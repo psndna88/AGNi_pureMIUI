@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -273,6 +273,30 @@
 	"Attempts for sending TDLS discovery requests")
 
 /*
+ * gTDLSMaxPeerCount - Max TDLS connected peer count
+ * @Min: 1
+ * @Max: 8
+ * @Default: 8
+ *
+ * This ini is used to configure the max connected TDLS peer count.
+ *
+ * Related: gEnableTDLSSupport.
+ *
+ * Supported Feature: TDLS
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TDLS_MAX_PEER_COUNT CFG_INI_UINT( \
+	"gTDLSMaxPeerCount", \
+	1, \
+	8, \
+	8, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Max TDLS peer count")
+
+/*
  * <ini>
  * gTDLSIdleTimeout - Duration within which number of TX / RX frames meet the
  * criteria for TDLS teardown.
@@ -520,15 +544,24 @@
 
 /*
  * <ini>
- * gTDLSPuapsdPTIWindow - This ini is used to configure peer traffic indication
- * window.
- * @Min: 1
- * @Max: 5
- * @Default: 2
+ * gTDLSExternalControl - Enable external TDLS control.
+ * @Min: 0
+ * @Max: 2
+ * @Default: 1
  *
- * This ini is used to configure buffering time in number of beacon intervals.
+ * This ini is used to enable/disable external TDLS control.
+ * TDLS external control works with TDLS implicit trigger. TDLS external
+ * control allows a user to add a MAC address of potential TDLS peers so
+ * that the CLD driver can initiate implicit TDLS setup to only those peers
+ * when criteria for TDLS setup (throughput and RSSI threshold) is met.
+ * There are two flavors of external control supported. If control default
+ * is set 1 it means strict external control where only for configured
+ * tdls peer mac address tdls link will be established. If control default
+ * is set 2 liberal tdls external control is needed which means
+ * tdls link will be established with configured peer mac address as well
+ * as any other peer which supports tdls.
  *
- * Related: gEnableTDLSSupport.
+ * Related: gEnableTDLSSupport, gEnableTDLSImplicitTrigger.
  *
  * Supported Feature: TDLS
  *
@@ -536,9 +569,12 @@
  *
  * </ini>
  */
-#define CFG_TDLS_EXTERNAL_CONTROL CFG_INI_BOOL( \
+#define CFG_TDLS_EXTERNAL_CONTROL CFG_INI_UINT( \
 	"gTDLSExternalControl", \
+	0, \
+	2, \
 	1, \
+	CFG_VALUE_OR_DEFAULT, \
 	"Enable external TDLS control")
 
 /*
@@ -690,6 +726,7 @@
 	CFG(CFG_TDLS_TX_STATS_PERIOD) \
 	CFG(CFG_TDLS_TX_PACKET_THRESHOLD) \
 	CFG(CFG_TDLS_MAX_DISCOVERY_ATTEMPT) \
+	CFG(CFG_TDLS_MAX_PEER_COUNT) \
 	CFG(CFG_TDLS_IDLE_TIMEOUT) \
 	CFG(CFG_TDLS_IDLE_PACKET_THRESHOLD) \
 	CFG(CFG_TDLS_RSSI_TRIGGER_THRESHOLD) \

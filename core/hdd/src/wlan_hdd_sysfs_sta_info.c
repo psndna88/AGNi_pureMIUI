@@ -15,14 +15,14 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_sta_info.c
+ * DOC: wlan_hdd_sysfs_sta_info.c
  *
  * implementation for creating sysfs file sta_info
  */
 
 #include <wlan_hdd_includes.h>
 #include "osif_vdev_sync.h"
-#include "wlan_hdd_sysfs_get_sta_info.h"
+#include "wlan_hdd_sysfs_sta_info.h"
 
 static ssize_t __show_sta_info(struct net_device *net_dev, char *buf)
 {
@@ -49,10 +49,10 @@ static ssize_t __show_sta_info(struct net_device *net_dev, char *buf)
 			    "%s    get_sta_info:\nstaAddress\n",
 			    net_dev->name);
 
-	hdd_for_each_sta_ref(adapter->sta_info_list, sta) {
+	hdd_for_each_sta_ref(adapter->sta_info_list, sta, STA_INFO_SHOW) {
 		if (QDF_IS_ADDR_BROADCAST(sta->sta_mac.bytes)) {
 			hdd_put_sta_info_ref(&adapter->sta_info_list, &sta,
-					     true);
+					     true, STA_INFO_SHOW);
 			continue;
 		}
 		ret_val += scnprintf(buf + ret_val, PAGE_SIZE - ret_val,
@@ -65,7 +65,8 @@ static ssize_t __show_sta_info(struct net_device *net_dev, char *buf)
 				     sta->sta_mac.bytes[5],
 				     sta->ecsa_capable);
 
-		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta, true);
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &sta, true,
+				     STA_INFO_SHOW);
 	}
 
 exit:
@@ -94,7 +95,7 @@ static ssize_t show_sta_info(struct device *dev,
 
 static DEVICE_ATTR(sta_info, 0444, show_sta_info, NULL);
 
-void hdd_sysfs_get_sta_info_interface_create(struct hdd_adapter *adapter)
+void hdd_sysfs_sta_info_interface_create(struct hdd_adapter *adapter)
 {
 	int error;
 
@@ -103,7 +104,7 @@ void hdd_sysfs_get_sta_info_interface_create(struct hdd_adapter *adapter)
 		hdd_err("Could not create sta_info sysfs file");
 }
 
-void hdd_sysfs_get_sta_info_interface_destroy(struct hdd_adapter *adapter)
+void hdd_sysfs_sta_info_interface_destroy(struct hdd_adapter *adapter)
 {
 	device_remove_file(&adapter->dev->dev, &dev_attr_sta_info);
 }

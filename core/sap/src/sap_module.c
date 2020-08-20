@@ -2219,7 +2219,7 @@ void wlansap_extend_to_acs_range(mac_handle_t mac_handle,
 					wlan_reg_ch_to_freq(CHAN_ENUM_2432) ?
 					(*start_ch_freq - ACS_2G_EXTEND) :
 					wlan_reg_ch_to_freq(CHAN_ENUM_2412);
-	} else if (*start_ch_freq <= wlan_reg_ch_to_freq(CHAN_ENUM_5865)) {
+	} else if (*start_ch_freq <= wlan_reg_ch_to_freq(CHAN_ENUM_5885)) {
 		*bandStartChannel = CHAN_ENUM_5180;
 		tmp_start_ch_freq = (*start_ch_freq - ACS_5G_EXTEND) >
 					wlan_reg_ch_to_freq(CHAN_ENUM_5180) ?
@@ -2245,22 +2245,22 @@ void wlansap_extend_to_acs_range(mac_handle_t mac_handle,
 					wlan_reg_ch_to_freq(CHAN_ENUM_2484) ?
 					(*end_ch_freq + ACS_2G_EXTEND) :
 					wlan_reg_ch_to_freq(CHAN_ENUM_2484);
-	} else if (*end_ch_freq <= wlan_reg_ch_to_freq(CHAN_ENUM_5865)) {
-		*bandEndChannel = CHAN_ENUM_5865;
+	} else if (*end_ch_freq <= wlan_reg_ch_to_freq(CHAN_ENUM_5885)) {
+		*bandEndChannel = CHAN_ENUM_5885;
 		tmp_end_ch_freq = (*end_ch_freq + ACS_5G_EXTEND) <=
-				     wlan_reg_ch_to_freq(CHAN_ENUM_5865) ?
+				     wlan_reg_ch_to_freq(CHAN_ENUM_5885) ?
 				     (*end_ch_freq + ACS_5G_EXTEND) :
-				     wlan_reg_ch_to_freq(CHAN_ENUM_5865);
+				     wlan_reg_ch_to_freq(CHAN_ENUM_5885);
 	} else if (WLAN_REG_IS_6GHZ_CHAN_FREQ(*end_ch_freq)) {
 		tmp_end_ch_freq = *end_ch_freq;
 		wlansap_update_end_range_6ghz(&tmp_end_ch_freq,
 					      bandEndChannel);
 	} else {
-		*bandEndChannel = CHAN_ENUM_5865;
+		*bandEndChannel = CHAN_ENUM_5885;
 		tmp_end_ch_freq = (*end_ch_freq + ACS_5G_EXTEND) <=
-				     wlan_reg_ch_to_freq(CHAN_ENUM_5865) ?
+				     wlan_reg_ch_to_freq(CHAN_ENUM_5885) ?
 				     (*end_ch_freq + ACS_5G_EXTEND) :
-				     wlan_reg_ch_to_freq(CHAN_ENUM_5865);
+				     wlan_reg_ch_to_freq(CHAN_ENUM_5885);
 
 		sap_err("unexpected end freq %d", *end_ch_freq);
 	}
@@ -3004,14 +3004,14 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx)
 		return 0;
 	}
 
-	if (ucfg_reg_get_curr_band(mac->pdev, &band) != QDF_STATUS_SUCCESS) {
+	if (ucfg_reg_get_band(mac->pdev, &band) != QDF_STATUS_SUCCESS) {
 		sap_err("Failed to get current band config");
 		return 0;
 	}
 	sap_band = wlan_reg_freq_to_band(sap_ctx->chan_freq);
 	sap_debug("SAP/Go current band: %d, pdev band capability: %d",
 		  sap_band, band);
-	if (sap_band == REG_BAND_5G && band == BAND_2G) {
+	if (sap_band == REG_BAND_5G && band == BIT(REG_BAND_2G)) {
 		sap_ctx->chan_freq_before_switch_band = sap_ctx->chan_freq;
 		sap_ctx->chan_width_before_switch_band =
 			sap_ctx->ch_params.ch_width;
@@ -3027,8 +3027,7 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx)
 			sap_debug("set 40M when switch SAP to 2G");
 			restart_ch_width = CH_WIDTH_40MHZ;
 		}
-	} else if (sap_band == REG_BAND_2G &&
-		   (band == BAND_ALL || band == BAND_5G)) {
+	} else if (sap_band == REG_BAND_2G && (band & BIT(REG_BAND_5G))) {
 		if (sap_ctx->chan_freq_before_switch_band == 0)
 			return 0;
 		restart_freq = sap_ctx->chan_freq_before_switch_band;

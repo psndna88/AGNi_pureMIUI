@@ -307,6 +307,11 @@ lim_process_disassoc_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 		ap_info.expected_rssi = frame_rssi +
 			wlan_blm_get_rssi_blacklist_threshold(mac->pdev);
 		qdf_mem_copy(ap_info.bssid.bytes, pHdr->sa, QDF_MAC_ADDR_SIZE);
+		ap_info.reject_reason = REASON_ASSOC_REJECT_POOR_RSSI;
+		ap_info.source = ADDED_BY_DRIVER;
+		ap_info.original_timeout = ap_info.retry_delay;
+		ap_info.received_time = qdf_mc_timer_get_system_time();
+
 		lim_add_bssid_to_reject_list(mac->pdev, &ap_info);
 	}
 	lim_extract_ies_from_deauth_disassoc(pe_session, (uint8_t *)pHdr,
@@ -358,6 +363,7 @@ void lim_perform_disassoc(struct mac_context *mac_ctx, int32_t frame_rssi,
 	tLimMlmDisassocInd mlmDisassocInd;
 	uint16_t aid;
 	tpDphHashNode sta_ds;
+	tpSirAssocRsp assoc_rsp;
 
 	sta_ds = dph_lookup_hash_entry(mac_ctx, addr, &aid,
 				       &pe_session->dph.dphHashTable);
@@ -388,6 +394,10 @@ void lim_perform_disassoc(struct mac_context *mac_ctx, int32_t frame_rssi,
 		pe_debug("received Disassoc from AP while waiting for Reassoc Rsp");
 
 		if (pe_session->limAssocResponseData) {
+			assoc_rsp = (tpSirAssocRsp) pe_session->
+						limAssocResponseData;
+			qdf_mem_free(assoc_rsp->sha384_ft_subelem.gtk);
+			qdf_mem_free(assoc_rsp->sha384_ft_subelem.igtk);
 			qdf_mem_free(pe_session->limAssocResponseData);
 			pe_session->limAssocResponseData = NULL;
 		}

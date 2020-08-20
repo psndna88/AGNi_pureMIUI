@@ -199,6 +199,20 @@ static void hdd_hif_set_attribute(struct hif_opaque_softc *hif_ctx)
 #endif
 
 /**
+ * hdd_hif_register_shutdown_notifier() - Register HIF shutdown notifier
+ * @hif_ctx: HIF Context
+ *
+ * Return: success/failure
+ */
+static QDF_STATUS
+hdd_hif_register_shutdown_notifier(struct hif_opaque_softc *hif_ctx)
+{
+	return cds_shutdown_notifier_register(
+					hif_shutdown_notifier_cb,
+					hif_ctx);
+}
+
+/**
  * hdd_init_cds_hif_context() - API to set CDS HIF Context
  * @hif: HIF Context
  *
@@ -290,6 +304,12 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 		goto err_hif_close;
 	}
 
+	status = hdd_hif_register_shutdown_notifier(hif_ctx);
+	if (status != QDF_STATUS_SUCCESS) {
+		hdd_err("Shutdown notifier register failed: %d", status);
+		goto err_deinit_hif_context;
+	}
+
 	hdd_hif_set_attribute(hif_ctx);
 
 	status = hif_enable(hif_ctx, dev, bdev, bid, bus_type,
@@ -300,7 +320,7 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 			status, reinit);
 
 		ret = qdf_status_to_os_return(status);
-		goto err_hif_close;
+		goto err_deinit_hif_context;
 	} else {
 		cds_set_target_ready(true);
 		ret = hdd_napi_create();
@@ -330,8 +350,10 @@ int hdd_hif_open(struct device *dev, void *bdev, const struct hif_bus_id *bid,
 mark_target_not_ready:
 	cds_set_target_ready(false);
 
-err_hif_close:
+err_deinit_hif_context:
 	hdd_deinit_cds_hif_context();
+
+err_hif_close:
 	hif_close(hif_ctx);
 	return ret;
 }
@@ -580,7 +602,17 @@ static int __hdd_soc_recovery_reinit(struct device *dev,
 	}
 
 	re_init_fail_cnt = 0;
-	cds_set_recovery_in_progress(false);
+
+	/*
+	 * In case of SSR within SSR we have seen the race
+	 * where the reinit is successful and fw down is received
+	 * which sets the recovery in progress. Now as reinit is
+	 * successful we reset the recovery in progress here.
+	 * So check if FW is down then don't reset the recovery
+	 * in progress
+	 */
+	if (!qdf_is_fw_down())
+		cds_set_recovery_in_progress(false);
 
 	hdd_soc_load_unlock(dev);
 	hdd_start_complete(0);
@@ -849,7 +881,6 @@ static void hdd_soc_recovery_shutdown(struct device *dev)
 	int errno;
 
 	errno = osif_psoc_sync_trans_start_wait(dev, &psoc_sync);
-	QDF_BUG(!errno);
 	if (errno)
 		return;
 

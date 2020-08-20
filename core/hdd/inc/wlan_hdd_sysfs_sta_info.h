@@ -15,49 +15,48 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_tdls_peers.h
+ * DOC: wlan_hdd_sysfs_sta_info.h
  *
- * implementation for creating sysfs file get TDLS peers
+ * implementation for creating sysfs file sta_info
  */
 
-#ifndef _WLAN_HDD_SYSFS_GET_TDLS_PEERS_H
-#define _WLAN_HDD_SYSFS_GET_TDLS_PEERS_H
+#ifndef _WLAN_HDD_SYSFS_STA_INFO_H
+#define _WLAN_HDD_SYSFS_STA_INFO_H
 
-#if defined(WLAN_SYSFS) && defined(WLAN_GET_TDLS_PEERS)
+#if defined(WLAN_SYSFS) && defined(WLAN_SYSFS_STA_INFO)
 /**
- * hdd_sysfs_get_tdls_peers_interface_create() - API to create tdls_peers
- * sysfs interface
+ * hdd_sysfs_sta_info_interface_create() - API to create sta_info sysfs
+ * interface
  * @adapter: pointer to adapter
  *
- * this file is created per adapter.
- * file path: /sys/class/net/wlanxx/tdls_peers
+ * this file is created for SAP adapter.
+ * file path: /sys/class/net/wlanxx/sta_info
  *	where wlanxx is adapter name
  *
  * usage:
- *      cat /sys/class/net/wlanxx/tdls_peers
+ *      cat /sys/class/net/wlanxx/sta_info
  *
  * Return: none
  */
-void hdd_sysfs_get_tdls_peers_interface_create(struct hdd_adapter *adapter);
+void hdd_sysfs_sta_info_interface_create(struct hdd_adapter *adapter);
 
 /**
- * hdd_sysfs_get_tdls_peers_interface_destroy() - API to destroy tdls_peers
- * sysfs interface
+ * hdd_sysfs_sta_info_interface_destroy() - API to destroy sta_info
  * @adapter: pointer to adapter
  *
  * Return: none
  */
-void hdd_sysfs_get_tdls_peers_interface_destroy(struct hdd_adapter *adapter);
+void hdd_sysfs_sta_info_interface_destroy(struct hdd_adapter *adapter);
 
 #else
 static inline
-void hdd_sysfs_get_tdls_peers_interface_create(struct hdd_adapter *adapter)
+void hdd_sysfs_sta_info_interface_create(struct hdd_adapter *adapter)
 {
 }
 
 static inline
-void hdd_sysfs_get_tdls_peers_interface_destroy(struct hdd_adapter *adapter)
+void hdd_sysfs_sta_info_interface_destroy(struct hdd_adapter *adapter)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_GET_TDLS_PEERS_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_STA_INFO_H */

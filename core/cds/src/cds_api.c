@@ -1306,6 +1306,10 @@ QDF_STATUS cds_close(struct wlan_objmgr_psoc *psoc)
 
 	dispatcher_psoc_close(psoc);
 
+	qdf_flush_work(&gp_cds_context->cds_recovery_work);
+
+	cds_shutdown_notifier_purge();
+
 	qdf_status = wma_wmi_work_close();
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		cds_err("Failed to close wma_wmi_work");
@@ -1338,8 +1342,6 @@ QDF_STATUS cds_close(struct wlan_objmgr_psoc *psoc)
 
 	ucfg_pmo_psoc_update_dp_handle(psoc, NULL);
 	wlan_psoc_set_dp_handle(psoc, NULL);
-
-	cds_shutdown_notifier_purge();
 
 	if (true == wma_needshutdown()) {
 		cds_err("Failed to shutdown wma");
@@ -2794,79 +2796,6 @@ uint32_t cds_get_connectivity_stats_pkt_bitmap(void *context)
 		return 0;
 	}
 	return adapter->pkt_type_bitmap;
-}
-
-/**
- * cds_get_arp_stats_gw_ip() - get arp stats track IP
- *
- * Return: ARP stats IP to track
- */
-uint32_t cds_get_arp_stats_gw_ip(void *context)
-{
-	struct hdd_adapter *adapter = NULL;
-
-	if (!context)
-		return 0;
-
-	adapter = (struct hdd_adapter *)context;
-
-	if (unlikely(adapter->magic != WLAN_HDD_ADAPTER_MAGIC)) {
-		cds_err("Magic cookie(%x) for adapter sanity verification is invalid",
-			adapter->magic);
-		return 0;
-	}
-
-	return adapter->track_arp_ip;
-}
-
-/**
- * cds_incr_arp_stats_tx_tgt_delivered() - increment ARP stats
- *
- * Return: none
- */
-void cds_incr_arp_stats_tx_tgt_delivered(void)
-{
-	struct hdd_context *hdd_ctx;
-	struct hdd_adapter *adapter = NULL;
-
-	hdd_ctx = gp_cds_context->hdd_context;
-	if (!hdd_ctx) {
-		cds_err("Hdd Context is Null");
-		return;
-	}
-
-	hdd_for_each_adapter(hdd_ctx, adapter) {
-		if (QDF_STA_MODE == adapter->device_mode)
-			break;
-	}
-
-	if (adapter)
-		adapter->hdd_stats.hdd_arp_stats.tx_host_fw_sent++;
-}
-
-/**
- * cds_incr_arp_stats_tx_tgt_acked() - increment ARP stats
- *
- * Return: none
- */
-void cds_incr_arp_stats_tx_tgt_acked(void)
-{
-	struct hdd_context *hdd_ctx;
-	struct hdd_adapter *adapter = NULL;
-
-	hdd_ctx = gp_cds_context->hdd_context;
-	if (!hdd_ctx) {
-		cds_err("Hdd Context is Null");
-		return;
-	}
-
-	hdd_for_each_adapter(hdd_ctx, adapter) {
-		if (QDF_STA_MODE == adapter->device_mode)
-			break;
-	}
-
-	if (adapter)
-		adapter->hdd_stats.hdd_arp_stats.tx_ack_cnt++;
 }
 
 #ifdef FEATURE_ALIGN_STATS_FROM_DP

@@ -60,7 +60,7 @@ struct mac_context;
 
 #define SIR_MAX_ELEMENT_ID         255
 
-#define SIR_BCN_REPORT_MAX_BSS_DESC       4
+#define SIR_BCN_REPORT_MAX_BSS_DESC       8
 
 #define SIR_NUM_11B_RATES 4     /* 1,2,5.5,11 */
 #define SIR_NUM_11A_RATES 8     /* 6,9,12,18,24,36,48,54 */
@@ -72,7 +72,9 @@ typedef uint8_t tSirVersionString[SIR_VERSION_STRING_LEN];
 
 /* Periodic Tx pattern offload feature */
 #define PERIODIC_TX_PTRN_MAX_SIZE 1536
+#ifndef MAXNUM_PERIODIC_TX_PTRNS
 #define MAXNUM_PERIODIC_TX_PTRNS 6
+#endif
 
 /* FW response timeout values in milli seconds */
 #define SIR_PEER_ASSOC_TIMEOUT           (4000) /* 4 seconds */
@@ -2025,9 +2027,7 @@ typedef enum {
 	SIR_ROAMING_DFS_CHANNEL_ENABLED_NORMAL = 1,
 	SIR_ROAMING_DFS_CHANNEL_ENABLED_ACTIVE = 2
 } eSirDFSRoamScanMode;
-#define MAX_SSID_ALLOWED_LIST 4
-#define MAX_BSSID_AVOID_LIST  16
-#define MAX_BSSID_FAVORED     16
+
 /**
  * struct roam_ext_params - Structure holding roaming parameters
  * @num_bssid_avoid_list:       The number of BSSID's that we should
@@ -2213,11 +2213,11 @@ struct roam_offload_scan_req {
 	bool is_sae_single_pmk;
 	bool enable_ft_im_roaming;
 	/* Idle/Disconnect roam parameters */
-	struct wmi_idle_roam_params idle_roam_params;
-	struct wmi_disconnect_roam_params disconnect_roam_params;
+	struct wlan_roam_idle_params idle_roam_params;
+	struct wlan_roam_disconnect_params disconnect_roam_params;
 #endif
 	struct roam_ext_params roam_params;
-	struct roam_triggers roam_triggers;
+	struct wlan_roam_triggers roam_triggers;
 	uint8_t  middle_of_roaming;
 	uint32_t hi_rssi_scan_max_count;
 	uint32_t hi_rssi_scan_rssi_delta;
@@ -2241,7 +2241,7 @@ struct roam_offload_scan_req {
 	uint32_t rct_validity_timer;
 	uint32_t disassoc_timer_threshold;
 	uint32_t btm_trig_min_candidate_score;
-	struct wmi_11k_offload_params offload_11k_params;
+	struct wlan_roam_11k_offload_params offload_11k_params;
 	uint32_t ho_delay_for_rx;
 	uint32_t roam_preauth_retry_count;
 	uint32_t roam_preauth_no_ack_timeout;
@@ -5274,6 +5274,9 @@ struct wow_enable_params {
 #define SET_AUTO_RATE_HE_LTF_VAL(set_val, bit_mask) \
 	(set_val = (set_val & HE_SGI_MASK) | bit_mask)
 
+#define MSCS_OUI_TYPE "\x58"
+#define MSCS_OUI_SIZE 1
+
 #ifdef WLAN_FEATURE_11AX
 #define HE_CAP_OUI_TYPE "\x23"
 #define HE_CAP_OUI_SIZE 1
@@ -5553,6 +5556,10 @@ struct sir_peer_set_rx_blocksize {
  * @retry_delay: Retry delay received during last rejection in ms
  * @ expected_rssi: RSSI at which STA can initate
  * @time_during_rejection: Timestamp during last rejection in millisec
+ * @reject_reason: reason to add the BSSID to BLM
+ * @source: Source of adding the BSSID to BLM
+ * @original_timeout: original timeout sent by the AP
+ * @received_time: Timestamp when the AP was added to the Blacklist
  */
 struct sir_rssi_disallow_lst {
 	qdf_list_node_t node;
@@ -5560,6 +5567,10 @@ struct sir_rssi_disallow_lst {
 	uint32_t retry_delay;
 	int8_t expected_rssi;
 	qdf_time_t time_during_rejection;
+	enum blm_reject_ap_reason reject_reason;
+	enum blm_reject_ap_source source;
+	uint32_t original_timeout;
+	qdf_time_t received_time;
 };
 
 /**

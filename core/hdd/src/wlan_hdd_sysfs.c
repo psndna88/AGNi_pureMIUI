@@ -37,9 +37,9 @@
 #include <sir_api.h>
 #endif
 #include "osif_sync.h"
-#include "wlan_hdd_sysfs_get_sta_info.h"
-#include "wlan_hdd_sysfs_get_channel.h"
-#include <wlan_hdd_sysfs_set_fw_mode_cfg.h>
+#include "wlan_hdd_sysfs_sta_info.h"
+#include "wlan_hdd_sysfs_channel.h"
+#include <wlan_hdd_sysfs_fw_mode_config.h>
 #include <wlan_hdd_sysfs_reassoc.h>
 #include <wlan_hdd_sysfs_mem_stats.h>
 #include "wlan_hdd_sysfs_crash_inject.h"
@@ -52,30 +52,29 @@
 #include <wlan_hdd_sysfs_wow_ito.h>
 #include <wlan_hdd_sysfs_wowl_add_ptrn.h>
 #include <wlan_hdd_sysfs_wowl_del_ptrn.h>
-#include <wlan_hdd_sysfs_get_tx_stbc.h>
-#include <wlan_hdd_sysfs_get_stats.h>
-#include <wlan_hdd_sysfs_set_wlan_dbg.h>
+#include <wlan_hdd_sysfs_tx_stbc.h>
+#include <wlan_hdd_sysfs_wlan_dbg.h>
 #include <wlan_hdd_sysfs_txrx_fw_st_rst.h>
 #include <wlan_hdd_sysfs_gtx_bw_mask.h>
-#include <wlan_hdd_sysfs_set_scan_cfg.h>
-#include <wlan_hdd_sysfs_set_mon_chan.h>
-#include <wlan_hdd_sysfs_set_range_ext.h>
-#include <wlan_hdd_sysfs_set_radar.h>
+#include <wlan_hdd_sysfs_scan_config.h>
+#include <wlan_hdd_sysfs_monitor_mode_channel.h>
+#include <wlan_hdd_sysfs_range_ext.h>
+#include <wlan_hdd_sysfs_radar.h>
 #include <wlan_hdd_sysfs_rts_cts.h>
 #include <wlan_hdd_sysfs_he_bss_color.h>
 #include <wlan_hdd_sysfs_txrx_fw_stats.h>
 #include <wlan_hdd_sysfs_txrx_stats.h>
 #include <wlan_hdd_sysfs_dp_trace.h>
 #include <wlan_hdd_sysfs_stats.h>
-#include <wlan_hdd_sysfs_get_range_ext.h>
-#include <wlan_hdd_sysfs_get_tdls_peers.h>
-#include <wlan_hdd_sysfs_get_temp.h>
+#include <wlan_hdd_sysfs_tdls_peers.h>
+#include <wlan_hdd_sysfs_temperature.h>
 #include <wlan_hdd_sysfs_thermal_cfg.h>
 #include <wlan_hdd_sysfs_motion_detection.h>
 #include <wlan_hdd_sysfs_ipa.h>
 #include <wlan_hdd_sysfs_pkt_log.h>
 #include <wlan_hdd_sysfs_policy_mgr.h>
 #include <wlan_hdd_sysfs_dp_aggregation.h>
+#include <wlan_hdd_sysfs_dl_modes.h>
 
 #define MAX_PSOC_ID_SIZE 10
 
@@ -656,37 +655,35 @@ hdd_sysfs_create_sta_adapter_root_obj(struct hdd_adapter *adapter)
 	hdd_sysfs_dcm_create(adapter);
 	hdd_sysfs_wowl_add_ptrn_create(adapter);
 	hdd_sysfs_wowl_del_ptrn_create(adapter);
-	hdd_sysfs_get_tx_stbc_create(adapter);
-	hdd_sysfs_get_stats_create(adapter);
+	hdd_sysfs_tx_stbc_create(adapter);
 	hdd_sysfs_txrx_fw_st_rst_create(adapter);
 	hdd_sysfs_gtx_bw_mask_create(adapter);
 	hdd_sysfs_rts_cts_create(adapter);
 	hdd_sysfs_stats_create(adapter);
 	hdd_sysfs_txrx_fw_stats_create(adapter);
 	hdd_sysfs_txrx_stats_create(adapter);
-	hdd_sysfs_get_range_ext_create(adapter);
-	hdd_sysfs_get_tdls_peers_interface_create(adapter);
-	hdd_sysfs_get_temp_create(adapter);
+	hdd_sysfs_tdls_peers_interface_create(adapter);
+	hdd_sysfs_temperature_create(adapter);
 	hdd_sysfs_motion_detection_create(adapter);
 	hdd_sysfs_range_ext_create(adapter);
+	hdd_sysfs_dl_modes_create(adapter);
 }
 
 static void
 hdd_sysfs_destroy_sta_adapter_root_obj(struct hdd_adapter *adapter)
 {
+	hdd_sysfs_dl_modes_destroy(adapter);
 	hdd_sysfs_range_ext_destroy(adapter);
 	hdd_sysfs_motion_detection_destroy(adapter);
-	hdd_sysfs_get_temp_destroy(adapter);
-	hdd_sysfs_get_tdls_peers_interface_destroy(adapter);
-	hdd_sysfs_get_range_ext_destroy(adapter);
+	hdd_sysfs_temperature_destroy(adapter);
+	hdd_sysfs_tdls_peers_interface_destroy(adapter);
 	hdd_sysfs_txrx_stats_destroy(adapter);
 	hdd_sysfs_txrx_fw_stats_destroy(adapter);
 	hdd_sysfs_stats_destroy(adapter);
 	hdd_sysfs_rts_cts_destroy(adapter);
 	hdd_sysfs_gtx_bw_mask_destroy(adapter);
 	hdd_sysfs_txrx_fw_st_rst_destroy(adapter);
-	hdd_sysfs_get_stats_destroy(adapter);
-	hdd_sysfs_get_tx_stbc_destroy(adapter);
+	hdd_sysfs_tx_stbc_destroy(adapter);
 	hdd_sysfs_wowl_del_ptrn_destroy(adapter);
 	hdd_sysfs_wowl_add_ptrn_destroy(adapter);
 	hdd_sysfs_dcm_destroy(adapter);
@@ -702,67 +699,67 @@ hdd_sysfs_destroy_sta_adapter_root_obj(struct hdd_adapter *adapter)
 static void
 hdd_sysfs_create_sap_adapter_root_obj(struct hdd_adapter *adapter)
 {
-	hdd_sysfs_get_channel_interface_create(adapter);
-	hdd_sysfs_get_sta_info_interface_create(adapter);
+	hdd_sysfs_channel_interface_create(adapter);
+	hdd_sysfs_sta_info_interface_create(adapter);
 	hdd_sysfs_crash_inject_create(adapter);
 	hdd_sysfs_suspend_create(adapter);
 	hdd_sysfs_resume_create(adapter);
 	hdd_sysfs_unit_test_target_create(adapter);
 	hdd_sysfs_modify_acl_create(adapter);
 	hdd_sysfs_connect_info_interface_create(adapter);
-	hdd_sysfs_get_tx_stbc_create(adapter);
-	hdd_sysfs_get_stats_create(adapter);
+	hdd_sysfs_tx_stbc_create(adapter);
 	hdd_sysfs_txrx_fw_st_rst_create(adapter);
 	hdd_sysfs_gtx_bw_mask_create(adapter);
 	hdd_sysfs_dcm_create(adapter);
-	hdd_sysfs_set_radar_create(adapter);
+	hdd_sysfs_radar_create(adapter);
 	hdd_sysfs_rts_cts_create(adapter);
 	hdd_sysfs_stats_create(adapter);
 	hdd_sysfs_he_bss_color_create(adapter);
 	hdd_sysfs_txrx_fw_stats_create(adapter);
 	hdd_sysfs_txrx_stats_create(adapter);
-	hdd_sysfs_get_temp_create(adapter);
+	hdd_sysfs_temperature_create(adapter);
 	hdd_sysfs_range_ext_create(adapter);
 	hdd_sysfs_ipa_create(adapter);
+	hdd_sysfs_dl_modes_create(adapter);
 }
 
 static void
 hdd_sysfs_destroy_sap_adapter_root_obj(struct hdd_adapter *adapter)
 {
+	hdd_sysfs_dl_modes_destroy(adapter);
 	hdd_sysfs_ipa_destroy(adapter);
 	hdd_sysfs_range_ext_destroy(adapter);
-	hdd_sysfs_get_temp_destroy(adapter);
+	hdd_sysfs_temperature_destroy(adapter);
 	hdd_sysfs_txrx_stats_destroy(adapter);
 	hdd_sysfs_txrx_fw_stats_destroy(adapter);
 	hdd_sysfs_he_bss_color_destroy(adapter);
 	hdd_sysfs_stats_destroy(adapter);
 	hdd_sysfs_rts_cts_destroy(adapter);
-	hdd_sysfs_set_radar_destroy(adapter);
+	hdd_sysfs_radar_destroy(adapter);
 	hdd_sysfs_dcm_destroy(adapter);
 	hdd_sysfs_gtx_bw_mask_destroy(adapter);
 	hdd_sysfs_txrx_fw_st_rst_destroy(adapter);
-	hdd_sysfs_get_stats_destroy(adapter);
-	hdd_sysfs_get_tx_stbc_destroy(adapter);
+	hdd_sysfs_tx_stbc_destroy(adapter);
 	hdd_sysfs_connect_info_interface_destroy(adapter);
 	hdd_sysfs_modify_acl_destroy(adapter);
 	hdd_sysfs_unit_test_target_destroy(adapter);
 	hdd_sysfs_resume_destroy(adapter);
 	hdd_sysfs_suspend_destroy(adapter);
 	hdd_sysfs_crash_inject_destroy(adapter);
-	hdd_sysfs_get_sta_info_interface_destroy(adapter);
-	hdd_sysfs_get_channel_interface_destroy(adapter);
+	hdd_sysfs_sta_info_interface_destroy(adapter);
+	hdd_sysfs_channel_interface_destroy(adapter);
 }
 
 static void
 hdd_sysfs_create_monitor_adapter_root_obj(struct hdd_adapter *adapter)
 {
-	hdd_sysfs_set_mon_chan_create(adapter);
+	hdd_sysfs_monitor_mode_channel_create(adapter);
 }
 
 static void
 hdd_sysfs_destroy_monitor_adapter_root_obj(struct hdd_adapter *adapter)
 {
-	hdd_sysfs_set_mon_chan_destroy(adapter);
+	hdd_sysfs_monitor_mode_channel_destroy(adapter);
 }
 
 void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
@@ -772,11 +769,11 @@ void hdd_create_sysfs_files(struct hdd_context *hdd_ctx)
 	hdd_sysfs_mem_stats_create(wlan_kobject);
 	if  (QDF_GLOBAL_MISSION_MODE == hdd_get_conparam()) {
 		hdd_sysfs_create_powerstats_interface();
-		hdd_sysfs_set_fw_mode_cfg_create(driver_kobject);
+		hdd_sysfs_fw_mode_config_create(driver_kobject);
 		hdd_sysfs_scan_disable_create(driver_kobject);
 		hdd_sysfs_wow_ito_create(driver_kobject);
-		hdd_sysfs_set_wlan_dbg_create(driver_kobject);
-		hdd_sysfs_set_scan_cfg_create(driver_kobject);
+		hdd_sysfs_wlan_dbg_create(driver_kobject);
+		hdd_sysfs_scan_config_create(driver_kobject);
 		hdd_sysfs_dp_trace_create(driver_kobject);
 		hdd_sysfs_thermal_cfg_create(driver_kobject);
 		hdd_sysfs_pktlog_create(driver_kobject);
@@ -797,11 +794,11 @@ void hdd_destroy_sysfs_files(void)
 		hdd_sysfs_pktlog_destroy(driver_kobject);
 		hdd_sysfs_thermal_cfg_destroy(driver_kobject);
 		hdd_sysfs_dp_trace_destroy(driver_kobject);
-		hdd_sysfs_set_scan_cfg_destroy(driver_kobject);
-		hdd_sysfs_set_wlan_dbg_destroy(driver_kobject);
+		hdd_sysfs_scan_config_destroy(driver_kobject);
+		hdd_sysfs_wlan_dbg_destroy(driver_kobject);
 		hdd_sysfs_wow_ito_destroy(driver_kobject);
 		hdd_sysfs_scan_disable_destroy(driver_kobject);
-		hdd_sysfs_set_fw_mode_cfg_destroy(driver_kobject);
+		hdd_sysfs_fw_mode_config_destroy(driver_kobject);
 		hdd_sysfs_destroy_powerstats_interface();
 	}
 	hdd_sysfs_mem_stats_destroy(wlan_kobject);

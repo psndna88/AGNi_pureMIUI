@@ -46,13 +46,6 @@
 #define WMA_LINK_MONITOR_DEFAULT_TIME_SECS 10
 #define WMA_KEEP_ALIVE_DEFAULT_TIME_SECS   5
 
-/* The maximum number of patterns that can be transmitted by the firmware
- *  and maximum patterns size.
- */
-#ifndef WMA_MAXNUM_PERIODIC_TX_PTRNS
-#define WMA_MAXNUM_PERIODIC_TX_PTRNS 6
-#endif
-
 #define WMA_WMM_EXPO_TO_VAL(val)        ((1 << (val)) - 1)
 
 #define MAX_HT_MCS_IDX 8
@@ -186,6 +179,15 @@ void wma_process_roam_synch_fail(WMA_HANDLE handle,
 int wma_roam_synch_event_handler(void *handle, uint8_t *event,
 					uint32_t len);
 
+/**
+ * wma_register_roam_vdev_disc_event_handler() - API to register handler for
+ * roam vdev disconnect event id
+ * @wma_handle: wma handle
+ *
+ * Return: void
+ */
+void wma_register_roam_vdev_disc_event_handler(tp_wma_handle wma_handle);
+
 #ifdef WLAN_FEATURE_FIPS
 /**
  * wma_register_pmkid_req_event_handler() - Register pmkid request event handler
@@ -277,10 +279,29 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
  */
 int wma_roam_synch_frame_event_handler(void *handle, uint8_t *event,
 					uint32_t len);
+
+/**
+ * wma_roam_vdev_disconnect_event_handler() - Handles roam vdev disconnect event
+ * @handle: wma_handle
+ * @event: pmkid request event data pointer
+ * @len: length of the data
+ *
+ * @Return: 0 on sucees else error code
+ */
+int wma_roam_vdev_disconnect_event_handler(void *handle, uint8_t *event,
+					   uint32_t len);
+
 #else
 static inline int wma_mlme_roam_synch_event_handler_cb(void *handle,
 						       uint8_t *event,
 						       uint32_t len)
+{
+	return 0;
+}
+
+static inline int
+wma_roam_vdev_disconnect_event_handler(void *handle, uint8_t *event,
+				       uint32_t len)
 {
 	return 0;
 }
@@ -322,6 +343,7 @@ wma_roam_scan_chan_list_event_handler(WMA_HANDLE handle, uint8_t *event,
 }
 #endif
 
+#ifndef ROAM_OFFLOAD_V1
 /**
  * wma_update_per_roam_config() -per roam config parameter updation to FW
  * @handle: wma handle
@@ -330,8 +352,8 @@ wma_roam_scan_chan_list_event_handler(WMA_HANDLE handle, uint8_t *event,
  * Return: none
  */
 void wma_update_per_roam_config(WMA_HANDLE handle,
-				 struct wmi_per_roam_config_req *req_buf);
-
+				 struct wlan_per_roam_config_req *req_buf);
+#endif
 QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 				   tSirUpdateChanList *chan_list);
 
@@ -1809,7 +1831,7 @@ int wma_oem_event_handler(void *wma_ctx, uint8_t *event_buff, uint32_t len);
  * Return: Success or Failure status
  */
 QDF_STATUS wma_set_roam_triggers(tp_wma_handle wma_handle,
-				 struct roam_triggers *triggers);
+				 struct wlan_roam_triggers *triggers);
 
 /**
  * wma_get_ani_level_evt_handler - event handler to fetch ani level

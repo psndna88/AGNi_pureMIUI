@@ -64,6 +64,7 @@ struct rssi_monitor_param {
 	bool     control;
 };
 
+#ifndef ROAM_OFFLOAD_V1
 /**
  * struct roam_offload_scan_rssi_params - structure containing
  *              parameters for roam offload scan based on RSSI
@@ -150,6 +151,7 @@ struct roam_scan_period_params {
 	uint32_t roam_scan_period_after_inactivity;
 	uint32_t full_scan_period;
 };
+#endif
 
 /**
  * struct wmi_mawc_roam_params - Motion Aided wireless connectivity params
@@ -167,63 +169,6 @@ struct wmi_mawc_roam_params {
 	uint32_t best_ap_rssi_threshold;
 	uint8_t rssi_stationary_high_adjust;
 	uint8_t rssi_stationary_low_adjust;
-};
-
-#define MAX_SSID_ALLOWED_LIST    4
-#define MAX_BSSID_AVOID_LIST     16
-#define MAX_BSSID_FAVORED      16
-
-/**
- * struct roam_scan_filter_params - Structure holding roaming scan
- *                                  parameters
- * @op_bitmap: bitmap to determine reason of roaming
- * @vdev_id: vdev id
- * @num_bssid_black_list: The number of BSSID's that we should avoid
- *                        connecting to. It is like a blacklist of BSSID's.
- * @num_ssid_white_list: The number of SSID profiles that are in the
- *                       Whitelist. When roaming, we consider the BSSID's with
- *                       this SSID also for roaming apart from the connected
- *                       one's
- * @num_bssid_preferred_list: Number of BSSID's which have a preference over
- *                            others
- * @bssid_avoid_list: Blacklist SSID's
- * @ssid_allowed_list: Whitelist SSID's
- * @bssid_favored: Favorable BSSID's
- * @bssid_favored_factor: RSSI to be added to this BSSID to prefer it
- * @lca_disallow_config_present: LCA [Last Connected AP] disallow config
- *                               present
- * @disallow_duration: How long LCA AP will be disallowed before it can be a
- *                     roaming candidate again, in seconds
- * @rssi_channel_penalization: How much RSSI will be penalized if candidate(s)
- *                             are found in the same channel as disallowed
- *                             AP's, in units of db
- * @num_disallowed_aps: How many APs the target should maintain in its LCA
- *                      list
- * @delta_rssi: (dB units) when AB in RSSI blacklist improved by at least
- *              delta_rssi,it will be removed from blacklist
- *
- * This structure holds all the key parameters related to
- * initial connection and roaming connections.
- */
-
-struct roam_scan_filter_params {
-	uint32_t op_bitmap;
-	uint8_t vdev_id;
-	uint32_t num_bssid_black_list;
-	uint32_t num_ssid_white_list;
-	uint32_t num_bssid_preferred_list;
-	struct qdf_mac_addr bssid_avoid_list[MAX_BSSID_AVOID_LIST];
-	struct wlan_ssid ssid_allowed_list[MAX_SSID_ALLOWED_LIST];
-	struct qdf_mac_addr bssid_favored[MAX_BSSID_FAVORED];
-	uint8_t bssid_favored_factor[MAX_BSSID_FAVORED];
-	uint8_t lca_disallow_config_present;
-	uint32_t disallow_duration;
-	uint32_t rssi_channel_penalization;
-	uint32_t num_disallowed_aps;
-	uint32_t num_rssi_rejection_ap;
-	struct reject_ap_config_params
-				rssi_rejection_ap[MAX_RSSI_AVOID_BSSID_LIST];
-	uint32_t delta_rssi;
 };
 
 #define WMI_CFG_VALID_CHANNEL_LIST_LEN    100
@@ -270,207 +215,6 @@ struct plm_req_params {
 };
 
 /**
- * struct ap_profile - Structure ap profile to match candidate
- * @flags: flags
- * @rssi_threshold: the value of the the candidate AP should higher by this
- *                  threshold than the rssi of the currrently associated AP
- * @ssid: ssid vlaue to be matched
- * @rsn_authmode: security params to be matched
- * @rsn_ucastcipherset: unicast cipher set
- * @rsn_mcastcipherset: mcast/group cipher set
- * @rsn_mcastmgmtcipherset: mcast/group management frames cipher set
- * @rssi_abs_thresh: the value of the candidate AP should higher than this
- *                   absolute RSSI threshold. Zero means no absolute minimum
- *                   RSSI is required. units are the offset from the noise
- *                   floor in dB
- */
-struct ap_profile {
-	uint32_t flags;
-	uint32_t rssi_threshold;
-	struct wlan_ssid  ssid;
-	uint32_t rsn_authmode;
-	uint32_t rsn_ucastcipherset;
-	uint32_t rsn_mcastcipherset;
-	uint32_t rsn_mcastmgmtcipherset;
-	uint32_t rssi_abs_thresh;
-};
-
-
-/**
- * struct scoring_param - scoring param to sortlist selected AP
- * @disable_bitmap: Each bit will be either allow(0)/disallow(1) to
- *                 considered the roam score param.
- * @rssi_weightage: RSSI weightage out of total score in %
- * @ht_weightage: HT weightage out of total score in %.
- * @vht_weightage: VHT weightage out of total score in %.
- * @he_weightaget: 11ax weightage out of total score in %.
- * @bw_weightage: Bandwidth weightage out of total score in %.
- * @band_weightage: Band(2G/5G) weightage out of total score in %.
- * @nss_weightage: NSS(1x1 / 2x2)weightage out of total score in %.
- * @esp_qbss_weightage: ESP/QBSS weightage out of total score in %.
- * @beamforming_weightage: Beamforming weightage out of total score in %.
- * @pcl_weightage: PCL weightage out of total score in %.
- * @oce_wan_weightage OCE WAN metrics weightage out of total score in %.
- * @oce_ap_tx_pwr_weightage: OCE AP TX power score in %
- * @oce_subnet_id_weightage: OCE subnet id score in %
- * @bw_index_score: channel BW scoring percentage information.
- *                 BITS 0-7   :- It contains scoring percentage of 20MHz   BW
- *                 BITS 8-15  :- It contains scoring percentage of 40MHz   BW
- *                 BITS 16-23 :- It contains scoring percentage of 80MHz   BW
- *                 BITS 24-31 :- It contains scoring percentage of 1600MHz BW
- *                 The value of each index must be 0-100
- * @band_index_score: band scording percentage information.
- *                   BITS 0-7   :- It contains scoring percentage of 2G
- *                   BITS 8-15  :- It contains scoring percentage of 5G
- *                   BITS 16-23 :- reserved
- *                   BITS 24-31 :- reserved
- *                   The value of each index must be 0-100
- * @nss_index_score: NSS scoring percentage information.
- *                  BITS 0-7   :- It contains scoring percentage of 1x1
- *                  BITS 8-15  :- It contains scoring percentage of 2x2
- *                  BITS 16-23 :- It contains scoring percentage of 3x3
- *                  BITS 24-31 :- It contains scoring percentage of 4x4
- *                  The value of each index must be 0-100
- * @roam_score_delta: delta value expected over the roam score of the candidate
- * ap over the roam score of the current ap
- * @roam_trigger_bitmap: bitmap of roam triggers on which roam_score_delta
- * will be applied
- * @vendor_roam_score_algorithm: Prefered algorithm for roam candidate selection
- * @cand_min_roam_score_delta: candidate min roam score delta value
- * @rssi_scoring: RSSI scoring information.
- * @esp_qbss_scoring: ESP/QBSS scoring percentage information
- * @oce_wan_scoring: OCE WAN metrics percentage information
- */
-struct scoring_param {
-	uint32_t disable_bitmap;
-	int32_t rssi_weightage;
-	int32_t ht_weightage;
-	int32_t vht_weightage;
-	int32_t he_weightage;
-	int32_t bw_weightage;
-	int32_t band_weightage;
-	int32_t nss_weightage;
-	int32_t esp_qbss_weightage;
-	int32_t beamforming_weightage;
-	int32_t pcl_weightage;
-	int32_t oce_wan_weightage;
-	uint32_t oce_ap_tx_pwr_weightage;
-	uint32_t oce_subnet_id_weightage;
-	uint32_t bw_index_score;
-	uint32_t band_index_score;
-	uint32_t nss_index_score;
-	uint32_t roam_score_delta;
-	uint32_t roam_trigger_bitmap;
-	uint32_t vendor_roam_score_algorithm;
-	uint32_t cand_min_roam_score_delta;
-	struct rssi_config_score rssi_scoring;
-	struct per_slot_score esp_qbss_scoring;
-	struct per_slot_score oce_wan_scoring;
-};
-
-/*
- * Currently roam score delta value and min rssi values are sent
- * for 2 triggers
- */
-#define NUM_OF_ROAM_TRIGGERS 2
-#define IDLE_ROAM_TRIGGER 0
-#define BTM_ROAM_TRIGGER  1
-
-#define DEAUTH_MIN_RSSI 0
-#define BMISS_MIN_RSSI  1
-
-/**
- * enum roam_trigger_reason - Reason for triggering roam
- * ROAM_TRIGGER_REASON_NONE: Roam trigger reason none
- * ROAM_TRIGGER_REASON_PER:  Roam triggered due to packet error
- * ROAM_TRIGGER_REASON_BMISS: Roam triggered due to beacon miss
- * ROAM_TRIGGER_REASON_LOW_RSSI: Roam triggered due to low RSSI of current
- * connected AP.
- * ROAM_TRIGGER_REASON_HIGH_RSSI: Roam triggered because sta is connected to
- * a AP in 2.4GHz band and a better 5GHz AP is available
- * ROAM_TRIGGER_REASON_PERIODIC: Roam triggered as better AP was found during
- * periodic roam scan.
- * ROAM_TRIGGER_REASON_MAWC: Motion Aided WiFi Connectivity triggered roam.
- * ROAM_TRIGGER_REASON_DENSE: Roaming triggered due to dense environment
- * detected.
- * ROAM_TRIGGER_REASON_BACKGROUND: Roam triggered due to current AP having
- * poor rssi and scan candidate found in scan results provided by other
- * scan clients.
- * ROAM_TRIGGER_REASON_FORCED: Forced roam trigger.
- * ROAM_TRIGGER_REASON_BTM: Roam triggered due to AP sent BTM query with
- * Disassoc imminent bit set.
- * ROAM_TRIGGER_REASON_UNIT_TEST: Roam triggered due to unit test command.
- * ROAM_TRIGGER_REASON_BSS_LOAD: Roam triggered due to high channel utilization
- * in the current connected channel
- * ROAM_TRIGGER_REASON_DEAUTH: Roam triggered due to deauth received from the
- * current connected AP.
- * ROAM_TRIGGER_REASON_IDLE: Roam triggered due to inactivity of the device.
- * ROAM_TRIGGER_REASON_STA_KICKOUT: Roam triggered due to sta kickout event.
- * ROAM_TRIGGER_REASON_ESS_RSSI: Roam triggered due to ess rssi
- * ROAM_TRIGGER_REASON_MAX: Maximum number of roam triggers
- */
-enum roam_trigger_reason {
-	ROAM_TRIGGER_REASON_NONE = 0,
-	ROAM_TRIGGER_REASON_PER,
-	ROAM_TRIGGER_REASON_BMISS,
-	ROAM_TRIGGER_REASON_LOW_RSSI,
-	ROAM_TRIGGER_REASON_HIGH_RSSI,
-	ROAM_TRIGGER_REASON_PERIODIC,
-	ROAM_TRIGGER_REASON_MAWC,
-	ROAM_TRIGGER_REASON_DENSE,
-	ROAM_TRIGGER_REASON_BACKGROUND,
-	ROAM_TRIGGER_REASON_FORCED,
-	ROAM_TRIGGER_REASON_BTM,
-	ROAM_TRIGGER_REASON_UNIT_TEST,
-	ROAM_TRIGGER_REASON_BSS_LOAD,
-	ROAM_TRIGGER_REASON_DEAUTH,
-	ROAM_TRIGGER_REASON_IDLE,
-	ROAM_TRIGGER_REASON_STA_KICKOUT,
-	ROAM_TRIGGER_REASON_ESS_RSSI,
-	ROAM_TRIGGER_REASON_MAX,
-};
-
-/**
- * struct roam_trigger_min_rssi - structure to hold minimum rssi value of
- * candidate APs for each roam trigger
- * @min_rssi: minimum RSSI of candidate AP for the trigger reason specified in
- * trigger_id
- * @trigger_reason: Roam trigger reason
- */
-struct roam_trigger_min_rssi {
-	int32_t  min_rssi;
-	enum roam_trigger_reason trigger_reason;
-};
-
-/**
- * struct roam_trigger_score_delta - structure to hold roam score delta value of
- * candidate APs for each roam trigger
- * @roam_score_delta: delta value in score of the candidate AP for the roam
- * trigger mentioned in the trigger_id.
- * @trigger_reason: Roam trigger reason
- */
-struct roam_trigger_score_delta {
-	uint32_t roam_score_delta;
-	enum roam_trigger_reason trigger_reason;
-};
-
-/**
- * struct ap_profile_params - ap profile params
- * @vdev_id: vdev id
- * @profile: ap profile to match candidate
- * @param: scoring params to short candidate
- * @min_rssi_params: Min RSSI values for different roam triggers
- * @score_delta_params: Roam score delta values for different triggers
- */
-struct ap_profile_params {
-	uint8_t vdev_id;
-	struct ap_profile profile;
-	struct scoring_param param;
-	struct roam_trigger_min_rssi min_rssi_params[NUM_OF_ROAM_TRIGGERS];
-	struct roam_trigger_score_delta score_delta_param[NUM_OF_ROAM_TRIGGERS];
-};
-
-/**
  * struct wmi_roam_invoke_cmd - roam invoke command
  * @vdev_id: vdev id
  * @bssid: mac address
@@ -488,54 +232,6 @@ struct wmi_roam_invoke_cmd {
 	uint8_t *frame_buf;
 	uint8_t is_same_bssid;
 	bool forced_roaming;
-};
-
-/**
- * struct wmi_per_roam_config - per based roaming parameters
- * @enable: if PER based roaming is enabled/disabled
- * @tx_high_rate_thresh: high rate threshold at which PER based
- *     roam will stop in tx path
- * @rx_high_rate_thresh: high rate threshold at which PER based
- *     roam will stop in rx path
- * @tx_low_rate_thresh: rate below which traffic will be considered
- *     for PER based roaming in Tx path
- * @rx_low_rate_thresh: rate below which traffic will be considered
- *     for PER based roaming in Tx path
- * @tx_rate_thresh_percnt: % above which when traffic is below low_rate_thresh
- *     will be considered for PER based scan in tx path
- * @rx_rate_thresh_percnt: % above which when traffic is below low_rate_thresh
- *     will be considered for PER based scan in rx path
- * @per_rest_time: time for which PER based roam will wait once it
- *     issues a roam scan.
- * @tx_per_mon_time: Minimum time required to be considered as valid scenario
- *     for PER based roam in tx path
- * @rx_per_mon_time: Minimum time required to be considered as valid scenario
- *     for PER based roam in rx path
- * @min_candidate_rssi: Minimum RSSI threshold for candidate AP to be used for
- *     PER based roaming
- */
-struct wmi_per_roam_config {
-	uint32_t enable;
-	uint32_t tx_high_rate_thresh;
-	uint32_t rx_high_rate_thresh;
-	uint32_t tx_low_rate_thresh;
-	uint32_t rx_low_rate_thresh;
-	uint32_t tx_rate_thresh_percnt;
-	uint32_t rx_rate_thresh_percnt;
-	uint32_t per_rest_time;
-	uint32_t tx_per_mon_time;
-	uint32_t rx_per_mon_time;
-	uint32_t min_candidate_rssi;
-};
-
-/**
- * struct wmi_per_roam_config_req: PER based roaming config request
- * @vdev_id: vdev id on which config needs to be set
- * @per_config: PER config
- */
-struct wmi_per_roam_config_req {
-	uint8_t vdev_id;
-	struct wmi_per_roam_config per_config;
 };
 
 /**
@@ -568,30 +264,6 @@ struct hlp_params {
 };
 
 /**
- * struct wmi_btm_config - BSS Transition Management offload params
- * @vdev_id: VDEV on which the parameters should be applied
- * @btm_offload_config: BTM config
- * @btm_solicited_timeout: Timeout value for waiting BTM request
- * @btm_max_attempt_cnt: Maximum attempt for sending BTM query to ESS
- * @btm_sticky_time: Stick time after roaming to new AP by BTM
- * @disassoc_timer_threshold: threshold value till which the firmware can
- * wait before triggering the roam scan after receiving the disassoc iminent
- * @btm_query_bitmask: bitmask to btm query with candidate list
- * @btm_candidate_min_score: Minimum score of the AP to consider it as a
- * candidate if the roam trigger is BTM kickout.
- */
-struct wmi_btm_config {
-	uint8_t vdev_id;
-	uint32_t btm_offload_config;
-	uint32_t btm_solicited_timeout;
-	uint32_t btm_max_attempt_cnt;
-	uint32_t btm_sticky_time;
-	uint32_t disassoc_timer_threshold;
-	uint32_t btm_query_bitmask;
-	uint32_t btm_candidate_min_score;
-};
-
-/**
  * struct wmi_bss_load_config - BSS load trigger parameters
  * @vdev_id: VDEV on which the parameters should be applied
  * @bss_load_threshold: BSS load threshold after which roam scan should trigger
@@ -613,36 +285,6 @@ struct wmi_bss_load_config {
 };
 
 /**
- * struct wmi_idle_roam_params - Idle roam trigger parameters
- * @vdev_id: VDEV on which the parameters should be applied
- * @enable: Enable/Disable Idle roaming
- * @band: Connected AP band
- * @conn_ap_rssi_delta: Rssi change of connected AP in dBm
- * @conn_ap_min_rssi: If connected AP rssi is less than min rssi trigger roam
- * @inactive_time: Connected AP idle time
- * @data_pkt_count: Data packet count allowed during idle time
- */
-struct wmi_idle_roam_params {
-	uint32_t vdev_id;
-	bool enable;
-	uint32_t band;
-	uint32_t conn_ap_rssi_delta;
-	int32_t conn_ap_min_rssi;
-	uint32_t inactive_time;
-	uint32_t data_pkt_count;
-};
-
-/**
- * struct wmi_disconnect_roam_params - Emergency deauth/disconnect roam params
- * @vdev_id: VDEV on which the parameters should be applied
- * @enable: Enable or disable disconnect roaming.
- */
-struct wmi_disconnect_roam_params {
-	uint32_t vdev_id;
-	bool enable;
-};
-
-/**
  * struct wmi_roam_auth_status_params - WPA3 roam auth response status
  * parameters
  * @vdev_id: Vdev on which roam preauth is happening
@@ -661,45 +303,6 @@ struct wmi_roam_auth_status_params {
 };
 
 /**
- * @time_offset: time offset after 11k offload command to trigger a neighbor
- *	report request (in seconds)
- * @low_rssi_offset: Offset from rssi threshold to trigger a neighbor
- *	report request (in dBm)
- * @bmiss_count_trigger: Number of beacon miss events to trigger neighbor
- *	report request
- * @per_threshold_offset: offset from PER threshold to trigger neighbor
- *	report request (in %)
- * @neighbor_report_cache_timeout: timeout after which new trigger can enable
- *	sending of a neighbor report request (in seconds)
- * @max_neighbor_report_req_cap: max number of neighbor report requests that
- *	can be sent to the peer in the current session
- * @ssid: Current connect SSID info
- */
-struct wmi_11k_offload_neighbor_report_params {
-	uint32_t time_offset;
-	uint32_t low_rssi_offset;
-	uint32_t bmiss_count_trigger;
-	uint32_t per_threshold_offset;
-	uint32_t neighbor_report_cache_timeout;
-	uint32_t max_neighbor_report_req_cap;
-	struct wlan_ssid ssid;
-};
-
-/**
- * struct wmi_11k_offload_params - offload 11k features to FW
- * @vdev_id: vdev id
- * @offload_11k_bitmask: bitmask to specify offloaded features
- *	B0: Neighbor Report Request offload
- *	B1-B31: Reserved
- * @neighbor_report_params: neighbor report offload params
- */
-struct wmi_11k_offload_params {
-	uint32_t vdev_id;
-	uint32_t offload_11k_bitmask;
-	struct wmi_11k_offload_neighbor_report_params neighbor_report_params;
-};
-
-/**
  * struct wmi_invoke_neighbor_report_params - Invoke neighbor report request
  *	from IW to FW
  * @vdev_id: vdev id
@@ -710,17 +313,6 @@ struct wmi_invoke_neighbor_report_params {
 	uint32_t vdev_id;
 	uint32_t send_resp_to_host;
 	struct wlan_ssid ssid;
-};
-
-/**
- * struct roam_triggers - vendor configured roam triggers
- * @vdev_id: vdev id
- * @trigger_bitmap: vendor configured roam trigger bitmap as
- *		    defined @enum roam_control_trigger_reason
- */
-struct roam_triggers {
-	uint32_t vdev_id;
-	uint32_t trigger_bitmap;
 };
 
 /**

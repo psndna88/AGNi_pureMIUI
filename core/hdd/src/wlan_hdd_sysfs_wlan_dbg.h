@@ -15,48 +15,45 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_range_ext.h
+ * DOC: wlan_hdd_sysfs_wlan_dbg.h
  *
- * implementation for creating sysfs file range_ext
+ * Implementation for creating sysfs file wlan_dbg
  */
 
-#ifndef _WLAN_HDD_SYSFS_GET_RANGE_EXT_H
-#define _WLAN_HDD_SYSFS_GET_RANGE_EXT_H
+#ifndef _WLAN_HDD_SYSFS_WLAN_DBG_H
+#define _WLAN_HDD_SYSFS_WLAN_DBG_H
 
-#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_GET_RANGE_EXT)
+#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_SYSFS_WLAN_DBG)
 /**
- * hdd_sysfs_get_range_ext_create() - API to create range_ext
- * @adapter: pointer to adapter
+ * hdd_sysfs_wlan_dbg_create() - API to create wlan_dbg sysfs file
+ * @driver_kobject: sysfs driver kobject
  *
- * this file is created per adapter.
- * file path: /sys/class/net/wlanxx/range_ext
- *	where wlanxx is adapter name
+ * file path: /sys/kernel/wifi/wlan_dbg
  *
  * usage:
- *      cat /sys/class/net/wlanxx/range_ext
+ *      echo [arg_0] [arg_1] [arg_2] > wlan_dbg
  *
  * Return: 0 on success and errno on failure
  */
-int hdd_sysfs_get_range_ext_create(struct hdd_adapter *adapter);
+int hdd_sysfs_wlan_dbg_create(struct kobject *driver_kobject);
 
 /**
- * hdd_sysfs_get_range_ext_destroy() -
- *   API to destroy range_ext
- * @adapter: pointer to adapter
+ * hdd_sysfs_wlan_dbg_destroy() - API to destroy wlan_dbg sysfs file
  *
  * Return: none
  */
-void hdd_sysfs_get_range_ext_destroy(struct hdd_adapter *adapter);
+void
+hdd_sysfs_wlan_dbg_destroy(struct kobject *driver_kobject);
 #else
 static inline int
-hdd_sysfs_get_range_ext_create(struct hdd_adapter *adapter)
+hdd_sysfs_wlan_dbg_create(struct kobject *driver_kobject)
 {
 	return 0;
 }
 
 static inline void
-hdd_sysfs_get_range_ext_destroy(struct hdd_adapter *adapter)
+hdd_sysfs_wlan_dbg_destroy(struct kobject *driver_kobject)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_GET_RANGE_EXT_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_WLAN_DBG_H */

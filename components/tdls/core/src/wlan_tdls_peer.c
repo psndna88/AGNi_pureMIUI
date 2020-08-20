@@ -477,7 +477,7 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 	enum channel_state ch_state;
 	struct wlan_objmgr_pdev *pdev;
 	uint8_t chan_id;
-	enum band_info cur_band = BAND_ALL;
+	uint32_t cur_band;
 	qdf_freq_t ch_freq;
 
 	vdev_obj = peer->vdev_priv;
@@ -513,7 +513,7 @@ void tdls_extract_peer_state_param(struct tdls_peer_update_state *peer_param,
 		return;
 	}
 
-	if (BAND_2G == cur_band) {
+	if (BIT(REG_BAND_2G) == cur_band) {
 		tdls_err("sending the offchannel value as 0 as only 2g is supported");
 		peer_param->peer_cap.pref_off_channum = 0;
 		peer_param->peer_cap.opclass_for_prefoffchan = 0;
@@ -865,6 +865,14 @@ QDF_STATUS tdls_reset_peer(struct tdls_vdev_priv_obj *vdev_obj,
 				soc_obj, curr_peer->pref_off_chan_num,
 				soc_obj->tdls_configs.tdls_pre_off_chan_bw,
 				&reg_bw_offset);
+	}
+
+	if (curr_peer->is_peer_idle_timer_initialised) {
+		tdls_debug(QDF_MAC_ADDR_STR ": destroy  idle timer ",
+			   QDF_MAC_ADDR_ARRAY(curr_peer->peer_mac.bytes));
+		qdf_mc_timer_stop(&curr_peer->peer_idle_timer);
+		qdf_mc_timer_destroy(&curr_peer->peer_idle_timer);
+		curr_peer->is_peer_idle_timer_initialised = false;
 	}
 
 	tdls_set_peer_link_status(curr_peer, TDLS_LINK_IDLE,

@@ -236,7 +236,7 @@ QDF_STATUS ucfg_mlme_set_ht_mpdu_density(struct wlan_objmgr_psoc *psoc,
  */
 static inline
 QDF_STATUS ucfg_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
-					 uint8_t *band_capability)
+					 uint32_t *band_capability)
 {
 	return wlan_mlme_get_band_capability(psoc, band_capability);
 }
@@ -250,7 +250,7 @@ QDF_STATUS ucfg_mlme_get_band_capability(struct wlan_objmgr_psoc *psoc,
  */
 static inline
 QDF_STATUS ucfg_mlme_set_band_capability(struct wlan_objmgr_psoc *psoc,
-					 uint8_t band_capability)
+					 uint32_t band_capability)
 {
 	return wlan_mlme_set_band_capability(psoc, band_capability);
 }
@@ -323,6 +323,21 @@ QDF_STATUS ucfg_mlme_get_lpass_support(struct wlan_objmgr_psoc *psoc,
 				       bool *lpass_support)
 {
 	return wlan_mlme_get_lpass_support(psoc, lpass_support);
+}
+
+/**
+ * ucfg_mlme_get_wls_6ghz_cap() - Get the WiFi Location Service(WLS)
+ * 6ghz capability
+ * @psoc: pointer to psoc object
+ * @wls_6ghz_capable: Pointer to the variable from caller
+ *
+ * Return: void
+ */
+static inline
+void ucfg_mlme_get_wls_6ghz_cap(struct wlan_objmgr_psoc *psoc,
+				bool *wls_6ghz_capable)
+{
+	wlan_mlme_get_wls_6ghz_cap(psoc, wls_6ghz_capable);
 }
 
 /**
@@ -3773,6 +3788,18 @@ QDF_STATUS
 ucfg_mlme_get_etsi13_srd_chan_in_master_mode(struct wlan_objmgr_psoc *psoc,
 					     bool *value);
 
+/**
+ * ucfg_mlme_get_5dot9_ghz_chan_in_master_mode  - get fcc 5.9 GHz chan
+ * in master mode
+ * @psoc:   pointer to psoc object
+ * @value:  pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_5dot9_ghz_chan_in_master_mode(struct wlan_objmgr_psoc *psoc,
+					    bool *value);
+
 #ifdef SAP_AVOID_ACS_FREQ_LIST
 /**
  * ucfg_mlme_get_acs_avoid_freq_list  - get acs avoid frequency list
@@ -3841,6 +3868,17 @@ ucfg_mlme_get_indoor_channel_support(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 ucfg_mlme_get_scan_11d_interval(struct wlan_objmgr_psoc *psoc,
 				uint32_t *value);
+
+/**
+ * ucfg_mlme_get_nol_across_regdmn() - get scan 11d interval
+ * @psoc: pointer to psoc object
+ * @value:  Pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+
+QDF_STATUS
+ucfg_mlme_get_nol_across_regdmn(struct wlan_objmgr_psoc *psoc, bool *value);
 
 /**
  * ucfg_mlme_get_valid_channel_freq_list() - get valid channel

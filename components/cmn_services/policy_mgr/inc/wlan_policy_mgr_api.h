@@ -2099,6 +2099,7 @@ QDF_STATUS policy_mgr_get_pcl_for_existing_conn(
  * @psoc: PSOC object information
  * @weight: Pointer to the structure containing pcl, saved channel list and
  * weighed channel list
+ * @mode: Policy manager connection mode
  *
  * Provides the weightage for all valid channels. This compares the PCL list
  * with the valid channel list. The channels present in the PCL get their
@@ -2108,7 +2109,8 @@ QDF_STATUS policy_mgr_get_pcl_for_existing_conn(
  * Return: QDF_STATUS
  */
 QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
-		struct policy_mgr_pcl_chan_weights *weight);
+		struct policy_mgr_pcl_chan_weights *weight,
+		enum policy_mgr_con_mode mode);
 
 /**
  * policy_mgr_set_hw_mode_on_channel_switch() - Set hw mode
@@ -2136,31 +2138,6 @@ QDF_STATUS policy_mgr_set_hw_mode_on_channel_switch(
 QDF_STATUS policy_mgr_check_and_set_hw_mode_for_channel_switch(
 		struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		uint32_t ch_freq, enum policy_mgr_conn_update_reason reason);
-
-/**
- * policy_mgr_set_do_hw_mode_change_flag() - Set flag to indicate hw mode change
- * @psoc: PSOC object information
- * @flag: Indicate if hw mode change is required or not
- *
- * Set the flag to indicate whether a hw mode change is required after a
- * vdev up or not. Flag value of true indicates that a hw mode change is
- * required after vdev up.
- *
- * Return: None
- */
-void policy_mgr_set_do_hw_mode_change_flag(struct wlan_objmgr_psoc *psoc,
-		bool flag);
-
-/**
- * policy_mgr_is_hw_mode_change_after_vdev_up() - Check if hw
- * mode change is needed
- * @psoc: PSOC object information
- * Returns the flag which indicates if a hw mode change is required after
- * vdev up.
- *
- * Return: True if hw mode change is required, false otherwise
- */
-bool policy_mgr_is_hw_mode_change_after_vdev_up(struct wlan_objmgr_psoc *psoc);
 
 /**
  * policy_mgr_checkn_update_hw_mode_single_mac_mode() - Set hw_mode to SMM
@@ -3515,5 +3492,22 @@ bool policy_mgr_is_restart_sap_required(struct wlan_objmgr_psoc *psoc,
 					uint8_t vdev_id,
 					qdf_freq_t freq,
 					tQDF_MCC_TO_SCC_SWITCH_MODE scc_mode);
+
+/**
+ * policy_mgr_get_roam_enabled_sta_session_id() - get the session id of the sta
+ * on which roaming is enabled.
+ * @psoc: pointer to psoc object
+ * @vdev_id: vdev id of the requestor
+ *
+ * The function checks if any sta(other than the provided vdev_id) is present
+ * and has roaming enabled and return the session id of the sta with roaming
+ * enabled else if roaming is not enabled on any STA return
+ * WLAN_UMAC_VDEV_ID_MAX.
+ *
+ * Return: session id of STA on which roaming is enabled
+ */
+uint8_t policy_mgr_get_roam_enabled_sta_session_id(
+						struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id);
 
 #endif /* __WLAN_POLICY_MGR_API_H */

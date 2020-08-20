@@ -42,6 +42,8 @@
 /* No of sessions to be supported, and a session is for Infra, BT-AMP */
 #define CSR_IS_SESSION_VALID(mac, sessionId) \
 	((sessionId) < WLAN_MAX_VDEVS && \
+	 (mac != NULL) && \
+	 ((mac)->roam.roamSession != NULL) && \
 	 (mac)->roam.roamSession[(sessionId)].sessionActive)
 
 #define CSR_GET_SESSION(mac, sessionId) \
@@ -649,7 +651,10 @@ struct csr_roamstruct {
 	uint8_t RoamRssiDiff;
 	bool isWESModeEnabled;
 	uint32_t deauthRspStatus;
+#if defined(WLAN_LOGGING_SOCK_SVC_ENABLE) && \
+	defined(FEATURE_PKTLOG) && !defined(REMOVE_PKT_LOG)
 	qdf_mc_timer_t packetdump_timer;
+#endif
 	spinlock_t roam_state_lock;
 };
 
@@ -750,16 +755,17 @@ struct csr_roamstruct {
  * the 2.4 GHz band, meaning. it is NOT operating in the 5.0 GHz band.
  */
 #define CSR_IS_24_BAND_ONLY(mac) \
-	(BAND_2G == (mac)->mlme_cfg->gen.band)
+	(BIT(REG_BAND_2G) == (mac)->mlme_cfg->gen.band)
 
 #define CSR_IS_5G_BAND_ONLY(mac) \
-	(BAND_5G == (mac)->mlme_cfg->gen.band)
+	(BIT(REG_BAND_5G) == (mac)->mlme_cfg->gen.band)
 
 #define CSR_IS_RADIO_DUAL_BAND(mac) \
-	(BAND_ALL == (mac)->mlme_cfg->gen.band_capability)
+	((BIT(REG_BAND_2G) | BIT(REG_BAND_5G)) == \
+		(mac)->mlme_cfg->gen.band_capability)
 
 #define CSR_IS_RADIO_BG_ONLY(mac) \
-	(BAND_2G == (mac)->mlme_cfg->gen.band_capability)
+	(BIT(REG_BAND_2G) == (mac)->mlme_cfg->gen.band_capability)
 
 /*
  * this function returns true if the NIC is operating exclusively in the 5.0 GHz

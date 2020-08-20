@@ -218,6 +218,8 @@
 /* OWE DH Parameter element https://tools.ietf.org/html/rfc8110 */
 #define SIR_DH_PARAMETER_ELEMENT_EXT_EID 32
 
+#define SIR_MSCS_ELEMENT_EXT_EID 88
+
 /* OUI and type definition for WPA IE in network byte order */
 #define SIR_MAC_WPA_OUI             0x01F25000
 #define SIR_MAC_WSC_OUI             "\x00\x50\xf2\x04"
@@ -1479,9 +1481,9 @@ typedef struct sSirMacLinkReport {
 	uint8_t rsni;
 } tSirMacLinkReport, *tpSirMacLinkReport;
 
-#define BEACON_REPORT_MAX_IES 224       /* Refer IEEE 802.11k-2008, Table 7-31d */
+#define BEACON_REPORT_MAX_IES 215
 /* Max number of beacon reports per channel supported in the driver */
-#define MAX_BEACON_REPORTS 8
+#define MAX_BEACON_REPORTS 32
 /* Offset of IEs after Fixed Fields in Beacon Frame */
 #define BEACON_FRAME_IES_OFFSET 12
 
@@ -1537,7 +1539,7 @@ typedef struct sSirMacBeaconReport {
 
 } tSirMacBeaconReport, *tpSirMacBeaconReport;
 
-#define RADIO_REPORTS_MAX_IN_A_FRAME 4
+#define RADIO_REPORTS_MAX_IN_A_FRAME 7
 typedef struct sSirMacRadioMeasureReport {
 	uint8_t token;
 	uint8_t refused;

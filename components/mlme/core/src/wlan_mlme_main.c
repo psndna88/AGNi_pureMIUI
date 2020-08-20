@@ -299,6 +299,8 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_ENABLE_RTT_MAC_RANDOMIZATION);
 	gen->band_capability =
 		cfg_get(psoc, CFG_BAND_CAPABILITY);
+	if (!gen->band_capability)
+		gen->band_capability = (BIT(REG_BAND_2G) | BIT(REG_BAND_5G));
 	gen->band = gen->band_capability;
 	gen->select_5ghz_margin =
 		cfg_get(psoc, CFG_SELECT_5GHZ_MARGIN);
@@ -329,6 +331,7 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 	gen->debug_packet_log = cfg_get(psoc, CFG_ENABLE_DEBUG_PACKET_LOG);
 	gen->enable_deauth_to_disassoc_map =
 		cfg_get(psoc, CFG_ENABLE_DEAUTH_TO_DISASSOC_MAP);
+	gen->wls_6ghz_capable = cfg_get(psoc, CFG_WLS_6GHZ_CAPABLE);
 	mlme_init_pmf_cfg(psoc, gen);
 	mlme_init_lpass_support_cfg(psoc, gen);
 
@@ -1108,6 +1111,7 @@ static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
 	qdf_mem_zero(he_caps->he_ppet_5g, MLME_HE_PPET_LEN);
 	mlme_cfg->he_caps.he_mcs_12_13_supp_2g = 0;
 	mlme_cfg->he_caps.he_mcs_12_13_supp_5g = 0;
+	mlme_cfg->he_caps.enable_6g_sec_check = false;
 }
 #else
 static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
@@ -2185,6 +2189,8 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 	reg->self_gen_frm_pwr = cfg_get(psoc, CFG_SELF_GEN_FRM_PWR);
 	reg->etsi13_srd_chan_in_master_mode =
 			cfg_get(psoc, CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE);
+	reg->fcc_5dot9_ghz_chan_in_master_mode =
+			cfg_get(psoc, CFG_FCC_5DOT9_GHZ_CHAN_IN_MASTER_MODE);
 	reg->restart_beaconing_on_ch_avoid =
 			cfg_get(psoc, CFG_RESTART_BEACONING_ON_CH_AVOID);
 	reg->indoor_channel_support = cfg_get(psoc, CFG_INDOOR_CHANNEL_SUPPORT);
@@ -2196,6 +2202,8 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 	reg->ignore_fw_reg_offload_ind = cfg_get(
 						psoc,
 						CFG_IGNORE_FW_REG_OFFLOAD_IND);
+	reg->retain_nol_across_regdmn_update =
+		cfg_get(psoc, CFG_RETAIN_NOL_ACROSS_REG_DOMAIN);
 
 	qdf_uint8_array_parse(cfg_default(CFG_VALID_CHANNEL_LIST),
 			      channel_list,
@@ -2626,10 +2634,10 @@ static void
 mlme_print_roaming_state(uint8_t vdev_id, enum roam_offload_state cur_state,
 			 enum roam_offload_state new_state)
 {
-	mlme_legacy_debug("ROAM: vdev%d: [%s(%d)] --> [%s(%d)]",
-			  vdev_id, mlme_roam_state_to_string(cur_state),
-			  cur_state,
-			  mlme_roam_state_to_string(new_state), new_state);
+	mlme_nofl_debug("CM_RSO: vdev%d: [%s(%d)] --> [%s(%d)]",
+			vdev_id, mlme_roam_state_to_string(cur_state),
+			cur_state,
+			mlme_roam_state_to_string(new_state), new_state);
 
 	/* TODO: Try to print the state change requestor also */
 }
@@ -2834,13 +2842,13 @@ void mlme_set_roam_state(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 						    WLAN_MLME_OBJMGR_ID);
 
 	if (!vdev) {
-		mlme_legacy_err("vdev object is NULL");
+		mlme_err("vdev%d: vdev object is NULL", vdev_id);
 		return;
 	}
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv) {
-		mlme_legacy_err("vdev legacy private object is NULL");
+		mlme_err("vdev%d: vdev legacy private object is NULL", vdev_id);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 		return;
 	}

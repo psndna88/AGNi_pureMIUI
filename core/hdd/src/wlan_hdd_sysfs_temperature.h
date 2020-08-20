@@ -15,48 +15,48 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_stats.h
+ * DOC: wlan_hdd_sysfs_temperature.h
  *
- * implementation for creating sysfs file stats
+ * Implementation for creating sysfs file temperature
  */
 
-#ifndef _WLAN_HDD_SYSFS_GET_STATS_H
-#define _WLAN_HDD_SYSFS_GET_STATS_H
+#ifndef _WLAN_HDD_SYSFS_TEMPERATURE_H
+#define _WLAN_HDD_SYSFS_TEMPERATURE_H
 
-#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_GET_STATS)
+#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_SYSFS_TEMPERATURE)
 /**
- * hdd_sysfs_get_stats_create() - API to create stats sysfs file
+ * hdd_sysfs_temperature_create() - API to create temperature sysfs file
  * @adapter: pointer to adapter
  *
  * this file is created per adapter.
- * file path: /sys/class/net/wlanxx/stats
+ * file path: /sys/class/net/wlanxx/temperature
  *	where wlanxx is adapter name
  *
  * usage:
- *      cat /sys/class/net/wlanxx/stats
+ *      cat /sys/class/net/wlanxx/temperature
  *
  * Return: 0 on success and errno on failure
  */
-int hdd_sysfs_get_stats_create(struct hdd_adapter *adapter);
+int hdd_sysfs_temperature_create(struct hdd_adapter *adapter);
 
 /**
- * hdd_sysfs_get_stats_destroy() -
- *   API to destroy stats sysfs file
+ * hdd_sysfs_temperature_destroy() -
+ *   API to destroy temperature sysfs file
  * @adapter: pointer to adapter
  *
  * Return: none
  */
-void hdd_sysfs_get_stats_destroy(struct hdd_adapter *adapter);
+void hdd_sysfs_temperature_destroy(struct hdd_adapter *adapter);
 #else
 static inline int
-hdd_sysfs_get_stats_create(struct hdd_adapter *adapter)
+hdd_sysfs_temperature_create(struct hdd_adapter *adapter)
 {
 	return 0;
 }
 
 static inline void
-hdd_sysfs_get_stats_destroy(struct hdd_adapter *adapter)
+hdd_sysfs_temperature_destroy(struct hdd_adapter *adapter)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_GET_STATS_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_TEMPERATURE_H */

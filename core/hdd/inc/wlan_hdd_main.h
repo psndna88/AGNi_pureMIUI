@@ -111,8 +111,7 @@
 #include "qdf_periodic_work.h"
 #endif
 
-#if defined(CLD_PM_QOS) && \
-	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
+#ifdef CLD_PM_QOS
 #include <linux/pm_qos.h>
 #endif
 
@@ -1113,6 +1112,8 @@ struct hdd_context;
  *                          as per enum qca_disconnect_reason_codes
  * @upgrade_udp_qos_threshold: The threshold for user priority upgrade for
 			       any UDP packet.
+ * @gro_disallowed: Flag to check if GRO is enabled or disable for adapter
+ * @gro_flushed: Flag to indicate if GRO explicit flush is done or not
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1407,6 +1408,8 @@ struct hdd_adapter {
 	void *cookie;
 	bool response_expected;
 #endif
+	uint8_t gro_disallowed[DP_MAX_RX_THREADS];
+	uint8_t gro_flushed[DP_MAX_RX_THREADS];
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -1679,6 +1682,9 @@ struct hdd_fw_ver_info {
  * @country_change_work: work for updating vdev when country changes
  * @rx_aggregation: rx aggregation enable or disable state
  * @gro_force_flush: gro force flushed indication flag
+ * @current_pcie_gen_speed: current pcie gen speed
+ * @pm_qos_req: pm_qos request for all cpu cores
+ * @qos_cpu_mask: voted cpu core mask
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -1704,16 +1710,15 @@ struct hdd_context {
 	struct ieee80211_channel *channels_2ghz;
 	struct ieee80211_channel *channels_5ghz;
 
-#if (defined(CONFIG_BAND_6GHZ) && defined(CFG80211_6GHZ_BAND_SUPPORTED)) || \
-		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+#if defined(WLAN_FEATURE_11AX) && \
+	(defined(CFG80211_SBAND_IFTYPE_DATA_BACKPORT) || \
+	 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)))
 	struct ieee80211_sband_iftype_data *iftype_data_2g;
 	struct ieee80211_sband_iftype_data *iftype_data_5g;
-#endif
-
 #if defined(CONFIG_BAND_6GHZ) && (defined(CFG80211_6GHZ_BAND_SUPPORTED) || \
 		(KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE))
-
 	struct ieee80211_sband_iftype_data *iftype_data_6g;
+#endif
 #endif
 	/* Completion  variable to indicate Mc Thread Suspended */
 	struct completion mc_sus_event_var;
@@ -1989,8 +1994,10 @@ struct hdd_context {
 
 	qdf_time_t runtime_resume_start_time_stamp;
 	qdf_time_t runtime_suspend_done_time_stamp;
-#if defined(CLD_PM_QOS) && \
-	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
+#if defined(CLD_PM_QOS) && defined(CLD_DEV_PM_QOS)
+	struct dev_pm_qos_request pm_qos_req[NR_CPUS];
+	struct cpumask qos_cpu_mask;
+#elif defined(CLD_PM_QOS)
 	struct pm_qos_request pm_qos_req;
 #endif
 #ifdef WLAN_FEATURE_PKT_CAPTURE
@@ -2008,6 +2015,7 @@ struct hdd_context {
 		qdf_atomic_t rx_aggregation;
 		uint8_t gro_force_flush[DP_MAX_RX_THREADS];
 	} dp_agg_param;
+	int current_pcie_gen_speed;
 };
 
 /**
@@ -3708,6 +3716,8 @@ static inline void hdd_send_peer_status_ind_to_app(
 		return;
 	}
 
+	/* chan_id is obsoleted by mhz */
+	ch_info.chan_id = 0;
 	ch_info.mhz = chan_info->mhz;
 	ch_info.band_center_freq1 = chan_info->band_center_freq1;
 	ch_info.band_center_freq2 = chan_info->band_center_freq2;
@@ -4449,6 +4459,32 @@ static inline void hdd_sta_destroy_ctx_all(struct hdd_context *hdd_ctx)
 {
 }
 #endif
+
+#ifdef FEATURE_WLAN_RESIDENT_DRIVER
+extern char *country_code;
+extern int con_mode;
+extern const struct kernel_param_ops con_mode_ops;
+extern int con_mode_ftm;
+extern const struct kernel_param_ops con_mode_ftm_ops;
+#endif
+
+/**
+ * hdd_driver_load() - Perform the driver-level load operation
+ *
+ * Note: this is used in both static and DLKM driver builds
+ *
+ * Return: Errno
+ */
+int hdd_driver_load(void);
+
+/**
+ * hdd_driver_unload() - Performs the driver-level unload operation
+ *
+ * Note: this is used in both static and DLKM driver builds
+ *
+ * Return: None
+ */
+void hdd_driver_unload(void);
 
 /**
  * hdd_init_start_completion() - Init the completion variable to wait on ON/OFF

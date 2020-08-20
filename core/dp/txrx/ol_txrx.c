@@ -333,7 +333,7 @@ ol_txrx_get_vdev_by_peer_addr(struct cdp_pdev *ppdev,
 
 	if (!peer) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "PDEV not found for peer_addr:" QDF_MAC_ADDR_STR,
+			  "Peer not found for peer_addr:" QDF_MAC_ADDR_STR,
 			  QDF_MAC_ADDR_ARRAY(peer_addr.bytes));
 		return NULL;
 	}
@@ -5582,8 +5582,10 @@ static void ol_txrx_post_data_stall_event(
 	data_stall_info.recovery_type = recovery_type;
 
 	if (data_stall_info.data_stall_type ==
-				DATA_STALL_LOG_FW_RX_REFILL_FAILED)
+				DATA_STALL_LOG_FW_RX_REFILL_FAILED) {
 		htt_log_rx_ring_info(pdev->htt_pdev);
+		htt_rx_refill_failure(pdev->htt_pdev);
+	}
 
 	pdev->data_stall_detect_callback(&data_stall_info);
 }

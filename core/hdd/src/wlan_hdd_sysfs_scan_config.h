@@ -15,48 +15,46 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_set_radar.h
+ * DOC: wlan_hdd_sysfs_scan_config.h
  *
- * implementation for creating sysfs file radar
+ * implementation for creating sysfs file scan_config
  */
 
-#ifndef _WLAN_HDD_SYSFS_SET_RADAR_H
-#define _WLAN_HDD_SYSFS_SET_RADAR_H
+#ifndef _WLAN_HDD_SYSFS_SCAN_CONFIG_H
+#define _WLAN_HDD_SYSFS_SCAN_CONFIG_H
 
-#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_SET_RADAR)
+#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_SYSFS_SCAN_CFG)
 /**
- * wlan_hdd_sysfs_set_radar_create() - API to create radar sysfs file
- * (for sap mode only)
- * @adapter: hdd adapter
+ * hdd_sysfs_scan_config_create() - API to create scan_config sysfs file
+ * @driver_kobject: sysfs driver kobject
  *
- * this file is created per adapter.
- * file path: /sys/class/net/wlanxx/radar
- *                (wlanxx is adapter name)
+ * file path: /sys/kernel/wifi/scan_config
+ *
  * usage:
- *      echo [arg_0] > radar
+ *      echo [arg_0] [arg_1] [arg_2]> scan_config
  *
  * Return: 0 on success and errno on failure
  */
-int hdd_sysfs_set_radar_create(struct hdd_adapter *adapter);
+int hdd_sysfs_scan_config_create(struct kobject *driver_kobject);
 
 /**
- * hdd_sysfs_set_radar_destroy() -
- *   API to destroy radar sysfs file
- * @adapter: pointer to adapter
+ * hdd_sysfs_scan_config_destroy() -
+ *   API to destroy scan_config sysfs file
  *
  * Return: none
  */
-void hdd_sysfs_set_radar_destroy(struct hdd_adapter *adapter);
+void
+hdd_sysfs_scan_config_destroy(struct kobject *driver_kobject);
 #else
 static inline int
-hdd_sysfs_set_radar_create(struct hdd_adapter *adapter)
+hdd_sysfs_scan_config_create(struct kobject *driver_kobject)
 {
 	return 0;
 }
 
 static inline void
-hdd_sysfs_set_radar_destroy(struct hdd_adapter *adapter)
+hdd_sysfs_scan_config_destroy(struct kobject *driver_kobject)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_SET_RADAR_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_SCAN_CONFIG_H */

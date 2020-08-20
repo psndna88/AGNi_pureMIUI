@@ -15,24 +15,42 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_temp.c
+ * DOC: wlan_hdd_sysfs_tx_stbc.c
  *
- * implementation for creating sysfs file temp
+ * implementation for creating sysfs file tx_stbc
  */
 
 #include <wlan_hdd_includes.h>
 #include <wlan_hdd_sysfs.h>
 #include "osif_vdev_sync.h"
-#include <wlan_hdd_sysfs_get_temp.h>
-#include <wlan_hdd_stats.h>
+#include "sme_api.h"
+#include <wlan_hdd_sysfs_tx_stbc.h>
+
+static int hdd_sysfs_get_tx_stbc(struct hdd_adapter *adapter, int *value)
+{
+	mac_handle_t mac_handle = adapter->hdd_ctx->mac_handle;
+	int ret;
+
+	hdd_enter();
+	ret = sme_get_ht_config(mac_handle, adapter->vdev_id,
+				WNI_CFG_HT_CAP_INFO_TX_STBC);
+	if (ret < 0) {
+		hdd_err("Failed to get TX STBC value");
+	} else {
+		*value = ret;
+		ret = 0;
+	}
+
+	return ret;
+}
 
 static ssize_t
-__hdd_sysfs_get_temp_show(struct net_device *net_dev, char *buf)
+__hdd_sysfs_tx_stbc_show(struct net_device *net_dev, char *buf)
 {
 	struct hdd_adapter *adapter = netdev_priv(net_dev);
 	struct hdd_context *hdd_ctx;
-	int value;
 	int ret;
+	int value;
 
 	if (hdd_validate_adapter(adapter)) {
 		hdd_err_rl("adapter validate fail");
@@ -47,11 +65,9 @@ __hdd_sysfs_get_temp_show(struct net_device *net_dev, char *buf)
 	if (!wlan_hdd_validate_modules_state(hdd_ctx))
 		return -EINVAL;
 
-	hdd_debug("SYSFS_GET_TEMPERATURE");
-	ret = wlan_hdd_get_temperature(adapter, &value);
-
+	ret = hdd_sysfs_get_tx_stbc(adapter, &value);
 	if (ret) {
-		hdd_err_rl("GET_TEMP failed: %d", ret);
+		hdd_err_rl("Get_TX_STBC failed %d", ret);
 		return ret;
 	}
 
@@ -59,9 +75,9 @@ __hdd_sysfs_get_temp_show(struct net_device *net_dev, char *buf)
 }
 
 static ssize_t
-hdd_sysfs_get_temp_show(struct device *dev,
-			struct device_attribute *attr,
-			char *buf)
+hdd_sysfs_tx_stbc_show(struct device *dev,
+		       struct device_attribute *attr,
+		       char *buf)
 {
 	struct net_device *net_dev = container_of(dev, struct net_device, dev);
 	struct osif_vdev_sync *vdev_sync;
@@ -71,29 +87,29 @@ hdd_sysfs_get_temp_show(struct device *dev,
 	if (err_size)
 		return err_size;
 
-	err_size = __hdd_sysfs_get_temp_show(net_dev, buf);
+	err_size = __hdd_sysfs_tx_stbc_show(net_dev, buf);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return err_size;
 }
 
-static DEVICE_ATTR(temperature, 0440,
-		   hdd_sysfs_get_temp_show, NULL);
+static DEVICE_ATTR(tx_stbc, 0440,
+		   hdd_sysfs_tx_stbc_show, NULL);
 
-int hdd_sysfs_get_temp_create(struct hdd_adapter *adapter)
+int hdd_sysfs_tx_stbc_create(struct hdd_adapter *adapter)
 {
 	int error;
 
 	error = device_create_file(&adapter->dev->dev,
-				   &dev_attr_temperature);
+				   &dev_attr_tx_stbc);
 	if (error)
-		hdd_err("could not create temp sysfs file");
+		hdd_err("could not create tx_stbc sysfs file");
 
 	return error;
 }
 
-void hdd_sysfs_get_temp_destroy(struct hdd_adapter *adapter)
+void hdd_sysfs_tx_stbc_destroy(struct hdd_adapter *adapter)
 {
-	device_remove_file(&adapter->dev->dev, &dev_attr_temperature);
+	device_remove_file(&adapter->dev->dev, &dev_attr_tx_stbc);
 }

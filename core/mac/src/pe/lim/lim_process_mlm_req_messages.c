@@ -993,15 +993,6 @@ lim_process_mlm_disassoc_req_ntf(struct mac_context *mac_ctx,
 
 		}
 		break;
-	case eLIM_AP_ROLE:
-	case eLIM_P2P_DEVICE_GO:
-		if (true ==
-			 mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running) {
-			pe_err("CAC timer is running, drop disassoc from going out");
-			mlm_disassoccnf.resultCode = eSIR_SME_SUCCESS;
-			goto end;
-		}
-		break;
 	default:
 		break;
 	} /* end switch (GET_LIM_SYSTEM_ROLE(session)) */
@@ -1362,16 +1353,6 @@ lim_process_mlm_deauth_req_ntf(struct mac_context *mac_ctx,
 			goto end;
 		}
 		break;
-	case eLIM_AP_ROLE:
-	case eLIM_P2P_DEVICE_GO:
-		if (true ==
-			mac_ctx->sap.SapDfsInfo.is_dfs_cac_timer_running) {
-			pe_err("CAC timer is running, drop disassoc from going out");
-			mlm_deauth_cnf.resultCode = eSIR_SME_SUCCESS;
-			goto end;
-		}
-		break;
-
 	default:
 		break;
 	} /* end switch (GET_LIM_SYSTEM_ROLE(session)) */
@@ -1957,6 +1938,7 @@ void lim_process_assoc_failure_timeout(struct mac_context *mac_ctx,
 			session->peSessionId, session->limMlmState));
 		/* Change timer for future activations */
 		lim_deactivate_and_change_timer(mac_ctx, eLIM_ASSOC_FAIL_TIMER);
+		lim_stop_pmfcomeback_timer(session);
 		/*
 		 * Free up buffer allocated for JoinReq held by
 		 * MLM state machine

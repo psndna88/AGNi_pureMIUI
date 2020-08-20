@@ -42,10 +42,12 @@
 #include <sme_api.h>
 #include <sir_api.h>
 #endif
+#include "wlan_hdd_object_manager.h"
 #include "hif.h"
 #include "wlan_scan_ucfg_api.h"
 #include "wlan_reg_ucfg_api.h"
 #include "qdf_func_tracker.h"
+#include "wlan_cm_roam_ucfg_api.h"
 
 #if defined(LINUX_QCMBR)
 #define SIOCIOCTLTX99 (SIOCDEVPRIVATE+13)
@@ -514,6 +516,32 @@ QDF_STATUS hdd_wma_send_fastreassoc_cmd(struct hdd_adapter *adapter,
 }
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
+/**
+ * hdd_is_fast_reassoc_allowed  - check if roaming offload init is
+ * done. If roaming offload is not initialized, don't allow roam invoke
+ * to be triggered.
+ * @psoc: Pointer to psoc object
+ * @vdev_id: vdev_id
+ *
+ * This API should return true if kernel version is less than 4.9, because
+ * the earlier versions don't have the fix to handle reassociation failure.
+ *
+ * Return: true if roaming module initialization is done else false
+ */
+static bool
+hdd_is_fast_reassoc_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	return MLME_IS_ROAM_INITIALIZED(psoc, vdev_id);
+}
+#else
+static inline bool
+hdd_is_fast_reassoc_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	return true;
+}
+#endif
+
 int hdd_reassoc(struct hdd_adapter *adapter, const uint8_t *bssid,
 		uint32_t ch_freq, const handoff_src src)
 {
@@ -572,6 +600,14 @@ int hdd_reassoc(struct hdd_adapter *adapter, const uint8_t *bssid,
 
 	/* Proceed with reassoc */
 	if (roaming_offload_enabled(hdd_ctx)) {
+		if (!hdd_is_fast_reassoc_allowed(hdd_ctx->psoc,
+						adapter->vdev_id)) {
+			hdd_err("LFR3: vdev[%d] Roaming module is not initialized",
+				adapter->vdev_id);
+			ret = -EPERM;
+			goto exit;
+		}
+
 		status = hdd_wma_send_fastreassoc_cmd(adapter, bssid, ch_freq);
 		if (status != QDF_STATUS_SUCCESS) {
 			hdd_err("Failed to send fast reassoc cmd");
@@ -709,6 +745,19 @@ static int hdd_parse_reassoc(struct hdd_adapter *adapter, const char *command,
 	return ret;
 }
 
+#ifdef ROAM_OFFLOAD_V1
+static inline
+void hdd_abort_roam_scan(struct hdd_context *hdd_ctx, uint8_t vdev_id)
+{
+	ucfg_cm_abort_roam_scan(hdd_ctx->pdev, vdev_id);
+}
+#else
+static inline
+void hdd_abort_roam_scan(struct hdd_context *hdd_ctx, uint8_t vdev_id)
+{
+	sme_abort_roam_scan(hdd_ctx->mac_handle, vdev_id);
+}
+#endif
 /**
  * hdd_sendactionframe() - send a userspace-supplied action frame
  * @adapter:	Adapter upon which the command was received
@@ -804,8 +853,7 @@ hdd_sendactionframe(struct hdd_adapter *adapter, const uint8_t *bssid,
 				 * may cause long delays in sending action
 				 * frames.
 				 */
-				sme_abort_roam_scan(hdd_ctx->mac_handle,
-						    adapter->vdev_id);
+				hdd_abort_roam_scan(hdd_ctx, adapter->vdev_id);
 			} else {
 				/*
 				 * 0 is accepted as current home channel,
@@ -2582,6 +2630,7 @@ static int drv_cmd_set_band(struct hdd_adapter *adapter,
 {
 	int err;
 	uint8_t band;
+	uint32_t band_bitmap;
 
 	/*
 	 * Parse the band value passed from userspace. The first 8 bytes
@@ -2593,7 +2642,9 @@ static int drv_cmd_set_band(struct hdd_adapter *adapter,
 		return err;
 	}
 
-	return hdd_reg_set_band(adapter->dev, band);
+	band_bitmap = hdd_reg_legacy_setband_to_reg_wifi_band_bitmap(band);
+
+	return hdd_reg_set_band(adapter->dev, band_bitmap);
 }
 
 static int drv_cmd_set_wmmps(struct hdd_adapter *adapter,
@@ -5804,6 +5855,7 @@ hdd_set_dynamic_antenna_mode(struct hdd_adapter *adapter,
 	QDF_STATUS status;
 	mac_handle_t mac_handle;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
 
 	mac_handle = hdd_ctx->mac_handle;
 	if (!mac_handle) {
@@ -5817,15 +5869,24 @@ hdd_set_dynamic_antenna_mode(struct hdd_adapter *adapter,
 		return -EINVAL;
 	}
 
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		return -EINVAL;
+	}
+
 	qdf_mem_zero(&user_cfg, sizeof(user_cfg));
 	for (band = NSS_CHAINS_BAND_2GHZ; band < NSS_CHAINS_BAND_MAX; band++) {
 		status = hdd_populate_vdev_chains(&user_cfg,
 						  num_rx_chains,
-						  num_tx_chains, band,
-						  adapter->vdev);
-		if (QDF_IS_STATUS_ERROR(status))
+						  num_tx_chains, band, vdev);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_objmgr_put_vdev(vdev);
 			return -EINVAL;
+		}
 	}
+	hdd_objmgr_put_vdev(vdev);
+
 	status = sme_nss_chains_update(mac_handle,
 				       &user_cfg,
 				       adapter->vdev_id);
@@ -6011,12 +6072,19 @@ static inline int drv_cmd_get_antenna_mode(struct hdd_adapter *adapter,
 	uint32_t antenna_mode = 0;
 	char extra[32];
 	uint8_t len = 0;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		return -EINVAL;
+	}
 
 	antenna_mode = hdd_ctx->current_antenna_mode;
 	/* Overwrite this antenna mode if dynamic vdev chains are supported */
 	hdd_get_dynamic_antenna_mode(&antenna_mode,
-				     hdd_ctx->dynamic_nss_chains_support,
-				     adapter->vdev);
+				     hdd_ctx->dynamic_nss_chains_support, vdev);
+	hdd_objmgr_put_vdev(vdev);
 	len = scnprintf(extra, sizeof(extra), "%s %d", command,
 			antenna_mode);
 	len = QDF_MIN(priv_data->total_len, len + 1);

@@ -15,15 +15,15 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_set_range_ext.h
+ * DOC: wlan_hdd_sysfs_range_ext.h
  *
- * implementation for creating sysfs file range_ext
+ * Implementation for creating sysfs file range_ext
  */
 
-#ifndef _WLAN_HDD_SYSFS_SET_RANGE_EXT_H
-#define _WLAN_HDD_SYSFS_SET_RANGE_EXT_H
+#ifndef _WLAN_HDD_SYSFS_RANGE_EXT_H
+#define _WLAN_HDD_SYSFS_RANGE_EXT_H
 
-#if defined(WLAN_SYSFS) && defined(WLAN_SET_RANGE_EXT)
+#if defined(WLAN_SYSFS) && defined(WLAN_SYSFS_RANGE_EXT)
 /**
  * wlan_hdd_sysfs_range_ext_create() - API to create range_ext
  * @adapter: hdd adapter
@@ -56,4 +56,4 @@ hdd_sysfs_range_ext_destroy(struct hdd_adapter *adapter)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_SET_RANGE_EXT_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_RANGE_EXT_H */

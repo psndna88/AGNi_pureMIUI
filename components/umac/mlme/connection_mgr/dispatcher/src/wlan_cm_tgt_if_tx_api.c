@@ -38,14 +38,14 @@ wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 	struct wmi_pcl_chan_weights *weights;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	uint8_t band_capability;
+	uint32_t band_capability;
 	uint16_t i;
 
 	/*
 	 * If vdev_id is WLAN_UMAC_VDEV_ID_MAX, then PDEV pcl command
 	 * needs to be sent
 	 */
-	if (pcl_req && pcl_req->vdev_id == WLAN_UMAC_VDEV_ID_MAX)
+	if (!pcl_req || pcl_req->vdev_id == WLAN_UMAC_VDEV_ID_MAX)
 		return QDF_STATUS_E_FAILURE;
 
 	status = ucfg_mlme_get_band_capability(psoc, &band_capability);
@@ -85,7 +85,8 @@ wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
 		weights->saved_num_chan = 0;
 
 	status = policy_mgr_get_valid_chan_weights(
-			psoc, (struct policy_mgr_pcl_chan_weights *)weights);
+			psoc, (struct policy_mgr_pcl_chan_weights *)weights,
+			PM_STA_MODE);
 
 	qdf_mem_free(freq_list);
 
@@ -94,13 +95,13 @@ wlan_cm_roam_send_set_vdev_pcl(struct wlan_objmgr_psoc *psoc,
 			wma_map_pcl_weights(weights->weighed_valid_list[i]);
 
 		/* Dont allow roaming on 2G when 5G_ONLY configured */
-		if ((band_capability == BAND_5G ||
+		if ((band_capability == BIT(REG_BAND_5G) ||
 		     pcl_req->band_mask == BIT(REG_BAND_5G)) &&
 		     WLAN_REG_IS_24GHZ_CH_FREQ(weights->saved_chan_list[i]))
 			weights->weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
 
-		if ((band_capability == BAND_2G ||
+		if ((band_capability == BIT(REG_BAND_2G) ||
 		     pcl_req->band_mask == BIT(REG_BAND_2G)) &&
 		    !WLAN_REG_IS_24GHZ_CH_FREQ(weights->saved_chan_list[i]))
 			weights->weighed_valid_list[i] =
@@ -126,4 +127,207 @@ end:
 
 	return status;
 }
+#endif
+
+#ifdef ROAM_OFFLOAD_V1
+#if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
+QDF_STATUS wlan_cm_tgt_send_roam_offload_init(struct wlan_objmgr_psoc *psoc,
+					      uint8_t vdev_id, bool is_init)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_roam_offload_init_params init_msg = {0};
+	bool disable_4way_hs_offload, bmiss_skip_full_scan;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_offload_init_req) {
+		mlme_err("CM_RSO: vdev%d send_roam_offload_init_req is NULL",
+			 vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	init_msg.vdev_id = vdev_id;
+	if (is_init) {
+		init_msg.roam_offload_flag = WLAN_ROAM_FW_OFFLOAD_ENABLE |
+				 WLAN_ROAM_BMISS_FINAL_SCAN_ENABLE;
+
+		wlan_mlme_get_4way_hs_offload(psoc, &disable_4way_hs_offload);
+		if (disable_4way_hs_offload)
+			init_msg.roam_offload_flag |=
+				WLAN_ROAM_SKIP_EAPOL_4WAY_HANDSHAKE;
+
+		wlan_mlme_get_bmiss_skip_full_scan_value(psoc,
+							 &bmiss_skip_full_scan);
+		if (bmiss_skip_full_scan)
+			init_msg.roam_offload_flag |=
+				WLAN_ROAM_BMISS_FINAL_SCAN_TYPE;
+	}
+	mlme_debug("vdev_id:%d, is_init:%d, flag:%d",  vdev_id, is_init,
+		   init_msg.roam_offload_flag);
+
+	status = roam_tx_ops.send_roam_offload_init_req(vdev, &init_msg);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev%d fail to send rso init", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+QDF_STATUS wlan_cm_tgt_send_roam_start_req(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   struct wlan_roam_start_config *req)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_start_req) {
+		mlme_err("CM_RSO: vdev %d send_roam_start_req is NULL",
+			 vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops.send_roam_start_req(vdev, req);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev %d fail to send roam start", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+QDF_STATUS wlan_cm_tgt_send_roam_stop_req(struct wlan_objmgr_psoc *psoc,
+					 uint8_t vdev_id,
+					 struct wlan_roam_stop_config *req)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_stop_offload) {
+		mlme_err("CM_RSO: vdev %d send_roam_stop_offload is NULL",
+			 vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops.send_roam_stop_offload(vdev, req);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev %d fail to send roam stop", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+QDF_STATUS wlan_cm_tgt_send_roam_update_req(struct wlan_objmgr_psoc *psoc,
+					    uint8_t vdev_id,
+					    struct wlan_roam_update_config *req)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_update_config) {
+		mlme_err("CM_RSO: vdev %d send_roam_update_config is NULL",
+			 vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops.send_roam_update_config(vdev, req);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev %d fail to send roam update", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+QDF_STATUS wlan_cm_tgt_send_roam_abort_req(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_abort) {
+		mlme_err("CM_RSO: vdev %d send_roam_abort is NULL", vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops.send_roam_abort(vdev, vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev %d fail to send roam abort", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+QDF_STATUS wlan_cm_tgt_send_roam_per_config(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id,
+					   struct wlan_per_roam_config_req *req)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = GET_CM_ROAM_TX_OPS_FROM_VDEV(vdev);
+	if (!roam_tx_ops.send_roam_per_config) {
+		mlme_err("CM_RSO: vdev %d send_roam_per_config is NULL",
+			 vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops.send_roam_per_config(vdev, req);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("CM_RSO: vdev %d fail to send per config", vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
+
+#endif
 #endif

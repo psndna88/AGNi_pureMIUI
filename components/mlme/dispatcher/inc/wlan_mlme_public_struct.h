@@ -48,7 +48,7 @@
 #define TIME_STRING_LEN            24
 
 #define ROAM_CHANNEL_BUF_SIZE      300
-#define LINE_STR "========================================="
+#define LINE_STR "=============================================================="
 /*
  * MLME_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_FW_DEF + 1 is
  * assumed to be the default fw supported BF antennas, if fw
@@ -891,6 +891,7 @@ struct wlan_mlme_he_caps {
 	uint32_t he_sta_obsspd;
 	uint16_t he_mcs_12_13_supp_2g;
 	uint16_t he_mcs_12_13_supp_5g;
+	bool enable_6g_sec_check;
 };
 #endif
 
@@ -1109,10 +1110,11 @@ struct wlan_mlme_chainmask {
  * @peer_create_conf_support: Peer create confirmation command support
  * @dual_sta_roam_fw_support: Firmware support for dual sta roaming feature
  * @sae_connect_retries: sae connect retry bitmask
+ * @wls_6ghz_capable: wifi location service(WLS) is 6ghz capable
  */
 struct wlan_mlme_generic {
-	enum band_info band_capability;
-	enum band_info band;
+	uint32_t band_capability;
+	uint32_t band;
 	uint8_t select_5ghz_margin;
 	uint8_t sub_20_chan_width;
 	uint8_t ito_repeat_count;
@@ -1150,6 +1152,7 @@ struct wlan_mlme_generic {
 	bool peer_create_conf_support;
 	bool dual_sta_roam_fw_support;
 	uint32_t sae_connect_retries;
+	bool wls_6ghz_capable;
 };
 
 /*
@@ -1337,6 +1340,7 @@ enum station_keepalive_method {
  * @force_rsne_override:            Force rsnie override from user
  * @single_tid:                     Set replay counter for all TID
  * @allow_tpc_from_ap:              Support for AP power constraint
+ * @usr_disabled_roaming:           User config for roaming disable
  */
 struct wlan_mlme_sta_cfg {
 	uint32_t sta_keep_alive_period;
@@ -1356,6 +1360,7 @@ struct wlan_mlme_sta_cfg {
 	bool single_tid;
 	bool allow_tpc_from_ap;
 	enum station_keepalive_method sta_keepalive_method;
+	bool usr_disabled_roaming;
 };
 
 /**
@@ -2138,6 +2143,7 @@ struct wlan_mlme_mwc {
  * @self_gen_frm_pwr: self-generated frame power in tx chain mask
  * for CCK rates
  * @etsi13_srd_chan_in_master_mode: etsi13 srd chan in master mode
+ * @fcc_5dot9_ghz_chan_in_master_mode: fcc 5.9 GHz chan in master mode
  * @restart_beaconing_on_ch_avoid: restart beaconing on ch avoid
  * @indoor_channel_support: indoor channel support
  * @scan_11d_interval: scan 11d interval
@@ -2150,10 +2156,12 @@ struct wlan_mlme_mwc {
  * @ignore_fw_reg_offload_ind: Ignore fw regulatory offload indication
  * @enable_pending_chan_list_req: enables/disables scan channel
  * list command to FW till the current scan is complete.
+ * @retain_nol_across_regdmn_update: Retain the NOL list across the regdomain.
  */
 struct wlan_mlme_reg {
 	uint32_t self_gen_frm_pwr;
 	bool etsi13_srd_chan_in_master_mode;
+	bool fcc_5dot9_ghz_chan_in_master_mode;
 	enum restart_beaconing_on_ch_avoid_rule
 		restart_beaconing_on_ch_avoid;
 	bool indoor_channel_support;
@@ -2167,6 +2175,7 @@ struct wlan_mlme_reg {
 #endif
 	bool ignore_fw_reg_offload_ind;
 	bool enable_pending_chan_list_req;
+	bool retain_nol_across_regdmn_update;
 };
 
 /**
@@ -2289,12 +2298,16 @@ struct wlan_mlme_sae_single_pmk {
  * @scan:               Roam scan related data structure.
  * @result:             Roam result parameters.
  * @data_11kv:          Neighbor report/BTM parameters.
+ * @btm_rsp:            BTM response information
+ * @roam_init_info:     Roam initial info
  */
 struct mlme_roam_debug_info {
 	struct wmi_roam_trigger_info trigger;
 	struct wmi_roam_scan_data scan;
 	struct wmi_roam_result result;
 	struct wmi_neighbor_report_data data_11kv;
+	struct roam_btm_response_data btm_rsp;
+	struct roam_initial_data roam_init_info;
 };
 
 /**

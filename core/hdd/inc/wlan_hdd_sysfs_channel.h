@@ -15,48 +15,47 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_sta_info.h
+ * DOC: wlan_hdd_sysfs_channel.h
  *
- * implementation for creating sysfs file sta_info
+ * Implementation for creating sysfs file channel
  */
 
-#ifndef _WLAN_HDD_SYSFS_GET_STA_INFO_H
-#define _WLAN_HDD_SYSFS_GET_STA_INFO_H
+#ifndef _WLAN_HDD_SYSFS_CHANNEL_H
+#define _WLAN_HDD_SYSFS_CHANNEL_H
 
-#if defined(WLAN_SYSFS) && defined(WLAN_SYSFS_GET_STA_INFO)
+#if defined(WLAN_SYSFS) && defined(WLAN_SYSFS_CHANNEL)
 /**
- * hdd_sysfs_get_sta_info_interface_create() - API to create sta_info sysfs
- * interface
+ * hdd_sysfs_channel_interface_create() - API to create channel sysfs
  * @adapter: pointer to adapter
  *
  * this file is created for SAP adapter.
- * file path: /sys/class/net/wlanxx/sta_info
+ * file path: /sys/class/net/wlanxx/channel
  *	where wlanxx is adapter name
  *
  * usage:
- *      cat /sys/class/net/wlanxx/sta_info
+ *      cat /sys/class/net/wlanxx/channel
  *
  * Return: none
  */
-void hdd_sysfs_get_sta_info_interface_create(struct hdd_adapter *adapter);
+void hdd_sysfs_channel_interface_create(struct hdd_adapter *adapter);
 
 /**
- * hdd_sysfs_get_sta_info_interface_destroy() - API to destroy sta_info
+ * hdd_sysfs_channel_interface_destroy() - API to destroy channel
  * @adapter: pointer to adapter
  *
  * Return: none
  */
-void hdd_sysfs_get_sta_info_interface_destroy(struct hdd_adapter *adapter);
+void hdd_sysfs_channel_interface_destroy(struct hdd_adapter *adapter);
 
 #else
 static inline
-void hdd_sysfs_get_sta_info_interface_create(struct hdd_adapter *adapter)
+void hdd_sysfs_channel_interface_create(struct hdd_adapter *adapter)
 {
 }
 
 static inline
-void hdd_sysfs_get_sta_info_interface_destroy(struct hdd_adapter *adapter)
+void hdd_sysfs_channel_interface_destroy(struct hdd_adapter *adapter)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_GET_STA_INFO_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_CHANNEL_H */

@@ -15,48 +15,48 @@
  */
 
 /**
- * DOC: wlan_hdd_sysfs_get_temp.h
+ * DOC: wlan_hdd_sysfs_radar.h
  *
- * implementation for creating sysfs file temperature
+ * implementation for creating sysfs file radar
  */
 
-#ifndef _WLAN_HDD_SYSFS_GET_TEMP_H
-#define _WLAN_HDD_SYSFS_GET_TEMP_H
+#ifndef _WLAN_HDD_SYSFS_RADAR_H
+#define _WLAN_HDD_SYSFS_RADAR_H
 
-#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_GET_TEMP)
+#if defined(WLAN_SYSFS) && defined(CONFIG_WLAN_SYSFS_RADAR)
 /**
- * hdd_sysfs_get_temp_create() - API to create temperature sysfs file
- * @adapter: pointer to adapter
+ * wlan_hdd_sysfs_radar_create() - API to create radar sysfs file
+ * (for sap mode only)
+ * @adapter: hdd adapter
  *
  * this file is created per adapter.
- * file path: /sys/class/net/wlanxx/temperature
- *	where wlanxx is adapter name
- *
+ * file path: /sys/class/net/wlanxx/radar
+ *                (wlanxx is adapter name)
  * usage:
- *      cat /sys/class/net/wlanxx/temperature
+ *      echo [arg_0] > radar
  *
  * Return: 0 on success and errno on failure
  */
-int hdd_sysfs_get_temp_create(struct hdd_adapter *adapter);
+int hdd_sysfs_radar_create(struct hdd_adapter *adapter);
 
 /**
- * hdd_sysfs_get_temp_destroy() -
- *   API to destroy temperature sysfs file
+ * hdd_sysfs_radar_destroy() -
+ *   API to destroy radar sysfs file
  * @adapter: pointer to adapter
  *
  * Return: none
  */
-void hdd_sysfs_get_temp_destroy(struct hdd_adapter *adapter);
+void hdd_sysfs_radar_destroy(struct hdd_adapter *adapter);
 #else
 static inline int
-hdd_sysfs_get_temp_create(struct hdd_adapter *adapter)
+hdd_sysfs_radar_create(struct hdd_adapter *adapter)
 {
 	return 0;
 }
 
 static inline void
-hdd_sysfs_get_temp_destroy(struct hdd_adapter *adapter)
+hdd_sysfs_radar_destroy(struct hdd_adapter *adapter)
 {
 }
 #endif
-#endif /* #ifndef _WLAN_HDD_SYSFS_GET_TEMP_H */
+#endif /* #ifndef _WLAN_HDD_SYSFS_RADAR_H */

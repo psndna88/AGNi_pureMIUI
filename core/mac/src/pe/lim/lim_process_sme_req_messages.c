@@ -479,10 +479,85 @@ void lim_strip_he_ies_from_add_ies(struct mac_context *mac_ctx,
 	if (status != QDF_STATUS_SUCCESS)
 		pe_debug("Failed to strip HE op IE status: %d", status);
 }
+
+static bool lim_is_6g_allowed_sec(struct mac_context *mac,
+				  struct pe_session *session)
+{
+	struct wlan_objmgr_vdev *vdev;
+	uint32_t keymgmt;
+	uint16_t ie_len;
+	bool status = false;
+
+	if (!mac->mlme_cfg->he_caps.enable_6g_sec_check)
+		return true;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc,
+						    session->vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		pe_err("Invalid vdev");
+		return false;
+	}
+	if (wlan_crypto_check_open_none(mac->psoc, session->vdev_id)) {
+		pe_err("open mode sec not allowed for 6G conn");
+		return false;
+	}
+
+	if (!session->limRmfEnabled) {
+		pe_err("rmf enabled is false");
+		return false;
+	}
+
+	keymgmt = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (!keymgmt ||
+	    (keymgmt & (1 << WLAN_CRYPTO_KEY_MGMT_NONE |
+			1 << WLAN_CRYPTO_KEY_MGMT_SAE |
+			1 << WLAN_CRYPTO_KEY_MGMT_FT_SAE |
+			1 << WLAN_CRYPTO_KEY_MGMT_FILS_SHA256 |
+			1 << WLAN_CRYPTO_KEY_MGMT_FILS_SHA384 |
+			1 << WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA256 |
+			1 << WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384 |
+			1 << WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B |
+			1 << WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192 |
+			1 << WLAN_CRYPTO_KEY_MGMT_OWE)))
+		status = true;
+	else
+		pe_err("Invalid key_mgmt %0X for 6G connection, vdev %d",
+		       keymgmt, session->vdev_id);
+
+	if (!(keymgmt & (1 << WLAN_CRYPTO_KEY_MGMT_SAE |
+			 1 << WLAN_CRYPTO_KEY_MGMT_FT_SAE)))
+		return status;
+
+	ie_len = lim_get_ielen_from_bss_description(
+			&session->lim_join_req->bssDescription);
+	if (!wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSNXE,
+		(uint8_t *)session->lim_join_req->bssDescription.ieFields,
+		ie_len)) {
+		pe_err("RSNXE IE not present in beacon for 6G conn");
+		return false;
+	}
+
+	if (!wlan_get_ie_ptr_from_eid(WLAN_ELEMID_RSNXE,
+				session->lim_join_req->addIEAssoc.addIEdata,
+				session->lim_join_req->addIEAssoc.length)) {
+		pe_err("RSNXE IE not present in assoc add IE data for 6G conn");
+		return false;
+	}
+
+	return status;
+}
+
 #else
 void lim_strip_he_ies_from_add_ies(struct mac_context *mac_ctx,
 				   struct pe_session *session)
 {
+}
+
+static inline bool lim_is_6g_allowed_sec(struct mac_context *mac,
+					 struct pe_session *session)
+{
+	return false;
 }
 #endif
 
@@ -1381,6 +1456,16 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 			goto end;
 		}
 
+		session->encryptType = sme_join_req->UCEncryptionType;
+		if (wlan_reg_is_6ghz_chan_freq(session->curr_op_freq)) {
+			if (!lim_is_session_he_capable(session) ||
+			    !lim_is_6g_allowed_sec(mac_ctx, session)) {
+				pe_err("JOIN_REQ with invalid 6G security");
+				ret_code = eSIR_SME_INVALID_PARAMETERS;
+				goto end;
+			}
+
+		}
 		if (sme_join_req->addIEScan.length)
 			qdf_mem_copy(&session->lim_join_req->addIEScan,
 				     &sme_join_req->addIEScan,
@@ -1417,7 +1502,6 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 			(void *)&session->rateSet,
 			sizeof(tSirMacRateSet));
 
-		session->encryptType = sme_join_req->UCEncryptionType;
 
 		session->supported_nss_1x1 = sme_join_req->supported_nss_1x1;
 		session->vdev_nss = sme_join_req->vdev_nss;
@@ -3405,6 +3489,7 @@ static void __lim_process_roam_scan_offload_req(struct mac_context *mac_ctx,
 }
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
+#ifndef ROAM_OFFLOAD_V1
 /**
  * lim_send_roam_offload_init() - Process Roam offload flag from csr
  * @mac_ctx: Pointer to Global MAC structure
@@ -3424,6 +3509,22 @@ static void lim_send_roam_offload_init(struct mac_context *mac_ctx,
 	status = wma_post_ctrl_msg(mac_ctx, &wma_msg);
 	if (QDF_STATUS_SUCCESS != status) {
 		pe_err("Posting WMA_ROAM_INIT_PARAM failed");
+		qdf_mem_free(msg_buf);
+	}
+}
+
+static void lim_send_roam_disable_cfg(struct mac_context *mac_ctx,
+				      uint32_t *msg_buf)
+{
+	struct scheduler_msg wma_msg = {0};
+	QDF_STATUS status;
+
+	wma_msg.type = WMA_ROAM_DISABLE_CFG;
+	wma_msg.bodyptr = msg_buf;
+
+	status = wma_post_ctrl_msg(mac_ctx, &wma_msg);
+	if (QDF_STATUS_SUCCESS != status) {
+		pe_err("Posting WMA_ROAM_DISABLE_CFG failed");
 		qdf_mem_free(msg_buf);
 	}
 }
@@ -3450,7 +3551,7 @@ static void lim_send_roam_per_command(struct mac_context *mac_ctx,
 		qdf_mem_free(msg_buf);
 	}
 }
-
+#endif
 /**
  * lim_send_roam_set_pcl() - Process Roam offload flag from csr
  * @mac_ctx: Pointer to Global MAC structure
@@ -3474,6 +3575,8 @@ static void lim_send_roam_set_pcl(struct mac_context *mac_ctx,
 	}
 }
 #else
+
+#ifndef ROAM_OFFLOAD_V1
 static void lim_send_roam_offload_init(struct mac_context *mac_ctx,
 				       uint32_t *msg_buf)
 {
@@ -3485,7 +3588,12 @@ static void lim_send_roam_per_command(struct mac_context *mac_ctx,
 {
 	qdf_mem_free(msg_buf);
 }
-
+static void lim_send_roam_disable_cfg(struct mac_context *mac_ctx,
+				      uint32_t *msg_buf)
+{
+	qdf_mem_free(msg_buf);
+}
+#endif
 static inline void lim_send_roam_set_pcl(struct mac_context *mac_ctx,
 					 struct set_pcl_req *msg_buf)
 {
@@ -4560,18 +4668,24 @@ bool lim_process_sme_req_messages(struct mac_context *mac,
 		__lim_process_roam_scan_offload_req(mac, msg_buf);
 		bufConsumed = false;
 		break;
+	case eWNI_SME_ROAM_SEND_SET_PCL_REQ:
+		lim_send_roam_set_pcl(mac, (struct set_pcl_req *)msg_buf);
+		bufConsumed = false;
+		break;
+#ifndef ROAM_OFFLOAD_V1
 	case eWNI_SME_ROAM_INIT_PARAM:
 		lim_send_roam_offload_init(mac, msg_buf);
 		bufConsumed = false;
 		break;
-	case eWNI_SME_ROAM_SEND_SET_PCL_REQ:
-		lim_send_roam_set_pcl(mac, (struct set_pcl_req *)msg_buf);
+	case eWNI_SME_ROAM_DISABLE_CFG:
+		lim_send_roam_disable_cfg(mac, msg_buf);
 		bufConsumed = false;
 		break;
 	case eWNI_SME_ROAM_SEND_PER_REQ:
 		lim_send_roam_per_command(mac, msg_buf);
 		bufConsumed = false;
 		break;
+#endif
 	case eWNI_SME_ROAM_INVOKE:
 		lim_process_roam_invoke(mac, msg_buf);
 		bufConsumed = false;
@@ -6049,11 +6163,18 @@ void lim_add_roam_blacklist_ap(struct mac_context *mac_ctx,
 	struct sir_rssi_disallow_lst entry;
 	struct roam_blacklist_timeout *blacklist;
 
+	pe_debug("Received Blacklist event from FW num entries %d",
+		 src_lst->num_entries);
 	blacklist = &src_lst->roam_blacklist[0];
 	for (i = 0; i < src_lst->num_entries; i++) {
 
 		entry.bssid = blacklist->bssid;
 		entry.time_during_rejection = blacklist->received_time;
+		entry.reject_reason = blacklist->reject_reason;
+		entry.source = blacklist->source ? blacklist->source :
+						   ADDED_BY_TARGET;
+		entry.original_timeout = blacklist->original_timeout;
+		entry.received_time = blacklist->received_time;
 		/* If timeout = 0 and rssi = 0 ignore the entry */
 		if (!blacklist->timeout && !blacklist->rssi) {
 			continue;

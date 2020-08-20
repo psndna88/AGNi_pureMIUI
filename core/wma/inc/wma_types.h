@@ -398,7 +398,9 @@
 
 #define WMA_SET_WOW_PULSE_CMD                SIR_HAL_SET_WOW_PULSE_CMD
 
+#ifndef ROAM_OFFLOAD_V1
 #define WMA_SET_PER_ROAM_CONFIG_CMD          SIR_HAL_SET_PER_ROAM_CONFIG_CMD
+#endif
 
 #define WMA_SEND_AP_VDEV_UP                  SIR_HAL_SEND_AP_VDEV_UP
 
@@ -433,9 +435,12 @@
 #endif
 #define WMA_SET_ROAM_TRIGGERS                SIR_HAL_SET_ROAM_TRIGGERS
 
+#ifndef ROAM_OFFLOAD_V1
 #define WMA_ROAM_INIT_PARAM                  SIR_HAL_INIT_ROAM_OFFLOAD_PARAM
+#endif
 
 #define WMA_DATA_STALL_TRIGGER 6
+#define WMA_ROAM_DISABLE_CFG                 SIR_HAL_INIT_ROAM_DISABLE_CFG
 
 /* Bit 6 will be used to control BD rate for Management frames */
 #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40

@@ -339,16 +339,33 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
- * wlanLoggingToConsole - Wlan logging to console
- * @Min: 0
- * @Max: 1
- * @Default: 1
+ * wlanConsoleLogLevelsBitmap - Bitmap to enable/disable console log levels
+ * @Min: 0x00000000
+ * @Max: 0x000003ff
+ * @Default: 0x0000001e
+ *
+ * This INI is used to enable/disable console logs for specific log level.
+ *
+ * bit-0: Reserved
+ * bit-1: QDF_TRACE_LEVEL_FATAL
+ * bit-2: QDF_TRACE_LEVEL_ERROR
+ * bit-3: QDF_TRACE_LEVEL_WARN
+ * bit-4: QDF_TRACE_LEVEL_INFO
+ * bit-5: QDF_TRACE_LEVEL_INFO_HIGH
+ * bit-6: QDF_TRACE_LEVEL_INFO_MED
+ * bit-7: QDF_TRACE_LEVEL_INFO_LOW
+ * bit-8: QDF_TRACE_LEVEL_DEBUG
+ * bit-9: QDF_TRACE_LEVEL_TRACE
+ * bit-10 to bit-31: Reserved
  *
  * </ini>
  */
-#define CFG_WLAN_LOGGING_CONSOLE_SUPPORT CFG_INI_BOOL( \
-				"wlanLoggingToConsole", \
-				1, \
+#define CFG_WLAN_LOGGING_CONSOLE_SUPPORT CFG_INI_UINT( \
+				"wlanConsoleLogLevelsBitmap", \
+				0x00000000, \
+				0x000003ff, \
+				0x0000001e, \
+				CFG_VALUE_OR_DEFAULT, \
 				"Wlan logging to console")
 
 #define CFG_WLAN_LOGGING_SUPPORT_ALL \
@@ -495,6 +512,41 @@ enum hdd_runtime_pm_cfg {
 	CFG(CFG_ENABLE_RUNTIME_PM)
 #else
 #define CFG_ENABLE_RUNTIME_PM_ALL
+#endif
+
+#ifdef WLAN_FEATURE_WMI_SEND_RECV_QMI
+/*
+ * <ini>
+ * enable_qmi_stats - enable periodic stats over qmi
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable periodic stats over qmi if DUT is
+ * in RTPM suspended state to avoid WoW enter/exit for every stats
+ * request.
+ *
+ * 0: Periodic stats over QMI is disabled
+ * 1: Periodic stats over QMI is enabled
+ * Related: None
+ *
+ * Supported Feature: Power Save
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_QMI_STATS CFG_INI_UINT( \
+		"enable_qmi_stats", \
+		0, \
+		1, \
+		1, \
+		CFG_VALUE_OR_DEFAULT, \
+		"This ini is used to enable periodic stats over qmi")
+#define CFG_ENABLE_QMI_STATS_ALL \
+	CFG(CFG_ENABLE_QMI_STATS)
+#else
+#define CFG_ENABLE_QMI_STATS_ALL
 #endif
 
 /*
@@ -1597,6 +1649,7 @@ enum host_log_level {
 #define CFG_HDD_ALL \
 	CFG_ENABLE_PACKET_LOG_ALL \
 	CFG_ENABLE_RUNTIME_PM_ALL \
+	CFG_ENABLE_QMI_STATS_ALL \
 	CFG_VC_MODE_BITMAP_ALL \
 	CFG_WLAN_AUTO_SHUTDOWN_ALL \
 	CFG_WLAN_LOGGING_SUPPORT_ALL \
