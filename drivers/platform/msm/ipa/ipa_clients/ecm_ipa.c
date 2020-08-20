@@ -13,7 +13,7 @@
 #include <linux/skbuff.h>
 #include <linux/sched.h>
 #include <linux/atomic.h>
-#include <linux/ecm_ipa.h>
+#include "ecm_ipa.h"
 #include "ipa_common_i.h"
 #include "ipa_pm.h"
 
@@ -628,7 +628,8 @@ static netdev_tx_t ecm_ipa_start_xmit
 
 fail_tx_packet:
 out:
-	ipa_pm_deferred_deactivate(ecm_ipa_ctx->pm_hdl);
+	if (atomic_read(&ecm_ipa_ctx->outstanding_pkts) == 0)
+		ipa_pm_deferred_deactivate(ecm_ipa_ctx->pm_hdl);
 fail_pm_activate:
 	return status;
 }
@@ -1180,6 +1181,8 @@ static void ecm_ipa_tx_complete_notify
 		netif_wake_queue(ecm_ipa_ctx->net);
 	}
 
+	if (atomic_read(&ecm_ipa_ctx->outstanding_pkts) == 0)
+		ipa_pm_deferred_deactivate(ecm_ipa_ctx->pm_hdl);
 out:
 	dev_kfree_skb_any(skb);
 }
@@ -1328,7 +1331,7 @@ static int ecm_ipa_ep_registers_cfg(u32 usb_to_ipa_hdl, u32 ipa_to_usb_hdl,
 	/* enable hdr_metadata_reg_valid */
 	usb_to_ipa_ep_cfg.hdr.hdr_metadata_reg_valid = true;
 
-	result = ipa_cfg_ep(usb_to_ipa_hdl, &usb_to_ipa_ep_cfg);
+	result = ipa3_cfg_ep(usb_to_ipa_hdl, &usb_to_ipa_ep_cfg);
 	if (result) {
 		ECM_IPA_ERROR("failed to configure USB to IPA point\n");
 		goto out;
@@ -1337,7 +1340,7 @@ static int ecm_ipa_ep_registers_cfg(u32 usb_to_ipa_hdl, u32 ipa_to_usb_hdl,
 	ipa_to_usb_ep_cfg.aggr.aggr_en = IPA_BYPASS_AGGR;
 	ipa_to_usb_ep_cfg.hdr.hdr_len = ETH_HLEN + hdr_add;
 	ipa_to_usb_ep_cfg.nat.nat_en = IPA_BYPASS_NAT;
-	result = ipa_cfg_ep(ipa_to_usb_hdl, &ipa_to_usb_ep_cfg);
+	result = ipa3_cfg_ep(ipa_to_usb_hdl, &ipa_to_usb_ep_cfg);
 	if (result) {
 		ECM_IPA_ERROR("failed to configure IPA to USB end-point\n");
 		goto out;

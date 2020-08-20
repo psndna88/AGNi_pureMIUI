@@ -19,8 +19,8 @@
 #include <linux/sched.h>
 #include <linux/ipa.h>
 #include <linux/random.h>
-#include <linux/rndis_ipa.h>
 #include <linux/workqueue.h>
+#include "rndis_ipa.h"
 #include "ipa_common_i.h"
 #include "ipa_pm.h"
 
@@ -982,8 +982,10 @@ static netdev_tx_t rndis_ipa_start_xmit(struct sk_buff *skb,
 fail_tx_packet:
 	rndis_ipa_xmit_error(skb);
 out:
-	ipa_pm_deferred_deactivate(rndis_ipa_ctx->pm_hdl);
+	if (atomic_read(&rndis_ipa_ctx->outstanding_pkts) == 0)
+		ipa_pm_deferred_deactivate(rndis_ipa_ctx->pm_hdl);
 fail_pm_activate:
+
 	RNDIS_IPA_DEBUG
 		("packet Tx done - %s\n",
 		(status == NETDEV_TX_OK) ? "OK" : "FAIL");
@@ -1054,6 +1056,10 @@ static void rndis_ipa_tx_complete_notify(
 		netif_wake_queue(rndis_ipa_ctx->net);
 		RNDIS_IPA_DEBUG("send queue was awaken\n");
 	}
+
+	/*Release resource only when outstanding packets are zero*/
+	if (atomic_read(&rndis_ipa_ctx->outstanding_pkts) == 0)
+		ipa_pm_deferred_deactivate(rndis_ipa_ctx->pm_hdl);
 
 out:
 	dev_kfree_skb_any(skb);
@@ -1951,7 +1957,7 @@ static int rndis_ipa_ep_registers_cfg(
 	}
 
 	usb_to_ipa_ep_cfg->deaggr.max_packet_len = max_xfer_size_bytes_to_dev;
-	result = ipa_cfg_ep(usb_to_ipa_hdl, usb_to_ipa_ep_cfg);
+	result = ipa3_cfg_ep(usb_to_ipa_hdl, usb_to_ipa_ep_cfg);
 	if (result) {
 		pr_err("failed to configure USB to IPA point\n");
 		return result;
@@ -1981,7 +1987,7 @@ static int rndis_ipa_ep_registers_cfg(
 	/* enable hdr_metadata_reg_valid */
 	usb_to_ipa_ep_cfg->hdr.hdr_metadata_reg_valid = true;
 
-	result = ipa_cfg_ep(ipa_to_usb_hdl, &ipa_to_usb_ep_cfg);
+	result = ipa3_cfg_ep(ipa_to_usb_hdl, &ipa_to_usb_ep_cfg);
 	if (result) {
 		pr_err("failed to configure IPA to USB end-point\n");
 		return result;
@@ -2372,7 +2378,7 @@ static ssize_t rndis_ipa_debugfs_aggr_write
 		return -EFAULT;
 	rndis_ipa_ctx = file->private_data;
 
-	result = ipa_cfg_ep(rndis_ipa_ctx->usb_to_ipa_hdl, &ipa_to_usb_ep_cfg);
+	result = ipa3_cfg_ep(rndis_ipa_ctx->usb_to_ipa_hdl, &ipa_to_usb_ep_cfg);
 	if (result) {
 		pr_err("failed to re-configure USB to IPA point\n");
 		return result;

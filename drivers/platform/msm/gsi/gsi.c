@@ -909,6 +909,13 @@ static uint32_t gsi_get_max_channels(enum gsi_ver ver)
 			GSI_V2_9_EE_n_GSI_HW_PARAM_2_GSI_NUM_CH_PER_EE_BMSK) >>
 			GSI_V2_9_EE_n_GSI_HW_PARAM_2_GSI_NUM_CH_PER_EE_SHFT;
 		break;
+	case GSI_VER_2_11:
+		reg = gsi_readl(gsi_ctx->base +
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_OFFS(gsi_ctx->per.ee));
+		reg = (reg &
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_GSI_NUM_CH_PER_EE_BMSK) >>
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_GSI_NUM_CH_PER_EE_SHFT;
+		break;
 	default:
 		GSIERR("GSI version is not supported %d\n", ver);
 		break;
@@ -982,6 +989,13 @@ static uint32_t gsi_get_max_event_rings(enum gsi_ver ver)
 		reg = (reg &
 			GSI_V2_9_EE_n_GSI_HW_PARAM_2_GSI_NUM_EV_PER_EE_BMSK) >>
 			GSI_V2_9_EE_n_GSI_HW_PARAM_2_GSI_NUM_EV_PER_EE_SHFT;
+		break;
+	case GSI_VER_2_11:
+		reg = gsi_readl(gsi_ctx->base +
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_OFFS(gsi_ctx->per.ee));
+		reg = (reg &
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_GSI_NUM_EV_PER_EE_BMSK) >>
+			GSI_V2_11_EE_n_GSI_HW_PARAM_2_GSI_NUM_EV_PER_EE_SHFT;
 		break;
 	default:
 		GSIERR("GSI version is not supported %d\n", ver);
@@ -1112,6 +1126,7 @@ int gsi_register_device(struct gsi_per_props *props, unsigned long *dev_hdl)
 	case GSI_VER_2_5:
 	case GSI_VER_2_7:
 	case GSI_VER_2_9:
+	case GSI_VER_2_11:
 		needed_reg_ver = GSI_REGISTER_VER_2;
 		break;
 	case GSI_VER_ERR:
@@ -1298,8 +1313,16 @@ int gsi_register_device(struct gsi_per_props *props, unsigned long *dev_hdl)
 	__gsi_config_evt_irq(props->ee, ~0, ~0);
 	__gsi_config_ieob_irq(props->ee, ~0, ~0);
 	__gsi_config_glob_irq(props->ee, ~0, ~0);
+
+	/*
+	 * Disabling global INT1 interrupt by default and enable it
+	 * onlt when sending the generic command.
+	 */
 	__gsi_config_gen_irq(props->ee, ~0,
 		~GSI_EE_n_CNTXT_GSI_IRQ_CLR_GSI_BREAK_POINT_BMSK);
+
+	__gsi_config_glob_irq(props->ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, 0);
 
 	gsi_writel(props->intr, gsi_ctx->base +
 			GSI_EE_n_CNTXT_INTSET_OFFS(gsi_ctx->per.ee));
@@ -1535,6 +1558,9 @@ static void gsi_init_evt_ring(struct gsi_evt_ring_props *props,
 	ctx->elem_sz = props->re_size;
 	ctx->max_num_elem = ctx->len / ctx->elem_sz - 1;
 	ctx->end = ctx->base + (ctx->max_num_elem + 1) * ctx->elem_sz;
+
+	if (props->rp_update_vaddr)
+		*(uint64_t *)(props->rp_update_vaddr) = ctx->rp_local;
 }
 
 static void gsi_prime_evt_ring(struct gsi_evt_ctx *ctx)
@@ -2991,7 +3017,8 @@ int gsi_start_channel(unsigned long chan_hdl)
 	/* check if INTSET is in IRQ mode for GPI channel */
 	val = gsi_readl(gsi_ctx->base +
 			GSI_EE_n_CNTXT_INTSET_OFFS(gsi_ctx->per.ee));
-	if (ctx->evtr->props.intf == GSI_EVT_CHTYPE_GPI_EV &&
+	if (ctx->evtr &&
+		ctx->evtr->props.intf == GSI_EVT_CHTYPE_GPI_EV &&
 		val != GSI_INTR_IRQ) {
 		GSIERR("GSI_EE_n_CNTXT_INTSET_OFFS %d\n", val);
 		BUG();
@@ -3074,7 +3101,8 @@ int gsi_stop_channel(unsigned long chan_hdl)
 	/* check if INTSET is in IRQ mode for GPI channel */
 	val = gsi_readl(gsi_ctx->base +
 			GSI_EE_n_CNTXT_INTSET_OFFS(gsi_ctx->per.ee));
-	if (ctx->evtr->props.intf == GSI_EVT_CHTYPE_GPI_EV &&
+	if (ctx->evtr &&
+		ctx->evtr->props.intf == GSI_EVT_CHTYPE_GPI_EV &&
 		val != GSI_INTR_IRQ) {
 		GSIERR("GSI_EE_n_CNTXT_INTSET_OFFS %d\n", val);
 		BUG();
@@ -4123,6 +4151,9 @@ static void gsi_configure_ieps(void *base, enum gsi_ver ver)
 	if (ver >= GSI_VER_2_5)
 		gsi_writel(17,
 			gsi_base + GSI_V2_5_GSI_IRAM_PTR_TLV_CH_NOT_FULL_OFFS);
+	if (ver >= GSI_VER_2_11)
+		gsi_writel(18, gsi_base + GSI_GSI_IRAM_PTR_MSI_DB_OFFS);
+
 }
 
 static void gsi_configure_bck_prs_matrix(void *base)
@@ -4280,6 +4311,9 @@ void gsi_get_inst_ram_offset_and_size(unsigned long *base_offset,
 	case GSI_VER_2_9:
 		maxn = GSI_V2_9_GSI_INST_RAM_n_MAXn;
 		break;
+	case GSI_VER_2_11:
+		maxn = GSI_V2_11_GSI_INST_RAM_n_MAXn;
+		break;
 	case GSI_VER_ERR:
 	case GSI_VER_MAX:
 	default:
@@ -4316,6 +4350,8 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 	}
 
 	mutex_lock(&gsi_ctx->mlock);
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, ~0);
 	reinit_completion(&gsi_ctx->gen_ee_cmd_compl);
 
 	/* invalidate the response */
@@ -4361,6 +4397,8 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 	res = GSI_STATUS_SUCCESS;
 	*code = gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code;
 free_lock:
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, 0);
 	mutex_unlock(&gsi_ctx->mlock);
 
 	return res;
@@ -4383,6 +4421,8 @@ int gsi_alloc_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 		return gsi_alloc_ap_channel(chan_idx);
 
 	mutex_lock(&gsi_ctx->mlock);
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, ~0);
 	reinit_completion(&gsi_ctx->gen_ee_cmd_compl);
 
 	/* invalidate the response */
@@ -4430,6 +4470,8 @@ int gsi_alloc_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 	res = GSI_STATUS_SUCCESS;
 	*code = gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code;
 free_lock:
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, 0);
 	mutex_unlock(&gsi_ctx->mlock);
 
 	return res;
@@ -4455,6 +4497,8 @@ int gsi_enable_flow_control_ee(unsigned int chan_idx, unsigned int ee,
 	}
 
 	mutex_lock(&gsi_ctx->mlock);
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, ~0);
 	reinit_completion(&gsi_ctx->gen_ee_cmd_compl);
 
 	/* invalidate the response */
@@ -4521,6 +4565,8 @@ int gsi_enable_flow_control_ee(unsigned int chan_idx, unsigned int ee,
 	}
 	*code = gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code;
 free_lock:
+	__gsi_config_glob_irq(gsi_ctx->per.ee,
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_GP_INT1_BMSK, 0);
 	mutex_unlock(&gsi_ctx->mlock);
 
 	return res;

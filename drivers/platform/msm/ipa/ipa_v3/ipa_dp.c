@@ -11,6 +11,7 @@
 #include <linux/netdevice.h>
 #include <linux/msm_gsi.h>
 #include <net/sock.h>
+#include "gsi.h"
 #include "ipa_i.h"
 #include "ipa_trace.h"
 #include "ipahal.h"
@@ -1182,7 +1183,7 @@ int ipa3_setup_sys_pipe(struct ipa_sys_connect_params *sys_in, u32 *clnt_hdl)
 		tasklet_init(&ep->sys->tasklet, ipa3_tasklet_rx_notify,
 				(unsigned long) ep->sys);
 
-	if (IPA_CLIENT_IS_PROD(ep->client) &&
+	if (IPA_CLIENT_IS_PROD(sys_in->client) &&
 		ipa3_ctx->tx_napi_enable) {
 		if (sys_in->client != IPA_CLIENT_APPS_WAN_PROD) {
 			netif_tx_napi_add(&ipa3_ctx->generic_ndev,
@@ -1449,6 +1450,12 @@ int ipa3_teardown_sys_pipe(u32 clnt_hdl)
 		} while (1);
 
 		delete_avail_tx_wrapper_list(ep);
+		/* Delete NAPI TX object. For WAN_PROD, it is deleted
+		 * in rmnet_ipa driver.
+		 */
+		if (ipa3_ctx->tx_napi_enable &&
+			(ep->client != IPA_CLIENT_APPS_WAN_PROD))
+			netif_napi_del(&ep->sys->napi_tx);
 	}
 
 	/* channel stop might fail on timeout if IPA is busy */

@@ -267,11 +267,14 @@ int ipa3_setup_apps_low_lat_cons_pipe(void)
 	if (rmnet_ctl_ipa3_ctx->cb_info.ready_cb) {
 		(*(rmnet_ctl_ipa3_ctx->cb_info.ready_cb))
 			(rmnet_ctl_ipa3_ctx->cb_info.ready_cb_user_data);
-	} else {
-		IPAERR("invalid ready_cb\n");
-		return -EFAULT;
 	}
-
+	/*
+	 * if no ready_cb yet, which means rmnet_ctl not
+	 * register to IPA, we will move state to pipe
+	 * ready and will wait for register event
+	 * coming and move to start state.
+	 * The ready_cb will called from regsiter itself.
+	 */
 	mutex_lock(&rmnet_ctl_ipa3_ctx->lock);
 	if (rmnet_ctl_ipa3_ctx->state == IPA_RMNET_CTL_NOT_REG)
 		rmnet_ctl_ipa3_ctx->state = IPA_RMNET_CTL_PIPE_READY;
@@ -367,17 +370,6 @@ int ipa3_teardown_apps_low_lat_pipes(void)
 	}
 	rmnet_ctl_ipa3_ctx->apps_to_ipa3_low_lat_hdl = -1;
 	return ret;
-}
-
-void ipa3_rmnet_ctl_ready_notifier(void)
-{
-	if (rmnet_ctl_ipa3_ctx->cb_info.ready_cb) {
-		(*(rmnet_ctl_ipa3_ctx->cb_info.ready_cb))
-		(rmnet_ctl_ipa3_ctx->cb_info.ready_cb_user_data);
-	} else
-		IPAERR("invalid ready_cb\n");
-
-	IPADBG("low lat pipes are ready\n");
 }
 
 int ipa3_rmnet_ctl_xmit(struct sk_buff *skb)
@@ -497,7 +489,7 @@ static void rmnet_ctl_wakeup_ipa(struct work_struct *work)
 	int ret;
 	unsigned long flags;
 	struct sk_buff *skb;
-	int len;
+	int len = 0;
 
 	/* calling from WQ */
 	ret = ipa_pm_activate_sync(rmnet_ctl_ipa3_ctx->rmnet_ctl_pm_hdl);
@@ -514,8 +506,9 @@ static void rmnet_ctl_wakeup_ipa(struct work_struct *work)
 	/* dequeue the skb */
 	while (skb_queue_len(&rmnet_ctl_ipa3_ctx->tx_queue) > 0) {
 		skb = skb_dequeue(&rmnet_ctl_ipa3_ctx->tx_queue);
-		if (skb)
-			len = skb->len;
+		if (skb == NULL)
+			continue;
+		len = skb->len;
 		spin_unlock_irqrestore(&rmnet_ctl_ipa3_ctx->tx_lock, flags);
 		/*
 		 * both data packets and command will be routed to

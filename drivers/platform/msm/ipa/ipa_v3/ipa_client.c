@@ -8,6 +8,7 @@
 #include <linux/device.h>
 #include "ipa_i.h"
 #include <linux/msm_gsi.h>
+#include "gsi.h"
 
 /*
  * These values were determined empirically and shows good E2E bi-
@@ -478,6 +479,7 @@ void ipa3_register_client_callback(int (*client_cb)(bool is_lock),
 		ipa3_ctx->get_teth_port_state[client] = teth_port_state;
 	IPADBG("exit\n");
 }
+EXPORT_SYMBOL(ipa3_register_client_callback);
 
 void ipa3_deregister_client_callback(enum ipa_client_type client_type)
 {
@@ -499,6 +501,7 @@ void ipa3_deregister_client_callback(enum ipa_client_type client_type)
 	ipa3_ctx->get_teth_port_state[client_cb] = NULL;
 	IPADBG("exit\n");
 }
+EXPORT_SYMBOL(ipa3_deregister_client_callback);
 
 static void client_lock_unlock_cb(enum ipa_client_type client, bool is_lock)
 {
@@ -1567,6 +1570,7 @@ int ipa3_xdci_suspend(u32 ul_clnt_hdl, u32 dl_clnt_hdl,
 	struct ipa_ep_cfg_ctrl ep_cfg_ctrl;
 	u32 holb_max_cnt = ipa3_ctx->uc_ctx.holb_monitor.max_cnt_usb;
 	int res = 0;
+	struct ipa_ep_cfg_holb holb_cfg;
 
 	/* In case of DPL, dl is the DPL channel/client */
 
@@ -1652,6 +1656,14 @@ int ipa3_xdci_suspend(u32 ul_clnt_hdl, u32 dl_clnt_hdl,
 		goto unsuspend_dl_and_exit;
 	}
 
+	/*enable holb to discard the packets*/
+	if (IPA_CLIENT_IS_CONS(dl_ep->client) && !is_dpl) {
+		memset(&holb_cfg, 0, sizeof(holb_cfg));
+		holb_cfg.en = IPA_HOLB_TMR_EN;
+		holb_cfg.tmr_val = IPA_HOLB_TMR_VAL_4_5;
+		result = ipa3_cfg_ep_holb(dl_clnt_hdl, &holb_cfg);
+	}
+
 	/* Stop DL channel */
 	result = ipa3_stop_gsi_channel(dl_clnt_hdl);
 	if (result) {
@@ -1689,6 +1701,13 @@ start_dl_and_exit:
 					dl_ep->gsi_chan_hdl);
 	}
 	ipa3_start_gsi_debug_monitor(dl_clnt_hdl);
+	/*disable holb to allow packets*/
+	if (IPA_CLIENT_IS_CONS(dl_ep->client) && !is_dpl) {
+		memset(&holb_cfg, 0, sizeof(holb_cfg));
+		holb_cfg.en = IPA_HOLB_TMR_DIS;
+		holb_cfg.tmr_val = 0;
+		ipa3_cfg_ep_holb(dl_clnt_hdl, &holb_cfg);
+	}
 unsuspend_dl_and_exit:
 	if (ipa3_ctx->ipa_hw_type < IPA_HW_v4_0) {
 		/* Unsuspend the DL EP */
@@ -1759,6 +1778,7 @@ int ipa3_xdci_resume(u32 ul_clnt_hdl, u32 dl_clnt_hdl, bool is_dpl)
 	struct ipa_ep_cfg_ctrl ep_cfg_ctrl;
 	int result;
 	u32 holb_max_cnt = ipa3_ctx->uc_ctx.holb_monitor.max_cnt_usb;
+	struct ipa_ep_cfg_holb holb_cfg;
 
 	/* In case of DPL, dl is the DPL channel/client */
 
@@ -1787,6 +1807,13 @@ int ipa3_xdci_resume(u32 ul_clnt_hdl, u32 dl_clnt_hdl, bool is_dpl)
 	gsi_res = gsi_start_channel(dl_ep->gsi_chan_hdl);
 	if (gsi_res != GSI_STATUS_SUCCESS)
 		IPAERR("Error starting DL channel: %d\n", gsi_res);
+	/*disable holb to allow packets*/
+	if (IPA_CLIENT_IS_CONS(dl_ep->client) && !is_dpl) {
+		memset(&holb_cfg, 0, sizeof(holb_cfg));
+		holb_cfg.en = IPA_HOLB_TMR_DIS;
+		holb_cfg.tmr_val = 0;
+		ipa3_cfg_ep_holb(dl_clnt_hdl, &holb_cfg);
+	}
 	if (!is_dpl) {
 		result = ipa3_uc_client_add_holb_monitor(dl_ep->gsi_chan_hdl,
 				HOLB_MONITOR_MASK,
