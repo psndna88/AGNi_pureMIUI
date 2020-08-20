@@ -1168,8 +1168,10 @@ static void hif_prepare_hal_shadow_register_cfg(struct hif_softc *scn,
 		int *num_shadow_registers_configured) {
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
 
-	return hif_state->ce_services->ce_prepare_shadow_register_v2_cfg(
+	hif_state->ce_services->ce_prepare_shadow_register_v2_cfg(
 			scn, shadow_config, num_shadow_registers_configured);
+
+	return;
 }
 
 static inline uint32_t ce_get_desc_size(struct hif_softc *scn,
@@ -2068,7 +2070,8 @@ hif_send_head(struct hif_opaque_softc *hif_ctx,
 	struct CE_handle *ce_hdl = pipe_info->ce_hdl;
 	int bytes = nbytes, nfrags = 0;
 	struct ce_sendlist sendlist;
-	int status, i = 0;
+	int i = 0;
+	QDF_STATUS status;
 	unsigned int mux_id = 0;
 
 	if (nbytes > qdf_nbuf_len(nbuf)) {
@@ -3866,7 +3869,7 @@ int hif_map_service_to_pipe(struct hif_opaque_softc *hif_hdl, uint16_t svc_id,
 			uint8_t *ul_pipe, uint8_t *dl_pipe, int *ul_is_polled,
 			int *dl_is_polled)
 {
-	int status = QDF_STATUS_E_INVAL;
+	int status = -EINVAL;
 	unsigned int i;
 	struct service_to_pipe element;
 	struct service_to_pipe *tgt_svc_map_to_use;
@@ -3895,7 +3898,7 @@ int hif_map_service_to_pipe(struct hif_opaque_softc *hif_hdl, uint16_t svc_id,
 				*dl_pipe = element.pipenum;
 				dl_updated = true;
 			}
-			status = QDF_STATUS_SUCCESS;
+			status = 0;
 		}
 	}
 	if (ul_updated == false)
@@ -4185,7 +4188,7 @@ void hif_wlan_disable(struct hif_softc *scn)
 
 int hif_get_wake_ce_id(struct hif_softc *scn, uint8_t *ce_id)
 {
-	QDF_STATUS status;
+	int status;
 	uint8_t ul_pipe, dl_pipe;
 	int ul_is_polled, dl_is_polled;
 
@@ -4196,7 +4199,7 @@ int hif_get_wake_ce_id(struct hif_softc *scn, uint8_t *ce_id)
 					 &ul_is_polled, &dl_is_polled);
 	if (status) {
 		HIF_ERROR("%s: failed to map pipe: %d", __func__, status);
-		return qdf_status_to_os_return(status);
+		return status;
 	}
 
 	*ce_id = dl_pipe;

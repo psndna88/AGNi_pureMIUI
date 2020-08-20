@@ -185,6 +185,10 @@ struct wlan_srng_cfg {
  * @pktlog_buffer_size: packet log buffer size
  * @is_rx_fisa_enabled: flag to enable/disable FISA Rx
  * @pext_stats_enabled: Flag to enable and disabled peer extended stats
+ * @is_rx_buff_pool_enabled: flag to enable/disable emergency RX buffer
+ *                           pool support
+ * @rx_pending_high_threshold: threshold of starting pkt drop
+ * @rx_pending_low_threshold: threshold of stopping pkt drop
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -276,6 +280,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	bool tx_comp_enable_eol_data_check;
 #endif /* WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT */
 	int rx_sw_desc_weight;
+	int rx_sw_desc_num;
 	bool is_rx_mon_protocol_flow_tag_enabled;
 	bool is_rx_flow_tag_enabled;
 	bool is_rx_flow_search_table_per_pdev;
@@ -288,6 +293,9 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint32_t delayed_replenish_entries;
 	uint32_t reo_rings_mapping;
 	bool pext_stats_enabled;
+	bool is_rx_buff_pool_enabled;
+	uint32_t rx_pending_high_threshold;
+	uint32_t rx_pending_low_threshold;
 };
 
 /**
@@ -864,6 +872,24 @@ int wlan_cfg_get_rx_dma_buf_ring_size(
 		struct wlan_cfg_dp_pdev_ctxt *wlan_cfg_pdev_ctx);
 
 /*
+ * wlan_cfg_rx_pending_hl_threshold() - Return high threshold of rx pending
+ * @wlan_cfg_pdev_ctx
+ *
+ * Return: rx_pending_high_threshold
+ */
+uint32_t
+wlan_cfg_rx_pending_hl_threshold(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/*
+ * wlan_cfg_rx_pending_lo_threshold() - Return low threshold of rx pending
+ * @wlan_cfg_pdev_ctx
+ *
+ * Return: rx_pending_low_threshold
+ */
+uint32_t
+wlan_cfg_rx_pending_lo_threshold(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/*
  * wlan_cfg_get_num_mac_rings() - Return the number of MAC RX DMA rings
  * per pdev
  * @wlan_cfg_pdev_ctx
@@ -1181,6 +1207,15 @@ int
 wlan_cfg_get_dp_soc_rx_sw_desc_weight(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 /*
+ * wlan_cfg_get_dp_soc_rx_sw_desc_num - Get rx sw desc num
+ * @wlan_cfg_soc_ctx
+ *
+ * Return: rx_sw_desc_num
+ */
+int
+wlan_cfg_get_dp_soc_rx_sw_desc_num(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/*
  * wlan_cfg_get_dp_caps - Get dp capablities
  * @wlan_cfg_soc_ctx
  * @dp_caps: enum for dp capablities
@@ -1335,6 +1370,16 @@ void wlan_cfg_fill_interrupt_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
  * Return: true if enabled, false otherwise.
  */
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/**
+ * wlan_cfg_is_rx_buffer_pool_enabled() - Get RX buffer pool enabled flag
+ *
+ *
+ * @cfg: soc configuration context
+ *
+ * Return: true if enabled, false otherwise.
+ */
+bool wlan_cfg_is_rx_buffer_pool_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
 #endif
 
 void wlan_cfg_set_tso_desc_attach_defer(struct wlan_cfg_dp_soc_ctxt *cfg,

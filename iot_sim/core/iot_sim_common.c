@@ -21,8 +21,10 @@
 #include <qdf_types.h>
 #include <qdf_util.h>
 #include <qdf_str.h>
+#include <qdf_delayed_work.h>
 #include <wmi_unified_param.h>
 #include <wlan_iot_sim_utils_api.h>
+#include <wlan_lmac_if_api.h>
 
 /*
  * iot_sim_oper_to_str - function to return iot sim operation string
@@ -97,7 +99,7 @@ iot_sim_parse_action_frame(uint16_t length, uint16_t offset, uint8_t *content,
 
 		/* Offset represet category type and action type */
 		status = iot_sim_get_index_for_action_frm(hex, category,
-							  action);
+							  action, false);
 		if (status == QDF_STATUS_E_FAULT) {
 			iot_sim_err("Get indices for action failed");
 			return status;
@@ -113,7 +115,7 @@ iot_sim_parse_action_frame(uint16_t length, uint16_t offset, uint8_t *content,
 			return QDF_STATUS_E_FAILURE;
 		}
 		status = iot_sim_get_index_for_action_frm(ptr, category,
-							  action);
+							  action, false);
 	}
 	return status;
 }
@@ -131,10 +133,108 @@ struct iot_sim_rule_per_peer *
 iot_sim_find_peer_from_mac(struct iot_sim_context *isc,
 			   struct qdf_mac_addr *mac)
 {
+	struct iot_sim_rule_per_peer *peer_rule = NULL;
+	qdf_list_node_t *node = NULL, *next_node = NULL;
+
 	if (qdf_is_macaddr_zero(mac) || qdf_is_macaddr_broadcast(mac))
 		return &isc->bcast_peer;
-	else
-		return NULL;
+	else {
+		if (qdf_list_empty(&isc->peer_list)) {
+			iot_sim_debug("peer_list empty");
+			return NULL;
+		}
+
+		qdf_spin_lock_bh(&isc->iot_sim_lock);
+		if (QDF_STATUS_SUCCESS !=
+		    qdf_list_peek_front(&isc->peer_list, &next_node)) {
+			qdf_spin_unlock_bh(&isc->iot_sim_lock);
+			iot_sim_err("Failed to get peer rule from peer_list");
+			return NULL;
+		}
+
+		do {
+			node = next_node;
+			peer_rule =
+				qdf_container_of(node,
+						 struct iot_sim_rule_per_peer,
+						 node);
+			if (qdf_is_macaddr_equal(&peer_rule->addr, mac)) {
+				qdf_spin_unlock_bh(&isc->iot_sim_lock);
+				return peer_rule;
+			}
+		} while (QDF_STATUS_SUCCESS ==
+			 qdf_list_peek_next(&isc->peer_list, node, &next_node));
+
+		qdf_spin_unlock_bh(&isc->iot_sim_lock);
+		iot_sim_debug("Failed to find peer");
+	}
+
+	return NULL;
+}
+
+/*
+ * iot_sim_add_peer - function to add the iot sim peer data
+ *
+ * @isc: iot_sim pdev private object
+ * @mac: mac address of the peer
+ *
+ * Return: iot_sim_rule_per_peer reference
+ */
+struct iot_sim_rule_per_peer *
+iot_sim_add_peer(struct iot_sim_context *isc, struct qdf_mac_addr *mac)
+{
+	struct iot_sim_rule_per_peer *peer_rule = NULL;
+	QDF_STATUS status;
+
+	if (qdf_is_macaddr_zero(mac) || qdf_is_macaddr_broadcast(mac)) {
+		iot_sim_err("called iot_sim_add_peer for broadcast address");
+		return &isc->bcast_peer;
+	}
+
+	qdf_spin_lock_bh(&isc->iot_sim_lock);
+	if (qdf_list_size(&isc->peer_list) < MAX_PEER_COUNT) {
+		peer_rule = qdf_mem_malloc(sizeof
+					   (struct iot_sim_rule_per_peer));
+		if (!peer_rule) {
+			iot_sim_err("Memory alloc failed for peer: "
+				    QDF_MAC_ADDR_STR,
+				    QDF_MAC_ADDR_ARRAY(mac->bytes));
+			goto rel_lock;
+		}
+
+		qdf_copy_macaddr(&peer_rule->addr, mac);
+		status = qdf_list_insert_back(&isc->peer_list,
+					      &peer_rule->node);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			iot_sim_err("peer_list enqueue failed for peer "
+				    QDF_MAC_ADDR_STR,
+				    QDF_MAC_ADDR_ARRAY(mac->bytes));
+			qdf_mem_free(peer_rule);
+			peer_rule = NULL;
+		}
+	} else {
+		iot_sim_err("peer_list  already reached max limit");
+	}
+
+rel_lock:
+	qdf_spin_unlock_bh(&isc->iot_sim_lock);
+	return peer_rule;
+}
+
+/*
+ * iot_sim_remove_peer - function to remove the iot sim peer data
+ *
+ * @isc: iot_sim pdev private object
+ * @mac: mac address of the peer
+ *
+ * Return: void
+ */
+void iot_sim_remove_peer(struct iot_sim_context *isc,
+			 struct iot_sim_rule_per_peer *peer_rule)
+{
+	qdf_spin_lock_bh(&isc->iot_sim_lock);
+	qdf_list_remove_node(&isc->peer_list, &peer_rule->node);
+	qdf_spin_unlock_bh(&isc->iot_sim_lock);
 }
 
 /*
@@ -370,12 +470,13 @@ err:
  * @frm: buf containing 802.11 action/category codes
  * @cat_type: buf to hold converted category code
  * @act_type: buf to hold converted action code
+ * @rx: TRUE if its getting called in the rx path
  *
  * Return: QDF_STATUS_SUCCESS on success, failure otherwise
  */
 QDF_STATUS
 iot_sim_get_index_for_action_frm(uint8_t *frm, uint8_t *cat_type,
-				 uint8_t *act_type)
+				 uint8_t *act_type, bool rx)
 {
 	uint8_t category, action;
 
@@ -388,8 +489,14 @@ iot_sim_get_index_for_action_frm(uint8_t *frm, uint8_t *cat_type,
 	case IEEE80211_ACTION_CAT_BA:
 		switch (action) {
 		case IEEE80211_ACTION_BA_ADDBA_REQUEST:
-			*cat_type = category;
-			*act_type = action;
+			if (rx) {
+				*cat_type = CAT_BA;
+				*act_type = action;
+
+			} else {
+				*cat_type = category;
+				*act_type = action;
+			}
 			break;
 		case IEEE80211_ACTION_BA_ADDBA_RESPONSE:
 		case IEEE80211_ACTION_BA_DELBA:
@@ -581,7 +688,7 @@ iot_sim_send_rule_to_fw(struct iot_sim_context *isc,
 {
 	struct simulation_test_params param;
 
-	if (FRAME_TYPE_IS_BEACON(type, subtype) && offset) {
+	if (oper != DELAY && FRAME_TYPE_IS_BEACON(type, subtype) && offset) {
 		iot_sim_info("Beacon update from offset:%d", offset);
 		return QDF_STATUS_E_NOSUPPORT;
 	}
@@ -635,7 +742,8 @@ iot_sim_send_rule_to_fw(struct iot_sim_context *isc,
 QDF_STATUS
 iot_sim_del_rule(struct iot_sim_rule_per_seq **s_e,
 		 struct iot_sim_rule **f_e,
-		 enum iot_sim_operations oper)
+		 enum iot_sim_operations oper,
+		 struct iot_sim_context *isc)
 {
 	if (oper == CONTENT_CHANGE) {
 		qdf_mem_free((*f_e)->frm_content);
@@ -643,7 +751,31 @@ iot_sim_del_rule(struct iot_sim_rule_per_seq **s_e,
 	} else if (oper == DROP) {
 		(*f_e)->drop = false;
 	} else if (oper == DELAY) {
-		/* TBD */
+		if (!qdf_delayed_work_stop((*f_e)->dwork)) {
+			iot_sim_err("delayed work is in running state");
+			/* iot_sim_lock need to be released for the delay */
+			/* work callback to complete execution */
+			/* Hence releasing the lock */
+			qdf_spin_unlock_bh(&isc->iot_sim_lock);
+			/* iot_sim_delay_lock will be freed only after delay */
+			/* work callback execution completion */
+			qdf_spin_lock_bh(&(*f_e)->iot_sim_delay_lock);
+			qdf_spin_lock_bh(&isc->iot_sim_lock);
+			qdf_delayed_work_stop_sync((*f_e)->dwork);
+			qdf_spin_unlock_bh(&(*f_e)->iot_sim_delay_lock);
+		}
+
+		qdf_delayed_work_destroy((*f_e)->dwork);
+		qdf_spinlock_destroy(&(*f_e)->iot_sim_delay_lock);
+		qdf_mem_free((*f_e)->dwork->context);
+		qdf_mem_free((*f_e)->dwork);
+		qdf_nbuf_free((*f_e)->nbuf_list[0]);
+		(*f_e)->nbuf_list[0] = NULL;
+		qdf_nbuf_free((*f_e)->nbuf_list[1]);
+		(*f_e)->nbuf_list[1] = NULL;
+		(*f_e)->sec_buf = NULL;
+		qdf_mem_free((*f_e)->rx_param);
+		(*f_e)->rx_param = NULL;
 	}
 
 	if (qdf_test_bit(oper, (unsigned long *)
@@ -689,6 +821,8 @@ iot_sim_delete_rule_for_mac(struct iot_sim_context *isc,
 	struct iot_sim_rule_per_seq **s_e;
 	struct iot_sim_rule **f_e;
 	struct iot_sim_rule_per_peer *peer;
+	bool peer_remove = 1, broadcast_peer = 0;
+	uint8_t i;
 
 	if (qdf_is_macaddr_zero(mac))
 		iot_sim_info("Rule deletion for all peers");
@@ -709,12 +843,16 @@ iot_sim_delete_rule_for_mac(struct iot_sim_context *isc,
 	if (oper == DROP || oper == DELAY)
 		iot_sim_remap_type_subtype(&type, &subtype, &seq, action);
 
-	peer = iot_sim_find_peer_from_mac(isc, mac);
+	if (qdf_is_macaddr_zero(mac) || qdf_is_macaddr_broadcast(mac)) {
+		peer = &isc->bcast_peer;
+		broadcast_peer = 1;
+	} else
+		peer = iot_sim_find_peer_from_mac(isc, mac);
 	if (peer) {
-		qdf_spin_lock(&peer->iot_sim_lock);
+		qdf_spin_lock_bh(&isc->iot_sim_lock);
 		s_e = &peer->rule_per_seq[seq];
 		if (!*s_e) {
-			qdf_spin_unlock(&peer->iot_sim_lock);
+			qdf_spin_unlock_bh(&isc->iot_sim_lock);
 			return QDF_STATUS_SUCCESS;
 		}
 
@@ -724,11 +862,66 @@ iot_sim_delete_rule_for_mac(struct iot_sim_context *isc,
 			f_e = &((*s_e)->rule_per_type[type][subtype]);
 
 		if (*f_e)
-			status = iot_sim_del_rule(s_e, f_e, oper);
-		qdf_spin_unlock(&peer->iot_sim_lock);
+			status = iot_sim_del_rule(s_e, f_e, oper, isc);
+
+		for (i = 0; i < MAX_SEQ; i++)
+			if (peer->rule_per_seq[i])
+				peer_remove = 0;
+		qdf_spin_unlock_bh(&isc->iot_sim_lock);
+		if (!broadcast_peer && peer_remove) {
+			iot_sim_remove_peer(isc, peer);
+			qdf_mem_free(peer);
+		}
 	}
 
 	return status;
+}
+
+/*
+ * iot_sim_delay_cb - Delayed work callback function
+ *                    to process delayed frames
+ *
+ * @context: Delayed work callback context
+ *
+ * Return: void
+ */
+static void iot_sim_delay_cb(void *ctxt)
+{
+	struct wlan_objmgr_psoc *psoc = NULL;
+	struct iot_sim_cb_context *context = ctxt;
+
+	qdf_spin_lock_bh(&context->piot_sim_rule->iot_sim_delay_lock);
+	qdf_spin_lock_bh(&context->isc->iot_sim_lock);
+	psoc = wlan_pdev_get_psoc(context->isc->pdev_obj);
+	context->piot_sim_rule->sec_buf = context->piot_sim_rule->nbuf_list[0];
+	qdf_spin_unlock_bh(&context->isc->iot_sim_lock);
+	mgmt_txrx_rx_handler(psoc, context->piot_sim_rule->sec_buf,
+			     context->piot_sim_rule->rx_param);
+	qdf_spin_lock_bh(&context->isc->iot_sim_lock);
+	if (context->piot_sim_rule->nbuf_list[1]) {
+		context->piot_sim_rule->nbuf_list[0] =
+					context->piot_sim_rule->nbuf_list[1];
+		if (!qdf_delayed_work_start(context->piot_sim_rule->dwork,
+					    context->
+					    piot_sim_rule->delay_dur)) {
+			iot_sim_err("delayed_work_start failed");
+			qdf_nbuf_free(context->piot_sim_rule->nbuf_list[0]);
+			qdf_mem_free(context->piot_sim_rule->
+				     rx_param->rx_params);
+			qdf_mem_free(context->piot_sim_rule->rx_param);
+			context->piot_sim_rule->nbuf_list[0] = NULL;
+			context->piot_sim_rule->rx_param = NULL;
+		}
+		context->piot_sim_rule->nbuf_list[1] = NULL;
+	} else {
+		context->piot_sim_rule->nbuf_list[0] = NULL;
+		qdf_mem_free(context->piot_sim_rule->rx_param->rx_params);
+		qdf_mem_free(context->piot_sim_rule->rx_param);
+		context->piot_sim_rule->rx_param = NULL;
+	}
+
+	qdf_spin_unlock_bh(&context->isc->iot_sim_lock);
+	qdf_spin_unlock_bh(&context->piot_sim_rule->iot_sim_delay_lock);
 }
 
 /*
@@ -740,6 +933,7 @@ iot_sim_delete_rule_for_mac(struct iot_sim_context *isc,
  * @frm: user provided frame content
  * @offset: user provided offset
  * @len: length of the user provided frame content
+ * @isc: iot sim context
  *
  * Return: QDF_STATUS_SUCCESS
  */
@@ -747,8 +941,11 @@ QDF_STATUS
 iot_sim_add_rule(struct iot_sim_rule_per_seq **s_e,
 		 struct iot_sim_rule **f_e,
 		 enum iot_sim_operations oper,
-		 uint8_t *frm, uint16_t offset, uint16_t len)
+		 uint8_t *frm, uint16_t offset, uint16_t len,
+		 struct iot_sim_context *isc)
 {
+	struct iot_sim_cb_context *cb_context;
+
 	if (!*f_e) {
 		*f_e = qdf_mem_malloc(sizeof(struct iot_sim_rule));
 		if (!*f_e) {
@@ -767,7 +964,35 @@ iot_sim_add_rule(struct iot_sim_rule_per_seq **s_e,
 	} else if (oper == DROP) {
 		(*f_e)->drop = true;
 	} else if (oper == DELAY) {
-		/* TBD */
+		(*f_e)->delay_dur = offset;
+		(*f_e)->dwork = qdf_mem_malloc(sizeof(struct qdf_delayed_work));
+		if (!(*f_e)->dwork) {
+			iot_sim_err("can't allocate dwork");
+			return QDF_STATUS_E_NOMEM;
+		}
+
+		cb_context = qdf_mem_malloc(sizeof(struct iot_sim_cb_context));
+		if (!cb_context) {
+			iot_sim_err("can't allocate cb_context");
+			qdf_mem_free((*f_e)->dwork);
+			return QDF_STATUS_E_NOMEM;
+		}
+
+		cb_context->isc = isc;
+		cb_context->piot_sim_rule = *f_e;
+		if (QDF_STATUS_SUCCESS !=
+		    qdf_delayed_work_create((*f_e)->dwork, iot_sim_delay_cb,
+					    cb_context)) {
+			iot_sim_err("delayed_work_create failed");
+			qdf_mem_free(cb_context);
+			qdf_mem_free((*f_e)->dwork);
+			return QDF_STATUS_E_NOMEM;
+		}
+
+		(*f_e)->nbuf_list[0] = NULL;
+		(*f_e)->nbuf_list[1] = NULL;
+		iot_sim_err("delayed_work_created");
+		qdf_spinlock_create(&((*f_e)->iot_sim_delay_lock));
 	}
 
 	(*s_e)->use_count++;
@@ -800,7 +1025,7 @@ iot_sim_add_rule_for_mac(struct iot_sim_context *isc,
 			 uint8_t type, uint8_t subtype,
 			 uint16_t seq, uint16_t offset,
 			 uint8_t *frm, uint16_t len,
-			 uint8_t drop, bool action)
+			 uint16_t drop, bool action)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct iot_sim_rule_per_peer *peer;
@@ -824,15 +1049,17 @@ iot_sim_add_rule_for_mac(struct iot_sim_context *isc,
 		iot_sim_remap_type_subtype(&type, &subtype, &seq, action);
 
 	peer = iot_sim_find_peer_from_mac(isc, mac);
+	if (!peer)
+		peer = iot_sim_add_peer(isc, mac);
 	if (peer) {
-		qdf_spin_lock(&peer->iot_sim_lock);
+		qdf_spin_lock_bh(&isc->iot_sim_lock);
 		s_e = &peer->rule_per_seq[seq];
 		if (!*s_e) {
 			*s_e = qdf_mem_malloc(sizeof(struct
 					      iot_sim_rule_per_seq));
 			if (!*s_e) {
 				iot_sim_err("can't allocate s_e");
-				qdf_spin_unlock(&peer->iot_sim_lock);
+				qdf_spin_unlock_bh(&isc->iot_sim_lock);
 				return QDF_STATUS_E_NOMEM;
 			}
 		}
@@ -848,13 +1075,17 @@ iot_sim_add_rule_for_mac(struct iot_sim_context *isc,
 			iot_sim_info("Rule addition for " QDF_MAC_ADDR_STR,
 				     QDF_MAC_ADDR_ARRAY(mac->bytes));
 
-		iot_sim_info("oper:%s seq: %hu %s:%hu/%hu",
+		iot_sim_info("oper:%s seq: %hu %s:%hu/%hu delay:%hu",
 			     iot_sim_oper_to_str(oper), seq,
 			     action ? "category/action code" : "type/subtype",
-			     type, subtype);
+			     type, subtype, drop);
 
-		status = iot_sim_add_rule(s_e, f_e, oper, frm, offset, len);
-		qdf_spin_unlock(&peer->iot_sim_lock);
+		if (oper == DELAY)
+			offset = drop;
+
+		status = iot_sim_add_rule(s_e, f_e, oper, frm,
+					  offset, len, isc);
+		qdf_spin_unlock_bh(&isc->iot_sim_lock);
 	} else {
 		/* TBD: clear the rules for peer with address 'mac'*/
 	}
@@ -981,6 +1212,93 @@ free:
 }
 
 /*
+ * iot_sim_parse_user_input_delay - function to parse user input into
+ *				   predefined format for delay operation.
+ *				   All arguments passed will be filled
+ *				   upon success
+ * @isc: iot sim context
+ * @userbuf: local copy of user input
+ * @count: length of userbuf
+ * @t_st: address of type variable
+ * @seq: address of seq variable
+ * @cat_type: 802.11 action frame category code
+ * @act_type: 802.11 action frame action code
+ * @delay: address of delay variable
+ * @addr: pointer to mac address
+ *
+ * Return: QDF_STATUS_SUCCESS on success
+ *	   QDF_STATUS_E_FAILURE otherwise
+ */
+QDF_STATUS
+iot_sim_parse_user_input_delay(struct iot_sim_context *isc,
+			       char *userbuf, ssize_t count,
+			       uint8_t *t_st, uint16_t *seq,
+			       uint8_t *cat_type, uint8_t *act_type,
+			       uint16_t *delay, struct qdf_mac_addr *addr)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	char *argv[6], *delim = " ", *substr;
+	int argc = -1, ret = 0;
+
+	qdf_mem_zero(argv, sizeof(argv));
+	userbuf = qdf_str_trim(userbuf);
+
+	while ((substr = qdf_str_sep(&userbuf, delim)) != NULL) {
+		if (!isspace(*substr) && *substr != '\0')
+			argv[++argc] = substr;
+		if (argc >= 5)
+			break;
+	}
+
+	if (argc < 3) {
+		iot_sim_err("Invalid argument count %d", (argc + 1));
+		return status;
+	}
+
+	if (!argv[0] || !argv[1] || !argv[2] || !argv[3] || !argv[4]) {
+		iot_sim_err("One or more arguments are null");
+		return status;
+	}
+	/*
+	 * User can send delay data in following format:
+	 * 1. Add delay rule for specific peer
+	 *	<t_st> <seq> <category_type> <action_type> <delay> <MAC>
+	 * 2. Remove delay rule for specific peer
+	 *	<t_st> <seq> <category_type> <action_type> <delay> <MAC>
+	 */
+
+	ret = kstrtou8(argv[0], 16, t_st);
+	if (ret)
+		goto err;
+	ret = kstrtou16(argv[1], 10, seq);
+	if (ret)
+		goto err;
+	ret = kstrtou8(argv[2], 10, cat_type);
+	if (ret)
+		goto err;
+	ret = kstrtou8(argv[3], 10, act_type);
+	if (ret)
+		goto err;
+	ret = kstrtou16(argv[4], 10, delay);
+	if (ret)
+		goto err;
+
+	/*
+	 * If argv[5] is valid, this must be mac address
+	 */
+	if (argv[5])
+		status = qdf_mac_parse(argv[5], addr);
+
+	iot_sim_err("delay rule mac address " QDF_MAC_ADDR_STR,
+		    QDF_MAC_ADDR_ARRAY(addr->bytes));
+
+	return status;
+err:
+	iot_sim_err("kstrtoXX failed: %d", ret);
+	return QDF_STATUS_E_FAILURE;
+}
+
+/*
  * iot_sim_debug_delay_write - Write Handler for delay operation
  * @file: debugfs file pointer
  * @buf: buf of user input
@@ -994,7 +1312,86 @@ iot_sim_debug_delay_write(struct file *file,
 			  const char __user *buf,
 			  size_t count, loff_t *ppos)
 {
-	iot_sim_err("delay iot sim ops called");
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	unsigned char t_st, type, subtype;
+	uint16_t seq = 0;
+	char *locbuf = NULL;
+	enum iot_sim_operations oper = DELAY;
+	struct qdf_mac_addr mac_addr = QDF_MAC_ADDR_BCAST_INIT;
+	struct iot_sim_context *isc =
+			((struct seq_file *)file->private_data)->private;
+	uint8_t action = 0, category = 0, tmp[2];
+	bool is_action = false, clear = false;
+	uint16_t delay = 0;
+
+	if ((!buf) || (count > USER_BUF_LEN_DELAY) || (count < 6))
+		return -EFAULT;
+
+	locbuf = qdf_mem_malloc(USER_BUF_LEN_DELAY + 1);
+	if (!locbuf)
+		return -ENOMEM;
+
+	if (copy_from_user(locbuf, buf, count)) {
+		qdf_mem_free(locbuf);
+		return -EFAULT;
+	}
+
+	status = iot_sim_parse_user_input_delay(isc, locbuf, count,
+						&t_st, &seq, &category,
+						&action, &delay, &mac_addr);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		iot_sim_err("iot_sim_parse_user_input_delay failed");
+		goto free;
+	}
+	iot_sim_err("Delay rule t_st:%d, seq:%hu cat_type:%d, act_type:%d, delay:%hu",
+		    t_st, seq, category, action, delay);
+
+	type = (t_st & IEEE80211_FC0_TYPE_MASK) >> IEEE80211_FC0_TYPE_SHIFT;
+	subtype = (t_st & IEEE80211_FC0_SUBTYPE_MASK);
+	subtype >>= IEEE80211_FC0_SUBTYPE_SHIFT;
+
+	if (type > N_FRAME_TYPE || subtype > N_FRAME_SUBTYPE || seq > MAX_SEQ)
+		goto free;
+
+	if (FRAME_TYPE_IS_ACTION(type, subtype)) {
+		tmp[0] = category;
+		tmp[1] = action;
+		/*
+		 * convert 802.11 category and action code to iot sim codes
+		 */
+		status = iot_sim_get_index_for_action_frm(tmp, &category,
+							  &action, false);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto free;
+
+		is_action = 1;
+		type = category;
+		subtype = action;
+	}
+
+	clear = delay ? false : true;
+	status = iot_sim_send_rule_to_fw(isc, oper, &mac_addr, type, subtype,
+					 seq, delay, NULL, 0, is_action, clear);
+	if (QDF_IS_STATUS_SUCCESS(status))
+		goto free;
+
+	/* check for rule removal */
+	if (!delay) {
+		status = iot_sim_delete_rule_for_mac(isc, oper, seq,
+						     type, subtype,
+						     &mac_addr,
+						     is_action);
+	} else {
+		status = iot_sim_add_rule_for_mac(isc, oper, &mac_addr,
+						  type, subtype, seq, 0,
+						  NULL, 0, delay, is_action);
+	}
+	if (QDF_IS_STATUS_SUCCESS(status))
+		iot_sim_debug("iot_sim: Rule update Delay Operation - Success");
+	else
+		iot_sim_err("iot_sim: Rule update Delay Operation - Fail");
+free:
+	qdf_mem_free(locbuf);
 	return count;
 }
 
@@ -1082,6 +1479,9 @@ iot_sim_parse_user_input_drop(struct iot_sim_context *isc,
 	if (argv[5])
 		status = qdf_mac_parse(argv[5], addr);
 
+	iot_sim_err("drop rule mac address " QDF_MAC_ADDR_STR,
+		    QDF_MAC_ADDR_ARRAY(addr->bytes));
+
 	return status;
 err:
 	iot_sim_err("kstrtoXX failed: %d", ret);
@@ -1145,7 +1545,7 @@ iot_sim_debug_drop_write(struct file *file,
 		 * convert 802.11 category and action code to iot sim codes
 		 */
 		status = iot_sim_get_index_for_action_frm(tmp, &category,
-							  &action);
+							  &action, false);
 		if (QDF_IS_STATUS_ERROR(status))
 			goto free;
 
@@ -1386,8 +1786,8 @@ wlan_iot_sim_pdev_obj_create_handler(struct wlan_objmgr_pdev *pdev, void *arg)
 	}
 
 	qdf_set_macaddr_broadcast(&isc->bcast_peer.addr);
-	qdf_spinlock_create(&isc->bcast_peer.iot_sim_lock);
-	qdf_list_create(&isc->bcast_peer.list, 0);
+	qdf_spinlock_create(&isc->iot_sim_lock);
+	qdf_list_create(&isc->peer_list, 2);
 	isc->bcn_buf = NULL;
 
 	wlan_objmgr_pdev_component_obj_attach(pdev, WLAN_IOT_SIM_COMP,
@@ -1419,9 +1819,10 @@ wlan_iot_sim_pdev_obj_destroy_handler(struct wlan_objmgr_pdev *pdev,
 		/* Deinitilise function pointers from iot_sim context */
 		iot_sim_debugfs_deinit(isc);
 		iot_sim_remove_all_rules(isc);
+		qdf_list_destroy(&isc->peer_list);
 		if (isc->bcn_buf)
 			qdf_nbuf_free(isc->bcn_buf);
-		qdf_spinlock_destroy(&isc->bcast_peer.iot_sim_lock);
+		qdf_spinlock_destroy(&isc->iot_sim_lock);
 		qdf_mem_free(isc);
 	}
 	iot_sim_debug("iot_sim component pdev%u object destroyed",

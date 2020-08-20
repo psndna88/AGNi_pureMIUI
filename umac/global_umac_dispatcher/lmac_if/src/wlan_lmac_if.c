@@ -183,6 +183,8 @@ wlan_lmac_if_atf_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	atf_rx_ops->atf_peer_unblk_txtraffic = tgt_atf_peer_unblk_txtraffic;
 	atf_rx_ops->atf_set_token_allocated = tgt_atf_set_token_allocated;
 	atf_rx_ops->atf_set_token_utilized = tgt_atf_set_token_utilized;
+	atf_rx_ops->atf_process_ppdu_stats = tgt_atf_process_ppdu_stats;
+	atf_rx_ops->atf_is_stats_enabled = tgt_atf_is_stats_enabled;
 }
 #else
 static void
@@ -264,6 +266,9 @@ wlan_lmac_if_cfr_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	/* CFR rx ops */
 	cfr_rx_ops->cfr_support_set = tgt_cfr_support_set;
 	cfr_rx_ops->cfr_info_send  = tgt_cfr_info_send;
+	cfr_rx_ops->cfr_capture_count_support_set =
+		tgt_cfr_capture_count_support_set;
+	cfr_rx_ops->cfr_mo_marking_support_set = tgt_cfr_mo_marking_support_set;
 }
 #else
 static void
@@ -315,6 +320,9 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 
 	rx_ops->reg_rx_ops.reg_set_6ghz_supported =
 		tgt_reg_set_6ghz_supported;
+
+	rx_ops->reg_rx_ops.reg_set_5dot9_ghz_supported =
+		tgt_reg_set_5dot9_ghz_supported;
 
 	rx_ops->reg_rx_ops.get_dfs_region =
 		wlan_reg_get_dfs_region;
@@ -467,25 +475,7 @@ static void register_dfs_rx_ops_for_freq(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 #endif
 
 /*
- * register_dfs_rx_ops_for_ieee() - Register DFS rx ops for IEEE channel based
- * APIs
- * rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
- */
-
-#ifdef CONFIG_CHAN_NUM_API
-static void register_dfs_rx_ops_for_ieee(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
-{
-	if (!rx_ops)
-		return;
-	rx_ops->dfs_find_vht80_chan_for_precac =
-		tgt_dfs_find_vht80_chan_for_precac;
-	rx_ops->dfs_set_current_channel =
-		tgt_dfs_set_current_channel;
-}
-#endif
-
-/*
- * register_rcac_dfs_rx_ops() - Register DFS RX-Ops for Rolling CAC specific
+ * register_rcac_dfs_rx_ops() - Register DFS RX-Ops for RCAC specific
  * APIs.
  * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
  */
@@ -494,17 +484,58 @@ static void register_rcac_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 {
 	if (!rx_ops)
 		return;
-
 	rx_ops->dfs_set_rcac_enable = ucfg_dfs_set_rcac_enable;
 	rx_ops->dfs_get_rcac_enable = ucfg_dfs_get_rcac_enable;
 	rx_ops->dfs_set_rcac_freq = ucfg_dfs_set_rcac_freq;
 	rx_ops->dfs_get_rcac_freq = ucfg_dfs_get_rcac_freq;
-	rx_ops->dfs_rcac_sm_deliver_evt = utils_dfs_rcac_sm_deliver_evt;
 	rx_ops->dfs_is_agile_rcac_enabled = ucfg_dfs_is_agile_rcac_enabled;
 }
 #else
 static inline void
 register_rcac_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
+/*
+ * register_agile_dfs_rx_ops() - Register Rx-Ops for Agile Specific APIs
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+#ifdef QCA_SUPPORT_AGILE_DFS
+static void register_agile_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+	rx_ops->dfs_agile_sm_deliver_evt = utils_dfs_agile_sm_deliver_evt;
+}
+#else
+static inline void
+register_agile_dfs_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
+#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+/* register_dfs_chan_postnol_rx_ops() - Register DFS Rx-Ops for postNOL
+ * channel change APIs.
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+static void
+register_dfs_chan_postnol_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+
+	rx_ops->dfs_set_postnol_freq = ucfg_dfs_set_postnol_freq;
+	rx_ops->dfs_set_postnol_mode = ucfg_dfs_set_postnol_mode;
+	rx_ops->dfs_set_postnol_cfreq2 = ucfg_dfs_set_postnol_cfreq2;
+	rx_ops->dfs_get_postnol_freq = ucfg_dfs_get_postnol_freq;
+	rx_ops->dfs_get_postnol_mode = ucfg_dfs_get_postnol_mode;
+	rx_ops->dfs_get_postnol_cfreq2 = ucfg_dfs_get_postnol_cfreq2;
+}
+#else
+static inline void
+register_dfs_chan_postnol_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 {
 }
 #endif
@@ -592,8 +623,9 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	register_precac_auto_chan_rx_ops_ieee(dfs_rx_ops);
 	register_precac_auto_chan_rx_ops_freq(dfs_rx_ops);
 	register_dfs_rx_ops_for_freq(dfs_rx_ops);
-	register_dfs_rx_ops_for_ieee(dfs_rx_ops);
 	register_rcac_dfs_rx_ops(dfs_rx_ops);
+	register_agile_dfs_rx_ops(dfs_rx_ops);
+	register_dfs_chan_postnol_rx_ops(dfs_rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

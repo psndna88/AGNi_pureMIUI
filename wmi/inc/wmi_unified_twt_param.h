@@ -124,6 +124,61 @@ struct wmi_twt_disable_complete_event {
 	uint32_t pdev_id;
 };
 
+/* TWT event types
+ *  refer to wmi_unified.h enum wmi_twt_session_stats_type
+ */
+enum host_twt_session_stats_type {
+	HOST_TWT_SESSION_SETUP     = 1,
+	HOST_TWT_SESSION_TEARDOWN  = 2,
+	HOST_TWT_SESSION_UPDATE    = 3,
+};
+
+/**
+ * struct wmi_host_twt_session_stats_info:
+ * @vdev_id: id of VDEV for twt session
+ * @peer_mac: MAC address of node
+ * @event_type: Indicates TWT session type (SETUP/TEARDOWN/UPDATE)
+ * @flow_id: TWT flow identifier established with TWT peer
+ * @bcast:  If this is a broacast TWT session
+ * @trig: If the TWT session is trigger enabled
+ * @announ: If the flow type is announced/unannounced
+ * @protection: If the TWT protection field is set
+ * @info_frame_disabled: If the TWT Information frame is disabled
+ * @dialog_id: Dialog_id of current session
+ * @wake_dura_us: wake duration in us
+ * @wake_intvl_us: wake time interval in us
+ * @sp_offset_us: Time until initial TWT SP occurs
+ * @sp_tsf_us_lo: TWT wake time TSF in usecs lower bits - 31:0
+ * @sp_tsf_us_hi: TWT wake time TSF in usecs higher bits - 63:32
+ */
+struct wmi_host_twt_session_stats_info {
+	uint32_t vdev_id;
+	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+	uint32_t event_type;
+	uint32_t flow_id:16,
+		 bcast:1,
+		 trig:1,
+		 announ:1,
+		 protection:1,
+		 info_frame_disabled:1;
+	uint32_t dialog_id;
+	uint32_t wake_dura_us;
+	uint32_t wake_intvl_us;
+	uint32_t sp_offset_us;
+	uint32_t sp_tsf_us_lo;
+	uint32_t sp_tsf_us_hi;
+};
+
+/** struct wmi_twt_session_stats_event:
+ * @pdev_id: pdev_id for identifying the MAC.
+ * @num_sessions: number of TWT sessions
+ * @twt_sessions: received TWT sessions
+ */
+struct wmi_twt_session_stats_event_param {
+	uint32_t pdev_id;
+	uint32_t num_sessions;
+};
+
 /* from IEEE 802.11ah section 9.4.2.200 */
 enum WMI_HOST_TWT_COMMAND {
 	WMI_HOST_TWT_COMMAND_REQUEST_TWT    = 0,
@@ -215,17 +270,55 @@ enum WMI_HOST_ADD_TWT_STATUS {
 	WMI_HOST_ADD_TWT_STATUS_UNKNOWN_ERROR,
 };
 
+/**
+ * struct wmi_twt_add_dialog_additional_params -
+ * @twt_cmd: TWT command
+ * @bcast: 0 means Individual TWT
+ *         1 means Broadcast TWT
+ * @trig_en: 0 means non-Trigger-enabled TWT
+ *           1 means Trigger-enabled TWT
+ * @announce: 0 means announced TWT
+ *            1 means un-announced TWT
+ * @protection: 0 means TWT protection is required
+ *              1 means TWT protection is not required
+ * @b_twt_id0: 0 means non-0 B-TWT ID or I-TWT
+ *             1 means B-TWT ID 0
+ * @info_frame_disabled: 0 means TWT Information frame is enabled
+ *                       1 means TWT Information frame is disabled
+ * @wake_dura_us: wake duration in us
+ * @wake_intvl_us: wake time interval in us
+ * @sp_offset_us: Time until initial TWT SP occurs
+ * @sp_tsf_us_lo: TWT service period tsf in usecs lower bits - 31:0
+ * @sp_tsf_us_hi: TWT service period tsf in usecs higher bits - 63:32
+ */
+struct wmi_twt_add_dialog_additional_params {
+	uint32_t twt_cmd:8,
+		 bcast:1,
+		 trig_en:1,
+		 announce:1,
+		 protection:1,
+		 b_twt_id0:1,
+		 info_frame_disabled:1;
+	uint32_t wake_dur_us;
+	uint32_t wake_intvl_us;
+	uint32_t sp_offset_us;
+	uint32_t sp_tsf_us_lo;
+	uint32_t sp_tsf_us_hi;
+};
+
 /** struct wmi_twt_add_dialog_complete_param -
  * @vdev_id: VDEV identifier
  * @peer_macaddr: Peer mac address
  * @dialog_id: TWT dialog ID
  * @status: refer to WMI_HOST_ADD_TWT_STATUS enum
+ * @num_additional_twt_params: no of additional_twt_params available
  */
 struct wmi_twt_add_dialog_complete_event_param {
 	uint32_t vdev_id;
 	uint8_t  peer_macaddr[QDF_MAC_ADDR_SIZE];
 	uint32_t dialog_id;
 	uint32_t status;
+	uint32_t num_additional_twt_params;
 };
 
 /** struct wmi_twt_del_dialog_param -

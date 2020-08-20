@@ -2552,6 +2552,20 @@ QDF_STATUS wmi_extract_dbr_ring_cap_service_ready_ext2(
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_extract_scan_radio_cap_service_ready_ext2(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf, uint8_t idx,
+			struct wlan_psoc_host_scan_radio_caps *param)
+{
+	if (wmi_handle->ops->extract_scan_radio_cap_service_ready_ext2)
+		return wmi_handle->ops->
+		       extract_scan_radio_cap_service_ready_ext2(
+				wmi_handle,
+				evt_buf, idx, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 QDF_STATUS wmi_extract_pdev_sscan_fw_cmd_fixed_param(
 			wmi_unified_t wmi_handle,
@@ -3130,6 +3144,23 @@ QDF_STATUS wmi_convert_pdev_id_host_to_target(wmi_unified_t wmi_handle,
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#ifndef CNSS_GENL
+QDF_STATUS wmi_convert_pdev_id_target_to_host(wmi_unified_t wmi_handle,
+					      uint32_t target_pdev_id,
+					      uint32_t *host_pdev_id)
+{
+	if (wmi_handle->ops->convert_pdev_id_target_to_host) {
+		*host_pdev_id =
+			wmi_handle->ops->convert_pdev_id_target_to_host(
+					wmi_handle,
+					target_pdev_id);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 
 QDF_STATUS
 wmi_unified_send_bss_color_change_enable_cmd(wmi_unified_t wmi_handle,

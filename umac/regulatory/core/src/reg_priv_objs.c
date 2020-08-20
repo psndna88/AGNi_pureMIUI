@@ -82,7 +82,8 @@ QDF_STATUS wlan_regulatory_psoc_obj_created_notification(
 	soc_reg_obj->offload_enabled = false;
 	soc_reg_obj->psoc_ptr = psoc;
 	soc_reg_obj->dfs_enabled = true;
-	soc_reg_obj->band_capability = BAND_ALL;
+	soc_reg_obj->band_capability = (BIT(REG_BAND_2G) | BIT(REG_BAND_5G) |
+					BIT(REG_BAND_6G));
 	soc_reg_obj->enable_11d_supp = false;
 	soc_reg_obj->indoor_chan_enabled = true;
 	soc_reg_obj->force_ssc_disable_indoor_channel = false;
@@ -92,6 +93,9 @@ QDF_STATUS wlan_regulatory_psoc_obj_created_notification(
 	soc_reg_obj->restart_beaconing = CH_AVOID_RULE_RESTART;
 	soc_reg_obj->enable_srd_chan_in_master_mode = true;
 	soc_reg_obj->enable_11d_in_world_mode = false;
+	soc_reg_obj->five_dot_nine_ghz_supported = false;
+	soc_reg_obj->enable_5dot9_ghz_chan_in_master_mode = false;
+	soc_reg_obj->retain_nol_across_regdmn_update = false;
 
 	for (i = 0; i < MAX_STA_VDEV_CNT; i++)
 		soc_reg_obj->vdev_ids_11d[i] = INVALID_VDEV_ID;
@@ -212,7 +216,7 @@ QDF_STATUS wlan_regulatory_pdev_obj_created_notification(
 	pdev_priv_obj->pdev_ptr = pdev;
 	pdev_priv_obj->dfs_enabled = psoc_priv_obj->dfs_enabled;
 	pdev_priv_obj->set_fcc_channel = false;
-	pdev_priv_obj->band_capability =  psoc_priv_obj->band_capability;
+	pdev_priv_obj->band_capability = psoc_priv_obj->band_capability;
 	pdev_priv_obj->indoor_chan_enabled =
 		psoc_priv_obj->indoor_chan_enabled;
 	pdev_priv_obj->en_chan_144 = true;

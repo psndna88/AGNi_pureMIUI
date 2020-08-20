@@ -457,20 +457,6 @@ void target_if_ftm_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 }
 #endif
 
-#ifdef FEATURE_NO_DBS_INTRABAND_MCC_SUPPORT
-static enum wmi_host_hw_mode_config_type
-target_if_get_default_pref_hw_mode(struct target_psoc_info *psoc_info)
-{
-	return WMI_HOST_HW_MODE_DETECT;
-}
-#else
-static enum wmi_host_hw_mode_config_type
-target_if_get_default_pref_hw_mode(struct target_psoc_info *psoc_info)
-{
-	return WMI_HOST_HW_MODE_MAX;
-}
-#endif
-
 static
 QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
@@ -610,7 +596,6 @@ QDF_STATUS target_if_free_pdev_tgt_info(struct wlan_objmgr_pdev *pdev)
 QDF_STATUS target_if_alloc_psoc_tgt_info(struct wlan_objmgr_psoc *psoc)
 {
 	struct target_psoc_info *tgt_psoc_info;
-	enum wmi_host_hw_mode_config_type hw_mode;
 
 	if (!psoc) {
 		target_if_err("psoc is null");
@@ -623,8 +608,7 @@ QDF_STATUS target_if_alloc_psoc_tgt_info(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_E_NOMEM;
 
 	wlan_psoc_set_tgt_if_handle(psoc, tgt_psoc_info);
-	hw_mode = target_if_get_default_pref_hw_mode(tgt_psoc_info);
-	target_psoc_set_preferred_hw_mode(tgt_psoc_info, hw_mode);
+	target_psoc_set_preferred_hw_mode(tgt_psoc_info, WMI_HOST_HW_MODE_MAX);
 	wlan_minidump_log(tgt_psoc_info,
 			  sizeof(*tgt_psoc_info), psoc,
 			  WLAN_MD_OBJMGR_PSOC_TGT_INFO, "target_psoc_info");
@@ -654,6 +638,7 @@ QDF_STATUS target_if_free_psoc_tgt_info(struct wlan_objmgr_psoc *psoc)
 	init_deinit_chainmask_table_free(ext_param);
 	init_deinit_dbr_ring_cap_free(tgt_psoc_info);
 	init_deinit_spectral_scaling_params_free(tgt_psoc_info);
+	init_deinit_scan_radio_cap_free(tgt_psoc_info);
 
 	qdf_event_destroy(&tgt_psoc_info->info.event);
 
@@ -693,4 +678,142 @@ bool target_is_tgt_type_adrastea(uint32_t target_type)
 bool target_is_tgt_type_qcn9000(uint32_t target_type)
 {
 	return target_type == TARGET_TYPE_QCN9000;
+}
+
+QDF_STATUS
+target_pdev_is_scan_radio_supported(struct wlan_objmgr_pdev *pdev,
+				    bool *is_scan_radio_supported)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_psoc_host_scan_radio_caps *scan_radio_caps;
+	uint8_t cap_idx;
+	uint32_t num_scan_radio_caps;
+	int32_t phy_id;
+	struct target_psoc_info *tgt_psoc_info;
+	struct target_pdev_info *tgt_pdev;
+
+	if (!is_scan_radio_supported) {
+		target_if_err("input argument is null");
+		return QDF_STATUS_E_INVAL;
+	}
+	*is_scan_radio_supported = false;
+
+	if (!pdev) {
+		target_if_err("pdev is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	tgt_psoc_info = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_psoc_info) {
+		target_if_err("target_psoc_info is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	num_scan_radio_caps =
+		target_psoc_get_num_scan_radio_caps(tgt_psoc_info);
+	if (!num_scan_radio_caps)
+		return QDF_STATUS_SUCCESS;
+
+	scan_radio_caps = target_psoc_get_scan_radio_caps(tgt_psoc_info);
+	if (!scan_radio_caps) {
+		target_if_err("scan radio capabilities is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	tgt_pdev = (struct target_pdev_info *)wlan_pdev_get_tgt_if_handle(pdev);
+	if (!tgt_pdev) {
+		target_if_err("target_pdev_info is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	phy_id = target_pdev_get_phy_idx(tgt_pdev);
+	if (phy_id < 0) {
+		target_if_err("phy_id is invalid");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	for (cap_idx = 0; cap_idx < num_scan_radio_caps; cap_idx++)
+		if (scan_radio_caps[cap_idx].phy_id == phy_id)
+			*is_scan_radio_supported =
+				scan_radio_caps[cap_idx].scan_radio_supported;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+target_pdev_scan_radio_is_dfs_enabled(struct wlan_objmgr_pdev *pdev,
+				      bool *is_dfs_en)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_psoc_host_scan_radio_caps *scan_radio_caps;
+	uint8_t cap_idx;
+	uint32_t num_scan_radio_caps, pdev_id;
+	int32_t phy_id;
+	struct target_psoc_info *tgt_psoc_info;
+	struct target_pdev_info *tgt_pdev;
+
+	if (!is_dfs_en) {
+		target_if_err("input argument is null");
+		return QDF_STATUS_E_INVAL;
+	}
+	*is_dfs_en = true;
+
+	if (!pdev) {
+		target_if_err("pdev is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	tgt_psoc_info = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_psoc_info) {
+		target_if_err("target_psoc_info is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	num_scan_radio_caps =
+		target_psoc_get_num_scan_radio_caps(tgt_psoc_info);
+	if (!num_scan_radio_caps) {
+		target_if_err("scan radio not supported for psoc");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	scan_radio_caps = target_psoc_get_scan_radio_caps(tgt_psoc_info);
+	if (!scan_radio_caps) {
+		target_if_err("scan radio capabilities is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	tgt_pdev = (struct target_pdev_info *)wlan_pdev_get_tgt_if_handle(pdev);
+	if (!tgt_pdev) {
+		target_if_err("target_pdev_info is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	phy_id = target_pdev_get_phy_idx(tgt_pdev);
+	if (phy_id < 0) {
+		target_if_err("phy_id is invalid");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	for (cap_idx = 0; cap_idx < num_scan_radio_caps; cap_idx++)
+		if (scan_radio_caps[cap_idx].phy_id == phy_id) {
+			*is_dfs_en = scan_radio_caps[cap_idx].dfs_en;
+			return QDF_STATUS_SUCCESS;
+		}
+
+	target_if_err("No scan radio cap found in pdev %d", pdev_id);
+
+	return QDF_STATUS_E_INVAL;
 }

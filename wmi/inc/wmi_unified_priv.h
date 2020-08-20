@@ -81,6 +81,10 @@
 #include "wlan_spectral_public_structs.h"
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+#include <wlan_cm_roam_public_srtuct.h>
+#endif
+
 #define WMI_UNIFIED_MAX_EVENT 0x100
 
 #ifdef WMI_EXT_DBG
@@ -122,6 +126,29 @@ struct wmi_ext_dbg_msg {
 };
 #endif /*WMI_EXT_DBG */
 
+#define wmi_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_WMI, ## params)
+#define wmi_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_WMI, ## params)
+#define wmi_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_WMI, ## params)
+#define wmi_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_WMI, ## params)
+#define wmi_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_WMI, ## params)
+
+#define wmi_nofl_alert(params...) \
+	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_WMI, ## params)
+#define wmi_nofl_err(params...) \
+	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_WMI, ## params)
+#define wmi_nofl_warn(params...) \
+	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_WMI, ## params)
+#define wmi_nofl_info(params...) \
+	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_WMI, ## params)
+#define wmi_nofl_debug(params...) \
+	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMI, ## params)
+
+#define wmi_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_WMI, params)
+#define wmi_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_WMI, params)
+#define wmi_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_WMI, params)
+#define wmi_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_WMI, params)
+#define wmi_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_WMI, params)
+
 #ifdef WMI_INTERFACE_EVENT_LOGGING
 
 #ifndef WMI_EVENT_DEBUG_MAX_ENTRY
@@ -150,29 +177,6 @@ struct wmi_ext_dbg_msg {
 #define WMI_FILTERED_CMD_EVT_MAX_NUM_ENTRY (1024)
 #endif
 #endif /* WMI_INTERFACE_FILTERED_EVENT_LOGGING */
-
-#define wmi_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_WMI, ## params)
-#define wmi_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_WMI, ## params)
-#define wmi_info(params...) QDF_TRACE_INFO(QDF_MODULE_ID_WMI, ## params)
-#define wmi_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_WMI, ## params)
-
-#define wmi_nofl_alert(params...) \
-	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_err(params...) \
-	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_warn(params...) \
-	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_info(params...) \
-	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_WMI, ## params)
-#define wmi_nofl_debug(params...) \
-	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_WMI, ## params)
-
-#define wmi_alert_rl(params...) QDF_TRACE_FATAL_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_err_rl(params...) QDF_TRACE_ERROR_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_info_rl(params...) QDF_TRACE_INFO_RL(QDF_MODULE_ID_WMI, params)
-#define wmi_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_WMI, params)
 
 /**
  * struct wmi_command_debug - WMI command log buffer data type
@@ -326,6 +330,17 @@ struct wmi_wq_dbg_info {
 };
 
 struct wmi_ops {
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+QDF_STATUS
+(*extract_roam_btm_response_stats)(wmi_unified_t wmi_handle, void *evt_buf,
+				   struct roam_btm_response_data *dst,
+				   uint8_t idx);
+
+QDF_STATUS
+(*extract_roam_initial_info)(wmi_unified_t wmi_handle, void *evt_buf,
+			     struct roam_initial_data *dst, uint8_t idx);
+#endif
+
 QDF_STATUS (*send_vdev_create_cmd)(wmi_unified_t wmi_handle,
 				 uint8_t macaddr[QDF_MAC_ADDR_SIZE],
 				 struct vdev_create_params *param);
@@ -414,7 +429,7 @@ QDF_STATUS (*send_d0wow_disable_cmd)(wmi_unified_t wmi_handle,
 				uint8_t mac_id);
 #endif
 
-#ifdef FEATURE_BLACKLIST_MGR
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_BLACKLIST_MGR)
 QDF_STATUS
 (*send_reject_ap_list_cmd)(struct wmi_unified *wmi_handle,
 			   struct reject_ap_params *reject_params);
@@ -602,8 +617,23 @@ QDF_STATUS (*send_set_rssi_monitoring_cmd)(wmi_unified_t wmi_handle,
 					struct rssi_monitor_param *req);
 #endif /* FEATURE_RSSI_MONITOR */
 
-QDF_STATUS (*send_roam_scan_offload_rssi_thresh_cmd)(wmi_unified_t wmi_handle,
+#ifdef ROAM_OFFLOAD_V1
+QDF_STATUS (*send_roam_scan_offload_rssi_thresh_cmd)(
+			wmi_unified_t wmi_handle,
+			struct wlan_roam_offload_scan_rssi_params *roam_req);
+
+QDF_STATUS (*send_roam_scan_offload_scan_period_cmd)(
+				wmi_unified_t wmi_handle,
+				struct wlan_roam_scan_period_params *params);
+#else
+QDF_STATUS (*send_roam_scan_offload_rssi_thresh_cmd)(
+				wmi_unified_t wmi_handle,
 				struct roam_offload_scan_rssi_params *roam_req);
+
+QDF_STATUS (*send_roam_scan_offload_scan_period_cmd)(
+					wmi_unified_t wmi_handle,
+					struct roam_scan_period_params *params);
+#endif
 
 QDF_STATUS (*send_roam_mawc_params_cmd)(wmi_unified_t wmi_handle,
 		struct wmi_mawc_roam_params *params);
@@ -621,9 +651,6 @@ QDF_STATUS (*send_roam_scan_offload_ap_profile_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_roam_scan_offload_cmd)(wmi_unified_t wmi_handle,
 				 uint32_t command, uint32_t vdev_id);
 
-QDF_STATUS (*send_roam_scan_offload_scan_period_cmd)(wmi_unified_t wmi_handle,
-					struct roam_scan_period_params *params);
-
 QDF_STATUS (*send_roam_scan_offload_chan_list_cmd)(wmi_unified_t wmi_handle,
 				   uint8_t chan_count,
 				   uint32_t *chan_list,
@@ -636,10 +663,10 @@ QDF_STATUS (*send_roam_scan_offload_rssi_change_cmd)(wmi_unified_t wmi_handle,
 					uint32_t hirssi_delay_btw_scans);
 
 QDF_STATUS (*send_per_roam_config_cmd)(wmi_unified_t wmi_handle,
-		struct wmi_per_roam_config_req *req_buf);
+		struct wlan_per_roam_config_req *req_buf);
 
 QDF_STATUS (*send_offload_11k_cmd)(wmi_unified_t wmi_handle,
-		struct wmi_11k_offload_params *params);
+		struct wlan_roam_11k_offload_params *params);
 
 QDF_STATUS (*send_invoke_neighbor_report_cmd)(wmi_unified_t wmi_handle,
 		struct wmi_invoke_neighbor_report_params *params);
@@ -647,18 +674,17 @@ QDF_STATUS (*send_invoke_neighbor_report_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_roam_bss_load_config)(wmi_unified_t wmi_handle,
 					struct wmi_bss_load_config *params);
 
-QDF_STATUS (*send_disconnect_roam_params)(
-			wmi_unified_t wmi_handle,
-			struct wmi_disconnect_roam_params *req);
+QDF_STATUS (*send_disconnect_roam_params)(wmi_unified_t wmi_handle,
+			struct wlan_roam_disconnect_params *req);
 
 QDF_STATUS (*send_idle_roam_params)(wmi_unified_t wmi_handle,
-				    struct wmi_idle_roam_params *req);
+				    struct wlan_roam_idle_params *req);
 
 QDF_STATUS (*send_roam_preauth_status)(wmi_unified_t wmi_handle,
 				struct wmi_roam_auth_status_params *params);
 
 QDF_STATUS (*send_btm_config)(wmi_unified_t wmi_handle,
-			      struct wmi_btm_config *params);
+			      struct wlan_roam_btm_config *params);
 
 QDF_STATUS (*send_limit_off_chan_cmd)(wmi_unified_t wmi_handle,
 		struct wmi_limit_off_chan_param *limit_off_chan_param);
@@ -686,6 +712,9 @@ QDF_STATUS (*send_process_roam_synch_complete_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_roam_invoke_cmd)(wmi_unified_t wmi_handle,
 		struct wmi_roam_invoke_cmd *roaminvoke,
 		uint32_t ch_hz);
+
+QDF_STATUS (*send_set_roam_trigger_cmd)(wmi_unified_t wmi_handle,
+					struct wlan_roam_triggers *triggers);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 #endif /* WMI_ROAM_SUPPORT */
 
@@ -1836,6 +1865,11 @@ QDF_STATUS (*extract_dbr_ring_cap_service_ready_ext2)(
 			uint8_t *evt_buf, uint8_t idx,
 			struct wlan_psoc_host_dbr_ring_caps *param);
 
+QDF_STATUS (*extract_scan_radio_cap_service_ready_ext2)(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf, uint8_t idx,
+			struct wlan_psoc_host_scan_radio_caps *param);
+
 QDF_STATUS (*extract_scaling_params_service_ready_ext)(
 			wmi_unified_t wmi_handle,
 			uint8_t *evt_buf, uint8_t idx,
@@ -2133,6 +2167,13 @@ QDF_STATUS (*extract_twt_add_dialog_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
 		struct wmi_twt_add_dialog_complete_event_param *params);
 
+QDF_STATUS (*extract_twt_add_dialog_comp_additional_params)
+		(
+		 wmi_unified_t wmi_handle, uint8_t *evt_buf,
+		 struct wmi_twt_add_dialog_additional_params *additional_params,
+		 uint32_t idx
+		);
+
 QDF_STATUS (*extract_twt_del_dialog_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
 		struct wmi_twt_del_dialog_complete_event_param *params);
@@ -2155,6 +2196,20 @@ QDF_STATUS (*extract_twt_btwt_remove_sta_comp_event)(wmi_unified_t wmi_handle,
 		struct wmi_twt_btwt_remove_sta_complete_event_param *params);
 #endif
 
+QDF_STATUS(*extract_twt_session_stats_event)
+		(
+		 wmi_unified_t wmi_handle,
+		 uint8_t *evt_buf,
+		 struct wmi_twt_session_stats_event_param *params
+		);
+QDF_STATUS(*extract_twt_session_stats_data)
+		(
+		 wmi_unified_t wmi_handle,
+		 uint8_t *evt_buf,
+		 struct wmi_twt_session_stats_event_param *params,
+		 struct wmi_host_twt_session_stats_info *session,
+		 uint32_t idx
+		);
 #endif
 
 #ifdef QCA_SUPPORT_CP_STATS
@@ -2257,10 +2312,6 @@ QDF_STATUS (*extract_oem_response_param)
 
 QDF_STATUS (*extract_hw_mode_resp_event)(wmi_unified_t wmi_handle,
 					 void *evt_buf, uint32_t *cmd_status);
-
-QDF_STATUS (*send_set_roam_trigger_cmd)(wmi_unified_t wmi_handle,
-					uint32_t vdev_id,
-					uint32_t trigger_bitmap);
 
 #ifdef WLAN_FEATURE_ELNA
 QDF_STATUS (*send_set_elna_bypass_cmd)(wmi_unified_t wmi_handle,
@@ -2400,6 +2451,9 @@ struct wmi_unified {
 #endif /*WMI_INTERFACE_EVENT_LOGGING */
 
 	qdf_atomic_t is_target_suspended;
+#ifdef WLAN_FEATURE_WMI_SEND_RECV_QMI
+	bool is_qmi_stats_enabled;
+#endif
 
 #ifdef FEATURE_RUNTIME_PM
 	qdf_atomic_t runtime_pm_inprogress;
@@ -2452,6 +2506,7 @@ struct wmi_soc {
 	/* WMI service bitmap received from target */
 	uint32_t *wmi_service_bitmap;
 	uint32_t *wmi_ext_service_bitmap;
+	uint32_t *wmi_ext2_service_bitmap;
 	uint32_t services[wmi_services_max];
 	uint16_t wmi_max_cmds;
 	uint32_t soc_idx;
@@ -2725,7 +2780,7 @@ void wmi_policy_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 }
 #endif
 
-#ifdef FEATURE_BLACKLIST_MGR
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_BLACKLIST_MGR)
 void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle);
 #else
 static inline

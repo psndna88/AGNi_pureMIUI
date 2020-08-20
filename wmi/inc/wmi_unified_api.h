@@ -436,6 +436,36 @@ void wmi_set_target_suspend(wmi_unified_t wmi_handle, bool val);
  */
 bool wmi_is_target_suspended(struct wmi_unified *wmi_handle);
 
+#ifdef WLAN_FEATURE_WMI_SEND_RECV_QMI
+/**
+ *  wmi_set_qmi_stats() - WMI API to set qmi stats enabled/disabled
+ *  @wmi_handle: handle to WMI.
+ *  @val: suspend state boolean
+ */
+void wmi_set_qmi_stats(wmi_unified_t wmi_handle, bool val);
+
+/**
+ * wmi_is_qmi_stats_enabled() - WMI API to check if periodic stats
+ * over qmi is enableid
+ * @wmi_handle: handle to WMI.
+ *
+ * WMI API to check if periodic stats over qmi is enabled
+ *
+ * Return: true if qmi stats is enabled, else false.
+ */
+bool wmi_is_qmi_stats_enabled(struct wmi_unified *wmi_handle);
+#else
+static inline
+void wmi_set_qmi_stats(wmi_unified_t wmi_handle, bool val)
+{}
+
+static inline
+bool wmi_is_qmi_stats_enabled(struct wmi_unified *wmi_handle)
+{
+	return false;
+}
+#endif /* end if of WLAN_FEATURE_WMI_SEND_RECV_QMI */
+
 /**
  * WMI API to set bus suspend state
  * @param wmi_handle:	handle to WMI.
@@ -3329,6 +3359,21 @@ QDF_STATUS wmi_extract_dbr_ring_cap_service_ready_ext2(
 			struct wlan_psoc_host_dbr_ring_caps *param);
 
 /**
+ * wmi_extract_scan_radio_cap_service_ready_ext2: Extract scan radio capability
+ * received through extended service ready2 event
+ * @wmi_handle: WMI handle
+ * @evt_buf: Event buffer
+ * @idx: Index of the module for which capability is received
+ * @param: Pointer to scan radio cap struct
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS wmi_extract_scan_radio_cap_service_ready_ext2(
+			wmi_unified_t wmi_handle,
+			uint8_t *evt_buf, uint8_t idx,
+			struct wlan_psoc_host_scan_radio_caps *param);
+
+/**
  * wmi_extract_spectral_scaling_params_service_ready_ext: Extract Spectral
  *                                             scaling params received through
  *                                             extended service ready event
@@ -3874,6 +3919,22 @@ QDF_STATUS wmi_unified_send_self_non_srg_obss_bssid_enable_bitmap_cmd(
 QDF_STATUS wmi_convert_pdev_id_host_to_target(wmi_unified_t wmi_handle,
 					      uint32_t host_pdev_id,
 					      uint32_t *target_pdev_id);
+
+#ifndef CNSS_GENL
+/**
+ * wmi_convert_pdev_id_target_to_host() - Convert pdev_id from target to host
+ * defines. For legacy there is not conversion required. Just return pdev_id as
+ * it is.
+ * @wmi_handle: wmi handle
+ * @target_pdev_id: target pdev_id to be converted.
+ * @host_pdev_id: Output host pdev id.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wmi_convert_pdev_id_target_to_host(wmi_unified_t wmi_handle,
+					      uint32_t target_pdev_id,
+					      uint32_t *host_pdev_id);
+#endif
 
 /**
  * wmi_unified_send_bss_color_change_enable_cmd() - WMI function to send bss

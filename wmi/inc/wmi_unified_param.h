@@ -1085,6 +1085,7 @@ struct peer_assoc_params {
 	uint32_t peer_he_rx_mcs_set[WMI_HOST_MAX_HE_RATE_SET];
 	uint32_t peer_he_tx_mcs_set[WMI_HOST_MAX_HE_RATE_SET];
 	struct wmi_host_ppe_threshold peer_ppet;
+	u_int8_t peer_bsscolor_rept_info;
 };
 
 /**
@@ -1305,6 +1306,7 @@ struct tx_send_params {
  * @tx_param: TX send parameters
  * @tx_params_valid: Flag that indicates if TX params are valid
  * @use_6mbps: specify whether management frame to transmit should
+ * @tx_flags: additional configuration flags for mgmt frames
  *  use 6 Mbps rather than 1 Mbps min rate(for 5GHz band or P2P)
  */
 struct wmi_mgmt_params {
@@ -1320,6 +1322,7 @@ struct wmi_mgmt_params {
 	struct tx_send_params tx_param;
 	bool tx_params_valid;
 	uint8_t use_6mbps;
+	uint32_t tx_flags;
 };
 
 /**
@@ -4623,8 +4626,15 @@ typedef enum {
 #if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
 	wmi_host_dfs_status_check_event_id,
 #endif
+#ifdef WLAN_SUPPORT_TWT
 	wmi_twt_enable_complete_event_id,
 	wmi_twt_disable_complete_event_id,
+	wmi_twt_add_dialog_complete_event_id,
+	wmi_twt_del_dialog_complete_event_id,
+	wmi_twt_pause_dialog_complete_event_id,
+	wmi_twt_resume_dialog_complete_event_id,
+	wmi_twt_session_stats_event_id,
+#endif
 	wmi_apf_get_vdev_work_memory_resp_event_id,
 	wmi_roam_scan_stats_event_id,
 	wmi_vdev_ocac_complete_event_id,
@@ -4671,6 +4681,8 @@ typedef enum {
 	wmi_pdev_sscan_fw_param_eventid,
 	wmi_roam_cap_report_event_id,
 	wmi_vdev_bcn_latency_event_id,
+	wmi_vdev_disconnect_event_id,
+	wmi_peer_create_conf_event_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -4838,6 +4850,9 @@ typedef enum {
 	wmi_pdev_param_enable_fw_dynamic_he_edca,
 	wmi_pdev_param_enable_srp,
 	wmi_pdev_param_enable_sr_prohibit,
+	wmi_pdev_param_sr_trigger_margin,
+	wmi_pdev_param_pream_punct_bw,
+	wmi_pdev_param_enable_mbssid_ctrl_frame,
 	wmi_pdev_param_max,
 } wmi_conv_pdev_params_id;
 
@@ -5198,6 +5213,10 @@ typedef enum {
 	wmi_service_no_interband_mcc_support,
 	wmi_service_dual_sta_roam_support,
 	wmi_service_peer_create_conf,
+	wmi_service_configure_roam_trigger_param_support,
+	wmi_service_5dot9_ghz_support,
+	wmi_service_cfr_ta_ra_as_fp_support,
+	wmi_service_cfr_capture_count_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -7670,6 +7689,10 @@ struct wmi_roam_scan_stats_res {
  * @validity_interval:     Preferred candidate list validity interval in ms
  * @candidate_list_count:  Number of candidates in BTM request.
  * @btm_resp_status:       Status code of the BTM response.
+ * @btm_bss_termination_timeout: BTM BSS termination timeout value
+ * in milli seconds
+ * @btm_mbo_assoc_retry_timeout: BTM MBO assoc retry timeout value in
+ * milli seconds
  */
 struct wmi_roam_btm_trigger_data {
 	uint32_t btm_request_mode;
@@ -7677,6 +7700,8 @@ struct wmi_roam_btm_trigger_data {
 	uint32_t validity_interval;
 	uint32_t candidate_list_count;
 	uint32_t btm_resp_status;
+	uint32_t btm_bss_termination_timeout;
+	uint32_t btm_mbo_assoc_retry_timeout;
 };
 
 /**
@@ -7709,6 +7734,27 @@ struct wmi_roam_deauth_trigger_data {
 };
 
 /**
+ * struct wmi_roam_wtc_btm_trigger_data - wtc btm roaming trigger related
+ * parameters
+ * @roaming_mode: Roaming Mode
+ * @vsie_trigger_reason: Roam trigger reason present in btm request
+ * @sub_code: Sub code present in btm request
+ * @wtc_mode: WTC mode
+ * @wtc_scan_mode: WTC scan mode
+ * @wtc_rssi_th: Connected AP threshold
+ * @wtc_candi_rssi_th: Candidate AP threshold
+ */
+struct wmi_roam_wtc_btm_trigger_data {
+	uint32_t roaming_mode;
+	uint32_t vsie_trigger_reason;
+	uint32_t sub_code;
+	uint32_t wtc_mode;
+	uint32_t wtc_scan_mode;
+	uint32_t wtc_rssi_th;
+	uint32_t wtc_candi_rssi_th;
+};
+
+/**
  *  struct wmi_roam_candidate_info - Roam scan candidate APs related info
  *  @timestamp:   Host timestamp in millisecs
  *  @type:        0 - Candidate AP; 1 - Current connected AP.
@@ -7720,6 +7766,12 @@ struct wmi_roam_deauth_trigger_data {
  *  @rssi_score:  AP RSSI score
  *  @total_score: Total score of the candidate AP.
  *  @etp:         Estimated throughput value of the AP in Mbps
+ *  @bl_reason:   Blacklist reason
+ *  @bl_source:   Source of adding AP to BL
+ *  @bl_timestamp:This timestamp indicates the time when AP added
+ *  to blacklist.
+ *  @bl_original_timeout: Original timeout value in milli seconds
+ *  when AP added to BL
  */
 struct wmi_roam_candidate_info {
 	uint32_t timestamp;
@@ -7732,6 +7784,10 @@ struct wmi_roam_candidate_info {
 	uint32_t rssi_score;
 	uint32_t total_score;
 	uint32_t etp;
+	uint32_t bl_reason;
+	uint32_t bl_source;
+	uint32_t bl_timestamp;
+	uint32_t bl_original_timeout;
 };
 
 /**
@@ -7799,6 +7855,7 @@ struct wmi_neighbor_report_data {
  * @cu_trig_data:       BSS Load roam trigger parameters.
  * @rssi_trig_data:     RSSI trigger related info.
  * @deauth_trig_data:   Deauth roam trigger related info
+ * @wtc_btm_trig_data:  WTC BTM roam trigger related info
  */
 struct wmi_roam_trigger_info {
 	bool present;
@@ -7811,6 +7868,7 @@ struct wmi_roam_trigger_info {
 		struct wmi_roam_cu_trigger_data cu_trig_data;
 		struct wmi_roam_rssi_trigger_data rssi_trig_data;
 		struct wmi_roam_deauth_trigger_data deauth_trig_data;
+		struct wmi_roam_wtc_btm_trigger_data wtc_btm_trig_data;
 	};
 };
 

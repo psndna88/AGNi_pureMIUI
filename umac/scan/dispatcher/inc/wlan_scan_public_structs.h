@@ -237,22 +237,13 @@ struct scan_cache_node {
  * @ucastcipherset: unicast cipher set
  * @mcastcipherset: multicast cipher set
  * @mgmtcipherset: mgmt cipher set
- * @uc_enc: unicast cipher
- * @mc_enc: multicast cipher
- * @auth_type: key management
  */
 struct security_info {
-#ifdef WLAN_SCAN_SECURITY_FILTER_V1
 	uint32_t authmodeset;
 	uint32_t key_mgmt;
 	uint32_t ucastcipherset;
 	uint32_t mcastcipherset;
 	uint32_t mgmtcipherset;
-#else
-	enum wlan_enc_type uc_enc;
-	enum wlan_enc_type mc_enc;
-	enum wlan_auth_type auth_type;
-#endif
 };
 
 /**
@@ -275,6 +266,7 @@ struct scan_mbssid_info {
  * @bssid: BSS MAC address
  * @short_ssid: short ssid
  * @bss_params: BSS parameters
+ * @psd_20mhz: 20MHz power spectral density
  */
 struct rnr_bss_info {
 	uint8_t neighbor_ap_tbtt_offset;
@@ -283,6 +275,7 @@ struct rnr_bss_info {
 	struct qdf_mac_addr bssid;
 	uint32_t short_ssid;
 	uint8_t bss_params;
+	uint8_t psd_20mhz;
 };
 
 /**
@@ -320,9 +313,13 @@ struct neighbor_ap_info_field {
  * @TBTT_NEIGHBOR_AP_S_SSID_BSS_PARAM: neighbor AP, short ssid and bss param
  * @TBTT_NEIGHBOR_AP_BSSID: neighbor AP and bssid
  * @TBTT_NEIGHBOR_AP_BSSID_BSS_PARAM: neighbor AP, bssid and bss param
+ * @TBTT_NEIGHBOR_AP_BSSID_BSS_PARAM_20MHZ_PSD: neighbor AP, bssid and bss
+ * param and 20MHz PSD
  * @TBTT_NEIGHBOR_AP_BSSSID_S_SSID: neighbor AP, bssid and short ssid
  * @TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM: neighbor AP, bssid, short ssid
  * and bss params
+ * @TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM_20MHZ_PSD: neighbor AP, bssid,
+ * short ssid, bss params and 20MHz PSD
  */
 enum tbtt_information_field {
 	TBTT_NEIGHBOR_AP_OFFSET_ONLY = 1,
@@ -331,8 +328,10 @@ enum tbtt_information_field {
 	TBTT_NEIGHBOR_AP_S_SSID_BSS_PARAM = 6,
 	TBTT_NEIGHBOR_AP_BSSID = 7,
 	TBTT_NEIGHBOR_AP_BSSID_BSS_PARAM = 8,
+	TBTT_NEIGHBOR_AP_BSSID_BSS_PARAM_20MHZ_PSD = 9,
 	TBTT_NEIGHBOR_AP_BSSSID_S_SSID = 11,
-	TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM = 12
+	TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM = 12,
+	TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM_20MHZ_PSD = 13
 };
 
 /**
@@ -471,77 +470,62 @@ struct fils_filter_info {
 /**
  * struct scan_filter: scan filter
  * @enable_adaptive_11r:    flag to check if adaptive 11r ini is enabled
- * @age_threshold: If set return entry which are newer than the age_threshold
  * @rrm_measurement_filter: For measurement reports.if set, only SSID, BSSID
  *                          and channel is considered for filtering.
+ * @ignore_pmf_cap: Ignore pmf capability match
+ * @ignore_auth_enc_type: Ignore enc type if
+ *                        this is set (For WPS/OSEN connection)
+ * @ignore_nol_chan: Ignore entry with channel in the NOL list
+ * @age_threshold: If set return entry which are newer than the age_threshold
  * @num_of_bssid: number of bssid passed
  * @num_of_ssid: number of ssid
  * @num_of_channels: number of  channels
- * @num_of_auth: number of auth types
- * @num_of_enc_type: number of unicast enc type
- * @num_of_mc_enc_type: number of multicast enc type
  * @pmf_cap: Pmf capability
- * @ignore_pmf_cap: Ignore pmf capability match
  * @dot11_mode: operating modes 0 mean any
  *              11a , 11g, 11n , 11ac , 11b etc
  * @band: to get specific band 2.4G, 5G or 4.9 G
  * @rssi_threshold: AP having RSSI greater than
  *                  rssi threasholed (ignored if set 0)
- * @ignore_auth_enc_type: Ignore enc type if
- *                        this is set (For WPS/OSEN connection)
  * @mobility_domain: Mobility domain for 11r
- * @bssid_list: bssid list
- * @ssid_list: ssid list
- * @chan_freq_list: channel frequency list, frequency unit: MHz
  * @authmodeset: auth mode
  * @key_mgmt: key management
  * @ucastcipherset: unicast cipher set
  * @mcastcipherset: multicast cipher set
  * @mgmtcipherset: mgmt cipher set
- * @auth_type: auth type list
- * @enc_type: unicast enc type list
- * @mc_enc_type: multicast cast enc type list
  * @fils_scan_filter: FILS info
  * @bssid_hint: Mac address of bssid_hint
+ * @bssid_list: bssid list
+ * @ssid_list: ssid list
+ * @chan_freq_list: channel frequency list, frequency unit: MHz
  */
 struct scan_filter {
-	bool enable_adaptive_11r;
+	uint8_t enable_adaptive_11r:1,
+		rrm_measurement_filter:1,
+		ignore_pmf_cap:1,
+		ignore_auth_enc_type:1,
+		ignore_nol_chan:1;
 	qdf_time_t age_threshold;
-	bool rrm_measurement_filter;
 	uint8_t num_of_bssid;
 	uint8_t num_of_ssid;
-	uint8_t num_of_channels;
-#ifndef WLAN_SCAN_SECURITY_FILTER_V1
-	uint8_t num_of_auth;
-	uint8_t num_of_enc_type;
-	uint8_t num_of_mc_enc_type;
-#endif
+	uint16_t num_of_channels;
 	enum wlan_pmf_cap pmf_cap;
-	bool ignore_pmf_cap;
 	enum wlan_phymode dot11_mode;
 	enum wlan_band band;
 	uint8_t rssi_threshold;
-	bool ignore_auth_enc_type;
 	uint32_t mobility_domain;
-	/* Variable params list */
-	struct qdf_mac_addr bssid_list[WLAN_SCAN_FILTER_NUM_BSSID];
-	struct wlan_ssid ssid_list[WLAN_SCAN_FILTER_NUM_SSID];
-	qdf_freq_t chan_freq_list[NUM_CHANNELS];
-#ifdef WLAN_SCAN_SECURITY_FILTER_V1
 	uint32_t authmodeset;
 	uint32_t key_mgmt;
 	uint32_t ucastcipherset;
 	uint32_t mcastcipherset;
 	uint32_t mgmtcipherset;
-#else
-	enum wlan_auth_type auth_type[WLAN_NUM_OF_SUPPORT_AUTH_TYPE];
-	enum wlan_enc_type enc_type[WLAN_NUM_OF_ENCRYPT_TYPE];
-	enum wlan_enc_type mc_enc_type[WLAN_NUM_OF_ENCRYPT_TYPE];
-#endif
 #ifdef WLAN_FEATURE_FILS_SK
 	struct fils_filter_info fils_scan_filter;
 #endif
 	struct qdf_mac_addr bssid_hint;
+	/* Variable params list */
+	struct qdf_mac_addr bssid_list[WLAN_SCAN_FILTER_NUM_BSSID];
+	struct wlan_ssid ssid_list[WLAN_SCAN_FILTER_NUM_SSID];
+	qdf_freq_t chan_freq_list[NUM_CHANNELS];
 };
 
 /**

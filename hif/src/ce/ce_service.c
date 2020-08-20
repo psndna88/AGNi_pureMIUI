@@ -375,7 +375,7 @@ void war_ce_src_ring_write_idx_set(struct hif_softc *scn,
 
 qdf_export_symbol(war_ce_src_ring_write_idx_set);
 
-int
+QDF_STATUS
 ce_send(struct CE_handle *copyeng,
 		void *per_transfer_context,
 		qdf_dma_addr_t buffer,
@@ -385,7 +385,7 @@ ce_send(struct CE_handle *copyeng,
 		uint32_t user_flag)
 {
 	struct CE_state *CE_state = (struct CE_state *)copyeng;
-	int status;
+	QDF_STATUS status;
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(CE_state->scn);
 
 	qdf_spin_lock_bh(&CE_state->ce_index_lock);
@@ -410,7 +410,7 @@ void ce_sendlist_init(struct ce_sendlist *sendlist)
 	sl->num_items = 0;
 }
 
-int
+QDF_STATUS
 ce_sendlist_buf_add(struct ce_sendlist *sendlist,
 					qdf_dma_addr_t buffer,
 					uint32_t nbytes,
@@ -436,7 +436,7 @@ ce_sendlist_buf_add(struct ce_sendlist *sendlist,
 	return QDF_STATUS_SUCCESS;
 }
 
-int
+QDF_STATUS
 ce_sendlist_send(struct CE_handle *copyeng,
 		 void *per_transfer_context,
 		 struct ce_sendlist *sendlist, unsigned int transfer_id)
@@ -671,9 +671,9 @@ QDF_STATUS ce_send_single(struct CE_handle *ce_tx_hdl, qdf_nbuf_t msdu,
  * @per_recv_context: virtual address of the nbuf
  * @buffer: physical address of the nbuf
  *
- * Return: 0 if the buffer is enqueued
+ * Return: QDF_STATUS_SUCCESS if the buffer is enqueued
  */
-int
+QDF_STATUS
 ce_recv_buf_enqueue(struct CE_handle *copyeng,
 		    void *per_recv_context, qdf_dma_addr_t buffer)
 {
@@ -749,7 +749,7 @@ unsigned int ce_recv_entries_avail(struct CE_handle *copyeng)
  * Guts of ce_completed_recv_next.
  * The caller takes responsibility for any necessary locking.
  */
-int
+QDF_STATUS
 ce_completed_recv_next(struct CE_handle *copyeng,
 		       void **per_CE_contextp,
 		       void **per_transfer_contextp,
@@ -758,7 +758,7 @@ ce_completed_recv_next(struct CE_handle *copyeng,
 		       unsigned int *transfer_idp, unsigned int *flagsp)
 {
 	struct CE_state *CE_state = (struct CE_state *)copyeng;
-	int status;
+	QDF_STATUS status;
 	struct hif_softc *scn = CE_state->scn;
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
 	struct ce_ops *ce_services;
@@ -804,7 +804,7 @@ ce_cancel_send_next(struct CE_handle *copyeng,
 }
 qdf_export_symbol(ce_cancel_send_next);
 
-int
+QDF_STATUS
 ce_completed_send_next(struct CE_handle *copyeng,
 		       void **per_CE_contextp,
 		       void **per_transfer_contextp,
@@ -819,7 +819,7 @@ ce_completed_send_next(struct CE_handle *copyeng,
 	struct hif_softc *scn = CE_state->scn;
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
 	struct ce_ops *ce_services;
-	int status;
+	QDF_STATUS status;
 
 	ce_services = hif_state->ce_services;
 	qdf_spin_lock_bh(&CE_state->ce_index_lock);

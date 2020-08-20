@@ -426,8 +426,9 @@ static inline void hif_record_event(struct hif_opaque_softc *hif_ctx,
 	event.tp = tp;
 	event.type = type;
 
-	return hif_hist_record_event(hif_ctx, &event,
-				     intr_grp_id);
+	hif_hist_record_event(hif_ctx, &event, intr_grp_id);
+
+	return;
 }
 
 #else
@@ -665,15 +666,25 @@ bool hif_is_polled_mode_enabled(struct hif_opaque_softc *hif_ctx);
 void hif_enable_fastpath(struct hif_opaque_softc *hif_ctx);
 bool hif_is_fastpath_mode_enabled(struct hif_opaque_softc *hif_ctx);
 void *hif_get_ce_handle(struct hif_opaque_softc *hif_ctx, int ret);
-int hif_ce_fastpath_cb_register(struct hif_opaque_softc *hif_ctx,
-				fastpath_msg_handler handler, void *context);
+
+/**
+ * hif_ce_fastpath_cb_register() - Register callback for fastpath msg handler
+ * @handler: Callback funtcion
+ * @context: handle for callback function
+ *
+ * Return: QDF_STATUS_SUCCESS on success or QDF_STATUS_E_FAILURE
+ */
+QDF_STATUS hif_ce_fastpath_cb_register(
+		struct hif_opaque_softc *hif_ctx,
+		fastpath_msg_handler handler, void *context);
 #else
-static inline int hif_ce_fastpath_cb_register(struct hif_opaque_softc *hif_ctx,
-					      fastpath_msg_handler handler,
-					      void *context)
+static inline QDF_STATUS hif_ce_fastpath_cb_register(
+		struct hif_opaque_softc *hif_ctx,
+		fastpath_msg_handler handler, void *context)
 {
 	return QDF_STATUS_E_FAILURE;
 }
+
 static inline void *hif_get_ce_handle(struct hif_opaque_softc *hif_ctx, int ret)
 {
 	return NULL;
@@ -1258,11 +1269,31 @@ typedef uint32_t (*ext_intr_handler)(void *, uint32_t);
 int32_t hif_get_int_ctx_irq_num(struct hif_opaque_softc *softc,
 				uint8_t id);
 
-uint32_t hif_configure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
-uint32_t  hif_register_ext_group(struct hif_opaque_softc *hif_ctx,
-		uint32_t numirq, uint32_t irq[], ext_intr_handler handler,
-		void *cb_ctx, const char *context_name,
-		enum hif_exec_type type, uint32_t scale);
+/**
+ * hif_configure_ext_group_interrupts() - Congigure ext group intrrupts
+ * @hif_ctx: hif opaque context
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hif_configure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_register_ext_group() - API to register external group
+ * interrupt handler.
+ * @hif_ctx : HIF Context
+ * @numirq: number of irq's in the group
+ * @irq: array of irq values
+ * @handler: callback interrupt handler function
+ * @cb_ctx: context to passed in callback
+ * @type: napi vs tasklet
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hif_register_ext_group(struct hif_opaque_softc *hif_ctx,
+				  uint32_t numirq, uint32_t irq[],
+				  ext_intr_handler handler,
+				  void *cb_ctx, const char *context_name,
+				  enum hif_exec_type type, uint32_t scale);
 
 void hif_deregister_exec_group(struct hif_opaque_softc *hif_ctx,
 				const char *context_name);
@@ -1484,6 +1515,21 @@ void hif_srng_init_phase(struct hif_opaque_softc *hif_ctx,
 {
 }
 #endif /* FORCE_WAKE */
+
+#ifdef HIF_IPCI
+/**
+ * hif_shutdown_notifier_cb - Call back for shutdown notifier
+ * @ctx: hif handle
+ *
+ * Return:  None
+ */
+void hif_shutdown_notifier_cb(void *ctx);
+#else
+static inline
+void hif_shutdown_notifier_cb(void *ctx)
+{
+}
+#endif /* HIF_IPCI */
 
 #ifdef HIF_CE_LOG_INFO
 /**

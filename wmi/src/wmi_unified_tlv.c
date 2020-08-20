@@ -327,6 +327,9 @@ static const uint32_t pdev_param_tlv[] = {
 			WMI_PDEV_PARAM_ENABLE_FW_DYNAMIC_HE_EDCA,
 	[wmi_pdev_param_enable_srp] = WMI_PDEV_PARAM_ENABLE_SRP,
 	[wmi_pdev_param_enable_sr_prohibit] = WMI_PDEV_PARAM_ENABLE_SR_PROHIBIT,
+	[wmi_pdev_param_sr_trigger_margin] = WMI_PDEV_PARAM_SR_TRIGGER_MARGIN,
+	[wmi_pdev_param_pream_punct_bw] = WMI_PDEV_PARAM_SET_PREAM_PUNCT_BW,
+	[wmi_pdev_param_enable_mbssid_ctrl_frame] = WMI_PDEV_PARAM_ENABLE_MBSSID_CTRL_FRAME,
 };
 
 /**
@@ -705,6 +708,9 @@ static QDF_STATUS wmi_unified_cmd_send_pm_chk(struct wmi_unified *wmi_handle,
 					      wmi_buf_t buf,
 					      uint32_t buflen, uint32_t cmd_id)
 {
+	if (!wmi_is_qmi_stats_enabled(wmi_handle))
+		goto send_over_wmi;
+
 	if (wmi_is_target_suspended(wmi_handle)) {
 		if (QDF_IS_STATUS_SUCCESS(
 		    wmi_unified_cmd_send_over_qmi(wmi_handle, buf,
@@ -712,6 +718,7 @@ static QDF_STATUS wmi_unified_cmd_send_pm_chk(struct wmi_unified *wmi_handle,
 			return QDF_STATUS_SUCCESS;
 	}
 
+send_over_wmi:
 	qdf_atomic_set(&wmi_handle->num_stats_over_qmi, 0);
 
 	return wmi_unified_cmd_send(wmi_handle, buf, buflen, cmd_id);
@@ -760,6 +767,7 @@ static QDF_STATUS send_vdev_create_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->vdev_type = param->type;
 	cmd->vdev_subtype = param->subtype;
 	cmd->flags = param->mbssid_flags;
+	cmd->flags |= (param->special_vdev_mode ? VDEV_FLAGS_SCAN_MODE_VAP : 0);
 	cmd->vdevid_trans = param->vdevid_trans;
 	cmd->num_cfg_txrx_streams = num_bands;
 	copy_vdev_create_pdev_id(wmi_handle, cmd, param);
@@ -2693,6 +2701,7 @@ static QDF_STATUS send_peer_assoc_cmd_tlv(wmi_unified_t wmi_handle,
 		(param->peer_he_mcs_count * sizeof(wmi_he_rate_set)));
 	buf_ptr += WMI_TLV_HDR_SIZE;
 
+	WMI_PEER_STA_TYPE_SET(cmd->sta_type, param->peer_bsscolor_rept_info);
 	/* Loop through the HE rate set */
 	for (i = 0; i < param->peer_he_mcs_count; i++) {
 		he_mcs = (wmi_he_rate_set *) buf_ptr;
@@ -3474,6 +3483,7 @@ static QDF_STATUS send_mgmt_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->frame_len = param->frm_len;
 	cmd->buf_len = bufp_len;
 	cmd->tx_params_valid = param->tx_params_valid;
+	cmd->tx_flags = param->tx_flags;
 
 	wmi_mgmt_cmd_record(wmi_handle, WMI_MGMT_TX_SEND_CMDID,
 			bufp, cmd->vdev_id, cmd->chanfreq);
@@ -3562,6 +3572,7 @@ static QDF_STATUS send_mgmt_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->frame_len = param->frm_len;
 	cmd->buf_len = bufp_len;
 	cmd->tx_params_valid = param->tx_params_valid;
+	cmd->tx_flags = param->tx_flags;
 
 	wmi_mgmt_cmd_record(wmi_handle, WMI_MGMT_TX_SEND_CMDID,
 			bufp, cmd->vdev_id, cmd->chanfreq);
@@ -5916,6 +5927,14 @@ static QDF_STATUS send_stats_ext_req_cmd_tlv(wmi_unified_t wmi_handle,
 	wmi_buf_t buf;
 	size_t len;
 	uint8_t *buf_ptr;
+	uint16_t max_wmi_msg_size = wmi_get_max_msg_len(wmi_handle);
+
+	if (preq->request_data_len > (max_wmi_msg_size - WMI_TLV_HDR_SIZE -
+				      sizeof(*cmd))) {
+		wmi_err("Data length=%d is greater than max wmi msg size",
+			preq->request_data_len);
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE + preq->request_data_len;
 
@@ -8424,6 +8443,25 @@ static bool is_service_enabled_tlv(wmi_unified_t wmi_handle,
 		return false;
 	}
 
+	if (!soc->wmi_ext_service_bitmap) {
+		WMI_LOGE("WMI service ext bit map is not saved yet");
+		return false;
+	}
+
+	/* if wmi_service_enabled was received with extended2 bitmap,
+	 * use WMI_SERVICE_EXT2_IS_ENABLED to check the services.
+	 */
+	if (soc->wmi_ext2_service_bitmap)
+		return WMI_SERVICE_EXT2_IS_ENABLED(soc->wmi_service_bitmap,
+				soc->wmi_ext_service_bitmap,
+				soc->wmi_ext2_service_bitmap,
+				service_id);
+
+	if (service_id >= WMI_MAX_EXT_SERVICE) {
+		WMI_LOGE("Service id %d but WMI ext2 service bitmap is NULL",
+			 service_id);
+		return false;
+	}
 	/* if wmi_service_enabled was received with extended bitmap,
 	 * use WMI_SERVICE_EXT_IS_ENABLED to check the services.
 	 */
@@ -9248,6 +9286,7 @@ QDF_STATUS save_ext_service_bitmap_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	WMI_SERVICE_AVAILABLE_EVENTID_param_tlvs *param_buf;
 	wmi_service_available_event_fixed_param *ev;
 	struct wmi_soc *soc = wmi_handle->soc;
+	uint32_t i = 0;
 
 	param_buf = (WMI_SERVICE_AVAILABLE_EVENTID_param_tlvs *) evt_buf;
 
@@ -9275,6 +9314,29 @@ QDF_STATUS save_ext_service_bitmap_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		qdf_mem_copy(bitmap_buf,
 			soc->wmi_ext_service_bitmap,
 			(WMI_SERVICE_SEGMENT_BM_SIZE32 * sizeof(uint32_t)));
+
+	if (!param_buf->wmi_service_ext_bitmap) {
+		WMI_LOGD("wmi_service_ext_bitmap not available");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (!soc->wmi_ext2_service_bitmap) {
+		soc->wmi_ext2_service_bitmap =
+			qdf_mem_malloc(param_buf->num_wmi_service_ext_bitmap *
+				       sizeof(uint32_t));
+		if (!soc->wmi_ext2_service_bitmap)
+			return QDF_STATUS_E_NOMEM;
+	}
+
+	qdf_mem_copy(soc->wmi_ext2_service_bitmap,
+		     param_buf->wmi_service_ext_bitmap,
+		     (param_buf->num_wmi_service_ext_bitmap *
+		      sizeof(uint32_t)));
+
+	for (i = 0; i < param_buf->num_wmi_service_ext_bitmap; i++) {
+		WMI_LOGD("wmi_ext2_service_bitmap %u:0x%x",
+			 i, soc->wmi_ext2_service_bitmap[i]);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -11248,6 +11310,9 @@ extract_service_ready_ext2_tlv(wmi_unified_t wmi_handle, uint8_t *event,
 	else
 		param->max_ndp_sessions = 0;
 
+	param->preamble_puncture_bw_cap = ev->preamble_puncture_bw;
+	param->num_scan_radio_caps = param_buf->num_wmi_scan_radio_caps;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -11613,6 +11678,32 @@ static QDF_STATUS extract_dbr_ring_cap_service_ready_ext2_tlv(
 				    &param_buf->dma_ring_caps[idx]);
 	return QDF_STATUS_SUCCESS;
 }
+
+static QDF_STATUS extract_scan_radio_cap_service_ready_ext2_tlv(
+			wmi_unified_t wmi_handle,
+			uint8_t *event, uint8_t idx,
+			struct wlan_psoc_host_scan_radio_caps *param)
+{
+	WMI_SERVICE_READY_EXT2_EVENTID_param_tlvs *param_buf;
+	WMI_SCAN_RADIO_CAPABILITIES_EXT2 *scan_radio_caps;
+
+	param_buf = (WMI_SERVICE_READY_EXT2_EVENTID_param_tlvs *)event;
+	if (!param_buf)
+		return QDF_STATUS_E_INVAL;
+
+	if (idx >= param_buf->num_wmi_scan_radio_caps)
+		return QDF_STATUS_E_INVAL;
+
+	scan_radio_caps = &param_buf->wmi_scan_radio_caps[idx];
+	param->phy_id = scan_radio_caps->phy_id;
+	param->scan_radio_supported =
+		WMI_SCAN_RADIO_CAP_SCAN_RADIO_FLAG_GET(scan_radio_caps->flags);
+	param->dfs_en =
+		WMI_SCAN_RADIO_CAP_DFS_FLAG_GET(scan_radio_caps->flags);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * extract_thermal_stats_tlv() - extract thermal stats from event
  * @wmi_handle: wmi handle
@@ -13775,6 +13866,10 @@ extract_roam_trigger_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 				src_data->candidate_list_count;
 		trig->btm_trig_data.btm_resp_status =
 				src_data->btm_response_status_code;
+		trig->btm_trig_data.btm_bss_termination_timeout =
+				src_data->btm_bss_termination_timeout;
+		trig->btm_trig_data.btm_mbo_assoc_retry_timeout =
+				src_data->btm_mbo_assoc_retry_timeout;
 		return QDF_STATUS_SUCCESS;
 
 	case WMI_ROAM_TRIGGER_REASON_BSS_LOAD:
@@ -13790,6 +13885,22 @@ extract_roam_trigger_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		trig->rssi_trig_data.threshold = src_data->roam_rssi_threshold;
 		return QDF_STATUS_SUCCESS;
 
+	case WMI_ROAM_TRIGGER_REASON_WTC_BTM:
+		trig->wtc_btm_trig_data.roaming_mode =
+					src_data->vendor_specific1[0];
+		trig->wtc_btm_trig_data.vsie_trigger_reason =
+					src_data->vendor_specific1[1];
+		trig->wtc_btm_trig_data.sub_code =
+					src_data->vendor_specific1[2];
+		trig->wtc_btm_trig_data.wtc_mode =
+					src_data->vendor_specific1[3];
+		trig->wtc_btm_trig_data.wtc_scan_mode =
+					src_data->vendor_specific1[4];
+		trig->wtc_btm_trig_data.wtc_rssi_th =
+					src_data->vendor_specific1[5];
+		trig->wtc_btm_trig_data.wtc_candi_rssi_th =
+					src_data->vendor_specific1[6];
+		return QDF_STATUS_SUCCESS;
 	default:
 		return QDF_STATUS_SUCCESS;
 	}
@@ -13840,6 +13951,10 @@ extract_roam_scan_ap_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		dst->cu_score = src->cu_score;
 		dst->total_score = src->total_score;
 		dst->timestamp = src->timestamp;
+		dst->bl_reason = src->bl_reason;
+		dst->bl_source = src->bl_source;
+		dst->bl_timestamp = src->bl_timestamp;
+		dst->bl_original_timeout = src->bl_original_timeout;
 
 		src++;
 		dst++;
@@ -14422,6 +14537,8 @@ struct wmi_ops tlv_ops =  {
 				extract_dbr_ring_cap_service_ready_ext_tlv,
 	.extract_dbr_ring_cap_service_ready_ext2 =
 				extract_dbr_ring_cap_service_ready_ext2_tlv,
+	.extract_scan_radio_cap_service_ready_ext2 =
+				extract_scan_radio_cap_service_ready_ext2_tlv,
 	.extract_sar_cap_service_ready_ext =
 				extract_sar_cap_service_ready_ext_tlv,
 	.extract_pdev_utf_event = extract_pdev_utf_event_tlv,
@@ -14866,10 +14983,22 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 		WMI_OBSS_COLOR_COLLISION_DETECTION_EVENTID;
 	event_ids[wmi_pdev_div_rssi_antid_event_id] =
 		WMI_PDEV_DIV_RSSI_ANTID_EVENTID;
+#ifdef WLAN_SUPPORT_TWT
 	event_ids[wmi_twt_enable_complete_event_id] =
 		WMI_TWT_ENABLE_COMPLETE_EVENTID;
 	event_ids[wmi_twt_disable_complete_event_id] =
 		WMI_TWT_DISABLE_COMPLETE_EVENTID;
+	event_ids[wmi_twt_add_dialog_complete_event_id] =
+		WMI_TWT_ADD_DIALOG_COMPLETE_EVENTID;
+	event_ids[wmi_twt_del_dialog_complete_event_id] =
+		WMI_TWT_DEL_DIALOG_COMPLETE_EVENTID;
+	event_ids[wmi_twt_pause_dialog_complete_event_id] =
+		WMI_TWT_PAUSE_DIALOG_COMPLETE_EVENTID;
+	event_ids[wmi_twt_resume_dialog_complete_event_id] =
+		WMI_TWT_RESUME_DIALOG_COMPLETE_EVENTID;
+	event_ids[wmi_twt_session_stats_event_id] =
+		WMI_TWT_SESSION_STATS_EVENTID;
+#endif
 	event_ids[wmi_apf_get_vdev_work_memory_resp_event_id] =
 		WMI_BPF_GET_VDEV_WORK_MEMORY_RESP_EVENTID;
 	event_ids[wmi_wlan_sar2_result_event_id] = WMI_SAR2_RESULT_EVENTID;
@@ -14944,6 +15073,10 @@ event_ids[wmi_roam_scan_chan_list_id] =
 			WMI_ROAM_CAPABILITY_REPORT_EVENTID;
 	event_ids[wmi_vdev_bcn_latency_event_id] =
 			WMI_VDEV_BCN_LATENCY_EVENTID;
+	event_ids[wmi_vdev_disconnect_event_id] =
+			WMI_VDEV_DISCONNECT_EVENTID;
+	event_ids[wmi_peer_create_conf_event_id] =
+			WMI_PEER_CREATE_CONF_EVENTID;
 }
 
 /**
@@ -15256,7 +15389,14 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_DUAL_STA_ROAM_SUPPORT;
 	wmi_service[wmi_service_peer_create_conf] =
 			WMI_SERVICE_PEER_CREATE_CONF;
-
+	wmi_service[wmi_service_configure_roam_trigger_param_support] =
+			WMI_SERVICE_CONFIGURE_ROAM_TRIGGER_PARAM_SUPPORT;
+	wmi_service[wmi_service_5dot9_ghz_support] =
+			WMI_SERVICE_5_DOT_9GHZ_SUPPORT;
+	wmi_service[wmi_service_cfr_ta_ra_as_fp_support] =
+			WMI_SERVICE_CFR_TA_RA_AS_FP_SUPPORT;
+	wmi_service[wmi_service_cfr_capture_count_support] =
+			WMI_SERVICE_CFR_CAPTURE_COUNT_SUPPORT;
 }
 
 /**

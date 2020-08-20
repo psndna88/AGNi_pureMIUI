@@ -24,7 +24,9 @@
 #include <wlan_vdev_mgr_tgt_if_rx_defs.h>
 #include <qdf_timer.h>
 #include <wlan_cm_bss_score_param.h>
-
+#ifdef FEATURE_VDEV_OPS_WAKELOCK
+#include <target_if_psoc_wake_lock.h>
+#endif
 /* Max RNR size given max vaps are 16 */
 #define MAX_RNR_SIZE 256
 
@@ -65,25 +67,33 @@ struct psoc_phy_config {
 };
 
 /**
+ * struct psoc_config - psoc level configs
+ * @score_config:          BSS scoring related config
+ * @phy_config:            Psoc Phy config
+ */
+struct psoc_config {
+	struct scoring_cfg score_config;
+	struct psoc_phy_config phy_config;
+};
+
+/**
  * struct psoc_mlme_obj -  PSoC MLME component object
  * @psoc:                  PSoC object
  * @ext_psoc_ptr:          PSoC legacy pointer
  * @psoc_vdev_rt:          PSoC Vdev response timer
  * @psoc_mlme_wakelock:    Wakelock to prevent system going to suspend
  * @rnr_6ghz_cache:        Cache of 6Ghz vap in RNR ie format
- * @score_config:          BSS scoring related config
- * @phy_config:            Psoc Phy config
+ * @psoc_cfg:              Psoc level configs
  */
 struct psoc_mlme_obj {
 	struct wlan_objmgr_psoc *psoc;
 	mlme_psoc_ext_t *ext_psoc_ptr;
 	struct vdev_response_timer psoc_vdev_rt[WLAN_UMAC_PSOC_MAX_VDEVS];
-#ifdef FEATURE_VDEV_RSP_WAKELOCK
+#ifdef FEATURE_VDEV_OPS_WAKELOCK
 	struct psoc_mlme_wakelock psoc_mlme_wakelock;
 #endif
 	struct wlan_6ghz_rnr_global_cache rnr_6ghz_cache;
-	struct scoring_cfg score_config;
-	struct psoc_phy_config phy_config;
+	struct psoc_config psoc_cfg;
 };
 
 #endif

@@ -127,15 +127,6 @@ extern const struct chan_map channel_map_jp[];
 extern const struct chan_map channel_map_china[];
 extern const struct chan_map channel_map_global[];
 
-#ifdef CONFIG_CHAN_NUM_API
-/**
- * reg_get_chan_enum() - Get channel enum for given channel number
- * @chan_num: Channel number
- *
- * Return: Channel enum
- */
-enum channel_enum reg_get_chan_enum(uint8_t chan_num);
-
 /**
  * reg_get_channel_list_with_power() - Provides the channel list with power
  * @pdev: Pointer to pdev
@@ -147,6 +138,15 @@ enum channel_enum reg_get_chan_enum(uint8_t chan_num);
 QDF_STATUS reg_get_channel_list_with_power(struct wlan_objmgr_pdev *pdev,
 					   struct channel_power *ch_list,
 					   uint8_t *num_chan);
+
+#ifdef CONFIG_CHAN_NUM_API
+/**
+ * reg_get_chan_enum() - Get channel enum for given channel number
+ * @chan_num: Channel number
+ *
+ * Return: Channel enum
+ */
+enum channel_enum reg_get_chan_enum(uint8_t chan_num);
 
 /**
  * reg_get_channel_state() - Get channel state from regulatory
@@ -357,7 +357,6 @@ bool reg_is_dfs_ch(struct wlan_objmgr_pdev *pdev, uint8_t chan);
  */
 uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
 
-#ifdef CONFIG_CHAN_NUM_API
 /**
  * reg_chan_to_freq() - Get frequency from channel number
  * @pdev: Pointer to pdev
@@ -377,6 +376,7 @@ qdf_freq_t reg_chan_to_freq(struct wlan_objmgr_pdev *pdev, uint8_t chan_num);
 uint16_t reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 				 uint8_t chan_num);
 
+#ifdef CONFIG_CHAN_NUM_API
 /**
  * reg_chan_is_49ghz() - Check if the input channel number is 4.9GHz
  * @pdev: Pdev pointer
@@ -406,16 +406,6 @@ QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS reg_get_current_cc(struct wlan_objmgr_pdev *pdev,
 			      struct cc_regdmn_s *rd);
-
-/**
- * reg_get_curr_band() - Get current band
- * @pdev: Pdev pointer
- * @band: Pointer to save the current band
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS reg_get_curr_band(struct wlan_objmgr_pdev *pdev,
-			     enum band_info *band);
 
 /**
  * reg_set_regdb_offloaded() - set/clear regulatory offloaded flag
@@ -609,6 +599,15 @@ static inline bool REG_IS_6GHZ_FREQ(uint16_t freq)
 bool reg_is_6ghz_psc_chan_freq(uint16_t freq);
 
 /**
+ * reg_is_6g_freq_indoor() - Check if a 6GHz frequency is indoor.
+ * @pdev: Pointer to pdev.
+ * @freq: Channel frequency.
+ *
+ * Return: Return true if a 6GHz frequency is indoor, else false.
+ */
+bool reg_is_6g_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
  * reg_min_6ghz_chan_freq() - Get minimum 6GHz channel center frequency
  *
  * Return: Minimum 6GHz channel center frequency
@@ -623,6 +622,12 @@ uint16_t reg_min_6ghz_chan_freq(void);
 uint16_t reg_max_6ghz_chan_freq(void);
 #else
 static inline bool reg_is_6ghz_chan_freq(uint16_t freq)
+{
+	return false;
+}
+
+static inline bool
+reg_is_6g_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
 	return false;
 }
@@ -1104,6 +1109,15 @@ QDF_STATUS reg_set_6ghz_supported(struct wlan_objmgr_psoc *psoc,
 				  bool val);
 
 /**
+ * reg_set_5dot9_ghz_supported() - Set if 5.9ghz is supported
+ *
+ * @psoc: Pointer to psoc
+ * @val: value
+ */
+QDF_STATUS reg_set_5dot9_ghz_supported(struct wlan_objmgr_psoc *psoc,
+				       bool val);
+
+/**
  * reg_is_6ghz_op_class() - Check whether 6ghz oper class
  *
  * @pdev: Pointer to pdev
@@ -1120,6 +1134,41 @@ bool reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
  */
 bool reg_is_6ghz_supported(struct wlan_objmgr_psoc *psoc);
 #endif
+
+/**
+ * reg_is_5dot9_ghz_supported() - Whether 5.9ghz is supported
+ *
+ * @psoc: pointer to psoc
+ */
+bool reg_is_5dot9_ghz_supported(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * reg_is_fcc_regdmn () - Checks if the current reg domain is FCC3/FCC8/FCC15/
+ * FCC16 or not
+ * @pdev: pdev ptr
+ *
+ * Return: true or false
+ */
+bool reg_is_fcc_regdmn(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * reg_is_5dot9_ghz_freq () - Checks if the frequency is 5.9 GHz freq or not
+ * @freq: frequency
+ * @pdev: pdev ptr
+ *
+ * Return: true or false
+ */
+bool reg_is_5dot9_ghz_freq(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
+ * reg_is_5dot9_ghz_chan_allowed_master_mode () - Checks if 5.9 GHz channels
+ * are allowed in master mode or not.
+ *
+ * @pdev: pdev ptr
+ *
+ * Return: true or false
+ */
+bool reg_is_5dot9_ghz_chan_allowed_master_mode(struct wlan_objmgr_pdev *pdev);
 
 /**
  * reg_get_unii_5g_bitmap() - get unii_5g_bitmap value
@@ -1155,5 +1204,19 @@ reg_get_max_phymode(struct wlan_objmgr_pdev *pdev,
 	return REG_PHYMODE_INVALID;
 }
 #endif /* CHECK_REG_PHYMODE */
+
+#ifdef CONFIG_REG_CLIENT
+/**
+ * reg_band_bitmap_to_band_info() - Convert the band_bitmap to a band_info enum.
+ *	Since band_info enum only has combinations for 2G and 5G, 6G is not
+ *	considered in this function.
+ * @band_bitmap: bitmap on top of reg_wifi_band of bands enabled
+ *
+ * Return: BAND_ALL if both 2G and 5G band is enabled
+ *	BAND_2G if 2G is enabled but 5G isn't
+ *	BAND_5G if 5G is enabled but 2G isn't
+ */
+enum band_info reg_band_bitmap_to_band_info(uint32_t band_bitmap);
+#endif
 
 #endif

@@ -91,14 +91,23 @@ struct chan_change_cbk_entry {
  *	country update is pending for pdev (phy_id).
  * @world_country_pending: In this array, element[phy_id] is true if any world
  *	country update is pending for pdev (phy_id).
+ * @band_capability: bitmap of bands enabled, using enum reg_wifi_band as the
+ *	bit position value
  * @ignore_fw_reg_offload_ind: Ignore FW reg offload indication
  * @six_ghz_supported: whether 6ghz is supported
+ * @five_dot_nine_ghz_supported: whether 5.9ghz is supported
+ *	(service bit WMI_SERVICE_5_DOT_9GHZ_SUPPORT)
+ * @enable_5dot9_ghz_chan_in_master_mode: 5.9 GHz channel support in
+ *	master mode (ini fcc_5dot9_ghz_chan_in_master_mode)
+ * @retain_nol_across_regdmn_update: Retain the NOL list across the regdomain
+ *	changes.
  */
 struct wlan_regulatory_psoc_priv_obj {
 	struct mas_chan_params mas_chan_params[PSOC_MAX_PHY_REG_CAP];
 	bool chan_list_recvd[PSOC_MAX_PHY_REG_CAP];
 	bool offload_enabled;
 	bool six_ghz_supported;
+	bool five_dot_nine_ghz_supported;
 	uint8_t num_phy;
 	char cur_country[REG_ALPHA2_LEN + 1];
 	char def_country[REG_ALPHA2_LEN + 1];
@@ -111,7 +120,7 @@ struct wlan_regulatory_psoc_priv_obj {
 	bool new_11d_ctry_pending[PSOC_MAX_PHY_REG_CAP];
 	bool world_country_pending[PSOC_MAX_PHY_REG_CAP];
 	bool dfs_enabled;
-	enum band_info band_capability;
+	uint32_t band_capability;
 	bool indoor_chan_enabled;
 	bool ignore_fw_reg_offload_ind;
 	bool enable_11d_supp_original;
@@ -141,12 +150,16 @@ struct wlan_regulatory_psoc_priv_obj {
 	bool force_ssc_disable_indoor_channel;
 	bool enable_srd_chan_in_master_mode;
 	bool enable_11d_in_world_mode;
+	bool enable_5dot9_ghz_chan_in_master_mode;
 	qdf_spinlock_t cbk_list_lock;
+	bool retain_nol_across_regdmn_update;
 };
 
 /**
  * struct wlan_regulatory_pdev_priv_obj - wlan regulatory pdev private object
  * @pdev_opened: whether pdev has been opened by application
+ * @band_capability: bitmap of bands enabled, using enum reg_wifi_band as the
+ *	bit position value
  */
 struct wlan_regulatory_pdev_priv_obj {
 	struct regulatory_channel cur_chan_list[NUM_CHANNELS];
@@ -174,7 +187,7 @@ struct wlan_regulatory_pdev_priv_obj {
 	qdf_freq_t range_5g_high;
 	bool dfs_enabled;
 	bool set_fcc_channel;
-	enum band_info band_capability;
+	uint32_t band_capability;
 	bool indoor_chan_enabled;
 	bool en_chan_144;
 	uint32_t wireless_modes;

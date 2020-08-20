@@ -708,9 +708,10 @@ typedef qdf_nbuf_t (*ol_txrx_tx_exc_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
  * for tx completion
  * @skb: skb data
  * @osif_dev: the virtual device's OS shim object
+ * @flag: flag
  */
 typedef void (*ol_txrx_completion_fp)(qdf_nbuf_t skb,
-				      void *osif_dev);
+				      void *osif_dev, uint16_t flag);
 /**
  * ol_txrx_tx_flow_control_fp - tx flow control notification
  * function from txrx to OS shim
@@ -979,11 +980,13 @@ struct cdp_soc_t {
  * @CDP_CONFIG_NAWDS: Enable nawds mode
  * @CDP_CONFIG_NAC: Enable nac
  * @CDP_CONFIG_ISOLATION : Enable isolation
+ * @CDP_CONFIG_IN_TWT : In TWT session or not
  */
 enum cdp_peer_param_type {
 	CDP_CONFIG_NAWDS,
 	CDP_CONFIG_NAC,
 	CDP_CONFIG_ISOLATION,
+	CDP_CONFIG_IN_TWT,
 };
 
 /*
@@ -1016,6 +1019,7 @@ enum cdp_peer_param_type {
  * @CDP_MONITOR_CHANNEL: monitor channel
  * @CDP_MONITOR_FREQUENCY: monitor frequency
  * @CDP_CONFIG_BSS_COLOR: configure bss color
+ * @CDP_SET_ATF_STATS_ENABLE: set ATF stats flag
  */
 enum cdp_pdev_param_type {
 	CDP_CONFIG_DEBUG_SNIFFER,
@@ -1045,6 +1049,7 @@ enum cdp_pdev_param_type {
 	CDP_MONITOR_CHANNEL,
 	CDP_MONITOR_FREQUENCY,
 	CDP_CONFIG_BSS_COLOR,
+	CDP_SET_ATF_STATS_ENABLE,
 };
 
 /*
@@ -1053,6 +1058,7 @@ enum cdp_pdev_param_type {
  *
  * @cdp_peer_param_nawds: Enable nawds mode
  * @cdp_peer_param_isolation: Enable isolation
+ * @cdp_peer_param_in_twt: in TWT session or not
  * @cdp_peer_param_nac: Enable nac
  *
  * @cdp_vdev_param_nawds: set nawds enable/disable
@@ -1100,6 +1106,7 @@ enum cdp_pdev_param_type {
  * @cdp_pdev_param_fltr_mcast: filter multicast data
  * @cdp_pdev_param_fltr_none: filter no data
  * @cdp_pdev_param_monitor_chan: monitor channel
+ * @cdp_pdev_param_atf_stats_enable: ATF stats enable
  *
  * @cdp_psoc_param_en_rate_stats: set rate stats enable/disable
  * @cdp_psoc_param_en_nss_cfg: set nss cfg
@@ -1109,6 +1116,7 @@ typedef union cdp_config_param_t {
 	bool cdp_peer_param_nawds;
 	bool cdp_peer_param_isolation;
 	uint8_t cdp_peer_param_nac;
+	bool cdp_peer_param_in_twt;
 
 	/* vdev params */
 	bool cdp_vdev_param_wds;
@@ -1160,11 +1168,13 @@ typedef union cdp_config_param_t {
 	uint32_t cdp_pdev_param_osif_drop;
 	uint32_t cdp_pdev_param_en_perpkt_txstats;
 	uint32_t cdp_pdev_param_tx_pending;
+	bool cdp_pdev_param_atf_stats_enable;
 
 	/* psoc params */
 	bool cdp_psoc_param_en_rate_stats;
 	int cdp_psoc_param_en_nss_cfg;
 	int cdp_psoc_param_preferred_hw_mode;
+	bool cdp_psoc_param_pext_stats;
 } cdp_config_param_type;
 
 /**
@@ -1267,11 +1277,13 @@ enum cdp_vdev_param_type {
  * @CDP_ENABLE_RATE_STATS: set rate stats enable/disable
  * @CDP_SET_NSS_CFG: set nss cfg
  * @CDP_SET_PREFERRED_HW_MODE: set preferred hw mode
+ * @CDP_CFG_PEER_EXT_STATS: Peer extended stats mode.
  */
 enum cdp_psoc_param_type {
 	CDP_ENABLE_RATE_STATS,
 	CDP_SET_NSS_CFG,
 	CDP_SET_PREFERRED_HW_MODE,
+	CDP_CFG_PEER_EXT_STATS,
 };
 
 #define TXRX_FW_STATS_TXSTATS                     1
@@ -1602,6 +1614,10 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @pending_retries: pending MPDUs (retries)
  * @tlv_bitmap: per user tlv bitmap
  * @skip: tx capture skip flag
+ * @mon_procd: to indicate user processed in ppdu of the sched cmd
+ * @debug_copied: flag to indicate bar frame copied
+ * @peer_last_delayed_ba: flag to indicate peer last delayed ba
+ * @phy_tx_time_us: Phy TX duration for the User
  */
 struct cdp_tx_completion_ppdu_user {
 	uint32_t completion_status:8,
@@ -1694,6 +1710,11 @@ struct cdp_tx_completion_ppdu_user {
 	uint32_t pending_retries;
 	uint32_t tlv_bitmap;
 	bool skip;
+	bool mon_procd;
+	bool debug_copied;
+	bool peer_last_delayed_ba;
+
+	uint16_t phy_tx_time_us;
 };
 
 /**
@@ -1813,6 +1834,7 @@ struct cdp_tx_mgmt_comp_info {
  * @vdev_id: VAP Id
  * @bar_num_users: BA response user count, based on completion common TLV
  * @num_users: Number of users
+ * @max_users: Number of users from USR_INFO TLV
  * @drop_reason: drop reason from flush status
  * @is_flush: is_flush is set based on flush tlv
  * @flow_type: tx flow type from flush status
@@ -1838,13 +1860,16 @@ struct cdp_tx_mgmt_comp_info {
  * @bss_color: 6 bit value for full bss color
  * @doppler: value for doppler (will be 0 most of the times)
  * @spatial_reuse: value for spatial reuse used in radiotap HE header
- * @user: per-User stats (array of per-user structures)
+ * @usr_nss_sum: Sum of user nss
+ * @usr_ru_tones_sum: Sum of user ru_tones
  * @bar_ppdu_id: BAR ppdu_id
  * @bar_tx_duration: BAR tx duration
  * @bar_ppdu_start_timestamp: BAR start timestamp
  * @bar_ppdu_end_timestamp: BAR end timestamp
  * @tlv_bitmap: tlv_bitmap for the PPDU
  * @sched_cmdid: schedule command id
+ * @phy_ppdu_tx_time_us: Phy per PPDU TX duration
+ * @user: per-User stats (array of per-user structures)
  */
 struct cdp_tx_completion_ppdu {
 	uint32_t ppdu_id;
@@ -1852,6 +1877,7 @@ struct cdp_tx_completion_ppdu {
 	uint16_t vdev_id;
 	uint16_t bar_num_users;
 	uint32_t num_users;
+	uint8_t  max_users;
 	uint8_t last_usr_index;
 	uint32_t drop_reason;
 	uint32_t is_flush:1,
@@ -1878,13 +1904,16 @@ struct cdp_tx_completion_ppdu {
 	uint8_t bss_color;
 	uint8_t doppler;
 	uint8_t spatial_reuse;
-	struct cdp_tx_completion_ppdu_user user[CDP_MU_MAX_USERS];
+	uint8_t usr_nss_sum;
+	uint32_t usr_ru_tones_sum;
 	uint32_t bar_ppdu_id;
 	uint32_t bar_tx_duration;
 	uint32_t bar_ppdu_start_timestamp;
 	uint32_t bar_ppdu_end_timestamp;
 	uint32_t tlv_bitmap;
 	uint16_t sched_cmdid;
+	uint16_t phy_ppdu_tx_time_us;
+	struct cdp_tx_completion_ppdu_user user[];
 };
 
 /**

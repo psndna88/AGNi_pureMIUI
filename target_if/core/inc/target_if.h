@@ -184,6 +184,7 @@ struct target_version_info {
  * @num_mem_chunks: number of mem chunks allocated
  * @hw_mode_caps: HW mode caps of preferred mode
  * @mem_chunks: allocated memory blocks for FW
+ * @scan_radio_caps: scan radio capabilities
  */
 struct tgt_info {
 	struct host_fw_ver version;
@@ -213,6 +214,7 @@ struct tgt_info {
 	struct target_supported_modes hw_modes;
 	uint8_t pdev_id_to_phy_id_map[WLAN_UMAC_MAX_PDEVS];
 	bool is_pdevid_to_phyid_map;
+	struct wlan_psoc_host_scan_radio_caps *scan_radio_caps;
 };
 
 /**
@@ -1354,6 +1356,23 @@ static inline uint32_t target_psoc_get_num_dbr_ring_caps
 }
 
 /**
+ * target_psoc_get_num_scan_radio_caps() - get no of scan_radio_caps
+ * @psoc_info:  pointer to structure target_psoc_info
+ *
+ * API to get num_scan_radio_caps
+ *
+ * Return: no of scan_radio_caps
+ */
+static inline uint32_t target_psoc_get_num_scan_radio_caps
+		(struct target_psoc_info *psoc_info)
+{
+	if (!psoc_info)
+		return 0;
+
+	return psoc_info->info.service_ext2_param.num_scan_radio_caps;
+}
+
+/**
  * target_psoc_get_mac_phy_cap_for_mode() - get mac_phy_cap for a hw-mode
  * @psoc_info:  pointer to structure target_psoc_info
  *
@@ -1430,6 +1449,23 @@ static inline struct wlan_psoc_host_dbr_ring_caps
 		return NULL;
 
 	return psoc_info->info.dbr_ring_cap;
+}
+
+/**
+ * target_psoc_get_scan_radio_caps() - get scan_radio_cap
+ * @psoc_info:  pointer to structure target_psoc_info
+ *
+ * API to get scan_radio_cap
+ *
+ * Return: structure pointer to wlan_psoc_host_scan_radio_caps
+ */
+static inline struct wlan_psoc_host_scan_radio_caps
+	*target_psoc_get_scan_radio_caps(struct target_psoc_info *psoc_info)
+{
+	if (!psoc_info)
+		return NULL;
+
+	return psoc_info->info.scan_radio_caps;
 }
 
 /**
@@ -2368,4 +2404,34 @@ static inline uint32_t target_psoc_get_chan_width_switch_num_peers(
 
 	return psoc_info->info.service_ext2_param.chwidth_num_peer_caps;
 }
+
+/**
+ * target_if_is_scan_radio_supported() - API to check scan radio
+ * support for the given radio
+ * @pdev: pointer to pdev
+ * @is_scan_radio_supported: pointer to scan radio support flag
+ *
+ * API to check scan radio support for the given radio
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+target_pdev_is_scan_radio_supported(struct wlan_objmgr_pdev *pdev,
+				    bool *is_scan_radio_supported);
+
+/**
+ * target_pdev_scan_radio_is_dfs_enabled() - API to check
+ * whether DFS needs to be enabled/disabled for scan radio.
+ * @pdev:  pointer to pdev
+ * @is_dfs_en: Pointer to DFS enable flag
+ *
+ * API to check whether DFS needs to be enabled/disabled for
+ * scan radio. This API should be used only for a scan radio
+ * pdev.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+target_pdev_scan_radio_is_dfs_enabled(struct wlan_objmgr_pdev *pdev,
+				      bool *is_dfs_en);
 #endif

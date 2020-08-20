@@ -538,6 +538,37 @@ skb_alloc:
 #endif
 qdf_export_symbol(__qdf_nbuf_alloc);
 
+__qdf_nbuf_t __qdf_nbuf_alloc_no_recycler(size_t size, int reserve, int align,
+					  const char *func, uint32_t line)
+{
+	qdf_nbuf_t nbuf;
+	unsigned long offset;
+
+	if (align)
+		size += (align - 1);
+
+	nbuf = alloc_skb(size, GFP_ATOMIC);
+	if (!nbuf)
+		goto ret_nbuf;
+
+	memset(nbuf->cb, 0x0, sizeof(nbuf->cb));
+
+	skb_reserve(nbuf, reserve);
+
+	if (align) {
+		offset = ((unsigned long)nbuf->data) % align;
+		if (offset)
+			skb_reserve(nbuf, align - offset);
+	}
+
+	qdf_nbuf_count_inc(nbuf);
+
+ret_nbuf:
+	return nbuf;
+}
+
+qdf_export_symbol(__qdf_nbuf_alloc_no_recycler);
+
 /**
  * __qdf_nbuf_free() - free the nbuf its interrupt safe
  * @skb: Pointer to network buffer
@@ -2416,8 +2447,7 @@ void qdf_net_buf_debug_exit(void)
 			qdf_info("SKB buf memory Leak@ Func %s, @Line %d, size %zu, nbuf %pK",
 				 p_prev->func_name, p_prev->line_num,
 				 p_prev->size, p_prev->net_buf);
-			qdf_info(
-				 "SKB leak map %s, line %d, unmap %s line %d mapped=%d",
+			qdf_info("SKB leak map %s, line %d, unmap %s line %d mapped=%d",
 				 p_prev->map_func_name,
 				 p_prev->map_line_num,
 				 p_prev->unmap_func_name,
@@ -2514,6 +2544,11 @@ void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 			qdf_str_lcopy(p_node->func_name, func_name,
 				      QDF_MEM_FUNC_NAME_SIZE);
 			p_node->line_num = line_num;
+			p_node->is_nbuf_mapped = false;
+			p_node->map_line_num = 0;
+			p_node->unmap_line_num = 0;
+			p_node->map_func_name[0] = '\0';
+			p_node->unmap_func_name[0] = '\0';
 			p_node->size = size;
 			qdf_mem_skb_inc(size);
 			p_node->p_next = gp_qdf_net_buf_track_tbl[i];
@@ -2653,9 +2688,8 @@ done:
 		qdf_mem_skb_dec(p_node->size);
 		qdf_nbuf_track_free(p_node);
 	} else {
-		qdf_print("Unallocated buffer ! Double free of net_buf %pK ?",
-			  net_buf);
-		QDF_BUG(0);
+		QDF_MEMDEBUG_PANIC("Unallocated buffer ! Double free of net_buf %pK ?",
+				   net_buf);
 	}
 }
 qdf_export_symbol(qdf_net_buf_debug_delete_node);
@@ -2749,6 +2783,30 @@ qdf_nbuf_t qdf_nbuf_alloc_debug(qdf_device_t osdev, qdf_size_t size,
 	return nbuf;
 }
 qdf_export_symbol(qdf_nbuf_alloc_debug);
+
+qdf_nbuf_t qdf_nbuf_alloc_no_recycler_debug(size_t size, int reserve, int align,
+					    const char *func, uint32_t line)
+{
+	qdf_nbuf_t nbuf;
+
+	if (is_initial_mem_debug_disabled)
+		return __qdf_nbuf_alloc_no_recycler(size, reserve, align, func,
+						    line);
+
+	nbuf = __qdf_nbuf_alloc_no_recycler(size, reserve, align, func, line);
+
+	/* Store SKB in internal QDF tracking table */
+	if (qdf_likely(nbuf)) {
+		qdf_net_buf_debug_add_node(nbuf, size, func, line);
+		qdf_nbuf_history_add(nbuf, func, line, QDF_NBUF_ALLOC);
+	} else {
+		qdf_nbuf_history_add(nbuf, func, line, QDF_NBUF_ALLOC_FAILURE);
+	}
+
+	return nbuf;
+}
+
+qdf_export_symbol(qdf_nbuf_alloc_no_recycler_debug);
 
 void qdf_nbuf_free_debug(qdf_nbuf_t nbuf, const char *func, uint32_t line)
 {
@@ -4570,3 +4628,71 @@ void __qdf_nbuf_mod_exit(void)
 {
 }
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
+					    int offset)
+{
+	unsigned int frag_offset;
+	skb_frag_t *frag;
+
+	if (qdf_unlikely(idx >= __qdf_nbuf_get_nr_frags(nbuf)))
+		return QDF_STATUS_E_FAILURE;
+
+	frag = &skb_shinfo(nbuf)->frags[idx];
+	frag_offset = skb_frag_off(frag);
+
+	frag_offset += offset;
+	skb_frag_off_set(frag, frag_offset);
+
+	__qdf_nbuf_trim_add_frag_size(nbuf, idx, -(offset), 0);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#else
+QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
+					    int offset)
+{
+	uint16_t frag_offset;
+	skb_frag_t *frag;
+
+	if (qdf_unlikely(idx >= __qdf_nbuf_get_nr_frags(nbuf)))
+		return QDF_STATUS_E_FAILURE;
+
+	frag = &skb_shinfo(nbuf)->frags[idx];
+	frag_offset = frag->page_offset;
+
+	frag_offset += offset;
+	frag->page_offset = frag_offset;
+
+	__qdf_nbuf_trim_add_frag_size(nbuf, idx, -(offset), 0);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+qdf_export_symbol(__qdf_nbuf_move_frag_page_offset);
+
+void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
+			    int offset, int frag_len,
+			    unsigned int truesize, bool take_frag_ref)
+{
+	struct page *page;
+	int frag_offset;
+	uint8_t nr_frag;
+
+	nr_frag = __qdf_nbuf_get_nr_frags(nbuf);
+
+	page = virt_to_head_page(buf);
+	frag_offset = buf - page_address(page);
+
+	skb_add_rx_frag(nbuf, nr_frag, page,
+			(frag_offset + offset),
+			frag_len, truesize);
+
+	if (unlikely(take_frag_ref))
+		skb_frag_ref(nbuf, nr_frag);
+}
+
+qdf_export_symbol(__qdf_nbuf_add_rx_frag);

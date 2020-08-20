@@ -126,6 +126,31 @@ wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
 
 	return resp_buf;
 }
+
+/**
+ * wifi_pos_get_host_pdev_id: Get host pdev_id
+ * @psoc: Pointer to psoc object
+ * @tgt_pdev_id: target_pdev_id
+ * @host_pdev_id: host pdev_id
+ *
+ * Return: QDF_STATUS_SUCCESS in case of success, error codes in case of failure
+ */
+static QDF_STATUS wifi_pos_get_host_pdev_id(
+		struct wlan_objmgr_psoc *psoc, uint32_t tgt_pdev_id,
+		uint32_t *host_pdev_id)
+{
+	/* pdev_id in FW starts from 1. So convert it to
+	 * host id by decrementing it.
+	 * zero has special meaning due to backward
+	 * compatibility. Dont change it.
+	 */
+	if (tgt_pdev_id)
+		*host_pdev_id = tgt_pdev_id - 1;
+	else
+		*host_pdev_id = tgt_pdev_id;
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static uint8_t *
 wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
@@ -147,6 +172,27 @@ wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
 
 	return resp_buf;
 }
+
+static QDF_STATUS wifi_pos_get_host_pdev_id(
+		struct wlan_objmgr_psoc *psoc, uint32_t tgt_pdev_id,
+		uint32_t *host_pdev_id)
+{
+	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+
+	tx_ops = wifi_pos_get_tx_ops(psoc);
+	if (!tx_ops) {
+		qdf_print("tx ops null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!tx_ops->wifi_pos_convert_pdev_id_target_to_host) {
+		wifi_pos_err("wifi_pos_convert_pdev_id_target_to_host is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return tx_ops->wifi_pos_convert_pdev_id_target_to_host(
+			psoc, tgt_pdev_id, host_pdev_id);
+}
 #endif
 
 static QDF_STATUS wifi_pos_process_data_req(struct wlan_objmgr_psoc *psoc,
@@ -155,13 +201,15 @@ static QDF_STATUS wifi_pos_process_data_req(struct wlan_objmgr_psoc *psoc,
 	uint8_t idx;
 	uint32_t sub_type = 0;
 	uint32_t channel_mhz = 0;
-	uint32_t pdev_id = 0;
+	uint32_t host_pdev_id = 0, tgt_pdev_id = 0;
 	uint32_t offset;
 	struct oem_data_req data_req;
 	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
 	struct wlan_objmgr_pdev *pdev;
 	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
-				wifi_pos_get_psoc_priv_obj(psoc);
+				wifi_pos_get_psoc_priv_obj(wifi_pos_get_psoc());
+	QDF_STATUS status;
+
 
 	if (!wifi_pos_obj) {
 		wifi_pos_err("wifi_pos priv obj is null");
@@ -180,27 +228,28 @@ static QDF_STATUS wifi_pos_process_data_req(struct wlan_objmgr_psoc *psoc,
 			 * length
 			 */
 			if (req->field_info_buf->fields[idx].id ==
-					WMIRTT_FIELD_ID_oem_data_sub_type) {
+					META_DATA_SUB_TYPE) {
 				sub_type = *((uint32_t *)&req->buf[offset]);
 				continue;
 			}
 
 			if (req->field_info_buf->fields[idx].id ==
-					WMIRTT_FIELD_ID_channel_mhz) {
+					META_DATA_CHANNEL_MHZ) {
 				channel_mhz = *((uint32_t *)&req->buf[offset]);
 				continue;
 			}
 
 			if (req->field_info_buf->fields[idx].id ==
-					WMIRTT_FIELD_ID_pdev) {
-				pdev_id = *((uint32_t *)&req->buf[offset]);
-				/* pdev_id in FW starts from 1. So convert it to
-				 * host id by decrementing it.
-				 * zero has special meaning due to backward
-				 * compatibility. Dont change it.
-				 */
-				if (pdev_id)
-					pdev_id -= 1;
+					META_DATA_PDEV) {
+				tgt_pdev_id = *((uint32_t *)&req->buf[offset]);
+				status = wifi_pos_get_host_pdev_id(
+						psoc, tgt_pdev_id,
+						&host_pdev_id);
+				if (QDF_IS_STATUS_ERROR(status)) {
+					wifi_pos_err("failed to get host pdev_id, tgt_pdev_id = %d",
+						     tgt_pdev_id);
+					return QDF_STATUS_E_INVAL;
+				}
 				continue;
 			}
 		}
@@ -241,7 +290,7 @@ static QDF_STATUS wifi_pos_process_data_req(struct wlan_objmgr_psoc *psoc,
 			return QDF_STATUS_E_INVAL;
 		}
 
-		pdev = wlan_objmgr_get_pdev_by_id(psoc, pdev_id,
+		pdev = wlan_objmgr_get_pdev_by_id(psoc, host_pdev_id,
 						  WLAN_WIFI_POS_CORE_ID);
 		if (!pdev) {
 			wifi_pos_err("pdev null");
@@ -278,7 +327,7 @@ static QDF_STATUS wifi_pos_process_set_cap_req(struct wlan_objmgr_psoc *psoc,
 	wifi_pos_obj->ftm_rr = caps->ftm_rr;
 	wifi_pos_obj->lci_capability = caps->lci_capability;
 	error_code = qdf_status_to_os_return(QDF_STATUS_SUCCESS);
-	wifi_pos_obj->wifi_pos_send_rsp(wifi_pos_obj->app_pid,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, wifi_pos_obj->app_pid,
 					WIFI_POS_CMD_SET_CAPS,
 					sizeof(error_code),
 					(uint8_t *)&error_code);
@@ -305,7 +354,7 @@ static QDF_STATUS wifi_pos_process_get_cap_req(struct wlan_objmgr_psoc *psoc,
 	cap_rsp.user_defined_cap.ftm_rr = wifi_pos_obj->ftm_rr;
 	cap_rsp.user_defined_cap.lci_capability = wifi_pos_obj->lci_capability;
 
-	wifi_pos_obj->wifi_pos_send_rsp(wifi_pos_obj->app_pid,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, wifi_pos_obj->app_pid,
 					WIFI_POS_CMD_GET_CAPS,
 					sizeof(cap_rsp),
 					(uint8_t *)&cap_rsp);
@@ -339,7 +388,7 @@ QDF_STATUS wifi_pos_send_report_resp(struct wlan_objmgr_psoc *psoc,
 				(sizeof(struct wifi_pos_err_rpt)) & 0x0000FFFF;
 	memcpy(&err_report.err_rpt.dest_mac, dest_mac, QDF_MAC_ADDR_SIZE);
 
-	wifi_pos_obj->wifi_pos_send_rsp(wifi_pos_obj->app_pid,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, wifi_pos_obj->app_pid,
 			WIFI_POS_CMD_OEM_DATA,
 			sizeof(err_report),
 			(uint8_t *)&err_report);
@@ -391,21 +440,23 @@ static void wifi_pos_get_reg_info(struct wlan_objmgr_pdev *pdev,
 /**
  * wifi_pos_get_valid_channels: Get the list of valid channels from the
  * given channel list
- * @channels: Channel list to be validated
+ * @chan_freqs: Channel frequencies to be validated
  * @num_ch: NUmber of channels in the channel list to be validated
  * @valid_channel_list: Pointer to valid channel list
  *
  * Return: Number of valid channels in the given list
  */
-
-static uint32_t wifi_pos_get_valid_channels(uint8_t *channels, uint32_t num_ch,
-					    uint8_t *valid_channel_list) {
+static uint32_t wifi_pos_get_valid_channels(qdf_freq_t *chan_freqs,
+					    uint32_t num_ch,
+					    qdf_freq_t *valid_channel_list)
+{
 	uint32_t i, num_valid_channels = 0;
 
 	for (i = 0; i < num_ch; i++) {
-		if (wlan_reg_get_chan_enum(channels[i]) == INVALID_CHANNEL)
+		if (wlan_reg_get_chan_enum_for_freq(chan_freqs[i]) ==
+		    INVALID_CHANNEL)
 			continue;
-		valid_channel_list[num_valid_channels++] = channels[i];
+		valid_channel_list[num_valid_channels++] = chan_freqs[i];
 	}
 	return num_valid_channels;
 }
@@ -446,21 +497,23 @@ static void wifi_pos_get_ch_info(struct wlan_objmgr_psoc *psoc,
 static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 					struct wifi_pos_req_msg *req)
 {
-	uint8_t idx, band_mask;
-	uint8_t *buf;
+	uint8_t idx;
+	uint8_t *buf = NULL;
 	uint32_t len, i, freq;
 	uint32_t reg_info_1;
 	uint32_t reg_info_2;
+	qdf_freq_t *chan_freqs = NULL;
 	bool oem_6g_support_disable;
 	uint8_t *channels = req->buf;
 	struct wlan_objmgr_pdev *pdev;
 	uint32_t num_ch = req->buf_len;
-	uint8_t valid_channel_list[NUM_CHANNELS];
+	qdf_freq_t valid_channel_list[NUM_CHANNELS];
 	uint32_t num_valid_channels = 0;
 	struct wifi_pos_ch_info_rsp *ch_info;
-	struct wifi_pos_channel_list *ch_list;
+	struct wifi_pos_channel_list *ch_list = NULL;
 	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
 					wifi_pos_get_psoc_priv_obj(psoc);
+	QDF_STATUS ret_val;
 
 	if (!wifi_pos_obj) {
 		wifi_pos_err("wifi_pos priv obj is null");
@@ -478,12 +531,21 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 	}
 	if (num_ch > NUM_CHANNELS) {
 		wifi_pos_err("Invalid number of channels");
-		return QDF_STATUS_E_INVAL;
+		ret_val = QDF_STATUS_E_INVAL;
+		goto cleanup;
+	}
+
+	chan_freqs = qdf_mem_malloc(NUM_CHANNELS * (sizeof(*chan_freqs)));
+	if (!chan_freqs) {
+		ret_val = QDF_STATUS_E_NOMEM;
+		goto cleanup;
 	}
 
 	ch_list = qdf_mem_malloc(sizeof(*ch_list));
-	if (!ch_list)
-		return QDF_STATUS_E_NOMEM;
+	if (!ch_list) {
+		ret_val = QDF_STATUS_E_NOMEM;
+		goto cleanup;
+	}
 
 	if (num_ch == 0 && req->rsp_version == WIFI_POS_RSP_V2_NL) {
 		wifi_pos_get_ch_info(psoc, ch_list);
@@ -500,18 +562,21 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 			num_valid_channels++;
 		}
 	} else {
+		for (i = 0; i < NUM_CHANNELS; i++)
+			chan_freqs[i] =
+			    wlan_reg_chan_band_to_freq(pdev, channels[i],
+						       BIT(REG_BAND_5G) |
+						       BIT(REG_BAND_2G));
 		/* v1 has ch_list with frequencies in order of 2.4g, 5g only */
 		num_valid_channels = wifi_pos_get_valid_channels(
-							channels, num_ch,
+							chan_freqs, num_ch,
 							 valid_channel_list);
-		band_mask = BIT(REG_BAND_5G) | BIT(REG_BAND_2G);
 		for (i = 0; i < num_valid_channels; i++) {
-			ch_list->chan_info[i].chan_num = valid_channel_list[i];
 			ch_list->chan_info[i].center_freq =
-				wlan_reg_chan_band_to_freq(
-						pdev,
-						ch_list->chan_info[i].chan_num,
-						band_mask);
+							valid_channel_list[i];
+			ch_list->chan_info[i].chan_num =
+				wlan_reg_freq_to_chan(pdev, ch_list->
+						      chan_info[i].center_freq);
 		}
 	}
 
@@ -519,9 +584,8 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 			num_valid_channels;
 	buf = qdf_mem_malloc(len);
 	if (!buf) {
-		wlan_objmgr_pdev_release_ref(pdev, WLAN_WIFI_POS_CORE_ID);
-		qdf_mem_free(ch_list);
-		return QDF_STATUS_E_NOMEM;
+		ret_val = QDF_STATUS_E_NOMEM;
+		goto cleanup;
 	}
 
 	/* First byte of message body will have num of channels */
@@ -548,15 +612,18 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 		ch_info[idx].reg_info_2 = reg_info_2;
 	}
 
-	wifi_pos_obj->wifi_pos_send_rsp(wifi_pos_obj->app_pid,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, wifi_pos_obj->app_pid,
 					WIFI_POS_CMD_GET_CH_INFO,
 					len, buf);
+	ret_val = QDF_STATUS_SUCCESS;
 
+cleanup:
 	qdf_mem_free(buf);
 	qdf_mem_free(ch_list);
+	qdf_mem_free(chan_freqs);
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_WIFI_POS_CORE_ID);
 
-	return QDF_STATUS_SUCCESS;
+	return ret_val;
 }
 
 static void wifi_pos_vdev_iterator(struct wlan_objmgr_psoc *psoc,
@@ -622,7 +689,8 @@ static QDF_STATUS wifi_pos_process_app_reg_req(struct wlan_objmgr_psoc *psoc,
 		wifi_pos_debug("no active vdev");
 
 	vdev_idx = 0;
-	wifi_pos_obj->wifi_pos_send_rsp(req->pid, WIFI_POS_CMD_REGISTRATION,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, req->pid,
+					WIFI_POS_CMD_REGISTRATION,
 					rsp_len, (uint8_t *)app_reg_rsp);
 
 	qdf_mem_free(app_reg_rsp);
@@ -630,7 +698,7 @@ static QDF_STATUS wifi_pos_process_app_reg_req(struct wlan_objmgr_psoc *psoc,
 
 app_reg_failed:
 
-	wifi_pos_obj->wifi_pos_send_rsp(req->pid, WIFI_POS_CMD_ERROR,
+	wifi_pos_obj->wifi_pos_send_rsp(psoc, req->pid, WIFI_POS_CMD_ERROR,
 					sizeof(err), &err);
 	return ret;
 }
@@ -674,6 +742,27 @@ static QDF_STATUS wifi_pos_non_tlv_callback(struct wlan_objmgr_psoc *psoc,
 					    struct wifi_pos_req_msg *req)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wifi_pos_convert_host_pdev_id_to_target(
+		struct wlan_objmgr_psoc *psoc, uint32_t host_pdev_id,
+		uint32_t *target_pdev_id)
+{
+	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+
+	tx_ops = wifi_pos_get_tx_ops(psoc);
+	if (!tx_ops) {
+		wifi_pos_err("tx_ops is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!tx_ops->wifi_pos_convert_pdev_id_host_to_target) {
+		wifi_pos_err("wifi_pos_convert_pdev_id_host_to_target is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return tx_ops->wifi_pos_convert_pdev_id_host_to_target(
+			psoc, host_pdev_id, target_pdev_id);
 }
 
 QDF_STATUS wifi_pos_psoc_obj_created_notification(
@@ -774,10 +863,10 @@ int wifi_pos_oem_rsp_handler(struct wlan_objmgr_psoc *psoc,
 	uint32_t len;
 	uint8_t *data;
 	uint32_t app_pid;
-	struct wifi_pos_psoc_priv_obj *priv =
-					wifi_pos_get_psoc_priv_obj(psoc);
+	struct wifi_pos_psoc_priv_obj *priv;
 	wifi_pos_send_rsp_handler wifi_pos_send_rsp;
 
+	priv = wifi_pos_get_psoc_priv_obj(wifi_pos_get_psoc());
 	if (!priv) {
 		wifi_pos_err("private object is NULL");
 		return -EINVAL;
@@ -814,10 +903,11 @@ int wifi_pos_oem_rsp_handler(struct wlan_objmgr_psoc *psoc,
 		qdf_mem_copy(&data[oem_rsp->rsp_len_1 + oem_rsp->dma_len],
 			     oem_rsp->data_2, oem_rsp->rsp_len_2);
 
-		wifi_pos_send_rsp(app_pid, WIFI_POS_CMD_OEM_DATA, len, data);
+		wifi_pos_send_rsp(psoc, app_pid, WIFI_POS_CMD_OEM_DATA, len,
+				  data);
 		qdf_mem_free(data);
 	} else {
-		wifi_pos_send_rsp(app_pid, WIFI_POS_CMD_OEM_DATA,
+		wifi_pos_send_rsp(psoc, app_pid, WIFI_POS_CMD_OEM_DATA,
 				  oem_rsp->rsp_len_1, oem_rsp->data_1);
 	}
 

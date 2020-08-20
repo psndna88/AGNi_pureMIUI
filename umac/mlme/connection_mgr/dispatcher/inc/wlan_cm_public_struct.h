@@ -25,6 +25,9 @@
 
 #ifdef FEATURE_CM_ENABLE
 #include <wlan_scan_public_structs.h>
+#include "wlan_crypto_global_def.h"
+
+typedef uint32_t wlan_cm_id;
 
 /**
  * struct wlan_cm_wep_key_params - store wep key info
@@ -42,34 +45,28 @@ struct wlan_cm_wep_key_params {
 	uint8_t key_idx;
 };
 
-#define WLAN_CM_MAX_NR_CIPHER_SUITES 5
-#define WLAN_CM_MAX_NR_AKM_SUITES 2
-
 /**
  * struct wlan_cm_connect_crypto_info - Crypto settings
  * @wpa_versions: indicates which, if any, WPA versions are enabled
  *	(from enum nl80211_wpa_versions)
- * @group_cipher: group key cipher suite (or 0 if unset)
- * @n_ciphers_pairwise: number of AP supported unicast ciphers
- * @ciphers_pairwise: unicast key cipher suites
- * @n_akm_suites: number of AKM suites
- * @akm_suites: AKM suites
+ * @auth_type: Auth mode type bitmask
+ * @group_cipher: group key cipher suite bitmask
+ * @ciphers_pairwise: unicast key cipher suites bitmask
+ * @akm_suites: AKM suites bitmask
  * @wep_keys: static WEP keys, if not NULL points to an array of
  *	MAX_WEP_KEYS WEP keys
  * @pmf_cap: Pmf capability
+ * @mgmt_ciphers: mgmt cipher bitmask
  */
 struct wlan_cm_connect_crypto_info {
 	uint32_t wpa_versions;
-	wlan_crypto_auth_mode auth_type;
-	wlan_crypto_cipher_type group_cipher;
-	uint32_t n_ciphers_pairwise;
-	wlan_crypto_cipher_type ciphers_pairwise[WLAN_CM_MAX_NR_CIPHER_SUITES];
-	uint32_t n_akm_suites;
-	wlan_crypto_key_mgmt akm_suites[WLAN_CM_MAX_NR_AKM_SUITES];
+	uint32_t auth_type;
+	uint32_t group_cipher;
+	uint32_t ciphers_pairwise;
+	uint32_t akm_suites;
 	struct wlan_cm_wep_key_params wep_keys;
 	enum wlan_pmf_cap pmf_cap;
-	uint32_t rsn_ie_len;
-	uint8_t *rsn_ie;
+	uint32_t mgmt_ciphers;
 };
 
 #ifdef WLAN_FEATURE_FILS_SK
@@ -133,7 +130,8 @@ enum wlan_cm_source {
  * @bssid_hint: bssid hint to connect
  * @chan_freq: channel of the AP
  * @crypto: crypto related info
- * @connect_ie: connect IE additional assoc IE
+ * @assoc_ie:Additional assoc IE to be appended in assoc req
+ *           (Include RSN/WPA/WAPI/WPS ies)
  * @ht_caps: ht capability
  * @ht_caps_mask: mask of valid ht caps
  * @vht_caps: vht capability
@@ -149,7 +147,7 @@ struct wlan_cm_connect_req {
 	struct qdf_mac_addr bssid_hint;
 	uint32_t chan_freq;
 	struct wlan_cm_connect_crypto_info crypto;
-	struct element_info connect_ie;
+	struct element_info assoc_ie;
 	uint16_t ht_caps;
 	uint16_t ht_caps_mask;
 	uint32_t vht_caps;
@@ -168,7 +166,7 @@ struct wlan_cm_connect_req {
  */
 struct wlan_cm_vdev_connect_req {
 	uint8_t vdev_id;
-	uint8_t cm_id;
+	wlan_cm_id cm_id;
 	struct scan_cache_node *bss;
 };
 
@@ -195,7 +193,7 @@ struct wlan_cm_disconnect_req {
  * @req: disconnect req
  */
 struct wlan_cm_vdev_discon_req {
-	uint8_t cm_id;
+	wlan_cm_id cm_id;
 	struct wlan_cm_disconnect_req req;
 };
 
@@ -227,32 +225,94 @@ enum wlan_cm_connect_fail_reason {
 	CM_GENERIC_FAILURE,
 };
 
+#ifdef WLAN_FEATURE_FILS_SK
+#define CM_FILS_MAX_HLP_DATA_LEN 2048
+#define MAX_KEK_LENGTH 64
+#define MAX_TK_LENGTH 32
+#define MAX_GTK_LENGTH 255
+
+/**
+ * struct fils_connect_rsp_params - fils related connect rsp params
+ * @fils_pmk: fils pmk
+ * @fils_pmk_len: fils pmk length
+ * @fils_pmkid: fils pmkid
+ * @kek: kek
+ * @kek_len: kek length
+ * @tk: tk
+ * @tk_len: tk length
+ * @gtk: gtk
+ * @gtk_len: gtk length
+ * @dst_mac: dst mac
+ * @src_mac: src mac
+ * @hlp_data: hlp data
+ * @hlp_data_len: hlp data length
+ */
+struct fils_connect_rsp_params {
+	uint8_t *fils_pmk;
+	uint8_t fils_pmk_len;
+	uint8_t fils_pmkid[PMKID_LEN];
+	uint8_t kek[MAX_KEK_LENGTH];
+	uint8_t kek_len;
+	uint8_t tk[MAX_TK_LENGTH];
+	uint8_t tk_len;
+	uint8_t gtk[MAX_GTK_LENGTH];
+	uint8_t gtk_len;
+	struct qdf_mac_addr dst_mac;
+	struct qdf_mac_addr src_mac;
+	uint8_t hlp_data[CM_FILS_MAX_HLP_DATA_LEN];
+	uint16_t hlp_data_len;
+};
+#endif
+
+/**
+ * struct connect_rsp_ies - connect rsp ies stored in vdev filled during connect
+ * @bcn_probe_rsp: beacon or probe rsp of connected AP
+ * @assoc_req: assoc req send during conenct
+ * @assoc_rsq: assoc rsp received during connection
+ * @ric_resp_ie: ric ie from assoc resp received during connection
+ * @fills_ie: fills connection ie received during connection
+ */
+struct wlan_connect_rsp_ies {
+	struct element_info bcn_probe_rsp;
+	struct element_info assoc_req;
+	struct element_info assoc_rsp;
+	struct element_info ric_resp_ie;
+#ifdef WLAN_FEATURE_FILS_SK
+	struct fils_connect_rsp_params fils_ie;
+#endif
+};
+
 /**
  * struct wlan_cm_connect_rsp - connect resp from VDEV mgr and will be sent to
  * OSIF
  * @vdev_id: vdev id
  * @cm_id: Connect manager id
  * @connect_status: connect status success or failure
- * @reason: connect fail reason
+ * @reason: connect fail reason, valid only in case of failure
  * @reason_code: protocol reason code of the connect failure
- * @peer_macaddr: bssid of AP
+ * @aid: aid
+ * @connect_ies: connect related IE required by osif to send to kernel
  */
 struct wlan_cm_connect_rsp {
 	uint8_t vdev_id;
-	uint8_t cm_id;
+	wlan_cm_id cm_id;
 	uint8_t connect_status;
 	enum wlan_cm_connect_fail_reason reason;
-	uint8_t failure_code;
+	uint8_t reason_code;
 	uint8_t aid;
+	struct wlan_connect_rsp_ies connect_ies;
 };
+
 
 /**
  * struct wlan_cm_discon_rsp - disconnect resp from VDEV mgr and will be sent to
  * OSIF
  * @req: disconnect req sent to vdev mgr
+ * @ap_discon_ie: disconnect IE sent by AP
  */
 struct wlan_cm_discon_rsp {
 	struct wlan_cm_vdev_discon_req req;
+	struct element_info ap_discon_ie;
 };
 
 #endif /* FEATURE_CM_ENABLE */

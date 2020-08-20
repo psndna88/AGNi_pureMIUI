@@ -149,23 +149,8 @@ int dfs_get_nol_subchannel_marking(struct wlan_dfs *dfs,
 	return 0;
 }
 
-/**
- * dfs_radar_add_channel_list_to_nol_for_freq()- Add given channels to nol
- * @dfs: Pointer to wlan_dfs structure.
- * @freq_list: Pointer to list of frequency(has both nonDFS and DFS channels).
- * Input frequency list.
- * @nol_freq_list: Pointer to list of NOL frequencies. Output frequency list.
- * @num_channels: Pointer to number of channels in the list. It is both input
- * and output to this function.
- * *Input: Number of subchannels in @freq_list.
- * *Output: Number of subchannels in @nol_freq_list.
- *
- * Add list of channels to nol, only if the channel is dfs.
- *
- * Return: QDF_STATUS
- */
 #ifdef CONFIG_CHAN_FREQ_API
-static QDF_STATUS
+QDF_STATUS
 dfs_radar_add_channel_list_to_nol_for_freq(struct wlan_dfs *dfs,
 					   uint16_t *freq_list,
 					   uint16_t *nol_freq_list,
@@ -325,14 +310,8 @@ static void dfs_radar_chan_for_20(struct freqs_offsets *freq_offset,
 	}
 }
 
-/* dfs_compute_radar_found_cfreq(): Computes the centre frequency of the
- * radar hit channel.
- * @dfs: Pointer to wlan_dfs structure.
- * @radar_found: Pointer to radar_found_info.
- * @freq_center: Pointer to retrieve the value of radar found cfreq.
- */
 #ifdef CONFIG_CHAN_FREQ_API
-static void
+void
 dfs_compute_radar_found_cfreq(struct wlan_dfs *dfs,
 			      struct radar_found_info *radar_found,
 			      uint32_t *freq_center)
@@ -785,7 +764,7 @@ uint8_t dfs_get_bonding_channels(struct wlan_dfs *dfs,
 }
 #endif
 
-static inline void dfs_reset_bangradar(struct wlan_dfs *dfs)
+void dfs_reset_bangradar(struct wlan_dfs *dfs)
 {
 	dfs->dfs_bangradar_type = DFS_NO_BANGRADAR;
 }
@@ -793,11 +772,15 @@ static inline void dfs_reset_bangradar(struct wlan_dfs *dfs)
 int dfs_radarevent_basic_sanity(struct wlan_dfs *dfs,
 		struct dfs_channel *chan)
 {
-	if (!(dfs->dfs_seg_id == SEG_ID_SECONDARY &&
-	      dfs_is_precac_timer_running(dfs)))
+		if (!chan) {
+			dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,
+				"dfs->dfs_curchan is NULL");
+			return 0;
+		}
+
 		if (!(WLAN_IS_PRIMARY_OR_SECONDARY_CHAN_DFS(chan))) {
-			dfs_debug(dfs, WLAN_DEBUG_DFS2,
-					"radar event on non-DFS chan");
+			dfs_debug(dfs, WLAN_DEBUG_DFS_ALWAYS,
+				  "radar event on non-DFS chan");
 			if (!(dfs->dfs_is_offload_enabled)) {
 				dfs_reset_radarq(dfs);
 				dfs_reset_alldelaylines(dfs);
@@ -809,14 +792,7 @@ int dfs_radarevent_basic_sanity(struct wlan_dfs *dfs,
 	return 1;
 }
 
-/**
- * dfs_send_csa_to_current_chan() - Send CSA to current channel
- * @dfs: Pointer to wlan_dfs structure.
- *
- * For the test mode(usenol = 0), don't do a CSA; but setup the test timer so
- * we get a CSA _back_ to the current operating channel.
- */
-static inline void dfs_send_csa_to_current_chan(struct wlan_dfs *dfs)
+void dfs_send_csa_to_current_chan(struct wlan_dfs *dfs)
 {
 	qdf_timer_stop(&dfs->wlan_dfstesttimer);
 	dfs->wlan_dfstest = 1;
@@ -832,6 +808,7 @@ int dfs_second_segment_radar_disable(struct wlan_dfs *dfs)
 	return 0;
 }
 
+#if defined(QCA_DFS_RCSA_SUPPORT)
 /* dfs_prepare_nol_ie_bitmap: Create a Bitmap from the radar found subchannels
  * to be sent along with RCSA.
  * @dfs: Pointer to wlan_dfs.
@@ -958,43 +935,11 @@ bool dfs_process_nol_ie_bitmap(struct wlan_dfs *dfs, uint8_t nol_ie_bandwidth,
 	return should_nol_ie_be_sent;
 }
 #endif
+#endif /* QCA_DFS_RCSA_SUPPORT */
 
-#ifdef WLAN_DFS_TRUE_160MHZ_SUPPORT
-#define DFS_80P80MHZ_SECOND_SEG_OFFSET 85
-/**
- * dfs_translate_radar_params() - Translate the radar parameters received in
- *                                true 160MHz supported chipsets.
- * @dfs: Pointer to the wlan_dfs object.
- * @radar_found: Radar found parameters.
- *
- * Radar found parameters in true 160MHz detectors are represented below:
- *
- * Offset received with respect to the center of 160MHz ranging from -80 to +80.
- *          __________________________________________
- *         |                                          |
- *         |             160 MHz Channel              |
- *         |__________________________________________|
- *         |        |           |           |         |
- *         |        |           |           |         |
- *        -80    -ve offset   center    +ve offset   +80
- *
- *
- * Radar found parameters after translation by this API:
- *
- * Offsets with respect to pri/sec 80MHz center ranging from -40 to +40.
- *          __________________________________________
- *         |                    |                     |
- *         |             160 MHz|Channel              |
- *         |____________________|_____________________|
- *         |         |          |           |         |
- *         |         |          |           |         |
- *        -40    pri center  +40/-40     sec center  +40
- *
- * Return: void.
- */
-static void
-dfs_translate_radar_params(struct wlan_dfs *dfs,
-			   struct radar_found_info *radar_found)
+#if defined(WLAN_DFS_TRUE_160MHZ_SUPPORT) && defined(WLAN_DFS_FULL_OFFLOAD)
+void dfs_translate_radar_params(struct wlan_dfs *dfs,
+				struct radar_found_info *radar_found)
 {
 	struct dfs_channel *curchan = dfs->dfs_curchan;
 	bool is_primary_ch_right_of_center = false;
@@ -1044,17 +989,200 @@ dfs_translate_radar_params(struct wlan_dfs *dfs,
 		}
 	}
 }
-#else
-static inline void
-dfs_translate_radar_params(struct wlan_dfs *dfs,
-			   struct radar_found_info *radar_found)
-{
-}
 #endif /* WLAN_DFS_TRUE_160MHZ_SUPPORT */
 
+/**
+ * dfs_radar_action_for_hw_mode_switch()- Radar cannot be processed when HW
+ * switch is in progress. So save the radar found parameters for
+ * future processing.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @radar_found: Pointer to radar found structure.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+dfs_radar_action_for_hw_mode_switch(struct wlan_dfs *dfs,
+				    struct radar_found_info *radar_found)
+{
+	struct radar_found_info *radar_params = NULL;
+
+	radar_params = qdf_mem_malloc(sizeof(*radar_params));
+	if (!radar_params)
+		return QDF_STATUS_E_NOMEM;
+
+	/* If CAC timer is running, cancel it here rather than
+	 * after processing to avoid handling unnecessary CAC timeouts.
+	 */
+	if (dfs->dfs_cac_timer_running)
+		dfs_cac_stop(dfs);
+
+	/* If CAC timer is to be handled after mode switch and then
+	 * we receive radar, no point in handling CAC completion.
+	 */
+	if (dfs->dfs_defer_params.is_cac_completed)
+		dfs->dfs_defer_params.is_cac_completed = false;
+	qdf_mem_copy(radar_params, radar_found, sizeof(*radar_params));
+	dfs->dfs_defer_params.radar_params = radar_params;
+	dfs->dfs_defer_params.is_radar_detected = true;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #ifdef CONFIG_CHAN_FREQ_API
-QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
-				 struct radar_found_info *radar_found)
+uint8_t
+dfs_find_radar_affected_channels(struct wlan_dfs *dfs,
+				 struct radar_found_info *radar_found,
+				 uint16_t *freq_list,
+				 uint32_t freq_center)
+{
+	uint8_t num_channels;
+
+	if (dfs->dfs_bangradar_type == DFS_BANGRADAR_FOR_ALL_SUBCHANS)
+		num_channels =
+			dfs_get_bonding_channel_without_seg_info_for_freq
+			(dfs->dfs_curchan, freq_list);
+	/* BW reduction is dependent on subchannel marking */
+	else if ((dfs->dfs_use_nol_subchannel_marking) &&
+		 (!(dfs->dfs_bangradar_type) ||
+		 (dfs->dfs_bangradar_type ==
+		  DFS_BANGRADAR_FOR_SPECIFIC_SUBCHANS)))
+		num_channels =
+		dfs_find_radar_affected_subchans_for_freq(dfs,
+							  radar_found,
+							  freq_list,
+							  freq_center);
+	else
+		num_channels = dfs_get_bonding_channels_for_freq
+			(dfs,
+			 dfs->dfs_curchan,
+			 radar_found->segment_id,
+			 radar_found->detector_id,
+			 freq_list);
+
+	return num_channels;
+}
+
+#if defined(QCA_DFS_RCSA_SUPPORT)
+/**
+ * dfs_send_nol_ie_and_rcsa()- Send NOL IE and RCSA action frames.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @radar_found: Pointer to radar found structure.
+ * @nol_freq_list: List of 20MHz frequencies on which radar has been detected.
+ * @num_channels: number of radar affected channels.
+ * @wait_for_csa: indicates if the repeater AP should take DFS action or wait
+ * for CSA
+ *
+ * Return: void.
+ */
+static void
+dfs_send_nol_ie_and_rcsa(struct wlan_dfs *dfs,
+			 struct radar_found_info *radar_found,
+			 uint16_t *nol_freq_list,
+			 uint8_t num_channels,
+			 bool *wait_for_csa)
+{
+	dfs->dfs_is_nol_ie_sent = false;
+	(dfs->is_radar_during_precac ||
+	 radar_found->detector_id == dfs_get_agile_detector_id(dfs)) ?
+		(dfs->dfs_is_rcsa_ie_sent = false) :
+		(dfs->dfs_is_rcsa_ie_sent = true);
+	if (dfs->dfs_use_nol_subchannel_marking) {
+		dfs_reset_nol_ie_bitmap(dfs);
+		dfs_prepare_nol_ie_bitmap_for_freq(dfs, radar_found,
+						   nol_freq_list,
+						   num_channels);
+		dfs->dfs_is_nol_ie_sent = true;
+	}
+
+	/*
+	 * This calls into the umac DFS code, which sets the umac
+	 * related radar flags and begins the channel change
+	 * machinery.
+
+	 * Even during precac, this API is called, but with a flag
+	 * saying not to send RCSA, but only the radar affected subchannel
+	 * information.
+	 */
+	dfs_mlme_start_rcsa(dfs->dfs_pdev_obj, wait_for_csa);
+}
+#else
+static void
+dfs_send_nol_ie_and_rcsa(struct wlan_dfs *dfs,
+			 struct radar_found_info *radar_found,
+			 uint16_t *nol_freq_list,
+			 uint8_t num_channels,
+			 bool *wait_for_csa)
+{
+}
+#endif /* QCA_DFS_RCSA_SUPPORT */
+
+#if defined(QCA_SUPPORT_AGILE_DFS) || defined(ATH_SUPPORT_ZERO_CAC_DFS) || \
+	defined(QCA_SUPPORT_ADFS_RCAC)
+/**
+ * dfs_is_radarsource_agile() - Indicates whether the radar event is received
+ * on the agile channel.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @radar_found: Pointer to radar_found_info structure.
+ *
+ * Return: QDF_STATUS
+ */
+static
+bool dfs_is_radarsource_agile(struct wlan_dfs *dfs,
+			      struct radar_found_info *radar_found)
+{
+	bool is_radar_from_agile_dfs =
+	    (radar_found->detector_id == dfs_get_agile_detector_id(dfs));
+	bool is_radar_from_zero_wait_dfs =
+	    (dfs_is_legacy_precac_enabled(dfs) &&
+	     dfs_is_precac_timer_running(dfs) &&
+	     (radar_found->segment_id == SEG_ID_SECONDARY));
+
+	return (is_radar_from_agile_dfs || is_radar_from_zero_wait_dfs);
+}
+#else
+static
+bool dfs_is_radarsource_agile(struct wlan_dfs *dfs,
+			      struct radar_found_info *radar_found)
+{
+	return false;
+}
+#endif
+
+QDF_STATUS
+dfs_process_radar_ind(struct wlan_dfs *dfs,
+		      struct radar_found_info *radar_found)
+{
+	QDF_STATUS status;
+
+	/* Acquire a lock to avoid initiating mode switch till radar
+	 * processing is completed.
+	 */
+	DFS_RADAR_MODE_SWITCH_LOCK(dfs);
+
+	if (utils_dfs_can_ignore_radar_event(dfs->dfs_pdev_obj)) {
+		DFS_RADAR_MODE_SWITCH_UNLOCK(dfs);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	/* Before processing radar, check if HW mode switch is in progress.
+	 * If in progress, defer the processing of radar event received till
+	 * the mode switch is completed.
+	 */
+	if (dfs_is_hw_mode_switch_in_progress(dfs))
+		status = dfs_radar_action_for_hw_mode_switch(dfs, radar_found);
+	else if (dfs_is_radarsource_agile(dfs, radar_found))
+		status = dfs_process_radar_ind_on_agile_chan(dfs, radar_found);
+	else
+		status = dfs_process_radar_ind_on_home_chan(dfs, radar_found);
+
+	DFS_RADAR_MODE_SWITCH_UNLOCK(dfs);
+
+	return status;
+}
+
+QDF_STATUS
+dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
+				   struct radar_found_info *radar_found)
 {
 	bool wait_for_csa = false;
 	uint16_t freq_list[NUM_CHANNELS_160MHZ];
@@ -1065,92 +1193,20 @@ QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
 	uint32_t radarfound_freq;
 	struct dfs_channel *dfs_curchan;
 
-	if (utils_dfs_can_ignore_radar_event(dfs->dfs_pdev_obj))
-		return QDF_STATUS_SUCCESS;
-	/* Acquire a lock to avoid initiating mode switch till radar
-	 * processing is completed.
-	 */
-	DFS_RADAR_MODE_SWITCH_LOCK(dfs);
-
-	dfs_translate_radar_params(dfs, radar_found);
-	/* Before processing radar, check if HW mode switch is in progress.
-	 * If in progress, defer the processing of radar event received till
-	 * the mode switch is completed.
-	 */
-	if (dfs_is_hw_mode_switch_in_progress(dfs)) {
-		struct radar_found_info *radar_params = NULL;
-
-		radar_params = qdf_mem_malloc(sizeof(*radar_params));
-		if (!radar_params)
-			goto exit;
-
-		/* If CAC timer is running, cancel it here rather than
-		 * after processing to avoid handling unnecessary CAC timeouts.
-		 */
-		if (dfs->dfs_cac_timer_running)
-			dfs_cac_stop(dfs);
-
-		/* If CAC timer is to be handled after mode switch and then
-		 * we receive radar, no point in handling CAC completion.
-		 */
-		if (dfs->dfs_defer_params.is_cac_completed)
-			dfs->dfs_defer_params.is_cac_completed = false;
-		qdf_mem_copy(radar_params, radar_found, sizeof(*radar_params));
-		dfs->dfs_defer_params.radar_params = radar_params;
-		dfs->dfs_defer_params.is_radar_detected = true;
-		status = QDF_STATUS_SUCCESS;
-		goto exit;
-	}
-
 	dfs_curchan = dfs->dfs_curchan;
-
-	if (!dfs_curchan) {
-		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS, "dfs->dfs_curchan is NULL");
-		goto exit;
-	}
 
 	/* Check if the current channel is a non DFS channel
 	 * If the current channel is non-DFS and the radar is from Agile
 	 * Detector we need to process it since Agile Detector has a
 	 * different channel.
 	 */
-	if (!dfs_radarevent_basic_sanity(dfs, dfs_curchan) &&
-	    !(radar_found->detector_id == dfs_get_agile_detector_id(dfs))) {
-		dfs_err(dfs, WLAN_DEBUG_DFS,
-			"radar event on a non-DFS channel");
+	if (!dfs_radarevent_basic_sanity(dfs, dfs_curchan))
 		goto exit;
-	}
-
-	/* Sanity checks for radar on Agile detector */
-	if (radar_found->detector_id == dfs_get_agile_detector_id(dfs) &&
-	    ((!dfs_is_agile_precac_enabled(dfs) &&
-	      !dfs_is_agile_rcac_enabled(dfs)) ||
-	      !dfs->dfs_agile_precac_freq_mhz))
-	{
-		dfs_err(dfs, WLAN_DEBUG_DFS,
-			"radar on Agile detector when ADFS is not running");
-		goto exit;
-	}
-
-	/* For Full Offload, FW sends segment id,freq_offset and chirp
-	 * information and gets assigned when there is radar detect. In
-	 * case of radartool bangradar enhanced command and real radar
-	 * for DA and PO, we assign these information here.
-	 */
-	if (!(dfs->dfs_is_offload_enabled && dfs->dfs_radar_found_for_fo)) {
-		radar_found->segment_id = dfs->dfs_seg_id;
-		radar_found->freq_offset = dfs->dfs_freq_offset;
-		radar_found->is_chirp = dfs->dfs_is_chirp;
-	}
 
 	dfs_compute_radar_found_cfreq(dfs, radar_found, &freq_center);
 	radarfound_freq = freq_center + radar_found->freq_offset;
 
-	if (radar_found->detector_id == dfs_get_agile_detector_id(dfs))
-		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
-			 "Radar found on Agile detector freq=%d radar freq=%d",
-			 freq_center, radarfound_freq);
-	else if (radar_found->segment_id == SEG_ID_SECONDARY)
+	if (radar_found->segment_id == SEG_ID_SECONDARY)
 		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
 			 "Radar found on second segment.Radarfound Freq=%d MHz.Secondary Chan cfreq=%d MHz.",
 			 radarfound_freq, freq_center);
@@ -1170,25 +1226,10 @@ QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
 		status = QDF_STATUS_SUCCESS;
 		goto exit;
 	}
-
-	if (dfs->dfs_bangradar_type == DFS_BANGRADAR_FOR_ALL_SUBCHANS)
-		num_channels =
-			dfs_get_bonding_channel_without_seg_info_for_freq
-			(dfs_curchan, freq_list);
-	/* BW reduction is dependent on subchannel marking */
-	else if ((dfs->dfs_use_nol_subchannel_marking) &&
-		 (!(dfs->dfs_bangradar_type) ||
-		  (dfs->dfs_bangradar_type ==
-		   DFS_BANGRADAR_FOR_SPECIFIC_SUBCHANS)))
-		num_channels =
-			dfs_find_radar_affected_subchans_for_freq(dfs,
-								  radar_found,
-								  freq_list,
-								  freq_center);
-	else
-		num_channels = dfs_get_bonding_channels_for_freq
-			(dfs, dfs_curchan, radar_found->segment_id,
-			 radar_found->detector_id, freq_list);
+	num_channels = dfs_find_radar_affected_channels(dfs,
+							radar_found,
+							freq_list,
+							freq_center);
 
 	dfs_reset_bangradar(dfs);
 
@@ -1200,19 +1241,6 @@ QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
 		dfs_err(dfs, WLAN_DEBUG_DFS,
 			"radar event received on invalid channel");
 		goto exit;
-	}
-
-	dfs->dfs_is_nol_ie_sent = false;
-	(dfs->is_radar_during_precac ||
-	 radar_found->detector_id == dfs_get_agile_detector_id(dfs)) ?
-		(dfs->dfs_is_rcsa_ie_sent = false) :
-		(dfs->dfs_is_rcsa_ie_sent = true);
-	if (dfs->dfs_use_nol_subchannel_marking) {
-		dfs_reset_nol_ie_bitmap(dfs);
-		dfs_prepare_nol_ie_bitmap_for_freq(dfs, radar_found,
-						   nol_freq_list,
-						   num_channels);
-		dfs->dfs_is_nol_ie_sent = true;
 	}
 
 	/*
@@ -1241,27 +1269,12 @@ QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
 				     nol_freq_list,
 				     num_channels);
 
-	if (dfs_is_agile_rcac_enabled(dfs) &&
-	    radar_found->detector_id == dfs_get_agile_detector_id(dfs))
-		utils_dfs_rcac_sm_deliver_evt(dfs->dfs_pdev_obj,
-					      DFS_RCAC_SM_EV_ADFS_RADAR_FOUND);
-	/*
-	 * This calls into the umac DFS code, which sets the umac
-	 * related radar flags and begins the channel change
-	 * machinery.
+	dfs_send_nol_ie_and_rcsa(dfs,
+				 radar_found,
+				 nol_freq_list,
+				 num_channels,
+				 &wait_for_csa);
 
-	 * Even during precac, this API is called, but with a flag
-	 * saying not to send RCSA, but only the radar affected subchannel
-	 * information.
-	 */
-
-	dfs_mlme_start_rcsa(dfs->dfs_pdev_obj, &wait_for_csa);
-
-	/* If radar is found on preCAC or Agile CAC, return here since
-	 * channel change is not required.
-	 */
-	if (radar_found->detector_id == dfs_get_agile_detector_id(dfs))
-		goto exit;
 	if (!dfs->dfs_is_offload_enabled &&
 	    dfs->is_radar_found_on_secondary_seg) {
 		dfs_second_segment_radar_disable(dfs);
@@ -1301,7 +1314,6 @@ QDF_STATUS dfs_process_radar_ind(struct wlan_dfs *dfs,
 				   dfs->dfs_curchan->dfs_ch_flags);
 
 exit:
-	DFS_RADAR_MODE_SWITCH_UNLOCK(dfs);
 	return status;
 }
 #endif

@@ -43,6 +43,7 @@
 #define MBO_OCE_OUI 0x506f9a16
 #define MBO_OCE_OUI_SIZE 4
 #define REDUCED_WAN_METRICS_ATTR 103
+#define OCE_DISALLOW_ASSOC_ATTR  0x4
 #define AP_TX_PWR_ATTR 107
 #define OCE_SUBNET_ID_ATTR 108
 #define OCE_SUBNET_ID_LEN 6
@@ -525,35 +526,7 @@ struct wlan_rsn_ie_hdr {
 	u8 version[2];
 };
 
-#define WLAN_RSN_IE_MIN_LEN                    2
-
-#ifndef WLAN_SCAN_SECURITY_FILTER_V1
-/**
- * struct wlan_rsn_ie: rsn ie info
- * @ver: RSN ver
- * @gp_cipher_suite: group cipher
- * @pwise_cipher_count: number of pw cipher
- * @pwise_cipher_suites:  pair wise cipher list
- * @akm_suite_count: Number of akm suite
- * @akm_suites: akm suites list
- * @cap: RSN capability
- * @pmkid_count: number of PMKID
- * @pmkid: PMKID list
- * @mgmt_cipher_suite: management (11w) cipher suite
- */
-struct wlan_rsn_ie {
-	uint16_t ver;
-	uint32_t gp_cipher_suite;
-	uint16_t pwise_cipher_count;
-	uint32_t pwise_cipher_suites[WLAN_MAX_CIPHER];
-	uint16_t akm_suite_count;
-	uint32_t akm_suites[WLAN_MAX_CIPHER];
-	uint16_t cap;
-	uint16_t pmkid_count;
-	uint8_t pmkid[MAX_PMKID][PMKID_LEN];
-	uint32_t mgmt_cipher_suite;
-};
-#endif
+#define WLAN_RSN_IE_MIN_LEN             2
 #define WLAN_WAPI_IE_MIN_LEN            20
 
 /**
@@ -570,27 +543,6 @@ struct wlan_wpa_ie_hdr {
 	u8 version[2];
 };
 
-#ifndef WLAN_SCAN_SECURITY_FILTER_V1
-/**
- * struct wlan_wpa_ie: WPA ie info
- * @ver: WPA ver
- * @mc_cipher: multicast cipher
- * @uc_cipher_count: number of unicast cipher
- * @uc_ciphers:  unicast cipher list
- * @auth_suite_count: Number of akm suite
- * @auth_suites: akm suites list
- * @cap: WPA capability
- */
-struct wlan_wpa_ie {
-	uint16_t ver;
-	uint32_t mc_cipher;
-	uint16_t uc_cipher_count;
-	uint32_t uc_ciphers[WLAN_MAX_CIPHER];
-	uint16_t auth_suite_count;
-	uint32_t auth_suites[WLAN_MAX_CIPHER];
-	uint16_t cap;
-};
-#endif
 #define WAPI_VERSION 1
 #define WLAN_WAPI_OUI 0x721400
 
@@ -599,25 +551,6 @@ struct wlan_wpa_ie {
 #define WLAN_WAI_CERT_OR_SMS4 0x01
 #define WLAN_WAI_PSK 0x02
 
-#ifndef WLAN_SCAN_SECURITY_FILTER_V1
-/**
- * struct wlan_wapi_ie: WAPI ie info
- * @ver: WAPI ver
- * @akm_suite_count: Number of akm suite
- * @akm_suites: akm suites list
- * @uc_cipher_suites:unicast cipher count
- * @uc_cipher_suites: unicast cipher suite
- * @mc_cipher_suite: mc cipher suite
- */
-struct wlan_wapi_ie {
-	uint16_t ver;
-	uint16_t akm_suite_count;
-	uint32_t akm_suites[WLAN_MAX_CIPHER];
-	uint16_t uc_cipher_count;
-	uint32_t uc_cipher_suites[WLAN_MAX_CIPHER];
-	uint32_t mc_cipher_suite;
-};
-#endif
 /**
  * struct wlan_frame_hdr: generic IEEE 802.11 frames
  * @i_fc: frame control
@@ -1005,6 +938,42 @@ struct wlan_ie_vhtop {
 	uint8_t vht_op_ch_freq_seg1;
 	uint8_t vht_op_ch_freq_seg2;
 	uint16_t vhtop_basic_mcs_set;
+} qdf_packed;
+
+#define WLAN_HE_PHYCAP_160_SUPPORT BIT(2)
+#define WLAN_HE_PHYCAP_80_80_SUPPORT BIT(3)
+#define WLAN_HE_MACCAP_LEN 6
+#define WLAN_HE_PHYCAP_LEN 11
+#define WLAN_HE_MAX_MCS_MAPS 3
+/**
+ * struct wlan_ie_hecaps - HT capabilities
+ * @elem_id: HE caps IE
+ * @elem_len: HE caps IE len
+ * @elem_id_extn: HE caps extension id
+ * @he_mac_cap: HE mac capabilities
+ * @he_phy_cap: HE phy capabilities
+ * @phy_cap_bytes: HT phy capability bytes
+ * @supported_ch_width_set: Supported channel width set
+ * @mcs_bw_map: MCS NSS map per bandwidth
+ * @rx_mcs_map: RX MCS map
+ * @tx_mcs_map: TX MCS map
+ */
+struct wlan_ie_hecaps {
+	uint8_t elem_id;
+	uint8_t elem_len;
+	uint8_t elem_id_extn;
+	uint8_t he_mac_cap[WLAN_HE_MACCAP_LEN];
+	union {
+		uint8_t phy_cap_bytes[WLAN_HE_PHYCAP_LEN];
+		struct {
+			uint32_t reserved:1;
+			uint32_t supported_ch_width_set:7;
+		} qdf_packed;
+	} qdf_packed he_phy_cap;
+	struct {
+		uint16_t rx_mcs_map;
+		uint16_t tx_mcs_map;
+	} qdf_packed mcs_bw_map[WLAN_HE_MAX_MCS_MAPS];
 } qdf_packed;
 
 /**
@@ -1552,325 +1521,6 @@ is_sae_single_pmk_oui(uint8_t *frm)
 		((SAE_SINGLE_PMK_TYPE << OUI_TYPE_BITS) | SAE_SINGLE_PMK_OUI));
 }
 
-#ifndef WLAN_SCAN_SECURITY_FILTER_V1
-/**
- * wlan_parse_rsn_ie() - parse rsn ie
- * @rsn_ie: rsn ie ptr
- * @rsn: out structure for the parsed ie
- *
- * API, function to parse rsn ie, if optional fields are not present use the
- * default values defined by standard.
- *
- * Return: QDF_STATUS
- */
-static inline QDF_STATUS wlan_parse_rsn_ie(uint8_t *rsn_ie,
-	struct wlan_rsn_ie *rsn)
-{
-	uint8_t rsn_ie_len, i;
-	uint8_t *ie;
-	int rem_len;
-	const struct wlan_rsn_ie_hdr *hdr;
-
-	if (!rsn_ie)
-		return QDF_STATUS_E_NULL_VALUE;
-
-	ie = rsn_ie;
-	rsn_ie_len = ie[1] + 2;
-
-	/*
-	 * Check the length once for fixed parts:
-	 * element id, len and version. Other, variable-length data,
-	 * must be checked separately.
-	 */
-	if (rsn_ie_len < sizeof(struct wlan_rsn_ie_hdr))
-		return QDF_STATUS_E_INVAL;
-
-	hdr = (struct wlan_rsn_ie_hdr *) rsn_ie;
-
-	if (hdr->elem_id != WLAN_ELEMID_RSN ||
-	    LE_READ_2(hdr->version) != RSN_VERSION)
-		return QDF_STATUS_E_INVAL;
-
-	/* Set default values for optional field. */
-	rsn->gp_cipher_suite = WLAN_RSN_SEL(WLAN_CSE_CCMP);
-	rsn->pwise_cipher_count = 1;
-	rsn->pwise_cipher_suites[0] = WLAN_RSN_SEL(WLAN_CSE_CCMP);
-	rsn->akm_suite_count = 1;
-	rsn->akm_suites[0] = WLAN_RSN_SEL(WLAN_AKM_IEEE8021X);
-
-	rsn->ver = LE_READ_2(hdr->version);
-
-	ie = (uint8_t *) (hdr + 1);
-	rem_len = rsn_ie_len - sizeof(*hdr);
-
-	/* Check if optional group cipher is present */
-	if (rem_len >= WLAN_RSN_SELECTOR_LEN) {
-		rsn->gp_cipher_suite  = LE_READ_4(ie);
-		ie += WLAN_RSN_SELECTOR_LEN;
-		rem_len -= WLAN_RSN_SELECTOR_LEN;
-	} else if (rem_len > 0) {
-		/* RSN IE is invalid as group cipher is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Check if optional pairwise cipher is present */
-	if (rem_len >= 2) {
-		rsn->pwise_cipher_count = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-		if (rsn->pwise_cipher_count == 0 ||
-		    rsn->pwise_cipher_count > WLAN_MAX_CIPHER ||
-		    rsn->pwise_cipher_count > rem_len / WLAN_RSN_SELECTOR_LEN)
-			return QDF_STATUS_E_INVAL;
-		for (i = 0; i < rsn->pwise_cipher_count; i++) {
-			rsn->pwise_cipher_suites[i] = LE_READ_4(ie);
-			ie += WLAN_RSN_SELECTOR_LEN;
-			rem_len -= WLAN_RSN_SELECTOR_LEN;
-		}
-	} else if (rem_len == 1) {
-		/* RSN IE is invalid as pairwise cipher is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Check if optional akm suite is present */
-	if (rem_len >= 2) {
-		rsn->akm_suite_count = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-		if (rsn->akm_suite_count == 0 ||
-		    rsn->akm_suite_count > WLAN_MAX_CIPHER ||
-		    rsn->akm_suite_count > rem_len / WLAN_RSN_SELECTOR_LEN)
-			return QDF_STATUS_E_INVAL;
-		for (i = 0; i < rsn->akm_suite_count; i++) {
-			rsn->akm_suites[i] = LE_READ_4(ie);
-			ie += WLAN_RSN_SELECTOR_LEN;
-			rem_len -= WLAN_RSN_SELECTOR_LEN;
-		}
-	} else if (rem_len == 1) {
-		/* RSN IE is invalid as akm suite is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Update capabilty if present */
-	if (rem_len >= 2) {
-		rsn->cap = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-	} else if (rem_len == 1) {
-		/* RSN IE is invalid as cap field is truncated */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Update PMKID if present */
-	if (rem_len >= 2) {
-		rsn->pmkid_count = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-		if (rsn->pmkid_count > MAX_PMKID ||
-		    rsn->pmkid_count > (unsigned int)rem_len / PMKID_LEN) {
-			rsn->pmkid_count = 0;
-			return QDF_STATUS_E_INVAL;
-		}
-
-		qdf_mem_copy(rsn->pmkid, ie,
-			rsn->pmkid_count * PMKID_LEN);
-		ie += rsn->pmkid_count * PMKID_LEN;
-		rem_len -= rsn->pmkid_count * PMKID_LEN;
-	} else if (rem_len == 1) {
-		/* RSN IE is invalid as pmkid count field is truncated */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Update mgmt cipher if present */
-	if (rem_len >= WLAN_RSN_SELECTOR_LEN) {
-		rsn->mgmt_cipher_suite = LE_READ_4(ie);
-		ie += WLAN_RSN_SELECTOR_LEN;
-		rem_len -= WLAN_RSN_SELECTOR_LEN;
-	} else if (rem_len > 0) {
-		/* RSN IE is invalid as mgmt cipher is truncated */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * wlan_parse_wpa_ie() - parse wpa ie
- * @wpa_ie: wpa ie ptr
- * @wpa: out structure for the parsed ie
- *
- * API, function to parse wpa ie, if optional fields are not present use the
- * default values defined by standard.
- *
- * Return: QDF_STATUS
- */
-static inline QDF_STATUS wlan_parse_wpa_ie(uint8_t *wpa_ie,
-	struct wlan_wpa_ie *wpa)
-{
-	uint8_t wpa_ie_len, i;
-	uint8_t *ie;
-	int rem_len;
-	struct wlan_wpa_ie_hdr *hdr;
-
-	if (!wpa_ie)
-		return QDF_STATUS_E_NULL_VALUE;
-
-	ie = wpa_ie;
-	wpa_ie_len = ie[1] + 2;
-
-	/*
-	 * Check the length once for fixed parts:
-	 * element id, len, oui and version. Other, variable-length data,
-	 * must be checked separately.
-	 */
-	if (wpa_ie_len < sizeof(struct wlan_wpa_ie_hdr))
-		return QDF_STATUS_E_INVAL;
-
-	hdr = (struct wlan_wpa_ie_hdr *) wpa_ie;
-
-	if (hdr->elem_id != WLAN_ELEMID_VENDOR ||
-	    !is_wpa_oui(wpa_ie) ||
-	    LE_READ_2(hdr->version) != WPA_VERSION)
-		return QDF_STATUS_E_INVAL;
-
-	/* Set default values for optional field. */
-	wpa->mc_cipher = WLAN_WPA_SEL(WLAN_CSE_TKIP);
-	wpa->uc_cipher_count = 1;
-	wpa->uc_ciphers[0] = WLAN_WPA_SEL(WLAN_CSE_TKIP);
-	wpa->auth_suite_count = 1;
-	wpa->auth_suites[0] = WLAN_WPA_SEL(WLAN_ASE_8021X_UNSPEC);
-
-	wpa->ver = LE_READ_2(hdr->version);
-	ie = (uint8_t *) (hdr + 1);
-	rem_len = wpa_ie_len - sizeof(*hdr);
-
-	/* Check if optional group cipher is present */
-	if (rem_len >= WLAN_WPA_SELECTOR_LEN) {
-		wpa->mc_cipher = LE_READ_4(ie);
-		ie += WLAN_WPA_SELECTOR_LEN;
-		rem_len -= WLAN_WPA_SELECTOR_LEN;
-	} else if (rem_len > 0) {
-		/* WPA IE is invalid as group cipher is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Check if optional pairwise cipher is present */
-	if (rem_len >= 2) {
-		wpa->uc_cipher_count = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-		if (wpa->uc_cipher_count == 0 ||
-		    wpa->uc_cipher_count > WLAN_MAX_CIPHER ||
-		    wpa->uc_cipher_count > rem_len / WLAN_WPA_SELECTOR_LEN)
-			return QDF_STATUS_E_INVAL;
-		for (i = 0; i < wpa->uc_cipher_count; i++) {
-			wpa->uc_ciphers[i] = LE_READ_4(ie);
-			ie += WLAN_WPA_SELECTOR_LEN;
-			rem_len -= WLAN_WPA_SELECTOR_LEN;
-		}
-	} else if (rem_len == 1) {
-		/* WPA IE is invalid as pairwise cipher is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Check if optional akm suite is present */
-	if (rem_len >= 2) {
-		wpa->auth_suite_count = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-		if (wpa->auth_suite_count == 0 ||
-		    wpa->auth_suite_count > WLAN_MAX_CIPHER ||
-		    wpa->auth_suite_count > rem_len / WLAN_WPA_SELECTOR_LEN)
-			return QDF_STATUS_E_INVAL;
-		for (i = 0; i < wpa->auth_suite_count; i++) {
-			wpa->auth_suites[i] = LE_READ_4(ie);
-			ie += WLAN_WPA_SELECTOR_LEN;
-			rem_len -= WLAN_WPA_SELECTOR_LEN;
-		}
-	} else if (rem_len == 1) {
-		/* WPA IE is invalid as akm suite is of invalid length */
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Update capabilty if optional capabilty is present */
-	if (rem_len >= 2) {
-		wpa->cap = LE_READ_2(ie);
-		ie += 2;
-		rem_len -= 2;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * wlan_parse_wapi_ie() - parse wapi ie
- * @wapi_ie: wpa ie ptr
- * @wapi: out structure for the parsed  IE
- *
- * API, function to parse wapi ie
- *
- * Return: void
- */
-static inline void wlan_parse_wapi_ie(uint8_t *wapi_ie,
-	struct wlan_wapi_ie *wapi)
-{
-	uint8_t len, i;
-	uint8_t *ie;
-
-	if (!wapi_ie)
-		return;
-
-	ie = wapi_ie;
-	len = ie[1];
-	/*
-	 * Check the length once for fixed parts: OUI, type,
-	 * version, mcast cipher, and 2 selector counts.
-	 * Other, variable-length data, must be checked separately.
-	 */
-	if (len < 20)
-		return;
-
-	ie += 2;
-
-	wapi->ver = LE_READ_2(ie);
-	if (wapi->ver != WAPI_VERSION)
-		return;
-
-	ie += 2;
-	len -= 2;
-
-	/* akm */
-	wapi->akm_suite_count = LE_READ_2(ie);
-
-	ie += 2;
-	len -= 2;
-
-	if ((wapi->akm_suite_count > WLAN_MAX_CIPHER) ||
-		   len < (wapi->akm_suite_count * WLAN_OUI_SIZE))
-		return;
-	for (i = 0 ; i < wapi->akm_suite_count; i++) {
-		wapi->akm_suites[i] = LE_READ_4(ie);
-		ie += WLAN_OUI_SIZE;
-		len -= WLAN_OUI_SIZE;
-	}
-
-	wapi->uc_cipher_count = LE_READ_2(ie);
-	ie += 2;
-	len -= 2;
-	if ((wapi->uc_cipher_count > WLAN_MAX_CIPHER) ||
-	   len < (wapi->uc_cipher_count * WLAN_OUI_SIZE + 2))
-		return;
-	for (i = 0 ; i < wapi->uc_cipher_count; i++) {
-		wapi->uc_cipher_suites[i] = LE_READ_4(ie);
-		ie += WLAN_OUI_SIZE;
-		len -= WLAN_OUI_SIZE;
-	}
-
-	if (len >= WLAN_OUI_SIZE)
-		wapi->mc_cipher_suite = LE_READ_4(ie);
-}
-#endif
-
 /**
  * wlan_parse_oce_reduced_wan_metrics_ie() - parse oce wan metrics
  * @mbo_oce_ie: MBO/OCE ie ptr
@@ -1962,6 +1612,53 @@ wlan_parse_oce_subnet_id_ie(uint8_t *mbo_oce_ie)
 
 		if (attribute_id == OCE_SUBNET_ID_ATTR)
 			return true;
+
+		ie += (attribute_len + 2);
+		len -= attribute_len;
+	}
+
+	return false;
+}
+
+/**
+ * wlan_parse_oce_assoc_disallowed_ie() - parse oce assoc disallowed IE
+ * @mbo_oce_ie: MBO/OCE ie ptr
+ * @reason: reason for disallowing assoc.
+ *
+ * API, function to parse OCE assoc disallowed param from the OCE MBO IE
+ *
+ * Return: true if assoc disallowed field is present in the IE
+ */
+static inline bool
+wlan_parse_oce_assoc_disallowed_ie(uint8_t *mbo_oce_ie, uint8_t *reason)
+{
+	uint8_t len, attribute_len, attribute_id;
+	uint8_t *ie;
+
+	if (!mbo_oce_ie)
+		return false;
+
+	ie = mbo_oce_ie;
+	len = ie[1];
+	ie += 2;
+
+	if (len <= MBO_OCE_OUI_SIZE)
+		return false;
+
+	ie += MBO_OCE_OUI_SIZE;
+	len -= MBO_OCE_OUI_SIZE;
+
+	while (len > 2) {
+		attribute_id = ie[0];
+		attribute_len = ie[1];
+		len -= 2;
+		if (attribute_len > len)
+			return false;
+
+		if (attribute_id == OCE_DISALLOW_ASSOC_ATTR) {
+			*reason = ie[2];
+			return true;
+		}
 
 		ie += (attribute_len + 2);
 		len -= attribute_len;

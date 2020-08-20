@@ -297,6 +297,21 @@ enum dp_cpu_ring_map_types {
 };
 
 /**
+ * dp_rx_nbuf_frag_info - Hold vaddr and paddr for a buffer
+ *
+ * paddr: Physical address of buffer allocated.
+ * nbuf: Allocated nbuf in case of nbuf approach.
+ * vaddr: Virtual address of frag allocated in case of frag approach.
+ */
+struct dp_rx_nbuf_frag_info {
+	qdf_dma_addr_t paddr;
+	union {
+		qdf_nbuf_t nbuf;
+		qdf_frag_t vaddr;
+	} virt_addr;
+};
+
+/**
  * struct rx_desc_pool
  * @pool_size: number of RX descriptor in the pool
  * @elem_size: Element size
@@ -307,6 +322,7 @@ enum dp_cpu_ring_map_types {
  * @owner: owner for nbuf
  * @buf_size: Buffer size
  * @buf_alignment: Buffer alignment
+ * @rx_mon_dest_frag_enable: Enable frag processing for mon dest buffer
  */
 struct rx_desc_pool {
 	uint32_t pool_size;
@@ -321,6 +337,7 @@ struct rx_desc_pool {
 	uint8_t owner;
 	uint16_t buf_size;
 	uint8_t buf_alignment;
+	bool rx_mon_dest_frag_enable;
 };
 
 /**
@@ -608,6 +625,9 @@ struct dp_rx_tid {
 	uint32_t curr_seq_num;
 	uint32_t curr_frag_num;
 
+	/* head PN number */
+	uint64_t pn128[2];
+
 	uint32_t defrag_timeout_ms;
 	uint16_t dialogtoken;
 	uint16_t statuscode;
@@ -701,6 +721,7 @@ struct reo_desc_list_node {
 	unsigned long free_ts;
 	struct dp_rx_tid rx_tid;
 	bool resend_update_reo_cmd;
+	uint32_t pending_ext_desc_size;
 };
 
 #ifdef WLAN_FEATURE_DP_EVENT_HISTORY
@@ -770,6 +791,8 @@ struct dp_soc_stats {
 		uint32_t rx_frag_wait;
 		/* Fragments dropped due to errors */
 		uint32_t rx_frag_err;
+		/* Fragments received OOR causing sequence num mismatch */
+		uint32_t rx_frag_oor;
 		/* Fragments dropped due to len errors in skb */
 		uint32_t rx_frag_err_len_error;
 		/* Fragments dropped due to no peer found */
@@ -825,6 +848,12 @@ struct dp_soc_stats {
 			uint32_t hal_wbm_rel_dup;
 			/* HAL RXDMA error Duplicate count */
 			uint32_t hal_rxdma_err_dup;
+			/* ipa smmu map duplicate count */
+			uint32_t ipa_smmu_map_dup;
+			/* ipa smmu unmap duplicate count */
+			uint32_t ipa_smmu_unmap_dup;
+			/* ipa smmu unmap while ipa pipes is disabled */
+			uint32_t ipa_unmap_no_pipe;
 			/* REO cmd send fail/requeue count */
 			uint32_t reo_cmd_send_fail;
 			/* REO cmd send drain count */
@@ -833,6 +862,8 @@ struct dp_soc_stats {
 			uint32_t scatter_msdu;
 			/* RX msdu drop count due to invalid cookie */
 			uint32_t invalid_cookie;
+			/* Count of stale cookie read in RX path */
+			uint32_t stale_cookie;
 			/* Delba sent count due to RX 2k jump */
 			uint32_t rx_2k_jump_delba_sent;
 			/* RX 2k jump msdu indicated to stack count */
@@ -849,6 +880,14 @@ struct dp_soc_stats {
 			uint32_t rejected;
 			/* Incorrect msdu count in MPDU desc info */
 			uint32_t msdu_count_mismatch;
+			/* RX raw frame dropped count */
+			uint32_t raw_frm_drop;
+			/* Stale link desc cookie count*/
+			uint32_t invalid_link_cookie;
+			/* Nbuf sanity failure */
+			uint32_t nbuf_sanity_fail;
+			/* Duplicate link desc refilled */
+			uint32_t dup_refill_link_desc;
 		} err;
 
 		/* packet count per core - per ring */
@@ -957,6 +996,75 @@ struct link_desc_bank {
 	qdf_dma_addr_t base_paddr_unaligned;
 	qdf_dma_addr_t base_paddr;
 	uint32_t size;
+};
+
+struct rx_buff_pool {
+	qdf_nbuf_queue_head_t emerg_nbuf_q;
+	uint32_t nbuf_fail_cnt;
+	bool is_initialized;
+};
+
+/*
+ * The logic for get current index of these history is dependent on this
+ * value being power of 2.
+ */
+#define DP_RX_HIST_MAX 2048
+#define DP_RX_ERR_HIST_MAX 4096
+#define DP_RX_REINJECT_HIST_MAX 1024
+
+QDF_COMPILE_TIME_ASSERT(rx_history_size,
+			(DP_RX_HIST_MAX &
+			 (DP_RX_HIST_MAX - 1)) == 0);
+QDF_COMPILE_TIME_ASSERT(rx_err_history_size,
+			(DP_RX_ERR_HIST_MAX &
+			 (DP_RX_ERR_HIST_MAX - 1)) == 0);
+QDF_COMPILE_TIME_ASSERT(rx_reinject_history_size,
+			(DP_RX_REINJECT_HIST_MAX &
+			 (DP_RX_REINJECT_HIST_MAX - 1)) == 0);
+
+/**
+ * struct dp_buf_info_record - ring buffer info
+ * @hbi: HW ring buffer info
+ * @timestamp: timestamp when this entry was recorded
+ */
+struct dp_buf_info_record {
+	struct hal_buf_info hbi;
+	uint64_t timestamp;
+};
+
+/* struct dp_rx_history - rx ring hisotry
+ * @index: Index where the last entry is written
+ * @entry: history entries
+ */
+struct dp_rx_history {
+	qdf_atomic_t index;
+	struct dp_buf_info_record entry[DP_RX_HIST_MAX];
+};
+
+/* struct dp_rx_err_history - rx err ring hisotry
+ * @index: Index where the last entry is written
+ * @entry: history entries
+ */
+struct dp_rx_err_history {
+	qdf_atomic_t index;
+	struct dp_buf_info_record entry[DP_RX_ERR_HIST_MAX];
+};
+
+/* struct dp_rx_reinject_history - rx reinject ring hisotry
+ * @index: Index where the last entry is written
+ * @entry: history entries
+ */
+struct dp_rx_reinject_history {
+	qdf_atomic_t index;
+	struct dp_buf_info_record entry[DP_RX_REINJECT_HIST_MAX];
+};
+
+/* structure to record recent operation related variable */
+struct dp_last_op_info {
+	/* last link desc buf info through WBM release ring */
+	struct hal_buf_info wbm_rel_link_desc;
+	/* last link desc buf info through REO reinject ring */
+	struct hal_buf_info reo_reinject_link_desc;
 };
 
 /* SOC level structure for data path */
@@ -1207,6 +1315,10 @@ struct dp_soc {
 		TAILQ_HEAD(, dp_ast_entry) * bins;
 	} ast_hash;
 
+	struct dp_rx_history *rx_ring_history[MAX_REO_DEST_RINGS];
+	struct dp_rx_err_history *rx_err_ring_history;
+	struct dp_rx_reinject_history *rx_reinject_ring_history;
+
 	qdf_spinlock_t ast_lock;
 	/*Timer for AST entry ageout maintainance */
 	qdf_timer_t ast_aging_timer;
@@ -1354,6 +1466,11 @@ struct dp_soc {
 	} wbm_sg_param;
 	/* Number of msdu exception descriptors */
 	uint32_t num_msdu_exception_desc;
+
+	/* RX buffer params */
+	struct rx_buff_pool rx_buff_pool[MAX_PDEV_CNT];
+	/* Save recent operation related variable */
+	struct dp_last_op_info last_op_info;
 };
 
 #ifdef IPA_OFFLOAD
@@ -1462,6 +1579,7 @@ struct ppdu_info {
 	uint32_t ppdu_id;
 	uint32_t sched_cmdid;
 	uint32_t max_ppdu_id;
+	uint32_t tsf_l32;
 	uint16_t tlv_bitmap;
 	uint16_t last_tlv_cnt;
 	uint16_t last_user:8,
@@ -1480,6 +1598,7 @@ struct ppdu_info {
 #endif
 	uint8_t compltn_common_tlv;
 	uint8_t ack_ba_tlv;
+	bool done;
 };
 
 /**
@@ -1582,6 +1701,8 @@ struct dp_pdev {
 
 	/* Empty ring used by firmware to post rx buffers to the MAC */
 	struct dp_srng rx_mac_buf_ring[MAX_RX_MAC_RINGS];
+
+	int ch_band_lmac_id_mapping[REG_BAND_UNKNOWN];
 
 	/* wlan_cfg pdev ctxt*/
 	 struct wlan_cfg_dp_pdev_ctxt *wlan_cfg_ctx;
@@ -1790,6 +1911,11 @@ struct dp_pdev {
 #endif
 	/* list of ppdu tlvs */
 	TAILQ_HEAD(, ppdu_info) ppdu_info_list;
+	TAILQ_HEAD(, ppdu_info) sched_comp_ppdu_list;
+
+	uint32_t sched_comp_list_depth;
+	uint16_t delivered_sched_cmdid;
+	uint16_t last_sched_cmdid;
 	uint32_t tlv_count;
 	uint32_t list_depth;
 	uint32_t ppdu_id;
@@ -1907,6 +2033,11 @@ struct dp_pdev {
 	/* Flag to hold on to monitor destination ring */
 	bool hold_mon_dest_ring;
 
+#ifdef WLAN_ATF_ENABLE
+	/* ATF stats enable */
+	bool dp_atf_stats_enable;
+#endif
+
 	/* Maintains first status buffer's paddr of a PPDU */
 	uint64_t status_buf_addr;
 };
@@ -1986,9 +2117,6 @@ struct dp_vdev {
 
 	/* Handle to the OS shim SW's virtual device */
 	ol_osif_vdev_handle osif_vdev;
-
-	/* Handle to the UMAC handle */
-	struct cdp_ctrl_objmgr_vdev *ctrl_vdev;
 
 	/* MAC address */
 	union dp_align_mac_addr mac_addr;
@@ -2107,8 +2235,6 @@ struct dp_vdev {
 
 	/* TIDmap priority */
 	uint8_t tidmap_prty;
-	/* Self Peer in STA mode */
-	struct dp_peer *vap_self_peer;
 
 #ifdef QCA_MULTIPASS_SUPPORT
 	uint16_t *iv_vlan_map;
@@ -2134,12 +2260,16 @@ struct dp_vdev {
 	bool peer_protocol_count_track;
 	int peer_protocol_count_dropmask;
 #endif
-
-	/* vap bss peer mac addr */
-	uint8_t vap_bss_peer_mac_addr[QDF_MAC_ADDR_SIZE];
-
 	/* callback to collect connectivity stats */
 	ol_txrx_stats_rx_fp stats_cb;
+
+#ifdef WLAN_SUPPORT_RX_FISA
+	/**
+	 * Params used for controlling the fisa aggregation dynamically
+	 */
+	uint8_t fisa_disallowed[MAX_REO_DEST_RINGS];
+	uint8_t fisa_force_flushed[MAX_REO_DEST_RINGS];
+#endif
 };
 
 
@@ -2252,14 +2382,17 @@ struct dp_peer {
 	} security[2]; /* 0 -> multicast, 1 -> unicast */
 
 	/* NAWDS Flag and Bss Peer bit */
-	uint8_t nawds_enabled:1, /* NAWDS flag */
+	uint16_t nawds_enabled:1, /* NAWDS flag */
 		bss_peer:1, /* set for bss peer */
 		wds_enabled:1, /* WDS peer */
 		authorize:1, /* Set when authorized */
 		nac:1, /* NAC Peer*/
 		tx_cap_enabled:1, /* Peer's tx-capture is enabled */
 		rx_cap_enabled:1, /* Peer's rx-capture is enabled */
-		valid:1; /* valid bit */
+		valid:1, /* valid bit */
+		in_twt:1, /* in TWT session */
+		delete_in_progress:1, /*delete_in_progress bit*/
+		sta_self_peer:1; /* Indicate STA self peer */
 
 #ifdef QCA_SUPPORT_PEER_ISOLATION
 	bool isolation; /* enable peer isolation for this peer */
@@ -2282,7 +2415,6 @@ struct dp_peer {
 #ifdef WDS_VENDOR_EXTENSION
 	dp_ecm_policy wds_ecm;
 #endif
-	bool delete_in_progress;
 
 	/* Active Block ack sessions */
 	uint16_t active_ba_session_cnt;
@@ -2402,6 +2534,11 @@ struct dp_rx_fst {
 #define DP_RX_GET_SW_FT_ENTRY_SIZE sizeof(struct dp_rx_fse)
 #elif WLAN_SUPPORT_RX_FISA
 
+struct dp_fisa_stats {
+	/* flow index invalid from RX HW TLV */
+	uint32_t invalid_flow_index;
+};
+
 enum fisa_aggr_ret {
 	FISA_AGGR_DONE,
 	FISA_AGGR_NOT_ELIGIBLE,
@@ -2446,6 +2583,7 @@ struct dp_fisa_rx_sw_ft {
 	uint32_t last_hal_aggr_count;
 	uint32_t cur_aggr_gso_size;
 	struct udphdr *head_skb_udp_hdr;
+	uint16_t frags_cumulative_len;
 };
 
 #define DP_RX_GET_SW_FT_ENTRY_SIZE sizeof(struct dp_fisa_rx_sw_ft)
@@ -2486,6 +2624,8 @@ struct dp_rx_fst {
 	qdf_atomic_t fse_cache_flush_posted;
 	qdf_timer_t fse_cache_flush_timer;
 	struct fse_cache_flush_history cache_fl_rec[MAX_FSE_CACHE_FL_HST];
+	/* FISA DP stats */
+	struct dp_fisa_stats stats;
 };
 
 #endif /* WLAN_SUPPORT_RX_FISA */

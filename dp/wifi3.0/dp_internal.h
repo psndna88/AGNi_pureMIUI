@@ -36,22 +36,6 @@
 /* Macro For NYSM value received in VHT TLV */
 #define VHT_SGI_NYSM 3
 
-/* PPDU STATS CFG */
-#define DP_PPDU_STATS_CFG_ALL 0xFFFF
-
-/* PPDU stats mask sent to FW to enable enhanced stats */
-#define DP_PPDU_STATS_CFG_ENH_STATS 0xE67
-/* PPDU stats mask sent to FW to support debug sniffer feature */
-#define DP_PPDU_STATS_CFG_SNIFFER 0x2FFF
-/* PPDU stats mask sent to FW to support BPR feature*/
-#define DP_PPDU_STATS_CFG_BPR 0x2000
-/* PPDU stats mask sent to FW to support BPR and enhanced stats feature */
-#define DP_PPDU_STATS_CFG_BPR_ENH (DP_PPDU_STATS_CFG_BPR | \
-				   DP_PPDU_STATS_CFG_ENH_STATS)
-/* PPDU stats mask sent to FW to support BPR and pcktlog stats feature */
-#define DP_PPDU_STATS_CFG_BPR_PKTLOG (DP_PPDU_STATS_CFG_BPR | \
-				      DP_PPDU_TXLITE_STATS_BITMASK_CFG)
-
 /**
  * Bitmap of HTT PPDU TLV types for Default mode
  */
@@ -62,6 +46,42 @@
 	(1 << HTT_PPDU_STATS_SCH_CMD_STATUS_TLV) | \
 	(1 << HTT_PPDU_STATS_USR_COMPLTN_COMMON_TLV) | \
 	(1 << HTT_PPDU_STATS_USR_COMPLTN_ACK_BA_STATUS_TLV)
+
+/* PPDU STATS CFG */
+#define DP_PPDU_STATS_CFG_ALL 0xFFFF
+
+/* PPDU stats mask sent to FW to enable enhanced stats */
+#define DP_PPDU_STATS_CFG_ENH_STATS \
+	(HTT_PPDU_DEFAULT_TLV_BITMAP) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_FLUSH_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMMON_ARRAY_TLV) | \
+	(1 << HTT_PPDU_STATS_USERS_INFO_TLV)
+
+/* PPDU stats mask sent to FW to support debug sniffer feature */
+#define DP_PPDU_STATS_CFG_SNIFFER \
+	(HTT_PPDU_DEFAULT_TLV_BITMAP) | \
+	(1 << HTT_PPDU_STATS_USR_MPDU_ENQ_BITMAP_64_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_MPDU_ENQ_BITMAP_256_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_BA_BITMAP_64_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_BA_BITMAP_256_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_FLUSH_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_BA_BITMAP_256_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMPLTN_FLUSH_TLV) | \
+	(1 << HTT_PPDU_STATS_USR_COMMON_ARRAY_TLV) | \
+	(1 << HTT_PPDU_STATS_TX_MGMTCTRL_PAYLOAD_TLV) | \
+	(1 << HTT_PPDU_STATS_USERS_INFO_TLV)
+
+/* PPDU stats mask sent to FW to support BPR feature*/
+#define DP_PPDU_STATS_CFG_BPR \
+	(1 << HTT_PPDU_STATS_TX_MGMTCTRL_PAYLOAD_TLV) | \
+	(1 << HTT_PPDU_STATS_USERS_INFO_TLV)
+
+/* PPDU stats mask sent to FW to support BPR and enhanced stats feature */
+#define DP_PPDU_STATS_CFG_BPR_ENH (DP_PPDU_STATS_CFG_BPR | \
+				   DP_PPDU_STATS_CFG_ENH_STATS)
+/* PPDU stats mask sent to FW to support BPR and pcktlog stats feature */
+#define DP_PPDU_STATS_CFG_BPR_PKTLOG (DP_PPDU_STATS_CFG_BPR | \
+				      DP_PPDU_TXLITE_STATS_BITMASK_CFG)
 
 /**
  * Bitmap of HTT PPDU delayed ba TLV types for Default mode
@@ -1948,6 +1968,18 @@ void dp_peer_tx_capture_filter_check(struct dp_pdev *pdev,
 				     struct dp_peer *peer)
 {
 }
+
+/*
+ * dp_tx_capture_debugfs_init: tx capture debugfs init
+ * @pdev: DP PDEV handle
+ *
+ * return: QDF_STATUS
+ */
+static inline
+QDF_STATUS dp_tx_capture_debugfs_init(struct dp_pdev *pdev)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 
 #ifdef FEATURE_PERPKT_INFO
@@ -2211,6 +2243,24 @@ void dp_set_max_page_size(struct qdf_mem_multi_page_t *pages,
 #endif /* MAX_ALLOC_PAGE_SIZE */
 
 /**
+ * dp_history_get_next_index() - get the next entry to record an entry
+ *				 in the history.
+ * @curr_idx: Current index where the last entry is written.
+ * @max_entries: Max number of entries in the history
+ *
+ * This function assumes that the max number os entries is a power of 2.
+ *
+ * Returns: The index where the next entry is to be written.
+ */
+static inline uint32_t dp_history_get_next_index(qdf_atomic_t *curr_idx,
+						 uint32_t max_entries)
+{
+	uint32_t idx = qdf_atomic_inc_return(curr_idx);
+
+	return idx & (max_entries - 1);
+}
+
+/**
  * dp_rx_skip_tlvs() - Skip TLVs len + L2 hdr_offset, save in nbuf->cb
  * @nbuf: nbuf cb to be updated
  * @l2_hdr_offset: l2_hdr_offset
@@ -2230,4 +2280,15 @@ static inline bool dp_soc_is_full_mon_enable(struct dp_pdev *pdev)
 	return (pdev->soc->full_mon_mode && pdev->monitor_configured) ?
 			true : false;
 }
+
+#ifndef FEATURE_WDS
+static inline void
+dp_hmwds_ast_add_notify(struct dp_peer *peer,
+			uint8_t *mac_addr,
+			enum cdp_txrx_ast_entry_type type,
+			QDF_STATUS err,
+			bool is_peer_map)
+{
+}
+#endif
 #endif /* #ifndef _DP_INTERNAL_H_ */

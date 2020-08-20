@@ -206,6 +206,7 @@ struct vdev_mlme_proto {
  * @disable_hw_ack: disable ha ack flag
  * @bssid: bssid
  * @phy_mode: phy mode
+ * @special_vdev_mode: indicates special vdev mode
  */
 struct vdev_mlme_mgmt_generic {
 	uint32_t rts_threshold;
@@ -231,6 +232,7 @@ struct vdev_mlme_mgmt_generic {
 	bool disable_hw_ack;
 	uint8_t bssid[QDF_MAC_ADDR_SIZE];
 	uint32_t phy_mode;
+	bool special_vdev_mode;
 };
 
 /**
@@ -887,5 +889,28 @@ static inline uint32_t wlan_vdev_mlme_get_txmgmtrate(
 		return 0;
 
 	return vdev_mlme->mgmt.rate_info.tx_mgmt_rate;
+}
+
+/**
+ * wlan_vdev_mlme_is_special_vdev() - check given vdev is a special vdev
+ * @vdev: VDEV object
+ *
+ * API to check given vdev is a special vdev.
+ *
+ * Return: true if given vdev is special vdev, else false
+ */
+static inline bool wlan_vdev_mlme_is_special_vdev(
+				struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	if (!vdev)
+		return false;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return false;
+
+	return vdev_mlme->mgmt.generic.special_vdev_mode;
 }
 #endif

@@ -42,7 +42,7 @@
 #include <osdep.h>
 #include <wlan_cmn.h>
 #include "target_type.h"
-#ifdef QCA_SUPPORT_ADFS_RCAC
+#ifdef QCA_SUPPORT_AGILE_DFS
 #include <wlan_sm_engine.h> /* for struct wlan_sm */
 #endif
 #include <wlan_dfs_public_struct.h>
@@ -938,20 +938,23 @@ struct dfs_mode_switch_defer_params {
 	bool is_radar_detected;
 };
 
-#ifdef QCA_SUPPORT_ADFS_RCAC
+#ifdef QCA_SUPPORT_AGILE_DFS
 #define DFS_PSOC_NO_IDX 0xFF
 /**
- * enum dfs_rcac_sm_state - DFS Rolling CAC SM states.
- * @DFS_RCAC_S_INIT:     Default state, where RCAC not in progress.
- * @DFS_RCAC_S_RUNNING:  RCAC is in progress.
- * @DFS_RCAC_S_COMPLETE: RCAC is completed.
- * @DFS_RCAC_S_MAX:      Max (invalid) state.
+ * enum dfs_agile_sm_state - DFS AGILE SM states.
+ * @DFS_AGILE_S_INIT:     Default state or the start state of the Agile SM.
+ * @DFS_AGILE_S_RUNNING:  Agile Engine is being run.
+ * @DFS_AGILE_S_COMPLETE: The Agile Engine's minimum run is complete.
+			  However, it is still running. Used only for RCAC
+			  as RCAC needs to run continuously (uninterrupted)
+			  until the channel change.
+ * @DFS_AGILE_S_MAX:      Max (invalid) state.
  */
-enum dfs_rcac_sm_state {
-	DFS_RCAC_S_INIT,
-	DFS_RCAC_S_RUNNING,
-	DFS_RCAC_S_COMPLETE,
-	DFS_RCAC_S_MAX,
+enum dfs_agile_sm_state {
+	DFS_AGILE_S_INIT,
+	DFS_AGILE_S_RUNNING,
+	DFS_AGILE_S_COMPLETE,
+	DFS_AGILE_S_MAX,
 };
 
 /**
@@ -1003,8 +1006,6 @@ struct dfs_rcac_params {
  * @wlan_dfs_debug_timer:            Dfs debug timer.
  * @dfs_bangradar_type:              Radar simulation type.
  * @is_radar_found_on_secondary_seg: Radar on second segment.
- * @dfs_radar_found_for_fo:          Radar found event for FO(Full Offload) is
- *                                   received.
  * @is_radar_during_precac:          Radar found during precac.
  * @dfs_precac_lock:                 Lock to protect precac lists.
  * @dfs_precac_secondary_freq:       Second segment freq for precac.
@@ -1138,6 +1139,10 @@ struct dfs_rcac_params {
  *                                   MHZ.
  * @dfs_rcac_param:                  Primary frequency and Channel params of
  *                                   the selected RCAC channel.
+ * @dfs_chan_postnol_freq:           Frequency the AP switches to, post NOL.
+ * @dfs_chan_postnol_mode:           Phymode the AP switches to, post NOL.
+ * @dfs_chan_postnol_cfreq2:         Secondary center frequency the AP
+ *                                   switches to, post NOL.
  */
 struct wlan_dfs {
 	uint32_t       dfs_debug_mask;
@@ -1180,7 +1185,6 @@ struct wlan_dfs {
 	qdf_timer_t    wlan_dfs_debug_timer;
 	enum dfs_bangradar_types dfs_bangradar_type;
 	bool           is_radar_found_on_secondary_seg;
-	bool           dfs_radar_found_for_fo;
 	bool           is_radar_during_precac;
 	qdf_spinlock_t dfs_precac_lock;
 	bool           dfs_precac_enable;
@@ -1289,11 +1293,13 @@ struct wlan_dfs {
 	int32_t        dfs_freq_offset;
 	bool           dfs_cac_aborted;
 	qdf_spinlock_t dfs_data_struct_lock;
+#if defined(QCA_DFS_RCSA_SUPPORT)
 	uint8_t        dfs_nol_ie_bandwidth;
 	uint16_t       dfs_nol_ie_startfreq;
 	uint8_t        dfs_nol_ie_bitmap;
 	bool           dfs_is_rcsa_ie_sent;
 	bool           dfs_is_nol_ie_sent;
+#endif
 	uint8_t        dfs_legacy_precac_ucfg:1,
 		       dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)
@@ -1311,6 +1317,11 @@ struct wlan_dfs {
 	struct dfs_rcac_params dfs_rcac_param;
 #endif
 	uint16_t       dfs_lowest_pri_limit;
+#if defined(QCA_SUPPORT_DFS_CHAN_POSTNOL)
+	qdf_freq_t     dfs_chan_postnol_freq;
+	enum phy_ch_width dfs_chan_postnol_mode;
+	qdf_freq_t     dfs_chan_postnol_cfreq2;
+#endif
 };
 
 #if defined(QCA_SUPPORT_AGILE_DFS) || defined(ATH_SUPPORT_ZERO_CAC_DFS)
@@ -1337,14 +1348,16 @@ struct wlan_dfs_priv {
  *                                radar detection related information to host.
  * @dfs_priv: array of dfs private structs with agile capability info
  * @num_dfs_privs: array size of dfs private structs for given psoc.
- * @cur_precac_dfs_index: current precac dfs index
+ * @cur_dfs_index: index of the current dfs object using the Agile Engine.
+ *                 It is used to index struct wlan_dfs_priv dfs_priv[] array.
  * @dfs_precac_timer: agile precac timer
  * @dfs_precac_timer_running: precac timer running flag
  * @ocac_status: Off channel CAC complete status
  * @dfs_nol_ctx: dfs NOL data for all radios.
  * @dfs_rcac_timer: Agile RCAC (Rolling CAC) timer.
- * @dfs_rcac_sm_hdl: DFS Rolling CAC state machine handle.
- * @dfs_rcac_curr_state: Current state of DFS rolling CAC state machine.
+ * @dfs_agile_sm_hdl: The handle for the state machine that drives Agile
+ *                    Engine.
+ * @dfs_agile_sm_cur_state: Current state of the Agile State Machine.
  * @dfs_rcac_sm_lock: DFS Rolling CAC state machine lock.
  */
 struct dfs_soc_priv_obj {
@@ -1354,18 +1367,20 @@ struct dfs_soc_priv_obj {
 #if defined(QCA_SUPPORT_AGILE_DFS) || defined(ATH_SUPPORT_ZERO_CAC_DFS)
 	struct wlan_dfs_priv dfs_priv[WLAN_UMAC_MAX_PDEVS];
 	uint8_t num_dfs_privs;
-	uint8_t cur_precac_dfs_index;
+	uint8_t cur_agile_dfs_index;
 	qdf_timer_t     dfs_precac_timer;
 	uint8_t dfs_precac_timer_running;
 	bool precac_state_started;
 	bool ocac_status;
 #endif
 	struct dfsreq_nolinfo *dfs_psoc_nolinfo;
-#if defined(QCA_SUPPORT_ADFS_RCAC)
+#ifdef QCA_SUPPORT_ADFS_RCAC
 	qdf_timer_t dfs_rcac_timer;
-	struct wlan_sm *dfs_rcac_sm_hdl;
-	enum dfs_rcac_sm_state dfs_rcac_curr_state;
-	qdf_spinlock_t dfs_rcac_sm_lock;
+#endif
+#ifdef QCA_SUPPORT_AGILE_DFS
+	struct wlan_sm *dfs_agile_sm_hdl;
+	enum dfs_agile_sm_state dfs_agile_sm_cur_state;
+	qdf_spinlock_t dfs_agile_sm_lock;
 #endif
 };
 
@@ -1386,6 +1401,7 @@ struct dfs_soc_priv_obj {
  * @WLAN_DEBUG_DFS_FALSE_DET2:  Second level check to confirm poisitive
  *                              detection.
  * @WLAN_DEBUG_DFS_RANDOM_CHAN: Random channel selection.
+ * @WLAN_DEBUG_DFS_AGILE:       Agile PreCAC/RCAC
  */
 enum {
 	WLAN_DEBUG_DFS  = 0x00000100,
@@ -1402,7 +1418,7 @@ enum {
 	WLAN_DEBUG_DFS_FALSE_DET  = 0x00080000,
 	WLAN_DEBUG_DFS_FALSE_DET2 = 0x00100000,
 	WLAN_DEBUG_DFS_RANDOM_CHAN = 0x00200000,
-	WLAN_DEBUG_DFS_RCAC       = 0x00400000,
+	WLAN_DEBUG_DFS_AGILE       = 0x00400000,
 	WLAN_DEBUG_DFS_MAX        = 0x80000000,
 	WLAN_DEBUG_DFS_ALWAYS     = WLAN_DEBUG_DFS_MAX
 };
@@ -1747,8 +1763,15 @@ int dfs_get_random_bin5_dur(struct wlan_dfs *dfs,
  * @dfs: Pointer to wlan_dfs structure.
  * @dl: Pointer to dfs_delayline structure.
  */
+#if defined(WLAN_DFS_DIRECT_ATTACH) || defined(WLAN_DFS_PARTIAL_OFFLOAD)
 void dfs_print_delayline(struct wlan_dfs *dfs,
 		struct dfs_delayline *dl);
+#else
+static inline
+void dfs_print_delayline(struct wlan_dfs *dfs, struct dfs_delayline *dl)
+{
+}
+#endif
 
 /**
  * dfs_print_nol() - Print NOL elements.
@@ -1892,9 +1915,19 @@ int dfs_staggered_check(struct wlan_dfs *dfs,
  *
  * Return: Returns pri_margin.
  */
+#if defined(WLAN_DFS_DIRECT_ATTACH) || defined(WLAN_DFS_PARTIAL_OFFLOAD)
 int dfs_get_pri_margin(struct wlan_dfs *dfs,
 		int is_extchan_detect,
 		int is_fixed_pattern);
+#else
+static inline
+int dfs_get_pri_margin(struct wlan_dfs *dfs,
+		       int is_extchan_detect,
+		       int is_fixed_pattern)
+{
+	return 0;
+}
+#endif
 
 /**
  * dfs_get_filter_threshold() - Get filter threshold.
@@ -2708,8 +2741,19 @@ int dfs_second_segment_radar_disable(struct wlan_dfs *dfs);
  *                         - centre frequency.
  * @nol_ie_bitmap          - NOL bitmap denoting affected subchannels.
  */
+#if defined(QCA_DFS_RCSA_SUPPORT)
 void dfs_fetch_nol_ie_info(struct wlan_dfs *dfs, uint8_t *nol_ie_bandwidth,
 			   uint16_t *nol_ie_startfreq, uint8_t *nol_ie_bitmap);
+#else
+static inline
+void dfs_fetch_nol_ie_info(struct wlan_dfs *dfs, uint8_t *nol_ie_bandwidth,
+			   uint16_t *nol_ie_startfreq, uint8_t *nol_ie_bitmap)
+{
+	*nol_ie_bandwidth = 0;
+	*nol_ie_startfreq = 0;
+	*nol_ie_bitmap = 0;
+}
+#endif
 
 /**
  * dfs_set_rcsa_flags() - Set flags that are required for sending RCSA and
@@ -2718,8 +2762,16 @@ void dfs_fetch_nol_ie_info(struct wlan_dfs *dfs, uint8_t *nol_ie_bandwidth,
  * @is_rcsa_ie_sent: Boolean to check if RCSA IE should be sent or not.
  * @is_nol_ie_sent: Boolean to check if NOL IE should be sent or not.
  */
+#if defined(QCA_DFS_RCSA_SUPPORT)
 void dfs_set_rcsa_flags(struct wlan_dfs *dfs, bool is_rcsa_ie_sent,
 			bool is_nol_ie_sent);
+#else
+static inline
+void dfs_set_rcsa_flags(struct wlan_dfs *dfs, bool is_rcsa_ie_sent,
+			bool is_nol_ie_sent)
+{
+}
+#endif
 
 /**
  * dfs_get_rcsa_flags() - Get flags that are required for sending RCSA and
@@ -2728,8 +2780,18 @@ void dfs_set_rcsa_flags(struct wlan_dfs *dfs, bool is_rcsa_ie_sent,
  * @is_rcsa_ie_sent: Boolean to check if RCSA IE should be sent or not.
  * @is_nol_ie_sent: Boolean to check if NOL IE should be sent or not.
  */
+#if defined(QCA_DFS_RCSA_SUPPORT)
 void dfs_get_rcsa_flags(struct wlan_dfs *dfs, bool *is_rcsa_ie_sent,
 			bool *is_nol_ie_sent);
+#else
+static inline
+void dfs_get_rcsa_flags(struct wlan_dfs *dfs, bool *is_rcsa_ie_sent,
+			bool *is_nol_ie_sent)
+{
+	*is_rcsa_ie_sent = false;
+	*is_nol_ie_sent = false;
+}
+#endif
 
 /**
  * dfs_process_nol_ie_bitmap() - Update NOL with external radar information.
@@ -2741,9 +2803,19 @@ void dfs_get_rcsa_flags(struct wlan_dfs *dfs, bool *is_rcsa_ie_sent,
  *
  * Return: True if NOL IE should be propagated, else false.
  */
+#if defined(QCA_DFS_RCSA_SUPPORT)
 bool dfs_process_nol_ie_bitmap(struct wlan_dfs *dfs, uint8_t nol_ie_bandwidth,
 			       uint16_t nol_ie_startfreq,
 			       uint8_t nol_ie_bitmap);
+#else
+static inline
+bool dfs_process_nol_ie_bitmap(struct wlan_dfs *dfs, uint8_t nol_ie_bandwidth,
+			       uint16_t nol_ie_startfreq,
+			       uint8_t nol_ie_bitmap)
+{
+	return false;
+}
+#endif
 
 /**
  * dfs_is_cac_required() - Check if DFS CAC is required for the current channel.
@@ -2981,5 +3053,85 @@ bool dfs_is_new_chan_subset_of_old_chan(struct wlan_dfs *dfs,
 uint8_t dfs_find_dfs_sub_channels_for_freq(struct  wlan_dfs *dfs,
 					   struct dfs_channel *chan,
 					   uint16_t *subchan_arr);
+
+#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+/**
+ * dfs_set_postnol_freq() - DFS API to set postNOL frequency.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_freq: PostNOL frequency value configured by the user.
+ */
+void dfs_set_postnol_freq(struct wlan_dfs *dfs, qdf_freq_t postnol_freq);
+
+/**
+ * dfs_set_postnol_mode() - DFS API to set postNOL mode.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_mode: PostNOL frequency value configured by the user.
+ */
+void dfs_set_postnol_mode(struct wlan_dfs *dfs, uint8_t postnol_mode);
+
+/**
+ * dfs_set_postnol_cfreq2() - DFS API to set postNOL secondary center frequency.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_cfreq2: PostNOL secondary center frequency value configured by the
+ * user.
+ */
+void dfs_set_postnol_cfreq2(struct wlan_dfs *dfs, qdf_freq_t postnol_cfreq2);
+
+/**
+ * dfs_get_postnol_freq() - DFS API to get postNOL frequency.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_freq: PostNOL frequency value configured by the user.
+ */
+void dfs_get_postnol_freq(struct wlan_dfs *dfs, qdf_freq_t *postnol_freq);
+
+/**
+ * dfs_get_postnol_mode() - DFS API to get postNOL mode.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_mode: PostNOL frequency value configured by the user.
+ */
+void dfs_get_postnol_mode(struct wlan_dfs *dfs, uint8_t *postnol_mode);
+
+/**
+ * dfs_get_postnol_cfreq2() - DFS API to get postNOL secondary center frequency.
+ * @dfs: Pointer to wlan_dfs object.
+ * @postnol_cfreq2: PostNOL secondary center frequency value configured by the
+ * user.
+ */
+void dfs_get_postnol_cfreq2(struct wlan_dfs *dfs, qdf_freq_t *postnol_cfreq2);
+#else
+static inline void
+dfs_set_postnol_freq(struct wlan_dfs *dfs, qdf_freq_t postnol_freq)
+{
+}
+
+static inline void
+dfs_set_postnol_mode(struct wlan_dfs *dfs, uint8_t postnol_mode)
+{
+}
+
+static inline void
+dfs_set_postnol_cfreq2(struct wlan_dfs *dfs, qdf_freq_t postnol_cfreq2)
+{
+}
+
+static inline void
+dfs_get_postnol_freq(struct wlan_dfs *dfs, qdf_freq_t *postnol_freq)
+{
+	*postnol_freq = 0;
+}
+
+static inline void
+dfs_get_postnol_mode(struct wlan_dfs *dfs, uint8_t *postnol_mode)
+{
+	*postnol_mode = CH_WIDTH_INVALID;
+}
+
+static inline void
+dfs_get_postnol_cfreq2(struct wlan_dfs *dfs, qdf_freq_t *postnol_cfreq2)
+{
+	*postnol_cfreq2 = 0;
+}
+
+#endif /* QCA_SUPPORT_DFS_CHAN_POSTNOL */
 
 #endif  /* _DFS_H_ */

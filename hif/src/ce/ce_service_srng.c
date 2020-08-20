@@ -132,7 +132,7 @@ void hif_record_ce_srng_desc_event(struct hif_softc *scn, int ce_id,
 }
 #endif /* HIF_CONFIG_SLUB_DEBUG_ON || HIF_CE_DEBUG_DATA_BUF */
 
-static int
+static QDF_STATUS
 ce_send_nolock_srng(struct CE_handle *copyeng,
 			   void *per_transfer_context,
 			   qdf_dma_addr_t buffer,
@@ -141,7 +141,7 @@ ce_send_nolock_srng(struct CE_handle *copyeng,
 			   uint32_t flags,
 			   uint32_t user_flags)
 {
-	int status;
+	QDF_STATUS status;
 	struct CE_state *CE_state = (struct CE_state *)copyeng;
 	struct CE_ring_state *src_ring = CE_state->src_ring;
 	unsigned int nentries_mask = src_ring->nentries_mask;
@@ -215,12 +215,12 @@ ce_send_nolock_srng(struct CE_handle *copyeng,
 	return status;
 }
 
-static int
+static QDF_STATUS
 ce_sendlist_send_srng(struct CE_handle *copyeng,
 		 void *per_transfer_context,
 		 struct ce_sendlist *sendlist, unsigned int transfer_id)
 {
-	int status = -ENOMEM;
+	QDF_STATUS status = QDF_STATUS_E_NOMEM;
 	struct ce_sendlist_s *sl = (struct ce_sendlist_s *)sendlist;
 	struct CE_state *CE_state = (struct CE_state *)copyeng;
 	struct CE_ring_state *src_ring = CE_state->src_ring;
@@ -294,13 +294,13 @@ ce_sendlist_send_srng(struct CE_handle *copyeng,
  * @per_recv_context: virtual address of the nbuf
  * @buffer: physical address of the nbuf
  *
- * Return: 0 if the buffer is enqueued
+ * Return: QDF_STATUS_SUCCESS if the buffer is enqueued
  */
-static int
+static QDF_STATUS
 ce_recv_buf_enqueue_srng(struct CE_handle *copyeng,
 		    void *per_recv_context, qdf_dma_addr_t buffer)
 {
-	int status;
+	QDF_STATUS status;
 	struct CE_state *CE_state = (struct CE_state *)copyeng;
 	struct CE_ring_state *dest_ring = CE_state->dest_ring;
 	unsigned int nentries_mask = dest_ring->nentries_mask;
@@ -316,7 +316,7 @@ ce_recv_buf_enqueue_srng(struct CE_handle *copyeng,
 
 	if (Q_TARGET_ACCESS_BEGIN(scn) < 0) {
 		qdf_spin_unlock_bh(&CE_state->ce_index_lock);
-		return -EIO;
+		return QDF_STATUS_E_IO;
 	}
 
 	if (hal_srng_access_start(scn->hal_soc, dest_ring->srng_ctx)) {
@@ -402,7 +402,7 @@ ce_send_entries_done_nolock_srng(struct hif_softc *scn,
  * Guts of ce_completed_recv_next.
  * The caller takes responsibility for any necessary locking.
  */
-static int
+static QDF_STATUS
 ce_completed_recv_next_nolock_srng(struct CE_state *CE_state,
 			      void **per_CE_contextp,
 			      void **per_transfer_contextp,
@@ -411,7 +411,7 @@ ce_completed_recv_next_nolock_srng(struct CE_state *CE_state,
 			      unsigned int *transfer_idp,
 			      unsigned int *flagsp)
 {
-	int status;
+	QDF_STATUS status;
 	struct CE_ring_state *dest_ring = CE_state->dest_ring;
 	struct CE_ring_state *status_ring = CE_state->status_ring;
 	unsigned int nentries_mask = dest_ring->nentries_mask;
@@ -547,7 +547,7 @@ ce_revoke_recv_next_srng(struct CE_handle *copyeng,
  * Guts of ce_completed_send_next.
  * The caller takes responsibility for any necessary locking.
  */
-static int
+static QDF_STATUS
 ce_completed_send_next_nolock_srng(struct CE_state *CE_state,
 			      void **per_CE_contextp,
 			      void **per_transfer_contextp,
@@ -558,7 +558,7 @@ ce_completed_send_next_nolock_srng(struct CE_state *CE_state,
 			      unsigned int *hw_idx,
 			      uint32_t *toeplitz_hash_result)
 {
-	int status = QDF_STATUS_E_FAILURE;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct CE_ring_state *src_ring = CE_state->src_ring;
 	unsigned int nentries_mask = src_ring->nentries_mask;
 	unsigned int sw_index = src_ring->sw_index;
@@ -621,7 +621,7 @@ ce_cancel_send_next_srng(struct CE_handle *copyeng,
 		uint32_t *toeplitz_hash_result)
 {
 	struct CE_state *CE_state;
-	int status = QDF_STATUS_E_FAILURE;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct CE_ring_state *src_ring;
 	unsigned int nentries_mask;
 	unsigned int sw_index;

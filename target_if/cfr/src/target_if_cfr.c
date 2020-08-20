@@ -26,7 +26,7 @@
 #include <init_deinit_lmac.h>
 #include <wlan_cfr_utils_api.h>
 #include <wlan_objmgr_pdev_obj.h>
-#include <target_if_cfr_6018.h>
+#include <target_if_cfr_enh.h>
 #ifdef CFR_USE_FIXED_FOLDER
 #include "target_if_cfr_6490.h"
 #include "target_if_cfr_adrastea.h"
@@ -277,7 +277,7 @@ int target_if_cfr_init_pdev(struct wlan_objmgr_psoc *psoc,
 	} else if ((target_type == TARGET_TYPE_QCA6018) ||
 		   (target_type == TARGET_TYPE_QCN9000)) {
 		pa->is_cfr_capable = cfr_sc->is_cfr_capable;
-		return cfr_6018_init_pdev(psoc, pdev);
+		return cfr_enh_init_pdev(psoc, pdev);
 	} else
 		return QDF_STATUS_E_NOSUPPORT;
 }
@@ -303,7 +303,7 @@ int target_if_cfr_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 		return cfr_wifi2_0_deinit_pdev(psoc, pdev);
 	} else if ((target_type == TARGET_TYPE_QCA6018) ||
 		   (target_type == TARGET_TYPE_QCN9000)) {
-		return cfr_6018_deinit_pdev(psoc, pdev);
+		return cfr_enh_deinit_pdev(psoc, pdev);
 	} else
 		return QDF_STATUS_E_NOSUPPORT;
 }
@@ -507,6 +507,44 @@ void target_if_cfr_set_cfr_support(struct wlan_objmgr_psoc *psoc,
 	}
 	if (rx_ops->cfr_rx_ops.cfr_support_set)
 		rx_ops->cfr_rx_ops.cfr_support_set(psoc, value);
+}
+
+QDF_STATUS
+target_if_cfr_set_capture_count_support(struct wlan_objmgr_psoc *psoc,
+					uint8_t value)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		cfr_err("rx_ops is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (rx_ops->cfr_rx_ops.cfr_capture_count_support_set)
+		return rx_ops->cfr_rx_ops.cfr_capture_count_support_set(
+						psoc, value);
+
+	return QDF_STATUS_E_INVAL;
+}
+
+QDF_STATUS
+target_if_cfr_set_mo_marking_support(struct wlan_objmgr_psoc *psoc,
+				     uint8_t value)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		cfr_err("rx_ops is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (rx_ops->cfr_rx_ops.cfr_mo_marking_support_set)
+		return rx_ops->cfr_rx_ops.cfr_mo_marking_support_set(
+						psoc, value);
+
+	return QDF_STATUS_E_INVAL;
 }
 
 void target_if_cfr_info_send(struct wlan_objmgr_pdev *pdev, void *head,

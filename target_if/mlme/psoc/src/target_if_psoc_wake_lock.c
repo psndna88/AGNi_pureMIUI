@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,6 +28,9 @@
 #include <host_diag_core_event.h>
 #include <wlan_objmgr_psoc_obj.h>
 #include <target_if.h>
+#include <target_if_vdev_mgr_rx_ops.h>
+#include <wlan_reg_services_api.h>
+#include "init_deinit_lmac.h"
 
 void target_if_wake_lock_init(struct wlan_objmgr_psoc *psoc)
 {
@@ -35,10 +38,10 @@ void target_if_wake_lock_init(struct wlan_objmgr_psoc *psoc)
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
-	if (!rx_ops && !rx_ops->psoc_get_wakelock_info) {
-		mlme_err("vdev_id:%d psoc_id:%d No Rx Ops", vdev_id,
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops",
 			 wlan_psoc_get_id(psoc));
-		return QDF_STATUS_E_INVAL;
+		return;
 	}
 
 	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
@@ -48,6 +51,8 @@ void target_if_wake_lock_init(struct wlan_objmgr_psoc *psoc)
 	qdf_wake_lock_create(&psoc_wakelock->delete_wakelock, "vdev_delete");
 
 	qdf_runtime_lock_init(&psoc_wakelock->wmi_cmd_rsp_runtime_lock);
+	qdf_runtime_lock_init(&psoc_wakelock->prevent_runtime_lock);
+	psoc_wakelock->is_link_up = false;
 }
 
 void target_if_wake_lock_deinit(struct wlan_objmgr_psoc *psoc)
@@ -56,10 +61,10 @@ void target_if_wake_lock_deinit(struct wlan_objmgr_psoc *psoc)
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
-	if (!rx_ops && !rx_ops->psoc_get_wakelock_info) {
-		mlme_err("vdev_id:%d psoc_id:%d No Rx Ops", vdev_id,
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops",
 			 wlan_psoc_get_id(psoc));
-		return QDF_STATUS_E_INVAL;
+		return;
 	}
 
 	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
@@ -68,7 +73,8 @@ void target_if_wake_lock_deinit(struct wlan_objmgr_psoc *psoc)
 	qdf_wake_lock_destroy(&psoc_wakelock->stop_wakelock);
 	qdf_wake_lock_destroy(&psoc_wakelock->delete_wakelock);
 
-	qdf_runtime_lock_deinit(&vdev_wakelock->wmi_cmd_rsp_runtime_lock);
+	qdf_runtime_lock_deinit(&psoc_wakelock->wmi_cmd_rsp_runtime_lock);
+	qdf_runtime_lock_deinit(&psoc_wakelock->prevent_runtime_lock);
 }
 
 QDF_STATUS target_if_wake_lock_timeout_acquire(
@@ -76,12 +82,11 @@ QDF_STATUS target_if_wake_lock_timeout_acquire(
 				enum wakelock_mode mode)
 {
 	struct psoc_mlme_wakelock *psoc_wakelock;
-	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
-	if (!rx_ops && !rx_ops->psoc_get_wakelock_info) {
-		mlme_err("vdev_id:%d psoc_id:%d No Rx Ops", vdev_id,
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops",
 			 wlan_psoc_get_id(psoc));
 		return QDF_STATUS_E_INVAL;
 	}
@@ -97,7 +102,7 @@ QDF_STATUS target_if_wake_lock_timeout_acquire(
 					      STOP_RESPONSE_TIMER);
 		break;
 	case DELETE_WAKELOCK:
-		qdf_wake_lock_timeout_acquire(&vdev_wakelock->delete_wakelock,
+		qdf_wake_lock_timeout_acquire(&psoc_wakelock->delete_wakelock,
 					      DELETE_RESPONSE_TIMER);
 		break;
 	default:
@@ -119,9 +124,8 @@ QDF_STATUS target_if_wake_lock_timeout_release(
 	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
 
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
-	if (!rx_ops && !rx_ops->psoc_get_wakelock_info) {
-		mlme_err("vdev_id:%d psoc_id:%d No Rx Ops", vdev_id,
-			 wlan_psoc_get_id(psoc));
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops", wlan_psoc_get_id(psoc));
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -147,5 +151,97 @@ QDF_STATUS target_if_wake_lock_timeout_release(
 	qdf_runtime_pm_allow_suspend(&psoc_wakelock->wmi_cmd_rsp_runtime_lock);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+static void
+target_if_vote_for_link_down(struct wlan_objmgr_psoc *psoc,
+			     struct psoc_mlme_wakelock *psoc_wakelock)
+{
+	void *htc_handle;
+
+	htc_handle = lmac_get_htc_hdl(psoc);
+	if (!htc_handle) {
+		mlme_err("HTC handle is NULL");
+		return;
+	}
+
+	if (psoc_wakelock->is_link_up) {
+		htc_vote_link_down(htc_handle);
+		qdf_runtime_pm_allow_suspend(&psoc_wakelock->prevent_runtime_lock);
+		psoc_wakelock->is_link_up = false;
+	}
+}
+
+static void
+target_if_vote_for_link_up(struct wlan_objmgr_psoc *psoc,
+			   struct psoc_mlme_wakelock *psoc_wakelock)
+{
+	void *htc_handle;
+
+	htc_handle = lmac_get_htc_hdl(psoc);
+	if (!htc_handle) {
+		mlme_err("HTC handle is NULL");
+		return;
+	}
+
+	if (!psoc_wakelock->is_link_up) {
+		htc_vote_link_up(htc_handle);
+		qdf_runtime_pm_prevent_suspend(&psoc_wakelock->prevent_runtime_lock);
+		psoc_wakelock->is_link_up = true;
+	}
+}
+
+void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
+				       uint32_t cfreq1, uint32_t cfreq2)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_pdev *pdev;
+	struct psoc_mlme_wakelock *psoc_wakelock;
+	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	pdev = wlan_vdev_get_pdev(vdev);
+
+	if (!pdev) {
+		mlme_err("pdev is NULL");
+		return;
+	}
+
+	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops",
+			 wlan_psoc_get_id(psoc));
+		return;
+	}
+
+	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
+		if ((wlan_reg_chan_has_dfs_attribute_for_freq(pdev,
+							      cfreq1)) ||
+		    (wlan_reg_chan_has_dfs_attribute_for_freq(pdev,
+							      cfreq2)))
+			target_if_vote_for_link_up(psoc, psoc_wakelock);
+		else
+			target_if_vote_for_link_down(psoc, psoc_wakelock);
+	}
+}
+
+void target_if_vdev_stop_link_handler(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct psoc_mlme_wakelock *psoc_wakelock;
+	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		mlme_err("psoc_id:%d No Rx Ops",
+			 wlan_psoc_get_id(psoc));
+		return;
+	}
+
+	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
+		target_if_vote_for_link_down(psoc, psoc_wakelock);
 }
 

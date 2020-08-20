@@ -27,7 +27,64 @@
 #include <wlan_sm_engine.h>
 
 /**
- * mlme_cm_sm_create() - Invoke SM creation for connection manager
+ * enum wlan_cm_sm_evt - connection manager related events
+ * @WLAN_CM_SM_EV_CONNECT_REQ:            Connect request event from requester
+ * @WLAN_CM_SM_EV_SCAN:                   Event to start connect scan
+ * @WLAN_CM_SM_EV_SCAN_SUCCESS:           Connect scan success event
+ * @WLAN_CM_SM_EV_SCAN_FAILURE:           Connect scan fail event
+ * @WLAN_CM_SM_EV_CONNECT_START:          Connect start process initiate
+ * @WLAN_CM_SM_EV_CONNECT_ACTIVE:         Connect request is activated
+ * @WLAN_CM_SM_EV_CONNECT_SUCCESS:        Connect success
+ * @WLAN_CM_SM_EV_CONNECT_GET_NEXT_CANDIDATE: Get next candidate for connection
+ * @WLAN_CM_SM_EV_CONNECT_FAILURE:        Connect failed for all candidate
+ * @WLAN_CM_SM_EV_DISCONNECT_REQ:         Disconnect request event from
+ * requester
+ * @WLAN_CM_SM_EV_DISCONNECT_START:       Start disconnect sequence
+ * @WLAN_CM_SM_EV_DISCONNECT_ACTIVE:      Process disconnect after in active cmd
+ * @WLAN_CM_SM_EV_DISCONNECT_DONE:        Disconnect done event
+ * @WLAN_CM_SM_EV_ROAM_START:             Roam start event
+ * @WLAN_CM_SM_EV_ROAM_SYNC:              Roam sync event
+ * @WLAN_CM_SM_EV_ROAM_INVOKE_FAIL:       Roam invoke fail event
+ * @WLAN_CM_SM_EV_ROAM_HO_FAIL:           Hand off failed event
+ * @WLAN_CM_SM_EV_PREAUTH_DONE:           Preauth is completed
+ * @WLAN_CM_SM_EV_GET_NEXT_PREAUTH_AP:    Get next candidate as preauth failed
+ * @WLAN_CM_SM_EV_PREAUTH_FAIL:           Preauth failed for all candidate
+ * @WLAN_CM_SM_EV_START_REASSOC:          Start reassoc after preauth done
+ * @WLAN_CM_SM_EV_REASSOC_DONE:           Reassoc completed
+ * @WLAN_CM_SM_EV_REASSOC_FAILURE:        Reassoc failed
+ * @WLAN_CM_SM_EV_ROAM_COMPLETE:          Roaming completed
+ * @WLAN_CM_SM_EV_MAX:                    Max event
+ */
+enum wlan_cm_sm_evt {
+	WLAN_CM_SM_EV_CONNECT_REQ = 0,
+	WLAN_CM_SM_EV_SCAN = 1,
+	WLAN_CM_SM_EV_SCAN_SUCCESS = 2,
+	WLAN_CM_SM_EV_SCAN_FAILURE = 3,
+	WLAN_CM_SM_EV_CONNECT_START = 4,
+	WLAN_CM_SM_EV_CONNECT_ACTIVE = 5,
+	WLAN_CM_SM_EV_CONNECT_SUCCESS = 6,
+	WLAN_CM_SM_EV_CONNECT_GET_NEXT_CANDIDATE = 7,
+	WLAN_CM_SM_EV_CONNECT_FAILURE = 8,
+	WLAN_CM_SM_EV_DISCONNECT_REQ = 9,
+	WLAN_CM_SM_EV_DISCONNECT_START = 10,
+	WLAN_CM_SM_EV_DISCONNECT_ACTIVE = 11,
+	WLAN_CM_SM_EV_DISCONNECT_DONE = 12,
+	WLAN_CM_SM_EV_ROAM_START = 13,
+	WLAN_CM_SM_EV_ROAM_SYNC = 14,
+	WLAN_CM_SM_EV_ROAM_INVOKE_FAIL = 15,
+	WLAN_CM_SM_EV_ROAM_HO_FAIL = 16,
+	WLAN_CM_SM_EV_PREAUTH_DONE = 17,
+	WLAN_CM_SM_EV_GET_NEXT_PREAUTH_AP = 18,
+	WLAN_CM_SM_EV_PREAUTH_FAIL = 19,
+	WLAN_CM_SM_EV_START_REASSOC = 20,
+	WLAN_CM_SM_EV_REASSOC_DONE = 21,
+	WLAN_CM_SM_EV_REASSOC_FAILURE = 22,
+	WLAN_CM_SM_EV_ROAM_COMPLETE = 23,
+	WLAN_CM_SM_EV_MAX,
+};
+
+/**
+ * cm_sm_create() - Invoke SM creation for connection manager
  * @cm_ctx:  connection manager ctx
  *
  * API allocates CM MLME SM and initializes SM lock
@@ -35,10 +92,10 @@
  * Return: SUCCESS on successful allocation
  *         FAILURE, if registration fails
  */
-QDF_STATUS mlme_cm_sm_create(struct cnx_mgr *cm_ctx);
+QDF_STATUS cm_sm_create(struct cnx_mgr *cm_ctx);
 
 /**
- * mlme_cm_sm_destroy() - Invoke SM deletion for connection manager
+ * cm_sm_destroy() - Invoke SM deletion for connection manager
  * @cm_ctx:  connection manager ctx
  *
  * API destroys CM MLME SM and SM lock
@@ -46,10 +103,10 @@ QDF_STATUS mlme_cm_sm_create(struct cnx_mgr *cm_ctx);
  * Return: SUCCESS on successful deletion
  *         FAILURE, if deletion fails
  */
-QDF_STATUS mlme_cm_sm_destroy(struct cnx_mgr *cm_ctx);
+QDF_STATUS cm_sm_destroy(struct cnx_mgr *cm_ctx);
 
 /**
- * mlme_cm_sm_history_print() - Prints SM history
+ * cm_sm_history_print() - Prints SM history
  * @cm_ctx:  connection manager ctx
  *
  * API to print CM SM history
@@ -57,19 +114,19 @@ QDF_STATUS mlme_cm_sm_destroy(struct cnx_mgr *cm_ctx);
  * Return: void
  */
 #ifdef SM_ENG_HIST_ENABLE
-static inline void mlme_cm_sm_history_print(struct cnx_mgr *cm_ctx)
+static inline void cm_sm_history_print(struct cnx_mgr *cm_ctx)
 {
 	return wlan_sm_print_history(cm_ctx->sm.sm_hdl);
 }
 #else
-static inline void mlme_cm_sm_history_print(struct cnx_mgr *cm_ctx)
+static inline void cm_sm_history_print(struct cnx_mgr *cm_ctx)
 {
 }
 #endif
 
 #ifdef WLAN_CM_USE_SPINLOCK
 /**
- * mlme_cm_lock_create - Create CM SM mutex/spinlock
+ * cm_lock_create - Create CM SM mutex/spinlock
  * @cm_ctx:  connection manager ctx
  *
  * Creates CM SM mutex/spinlock
@@ -77,13 +134,13 @@ static inline void mlme_cm_sm_history_print(struct cnx_mgr *cm_ctx)
  * Return: void
  */
 static inline void
-mlme_cm_lock_create(struct cnx_mgr *cm_ctx)
+cm_lock_create(struct cnx_mgr *cm_ctx)
 {
 	qdf_spinlock_create(&cm_ctx->sm.cm_sm_lock);
 }
 
 /**
- * mlme_cm_lock_destroy - Destroy CM SM mutex/spinlock
+ * cm_lock_destroy - Destroy CM SM mutex/spinlock
  * @cm_ctx:  connection manager ctx
  *
  * Destroy CM SM mutex/spinlock
@@ -91,62 +148,62 @@ mlme_cm_lock_create(struct cnx_mgr *cm_ctx)
  * Return: void
  */
 static inline void
-mlme_cm_lock_destroy(struct cnx_mgr *cm_ctx)
+cm_lock_destroy(struct cnx_mgr *cm_ctx)
 {
 	qdf_spinlock_destroy(&cm_ctx->sm.cm_sm_lock);
 }
 
 /**
- * mlme_cm_lock_acquire - acquire CM SM mutex/spinlock
+ * cm_lock_acquire - acquire CM SM mutex/spinlock
  * @cm_ctx:  connection manager ctx
  *
  * acquire CM SM mutex/spinlock
  *
  * return: void
  */
-static inline void mlme_cm_lock_acquire(struct cnx_mgr *cm_ctx)
+static inline void cm_lock_acquire(struct cnx_mgr *cm_ctx)
 {
 	qdf_spinlock_acquire(&cm_ctx->sm.cm_sm_lock);
 }
 
 /**
- * mlme_cm_lock_release - release CM SM mutex/spinlock
+ * cm_lock_release - release CM SM mutex/spinlock
  * @cm_ctx:  connection manager ctx
  *
  * release CM SM mutex/spinlock
  *
  * return: void
  */
-static inline void mlme_cm_lock_release(struct cnx_mgr *cm_ctx)
+static inline void cm_lock_release(struct cnx_mgr *cm_ctx)
 {
 	qdf_spinlock_release(&cm_ctx->sm.cm_sm_lock);
 }
 #else
 static inline void
-mlme_cm_lock_create(struct cnx_mgr *cm_ctx)
+cm_lock_create(struct cnx_mgr *cm_ctx)
 {
 	qdf_mutex_create(&cm_ctx->sm.cm_sm_lock);
 }
 
 static inline void
-mlme_cm_lock_destroy(struct cnx_mgr *cm_ctx)
+cm_lock_destroy(struct cnx_mgr *cm_ctx)
 {
 	qdf_mutex_destroy(&cm_ctx->sm.cm_sm_lock);
 }
 
-static inline void mlme_cm_lock_acquire(struct cnx_mgr *cm_ctx)
+static inline void cm_lock_acquire(struct cnx_mgr *cm_ctx)
 {
 	qdf_mutex_acquire(&cm_ctx->sm.cm_sm_lock);
 }
 
-static inline void mlme_cm_lock_release(struct cnx_mgr *cm_ctx)
+static inline void cm_lock_release(struct cnx_mgr *cm_ctx)
 {
 	qdf_mutex_release(&cm_ctx->sm.cm_sm_lock);
 }
 #endif /* WLAN_CM_USE_SPINLOCK */
 
 /**
- * mlme_cm_sm_transition_to() - invokes state transition
+ * cm_sm_transition_to() - invokes state transition
  * @cm_ctx:  connection manager ctx
  * @state: new cm state
  *
@@ -154,34 +211,34 @@ static inline void mlme_cm_lock_release(struct cnx_mgr *cm_ctx)
  *
  * Return: void
  */
-static inline void mlme_cm_sm_transition_to(struct cnx_mgr *cm_ctx,
-					    enum wlan_cm_sm_state state)
+static inline void cm_sm_transition_to(struct cnx_mgr *cm_ctx,
+				       enum wlan_cm_sm_state state)
 {
 	wlan_sm_transition_to(cm_ctx->sm.sm_hdl, state);
 }
 
 /**
- * mlme_cm_get_state() - get mlme state
+ * cm_get_state() - get mlme state
  * @cm_ctx: connection manager SM ctx
  *
  * API to get cm state
  *
  * Return: state of cm
  */
-enum wlan_cm_sm_state mlme_cm_get_state(struct cnx_mgr *cm_ctx);
+enum wlan_cm_sm_state cm_get_state(struct cnx_mgr *cm_ctx);
 
 /**
- * mlme_cm_get_sub_state() - get mlme substate
+ * cm_get_sub_state() - get mlme substate
  * @cm_ctx: connection manager SM ctx
  *
  * API to get cm substate
  *
  * Return: substate of cm
  */
-enum wlan_cm_sm_state mlme_cm_get_sub_state(struct cnx_mgr *cm_ctx);
+enum wlan_cm_sm_state cm_get_sub_state(struct cnx_mgr *cm_ctx);
 
 /**
- * mlme_cm_set_state() - set cm mlme state
+ * cm_set_state() - set cm mlme state
  * @cm_ctx: connection manager SM ctx
  * @state: cm state
  *
@@ -189,9 +246,9 @@ enum wlan_cm_sm_state mlme_cm_get_sub_state(struct cnx_mgr *cm_ctx);
  *
  * Return: void
  */
-void mlme_cm_set_state(struct cnx_mgr *cm_ctx, enum wlan_cm_sm_state state);
+void cm_set_state(struct cnx_mgr *cm_ctx, enum wlan_cm_sm_state state);
 /**
- * mlme_cm_set_substate() - set cm mlme sub state
+ * cm_set_substate() - set cm mlme sub state
  * @cm_ctx: connection manager SM ctx
  * @substate: cm sub state
  *
@@ -199,11 +256,11 @@ void mlme_cm_set_state(struct cnx_mgr *cm_ctx, enum wlan_cm_sm_state state);
  *
  * Return: void
  */
-void mlme_cm_set_substate(struct cnx_mgr *cm_ctx,
-			  enum wlan_cm_sm_state substate);
+void cm_set_substate(struct cnx_mgr *cm_ctx,
+		     enum wlan_cm_sm_state substate);
 
 /**
- * mlme_cm_sm_state_update() - set cm mlme state and sub state
+ * cm_sm_state_update() - set cm mlme state and sub state
  * @cm_ctx: connection manager SM ctx
  * @state: cm state
  * @substate: cm sub state
@@ -212,26 +269,45 @@ void mlme_cm_set_substate(struct cnx_mgr *cm_ctx,
  *
  * Return: void
  */
-void mlme_cm_sm_state_update(struct cnx_mgr *cm_ctx,
-			     enum wlan_cm_sm_state state,
-			     enum wlan_cm_sm_state substate);
+void cm_sm_state_update(struct cnx_mgr *cm_ctx,
+			enum wlan_cm_sm_state state,
+			enum wlan_cm_sm_state substate);
 
 /**
- * mlme_cm_sm_deliver_evt() - Delivers event to CM SM
+ * cm_sm_deliver_event() - Delivers event to connection manager SM
+ * @cm_ctx: cm ctx
+ * @event: CM event
+ * @data_len: data size
+ * @data: event data
+ *
+ * API to dispatch event to VDEV MLME SM without lock
+ *
+ * Return: SUCCESS: on handling event
+ *         FAILURE: on ignoring the event
+ */
+static inline
+QDF_STATUS cm_sm_deliver_event(struct cnx_mgr *cm_ctx,
+			       enum wlan_cm_sm_evt event,
+			       uint16_t data_len, void *data)
+{
+	return wlan_sm_dispatch(cm_ctx->sm.sm_hdl, event, data_len, data);
+}
+
+/**
+ * wlan_cm_sm_deliver_evt() - Delivers event to CM SM
  * @vdev: Object manager VDEV object
  * @event: CM event
- * @event_data_len: data size
- * @event_data: event data
+ * @data_len: data size
+ * @data: event data
  *
  * API to dispatch event to VDEV MLME SM with lock acquired
  *
  * Return: SUCCESS: on handling event
  *         FAILURE: on ignoring the event
  */
-QDF_STATUS mlme_cm_sm_deliver_evt(struct wlan_objmgr_vdev *vdev,
+QDF_STATUS wlan_cm_sm_deliver_evt(struct wlan_objmgr_vdev *vdev,
 				  enum wlan_cm_sm_evt event,
-				  uint16_t event_data_len,
-				  void *event_data);
+				  uint16_t data_len, void *data);
 
 #endif /* FEATURE_CM_ENABLE */
 #endif /* __WLAN_CM_SM_H__ */

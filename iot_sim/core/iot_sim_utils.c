@@ -16,6 +16,7 @@
 
 #include <wlan_iot_sim_utils_api.h>
 #include <qdf_module.h>
+#include <qdf_delayed_work.h>
 #include "../../core/iot_sim_cmn_api_i.h"
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_vdev_obj.h>
@@ -198,9 +199,12 @@ iot_sim_apply_content_change_rule(struct wlan_objmgr_pdev *pdev,
 }
 
 /*
- * iot_sim_apply_drop_rule - function to apply drop rule. If set buffer will be
- *			     freed here and proper return value will be sent to
- *			     tgt layer.
+ * iot_sim_apply_delay_drop_rule - function to apply delay or drop rule.
+ *                                 If drop rule is set, buffer will be freed
+ *                                 here and proper return value will be sent to
+ *			           tgt layer. In case of delay rule, delayed
+ *                                 workqueue will be scheduled for rx frame
+ *                                 processing
  *
  * @piot_sim_rule: iot_sim rule structure
  * @nbuf: skb coming from upper stack
@@ -209,16 +213,67 @@ iot_sim_apply_content_change_rule(struct wlan_objmgr_pdev *pdev,
  *	   QDF_STATUS_E_NULL_VALUE, when drop rule is applied
  */
 QDF_STATUS
-iot_sim_apply_drop_rule(struct iot_sim_rule *piot_sim_rule,
-			qdf_nbuf_t nbuf)
+iot_sim_apply_delay_drop_rule(struct iot_sim_rule *piot_sim_rule,
+			      qdf_nbuf_t nbuf,
+			      struct mgmt_rx_event_params *param)
 {
-	if (!piot_sim_rule->drop)
+	struct mgmt_rx_event_params *rx_param;
+
+	if (!piot_sim_rule->drop &&
+	    !piot_sim_rule->delay_dur)
 		return QDF_STATUS_E_NOSUPPORT;
 
-	if (nbuf)
+	if (piot_sim_rule->drop && nbuf) {
 		qdf_nbuf_free(nbuf);
+		iot_sim_debug("iot_sim: Drop rule applied");
+	} else if (piot_sim_rule->delay_dur) {
+		if (nbuf == piot_sim_rule->sec_buf) {
+			iot_sim_debug("iot_sim: rx frame process after delay");
+			return QDF_STATUS_E_NOSUPPORT;
+		}
 
-	iot_sim_debug("iot_sim: Drop rule applied");
+		if (piot_sim_rule->nbuf_list[0]) {
+			if (!qdf_delayed_work_stop(piot_sim_rule->
+						   dwork)) {
+				piot_sim_rule->nbuf_list[1] = nbuf;
+				return QDF_STATUS_SUCCESS;
+			}
+
+			qdf_nbuf_free(piot_sim_rule->nbuf_list[0]);
+			qdf_mem_free(piot_sim_rule->rx_param->rx_params);
+			qdf_mem_free(piot_sim_rule->rx_param);
+		}
+
+		rx_param = qdf_mem_malloc(sizeof(struct mgmt_rx_event_params));
+		if (!rx_param) {
+			iot_sim_err("rx_param alloc failed");
+			return QDF_STATUS_E_NOSUPPORT;
+		}
+
+		qdf_mem_copy(rx_param, param,
+			     sizeof(struct mgmt_rx_event_params));
+		rx_param->rx_params = qdf_mem_malloc(RX_STATUS_SIZE);
+		if (!rx_param->rx_params) {
+			iot_sim_err("rx_param->rx_params alloc failed");
+			qdf_mem_free(rx_param);
+			return QDF_STATUS_E_NOSUPPORT;
+		}
+
+		qdf_mem_copy(rx_param->rx_params,
+			     param->rx_params, RX_STATUS_SIZE);
+		piot_sim_rule->rx_param = rx_param;
+		piot_sim_rule->nbuf_list[0] = nbuf;
+		if (!qdf_delayed_work_start(piot_sim_rule->dwork,
+					    piot_sim_rule->delay_dur)) {
+			iot_sim_err("delayed_work_start failed");
+			qdf_mem_free(rx_param->rx_params);
+			qdf_mem_free(rx_param);
+			return QDF_STATUS_E_NOSUPPORT;
+		}
+
+		iot_sim_err("iot_sim: Delay rule applied");
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -233,13 +288,14 @@ iot_sim_apply_drop_rule(struct iot_sim_rule *piot_sim_rule,
  * @nbuf: input packet
  * @param: beacon template cmd parameter
  * @tx: tx or not
+ * @rx_param: mgmt_rx_event_params
  *
  * Return: QDF_STATUS_SUCCESS in general
  *	   QDF_STATUS_E_NOSUPPORT, no content change rule found for this frame
  */
 QDF_STATUS iot_sim_frame_update(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t nbuf,
 				struct beacon_tmpl_params *param,
-				bool tx)
+				bool tx, struct mgmt_rx_event_params *rx_param)
 {
 	uint8_t type, subtype, seq = 0;
 	struct iot_sim_context *isc;
@@ -250,6 +306,9 @@ QDF_STATUS iot_sim_frame_update(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t nbuf,
 	int auth_seq_index = 0;
 	struct iot_sim_rule *piot_sim_rule = NULL;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct iot_sim_rule_per_peer *peer_rule;
+	struct ieee80211_frame *wh = (struct ieee80211_frame *)buf;
+	struct qdf_mac_addr *mac_addr;
 
 	isc = wlan_objmgr_pdev_get_comp_private_obj(pdev, WLAN_IOT_SIM_COMP);
 	if (!isc) {
@@ -281,7 +340,8 @@ QDF_STATUS iot_sim_frame_update(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t nbuf,
 		frm = buf + IEEE80211_FRAME_BODY_OFFSET;
 
 		is_action_frm = true;
-		if (iot_sim_get_index_for_action_frm(frm, &cat, &cat_index)) {
+		if (iot_sim_get_index_for_action_frm(frm, &cat,
+						     &cat_index, !tx)) {
 			iot_sim_err("get_index_for_action_frm failed");
 			return QDF_STATUS_SUCCESS;
 		}
@@ -292,20 +352,28 @@ QDF_STATUS iot_sim_frame_update(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t nbuf,
 		      type, subtype, seq, is_action_frm,
 		      tx ? "TX" : "RX");
 
-	/**
-	 * Only broadcast peer is getting handled right now.
-	 * Need to add support for peer based content modification
-	 */
-	qdf_spin_lock(&isc->bcast_peer.iot_sim_lock);
+	if (tx)
+		mac_addr = (struct qdf_mac_addr *)wh->i_addr1;
+	else
+		mac_addr = (struct qdf_mac_addr *)wh->i_addr2;
 
-	if (!isc->bcast_peer.rule_per_seq[seq])
+	peer_rule = iot_sim_find_peer_from_mac(isc, mac_addr);
+	if (!peer_rule)
+		peer_rule = &isc->bcast_peer;
+
+	if (!peer_rule)
+		goto no_peer_rule;
+
+	qdf_spin_lock_bh(&isc->iot_sim_lock);
+
+	if (!peer_rule->rule_per_seq[seq])
 		goto norule;
 
 	if (is_action_frm)
-		piot_sim_rule = isc->bcast_peer.rule_per_seq[seq]->
+		piot_sim_rule = peer_rule->rule_per_seq[seq]->
 			rule_per_action_frm[cat][cat_index];
 	else
-		piot_sim_rule = isc->bcast_peer.rule_per_seq[seq]->
+		piot_sim_rule = peer_rule->rule_per_seq[seq]->
 			rule_per_type[type][subtype];
 
 	if (!piot_sim_rule)
@@ -335,16 +403,22 @@ QDF_STATUS iot_sim_frame_update(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t nbuf,
 		if (status == QDF_STATUS_E_NOSUPPORT)
 			goto norule;
 	} else {
-		status = iot_sim_apply_drop_rule(piot_sim_rule, nbuf);
+		status = iot_sim_apply_delay_drop_rule(piot_sim_rule,
+						       nbuf, rx_param);
 		if (QDF_IS_STATUS_SUCCESS(status))
 			status = QDF_STATUS_E_NULL_VALUE;
+		else
+			status = QDF_STATUS_SUCCESS;
 	}
 
-	qdf_spin_unlock(&isc->bcast_peer.iot_sim_lock);
+	qdf_spin_unlock_bh(&isc->iot_sim_lock);
 	return status;
 
 norule:
 	iot_sim_debug("Rule not set for this frame");
-	qdf_spin_unlock(&isc->bcast_peer.iot_sim_lock);
+	qdf_spin_unlock_bh(&isc->iot_sim_lock);
+	return QDF_STATUS_SUCCESS;
+no_peer_rule:
+	iot_sim_debug("Rule not set for this peer");
 	return QDF_STATUS_SUCCESS;
 }

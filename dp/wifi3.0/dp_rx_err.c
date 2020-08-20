@@ -25,11 +25,13 @@
 #include "qdf_trace.h"
 #include "qdf_nbuf.h"
 #include "dp_rx_defrag.h"
+#include "dp_ipa.h"
 #ifdef FEATURE_WDS
 #include "dp_txrx_wds.h"
 #endif
 #include <enet.h>	/* LLC_SNAP_HDR_LEN */
 #include "qdf_net_types.h"
+#include "dp_rx_buffer_pool.h"
 
 /* Max buffer in invalid peer SG list*/
 #define DP_MAX_INVALID_BUFFERS 10
@@ -154,6 +156,26 @@ static inline bool dp_rx_mcast_echo_check(struct dp_soc *soc,
 	return false;
 }
 
+void dp_rx_link_desc_refill_duplicate_check(
+				struct dp_soc *soc,
+				struct hal_buf_info *buf_info,
+				hal_buff_addrinfo_t ring_buf_info)
+{
+	struct hal_buf_info current_link_desc_buf_info = { 0 };
+
+	/* do duplicate link desc address check */
+	hal_rx_buffer_addr_info_get_paddr(ring_buf_info,
+					  &current_link_desc_buf_info);
+	if (qdf_unlikely(current_link_desc_buf_info.paddr ==
+			 buf_info->paddr)) {
+		dp_info_rl("duplicate link desc addr: %llu, cookie: 0x%x",
+			   current_link_desc_buf_info.paddr,
+			   current_link_desc_buf_info.sw_cookie);
+		DP_STATS_INC(soc, rx.err.dup_refill_link_desc, 1);
+	}
+	*buf_info = current_link_desc_buf_info;
+}
+
 /**
  * dp_rx_link_desc_return_by_addr - Return a MPDU link descriptor to
  *					(WBM) by address
@@ -179,6 +201,12 @@ dp_rx_link_desc_return_by_addr(struct dp_soc *soc,
 			"WBM RELEASE RING not initialized");
 		return status;
 	}
+
+	/* do duplicate link desc address check */
+	dp_rx_link_desc_refill_duplicate_check(
+				soc,
+				&soc->last_op_info.wbm_rel_link_desc,
+				link_desc_addr);
 
 	if (qdf_unlikely(hal_srng_access_start(hal_soc, wbm_rel_srng))) {
 
@@ -301,6 +329,9 @@ dp_rx_msdus_drop(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 		}
 
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf,
+						  rx_desc_pool->buf_size,
+						  false);
 		qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
 					     QDF_DMA_FROM_DEVICE,
 					     rx_desc_pool->buf_size);
@@ -319,7 +350,7 @@ dp_rx_msdus_drop(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 			hal_rx_print_pn(soc->hal_soc, rx_tlv_hdr);
 
 		/* Just free the buffers */
-		qdf_nbuf_free(rx_desc->nbuf);
+		dp_rx_buffer_pool_nbuf_free(soc, rx_desc->nbuf, *mac_id);
 
 		dp_rx_add_to_free_desc_list(&pdev->free_list_head,
 					    &pdev->free_list_tail, rx_desc);
@@ -492,6 +523,9 @@ more_msdu_link_desc:
 
 		nbuf = rx_desc->nbuf;
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, nbuf,
+						  rx_desc_pool->buf_size,
+						  false);
 		qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
 					     QDF_DMA_FROM_DEVICE,
 					     rx_desc_pool->buf_size);
@@ -507,6 +541,12 @@ more_msdu_link_desc:
 		if (qdf_unlikely(msdu_list.msdu_info[i].msdu_flags &
 				 HAL_MSDU_F_MSDU_CONTINUATION))
 			continue;
+
+		if (dp_rx_buffer_pool_refill(soc, head_nbuf,
+					     rx_desc->pool_id)) {
+			/* MSDU queued back to the pool */
+			goto process_next_msdu;
+		}
 
 		rx_tlv_hdr_first = qdf_nbuf_data(head_nbuf);
 		rx_tlv_hdr_last = qdf_nbuf_data(tail_nbuf);
@@ -540,6 +580,7 @@ more_msdu_link_desc:
 			qdf_nbuf_free(nbuf);
 		}
 
+process_next_msdu:
 		msdu_processed++;
 		head_nbuf = NULL;
 		tail_nbuf = NULL;
@@ -1381,6 +1422,85 @@ fail:
 	return;
 }
 
+#ifdef DP_RX_DESC_COOKIE_INVALIDATE
+/**
+ * dp_rx_link_cookie_check() - Validate link desc cookie
+ * @ring_desc: ring descriptor
+ *
+ * Return: qdf status
+ */
+static inline QDF_STATUS
+dp_rx_link_cookie_check(hal_ring_desc_t ring_desc)
+{
+	if (qdf_unlikely(HAL_RX_REO_BUF_LINK_COOKIE_INVALID_GET(ring_desc)))
+		return QDF_STATUS_E_FAILURE;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_rx_link_cookie_invalidate() - Invalidate link desc cookie
+ * @ring_desc: ring descriptor
+ *
+ * Return: None
+ */
+static inline void
+dp_rx_link_cookie_invalidate(hal_ring_desc_t ring_desc)
+{
+	HAL_RX_REO_BUF_LINK_COOKIE_INVALID_SET(ring_desc);
+}
+#else
+static inline QDF_STATUS
+dp_rx_link_cookie_check(hal_ring_desc_t ring_desc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+dp_rx_link_cookie_invalidate(hal_ring_desc_t ring_desc)
+{
+}
+#endif
+
+#ifdef WLAN_FEATURE_DP_RX_RING_HISTORY
+/**
+ * dp_rx_err_ring_record_entry() - Record rx err ring history
+ * @soc: Datapath soc structure
+ * @paddr: paddr of the buffer in RX err ring
+ * @sw_cookie: SW cookie of the buffer in RX err ring
+ * @rbm: Return buffer manager of the buffer in RX err ring
+ *
+ * Returns: None
+ */
+static inline void
+dp_rx_err_ring_record_entry(struct dp_soc *soc, uint64_t paddr,
+			    uint32_t sw_cookie, uint8_t rbm)
+{
+	struct dp_buf_info_record *record;
+	uint32_t idx;
+
+	if (qdf_unlikely(soc->rx_err_ring_history))
+		return;
+
+	idx = dp_history_get_next_index(&soc->rx_err_ring_history->index,
+					DP_RX_ERR_HIST_MAX);
+
+	/* No NULL check needed for record since its an array */
+	record = &soc->rx_err_ring_history->entry[idx];
+
+	record->timestamp = qdf_get_log_timestamp();
+	record->hbi.paddr = paddr;
+	record->hbi.sw_cookie = sw_cookie;
+	record->hbi.rbm = rbm;
+}
+#else
+static inline void
+dp_rx_err_ring_record_entry(struct dp_soc *soc, uint64_t paddr,
+			    uint32_t sw_cookie, uint8_t rbm)
+{
+}
+#endif
+
 uint32_t
 dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		  hal_ring_handle_t hal_ring_hdl, uint32_t quota)
@@ -1403,6 +1523,8 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	struct hal_rx_msdu_list msdu_list; /* MSDU's per MPDU */
 	uint16_t num_msdus;
 	struct dp_rx_desc *rx_desc = NULL;
+	QDF_STATUS status;
+	bool ret;
 
 	/* Debug -- Remove later */
 	qdf_assert(soc && hal_ring_hdl);
@@ -1426,8 +1548,8 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	}
 
 	while (qdf_likely(quota-- && (ring_desc =
-				hal_srng_dst_get_next(hal_soc,
-						      hal_ring_hdl)))) {
+				hal_srng_dst_peek(hal_soc,
+						  hal_ring_hdl)))) {
 
 		DP_STATS_INC(soc, rx.err_ring_pkts, 1);
 
@@ -1448,6 +1570,12 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		qdf_assert_always((cookie >> LINK_DESC_ID_SHIFT) &
 							LINK_DESC_ID_START);
 
+		status = dp_rx_link_cookie_check(ring_desc);
+		if (qdf_unlikely(QDF_IS_STATUS_ERROR(status))) {
+			DP_STATS_INC(soc, rx.err.invalid_link_cookie, 1);
+			break;
+		}
+
 		/*
 		 * Check if the buffer is to be processed on this processor
 		 */
@@ -1457,7 +1585,9 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		link_desc_va = dp_rx_cookie_2_link_desc_va(soc, &hbi);
 		hal_rx_msdu_list_get(soc->hal_soc, link_desc_va, &msdu_list,
 				     &num_msdus);
-
+		dp_rx_err_ring_record_entry(soc, msdu_list.paddr[0],
+					    msdu_list.sw_cookie[0],
+					    msdu_list.rbm[0]);
 		if (qdf_unlikely((msdu_list.rbm[0] != DP_WBM2SW_RBM) &&
 				(msdu_list.rbm[0] !=
 					HAL_RX_BUF_RBM_WBM_IDLE_DESC_LIST) &&
@@ -1475,7 +1605,7 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 			/* Return link descriptor through WBM ring (SW2WBM)*/
 			dp_rx_link_desc_return(soc, ring_desc,
 					HAL_BM_ACTION_RELEASE_MSDU_LIST);
-			continue;
+			goto next_entry;
 		}
 
 		rx_desc = dp_rx_cookie_2_va_rxdma_buf(soc,
@@ -1498,7 +1628,33 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 							 &mpdu_desc_info,
 							 &mac_id, quota);
 				rx_bufs_reaped[mac_id] += count;
-				continue;
+				goto next_entry;
+			}
+
+			/*
+			 * this is a unlikely scenario where the host is reaping
+			 * a descriptor which it already reaped just a while ago
+			 * but is yet to replenish it back to HW.
+			 * In this case host will dump the last 128 descriptors
+			 * including the software descriptor rx_desc and assert.
+			 */
+
+			if (qdf_unlikely(!rx_desc->in_use)) {
+				DP_STATS_INC(soc, rx.err.hal_reo_dest_dup, 1);
+				dp_info_rl("Reaping rx_desc not in use!");
+				dp_rx_dump_info_and_assert(soc, hal_ring_hdl,
+							   ring_desc, rx_desc);
+				/* ignore duplicate RX desc and continue */
+				/* Pop out the descriptor */
+				goto next_entry;
+			}
+
+			ret = dp_rx_desc_paddr_sanity_check(rx_desc,
+							    msdu_list.paddr[0]);
+			if (!ret) {
+				DP_STATS_INC(soc, rx.err.nbuf_sanity_fail, 1);
+				rx_desc->in_err_state = 1;
+				goto next_entry;
 			}
 
 			count = dp_rx_frag_handle(soc,
@@ -1507,7 +1663,7 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 			rx_bufs_reaped[mac_id] += count;
 			DP_STATS_INC(soc, rx.rx_frags, 1);
-			continue;
+			goto next_entry;
 		}
 
 		if (hal_rx_reo_is_pn_error(ring_desc)) {
@@ -1526,7 +1682,7 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 						      quota);
 
 			rx_bufs_reaped[mac_id] += count;
-			continue;
+			goto next_entry;
 		}
 
 		if (hal_rx_reo_is_2k_jump(ring_desc)) {
@@ -1548,7 +1704,7 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 					HAL_REO_ERR_REGULAR_FRAME_2K_JUMP);
 
 			rx_bufs_reaped[mac_id] += count;
-			continue;
+			goto next_entry;
 		}
 
 		if (hal_rx_reo_is_oor_error(ring_desc)) {
@@ -1569,8 +1725,11 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 					HAL_REO_ERR_REGULAR_FRAME_OOR);
 
 			rx_bufs_reaped[mac_id] += count;
-			continue;
+			goto next_entry;
 		}
+next_entry:
+		dp_rx_link_cookie_invalidate(ring_desc);
+		hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
 	}
 
 done:
@@ -1772,6 +1931,9 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 		nbuf = rx_desc->nbuf;
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, nbuf,
+						  rx_desc_pool->buf_size,
+						  false);
 		qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
 					     QDF_DMA_FROM_DEVICE,
 					     rx_desc_pool->buf_size);
@@ -1792,13 +1954,19 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 					  soc->wbm_sg_param.wbm_sg_nbuf_tail,
 					  nbuf);
 			if (process_sg_buf) {
-				DP_RX_MERGE_TWO_LIST(nbuf_head, nbuf_tail,
-						     soc->wbm_sg_param.wbm_sg_nbuf_head,
-						     soc->wbm_sg_param.wbm_sg_nbuf_tail);
+				if (!dp_rx_buffer_pool_refill(
+					soc,
+					soc->wbm_sg_param.wbm_sg_nbuf_head,
+					rx_desc->pool_id))
+					DP_RX_MERGE_TWO_LIST(
+						nbuf_head, nbuf_tail,
+						soc->wbm_sg_param.wbm_sg_nbuf_head,
+						soc->wbm_sg_param.wbm_sg_nbuf_tail);
 				dp_rx_wbm_sg_list_reset(soc);
 				process_sg_buf = false;
 			}
-		} else {
+		} else if (!dp_rx_buffer_pool_refill(soc, nbuf,
+						     rx_desc->pool_id)) {
 			DP_RX_LIST_APPEND(nbuf_head, nbuf_tail, nbuf);
 		}
 
@@ -2079,6 +2247,7 @@ dp_rx_err_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 	struct dp_pdev *pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	uint32_t rx_link_buf_info[HAL_RX_BUFFINFO_NUM_DWORDS];
 	hal_rxdma_desc_t ring_desc;
+	struct rx_desc_pool *rx_desc_pool;
 
 	if (!pdev) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
@@ -2149,15 +2318,25 @@ dp_rx_err_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 						continue;
 					}
 
-					qdf_nbuf_unmap_single(soc->osdev, msdu,
-						QDF_DMA_FROM_DEVICE);
+					rx_desc_pool = &soc->
+						rx_desc_buf[rx_desc->pool_id];
+					dp_ipa_handle_rx_buf_smmu_mapping(
+							soc, msdu,
+							rx_desc_pool->buf_size,
+							false);
+					qdf_nbuf_unmap_nbytes_single(
+						soc->osdev, msdu,
+						QDF_DMA_FROM_DEVICE,
+						rx_desc_pool->buf_size);
+					rx_desc->unmapped = 1;
 
 					QDF_TRACE(QDF_MODULE_ID_DP,
 						QDF_TRACE_LEVEL_DEBUG,
 						"[%s][%d] msdu_nbuf=%pK ",
 						__func__, __LINE__, msdu);
 
-					qdf_nbuf_free(msdu);
+					dp_rx_buffer_pool_nbuf_free(soc, msdu,
+							rx_desc->pool_id);
 					rx_bufs_used++;
 					dp_rx_add_to_free_desc_list(head,
 						tail, rx_desc);
@@ -2305,7 +2484,8 @@ dp_wbm_int_err_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 				qdf_nbuf_unmap_single(soc->osdev, msdu,
 						      QDF_DMA_FROM_DEVICE);
 
-				qdf_nbuf_free(msdu);
+				dp_rx_buffer_pool_nbuf_free(soc, msdu,
+							    rx_desc->pool_id);
 				rx_bufs_used++;
 				dp_rx_add_to_free_desc_list(head,
 							    tail, rx_desc);
@@ -2377,12 +2557,17 @@ dp_handle_wbm_internal_error(struct dp_soc *soc, void *hal_desc,
 
 		if (rx_desc && rx_desc->nbuf) {
 			rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+			dp_ipa_handle_rx_buf_smmu_mapping(
+						soc, rx_desc->nbuf,
+						rx_desc_pool->buf_size,
+						false);
 			qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
 						     QDF_DMA_FROM_DEVICE,
 						     rx_desc_pool->buf_size);
 			rx_desc->unmapped = 1;
 
-			qdf_nbuf_free(rx_desc->nbuf);
+			dp_rx_buffer_pool_nbuf_free(soc, rx_desc->nbuf,
+						    rx_desc->pool_id);
 			dp_rx_add_to_free_desc_list(&head,
 						    &tail,
 						    rx_desc);

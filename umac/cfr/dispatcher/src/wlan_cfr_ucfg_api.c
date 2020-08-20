@@ -301,7 +301,7 @@ static void cfr_iter_peer_handler(struct wlan_objmgr_pdev *pdev,
 		return;
 	}
 
-	if (pe->request == PEER_CFR_CAPTURE_ENABLE) {
+	if (pe->period && (pe->request == PEER_CFR_CAPTURE_ENABLE)) {
 		*cfr_capt_status = pe->request;
 		cfr_debug("CFR capture running for peer "
 			  QDF_MAC_ADDR_STR,
@@ -538,6 +538,7 @@ QDF_STATUS ucfg_cfr_set_reset_bitmap(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+#ifdef WLAN_ENH_CFR_ENABLE
 /*
  * This is needed only in case of m_ta_ra_filter mode.
  * After providing all the group configurations, user should provide
@@ -567,6 +568,7 @@ QDF_STATUS ucfg_cfr_set_en_bitmap(struct wlan_objmgr_vdev *vdev,
 
 	return status;
 }
+#endif
 
 /*
  * Copy user provided input for ul_mu_user_mask into cfr_rcc_param.
@@ -621,6 +623,89 @@ ucfg_cfr_set_freeze_tlv_delay_cnt(struct wlan_objmgr_vdev *vdev,
 	pcfr->rcc_param.freeze_tlv_delay_cnt_thr =
 		params->freeze_tlv_delay_cnt_thr;
 
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
+
+	return status;
+}
+
+/*
+ * Configure ta_ra_filter_in_as_fp from the provided configuration into
+ * cfr_rcc_param. All fixed parameters needed to be stored into cfr_rcc_param.
+ */
+QDF_STATUS
+ucfg_cfr_set_tara_filterin_as_fp(struct wlan_objmgr_vdev *vdev,
+				 struct cfr_wlanconfig_param *params)
+{
+	struct pdev_cfr *pcfr = NULL;
+	struct wlan_objmgr_pdev *pdev = NULL;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	status = dev_sanity_check(vdev, &pdev, &pcfr);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
+
+	if (!pcfr->is_mo_marking_support) {
+		cfr_err("MO marking support not available to filter as FP/MO");
+		status = QDF_STATUS_E_NOSUPPORT;
+	} else {
+		pcfr->rcc_param.en_ta_ra_filter_in_as_fp =
+			params->en_ta_ra_filter_in_as_fp;
+	}
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
+
+	return status;
+}
+
+/*
+ * Set the capture count from the provided configuration into cfr_rcc_param.
+ * All fixed parameters are needed to be stored into cfr_rcc_param.
+ */
+QDF_STATUS
+ucfg_cfr_set_capture_count(struct wlan_objmgr_vdev *vdev,
+			   struct cfr_wlanconfig_param *params)
+{
+	struct pdev_cfr *pcfr = NULL;
+	struct wlan_objmgr_pdev *pdev = NULL;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	status = dev_sanity_check(vdev, &pdev, &pcfr);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
+
+	if (!pcfr->is_cap_interval_mode_sel_support) {
+		cfr_err("Capture count support not enabled");
+		status = QDF_STATUS_E_NOSUPPORT;
+	} else {
+		pcfr->rcc_param.capture_count = params->cap_count;
+	}
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
+
+	return status;
+}
+
+/*
+ * Set interval mode sel nob from the provided configuration into cfr_rcc_param.
+ * All fixed parameters are needed to be stored into cfr_rcc_param
+ */
+QDF_STATUS
+ucfg_cfr_set_capture_interval_mode_sel(struct wlan_objmgr_vdev *vdev,
+				       struct cfr_wlanconfig_param *params)
+{
+	struct pdev_cfr *pcfr = NULL;
+	struct wlan_objmgr_pdev *pdev = NULL;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	status = dev_sanity_check(vdev, &pdev, &pcfr);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
+
+	if (!pcfr->is_cap_interval_mode_sel_support) {
+		cfr_err("Capture count support not enabled");
+		status = QDF_STATUS_E_NOSUPPORT;
+	} else {
+		pcfr->rcc_param.capture_intval_mode_sel =
+			params->cap_intval_mode_sel;
+	}
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_CFR_ID);
 
 	return status;
@@ -842,6 +927,10 @@ QDF_STATUS ucfg_cfr_get_cfg(struct wlan_objmgr_vdev *vdev)
 		pcfr->rcc_param.capture_duration);
 	cfr_err("capture interval : %u usec\n",
 		pcfr->rcc_param.capture_interval);
+	cfr_err("capture count : %u\n",
+		pcfr->rcc_param.capture_count);
+	cfr_err("capture interval mode sel : %u\n",
+		pcfr->rcc_param.capture_intval_mode_sel);
 	cfr_err("UL MU User mask lower : %u\n",
 		pcfr->rcc_param.ul_mu_user_mask_lower);
 	cfr_err("UL MU User mask upper : %u\n",
@@ -1096,6 +1185,7 @@ static void cfr_set_filter(struct wlan_objmgr_pdev *pdev, bool enable,
 		       filter_val);
 }
 
+#ifdef WLAN_ENH_CFR_ENABLE
 /*
  * With the initiation of commit command, this handler will be triggered.
  *
@@ -1286,6 +1376,7 @@ QDF_STATUS ucfg_cfr_set_rcc_mode(struct wlan_objmgr_vdev *vdev,
 
 	return status;
 }
+#endif
 
 bool ucfg_cfr_get_rcc_enabled(struct wlan_objmgr_vdev *vdev)
 {
@@ -1304,9 +1395,12 @@ bool ucfg_cfr_get_rcc_enabled(struct wlan_objmgr_vdev *vdev)
 	return rcc_enabled;
 }
 
+#ifdef WLAN_ENH_CFR_ENABLE
 QDF_STATUS ucfg_cfr_subscribe_ppdu_desc(struct wlan_objmgr_pdev *pdev,
 					bool is_subscribe)
 {
 	return tgt_cfr_subscribe_ppdu_desc(pdev, is_subscribe);
 }
+#endif
+
 #endif

@@ -42,7 +42,6 @@
 #include <../../core/src/reg_offload_11d_scan.h>
 #include <wlan_objmgr_global_obj.h>
 
-#ifdef CONFIG_CHAN_NUM_API
 /**
  * wlan_reg_get_channel_list_with_power() - Provide the channel list with power
  * @ch_list: pointer to the channel list.
@@ -58,7 +57,6 @@ QDF_STATUS wlan_reg_get_channel_list_with_power(struct wlan_objmgr_pdev *pdev,
 	 */
 	return reg_get_channel_list_with_power(pdev, ch_list, num_chan);
 }
-#endif /* CONFIG_CHAN_NUM_API */
 
 /**
  * wlan_reg_read_default_country() - Read the default country for the regdomain
@@ -562,7 +560,6 @@ uint8_t wlan_reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_freq_to_chan);
 
-#ifdef CONFIG_CHAN_NUM_API
 qdf_freq_t wlan_reg_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 				 uint8_t chan_num)
 {
@@ -577,6 +574,7 @@ qdf_freq_t wlan_reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 	return reg_legacy_chan_to_freq(pdev, chan_num);
 }
 
+#ifdef CONFIG_CHAN_NUM_API
 bool wlan_reg_chan_is_49ghz(struct wlan_objmgr_pdev *pdev,
 			    uint8_t chan_num)
 {
@@ -819,6 +817,10 @@ bool wlan_reg_is_6ghz_psc_chan_freq(uint16_t freq)
 	return reg_is_6ghz_psc_chan_freq(freq);
 }
 
+bool wlan_reg_is_6g_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	return reg_is_6g_freq_indoor(pdev, freq);
+}
 #endif /* CONFIG_BAND_6GHZ */
 
 uint16_t
@@ -1153,6 +1155,16 @@ uint16_t wlan_reg_get_op_class_width(struct wlan_objmgr_pdev *pdev,
 				      global_tbl_lookup);
 }
 
+bool wlan_reg_is_5ghz_op_class(const uint8_t *country, uint8_t op_class)
+{
+	return reg_is_5ghz_op_class(country, op_class);
+}
+
+bool wlan_reg_is_2ghz_op_class(const uint8_t *country, uint8_t op_class)
+{
+	return reg_is_2ghz_op_class(country, op_class);
+}
+
 bool wlan_reg_is_6ghz_op_class(struct wlan_objmgr_pdev *pdev,
 			       uint8_t op_class)
 {
@@ -1205,3 +1217,10 @@ enum reg_phymode wlan_reg_get_max_phymode(struct wlan_objmgr_pdev *pdev,
 	return reg_get_max_phymode(pdev, phy_in, freq);
 }
 #endif /* CHECK_REG_PHYMODE */
+
+#ifdef CONFIG_REG_CLIENT
+enum band_info wlan_reg_band_bitmap_to_band_info(uint32_t band_bitmap)
+{
+	return reg_band_bitmap_to_band_info(band_bitmap);
+}
+#endif

@@ -310,6 +310,26 @@ select_preferred_hw_mode(struct target_psoc_info *tgt_hdl,
 	return selected_mode;
 }
 
+#ifdef FEATURE_NO_DBS_INTRABAND_MCC_SUPPORT
+static void init_deinit_change_def_hw_mode(struct target_psoc_info *tgt_hdl,
+					   struct wmi_unified *wmi_handle)
+{
+	struct tgt_info *info = &tgt_hdl->info;
+
+	if ((info->hw_modes.num_modes == 1) &&
+	    (info->hw_modes.hw_mode_ids[0] == WMI_HOST_HW_MODE_DBS) &&
+	    !wmi_service_enabled(wmi_handle,
+				 wmi_service_dual_band_simultaneous_support))
+		target_psoc_set_preferred_hw_mode(tgt_hdl,
+						  WMI_HOST_HW_MODE_DETECT);
+}
+#else
+static void init_deinit_change_def_hw_mode(struct target_psoc_info *tgt_hdl,
+					   struct wmi_unified *wmi_handle)
+{
+}
+#endif
+
 int init_deinit_populate_hw_mode_capability(
 		wmi_unified_t wmi_handle, uint8_t *event,
 		struct target_psoc_info *tgt_hdl)
@@ -333,7 +353,6 @@ int init_deinit_populate_hw_mode_capability(
 	info->hw_modes.num_modes = 0;
 	info->hw_mode_cap.hw_mode_id = WMI_HOST_HW_MODE_MAX;
 
-	preferred_mode = target_psoc_get_preferred_hw_mode(tgt_hdl);
 	for (hw_idx = 0; hw_idx < num_hw_modes; hw_idx++) {
 		status = get_hw_mode(wmi_handle, event, hw_idx,
 						&hw_mode_caps[hw_idx]);
@@ -353,11 +372,15 @@ int init_deinit_populate_hw_mode_capability(
 		if (status)
 			goto return_exit;
 
+		if (num_hw_modes == 1)
+			init_deinit_change_def_hw_mode(tgt_hdl, wmi_handle);
+
 		selected_mode = select_preferred_hw_mode(tgt_hdl,
 							 &hw_mode_caps[hw_idx],
 							 selected_mode);
 	}
 
+	preferred_mode = target_psoc_get_preferred_hw_mode(tgt_hdl);
 	if (preferred_mode == WMI_HOST_HW_MODE_DETECT) {
 		target_if_info("Preferred mode is not set, use mode id %d\n",
 			       selected_mode);
@@ -755,6 +778,66 @@ int init_deinit_populate_hal_reg_cap_ext2(wmi_unified_t wmi_handle,
 
 	return 0;
 }
+
+int init_deinit_populate_scan_radio_cap_ext2(wmi_unified_t wmi_handle,
+					     uint8_t *event,
+					     struct tgt_info *info)
+{
+	struct wlan_psoc_host_scan_radio_caps *param;
+	uint32_t num_scan_radio_caps;
+	uint8_t cap_idx;
+	QDF_STATUS status;
+
+	if (!event) {
+		target_if_err("Invalid event buffer");
+		return -EINVAL;
+	}
+
+	num_scan_radio_caps = info->service_ext2_param.num_scan_radio_caps;
+	target_if_debug("num scan radio capabilities = %d",
+			num_scan_radio_caps);
+
+	if (!num_scan_radio_caps)
+		return 0;
+
+	info->scan_radio_caps = qdf_mem_malloc(
+				sizeof(struct wlan_psoc_host_scan_radio_caps) *
+				num_scan_radio_caps);
+
+	if (!info->scan_radio_caps) {
+		target_if_err("Failed to allocate memory for scan radio caps");
+		return -EINVAL;
+	}
+
+	for (cap_idx = 0; cap_idx < num_scan_radio_caps; cap_idx++) {
+		param = &info->scan_radio_caps[cap_idx];
+		status = wmi_extract_scan_radio_cap_service_ready_ext2(
+				wmi_handle, event, cap_idx, param);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			target_if_err("Extraction of scan radio cap failed");
+			goto free_and_return;
+		}
+	}
+
+	return 0;
+
+free_and_return:
+	qdf_mem_free(info->scan_radio_caps);
+	info->scan_radio_caps = NULL;
+
+	return qdf_status_to_os_return(status);
+}
+
+QDF_STATUS init_deinit_scan_radio_cap_free(
+		struct target_psoc_info *tgt_psoc_info)
+{
+	qdf_mem_free(tgt_psoc_info->info.scan_radio_caps);
+	tgt_psoc_info->info.scan_radio_caps = NULL;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(init_deinit_scan_radio_cap_free);
 
 static bool init_deinit_regdmn_160mhz_support(
 		struct wlan_psoc_host_hal_reg_capabilities_ext *hal_cap)

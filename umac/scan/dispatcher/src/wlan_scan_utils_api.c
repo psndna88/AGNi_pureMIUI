@@ -674,6 +674,14 @@ util_scan_update_rnr(struct rnr_bss_info *rnr,
 		rnr->bss_params = data[7];
 		break;
 
+	case TBTT_NEIGHBOR_AP_BSSID_BSS_PARAM_20MHZ_PSD:
+		rnr->channel_number = ap_info->channel_number;
+		rnr->operating_class = ap_info->operting_class;
+		qdf_mem_copy(&rnr->bssid, &data[1], QDF_MAC_ADDR_SIZE);
+		rnr->bss_params = data[7];
+		rnr->psd_20mhz = data[8];
+		break;
+
 	case TBTT_NEIGHBOR_AP_BSSSID_S_SSID:
 		rnr->channel_number = ap_info->channel_number;
 		rnr->operating_class = ap_info->operting_class;
@@ -687,6 +695,15 @@ util_scan_update_rnr(struct rnr_bss_info *rnr,
 		qdf_mem_copy(&rnr->bssid, &data[1], QDF_MAC_ADDR_SIZE);
 		qdf_mem_copy(&rnr->short_ssid, &data[7], SHORT_SSID_LEN);
 		rnr->bss_params = data[11];
+		break;
+
+	case TBTT_NEIGHBOR_AP_BSSID_S_SSID_BSS_PARAM_20MHZ_PSD:
+		rnr->channel_number = ap_info->channel_number;
+		rnr->operating_class = ap_info->operting_class;
+		qdf_mem_copy(&rnr->bssid, &data[1], QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(&rnr->short_ssid, &data[7], SHORT_SSID_LEN);
+		rnr->bss_params = data[11];
+		rnr->psd_20mhz = data[12];
 		break;
 
 	default:
@@ -1252,21 +1269,47 @@ static int util_scan_scm_calc_nss_supported_by_ap(
 {
 	struct htcap_cmn_ie *htcap;
 	struct wlan_ie_vhtcaps *vhtcaps;
-	uint8_t rx_mcs_map;
+	struct wlan_ie_hecaps *hecaps;
+	uint16_t rx_mcs_map = 0;
 
 	htcap = (struct htcap_cmn_ie *)
 		util_scan_entry_htcap(scan_params);
 	vhtcaps = (struct wlan_ie_vhtcaps *)
 		util_scan_entry_vhtcap(scan_params);
-	if (vhtcaps) {
+	hecaps = (struct wlan_ie_hecaps *)
+		util_scan_entry_hecap(scan_params);
+
+	if (hecaps) {
+		/* Using rx mcs map related to 80MHz or lower as in some
+		 * cases higher mcs may suuport lesser NSS than that
+		 * of lowe mcs. Thus giving max NSS capability.
+		 */
+		rx_mcs_map =
+			qdf_cpu_to_le16(hecaps->mcs_bw_map[0].rx_mcs_map);
+	} else if (vhtcaps) {
 		rx_mcs_map = vhtcaps->rx_mcs_map;
-		if ((rx_mcs_map & 0xC0) != 0xC0)
+	}
+
+	if (hecaps || vhtcaps) {
+		if ((rx_mcs_map & 0xC000) != 0xC000)
+			return 8;
+
+		if ((rx_mcs_map & 0x3000) != 0x3000)
+			return 7;
+
+		if ((rx_mcs_map & 0x0C00) != 0x0C00)
+			return 6;
+
+		if ((rx_mcs_map & 0x0300) != 0x0300)
+			return 5;
+
+		if ((rx_mcs_map & 0x00C0) != 0x00C0)
 			return 4;
 
-		if ((rx_mcs_map & 0x30) != 0x30)
+		if ((rx_mcs_map & 0x0030) != 0x0030)
 			return 3;
 
-		if ((rx_mcs_map & 0x0C) != 0x0C)
+		if ((rx_mcs_map & 0x000C) != 0x000C)
 			return 2;
 	} else if (htcap) {
 		if (htcap->mcsset[3])

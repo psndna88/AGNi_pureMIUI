@@ -1553,6 +1553,17 @@ QDF_STATUS utils_dfs_is_spoof_check_failed(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(utils_dfs_is_spoof_check_failed);
+
+bool utils_dfs_is_spoof_done(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_dfs *dfs;
+
+	dfs = wlan_pdev_get_dfs_obj(pdev);
+	if (!dfs)
+		return false;
+
+	return !!dfs->dfs_spoof_test_done;
+}
 #endif
 
 int dfs_get_num_chans(void)
@@ -1619,9 +1630,10 @@ void utils_dfs_reset_dfs_prevchan(struct wlan_objmgr_pdev *pdev)
 	dfs_reset_dfs_prevchan(dfs);
 }
 
-#ifdef QCA_SUPPORT_ADFS_RCAC
-void utils_dfs_rcac_sm_deliver_evt(struct wlan_objmgr_pdev *pdev,
-				   enum dfs_rcac_sm_evt event)
+#ifdef QCA_SUPPORT_AGILE_DFS
+
+void utils_dfs_agile_sm_deliver_evt(struct wlan_objmgr_pdev *pdev,
+				    enum dfs_agile_sm_evt event)
 {
 	struct wlan_dfs *dfs;
 	void *event_data;
@@ -1635,17 +1647,19 @@ void utils_dfs_rcac_sm_deliver_evt(struct wlan_objmgr_pdev *pdev,
 		return;
 	}
 
-	if (!dfs_is_agile_rcac_enabled(dfs))
+	if (!dfs_is_agile_cac_enabled(dfs))
 		return;
 
 	event_data = (void *)dfs;
 
-	dfs_rcac_sm_deliver_evt(dfs->dfs_soc_obj,
-				event,
-				0,
-				event_data);
+	dfs_agile_sm_deliver_evt(dfs->dfs_soc_obj,
+				 event,
+				 0,
+				 event_data);
 }
+#endif
 
+#ifdef QCA_SUPPORT_ADFS_RCAC
 QDF_STATUS utils_dfs_get_rcac_channel(struct wlan_objmgr_pdev *pdev,
 				      struct ch_params *chan_params,
 				      qdf_freq_t *target_chan_freq)
@@ -1668,6 +1682,11 @@ QDF_STATUS utils_dfs_get_rcac_channel(struct wlan_objmgr_pdev *pdev,
 		return status;
 
 	*target_chan_freq = dfs->dfs_rcac_param.rcac_pri_freq;
+
+	/* Do not modify the input ch_params if no RCAC channel is present. */
+	if (!*target_chan_freq)
+		return status;
+
 	*chan_params = dfs->dfs_rcac_param.rcac_ch_params;
 
 	return QDF_STATUS_SUCCESS;

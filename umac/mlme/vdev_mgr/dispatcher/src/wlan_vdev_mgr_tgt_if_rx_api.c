@@ -211,7 +211,7 @@ static QDF_STATUS tgt_vdev_mgr_multi_vdev_restart_resp_handler(
 	return mlme_vdev_ops_ext_hdl_multivdev_restart_resp(psoc, resp);
 }
 
-#ifdef FEATURE_VDEV_RSP_WAKELOCK
+#ifdef FEATURE_VDEV_OPS_WAKELOCK
 static struct psoc_mlme_wakelock *
 tgt_psoc_get_wakelock_info(struct wlan_objmgr_psoc *psoc)
 {
@@ -219,19 +219,18 @@ tgt_psoc_get_wakelock_info(struct wlan_objmgr_psoc *psoc)
 
 	psoc_mlme = mlme_psoc_get_priv(psoc);
 	if (!psoc_mlme) {
-		mlme_err("VDEV_%d: VDEV_MLME is NULL", wlan_vdev_get_id(psoc));
+		mlme_err("PSOC_MLME is NULL");
 		return NULL;
 	}
 
-	return &psoc_mlme->psoc_wakelock;
+	return &psoc_mlme->psoc_mlme_wakelock;
 }
 
 static inline void
 tgt_psoc_reg_wakelock_info_rx_op(struct wlan_lmac_if_mlme_rx_ops
 				     *mlme_rx_ops)
 {
-	mlme_rx_ops->psoc_get_wakelock_info =
-		tgt_psoc_get_wakelock_info;
+	mlme_rx_ops->psoc_get_wakelock_info = tgt_psoc_get_wakelock_info;
 }
 #else
 static inline void

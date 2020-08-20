@@ -189,6 +189,20 @@ enum cdp_ru_index {
 	RU_242_INDEX,
 	RU_484_INDEX,
 	RU_996_INDEX,
+	RU_INDEX_MAX,
+};
+
+struct cdp_ru_debug {
+	char *ru_type;
+};
+
+static const struct cdp_ru_debug cdp_ru_string[RU_INDEX_MAX] = {
+	{ "RU_26" },
+	{ "RU_52" },
+	{ "RU_106" },
+	{ "RU_242" },
+	{ "RU_484" },
+	{ "RU_996" }
 };
 
 #ifdef FEATURE_TSO_STATS
@@ -208,6 +222,99 @@ enum cdp_packet_type {
 	DOT11_AC = 3,
 	DOT11_AX = 4,
 	DOT11_MAX = 5,
+};
+
+#define MCS_VALID 1
+#define MCS_INVALID 0
+
+#define CDP_MAX_MCS_STRING_LEN 34
+/*
+ * struct cdp_rate_debug
+ *
+ * @mcs_type: print string for a given mcs
+ * @valid: valid mcs rate?
+ */
+struct cdp_rate_debug {
+	char mcs_type[CDP_MAX_MCS_STRING_LEN];
+	uint8_t valid;
+};
+
+static const struct cdp_rate_debug cdp_rate_string[DOT11_MAX][MAX_MCS] = {
+	{
+		{"OFDM 48 Mbps", MCS_VALID},
+		{"OFDM 24 Mbps", MCS_VALID},
+		{"OFDM 12 Mbps", MCS_VALID},
+		{"OFDM 6 Mbps ", MCS_VALID},
+		{"OFDM 54 Mbps", MCS_VALID},
+		{"OFDM 36 Mbps", MCS_VALID},
+		{"OFDM 18 Mbps", MCS_VALID},
+		{"OFDM 9 Mbps ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+	},
+	{
+		{"CCK 11 Mbps Long  ", MCS_VALID},
+		{"CCK 5.5 Mbps Long ", MCS_VALID},
+		{"CCK 2 Mbps Long   ", MCS_VALID},
+		{"CCK 1 Mbps Long   ", MCS_VALID},
+		{"CCK 11 Mbps Short ", MCS_VALID},
+		{"CCK 5.5 Mbps Short", MCS_VALID},
+		{"CCK 2 Mbps Short  ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+	},
+	{
+		{"HT MCS 0 (BPSK 1/2)  ", MCS_VALID},
+		{"HT MCS 1 (QPSK 1/2)  ", MCS_VALID},
+		{"HT MCS 2 (QPSK 3/4)  ", MCS_VALID},
+		{"HT MCS 3 (16-QAM 1/2)", MCS_VALID},
+		{"HT MCS 4 (16-QAM 3/4)", MCS_VALID},
+		{"HT MCS 5 (64-QAM 2/3)", MCS_VALID},
+		{"HT MCS 6 (64-QAM 3/4)", MCS_VALID},
+		{"HT MCS 7 (64-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+	},
+	{
+		{"VHT MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"VHT MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"VHT MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"VHT MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"VHT MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"VHT MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"VHT MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"VHT MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"VHT MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"VHT MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"VHT MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"VHT MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+	},
+	{
+		{"HE MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"HE MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"HE MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"HE MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"HE MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"HE MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"HE MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"HE MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"HE MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"HE MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"HE MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"HE MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+	}
 };
 
 /*
@@ -252,6 +359,7 @@ enum WDI_EVENT {
 	WDI_EVENT_PEER_FLUSH_RATE_STATS,
 	WDI_EVENT_FLUSH_RATE_STATS_REQ,
 	WDI_EVENT_RX_MPDU,
+	WDI_EVENT_HMWDS_AST_ADD_STATUS,
 	/* End of new event items */
 	WDI_EVENT_LAST
 };
@@ -814,6 +922,7 @@ struct protocol_trace_count {
  * @ru_tones: RU tones size
  * @ru_loc: pkt info for RU location 26/ 52/ 106/ 242/ 484 counter
  * @num_ppdu_cookie_valid : Number of comp received with valid ppdu cookie
+ * @tx_success_twt: Successful Tx Packets in TWT session
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -904,6 +1013,7 @@ struct cdp_tx_stats {
 
 	uint32_t num_ppdu_cookie_valid;
 	uint32_t no_ack_count[QDF_PROTO_SUBTYPE_MAX];
+	struct cdp_pkt_info tx_success_twt;
 };
 
 /* struct cdp_rx_stats - rx Level Stats
@@ -968,6 +1078,7 @@ struct cdp_tx_stats {
  * @last_rssi: Previous rssi
  * @multipass_rx_pkt_drop: Dropped multipass rx pkt
  * @rx_mpdu_cnt: rx mpdu count per MCS rate
+ * @to_stack_twt: Total packets sent up the stack in TWT session
  */
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
@@ -1036,6 +1147,7 @@ struct cdp_rx_stats {
 	uint8_t last_rssi;
 	uint32_t multipass_rx_pkt_drop;
 	uint32_t rx_mpdu_cnt[MAX_MCS];
+	struct cdp_pkt_info to_stack_twt;
 };
 
 /* struct cdp_tx_ingress_stats - Tx ingress Stats
@@ -1689,6 +1801,7 @@ struct cdp_cfr_rcc_stats {
  * @pkts: total packets replenished
  * @rxdma_err: rxdma errors for replenished
  * @nbuf_alloc_fail: nbuf alloc failed
+ * @frag_alloc_fail: frag alloc failed
  * @map_err: Mapping failure
  * @x86_fail: x86 failures
  * @low_thresh_intrs: low threshold interrupts
@@ -1717,6 +1830,7 @@ struct cdp_cfr_rcc_stats {
  * @tx_ppdu_proc: stats counter for tx ppdu processed
  * @ack_ba_comes_twice: stats counter for ack_ba_comes twice
  * @ppdu_drop: stats counter for ppdu_desc drop once threshold reached
+ * @ppdu_wrap_drop: stats counter for ppdu desc drop on wrap around
  */
 struct cdp_pdev_stats {
 	struct {
@@ -1733,6 +1847,7 @@ struct cdp_pdev_stats {
 		struct cdp_pkt_info pkts;
 		uint32_t rxdma_err;
 		uint32_t nbuf_alloc_fail;
+		uint32_t frag_alloc_fail;
 		uint32_t map_err;
 		uint32_t x86_fail;
 		uint32_t low_thresh_intrs;
@@ -1783,6 +1898,26 @@ struct cdp_pdev_stats {
 	uint64_t tx_ppdu_proc;
 	uint64_t ack_ba_comes_twice;
 	uint64_t ppdu_drop;
+	uint64_t ppdu_wrap_drop;
+
+	struct {
+		uint64_t num_bufs_consumed;
+		uint64_t num_pool_bufs_replenish;
+		uint64_t num_bufs_alloc_success;
+	} rx_buffer_pool;
+};
+
+/* struct cdp_peer_hmwds_ast_add_status - hmwds peer ast add status
+ * @vdev_id: vdev id
+ * @status: ast add status
+ * @peer_mac: peer mac address
+ * @ast_mac: ast node mac address
+ */
+struct cdp_peer_hmwds_ast_add_status {
+	uint32_t vdev_id;
+	uint32_t status;
+	uint8_t  peer_mac[QDF_MAC_ADDR_SIZE];
+	uint8_t  ast_mac[QDF_MAC_ADDR_SIZE];
 };
 
 enum cdp_soc_param_t {

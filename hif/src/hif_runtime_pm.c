@@ -1077,7 +1077,9 @@ void hif_pm_runtime_mark_last_busy(struct hif_opaque_softc *hif_ctx)
 	rpm_ctx->pm_stats.last_busy_marker = (void *)_RET_IP_;
 	rpm_ctx->pm_stats.last_busy_timestamp = qdf_get_log_timestamp_usecs();
 
-	return pm_runtime_mark_last_busy(hif_bus_get_dev(scn));
+	pm_runtime_mark_last_busy(hif_bus_get_dev(scn));
+
+	return;
 }
 
 /**
@@ -1634,7 +1636,7 @@ void hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
 			     struct hif_pm_runtime_lock *data)
 {
 	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
-	struct hif_runtime_pm_ctx *rpm_ctx = hif_bus_get_rpm_ctx(scn);
+	struct hif_runtime_pm_ctx *rpm_ctx;
 	struct hif_pm_runtime_lock *context = data;
 
 	if (!context) {
@@ -1649,6 +1651,7 @@ void hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
 	 * before freeing the context if context is active.
 	 */
 	if (scn) {
+		rpm_ctx = hif_bus_get_rpm_ctx(scn);
 		spin_lock_bh(&rpm_ctx->runtime_lock);
 		__hif_pm_runtime_allow_suspend(scn, context);
 		spin_unlock_bh(&rpm_ctx->runtime_lock);
