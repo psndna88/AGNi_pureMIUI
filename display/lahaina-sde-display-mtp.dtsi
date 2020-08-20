@@ -170,6 +170,7 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
+	qcom,bl-dsc-cmd-state = "dsi_lp_mode";
 };
 
 &dsi_dual_sim_vid {
