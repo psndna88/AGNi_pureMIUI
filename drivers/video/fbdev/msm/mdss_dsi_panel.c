@@ -69,6 +69,7 @@ extern bool focal_gesture_mode;
 extern bool enable_gesture_mode;
 extern bool synaptics_gesture_func_on;
 #endif
+bool ESD_TE_status = false;
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
@@ -1246,9 +1247,12 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
-
-	if (ctrl->off_cmds.cmd_cnt)
-		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
+	if(ESD_TE_status){
+		printk("%s: esd check skip lcd suspend \n", __func__);	 
+	}else{
+		if (ctrl->off_cmds.cmd_cnt)
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
+	}
 
 	if (ctrl->ds_registered && pinfo->is_pluggable) {
 		mdss_dba_utils_video_off(pinfo->dba_data);
@@ -2059,6 +2063,9 @@ static int mdss_dsi_gen_read_status(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	if (!mdss_dsi_cmp_panel_reg_v2(ctrl_pdata)) {
 		pr_err("%s: Read back value from panel is incorrect\n",
 							__func__);
+	if ((strstr(g_lcd_id,"nt36672") != NULL)||(strstr(g_lcd_id,"nt36672a") != NULL)||(strstr(g_lcd_id,"td4320") != NULL)) {
+		ESD_TE_status = true;
+	}
 		return -EINVAL;
 	} else {
 		return 1;
