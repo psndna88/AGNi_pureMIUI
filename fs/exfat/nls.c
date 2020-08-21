@@ -46,7 +46,7 @@ static u16 nls_upper(struct super_block *sb, u16 a)
 		return a;
 }
 
-u16 *nls_wstrchr(u16 *str, u16 wchar)
+u16 *nls_wstrchr_exfat(u16 *str, u16 wchar)
 {
 	while (*str) {
 		if (*(str++) == wchar)
@@ -167,7 +167,7 @@ static s32 __nls_vfsname_to_utf16s(struct super_block *sb, const u8 *p_cstring,
 	p_uniname->name_len = (u8)(unilen & 0xFF);
 
 	for (i = 0; i < unilen; i++) {
-		if ((*uniname < 0x0020) || nls_wstrchr(bad_uni_chars, *uniname))
+		if ((*uniname < 0x0020) || nls_wstrchr_exfat(bad_uni_chars, *uniname))
 			lossy |= NLS_NAME_LOSSY;
 
 		*(upname+i) = nls_upper(sb, *uniname);
@@ -233,7 +233,7 @@ static s32 __exfat_nls_vfsname_to_uni16s(struct super_block *sb, const u8 *p_cst
 	while ((unilen < MAX_NAME_LENGTH) && (i < len)) {
 		i += convert_ch_to_uni(nls, (u8 *)(p_cstring+i), uniname, &lossy);
 
-		if ((*uniname < 0x0020) || nls_wstrchr(bad_uni_chars, *uniname))
+		if ((*uniname < 0x0020) || nls_wstrchr_exfat(bad_uni_chars, *uniname))
 			lossy |= NLS_NAME_LOSSY;
 
 		*(upname+unilen) = nls_upper(sb, *uniname);

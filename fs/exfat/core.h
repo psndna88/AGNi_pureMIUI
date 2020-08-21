@@ -117,7 +117,7 @@ ENTRY_SET_CACHE_T *exfat_get_dentry_set_in_dir(struct super_block *sb,
 void exfat_release_dentry_set(ENTRY_SET_CACHE_T *es);
 s32 exfat_update_dir_chksum(struct super_block *sb, CHAIN_T *p_dir, s32 entry);
 s32 exfat_update_dir_chksum_with_entry_set(struct super_block *sb, ENTRY_SET_CACHE_T *es);
-s32  mount_exfat(struct super_block *sb, pbr_t *p_pbr);
+s32 _mount_exfat(struct super_block *sb, pbr_t *p_pbr);
 
 /* blkdev.c */
 s32 exfat_bdev_open_dev(struct super_block *sb);
