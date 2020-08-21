@@ -124,6 +124,9 @@
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list = <606979440 604450359 601921278>;
 
+	qcom,dsi-panel-gpio-address = <0x0F100000 0x1000>;
+	qcom,dsi-panel-gpio-pins = <12 24 82>;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 14 05 05 13 13 05

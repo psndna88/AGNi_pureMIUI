@@ -531,6 +531,8 @@ Optional properties:
 				should be excluded from IO memory validation list
 				in trusted vm environment
 - qcom,vram-size: 		A u32 value indicating the size of the VRAM in bytes
+- qcom,pmic-arb-address:	A u32 array of display related SPMI address
+				bit mask, which is a combination of SID and  pheripheral id's.
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -812,6 +814,7 @@ Example:
     qcom,sde-secure-sid-mask = <0x200801 0x200c01>;
 
     qcom,vram-size = <0x200000>;
+    qcom,pmic-arb-address = <0x3F800 0x3F900 0x3FA00>;
 
     qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
     qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;
