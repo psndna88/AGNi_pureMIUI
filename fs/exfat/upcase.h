@@ -1,27 +1,29 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
- *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "exfat_config.h"
-#include "exfat_global.h"
+#ifndef _UPCASE_H
+#define _UPCASE_H
 
-#include "exfat_nls.h"
+/* Upcase tabel macro */
+#define EXFAT_NUM_UPCASE              2918
+#define HIGH_INDEX_BIT (8)
+#define HIGH_INDEX_MASK (0xFF00)
+#define LOW_INDEX_BIT (16-HIGH_INDEX_BIT)
+#define UTBL_ROW_COUNT (1<<LOW_INDEX_BIT)
+#define UTBL_COL_COUNT (1<<HIGH_INDEX_BIT)
 
-UINT8 uni_upcase[NUM_UPCASE<<1] = {
+static inline u16 exfat_get_col_index(u16 i)
+{
+	return i >> LOW_INDEX_BIT;
+}
+static inline u16 exfat_get_row_index(u16 i)
+{
+	return i & ~HIGH_INDEX_MASK;
+}
+
+static const u8 uni_def_upcase[EXFAT_NUM_UPCASE<<1] = {
 	0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00,
 	0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00,
 	0x10, 0x00, 0x11, 0x00, 0x12, 0x00, 0x13, 0x00, 0x14, 0x00, 0x15, 0x00, 0x16, 0x00, 0x17, 0x00,
@@ -389,4 +391,4 @@ UINT8 uni_upcase[NUM_UPCASE<<1] = {
 	0xFA, 0xFF, 0xFB, 0xFF, 0xFC, 0xFF, 0xFD, 0xFF, 0xFE, 0xFF, 0xFF, 0xFF
 };
 
-/* end of exfat_upcase.c */
+#endif /* _UPCASE_H */
