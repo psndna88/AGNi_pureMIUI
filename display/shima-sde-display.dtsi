@@ -24,7 +24,7 @@
 			qcom,supply-name = "vdd";
 			qcom,supply-min-voltage = <3000000>;
 			qcom,supply-max-voltage = <3000000>;
-			qcom,supply-enable-load = <10000>;
+			qcom,supply-enable-load = <30000>;
 			qcom,supply-disable-load = <0>;
 			qcom,supply-post-on-sleep = <0>;
 		};
