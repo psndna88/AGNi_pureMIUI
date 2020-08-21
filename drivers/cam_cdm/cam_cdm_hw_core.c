@@ -1224,16 +1224,14 @@ static void cam_hw_cdm_work(struct work_struct *work)
 
 }
 
-static void cam_hw_cdm_iommu_fault_handler(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token,
-	uint32_t buf_info)
+static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 {
 	struct cam_hw_info *cdm_hw = NULL;
 	struct cam_cdm *core = NULL;
 	int i;
 
-	if (token) {
-		cdm_hw = (struct cam_hw_info *)token;
+	if (pf_info->token) {
+		cdm_hw = (struct cam_hw_info *)pf_info->token;
 		core = (struct cam_cdm *)cdm_hw->core_info;
 		set_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 		mutex_lock(&cdm_hw->hw_mutex);
@@ -1254,9 +1252,9 @@ static void cam_hw_cdm_iommu_fault_handler(struct iommu_domain *domain,
 			mutex_unlock(&core->bl_fifo[i].fifo_lock);
 		mutex_unlock(&cdm_hw->hw_mutex);
 		CAM_ERR_RATE_LIMIT(CAM_CDM, "Page fault iova addr %pK\n",
-			(void *)iova);
+			(void *)pf_info->iova);
 		cam_cdm_notify_clients(cdm_hw, CAM_CDM_CB_STATUS_PAGEFAULT,
-			(void *)iova);
+			(void *)pf_info->iova);
 		clear_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 	} else {
 		CAM_ERR(CAM_CDM, "Invalid token");

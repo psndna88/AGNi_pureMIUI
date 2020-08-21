@@ -998,8 +998,8 @@ end:
 }
 
 int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
-	struct cam_packet *packet, unsigned long iova, uint32_t buf_info,
-	bool *mem_found)
+	struct cam_packet *packet, bool *mem_found, bool *ctx_found,
+	uint32_t  *resource_type, struct cam_smmu_pf_info *pf_info)
 {
 	int rc = 0;
 	struct cam_hw_cmd_args cmd_args;
@@ -1021,9 +1021,14 @@ int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
 		cmd_args.ctxt_to_hw_map = ctx->ctxt_to_hw_map;
 		cmd_args.cmd_type = CAM_HW_MGR_CMD_DUMP_PF_INFO;
 		cmd_args.u.pf_args.pf_data.packet = packet;
-		cmd_args.u.pf_args.iova = iova;
-		cmd_args.u.pf_args.buf_info = buf_info;
+		cmd_args.u.pf_args.iova = pf_info->iova;
+		cmd_args.u.pf_args.buf_info = pf_info->buf_info;
 		cmd_args.u.pf_args.mem_found = mem_found;
+		cmd_args.u.pf_args.ctx_found = ctx_found;
+		cmd_args.u.pf_args.resource_type = resource_type;
+		cmd_args.u.pf_args.bid = pf_info->bid;
+		cmd_args.u.pf_args.pid = pf_info->pid;
+		cmd_args.u.pf_args.mid = pf_info->mid;
 		ctx->hw_mgr_intf->hw_cmd(ctx->hw_mgr_intf->hw_mgr_priv,
 			&cmd_args);
 	}

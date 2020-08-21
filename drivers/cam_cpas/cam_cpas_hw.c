@@ -14,6 +14,7 @@
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_soc.h"
 #include "cam_req_mgr_dev.h"
+#include "cam_smmu_api.h"
 
 static uint cam_min_camnoc_ib_bw;
 module_param(cam_min_camnoc_ib_bw, uint, 0644);
@@ -1431,6 +1432,8 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 		}
 		CAM_DBG(CAM_CPAS, "irq_count=%d\n",
 			atomic_read(&cpas_core->irq_count));
+
+		cam_smmu_reset_cb_page_fault_cnt();
 		cpas_hw->hw_state = CAM_HW_STATE_POWER_UP;
 	}
 

@@ -424,6 +424,7 @@ struct cam_mem_cache_ops_cmd {
  * @CAM_REQ_MGR_ERROR_TYPE_BUFFER: Buffer was not filled, not fatal
  * @CAM_REQ_MGR_ERROR_TYPE_RECOVERY: Fatal error, can be recovered
  * @CAM_REQ_MGR_ERROR_TYPE_SOF_FREEZE: SOF freeze, can be recovered
+ * @CAM_REQ_MGR_ERROR_TYPE_PAGE_FAULT: page fault, can be recovered
  */
 #define CAM_REQ_MGR_ERROR_TYPE_DEVICE           0
 #define CAM_REQ_MGR_ERROR_TYPE_REQUEST          1
@@ -431,7 +432,7 @@ struct cam_mem_cache_ops_cmd {
 #define CAM_REQ_MGR_ERROR_TYPE_RECOVERY         3
 #define CAM_REQ_MGR_ERROR_TYPE_SOF_FREEZE       4
 #define CAM_REQ_MGR_ERROR_TYPE_FULL_RECOVERY    5
-
+#define CAM_REQ_MGR_ERROR_TYPE_PAGE_FAULT       6
 
 /**
  * struct cam_req_mgr_error_msg

@@ -180,6 +180,7 @@ struct cam_vfe_bus_ver2_vfe_out_data {
 	struct cam_cdm_utils_ops        *cdm_util_ops;
 	uint32_t                         secure_mode;
 	void                            *priv;
+	uint32_t                         mid[CAM_VFE_BUS_VER2_MAX_MID_PER_PORT];
 };
 
 struct cam_vfe_bus_ver2_priv {
@@ -2431,7 +2432,7 @@ static int cam_vfe_bus_init_vfe_out_resource(uint32_t  index,
 {
 	struct cam_isp_resource_node         *vfe_out = NULL;
 	struct cam_vfe_bus_ver2_vfe_out_data *rsrc_data = NULL;
-	int rc = 0;
+	int rc = 0, i;
 	int32_t vfe_out_type =
 		ver2_hw_info->vfe_out_hw_info[index].vfe_out_type;
 
@@ -2480,6 +2481,9 @@ static int cam_vfe_bus_init_vfe_out_resource(uint32_t  index,
 	vfe_out->process_cmd = cam_vfe_bus_process_cmd;
 	vfe_out->hw_intf = ver2_bus_priv->common_data.hw_intf;
 	vfe_out->irq_handle = 0;
+
+	for (i = 0; i < CAM_VFE_BUS_VER2_MAX_MID_PER_PORT; i++)
+		rsrc_data->mid[i] = ver2_hw_info->vfe_out_hw_info[index].mid[i];
 
 	return 0;
 }
@@ -3576,6 +3580,50 @@ int cam_vfe_bus_dump_wm_data(void *priv, void *cmd_args, uint32_t arg_size)
 	return 0;
 }
 
+static int cam_vfe_bus_get_res_for_mid(
+	struct cam_vfe_bus_ver2_priv *bus_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_vfe_bus_ver2_vfe_out_data   *out_data = NULL;
+	struct cam_isp_hw_get_cmd_update       *cmd_update = cmd_args;
+	struct cam_isp_hw_get_res_for_mid       *get_res = NULL;
+	int i, j;
+
+	get_res = (struct cam_isp_hw_get_res_for_mid *)cmd_update->data;
+	if (!get_res) {
+		CAM_ERR(CAM_ISP,
+			"invalid get resource for mid paramas");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < bus_priv->num_out; i++) {
+		out_data = (struct cam_vfe_bus_ver2_vfe_out_data   *)
+			bus_priv->vfe_out[i].res_priv;
+
+		if (!out_data)
+			continue;
+
+		for (j = 0; j < CAM_VFE_BUS_VER2_MAX_MID_PER_PORT; j++) {
+			if (out_data->mid[j] == get_res->mid)
+				goto end;
+		}
+	}
+
+	if (i == bus_priv->num_out) {
+		CAM_ERR(CAM_ISP,
+			"mid:%d does not match with any out resource",
+			get_res->mid);
+		get_res->out_res_id = 0;
+		return -EINVAL;
+	}
+
+end:
+	CAM_INFO(CAM_ISP, "match mid :%d  out resource:0x%x found",
+		get_res->mid, bus_priv->vfe_out[i].res_id);
+	get_res->out_res_id = bus_priv->vfe_out[i].res_id;
+	return 0;
+}
+
 static int cam_vfe_bus_process_cmd(
 	struct cam_isp_resource_node *priv,
 	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
@@ -3635,6 +3683,10 @@ static int cam_vfe_bus_process_cmd(
 		support_consumed_addr = (bool *)cmd_args;
 		*support_consumed_addr =
 			bus_priv->common_data.support_consumed_addr;
+		break;
+	case CAM_ISP_HW_CMD_GET_RES_FOR_MID:
+		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
+		rc = cam_vfe_bus_get_res_for_mid(bus_priv, cmd_args, arg_size);
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",

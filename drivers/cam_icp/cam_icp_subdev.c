@@ -50,23 +50,20 @@ static const struct of_device_id cam_icp_dt_match[] = {
 	{}
 };
 
-static void cam_icp_dev_iommu_fault_handler(
-	struct iommu_domain *domain, struct device *dev, unsigned long iova,
-	int flags, void *token, uint32_t buf_info)
+static void cam_icp_dev_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 {
 	int i = 0;
 	struct cam_node *node = NULL;
 
-	if (!token) {
-		CAM_ERR(CAM_ICP, "invalid token in page handler cb");
+	if (!pf_info || !pf_info->token) {
+		CAM_ERR(CAM_ISP, "invalid token in page handler cb");
 		return;
 	}
 
-	node = (struct cam_node *)token;
+	node = (struct cam_node *)pf_info->token;
 
 	for (i = 0; i < node->ctx_size; i++)
-		cam_context_dump_pf_info(&(node->ctx_list[i]), iova,
-			buf_info);
+		cam_context_dump_pf_info(&(node->ctx_list[i]), pf_info);
 }
 
 static int cam_icp_subdev_open(struct v4l2_subdev *sd,
