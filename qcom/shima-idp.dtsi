@@ -96,7 +96,7 @@
 };
 
 &spmi_debug_bus {
-	status = "ok";
+	status = "disabled";
 };
 
 &spmi_glink_debug {
