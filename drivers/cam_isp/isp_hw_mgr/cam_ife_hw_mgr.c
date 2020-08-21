@@ -6115,7 +6115,7 @@ static int cam_ife_mgr_util_insert_frame_header(
 	/* frame header address needs to be 16 byte aligned */
 	if (frame_header_iova % 16) {
 		padded_bytes = (uint32_t)(16 - (frame_header_iova % 16));
-		iova_addr += padded_bytes;
+		frame_header_iova += padded_bytes;
 	}
 
 	prepare_hw_data->frame_header_iova = frame_header_iova;
