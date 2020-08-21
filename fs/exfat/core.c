@@ -883,7 +883,7 @@ static s32 __count_dos_name_entries(struct super_block *sb, CHAIN_T *p_dir, u32 
 	return count;
 }
 
-s32 check_dir_empty(struct super_block *sb, CHAIN_T *p_dir)
+s32 check_dir_empty_exfat(struct super_block *sb, CHAIN_T *p_dir)
 {
 	s32 i;
 	s32 dentries_per_clu;
@@ -1395,7 +1395,7 @@ static bool is_exfat(pbr_t *pbr)
 	return i ? false : true;
 }
 
-inline pbr_t *read_pbr_with_logical_sector(struct super_block *sb, struct buffer_head **prev_bh)
+inline pbr_t *read_pbr_with_logical_sector_exfat(struct super_block *sb, struct buffer_head **prev_bh)
 {
 	pbr_t *p_pbr = (pbr_t *) (*prev_bh)->b_data;
 	u16 logical_sect = 0;
@@ -1492,7 +1492,7 @@ s32 exfat_fscore_mount(struct super_block *sb)
 	}
 
 	/* check logical sector size */
-	p_pbr = read_pbr_with_logical_sector(sb, &tmp_bh);
+	p_pbr = read_pbr_with_logical_sector_exfat(sb, &tmp_bh);
 	if (!p_pbr) {
 		brelse(tmp_bh);
 		ret = -EIO;
@@ -1507,7 +1507,7 @@ s32 exfat_fscore_mount(struct super_block *sb)
 
 	/* set maximum file size for exFAT */
 	sb->s_maxbytes = 0x7fffffffffffffffLL;
-	ret = mount_exfat(sb, p_pbr);
+	ret = _mount_exfat(sb, p_pbr);
 
 free_bh:
 	brelse(tmp_bh);
@@ -2371,7 +2371,7 @@ s32 exfat_fscore_rename(struct inode *old_parent_inode, FILE_ID_T *fid,
 			new_clu.size = ((new_fid->size-1) >> fsi->cluster_size_bits) + 1;
 			new_clu.flags = new_fid->flags;
 
-			ret = check_dir_empty(sb, &new_clu);
+			ret = check_dir_empty_exfat(sb, &new_clu);
 			if (ret)
 				return ret;
 		}
@@ -3145,10 +3145,10 @@ s32 exfat_fscore_rmdir(struct inode *inode, FILE_ID_T *fid)
 	clu_to_free.size = ((fid->size-1) >> fsi->cluster_size_bits) + 1;
 	clu_to_free.flags = fid->flags;
 
-	ret = check_dir_empty(sb, &clu_to_free);
+	ret = check_dir_empty_exfat(sb, &clu_to_free);
 	if (ret) {
 		if (ret == -EIO)
-			EMSG("%s : failed to check_dir_empty : err(%d)\n",
+			EMSG("%s : exfat failed to check_dir_empty : err(%d)\n",
 				__func__, ret);
 		return ret;
 	}
