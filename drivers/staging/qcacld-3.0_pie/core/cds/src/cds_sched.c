@@ -719,7 +719,14 @@ static int cds_mc_thread(void *Arg)
 			  "%s: Bad Args passed", __func__);
 		return 0;
 	}
+#ifdef RX_THREAD_PRIORITY
+	struct sched_param scheduler_params = {0};
+
+	scheduler_params.sched_priority = 1;
+	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);
+#else
 	set_user_nice(current, -2);
+#endif
 
 	/* Ack back to the context from which the main controller thread
 	 * has been created

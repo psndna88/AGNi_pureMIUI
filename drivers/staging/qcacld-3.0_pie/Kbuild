@@ -1668,6 +1668,14 @@ ifeq ($(CONFIG_ARCH_SDX20), y)
 CONFIG_NUM_IPA_IFACE := 2
 endif
 
+ifeq ($(CONFIG_ARCH_SDM660), y)
+CONFIG_RX_THREAD_PRIORITY := y
+endif
+
+ifeq ($(CONFIG_RX_THREAD_PRIORITY), y)
+cppflags-y += -DRX_THREAD_PRIORITY
+endif
+
 #Enable IPA Offload support
 ifeq ($(CONFIG_IPA_OFFLOAD), 1)
 CDEFINES += -DIPA_OFFLOAD
