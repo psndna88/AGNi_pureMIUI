@@ -2477,6 +2477,7 @@
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "mss-pil";
+		status = "disabled";
 	};
 
 	qcom,lpass@3700000 {
@@ -2524,6 +2525,7 @@
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "adsp-pil";
+		status = "disabled";
 	};
 
 	qcom,turing@a300000 {
@@ -2573,6 +2575,7 @@
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "cdsp-pil";
+		status = "disabled";
 	};
 
 	qcom,msm-adsprpc-mem {
