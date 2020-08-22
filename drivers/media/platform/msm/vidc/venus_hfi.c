@@ -79,11 +79,6 @@ struct tzbsp_video_set_state_req {
 	u32 spare; /* reserved for future, should be zero */
 };
 
-const struct msm_vidc_gov_data DEFAULT_BUS_VOTE = {
-	.data = NULL,
-	.data_count = 0,
-};
-
 const int max_packets = 1000;
 
 static void venus_hfi_pm_handler(struct work_struct *work);
@@ -1088,8 +1083,6 @@ static int __unvote_buses(struct venus_hfi_device *device)
 	int rc = 0;
 	struct bus_info *bus = NULL;
 
-	kfree(device->bus_vote.data);
-	device->bus_vote.data = NULL;
 	device->bus_vote.data_count = 0;
 
 	venus_hfi_for_each_bus(device, bus) {
@@ -1116,7 +1109,6 @@ static int __vote_buses(struct venus_hfi_device *device,
 {
 	int rc = 0;
 	struct bus_info *bus = NULL;
-	struct vidc_bus_vote_data *new_data = NULL;
 
 	if (!num_data) {
 		dprintk(VIDC_DBG, "No vote data available\n");
@@ -1126,16 +1118,9 @@ static int __vote_buses(struct venus_hfi_device *device,
 		return -EINVAL;
 	}
 
-	new_data = kmemdup(data, num_data * sizeof(*new_data), GFP_KERNEL);
-	if (!new_data) {
-		dprintk(VIDC_ERR, "Can't alloc memory to cache bus votes\n");
-		rc = -ENOMEM;
-		goto err_no_mem;
-	}
+	memcpy(device->bus_vote.data, data, num_data * sizeof(*data));
 
 no_data_count:
-	kfree(device->bus_vote.data);
-	device->bus_vote.data = new_data;
 	device->bus_vote.data_count = num_data;
 
 	venus_hfi_for_each_bus(device, bus) {
@@ -2159,14 +2144,6 @@ static int venus_hfi_core_init(void *device)
 
 	mutex_lock(&dev->lock);
 
-	dev->bus_vote.data =
-		kzalloc(sizeof(struct vidc_bus_vote_data), GFP_KERNEL);
-	if (!dev->bus_vote.data) {
-		dprintk(VIDC_ERR, "Bus vote data memory is not allocated\n");
-		rc = -ENOMEM;
-		goto err_no_mem;
-	}
-
 	dev->bus_vote.data_count = 1;
 	dev->bus_vote.data->power_mode = VIDC_POWER_TURBO;
 
@@ -2239,7 +2216,6 @@ err_core_init:
 	__set_state(dev, VENUS_STATE_DEINIT);
 	__unload_fw(dev);
 err_load_fw:
-err_no_mem:
 	dprintk(VIDC_ERR, "Core init failed\n");
 	mutex_unlock(&dev->lock);
 	return rc;
@@ -4079,8 +4055,7 @@ static void __deinit_bus(struct venus_hfi_device *device)
 	if (!device)
 		return;
 
-	kfree(device->bus_vote.data);
-	device->bus_vote = DEFAULT_BUS_VOTE;
+	device->bus_vote.data_count = 0;
 
 	venus_hfi_for_each_bus_reverse(device, bus) {
 		devfreq_remove_device(bus->devfreq);
