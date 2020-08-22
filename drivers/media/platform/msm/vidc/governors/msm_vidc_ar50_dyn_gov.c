@@ -891,7 +891,7 @@ static int __get_target_freq(struct devfreq *dev, unsigned long *freq)
 		goto exit;
 
 	for (c = 0; c < vidc_data->data_count; ++c) {
-		if (vidc_data->data->power_mode == VIDC_POWER_TURBO) {
+		if (vidc_data->data[c].power_mode == VIDC_POWER_TURBO) {
 			ab_kbps = INT_MAX;
 			goto exit;
 		}
