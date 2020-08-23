@@ -150,6 +150,7 @@
 #define RECHARGE_VBATT_THR_v2_OFFSET	1
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
+#define SLOW_CHARGE_THRESHOLD		80
 
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
@@ -167,6 +168,7 @@ static void fg_encode_default(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val, u8 *buf);
 
 static struct fg_irq_info fg_irqs[FG_IRQ_MAX];
+bool slow_charge = false;
 
 #define PARAM(_id, _addr_word, _addr_byte, _len, _num, _den, _offset,	\
 	      _enc, _dec)						\
@@ -3407,7 +3409,7 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	ibatt_avg = -ibatt_avg / MILLI_UNIT;
 	vbatt_avg /= MILLI_UNIT;
 
-	if (msoc <= 70) {
+	if (msoc <= SLOW_CHARGE_THRESHOLD) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 		if (ibatt_avg > 2300)
 			ibatt_avg = 2300;
@@ -3417,6 +3419,9 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 #endif
 		if (ibatt_avg < 1200)
 			ibatt_avg = 1200;
+		slow_charge = false;
+	} else {
+		slow_charge = true;
 	}
 	if (msoc == 99) {
 		/* clamp ibatt_avg to iterm */
@@ -3533,8 +3538,8 @@ cv_estimate:
 		return rc;
 	}
 
-	/* tau is scaled linearly from 70% to 100% SOC */
-	if (msoc >= 70)
+	/* tau is scaled linearly from SLOW_CHARGE_THRESHOLD(%) to 100% SOC */
+	if (msoc >= SLOW_CHARGE_THRESHOLD)
 		tau = tau * 2 * (100 - msoc) / 10;
 
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);
