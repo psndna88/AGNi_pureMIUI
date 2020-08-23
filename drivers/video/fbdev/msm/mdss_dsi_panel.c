@@ -1155,18 +1155,18 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 			mdss_dsi_panel_cmds_send(ctrl,srgb_off_cmds, CMD_REQ_COMMIT);
 	}
 	if(cabc_state == 11){
-		if (cabc_on_cmds->cmd_cnt)
-	       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
+//		if (cabc_on_cmds->cmd_cnt)
+//	       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
 	}
 	if(cabc_movie_state == 1){
-		if (cabc_movie_on_cmds->cmd_cnt)
-	       mdss_dsi_panel_cmds_send(ctrl,cabc_movie_on_cmds, CMD_REQ_COMMIT);
-		pr_info("set cabc movie on\n");
+//		if (cabc_movie_on_cmds->cmd_cnt)
+//	       mdss_dsi_panel_cmds_send(ctrl,cabc_movie_on_cmds, CMD_REQ_COMMIT);
+//		pr_info("set cabc movie on\n");
 	}
 	if(cabc_still_state == 1){
-		if (cabc_still_on_cmds->cmd_cnt)
-	       mdss_dsi_panel_cmds_send(ctrl,cabc_still_on_cmds, CMD_REQ_COMMIT);
-		pr_info("set cabc still on\n");
+//		if (cabc_still_on_cmds->cmd_cnt)
+//	       mdss_dsi_panel_cmds_send(ctrl,cabc_still_on_cmds, CMD_REQ_COMMIT);
+//		pr_info("set cabc still on\n");
 	}
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
