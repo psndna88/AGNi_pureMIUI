@@ -469,10 +469,6 @@ int ipa3_connect_mhi_pipe(struct ipa_mhi_connect_params_internal *in,
 		u32 *clnt_hdl);
 int ipa3_disconnect_mhi_pipe(u32 clnt_hdl);
 bool ipa3_mhi_stop_gsi_channel(enum ipa_client_type client);
-int ipa3_qmi_enable_force_clear_datapath_send(
-	struct ipa_enable_force_clear_datapath_req_msg_v01 *req);
-int ipa3_qmi_disable_force_clear_datapath_send(
-	struct ipa_disable_force_clear_datapath_req_msg_v01 *req);
 int ipa3_generate_tag_process(void);
 int ipa3_disable_sps_pipe(enum ipa_client_type client);
 int ipa3_mhi_reset_channel_internal(enum ipa_client_type client);

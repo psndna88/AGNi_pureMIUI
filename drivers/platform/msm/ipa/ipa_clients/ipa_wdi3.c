@@ -126,6 +126,8 @@ static int ipa_wdi_cleanup_internal(void)
 	struct ipa_wdi_intf_info *entry;
 	struct ipa_wdi_intf_info *next;
 
+	ipa3_uc_dereg_rdyCB();
+
 	/* clear interface list */
 	list_for_each_entry_safe(entry, next,
 		&ipa_wdi_ctx->head_intf_list, link) {

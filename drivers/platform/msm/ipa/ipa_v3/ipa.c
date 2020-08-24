@@ -1866,7 +1866,16 @@ static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	if (!ipa3_is_ready()) {
 		IPAERR("IPA not ready, waiting for init completion\n");
-		wait_for_completion(&ipa3_ctx->init_completion_obj);
+		if (ipa3_ctx->manual_fw_load) {
+			if (!wait_for_completion_timeout(
+					&ipa3_ctx->init_completion_obj,
+					msecs_to_jiffies(1000))) {
+				IPAERR("IPA not ready, return\n");
+				return -ETIME;
+			}
+		} else {
+			wait_for_completion(&ipa3_ctx->init_completion_obj);
+		}
 	}
 
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
@@ -7034,6 +7043,9 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	ipa3_ctx->tx_wrapper_cache_max_size = get_tx_wrapper_cache_size(
 			resource_p->tx_wrapper_cache_max_size);
 	ipa3_ctx->gsi_wdi_db_polling = resource_p->gsi_wdi_db_polling;
+	ipa3_ctx->ipa_config_is_auto = resource_p->ipa_config_is_auto;
+	ipa3_ctx->manual_fw_load = resource_p->manual_fw_load;
+	ipa3_ctx->max_num_smmu_cb = resource_p->max_num_smmu_cb;
 
 	if (resource_p->gsi_fw_file_name) {
 		ipa3_ctx->gsi_fw_file_name =
@@ -7499,20 +7511,21 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	/* Create the dummy netdev for LAN RX NAPI*/
 	ipa3_enable_napi_netdev();
 
-	result = ipa3_wwan_init();
-	if (result) {
-		IPAERR(":ipa3_wwan_init err=%d\n", -result);
-		result = -ENODEV;
-		goto fail_wwan_init;
-	}
+	if (ipa3_ctx->platform_type != IPA_PLAT_TYPE_APQ) {
+		result = ipa3_wwan_init();
+		if (result) {
+			IPAERR(":ipa3_wwan_init err=%d\n", -result);
+			result = -ENODEV;
+			goto fail_wwan_init;
+		}
 
-	result = ipa3_rmnet_ctl_init();
-	if (result) {
-		IPAERR(":ipa3_rmnet_ctl_init err=%d\n", -result);
-		result = -ENODEV;
-		goto fail_rmnet_ctl_init;
+		result = ipa3_rmnet_ctl_init();
+		if (result) {
+			IPAERR(":ipa3_rmnet_ctl_init err=%d\n", -result);
+			result = -ENODEV;
+			goto fail_rmnet_ctl_init;
+		}
 	}
-
 	mutex_init(&ipa3_ctx->app_clock_vote.mutex);
 
 	return 0;
@@ -7828,6 +7841,10 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->skip_ieob_mask_wa = false;
 	ipa_drv_res->ipa_gpi_event_rp_ddr = false;
 	ipa_drv_res->gsi_wdi_db_polling = false;
+	ipa_drv_res->ipa_config_is_auto = false;
+	ipa_drv_res->manual_fw_load = false;
+	ipa_drv_res->max_num_smmu_cb = IPA_SMMU_CB_MAX;
+
 	/* Get IPA HW Version */
 	result = of_property_read_u32(pdev->dev.of_node, "qcom,ipa-hw-ver",
 					&ipa_drv_res->ipa_hw_type);
@@ -7932,6 +7949,13 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	IPADBG(": WDI-2.0 = %s\n",
 			ipa_drv_res->ipa_wdi2
 			? "True" : "False");
+
+	ipa_drv_res->ipa_config_is_auto =
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,ipa-config-is-auto");
+	IPADBG(": ipa-config-is-auto = %s\n",
+		ipa_drv_res->ipa_config_is_auto
+		? "True" : "False");
 
 	ipa_drv_res->ipa_wan_skb_page =
 			of_property_read_bool(pdev->dev.of_node,
@@ -8356,6 +8380,22 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->ipa_wan_aggr_pkt_cnt = ipa_wan_aggr_pkt_cnt;
 
 	get_dts_tx_wrapper_cache_size(pdev, ipa_drv_res);
+
+	ipa_drv_res->manual_fw_load =
+		of_property_read_bool(pdev->dev.of_node,
+								"qcom,manual-fw-load");
+	IPADBG(": manual-fw-load (%s)\n",
+		ipa_drv_res->manual_fw_load? "True" : "False");
+
+	result = of_property_read_u32(pdev->dev.of_node,
+		"qcom,max_num_smmu_cb",
+		&ipa_drv_res->max_num_smmu_cb);
+	if (result)
+		IPADBG(": using default max number of cb = %d\n",
+			ipa_drv_res->max_num_smmu_cb);
+	else
+		IPADBG(": found ipa_drv_res->max_num_smmu_cb = %d\n",
+			ipa_drv_res->max_num_smmu_cb);
 
 	return 0;
 }
@@ -8862,7 +8902,8 @@ static void ipa_smmu_update_fw_loader(void)
 				break;
 			}
 		}
-		if (i == IPA_SMMU_CB_MAX) {
+		if (i == IPA_SMMU_CB_MAX ||
+			ipa3_ctx->num_smmu_cb_probed == ipa3_ctx->max_num_smmu_cb) {
 			IPADBG("All %d CBs probed\n", IPA_SMMU_CB_MAX);
 			ipa_fw_load_sm_handle_event(IPA_FW_LOAD_EVNT_SMMU_DONE);
 		}
@@ -8922,6 +8963,7 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 		cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_AP);
 		cb->dev = dev;
 		smmu_info.present[IPA_SMMU_CB_AP] = true;
+		ipa3_ctx->num_smmu_cb_probed++;
 		ipa_smmu_update_fw_loader();
 
 		return 0;
@@ -8935,6 +8977,7 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 		cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_WLAN);
 		cb->dev = dev;
 		smmu_info.present[IPA_SMMU_CB_WLAN] = true;
+		ipa3_ctx->num_smmu_cb_probed++;
 		ipa_smmu_update_fw_loader();
 
 		return 0;
@@ -8948,6 +8991,7 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 		cb =  ipa3_get_smmu_ctx(IPA_SMMU_CB_UC);
 		cb->dev = dev;
 		smmu_info.present[IPA_SMMU_CB_UC] = true;
+		ipa3_ctx->num_smmu_cb_probed++;
 		ipa_smmu_update_fw_loader();
 
 		return 0;
@@ -8961,6 +9005,7 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 		cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_11AD);
 		cb->dev = dev;
 		smmu_info.present[IPA_SMMU_CB_11AD] = true;
+		ipa3_ctx->num_smmu_cb_probed++;
 		ipa_smmu_update_fw_loader();
 
 		return 0;

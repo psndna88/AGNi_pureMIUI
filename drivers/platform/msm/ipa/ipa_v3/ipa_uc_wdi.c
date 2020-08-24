@@ -3001,7 +3001,7 @@ int ipa3_uc_dereg_rdyCB(void)
 
 	return 0;
 }
-
+EXPORT_SYMBOL(ipa3_uc_dereg_rdyCB);
 
 /**
  * ipa3_uc_wdi_get_dbpa() - To retrieve
