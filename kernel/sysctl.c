@@ -379,8 +379,7 @@ static int max_extfrag_threshold = 1000;
 
 #ifdef CONFIG_BPF_SYSCALL
 static int bpf_stats_handler(struct ctl_table *table, int write,
-			     void __user *buffer, size_t *lenp,
-			     loff_t *ppos)
+			     void *buffer, size_t *lenp, loff_t *ppos)
 {
 	struct static_key *key = (struct static_key *)table->data;
 	static int saved_val;
