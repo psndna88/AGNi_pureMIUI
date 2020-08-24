@@ -7518,6 +7518,7 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 	struct cam_ife_hw_mgr_ctx            *ife_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  ife_hw_irq_sof_cb;
 	struct cam_isp_hw_sof_event_data      sof_done_event_data;
+	struct timespec64 ts;
 
 	memset(&sof_done_event_data, 0, sizeof(sof_done_event_data));
 
@@ -7527,20 +7528,27 @@ static int cam_ife_hw_mgr_handle_hw_sof(
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_VFE_IN_CAMIF:
 	case CAM_ISP_HW_VFE_IN_RD:
-		if (ife_hw_mgr_ctx->is_offline)
-			cam_ife_hw_mgr_get_offline_sof_timestamp(
+		/* if frame header is enabled reset qtimer ts */
+		if (ife_hw_mgr_ctx->custom_config &
+			CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS) {
+			sof_done_event_data.timestamp = 0x0;
+			ktime_get_boottime_ts64(&ts);
+			sof_done_event_data.boot_time =
+			(uint64_t)((ts.tv_sec * 1000000000) +
+			ts.tv_nsec);
+			CAM_DBG(CAM_ISP, "boot_time 0x%llx",
+				sof_done_event_data.boot_time);
+		} else {
+			if (ife_hw_mgr_ctx->is_offline)
+				cam_ife_hw_mgr_get_offline_sof_timestamp(
 				&sof_done_event_data.timestamp,
 				&sof_done_event_data.boot_time);
-		else
-			cam_ife_mgr_cmd_get_sof_timestamp(
+			else
+				cam_ife_mgr_cmd_get_sof_timestamp(
 				ife_hw_mgr_ctx,
 				&sof_done_event_data.timestamp,
 				&sof_done_event_data.boot_time);
-
-		/* if frame header is enabled reset qtimer ts */
-		if (ife_hw_mgr_ctx->custom_config &
-			CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS)
-			sof_done_event_data.timestamp = 0x0;
+		}
 
 		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
 			break;
