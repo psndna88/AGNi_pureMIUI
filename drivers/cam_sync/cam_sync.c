@@ -516,7 +516,7 @@ static int cam_sync_handle_signal(struct cam_private_ioctl_arg *k_ioctl)
 
 	return cam_sync_signal(sync_signal.sync_obj,
 		sync_signal.sync_state,
-		CAM_SYNC_CAM_SYNC_SIGNAL_EVENT);
+		CAM_SYNC_COMMON_SYNC_SIGNAL_EVENT);
 }
 
 static int cam_sync_handle_merge(struct cam_private_ioctl_arg *k_ioctl)
@@ -667,7 +667,7 @@ static int cam_sync_handle_register_user_payload(
 			row->state,
 			user_payload_kernel->payload_data,
 			CAM_SYNC_USER_PAYLOAD_SIZE * sizeof(__u64),
-			CAM_SYNC_REGISTER_PAYLOAD_EVENT);
+			CAM_SYNC_COMMON_REG_PAYLOAD_EVENT);
 
 		spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
 		kfree(user_payload_kernel);
@@ -873,7 +873,7 @@ static int cam_sync_close(struct file *filep)
 			if (row->state == CAM_SYNC_STATE_ACTIVE) {
 				rc = cam_sync_signal(i,
 					CAM_SYNC_STATE_SIGNALED_ERROR,
-					CAM_SYNC_v4l2_RELEASE_EVENT);
+					CAM_SYNC_COMMON_RELEASE_EVENT);
 				if (rc < 0)
 					CAM_ERR(CAM_SYNC,
 					  "Cleanup signal fail idx:%d\n",
@@ -1099,7 +1099,7 @@ int cam_synx_sync_signal(int32_t sync_obj, uint32_t synx_status)
 		break;
 	}
 
-	rc = cam_sync_signal(sync_obj, sync_status, CAM_SYNC_EVENT_SYNX);
+	rc = cam_sync_signal(sync_obj, sync_status, CAM_SYNC_COMMON_EVENT_SYNX);
 	if (rc) {
 		CAM_ERR(CAM_SYNC,
 			"synx signal failed with %d, sync_obj=%d, synx_status=%d, sync_status=%d",

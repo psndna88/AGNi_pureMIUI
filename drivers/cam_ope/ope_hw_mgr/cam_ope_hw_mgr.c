@@ -1567,7 +1567,7 @@ static void cam_ope_ctx_cdm_callback(uint32_t handle, void *userdata,
 			ope_req->request_id, ctx->ctx_id);
 		cam_ope_req_timer_reset(ctx);
 		cam_ope_device_timer_reset(ope_hw_mgr);
-		buf_data.evt_param = CAM_SYNC_EVENT_SUCCESS;
+		buf_data.evt_param = CAM_SYNC_COMMON_EVENT_SUCCESS;
 	} else if (status == CAM_CDM_CB_STATUS_HW_RESUBMIT) {
 		CAM_INFO(CAM_OPE, "After reset of CDM and OPE, reapply req");
 		buf_data.evt_param = CAM_SYNC_OPE_EVENT_HW_RESUBMIT;

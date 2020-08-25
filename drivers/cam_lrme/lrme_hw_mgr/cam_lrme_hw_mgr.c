@@ -547,7 +547,7 @@ static int cam_lrme_mgr_cb(void *data,
 		buf_data.request_id = frame_req->req_id;
 		buf_data.evt_param = (cb_args->cb_type & CAM_LRME_CB_ERROR) ?
 			CAM_SYNC_LRME_EVENT_CB_ERROR :
-			CAM_SYNC_EVENT_SUCCESS;
+			CAM_SYNC_COMMON_EVENT_SUCCESS;
 		CAM_DBG(CAM_LRME, "frame req %llu, evt_id %d",
 			frame_req->req_id, evt_id);
 		rc = hw_mgr->event_cb(frame_req->ctxt_to_hw_map,
