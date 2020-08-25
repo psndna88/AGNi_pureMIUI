@@ -1318,6 +1318,7 @@ static int __cam_isp_ctx_apply_req_offline(
 	void *priv, void *data)
 {
 	int rc = 0;
+	int64_t prev_applied_req;
 	struct cam_context *ctx = NULL;
 	struct cam_isp_context *ctx_isp = priv;
 	struct cam_ctx_request *req;
@@ -1363,22 +1364,36 @@ static int __cam_isp_ctx_apply_req_offline(
 	cfg.priv  = &req_isp->hw_update_data;
 	cfg.init_packet = 0;
 
+	/*
+	 * Offline mode may receive the SOF and REG_UPD earlier than
+	 * CDM processing return back, so we set the substate before
+	 * apply setting.
+	 */
+	spin_lock_bh(&ctx->lock);
+
+	atomic_set(&ctx_isp->rxd_epoch, 0);
+	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_APPLIED;
+	prev_applied_req = ctx_isp->last_applied_req_id;
+	ctx_isp->last_applied_req_id = req->request_id;
+
+	list_del_init(&req->list);
+	list_add_tail(&req->list, &ctx->wait_req_list);
+
+	spin_unlock_bh(&ctx->lock);
+
 	rc = ctx->hw_mgr_intf->hw_config(ctx->hw_mgr_intf->hw_mgr_priv, &cfg);
 	if (rc) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Can not apply the configuration");
-	} else {
 		spin_lock_bh(&ctx->lock);
 
-		atomic_set(&ctx_isp->rxd_epoch, 0);
-
-		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_APPLIED;
-		ctx_isp->last_applied_req_id = req->request_id;
+		ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_SOF;
+		ctx_isp->last_applied_req_id = prev_applied_req;
 
 		list_del_init(&req->list);
-		list_add_tail(&req->list, &ctx->wait_req_list);
+		list_add(&req->list, &ctx->pending_req_list);
 
 		spin_unlock_bh(&ctx->lock);
-
+	} else {
 		CAM_DBG(CAM_ISP, "New substate state %d, applied req %lld",
 			CAM_ISP_CTX_ACTIVATED_APPLIED,
 			ctx_isp->last_applied_req_id);
@@ -1387,6 +1402,7 @@ static int __cam_isp_ctx_apply_req_offline(
 			CAM_ISP_STATE_CHANGE_TRIGGER_APPLIED,
 			req->request_id);
 	}
+
 end:
 	return rc;
 }
