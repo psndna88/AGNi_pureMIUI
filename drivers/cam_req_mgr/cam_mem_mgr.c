@@ -733,6 +733,9 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 		}
 	}
 
+	if (cmd->flags & CAM_MEM_FLAG_KMD_DEBUG_FLAG)
+		tbl.dbg_buf_idx = idx;
+
 	tbl.bufq[idx].kmdvaddr = kvaddr;
 	tbl.bufq[idx].vaddr = hw_vaddr;
 	tbl.bufq[idx].dma_buf = dmabuf;
@@ -1023,6 +1026,7 @@ void cam_mem_mgr_deinit(void)
 	bitmap_zero(tbl.bitmap, tbl.bits);
 	kfree(tbl.bitmap);
 	tbl.bitmap = NULL;
+	tbl.dbg_buf_idx = -1;
 	mutex_unlock(&tbl.m_lock);
 	mutex_destroy(&tbl.m_lock);
 }
