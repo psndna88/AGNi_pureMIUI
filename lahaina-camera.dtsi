@@ -543,10 +543,11 @@
 		label = "cpas";
 		arch-compat = "cpas_top";
 		status = "ok";
-		reg-names = "cam_cpas_top", "cam_camnoc";
+		reg-names = "cam_cpas_top", "cam_camnoc", "cam_rpmh";
 		reg = <0xac40000 0x1000>,
-			<0xac42000 0x8000>;
-		reg-cam-base = <0x40000 0x42000>;
+			<0xac42000 0x8000>,
+			<0xbbf0000 0x1F00>;
+		reg-cam-base = <0x40000 0x42000 0x0BBF0000>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 459 IRQ_TYPE_EDGE_RISING>;
 		camnoc-axi-min-ib-bw = <3000000000>;
@@ -587,6 +588,7 @@
 		interconnect-names = "cam_ahb";
 		interconnects =<&gem_noc MASTER_APPSS_PROC
 			&config_noc SLAVE_CAMERA_CFG>;
+		rpmh-bcm-info = <12 0x4 0x800 0 4>;
 		cam-ahb-num-cases = <8>;
 		cam-ahb-bw-KBps =
 			<0 0>, <0 76800>, <0 76800>, <0 150000>, <0 150000>,
@@ -786,7 +788,7 @@
 				level-index = <0>;
 				ife2_ubwc_stats_wr: ife2-ubwc-stats-wr {
 					cell-index = <17>;
-					node-name = "ife0-ubwc-stats-wr";
+					node-name = "ife2-ubwc-stats-wr";
 					client-name = "ife2";
 					traffic-data =
 					<CAM_CPAS_PATH_DATA_IFE_UBWC_STATS>;
