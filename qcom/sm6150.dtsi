@@ -362,6 +362,12 @@
 			reg = <0x0 0x85e00000 0x0 0x140000>;
 		};
 
+		aop_cmd_db: memory@85f20000 {
+			compatible = "qcom,cmd-db";
+			reg = <0x0 0x85f20000 0x0 0x20000>;
+			no-map;
+		};
+
 		sec_apps_mem: sec_apps_region@85fff000 {
 			no-map;
 			reg = <0x0 0x85fff000 0x0 0x1000>;
@@ -592,6 +598,15 @@
 		};
 	};
 
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,sm6150-pdc";
+		reg = <0xb220000 0x30000>, <0x17c000f0 0x60>;
+		qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
 	qcom,msm-imem@146aa000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x146aa000 0x1000>;
@@ -676,6 +691,20 @@
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
+	};
+
+	disp_rsc: rsc@af20000 {
+		label = "disp_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0xaf20000 0x10000>;
+		reg-names = "drv-0";
+		interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0x1c00>;
+		qcom,drv-id = <0>;
+		qcom,tcs-config = <SLEEP_TCS   1>,
+				  <WAKE_TCS    1>,
+				  <ACTIVE_TCS  2>,
+				  <CONTROL_TCS 0>;
 	};
 };
 
