@@ -232,19 +232,15 @@ static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 				   unsigned int flags)
 {
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
-	char game_tcpcongctl = "cubic";
 
 	if (!sg_policy->tunables->iowait_boost_enable ||
 	     sg_policy->is_panel_blank)
 		return;
 	if (adreno_load_perc > GPULOADTRIGGER) {
 		sg_policy->tunables->iowait_boost_enable = 1;
-		eas_ioboost = true;
 	} else {
 		sg_policy->tunables->iowait_boost_enable = 0;
-		eas_ioboost = false;
 	}
-	void tcp_congestion_game();
 	if (!sg_policy->tunables->iowait_boost_enable)
 		return;
 

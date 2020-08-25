@@ -35,8 +35,6 @@
 /* Print length for names. Extra 1 space for accomodating '\n' in prints */
 #define CPUFREQ_NAME_PLEN		(CPUFREQ_NAME_LEN + 1)
 
-extern bool eas_ioboost;
-extern void tcp_congestion_game(void);
 struct cpufreq_governor;
 
 struct cpufreq_freqs {
