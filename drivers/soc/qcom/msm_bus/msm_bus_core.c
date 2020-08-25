@@ -23,6 +23,9 @@
 #include <linux/msm-bus.h>
 #include "msm_bus_core.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/trace_msm_bus.h>
+
 static atomic_t num_fab = ATOMIC_INIT(0);
 
 int msm_bus_get_num_fab(void)
