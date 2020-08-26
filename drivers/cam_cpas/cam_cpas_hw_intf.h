@@ -40,6 +40,7 @@ enum cam_cpas_hw_cmd_process {
 	CAM_CPAS_HW_CMD_AXI_VOTE,
 	CAM_CPAS_HW_CMD_LOG_VOTE,
 	CAM_CPAS_HW_CMD_SELECT_QOS,
+	CAM_CPAS_HW_CMD_LOG_EVENT,
 	CAM_CPAS_HW_CMD_INVALID,
 };
 
@@ -105,6 +106,18 @@ struct cam_cpas_hw_cmd_start {
  */
 struct cam_cpas_hw_cmd_stop {
 	uint32_t client_handle;
+};
+
+/**
+ * struct cam_cpas_hw_cmd_notify_event : CPAS cmd struct for notify event
+ *
+ * @identifier_string: Identifier string passed by caller
+ * @identifier_value: Identifier value passed by caller
+ *
+ */
+struct cam_cpas_hw_cmd_notify_event {
+	const char *identifier_string;
+	int32_t identifier_value;
 };
 
 /**

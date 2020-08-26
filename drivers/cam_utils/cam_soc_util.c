@@ -2488,3 +2488,42 @@ int cam_soc_util_reg_dump_to_cmd_buf(void *ctx,
 end:
 	return rc;
 }
+
+/**
+ * cam_soc_util_print_clk_freq()
+ *
+ * @brief:              This function gets the clk rates for each clk from clk
+ *                      driver and prints in log
+ *
+ * @soc_info:           Device soc struct to be populated
+ *
+ * @return:             success or failure
+ */
+int cam_soc_util_print_clk_freq(struct cam_hw_soc_info *soc_info)
+{
+	int i;
+	unsigned long clk_rate = 0;
+
+	if (!soc_info) {
+		CAM_ERR(CAM_UTIL, "Invalid soc info");
+		return -EINVAL;
+	}
+
+	if ((soc_info->num_clk == 0) ||
+		(soc_info->num_clk >= CAM_SOC_MAX_CLK)) {
+		CAM_ERR(CAM_UTIL, "[%s] Invalid number of clock %d",
+			soc_info->dev_name, soc_info->num_clk);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < soc_info->num_clk; i++) {
+		clk_rate = clk_get_rate(soc_info->clk[i]);
+
+		CAM_INFO(CAM_UTIL,
+			"[%s] idx = %d clk name = %s clk_rate=%lld",
+			soc_info->dev_name, i, soc_info->clk_name[i],
+			clk_rate);
+	}
+
+	return 0;
+}
