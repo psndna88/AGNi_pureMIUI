@@ -852,48 +852,13 @@ enum hal_video_codec get_hal_codec(int fourcc, u32 sid)
 	return codec;
 }
 
-enum hal_uncompressed_format msm_comm_get_hal_uncompressed(int fourcc)
-{
-	enum hal_uncompressed_format format = HAL_UNUSED_COLOR;
-
-	switch (fourcc) {
-	case V4L2_PIX_FMT_NV12:
-		format = HAL_COLOR_FORMAT_NV12;
-		break;
-	case V4L2_PIX_FMT_NV12_512:
-		format = HAL_COLOR_FORMAT_NV12_512;
-		break;
-	case V4L2_PIX_FMT_NV21:
-		format = HAL_COLOR_FORMAT_NV21;
-		break;
-	case V4L2_PIX_FMT_NV12_UBWC:
-		format = HAL_COLOR_FORMAT_NV12_UBWC;
-		break;
-	case V4L2_PIX_FMT_NV12_TP10_UBWC:
-		format = HAL_COLOR_FORMAT_NV12_TP10_UBWC;
-		break;
-	case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:
-		format = HAL_COLOR_FORMAT_P010;
-		break;
-	case V4L2_PIX_FMT_RGBA8888_UBWC:
-		format = HAL_COLOR_FORMAT_RGBA8888_UBWC;
-		break;
-	default:
-		format = HAL_UNUSED_COLOR;
-		break;
-	}
-
-	return format;
-}
-
 u32 msm_comm_get_hfi_uncompressed(int fourcc, u32 sid)
 {
 	u32 format;
 
 	switch (fourcc) {
 	case V4L2_PIX_FMT_NV12:
-		format = HFI_COLOR_FORMAT_NV12;
-		break;
+	case V4L2_PIX_FMT_NV12_128:
 	case V4L2_PIX_FMT_NV12_512:
 		format = HFI_COLOR_FORMAT_NV12;
 		break;
@@ -3718,6 +3683,8 @@ u32 msm_comm_convert_color_fmt(u32 v4l2_fmt, u32 sid)
 		return COLOR_FMT_NV12;
 	case V4L2_PIX_FMT_NV21:
 		return COLOR_FMT_NV21;
+	case V4L2_PIX_FMT_NV12_128:
+		return COLOR_FMT_NV12_128;
 	case V4L2_PIX_FMT_NV12_512:
 		return COLOR_FMT_NV12_512;
 	case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:

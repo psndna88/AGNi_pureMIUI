@@ -438,16 +438,16 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 		if (msm_comm_get_stream_output_mode(inst) ==
 				HAL_VIDEO_DECODER_PRIMARY) {
 			vote_data->color_formats[0] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.opb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.opb_fourcc, inst->sid);
 			vote_data->num_formats = 1;
 		} else {
 			vote_data->color_formats[0] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.dpb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.dpb_fourcc, inst->sid);
 			vote_data->color_formats[1] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.opb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.opb_fourcc, inst->sid);
 			vote_data->num_formats = 2;
 		}
 		vote_data->work_mode = inst->clk_data.work_mode;

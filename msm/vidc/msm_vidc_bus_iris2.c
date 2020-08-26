@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  */
 
 #include "msm_vidc_bus.h"
@@ -337,7 +337,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d)
 
 	b_frames_enabled = d->b_frames_enabled;
 	original_color_format = d->num_formats >= 1 ?
-		d->color_formats[0] : HAL_UNUSED_COLOR;
+		d->color_formats[0] : HFI_COLOR_FORMAT_NV12_UBWC;
 
 	original_compression_enabled = __ubwc(original_color_format);
 

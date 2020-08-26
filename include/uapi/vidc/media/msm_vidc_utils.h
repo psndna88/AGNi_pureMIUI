@@ -14,6 +14,8 @@
 #define V4L2_PIX_FMT_NV12_UBWC                  v4l2_fourcc('Q', '1', '2', '8')
 /* NV12_512 8-bit Y/CbCr 4:2:0  */
 #define V4L2_PIX_FMT_NV12_512                   v4l2_fourcc('Q', '5', '1', '2')
+/* NV12_128 8-bit Y/CbCr 4:2:0  */
+#define V4L2_PIX_FMT_NV12_128                   v4l2_fourcc('N', '1', '2', '8')
 /* NV12 10-bit Y/CbCr 4:2:0 */
 #define V4L2_PIX_FMT_NV12_P010_UBWC             v4l2_fourcc('Q', '1', '2', 'B')
 /* UBWC 10-bit Y/CbCr 4:2:0 */

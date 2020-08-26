@@ -344,7 +344,6 @@ int msm_comm_get_v4l2_profile(int fourcc, int profile, u32 sid);
 int msm_comm_get_v4l2_level(int fourcc, int level, u32 sid);
 int msm_comm_session_continue(void *instance);
 int msm_vidc_send_pending_eos_buffers(struct msm_vidc_inst *inst);
-enum hal_uncompressed_format msm_comm_get_hal_uncompressed(int fourcc);
 u32 msm_comm_get_hfi_uncompressed(int fourcc, u32 sid);
 u32 msm_comm_convert_color_fmt(u32 v4l2_fmt, u32 sid);
 struct vb2_buffer *msm_comm_get_vb_using_vidc_buffer(
