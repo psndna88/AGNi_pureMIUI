@@ -7,6 +7,8 @@
 #include <dt-bindings/clock/qcom,gcc-sm6150.h>
 #include <dt-bindings/clock/qcom,scc-sm6150.h>
 #include <dt-bindings/clock/qcom,videocc-sm6150.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,sm6150.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
 
 / {
@@ -760,6 +762,83 @@
 				  <WAKE_TCS    1>,
 				  <ACTIVE_TCS  2>,
 				  <CONTROL_TCS 0>;
+
+		disp_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+			qcom,tcs-wait = <QCOM_ICC_TAG_AMC>;
+		};
+	};
+
+	camnoc_virt: interconnect@0 {
+		compatible = "qcom,sm6150-camnoc_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	ipa_virt: interconnect@1 {
+		compatible = "qcom,sm6150-ipa_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	mc_virt: interconnect@2 {
+		compatible = "qcom,sm6150-mc_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+	};
+
+	dc_noc: interconnect@9160000 {
+		reg = <0x9160000 0x3200>;
+		compatible = "qcom,sm6150-dc_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	gem_noc: interconnect@9680000 {
+		reg = <0x9680000 0x3E200>;
+		compatible = "qcom,sm6150-gem_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+	};
+
+	config_noc: interconnect@1500000 {
+		reg = <0x1500000 0x5080>;
+		compatible = "qcom,sm6150-config_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	system_noc: interconnect@1620000 {
+		reg = <0x1620000 0x1F300>;
+		compatible = "qcom,sm6150-system_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	aggre1_noc: interconnect@1700000 {
+		reg = <0x1700000 0x3F200>;
+		compatible = "qcom,sm6150-aggre1_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB2_SEC_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>;
+	};
+
+	mmss_noc: interconnect@1740000 {
+		reg = <0x1740000 0x1C100>;
+		compatible = "qcom,sm6150-mmss_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
 	};
 
 	aopcc: qcom,aopcc@0 {
