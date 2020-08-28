@@ -1979,7 +1979,7 @@ ifeq ($(CONFIG_ARCH_SDX20), y)
 cppflags-y += -DSYNC_IPA_READY
 endif
 
-ifeq ($(CONFIG_ARCH_SDM660), y)
+ifeq ($(CONFIG_ARCH_MSM8996), y)
 CONFIG_RX_THREAD_PRIORITY := y
 endif
 
