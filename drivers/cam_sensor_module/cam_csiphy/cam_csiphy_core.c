@@ -24,7 +24,12 @@
 #define LANE_MASK_2PH 0x1F
 #define LANE_MASK_3PH 0x7
 
+/* Size of CPAS_SEC_LANE_CP_CTRL register mask */
 #define SEC_LANE_CP_REG_LEN 32
+/*
+ * PHY index at which CPAS_SEC_LANE_CP_CTRL register mask
+ * changes depending on PHY HW version
+ */
 #define MAX_PHY_MSK_PER_REG 4
 
 /* Mask to enable skew calibration registers */
@@ -111,19 +116,24 @@ static int32_t cam_csiphy_update_secure_info(
 		lane_assign >>= 4;
 	}
 
-	if ((csiphy_dev->hw_version == CSIPHY_VERSION_V201) ||
-		(csiphy_dev->hw_version == CSIPHY_VERSION_V125)) {
-		phy_mask_len = CAM_CSIPHY_MAX_DPHY_LANES +
-			CAM_CSIPHY_MAX_CPHY_LANES + 1;
-	} else if (csiphy_dev->hw_version == CSIPHY_VERSION_V121) {
+	switch (csiphy_dev->hw_version) {
+	case CSIPHY_VERSION_V201:
+	case CSIPHY_VERSION_V125:
 		phy_mask_len =
-			(csiphy_dev->soc_info.index < MAX_PHY_MSK_PER_REG) ?
-			(CAM_CSIPHY_MAX_DPHY_LANES + CAM_CSIPHY_MAX_CPHY_LANES)
-			: (CAM_CSIPHY_MAX_DPHY_LANES +
-				CAM_CSIPHY_MAX_CPHY_LANES + 1);
-	} else {
-		phy_mask_len = CAM_CSIPHY_MAX_DPHY_LANES +
-			CAM_CSIPHY_MAX_CPHY_LANES;
+		CAM_CSIPHY_MAX_DPHY_LANES + CAM_CSIPHY_MAX_CPHY_LANES + 1;
+		break;
+	case CSIPHY_VERSION_V121:
+	case CSIPHY_VERSION_V123:
+	case CSIPHY_VERSION_V124:
+		phy_mask_len =
+		(csiphy_dev->soc_info.index < MAX_PHY_MSK_PER_REG) ?
+		(CAM_CSIPHY_MAX_DPHY_LANES + CAM_CSIPHY_MAX_CPHY_LANES) :
+		(CAM_CSIPHY_MAX_DPHY_LANES + CAM_CSIPHY_MAX_CPHY_LANES + 1);
+		break;
+	default:
+		phy_mask_len =
+		CAM_CSIPHY_MAX_DPHY_LANES + CAM_CSIPHY_MAX_CPHY_LANES;
+		break;
 	}
 
 	if (csiphy_dev->soc_info.index < MAX_PHY_MSK_PER_REG) {
