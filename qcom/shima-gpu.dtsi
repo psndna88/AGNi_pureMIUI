@@ -42,7 +42,7 @@
 				"gpu_cc_hub_aon",
 				"gpu_cc_hub_cx_int";
 
-		qcom,chipid = <0x06060001>;
+		qcom,chipid = <0x06060010>;
 
 		qcom,no-nap;
 
