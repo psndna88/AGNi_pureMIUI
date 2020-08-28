@@ -544,7 +544,6 @@ int cam_soc_util_get_option_clk_by_name(struct cam_hw_soc_info *soc_info,
 
 	index = of_property_match_string(of_node, "clock-names-option",
 		clk_name);
-
 	if (index < 0) {
 		CAM_DBG(CAM_UTIL, "No clk data for %s", clk_name);
 		*clk_index = -1;
@@ -557,6 +556,7 @@ int cam_soc_util_get_option_clk_by_name(struct cam_hw_soc_info *soc_info,
 		CAM_ERR(CAM_UTIL, "No clk named %s found. Dev %s", clk_name,
 			soc_info->dev_name);
 		*clk_index = -1;
+		*clk = NULL;
 		return -EFAULT;
 	}
 	*clk_index = index;
