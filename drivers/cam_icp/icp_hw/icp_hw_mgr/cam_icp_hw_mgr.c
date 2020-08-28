@@ -3054,32 +3054,63 @@ static int cam_icp_mgr_hw_close_k(void *hw_priv, void *hw_close_args)
 
 }
 
-static int cam_icp_mgr_icp_power_collapse(struct cam_icp_hw_mgr *hw_mgr)
+static int cam_icp_mgr_proc_resume(struct cam_icp_hw_mgr *hw_mgr)
 {
-	int rc;
-	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->a5_dev_intf;
 
-	CAM_DBG(CAM_PERF, "ENTER");
-
-	a5_dev_intf = hw_mgr->a5_dev_intf;
-	if (!a5_dev_intf) {
-		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid\n");
+	if (!icp_dev_intf)
 		return -EINVAL;
-	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
+
+	return icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+						CAM_ICP_A5_CMD_POWER_RESUME,
+						&hw_mgr->a5_jtag_debug,
+						sizeof(hw_mgr->a5_jtag_debug));
+}
+
+static void cam_icp_mgr_proc_suspend(struct cam_icp_hw_mgr *hw_mgr)
+{
+	struct cam_hw_intf *icp_dev_intf = hw_mgr->a5_dev_intf;
+
+	if (!icp_dev_intf)
+		return;
+
+	icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
+					CAM_ICP_A5_CMD_POWER_COLLAPSE,
+					NULL, 0);
+}
+
+static int __power_collapse(struct cam_icp_hw_mgr *hw_mgr)
+{
+	int rc = 0;
 
 	if (!hw_mgr->icp_pc_flag || atomic_read(&hw_mgr->recovery)) {
-		cam_hfi_disable_cpu(
-			a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+		cam_icp_mgr_proc_suspend(hw_mgr);
 		rc = cam_icp_mgr_hw_close_k(hw_mgr, NULL);
 	} else {
 		CAM_DBG(CAM_PERF, "Sending PC prep ICP PC enabled");
 		rc = cam_icp_mgr_send_pc_prep(hw_mgr);
-		cam_hfi_disable_cpu(
-			a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+		cam_icp_mgr_proc_suspend(hw_mgr);
 	}
+
+	return rc;
+}
+
+static int cam_icp_mgr_icp_power_collapse(struct cam_icp_hw_mgr *hw_mgr)
+{
+	struct cam_hw_intf *a5_dev_intf = hw_mgr->a5_dev_intf;
+	int rc;
+
+	CAM_DBG(CAM_PERF, "ENTER");
+
+	if (!a5_dev_intf) {
+		CAM_ERR(CAM_ICP, "A5 device interface is NULL");
+		return -EINVAL;
+	}
+
+	rc = __power_collapse(hw_mgr);
+
 	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
+
 	CAM_DBG(CAM_PERF, "EXIT");
 
 	return rc;
@@ -3173,8 +3204,7 @@ static int cam_icp_mgr_hfi_resume(struct cam_icp_hw_mgr *hw_mgr)
 		hfi_mem.io_mem2.len);
 
 	return cam_hfi_resume(&hfi_mem,
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base,
-		hw_mgr->a5_jtag_debug);
+		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
 }
 
 static int cam_icp_retry_wait_for_abort(
@@ -3550,7 +3580,6 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 {
 	int rc;
 	struct cam_hw_intf *a5_dev_intf = NULL;
-	struct cam_hw_info *a5_dev = NULL;
 	struct cam_icp_a5_set_irq_cb irq_cb;
 	struct cam_icp_a5_set_fw_buf_info fw_buf_info;
 
@@ -3559,7 +3588,6 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 		CAM_ERR(CAM_ICP, "a5_dev_intf is invalid");
 		return -EINVAL;
 	}
-	a5_dev = (struct cam_hw_info *)a5_dev_intf->hw_priv;
 
 	irq_cb.icp_hw_mgr_cb = cam_icp_hw_mgr_cb;
 	irq_cb.data = hw_mgr;
@@ -3568,7 +3596,7 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 		CAM_ICP_A5_SET_IRQ_CB,
 		&irq_cb, sizeof(irq_cb));
 	if (rc)
-		goto set_irq_failed;
+		return rc;
 
 	fw_buf_info.kva = icp_hw_mgr.hfi_mem.fw_buf.kva;
 	fw_buf_info.iova = icp_hw_mgr.hfi_mem.fw_buf.iova;
@@ -3579,22 +3607,16 @@ static int cam_icp_mgr_fw_download(struct cam_icp_hw_mgr *hw_mgr)
 		CAM_ICP_A5_CMD_SET_FW_BUF,
 		&fw_buf_info, sizeof(fw_buf_info));
 	if (rc)
-		goto set_irq_failed;
-
-	cam_hfi_enable_cpu(a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+		return rc;
 
 	rc = a5_dev_intf->hw_ops.process_cmd(
 		a5_dev_intf->hw_priv,
 		CAM_ICP_A5_CMD_FW_DOWNLOAD,
 		NULL, 0);
 	if (rc)
-		goto fw_download_failed;
+		return rc;
 
-	return rc;
-fw_download_failed:
-	cam_hfi_disable_cpu(a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
-set_irq_failed:
-	return rc;
+	return cam_icp_mgr_proc_resume(hw_mgr);
 }
 
 static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
@@ -3667,8 +3689,7 @@ static int cam_icp_mgr_hfi_init(struct cam_icp_hw_mgr *hw_mgr)
 	}
 
 	return cam_hfi_init(0, &hfi_mem,
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base,
-		hw_mgr->a5_jtag_debug);
+		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
 }
 
 static int cam_icp_mgr_send_fw_init(struct cam_icp_hw_mgr *hw_mgr)
@@ -3760,14 +3781,22 @@ static int cam_icp_mgr_icp_resume(struct cam_icp_hw_mgr *hw_mgr)
 	if (rc)
 		return -EINVAL;
 
+	rc = cam_icp_mgr_proc_resume(hw_mgr);
+	if (rc)
+		goto hw_deinit;
+
 	rc = cam_icp_mgr_hfi_resume(hw_mgr);
 	if (rc)
-		goto hfi_resume_failed;
+		goto power_collapse;
 
 	CAM_DBG(CAM_ICP, "Exit");
 	return rc;
-hfi_resume_failed:
-	cam_icp_mgr_icp_power_collapse(hw_mgr);
+
+power_collapse:
+	__power_collapse(hw_mgr);
+hw_deinit:
+	a5_dev_intf->hw_ops.deinit(a5_dev_intf->hw_priv, NULL, 0);
+
 	return rc;
 }
 
@@ -3843,8 +3872,7 @@ fw_init_failed:
 	cam_hfi_deinit(
 		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
 hfi_init_failed:
-	cam_hfi_disable_cpu(
-		a5_dev->soc_info.reg_map[A5_SIERRA_BASE].mem_base);
+	cam_icp_mgr_proc_suspend(hw_mgr);
 fw_download_failed:
 	cam_icp_mgr_device_deinit(hw_mgr);
 dev_init_fail:
