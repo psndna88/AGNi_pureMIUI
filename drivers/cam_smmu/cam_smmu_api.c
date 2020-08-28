@@ -2210,6 +2210,26 @@ static enum cam_smmu_buf_state cam_smmu_check_fd_in_list(int idx,
 	return CAM_SMMU_BUFF_NOT_EXIST;
 }
 
+static enum cam_smmu_buf_state cam_smmu_user_reuse_fd_in_list(int idx,
+	int ion_fd, dma_addr_t *paddr_ptr, size_t *len_ptr,
+	struct timespec64 **ts_mapping)
+{
+	struct cam_dma_buff_info *mapping;
+
+	list_for_each_entry(mapping,
+		&iommu_cb_set.cb_info[idx].smmu_buf_list, list) {
+		if (mapping->ion_fd == ion_fd) {
+			*paddr_ptr = mapping->paddr;
+			*len_ptr = mapping->len;
+			*ts_mapping = &mapping->ts;
+			mapping->ref_count++;
+			return CAM_SMMU_BUFF_EXIST;
+		}
+	}
+
+	return CAM_SMMU_BUFF_NOT_EXIST;
+}
+
 static enum cam_smmu_buf_state cam_smmu_check_dma_buf_in_list(int idx,
 	struct dma_buf *buf, dma_addr_t *paddr_ptr, size_t *len_ptr)
 {
@@ -2973,7 +2993,7 @@ int cam_smmu_map_user_iova(int handle, int ion_fd, bool dis_delayed_unmap,
 		goto get_addr_end;
 	}
 
-	buf_state = cam_smmu_check_fd_in_list(idx, ion_fd, paddr_ptr,
+	buf_state = cam_smmu_user_reuse_fd_in_list(idx, ion_fd, paddr_ptr,
 		len_ptr, &ts);
 	if (buf_state == CAM_SMMU_BUFF_EXIST) {
 		uint64_t ms = 0, tmp = 0, hrs = 0, min = 0, sec = 0;
@@ -2990,7 +3010,7 @@ int cam_smmu_map_user_iova(int handle, int ion_fd, bool dis_delayed_unmap,
 			ion_fd, hrs, min, sec, ms,
 			iommu_cb_set.cb_info[idx].name[0],
 			idx, handle, *len_ptr);
-		rc = -EALREADY;
+		rc = 0;
 		goto get_addr_end;
 	}
 
@@ -3250,6 +3270,16 @@ int cam_smmu_unmap_user_iova(int handle,
 		rc = -EINVAL;
 		goto unmap_end;
 	}
+
+	mapping_info->ref_count--;
+	if (mapping_info->ref_count > 0) {
+		CAM_DBG(CAM_SMMU,
+			"idx: %d fd = %d ref_count: %d",
+			idx, ion_fd, mapping_info->ref_count);
+		rc = 0;
+		goto unmap_end;
+	}
+	mapping_info->ref_count = 0;
 
 	/* Unmapping one buffer from device */
 	CAM_DBG(CAM_SMMU, "SMMU: removing buffer idx = %d", idx);
