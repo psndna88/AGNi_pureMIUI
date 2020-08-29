@@ -114,6 +114,10 @@ int cam_cdm_soc_load_dt_private(struct platform_device *pdev,
 
 	}
 
+	cdm_pvt_data->is_single_ctx_cdm =
+		of_property_read_bool(pdev->dev.of_node,
+			"single-context-cdm");
+
 	rc = of_property_read_u8(pdev->dev.of_node, "cdm-priority-group",
 			&cdm_pvt_data->priority_group);
 	if (rc < 0) {
