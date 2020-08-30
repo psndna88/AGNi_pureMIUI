@@ -930,3 +930,5 @@
 	compatible = "regulator-fixed";
 	status = "ok";
 };
+
+#include "yupik-usb.dtsi"
