@@ -1016,7 +1016,7 @@ sconfig_store(struct device *dev, struct device_attribute *devattr,
 	if (kstrtoint(buf,10,&sconfig))
 		return -EINVAL;
 
-//	thermal_msg->sconfig = sconfig; //
+//	thermal_msg->sconfig = sconfig;
 
 	return count;
 }
@@ -1041,7 +1041,7 @@ temp_state_store(struct device *dev, struct device_attribute *devattr,
 	if (kstrtoint(buf,10,&temp_state))
 		return -EINVAL;
 
-//	thermal_msg->temp_state = temp_state; //
+//	thermal_msg->temp_state = temp_state;
 
 	return count;
 }
@@ -1093,7 +1093,7 @@ mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 	return sprintf(buf, "%s\n", mode == THERMAL_DEVICE_ENABLED ? "enabled"
 		       : "disabled");
 }
-//
+
 static ssize_t
 mode_store(struct device *dev, struct device_attribute *attr,
 	   const char *buf, size_t count)
@@ -1175,7 +1175,6 @@ trip_point_type_activate(struct device *dev, struct device_attribute *attr,
 		goto trip_activate_exit;
 	}
 
-	return count;
 	if (!strcmp(buf, "enabled")) {
 		activate = true;
 	} else if (!strcmp(buf, "disabled")) {
@@ -1215,7 +1214,6 @@ trip_point_temp_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_temp", &trip))
 		return -EINVAL;
 
-	return count;		
 	if (kstrtol(buf, 10, &temperature))
 		return -EINVAL;
 
@@ -1259,7 +1257,6 @@ trip_point_hyst_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_hyst", &trip))
 		return -EINVAL;
 
-	return count;
 	if (kstrtoint(buf, 10, &temperature))
 		return -EINVAL;
 
@@ -1303,7 +1300,6 @@ passive_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(buf, "%d\n", &state))
 		return -EINVAL;
 
-	return count;
 	/* sanity check: values below 1000 millicelcius don't make sense
 	 * and can cause the system to go into a thermal heart attack
 	 */
@@ -1364,7 +1360,6 @@ policy_store(struct device *dev, struct device_attribute *attr,
 
 	snprintf(name, sizeof(name), "%s", buf);
 
-	return count;
 	mutex_lock(&thermal_governor_lock);
 	mutex_lock(&tz->lock);
 
@@ -1422,7 +1417,6 @@ emul_temp_store(struct device *dev, struct device_attribute *attr,
 	if (kstrtoul(buf, 10, &temperature))
 		return -EINVAL;
 
-	return count;
 	if (!tz->ops->set_emul_temp) {
 		mutex_lock(&tz->lock);
 		tz->emul_temperature = temperature;
@@ -1463,7 +1457,7 @@ sustainable_power_store(struct device *dev, struct device_attribute *devattr,
 	if (kstrtou32(buf, 10, &sustainable_power))
 		return -EINVAL;
 
-//	tz->tzp->sustainable_power = sustainable_power;
+	tz->tzp->sustainable_power = sustainable_power;
 
 	return count;
 }
