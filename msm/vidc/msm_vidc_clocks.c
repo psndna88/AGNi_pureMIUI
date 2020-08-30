@@ -701,9 +701,14 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 
 		vpp_cycles = mbs_per_second * vpp_cycles_per_mb /
 				inst->clk_data.work_route;
-		/* 1.25 factor for IbP GOP structure */
-		if (msm_comm_g_ctrl_for_id(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES))
+		/* Factor 1.25 for IbP and 1.375 for I1B2b1P GOP structure */
+		if (is_hier_b_session(inst)) {
+			vpp_cycles += (vpp_cycles / 4) + (vpp_cycles / 8);
+		} else if (msm_comm_g_ctrl_for_id(inst,
+					V4L2_CID_MPEG_VIDEO_B_FRAMES)) {
 			vpp_cycles += vpp_cycles / 4;
+		}
+
 		/* 21 / 20 is minimum overhead factor */
 		vpp_cycles += max(div_u64(vpp_cycles, 20), fw_vpp_cycles);
 		/* 1.01 is multi-pipe overhead */
@@ -758,7 +763,8 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 
 		/* VSP */
 		codec = get_v4l2_codec(inst);
-		base_cycles = inst->clk_data.entry->vsp_cycles;
+		base_cycles = inst->has_bframe ?
+				80 : inst->clk_data.entry->vsp_cycles;
 		vsp_cycles = fps * filled_len * 8;
 
 		if (codec == V4L2_PIX_FMT_VP9) {

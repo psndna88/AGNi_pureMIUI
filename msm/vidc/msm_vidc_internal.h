@@ -574,6 +574,7 @@ struct msm_vidc_inst {
 	u32 first_reconfig_done;
 	u64 last_qbuf_time_ns;
 	bool active;
+	bool has_bframe;
 };
 
 extern struct msm_vidc_drv *vidc_driver;

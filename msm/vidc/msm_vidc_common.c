@@ -2615,6 +2615,7 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 		break;
 	case HFI_PICTURE_TYPE_B:
 		mbuf->vvb.flags |= V4L2_BUF_FLAG_BFRAME;
+		inst->has_bframe = 1;
 		break;
 	case HFI_FRAME_NOTCODED:
 	case HFI_UNUSED_PICT:
