@@ -5028,13 +5028,9 @@ static int __cam_isp_ctx_stop_dev_in_activated_unlock(
 	if (ctx_isp->hw_ctx) {
 		stop.ctxt_to_hw_map = ctx_isp->hw_ctx;
 
-		if (stop_cmd)
-			stop_isp.hw_stop_cmd =
-				CAM_ISP_HW_STOP_AT_FRAME_BOUNDARY;
-		else
-			stop_isp.hw_stop_cmd = CAM_ISP_HW_STOP_IMMEDIATELY;
-
+		stop_isp.hw_stop_cmd = CAM_ISP_HW_STOP_IMMEDIATELY;
 		stop_isp.stop_only = false;
+
 		stop.args = (void *) &stop_isp;
 		ctx->hw_mgr_intf->hw_stop(ctx->hw_mgr_intf->hw_mgr_priv,
 			&stop);
