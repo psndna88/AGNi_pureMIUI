@@ -38,6 +38,11 @@
 		qcom,sde-dspp-off = <0x55000>;
 		qcom,sde-dspp-size = <0x1800>;
 
+		qcom,sde-dspp-rc-version = <0x00010000>;
+		qcom,sde-dspp-rc-off = <0x15800>;
+		qcom,sde-dspp-rc-size = <0x100>;
+		qcom,sde-dspp-rc-mem-size = <2720>;
+
 		qcom,sde-intf-off = <0x0 0x6b800>;
 		qcom,sde-intf-size = <0x2c0>;
 		qcom,sde-intf-type = "none", "dsi";
