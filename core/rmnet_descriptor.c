@@ -340,7 +340,6 @@ int rmnet_frag_ipv6_skip_exthdr(struct rmnet_frag_descriptor *frag_desc,
 		if (!hp)
 			return -EINVAL;
 
-		hp = rmnet_frag_data_ptr(frag_desc) + start;
 		if (nexthdr == NEXTHDR_FRAGMENT) {
 			u32 off = offsetof(struct frag_hdr, frag_off);
 			__be16 *fp, __fp;
@@ -1005,6 +1004,13 @@ static bool rmnet_frag_validate_csum(struct rmnet_frag_descriptor *frag_desc)
 	__wsum csum;
 	__sum16 pseudo;
 
+	/* Keep analysis tools happy, since they will see that
+	 * rmnet_frag_data_ptr() could return NULL. It can't in this case,
+	 * since we can't get this far otherwise...
+	 */
+	if (unlikely(!data))
+		return false;
+
 	datagram_len = frag_desc->len - frag_desc->ip_len;
 	if (frag_desc->ip_proto == 4) {
 		struct iphdr *iph = (struct iphdr *)data;
@@ -1061,6 +1067,9 @@ rmnet_frag_segment_coal_data(struct rmnet_frag_descriptor *coal_desc,
 	 * for it.
 	*/
 	version = rmnet_frag_data_ptr(coal_desc);
+	if (unlikely(!version))
+		return;
+
 	if ((*version & 0xF0) == 0x40) {
 		struct iphdr *iph, __iph;
 
