@@ -371,6 +371,9 @@ static int cam_vfe_camif_lite_process_cmd(
 		break;
 	case CAM_ISP_HW_CMD_SET_CAMIF_DEBUG:
 		break;
+	case CAM_ISP_HW_CMD_BLANKING_UPDATE:
+		rc = 0;
+		break;
 	default:
 		CAM_ERR(CAM_ISP,
 			"unsupported process command:%d", cmd_type);

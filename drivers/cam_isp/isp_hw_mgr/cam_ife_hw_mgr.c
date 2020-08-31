@@ -49,6 +49,7 @@ static uint32_t blob_type_hw_cmd_map[CAM_ISP_GENERIC_BLOB_TYPE_MAX] = {
 	CAM_ISP_HW_CMD_CORE_CONFIG,
 	CAM_ISP_HW_CMD_WM_CONFIG_UPDATE,
 	CAM_ISP_HW_CMD_BW_UPDATE_V2,
+	CAM_ISP_HW_CMD_BLANKING_UPDATE,
 };
 
 static struct cam_ife_hw_mgr g_ife_hw_mgr;
@@ -5577,6 +5578,53 @@ static int cam_isp_blob_csid_config_update(
 
 	return rc;
 }
+
+static int cam_isp_blob_sensor_blanking_config(
+	uint32_t                               blob_type,
+	struct cam_isp_generic_blob_info      *blob_info,
+	struct cam_isp_sensor_blanking_config *sensor_blanking_config,
+	struct cam_hw_prepare_update_args     *prepare)
+
+{
+	struct cam_ife_hw_mgr_ctx       *ctx = NULL;
+	struct cam_isp_hw_mgr_res       *hw_mgr_res;
+	struct cam_hw_intf              *hw_intf;
+	struct cam_isp_blanking_config  blanking_config;
+	int                             rc = 0, i;
+
+	ctx = prepare->ctxt_to_hw_map;
+	if (list_empty(&ctx->res_list_ife_src)) {
+		CAM_ERR(CAM_ISP, "Mux List empty");
+		return -ENODEV;
+	}
+
+	list_for_each_entry(hw_mgr_res,
+		&ctx->res_list_ife_src, list) {
+		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+			if (!hw_mgr_res->hw_res[i])
+				continue;
+
+			hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+			blanking_config.node_res = hw_mgr_res->hw_res[i];
+			blanking_config.vbi = sensor_blanking_config->vbi;
+			blanking_config.hbi = sensor_blanking_config->hbi;
+
+			if (hw_intf && hw_intf->hw_ops.process_cmd) {
+				rc = hw_intf->hw_ops.process_cmd(
+					hw_intf->hw_priv,
+					CAM_ISP_HW_CMD_BLANKING_UPDATE,
+					&blanking_config,
+					sizeof(
+					struct cam_isp_blanking_config));
+				if (rc)
+					CAM_ERR(CAM_ISP,
+						"blanking update failed");
+			}
+		}
+	}
+	return rc;
+}
+
 static int cam_isp_packet_generic_blob_handler(void *user_data,
 	uint32_t blob_type, uint32_t blob_size, uint8_t *blob_data)
 {
@@ -6055,6 +6103,25 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 			epd_config, prepare);
 		if (rc)
 			CAM_ERR(CAM_ISP, "CSID Config failed rc: %d", rc);
+	}
+		break;
+	case CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_BLANKING_CONFIG: {
+		struct cam_isp_sensor_blanking_config  *sensor_blanking_config;
+
+		if (blob_size < sizeof(struct cam_isp_sensor_blanking_config)) {
+			CAM_ERR(CAM_ISP, "Invalid blob size %zu expected %zu",
+				blob_size,
+				sizeof(struct cam_isp_sensor_blanking_config));
+			return -EINVAL;
+		}
+		sensor_blanking_config =
+			(struct cam_isp_sensor_blanking_config *)blob_data;
+
+		rc = cam_isp_blob_sensor_blanking_config(blob_type, blob_info,
+			sensor_blanking_config, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP,
+				"Epoch Configuration Update Failed rc:%d", rc);
 	}
 		break;
 	case CAM_ISP_GENERIC_BLOB_TYPE_SENSOR_DIMENSION_CONFIG: {

@@ -124,6 +124,7 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ,
 	CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
 	CAM_ISP_HW_CMD_GET_RES_FOR_MID,
+	CAM_ISP_HW_CMD_BLANKING_UPDATE,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -176,6 +177,20 @@ struct cam_isp_resource_node {
 		uint32_t cmd_type, void *cmd_args, uint32_t arg_size);
 	CAM_IRQ_HANDLER_TOP_HALF       top_half_handler;
 	CAM_IRQ_HANDLER_BOTTOM_HALF    bottom_half_handler;
+};
+
+/*
+ * struct cam_isp_blanking_config:
+ *
+ * @Brief:          Structure to pass blanking details
+ * @hbi:            HBI Value
+ * @vbi:            VBI Value
+ * node_res:        Pointer to Resource Node object
+ */
+struct cam_isp_blanking_config {
+	uint32_t                           hbi;
+	uint32_t                           vbi;
+	struct cam_isp_resource_node       *node_res;
 };
 
 /*

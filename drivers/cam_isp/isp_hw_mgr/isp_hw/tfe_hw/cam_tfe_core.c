@@ -79,6 +79,8 @@ struct cam_tfe_camif_data {
 	uint32_t                           camif_debug;
 	uint32_t                           camif_pd_enable;
 	uint32_t                           dual_tfe_sync_sel;
+	uint32_t                           hbi_value;
+	uint32_t                           vbi_value;
 };
 
 struct cam_tfe_rdi_data {
@@ -265,6 +267,10 @@ static void cam_tfe_log_tfe_in_debug_status(
 				"Acquired line start:0x%x line end:0x%x",
 				camif_data->first_line,
 				camif_data->last_line);
+			CAM_INFO(CAM_ISP, "vbi_value:0x%x hbi_value:0x%x",
+				camif_data->vbi_value,
+				camif_data->hbi_value);
+
 		} else if ((top_priv->in_rsrc[i].res_id >=
 			CAM_ISP_HW_TFE_IN_RDI0) ||
 			(top_priv->in_rsrc[i].res_id <=
@@ -1815,6 +1821,10 @@ int cam_tfe_top_reserve(void *device_priv,
 					acquire_args->in_port->line_start;
 				camif_data->last_line =
 					acquire_args->in_port->line_end;
+				camif_data->vbi_value =
+					acquire_args->in_port->sensor_vbi;
+				camif_data->hbi_value =
+					acquire_args->in_port->sensor_hbi;
 				camif_data->camif_pd_enable =
 					acquire_args->camif_pd_enable;
 				camif_data->dual_tfe_sync_sel =
@@ -1978,9 +1988,12 @@ static int cam_tfe_camif_resource_start(
 	}
 
 	/* Epoch config */
-	epoch0_irq_mask = ((rsrc_data->last_line -
+	epoch0_irq_mask = (((rsrc_data->last_line + rsrc_data->vbi_value) -
 			rsrc_data->first_line) / 2) +
 			rsrc_data->first_line;
+	if (epoch0_irq_mask > rsrc_data->last_line)
+		epoch0_irq_mask = rsrc_data->last_line;
+
 	epoch1_irq_mask = rsrc_data->reg_data->epoch_line_cfg &
 			0xFFFF;
 	computed_epoch_line_cfg = (epoch0_irq_mask << 16) |
