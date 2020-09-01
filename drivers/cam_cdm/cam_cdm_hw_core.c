@@ -1085,6 +1085,9 @@ static void cam_hw_cdm_reset_cleanup(
 			&core->bl_fifo[i].bl_request_list, entry) {
 			if (node->request_type ==
 					CAM_HW_CDM_BL_CB_CLIENT) {
+				CAM_DBG(CAM_CDM,
+					"Notifying client %d for tag %d",
+					node->client_hdl, node->bl_tag);
 				if (flush_hw)
 					cam_cdm_notify_clients(cdm_hw,
 						(node->client_hdl == handle) ?
@@ -1145,6 +1148,17 @@ static void cam_hw_cdm_work(struct work_struct *work)
 			if (core->bl_fifo[payload->fifo_idx].work_record)
 				core->bl_fifo[payload->fifo_idx].work_record--;
 
+			if (list_empty(&core->bl_fifo[payload->fifo_idx]
+					.bl_request_list)) {
+				CAM_INFO(CAM_CDM,
+					"Fifo list empty, idx %d tag %d arb %d",
+					payload->fifo_idx, payload->irq_data,
+					core->arbitration);
+				mutex_unlock(&core->bl_fifo[payload->fifo_idx]
+						.fifo_lock);
+				return;
+			}
+
 			if (core->bl_fifo[payload->fifo_idx]
 				.last_bl_tag_done !=
 				payload->irq_data) {
@@ -1174,7 +1188,7 @@ static void cam_hw_cdm_work(struct work_struct *work)
 					}
 				}
 			} else {
-				CAM_DBG(CAM_CDM,
+				CAM_INFO(CAM_CDM,
 					"Skip GenIRQ, tag 0x%x fifo %d",
 					payload->irq_data, payload->fifo_idx);
 			}
