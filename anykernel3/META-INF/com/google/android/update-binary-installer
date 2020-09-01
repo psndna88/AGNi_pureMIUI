@@ -579,69 +579,85 @@ $BB chmod 0755 /vendor/bin/init.qcom.early_boot.sh;
 /sbin/restorecon -v /vendor/bin/init.qcom.sh;
 ########$BB rm /cache/cleaned;
 ### EAS Perf hal
+if [ ! -d /vendor/etc/perf ]; then
+	PIXEL_PERF=1;
+else
+	PIXEL_PERF=0;
+fi;
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
 	# Backups
-	if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
-			$BB mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
+	if [ "$PIXEL_PERF" == "0" ]; then
+		if [ ! -f /vendor/etc/perf/commonresourceconfigs.xml.bak ]; then
+				$BB mv /vendor/etc/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml.bak;
+		fi;
+		if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
+			$BB mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
+		fi;
+		if [ ! -f /vendor/etc/perf/perfconfigstore.xml.bak ]; then
+			$BB mv /vendor/etc/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml.bak;
+		fi;
+		if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
+			$BB mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
+		fi;
+		if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
+			$BB mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
+		fi;
+#		if [ ! -f /vendor/etc/perf/perf-profile0.conf.bak ]; then
+#			$BB mv /vendor/etc/perf/perf-profile0.conf /vendor/etc/perf/perf-profile0.conf.bak;
+#		fi;
 	fi;
 	if [ ! -f /vendor/etc/msm_irqbalance.conf.bak ]; then
 		$BB mv /vendor/etc/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf.bak;
-	fi;
-	if [ ! -f /vendor/etc/perf/perfboostsconfig.xml.bak ]; then
-		$BB mv /vendor/etc/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml.bak;
-	fi;
-	if [ ! -f /vendor/etc/perf/perfconfigstore.xml.bak ]; then
-		$BB mv /vendor/etc/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml.bak;
-	fi;
-	if [ ! -f /vendor/etc/perf/targetconfig.xml.bak ]; then
-		$BB mv /vendor/etc/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml.bak;
-	fi;
-	if [ ! -f /vendor/etc/perf/targetresourceconfigs.xml.bak ]; then
-		$BB mv /vendor/etc/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml.bak;
 	fi;
 	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
 		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak 2>/dev/null;
 	fi;
 	# Copy files
-	$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
+	if [ "$PIXEL_PERF" == "0" ]; then
+		$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
+		$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
+		$BB cp -f $AKHOME/tools/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml;
+		$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
+		$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
+#		$BB cp -f $AKHOME/tools/perf/perf-profile0.conf /vendor/etc/perf/perf-profile0.conf;
+	fi;
 	$BB cp -f $AKHOME/tools/perf/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf;
-	$BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
-	$BB cp -f $AKHOME/tools/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstore.xml;
-	$BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
-	$BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
 	if [ -f /vendor/etc/powerhint.json ]; then
 		$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
 	fi;
 	# Permissions
-	$BB chmod 0644 /vendor/etc/perf/*;
+	if [ "$PIXEL_PERF" == "0" ]; then
+		$BB chmod 0644 /vendor/etc/perf/*;
+		/sbin/restorecon -R -v /vendor/etc/perf;
+	fi;
 	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
 	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
-	/sbin/restorecon -R -v /vendor/etc/perf;
 	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
 	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
 	ui_print " " "AGNi has installed Perf HAL (uvera)" " ";
 else
 	# Restore Backups
-	$BB mv -f /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
+	if [ "$PIXEL_PERF" == "0" ]; then
+		$BB mv -f /vendor/etc/perf/commonresourceconfigs.xml.bak /vendor/etc/perf/commonresourceconfigs.xml;
+		$BB mv -f /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
+		$BB mv -f /vendor/etc/perf/perfconfigstore.xml.bak /vendor/etc/perf/perfconfigstore.xml;
+		$BB mv -f /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
+		$BB mv -f /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
+#		$BB mv /vendor/etc/perf/perf-profile0.conf.bak /vendor/etc/perf/perf-profile0.conf;
+	fi;
 	$BB mv -f /vendor/etc/msm_irqbalance.conf.bak /vendor/etc/msm_irqbalance.conf 2>/dev/null;
-	$BB mv -f /vendor/etc/perf/perfboostsconfig.xml.bak /vendor/etc/perf/perfboostsconfig.xml;
-	$BB mv -f /vendor/etc/perf/perfconfigstore.xml.bak /vendor/etc/perf/perfconfigstore.xml;
-	$BB mv -f /vendor/etc/perf/targetconfig.xml.bak /vendor/etc/perf/targetconfig.xml;
-	$BB mv -f /vendor/etc/perf/targetresourceconfigs.xml.bak /vendor/etc/perf/targetresourceconfigs.xml;
 	$BB mv -f /vendor/etc/powerhint.json.bak /vendor/etc/powerhint.json 2>/dev/null;
 	# Permissions
-	$BB chmod 0644 /vendor/etc/perf/*;
+	if [ "$PIXEL_PERF" == "0" ]; then
+		$BB chmod 0644 /vendor/etc/perf/*;
+		/sbin/restorecon -R -v /vendor/etc/perf;
+	fi;
 	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
 	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
-	/sbin/restorecon -R -v /vendor/etc/perf;
 	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
 	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
 	ui_print " " "AGNi has NOT installed EAS Perf HAL." " ";
 fi;
-# Delete modules placed in /sdcard in v9.6 beta 2
-$BB rm /data/media/0/Q-Project_EAS-PowerHAL-module.zip 2>/dev/null;
-$BB rm /data/media/0/Pie-EAS_PerfHAL_module.zip 2>/dev/null;
-$BB rm /data/media/0/Pie-SDM660_EAS_perfHAL_Module_200520065239.zip 2>/dev/null;
 ### EAS Perf hal END
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
@@ -860,17 +876,12 @@ if [ -d /data/data/com.facebook.katana ]; then
 	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
 fi;
 
-# Thermal Modules for Universal Rom Fixes
-if [ ! -d /vendor/etc/thermalbak-agni ]; then
-	$BB mkdir -p /vendor/etc/thermalbak-agni;
-	$BB mv -f /vendor/etc/thermal-engin* /vendor/etc/thermalbak-agni;
+# Thermal Modules for Universal Rom Fixes REVERT
+if [ -d /vendor/etc/thermalbak-agni ]; then
+	$BB mv -f /vendor/etc/thermalbak-agni/* /vendor/etc;
+	$BB rm -rf /vendor/etc/thermalbak-agni;
+	$BB chmod 0644 /vendor/etc/thermal-engin*;
 fi;
-if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
-	$BB cp -f $AKHOME/tools/thermals-sdm660/* /vendor/etc;
-else
-	$BB cp -f $AKHOME/tools/thermals-sdm636/* /vendor/etc;
-fi;
-$BB chmod 0644 /vendor/etc/thermal-engin*;
 ## Unmount /system /vendor
 umount_all;
 
