@@ -20,6 +20,8 @@
 #include "cam_sensor_io.h"
 
 #define INVALID_VREG 100
+#define RES_MGR_GPIO_NEED_HOLD   1
+#define RES_MGR_GPIO_CAN_FREE    2
 
 /*
  * Constant Factors needed to change QTimer ticks to nanoseconds
@@ -77,4 +79,6 @@ int32_t cam_sensor_update_power_settings(void *cmd_buf,
 
 int cam_sensor_bob_pwm_mode_switch(struct cam_hw_soc_info *soc_info,
 	int bob_reg_idx, bool flag);
+
+bool cam_sensor_util_check_gpio_is_shared(struct cam_hw_soc_info *soc_info);
 #endif /* _CAM_SENSOR_UTIL_H_ */
