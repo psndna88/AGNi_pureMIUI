@@ -25,9 +25,9 @@ static bool cam_tfe_cpas_cb(uint32_t client_handle, void *userdata,
 int cam_tfe_init_soc_resources(struct cam_hw_soc_info *soc_info,
 	irq_handler_t tfe_irq_handler, void *irq_data)
 {
-	int                               rc = 0;
 	struct cam_tfe_soc_private       *soc_private;
 	struct cam_cpas_register_params   cpas_register_param;
+	int    rc = 0,  i = 0, num_pid = 0;
 
 	soc_private = kzalloc(sizeof(struct cam_tfe_soc_private),
 		GFP_KERNEL);
@@ -42,6 +42,27 @@ int cam_tfe_init_soc_resources(struct cam_hw_soc_info *soc_info,
 		CAM_ERR(CAM_ISP, "Error! get DT properties failed rc=%d", rc);
 		goto free_soc_private;
 	}
+
+	/* set some default values */
+	soc_private->num_pid = 0;
+
+	num_pid = of_property_count_u32_elems(soc_info->pdev->dev.of_node,
+		"cam_hw_pid");
+	CAM_DBG(CAM_CPAS, "tfe:%d pid count %d", soc_info->index, num_pid);
+
+	if (num_pid <= 0  || num_pid > CAM_ISP_HW_MAX_PID_VAL)
+		goto clk_option;
+
+	for (i = 0; i < num_pid; i++) {
+		of_property_read_u32_index(soc_info->pdev->dev.of_node,
+		"cam_hw_pid", i, &soc_private->pid[i]);
+		CAM_INFO(CAM_CPAS, "tfe:%d I:%d pid %d", soc_info->index,
+			i, soc_private->pid[i]);
+	}
+
+	soc_private->num_pid = num_pid;
+
+clk_option:
 
 	rc = cam_soc_util_get_option_clk_by_name(soc_info,
 		CAM_TFE_DSP_CLK_NAME, &soc_private->dsp_clk,

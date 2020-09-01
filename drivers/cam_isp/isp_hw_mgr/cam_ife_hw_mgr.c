@@ -6689,7 +6689,6 @@ static void cam_ife_mgr_dump_pf_data(
 	struct cam_hw_cmd_args *hw_cmd_args)
 {
 	struct cam_ife_hw_mgr_ctx *ctx;
-
 	struct cam_isp_hw_mgr_res          *hw_mgr_res;
 	struct cam_isp_hw_get_cmd_update    cmd_update;
 	struct cam_isp_hw_get_res_for_mid   get_res;

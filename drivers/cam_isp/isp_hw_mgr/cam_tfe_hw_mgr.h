@@ -152,7 +152,7 @@ struct cam_tfe_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
 	struct cam_hw_intf            *tpg_devices[CAM_TOP_TPG_HW_NUM_MAX];
 	struct cam_hw_intf            *csid_devices[CAM_TFE_CSID_HW_NUM_MAX];
-	struct cam_hw_intf            *tfe_devices[CAM_TFE_HW_NUM_MAX];
+	struct cam_isp_hw_intf_data   *tfe_devices[CAM_TFE_HW_NUM_MAX];
 	struct cam_soc_reg_map        *cdm_reg_map[CAM_TFE_HW_NUM_MAX];
 	struct mutex                   ctx_mutex;
 	atomic_t                       active_ctx_cnt;
