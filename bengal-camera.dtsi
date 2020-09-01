@@ -650,6 +650,7 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
+		cam_hw_pid = <4>;
 		status = "ok";
 	};
 
@@ -714,6 +715,7 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
+		cam_hw_pid = <5>;
 		status = "ok";
 	};
 
@@ -778,6 +780,7 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
+		cam_hw_pid = <6>;
 		status = "ok";
 	};
 

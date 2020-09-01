@@ -764,6 +764,7 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
+		cam_hw_pid = <4>;
 		status = "ok";
 	};
 
@@ -827,6 +828,7 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
+		cam_hw_pid = <5>;
 		status = "ok";
 	};
 
@@ -890,6 +892,7 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
+		cam_hw_pid = <6>;
 		status = "ok";
 	};
 
