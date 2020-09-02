@@ -5033,9 +5033,11 @@ static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
 		/* HW failure. user need to clean up the resource */
 		CAM_ERR(CAM_ISP, "Start HW failed");
 		ctx->state = CAM_CTX_READY;
-		trace_cam_context_state("ISP", ctx);
-		if (rc == -ETIMEDOUT)
+		if ((rc == -ETIMEDOUT) &&
+			(isp_ctx_debug.enable_cdm_cmd_buff_dump))
 			rc = cam_isp_ctx_dump_req(req_isp, 0, 0, NULL, false);
+
+		trace_cam_context_state("ISP", ctx);
 		list_del_init(&req->list);
 		list_add(&req->list, &ctx->pending_req_list);
 		goto end;
@@ -5628,7 +5630,7 @@ static int cam_isp_context_debug_register(void)
 
 	dbgfileptr = debugfs_create_dir("camera_isp_ctx", NULL);
 	if (!dbgfileptr) {
-		CAM_ERR(CAM_ICP,"DebugFS could not create directory!");
+		CAM_ERR(CAM_ISP, "DebugFS could not create directory!");
 		rc = -ENOENT;
 		goto end;
 	}
@@ -5637,9 +5639,11 @@ static int cam_isp_context_debug_register(void)
 
 	dbgfileptr = debugfs_create_u32("enable_state_monitor_dump", 0644,
 		isp_ctx_debug.dentry, &isp_ctx_debug.enable_state_monitor_dump);
+	dbgfileptr = debugfs_create_u8("enable_cdm_cmd_buffer_dump", 0644,
+		isp_ctx_debug.dentry, &isp_ctx_debug.enable_cdm_cmd_buff_dump);
 	if (IS_ERR(dbgfileptr)) {
 		if (PTR_ERR(dbgfileptr) == -ENODEV)
-			CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel!");
+			CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel!");
 		else
 			rc = PTR_ERR(dbgfileptr);
 	}

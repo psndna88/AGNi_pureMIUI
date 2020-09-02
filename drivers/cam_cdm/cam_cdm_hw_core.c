@@ -169,14 +169,14 @@ static int cam_hw_cdm_pause_core(struct cam_hw_info *cdm_hw, bool pause)
 	return rc;
 }
 
-int cam_hw_cdm_enable_core_dbg(struct cam_hw_info *cdm_hw)
+int cam_hw_cdm_enable_core_dbg(struct cam_hw_info *cdm_hw, uint32_t value)
 {
 	int rc = 0;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 
 	if (cam_cdm_write_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->core_debug,
-			0x10100)) {
+			value)) {
 		CAM_ERR(CAM_CDM, "Failed to Write CDM HW core debug");
 		rc = -EIO;
 	}
@@ -263,24 +263,7 @@ end:
 	return rc;
 }
 
-int cam_hw_cdm_enable_core_dbg_per_fifo(
-		struct cam_hw_info *cdm_hw,
-		uint32_t            fifo_idx)
-{
-	int rc = 0;
-	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
-
-	if (cam_cdm_write_hw_reg(cdm_hw,
-			core->offsets->cmn_reg->core_debug,
-			(0x10100 | fifo_idx << 20))) {
-		CAM_ERR(CAM_CDM, "Failed to Write CDM HW core debug");
-		rc = -EIO;
-	}
-
-	return rc;
-}
-
-void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
+static void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
 {
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 	int i, j;
@@ -289,13 +272,7 @@ void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++) {
 		cam_hw_cdm_bl_fifo_pending_bl_rb_in_fifo(cdm_hw,
 			i, &num_pending_req);
-
-		if (cam_hw_cdm_enable_core_dbg_per_fifo(cdm_hw, i)) {
-			CAM_ERR(CAM_CDM,
-				"Problem in selecting the fifo for readback");
-			continue;
-		}
-		for (j = 0 ; j < num_pending_req ; j++) {
+		for (j = 0; j < num_pending_req ; j++) {
 			cam_cdm_write_hw_reg(cdm_hw,
 				core->offsets->cmn_reg->bl_fifo_rb, j);
 			cam_cdm_read_hw_reg(cdm_hw,
@@ -316,83 +293,111 @@ void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
 	}
 }
 
-void cam_hw_cdm_dump_core_debug_registers(
-	struct cam_hw_info *cdm_hw)
+void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
+	bool pause_core)
 {
-	uint32_t dump_reg, dump_reg1, dump_reg2, core_dbg;
+	uint32_t dump_reg, core_dbg = 0x100;
 	int i;
+	bool is_core_paused_already;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
+	const struct cam_cdm_icl_regs *inv_cmd_log =
+		core->offsets->cmn_reg->icl_reg;
 
 	cam_cdm_read_hw_reg(cdm_hw, core->offsets->cmn_reg->core_en, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW core status=%x", dump_reg);
+	CAM_INFO(CAM_CDM, "CDM HW core status=0x%x", dump_reg);
+
+	if (pause_core) {
+		cam_hw_cdm_pause_core(cdm_hw, true);
+		usleep_range(1000, 1010);
+	}
+	cam_hw_cdm_enable_core_dbg(cdm_hw, core_dbg);
 
 	cam_cdm_read_hw_reg(cdm_hw, core->offsets->cmn_reg->usr_data,
 		&dump_reg);
 	CAM_INFO(CAM_CDM, "CDM HW core userdata=0x%x", dump_reg);
 
-	usleep_range(1000, 1010);
-
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->debug_status,
 		&dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW Debug status reg=%x", dump_reg);
-	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->core_debug,
-		&core_dbg);
+	CAM_INFO(CAM_CDM, "CDM HW Debug status reg=0x%x", dump_reg);
+
 	if (core_dbg & 0x100) {
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->last_ahb_addr,
 			&dump_reg);
-		CAM_INFO(CAM_CDM, "AHB dump reglastaddr=%x", dump_reg);
+		CAM_INFO(CAM_CDM, "AHB dump reglastaddr=0x%x", dump_reg);
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->last_ahb_data,
 			&dump_reg);
-		CAM_INFO(CAM_CDM, "AHB dump reglastdata=%x", dump_reg);
+		CAM_INFO(CAM_CDM, "AHB dump reglastdata=0x%x", dump_reg);
 	} else {
 		CAM_INFO(CAM_CDM, "CDM HW AHB dump not enable");
 	}
 
-	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->icl_reg->data_regs->icl_inv_data,
-		&dump_reg);
-	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->icl_reg->misc_regs->icl_inv_bl_addr,
-		&dump_reg1);
-	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->icl_reg->misc_regs->icl_status,
-		&dump_reg2);
-	CAM_INFO(CAM_CDM,
-		"Last Inv Cmd Log(ICL)Status: 0x%x, Last Inv cmd: 0x%x, Last Inv bl_addr: 0x%x",
-		dump_reg2, dump_reg, dump_reg1);
+	if (inv_cmd_log) {
+		if (inv_cmd_log->misc_regs) {
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->misc_regs->icl_status,
+				&dump_reg);
+			CAM_INFO(CAM_CDM,
+				"Last Inv Cmd Log(ICL)Status: 0x%x",
+				dump_reg);
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->misc_regs->icl_inv_bl_addr,
+				&dump_reg);
+			CAM_INFO(CAM_CDM,
+				"Last Inv bl_addr: 0x%x",
+				dump_reg);
+		}
+		if (inv_cmd_log->data_regs) {
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_inv_data,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "Last Inv cmd: 0x%x", dump_reg);
+		}
+	}
 
-	cam_hw_cdm_dump_bl_fifo_data(cdm_hw);
+	if (core_dbg & 0x10000) {
+		cam_cdm_read_hw_reg(cdm_hw,
+			core->offsets->cmn_reg->core_en, &dump_reg);
+		is_core_paused_already = (bool)(dump_reg & 0x20);
+		if (!is_core_paused_already) {
+			cam_hw_cdm_pause_core(cdm_hw, true);
+			usleep_range(1000, 1010);
+		}
+
+		cam_hw_cdm_dump_bl_fifo_data(cdm_hw);
+
+		if (!is_core_paused_already)
+			cam_hw_cdm_pause_core(cdm_hw, false);
+	}
 
 	CAM_INFO(CAM_CDM, "CDM HW default dump");
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->core_cfg, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW core cfg=%x", dump_reg);
+	CAM_INFO(CAM_CDM, "CDM HW core cfg=0x%x", dump_reg);
 
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo_irq; i++) {
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_status, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq status%d=%x", i, dump_reg);
+		CAM_INFO(CAM_CDM, "CDM HW irq status%d=0x%x", i, dump_reg);
 
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_set, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq set%d=%x", i, dump_reg);
+		CAM_INFO(CAM_CDM, "CDM HW irq set%d=0x%x", i, dump_reg);
 
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_mask, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq mask%d=%x", i, dump_reg);
+		CAM_INFO(CAM_CDM, "CDM HW irq mask%d=0x%x", i, dump_reg);
 
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_clear, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq clear%d=%x", i, dump_reg);
+		CAM_INFO(CAM_CDM, "CDM HW irq clear%d=0x%x", i, dump_reg);
 	}
 
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->current_bl_base, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW current BL base=%x", dump_reg);
+	CAM_INFO(CAM_CDM, "CDM HW current BL base=0x%x", dump_reg);
 
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->current_bl_len, &dump_reg);
@@ -408,8 +413,11 @@ void cam_hw_cdm_dump_core_debug_registers(
 
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->current_used_ahb_base, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW current AHB base=%x", dump_reg);
+	CAM_INFO(CAM_CDM, "CDM HW current AHB base=0x%x", dump_reg);
 
+	cam_hw_cdm_disable_core_dbg(cdm_hw);
+	if (pause_core)
+		cam_hw_cdm_pause_core(cdm_hw, false);
 }
 
 enum cam_cdm_arbitration cam_cdm_get_arbitration_type(
@@ -1209,14 +1217,7 @@ static void cam_hw_cdm_work(struct work_struct *work)
 			for (i = 0; i < core->offsets->reg_data->num_bl_fifo;
 					i++)
 				mutex_lock(&core->bl_fifo[i].fifo_lock);
-			/*
-			 * First pause CDM, If it fails still proceed
-			 * to dump debug info
-			 */
-			cam_hw_cdm_pause_core(cdm_hw, true);
-			cam_hw_cdm_dump_core_debug_registers(cdm_hw);
-			/* Resume CDM back */
-			cam_hw_cdm_pause_core(cdm_hw, false);
+			cam_hw_cdm_dump_core_debug_registers(cdm_hw, true);
 			for (i = 0; i < core->offsets->reg_data->num_bl_fifo;
 					i++)
 				mutex_unlock(&core->bl_fifo[i].fifo_lock);
@@ -1247,14 +1248,7 @@ static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
 			mutex_lock(&core->bl_fifo[i].fifo_lock);
 		if (cdm_hw->hw_state == CAM_HW_STATE_POWER_UP) {
-			/*
-			 * First pause CDM, If it fails still proceed
-			 * to dump debug info
-			 */
-			cam_hw_cdm_pause_core(cdm_hw, true);
-			cam_hw_cdm_dump_core_debug_registers(cdm_hw);
-			/* Resume CDM back */
-			cam_hw_cdm_pause_core(cdm_hw, false);
+			cam_hw_cdm_dump_core_debug_registers(cdm_hw, true);
 		} else
 			CAM_INFO(CAM_CDM, "CDM hw is power in off state");
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
@@ -1574,7 +1568,7 @@ int cam_hw_cdm_handle_error_info(
 		current_fifo, current_tag);
 
 	/* dump cdm registers for further debug */
-	cam_hw_cdm_dump_core_debug_registers(cdm_hw);
+	cam_hw_cdm_dump_core_debug_registers(cdm_hw, false);
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
 		if (!cdm_core->bl_fifo[i].bl_depth)
@@ -1690,8 +1684,8 @@ int cam_hw_cdm_hang_detect(
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++)
 		if (cdm_core->bl_fifo[i].work_record) {
 			CAM_WARN(CAM_CDM,
-				"workqueue got delayed, work_record :%u",
-				cdm_core->bl_fifo[i].work_record);
+				"workqueue got delayed, bl_fifo: %d, work_record :%u",
+				i, cdm_core->bl_fifo[i].work_record);
 			rc = 0;
 			break;
 		}
