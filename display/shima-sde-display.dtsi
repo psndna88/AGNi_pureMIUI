@@ -138,7 +138,7 @@
 
 &mdss_mdp {
 	connectors = <&smmu_sde_unsec &smmu_sde_sec &sde_wb &sde_dsi
-		&sde_dsi1>;
+		&sde_dsi1 &sde_rscc>;
 };
 
 &dsi_r66451_amoled_video {
