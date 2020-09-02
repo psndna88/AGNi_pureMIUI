@@ -12,8 +12,8 @@
 		qcom,panel-supply-entry@0 {
 			reg = <0>;
 			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1800000>;
-			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-min-voltage = <1920000>;
+			qcom,supply-max-voltage = <1920000>;
 			qcom,supply-enable-load = <60700>;
 			qcom,supply-disable-load = <80>;
 			qcom,supply-post-on-sleep = <20>;
