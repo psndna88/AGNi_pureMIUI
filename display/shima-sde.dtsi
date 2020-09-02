@@ -3,7 +3,6 @@
 
 &soc {
 	ext_disp: qcom,msm-ext-disp {
-		status = "disabled";
 		compatible = "qcom,msm-ext-disp";
 
 		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
@@ -12,12 +11,10 @@
 	};
 
 	qcom_msmhdcp: qcom,msm_hdcp {
-		status = "disabled";
 		compatible = "qcom,msm-hdcp";
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status = "disabled";
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
