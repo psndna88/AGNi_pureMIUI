@@ -102,18 +102,7 @@ extern bool msm_vidc_debug_timeout;
 	__str; \
 	})
 
-#define dprintk(__level, __fmt, arg...)	\
-	do { \
-		if (msm_vidc_debug & __level) { \
-			if (msm_vidc_debug_out == VIDC_OUT_PRINTK) { \
-				pr_info(VIDC_DBG_TAG __fmt, \
-						VIDC_MSG_PRIO2STRING(__level), \
-						## arg); \
-			} \
-		} \
-	} while (0)
-
-
+#define dprintk(__level, __fmt, arg...)
 
 struct dentry *msm_vidc_debugfs_init_drv(void);
 struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
