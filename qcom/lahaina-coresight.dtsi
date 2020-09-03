@@ -107,7 +107,6 @@
 
 		coresight-name = "coresight-tmc-etf";
 		coresight-csr = <&swao_csr>;
-		coresight-ctis = <&cti0_swao &cti3_swao>;
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "apb_pclk";
 
@@ -154,7 +153,7 @@
 
 		qcom,sw-usb;
 		coresight-name = "coresight-tmc-etr";
-		coresight-ctis = <&cti0 &cti3_swao>;
+		coresight-ctis = <&cti0 &cti0>;
 		coresight-csr = <&csr>;
 
 		clocks = <&clock_aop QDSS_CLK>;
