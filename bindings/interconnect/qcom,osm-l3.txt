@@ -8,6 +8,8 @@ Required properties :
 - compatible : shall contain only one of the following:
 			"qcom,sdm845-osm-l3",
 			"qcom,sm8150-osm-l3";
+			"qcom,sm6150-osm-l3";
+			"qcom,scshrike-osm-l3";
 - reg : Address and length of the register set for the device
 - clock-names: should contain "xo", "alternate"
 - clocks: list of phandle and clock specifier pairs corresponding to
