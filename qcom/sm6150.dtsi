@@ -36,6 +36,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -74,6 +75,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_100>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_100: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -107,6 +109,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_200>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_200: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -139,6 +142,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_300>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_300: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -171,6 +175,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_400>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_400: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -203,6 +208,7 @@
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_500>;
+			qcom,freq-domain = <&cpufreq_hw 0 6>;
 			#cooling-cells = <2>;
 			L2_500: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -235,6 +241,7 @@
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_600>;
+			qcom,freq-domain = <&cpufreq_hw 1 2>;
 			#cooling-cells = <2>;
 			L2_600: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -276,6 +283,7 @@
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_700>;
+			qcom,freq-domain = <&cpufreq_hw 1 2>;
 			#cooling-cells = <2>;
 			L2_700: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -861,6 +869,15 @@
 		clocks = <&rpmhcc RPMH_CXO_CLK>;
 		clock-names = "xo_clk_src";
 		#clock-cells = <1>;
+	};
+
+	cpufreq_hw: cpufreq@18323000 {
+		compatible = "qcom,cpufreq-hw";
+		reg = <0x18323000 0x1400>, <0x18325800 0x1400>;
+		reg-names = "freq-domain0", "freq-domain1";
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
+		clock-names = "xo", "alternate";
+		#freq-domain-cells = <2>;
 	};
 };
 
