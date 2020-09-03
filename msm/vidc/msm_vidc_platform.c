@@ -425,11 +425,12 @@ static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
 	/* {cap_type, domains, codecs, min, max, step_size, default_value,} */
 	{CAP_FRAME_WIDTH, DEC, CODECS_ALL, 96, 8192, 1, 1920},
 	{CAP_FRAME_HEIGHT, DEC, CODECS_ALL, 96, 8192, 1, 1080},
-	{CAP_FRAME_WIDTH, ENC, CODECS_ALL, 128, 8192, 1, 1920},
-	{CAP_FRAME_HEIGHT, ENC, CODECS_ALL, 128, 8192, 1, 1080},
+	{CAP_FRAME_WIDTH, ENC, CODECS_ALL, 128, 4096, 1, 1920},
+	{CAP_FRAME_HEIGHT, ENC, CODECS_ALL, 128, 4096, 1, 1080},
 	/* (8192 * 4320) / 256 */
 	{CAP_MBS_PER_FRAME, DEC, CODECS_ALL, 36, 138240, 1, 138240},
-	{CAP_MBS_PER_FRAME, ENC, CODECS_ALL, 64, 138240, 1, 138240},
+	/* (4096 * 2176) / 256 */
+	{CAP_MBS_PER_FRAME, ENC, CODECS_ALL, 64, 34816, 1, 138240},
 	{CAP_FRAMERATE, DOMAINS_ALL, CODECS_ALL, 1, 480, 1, 30},
 
 	/* Encode spec - 4K@60 */
@@ -518,18 +519,18 @@ static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
 	 * to set higher level than supported.
 	 */
 	{CAP_H264_LEVEL, ENC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, ENC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
 	/* Level for AVC and HEVC decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_6_0, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_6, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 };
 
@@ -625,18 +626,18 @@ static struct msm_vidc_codec_capability shima_capabilities_v1[] = {
 	 * to set higher level than supported.
 	 */
 	{CAP_H264_LEVEL, ENC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, ENC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
 	/* Level for AVC and HEVC decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 };
 
@@ -731,18 +732,18 @@ static struct msm_vidc_codec_capability shima_capabilities_v2[] = {
 	 * to set higher level than supported.
 	 */
 	{CAP_H264_LEVEL, ENC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, ENC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
 	/* Level for AVC and HEVC decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
+	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1, 1,
+	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 };
 
