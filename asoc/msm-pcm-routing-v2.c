@@ -1423,7 +1423,47 @@ static struct cal_block_data *msm_routing_find_topology(int path,
 								cal_index);
 }
 
-static int msm_routing_find_topology_on_index(int session_type, int app_type,
+static struct cal_block_data *msm_routing_find_topology_by_buf_number(int usecase, int path,
+							int app_type,
+							int acdb_id,
+							int cal_index,
+							bool exact)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_adm_top *cal_info;
+	int buffer_idx_w_path;
+
+	pr_debug("%s\n", __func__);
+
+	buffer_idx_w_path = path + MAX_SESSION_TYPES * usecase;
+
+	list_for_each_safe(ptr, next,
+		&cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+			struct cal_block_data, list);
+
+		if (cal_utils_is_cal_stale(cal_block))
+			continue;
+
+		cal_info = (struct audio_cal_info_adm_top *)
+			cal_block->cal_info;
+		if ((cal_block->buffer_number == buffer_idx_w_path) &&
+			(cal_info->path == path)  &&
+			(cal_info->app_type == app_type) &&
+			(cal_info->acdb_id == acdb_id)) {
+			return cal_block;
+		}
+	}
+	pr_debug("%s: Can't find topology for buffer_number %d, path %d, app %d, acdb_id %d %s\n",
+		__func__, buffer_idx_w_path, path, app_type, acdb_id,
+		exact ? "fail" : "defaulting to search by path, app_type and acdb_id");
+	return exact ? NULL : msm_routing_find_topology(path, app_type,
+							      acdb_id, cal_index, exact);
+}
+
+static int msm_routing_find_topology_on_index(int fedai_id, int session_type, int app_type,
 					      int acdb_dev_id,  int idx,
 					      bool exact)
 {
@@ -1431,8 +1471,16 @@ static int msm_routing_find_topology_on_index(int session_type, int app_type,
 	struct cal_block_data *cal_block = NULL;
 
 	mutex_lock(&cal_data[idx]->lock);
-	cal_block = msm_routing_find_topology(session_type, app_type,
-					      acdb_dev_id, idx, exact);
+	if (idx == ADM_TOPOLOGY_CAL_TYPE_IDX)
+		cal_block = msm_routing_find_topology_by_buf_number(fedai_id,
+						     session_type,
+						     app_type,
+						     acdb_dev_id,
+						     idx, exact);
+	else
+		cal_block = msm_routing_find_topology(session_type, app_type,
+							      acdb_dev_id, idx, exact);
+
 	if (cal_block != NULL) {
 		topology = ((struct audio_cal_info_adm_top *)
 			    cal_block->cal_info)->topology;
@@ -1463,14 +1511,16 @@ static int msm_routing_get_adm_topology(int fedai_id, int session_type,
 		fe_dai_app_type_cfg[fedai_id][session_type][be_id].acdb_dev_id;
 
 	pr_debug("%s: Check for exact LSM topology\n", __func__);
-	topology = msm_routing_find_topology_on_index(session_type,
+	topology = msm_routing_find_topology_on_index(fedai_id,
+					       session_type,
 					       app_type,
 					       acdb_dev_id,
 					       ADM_LSM_TOPOLOGY_CAL_TYPE_IDX,
 					       true /*exact*/);
 	if (topology < 0) {
 		pr_debug("%s: Check for compatible topology\n", __func__);
-		topology = msm_routing_find_topology_on_index(session_type,
+		topology = msm_routing_find_topology_on_index(fedai_id,
+						      session_type,
 						      app_type,
 						      acdb_dev_id,
 						      ADM_TOPOLOGY_CAL_TYPE_IDX,
@@ -1537,7 +1587,7 @@ static void msm_pcm_routing_build_matrix(int fedai_id, int sess_type,
 	if (num_copps) {
 		payload.num_copps = num_copps;
 		payload.session_id = fe_dai_map[fedai_id][sess_type].strm_id;
-		adm_matrix_map(path_type, payload, perf_mode, passthr_mode);
+		adm_matrix_map(fedai_id, path_type, payload, perf_mode, passthr_mode);
 		msm_pcm_routng_cfg_matrix_map_pp(payload, path_type, perf_mode);
 	}
 }
@@ -1809,7 +1859,7 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 	if (num_copps) {
 		payload.num_copps = num_copps;
 		payload.session_id = fe_dai_map[fe_id][session_type].strm_id;
-		adm_matrix_map(path_type, payload, perf_mode, passthr_mode);
+		adm_matrix_map(fe_id, path_type, payload, perf_mode, passthr_mode);
 		msm_pcm_routng_cfg_matrix_map_pp(payload, path_type, perf_mode);
 	}
 	mutex_unlock(&routing_lock);
@@ -2173,7 +2223,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 	if (num_copps) {
 		payload.num_copps = num_copps;
 		payload.session_id = fe_dai_map[fedai_id][session_type].strm_id;
-		adm_matrix_map(path_type, payload, perf_mode, passthr_mode);
+		adm_matrix_map(fedai_id, path_type, payload, perf_mode, passthr_mode);
 		msm_pcm_routng_cfg_matrix_map_pp(payload, path_type, perf_mode);
 	}
 

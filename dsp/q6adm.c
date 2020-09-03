@@ -2288,6 +2288,54 @@ static struct cal_block_data *adm_find_cal(int cal_index, int path,
 	return adm_find_cal_by_app_type(cal_index, path, app_type);
 }
 
+static struct cal_block_data *adm_find_cal_by_buf_number(int usecase, int cal_index, int path,
+					   int app_type, int acdb_id,
+					   int sample_rate)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_audproc *audproc_cal_info = NULL;
+	struct audio_cal_info_audvol *audvol_cal_info = NULL;
+	int buffer_idx_w_path;
+
+	pr_debug("%s:\n", __func__);
+
+	buffer_idx_w_path = path + MAX_PATH_TYPE * usecase;
+
+	list_for_each_safe(ptr, next,
+		&this_adm.cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+			struct cal_block_data, list);
+		if (cal_utils_is_cal_stale(cal_block))
+			continue;
+
+		if (cal_index == ADM_AUDPROC_CAL ||
+		    cal_index == ADM_LSM_AUDPROC_CAL ||
+		    cal_index == ADM_LSM_AUDPROC_PERSISTENT_CAL) {
+			audproc_cal_info = cal_block->cal_info;
+			if ((cal_block->buffer_number == buffer_idx_w_path) &&
+			    (audproc_cal_info->path == path) &&
+			    (audproc_cal_info->app_type == app_type) &&
+			    (audproc_cal_info->acdb_id == acdb_id) &&
+			    (audproc_cal_info->sample_rate == sample_rate) &&
+			    (cal_block->cal_data.size > 0))
+				return cal_block;
+		} else if (cal_index == ADM_AUDVOL_CAL) {
+			audvol_cal_info = cal_block->cal_info;
+			if ((cal_block->buffer_number == buffer_idx_w_path) &&
+			    (audvol_cal_info->path == path) &&
+			    (audvol_cal_info->app_type == app_type) &&
+			    (audvol_cal_info->acdb_id == acdb_id) &&
+			    (cal_block->cal_data.size > 0))
+				return cal_block;
+		}
+	}
+	pr_debug("%s: Can't find ADM cal for buffer_number %d, cal_index %d, path %d, app %d, acdb_id %d sample_rate %d defaulting to search by app type\n",
+		__func__, buffer_idx_w_path, cal_index, path, app_type, acdb_id, sample_rate);
+	return adm_find_cal(cal_index, path, app_type, acdb_id, sample_rate);
+}
+
 static int adm_remap_and_send_cal_block(int cal_index, int port_id,
 	int copp_idx, struct cal_block_data *cal_block, int perf_mode,
 	int app_type, int acdb_id, int sample_rate)
@@ -2309,7 +2357,7 @@ done:
 	return ret;
 }
 
-static void send_adm_cal_type(int cal_index, int path, int port_id,
+static void send_adm_cal_type(int fedai_id, int cal_index, int path, int port_id,
 			      int copp_idx, int perf_mode, int app_type,
 			      int acdb_id, int sample_rate)
 {
@@ -2328,7 +2376,7 @@ static void send_adm_cal_type(int cal_index, int path, int port_id,
 	}
 
 	mutex_lock(&this_adm.cal_data[cal_index]->lock);
-	cal_block = adm_find_cal(cal_index, path, app_type, acdb_id,
+	cal_block = adm_find_cal_by_buf_number(fedai_id, cal_index, path, app_type, acdb_id,
 				sample_rate);
 	if (cal_block == NULL)
 		goto unlock;
@@ -2374,28 +2422,30 @@ static int get_cal_path(int path)
 		return TX_DEVICE;
 }
 
-static void send_adm_cal(int port_id, int copp_idx, int path, int perf_mode,
+static void send_adm_cal(int fedai_id, int port_id, int copp_idx, int path, int perf_mode,
 			 int app_type, int acdb_id, int sample_rate,
 			 int passthr_mode)
 {
 	pr_debug("%s: port id 0x%x copp_idx %d\n", __func__, port_id, copp_idx);
 
 	if (passthr_mode != LISTEN) {
-		send_adm_cal_type(ADM_AUDPROC_CAL, path, port_id, copp_idx,
+		send_adm_cal_type(fedai_id, ADM_AUDPROC_CAL, path, port_id, copp_idx,
 				perf_mode, app_type, acdb_id, sample_rate);
-		send_adm_cal_type(ADM_AUDPROC_PERSISTENT_CAL, path,
+		/* send persistent cal only in case of record */
+		if (path == TX_DEVICE)
+			send_adm_cal_type(fedai_id, ADM_LSM_AUDPROC_PERSISTENT_CAL, path,
 				  port_id, copp_idx, perf_mode, app_type,
 				  acdb_id, sample_rate);
 	} else {
-		send_adm_cal_type(ADM_LSM_AUDPROC_CAL, path, port_id, copp_idx,
+		send_adm_cal_type(fedai_id, ADM_LSM_AUDPROC_CAL, path, port_id, copp_idx,
 				  perf_mode, app_type, acdb_id, sample_rate);
 
-		send_adm_cal_type(ADM_LSM_AUDPROC_PERSISTENT_CAL, path,
+		send_adm_cal_type(fedai_id, ADM_LSM_AUDPROC_PERSISTENT_CAL, path,
 				  port_id, copp_idx, perf_mode, app_type,
 				  acdb_id, sample_rate);
 	}
 
-	send_adm_cal_type(ADM_AUDVOL_CAL, path, port_id, copp_idx, perf_mode,
+	send_adm_cal_type(fedai_id, ADM_AUDVOL_CAL, path, port_id, copp_idx, perf_mode,
 			  app_type, acdb_id, sample_rate);
 }
 
@@ -3614,6 +3664,7 @@ static void route_set_opcode_matrix_id(
  * adm_matrix_map -
  *        command to send ADM matrix map for ADM copp list
  *
+ * @fedai_id: FrontEnd DAI ID
  * @path: direction or ADM path type
  * @payload_map: have info of session id and associated copp_idx/num_copps
  * @perf_mode: performance mode like LL/ULL/..
@@ -3621,7 +3672,7 @@ static void route_set_opcode_matrix_id(
  *
  * Returns 0 on success or error on failure
  */
-int adm_matrix_map(int path, struct route_payload payload_map, int perf_mode,
+int adm_matrix_map(int fedai_id, int path, struct route_payload payload_map, int perf_mode,
 			uint32_t passthr_mode)
 {
 	struct adm_cmd_matrix_map_routings_v5	*route;
@@ -3731,7 +3782,7 @@ int adm_matrix_map(int path, struct route_payload payload_map, int perf_mode,
 						__func__, port_idx, copp_idx);
 				continue;
 			}
-			send_adm_cal(payload_map.port_id[i], copp_idx,
+			send_adm_cal(fedai_id, payload_map.port_id[i], copp_idx,
 				     get_cal_path(path), perf_mode,
 				     payload_map.app_type[i],
 				     payload_map.acdb_dev_id[i],
