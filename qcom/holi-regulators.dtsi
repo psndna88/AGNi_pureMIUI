@@ -32,9 +32,11 @@
 			regulator-name = "pm6350_s3_level";
 			qcom,set = <3>;
 			regulator-min-microvolt =
-					<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+					<RPM_SMD_REGULATOR_LEVEL_NONE>;
 			regulator-max-microvolt =
 					<RPM_SMD_REGULATOR_LEVEL_BINNING>;
+			qcom,init-voltage-level =
+				<RPM_SMD_REGULATOR_LEVEL_LOW_SVS>;
 			qcom,use-voltage-level;
 		};
 
@@ -44,9 +46,11 @@
 			regulator-name = "pm6350_s3_level_ao";
 			qcom,set = <1>;
 			regulator-min-microvolt =
-					<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+					<RPM_SMD_REGULATOR_LEVEL_NONE>;
 			regulator-max-microvolt =
 					<RPM_SMD_REGULATOR_LEVEL_BINNING>;
+			qcom,init-voltage-level =
+				<RPM_SMD_REGULATOR_LEVEL_LOW_SVS>;
 			qcom,use-voltage-level;
 		};
 
