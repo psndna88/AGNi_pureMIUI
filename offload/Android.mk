@@ -2,6 +2,7 @@ ifneq ($(TARGET_BOARD_AUTO),true)
 ifneq ($(TARGET_PRODUCT),qssi)
 
 RMNET_OFFLOAD_DLKM_PLATFORMS_LIST := lahaina
+RMNET_OFFLOAD_DLKM_PLATFORMS_LIST += holi
 
 ifeq ($(call is-board-platform-in-list, $(RMNET_OFFLOAD_DLKM_PLATFORMS_LIST)),true)
 LOCAL_PATH := $(call my-dir)
