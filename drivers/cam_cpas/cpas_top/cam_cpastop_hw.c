@@ -1006,6 +1006,127 @@ static int cam_cpastop_setup_qos_settings(struct cam_hw_info *cpas_hw,
 	return rc;
 }
 
+int cam_cpas_hw_get_camnoc_fill_level_info(
+	uint32_t cpas_version,
+	uint32_t client_handle)
+{
+	struct cam_camnoc_fifo_lvl_info *camnoc_reg_info;
+	uint32_t val;
+
+	if (!camnoc_info->fill_lvl_register)
+		return -EFAULT;
+
+	camnoc_reg_info = camnoc_info->fill_lvl_register;
+
+	switch (cpas_version) {
+	case CAM_CPAS_TITAN_175_V120:
+	case CAM_CPAS_TITAN_175_V130:
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC,
+			camnoc_reg_info->IFE0_nRDI_maxwr_offset,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "IFE0_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE0_nRDI_maxwr_offset,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC,
+			camnoc_reg_info->IFE1_nRDI_maxwr_offset,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "IFE1_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE1_nRDI_maxwr_offset,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC,
+			camnoc_reg_info->IFE0123_RDI_maxwr_offset,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "IFE0_nRDI_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE0123_RDI_maxwr_offset,
+			val);
+		break;
+	case CAM_CPAS_TITAN_480_V100:
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_linear,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "ife_linear offset 0x%x val 0x%x",
+			camnoc_reg_info->ife_linear,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_rdi_wr,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "ife_rdi_wr offset 0x%x val 0x%x",
+			camnoc_reg_info->ife_rdi_wr,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->ife_ubwc_stats,
+			true, &val);
+		CAM_INFO(CAM_CPAS, "ife_ubwc_stats offset 0x%x val 0x%x",
+			camnoc_reg_info->ife_ubwc_stats,
+			val);
+
+		break;
+	case CAM_CPAS_TITAN_170_V200:
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE01_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE01_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE01_MAXWR_LOW,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE23_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE23_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE23_MAXWR_LOW,
+			val);
+
+		break;
+	case CAM_CPAS_TITAN_165_V100:
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE0_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE0_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE0_MAXWR_LOW,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE1_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE1_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE1_MAXWR_LOW,
+			val);
+		break;
+	case CAM_CPAS_TITAN_150_V100:
+	case CAM_CPAS_TITAN_170_V100:
+	case CAM_CPAS_TITAN_170_V110:
+	case CAM_CPAS_TITAN_170_V120:
+	case CAM_CPAS_TITAN_175_V100:
+	case CAM_CPAS_TITAN_175_V101:
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE02_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE02_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE02_MAXWR_LOW,
+			val);
+
+		cam_cpas_reg_read(client_handle,
+			CAM_CPAS_REG_CAMNOC, camnoc_reg_info->IFE13_MAXWR_LOW,
+			true, &val);
+		CAM_INFO(CAM_ISP, "IFE13_MAXWR_LOW offset 0x%x val 0x%x",
+			camnoc_reg_info->IFE13_MAXWR_LOW,
+			val);
+		break;
+	default:
+		CAM_ERR(CAM_CPAS, "Camera version not supported %d",
+			cpas_version);
+		break;
+	}
+	return 0;
+}
+
 int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 {
 	if (!internal_ops) {

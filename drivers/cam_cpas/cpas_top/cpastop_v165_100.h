@@ -591,6 +591,11 @@ static struct cam_cpas_hw_errata_wa_list cam165_cpas100_errata_wa_list = {
 	},
 };
 
+struct cam_camnoc_fifo_lvl_info cam165_cpas100_camnoc_fifo_info = {
+	.IFE0_MAXWR_LOW = 0x3A20,
+	.IFE1_MAXWR_LOW = 0x5420,
+};
+
 static struct cam_camnoc_info cam165_cpas100_camnoc_info = {
 	.specific = &cam_cpas_v165_100_camnoc_specific[0],
 	.specific_size = ARRAY_SIZE(cam_cpas_v165_100_camnoc_specific),
@@ -599,6 +604,7 @@ static struct cam_camnoc_info cam165_cpas100_camnoc_info = {
 	.irq_err_size = ARRAY_SIZE(cam_cpas_v165_100_irq_err),
 	.err_logger = &cam165_cpas100_err_logger_offsets,
 	.errata_wa_list = &cam165_cpas100_errata_wa_list,
+	.fill_lvl_register = &cam165_cpas100_camnoc_fifo_info,
 };
 
 #endif /* _CPASTOP_V165_100_H_ */
