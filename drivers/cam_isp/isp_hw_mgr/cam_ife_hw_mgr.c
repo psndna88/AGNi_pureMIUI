@@ -7347,6 +7347,7 @@ static int cam_ife_hw_mgr_handle_hw_dump_info(
 	struct cam_isp_resource_node  *rsrc_node = NULL;
 	struct cam_hw_intf            *hw_intf;
 	uint32_t i, out_port_id;
+	uint64_t dummy_args;
 	int rc = 0;
 
 	list_for_each_entry(hw_mgr_res,
@@ -7373,6 +7374,24 @@ static int cam_ife_hw_mgr_handle_hw_dump_info(
 		}
 	}
 
+	list_for_each_entry(hw_mgr_res,
+		&ife_hw_mgr_ctx->res_list_ife_csid, list) {
+		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+			if (!hw_mgr_res->hw_res[i])
+				continue;
+			hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+			if (hw_intf->hw_ops.process_cmd) {
+				rc = hw_intf->hw_ops.process_cmd(
+					hw_intf->hw_priv,
+					CAM_ISP_HW_CMD_CSID_CLOCK_DUMP,
+					&dummy_args,
+					sizeof(uint64_t));
+				if (rc)
+					CAM_ERR(CAM_ISP,
+						"CSID Clock Dump failed");
+			}
+		}
+	}
 
 	out_port_id = event_info->res_id & 0xFF;
 	hw_mgr_res =
@@ -7431,18 +7450,6 @@ static int cam_ife_hw_mgr_handle_hw_err(
 	struct cam_ife_hw_event_recovery_data    recovery_data = {0};
 	int                                  rc = -EINVAL;
 
-	if (ctx) {
-		ife_hw_mgr_ctx =
-			(struct cam_ife_hw_mgr_ctx *)ctx;
-		if (event_info->res_type ==
-			CAM_ISP_RESOURCE_VFE_IN &&
-			!ife_hw_mgr_ctx->is_rdi_only_context &&
-			event_info->res_id !=
-			CAM_ISP_HW_VFE_IN_CAMIF)
-			cam_ife_hw_mgr_handle_hw_dump_info(
-			ife_hw_mgr_ctx, event_info);
-	}
-
 	if (event_info->err_type == CAM_VFE_IRQ_STATUS_VIOLATION)
 		error_event_data.error_type = CAM_ISP_HW_ERROR_VIOLATION;
 	else if (event_info->res_type == CAM_ISP_RESOURCE_VFE_IN)
@@ -7455,6 +7462,18 @@ static int cam_ife_hw_mgr_handle_hw_err(
 		rc = cam_ife_hw_mgr_handle_csid_event(event_info);
 		spin_unlock(&g_ife_hw_mgr.ctx_lock);
 		return rc;
+	}
+
+	if (ctx) {
+		ife_hw_mgr_ctx =
+			(struct cam_ife_hw_mgr_ctx *)ctx;
+		if (event_info->res_type ==
+			CAM_ISP_RESOURCE_VFE_IN &&
+			!ife_hw_mgr_ctx->is_rdi_only_context &&
+			event_info->res_id !=
+			CAM_ISP_HW_VFE_IN_CAMIF)
+			cam_ife_hw_mgr_handle_hw_dump_info(
+			ife_hw_mgr_ctx, event_info);
 	}
 
 	core_idx = event_info->hw_idx;

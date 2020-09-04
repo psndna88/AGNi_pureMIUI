@@ -881,8 +881,13 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 		if (status_0 & 0x20000000)
 			CAM_INFO(CAM_ISP, "RDI0 OVERFLOW");
 
-		if (status_0 & 0x40000000)
+		if (status_0 & 0x40000000) {
 			CAM_INFO(CAM_ISP, "PD PIPE OVERFLOW");
+			cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x1010, true, &val3);
+			CAM_INFO(CAM_ISP, "ife_rdi_Rd: 0x%x", val3);
+			cam_cpas_log_votes();
+		}
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_OVERFLOW && bus_overflow_status) {
@@ -1207,6 +1212,9 @@ static int cam_vfe_camif_lite_handle_irq_bottom_half(
 
 		ret = CAM_VFE_IRQ_STATUS_OVERFLOW;
 
+		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
+			soc_private->ife_clk_src);
+
 		cam_vfe_camif_lite_print_status(irq_status, ret,
 			camif_lite_priv);
 
@@ -1225,6 +1233,9 @@ static int cam_vfe_camif_lite_handle_irq_bottom_half(
 				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
 
 		ret = CAM_VFE_IRQ_STATUS_VIOLATION;
+
+		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
+			soc_private->ife_clk_src);
 
 		cam_vfe_camif_lite_print_status(irq_status, ret,
 			camif_lite_priv);

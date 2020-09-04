@@ -523,6 +523,9 @@ static int cam_vfe_rdi_handle_irq_bottom_half(void *handler_priv,
 		ret = CAM_VFE_IRQ_STATUS_SUCCESS;
 	}
 
+	if (!rdi_priv->rdi_irq_status)
+		goto end;
+
 	irq_rdi_status =
 		(irq_status1 &
 		rdi_priv->rdi_irq_status->rdi_overflow_mask);
@@ -566,7 +569,7 @@ static int cam_vfe_rdi_handle_irq_bottom_half(void *handler_priv,
 			(void *)&evt_info);
 		cam_cpas_log_votes();
 	}
-
+end:
 	cam_vfe_rdi_put_evt_payload(rdi_priv, &payload);
 	CAM_DBG(CAM_ISP, "returing status = %d", ret);
 	return ret;
