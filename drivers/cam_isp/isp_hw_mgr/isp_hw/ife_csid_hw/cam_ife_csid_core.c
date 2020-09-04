@@ -1153,12 +1153,13 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	path_data->horizontal_bin = reserve->in_port->horizontal_bin;
 	path_data->qcfa_bin = reserve->in_port->qcfa_bin;
 	path_data->num_bytes_out = reserve->in_port->num_bytes_out;
+	path_data->hblank_cnt = reserve->in_port->hbi_cnt;
 
 	CAM_DBG(CAM_ISP,
-		"Res id: %d height:%d line_start %d line_stop %d crop_en %d",
+		"Res id: %d height:%d line_start %d line_stop %d crop_en %d hblank %u",
 		reserve->res_id, reserve->in_port->height,
 		reserve->in_port->line_start, reserve->in_port->line_stop,
-		path_data->crop_enable);
+		path_data->crop_enable, path_data->hblank_cnt);
 
 	if ((reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
 		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
@@ -1856,6 +1857,17 @@ static int cam_ife_csid_init_config_pxl_path(
 
 	val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_cfg1_addr);
+
+	/* Program min hbi between lines */
+	if ((path_data->hblank_cnt) && (path_data->hblank_cnt <=
+		(CAM_CSID_MIN_HBI_CFG_MAX_VAL * 16))) {
+		if ((path_data->hblank_cnt % 16) == 0)
+			val |= ((path_data->hblank_cnt / 16) <<
+				pxl_reg->hblank_cfg_shift_val);
+		else
+			val |=  (((path_data->hblank_cnt / 16) + 1) <<
+				pxl_reg->hblank_cfg_shift_val);
+	}
 
 	/* select the post irq sub sample strobe for time stamp capture */
 	val |= CSID_TIMESTAMP_STB_POST_IRQ;

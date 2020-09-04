@@ -54,6 +54,7 @@ static struct cam_ife_csid_pxl_reg_offset  cam_ife_csid_480_ipp_reg_offset = {
 	.quad_cfa_bin_en_shift_val           = 30,
 	.ccif_violation_en                   = 1,
 	.overflow_ctrl_en                    = 1,
+	.hblank_cfg_shift_val                = 4,
 };
 
 static struct cam_ife_csid_pxl_reg_offset  cam_ife_csid_480_ppp_reg_offset = {
