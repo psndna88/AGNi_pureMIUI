@@ -115,6 +115,11 @@ Optional properties:
   Definition: Scalable clock names to identify which clocks needs to update
 	along with source clock.
 
+- cam_hw_pid:
+  Usage: optional
+  Value type: <u32>
+  Definition: HW unique Pid values
+
 Example:
 	qcom,vfe0@acaf000 {
 		cell-index = <0>;
@@ -152,5 +157,6 @@ Example:
 		scl-clk-en;
 		scl-clk-names = "ife_axi_clk";
 		qcom,cam-cx-ipeak = <&cx_ipeak_lm 2>;
+		cam_hw_pid = < 28 4 16 8 >;
 		status = "ok";
 	};
