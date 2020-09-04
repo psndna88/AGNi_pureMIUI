@@ -101,7 +101,7 @@ struct cpu_gpu_lock {
 /* Size of the performance counter save/restore block (in bytes) */
 #define A6XX_CP_PERFCOUNTER_SAVE_RESTORE_SIZE   (4 * 1024)
 
-#define A6XX_CP_RB_CNTL_DEFAULT ((1 << 27) | ((ilog2(4) << 8) & 0x1F00) | \
+#define A6XX_CP_RB_CNTL_DEFAULT (((ilog2(4) << 8) & 0x1F00) | \
 		(ilog2(KGSL_RB_DWORDS >> 1) & 0x3F))
 
 /*
