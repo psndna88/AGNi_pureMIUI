@@ -30,8 +30,8 @@
 #include "storm-watch.h"
 #include <linux/pmic-voter.h>
 
-#define SMB138X_DEFAULT_FCC_UA 1000000
-#define SMB138X_DEFAULT_ICL_UA 1500000
+#define SMB138X_DEFAULT_FCC_UA 2000000
+#define SMB138X_DEFAULT_ICL_UA 2300000
 
 /* Registers that are not common to be mentioned in smb-reg.h */
 #define SMB2CHG_MISC_ENG_SDCDC_CFG2	(MISC_BASE + 0xC1)

@@ -150,7 +150,7 @@
 #define RECHARGE_VBATT_THR_v2_OFFSET	1
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
-#define SLOW_CHARGE_THRESHOLD		80
+#define SLOW_CHARGE_THRESHOLD		70
 
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
@@ -3345,7 +3345,7 @@ module_param_cb(restart, &fg_restart_ops, &fg_restart, 0644);
 static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 {
 	int rc, ibatt_avg, vbatt_avg, rbatt, msoc, full_soc, act_cap_mah,
-		i_cc2cv, soc_cc2cv, tau, divisor, iterm, ttf_mode,
+		i_cc2cv = 0, soc_cc2cv, tau, divisor, iterm, ttf_mode,
 		i, soc_per_step, msoc_this_step, msoc_next_step,
 		ibatt_this_step, t_predicted_this_step, ttf_slope,
 		t_predicted_cv, t_predicted = 0;
@@ -3411,14 +3411,10 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 
 	if (msoc <= SLOW_CHARGE_THRESHOLD) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		if (ibatt_avg > 2300)
-			ibatt_avg = 2300;
+		ibatt_avg = 2300;
 #else
-		if (ibatt_avg > 2700)
-			ibatt_avg = 2700;
+		ibatt_avg = 2700;
 #endif
-		if (ibatt_avg < 1200)
-			ibatt_avg = 1200;
 		slow_charge = false;
 	} else {
 		slow_charge = true;
