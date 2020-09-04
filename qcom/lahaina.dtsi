@@ -311,6 +311,11 @@
 			reg = <0x0 0x80860000 0x0 0x20000>;
 		};
 
+		reserved_xbl_uefi_log: res_xbl_uefi_log_region@80880000 {
+			no-map;
+			reg = <0x0 0x80880000 0x0 0x14000>;
+		};
+
 		smem_mem: smem_region@80900000 {
 			no-map;
 			reg = <0x0 0x80900000 0x0 0x200000>;
@@ -489,7 +494,7 @@
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
-			size = <0 0x2c00000>;
+			size = <0 0x3000000>;
 		};
 
 		sp_mem: sp_region {  /* SPSS-HLOS ION shared mem */
@@ -2080,6 +2085,11 @@
 			reg = <0x94c 0xc8>;
 		};
 
+		pil@6dc {
+			compatible = "qcom,msm-imem-pil-disable-timeout";
+			reg = <0x6dc 0x4>;
+		};
+
 		diag_dload@c8 {
 			compatible = "qcom,msm-imem-diag-dload";
 			reg = <0xc8 0xc8>;
@@ -2174,7 +2184,6 @@
 		reg = <0x7040000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2186,7 +2195,6 @@
 		reg = <0x7140000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2198,7 +2206,6 @@
 		reg = <0x7240000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2210,7 +2217,6 @@
 		reg = <0x7340000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2222,7 +2228,6 @@
 		reg = <0x7440000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2234,7 +2239,6 @@
 		reg = <0x7540000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2246,7 +2250,6 @@
 		reg = <0x7640000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2258,7 +2261,6 @@
 		reg = <0x7740000 0x1000>;
 		reg-names = "etm-base";
 
-		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "core_clk";
 
@@ -2764,7 +2766,7 @@
 		qcom,tcs-config = <ACTIVE_TCS  2>,
 				  <SLEEP_TCS   3>,
 				  <WAKE_TCS    3>,
-				  <CONTROL_TCS 1>;
+				  <CONTROL_TCS 0>;
 
 		apps_bcm_voter: bcm_voter {
 			compatible = "qcom,bcm-voter";
@@ -3207,6 +3209,16 @@
 		qcom,iommu-dma = "bypass";
 
 		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <44>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <44>;
+		};
 	};
 
 	kryo-erp {
@@ -3851,6 +3863,13 @@
 		mboxes = <&qmp_aop 0>;
 	};
 
+	cpu7_cpu_ddr_qoslatfloor: qcom,cpu7-cpu-ddr-qoslatfloor {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "mem_latency";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	cpu0_cpu_l3_tbl: qcom,cpu0-cpu-l3-tbl {
 		qcom,core-dev-table =
 			<  300000  300000000 >,
@@ -3988,9 +4007,10 @@
 
 		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU7>;
 			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
 			qcom,core-dev-table =
-				< 2304000  300000000 >,
+				< 1996800  300000000 >,
 				< 2400000 1516800000 >;
 		};
 
@@ -4098,18 +4118,23 @@
 				<  300000 1 >,
 				< 3000000 2 >;
 		};
+
+		cpu7_qoslatmon: qcom,cpu7-qoslatmon {
+			compatible = "qcom,arm-memlat-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_ddr_qoslatfloor>;
+			qcom,cachemiss-ev = <0x1000>;
+			qcom,core-dev-table =
+				< 1996800 1 >,
+				< 2400000 2 >;
+		};
 	};
 
 	wdog: qcom,wdt@17c10000{
 		compatible = "qcom,msm-watchdog";
 		reg = <0x17c10000 0x1000>;
 		reg-names = "wdt-base";
-		interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>,
-		                <0 1 IRQ_TYPE_LEVEL_HIGH>;
-		qcom,bark-time = <11000>;
-		qcom,pet-time = <9360>;
-		qcom,ipi-ping;
-		qcom,wakeup-enable;
+		interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	tsens0:tsens@c222000 {
@@ -4235,6 +4260,7 @@
 
 			qcom,slpi_qrtr {
 				qcom,glink-channels = "IPCRTR";
+				qcom,net-id = <2>;
 				qcom,low-latency;
 				qcom,intents = <0x800  5
 						0x2000 3
@@ -5005,6 +5031,26 @@
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0x104>;
 		};
+
+		LLCC_1: llcc_1_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x140>;
+		};
+
+		LLCC_2: llcc_2_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x141>;
+		};
+
+		LLCC_3: llcc_3_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x142>;
+		};
+
+		LLCC_4: llcc_4_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x143>;
+		};
 	};
 
 	qcom,ssc@5c00000 {
@@ -5128,9 +5174,7 @@
 		qcom,hlos-ce-hw-instance = <0>;
 		qcom,qsee-ce-hw-instance = <0>;
 		qcom,disk-encrypt-pipe-pair = <2>;
-		qcom,support-fde;
 		qcom,no-clock-support;
-		qcom,fde-key-size;
 		qcom,appsbl-qseecom-support;
 		qcom,commonlib64-loaded-by-uefi;
 		qcom,qsee-reentrancy-support = <2>;
@@ -5397,7 +5441,7 @@
 				mhi,num-elements = <32>;
 				mhi,intmod = <0>;
 				mhi,msi = <1>;
-				mhi,priority = <1>;
+				mhi,priority = <0>;
 				mhi,brstmode = <2>;
 				mhi,data-type = <1>;
 			};

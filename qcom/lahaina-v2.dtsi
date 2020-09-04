@@ -43,7 +43,7 @@
 };
 
 &pcie0 {
-	qcom,pcie-phy-ver = <20099>;
+	qcom,pcie-phy-ver = <20100>;
 	qcom,phy-sequence = <0x0240 0x03 0x0
 			0x0094 0x08 0x0
 			0x0154 0x34 0x0
@@ -107,6 +107,7 @@
 			0x1050 0x08 0x0
 			0x1044 0xf0 0x0
 			0x11a4 0x38 0x0
+			0x10cc 0xf0 0x0
 			0x0694 0x00 0x0
 			0x0654 0x00 0x0
 			0x06a8 0x0f 0x0
@@ -160,7 +161,7 @@
 
 &cpu7_l3_computemon {
 	qcom,core-dev-table =
-		< 2592000 300000000 >,
+		< 2035200 300000000 >,
 		< 2814600 1593600000 >;
 };
 
@@ -273,5 +274,11 @@
 &cpu4_qoslatmon {
 	qcom,core-dev-table =
 		< 1881600 1 >,
+		< 2841600 2 >;
+};
+
+&cpu7_qoslatmon {
+	qcom,core-dev-table =
+		< 2035200 1 >,
 		< 2841600 2 >;
 };

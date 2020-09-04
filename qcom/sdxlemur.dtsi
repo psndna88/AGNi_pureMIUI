@@ -2,6 +2,7 @@
 #include <dt-bindings/clock/qcom,apsscc-sdxlemur.h>
 #include <dt-bindings/clock/qcom,gcc-sdxlemur.h>
 #include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/soc/qcom,dcc_v2.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interconnect/qcom,sdxlemur.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
@@ -15,7 +16,9 @@
 	qcom,msm-id = <458 0x10000>;
 	interrupt-parent = <&intc>;
 
-	aliases { };
+	aliases {
+		pci-domain0 = &pcie0; /* PCIe0 domain */
+	};
 
 	chosen { };
 
@@ -107,6 +110,11 @@
 	#size-cells = <1>;
 	ranges;
 
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
 	intc: interrupt-controller@17800000 {
 		compatible = "qcom,msm-qgic2";
 		interrupt-controller;
@@ -195,6 +203,17 @@
 		reg = <0xc264000 0x4>,
 			<0x1fd3000 0x4>;
 		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+	};
+
+	dcc: dcc_v2@117f000 {
+		compatible = "qcom,dcc-v2";
+		reg = <0x117f000 0x1000>,
+		      <0x1100000 0x2000>;
+
+		qcom,transaction_timeout = <0>;
+
+		reg-names = "dcc-base", "dcc-ram-base";
+		dcc-ram-offset = <0x800>;
 	};
 
 	watchdog: qcom,wdt@17817000 {
@@ -294,7 +313,7 @@
 	clocks {
 		xo_board: xo-board {
 			compatible = "fixed-clock";
-			clock-frequency = <38400000>;
+			clock-frequency = <76800000>;
 			clock-output-names = "xo_board";
 			#clock-cells = <0>;
 		};
@@ -305,12 +324,26 @@
 			clock-output-names = "sleep_clk";
 			#clock-cells = <0>;
 		};
+
+		pcie_pipe_clk: pcie-0-pipe-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <1000>;
+			clock-output-names = "pcie_pipe_clk";
+			#clock-cells = <0>;
+		};
+
+		usb3_phy_wrapper_gcc_usb30_pipe_clk: usb3-phy-wrapper-gcc-usb30-pipe-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <1000>;
+			clock-output-names = "usb3_phy_wrapper_gcc_usb30_pipe_clk";
+			#clock-cells = <0>;
+		};
 	};
 
 	bi_tcxo: bi_tcxo {
 		compatible = "fixed-factor-clock";
 		clock-mult = <1>;
-		clock-div = <2>;
+		clock-div = <4>;
 		clocks = <&xo_board>;
 		#clock-cells = <0>;
 	};
@@ -318,16 +351,16 @@
 	bi_tcxo_ao: bi_tcxo_ao {
 		compatible = "fixed-factor-clock";
 		clock-mult = <1>;
-		clock-div = <2>;
+		clock-div = <4>;
 		clocks = <&xo_board>;
 		#clock-cells = <0>;
 	};
 
 	aopcc: clock-controller@0 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "aopcc_clocks";
+		compatible = "qcom,aop-qmp-clk";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "qdss_clk";
 		#clock-cells = <1>;
-		#reset-cells = <1>;
 	};
 
 	rpmhcc: clock-controller@1 {
@@ -379,6 +412,10 @@
 				  <WAKE_TCS    2>,
 				  <CONTROL_TCS 1>;
 
+		apps_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+		};
+
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
@@ -408,17 +445,25 @@
 
 	system_noc: interconnect@1620000 {
 		compatible = "qcom,sdxlemur-system_noc";
+		reg = <0x1620000 0x31200>;
 		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
 	};
 
 	mem_noc: interconnect@9680000 {
 		compatible = "qcom,sdxlemur-mem_noc";
+		reg = <0x9680000 0x27200>;
 		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
 	};
 
 	mc_virt: interconnect {
 		compatible = "qcom,sdxlemur-mc_virt";
 		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos"
+		qcom,bcm-voters = <&apps_bcm_voter>;
 	};
 
 	tcsr_mutex_block: syscon@1f40000 {
@@ -430,6 +475,15 @@
 		compatible = "qcom,tcsr-mutex";
 		syscon = <&tcsr_mutex_block 0 0x1000>;
 		#hwlock-cells = <1>;
+	};
+
+	cache-controller@9200000 {
+		compatible = "qcom,sdxlemur-llcc", "qcom,llcc-v2";
+		reg = <0x9200000 0x50000>;
+		reg-names = "llcc_base";
+		cap-based-alloc-and-pwr-collapse;
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "aopcc_closks";
 	};
 
 	smem: qcom,smem {
@@ -587,6 +641,28 @@
 	qcom-secure-buffer {
 		compatible = "qcom,secure-buffer";
 	};
+
+	spmi_bus: qcom,spmi@c440000 {
+		compatible = "qcom,spmi-pmic-arb";
+		reg = <0xc440000 0xd00>,
+		      <0xc600000 0x2000000>,
+		      <0xe600000 0x100000>,
+		      <0xe700000 0xa0000>,
+		      <0xc40a000 0x26000>;
+		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
+		interrupts-extended = <&pdc 1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "periph_irq";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		cell-index = <0>;
+		qcom,channel = <0>;
+		qcom,ee = <0>;
+	};
+
+	thermal_zones: thermal-zones {
+	};
 };
 
 #include "sdxlemur-pinctrl.dtsi"
@@ -595,3 +671,4 @@
 #include "sdxlemur-ion.dtsi"
 #include "sdxlemur-usb.dtsi"
 #include "sdxlemur-pm.dtsi"
+#include "sdxlemur-pcie.dtsi"

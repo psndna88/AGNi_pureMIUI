@@ -79,7 +79,7 @@
 		st,touch-environment = "pvm";
 		st,trusted-touch-spi-irq = <566>;
 		st,trusted-touch-io-bases = <0xF114000 0xF115000 0xF116000 0xF117000 0x990000 0x00910000>;
-		st,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x4000 0x4000>;
+		st,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
 		panel = <&dsi_sw43404_amoled_cmd &dsi_sw43404_amoled_video
 			 &dsi_sw43404_amoled_fhd_plus_cmd>;
 	};
@@ -182,13 +182,19 @@
 	status = "ok";
 };
 
-&dai_mi2s2 {
-	qcom,msm-mi2s-tx-lines = <1>;
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
-			&tert_mi2s_sd0_active>;
-	pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
-			&tert_mi2s_sd0_sleep>;
+&q6core {
+	cdc_tert_mi2s_gpios: msm_cdc_pinctrl_tert {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
+				&tert_mi2s_sd0_active>;
+		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
+				&tert_mi2s_sd0_sleep>;
+	};
+};
+
+&lahaina_snd {
+	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
 };
 
 &usb1 {
