@@ -12,3 +12,7 @@
 		focaltech,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
 	};
 };
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_cmd>;
+};
