@@ -37,11 +37,11 @@ $(obj)/dtc/dtc-lexer.lex.o: $(obj)/dtc/dtc-parser.h
 # This is gross, so we add the build rules ourselves. We also make the
 # header output .h instead of .tab.h for bison, because aosp is broken.
 LEX ?= flex
-BISON ?= bison
+YACC ?= bison
 quiet_cmd_lex = LEX     $@
       cmd_lex = $(LEX) -o$@ $<
-quiet_cmd_bison = BISON   $@
-      cmd_bison = $(BISON) -d --output=$(@D)/$(notdir $(<:.y=.tab.c)) --defines=$(@D)/$(notdir $(<:.y=.h)) -Wno-conflicts-sr $<
+quiet_cmd_bison = YACC   $@
+      cmd_bison = $(YACC) -d --output=$(@D)/$(notdir $(<:.y=.tab.c)) --defines=$(@D)/$(notdir $(<:.y=.h)) -Wno-conflicts-sr $<
 %.lex.c: %.l
 	$(call if_changed,lex)
 %.tab.c %.h: %.y
