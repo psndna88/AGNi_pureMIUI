@@ -3772,7 +3772,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3782,7 +3781,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3791,7 +3789,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3800,7 +3797,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3809,7 +3805,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3819,7 +3814,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3829,7 +3823,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3838,7 +3831,6 @@
 	clocks = <&gcc GCC_GPU_CFG_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3847,7 +3839,6 @@
 	clocks = <&gcc GCC_GPU_CFG_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_GFX_LEVEL>;
-	vdd_parent-supply = <&VDD_GFX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3857,7 +3848,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3866,7 +3856,6 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3876,7 +3865,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
@@ -3885,7 +3873,6 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	vdd_parent-supply = <&VDD_CX_LEVEL>;
 	qcom,retain-regs;
 	status = "ok";
 };
