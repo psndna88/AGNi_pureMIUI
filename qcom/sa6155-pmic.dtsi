@@ -40,3 +40,4 @@
 };
 
 #include "sa6155-regulator.dtsi"
+#include "pm6155.dtsi"
