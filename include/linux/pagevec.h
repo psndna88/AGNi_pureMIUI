@@ -8,14 +8,14 @@
 #ifndef _LINUX_PAGEVEC_H
 #define _LINUX_PAGEVEC_H
 
-/* 15 pointers + header align the pagevec structure to a power of two */
-#define PAGEVEC_SIZE	15
+/* 14 pointers + two long's align the pagevec structure to a power of two */
+#define PAGEVEC_SIZE	14
 
 struct page;
 struct address_space;
 
 struct pagevec {
-	unsigned char nr;
+	unsigned long nr;
 	unsigned long cold;
 	struct page *pages[PAGEVEC_SIZE];
 };
