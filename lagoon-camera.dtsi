@@ -341,7 +341,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xD40 0x20>,
 				<&apps_smmu 0xD60 0x20>;
-			label = "lrme";
+			cam-smmu-label = "lrme";
 			lrme_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
 					/* Shared region is 100MB long */
@@ -368,7 +368,7 @@
 				<&apps_smmu 0x840 0x0>,
 				<&apps_smmu 0x860 0xc0>,
 				<&apps_smmu 0x880 0x0>;
-			label = "ife";
+			cam-smmu-label = "ife";
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -385,7 +385,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xD00 0x20>,
 				<&apps_smmu 0xD20 0x20>;
-			label = "jpeg";
+			cam-smmu-label = "jpeg";
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -409,7 +409,7 @@
 			iommus = <&apps_smmu 0xCA2 0x0>,
 				<&apps_smmu 0xCC0 0x20>,
 				<&apps_smmu 0xCE0 0x20>;
-			label = "icp";
+			cam-smmu-label = "icp";
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
 					/* Firmware region is 5MB */
@@ -463,7 +463,7 @@
 		msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xC80 0x0>;
-			label = "cpas-cdm0";
+			cam-smmu-label = "cpas-cdm0";
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 3.4 GB */
@@ -478,7 +478,7 @@
 
 		msm_cam_smmu_secure {
 			compatible = "qcom,msm-cam-smmu-cb";
-			label = "cam-secure";
+			cam-smmu-label = "cam-secure";
 			qcom,secure-cb;
 		};
 
