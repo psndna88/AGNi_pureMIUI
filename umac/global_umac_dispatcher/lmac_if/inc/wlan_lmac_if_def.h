@@ -114,6 +114,10 @@ typedef struct wake_lock_stats stats_wake_lock;
  * control plane statistics component
  * @cp_stats_attach:	function pointer to register events from FW
  * @cp_stats_detach:	function pointer to unregister events from FW
+ * @inc_wake_lock_stats: function pointer to increase wake lock stats
+ * @send_req_stats: function pointer to send request stats command to FW
+ * @send_req_peer_stats: function pointer to send request peer stats command
+ *                       to FW
  */
 struct wlan_lmac_if_cp_stats_tx_ops {
 	QDF_STATUS (*cp_stats_attach)(struct wlan_objmgr_psoc *psoc);
@@ -124,6 +128,8 @@ struct wlan_lmac_if_cp_stats_tx_ops {
 	QDF_STATUS (*send_req_stats)(struct wlan_objmgr_psoc *psoc,
 				     enum stats_req_type type,
 				     stats_req_info *req);
+	QDF_STATUS (*send_req_peer_stats)(struct wlan_objmgr_psoc *psoc,
+					  stats_req_info *req);
 };
 
 /**
@@ -706,6 +712,7 @@ struct wlan_lmac_if_iot_sim_tx_ops {
  * pdev_id from host pdev_id.
  * @wifi_pos_convert_pdev_id_target_to_host: function pointer to get host
  * pdev_id from target pdev_id.
+ * @wifi_pos_get_vht_ch_width: Function pointer to get max supported bw by FW
  */
 struct wlan_lmac_if_wifi_pos_tx_ops {
 	QDF_STATUS (*data_req_tx)(struct wlan_objmgr_pdev *pdev,
@@ -718,6 +725,8 @@ struct wlan_lmac_if_wifi_pos_tx_ops {
 	QDF_STATUS (*wifi_pos_convert_pdev_id_target_to_host)(
 			struct wlan_objmgr_psoc *psoc, uint32_t target_pdev_id,
 			uint32_t *host_pdev_id);
+	QDF_STATUS (*wifi_pos_get_vht_ch_width)(struct wlan_objmgr_psoc *psoc,
+						enum phy_ch_width *ch_width);
 };
 #endif
 

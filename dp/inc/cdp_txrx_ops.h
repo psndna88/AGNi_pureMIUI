@@ -524,6 +524,9 @@ struct cdp_cmn_ops {
 	QDF_STATUS (*txrx_peer_flush_rate_stats)(struct cdp_soc_t *soc,
 						 uint8_t pdev_id,
 						 void *buf);
+	void* (*txrx_peer_get_wlan_stats_ctx)(struct cdp_soc_t *soc,
+					      uint8_t vdev_id,
+					      uint8_t *mac_addr);
 
 	QDF_STATUS (*txrx_flush_rate_stats_request)(struct cdp_soc_t *soc,
 						    uint8_t pdev_id);
@@ -677,6 +680,14 @@ struct cdp_ctrl_ops {
 						   char *macaddr,
 						   uint8_t *rssi);
 #endif
+
+	QDF_STATUS
+		(*txrx_record_mscs_params) (
+				struct cdp_soc_t *soc, uint8_t *macaddr,
+				uint8_t vdev_id,
+				struct cdp_mscs_params *mscs_params,
+				bool active);
+
 	QDF_STATUS
 	(*set_key)(struct cdp_soc_t *soc, uint8_t vdev_id, uint8_t *mac,
 		   bool is_unicast, uint32_t *key);
@@ -1085,10 +1096,12 @@ struct ol_if_ops {
 			       uint16_t peer_id, uint8_t vdev_id, uint8_t *peer_mac_addr);
 #endif
 	int (*get_soc_nss_cfg)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle);
-	/* TODO: Add any other control path calls required to OL_IF/WMA layer */
 
 	char *(*get_device_name)(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 				 uint8_t pdev_id);
+	QDF_STATUS(*nss_stats_clr)(struct cdp_ctrl_objmgr_psoc *psoc,
+				   uint8_t vdev_id);
+	/* TODO: Add any other control path calls required to OL_IF/WMA layer */
 };
 
 #ifdef DP_PEER_EXTENDED_API

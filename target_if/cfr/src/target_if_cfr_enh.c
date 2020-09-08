@@ -349,7 +349,7 @@ static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 		  "cfr_capture_type = %d\n"
 		  "sts_count = %d\n"
 		  "num_rx_chain = %d\n"
-		  "timestamp = 0x%x\n"
+		  "timestamp = %llu\n"
 		  "length = %d\n"
 		  "is_mu_ppdu = %d\n"
 		  "num_users = %d\n",
@@ -1158,6 +1158,8 @@ static void enh_prepare_cfr_header_txstatus(wmi_cfr_peer_tx_event_param
 
 	if (target_type == TARGET_TYPE_QCN9000)
 		header->chip_type      = CFR_CAPTURE_RADIO_PINE;
+	else if (target_type == TARGET_TYPE_QCA5018)
+		header->chip_type      = CFR_CAPTURE_RADIO_MAPLE;
 	else
 		header->chip_type      = CFR_CAPTURE_RADIO_CYP;
 
@@ -1354,6 +1356,8 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 
 	if (target_type == TARGET_TYPE_QCN9000)
 		header->chip_type      = CFR_CAPTURE_RADIO_PINE;
+	else if (target_type == TARGET_TYPE_QCA5018)
+		header->chip_type      = CFR_CAPTURE_RADIO_MAPLE;
 	else
 		header->chip_type      = CFR_CAPTURE_RADIO_CYP;
 
@@ -1598,15 +1602,13 @@ void target_if_cfr_update_global_cfg(struct wlan_objmgr_pdev *pdev)
 	struct pdev_cfr *pcfr;
 	struct ta_ra_cfr_cfg *curr_cfg = NULL;
 	struct ta_ra_cfr_cfg *glbl_cfg = NULL;
-	unsigned long *modified_in_this_session;
 
 	pcfr = wlan_objmgr_pdev_get_comp_private_obj(pdev,
 						     WLAN_UMAC_COMP_CFR);
-	modified_in_this_session =
-		(unsigned long *)&pcfr->rcc_param.modified_in_curr_session;
 
 	for (grp_id = 0; grp_id < MAX_TA_RA_ENTRIES; grp_id++) {
-		if (qdf_test_bit(grp_id, modified_in_this_session)) {
+		if (qdf_test_bit(grp_id,
+				 &pcfr->rcc_param.modified_in_curr_session)) {
 			/* Populating global config based on user's input */
 			glbl_cfg = &pcfr->global[grp_id];
 			curr_cfg = &pcfr->rcc_param.curr[grp_id];
@@ -1726,7 +1728,7 @@ QDF_STATUS cfr_enh_init_pdev(struct wlan_objmgr_psoc *psoc,
 		/* Update global configuration */
 		target_if_cfr_update_global_cfg(pdev);
 	} else {
-		cfr_err("Sending WMI to configure default has failed\n");
+		cfr_err("Sending WMI to configure default has failed");
 		return status;
 	}
 
@@ -1739,6 +1741,11 @@ QDF_STATUS cfr_enh_init_pdev(struct wlan_objmgr_psoc *psoc,
 		pcfr->num_subbufs = STREAMFS_NUM_SUBBUF_PINE;
 		pcfr->chip_type = CFR_CAPTURE_RADIO_PINE;
 		pcfr->max_mu_users = PINE_CFR_MU_USERS;
+	} else if (target_type == TARGET_TYPE_QCA5018) {
+		pcfr->subbuf_size = STREAMFS_MAX_SUBBUF_MAPLE;
+		pcfr->num_subbufs = STREAMFS_NUM_SUBBUF_MAPLE;
+		pcfr->chip_type = CFR_CAPTURE_RADIO_MAPLE;
+		pcfr->max_mu_users = MAPLE_CFR_MU_USERS;
 	} else {
 		pcfr->subbuf_size = STREAMFS_MAX_SUBBUF_CYP;
 		pcfr->num_subbufs = STREAMFS_NUM_SUBBUF_CYP;

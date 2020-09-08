@@ -485,6 +485,21 @@ struct cdp_rx_mic_err_info {
 };
 
 /**
+ * struct cdp_mscs_params - MSCS parameters obtained
+ * from handshake
+ * @user_pri_bitmap - User priority bitmap
+ * @user_pri_limit - User priority limit
+ * @classifier_type - TCLAS Classifier type
+ * @classifier_mask - TCLAS Classifier mask
+ */
+struct cdp_mscs_params {
+	uint8_t user_pri_bitmap;
+	uint8_t user_pri_limit;
+	uint8_t classifier_type;
+	uint8_t classifier_mask;
+};
+
+/**
  * struct cdp_sec_type - security type information
  */
 enum cdp_sec_type {
@@ -1604,6 +1619,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @ppdu_cookie: 16-bit ppdu_cookie
  * @sa_is_training: smart antenna training packets indication
  * @rssi_chain: rssi chain per bandwidth
+ * @usr_ack_rssi: overall per user ack rssi
  * @sa_tx_antenna: antenna in which packet is transmitted
  * @sa_max_rates: smart antenna tx feedback info max rates
  * @sa_goodput: smart antenna tx feedback info goodput
@@ -1672,10 +1688,10 @@ struct cdp_tx_completion_ppdu_user {
 	/*ack rssi for separate chains*/
 	uint32_t ack_rssi[CDP_RSSI_CHAIN_LEN];
 	bool ack_rssi_valid;
+	uint32_t usr_ack_rssi;
 	uint32_t user_pos;
 	uint32_t mu_group_id;
 	uint32_t rix;
-	struct cdp_stats_cookie *cookie;
 	uint8_t is_ppdu_cookie_valid;
 	uint16_t ppdu_cookie;
 	uint8_t sa_is_training;
@@ -2159,7 +2175,6 @@ struct cdp_rx_indication_ppdu {
 	uint8_t fcs_error_mpdus;
 	uint16_t frame_ctrl;
 	int8_t rssi_chain[SS_COUNT][MAX_BW];
-	struct cdp_stats_cookie *cookie;
 	struct cdp_rx_su_evm_info evm_info;
 	uint32_t rx_antenna;
 	uint8_t num_users;

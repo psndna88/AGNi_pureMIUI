@@ -97,6 +97,7 @@ enum cfrradiotype {
 	CFR_CAPTURE_RADIO_HSP,
 	CFR_CAPTURE_RADIO_PINE,
 	CFR_CAPTURE_RADIO_ADRASTEA,
+	CFR_CAPTURE_RADIO_MAPLE,
 	CFR_CAPTURE_RADIO_MAX = 0xFF,
 };
 
@@ -176,7 +177,7 @@ struct cfr_metadata_version_3 {
 	u_int8_t    capture_type; /* cfr_capture_type */
 	u_int8_t    sts_count;
 	u_int8_t    num_rx_chain;
-	u_int32_t   timestamp;
+	u_int64_t   timestamp;
 	u_int32_t   length;
 	u_int8_t    is_mu_ppdu;
 	u_int8_t    num_mu_users;
@@ -444,7 +445,7 @@ struct cfr_rcc_param {
 	uint8_t num_grp_tlvs;
 
 	struct ta_ra_cfr_cfg curr[MAX_TA_RA_ENTRIES];
-	uint16_t modified_in_curr_session;
+	unsigned long modified_in_curr_session;
 	uint32_t capture_count            :16,
 		 capture_intval_mode_sel  :1,
 		 rsvd2                    :15;
@@ -626,7 +627,7 @@ QDF_STATUS wlan_cfr_pdev_close(struct wlan_objmgr_pdev *pdev);
  *
  * Return: No. of set bits
  */
-uint8_t count_set_bits(uint32_t value);
+uint8_t count_set_bits(unsigned long value);
 
 /**
  * wlan_cfr_is_feature_disabled() - Check if cfr feature is disabled

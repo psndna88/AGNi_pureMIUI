@@ -115,8 +115,9 @@ static inline bool dp_rx_mcast_echo_check(struct dp_soc *soc,
 			 * ast is not in ast_table, we use the below API to get
 			 * AST entry for STA's own mac_address.
 			 */
-			ase = dp_peer_ast_list_find(soc, peer,
-						    &data[QDF_MAC_ADDR_SIZE]);
+			ase = dp_peer_ast_hash_find_by_vdevid
+				(soc, &data[QDF_MAC_ADDR_SIZE],
+				 peer->vdev->vdev_id);
 			if (ase) {
 				ase->ast_idx = sa_idx;
 				soc->ast_table[sa_idx] = ase;
@@ -142,7 +143,7 @@ static inline bool dp_rx_mcast_echo_check(struct dp_soc *soc,
 		}
 
 		if ((ase->type == CDP_TXRX_AST_TYPE_MEC) ||
-				(ase->peer != peer)) {
+				(ase->peer_id != peer->peer_id)) {
 			qdf_spin_unlock_bh(&soc->ast_lock);
 			QDF_TRACE(QDF_MODULE_ID_DP,
 				QDF_TRACE_LEVEL_INFO,
@@ -395,7 +396,7 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 				mpdu_desc_info->peer_meta_data);
 
 
-	peer = dp_peer_find_by_id(soc, peer_id);
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 
 	if (qdf_likely(peer)) {
 		/*
@@ -405,7 +406,7 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 			"discard rx due to PN error for peer  %pK  %pM",
 			peer, peer->mac_addr.raw);
 
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 	}
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 		"Packet received with PN error");
@@ -442,7 +443,7 @@ dp_rx_oor_handle(struct dp_soc *soc,
 				FRAME_MASK_IPV4_EAPOL | FRAME_MASK_IPV6_DHCP;
 	struct dp_peer *peer = NULL;
 
-	peer = dp_peer_find_by_id(soc, peer_id);
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 	if (!peer) {
 		dp_info_rl("peer not found");
 		goto free_nbuf;
@@ -451,13 +452,13 @@ dp_rx_oor_handle(struct dp_soc *soc,
 	if (dp_rx_deliver_special_frame(soc, peer, nbuf, frame_mask,
 					rx_tlv_hdr)) {
 		DP_STATS_INC(soc, rx.err.reo_err_oor_to_stack, 1);
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 		return;
 	}
 
 free_nbuf:
 	if (peer)
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 
 	DP_STATS_INC(soc, rx.err.reo_err_oor_drop, 1);
 	qdf_nbuf_free(nbuf);
@@ -789,9 +790,10 @@ dp_2k_jump_handle(struct dp_soc *soc,
 	struct dp_rx_tid *rx_tid = NULL;
 	uint32_t frame_mask = FRAME_MASK_IPV4_ARP;
 
-	peer = dp_peer_find_by_id(soc, peer_id);
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 	if (!peer) {
-		dp_info_rl("peer not found");
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  "peer not found");
 		goto free_nbuf;
 	}
 
@@ -832,14 +834,13 @@ nbuf_deliver:
 	if (dp_rx_deliver_special_frame(soc, peer, nbuf, frame_mask,
 					rx_tlv_hdr)) {
 		DP_STATS_INC(soc, rx.err.rx_2k_jump_to_stack, 1);
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 		return;
 	}
 
 free_nbuf:
 	if (peer)
-		dp_peer_unref_del_find_by_id(peer);
-
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 	DP_STATS_INC(soc, rx.err.rx_2k_jump_drop, 1);
 	qdf_nbuf_free(nbuf);
 }
@@ -882,8 +883,8 @@ dp_rx_null_q_handle_invalid_peer_id_exception(struct dp_soc *soc,
 	 * received MPDU
 	 */
 	if (wh)
-		peer = dp_find_peer_by_addr((struct cdp_pdev *)pdev,
-					    wh->i_addr2);
+		peer = dp_peer_find_hash_find(soc, wh->i_addr2, 0,
+					      DP_VDEV_ALL, DP_MOD_ID_RX_ERR);
 	if (peer) {
 		dp_verbose_debug("MPDU sw_peer_id & ast_idx is corrupted");
 		hal_rx_dump_pkt_tlvs(soc->hal_soc, rx_tlv_hdr,
@@ -892,6 +893,7 @@ dp_rx_null_q_handle_invalid_peer_id_exception(struct dp_soc *soc,
 				 1, qdf_nbuf_len(nbuf));
 		qdf_nbuf_free(nbuf);
 
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 		return true;
 	}
 	return false;
@@ -2013,7 +2015,7 @@ done:
 
 		peer_id = hal_rx_mpdu_start_sw_peer_id_get(soc->hal_soc,
 							   rx_tlv_hdr);
-		peer = dp_peer_find_by_id(soc, peer_id);
+		peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 
 		if (!peer)
 			dp_info_rl("peer is null peer_id%u err_src%u err_rsn%u",
@@ -2039,6 +2041,8 @@ done:
 			qdf_nbuf_free(nbuf);
 			dp_info_rl("scattered msdu dropped");
 			nbuf = next;
+			if (peer)
+				dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 			continue;
 		}
 
@@ -2066,11 +2070,7 @@ done:
 					dp_rx_null_q_desc_handle(soc, nbuf,
 								 rx_tlv_hdr,
 								 pool_id, peer);
-					nbuf = next;
-					if (peer)
-						dp_peer_unref_del_find_by_id(
-									peer);
-					continue;
+					break;
 				/* TODO */
 				/* Add per error code accounting */
 				case HAL_REO_ERR_REGULAR_FRAME_2K_JUMP:
@@ -2091,23 +2091,20 @@ done:
 					dp_2k_jump_handle(soc, nbuf,
 							  rx_tlv_hdr,
 							  peer_id, tid);
-					nbuf = next;
-					if (peer)
-						dp_peer_unref_del_find_by_id(
-									peer);
-					continue;
+					break;
 				case HAL_REO_ERR_BAR_FRAME_2K_JUMP:
 				case HAL_REO_ERR_BAR_FRAME_OOR:
 					if (peer)
 						dp_rx_wbm_err_handle_bar(soc,
 									 peer,
 									 nbuf);
+					qdf_nbuf_free(nbuf);
 					break;
 
 				default:
 					dp_info_rl("Got pkt with REO ERROR: %d",
 						   wbm_err_info.reo_err_code);
-					break;
+					qdf_nbuf_free(nbuf);
 				}
 			}
 		} else if (wbm_err_info.wbm_err_src ==
@@ -2135,33 +2132,29 @@ done:
 								wbm_err_info.
 								rxdma_err_code,
 								pool_id);
-					nbuf = next;
-					if (peer)
-						dp_peer_unref_del_find_by_id(peer);
-					continue;
+					break;
 
 				case HAL_RXDMA_ERR_TKIP_MIC:
 					dp_rx_process_mic_error(soc, nbuf,
 								rx_tlv_hdr,
 								peer);
-					nbuf = next;
-					if (peer) {
+					if (peer)
 						DP_STATS_INC(peer, rx.err.mic_err, 1);
-						dp_peer_unref_del_find_by_id(
-									peer);
-					}
-					continue;
+					break;
 
 				case HAL_RXDMA_ERR_DECRYPT:
 
 					if (peer) {
 						DP_STATS_INC(peer, rx.err.
 							     decrypt_err, 1);
+						qdf_nbuf_free(nbuf);
 						break;
 					}
 
-					if (!dp_handle_rxdma_decrypt_err())
+					if (!dp_handle_rxdma_decrypt_err()) {
+						qdf_nbuf_free(nbuf);
 						break;
+					}
 
 					pool_id = wbm_err_info.pool_id;
 					err_code = wbm_err_info.rxdma_err_code;
@@ -2170,10 +2163,10 @@ done:
 								tlv_hdr, NULL,
 								err_code,
 								pool_id);
-					nbuf = next;
-					continue;
+					break;
 
 				default:
+					qdf_nbuf_free(nbuf);
 					dp_err_rl("RXDMA error %d",
 						  wbm_err_info.rxdma_err_code);
 				}
@@ -2184,11 +2177,8 @@ done:
 		}
 
 		if (peer)
-			dp_peer_unref_del_find_by_id(peer);
+			dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 
-		hal_rx_dump_pkt_tlvs(hal_soc, rx_tlv_hdr,
-				     QDF_TRACE_LEVEL_DEBUG);
-		qdf_nbuf_free(nbuf);
 		nbuf = next;
 	}
 	return rx_bufs_used; /* Assume no scale factor for now */

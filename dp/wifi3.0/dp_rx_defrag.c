@@ -212,7 +212,8 @@ void dp_rx_defrag_waitlist_flush(struct dp_soc *soc)
 				     rx_tid[rx_reorder->tid]);
 		qdf_spin_unlock_bh(&rx_reorder->tid_lock);
 
-		temp_peer = dp_peer_find_by_id(soc, peer->peer_id);
+		temp_peer = dp_peer_get_ref_by_id(soc, peer->peer_id,
+						  DP_MOD_ID_RX_ERR);
 		if (temp_peer == peer) {
 			qdf_spin_lock_bh(&rx_reorder->tid_lock);
 			dp_rx_reorder_flush_frag(peer, rx_reorder->tid);
@@ -220,7 +221,7 @@ void dp_rx_defrag_waitlist_flush(struct dp_soc *soc)
 		}
 
 		if (temp_peer)
-			dp_peer_unref_del_find_by_id(temp_peer);
+			dp_peer_unref_delete(temp_peer, DP_MOD_ID_RX_ERR);
 
 	}
 }
@@ -830,6 +831,38 @@ static void dp_rx_frag_pull_hdr(qdf_nbuf_t nbuf, uint16_t hdrsize)
 }
 
 /*
+ * dp_rx_defrag_pn_check(): Check the PN of current fragmented with prev PN
+ * @msdu: msdu to get the current PN
+ * @cur_pn128: PN extracted from current msdu
+ * @prev_pn128: Prev PN
+ *
+ * Returns: 0 on success, non zero on failure
+ */
+static int dp_rx_defrag_pn_check(qdf_nbuf_t msdu,
+				 uint64_t *cur_pn128, uint64_t *prev_pn128)
+{
+	struct rx_pkt_tlvs *rx_pkt_tlv =
+			(struct rx_pkt_tlvs *)qdf_nbuf_data(msdu);
+	struct rx_mpdu_info *rx_mpdu_info_details =
+	 &rx_pkt_tlv->mpdu_start_tlv.rx_mpdu_start.rx_mpdu_info_details;
+	int out_of_order = 0;
+
+	cur_pn128[0] = rx_mpdu_info_details->pn_31_0;
+	cur_pn128[0] |=
+		((uint64_t)rx_mpdu_info_details->pn_63_32 << 32);
+	cur_pn128[1] = rx_mpdu_info_details->pn_95_64;
+	cur_pn128[1] |=
+		((uint64_t)rx_mpdu_info_details->pn_127_96 << 32);
+
+	if (cur_pn128[1] == prev_pn128[1])
+		out_of_order = (cur_pn128[0] <= prev_pn128[0]);
+	else
+		out_of_order = (cur_pn128[1] < prev_pn128[1]);
+
+	return out_of_order;
+}
+
+/*
  * dp_rx_construct_fraglist(): Construct a nbuf fraglist
  * @peer: Pointer to the peer
  * @head: Pointer to list of fragments
@@ -847,35 +880,30 @@ dp_rx_construct_fraglist(struct dp_peer *peer, int tid, qdf_nbuf_t head,
 	qdf_nbuf_t rx_nbuf = msdu;
 	struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
 	uint32_t len = 0;
-	uint64_t cur_pn128[2], prev_pn128[2];
+	uint64_t cur_pn128[2] = {0, 0}, prev_pn128[2];
 	int out_of_order = 0;
+	int index;
+	int needs_pn_check = 0;
 
 	prev_pn128[0] = rx_tid->pn128[0];
 	prev_pn128[1] = rx_tid->pn128[1];
 
+	index = hal_rx_msdu_is_wlan_mcast(msdu) ? dp_sec_mcast : dp_sec_ucast;
+	if (qdf_likely(peer->security[index].sec_type != cdp_sec_type_none))
+		needs_pn_check = 1;
+
 	while (msdu) {
-		struct rx_pkt_tlvs *rx_pkt_tlv =
-				(struct rx_pkt_tlvs *)qdf_nbuf_data(msdu);
-		struct rx_mpdu_info *rx_mpdu_info_details =
-		 &rx_pkt_tlv->mpdu_start_tlv.rx_mpdu_start.rx_mpdu_info_details;
+		if (qdf_likely(needs_pn_check))
+			out_of_order = dp_rx_defrag_pn_check(msdu,
+							     &cur_pn128[0],
+							     &prev_pn128[0]);
 
-		cur_pn128[0] = rx_mpdu_info_details->pn_31_0;
-		cur_pn128[0] |=
-			((uint64_t)rx_mpdu_info_details->pn_63_32 << 32);
-		cur_pn128[1] = rx_mpdu_info_details->pn_95_64;
-		cur_pn128[1] |=
-			((uint64_t)rx_mpdu_info_details->pn_127_96 << 32);
-
-		dp_debug("cur_pn128[0] 0x%llx cur_pn128[1] 0x%llx prev_pn128[0] 0x%llx prev_pn128[1] 0x%llx",
-			 cur_pn128[0], cur_pn128[1],
-			 prev_pn128[0], prev_pn128[1]);
-		if (cur_pn128[1] == prev_pn128[1])
-			out_of_order = (cur_pn128[0] <= prev_pn128[0]);
-		else
-			out_of_order = (cur_pn128[1] < prev_pn128[1]);
-
-		if (out_of_order)
+		if (qdf_unlikely(out_of_order)) {
+			dp_info_rl("cur_pn128[0] 0x%llx cur_pn128[1] 0x%llx prev_pn128[0] 0x%llx prev_pn128[1] 0x%llx",
+				   cur_pn128[0], cur_pn128[1],
+				   prev_pn128[0], prev_pn128[1]);
 			return QDF_STATUS_E_FAILURE;
+		}
 
 		prev_pn128[0] = cur_pn128[0];
 		prev_pn128[1] = cur_pn128[1];
@@ -1616,7 +1644,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	/* Check if the packet is from a valid peer */
 	peer_id = DP_PEER_METADATA_PEER_ID_GET(
 					mpdu_desc_info->peer_meta_data);
-	peer = dp_peer_find_by_id(soc, peer_id);
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 
 	if (!peer) {
 		/* We should not receive anything from unknown peer
@@ -1632,6 +1660,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	if (tid >= DP_MAX_TIDS) {
 		dp_info("TID out of bounds: %d", tid);
 		qdf_assert_always(0);
+		goto discard_frag;
 	}
 
 	pdev = peer->vdev->pdev;
@@ -1778,7 +1807,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 			now_ms + pdev->soc->rx.defrag.timeout_ms;
 
 		dp_rx_defrag_waitlist_add(peer, tid);
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1824,7 +1853,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 
 	dp_rx_defrag_cleanup(peer, tid);
 
-	dp_peer_unref_del_find_by_id(peer);
+	dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 
 	return QDF_STATUS_SUCCESS;
 
@@ -1841,7 +1870,7 @@ err_free_desc:
 
 end:
 	if (peer)
-		dp_peer_unref_del_find_by_id(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
 
 	DP_STATS_INC(soc, rx.rx_frag_err, 1);
 	return QDF_STATUS_E_DEFRAG_ERROR;

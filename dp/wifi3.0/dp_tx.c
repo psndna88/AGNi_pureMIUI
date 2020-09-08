@@ -680,6 +680,10 @@ static QDF_STATUS dp_tx_prepare_tso(struct dp_vdev *vdev,
 }
 #endif
 
+QDF_COMPILE_TIME_ASSERT(dp_tx_htt_metadata_len_check,
+			(DP_TX_MSDU_INFO_META_DATA_DWORDS * 4 >=
+			 sizeof(struct htt_tx_msdu_desc_ext2_t)));
+
 /**
  * dp_tx_prepare_ext_desc() - Allocate and prepare MSDU extension descriptor
  * @vdev: DP Vdev handle
@@ -713,6 +717,7 @@ struct dp_tx_ext_desc_elem_s *dp_tx_prepare_ext_desc(struct dp_vdev *vdev,
 				&msdu_info->meta_data[0],
 				sizeof(struct htt_tx_msdu_desc_ext2_t));
 		qdf_atomic_inc(&soc->num_tx_exception);
+		msdu_ext_desc->flags |= DP_TX_EXT_DESC_FLAG_METADATA_VALID;
 	}
 
 	switch (msdu_info->frm_type) {
@@ -1173,9 +1178,14 @@ static QDF_STATUS dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 	hal_tx_desc_cached = (void *) cached_desc;
 
 	if (tx_desc->flags & DP_TX_DESC_FLAG_FRAG) {
-		tx_desc->length = HAL_TX_EXT_DESC_WITH_META_DATA;
 		type = HAL_TX_BUF_TYPE_EXT_DESC;
 		tx_desc->dma_addr = tx_desc->msdu_ext_desc->paddr;
+
+		if (tx_desc->msdu_ext_desc->flags &
+			DP_TX_EXT_DESC_FLAG_METADATA_VALID)
+			tx_desc->length = HAL_TX_EXT_DESC_WITH_META_DATA;
+		else
+			tx_desc->length = HAL_TX_EXTENSION_DESC_LEN_BYTES;
 	} else {
 		tx_desc->length = qdf_nbuf_len(tx_desc->nbuf) -
 					tx_desc->pkt_offset;
@@ -1411,7 +1421,7 @@ static void dp_tx_get_tid(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	DP_TX_TID_OVERRIDE(msdu_info, nbuf);
 	if (qdf_likely(vdev->tx_encap_type != htt_cmn_pkt_type_raw)) {
 		eh = (qdf_ether_header_t *)nbuf->data;
-		hdr_ptr = eh->ether_dhost;
+		hdr_ptr = (uint8_t *)(eh->ether_dhost);
 		L3datap = hdr_ptr + sizeof(qdf_ether_header_t);
 	} else {
 		qdf_dot3_qosframe_t *qos_wh =
@@ -1665,8 +1675,8 @@ int dp_tx_frame_is_drop(struct dp_vdev *vdev, uint8_t *srcmac, uint8_t *dstmac)
 	src_ast_entry = dp_peer_ast_hash_find_by_pdevid
 				(soc, srcmac, vdev->pdev->pdev_id);
 	if (dst_ast_entry && src_ast_entry) {
-		if (dst_ast_entry->peer->peer_id ==
-				src_ast_entry->peer->peer_id)
+		if (dst_ast_entry->peer_id ==
+				src_ast_entry->peer_id)
 			return 1;
 	}
 
@@ -2379,7 +2389,7 @@ void dp_tx_nawds_handler(struct cdp_soc_t *soc, struct dp_vdev *vdev,
 	qdf_nbuf_t nbuf_clone = NULL;
 	struct dp_soc *dp_soc = (struct dp_soc *)soc;
 	uint16_t peer_id = DP_INVALID_PEER;
-	struct dp_peer *sa_peer = NULL;
+	uint16_t sa_peer_id = DP_INVALID_PEER;
 	struct dp_ast_entry *ast_entry = NULL;
 	qdf_ether_header_t *eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 
@@ -2392,18 +2402,18 @@ void dp_tx_nawds_handler(struct cdp_soc_t *soc, struct dp_vdev *vdev,
 					 vdev->pdev->pdev_id);
 
 		if (ast_entry)
-			sa_peer = ast_entry->peer;
+			sa_peer_id = ast_entry->peer_id;
 		qdf_spin_unlock_bh(&dp_soc->ast_lock);
 	}
 
-	qdf_spin_lock_bh(&dp_soc->peer_ref_mutex);
+	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		if (!peer->bss_peer && peer->nawds_enabled) {
 			peer_id = peer->peer_id;
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
-			if (sa_peer == peer) {
+			if (sa_peer_id == peer->peer_id) {
 				QDF_TRACE(QDF_MODULE_ID_DP,
 					  QDF_TRACE_LEVEL_DEBUG,
 					  " %s: multicast packet",  __func__);
@@ -2436,7 +2446,7 @@ void dp_tx_nawds_handler(struct cdp_soc_t *soc, struct dp_vdev *vdev,
 		}
 	}
 
-	qdf_spin_unlock_bh(&dp_soc->peer_ref_mutex);
+	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 }
 
 /**
@@ -2658,6 +2668,7 @@ void dp_tx_reinject_handler(struct dp_tx_desc_s *tx_desc, uint8_t *status)
 	}
 	is_ucast = !is_mcast;
 
+	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		if (peer->bss_peer)
 			continue;
@@ -2673,11 +2684,13 @@ void dp_tx_reinject_handler(struct dp_tx_desc_s *tx_desc, uint8_t *status)
 			break;
 		}
 	}
+	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 #endif
 
 	if (qdf_unlikely(vdev->mesh_vdev)) {
 		DP_TX_FREE_SINGLE_BUF(vdev->pdev->soc, tx_desc->nbuf);
 	} else {
+		qdf_spin_lock_bh(&vdev->peer_list_lock);
 		TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 			if ((peer->peer_id != HTT_INVALID_PEER) &&
 #ifdef WDS_VENDOR_EXTENSION
@@ -2718,14 +2731,10 @@ void dp_tx_reinject_handler(struct dp_tx_desc_s *tx_desc, uint8_t *status)
 						QDF_TRACE_LEVEL_DEBUG,
 						FL("pkt send failed"));
 					qdf_nbuf_free(nbuf_copy);
-				} else {
-					if (peer_id != DP_INVALID_PEER)
-						DP_STATS_INC_PKT(peer,
-							tx.nawds_mcast,
-							1, qdf_nbuf_len(nbuf));
 				}
 			}
 		}
+		qdf_spin_unlock_bh(&vdev->peer_list_lock);
 	}
 
 	qdf_nbuf_free(nbuf);
@@ -3663,7 +3672,8 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 		if (qdf_likely(desc->flags & DP_TX_DESC_FLAG_SIMPLE)) {
 			struct dp_pdev *pdev = desc->pdev;
 
-			peer = dp_peer_find_by_id(soc, desc->peer_id);
+			peer = dp_peer_get_ref_by_id(soc, desc->peer_id,
+						     DP_MOD_ID_TX_COMP);
 			if (qdf_likely(peer)) {
 				/*
 				 * Increment peer statistics
@@ -3676,7 +3686,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 						HAL_TX_TQM_RR_FRAME_ACKED)
 					peer->stats.tx.tx_failed++;
 
-				dp_peer_unref_del_find_by_id(peer);
+				dp_peer_unref_delete(peer, DP_MOD_ID_TX_COMP);
 			}
 
 			qdf_assert(pdev);
@@ -3697,7 +3707,8 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			continue;
 		}
 		hal_tx_comp_get_status(&desc->comp, &ts, soc->hal_soc);
-		peer = dp_peer_find_by_id(soc, ts.peer_id);
+		peer = dp_peer_get_ref_by_id(soc, ts.peer_id,
+					     DP_MOD_ID_TX_COMP);
 		dp_tx_comp_process_tx_status(soc, desc, &ts, peer, ring_id);
 
 		netbuf = desc->nbuf;
@@ -3708,14 +3719,13 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 		dp_tx_comp_process_desc(soc, desc, &ts, peer);
 
 		if (peer)
-			dp_peer_unref_del_find_by_id(peer);
+			dp_peer_unref_delete(peer, DP_MOD_ID_TX_COMP);
 
 		next = desc->next;
 
 		dp_tx_desc_release(desc, desc->pool_id);
 		desc = next;
 	}
-
 }
 
 /**
@@ -3816,13 +3826,15 @@ void dp_tx_process_htt_completion(struct dp_tx_desc_s *tx_desc, uint8_t *status,
 			tid_stats->htt_status_cnt[tx_status]++;
 		}
 
-		peer = dp_peer_find_by_id(soc, ts.peer_id);
-		if (qdf_likely(peer))
-			dp_peer_unref_del_find_by_id(peer);
+		peer = dp_peer_get_ref_by_id(soc, ts.peer_id,
+					     DP_MOD_ID_TX_COMP);
 
 		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, peer, ring_id);
 		dp_tx_comp_process_desc(soc, tx_desc, &ts, peer);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+
+		if (qdf_likely(peer))
+			dp_peer_unref_delete(peer, DP_MOD_ID_TX_COMP);
 
 		break;
 	}

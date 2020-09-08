@@ -25,69 +25,96 @@
 #define DP_INVALID_PEER_ID 0xffff
 
 #define DP_FW_PEER_STATS_CMP_TIMEOUT_MSEC 5000
+
+typedef void dp_peer_iter_func(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg);
+void dp_peer_unref_delete(struct dp_peer *peer, enum dp_peer_mod_id id);
+
 /**
- * __dp_peer_find_by_id() - Returns peer object given the peer id
+ * dp_peer_get_ref() - Returns peer object given the peer id
+ *
+ * @soc		: core DP soc context
+ * @peer	: DP peer
+ * @mod_id	: id of module requesting the reference
+ *
+ * Return:	QDF_STATUS_SUCCESS if reference held successfully
+ *		else QDF_STATUS_E_INVAL
+ */
+static inline
+QDF_STATUS dp_peer_get_ref(struct dp_soc *soc,
+			   struct dp_peer *peer,
+			   enum dp_peer_mod_id mod_id)
+{
+	if (!qdf_atomic_inc_not_zero(&peer->ref_cnt))
+		return QDF_STATUS_E_INVAL;
+
+	if (mod_id > DP_MOD_ID_RX)
+		qdf_atomic_inc(&peer->mod_refs[mod_id]);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * __dp_peer_get_ref_by_id() - Returns peer object given the peer id
  *
  * @soc		: core DP soc context
  * @peer_id	: peer id from peer object can be retrieved
+ * @mod_id	: module id
  *
  * Return: struct dp_peer*: Pointer to DP peer object
  */
 static inline struct dp_peer *
-__dp_peer_find_by_id(struct dp_soc *soc,
-		   uint16_t peer_id)
+__dp_peer_get_ref_by_id(struct dp_soc *soc,
+			uint16_t peer_id,
+			enum dp_peer_mod_id mod_id)
+
 {
 	struct dp_peer *peer;
 
-	/* TODO: Hold lock */
+	qdf_spin_lock_bh(&soc->peer_map_lock);
 	peer = (peer_id >= soc->max_peers) ? NULL :
 				soc->peer_id_to_obj_map[peer_id];
+	if (!peer ||
+	    (dp_peer_get_ref(soc, peer, mod_id) != QDF_STATUS_SUCCESS)) {
+		qdf_spin_unlock_bh(&soc->peer_map_lock);
+		return NULL;
+	}
 
+	qdf_spin_unlock_bh(&soc->peer_map_lock);
 	return peer;
 }
 
-#ifdef PEER_PROTECTED_ACCESS
 /**
- * dp_peer_find_by_id() - Returns peer object given the peer id
- *                        if delete_in_progress in not set for peer
+ * dp_peer_get_ref_by_id() - Returns peer object given the peer id
+ *                        if peer state is active
  *
  * @soc		: core DP soc context
  * @peer_id	: peer id from peer object can be retrieved
+ * @mod_id      : ID ot module requesting reference
  *
  * Return: struct dp_peer*: Pointer to DP peer object
  */
 static inline
-struct dp_peer *dp_peer_find_by_id(struct dp_soc *soc,
-				   uint16_t peer_id)
+struct dp_peer *dp_peer_get_ref_by_id(struct dp_soc *soc,
+				      uint16_t peer_id,
+				      enum dp_peer_mod_id mod_id)
 {
 	struct dp_peer *peer;
 
-	qdf_spin_lock_bh(&soc->peer_ref_mutex);
-	peer = __dp_peer_find_by_id(soc, peer_id);
-	if (!peer || (peer && peer->delete_in_progress)) {
-		qdf_spin_unlock_bh(&soc->peer_ref_mutex);
-		return NULL;
-	}
-	qdf_atomic_inc(&peer->ref_cnt);
-	qdf_spin_unlock_bh(&soc->peer_ref_mutex);
+	qdf_spin_lock_bh(&soc->peer_map_lock);
+	peer = (peer_id >= soc->max_peers) ? NULL :
+				soc->peer_id_to_obj_map[peer_id];
 
-	return peer;
-}
-#else
-static inline struct dp_peer *
-dp_peer_find_by_id(struct dp_soc *soc,
-		   uint16_t peer_id)
-{
-	struct dp_peer *peer;
-
-	peer = __dp_peer_find_by_id (soc, peer_id);
-	if (peer && peer->delete_in_progress) {
+	if (!peer || peer->peer_state >= DP_PEER_STATE_LOGICAL_DELETE ||
+	    (dp_peer_get_ref(soc, peer, mod_id) != QDF_STATUS_SUCCESS)) {
+		qdf_spin_unlock_bh(&soc->peer_map_lock);
 		return NULL;
 	}
 
+	qdf_spin_unlock_bh(&soc->peer_map_lock);
+
 	return peer;
 }
-#endif /* PEER_LOCK_REF_PROTECT */
 
 #ifdef PEER_CACHE_RX_PKTS
 /**
@@ -112,6 +139,331 @@ dp_clear_peer_internal(struct dp_soc *soc, struct dp_peer *peer)
 	qdf_spin_unlock_bh(&peer->peer_info_lock);
 
 	dp_rx_flush_rx_cached(peer, true);
+}
+
+/**
+ * dp_vdev_iterate_peer() - API to iterate through vdev peer list
+ *
+ * @vdev	: DP vdev context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_vdev_iterate_peer(struct dp_vdev *vdev, dp_peer_iter_func *func, void *arg,
+		     enum dp_peer_mod_id mod_id)
+{
+	struct dp_peer *peer;
+	struct dp_peer *tmp_peer;
+	struct dp_soc *soc = NULL;
+
+	if (!vdev || !vdev->pdev || !vdev->pdev->soc)
+		return;
+
+	soc = vdev->pdev->soc;
+
+	qdf_spin_lock_bh(&vdev->peer_list_lock);
+	TAILQ_FOREACH_SAFE(peer, &vdev->peer_list,
+			   peer_list_elem,
+			   tmp_peer) {
+		if (dp_peer_get_ref(soc, peer, mod_id) ==
+					QDF_STATUS_SUCCESS) {
+			(*func)(soc, peer, arg);
+			dp_peer_unref_delete(peer, mod_id);
+		}
+	}
+	qdf_spin_unlock_bh(&vdev->peer_list_lock);
+}
+
+/**
+ * dp_pdev_iterate_peer() - API to iterate through all peers of pdev
+ *
+ * @pdev	: DP pdev context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_pdev_iterate_peer(struct dp_pdev *pdev, dp_peer_iter_func *func, void *arg,
+		     enum dp_peer_mod_id mod_id)
+{
+	struct dp_vdev *vdev;
+
+	if (!pdev)
+		return;
+
+	qdf_spin_lock_bh(&pdev->vdev_list_lock);
+	DP_PDEV_ITERATE_VDEV_LIST(pdev, vdev)
+		dp_vdev_iterate_peer(vdev, func, arg, mod_id);
+	qdf_spin_unlock_bh(&pdev->vdev_list_lock);
+}
+
+/**
+ * dp_soc_iterate_peer() - API to iterate through all peers of soc
+ *
+ * @soc		: DP soc context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_soc_iterate_peer(struct dp_soc *soc, dp_peer_iter_func *func, void *arg,
+		    enum dp_peer_mod_id mod_id)
+{
+	struct dp_pdev *pdev;
+	int i;
+
+	if (!soc)
+		return;
+
+	for (i = 0; i < MAX_PDEV_CNT && soc->pdev_list[i]; i++) {
+		pdev = soc->pdev_list[i];
+		dp_pdev_iterate_peer(pdev, func, arg, mod_id);
+	}
+}
+
+/**
+ * dp_vdev_iterate_peer_lock_safe() - API to iterate through vdev list
+ *
+ * This API will cache the peers in local allocated memory and calls
+ * iterate function outside the lock.
+ *
+ * As this API is allocating new memory it is suggested to use this
+ * only when lock cannot be held
+ *
+ * @vdev	: DP vdev context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_vdev_iterate_peer_lock_safe(struct dp_vdev *vdev,
+			       dp_peer_iter_func *func,
+			       void *arg,
+			       enum dp_peer_mod_id mod_id)
+{
+	struct dp_peer *peer;
+	struct dp_peer *tmp_peer;
+	struct dp_soc *soc = NULL;
+	struct dp_peer **peer_array = NULL;
+	int i = 0;
+	uint32_t num_peers = 0;
+
+	if (!vdev || !vdev->pdev || !vdev->pdev->soc)
+		return;
+
+	num_peers = vdev->num_peers;
+
+	soc = vdev->pdev->soc;
+
+	peer_array = qdf_mem_malloc(num_peers * sizeof(struct dp_peer *));
+	if (!peer_array)
+		return;
+
+	qdf_spin_lock_bh(&vdev->peer_list_lock);
+	TAILQ_FOREACH_SAFE(peer, &vdev->peer_list,
+			   peer_list_elem,
+			   tmp_peer) {
+		if (i >= num_peers)
+			break;
+
+		if (dp_peer_get_ref(soc, peer, mod_id) == QDF_STATUS_SUCCESS) {
+			peer_array[i] = peer;
+			i = (i + 1);
+		}
+	}
+	qdf_spin_unlock_bh(&vdev->peer_list_lock);
+
+	for (i = 0; i < num_peers; i++) {
+		peer = peer_array[i];
+
+		if (!peer)
+			continue;
+
+		(*func)(soc, peer, arg);
+		dp_peer_unref_delete(peer, mod_id);
+	}
+
+	qdf_mem_free(peer_array);
+}
+
+/**
+ * dp_pdev_iterate_peer_lock_safe() - API to iterate through all peers of pdev
+ *
+ * This API will cache the peers in local allocated memory and calls
+ * iterate function outside the lock.
+ *
+ * As this API is allocating new memory it is suggested to use this
+ * only when lock cannot be held
+ *
+ * @pdev	: DP pdev context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_pdev_iterate_peer_lock_safe(struct dp_pdev *pdev,
+			       dp_peer_iter_func *func,
+			       void *arg,
+			       enum dp_peer_mod_id mod_id)
+{
+	struct dp_peer *peer;
+	struct dp_peer *tmp_peer;
+	struct dp_soc *soc = NULL;
+	struct dp_vdev *vdev = NULL;
+	struct dp_peer **peer_array[DP_PDEV_MAX_VDEVS] = {0};
+	int i = 0;
+	int j = 0;
+	uint32_t num_peers[DP_PDEV_MAX_VDEVS] = {0};
+
+	if (!pdev || !pdev->soc)
+		return;
+
+	soc = pdev->soc;
+
+	qdf_spin_lock_bh(&pdev->vdev_list_lock);
+	DP_PDEV_ITERATE_VDEV_LIST(pdev, vdev) {
+		num_peers[i] = vdev->num_peers;
+		peer_array[i] = qdf_mem_malloc(num_peers[i] *
+					       sizeof(struct dp_peer *));
+		if (!peer_array[i])
+			break;
+
+		qdf_spin_lock_bh(&vdev->peer_list_lock);
+		TAILQ_FOREACH_SAFE(peer, &vdev->peer_list,
+				   peer_list_elem,
+				   tmp_peer) {
+			if (j >= num_peers[i])
+				break;
+
+			if (dp_peer_get_ref(soc, peer, mod_id) ==
+					QDF_STATUS_SUCCESS) {
+				peer_array[i][j] = peer;
+
+				j = (j + 1);
+			}
+		}
+		qdf_spin_unlock_bh(&vdev->peer_list_lock);
+		i = (i + 1);
+	}
+	qdf_spin_unlock_bh(&pdev->vdev_list_lock);
+
+	for (i = 0; i < DP_PDEV_MAX_VDEVS; i++) {
+		if (!peer_array[i])
+			break;
+
+		for (j = 0; j < num_peers[i]; j++) {
+			peer = peer_array[i][j];
+
+			if (!peer)
+				continue;
+
+			(*func)(soc, peer, arg);
+			dp_peer_unref_delete(peer, mod_id);
+		}
+
+		qdf_mem_free(peer_array[i]);
+	}
+}
+
+/**
+ * dp_soc_iterate_peer_lock_safe() - API to iterate through all peers of soc
+ *
+ * This API will cache the peers in local allocated memory and calls
+ * iterate function outside the lock.
+ *
+ * As this API is allocating new memory it is suggested to use this
+ * only when lock cannot be held
+ *
+ * @soc		: DP soc context
+ * @func	: function to be called for each peer
+ * @arg		: argument need to be passed to func
+ * @mod_id	: module_id
+ *
+ * Return: void
+ */
+static inline void
+dp_soc_iterate_peer_lock_safe(struct dp_soc *soc,
+			      dp_peer_iter_func *func,
+			      void *arg,
+			      enum dp_peer_mod_id mod_id)
+{
+	struct dp_pdev *pdev;
+	int i;
+
+	if (!soc)
+		return;
+
+	for (i = 0; i < MAX_PDEV_CNT && soc->pdev_list[i]; i++) {
+		pdev = soc->pdev_list[i];
+		dp_pdev_iterate_peer_lock_safe(pdev, func, arg, mod_id);
+	}
+}
+
+/**
+ * dp_peer_update_state() - update dp peer state
+ *
+ * @soc		: core DP soc context
+ * @peer	: DP peer
+ * @state	: new state
+ *
+ * Return: None
+ */
+static inline void
+dp_peer_update_state(struct dp_soc *soc,
+		     struct dp_peer *peer,
+		     enum dp_peer_state state)
+{
+	uint8_t peer_state = peer->peer_state;
+
+	switch (state) {
+	case DP_PEER_STATE_INIT:
+		QDF_ASSERT
+			((peer_state != DP_PEER_STATE_ACTIVE) ||
+			 (peer_state != DP_PEER_STATE_LOGICAL_DELETE));
+		break;
+
+	case DP_PEER_STATE_ACTIVE:
+		QDF_ASSERT(peer_state == DP_PEER_STATE_INIT);
+		break;
+
+	case DP_PEER_STATE_LOGICAL_DELETE:
+		QDF_ASSERT((peer_state == DP_PEER_STATE_ACTIVE) ||
+			   (peer_state == DP_PEER_STATE_INIT));
+		break;
+
+	case DP_PEER_STATE_INACTIVE:
+		QDF_ASSERT(peer_state == DP_PEER_STATE_LOGICAL_DELETE);
+		break;
+
+	case DP_PEER_STATE_FREED:
+		if (peer->sta_self_peer)
+			QDF_ASSERT(peer_state ==
+					DP_PEER_STATE_INIT);
+		else
+			QDF_ASSERT((peer_state ==
+					DP_PEER_STATE_INACTIVE) ||
+				   (peer_state ==
+					DP_PEER_STATE_LOGICAL_DELETE));
+		break;
+
+	default:
+		QDF_ASSERT(0);
+		break;
+	}
+	qdf_info("Updating peer state from %u to %u mac %pM\n",
+		 peer_state, state, peer->mac_addr.raw);
+	peer->peer_state = state;
 }
 
 void dp_print_ast_stats(struct dp_soc *soc);
@@ -148,12 +500,12 @@ struct dp_ast_entry *dp_peer_ast_hash_find_by_pdevid(struct dp_soc *soc,
 						     uint8_t *ast_mac_addr,
 						     uint8_t pdev_id);
 
+struct dp_ast_entry *dp_peer_ast_hash_find_by_vdevid(struct dp_soc *soc,
+						     uint8_t *ast_mac_addr,
+						     uint8_t vdev_id);
+
 struct dp_ast_entry *dp_peer_ast_hash_find_soc(struct dp_soc *soc,
 					       uint8_t *ast_mac_addr);
-
-struct dp_ast_entry *dp_peer_ast_list_find(struct dp_soc *soc,
-					   struct dp_peer *peer,
-					   uint8_t *ast_mac_addr);
 
 uint8_t dp_peer_ast_get_pdev_id(struct dp_soc *soc,
 				struct dp_ast_entry *ast_entry);
@@ -167,7 +519,8 @@ void dp_peer_ast_set_type(struct dp_soc *soc,
 				enum cdp_txrx_ast_entry_type type);
 
 void dp_peer_ast_send_wds_del(struct dp_soc *soc,
-			      struct dp_ast_entry *ast_entry);
+			      struct dp_ast_entry *ast_entry,
+			      struct dp_peer *peer);
 
 void dp_peer_free_hmwds_cb(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 			   struct cdp_soc *dp_soc,
@@ -181,16 +534,8 @@ void dp_peer_free_ast_entry(struct dp_soc *soc,
 			    struct dp_ast_entry *ast_entry);
 
 void dp_peer_unlink_ast_entry(struct dp_soc *soc,
-			      struct dp_ast_entry *ast_entry);
-
-/*
- * dp_peer_find_by_id_exist - check if peer exists for given id
- * @soc: core DP soc context
- * @peer_id: peer id from peer object can be retrieved
- *
- * Return: true if peer exists of false otherwise
- */
-bool dp_peer_find_by_id_valid(struct dp_soc *soc, uint16_t peer_id);
+			      struct dp_ast_entry *ast_entry,
+			      struct dp_peer *peer);
 
 #define DP_AST_ASSERT(_condition) \
 	do { \
@@ -402,7 +747,9 @@ static inline void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc,
 #endif
 
 struct dp_peer *dp_vdev_bss_peer_ref_n_get(struct dp_soc *soc,
-					   struct dp_vdev *vdev);
+					   struct dp_vdev *vdev,
+					   enum dp_peer_mod_id mod_id);
 struct dp_peer *dp_sta_vdev_self_peer_ref_n_get(struct dp_soc *soc,
-						struct dp_vdev *vdev);
+						struct dp_vdev *vdev,
+						enum dp_peer_mod_id mod_id);
 #endif /* _DP_PEER_H_ */

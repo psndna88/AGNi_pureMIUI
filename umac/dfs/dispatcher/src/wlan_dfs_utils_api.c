@@ -36,6 +36,8 @@
 #include <pld_common.h>
 #endif
 #include <qdf_module.h>
+#include "wlan_dfs_lmac_api.h"
+#include "../../core/src/dfs_internal.h"
 
 struct dfs_nol_info {
 	uint16_t num_chans;
@@ -771,11 +773,12 @@ static void utils_dfs_get_channel_list(struct wlan_objmgr_pdev *pdev,
 {
 	struct dfs_channel *tmp_chan_list = NULL;
 	struct wlan_dfs *dfs;
+	bool is_curchan_6g;
 	bool is_curchan_5g;
 	bool is_curchan_24g;
 	bool is_curchan_49g;
-	uint32_t chan_num;
-	uint32_t center_freq;
+	uint8_t chan_num;
+	uint16_t center_freq;
 	uint16_t flagext;
 	int i, j = 0;
 
@@ -793,6 +796,7 @@ static void utils_dfs_get_channel_list(struct wlan_objmgr_pdev *pdev,
 
 	chan_num = dfs->dfs_curchan->dfs_ch_ieee;
 	center_freq = dfs->dfs_curchan->dfs_ch_freq;
+	is_curchan_6g = WLAN_REG_IS_6GHZ_CHAN_FREQ(center_freq);
 	is_curchan_5g = WLAN_REG_IS_5GHZ_CH_FREQ(center_freq);
 	is_curchan_24g = WLAN_REG_IS_24GHZ_CH_FREQ(center_freq);
 	is_curchan_49g = WLAN_REG_IS_49GHZ_FREQ(center_freq);
@@ -805,7 +809,9 @@ static void utils_dfs_get_channel_list(struct wlan_objmgr_pdev *pdev,
 		if (!dfs_mlme_check_allowed_prim_chanlist(pdev, center_freq))
 			continue;
 
-		if ((is_curchan_5g) && WLAN_REG_IS_5GHZ_CH_FREQ(center_freq)) {
+		if (((is_curchan_5g) || is_curchan_6g) &&
+		    (WLAN_REG_IS_5GHZ_CH_FREQ(center_freq) ||
+		     WLAN_REG_IS_6GHZ_CHAN_FREQ(center_freq))) {
 			chan_list[j].dfs_ch_ieee = chan_num;
 			chan_list[j].dfs_ch_freq = center_freq;
 			chan_list[j].dfs_ch_flagext = flagext;
@@ -1562,7 +1568,10 @@ bool utils_dfs_is_spoof_done(struct wlan_objmgr_pdev *pdev)
 	if (!dfs)
 		return false;
 
-	return !!dfs->dfs_spoof_test_done;
+	if (lmac_is_host_dfs_check_support_enabled(dfs->dfs_pdev_obj) &&
+	    utils_get_dfsdomain(dfs->dfs_pdev_obj) == DFS_FCC_DOMAIN)
+		return !!dfs->dfs_spoof_test_done;
+	return true;
 }
 #endif
 
@@ -1690,5 +1699,23 @@ QDF_STATUS utils_dfs_get_rcac_channel(struct wlan_objmgr_pdev *pdev,
 	*chan_params = dfs->dfs_rcac_param.rcac_ch_params;
 
 	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef ATH_SUPPORT_ZERO_CAC_DFS
+enum precac_status_for_chan
+utils_dfs_precac_status_for_channel(struct wlan_objmgr_pdev *pdev,
+				    struct wlan_channel *deschan)
+{
+	struct wlan_dfs *dfs;
+	struct dfs_channel chan;
+
+	dfs = wlan_pdev_get_dfs_obj(pdev);
+	if (!dfs)
+		return false;
+
+	dfs_fill_chan_info(&chan, deschan);
+
+	return dfs_precac_status_for_channel(dfs, &chan);
 }
 #endif

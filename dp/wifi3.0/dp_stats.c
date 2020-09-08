@@ -4307,7 +4307,8 @@ void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 		mac = eh->ether_dhost;
 
 	if (!peer) {
-		peer = dp_peer_find_hash_find(soc, mac, 0, vdev->vdev_id);
+		peer = dp_peer_find_hash_find(soc, mac, 0, vdev->vdev_id,
+					      DP_MOD_ID_GENERIC_STATS);
 		new_peer_ref = true;
 		if (!peer)
 			return;
@@ -4334,7 +4335,7 @@ void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 		protocol_trace_cnt[prot].ingress_cnt++;
 dp_vdev_peer_stats_update_protocol_cnt_free_peer:
 	if (new_peer_ref)
-		dp_peer_unref_delete(peer);
+		dp_peer_unref_delete(peer, DP_MOD_ID_GENERIC_STATS);
 }
 
 void dp_peer_stats_update_protocol_cnt(struct cdp_soc_t *soc,
@@ -5366,11 +5367,11 @@ static void dp_print_jitter_stats(struct dp_peer *peer, struct dp_pdev *pdev)
 				"Total Success Count       : %llu\n"
 				"Total Drop                : %llu\n",
 				rx_tid->tid,
-				rx_tid->tx_avg_jitter,
-				rx_tid->tx_avg_delay,
-				rx_tid->tx_avg_err,
-				rx_tid->tx_total_success,
-				rx_tid->tx_drop);
+				rx_tid->stats.tx_avg_jitter,
+				rx_tid->stats.tx_avg_delay,
+				rx_tid->stats.tx_avg_err,
+				rx_tid->stats.tx_total_success,
+				rx_tid->stats.tx_drop);
 	}
 }
 #else
@@ -6039,41 +6040,29 @@ void dp_txrx_path_stats(struct dp_soc *soc)
  * dp_aggregate_pdev_ctrl_frames_stats()- function to agreegate peer stats
  * Current scope is bar received count
  *
- * @pdev_handle: DP_PDEV handle
+ * @soc : Datapath SOC handle
+ * @peer: Datapath peer handle
+ * @arg : argument to iterate function
  *
  * Return: void
  */
 static void
-dp_aggregate_pdev_ctrl_frames_stats(struct dp_pdev *pdev)
+dp_peer_ctrl_frames_stats_get(struct dp_soc *soc,
+			      struct dp_peer *peer,
+			      void *arg)
 {
-	struct dp_vdev *vdev;
-	struct dp_peer *peer;
 	uint32_t waitcnt;
+	struct dp_pdev *pdev = peer->vdev->pdev;
 
-	TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
-		TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-			if (!peer) {
-				dp_err("DP Invalid Peer refernce");
-				return;
-			}
-
-			if (peer->delete_in_progress) {
-				dp_err("DP Peer deletion in progress");
-				continue;
-			}
-			qdf_atomic_inc(&peer->ref_cnt);
-			waitcnt = 0;
-			dp_peer_rxtid_stats(peer, dp_rx_bar_stats_cb, pdev);
-			while (!(qdf_atomic_read(&pdev->stats_cmd_complete)) &&
-			       waitcnt < 10) {
-				schedule_timeout_interruptible(
-						STATS_PROC_TIMEOUT);
-				waitcnt++;
-			}
-			qdf_atomic_set(&pdev->stats_cmd_complete, 0);
-			dp_peer_unref_delete(peer);
-		}
+	waitcnt = 0;
+	dp_peer_rxtid_stats(peer, dp_rx_bar_stats_cb, pdev);
+	while (!(qdf_atomic_read(&pdev->stats_cmd_complete)) &&
+	       waitcnt < 10) {
+		schedule_timeout_interruptible(
+				STATS_PROC_TIMEOUT);
+		waitcnt++;
 	}
+	qdf_atomic_set(&pdev->stats_cmd_complete, 0);
 }
 
 void
@@ -6285,8 +6274,9 @@ dp_print_pdev_rx_stats(struct dp_pdev *pdev)
 	DP_PRINT_STATS("	Failed frag alloc = %u",
 		       pdev->stats.replenish.frag_alloc_fail);
 
+	dp_pdev_iterate_peer_lock_safe(pdev, dp_peer_ctrl_frames_stats_get,
+				       NULL, DP_MOD_ID_GENERIC_STATS);
 	/* Get bar_recv_cnt */
-	dp_aggregate_pdev_ctrl_frames_stats(pdev);
 	DP_PRINT_STATS("BAR Received Count: = %u",
 		       pdev->stats.rx.bar_recv_cnt);
 

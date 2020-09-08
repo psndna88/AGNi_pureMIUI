@@ -86,6 +86,13 @@
 #define MAX_VDEV_CNT 51
 #endif
 
+/* Max no. of VDEVs, a PDEV can support */
+#ifdef WLAN_PDEV_MAX_VDEVS
+#define DP_PDEV_MAX_VDEVS WLAN_PDEV_MAX_VDEVS
+#else
+#define DP_PDEV_MAX_VDEVS 17
+#endif
+
 #define MAX_TXDESC_POOLS 4
 #define MAX_RXDESC_POOLS 4
 #define MAX_REO_DEST_RINGS 4
@@ -147,6 +154,40 @@ struct cdp_soc_rate_stats_ctx;
 struct dp_rx_fst;
 struct dp_mon_filter;
 struct dp_mon_mpdu;
+
+/**
+ * enum for DP peer state
+ */
+enum dp_peer_state {
+	DP_PEER_STATE_NONE,
+	DP_PEER_STATE_INIT,
+	DP_PEER_STATE_ACTIVE,
+	DP_PEER_STATE_LOGICAL_DELETE,
+	DP_PEER_STATE_INACTIVE,
+	DP_PEER_STATE_FREED,
+	DP_PEER_STATE_INVALID,
+};
+
+/**
+ * enum for modules ids of peer reference
+ */
+enum dp_peer_mod_id {
+	DP_MOD_ID_TX_COMP,
+	DP_MOD_ID_RX,
+	DP_MOD_ID_RX_ERR,
+	DP_MOD_ID_TX_PPDU_STATS,
+	DP_MOD_ID_RX_PPDU_STATS,
+	DP_MOD_ID_CDP,
+	DP_MOD_ID_GENERIC_STATS,
+	DP_MOD_ID_TX_MULTIPASS,
+	DP_MOD_ID_TX_CAPTURE,
+	DP_MOD_ID_NSS_OFFLOAD,
+	DP_MOD_ID_PEER_CONFIG,
+	DP_MOD_ID_HTT,
+	DP_MOD_ID_IPA,
+	DP_MOD_ID_AST,
+	DP_MOD_ID_MAX,
+};
 
 #define DP_PDEV_ITERATE_VDEV_LIST(_pdev, _vdev) \
 	TAILQ_FOREACH((_vdev), &(_pdev)->vdev_list, vdev_list_elem)
@@ -345,11 +386,13 @@ struct rx_desc_pool {
  * @next: next extension descriptor pointer
  * @vaddr: hlos virtual address pointer
  * @paddr: physical address pointer for descriptor
+ * @flags: mark features for extension descriptor
  */
 struct dp_tx_ext_desc_elem_s {
 	struct dp_tx_ext_desc_elem_s *next;
 	void *vaddr;
 	qdf_dma_addr_t paddr;
+	uint16_t flags;
 };
 
 /**
@@ -653,14 +696,8 @@ struct dp_rx_tid {
 	/* Coex Override preserved windows size 1 based */
 	uint16_t rx_ba_win_size_override;
 
-#ifdef WLAN_PEER_JITTER
-	/* Tx Jitter stats */
-	uint32_t tx_avg_jitter;
-	uint32_t tx_avg_delay;
-	uint64_t tx_avg_err;
-	uint64_t tx_total_success;
-	uint64_t tx_drop;
-#endif /* WLAN_PEER_JITTER */
+	/* Peer TID statistics */
+	struct cdp_peer_tid_stats stats;
 };
 
 /**
@@ -936,9 +973,9 @@ struct dp_ast_free_cb_params {
  * dp_ast_entry
  *
  * @ast_idx: Hardware AST Index
+ * @peer_id: Next Hop peer_id (for non-WDS nodes, this will be point to
+ *           associated peer with this MAC address)
  * @mac_addr:  MAC Address for this AST entry
- * @peer: Next Hop peer (for non-WDS nodes, this will be point to
- *        associated peer with this MAC address)
  * @next_hop: Set to 1 if this is for a WDS node
  * @is_active: flag to indicate active data traffic on this node
  *             (used for aging out/expiry)
@@ -959,12 +996,13 @@ struct dp_ast_free_cb_params {
  */
 struct dp_ast_entry {
 	uint16_t ast_idx;
+	uint16_t peer_id;
 	union dp_align_mac_addr mac_addr;
-	struct dp_peer *peer;
 	bool next_hop;
 	bool is_active;
 	bool is_mapped;
 	uint8_t pdev_id;
+	uint8_t vdev_id;
 	uint16_t ast_hash_value;
 	qdf_atomic_t ref_cnt;
 	enum cdp_txrx_ast_entry_type type;
@@ -1291,13 +1329,10 @@ struct dp_soc {
 		qdf_dma_mem_context(memctx);
 	} me_buf;
 
-	/**
-	 * peer ref mutex:
-	 * 1. Protect peer object lookups until the returned peer object's
-	 *	reference count is incremented.
-	 * 2. Provide mutex when accessing peer object lookup structures.
-	 */
-	DP_MUTEX_TYPE peer_ref_mutex;
+	/* Protect peer hash table */
+	DP_MUTEX_TYPE peer_hash_lock;
+	/* Protect peer_id_to_objmap */
+	DP_MUTEX_TYPE peer_map_lock;
 
 	/* maximum value for peer_id */
 	uint32_t max_peers;
@@ -1471,6 +1506,8 @@ struct dp_soc {
 	struct rx_buff_pool rx_buff_pool[MAX_PDEV_CNT];
 	/* Save recent operation related variable */
 	struct dp_last_op_info last_op_info;
+	TAILQ_HEAD(, dp_peer) inactive_peer_list;
+	qdf_spinlock_t inactive_peer_list_lock;
 };
 
 #ifdef IPA_OFFLOAD
@@ -2126,6 +2163,8 @@ struct dp_vdev {
 
 	/* dp_peer list */
 	TAILQ_HEAD(, dp_peer) peer_list;
+	/* to protect peer_list */
+	DP_MUTEX_TYPE peer_list_lock;
 
 	/* RX call back function to flush GRO packets*/
 	ol_txrx_rx_gro_flush_ind_fp osif_gro_flush;
@@ -2270,6 +2309,12 @@ struct dp_vdev {
 	uint8_t fisa_disallowed[MAX_REO_DEST_RINGS];
 	uint8_t fisa_force_flushed[MAX_REO_DEST_RINGS];
 #endif
+	/*
+	 * Refcount for VDEV currently incremented when
+	 * peer is created for VDEV
+	 */
+	qdf_atomic_t ref_cnt;
+	uint32_t num_peers;
 };
 
 
@@ -2350,6 +2395,25 @@ struct dp_peer_ast_params {
 	uint8_t flowQ;
 };
 
+#define IEEE80211_MSCS_MAX_ELEM_SIZE    5
+#define IEEE80211_TCLAS_MASK_CLA_TYPE_4  4
+/*
+ * struct dp_peer_mscs_node_stats - MSCS database obtained from
+ * MSCS Request and Response in the control path. This data is used
+ * by the AP to find out what priority to set based on the tuple
+ * classification during packet processing.
+ * @user_priority_bitmap - User priority bitmap obtained during
+ * handshake
+ * @user_priority_limit - User priority limit obtained during
+ * handshake
+ * @classifier_mask - params to be compared during processing
+ */
+struct dp_peer_mscs_parameter {
+	uint8_t user_priority_bitmap;
+	uint8_t user_priority_limit;
+	uint8_t classifier_mask;
+};
+
 /* Peer structure for data path state */
 struct dp_peer {
 	/* VDEV to which this peer is associated */
@@ -2391,7 +2455,7 @@ struct dp_peer {
 		rx_cap_enabled:1, /* Peer's rx-capture is enabled */
 		valid:1, /* valid bit */
 		in_twt:1, /* in TWT session */
-		delete_in_progress:1, /*delete_in_progress bit*/
+		delete_in_progress:1, /* Indicate kickout sent */
 		sta_self_peer:1; /* Indicate STA self peer */
 
 #ifdef QCA_SUPPORT_PEER_ISOLATION
@@ -2460,6 +2524,14 @@ struct dp_peer {
 #ifdef QCA_PEER_MULTIQ_SUPPORT
 	struct dp_peer_ast_params peer_ast_flowq_idx[DP_PEER_AST_FLOWQ_MAX];
 #endif
+	/* entry to inactive_list*/
+	TAILQ_ENTRY(dp_peer) inactive_list_elem;
+
+	qdf_atomic_t mod_refs[DP_MOD_ID_MAX];
+
+	uint8_t peer_state;
+	struct dp_peer_mscs_parameter mscs_ipv4_parameter, mscs_ipv6_parameter;
+	bool mscs_active;
 };
 
 /*

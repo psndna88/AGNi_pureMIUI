@@ -703,9 +703,11 @@ static inline void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 
 }
 
-static inline void dp_update_vdev_stats(struct cdp_vdev_stats *tgtobj,
-					struct dp_peer *srcobj)
+static inline void dp_update_vdev_stats(struct dp_soc *soc,
+					struct dp_peer *srcobj,
+					void *arg)
 {
+	struct cdp_vdev_stats *tgtobj = (struct cdp_vdev_stats *)arg;
 	uint8_t i;
 	uint8_t pream_type;
 
@@ -945,7 +947,16 @@ extern void dp_peer_find_detach(struct dp_soc *soc);
 extern void dp_peer_find_hash_add(struct dp_soc *soc, struct dp_peer *peer);
 extern void dp_peer_find_hash_remove(struct dp_soc *soc, struct dp_peer *peer);
 extern void dp_peer_find_hash_erase(struct dp_soc *soc);
-
+void dp_peer_vdev_list_add(struct dp_soc *soc, struct dp_vdev *vdev,
+			   struct dp_peer *peer);
+void dp_peer_vdev_list_remove(struct dp_soc *soc, struct dp_vdev *vdev,
+			      struct dp_peer *peer);
+void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
+				struct dp_peer *peer,
+				uint16_t peer_id);
+void dp_peer_find_id_to_obj_remove(struct dp_soc *soc,
+				   uint16_t peer_id);
+void dp_vdev_unref_delete(struct dp_soc *soc, struct dp_vdev *vdev);
 /*
  * dp_peer_ppdu_delayed_ba_init() Initialize ppdu in peer
  * @peer: Datapath peer
@@ -964,15 +975,13 @@ void dp_peer_ppdu_delayed_ba_cleanup(struct dp_peer *peer);
 
 extern void dp_peer_rx_init(struct dp_pdev *pdev, struct dp_peer *peer);
 void dp_peer_tx_init(struct dp_pdev *pdev, struct dp_peer *peer);
-void dp_peer_cleanup(struct dp_vdev *vdev, struct dp_peer *peer,
-		     bool reuse);
-void dp_peer_rx_cleanup(struct dp_vdev *vdev, struct dp_peer *peer,
-			bool reuse);
-void dp_peer_unref_delete(struct dp_peer *peer);
-extern void *dp_find_peer_by_addr(struct cdp_pdev *dev,
-	uint8_t *peer_mac_addr);
+void dp_peer_cleanup(struct dp_vdev *vdev, struct dp_peer *peer);
+void dp_peer_rx_cleanup(struct dp_vdev *vdev, struct dp_peer *peer);
 extern struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
-	uint8_t *peer_mac_addr, int mac_addr_is_aligned, uint8_t vdev_id);
+					      uint8_t *peer_mac_addr,
+					      int mac_addr_is_aligned,
+					      uint8_t vdev_id,
+					      enum dp_peer_mod_id id);
 
 #ifdef DP_PEER_EXTENDED_API
 /**
@@ -1038,10 +1047,6 @@ bool dp_find_peer_exist_on_vdev(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 bool dp_find_peer_exist_on_other_vdev(struct cdp_soc_t *soc_hdl,
 				      uint8_t vdev_id, uint8_t *peer_addr,
 				      uint16_t max_bssid);
-
-void *dp_find_peer_by_addr_and_vdev(struct cdp_pdev *pdev_handle,
-		struct cdp_vdev *vdev,
-		uint8_t *peer_addr);
 
 /**
  * dp_peer_state_update() - update peer local state
@@ -1751,24 +1756,6 @@ int dp_tx_delete_flow_pool(struct dp_soc *soc, struct dp_tx_desc_pool_s *pool,
 	bool force);
 #endif /* QCA_LL_TX_FLOW_CONTROL_V2 */
 
-#ifdef PEER_PROTECTED_ACCESS
-/**
- * dp_peer_unref_del_find_by_id() - dec ref and del peer if ref count is
- *                                  taken by dp_peer_find_by_id
- * @peer: peer context
- *
- * Return: none
- */
-static inline void dp_peer_unref_del_find_by_id(struct dp_peer *peer)
-{
-	dp_peer_unref_delete(peer);
-}
-#else
-static inline void dp_peer_unref_del_find_by_id(struct dp_peer *peer)
-{
-}
-#endif
-
 #ifdef WLAN_FEATURE_DP_EVENT_HISTORY
 /**
  * dp_srng_access_start() - Wrapper function to log access start of a hal ring
@@ -2291,4 +2278,22 @@ dp_hmwds_ast_add_notify(struct dp_peer *peer,
 {
 }
 #endif
+
+/**
+ * dp_vdev_get_ref() - API to take a reference for VDEV object
+ *
+ * @soc		: core DP soc context
+ * @vdev	: DP vdev
+ *
+ * Return:	QDF_STATUS_SUCCESS if reference held successfully
+ *		else QDF_STATUS_E_INVAL
+ */
+static inline
+QDF_STATUS dp_vdev_get_ref(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	if (!qdf_atomic_inc_not_zero(&vdev->ref_cnt))
+		return QDF_STATUS_E_INVAL;
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* #ifndef _DP_INTERNAL_H_ */
