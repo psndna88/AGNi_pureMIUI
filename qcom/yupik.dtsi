@@ -266,3 +266,4 @@
 };
 
 #include "yupik-pinctrl.dtsi"
+#include "yupik-stub-regulator.dtsi"
