@@ -21,7 +21,7 @@
 #define IPA_WAN_AGGR_PKT_CNT 5
 #define IPA_WAN_NAPI_MAX_FRAMES (NAPI_WEIGHT / IPA_WAN_AGGR_PKT_CNT)
 #define IPA_WAN_PAGE_ORDER 3
-#define IPA_LAN_AGGR_PKT_CNT 5
+#define IPA_LAN_AGGR_PKT_CNT 1
 #define IPA_LAN_NAPI_MAX_FRAMES (NAPI_WEIGHT / IPA_LAN_AGGR_PKT_CNT)
 #define IPA_LAST_DESC_CNT 0xFFFF
 #define POLLING_INACTIVITY_RX 40
@@ -4120,9 +4120,10 @@ static int ipa3_assign_policy(struct ipa_sys_connect_params *in,
 			 * Dont enable ipa_status for APQ, since MDM IPA
 			 * has IPA >= 4.5 with DPLv3.
 			 */
-			if (ipa3_ctx->platform_type == IPA_PLAT_TYPE_APQ &&
-				ipa3_is_mhip_offload_enabled())
-				sys->ep->status.status_en = false;
+			if ((ipa3_ctx->platform_type == IPA_PLAT_TYPE_APQ &&
+				ipa3_is_mhip_offload_enabled()) ||
+				(ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5))
+					sys->ep->status.status_en = false;
 			else
 				sys->ep->status.status_en = true;
 			sys->policy = IPA_POLICY_INTR_POLL_MODE;
@@ -5242,10 +5243,12 @@ start_poll:
 int ipa3_rx_poll(u32 clnt_hdl, int weight)
 {
 	struct ipa3_ep_context *ep;
+	struct ipa3_sys_context *wan_def_sys;
 	int ret;
 	int cnt = 0;
 	int num = 0;
 	int remain_aggr_weight;
+	int ipa_ep_idx;
 	struct ipa_active_client_logging_info log;
 	struct gsi_chan_xfer_notify notify[IPA_WAN_NAPI_MAX_FRAMES];
 
@@ -5257,8 +5260,16 @@ int ipa3_rx_poll(u32 clnt_hdl, int weight)
 		return cnt;
 	}
 
-	remain_aggr_weight = weight / IPA_WAN_AGGR_PKT_CNT;
+	ipa_ep_idx = ipa3_get_ep_mapping(
+		IPA_CLIENT_APPS_WAN_CONS);
+	if (ipa_ep_idx ==
+		IPA_EP_NOT_ALLOCATED) {
+		IPAERR("Invalid client.\n");
+		return cnt;
+	}
 
+	wan_def_sys = ipa3_ctx->ep[ipa_ep_idx].sys;
+	remain_aggr_weight = weight / IPA_WAN_AGGR_PKT_CNT;
 	if (remain_aggr_weight > IPA_WAN_NAPI_MAX_FRAMES) {
 		IPAERR("NAPI weight is higher than expected\n");
 		IPAERR("expected %d got %d\n",
@@ -5295,11 +5306,11 @@ start_poll:
 	cnt += weight - remain_aggr_weight * IPA_WAN_AGGR_PKT_CNT;
 	/* call repl_hdlr before napi_reschedule / napi_complete */
 	ep->sys->repl_hdlr(ep->sys);
-
-	/* When not able to replenish enough descriptors pipe wait
-	 * until minimum number descripotrs to replish.
+	/* When not able to replenish enough descriptors, keep in polling
+	 * mode, wait for napi-poll and replenish again.
 	 */
-	if (cnt < weight && ep->sys->len > IPA_DEFAULT_SYS_YELLOW_WM) {
+	if (cnt < weight && ep->sys->len > IPA_DEFAULT_SYS_YELLOW_WM &&
+		wan_def_sys->len > IPA_DEFAULT_SYS_YELLOW_WM) {
 		napi_complete(ep->sys->napi_obj);
 		ret = ipa3_rx_switch_to_intr_mode(ep->sys);
 		if (ret == -GSI_STATUS_PENDING_IRQ &&

@@ -63,6 +63,8 @@
 #define IPA_UC_WAIT_MIN_SLEEP 1000
 #define IPA_UC_WAII_MAX_SLEEP 1200
 #define IPA_HOLB_TMR_VAL_4_5 31
+#define IPA_HOLB_TMR_DIS 0x0
+#define IPA_HOLB_TMR_EN 0x1
 /*
  * The transport descriptor size was changed to GSI_CHAN_RE_SIZE_16B, but
  * IPA users still use sps_iovec size as FIFO element size.
@@ -2969,6 +2971,8 @@ int ipa_get_quota_stats(struct ipa_quota_stats_all *out);
 int ipa_reset_quota_stats(enum ipa_client_type client);
 
 int ipa_reset_all_quota_stats(void);
+
+int ipa_drop_stats_init(void);
 
 int ipa_init_drop_stats(u32 pipe_bitmask);
 
