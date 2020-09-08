@@ -8,7 +8,7 @@
 
 #include <linux/videodev2.h>
 #include <linux/msm_ion.h>
-#include <media/msm_vidc_utils.h>
+#include "vidc/media/msm_vidc_utils.h"
 #include <media/media-device.h>
 
 #define HAL_BUFFER_MAX 0xe

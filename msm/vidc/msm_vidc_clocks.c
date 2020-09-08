@@ -438,16 +438,16 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 		if (msm_comm_get_stream_output_mode(inst) ==
 				HAL_VIDEO_DECODER_PRIMARY) {
 			vote_data->color_formats[0] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.opb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.opb_fourcc, inst->sid);
 			vote_data->num_formats = 1;
 		} else {
 			vote_data->color_formats[0] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.dpb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.dpb_fourcc, inst->sid);
 			vote_data->color_formats[1] =
-				msm_comm_get_hal_uncompressed(
-				inst->clk_data.opb_fourcc);
+				msm_comm_get_hfi_uncompressed(
+				inst->clk_data.opb_fourcc, inst->sid);
 			vote_data->num_formats = 2;
 		}
 		vote_data->work_mode = inst->clk_data.work_mode;
@@ -701,9 +701,14 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 
 		vpp_cycles = mbs_per_second * vpp_cycles_per_mb /
 				inst->clk_data.work_route;
-		/* 1.25 factor for IbP GOP structure */
-		if (msm_comm_g_ctrl_for_id(inst, V4L2_CID_MPEG_VIDEO_B_FRAMES))
+		/* Factor 1.25 for IbP and 1.375 for I1B2b1P GOP structure */
+		if (is_hier_b_session(inst)) {
+			vpp_cycles += (vpp_cycles / 4) + (vpp_cycles / 8);
+		} else if (msm_comm_g_ctrl_for_id(inst,
+					V4L2_CID_MPEG_VIDEO_B_FRAMES)) {
 			vpp_cycles += vpp_cycles / 4;
+		}
+
 		/* 21 / 20 is minimum overhead factor */
 		vpp_cycles += max(div_u64(vpp_cycles, 20), fw_vpp_cycles);
 		/* 1.01 is multi-pipe overhead */
@@ -758,7 +763,8 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 
 		/* VSP */
 		codec = get_v4l2_codec(inst);
-		base_cycles = inst->clk_data.entry->vsp_cycles;
+		base_cycles = inst->has_bframe ?
+				80 : inst->clk_data.entry->vsp_cycles;
 		vsp_cycles = fps * filled_len * 8;
 
 		if (codec == V4L2_PIX_FMT_VP9) {
@@ -1293,6 +1299,7 @@ int msm_vidc_set_bse_vpp_delay(struct msm_vidc_inst *inst)
 	if (!inst->core->resources.has_vpp_delay ||
 		!is_decode_session(inst) ||
 		is_thumbnail_session(inst) ||
+		is_heif_decoder(inst) ||
 		inst->clk_data.work_mode != HFI_WORKMODE_2) {
 		s_vpr_hp(inst->sid, "%s: Skip bse-vpp\n", __func__);
 		return 0;

@@ -14,6 +14,8 @@
 #define V4L2_PIX_FMT_NV12_UBWC                  v4l2_fourcc('Q', '1', '2', '8')
 /* NV12_512 8-bit Y/CbCr 4:2:0  */
 #define V4L2_PIX_FMT_NV12_512                   v4l2_fourcc('Q', '5', '1', '2')
+/* NV12_128 8-bit Y/CbCr 4:2:0  */
+#define V4L2_PIX_FMT_NV12_128                   v4l2_fourcc('N', '1', '2', '8')
 /* NV12 10-bit Y/CbCr 4:2:0 */
 #define V4L2_PIX_FMT_NV12_P010_UBWC             v4l2_fourcc('Q', '1', '2', 'B')
 /* UBWC 10-bit Y/CbCr 4:2:0 */
@@ -252,6 +254,8 @@ enum v4l2_mpeg_vidc_video_bitrate_savings_type {
 		(V4L2_CID_MPEG_MSM_VIDC_BASE + 132)
 #define V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_HINT \
 	(V4L2_CID_MPEG_MSM_VIDC_BASE + 133)
+#define V4L2_CID_MPEG_VIDC_VDEC_HEIF_MODE \
+		(V4L2_CID_MPEG_MSM_VIDC_BASE + 134)
 
 #define V4L2_CID_MPEG_VIDC_VIDEO_UNKNOWN \
 		(V4L2_CID_MPEG_MSM_VIDC_BASE + 0xFFF)

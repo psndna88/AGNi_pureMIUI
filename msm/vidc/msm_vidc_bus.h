@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __H_MSM_VIDC_BUS_DEFS_H__
@@ -228,30 +228,30 @@ struct lut const *__lut(int width, int height, int fps);
 fp_t __compression_ratio(struct lut const *entry, int bpp);
 void __dump(struct dump dump[], int len, u32 sid);
 
-static inline bool __ubwc(enum hal_uncompressed_format f)
+static inline bool __ubwc(u32 format)
 {
-	switch (f) {
-	case HAL_COLOR_FORMAT_NV12_UBWC:
-	case HAL_COLOR_FORMAT_NV12_TP10_UBWC:
+	switch (format) {
+	case HFI_COLOR_FORMAT_NV12_UBWC:
+	case HFI_COLOR_FORMAT_YUV420_TP10_UBWC:
 		return true;
 	default:
 		return false;
 	}
 }
 
-static inline int __bpp(enum hal_uncompressed_format f, u32 sid)
+static inline int __bpp(u32 format, u32 sid)
 {
-	switch (f) {
-	case HAL_COLOR_FORMAT_NV12:
-	case HAL_COLOR_FORMAT_NV21:
-	case HAL_COLOR_FORMAT_NV12_UBWC:
-	case HAL_COLOR_FORMAT_RGBA8888_UBWC:
+	switch (format) {
+	case HFI_COLOR_FORMAT_NV12:
+	case HFI_COLOR_FORMAT_NV21:
+	case HFI_COLOR_FORMAT_NV12_UBWC:
+	case HFI_COLOR_FORMAT_RGBA8888_UBWC:
 		return 8;
-	case HAL_COLOR_FORMAT_NV12_TP10_UBWC:
-	case HAL_COLOR_FORMAT_P010:
+	case HFI_COLOR_FORMAT_YUV420_TP10_UBWC:
+	case HFI_COLOR_FORMAT_P010:
 		return 10;
 	default:
-		s_vpr_e(sid, "Unsupported colorformat (%x)", f);
+		s_vpr_e(sid, "Unsupported colorformat (%x)", format);
 		return INT_MAX;
 	}
 }

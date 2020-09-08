@@ -27,6 +27,10 @@
 /* extra output buffers for encoder HEIF usecase */
 #define HEIF_ENC_TOTAL_OUTPUT_BUFFERS 12
 
+/* extra buffer count for heif decoder */
+#define HEIF_DEC_TOTAL_INPUT_BUFFERS 12
+#define HEIF_DEC_EXTRA_OUTPUT_BUFFERS 8
+
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_WIDTH 32
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_Y_TILE_HEIGHT 8
 #define HFI_COLOR_FORMAT_YUV420_NV12_UBWC_UV_TILE_WIDTH 16
@@ -789,6 +793,9 @@ static int msm_vidc_get_extra_input_buff_count(struct msm_vidc_inst *inst)
 
 	core = inst->core;
 
+	if (is_heif_decoder(inst))
+		return (HEIF_DEC_TOTAL_INPUT_BUFFERS - MIN_INPUT_BUFFERS);
+
 	/*
 	 * For thumbnail session, extra buffers are not required as
 	 * neither dcvs nor batching will be enabled.
@@ -821,6 +828,9 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 
 	core = inst->core;
 
+	if (is_heif_decoder(inst))
+		return HEIF_DEC_EXTRA_OUTPUT_BUFFERS;
+
 	/*
 	 * For a non-realtime session, extra buffers are not required.
 	 * For thumbnail session, extra buffers are not required as
@@ -829,7 +839,7 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 	if (!is_realtime_session(inst) || is_thumbnail_session(inst))
 		return extra_output_count;
 
-	/* For HEIF, we are increasing buffer count */
+	/* For HEIF encoder, we are increasing buffer count */
 	if (is_image_session(inst)) {
 		extra_output_count = (HEIF_ENC_TOTAL_OUTPUT_BUFFERS -
 			MIN_ENC_OUTPUT_BUFFERS);
@@ -887,6 +897,11 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
 	 */
 	if (base_res_mbs > inst->capability.cap[CAP_MBS_PER_FRAME].max) {
 		base_res_mbs = inst->capability.cap[CAP_MBS_PER_FRAME].max;
+		div_factor = 1;
+	}
+	/* For HEIF image, use the actual resolution to calc buffer size */
+	if (is_heif_decoder(inst)) {
+		base_res_mbs = num_mbs;
 		div_factor = 1;
 	}
 

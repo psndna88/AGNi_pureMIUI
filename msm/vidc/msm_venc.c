@@ -1037,6 +1037,11 @@ static struct msm_vidc_format_desc venc_input_formats[] = {
 		.fourcc = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS,
 	},
 	{
+		.name = "YCbCr Semiplanar 4:2:0 128 aligned",
+		.description = "Y/CbCr 4:2:0 128 aligned",
+		.fourcc = V4L2_PIX_FMT_NV12_128,
+	},
+	{
 		.name = "YCbCr Semiplanar 4:2:0 512 aligned",
 		.description = "Y/CbCr 4:2:0 512 aligned",
 		.fourcc = V4L2_PIX_FMT_NV12_512,
@@ -1069,6 +1074,14 @@ struct msm_vidc_format_constraint enc_pix_format_constraints[] = {
 		.y_buffer_alignment = 256,
 		.uv_max_stride = 8192,
 		.uv_buffer_alignment = 256,
+	},
+	{
+		.fourcc = V4L2_PIX_FMT_NV12_128,
+		.num_planes = 2,
+		.y_max_stride = 8192,
+		.y_buffer_alignment = 128,
+		.uv_max_stride = 8192,
+		.uv_buffer_alignment = 32,
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_NV12_512,

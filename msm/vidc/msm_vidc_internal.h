@@ -15,7 +15,7 @@
 #include <media/videobuf2-v4l2.h>
 #include <linux/interconnect.h>
 #include "msm_vidc.h"
-#include <media/msm_media_info.h>
+#include "vidc/media/msm_media_info.h"
 #include "vidc_hfi_api.h"
 #include "vidc_hfi_helper.h"
 
@@ -411,7 +411,7 @@ struct vidc_bus_vote_data {
 	u32 sid;
 	enum hal_domain domain;
 	enum hal_video_codec codec;
-	enum hal_uncompressed_format color_formats[2];
+	u32 color_formats[2];
 	int num_formats; /* 1 = DPB-OPB unified; 2 = split */
 	int input_height, input_width, bitrate;
 	int output_height, output_width;
@@ -574,6 +574,7 @@ struct msm_vidc_inst {
 	u32 first_reconfig_done;
 	u64 last_qbuf_time_ns;
 	bool active;
+	bool has_bframe;
 };
 
 extern struct msm_vidc_drv *vidc_driver;

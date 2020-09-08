@@ -27,8 +27,7 @@ endif
 endif
 
 LINUXINCLUDE    += -I$(srctree)/techpack/video/include \
-                   -I$(srctree)/techpack/video/include/uapi \
-                   -I$(srctree)/techpack/video/include/uapi/vidc
+                   -I$(srctree)/techpack/video/include/uapi
 
 USERINCLUDE     += -I$(srctree)/techpack/video/include/uapi
 
