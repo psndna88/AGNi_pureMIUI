@@ -97,6 +97,17 @@
 	};
 };
 
+&q6core {
+	cdc_tert_mi2s_gpios: msm_cdc_pinctrl_tert {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
+				&tert_mi2s_sd0_active>;
+		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
+				&tert_mi2s_sd0_sleep>;
+	};
+};
+
 &lahaina_snd {
 	qcom,model = "lahaina-qrd-snd-card";
 
@@ -164,25 +175,8 @@
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
-};
 
-&usb1 {
-	status = "disabled";
-};
-
-&usb2_phy1 {
-	status = "disabled";
-};
-
-&usb_qmp_phy {
-	status = "disabled";
-};
-
-&usb2_phy0 {
-	qcom,param-override-seq =
-		<0xe6 0x6c
-		0x0f 0x70
-		0x17 0x74>;
+	qcom,tert-mi2s-gpios = <&cdc_tert_mi2s_gpios>;
 };
 
 &qupv3_se4_i2c {
@@ -214,15 +208,6 @@
 	};
 };
 
-&dai_mi2s2 {
-	qcom,msm-mi2s-tx-lines = <1>;
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&tert_mi2s_sck_active &tert_mi2s_ws_active
-			&tert_mi2s_sd0_active>;
-	pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
-			&tert_mi2s_sd0_sleep>;
-};
-
 &battery_charger {
 	qcom,thermal-mitigation = <10000000 9500000 9000000 8500000 8000000
 				7500000 7000000 6500000 6000000 5500000
@@ -233,48 +218,6 @@
 
 &wil6210 {
 	status = "ok";
-};
-
-&usb_qmp_dp_phy {
-	pinctrl-names = "portselect";
-};
-
-&usb0 {
-	ssusb_redriver = <&redriver>;
-};
-
-&qupv3_se13_i2c {
-	status = "ok";
-
-	redriver: redriver@1c {
-		compatible = "onnn,redriver";
-		reg = <0x1c>;
-
-		pinctrl-names = "enable_gpio";
-		pinctrl-0 = <&usb3phy_portselect_gpio>;
-		orientation_gpio = <&tlmm 81 0>;
-
-		eq = /bits/ 8 <
-				/* Parameters for USB */
-				0x4 0x4 0x4 0x4
-				/* Parameters for DP */
-				0x6 0x4 0x4 0x6>;
-		flat-gain = /bits/ 8 <
-				/* Parameters for USB */
-				0x3 0x1 0x1 0x3
-				/* Parameters for DP */
-				0x2 0x1 0x1 0x2>;
-		output-comp = /bits/ 8 <
-				/* Parameters for USB */
-				0x3 0x3 0x3 0x3
-				/* Parameters for DP */
-				0x3 0x3 0x3 0x3>;
-		loss-match = /bits/ 8 <
-				/* Parameters for USB */
-				0x1 0x3 0x3 0x1
-				/* Parameters for DP */
-				0x3 0x3 0x3 0x3>;
-	};
 };
 
 &qupv3_se15_i2c {

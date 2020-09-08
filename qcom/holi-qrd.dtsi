@@ -4,6 +4,8 @@
 #include "holi-pmic-overlay.dtsi"
 #include "holi-thermal-overlay.dtsi"
 #include "camera/holi-camera-sensor-qrd.dtsi"
+#include "display/holi-sde-display-qrd.dtsi"
+#include <dt-bindings/iio/qti_power_supply_iio.h>
 
 &sdhc_1 {
 	status = "ok";
@@ -81,12 +83,44 @@
 		qcom,sn-ven = <&tlmm 6 0x00>;
 		qcom,sn-firm = <&tlmm 8 0x00>;
 		qcom,sn-clkreq = <&tlmm 7 0x00>;
+		qcom,sn-vdd-1p8-supply = <&L11A>;
+		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+		qcom,sn-vdd-1p8-current = <157000>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <9 0>;
 		interrupt-names = "nfc_irq";
 		pinctrl-names = "nfc_active", "nfc_suspend";
 		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	};
+};
+
+&qupv3_se8_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	status = "ok";
+	qcom,i2c-touch-active = "focaltech,fts_ts";
+
+	focaltech@38 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <22 0x2008>;
+		focaltech,reset-gpio = <&tlmm 21 0x00>;
+		focaltech,irq-gpio = <&tlmm 22 0x2008>;
+		focaltech,max-touch-number = <5>;
+		focaltech,display-coords = <0 0 1080 2340>;
+
+		vdd-supply = <&L6A>;
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend",
+				"pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&pmx_ts_release>;
+
+		panel = <&dsi_r66451_amoled_cmd &dsi_r66451_amoled_video>;
 	};
 };
 
@@ -112,96 +146,61 @@
 
 &holi_snd {
 	qcom,model = "holi-qrd-snd-card";
-	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>, <1>, <1>;
+	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>;
 	qcom,wcn-btfm = <1>;
 	qcom,audio-routing =
-		"AMIC1", "MIC BIAS1",
-		"MIC BIAS1", "Analog Mic1",
-		"AMIC2", "MIC BIAS2",
-		"MIC BIAS2", "Analog Mic2",
-		"AMIC3", "MIC BIAS3",
-		"MIC BIAS3", "Analog Mic3",
-		"AMIC4", "MIC BIAS1",
-		"MIC BIAS1", "Analog Mic4",
-		"TX DMIC0", "MIC BIAS3",
-		"MIC BIAS3", "Digital Mic0",
-		"TX DMIC1", "MIC BIAS3",
-		"MIC BIAS3", "Digital Mic1",
-		"TX DMIC2", "MIC BIAS1",
-		"MIC BIAS1", "Digital Mic2",
-		"TX DMIC3", "MIC BIAS1",
-		"MIC BIAS1", "Digital Mic3",
-		"TX DMIC4", "MIC BIAS4",
-		"MIC BIAS4", "Digital Mic4",
-		"TX DMIC5", "MIC BIAS4",
-		"MIC BIAS4", "Digital Mic5",
+		"AMIC1", "Analog Mic1",
+		"Analog Mic1", "MIC BIAS1",
+		"AMIC2", "Analog Mic2",
+		"Analog Mic2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"Analog Mic3", "MIC BIAS3",
+		"AMIC4", "Analog Mic4",
+		"Analog Mic4", "MIC BIAS3",
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC0", "MIC BIAS1",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC1", "MIC BIAS1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC2", "MIC BIAS3",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC3", "MIC BIAS3",
 		"IN1_HPHL", "HPHL_OUT",
 		"IN2_HPHR", "HPHR_OUT",
 		"IN3_AUX", "AUX_OUT",
-		"TX SWR_ADC0", "ADC1_OUTPUT",
-		"TX SWR_ADC2", "ADC2_OUTPUT",
-		"TX SWR_ADC3", "ADC3_OUTPUT",
-		"TX SWR_DMIC0", "DMIC1_OUTPUT",
-		"TX SWR_DMIC1", "DMIC2_OUTPUT",
-		"TX SWR_DMIC2", "DMIC3_OUTPUT",
-		"TX SWR_DMIC3", "DMIC4_OUTPUT",
-		"TX SWR_DMIC4", "DMIC5_OUTPUT",
-		"TX SWR_DMIC5", "DMIC6_OUTPUT",
-		"TX SWR_DMIC6", "DMIC7_OUTPUT",
-		"TX SWR_DMIC7", "DMIC8_OUTPUT",
-		"WSA SRC0_INP", "SRC0",
-		"WSA_TX DEC0_INP", "TX DEC0 MUX",
-		"WSA_TX DEC1_INP", "TX DEC1 MUX",
 		"RX_TX DEC0_INP", "TX DEC0 MUX",
 		"RX_TX DEC1_INP", "TX DEC1 MUX",
 		"RX_TX DEC2_INP", "TX DEC2 MUX",
 		"RX_TX DEC3_INP", "TX DEC3 MUX",
-		"SpkrLeft IN", "WSA_SPK1 OUT",
+		"SpkrMono WSA_IN", "AUX",
+		"TX SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA SWR_INPUT", "WCD_TX_OUTPUT",
 		"VA_AIF1 CAP", "VA_SWR_CLK",
 		"VA_AIF2 CAP", "VA_SWR_CLK",
 		"VA_AIF3 CAP", "VA_SWR_CLK",
-		"VA MIC BIAS3", "Digital Mic0",
-		"VA MIC BIAS3", "Digital Mic1",
-		"VA MIC BIAS1", "Digital Mic2",
-		"VA MIC BIAS1", "Digital Mic3",
-		"VA MIC BIAS4", "Digital Mic4",
-		"VA MIC BIAS4", "Digital Mic5",
-		"VA DMIC0", "VA MIC BIAS3",
-		"VA DMIC1", "VA MIC BIAS3",
-		"VA DMIC2", "VA MIC BIAS1",
-		"VA DMIC3", "VA MIC BIAS1",
-		"VA DMIC4", "VA MIC BIAS4",
-		"VA DMIC5", "VA MIC BIAS4",
-		"VA SWR_ADC0", "VA_SWR_CLK",
-		"VA SWR_ADC1", "VA_SWR_CLK",
-		"VA SWR_ADC2", "VA_SWR_CLK",
-		"VA SWR_ADC3", "VA_SWR_CLK",
-		"VA SWR_MIC0", "VA_SWR_CLK",
-		"VA SWR_MIC1", "VA_SWR_CLK",
-		"VA SWR_MIC2", "VA_SWR_CLK",
-		"VA SWR_MIC3", "VA_SWR_CLK",
-		"VA SWR_MIC4", "VA_SWR_CLK",
-		"VA SWR_MIC5", "VA_SWR_CLK",
-		"VA SWR_MIC6", "VA_SWR_CLK",
-		"VA SWR_MIC7", "VA_SWR_CLK",
-		"VA SWR_ADC0", "ADC1_OUTPUT",
-		"VA SWR_ADC2", "ADC2_OUTPUT",
-		"VA SWR_ADC3", "ADC3_OUTPUT",
-		"VA SWR_MIC0", "DMIC1_OUTPUT",
-		"VA SWR_MIC1", "DMIC2_OUTPUT",
-		"VA SWR_MIC2", "DMIC3_OUTPUT",
-		"VA SWR_MIC3", "DMIC4_OUTPUT",
-		"VA SWR_MIC4", "DMIC5_OUTPUT",
-		"VA SWR_MIC5", "DMIC6_OUTPUT",
-		"VA SWR_MIC6", "DMIC7_OUTPUT",
-		"VA SWR_MIC7", "DMIC8_OUTPUT";
-	qcom,msm-mbhc-hphl-swh = <0>;
-	qcom,msm-mbhc-gnd-swh = <0>;
-	qcom,wsa-devs = <&wsa881x_i2c_e>;
-	qcom,wsa-aux-dev-prefix = "SpkrLeft";
-	qcom,codec-aux-devs = <&wcd937x_codec>;
-	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>,
-				<&lpi_tlmm>, <&bolero>;
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC0", "VA MIC BIAS1",
+		"VA DMIC1", "VA MIC BIAS1",
+		"VA DMIC2", "VA MIC BIAS3",
+		"VA DMIC3", "VA MIC BIAS3";
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
+	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
+	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
+	asoc-codec  = <&stub_codec>, <&bolero>,
+		      <&wcd937x_codec>, <&wsa881x_i2c_e>,
+		      <&wsa881x_i2c_f>;
+	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
+			   "wcd937x_codec", "wsa-codec0",
+			   "wsa-codec1";
+	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
+				  <&bolero>;
 };
 
 &soc {
@@ -222,8 +221,162 @@
 			linux,can-disable;
 		};
 	};
+
+	qrd_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <15>;
+		#include "qg-batterydata-atl436186020H_3780mAh.dtsi"
+		#include "qg-batterydata-atl466271_3300mAh.dtsi"
+	};
 };
 
 &pm6150a_amoled {
 	status = "ok";
+};
+
+&pm7250b_charger {
+	status = "ok";
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_vadc ADC5_USB_IN_V_16>,
+		      <&pm7250b_vadc ADC5_USB_IN_I>,
+		      <&pm7250b_vadc ADC5_CHG_TEMP>,
+		      <&pm7250b_vadc ADC5_DIE_TEMP>,
+		      <&pm7250b_vadc ADC5_AMUX_THM3_100K_PU>,
+		      <&pm7250b_vadc ADC5_SBUx>,
+		      <&pm7250b_vadc ADC5_VPH_PWR>,
+		      <&pm7250b_vadc ADC5_AMUX_THM1_100K_PU>,
+		      <&pm7250b_qg PSY_IIO_RESISTANCE_ID>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_NOW>,
+		      <&pm7250b_qg PSY_IIO_TEMP>,
+		      <&pm7250b_qg PSY_IIO_CAPACITY>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_OCV>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_AVG>,
+		      <&pm7250b_qg PSY_IIO_DEBUG_BATTERY>,
+		      <&pm7250b_qg PSY_IIO_REAL_CAPACITY>,
+		      <&pm7250b_qg PSY_IIO_CC_SOC>,
+		      <&pm7250b_qg PSY_IIO_CURRENT_NOW>,
+		      <&pm7250b_qg PSY_IIO_VOLTAGE_MAX>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_FULL>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_COUNTER>,
+		      <&pm7250b_qg PSY_IIO_CYCLE_COUNT>,
+		      <&pm7250b_qg PSY_IIO_CHARGE_FULL_DESIGN>,
+		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>;
+	io-channel-names = "usb_in_voltage",
+			   "usb_in_current",
+			   "chg_temp",
+			   "die_temp",
+			   "conn_temp",
+			   "sbux_res",
+			   "vph_voltage",
+			   "skin_temp",
+			   "resistance_id",
+			   "voltage_now",
+			   "temp",
+			   "capacity",
+			   "voltage_ocv",
+			   "voltage_avg",
+			   "debug_battery",
+			   "real_capacity",
+			   "cc_soc",
+			   "current_now",
+			   "voltage_max",
+			   "charge_full",
+			   "charge_counter",
+			   "cycle_count",
+			   "charge_full_design",
+			   "time_to_full_now";
+	qcom,battery-data = <&qrd_batterydata>;
+	qcom,sec-charger-config = <1>;
+	qcom,auto-recharge-soc = <98>;
+	qcom,step-charging-enable;
+	qcom,sw-jeita-enable;
+	qcom,charger-temp-max = <800>;
+	qcom,smb-temp-max = <800>;
+	qcom,suspend-input-on-debug-batt;
+	qcom,fcc-stepping-enable;
+	qcom,fcc-step-delay-ms = <100>;
+	qcom,fcc-step-size-ua = <100000>;
+	qcom,smb-internal-pull-kohm = <0>;
+	qcom,en-skin-therm-mitigation;
+	qcom,thermal-mitigation = <10000000 9500000 9000000 8500000 8000000
+				7500000 7000000 6500000 6000000 5500000 5000000 4500000
+				4000000 3500000 3000000 2500000 2000000 1500000 1000000
+				500000>;
+};
+
+&pm7250b_qg {
+	status = "ok";
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_vadc ADC5_BAT_THERM_100K_PU>,
+		      <&pm7250b_vadc ADC5_BAT_ID_100K_PU>,
+		      <&pm7250b_charger PSY_IIO_INPUT_CURRENT_LIMITED>,
+		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
+		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
+		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>;
+	io-channel-names = "batt-therm",
+			   "batt-id",
+			   "input_current_limited",
+			   "recharge_soc",
+			   "force_recharge",
+			   "charge_done";
+	qcom,qg-iterm-ma = <150>;
+	qcom,hold-soc-while-full;
+	qcom,linearize-soc;
+	qcom,cl-feedback-on;
+	qcom,tcss-enable;
+	qcom,fvss-enable;
+	qcom,fvss-vbatt-mv = <3300>;
+	qcom,bass-enable;
+	qcom,use-cp-iin-sns;
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&qusb_phy0>;
+
+	smb5_vbus: qcom,smb5-vbus {
+		regulator-name = "smb5-vbus";
+	};
+
+	smb5_vconn: qcom,smb5-vconn {
+		regulator-name = "smb5-vconn";
+	};
+};
+
+&pm7250b_pdphy {
+	vdd-pdphy-supply = <&L3A>;
+	vbus-supply = <&smb5_vbus>;
+	vconn-supply = <&smb5_vconn>;
+
+	#io-channel-cells = <1>;
+	io-channels = <&pm7250b_charger PSY_IIO_PD_ACTIVE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_CC_ORIENTATION>,
+		      <&pm7250b_charger PSY_IIO_CONNECTOR_TYPE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_POWER_ROLE>,
+		      <&pm7250b_charger PSY_IIO_PD_USB_SUSPEND_SUPPORTED>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_SRC_RP>,
+		      <&pm7250b_charger PSY_IIO_PD_IN_HARD_RESET>,
+		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
+		      <&pm7250b_charger PSY_IIO_PR_SWAP>,
+		      <&pm7250b_charger PSY_IIO_PD_VOLTAGE_MIN>,
+		      <&pm7250b_charger PSY_IIO_PD_VOLTAGE_MAX>,
+		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
+		      <&pm7250b_charger PSY_IIO_TYPEC_MODE>,
+		      <&pm7250b_charger PSY_IIO_PE_START>;
+	io-channel-names = "pd_active",
+			   "typec_cc_orientation",
+			   "connector_type",
+			   "typec_power_role",
+			   "pd_usb_suspend_supported",
+			   "typec_src_rp",
+			   "pd_in_hard_reset",
+			   "pr_current_max",
+			   "pr_swap",
+			   "pd_voltage_min",
+			   "pd_voltage_max",
+			   "real_type",
+			   "typec_mode",
+			   "pe_start";
+};
+
+&usb0 {
+	extcon = <&pm7250b_pdphy>, <&eud>;
 };
