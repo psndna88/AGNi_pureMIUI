@@ -3,7 +3,6 @@
 
 &soc {
 	ext_disp: qcom,msm-ext-disp {
-		status = "disabled";
 		compatible = "qcom,msm-ext-disp";
 
 		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
@@ -12,12 +11,10 @@
 	};
 
 	qcom_msmhdcp: qcom,msm_hdcp {
-		status = "disabled";
 		compatible = "qcom,msm-hdcp";
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status = "disabled";
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
@@ -147,7 +144,6 @@
 	sde_rscc: qcom,sde_rscc {
 		cell-index = <0>;
 		compatible = "qcom,sde-rsc";
-		status = "disabled";
 		reg = <0xaf20000 0x4d68>,
 			<0xaf30000 0x3fd4>;
 		reg-names = "drv", "wrapper";
@@ -200,7 +196,6 @@
 	clock-names = "gcc_iface", "gcc_bus", "gcc_nrt_bus",
 			"iface_clk", "core_clk", "vsync_clk",
 			"lut_clk";
-	vdd-supply = <&disp_cc_mdss_core_gdsc>;
 
 	/* data and reg bus scale settings */
 	interconnects = <&mmss_noc MASTER_MDP0 &mc_virt SLAVE_EBI1>,
@@ -213,20 +208,6 @@
 	qcom,sde-dspp-ltm-version = <0x00010000>;
 	/* offsets are based off dspp 0 and dspp 1 */
 	qcom,sde-dspp-ltm-off = <0x2a000 0x28100>;
-
-	qcom,platform-supply-entries {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,platform-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vdd";
-			qcom,supply-min-voltage = <0>;
-			qcom,supply-max-voltage = <0>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-		};
-	};
 };
 
 &mdss_dsi0 {
