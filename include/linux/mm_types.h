@@ -42,12 +42,6 @@ struct mem_cgroup;
  * allows the use of atomic double word operations on the flags/mapping
  * and lru list pointers also.
  */
-#ifdef CONFIG_HAVE_ALIGNED_STRUCT_PAGE
-#define _struct_page_alignment	__aligned(2 * sizeof(unsigned long))
-#else
-#define _struct_page_alignment
-#endif
-
 struct page {
 	/* First double word block */
 	unsigned long flags;		/* Atomic flags, some possibly
@@ -219,7 +213,15 @@ struct page {
 #ifdef LAST_CPUPID_NOT_IN_PAGE_FLAGS
 	int _last_cpupid;
 #endif
-} _struct_page_alignment;
+}
+/*
+ * The struct page can be forced to be double word aligned so that atomic ops
+ * on double words work. The SLUB allocator can make use of such a feature.
+ */
+#ifdef CONFIG_HAVE_ALIGNED_STRUCT_PAGE
+	__aligned(2 * sizeof(unsigned long))
+#endif
+;
 
 struct page_frag {
 	struct page *page;
