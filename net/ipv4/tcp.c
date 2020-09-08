@@ -543,6 +543,12 @@ unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 
 		if (tp->urg_data & TCP_URG_VALID)
 			mask |= POLLPRI;
+	} else if (sk->sk_state == TCP_SYN_SENT && inet_sk(sk)->defer_connect) {
+		/* Active TCP fastopen socket with defer_connect
+		 * Return POLLOUT so application can call write()
+		 * in order for kernel to generate SYN+data
+		 */
+		mask |= POLLOUT | POLLWRNORM;
 	}
 	/* This barrier is coupled with smp_wmb() in tcp_reset() */
 	smp_rmb();
@@ -1073,6 +1079,7 @@ static int tcp_sendmsg_fastopen(struct sock *sk, struct msghdr *msg,
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct sockaddr *uaddr = msg->msg_name;
+	struct inet_sock *inet = inet_sk(sk);
 	int err, flags;
 
 	if (!(sysctl_tcp_fastopen & TFO_CLIENT_ENABLE) ||
@@ -1089,9 +1096,19 @@ static int tcp_sendmsg_fastopen(struct sock *sk, struct msghdr *msg,
 	tp->fastopen_req->data = msg;
 	tp->fastopen_req->size = size;
 
+	if (inet->defer_connect) {
+		err = tcp_connect(sk);
+		/* Same failure procedure as in tcp_v4/6_connect */
+		if (err) {
+			tcp_set_state(sk, TCP_CLOSE);
+			inet->inet_dport = 0;
+			sk->sk_route_caps = 0;
+		}
+	}
 	flags = (msg->msg_flags & MSG_DONTWAIT) ? O_NONBLOCK : 0;
 	err = __inet_stream_connect(sk->sk_socket, uaddr,
-				    msg->msg_namelen, flags);
+				    msg->msg_namelen, flags, 1);
+	inet->defer_connect = 0;
 	*copied = tp->fastopen_req->copied;
 	tcp_free_fastopen_req(tp);
 	return err;
@@ -1109,7 +1126,7 @@ int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	lock_sock(sk);
 
 	flags = msg->msg_flags;
-	if ((flags & MSG_FASTOPEN) && !tp->repair) {
+	if (unlikely(flags & MSG_FASTOPEN || inet_sk(sk)->defer_connect) && !tp->repair) {
 		err = tcp_sendmsg_fastopen(sk, msg, &copied_syn, size);
 		if (err == -EINPROGRESS && copied_syn > 0)
 			goto out;
@@ -2253,6 +2270,7 @@ int tcp_disconnect(struct sock *sk, int flags)
 	tcp_clear_xmit_timers(sk);
 	__skb_queue_purge(&sk->sk_receive_queue);
 	tcp_write_queue_purge(sk);
+	tcp_fastopen_active_disable_ofo_check(sk);
 	skb_rbtree_purge(&tp->out_of_order_queue);
 
 	inet->inet_dport = 0;
@@ -2627,6 +2645,18 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 			err = -EINVAL;
 		}
 		break;
+	case TCP_FASTOPEN_CONNECT:
+		if (val > 1 || val < 0) {
+			err = -EINVAL;
+		} else if (sysctl_tcp_fastopen & TFO_CLIENT_ENABLE) {
+			if (sk->sk_state == TCP_CLOSE)
+				tp->fastopen_connect = val;
+			else
+				err = -EINVAL;
+		} else {
+			err = -EOPNOTSUPP;
+		}
+		break;
 	case TCP_TIMESTAMP:
 		if (!tp->repair)
 			err = -EPERM;
@@ -2758,7 +2788,7 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 	info->tcpi_advmss = tp->advmss;
 	info->tcpi_reordering = tp->reordering;
 
-	info->tcpi_rcv_rtt = jiffies_to_usecs(tp->rcv_rtt_est.rtt)>>3;
+	info->tcpi_rcv_rtt = tp->rcv_rtt_est.rtt_us >> 3;
 	info->tcpi_rcv_space = tp->rcvq_space.space;
 
 	info->tcpi_total_retrans = tp->total_retrans;
@@ -2962,6 +2992,10 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 
 	case TCP_FASTOPEN:
 		val = icsk->icsk_accept_queue.fastopenq.max_qlen;
+		break;
+
+	case TCP_FASTOPEN_CONNECT:
+		val = tp->fastopen_connect;
 		break;
 
 	case TCP_TIMESTAMP:

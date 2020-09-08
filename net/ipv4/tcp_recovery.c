@@ -100,7 +100,7 @@ static void tcp_rack_detect_loss(struct sock *sk, u32 *reo_timeout)
 	}
 }
 
-void tcp_rack_mark_lost(struct sock *sk, const struct skb_mstamp *now)
+void tcp_rack_mark_lost(struct sock *sk)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	u32 timeout;
@@ -110,7 +110,7 @@ void tcp_rack_mark_lost(struct sock *sk, const struct skb_mstamp *now)
 
 	/* Reset the advanced flag to avoid unnecessary queue scanning */
 	tp->rack.advanced = 0;
-	tcp_rack_detect_loss(sk, now, &timeout);
+	tcp_rack_detect_loss(sk, &timeout);
 	if (timeout) {
 		timeout = usecs_to_jiffies(timeout + TCP_REO_TIMEOUT_MIN);
 		inet_csk_reset_xmit_timer(sk, ICSK_TIME_REO_TIMEOUT,
@@ -159,10 +159,8 @@ void tcp_rack_advance(struct tcp_sock *tp, u8 sacked, u32 end_seq,
 void tcp_rack_reo_timeout(struct sock *sk)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
-	struct skb_mstamp now;
 	u32 timeout, prior_inflight;
 
-	skb_mstamp_get(&now);
 	prior_inflight = tcp_packets_in_flight(tp);
 	tcp_rack_detect_loss(sk, &timeout);
 	if (prior_inflight != tcp_packets_in_flight(tp)) {
