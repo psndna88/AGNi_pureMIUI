@@ -14,8 +14,7 @@
 #include "cam_vfe_soc.h"
 #include "cam_debug_util.h"
 
-static struct cam_hw_intf *cam_vfe_hw_list[CAM_VFE_HW_NUM_MAX];
-
+static  struct cam_isp_hw_intf_data cam_vfe_hw_list[CAM_VFE_HW_NUM_MAX];
 static char vfe_dev_name[8];
 
 static int cam_vfe_component_bind(struct device *dev,
@@ -28,6 +27,8 @@ static int cam_vfe_component_bind(struct device *dev,
 	struct cam_vfe_hw_info            *hw_info = NULL;
 	int                                rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
+	struct cam_vfe_soc_private   *vfe_soc_priv;
+	uint32_t  i;
 
 	vfe_hw_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!vfe_hw_intf) {
@@ -109,7 +110,13 @@ static int cam_vfe_component_bind(struct device *dev,
 	init_completion(&vfe_hw->hw_complete);
 
 	if (vfe_hw_intf->hw_idx < CAM_VFE_HW_NUM_MAX)
-		cam_vfe_hw_list[vfe_hw_intf->hw_idx] = vfe_hw_intf;
+		cam_vfe_hw_list[vfe_hw_intf->hw_idx].hw_intf = vfe_hw_intf;
+
+	vfe_soc_priv = vfe_hw->soc_info.soc_private;
+	cam_vfe_hw_list[vfe_hw_intf->hw_idx].num_hw_pid = vfe_soc_priv->num_pid;
+	for (i = 0; i < vfe_soc_priv->num_pid; i++)
+		cam_vfe_hw_list[vfe_hw_intf->hw_idx].hw_pid[i] =
+			vfe_soc_priv->pid[i];
 
 	cam_vfe_init_hw(vfe_hw, NULL, 0);
 	cam_vfe_deinit_hw(vfe_hw, NULL, 0);
@@ -150,7 +157,7 @@ static void cam_vfe_component_unbind(struct device *dev,
 		vfe_hw_intf->hw_type, vfe_hw_intf->hw_idx);
 
 	if (vfe_hw_intf->hw_idx < CAM_VFE_HW_NUM_MAX)
-		cam_vfe_hw_list[vfe_hw_intf->hw_idx] = NULL;
+		cam_vfe_hw_list[vfe_hw_intf->hw_idx].hw_intf = NULL;
 
 	vfe_hw = vfe_hw_intf->hw_priv;
 	if (!vfe_hw) {
@@ -207,15 +214,17 @@ int cam_vfe_remove(struct platform_device *pdev)
 	return 0;
 }
 
-int cam_vfe_hw_init(struct cam_hw_intf **vfe_hw, uint32_t hw_idx)
+int cam_vfe_hw_init(struct cam_isp_hw_intf_data **vfe_hw_intf,
+	uint32_t hw_idx)
 {
 	int rc = 0;
 
-	if (cam_vfe_hw_list[hw_idx]) {
-		*vfe_hw = cam_vfe_hw_list[hw_idx];
+	if (cam_vfe_hw_list[hw_idx].hw_intf) {
+		*vfe_hw_intf = &cam_vfe_hw_list[hw_idx];
 		rc = 0;
 	} else {
-		*vfe_hw = NULL;
+		CAM_ERR(CAM_ISP, "inval param");
+		*vfe_hw_intf = NULL;
 		rc = -ENODEV;
 	}
 	return rc;

@@ -15,6 +15,7 @@
 
 /* V4L event which user space will subscribe to */
 #define CAM_SYNC_V4L_EVENT                       (V4L2_EVENT_PRIVATE_START + 0)
+#define CAM_SYNC_V4L_EVENT_V2                    (V4L2_EVENT_PRIVATE_START + 1)
 
 /* Specific event ids to get notified in user space */
 #define CAM_SYNC_V4L_EVENT_ID_CB_TRIG            0
@@ -31,11 +32,92 @@
 #define CAM_SYNC_GET_HEADER_PTR(ev)              \
 	((struct cam_sync_ev_header *)ev.u.data)
 
+#define CAM_SYNC_GET_PAYLOAD_PTR_V2(ev, type)       \
+	(type *)((char *)ev.u.data + sizeof(struct cam_sync_ev_header_v2))
+
+#define CAM_SYNC_GET_HEADER_PTR_V2(ev)              \
+	((struct cam_sync_ev_header_v2 *)ev.u.data)
+
 #define CAM_SYNC_STATE_INVALID                   0
 #define CAM_SYNC_STATE_ACTIVE                    1
 #define CAM_SYNC_STATE_SIGNALED_SUCCESS          2
 #define CAM_SYNC_STATE_SIGNALED_ERROR            3
 #define CAM_SYNC_STATE_SIGNALED_CANCEL           4
+
+/* Top level common sync event reason types */
+#define CAM_SYNC_COMMON_EVENT_START       0
+#define CAM_SYNC_COMMON_EVENT_UNUSED      (CAM_SYNC_COMMON_EVENT_START + 0)
+#define CAM_SYNC_COMMON_EVENT_SUCCESS     (CAM_SYNC_COMMON_EVENT_START + 1)
+#define CAM_SYNC_COMMON_EVENT_FLUSH       (CAM_SYNC_COMMON_EVENT_START + 2)
+#define CAM_SYNC_COMMON_EVENT_STOP        (CAM_SYNC_COMMON_EVENT_START + 3)
+#define CAM_SYNC_COMMON_EVENT_SYNX        (CAM_SYNC_COMMON_EVENT_START + 4)
+#define CAM_SYNC_COMMON_REG_PAYLOAD_EVENT (CAM_SYNC_COMMON_EVENT_START + 5)
+#define CAM_SYNC_COMMON_SYNC_SIGNAL_EVENT (CAM_SYNC_COMMON_EVENT_START + 6)
+#define CAM_SYNC_COMMON_RELEASE_EVENT     (CAM_SYNC_COMMON_EVENT_START + 7)
+#define CAM_SYNC_COMMON_EVENT_END         (CAM_SYNC_COMMON_EVENT_START + 50)
+
+/* ISP Sync event reason types */
+#define CAM_SYNC_ISP_EVENT_START          (CAM_SYNC_COMMON_EVENT_END + 1)
+#define CAM_SYNC_ISP_EVENT_UNKNOWN        (CAM_SYNC_ISP_EVENT_START + 0)
+#define CAM_SYNC_ISP_EVENT_BUBBLE         (CAM_SYNC_ISP_EVENT_START + 1)
+#define CAM_SYNC_ISP_EVENT_OVERFLOW       (CAM_SYNC_ISP_EVENT_START + 2)
+#define CAM_SYNC_ISP_EVENT_P2I_ERROR      (CAM_SYNC_ISP_EVENT_START + 3)
+#define CAM_SYNC_ISP_EVENT_VIOLATION      (CAM_SYNC_ISP_EVENT_START + 4)
+#define CAM_SYNC_ISP_EVENT_BUSIF_OVERFLOW (CAM_SYNC_ISP_EVENT_START + 5)
+#define CAM_SYNC_ISP_EVENT_FLUSH          (CAM_SYNC_ISP_EVENT_START + 6)
+#define CAM_SYNC_ISP_EVENT_HW_STOP        (CAM_SYNC_ISP_EVENT_START + 7)
+#define CAM_SYNC_ISP_EVENT_END            (CAM_SYNC_ISP_EVENT_START + 50)
+
+/* ICP Sync event reason types */
+#define CAM_SYNC_ICP_EVENT_START                 (CAM_SYNC_ISP_EVENT_END + 1)
+#define CAM_SYNC_ICP_EVENT_UNKNOWN               (CAM_SYNC_ICP_EVENT_START + 0)
+#define CAM_SYNC_ICP_EVENT_FRAME_PROCESS_FAILURE (CAM_SYNC_ICP_EVENT_START + 1)
+#define CAM_SYNC_ICP_EVENT_CONFIG_ERR            (CAM_SYNC_ICP_EVENT_START + 2)
+#define CAM_SYNC_ICP_EVENT_END                   (CAM_SYNC_ICP_EVENT_START + 50)
+
+/* JPEG Sync event reason types */
+#define CAM_SYNC_JPEG_EVENT_START               (CAM_SYNC_ICP_EVENT_END + 1)
+#define CAM_SYNC_JPEG_EVENT_UNKNOWN             (CAM_SYNC_JPEG_EVENT_START + 0)
+#define CAM_SYNC_JPEG_EVENT_INVLD_CMD           (CAM_SYNC_JPEG_EVENT_START + 1)
+#define CAM_SYNC_JPEG_EVENT_SET_IRQ_CB          (CAM_SYNC_JPEG_EVENT_START + 2)
+#define CAM_SYNC_JPEG_EVENT_HW_RESET_FAILED     (CAM_SYNC_JPEG_EVENT_START + 3)
+#define CAM_SYNC_JPEG_EVENT_CDM_CHANGE_BASE_ERR (CAM_SYNC_JPEG_EVENT_START + 4)
+#define CAM_SYNC_JPEG_EVENT_CDM_CONFIG_ERR      (CAM_SYNC_JPEG_EVENT_START + 5)
+#define CAM_SYNC_JPEG_EVENT_START_HW_ERR        (CAM_SYNC_JPEG_EVENT_START + 6)
+#define CAM_SYNC_JPEG_EVENT_END                 (CAM_SYNC_JPEG_EVENT_START + 50)
+
+/* FD Sync event reason types */
+#define CAM_SYNC_FD_EVENT_START           (CAM_SYNC_JPEG_EVENT_END + 1)
+#define CAM_SYNC_FD_EVENT_UNKNOWN         (CAM_SYNC_FD_EVENT_START + 0)
+#define CAM_SYNC_FD_EVENT_IRQ_FRAME_DONE  (CAM_SYNC_FD_EVENT_START + 1)
+#define CAM_SYNC_FD_EVENT_IRQ_RESET_DONE  (CAM_SYNC_FD_EVENT_START + 2)
+#define CAM_SYNC_FD_EVENT_HALT            (CAM_SYNC_FD_EVENT_START + 3)
+#define CAM_SYNC_FD_EVENT_END             (CAM_SYNC_FD_EVENT_START + 50)
+
+/* LRME Sync event reason types */
+#define CAM_SYNC_LRME_EVENT_START           (CAM_SYNC_FD_EVENT_END + 1)
+#define CAM_SYNC_LRME_EVENT_UNKNOWN         (CAM_SYNC_LRME_EVENT_START + 0)
+#define CAM_SYNC_LRME_EVENT_CB_ERROR        (CAM_SYNC_LRME_EVENT_START + 1)
+#define CAM_SYNC_LRME_EVENT_END             (CAM_SYNC_LRME_EVENT_START + 50)
+
+/* OPE Sync event reason types */
+#define CAM_SYNC_OPE_EVENT_START              (CAM_SYNC_LRME_EVENT_END + 1)
+#define CAM_SYNC_OPE_EVENT_UNKNOWN            (CAM_SYNC_OPE_EVENT_START + 0)
+#define CAM_SYNC_OPE_EVENT_PAGE_FAULT         (CAM_SYNC_OPE_EVENT_START + 1)
+#define CAM_SYNC_OPE_EVENT_HW_HANG            (CAM_SYNC_OPE_EVENT_START + 2)
+#define CAM_SYNC_OPE_EVENT_HALT               (CAM_SYNC_OPE_EVENT_START + 3)
+#define CAM_SYNC_OPE_EVENT_CONFIG_ERR         (CAM_SYNC_OPE_EVENT_START + 4)
+#define CAM_SYNC_OPE_EVENT_HW_FLUSH           (CAM_SYNC_OPE_EVENT_START + 5)
+#define CAM_SYNC_OPE_EVENT_HW_RESUBMIT        (CAM_SYNC_OPE_EVENT_START + 6)
+#define CAM_SYNC_OPE_EVENT_HW_RESET_DONE      (CAM_SYNC_OPE_EVENT_START + 7)
+#define CAM_SYNC_OPE_EVENT_HW_ERROR           (CAM_SYNC_OPE_EVENT_START + 8)
+#define CAM_SYNC_OPE_EVENT_INVLD_CMD          (CAM_SYNC_OPE_EVENT_START + 9)
+#define CAM_SYNC_OPE_EVENT_HW_RESET_FAILED    (CAM_SYNC_OPE_EVENT_START + 10)
+#define CAM_SYNC_OPE_EVENT_END                (CAM_SYNC_OPE_EVENT_START + 50)
+
+#define CAM_SYNC_EVENT_CNT                7
+#define CAM_SYNC_EVENT_REASON_CODE_INDEX  0
+
 
 /**
  * struct cam_sync_ev_header - Event header for sync event notification
@@ -46,6 +128,21 @@
 struct cam_sync_ev_header {
 	__s32 sync_obj;
 	__s32 status;
+};
+
+/**
+ * struct cam_sync_ev_header_v2 - Event header for sync event notification
+ *
+ * @sync_obj:    Sync object
+ * @status:      Status of the object
+ * @version:     sync driver version
+ * @evt_param:   event parameter
+ */
+struct cam_sync_ev_header_v2 {
+	__s32 sync_obj;
+	__s32 status;
+	uint32_t version;
+	uint32_t evt_param[CAM_SYNC_EVENT_CNT];
 };
 
 /**

@@ -86,6 +86,21 @@ TRACE_EVENT(cam_log_event,
 	)
 );
 
+TRACE_EVENT(cam_log_debug,
+	TP_PROTO(const char *string1),
+	TP_ARGS(string1),
+	TP_STRUCT__entry(
+		__string(string1, string1)
+	),
+	TP_fast_assign(
+		__assign_str(string1, string1);
+	),
+	TP_printk(
+		"%s",
+		__get_str(string1)
+	)
+);
+
 TRACE_EVENT(cam_icp_fw_dbg,
 	TP_PROTO(char *dbg_message, uint64_t timestamp),
 	TP_ARGS(dbg_message, timestamp),

@@ -389,7 +389,8 @@ struct cam_vfe_generic_ubwc_config {
  *                          successful initialization
  * @hw_idx:                 Index of VFE HW
  */
-int cam_vfe_hw_init(struct cam_hw_intf **vfe_hw, uint32_t hw_idx);
+int cam_vfe_hw_init(struct cam_isp_hw_intf_data **vfe_hw,
+	uint32_t hw_idx);
 
 /*
  * cam_vfe_put_evt_payload()

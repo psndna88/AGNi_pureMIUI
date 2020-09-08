@@ -772,6 +772,9 @@ static int cam_vfe_camif_lite_process_cmd(
 			rsrc_node->res_priv;
 		camif_lite_priv->camif_debug = *((uint32_t *)cmd_args);
 		break;
+	case CAM_ISP_HW_CMD_BLANKING_UPDATE:
+		rc = 0;
+		break;
 	default:
 		CAM_ERR(CAM_ISP,
 			"unsupported process command:%d", cmd_type);
@@ -840,7 +843,7 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 	uint32_t violation_mask = 0x3F00, violation_status = 0;
 	uint32_t bus_overflow_status = 0, status_0 = 0, status_2 = 0;
 	struct cam_vfe_soc_private *soc_private = NULL;
-	uint32_t val0, val1, val2;
+	uint32_t val0, val1, val2, val3, val4;
 
 	if (!status) {
 		CAM_ERR(CAM_ISP, "Invalid params");
@@ -878,8 +881,13 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 		if (status_0 & 0x20000000)
 			CAM_INFO(CAM_ISP, "RDI0 OVERFLOW");
 
-		if (status_0 & 0x40000000)
+		if (status_0 & 0x40000000) {
 			CAM_INFO(CAM_ISP, "PD PIPE OVERFLOW");
+			cam_cpas_reg_read(soc_private->cpas_handle,
+				CAM_CPAS_REG_CAMNOC, 0x1010, true, &val3);
+			CAM_INFO(CAM_ISP, "ife_rdi_Rd: 0x%x", val3);
+			cam_cpas_log_votes();
+		}
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_OVERFLOW && bus_overflow_status) {
@@ -897,24 +905,12 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 
 		if (bus_overflow_status & 0x02000000)
 			CAM_INFO(CAM_ISP, "RDI2 BUS OVERFLOW");
-
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0xA20, true, &val0);
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x1420, true, &val1);
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x1A20, true, &val2);
-		CAM_INFO(CAM_ISP,
-			"CAMNOC REG ife_linear: 0x%X ife_rdi_wr: 0x%X ife_ubwc_stats: 0x%X",
-			val0, val1, val2);
-		cam_cpas_log_votes();
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_OVERFLOW && !bus_overflow_status) {
 		CAM_INFO(CAM_ISP, "PDLIB / LCR Module hang");
 		/* print debug registers */
 		cam_vfe_camif_lite_overflow_debug_info(camif_lite_priv);
-		return;
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_VIOLATION) {
@@ -952,7 +948,7 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 
 	}
 
-	return;
+	goto print_state;
 
 ife_lite:
 	if (err_type == CAM_VFE_IRQ_STATUS_OVERFLOW) {
@@ -993,23 +989,12 @@ ife_lite:
 
 		if (bus_overflow_status & 0x08)
 			CAM_INFO(CAM_ISP, "RDI3 BUS OVERFLOW");
-
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0xA20, true, &val0);
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x1420, true, &val1);
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x1A20, true, &val2);
-		CAM_INFO(CAM_ISP,
-			"CAMNOC REG ife_linear: 0x%X ife_rdi_wr: 0x%X ife_ubwc_stats: 0x%X",
-			val0, val1, val2);
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_OVERFLOW && !bus_overflow_status) {
 		CAM_INFO(CAM_ISP, "RDI hang");
 		/* print debug registers */
 		cam_vfe_camif_lite_overflow_debug_info(camif_lite_priv);
-		return;
 	}
 
 	if (err_type == CAM_VFE_IRQ_STATUS_VIOLATION) {
@@ -1025,6 +1010,33 @@ ife_lite:
 		if (status_2 & 0x800)
 			CAM_INFO(CAM_ISP, "RDI3 CAMIF VIOLATION");
 	}
+
+print_state:
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0xA20, true, &val0);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x1420, true, &val1);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x1A20, true, &val2);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x7620, true, &val3);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x7420, true, &val4);
+
+	CAM_INFO(CAM_ISP,
+		"CAMNOC REG[Queued Pending] linear[%d %d] rdi0_wr[%d %d] ubwc_stats0[%d %d] ubwc_stats1[%d %d] rdi1_wr[%d %d]",
+		(val0 & 0x7FF), (val0 & 0x7F0000) >> 16,
+		(val1 & 0x7FF), (val1 & 0x7F0000) >> 16,
+		(val2 & 0x7FF), (val2 & 0x7F0000) >> 16,
+		(val3 & 0x7FF), (val3 & 0x7F0000) >> 16,
+		(val4 & 0x7FF), (val4 & 0x7F0000) >> 16);
+
+	CAM_INFO(CAM_ISP, "ife_clk_src:%lld", soc_private->ife_clk_src);
+
+	if ((err_type == CAM_VFE_IRQ_STATUS_OVERFLOW) &&
+		bus_overflow_status)
+		cam_cpas_log_votes();
+
 }
 
 static int cam_vfe_camif_lite_handle_irq_top_half(uint32_t evt_id,
@@ -1200,6 +1212,9 @@ static int cam_vfe_camif_lite_handle_irq_bottom_half(
 
 		ret = CAM_VFE_IRQ_STATUS_OVERFLOW;
 
+		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
+			soc_private->ife_clk_src);
+
 		cam_vfe_camif_lite_print_status(irq_status, ret,
 			camif_lite_priv);
 
@@ -1218,6 +1233,9 @@ static int cam_vfe_camif_lite_handle_irq_bottom_half(
 				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
 
 		ret = CAM_VFE_IRQ_STATUS_VIOLATION;
+
+		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
+			soc_private->ife_clk_src);
 
 		cam_vfe_camif_lite_print_status(irq_status, ret,
 			camif_lite_priv);

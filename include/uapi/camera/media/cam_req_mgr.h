@@ -284,6 +284,8 @@ struct cam_req_mgr_link_control {
 #define CAM_MEM_FLAG_HW_SHARED_ACCESS           (1<<11)
 #define CAM_MEM_FLAG_CDSP_OUTPUT                (1<<12)
 #define CAM_MEM_FLAG_DISABLE_DELAYED_UNMAP      (1<<13)
+#define CAM_MEM_FLAG_KMD_DEBUG_FLAG             (1<<14)
+
 
 #define CAM_MEM_MMU_MAX_HANDLE                  16
 
@@ -424,6 +426,7 @@ struct cam_mem_cache_ops_cmd {
  * @CAM_REQ_MGR_ERROR_TYPE_BUFFER: Buffer was not filled, not fatal
  * @CAM_REQ_MGR_ERROR_TYPE_RECOVERY: Fatal error, can be recovered
  * @CAM_REQ_MGR_ERROR_TYPE_SOF_FREEZE: SOF freeze, can be recovered
+ * @CAM_REQ_MGR_ERROR_TYPE_PAGE_FAULT: page fault, can be recovered
  */
 #define CAM_REQ_MGR_ERROR_TYPE_DEVICE           0
 #define CAM_REQ_MGR_ERROR_TYPE_REQUEST          1
@@ -431,7 +434,7 @@ struct cam_mem_cache_ops_cmd {
 #define CAM_REQ_MGR_ERROR_TYPE_RECOVERY         3
 #define CAM_REQ_MGR_ERROR_TYPE_SOF_FREEZE       4
 #define CAM_REQ_MGR_ERROR_TYPE_FULL_RECOVERY    5
-
+#define CAM_REQ_MGR_ERROR_TYPE_PAGE_FAULT       6
 
 /**
  * struct cam_req_mgr_error_msg

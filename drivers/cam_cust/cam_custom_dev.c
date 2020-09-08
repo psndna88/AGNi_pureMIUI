@@ -25,22 +25,20 @@
 static struct cam_custom_dev g_custom_dev;
 
 static void cam_custom_dev_iommu_fault_handler(
-	struct iommu_domain *domain, struct device *dev, unsigned long iova,
-	int flags, void *token, uint32_t buf_info)
+	struct cam_smmu_pf_info *pf_info)
 {
 	int i = 0;
 	struct cam_node *node = NULL;
 
-	if (!token) {
+	if (!pf_info || !pf_info->token) {
 		CAM_ERR(CAM_CUSTOM, "invalid token in page handler cb");
 		return;
 	}
 
-	node = (struct cam_node *)token;
+	node = (struct cam_node *)pf_info->token;
 
 	for (i = 0; i < node->ctx_size; i++)
-		cam_context_dump_pf_info(&(node->ctx_list[i]), iova,
-			buf_info);
+		cam_context_dump_pf_info(&(node->ctx_list[i]), pf_info);
 }
 
 static const struct of_device_id cam_custom_dt_match[] = {

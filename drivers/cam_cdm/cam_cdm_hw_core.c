@@ -1085,6 +1085,9 @@ static void cam_hw_cdm_reset_cleanup(
 			&core->bl_fifo[i].bl_request_list, entry) {
 			if (node->request_type ==
 					CAM_HW_CDM_BL_CB_CLIENT) {
+				CAM_DBG(CAM_CDM,
+					"Notifying client %d for tag %d",
+					node->client_hdl, node->bl_tag);
 				if (flush_hw)
 					cam_cdm_notify_clients(cdm_hw,
 						(node->client_hdl == handle) ?
@@ -1145,6 +1148,17 @@ static void cam_hw_cdm_work(struct work_struct *work)
 			if (core->bl_fifo[payload->fifo_idx].work_record)
 				core->bl_fifo[payload->fifo_idx].work_record--;
 
+			if (list_empty(&core->bl_fifo[payload->fifo_idx]
+					.bl_request_list)) {
+				CAM_INFO(CAM_CDM,
+					"Fifo list empty, idx %d tag %d arb %d",
+					payload->fifo_idx, payload->irq_data,
+					core->arbitration);
+				mutex_unlock(&core->bl_fifo[payload->fifo_idx]
+						.fifo_lock);
+				return;
+			}
+
 			if (core->bl_fifo[payload->fifo_idx]
 				.last_bl_tag_done !=
 				payload->irq_data) {
@@ -1174,7 +1188,7 @@ static void cam_hw_cdm_work(struct work_struct *work)
 					}
 				}
 			} else {
-				CAM_DBG(CAM_CDM,
+				CAM_INFO(CAM_CDM,
 					"Skip GenIRQ, tag 0x%x fifo %d",
 					payload->irq_data, payload->fifo_idx);
 			}
@@ -1224,16 +1238,14 @@ static void cam_hw_cdm_work(struct work_struct *work)
 
 }
 
-static void cam_hw_cdm_iommu_fault_handler(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token,
-	uint32_t buf_info)
+static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 {
 	struct cam_hw_info *cdm_hw = NULL;
 	struct cam_cdm *core = NULL;
 	int i;
 
-	if (token) {
-		cdm_hw = (struct cam_hw_info *)token;
+	if (pf_info->token) {
+		cdm_hw = (struct cam_hw_info *)pf_info->token;
 		core = (struct cam_cdm *)cdm_hw->core_info;
 		set_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 		mutex_lock(&cdm_hw->hw_mutex);
@@ -1254,9 +1266,9 @@ static void cam_hw_cdm_iommu_fault_handler(struct iommu_domain *domain,
 			mutex_unlock(&core->bl_fifo[i].fifo_lock);
 		mutex_unlock(&cdm_hw->hw_mutex);
 		CAM_ERR_RATE_LIMIT(CAM_CDM, "Page fault iova addr %pK\n",
-			(void *)iova);
+			(void *)pf_info->iova);
 		cam_cdm_notify_clients(cdm_hw, CAM_CDM_CB_STATUS_PAGEFAULT,
-			(void *)iova);
+			(void *)pf_info->iova);
 		clear_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 	} else {
 		CAM_ERR(CAM_CDM, "Invalid token");

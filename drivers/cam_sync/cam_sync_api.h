@@ -76,10 +76,11 @@ int cam_sync_deregister_callback(sync_callback cb_func,
  * @param sync_obj: int referencing the sync object.
  * @param status: Status of the signaling. Can be either SYNC_SIGNAL_ERROR or
  * SYNC_SIGNAL_SUCCESS.
+ * @param evt_param: Event parameter
  *
  * @return Status of operation. Negative in case of error. Zero otherwise.
  */
-int cam_sync_signal(int32_t sync_obj, uint32_t status);
+int cam_sync_signal(int32_t sync_obj, uint32_t status, uint32_t evt_param);
 
 /**
  * @brief: Merges multiple sync objects

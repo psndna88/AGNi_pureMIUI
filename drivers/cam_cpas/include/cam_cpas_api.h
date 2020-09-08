@@ -33,6 +33,7 @@ enum cam_cpas_reg_base {
 	CAM_CPAS_REG_CPASTOP,
 	CAM_CPAS_REG_CAMNOC,
 	CAM_CPAS_REG_CAMSS,
+	CAM_CPAS_REG_RPMH,
 	CAM_CPAS_REG_MAX
 };
 
@@ -575,15 +576,17 @@ int cam_cpas_reg_read(
  * @camera_version : Camera platform version
  * @cpas_version   : Camera cpas version
  * @cam_caps       : Camera capability
+ * @cam_fuse_info  : Camera fuse info
  *
  * @return 0 on success.
  *
  */
 int cam_cpas_get_hw_info(
-	uint32_t                 *camera_family,
-	struct cam_hw_version    *camera_version,
-	struct cam_hw_version    *cpas_version,
-	uint32_t                 *cam_caps);
+	uint32_t                  *camera_family,
+	struct cam_hw_version     *camera_version,
+	struct cam_hw_version     *cpas_version,
+	uint32_t                  *cam_caps,
+	struct cam_cpas_fuse_info *cam_fuse_info);
 
 /**
  * cam_cpas_get_cpas_hw_version()
@@ -657,5 +660,24 @@ void cam_cpas_log_votes(void);
  *
  */
 int cam_cpas_select_qos_settings(uint32_t selection_mask);
+
+/**
+ * cam_cpas_notify_event()
+ *
+ * @brief: API that clients can notify about their events. CPAS save the event
+ *         and any other useful information related to this event. This will
+ *         be printed while cpas state dump - cam_cpas_log_votes.
+ *         One such example is IFE notifiying SOF or EPOCH to cpas and cpas
+ *         saving axi clock information (camnoc_axi, mnoc_hf) at that point
+ *         and printing latest history on IFE overflow.
+ *
+ * @identifier_string: Identifier string passed by caller
+ * @identifier_value: Identifier value passed by caller
+ *
+ * @return 0 on success.
+ *
+ */
+int cam_cpas_notify_event(const char *identifier_string,
+	int32_t identifier_value);
 
 #endif /* _CAM_CPAS_API_H_ */

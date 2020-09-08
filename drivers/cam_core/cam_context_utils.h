@@ -7,6 +7,7 @@
 #define _CAM_CONTEXT_UTILS_H_
 
 #include <linux/types.h>
+#include "cam_smmu_api.h"
 
 int cam_context_buf_done_from_hw(struct cam_context *ctx,
 	void *done_event_data, uint32_t evt_id);
@@ -27,8 +28,9 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx);
 int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 	struct cam_flush_dev_cmd *cmd);
 int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
-	struct cam_packet *packet, unsigned long iova, uint32_t buf_info,
-	bool *mem_found);
+	struct cam_packet *packet, bool *mem_found, bool *ctx_found,
+	uint32_t  *resource_type,
+	struct cam_smmu_pf_info *pf_info);
 int32_t cam_context_dump_hw_acq_info(struct cam_context *ctx);
 int32_t cam_context_dump_dev_to_hw(struct cam_context *ctx,
 	struct cam_dump_req_cmd *cmd);

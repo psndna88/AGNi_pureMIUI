@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __CAM_RES_MGR_API_H__
@@ -75,14 +75,18 @@ void cam_res_mgr_shared_pinctrl_put(void);
 int cam_res_mgr_shared_pinctrl_select_state(bool active);
 
 /**
- * @brief: Post init shared pinctrl
+ * @brief: Check for shared gpio
  *
- *  Post init to check if the device really has shared gpio,
- *  suspend and put the pinctrl if not use shared gpio.
+ *  Will check whether requested device shares the gpio with other
+ *  device. This function check against gpio table from device and
+ *  shared gpio resources has been defined at res-mgr level
  *
- * @return Status of operation. Negative in case of error. Zero otherwise.
+ * @gpio_tbl  : The GPIO table for respective device
+ * @size      : GPIO table size
+ * @return Status of operation. False if not shared, true otherwise.
  */
-int cam_res_mgr_shared_pinctrl_post_init(void);
+bool cam_res_mgr_check_if_gpio_is_shared(
+	struct gpio *gpio_tbl, uint8_t size);
 
 /**
  * @brief: Request a gpio

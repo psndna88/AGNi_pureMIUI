@@ -34,9 +34,6 @@
 #define HFI_POLL_DELAY_US 100
 #define HFI_POLL_TIMEOUT_US 10000
 
-#define HFI_MAX_PC_POLL_TRY 150
-#define HFI_POLL_TRY_SLEEP 1
-
 static struct hfi_info *g_hfi;
 unsigned int g_icp_mmu_hdl;
 static DEFINE_MUTEX(hfi_cmd_q_mutex);
@@ -542,74 +539,12 @@ int hfi_get_hw_caps(void *query_buf)
 	return 0;
 }
 
-void cam_hfi_disable_cpu(void __iomem *icp_base)
-{
-	uint32_t data;
-	uint32_t val;
-	uint32_t try = 0;
-
-	while (try < HFI_MAX_PC_POLL_TRY) {
-		data = cam_io_r_mb(icp_base + HFI_REG_A5_CSR_A5_STATUS);
-		CAM_DBG(CAM_HFI, "wfi status = %x\n", (int)data);
-
-		if (data & ICP_CSR_A5_STATUS_WFI)
-			break;
-		/* Need to poll here to confirm that FW is going trigger wfi
-		 * and Host can the proceed. No interrupt is expected from FW
-		 * at this time.
-		 */
-		usleep_range(HFI_POLL_TRY_SLEEP * 1000,
-			(HFI_POLL_TRY_SLEEP * 1000) + 1000);
-		try++;
-	}
-
-	val = cam_io_r(icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-	val &= ~(ICP_FLAG_CSR_A5_EN | ICP_FLAG_CSR_WAKE_UP_EN);
-	cam_io_w_mb(val, icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-
-	val = cam_io_r(icp_base + HFI_REG_A5_CSR_NSEC_RESET);
-	cam_io_w_mb(val, icp_base + HFI_REG_A5_CSR_NSEC_RESET);
-
-	cam_io_w_mb((uint32_t)ICP_INIT_REQUEST_RESET,
-		icp_base + HFI_REG_HOST_ICP_INIT_REQUEST);
-	cam_io_w_mb((uint32_t)INTR_DISABLE,
-		icp_base + HFI_REG_A5_CSR_A2HOSTINTEN);
-}
-
-void cam_hfi_enable_cpu(void __iomem *icp_base)
-{
-	cam_io_w_mb((uint32_t)ICP_FLAG_CSR_A5_EN,
-			icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-	cam_io_w_mb((uint32_t)0x10, icp_base + HFI_REG_A5_CSR_NSEC_RESET);
-}
-
-int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
-	void __iomem *icp_base, bool debug)
+int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base)
 {
 	int rc = 0;
-	uint32_t data;
 	uint32_t fw_version, status = 0;
 
-	cam_hfi_enable_cpu(icp_base);
 	g_hfi->csr_base = icp_base;
-
-	if (debug) {
-		cam_io_w_mb(ICP_FLAG_A5_CTRL_DBG_EN,
-			(icp_base + HFI_REG_A5_CSR_A5_CONTROL));
-
-		/* Barrier needed as next write should be done after
-		 * sucessful previous write. Next write enable clock
-		 * gating
-		 */
-		wmb();
-
-		cam_io_w_mb((uint32_t)ICP_FLAG_A5_CTRL_EN,
-			icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-
-	} else {
-		cam_io_w_mb((uint32_t)ICP_FLAG_A5_CTRL_EN,
-			icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-	}
 
 	if (readl_poll_timeout(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE,
 			       status, status == ICP_INIT_RESP_SUCCESS,
@@ -624,9 +559,6 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
 
 	fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
 	CAM_DBG(CAM_HFI, "fw version : [%x]", fw_version);
-
-	data = cam_io_r(icp_base + HFI_REG_A5_CSR_A5_STATUS);
-	CAM_DBG(CAM_HFI, "wfi status = %x", (int)data);
 
 	cam_io_w_mb((uint32_t)hfi_mem->qtbl.iova, icp_base + HFI_REG_QTBL_PTR);
 	cam_io_w_mb((uint32_t)hfi_mem->sfr_buf.iova,
@@ -661,7 +593,7 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
 }
 
 int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
-		void __iomem *icp_base, bool debug)
+		void __iomem *icp_base)
 {
 	int rc = 0;
 	struct hfi_qtbl *qtbl;
@@ -688,27 +620,6 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 
 	memcpy(&g_hfi->map, hfi_mem, sizeof(g_hfi->map));
 	g_hfi->hfi_state = HFI_DEINIT;
-	if (debug) {
-		cam_io_w_mb(
-		(uint32_t)(ICP_FLAG_CSR_A5_EN | ICP_FLAG_CSR_WAKE_UP_EN |
-		ICP_CSR_EDBGRQ | ICP_CSR_DBGSWENABLE),
-		icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-		msleep(100);
-		cam_io_w_mb((uint32_t)(ICP_FLAG_CSR_A5_EN |
-		ICP_FLAG_CSR_WAKE_UP_EN | ICP_CSR_EN_CLKGATE_WFI),
-		icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-	} else {
-		/* Due to hardware bug in V1 ICP clock gating has to be
-		 * disabled, this is supposed to be fixed in V-2. But enabling
-		 * the clock gating is causing the firmware hang, hence
-		 * disabling the clock gating on both V1 and V2 until the
-		 * hardware team root causes this
-		 */
-		cam_io_w_mb((uint32_t)ICP_FLAG_CSR_A5_EN |
-			ICP_FLAG_CSR_WAKE_UP_EN |
-			ICP_CSR_EN_CLKGATE_WFI,
-			icp_base + HFI_REG_A5_CSR_A5_CONTROL);
-	}
 
 	qtbl = (struct hfi_qtbl *)hfi_mem->qtbl.kva;
 	qtbl_hdr = &qtbl->q_tbl_hdr;

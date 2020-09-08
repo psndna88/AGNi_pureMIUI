@@ -25,6 +25,8 @@
  * @ubwc_static_ctrl:        UBWC static control configuration
  * @is_ife_lite:             Flag to indicate full vs lite IFE
  * @ife_clk_src:             IFE source clock
+ * @num_pid:                 Number of pids of ife
+ * @pid:                     IFE pid values list
  */
 struct cam_vfe_soc_private {
 	uint32_t    cpas_handle;
@@ -35,6 +37,8 @@ struct cam_vfe_soc_private {
 	uint32_t    ubwc_static_ctrl[UBWC_STATIC_CONFIG_MAX];
 	bool        is_ife_lite;
 	uint64_t    ife_clk_src;
+	uint32_t    num_pid;
+	uint32_t    pid[CAM_ISP_HW_MAX_PID_VAL];
 };
 
 /*

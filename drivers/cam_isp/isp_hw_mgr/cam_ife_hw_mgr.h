@@ -99,6 +99,7 @@ struct cam_ife_hw_mgr_debug {
  * @dsp_enabled             Indicate whether dsp is enabled in this context
  * @hw_enabled              Array to indicate active HW
  * @internal_cdm            Indicate whether context uses internal CDM
+ * @pf_mid_found            in page fault, mid found for this ctx.
  */
 struct cam_ife_hw_mgr_ctx {
 	struct list_head                list;
@@ -154,6 +155,7 @@ struct cam_ife_hw_mgr_ctx {
 	bool                            is_offline;
 	bool                            dsp_enabled;
 	bool                            internal_cdm;
+	bool                            pf_mid_found;
 };
 
 /**
@@ -172,13 +174,15 @@ struct cam_ife_hw_mgr_ctx {
  * @ife_dev_caps           ife device capability per core
  * @work q                 work queue for IFE hw manager
  * @debug_cfg              debug configuration
+ * @ctx_lock               context lock
  * @support_consumed_addr  indicate whether hw supports last consumed address
+ * @hw_pid_support         hw pid support for this target
  */
 struct cam_ife_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
 	struct cam_hw_intf            *tpg_devices[CAM_TOP_TPG_HW_NUM_MAX];
 	struct cam_hw_intf            *csid_devices[CAM_IFE_CSID_HW_NUM_MAX];
-	struct cam_hw_intf            *ife_devices[CAM_IFE_HW_NUM_MAX];
+	struct cam_isp_hw_intf_data   *ife_devices[CAM_IFE_HW_NUM_MAX];
 	struct cam_soc_reg_map        *cdm_reg_map[CAM_IFE_HW_NUM_MAX];
 
 	struct mutex                   ctx_mutex;
@@ -194,6 +198,7 @@ struct cam_ife_hw_mgr {
 	struct cam_ife_hw_mgr_debug    debug_cfg;
 	spinlock_t                     ctx_lock;
 	bool                           support_consumed_addr;
+	bool                           hw_pid_support;
 };
 
 /**

@@ -40,6 +40,7 @@ enum cam_cpas_hw_cmd_process {
 	CAM_CPAS_HW_CMD_AXI_VOTE,
 	CAM_CPAS_HW_CMD_LOG_VOTE,
 	CAM_CPAS_HW_CMD_SELECT_QOS,
+	CAM_CPAS_HW_CMD_LOG_EVENT,
 	CAM_CPAS_HW_CMD_INVALID,
 };
 
@@ -108,12 +109,25 @@ struct cam_cpas_hw_cmd_stop {
 };
 
 /**
+ * struct cam_cpas_hw_cmd_notify_event : CPAS cmd struct for notify event
+ *
+ * @identifier_string: Identifier string passed by caller
+ * @identifier_value: Identifier value passed by caller
+ *
+ */
+struct cam_cpas_hw_cmd_notify_event {
+	const char *identifier_string;
+	int32_t identifier_value;
+};
+
+/**
  * struct cam_cpas_hw_caps : CPAS HW capabilities
  *
  * @camera_family: Camera family type
  * @camera_version: Camera version
  * @cpas_version: CPAS version
  * @camera_capability: Camera hw capabilities
+ * @fuse_info: Fuse information
  *
  */
 struct cam_cpas_hw_caps {
@@ -121,6 +135,7 @@ struct cam_cpas_hw_caps {
 	struct cam_hw_version camera_version;
 	struct cam_hw_version cpas_version;
 	uint32_t camera_capability;
+	struct cam_cpas_fuse_info fuse_info;
 };
 
 int cam_cpas_hw_probe(struct platform_device *pdev,

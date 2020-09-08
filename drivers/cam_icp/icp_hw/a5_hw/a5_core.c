@@ -13,12 +13,14 @@
 #include <linux/delay.h>
 #include <linux/timer.h>
 #include <linux/elf.h>
+#include <linux/iopoll.h>
 #include <media/cam_icp.h>
 #include "cam_io_util.h"
 #include "cam_a5_hw_intf.h"
 #include "cam_hw.h"
 #include "cam_hw_intf.h"
 #include "a5_core.h"
+#include "a5_reg.h"
 #include "a5_soc.h"
 #include "cam_soc_util.h"
 #include "cam_io_util.h"
@@ -27,6 +29,9 @@
 #include "cam_icp_hw_mgr_intf.h"
 #include "cam_cpas_api.h"
 #include "cam_debug_util.h"
+
+#define PC_POLL_DELAY_US 100
+#define PC_POLL_TIMEOUT_US 10000
 
 static int cam_a5_cpas_vote(struct cam_a5_device_core_info *core_info,
 	struct cam_icp_cpas_vote *cpas_vote)
@@ -388,6 +393,60 @@ int cam_a5_deinit_hw(void *device_priv,
 	return rc;
 }
 
+static int cam_a5_power_resume(struct cam_hw_info *a5_info, bool debug_enabled)
+{
+	uint32_t val = A5_CSR_FULL_CPU_EN;
+	void __iomem *base;
+
+	if (!a5_info) {
+		CAM_ERR(CAM_ICP, "invalid A5 device info");
+		return -EINVAL;
+	}
+
+	base = a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base;
+
+	cam_io_w_mb(A5_CSR_A5_CPU_EN, base + ICP_SIERRA_A5_CSR_A5_CONTROL);
+	cam_io_w_mb(A5_CSR_FUNC_RESET, base + ICP_SIERRA_A5_CSR_NSEC_RESET);
+
+	if (debug_enabled)
+		val |= A5_CSR_FULL_DBG_EN;
+
+	cam_io_w_mb(val, base + ICP_SIERRA_A5_CSR_A5_CONTROL);
+
+	return 0;
+}
+
+static int cam_a5_power_collapse(struct cam_hw_info *a5_info)
+{
+	uint32_t val, status = 0;
+	void __iomem *base;
+
+	if (!a5_info) {
+		CAM_ERR(CAM_ICP, "invalid A5 device info");
+		return -EINVAL;
+	}
+
+	base = a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base;
+
+	/**
+	 * Need to poll here to confirm that FW has triggered WFI
+	 * and Host can then proceed. No interrupt is expected
+	 * from FW at this time.
+	 */
+	if (readl_poll_timeout(base + ICP_SIERRA_A5_CSR_A5_STATUS,
+				status, status & A5_CSR_A5_STANDBYWFI,
+				PC_POLL_DELAY_US, PC_POLL_TIMEOUT_US)) {
+		CAM_ERR(CAM_ICP, "WFI poll timed out: status=0x%08x", status);
+		return -ETIMEDOUT;
+	}
+
+	val = cam_io_r(base + ICP_SIERRA_A5_CSR_A5_CONTROL);
+	val &= ~(A5_CSR_A5_CPU_EN | A5_CSR_WAKE_UP_EN);
+	cam_io_w_mb(val, base + ICP_SIERRA_A5_CSR_A5_CONTROL);
+
+	return 0;
+}
+
 irqreturn_t cam_a5_irq(int irq_num, void *data)
 {
 	struct cam_hw_info *a5_dev = data;
@@ -457,6 +516,12 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 	switch (cmd_type) {
 	case CAM_ICP_A5_CMD_FW_DOWNLOAD:
 		rc = cam_a5_download_fw(device_priv);
+		break;
+	case CAM_ICP_A5_CMD_POWER_COLLAPSE:
+		rc = cam_a5_power_collapse(a5_dev);
+		break;
+	case CAM_ICP_A5_CMD_POWER_RESUME:
+		rc = cam_a5_power_resume(a5_dev, *((bool *)cmd_args));
 		break;
 	case CAM_ICP_A5_CMD_SET_FW_BUF: {
 		struct cam_icp_a5_set_fw_buf_info *fw_buf_info = cmd_args;

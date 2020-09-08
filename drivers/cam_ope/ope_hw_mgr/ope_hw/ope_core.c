@@ -427,7 +427,7 @@ static int dump_dmi_cmd(uint32_t print_idx,
 	return 0;
 }
 
-static int dump_frame_direct(uint32_t print_idx,
+static int dump_direct_cmd(uint32_t print_idx,
 	uint32_t *print_ptr,
 	struct ope_frame_process *frm_proc,
 	int batch_idx, int cmd_buf_idx)
@@ -569,7 +569,7 @@ static uint32_t *ope_create_frame_cmd_batch(struct cam_ope_hw_mgr *hw_mgr,
 				iova_addr,
 				frm_proc->cmd_buf[i][j].length);
 			print_ptr = (uint32_t *)cpu_addr;
-			dump_frame_direct(print_idx, print_ptr,
+			dump_direct_cmd(print_idx, print_ptr,
 				frm_proc, i, j);
 		} else {
 			num_dmi = frm_proc->cmd_buf[i][j].length /
@@ -581,21 +581,28 @@ static uint32_t *ope_create_frame_cmd_batch(struct cam_ope_hw_mgr *hw_mgr,
 				memcpy(temp, (const void *)print_ptr,
 					sizeof(struct cdm_dmi_cmd));
 				dmi_cmd = (struct cdm_dmi_cmd *)temp;
+				if (!dmi_cmd->addr) {
+					CAM_ERR(CAM_OPE, "Null dmi cmd addr");
+					return NULL;
+				}
+
 				kmd_buf = cdm_ops->cdm_write_dmi(
 					kmd_buf,
 					0, dmi_cmd->DMIAddr,
 					dmi_cmd->DMISel, dmi_cmd->addr,
 					dmi_cmd->length);
-				dump_dmi_cmd(print_idx,
-					print_ptr, dmi_cmd, temp);
+				if (hw_mgr->frame_dump_enable)
+					dump_dmi_cmd(print_idx,
+						print_ptr, dmi_cmd, temp);
 				print_ptr +=
 					sizeof(struct cdm_dmi_cmd) /
 					sizeof(uint32_t);
 			}
 			CAM_DBG(CAM_OPE, "Frame DB : In direct: X");
 		}
-		dump_frame_cmd(frm_proc, i, j,
-			iova_addr, kmd_buf, buf_len);
+		if (hw_mgr->frame_dump_enable)
+			dump_frame_cmd(frm_proc, i, j,
+				iova_addr, kmd_buf, buf_len);
 	}
 	return kmd_buf;
 
@@ -719,8 +726,9 @@ static uint32_t *ope_create_frame_cmd(struct cam_ope_hw_mgr *hw_mgr,
 					iova_addr,
 					frm_proc->cmd_buf[i][j].length);
 				print_ptr = (uint32_t *)cpu_addr;
-				dump_frame_direct(print_idx, print_ptr,
-					frm_proc, i, j);
+				if (hw_mgr->frame_dump_enable)
+					dump_direct_cmd(print_idx, print_ptr,
+						frm_proc, i, j);
 			} else {
 				num_dmi = frm_proc->cmd_buf[i][j].length /
 					sizeof(struct cdm_dmi_cmd);
@@ -731,21 +739,30 @@ static uint32_t *ope_create_frame_cmd(struct cam_ope_hw_mgr *hw_mgr,
 					memcpy(temp, (const void *)print_ptr,
 						sizeof(struct cdm_dmi_cmd));
 					dmi_cmd = (struct cdm_dmi_cmd *)temp;
+					if (!dmi_cmd->addr) {
+						CAM_ERR(CAM_OPE,
+							"Null dmi cmd addr");
+						return NULL;
+					}
+
 					kmd_buf = cdm_ops->cdm_write_dmi(
 						kmd_buf,
 						0, dmi_cmd->DMIAddr,
 						dmi_cmd->DMISel, dmi_cmd->addr,
 						dmi_cmd->length);
-					dump_dmi_cmd(print_idx,
-						print_ptr, dmi_cmd, temp);
+					if (hw_mgr->frame_dump_enable)
+						dump_dmi_cmd(print_idx,
+							print_ptr, dmi_cmd,
+							temp);
 					print_ptr +=
 						sizeof(struct cdm_dmi_cmd) /
 						sizeof(uint32_t);
 				}
 				CAM_DBG(CAM_OPE, "Frame DB : In direct: X");
 			}
-			dump_frame_cmd(frm_proc, i, j,
-				iova_addr, kmd_buf, buf_len);
+			if (hw_mgr->frame_dump_enable)
+				dump_frame_cmd(frm_proc, i, j,
+					iova_addr, kmd_buf, buf_len);
 		}
 	}
 	return kmd_buf;
@@ -817,15 +834,12 @@ static uint32_t *ope_create_stripe_cmd(struct cam_ope_hw_mgr *hw_mgr,
 				kmd_buf,
 				iova_addr,
 				frm_proc->cmd_buf[i][k].length);
-				print_ptr = (uint32_t *)cpu_addr;
-				CAM_DBG(CAM_OPE, "Stripe:%d direct:E",
-					stripe_idx);
-			for (print_idx = 0; print_idx <
-				frm_proc->cmd_buf[i][k].length / 4;
-				print_idx++) {
-				CAM_DBG(CAM_OPE, "%d: %x", print_idx,
-					print_ptr[print_idx]);
-			}
+			print_ptr = (uint32_t *)cpu_addr;
+			CAM_DBG(CAM_OPE, "Stripe:%d direct:E",
+				stripe_idx);
+			if (hw_mgr->frame_dump_enable)
+				dump_direct_cmd(print_idx, print_ptr,
+					frm_proc, i, k);
 			CAM_DBG(CAM_OPE, "Stripe:%d direct:X", stripe_idx);
 		} else if (frm_proc->cmd_buf[i][k].type ==
 			OPE_CMD_BUF_TYPE_INDIRECT) {
@@ -837,18 +851,25 @@ static uint32_t *ope_create_stripe_cmd(struct cam_ope_hw_mgr *hw_mgr,
 				memcpy(temp, (const void *)print_ptr,
 					sizeof(struct cdm_dmi_cmd));
 				dmi_cmd = (struct cdm_dmi_cmd *)temp;
+				if (!dmi_cmd->addr) {
+					CAM_ERR(CAM_OPE, "Null dmi cmd addr");
+					return NULL;
+				}
+
 				kmd_buf = cdm_ops->cdm_write_dmi(kmd_buf,
 					0, dmi_cmd->DMIAddr, dmi_cmd->DMISel,
 					dmi_cmd->addr, dmi_cmd->length);
-				dump_dmi_cmd(print_idx,
-					print_ptr, dmi_cmd, temp);
+				if (hw_mgr->frame_dump_enable)
+					dump_dmi_cmd(print_idx,
+						print_ptr, dmi_cmd, temp);
 				print_ptr += sizeof(struct cdm_dmi_cmd) /
 					sizeof(uint32_t);
 			}
 			CAM_DBG(CAM_OPE, "Stripe:%d Indirect:X", stripe_idx);
 		}
-		dump_stripe_cmd(frm_proc, stripe_idx, i, k,
-			iova_addr, kmd_buf, buf_len);
+		if (hw_mgr->frame_dump_enable)
+			dump_stripe_cmd(frm_proc, stripe_idx, i, k,
+				iova_addr, kmd_buf, buf_len);
 	}
 	return kmd_buf;
 }
@@ -1511,10 +1532,12 @@ static int cam_ope_dev_process_prepare(struct ope_hw *ope_hw, void *cmd_args)
 	if (rc)
 		goto end;
 
-	cam_ope_dev_create_kmd_buf(ope_dev_prepare_req->hw_mgr,
-		ope_dev_prepare_req->prepare_args,
-		ope_dev_prepare_req->ctx_data, ope_dev_prepare_req->req_idx,
-		ope_dev_prepare_req->kmd_buf_offset, ope_dev_prepare_req);
+	rc = cam_ope_dev_create_kmd_buf(ope_dev_prepare_req->hw_mgr,
+			ope_dev_prepare_req->prepare_args,
+			ope_dev_prepare_req->ctx_data,
+			ope_dev_prepare_req->req_idx,
+			ope_dev_prepare_req->kmd_buf_offset,
+			ope_dev_prepare_req);
 
 end:
 	return rc;

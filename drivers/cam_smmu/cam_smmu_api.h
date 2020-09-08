@@ -43,8 +43,7 @@ enum cam_smmu_region_id {
 };
 
 /**
- * @brief        : Callback function type that gets called back on cam
- *                     smmu page fault.
+ * @brief          : cam_smmu_pf_info
  *
  * @param domain   : Iommu domain received in iommu page fault handler
  * @param dev      : Device received in iommu page fault handler
@@ -52,10 +51,22 @@ enum cam_smmu_region_id {
  * @param flags    : Flags received in iommu page fault handler
  * @param token    : Userdata given during callback registration
  * @param buf_info : Closest mapped buffer info
+ * @bid            : bus id
+ * @pid            : unique id for hw group of ports
+ * @mid            : port id of hw
  */
-typedef void (*cam_smmu_client_page_fault_handler)(struct iommu_domain *domain,
-	struct device *dev, unsigned long iova, int flags, void *token,
-	uint32_t buf_info);
+
+struct cam_smmu_pf_info {
+	struct iommu_domain *domain;
+	struct device        *dev;
+	unsigned long        iova;
+	int                  flags;
+	void                *token;
+	uint32_t             buf_info;
+	uint32_t             bid;
+	uint32_t             pid;
+	uint32_t             mid;
+};
 
 /**
  * @brief            : Structure to store region information
@@ -234,7 +245,7 @@ int cam_smmu_find_index_by_handle(int hdl);
  * @param token: It is input param when trigger page fault handler
  */
 void cam_smmu_set_client_page_fault_handler(int handle,
-	cam_smmu_client_page_fault_handler handler_cb, void *token);
+	void (*handler_cb)(struct cam_smmu_pf_info  *pf_info), void *token);
 
 /**
  * @brief       : Unregisters smmu fault handler for client
@@ -404,6 +415,13 @@ int cam_smmu_get_io_region_info(int32_t smmu_hdl,
 	dma_addr_t *discard_iova_start, size_t *discard_iova_len);
 
 /**
+ * @brief : API to reset the call context bank page fault count
+ *          This should be done on the starting of new camera open
+ * @return void.
+ */
+void cam_smmu_reset_cb_page_fault_cnt(void);
+
+/**
  * @brief : API to register SMMU hw to platform framework.
  * @return struct platform_device pointer on on success, or ERR_PTR() on error.
  */
@@ -413,4 +431,5 @@ int cam_smmu_init_module(void);
  * @brief : API to remove SMMU Hw from platform framework.
  */
 void cam_smmu_exit_module(void);
+
 #endif /* _CAM_SMMU_API_H_ */

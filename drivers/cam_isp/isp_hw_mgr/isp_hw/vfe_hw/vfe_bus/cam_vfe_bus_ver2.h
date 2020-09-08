@@ -10,6 +10,7 @@
 #include "cam_vfe_bus.h"
 
 #define CAM_VFE_BUS_VER2_MAX_CLIENTS 24
+#define CAM_VFE_BUS_VER2_MAX_MID_PER_PORT 4
 
 enum cam_vfe_bus_ver2_vfe_core_id {
 	CAM_VFE_BUS_VER2_VFE_CORE_0,
@@ -167,6 +168,7 @@ struct cam_vfe_bus_ver2_vfe_out_hw_info {
 	enum cam_vfe_bus_ver2_vfe_out_type  vfe_out_type;
 	uint32_t                            max_width;
 	uint32_t                            max_height;
+	uint32_t                         mid[CAM_VFE_BUS_VER2_MAX_MID_PER_PORT];
 };
 
 /*

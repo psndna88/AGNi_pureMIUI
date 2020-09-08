@@ -73,12 +73,11 @@ int hfi_read_message(uint32_t *pmsg, uint8_t q_id, uint32_t *words_read);
  * @event_driven_mode: event mode
  * @hfi_mem: hfi memory info
  * @icp_base: icp base address
- * @debug: debug flag
  *
  * Returns success(zero)/failure(non zero)
  */
 int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
-	void *__iomem icp_base, bool debug);
+	void *__iomem icp_base);
 
 /**
  * hfi_get_hw_caps() - hardware capabilities from firmware
@@ -95,18 +94,6 @@ int hfi_get_hw_caps(void *query_caps);
  * @size: size of command data
  */
 void hfi_send_system_cmd(uint32_t type, uint64_t data, uint32_t size);
-
-/**
- * cam_hfi_enable_cpu() - enable A5 CPU
- * @icp_base: icp base address
- */
-void cam_hfi_enable_cpu(void __iomem *icp_base);
-
-/**
- * cam_hfi_disable_cpu() - disable A5 CPU
- * @icp_base: icp base address
- */
-void cam_hfi_disable_cpu(void __iomem *icp_base);
 
 /**
  * cam_hfi_deinit() - cleanup HFI
@@ -154,12 +141,10 @@ int hfi_cmd_ubwc_config(uint32_t *ubwc_cfg);
  * cam_hfi_resume() - function to resume
  * @hfi_mem: hfi memory info
  * @icp_base: icp base address
- * @debug: debug flag
  *
  * Returns success(zero)/failure(non zero)
  */
-int cam_hfi_resume(struct hfi_mem_info *hfi_mem,
-	void __iomem *icp_base, bool debug);
+int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base);
 
 /**
  * cam_hfi_queue_dump() - utility function to dump hfi queues

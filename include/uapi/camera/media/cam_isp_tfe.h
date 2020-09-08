@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only WITH Linux-syscall-note */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __UAPI_CAM_ISP_TFE_H__
@@ -30,6 +30,7 @@
 #define CAM_ISP_TFE_IN_RES_PHY_0               (CAM_ISP_TFE_IN_RES_BASE + 1)
 #define CAM_ISP_TFE_IN_RES_PHY_1               (CAM_ISP_TFE_IN_RES_BASE + 2)
 #define CAM_ISP_TFE_IN_RES_PHY_2               (CAM_ISP_TFE_IN_RES_BASE + 3)
-#define CAM_ISP_TFE_IN_RES_MAX                 (CAM_ISP_TFE_IN_RES_BASE + 4)
+#define CAM_ISP_TFE_IN_RES_PHY_3               (CAM_ISP_TFE_IN_RES_BASE + 4)
+#define CAM_ISP_TFE_IN_RES_MAX                 (CAM_ISP_TFE_IN_RES_BASE + 5)
 
 #endif /* __UAPI_CAM_ISP_TFE_H__ */

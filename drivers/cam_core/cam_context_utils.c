@@ -98,7 +98,8 @@ int cam_context_buf_done_from_hw(struct cam_context *ctx,
 	for (j = 0; j < req->num_out_map_entries; j++) {
 		CAM_DBG(CAM_REQ, "fence %d signal with %d",
 			req->out_map_entries[j].sync_id, result);
-		cam_sync_signal(req->out_map_entries[j].sync_id, result);
+		cam_sync_signal(req->out_map_entries[j].sync_id, result,
+			done->evt_param);
 		req->out_map_entries[j].sync_id = -1;
 	}
 
@@ -661,7 +662,8 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 			if (req->out_map_entries[i].sync_id != -1) {
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_CANCEL);
+					CAM_SYNC_STATE_SIGNALED_CANCEL,
+					CAM_SYNC_COMMON_EVENT_FLUSH);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 					"Req: %llu already signalled, sync_id:%d",
@@ -733,7 +735,8 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 			if (req->out_map_entries[i].sync_id != -1) {
 				rc = cam_sync_signal(
 					req->out_map_entries[i].sync_id,
-					CAM_SYNC_STATE_SIGNALED_CANCEL);
+					CAM_SYNC_STATE_SIGNALED_CANCEL,
+					CAM_SYNC_COMMON_EVENT_FLUSH);
 				if (rc == -EALREADY) {
 					CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled ctx: %pK dev_name: %s dev_handle: %d ctx_state: %d",
@@ -846,7 +849,8 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 					req->out_map_entries[i].sync_id;
 				if (sync_id != -1) {
 					rc = cam_sync_signal(sync_id,
-						CAM_SYNC_STATE_SIGNALED_CANCEL);
+						CAM_SYNC_STATE_SIGNALED_CANCEL,
+						CAM_SYNC_COMMON_EVENT_FLUSH);
 					if (rc == -EALREADY) {
 						CAM_ERR(CAM_CTXT,
 						"Req: %llu already signalled, sync_id:%d",
@@ -994,8 +998,8 @@ end:
 }
 
 int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
-	struct cam_packet *packet, unsigned long iova, uint32_t buf_info,
-	bool *mem_found)
+	struct cam_packet *packet, bool *mem_found, bool *ctx_found,
+	uint32_t  *resource_type, struct cam_smmu_pf_info *pf_info)
 {
 	int rc = 0;
 	struct cam_hw_cmd_args cmd_args;
@@ -1017,9 +1021,14 @@ int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
 		cmd_args.ctxt_to_hw_map = ctx->ctxt_to_hw_map;
 		cmd_args.cmd_type = CAM_HW_MGR_CMD_DUMP_PF_INFO;
 		cmd_args.u.pf_args.pf_data.packet = packet;
-		cmd_args.u.pf_args.iova = iova;
-		cmd_args.u.pf_args.buf_info = buf_info;
+		cmd_args.u.pf_args.iova = pf_info->iova;
+		cmd_args.u.pf_args.buf_info = pf_info->buf_info;
 		cmd_args.u.pf_args.mem_found = mem_found;
+		cmd_args.u.pf_args.ctx_found = ctx_found;
+		cmd_args.u.pf_args.resource_type = resource_type;
+		cmd_args.u.pf_args.bid = pf_info->bid;
+		cmd_args.u.pf_args.pid = pf_info->pid;
+		cmd_args.u.pf_args.mid = pf_info->mid;
 		ctx->hw_mgr_intf->hw_cmd(ctx->hw_mgr_intf->hw_mgr_priv,
 			&cmd_args);
 	}

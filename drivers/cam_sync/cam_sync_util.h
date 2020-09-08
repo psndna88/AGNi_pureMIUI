@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __CAM_SYNC_UTIL_H__
@@ -82,13 +82,14 @@ void cam_sync_util_cb_dispatch(struct work_struct *cb_dispatch_work);
 /**
  * @brief: Function to dispatch callbacks for a signaled sync object
  *
- * @sync_obj : Sync object that is signaled
- * @status   : Status of the signaled object
+ * @sync_obj    : Sync object that is signaled
+ * @status      : Status of the signaled object
+ * @evt_param   : Event paramaeter
  *
  * @return None
  */
 void cam_sync_util_dispatch_signaled_cb(int32_t sync_obj,
-	uint32_t status);
+	uint32_t status, uint32_t evt_param);
 
 /**
  * @brief: Function to send V4L event to user space
@@ -97,6 +98,7 @@ void cam_sync_util_dispatch_signaled_cb(int32_t sync_obj,
  * @param status   : Status of the event
  * @payload        : Payload that needs to be sent to user space
  * @len            : Length of the payload
+ * @evt_param      : Event Paramenter
  *
  * @return None
  */
@@ -104,7 +106,8 @@ void cam_sync_util_send_v4l2_event(uint32_t id,
 	uint32_t sync_obj,
 	int status,
 	void *payload,
-	int len);
+	int len,
+	uint32_t evt_param);
 
 /**
  * @brief: Function which gets the next state of the sync object based on the

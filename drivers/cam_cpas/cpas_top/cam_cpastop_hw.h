@@ -160,6 +160,9 @@ enum cam_camnoc_port_type {
  * @danger_lut: Danger LUT mapping for this connection
  * @safe_lut: Safe LUT mapping for this connection
  * @ubwc_ctl: UBWC control settings for this connection
+ * @qosgen_mainctl: qosgen shaping control configuration for this connection
+ * @qosgen_shaping_low: qosgen shaping low configuration for this connection
+ * @qosgen_shaping_high: qosgen shaping high configuration for this connection
  *
  */
 struct cam_camnoc_specific {
@@ -172,6 +175,9 @@ struct cam_camnoc_specific {
 	struct cam_cpas_reg safe_lut;
 	struct cam_cpas_reg ubwc_ctl;
 	struct cam_cpas_reg flag_out_set0_low;
+	struct cam_cpas_reg qosgen_mainctl;
+	struct cam_cpas_reg qosgen_shaping_low;
+	struct cam_cpas_reg qosgen_shaping_high;
 };
 
 /**

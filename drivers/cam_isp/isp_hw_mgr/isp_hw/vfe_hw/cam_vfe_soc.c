@@ -36,7 +36,7 @@ static bool cam_vfe_cpas_cb(uint32_t client_handle, void *userdata,
 
 static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 {
-	int rc = 0, num_ubwc_cfg = 0, i = 0;
+	int rc = 0, num_ubwc_cfg = 0, i = 0, num_pid = 0;
 	struct device_node *of_node = NULL;
 	struct platform_device *pdev = NULL;
 	struct cam_vfe_soc_private *vfe_soc_private;
@@ -55,7 +55,7 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 	if (strnstr(soc_info->compatible, "lite",
 		strlen(soc_info->compatible)) != NULL) {
 		vfe_soc_private->is_ife_lite = true;
-		goto end;
+		goto pid;
 	}
 
 	switch (soc_info->hw_version) {
@@ -69,7 +69,7 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 			CAM_ERR(CAM_ISP, "wrong num_ubwc_cfg: %d",
 				num_ubwc_cfg);
 			rc = num_ubwc_cfg;
-			goto end;
+			goto pid;
 		}
 
 		for (i = 0; i < num_ubwc_cfg; i++) {
@@ -86,8 +86,24 @@ static int cam_vfe_get_dt_properties(struct cam_hw_soc_info *soc_info)
 	default:
 		break;
 	}
+pid:
+	/* set some default values */
+	vfe_soc_private->num_pid = 0;
+
+	num_pid = of_property_count_u32_elems(pdev->dev.of_node, "cam_hw_pid");
+	CAM_DBG(CAM_CPAS, "vfe:%d pid count %d", soc_info->index, num_pid);
+
+	if (num_pid <= 0  || num_pid > CAM_ISP_HW_MAX_PID_VAL)
+		goto end;
+
+	for (i = 0; i < num_pid; i++)
+		of_property_read_u32_index(pdev->dev.of_node, "cam_hw_pid", i,
+		&vfe_soc_private->pid[i]);
+
+	vfe_soc_private->num_pid = num_pid;
 
 end:
+
 	return rc;
 }
 
@@ -282,11 +298,18 @@ int cam_vfe_soc_enable_clk(struct cam_hw_soc_info *soc_info,
 	if (!soc_info) {
 		CAM_ERR(CAM_ISP, "Error Invalid params");
 		rc = -EINVAL;
-		return rc;
+		goto end;
 	}
 	soc_private = soc_info->soc_private;
 
-	if (strcmp(clk_name, CAM_VFE_DSP_CLK_NAME) == 0) {
+	if (!strcmp(clk_name, CAM_VFE_DSP_CLK_NAME)) {
+		if (soc_private->dsp_clk_index == -1) {
+			CAM_ERR(CAM_ISP,
+			"DSP clock not supported for vfe: %d", soc_info->index);
+			rc = -EPERM;
+			goto end;
+		}
+
 		rc = cam_soc_util_clk_enable(soc_private->dsp_clk,
 			CAM_VFE_DSP_CLK_NAME, soc_private->dsp_clk_rate);
 		if (rc)
@@ -294,6 +317,7 @@ int cam_vfe_soc_enable_clk(struct cam_hw_soc_info *soc_info,
 			"Error enable dsp clk failed rc=%d", rc);
 	}
 
+end:
 	return rc;
 }
 
@@ -306,18 +330,26 @@ int cam_vfe_soc_disable_clk(struct cam_hw_soc_info *soc_info,
 	if (!soc_info) {
 		CAM_ERR(CAM_ISP, "Error Invalid params");
 		rc = -EINVAL;
-		return rc;
+		goto end;
 	}
 	soc_private = soc_info->soc_private;
 
-	if (strcmp(clk_name, CAM_VFE_DSP_CLK_NAME) == 0) {
+	if (!strcmp(clk_name, CAM_VFE_DSP_CLK_NAME)) {
+		if (soc_private->dsp_clk_index == -1) {
+			CAM_ERR(CAM_ISP,
+			"DSP clock not supported for vfe: %d", soc_info->index);
+			rc = -EPERM;
+			goto end;
+		}
+
 		rc = cam_soc_util_clk_disable(soc_private->dsp_clk,
 			CAM_VFE_DSP_CLK_NAME);
 		if (rc)
 			CAM_ERR(CAM_ISP,
-			"Error enable dsp clk failed rc=%d", rc);
+			"Error disable dsp clk failed rc=%d", rc);
 	}
 
+end:
 	return rc;
 }
 

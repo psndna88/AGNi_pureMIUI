@@ -12,6 +12,7 @@
 
 #define CAM_VFE_BUS_VER3_MAX_CLIENTS     26
 #define CAM_VFE_BUS_VER3_MAX_SUB_GRPS     6
+#define CAM_VFE_BUS_VER3_MAX_MID_PER_PORT 4
 
 enum cam_vfe_bus_ver3_vfe_core_id {
 	CAM_VFE_BUS_VER3_VFE_CORE_0,
@@ -160,6 +161,7 @@ struct cam_vfe_bus_ver3_vfe_out_hw_info {
 	uint32_t                            max_width;
 	uint32_t                            max_height;
 	uint32_t                            source_group;
+	uint32_t                         mid[CAM_VFE_BUS_VER3_MAX_MID_PER_PORT];
 };
 
 /*

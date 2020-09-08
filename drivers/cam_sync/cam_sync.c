@@ -184,7 +184,7 @@ int cam_sync_deregister_callback(sync_callback cb_func,
 	return found ? 0 : -ENOENT;
 }
 
-int cam_sync_signal(int32_t sync_obj, uint32_t status)
+int cam_sync_signal(int32_t sync_obj, uint32_t status, uint32_t event_cause)
 {
 	struct sync_table_row *row = NULL;
 	struct sync_table_row *parent_row = NULL;
@@ -228,8 +228,8 @@ int cam_sync_signal(int32_t sync_obj, uint32_t status)
 		(status != CAM_SYNC_STATE_SIGNALED_CANCEL)) {
 		spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
 		CAM_ERR(CAM_SYNC,
-			"Error: signaling with undefined status = %d",
-			status);
+			"Error: signaling with undefined status = %d event reason = %u",
+			status, event_cause);
 		return -EINVAL;
 	}
 
@@ -239,7 +239,7 @@ int cam_sync_signal(int32_t sync_obj, uint32_t status)
 	}
 
 	row->state = status;
-	cam_sync_util_dispatch_signaled_cb(sync_obj, status);
+	cam_sync_util_dispatch_signaled_cb(sync_obj, status, event_cause);
 
 	/* copy parent list to local and release child lock */
 	INIT_LIST_HEAD(&parents_list);
@@ -275,7 +275,8 @@ int cam_sync_signal(int32_t sync_obj, uint32_t status)
 
 		if (!parent_row->remaining)
 			cam_sync_util_dispatch_signaled_cb(
-				parent_info->sync_id, parent_row->state);
+				parent_info->sync_id, parent_row->state,
+				event_cause);
 
 		spin_unlock_bh(&sync_dev->row_spinlocks[parent_info->sync_id]);
 		list_del_init(&parent_info->list);
@@ -514,7 +515,8 @@ static int cam_sync_handle_signal(struct cam_private_ioctl_arg *k_ioctl)
 	}
 
 	return cam_sync_signal(sync_signal.sync_obj,
-		sync_signal.sync_state);
+		sync_signal.sync_state,
+		CAM_SYNC_COMMON_SYNC_SIGNAL_EVENT);
 }
 
 static int cam_sync_handle_merge(struct cam_private_ioctl_arg *k_ioctl)
@@ -664,7 +666,8 @@ static int cam_sync_handle_register_user_payload(
 			sync_obj,
 			row->state,
 			user_payload_kernel->payload_data,
-			CAM_SYNC_USER_PAYLOAD_SIZE * sizeof(__u64));
+			CAM_SYNC_USER_PAYLOAD_SIZE * sizeof(__u64),
+			CAM_SYNC_COMMON_REG_PAYLOAD_EVENT);
 
 		spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
 		kfree(user_payload_kernel);
@@ -869,7 +872,8 @@ static int cam_sync_close(struct file *filep)
 			 */
 			if (row->state == CAM_SYNC_STATE_ACTIVE) {
 				rc = cam_sync_signal(i,
-					CAM_SYNC_STATE_SIGNALED_ERROR);
+					CAM_SYNC_STATE_SIGNALED_ERROR,
+					CAM_SYNC_COMMON_RELEASE_EVENT);
 				if (rc < 0)
 					CAM_ERR(CAM_SYNC,
 					  "Cleanup signal fail idx:%d\n",
@@ -912,11 +916,24 @@ static int cam_sync_close(struct file *filep)
 static void cam_sync_event_queue_notify_error(const struct v4l2_event *old,
 	struct v4l2_event *new)
 {
-	struct cam_sync_ev_header *ev_header;
+	if (sync_dev->version == CAM_SYNC_V4L_EVENT_V2) {
+		struct cam_sync_ev_header_v2 *ev_header;
 
-	ev_header = CAM_SYNC_GET_HEADER_PTR((*old));
-	CAM_ERR(CAM_CRM, "Failed to notify event id %d fence %d statue %d",
-		old->id, ev_header->sync_obj, ev_header->status);
+		ev_header = CAM_SYNC_GET_HEADER_PTR_V2((*old));
+		CAM_ERR(CAM_CRM,
+			"Failed to notify event id %d fence %d statue %d reason %u %u %u %u",
+			old->id, ev_header->sync_obj, ev_header->status,
+			ev_header->evt_param[0], ev_header->evt_param[1],
+			ev_header->evt_param[2], ev_header->evt_param[3]);
+
+	} else {
+		struct cam_sync_ev_header *ev_header;
+
+		ev_header = CAM_SYNC_GET_HEADER_PTR((*old));
+		CAM_ERR(CAM_CRM,
+			"Failed to notify event id %d fence %d statue %d",
+			old->id, ev_header->sync_obj, ev_header->status);
+	}
 }
 
 static struct v4l2_subscribed_event_ops cam_sync_v4l2_ops = {
@@ -926,6 +943,14 @@ static struct v4l2_subscribed_event_ops cam_sync_v4l2_ops = {
 int cam_sync_subscribe_event(struct v4l2_fh *fh,
 		const struct v4l2_event_subscription *sub)
 {
+	if (!((sub->type == CAM_SYNC_V4L_EVENT) ||
+	(sub->type == CAM_SYNC_V4L_EVENT_V2))) {
+		CAM_ERR(CAM_SYNC, "Non supported event type 0x%x", sub->type);
+		return -EINVAL;
+	}
+
+	sync_dev->version = sub->type;
+	CAM_DBG(CAM_SYNC, "Sync event verion type 0x%x", sync_dev->version);
 	return v4l2_event_subscribe(fh, sub, CAM_SYNC_MAX_V4L2_EVENTS,
 		&cam_sync_v4l2_ops);
 }
@@ -933,6 +958,12 @@ int cam_sync_subscribe_event(struct v4l2_fh *fh,
 int cam_sync_unsubscribe_event(struct v4l2_fh *fh,
 		const struct v4l2_event_subscription *sub)
 {
+	if (!((sub->type == CAM_SYNC_V4L_EVENT) ||
+	(sub->type == CAM_SYNC_V4L_EVENT_V2))) {
+		CAM_ERR(CAM_SYNC, "Non supported event type 0x%x", sub->type);
+		return -EINVAL;
+	}
+
 	return v4l2_event_unsubscribe(fh, sub);
 }
 
@@ -1068,7 +1099,7 @@ int cam_synx_sync_signal(int32_t sync_obj, uint32_t synx_status)
 		break;
 	}
 
-	rc = cam_sync_signal(sync_obj, sync_status);
+	rc = cam_sync_signal(sync_obj, sync_status, CAM_SYNC_COMMON_EVENT_SYNX);
 	if (rc) {
 		CAM_ERR(CAM_SYNC,
 			"synx signal failed with %d, sync_obj=%d, synx_status=%d, sync_status=%d",

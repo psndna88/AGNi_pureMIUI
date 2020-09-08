@@ -182,6 +182,7 @@ struct cam_signalable_info {
  * @cam_sync_eventq : Event queue used to dispatch user payloads to user space
  * @bitmap          : Bitmap representation of all sync objects
  * @params          : Parameters for synx call back registration
+ * @version         : version support
  */
 struct sync_device {
 	struct video_device *vdev;
@@ -198,6 +199,7 @@ struct sync_device {
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
 	struct synx_register_params params;
 #endif
+	uint32_t version;
 };
 
 

@@ -6,6 +6,7 @@
 #ifndef _CAM_SOC_UTIL_H_
 #define _CAM_SOC_UTIL_H_
 
+#include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/interrupt.h>
@@ -685,5 +686,17 @@ int cam_soc_util_reg_dump_to_cmd_buf(void *ctx,
 	cam_soc_util_regspace_data_cb reg_data_cb,
 	struct cam_hw_soc_dump_args *soc_dump_args,
 	bool user_triggered_dump);
+
+/**
+ * cam_soc_util_print_clk_freq()
+ *
+ * @brief:              This function gets the clk rates for each clk from clk
+ *                      driver and prints in log
+ *
+ * @soc_info:           Device soc struct to be populated
+ *
+ * @return:             success or failure
+ */
+int cam_soc_util_print_clk_freq(struct cam_hw_soc_info *soc_info);
 
 #endif /* _CAM_SOC_UTIL_H_ */

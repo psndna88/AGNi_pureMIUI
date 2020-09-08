@@ -15,6 +15,8 @@
 
 /* Maximum length of tag while dumping */
 #define CAM_ISP_HW_DUMP_TAG_MAX_LEN 32
+/* Max isp hw pid values number */
+#define CAM_ISP_HW_MAX_PID_VAL      4
 /*
  * struct cam_isp_timestamp:
  *
@@ -121,6 +123,9 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_FE_TRIGGER_CMD,
 	CAM_ISP_HW_CMD_UNMASK_BUS_WR_IRQ,
 	CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
+	CAM_ISP_HW_CMD_GET_RES_FOR_MID,
+	CAM_ISP_HW_CMD_BLANKING_UPDATE,
+	CAM_ISP_HW_CMD_CSID_CLOCK_DUMP,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -173,6 +178,20 @@ struct cam_isp_resource_node {
 		uint32_t cmd_type, void *cmd_args, uint32_t arg_size);
 	CAM_IRQ_HANDLER_TOP_HALF       top_half_handler;
 	CAM_IRQ_HANDLER_BOTTOM_HALF    bottom_half_handler;
+};
+
+/*
+ * struct cam_isp_blanking_config:
+ *
+ * @Brief:          Structure to pass blanking details
+ * @hbi:            HBI Value
+ * @vbi:            VBI Value
+ * node_res:        Pointer to Resource Node object
+ */
+struct cam_isp_blanking_config {
+	uint32_t                           hbi;
+	uint32_t                           vbi;
+	struct cam_isp_resource_node       *node_res;
 };
 
 /*
@@ -231,6 +250,20 @@ struct cam_isp_hw_get_wm_update {
 	uint64_t                        frame_header;
 	uint32_t                        local_id;
 	struct cam_buf_io_cfg          *io_cfg;
+};
+
+/*
+ * struct cam_isp_hw_get_res_for_mid:
+ *
+ * @Brief:           Get the out resource id for given mid
+ *
+ * @mid:             Mid number of hw outport numb
+ * @out_res_id:      Out resource id
+ *
+ */
+struct cam_isp_hw_get_res_for_mid {
+	uint32_t                       mid;
+	uint32_t                       out_res_id;
 };
 
 /*
@@ -308,4 +341,19 @@ struct cam_isp_hw_dump_header {
 	uint32_t  word_size;
 };
 
+/**
+ * struct cam_isp_hw_intf_data - ISP hw intf data
+ *
+ * @Brief:        isp hw intf pointer and pid list data
+ *
+ * @isp_hw_intf:      Isp hw intf pointer
+ * @num_hw_pid:       Number of pids for this hw
+ * @isp_hw_pid:       Isp hw pid values
+ *
+ */
+struct cam_isp_hw_intf_data {
+	struct cam_hw_intf     *hw_intf;
+	uint32_t                num_hw_pid;
+	uint32_t                hw_pid[CAM_ISP_HW_MAX_PID_VAL];
+};
 #endif /* _CAM_ISP_HW_H_ */

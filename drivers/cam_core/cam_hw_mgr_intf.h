@@ -9,6 +9,8 @@
 #include <linux/time.h>
 #include <linux/types.h>
 #include <media/cam_defs.h>
+#include "cam_smmu_api.h"
+
 /*
  * This file declares Constants, Enums, Structures and APIs to be used as
  * Interface between HW Manager and Context.
@@ -44,8 +46,8 @@ typedef int (*cam_hw_event_cb_func)(void *context, uint32_t evt_id,
 	void *evt_data);
 
 /* hardware page fault callback function type */
-typedef int (*cam_hw_pagefault_cb_func)(void *context, unsigned long iova,
-	uint32_t buf_info);
+typedef int (*cam_hw_pagefault_cb_func)(void *context,
+	struct cam_smmu_pf_info *pf_info);
 
 /* ctx dump callback function type */
 typedef int (*cam_ctx_info_dump_cb_func)(void *context,
@@ -90,6 +92,7 @@ struct cam_hw_fence_map_entry {
  * @resrouce_handle:       list of the resource handle
  * @timestamp:             time stamp
  * @request_id:            request identifier
+ * @evt_param:             event parameter
  *
  */
 struct cam_hw_done_event_data {
@@ -97,6 +100,7 @@ struct cam_hw_done_event_data {
 	uint32_t           resource_handle[CAM_NUM_OUT_PER_COMP_IRQ_MAX];
 	struct timeval     timestamp;
 	uint64_t           request_id;
+	uint32_t           evt_param;
 };
 
 /**
@@ -293,6 +297,11 @@ struct cam_hw_flush_args {
  *                               fault occurred
  * @mem_found:             If fault memory found in current
  *                               request
+ * @ctx_found              If fault pid found in context acquired hardware
+ * @resource_type          Resource type of the port which caused pf
+ * @bid:                   Indicate the bus id
+ * @pid:                   Indicates unique hw group ports
+ * @mid:                   Indicates port id of the camera hw
  *
  */
 struct cam_hw_dump_pf_args {
@@ -300,6 +309,11 @@ struct cam_hw_dump_pf_args {
 	unsigned long                   iova;
 	uint32_t                        buf_info;
 	bool                           *mem_found;
+	bool                           *ctx_found;
+	uint32_t                       *resource_type;
+	uint32_t                        bid;
+	uint32_t                        pid;
+	uint32_t                        mid;
 };
 
 /**

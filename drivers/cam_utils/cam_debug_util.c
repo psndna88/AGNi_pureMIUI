@@ -6,11 +6,17 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include "cam_trace.h"
 
 #include "cam_debug_util.h"
 
 static uint debug_mdl;
 module_param(debug_mdl, uint, 0644);
+
+/* 0x0 - only logs, 0x1 - only trace, 0x2 - logs + trace */
+static uint debug_type;
+module_param(debug_type, uint, 0644);
+
 struct camera_debug_settings cam_debug;
 
 const struct camera_debug_settings *cam_debug_get_settings()
@@ -217,6 +223,34 @@ const char *cam_get_module_name(unsigned int module_id)
 	return name;
 }
 
+const char *cam_get_tag_name(unsigned int tag_id)
+{
+	const char *name = NULL;
+
+	switch (tag_id) {
+	case CAM_TYPE_TRACE:
+		name = "CAM_TRACE";
+		break;
+	case CAM_TYPE_ERR:
+		name = "CAM_ERR";
+		break;
+	case CAM_TYPE_WARN:
+		name = "CAM_WARN";
+		break;
+	case CAM_TYPE_INFO:
+		name = "CAM_INFO";
+		break;
+	case CAM_TYPE_DBG:
+		name = "CAM_DBG";
+		break;
+	default:
+		name = "CAM";
+		break;
+	}
+
+	return name;
+}
+
 void cam_debug_log(unsigned int module_id, const char *func, const int line,
 	const char *fmt, ...)
 {
@@ -227,10 +261,47 @@ void cam_debug_log(unsigned int module_id, const char *func, const int line,
 
 	if (debug_mdl & module_id) {
 		vsnprintf(str_buffer, STR_BUFFER_MAX_LENGTH, fmt, args);
-		pr_info("CAM_DBG: %s: %s: %d: %s\n",
-			cam_get_module_name(module_id),
-			func, line, str_buffer);
+
+		if ((debug_type == 0) || (debug_type == 2)) {
+			pr_info("CAM_DBG: %s: %s: %d: %s\n",
+				cam_get_module_name(module_id),
+				func, line, str_buffer);
+		}
+
+		if ((debug_type == 1) || (debug_type == 2)) {
+			char trace_buffer[STR_BUFFER_MAX_LENGTH];
+
+			snprintf(trace_buffer, sizeof(trace_buffer),
+				"%s: %s: %s: %d: %s",
+				cam_get_tag_name(CAM_TYPE_DBG),
+				cam_get_module_name(module_id),
+				func, line, str_buffer);
+			trace_cam_log_debug(trace_buffer);
+		}
 	}
 
 	va_end(args);
+}
+
+void cam_debug_trace(unsigned int tag, unsigned int module_id,
+	const char *func, const int line, const char *fmt, ...)
+{
+	char str_buffer[STR_BUFFER_MAX_LENGTH];
+	va_list args;
+
+	if ((tag == CAM_TYPE_TRACE) || (debug_type == 1) || (debug_type == 2)) {
+		char trace_buffer[STR_BUFFER_MAX_LENGTH];
+
+		va_start(args, fmt);
+
+		vsnprintf(str_buffer, STR_BUFFER_MAX_LENGTH, fmt, args);
+
+		snprintf(trace_buffer, sizeof(trace_buffer),
+			"%s: %s: %s: %d: %s",
+			cam_get_tag_name(tag), cam_get_module_name(module_id),
+			func, line, str_buffer);
+		trace_cam_log_debug(trace_buffer);
+
+		va_end(args);
+	}
 }
