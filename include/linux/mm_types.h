@@ -144,9 +144,19 @@ struct page {
 			unsigned long compound_head; /* If bit zero is set */
 
 			/* First tail page only */
-			unsigned char compound_dtor;
-			unsigned char compound_order;
-			/* two/six bytes available here */
+#ifdef CONFIG_64BIT
+			/*
+			 * On 64 bit system we have enough space in struct page
+			 * to encode compound_dtor and compound_order with
+			 * unsigned int. It can help compiler generate better or
+			 * smaller code on some archtectures.
+			 */
+			unsigned int compound_dtor;
+			unsigned int compound_order;
+#else
+			unsigned short int compound_dtor;
+			unsigned short int compound_order;
+#endif
 		};
 
 #if defined(CONFIG_TRANSPARENT_HUGEPAGE) && USE_SPLIT_PMD_PTLOCKS
