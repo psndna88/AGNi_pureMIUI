@@ -124,7 +124,7 @@ fi
 echo ""
 
 ###### ZIP Packing
-if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-mqc ] && [ -f $KERNELDIR/$DIR/wlan_pie.ko ] && [ -f $KERNELDIR/$DIR/wlan_q.ko ]); then
+if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-mqc ] && ([ -f $KERNELDIR/$DIR/wlan_pie.ko ] || [ -f $KERNELDIR/$DIR/wlan_pie_old.ko ]) && [ -f $KERNELDIR/$DIR/wlan_q.ko ]); then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	sed -i 's/device.name1=/device.name2=jasmine/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i 's/device.name2=/device.name1=jasmine_sprout/' $KERNELDIR/$DIR/anykernel.sh
@@ -132,9 +132,9 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	sed -i '/#SDM636/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i '/#AGNIFW/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SETDEVICETYPE/SDM660_jasmine (MI A2)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
+	sed -i 's/SDM660/MIA2/' $KERNELDIR/$DIR/tools/sdm660/init.agni*
 	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
 	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko
-	mv $KERNELDIR/$DIR/tools/wlan_pie_old.ko.module $KERNELDIR/$DIR/tools/wlan_pie_old.ko 2>/dev/null
 	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm636
 	rm -rf $KERNELDIR/$DIR/tools/sdm636
 	cp -f $KERNELDIR/$DIR/tools/sdm660/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm660
