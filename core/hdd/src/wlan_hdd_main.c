@@ -5076,6 +5076,7 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 	ucfg_pmo_del_wow_pattern(vdev);
 	status = ucfg_reg_11d_vdev_delete_update(vdev);
 	ucfg_scan_vdev_set_disable(vdev, REASON_VDEV_DOWN);
+	wlan_hdd_scan_abort(adapter);
 	/* Disable serialization for vdev before sending vdev delete */
 	wlan_ser_vdev_queue_disable(vdev);
 	hdd_objmgr_put_vdev(vdev);
@@ -5103,6 +5104,8 @@ int hdd_vdev_destroy(struct hdd_adapter *adapter)
 		hdd_err("timed out waiting for sme vdev delete");
 		clear_bit(SME_SESSION_OPENED, &adapter->event_flags);
 		sme_cleanup_session(hdd_ctx->mac_handle, vdev_id);
+		qdf_trigger_self_recovery(hdd_ctx->psoc,
+					  QDF_VDEV_DELETE_RESPONSE_TIMED_OUT);
 	}
 
 	hdd_nofl_debug("vdev %d destroyed successfully", vdev_id);

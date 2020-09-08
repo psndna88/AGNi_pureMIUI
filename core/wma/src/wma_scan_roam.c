@@ -2109,8 +2109,7 @@ QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 
 		if (roam_req->reason == REASON_ROAM_STOP_ALL ||
 		    roam_req->reason == REASON_DISCONNECTED ||
-		    roam_req->reason == REASON_ROAM_SYNCH_FAILED ||
-		    roam_req->reason == REASON_SUPPLICANT_DISABLED_ROAMING) {
+		    roam_req->reason == REASON_ROAM_SYNCH_FAILED) {
 			mode = WMI_ROAM_SCAN_MODE_NONE;
 		} else {
 			if (csr_is_roam_offload_enabled(mac))
@@ -2888,6 +2887,7 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	wma_debug("LFR3: new phymode %d", bss_phymode);
 }
 
+#ifndef ROAM_OFFLOAD_V1
 /**
  * wma_post_roam_sync_failure: Send roam sync failure ind to fw
  * @wma: wma handle
@@ -2910,6 +2910,14 @@ static void wma_post_roam_sync_failure(tp_wma_handle wma, uint8_t vdev_id)
 		wma_process_roaming_config(wma, roam_req);
 	}
 }
+#else
+static void wma_post_roam_sync_failure(tp_wma_handle wma, uint8_t vdev_id)
+{
+	wlan_cm_roam_stop_req(wma->psoc, vdev_id, REASON_ROAM_SYNCH_FAILED);
+	wma_debug("In cleanup: RSO Command:%d, reason %d vdev %d",
+		  ROAM_SCAN_OFFLOAD_STOP, REASON_ROAM_SYNCH_FAILED, vdev_id);
+}
+#endif
 
 int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 					 uint32_t len)

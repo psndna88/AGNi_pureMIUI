@@ -1025,7 +1025,8 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 		sap_signal_hdd_event(sap_ctx, NULL, eSAP_DFS_RADAR_DETECT,
 				     (void *) eSAP_STATUS_SUCCESS);
 		mac_ctx->sap.SapDfsInfo.target_chan_freq =
-			wlan_reg_chan_to_freq(mac_ctx->pdev, sap_indicate_radar(sap_ctx));
+			sap_indicate_radar(sap_ctx);
+
 		/* if there is an assigned next channel hopping */
 		if (0 < mac_ctx->sap.SapDfsInfo.user_provided_target_chan_freq) {
 			mac_ctx->sap.SapDfsInfo.target_chan_freq =
@@ -1059,16 +1060,12 @@ QDF_STATUS wlansap_roam_callback(void *ctx,
 				sap_context =
 				    mac_ctx->sap.sapCtxList[intf].sap_context;
 				profile = &sap_context->csr_roamProfile;
-				if (!wlan_reg_is_passive_or_disable_ch(
+				if (!wlan_reg_is_passive_or_disable_for_freq(
 						mac_ctx->pdev,
-						wlan_reg_freq_to_chan(
-							mac_ctx->pdev,
-							profile->op_freq)))
+						profile->op_freq))
 					continue;
-				QDF_TRACE(QDF_MODULE_ID_SAP,
-					  QDF_TRACE_LEVEL_ERROR,
-					  FL("sapdfs: no available channel for sapctx[%pK], StopBss"),
-					  sap_context);
+				sap_debug("Vdev %d no channel available , stop bss",
+					  sap_context->sessionId);
 				sap_signal_hdd_event(sap_context, NULL,
 					eSAP_STOP_BSS_DUE_TO_NO_CHNL,
 					(void *) eSAP_STATUS_SUCCESS);
