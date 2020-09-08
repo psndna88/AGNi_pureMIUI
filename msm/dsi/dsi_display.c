@@ -4371,9 +4371,13 @@ static int _dsi_display_dyn_update_clks(struct dsi_display *display,
 					struct link_clk_freq *bkp_freq)
 {
 	int rc = 0, i;
+	u8 ctrl_version;
 	struct dsi_display_ctrl *m_ctrl, *ctrl;
+	struct dsi_dyn_clk_caps *dyn_clk_caps;
 
 	m_ctrl = &display->ctrl[display->clk_master_idx];
+	dyn_clk_caps = &(display->panel->dyn_clk_caps);
+	ctrl_version = m_ctrl->ctrl->version;
 
 	dsi_clk_prepare_enable(&display->clock_info.src_clks);
 
@@ -4411,6 +4415,15 @@ static int _dsi_display_dyn_update_clks(struct dsi_display *display,
 	}
 	dsi_phy_dynamic_refresh_trigger(m_ctrl->phy, true);
 
+	/*
+	 * Don't wait for dynamic refresh done for dsi ctrl greater than 2.5
+	 * and with constant fps, as dynamic refresh will applied with
+	 * next mdp intf ctrl flush.
+	 */
+	if ((ctrl_version >= DSI_CTRL_VERSION_2_5) &&
+			(dyn_clk_caps->maintain_const_fps))
+		goto defer_dfps_wait;
+
 	/* wait for dynamic refresh done */
 	display_for_each_ctrl(i, display) {
 		ctrl = &display->ctrl[i];
@@ -4429,6 +4442,7 @@ static int _dsi_display_dyn_update_clks(struct dsi_display *display,
 		dsi_phy_dynamic_refresh_clear(ctrl->phy);
 	}
 
+defer_dfps_wait:
 	rc = dsi_clk_update_parent(&display->clock_info.src_clks,
 			      &display->clock_info.mux_clks);
 	if (rc)
@@ -4828,8 +4842,10 @@ static int dsi_display_set_mode_sub(struct dsi_display *display,
 	int rc = 0, clk_rate = 0;
 	int i;
 	struct dsi_display_ctrl *ctrl;
+	struct dsi_display_ctrl *mctrl;
 	struct dsi_display_mode_priv_info *priv_info;
 	bool commit_phy_timing = false;
+	struct dsi_dyn_clk_caps *dyn_clk_caps;
 
 	priv_info = mode->priv_info;
 	if (!priv_info) {
@@ -4855,8 +4871,27 @@ static int dsi_display_set_mode_sub(struct dsi_display *display,
 	memcpy(&display->config.lane_map, &display->lane_map,
 	       sizeof(display->lane_map));
 
+	mctrl = &display->ctrl[display->clk_master_idx];
+	dyn_clk_caps = &(display->panel->dyn_clk_caps);
+
 	if (mode->dsi_mode_flags &
 			(DSI_MODE_FLAG_DFPS | DSI_MODE_FLAG_VRR)) {
+		display_for_each_ctrl(i, display) {
+			ctrl = &display->ctrl[i];
+
+			if (!ctrl->ctrl || (ctrl != mctrl))
+				continue;
+
+			ctrl->ctrl->hw.ops.set_timing_db(&ctrl->ctrl->hw,
+					true);
+			dsi_phy_dynamic_refresh_clear(ctrl->phy);
+
+			if ((ctrl->ctrl->version >= DSI_CTRL_VERSION_2_5) &&
+					(dyn_clk_caps->maintain_const_fps)) {
+				dsi_phy_dynamic_refresh_trigger_sel(ctrl->phy,
+						true);
+			}
+		}
 		rc = dsi_display_dfps_update(display, mode);
 		if (rc) {
 			DSI_ERR("[%s]DSI dfps update failed, rc=%d\n",
@@ -5022,6 +5057,25 @@ static int _dsi_display_dev_deinit(struct dsi_display *display)
 }
 
 /**
+ * dsi_display_cont_splash_res_disable() - Disable resource votes added in probe
+ * @dsi_display:    Pointer to dsi display
+ * Returns:     Zero on success
+ */
+int dsi_display_cont_splash_res_disable(void *dsi_display)
+{
+	struct dsi_display *display = dsi_display;
+	int rc = 0;
+
+	/* Remove the panel vote that was added during dsi display probe */
+	rc = dsi_pwr_enable_regulator(&display->panel->power_info, false);
+	if (rc)
+		DSI_ERR("[%s] failed to disable vregs, rc=%d\n",
+				display->panel->name, rc);
+
+	return rc;
+}
+
+/**
  * dsi_display_cont_splash_config() - Initialize resources for continuous splash
  * @dsi_display:    Pointer to dsi display
  * Returns:     Zero on success
@@ -5066,24 +5120,12 @@ int dsi_display_cont_splash_config(void *dsi_display)
 		goto clk_manager_update;
 	}
 
-	/* Vote on panel regulator will be removed during suspend path */
-	rc = dsi_pwr_enable_regulator(&display->panel->power_info, true);
-	if (rc) {
-		DSI_ERR("[%s] failed to enable vregs, rc=%d\n",
-				display->panel->name, rc);
-		goto clks_disabled;
-	}
-
 	mutex_unlock(&display->display_lock);
 
 	/* Set the current brightness level */
 	dsi_panel_bl_handoff(display->panel);
 
 	return rc;
-
-clks_disabled:
-	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_ALL_CLKS, DSI_CLK_OFF);
 
 clk_manager_update:
 	dsi_display_ctrl_isr_configure(display, false);
@@ -5182,12 +5224,22 @@ error:
 static int dsi_display_get_io_resources(struct msm_io_res *io_res, void *data)
 {
 	int rc = 0;
+	struct dsi_display *display;
+
+	if (!data)
+		return -EINVAL;
 
 	rc = dsi_ctrl_get_io_resources(io_res);
 	if (rc)
 		goto end;
 
 	rc = dsi_phy_get_io_resources(io_res);
+	if (rc)
+		goto end;
+
+	display = (struct dsi_display *)data;
+	rc = dsi_panel_get_io_resources(display->panel, io_res);
+
 end:
 	return rc;
 }
@@ -5416,17 +5468,6 @@ static int dsi_display_bind(struct device *dev,
 		}
 	}
 
-	/* Remove the panel vote that was added during dsi display probe */
-	if (display->panel) {
-		rc = dsi_pwr_enable_regulator(&display->panel->power_info,
-								false);
-		if (rc) {
-			DSI_ERR("[%s] failed to disable vregs, rc=%d\n",
-					display->panel->name, rc);
-			goto error_host_deinit;
-		}
-	}
-
 	/* register te irq handler */
 	dsi_display_register_te_irq(display);
 
@@ -5536,11 +5577,13 @@ static int dsi_display_init(struct dsi_display *display)
 
 	/*
 	 * Vote on panel regulator is added to make sure panel regulators
-	 * are ON until dsi bind is completed for cont-splash enabled usecase.
-	 * This panel regulator vote will be removed after bind is done.
+	 * are ON for cont-splash enabled usecase.
+	 * This panel regulator vote will be removed only in:
+	 *	1) device suspend when cont-splash is enabled.
+	 *	2) cont_splash_res_disable() when cont-splash is disabled.
 	 * For GKI, adding this vote will make sure that sync_state
-	 * kernel driver doesn't disable the panel regulators before
-	 * splash_config() function adds vote for these regulators.
+	 * kernel driver doesn't disable the panel regulators after
+	 * dsi probe is complete.
 	 */
 	if (display->panel) {
 		rc = dsi_pwr_enable_regulator(&display->panel->power_info,

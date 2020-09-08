@@ -531,6 +531,14 @@ static u32 sde_hw_intf_get_underrun_line_count(struct sde_hw_intf *intf)
 		0xebadebad;
 }
 
+static u32 sde_hw_intf_get_intr_status(struct sde_hw_intf *intf)
+{
+	if (!intf)
+		return -EINVAL;
+
+	return SDE_REG_READ(&intf->hw, INTF_INTR_STATUS);
+}
+
 static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 		struct sde_hw_tear_check *te)
 {
@@ -777,17 +785,22 @@ static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 {
 	ops->setup_timing_gen = sde_hw_intf_setup_timing_engine;
 	ops->setup_prg_fetch  = sde_hw_intf_setup_prg_fetch;
-	ops->get_status = sde_hw_intf_get_status;
 	ops->enable_timing = sde_hw_intf_enable_timing_engine;
 	ops->setup_misr = sde_hw_intf_setup_misr;
 	ops->collect_misr = sde_hw_intf_collect_misr;
 	ops->get_line_count = sde_hw_intf_get_line_count;
 	ops->get_underrun_line_count = sde_hw_intf_get_underrun_line_count;
+	ops->get_intr_status = sde_hw_intf_get_intr_status;
 	ops->avr_setup = sde_hw_intf_avr_setup;
 	ops->avr_trigger = sde_hw_intf_avr_trigger;
 	ops->avr_ctrl = sde_hw_intf_avr_ctrl;
 	ops->enable_compressed_input = sde_hw_intf_enable_compressed_input;
 	ops->enable_wide_bus = sde_hw_intf_enable_wide_bus;
+
+	if (cap & BIT(SDE_INTF_STATUS))
+		ops->get_status = sde_hw_intf_v1_get_status;
+	else
+		ops->get_status = sde_hw_intf_get_status;
 
 	if (cap & BIT(SDE_INTF_INPUT_CTRL))
 		ops->bind_pingpong_blk = sde_hw_intf_bind_pingpong_blk;
@@ -802,7 +815,6 @@ static void _setup_intf_ops(struct sde_hw_intf_ops *ops,
 		ops->get_autorefresh = sde_hw_intf_get_autorefresh_config;
 		ops->poll_timeout_wr_ptr = sde_hw_intf_poll_timeout_wr_ptr;
 		ops->vsync_sel = sde_hw_intf_vsync_sel;
-		ops->get_status = sde_hw_intf_v1_get_status;
 		ops->check_and_reset_tearcheck =
 			sde_hw_intf_v1_check_and_reset_tearcheck;
 	}

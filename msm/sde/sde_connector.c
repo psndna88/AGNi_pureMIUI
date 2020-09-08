@@ -82,6 +82,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	int rc = 0;
 	struct msm_drm_private *priv;
 	struct sde_kms *sde_kms;
+	struct sde_vm_ops *vm_ops;
 
 	brightness = bd->props.brightness;
 
@@ -113,17 +114,12 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		return 0;
 	}
 
-	if (sde_kms->vm) {
-		struct sde_vm_ops *vm_ops = &sde_kms->vm->vm_ops;
+	sde_vm_lock(sde_kms);
 
-		mutex_lock(&sde_kms->vm->vm_res_lock);
-
-		if (vm_ops->vm_owns_hw && !vm_ops->vm_owns_hw(sde_kms)) {
-			SDE_DEBUG(
-				"skipping bl update due to HW unavailablity\n");
-			mutex_unlock(&sde_kms->vm->vm_res_lock);
-			return 0;
-		}
+	vm_ops = sde_vm_get_ops(sde_kms);
+	if (vm_ops && vm_ops->vm_owns_hw && !vm_ops->vm_owns_hw(sde_kms)) {
+		SDE_DEBUG("skipping bl update due to HW unavailablity\n");
+		goto done;
 	}
 
 	if (c_conn->ops.set_backlight) {
@@ -139,8 +135,8 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		c_conn->unset_bl_level = 0;
 	}
 
-	if (sde_kms->vm)
-		mutex_unlock(&sde_kms->vm->vm_res_lock);
+done:
+	sde_vm_unlock(sde_kms);
 
 	return rc;
 }
@@ -2729,10 +2725,8 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 			      sizeof(hdr),
 			      CONNECTOR_PROP_EXT_HDR_INFO);
 
-		/* create and attach colorspace property for DP */
-		if (!drm_mode_create_dp_colorspace_property(connector))
-			drm_object_attach_property(&connector->base,
-				connector->colorspace_property, 0);
+		if (c_conn->ops.install_properties)
+			c_conn->ops.install_properties(display, connector);
 	}
 
 	msm_property_install_volatile_range(&c_conn->property_info,

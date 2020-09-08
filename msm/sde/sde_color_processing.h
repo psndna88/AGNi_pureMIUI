@@ -201,10 +201,10 @@ int sde_cp_ltm_off_event_handler(struct drm_crtc *crtc_drm, bool en,
 	struct sde_irq_callback *hist_irq);
 
 /**
- * sde_cp_mode_switch_prop_dirty: API marks mode dependent features as dirty
+ * sde_cp_crtc_res_change: API to handle LM resolution changes
  * @crtc_drm: Pointer to crtc.
  */
-void sde_cp_mode_switch_prop_dirty(struct drm_crtc *crtc_drm);
+void sde_cp_crtc_res_change(struct drm_crtc *crtc_drm);
 
 /**
  * sde_cp_crtc_vm_primary_handoff: Properly handoff CRTC color mode features
@@ -213,4 +213,17 @@ void sde_cp_mode_switch_prop_dirty(struct drm_crtc *crtc_drm);
  */
 void sde_cp_crtc_vm_primary_handoff(struct drm_crtc *crtc);
 
+/**
+ * sde_cp_crtc_enable(): enable color processing info in the crtc.
+ *                     Should be called during crtc enable.
+ * @crtc:  Pointer to drm_crtc.
+ */
+void sde_cp_crtc_enable(struct drm_crtc *crtc);
+
+/**
+ * sde_cp_crtc_disable(): disable color processing info in the crtc.
+ *                     Should be called during crtc disable.
+ * @crtc:  Pointer to drm_crtc.
+ */
+void sde_cp_crtc_disable(struct drm_crtc *crtc);
 #endif /*_SDE_COLOR_PROCESSING_H */
