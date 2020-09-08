@@ -30,6 +30,17 @@
 		csr-id = <1 3 5>;
 	};
 
+	cx_sdpm@0x00634000 {
+		compatible = "qcom,sdpm";
+		reg = <0x00634000 0x1000>;
+		clock-names = "cam_cc_csi0phytiimer", "ufs_phy";
+		clocks = <&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
+			<&clock_gcc GCC_UFS_PHY_AXI_CLK_SRC>;
+		cam_cc_csi0phytiimer-supply = <&cam_cc_ipe_0_gdsc>;
+		cpu = <&CPU7>;
+		csr-id = <5 7 4>;
+	};
+
 	mx_pe: mx_rdpm_pe@0x00637000 {
 		compatible = "qcom,policy-engine";
 		#thermal-sensor-cells = <0>;
