@@ -228,6 +228,10 @@
 
 		qcom,sde-secure-sid-mask = <0x4000821>;
 
+		/* SPMI address related to display */
+		qcom,pmic-arb = <&spmi_bus>;
+		qcom,pmic-arb-address = <0x3F800 0x3F900 0x3FA00>;
+
 		qcom,sde-reg-bus,vectors-KBps = <0 0>,
 				<0 74000>,
 				<0 148000>,

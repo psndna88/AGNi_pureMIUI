@@ -1,8 +1,4 @@
-#include "dsi-panel-sim-video.dtsi"
-#include "dsi-panel-rm69299-visionox-fhd-plus-video.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-video.dtsi"
-#include <dt-bindings/clock/mdss-10nm-pll-clk.h>
+#include "holi-sde-display-common.dtsi"
 
 &pm6150l_gpios {
 	disp_pins {
@@ -17,120 +13,53 @@
 	};
 };
 
-&soc {
-	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
-		#address-cells = <1>;
-		#size-cells = <0>;
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		 <&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+		 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+		 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+		 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0";
 
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1800000>;
-			qcom,supply-max-voltage = <1800000>;
-			qcom,supply-enable-load = <62000>;
-			qcom,supply-disable-load = <80>;
-			qcom,supply-post-on-sleep = <20>;
-		};
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <&sde_te_active &disp_pins_default>;
+	pinctrl-1 = <&sde_te_suspend>;
 
-		qcom,panel-supply-entry@1 {
-			reg = <1>;
-			qcom,supply-name = "vdd";
-			qcom,supply-min-voltage = <3000000>;
-			qcom,supply-max-voltage = <3000000>;
-			qcom,supply-enable-load = <857000>;
-			qcom,supply-disable-load = <0>;
-			qcom,supply-post-on-sleep = <0>;
-		};
+	qcom,platform-te-gpio = <&tlmm 23 0>;
+	qcom,panel-te-source = <0>;
 
-		qcom,panel-supply-entry@2 {
-			reg = <2>;
-			qcom,supply-name = "lab";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-		};
+	vddio-supply = <&L1E>;
+	vdd-supply = <&L8A>;
 
-		qcom,panel-supply-entry@3 {
-			reg = <3>;
-			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-			qcom,supply-post-on-sleep = <20>;
-		};
-	};
-
-	sde_dsi: qcom,dsi-display-primary {
-		compatible = "qcom,dsi-display";
-		label = "primary";
-
-		qcom,dsi-ctrl = <&mdss_dsi0>;
-		qcom,dsi-phy = <&mdss_dsi_phy0>;
-
-		clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
-			 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
-			 <&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
-			 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
-			 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
-			 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>;
-		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
-				"src_byte_clk0", "src_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
-
-		pinctrl-names = "panel_active", "panel_suspend";
-		pinctrl-0 = <&sde_te_active &disp_pins_default>;
-		pinctrl-1 = <&sde_te_suspend>;
-
-		qcom,platform-te-gpio = <&tlmm 23 0>;
-		qcom,panel-te-source = <0>;
-
-		vddio-supply = <&L1E>;
-		vdd-supply = <&L8A>;
-
-		lab-supply = <&ab_vreg>;
-		ibb-supply = <&ibb_vreg>;
-
-		qcom,mdp = <&mdss_mdp>;
-		qcom,dsi-default-panel = <&dsi_rm69299_visionox_amoled_video>;
-	};
+	lab-supply = <&ab_vreg>;
+	ibb-supply = <&ibb_vreg>;
 };
 
 &mdss_mdp {
 	connectors = <&smmu_sde_unsec &smmu_sde_sec &sde_dsi>;
 };
 
-&dsi_sim_vid {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-	qcom,mdss-dsi-display-timings {
-		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [01 05 01 01 03 03 01
-				01 01 02 04 00 06 06];
-			qcom,display-topology = <1 0 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
 &dsi_rm69299_visionox_amoled_video {
+	qcom,esd-check-enabled;
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 	qcom,mdss-dsi-panel-status-value = <0x9c>;
 	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-	qcom,mdss-dsi-t-clk-post = <0x0E>;
-	qcom,mdss-dsi-t-clk-pre = <0x31>;
-	qcom,mdss-dsi-display-timings {
-		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08
-							08 05 02 04 00];
-			qcom,display-topology = <1 0 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
+};
+
+&dsi_rm69299_visionox_amoled_cmd {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
 };
 
 &dsi_r66451_amoled_cmd {
@@ -141,31 +70,6 @@
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 	qcom,mdss-dsi-panel-status-value = <0x1c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-	qcom,mdss-dsi-t-clk-post = <0x0A>;
-	qcom,mdss-dsi-t-clk-pre = <0x1D>;
-	qcom,mdss-dsi-display-timings {
-		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
-				04 03 02 04 00];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-
-		timing@1 {
-			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
-				06 06 02 04 00];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-
-		timing@2 {
-			qcom,mdss-dsi-panel-phy-timings = [00 1C 08 07 23 22 07
-				07 08 02 04 00];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
 };
 
 &dsi_r66451_amoled_video {
@@ -175,16 +79,4 @@
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 	qcom,mdss-dsi-panel-status-value = <0x1c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-	qcom,mdss-dsi-t-clk-post = <0x0B>;
-	qcom,mdss-dsi-t-clk-pre = <0x27>;
-	qcom,mdss-dsi-display-timings {
-		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
-				06 06 02 04 00];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
 };
-

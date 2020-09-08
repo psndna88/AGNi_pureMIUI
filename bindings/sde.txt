@@ -158,6 +158,9 @@ Optional properties:
 				feature is available or not.
 - qcom,sde-has-idle-pc:		Boolean property to indicate if target has idle
 				power collapse feature available or not.
+- qcom,sde-wakeup-with-touch:	Boolean property to indicate if command mode display
+				will exit from power collapse based on display input
+				touch event or not.
 - qcom,sde-has-mixer-gc:	Boolean property to indicate if mixer has gamma correction
 				feature available or not.
 - qcom,sde-has-dest-scaler: 	Boolean property to indicate if destination scaler
@@ -528,6 +531,8 @@ Optional properties:
 				should be excluded from IO memory validation list
 				in trusted vm environment
 - qcom,vram-size: 		A u32 value indicating the size of the VRAM in bytes
+- qcom,pmic-arb-address:	A u32 array of display related SPMI address
+				bit mask, which is a combination of SID and  pheripheral id's.
 
 Bus Scaling:
 - interconnects                 An array of 4 cell properties with the format of
@@ -718,6 +723,7 @@ Example:
     qcom,sde-highest-bank-bit = <15>;
     qcom,sde-has-mixer-gc;
     qcom,sde-has-idle-pc;
+    qcom,sde-wakeup-with-touch;
     qcom,fullsize-va-map;
     qcom,sde-has-dest-scaler;
     qcom,sde-max-trusted-vm-displays = <1>;
@@ -808,6 +814,7 @@ Example:
     qcom,sde-secure-sid-mask = <0x200801 0x200c01>;
 
     qcom,vram-size = <0x200000>;
+    qcom,pmic-arb-address = <0x3F800 0x3F900 0x3FA00>;
 
     qcom,sde-vbif-qos-rt-remap = <3 3 4 4 5 5 6 6>;
     qcom,sde-vbif-qos-nrt-remap = <3 3 3 3 3 3 3 3>;

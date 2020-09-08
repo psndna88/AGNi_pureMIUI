@@ -6,7 +6,6 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <1023>;
 	qcom,mdss-brightness-max-level = <255>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
@@ -28,7 +27,6 @@
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <255>;
 	qcom,mdss-dsi-bl-inverted-dbv;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 	qcom,platform-sec-reset-gpio = <&tlmm 25 0>;
 };
@@ -49,6 +47,7 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <255>;
+	qcom,mdss-dsi-bl-inverted-dbv;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
@@ -58,7 +57,17 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <255>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,mdss-dsi-bl-inverted-dbv;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
+};
+
+&dsi_r66451_amoled_144hz_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <255>;
+	qcom,mdss-dsi-bl-inverted-dbv;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
@@ -67,7 +76,6 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_external";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 	qcom,platform-bklight-en-gpio = <&tlmm 13 0>;
 };
@@ -86,7 +94,6 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_external";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
@@ -95,7 +102,6 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_external";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 	qcom,platform-bklight-en-gpio = <&tlmm 13 0>;
 };
@@ -116,7 +122,6 @@
 	qcom,bl-pmic-pwm-period-usecs = <100>;
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 	qcom,platform-bklight-en-gpio = <&tlmm 13 0>;
 };
@@ -126,7 +131,6 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_external";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
@@ -145,7 +149,6 @@
 	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_external";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 	qcom,platform-sec-reset-gpio = <&tlmm 25 0>;
 };

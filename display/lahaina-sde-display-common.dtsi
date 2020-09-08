@@ -15,6 +15,7 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd-cphy.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-video.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd.dtsi"
+#include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
 #include "dsi-panel-ext-bridge-1080p.dtsi"
 #include "dsi-panel-sim-cmd.dtsi"
 #include "dsi-panel-sim-video.dtsi"
@@ -124,6 +125,9 @@
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list = <606979440 604450359 601921278>;
 
+	qcom,dsi-panel-gpio-address = <0x0F100000 0x1000>;
+	qcom,dsi-panel-gpio-pins = <12 24 82>;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 14 05 05 13 13 05
@@ -143,6 +147,7 @@
 			"shadow_byte_clk0", "shadow_pixel_clk0";
 	qcom,dsi-dyn-clk-enable;
 	qcom,dsi-dyn-clk-list = <534712320 532484352 530256384>;
+	qcom,dsi-dyn-clk-type = "constant-fps-adjust-hfp";
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -218,6 +223,19 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 1e 17 04
 				19 03 02 04 00 00 00];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_144hz_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-select-sec-clocks = "mux_byte_clk1", "mux_pixel_clk1";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 22 09 09 19 17 09
+				09 09 02 04 00 1d 0e];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
