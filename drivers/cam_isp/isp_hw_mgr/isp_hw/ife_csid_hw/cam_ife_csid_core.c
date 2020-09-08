@@ -2154,9 +2154,8 @@ static int cam_ife_csid_enable_pxl_path(
 	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ)
 		val |= CSID_PATH_INFO_INPUT_EOF;
 
-	if (path_config->measure_enabled)
-		val |= (CSID_PATH_ERROR_PIX_COUNT |
-			CSID_PATH_ERROR_LINE_COUNT);
+	val |= (CSID_PATH_ERROR_PIX_COUNT |
+		CSID_PATH_ERROR_LINE_COUNT);
 
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_irq_mask_addr);
@@ -2781,9 +2780,8 @@ static int cam_ife_csid_enable_rdi_path(
 	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ)
 		val |= CSID_PATH_INFO_INPUT_EOF;
 
-	if (csid_hw->rdi_path_config[id].measure_enabled)
-		val |= (CSID_PATH_ERROR_PIX_COUNT |
-			CSID_PATH_ERROR_LINE_COUNT);
+	val |= (CSID_PATH_ERROR_PIX_COUNT |
+		CSID_PATH_ERROR_LINE_COUNT);
 
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 		csid_reg->rdi_reg[id]->csid_rdi_irq_mask_addr);
@@ -4843,14 +4841,15 @@ handle_fatal_error:
 				csid_hw->hw_intf->hw_idx,
 				irq_status[CAM_IFE_CSID_IRQ_REG_IPP]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			csid_hw->ipp_path_config.height,
 			csid_hw->ipp_path_config.width,
 			((val >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 
@@ -4914,14 +4913,15 @@ handle_fatal_error:
 				csid_hw->hw_intf->hw_idx,
 				irq_status[CAM_IFE_CSID_IRQ_REG_PPP]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h:  0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h:  0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			csid_hw->ppp_path_config.height,
 			csid_hw->ppp_path_config.width,
 			((val >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 
@@ -4979,7 +4979,7 @@ handle_fatal_error:
 				"CSID:%d irq_status_rdi[%d]:0x%x",
 				csid_hw->hw_intf->hw_idx, i, irq_status[i]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			((val2 >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
@@ -4989,7 +4989,8 @@ handle_fatal_error:
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 
