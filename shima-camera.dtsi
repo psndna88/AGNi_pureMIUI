@@ -1178,9 +1178,9 @@
 			"turbo";
 		fw_name = "CAMERA_ICP.elf";
 		ubwc-ipe-fetch-cfg = <0x707b 0x7083>;
-		ubwc-ipe-write-cfg = <0x161ef 0x1620f>;
+		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x707b 0x7083>;
-		ubwc-bps-write-cfg = <0x161ef 0x1620f>;
+		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
 		status = "ok";
 	};
 
