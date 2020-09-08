@@ -2159,17 +2159,6 @@ static int venus_hfi_core_init(void *device)
 
 	mutex_lock(&dev->lock);
 
-	dev->bus_vote.data =
-		kzalloc(sizeof(struct vidc_bus_vote_data), GFP_KERNEL);
-	if (!dev->bus_vote.data) {
-		dprintk(VIDC_ERR, "Bus vote data memory is not allocated\n");
-		rc = -ENOMEM;
-		goto err_no_mem;
-	}
-
-	dev->bus_vote.data_count = 1;
-	dev->bus_vote.data->power_mode = VIDC_POWER_TURBO;
-
 	rc = __load_fw(dev);
 	if (rc) {
 		dprintk(VIDC_ERR, "Failed to load Venus FW\n");
@@ -2239,7 +2228,6 @@ err_core_init:
 	__set_state(dev, VENUS_STATE_DEINIT);
 	__unload_fw(dev);
 err_load_fw:
-err_no_mem:
 	dprintk(VIDC_ERR, "Core init failed\n");
 	mutex_unlock(&dev->lock);
 	return rc;
@@ -4085,7 +4073,8 @@ static void __deinit_bus(struct venus_hfi_device *device)
 		return;
 
 	kfree(device->bus_vote.data);
-	device->bus_vote = DEFAULT_BUS_VOTE;
+	device->bus_vote.data = NULL;
+	device->bus_vote.data_count = 0;
 
 	venus_hfi_for_each_bus_reverse(device, bus) {
 		devfreq_remove_device(bus->devfreq);
@@ -4697,13 +4686,6 @@ static int __venus_power_on(struct venus_hfi_device *device)
 		return 0;
 
 	device->power_enabled = true;
-	/* Vote for all hardware resources */
-	rc = __vote_buses(device, device->bus_vote.data,
-			device->bus_vote.data_count);
-	if (rc) {
-		dprintk(VIDC_ERR, "Failed to vote buses, err: %d\n", rc);
-		goto fail_vote_buses;
-	}
 
 	rc = __enable_regulators(device);
 	if (rc) {
@@ -4755,7 +4737,6 @@ fail_enable_clks:
 	__disable_regulators(device);
 fail_enable_gdsc:
 	__unvote_buses(device);
-fail_vote_buses:
 	device->power_enabled = false;
 	return rc;
 }

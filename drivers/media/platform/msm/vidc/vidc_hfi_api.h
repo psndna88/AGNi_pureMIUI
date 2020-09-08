@@ -1403,12 +1403,6 @@ struct msm_vidc_gov_data {
 	u32 data_count;
 };
 
-enum msm_vidc_power_mode {
-	VIDC_POWER_NORMAL = 0,
-	VIDC_POWER_LOW,
-	VIDC_POWER_TURBO
-};
-
 struct vidc_bus_vote_data {
 	enum hal_domain domain;
 	enum hal_video_codec codec;
@@ -1424,17 +1418,9 @@ struct vidc_bus_vote_data {
 	u32 sys_cache_bw;
 	bool use_dpb_read;
 	unsigned int lcu_size;
-	enum msm_vidc_power_mode power_mode;
 	enum hal_work_mode work_mode;
 	bool use_sys_cache;
 	bool b_frames_enabled;
-};
-
-struct vidc_clk_scale_data {
-	enum vidc_vote_data_session session[VIDC_MAX_SESSIONS];
-	enum msm_vidc_power_mode power_mode[VIDC_MAX_SESSIONS];
-	u32 load[VIDC_MAX_SESSIONS];
-	int num_sessions;
 };
 
 struct hal_cmd_sys_get_property_packet {

@@ -307,13 +307,6 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 				filled_len * vote_data[i].fps * 8;
 		}
 
-		vote_data[i].power_mode = 0;
-		if (inst->clk_data.buffer_counter < DCVS_FTB_WINDOW &&
-			inst->session_type != MSM_VIDC_CVP)
-			vote_data[i].power_mode = VIDC_POWER_TURBO;
-		if (msm_vidc_clock_voting || is_turbo)
-			vote_data[i].power_mode = VIDC_POWER_TURBO;
-
 		if (msm_comm_get_stream_output_mode(inst) ==
 				HAL_VIDEO_DECODER_PRIMARY) {
 			vote_data[i].color_formats[0] =
