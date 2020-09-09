@@ -11,6 +11,7 @@ Required properties:
 	- "qcom,holi-vidc" : Invokes driver-specific data for HOLI.
 	- "qcom,yupik-vidc" : Invokes driver-specific data for YUPIK.
 	- "qcom,sm8150-vidc" : Invokes driver specific data for SM8150.
+	- "qcom,scshrike-vidc" : Invokes driver specific data for SA8195.
 
 Optional properties:
 - vidc,firmware-name : Video Firmware ELF image name to be loaded by PIL
