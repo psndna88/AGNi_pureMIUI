@@ -257,6 +257,24 @@
 		qcom,glb-db-receivers = <&hgsl_tcsr_receiver0
 					&hgsl_tcsr_receiver1>;
 	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+	};
+
+	qcom_qseecom: qseecom@87900000 {
+		compatible = "qcom,qseecom";
+		reg = <0x87900000 0x2200000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+	};
+
 };
 
 &regulator {
@@ -342,6 +360,12 @@
 		regulator-name = "smpc5";
 		regulator-min-microvolt = <1824000>;
 		regulator-max-microvolt = <2040000>;
+	};
+};
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
 	};
 };
 
