@@ -617,6 +617,8 @@
 		reg = <0x117f000 0x1000>,
 		      <0x1112000 0x6000>;
 
+		qcom,transaction_timeout = <0>;
+
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
 	};
@@ -2717,13 +2719,15 @@
 				<&adsp_smp2p_in 0 0>,
 				<&adsp_smp2p_in 2 0>,
 				<&adsp_smp2p_in 1 0>,
-				<&adsp_smp2p_in 3 0>;
+				<&adsp_smp2p_in 3 0>,
+				<&adsp_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		/* Outputs to lpass */
 		qcom,smem-states = <&adsp_smp2p_out 0>;
@@ -2766,13 +2770,15 @@
 				<&cdsp_smp2p_in 0 0>,
 				<&cdsp_smp2p_in 2 0>,
 				<&cdsp_smp2p_in 1 0>,
-				<&cdsp_smp2p_in 3 0>;
+				<&cdsp_smp2p_in 3 0>,
+				<&cdsp_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		/* Outputs to turing */
 		qcom,smem-states = <&cdsp_smp2p_out 0>;
@@ -3373,7 +3379,6 @@
 	};
 
 	wlan: qcom,cnss-qca6490@b0000000 {
-		status = "disabled";
 		compatible = "qcom,cnss-qca6490";
 		reg = <0xb0000000 0x10000>;
 		reg-names = "smmu_iova_ipa";
