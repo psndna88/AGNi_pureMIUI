@@ -76,6 +76,12 @@ dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_SCUBA) += scuba-iot-idp-overlay.dtbo
+
+scuba-iot-idp-overlay.dtbo-base := scuba-iot.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_HOLI) += holi-rumi-overlay.dtbo \
 	holi-mtp-overlay.dtbo \
 	holi-cdp-overlay.dtbo \
