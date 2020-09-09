@@ -908,8 +908,9 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
 	frame_size = base_res_mbs * MB_SIZE_IN_PIXEL * 3 / 2 / div_factor;
 
 	 /* multiply by 10/8 (1.25) to get size for 10 bit case */
-	if ((f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_VP9) ||
-		(f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC))
+	if ((f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_VP9 ||
+		f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC) &&
+		inst->core->platform_data->vpu_ver != VPU_VERSION_AR50_LITE)
 		frame_size = frame_size + (frame_size >> 2);
 
 	if (inst->buffer_size_limit &&
