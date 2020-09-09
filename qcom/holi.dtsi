@@ -2150,7 +2150,7 @@
 		"MAX";
 
 		iommus = <&apps_smmu 0x60 0x0>;
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
 
 		reset-gpios = <&tlmm 156 GPIO_ACTIVE_LOW>;
 
