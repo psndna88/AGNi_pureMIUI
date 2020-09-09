@@ -78,51 +78,52 @@ permission_error:
 }
 
 int cam_cdm_soc_load_dt_private(struct platform_device *pdev,
-	struct cam_cdm_private_dt_data *ptr)
+	struct cam_cdm_private_dt_data *cdm_pvt_data)
 {
-	int i, rc = -EINVAL, num_fifo_entries = 0;
+	int i, rc = -EINVAL, num_fifo_entries = 0, num_clients = 0;
 
-	ptr->dt_num_supported_clients = of_property_count_strings(
-						pdev->dev.of_node,
-						"cdm-client-names");
-	CAM_DBG(CAM_CDM, "Num supported cdm_client = %d",
-		ptr->dt_num_supported_clients);
-	if (ptr->dt_num_supported_clients >
-		CAM_PER_CDM_MAX_REGISTERED_CLIENTS) {
+	num_clients = of_property_count_strings(
+			pdev->dev.of_node, "cdm-client-names");
+	if ((num_clients <= 0) ||
+		(num_clients > CAM_PER_CDM_MAX_REGISTERED_CLIENTS)) {
 		CAM_ERR(CAM_CDM, "Invalid count of client names count=%d",
-			ptr->dt_num_supported_clients);
+			num_clients);
+
 		rc = -EINVAL;
 		goto end;
 	}
-	if (ptr->dt_num_supported_clients < 0) {
-		CAM_DBG(CAM_CDM, "No cdm client names found");
-		ptr->dt_num_supported_clients = 0;
-		ptr->dt_cdm_shared = false;
-	} else {
-		ptr->dt_cdm_shared = true;
-	}
-	for (i = 0; i < ptr->dt_num_supported_clients; i++) {
+
+	cdm_pvt_data->dt_num_supported_clients = (uint32_t)num_clients;
+	CAM_DBG(CAM_CDM, "Num supported cdm_client = %u",
+		cdm_pvt_data->dt_num_supported_clients);
+
+	cdm_pvt_data->dt_cdm_shared = true;
+
+	for (i = 0; i < cdm_pvt_data->dt_num_supported_clients; i++) {
 		rc = of_property_read_string_index(pdev->dev.of_node,
-			"cdm-client-names", i, &(ptr->dt_cdm_client_name[i]));
-		CAM_DBG(CAM_CDM, "cdm-client-names[%d] = %s",	i,
-			ptr->dt_cdm_client_name[i]);
+			"cdm-client-names", i,
+			&(cdm_pvt_data->dt_cdm_client_name[i]));
+		CAM_DBG(CAM_CDM, "cdm-client-names[%d] = %s", i,
+			cdm_pvt_data->dt_cdm_client_name[i]);
 		if (rc < 0) {
-			CAM_ERR(CAM_CDM, "Reading cdm-client-names failed");
+			CAM_ERR(CAM_CDM,
+				"Reading cdm-client-names failed for client: %d",
+				i);
 			goto end;
 		}
 
 	}
 
 	rc = of_property_read_u8(pdev->dev.of_node, "cdm-priority-group",
-			&ptr->priority_group);
+			&cdm_pvt_data->priority_group);
 	if (rc < 0) {
-		ptr->priority_group = 0;
+		cdm_pvt_data->priority_group = 0;
 		rc = 0;
 	}
 
-	ptr->config_fifo = of_property_read_bool(pdev->dev.of_node,
+	cdm_pvt_data->config_fifo = of_property_read_bool(pdev->dev.of_node,
 		"config-fifo");
-	if (ptr->config_fifo) {
+	if (cdm_pvt_data->config_fifo) {
 		num_fifo_entries = of_property_count_u32_elems(
 			pdev->dev.of_node,
 			"fifo-depths");
@@ -135,7 +136,7 @@ int cam_cdm_soc_load_dt_private(struct platform_device *pdev,
 		}
 		for (i = 0; i < num_fifo_entries; i++) {
 			rc = of_property_read_u32_index(pdev->dev.of_node,
-				"fifo-depths", i, &ptr->fifo_depth[i]);
+				"fifo-depths", i, &cdm_pvt_data->fifo_depth[i]);
 			if (rc < 0) {
 				CAM_ERR(CAM_CDM,
 					"Unable to read fifo-depth rc %d",
@@ -143,13 +144,14 @@ int cam_cdm_soc_load_dt_private(struct platform_device *pdev,
 				goto end;
 			}
 			CAM_DBG(CAM_CDM, "FIFO%d depth is %d",
-				i, ptr->fifo_depth[i]);
+				i, cdm_pvt_data->fifo_depth[i]);
 		}
 	} else {
 		for (i = 0; i < CAM_CDM_BL_FIFO_MAX; i++) {
-			ptr->fifo_depth[i] = CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT;
+			cdm_pvt_data->fifo_depth[i] =
+				CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT;
 			CAM_DBG(CAM_CDM, "FIFO%d depth is %d",
-				i, ptr->fifo_depth[i]);
+				i, cdm_pvt_data->fifo_depth[i]);
 		}
 	}
 end:
