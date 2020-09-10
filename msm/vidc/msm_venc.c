@@ -42,6 +42,7 @@
 #define LEGACY_CBR_BUF_SIZE 500
 #define CBR_PLUS_BUF_SIZE 1000
 #define MAX_GOP 0xFFFFFFF
+#define MAX_QPRANGE_BOOST 0x3333
 
 #define MIN_NUM_ENC_OUTPUT_BUFFERS 4
 #define MIN_NUM_ENC_CAPTURE_BUFFERS 5
@@ -954,6 +955,15 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.minimum = 0,
 		.maximum = 100,
 		.default_value = 25,
+		.step = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VENC_QPRANGE_BOOST,
+		.name = "Bitrate boost QP range",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.minimum = 0,
+		.maximum = MAX_QPRANGE_BOOST,
+		.default_value = 0,
 		.step = 1,
 	},
 	{
@@ -2021,6 +2031,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDEO_H264_CHROMA_QP_INDEX_OFFSET:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS:
 	case V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST:
+	case V4L2_CID_MPEG_VIDC_VENC_QPRANGE_BOOST:
 	case V4L2_CID_MPEG_VIDC_SUPERFRAME:
 		s_vpr_h(sid, "Control set: ID : 0x%x Val : %d\n",
 			ctrl->id, ctrl->val);
@@ -2993,7 +3004,8 @@ int msm_venc_set_qp_range(struct msm_vidc_inst *inst)
 	hdev = inst->core->device;
 
 	if (!(inst->client_set_ctrls & CLIENT_SET_MIN_QP) &&
-		!(inst->client_set_ctrls & CLIENT_SET_MAX_QP)) {
+		!(inst->client_set_ctrls & CLIENT_SET_MAX_QP) &&
+		!inst->boost_qp_enabled) {
 		s_vpr_h(inst->sid,
 			"%s: Client didn't set QP range\n", __func__);
 		return 0;
@@ -3003,10 +3015,18 @@ int msm_venc_set_qp_range(struct msm_vidc_inst *inst)
 	qp_range.max_qp.layer_id = MSM_VIDC_ALL_LAYER_ID;
 
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_MIN_QP);
-	qp_range.min_qp.qp_packed = ctrl->val;
+	if (inst->boost_qp_enabled &&
+		!(inst->client_set_ctrls & CLIENT_SET_MIN_QP))
+		qp_range.min_qp.qp_packed = inst->boost_min_qp;
+	else
+		qp_range.min_qp.qp_packed = ctrl->val;
 
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_MAX_QP);
-	qp_range.max_qp.qp_packed = ctrl->val;
+	if (inst->boost_qp_enabled &&
+		!(inst->client_set_ctrls & CLIENT_SET_MAX_QP))
+		qp_range.max_qp.qp_packed = inst->boost_max_qp;
+	else
+		qp_range.max_qp.qp_packed = ctrl->val;
 
 	s_vpr_h(inst->sid, "%s: layers %#x qp_min %#x qp_max %#x\n",
 			__func__, qp_range.min_qp.layer_id,
@@ -3485,6 +3505,7 @@ int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable)
 	struct hfi_device *hdev;
 	struct v4l2_ctrl *ctrl = NULL;
 	struct hfi_bitrate_boost_margin boost_margin;
+	int minqp, maxqp;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
@@ -3498,6 +3519,7 @@ int msm_venc_set_bitrate_boost_margin(struct msm_vidc_inst *inst, u32 enable)
 	}
 
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_BITRATE_BOOST);
+
 	/* Mapped value to 0, 25 or 50*/
 	if (ctrl->val >= 50)
 		boost_margin.margin = 50;
@@ -3511,6 +3533,18 @@ setprop:
 		sizeof(boost_margin));
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
+
+	/* Boost QP range is only enabled when bitrate boost is enabled
+	 * and boost QP range is set by client
+	 */
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_QPRANGE_BOOST);
+	if (enable && ctrl->val) {
+		minqp = ctrl->val & 0xFF;
+		maxqp = (ctrl->val >> 8) & 0xFF;
+		inst->boost_qp_enabled = true;
+		inst->boost_min_qp = minqp | (minqp << 8) | (minqp << 16);
+		inst->boost_max_qp = maxqp | (maxqp << 8) | (maxqp << 16);
+	}
 
 	return rc;
 }
