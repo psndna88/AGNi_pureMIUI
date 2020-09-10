@@ -45,6 +45,12 @@
 #include "wifi_hal.h"
 #endif /*ANDROID_WIFI_HAL*/
 
+#ifdef NL80211_SUPPORT
+#ifndef NL_CAPABILITY_VERSION_3_5_0
+#define nla_nest_start(msg, attrtype) \
+	nla_nest_start(msg, NLA_F_NESTED | (attrtype))
+#endif
+#endif
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
