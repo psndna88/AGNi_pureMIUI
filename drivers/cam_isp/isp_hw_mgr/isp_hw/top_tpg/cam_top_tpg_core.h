@@ -80,6 +80,7 @@ struct cam_top_tpg_dt_cfg {
  * @vbi_cnt:         vbi count
  * @num_active_dts:  number of active dts need to configure
  * @num_frames:      number of output frames
+ * @qcfa_en:         enable qcfa in color bar cfg
  * @dt_cfg:          dt configuration values
  *
  */
@@ -94,6 +95,7 @@ struct cam_top_tpg_cfg {
 	uint32_t                        num_active_dts;
 	uint32_t                        num_frames;
 	uint32_t                        vc_dt_pattern_id;
+	uint32_t                        qcfa_en;
 	struct cam_top_tpg_dt_cfg       dt_cfg[4];
 };
 
