@@ -12361,6 +12361,23 @@ static int wcn_sta_set_rsnxe_used(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int wcn_sta_ignore_sa_query_timeout(struct sigma_dut *dut,
+					   const char *intf,
+					   uint8_t ignore_sa_query_timeout)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_SA_QUERY_TIMEOUT,
+		ignore_sa_query_timeout);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Ignore SA Query timeout can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			  struct sigma_conn *conn,
@@ -12448,6 +12465,18 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			if (wcn_sta_ignore_csa(dut, intf, 1)) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set ignore CSA");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
+	}
+
+	val = get_param(cmd, "Deauth_Per_SAQueryResp");
+	if (val && atoi(val) == 0) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_ignore_sa_query_timeout(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ignore SA Query timeout");
 				return STATUS_SENT_ERROR;
 			}
 			return SUCCESS_SEND_STATUS;
