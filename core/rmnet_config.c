@@ -331,7 +331,9 @@ static int rmnet_config_notify_cb(struct notifier_block *nb,
 		netdev_dbg(dev, "Kernel unregister\n");
 		rmnet_force_unassociate_device(dev);
 		break;
-
+	case NETDEV_DOWN:
+		rmnet_vnd_reset_mac_addr(dev);
+		break;
 	default:
 		break;
 	}

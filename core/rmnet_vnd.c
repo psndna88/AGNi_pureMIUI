@@ -357,7 +357,7 @@ void rmnet_vnd_setup(struct net_device *rmnet_dev)
 	rmnet_dev->netdev_ops = &rmnet_vnd_ops;
 	rmnet_dev->mtu = RMNET_DFLT_PACKET_SIZE;
 	rmnet_dev->needed_headroom = RMNET_NEEDED_HEADROOM;
-	random_ether_addr(rmnet_dev->dev_addr);
+	random_ether_addr(rmnet_dev->perm_addr);
 	rmnet_dev->tx_queue_len = RMNET_TX_QUEUE_LEN;
 
 	/* Raw IP mode */
@@ -443,4 +443,12 @@ int rmnet_vnd_do_flow_control(struct net_device *rmnet_dev, int enable)
 		netif_stop_queue(rmnet_dev);
 
 	return 0;
+}
+
+void rmnet_vnd_reset_mac_addr(struct net_device *dev)
+{
+	if (dev->netdev_ops != &rmnet_vnd_ops)
+		return;
+
+	random_ether_addr(dev->perm_addr);
 }
