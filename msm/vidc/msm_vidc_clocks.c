@@ -742,9 +742,9 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 		} else {
 			base_cycles = 0;
 			vsp_cycles = div_u64(vsp_cycles, 2);
-			/* VSP FW Overhead 1.05 */
-			vsp_cycles = div_u64(vsp_cycles * 21, 20);
 		}
+		/* VSP FW Overhead 1.05 */
+		vsp_cycles = div_u64(vsp_cycles * 21, 20);
 
 		if (inst->clk_data.work_mode == HFI_WORKMODE_1)
 			vsp_cycles = vsp_cycles * 3;
@@ -774,9 +774,9 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 		} else {
 			base_cycles = 0;
 			vsp_cycles = div_u64(vsp_cycles, 2);
-			/* VSP FW Overhead 1.05 */
-			vsp_cycles = div_u64(vsp_cycles * 21, 20);
 		}
+		/* VSP FW Overhead 1.05 */
+		vsp_cycles = div_u64(vsp_cycles * 21, 20);
 
 		if (inst->clk_data.work_mode == HFI_WORKMODE_1)
 			vsp_cycles = vsp_cycles * 3;
