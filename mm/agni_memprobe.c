@@ -90,11 +90,11 @@ bool agni_memprober(void) {
 //			vote = false;
 //	}
 
-	if ((low_batt_swap_stall) && (!charging_detected())) { /* Battery below 25% & not charging*/
-		vote = false;
-	} else {
+//	if ((low_batt_swap_stall) && (!charging_detected())) { /* Battery below 25% & not charging*/
+//		vote = false;
+//	} else {
 		vote = true;
-	}
+//	}
 
 	if (vote) {
 		if (ramgb >= 4)
