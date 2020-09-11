@@ -1663,3 +1663,5 @@
 &venus_gdsc {
 	status = "ok";
 };
+
+#include "msm-arm-smmu-sm6150.dtsi"
