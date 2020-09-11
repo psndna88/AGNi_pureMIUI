@@ -64,9 +64,14 @@ static int ipa3_generate_flt_hw_rule(enum ipa_ip_type ip,
 	}
 
 	gen_params.ipt = ip;
-	if (entry->rt_tbl && (!ipa3_check_idr_if_freed(entry->rt_tbl)))
-		gen_params.rt_tbl_idx = entry->rt_tbl->idx;
-	else
+	if (entry->rt_tbl) {
+		if (ipa3_check_idr_if_freed(entry->rt_tbl)) {
+			IPAERR_RL("Routing table already freed\n");
+			return -EPERM;
+		} else {
+			gen_params.rt_tbl_idx = entry->rt_tbl->idx;
+		}
+	} else
 		gen_params.rt_tbl_idx = entry->rule.rt_tbl_idx;
 
 	gen_params.priority = entry->prio;
