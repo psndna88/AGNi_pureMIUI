@@ -844,19 +844,9 @@ static void cam_vfe_camif_lite_print_status(uint32_t *status,
 	uint32_t bus_overflow_status = 0, status_0 = 0, status_2 = 0;
 	struct cam_vfe_soc_private *soc_private = NULL;
 	uint32_t val0, val1, val2, val3, val4;
-	uint32_t camera_hw_version;
-	int rc = 0;
-
-	val3 = val4 = 0;
 
 	if (!status) {
 		CAM_ERR(CAM_ISP, "Invalid params");
-		return;
-	}
-
-	rc = cam_cpas_get_cpas_hw_version(&camera_hw_version);
-	if (rc) {
-		CAM_ERR(CAM_ISP, "Failed to get HW version rc:%d", rc);
 		return;
 	}
 
@@ -1028,13 +1018,10 @@ print_state:
 		CAM_CPAS_REG_CAMNOC, 0x1420, true, &val1);
 	cam_cpas_reg_read(soc_private->cpas_handle,
 		CAM_CPAS_REG_CAMNOC, 0x1A20, true, &val2);
-
-	if (camera_hw_version == CAM_CPAS_TITAN_580_V100) {
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x7620, true, &val3);
-		cam_cpas_reg_read(soc_private->cpas_handle,
-			CAM_CPAS_REG_CAMNOC, 0x7420, true, &val4);
-	}
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x7620, true, &val3);
+	cam_cpas_reg_read(soc_private->cpas_handle,
+		CAM_CPAS_REG_CAMNOC, 0x7420, true, &val4);
 
 	CAM_INFO(CAM_ISP,
 		"CAMNOC REG[Queued Pending] linear[%d %d] rdi0_wr[%d %d] ubwc_stats0[%d %d] ubwc_stats1[%d %d] rdi1_wr[%d %d]",
