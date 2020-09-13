@@ -3756,15 +3756,11 @@
 };
 
 &gcc_pcie_0_gdsc {
-	qcom,gds-timeout = <500>;
-	qcom,no-status-check-on-disable;
 	qcom,retain-regs;
 	status = "ok";
 };
 
 &gcc_pcie_1_gdsc {
-	qcom,gds-timeout = <500>;
-	qcom,no-status-check-on-disable;
 	qcom,retain-regs;
 	status = "ok";
 };
