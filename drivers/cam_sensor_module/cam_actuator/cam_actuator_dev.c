@@ -20,10 +20,13 @@ static long cam_actuator_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_actuator_driver_cmd(a_ctrl, arg);
+		if (rc)
+			CAM_ERR(CAM_ACTUATOR,
+				"Failed for driver_cmd: %d", rc);
 		break;
 	default:
-		CAM_ERR(CAM_ACTUATOR, "Invalid ioctl cmd");
-		rc = -EINVAL;
+		CAM_ERR(CAM_ACTUATOR, "Invalid ioctl cmd: %u", cmd);
+		rc = -ENOIOCTLCMD;
 		break;
 	}
 	return rc;
@@ -54,10 +57,11 @@ static long cam_actuator_init_subdev_do_ioctl(struct v4l2_subdev *sd,
 				rc);
 			return rc;
 		}
-	break;
+		break;
 	default:
 		CAM_ERR(CAM_ACTUATOR, "Invalid compat ioctl: %d", cmd);
-		rc = -EINVAL;
+		rc = -ENOIOCTLCMD;
+		break;
 	}
 
 	if (!rc) {
