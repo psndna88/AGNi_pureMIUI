@@ -11,8 +11,6 @@
 #include <media/cam_req_mgr.h>
 #include "cam_mem_mgr_api.h"
 
-#define CAM_MEM_BUFQ_MAX 1024
-
 /* Enum for possible mem mgr states */
 enum cam_mem_mgr_state {
 	CAM_MEM_MGR_UNINITIALIZED,
