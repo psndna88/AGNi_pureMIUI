@@ -456,6 +456,9 @@ int msm_comm_vote_bus(struct msm_vidc_inst *inst)
 		if (core->resources.sys_cache_res_set)
 			vote_data->use_sys_cache = true;
 
+		vote_data->num_vpp_pipes =
+			inst->core->platform_data->num_vpp_pipes;
+
 		call_core_op(core, calc_bw, vote_data);
 	}
 

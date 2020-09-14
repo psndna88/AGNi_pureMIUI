@@ -32,6 +32,7 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 	/* Derived parameters */
 	int lcu_per_frame, collocated_bytes_per_lcu, tnbr_per_lcu;
 	unsigned long bitrate;
+	unsigned int num_vpp_pipes;
 
 	fp_t bins_to_bit_factor, vsp_read_factor, vsp_write_factor,
 		dpb_factor, dpb_write_factor, y_bw_no_ubwc_8bpp;
@@ -82,6 +83,8 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 	dpb_write_compression_factor = dpb_read_compression_factor;
 	opb_write_compression_factor = opb_compression_enabled ?
 		dpb_write_compression_factor : FP_ONE;
+
+	num_vpp_pipes = d->num_vpp_pipes;
 
 	if (d->codec == HAL_VIDEO_CODEC_HEVC ||
 		d->codec == HAL_VIDEO_CODEC_VP9) {
@@ -163,7 +166,14 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 	ddr.line_buffer_read =
 		fp_div(FP_INT(tnbr_per_lcu * lcu_per_frame * fps),
 			FP_INT(bps(1)));
-	ddr.line_buffer_write = ddr.line_buffer_read;
+	/* This change is applicable for all IRIS2 targets,
+	 * but currently being done for IRIS2 with 2 pipes
+	 * only due to timeline constraints.
+	 */
+	if((num_vpp_pipes == 2) && (is_h264_category))
+		ddr.line_buffer_write = fp_div(ddr.line_buffer_read,FP_INT(2));
+	else
+		ddr.line_buffer_write = ddr.line_buffer_read;
 	if (llc_top_line_buf_enabled) {
 		llc.line_buffer_read = ddr.line_buffer_read;
 		llc.line_buffer_write = ddr.line_buffer_write;

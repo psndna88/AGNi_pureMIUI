@@ -427,6 +427,7 @@ struct vidc_bus_vote_data {
 	bool b_frames_enabled;
 	unsigned long calc_bw_ddr;
 	unsigned long calc_bw_llcc;
+	u32 num_vpp_pipes;
 };
 
 struct profile_data {
