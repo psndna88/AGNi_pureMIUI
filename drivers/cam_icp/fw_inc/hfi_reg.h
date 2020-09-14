@@ -11,8 +11,6 @@
 
 /* start of ICP CSR registers */
 #define HFI_REG_A5_HW_VERSION                   0x0
-#define HFI_REG_A5_CSR_A2HOSTINTEN              0x10
-#define HFI_REG_A5_CSR_HOST2ICPINT              0x30
 
 /* general purpose registers from */
 #define HFI_REG_FW_VERSION                      0x44
@@ -95,19 +93,6 @@ enum reg_settings {
 	RESET,
 	SET,
 	SET_WM = 1024
-};
-
-/**
- * @INTR_DISABLE: Disable interrupt
- * @INTR_ENABLE: Enable interrupt
- * @INTR_ENABLE_WD0: Enable WD0
- * @INTR_ENABLE_WD1: Enable WD1
- */
-enum intr_status {
-	INTR_DISABLE,
-	INTR_ENABLE,
-	INTR_ENABLE_WD0,
-	INTR_ENABLE_WD1 = 0x4
 };
 
 /**
@@ -284,6 +269,7 @@ struct hfi_qtbl {
 /**
  * struct hfi_info
  * @map: Hfi shared memory info
+ * @ops: processor-specific ops
  * @smem_size: Shared memory size
  * @uncachedheap_size: uncached heap size
  * @msgpacket_buf: message buffer
@@ -293,9 +279,11 @@ struct hfi_qtbl {
  * @mutex msg_q_lock: Lock for message queue
  * @msg_q_state: State of message queue
  * @csr_base: CSR base address
+ * @priv: device private data
  */
 struct hfi_info {
 	struct hfi_mem_info map;
+	struct hfi_ops ops;
 	uint32_t smem_size;
 	uint32_t uncachedheap_size;
 	uint32_t msgpacket_buf[ICP_HFI_MAX_MSG_SIZE_IN_WORDS];
@@ -305,6 +293,7 @@ struct hfi_info {
 	struct mutex msg_q_lock;
 	bool msg_q_state;
 	void __iomem *csr_base;
+	void *priv;
 };
 
 #endif /* _CAM_HFI_REG_H_ */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_A5_CORE_H
@@ -80,6 +80,9 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 	void *cmd_args, uint32_t arg_size);
 
 irqreturn_t cam_a5_irq(int irq_num, void *data);
+
+void cam_a5_irq_raise(void *priv);
+void cam_a5_irq_enable(void *priv);
 
 /**
  * @brief : API to register a5 hw to platform framework.

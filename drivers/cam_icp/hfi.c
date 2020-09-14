@@ -39,6 +39,18 @@ unsigned int g_icp_mmu_hdl;
 static DEFINE_MUTEX(hfi_cmd_q_mutex);
 static DEFINE_MUTEX(hfi_msg_q_mutex);
 
+static void hfi_irq_raise(struct hfi_info *hfi)
+{
+	if (hfi->ops.irq_raise)
+		hfi->ops.irq_raise(hfi->priv);
+}
+
+static void hfi_irq_enable(struct hfi_info *hfi)
+{
+	if (hfi->ops.irq_enable)
+		hfi->ops.irq_enable(hfi->priv);
+}
+
 void cam_hfi_queue_dump(void)
 {
 	struct hfi_qtbl *qtbl;
@@ -160,8 +172,7 @@ int hfi_write_cmd(void *cmd_ptr)
 	 * firmware to process
 	 */
 	wmb();
-	cam_io_w_mb((uint32_t)INTR_ENABLE,
-		g_hfi->csr_base + HFI_REG_A5_CSR_HOST2ICPINT);
+	hfi_irq_raise(g_hfi);
 err:
 	mutex_unlock(&hfi_cmd_q_mutex);
 	return rc;
@@ -554,8 +565,7 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base)
 		return -ETIMEDOUT;
 	}
 
-	cam_io_w_mb((uint32_t)(INTR_ENABLE|INTR_ENABLE_WD0),
-		icp_base + HFI_REG_A5_CSR_A2HOSTINTEN);
+	hfi_irq_enable(g_hfi);
 
 	fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
 	CAM_DBG(CAM_HFI, "fw version : [%x]", fw_version);
@@ -592,8 +602,8 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base)
 	return rc;
 }
 
-int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
-		void __iomem *icp_base)
+int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
+		void *priv, uint8_t event_driven_mode, void __iomem *icp_base)
 {
 	int rc = 0;
 	struct hfi_qtbl *qtbl;
@@ -601,6 +611,13 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 	struct hfi_q_hdr *cmd_q_hdr, *msg_q_hdr, *dbg_q_hdr;
 	uint32_t hw_version, fw_version, status = 0;
 	struct sfr_buf *sfr_buffer;
+
+	if (!hfi_mem || !hfi_ops || !priv) {
+		CAM_ERR(CAM_HFI,
+			"invalid arg: hfi_mem=%pK hfi_ops=%pK priv=%pK",
+			hfi_mem, hfi_ops, priv);
+		return -EINVAL;
+	}
 
 	mutex_lock(&hfi_cmd_q_mutex);
 	mutex_lock(&hfi_msg_q_mutex);
@@ -784,8 +801,10 @@ int cam_hfi_init(uint8_t event_driven_mode, struct hfi_mem_info *hfi_mem,
 	g_hfi->hfi_state = HFI_READY;
 	g_hfi->cmd_q_state = true;
 	g_hfi->msg_q_state = true;
-	cam_io_w_mb((uint32_t)(INTR_ENABLE|INTR_ENABLE_WD0),
-		icp_base + HFI_REG_A5_CSR_A2HOSTINTEN);
+	g_hfi->ops = *hfi_ops;
+	g_hfi->priv = priv;
+
+	hfi_irq_enable(g_hfi);
 
 	mutex_unlock(&hfi_cmd_q_mutex);
 	mutex_unlock(&hfi_msg_q_mutex);
