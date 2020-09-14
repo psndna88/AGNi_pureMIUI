@@ -142,6 +142,7 @@
 
 #define NUM_SLIST_BUF_H264            (256 + 32)
 #define SIZE_SLIST_BUF_H264           512
+#define SIZE_SEI_USERDATA             4096
 
 #define LCU_MAX_SIZE_PELS 64
 #define LCU_MIN_SIZE_PELS 16
@@ -1861,7 +1862,8 @@ static inline u32 calculate_h264d_persist1_size(void)
 {
 	u32 size = 0;
 
-	size = ALIGN((SIZE_SLIST_BUF_H264 * NUM_SLIST_BUF_H264),
+	size = ALIGN((SIZE_SLIST_BUF_H264 * NUM_SLIST_BUF_H264
+			+ NUM_HW_PIC_BUF * SIZE_SEI_USERDATA),
 			VENUS_DMA_ALIGNMENT);
 	return size;
 }
@@ -1871,7 +1873,8 @@ static inline u32 calculate_h265d_persist1_size(void)
 	u32 size = 0;
 
 	size = ALIGN((SIZE_SLIST_BUF_H265 * NUM_SLIST_BUF_H265 + H265_NUM_TILE
-			* sizeof(u32)), VENUS_DMA_ALIGNMENT);
+			* sizeof(u32) + NUM_HW_PIC_BUF * SIZE_SEI_USERDATA),
+			VENUS_DMA_ALIGNMENT);
 	return size;
 }
 
