@@ -74,6 +74,7 @@ struct cam_ife_hw_mgr_debug {
  * @cdm_ops                 cdm util operation pointer for building
  *                          cdm commands
  * @cdm_cmd                 cdm base and length request pointer
+ * @cdm_id                  cdm id of the acquired cdm
  * @sof_cnt                 sof count value per core, used for dual VFE
  * @epoch_cnt               epoch count value per core, used for dual VFE
  * @eof_cnt                 eof count value per core, used for dual VFE
@@ -130,7 +131,7 @@ struct cam_ife_hw_mgr_ctx {
 	uint32_t                        cdm_handle;
 	struct cam_cdm_utils_ops       *cdm_ops;
 	struct cam_cdm_bl_request      *cdm_cmd;
-
+	enum cam_cdm_id                 cdm_id;
 	uint32_t                        sof_cnt[CAM_IFE_HW_NUM_MAX];
 	uint32_t                        epoch_cnt[CAM_IFE_HW_NUM_MAX];
 	uint32_t                        eof_cnt[CAM_IFE_HW_NUM_MAX];

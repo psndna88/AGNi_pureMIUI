@@ -503,7 +503,6 @@ struct cam_cdm_bl_fifo {
  * @gen_irq:             memory region in which gen_irq command will be written
  * @cpas_handle:         handle for cpas driver
  * @arbitration:         type of arbitration to be used for the CDM
- * @rst_done_cnt:        CMD reset done count
  */
 struct cam_cdm {
 	uint32_t index;
@@ -526,13 +525,13 @@ struct cam_cdm {
 	struct cam_cdm_hw_mem gen_irq[CAM_CDM_BL_FIFO_MAX];
 	uint32_t cpas_handle;
 	enum cam_cdm_arbitration arbitration;
-	uint32_t rst_done_cnt;
 };
 
 /* struct cam_cdm_private_dt_data - CDM hw custom dt data */
 struct cam_cdm_private_dt_data {
 	bool dt_cdm_shared;
 	bool config_fifo;
+	bool is_single_ctx_cdm;
 	uint8_t priority_group;
 	uint32_t fifo_depth[CAM_CDM_BL_FIFO_MAX];
 	uint32_t dt_num_supported_clients;
@@ -550,10 +549,10 @@ struct cam_cdm_intf_devices {
 /* struct cam_cdm_intf_mgr - CDM mgr interface device struct */
 struct cam_cdm_intf_mgr {
 	bool probe_done;
-	struct cam_cdm_intf_devices nodes[CAM_CDM_INTF_MGR_MAX_SUPPORTED_CDM];
 	uint32_t cdm_count;
 	uint32_t dt_supported_hw_cdm;
 	int32_t refcount;
+	struct cam_cdm_intf_devices nodes[CAM_CDM_INTF_MGR_MAX_SUPPORTED_CDM];
 };
 
 int cam_cdm_intf_register_hw_cdm(struct cam_hw_intf *hw,
