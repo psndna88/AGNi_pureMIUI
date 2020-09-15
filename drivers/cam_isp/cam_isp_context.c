@@ -942,7 +942,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request(
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
 		} else if (!req_isp->bubble_report) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"Sync with failure: req %lld res 0x%x fd 0x%x, ctx %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
@@ -1083,7 +1083,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
 		} else if (!req_isp->bubble_report) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"Sync with failure: req %lld res 0x%x fd 0x%x, ctx %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
@@ -1726,6 +1726,7 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	void *evt_data)
 {
 	uint64_t request_id = 0;
+	struct cam_req_mgr_trigger_notify   notify;
 	struct cam_ctx_request             *req;
 	struct cam_isp_ctx_req             *req_isp;
 	struct cam_context                 *ctx = ctx_isp->base;
@@ -1784,6 +1785,27 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 		atomic_set(&ctx_isp->process_bubble, 1);
 	} else {
 		req_isp->bubble_report = 0;
+		CAM_DBG(CAM_ISP, "Skip bubble recovery for req %lld ctx %u",
+			req->request_id, ctx->ctx_id);
+		if (ctx->ctx_crm_intf && ctx->ctx_crm_intf->notify_trigger &&
+			ctx_isp->active_req_cnt <= 1) {
+			if (ctx_isp->subscribe_event & CAM_TRIGGER_POINT_SOF) {
+				notify.link_hdl = ctx->link_hdl;
+				notify.dev_hdl = ctx->dev_hdl;
+				notify.frame_id = ctx_isp->frame_id;
+				notify.trigger = CAM_TRIGGER_POINT_SOF;
+				notify.req_id =
+					ctx_isp->req_info.last_bufdone_req_id;
+				notify.sof_timestamp_val =
+					ctx_isp->sof_timestamp_val;
+				notify.trigger_id = ctx_isp->trigger_id;
+
+				ctx->ctx_crm_intf->notify_trigger(&notify);
+				CAM_DBG(CAM_ISP,
+					"Notify CRM  SOF frame %lld ctx %u",
+					ctx_isp->frame_id, ctx->ctx_id);
+			}
+		}
 	}
 
 	/*
@@ -1905,6 +1927,7 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 	struct cam_isp_context *ctx_isp, void *evt_data)
 {
 	uint64_t  request_id = 0;
+	struct cam_req_mgr_trigger_notify   notify;
 	struct cam_ctx_request             *req;
 	struct cam_isp_ctx_req             *req_isp;
 	struct cam_context                 *ctx = ctx_isp->base;
@@ -1966,6 +1989,27 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 		atomic_set(&ctx_isp->process_bubble, 1);
 	} else {
 		req_isp->bubble_report = 0;
+		CAM_DBG(CAM_ISP, "Skip bubble recovery for req %lld ctx %u",
+			req->request_id, ctx->ctx_id);
+		if (ctx->ctx_crm_intf && ctx->ctx_crm_intf->notify_trigger &&
+			ctx_isp->active_req_cnt <= 1) {
+			if (ctx_isp->subscribe_event & CAM_TRIGGER_POINT_SOF) {
+				notify.link_hdl = ctx->link_hdl;
+				notify.dev_hdl = ctx->dev_hdl;
+				notify.frame_id = ctx_isp->frame_id;
+				notify.trigger = CAM_TRIGGER_POINT_SOF;
+				notify.req_id =
+					ctx_isp->req_info.last_bufdone_req_id;
+				notify.sof_timestamp_val =
+					ctx_isp->sof_timestamp_val;
+				notify.trigger_id = ctx_isp->trigger_id;
+
+				ctx->ctx_crm_intf->notify_trigger(&notify);
+				CAM_DBG(CAM_ISP,
+					"Notify CRM  SOF frame %lld ctx %u",
+					ctx_isp->frame_id, ctx->ctx_id);
+			}
+		}
 	}
 
 	/*

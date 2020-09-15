@@ -554,6 +554,8 @@ static void __cam_req_mgr_flush_req_slot(
 	atomic_set(&link->eof_event_cnt, 0);
 	in_q->wr_idx = 0;
 	in_q->rd_idx = 0;
+	link->trigger_cnt[0] = 0;
+	link->trigger_cnt[1] = 0;
 }
 
 /**
@@ -3027,6 +3029,9 @@ static int __cam_req_mgr_check_for_dual_trigger(
 	struct cam_req_mgr_core_link    *link)
 {
 	int rc  = -EAGAIN;
+
+	CAM_DBG(CAM_CRM, "trigger_cnt [%u: %u]",
+		link->trigger_cnt[0], link->trigger_cnt[1]);
 
 	if (link->trigger_cnt[0] == link->trigger_cnt[1]) {
 		link->trigger_cnt[0] = 0;
