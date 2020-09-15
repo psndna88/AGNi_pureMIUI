@@ -596,6 +596,24 @@
 					parent-node = <&level1_rt0_wr>;
 				};
 
+				tfe2_all_wr: tfe2-all-wr {
+					cell-index = <8>;
+					node-name = "tfe2-all-wr";
+					client-name = "tfe2";
+					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
+					traffic-transaction-type =
+					<CAM_CPAS_TRANSACTION_WRITE>;
+					constituent-paths =
+						<CAM_CPAS_PATH_DATA_IFE_RDI0
+						CAM_CPAS_PATH_DATA_IFE_RDI1
+						CAM_CPAS_PATH_DATA_IFE_RDI2
+						CAM_CPAS_PATH_DATA_IFE_RDI3
+						CAM_CPAS_PATH_DATA_IFE_VID
+						CAM_CPAS_PATH_DATA_IFE_DISP
+						CAM_CPAS_PATH_DATA_IFE_STATS>;
+					parent-node = <&level1_rt0_wr>;
+				};
+
 				cpas_cdm0_all_rd: cpas-cdm0-all-rd {
 					cell-index = <9>;
 					node-name = "cpas-cdm0-all-rd";
