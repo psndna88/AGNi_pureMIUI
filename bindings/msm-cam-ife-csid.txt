@@ -12,20 +12,19 @@ The IFE CSID device is described in one level of the device node.
 ======================================
 First Level Node - CAM IFE CSID device
 ======================================
-- compatible
-  Usage: required
-  Value type: <string>
-
-  Definition: Should be "qcom,csid170", "qcom,csid170_200", "qcom,csid175", "qcom,csid175_200",
-              "qcom,csid480", "qcom,csid580", "qcom,csid680", "qcom,csid-lite170",
-	      "qcom,csid-lite175", "qcom,csid-lite480" or "qcom,csid-custom480",
-              "qcom,csid-lite580" or "qcom,csid-custom580",
-	      "qcom,csid-lite680".
-
 - cell-index
   Usage: required
   Value type: <u32>
   Definition: Should specify the hardware index id.
+
+- compatible
+  Usage: required
+  Value type: <string>
+  Definition: Should be "qcom,csid170", "qcom,csid170_200", "qcom,csid175",
+	"qcom,csid175_200", "qcom,csid480", "qcom,csid580", "qcom,csid680",
+	"qcom,csid-lite170", "qcom,csid-lite175", "qcom,csid-lite480",
+	"qcom,csid-custom480", "qcom,csid-lite580", "qcom,csid-custom580",
+	"qcom,csid-lite680" or "qcom,csid-custom680".
 
 - reg-names
   Usage: required
@@ -36,6 +35,11 @@ First Level Node - CAM IFE CSID device
   Usage: required
   Value type: <u32>
   Definition: Register values.
+
+- reg-cam-base
+  Usage: required
+  Value type: <u32>
+  Definition: List of bases.
 
 - interrupt-names
   Usage: Required
@@ -90,35 +94,41 @@ First Level Node - CAM IFE CSID device
 
 Example:
 
-	qcom,csid0@acb3000 {
-		cell-index = <0>;
-		compatible = "qcom,csid580";
-		reg = <0xacb3000 0x1000>;
-		reg-names = "csid";
-		interrupts = <0 464 0>;
-		interrupt-names = "csid";
-		vdd-names = "camss", "ife0";
-		camss-supply = <&titan_top_gdsc>;
-		ife0-supply = <&ife_0_gdsc>;
-		clock-names = "soc_ahb_clk",
-			"cpas_ahb_clk",
-			"slow_ahb_clk_src",
-			"ife_clk",
-			"ife_clk_src",
-			"ife_csid_clk",
-			"ife_csid_clk_src",
-			"ife_cphy_rx_clk",
-			"cphy_rx_clk_src";
-		clocks = <&clock_camcc CAM_CC_SOC_AHB_CLK>,
-			<&clock_camcc CAM_CC_CPAS_AHB_CLK>,
-			<&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
-			<&clock_camcc CAM_CC_IFE_0_CLK>,
-			<&clock_camcc CAM_CC_IFE_0_CLK_SRC>,
-			<&clock_camcc CAM_CC_IFE_0_CSID_CLK>,
-			<&clock_camcc CAM_CC_IFE_0_CSID_CLK_SRC>,
-			<&clock_camcc CAM_CC_IFE_0_CPHY_RX_CLK>,
-			<&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>;
-		clock-rates = <0 0 80000000 0 320000000 0 384000000 0 384000000>;
-		src-clock-name = "ife_csid_clk_src";
-		status = "ok";
-	};
+cam_csid0: qcom,csid0@acb7000 {
+	cell-index = <0>;
+	compatible = "qcom,csid680";
+	reg-names = "csid", "csid_top", "rt_wrapper";
+	reg = <0xacb7000 0xd00>,
+		<0xacb6000 0x1000>,
+		<0xac62000 0x64000>;
+	reg-cam-base = <0xb7000 0xb6000 0x62000>;
+	interrupt-names = "csid";
+	interrupts = <GIC_SPI 464 IRQ_TYPE_EDGE_RISING>;
+	regulator-names = "camss";
+	camss-supply = <&cam_cc_titan_top_gdsc>;
+	clock-names =
+		"csid_clk_src",
+		"csid_clk",
+		"cphy_rx_clk_src",
+		"csiphy_rx_clk",
+		"cpas_fast_ahb_src",
+		"cpas_fast_ahb";
+	clocks =
+		<&clock_camcc CAM_CC_CSID_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSID_CLK>,
+		<&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSID_CSIPHY_RX_CLK>,
+		<&clock_camcc CAM_CC_FAST_AHB_CLK_SRC>,
+		<&clock_camcc CAM_CC_CPAS_FAST_AHB_CLK>;
+	clock-rates =
+		<400000000 0 400000000 0 100000000 0>,
+		<480000000 0 480000000 0 200000000 0>,
+		<480000000 0 480000000 0 300000000 0>,
+		<480000000 0 480000000 0 400000000 0>,
+		<480000000 0 480000000 0 400000000 0>;
+	clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
+		"turbo";
+	src-clock-name = "csid_clk_src";
+	clock-control-debugfs = "true";
+	status = "ok";
+};
