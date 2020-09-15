@@ -1707,7 +1707,14 @@
 		dma-coherent;
 
 		rpm-level = <3>;
-		spm-level = <5>;
+		/*
+		 * Hynix UFS2.2 is drawing 40mA current during APPS PC.
+		 * Issue is seen only if PX10 is turned off and Vccq2 is ON.
+		 * Since Vccq2 is always-on supply we can't turn it off,
+		 * so don't turn off PX10, by updating spm_lvl to 3.
+		 * In sleep state (spm-lvl=3) its drawing only .5mA.
+		 */
+		spm-level = <3>;
 
 		status = "disabled";
 
