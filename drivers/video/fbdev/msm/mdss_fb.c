@@ -82,6 +82,9 @@
 int srgb_enabled = 0;
 module_param(srgb_enabled, int, 0644);
 extern bool miuirom;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+extern bool srgb_locked;
+#endif
 #define MAX_FBI_LIST 32
 
 #ifndef TARGET_HW_MDSS_MDP3
@@ -1042,6 +1045,9 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 			break;
 			
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (!srgb_locked) {
+#endif
 	switch(first_srgb_state) {
 		case 0x1:
 			if (ctrl->srgb_on_cmds.cmd_cnt){
@@ -1058,6 +1064,9 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 			break;
 			
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	}
+#endif
 
 	switch(first_gamma_state) {
 		case 0x1:
@@ -1337,10 +1346,16 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 		return len;
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (!srgb_locked) {
+#endif
 	if ((srgb_enabled == 1) && (!miuirom)) {
 		param = 2;
 	}
 	srgb_state=param;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	}
+#endif
 
 	if(param>9){
 		srgb_resume=true;
@@ -1372,6 +1387,9 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 		return len;
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (!srgb_locked) {
+#endif
 	switch(param) {
 		case 0x1:
 			if (ctrl->srgb_on_cmds.cmd_cnt){
@@ -1388,6 +1406,9 @@ static ssize_t mdss_fb_set_srgb(struct device *dev,struct device_attribute *attr
 			break;
 			
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	}
+#endif
 	printk("guorui ##### srgb over ###\n");
 	return len;
 

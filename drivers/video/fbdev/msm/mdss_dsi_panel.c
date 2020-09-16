@@ -37,6 +37,9 @@
 #include <linux/powersuspend.h>
 #endif
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+extern bool srgb_locked;
+#endif
 #define DT_CMD_HDR 6
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
@@ -1147,6 +1150,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	   if (ce_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,ce_on_cmds, CMD_REQ_COMMIT);
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (!srgb_locked) {
+#endif
 	if(srgb_state == 11){
 	   if (srgb_on_cmds->cmd_cnt)
 	       mdss_dsi_panel_cmds_send(ctrl,srgb_on_cmds, CMD_REQ_COMMIT);
@@ -1154,6 +1160,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		if (srgb_off_cmds->cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl,srgb_off_cmds, CMD_REQ_COMMIT);
 	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	}
+#endif
 	if(cabc_state == 11){
 //		if (cabc_on_cmds->cmd_cnt)
 //	       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
