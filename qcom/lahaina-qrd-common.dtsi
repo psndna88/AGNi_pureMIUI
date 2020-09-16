@@ -299,6 +299,11 @@
 	};
 };
 
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_r66451_amoled_cmd
+			  &dsi_r66451_amoled_video>;
+};
+
 &soc {
 	gpio_keys {
 		compatible = "gpio-keys";
