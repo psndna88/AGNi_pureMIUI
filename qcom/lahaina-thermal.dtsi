@@ -37,8 +37,7 @@
 		clocks = <&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
 			<&clock_gcc GCC_UFS_PHY_AXI_CLK_SRC>;
 		cam_cc_csi0phytiimer-supply = <&cam_cc_ipe_0_gdsc>;
-		cpu = <&CPU7>;
-		csr-id = <5 7 4>;
+		csr-id = <5 7>;
 	};
 
 	mx_pe: mx_rdpm_pe@0x00637000 {
