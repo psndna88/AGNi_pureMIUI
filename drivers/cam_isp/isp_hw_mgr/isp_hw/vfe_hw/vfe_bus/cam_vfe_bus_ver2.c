@@ -201,6 +201,7 @@ struct cam_vfe_bus_ver2_priv {
 	int                                 irq_handle;
 	int                                 error_irq_handle;
 	void                               *tasklet_info;
+	uint32_t                            max_out_res;
 };
 
 static int cam_vfe_bus_process_cmd(
@@ -3394,7 +3395,7 @@ static int cam_vfe_bus_update_stripe_cfg(void *priv, void *cmd_args,
 
 	outport_id = stripe_args->res->res_id & 0xFF;
 	if (stripe_args->res->res_id < CAM_ISP_IFE_OUT_RES_BASE ||
-		stripe_args->res->res_id >= CAM_ISP_IFE_OUT_RES_MAX)
+		stripe_args->res->res_id >= bus_priv->max_out_res)
 		return 0;
 
 	ports_plane_idx = (stripe_args->split_id *
@@ -3637,7 +3638,8 @@ static int cam_vfe_bus_process_cmd(
 	int rc = -EINVAL;
 	struct cam_vfe_bus_ver2_priv		 *bus_priv;
 	uint32_t top_mask_0 = 0;
-	bool *support_consumed_addr;
+	struct cam_isp_hw_bus_cap *vfe_bus_cap;
+
 
 	if (!priv || !cmd_args) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid input arguments");
@@ -3684,12 +3686,6 @@ static int cam_vfe_bus_process_cmd(
 		cam_io_w_mb(top_mask_0, bus_priv->common_data.mem_base +
 			bus_priv->common_data.common_reg->top_irq_mask_0);
 		break;
-	case CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT:
-		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
-		support_consumed_addr = (bool *)cmd_args;
-		*support_consumed_addr =
-			bus_priv->common_data.support_consumed_addr;
-		break;
 	case CAM_ISP_HW_CMD_GET_RES_FOR_MID:
 		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
 		rc = cam_vfe_bus_get_res_for_mid(bus_priv, cmd_args, arg_size);
@@ -3697,6 +3693,14 @@ static int cam_vfe_bus_process_cmd(
 	case CAM_ISP_HW_CMD_DISABLE_UBWC_COMP:
 		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
 		bus_priv->common_data.disable_ubwc_comp = true;
+		break;
+	case CAM_ISP_HW_CMD_QUERY_BUS_CAP:
+		bus_priv = (struct cam_vfe_bus_ver2_priv  *) priv;
+		vfe_bus_cap = (struct cam_isp_hw_bus_cap *) cmd_args;
+		vfe_bus_cap->max_vfe_out_res_type = bus_priv->max_out_res;
+		vfe_bus_cap->support_consumed_addr =
+			bus_priv->common_data.support_consumed_addr;
+
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
@@ -3749,6 +3753,7 @@ int cam_vfe_bus_ver2_init(
 	bus_priv->num_client                     = ver2_hw_info->num_client;
 	bus_priv->num_out                        = ver2_hw_info->num_out;
 	bus_priv->top_irq_shift                  = ver2_hw_info->top_irq_shift;
+	bus_priv->max_out_res                    = ver2_hw_info->max_out_res;
 	bus_priv->common_data.num_sec_out        = 0;
 	bus_priv->common_data.secure_mode        = CAM_SECURE_MODE_NON_SECURE;
 	bus_priv->common_data.core_index         = soc_info->index;

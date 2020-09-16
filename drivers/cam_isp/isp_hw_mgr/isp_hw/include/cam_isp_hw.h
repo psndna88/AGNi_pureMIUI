@@ -135,6 +135,7 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_CSID_CHANGE_HALT_MODE,
 	CAM_ISP_HW_CMD_DISABLE_UBWC_COMP,
 	CAM_ISP_HW_CMD_SET_SFE_DEBUG_CFG,
+	CAM_ISP_HW_CMD_QUERY_BUS_CAP,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -377,4 +378,18 @@ struct cam_isp_hw_intf_data {
 	uint32_t                num_hw_pid;
 	uint32_t                hw_pid[CAM_ISP_HW_MAX_PID_VAL];
 };
+/**
+ * struct cam_isp_hw_bus_cap:
+ *
+ * @Brief:         ISP hw bus capabilities
+ *
+ * @support_consumed_addr:   Indicate whether HW has last consumed addr reg
+ * @max_vfe_out_res_type:    Maximum value of out resource type supported by hw
+ *
+ */
+struct cam_isp_hw_bus_cap {
+	bool                    support_consumed_addr;
+	uint32_t                max_vfe_out_res_type;
+};
+
 #endif /* _CAM_ISP_HW_H_ */

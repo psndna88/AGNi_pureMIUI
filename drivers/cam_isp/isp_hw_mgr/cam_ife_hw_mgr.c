@@ -54,6 +54,8 @@ static uint32_t blob_type_hw_cmd_map[CAM_ISP_GENERIC_BLOB_TYPE_MAX] = {
 
 static struct cam_ife_hw_mgr g_ife_hw_mgr;
 
+static uint32_t max_ife_out_res;
+
 static int cam_ife_hw_mgr_event_handler(
 	void                                *priv,
 	uint32_t                             evt_id,
@@ -507,7 +509,7 @@ static void cam_ife_hw_mgr_deinit_hw(
 	}
 
 	/* Deinit IFE OUT */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++)
+	for (i = 0; i < max_ife_out_res; i++)
 		cam_ife_hw_mgr_deinit_hw_res(&ctx->res_list_ife_out[i]);
 
 	ctx->init_done = false;
@@ -583,7 +585,7 @@ static int cam_ife_hw_mgr_init_hw(
 	CAM_DBG(CAM_ISP, "INIT IFE OUT RESOURCES in ctx id:%d",
 		ctx->ctx_index);
 
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+	for (i = 0; i < max_ife_out_res; i++) {
 		rc = cam_ife_hw_mgr_init_hw_res(&ctx->res_list_ife_out[i]);
 		if (rc) {
 			CAM_ERR(CAM_ISP, "Can not INIT IFE OUT (%d)",
@@ -939,7 +941,7 @@ static void cam_ife_hw_mgr_dump_acq_data(
 	}
 
 	/* Iterate over IFE OUT resources */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+	for (i = 0; i < max_ife_out_res; i++) {
 		for (j = 0; j < CAM_ISP_HW_SPLIT_MAX; j++) {
 			hw_mgr_res = &hwr_mgr_ctx->res_list_ife_out[i];
 			hw_res = hw_mgr_res->hw_res[j];
@@ -1048,7 +1050,7 @@ static int cam_ife_hw_mgr_release_hw_for_ctx(
 	struct cam_isp_hw_mgr_res        *hw_mgr_res_temp;
 
 	/* ife leaf resource */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++)
+	for (i = 0; i < max_ife_out_res; i++)
 		cam_ife_hw_mgr_free_hw_res(&ife_ctx->res_list_ife_out[i]);
 
 	/* ife bus rd resource */
@@ -1308,7 +1310,7 @@ static int cam_ife_hw_mgr_acquire_res_ife_out_pixel(
 	for (i = 0; i < in_port->num_out_res; i++) {
 		out_port = &in_port->data[i];
 		k = out_port->res_type & 0xFF;
-		if (k >= CAM_IFE_HW_OUT_RES_MAX) {
+		if (k >= max_ife_out_res) {
 			CAM_ERR(CAM_ISP, "invalid output resource type 0x%x",
 				 out_port->res_type);
 			continue;
@@ -2262,7 +2264,7 @@ static int cam_ife_mgr_check_and_update_fe_v0(
 			return -EINVAL;
 		}
 
-		if ((in_port->num_out_res > CAM_IFE_HW_OUT_RES_MAX) ||
+		if ((in_port->num_out_res > max_ife_out_res) ||
 			(in_port->num_out_res <= 0)) {
 			CAM_ERR(CAM_ISP, "Invalid num output res %u",
 				in_port->num_out_res);
@@ -2325,7 +2327,7 @@ static int cam_ife_mgr_check_and_update_fe_v2(
 			return -EINVAL;
 		}
 
-		if ((in_port->num_out_res > CAM_IFE_HW_OUT_RES_MAX) ||
+		if ((in_port->num_out_res > max_ife_out_res) ||
 			(in_port->num_out_res <= 0)) {
 			CAM_ERR(CAM_ISP, "Invalid num output res %u",
 				in_port->num_out_res);
@@ -3390,7 +3392,7 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 			u64_to_user_ptr(isp_resource[i].res_hdl),
 			isp_resource[i].length);
 		if (!IS_ERR(in_port)) {
-			if (in_port->num_out_res > CAM_IFE_HW_OUT_RES_MAX) {
+			if (in_port->num_out_res > max_ife_out_res) {
 				CAM_ERR(CAM_ISP, "too many output res %d",
 					in_port->num_out_res);
 				rc = -EINVAL;
@@ -4057,7 +4059,7 @@ static int cam_ife_mgr_stop_hw_in_overflow(void *stop_hw_args)
 	}
 
 	/* IFE out resources */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++)
+	for (i = 0; i < max_ife_out_res; i++)
 		cam_ife_hw_mgr_stop_hw_res(&ctx->res_list_ife_out[i]);
 
 
@@ -4210,7 +4212,7 @@ static int cam_ife_mgr_stop_hw(void *hw_mgr_priv, void *stop_hw_args)
 	CAM_DBG(CAM_ISP, "Going to stop IFE Out");
 
 	/* IFE out resources */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++)
+	for (i = 0; i < max_ife_out_res; i++)
 		cam_ife_hw_mgr_stop_hw_res(&ctx->res_list_ife_out[i]);
 
 	CAM_DBG(CAM_ISP, "Going to stop IFE Mux");
@@ -4353,7 +4355,7 @@ static int cam_ife_mgr_restart_hw(void *start_hw_args)
 	cam_tasklet_start(ctx->common.tasklet_info);
 
 	/* start the IFE out devices */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+	for (i = 0; i < max_ife_out_res; i++) {
 		rc = cam_ife_hw_mgr_start_hw_res(
 			&ctx->res_list_ife_out[i], ctx);
 		if (rc) {
@@ -4421,7 +4423,7 @@ static int cam_ife_mgr_start_hw(void *hw_mgr_priv, void *start_hw_args)
 	uint32_t                          primary_rdi_out_res;
 
 	primary_rdi_src_res = CAM_ISP_HW_VFE_IN_MAX;
-	primary_rdi_out_res = CAM_ISP_IFE_OUT_RES_MAX;
+	primary_rdi_out_res = g_ife_hw_mgr.max_vfe_out_res_type;
 
 	if (!hw_mgr_priv || !start_isp) {
 		CAM_ERR(CAM_ISP, "Invalid arguments");
@@ -4491,7 +4493,7 @@ static int cam_ife_mgr_start_hw(void *hw_mgr_priv, void *start_hw_args)
 
 	if (g_ife_hw_mgr.debug_cfg.disable_ubwc_comp) {
 		disable_ubwc_comp = 1;
-		for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+		for (i = 0; i < max_ife_out_res; i++) {
 			hw_mgr_res = &ctx->res_list_ife_out[i];
 			for (j = 0; j < CAM_ISP_HW_SPLIT_MAX; j++) {
 				if (!hw_mgr_res->hw_res[i])
@@ -4553,7 +4555,7 @@ start_only:
 	CAM_DBG(CAM_ISP, "START IFE OUT ... in ctx id:%d",
 		ctx->ctx_index);
 	/* start the IFE out devices */
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+	for (i = 0; i < max_ife_out_res; i++) {
 		hw_mgr_res = &ctx->res_list_ife_out[i];
 		switch (hw_mgr_res->res_id) {
 		case CAM_ISP_IFE_OUT_RES_RDI_0:
@@ -4579,7 +4581,7 @@ start_only:
 		}
 	}
 
-	if (primary_rdi_out_res < CAM_ISP_IFE_OUT_RES_MAX)
+	if (primary_rdi_out_res < g_ife_hw_mgr.max_vfe_out_res_type)
 		primary_rdi_src_res =
 			cam_convert_rdi_out_res_id_to_src(primary_rdi_out_res);
 
@@ -4909,7 +4911,7 @@ static int cam_isp_blob_ubwc_update(
 			CAM_DBG(CAM_ISP, "UBWC config idx %d, port_type=%d", i,
 				ubwc_plane_cfg->port_type);
 
-			if (res_id_out >= CAM_IFE_HW_OUT_RES_MAX) {
+			if (res_id_out >= max_ife_out_res) {
 				CAM_ERR(CAM_ISP, "Invalid port type:%x",
 					ubwc_plane_cfg->port_type);
 				rc = -EINVAL;
@@ -5079,7 +5081,7 @@ static int cam_isp_blob_ubwc_update_v2(
 		CAM_DBG(CAM_ISP, "UBWC config idx %d, port_type=%d", i,
 			ubwc_plane_cfg->port_type);
 
-		if (res_id_out >= CAM_IFE_HW_OUT_RES_MAX) {
+		if (res_id_out >= max_ife_out_res) {
 			CAM_ERR(CAM_ISP, "Invalid port type:%x",
 				ubwc_plane_cfg->port_type);
 			rc = -EINVAL;
@@ -5190,7 +5192,7 @@ static int cam_isp_blob_hfr_update(
 		CAM_DBG(CAM_ISP, "hfr config idx %d, type=%d", i,
 			res_id_out);
 
-		if (res_id_out >= CAM_IFE_HW_OUT_RES_MAX) {
+		if (res_id_out >= max_ife_out_res) {
 			CAM_ERR(CAM_ISP, "invalid out restype:%x",
 				port_hfr_config->resource_type);
 			return -EINVAL;
@@ -5645,7 +5647,7 @@ static int cam_isp_blob_vfe_out_update(
 		CAM_DBG(CAM_ISP, "VFE out config idx: %d port: 0x%x",
 			i, wm_config->port_type);
 
-		if (res_id_out >= CAM_IFE_HW_OUT_RES_MAX) {
+		if (res_id_out >= max_ife_out_res) {
 			CAM_ERR(CAM_ISP, "Invalid out port:0x%x",
 				wm_config->port_type);
 			return -EINVAL;
@@ -5832,7 +5834,7 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 
 		hfr_config = (struct cam_isp_resource_hfr_config *)blob_data;
 
-		if (hfr_config->num_ports > CAM_ISP_IFE_OUT_RES_MAX ||
+		if (hfr_config->num_ports > g_ife_hw_mgr.max_vfe_out_res_type ||
 			hfr_config->num_ports == 0) {
 			CAM_ERR(CAM_ISP, "Invalid num_ports %u in HFR config",
 				hfr_config->num_ports);
@@ -6221,12 +6223,12 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 
 		vfe_out_config = (struct cam_isp_vfe_out_config *)blob_data;
 
-		if (vfe_out_config->num_ports > CAM_IFE_HW_OUT_RES_MAX ||
+		if (vfe_out_config->num_ports > max_ife_out_res ||
 			vfe_out_config->num_ports == 0) {
 			CAM_ERR(CAM_ISP,
 				"Invalid num_ports:%u in vfe out config",
 				vfe_out_config->num_ports,
-				CAM_IFE_HW_OUT_RES_MAX);
+				max_ife_out_res);
 			return -EINVAL;
 		}
 
@@ -6497,7 +6499,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 			rc = cam_isp_add_command_buffers(prepare, &kmd_buf,
 				&ctx->base[i],
 				cam_isp_packet_generic_blob_handler,
-				ctx->res_list_ife_out, CAM_IFE_HW_OUT_RES_MAX);
+				ctx->res_list_ife_out, max_ife_out_res);
 			if (rc) {
 				CAM_ERR(CAM_ISP,
 					"Failed in add cmdbuf, i=%d, split_id=%d, rc=%d",
@@ -6521,7 +6523,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 			prepare, ctx->base[i].idx,
 			&kmd_buf, ctx->res_list_ife_out,
 			&ctx->res_list_ife_in_rd,
-			CAM_IFE_HW_OUT_RES_MAX, fill_fence,
+			max_ife_out_res, fill_fence,
 			&frame_header_info);
 
 		if (rc) {
@@ -6803,7 +6805,7 @@ static void cam_ife_mgr_pf_dump(uint32_t res_id,
 	event_info.res_id = res_id;
 	res_id_out = res_id & 0xFF;
 
-	if (res_id_out >= CAM_IFE_HW_OUT_RES_MAX) {
+	if (res_id_out >= max_ife_out_res) {
 		CAM_ERR(CAM_ISP, "Invalid out resource id :%x",
 			res_id);
 		return;
@@ -6891,7 +6893,7 @@ static void cam_ife_mgr_dump_pf_data(
 	}
 
 mid_check:
-	for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+	for (i = 0; i < max_ife_out_res; i++) {
 		hw_mgr_res = &ctx->res_list_ife_out[i];
 		if (!hw_mgr_res->hw_res[0])
 			continue;
@@ -6899,7 +6901,7 @@ mid_check:
 		break;
 	}
 
-	if (i >= CAM_IFE_HW_OUT_RES_MAX) {
+	if (i >= max_ife_out_res) {
 		CAM_ERR(CAM_ISP,
 			"NO valid outport resources ctx id:%d req id:%lld",
 			ctx->ctx_index, packet->header.request_id);
@@ -8121,10 +8123,10 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 {
 	int rc = -EFAULT;
 	int i, j;
-	bool support_consumed_addr = false;
 	struct cam_iommu_handle cdm_handles;
 	struct cam_ife_hw_mgr_ctx *ctx_pool;
 	struct cam_isp_hw_mgr_res *res_list_ife_out;
+	struct cam_isp_hw_bus_cap isp_bus_cap = {0};
 
 	memset(&g_ife_hw_mgr, 0, sizeof(g_ife_hw_mgr));
 
@@ -8147,14 +8149,17 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 				ife_device->hw_priv;
 			struct cam_hw_soc_info *soc_info = &vfe_hw->soc_info;
 
-			if (j == 0)
+			if (j == 0) {
 				ife_device->hw_ops.process_cmd(
 					vfe_hw,
-					CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
-					&support_consumed_addr,
-					sizeof(support_consumed_addr));
-			j++;
+					CAM_ISP_HW_CMD_QUERY_BUS_CAP,
+					&isp_bus_cap,
+					sizeof(struct cam_isp_hw_bus_cap));
+				CAM_DBG(CAM_ISP, "max VFE out resources: 0x%x",
+					isp_bus_cap.max_vfe_out_res_type);
+			}
 
+			j++;
 			g_ife_hw_mgr.cdm_reg_map[i] = &soc_info->reg_map[0];
 			CAM_DBG(CAM_ISP,
 				"reg_map: mem base = %pK cam_base = 0x%llx",
@@ -8173,7 +8178,9 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 		return -EINVAL;
 	}
 
-	g_ife_hw_mgr.support_consumed_addr = support_consumed_addr;
+	g_ife_hw_mgr.support_consumed_addr = isp_bus_cap.support_consumed_addr;
+	g_ife_hw_mgr.max_vfe_out_res_type = isp_bus_cap.max_vfe_out_res_type;
+	max_ife_out_res = g_ife_hw_mgr.max_vfe_out_res_type & 0xFF;
 
 	/* fill csid hw intf information */
 	for (i = 0, j = 0; i < CAM_IFE_CSID_HW_NUM_MAX; i++) {
@@ -8253,7 +8260,15 @@ int cam_ife_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_ife_src);
 		INIT_LIST_HEAD(&g_ife_hw_mgr.ctx_pool[i].res_list_ife_in_rd);
 		ctx_pool = &g_ife_hw_mgr.ctx_pool[i];
-		for (j = 0; j < CAM_IFE_HW_OUT_RES_MAX; j++) {
+		ctx_pool->res_list_ife_out = kzalloc((max_ife_out_res *
+			sizeof(struct cam_isp_hw_mgr_res)), GFP_KERNEL);
+		if (!ctx_pool->res_list_ife_out) {
+			rc = -ENOMEM;
+			CAM_ERR(CAM_ISP, "Alloc failed for ife out res list");
+			goto end;
+		}
+
+		for (j = 0; j < max_ife_out_res; j++) {
 			res_list_ife_out = &ctx_pool->res_list_ife_out[j];
 			INIT_LIST_HEAD(&res_list_ife_out->list);
 		}
@@ -8329,6 +8344,8 @@ end:
 				&g_ife_hw_mgr.mgr_common.tasklet_pool[i]);
 			kfree(g_ife_hw_mgr.ctx_pool[i].cdm_cmd);
 			g_ife_hw_mgr.ctx_pool[i].cdm_cmd = NULL;
+			kfree(g_ife_hw_mgr.ctx_pool[i].res_list_ife_out);
+			g_ife_hw_mgr.ctx_pool[i].res_list_ife_out = NULL;
 			g_ife_hw_mgr.ctx_pool[i].common.tasklet_info = NULL;
 		}
 	}
@@ -8354,6 +8371,8 @@ void cam_ife_hw_mgr_deinit(void)
 			&g_ife_hw_mgr.mgr_common.tasklet_pool[i]);
 		kfree(g_ife_hw_mgr.ctx_pool[i].cdm_cmd);
 		g_ife_hw_mgr.ctx_pool[i].cdm_cmd = NULL;
+		kfree(g_ife_hw_mgr.ctx_pool[i].res_list_ife_out);
+		g_ife_hw_mgr.ctx_pool[i].res_list_ife_out = NULL;
 		g_ife_hw_mgr.ctx_pool[i].common.tasklet_info = NULL;
 	}
 
