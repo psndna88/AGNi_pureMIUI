@@ -312,6 +312,7 @@
 	wsa881x_i2c_44: wsa881x-i2c-codec@44 {
 		compatible = "qcom,wsa881x-i2c-codec";
 		reg = <0x044>;
+		qcom,wsa-analog-clk-gpio = <&wsa881x_analog_clk_gpio>;
 	};
 
 	wsa881x_i2c_f: wsa881x-i2c-codec@f {
@@ -333,6 +334,7 @@
 		status = "disabled";
 		compatible = "qcom,wsa881x-i2c-codec";
 		reg = <0x045>;
+		qcom,wsa-analog-clk-gpio = <&wsa881x_analog_clk_gpio>;
 	};
 };
 
