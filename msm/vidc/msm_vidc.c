@@ -598,14 +598,31 @@ int msm_vidc_enum_framesizes(void *instance, struct v4l2_frmsizeenum *fsize)
 
 	capability = &inst->capability;
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
-	fsize->stepwise.min_width = capability->cap[CAP_FRAME_WIDTH].min;
-	fsize->stepwise.max_width = capability->cap[CAP_FRAME_WIDTH].max;
-	fsize->stepwise.step_width =
-		capability->cap[CAP_FRAME_WIDTH].step_size;
-	fsize->stepwise.min_height = capability->cap[CAP_FRAME_HEIGHT].min;
-	fsize->stepwise.max_height = capability->cap[CAP_FRAME_HEIGHT].max;
-	fsize->stepwise.step_height =
-		capability->cap[CAP_FRAME_HEIGHT].step_size;
+	if(is_grid_session(inst)) {
+		fsize->stepwise.min_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].min;
+		fsize->stepwise.max_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].max;
+		fsize->stepwise.step_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].step_size;
+		fsize->stepwise.min_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].min;
+		fsize->stepwise.max_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].max;
+		fsize->stepwise.step_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].step_size;
+
+	}
+	else {
+		fsize->stepwise.min_width = capability->cap[CAP_FRAME_WIDTH].min;
+		fsize->stepwise.max_width = capability->cap[CAP_FRAME_WIDTH].max;
+		fsize->stepwise.step_width =
+			capability->cap[CAP_FRAME_WIDTH].step_size;
+		fsize->stepwise.min_height = capability->cap[CAP_FRAME_HEIGHT].min;
+		fsize->stepwise.max_height = capability->cap[CAP_FRAME_HEIGHT].max;
+		fsize->stepwise.step_height =
+			capability->cap[CAP_FRAME_HEIGHT].step_size;
+	}
 	return 0;
 }
 EXPORT_SYMBOL(msm_vidc_enum_framesizes);
