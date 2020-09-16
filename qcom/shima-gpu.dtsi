@@ -420,6 +420,9 @@
 
 		regulator-names = "vddcx", "vdd";
 
+		iommus = <&kgsl_smmu 0x5 0x400>;
+		qcom,iommu-dma = "disabled";
+
 		vddcx-supply = <&gpu_cx_gdsc>;
 		vdd-supply = <&gpu_gx_gdsc>;
 
@@ -436,18 +439,5 @@
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
-
-		gmu_user: gmu_user {
-			compatible = "qcom,smmu-gmu-user-cb";
-			iommus = <&kgsl_smmu 0x4 0x400>;
-			qcom,iommu-dma = "disabled";
-		};
-
-		gmu_kernel: gmu_kernel {
-			compatible = "qcom,smmu-gmu-kernel-cb";
-			iommus = <&kgsl_smmu 0x5 0x400>;
-			qcom,iommu-dma = "disabled";
-		};
-
 	};
 };
