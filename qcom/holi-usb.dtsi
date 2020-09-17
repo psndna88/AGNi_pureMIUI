@@ -39,12 +39,20 @@
 
 		qcom,core-clk-rate = <133333333>;
 		qcom,core-clk-rate-hs = <66666667>;
-		qcom,default-bus-vote = <2>; /* use svs bus voting */
 
 		interconnect-names = "usb-ddr", "usb-ipa", "ddr-usb";
 		interconnects = <&system_noc MASTER_USB3_0 &bimc SLAVE_EBI>,
 				<&system_noc MASTER_USB3_0 &config_noc SLAVE_IPA_CFG>,
 				<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_USB3>;
+
+		qcom,interconnect-values-nom = /* NOMINAL Votes */
+						<1000000 1550000>,
+						<0 2400>,
+						<0 40000>;
+		qcom,interconnect-values-svs = /* SVS Votes */
+						<240000 700000>,
+						<0 2400>,
+						<0 40000>;
 
 		qcom,num-gsi-evt-buffs = <0x3>;
 		qcom,pm-qos-latency = <61>;
