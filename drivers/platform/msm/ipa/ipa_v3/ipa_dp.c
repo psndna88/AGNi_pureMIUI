@@ -1937,6 +1937,7 @@ static void ipa3_wq_handle_rx(struct work_struct *work)
 	if (sys->napi_obj) {
 		ipa_pm_activate_sync(sys->pm_hdl);
 		napi_schedule(sys->napi_obj);
+		IPA_STATS_INC_CNT(sys->napi_sch_cnt);
 	} else if (IPA_CLIENT_IS_LOW_LAT_CONS(sys->ep->client)) {
 		ipa_pm_activate_sync(sys->pm_hdl);
 		tasklet_schedule(&sys->tasklet);
@@ -4590,13 +4591,16 @@ void __ipa_gsi_irq_rx_scedule_poll(struct ipa3_sys_context *sys)
 	 * or after NAPI poll
 	 */
 	clk_off = ipa_pm_activate(sys->pm_hdl);
-	if (!clk_off && sys->napi_obj)
+	if (!clk_off && sys->napi_obj) {
 		napi_schedule(sys->napi_obj);
-	else if (!clk_off &&
+		IPA_STATS_INC_CNT(sys->napi_sch_cnt);
+	} else if (!clk_off &&
 		IPA_CLIENT_IS_LOW_LAT_CONS(sys->ep->client)) {
 		tasklet_schedule(&sys->tasklet);
-	} else
+	} else {
 		queue_work(sys->wq, &sys->work);
+	}
+
 }
 
 static void ipa_gsi_irq_rx_notify_cb(struct gsi_chan_xfer_notify *notify)
@@ -5312,6 +5316,7 @@ start_poll:
 	if (cnt < weight && ep->sys->len > IPA_DEFAULT_SYS_YELLOW_WM &&
 		wan_def_sys->len > IPA_DEFAULT_SYS_YELLOW_WM) {
 		napi_complete(ep->sys->napi_obj);
+		IPA_STATS_INC_CNT(ep->sys->napi_comp_cnt);
 		ret = ipa3_rx_switch_to_intr_mode(ep->sys);
 		if (ret == -GSI_STATUS_PENDING_IRQ &&
 				napi_reschedule(ep->sys->napi_obj))
