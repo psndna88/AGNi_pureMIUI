@@ -2176,7 +2176,7 @@
 		reg-names = "hc_mem", "cqhci_mem";
 
 		iommus = <&apps_smmu 0x20 0x0>;
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
 
 		interrupts = <GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 352 IRQ_TYPE_LEVEL_HIGH>;
