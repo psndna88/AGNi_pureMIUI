@@ -33,6 +33,8 @@
 #define PC_POLL_DELAY_US 100
 #define PC_POLL_TIMEOUT_US 10000
 
+#define A5_GEN_PURPOSE_REG_OFFSET 0x40
+
 static int cam_a5_cpas_vote(struct cam_a5_device_core_info *core_info,
 	struct cam_icp_cpas_vote *cpas_vote)
 {
@@ -511,6 +513,21 @@ void cam_a5_irq_enable(void *priv)
 	cam_io_w_mb(A5_WDT_WS0EN | A5_A2HOSTINTEN,
 		a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base +
 		ICP_SIERRA_A5_CSR_A2HOSTINTEN);
+}
+
+void __iomem *cam_a5_iface_addr(void *priv)
+{
+	struct cam_hw_info *a5_info = priv;
+	void __iomem *base;
+
+	if (!a5_info) {
+		CAM_ERR(CAM_ICP, "invalid A5 device info");
+		return ERR_PTR(-EINVAL);
+	}
+
+	base = a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base;
+
+	return base + A5_GEN_PURPOSE_REG_OFFSET;
 }
 
 int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
