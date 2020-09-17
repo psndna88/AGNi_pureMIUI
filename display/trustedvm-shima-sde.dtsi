@@ -14,12 +14,15 @@
 	reg = <0xae00000 0x84208>,
 		<0xaeb0000 0x2008>,
 		<0xaeac000 0x214>,
-		<0xaf50000 0x038>;
+		<0xaf50000 0x038>,
+		<0xae8f000 0x02c>;
 	reg-names = "mdp_phys",
 		"vbif_phys",
 		"regdma_phys",
-		"swfuse_phys";
+		"swfuse_phys",
+		"sid_phys";
 
+	qcom,sde-vm-exclude-reg-names = "sid_phys";
 	qcom,sde-hw-version = <0x60070000>;
 	clocks =
 		<&clock_cpucc GCC_DISP_AHB_CLK>,
