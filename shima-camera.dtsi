@@ -757,7 +757,7 @@
 		clock-names-option =  "ife_dsp_clk";
 		clocks-option = <&camcc CAM_CC_IFE_0_DSP_CLK>;
 		clock-rates-option = <720000000>;
-		ubwc-static-cfg = <0x1026 0x1036>;
+		ubwc-static-cfg = <0x1016 0x1026>;
 		cam_hw_pid = < 28 4 16 8 >;
 		status = "ok";
 	};
@@ -844,7 +844,7 @@
 		clock-names-option =  "ife_dsp_clk";
 		clocks-option = <&camcc CAM_CC_IFE_1_DSP_CLK>;
 		clock-rates-option = <720000000>;
-		ubwc-static-cfg = <0x1026 0x1036>;
+		ubwc-static-cfg = <0x1016 0x1026>;
 		cam_hw_pid = < 29 5 17 9 >;
 		status = "ok";
 	};
@@ -928,7 +928,7 @@
 		src-clock-name = "ife_clk_src";
 		scl-clk-names = "ife_2_areg";
 		clock-control-debugfs = "true";
-		ubwc-static-cfg = <0x1026 0x1036>;
+		ubwc-static-cfg = <0x1016 0x1026>;
 		cam_hw_pid = < 23 6 18 10>;
 		status = "ok";
 	};
@@ -1177,9 +1177,9 @@
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		fw_name = "CAMERA_ICP.elf";
-		ubwc-ipe-fetch-cfg = <0x707b 0x7083>;
+		ubwc-ipe-fetch-cfg = <0x7073 0x707b>;
 		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
-		ubwc-bps-fetch-cfg = <0x707b 0x7083>;
+		ubwc-bps-fetch-cfg = <0x7073 0x707b>;
 		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
 		status = "ok";
 	};
