@@ -4161,7 +4161,7 @@ int msm_venc_set_vui_timing_info(struct msm_vidc_inst *inst)
 	struct hfi_device *hdev;
 	struct v4l2_ctrl *ctrl;
 	struct hfi_vui_timing_info timing_info;
-	bool cfr;
+	bool cfr, native_recorder;
 	u32 codec;
 
 	if (!inst || !inst->core) {
@@ -4174,8 +4174,13 @@ int msm_venc_set_vui_timing_info(struct msm_vidc_inst *inst)
 	if (codec != V4L2_PIX_FMT_H264 && codec != V4L2_PIX_FMT_HEVC)
 		return 0;
 
+	native_recorder = false;
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER);
+	if (ctrl->val == V4L2_MPEG_MSM_VIDC_ENABLE)
+		native_recorder = true;
+
 	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VIDEO_VUI_TIMING_INFO);
-	if (ctrl->val == V4L2_MPEG_MSM_VIDC_DISABLE)
+	if (ctrl->val == V4L2_MPEG_MSM_VIDC_DISABLE && native_recorder == false)
 		return 0;
 
 	switch (inst->rc_type) {
