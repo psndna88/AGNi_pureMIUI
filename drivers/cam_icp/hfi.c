@@ -647,7 +647,8 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
 
 	if (g_hfi->hfi_state != HFI_DEINIT) {
 		CAM_ERR(CAM_HFI, "hfi_init: invalid state");
-		return -EINVAL;
+		rc = -EINVAL;
+		goto regions_fail;
 	}
 
 	memcpy(&g_hfi->map, hfi_mem, sizeof(g_hfi->map));
