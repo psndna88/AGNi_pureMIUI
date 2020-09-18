@@ -377,7 +377,7 @@
 				<&apps_smmu 0xC00 0x400>,
 				<&apps_smmu 0xC40 0x400>;
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
-			label = "ife", "ife-cdm";
+			cam-smmu-label = "ife", "ife-cdm";
 			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
@@ -397,7 +397,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x2040 0x400>,
 				<&apps_smmu 0x2440 0x400>;
-			label = "jpeg";
+			cam-smmu-label = "jpeg";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
@@ -435,7 +435,7 @@
 				<&apps_smmu 0x2021 0x400>,
 				<&apps_smmu 0x2420 0x400>,
 				<&apps_smmu 0x2421 0x400>;
-			label = "icp";
+			cam-smmu-label = "icp";
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
 			iova-region-discard = <0xdff00000 0x300000>;
 			icp_iova_mem_map: iova-mem-map {
@@ -492,7 +492,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x20C0 0x400>,
 				<&apps_smmu 0x24C0 0x400>;
-			label = "cpas-cdm";
+			cam-smmu-label = "cpas-cdm";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
@@ -510,7 +510,7 @@
 
 		msm_cam_smmu_secure {
 			compatible = "qcom,msm-cam-smmu-cb";
-			label = "cam-secure";
+			cam-smmu-label = "cam-secure";
 			qcom,secure-cb;
 		};
 
@@ -519,7 +519,7 @@
 			iommus = <&apps_smmu 0x2080 0x400>,
 				<&apps_smmu 0x2480 0x400>;
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
-			label = "fd";
+			cam-smmu-label = "fd";
 			fd_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 4.0 GB */
