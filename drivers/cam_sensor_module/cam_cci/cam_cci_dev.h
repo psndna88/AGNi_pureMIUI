@@ -32,7 +32,6 @@
 #include "cam_soc_util.h"
 #include "cam_debug_util.h"
 
-#define V4L2_IDENT_CCI 50005
 #define CCI_I2C_QUEUE_0_SIZE 128
 #define CCI_I2C_QUEUE_1_SIZE 32
 #define CCI_I2C_QUEUE_0_SIZE_V_1_2 64
@@ -43,16 +42,8 @@
 #define CCI_TIMEOUT msecs_to_jiffies(1500)
 #define NUM_QUEUES 2
 
-#define CCI_PINCTRL_STATE_DEFAULT "cci_default"
-#define CCI_PINCTRL_STATE_SLEEP "cci_suspend"
-
-#define CCI_NUM_CLK_MAX 16
-#define CCI_NUM_CLK_CASES 5
-#define CCI_CLK_SRC_NAME "cci_src_clk"
-#define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_10 10
 #define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_11 11
 #define BURST_MIN_FREE_SIZE 8
-#define MAX_LRME_V4l2_EVENTS 30
 
 /* Max bytes that can be read per CCI read transaction */
 #define CCI_READ_MAX 256
