@@ -83,6 +83,8 @@
 
 #define SWR_OVERFLOW_RETRY_COUNT 30
 
+#define SWRM_PHY_ADDR_MAP_COUNT 2
+
 /* pm runtime auto suspend timer in msecs */
 static int auto_suspend_timer = 500;
 module_param(auto_suspend_timer, int, 0664);
@@ -131,21 +133,12 @@ static void swr_master_write(struct swr_mstr_ctrl *swrm, u16 reg_addr, u32 val);
 static int swrm_runtime_resume(struct device *dev);
 static void swrm_wait_for_fifo_avail(struct swr_mstr_ctrl *swrm, int swrm_rd_wr);
 
-static u64 swrm_phy_dev[] = {
-	0,
-	0xd01170223,
-	0x858350223,
-	0x858350222,
-	0x858350221,
-	0x858350220,
-};
-
 static u8 swrm_get_device_id(struct swr_mstr_ctrl *swrm, u8 devnum)
 {
 	int i;
 
 	for (i = 1; i < (swrm->num_dev + 1); i++) {
-		if (swrm->logical_dev[devnum] == swrm_phy_dev[i])
+		if (swrm->logical_dev[devnum] == swrm->phy_dev[i])
 			break;
 	}
 
@@ -1380,6 +1373,7 @@ static void swrm_get_device_frame_shape(struct swr_mstr_ctrl *swrm,
 	struct port_params *pp_port;
 
 	if ((swrm->master_id == MASTER_ID_TX) &&
+		(swrm->use_custom_phy_addr) &&
 		((swrm->bus_clk == SWR_CLK_RATE_9P6MHZ) ||
 		 (swrm->bus_clk == SWR_CLK_RATE_0P6MHZ) ||
 		 (swrm->bus_clk == SWR_CLK_RATE_4P8MHZ))) {
@@ -2599,7 +2593,6 @@ static int swrm_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct clk *lpass_core_hw_vote = NULL;
 	struct clk *lpass_core_audio = NULL;
-	u32 is_wcd937x = 0;
 	u32 swrm_hw_ver = 0;
 
 	/* Allocate soundwire master driver structure */
@@ -2641,13 +2634,6 @@ static int swrm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: failed to get master id\n", __func__);
 		goto err_pdata_fail;
 	}
-	/* update the physical device address if wcd937x. */
-	ret = of_property_read_u32(pdev->dev.of_node, "qcom,is_wcd937x",
-				&is_wcd937x);
-	if (ret)
-		dev_dbg(&pdev->dev, "%s: failed to get wcd info\n", __func__);
-	else if (is_wcd937x)
-		swrm_phy_dev[1] = 0xa01170223;
 
 	ret = of_property_read_u32(pdev->dev.of_node, "qcom,dynamic-port-map-supported",
 				&swrm->dynamic_port_map_supported);
@@ -2723,6 +2709,45 @@ static int swrm_probe(struct platform_device *pdev)
 			swrm->master.num_dev = swrm->num_dev;
 		}
 	}
+
+	/* Parse soundwire slave physical address(es) */
+	swrm->phy_dev[0] = 0;
+	swrm->use_custom_phy_addr = false;
+	if (of_find_property(pdev->dev.of_node, "qcom,swr-phy-dev-addr",
+				&map_size)) {
+		map_length = map_size / (SWRM_PHY_ADDR_MAP_COUNT * sizeof(u32));
+		if (map_length > SWRM_NUM_AUTO_ENUM_SLAVES) {
+			map_length = SWRM_NUM_AUTO_ENUM_SLAVES;
+			map_size = map_length *
+					(SWRM_PHY_ADDR_MAP_COUNT * sizeof(u32));
+		}
+
+		temp = devm_kzalloc(&pdev->dev, map_size, GFP_KERNEL);
+		if (!temp) {
+			ret = -ENOMEM;
+			goto err_pdata_fail;
+		}
+		ret = of_property_read_u32_array(pdev->dev.of_node,
+					"qcom,swr-phy-dev-addr", temp,
+					SWRM_PHY_ADDR_MAP_COUNT * map_length);
+		if (ret) {
+			dev_dbg(swrm->dev,
+				"%s: Failed to read swr-phy-dev-addr\n",
+				__func__);
+		} else {
+			for (i = 0; i < map_length; i++) {
+				swrm->phy_dev[i + 1] =
+					temp[SWRM_PHY_ADDR_MAP_COUNT * i];
+				swrm->phy_dev[i + 1] <<= 32;
+				swrm->phy_dev[i + 1] |=
+					temp[SWRM_PHY_ADDR_MAP_COUNT * i + 1];
+			}
+			swrm->use_custom_phy_addr = true;
+		}
+		devm_kfree(&pdev->dev, temp);
+	} else
+		dev_dbg(swrm->dev, "%s: Failed to find swr-phy-dev-addr\n",
+					__func__);
 
 	/* Parse soundwire port mapping */
 	ret = of_property_read_u32(pdev->dev.of_node, "qcom,swr-num-ports",
