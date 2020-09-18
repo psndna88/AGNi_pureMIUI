@@ -669,11 +669,11 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 	struct cdp_txrx_ext_stats ext_stats = {0};
 	struct cdp_soc_t *soc_hdl = cds_get_context(QDF_MODULE_ID_SOC);
 
-	wma_debug("%s: Posting stats ext event to SME", __func__);
+	wma_debug("Posting stats ext event to SME");
 
 	param_buf = (WMI_STATS_EXT_EVENTID_param_tlvs *)event_buf;
 	if (!param_buf) {
-		wma_err("%s: Invalid stats ext event buf", __func__);
+		wma_err("Invalid stats ext event buf");
 		return -EINVAL;
 	}
 
@@ -721,7 +721,7 @@ int wma_stats_ext_event_handler(void *handle, uint8_t *event_buf,
 		return -EFAULT;
 	}
 
-	wma_debug("%s: stats ext event Posted to SME", __func__);
+	wma_debug("stats ext event Posted to SME");
 	return 0;
 }
 #else
@@ -2155,12 +2155,22 @@ static int wma_unified_link_radio_stats_event_handler(void *handle,
 		wma_debug("Channel Stats Info");
 		for (count = 0; count < radio_stats->num_channels; count++) {
 			wma_nofl_debug("freq %u width %u freq0 %u freq1 %u awake time %u cca busy time %u",
-				 channel_stats->center_freq,
-				 channel_stats->channel_width,
-				 channel_stats->center_freq0,
-				 channel_stats->center_freq1,
-				 channel_stats->radio_awake_time,
-				 channel_stats->cca_busy_time);
+				       channel_stats->center_freq,
+				       channel_stats->channel_width,
+				       channel_stats->center_freq0,
+				       channel_stats->center_freq1,
+				       channel_stats->radio_awake_time,
+				       channel_stats->cca_busy_time);
+			if (wmi_service_enabled(
+			      wma_handle->wmi_handle,
+			      wmi_service_ll_stats_per_chan_rx_tx_time)) {
+				wma_nofl_debug("tx time %u rx time %u",
+					       channel_stats->tx_time,
+					       channel_stats->rx_time);
+			} else {
+				wma_nofl_debug("LL Stats per channel tx time and rx time are not supported.");
+			}
+
 			channel_stats++;
 
 			qdf_mem_copy(chn_results,
@@ -3877,7 +3887,6 @@ void wma_update_roam_offload_flag(void *handle,
 
 	wma_set_roam_offload_flag(wma, params->vdev_id, params->enable);
 }
-#endif
 
 void wma_set_roam_disable_cfg(void *handle, struct roam_disable_cfg *params)
 {
@@ -3903,6 +3912,7 @@ void wma_set_roam_disable_cfg(void *handle, struct roam_disable_cfg *params)
 	if (QDF_IS_STATUS_ERROR(status))
 		wma_err("Failed to set WMI_VDEV_PARAM_ROAM_11KV_CTRL");
 }
+#endif
 
 QDF_STATUS wma_send_vdev_down_to_fw(t_wma_handle *wma, uint8_t vdev_id)
 {
@@ -4162,11 +4172,12 @@ void wma_remove_bss_peer_on_vdev_start_failure(tp_wma_handle wma,
 	wma_err("ADD BSS failure for vdev %d", vdev_id);
 
 	if (!cdp_find_peer_exist(soc, pdev_id, bss_peer.bytes)) {
-		wma_err("Failed to find peer %pM", bss_peer.bytes);
+		wma_err("Failed to find peer "QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(bss_peer.bytes));
 		return;
 	}
 
-	wma_remove_peer(wma, bss_peer.bytes, vdev_id);
+	wma_remove_peer(wma, bss_peer.bytes, vdev_id, false);
 }
 
 QDF_STATUS wma_sta_vdev_up_send(struct vdev_mlme_obj *vdev_mlme,

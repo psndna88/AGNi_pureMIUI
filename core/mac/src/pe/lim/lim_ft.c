@@ -424,15 +424,22 @@ static uint8_t lim_calculate_dot11_mode(struct mac_context *mac_ctx,
 	case MLME_DOT11_MODE_ALL:
 		if (bcn->he_cap.present)
 			return MLME_DOT11_MODE_11AX;
-		else if (bcn->VHTCaps.present ||
-			 bcn->vendor_vht_ie.present)
+		else if ((bcn->VHTCaps.present ||
+			  bcn->vendor_vht_ie.present) &&
+			 (!(band == REG_BAND_2G &&
+			  !mac_ctx->mlme_cfg->vht_caps.vht_cap_info.b24ghz_band)
+			 ))
+
 			return MLME_DOT11_MODE_11AC;
 		else if (bcn->HTCaps.present)
 			return MLME_DOT11_MODE_11N;
 	case MLME_DOT11_MODE_11AC:
 	case MLME_DOT11_MODE_11AC_ONLY:
-		if (bcn->VHTCaps.present ||
-		    bcn->vendor_vht_ie.present)
+		if ((bcn->VHTCaps.present ||
+		     bcn->vendor_vht_ie.present) &&
+		   (!(band == REG_BAND_2G &&
+		    !mac_ctx->mlme_cfg->vht_caps.vht_cap_info.b24ghz_band)
+		   ))
 			return MLME_DOT11_MODE_11AC;
 		else if (bcn->HTCaps.present)
 			return MLME_DOT11_MODE_11N;
@@ -810,7 +817,7 @@ void lim_process_ft_aggr_qos_rsp(struct mac_context *mac,
 	pe_session =
 		pe_find_session_by_session_id(mac, pAggrQosRspMsg->sessionId);
 	if (!pe_session) {
-		pe_err("Cant find session entry for %s", __func__);
+		pe_err("Cant find session entry");
 		if (pAggrQosRspMsg) {
 			qdf_mem_free(pAggrQosRspMsg);
 		}

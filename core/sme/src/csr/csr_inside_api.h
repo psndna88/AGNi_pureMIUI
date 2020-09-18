@@ -139,7 +139,8 @@ QDF_STATUS csr_roam_save_connected_bss_desc(struct mac_context *mac,
 
 QDF_STATUS csr_roam_copy_profile(struct mac_context *mac,
 				 struct csr_roam_profile *pDstProfile,
-				 struct csr_roam_profile *pSrcProfile);
+				 struct csr_roam_profile *pSrcProfile,
+				 uint8_t vdev_id);
 QDF_STATUS csr_roam_start(struct mac_context *mac);
 void csr_roam_stop(struct mac_context *mac, uint32_t sessionId);
 
@@ -429,6 +430,16 @@ csr_update_adaptive_11r_scan_filter(struct mac_context *mac_ctx,
 QDF_STATUS csr_fill_filter_from_vdev_crypto(struct mac_context *mac_ctx,
 					    struct scan_filter *filter,
 					    uint8_t vdev_id);
+
+/*
+ * csr_update_scan_filter_dot11mode() - update dot11mode for scan filter
+ * @mac_ctx: csr auth type
+ * @filter: scan filter
+ *
+ * Return void
+ */
+void csr_update_scan_filter_dot11mode(struct mac_context *mac_ctx,
+				      struct scan_filter *filter);
 
 /*
  * csr_set_open_mode_in_scan_filter() - set open mode in scan filter

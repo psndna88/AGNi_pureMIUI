@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ void ol_txrx_vdev_pause(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	/* TO DO: log the queue pause */
 	/* acquire the mutex lock, since we'll be modifying the queues */
-	TX_SCHED_DEBUG_PRINT("Enter %s\n", __func__);
+	TX_SCHED_DEBUG_PRINT("Enter");
 
 	qdf_spin_lock_bh(&vdev->ll_pause.mutex);
 	vdev->ll_pause.paused_reason |= reason;
@@ -59,7 +59,7 @@ void ol_txrx_vdev_pause(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	vdev->ll_pause.is_q_paused = true;
 	qdf_spin_unlock_bh(&vdev->ll_pause.mutex);
 
-	TX_SCHED_DEBUG_PRINT("Leave %s\n", __func__);
+	TX_SCHED_DEBUG_PRINT("Leave");
 }
 
 void ol_txrx_vdev_unpause(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
@@ -75,7 +75,7 @@ void ol_txrx_vdev_unpause(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	/* TO DO: log the queue unpause */
 	/* acquire the mutex lock, since we'll be modifying the queues */
-	TX_SCHED_DEBUG_PRINT("Enter %s\n", __func__);
+	TX_SCHED_DEBUG_PRINT("Enter");
 
 	qdf_spin_lock_bh(&vdev->ll_pause.mutex);
 	if (vdev->ll_pause.paused_reason & reason) {
@@ -91,7 +91,7 @@ void ol_txrx_vdev_unpause(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	} else {
 		qdf_spin_unlock_bh(&vdev->ll_pause.mutex);
 	}
-	TX_SCHED_DEBUG_PRINT("Leave %s\n", __func__);
+	TX_SCHED_DEBUG_PRINT("Leave");
 }
 
 void ol_txrx_vdev_flush(struct cdp_soc_t *soc_hdl, uint8_t vdev_id)
@@ -488,8 +488,8 @@ ol_txrx_get_tx_resource(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 					     peer_addr);
 	if (!vdev) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_INFO_HIGH,
-			  "%s: Invalid peer address: " QDF_MAC_ADDR_STR,
-			  __func__, QDF_MAC_ADDR_ARRAY(peer_addr.bytes));
+			  "%s: Invalid peer address: " QDF_MAC_ADDR_FMT,
+			  __func__, QDF_MAC_ADDR_REF(peer_addr.bytes));
 		/* Return true so caller do not understand that resource
 		 * is less than low_watermark.
 		 * sta_id validation will be done in ol_tx_send_data_frame

@@ -632,7 +632,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	QDF_STATUS status;
 	enum ani_akm_type auth_type;
 	bool sha384_akm;
-	tpRRMCaps rrm_caps = &mac_ctx->rrm.rrmPEContext.rrmEnabledCaps;
 
 	assoc_cnf.resultCode = eSIR_SME_SUCCESS;
 	/* Update PE session Id */
@@ -663,11 +662,11 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 
-	pe_nofl_info("Assoc rsp RX: subtype %d vdev %d sys role %d lim state %d rssi %d from " QDF_MAC_ADDR_STR,
+	pe_nofl_info("Assoc rsp RX: subtype %d vdev %d sys role %d lim state %d rssi %d from " QDF_MAC_ADDR_FMT,
 		     subtype, vdev_id,
 		     GET_LIM_SYSTEM_ROLE(session_entry),
 		     session_entry->limMlmState, rssi,
-		     QDF_MAC_ADDR_ARRAY(hdr->sa));
+		     QDF_MAC_ADDR_REF(hdr->sa));
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   (uint8_t *)hdr, frame_len + SIR_MAC_HDR_LEN_3A);
 
@@ -707,8 +706,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			 * other than one to which request was initiated.
 			 * Ignore this and wait until Assoc Failure Timeout
 			 */
-			pe_warn("received AssocRsp from unexpected peer "QDF_MAC_ADDR_STR,
-				QDF_MAC_ADDR_ARRAY(hdr->sa));
+			pe_warn("received AssocRsp from unexpected peer "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(hdr->sa));
 			qdf_mem_free(beacon);
 			return;
 		}
@@ -721,8 +720,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			 * other than one to which request was initiated.
 			 * Ignore this and wait until Reassoc Failure Timeout.
 			 */
-			pe_warn("received ReassocRsp from unexpected peer "QDF_MAC_ADDR_STR,
-				QDF_MAC_ADDR_ARRAY(hdr->sa));
+			pe_warn("received ReassocRsp from unexpected peer "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(hdr->sa));
 			qdf_mem_free(beacon);
 			return;
 		}
@@ -1027,8 +1026,8 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		qdf_mem_free(beacon);
 		return;
 	}
-	pe_debug("Successfully Associated with BSS " QDF_MAC_ADDR_STR,
-		 QDF_MAC_ADDR_ARRAY(hdr->sa));
+	pe_debug("Successfully Associated with BSS " QDF_MAC_ADDR_FMT,
+		 QDF_MAC_ADDR_REF(hdr->sa));
 #ifdef FEATURE_WLAN_ESE
 	if (session_entry->eseContext.tsm.tsmInfo.state)
 		session_entry->eseContext.tsm.tsmMetrics.RoamingCount = 0;
@@ -1116,12 +1115,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			session_entry->beaconParams.fShortPreamble = true;
 	}
 
-	if (assoc_rsp->rrm_caps.present) {
-		rrm_caps->nonOperatingChanMax =
-					assoc_rsp->rrm_caps.nonOperatinChanMax;
-		rrm_caps->operatingChanMax =
-					assoc_rsp->rrm_caps.operatingChanMax;
-	}
 #ifdef FEATURE_WLAN_DIAG_SUPPORT
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_CONNECTED, session_entry,
 			      QDF_STATUS_SUCCESS, QDF_STATUS_SUCCESS);
@@ -1148,10 +1141,10 @@ assocReject:
 		&& (session_entry->limMlmState ==
 		    eLIM_MLM_WT_FT_REASSOC_RSP_STATE))) {
 		pe_err("Assoc Rejected by the peer mlmestate: %d sessionid: %d Reason: %d MACADDR:"
-			QDF_MAC_ADDR_STR,
+			QDF_MAC_ADDR_FMT,
 			session_entry->limMlmState,
 			session_entry->peSessionId,
-			assoc_cnf.resultCode, QDF_MAC_ADDR_ARRAY(hdr->sa));
+			assoc_cnf.resultCode, QDF_MAC_ADDR_REF(hdr->sa));
 		session_entry->limMlmState = eLIM_MLM_IDLE_STATE;
 		MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
 			session_entry->peSessionId,

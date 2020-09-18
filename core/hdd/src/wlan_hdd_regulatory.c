@@ -215,7 +215,7 @@ static void reg_program_config_vars(struct hdd_context *hdd_ctx,
 	uint32_t band_capability = 0, scan_11d_interval = 0;
 	bool indoor_chan_enabled = false;
 	uint32_t restart_beaconing = 0;
-	bool enable_srd_chan = false;
+	uint8_t enable_srd_chan;
 	bool enable_5dot9_ghz_chan;
 	QDF_STATUS status;
 	bool country_priority = 0;
@@ -262,8 +262,8 @@ static void reg_program_config_vars(struct hdd_context *hdd_ctx,
 						    &restart_beaconing);
 	config_vars->restart_beaconing = restart_beaconing;
 
-	ucfg_mlme_get_etsi13_srd_chan_in_master_mode(hdd_ctx->psoc,
-						     &enable_srd_chan);
+	ucfg_mlme_get_etsi_srd_chan_in_master_mode(hdd_ctx->psoc,
+						   &enable_srd_chan);
 	config_vars->enable_srd_chan_in_master_mode = enable_srd_chan;
 
 	ucfg_mlme_get_11d_in_world_mode(hdd_ctx->psoc,
@@ -947,8 +947,7 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 
 	if (cds_is_driver_unloading() || cds_is_driver_recovering() ||
 	    cds_is_driver_in_bad_state()) {
-		hdd_err("%s: unloading or ssr in progress, ignore",
-			__func__);
+		hdd_err("unloading or ssr in progress, ignore");
 		return;
 	}
 
@@ -958,7 +957,7 @@ void hdd_reg_notifier(struct wiphy *wiphy,
 	}
 
 	if (hdd_ctx->is_wiphy_suspended == true) {
-		hdd_err("%s: system/cfg80211 is already suspend", __func__);
+		hdd_err("system/cfg80211 is already suspend");
 		return;
 	}
 
@@ -1748,11 +1747,9 @@ void hdd_regulatory_deinit(struct hdd_context *hdd_ctx)
 
 void hdd_update_regdb_offload_config(struct hdd_context *hdd_ctx)
 {
-	QDF_STATUS status;
 	bool ignore_fw_reg_offload_ind = false;
 
-	status = ucfg_mlme_get_ignore_fw_reg_offload_ind(
-						hdd_ctx->psoc,
+	ucfg_mlme_get_ignore_fw_reg_offload_ind(hdd_ctx->psoc,
 						&ignore_fw_reg_offload_ind);
 	if (!ignore_fw_reg_offload_ind) {
 		hdd_debug("regdb offload is based on firmware capability");

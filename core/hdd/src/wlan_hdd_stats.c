@@ -607,9 +607,9 @@ bool hdd_get_interface_info(struct hdd_adapter *adapter,
 		if ((eConnectionState_Associated ==
 		     sta_ctx->conn_info.conn_state) &&
 		    (!sta_ctx->conn_info.is_authenticated)) {
-			hdd_err("client " QDF_MAC_ADDR_STR
+			hdd_err("client " QDF_MAC_ADDR_FMT
 				" is in the middle of WPS/EAPOL exchange.",
-				QDF_MAC_ADDR_ARRAY(adapter->mac_addr.bytes));
+				QDF_MAC_ADDR_REF(adapter->mac_addr.bytes));
 			info->state = WIFI_AUTHENTICATING;
 		}
 		if (eConnectionState_Associated ==
@@ -855,6 +855,22 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 			hdd_err("nla_put failed");
 			return -EINVAL;
 		}
+
+		if (adapter->hdd_ctx &&
+		    adapter->hdd_ctx->ll_stats_per_chan_rx_tx_time) {
+			if (nla_put_u32(
+				vendor_event,
+				QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_TX_TIME,
+				channel_stats->tx_time) ||
+			    nla_put_u32(
+				vendor_event,
+				QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_RX_TIME,
+				channel_stats->rx_time)) {
+				hdd_err("nla_put failed");
+				return -EINVAL;
+			}
+		}
+
 		nla_nest_end(vendor_event, chinfo);
 	}
 	nla_nest_end(vendor_event, chlist);
@@ -4376,12 +4392,13 @@ static int wlan_hdd_get_station_remote(struct wiphy *wiphy,
 	if (status != 0)
 		return status;
 
-	hdd_debug("Peer %pM", mac);
+	hdd_debug("Peer "QDF_MAC_ADDR_FMT, QDF_MAC_ADDR_REF(mac));
 
 	stainfo = hdd_get_sta_info_by_mac(&adapter->sta_info_list, mac,
 					  STA_INFO_WLAN_HDD_GET_STATION_REMOTE);
 	if (!stainfo) {
-		hdd_err("peer %pM not found", mac);
+		hdd_err("peer "QDF_MAC_ADDR_FMT" not found",
+			QDF_MAC_ADDR_REF(mac));
 		return -EINVAL;
 	}
 
@@ -5292,7 +5309,7 @@ static int __wlan_hdd_cfg80211_dump_station(struct wiphy *wiphy,
 				int idx, u8 *mac,
 				struct station_info *sinfo)
 {
-	hdd_debug("%s: idx %d", __func__, idx);
+	hdd_debug("idx: %d", idx);
 	if (idx != 0)
 		return -ENOENT;
 	qdf_mem_copy(mac, dev->dev_addr, QDF_MAC_ADDR_SIZE);
@@ -6393,9 +6410,9 @@ static void hdd_lost_link_cp_stats_info_cb(void *stats_ev)
 		}
 		adapter->rssi_on_disconnect =
 					ev->vdev_summary_stats[i].stats.rssi;
-		hdd_debug("rssi %d for " QDF_MAC_ADDR_STR,
+		hdd_debug("rssi %d for " QDF_MAC_ADDR_FMT,
 			  adapter->rssi_on_disconnect,
-			  QDF_MAC_ADDR_ARRAY(adapter->mac_addr.bytes));
+			  QDF_MAC_ADDR_REF(adapter->mac_addr.bytes));
 	}
 }
 

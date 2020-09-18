@@ -46,7 +46,7 @@
 #include "wma_api.h"
 #include "wmi_unified_param.h"
 #include "wmi.h"
-#include "wlan_cm_roam_public_srtuct.h"
+#include "wlan_cm_roam_public_struct.h"
 
 /* Platform specific configuration for max. no. of fragments */
 #define QCA_OL_11AC_TX_MAX_FRAGS            2
@@ -1639,7 +1639,7 @@ void wma_process_set_pdev_vht_ie_req(tp_wma_handle wma,
 		struct set_ie_param *ie_params);
 
 QDF_STATUS wma_remove_peer(tp_wma_handle wma, uint8_t *mac_addr,
-			   uint8_t vdev_id);
+			   uint8_t vdev_id, bool no_fw_peer_delete);
 
 QDF_STATUS wma_create_peer(tp_wma_handle wma, uint8_t peer_addr[6],
 			   u_int32_t peer_type, u_int8_t vdev_id);
@@ -2035,6 +2035,7 @@ void wma_vdev_clear_pause_bit(uint8_t vdev_id, wmi_tx_pause_type bit_pos)
 	iface->pause_bitmap &= ~(1 << bit_pos);
 }
 
+#ifndef ROAM_OFFLOAD_V1
 /**
  * wma_process_roaming_config() - process roam request
  * @wma_handle: wma handle
@@ -2046,7 +2047,7 @@ void wma_vdev_clear_pause_bit(uint8_t vdev_id, wmi_tx_pause_type bit_pos)
  */
 QDF_STATUS wma_process_roaming_config(tp_wma_handle wma_handle,
 				     struct roam_offload_scan_req *roam_req);
-
+#endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * wma_send_roam_preauth_status() - Send the preauth status to wmi

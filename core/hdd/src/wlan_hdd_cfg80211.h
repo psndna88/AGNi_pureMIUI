@@ -209,9 +209,10 @@ extern const struct nla_policy wlan_hdd_wisa_cmd_policy[
 #define USE_CFG80211_DEL_STA_V2
 #endif
 
-#define TWT_SETUP_WAKE_INTVL_MANTISSA_MAX 0xFFFF
-#define TWT_SETUP_WAKE_DURATION_MAX       0xFFFF
-#define TWT_SETUP_WAKE_INTVL_EXP_MAX      31
+#define TWT_SETUP_WAKE_INTVL_MANTISSA_MAX       0xFFFF
+#define TWT_SETUP_WAKE_DURATION_MAX             0xFFFF
+#define TWT_SETUP_WAKE_INTVL_EXP_MAX            31
+#define TWT_WAKE_DURATION_MULTIPLICATION_FACTOR 256
 
 /**
  * enum eDFS_CAC_STATUS: CAC status
@@ -817,6 +818,20 @@ void wlan_hdd_set_wlm_mode(struct hdd_context *hdd_ctx, uint16_t latency_level)
 #endif
 
 /**
+ * hdd_set_dynamic_antenna_mode() - set dynamic antenna mode
+ * @adapter: Pointer to network adapter
+ * @num_rx_chains: number of chains to be used for receiving data
+ * @num_tx_chains: number of chains to be used for transmitting data
+ *
+ * This function will set dynamic antenna mode
+ *
+ * Return: 0 for success
+ */
+int hdd_set_dynamic_antenna_mode(struct hdd_adapter *adapter,
+				 uint8_t num_rx_chains,
+				 uint8_t num_tx_chains);
+
+/**
  * hdd_convert_cfgdot11mode_to_80211mode() - Function to convert cfg dot11 mode
  *  to 80211 mode
  * @mode: cfg dot11 mode
@@ -851,4 +866,25 @@ static inline void hdd_send_update_owe_info_event(struct hdd_adapter *adapter,
 {
 }
 #endif
+
+/**
+ * hdd_is_legacy_connection() - Is adapter connection is legacy
+ * @adapter: Handle to hdd_adapter
+ *
+ * Return: true if connection mode is legacy, false otherwise.
+ */
+bool hdd_is_legacy_connection(struct hdd_adapter *adapter);
+
+/**
+ * hdd_twt_get_add_dialog_values() - Get TWT add dialog parameter
+ * values from QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS
+ * @tb: nl attributes
+ * @params: wmi twt add dialog parameters
+ *
+ * Handles QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX
+ *
+ * Return: 0 or -EINVAL.
+ */
+int hdd_twt_get_add_dialog_values(struct nlattr **tb2,
+			       struct wmi_twt_add_dialog_param *params);
 #endif

@@ -721,8 +721,8 @@ static void wma_process_send_addba_req(tp_wma_handle wma_handle,
 	if (QDF_STATUS_SUCCESS != status) {
 		wma_err("Failed to process WMA_SEND_ADDBA_REQ");
 	}
-	wma_debug("sent ADDBA req to" QDF_MAC_ADDR_STR "tid %d buff_size %d",
-			QDF_MAC_ADDR_ARRAY(send_addba->mac_addr),
+	wma_debug("sent ADDBA req to" QDF_MAC_ADDR_FMT "tid %d buff_size %d",
+			QDF_MAC_ADDR_REF(send_addba->mac_addr),
 			send_addba->param.tidno,
 			send_addba->param.buffersize);
 
@@ -2806,6 +2806,28 @@ wma_register_pkt_capture_callbacks(tp_wma_handle wma_handle)
 }
 #endif
 
+#ifdef TRACE_RECORD
+static void wma_trace_dump(void *mac_ctx, tp_qdf_trace_record record,
+			   uint16_t rec_index)
+{
+	/*
+	 * This is dummy handler registered to qdf_trace as wma module wants to
+	 * insert trace records in qdf trace global record table but qdf_trace
+	 * does not allow to insert the trace records in the global record
+	 * table if a module is not registered with the qdf trace.
+	 */
+}
+
+static void wma_trace_init(void)
+{
+	qdf_trace_register(QDF_MODULE_ID_WMA, &wma_trace_dump);
+}
+#else
+static inline void wma_trace_init(void)
+{
+}
+#endif
+
 /**
  * wma_open() - Allocate wma context and initialize it.
  * @cds_context:  cds context
@@ -3356,20 +3378,14 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 			WMA_RX_WORK_CTX);
 
 #ifdef WLAN_SUPPORT_TWT
-	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   wmi_twt_enable_complete_event_id,
-					   wma_twt_en_complete_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
-	wmi_unified_register_event_handler(wma_handle->wmi_handle,
-					   wmi_twt_disable_complete_event_id,
-					   wma_twt_disable_comp_event_handler,
-					   WMA_RX_SERIALIZER_CTX);
+	wma_register_twt_events(wma_handle);
 #endif
 
 	wma_register_apf_events(wma_handle);
 	wma_register_md_events(wma_handle);
 	wma_register_wlm_stats_events(wma_handle);
 	wma_register_mws_coex_events(wma_handle);
+	wma_trace_init();
 	return QDF_STATUS_SUCCESS;
 
 err_dbglog_init:
@@ -3515,8 +3531,8 @@ static int wma_set_base_macaddr_indicate(tp_wma_handle wma_handle,
 				     (uint8_t *)customAddr);
 	if (err)
 		return -EIO;
-	wma_debug("Base MAC Addr: " QDF_MAC_ADDR_STR,
-		 QDF_MAC_ADDR_ARRAY((*customAddr)));
+	wma_debug("Base MAC Addr: " QDF_MAC_ADDR_FMT,
+		 QDF_MAC_ADDR_REF((*customAddr)));
 
 	return 0;
 }
@@ -4621,6 +4637,10 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 	if (wmi_service_enabled(wmi_handle,
 				wmi_roam_scan_chan_list_to_host_support))
 		cfg->is_roam_scan_ch_to_host = true;
+
+	cfg->ll_stats_per_chan_rx_tx_time =
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_ll_stats_per_chan_rx_tx_time);
 }
 
 /**
@@ -8476,10 +8496,12 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 				(tpSirRcvFltMcAddrList) msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
+#ifndef ROAM_OFFLOAD_V1
+	/* this is temp will be removed once ROAM_OFFLOAD_V1 is enabled */
 	case WMA_ROAM_SCAN_OFFLOAD_REQ:
 		wma_process_roaming_config(wma_handle, msg->bodyptr);
 		break;
-
+#endif
 	case WMA_ROAM_PRE_AUTH_STATUS:
 		wma_send_roam_preauth_status(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
@@ -8957,20 +8979,21 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 #endif
+#ifndef ROAM_OFFLOAD_V1
+	/* This code will be removed once ROAM_OFFLOAD_V1 is enabled */
 	case WMA_SET_ROAM_TRIGGERS:
 		wma_set_roam_triggers(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
-#ifndef ROAM_OFFLOAD_V1
 	case WMA_ROAM_INIT_PARAM:
 		wma_update_roam_offload_flag(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
-#endif
 	case WMA_ROAM_DISABLE_CFG:
 		wma_set_roam_disable_cfg(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
+#endif
 	case WMA_ROAM_SCAN_CH_REQ:
 		wma_get_roam_scan_ch(wma_handle->wmi_handle, msg->bodyval);
 		break;

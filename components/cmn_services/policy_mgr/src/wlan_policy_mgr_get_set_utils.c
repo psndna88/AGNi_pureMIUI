@@ -35,7 +35,7 @@
 #include "wlan_nan_api.h"
 #include "nan_public_structs.h"
 #include "wlan_reg_services_api.h"
-#include "wlan_cm_roam_public_srtuct.h"
+#include "wlan_cm_roam_public_struct.h"
 #include "csr_neighbor_roam.h"
 #include "wlan_mlme_main.h"
 
@@ -2398,6 +2398,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	uint32_t list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	bool sta_sap_scc_on_dfs_chan;
+	bool go_force_scc;
 	uint32_t sta_freq;
 	enum channel_state chan_state;
 	bool is_dfs_ch = false;
@@ -2462,9 +2463,9 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 
 		sta_sap_scc_on_dfs_chan =
 			policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(psoc);
-
-		if (!sta_sap_scc_on_dfs_chan && ((mode == PM_P2P_GO_MODE) ||
-		    (mode == PM_SAP_MODE))) {
+		go_force_scc = policy_mgr_go_scc_enforced(psoc);
+		if ((!sta_sap_scc_on_dfs_chan && mode == PM_SAP_MODE) ||
+		    (!go_force_scc && mode == PM_P2P_GO_MODE)) {
 			if (is_dfs_ch)
 				match = policy_mgr_disallow_mcc(psoc,
 								ch_freq);
@@ -2753,8 +2754,7 @@ uint32_t policy_mgr_search_and_check_for_session_conc(
 	status = policy_mgr_get_channel_from_scan_result(
 			psoc, roam_profile, &ch_freq, session_id);
 	if (QDF_STATUS_SUCCESS != status || ch_freq == 0) {
-		policy_mgr_err("%s error %d %d",
-			__func__, status, ch_freq);
+		policy_mgr_err("status: %d ch_freq: %d", status, ch_freq);
 		return 0;
 	}
 
@@ -3794,8 +3794,8 @@ QDF_STATUS policy_mgr_get_updated_scan_and_fw_mode_config(
 		WMI_DBS_CONC_SCAN_CFG_ASYNC_DBS_SCAN_SET(*scan_config, 0);
 		break;
 	case ENABLE_DBS_CXN_AND_DISABLE_DBS_SCAN:
-		policy_mgr_debug("%s: dual_mac_disable_ini:%d ", __func__,
-				dual_mac_disable_ini);
+		policy_mgr_debug("dual_mac_disable_ini:%d ",
+				 dual_mac_disable_ini);
 		WMI_DBS_CONC_SCAN_CFG_DBS_SCAN_SET(*scan_config, 0);
 		break;
 	default:

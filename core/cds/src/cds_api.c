@@ -121,6 +121,11 @@ static struct ol_if_ops  dp_ol_if_ops = {
 	.is_roam_inprogress = wma_is_roam_in_progress,
 	.get_con_mode = cds_get_conparam,
 	.send_delba = cds_send_delba,
+	.dp_rx_get_pending = dp_rx_tm_get_pending,
+#ifdef DP_MEM_PRE_ALLOC
+	.dp_prealloc_get_consistent = dp_prealloc_get_coherent,
+	.dp_prealloc_put_consistent = dp_prealloc_put_coherent
+#endif
     /* TODO: Add any other control path calls required to OL_IF/WMA layer */
 };
 #else
@@ -427,6 +432,8 @@ static void cds_cdp_cfg_attach(struct wlan_objmgr_psoc *psoc)
 		cfg_get(psoc, CFG_DP_NAN_TCP_UDP_CKSUM_OFFLOAD);
 	cdp_cfg.p2p_ip_tcp_udp_checksum_offload =
 		cfg_get(psoc, CFG_DP_P2P_TCP_UDP_CKSUM_OFFLOAD);
+	cdp_cfg.legacy_mode_csum_disable =
+		cfg_get(psoc, CFG_DP_LEGACY_MODE_CSUM_DISABLE);
 	cdp_cfg.ce_classify_enabled =
 		cfg_get(psoc, CFG_DP_CE_CLASSIFY_ENABLE);
 	cdp_cfg.tso_enable = cfg_get(psoc, CFG_DP_TSO);
@@ -1059,12 +1066,12 @@ stop_wmi:
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
 	if (!hif_ctx)
-		cds_err("%s: Failed to get hif_handle!", __func__);
+		cds_err("Failed to get hif_handle!");
 
 	wma_wmi_stop();
 
 	if (hif_ctx) {
-		cds_err("%s: Disable the isr & reset the soc!", __func__);
+		cds_err("Disable the isr & reset the soc!");
 		hif_disable_isr(hif_ctx);
 		hif_reset_soc(hif_ctx);
 	}
@@ -2631,7 +2638,7 @@ bool cds_is_5_mhz_enabled(void)
 
 	p_cds_context = cds_get_context(QDF_MODULE_ID_QDF);
 	if (!p_cds_context) {
-		cds_err("%s: cds context is invalid", __func__);
+		cds_err("cds context is invalid");
 		return false;
 	}
 
@@ -2653,7 +2660,7 @@ bool cds_is_10_mhz_enabled(void)
 
 	p_cds_context = cds_get_context(QDF_MODULE_ID_QDF);
 	if (!p_cds_context) {
-		cds_err("%s: cds context is invalid", __func__);
+		cds_err("cds context is invalid");
 		return false;
 	}
 
@@ -2675,7 +2682,7 @@ bool cds_is_sub_20_mhz_enabled(void)
 
 	p_cds_context = cds_get_context(QDF_MODULE_ID_QDF);
 	if (!p_cds_context) {
-		cds_err("%s: cds context is invalid", __func__);
+		cds_err("cds context is invalid");
 		return false;
 	}
 
@@ -2696,7 +2703,7 @@ bool cds_is_self_recovery_enabled(void)
 
 	p_cds_context = cds_get_context(QDF_MODULE_ID_QDF);
 	if (!p_cds_context) {
-		cds_err("%s: cds context is invalid", __func__);
+		cds_err("cds context is invalid");
 		return false;
 	}
 

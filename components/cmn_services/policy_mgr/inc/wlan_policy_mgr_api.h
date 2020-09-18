@@ -30,7 +30,7 @@
 #include "qdf_status.h"
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_policy_mgr_public_struct.h"
-#include "wlan_cm_roam_public_srtuct.h"
+#include "wlan_cm_roam_public_struct.h"
 #include "wlan_utility.h"
 #include "sir_types.h"
 
@@ -989,6 +989,23 @@ policy_mgr_current_connections_update(struct wlan_objmgr_psoc *psoc,
 				      uint32_t session_id, uint32_t ch_freq,
 				      enum policy_mgr_conn_update_reason,
 				      uint32_t request_id);
+
+/**
+ * policy_mgr_change_hw_mode_sta_connect() - Change HW mode for STA connect
+ * @psoc: psoc object
+ * @scan_list: candidates for conenction
+ * @vdev_id: vdev id for STA/CLI
+ * @connect_id: connect id of the conenct request
+ *
+ * When a new connection is about to come up, change hw mode for STA/CLI
+ * based upon the scan results and hw type.
+ *
+ * Return: status ifset HW mode is fail or already taken care of.
+ */
+QDF_STATUS
+policy_mgr_change_hw_mode_sta_connect(struct wlan_objmgr_psoc *psoc,
+				      qdf_list_t *scan_list, uint8_t vdev_id,
+				      uint32_t connect_id);
 
 /**
  * policy_mgr_is_dbs_allowed_for_concurrency() - If dbs is allowed for current
@@ -2928,6 +2945,7 @@ bool policy_mgr_go_scc_enforced(struct wlan_objmgr_psoc *psoc);
  * @con_ch_freq: pointer to the chan freq on which sap will come up
  * @sap_ch_freq: initial channel frequency for SAP
  * @sap_vdev_id: sap vdev id.
+ * @ch_params: sap channel parameters
  *
  * This function checks & updates the channel SAP to come up on in
  * case of STA+SAP concurrency
@@ -2935,7 +2953,8 @@ bool policy_mgr_go_scc_enforced(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS policy_mgr_valid_sap_conc_channel_check(
 	struct wlan_objmgr_psoc *psoc, uint32_t *con_ch_freq,
-	uint32_t sap_ch_freq, uint8_t sap_vdev_id);
+	uint32_t sap_ch_freq, uint8_t sap_vdev_id,
+	struct ch_params *ch_params);
 
 /**
  * policy_mgr_get_alternate_channel_for_sap() - Get an alternate

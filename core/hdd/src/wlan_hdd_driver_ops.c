@@ -46,6 +46,7 @@
 #include <linux/suspend.h>
 #include <qdf_notifier.h>
 #include <qdf_hang_event_notifier.h>
+#include "wlan_hdd_thermal.h"
 
 #ifdef MODULE
 #define WLAN_MODULE_NAME  module_name(THIS_MODULE)
@@ -491,6 +492,13 @@ static int __hdd_soc_probe(struct device *dev,
 	if (errno)
 		goto unlock;
 
+	status = dp_prealloc_init();
+
+	if (status != QDF_STATUS_SUCCESS) {
+		errno = qdf_status_to_os_return(status);
+		goto unlock;
+	}
+
 	hdd_ctx = hdd_context_create(dev);
 	if (IS_ERR(hdd_ctx)) {
 		errno = PTR_ERR(hdd_ctx);
@@ -511,6 +519,7 @@ static int __hdd_soc_probe(struct device *dev,
 	cds_set_driver_loaded(true);
 	cds_set_load_in_progress(false);
 	hdd_start_complete(0);
+	hdd_thermal_mitigation_register(hdd_ctx, dev);
 
 	hdd_soc_load_unlock(dev);
 
@@ -523,6 +532,7 @@ hdd_context_destroy:
 	hdd_context_destroy(hdd_ctx);
 
 assert_fail_count:
+	dp_prealloc_deinit();
 	probe_fail_cnt++;
 	hdd_err("consecutive probe failures:%u", probe_fail_cnt);
 	QDF_BUG(probe_fail_cnt < SSR_MAX_FAIL_CNT);
@@ -674,6 +684,7 @@ static int hdd_soc_recovery_reinit(struct device *dev,
 static void __hdd_soc_remove(struct device *dev)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	void *hif_ctx;
 
 	QDF_BUG(hdd_ctx);
 	if (!hdd_ctx)
@@ -682,9 +693,17 @@ static void __hdd_soc_remove(struct device *dev)
 	pr_info("%s: Removing driver v%s\n", WLAN_MODULE_NAME,
 		QWLAN_VERSIONSTR);
 
+	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
+	if (hif_ctx) {
+		/*
+		 * Trigger runtime sync resume before setting unload in progress
+		 * such that resume can happen successfully
+		 */
+		hif_pm_runtime_sync_resume(hif_ctx);
+	}
+
 	cds_set_driver_loaded(false);
 	cds_set_unload_in_progress(true);
-
 	if (!hdd_wait_for_debugfs_threads_completion())
 		hdd_warn("Debugfs threads are still active attempting driver unload anyway");
 
@@ -692,6 +711,7 @@ static void __hdd_soc_remove(struct device *dev)
 		hdd_wlan_stop_modules(hdd_ctx, false);
 		qdf_nbuf_deinit_replenish_timer();
 	} else {
+		hdd_thermal_mitigation_unregister(hdd_ctx, dev);
 		hdd_wlan_exit(hdd_ctx);
 	}
 
@@ -699,6 +719,8 @@ static void __hdd_soc_remove(struct device *dev)
 
 	cds_set_driver_in_bad_state(false);
 	cds_set_unload_in_progress(false);
+
+	dp_prealloc_deinit();
 
 	pr_info("%s: Driver De-initialized\n", WLAN_MODULE_NAME);
 }
@@ -1037,19 +1059,26 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params)
 	void *hif_ctx;
 	void *dp_soc;
 	struct pmo_wow_enable_params pmo_params;
+	int pending;
 
 	hdd_info("starting bus suspend");
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is NULL");
+		return -ENODEV;
+	}
+
+	/* If Wifi is off, return success for system suspend */
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
+		hdd_debug("Driver Module closed; skipping suspend");
+		return 0;
+	}
+
 	err = wlan_hdd_validate_context(hdd_ctx);
 	if (err) {
 		hdd_err("Invalid hdd context: %d", err);
 		return err;
-	}
-
-	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
-		hdd_debug("Driver Module closed; skipping suspend");
-		return 0;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1098,6 +1127,13 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params)
 		goto resume_pmo;
 	}
 
+	pending = cdp_rx_get_pending(cds_get_context(QDF_MODULE_ID_SOC));
+	if (pending) {
+		hdd_debug("Prevent suspend, RX frame pending %d", pending);
+		err = -EBUSY;
+		goto resume_hif;
+	}
+
 	/*
 	 * Remove bus votes at the very end, after making sure there are no
 	 * pending bus transactions from WLAN SOC for TX/RX.
@@ -1106,6 +1142,10 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params)
 
 	hdd_info("bus suspend succeeded");
 	return 0;
+
+resume_hif:
+	status = hif_bus_resume(hif_ctx);
+	QDF_BUG(QDF_IS_STATUS_SUCCESS(status));
 
 resume_pmo:
 	status = ucfg_pmo_psoc_bus_resume_req(hdd_ctx->psoc,
@@ -1155,15 +1195,22 @@ int wlan_hdd_bus_suspend_noirq(void)
 	uint32_t pending_events;
 
 	hdd_debug("start bus_suspend_noirq");
+
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is NULL");
+		return -ENODEV;
+	}
+
+	/* If Wifi is off, return success for system suspend */
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
+		hdd_debug("Driver module closed; skip bus-noirq suspend");
+		return 0;
+	}
+
 	errno = wlan_hdd_validate_context(hdd_ctx);
 	if (errno) {
 		hdd_err("Invalid HDD context: errno %d", errno);
 		return errno;
-	}
-
-	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
-		hdd_debug("Driver module closed; skip bus-noirq suspend");
-		return 0;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1233,15 +1280,21 @@ int wlan_hdd_bus_resume(void)
 
 	hdd_info("starting bus resume");
 
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is NULL");
+		return -ENODEV;
+	}
+
+	/* If Wifi is off, return success for system resume */
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
+		hdd_debug("Driver Module closed; return success");
+		return 0;
+	}
+
 	status = wlan_hdd_validate_context(hdd_ctx);
 	if (status) {
 		hdd_err("Invalid hdd context");
 		return status;
-	}
-
-	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
-		hdd_debug("Driver Module closed; return success");
-		return 0;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1323,15 +1376,21 @@ int wlan_hdd_bus_resume_noirq(void)
 	if (cds_is_driver_recovering())
 		return 0;
 
+	if (!hdd_ctx) {
+		hdd_err_rl("hdd context is NULL");
+		return -ENODEV;
+	}
+
+	/* If Wifi is off, return success for system resume */
+	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
+		hdd_debug("Driver Module closed return success");
+		return 0;
+	}
+
 	status = wlan_hdd_validate_context(hdd_ctx);
 	if (status) {
 		hdd_err("Invalid HDD context: %d", status);
 		return status;
-	}
-
-	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
-		hdd_debug("Driver Module closed return success");
-		return 0;
 	}
 
 	hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
@@ -1478,8 +1537,12 @@ static int wlan_hdd_runtime_resume(struct device *dev)
 	hdd_debug("Starting runtime resume");
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
-	if (wlan_hdd_validate_context(hdd_ctx))
+
+	if (cds_is_driver_recovering()) {
+		hdd_debug("Recovery in progress, state:0x%x",
+			  cds_get_driver_state());
 		return 0;
+	}
 
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
 		hdd_debug("Driver module closed skipping runtime resume");
@@ -1817,7 +1880,7 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 
 	switch (event_data->uevent) {
 	case PLD_FW_DOWN:
-		hdd_info("Received firmware down indication");
+		hdd_debug("Received firmware down indication");
 
 		cds_set_target_ready(false);
 		cds_set_recovery_in_progress(true);
@@ -1949,6 +2012,7 @@ struct pld_driver_ops wlan_drv_ops = {
 	.runtime_suspend = wlan_hdd_pld_runtime_suspend,
 	.runtime_resume = wlan_hdd_pld_runtime_resume,
 #endif
+	.set_curr_therm_cdev_state = wlan_hdd_pld_set_thermal_mitigation,
 };
 
 int wlan_hdd_register_driver(void)

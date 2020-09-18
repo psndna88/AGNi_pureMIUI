@@ -109,6 +109,9 @@ struct wlan_fwol_coex_config {
  * @throttle_period: Thermal throttle period value
  * @throttle_dutycycle_level: Array of throttle duty cycle levels
  * @thermal_sampling_time: sampling time for thermal mitigation in ms
+ * @mon_id: Monitor client id either the wpps or apps
+ * @priority_apps: Priority of the apps mitigation to consider by fw
+ * @priority_wpps: Priority of the wpps mitigation to consider by fw
  */
 struct wlan_fwol_thermal_temp {
 	bool     thermal_mitigation_enable;
@@ -117,6 +120,9 @@ struct wlan_fwol_thermal_temp {
 	uint16_t thermal_temp_max_level[FWOL_THERMAL_LEVEL_MAX];
 	uint32_t throttle_dutycycle_level[FWOL_THERMAL_THROTTLE_LEVEL_MAX];
 	uint16_t thermal_sampling_time;
+	uint8_t mon_id;
+	uint8_t priority_apps;
+	uint8_t priority_wpps;
 };
 
 /**
@@ -205,6 +211,7 @@ struct wlan_fwol_neighbor_report_cfg {
  * @dhcp_max_num_clients: Max number of DHCP client supported
  * @dwelltime_params: adaptive dwell time parameters
  * @ocl_cfg: OCL mode configuration
+ * @enable_ilp: ILP HW block configuration
  */
 struct wlan_fwol_cfg {
 	/* Add CFG and INI items here */
@@ -256,6 +263,7 @@ struct wlan_fwol_cfg {
 #endif
 	struct adaptive_dwelltime_params dwelltime_params;
 	uint32_t ocl_cfg;
+	bool enable_ilp;
 };
 
 /**
@@ -367,4 +375,14 @@ fwol_init_adapt_dwelltime_in_cfg(
 QDF_STATUS
 fwol_set_adaptive_dwelltime_config(
 			struct adaptive_dwelltime_params *dwelltime_params);
+
+/**
+ * fwol_set_ilp_config() - API to set ILP HW block config
+ * @pdev: pointer to the pdev object
+ * @enable_ilp: enable/disable config for ILP
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS fwol_set_ilp_config(struct wlan_objmgr_pdev *pdev,
+			       bool enable_ilp);
 #endif

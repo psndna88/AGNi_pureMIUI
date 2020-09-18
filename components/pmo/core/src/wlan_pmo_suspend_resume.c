@@ -453,15 +453,12 @@ static void pmo_core_disable_runtime_pm_offloads(struct wlan_objmgr_psoc *psoc)
 {
 	uint8_t vdev_id;
 	struct wlan_objmgr_vdev *vdev;
-	QDF_STATUS status;
 
 	/* Iterate through VDEV list */
 	for (vdev_id = 0; vdev_id < WLAN_UMAC_PSOC_MAX_VDEVS; vdev_id++) {
-		vdev = pmo_psoc_get_vdev(psoc, vdev_id);
+		vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+							    WLAN_PMO_ID);
 		if (!vdev)
-			continue;
-		status = pmo_vdev_get_ref(vdev);
-		if (QDF_IS_STATUS_ERROR(status))
 			continue;
 
 		pmo_clear_action_frame_patterns(vdev);
@@ -961,6 +958,7 @@ QDF_STATUS pmo_core_psoc_bus_runtime_suspend(struct wlan_objmgr_psoc *psoc,
 	int ret;
 	struct pmo_wow_enable_params wow_params = {0};
 	qdf_time_t begin, end;
+	int pending;
 
 	pmo_enter();
 
@@ -1024,6 +1022,13 @@ QDF_STATUS pmo_core_psoc_bus_runtime_suspend(struct wlan_objmgr_psoc *psoc,
 	if (ret) {
 		status = qdf_status_from_os_return(ret);
 		goto pmo_bus_resume;
+	}
+
+	pending = cdp_rx_get_pending(cds_get_context(QDF_MODULE_ID_SOC));
+	if (pending) {
+		pmo_debug("Prevent suspend, RX frame pending %d", pending);
+		status = QDF_STATUS_E_BUSY;
+		goto resume_hif;
 	}
 
 	if (pld_cb) {

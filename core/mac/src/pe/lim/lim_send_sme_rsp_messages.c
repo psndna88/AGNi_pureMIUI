@@ -667,8 +667,8 @@ void lim_send_sme_disassoc_ntf(struct mac_context *mac,
 		 * Duplicate entry is removed at LIM.
 		 * Initiate new entry for other session
 		 */
-		pe_debug("Rcvd eLIM_DUPLICATE_ENTRY for " QDF_MAC_ADDR_STR,
-			QDF_MAC_ADDR_ARRAY(peerMacAddr));
+		pe_debug("Rcvd eLIM_DUPLICATE_ENTRY for " QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(peerMacAddr));
 
 		for (i = 0; i < mac->lim.maxBssId; i++) {
 			session = &mac->lim.gpSession[i];
@@ -710,8 +710,8 @@ void lim_send_sme_disassoc_ntf(struct mac_context *mac,
 			goto error;
 		}
 		pe_debug("send eWNI_SME_DISASSOC_RSP with retCode: %d for "
-			 QDF_MAC_ADDR_STR,
-			 reasonCode, QDF_MAC_ADDR_ARRAY(peerMacAddr));
+			 QDF_MAC_ADDR_FMT,
+			 reasonCode, QDF_MAC_ADDR_REF(peerMacAddr));
 		pSirSmeDisassocRsp->messageType = eWNI_SME_DISASSOC_RSP;
 		pSirSmeDisassocRsp->length = sizeof(struct disassoc_rsp);
 		pSirSmeDisassocRsp->sessionId = smesessionId;
@@ -751,8 +751,8 @@ void lim_send_sme_disassoc_ntf(struct mac_context *mac,
 			goto error;
 		}
 		pe_debug("send eWNI_SME_DISASSOC_IND with retCode: %d for "
-			 QDF_MAC_ADDR_STR,
-			 reasonCode, QDF_MAC_ADDR_ARRAY(peerMacAddr));
+			 QDF_MAC_ADDR_FMT,
+			 reasonCode, QDF_MAC_ADDR_REF(peerMacAddr));
 		pSirSmeDisassocInd->messageType = eWNI_SME_DISASSOC_IND;
 		pSirSmeDisassocInd->length = sizeof(*pSirSmeDisassocInd);
 		pSirSmeDisassocInd->vdev_id = smesessionId;
@@ -936,8 +936,8 @@ lim_send_sme_tdls_del_sta_ind(struct mac_context *mac, tpDphHashNode sta,
 {
 	struct tdls_event_info info;
 
-	pe_debug("Delete TDLS Peer "QDF_MAC_ADDR_STR "with reason code: %d",
-			QDF_MAC_ADDR_ARRAY(sta->staAddr), reasonCode);
+	pe_debug("Delete TDLS Peer "QDF_MAC_ADDR_FMT "with reason code: %d",
+			QDF_MAC_ADDR_REF(sta->staAddr), reasonCode);
 	info.vdev_id = pe_session->smeSessionId;
 	qdf_mem_copy(info.peermac.bytes, sta->staAddr, QDF_MAC_ADDR_SIZE);
 	info.message_type = TDLS_PEER_DISCONNECTED;
@@ -1063,8 +1063,8 @@ void lim_send_sme_deauth_ntf(struct mac_context *mac, tSirMacAddr peerMacAddr,
 		if (!pSirSmeDeauthRsp)
 			return;
 		pe_debug("send eWNI_SME_DEAUTH_RSP with retCode: %d for "
-			 QDF_MAC_ADDR_STR,
-			 reasonCode, QDF_MAC_ADDR_ARRAY(peerMacAddr));
+			 QDF_MAC_ADDR_FMT,
+			 reasonCode, QDF_MAC_ADDR_REF(peerMacAddr));
 		pSirSmeDeauthRsp->messageType = eWNI_SME_DEAUTH_RSP;
 		pSirSmeDeauthRsp->length = sizeof(*pSirSmeDeauthRsp);
 		pSirSmeDeauthRsp->status_code = reasonCode;
@@ -1101,8 +1101,8 @@ void lim_send_sme_deauth_ntf(struct mac_context *mac, tSirMacAddr peerMacAddr,
 		if (!pSirSmeDeauthInd)
 			return;
 		pe_debug("send eWNI_SME_DEAUTH_IND with retCode: %d for "
-			 QDF_MAC_ADDR_STR,
-			 reasonCode, QDF_MAC_ADDR_ARRAY(peerMacAddr));
+			 QDF_MAC_ADDR_FMT,
+			 reasonCode, QDF_MAC_ADDR_REF(peerMacAddr));
 		pSirSmeDeauthInd->messageType = eWNI_SME_DEAUTH_IND;
 		pSirSmeDeauthInd->length = sizeof(*pSirSmeDeauthInd);
 		pSirSmeDeauthInd->reasonCode = eSIR_MAC_UNSPEC_FAILURE_REASON;
@@ -1386,8 +1386,8 @@ void lim_send_sme_pe_ese_tsm_rsp(struct mac_context *mac,
 		/* Fill the Session Id */
 		pPeStats->sessionId = pPeSessionEntry->smeSessionId;
 	} else {
-		pe_err("Session not found for the Sta peer:" QDF_MAC_ADDR_STR,
-		       QDF_MAC_ADDR_ARRAY(pPeStats->bssid.bytes));
+		pe_err("Session not found for the Sta peer:" QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(pPeStats->bssid.bytes));
 		qdf_mem_free(pPeStats->tsmStatsReq);
 		qdf_mem_free(pPeStats);
 		return;
@@ -1582,8 +1582,8 @@ void lim_handle_csa_offload_msg(struct mac_context *mac_ctx,
 		pe_find_session_by_bssid(mac_ctx,
 			csa_params->bssId, &session_id);
 	if (!session_entry) {
-		pe_err("Session does not exists for %pM",
-				csa_params->bssId);
+		pe_err("Session does not exists for "QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(csa_params->bssId));
 		goto err;
 	}
 
@@ -1680,7 +1680,7 @@ void lim_handle_csa_offload_msg(struct mac_context *mac_ctx,
 					 csa_params->new_op_class, true);
 			} else {
 				chan_space =
-				wlan_reg_dmn_get_chanwidth_from_opclass(
+				wlan_reg_dmn_get_chanwidth_from_opclass_auto(
 						country_code,
 						csa_params->channel,
 						csa_params->new_op_class);
@@ -1753,7 +1753,7 @@ void lim_handle_csa_offload_msg(struct mac_context *mac_ctx,
 		if (csa_params->ies_present_flag
 				& lim_xcsa_ie_present) {
 			chan_space =
-				wlan_reg_dmn_get_chanwidth_from_opclass(
+				wlan_reg_dmn_get_chanwidth_from_opclass_auto(
 						country_code,
 						csa_params->channel,
 						csa_params->new_op_class);
@@ -1926,8 +1926,8 @@ void lim_send_sme_max_assoc_exceeded_ntf(struct mac_context *mac, tSirMacAddr pe
 	pSmeMaxAssocInd->sessionId = smesessionId;
 	mmhMsg.type = pSmeMaxAssocInd->mesgType;
 	mmhMsg.bodyptr = pSmeMaxAssocInd;
-	pe_debug("msgType: %s peerMacAddr "QDF_MAC_ADDR_STR "sme session id %d",
-		"eWNI_SME_MAX_ASSOC_EXCEEDED", QDF_MAC_ADDR_ARRAY(peerMacAddr),
+	pe_debug("msgType: %s peerMacAddr "QDF_MAC_ADDR_FMT "sme session id %d",
+		"eWNI_SME_MAX_ASSOC_EXCEEDED", QDF_MAC_ADDR_REF(peerMacAddr),
 		pSmeMaxAssocInd->sessionId);
 	MTRACE(mac_trace(mac, TRACE_CODE_TX_SME_MSG,
 			 smesessionId, mmhMsg.type));
@@ -2067,30 +2067,31 @@ lim_handle_bss_color_change_ie(struct mac_context *mac_ctx,
 
 	/* handle bss color change IE */
 	if (LIM_IS_AP_ROLE(session) &&
-			session->he_op.bss_col_disabled) {
+	    session->he_op.bss_col_disabled &&
+	    session->he_bss_color_change.new_color) {
+		pe_debug("countdown: %d, new_color: %d",
+			 session->he_bss_color_change.countdown,
+			 session->he_bss_color_change.new_color);
 		if (session->he_bss_color_change.countdown > 0) {
 			session->he_bss_color_change.countdown--;
 		} else {
 			session->bss_color_changing = 0;
 			qdf_mem_zero(&beacon_params, sizeof(beacon_params));
-			if (session->he_bss_color_change.new_color != 0) {
-				session->he_op.bss_col_disabled = 0;
-				session->he_op.bss_color =
-					session->he_bss_color_change.new_color;
-				beacon_params.paramChangeBitmap |=
-					PARAM_BSS_COLOR_CHANGED;
-				beacon_params.bss_color_disabled = 0;
-				beacon_params.bss_color =
-					session->he_op.bss_color;
-				lim_send_beacon_params(mac_ctx,
-						       &beacon_params,
-						       session);
-				lim_send_obss_color_collision_cfg(mac_ctx,
-						session,
-						OBSS_COLOR_COLLISION_DETECTION);
-			}
+			session->he_op.bss_col_disabled = 0;
+			session->he_op.bss_color =
+				session->he_bss_color_change.new_color;
+			session->he_bss_color_change.new_color = 0;
+			beacon_params.paramChangeBitmap |=
+				PARAM_BSS_COLOR_CHANGED;
+			beacon_params.bss_color_disabled = 0;
+			beacon_params.bss_color = session->he_op.bss_color;
+			lim_send_beacon_params(mac_ctx,
+					       &beacon_params,
+					       session);
+			lim_send_obss_color_collision_cfg(
+				mac_ctx, session,
+				OBSS_COLOR_COLLISION_DETECTION);
 		}
-
 		lim_send_bss_color_change_ie_update(mac_ctx, session);
 	}
 }

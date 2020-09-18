@@ -25,7 +25,8 @@
 #ifndef _WLAN_CM_ROAM_OFFLOAD_H_
 #define _WLAN_CM_ROAM_OFFLOAD_H_
 
-#include "wlan_cm_roam_public_srtuct.h"
+#include "qdf_str.h"
+#include "wlan_cm_roam_public_struct.h"
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 
@@ -64,6 +65,19 @@ QDF_STATUS cm_roam_send_rso_cmd(struct wlan_objmgr_psoc *psoc,
 				uint8_t reason);
 
 /**
+ * cm_rso_set_roam_trigger() - Send roam trigger bitmap firmware
+ * @pdev: Pointer to pdev
+ * @vdev_id: vdev id
+ * @triggers: Carries pointer of the object containing vdev id and
+ *  roam_trigger_bitmap.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_rso_set_roam_trigger(struct wlan_objmgr_pdev *pdev,
+				   uint8_t vdev_id,
+				   struct wlan_roam_triggers *trigger);
+
+/**
  * cm_roam_stop_req() - roam stop request handling
  * @psoc: psoc pointer
  * @vdev_id: vdev id
@@ -75,5 +89,46 @@ QDF_STATUS
 cm_roam_stop_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		 uint8_t reason);
 
+/**
+ * cm_roam_fill_rssi_change_params() - Fill roam scan rssi change parameters
+ * @psoc: PSOC pointer
+ * @vdev_id: vdev_id
+ * @params: RSSI change parameters
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_roam_fill_rssi_change_params(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+				struct wlan_roam_rssi_change_params *params);
 #endif
-#endif
+
+/**
+ * cm_roam_send_disable_config() - Send roam module enable/disable cfg to fw
+ * @psoc: PSOC pointer
+ * @vdev_id: vdev id
+ * @cfg: roaming enable/disable cfg
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_roam_send_disable_config(struct wlan_objmgr_psoc *psoc,
+			    uint8_t vdev_id, uint8_t cfg);
+
+#ifdef ROAM_OFFLOAD_V1
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(WLAN_FEATURE_FILS_SK)
+QDF_STATUS cm_roam_scan_offload_add_fils_params(
+		struct wlan_objmgr_psoc *psoc,
+		struct wlan_roam_scan_offload_params *rso_cfg,
+		uint8_t vdev_id);
+#else
+static inline
+QDF_STATUS cm_roam_scan_offload_add_fils_params(
+		struct wlan_objmgr_psoc *psoc,
+		struct wlan_roam_scan_offload_params *rso_cfg,
+		uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* FEATURE_ROAM_OFFLOAD && WLAN_FEATURE_FILS_SK */
+#endif /* ROAM_OFFLOAD_V1 */
+#endif /* _WLAN_CM_ROAM_OFFLOAD_H_ */

@@ -133,7 +133,8 @@ QDF_STATUS mlme_get_peer_mic_len(struct wlan_objmgr_psoc *psoc, uint8_t pdev_id,
 	peer = wlan_objmgr_get_peer(psoc, pdev_id,
 				    peer_mac, WLAN_LEGACY_MAC_ID);
 	if (!peer) {
-		mlme_legacy_debug("Peer of peer_mac %pM not found", peer_mac);
+		mlme_legacy_debug("Peer of peer_mac "QDF_MAC_ADDR_FMT" not found",
+				  QDF_MAC_ADDR_REF(peer_mac));
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -150,8 +151,9 @@ QDF_STATUS mlme_get_peer_mic_len(struct wlan_objmgr_psoc *psoc, uint8_t pdev_id,
 		*mic_hdr_len = IEEE80211_CCMP_HEADERLEN;
 		*mic_len = IEEE80211_CCMP_MICLEN;
 	}
-	mlme_legacy_debug("peer %pM hdr_len %d mic_len %d key_cipher 0x%x",
-			  peer_mac, *mic_hdr_len, *mic_len, key_cipher);
+	mlme_legacy_debug("peer "QDF_MAC_ADDR_FMT" hdr_len %d mic_len %d key_cipher 0x%x",
+			  QDF_MAC_ADDR_REF(peer_mac),
+			  *mic_hdr_len, *mic_len, key_cipher);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -253,6 +255,42 @@ static void mlme_init_chainmask_cfg(struct wlan_objmgr_psoc *psoc,
 
 	chainmask_info->enable_bt_chain_separation =
 		cfg_get(psoc, CFG_ENABLE_BT_CHAIN_SEPARATION);
+}
+
+static void mlme_init_ratemask_cfg(struct wlan_objmgr_psoc *psoc,
+				   struct wlan_mlme_ratemask *ratemask_cfg)
+{
+	uint32_t masks[CFG_MLME_RATE_MASK_LEN] = { 0 };
+	qdf_size_t len = 0;
+	QDF_STATUS status;
+
+	ratemask_cfg->type = cfg_get(psoc, CFG_RATEMASK_TYPE);
+	if ((ratemask_cfg->type <= WLAN_MLME_RATEMASK_TYPE_NO_MASK) ||
+	    (ratemask_cfg->type >= WLAN_MLME_RATEMASK_TYPE_MAX)) {
+		mlme_legacy_debug("Ratemask disabled");
+		return;
+	}
+
+	status = qdf_uint32_array_parse(cfg_get(psoc, CFG_RATEMASK_SET),
+					masks,
+					CFG_MLME_RATE_MASK_LEN,
+					&len);
+
+	if (status != QDF_STATUS_SUCCESS || len != CFG_MLME_RATE_MASK_LEN) {
+		/* Do not enable ratemaks if config is invalid */
+		ratemask_cfg->type = WLAN_MLME_RATEMASK_TYPE_NO_MASK;
+		mlme_legacy_err("Failed to parse ratemask");
+		return;
+	}
+
+	ratemask_cfg->lower32 = masks[0];
+	ratemask_cfg->higher32 = masks[1];
+	ratemask_cfg->lower32_2 = masks[2];
+	ratemask_cfg->higher32_2 = masks[3];
+	mlme_legacy_debug("Ratemask type: %d, masks:0x%x, 0x%x, 0x%x, 0x%x",
+			  ratemask_cfg->type, ratemask_cfg->lower32,
+			  ratemask_cfg->higher32, ratemask_cfg->lower32_2,
+			  ratemask_cfg->higher32_2);
 }
 
 #ifdef WLAN_FEATURE_11W
@@ -1389,6 +1427,7 @@ static void mlme_init_sta_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_QCN_IE_SUPPORT);
 	sta->fils_max_chan_guard_time =
 		cfg_get(psoc, CFG_FILS_MAX_CHAN_GUARD_TIME);
+	sta->deauth_retry_cnt = cfg_get(psoc, CFG_DEAUTH_RETRY_CNT);
 	sta->single_tid =
 		cfg_get(psoc, CFG_SINGLE_TID_RC);
 	sta->sta_miracast_mcc_rest_time =
@@ -1588,8 +1627,6 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_LFR_EARLY_STOP_SCAN_MIN_THRESHOLD);
 	lfr->early_stop_scan_max_threshold =
 		cfg_get(psoc, CFG_LFR_EARLY_STOP_SCAN_MAX_THRESHOLD);
-	lfr->first_scan_bucket_threshold =
-		cfg_get(psoc, CFG_LFR_FIRST_SCAN_BUCKET_THRESHOLD);
 	lfr->roam_dense_traffic_threshold =
 		cfg_get(psoc, CFG_LFR_ROAM_DENSE_TRAFFIC_THRESHOLD);
 	lfr->roam_dense_rssi_thre_offset =
@@ -1602,6 +1639,12 @@ static void mlme_init_lfr_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_LFR_ROAM_BG_SCAN_CLIENT_BITMAP);
 	lfr->roam_bg_scan_bad_rssi_offset_2g =
 		cfg_get(psoc, CFG_LFR_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G);
+	lfr->roam_data_rssi_threshold_triggers =
+		cfg_get(psoc, CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS);
+	lfr->roam_data_rssi_threshold =
+		cfg_get(psoc, CFG_ROAM_DATA_RSSI_THRESHOLD);
+	lfr->rx_data_inactivity_time =
+		cfg_get(psoc, CFG_RX_DATA_INACTIVITY_TIME);
 	lfr->adaptive_roamscan_dwell_mode =
 		cfg_get(psoc, CFG_LFR_ADAPTIVE_ROAMSCAN_DWELL_MODE);
 	lfr->per_roam_enable =
@@ -2187,8 +2230,8 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_pdev *pdev = NULL;
 
 	reg->self_gen_frm_pwr = cfg_get(psoc, CFG_SELF_GEN_FRM_PWR);
-	reg->etsi13_srd_chan_in_master_mode =
-			cfg_get(psoc, CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE);
+	reg->etsi_srd_chan_in_master_mode =
+			cfg_get(psoc, CFG_ETSI_SRD_CHAN_IN_MASTER_MODE);
 	reg->fcc_5dot9_ghz_chan_in_master_mode =
 			cfg_get(psoc, CFG_FCC_5DOT9_GHZ_CHAN_IN_MASTER_MODE);
 	reg->restart_beaconing_on_ch_avoid =
@@ -2227,9 +2270,11 @@ static void mlme_init_reg_cfg(struct wlan_objmgr_psoc *psoc,
 }
 
 static void
-mlme_init_dot11_mode_cfg(struct wlan_mlme_dot11_mode *dot11_mode)
+mlme_init_dot11_mode_cfg(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_mlme_dot11_mode *dot11_mode)
 {
 	dot11_mode->dot11_mode = cfg_default(CFG_DOT11_MODE);
+	dot11_mode->vdev_type_dot11_mode = cfg_get(psoc, CFG_VDEV_DOT11_MODE);
 }
 
 QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
@@ -2269,7 +2314,7 @@ QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	mlme_init_lfr_cfg(psoc, &mlme_cfg->lfr);
 	mlme_init_feature_flag_in_cfg(psoc, &mlme_cfg->feature_flags);
 	mlme_init_roam_scoring_cfg(psoc, &mlme_cfg->roam_scoring);
-	mlme_init_dot11_mode_cfg(&mlme_cfg->dot11_mode);
+	mlme_init_dot11_mode_cfg(psoc, &mlme_cfg->dot11_mode);
 	mlme_init_threshold_cfg(psoc, &mlme_cfg->threshold);
 	mlme_init_acs_cfg(psoc, &mlme_cfg->acs);
 	mlme_init_power_cfg(psoc, &mlme_cfg->power);
@@ -2283,6 +2328,7 @@ QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	mlme_init_reg_cfg(psoc, &mlme_cfg->reg);
 	mlme_init_btm_cfg(psoc, &mlme_cfg->btm);
 	mlme_init_roam_score_config(psoc, mlme_cfg);
+	mlme_init_ratemask_cfg(psoc, &mlme_cfg->ratemask_cfg);
 
 	return status;
 }

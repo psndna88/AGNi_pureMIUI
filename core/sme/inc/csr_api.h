@@ -29,6 +29,7 @@
 #include "sir_mac_prot_def.h"
 #include "csr_link_list.h"
 #include "wlan_scan_public_structs.h"
+#include "wlan_mlme_public_struct.h"
 
 #define CSR_INVALID_SCANRESULT_HANDLE       (NULL)
 
@@ -718,7 +719,7 @@ struct csr_roam_profile {
 #ifdef WLAN_FEATURE_FILS_SK
 	uint8_t *hlp_ie;
 	uint32_t hlp_ie_len;
-	struct cds_fils_connection_info *fils_con_info;
+	struct wlan_fils_connection_info *fils_con_info;
 #endif
 	bool force_rsne_override;
 };
@@ -900,6 +901,9 @@ struct csr_config_params {
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
+	uint32_t roam_data_rssi_threshold_triggers;
+	int32_t roam_data_rssi_threshold;
+	uint32_t rx_data_inactivity_time;
 	struct csr_sta_roam_policy_params sta_roam_policy_params;
 	enum force_1x1_type is_force_1x1;
 	uint32_t offload_11k_enable_bitmask;
@@ -1415,6 +1419,7 @@ QDF_STATUS
 csr_send_roam_offload_init_msg(struct mac_context *mac, uint32_t vdev_id,
 			       bool enable);
 
+#ifndef ROAM_OFFLOAD_V1
 /**
  * csr_send_roam_disable_cfg_msg() - Send roam module enable/disable cfg to fw
  * @mac: mac context
@@ -1425,6 +1430,7 @@ csr_send_roam_offload_init_msg(struct mac_context *mac, uint32_t vdev_id,
  */
 QDF_STATUS csr_send_roam_disable_cfg_msg(struct mac_context *mac,
 					 uint32_t vdev_id, uint8_t cfg);
+#endif
 
 typedef void (*csr_ani_callback)(int8_t *ani, void *context);
 

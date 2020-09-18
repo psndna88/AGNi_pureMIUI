@@ -363,8 +363,9 @@ void lim_delete_pre_auth_node(struct mac_context *mac, tSirMacAddr macAddr)
 
 		mac->lim.pLimPreAuthList = pTempNode->next;
 
-		pe_debug("fRelease data for %d peer %pM",
-			 pTempNode->authNodeIdx, macAddr);
+		pe_debug("fRelease data for %d peer "QDF_MAC_ADDR_FMT,
+			 pTempNode->authNodeIdx,
+			 QDF_MAC_ADDR_REF(macAddr));
 		lim_release_pre_auth_node(mac, pTempNode);
 
 		return;
@@ -515,6 +516,13 @@ lim_encrypt_auth_frame(struct mac_context *mac, uint8_t keyId, uint8_t *pKey,
 	frame_len = ((tpSirMacAuthFrameBody)pPlainText)->length +
 			SIR_MAC_AUTH_FRAME_INFO_LEN + SIR_MAC_CHALLENGE_ID_LEN;
 	keyLength += 3;
+
+	/*
+	 * Make sure that IV is non-zero, because few IOT APs fails to decrypt
+	 * auth sequence 3 encrypted frames if initialization vector value is 0
+	 */
+	while (!(*(uint32_t *)seed))
+		qdf_get_random_bytes(seed, SIR_MAC_WEP_IV_LENGTH);
 
 	/* Bytes 3-7 of seed is key */
 	qdf_mem_copy((uint8_t *) &seed[3], pKey, keyLength - 3);

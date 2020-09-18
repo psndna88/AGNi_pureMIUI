@@ -22,7 +22,7 @@
 #define _WMI_UNIFIED_ROAM_API_H_
 
 #include <wmi_unified_roam_param.h>
-#include <wlan_cm_roam_public_srtuct.h>
+#include "wlan_cm_roam_public_struct.h"
 
 #ifdef FEATURE_LFR_SUBNET_DETECTION
 /**
@@ -126,7 +126,7 @@ QDF_STATUS wmi_unified_roam_scan_offload_scan_period(
  */
 QDF_STATUS
 wmi_unified_roam_mawc_params_cmd(wmi_unified_t wmi_handle,
-				 struct wmi_mawc_roam_params *params);
+				 struct wlan_roam_mawc_params *params);
 
 /**
  * wmi_unified_roam_scan_filter_cmd() - send roam scan whitelist,
@@ -270,6 +270,22 @@ QDF_STATUS wmi_unified_vdev_set_pcl_cmd(wmi_unified_t wmi_handle,
 					struct set_pcl_cmd_params *params);
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
+#ifdef ROAM_OFFLOAD_V1
+/**
+ * wmi_unified_roam_scan_offload_mode_cmd() - set roam scan parameters
+ * @wmi_handle: wmi handle
+ * @scan_cmd_fp: scan related parameters
+ * @rso_cfg: roam scan offload parameters
+ *
+ * This function reads the incoming @rso_cfg and fill in the destination
+ * WMI structure and send down the roam scan configs down to the firmware
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_roam_scan_offload_mode_cmd(
+			wmi_unified_t wmi_handle,
+			struct wlan_roam_scan_offload_params *rso_cfg);
+#else
 /**
  * wmi_unified_roam_scan_offload_mode_cmd() - set roam scan parameters
  * @wmi_handle: wmi handle
@@ -285,6 +301,7 @@ QDF_STATUS wmi_unified_roam_scan_offload_mode_cmd(
 				wmi_unified_t wmi_handle,
 				wmi_start_scan_cmd_fixed_param *scan_cmd_fp,
 				struct roam_offload_scan_params *roam_req);
+#endif
 
 /**
  * wmi_unified_send_roam_scan_offload_ap_cmd() - set roam ap profile in fw
@@ -313,6 +330,52 @@ QDF_STATUS wmi_unified_roam_scan_offload_cmd(wmi_unified_t wmi_handle,
 					     uint32_t command,
 					     uint32_t vdev_id);
 
+#ifdef ROAM_OFFLOAD_V1
+/**
+ * wmi_unified_roam_scan_offload_chan_list_cmd  - Roam scan offload channel
+ * list command
+ * @wmi_handle: wmi handle
+ * @rso_ch_info: roam scan offload channel info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_unified_roam_scan_offload_chan_list_cmd(wmi_unified_t wmi_handle,
+			struct wlan_roam_scan_channel_list *rso_ch_info);
+
+/**
+ * wmi_unified_roam_scan_offload_rssi_change_cmd() - set roam offload RSSI
+ * threshold
+ * @wmi_handle: wmi handle
+ * @params: RSSI change params
+ *
+ * Send WMI_ROAM_SCAN_RSSI_CHANGE_THRESHOLD parameters to fw.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_roam_scan_offload_rssi_change_cmd(
+		wmi_unified_t wmi_handle,
+		struct wlan_roam_rssi_change_params *params);
+#else
+/**
+ * wmi_unified_roam_scan_offload_rssi_change_cmd() - set roam offload RSSI th
+ * @wmi_handle: wmi handle
+ * @rssi_change_thresh: RSSI Change threshold
+ * @bcn_rssi_weight: beacon RSSI weight
+ * @vdev_id: vdev id
+ *
+ * Send WMI_ROAM_SCAN_RSSI_CHANGE_THRESHOLD parameters to fw.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_roam_scan_offload_rssi_change_cmd(wmi_unified_t wmi_handle,
+					      uint32_t vdev_id,
+					      int32_t rssi_change_thresh,
+					      uint32_t bcn_rssi_weight,
+					      uint32_t hirssi_delay_btw_scans);
+
 /**
  * wmi_unified_roam_scan_offload_chan_list_cmd() - set roam offload channel list
  * @wmi_handle: wmi handle
@@ -331,24 +394,7 @@ wmi_unified_roam_scan_offload_chan_list_cmd(wmi_unified_t wmi_handle,
 					    uint32_t *chan_list,
 					    uint8_t list_type,
 					    uint32_t vdev_id);
-
-/**
- * wmi_unified_roam_scan_offload_rssi_change_cmd() - set roam offload RSSI th
- * @wmi_handle: wmi handle
- * @rssi_change_thresh: RSSI Change threshold
- * @bcn_rssi_weight: beacon RSSI weight
- * @vdev_id: vdev id
- *
- * Send WMI_ROAM_SCAN_RSSI_CHANGE_THRESHOLD parameters to fw.
- *
- * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
- */
-QDF_STATUS
-wmi_unified_roam_scan_offload_rssi_change_cmd(wmi_unified_t wmi_handle,
-					      uint32_t vdev_id,
-					      int32_t rssi_change_thresh,
-					      uint32_t bcn_rssi_weight,
-					      uint32_t hirssi_delay_btw_scans);
+#endif
 
 /**
  * wmi_unified_set_per_roam_config() - set PER roam config in FW
@@ -398,12 +444,13 @@ QDF_STATUS wmi_unified_send_btm_config(wmi_unified_t wmi_handle,
 /**
  * wmi_unified_send_bss_load_config() - Send bss load trigger params to fw
  * @wmi_handle:  wmi handle
- * @params: pointer to wmi_bss_load_config
+ * @params: pointer to wlan_roam_bss_load_config
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS wmi_unified_send_bss_load_config(wmi_unified_t wmi_handle,
-					    struct wmi_bss_load_config *params);
+QDF_STATUS wmi_unified_send_bss_load_config(
+				wmi_unified_t wmi_handle,
+				struct wlan_roam_bss_load_config *params);
 
 /**
  * wmi_unified_offload_11k_cmd() - send 11k offload command

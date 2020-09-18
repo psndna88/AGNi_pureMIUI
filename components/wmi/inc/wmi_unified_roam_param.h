@@ -95,6 +95,10 @@ struct rssi_monitor_param {
  * @roam_bad_rssi_thresh_offset_2g: Offset from Bad RSSI threshold for 2G
  *                                  to 5G Roam
  * @bg_scan_client_bitmap: Bitmap used to identify the client scans to snoop
+ * @roam_data_rssi_threshold_triggers: triggers of bad data RSSI threshold to
+ *                                  roam
+ * @roam_data_rssi_threshold: Bad data RSSI threshold to roam
+ * @rx_data_inactivity_time: Rx duration to check data RSSI
  * @flags: Flags for Background Roaming
  *	Bit 0 : BG roaming enabled when we connect to 2G AP only and roaming
  *	        to 5G AP only.
@@ -125,6 +129,9 @@ struct roam_offload_scan_rssi_params {
 	int8_t bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
 	uint32_t bg_scan_client_bitmap;
+	uint32_t roam_data_rssi_threshold_triggers;
+	int32_t roam_data_rssi_threshold;
+	uint32_t rx_data_inactivity_time;
 	uint32_t flags;
 };
 
@@ -152,24 +159,6 @@ struct roam_scan_period_params {
 	uint32_t full_scan_period;
 };
 #endif
-
-/**
- * struct wmi_mawc_roam_params - Motion Aided wireless connectivity params
- * @vdev_id: VDEV on which the parameters should be applied
- * @enable: MAWC roaming feature enable/disable
- * @traffic_load_threshold: Traffic threshold in kBps for MAWC roaming
- * @best_ap_rssi_threshold: AP RSSI Threshold for MAWC roaming
- * @rssi_stationary_high_adjust: High RSSI adjustment value to suppress scan
- * @rssi_stationary_low_adjust: Low RSSI adjustment value to suppress scan
- */
-struct wmi_mawc_roam_params {
-	uint8_t vdev_id;
-	bool enable;
-	uint32_t traffic_load_threshold;
-	uint32_t best_ap_rssi_threshold;
-	uint8_t rssi_stationary_high_adjust;
-	uint8_t rssi_stationary_low_adjust;
-};
 
 #define WMI_CFG_VALID_CHANNEL_LIST_LEN    100
 /* Occupied channel list remains static */
@@ -261,27 +250,6 @@ struct hlp_params {
 	uint8_t vdev_id;
 	uint32_t  hlp_ie_len;
 	uint8_t hlp_ie[WMI_MAX_HLP_IE_LEN];
-};
-
-/**
- * struct wmi_bss_load_config - BSS load trigger parameters
- * @vdev_id: VDEV on which the parameters should be applied
- * @bss_load_threshold: BSS load threshold after which roam scan should trigger
- * @bss_load_sample_time: Time duration in milliseconds for which the bss load
- * trigger needs to be enabled
- * @rssi_threshold_5ghz: RSSI threshold of the current connected AP below which
- * roam should be triggered if bss load threshold exceeds the configured value.
- * This value is applicable only when we are connected in 5GHz band.
- * @rssi_threshold_24ghz: RSSI threshold of the current connected AP below which
- * roam should be triggered if bss load threshold exceeds the configured value.
- * This value is applicable only when we are connected in 2.4GHz band.
- */
-struct wmi_bss_load_config {
-	uint32_t vdev_id;
-	uint32_t bss_load_threshold;
-	uint32_t bss_load_sample_time;
-	int32_t rssi_threshold_5ghz;
-	int32_t rssi_threshold_24ghz;
 };
 
 /**

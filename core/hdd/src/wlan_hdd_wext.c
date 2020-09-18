@@ -112,6 +112,7 @@
 #include "dp_txrx.h"
 #include "wlan_fwol_ucfg_api.h"
 #include "wlan_hdd_unit_test.h"
+#include "wlan_hdd_thermal.h"
 
 /* Private ioctls and their sub-ioctls */
 #define WLAN_PRIV_SET_INT_GET_NONE    (SIOCIWFIRSTPRIV + 0)
@@ -7267,8 +7268,8 @@ static int __iw_set_var_ints_getnone(struct net_device *dev,
 
 		if (apps_args[0] == CDP_TXRX_STATS_28) {
 			if (sta_ctx->conn_info.is_authenticated) {
-				hdd_debug("ap mac addr: %pM",
-					  (void *)&sta_ctx->conn_info.bssid);
+				hdd_debug("ap mac addr: "QDF_MAC_ADDR_FMT,
+					  QDF_MAC_ADDR_REF(sta_ctx->conn_info.bssid.bytes));
 				req.peer_addr =
 					(char *)&sta_ctx->conn_info.bssid;
 			}
@@ -7329,10 +7330,17 @@ static int __iw_set_var_ints_getnone(struct net_device *dev,
 	case WE_SET_THERMAL_THROTTLE_CFG:
 	{
 		QDF_STATUS status;
-
+		struct thermal_mitigation_params therm_cfg_params;
+		struct wlan_fwol_thermal_temp thermal_temp = {0};
 		if (num_args != 7) {
 			hdd_err_rl("set_thermal_cfg: Invalid no of args");
 			return -EINVAL;
+		}
+		status = ucfg_fwol_get_thermal_temp(hdd_ctx->psoc,
+						    &thermal_temp);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			hdd_err_rl("Failed to get fwol thermal obj");
+			return qdf_status_to_os_return(status);
 		}
 
 		/* Check for valid inputs */
@@ -7343,12 +7351,18 @@ static int __iw_set_var_ints_getnone(struct net_device *dev,
 		    apps_args[5] <= apps_args[4])
 			return -EINVAL;
 
+		therm_cfg_params.enable = apps_args[0];
+		therm_cfg_params.dc = apps_args[1];
+		therm_cfg_params.levelconf[0].dcoffpercent = apps_args[2];
+		therm_cfg_params.levelconf[0].priority = apps_args[3];
+		therm_cfg_params.levelconf[0].tmplwm = apps_args[6];
+		hdd_thermal_fill_clientid_priority(THERMAL_MONITOR_APPS,
+						   thermal_temp.priority_apps,
+						   thermal_temp.priority_wpps,
+						   &therm_cfg_params);
+		therm_cfg_params.num_thermal_conf = 1;
 		status = sme_set_thermal_throttle_cfg(hdd_ctx->mac_handle,
-						      apps_args[0],
-						      apps_args[1],
-						      apps_args[2],
-						      apps_args[3],
-						      apps_args[6]);
+						      &therm_cfg_params);
 		if (QDF_IS_STATUS_ERROR(status))
 			return qdf_status_to_os_return(status);
 
@@ -8042,8 +8056,8 @@ static int __iw_set_keepalive_params(struct net_device *dev,
 		       request->destIpv4Addr[0], request->destIpv4Addr[1],
 		       request->destIpv4Addr[2], request->destIpv4Addr[3]);
 
-		hdd_debug("Dest MAC address: "QDF_MAC_ADDR_STR,
-		       QDF_MAC_ADDR_ARRAY(request->dest_macaddr.bytes));
+		hdd_debug("Dest MAC address: "QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(request->dest_macaddr.bytes));
 		break;
 	}
 

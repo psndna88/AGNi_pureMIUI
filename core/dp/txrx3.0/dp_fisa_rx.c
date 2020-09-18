@@ -558,10 +558,11 @@ dp_rx_fisa_aggr_tcp(struct dp_rx_fst *fisa_hdl,
 static int get_transport_payload_offset(struct dp_rx_fst *fisa_hdl,
 					uint8_t *rx_tlv_hdr)
 {
+	uint32_t eth_hdr_len = HAL_RX_TLV_GET_IP_OFFSET(rx_tlv_hdr);
 	uint32_t ip_hdr_len = HAL_RX_TLV_GET_TCP_OFFSET(rx_tlv_hdr);
 
 	/* ETHERNET_HDR_LEN + ip_hdr_len + UDP/TCP; */
-	return (ETHERNET_HDR_LEN + ip_hdr_len + sizeof(struct udphdr));
+	return (eth_hdr_len + ip_hdr_len + sizeof(struct udphdr));
 }
 
 /**
@@ -817,8 +818,10 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 
 	hex_dump_skb_data(fisa_flow->head_skb, false);
 
-	fisa_flow_vdev = dp_get_vdev_from_soc_vdev_id_wifi3(fisa_flow->soc_hdl,
-				QDF_NBUF_CB_RX_VDEV_ID(fisa_flow->head_skb));
+	fisa_flow_vdev = dp_vdev_get_ref_by_id(
+				fisa_flow->soc_hdl,
+				QDF_NBUF_CB_RX_VDEV_ID(fisa_flow->head_skb),
+				DP_MOD_ID_RX);
 	if (qdf_unlikely(!fisa_flow_vdev ||
 					(fisa_flow_vdev != fisa_flow->vdev))) {
 		qdf_nbuf_free(fisa_flow->head_skb);
@@ -851,6 +854,10 @@ dp_rx_fisa_flush_udp_flow(struct dp_vdev *vdev,
 	}
 
 out:
+	if (fisa_flow_vdev)
+		dp_vdev_unref_delete(fisa_flow->soc_hdl,
+				     fisa_flow_vdev,
+				     DP_MOD_ID_RX);
 	fisa_flow->head_skb = NULL;
 	fisa_flow->last_skb = NULL;
 
@@ -978,11 +985,18 @@ static int dp_add_nbuf_to_fisa_flow(struct dp_rx_fst *fisa_hdl,
 	uint16_t hal_cumulative_ip_len;
 	hal_soc_handle_t hal_soc_hdl = fisa_hdl->soc_hdl->hal_soc;
 	uint32_t hal_aggr_count;
+	uint8_t napi_id = QDF_NBUF_CB_RX_CTX_ID(nbuf);
 
 	dump_tlvs(hal_soc_hdl, rx_tlv_hdr, QDF_TRACE_LEVEL_INFO_HIGH);
 	dp_fisa_debug("nbuf: %pK nbuf->next:%pK nbuf->data:%pK len %d data_len %d",
 		      nbuf, qdf_nbuf_next(nbuf), qdf_nbuf_data(nbuf), nbuf->len,
 		      nbuf->data_len);
+
+	/* Packets of the flow are arriving on a different REO than
+	 * the one configured.
+	 */
+	if (fisa_flow->napi_id != napi_id)
+		DP_STATS_INC(fisa_hdl, reo_mismatch, 1);
 
 	hal_cumulative_ip_len = hal_rx_get_fisa_cumulative_ip_length(
 								hal_soc_hdl,
@@ -1351,7 +1365,7 @@ QDF_STATUS dp_rx_fisa_flush_by_vdev_id(struct dp_soc *soc, uint8_t vdev_id)
 	int i;
 	struct dp_vdev *vdev;
 
-	vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, vdev_id);
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_RX);
 	if (qdf_unlikely(!vdev)) {
 		dp_err("null vdev by vdev_id %d", vdev_id);
 		return QDF_STATUS_E_FAILURE;
@@ -1364,6 +1378,7 @@ QDF_STATUS dp_rx_fisa_flush_by_vdev_id(struct dp_soc *soc, uint8_t vdev_id)
 			dp_rx_fisa_flush_flow_wrap(&sw_ft_entry[i]);
 		}
 	}
+	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1374,9 +1389,10 @@ void dp_set_fisa_disallowed_for_vdev(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
 	struct dp_vdev *vdev;
 
-	vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, vdev_id);
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_RX);
 	if (qdf_unlikely(!vdev))
 		return;
 
 	vdev->fisa_disallowed[rx_ctx_id] = val;
+	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
 }

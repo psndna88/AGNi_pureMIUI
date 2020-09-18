@@ -33,7 +33,7 @@
 #include "wlan_serialization_legacy_api.h"
 #include "wlan_reg_services_api.h"
 #include "wlan_crypto_global_api.h"
-
+#include "wlan_cm_roam_api.h"
 
 uint8_t csr_wpa_oui[][CSR_WPA_OUI_SIZE] = {
 	{0x00, 0x50, 0xf2, 0x00}
@@ -597,6 +597,66 @@ bool csr_is_conn_state_wds(struct mac_context *mac, uint32_t sessionId)
 {
 	return csr_is_conn_state_connected_wds(mac, sessionId) ||
 	       csr_is_conn_state_disconnected_wds(mac, sessionId);
+}
+
+enum csr_cfgdot11mode
+csr_get_vdev_dot11_mode(struct mac_context *mac,
+			enum QDF_OPMODE device_mode,
+			enum csr_cfgdot11mode curr_dot11_mode)
+{
+	enum mlme_vdev_dot11_mode vdev_dot11_mode;
+	uint8_t dot11_mode_indx;
+	enum csr_cfgdot11mode dot11_mode = curr_dot11_mode;
+	uint32_t vdev_type_dot11_mode =
+				mac->mlme_cfg->dot11_mode.vdev_type_dot11_mode;
+
+	sme_debug("curr_dot11_mode %d, vdev_dot11 %08X, dev_mode %d",
+		  curr_dot11_mode, vdev_type_dot11_mode, device_mode);
+
+	switch (device_mode) {
+	case QDF_STA_MODE:
+		dot11_mode_indx = STA_DOT11_MODE_INDX;
+		break;
+	case QDF_P2P_CLIENT_MODE:
+	case QDF_P2P_DEVICE_MODE:
+		dot11_mode_indx = P2P_DEV_DOT11_MODE_INDX;
+		break;
+	case QDF_TDLS_MODE:
+		dot11_mode_indx = TDLS_DOT11_MODE_INDX;
+		break;
+	case QDF_NAN_DISC_MODE:
+		dot11_mode_indx = NAN_DISC_DOT11_MODE_INDX;
+		break;
+	case QDF_NDI_MODE:
+		dot11_mode_indx = NDI_DOT11_MODE_INDX;
+		break;
+	case QDF_OCB_MODE:
+		dot11_mode_indx = OCB_DOT11_MODE_INDX;
+		break;
+	default:
+		return dot11_mode;
+	}
+	vdev_dot11_mode = QDF_GET_BITS(vdev_type_dot11_mode,
+				       dot11_mode_indx, 4);
+	if (vdev_dot11_mode == MLME_VDEV_DOT11_MODE_AUTO)
+		dot11_mode = curr_dot11_mode;
+
+	if (CSR_IS_DOT11_MODE_11N(curr_dot11_mode) &&
+	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11N)
+		dot11_mode = eCSR_CFG_DOT11_MODE_11N;
+
+	if (CSR_IS_DOT11_MODE_11AC(curr_dot11_mode) &&
+	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11AC)
+		dot11_mode = eCSR_CFG_DOT11_MODE_11AC;
+
+	if (CSR_IS_DOT11_MODE_11AX(curr_dot11_mode) &&
+	    vdev_dot11_mode == MLME_VDEV_DOT11_MODE_11AX)
+		dot11_mode = eCSR_CFG_DOT11_MODE_11AX;
+
+	sme_debug("INI vdev_dot11_mode %d new dot11_mode %d",
+		  vdev_dot11_mode, dot11_mode);
+
+	return dot11_mode;
 }
 
 static bool csr_is_conn_state_ap(struct mac_context *mac, uint32_t sessionId)
@@ -1909,6 +1969,9 @@ bool csr_is_phy_mode_match(struct mac_context *mac, uint32_t phyMode,
 			}
 		}
 	}
+
+	cfgDot11ModeToUse = csr_get_vdev_dot11_mode(mac, pProfile->csrPersona,
+						    cfgDot11ModeToUse);
 	if (fMatch && pReturnCfgDot11Mode) {
 		if (pProfile) {
 			/*
@@ -2815,6 +2878,7 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 	} else {
 		self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
 		self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
+		self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED;
 	}
 	wlan_crypto_set_vdev_param(vdev, WLAN_CRYPTO_PARAM_RSN_CAP,
 				   self_rsn_cap);
@@ -3490,7 +3554,9 @@ bool csr_rates_is_dot11_rate_supported(struct mac_context *mac_ctx, uint8_t rate
 }
 
 #ifdef WLAN_FEATURE_FILS_SK
-static inline void csr_free_fils_profile_info(struct csr_roam_profile *profile)
+static inline
+void csr_free_fils_profile_info(struct mac_context *mac,
+				struct csr_roam_profile *profile)
 {
 	if (profile->fils_con_info) {
 		qdf_mem_free(profile->fils_con_info);
@@ -3504,11 +3570,13 @@ static inline void csr_free_fils_profile_info(struct csr_roam_profile *profile)
 	}
 }
 #else
-static inline void csr_free_fils_profile_info(struct csr_roam_profile *profile)
+static inline void csr_free_fils_profile_info(struct mac_context *mac,
+					      struct csr_roam_profile *profile)
 { }
 #endif
 
-void csr_release_profile(struct mac_context *mac, struct csr_roam_profile *pProfile)
+void csr_release_profile(struct mac_context *mac,
+			 struct csr_roam_profile *pProfile)
 {
 	if (pProfile) {
 		if (pProfile->BSSIDs.bssid) {
@@ -3547,7 +3615,7 @@ void csr_release_profile(struct mac_context *mac, struct csr_roam_profile *pProf
 			qdf_mem_free(pProfile->ChannelInfo.freq_list);
 			pProfile->ChannelInfo.freq_list = NULL;
 		}
-		csr_free_fils_profile_info(pProfile);
+		csr_free_fils_profile_info(mac, pProfile);
 		qdf_mem_zero(pProfile, sizeof(struct csr_roam_profile));
 	}
 }
