@@ -28,7 +28,7 @@
 
 typedef void dp_peer_iter_func(struct dp_soc *soc, struct dp_peer *peer,
 			       void *arg);
-void dp_peer_unref_delete(struct dp_peer *peer, enum dp_peer_mod_id id);
+void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id id);
 
 /**
  * dp_peer_get_ref() - Returns peer object given the peer id
@@ -43,7 +43,7 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_peer_mod_id id);
 static inline
 QDF_STATUS dp_peer_get_ref(struct dp_soc *soc,
 			   struct dp_peer *peer,
-			   enum dp_peer_mod_id mod_id)
+			   enum dp_mod_id mod_id)
 {
 	if (!qdf_atomic_inc_not_zero(&peer->ref_cnt))
 		return QDF_STATUS_E_INVAL;
@@ -66,7 +66,7 @@ QDF_STATUS dp_peer_get_ref(struct dp_soc *soc,
 static inline struct dp_peer *
 __dp_peer_get_ref_by_id(struct dp_soc *soc,
 			uint16_t peer_id,
-			enum dp_peer_mod_id mod_id)
+			enum dp_mod_id mod_id)
 
 {
 	struct dp_peer *peer;
@@ -97,7 +97,7 @@ __dp_peer_get_ref_by_id(struct dp_soc *soc,
 static inline
 struct dp_peer *dp_peer_get_ref_by_id(struct dp_soc *soc,
 				      uint16_t peer_id,
-				      enum dp_peer_mod_id mod_id)
+				      enum dp_mod_id mod_id)
 {
 	struct dp_peer *peer;
 
@@ -153,7 +153,7 @@ dp_clear_peer_internal(struct dp_soc *soc, struct dp_peer *peer)
  */
 static inline void
 dp_vdev_iterate_peer(struct dp_vdev *vdev, dp_peer_iter_func *func, void *arg,
-		     enum dp_peer_mod_id mod_id)
+		     enum dp_mod_id mod_id)
 {
 	struct dp_peer *peer;
 	struct dp_peer *tmp_peer;
@@ -189,7 +189,7 @@ dp_vdev_iterate_peer(struct dp_vdev *vdev, dp_peer_iter_func *func, void *arg,
  */
 static inline void
 dp_pdev_iterate_peer(struct dp_pdev *pdev, dp_peer_iter_func *func, void *arg,
-		     enum dp_peer_mod_id mod_id)
+		     enum dp_mod_id mod_id)
 {
 	struct dp_vdev *vdev;
 
@@ -214,7 +214,7 @@ dp_pdev_iterate_peer(struct dp_pdev *pdev, dp_peer_iter_func *func, void *arg,
  */
 static inline void
 dp_soc_iterate_peer(struct dp_soc *soc, dp_peer_iter_func *func, void *arg,
-		    enum dp_peer_mod_id mod_id)
+		    enum dp_mod_id mod_id)
 {
 	struct dp_pdev *pdev;
 	int i;
@@ -248,7 +248,7 @@ static inline void
 dp_vdev_iterate_peer_lock_safe(struct dp_vdev *vdev,
 			       dp_peer_iter_func *func,
 			       void *arg,
-			       enum dp_peer_mod_id mod_id)
+			       enum dp_mod_id mod_id)
 {
 	struct dp_peer *peer;
 	struct dp_peer *tmp_peer;
@@ -315,7 +315,7 @@ static inline void
 dp_pdev_iterate_peer_lock_safe(struct dp_pdev *pdev,
 			       dp_peer_iter_func *func,
 			       void *arg,
-			       enum dp_peer_mod_id mod_id)
+			       enum dp_mod_id mod_id)
 {
 	struct dp_peer *peer;
 	struct dp_peer *tmp_peer;
@@ -396,7 +396,7 @@ static inline void
 dp_soc_iterate_peer_lock_safe(struct dp_soc *soc,
 			      dp_peer_iter_func *func,
 			      void *arg,
-			      enum dp_peer_mod_id mod_id)
+			      enum dp_mod_id mod_id)
 {
 	struct dp_pdev *pdev;
 	int i;
@@ -409,6 +409,30 @@ dp_soc_iterate_peer_lock_safe(struct dp_soc *soc,
 		dp_pdev_iterate_peer_lock_safe(pdev, func, arg, mod_id);
 	}
 }
+
+#ifdef DP_PEER_STATE_DEBUG
+#define DP_PEER_STATE_ASSERT(_peer, _new_state, _condition) \
+	do {  \
+		if (!(_condition)) { \
+			dp_alert("Invalid state shift from %u to %u peer " \
+				 QDF_MAC_ADDR_FMT, \
+				 (_peer)->peer_state, (_new_state), \
+				 QDF_MAC_ADDR_REF((_peer)->mac_addr.raw)); \
+			QDF_ASSERT(0); \
+		} \
+	} while (0)
+
+#else
+#define DP_PEER_STATE_ASSERT(_peer, _new_state, _condition) \
+	do {  \
+		if (!(_condition)) { \
+			dp_alert("Invalid state shift from %u to %u peer " \
+				 QDF_MAC_ADDR_FMT, \
+				 (_peer)->peer_state, (_new_state), \
+				 QDF_MAC_ADDR_REF((_peer)->mac_addr.raw)); \
+		} \
+	} while (0)
+#endif
 
 /**
  * dp_peer_update_state() - update dp peer state
@@ -428,41 +452,47 @@ dp_peer_update_state(struct dp_soc *soc,
 
 	switch (state) {
 	case DP_PEER_STATE_INIT:
-		QDF_ASSERT
-			((peer_state != DP_PEER_STATE_ACTIVE) ||
+		DP_PEER_STATE_ASSERT
+			(peer, state, (peer_state != DP_PEER_STATE_ACTIVE) ||
 			 (peer_state != DP_PEER_STATE_LOGICAL_DELETE));
 		break;
 
 	case DP_PEER_STATE_ACTIVE:
-		QDF_ASSERT(peer_state == DP_PEER_STATE_INIT);
+		DP_PEER_STATE_ASSERT(peer, state,
+				     (peer_state == DP_PEER_STATE_INIT));
 		break;
 
 	case DP_PEER_STATE_LOGICAL_DELETE:
-		QDF_ASSERT((peer_state == DP_PEER_STATE_ACTIVE) ||
-			   (peer_state == DP_PEER_STATE_INIT));
+		DP_PEER_STATE_ASSERT(peer, state,
+				     (peer_state == DP_PEER_STATE_ACTIVE) ||
+				     (peer_state == DP_PEER_STATE_INIT));
 		break;
 
 	case DP_PEER_STATE_INACTIVE:
-		QDF_ASSERT(peer_state == DP_PEER_STATE_LOGICAL_DELETE);
+		DP_PEER_STATE_ASSERT
+			(peer, state,
+			 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
 		break;
 
 	case DP_PEER_STATE_FREED:
 		if (peer->sta_self_peer)
-			QDF_ASSERT(peer_state ==
-					DP_PEER_STATE_INIT);
+			DP_PEER_STATE_ASSERT
+			(peer, state, (peer_state == DP_PEER_STATE_INIT));
 		else
-			QDF_ASSERT((peer_state ==
-					DP_PEER_STATE_INACTIVE) ||
-				   (peer_state ==
-					DP_PEER_STATE_LOGICAL_DELETE));
+			DP_PEER_STATE_ASSERT
+				(peer, state,
+				 (peer_state == DP_PEER_STATE_INACTIVE) ||
+				 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
 		break;
 
 	default:
-		QDF_ASSERT(0);
-		break;
+		dp_alert("Invalid peer state %u for peer "QDF_MAC_ADDR_FMT,
+			 state, QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+		return;
 	}
-	qdf_info("Updating peer state from %u to %u mac %pM\n",
-		 peer_state, state, peer->mac_addr.raw);
+	dp_info("Updating peer state from %u to %u mac "QDF_MAC_ADDR_FMT"\n",
+		peer_state, state,
+		QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 	peer->peer_state = state;
 }
 
@@ -748,8 +778,33 @@ static inline void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc,
 
 struct dp_peer *dp_vdev_bss_peer_ref_n_get(struct dp_soc *soc,
 					   struct dp_vdev *vdev,
-					   enum dp_peer_mod_id mod_id);
+					   enum dp_mod_id mod_id);
 struct dp_peer *dp_sta_vdev_self_peer_ref_n_get(struct dp_soc *soc,
 						struct dp_vdev *vdev,
-						enum dp_peer_mod_id mod_id);
+						enum dp_mod_id mod_id);
+
+#ifdef FEATURE_AST
+/*
+ * dp_peer_delete_ast_entries(): Delete all AST entries for a peer
+ * @soc - datapath soc handle
+ * @peer - datapath peer handle
+ *
+ * Delete the AST entries belonging to a peer
+ */
+static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
+					      struct dp_peer *peer)
+{
+	struct dp_ast_entry *ast_entry, *temp_ast_entry;
+
+	DP_PEER_ITERATE_ASE_LIST(peer, ast_entry, temp_ast_entry)
+		dp_peer_del_ast(soc, ast_entry);
+
+	peer->self_ast_entry = NULL;
+}
+#else
+static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
+					      struct dp_peer *peer)
+{
+}
+#endif
 #endif /* _DP_PEER_H_ */

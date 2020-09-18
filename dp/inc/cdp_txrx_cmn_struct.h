@@ -84,6 +84,7 @@
 #define CDP_CREDIT_STATS           24
 #define CDP_DISCONNECT_STATS       25
 #define CDP_DP_RX_FISA_STATS	   26
+#define CDP_DP_SWLM_STATS	   27
 
 #define WME_AC_TO_TID(_ac) (       \
 		((_ac) == WME_AC_VO) ? 6 : \
@@ -484,6 +485,7 @@ struct cdp_rx_mic_err_info {
 	uint16_t vdev_id;
 };
 
+#ifdef WLAN_SUPPORT_MSCS
 /**
  * struct cdp_mscs_params - MSCS parameters obtained
  * from handshake
@@ -498,6 +500,7 @@ struct cdp_mscs_params {
 	uint8_t classifier_type;
 	uint8_t classifier_mask;
 };
+#endif
 
 /**
  * struct cdp_sec_type - security type information
@@ -1093,6 +1096,7 @@ enum cdp_pdev_param_type {
  * @cdp_vdev_param_mesh_mode: set mesh mode
  * @cdp_vdev_param_safe_mode: set safe mode
  * @cdp_vdev_param_drop_unenc: set drop unencrypted flag
+ * @cdp_vdev_param_hlos_tid_override: set hlos tid override
  *
  * @cdp_pdev_param_dbg_snf: Enable debug sniffer feature
  * @cdp_pdev_param_bpr_enable: Enable bcast probe feature
@@ -1125,6 +1129,8 @@ enum cdp_pdev_param_type {
  *
  * @cdp_psoc_param_en_rate_stats: set rate stats enable/disable
  * @cdp_psoc_param_en_nss_cfg: set nss cfg
+ *
+ * @cdp_enable_tx_checksum: Flag to specify if HW Tx checksum enabled
  */
 typedef union cdp_config_param_t {
 	/* peer params */
@@ -1144,6 +1150,7 @@ typedef union cdp_config_param_t {
 	bool cdp_vdev_param_update_multipass;
 	uint8_t cdp_vdev_param_da_war;
 	uint8_t cdp_vdev_param_mcast_en;
+	uint8_t cdp_vdev_param_igmp_mcast_en;
 	uint8_t cdp_vdev_param_tidmap_prty;
 	uint8_t cdp_vdev_param_tidmap_tbl_id;
 	uint32_t cdp_vdev_param_aging_tmr;
@@ -1154,6 +1161,7 @@ typedef union cdp_config_param_t {
 	uint32_t cdp_vdev_param_mesh_mode;
 	uint32_t cdp_vdev_param_safe_mode;
 	uint32_t cdp_vdev_param_drop_unenc;
+	uint8_t cdp_vdev_param_hlos_tid_override;
 
 	/* pdev params */
 	bool cdp_pdev_param_cptr_latcy;
@@ -1190,6 +1198,8 @@ typedef union cdp_config_param_t {
 	int cdp_psoc_param_en_nss_cfg;
 	int cdp_psoc_param_preferred_hw_mode;
 	bool cdp_psoc_param_pext_stats;
+
+	bool cdp_enable_tx_checksum;
 } cdp_config_param_type;
 
 /**
@@ -1260,6 +1270,8 @@ enum cdp_pdev_bpr_param {
  * @CDP_MESH_MODE: set mesh mode
  * @CDP_SAFEMODE: set safe mode
  * @CDP_DROP_UNENC: set drop unencrypted flag
+ * @CDP_ENABLE_IGMP_MCAST_EN: enable/disable igmp multicast enhancement
+ * @CDP_ENABLE_HLOS_TID_OVERRIDE: set hlos tid override flag
  */
 enum cdp_vdev_param_type {
 	CDP_ENABLE_NAWDS,
@@ -1284,6 +1296,9 @@ enum cdp_vdev_param_type {
 #endif
 	CDP_SAFEMODE,
 	CDP_DROP_UNENC,
+	CDP_ENABLE_CSUM,
+	CDP_ENABLE_IGMP_MCAST_EN,
+	CDP_ENABLE_HLOS_TID_OVERRIDE,
 };
 
 /*
@@ -1602,6 +1617,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @delayed_ba: delayed ba bit
  * @ack_ba_tlv: ack ba recv tlv bit
  * @ppdu_type: SU/MU_MIMO/MU_OFDMA/MU_MIMO_OFDMA/UL_TRIG/BURST_BCN/UL_BSR_RESP/
+ * @pream_punct: Preamble Punctured PPDU
  * UL_BSR_TRIG/UNKNOWN
  * @ba_seq_no: Block Ack sequence number
  * @ba_bitmap: Block Ack bitmap
@@ -1651,7 +1667,8 @@ struct cdp_tx_completion_ppdu_user {
 		 short_retries:4,
 		 tx_ratecode:16,
 		 is_ampdu:1,
-		 ppdu_type:5;
+		 ppdu_type:5,
+		 pream_punct:1;
 	uint32_t success_bytes;
 	uint32_t retry_bytes;
 	uint32_t failed_bytes;
@@ -2032,17 +2049,19 @@ struct cdp_tx_completion_msdu {
  * @other_msdu_count: Number of MSDUs other than UDP and TCP MSDUs in PPDU
  * @frame_control: frame control field
  * @frame_control_info_valid: frame_control valid
+ * @qos_control: qos control field
+ * @qos_control_info_valid: qos_control valid
  * @data_sequence_control_info_valid: data_sequence_control_info valid
  * @first_data_seq_ctrl: Sequence control field of first data frame
  * @preamble: preamble
  * @ht_flag: ht flag
  * @vht_flag: vht flag
  * @he_re: he_re (range extension)
+ * @mac_addr: Peer MAC Address
  * @mpdu_cnt_fcs_ok: Number of MPDUs in PPDU with fcs ok
  * @mpdu_cnt_fcs_err: Number of MPDUs in PPDU with fcs err
  * @mpdu_fcs_ok_bitmap - MPDU with fcs ok bitmap
  * @retried - number of retries
- * @mac_addr: Peer MAC Address
  */
 struct cdp_rx_stats_ppdu_user {
 	uint16_t peer_id;
@@ -2063,19 +2082,21 @@ struct cdp_rx_stats_ppdu_user {
 	uint16_t  other_msdu_count;
 	uint16_t frame_control;
 	uint8_t  frame_control_info_valid;
+	uint16_t qos_control;
+	uint8_t  qos_control_info_valid;
 	uint8_t data_sequence_control_info_valid;
 	uint16_t first_data_seq_ctrl;
 	uint32_t preamble_type;
 	uint16_t ht_flags;
 	uint16_t vht_flags;
 	uint16_t he_flags;
+	uint8_t  mac_addr[QDF_MAC_ADDR_SIZE];
 	uint32_t mpdu_cnt_fcs_ok;
 	uint32_t mpdu_cnt_fcs_err;
 	uint32_t mpdu_fcs_ok_bitmap[QDF_MON_STATUS_MPDU_FCS_BMAP_NWORDS];
 	uint32_t mpdu_ok_byte_count;
 	uint32_t mpdu_err_byte_count;
 	uint32_t retries;
-	uint8_t  mac_addr[QDF_MAC_ADDR_SIZE];
 };
 
 /**
@@ -2219,6 +2240,8 @@ struct cdp_rx_indication_msdu {
  * @p2p_tcp_udp_checksumoffload: Enable/Disable TCP/UDP Checksum Offload for P2P
  * @nan_tcp_udp_checksumoffload: Enable/Disable TCP/UDP Checksum Offload for NAN
  * @tcp_udp_checksumoffload: Enable/Disable TCP/UDP Checksum Offload
+ * @legacy_mode_checksumoffload_disable: Disable TCP/UDP Checksum Offload for
+ *					 legacy modes.
  * @napi_enable: Enable/Disable Napi
  * @ipa_enable: Flag indicating if IPA is enabled or not
  * @tx_flow_stop_queue_threshold: Value to Pause tx queues
@@ -2236,6 +2259,7 @@ struct cdp_config_params {
 	unsigned int p2p_tcp_udp_checksumoffload:1;
 	unsigned int nan_tcp_udp_checksumoffload:1;
 	unsigned int tcp_udp_checksumoffload:1;
+	unsigned int legacy_mode_checksumoffload_disable:1;
 	unsigned int napi_enable:1;
 	unsigned int ipa_enable:1;
 	/* Set when QCA_LL_TX_FLOW_CONTROL_V2 is enabled */
@@ -2314,6 +2338,8 @@ enum cdp_dp_cfg {
 	cfg_dp_enable_p2p_ip_tcp_udp_checksum_offload,
 	cfg_dp_enable_nan_ip_tcp_udp_checksum_offload,
 	cfg_dp_enable_ip_tcp_udp_checksum_offload,
+	/* Disable checksum offload for legacy modes */
+	cfg_dp_disable_legacy_mode_csum_offload,
 	cfg_dp_tso_enable,
 	cfg_dp_lro_enable,
 	cfg_dp_gro_enable,

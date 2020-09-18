@@ -483,62 +483,6 @@ dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
 	vdev->osif_rx(vdev->osif_vdev, deliver_list_head);
 }
 
-
-#ifdef DP_LFR
-/*
- * In case of LFR, data of a new peer might be sent up
- * even before peer is added.
- */
-static inline struct dp_vdev *
-dp_get_vdev_from_peer(struct dp_soc *soc,
-			uint16_t peer_id,
-			struct dp_peer *peer,
-			struct hal_rx_mpdu_desc_info mpdu_desc_info)
-{
-	struct dp_vdev *vdev;
-	uint8_t vdev_id;
-
-	if (unlikely(!peer)) {
-		if (peer_id != HTT_INVALID_PEER) {
-			vdev_id = DP_PEER_METADATA_VDEV_ID_GET(
-					mpdu_desc_info.peer_meta_data);
-			QDF_TRACE(QDF_MODULE_ID_DP,
-				QDF_TRACE_LEVEL_DEBUG,
-				FL("PeerID %d not found use vdevID %d"),
-				peer_id, vdev_id);
-			vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc,
-								  vdev_id);
-		} else {
-			QDF_TRACE(QDF_MODULE_ID_DP,
-				QDF_TRACE_LEVEL_DEBUG,
-				FL("Invalid PeerID %d"),
-				peer_id);
-			return NULL;
-		}
-	} else {
-		vdev = peer->vdev;
-	}
-	return vdev;
-}
-#else
-static inline struct dp_vdev *
-dp_get_vdev_from_peer(struct dp_soc *soc,
-			uint16_t peer_id,
-			struct dp_peer *peer,
-			struct hal_rx_mpdu_desc_info mpdu_desc_info)
-{
-	if (unlikely(!peer)) {
-		QDF_TRACE(QDF_MODULE_ID_DP,
-			QDF_TRACE_LEVEL_DEBUG,
-			FL("Peer not found for peerID %d"),
-			peer_id);
-		return NULL;
-	} else {
-		return peer->vdev;
-	}
-}
-#endif
-
 #ifndef FEATURE_WDS
 static void
 dp_rx_da_learn(struct dp_soc *soc,
@@ -1919,7 +1863,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 {
 	uint16_t peer_id;
 	uint8_t vdev_id;
-	struct dp_vdev *vdev;
+	struct dp_vdev *vdev = NULL;
 	uint32_t l2_hdr_offset = 0;
 	uint16_t msdu_len = 0;
 	uint32_t pkt_len = 0;
@@ -1932,7 +1876,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 		goto deliver_fail;
 
 	vdev_id = QDF_NBUF_CB_RX_VDEV_ID(nbuf);
-	vdev = dp_get_vdev_from_soc_vdev_id_wifi3(soc, vdev_id);
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_RX);
 	if (!vdev || vdev->delete.pending || !vdev->osif_rx)
 		goto deliver_fail;
 
@@ -1958,6 +1902,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 		    vdev->osif_rx(vdev->osif_vdev, nbuf))
 			goto deliver_fail;
 		DP_STATS_INC(soc, rx.err.pkt_delivered_no_peer, 1);
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
 		return;
 	}
 
@@ -1965,6 +1910,8 @@ deliver_fail:
 	DP_STATS_INC_PKT(soc, rx.err.rx_invalid_peer, 1,
 			 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
 	qdf_nbuf_free(nbuf);
+	if (vdev)
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
 }
 #else
 static inline
@@ -2113,6 +2060,26 @@ dp_rx_ring_record_entry(struct dp_soc *soc, uint8_t ring_num,
 }
 #endif
 
+#ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
+/**
+ * dp_rx_update_stats() - Update soc level rx packet count
+ * @soc: DP soc handle
+ * @nbuf: nbuf received
+ *
+ * Returns: none
+ */
+static inline void dp_rx_update_stats(struct dp_soc *soc,
+				      qdf_nbuf_t nbuf)
+{
+	DP_STATS_INC_PKT(soc, rx.ingress, 1,
+			 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
+}
+#else
+static inline void dp_rx_update_stats(struct dp_soc *soc,
+				      qdf_nbuf_t nbuf)
+{
+}
+#endif
 /**
  * dp_rx_process() - Brain of the Rx processing functionality
  *		     Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
@@ -2527,6 +2494,13 @@ done:
 			continue;
 		}
 
+		/* when hlos tid override is enabled, save tid in
+		 * skb->priority
+		 */
+		if (qdf_unlikely(vdev->skip_sw_tid_classification &
+					DP_TXRX_HLOS_TID_OVERRIDE_ENABLED))
+			qdf_nbuf_set_priority(nbuf, tid);
+
 		rx_pdev = vdev->pdev;
 		DP_RX_TID_SAVE(nbuf, tid);
 		if (qdf_unlikely(rx_pdev->delay_stats_flag) ||
@@ -2738,6 +2712,7 @@ done:
 
 		dp_rx_fill_gro_info(soc, rx_tlv_hdr, nbuf, &rx_ol_pkt_cnt);
 
+		dp_rx_update_stats(soc, nbuf);
 		DP_RX_LIST_APPEND(deliver_list_head,
 				  deliver_list_tail,
 				  nbuf);

@@ -467,6 +467,26 @@ struct fils_filter_info {
 };
 #endif
 
+/*
+ * struct filter_arg: Opaque pointer for the filter arguments
+ */
+struct filter_arg;
+typedef struct filter_arg *bss_filter_arg_t;
+
+/**
+ * enum dot11_mode_filter - Filter APs according to dot11mode
+ * @ALLOW_ALL: ignore check
+ * @ALLOW_11N_ONLY: allow only 11n AP
+ * @ALLOW_11AC_ONLY: allow only 11ac AP
+ * @ALLOW_11AX_ONLY: allow only 11ax AP
+ */
+enum dot11_mode_filter {
+	ALLOW_ALL,
+	ALLOW_11N_ONLY,
+	ALLOW_11AC_ONLY,
+	ALLOW_11AX_ONLY,
+};
+
 /**
  * struct scan_filter: scan filter
  * @enable_adaptive_11r:    flag to check if adaptive 11r ini is enabled
@@ -481,8 +501,7 @@ struct fils_filter_info {
  * @num_of_ssid: number of ssid
  * @num_of_channels: number of  channels
  * @pmf_cap: Pmf capability
- * @dot11_mode: operating modes 0 mean any
- *              11a , 11g, 11n , 11ac , 11b etc
+ * @dot11mode: Filter APs based upon dot11mode
  * @band: to get specific band 2.4G, 5G or 4.9 G
  * @rssi_threshold: AP having RSSI greater than
  *                  rssi threasholed (ignored if set 0)
@@ -497,6 +516,10 @@ struct fils_filter_info {
  * @bssid_list: bssid list
  * @ssid_list: ssid list
  * @chan_freq_list: channel frequency list, frequency unit: MHz
+ * @match_security_func: Function pointer to custom security filter
+ * @match_security_func_arg: Function argument to custom security filter
+ * @ccx_validate_bss: Function pointer to custom bssid filter
+ * @ccx_validate_bss_arg: Function argument to custom bssid filter
  */
 struct scan_filter {
 	uint8_t enable_adaptive_11r:1,
@@ -509,7 +532,7 @@ struct scan_filter {
 	uint8_t num_of_ssid;
 	uint16_t num_of_channels;
 	enum wlan_pmf_cap pmf_cap;
-	enum wlan_phymode dot11_mode;
+	enum dot11_mode_filter dot11mode;
 	enum wlan_band band;
 	uint8_t rssi_threshold;
 	uint32_t mobility_domain;
@@ -526,6 +549,10 @@ struct scan_filter {
 	struct qdf_mac_addr bssid_list[WLAN_SCAN_FILTER_NUM_BSSID];
 	struct wlan_ssid ssid_list[WLAN_SCAN_FILTER_NUM_SSID];
 	qdf_freq_t chan_freq_list[NUM_CHANNELS];
+	bool (*match_security_func)(void *, struct scan_cache_entry *);
+	bss_filter_arg_t match_security_func_arg;
+	bool (*ccx_validate_bss)(void *, struct scan_cache_entry *, int);
+	bss_filter_arg_t ccx_validate_bss_arg;
 };
 
 /**

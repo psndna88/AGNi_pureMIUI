@@ -82,6 +82,17 @@ enum vdev_peer_protocol_tx_rx {
 	CDP_VDEV_PEER_PROTOCOL_IS_RX
 };
 
+/**
+ * enum vdev_ll_conn_actions - Actions to informvdev about
+ *			       low latency connection.
+ * @CDP_VDEV_LL_CONN_ADD: Add Low latency connection
+ * @CDP_VDEV_LL_CONN_DEL: Delete Low latency connection
+ */
+enum vdev_ll_conn_actions {
+	CDP_VDEV_LL_CONN_ADD,
+	CDP_VDEV_LL_CONN_DEL
+};
+
 /******************************************************************************
  *
  * Control Interface (A Interface)
@@ -524,9 +535,9 @@ struct cdp_cmn_ops {
 	QDF_STATUS (*txrx_peer_flush_rate_stats)(struct cdp_soc_t *soc,
 						 uint8_t pdev_id,
 						 void *buf);
-	void* (*txrx_peer_get_wlan_stats_ctx)(struct cdp_soc_t *soc,
-					      uint8_t vdev_id,
-					      uint8_t *mac_addr);
+	void* (*txrx_peer_get_rdkstats_ctx)(struct cdp_soc_t *soc,
+					    uint8_t vdev_id,
+					    uint8_t *mac_addr);
 
 	QDF_STATUS (*txrx_flush_rate_stats_request)(struct cdp_soc_t *soc,
 						    uint8_t pdev_id);
@@ -543,7 +554,8 @@ struct cdp_cmn_ops {
 
 	uint16_t (*get_peer_mac_list)
 		 (ol_txrx_soc_handle soc, uint8_t vdev_id,
-		  u_int8_t newmac[][QDF_MAC_ADDR_SIZE], uint16_t mac_cnt);
+		  u_int8_t newmac[][QDF_MAC_ADDR_SIZE], uint16_t mac_cnt,
+		  bool limit);
 };
 
 struct cdp_ctrl_ops {
@@ -681,12 +693,14 @@ struct cdp_ctrl_ops {
 						   uint8_t *rssi);
 #endif
 
+#ifdef WLAN_SUPPORT_MSCS
 	QDF_STATUS
 		(*txrx_record_mscs_params) (
 				struct cdp_soc_t *soc, uint8_t *macaddr,
 				uint8_t vdev_id,
 				struct cdp_mscs_params *mscs_params,
 				bool active);
+#endif
 
 	QDF_STATUS
 	(*set_key)(struct cdp_soc_t *soc, uint8_t vdev_id, uint8_t *mac,
@@ -766,7 +780,8 @@ struct cdp_me_ops {
 
 	uint16_t (*tx_me_convert_ucast)(struct cdp_soc_t *soc, uint8_t vdev_id,
 					qdf_nbuf_t wbuf, u_int8_t newmac[][6],
-					uint8_t newmaccnt);
+					uint8_t newmaccnt, uint8_t tid,
+					bool is_igmp);
 };
 
 struct cdp_mon_ops {
@@ -1092,8 +1107,20 @@ struct ol_if_ops {
 	bool (*is_roam_inprogress)(uint32_t vdev_id);
 	enum QDF_GLOBAL_MODE (*get_con_mode)(void);
 #ifdef QCA_PEER_MULTIQ_SUPPORT
-	int  (*peer_ast_flowid_map)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle,
-			       uint16_t peer_id, uint8_t vdev_id, uint8_t *peer_mac_addr);
+	int (*peer_ast_flowid_map)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle,
+				   uint16_t peer_id, uint8_t vdev_id,
+				   uint8_t *peer_mac_addr);
+#endif
+#ifdef DP_MEM_PRE_ALLOC
+	void *(*dp_prealloc_get_consistent)(uint32_t *size,
+					    void **base_vaddr_unaligned,
+					    qdf_dma_addr_t *paddr_unaligned,
+					    qdf_dma_addr_t *paddr_aligned,
+					    uint32_t align,
+					    uint32_t ring_type);
+	void (*dp_prealloc_put_consistent)(qdf_size_t size,
+					   void *vaddr_unligned,
+					   qdf_dma_addr_t paddr);
 #endif
 	int (*get_soc_nss_cfg)(struct cdp_ctrl_objmgr_psoc *ol_soc_handle);
 
@@ -1101,6 +1128,7 @@ struct ol_if_ops {
 				 uint8_t pdev_id);
 	QDF_STATUS(*nss_stats_clr)(struct cdp_ctrl_objmgr_psoc *psoc,
 				   uint8_t vdev_id);
+	int (*dp_rx_get_pending)(ol_txrx_soc_handle soc);
 	/* TODO: Add any other control path calls required to OL_IF/WMA layer */
 };
 
@@ -1135,6 +1163,11 @@ struct ol_if_ops {
  * @unregister_packetdump_cb: unregister callback for different pktlog
  * @pdev_reset_driver_del_ack: reset driver delayed ack enabled flag
  * @vdev_set_driver_del_ack_enable: set driver delayed ack enabled flag
+ *
+ * @vdev_inform_ll_conn: inform DP to add/delete a latency critical connection
+ *			 for this particular vdev.
+ * @set_swlm_enable: Enable or Disable Software Latency Manager.
+ * @is_swlm_enabled: Check if Software latency manager is enabled or not.
  *
  * Function pointers for miscellaneous soc/pdev/vdev related operations.
  */
@@ -1217,6 +1250,12 @@ struct cdp_misc_ops {
 					     struct cdp_txrx_ext_stats *req);
 	QDF_STATUS (*request_rx_hw_stats)(struct cdp_soc_t *soc_hdl,
 					  uint8_t vdev_id);
+	QDF_STATUS (*vdev_inform_ll_conn)(struct cdp_soc_t *soc_hdl,
+					  uint8_t vdev_id,
+					  enum vdev_ll_conn_actions action);
+	QDF_STATUS (*set_swlm_enable)(struct cdp_soc_t *soc_hdl,
+				      uint8_t val);
+	uint8_t (*is_swlm_enabled)(struct cdp_soc_t *soc_hdl);
 };
 
 /**
@@ -1476,6 +1515,8 @@ struct cdp_throttle_ops {
  * @ipa_register_op_cb:
  * @ipa_get_stat:
  * @ipa_tx_data_frame:
+ * @ipa_tx_buf_smmu_mapping: Provide SMMU mappings for Tx
+ * buffers to IPA
  */
 struct cdp_ipa_ops {
 	QDF_STATUS (*ipa_get_resource)(struct cdp_soc_t *soc_hdl,
@@ -1539,6 +1580,8 @@ struct cdp_ipa_ops {
 		uint32_t max_supported_bw_mbps);
 	bool (*ipa_rx_intrabss_fwd)(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 				    qdf_nbuf_t nbuf, bool *fwd_success);
+	QDF_STATUS (*ipa_tx_buf_smmu_mapping)(struct cdp_soc_t *soc_hdl,
+					      uint8_t pdev_id);
 };
 #endif
 

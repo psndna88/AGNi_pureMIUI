@@ -123,6 +123,7 @@ enum scan_source {
  * @scan_id: scan identifier used across host layers which is generated at WMI
  * @source: scan request originator (NL/Vendor scan)
  * @dev: net device (same as what is in scan_request)
+ * @scan_start_timestamp: scan start time
  *
  * Scan request linked list element
  */
@@ -132,6 +133,7 @@ struct scan_req {
 	uint32_t scan_id;
 	uint8_t source;
 	struct net_device *dev;
+	qdf_time_t scan_start_timestamp;
 };
 
 /**
@@ -427,4 +429,17 @@ void wlan_config_sched_scan_plans_to_wiphy(struct wiphy *wiphy,
 }
 #endif /* FEATURE_WLAN_SCAN_PNO */
 
+/**
+ * wlan_cfg80211_scan_done() - Scan completed callback to cfg80211
+ * @netdev: Net device
+ * @req : Scan request
+ * @aborted : true scan aborted false scan success
+ *
+ * This function notifies scan done to cfg80211
+ *
+ * Return: none
+ */
+void wlan_cfg80211_scan_done(struct net_device *netdev,
+			     struct cfg80211_scan_request *req,
+			     bool aborted);
 #endif

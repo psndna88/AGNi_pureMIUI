@@ -23,6 +23,8 @@
 #include "dp_types.h"
 
 
+#define DP_INVALID_VDEV_ID 0xFF
+
 #define DP_TX_MAX_NUM_FRAGS 6
 
 #define DP_TX_DESC_FLAG_SIMPLE		0x1
@@ -35,6 +37,7 @@
 #define DP_TX_DESC_FLAG_ME		0x80
 #define DP_TX_DESC_FLAG_TDLS_FRAME	0x100
 #define DP_TX_DESC_FLAG_ALLOCATED	0x200
+#define DP_TX_DESC_FLAG_MESH_MODE	0x400
 
 #define DP_TX_EXT_DESC_FLAG_METADATA_VALID 0x1
 
@@ -185,8 +188,6 @@ QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
 QDF_STATUS dp_tx_tso_cmn_desc_pool_init(struct dp_soc *soc,
 					uint8_t num_pool,
 					uint16_t num_desc);
-QDF_STATUS dp_tx_pdev_detach(struct dp_pdev *pdev);
-QDF_STATUS dp_tx_pdev_attach(struct dp_pdev *pdev);
 
 void dp_tx_tso_cmn_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool);
 void dp_tx_tso_cmn_desc_pool_free(struct dp_soc *soc, uint8_t num_pool);
@@ -281,6 +282,9 @@ uint32_t dp_tx_comp_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 QDF_STATUS
 dp_tx_prepare_send_me(struct dp_vdev *vdev, qdf_nbuf_t nbuf);
+
+QDF_STATUS
+dp_tx_prepare_send_igmp_me(struct dp_vdev *vdev, qdf_nbuf_t nbuf);
 
 #ifndef FEATURE_WDS
 static inline void dp_tx_mec_handler(struct dp_vdev *vdev, uint8_t *status)

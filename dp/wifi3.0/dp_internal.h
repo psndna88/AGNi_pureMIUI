@@ -22,7 +22,11 @@
 #include "dp_types.h"
 
 #define RX_BUFFER_SIZE_PKTLOG_LITE 1024
+
 #define DP_PEER_WDS_COUNT_INVALID UINT_MAX
+
+/* Alignment for consistent memory for DP rings*/
+#define DP_RING_BASE_ALIGN 32
 
 #define DP_RSSI_INVAL 0x80
 #define DP_RSSI_AVG_WEIGHT 2
@@ -35,6 +39,28 @@
 
 /* Macro For NYSM value received in VHT TLV */
 #define VHT_SGI_NYSM 3
+
+/* struct htt_dbgfs_cfg - structure to maintain required htt data
+ * @msg_word: htt msg sent to upper layer
+ * @m: qdf debugfs file pointer
+ */
+struct htt_dbgfs_cfg {
+	uint32_t *msg_word;
+	qdf_debugfs_file_t m;
+};
+
+/* Cookie MSB bits assigned for different use case.
+ * Note: User can't use last 3 bits, as it is reserved for pdev_id.
+ * If in future number of pdev are more than 3.
+ */
+/* Reserve for default case */
+#define DBG_STATS_COOKIE_DEFAULT 0x0
+
+/* Reserve for DP Stats: 3rd bit */
+#define DBG_STATS_COOKIE_DP_STATS 0x8
+
+/* Reserve for HTT Stats debugfs support: 4th bit */
+#define DBG_STATS_COOKIE_HTT_DBGFS 0x10
 
 /**
  * Bitmap of HTT PPDU TLV types for Default mode
@@ -360,6 +386,11 @@ while (0)
 #define DP_TX_HIST_STATS_PER_PDEV()
 #endif /* DISABLE_DP_STATS */
 
+#define FRAME_MASK_IPV4_ARP   1
+#define FRAME_MASK_IPV4_DHCP  2
+#define FRAME_MASK_IPV4_EAPOL 4
+#define FRAME_MASK_IPV6_DHCP  8
+
 #ifdef QCA_SUPPORT_PEER_ISOLATION
 #define dp_get_peer_isolation(_peer) ((_peer)->isolation)
 
@@ -367,8 +398,8 @@ static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
 {
 	peer->isolation = val;
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-		  "peer:%pM isolation:%d",
-		  peer->mac_addr.raw, peer->isolation);
+		  "peer:"QDF_MAC_ADDR_FMT" isolation:%d",
+		  QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer->isolation);
 }
 
 #else
@@ -589,6 +620,7 @@ static inline void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 	tgtobj->stats.tx.ofdma += srcobj->tx.ofdma;
 	tgtobj->stats.tx.stbc += srcobj->tx.stbc;
 	tgtobj->stats.tx.ldpc += srcobj->tx.ldpc;
+	tgtobj->stats.tx.pream_punct_cnt += srcobj->tx.pream_punct_cnt;
 	tgtobj->stats.tx.retries += srcobj->tx.retries;
 	tgtobj->stats.tx.non_amsdu_cnt += srcobj->tx.non_amsdu_cnt;
 	tgtobj->stats.tx.amsdu_cnt += srcobj->tx.amsdu_cnt;
@@ -682,6 +714,8 @@ static inline void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 	DP_STATS_AGGR(tgtobj, srcobj,
 		      tx_i.mcast_en.dropped_send_fail);
 	DP_STATS_AGGR(tgtobj, srcobj, tx_i.mcast_en.ucast);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.igmp_mcast_en.igmp_rcvd);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.igmp_mcast_en.igmp_ucast_converted);
 	DP_STATS_AGGR(tgtobj, srcobj, tx_i.dropped.dma_error);
 	DP_STATS_AGGR(tgtobj, srcobj, tx_i.dropped.ring_full);
 	DP_STATS_AGGR(tgtobj, srcobj, tx_i.dropped.enqueue_fail);
@@ -777,6 +811,7 @@ static inline void dp_update_vdev_stats(struct dp_soc *soc,
 	tgtobj->tx.ofdma += srcobj->stats.tx.ofdma;
 	tgtobj->tx.stbc += srcobj->stats.tx.stbc;
 	tgtobj->tx.ldpc += srcobj->stats.tx.ldpc;
+	tgtobj->tx.pream_punct_cnt += srcobj->stats.tx.pream_punct_cnt;
 	tgtobj->tx.retries += srcobj->stats.tx.retries;
 	tgtobj->tx.non_amsdu_cnt += srcobj->stats.tx.non_amsdu_cnt;
 	tgtobj->tx.amsdu_cnt += srcobj->stats.tx.amsdu_cnt;
@@ -956,7 +991,8 @@ void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
 				uint16_t peer_id);
 void dp_peer_find_id_to_obj_remove(struct dp_soc *soc,
 				   uint16_t peer_id);
-void dp_vdev_unref_delete(struct dp_soc *soc, struct dp_vdev *vdev);
+void dp_vdev_unref_delete(struct dp_soc *soc, struct dp_vdev *vdev,
+			  enum dp_mod_id mod_id);
 /*
  * dp_peer_ppdu_delayed_ba_init() Initialize ppdu in peer
  * @peer: Datapath peer
@@ -981,7 +1017,7 @@ extern struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 					      uint8_t *peer_mac_addr,
 					      int mac_addr_is_aligned,
 					      uint8_t vdev_id,
-					      enum dp_peer_mod_id id);
+					      enum dp_mod_id id);
 
 #ifdef DP_PEER_EXTENDED_API
 /**
@@ -1191,7 +1227,8 @@ void dp_rx_bar_stats_cb(struct dp_soc *soc, void *cb_ctxt,
 uint16_t dp_tx_me_send_convert_ucast(struct cdp_soc_t *soc, uint8_t vdev_id,
 				     qdf_nbuf_t nbuf,
 				     uint8_t newmac[][QDF_MAC_ADDR_SIZE],
-				     uint8_t new_mac_cnt);
+				     uint8_t new_mac_cnt, uint8_t tid,
+				     bool is_igmp);
 void dp_tx_me_alloc_descriptor(struct cdp_soc_t *soc, uint8_t pdev_id);
 
 void dp_tx_me_free_descriptor(struct cdp_soc_t *soc, uint8_t pdev_id);
@@ -1645,6 +1682,8 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc,
 
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev, struct dp_peer *peer);
 
+QDF_STATUS dp_peer_qos_stats_notify(struct dp_pdev *dp_pdev,
+				    struct cdp_rx_stats_ppdu_user *ppdu_user);
 #else
 static inline int dp_wdi_event_unsub(struct cdp_soc_t *soc, uint8_t pdev_id,
 				     wdi_event_subscribe *event_cb_sub_handle,
@@ -1707,6 +1746,11 @@ static inline QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS dp_peer_qos_stats_notify(struct dp_pdev *dp_pdev,
+				    struct cdp_rx_stats_ppdu_user *ppdu_user)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* CONFIG_WIN */
 
 #ifdef VDEV_PEER_PROTOCOL_COUNT
@@ -2128,20 +2172,53 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 #endif
 
 /**
- * dp_get_vdev_from_soc_vdev_id_wifi3() - Returns vdev object given the vdev id
+ * dp_vdev_get_ref() - API to take a reference for VDEV object
+ *
+ * @soc		: core DP soc context
+ * @vdev	: DP vdev
+ * @mod_id	: module id
+ *
+ * Return:	QDF_STATUS_SUCCESS if reference held successfully
+ *		else QDF_STATUS_E_INVAL
+ */
+static inline
+QDF_STATUS dp_vdev_get_ref(struct dp_soc *soc, struct dp_vdev *vdev,
+			   enum dp_mod_id mod_id)
+{
+	if (!qdf_atomic_inc_not_zero(&vdev->ref_cnt))
+		return QDF_STATUS_E_INVAL;
+
+	qdf_atomic_inc(&vdev->mod_refs[mod_id]);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_vdev_get_ref_by_id() - Returns vdev object given the vdev id
  * @soc: core DP soc context
  * @vdev_id: vdev id from vdev object can be retrieved
+ * @mod_id: module id which is requesting the reference
  *
  * Return: struct dp_vdev*: Pointer to DP vdev object
  */
 static inline struct dp_vdev *
-dp_get_vdev_from_soc_vdev_id_wifi3(struct dp_soc *soc,
-				   uint8_t vdev_id)
+dp_vdev_get_ref_by_id(struct dp_soc *soc, uint8_t vdev_id,
+		      enum dp_mod_id mod_id)
 {
+	struct dp_vdev *vdev = NULL;
 	if (qdf_unlikely(vdev_id >= MAX_VDEV_CNT))
 		return NULL;
 
-	return soc->vdev_id_map[vdev_id];
+	qdf_spin_lock_bh(&soc->vdev_map_lock);
+	vdev = soc->vdev_id_map[vdev_id];
+
+	if (!vdev || dp_vdev_get_ref(soc, vdev, mod_id) != QDF_STATUS_SUCCESS) {
+		qdf_spin_unlock_bh(&soc->vdev_map_lock);
+		return NULL;
+	}
+	qdf_spin_unlock_bh(&soc->vdev_map_lock);
+
+	return vdev;
 }
 
 /**
@@ -2179,12 +2256,13 @@ QDF_STATUS dp_rx_tid_update_wifi3(struct dp_peer *peer, int tid, uint32_t
  * @vdev_id: vdev id
  * @newmac: Table of the clients mac
  * @mac_cnt: No. of MACs required
+ * @limit: Limit the number of clients
  *
  * return: no of clients
  */
 uint16_t dp_get_peer_mac_list(ol_txrx_soc_handle soc, uint8_t vdev_id,
 			      u_int8_t newmac[][QDF_MAC_ADDR_SIZE],
-			      u_int16_t mac_cnt);
+			      u_int16_t mac_cnt, bool limit);
 /*
  * dp_is_hw_dbs_enable() - Procedure to check if DBS is supported
  * @soc:		DP SoC context
@@ -2279,21 +2357,70 @@ dp_hmwds_ast_add_notify(struct dp_peer *peer,
 }
 #endif
 
-/**
- * dp_vdev_get_ref() - API to take a reference for VDEV object
+#ifdef HTT_STATS_DEBUGFS_SUPPORT
+/* dp_pdev_htt_stats_dbgfs_init() - Function to allocate memory and initialize
+ * debugfs for HTT stats
+ * @pdev: dp pdev handle
  *
- * @soc		: core DP soc context
- * @vdev	: DP vdev
- *
- * Return:	QDF_STATUS_SUCCESS if reference held successfully
- *		else QDF_STATUS_E_INVAL
+ * Return: QDF_STATUS
  */
-static inline
-QDF_STATUS dp_vdev_get_ref(struct dp_soc *soc, struct dp_vdev *vdev)
-{
-	if (!qdf_atomic_inc_not_zero(&vdev->ref_cnt))
-		return QDF_STATUS_E_INVAL;
+QDF_STATUS dp_pdev_htt_stats_dbgfs_init(struct dp_pdev *pdev);
 
+/* dp_pdev_htt_stats_dbgfs_deinit() - Function to remove debugfs entry for
+ * HTT stats
+ * @pdev: dp pdev handle
+ *
+ * Return: none
+ */
+void dp_pdev_htt_stats_dbgfs_deinit(struct dp_pdev *pdev);
+#else
+
+/* dp_pdev_htt_stats_dbgfs_init() - Function to allocate memory and initialize
+ * debugfs for HTT stats
+ * @pdev: dp pdev handle
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_pdev_htt_stats_dbgfs_init(struct dp_pdev *pdev)
+{
 	return QDF_STATUS_SUCCESS;
 }
+
+/* dp_pdev_htt_stats_dbgfs_deinit() - Function to remove debugfs entry for
+ * HTT stats
+ * @pdev: dp pdev handle
+ *
+ * Return: none
+ */
+static inline void
+dp_pdev_htt_stats_dbgfs_deinit(struct dp_pdev *pdev)
+{
+}
+#endif /* HTT_STATS_DEBUGFS_SUPPORT */
+
+#ifndef WLAN_DP_FEATURE_SW_LATENCY_MGR
+/**
+ * dp_soc_swlm_attach() - attach the software latency manager resources
+ * @soc: Datapath global soc handle
+ *
+ * Returns: QDF_STATUS
+ */
+static inline QDF_STATUS dp_soc_swlm_attach(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_soc_swlm_detach() - detach the software latency manager resources
+ * @soc: Datapath global soc handle
+ *
+ * Returns: QDF_STATUS
+ */
+static inline QDF_STATUS dp_soc_swlm_detach(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* !WLAN_DP_FEATURE_SW_LATENCY_MGR */
+
 #endif /* #ifndef _DP_INTERNAL_H_ */

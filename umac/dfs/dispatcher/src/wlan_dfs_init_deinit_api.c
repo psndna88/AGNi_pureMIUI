@@ -161,6 +161,8 @@ void register_dfs_callbacks(void)
 		mlme_dfs_bringdown_vaps;
 	tmp_dfs_to_mlme->mlme_dfs_deliver_event =
 		mlme_dfs_deliver_event;
+	tmp_dfs_to_mlme->mlme_is_inter_band_chan_switch_allowed =
+		mlme_is_inter_band_chan_switch_allowed;
 
 	tmp_dfs_to_mlme->mlme_acquire_radar_mode_switch_lock =
 		mlme_acquire_radar_mode_switch_lock;
@@ -397,6 +399,8 @@ QDF_STATUS wlan_dfs_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 	uint8_t pdev_id;
 	QDF_STATUS status;
 	bool is_5ghz = false;
+	bool is_6ghz_only_pdev;
+	qdf_freq_t low_5g, high_5g;
 
 	if (!pdev) {
 		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "null pdev");
@@ -407,6 +411,17 @@ QDF_STATUS wlan_dfs_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 	if (!psoc) {
 		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "null psoc");
 		return QDF_STATUS_E_FAILURE;
+	}
+
+	wlan_reg_get_freq_range(pdev, NULL, NULL, &low_5g, &high_5g);
+	is_6ghz_only_pdev = wlan_reg_is_range_only6g(low_5g, high_5g);
+
+	if (is_6ghz_only_pdev) {
+		pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
+			 "Do not allocate DFS object for 6G, pdev_id = %d",
+			 pdev_id);
+		return QDF_STATUS_SUCCESS;
 	}
 
 	dfs_tx_ops = wlan_psoc_get_dfs_txops(psoc);

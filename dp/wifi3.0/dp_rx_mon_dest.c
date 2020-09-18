@@ -481,14 +481,13 @@ void dp_rx_msdus_set_payload(struct dp_soc *soc, qdf_nbuf_t msdu)
 #ifdef DP_RX_MON_MEM_FRAG
 /**
  * dp_rx_mon_frag_restitch_mpdu_from_msdus() - Restitch logic to
- *      convert to dot3 header and adjust frag memory pointing to
+ *      convert to 802.3 header and adjust frag memory pointing to
  *      dot3 header and payload in case of Non-Raw frame.
  *
  * @soc: struct dp_soc *
  * @mac_id: MAC id
  * @head_msdu: MPDU containing all MSDU as a frag
  * @rx_status: struct cdp_mon_status *
- * @pf_tag: Memory to store Protocol flow tag for every MSDU
  *
  * Return: Adjusted nbuf containing MPDU worth info.
  */
@@ -496,7 +495,6 @@ static inline
 qdf_nbuf_t dp_rx_mon_frag_restitch_mpdu_from_msdus(struct dp_soc *soc,
 						   uint32_t mac_id,
 						   qdf_nbuf_t head_msdu,
-						   qdf_nbuf_t last_msdu,
 						   struct cdp_mon_status *rx_status)
 {
 	uint32_t wifi_hdr_len, sec_hdr_len, msdu_llc_len,
@@ -1223,12 +1221,20 @@ static inline QDF_STATUS dp_send_mgmt_packet_to_stack(struct dp_soc *soc,
 {
 	uint32_t *nbuf_data;
 	struct ieee80211_frame *wh;
+	qdf_frag_t addr;
 
 	if (!nbuf)
 		return QDF_STATUS_E_INVAL;
 
+	/* Get addr pointing to80211 header */
+	addr = dp_rx_mon_get_nbuf_80211_hdr(nbuf);
+	if (qdf_unlikely(!addr)) {
+		qdf_nbuf_free(nbuf);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	/*check if this is not a mgmt packet*/
-	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
+	wh = (struct ieee80211_frame *)addr;
 	if (((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
 	     IEEE80211_FC0_TYPE_MGT) &&
 	     ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
@@ -1298,8 +1304,7 @@ qdf_nbuf_t dp_rx_mon_restitch_mpdu(struct dp_soc *soc, uint32_t mac_id,
 {
 	if (qdf_nbuf_get_nr_frags(head_msdu))
 		return dp_rx_mon_frag_restitch_mpdu_from_msdus(soc, mac_id,
-							       head_msdu,
-							       tail_msdu, rs);
+							       head_msdu, rs);
 	else
 		return dp_rx_mon_restitch_mpdu_from_msdus(soc, mac_id,
 							  head_msdu,

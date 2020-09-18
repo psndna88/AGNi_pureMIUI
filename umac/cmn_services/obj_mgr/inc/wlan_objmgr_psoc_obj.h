@@ -140,6 +140,8 @@
 #define WLAN_SOC_NSS_RATIO_TO_HOST_SUPPORT 0x00200000
 	/* EMA AP Support */
 #define WLAN_SOC_CEXT_EMA_AP           0x00400000
+	/* MBSS PARAM IN START REQ Support */
+#define WLAN_SOC_CEXT_MBSS_PARAM_IN_START   0x00800000
 
 /* feature_flags */
 	/* CONF: ATH FF enabled */
@@ -198,6 +200,8 @@
 #define WLAN_SOC_F_TESTMODE_ENABLE     0x01000000
 	/* Dynamic HW mode swithch enable */
 #define WLAN_SOC_F_DYNAMIC_HW_MODE     0x02000000
+	/* Broadcast TWT support enable */
+#define WLAN_SOC_F_BCAST_TWT           0x04000000
 
 /* PSOC op flags */
 

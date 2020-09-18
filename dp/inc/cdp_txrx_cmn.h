@@ -2483,13 +2483,13 @@ cdp_peer_flush_rate_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
 }
 
 /**
- * cdp_peer_get_wlanstats_ctx() - get wlanstats context
+ * cdp_peer_get_rdkstats_ctx() - get RDK stats context
  * @soc: opaque soc handle
  * @vdev_id: id of vdev handle
  * @mac: peer mac address
  */
 static inline void
-*cdp_peer_get_wlanstats_ctx(ol_txrx_soc_handle soc, uint8_t vdev_id,
+*cdp_peer_get_rdkstats_ctx(ol_txrx_soc_handle soc, uint8_t vdev_id,
 			  uint8_t *mac_addr)
 {
 	if (!soc || !soc->ops) {
@@ -2500,10 +2500,10 @@ static inline void
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->txrx_peer_get_wlan_stats_ctx)
+	    !soc->ops->cmn_drv_ops->txrx_peer_get_rdkstats_ctx)
 		return NULL;
 
-	return soc->ops->cmn_drv_ops->txrx_peer_get_wlan_stats_ctx(soc,
+	return soc->ops->cmn_drv_ops->txrx_peer_get_rdkstats_ctx(soc,
 								   vdev_id,
 								   mac_addr);
 }
@@ -2600,6 +2600,7 @@ cdp_tx_send_exc(ol_txrx_soc_handle soc,
  * @vdev_id: vdev id
  * @newmac: Table of the clients mac
  * @mac_cnt: No. of MACs required
+ * @limit: Limit the number of clients
  *
  * return: no of clients
  */
@@ -2607,7 +2608,7 @@ static inline uint16_t
 cdp_vdev_get_peer_mac_list(ol_txrx_soc_handle soc,
 			   uint8_t vdev_id,
 			   uint8_t newmac[][QDF_MAC_ADDR_SIZE],
-			   uint16_t mac_cnt)
+			   uint16_t mac_cnt, bool limit)
 {
 	if (!soc || !soc->ops) {
 		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
@@ -2621,7 +2622,7 @@ cdp_vdev_get_peer_mac_list(ol_txrx_soc_handle soc,
 		return 0;
 
 	return soc->ops->cmn_drv_ops->get_peer_mac_list
-			(soc, vdev_id, newmac, mac_cnt);
+			(soc, vdev_id, newmac, mac_cnt, limit);
 }
 
 /*
@@ -2651,4 +2652,18 @@ cdp_soc_config_full_mon_mode(ol_txrx_soc_handle soc, uint8_t val)
 	return soc->ops->mon_ops->config_full_mon_mode(soc, val);
 }
 
+/**
+ * cdp_rx_get_pending() - Get number of pending frames of RX threads
+ * @soc: opaque soc handle
+ * Return: number of pending frames
+ */
+static inline int
+cdp_rx_get_pending(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ol_ops ||
+	    !soc->ol_ops->dp_rx_get_pending)
+		return 0;
+
+	return soc->ol_ops->dp_rx_get_pending(soc);
+}
 #endif /* _CDP_TXRX_CMN_H_ */

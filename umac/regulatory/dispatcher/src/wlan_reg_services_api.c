@@ -316,6 +316,14 @@ uint16_t wlan_reg_dmn_get_chanwidth_from_opclass(uint8_t *country,
 						  opclass);
 }
 
+uint16_t wlan_reg_dmn_get_chanwidth_from_opclass_auto(uint8_t *country,
+						      uint8_t channel,
+						      uint8_t opclass)
+{
+	return reg_dmn_get_chanwidth_from_opclass_auto(country, channel,
+						       opclass);
+}
+
 uint16_t wlan_reg_dmn_set_curr_opclasses(uint8_t num_classes,
 					 uint8_t *class)
 {
@@ -703,10 +711,17 @@ QDF_STATUS wlan_reg_get_freq_range(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAULT;
 	}
 
-	*low_2g = pdev_priv_obj->range_2g_low;
-	*high_2g = pdev_priv_obj->range_2g_high;
-	*low_5g = pdev_priv_obj->range_5g_low;
-	*high_5g = pdev_priv_obj->range_5g_high;
+	if (low_2g)
+		*low_2g = pdev_priv_obj->range_2g_low;
+
+	if (high_2g)
+		*high_2g = pdev_priv_obj->range_2g_high;
+
+	if (low_5g)
+		*low_5g = pdev_priv_obj->range_5g_low;
+
+	if (high_5g)
+		*high_5g = pdev_priv_obj->range_5g_high;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -789,6 +804,16 @@ bool wlan_reg_is_5ghz_ch_freq(qdf_freq_t freq)
 	return reg_is_5ghz_ch_freq(freq);
 }
 
+bool wlan_reg_is_range_overlap_2g(qdf_freq_t low_freq, qdf_freq_t high_freq)
+{
+	return reg_is_range_overlap_2g(low_freq, high_freq);
+}
+
+bool wlan_reg_is_range_overlap_5g(qdf_freq_t low_freq, qdf_freq_t high_freq)
+{
+	return reg_is_range_overlap_5g(low_freq, high_freq);
+}
+
 #ifdef CONFIG_BAND_6GHZ
 bool wlan_reg_is_6ghz_chan_freq(uint16_t freq)
 {
@@ -799,6 +824,11 @@ bool wlan_reg_is_6ghz_chan_freq(uint16_t freq)
 bool wlan_reg_is_range_only6g(qdf_freq_t low_freq, qdf_freq_t high_freq)
 {
 	return reg_is_range_only6g(low_freq, high_freq);
+}
+
+bool wlan_reg_is_range_overlap_6g(qdf_freq_t low_freq, qdf_freq_t high_freq)
+{
+	return reg_is_range_overlap_6g(low_freq, high_freq);
 }
 #endif
 
@@ -820,6 +850,20 @@ bool wlan_reg_is_6ghz_psc_chan_freq(uint16_t freq)
 bool wlan_reg_is_6g_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
 	return reg_is_6g_freq_indoor(pdev, freq);
+}
+
+QDF_STATUS
+wlan_reg_get_max_txpower_for_6g_tpe(struct wlan_objmgr_pdev *pdev,
+				    qdf_freq_t freq, uint8_t bw,
+				    enum reg_6g_ap_type reg_ap,
+				    enum reg_6g_client_type reg_client,
+				    bool is_psd,
+				    uint8_t *tx_power)
+{
+	return reg_get_max_txpower_for_6g_tpe(pdev, freq, bw,
+					      reg_ap,
+					      reg_client, is_psd,
+					      tx_power);
 }
 #endif /* CONFIG_BAND_6GHZ */
 

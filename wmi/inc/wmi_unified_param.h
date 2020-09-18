@@ -226,7 +226,12 @@
 
 /* The following WMI_HOST_HEOPS_BSSCOLOR_XXX macros correspond to the
  *  WMI_HEOPS_COLOR_XXX macros in the FW wmi_unified.h */
+#ifdef SUPPORT_11AX_D3
+#define WMI_HOST_HEOPS_BSSCOLOR_S 24
+#else
 #define WMI_HOST_HEOPS_BSSCOLOR_S 0
+#endif
+
 #define WMI_HOST_HEOPS_BSSCOLOR_M 0x3f
 #define WMI_HOST_HEOPS_BSSCOLOR \
 	(WMI_HOST_HEOPS_BSSCOLOR_M << WMI_HOST_HEOPS_BSSCOLOR_S)
@@ -237,7 +242,12 @@
 
 /* The following WMI_HOST_HEOPS_BSSCOLOR_DISABLE_XXX macros correspond to the
  *  WMI_HEOPS_BSSCOLORDISABLE_XXX macros in the FW wmi_unified.h */
+#ifdef SUPPORT_11AX_D3
+#define WMI_HOST_HEOPS_BSSCOLOR_DISABLE_S 31
+#else
 #define WMI_HOST_HEOPS_BSSCOLOR_DISABLE_S 30
+#endif
+
 #define WMI_HOST_HEOPS_BSSCOLOR_DISABLE_M 0x1
 #define WMI_HOST_HEOPS_BSSCOLOR_DISABLE \
 	(WMI_HOST_HEOPS_BSSCOLOR_DISABLE_M << WMI_HOST_HEOPS_BSSCOLOR_DISABLE_S)
@@ -631,6 +641,7 @@ typedef enum {
  * @set_agile: is agile mode
  * @allow_he: HE allowed on chan
  * @psc_channel: 6 ghz preferred scan chan
+ * @nan_disabled: is NAN disabled on @mhz
  * @phy_mode: phymode (vht80 or ht40 or ...)
  * @cfreq1: centre frequency on primary
  * @cfreq2: centre frequency on secondary
@@ -655,7 +666,8 @@ struct channel_param {
 		allow_vht:1,
 		set_agile:1,
 		allow_he:1,
-		psc_channel:1;
+		psc_channel:1,
+		nan_disabled:1;
 	uint32_t phy_mode;
 	uint32_t cfreq1;
 	uint32_t cfreq2;
@@ -786,6 +798,8 @@ typedef enum {
 	WMI_HOST_REQUEST_BCN_STAT_RESET =  0x1000,
 	WMI_HOST_REQUEST_PEER_RETRY_STAT = 0x2000,
 	WMI_HOST_REQUEST_PEER_ADV_STATS = 0x4000,
+	WMI_HOST_REQUEST_PMF_BCN_PROTECT_STAT = 0x8000,
+	WMI_HOST_REQUEST_VDEV_PRB_FILS_STAT = 0x10000,
 } wmi_host_stats_id;
 
 typedef struct {
@@ -1589,16 +1603,12 @@ struct mobility_domain_info {
 	uint16_t mobility_domain;
 };
 
+#ifndef ROAM_OFFLOAD_V1
 #define WMI_HOST_ROAM_OFFLOAD_NUM_MCS_SET     (16)
 
 /* This TLV will be filled only in case roam offload
  * for wpa2-psk/pmkid/ese/11r is enabled */
 typedef struct {
-	/*
-	 * TLV tag and len; tag equals
-	 * WMITLV_TAG_STRUC_wmi_roam_offload_fixed_param
-	 */
-	uint32_t tlv_header;
 	uint32_t rssi_cat_gap;          /* gap for every category bucket */
 	uint32_t prefer_5g;             /* prefer select 5G candidate */
 	uint32_t select_5g_margin;
@@ -1743,6 +1753,7 @@ struct roam_offload_scan_params {
 	struct roam_fils_params roam_fils_params;
 #endif
 };
+#endif
 
 /**
  * struct wifi_epno_network - enhanced pno network block
@@ -2893,6 +2904,8 @@ typedef struct {
  * @dc: DC
  * @dc_per_event: DC per event
  * @num_thermal_conf: Number of thermal configurations to be sent
+ * @client_id: Thermal client id either apps or wpps
+ * @priority: Priority of apps/wpps
  * @tt_level_config: TT level config params
  */
 struct thermal_mitigation_params {
@@ -2901,6 +2914,8 @@ struct thermal_mitigation_params {
 	uint32_t dc;
 	uint32_t dc_per_event;
 	uint8_t num_thermal_conf;
+	uint8_t client_id;
+	uint8_t priority;
 	tt_level_config levelconf[THERMAL_LEVELS];
 };
 
@@ -3557,6 +3572,22 @@ enum wmi_host_preamble_type {
 };
 
 /**
+ * enum wmi_ratemask_type: ratemask type
+ * @WMI_RATEMASK_TYPE_CCK: CCK rate mask type
+ * @WMI_RATEMASK_TYPE_HT:  HT rate mask type
+ * @WMI_RATEMASK_TYPE_VHT: VHT rate mask type
+ * @WMI_RATEMASK_TYPE_HE:  HE rate mask type
+ *
+ * This is used for 'type' in WMI_VDEV_RATEMASK_CMDID
+ */
+enum wmi_ratemask_type {
+	WMI_RATEMASK_TYPE_CCK = 0,
+	WMI_RATEMASK_TYPE_HT  = 1,
+	WMI_RATEMASK_TYPE_VHT = 2,
+	WMI_RATEMASK_TYPE_HE  = 3,
+};
+
+/**
  * struct packet_power_info_params - packet power info params
  * @chainmask: chain mask
  * @chan_width: channel bandwidth
@@ -3870,6 +3901,7 @@ struct rx_reorder_queue_remove_params {
  * @num_mib_stats: number of mib stats
  * @num_mib_extd_stats: number of extended mib stats
  * @num_peer_stats_info_ext: number of peer extended stats info
+ * @num_vdev_extd_stats: number of vdev extended stats info
  * @last_event: specify if the current event is the last event
  */
 typedef struct {
@@ -3888,6 +3920,7 @@ typedef struct {
 	uint32_t num_mib_stats;
 	uint32_t num_mib_extd_stats;
 	uint32_t num_peer_stats_info_ext;
+	uint32_t num_vdev_extd_stats;
 	uint32_t last_event;
 } wmi_host_stats_event;
 
@@ -4146,6 +4179,19 @@ typedef struct {
 	uint32_t	mib_int_count;
 } wmi_host_pdev_stats;
 
+/**
+ * struct wmi_host_pmf_bcn_protect_stats - PMF bcn protect stats
+ * @igtk_mic_fail_cnt: MIC failure count of management packets using IGTK
+ * @igtk_replay_cnt: Replay detection count of management packets using IGTK
+ * @bcn_mic_fail_cnt: MIC failure count of beacon packets using BIGTK
+ * @bcn_replay_cnt: Replay detection count of beacon packets using BIGTK
+ */
+typedef struct {
+	uint32_t igtk_mic_fail_cnt;
+	uint32_t igtk_replay_cnt;
+	uint32_t bcn_mic_fail_cnt;
+	uint32_t bcn_replay_cnt;
+} wmi_host_pmf_bcn_protect_stats;
 
 /**
  * struct wmi_unit_test_event - Structure corresponding to WMI Unit test event
@@ -4283,6 +4329,22 @@ typedef struct {
 	uint32_t mpdu_fail_retry;
 	uint32_t reserved[13];
 } wmi_host_vdev_extd_stats;
+
+/**
+ * struct wmi_host_vdev_prb_fils_stats - VDEV probe response fils stats
+ * @vdev_id: unique id identifying the VDEV, generated by the caller
+ * @fd_succ_cnt: Total number of successfully transmitted Fils Discovery frames
+ * @fd_fail_cnt: Toatl number of Fils discovery failed count
+ * @unsolicited_prb_succ_cnt: Successful unsolicited probe response frames cnt
+ * @unsolicited_prb_fail_cnt: Failed unsolictied probe response frames cnt
+ */
+struct wmi_host_vdev_prb_fils_stats {
+	uint32_t vdev_id;
+	uint32_t fd_succ_cnt;
+	uint32_t fd_fail_cnt;
+	uint32_t unsolicited_prb_succ_cnt;
+	uint32_t unsolicited_prb_fail_cnt;
+};
 
 /**
  * struct wmi_host_vdev_nac_rssi_event - VDEV nac rssi stats
@@ -4685,6 +4747,7 @@ typedef enum {
 	wmi_vdev_bcn_latency_event_id,
 	wmi_vdev_disconnect_event_id,
 	wmi_peer_create_conf_event_id,
+	wmi_pdev_cp_fwstats_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5219,6 +5282,9 @@ typedef enum {
 	wmi_service_5dot9_ghz_support,
 	wmi_service_cfr_ta_ra_as_fp_support,
 	wmi_service_cfr_capture_count_support,
+	wmi_service_ll_stats_per_chan_rx_tx_time,
+	wmi_service_thermal_multi_client_support,
+	wmi_service_mbss_param_in_vdev_start_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5594,12 +5660,17 @@ typedef struct {
  * @freqnum:
  *   chan[0 ~ 7]: frequency number
  * @pdev_id: pdev_id
+ * @num_freq: number of valid frequency in freqnum
+ * @num_nfdbr_dbm: number of valid entries in dbr/dbm array
+ *
  */
 typedef struct {
 	int8_t nfdbr[WMI_HOST_RXG_CAL_CHAN_MAX * WMI_HOST_MAX_NUM_CHAINS];
 	int8_t nfdbm[WMI_HOST_RXG_CAL_CHAN_MAX * WMI_HOST_MAX_NUM_CHAINS];
 	uint32_t freqnum[WMI_HOST_RXG_CAL_CHAN_MAX];
 	uint32_t pdev_id;
+	uint16_t num_freq;
+	uint16_t num_nfdbr_dbm;
 } wmi_host_pdev_nfcal_power_all_channels_event;
 
 /**
@@ -7455,7 +7526,8 @@ struct wmi_host_obss_spatial_reuse_set_def_thresh {
  * @vdev_id: vdev identifer of VAP
  * @enable: Enable/disable flag for the frame
  * @frame_type: Frame type to be enabled
- * @frame_inject_period: Periodicity of injector frame transmission
+ * @frame_inject_period: Periodicity of injector frame transmission in msecs
+ * @frame_duration: Frame Duration field in usecs
  * @dstmac: Destination address to be used for the frame
  */
 struct wmi_host_injector_frame_params {
@@ -7463,6 +7535,7 @@ struct wmi_host_injector_frame_params {
 	uint32_t enable;
 	uint32_t frame_type;
 	uint32_t frame_inject_period;
+	uint32_t frame_duration;
 	uint8_t dstmac[QDF_MAC_ADDR_SIZE];
 };
 
@@ -8329,4 +8402,15 @@ enum wmi_host_tbtt_offset_cmd_type {
 	WMI_HOST_PDEV_GET_TBTT_OFFSET,
 	WMI_HOST_PDEV_SET_TBTT_OFFSET,
 };
+
+/**
+ * struct wmi_raw_event_buffer - fw event buffers
+ * @evt_raw_buf: event raw buffer
+ * @evt_processed_buf: event processed buffer
+ */
+struct wmi_raw_event_buffer {
+	void *evt_raw_buf;
+	void *evt_processed_buf;
+};
+
 #endif /* _WMI_UNIFIED_PARAM_H_ */

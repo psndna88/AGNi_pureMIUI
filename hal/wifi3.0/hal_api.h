@@ -985,6 +985,30 @@ hal_srng_access_start_unlocked(hal_soc_handle_t hal_soc_hdl,
 }
 
 /**
+ * hal_srng_try_access_start - Try to start (locked) ring access
+ *
+ * @hal_soc: Opaque HAL SOC handle
+ * @hal_ring_hdl: Ring pointer (Source or Destination ring)
+ *
+ * Return: 0 on success; error on failure
+ */
+static inline int hal_srng_try_access_start(hal_soc_handle_t hal_soc_hdl,
+					    hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	if (qdf_unlikely(!hal_ring_hdl)) {
+		qdf_print("Error: Invalid hal_ring\n");
+		return -EINVAL;
+	}
+
+	if (!SRNG_TRY_LOCK(&(srng->lock)))
+		return -EINVAL;
+
+	return hal_srng_access_start_unlocked(hal_soc_hdl, hal_ring_hdl);
+}
+
+/**
  * hal_srng_access_start - Start (locked) ring access
  *
  * @hal_soc: Opaque HAL SOC handle
@@ -1542,6 +1566,41 @@ void *hal_srng_src_peek_n_get_next(hal_soc_handle_t hal_soc_hdl,
 		srng->ring_size) != srng->u.src_ring.cached_tp) {
 		desc = &(srng->ring_base_vaddr[(srng->u.src_ring.hp +
 						srng->entry_size) %
+						srng->ring_size]);
+		return (void *)desc;
+	}
+
+	return NULL;
+}
+
+/**
+ * hal_srng_src_peek_n_get_next_next - Get next to next, i.e HP + 2 entry
+ * from a ring without moving head pointer.
+ *
+ * @hal_soc: Opaque HAL SOC handle
+ * @hal_ring_hdl: Source ring pointer
+ *
+ * Return: Opaque pointer for next to next ring entry; NULL on failire
+ */
+static inline
+void *hal_srng_src_peek_n_get_next_next(hal_soc_handle_t hal_soc_hdl,
+					hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	uint32_t *desc;
+
+	/* TODO: Using % is expensive, but we have to do this since
+	 * size of some SRNG rings is not power of 2 (due to descriptor
+	 * sizes). Need to create separate API for rings used
+	 * per-packet, with sizes power of 2 (TCL2SW, REO2SW,
+	 * SW2RXDMA and CE rings)
+	 */
+	if ((((srng->u.src_ring.hp + (srng->entry_size)) %
+		srng->ring_size) != srng->u.src_ring.cached_tp) &&
+	    (((srng->u.src_ring.hp + (srng->entry_size * 2)) %
+		srng->ring_size) != srng->u.src_ring.cached_tp)) {
+		desc = &(srng->ring_base_vaddr[(srng->u.src_ring.hp +
+						(srng->entry_size * 2)) %
 						srng->ring_size]);
 		return (void *)desc;
 	}

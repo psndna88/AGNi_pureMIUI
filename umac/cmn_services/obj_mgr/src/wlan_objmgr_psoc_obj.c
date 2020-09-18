@@ -1080,6 +1080,7 @@ struct wlan_objmgr_vdev *wlan_objmgr_get_vdev_by_opmode_from_psoc_debug(
 			break;
 		}
 		wlan_vdev_obj_unlock(vdev);
+		vdev = NULL;
 	}
 	wlan_psoc_obj_unlock(psoc);
 
@@ -1119,6 +1120,7 @@ struct wlan_objmgr_vdev *wlan_objmgr_get_vdev_by_opmode_from_psoc(
 			break;
 		}
 		wlan_vdev_obj_unlock(vdev);
+		vdev = NULL;
 	}
 	wlan_psoc_obj_unlock(psoc);
 
@@ -2876,8 +2878,8 @@ wlan_objmgr_print_peer_ref_leaks(struct wlan_objmgr_peer *peer, int vdev_id)
 
 	ref_id_dbg = peer->peer_objmgr.ref_id_dbg;
 	wlan_objmgr_for_each_refs(ref_id_dbg, ref_id, refs) {
-		obj_mgr_alert(QDF_MAC_ADDR_STR " %7u   %4u   %s",
-			      QDF_MAC_ADDR_ARRAY(peer->macaddr),
+		obj_mgr_alert(QDF_MAC_ADDR_FMT " %7u   %4u   %s",
+			      QDF_MAC_ADDR_REF(peer->macaddr),
 			      vdev_id,
 			      refs,
 			      string_from_dbgid(ref_id));
@@ -2887,8 +2889,8 @@ wlan_objmgr_print_peer_ref_leaks(struct wlan_objmgr_peer *peer, int vdev_id)
 static inline void
 wlan_objmgr_print_peer_ref_leaks(struct wlan_objmgr_peer *peer, int vdev_id)
 {
-	obj_mgr_alert(QDF_MAC_ADDR_STR " %7u   %4u   %s",
-		      QDF_MAC_ADDR_ARRAY(peer->macaddr),
+	obj_mgr_alert(QDF_MAC_ADDR_FMT " %7u   %4u   %s",
+		      QDF_MAC_ADDR_REF(peer->macaddr),
 		      vdev_id,
 		      qdf_atomic_read(&peer->peer_objmgr.ref_cnt),
 		      "TOTAL_REF_COUNT");

@@ -1729,6 +1729,7 @@ int hif_pci_bus_configure(struct hif_softc *hif_sc)
 	if (((hif_sc->target_info.target_type == TARGET_TYPE_QCA8074) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA8074V2) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5018) ||
+	     (hif_sc->target_info.target_type == TARGET_TYPE_QCN9100) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA6018)) &&
 	    (hif_sc->bus_type == QDF_BUS_TYPE_AHB)) {
 		hif_sc->per_ce_irq = true;
@@ -1750,6 +1751,7 @@ int hif_pci_bus_configure(struct hif_softc *hif_sc)
 	if (((hif_sc->target_info.target_type == TARGET_TYPE_QCA8074) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA8074V2) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5018) ||
+	     (hif_sc->target_info.target_type == TARGET_TYPE_QCN9100) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA6018)) &&
 	    (hif_sc->bus_type == QDF_BUS_TYPE_PCI))
 		HIF_INFO_MED("%s: Skip irq config for PCI based 8074 target",
@@ -2089,6 +2091,8 @@ static int hif_ce_srng_msi_free_irq(struct hif_softc *scn)
 
 		msi_data = (ce_id % msi_data_count) + msi_irq_start;
 		irq = pld_get_msi_irq(scn->qdf_dev->dev, msi_data);
+
+		hif_pci_ce_irq_remove_affinity_hint(irq);
 
 		hif_debug("%s: (ce_id %d, msi_data %d, irq %d)", __func__,
 			  ce_id, msi_data, irq);
@@ -2965,17 +2969,6 @@ const char *hif_pci_get_irq_name(int irq_no)
 }
 
 #ifdef HIF_CPU_PERF_AFFINE_MASK
-/**
- * hif_pci_irq_set_affinity_hint() - API to set IRQ affinity
- * @hif_ext_group: hif_ext_group to extract the irq info
- *
- * This function will set the IRQ affinity to the gold cores
- * only for defconfig builds
- *
- * @hif_ext_group: hif_ext_group to extract the irq info
- *
- * Return: none
- */
 void hif_pci_irq_set_affinity_hint(
 	struct hif_exec_context *hif_ext_group)
 {
@@ -3023,6 +3016,60 @@ void hif_pci_irq_set_affinity_hint(
 		}
 	}
 }
+
+void hif_pci_ce_irq_set_affinity_hint(
+	struct hif_softc *scn)
+{
+	int ret;
+	unsigned int cpus;
+	struct HIF_CE_state *ce_sc = HIF_GET_CE_STATE(scn);
+	struct hif_pci_softc *pci_sc = HIF_GET_PCI_SOFTC(scn);
+	struct CE_attr *host_ce_conf;
+	int ce_id;
+	qdf_cpu_mask ce_cpu_mask;
+
+	host_ce_conf = ce_sc->host_ce_config;
+	qdf_cpumask_clear(&ce_cpu_mask);
+
+	qdf_for_each_online_cpu(cpus) {
+		if (qdf_topology_physical_package_id(cpus) ==
+			CPU_CLUSTER_TYPE_PERF) {
+			qdf_cpumask_set_cpu(cpus,
+					    &ce_cpu_mask);
+		} else {
+			hif_err_rl("Unable to set cpu mask for offline CPU %d"
+				   , cpus);
+		}
+	}
+	if (qdf_cpumask_empty(&ce_cpu_mask)) {
+		hif_err_rl("Empty cpu_mask, unable to set CE IRQ affinity");
+		return;
+	}
+	for (ce_id = 0; ce_id < scn->ce_count; ce_id++) {
+		if (host_ce_conf[ce_id].flags & CE_ATTR_DISABLE_INTR)
+			continue;
+		qdf_cpumask_clear(&pci_sc->ce_irq_cpu_mask[ce_id]);
+		qdf_cpumask_copy(&pci_sc->ce_irq_cpu_mask[ce_id],
+				 &ce_cpu_mask);
+		qdf_dev_modify_irq_status(pci_sc->ce_msi_irq_num[ce_id],
+					  IRQ_NO_BALANCING, 0);
+		ret = qdf_dev_set_irq_affinity(
+			pci_sc->ce_msi_irq_num[ce_id],
+			(struct qdf_cpu_mask *)&pci_sc->ce_irq_cpu_mask[ce_id]);
+		qdf_dev_modify_irq_status(pci_sc->ce_msi_irq_num[ce_id],
+					  0, IRQ_NO_BALANCING);
+		if (ret)
+			hif_err_rl("Set affinity %*pbl fails for CE IRQ %d",
+				   qdf_cpumask_pr_args(
+					&pci_sc->ce_irq_cpu_mask[ce_id]),
+				   pci_sc->ce_msi_irq_num[ce_id]);
+		else
+			hif_debug_rl("Set affinity %*pbl for CE IRQ: %d",
+				     qdf_cpumask_pr_args(
+					&pci_sc->ce_irq_cpu_mask[ce_id]),
+				     pci_sc->ce_msi_irq_num[ce_id]);
+	}
+}
 #endif /* #ifdef HIF_CPU_PERF_AFFINE_MASK */
 
 void hif_pci_config_irq_affinity(struct hif_softc *scn)
@@ -3032,10 +3079,13 @@ void hif_pci_config_irq_affinity(struct hif_softc *scn)
 	struct hif_exec_context *hif_ext_group;
 
 	hif_core_ctl_set_boost(true);
+	/* Set IRQ affinity for WLAN DP interrupts*/
 	for (i = 0; i < hif_state->hif_num_extgroup; i++) {
 		hif_ext_group = hif_state->hif_ext_group[i];
 		hif_pci_irq_set_affinity_hint(hif_ext_group);
 	}
+	/* Set IRQ affinity for CE interrupts*/
+	hif_pci_ce_irq_set_affinity_hint(scn);
 }
 
 int hif_pci_configure_grp_irq(struct hif_softc *scn,

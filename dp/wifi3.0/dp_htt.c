@@ -452,6 +452,7 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 			((mcs < (MAX_MCS - 1)) && (preamble == DOT11_AX)));
 	DP_STATS_INCC(peer, tx.ampdu_cnt, num_msdu, ppdu->is_ampdu);
 	DP_STATS_INCC(peer, tx.non_ampdu_cnt, num_msdu, !(ppdu->is_ampdu));
+	DP_STATS_INCC(peer, tx.pream_punct_cnt, 1, ppdu->pream_punct);
 
 	dp_peer_stats_notify(pdev, peer);
 
@@ -495,6 +496,12 @@ htt_htc_pkt_alloc(struct htt_soc *soc)
 
 	if (!pkt)
 		pkt = qdf_mem_malloc(sizeof(*pkt));
+
+	if (!pkt)
+		return NULL;
+
+	htc_packet_set_magic_cookie(&(pkt->u.pkt.htc_pkt), 0);
+
 	return &pkt->u.pkt; /* not actually a dereference */
 }
 
@@ -509,6 +516,7 @@ htt_htc_pkt_free(struct htt_soc *soc, struct dp_htt_htc_pkt *pkt)
 		(struct dp_htt_htc_pkt_union *)pkt;
 
 	HTT_TX_MUTEX_ACQUIRE(&soc->htt_tx_mutex);
+	htc_packet_set_magic_cookie(&(u_pkt->u.pkt.htc_pkt), 0);
 	u_pkt->u.next = soc->htt_htc_pkt_freelist;
 	soc->htt_htc_pkt_freelist = u_pkt;
 	HTT_TX_MUTEX_RELEASE(&soc->htt_tx_mutex);
@@ -632,6 +640,11 @@ htt_htc_misc_pkt_pool_free(struct htt_soc *soc)
 
 	while (pkt) {
 		next = pkt->u.next;
+		if (htc_packet_get_magic_cookie(&(pkt->u.pkt.htc_pkt)) !=
+		    HTC_PACKET_MAGIC_COOKIE) {
+			pkt = next;
+			continue;
+		}
 		netbuf = (qdf_nbuf_t) (pkt->u.pkt.htc_pkt.pNetBufContext);
 		qdf_nbuf_unmap(soc->osdev, netbuf, QDF_DMA_TO_DEVICE);
 
@@ -1949,6 +1962,47 @@ dp_send_htt_stat_resp(struct htt_stats_context *htt_stats,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
+
+#ifdef HTT_STATS_DEBUGFS_SUPPORT
+/* dp_send_htt_stats_dbgfs_msg() - Function to send htt data to upper layer
+ * @pdev: dp pdev handle
+ * @msg_word: HTT msg
+ * @msg_len: Length of HTT msg sent
+ *
+ * Return: none
+ */
+static inline void
+dp_htt_stats_dbgfs_send_msg(struct dp_pdev *pdev, uint32_t *msg_word,
+			    uint32_t msg_len)
+{
+	struct htt_dbgfs_cfg dbgfs_cfg;
+	int done = 0;
+
+	/* send 5th word of HTT msg to upper layer */
+	dbgfs_cfg.msg_word = (msg_word + 4);
+	dbgfs_cfg.m = pdev->dbgfs_cfg->m;
+	msg_len = qdf_min(msg_len, (uint32_t)DP_EXT_MSG_LENGTH);
+
+	if (pdev->dbgfs_cfg->htt_stats_dbgfs_msg_process)
+		pdev->dbgfs_cfg->htt_stats_dbgfs_msg_process(&dbgfs_cfg,
+							     (msg_len + 4));
+
+	/* Get TLV Done bit from 4th msg word */
+	done = HTT_T2H_EXT_STATS_CONF_TLV_DONE_GET(*(msg_word + 3));
+	if (done) {
+		if (qdf_event_set(&pdev->dbgfs_cfg->htt_stats_dbgfs_event))
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				  "Failed to set event for debugfs htt stats");
+	}
+}
+#else
+static inline void
+dp_htt_stats_dbgfs_send_msg(struct dp_pdev *pdev, uint32_t *msg_word,
+			    uint32_t msg_len)
+{
+}
+#endif /* HTT_STATS_DEBUGFS_SUPPORT */
+
 /**
  * dp_process_htt_stat_msg(): Process the list of buffers of HTT EXT stats
  * @htt_stats: htt stats info
@@ -1980,8 +2034,8 @@ static inline void dp_process_htt_stat_msg(struct htt_stats_context *htt_stats,
 	uint32_t msg_remain_len = 0;
 	uint32_t tlv_remain_len = 0;
 	uint32_t *tlv_start;
-	int cookie_val;
-	int cookie_msb;
+	int cookie_val = 0;
+	int cookie_msb = 0;
 	int pdev_id;
 	bool copy_stats = false;
 	struct dp_pdev *pdev;
@@ -2006,9 +2060,15 @@ static inline void dp_process_htt_stat_msg(struct htt_stats_context *htt_stats,
 		pdev_id = *(msg_word + 2) & HTT_PID_BIT_MASK;
 		pdev = soc->pdev_list[pdev_id];
 
-		if (cookie_msb >> 2) {
-			copy_stats = true;
+		if (!cookie_val && (cookie_msb & DBG_STATS_COOKIE_HTT_DBGFS)) {
+			dp_htt_stats_dbgfs_send_msg(pdev, msg_word,
+						    htt_stats->msg_len);
+			qdf_nbuf_free(htt_msg);
+			continue;
 		}
+
+		if (cookie_msb & DBG_STATS_COOKIE_DP_STATS)
+			copy_stats = true;
 
 		/* read 5th word */
 		msg_word = msg_word + 4;
@@ -2414,13 +2474,13 @@ static void dp_process_ppdu_stats_user_common_tlv(
 
 	/* returning earlier causes other feilds unpopulated */
 	if (peer_id == DP_SCAN_PEER_ID) {
-		vdev =
-		       dp_get_vdev_from_soc_vdev_id_wifi3(pdev->soc,
-							  ppdu_desc->vdev_id);
+		vdev = dp_vdev_get_ref_by_id(pdev->soc, ppdu_desc->vdev_id,
+					     DP_MOD_ID_TX_PPDU_STATS);
 		if (!vdev)
 			return;
 		qdf_mem_copy(ppdu_user_desc->mac_addr, vdev->mac_addr.raw,
 			     QDF_MAC_ADDR_SIZE);
+		dp_vdev_unref_delete(pdev->soc, vdev, DP_MOD_ID_TX_PPDU_STATS);
 	} else {
 		peer = dp_peer_get_ref_by_id(pdev->soc, peer_id,
 					     DP_MOD_ID_TX_PPDU_STATS);
@@ -2432,13 +2492,15 @@ static void dp_process_ppdu_stats_user_common_tlv(
 			 * with peer id equal to previously associated
 			 * peer's peer_id but it was removed
 			 */
-			vdev =
-			dp_get_vdev_from_soc_vdev_id_wifi3(pdev->soc,
-							   ppdu_desc->vdev_id);
+			vdev = dp_vdev_get_ref_by_id(pdev->soc,
+						     ppdu_desc->vdev_id,
+						     DP_MOD_ID_TX_PPDU_STATS);
 			if (!vdev)
 				return;
 			qdf_mem_copy(ppdu_user_desc->mac_addr,
 				     vdev->mac_addr.raw, QDF_MAC_ADDR_SIZE);
+			dp_vdev_unref_delete(pdev->soc, vdev,
+					     DP_MOD_ID_TX_PPDU_STATS);
 			return;
 		}
 		qdf_mem_copy(ppdu_user_desc->mac_addr,
@@ -2478,11 +2540,12 @@ static void dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 	ppdu_user_desc = &ppdu_desc->user[curr_user_index];
 	ppdu_user_desc->tlv_bitmap |= (1 << tlv_type);
 	if (peer_id == DP_SCAN_PEER_ID) {
-		vdev =
-		       dp_get_vdev_from_soc_vdev_id_wifi3(pdev->soc,
-							  ppdu_desc->vdev_id);
+		vdev = dp_vdev_get_ref_by_id(pdev->soc, ppdu_desc->vdev_id,
+					     DP_MOD_ID_TX_PPDU_STATS);
 		if (!vdev)
 			return;
+		dp_vdev_unref_delete(pdev->soc, vdev,
+				     DP_MOD_ID_TX_PPDU_STATS);
 	}
 	ppdu_user_desc->peer_id = peer_id;
 
@@ -2705,6 +2768,8 @@ static void dp_process_ppdu_stats_user_cmpltn_common_tlv(
 		HTT_PPDU_STATS_USER_CMPLTN_COMMON_TLV_RTS_SUCCESS_GET(*tag_buf);
 	ppdu_desc->rts_failure =
 		HTT_PPDU_STATS_USER_CMPLTN_COMMON_TLV_RTS_FAILURE_GET(*tag_buf);
+	ppdu_user_desc->pream_punct =
+		HTT_PPDU_STATS_USER_CMPLTN_COMMON_TLV_PREAM_PUNC_TX_GET(*tag_buf);
 
 	ppdu_info->compltn_common_tlv++;
 
@@ -3580,7 +3645,7 @@ void dp_ppdu_desc_deliver(struct dp_pdev *pdev,
 
 		if (!s_ppdu_info->done && !recv_ack_ba_done) {
 			if (time_delta < MAX_SCHED_STARVE) {
-				qdf_err("pdev[%d] ppdu_id[%d] sched_cmdid[%d] TLV_B[0x%x] TSF[%u] D[%d]",
+				dp_info("pdev[%d] ppdu_id[%d] sched_cmdid[%d] TLV_B[0x%x] TSF[%u] D[%d]",
 					pdev->pdev_id,
 					s_ppdu_info->ppdu_id,
 					s_ppdu_info->sched_cmdid,
@@ -3604,11 +3669,11 @@ void dp_ppdu_desc_deliver(struct dp_pdev *pdev,
 		ppdu_desc->tlv_bitmap = s_ppdu_info->tlv_bitmap;
 
 		if (starved) {
-			qdf_err("ppdu starved fc[0x%x] h_ftype[%d] tlv_bitmap[0x%x] cs[%d]\n",
-				ppdu_desc->frame_ctrl,
-				ppdu_desc->htt_frame_type,
-				ppdu_desc->tlv_bitmap,
-				ppdu_desc->user[0].completion_status);
+			dp_err("ppdu starved fc[0x%x] h_ftype[%d] tlv_bitmap[0x%x] cs[%d]\n",
+			       ppdu_desc->frame_ctrl,
+			       ppdu_desc->htt_frame_type,
+			       ppdu_desc->tlv_bitmap,
+			       ppdu_desc->user[0].completion_status);
 			starved = 0;
 		}
 
@@ -5005,8 +5070,10 @@ QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 	/* word 7 */
 	msg_word++;
 	*msg_word = 0;
-	/*Using last 2 bits for pdev_id */
-	cookie_msb = ((cookie_msb << 2) | pdev->pdev_id);
+	/* Currently Using last 2 bits for pdev_id
+	 * For future reference, reserving 3 bits in cookie_msb for pdev_id
+	 */
+	cookie_msb = (cookie_msb | pdev->pdev_id);
 	HTT_H2T_EXT_STATS_REQ_CONFIG_PARAM_SET(*msg_word, cookie_msb);
 
 	pkt = htt_htc_pkt_alloc(soc);

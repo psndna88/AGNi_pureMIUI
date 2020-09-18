@@ -35,3 +35,41 @@ QDF_STATUS wlan_cm_start_disconnect(struct wlan_objmgr_vdev *vdev,
 	return cm_disconnect_start_req(vdev, req);
 }
 
+QDF_STATUS wlan_cm_bss_peer_create_rsp(struct wlan_objmgr_vdev *vdev,
+				       uint32_t status,
+				       struct qdf_mac_addr *peer_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_cm_connect_rsp(struct wlan_objmgr_vdev *vdev,
+			       struct wlan_cm_connect_rsp *cm_conn_rsp)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_cm_bss_peer_delete_ind(struct wlan_objmgr_vdev *vdev,
+				       struct qdf_mac_addr *peer_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_cm_bss_peer_delete_rsp(struct wlan_objmgr_vdev *vdev,
+				       uint32_t status)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_cm_disconnect_rsp(struct wlan_objmgr_vdev *vdev,
+				  struct wlan_cm_discon_rsp cm_discon_rsp)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_POLICY_MGR_ENABLE
+void wlan_cm_hw_mode_change_resp(struct wlan_objmgr_pdev *pdev, uint8_t vdev_id,
+				 wlan_cm_id cm_id, QDF_STATUS status)
+{
+	cm_hw_mode_change_resp(pdev, vdev_id, cm_id, status);
+}
+#endif /* ifdef POLICY_MGR_ENABLE */

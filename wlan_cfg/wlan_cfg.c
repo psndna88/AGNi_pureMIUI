@@ -547,6 +547,8 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 			cfg_get(psoc, CFG_DP_NAN_TCP_UDP_CKSUM_OFFLOAD);
 	wlan_cfg_ctx->tcp_udp_checksumoffload =
 			cfg_get(psoc, CFG_DP_TCP_UDP_CKSUM_OFFLOAD);
+	wlan_cfg_ctx->legacy_mode_checksumoffload_disable =
+			cfg_get(psoc, CFG_DP_LEGACY_MODE_CSUM_DISABLE);
 	wlan_cfg_ctx->per_pkt_trace = cfg_get(psoc, CFG_DP_PER_PKT_LOGGING);
 	wlan_cfg_ctx->defrag_timeout_check =
 			cfg_get(psoc, CFG_DP_DEFRAG_TIMEOUT_CHECK);
@@ -616,7 +618,9 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 			cfg_get(psoc, CFG_DP_RX_PENDING_HL_THRESHOLD);
 	wlan_cfg_ctx->rx_pending_low_threshold =
 			cfg_get(psoc, CFG_DP_RX_PENDING_LO_THRESHOLD);
-
+	wlan_cfg_ctx->is_poll_mode_enabled =
+			cfg_get(psoc, CFG_DP_POLL_MODE_ENABLE);
+	wlan_cfg_ctx->is_swlm_enabled = cfg_get(psoc, CFG_DP_SWLM_ENABLE);
 	return wlan_cfg_ctx;
 }
 
@@ -1355,6 +1359,11 @@ bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 }
 #endif
 
+bool wlan_cfg_is_poll_mode_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return (bool)(cfg->is_poll_mode_enabled);
+}
+
 void
 wlan_cfg_set_rx_flow_search_table_per_pdev(struct wlan_cfg_dp_soc_ctxt *cfg,
 					   bool val)
@@ -1416,3 +1425,15 @@ bool wlan_cfg_is_rx_buffer_pool_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 	return false;
 }
 #endif /* WLAN_FEATURE_RX_PREALLOC_BUFFER_POOL */
+
+#ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
+bool wlan_cfg_is_swlm_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return (bool)(cfg->is_swlm_enabled);
+}
+#else
+bool wlan_cfg_is_swlm_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return false;
+}
+#endif

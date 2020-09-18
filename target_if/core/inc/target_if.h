@@ -336,6 +336,20 @@ struct target_pdev_info {
 	void *feature_ptr;
 };
 
+/**
+ * struct target_mu_caps - max number of users per-PPDU for OFDMA/MU-MIMO
+ * @ofdma_dl: max users for Downlink OFDMA transmissions
+ * @ofdma_ul: max users for Uplink OFDMA transmissions
+ * @mumimo_dl: max users for Downlink MU-MIMO transmissions
+ * @mumimo_ul: max users for Uplink MU-MIMO transmissions
+ */
+struct target_mu_caps {
+	uint16_t ofdma_dl;
+	uint16_t ofdma_ul;
+	uint16_t mumimo_dl;
+	uint16_t mumimo_ul;
+};
+
 
 /**
  * target_if_init() - target_if Initialization
@@ -515,6 +529,14 @@ bool target_is_tgt_type_adrastea(uint32_t target_type);
  * Return: true if the target_type is QCN9000, else false.
  */
 bool target_is_tgt_type_qcn9000(uint32_t target_type);
+
+/**
+ * target_is_tgt_type_qcn9100() - Check if the target type is QCN9100 (Spruce)
+ * @target_type: target type to be checked.
+ *
+ * Return: true if the target_type is QCN9100, else false.
+ */
+bool target_is_tgt_type_qcn9100(uint32_t target_type);
 
 /**
  * target_psoc_set_wlan_init_status() - set info wlan_init_status
@@ -2451,4 +2473,32 @@ static inline uint32_t target_psoc_get_preamble_puncture_cap(
 
 	return psoc_info->info.service_ext2_param.preamble_puncture_bw_cap;
 }
+
+/**
+ * target_psoc_get_mu_max_users() - Get max users for MU transmissions
+ * @psoc_info: pointer to structure target_psoc_info
+ * @mu_caps: pointer to structure for max OFDMA/MU-MIMO users per-PPDU
+ *
+ * API to get the max number of users per-PPDU supported for Uplink/Downlink
+ * MU transmissions.
+ *
+ * Return: void
+ */
+static inline void target_psoc_get_mu_max_users(
+					struct target_psoc_info *psoc_info,
+					struct target_mu_caps *mu_caps)
+{
+	struct wlan_psoc_host_service_ext2_param *service_ext2_param;
+
+	if (!psoc_info || !mu_caps)
+		return;
+
+	service_ext2_param = &psoc_info->info.service_ext2_param;
+
+	mu_caps->ofdma_dl = service_ext2_param->max_users_dl_ofdma;
+	mu_caps->ofdma_ul = service_ext2_param->max_users_ul_ofdma;
+	mu_caps->mumimo_dl = service_ext2_param->max_users_dl_mumimo;
+	mu_caps->mumimo_ul = service_ext2_param->max_users_ul_mumimo;
+}
+
 #endif

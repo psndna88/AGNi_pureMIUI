@@ -794,4 +794,73 @@ cdp_request_rx_hw_stats(ol_txrx_soc_handle soc, uint8_t vdev_id)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+/**
+ * cdp_vdev_inform_ll_conn() - Inform DP about the low latency connection
+ * @soc: soc handle
+ * @vdev_id: vdev id
+ * @action: Action to be performed (Add/Delete)
+ *
+ * Returns: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_vdev_inform_ll_conn(ol_txrx_soc_handle soc, uint8_t vdev_id,
+			enum vdev_ll_conn_actions action)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (soc->ops->misc_ops->vdev_inform_ll_conn)
+		return soc->ops->misc_ops->vdev_inform_ll_conn(soc, vdev_id,
+							       action);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * cdp_soc_set_swlm_enable() - Enable or disable software latency manager
+ * @soc: soc handle
+ * @value: value (enable/disable)
+ *
+ * Returns: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_soc_set_swlm_enable(ol_txrx_soc_handle soc, uint8_t value)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (soc->ops->misc_ops->set_swlm_enable)
+		return soc->ops->misc_ops->set_swlm_enable(soc, value);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * cdp_soc_is_swlm_enabled() - Check if the software latency manager is
+ *			       enabled or not
+ * @soc: soc handle
+ *
+ * Returns: 1 if enabled, 0 if disabled
+ */
+static inline uint8_t
+cdp_soc_is_swlm_enabled(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		return 0;
+	}
+
+	if (soc->ops->misc_ops->is_swlm_enabled)
+		return soc->ops->misc_ops->is_swlm_enabled(soc);
+
+	return 0;
+}
 #endif /* _CDP_TXRX_MISC_H_ */
