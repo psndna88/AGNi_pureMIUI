@@ -33,6 +33,15 @@
 	#size-cells = <2>;
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
 
+	mem-offline {
+		compatible = "qcom,mem-offline";
+		offline-sizes = <0x1 0x40000000 0x0 0x40000000>,
+			<0x1 0xc0000000 0x0 0x80000000>,
+			<0x2 0xc0000000 0x1 0x40000000>;
+		granule = <512>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	aliases {
 			ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
 			sdhc1 = &sdhc_1; /*SDC1 eMMC slot*/
@@ -403,6 +412,13 @@
 			size = <0x0 0x1400000>;
 		};
 
+		qcom: ramoops {
+			compatible = "ramoops";
+			reg = <0x0 0xa9000000 0x0 0x200000>;
+			pmsg-size = <0x200000>;
+			mem-type = <2>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
@@ -419,6 +435,14 @@
 			reusable;
 			alignment = <0x0 0x400000>;
 			size = <0x0 0x400000>;
+		};
+
+		memshare_mem: memshare_region {
+			compatible = "shared-dma-pool";
+			no-map;
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			alignment = <0x0 0x100000>;
+			size = <0x0 0x800000>;
 		};
 
 		dump_mem: mem_dump_region {
@@ -440,10 +464,15 @@
 			reg = <0x0 0xe1000000 0x0 0x02300000>;
 			label = "cont_splash_region";
 		};
+
+		dfps_data_memory: dfps_data_memory {
+			reg = <0x0 0xe3300000 0x0 0x0100000>;
+			label = "dfps_data_memory";
+		};
 	};
 
 	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000";
+		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
 	};
 
 	soc: soc { };
@@ -617,6 +646,8 @@
 		reg = <0x117f000 0x1000>,
 		      <0x1112000 0x6000>;
 
+		qcom,transaction_timeout = <0>;
+
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
 	};
@@ -768,6 +799,7 @@
 		qcom,client_3 {
 			compatible = "qcom,memshare-peripheral";
 			qcom,peripheral-size = <0x500000>;
+			memory-region = <&memshare_mem>;
 			qcom,client-id = <1>;
 			qcom,allocate-on-request;
 			label = "modem";
@@ -986,6 +1018,11 @@
 
 		qcom,lut-row-size = <4>;
 		qcom,skip-enable-check;
+
+		interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "dcvsh0_int", "dcvsh1_int", "dcvsh2_int";
 
 		#freq-domain-cells = <2>;
 	};
@@ -1744,7 +1781,20 @@
 		non-removable;
 		supports-cqe;
 
+		qcom,devfreq,freq-table = <50000000 200000000>;
+		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
 		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <67>;
+		};
 	};
 
 	sdhc_2: sdhci@8804000 {
@@ -1792,7 +1842,19 @@
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
 
+		qcom,devfreq,freq-table = <50000000 202000000>;
+
 		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <67>;
+		};
 	};
 
 	apps_rsc: rsc@18200000 {
@@ -1810,7 +1872,7 @@
 		qcom,tcs-config = <ACTIVE_TCS  2>,
 				  <SLEEP_TCS   3>,
 				  <WAKE_TCS    3>,
-				  <CONTROL_TCS 1>;
+				  <CONTROL_TCS 0>;
 
 		rpmhcc: qcom,rpmhclk {
 			compatible = "qcom,shima-rpmh-clk";
@@ -2013,6 +2075,8 @@
 		reg = <0x9200000 0xd0000> , <0x9600000 0x50000>;
 		reg-names = "llcc_base", "llcc_broadcast_base";
 		cap-based-alloc-and-pwr-collapse;
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "qdss_clk";
 	};
 
 	clk_virt: interconnect {
@@ -2052,7 +2116,9 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
-		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+		clocks = <&gcc GCC_AGGRE_NOC_PCIE_0_AXI_CLK>,
+			<&gcc GCC_AGGRE_NOC_PCIE_1_AXI_CLK>,
+			<&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
 			<&gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>;
 	};
 
@@ -2062,9 +2128,7 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
-		clocks = <&gcc GCC_AGGRE_NOC_PCIE_0_AXI_CLK>,
-			<&gcc GCC_AGGRE_NOC_PCIE_1_AXI_CLK>,
-			<&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
 			<&rpmhcc RPMH_IPA_CLK>;
 	};
 
@@ -2126,7 +2190,7 @@
 	llcc_bw_opp_table: llcc-bw-opp-table {
 		compatible = "operating-points-v2";
 		BW_OPP_ENTRY(  150, 32); /*  4576 MB/s */
-		BW_OPP_ENTRY(  300, 32); /*  9154 MB/s */
+		BW_OPP_ENTRY(  300, 32); /*  9155 MB/s */
 		BW_OPP_ENTRY(  466, 32); /* 14220 MB/s */
 		BW_OPP_ENTRY(  600, 32); /* 18310 MB/s */
 		BW_OPP_ENTRY(  806, 32); /* 24596 MB/s */
@@ -2354,7 +2418,7 @@
 			<  691200  556800000 >,
 			<  940800  652800000 >,
 			< 1171200  844800000 >,
-			< 1516800 1065600000 >,
+			< 1516800 1056000000 >,
 			< 1670400 1305600000 >,
 			< 1804800 1420800000 >;
 	};
@@ -2373,7 +2437,7 @@
 			< 1094400  556800000 >,
 			< 1267200  806400000 >,
 			< 1766400 1190400000 >,
-			< 2227200 1401600000 >,
+			< 2169600 1401600000 >,
 			< 2707200 1420800000 >;
 	};
 
@@ -2610,7 +2674,7 @@
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
 					< 2361600 MHZ_TO_MBPS( 300, 4) >,
-					< 2707200 MHZ_TO_MBPS(2033, 4) >;
+					< 2707200 MHZ_TO_MBPS(2133, 4) >;
 			};
 
 			ddr5-map {
@@ -2662,6 +2726,8 @@
 		memory-region = <&pil_mpss_wlan_mem>;
 		qcom,signal-aop;
 		qcom,complete-ramdump;
+
+		interconnects = <&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>;
 
 		/* Inputs from mss */
 		interrupts-extended = <&intc GIC_SPI 264 IRQ_TYPE_LEVEL_HIGH>,
@@ -2717,13 +2783,15 @@
 				<&adsp_smp2p_in 0 0>,
 				<&adsp_smp2p_in 2 0>,
 				<&adsp_smp2p_in 1 0>,
-				<&adsp_smp2p_in 3 0>;
+				<&adsp_smp2p_in 3 0>,
+				<&adsp_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		/* Outputs to lpass */
 		qcom,smem-states = <&adsp_smp2p_out 0>;
@@ -2766,13 +2834,15 @@
 				<&cdsp_smp2p_in 0 0>,
 				<&cdsp_smp2p_in 2 0>,
 				<&cdsp_smp2p_in 1 0>,
-				<&cdsp_smp2p_in 3 0>;
+				<&cdsp_smp2p_in 3 0>,
+				<&cdsp_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		/* Outputs to turing */
 		qcom,smem-states = <&cdsp_smp2p_out 0>;
@@ -3314,6 +3384,16 @@
 			qcom,dump-id = <0x102>;
 		};
 
+		LLCC_1: llcc_1_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x140>;
+		};
+
+		LLCC_2: llcc_2_dcache {
+			qcom,dump-size = <0x1141c0>;
+			qcom,dump-id = <0x141>;
+		};
+
 		misc_data {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0xe8>;
@@ -3327,6 +3407,11 @@
 		etflpass_reg {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0x104>;
+		};
+
+		osm_reg {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x163>;
 		};
 
 		pcu_reg {
@@ -3373,7 +3458,6 @@
 	};
 
 	wlan: qcom,cnss-qca6490@b0000000 {
-		status = "disabled";
 		compatible = "qcom,cnss-qca6490";
 		reg = <0xb0000000 0x10000>;
 		reg-names = "smmu_iova_ipa";
@@ -3397,6 +3481,40 @@
 		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
 		wlan-ant-switch-supply = <&L11C>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
+
+		interconnects =
+		<&aggre1_noc MASTER_PCIE_0 &aggre1_noc SLAVE_ANOC_PCIE_GEM_NOC>,
+		<&gem_noc MASTER_ANOC_PCIE_GEM_NOC &mc_virt SLAVE_EBI1>;
+		interconnect-names = "pcie_to_memnoc", "memnoc_to_ddr";
+
+		qcom,icc-path-count = <2>;
+		qcom,bus-bw-cfg-count = <7>;
+		qcom,bus-bw-cfg =
+		/** ICC Path 1 **/
+		<0 0>, /* no vote */
+		/* idle: 0-18 Mbps snoc/anoc: 100 Mhz ddr: 451.2 MHz */
+		<2250 390000>,
+		/* low: 18-60 Mbps snoc/anoc: 100 Mhz ddr: 451.2 MHz */
+		<7500 390000>,
+		/* medium: 60-240 Mbps snoc/anoc: 200 Mhz ddr: 451.2 MHz */
+		<30000 790000>,
+		/* high: 240-1080 Mbps snoc/anoc: 200 Mhz ddr: 451.2 MHz */
+		<100000 790000>,
+		/* very high: > 1080 Mbps snoc/anoc: 403 Mhz ddr: 451.2 MHz */
+		<175000 1600000>,
+		/* low (latency critical): 18-60 Mbps snoc/anoc: 200 Mhz
+		 * ddr: 547.2 MHz
+		 */
+		<7500 390000>,
+
+		/** ICC Path 2 **/
+		<0 0>,
+		<2250 1804800>,
+		<7500 1804800>,
+		<30000 1804800>,
+		<100000 1804800>,
+		<175000 6220800>,
+		<7500 2188800>;
 
 		mhi,max-channels = <30>;
 		mhi,timeout = <10000>;

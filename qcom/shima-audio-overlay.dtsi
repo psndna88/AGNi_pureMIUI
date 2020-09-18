@@ -247,7 +247,7 @@
 	qcom,wcn-bt = <1>;
 	qcom,tdm-max-slots = <8>;
 	qcom,wcd-disabled = <0>;
-	qcom,ext-disp-audio-rx = <0>;
+	qcom,ext-disp-audio-rx = <1>;
 	qcom,audio-routing =
 		"AMIC1", "Analog Mic1",
 		"Analog Mic1", "MIC BIAS3",
@@ -310,13 +310,15 @@
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0221>, <&wsa883x_0222>;
+		      <&wsa883x_0221>, <&wsa883x_0222>,
+		      <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec1", "wsa-codec2";
+			   "wsa-codec1", "wsa-codec2",
+			   "msm-ext-disp-audio-codec-rx";
 	qcom,wsa-max-devs = <2>;
 	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;
-	qcom,cps_wsa_vbatt_temp_reg_addr = <0x0000429 0x0000422>;
+	qcom,cps_wsa_vbatt_temp_reg_addr = <0x0003429 0x0003422>;
 	qcom,cps_threshold_levels = <148 168>;
 	qcom,cps_normal_values = <0x8E 0x8F 0x8F>;
 	qcom,cps_lower1_values = <0x10 0xD0 0xD0>;
@@ -420,5 +422,5 @@
 	nvmem-cells = <&adsp_variant>;
 	nvmem-cell-names = "adsp_variant";
 	adsp-fw-names = "adsp2";
-	adsp-fw-bit-values = <0x1>;
+	adsp-fw-bit-values = <0x4>;
 };
