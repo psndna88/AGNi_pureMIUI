@@ -1178,9 +1178,9 @@
 			"turbo";
 		fw_name = "CAMERA_ICP.elf";
 		ubwc-ipe-fetch-cfg = <0x707b 0x7083>;
-		ubwc-ipe-write-cfg = <0x161ef 0x1620f>;
+		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x707b 0x7083>;
-		ubwc-bps-write-cfg = <0x161ef 0x1620f>;
+		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
 		status = "ok";
 	};
 
@@ -1317,15 +1317,23 @@
 		reg = <0xac40000 0x1000>,
 			<0xac42000 0x8000>;
 		reg-cam-base = <0x40000 0x42000>;
+		cam_hw_fuse = <CAM_CPAS_MF_HDR_ENABLE 0x007801E0 22>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 459 IRQ_TYPE_EDGE_RISING>;
 		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&cam_cc_titan_top_gdsc>;
+		/*
+		 * GCC throttle rt/nrt clock is added as a workaround in shima.
+		 * Normally, This clock should be turned on/off along with
+		 * GCC HF/SF clock
+		 */
 		clock-names =
 			"gcc_ahb_clk",
 			"gcc_axi_hf_clk",
 			"gcc_axi_sf_clk",
+			"gcc_rt_throttle_clk",
+			"gcc_nrt_throttle_clk",
 			"slow_ahb_clk_src",
 			"cpas_ahb_clk",
 			"cpas_core_ahb_clk",
@@ -1335,6 +1343,8 @@
 			<&gcc GCC_CAMERA_AHB_CLK>,
 			<&gcc GCC_CAMERA_HF_AXI_CLK>,
 			<&gcc GCC_CAMERA_SF_AXI_CLK>,
+			<&gcc GCC_TITAN_RT_THROTTLE_CORE_CLK>,
+			<&gcc GCC_TITAN_NRT_THROTTLE_CORE_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&camcc CAM_CC_CPAS_AHB_CLK>,
 			<&camcc CAM_CC_CORE_AHB_CLK>,
@@ -1342,12 +1352,12 @@
 			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
 		src-clock-name = "camnoc_axi_clk_src";
 		clock-rates =
-			<0 0 0 0 0 0 0 0>,
-			<0 0 0 80000000 0 0 300000000 0>,
-			<0 0 0 80000000 0 0 300000000 0>,
-			<0 0 0 80000000 0 0 342855555 0>,
-			<0 0 0 80000000 0 0 400000000 0>,
-			<0 0 0 80000000 0 0 400000000 0>;
+			<0 0 0 0 0 0 0 0 0 0>,
+			<0 0 0 0 0 80000000 0 0 300000000 0>,
+			<0 0 0 0 0 80000000 0 0 300000000 0>,
+			<0 0 0 0 0 80000000 0 0 342855555 0>,
+			<0 0 0 0 0 80000000 0 0 400000000 0>,
+			<0 0 0 0 0 80000000 0 0 400000000 0>;
 		clock-cntl-level = "suspend", "lowsvs", "svs", "svs_l1",
 			"nominal", "turbo";
 		control-camnoc-axi-clk;
