@@ -144,4 +144,5 @@
 	vdda-0p9-supply = <&S5A_LEVEL>;
 	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
+	memory-region = <&dfps_data_memory>;
 };
