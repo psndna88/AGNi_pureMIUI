@@ -1,4 +1,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,dispcc-shima.h>
+#include <dt-bindings/clock/qcom,gcc-shima.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 
 / {
 	#address-cells = <0x2>;
@@ -288,3 +291,5 @@
 
 };
 #include "lahaina-vm-ion.dtsi"
+#include "display/trustedvm-shima-sde.dtsi"
+#include "display/trustedvm-shima-sde-display.dtsi"
