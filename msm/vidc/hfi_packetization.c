@@ -671,21 +671,6 @@ int create_pkt_cmd_sys_image_version(
 	return 0;
 }
 
-int create_pkt_cmd_session_sync_process(
-	struct hfi_cmd_session_sync_process_packet *pkt, u32 sid)
-{
-	if (!pkt)
-		return -EINVAL;
-
-	*pkt = (struct hfi_cmd_session_sync_process_packet) {0};
-	pkt->size = sizeof(*pkt);
-	pkt->packet_type = HFI_CMD_SESSION_SYNC;
-	pkt->sid = sid;
-	pkt->sync_id = 0;
-
-	return 0;
-}
-
 static struct hfi_packetization_ops hfi_default = {
 	.sys_init = create_pkt_cmd_sys_init,
 	.sys_pc_prep = create_pkt_cmd_sys_pc_prep,
@@ -707,7 +692,6 @@ static struct hfi_packetization_ops hfi_default = {
 	.session_get_buf_req = create_pkt_cmd_session_get_buf_req,
 	.session_flush = create_pkt_cmd_session_flush,
 	.session_set_property = create_pkt_cmd_session_set_property,
-	.session_sync_process = create_pkt_cmd_session_sync_process,
 };
 
 struct hfi_packetization_ops *hfi_get_pkt_ops_handle(

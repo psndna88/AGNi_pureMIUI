@@ -575,6 +575,9 @@ struct msm_vidc_inst {
 	u64 last_qbuf_time_ns;
 	bool active;
 	bool has_bframe;
+	bool boost_qp_enabled;
+	u32 boost_min_qp;
+	u32 boost_max_qp;
 };
 
 extern struct msm_vidc_drv *vidc_driver;

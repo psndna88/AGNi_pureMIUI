@@ -963,14 +963,6 @@ struct hfi_buffer_mapping_type {
 	u32 size;
 };
 
-struct hfi_cmd_session_sync_process_packet {
-	u32 size;
-	u32 packet_type;
-	u32 sid;
-	u32 sync_id;
-	u32 rg_data[1];
-};
-
 struct hfi_msg_event_notify_packet {
 	u32 size;
 	u32 packet_type;

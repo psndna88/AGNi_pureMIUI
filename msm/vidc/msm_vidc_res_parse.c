@@ -349,7 +349,7 @@ static int msm_vidc_load_allowed_clocks_table(
 
 	if (res->allowed_clks_tbl) {
 		d_vpr_h("allowed-clock-rates populated from platform_data\n");
-		return 0;
+		goto exit;
 	}
 
 	if (!of_find_property(pdev->dev.of_node,
@@ -367,7 +367,7 @@ static int msm_vidc_load_allowed_clocks_table(
 		d_vpr_e("%s: failed to read allowed clocks table\n", __func__);
 		return rc;
 	}
-
+exit:
 	sort(res->allowed_clks_tbl, res->allowed_clks_tbl_size,
 		 sizeof(*res->allowed_clks_tbl), cmp, NULL);
 
