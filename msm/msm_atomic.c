@@ -87,19 +87,19 @@ static inline bool _msm_seamless_for_conn(struct drm_connector *connector,
 		old_conn_state->crtc->state->connectors_changed)
 		return false;
 
-	if (msm_is_mode_seamless(&connector->encoder->crtc->state->mode))
+	if (msm_is_mode_seamless(&old_conn_state->crtc->state->mode))
 		return true;
 
 	if (msm_is_mode_seamless_vrr(
-			&connector->encoder->crtc->state->adjusted_mode))
+			&old_conn_state->crtc->state->adjusted_mode))
 		return true;
 
 	if (msm_is_mode_seamless_dyn_clk(
-			 &connector->encoder->crtc->state->adjusted_mode))
+			 &old_conn_state->crtc->state->adjusted_mode))
 		return true;
 
 	if (msm_is_mode_seamless_dms(
-			&connector->encoder->crtc->state->adjusted_mode))
+			&old_conn_state->crtc->state->adjusted_mode))
 		return true;
 
 	return false;
@@ -142,17 +142,50 @@ static void msm_atomic_wait_for_commit_done(
 	}
 }
 
-static void
-msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
+static bool
+msm_disable_outputs_for_clone_conn(struct drm_device *dev,
+		struct drm_atomic_state *old_state)
 {
 	struct drm_connector *connector;
 	struct drm_connector_state *old_conn_state;
-	struct drm_crtc *crtc;
 	struct drm_crtc_state *old_crtc_state;
-	struct drm_panel_notifier notifier_data;
-	int i, blank;
+	struct drm_crtc *crtc = NULL;
+	int i;
+	bool clone_state = false;
 
-	SDE_ATRACE_BEGIN("msm_disable");
+	for_each_old_connector_in_state(old_state, connector,
+			old_conn_state, i) {
+
+		if (!old_conn_state->crtc)
+			continue;
+
+		old_crtc_state = drm_atomic_get_old_crtc_state(old_state,
+							old_conn_state->crtc);
+		if (!old_crtc_state->active ||
+		    !old_conn_state->crtc->state->connectors_changed ||
+		    (!_msm_seamless_for_conn(connector, old_conn_state,
+				 false) && (connector->connector_type !=
+						DRM_MODE_CONNECTOR_VIRTUAL)))
+			return false;
+
+		if (crtc)
+			clone_state = (crtc == old_conn_state->crtc)
+				? true : false;
+
+		crtc = old_conn_state->crtc;
+	}
+
+	return clone_state;
+}
+
+static void
+msm_disable_connector_outputs(struct drm_device *dev,
+		struct drm_atomic_state *old_state)
+{
+	struct drm_connector *connector;
+	struct drm_connector_state *old_conn_state;
+	int i;
+
 	for_each_old_connector_in_state(old_state, connector,
 			old_conn_state, i) {
 		const struct drm_encoder_helper_funcs *funcs;
@@ -189,15 +222,6 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 		DRM_DEBUG_ATOMIC("disabling [ENCODER:%d:%s]\n",
 				 encoder->base.id, encoder->name);
 
-		if (connector->state->crtc &&
-			connector->state->crtc->state->active_changed) {
-			blank = DRM_PANEL_BLANK_POWERDOWN;
-			notifier_data.data = &blank;
-			if (connector->panel)
-				drm_panel_notifier_call_chain(connector->panel,
-					DRM_PANEL_EARLY_EVENT_BLANK,
-					&notifier_data);
-		}
 		/*
 		 * Each encoder has at most one connector (since we always steal
 		 * it away), so we won't call disable hooks twice.
@@ -213,15 +237,19 @@ msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
 			funcs->dpms(encoder, DRM_MODE_DPMS_OFF);
 
 		drm_bridge_post_disable(encoder->bridge);
-		if (connector->state->crtc &&
-			connector->state->crtc->state->active_changed) {
-			DRM_DEBUG_ATOMIC("Notify blank\n");
-			if (connector->panel)
-				drm_panel_notifier_call_chain(connector->panel,
-					DRM_PANEL_EVENT_BLANK,
-					&notifier_data);
-		}
 	}
+}
+
+static void
+msm_disable_outputs(struct drm_device *dev, struct drm_atomic_state *old_state)
+{
+	struct drm_crtc *crtc;
+	struct drm_crtc_state *old_crtc_state;
+	int i;
+
+	SDE_ATRACE_BEGIN("msm_disable");
+	if (!msm_disable_outputs_for_clone_conn(dev, old_state))
+		msm_disable_connector_outputs(dev, old_state);
 
 	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 		const struct drm_crtc_helper_funcs *funcs;
@@ -364,12 +392,10 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 	struct drm_crtc_state *new_crtc_state;
 	struct drm_connector *connector;
 	struct drm_connector_state *new_conn_state;
-	struct drm_panel_notifier notifier_data;
 	struct msm_drm_private *priv = dev->dev_private;
 	struct msm_kms *kms = priv->kms;
 	int bridge_enable_count = 0;
-	int i, blank;
-	bool splash = false;
+	int i;
 
 	SDE_ATRACE_BEGIN("msm_enable");
 	for_each_oldnew_crtc_in_state(old_state, crtc, old_crtc_state,
@@ -429,19 +455,6 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		DRM_DEBUG_ATOMIC("enabling [ENCODER:%d:%s]\n",
 				 encoder->base.id, encoder->name);
 
-		if (kms && kms->funcs && kms->funcs->check_for_splash)
-			splash = kms->funcs->check_for_splash(kms);
-
-		if (splash || (connector->state->crtc &&
-			connector->state->crtc->state->active_changed)) {
-			blank = DRM_PANEL_BLANK_UNBLANK;
-			notifier_data.data = &blank;
-			DRM_DEBUG_ATOMIC("Notify early unblank\n");
-			if (connector->panel)
-				drm_panel_notifier_call_chain(connector->panel,
-					DRM_PANEL_EARLY_EVENT_BLANK,
-					&notifier_data);
-		}
 		/*
 		 * Each encoder has at most one connector (since we always steal
 		 * it away), so we won't call enable hooks twice.
@@ -490,15 +503,6 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 				 encoder->base.id, encoder->name);
 
 		drm_bridge_enable(encoder->bridge);
-
-		if (splash || (connector->state->crtc &&
-			connector->state->crtc->state->active_changed)) {
-			DRM_DEBUG_ATOMIC("Notify unblank\n");
-			if (connector->panel)
-				drm_panel_notifier_call_chain(connector->panel,
-					DRM_PANEL_EVENT_BLANK,
-					&notifier_data);
-		}
 	}
 	SDE_ATRACE_END("msm_enable");
 }
@@ -564,6 +568,9 @@ static void complete_commit(struct msm_commit *c)
 
 	kms->funcs->complete_commit(kms, state);
 
+	if (msm_disable_outputs_for_clone_conn(dev, state))
+		msm_disable_connector_outputs(dev, state);
+
 	drm_atomic_state_put(state);
 
 	commit_destroy(c);
@@ -609,7 +616,7 @@ static void msm_atomic_commit_dispatch(struct drm_device *dev,
 	struct msm_drm_private *priv = dev->dev_private;
 	struct drm_crtc *crtc = NULL;
 	struct drm_crtc_state *crtc_state = NULL;
-	int ret = -EINVAL, i = 0, j = 0;
+	int ret = -ECANCELED, i = 0, j = 0;
 	bool nonblock;
 
 	/* cache since work will kfree commit in non-blocking case */
@@ -630,6 +637,7 @@ static void msm_atomic_commit_dispatch(struct drm_device *dev,
 				} else {
 					DRM_ERROR(" Error for crtc_id: %d\n",
 						priv->disp_thread[j].crtc_id);
+					ret = -EINVAL;
 				}
 				break;
 			}
@@ -645,13 +653,17 @@ static void msm_atomic_commit_dispatch(struct drm_device *dev,
 	}
 
 	if (ret) {
+		if (ret == -EINVAL)
+			DRM_ERROR("failed to dispatch commit to any CRTC\n");
+		else
+			DRM_DEBUG_DRIVER_RATELIMITED("empty crtc state\n");
+
 		/**
 		 * this is not expected to happen, but at this point the state
 		 * has been swapped, but we couldn't dispatch to a crtc thread.
 		 * fallback now to a synchronous complete_commit to try and
 		 * ensure that SW and HW state don't get out of sync.
 		 */
-		DRM_ERROR("failed to dispatch commit to any CRTC\n");
 		complete_commit(commit);
 	} else if (!nonblock) {
 		kthread_flush_work(&commit->commit_work);

@@ -20,10 +20,12 @@
 
 #include <drm/drm_crtc.h>
 #include <drm/drm_fixed.h>
+#include <drm/drm_panel.h>
 #include <linux/debugfs.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/dma-buf.h>
+#include <linux/memblock.h>
 #include <drm/drm_atomic_uapi.h>
 #include <drm/drm_probe_helper.h>
 
@@ -817,6 +819,7 @@ static int _sde_kms_release_splash_buffer(unsigned int mem_addr,
 	pfn_start = mem_addr >> PAGE_SHIFT;
 	pfn_end = (mem_addr + splash_buffer_size) >> PAGE_SHIFT;
 
+	ret = memblock_free(mem_addr, splash_buffer_size);
 	if (ret) {
 		SDE_ERROR("continuous splash memory free failed:%d\n", ret);
 		return ret;
@@ -939,6 +942,93 @@ static int _sde_kms_unmap_all_splash_regions(struct sde_kms *sde_kms)
 	return ret;
 }
 
+static int _sde_kms_get_blank(struct drm_crtc_state *crtc_state,
+		struct drm_connector_state *conn_state)
+{
+	int lp_mode, blank;
+
+	if (crtc_state->active)
+		lp_mode = sde_connector_get_property(conn_state,
+							CONNECTOR_PROP_LP);
+	else
+		lp_mode = SDE_MODE_DPMS_OFF;
+
+	switch (lp_mode) {
+	case SDE_MODE_DPMS_ON:
+		blank = DRM_PANEL_BLANK_UNBLANK;
+		break;
+	case SDE_MODE_DPMS_LP1:
+	case SDE_MODE_DPMS_LP2:
+		blank = DRM_PANEL_BLANK_LP;
+		break;
+	case SDE_MODE_DPMS_OFF:
+	default:
+		blank = DRM_PANEL_BLANK_POWERDOWN;
+		break;
+	}
+
+	return blank;
+}
+
+static void _sde_kms_drm_check_dpms(struct drm_atomic_state *old_state,
+			unsigned long event)
+{
+	struct drm_connector *connector;
+	struct drm_connector_state *old_conn_state;
+	struct drm_crtc_state *old_crtc_state;
+	struct drm_crtc *crtc;
+	int i, old_mode, new_mode, old_fps, new_fps;
+
+	for_each_old_connector_in_state(old_state, connector,
+			old_conn_state, i) {
+		crtc = connector->state->crtc ? connector->state->crtc :
+			old_conn_state->crtc;
+		if (!crtc)
+			continue;
+
+		new_fps = crtc->state->mode.vrefresh;
+		new_mode = _sde_kms_get_blank(crtc->state, connector->state);
+		if (old_conn_state->crtc) {
+			old_crtc_state = drm_atomic_get_existing_crtc_state(
+					old_state, old_conn_state->crtc);
+
+			old_fps = old_crtc_state->mode.vrefresh;
+			old_mode = _sde_kms_get_blank(old_crtc_state,
+							old_conn_state);
+		} else {
+			old_fps = 0;
+			old_mode = DRM_PANEL_BLANK_POWERDOWN;
+		}
+
+		if ((old_mode != new_mode) || (old_fps != new_fps)) {
+			struct drm_panel_notifier notifier_data;
+
+			SDE_EVT32(old_mode, new_mode, old_fps, new_fps,
+				connector->panel, crtc->state->active,
+				old_conn_state->crtc, event);
+			pr_debug("change detected (power mode %d->%d, fps %d->%d)\n",
+				old_mode, new_mode, old_fps, new_fps);
+
+			/* If suspend resume and fps change are happening
+			 * at the same time, give preference to power mode
+			 * changes rather than fps change.
+			 */
+
+			if ((old_mode == new_mode) && (old_fps != new_fps))
+				new_mode = DRM_PANEL_BLANK_FPS_CHANGE;
+
+			notifier_data.data = &new_mode;
+			notifier_data.refresh_rate = new_fps;
+			notifier_data.id = connector->base.id;
+
+			if (connector->panel)
+				drm_panel_notifier_call_chain(connector->panel,
+							event, &notifier_data);
+		}
+	}
+
+}
+
 int sde_kms_vm_primary_prepare_commit(struct sde_kms *sde_kms,
 				      struct drm_atomic_state *state)
 {
@@ -997,8 +1087,6 @@ int sde_kms_vm_trusted_prepare_commit(struct sde_kms *sde_kms,
 	enum sde_crtc_vm_req vm_req;
 
 	ddev = sde_kms->dev;
-
-	pm_runtime_get_sync(ddev->dev);
 
 	cstate = to_sde_crtc_state(state->crtcs[0].new_state);
 
@@ -1081,6 +1169,7 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 
 	if (vm_ops->vm_prepare_commit)
 		vm_ops->vm_prepare_commit(sde_kms, state);
+	_sde_kms_drm_check_dpms(state, DRM_PANEL_EARLY_EVENT_BLANK);
 end:
 	SDE_ATRACE_END("prepare_commit");
 }
@@ -1262,8 +1351,6 @@ int sde_kms_vm_trusted_post_commit(struct sde_kms *sde_kms,
 	drm_for_each_encoder_mask(encoder, crtc->dev, crtc->state->encoder_mask)
 		sde_encoder_irq_control(encoder, false);
 
-	sde_irq_update(&sde_kms->base, false);
-
 	list_for_each_entry(plane, &ddev->mode_config.plane_list, head)
 		sde_plane_set_sid(plane, 0);
 
@@ -1273,8 +1360,6 @@ int sde_kms_vm_trusted_post_commit(struct sde_kms *sde_kms,
 
 	if (vm_ops->vm_release)
 		rc = vm_ops->vm_release(sde_kms);
-
-	pm_runtime_put_sync(ddev->dev);
 
 	return rc;
 }
@@ -1423,6 +1508,7 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 			SDE_ERROR("vm post commit failed, rc = %d\n",
 				  rc);
 	}
+	_sde_kms_drm_check_dpms(old_state, DRM_PANEL_EVENT_BLANK);
 
 	pm_runtime_put_sync(sde_kms->dev->dev);
 
@@ -1657,6 +1743,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.get_default_lms = dsi_display_get_default_lms,
 		.cmd_receive = dsi_display_cmd_receive,
 		.install_properties = NULL,
+		.set_allowed_mode_switch = dsi_conn_set_allowed_mode_switch,
 	};
 	static const struct sde_connector_ops wb_ops = {
 		.post_init =    sde_wb_connector_post_init,
@@ -1675,6 +1762,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.get_panel_vfp = NULL,
 		.cmd_receive = NULL,
 		.install_properties = NULL,
+		.set_allowed_mode_switch = NULL,
 	};
 	static const struct sde_connector_ops dp_ops = {
 		.post_init  = dp_connector_post_init,
@@ -1695,6 +1783,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.update_pps = dp_connector_update_pps,
 		.cmd_receive = NULL,
 		.install_properties = dp_connector_install_properties,
+		.set_allowed_mode_switch = NULL,
 	};
 	struct msm_display_info info;
 	struct drm_encoder *encoder;
@@ -3555,6 +3644,7 @@ static int _sde_kms_mmu_init(struct sde_kms *sde_kms)
 			mmu, "sde");
 		if (IS_ERR(aspace)) {
 			ret = PTR_ERR(aspace);
+			mmu->funcs->destroy(mmu);
 			goto fail;
 		}
 
@@ -3591,7 +3681,6 @@ static int _sde_kms_mmu_init(struct sde_kms *sde_kms)
 early_map_fail:
 	_sde_kms_unmap_all_splash_regions(sde_kms);
 fail:
-	mmu->funcs->destroy(mmu);
 	_sde_kms_mmu_destroy(sde_kms);
 
 	return ret;
@@ -3738,7 +3827,7 @@ static void sde_kms_irq_affinity_notify(
 	sde_kms->irq_cpu_mask = *mask;
 
 	// request vote with updated irq cpu mask
-	if (sde_kms->irq_enabled)
+	if (atomic_read(&sde_kms->irq_vote_count))
 		_sde_kms_update_pm_qos_irq_request(sde_kms);
 
 	mutex_unlock(&priv->phandle.phandle_lock);
@@ -4371,7 +4460,7 @@ int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms)
 	}
 
 	vm_ops = sde_vm_get_ops(sde_kms);
-	if (vm_ops && vm_ops->vm_owns_hw(sde_kms)) {
+	if (vm_ops && !vm_ops->vm_owns_hw(sde_kms)) {
 		SDE_DEBUG(
 		   "skipping sde res init as device assign is not completed\n");
 		return 0;
@@ -4406,6 +4495,12 @@ int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms)
 		SDE_ERROR("error in setting handoff configs\n");
 		goto error;
 	}
+
+	/**
+	 * fill-in vote for the continuous splash hanodff path, which will be
+	 * removed on the successful first commit.
+	 */
+	pm_runtime_get_sync(sde_kms->dev->dev);
 
 	return 0;
 

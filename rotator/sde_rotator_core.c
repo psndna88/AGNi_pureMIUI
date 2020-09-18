@@ -69,6 +69,10 @@
 
 #define BUS_VOTE_19_MHZ 153600000
 
+#define ROT_HAS_UBWC(caps) (test_bit(SDE_CAPS_UBWC_2, caps) ||\
+		test_bit(SDE_CAPS_UBWC_3, caps) ||\
+		test_bit(SDE_CAPS_UBWC_4, caps))
+
 /* forward prototype */
 static int sde_rotator_update_perf(struct sde_rot_mgr *mgr);
 
@@ -95,7 +99,8 @@ static int sde_rotator_bus_scale_set_quota(struct sde_rot_bus_data_type *bus,
 
 	for (i = 0; i < bus->data_paths_cnt; i++) {
 		if (bus->data_bus_hdl[i]) {
-			ret = icc_set_bw(bus->data_bus_hdl[i], ab, ab);
+			ret = icc_set_bw(bus->data_bus_hdl[i], Bps_to_icc(ab),
+				Bps_to_icc(ab));
 			if (ret)
 				goto err;
 		}
@@ -108,7 +113,8 @@ static int sde_rotator_bus_scale_set_quota(struct sde_rot_bus_data_type *bus,
 err:
 	ab = div_u64(bus->curr_quota_val, bus->data_paths_cnt);
 	for (j = 0; j < i; j++)
-		icc_set_bw(bus->data_bus_hdl[j], ab, ab);
+		icc_set_bw(bus->data_bus_hdl[j], Bps_to_icc(ab),
+			Bps_to_icc(ab));
 	ATRACE_END("msm_bus_scale_req_rot");
 	pr_err("failed to set data bus quota %llu\n", quota);
 
@@ -572,7 +578,7 @@ static int sde_rotator_secure_session_ctrl(bool enable)
 
 			sid_info = (uint32_t *) shm.vaddr;
 			mem_addr = shm.paddr;
-			mem_size = shm.size;
+			mem_size = sizeof(uint32_t);
 		} else {
 			sid_info = kzalloc(sizeof(uint32_t), GFP_KERNEL);
 			if (!sid_info)
@@ -1989,14 +1995,25 @@ static int sde_rotator_validate_img_roi(struct sde_rotation_item *item)
 static int sde_rotator_validate_fmt_and_item_flags(
 	struct sde_rotation_config *config, struct sde_rotation_item *item)
 {
-	struct sde_mdp_format_params *fmt;
+	struct sde_mdp_format_params *in_fmt, *out_fmt;
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
+	bool has_ubwc;
 
-	fmt = sde_get_format_params(item->input.format);
+	in_fmt = sde_get_format_params(item->input.format);
+	out_fmt = sde_get_format_params(item->output.format);
 	if ((item->flags & SDE_ROTATION_DEINTERLACE) &&
-			sde_mdp_is_ubwc_format(fmt)) {
+			sde_mdp_is_ubwc_format(in_fmt)) {
 		SDEROT_DBG("cannot perform deinterlace on tiled formats\n");
 		return -EINVAL;
 	}
+
+	has_ubwc = ROT_HAS_UBWC(mdata->sde_caps_map);
+	if (!has_ubwc && (sde_mdp_is_ubwc_format(in_fmt) ||
+		sde_mdp_is_ubwc_format(out_fmt))) {
+		SDEROT_ERR("ubwc format is not supported\n");
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
