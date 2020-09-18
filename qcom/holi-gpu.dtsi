@@ -25,8 +25,8 @@ msm_gpu: qcom,kgsl-3d0@5900000 {
 			<&gcc GCC_GPU_MEMNOC_GFX_CLK>,
 			<&gpucc GPU_CC_CX_GMU_CLK>;
 
-		clock-names = "core_clk", "rbbmtimer_clk", "mem_clk",
-				"iface_clk", "mem_iface_clk", "gmu_clk";
+		clock-names = "core_clk", "rbbmtimer_clk", "iface_clk",
+				"ahb_clk", "mem_clk", "gmu_clk";
 
 		vddcx-supply = <&gpu_cx_gdsc>;
 		vdd-supply = <&gpu_gx_gdsc>;
@@ -313,6 +313,13 @@ msm_gpu: qcom,kgsl-3d0@5900000 {
 		reg = <0x5940000 0x10000>;
 
 		vddcx-supply = <&gpu_cx_gdsc>;
+
+		clocks = <&gcc GCC_BIMC_GPU_AXI_CLK>,
+			<&gpucc GPU_CC_AHB_CLK>,
+			<&gcc GCC_GPU_MEMNOC_GFX_CLK>;
+
+		clock-names = "gcc_bimc_gpu_axi", "gpu_cc_ahb",
+			      "gcc_gpu_memnoc_gfx";
 
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";

@@ -523,6 +523,19 @@
 			label = "dfps_data_region";
 		};
 
+		memshare_mem: memshare_region {
+			compatible = "shared-dma-pool";
+			no-map;
+			/*
+			 * Memory shared with modem needs to be outside of
+			 * the CLADE address space, which begins at
+			 * 0xE0000000 and spans 512 MB.
+			 */
+			alloc-ranges = <0x0 0x00000000 0x0 0xdfffffff>;
+			alignment = <0x0 0x100000>;
+			size = <0x0 0x800000>;
+		};
+
 		non_secure_display_memory: non_secure_display_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
@@ -2288,6 +2301,7 @@
 		qcom,client_3 {
 			compatible = "qcom,memshare-peripheral";
 			qcom,peripheral-size = <0x500000>;
+			memory-region = <&memshare_mem>;
 			qcom,client-id = <1>;
 			qcom,allocate-on-request;
 			label = "modem";
@@ -2332,8 +2346,9 @@
 		reg-name = "cc_base";
 		vdd_mm-supply = <&VDD_MM_LEVEL>;
 		vdd_mx-supply = <&VDD_MXA_LEVEL>;
-		clock-names = "cfg_ahb_clk";
+		interconnects = <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_VENUS_CFG>;
 		clocks = <&clock_gcc GCC_VIDEO_AHB_CLK>;
+		clock-names = "iface";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -2344,8 +2359,9 @@
 		reg-names = "cc_base";
 		vdd_mm-supply = <&VDD_MM_LEVEL>;
 		vdd_mx-supply = <&VDD_MXA_LEVEL>;
-		clock-names = "cfg_ahb_clk";
+		interconnects = <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_CAMERA_CFG>;
 		clocks = <&clock_gcc GCC_CAMERA_AHB_CLK>;
+		clock-names = "iface";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -2355,8 +2371,9 @@
 		reg = <0xaf00000 0x20000>;
 		reg-name = "cc_base";
 		vdd_mm-supply = <&VDD_MM_LEVEL>;
-		clock-names = "cfg_ahb_clk";
+		interconnects = <&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_DISPLAY_CFG>;
 		clocks = <&clock_gcc GCC_DISP_AHB_CLK>;
+		clock-names = "iface";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -2735,6 +2752,7 @@
 
 	qcom-secure-buffer {
 		compatible = "qcom,secure-buffer";
+		qcom,vmid-cp-camera-preview-ro;
 	};
 
 	qcom-mem-buf {
@@ -5211,6 +5229,7 @@
 		qcom,spss-test-firmware-name = "spss1t";  /* 8 chars max */
 		qcom,spss-prod-firmware-name = "spss1p";  /* 8 chars max */
 		qcom,spss-debug-reg-addr = <0x01886020>;
+		qcom,spss-scsr-regs-addr = <0x01880000>;  /* SPU shared register */
 		qcom,spss-emul-type-reg-addr = <0x01fc8004>;
 		pil-mem = <&pil_spss_mem>;
 		qcom,pil-size = <0x0F0000>; // padding to 960 KB
@@ -5325,6 +5344,7 @@
 		qcom,wlan-cbc-enabled;
 		/* RPMH_PDC_WLAN_RF_TCS<6>_CMD<2> offset */
 		qcom,tcs_offset_int_pow_amp_vreg = <0x4D0>;
+		use-pm-domain;
 
 		vdd-wlan-aon-supply = <&S2E>;
 		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
@@ -5339,22 +5359,38 @@
 		wlan-ant-switch-supply = <&L7E>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
 
-		interconnects = <&aggre2_noc MASTER_PCIE_0 &mc_virt SLAVE_EBI1>;
-		qcom,bus-bw-cfg-num = <7>;
+		interconnects =
+		<&aggre2_noc MASTER_PCIE_0 &aggre2_noc SLAVE_ANOC_PCIE_GEM_NOC>,
+		<&gem_noc MASTER_ANOC_PCIE_GEM_NOC &mc_virt SLAVE_EBI1>;
+		interconnect-names = "pcie_to_memnoc", "memnoc_to_ddr";
+
+		qcom,icc-path-count = <2>;
+		qcom,bus-bw-cfg-count = <7>;
 		qcom,bus-bw-cfg =
-		/* no vote */
+		/** ICC Path 1 **/
+		<0 0>, /* no vote */
+		/* idle: 0-18 Mbps snoc/anoc: 100 Mhz ddr: 451.2 MHz */
+		<2250 390000>,
+		/* low: 18-60 Mbps snoc/anoc: 100 Mhz ddr: 451.2 MHz */
+		<7500 390000>,
+		/* medium: 60-240 Mbps snoc/anoc: 200 Mhz ddr: 451.2 MHz */
+		<30000 790000>,
+		/* high: 240-1080 Mbps snoc/anoc: 200 Mhz ddr: 451.2 MHz */
+		<100000 790000>,
+		/* very high: > 1080 Mbps snoc/anoc: 403 Mhz ddr: 451.2 MHz */
+		<175000 1600000>,
+		/* low (latency critical): 18-60 Mbps snoc/anoc: 200 Mhz
+		 * ddr: 547.2 MHz
+		 */
+		<7500 390000>,
+
+		/** ICC Path 2 **/
 		<0 0>,
-		/* idle: 0-18 Mbps ddr freq: 451.2 MHz */
-		<2250 1600000>,
-		/* low: 18-60 Mbps ddr freq: 451.2 MHz */
-		<7500 1600000>,
-		/* medium: 60-240 Mbps ddr freq: 451.2 MHz */
+		<2250 1804800>,
+		<7500 1804800>,
 		<30000 1804800>,
-		/* high: 240 - 1080 Mbps ddr freq: 451.2 MHz */
 		<100000 1804800>,
-		/* high: 1080 - 1400 Mbps ddr freq: 451.2 MHz */
-		<175000 1804800>,
-		/* low (latency critical): 18 - 60 Mbps, ddr freq: 547.2 MHz */
+		<175000 6220800>,
 		<7500 2188800>;
 
 		mhi,max-channels = <30>;

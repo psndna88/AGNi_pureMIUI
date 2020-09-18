@@ -315,11 +315,6 @@
 			reg = <0x0 0xc0000000 0x0 0x5100000>;
 		};
 
-		pil_trustedvm_mem: pil_trustedvm_region@d0000000 {
-			no-map;
-			reg = <0x0 0xd0000000 0x0 0xa600000>;
-		};
-
 		secure_display_memory: secure_display_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
@@ -385,6 +380,14 @@
 			reusable;
 			alignment = <0x0 0x400000>;
 			size = <0x0 0x1000000>;
+		};
+
+		memshare_mem: memshare_region {
+			compatible = "shared-dma-pool";
+			no-map;
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			alignment = <0x0 0x100000>;
+			size = <0x0 0x800000>;
 		};
 	};
 
@@ -835,6 +838,11 @@
 			qcom,dump-id = <0x104>;
 		};
 
+		osm_reg {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x163>;
+		};
+
 		pcu_reg {
 			qcom,dump-size = <0x400>;
 			qcom,dump-id = <0x164>;
@@ -908,6 +916,12 @@
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
+	};
+
+	qcom,mpm2-sleep-counter@0x4403000 {
+		compatible = "qcom,mpm2-sleep-counter";
+		reg = <0x4403000 0x1000>;
+		clock-frequency = <32768>;
 	};
 
 	wdog: qcom,wdt@f410000 {
@@ -1044,6 +1058,7 @@
 		qcom,client_3 {
 			compatible = "qcom,memshare-peripheral";
 			qcom,peripheral-size = <0x500000>;
+			memory-region = <&memshare_mem>;
 			qcom,client-id = <1>;
 			qcom,allocate-on-request;
 			label = "modem";
@@ -1156,6 +1171,7 @@
 
 	rpmcc: clock-controller {
 		compatible = "qcom,rpmcc-holi";
+		qcom,bimc-log-stop;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -1241,6 +1257,13 @@
 				<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dcvsh0_int", "dcvsh1_int";
 		#freq-domain-cells = <2>;
+	};
+
+	qcom,cpufreq-hw-debug@0fd91000 {
+		compatible = "qcom,cpufreq-hw-epss-debug";
+		reg = <0x0fd91000 0x800>;
+		reg-names = "domain-top";
+		qcom,freq-hw-domain = <&cpufreq_hw 0>, <&cpufreq_hw 1>;
 	};
 
 	ddr_bw_opp_table: ddr-bw-opp-table {
@@ -2204,7 +2227,20 @@
 		non-removable;
 		supports-cqe;
 
+		qcom,devfreq,freq-table = <50000000 200000000>;
+		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
 		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <67>;
+		};
 	};
 
 	sdhc_2: sdhci@4784000 {
@@ -2251,7 +2287,19 @@
 		iommus = <&apps_smmu 0x40 0x0>;
 		qcom,iommu-dma = "bypass";
 
+		qcom,devfreq,freq-table = <50000000 202000000>;
+
 		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <67>;
+		};
 	};
 
 	qcom,lpass@a400000 {
@@ -2710,13 +2758,16 @@
 		};
 
 		feat_conf8: feat_conf8@6024 {
-			reg = <0x6024 0x2>;
-			bits = <21 1>;
+			reg = <0x6024 0x4>;
 		};
 
 		gpu_gaming_bin: gpu_gaming_bin@6026 {
 			reg = <0x6026 0x1>;
 			bits = <5 1>;
+		};
+
+		feat_conf9: feat_conf9@6028 {
+			reg = <0x6028 0x4>;
 		};
 	};
 };

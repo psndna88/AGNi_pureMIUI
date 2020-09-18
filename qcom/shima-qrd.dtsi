@@ -4,6 +4,7 @@
 #include "shima-thermal-overlay.dtsi"
 #include "shima-audio-overlay.dtsi"
 #include "display/shima-sde-display-qrd.dtsi"
+#include "camera/shima-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {
@@ -79,7 +80,7 @@
 	qcom,vdd-io-voltage-level = <1800000 2960000>;
 	qcom,vdd-io-current-level = <0 22000>;
 
-	cd-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+	cd-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
 };
 
 &ufsphy_mem {
@@ -98,7 +99,7 @@
 	vdd-hba-fixed-regulator;
 
 	vcc-supply = <&L7B>;
-	vcc-voltage-level = <2504000 2950000>;
+	vcc-voltage-level = <2950000 2960000>;
 	vcc-low-voltage-sup;
 	vcc-max-microamp = <800000>;
 
@@ -220,10 +221,24 @@
 	};
 };
 
+&wsa883x_0221 {
+	status = "disabled";
+};
+
 &shima_snd {
 	qcom,model = "lahaina-shimaqrd-snd-card";
 
 	qcom,audio-routing =
+		"AMIC1", "Analog Mic1",
+		"Analog Mic1", "MIC BIAS3",
+		"AMIC2", "Analog Mic2",
+		"Analog Mic2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"Analog Mic3", "MIC BIAS3",
+		"AMIC4", "Analog Mic4",
+		"Analog Mic4", "MIC BIAS1",
+		"AMIC5", "Analog Mic5",
+		"Analog Mic5", "MIC BIAS4",
 		"TX DMIC0", "Digital Mic0",
 		"Digital Mic0", "MIC BIAS1",
 		"TX DMIC1", "Digital Mic1",
@@ -247,7 +262,6 @@
 		"RX_TX DEC1_INP", "TX DEC1 MUX",
 		"RX_TX DEC2_INP", "TX DEC2 MUX",
 		"RX_TX DEC3_INP", "TX DEC3 MUX",
-		"SpkrLeft IN", "WSA_SPK1 OUT",
 		"SpkrRight IN", "WSA_SPK2 OUT",
 		"TX SWR_INPUT", "WCD_TX_OUTPUT",
 		"VA SWR_INPUT", "VA_SWR_CLK",
@@ -260,8 +274,13 @@
 		"VA DMIC2", "Digital Mic2",
 		"VA DMIC3", "Digital Mic3",
 		"VA DMIC4", "Digital Mic4",
-		"VA DMIC5", "Digital Mic5";
-
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC0", "VA MIC BIAS1",
+		"VA DMIC1", "VA MIC BIAS3",
+		"VA DMIC2", "VA MIC BIAS4",
+		"VA DMIC3", "VA MIC BIAS1",
+		"VA DMIC4", "VA MIC BIAS3",
+		"VA DMIC5", "VA MIC BIAS4";
 	qcom,swr-dmic-max-devs = <0>;
 
 	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
@@ -274,10 +293,10 @@
 
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0221>, <&wsa883x_0222>;
+		      <&wsa883x_0222>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec1", "wsa-codec2";
+			   "wsa-codec2";
 	qcom,wsa-max-devs = <1>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
