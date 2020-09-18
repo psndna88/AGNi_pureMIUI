@@ -14,6 +14,7 @@
 #define CAM_VFE_HW_NUM_MAX            7
 
 #define VFE_CORE_BASE_IDX             0
+#define RT_BASE_IDX                   2
 /*
  * VBIF and BUS do not exist on same HW.
  * Hence both can be 1 below.

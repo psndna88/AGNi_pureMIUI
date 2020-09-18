@@ -15,7 +15,7 @@
 int cam_isp_add_change_base(
 	struct cam_hw_prepare_update_args      *prepare,
 	struct list_head                       *res_list_isp_src,
-	uint32_t                                base_idx,
+	struct cam_isp_change_base_args        *change_base_args,
 	struct cam_kmd_buf_info                *kmd_buf_info)
 {
 	int rc = -EINVAL;
@@ -44,10 +44,11 @@ int cam_isp_add_change_base(
 				continue;
 
 			res = hw_mgr_res->hw_res[i];
-			if (res->hw_intf->hw_idx != base_idx)
+			if (res->hw_intf->hw_idx != change_base_args->base_idx)
 				continue;
 
 			get_base.res  = res;
+			get_base.cdm_id = change_base_args->cdm_id;
 			get_base.cmd_type = CAM_ISP_HW_CMD_GET_CHANGE_BASE;
 			get_base.cmd.cmd_buf_addr = kmd_buf_info->cpu_addr +
 				kmd_buf_info->used_bytes/4;

@@ -63,6 +63,19 @@ int32_t cam_csiphy_get_instance_offset(
 	return i;
 }
 
+static void cam_csiphy_reset_phyconfig_param(struct csiphy_device *csiphy_dev,
+	int32_t index)
+{
+	CAM_DBG(CAM_CSIPHY, "Resetting phyconfig param at index: %d", index);
+	csiphy_dev->csiphy_info[index].lane_cnt = 0;
+	csiphy_dev->csiphy_info[index].lane_assign = 0;
+	csiphy_dev->csiphy_info[index].lane_enable = 0;
+	csiphy_dev->csiphy_info[index].settle_time = 0;
+	csiphy_dev->csiphy_info[index].data_rate = 0;
+	csiphy_dev->csiphy_info[index].secure_mode = 0;
+	csiphy_dev->csiphy_info[index].hdl_data.device_hdl = -1;
+}
+
 void cam_csiphy_query_cap(struct csiphy_device *csiphy_dev,
 	struct cam_csiphy_query_cap *csiphy_cap)
 {
@@ -389,8 +402,6 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 		cam_csiphy_update_secure_info(csiphy_dev,
 			index);
 
-	csiphy_dev->config_count++;
-
 	CAM_DBG(CAM_CSIPHY,
 		"phy version:%d, phy_idx: %d",
 		csiphy_dev->hw_version,
@@ -411,13 +422,7 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 	return rc;
 
 reset_settings:
-	csiphy_dev->csiphy_info[index].lane_cnt = 0;
-	csiphy_dev->csiphy_info[index].lane_assign = 0;
-	csiphy_dev->csiphy_info[index].lane_enable = 0;
-	csiphy_dev->csiphy_info[index].settle_time = 0;
-	csiphy_dev->csiphy_info[index].data_rate = 0;
-	csiphy_dev->csiphy_info[index].secure_mode = 0;
-	csiphy_dev->csiphy_info[index].hdl_data.device_hdl = -1;
+	cam_csiphy_reset_phyconfig_param(csiphy_dev, index);
 
 	return rc;
 }
@@ -881,9 +886,7 @@ void cam_csiphy_shutdown(struct csiphy_device *csiphy_dev)
 			csiphy_dev->csiphy_info[i].secure_mode =
 				CAM_SECURE_MODE_NON_SECURE;
 
-			csiphy_dev->csiphy_info[i].csiphy_cpas_cp_reg_mask = 0;
-			csiphy_dev->csiphy_info[i].settle_time = 0;
-			csiphy_dev->csiphy_info[i].data_rate = 0;
+			cam_csiphy_reset_phyconfig_param(csiphy_dev, i);
 		}
 
 		cam_csiphy_reset(csiphy_dev);
@@ -1258,24 +1261,20 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		csiphy_dev->csiphy_info[offset].hdl_data.device_hdl = -1;
 		csiphy_dev->csiphy_info[offset].hdl_data.session_hdl = -1;
 
-		csiphy_dev->config_count--;
+		cam_csiphy_reset_phyconfig_param(csiphy_dev, offset);
+
 		if (csiphy_dev->acquire_count) {
 			csiphy_dev->acquire_count--;
 			CAM_DBG(CAM_CSIPHY, "Acquire_cnt: %d",
 				csiphy_dev->acquire_count);
 		}
 
-		if (csiphy_dev->start_dev_count == 0) {
+		if (csiphy_dev->acquire_count == 0) {
 			CAM_DBG(CAM_CSIPHY, "All PHY devices released");
+			csiphy_dev->combo_mode = 0;
 			csiphy_dev->csiphy_state = CAM_CSIPHY_INIT;
 		}
-		if (csiphy_dev->config_count == 0) {
-			CAM_DBG(CAM_CSIPHY, "reset csiphy_info");
-			csiphy_dev->csiphy_info[offset].lane_cnt = 0;
-			csiphy_dev->csiphy_info[offset].lane_assign = 0;
-			csiphy_dev->csiphy_info[offset].csiphy_3phase = -1;
-			csiphy_dev->combo_mode = 0;
-		}
+
 		break;
 	}
 	case CAM_CONFIG_DEV: {

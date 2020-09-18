@@ -47,6 +47,52 @@ static int cam_top_tpg_ver3_get_hw_caps(
 	return rc;
 }
 
+static int cam_top_tpg_ver3_process_cmd(void *hw_priv,
+	uint32_t cmd_type, void *cmd_args, uint32_t arg_size)
+{
+	int                                     rc = 0;
+	struct cam_top_tpg_hw                  *tpg_hw;
+	struct cam_hw_info                     *tpg_hw_info;
+	struct cam_isp_tpg_core_config         *core_cfg;
+	struct cam_top_tpg_cfg                 *tpg_data;
+
+	if (!hw_priv || !cmd_args) {
+		CAM_ERR(CAM_ISP, "TPG: Invalid args");
+		return -EINVAL;
+	}
+
+	tpg_hw_info = (struct cam_hw_info *)hw_priv;
+	tpg_hw = (struct cam_top_tpg_hw *)tpg_hw_info->core_info;
+	tpg_data = (struct cam_top_tpg_cfg *)tpg_hw->tpg_res.res_priv;
+
+	switch (cmd_type) {
+	case CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD:
+		if (arg_size != sizeof(struct cam_isp_tpg_core_config)) {
+			CAM_ERR(CAM_ISP, "Invalid size %u expected %u",
+				arg_size,
+				sizeof(struct cam_isp_tpg_core_config));
+			rc = -EINVAL;
+			break;
+		}
+
+		core_cfg = (struct cam_isp_tpg_core_config *)cmd_args;
+		tpg_data->pix_pattern = core_cfg->pix_pattern;
+		tpg_data->vc_dt_pattern_id = core_cfg->vc_dt_pattern_id;
+		tpg_data->qcfa_en = core_cfg->qcfa_en;
+		CAM_DBG(CAM_ISP,
+			"pattern_id: 0x%x pix_pattern: 0x%x qcfa_en: 0x%x",
+			tpg_data->vc_dt_pattern_id, tpg_data->pix_pattern,
+			tpg_data->qcfa_en);
+		break;
+	default:
+		CAM_ERR(CAM_ISP, "Invalid TPG cmd type %u", cmd_type);
+		rc = -EINVAL;
+		break;
+	}
+
+	return rc;
+}
+
 static int cam_top_tpg_ver3_reserve(
 	void                                         *hw_priv,
 	void                                         *reserve_args,
@@ -95,7 +141,7 @@ static int cam_top_tpg_ver3_reserve(
 	}
 
 	tpg_data = (struct cam_top_tpg_cfg *)tpg_hw->tpg_res.res_priv;
-
+	memset(tpg_data, 0, sizeof(*tpg_data));
 	for (i = 0; i < reserv->in_port->num_valid_vc_dt; i++) {
 		if (reserv->in_port->dt[i] > 0x3f ||
 			reserv->in_port->vc[i] > 0x1f) {
@@ -218,6 +264,8 @@ static int cam_top_tpg_ver3_start(
 
 		val = (1 << tpg_reg->tpg_split_en_shift);
 		val |= tpg_data->pix_pattern;
+		if (tpg_data->qcfa_en)
+			val |= (1 << tpg_reg->tpg_color_bar_qcfa_en_shift);
 		cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 			tpg_reg->tpg_vc0_color_bar_cfg + 0x60 * i);
 
@@ -236,7 +284,7 @@ static int cam_top_tpg_ver3_start(
 				tpg_reg->tpg_vc0_hbi_cfg + 0x60 * i);
 
 		if (tpg_data->v_blank_count)
-			cam_io_w_mb(tpg_data->h_blank_count,
+			cam_io_w_mb(tpg_data->v_blank_count,
 				soc_info->reg_map[0].mem_base +
 				tpg_reg->tpg_vc0_vbi_cfg + 0x60 * i);
 		else
@@ -340,6 +388,6 @@ int cam_top_tpg_ver3_init(
 	tpg_hw->hw_intf->hw_ops.reserve     = cam_top_tpg_ver3_reserve;
 	tpg_hw->hw_intf->hw_ops.start       = cam_top_tpg_ver3_start;
 	tpg_hw->hw_intf->hw_ops.stop        = cam_top_tpg_ver3_stop;
-
+	tpg_hw->hw_intf->hw_ops.process_cmd = cam_top_tpg_ver3_process_cmd;
 	return 0;
 }

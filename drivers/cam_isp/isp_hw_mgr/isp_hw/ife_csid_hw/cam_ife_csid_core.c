@@ -1153,12 +1153,13 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	path_data->horizontal_bin = reserve->in_port->horizontal_bin;
 	path_data->qcfa_bin = reserve->in_port->qcfa_bin;
 	path_data->num_bytes_out = reserve->in_port->num_bytes_out;
+	path_data->hblank_cnt = reserve->in_port->hbi_cnt;
 
 	CAM_DBG(CAM_ISP,
-		"Res id: %d height:%d line_start %d line_stop %d crop_en %d",
+		"Res id: %d height:%d line_start %d line_stop %d crop_en %d hblank %u",
 		reserve->res_id, reserve->in_port->height,
 		reserve->in_port->line_start, reserve->in_port->line_stop,
-		path_data->crop_enable);
+		path_data->crop_enable, path_data->hblank_cnt);
 
 	if ((reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
 		(reserve->in_port->res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
@@ -1857,6 +1858,17 @@ static int cam_ife_csid_init_config_pxl_path(
 	val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_cfg1_addr);
 
+	/* Program min hbi between lines */
+	if ((path_data->hblank_cnt) && (path_data->hblank_cnt <=
+		(CAM_CSID_MIN_HBI_CFG_MAX_VAL * 16))) {
+		if ((path_data->hblank_cnt % 16) == 0)
+			val |= ((path_data->hblank_cnt / 16) <<
+				pxl_reg->hblank_cfg_shift_val);
+		else
+			val |=  (((path_data->hblank_cnt / 16) + 1) <<
+				pxl_reg->hblank_cfg_shift_val);
+	}
+
 	/* select the post irq sub sample strobe for time stamp capture */
 	val |= CSID_TIMESTAMP_STB_POST_IRQ;
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
@@ -2154,9 +2166,8 @@ static int cam_ife_csid_enable_pxl_path(
 	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ)
 		val |= CSID_PATH_INFO_INPUT_EOF;
 
-	if (path_config->measure_enabled)
-		val |= (CSID_PATH_ERROR_PIX_COUNT |
-			CSID_PATH_ERROR_LINE_COUNT);
+	val |= (CSID_PATH_ERROR_PIX_COUNT |
+		CSID_PATH_ERROR_LINE_COUNT);
 
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_irq_mask_addr);
@@ -2781,9 +2792,8 @@ static int cam_ife_csid_enable_rdi_path(
 	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_EOF_IRQ)
 		val |= CSID_PATH_INFO_INPUT_EOF;
 
-	if (csid_hw->rdi_path_config[id].measure_enabled)
-		val |= (CSID_PATH_ERROR_PIX_COUNT |
-			CSID_PATH_ERROR_LINE_COUNT);
+	val |= (CSID_PATH_ERROR_PIX_COUNT |
+		CSID_PATH_ERROR_LINE_COUNT);
 
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 		csid_reg->rdi_reg[id]->csid_rdi_irq_mask_addr);
@@ -4843,14 +4853,15 @@ handle_fatal_error:
 				csid_hw->hw_intf->hw_idx,
 				irq_status[CAM_IFE_CSID_IRQ_REG_IPP]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			csid_hw->ipp_path_config.height,
 			csid_hw->ipp_path_config.width,
 			((val >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 
@@ -4914,14 +4925,15 @@ handle_fatal_error:
 				csid_hw->hw_intf->hw_idx,
 				irq_status[CAM_IFE_CSID_IRQ_REG_PPP]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h:  0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h:  0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			csid_hw->ppp_path_config.height,
 			csid_hw->ppp_path_config.width,
 			((val >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 
@@ -4979,7 +4991,7 @@ handle_fatal_error:
 				"CSID:%d irq_status_rdi[%d]:0x%x",
 				csid_hw->hw_intf->hw_idx, i, irq_status[i]);
 			CAM_ERR(CAM_ISP,
-			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x",
+			"Expected:: h: 0x%x w: 0x%x actual:: h: 0x%x w: 0x%x [format_measure0: 0x%x]",
 			((val2 >>
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
@@ -4989,7 +5001,8 @@ handle_fatal_error:
 			csid_reg->cmn_reg->format_measure_height_shift_val) &
 			csid_reg->cmn_reg->format_measure_height_mask_val),
 			val &
-			csid_reg->cmn_reg->format_measure_width_mask_val);
+			csid_reg->cmn_reg->format_measure_width_mask_val,
+			val);
 		}
 	}
 

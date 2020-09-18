@@ -38,13 +38,13 @@ static long cam_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_csiphy_core_cfg(csiphy_dev, arg);
-		if (rc != 0) {
-			CAM_ERR(CAM_CSIPHY, "in configuring the device");
-			return rc;
-		}
+		if (rc)
+			CAM_ERR(CAM_CSIPHY,
+				"Failed in configuring the device: %d", rc);
 		break;
 	default:
 		CAM_ERR(CAM_CSIPHY, "Wrong ioctl : %d", cmd);
+		rc = -ENOIOCTLCMD;
 		break;
 	}
 
@@ -89,10 +89,14 @@ static long cam_csiphy_subdev_compat_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_csiphy_subdev_ioctl(sd, cmd, &cmd_data);
+		if (rc)
+			CAM_ERR(CAM_CSIPHY,
+				"Failed in subdev_ioctl: %d", rc);
 		break;
 	default:
 		CAM_ERR(CAM_CSIPHY, "Invalid compat ioctl cmd: %d", cmd);
-		rc = -EINVAL;
+		rc = -ENOIOCTLCMD;
+		break;
 	}
 
 	if (!rc) {

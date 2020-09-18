@@ -4008,6 +4008,7 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 	bool                                     fill_fence = true;
 	struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
 	struct cam_isp_frame_header_info         frame_header_info;
+	struct cam_isp_change_base_args          change_base_info = {0};
 
 	if (!hw_mgr_priv || !prepare_hw_update_args) {
 		CAM_ERR(CAM_ISP, "Invalid args");
@@ -4060,9 +4061,12 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 			"change base i=%d, idx=%d",
 			i, ctx->base[i].idx);
 
+		change_base_info.base_idx = ctx->base[i].idx;
+		change_base_info.cdm_id = CAM_CDM_MAX;
+
 		/* Add change base */
 		rc = cam_isp_add_change_base(prepare, &ctx->res_list_tfe_in,
-			ctx->base[i].idx, &kmd_buf);
+			&change_base_info, &kmd_buf);
 		if (rc) {
 			CAM_ERR(CAM_ISP,
 				"Failed in change base i=%d, idx=%d, rc=%d",
@@ -4157,9 +4161,11 @@ static int cam_tfe_mgr_prepare_hw_update(void *hw_mgr_priv,
 
 	/* add reg update commands */
 	for (i = 0; i < ctx->num_base; i++) {
+		change_base_info.base_idx = ctx->base[i].idx;
+		change_base_info.cdm_id = CAM_CDM_MAX;
 		/* Add change base */
 		rc = cam_isp_add_change_base(prepare, &ctx->res_list_tfe_in,
-			ctx->base[i].idx, &kmd_buf);
+			&change_base_info, &kmd_buf);
 		if (rc) {
 			CAM_ERR(CAM_ISP,
 				"Failed in change base adding reg_update cmd i=%d, idx=%d, rc=%d",

@@ -66,14 +66,13 @@ static const struct of_device_id msm_cam_hw_cdm_dt_match[] = {
 		.data = &cam_cdm_2_1_reg_offset,
 	},
 	{
-		.compatible = CAM_HW_CDM_OPE_NAME_2_1,
+		.compatible = CAM_HW_CDM_RT_NAME_2_1,
 		.data = &cam_cdm_2_1_reg_offset,
 	},
 	{
-		.compatible = CAM_HW_CDM_IFE_NAME_2_1,
+		.compatible = CAM_HW_CDM_OPE_NAME_2_1,
 		.data = &cam_cdm_2_1_reg_offset,
 	},
-	{}
 };
 
 static enum cam_cdm_id cam_hw_cdm_get_id_by_name(char *name)
@@ -102,12 +101,12 @@ static enum cam_cdm_id cam_hw_cdm_get_id_by_name(char *name)
 	if (strnstr(name, CAM_HW_CDM_CPAS_NAME_2_1,
 			strlen(CAM_HW_CDM_CPAS_NAME_2_1)))
 		return CAM_CDM_CPAS;
+	if (strnstr(name, CAM_HW_CDM_RT_NAME_2_1,
+			strlen(CAM_HW_CDM_RT_NAME_2_1)))
+		return CAM_CDM_RT;
 	if (strnstr(name, CAM_HW_CDM_OPE_NAME_2_1,
 			strlen(CAM_HW_CDM_OPE_NAME_2_1)))
 		return CAM_CDM_OPE;
-	if (strnstr(name, CAM_HW_CDM_IFE_NAME_2_1,
-			strlen(CAM_HW_CDM_IFE_NAME_2_1)))
-		return CAM_CDM_IFE;
 
 	return CAM_CDM_MAX;
 }
@@ -320,7 +319,7 @@ void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
 void cam_hw_cdm_dump_core_debug_registers(
 	struct cam_hw_info *cdm_hw)
 {
-	uint32_t dump_reg, core_dbg;
+	uint32_t dump_reg, dump_reg1, dump_reg2, core_dbg;
 	int i;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 
@@ -353,6 +352,19 @@ void cam_hw_cdm_dump_core_debug_registers(
 		CAM_INFO(CAM_CDM, "CDM HW AHB dump not enable");
 	}
 
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->icl_reg->data_regs->icl_inv_data,
+		&dump_reg);
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->icl_reg->misc_regs->icl_inv_bl_addr,
+		&dump_reg1);
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->icl_reg->misc_regs->icl_status,
+		&dump_reg2);
+	CAM_INFO(CAM_CDM,
+		"Last Inv Cmd Log(ICL)Status: 0x%x, Last Inv cmd: 0x%x, Last Inv bl_addr: 0x%x",
+		dump_reg2, dump_reg, dump_reg1);
+
 	cam_hw_cdm_dump_bl_fifo_data(cdm_hw);
 
 	CAM_INFO(CAM_CDM, "CDM HW default dump");
@@ -360,9 +372,7 @@ void cam_hw_cdm_dump_core_debug_registers(
 		core->offsets->cmn_reg->core_cfg, &dump_reg);
 	CAM_INFO(CAM_CDM, "CDM HW core cfg=%x", dump_reg);
 
-	for (i = 0; i <
-		core->offsets->reg_data->num_bl_fifo_irq;
-		i++) {
+	for (i = 0; i < core->offsets->reg_data->num_bl_fifo_irq; i++) {
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_status, &dump_reg);
 		CAM_INFO(CAM_CDM, "CDM HW irq status%d=%x", i, dump_reg);
@@ -412,7 +422,6 @@ enum cam_cdm_arbitration cam_cdm_get_arbitration_type(
 		arbitration = CAM_CDM_ARBITRATION_NONE;
 		goto end;
 	}
-
 	switch (id) {
 	case CAM_CDM_CPAS:
 		arbitration = CAM_CDM_ARBITRATION_ROUND_ROBIN;
@@ -427,14 +436,13 @@ end:
 
 int cam_hw_cdm_set_cdm_blfifo_cfg(struct cam_hw_info *cdm_hw)
 {
-	uint32_t blfifo_cfg_mask = 0;
 	int rc = 0, i;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 
-	blfifo_cfg_mask = blfifo_cfg_mask |
-		CAM_CDM_BL_FIFO_REQ_SIZE_MAX;
-
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo_irq; i++) {
+		if (!core->bl_fifo[i].bl_depth)
+			continue;
+
 		rc = cam_cdm_write_hw_reg(cdm_hw,
 			core->offsets->irq_reg[i]->irq_mask, 0x70003);
 		if (rc) {
@@ -447,24 +455,10 @@ int cam_hw_cdm_set_cdm_blfifo_cfg(struct cam_hw_info *cdm_hw)
 
 	if (core->hw_version >= CAM_CDM_VERSION_2_0) {
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++) {
-			blfifo_cfg_mask = blfifo_cfg_mask |
-				(core->bl_fifo[i].bl_depth
+			rc = cam_cdm_write_hw_reg(cdm_hw,
+				core->offsets->bl_fifo_reg[i]->bl_fifo_cfg,
+				core->bl_fifo[i].bl_depth
 				<< CAM_CDM_BL_FIFO_LENGTH_CFG_SHIFT);
-			rc = cam_cdm_write_hw_reg(cdm_hw,
-				core->offsets->bl_fifo_reg[i]->bl_fifo_cfg,
-				blfifo_cfg_mask);
-			if (rc) {
-				CAM_ERR(CAM_CDM,
-					"Unable to write to cdm irq mask register");
-				rc = -EIO;
-				goto end;
-			}
-		}
-	} else {
-		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++) {
-			rc = cam_cdm_write_hw_reg(cdm_hw,
-				core->offsets->bl_fifo_reg[i]->bl_fifo_cfg,
-				blfifo_cfg_mask);
 			if (rc) {
 				CAM_ERR(CAM_CDM,
 					"Unable to write to cdm irq mask register");
@@ -484,7 +478,7 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 	int rc;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 	struct cam_cdm_private_dt_data *pvt_data =
-		pvt_data = cdm_hw->soc_info.soc_private;
+		(struct cam_cdm_private_dt_data *)cdm_hw->soc_info.soc_private;
 
 	cfg_mask = cfg_mask |
 			CAM_CDM_AHB_STOP_ON_ERROR|
@@ -501,7 +495,8 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 	}
 
 	if (cdm_version >= CAM_CDM_VERSION_2_0) {
-		if (core->id != CAM_CDM_CPAS)
+		if (core->id != CAM_CDM_CPAS &&
+			(!pvt_data->is_single_ctx_cdm))
 			cfg_mask = cfg_mask | CAM_CDM_IMPLICIT_WAIT_EN;
 
 		if (core->arbitration == CAM_CDM_ARBITRATION_ROUND_ROBIN)
@@ -1281,6 +1276,7 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 	struct cam_hw_info *cdm_hw = data;
 	struct cam_cdm *cdm_core = cdm_hw->core_info;
 	struct cam_cdm_work_payload *payload[CAM_CDM_BL_FIFO_MAX] = {0};
+	uint8_t rst_done_cnt = 0;
 	uint32_t user_data = 0;
 	uint32_t irq_status[CAM_CDM_BL_FIFO_MAX] = {0};
 	uint32_t irq_context_summary = 0xF;
@@ -1332,7 +1328,7 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 			continue;
 
 		if (irq_status[i] & CAM_CDM_IRQ_STATUS_RST_DONE_MASK) {
-			cdm_core->rst_done_cnt++;
+			rst_done_cnt++;
 			continue;
 		}
 
@@ -1391,17 +1387,15 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 			kfree(payload[i]);
 		}
 	}
-	if (cdm_core->rst_done_cnt ==
-		cdm_core->offsets->reg_data->num_bl_fifo_irq) {
+	if (rst_done_cnt == cdm_core->offsets->reg_data->num_bl_fifo_irq) {
 		CAM_DBG(CAM_CDM, "CDM HW reset done IRQ");
 		complete(&cdm_core->reset_complete);
 	}
-	if (cdm_core->rst_done_cnt &&
-		cdm_core->rst_done_cnt !=
-			cdm_core->offsets->reg_data->num_bl_fifo_irq)
+	if (rst_done_cnt &&
+		(rst_done_cnt != cdm_core->offsets->reg_data->num_bl_fifo_irq))
 		CAM_INFO(CAM_CDM,
 			"Reset IRQ received for %d fifos instead of %d",
-			cdm_core->rst_done_cnt,
+			rst_done_cnt,
 			cdm_core->offsets->reg_data->num_bl_fifo_irq);
 	return IRQ_HANDLED;
 }
@@ -1422,6 +1416,9 @@ int cam_hw_cdm_alloc_genirq_mem(void *hw_priv)
 	genirq_alloc_cmd.smmu_hdl = cdm_core->iommu_hdl.non_secure;
 	genirq_alloc_cmd.flags = CAM_MEM_FLAG_HW_READ_WRITE;
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
+		if (!cdm_core->bl_fifo[i].bl_depth)
+			continue;
+
 		genirq_alloc_cmd.size = (8 *
 				cdm_core->bl_fifo[i].bl_depth);
 		rc = cam_mem_mgr_request_mem(&genirq_alloc_cmd,
@@ -1478,7 +1475,7 @@ int cam_hw_cdm_reset_hw(struct cam_hw_info *cdm_hw, uint32_t handle)
 		mutex_lock(&cdm_core->bl_fifo[i].fifo_lock);
 
 	set_bit(CAM_CDM_RESET_HW_STATUS, &cdm_core->cdm_status);
-	cdm_core->rst_done_cnt = 0;
+
 	reinit_completion(&cdm_core->reset_complete);
 
 	/* First pause CDM, If it fails still proceed to reset CDM HW */
@@ -1486,6 +1483,9 @@ int cam_hw_cdm_reset_hw(struct cam_hw_info *cdm_hw, uint32_t handle)
 	usleep_range(1000, 1010);
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
+		if (!cdm_core->bl_fifo[i].bl_depth)
+			continue;
+
 		reset_val = reset_val |
 			(1 << (i + CAM_CDM_BL_FIFO_FLUSH_SHIFT));
 		if (cam_cdm_write_hw_reg(cdm_hw,
@@ -1549,7 +1549,6 @@ int cam_hw_cdm_handle_error_info(
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++)
 		mutex_lock(&cdm_core->bl_fifo[i].fifo_lock);
 
-	cdm_core->rst_done_cnt = 0;
 	reinit_completion(&cdm_core->reset_complete);
 	set_bit(CAM_CDM_RESET_HW_STATUS, &cdm_core->cdm_status);
 	set_bit(CAM_CDM_FLUSH_HW_STATUS, &cdm_core->cdm_status);
@@ -1578,6 +1577,9 @@ int cam_hw_cdm_handle_error_info(
 	cam_hw_cdm_dump_core_debug_registers(cdm_hw);
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
+		if (!cdm_core->bl_fifo[i].bl_depth)
+			continue;
+
 		reset_val = reset_val |
 			(1 << (i + CAM_CDM_BL_FIFO_FLUSH_SHIFT));
 		if (cam_cdm_write_hw_reg(cdm_hw,
@@ -1811,10 +1813,14 @@ int cam_hw_cdm_init(void *hw_priv,
 		goto disable_return;
 	} else {
 		CAM_DBG(CAM_CDM, "CDM Init success");
-		for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++)
+		for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
+			if (!cdm_core->bl_fifo[i].bl_depth)
+				continue;
+
 			cam_cdm_write_hw_reg(cdm_hw,
 					cdm_core->offsets->irq_reg[i]->irq_mask,
 					0x70003);
+		}
 		rc = 0;
 		goto end;
 	}
@@ -1860,7 +1866,6 @@ int cam_hw_cdm_deinit(void *hw_priv,
 	}
 
 	set_bit(CAM_CDM_RESET_HW_STATUS, &cdm_core->cdm_status);
-	cdm_core->rst_done_cnt = 0;
 	reinit_completion(&cdm_core->reset_complete);
 
 	/* First pause CDM, If it fails still proceed to reset CDM HW */
@@ -1868,6 +1873,9 @@ int cam_hw_cdm_deinit(void *hw_priv,
 	usleep_range(1000, 1010);
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
+		if (!cdm_core->bl_fifo[i].bl_depth)
+			continue;
+
 		reset_val = reset_val |
 			(1 << (i + CAM_CDM_BL_FIFO_FLUSH_SHIFT));
 		if (cam_cdm_write_hw_reg(cdm_hw,
@@ -1973,7 +1981,6 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 		goto release_private_mem;
 	}
 
-	cdm_core->rst_done_cnt = 0;
 	init_completion(&cdm_core->reset_complete);
 	cdm_hw_intf->hw_priv = cdm_hw;
 	cdm_hw_intf->hw_ops.get_hw_caps = cam_cdm_get_caps;

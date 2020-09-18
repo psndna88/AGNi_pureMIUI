@@ -12,6 +12,7 @@
 #include "cam_isp_hw_mgr.h"
 #include "cam_hw_intf.h"
 #include "cam_packet_util.h"
+#include "cam_cdm_intf_api.h"
 
 /* enum cam_isp_cdm_bl_type - isp cdm packet type*/
 enum cam_isp_cdm_bl_type {
@@ -48,6 +49,17 @@ struct cam_isp_frame_header_info {
 };
 
 /*
+ * struct cam_isp_change_base_args
+ *
+ * @cdm_id:       CDM id
+ * @base_idx:     Base index
+ */
+struct cam_isp_change_base_args {
+	enum cam_cdm_id  cdm_id;
+	uint32_t         base_idx;
+};
+
+/*
  * cam_isp_add_change_base()
  *
  * @brief                  Add change base in the hw entries list
@@ -56,8 +68,7 @@ struct cam_isp_frame_header_info {
  *
  * @prepare:               Contain the packet and HW update variables
  * @res_list_isp_src:      Resource list for IFE/VFE source
- * @base_idx:              Base or dev index of the IFE/VFE HW instance for
- *                         which change change base need to be added
+ * @change_base_args:      Arguments for Change base function
  * @kmd_buf_info:          Kmd buffer to store the change base command
  * @return:                0 for success
  *                         -EINVAL for Fail
@@ -65,7 +76,7 @@ struct cam_isp_frame_header_info {
 int cam_isp_add_change_base(
 	struct cam_hw_prepare_update_args     *prepare,
 	struct list_head                      *res_list_isp_src,
-	uint32_t                               base_idx,
+	struct cam_isp_change_base_args       *change_base_args,
 	struct cam_kmd_buf_info               *kmd_buf_info);
 
 /*

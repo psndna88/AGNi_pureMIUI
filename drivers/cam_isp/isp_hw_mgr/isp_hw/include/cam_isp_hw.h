@@ -12,6 +12,7 @@
 #include "cam_soc_util.h"
 #include "cam_irq_controller.h"
 #include "cam_hw_intf.h"
+#include "cam_cdm_intf_api.h"
 
 /* Maximum length of tag while dumping */
 #define CAM_ISP_HW_DUMP_TAG_MAX_LEN 32
@@ -49,6 +50,7 @@ enum cam_isp_hw_type {
 	CAM_ISP_HW_TYPE_TFE,
 	CAM_ISP_HW_TYPE_TFE_CSID,
 	CAM_ISP_HW_TYPE_TPG,
+	CAM_ISP_HW_TYPE_SFE,
 	CAM_ISP_HW_TYPE_MAX,
 };
 
@@ -126,6 +128,7 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_GET_RES_FOR_MID,
 	CAM_ISP_HW_CMD_BLANKING_UPDATE,
 	CAM_ISP_HW_CMD_CSID_CLOCK_DUMP,
+	CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -273,12 +276,14 @@ struct cam_isp_hw_get_res_for_mid {
  *
  * @res:           Resource node
  * @cmd_type:      Command type for which to get update
+ * @cdm_id  :      CDM id
  * @cmd:           Command buffer information
  *
  */
 struct cam_isp_hw_get_cmd_update {
 	struct cam_isp_resource_node     *res;
 	enum cam_isp_hw_cmd_type          cmd_type;
+	enum cam_cdm_id                   cdm_id;
 	struct cam_isp_hw_cmd_buf_update  cmd;
 	union {
 		void                                 *data;

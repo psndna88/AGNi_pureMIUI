@@ -3001,7 +3001,6 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	uint32_t                           total_pd_port = 0;
 	struct cam_isp_acquire_hw_info    *acquire_hw_info = NULL;
 	uint32_t                           input_size = 0;
-	uint32_t                           hw_version;
 
 	CAM_DBG(CAM_ISP, "Enter...");
 
@@ -3110,15 +3109,16 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		goto free_cdm;
 	}
 
-	cam_cpas_get_cpas_hw_version(&hw_version);
-	ife_ctx->hw_version = hw_version;
-
+	cam_cpas_get_cpas_hw_version(&ife_ctx->hw_version);
 	if (ife_ctx->is_dual)
 		memcpy(cdm_acquire.identifier, "dualife", sizeof("dualife"));
 	else
 		memcpy(cdm_acquire.identifier, "ife", sizeof("ife"));
 
-	cdm_acquire.cell_index = ife_ctx->base[0].idx;
+	if (ife_ctx->is_dual)
+		cdm_acquire.cell_index = ife_ctx->master_hw_idx;
+	else
+		cdm_acquire.cell_index = ife_ctx->base[0].idx;
 	cdm_acquire.handle = 0;
 	cdm_acquire.userdata = ife_ctx;
 	cdm_acquire.base_array_cnt = CAM_IFE_HW_NUM_MAX;
@@ -3141,6 +3141,7 @@ static int cam_ife_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 		"Successfully acquired CDM Id: %d, CDM HW hdl=%x, is_dual=%d",
 		cdm_acquire.id, cdm_acquire.handle, ife_ctx->is_dual);
 	ife_ctx->cdm_handle = cdm_acquire.handle;
+	ife_ctx->cdm_id = cdm_acquire.id;
 	if (cdm_acquire.id == CAM_CDM_IFE)
 		ife_ctx->internal_cdm = true;
 	atomic_set(&ife_ctx->cdm_done, 1);
@@ -3242,7 +3243,6 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 	uint32_t                               total_pix_port = 0;
 	uint32_t                               total_rdi_port = 0;
 	uint32_t                               in_port_length = 0;
-	uint32_t                               hw_version;
 
 	CAM_DBG(CAM_ISP, "Enter...");
 
@@ -3375,8 +3375,7 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 		goto free_res;
 	}
 
-	cam_cpas_get_cpas_hw_version(&hw_version);
-	ife_ctx->hw_version = hw_version;
+	cam_cpas_get_cpas_hw_version(&ife_ctx->hw_version);
 	ife_ctx->internal_cdm = false;
 
 	if (ife_ctx->is_dual)
@@ -3408,6 +3407,7 @@ static int cam_ife_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 	if (cdm_acquire.id == CAM_CDM_IFE)
 		ife_ctx->internal_cdm = true;
 	ife_ctx->cdm_handle = cdm_acquire.handle;
+	ife_ctx->cdm_id = cdm_acquire.id;
 	atomic_set(&ife_ctx->cdm_done, 1);
 
 	acquire_args->ctxt_to_hw_map = ife_ctx;
@@ -5370,6 +5370,37 @@ static int cam_isp_blob_clock_update(
 	return rc;
 }
 
+static int cam_isp_blob_tpg_config(
+	struct cam_isp_tpg_core_config        *tpg_config,
+	struct cam_hw_prepare_update_args     *prepare)
+{
+	int                                 i, rc = -EINVAL;
+	struct cam_ife_hw_mgr_ctx          *ctx = NULL;
+	struct cam_isp_hw_mgr_res          *hw_mgr_res;
+	struct cam_hw_intf                 *hw_intf;
+
+	ctx = prepare->ctxt_to_hw_map;
+	hw_mgr_res = &ctx->res_list_tpg;
+
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		if (!hw_mgr_res->hw_res[i])
+			continue;
+		hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+		CAM_DBG(CAM_ISP, "TPG ctrl config for hw %u",
+			hw_intf->hw_idx);
+		if (hw_intf->hw_ops.process_cmd) {
+			rc = hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
+				CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD, tpg_config,
+				sizeof(struct cam_isp_tpg_core_config));
+			if (rc)
+				goto end;
+		}
+	}
+
+end:
+	return rc;
+}
+
 static int cam_isp_blob_sensor_config(
 	uint32_t                               blob_type,
 	struct cam_isp_generic_blob_info      *blob_info,
@@ -6144,6 +6175,25 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 				"Sensor Dimension Update Failed rc: %d", rc);
 	}
 		break;
+	case CAM_ISP_GENERIC_BLOB_TYPE_TPG_CORE_CONFIG: {
+		struct cam_isp_tpg_core_config *tpg_config;
+
+		if (blob_size < sizeof(struct cam_isp_tpg_core_config)) {
+			CAM_ERR(CAM_ISP, "Invalid blob size %zu expected %zu",
+				blob_size,
+				sizeof(struct cam_isp_tpg_core_config));
+			return -EINVAL;
+		}
+
+		tpg_config =
+			(struct cam_isp_tpg_core_config *)blob_data;
+
+		rc = cam_isp_blob_tpg_config(tpg_config, prepare);
+		if (rc)
+			CAM_ERR(CAM_ISP,
+				"TPG config failed rc: %d", rc);
+	}
+		break;
 	default:
 		CAM_WARN(CAM_ISP, "Invalid blob type %d", blob_type);
 		break;
@@ -6219,6 +6269,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 	bool                                     frame_header_enable = false;
 	struct cam_isp_prepare_hw_update_data   *prepare_hw_data;
 	struct cam_isp_frame_header_info         frame_header_info;
+	struct cam_isp_change_base_args          change_base_info = {0};
 
 	if (!hw_mgr_priv || !prepare_hw_update_args) {
 		CAM_ERR(CAM_ISP, "Invalid args");
@@ -6289,9 +6340,11 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 
 		/* Add change base */
 		if (!ctx->internal_cdm) {
+			change_base_info.base_idx = ctx->base[i].idx;
+			change_base_info.cdm_id = ctx->cdm_id;
 			rc = cam_isp_add_change_base(prepare,
 				&ctx->res_list_ife_src,
-				ctx->base[i].idx, &kmd_buf);
+				&change_base_info, &kmd_buf);
 			if (rc) {
 				CAM_ERR(CAM_ISP,
 				"Failed in change base i=%d, idx=%d, rc=%d",
@@ -6401,11 +6454,13 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 
 	/* add reg update commands */
 	for (i = 0; i < ctx->num_base; i++) {
+		change_base_info.base_idx = ctx->base[i].idx;
+		change_base_info.cdm_id = ctx->cdm_id;
 		/* Add change base */
 		if (!ctx->internal_cdm) {
 			rc = cam_isp_add_change_base(prepare,
 				&ctx->res_list_ife_src,
-				ctx->base[i].idx, &kmd_buf);
+				&change_base_info, &kmd_buf);
 
 			if (rc) {
 				CAM_ERR(CAM_ISP,

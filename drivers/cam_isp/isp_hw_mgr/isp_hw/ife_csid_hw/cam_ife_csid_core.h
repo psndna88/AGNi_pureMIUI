@@ -73,6 +73,7 @@
 #define CSID_DEBUG_DISABLE_EARLY_EOF              BIT(8)
 
 #define CAM_CSID_EVT_PAYLOAD_MAX                  10
+#define CAM_CSID_MIN_HBI_CFG_MAX_VAL              0xF
 
 /* enum cam_csid_path_halt_mode select the path halt mode control */
 enum cam_csid_path_halt_mode {
@@ -159,6 +160,7 @@ struct cam_ife_csid_pxl_reg_offset {
 	uint32_t quad_cfa_bin_en_shift_val;
 	uint32_t ccif_violation_en;
 	uint32_t overflow_ctrl_en;
+	uint32_t hblank_cfg_shift_val;
 	uint32_t halt_master_sel_en;
 	uint32_t halt_sel_internal_master_val;
 };
@@ -518,6 +520,7 @@ struct cam_ife_csid_cid_data {
  *                  Slave will synchronize with master Start and stop operations
  * @clk_rate        Clock rate
  * @num_bytes_out:  Number of output bytes per cycle
+ * @hblank_cnt:     HBI count
  *
  */
 struct cam_ife_csid_path_cfg {
@@ -543,6 +546,7 @@ struct cam_ife_csid_path_cfg {
 	uint32_t                        horizontal_bin;
 	uint32_t                        qcfa_bin;
 	uint32_t                        num_bytes_out;
+	uint32_t                        hblank_cnt;
 };
 
 /**

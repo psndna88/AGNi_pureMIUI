@@ -22,6 +22,7 @@ enum cam_cdm_id {
 	CAM_CDM_IPE1,
 	CAM_CDM_BPS,
 	CAM_CDM_VFE,
+	CAM_CDM_RT,
 	CAM_CDM_MAX
 };
 
