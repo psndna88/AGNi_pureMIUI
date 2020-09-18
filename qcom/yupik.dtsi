@@ -10,6 +10,7 @@
 #include <dt-bindings/interconnect/qcom,yupik.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/soc/qcom,ipcc.h>
+#include <dt-bindings/soc/qcom,rpmh-rsc.h>
 #include <dt-bindings/gpio/gpio.h>
 
 / {
@@ -324,6 +325,19 @@
 		reg = <0x17a00000 0x10000>,     /* GICD */
 		      <0x17a60000 0x100000>;    /* GICR * 8 */
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_LOW>;
+	};
+
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,yupik-pdc";
+		reg = <0xb220000 0x30000>, <0x17c000f0 0x60>;
+		qcom,pdc-ranges = <0 480 40>, <40 140 14>, <54 263 1>,
+				  <55 306 4>, <59 312 3>, <62 374 2>,
+				  <64 434 2>, <66 438 3>, <69 86 1>,
+				  <70 520 54>, <124 609 31>, <155 63 1>,
+				  <156 716 12>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
 	};
 
 	wdog: qcom,wdt@17c10000 {
@@ -758,6 +772,42 @@
 	epss_l3_cpu: l3_cpu@18590000 {
 		compatible = "qcom,yupik-epss-l3-cpu";
 		#interconnect-cells = <1>;
+	};
+
+	apps_rsc: rsc@18200000 {
+		label = "apps_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0x18200000 0x10000>,
+		      <0x18210000 0x10000>,
+		      <0x18220000 0x10000>;
+		reg-names = "drv-0", "drv-1", "drv-2";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0xd00>;
+		qcom,drv-id = <2>;
+		qcom,tcs-config = <ACTIVE_TCS  2>,
+				  <SLEEP_TCS   3>,
+				  <WAKE_TCS    3>,
+				  <CONTROL_TCS 0>;
+
+		system_pm {
+			compatible = "qcom,system-pm";
+		};
+	};
+
+	disp_rsc: rsc@af20000 {
+		label = "disp_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0xaf20000 0x10000>;
+		reg-names = "drv-0";
+		interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0x1c00>;
+		qcom,drv-id = <0>;
+		qcom,tcs-config = <ACTIVE_TCS  0>,
+				  <SLEEP_TCS   1>,
+				  <WAKE_TCS    1>,
+				  <CONTROL_TCS 0>;
 	};
 };
 
