@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -374,7 +374,8 @@ void lim_remain_on_chn_rsp(tpAniSirGlobal pMac, QDF_STATUS status, uint32_t *dat
 void lim_send_sme_mgmt_frame_ind(tpAniSirGlobal pMac, uint8_t frameType,
 				 uint8_t *frame, uint32_t frameLen,
 				 uint16_t sessionId, uint32_t rxChannel,
-				 tpPESession psessionEntry, int8_t rxRssi)
+				 tpPESession session_entry,
+				 int8_t rx_rssi, enum rxmgmt_flags rx_flags)
 {
 	tpSirSmeMgmtFrameInd pSirSmeMgmtFrame = NULL;
 	uint16_t length;
@@ -397,8 +398,9 @@ void lim_send_sme_mgmt_frame_ind(tpAniSirGlobal pMac, uint8_t frameType,
 	pSirSmeMgmtFrame->frame_len = frameLen;
 	pSirSmeMgmtFrame->sessionId = sessionId;
 	pSirSmeMgmtFrame->frameType = frameType;
-	pSirSmeMgmtFrame->rxRssi = rxRssi;
+	pSirSmeMgmtFrame->rxRssi = rx_rssi;
 	pSirSmeMgmtFrame->rxChan = rxChannel;
+	pSirSmeMgmtFrame->rx_flags = rx_flags;
 
 	qdf_mem_zero(pSirSmeMgmtFrame->frameBuf, frameLen);
 	qdf_mem_copy(pSirSmeMgmtFrame->frameBuf, frame, frameLen);

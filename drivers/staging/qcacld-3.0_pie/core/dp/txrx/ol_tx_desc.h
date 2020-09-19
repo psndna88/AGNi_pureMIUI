@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2017, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -239,7 +239,20 @@ void ol_tso_num_seg_free(struct ol_txrx_pdev_t *pdev,
 void ol_free_remaining_tso_segs(ol_txrx_vdev_handle vdev,
 				struct ol_txrx_msdu_info_t *msdu_info,
 				bool is_tso_seg_mapping_done);
-
+/**
+ * collect_tso_frags() - collect all TSO fragments
+ * @pdev: The txrx pdev sending the data
+ * @tso_seg: The TSO segment element to be checked
+ * @netbuf: Target netbuf used to store all data from TSO fragments
+ *
+ * This function collects data contained in all TSO fragments related
+ * to a certain TSO segment element and put them into a single netbuf.
+ *
+ * Return: true if TSO fragments are really collected; false otherwise
+ */
+bool collect_tso_frags(struct ol_txrx_pdev_t *pdev,
+		       struct qdf_tso_seg_elem_t *tso_seg,
+		       qdf_nbuf_t netbuf);
 #else
 #define ol_tso_alloc_segment(pdev) /*no-op*/
 #define ol_tso_free_segment(pdev, tso_seg) /*no-op*/
@@ -247,6 +260,13 @@ void ol_free_remaining_tso_segs(ol_txrx_vdev_handle vdev,
 #define ol_tso_num_seg_free(pdev, tso_num_seg) /*no-op*/
 /*no-op*/
 #define ol_free_remaining_tso_segs(vdev, msdu_info, is_tso_seg_mapping_done)
+static inline
+bool collect_tso_frags(struct ol_txrx_pdev_t *dev,
+		       struct qdf_tso_seg_elem_t *tso_seg,
+		       qdf_nbuf_t netbuf)
+{
+	return false;
+}
 #endif
 
 /**

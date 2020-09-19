@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -337,4 +337,7 @@ unsigned char *g_cfg_param_name[] = {
 	(unsigned char *)"EDCA_ETSI_ACBE",
 	(unsigned char *)"EDCA_ETSI_ACVI",
 	(unsigned char *)"EDCA_ETSI_ACVO",
+#ifdef WLAN_FEATURE_SAE
+	(unsigned char *)"SAP_SAE_ENABLED",
+#endif
 };

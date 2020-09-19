@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -360,6 +360,11 @@ typedef struct tagCsrEseCckmIe {
 	uint8_t cckmIe[DOT11F_IE_RSN_MAX_LEN];
 	uint8_t cckmIeLen;
 } tCsrEseCckmIe;
+
+#define reset_cckm_info(cckm_info) \
+	qdf_mem_zero((cckm_info), sizeof(tCsrEseCckmInfo))
+#else
+#define reset_cckm_info(cckm_info)
 #endif /* FEATURE_WLAN_ESE */
 
 typedef struct sCsrChannel_ {

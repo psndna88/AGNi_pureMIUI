@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4844,6 +4844,7 @@ static QDF_STATUS sap_get_channel_list(ptSapContext sap_ctx,
 	tSapChSelSpectInfo spect_info_obj = { NULL, 0 };
 	uint16_t ch_width;
 	uint8_t i;
+	uint8_t ch;
 
 	if (NULL == hal) {
 		QDF_TRACE(QDF_MODULE_ID_SAP, QDF_TRACE_LEVEL_ERROR,
@@ -4958,10 +4959,8 @@ static QDF_STATUS sap_get_channel_list(ptSapContext sap_ctx,
 				continue;
 		}
 
-#ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
-		uint8_t ch;
-
 		ch = CDS_CHANNEL_NUM(loop_count);
+#ifdef FEATURE_WLAN_AP_AP_ACS_OPTIMIZE
 		if ((sap_ctx->acs_cfg->skip_scan_status ==
 			eSAP_DO_PAR_ACS_SCAN)) {
 		    if ((ch >= sap_ctx->acs_cfg->skip_scan_range1_stch &&
@@ -4991,7 +4990,7 @@ static QDF_STATUS sap_get_channel_list(ptSapContext sap_ctx,
 				ch_count, ch);
 		}
 #else
-		list[ch_count] = CDS_CHANNEL_NUM(loop_count);
+		list[ch_count] = ch;
 		ch_count++;
 #endif
 	}

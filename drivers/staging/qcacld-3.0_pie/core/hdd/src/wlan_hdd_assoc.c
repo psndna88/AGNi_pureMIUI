@@ -54,6 +54,7 @@
 #include <wlan_logging_sock_svc.h>
 #include "wlan_hdd_tsf.h"
 #include "wlan_hdd_scan.h"
+#include "wlan_hdd_main.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -2307,10 +2308,10 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 	chan_no = pCsrRoamInfo->pBssDesc->channelId;
 	if (chan_no <= 14)
 		freq = ieee80211_channel_to_frequency(chan_no,
-							NL80211_BAND_2GHZ);
+							HDD_NL80211_BAND_2GHZ);
 	else
 		freq = ieee80211_channel_to_frequency(chan_no,
-							NL80211_BAND_5GHZ);
+							HDD_NL80211_BAND_5GHZ);
 	chan = ieee80211_get_channel(pAdapter->wdev.wiphy, freq);
 
 	sme_roam_get_connect_profile(hal_handle, pAdapter->sessionId,

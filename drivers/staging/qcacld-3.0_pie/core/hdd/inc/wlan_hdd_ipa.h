@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -100,6 +100,7 @@ bool hdd_ipa_is_fw_wdi_actived(hdd_context_t *hdd_ctx);
 #ifndef QCA_LL_TX_FLOW_CONTROL_V2
 int hdd_ipa_send_mcc_scc_msg(hdd_context_t *hdd_ctx, bool mcc_mode);
 void hdd_ipa_set_mcc_mode(bool mcc_mode);
+void hdd_ipa_mcc_work_handler(struct work_struct *work);
 #else
 static inline int hdd_ipa_send_mcc_scc_msg(hdd_context_t *hdd_ctx,
 					   bool mcc_mode)
@@ -247,8 +248,8 @@ static inline void hdd_ipa_uc_stat_query(hdd_context_t *hdd_ctx,
 	*ipa_rx_diff = 0;
 }
 
-static inline void hdd_ipa_uc_stat_request(hdd_adapter_t *adapter,
-	uint8_t reason)
+static inline void hdd_ipa_uc_stat_request(hdd_context_t *hdd_ctx,
+					   uint8_t reason)
 {
 }
 

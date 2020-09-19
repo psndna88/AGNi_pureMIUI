@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2289,14 +2289,20 @@ QDF_STATUS sme_send_mgmt_tx(tHalHandle hal, uint8_t session_id,
  * @hal: The handle returned by mac_open
  * @session_id: session id
  * @sae_status: status of SAE authentication
+ * @peer_mac_addr: mac address of the peer to be authenticated
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
-		uint8_t sae_status);
+QDF_STATUS sme_handle_sae_msg(tHalHandle hal,
+			      uint8_t session_id,
+			      uint8_t sae_status,
+			      struct qdf_mac_addr peer_mac_addr);
 #else
-static inline QDF_STATUS sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
-		uint8_t sae_status)
+static inline
+QDF_STATUS sme_handle_sae_msg(tHalHandle hal,
+			      uint8_t session_id,
+			      uint8_t sae_status,
+			      struct qdf_mac_addr peer_mac_addr)
 {
 	return QDF_STATUS_SUCCESS;
 }

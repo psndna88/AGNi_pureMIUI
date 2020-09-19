@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -33,6 +33,7 @@
 #include <ol_txrx_encap.h>      /* OL_TX_RESTORE_HDR, etc */
 #endif
 #include <ol_txrx.h>
+#include <utils_api.h>
 
 #ifdef QCA_SUPPORT_TXDESC_SANITY_CHECKS
 static inline void ol_tx_desc_sanity_checks(struct ol_txrx_pdev_t *pdev,
@@ -1002,5 +1003,49 @@ void ol_tso_num_seg_free(struct ol_txrx_pdev_t *pdev,
 	pdev->tso_num_seg_pool.freelist = tso_num_seg;
 		pdev->tso_num_seg_pool.num_free++;
 	qdf_spin_unlock_bh(&pdev->tso_num_seg_pool.tso_num_seg_mutex);
+}
+
+bool collect_tso_frags(struct ol_txrx_pdev_t *pdev,
+		       struct qdf_tso_seg_elem_t *tso_seg,
+		       qdf_nbuf_t netbuf)
+{
+	uint8_t frag_cnt, num_frags = 0;
+	int frag_len = 0;
+	uint32_t tcp_seq_num;
+	uint16_t ip_len;
+
+	qdf_spin_lock_bh(&pdev->tso_seg_pool.tso_mutex);
+
+	if (tso_seg->seg.num_frags > 0)
+		num_frags = tso_seg->seg.num_frags - 1;
+
+	/*Num of frags in a tso seg cannot be less than 2 */
+	if (num_frags < 1) {
+		qdf_print("ERROR: num of frags in tso segment is %d\n",
+			  (num_frags + 1));
+		qdf_spin_unlock_bh(&pdev->tso_seg_pool.tso_mutex);
+		return false;
+	}
+
+	tcp_seq_num = tso_seg->seg.tso_flags.tcp_seq_num;
+	tcp_seq_num = ani_cpu_to_be32(tcp_seq_num);
+
+	ip_len = tso_seg->seg.tso_flags.ip_len;
+	ip_len = ani_cpu_to_be16(ip_len);
+
+	for (frag_cnt = 0; frag_cnt < num_frags; frag_cnt++) {
+		qdf_mem_copy(qdf_nbuf_data(netbuf) + frag_len,
+			     tso_seg->seg.tso_frags[frag_cnt].vaddr,
+			     tso_seg->seg.tso_frags[frag_cnt].length);
+		frag_len += tso_seg->seg.tso_frags[frag_cnt].length;
+	}
+
+	qdf_spin_unlock_bh(&pdev->tso_seg_pool.tso_mutex);
+
+	qdf_mem_copy((qdf_nbuf_data(netbuf) + IPV4_PKT_LEN_OFFSET),
+		     &ip_len, sizeof(ip_len));
+	qdf_mem_copy((qdf_nbuf_data(netbuf) + IPV4_TCP_SEQ_NUM_OFFSET),
+		     &tcp_seq_num, sizeof(tcp_seq_num));
+	return true;
 }
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -757,7 +757,7 @@ lim_fill_assoc_ind_params(tpAniSirGlobal mac_ctx,
 	if (assoc_ind->VHTCaps.present)
 		sme_assoc_ind->VHTCaps = assoc_ind->VHTCaps;
 	sme_assoc_ind->capability_info = assoc_ind->capabilityInfo;
-
+	sme_assoc_ind->is_sae_authenticated = assoc_ind->is_sae_authenticated;
 }
 
 /**

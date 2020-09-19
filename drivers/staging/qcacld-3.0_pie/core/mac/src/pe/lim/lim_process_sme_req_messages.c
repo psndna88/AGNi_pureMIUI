@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3602,21 +3602,33 @@ void __lim_process_sme_assoc_cnf_new(tpAniSirGlobal mac_ctx, uint32_t msg_type,
 					session_entry);
 		goto end;
 	} else {
+		uint8_t add_pre_auth_context = true;
 		/*
 		 * SME_ASSOC_CNF status is non-success, so STA is not allowed
 		 * to be associated since the HAL sta entry is created for
 		 * denied STA we need to remove this HAL entry.
 		 * So to do that set updateContext to 1
 		 */
+		tSirMacStatusCodes mac_status_code =
+			eSIR_MAC_UNSPEC_FAILURE_STATUS;
 		if (!sta_ds->mlmStaContext.updateContext)
 			sta_ds->mlmStaContext.updateContext = 1;
-		pe_debug("Recv Assoc Cnf, status Code : %d(assoc id=%d)",
-			assoc_cnf.statusCode, sta_ds->assocId);
+		pe_debug("Recv Assoc Cnf, status Code : %d(assoc id=%d) Reason code: %d",
+			 assoc_cnf.statusCode, sta_ds->assocId,
+			 assoc_cnf.mac_status_code);
+		if (assoc_cnf.mac_status_code)
+			mac_status_code = assoc_cnf.mac_status_code;
+		if (assoc_cnf.mac_status_code == eSIR_MAC_INVALID_PMKID ||
+		    assoc_cnf.mac_status_code ==
+			eSIR_MAC_AUTH_ALGO_NOT_SUPPORTED_STATUS)
+			add_pre_auth_context = false;
+
 		lim_reject_association(mac_ctx, sta_ds->staAddr,
 				       sta_ds->mlmStaContext.subType,
-				       true, sta_ds->mlmStaContext.authType,
+				       add_pre_auth_context,
+				       sta_ds->mlmStaContext.authType,
 				       sta_ds->assocId, true,
-				       eSIR_MAC_UNSPEC_FAILURE_STATUS,
+				       mac_status_code,
 				       session_entry);
 	}
 end:

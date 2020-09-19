@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1998,9 +1998,7 @@ int wlan_hdd_cfg80211_resume_wlan(struct wiphy *wiphy)
 static int __wlan_hdd_cfg80211_suspend_wlan(struct wiphy *wiphy,
 				     struct cfg80211_wowlan *wow)
 {
-#ifdef QCA_CONFIG_SMP
 #define RX_TLSHIM_SUSPEND_TIMEOUT 200   /* msecs */
-#endif
 	hdd_context_t *pHddCtx = wiphy_priv(wiphy);
 	p_cds_sched_context cds_sched_context = get_cds_sched_ctxt();
 	hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
@@ -2216,8 +2214,8 @@ resume_all:
 #ifdef QCA_CONFIG_SMP
 	complete(&cds_sched_context->ol_resume_rx_event);
 	pHddCtx->is_ol_rx_thread_suspended = false;
-#endif
 resume_mc:
+#endif
 	complete(&cds_sched_context->ResumeMcEvent);
 	pHddCtx->isMcThreadSuspended = false;
 
@@ -2507,6 +2505,7 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	hdd_adapter_t *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	int status;
 	hdd_station_ctx_t *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	static bool is_rate_limited;
 
 	ENTER();
 
@@ -2532,10 +2531,14 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
+	HDD_IS_RATE_LIMIT_REQ(is_rate_limited,
+			      pHddCtx->config->nb_commands_interval);
+
 	mutex_lock(&pHddCtx->iface_change_lock);
-	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED) {
+	if (pHddCtx->driver_status != DRIVER_MODULES_ENABLED ||
+	    is_rate_limited) {
 		mutex_unlock(&pHddCtx->iface_change_lock);
-		hdd_debug("Driver Module not enabled return success");
+		hdd_debug("Modules not enabled/rate limited, use cached stats");
 		/* Send cached data to upperlayer*/
 		*dbm = adapter->hdd_stats.ClassA_stat.max_pwr;
 		return 0;

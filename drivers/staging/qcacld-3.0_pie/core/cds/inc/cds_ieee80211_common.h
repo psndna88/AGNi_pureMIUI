@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011,2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011, 2014-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1631,6 +1631,7 @@ enum {
 #define AKM_SUITE_TYPE_FT_PSK           0x04
 #define AKM_SUITE_TYPE_SHA256_IEEE8021X 0x05
 #define AKM_SUITE_TYPE_SHA256_PSK       0x06
+#define AKM_SUITE_TYPE_SAE              0x08
 
 #define RSN_CAP_PREAUTH                 0x01
 #define RSN_CAP_PTKSA_REPLAYCOUNTER    0x0c
@@ -1685,6 +1686,25 @@ enum {
 #define CCKM_SEL(x)         (((x)<<24)|CCKM_OUI)
 
 #define IEEE80211_RV(v)     ((v) & IEEE80211_RATE_VAL)
+
+#define LE_READ_2(p) \
+	((uint16_t)\
+	((((const uint8_t *)(p))[0]) |\
+	(((const uint8_t *)(p))[1] <<  8)))
+
+#define LE_READ_4(p) \
+	((uint32_t)\
+	((((const uint8_t *)(p))[0]) |\
+	(((const uint8_t *)(p))[1] <<  8) |  \
+	(((const uint8_t *)(p))[2] << 16) |\
+	(((const uint8_t *)(p))[3] << 24)))
+
+#define BE_READ_4(p) \
+	((uint32_t)\
+	((((const uint8_t *)(p))[0] << 24) |\
+	(((const uint8_t *)(p))[1] << 16) |\
+	(((const uint8_t *)(p))[2] <<  8) |\
+	(((const uint8_t *)(p))[3])))
 
 /*
  * AUTH management packets
