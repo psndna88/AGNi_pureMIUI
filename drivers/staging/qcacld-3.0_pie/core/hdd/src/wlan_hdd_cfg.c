@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5625,6 +5625,12 @@ struct reg_table_entry g_registry_table[] = {
 		CFG_IS_SAE_ENABLED_DEFAULT,
 		CFG_IS_SAE_ENABLED_MIN,
 		CFG_IS_SAE_ENABLED_MAX),
+	REG_VARIABLE(CFG_ENABLE_SAE_FOR_SAP_NAME, WLAN_PARAM_Integer,
+		     struct hdd_config, enable_sae_for_sap,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_ENABLE_SAE_FOR_SAP_DEFAULT,
+		     CFG_ENABLE_SAE_FOR_SAP_MIN,
+		     CFG_ENABLE_SAE_FOR_SAP_MAX),
 #endif
 
 	REG_VARIABLE(CFG_BTM_SOLICITED_TIMEOUT, WLAN_PARAM_Integer,
@@ -5854,6 +5860,13 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT,
 		     CFG_DISABLE_4WAY_HS_OFFLOAD_MIN,
 		     CFG_DISABLE_4WAY_HS_OFFLOAD_MAX),
+
+	REG_VARIABLE(CFG_NB_COMMANDS_RATE_LIMIT, WLAN_PARAM_Integer,
+		     struct hdd_config, nb_commands_interval,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_NB_COMMANDS_RATE_LIMIT_DEFAULT,
+		     CFG_NB_COMMANDS_RATE_LIMIT_MIN,
+		     CFG_NB_COMMANDS_RATE_LIMIT_MAX),
 };
 
 /**
@@ -6795,8 +6808,19 @@ static void hdd_cfg_print_sae(hdd_context_t *hdd_ctx)
 		CFG_IS_SAE_ENABLED_NAME,
 		hdd_ctx->config->is_sae_enabled);
 }
+
+static void hdd_cfg_print_sae_sap(hdd_context_t *hdd_ctx)
+{
+	hdd_debug("Name = [%s] value = [%u]",
+		  CFG_ENABLE_SAE_FOR_SAP_NAME,
+		  hdd_ctx->config->enable_sae_for_sap);
+}
 #else
 static void hdd_cfg_print_sae(hdd_context_t *hdd_ctx)
+{
+}
+
+static void hdd_cfg_print_sae_sap(hdd_context_t *hdd_ctx)
 {
 }
 #endif
@@ -7895,6 +7919,7 @@ void hdd_cfg_print(hdd_context_t *pHddCtx)
 		  CFG_CHANNEL_SELECT_LOGIC_CONC_NAME,
 		  pHddCtx->config->channel_select_logic_conc);
 	hdd_cfg_print_sae(pHddCtx);
+	hdd_cfg_print_sae_sap(pHddCtx);
 	hdd_debug("Name = [%s] value = [0x%x]",
 		  CFG_ENABLE_UNIT_TEST_FRAMEWORK_NAME,
 		  pHddCtx->config->is_unit_test_framework_enabled);
@@ -8670,6 +8695,34 @@ static bool hdd_update_vht_cap_in_cfg(hdd_context_t *hdd_ctx)
 
 }
 
+#ifdef WLAN_FEATURE_SAE
+/**
+ * hdd_update_sae_cfg() - API to update SAE setting to MAC/WNI layer
+ * @hdd_ctx: pointer to hdd_ctx
+ *
+ * This API reads the SAE setting from HDD config structure and updates the
+ * same to MAC/WNI layer.
+ *
+ * Return: true if operation is successful, false otherwise.
+ */
+static inline bool hdd_update_sae_cfg(hdd_context_t *hdd_ctx)
+{
+	bool status = true;
+	if (sme_cfg_set_int(hdd_ctx->hHal, WNI_CFG_SAP_SAE_ENABLED,
+			    hdd_ctx->config->enable_sae_for_sap) ==
+			    QDF_STATUS_E_FAILURE) {
+		status = false;
+		hdd_err("Couldn't pass on WNI_CFG_SAP_SAE_ENABLED to CCM");
+	}
+	return status;
+}
+#else
+static inline bool hdd_update_sae_cfg(hdd_context_t *hdd_ctx)
+{
+	return true;
+}
+#endif
+
 /**
  * hdd_update_config_cfg() - API to update INI setting based on hw/fw caps
  * @hdd_ctx: pointer to hdd_ctx
@@ -9141,6 +9194,7 @@ bool hdd_update_config_cfg(hdd_context_t *hdd_ctx)
 		hdd_err("Couldn't pass on WNI_CFG_RATE_FOR_TX_MGMT_5G to CCM");
 	}
 
+	status = hdd_update_sae_cfg(hdd_ctx);
 	return status;
 }
 #ifdef FEATURE_WLAN_SCAN_PNO

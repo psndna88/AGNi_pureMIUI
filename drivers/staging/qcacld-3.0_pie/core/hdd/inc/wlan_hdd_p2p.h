@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -98,9 +98,10 @@ int hdd_set_p2p_ps(struct net_device *dev, void *msgData);
 int hdd_set_p2p_opps(struct net_device *dev, uint8_t *command);
 int hdd_set_p2p_noa(struct net_device *dev, uint8_t *command);
 
-void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
-			     uint32_t nFrameLength, uint8_t *pbFrames,
-			     uint8_t frameType, uint32_t rxChan, int8_t rxRssi);
+void __hdd_indicate_mgmt_frame(hdd_adapter_t *adapter,
+			       uint32_t frame_length, uint8_t *frames,
+			       uint8_t frame_type, uint32_t rx_chan,
+			       int8_t rx_rssi, enum rxmgmt_flags rx_flags);
 
 void hdd_remain_chan_ready_handler(hdd_adapter_t *pAdapter,
 	uint32_t scan_id);

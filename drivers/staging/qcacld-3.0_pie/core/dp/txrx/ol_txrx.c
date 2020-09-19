@@ -5608,6 +5608,7 @@ bool ol_txrx_mon_mgmt_process(struct mon_rx_status *txrx_status,
  *
  * Return: none
  */
+#ifndef CONFIG_HL_SUPPORT
 static QDF_STATUS
 ol_txrx_convert8023to80311(uint8_t *bssid,
 			   qdf_nbuf_t msdu, void *desc)
@@ -5713,6 +5714,7 @@ ol_txrx_convert8023to80311(uint8_t *bssid,
 
 	return status;
 }
+#endif
 
 #define SHORT_PREAMBLE 1
 #define LONG_PREAMBLE  0
@@ -6114,6 +6116,17 @@ free_buf:
  *
  * Return: none
  */
+#ifdef CONFIG_HL_SUPPORT
+static void
+ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
+		       uint8_t tid, struct ol_mon_tx_status pkt_tx_status,
+		       bool pkt_format)
+{
+	qdf_nbuf_t buf_list = (qdf_nbuf_t)nbuf_list;
+
+	ol_txrx_drop_nbuf_list(buf_list);
+}
+#else
 static void
 ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 		       uint8_t tid, struct ol_mon_tx_status pkt_tx_status,
@@ -6244,6 +6257,7 @@ ol_txrx_mon_rx_data_cb(void *ppdev, void *nbuf_list, uint8_t vdev_id,
 free_buf:
 	drop_count = ol_txrx_drop_nbuf_list(buf_list);
 }
+#endif
 
 /**
  * ol_txrx_pktcapture_status_map() - map Tx status for data packets

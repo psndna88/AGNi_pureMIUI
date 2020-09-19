@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -6773,7 +6773,7 @@ void hdd_ipa_set_mcc_mode(bool mcc_mode)
 	schedule_work(&hdd_ipa->mcc_work);
 }
 
-static void hdd_ipa_mcc_work_handler(struct work_struct *work)
+void hdd_ipa_mcc_work_handler(struct work_struct *work)
 {
 	struct hdd_ipa_priv *hdd_ipa;
 	hdd_context_t *hdd_ctx;

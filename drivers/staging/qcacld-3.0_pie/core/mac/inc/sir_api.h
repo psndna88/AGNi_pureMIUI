@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1536,6 +1536,7 @@ typedef struct sSirSmeAssocInd {
 	tDot11fIEHTCaps HTCaps;
 	tDot11fIEVHTCaps VHTCaps;
 	tSirMacCapabilityInfo capability_info;
+	bool is_sae_authenticated;
 } tSirSmeAssocInd, *tpSirSmeAssocInd;
 
 /* / Definition for Association confirm */
@@ -1549,6 +1550,7 @@ typedef struct sSirSmeAssocCnf {
 	uint16_t aid;
 	struct qdf_mac_addr alternate_bssid;
 	uint8_t alternateChannelId;
+	tSirMacStatusCodes mac_status_code;
 } tSirSmeAssocCnf, *tpSirSmeAssocCnf;
 
 /* / Enum definition for  Wireless medium status change codes */
@@ -3025,12 +3027,24 @@ typedef struct sSirKeepAliveReq {
 	uint8_t sessionId;
 } tSirKeepAliveReq, *tpSirKeepAliveReq;
 
+/**
+ * enum rxmgmt_flags - flags for received management frame.
+ * @RXMGMT_FLAG_NONE: Default value to indicate no flags are set.
+ * @RXMGMT_FLAG_EXTERNAL_AUTH: frame can be used for external authentication
+ *                             by upper layers.
+ */
+enum rxmgmt_flags {
+	RXMGMT_FLAG_NONE,
+	RXMGMT_FLAG_EXTERNAL_AUTH = 1 << 1,
+};
+
 typedef struct sSirSmeMgmtFrameInd {
 	uint16_t frame_len;
 	uint32_t rxChan;
 	uint8_t sessionId;
 	uint8_t frameType;
 	int8_t rxRssi;
+	enum rxmgmt_flags rx_flags;
 	uint8_t frameBuf[1];    /* variable */
 } tSirSmeMgmtFrameInd, *tpSirSmeMgmtFrameInd;
 
@@ -8581,12 +8595,14 @@ struct sir_sae_info {
  * @length: message length
  * @session_id: SME session id
  * @sae_status: SAE status, 0: Success, Non-zero: Failure.
+ * @peer_mac_addr: peer MAC address
  */
 struct sir_sae_msg {
 	uint16_t message_type;
 	uint16_t length;
 	uint16_t session_id;
 	uint8_t sae_status;
+	tSirMacAddr peer_mac_addr;
 };
 
 /**

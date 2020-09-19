@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017,2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017,2019-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -487,7 +487,7 @@ void sme_reset_key(tHalHandle mac_handle, uint32_t vdev_id)
 		return;
 	qdf_mem_zero(&session->psk_pmk, sizeof(session->psk_pmk));
 	session->pmk_len = 0;
-	qdf_mem_zero(&session->eseCckmInfo, sizeof(session->eseCckmInfo));
+	reset_cckm_info(&session->eseCckmInfo);
 }
 
 /* Reset the FT context. */

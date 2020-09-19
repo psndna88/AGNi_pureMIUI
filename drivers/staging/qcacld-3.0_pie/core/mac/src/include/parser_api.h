@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -425,6 +425,7 @@ typedef struct sSirAssocReq {
 	tDot11fIEExtCap ExtCap;
 	tDot11fIEvendor_vht_ie vendor_vht_ie;
 	tDot11fIEhs20vendor_ie hs20vendor_ie;
+	bool is_sae_authenticated;
 } tSirAssocReq, *tpSirAssocReq;
 
 /* / Association Response structure (one day to be replaced by */

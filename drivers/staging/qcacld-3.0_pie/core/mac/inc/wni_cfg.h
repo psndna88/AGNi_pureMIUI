@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -255,6 +255,9 @@ enum {
 	WNI_CFG_EDCA_ETSI_ACBE,
 	WNI_CFG_EDCA_ETSI_ACVI,
 	WNI_CFG_EDCA_ETSI_ACVO,
+#ifdef WLAN_FEATURE_SAE
+	WNI_CFG_SAP_SAE_ENABLED,
+#endif
 	/* Any new items to be added should be above this strictly */
 	CFG_PARAM_MAX_NUM
 };

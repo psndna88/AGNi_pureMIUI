@@ -5096,6 +5096,7 @@ QDF_STATUS hdd_stop_adapter(hdd_context_t *hdd_ctx, hdd_adapter_t *adapter,
 			wlan_hdd_del_station(adapter);
 
 		hdd_ipa_flush(hdd_ctx);
+		qdf_flush_work(&hdd_ctx->sap_pre_cac_work);
 
 	case QDF_P2P_GO_MODE:
 		if (hdd_ctx->config->conc_custom_rule1 &&
@@ -5266,7 +5267,7 @@ QDF_STATUS hdd_stop_all_adapters(hdd_context_t *hdd_ctx, bool close_session)
 
 	ENTER();
 
-	cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+	qdf_flush_work(&hdd_ctx->sap_pre_cac_work);
 	cds_flush_sta_ap_intf_work(hdd_ctx);
 
 	status = hdd_get_front_adapter(hdd_ctx, &adapterNode);
@@ -5318,7 +5319,7 @@ QDF_STATUS hdd_reset_all_adapters(hdd_context_t *hdd_ctx)
 
 	ENTER();
 
-	cds_flush_work(&hdd_ctx->sap_pre_cac_work);
+	qdf_flush_work(&hdd_ctx->sap_pre_cac_work);
 	cds_flush_sta_ap_intf_work(hdd_ctx);
 
 	status = hdd_get_front_adapter(hdd_ctx, &adapterNode);
@@ -8734,7 +8735,8 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
 						frame_ind->frameBuf,
 						frame_ind->frameType,
 						frame_ind->rxChan,
-						frame_ind->rxRssi);
+						frame_ind->rxRssi,
+						frame_ind->rx_flags);
 			}
 			status = hdd_get_next_adapter(hdd_ctx,
 						adapter_node, &next);
@@ -8753,7 +8755,8 @@ void hdd_indicate_mgmt_frame(tSirSmeMgmtFrameInd *frame_ind)
 						frame_ind->frameBuf,
 						frame_ind->frameType,
 						frame_ind->rxChan,
-						frame_ind->rxRssi);
+						frame_ind->rxRssi,
+						frame_ind->rx_flags);
 }
 
 /**
@@ -12758,7 +12761,7 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		goto exit;
 	}
 
-	if (!cds_is_driver_loaded()) {
+	if (!cds_is_driver_loaded() || cds_is_driver_recovering()) {
 		init_completion(&wlan_start_comp);
 		rc = wait_for_completion_timeout(&wlan_start_comp,
 				msecs_to_jiffies(HDD_WLAN_START_WAIT_TIME));

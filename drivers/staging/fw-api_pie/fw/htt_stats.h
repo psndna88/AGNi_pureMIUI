@@ -319,6 +319,25 @@ enum htt_dbg_ext_stats_type {
      */
     HTT_DBG_EXT_STATS_FSE_RX = 28,
 
+    /* HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS
+     * PARAMS:
+     *   - config_param0: [Bit0] : [1] for mac_addr based request
+     *   - config_param1: [Bit31 : Bit0] mac_addr31to0
+     *   - config_param2: [Bit15 : Bit0] mac_addr47to32
+     * RESP MSG:
+     *   - htt_ctrl_path_txrx_stats_t
+     */
+    HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS = 29,
+
+    /* HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT
+     * PARAMS:
+     *   - No Params
+     * RESP MSG:
+     *   - htt_rx_pdev_rate_ext_stats_t
+     */
+    HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT    = 30,
+
+
     /* keep this last */
     HTT_DBG_NUM_EXT_STATS = 256,
 };
@@ -339,6 +358,8 @@ enum htt_dbg_ext_stats_type {
         HTT_CHECK_SET_VAL(HTT_DBG_EXT_PEER_STATS_RESET, _val); \
         ((_var) |= ((_val) << HTT_DBG_EXT_PEER_STATS_RESET_S)); \
     } while (0)
+
+#define HTT_STATS_SUBTYPE_MAX 16
 
 typedef enum {
     HTT_STATS_TX_PDEV_CMN_TAG                      = 0,  /* htt_tx_pdev_stats_cmn_tlv */
@@ -441,6 +462,9 @@ typedef enum {
     HTT_STATS_RX_PDEV_UL_MUMIMO_TRIG_STATS_TAG     = 97, /* htt_rx_pdev_ul_mumimo_trig_stats_tlv */
     HTT_STATS_RX_FSE_STATS_TAG                     = 98, /* htt_rx_fse_stats_tlv */
     HTT_STATS_PEER_SCHED_STATS_TAG                 = 99, /* htt_peer_sched_stats_tlv */
+    HTT_STATS_SCHED_TXQ_SUPERCYCLE_TRIGGER_TAG     = 100, /* htt_sched_txq_supercycle_triggers_tlv_v */
+    HTT_STATS_PEER_CTRL_PATH_TXRX_STATS_TAG        = 101, /* htt_peer_ctrl_path_txrx_stats_tlv */
+    HTT_STATS_PDEV_CTRL_PATH_TX_STATS_TAG          = 102, /* htt_pdev_ctrl_path_tx_stats_tlv */
 
     HTT_STATS_MAX_TAG,
 } htt_tlv_tag_t;
@@ -509,6 +533,9 @@ typedef enum {
 #define HTT_TX_PDEV_MAX_SIFS_BURST_STATS 9
 #define HTT_TX_PDEV_MAX_SIFS_BURST_HIST_STATS 10
 #define HTT_TX_PDEV_MAX_PHY_ERR_STATS 18
+/* HTT_TX_PDEV_SCHED_TX_MODE_MAX:
+ * DEPRECATED - num sched tx mode max is 8
+ */
 #define HTT_TX_PDEV_SCHED_TX_MODE_MAX 4
 #define HTT_TX_PDEV_NUM_SCHED_ORDER_LOG 20
 
@@ -672,6 +699,10 @@ typedef struct {
     A_UINT32 next_seq_cancel;
     /* Num of times fes offset was misaligned */
     A_UINT32 fes_offsets_err_cnt;
+    /* Num of times peer blacklisted for MU-MIMO transmission */
+    A_UINT32 num_mu_peer_blacklisted;
+    /* Num of times mu_ofdma seq posted */
+    A_UINT32 mu_ofdma_seq_posted;
 } htt_tx_pdev_stats_cmn_tlv;
 
 #define HTT_TX_PDEV_STATS_URRN_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -738,6 +769,12 @@ typedef struct {
     A_UINT32      tried_mpdu_cnt_hist[1]; /* HTT_TX_PDEV_TRIED_MPDU_CNT_HIST */
 } htt_tx_pdev_stats_tried_mpdu_cnt_hist_tlv_v;
 
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* Num MGMT MPDU transmitted by the target */
+    A_UINT32 fw_tx_mgmt_subtype[HTT_STATS_SUBTYPE_MAX];
+} htt_pdev_ctrl_path_tx_stats_tlv_v;
+
 /* STATS_TYPE: HTT_DBG_EXT_STATS_PDEV_TX
  * TLV_TAGS:
  *      - HTT_STATS_TX_PDEV_CMN_TAG
@@ -748,6 +785,7 @@ typedef struct {
  *      - HTT_STATS_TX_PDEV_SIFS_HIST_TAG
  *      - HTT_STATS_TX_PDEV_TX_PPDU_STATS_TAG
  *      - HTT_STATS_TX_PDEV_TRIED_MPDU_CNT_HIST_TAG
+ *      - HTT_STATS_PDEV_CTRL_PATH_TX_STATS_TAG
  */
 /* NOTE:
  * This structure is for documentation, and cannot be safely used directly.
@@ -762,6 +800,7 @@ typedef struct _htt_tx_pdev_stats {
     htt_tx_pdev_stats_sifs_hist_tlv_v           sifs_hist_tlv;
     htt_tx_pdev_stats_tx_ppdu_stats_tlv_v       tx_su_tlv;
     htt_tx_pdev_stats_tried_mpdu_cnt_hist_tlv_v tried_mpdu_cnt_hist_tlv;
+    htt_pdev_ctrl_path_tx_stats_tlv_v           ctrl_path_tx_tlv;
 } htt_tx_pdev_stats_t;
 
 /* == SOC ERROR STATS == */
@@ -1216,7 +1255,7 @@ typedef enum {
     HTT_STATS_PREAM_COUNT,
 } HTT_STATS_PREAM_TYPE;
 
-#define HTT_TX_PEER_STATS_NUM_MCS_COUNTERS 12
+#define HTT_TX_PEER_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
 /* HTT_TX_PEER_STATS_NUM_GI_COUNTERS:
  * GI Index 0:  WHAL_GI_800
  * GI Index 1:  WHAL_GI_400
@@ -1239,6 +1278,7 @@ typedef enum {
  * bw index 7 (bw ext index 3): rssi_ext80_high20_chain0
  */
 #define HTT_RX_PEER_STATS_NUM_BW_EXT_COUNTERS 4
+#define HTT_RX_PDEV_STATS_NUM_BW_EXT_COUNTERS 4
 #define HTT_TX_PEER_STATS_NUM_SPATIAL_STREAMS 8
 #define HTT_TX_PEER_STATS_NUM_PREAMBLE_TYPES HTT_STATS_PREAM_COUNT
 
@@ -1267,7 +1307,7 @@ typedef struct _htt_tx_peer_rate_stats_tlv {
     A_UINT32 tx_dcm[HTT_TX_PEER_STATS_NUM_DCM_COUNTERS];
 } htt_tx_peer_rate_stats_tlv;
 
-#define HTT_RX_PEER_STATS_NUM_MCS_COUNTERS 12
+#define HTT_RX_PEER_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
 #define HTT_RX_PEER_STATS_NUM_GI_COUNTERS 4
 #define HTT_RX_PEER_STATS_NUM_DCM_COUNTERS 5
 #define HTT_RX_PEER_STATS_NUM_BW_COUNTERS 4
@@ -1353,9 +1393,24 @@ typedef struct {
     /* Peer RX time */
     A_UINT32 peer_rx_active_dur_us_low;
     A_UINT32 peer_rx_active_dur_us_high;
+    A_UINT32 peer_curr_rate_kbps;
 } htt_peer_sched_stats_tlv;
 
 /* config_param0 */
+
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_M 0x00000001
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_S 0
+
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_GET(_var) \
+    (((_var) & HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_M) >> \
+     HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_S)
+
+#define HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_peer_MAC_ADDR_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR, _val); \
+        ((_var) |= ((_val) << HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS_IS_MAC_ADDR_S)); \
+    } while (0)
+
 #define HTT_DBG_EXT_STATS_PEER_INFO_IS_MAC_ADDR_M 0x00000001
 #define HTT_DBG_EXT_STATS_PEER_INFO_IS_MAC_ADDR_S 0
 
@@ -1692,6 +1747,11 @@ typedef struct _htt_tx_hwq_stats {
         ((_var) |= ((_val) << HTT_TX_SELFGEN_CMN_STATS_MAC_ID_S)); \
     } while (0)
 
+#define HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS 4
+#define HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS 8
+#define HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS 74
+#define HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS 8
+
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
 
@@ -1776,6 +1836,7 @@ typedef struct {
     A_UINT32 ax_mu_bar_trigger_err;
     A_UINT32 ax_mu_rts_trigger_err;
     A_UINT32 ax_ulmumimo_trigger_err;
+    A_UINT32 ax_mu_mimo_brp_err_num_cbf_received[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
 } htt_tx_selfgen_ax_err_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TX_SELFGEN_INFO
@@ -1803,11 +1864,6 @@ typedef struct {
 } htt_tx_pdev_selfgen_stats_t;
 
 /* == TX MU STATS == */
-
-#define HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS 4
-#define HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS 8
-#define HTT_TX_PDEV_STATS_NUM_OFDMA_USER_STATS 74
-#define HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS 8
 
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
@@ -1919,7 +1975,7 @@ typedef struct {
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /* Scheduler command posted per tx_mode */
-    A_UINT32 sched_cmd_posted[1]; /* HTT_TX_PDEV_SCHED_TX_MODE_MAX */
+    A_UINT32 sched_cmd_posted[1/* length = num tx modes */];
 } htt_sched_txq_cmd_posted_tlv_v;
 
 #define HTT_SCHED_TXQ_CMD_REAPED_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -1928,7 +1984,7 @@ typedef struct {
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /* Scheduler command reaped per tx_mode */
-    A_UINT32 sched_cmd_reaped[1]; /* HTT_TX_PDEV_SCHED_TX_MODE_MAX */
+    A_UINT32 sched_cmd_reaped[1/* length = num tx modes */];
 } htt_sched_txq_cmd_reaped_tlv_v;
 
 #define HTT_SCHED_TXQ_SCHED_ORDER_SU_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -1955,16 +2011,29 @@ typedef enum {
     HTT_SCHED_TID_SKIP_SECOND_SU_SCHEDULE,      /* Skip tid from 2nd SU schedule when any of the following flag is set
                                                    WAL_TX_TID(SEND_BAR | TQM_MPDU_STATE_VALID | SEND_QOS_NULL | TQM_NOTIFY_MPDU | SENDN_PENDING) */
     HTT_SCHED_TID_SKIP_CMD_SLOT_NOT_AVAIL,      /* Skip the tid when command slot is not available                                               */
-    HTT_SCHED_TID_SKIP_NO_ENQ,                  /* Skip the tid when num_frames is zero with g_disable_remove_tid as true                        */
+    HTT_SCHED_TID_SKIP_NO_DATA,                 /* Skip tid without data                                                                         */
+    HTT_SCHED_TID_SKIP_NO_ENQ = HTT_SCHED_TID_SKIP_NO_DATA, /* deprecated old name */
     HTT_SCHED_TID_SKIP_LOW_ENQ,                 /* Skip the tid when enqueue is low                                                              */
     HTT_SCHED_TID_SKIP_PAUSED,                  /* Skipping the paused tid(sendn-frames)                                                         */
-    HTT_SCHED_TID_SKIP_UL,                      /* UL tid skip                                                                                   */
+    HTT_SCHED_TID_SKIP_UL_RESP,                 /* skip UL response tid                                                                          */
+    HTT_SCHED_TID_SKIP_UL = HTT_SCHED_TID_SKIP_UL_RESP, /* deprecated old name */
     HTT_SCHED_TID_REMOVE_PAUSED,                /* Removing the paused tid when number of sendn frames is zero                                   */
     HTT_SCHED_TID_REMOVE_NO_ENQ,                /* Remove tid with zero queue depth                                                              */
-    HTT_SCHED_TID_REMOVE_UL,                    /* UL tid remove                                                                                 */
+    HTT_SCHED_TID_REMOVE_UL_RESP,               /* Remove tid UL response                                                                        */
+    HTT_SCHED_TID_REMOVE_UL = HTT_SCHED_TID_REMOVE_UL_RESP, /* deprecated old name */
     HTT_SCHED_TID_QUERY,                        /* Moving to next user and adding tid in prepend list when qstats update is pending              */
     HTT_SCHED_TID_SU_ONLY,                      /* Tid is eligible and TX_SCHED_SU_ONLY is true                                                  */
     HTT_SCHED_TID_ELIGIBLE,                     /* Tid is eligible for scheduling                                                                */
+    HTT_SCHED_TID_SKIP_EXCEPT_EAPOL,            /* skip tid except eapol                                                                         */
+    HTT_SCHED_TID_SU_LOW_PRI_ONLY,              /* su low priority tid only                                                                      */
+    HTT_SCHED_TID_SKIP_SOUND_IN_PROGRESS,       /* skip tid  sound in progress                                                                   */
+    HTT_SCHED_TID_SKIP_NO_UL_DATA,              /* skip ul tid when no ul data                                                                   */
+    HTT_SCHED_TID_REMOVE_UL_NOT_CAPABLE,        /* Remove tid that are not UL capable                                                            */
+    HTT_SCHED_TID_UL_ELIGIBLE,                  /* Tid is eligible for UL scheduling                                                             */
+    HTT_SCHED_TID_FALLBACK_TO_PREV_DECISION,    /* Fall back to previous decision                                                                */
+    HTT_SCHED_TID_SKIP_PEER_ALREADY_IN_TXQ,     /* skip tid, peer is already available in the txq                                                */
+    HTT_SCHED_TID_SKIP_DELAY_UL_SCHED,          /* skip tid delay UL schedule                                                                    */
+
     HTT_SCHED_INELIGIBILITY_MAX,
 } htt_sched_txq_sched_ineligibility_tlv_enum;
 
@@ -1976,6 +2045,35 @@ typedef struct {
     /* sched_ineligibility counts the number of occurrences of different reasons for tid ineligibility during eligibility checks per txq in scheduling */
     A_UINT32 sched_ineligibility[1]; /* indexed by htt_sched_txq_sched_ineligibility_tlv_enum */
 } htt_sched_txq_sched_ineligibility_tlv_v;
+
+typedef enum {
+    HTT_SCHED_SUPERCYCLE_TRIGGER_NONE = 0,                 /* Supercycle not triggerd */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_FORCED,                   /* forced supercycle trigger */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_LESS_NUM_TIDQ_ENTRIES,    /* Num tidq entries is less than max_client threshold */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_LESS_NUM_ACTIVE_TIDS,     /* Num active tids is less than max_client threshold */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_MAX_ITR_REACHED,          /* max sched iteration reached */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_DUR_THRESHOLD_REACHED,    /* duration threshold reached */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_TWT_TRIGGER,              /* TWT supercycle trigger */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_MAX,
+} htt_sched_txq_supercycle_triggers_tlv_enum;
+
+#define HTT_SCHED_TXQ_SUPERCYCLE_TRIGGERS_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
+
+/* NOTE: Variable length TLV, use length spec to infer array size */
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /*
+     * supercycle_triggers[] is a histogram that counts the number of
+     * occurrences of each different reason for a transmit scheduler
+     * supercycle to be triggered.
+     * The htt_sched_txq_supercycle_triggers_tlv_enum is used to index
+     * supercycle_triggers[], e.g. supercycle_triggers[1] holds the number
+     * of times a supercycle has been forced.
+     * These supercycle trigger counts are not automatically reset, but
+     * are reset upon request.
+     */
+    A_UINT32 supercycle_triggers[1/*HTT_SCHED_SUPERCYCLE_TRIGGER_MAX*/];
+} htt_sched_txq_supercycle_triggers_tlv_v;
 
 #define HTT_TX_PDEV_STATS_SCHED_PER_TXQ_MAC_ID_M 0x000000ff
 #define HTT_TX_PDEV_STATS_SCHED_PER_TXQ_MAC_ID_S 0
@@ -2101,6 +2199,7 @@ typedef struct {
  *     - HTT_STATS_SCHED_TXQ_CMD_REAPED_TAG
  *     - HTT_STATS_SCHED_TXQ_SCHED_ORDER_SU_TAG
  *     - HTT_STATS_SCHED_TXQ_SCHED_INELIGIBILITY_TAG
+ *     - HTT_STATS_SCHED_TXQ_SUPERCYCLE_TRIGGER_TAG
  */
 /* NOTE:
  * This structure is for documentation, and cannot be safely used directly.
@@ -2114,6 +2213,7 @@ typedef struct {
         htt_sched_txq_cmd_reaped_tlv_v          cmd_reaped_tlv;
         htt_sched_txq_sched_order_su_tlv_v      sched_order_su_tlv;
         htt_sched_txq_sched_ineligibility_tlv_v sched_ineligibility_tlv;
+        htt_sched_txq_supercycle_triggers_tlv_v sched_supercycle_trigger_tlv;
     } txq[1];
 } htt_stats_tx_sched_t;
 
@@ -3008,7 +3108,7 @@ typedef struct {
 
 /* == PDEV TX RATE CTRL STATS == */
 
-#define HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS 12
+#define HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
 #define HTT_TX_PDEV_STATS_NUM_GI_COUNTERS 4
 #define HTT_TX_PDEV_STATS_NUM_DCM_COUNTERS 5
 #define HTT_TX_PDEV_STATS_NUM_BW_COUNTERS 4
@@ -3129,7 +3229,7 @@ typedef struct {
 
 #define HTT_RX_PDEV_STATS_NUM_LEGACY_CCK_STATS 4
 #define HTT_RX_PDEV_STATS_NUM_LEGACY_OFDM_STATS 8
-#define HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS 12
+#define HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS 12 /* 0-11 */
 #define HTT_RX_PDEV_STATS_NUM_GI_COUNTERS 4
 #define HTT_RX_PDEV_STATS_NUM_DCM_COUNTERS 5
 #define HTT_RX_PDEV_STATS_NUM_BW_COUNTERS 4
@@ -3260,6 +3360,14 @@ typedef struct {
     A_UINT32 rx_ulmumimo_mpdu_fail[HTT_RX_PDEV_MAX_ULMUMIMO_NUM_USER];     /* mpdu level */
     A_UINT32 rx_ulofdma_non_data_nusers[HTT_RX_PDEV_MAX_OFDMA_NUM_USER];
     A_UINT32 rx_ulofdma_data_nusers[HTT_RX_PDEV_MAX_OFDMA_NUM_USER];
+
+    /*
+     * NOTE - this TLV is already large enough that it causes the HTT message
+     * carrying it to be nearly at the message size limit that applies to
+     * many targets/hosts.
+     * No further fields should be added to this TLV without very careful
+     * review to ensure the size increase is acceptable.
+     */
 } htt_rx_pdev_rate_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_RX_RATE
@@ -3273,6 +3381,26 @@ typedef struct {
 typedef struct {
     htt_rx_pdev_rate_stats_tlv rate_tlv;
 } htt_rx_pdev_rate_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT8  rssi_chain_ext[HTT_RX_PDEV_STATS_NUM_SPATIAL_STREAMS][HTT_RX_PDEV_STATS_NUM_BW_EXT_COUNTERS]; /* units = dB above noise floor */
+    A_INT8   rx_per_chain_rssi_ext_in_dbm[HTT_RX_PDEV_STATS_NUM_SPATIAL_STREAMS][HTT_RX_PDEV_STATS_NUM_BW_EXT_COUNTERS];
+    A_INT32  rssi_mcast_in_dbm; /* rx mcast signal strength value in dBm unit */
+    A_INT32  rssi_mgmt_in_dbm; /* rx mgmt packet signal Strength value in dBm unit */
+} htt_rx_pdev_rate_ext_stats_tlv;
+
+/* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT
+ * TLV_TAGS:
+ *      - HTT_STATS_RX_PDEV_RATE_EXT_STATS_TAG
+ */
+/* NOTE:
+ * This structure is for documentation, and cannot be safely used directly.
+ * Instead, use the constituent TLV structures to fill/parse.
+ */
+typedef struct {
+    htt_rx_pdev_rate_ext_stats_tlv rate_tlv;
+} htt_rx_pdev_rate_ext_stats_t;
 
 #define HTT_STATS_CMN_MAC_ID_M 0x000000ff
 #define HTT_STATS_CMN_MAC_ID_S 0
@@ -3311,7 +3439,6 @@ typedef struct {
      */
     A_UINT32 rx_ulofdma_data_ru_size_ppdu[HTT_RX_PDEV_STATS_NUM_RU_SIZE_160MHZ_CNTRS];      /* ppdu level */
     A_UINT32 rx_ulofdma_non_data_ru_size_ppdu[HTT_RX_PDEV_STATS_NUM_RU_SIZE_160MHZ_CNTRS];  /* ppdu level */
-
 } htt_rx_pdev_ul_trigger_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_TRIG_STATS
@@ -3535,8 +3662,6 @@ typedef struct {
         ((_var) |= ((_val) << HTT_RX_PDEV_FW_STATS_MAC_ID_S)); \
     } while (0)
 
-#define HTT_STATS_SUBTYPE_MAX 16
-
 typedef struct {
     htt_tlv_hdr_t tlv_hdr;
 
@@ -3640,6 +3765,16 @@ typedef struct {
     A_UINT32 rx_recovery_reset_cnt;
 } htt_rx_pdev_fw_stats_tlv;
 
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* peer mac address */
+    htt_mac_addr peer_mac_addr;
+    /* Num of tx mgmt frames with subtype on peer level */
+    A_UINT32 peer_tx_mgmt_subtype[HTT_STATS_SUBTYPE_MAX];
+    /* Num of rx mgmt frames with subtype on peer level */
+    A_UINT32 peer_rx_mgmt_subtype[HTT_STATS_SUBTYPE_MAX];
+} htt_peer_ctrl_path_txrx_stats_tlv;
+
 #define HTT_STATS_PHY_ERR_MAX 43
 
 typedef struct {
@@ -3740,6 +3875,15 @@ typedef struct {
     htt_rx_pdev_fw_mpdu_drop_tlv_v     fw_ring_mpdu_drop;
     htt_rx_pdev_fw_stats_phy_err_tlv   fw_stats_phy_err_tlv;
 } htt_rx_pdev_stats_t;
+
+/* STATS_TYPE : HTT_DBG_EXT_PEER_CTRL_PATH_TXRX_STATS
+ * TLV_TAGS:
+ *      - HTT_STATS_PEER_CTRL_PATH_TXRX_STATS_TAG
+ *
+ */
+typedef struct {
+    htt_peer_ctrl_path_txrx_stats_tlv peer_ctrl_path_txrx_stats_tlv;
+} htt_ctrl_path_txrx_stats_t;
 
 #define HTT_PDEV_CCA_STATS_TX_FRAME_INFO_PRESENT (0x1)
 #define HTT_PDEV_CCA_STATS_RX_FRAME_INFO_PRESENT (0x2)
@@ -4070,11 +4214,24 @@ typedef struct {
         A_UINT32 num_sr_tx_transmissions; /* CORRECTED - use this one */
         A_UINT32 num_sr_tx_tranmissions;  /* DEPRECATED - has typo in name */
     };
-    /* num_sr_rx_ge_pd_rssi_thr
-     * counter of rx from other BSS for which RSSI was above the
-     * packet-detection threshold specified for enabling spatial reuse
-     */
-    A_UINT32 num_sr_rx_ge_pd_rssi_thr;
+    union {
+        /*
+         * Count the number of times the RSSI from an other-BSS signal
+         * is below the spatial reuse power threshold, thus providing an
+         * opportunity for spatial reuse since OBSS interference will be
+         * inconsequential.
+         */
+        A_UINT32 num_spatial_reuse_opportunities;
+
+        /* DEPRECATED: num_sr_rx_ge_pd_rssi_thr
+         * This old name has been deprecated because it does not
+         * clearly and accurately reflect the information stored within
+         * this field.
+         * Use the new name (num_spatial_reuse_opportunities) instead of
+         * the deprecated old name (num_sr_rx_ge_pd_rssi_thr).
+         */
+        A_UINT32 num_sr_rx_ge_pd_rssi_thr;
+    };
 } htt_pdev_obss_pd_stats_tlv;
 
 /* NOTE:

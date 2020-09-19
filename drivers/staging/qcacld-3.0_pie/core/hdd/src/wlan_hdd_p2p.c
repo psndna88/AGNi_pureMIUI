@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2003,7 +2003,8 @@ static int __wlan_hdd_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	 * When frame to be transmitted is auth mgmt, then trigger
 	 * sme_send_mgmt_tx to send auth frame
 	 */
-	if ((pAdapter->device_mode == QDF_STA_MODE) &&
+	if ((pAdapter->device_mode == QDF_STA_MODE ||
+	     pAdapter->device_mode == QDF_SAP_MODE) &&
 	    (type == SIR_MAC_MGMT_FRAME &&
 	    subType == SIR_MAC_MGMT_AUTH)) {
 		qdf_status = sme_send_mgmt_tx(WLAN_HDD_GET_HAL_CTX(pAdapter),
@@ -3593,15 +3594,62 @@ static uint16_t get_rx_frame_freq_from_chan(uint32_t rx_chan)
 						HDD_NL80211_BAND_5GHZ);
 }
 
+#if defined(WLAN_FEATURE_SAE) && defined(CFG80211_EXTERNAL_AUTH_AP_SUPPORT)
+/**
+ * wlan_hdd_set_rxmgmt_external_auth_flag() - Set the EXTERNAL_AUTH flag
+ * @nl80211_flag: flags to be sent to nl80211 from enum nl80211_rxmgmt_flags
+ *
+ * Set the flag NL80211_RXMGMT_FLAG_EXTERNAL_AUTH if supported.
+ */
+static void
+wlan_hdd_set_rxmgmt_external_auth_flag(enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+	*nl80211_flag |= NL80211_RXMGMT_FLAG_EXTERNAL_AUTH;
+}
+#else
+static void
+wlan_hdd_set_rxmgmt_external_auth_flag(enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+}
+#endif
+
+/**
+ * wlan_hdd_cfg80211_convert_rxmgmt_flags() - Convert RXMGMT value
+ * @nl80211_flag: Flags to be sent to nl80211 from enum nl80211_rxmgmt_flags
+ * @flag: flags set by driver(SME/PE) from enum rxmgmt_flags
+ *
+ * Convert driver internal RXMGMT flag value to nl80211 defined RXMGMT flag
+ * Return: 0 on success, -EINVAL on invalid value
+ */
+static int
+wlan_hdd_cfg80211_convert_rxmgmt_flags(enum rxmgmt_flags flag,
+				       enum nl80211_rxmgmt_flags *nl80211_flag)
+{
+	int ret = -EINVAL;
+
+	if (flag & RXMGMT_FLAG_EXTERNAL_AUTH) {
+		wlan_hdd_set_rxmgmt_external_auth_flag(nl80211_flag);
+		ret = 0;
+	}
+
+	return ret;
+}
+
 static void indicate_rx_mgmt_over_nl80211(hdd_adapter_t *adapter,
 					  uint32_t frm_len,
 					  uint8_t *pb_frames, uint16_t freq,
-					  int8_t rx_rssi)
+					  int8_t rx_rssi,
+					  enum rxmgmt_flags rx_flags)
 {
+	enum nl80211_rxmgmt_flags nl80211_flag = 0;
+
+	if (wlan_hdd_cfg80211_convert_rxmgmt_flags(rx_flags, &nl80211_flag))
+		hdd_debug("Failed to convert RXMGMT flags :0x%x to nl80211 format",
+			  rx_flags);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
 	cfg80211_rx_mgmt(adapter->dev->ieee80211_ptr,
 			 freq, rx_rssi * 100, pb_frames,
-			 frm_len, NL80211_RXMGMT_FLAG_ANSWERED);
+			 frm_len, NL80211_RXMGMT_FLAG_ANSWERED | nl80211_flag);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0))
 	cfg80211_rx_mgmt(adapter->dev->ieee80211_ptr,
 			 freq, rx_rssi * 100, pb_frames,
@@ -3616,7 +3664,8 @@ static void indicate_rx_mgmt_over_nl80211(hdd_adapter_t *adapter,
 
 void __hdd_indicate_mgmt_frame(hdd_adapter_t *adapter, uint32_t frm_len,
 			       uint8_t *pb_frames, uint8_t frame_type,
-			       uint32_t rx_chan, int8_t rx_rssi)
+			       uint32_t rx_chan, int8_t rx_rssi,
+			       enum rxmgmt_flags rx_flags)
 {
 	uint16_t freq;
 	uint8_t type = 0;
@@ -3718,6 +3767,6 @@ indicate:
 		  adapter->sessionId, adapter->dev->ifindex);
 
 	indicate_rx_mgmt_over_nl80211(adapter, frm_len, pb_frames,
-				      freq, rx_rssi);
+				      freq, rx_rssi, rx_flags);
 }
 

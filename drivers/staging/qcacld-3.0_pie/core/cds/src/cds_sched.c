@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -83,6 +83,12 @@ static int cds_mc_thread(void *Arg);
 static int cds_ol_mon_thread(void *arg);
 static QDF_STATUS cds_alloc_ol_mon_pkt_freeq(p_cds_sched_context pSchedContext);
 
+static inline
+int cds_set_cpus_allowed_ptr(struct task_struct *task, unsigned long cpu)
+{
+	return set_cpus_allowed_ptr(task, cpumask_of(cpu));
+}
+
 #ifdef QCA_CONFIG_SMP
 static int cds_ol_rx_thread(void *arg);
 static uint32_t affine_cpu;
@@ -94,13 +100,6 @@ static QDF_STATUS cds_alloc_ol_rx_pkt_freeq(p_cds_sched_context pSchedContext);
 
 #define CDS_CPU_CLUSTER_TYPE_LITTLE 0
 #define CDS_CPU_CLUSTER_TYPE_PERF 1
-
-static inline
-int cds_set_cpus_allowed_ptr(struct task_struct *task, unsigned long cpu)
-{
-	return set_cpus_allowed_ptr(task, cpumask_of(cpu));
-}
-
 
 /**
  * cds_sched_find_attach_cpu - find available cores and attach to required core
@@ -618,9 +617,8 @@ OL_MON_THREAD_START_FAILURE:
 	wake_up_interruptible(&pSchedContext->ol_rx_wait_queue);
 	/* Wait for RX Thread to exit */
 	wait_for_completion(&pSchedContext->ol_rx_shutdown);
-#endif
-
 OL_RX_THREAD_START_FAILURE:
+#endif
 	/* Try and force the Main thread controller to exit */
 	set_bit(MC_SHUTDOWN_EVENT, &pSchedContext->mcEventFlag);
 	set_bit(MC_POST_EVENT, &pSchedContext->mcEventFlag);

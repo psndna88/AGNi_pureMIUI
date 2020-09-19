@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -837,6 +837,7 @@ ol_tx_process_mon_tx_completion(
 	int nbuf_len;
 	struct qdf_tso_seg_elem_t *tso_seg = NULL;
 	struct ol_mon_tx_status pkt_tx_status = {0};
+	bool frags_collected = false;
 
 	pkt_tx_status.status = status;
 	pkt_tx_status.tx_retry_cnt = payload->tx_retry_cnt;
@@ -881,44 +882,11 @@ ol_tx_process_mon_tx_completion(
 	qdf_nbuf_put_tail(netbuf, nbuf_len);
 
 	if (tx_desc->pkt_type == OL_TX_FRM_TSO) {
-		uint8_t frag_cnt, num_frags = 0;
-		int frag_len = 0;
-		uint32_t tcp_seq_num;
-		uint16_t ip_len;
-
-		qdf_spin_lock_bh(&pdev->tso_seg_pool.tso_mutex);
-
-		if (tso_seg->seg.num_frags > 0)
-			num_frags = tso_seg->seg.num_frags - 1;
-
-		/*Num of frags in a tso seg cannot be less than 2 */
-		if (num_frags < 1) {
-			qdf_print("ERROR: num of frags in tso segment is %d\n",
-				  (num_frags + 1));
+		frags_collected = collect_tso_frags(pdev, tso_seg, netbuf);
+		if (!frags_collected) {
 			qdf_nbuf_free(netbuf);
-			qdf_spin_unlock_bh(&pdev->tso_seg_pool.tso_mutex);
 			return;
 		}
-
-		tcp_seq_num = tso_seg->seg.tso_flags.tcp_seq_num;
-		tcp_seq_num = ani_cpu_to_be32(tcp_seq_num);
-
-		ip_len = tso_seg->seg.tso_flags.ip_len;
-		ip_len = ani_cpu_to_be16(ip_len);
-
-		for (frag_cnt = 0; frag_cnt < num_frags; frag_cnt++) {
-			qdf_mem_copy(qdf_nbuf_data(netbuf) + frag_len,
-				     tso_seg->seg.tso_frags[frag_cnt].vaddr,
-				     tso_seg->seg.tso_frags[frag_cnt].length);
-			frag_len += tso_seg->seg.tso_frags[frag_cnt].length;
-		}
-
-		qdf_spin_unlock_bh(&pdev->tso_seg_pool.tso_mutex);
-
-		qdf_mem_copy((qdf_nbuf_data(netbuf) + IPV4_PKT_LEN_OFFSET),
-			     &ip_len, sizeof(ip_len));
-		qdf_mem_copy((qdf_nbuf_data(netbuf) + IPV4_TCP_SEQ_NUM_OFFSET),
-			     &tcp_seq_num, sizeof(tcp_seq_num));
 	} else {
 		qdf_mem_copy(qdf_nbuf_data(netbuf),
 			     qdf_nbuf_data(tx_desc->netbuf),

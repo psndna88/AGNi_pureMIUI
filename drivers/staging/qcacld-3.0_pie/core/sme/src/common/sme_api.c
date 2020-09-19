@@ -19485,8 +19485,10 @@ QDF_STATUS sme_send_mgmt_tx(tHalHandle hal, uint8_t session_id,
 }
 
 #ifdef WLAN_FEATURE_SAE
-QDF_STATUS sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
-		uint8_t sae_status)
+QDF_STATUS sme_handle_sae_msg(tHalHandle hal,
+			      uint8_t session_id,
+			      uint8_t sae_status,
+			      struct qdf_mac_addr peer_mac_addr)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	tpAniSirGlobal mac = PMAC_STRUCT(hal);
@@ -19503,9 +19505,13 @@ QDF_STATUS sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
 			sae_msg->length = sizeof(*sae_msg);
 			sae_msg->session_id = session_id;
 			sae_msg->sae_status = sae_status;
-			sme_debug("SAE: sae_status %d session_id %d",
-				sae_msg->sae_status,
-				sae_msg->session_id);
+			qdf_mem_copy(sae_msg->peer_mac_addr,
+				     peer_mac_addr.bytes,
+				     MAC_ADDR_LEN);
+			sme_debug("SAE: sae_status %d session_id %d Peer: "
+				  MAC_ADDRESS_STR, sae_msg->sae_status,
+				  sae_msg->session_id,
+				  MAC_ADDR_ARRAY(sae_msg->peer_mac_addr));
 
 			qdf_status = cds_send_mb_message_to_mac(sae_msg);
 		}
