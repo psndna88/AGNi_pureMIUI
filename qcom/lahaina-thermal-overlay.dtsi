@@ -296,4 +296,60 @@
 			};
 		};
 	};
+
+	xo-therm-step {
+		cooling-maps {
+			cpu4_freq_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu7_freq_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&CPU7 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu4_iso_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&cpu4_isolate 1 1>;
+			};
+
+			cpu5_iso_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&cpu5_isolate 1 1>;
+			};
+
+			cpu6_iso_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&cpu6_isolate 1 1>;
+			};
+
+			cpu7_iso_cdev {
+				trip = <&xo_config0>;
+				cooling-device = <&cpu7_isolate 1 1>;
+			};
+
+			cpu4_hot_cdev {
+				trip = <&xo_config1>;
+				cooling-device = <&cpu4_hotplug 1 1>;
+			};
+
+			cpu5_hot_cdev {
+				trip = <&xo_config1>;
+				cooling-device = <&cpu5_hotplug 1 1>;
+			};
+
+			cpu6_hot_cdev {
+				trip = <&xo_config1>;
+				cooling-device = <&cpu6_hotplug 1 1>;
+			};
+
+			cpu7_hot_cdev {
+				trip = <&xo_config1>;
+				cooling-device = <&cpu7_hotplug 1 1>;
+			};
+		};
+	};
 };
