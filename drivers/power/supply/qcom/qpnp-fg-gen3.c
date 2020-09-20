@@ -424,9 +424,6 @@ static bool fg_sram_dump;
  int hwc_check_india;
  int hwc_check_global;
 extern bool is_poweroff_charge;
-
-#define FG_RATE_LIM_MS (5 * MSEC_PER_SEC)
-
 /* All getters HERE */
 
 #define VOLTAGE_15BIT_MASK	GENMASK(14, 0)
@@ -2693,12 +2690,7 @@ static void fg_ttf_update(struct fg_chip *chip)
 	chip->ttf.last_ttf = 0;
 	chip->ttf.last_ms = 0;
 	mutex_unlock(&chip->ttf.lock);
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(delay_ms));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->ttf_work, msecs_to_jiffies(delay_ms));
-	}
+	schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(delay_ms));
 }
 
 static void restore_cycle_counter(struct fg_chip *chip)
@@ -3241,14 +3233,8 @@ static void sram_dump_work(struct work_struct *work)
 	fg_dbg(chip, FG_STATUS, "SRAM Dump done at %lld.%d\n",
 		quotient, remainder);
 resched:
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->sram_dump_work,
-				msecs_to_jiffies(fg_sram_dump_period_ms));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->sram_dump_work,
-				msecs_to_jiffies(fg_sram_dump_period_ms));
-	}
+	schedule_delayed_work(&chip->sram_dump_work,
+			msecs_to_jiffies(fg_sram_dump_period_ms));
 }
 
 static int fg_sram_dump_sysfs(const char *val, const struct kernel_param *kp)
@@ -3274,16 +3260,10 @@ static int fg_sram_dump_sysfs(const char *val, const struct kernel_param *kp)
 	}
 
 	chip = power_supply_get_drvdata(bms_psy);
-	if (fg_sram_dump) {
-		if (charging_detected()) {
-			schedule_delayed_work(&chip->sram_dump_work,
-					msecs_to_jiffies(fg_sram_dump_period_ms));
-		} else {
-			queue_delayed_work(system_power_efficient_wq,
-				&chip->sram_dump_work,
-					msecs_to_jiffies(fg_sram_dump_period_ms));
-		}
-	} else
+	if (fg_sram_dump)
+		schedule_delayed_work(&chip->sram_dump_work,
+				msecs_to_jiffies(fg_sram_dump_period_ms));
+	else
 		cancel_delayed_work_sync(&chip->sram_dump_work);
 
 	return 0;
@@ -3345,7 +3325,7 @@ module_param_cb(restart, &fg_restart_ops, &fg_restart, 0644);
 static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 {
 	int rc, ibatt_avg, vbatt_avg, rbatt, msoc, full_soc, act_cap_mah,
-		i_cc2cv = 0, soc_cc2cv, tau, divisor, iterm, ttf_mode,
+		i_cc2cv, soc_cc2cv, tau, divisor, iterm, ttf_mode,
 		i, soc_per_step, msoc_this_step, msoc_next_step,
 		ibatt_this_step, t_predicted_this_step, ttf_slope,
 		t_predicted_cv, t_predicted = 0;
@@ -3827,8 +3807,7 @@ static void ttf_work(struct work_struct *work)
 	ktime_t ktime_now;
 
 	mutex_lock(&chip->ttf.lock);
-	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING &&
-			chip->charge_status != POWER_SUPPLY_STATUS_DISCHARGING)
+	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING)
 		goto end_work;
 
 	rc = fg_get_battery_current(chip, &ibatt_now);
@@ -3856,13 +3835,8 @@ static void ttf_work(struct work_struct *work)
 		/* keep the wake lock and prime the IBATT and VBATT buffers */
 		if (ttf < 0) {
 			/* delay for one FG cycle */
-			if (charging_detected()) {
-				schedule_delayed_work(&chip->ttf_work,
-								msecs_to_jiffies(1500));
-			} else {
-				queue_delayed_work(system_power_efficient_wq,
-					&chip->ttf_work, msecs_to_jiffies(1500));
-			}
+			schedule_delayed_work(&chip->ttf_work,
+							msecs_to_jiffies(1500));
 			mutex_unlock(&chip->ttf.lock);
 			return;
 		}
@@ -3878,12 +3852,7 @@ static void ttf_work(struct work_struct *work)
 	}
 
 	/* recurse every 10 seconds */
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(10000));
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->ttf_work, msecs_to_jiffies(10000));
-	}
+	schedule_delayed_work(&chip->ttf_work, msecs_to_jiffies(10000));
 end_work:
 	vote(chip->awake_votable, TTF_PRIMING, false, 0);
 	mutex_unlock(&chip->ttf.lock);
@@ -3896,29 +3865,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 				       union power_supply_propval *pval)
 {
 	struct fg_chip *chip = power_supply_get_drvdata(psy);
-	struct fg_saved_data *sd = chip->saved_data + psp;
 	int rc = 0;
-
-	switch (psp) {
-	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-	case POWER_SUPPLY_PROP_RESISTANCE_ID:
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-	case POWER_SUPPLY_PROP_CYCLE_COUNT_ID:
-	case POWER_SUPPLY_PROP_CHARGE_NOW:
-	case POWER_SUPPLY_PROP_CHARGE_FULL:
-	case POWER_SUPPLY_PROP_SOC_REPORTING_READY:
-		/* These props don't require a fg query; don't ratelimit them */
-		break;
-	default:
-		if (!sd->last_req_expires)
-			break;
- 		if (!charging_detected() &&
-			time_before(jiffies, sd->last_req_expires)) {
-			*pval = sd->val;
-			return 0;
-		}
-		break;
-	}
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -4051,9 +3998,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 
 	if (rc < 0)
 		return -ENODATA;
-
-	sd->val = *pval;
-	sd->last_req_expires = jiffies + msecs_to_jiffies(FG_RATE_LIM_MS);
 
 	return 0;
 }
@@ -5802,22 +5746,10 @@ static int fg_gen3_resume(struct device *dev)
 	if (rc < 0)
 		pr_err("Error in configuring ESR timer, rc=%d\n", rc);
 
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->ttf_work, 0);
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->ttf_work, 0);
-	}
-	if (fg_sram_dump) {
-		if (charging_detected()) {
-			schedule_delayed_work(&chip->sram_dump_work,
-					msecs_to_jiffies(fg_sram_dump_period_ms));
-		} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->sram_dump_work,
+	schedule_delayed_work(&chip->ttf_work, 0);
+	if (fg_sram_dump)
+		schedule_delayed_work(&chip->sram_dump_work,
 				msecs_to_jiffies(fg_sram_dump_period_ms));
-		}
-	}
 
 	if (!work_pending(&chip->status_change_work)) {
 		pm_stay_awake(chip->dev);

@@ -42,6 +42,7 @@
 #define PL_INDIRECT_VOTER		"PL_INDIRECT_VOTER"
 #define USBIN_I_VOTER			"USBIN_I_VOTER"
 #define FCC_STEPPER_VOTER		"FCC_STEPPER_VOTER"
+#define PL_TEMP_VOTER			"PL_TEMP_VOTER"
 
 struct pl_data {
 	int			pl_mode;
@@ -792,7 +793,7 @@ stepper_exit:
 	}
 }
 
-#define PARALLEL_FLOAT_VOLTAGE_DELTA_UV 50000
+#define PARALLEL_FLOAT_VOLTAGE_DELTA_UV 100000
 static int pl_fv_vote_callback(struct votable *votable, void *data,
 			int fv_uv, const char *client)
 {
@@ -1167,6 +1168,10 @@ static void handle_settled_icl_change(struct pl_data *chip)
 	int main_settled_ua;
 	int main_limited;
 	int total_current_ua;
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	int battery_temp;
+	union power_supply_propval lct_pval = {0, };
+#endif
 
 	total_current_ua = get_effective_result_locked(chip->usb_icl_votable);
 
@@ -1191,6 +1196,49 @@ static void handle_settled_icl_change(struct pl_data *chip)
 		return;
 	}
 	main_limited = pval.intval;
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) {
+		rc = power_supply_get_property(chip->batt_psy,
+				       POWER_SUPPLY_PROP_TEMP,
+				       &lct_pval);
+		if (rc < 0) {
+			pr_err("Couldn't battery health value rc=%d\n", rc);
+			return;
+		}
+		battery_temp = lct_pval.intval;
+		pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d , battery_temp=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua, battery_temp);
+		if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < 1300000)
+				|| (main_settled_ua == 0)
+				|| ((total_current_ua >= 0) &&
+					(total_current_ua <= 1300000))){ 
+			pr_err("total_current_ua <= 1300000 disable parallel charger smb1351 \n");
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
+			vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
+		}
+		else {
+			if ((battery_temp > 20) && (battery_temp < 440)) {
+				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
+				vote(chip->pl_disable_votable, PL_TEMP_VOTER, false, 0);
+			}
+			else {
+				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
+				vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
+			}
+		}
+	}
+	else {
+		pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua);
+		if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < 1300000)
+				|| (main_settled_ua == 0)
+				|| ((total_current_ua >= 0) &&
+					(total_current_ua <= 1300000))){
+			pr_err("total_current_ua <= 1300000 disable parallel charger smb1351 \n");
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
+		}
+		else
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
+	}
+#else
 	pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua);
 	if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < 1300000)
 			|| (main_settled_ua == 0)
@@ -1201,7 +1249,7 @@ static void handle_settled_icl_change(struct pl_data *chip)
 	}
 	else
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
-
+#endif
 
 	if (get_effective_result(chip->pl_disable_votable))
 		return;

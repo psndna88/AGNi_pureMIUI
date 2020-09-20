@@ -2047,9 +2047,107 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 	if (val->intval > chg->thermal_levels)
 		return -EINVAL;
 
-//	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
-//	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+#ifdef THERMAL_CONFIG_FB
+	pr_err("smblib_set_prop_system_temp_level val=%d, chg->system_temp_level=%d, LctThermal=%d, lct_backlight_off= %d, IsInCall=%d, hwc_check_india=%d\n ", 
+		val->intval,chg->system_temp_level, LctThermal, lct_backlight_off, LctIsInCall, hwc_check_india);
+	
+	if (LctThermal == 0) {
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+		if (val->intval < 6)
+#endif
+		lct_therm_lvl_reserved.intval = val->intval;
+	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+		if (hwc_check_india == 1) {	
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
+		    return 0;
+		}
+	}
+	else {
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1)) {
+		    return 0;
+		}
+	}
+#elif defined(CONFIG_KERNEL_CUSTOM_D2S)
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
+		    return 0;
+	}
+#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 2)) {
+		return 0;
+	}
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (hwc_check_india == 1) {	
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
+		    return 0;
+		}
+	}
+	else {
+		if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 3)) {
+		    return 0;
+		}
+	}
+#else
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 0) && (hwc_check_india == 0)) {
+	    return 0;
+	}
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > 1) && (hwc_check_india == 1)) {
+	    return 0;
+	}
+#endif
+#if defined(CONFIG_KERNEL_CUSTOM_F7A) || defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_D2S)
+	if ((LctIsInCall == 1) && (val->intval != 4)) {
+			return 0;
+		}
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if ((LctIsInCall == 1) && (val->intval != 5)) {
+		return 0;
+	}
+#endif
+#if defined(CONFIG_KERNEL_CUSTOM_D2S)
+	if ((LctIsInVideo == 1) && (val->intval != 6) && (lct_backlight_off == 0) && (hwc_check_india == 1)) {
+	    return 0;
+	}
+#endif
+	if (val->intval == chg->system_temp_level)
+		return 0;
+#endif
 
+	chg->system_temp_level = val->intval;
+	/* disable parallel charge in case of system temp level */
+	if((lct_backlight_off == 0) && (chg->system_temp_level <= 1))
+	{
+		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
+	}
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+	else if((hwc_check_india == 0) && (chg->system_temp_level <= 2))
+	{
+		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
+	}
+#elif defined (CONFIG_KERNEL_CUSTOM_E7T)
+	else if(chg->system_temp_level <= 2)
+	{
+		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,false,0);
+	}
+#endif
+	else {
+		vote(chg->pl_disable_votable, THERMAL_DAEMON_VOTER,
+			chg->system_temp_level ? true : false, 0);
+	}
+
+	if (chg->system_temp_level == chg->thermal_levels)
+		return vote(chg->chg_disable_votable,
+			THERMAL_DAEMON_VOTER, true, 0);
+
+	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
+	if (chg->system_temp_level == 0) {
+		return vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+		pr_err("lct smblib_set_prop_system_temp_level 0 false fcc_votable\n");
+	}
+	pr_err("lct smblib_set_prop_system_temp_level >0 fcc_votable\n");
+
+	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
+			chg->thermal_mitigation[chg->system_temp_level]);
 	return 0;
 }
 
@@ -2692,7 +2790,11 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+#define FLOAT_CURRENT_UA		500000
+#else
 #define FLOAT_CURRENT_UA		1000000
+#endif
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -3911,7 +4013,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		 * if this is a SDP and appropriately set the current
 		 */
 #if defined(CONFIG_KERNEL_CUSTOM_E7S)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);

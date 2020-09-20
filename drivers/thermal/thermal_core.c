@@ -999,19 +999,20 @@ static void thermal_zone_device_check(struct work_struct *work)
 #define to_thermal_msg_device(_dev)	\
 	container_of(_dev, struct thermal_message_device, device)
 
+static int sconfig;
 static ssize_t
 sconfig_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf){
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	return sprintf(buf,"%d\n",thermal_msg->sconfig);
+//	return sprintf(buf,"%d\n",thermal_msg->sconfig);
+	return sprintf(buf,"%d\n",sconfig);
 }
 
 static ssize_t
 sconfig_store(struct device *dev, struct device_attribute *devattr,
 		const char *buf, size_t count){
-	int sconfig;
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
 	if (kstrtoint(buf,10,&sconfig))
 		return -EINVAL;
@@ -1024,19 +1025,20 @@ sconfig_store(struct device *dev, struct device_attribute *devattr,
 static DEVICE_ATTR(sconfig,0644,sconfig_show,sconfig_store);
 
 
+static int temp_state;
 static ssize_t
 temp_state_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf){
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	return sprintf(buf,"%d\n",thermal_msg->temp_state);
+//	return sprintf(buf,"%d\n",thermal_msg->temp_state);
+	return sprintf(buf,"%d\n",temp_state);
 }
 
 static ssize_t
 temp_state_store(struct device *dev, struct device_attribute *devattr,
 		const char *buf, size_t count){
-	int temp_state;
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
 	if (kstrtoint(buf,10,&temp_state))
 		return -EINVAL;
@@ -1201,13 +1203,13 @@ trip_activate_exit:
 	return count;
 }
 
+static int temperature;
 static ssize_t
 trip_point_temp_store(struct device *dev, struct device_attribute *attr,
 		     const char *buf, size_t count)
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 	int trip, ret;
-	long temperature;
 
 	if (!tz->ops->set_trip_temp)
 		return -EPERM;
@@ -1215,13 +1217,13 @@ trip_point_temp_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_temp", &trip))
 		return -EINVAL;
 
-	return count;		
 	if (kstrtol(buf, 10, &temperature))
 		return -EINVAL;
 
-	ret = sensor_set_trip_temp(tz, trip, temperature);
+	return count;
+//	ret = sensor_set_trip_temp(tz, trip, temperature);
 
-	return ret ? ret : count;
+//	return ret ? ret : count;
 }
 
 static ssize_t
@@ -1230,7 +1232,6 @@ trip_point_temp_show(struct device *dev, struct device_attribute *attr,
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 	int trip, ret;
-	int temperature;
 
 	if (!tz->ops->get_trip_temp)
 		return -EPERM;
@@ -1238,20 +1239,20 @@ trip_point_temp_show(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_temp", &trip))
 		return -EINVAL;
 
-	ret = tz->ops->get_trip_temp(tz, trip, &temperature);
-	if (ret)
-		return ret;
+//	ret = tz->ops->get_trip_temp(tz, trip, &temperature);
+//	if (ret)
+//		return ret;
 
 	return sprintf(buf, "%d\n", temperature);
 }
 
+static int temperature_hyst;
 static ssize_t
 trip_point_hyst_store(struct device *dev, struct device_attribute *attr,
 			const char *buf, size_t count)
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 	int trip, ret;
-	int temperature;
 
 	if (!tz->ops->set_trip_hyst)
 		return -EPERM;
@@ -1259,18 +1260,18 @@ trip_point_hyst_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_hyst", &trip))
 		return -EINVAL;
 
-	return count;
-	if (kstrtoint(buf, 10, &temperature))
+	if (kstrtoint(buf, 10, &temperature_hyst))
 		return -EINVAL;
 
+	return count;
 	/*
 	 * We are not doing any check on the 'temperature' value
 	 * here. The driver implementing 'set_trip_hyst' has to
 	 * take care of this.
 	 */
-	ret = tz->ops->set_trip_hyst(tz, trip, temperature);
+//	ret = tz->ops->set_trip_hyst(tz, trip, temperature);
 
-	return ret ? ret : count;
+//	return ret ? ret : count;
 }
 
 static ssize_t
@@ -1287,9 +1288,10 @@ trip_point_hyst_show(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(attr->attr.name, "trip_point_%d_hyst", &trip))
 		return -EINVAL;
 
-	ret = tz->ops->get_trip_hyst(tz, trip, &temperature);
+//	ret = tz->ops->get_trip_hyst(tz, trip, &temperature);
 
-	return ret ? ret : sprintf(buf, "%d\n", temperature);
+//	return ret ? ret : sprintf(buf, "%d\n", temperature);
+	return ret ? ret : sprintf(buf, "%d\n", temperature_hyst);
 }
 
 static ssize_t
@@ -1303,7 +1305,6 @@ passive_store(struct device *dev, struct device_attribute *attr,
 	if (!sscanf(buf, "%d\n", &state))
 		return -EINVAL;
 
-	return count;
 	/* sanity check: values below 1000 millicelcius don't make sense
 	 * and can cause the system to go into a thermal heart attack
 	 */
@@ -1353,6 +1354,7 @@ passive_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "%d\n", tz->forced_passive);
 }
 
+static char name[THERMAL_NAME_LENGTH];
 static ssize_t
 policy_store(struct device *dev, struct device_attribute *attr,
 		    const char *buf, size_t count)
@@ -1360,7 +1362,6 @@ policy_store(struct device *dev, struct device_attribute *attr,
 	int ret = -EINVAL;
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 	struct thermal_governor *gov;
-	char name[THERMAL_NAME_LENGTH];
 
 	snprintf(name, sizeof(name), "%s", buf);
 
@@ -1385,9 +1386,10 @@ exit:
 static ssize_t
 policy_show(struct device *dev, struct device_attribute *devattr, char *buf)
 {
-	struct thermal_zone_device *tz = to_thermal_zone(dev);
+//	struct thermal_zone_device *tz = to_thermal_zone(dev);
 
-	return sprintf(buf, "%s\n", tz->governor->name);
+//	return sprintf(buf, "%s\n", tz->governor->name);
+	return sprintf(buf, "%s\n", name);
 }
 
 static ssize_t
@@ -1438,15 +1440,17 @@ emul_temp_store(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR(emul_temp, S_IWUSR, NULL, emul_temp_store);
 
+static u32 sustainable_power;
 static ssize_t
 sustainable_power_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf)
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
 
-	if (tz->tzp)
-		return sprintf(buf, "%u\n", tz->tzp->sustainable_power);
-	else
+	if (tz->tzp) {
+//		return sprintf(buf, "%u\n", tz->tzp->sustainable_power);
+		return sprintf(buf, "%u\n", sustainable_power);
+	} else
 		return -EIO;
 }
 
@@ -1455,7 +1459,6 @@ sustainable_power_store(struct device *dev, struct device_attribute *devattr,
 			const char *buf, size_t count)
 {
 	struct thermal_zone_device *tz = to_thermal_zone(dev);
-	u32 sustainable_power;
 
 	if (!tz->tzp)
 		return -EIO;
