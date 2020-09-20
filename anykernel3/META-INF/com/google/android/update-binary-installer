@@ -494,6 +494,13 @@ else
 fi;
 $BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
+# AGNi: sRGB selector overrides										#SDM636
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/srgb.prop`" ]; then	#SDM636
+	# sRGB needed													#SDM636
+	$BB echo "false" > $AKHOME/srgb_lock;							#SDM636
+else																#SDM636
+	$BB echo "true" > $AKHOME/srgb_lock;							#SDM636
+fi;																	#SDM636
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";

@@ -631,6 +631,12 @@ patch_cmdline() {
   if [ "$miui" == "false" ]; then
 	sed -i 's/androidboot.miui=1/androidboot.miui=0/' $cmdfile;
   fi;
+ # AGNi sRGB detection												#SDM636
+  srgblock="`cat $home/srgb_lock`";									#SDM636
+  if [ "$srgblock" == "true" ]; then								#SDM636
+  	# srgb to be locked												#SDM636
+	sed -i 's/androidboot.srgblock=0/androidboot.srgblock=1/' $cmdfile;		#SDM636
+  fi;																#SDM636
   # AGNI CPU OC selection
   cpuoc="`cat $home/CPU_OC`";
   if [ "$cpuoc" == "1" ]; then

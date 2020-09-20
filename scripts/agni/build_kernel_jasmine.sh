@@ -130,6 +130,8 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	sed -i 's/device.name2=/device.name1=jasmine_sprout/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i 's/DEVICE_NATIVE_MIUIQ="NO";/DEVICE_NATIVE_MIUIQ="YES";/' $KERNELDIR/$DIR/META-INF/com/google/android/update-binary-installer
 	sed -i '/#SDM636/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
+	sed -i '/#SDM636/d' $KERNELDIR/$DIR/META-INF/com/google/android/update-binary-installer
+	sed -i '/#SDM636/d' $KERNELDIR/$DIR/tools/ak3-core.sh
 	sed -i '/#AGNIFW/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SETDEVICETYPE/SDM660_jasmine (MI A2)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SDM660/MIA2/' $KERNELDIR/$DIR/tools/sdm660/init.agni*

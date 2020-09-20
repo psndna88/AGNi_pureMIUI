@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v9.8_stable");
+ini_set("rom_version",	"v9.9_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"September, 11, 2020");
+ini_set("rom_date",		"September, 20, 2020");
 
 # Show Simple Splash
 splash(
@@ -127,8 +127,8 @@ selectbox(
 selectbox(
     "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
     "Pie Latest Source based WiFi",			"Widely used. Gives good speed.", 0,									#-- selected.0 = 1
-    "Q Latest Source based Enhanced WiFi",	"Major revamped. Now gives Improved Speeds than before.", 0, 			#-- selected.0 = 2
-    "Pie OLD Source based WiFi",			"DEFAULT: Solves all known Hotspot problems with Pie wifi driver", 1	#-- selected.0 = 3
+    "Q Latest Source based Enhanced WiFi",	"DEFAULT: Major revamped. Now gives Improved Speeds than before.", 1, 			#-- selected.0 = 2
+    "Pie OLD Source based WiFi",			"Solves all known Hotspot problems with Pie wifi driver", 0	#-- selected.0 = 3
 );
 
 selectbox(
@@ -146,9 +146,15 @@ selectbox(
 
 selectbox(
     "EAS Perf HAL","<@center><b>\nEAS compatible PERF HAL configuration</b>\n\n</@>","@install","easperfhal.prop",  
-    "YES",	"DEFAULT. Strongly recomended.", 1, 												#-- selected.0 = 1
-    "NO",	"I already use a Magisk module for that. THIS WILL REVERT ABOVE CHANGES also.", 0 	#-- selected.0 = 2
+    "YES",	"Strongly recomended for standard HMP roms like MIUI", 0, 							#-- selected.0 = 1
+    "NO",	"I'm using an EAS rom OR I'm already using EAS perf Magisk module on HMP rom", 1 	#-- selected.0 = 2
 );
+
+selectbox(																											#SDM636
+    "sRGB display colour","<@center><b>\nDo you require sRGB support?</b>\n\n</@>","@install","srgb.prop", 			#SDM636 
+    "YES",	"Default for Standard MIUI roms", 0, 												#-- selected.0 = 1	#SDM636
+    "NO",	"I use NON-MIUI/AOSP rom or my Ported-MIUI Android 10 rom need this disabled", 1 	#-- selected.0 = 2	#SDM636
+);																													#SDM636
 
 setvar("retstatus",
   install(
