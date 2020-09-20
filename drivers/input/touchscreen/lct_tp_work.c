@@ -25,16 +25,10 @@
  * DEFINE CONFIGURATION
  ****************************************************************************************
  */
-#define TP_WORK_LOG_ENABLE
 #define TP_WORK_TAG           "LCT_TP_WORK"
 
-#ifdef TP_WORK_LOG_ENABLE
-#define TP_LOGW(log, ...) printk(KERN_WARNING "[%s] %s (line %d): " log, TP_WORK_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#define TP_LOGE(log, ...) printk(KERN_ERR "[%s] %s ERROR (line %d): " log, TP_WORK_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#else
 #define TP_LOGW(log, ...) {}
 #define TP_LOGE(log, ...) {}
-#endif
 
 /*
  * DATA STRUCTURES
