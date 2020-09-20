@@ -190,6 +190,7 @@
 				&tert_mi2s_sd0_active>;
 		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 				&tert_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
 	};
 };
 
