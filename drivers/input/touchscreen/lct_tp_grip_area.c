@@ -24,16 +24,10 @@
  * DEFINE CONFIGURATION
  ****************************************************************************************
  */
-#define TP_GRIP_AREA_LOG_ENABLE
 #define TP_GRIP_AREA_TAG           "LCT_TP_GRIP_AREA"
 
-#ifdef TP_GRIP_AREA_LOG_ENABLE
-#define TP_LOGW(log, ...) printk(KERN_WARNING "[%s] %s (line %d): " log, TP_GRIP_AREA_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#define TP_LOGE(log, ...) printk(KERN_ERR "[%s] %s ERROR (line %d): " log, TP_GRIP_AREA_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#else
 #define TP_LOGW(log, ...) {}
 #define TP_LOGE(log, ...) {}
-#endif
 
 typedef int (*get_screen_angle_callback)(void);
 typedef int (*set_screen_angle_callback)(unsigned int angle);

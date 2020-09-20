@@ -24,19 +24,13 @@
  * DEFINE CONFIGURATION
  ****************************************************************************************
  */
-#define TP_INFO_LOG_ENABLE
 #define TP_INFO_TAG           "LCT_TP_INFO"
 #define LCT_STRING_SIZE       128
 #define TP_CALLBACK_CMD_INFO      "CMD_INFO"
 #define TP_CALLBACK_CMD_LOCKDOWN  "CMD_LOCKDOWN"
 
-#ifdef TP_INFO_LOG_ENABLE
-#define TP_LOGW(log, ...) printk(KERN_WARNING "[%s] %s (line %d): " log, TP_INFO_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#define TP_LOGE(log, ...) printk(KERN_ERR "[%s] %s ERROR (line %d): " log, TP_INFO_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#else
 #define TP_LOGW(log, ...) {}
 #define TP_LOGE(log, ...) {}
-#endif
 
 /*
  * DATA STRUCTURES
