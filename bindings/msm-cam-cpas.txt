@@ -67,9 +67,15 @@ First Level Node - CAM CPAS device
 
 - cam_hw_fuse
   Usage: optional
-  Value type: <u32>
-  Definition: List of fuse based features and respective
-	fuse info.
+  Value type: <u32:fuse_id> <u32:fuse_address> <u32:fuse_mask> <u32:fuse_type> <u32:hw_map>
+  Definition: List of fuse based features and respective fuse info.
+  fuse_id: fuse id for each features
+  fuse_address: fuse register io address
+  fuse_mask: fuse mask for the fuse registers
+  fuse_type: fuse feature is enable, disable or value type
+  hw_map: Hw map of the feature, set bit positions which HWs are
+	supported for that feature. Use 0xFF if all HWs supported
+
 
 - interrupt-names
   Usage: optional
