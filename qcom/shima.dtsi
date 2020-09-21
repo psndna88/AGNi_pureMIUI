@@ -3974,6 +3974,7 @@
 	parent-supply = <&VDD_GFX_LEVEL>;
 	vdd_parent-supply = <&VDD_GFX_LEVEL>;
 	qcom,retain-regs;
+	qcom,skip-disable-before-sw-enable;
 	status = "ok";
 };
 
