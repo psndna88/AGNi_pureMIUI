@@ -14,3 +14,8 @@
 	qcom,leds-per-string = <4>;
 };
 
+&sde_dsi {
+	lab-supply = <&lcdb_ldo_vreg>;
+	ibb-supply = <&lcdb_ncp_vreg>;
+	qcom,dsi-default-panel = <&dsi_sharp_qsync_fhd_video>;
+};
