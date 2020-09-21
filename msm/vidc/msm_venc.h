@@ -23,7 +23,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst,
 		struct v4l2_ctrl *ctrl);
 int msm_venc_set_properties(struct msm_vidc_inst *inst);
 int msm_venc_set_extradata(struct msm_vidc_inst *inst);
-int msm_venc_set_frame_rate(struct msm_vidc_inst *inst);
+int msm_venc_set_frame_rate(struct msm_vidc_inst *inst, bool external_requested);
 int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us);
 int msm_venc_set_bitrate(struct msm_vidc_inst *inst);
 int msm_venc_set_layer_bitrate(struct msm_vidc_inst *inst);
