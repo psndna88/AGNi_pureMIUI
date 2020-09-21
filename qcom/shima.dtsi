@@ -2196,13 +2196,13 @@
 
 	llcc_bw_opp_table: llcc-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY(  150, 32); /*  4576 MB/s */
-		BW_OPP_ENTRY(  300, 32); /*  9155 MB/s */
-		BW_OPP_ENTRY(  466, 32); /* 14220 MB/s */
-		BW_OPP_ENTRY(  600, 32); /* 18310 MB/s */
-		BW_OPP_ENTRY(  806, 32); /* 24596 MB/s */
-		BW_OPP_ENTRY(  933, 32); /* 28472 MB/s */
-		BW_OPP_ENTRY( 1066, 32); /* 30516 MB/s */
+		BW_OPP_ENTRY(  150, 16); /*  2288 MB/s */
+		BW_OPP_ENTRY(  300, 16); /*  4577 MB/s */
+		BW_OPP_ENTRY(  466, 16); /*  7110 MB/s */
+		BW_OPP_ENTRY(  600, 16); /*  9155 MB/s */
+		BW_OPP_ENTRY(  806, 16); /* 12298 MB/s */
+		BW_OPP_ENTRY(  933, 16); /* 14236 MB/s */
+		BW_OPP_ENTRY( 1066, 16); /* 15258 MB/s */
 	};
 
 	ddr_bw_opp_table: ddr-bw-opp-table {
@@ -2530,9 +2530,9 @@
 			qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				< 1171200 MHZ_TO_MBPS( 300, 32) >,
-				< 1516800 MHZ_TO_MBPS( 466, 32) >,
-				< 1804800 MHZ_TO_MBPS( 600, 32) >;
+				< 1171200 MHZ_TO_MBPS( 300, 16) >,
+				< 1516800 MHZ_TO_MBPS( 466, 16) >,
+				< 1804800 MHZ_TO_MBPS( 600, 16) >;
 		};
 
 		cpu0_llcc_ddr_latmon: qcom,cpu0-llcc-ddr-latmon {
@@ -2578,12 +2578,12 @@
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				<  691000 MHZ_TO_MBPS(  300, 32) >,
-				<  940800 MHZ_TO_MBPS(  466, 32) >,
-				< 1209600 MHZ_TO_MBPS(  600, 32) >,
-				< 1651800 MHZ_TO_MBPS(  806, 32) >,
-				< 2361600 MHZ_TO_MBPS(  933, 32) >,
-				< 2707200 MHZ_TO_MBPS( 1066, 32) >;
+				<  691000 MHZ_TO_MBPS(  300, 16) >,
+				<  940800 MHZ_TO_MBPS(  466, 16) >,
+				< 1209600 MHZ_TO_MBPS(  600, 16) >,
+				< 1651800 MHZ_TO_MBPS(  806, 16) >,
+				< 2361600 MHZ_TO_MBPS(  933, 16) >,
+				< 2707200 MHZ_TO_MBPS( 1066, 16) >;
 		};
 
 		cpu4_llcc_ddr_latmon: qcom,cpu4-llcc-ddr-latmon {
@@ -2669,8 +2669,8 @@
 			qcom,target-dev = <&cpu4_cpu_llcc_latfloor>;
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,core-dev-table =
-				< 1900800 MHZ_TO_MBPS( 150, 32) >,
-				< 2707200 MHZ_TO_MBPS( 600, 32) >;
+				< 1900800 MHZ_TO_MBPS( 150, 16) >,
+				< 2707200 MHZ_TO_MBPS( 600, 16) >;
 		};
 
 		cpu7_computemon: qcom,cpu7-computemon {
