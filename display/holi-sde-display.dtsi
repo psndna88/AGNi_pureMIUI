@@ -79,6 +79,11 @@
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 	qcom,mdss-dsi-panel-status-value = <0x1c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,dsi-supported-dfps-list = <120 90 60>;
+	qcom,mdss-dsi-pan-enable-dynamic-fps;
+	qcom,mdss-dsi-min-refresh-rate = <60>;
+	qcom,mdss-dsi-max-refresh-rate = <120>;
+	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 };
 
 &dsi_r66451_amoled_90hz_cmd {

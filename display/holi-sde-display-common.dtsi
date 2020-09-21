@@ -5,6 +5,8 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-video.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-90hz-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-90hz-video.dtsi"
+#include "dsi-panel-r66451-dsc-fhd-plus-60hz-video.dtsi"
+#include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
 #include "dsi-panel-sharp-qsync-fhd-video.dtsi"
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
 
@@ -222,6 +224,18 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
 				06 06 02 04 00];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_60hz_video {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
+				04 03 02 04 00];
 			qcom,display-topology = <1 1 1>;
 			qcom,default-topology-index = <0>;
 		};
