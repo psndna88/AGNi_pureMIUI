@@ -1269,3 +1269,4 @@
 
 #include "yupik-usb.dtsi"
 #include "msm-arm-smmu-yupik.dtsi"
+#include "yupik-qupv3.dtsi"
