@@ -3807,7 +3807,8 @@ static void ttf_work(struct work_struct *work)
 	ktime_t ktime_now;
 
 	mutex_lock(&chip->ttf.lock);
-	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING)
+	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING &&
+			chip->charge_status != POWER_SUPPLY_STATUS_DISCHARGING)
 		goto end_work;
 
 	rc = fg_get_battery_current(chip, &ibatt_now);
