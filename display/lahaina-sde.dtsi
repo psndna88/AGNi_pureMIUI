@@ -3,7 +3,7 @@
 
 &soc {
 	disp_rdump_memory: disp_rdump_region@e1000000 {
-		reg = <0x0 0xe1000000 0x0 0x00800000>;
+		reg = <0xe1000000 0x00800000>;
 		label = "disp_rdump_region";
 	};
 
