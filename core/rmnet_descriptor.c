@@ -582,7 +582,7 @@ static int rmnet_frag_deaggregate_one(struct sk_buff *skb,
 		 * Probably not faster or stronger than before. But certainly
 		 * more linear.
 		 */
-		if (skb_copy_bits(skb, 0, &__maph, sizeof(&__maph)) < 0)
+		if (skb_copy_bits(skb, 0, &__maph, sizeof(__maph)) < 0)
 			return -1;
 
 		maph = &__maph;
