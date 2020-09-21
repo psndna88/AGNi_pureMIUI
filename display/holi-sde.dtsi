@@ -33,8 +33,6 @@
 
 		#list-cells = <1>;
 		qcom,mdss-rot-mode = <1>;
-		rot-vdd-supply = <&mdss_core_gdsc>;
-		qcom,supply-names = "rot-vdd";
 
 		clocks =
 			<&gcc GCC_DISP_AHB_CLK>,
