@@ -2770,7 +2770,7 @@
 #include "msm-rdbg.dtsi"
 #include "sdm660-camera.dtsi"
 #include "sdm660-vidc.dtsi"
-#include "msm-audio.dtsi"
+#include "msm-audio_e7t.dtsi"
 #include "sdm660-audio.dtsi"
 
 &pm660l_gpios {
