@@ -426,10 +426,11 @@ static int cam_vfe_camif_resource_start(
 	default:
 		epoch0_irq_mask = (((rsrc_data->last_line +
 				rsrc_data->vbi_value) -
-				rsrc_data->first_line) / 2) +
+				rsrc_data->first_line) / 2);
+		if ((epoch0_irq_mask) >
+			(rsrc_data->last_line - rsrc_data->first_line))
+			epoch0_irq_mask = rsrc_data->last_line -
 				rsrc_data->first_line;
-		if (epoch0_irq_mask > rsrc_data->last_line)
-			epoch0_irq_mask = rsrc_data->last_line;
 
 		epoch1_irq_mask = rsrc_data->reg_data->epoch_line_cfg &
 				0xFFFF;
