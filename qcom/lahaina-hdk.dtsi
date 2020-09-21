@@ -1,5 +1,9 @@
 #include "lahaina-qrd-common.dtsi"
 
+&wsa883x_0222 {
+	status = "disabled";
+};
+
 &lahaina_snd {
 	qcom,model = "lahaina-hdk-snd-card";
 
@@ -60,6 +64,8 @@
 	qcom,msm-mbhc-usbc-audio-supported = <0>;
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
+
+	qcom,wsa-max-devs = <1>;
 };
 
 &usb1 {
