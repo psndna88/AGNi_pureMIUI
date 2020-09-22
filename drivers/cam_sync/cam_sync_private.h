@@ -16,6 +16,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-ioctl.h>
+#include "cam_sync_api.h"
 
 #if IS_REACHABLE(CONFIG_MSM_GLOBAL_SYNX)
 #include <synx_api.h>

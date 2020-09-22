@@ -291,10 +291,9 @@ void cam_sync_util_cb_dispatch(struct work_struct *cb_dispatch_work)
 	struct sync_callback_info *cb_info = container_of(cb_dispatch_work,
 		struct sync_callback_info,
 		cb_dispatch_work);
+	sync_callback sync_data = cb_info->callback_func;
 
-	cb_info->callback_func(cb_info->sync_obj,
-		cb_info->status,
-		cb_info->cb_data);
+	sync_data(cb_info->sync_obj, cb_info->status, cb_info->cb_data);
 
 	kfree(cb_info);
 }
