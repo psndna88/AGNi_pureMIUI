@@ -404,8 +404,7 @@ int cam_ipe_process_cmd(void *device_priv, uint32_t cmd_type,
 		rc = cam_ipe_handle_resume(ipe_dev);
 		break;
 	case CAM_ICP_IPE_CMD_UPDATE_CLK: {
-		struct cam_a5_clk_update_cmd *clk_upd_cmd =
-			(struct cam_a5_clk_update_cmd *)cmd_args;
+		struct cam_icp_clk_update_cmd *clk_upd_cmd = cmd_args;
 		struct cam_ahb_vote ahb_vote;
 		uint32_t clk_rate = clk_upd_cmd->curr_clk_rate;
 		int32_t clk_level  = 0, err = 0;

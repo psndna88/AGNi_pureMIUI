@@ -112,10 +112,10 @@ void hfi_send_system_cmd(uint32_t type, uint64_t data, uint32_t size);
 void cam_hfi_deinit(void);
 /**
  * hfi_set_debug_level() - set debug level
- * @a5_dbg_type: 1 for debug_q & 2 for qdss
+ * @icp_dbg_type: 1 for debug_q & 2 for qdss
  * @lvl: FW debug message level
  */
-int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl);
+int hfi_set_debug_level(u64 icp_dbg_type, uint32_t lvl);
 
 /**
  * hfi_set_fw_dump_level() - set firmware dump level

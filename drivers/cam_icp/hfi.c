@@ -382,7 +382,7 @@ int hfi_enable_ipe_bps_pc(bool enable, uint32_t core_info)
 	return 0;
 }
 
-int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl)
+int hfi_set_debug_level(u64 icp_dbg_type, uint32_t lvl)
 {
 	uint8_t *prop;
 	struct hfi_cmd_prop *dbg_prop;
@@ -413,7 +413,7 @@ int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl)
 	dbg_prop->num_prop = 1;
 	dbg_prop->prop_data[0] = HFI_PROP_SYS_DEBUG_CFG;
 	dbg_prop->prop_data[1] = lvl;
-	dbg_prop->prop_data[2] = a5_dbg_type;
+	dbg_prop->prop_data[2] = icp_dbg_type;
 	hfi_write_cmd(prop);
 
 	kfree(prop);
