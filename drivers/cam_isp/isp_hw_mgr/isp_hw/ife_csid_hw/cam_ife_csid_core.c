@@ -538,7 +538,6 @@ static int cam_ife_csid_global_reset(struct cam_ife_csid_hw *csid_hw)
 			csid_hw->hw_intf->hw_idx, val);
 	csid_hw->error_irq_count = 0;
 	csid_hw->prev_boot_timestamp = 0;
-	csid_hw->epd_supported = 0;
 
 end:
 	return rc;
@@ -5241,6 +5240,7 @@ int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 	ife_csid_hw->error_irq_count = 0;
 	ife_csid_hw->ipp_path_config.measure_enabled = 0;
 	ife_csid_hw->ppp_path_config.measure_enabled = 0;
+	ife_csid_hw->epd_supported = 0;
 	for (i = 0; i <= CAM_IFE_PIX_PATH_RES_RDI_3; i++)
 		ife_csid_hw->rdi_path_config[i].measure_enabled = 0;
 
