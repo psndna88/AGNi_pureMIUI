@@ -13,6 +13,8 @@
 #define CAM_ICP_BW_CONFIG_V1      1
 #define CAM_ICP_BW_CONFIG_V2      2
 
+#define CAM_ICP_UBWC_COMP_EN      BIT(1)
+
 enum cam_icp_hw_type {
 	CAM_ICP_DEV_A5,
 	CAM_ICP_DEV_IPE,

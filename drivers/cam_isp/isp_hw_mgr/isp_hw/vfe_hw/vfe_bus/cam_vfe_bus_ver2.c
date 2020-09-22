@@ -101,6 +101,7 @@ struct cam_vfe_bus_ver2_common_data {
 	cam_hw_mgr_event_cb_func                    event_cb;
 	bool                                        hw_init;
 	bool                                        support_consumed_addr;
+	bool                                        disable_ubwc_comp;
 };
 
 struct cam_vfe_bus_ver2_wm_resource_data {
@@ -1223,6 +1224,7 @@ static int cam_vfe_bus_start_wm(
 	struct cam_vfe_bus_ver2_common_data        *common_data =
 		rsrc_data->common_data;
 	uint32_t camera_hw_version;
+	uint32_t disable_ubwc_comp = rsrc_data->common_data->disable_ubwc_comp;
 
 	cam_io_w(0xf, common_data->mem_base + rsrc_data->hw_regs->burst_limit);
 
@@ -1259,6 +1261,8 @@ static int cam_vfe_bus_start_wm(
 			val = cam_io_r_mb(common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 			val |= 0x1;
+			if (disable_ubwc_comp)
+				val &= ~CAM_IFE_UBWC_COMP_EN;
 			cam_io_w_mb(val, common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 		} else if ((camera_hw_version == CAM_CPAS_TITAN_175_V100) ||
@@ -1275,6 +1279,8 @@ static int cam_vfe_bus_start_wm(
 			val = cam_io_r_mb(common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 			val |= 0x1;
+			if (disable_ubwc_comp)
+				val &= ~CAM_IFE_UBWC_COMP_EN;
 			cam_io_w_mb(val, common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 		} else {
@@ -3688,6 +3694,10 @@ static int cam_vfe_bus_process_cmd(
 		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
 		rc = cam_vfe_bus_get_res_for_mid(bus_priv, cmd_args, arg_size);
 		break;
+	case CAM_ISP_HW_CMD_DISABLE_UBWC_COMP:
+		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
+		bus_priv->common_data.disable_ubwc_comp = true;
+		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
 			cmd_type);
@@ -3752,6 +3762,7 @@ int cam_vfe_bus_ver2_init(
 	bus_priv->common_data.hw_init            = false;
 	bus_priv->common_data.support_consumed_addr =
 		ver2_hw_info->support_consumed_addr;
+	bus_priv->common_data.disable_ubwc_comp  = false;
 
 	mutex_init(&bus_priv->common_data.bus_mutex);
 

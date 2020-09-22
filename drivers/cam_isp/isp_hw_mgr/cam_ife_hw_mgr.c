@@ -4299,7 +4299,7 @@ static int cam_ife_mgr_start_hw(void *hw_mgr_priv, void *start_hw_args)
 	struct cam_ife_hw_mgr_ctx        *ctx;
 	struct cam_isp_hw_mgr_res        *hw_mgr_res;
 	struct cam_isp_resource_node     *rsrc_node = NULL;
-	uint32_t                          i, camif_debug;
+	uint32_t                          i, j, camif_debug, disable_ubwc_comp;
 	bool                              res_rdi_context_set = false;
 	uint32_t                          primary_rdi_src_res;
 	uint32_t                          primary_rdi_out_res;
@@ -4370,6 +4370,27 @@ static int cam_ife_mgr_start_hw(void *hw_mgr_priv, void *start_hw_args)
 					&camif_debug,
 					sizeof(camif_debug));
 			}
+		}
+	}
+
+	if (g_ife_hw_mgr.debug_cfg.disable_ubwc_comp) {
+		disable_ubwc_comp = 1;
+		for (i = 0; i < CAM_IFE_HW_OUT_RES_MAX; i++) {
+			hw_mgr_res = &ctx->res_list_ife_out[i];
+			for (j = 0; j < CAM_ISP_HW_SPLIT_MAX; j++) {
+				if (!hw_mgr_res->hw_res[i])
+					continue;
+
+				rsrc_node = hw_mgr_res->hw_res[i];
+				if (rsrc_node->hw_intf->hw_ops.process_cmd) {
+					rc = rsrc_node->hw_intf->hw_ops.process_cmd(
+						rsrc_node->hw_intf->hw_priv,
+						CAM_ISP_HW_CMD_DISABLE_UBWC_COMP,
+						&disable_ubwc_comp,
+						sizeof(disable_ubwc_comp));
+				}
+			}
+			break;
 		}
 	}
 
@@ -7960,6 +7981,10 @@ static int cam_ife_hw_mgr_debug_register(void)
 	dbgfileptr = debugfs_create_bool("per_req_reg_dump", 0644,
 		g_ife_hw_mgr.debug_cfg.dentry,
 		&g_ife_hw_mgr.debug_cfg.per_req_reg_dump);
+	dbgfileptr = debugfs_create_bool("disable_ubwc_comp", 0644,
+		g_ife_hw_mgr.debug_cfg.dentry,
+		&g_ife_hw_mgr.debug_cfg.disable_ubwc_comp);
+
 	if (IS_ERR(dbgfileptr)) {
 		if (PTR_ERR(dbgfileptr) == -ENODEV)
 			CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel!");

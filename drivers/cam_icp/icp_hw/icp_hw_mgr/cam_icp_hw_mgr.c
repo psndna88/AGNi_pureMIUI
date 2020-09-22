@@ -113,14 +113,19 @@ static int cam_icp_send_ubwc_cfg(struct cam_icp_hw_mgr *hw_mgr)
 {
 	struct cam_hw_intf *icp_dev_intf = hw_mgr->icp_dev_intf;
 	int rc;
+	uint32_t disable_ubwc_comp = 0;
 
 	if (!icp_dev_intf) {
 		CAM_ERR(CAM_ICP, "ICP device interface is NULL");
 		return -EINVAL;
 	}
 
-	rc = icp_dev_intf->hw_ops.process_cmd(icp_dev_intf->hw_priv,
-			CAM_ICP_CMD_UBWC_CFG, NULL, 0);
+	disable_ubwc_comp = hw_mgr->disable_ubwc_comp;
+
+	rc = icp_dev_intf->hw_ops.process_cmd(
+		icp_dev_intf->hw_priv,
+		CAM_ICP_CMD_UBWC_CFG, (void *)&disable_ubwc_comp,
+		sizeof(disable_ubwc_comp));
 	if (rc)
 		CAM_ERR(CAM_ICP, "CAM_ICP_CMD_UBWC_CFG is failed");
 
@@ -1918,6 +1923,10 @@ static int cam_icp_hw_mgr_create_debugfs_entry(void)
 
 	dbgfileptr = debugfs_create_file("icp_fw_dump_lvl", 0644,
 		icp_hw_mgr.dentry, NULL, &cam_icp_debug_fw_dump);
+
+	dbgfileptr = debugfs_create_bool("disable_ubwc_comp", 0644,
+		icp_hw_mgr.dentry, &icp_hw_mgr.disable_ubwc_comp);
+
 	if (IS_ERR(dbgfileptr)) {
 		if (PTR_ERR(dbgfileptr) == -ENODEV)
 			CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel!");
