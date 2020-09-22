@@ -1775,32 +1775,6 @@ void cam_tfe_cam_cdm_callback(uint32_t handle, void *userdata,
 	}
 }
 
-static bool cam_tfe_mgr_is_consumed_addr_supported(
-	struct cam_tfe_hw_mgr_ctx *ctx)
-{
-	bool support_consumed_addr            = false;
-	struct cam_isp_hw_mgr_res *isp_hw_res = NULL;
-	struct cam_hw_intf *hw_intf           = NULL;
-
-	isp_hw_res = &ctx->res_list_tfe_out[0];
-
-	if (!isp_hw_res || !isp_hw_res->hw_res[0]) {
-		CAM_ERR(CAM_ISP, "Invalid ife out res.");
-		goto end;
-	}
-
-	hw_intf = isp_hw_res->hw_res[0]->hw_intf;
-	if (hw_intf && hw_intf->hw_ops.process_cmd) {
-		hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
-			CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
-			&support_consumed_addr,
-			sizeof(support_consumed_addr));
-	}
-
-end:
-	return support_consumed_addr;
-}
-
 /* entry function: acquire_hw */
 static int cam_tfe_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 {
@@ -2011,7 +1985,7 @@ static int cam_tfe_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	tfe_ctx->num_reg_dump_buf = 0;
 
 	acquire_args->support_consumed_addr =
-		cam_tfe_mgr_is_consumed_addr_supported(tfe_ctx);
+		g_tfe_hw_mgr.support_consumed_addr;
 
 	cam_tfe_hw_mgr_put_ctx(&tfe_hw_mgr->used_ctx_list, &tfe_ctx);
 
@@ -5359,6 +5333,7 @@ static int cam_tfe_hw_mgr_handle_hw_buf_done(
 
 	buf_done_event_data.num_handles = 1;
 	buf_done_event_data.resource_handle[0] = event_info->res_id;
+	buf_done_event_data.last_consumed_addr[0] = event_info->reg_val;
 
 	if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
 		return 0;
@@ -5558,6 +5533,7 @@ int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 	struct cam_iommu_handle cdm_handles;
 	struct cam_tfe_hw_mgr_ctx *ctx_pool;
 	struct cam_isp_hw_mgr_res *res_list_tfe_out;
+	bool support_consumed_addr = false;
 
 	CAM_DBG(CAM_ISP, "Enter");
 
@@ -5574,9 +5550,18 @@ int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 	for (i = 0, j = 0; i < CAM_TFE_HW_NUM_MAX; i++) {
 		rc = cam_tfe_hw_init(&g_tfe_hw_mgr.tfe_devices[i], i);
 		if (!rc) {
+			struct cam_hw_intf *tfe_device =
+				g_tfe_hw_mgr.tfe_devices[i]->hw_intf;
 			struct cam_hw_info *tfe_hw = (struct cam_hw_info *)
 				g_tfe_hw_mgr.tfe_devices[i]->hw_intf->hw_priv;
 			struct cam_hw_soc_info *soc_info = &tfe_hw->soc_info;
+
+			if (j == 0)
+				tfe_device->hw_ops.process_cmd(
+					tfe_hw,
+					CAM_ISP_HW_CMD_IS_CONSUMED_ADDR_SUPPORT,
+					&support_consumed_addr,
+					sizeof(support_consumed_addr));
 
 			j++;
 
@@ -5594,6 +5579,7 @@ int cam_tfe_hw_mgr_init(struct cam_hw_mgr_intf *hw_mgr_intf, int *iommu_hdl)
 		return -EINVAL;
 	}
 
+	g_tfe_hw_mgr.support_consumed_addr = support_consumed_addr;
 	/* fill csid hw intf information */
 	for (i = 0, j = 0; i < CAM_TFE_CSID_HW_NUM_MAX; i++) {
 		rc = cam_tfe_csid_hw_init(&g_tfe_hw_mgr.csid_devices[i], i);
