@@ -81,6 +81,8 @@
 
 #define NAPI_TX_WEIGHT 64
 
+#define IPA_WAN_AGGR_PKT_CNT 1
+
 #define IPADBG(fmt, args...) \
 	do { \
 		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
@@ -2134,6 +2136,7 @@ struct ipa3_context {
 	char *gsi_fw_file_name;
 	char *uc_fw_file_name;
 	bool gsi_wdi_db_polling;
+	u32 ipa_wan_aggr_pkt_cnt;
 };
 
 struct ipa3_plat_drv_res {
@@ -2198,6 +2201,7 @@ struct ipa3_plat_drv_res {
 	const char *uc_fw_file_name;
 	u32 tx_wrapper_cache_max_size;
 	bool gsi_wdi_db_polling;
+	u32 ipa_wan_aggr_pkt_cnt;
 };
 
 /**
