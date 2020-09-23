@@ -24,7 +24,9 @@
 /* Number of internal IPC Logging log pages */
 #define GLINK_LBSRV_NUM_LOG_PAGES	3
 
+#ifdef CONFIG_IPC_LOGGING
 static void *glink_lbsrv_log_ctx;
+#endif
 
 #define GLINK_LBSRV_IPC_LOG_STR(x...) do { \
 	if (glink_lbsrv_log_ctx) \

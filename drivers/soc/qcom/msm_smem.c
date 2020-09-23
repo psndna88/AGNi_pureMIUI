@@ -45,7 +45,9 @@ enum {
 static int msm_smem_debug_mask = MSM_SMEM_INFO;
 module_param_named(debug_mask, msm_smem_debug_mask,
 			int, S_IRUGO | S_IWUSR | S_IWGRP);
+#ifdef CONFIG_IPC_LOGGING
 static void *smem_ipc_log_ctx;
+#endif
 #define NUM_LOG_PAGES 4
 
 #define IPC_LOG(x...) do {                                   \
