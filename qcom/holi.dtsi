@@ -814,7 +814,7 @@
 		};
 
 		pmic {
-			qcom,dump-size = <0x40000>;
+			qcom,dump-size = <0x200000>;
 			qcom,dump-id = <0xe4>;
 		};
 
