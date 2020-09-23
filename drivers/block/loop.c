@@ -82,7 +82,8 @@
 static DEFINE_IDR(loop_index_idr);
 static DEFINE_MUTEX(loop_index_mutex);
 
-static int max_part;
+static int max_part = 16;
+static int max_part_dummy;
 static int part_shift;
 
 /*
@@ -1563,7 +1564,7 @@ static const struct block_device_operations lo_fops = {
 static int max_loop;
 module_param(max_loop, int, S_IRUGO);
 MODULE_PARM_DESC(max_loop, "Maximum number of loop devices");
-module_param(max_part, int, S_IRUGO);
+module_param_named(max_part, max_part_dummy, int, S_IRUGO);
 MODULE_PARM_DESC(max_part, "Maximum number of partitions per loop device");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS_BLOCKDEV_MAJOR(LOOP_MAJOR);
