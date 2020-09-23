@@ -49,6 +49,9 @@ modules.builtin
 # Debian directory (make deb-pkg)
 #
 /debian/
+/OUT/
+/AnyKernel3/Image*
+/AnyKernel3/*.zip
 
 #
 # git files that we don't want to ignore even it they are dot-files
