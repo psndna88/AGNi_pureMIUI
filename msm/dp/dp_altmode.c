@@ -40,7 +40,8 @@ enum dp_altmode_pin_assignment {
 	DPAM_HPD_F,
 };
 
-static int dp_altmode_release_ss_lanes(struct dp_altmode_private *altmode)
+static int dp_altmode_release_ss_lanes(struct dp_altmode_private *altmode,
+		bool multi_func)
 {
 	int rc;
 	struct device_node *np;
@@ -69,7 +70,7 @@ static int dp_altmode_release_ss_lanes(struct dp_altmode_private *altmode)
 	}
 
 	while (timeout) {
-		rc = dwc3_msm_release_ss_lane(&usb_pdev->dev);
+		rc = dwc3_msm_release_ss_lane(&usb_pdev->dev, multi_func);
 		if (rc != -EBUSY)
 			break;
 
@@ -178,11 +179,10 @@ static int dp_altmode_notify(void *priv, void *data, size_t len)
 
 		altmode->dp_altmode.base.orientation = orientation;
 
-		if (!altmode->dp_altmode.base.multi_func) {
-			rc = dp_altmode_release_ss_lanes(altmode);
-			if (rc)
-				goto ack;
-		}
+		rc = dp_altmode_release_ss_lanes(altmode,
+				altmode->dp_altmode.base.multi_func);
+		if (rc)
+			goto ack;
 
 		if (altmode->dp_cb && altmode->dp_cb->configure)
 			altmode->dp_cb->configure(altmode->dev);
