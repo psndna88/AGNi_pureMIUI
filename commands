@@ -1,0 +1,13 @@
+
+
+mkdir -P OUT/
+
+make defconfig Nusantara_kenzo_defconfig O=OUT ARCH=arm64
+
+make menuconfig O=OUT ARCH=arm64
+
+make -j8 O=OUT ARCH=arm64 CROSS_COMPILE=/home/psndna88/WORKING_DIRECTORY/Kernel_Sources/gcc-linaro-4.9.4-2017.01-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+
+make clean O=OUT
+
+make mrproper O=OUT
