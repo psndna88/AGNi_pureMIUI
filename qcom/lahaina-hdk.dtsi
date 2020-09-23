@@ -4,6 +4,10 @@
 	status = "disabled";
 };
 
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
 &lahaina_snd {
 	qcom,model = "lahaina-hdk-snd-card";
 
