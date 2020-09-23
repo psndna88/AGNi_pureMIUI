@@ -1338,28 +1338,6 @@ static void swrm_cleanup_disabled_port_reqs(struct swr_master *master)
 	}
 }
 
-static u8 swrm_get_controller_offset1(struct swr_mstr_ctrl *swrm,
-					u8* dev_offset, u8 off1)
-{
-	u8 offset1 = 0x0F;
-	int i = 0;
-
-	if (swrm->master_id == MASTER_ID_TX) {
-		for (i = 1; i < SWRM_NUM_AUTO_ENUM_SLAVES; i++) {
-			pr_debug("%s: dev offset: %d\n",
-				__func__, dev_offset[i]);
-			if (offset1 > dev_offset[i])
-				offset1 = dev_offset[i];
-		}
-	} else {
-		offset1 = off1;
-	}
-
-	pr_debug("%s: offset: %d\n", __func__, offset1);
-
-	return offset1;
-}
-
 static void swrm_get_device_frame_shape(struct swr_mstr_ctrl *swrm,
 					struct swrm_mports *mport,
 					struct swr_port_info *port_req)
@@ -1417,14 +1395,12 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 	u8 hparams = 0;
 	u32 controller_offset = 0;
 	struct swr_mstr_ctrl *swrm = swr_get_ctrl_data(master);
-	u8 dev_offset[SWRM_NUM_AUTO_ENUM_SLAVES];
 
 	if (!swrm) {
 		pr_err("%s: swrm is null\n", __func__);
 		return;
 	}
 
-	memset(dev_offset, 0xff, SWRM_NUM_AUTO_ENUM_SLAVES);
 	dev_dbg(swrm->dev, "%s: master num_port: %d\n", __func__,
 		master->num_port);
 
@@ -1432,6 +1408,9 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 		mport = &(swrm->mport_cfg[i]);
 		if (!mport->port_en)
 			continue;
+
+		if (swrm->master_id == MASTER_ID_TX)
+			controller_offset = 0xFF;
 
 		if (mport->stream_type == SWR_PCM)
 			swrm_pcm_port_config(swrm, (i + 1), mport->dir, true);
@@ -1523,7 +1502,9 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 								slv_id, bank));
 			}
 			port_req->ch_en = port_req->req_ch;
-			dev_offset[port_req->dev_num] = port_req->offset1;
+			if (swrm->master_id == MASTER_ID_TX &&
+			    controller_offset > port_req->offset1)
+				controller_offset = port_req->offset1;
 		}
 		value = ((mport->req_ch)
 				<< SWRM_DP_PORT_CTRL_EN_CHAN_SHFT);
@@ -1531,8 +1512,8 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 		if (mport->offset2 != SWR_INVALID_PARAM)
 			value |= ((mport->offset2)
 					<< SWRM_DP_PORT_CTRL_OFFSET2_SHFT);
-		controller_offset = (swrm_get_controller_offset1(swrm,
-						dev_offset, mport->offset1));
+		if (swrm->master_id != MASTER_ID_TX)
+			controller_offset = mport->offset1;
 		value |= (controller_offset << SWRM_DP_PORT_CTRL_OFFSET1_SHFT);
 		mport->offset1 = controller_offset;
 		value |= (mport->sinterval & 0xFF);
