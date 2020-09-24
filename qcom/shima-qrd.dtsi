@@ -311,6 +311,10 @@
 			&tert_mi2s_sd0_sleep>;
 };
 
+&usb0 {
+	ssusb_redriver = <&redriver>;
+};
+
 &usb_qmp_dp_phy {
 	pinctrl-names = "portselect";
 };
