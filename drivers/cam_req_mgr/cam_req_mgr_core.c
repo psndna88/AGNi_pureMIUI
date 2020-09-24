@@ -4026,6 +4026,7 @@ int cam_req_mgr_sync_config(
 		link[i]->is_master = false;
 		link[i]->in_msync_mode = false;
 		link[i]->initial_sync_req = -1;
+		link[i]->num_sync_links = 0;
 
 		for (j = 0; j < sync_info->num_links-1; j++)
 			link[i]->sync_link[j] = NULL;
@@ -4054,7 +4055,6 @@ int cam_req_mgr_sync_config(
 		for (j = 0; j < sync_info->num_links; j++) {
 			link[j]->initial_skip = true;
 			link[j]->sof_timestamp = 0;
-			link[j]->num_sync_links = 0;
 		}
 	}
 
