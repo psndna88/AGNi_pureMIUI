@@ -39,7 +39,11 @@ extern struct g_nvt_data g_nvt;
 
 extern int hwc_check_global;
 extern bool slow_charge;
+#ifdef CONFIG_KERNEL_CUSTOM_E7S
+#define LCT_JEITA_CCC_AUTO_ADJUST  1
+#else
 #define LCT_JEITA_CCC_AUTO_ADJUST  0
+#endif
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
@@ -648,9 +652,7 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 	/* if PD is active, APSD is disabled so won't have a valid result */
 	if (chg->pd_active) {
 		chg->real_charger_type = POWER_SUPPLY_TYPE_USB_PD;
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
     	chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_PD;
-#endif
 	} else {
 		/*
 		 * Update real charger type only if its not FLOAT
@@ -659,9 +661,7 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 		if (!(apsd_result->pst == POWER_SUPPLY_TYPE_USB_FLOAT &&
 			chg->real_charger_type == POWER_SUPPLY_TYPE_USB))
 		chg->real_charger_type = apsd_result->pst;
-#ifndef CONFIG_KERNEL_CUSTOM_F7A
-	    chg->usb_psy_desc.type = apsd_result->pst;
-#endif
+    chg->usb_psy_desc.type = apsd_result->pst;
 	}
 
 	smblib_err(chg, "lct battery charge APSD=%s PD=%d\n",
@@ -2689,7 +2689,11 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+#define FLOAT_CURRENT_UA		500000
+#else
 #define FLOAT_CURRENT_UA		1000000
+#endif
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -3908,7 +3912,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		 * if this is a SDP and appropriately set the current
 		 */
 #if defined(CONFIG_KERNEL_CUSTOM_E7S)
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
 #elif defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 		vote(chg->usb_icl_votable, USER_VOTER, false, 0);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
