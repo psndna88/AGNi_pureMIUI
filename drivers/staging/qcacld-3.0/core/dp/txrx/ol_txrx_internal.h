@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -84,6 +84,12 @@
 #define ol_txrx_info(format, args...)
 #define ol_txrx_info_high(format, args...)
 #define ol_txrx_dbg(format, args...)
+#define txrx_nofl_alert(params...)
+#define txrx_nofl_err(params...)
+#define txrx_nofl_warn(params...)
+#define txrx_nofl_info(params...)
+#define txrx_nofl_dbg(params...)
+#define ol_txrx_err_rl(params...)
 #endif /* TXRX_PRINT_ENABLE */
 
 /*--- tx credit debug printouts ---*/
@@ -170,6 +176,9 @@ ol_rx_mpdu_list_next(struct ol_txrx_pdev_t *pdev,
 					     netbuf);			\
 		else if (status == htt_tx_status_no_ack)		\
 			TXRX_STATS_MSDU_INCR(pdev, tx.dropped.no_ack, netbuf); \
+		else if (status == htt_tx_status_drop)		\
+			TXRX_STATS_MSDU_INCR(pdev, tx.dropped.target_drop, \
+					     netbuf);			\
 		else if (status == htt_tx_status_download_fail)		\
 			TXRX_STATS_MSDU_INCR(pdev, tx.dropped.download_fail, \
 					     netbuf);			\
@@ -225,6 +234,12 @@ ol_rx_mpdu_list_next(struct ol_txrx_pdev_t *pdev,
 				 _p_cntrs);				       \
 			TXRX_STATS_ADD(_pdev, pub.tx.dropped.no_ack.bytes,     \
 				 _b_cntrs);				       \
+			break;                                                 \
+		case htt_tx_status_drop:                                    \
+			TXRX_STATS_ADD(_pdev,				       \
+				 pub.tx.dropped.target_drop.pkts, _p_cntrs);\
+			TXRX_STATS_ADD(_pdev,				       \
+				pub.tx.dropped.target_drop.bytes, _b_cntrs);\
 			break;                                                 \
 		case htt_tx_status_download_fail:                              \
 			TXRX_STATS_ADD(_pdev,				       \
@@ -300,7 +315,7 @@ static inline int ol_txrx_ieee80211_hdrsize(const void *data)
 		     IEEE80211_FC0_TYPE_CTL);
 	if ((wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) ==
 	    IEEE80211_FC1_DIR_DSTODS)
-		size += IEEE80211_ADDR_LEN;
+		size += QDF_MAC_ADDR_SIZE;
 	if (IEEE80211_QOS_HAS_SEQ(wh)) {
 		size += sizeof(uint16_t);
 		/* Qos frame with Order bit set indicates an HTC frame */
@@ -576,7 +591,7 @@ NOT_IP_TCP:
 		else							\
 			err_type = OL_RX_ERR_UNKNOWN;			\
 									\
-		if (vdev != NULL && peer != NULL) {			\
+		if (vdev && peer) {			\
 			OL_RX_ERR_STATISTICS_1(pdev, vdev, peer,	\
 					       rx_mpdu_desc, err_type); \
 		} else {						\
@@ -613,7 +628,7 @@ NOT_IP_TCP:
 				dest_addr = (uint8_t *) &(frm->i_addr3[0]); \
 			} \
 		} \
-		if (qdf_unlikely(IEEE80211_IS_BROADCAST(dest_addr))) { \
+		if (qdf_unlikely(QDF_IS_ADDR_BROADCAST(dest_addr))) { \
 			OL_TXRX_PEER_STATS_UPDATE_BASE(peer, tx_or_rx,	\
 						       bcast, msdu);	\
 		} else if (qdf_unlikely(IEEE80211_IS_MULTICAST(dest_addr))) { \

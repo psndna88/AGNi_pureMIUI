@@ -21,13 +21,15 @@
 #include <qdf_types.h>
 
 struct hdd_hang_event_fixed_param  {
-	uint32_t tlv_header;
+	uint16_t tlv_header;
 	uint8_t vdev_id;
 	uint8_t vdev_opmode;
+	uint8_t vdev_state;
+	uint8_t vdev_substate;
 } qdf_packed;
 
 struct hdd_scan_fixed_param {
-	uint32_t tlv_header;
+	uint16_t tlv_header;
 	uint8_t last_scan_reject_vdev_id;
 	enum scan_reject_states last_scan_reject_reason;
 	unsigned long last_scan_reject_timestamp;
@@ -67,7 +69,7 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 				     HANG_EVT_TAG_OS_IF_SCAN,
 		QDF_HANG_GET_STRUCT_TLVLEN(struct hdd_scan_fixed_param));
 		cmd_scan->last_scan_reject_vdev_id =
-					hdd_ctx->last_scan_reject_session_id;
+					hdd_ctx->last_scan_reject_vdev_id;
 		cmd_scan->last_scan_reject_reason =
 					hdd_ctx->last_scan_reject_reason;
 		cmd_scan->scan_reject_cnt =
@@ -89,6 +91,8 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 		QDF_HANG_GET_STRUCT_TLVLEN(struct hdd_hang_event_fixed_param));
 		cmd->vdev_id = wlan_vdev_get_id(vdev);
 		cmd->vdev_opmode = wlan_vdev_mlme_get_opmode(vdev);
+		cmd->vdev_state = wlan_vdev_mlme_get_state(vdev);
+		cmd->vdev_substate = wlan_vdev_mlme_get_substate(vdev);
 		hdd_hang_data->offset += total_len;
 		hdd_objmgr_put_vdev(vdev);
 		dev_put(adapter->dev);

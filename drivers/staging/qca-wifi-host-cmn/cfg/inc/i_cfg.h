@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,20 +28,29 @@
 #include "qdf_types.h"
 #include "wlan_objmgr_psoc_obj.h"
 
-#define __cfg_log(level, fmt, args...)
-#define cfg_err(fmt, args...)
-#define cfg_info(fmt, args...)
-#define cfg_debug(fmt, args...)
+#define cfg_err(params...)
+#define cfg_info(params...)
+#define cfg_debug(params...)
 #define cfg_enter()
 #define cfg_exit()
 
+#define cfg_err_rl(params...)
+#define cfg_info_rl(params...)
+#define cfg_debug_rl(params...)
+
+#define cfg_nofl_err(params...)
+#define cfg_nofl_warn(params...)
+#define cfg_nofl_info(params...)
+#define cfg_nofl_debug(params...)
+
 /* define global config values structure */
 
-#undef __CFG_STRING
-#define __CFG_STRING(id, mtype, ctype, name, min, max, fallback, desc, def...) \
-	const char id##_internal[max + 1];
-#undef __CFG_ANY
-#define __CFG_ANY(id, mtype, ctype, name, min, max, fallback, desc, def...) \
+#undef __CFG_INI_STRING
+#define __CFG_INI_STRING(id, mtype, ctype, name, min, max, fallback, desc, \
+			 def...) \
+	const char id##_internal[(max) + 1];
+#undef __CFG_INI
+#define __CFG_INI(id, mtype, ctype, name, min, max, fallback, desc, def...) \
 	const ctype id##_internal;
 
 struct cfg_values {
@@ -49,14 +58,15 @@ struct cfg_values {
 	CFG_ALL
 };
 
-#undef __CFG_STRING
-#define __CFG_STRING(args...) __CFG_ANY(args)
-#undef __CFG_ANY
-#define __CFG_ANY(args...) (args)
+#undef __CFG_INI_STRING
+#define __CFG_INI_STRING(args...) __CFG_INI(args)
+#undef __CFG_INI
+#define __CFG_INI(args...) (args)
 
 struct cfg_values *cfg_psoc_get_values(struct wlan_objmgr_psoc *psoc);
 
-#define __cfg_get(psoc, id) (cfg_psoc_get_values(psoc)->id##_internal)
+#define __cfg_get(psoc, id) (cfg_psoc_get_values( \
+			(struct wlan_objmgr_psoc *)psoc)->id##_internal)
 
 #endif /* __I_CFG_H */
 

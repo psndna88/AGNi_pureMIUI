@@ -1,7 +1,7 @@
-if QCA_CLD_WLAN_PIE = n
+if QCA_CLD_WLAN_A11 = y
 
 config QCA_CLD_WLAN
-	tristate "Qualcomm Atheros CLD WLAN module (CAF Q Tag)"
+	tristate "Qualcomm Atheros CLD WLAN module (CAF Android 11 Tag)"
 	default n
 	help
 	Add support for the Qualcomm Atheros CLD WLAN module
@@ -26,11 +26,6 @@ config QCOM_VOWIFI_11R
 
 config QCACLD_FEATURE_NAN
 	bool "Enable NAN feature"
-	default n
-
-config WLAN_FEATURE_NAN_DATAPATH
-	bool "Enable NaN Data Path feature"
-	depends on QCACLD_FEATURE_NAN
 	default n
 
 config QCACLD_FEATURE_GREEN_AP
@@ -152,4 +147,4 @@ config WLAN_FEATURE_SARV1_TO_SARV2
 	default n
 
 endif # QCA_CLD_WLAN
-endif # !QCA_CLD_WLAN_PIE
+endif # QCA_CLD_WLAN_PIE_A11
