@@ -7,6 +7,7 @@
 
 #define IPA_UC_NTN_DB_PA_TX 0x79620DC
 #define IPA_UC_NTN_DB_PA_RX 0x79620D8
+#define IPA_UC_RING_ELEM_SZ 16
 
 static void ipa3_uc_ntn_event_log_info_handler(
 struct IpaHwEventLogInfoData_t *uc_event_top_mmio)
@@ -287,13 +288,31 @@ static int ipa3_smmu_map_uc_ntn_pipes(struct ipa_ntn_setup_info *params,
 	}
 	if (params->smmu_enabled) {
 		IPADBG("smmu is enabled on EMAC\n");
-		result = ipa3_smmu_map_peer_buff((u64)params->ring_base_iova,
-			params->ntn_ring_size, map, params->ring_base_sgt,
-			IPA_SMMU_CB_UC);
-		if (result) {
-			IPAERR("failed to %s ntn ring %d\n",
-				map ? "map" : "unmap", result);
-			goto fail_map_ring;
+		if (params->ring_base_sgt) {
+			result = ipa3_smmu_map_peer_buff(
+				(u64)params->ring_base_iova,
+				params->ntn_ring_size, map,
+				params->ring_base_sgt,
+				IPA_SMMU_CB_UC);
+			if (result) {
+				IPAERR("failed to %s ntn ring %d\n",
+					map ? "map" : "unmap", result);
+				goto fail_map_ring;
+			}
+		} else {
+			/* Eth driver passes # of elements instead of sz
+			 * Calc & pass the ring size to map contigous mem
+			 */
+			result = ipa3_smmu_map_ctg(
+				(u64)params->ring_base_iova,
+				params->ntn_ring_size*IPA_UC_RING_ELEM_SZ,
+				map, params->ring_base_pa,
+				IPA_SMMU_CB_UC);
+			if (result) {
+				IPAERR("failed to %s ntn ring %d\n",
+					map ? "map" : "unmap", result);
+				goto fail_map_ring;
+			}
 		}
 		result = ipa3_smmu_map_peer_buff(
 			(u64)params->buff_pool_base_iova,
@@ -367,9 +386,15 @@ fail_map_data_buff_smmu_disabled:
 		params->num_buffers * 4, !map, NULL, IPA_SMMU_CB_UC);
 	goto fail_map_buffer_smmu_disabled;
 fail_map_buffer_smmu_enabled:
-	ipa3_smmu_map_peer_buff((u64)params->ring_base_iova,
-		params->ntn_ring_size, !map, params->ring_base_sgt,
-		IPA_SMMU_CB_UC);
+	if (params->ring_base_sgt) {
+		ipa3_smmu_map_peer_buff((u64)params->ring_base_iova,
+			params->ntn_ring_size, !map, params->ring_base_sgt,
+			IPA_SMMU_CB_UC);
+	} else {
+		ipa3_smmu_map_ctg((u64)params->ring_base_iova,
+			params->ntn_ring_size*IPA_UC_RING_ELEM_SZ, !map,
+			params->ring_base_pa, IPA_SMMU_CB_UC);
+	}
 	goto fail_map_ring;
 fail_map_buffer_smmu_disabled:
 	ipa3_smmu_map_peer_buff((u64)params->ring_base_pa,
@@ -475,6 +500,8 @@ int ipa3_setup_uc_ntn_pipes(struct ipa_ntn_conn_in_params *in,
 	/* setup dl ep cfg */
 	ep_dl->valid = 1;
 	ep_dl->client = in->dl.client;
+	ep_dl->client_notify = notify;
+	ep_dl->priv = priv;
 	memset(&ep_dl->cfg, 0, sizeof(ep_ul->cfg));
 	ep_dl->cfg.nat.nat_en = IPA_BYPASS_NAT;
 	ep_dl->cfg.hdr.hdr_len = hdr_len;
