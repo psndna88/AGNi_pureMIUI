@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -36,14 +36,17 @@
 #define WLAN_GREEN_AP_PS_ON_TIME        (0)
 #define WLAN_GREEN_AP_PS_TRANS_TIME     (20)
 
-#define green_ap_log(level, args...)
-#define green_ap_logfl(level, format, args...)
-#define green_ap_alert(format, args...)
-#define green_ap_err(format, args...)
-#define green_apwarn(format, args...)
-#define green_ap_notice(format, args...)
-#define green_ap_info(format, args...)
-#define green_ap_debug(format, args...)
+#define green_ap_alert(params...) 
+#define green_ap_err(params...)
+#define green_ap_warn(params...) 
+#define green_ap_notice(params...)
+#define green_ap_info(params...)
+#define green_ap_debug(params...)
+#define greenap_nofl_alert(params...)
+#define greenap_nofl_err(params...)
+#define greenap_nofl_warn(params...)
+#define greenap_nofl_info(params...)
+#define greenap_nofl_debug(params...)
 
 #define WLAN_GREEN_AP_PS_DISABLE 0
 #define WLAN_GREEN_AP_PS_ENABLE 1
@@ -68,6 +71,8 @@ enum wlan_green_ap_ps_state {
  * @WLAN_GREEN_AP_PS_STOP_EVENT  - Stop
  * @WLAN_GREEN_AP_ADD_STA_EVENT  - Sta assoc
  * @WLAN_GREEN_AP_DEL_STA_EVENT  - Sta disassoc
+ * @WLAN_GREEN_AP_ADD_MULTISTREAM_STA_EVENT - Multistream sta assoc
+ * @WLAN_GREEN_AP_DEL_MULTISTREAM_STA_EVENT - Multistream sta disassoc
  * @WLAN_GREEN_AP_PS_ON_EVENT    - PS on
  * @WLAN_GREEN_AP_PS_OFF_EVENT   - PS off
  */
@@ -76,6 +81,8 @@ enum wlan_green_ap_ps_event {
 	WLAN_GREEN_AP_PS_STOP_EVENT,
 	WLAN_GREEN_AP_ADD_STA_EVENT,
 	WLAN_GREEN_AP_DEL_STA_EVENT,
+	WLAN_GREEN_AP_ADD_MULTISTREAM_STA_EVENT,
+	WLAN_GREEN_AP_DEL_MULTISTREAM_STA_EVENT,
 	WLAN_GREEN_AP_PS_ON_EVENT,
 	WLAN_GREEN_AP_PS_WAIT_EVENT,
 };
@@ -84,9 +91,11 @@ enum wlan_green_ap_ps_event {
  * struct wlan_pdev_green_ap_ctx - green ap context
  * @pdev - Pdev pointer
  * @ps_enable  - Enable PS
+ * @ps_mode - No sta or Multistream sta mode
  * @ps_on_time - PS on time, once enabled
  * @ps_trans_time - PS transition time
  * @num_nodes - Number of nodes associated to radio
+ * @num_nodes_multistream - Multistream nodes associated to radio
  * @ps_state - PS state
  * @ps_event - PS event
  * @ps_timer - Timer
@@ -96,9 +105,11 @@ enum wlan_green_ap_ps_event {
 struct wlan_pdev_green_ap_ctx {
 	struct wlan_objmgr_pdev *pdev;
 	uint8_t ps_enable;
+	uint8_t ps_mode;
 	uint8_t ps_on_time;
 	uint32_t ps_trans_time;
 	uint32_t num_nodes;
+	uint32_t num_nodes_multistream;
 	enum wlan_green_ap_ps_state ps_state;
 	enum wlan_green_ap_ps_event ps_event;
 	qdf_timer_t ps_timer;

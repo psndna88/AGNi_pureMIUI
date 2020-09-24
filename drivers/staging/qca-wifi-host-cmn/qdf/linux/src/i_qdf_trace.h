@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,12 +29,14 @@
 /* older kernels have a bug in kallsyms, so ensure module.h is included */
 #include <linux/module.h>
 #include <linux/kallsyms.h>
+#ifdef CONFIG_QCA_MINIDUMP
+#include <linux/minidump_tlv.h>
+#endif
 
 #if !defined(__printf)
 #define __printf(a, b)
 #endif
 
-#ifdef CONFIG_MCL
 /* QDF_TRACE is the macro invoked to add trace messages to code.  See the
  * documenation for qdf_trace_msg() for the parameters etc. for this function.
  *
@@ -59,10 +61,11 @@
 #define QDF_TRACE(arg ...)
 #define QDF_VTRACE(arg ...)
 #define QDF_TRACE_HEX_DUMP(arg ...)
-#define __QDF_TRACE_RATE_LIMITED(arg ...)
-#else /* CONFIG_MCL */
+#define __QDF_TRACE_RATE_LIMITED(params...)
+#if defined(QDF_TRACE_PRINT_ENABLE)
 #define qdf_trace(log_level, args...)
-#endif /* CONFIG_MCL */
+#endif
+#define __QDF_TRACE_HEX_DUMP_RATE_LIMITED(arg ...)
 
 #define __QDF_TRACE_NO_FL(log_level, module_id, format, args...)
 
@@ -72,38 +75,51 @@
 
 #define __QDF_TRACE_RL_NO_FL(log_level, module_id, format, args...)
 
-static inline void __qdf_trace_noop(QDF_MODULE_ID module, char *format, ...) { }
-
+#define __QDF_TRACE_HEX_DUMP_RL(log_level, module_id, args...)
 #define QDF_TRACE_FATAL(params...)
 #define QDF_TRACE_FATAL_NO_FL(params...)
 #define QDF_TRACE_FATAL_RL(params...)
 #define QDF_TRACE_FATAL_RL_NO_FL(params...)
+#define QDF_VTRACE_FATAL(params...)
+#define QDF_TRACE_HEX_DUMP_FATAL_RL(params...)
 
 #define QDF_TRACE_ERROR(params...)
 #define QDF_TRACE_ERROR_NO_FL(params...)
 #define QDF_TRACE_ERROR_RL(params...)
 #define QDF_TRACE_ERROR_RL_NO_FL(params...)
+#define QDF_VTRACE_ERROR(params...)
+#define QDF_TRACE_HEX_DUMP_ERROR_RL(params...)
 
 #define QDF_TRACE_WARN(params...)
 #define QDF_TRACE_WARN_NO_FL(params...)
 #define QDF_TRACE_WARN_RL(params...)
 #define QDF_TRACE_WARN_RL_NO_FL(params...)
+#define QDF_VTRACE_WARN(params...)
+#define QDF_TRACE_HEX_DUMP_WARN_RL(params...)
 
 #define QDF_TRACE_INFO(params...)
 #define QDF_TRACE_INFO_NO_FL(params...)
 #define QDF_TRACE_INFO_RL(params...)
 #define QDF_TRACE_INFO_RL_NO_FL(params...)
+#define QDF_VTRACE_INFO(params...)
+#define QDF_TRACE_HEX_DUMP_INFO_RL(params...)
 
 #define QDF_TRACE_DEBUG(params...)
 #define QDF_TRACE_DEBUG_NO_FL(params...)
 #define QDF_TRACE_DEBUG_RL(params...)
 #define QDF_TRACE_DEBUG_RL_NO_FL(params...)
+#define QDF_VTRACE_DEBUG(params...)
+#define QDF_TRACE_HEX_DUMP_DEBUG_RL(params...)
+
+#define QDF_TRACE_ENTER(params...)
+#define QDF_TRACE_EXIT(params...)
 
 #define QDF_ENABLE_TRACING
 #define qdf_scnprintf scnprintf
 
 #define QDF_ASSERT(_condition)
 
+static inline void qdf_vprint(const char *fmt, va_list args) {}
 #ifdef PANIC_ON_BUG
 #ifdef CONFIG_SLUB_DEBUG
 /**
@@ -147,12 +163,12 @@ static inline void __qdf_bug(void)
 
 /**
  * QDF_DEBUG_PANIC() - In debug builds, panic, otherwise do nothing
- * @reason: An optional reason format string, followed by args
+ * @reason_fmt: a format string containing the reason for the panic
+ * @args: zero or more printf compatible logging arguments
  *
  * Return: None
  */
-#define QDF_DEBUG_PANIC(reason...) \
-	QDF_DEBUG_PANIC_FL(__func__, __LINE__, "" reason)
+#define QDF_DEBUG_PANIC(reason_fmt, args...)
 
 /**
  * QDF_DEBUG_PANIC_FL() - In debug builds, panic, otherwise do nothing
@@ -205,4 +221,8 @@ static inline void __qdf_bug(void)
 #define __QDF_SYMBOL_LEN 1
 #endif
 
+static inline void
+__qdf_minidump_log(void *start_addr, size_t size, const char *name) {}
+static inline void
+__qdf_minidump_remove(void *addr) {}
 #endif /* __I_QDF_TRACE_H */

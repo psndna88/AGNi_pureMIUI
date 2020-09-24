@@ -30,22 +30,20 @@
 #include "wlan_objmgr_cmn.h"
 #include "qdf_nbuf.h"
 
-#ifdef CONFIG_MCL
-#define MGMT_DESC_POOL_MAX 64
-#else
-#define MGMT_DESC_POOL_MAX 512
-#endif
-
-#define mgmt_txrx_log(level, args...)
-#define mgmt_txrx_logfl(level, format, args...)
-#define mgmt_txrx_alert(format, args...)
-#define mgmt_txrx_err(format, args...)
-#define mgmt_txrx_warn(format, args...)
-#define mgmt_txrx_notice(format, args...)
-#define mgmt_txrx_info(format, args...)
-#define mgmt_txrx_debug(format, args...)
+#define mgmt_txrx_alert(params...)
+#define mgmt_txrx_err(params...)
+#define mgmt_txrx_warn(params...)
+#define mgmt_txrx_notice(params...)
+#define mgmt_txrx_info(params...)
+#define mgmt_txrx_debug(params...)
 #define mgmt_txrx_err_rl(params...)
 #define mgmt_txrx_debug_rl(params...)
+
+#define mgmttxrx_nofl_alert(params...)
+#define mgmttxrx_nofl_err(params...)
+#define mgmttxrx_nofl_warn(params...)
+#define mgmttxrx_nofl_info(params...)
+#define mgmttxrx_nofl_debug(params...)
 
 /**
  * enum mgmt_subtype - enum of mgmt. subtypes
@@ -230,6 +228,20 @@ enum rrm_actioncode {
 };
 
 /**
+ * enum ft_actioncode - ft action frames
+ * @FT_FAST_BSS_TRNST_REQ: ft request frame
+ * @FT_FAST_BSS_TRNST_RES: ft response frame
+ * @FT_FAST_BSS_TRNST_CONFIRM: ft confirm frame
+ * @FT_FAST_BSS_TRNST_ACK: ft ACK frame
+ */
+enum ft_actioncode {
+	FT_FAST_BSS_TRNST_REQ = 1,
+	FT_FAST_BSS_TRNST_RES,
+	FT_FAST_BSS_TRNST_CONFIRM,
+	FT_FAST_BSS_TRNST_ACK,
+};
+
+/**
  * enum ht_actioncode - ht action frames
  * @HT_ACTION_NOTIFY_CHANWIDTH: ht notify bw action frame
  * @HT_ACTION_SMPS: ht smps action frame
@@ -397,6 +409,24 @@ enum wmm_actioncode {
 };
 
 /**
+ * enum fst_actioncode - fst action frames
+ * @FST_SETUP_REQ: fst setup request frame
+ * @FST_SETUP_RSP: fst setup response frame
+ * @FST_TEAR_DOWN: fst qos teardown frame
+ * @FST_ACK_REQ:  fst ack frame for request
+ * @FST_ACK_RSP:  fst ack frame for response
+ * @FST_ON_CHANNEL_TUNNEL:  fst on channel tunnel frame
+ */
+enum fst_actioncode {
+	FST_SETUP_REQ,
+	FST_SETUP_RSP,
+	FST_TEAR_DOWN,
+	FST_ACK_REQ,
+	FST_ACK_RSP,
+	FST_ON_CHANNEL_TUNNEL,
+};
+
+/**
  * enum vht_actioncode - vht action frames
  * @VHT_ACTION_COMPRESSED_BF: vht compressed bf action frame
  * @VHT_ACTION_GID_NOTIF: vht gid notification action frame
@@ -520,12 +550,18 @@ struct action_frm_hdr {
  * @MGMT_ACTION_VHT_COMPRESSED_BF: vht compressed bf action frame
  * @MGMT_ACTION_VHT_GID_NOTIF:   vht gid notification action frame
  * @MGMT_ACTION_VHT_OPMODE_NOTIF: vht opmode notification action frame
- * @MGMT_FRAME_TYPE_ALL:         mgmt frame type for all type of frames
- * @MGMT_MAX_FRAME_TYPE:         max. mgmt frame types
  * @MGMT_ACTION_GAS_INITIAL_REQUEST: GAS Initial request action frame
  * @MGMT_ACTION_GAS_INITIAL_RESPONSE: GAS Initial response action frame
  * @MGMT_ACTION_GAS_COMEBACK_REQUEST: GAS Comeback request action frame
  * @MGMT_ACTION_GAS_COMEBACK_RESPONSE: GAS Comeback response action frame
+ * @MGMT_ACTION_FST_SETUP_REQ: FST setup request frame
+ * @MGMT_ACTION_FST_SETUP_RSPA: FST setup response frame
+ * @MGMT_ACTION_FST_TEAR_DOWN: FST qos teardown frame
+ * @MGMT_ACTION_FST_ACK_REQ: FST ack frame for request
+ * @MGMT_ACTION_FST_ACK_RSP: FST ack frame for response
+ * @MGMT_ACTION_FST_ON_CHANNEL_TUNNEL: FST on channel tunnel frame
+ * @MGMT_FRAME_TYPE_ALL:         mgmt frame type for all type of frames
+ * @MGMT_MAX_FRAME_TYPE:         max. mgmt frame types
  */
 enum mgmt_frame_type {
 	MGMT_FRM_UNSPECIFIED = -1,
@@ -567,6 +603,10 @@ enum mgmt_frame_type {
 	MGMT_ACTION_RRM_LINK_MEASUREMENT_RPT,
 	MGMT_ACTION_RRM_NEIGHBOR_REQ,
 	MGMT_ACTION_RRM_NEIGHBOR_RPT,
+	MGMT_ACTION_FT_REQUEST,
+	MGMT_ACTION_FT_RESPONSE,
+	MGMT_ACTION_FT_CONFIRM,
+	MGMT_ACTION_FT_ACK,
 	MGMT_ACTION_HT_NOTIFY_CHANWIDTH,
 	MGMT_ACTION_HT_SMPS,
 	MGMT_ACTION_HT_PSMP,
@@ -632,15 +672,23 @@ enum mgmt_frame_type {
 	MGMT_ACTION_GAS_INITIAL_RESPONSE,
 	MGMT_ACTION_GAS_COMEBACK_REQUEST,
 	MGMT_ACTION_GAS_COMEBACK_RESPONSE,
+	MGMT_ACTION_FST_SETUP_REQ,
+	MGMT_ACTION_FST_SETUP_RSP,
+	MGMT_ACTION_FST_TEAR_DOWN,
+	MGMT_ACTION_FST_ACK_REQ,
+	MGMT_ACTION_FST_ACK_RSP,
+	MGMT_ACTION_FST_ON_CHANNEL_TUNNEL,
 	MGMT_FRAME_TYPE_ALL,
 	MGMT_MAX_FRAME_TYPE,
 };
 
 #define WLAN_MGMT_TXRX_HOST_MAX_ANTENNA          4
-#define WLAN_INVALID_PER_CHAIN_RSSI             0x80
+#define WLAN_INVALID_PER_CHAIN_RSSI             0xFF
+#define WLAN_INVALID_PER_CHAIN_SNR              0x80
 #define WLAN_NOISE_FLOOR_DBM_DEFAULT            -96
 /**
  * struct mgmt_rx_event_params - host mgmt header params
+ * @chan_freq: channel frequency on which this frame is received
  * @channel: channel on which this frame is received
  * @snr: snr information used to call rssi
  * @rssi_ctl[WLAN_MGMT_TXRX_HOST_MAX_ANTENNA]: RSSI of PRI 20MHz for each chain
@@ -657,6 +705,7 @@ enum mgmt_frame_type {
  *             (win specific, will be removed in phase 4)
  */
 struct mgmt_rx_event_params {
+	uint32_t    chan_freq;
 	uint32_t    channel;
 	uint32_t    snr;
 	uint8_t     rssi_ctl[WLAN_MGMT_TXRX_HOST_MAX_ANTENNA];

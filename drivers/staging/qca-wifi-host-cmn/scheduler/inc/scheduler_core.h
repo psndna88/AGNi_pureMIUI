@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,24 +24,26 @@
 #include <scheduler_api.h>
 #include <qdf_list.h>
 
-#ifdef CONFIG_MCL
-#define SCHEDULER_CORE_MAX_MESSAGES 1000
-#else
-#define SCHEDULER_CORE_MAX_MESSAGES 2000
+#ifndef SCHEDULER_CORE_MAX_MESSAGES
+#define SCHEDULER_CORE_MAX_MESSAGES 4000
+#endif
+#ifndef WLAN_SCHED_REDUCTION_LIMIT
 #define WLAN_SCHED_REDUCTION_LIMIT 32
 #endif
 #define SCHEDULER_NUMBER_OF_MSG_QUEUE 6
 #define SCHEDULER_WRAPPER_MAX_FAIL_COUNT (SCHEDULER_CORE_MAX_MESSAGES * 3)
 #define SCHEDULER_WATCHDOG_TIMEOUT (10 * 1000) /* 10s */
 
-#define __sched_log(level, format, args...)
-
-#define sched_fatal(format, args...)
-#define sched_err(format, args...)
-#define sched_warn(format, args...)
-#define sched_info(format, args...)
-#define sched_debug(format, args...)
-
+#define sched_fatal(params...)
+#define sched_err(params...)
+#define sched_warn(params...)
+#define sched_info(params...)
+#define sched_debug(params...)
+#define sched_nofl_fatal(params...)
+#define sched_nofl_err(params...)
+#define sched_nofl_warn(params...)
+#define sched_nofl_info(params...)
+#define sched_nofl_debug(params...)
 #define sched_enter()
 #define sched_exit()
 
@@ -81,11 +83,11 @@ struct scheduler_mq_ctx {
  * @resume_sch_event: scheduler resume wait event
  * @sch_thread_lock: scheduler thread lock
  * @sch_last_qidx: scheduler last qidx allocation
+ * @watchdog_msg_type: 'type' of the current msg being processed
  * @hdd_callback: os if suspend callback
  * @legacy_wma_handler: legacy wma message handler
  * @legacy_sys_handler: legacy sys message handler
  * @watchdog_timer: timer for triggering a scheduler watchdog bite
- * @watchdog_msg_type: 'type' of the current msg being processed
  * @watchdog_callback: the callback of the current msg being processed
  */
 struct scheduler_ctx {
@@ -98,11 +100,11 @@ struct scheduler_ctx {
 	qdf_event_t resume_sch_event;
 	qdf_spinlock_t sch_thread_lock;
 	uint8_t sch_last_qidx;
+	uint16_t watchdog_msg_type;
 	hdd_suspend_callback hdd_callback;
 	scheduler_msg_process_fn_t legacy_wma_handler;
 	scheduler_msg_process_fn_t legacy_sys_handler;
 	qdf_timer_t watchdog_timer;
-	uint16_t watchdog_msg_type;
 	void *watchdog_callback;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,20 +28,22 @@
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_ocb_public_structs.h>
-
 #define ocb_alert_rl(params...)
 #define ocb_err_rl(params...)
 #define ocb_warn_rl(params...)
 #define ocb_info_rl(params...)
 #define ocb_debug_rl(params...)
-#define ocb_log(level, args...)
-#define ocb_logfl(level, format, args...)
-#define ocb_alert(format, args...)
-#define ocb_err(format, args...)
-#define ocb_warn(format, args...)
-#define ocb_notice(format, args...)
-#define ocb_info(format, args...)
-#define ocb_debug(format, args...)
+#define ocb_alert(params...)
+#define ocb_err(params...)
+#define ocb_warn(params...)
+#define ocb_notice(params...)
+#define ocb_info(params...)
+#define ocb_debug(params...)
+#define ocb_nofl_alert(params...)
+#define ocb_nofl_err(params...)
+#define ocb_nofl_warn(params...)
+#define ocb_nofl_info(params...)
+#define ocb_nofl_debug(params...)
 
 /**
  * enum ocb_southbound_event - OCB south bound event type
@@ -66,7 +68,7 @@ enum ocb_southbound_event {
  * @ocb_channel_count: channel count
  * @channel_config: current channel configurations
  * @dp_soc: psoc data path handle
- * @dp_pdev: pdev data path handle
+ * @dp_pdev_id: pdev data path ID
  * @ocb_cbs: legacy callback functions
  * @ocb_txops: tx opertions for target interface
  * @ocb_rxops: rx opertions for target interface
@@ -77,7 +79,7 @@ struct ocb_pdev_obj {
 	uint32_t ocb_channel_count;
 	struct ocb_config *channel_config;
 	void *dp_soc;
-	void *dp_pdev;
+	uint8_t dp_pdev_id;
 	struct ocb_callbacks ocb_cbs;
 	struct wlan_ocb_tx_ops ocb_txops;
 	struct wlan_ocb_rx_ops ocb_rxops;

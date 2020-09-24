@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -68,13 +68,9 @@
 #define A_MEMSET(addr, value, size)     memset((addr), (value), (size))
 #define A_MEMCMP(addr1, addr2, len)     memcmp((addr1), (addr2), (len))
 
-#define A_LOGGER(mask, mod, args ...) \
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
-#define A_PRINTF(args ...) \
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
-#define A_PRINTF_LOG(args ...) \
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR, ## args)
-#define A_SNPRINTF(buf, len, args ...)   snprintf(buf, len, args)
+#define A_LOGGER(mask, mod, args ...)
+#define A_PRINTF(args ...)
+#define A_SNPRINTF(buf, len, args ...)
 
 /*
  * Timer Functions
@@ -117,10 +113,10 @@ typedef struct timer_list A_TIMER;
 
 #define wait_event_interruptible_timeout(wq, condition, timeout)	\
 	({									\
-		 long __ret = timeout;						 \
-		 if (!(condition))						 \
-			 __wait_event_interruptible_timeout(wq, condition, __ret); \
-		 __ret;								 \
+		long __ret = timeout;						 \
+		if (!(condition))						 \
+			__wait_event_interruptible_timeout(wq, condition, __ret); \
+		__ret;								 \
 	 })
 #endif /* wait_event_interruptible_timeout */
 

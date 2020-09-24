@@ -28,13 +28,16 @@
 #include "wlan_disa_priv.h"
 #include "wlan_disa_objmgr.h"
 
-#define disa_log(level, args...)
-#define disa_logfl(level, format, args...)
-#define disa_fatal(format, args...)
-#define disa_err(format, args...)
-#define disa_warn(format, args...)
-#define disa_info(format, args...)
-#define disa_debug(format, args...)
+#define disa_fatal(params...)
+#define disa_err(params...)
+#define disa_warn(params...)
+#define disa_info(params...)
+#define disa_debug(params...)
+#define disa_nofl_fatal(params...)
+#define disa_nofl_err(params...)
+#define disa_nofl_warn(params...)
+#define disa_nofl_info(params...)
+#define disa_nofl_debug(params...)
 #define DISA_ENTER()
 #define DISA_EXIT()
 

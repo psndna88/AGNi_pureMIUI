@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -22,29 +22,55 @@
  */
 #ifndef __WLAN_SERIALIZATION_MAIN_I_H
 #define __WLAN_SERIALIZATION_MAIN_I_H
-/* Include files */
-#include "wlan_objmgr_cmn.h"
-#include "wlan_objmgr_psoc_obj.h"
-#include "wlan_objmgr_pdev_obj.h"
-#include "qdf_mc_timer.h"
 
-#define WLAN_SERIALIZATION_MAX_GLOBAL_POOL_CMDS 24
-#define WLAN_SERIALIZATION_MAX_ACTIVE_CMDS 1
-#define WLAN_SERIALIZATION_MAX_ACTIVE_SCAN_CMDS 8
+#include <wlan_objmgr_cmn.h>
+#include <wlan_objmgr_psoc_obj.h>
+#include <wlan_objmgr_pdev_obj.h>
+#include <qdf_mc_timer.h>
 
-#define serialization_log(level, args...)
-#define serialization_logfl(level, format, args...)
-#define serialization_alert(format, args...)
-#define serialization_err(format, args...)
-#define serialization_warn(format, args...)
-#define serialization_info(format, args...)
-#define serialization_debug(format, args...)
-#define serialization_enter()
-#define serialization_exit()
+#define WLAN_SER_MAX_VDEVS WLAN_UMAC_PDEV_MAX_VDEVS
 
+#define WLAN_SER_MAX_ACTIVE_CMDS WLAN_SER_MAX_VDEVS
+
+#ifndef WLAN_SER_MAX_PENDING_CMDS
+#define WLAN_SER_MAX_PENDING_CMDS (WLAN_SER_MAX_VDEVS * 4)
+#endif
+
+#ifndef WLAN_SER_MAX_PENDING_CMDS_AP
+#define WLAN_SER_MAX_PENDING_CMDS_AP \
+	(WLAN_SER_MAX_PENDING_CMDS / WLAN_SER_MAX_VDEVS)
+#endif
+#ifndef WLAN_SER_MAX_PENDING_CMDS_STA
+#define WLAN_SER_MAX_PENDING_CMDS_STA \
+	(WLAN_SER_MAX_PENDING_CMDS / WLAN_SER_MAX_VDEVS)
+#endif
+
+#define WLAN_SER_MAX_ACTIVE_SCAN_CMDS 8
+#define WLAN_SER_MAX_PENDING_SCAN_CMDS 24
+
+#define WLAN_SERIALIZATION_MAX_GLOBAL_POOL_CMDS \
+	(WLAN_SER_MAX_ACTIVE_CMDS + \
+	 WLAN_SER_MAX_PENDING_CMDS + \
+	 WLAN_SER_MAX_ACTIVE_SCAN_CMDS + \
+	 WLAN_SER_MAX_PENDING_SCAN_CMDS)
+
+#define ser_alert(params...)
+#define ser_err(params...)
+#define ser_warn(params...) 
+#define ser_info(params...)
+#define ser_debug(params...)
+#define ser_enter()
+#define ser_exit()
+
+#define ser_err_no_fl(params...)
+
+/*
+ * Rate limited serialization logging api
+ */
+#define ser_err_rl(params...)
+#define ser_debug_rl(params...)
 /**
  * struct serialization_legacy_callback - to handle legacy serialization cb
- *
  * @serialization_purge_cmd_list: function ptr to be filled by serialization
  *				  module
  *
@@ -52,8 +78,8 @@
  * order to handle backward compatibility.
  */
 struct serialization_legacy_callback {
-	void (*serialization_purge_cmd_list) (struct wlan_objmgr_psoc *,
-		struct wlan_objmgr_vdev *, bool, bool, bool, bool, bool);
+	void (*serialization_purge_cmd_list)(struct wlan_objmgr_psoc *,
+					     struct wlan_objmgr_vdev *,
+					     bool, bool, bool, bool, bool);
 };
-
 #endif
