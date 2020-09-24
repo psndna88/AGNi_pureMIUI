@@ -1482,10 +1482,6 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 			"current monotonic time stamp seconds %lld:%lld",
 			ts.tv_sec, ts.tv_nsec/1000);
 
-		if (camif_priv->event_cb)
-			camif_priv->event_cb(camif_priv->priv,
-				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
-
 		ret = CAM_VFE_IRQ_STATUS_OVERFLOW;
 
 		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
@@ -1495,6 +1491,10 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 
 		if (camif_priv->camif_debug & CAMIF_DEBUG_ENABLE_REG_DUMP)
 			cam_vfe_camif_ver3_reg_dump(camif_node);
+
+		if (camif_priv->event_cb)
+			camif_priv->event_cb(camif_priv->priv,
+				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
 	}
 
 	if (irq_status[CAM_IFE_IRQ_CAMIF_REG_STATUS0]
@@ -1514,10 +1514,6 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 			"current monotonic time stamp seconds %lld:%lld",
 			ts.tv_sec, ts.tv_nsec/1000);
 
-		if (camif_priv->event_cb)
-			camif_priv->event_cb(camif_priv->priv,
-				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
-
 		ret = CAM_VFE_IRQ_STATUS_VIOLATION;
 
 		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
@@ -1527,6 +1523,10 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 
 		if (camif_priv->camif_debug & CAMIF_DEBUG_ENABLE_REG_DUMP)
 			cam_vfe_camif_ver3_reg_dump(camif_node);
+
+		if (camif_priv->event_cb)
+			camif_priv->event_cb(camif_priv->priv,
+				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
 	}
 
 	if (camif_priv->camif_debug & CAMIF_DEBUG_ENABLE_SENSOR_DIAG_STATUS) {
