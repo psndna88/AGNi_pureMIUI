@@ -135,7 +135,6 @@ struct cam_cci_master_info {
 	struct semaphore master_sem;
 	bool is_first_req;
 	uint16_t freq_ref_cnt;
-	bool is_initilized;
 };
 
 struct cam_cci_clk_params_t {
