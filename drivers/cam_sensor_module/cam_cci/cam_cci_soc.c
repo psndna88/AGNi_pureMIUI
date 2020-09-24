@@ -39,9 +39,16 @@ static int cam_cci_init_master(struct cci_device *cci_dev,
 
 		/* Set reset pending flag to true */
 		cci_dev->cci_master_info[master].reset_pending = true;
-		cam_io_w_mb((master == MASTER_0) ?
-			CCI_M0_RESET_RMSK : CCI_M1_RESET_RMSK,
-			base + CCI_RESET_CMD_ADDR);
+		cci_dev->cci_master_info[master].status = 0;
+		if (cci_dev->ref_count == 1) {
+			cam_io_w_mb(CCI_RESET_CMD_RMSK,
+				base + CCI_RESET_CMD_ADDR);
+			cam_io_w_mb(0x1, base + CCI_RESET_CMD_ADDR);
+		} else {
+			cam_io_w_mb((master == MASTER_0) ?
+				CCI_M0_RESET_RMSK : CCI_M1_RESET_RMSK,
+				base + CCI_RESET_CMD_ADDR);
+		}
 		if (!wait_for_completion_timeout(
 			&cci_dev->cci_master_info[master].reset_complete,
 			CCI_TIMEOUT)) {
