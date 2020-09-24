@@ -600,8 +600,12 @@
 	};
 
 	gcc: clock-controller@100000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "gcc_clocks";
+		compatible = "qcom,yupik-gcc", "syscon";
+		reg = <0x100000 0x1f0000>;
+		reg-names = "cc_base";
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&sleep_clk>;
+		clock-names = "bi_tcxo", "sleep_clk";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -1304,56 +1308,46 @@
 #include "ipcc-test-yupik.dtsi"
 
 &gcc_pcie_0_gdsc {
-	compatible = "regulator-fixed";
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &gcc_pcie_1_gdsc {
-	compatible = "regulator-fixed";
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &gcc_ufs_phy_gdsc {
-	compatible = "regulator-fixed";
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &gcc_usb30_prim_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
 &gcc_usb30_sec_gdsc {
-	compatible = "regulator-fixed";
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &hlos1_vote_mmnoc_mmu_tbu_hf0_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
 &hlos1_vote_mmnoc_mmu_tbu_hf1_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
 &hlos1_vote_mmnoc_mmu_tbu_sf0_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
 &hlos1_vote_turing_mmu_tbu0_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
 &hlos1_vote_turing_mmu_tbu1_gdsc {
-	compatible = "regulator-fixed";
 	status = "ok";
 };
 
