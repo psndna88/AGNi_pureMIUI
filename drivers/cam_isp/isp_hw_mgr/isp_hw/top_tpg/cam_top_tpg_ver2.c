@@ -173,7 +173,7 @@ static int cam_top_tpg_ver2_start(
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base + tpg_reg->tpg_cfg_2);
 
 	/* program number of frames */
-	cam_io_w_mb(1, soc_info->reg_map[0].mem_base + tpg_reg->tpg_cfg_3);
+	cam_io_w_mb(0xFFFFF, soc_info->reg_map[0].mem_base + tpg_reg->tpg_cfg_3);
 
 	cam_io_w_mb(tpg_reg->tpg_module_en, soc_info->reg_map[0].mem_base +
 		tpg_reg->tpg_module_cfg);
