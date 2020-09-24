@@ -1,4 +1,4 @@
-if QCA_CLD_WLAN_PIE_OLD != n
+if QCA_CLD_WLAN_PIE_OLD = y
 
 config QCA_CLD_WLAN
 	tristate "Qualcomm Atheros CLD WLAN module (CAF Pie OLD tag)"
