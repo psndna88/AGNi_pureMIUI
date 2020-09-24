@@ -47,11 +47,11 @@ obj-$(CONFIG_FSL_MC_BUS)	+= fsl-mc/
 obj-$(CONFIG_WILC1000)		+= wilc1000/
 obj-$(CONFIG_MOST)		+= most/
 ifeq ($(CONFIG_QCA_CLD_WLAN_PIE),y)
-ifeq ($(CONFIG_QCA_CLD_WLAN_PIE_OLD),y)
-obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0_pie_old/
-else
 obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0_pie/
-endif
+else ifeq ($(CONFIG_QCA_CLD_WLAN_PIE_OLD),y)
+obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0_pie_old/
+else ifeq ($(CONFIG_QCA_CLD_WLAN_Q),y)
+obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0_Q/
 else
 obj-$(CONFIG_QCA_CLD_WLAN)	+= qcacld-3.0/
 endif
