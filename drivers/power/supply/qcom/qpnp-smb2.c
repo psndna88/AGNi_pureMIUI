@@ -61,6 +61,7 @@ extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
 #endif
+extern bool miuirom;
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
 
@@ -1162,9 +1163,15 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-	case POWER_SUPPLY_PROP_CURRENT_NOW:
 	case POWER_SUPPLY_PROP_TEMP:
 		rc = smblib_get_prop_from_bms(chg, psp, val);
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		rc = smblib_get_prop_from_bms(chg, psp, val);
+		if (!miuirom) {
+			if (!rc)
+				val->intval *= (-1);
+		}
 		break;
 	case POWER_SUPPLY_PROP_FCC_STEPPER_ENABLE:
 		val->intval = chg->fcc_stepper_mode;
