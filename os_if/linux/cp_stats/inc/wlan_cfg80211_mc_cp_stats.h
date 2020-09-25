@@ -32,6 +32,10 @@
 struct wiphy;
 struct wlan_objmgr_psoc;
 
+/* QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS policy */
+extern const struct nla_policy qca_wlan_vendor_get_wake_reason_policy[
+			QCA_WLAN_VENDOR_GET_WAKE_STATS_MAX + 1];
+
 /**
  * wlan_cfg80211_mc_cp_stats_get_wakelock_stats() - API to request wake lock
  * stats. Stats are returned to user space via vender event
