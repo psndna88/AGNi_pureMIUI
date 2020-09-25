@@ -1947,6 +1947,7 @@ static int cam_tfe_bus_update_wm(void *priv, void *cmd_args,
 			update_buf->wm_update->image_buf[i]);
 		CAM_DBG(CAM_ISP, "WM %d image address 0x%x",
 			wm_data->index, reg_val_pair[j-1]);
+		update_buf->wm_update->image_buf_offset[i] = 0;
 
 		CAM_TFE_ADD_REG_VAL_PAIR(reg_val_pair, j,
 			wm_data->hw_regs->frame_incr, frame_inc);
