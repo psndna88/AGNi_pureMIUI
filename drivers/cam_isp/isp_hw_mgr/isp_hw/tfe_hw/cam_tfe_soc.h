@@ -26,6 +26,8 @@ enum cam_cpas_handle_id {
  *                           This handle is used for all further interface
  *                           with CPAS.
  * @cpas_version:            Has cpas version read from Hardware
+ * @num_pid:                 number of pids of tfe
+ * @pid:                     TFE pid value list
  */
 struct cam_tfe_soc_private {
 	uint32_t    cpas_handle;
@@ -33,6 +35,8 @@ struct cam_tfe_soc_private {
 	struct clk *dsp_clk;
 	int32_t     dsp_clk_index;
 	int32_t     dsp_clk_rate;
+	uint32_t    num_pid;
+	uint32_t    pid[CAM_ISP_HW_MAX_PID_VAL];
 };
 
 /*

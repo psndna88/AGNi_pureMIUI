@@ -12,7 +12,7 @@
 #include "cam_debug_util.h"
 #include "camera_main.h"
 
-static struct cam_hw_intf *cam_tfe_hw_list[CAM_TFE_HW_NUM_MAX] = {0, 0, 0};
+static struct cam_isp_hw_intf_data  cam_tfe_hw_list[CAM_TFE_HW_NUM_MAX];
 
 static char tfe_dev_name[8];
 
@@ -24,8 +24,10 @@ static int cam_tfe_component_bind(struct device *dev,
 	const struct of_device_id         *match_dev = NULL;
 	struct cam_tfe_hw_core_info       *core_info = NULL;
 	struct cam_tfe_hw_info            *hw_info = NULL;
+	struct cam_tfe_soc_private        *tfe_soc_priv;
 	int                                rc = 0;
 	struct platform_device *pdev = to_platform_device(dev);
+	uint32_t  i;
 
 	tfe_hw_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!tfe_hw_intf) {
@@ -108,7 +110,18 @@ static int cam_tfe_component_bind(struct device *dev,
 	init_completion(&tfe_hw->hw_complete);
 
 	if (tfe_hw_intf->hw_idx < CAM_TFE_HW_NUM_MAX)
-		cam_tfe_hw_list[tfe_hw_intf->hw_idx] = tfe_hw_intf;
+		cam_tfe_hw_list[tfe_hw_intf->hw_idx].hw_intf = tfe_hw_intf;
+	else {
+		CAM_ERR(CAM_ISP, "HW index:%d is wrong max HW idx:%d",
+			tfe_hw_intf->hw_idx, CAM_TFE_HW_NUM_MAX);
+		goto deinit_soc;
+	}
+
+	tfe_soc_priv = tfe_hw->soc_info.soc_private;
+	cam_tfe_hw_list[tfe_hw_intf->hw_idx].num_hw_pid = tfe_soc_priv->num_pid;
+	for (i = 0; i < tfe_soc_priv->num_pid; i++)
+		cam_tfe_hw_list[tfe_hw_intf->hw_idx].hw_pid[i] =
+			tfe_soc_priv->pid[i];
 
 	cam_tfe_init_hw(tfe_hw, NULL, 0);
 	cam_tfe_deinit_hw(tfe_hw, NULL, 0);
@@ -149,7 +162,7 @@ static void cam_tfe_component_unbind(struct device *dev,
 		tfe_hw_intf->hw_type, tfe_hw_intf->hw_idx);
 
 	if (tfe_hw_intf->hw_idx < CAM_TFE_HW_NUM_MAX)
-		cam_tfe_hw_list[tfe_hw_intf->hw_idx] = NULL;
+		cam_tfe_hw_list[tfe_hw_intf->hw_idx].hw_intf = NULL;
 
 	tfe_hw = tfe_hw_intf->hw_priv;
 	if (!tfe_hw) {
@@ -206,15 +219,16 @@ int cam_tfe_remove(struct platform_device *pdev)
 	return 0;
 }
 
-int cam_tfe_hw_init(struct cam_hw_intf **tfe_hw, uint32_t hw_idx)
+int cam_tfe_hw_init(struct cam_isp_hw_intf_data **tfe_hw_intf,
+	uint32_t hw_idx)
 {
 	int rc = 0;
 
-	if (cam_tfe_hw_list[hw_idx]) {
-		*tfe_hw = cam_tfe_hw_list[hw_idx];
+	if (cam_tfe_hw_list[hw_idx].hw_intf) {
+		*tfe_hw_intf = &cam_tfe_hw_list[hw_idx];
 		rc = 0;
 	} else {
-		*tfe_hw = NULL;
+		*tfe_hw_intf = NULL;
 		rc = -ENODEV;
 	}
 	return rc;

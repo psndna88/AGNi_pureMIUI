@@ -740,6 +740,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_5,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_1,
+			.mid              = 23,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_RDI1,
@@ -747,6 +748,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_6,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_2,
+			.mid              = 24,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_RDI2,
@@ -754,6 +756,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_7,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_3,
+			.mid              = 25,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_FULL,
@@ -761,6 +764,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = 4096,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_0,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 16,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_RAW_DUMP,
@@ -768,6 +772,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = 4096,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_1,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 17,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_PDAF,
@@ -775,6 +780,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = 4096,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_7,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_3,
+			.mid              = 25,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_STATS_HDR_BE,
@@ -782,6 +788,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_3,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 21,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_STATS_HDR_BHIST,
@@ -789,6 +796,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_2,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 19,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_STATS_TL_BG,
@@ -796,6 +804,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_2,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 18,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_STATS_AWB_BG,
@@ -803,6 +812,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_3,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 20,
 		},
 		{
 			.tfe_out_id       = CAM_TFE_BUS_TFE_OUT_STATS_BF,
@@ -810,6 +820,7 @@ static struct cam_tfe_bus_hw_info  tfe530_bus_hw_info = {
 			.max_height       = -1,
 			.composite_group  = CAM_TFE_BUS_COMP_GRP_4,
 			.rup_group_id     = CAM_TFE_BUS_RUP_GRP_0,
+			.mid              = 22,
 		},
 	},
 	.comp_done_shift          = 8,
