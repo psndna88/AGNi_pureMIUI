@@ -678,9 +678,9 @@
 		pm8350c_l12: regulator-pm8350c-l12 {
 			regulator-name = "pm8350c_l12";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1920000>;
+			regulator-min-microvolt = <1820000>;
 			regulator-max-microvolt = <1980000>;
-			qcom,init-voltage = <1920000>;
+			qcom,init-voltage = <1820000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 			qcom,proxy-consumer-enable;
 			qcom,proxy-consumer-current = <60700>;
