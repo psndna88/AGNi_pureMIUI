@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v9.9.1_stable");
+ini_set("rom_version",	"v10.0_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"September, 22, 2020");
+ini_set("rom_date",		"September, 27, 2020");
 
 # Show Simple Splash
 splash(
@@ -119,16 +119,16 @@ selectbox(
     "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
     "Automatic",						"DEFAULT. Auto detect camera libs in rom and flash kernel accordingly", 1,   								#-- selected.0 = 1
     "Forced NEW Camera Libs Mode", 		"Force Support for new camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0, 	#-- selected.0 = 2
-    "Forced OLD Camera Libs Mode", 		"Force Support for old camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0	#-- selected.0 = 3
-    ,																																									#NATIVEMIUIQ
-    "Forced MIUI-Q Camera Libs Mode", 	"Force Support for MIUI Q camera. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE or Lineage OS", 0			#-- selected.0 = 4	#NATIVEMIUIQ
+    "Forced OLD Camera Libs Mode", 		"Force Support for old camera libs. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE & you sure about it.", 0,	#-- selected.0 = 3
+    "Forced MIUI-Q Camera Libs Mode", 	"Force Support for MIUI Q camera. - USE IF PROBLEMS WITH AUTOMATIC CAMERA MODE or Lineage OS", 0			#-- selected.0 = 4
 );
 
 selectbox(
-    "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",  
-    "Pie Latest Source based WiFi",			"Widely used. Gives good speed.", 0,									#-- selected.0 = 1
-    "Q Latest Source based Enhanced WiFi",	"DEFAULT: Major revamped. Now gives Improved Speeds than before.", 1, 			#-- selected.0 = 2
-    "Pie OLD Source based WiFi",			"Solves all known Hotspot problems with Pie wifi driver", 0	#-- selected.0 = 3
+    "WiFi Driver","<@center><b>\nSelect the WiFi version you want</b>\n\n</@>","@install","wifi.prop",
+    "Android 11 Source based new WiFi",		"New Android 11 based wifi driver (under testing)", 0, 					#-- selected.0 = 1
+    "Q Latest Source based Enhanced WiFi",	"DEFAULT: Major revamped. Now gives Improved Speeds than before.", 1, 	#-- selected.0 = 2
+    "Pie Latest Source based WiFi",			"Widely used. Gives good speed.", 0,									#-- selected.0 = 3
+    "Pie OLD Source based WiFi",			"Solves all known Hotspot problems with Pie wifi driver", 0				#-- selected.0 = 4
 );
 
 selectbox(

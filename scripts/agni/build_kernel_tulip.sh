@@ -7,9 +7,10 @@ KERNELDIR=`readlink -f .`
 DEVICE="tulip"
 CONFIG1="agni_tulip_defconfig"
 CONFIG2="agni_tulip-oldcam_defconfig"
-CONFIG3=""
+CONFIG3="agni_tulip-MIUI-Q_defconfig"
 SYNC_CONFIG=1
-WLAN_MODQ="$COMPILEDIR/drivers/staging/qcacld-3.0"
+WLAN_MODA11="$COMPILEDIR/drivers/staging/qcacld-3.0"
+WLAN_MODQ="$COMPILEDIR/drivers/staging/qcacld-3.0_Q"
 WLAN_MODP="$COMPILEDIR/drivers/staging/qcacld-3.0_pie"
 WLAN_MODPO="$COMPILEDIR/drivers/staging/qcacld-3.0_pie_old"
 
@@ -48,6 +49,8 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
 echo ""
 
 rm $COMPILEDIR/.config 2>/dev/null
+rm $WLAN_MODA11/*.ko 2>/dev/null
+rm $WLAN_MODQ/*.ko 2>/dev/null
 rm $WLAN_MODP/*.ko 2>/dev/null
 rm $WLAN_MODPO/*.ko 2>/dev/null
 
@@ -67,6 +70,8 @@ else
 	exit;
 fi
 ########## COMPILE new cam END
+mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
+mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
 mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
 mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
 
@@ -77,7 +82,10 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
 echo ""
 
 rm $COMPILEDIR/.config 2>/dev/null
+rm $WLAN_MODA11/*.ko 2>/dev/null
 rm $WLAN_MODQ/*.ko 2>/dev/null
+rm $WLAN_MODP/*.ko 2>/dev/null
+rm $WLAN_MODPO/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG2
 make -j12 O=$COMPILEDIR
@@ -95,21 +103,58 @@ else
 	exit;
 fi
 ########## COMPILE old cam END
-mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_q.ko
+mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
+mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
+mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
+mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
+
+###### COMPILE MIUI-Q cam
+echo ""
+echo " ~~~~~ Cross-compiling AGNi kernel (MIUI-Q cam) $DEVICE ~~~~~"
+echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
+echo ""
+
+rm $COMPILEDIR/.config 2>/dev/null
+rm $WLAN_MODA11/*.ko 2>/dev/null
+rm $WLAN_MODQ/*.ko 2>/dev/null
+rm $WLAN_MODP/*.ko 2>/dev/null
+rm $WLAN_MODPO/*.ko 2>/dev/null
+
+make defconfig O=$COMPILEDIR $CONFIG3
+make -j12 O=$COMPILEDIR # COMPILE
+
+if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
+	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG3
+fi
+rm $COMPILEDIR/.config $COMPILEDIR/.config.old
+
+if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
+	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-mqc
+else
+	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
+	rm -rf $KERNELDIR/$DIR
+	exit;
+fi
+########## COMPILE MIUI-Q cam END
+mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
+mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
+mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
+mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
 
 echo ""
 
 ###### ZIP Packing
-if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ] && ([ -f $KERNELDIR/$DIR/wlan_pie.ko ] || [ -f $KERNELDIR/$DIR/wlan_pie_old.ko ]) && [ -f $KERNELDIR/$DIR/wlan_q.ko ]); then
+if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-mqc ]); then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	sed -i 's/device.name1=/device.name1=tulip/' $KERNELDIR/$DIR/anykernel.sh
-	sed -i '/#NATIVEMIUIQ/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i '/#SDM660/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i '/#AGNIFW/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SETDEVICETYPE/SDM636_tulip (Redmi Note 6 Pro)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SDM636/RedmiNote6Pro/' $KERNELDIR/$DIR/tools/sdm636/init.agni*
-	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko
-	mv $KERNELDIR/$DIR/wlan_q.ko $KERNELDIR/$DIR/tools/wlan_q.ko
+	mv $KERNELDIR/$DIR/wlan_pie.ko $KERNELDIR/$DIR/tools/wlan_pie.ko 2>/dev/null
+	mv $KERNELDIR/$DIR/wlan_pie_old.ko $KERNELDIR/$DIR/tools/wlan_pie_old.ko 2>/dev/null
+	mv $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
+	mv $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm660
 	rm -rf $KERNELDIR/$DIR/tools/sdm660
 	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
