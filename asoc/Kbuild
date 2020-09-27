@@ -154,6 +154,10 @@ ifdef CONFIG_SND_SOC_LAHAINA
 	MACHINE_OBJS += lahaina.o
 endif
 
+ifdef CONFIG_SND_SOC_MDM9650
+	MACHINE_OBJS += sdx-target.o
+endif
+
 # for HOLI sound card driver
 ifdef CONFIG_SND_SOC_HOLI
 	MACHINE_OBJS += holi.o
@@ -275,6 +279,9 @@ obj-$(CONFIG_SND_SOC_KONA) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_LAHAINA) += machine_dlkm.o
+machine_dlkm-y := $(MACHINE_OBJS)
+
+obj-$(CONFIG_SND_SOC_MDM9650) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_HOLI) += machine_dlkm.o
