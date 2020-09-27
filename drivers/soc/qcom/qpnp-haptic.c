@@ -1073,28 +1073,6 @@ static int qpnp_hap_parse_buffer_dt(struct qpnp_hap *hap)
 		memcpy(hap->wave_samp_three, prop->value, QPNP_HAP_WAV_SAMP_LEN);
 	}
 
-#ifdef CONFIG_KERNEL_CUSTOM_D2S_JASMINE
-		prop = of_find_property(pdev->dev.of_node,
-			"qcom,wave-samples-two", &temp);
-	if (!prop || temp != QPNP_HAP_WAV_SAMP_LEN) {
-		pr_err("Invalid wave samples, use default");
-		for (i = 0; i < QPNP_HAP_WAV_SAMP_LEN; i++)
-			hap->wave_samp_two[i] = QPNP_HAP_WAV_SAMP_MAX;
-	} else {
-		memcpy(hap->wave_samp_two, prop->value, QPNP_HAP_WAV_SAMP_LEN);
-	}
-
-		prop = of_find_property(pdev->dev.of_node,
-			"qcom,wave-samples-three", &temp);
-	if (!prop || temp != QPNP_HAP_WAV_SAMP_LEN) {
-		pr_err("Invalid wave samples, use default");
-		for (i = 0; i < QPNP_HAP_WAV_SAMP_LEN; i++)
-			hap->wave_samp_three[i] = QPNP_HAP_WAV_SAMP_MAX;
-	} else {
-		memcpy(hap->wave_samp_three, prop->value, QPNP_HAP_WAV_SAMP_LEN);
-	}
-#endif
-
 	return 0;
 }
 
@@ -2341,96 +2319,34 @@ static void qpnp_hap_td_enable(struct timed_output_dev *dev, int time_ms)
 	if (time_ms < 10)
 		time_ms = 10;
 
-#ifdef CONFIG_KERNEL_CUSTOM_E7T
+	pr_debug("zjl hasfasda haptic  =%d\n",time_ms);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 	vmax_mv = hap->vmax_mv;
 	qpnp_hap_vmax_config(hap, vmax_mv, false);
 #else
-
-#ifdef CONFIG_KERNEL_CUSTOM_F7A
-
-    pr_debug("zjl hasfasda F7A haptic  =%d\n",time_ms);
-
- 	vmax_mv = hap->vmax_mv;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-#else
-
-#ifdef CONFIG_KERNEL_CUSTOM_E7S
-
-    pr_debug("zjl hasfasda E7S haptic  =%d\n",time_ms);
-
- 	vmax_mv = hap->vmax_mv;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-#else
-#ifdef CONFIG_KERNEL_CUSTOM_D2S
- pr_debug("zjl hasfasda D2S haptic  =%d\n",time_ms);
-    if ((time_ms >= 30)||(time_ms != 11)||(time_ms != 15)||(time_ms != 20))
-	{
-	vmax_mv = 2204;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-	hap->play_mode = QPNP_HAP_DIRECT;
-    }
-	else
-	{
-	hap->play_mode = QPNP_HAP_BUFFER;
-	qpnp_hap_parse_buffer_dt(hap);
-	    if (time_ms == 20)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp_three, true);
-		}else if(time_ms == 15)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp_two, true);
-		}else if(time_ms == 11)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp, true);
+    if ((time_ms >= 30) || (time_ms != 11) || (time_ms != 15) || (time_ms != 20)) {
+		vmax_mv = 2204;
+		qpnp_hap_vmax_config(hap, vmax_mv, false);
+		hap->play_mode = QPNP_HAP_DIRECT;
+    } else {
+		hap->play_mode = QPNP_HAP_BUFFER;
+		qpnp_hap_parse_buffer_dt(hap);
+	    if (time_ms == 20) {
+			qpnp_hap_buffer_config(hap, hap->wave_samp_three, true);
+		} else if (time_ms == 15) {
+			qpnp_hap_buffer_config(hap, hap->wave_samp_two, true);
+		} else if (time_ms == 11) {
+			qpnp_hap_buffer_config(hap, hap->wave_samp, true);
 		}
-
-	vmax_mv = 2204;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-
-	hap->play_mode = QPNP_HAP_BUFFER;
-	hap->wave_shape = QPNP_HAP_WAV_SQUARE;
+		vmax_mv = 2204;
+		qpnp_hap_vmax_config(hap, vmax_mv, false);
+		hap->play_mode = QPNP_HAP_BUFFER;
+		hap->wave_shape = QPNP_HAP_WAV_SQUARE;
 	}
 	qpnp_hap_mod_enable(hap, false);
 	qpnp_hap_play_mode_config(hap);
-
 	if (is_sw_lra_auto_resonance_control(hap))
 		hrtimer_cancel(&hap->auto_res_err_poll_timer);
-#else
-    if ((time_ms >= 30)||(time_ms != 11)||(time_ms != 15)||(time_ms != 20))
-	{
-	vmax_mv = 2204;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-	hap->play_mode = QPNP_HAP_DIRECT;
-    }
-	else
-	{
-	hap->play_mode = QPNP_HAP_BUFFER;
-	qpnp_hap_parse_buffer_dt(hap);
-	    if (time_ms == 20)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp_three, true);
-		}else if(time_ms == 15)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp_two, true);
-		}else if(time_ms == 11)
-		{
-		qpnp_hap_buffer_config(hap, hap->wave_samp, true);
-		}
-
-	vmax_mv = 2204;
-	qpnp_hap_vmax_config(hap, vmax_mv, false);
-
-	hap->play_mode = QPNP_HAP_BUFFER;
-	hap->wave_shape = QPNP_HAP_WAV_SQUARE;
-	}
-	qpnp_hap_mod_enable(hap, false);
-	qpnp_hap_play_mode_config(hap);
-    pr_debug("zjl jjjjjj   haptic  =%d\n",time_ms);
-	if (is_sw_lra_auto_resonance_control(hap))
-		hrtimer_cancel(&hap->auto_res_err_poll_timer);
-#endif
-#endif
-#endif
 #endif
 
 	hrtimer_cancel(&hap->hap_timer);
