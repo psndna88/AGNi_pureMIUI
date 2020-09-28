@@ -380,6 +380,19 @@
 		};
 	};
 
+	lt9611_pins: lt9611_pins {
+		mux {
+			pins = "gpio47", "gpio48", "gpio49", "gpio50";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio47", "gpio48", "gpio49", "gpio50";
+			drive-strength = <8>;
+			bias-disable = <0>;
+		};
+	};
+
 	nfc {
 			nfc_int_active: nfc_int_active {
 				/* active state */
