@@ -3,6 +3,7 @@
 #include <dt-bindings/clock/qcom,gcc-sdxlemur.h>
 #include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/soc/qcom,dcc_v2.h>
+#include <dt-bindings/sound/qcom,gpr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 #include <dt-bindings/interconnect/qcom,sdxlemur.h>
@@ -88,6 +89,12 @@
 			alignment = <0x400000>;
 			size = <0xC00000>;
 			linux,cma-default;
+		};
+
+		audio_mem: audio_region@0 {
+			compatible = "shared-dma-pool";
+			no-map;
+			size = <0x400000>;
 		};
 	};
 
@@ -648,6 +655,29 @@
 						0x2000 3
 						0x4400 2>;
 			};
+
+			qcom,gpr {
+				compatible = "qcom,gpr";
+				qcom,glink-channels = "modem_apps";
+				qcom,intents = <0x200 20>;
+				reg = <GPR_DOMAIN_MODEM>;
+
+				spf_core {
+					compatible = "qcom,spf_core";
+					reg = <GPR_SVC_ADSP_CORE>;
+				};
+
+				audio-pkt {
+					compatible = "qcom,audio-pkt";
+					qcom,audiopkt-ch-name = "apr_audio_svc";
+					reg = <GPR_SVC_MAX>;
+				};
+
+				audio_prm {
+					compatible = "qcom,audio_prm";
+					reg = <GPR_SVC_ASM>;
+				};
+			};
 		};
 	};
 
@@ -895,3 +925,4 @@
 #include "sdxlemur-pm.dtsi"
 #include "sdxlemur-pcie.dtsi"
 #include "sdxlemur-blsp.dtsi"
+#include "sdxlemur-audio.dtsi"
