@@ -1776,3 +1776,4 @@
 };
 
 #include "msm-arm-smmu-sm6150.dtsi"
+#include "sm6150-slpi-pinctrl.dtsi"
