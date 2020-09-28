@@ -103,7 +103,6 @@
 		qcom,drv-supported;
 		qcom,l1ss-sleep-disable = <0x1>;
 		qcom,drv-l1ss-timeout-us = <5000>;
-		qcom,use-19p2mhz-aux-clk;
 		qcom,no-l0s-supported;
 		qcom,l1-2-th-scale = <2>;
 		qcom,l1-2-th-value = <70>;
@@ -330,7 +329,6 @@
 
 		qcom,boot-option = <0x1>;
 		qcom,drv-supported;
-		qcom,use-19p2mhz-aux-clk;
 		qcom,wr-halt-size = <0x8>;
 		qcom,no-l0s-supported;
 		qcom,slv-addr-space-size = <0x20000000>;
