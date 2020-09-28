@@ -747,6 +747,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v2[] = {
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 };
 
+/* Generally Iris2 VPSS only support 8 multiple encoding if
+ * rotation/flip is enabled, however customer can require specific
+ * resolution supports and expand capabilities here.
+ */
+static struct msm_vidc_vpss_capability vpss_capabilities[] = {
+	/* {supported width, supported height,} */
+	{3840, 1644},
+	{1644, 3840},
+};
+
 /*
  * Custom conversion coefficients for resolution: 176x144 negative
  * coeffs are converted to s4.9 format
@@ -1514,6 +1524,8 @@ static struct msm_vidc_platform_data lahaina_data = {
 	.codecs_count = ARRAY_SIZE(default_codecs),
 	.codec_caps = lahaina_capabilities,
 	.codec_caps_count = ARRAY_SIZE(lahaina_capabilities),
+	.vpss_caps = vpss_capabilities,
+	.vpss_caps_count = ARRAY_SIZE(vpss_capabilities),
 };
 
 static struct msm_vidc_platform_data bengal_data = {
@@ -1536,6 +1548,8 @@ static struct msm_vidc_platform_data bengal_data = {
 	.codecs_count = ARRAY_SIZE(bengal_codecs),
 	.codec_caps = bengal_capabilities_v0,
 	.codec_caps_count = ARRAY_SIZE(bengal_capabilities_v0),
+	.vpss_caps = NULL,
+	.vpss_caps_count = 0,
 };
 
 static struct msm_vidc_platform_data shima_data = {
@@ -1558,6 +1572,8 @@ static struct msm_vidc_platform_data shima_data = {
 	.codecs_count = ARRAY_SIZE(shima_codecs),
 	.codec_caps = shima_capabilities_v0,
 	.codec_caps_count = ARRAY_SIZE(shima_capabilities_v0),
+	.vpss_caps = vpss_capabilities,
+	.vpss_caps_count = ARRAY_SIZE(vpss_capabilities),
 };
 
 static struct msm_vidc_platform_data holi_data = {
@@ -1580,6 +1596,8 @@ static struct msm_vidc_platform_data holi_data = {
 	.codecs_count = ARRAY_SIZE(holi_codecs),
 	.codec_caps = holi_capabilities,
 	.codec_caps_count = ARRAY_SIZE(holi_capabilities),
+	.vpss_caps = NULL,
+	.vpss_caps_count = 0,
 };
 
 static const struct of_device_id msm_vidc_dt_device[] = {

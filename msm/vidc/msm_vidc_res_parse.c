@@ -733,6 +733,8 @@ int read_platform_resources_from_drv_data(
 	res->codec_data = platform_data->codec_data;
 	res->allowed_clks_tbl = platform_data->clock_data;
 	res->allowed_clks_tbl_size = platform_data->clock_data_length;
+	res->vpss_caps = platform_data->vpss_caps;
+	res->vpss_caps_count = platform_data->vpss_caps_count;
 
 	res->sku_version = platform_data->sku_version;
 	res->mem_limit_tbl = memory_limit_tbl_mbytes;

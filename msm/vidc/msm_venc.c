@@ -4039,6 +4039,9 @@ int msm_venc_check_dynamic_flip_constraints(struct msm_vidc_inst *inst)
 		/* Reject dynamic flip with scalar enabled */
 		s_vpr_e(inst->sid, "Unsupported dynamic flip with scalar\n");
 		rc = -EINVAL;
+	} else if (handle_vpss_restrictions(inst)) {
+		s_vpr_e(inst->sid, "Unsupported resolution for dynamic flip\n");
+		rc = -EINVAL;
 	}
 
 	return rc;
@@ -4825,6 +4828,69 @@ int check_blur_restrictions(struct msm_vidc_inst *inst)
 	return 0;
 }
 
+int handle_vpss_restrictions(struct msm_vidc_inst *inst)
+{
+	struct v4l2_ctrl *rotation = NULL;
+	struct v4l2_ctrl *hflip = NULL;
+	struct v4l2_ctrl *vflip = NULL;
+	struct v4l2_format *f;
+	struct msm_vidc_vpss_capability *vpss_caps;
+	u32 vpss_caps_count;
+	bool rotation_flip_enable = false;
+	u32 i,input_height, input_width;
+
+	if (!inst || !inst->core) {
+		d_vpr_e("%s: invalid params %pK\n", __func__, inst);
+		return -EINVAL;
+	}
+
+	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
+	input_height = f->fmt.pix_mp.height;
+	input_width = f->fmt.pix_mp.width;
+
+	vpss_caps = inst->core->resources.vpss_caps;
+	vpss_caps_count = inst->core->resources.vpss_caps_count;
+
+	/* check customer specified VPSS resolutions */
+	if (vpss_caps) {
+		for (i = 0; i < vpss_caps_count; i++) {
+			if (input_width == vpss_caps[i].width &&
+				input_height == vpss_caps[i].height) {
+				s_vpr_h(inst->sid,
+					"supported resolution found for VPSS, width = %d, height = %d\n",
+					input_width, input_height);
+				return 0;
+			}
+		}
+	}
+
+	/* check rotation and flip contraint for VPSS
+	 * any rotation or flip sessions with non-multiple of 8
+	 * resolution is rejected.
+	 */
+	rotation = get_ctrl(inst, V4L2_CID_ROTATE);
+	hflip = get_ctrl(inst, V4L2_CID_HFLIP);
+	vflip = get_ctrl(inst, V4L2_CID_VFLIP);
+	if (rotation->val != 0 ||
+		hflip->val != V4L2_MPEG_MSM_VIDC_DISABLE ||
+		vflip->val != V4L2_MPEG_MSM_VIDC_DISABLE)
+		rotation_flip_enable = true;
+
+	if (rotation_flip_enable) {
+		if ((input_width & 7) != 0) {
+			s_vpr_e(inst->sid, "Unsupported width = %d for VPSS\n",
+				input_width);
+			return -ENOTSUPP;
+		}
+		if ((input_height & 7) != 0) {
+			s_vpr_e(inst->sid, "Unsupported height = %d for VPSS\n",
+				input_height);
+			return -ENOTSUPP;
+		}
+	}
+	return 0;
+}
+
 int msm_venc_set_properties(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -4836,6 +4902,9 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	if (rc)
 		goto exit;
 	rc = handle_all_intra_restrictions(inst);
+	if (rc)
+		goto exit;
+	rc = handle_vpss_restrictions(inst);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_frame_size(inst);
