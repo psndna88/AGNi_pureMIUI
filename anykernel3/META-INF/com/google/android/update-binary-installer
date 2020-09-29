@@ -701,6 +701,7 @@ $BB chmod 644 /vendor/etc/init/hw/init.agni.rc;
 /sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
 $BB mkdir /vendor/agni 2>/dev/null;
 $BB cp -f $AKHOME/tools/wlan*.ko /vendor/agni/;
+$BB cp -f $AKHOME/tools/8*.ko /vendor/agni/;
 $BB umount /firmware 2>/dev/null;
 $BB umount /dev/block/by-name/modem 2>/dev/null;
 $BB mkdir /firmware 2>/dev/null;

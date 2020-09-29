@@ -39,6 +39,10 @@ on init
 on boot
 	write /sys/module/module/parameters/lock_wlanmodule N
     insmod /vendor/agni/wlan.ko
+    insmod /vendor/agni/8188eu.ko
+    insmod /vendor/agni/8712u.ko
+    insmod /vendor/agni/8723au.ko
+    insmod /vendor/agni/8192eu.ko
 	write /sys/module/module/parameters/lock_wlanmodule Y
     chown wifi wifi /sys/module/wlan/parameters/fwpath
 	write /sys/module/adreno/parameters/true_gpu Y
