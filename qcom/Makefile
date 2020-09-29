@@ -144,6 +144,15 @@ dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_MONACO) +=    \
+	monaco-rumi-overlay.dtbo
+
+monaco-rumi-overlay.dtbo-base := monaco.dtb
+else
+dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_SA8155) += \
 		sa8155-adp-star-overlay.dtbo \
 		sa8155p-adp-star-overlay.dtbo \
