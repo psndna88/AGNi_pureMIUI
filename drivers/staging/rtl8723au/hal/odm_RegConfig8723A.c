@@ -11,78 +11,181 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 
 #include "odm_precomp.h"
-#include "usb_ops_linux.h"
+
+#if (RTL8723A_SUPPORT == 1)
 
 void
 odm_ConfigRFReg_8723A(
-	struct dm_odm_t *pDM_Odm,
+	PDM_ODM_T				pDM_Odm,
 	u32					Addr,
 	u32					Data,
-	enum RF_RADIO_PATH     RF_PATH,
+  ODM_RF_RADIO_PATH_E     RF_PATH,
 	u32				    RegAddr
 	)
 {
-	if (Addr == 0xfe) {
-		msleep(50);
-	} else if (Addr == 0xfd) {
-		mdelay(5);
-	} else if (Addr == 0xfc) {
-		mdelay(1);
-	} else if (Addr == 0xfb) {
-		udelay(50);
-	} else if (Addr == 0xfa) {
-		udelay(5);
-	} else if (Addr == 0xf9) {
-		udelay(1);
-	} else {
+	if(Addr == 0xfe)
+	{
+		#ifdef CONFIG_LONG_DELAY_ISSUE
+		ODM_sleep_ms(50);
+		#else
+		ODM_delay_ms(50);
+		#endif
+	}
+	else if (Addr == 0xfd)
+	{
+		ODM_delay_ms(5);
+	}
+	else if (Addr == 0xfc)
+	{
+		ODM_delay_ms(1);
+	}
+	else if (Addr == 0xfb)
+	{
+		ODM_delay_us(50);
+	}
+	else if (Addr == 0xfa)
+	{
+		ODM_delay_us(5);
+	}
+	else if (Addr == 0xf9)
+	{
+		ODM_delay_us(1);
+	}
+	else
+	{
 		ODM_SetRFReg(pDM_Odm, RF_PATH, RegAddr, bRFRegOffsetMask, Data);
-		/*  Add 1us delay between BB/RF register setting. */
-		udelay(1);
+		// Add 1us delay between BB/RF register setting.
+		ODM_delay_us(1);
 	}
 }
 
-void odm_ConfigMAC_8723A(struct dm_odm_t *pDM_Odm, u32 addr, u8	data)
-{
-	rtl8723au_write8(pDM_Odm->Adapter, addr, data);
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-		     ("===> %s: [MAC_REG] %08X %08X\n", __func__, addr, data));
-}
 
-void odm_ConfigBB_AGC_8723A(struct dm_odm_t *pDM_Odm, u32 addr, u32 data)
+void
+odm_ConfigRF_RadioA_8723A(
+	PDM_ODM_T				pDM_Odm,
+	u32					Addr,
+	u32					Data
+	)
 {
-	rtl8723au_write32(pDM_Odm->Adapter, addr, data);
-	/*  Add 1us delay between BB/RF register setting. */
-	udelay(1);
+	u32  content = 0x1000; // RF_Content: radioa_txt
+	u32	maskforPhySet= (u32)(content&0xE000);
 
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-		     ("===> %s: [AGC_TAB] %08X %08X\n", __func__, addr, data));
+    odm_ConfigRFReg_8723A(pDM_Odm, Addr, Data, ODM_RF_PATH_A, Addr|maskforPhySet);
+
+	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigRFWithHeaderFile: [RadioA] %08X %08X\n", Addr, Data));
 }
 
 void
-odm_ConfigBB_PHY_8723A(struct dm_odm_t *pDM_Odm, u32 addr, u32 data)
+odm_ConfigRF_RadioB_8723A(
+	PDM_ODM_T				pDM_Odm,
+	u32					Addr,
+	u32					Data
+	)
 {
-	if (addr == 0xfe)
-		msleep(50);
-	else if (addr == 0xfd)
-		mdelay(5);
-	else if (addr == 0xfc)
-		mdelay(1);
-	else if (addr == 0xfb)
-		udelay(50);
-	else if (addr == 0xfa)
-		udelay(5);
-	else if (addr == 0xf9)
-		udelay(1);
-	else if (addr == 0xa24)
-		pDM_Odm->RFCalibrateInfo.RegA24 = data;
-	rtl8723au_write32(pDM_Odm->Adapter, addr, data);
+	u32  content = 0x1001; // RF_Content: radiob_txt
+	u32	maskforPhySet= (u32)(content&0xE000);
 
-	/*  Add 1us delay between BB/RF register setting. */
-	udelay(1);
+    odm_ConfigRFReg_8723A(pDM_Odm, Addr, Data, ODM_RF_PATH_B, Addr|maskforPhySet);
 
-	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-		     ("===> %s: [PHY_REG] %08X %08X\n", __func__, addr, data));
+	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigRFWithHeaderFile: [RadioB] %08X %08X\n", Addr, Data));
+
 }
+
+void
+odm_ConfigMAC_8723A(
+	PDM_ODM_T	pDM_Odm,
+	u32		Addr,
+	u8		Data
+	)
+{
+	ODM_Write1Byte(pDM_Odm, Addr, Data);
+	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigMACWithHeaderFile: [MAC_REG] %08X %08X\n", Addr, Data));
+}
+
+void
+odm_ConfigBB_AGC_8723A(
+	PDM_ODM_T	pDM_Odm,
+	u32		Addr,
+	u32		Bitmask,
+	u32		Data
+    )
+{
+	ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);
+	// Add 1us delay between BB/RF register setting.
+	ODM_delay_us(1);
+
+	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigBBWithHeaderFile: [AGC_TAB] %08X %08X\n", Addr, Data));
+}
+
+void
+odm_ConfigBB_PHY_REG_PG_8723A(
+	PDM_ODM_T	pDM_Odm,
+	u32		Addr,
+	u32		Bitmask,
+	u32		Data
+    )
+{
+	if (Addr == 0xfe)
+		#ifdef CONFIG_LONG_DELAY_ISSUE
+		ODM_sleep_ms(50);
+		#else
+		ODM_delay_ms(50);
+		#endif
+	else if (Addr == 0xfd)
+		ODM_delay_ms(5);
+	else if (Addr == 0xfc)
+		ODM_delay_ms(1);
+	else if (Addr == 0xfb)
+		ODM_delay_us(50);
+	else if (Addr == 0xfa)
+		ODM_delay_us(5);
+	else if (Addr == 0xf9)
+		ODM_delay_us(1);
+    // TODO: ODM_StorePwrIndexDiffRateOffset(...)
+	// storePwrIndexDiffRateOffset(Adapter, Addr, Bitmask, Data);
+
+    ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigBBWithHeaderFile: [PHY_REG] %08X %08X %08X\n", Addr, Bitmask, Data));
+}
+
+void
+odm_ConfigBB_PHY_8723A(
+	PDM_ODM_T	pDM_Odm,
+	u32		Addr,
+	u32		Bitmask,
+	u32		Data
+    )
+{
+	if (Addr == 0xfe)
+		#ifdef CONFIG_LONG_DELAY_ISSUE
+		ODM_sleep_ms(50);
+		#else
+		ODM_delay_ms(50);
+		#endif
+	else if (Addr == 0xfd)
+		ODM_delay_ms(5);
+	else if (Addr == 0xfc)
+		ODM_delay_ms(1);
+	else if (Addr == 0xfb)
+		ODM_delay_us(50);
+	else if (Addr == 0xfa)
+		ODM_delay_us(5);
+	else if (Addr == 0xf9)
+		ODM_delay_us(1);
+	else if (Addr == 0xa24)
+		pDM_Odm->RFCalibrateInfo.RegA24 = Data;
+	ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);
+
+	// Add 1us delay between BB/RF register setting.
+	ODM_delay_us(1);
+
+    ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ConfigBBWithHeaderFile: [PHY_REG] %08X %08X\n", Addr, Data));
+}
+#endif

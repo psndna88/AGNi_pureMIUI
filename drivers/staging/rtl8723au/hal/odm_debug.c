@@ -11,29 +11,27 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
+
+//============================================================
+// include files
+//============================================================
 
 #include "odm_precomp.h"
 
-void ODM_InitDebugSetting23a(struct dm_odm_t *pDM_Odm)
+void
+ODM_InitDebugSetting(
+	PDM_ODM_T		pDM_Odm
+	)
 {
-	pDM_Odm->DebugLevel = ODM_DBG_TRACE;
-	pDM_Odm->DebugComponents = 0;
+pDM_Odm->DebugLevel				=	ODM_DBG_TRACE;
+
+pDM_Odm->DebugComponents			= 0;
 }
 
-u32 GlobalDebugLevel23A;
-
-void rt_trace(int comp, int level, const char *fmt, ...)
-{
-	struct va_format vaf;
-	va_list args;
-
-	va_start(args, fmt);
-
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	pr_info(DRIVER_PREFIX " [0x%08x,%d] %pV", comp, level, &vaf);
-
-	va_end(args);
-}
+u32 GlobalDebugLevel;

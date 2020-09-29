@@ -954,7 +954,7 @@ static void process_phy_info(struct _adapter *padapter,
 	process_link_qual(padapter,  prframe);
 }
 
-int recv_func(struct _adapter *padapter, void *pcontext)
+int recv_func_8712(struct _adapter *padapter, void *pcontext)
 {
 	struct rx_pkt_attrib *pattrib;
 	union recv_frame *prframe, *orig_prframe;

@@ -11,14 +11,25 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 #ifndef	__MLME_OSDEP_H_
 #define __MLME_OSDEP_H_
 
+#include <drv_conf.h>
 #include <osdep_service.h>
 #include <drv_types.h>
 
-void rtw_os_indicate_disconnect23a(struct rtw_adapter *adapter);
-void rtw_reset_securitypriv23a(struct rtw_adapter *adapter);
+extern void rtw_init_mlme_timer(struct rtw_adapter *padapter);
+extern void rtw_os_indicate_disconnect(struct rtw_adapter *adapter );
+extern void rtw_os_indicate_connect(struct rtw_adapter *adapter );
+void rtw_os_indicate_scan_done(struct rtw_adapter *padapter, bool aborted);
+extern void rtw_report_sec_ie(struct rtw_adapter *adapter,u8 authmode,u8 *sec_ie);
 
-#endif	/* _MLME_OSDEP_H_ */
+void rtw_reset_securitypriv(struct rtw_adapter *adapter );
+
+#endif	//_MLME_OSDEP_H_

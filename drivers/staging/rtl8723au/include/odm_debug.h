@@ -11,6 +11,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 
 
@@ -18,100 +23,145 @@
 #define __ODM_DBG_H__
 
 
-/*  */
-/*	Define the debug levels */
-/*  */
-/*	1.	DBG_TRACE and DBG_LOUD are used for normal cases. */
-/*	So that, they can help SW engineer to develop or trace states changed */
-/*	and also help HW enginner to trace every operation to and from HW, */
-/*	e.g IO, Tx, Rx. */
-/*  */
-/*	2.	DBG_WARNNING and DBG_SERIOUS are used for unusual or error cases, */
-/*	which help us to debug SW or HW. */
-/*  */
-/*  */
-/*  */
-/*	Never used in a call to ODM_RT_TRACE()! */
-/*  */
+//-----------------------------------------------------------------------------
+//	Define the debug levels
+//
+//	1.	DBG_TRACE and DBG_LOUD are used for normal cases.
+//	So that, they can help SW engineer to develope or trace states changed
+//	and also help HW enginner to trace every operation to and from HW,
+//	e.g IO, Tx, Rx.
+//
+//	2.	DBG_WARNNING and DBG_SERIOUS are used for unusual or error cases,
+//	which help us to debug SW or HW.
+//
+//-----------------------------------------------------------------------------
+//
+//	Never used in a call to ODM_RT_TRACE()!
+//
 #define ODM_DBG_OFF					1
 
-/*  */
-/*	Fatal bug. */
-/*	For example, Tx/Rx/IO locked up, OS hangs, memory access violation, */
-/*	resource allocation failed, unexpected HW behavior, HW BUG and so on. */
-/*  */
+//
+//	Fatal bug.
+//	For example, Tx/Rx/IO locked up, OS hangs, memory access violation,
+//	resource allocation failed, unexpected HW behavior, HW BUG and so on.
+//
 #define ODM_DBG_SERIOUS				2
 
-/*  */
-/*	Abnormal, rare, or unexpeted cases. */
-/*	For example, IRP/Packet/OID canceled, device suprisely unremoved and so on. */
-/*  */
+//
+//	Abnormal, rare, or unexpeted cases.
+//	For example, IRP/Packet/OID canceled, device suprisely unremoved and so on.
+//
 #define ODM_DBG_WARNING				3
 
-/*  */
-/*	Normal case with useful information about current SW or HW state. */
-/*	For example, Tx/Rx descriptor to fill, Tx/Rx descriptor completed status, */
-/*	SW protocol state change, dynamic mechanism state change and so on. */
-/*  */
+//
+//	Normal case with useful information about current SW or HW state.
+//	For example, Tx/Rx descriptor to fill, Tx/Rx descriptor completed status,
+//	SW protocol state change, dynamic mechanism state change and so on.
+//
 #define ODM_DBG_LOUD					4
 
-/*  */
-/*	Normal case with detail execution flow or information. */
-/*  */
+//
+//	Normal case with detail execution flow or information.
+//
 #define ODM_DBG_TRACE					5
 
-/*  */
-/*  Define the tracing components */
-/*  */
-/*  */
-/* BB Functions */
-#define ODM_COMP_DIG				BIT(0)
-#define ODM_COMP_RA_MASK			BIT(1)
-#define ODM_COMP_DYNAMIC_TXPWR			BIT(2)
-#define ODM_COMP_FA_CNT				BIT(3)
-#define ODM_COMP_RSSI_MONITOR			BIT(4)
-#define ODM_COMP_CCK_PD				BIT(5)
-#define ODM_COMP_ANT_DIV			BIT(6)
-#define ODM_COMP_PWR_SAVE			BIT(7)
-#define ODM_COMP_PWR_TRAIN			BIT(8)
-#define ODM_COMP_RATE_ADAPTIVE			BIT(9)
-#define ODM_COMP_PATH_DIV			BIT(10)
-#define ODM_COMP_PSD				BIT(11)
-#define ODM_COMP_DYNAMIC_PRICCA			BIT(12)
-#define ODM_COMP_RXHP				BIT(13)
-/* MAC Functions */
-#define ODM_COMP_EDCA_TURBO			BIT(16)
-#define ODM_COMP_EARLY_MODE			BIT(17)
-/* RF Functions */
-#define ODM_COMP_TX_PWR_TRACK			BIT(24)
-#define ODM_COMP_RX_GAIN_TRACK			BIT(25)
-#define ODM_COMP_CALIBRATION			BIT(26)
-/* Common Functions */
-#define ODM_COMP_COMMON				BIT(30)
-#define ODM_COMP_INIT				BIT(31)
+//-----------------------------------------------------------------------------
+// Define the tracing components
+//
+//-----------------------------------------------------------------------------
+//BB Functions
+#define ODM_COMP_DIG					BIT0
+#define ODM_COMP_RA_MASK				BIT1
+#define ODM_COMP_DYNAMIC_TXPWR		BIT2
+#define ODM_COMP_FA_CNT				BIT3
+#define ODM_COMP_RSSI_MONITOR		BIT4
+#define ODM_COMP_CCK_PD				BIT5
+#define ODM_COMP_ANT_DIV				BIT6
+#define ODM_COMP_PWR_SAVE			BIT7
+#define ODM_COMP_PWR_TRAIN			BIT8
+#define ODM_COMP_RATE_ADAPTIVE		BIT9
+#define ODM_COMP_PATH_DIV				BIT10
+#define ODM_COMP_PSD					BIT11
+#define ODM_COMP_DYNAMIC_PRICCA		BIT12
+#define ODM_COMP_RXHP				BIT13
+//MAC Functions
+#define ODM_COMP_EDCA_TURBO			BIT16
+#define ODM_COMP_EARLY_MODE			BIT17
+//RF Functions
+#define ODM_COMP_TX_PWR_TRACK		BIT24
+#define ODM_COMP_RX_GAIN_TRACK		BIT25
+#define ODM_COMP_CALIBRATION			BIT26
+//Common Functions
+#define ODM_COMP_COMMON				BIT30
+#define ODM_COMP_INIT					BIT31
 
-/*------------------------Export Macro Definition---------------------------*/
-	#define RT_PRINTK(fmt, args...)	printk("%s(): " fmt, __func__, ## args);
+/*------------------------Export Marco Definition---------------------------*/
+	#define DbgPrint	printk
+	#define RT_PRINTK(fmt, args...)	DbgPrint( "%s(): " fmt, __FUNCTION__, ## args);
 
 #ifndef ASSERT
 	#define ASSERT(expr)
 #endif
 
-#define ODM_RT_TRACE(pDM_Odm, comp, level, fmt)							\
+#if DBG
+#define ODM_RT_TRACE(pDM_Odm, comp, level, fmt)									\
 		if(((comp) & pDM_Odm->DebugComponents) && (level <= pDM_Odm->DebugLevel))	\
-		{										\
-			printk("[ODM-8723A] ");						\
-			RT_PRINTK fmt;								\
+		{																			\
+			if(pDM_Odm->SupportICType == ODM_RTL8192C)								\
+				DbgPrint("[ODM-92C] ");												\
+			else if(pDM_Odm->SupportICType == ODM_RTL8192D)							\
+				DbgPrint("[ODM-92D] ");												\
+			else if(pDM_Odm->SupportICType == ODM_RTL8723A)							\
+				DbgPrint("[ODM-8723A] ");												\
+			else if(pDM_Odm->SupportICType == ODM_RTL8188E)							\
+				DbgPrint("[ODM-8188E] ");												\
+			else if(pDM_Odm->SupportICType == ODM_RTL8812)							\
+				DbgPrint("[ODM-8812] ");												\
+			else if(pDM_Odm->SupportICType == ODM_RTL8821)							\
+				DbgPrint("[ODM-8821] ");												\
+			RT_PRINTK fmt;															\
 		}
 
-#define ODM_RT_ASSERT(pDM_Odm, expr, fmt)							\
-		if(!(expr)) {									\
-			printk("Assertion failed! %s at ......\n", #expr);			\
-			printk("      ......%s,%s,line=%d\n", __FILE__, __func__, __LINE__);\
-			RT_PRINTK fmt;								\
-			ASSERT(false);								\
+#define ODM_RT_TRACE_F(pDM_Odm, comp, level, fmt)									\
+		if(((comp) & pDM_Odm->DebugComponents) && (level <= pDM_Odm->DebugLevel))	\
+		{																			\
+			RT_PRINTK fmt;															\
 		}
 
-void ODM_InitDebugSetting23a(struct dm_odm_t *pDM_Odm);
+#define ODM_RT_ASSERT(pDM_Odm, expr, fmt)											\
+		if(!(expr)) {																	\
+			DbgPrint( "Assertion failed! %s at ......\n", #expr);								\
+			DbgPrint( "      ......%s,%s,line=%d\n",__FILE__,__FUNCTION__,__LINE__);			\
+			RT_PRINTK fmt;															\
+			ASSERT(FALSE);															\
+		}
+#define ODM_dbg_enter() { DbgPrint("==> %s\n", __FUNCTION__); }
+#define ODM_dbg_exit() { DbgPrint("<== %s\n", __FUNCTION__); }
+#define ODM_dbg_trace(str) { DbgPrint("%s:%s\n", __FUNCTION__, str); }
 
-#endif	/*  __ODM_DBG_H__ */
+#define ODM_PRINT_ADDR(pDM_Odm, comp, level, title_str, ptr)						\
+			if(((comp) & pDM_Odm->DebugComponents) && (level <= pDM_Odm->DebugLevel))	\
+			{																		\
+				int __i;																\
+				u8 *	__ptr = (u8 *)ptr;											\
+				DbgPrint("[ODM] ");													\
+				DbgPrint(title_str);												\
+				DbgPrint(" ");														\
+				for( __i=0; __i<6; __i++ )												\
+					DbgPrint("%02X%s", __ptr[__i], (__i==5)?"":"-");						\
+				DbgPrint("\n");														\
+			}
+#else
+#define ODM_RT_TRACE(pDM_Odm, comp, level, fmt)
+#define ODM_RT_TRACE_F(pDM_Odm, comp, level, fmt)
+#define ODM_RT_ASSERT(pDM_Odm, expr, fmt)
+#define ODM_dbg_enter()
+#define ODM_dbg_exit()
+#define ODM_dbg_trace(str)
+#define ODM_PRINT_ADDR(pDM_Odm, comp, level, title_str, ptr)
+#endif
+
+
+void ODM_InitDebugSetting(PDM_ODM_T pDM_Odm);
+
+#endif	// __ODM_DBG_H__

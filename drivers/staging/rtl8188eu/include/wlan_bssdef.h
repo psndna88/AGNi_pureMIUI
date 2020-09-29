@@ -20,7 +20,6 @@
 #ifndef __WLAN_BSSDEF_H__
 #define __WLAN_BSSDEF_H__
 
-
 #define MAX_IE_SZ			768
 
 #define NDIS_802_11_LENGTH_SSID         32
@@ -74,8 +73,6 @@ struct ndis_802_11_fixed_ie {
 	u16  BeaconInterval;
 	u16  Capabilities;
 };
-
-
 
 struct ndis_802_11_var_ie {
 	u8  ElementID;
@@ -156,6 +153,16 @@ enum ndis_802_11_reload_def {
 	Ndis802_11ReloadWEPKeys
 };
 
+/*  Key mapping keys require a BSSID */
+struct ndis_802_11_key {
+	u32           Length;             /*  Length of this structure */
+	u32           KeyIndex;
+	u32           KeyLength;          /*  length of key in bytes */
+	unsigned char BSSID[ETH_ALEN];
+	unsigned long long KeyRSC;
+	u8           KeyMaterial[32];  /* var len depending on above field */
+};
+
 struct ndis_802_11_remove_key {
 	u32                   Length;        /*  Length */
 	u32                   KeyIndex;
@@ -211,7 +218,6 @@ struct ndis_802_11_test {
 		NDIS_802_11_RSSI RssiTrigger;
 	} tt;
 };
-
 
 #ifndef Ndis802_11APMode
 #define Ndis802_11APMode (Ndis802_11InfrastructureMax+1)
@@ -329,5 +335,9 @@ struct ndis_802_11_cap {
 	u32  NoOfAuthEncryptPairsSupported;
 	struct ndis_802_11_auth_encrypt AuthenticationEncryptionSupported[1];
 };
+
+u8 key_2char2num(u8 hch, u8 lch);
+u8 key_char2num(u8 ch);
+u8 str_2char2num(u8 hch, u8 lch);
 
 #endif /* ifndef WLAN_BSSDEF_H_ */

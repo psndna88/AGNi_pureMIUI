@@ -11,31 +11,50 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 #ifndef __USB_OPS_LINUX_H__
 #define __USB_OPS_LINUX_H__
 
 #define VENDOR_CMD_MAX_DATA_LEN	254
 
-#define RTW_USB_CONTROL_MSG_TIMEOUT	500/* ms */
+#define RTW_USB_CONTROL_MSG_TIMEOUT_TEST	10//ms
+#define RTW_USB_CONTROL_MSG_TIMEOUT	500//ms
 
+#if defined(CONFIG_VENDOR_REQ_RETRY) && defined(CONFIG_USB_VENDOR_REQ_MUTEX)
+/* vendor req retry should be in the situation when each vendor req is atomically submitted from others */
 #define MAX_USBCTRL_VENDORREQ_TIMES	10
+#else
+#define MAX_USBCTRL_VENDORREQ_TIMES	1
+#endif
 
-int rtl8723au_read_port(struct rtw_adapter *adapter, u32 cnt,
-			struct recv_buf *precvbuf);
-void rtl8723au_read_port_cancel(struct rtw_adapter *padapter);
-int rtl8723au_write_port(struct rtw_adapter *padapter, u32 addr, u32 cnt,
-			 struct xmit_buf *pxmitbuf);
-void rtl8723au_write_port_cancel(struct rtw_adapter *padapter);
-int rtl8723au_read_interrupt(struct rtw_adapter *adapter);
+#define RTW_USB_BULKOUT_TIMEOUT	5000//ms
 
-u8 rtl8723au_read8(struct rtw_adapter *padapter, u16 addr);
-u16 rtl8723au_read16(struct rtw_adapter *padapter, u16 addr);
-u32 rtl8723au_read32(struct rtw_adapter *padapter, u16 addr);
-int rtl8723au_write8(struct rtw_adapter *padapter, u16 addr, u8 val);
-int rtl8723au_write16(struct rtw_adapter *padapter, u16 addr, u16 val);
-int rtl8723au_write32(struct rtw_adapter *padapter, u16 addr, u32 val);
-int rtl8723au_writeN(struct rtw_adapter *padapter,
-		     u16 addr, u16 length, u8 *pdata);
+#define _usbctrl_vendorreq_async_callback(urb, regs)	_usbctrl_vendorreq_async_callback(urb)
+#define usb_bulkout_zero_complete(purb, regs)	usb_bulkout_zero_complete(purb)
+#define usb_write_mem_complete(purb, regs)	usb_write_mem_complete(purb)
+#define usb_write_port_complete(purb, regs)	usb_write_port_complete(purb)
+#define usb_read_port_complete(purb, regs)	usb_read_port_complete(purb)
+#define usb_read_interrupt_complete(purb, regs)	usb_read_interrupt_complete(purb)
+
+#ifdef CONFIG_USB_SUPPORT_ASYNC_VDN_REQ
+int usb_async_write8(struct intf_hdl *pintfhdl, u32 addr, u8 val);
+int usb_async_write16(struct intf_hdl *pintfhdl, u32 addr, u16 val);
+int usb_async_write32(struct intf_hdl *pintfhdl, u32 addr, u32 val);
+#endif /* CONFIG_USB_SUPPORT_ASYNC_VDN_REQ */
+
+unsigned int ffaddr2pipehdl(struct dvobj_priv *pdvobj, u32 addr);
+
+void usb_read_mem(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *rmem);
+void usb_write_mem(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *wmem);
+
+void usb_read_port_cancel(struct intf_hdl *pintfhdl);
+
+u32 usb_write_port(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *wmem);
+void usb_write_port_cancel(struct intf_hdl *pintfhdl);
 
 #endif

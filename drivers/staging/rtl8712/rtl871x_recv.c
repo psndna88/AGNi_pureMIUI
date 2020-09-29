@@ -673,7 +673,7 @@ s32 r8712_recv_entry(union recv_frame *precvframe)
 
 	padapter->ledpriv.LedControlHandler(padapter, LED_CTL_RX);
 
-	ret = recv_func(padapter, precvframe);
+	ret = recv_func_8712(padapter, precvframe);
 	if (ret == _FAIL)
 		goto _recv_entry_drop;
 	precvpriv->rx_pkts++;

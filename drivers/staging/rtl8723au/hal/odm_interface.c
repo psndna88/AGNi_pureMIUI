@@ -11,39 +11,626 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 
-/*  */
-/*  include files */
-/*  */
+//============================================================
+// include files
+//============================================================
 
 #include "odm_precomp.h"
-/*  */
-/*  ODM IO Relative API. */
-/*  */
-#include <usb_ops_linux.h>
+//
+// ODM IO Relative API.
+//
 
-void ODM_SetRFReg(
-	struct dm_odm_t *pDM_Odm,
-	enum RF_RADIO_PATH	eRFPath,
+u8
+ODM_Read1Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	return	RTL_R8(RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return rtw_read8(Adapter,RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return	PlatformEFIORead1Byte(Adapter, RegAddr);
+#endif
+
+}
+
+
+u16
+ODM_Read2Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	return	RTL_R16(RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return rtw_read16(Adapter,RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return	PlatformEFIORead2Byte(Adapter, RegAddr);
+#endif
+
+}
+
+
+u32
+ODM_Read4Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	return	RTL_R32(RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return rtw_read32(Adapter,RegAddr);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return	PlatformEFIORead4Byte(Adapter, RegAddr);
+#endif
+
+}
+
+
+void
+ODM_Write1Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr,
+	u8			Data
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	RTL_W8(RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	rtw_write8(Adapter,RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformEFIOWrite1Byte(Adapter, RegAddr, Data);
+#endif
+
+}
+
+
+void
+ODM_Write2Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr,
+	u16			Data
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	RTL_W16(RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	rtw_write16(Adapter,RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformEFIOWrite2Byte(Adapter, RegAddr, Data);
+#endif
+
+}
+
+
+void
+ODM_Write4Byte(
+	PDM_ODM_T		pDM_Odm,
+	u32			RegAddr,
+	u32			Data
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	prtl8192cd_priv	priv	= pDM_Odm->priv;
+	RTL_W32(RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	rtw_write32(Adapter,RegAddr, Data);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformEFIOWrite4Byte(Adapter, RegAddr, Data);
+#endif
+
+}
+
+
+void
+ODM_SetMACReg(
+	PDM_ODM_T	pDM_Odm,
+	u32		RegAddr,
+	u32		BitMask,
+	u32		Data
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	PHY_SetBBReg(pDM_Odm->priv, RegAddr, BitMask, Data);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PHY_SetBBReg(Adapter, RegAddr, BitMask, Data);
+#endif
+}
+
+
+u32
+ODM_GetMACReg(
+	PDM_ODM_T	pDM_Odm,
+	u32		RegAddr,
+	u32		BitMask
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	return PHY_QueryBBReg(pDM_Odm->priv, RegAddr, BitMask);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return PHY_QueryBBReg(Adapter, RegAddr, BitMask);
+#endif
+}
+
+
+void
+ODM_SetBBReg(
+	PDM_ODM_T	pDM_Odm,
+	u32		RegAddr,
+	u32		BitMask,
+	u32		Data
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	PHY_SetBBReg(pDM_Odm->priv, RegAddr, BitMask, Data);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PHY_SetBBReg(Adapter, RegAddr, BitMask, Data);
+#endif
+}
+
+
+u32
+ODM_GetBBReg(
+	PDM_ODM_T	pDM_Odm,
+	u32		RegAddr,
+	u32		BitMask
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	return PHY_QueryBBReg(pDM_Odm->priv, RegAddr, BitMask);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return PHY_QueryBBReg(Adapter, RegAddr, BitMask);
+#endif
+}
+
+
+void
+ODM_SetRFReg(
+	PDM_ODM_T			pDM_Odm,
+	ODM_RF_RADIO_PATH_E	eRFPath,
 	u32				RegAddr,
 	u32				BitMask,
 	u32				Data
 	)
 {
-	struct rtw_adapter *Adapter = pDM_Odm->Adapter;
-
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	PHY_SetRFReg(pDM_Odm->priv, eRFPath, RegAddr, BitMask, Data);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
 	PHY_SetRFReg(Adapter, eRFPath, RegAddr, BitMask, Data);
+#endif
 }
 
-u32 ODM_GetRFReg(
-	struct dm_odm_t *pDM_Odm,
-	enum RF_RADIO_PATH	eRFPath,
+
+u32
+ODM_GetRFReg(
+	PDM_ODM_T			pDM_Odm,
+	ODM_RF_RADIO_PATH_E	eRFPath,
 	u32				RegAddr,
 	u32				BitMask
 	)
 {
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	return PHY_QueryRFReg(pDM_Odm->priv, eRFPath, RegAddr, BitMask, 1);
+#elif(DM_ODM_SUPPORT_TYPE & (ODM_CE|ODM_MP))
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	return PHY_QueryRFReg(Adapter, eRFPath, RegAddr, BitMask);
+#endif
+}
+
+
+
+
+//
+// ODM Memory relative API.
+//
+void
+ODM_AllocateMemory(
+	PDM_ODM_T	pDM_Odm,
+	void *		*pPtr,
+	u32		length
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	*pPtr = kmalloc(length, GFP_ATOMIC);
+#elif (DM_ODM_SUPPORT_TYPE & ODM_CE )
+	*pPtr = rtw_zvmalloc(length);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformAllocateMemory(Adapter, pPtr, length);
+#endif
+}
+
+// length could be ignored, used to detect memory leakage.
+void
+ODM_FreeMemory(
+	PDM_ODM_T	pDM_Odm,
+	void *		pPtr,
+	u32		length
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	kfree(pPtr);
+#elif (DM_ODM_SUPPORT_TYPE & ODM_CE )
+	rtw_vmfree(pPtr, length);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	//struct rtw_adapter *   Adapter = pDM_Odm->Adapter;
+	PlatformFreeMemory(pPtr, length);
+#endif
+}
+
+
+//
+// ODM MISC relative API.
+//
+void
+ODM_AcquireSpinLock(
+	PDM_ODM_T			pDM_Odm,
+	RT_SPINLOCK_TYPE	type
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif (DM_ODM_SUPPORT_TYPE & ODM_CE )
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformAcquireSpinLock(Adapter, type);
+#endif
+}
+void
+ODM_ReleaseSpinLock(
+	PDM_ODM_T			pDM_Odm,
+	RT_SPINLOCK_TYPE	type
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif (DM_ODM_SUPPORT_TYPE & ODM_CE )
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformReleaseSpinLock(Adapter, type);
+#endif
+}
+
+//
+// Work item relative API. FOr MP driver only~!
+//
+void
+ODM_InitializeWorkItem(
+	PDM_ODM_T					pDM_Odm,
+	PRT_WORK_ITEM				pRtWorkItem,
+	RT_WORKITEM_CALL_BACK		RtWorkItemCallback,
+	void *						pContext,
+	const char*					szID
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformInitializeWorkItem(Adapter, pRtWorkItem, RtWorkItemCallback, pContext, szID);
+#endif
+}
+
+
+void
+ODM_StartWorkItem(
+	PRT_WORK_ITEM	pRtWorkItem
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformStartWorkItem(pRtWorkItem);
+#endif
+}
+
+
+void
+ODM_StopWorkItem(
+	PRT_WORK_ITEM	pRtWorkItem
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformStopWorkItem(pRtWorkItem);
+#endif
+}
+
+
+void
+ODM_FreeWorkItem(
+	PRT_WORK_ITEM	pRtWorkItem
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformFreeWorkItem(pRtWorkItem);
+#endif
+}
+
+
+void
+ODM_ScheduleWorkItem(
+	PRT_WORK_ITEM	pRtWorkItem
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformScheduleWorkItem(pRtWorkItem);
+#endif
+}
+
+
+void
+ODM_IsWorkItemScheduled(
+	PRT_WORK_ITEM	pRtWorkItem
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformIsWorkItemScheduled(pRtWorkItem);
+#endif
+}
+
+
+
+//
+// ODM Timer relative API.
+//
+void
+ODM_StallExecution(
+	u32	usDelay
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	rtw_udelay_os(usDelay);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformStallExecution(usDelay);
+#endif
+}
+
+void
+ODM_delay_ms(u32	ms)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	delay_ms(ms);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	rtw_mdelay_os(ms);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	delay_ms(ms);
+#endif
+}
+
+void
+ODM_delay_us(u32	us)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	delay_us(us);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	rtw_udelay_os(us);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	PlatformStallExecution(us);
+#endif
+}
+
+void
+ODM_sleep_ms(u32	ms)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	msleep(ms);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+#endif
+}
+
+void
+ODM_sleep_us(u32	us)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	rtw_usleep_os(us);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+#endif
+}
+
+void
+ODM_SetTimer(
+	PDM_ODM_T		pDM_Odm,
+	PRT_TIMER		pTimer,
+	u32			msDelay
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	mod_timer(pTimer, jiffies + (msDelay+9)/10);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	_set_timer(pTimer,msDelay ); //ms
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *		Adapter = pDM_Odm->Adapter;
+	PlatformSetTimer(Adapter, pTimer, msDelay);
+#endif
+
+}
+
+void
+ODM_InitializeTimer(
+	PDM_ODM_T			pDM_Odm,
+	PRT_TIMER			pTimer,
+	RT_TIMER_CALL_BACK	CallBackFunc,
+	void *				pContext,
+	const char*			szID
+	)
+{
+	struct rtw_adapter *Adapter = pDM_Odm->Adapter;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	_init_timer(pTimer,Adapter->pnetdev,CallBackFunc,pDM_Odm);
+#else
+	timer_setup(pTimer, CallBackFunc, 0);
+#endif
+}
+
+
+void
+ODM_CancelTimer(
+	PDM_ODM_T		pDM_Odm,
+	PRT_TIMER		pTimer
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+	del_timer_sync(pTimer);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+	_cancel_timer_ex(pTimer);
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	struct rtw_adapter *Adapter = pDM_Odm->Adapter;
+	PlatformCancelTimer(Adapter, pTimer);
+#endif
+}
+
+
+void
+ODM_ReleaseTimer(
+	PDM_ODM_T		pDM_Odm,
+	PRT_TIMER		pTimer
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+
 	struct rtw_adapter *Adapter = pDM_Odm->Adapter;
 
-	return PHY_QueryRFReg(Adapter, eRFPath, RegAddr, BitMask);
+    // <20120301, Kordan> If the initilization fails, InitializeAdapterXxx will return regardless of InitHalDm.
+    // Hence, uninitialized timers cause BSOD when the driver releases resources since the init fail.
+    if (pTimer == 0)
+    {
+        ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_SERIOUS, ("=====>ODM_ReleaseTimer(), The timer is NULL! Please check it!\n"));
+        return;
+    }
+
+	PlatformReleaseTimer(Adapter, pTimer);
+#endif
 }
+
+
+//
+// ODM FW relative API.
+//
+#if (DM_ODM_SUPPORT_TYPE & ODM_MP)
+void
+ODM_FillH2CCmd(struct rtw_adapter *Adapter, u8 ElementID,
+	       u32 CmdLen, u8 *pCmdBuffer)
+{
+	if(IS_HARDWARE_TYPE_JAGUAR(Adapter))
+	{
+		switch(ElementID)
+		{
+		case ODM_H2C_RSSI_REPORT:
+			FillH2CCmd8812(Adapter, H2C_8812_RSSI_REPORT, CmdLen, pCmdBuffer);
+		default:
+			break;
+		}
+
+	}
+	else if(IS_HARDWARE_TYPE_8188E(Adapter))
+	{
+		switch(ElementID)
+		{
+		case ODM_H2C_PSD_RESULT:
+			FillH2CCmd88E(Adapter, H2C_88E_PSD_RESULT, CmdLen, pCmdBuffer);
+		default:
+			break;
+		}
+	}
+	else
+	{
+		switch(ElementID)
+		{
+		case ODM_H2C_RSSI_REPORT:
+			FillH2CCmd92C(Adapter, H2C_RSSI_REPORT, CmdLen, pCmdBuffer);
+		case ODM_H2C_PSD_RESULT:
+			FillH2CCmd92C(Adapter, H2C_92C_PSD_RESULT, CmdLen, pCmdBuffer);
+		default:
+			break;
+		}
+	}
+}
+#else
+u32
+ODM_FillH2CCmd(
+	u8 *		pH2CBuffer,
+	u32		H2CBufferLen,
+	u32		CmdNum,
+	u32 *		pElementID,
+	u32 *		pCmdLen,
+	u8 **		pCmbBuffer,
+	u8 *		CmdStartSeq
+	)
+{
+#if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_CE)
+
+#elif(DM_ODM_SUPPORT_TYPE & ODM_MP)
+	//FillH2CCmd(pH2CBuffer, H2CBufferLen, CmdNum, pElementID, pCmdLen, pCmbBuffer, CmdStartSeq);
+	return	FALSE;
+#endif
+
+	return	TRUE;
+}
+#endif

@@ -17,6 +17,8 @@
  *
  *
  ******************************************************************************/
+#define _RECV_OSDEP_C_
+
 #include <osdep_service.h>
 #include <drv_types.h>
 
@@ -24,24 +26,58 @@
 #include <recv_osdep.h>
 
 #include <osdep_intf.h>
-#include <usb_ops_linux.h>
+#include <ethernet.h>
+#include <usb_ops.h>
+
+/* init os related resource in struct recv_priv */
+int rtw_os_recv_resource_init(struct recv_priv *precvpriv,
+			      struct adapter *padapter)
+{
+	return _SUCCESS;
+}
 
 /* alloc os related resource in struct recv_frame */
-void rtw_os_recv_resource_alloc(struct recv_frame *precvframe)
+int rtw_os_recv_resource_alloc(struct adapter *padapter,
+			       struct recv_frame *precvframe)
 {
 	precvframe->pkt_newalloc = NULL;
 	precvframe->pkt = NULL;
+	return _SUCCESS;
+}
+
+/* free os related resource in struct recv_frame */
+void rtw_os_recv_resource_free(struct recv_priv *precvpriv)
+{
 }
 
 /* alloc os related resource in struct recv_buf */
 int rtw_os_recvbuf_resource_alloc(struct adapter *padapter,
 				  struct recv_buf *precvbuf)
 {
+	int res = _SUCCESS;
+
+	precvbuf->irp_pending = false;
+	precvbuf->purb = usb_alloc_urb(0, GFP_KERNEL);
+	if (precvbuf->purb == NULL)
+		res = _FAIL;
 	precvbuf->pskb = NULL;
 	precvbuf->reuse = false;
-	precvbuf->purb = usb_alloc_urb(0, GFP_KERNEL);
-	if (!precvbuf->purb)
-		return _FAIL;
+	precvbuf->pallocated_buf = NULL;
+	precvbuf->pbuf = NULL;
+	precvbuf->pdata = NULL;
+	precvbuf->phead = NULL;
+	precvbuf->ptail = NULL;
+	precvbuf->pend = NULL;
+	precvbuf->transfer_len = 0;
+	precvbuf->len = 0;
+	return res;
+}
+
+/* free os related resource in struct recv_buf */
+int rtw_os_recvbuf_resource_free(struct adapter *padapter,
+				 struct recv_buf *precvbuf)
+{
+		usb_free_urb(precvbuf->purb);
 	return _SUCCESS;
 }
 
@@ -81,6 +117,11 @@ void rtw_handle_tkip_mic_err(struct adapter *padapter, u8 bgroup)
 			    &wrqu, (char *)&ev);
 }
 
+void rtw_hostapd_mlme_rx(struct adapter *padapter,
+			 struct recv_frame *precv_frame)
+{
+}
+
 int rtw_recv_indicatepkt(struct adapter *padapter,
 			 struct recv_frame *precv_frame)
 {
@@ -89,12 +130,11 @@ int rtw_recv_indicatepkt(struct adapter *padapter,
 	struct sk_buff *skb;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
-
 	precvpriv = &(padapter->recvpriv);
 	pfree_recv_queue = &(precvpriv->free_recv_queue);
 
 	skb = precv_frame->pkt;
-	if (!skb) {
+	if (skb == NULL) {
 		RT_TRACE(_module_recv_osdep_c_, _drv_err_,
 			 ("rtw_recv_indicatepkt():skb == NULL something wrong!!!!\n"));
 		goto _recv_indicatepkt_drop;
@@ -129,7 +169,7 @@ int rtw_recv_indicatepkt(struct adapter *padapter,
 		int bmcast = IS_MCAST(pattrib->dst);
 
 		if (memcmp(pattrib->dst, myid(&padapter->eeprompriv),
-			   ETH_ALEN)) {
+				 ETH_ALEN)) {
 			if (bmcast) {
 				psta = rtw_get_bcmc_stainfo(padapter);
 				pskb2 = skb_clone(skb, GFP_ATOMIC);
@@ -155,7 +195,11 @@ int rtw_recv_indicatepkt(struct adapter *padapter,
 	}
 
 	rcu_read_lock();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	rcu_dereference(padapter->pnetdev->rx_handler_data);
+#else
+	rcu_dereference(padapter->pnetdev->br_port);
+#endif
 	rcu_read_unlock();
 
 	skb->ip_summed = CHECKSUM_NONE;
@@ -174,21 +218,53 @@ _recv_indicatepkt_end:
 	RT_TRACE(_module_recv_osdep_c_, _drv_info_,
 		 ("\n rtw_recv_indicatepkt :after netif_rx!!!!\n"));
 
-
 	return _SUCCESS;
 
 _recv_indicatepkt_drop:
 
 	 /* enqueue back to free_recv_queue */
-	rtw_free_recvframe(precv_frame, pfree_recv_queue);
+		rtw_free_recvframe(precv_frame, pfree_recv_queue);
 
 	 return _FAIL;
 }
 
+void rtw_os_read_port(struct adapter *padapter, struct recv_buf *precvbuf)
+{
+	struct recv_priv *precvpriv = &padapter->recvpriv;
+
+	precvbuf->ref_cnt--;
+	/* free skb in recv_buf */
+	dev_kfree_skb_any(precvbuf->pskb);
+	precvbuf->pskb = NULL;
+	precvbuf->reuse = false;
+	if (!precvbuf->irp_pending)
+		rtw_read_port(padapter, precvpriv->ff_hwaddr, 0,
+			      (unsigned char *)precvbuf);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+static void _rtw_reordering_ctrl_timeout_handler(void *func_context)
+#else
+static void _rtw_reordering_ctrl_timeout_handler(struct timer_list *t)
+#endif
+{
+	struct recv_reorder_ctrl *preorder_ctrl;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	preorder_ctrl = (struct recv_reorder_ctrl *)func_context;
+#else
+	preorder_ctrl = from_timer(preorder_ctrl, t, reordering_ctrl_timer);
+#endif
+	rtw_reordering_ctrl_timeout_handler(preorder_ctrl);
+}
+
 void rtw_init_recv_timer(struct recv_reorder_ctrl *preorder_ctrl)
 {
+	struct adapter *padapter = preorder_ctrl->padapter;
 
-	setup_timer(&preorder_ctrl->reordering_ctrl_timer,
-		    rtw_reordering_ctrl_timeout_handler,
-		    (unsigned long)preorder_ctrl);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	_init_timer(&(preorder_ctrl->reordering_ctrl_timer), padapter->pnetdev, _rtw_reordering_ctrl_timeout_handler, preorder_ctrl);
+#else
+	timer_setup(&preorder_ctrl->reordering_ctrl_timer, _rtw_reordering_ctrl_timeout_handler, 0);
+#endif
 }

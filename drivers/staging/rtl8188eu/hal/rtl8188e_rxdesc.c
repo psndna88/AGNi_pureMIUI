@@ -39,8 +39,7 @@ static void process_rssi(struct adapter *padapter, struct recv_frame *prframe)
 	signal_stat->avg_val = signal_stat->total_val / signal_stat->total_num;
 } /*  Process_UI_RSSI_8192C */
 
-static void process_link_qual(struct adapter *padapter,
-			      struct recv_frame *prframe)
+static void process_link_qual(struct adapter *padapter, struct recv_frame *prframe)
 {
 	struct rx_pkt_attrib *pattrib;
 	struct signal_stat *signal_stat;
@@ -72,8 +71,7 @@ void rtl8188e_process_phy_info(struct adapter *padapter, void *prframe)
 	process_link_qual(padapter,  precvframe);
 }
 
-void update_recvframe_attrib_88e(struct recv_frame *precvframe,
-				 struct recv_stat *prxstat)
+void update_recvframe_attrib_88e(struct recv_frame *precvframe, struct recv_stat *prxstat)
 {
 	struct rx_pkt_attrib	*pattrib;
 	struct recv_stat	report;
@@ -88,7 +86,7 @@ void update_recvframe_attrib_88e(struct recv_frame *precvframe,
 	pattrib = &precvframe->attrib;
 	memset(pattrib, 0, sizeof(struct rx_pkt_attrib));
 
-	pattrib->crc_err = (u8)((le32_to_cpu(report.rxdw0) >> 14) & 0x1);/* u8)prxreport->crc32; */
+	pattrib->crc_err = (u8)((le32_to_cpu(report.rxdw0) >> 14) & 0x1);;/* u8)prxreport->crc32; */
 
 	/*  update rx report to recv_frame attribute */
 	pattrib->pkt_rpt_type = (u8)((le32_to_cpu(report.rxdw3) >> 14) & 0x3);/* prxreport->rpt_sel; */
@@ -140,8 +138,7 @@ void update_recvframe_attrib_88e(struct recv_frame *precvframe,
  *	Before calling this function,
  *	precvframe->rx_data should be ready!
  */
-void update_recvframe_phyinfo_88e(struct recv_frame *precvframe,
-				  struct phy_stat *pphy_status)
+void update_recvframe_phyinfo_88e(struct recv_frame *precvframe, struct phy_stat *pphy_status)
 {
 	struct adapter *padapter = precvframe->adapter;
 	struct rx_pkt_attrib *pattrib = &precvframe->attrib;
@@ -157,7 +154,7 @@ void update_recvframe_phyinfo_88e(struct recv_frame *precvframe,
 	pkt_info.bPacketToSelf = false;
 	pkt_info.bPacketBeacon = false;
 
-	wlanhdr = precvframe->rx_data;
+	wlanhdr = get_recvframe_data(precvframe);
 
 	pkt_info.bPacketMatchBSSID = ((!IsFrameTypeCtrl(wlanhdr)) &&
 		!pattrib->icv_err && !pattrib->crc_err &&
@@ -186,7 +183,7 @@ void update_recvframe_phyinfo_88e(struct recv_frame *precvframe,
 		pkt_info.StationID = psta->mac_id;
 	pkt_info.Rate = pattrib->mcs_rate;
 
-	ODM_PhyStatusQuery(&pHalData->odmpriv, pPHYInfo, (u8 *)pphy_status, &(pkt_info));
+	ODM_PhyStatusQuery(&pHalData->odmpriv, pPHYInfo, (u8 *)pphy_status, &(pkt_info), padapter);
 
 	precvframe->psta = NULL;
 	if (pkt_info.bPacketMatchBSSID &&

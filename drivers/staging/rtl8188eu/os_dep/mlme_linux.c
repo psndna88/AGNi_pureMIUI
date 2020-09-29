@@ -18,29 +18,83 @@
  *
  ******************************************************************************/
 
-
 #define _MLME_OSDEP_C_
 
 #include <osdep_service.h>
 #include <drv_types.h>
 #include <mlme_osdep.h>
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+void rtw_join_timeout_handler (void *FunctionContext)
+#else
+void rtw_join_timeout_handler (struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct adapter *adapter = (struct adapter *)FunctionContext;
+#else
+	struct adapter *adapter = from_timer(adapter, t, mlmepriv.assoc_timer);
+#endif
+
+	_rtw_join_timeout_handler(adapter);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+void _rtw_scan_timeout_handler (void *FunctionContext)
+#else
+void _rtw_scan_timeout_handler (struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct adapter *adapter = (struct adapter *)FunctionContext;
+#else
+	struct adapter *adapter = from_timer(adapter, t, mlmepriv.scan_to_timer);
+#endif
+
+	rtw_scan_timeout_handler(adapter);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+static void _dynamic_check_timer_handlder(void *FunctionContext)
+#else
+static void _dynamic_check_timer_handlder(struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct adapter *adapter = (struct adapter *)FunctionContext;
+#else
+	struct adapter *adapter = from_timer(adapter, t, mlmepriv.dynamic_chk_timer);
+#endif
+
+	if (adapter->registrypriv.mp_mode == 1)
+		return;
+	rtw_dynamic_check_timer_handlder(adapter);
+	_set_timer(&adapter->mlmepriv.dynamic_chk_timer, 2000);
+}
+
 void rtw_init_mlme_timer(struct adapter *padapter)
 {
 	struct	mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
-	setup_timer(&pmlmepriv->assoc_timer, _rtw_join_timeout_handler,
-		    (unsigned long)padapter);
-	setup_timer(&pmlmepriv->scan_to_timer, rtw_scan_timeout_handler,
-		    (unsigned long)padapter);
-	setup_timer(&pmlmepriv->dynamic_chk_timer,
-		    rtw_dynamic_check_timer_handlder, (unsigned long)padapter);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	_init_timer(&(pmlmepriv->assoc_timer), padapter->pnetdev, rtw_join_timeout_handler, padapter);
+	_init_timer(&(pmlmepriv->scan_to_timer), padapter->pnetdev, _rtw_scan_timeout_handler, padapter);
+	_init_timer(&(pmlmepriv->dynamic_chk_timer), padapter->pnetdev, _dynamic_check_timer_handlder, padapter);
+#else
+	timer_setup(&pmlmepriv->assoc_timer, rtw_join_timeout_handler, 0);
+	timer_setup(&pmlmepriv->scan_to_timer, _rtw_scan_timeout_handler, 0);
+	timer_setup(&pmlmepriv->dynamic_chk_timer, _dynamic_check_timer_handlder, 0);
+#endif
 }
 
 void rtw_os_indicate_connect(struct adapter *adapter)
 {
+
 	rtw_indicate_wx_assoc_event(adapter);
 	netif_carrier_on(adapter->pnetdev);
+	if (adapter->pid[2] != 0)
+		rtw_signal_process(adapter->pid[2], SIGALRM);
+
 }
 
 void rtw_os_indicate_scan_done(struct adapter *padapter, bool aborted)
@@ -61,6 +115,7 @@ void rtw_reset_securitypriv(struct adapter *adapter)
 		/*  We have to backup the PMK information for WiFi PMK Caching test item. */
 		/*  Backup the btkip_countermeasure information. */
 		/*  When the countermeasure is trigger, the driver have to disconnect with AP for 60 seconds. */
+		memset(&backup_pmkid[0], 0x00, sizeof(struct rt_pmkid_list) * NUM_PMKID_CACHE);
 		memcpy(&backup_pmkid[0], &adapter->securitypriv.PMKIDList[0], sizeof(struct rt_pmkid_list) * NUM_PMKID_CACHE);
 		backup_index = adapter->securitypriv.PMKIDIndex;
 		backup_counter = adapter->securitypriv.btkip_countermeasure;
@@ -80,7 +135,7 @@ void rtw_reset_securitypriv(struct adapter *adapter)
 		/* reset values in securitypriv */
 		struct security_priv *psec_priv = &adapter->securitypriv;
 
-		psec_priv->dot11AuthAlgrthm = dot11AuthAlgrthm_Open;
+		psec_priv->dot11AuthAlgrthm = dot11AuthAlgrthm_Open;  /* open system */
 		psec_priv->dot11PrivacyAlgrthm = _NO_PRIVACY_;
 		psec_priv->dot11PrivacyKeyIndex = 0;
 		psec_priv->dot118021XGrpPrivacy = _NO_PRIVACY_;
@@ -92,9 +147,11 @@ void rtw_reset_securitypriv(struct adapter *adapter)
 
 void rtw_os_indicate_disconnect(struct adapter *adapter)
 {
+
 	netif_carrier_off(adapter->pnetdev); /*  Do it first for tx broadcast pkt after disconnection issue! */
 	rtw_indicate_wx_disassoc_event(adapter);
 	 rtw_reset_securitypriv(adapter);
+
 }
 
 void rtw_report_sec_ie(struct adapter *adapter, u8 authmode, u8 *sec_ie)
@@ -116,32 +173,82 @@ void rtw_report_sec_ie(struct adapter *adapter, u8 authmode, u8 *sec_ie)
 		p = buff;
 		p += sprintf(p, "ASSOCINFO(ReqIEs =");
 		len = sec_ie[1]+2;
-		len =  min_t(uint, len, IW_CUSTOM_MAX);
+		len =  (len < IW_CUSTOM_MAX) ? len : IW_CUSTOM_MAX;
 		for (i = 0; i < len; i++)
 			p += sprintf(p, "%02x", sec_ie[i]);
 		p += sprintf(p, ")");
 		memset(&wrqu, 0, sizeof(wrqu));
 		wrqu.data.length = p-buff;
-		wrqu.data.length = min_t(__u16, wrqu.data.length, IW_CUSTOM_MAX);
+		wrqu.data.length = (wrqu.data.length < IW_CUSTOM_MAX) ?
+				   wrqu.data.length : IW_CUSTOM_MAX;
 		wireless_send_event(adapter->pnetdev, IWEVCUSTOM, &wrqu, buff);
 		kfree(buff);
 	}
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+static void _survey_timer_hdl(void *FunctionContext)
+#else
+static void _survey_timer_hdl(struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct adapter *padapter = (struct adapter *)FunctionContext;
+#else
+	struct adapter *padapter = from_timer(padapter, t, mlmeextpriv.survey_timer);
+#endif
+
+	survey_timer_hdl(padapter);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+static void _link_timer_hdl(void *FunctionContext)
+#else
+static void _link_timer_hdl(struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct adapter *padapter = (struct adapter *)FunctionContext;
+#else
+	struct adapter *padapter = from_timer(padapter, t, mlmeextpriv.link_timer);
+#endif
+	link_timer_hdl(padapter);
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+static void _addba_timer_hdl(void *FunctionContext)
+#else
+static void _addba_timer_hdl(struct timer_list *t)
+#endif
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	struct sta_info *psta = (struct sta_info *)FunctionContext;
+#else
+	struct sta_info *psta = from_timer(psta, t, addba_retry_timer);
+#endif
+	addba_timer_hdl(psta);
+}
+
 void init_addba_retry_timer(struct adapter *padapter, struct sta_info *psta)
 {
-	setup_timer(&psta->addba_retry_timer, addba_timer_hdl,
-		    (unsigned long)psta);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	_init_timer(&psta->addba_retry_timer, padapter->pnetdev, _addba_timer_hdl, psta);
+#else
+	timer_setup(&psta->addba_retry_timer, _addba_timer_hdl, 0);
+#endif
 }
 
 void init_mlme_ext_timer(struct adapter *padapter)
 {
 	struct	mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
 
-	setup_timer(&pmlmeext->survey_timer, survey_timer_hdl,
-		    (unsigned long)padapter);
-	setup_timer(&pmlmeext->link_timer, link_timer_hdl,
-		    (unsigned long)padapter);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+	_init_timer(&pmlmeext->survey_timer, padapter->pnetdev, _survey_timer_hdl, padapter);
+	_init_timer(&pmlmeext->link_timer, padapter->pnetdev, _link_timer_hdl, padapter);
+#else
+	timer_setup(&pmlmeext->survey_timer, _survey_timer_hdl, 0);
+	timer_setup(&pmlmeext->link_timer, _link_timer_hdl, 0);
+#endif
 }
 
 #ifdef CONFIG_88EU_AP_MODE
@@ -151,7 +258,7 @@ void rtw_indicate_sta_assoc_event(struct adapter *padapter, struct sta_info *pst
 	union iwreq_data wrqu;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 
-	if (!psta)
+	if (psta == NULL)
 		return;
 
 	if (psta->aid > NUM_STA)
@@ -159,7 +266,6 @@ void rtw_indicate_sta_assoc_event(struct adapter *padapter, struct sta_info *pst
 
 	if (pstapriv->sta_aid[psta->aid - 1] != psta)
 		return;
-
 
 	wrqu.addr.sa_family = ARPHRD_ETHER;
 
@@ -175,7 +281,7 @@ void rtw_indicate_sta_disassoc_event(struct adapter *padapter, struct sta_info *
 	union iwreq_data wrqu;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 
-	if (!psta)
+	if (psta == NULL)
 		return;
 
 	if (psta->aid > NUM_STA)
@@ -183,7 +289,6 @@ void rtw_indicate_sta_disassoc_event(struct adapter *padapter, struct sta_info *
 
 	if (pstapriv->sta_aid[psta->aid - 1] != psta)
 		return;
-
 
 	wrqu.addr.sa_family = ARPHRD_ETHER;
 

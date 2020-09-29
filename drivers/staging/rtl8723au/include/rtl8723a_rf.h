@@ -11,48 +11,16 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 #ifndef __RTL8723A_RF_H__
 #define __RTL8723A_RF_H__
 
-/*--------------------------Define Parameters-------------------------------*/
-
-/*  */
-/*  For RF 6052 Series */
-/*  */
-#define		RF6052_MAX_TX_PWR			0x3F
-#define		RF6052_MAX_REG				0x3F
-#define		RF6052_MAX_PATH				2
-/*--------------------------Define Parameters-------------------------------*/
-
-
-/*------------------------------Define structure----------------------------*/
-
-/*------------------------------Define structure----------------------------*/
-
-
-/*------------------------Export global variable----------------------------*/
-/*------------------------Export global variable----------------------------*/
-
-/*------------------------Export Marco Definition---------------------------*/
-
-/*------------------------Export Marco Definition---------------------------*/
-
-
-/*--------------------------Exported Function prototype---------------------*/
-
-/*  */
-/*  RF RL6052 Series API */
-/*  */
-void rtl8723a_phy_rf6052set_bw(struct rtw_adapter *Adapter,
-			       enum ht_channel_width Bandwidth);
-void rtl823a_phy_rf6052setccktxpower(struct rtw_adapter *Adapter,
-				      u8 *pPowerlevel);
-void rtl8723a_PHY_RF6052SetOFDMTxPower(struct rtw_adapter *Adapter,
-				       u8 *pPowerLevel, u8 Channel);
-
-/*--------------------------Exported Function prototype---------------------*/
-
+#include "rtl8192c_rf.h"
 int	PHY_RF6052_Config8723A(struct rtw_adapter *Adapter);
 
 #endif

@@ -11,26 +11,29 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 
 
 #ifndef	__HALHWOUTSRC_H__
 #define __HALHWOUTSRC_H__
 
-#include <Hal8723APhyCfg.h>
-
-/*  */
-/*  Definition */
-/*  */
-/*  */
-/*  */
-/*  CCK Rates, TxHT = 0 */
+//============================================================
+// Definition
+//============================================================
+//
+//-----------------------------------------------------------
+// CCK Rates, TxHT = 0
 #define DESC92C_RATE1M					0x00
 #define DESC92C_RATE2M					0x01
 #define DESC92C_RATE5_5M				0x02
 #define DESC92C_RATE11M				0x03
 
-/*  OFDM Rates, TxHT = 0 */
+// OFDM Rates, TxHT = 0
 #define DESC92C_RATE6M					0x04
 #define DESC92C_RATE9M					0x05
 #define DESC92C_RATE12M				0x06
@@ -40,7 +43,7 @@
 #define DESC92C_RATE48M				0x0a
 #define DESC92C_RATE54M				0x0b
 
-/*  MCS Rates, TxHT = 1 */
+// MCS Rates, TxHT = 1
 #define DESC92C_RATEMCS0				0x0c
 #define DESC92C_RATEMCS1				0x0d
 #define DESC92C_RATEMCS2				0x0e
@@ -61,64 +64,67 @@
 #define DESC92C_RATEMCS32				0x20
 
 
-/*  */
-/*  structure and define */
-/*  */
+//============================================================
+// structure and define
+//============================================================
 
-struct phy_rx_agc_info {
+typedef struct _Phy_Rx_AGC_Info
+{
 	#ifdef __LITTLE_ENDIAN
-		u8	gain:7, trsw:1;
+		u8	gain:7,trsw:1;
 	#else
-		u8	trsw:1, gain:7;
+		u8	trsw:1,gain:7;
 	#endif
-};
+} PHY_RX_AGC_INFO_T,*pPHY_RX_AGC_INFO_T;
 
-struct phy_status_rpt {
-	struct phy_rx_agc_info path_agc[RF_PATH_MAX];
-	u8	ch_corr[RF_PATH_MAX];
+typedef struct _Phy_Status_Rpt_8192cd
+{
+	PHY_RX_AGC_INFO_T path_agc[2];
+	u8	ch_corr[2];
 	u8	cck_sig_qual_ofdm_pwdb_all;
 	u8	cck_agc_rpt_ofdm_cfosho_a;
 	u8	cck_rpt_b_ofdm_cfosho_b;
-	u8	rsvd_1;/* ch_corr_msb; */
+	u8	rsvd_1;//ch_corr_msb;
 	u8	noise_power_db_msb;
-	u8	path_cfotail[RF_PATH_MAX];
-	u8	pcts_mask[RF_PATH_MAX];
-	s8	stream_rxevm[RF_PATH_MAX];
-	u8	path_rxsnr[RF_PATH_MAX];
+	u8	path_cfotail[2];
+	u8	pcts_mask[2];
+	s8	stream_rxevm[2];
+	u8	path_rxsnr[2];
 	u8	noise_power_db_lsb;
 	u8	rsvd_2[3];
-	u8	stream_csi[RF_PATH_MAX];
-	u8	stream_target_csi[RF_PATH_MAX];
+	u8	stream_csi[2];
+	u8	stream_target_csi[2];
 	s8	sig_evm;
 	u8	rsvd_3;
 
 #ifdef __LITTLE_ENDIAN
-	u8	antsel_rx_keep_2:1;	/* ex_intf_flg:1; */
+	u8	antsel_rx_keep_2:1;	//ex_intf_flg:1;
 	u8	sgi_en:1;
 	u8	rxsc:2;
 	u8	idle_long:1;
 	u8	r_ant_train_en:1;
 	u8	ant_sel_b:1;
 	u8	ant_sel:1;
-#else	/*  _BIG_ENDIAN_ */
+#else	// _BIG_ENDIAN_
 	u8	ant_sel:1;
 	u8	ant_sel_b:1;
 	u8	r_ant_train_en:1;
 	u8	idle_long:1;
 	u8	rxsc:2;
 	u8	sgi_en:1;
-	u8	antsel_rx_keep_2:1;	/* ex_intf_flg:1; */
+	u8	antsel_rx_keep_2:1;	//ex_intf_flg:1;
 #endif
-};
+} PHY_STATUS_RPT_8192CD_T,*PPHY_STATUS_RPT_8192CD_T;
 
 
-struct phy_status_rpt_8195 {
-	struct phy_rx_agc_info path_agc[2];
+typedef struct _Phy_Status_Rpt_8195
+{
+	PHY_RX_AGC_INFO_T path_agc[2];
 	u8	ch_num[2];
 	u8	cck_sig_qual_ofdm_pwdb_all;
 	u8	cck_agc_rpt_ofdm_cfosho_a;
 	u8	cck_bb_pwr_ofdm_cfosho_b;
-	u8    cck_rx_path;	/* CCK_RX_PATH [3:0] (with regA07[3:0] definition) */
+	u8    cck_rx_path;	//CCK_RX_PATH [3:0] (with regA07[3:0] definition)
 	u8	rsvd_1;
 	u8	path_cfotail[2];
 	u8	pcts_mask[2];
@@ -134,22 +140,51 @@ struct phy_status_rpt_8195 {
 	u8	antidx_anta:3;
 	u8	antidx_antb:3;
 	u8	rsvd_5:2;
-#else	/*  _BIG_ENDIAN_ */
+#else	// _BIG_ENDIAN_
 	u8	rsvd_5:2;
 	u8	antidx_antb:3;
 	u8	antidx_anta:3;
 #endif
-};
+} PHY_STATUS_RPT_8195_T,*pPHY_STATUS_RPT_8195_T;
 
-
-void odm_Init_RSSIForDM23a(struct dm_odm_t *pDM_Odm);
 
 void
-ODM_PhyStatusQuery23a(
-	struct dm_odm_t *pDM_Odm,
-	struct phy_info *pPhyInfo,
-	u8 *						pPhyStatus,
-	struct odm_packet_info *pPktinfo
+odm_Init_RSSIForDM(
+	PDM_ODM_T	pDM_Odm
 	);
 
+void
+ODM_PhyStatusQuery(
+	PDM_ODM_T					pDM_Odm,
+	PODM_PHY_INFO_T			pPhyInfo,
+	u8 *						pPhyStatus,
+	PODM_PACKET_INFO_T			pPktinfo
+	);
+
+void
+ODM_MacStatusQuery(
+	PDM_ODM_T					pDM_Odm,
+	u8 *						pMacStatus,
+	u8						MacID,
+	bool						bPacketMatchBSSID,
+	bool						bPacketToSelf,
+	bool						bPacketBeacon
+	);
+HAL_STATUS
+ODM_ConfigRFWithHeaderFile(
+	PDM_ODM_T	      pDM_Odm,
+	ODM_RF_RADIO_PATH_E	Content,
+	ODM_RF_RADIO_PATH_E	eRFPath
+	);
+
+HAL_STATUS
+ODM_ConfigBBWithHeaderFile(
+	PDM_ODM_T				pDM_Odm,
+	ODM_BB_Config_Type		ConfigType
+    );
+
+HAL_STATUS
+ODM_ConfigMACWithHeaderFile(
+	PDM_ODM_T	pDM_Odm
+    );
 #endif

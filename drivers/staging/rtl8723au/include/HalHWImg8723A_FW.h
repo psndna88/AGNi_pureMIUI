@@ -11,9 +11,14 @@
 * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
 * more details.
 *
+* You should have received a copy of the GNU General Public License along with
+* this program; if not, write to the Free Software Foundation, Inc.,
+* 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+*
 *
 ******************************************************************************/
 
+#if (RTL8723A_SUPPORT == 1)
 #ifndef __INC_FW_8723A_HW_IMG_H
 #define __INC_FW_8723A_HW_IMG_H
 
@@ -22,7 +27,12 @@
 *                           rtl8723fw_B.TXT
 ******************************************************************************/
 
-void ODM_ReadFirmware_8723A_rtl8723fw_B(struct dm_odm_t *pDM_Odm,
-					u8 *pFirmware, u32 *pFirmwareSize);
+void
+ODM_ReadFirmware_8723A_rtl8723fw_B(
+	PDM_ODM_T    pDM_Odm,
+	u8       *pFirmware,
+	u32       *pFirmwareSize
+);
 
-#endif /*  end of HWIMG_SUPPORT */
+#endif
+#endif // end of HWIMG_SUPPORT
