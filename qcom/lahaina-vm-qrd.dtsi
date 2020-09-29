@@ -5,6 +5,8 @@
 	focaltech@38 {
 		compatible = "focaltech,fts_ts";
 		reg = <0x38>;
+		focaltech,max-touch-number = <5>;
+		focaltech,display-coords = <0 0 1080 2340>;
 		focaltech,trusted-touch-mode = "vm_mode";
 		focaltech,touch-environment = "tvm";
 		focaltech,trusted-touch-spi-irq = <566>;
