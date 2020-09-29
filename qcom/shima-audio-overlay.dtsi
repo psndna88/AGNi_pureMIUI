@@ -33,7 +33,6 @@
 		qcom,va-dmic-sample-rate = <600000>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
 		qcom,is-used-swr-gpio = <0>;
-		qcom,disable-afe-wakeup-event-listener = <1>;
 	};
 
 	tx_macro: tx-macro@3220000 {
@@ -44,6 +43,7 @@
 			 <&clock_audio_tx_2 0>;
 		qcom,tx-swr-gpios = <&tx_swr_gpios>;
 		qcom,tx-dmic-sample-rate = <2400000>;
+		qcom,disable-afe-wakeup-event-listener = <1>;
 		swr2: tx_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
