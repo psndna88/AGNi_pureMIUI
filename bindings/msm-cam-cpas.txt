@@ -156,6 +156,16 @@ First Level Node - CAM CPAS device
   Definition: Percentage value to be added to camnoc bw while calculating
               camnoc axi clock frequency.
 
+- rpmh-bcm-info
+  Usage: optional
+  Value type: <u32:idx> <u32:bcm_fe> <u32:bcm_be> <u32:ddr_idx> <u32:mmnoc_idx>
+  Definition: Rpmh bcm register map
+  idx: Total number of BCMs
+  bcm_fe: First BCM FE (front-end) register offset.
+  bcm_be: First BCM BE (back-end) register offset.
+  ddr_idx: DDR BCM index
+  mmnoc_idx: MMNOC BCM index
+
 - qcom,msm-bus,name
 - qcom,msm-bus,num-cases
 - qcom,msm-bus,num-paths
