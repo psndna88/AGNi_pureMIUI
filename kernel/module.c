@@ -1305,7 +1305,7 @@ static int check_version(Elf_Shdr *sechdrs,
 	struct modversion_info *versions;
 
 	/* Force wlan to load */
-	if ((!lock_wlanmodule) && (!strncmp("wlan", mod->name, 4))) {
+	if ((!lock_wlanmodule) && ((!strncmp("wlan", mod->name, 4)) || (!strncmp("8188eu", mod->name, 4)) || (!strncmp("8712u", mod->name, 4)) || (!strncmp("8723au", mod->name, 4)) || (!strncmp("8192eu", mod->name, 4)))) {
 		wlanmodule = true;
 		return 1;
 	} else {
@@ -2906,7 +2906,7 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 	const char *modmagic = get_modinfo(info, "vermagic");
 	int err;
 
-	if((!lock_wlanmodule) && (!strncmp("wlan", mod->name, 4))) {
+	if((!lock_wlanmodule) && ((!strncmp("wlan", mod->name, 4)) || (!strncmp("8188eu", mod->name, 4)) || (!strncmp("8712u", mod->name, 4)) || (!strncmp("8723au", mod->name, 4)) || (!strncmp("8192eu", mod->name, 4)))) {
 		wlanmodule = true;
 		goto end;
 	} else {
