@@ -20,10 +20,9 @@
 #define _RTL8188E_XMIT_C_
 #include <osdep_service.h>
 #include <drv_types.h>
-#include <mon.h>
 #include <wifi.h>
 #include <osdep_intf.h>
-#include <usb_ops_linux.h>
+#include <usb_ops.h>
 #include <rtl8188e_hal.h>
 
 s32	rtl8188eu_init_xmit_priv(struct adapter *adapt)
@@ -34,6 +33,10 @@ s32	rtl8188eu_init_xmit_priv(struct adapter *adapt)
 		     (void(*)(unsigned long))rtl8188eu_xmit_tasklet,
 		     (unsigned long)adapt);
 	return _SUCCESS;
+}
+
+void	rtl8188eu_free_xmit_priv(struct adapter *adapt)
+{
 }
 
 static u8 urb_zero_packet_chk(struct adapter *adapt, int sz)
@@ -307,6 +310,9 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 		ptxdesc->txdw5 |= cpu_to_le32(MRateToHwRate(pmlmeext->tx_rate));
 	} else if ((pxmitframe->frame_tag&0x0f) == TXAGG_FRAMETAG) {
 		DBG_88E("pxmitframe->frame_tag == TXAGG_FRAMETAG\n");
+	} else if (((pxmitframe->frame_tag&0x0f) == MP_FRAMETAG) &&
+		   (adapt->registrypriv.mp_mode == 1)) {
+		fill_txdesc_for_mp(adapt, ptxdesc);
 	} else {
 		DBG_88E("pxmitframe->frame_tag = %d\n", pxmitframe->frame_tag);
 
@@ -337,8 +343,7 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz, u8 bag
 		ptxdesc->txdw4 |= cpu_to_le32(HW_SSN);	/*  Hw set sequence number */
 	}
 
-	rtl88eu_dm_set_tx_ant_by_tx_info(&haldata->odmpriv, pmem,
-					 pattrib->mac_id);
+	ODM_SetTxAntByTxInfo_88E(&haldata->odmpriv, pmem, pattrib->mac_id);
 
 	rtl8188eu_cal_txdesc_chksum(ptxdesc);
 	_dbg_dump_tx_info(adapt, pxmitframe->frame_tag, ptxdesc);
@@ -392,7 +397,7 @@ static s32 rtw_dump_xframe(struct adapter *adapt, struct xmit_frame *pxmitframe)
 		}
 		ff_hwaddr = rtw_get_ff_hwaddr(pxmitframe);
 
-		inner_ret = usb_write_port(adapt, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
+		inner_ret = rtw_write_port(adapt, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
 
 		rtw_count_tx_stats(adapt, pxmitframe, sz);
 
@@ -400,7 +405,7 @@ static s32 rtw_dump_xframe(struct adapter *adapt, struct xmit_frame *pxmitframe)
 
 		mem_addr += w_sz;
 
-		mem_addr = (u8 *)round_up((size_t)mem_addr, 4);
+		mem_addr = (u8 *)RND4(((size_t)(mem_addr)));
 	}
 
 	rtw_free_xmitframe(pxmitpriv, pxmitframe);
@@ -439,7 +444,6 @@ s32 rtl8188eu_xmitframe_complete(struct adapter *adapt, struct xmit_priv *pxmitp
 	struct hw_xmit *phwxmit;
 	struct sta_info *psta = NULL;
 	struct tx_servq *ptxservq = NULL;
-
 	struct list_head *xmitframe_plist = NULL, *xmitframe_phead = NULL;
 
 	u32 pbuf;	/*  next pkt address */
@@ -492,7 +496,7 @@ s32 rtl8188eu_xmitframe_complete(struct adapter *adapt, struct xmit_priv *pxmitp
 	pfirstframe = pxmitframe;
 	len = xmitframe_need_length(pfirstframe) + TXDESC_SIZE + (pfirstframe->pkt_offset*PACKET_OFFSET_SZ);
 	pbuf_tail = len;
-	pbuf = round_up(pbuf_tail, 8);
+	pbuf = _RND8(pbuf_tail);
 
 	/*  check pkt amount in one bulk */
 	desc_cnt = 0;
@@ -543,7 +547,7 @@ s32 rtl8188eu_xmitframe_complete(struct adapter *adapt, struct xmit_priv *pxmitp
 
 		len = xmitframe_need_length(pxmitframe) + TXDESC_SIZE + (pxmitframe->pkt_offset*PACKET_OFFSET_SZ);
 
-		if (round_up(pbuf + len, 8) > MAX_XMITBUF_SZ) {
+		if (_RND8(pbuf + len) > MAX_XMITBUF_SZ) {
 			pxmitframe->agg_num = 1;
 			pxmitframe->pkt_offset = 1;
 			break;
@@ -566,7 +570,7 @@ s32 rtl8188eu_xmitframe_complete(struct adapter *adapt, struct xmit_priv *pxmitp
 
 		/*  handle pointer and stop condition */
 		pbuf_tail = pbuf + len;
-		pbuf = round_up(pbuf_tail, 8);
+		pbuf = _RND8(pbuf_tail);
 
 		pfirstframe->agg_num++;
 		if (MAX_TX_AGG_PACKET_NUMBER == pfirstframe->agg_num)
@@ -603,7 +607,7 @@ s32 rtl8188eu_xmitframe_complete(struct adapter *adapt, struct xmit_priv *pxmitp
 
 	/* 3 4. write xmit buffer to USB FIFO */
 	ff_hwaddr = rtw_get_ff_hwaddr(pfirstframe);
-	usb_write_port(adapt, ff_hwaddr, pbuf_tail, (u8 *)pxmitbuf);
+	rtw_write_port(adapt, ff_hwaddr, pbuf_tail, (u8 *)pxmitbuf);
 
 	/* 3 5. update statisitc */
 	pbuf_tail -= (pfirstframe->agg_num * TXDESC_SIZE);
@@ -650,7 +654,7 @@ static s32 pre_xmitframe(struct adapter *adapt, struct xmit_frame *pxmitframe)
 		goto enqueue;
 
 	pxmitbuf = rtw_alloc_xmitbuf(pxmitpriv);
-	if (!pxmitbuf)
+	if (pxmitbuf == NULL)
 		goto enqueue;
 
 	spin_unlock_bh(&pxmitpriv->lock);
@@ -685,9 +689,6 @@ enqueue:
 
 s32 rtl8188eu_mgnt_xmit(struct adapter *adapt, struct xmit_frame *pmgntframe)
 {
-	struct xmit_priv *xmitpriv = &adapt->xmitpriv;
-
-	rtl88eu_mon_xmit_hook(adapt->pmondev, pmgntframe, xmitpriv->frag_len);
 	return rtw_dump_xframe(adapt, pmgntframe);
 }
 

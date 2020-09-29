@@ -11,6 +11,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
+ *
  ******************************************************************************/
 #ifndef __RTL8723A_CMD_H__
 #define __RTL8723A_CMD_H__
@@ -53,84 +58,87 @@ enum cmd_msg_element_id
 };
 
 struct cmd_msg_parm {
-	u8 eid; /* element id */
-	u8 sz; /*  sz */
+	u8 eid; //element id
+	u8 sz; // sz
 	u8 buf[6];
 };
 
-struct setpwrmode_parm {
+typedef struct _SETPWRMODE_PARM
+{
 	u8 Mode;
 	u8 SmartPS;
-	u8 AwakeInterval;	/*  unit: beacon interval */
+	u8 AwakeInterval;	// unit: beacon interval
 	u8 bAllQueueUAPSD;
 
 #define SETPM_LOWRXBCN			BIT(0)
 #define SETPM_AUTOANTSWITCH		BIT(1)
 #define SETPM_PSALLOWBTHIGHPRI	BIT(2)
 	u8 BcnAntMode;
-} __packed;
+}__attribute__((__packed__)) SETPWRMODE_PARM, *PSETPWRMODE_PARM;
 
 struct H2C_SS_RFOFF_PARAM{
-	u8 ROFOn; /*  1: on, 0:off */
-	u16 gpio_period; /*  unit: 1024 us */
+	u8 ROFOn; // 1: on, 0:off
+	u16 gpio_period; // unit: 1024 us
 }__attribute__ ((packed));
 
 
-struct joinbssrpt_parm {
-	u8 OpMode;	/*  enum rt_media_status */
-};
+typedef struct JOINBSSRPT_PARM{
+	u8 OpMode;	// RT_MEDIA_STATUS
+}JOINBSSRPT_PARM, *PJOINBSSRPT_PARM;
 
-struct rsvdpage_loc {
+typedef struct _RSVDPAGE_LOC {
 	u8 LocProbeRsp;
 	u8 LocPsPoll;
 	u8 LocNullData;
 	u8 LocQosNull;
 	u8 LocBTQosNull;
-};
+} RSVDPAGE_LOC, *PRSVDPAGE_LOC;
 
 struct P2P_PS_Offload_t {
 	u8 Offload_En:1;
-	u8 role:1; /*  1: Owner, 0: Client */
+	u8 role:1; // 1: Owner, 0: Client
 	u8 CTWindow_En:1;
 	u8 NoA0_En:1;
 	u8 NoA1_En:1;
-	u8 AllStaSleep:1; /*  Only valid in Owner */
+	u8 AllStaSleep:1; // Only valid in Owner
 	u8 discovery:1;
 	u8 rsvd:1;
 };
 
 struct P2P_PS_CTWPeriod_t {
-	u8 CTWPeriod;	/* TU */
+	u8 CTWPeriod;	//TU
 };
 
-#define B_TDMA_EN			BIT(0)
+
+typedef struct _B_TYPE_TDMA_PARM
+{
+#define B_TDMA_EN				BIT(0)
 #define B_TDMA_FIXANTINBT		BIT(1)
 #define B_TDMA_TXPSPOLL			BIT(2)
 #define B_TDMA_VAL870			BIT(3)
 #define B_TDMA_AUTOWAKEUP		BIT(4)
 #define B_TDMA_NOPS			BIT(5)
 #define B_TDMA_WLANHIGHPRI		BIT(6)
-
-struct b_type_tdma_parm {
 	u8 option;
 
 	u8 TBTTOnPeriod;
 	u8 MedPeriod;
 	u8 rsvd30;
-} __packed;
+}__attribute__((__packed__)) B_TYPE_TDMA_PARM, *PB_TYPE_TDMA_PARM;
 
-struct scan_en_parm {
+typedef struct _SCAN_EN_PARM {
 	u8 En;
-} __packed;
+}__attribute__((__packed__)) SCAN_EN_PARM, *PSCAN_EN_PARM;
 
-/*  BT_PWR */
+// BT_PWR
 #define SET_H2CCMD_BT_PWR_IDX(__pH2CCmd, __Value)							SET_BITS_TO_LE_1BYTE_8BIT(__pH2CCmd, 0, 8, __Value)
 
-/*  BT_FW_PATCH */
-#define SET_H2CCMD_BT_FW_PATCH_ENABLE(__pH2CCmd, __Value)					SET_BITS_TO_LE_4BYTE(__pH2CCmd, 0, 8, __Value) /*	SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value) */
-#define SET_H2CCMD_BT_FW_PATCH_SIZE(__pH2CCmd, __Value)						SET_BITS_TO_LE_4BYTE(__pH2CCmd, 8, 16, __Value) /*	SET_BITS_TO_LE_2BYTE((__pH2CCmd)+1, 0, 16, __Value) */
+// BT_FW_PATCH
+#define SET_H2CCMD_BT_FW_PATCH_ENABLE(__pH2CCmd, __Value)					SET_BITS_TO_LE_4BYTE(__pH2CCmd, 0, 8, __Value) //	SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value)
+#define SET_H2CCMD_BT_FW_PATCH_SIZE(__pH2CCmd, __Value)						SET_BITS_TO_LE_4BYTE(__pH2CCmd, 8, 16, __Value) //	SET_BITS_TO_LE_2BYTE((__pH2CCmd)+1, 0, 16, __Value)
 
-struct lowpwr_lps_parm{
+typedef struct _LOWPWR_LPS_PARM
+{
 	u8 bcn_count:4;
 	u8 tb_bcn_threshold:3;
 	u8 enable:1;
@@ -138,21 +146,33 @@ struct lowpwr_lps_parm{
 	u8 drop_threshold;
 	u8 max_early_period;
 	u8 max_bcn_timeout_period;
-} __packed;
+}__attribute__((__packed__)) LOWPWR_LPS_PARM, *PLOWPWR_LPS_PARM;
 
 
-/*  host message to firmware cmd */
-void rtl8723a_set_FwPwrMode_cmd(struct rtw_adapter *padapter, u8 Mode);
-void rtl8723a_set_FwJoinBssReport_cmd(struct rtw_adapter *padapter, u8 mstatus);
-#ifdef CONFIG_8723AU_BT_COEXIST
-void rtl8723a_set_BTCoex_AP_mode_FwRsvdPkt_cmd(struct rtw_adapter *padapter);
-#else
-#define rtl8723a_set_BTCoex_AP_mode_FwRsvdPkt_cmd(padapter) do {} while(0)
+// host message to firmware cmd
+void rtl8723a_set_FwPwrMode_cmd(struct rtw_adapter * padapter, u8 Mode);
+void rtl8723a_set_FwJoinBssReport_cmd(struct rtw_adapter * padapter, u8 mstatus);
+#ifdef CONFIG_BT_COEXIST
+void rtl8723a_set_BTCoex_AP_mode_FwRsvdPkt_cmd(struct rtw_adapter * padapter);
 #endif
-int rtl8723a_set_rssi_cmd(struct rtw_adapter *padapter, u8 *param);
-int rtl8723a_set_raid_cmd(struct rtw_adapter *padapter, u32 mask, u8 arg);
-void rtl8723a_add_rateatid(struct rtw_adapter *padapter, u32 bitmap, u8 arg, u8 rssi_level);
+u8 rtl8192c_set_rssi_cmd(struct rtw_adapter * padapter, u8 *param);
+//u8 rtl8723a_set_rssi_cmd(struct rtw_adapter * padapter, u8 *param);
+u8 rtl8192c_set_raid_cmd(struct rtw_adapter * padapter, u32 mask, u8 arg);
+//u8 rtl8723a_set_raid_cmd(struct rtw_adapter * padapter, u32 mask, u8 arg);
+void rtl8192c_Add_RateATid(struct rtw_adapter * padapter, u32 bitmap, u8 arg, u8 rssi_level);
+//void rtl8723a_Add_RateATid(struct rtw_adapter * padapter, u32 bitmap, u8 arg);
+u8 rtl8192c_set_FwSelectSuspend_cmd(struct rtw_adapter * padapter, u8 bfwpoll, u16 period);
+//u8 rtl8723a_set_FwSelectSuspend_cmd(struct rtw_adapter * padapter, u8 bfwpoll, u16 period);
 
-int FillH2CCmd(struct rtw_adapter *padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
+#ifdef CONFIG_P2P
+void rtl8192c_set_p2p_ps_offload_cmd(struct rtw_adapter * padapter, u8 p2p_ps_state);
+//void rtl8723a_set_p2p_ps_offload_cmd(struct rtw_adapter * padapter, u8 p2p_ps_state);
+#endif //CONFIG_P2P
+
+void CheckFwRsvdPageContent(struct rtw_adapter *padapter);
 
 #endif
+
+#ifdef CONFIG_TSF_RESET_OFFLOAD
+u8 rtl8723c_reset_tsf(struct rtw_adapter *padapter, u8 reset_port);
+#endif	// CONFIG_TSF_RESET_OFFLOAD

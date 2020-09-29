@@ -38,14 +38,11 @@
 #define WPA_KEY_MGMT_IEEE8021X_NO_WPA BIT(3)
 #define WPA_KEY_MGMT_WPA_NONE BIT(4)
 
-
 #define WPA_CAPABILITY_PREAUTH BIT(0)
 #define WPA_CAPABILITY_MGMT_FRAME_PROTECTION BIT(6)
 #define WPA_CAPABILITY_PEERKEY_ENABLED BIT(9)
 
-
 #define PMKID_LEN 16
-
 
 struct wpa_ie_hdr {
 	u8 elem_id;
@@ -103,24 +100,24 @@ struct wme_parameter_element {
 
 #define WPA_PUT_LE16(a, val)			\
 	do {					\
-		(a)[1] = ((u16)(val)) >> 8;	\
-		(a)[0] = ((u16)(val)) & 0xff;	\
+		(a)[1] = ((u16) (val)) >> 8;	\
+		(a)[0] = ((u16) (val)) & 0xff;	\
 	} while (0)
 
 #define WPA_PUT_BE32(a, val)					\
 	do {							\
-		(a)[0] = (u8)((((u32) (val)) >> 24) & 0xff);	\
-		(a)[1] = (u8)((((u32) (val)) >> 16) & 0xff);	\
-		(a)[2] = (u8)((((u32) (val)) >> 8) & 0xff);	\
-		(a)[3] = (u8)(((u32) (val)) & 0xff);		\
+		(a)[0] = (u8) ((((u32) (val)) >> 24) & 0xff);	\
+		(a)[1] = (u8) ((((u32) (val)) >> 16) & 0xff);	\
+		(a)[2] = (u8) ((((u32) (val)) >> 8) & 0xff);	\
+		(a)[3] = (u8) (((u32) (val)) & 0xff);		\
 	} while (0)
 
 #define WPA_PUT_LE32(a, val)					\
 	do {							\
-		(a)[3] = (u8)((((u32) (val)) >> 24) & 0xff);	\
-		(a)[2] = (u8)((((u32) (val)) >> 16) & 0xff);	\
-		(a)[1] = (u8)((((u32) (val)) >> 8) & 0xff);	\
-		(a)[0] = (u8)(((u32) (val)) & 0xff);		\
+		(a)[3] = (u8) ((((u32) (val)) >> 24) & 0xff);	\
+		(a)[2] = (u8) ((((u32) (val)) >> 16) & 0xff);	\
+		(a)[1] = (u8) ((((u32) (val)) >> 8) & 0xff);	\
+		(a)[0] = (u8) (((u32) (val)) & 0xff);		\
 	} while (0)
 
 #define RSN_SELECTOR_PUT(a, val) WPA_PUT_BE32((u8 *)(a), (val))

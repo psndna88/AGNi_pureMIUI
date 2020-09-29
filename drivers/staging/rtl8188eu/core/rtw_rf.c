@@ -24,7 +24,6 @@
 #include <recv_osdep.h>
 #include <xmit_osdep.h>
 
-
 struct ch_freq {
 	u32 channel;
 	u32 frequency;
@@ -52,7 +51,7 @@ static struct ch_freq ch_freq_map[] = {
 	{216, 5080},/* Japan, means J16 */
 };
 
-static int ch_freq_map_num = ARRAY_SIZE(ch_freq_map);
+static int ch_freq_map_num = (sizeof(ch_freq_map) / sizeof(struct ch_freq));
 
 u32 rtw_ch2freq(u32 channel)
 {

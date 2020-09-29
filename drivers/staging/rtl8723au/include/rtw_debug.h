@@ -11,11 +11,16 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ *
  *
  ******************************************************************************/
 #ifndef __RTW_DEBUG_H__
 #define __RTW_DEBUG_H__
 
+#include <drv_conf.h>
 #include <osdep_service.h>
 #include <drv_types.h>
 
@@ -141,51 +146,203 @@
 	#define	_MODULE_DEFINE_	_module_efuse_
 #endif
 
+#ifdef pr_info
+#define _dbgdump	pr_info
+#else
+#define _dbgdump	printk
+#endif
+
 #define DRIVER_PREFIX	"RTL8723AU: "
 #define DEBUG_LEVEL	(_drv_err_)
-#define DBG_8723A_LEVEL(_level, fmt, arg...)				\
-	do {								\
-		if (_level <= GlobalDebugLevel23A)				\
-			pr_info(DRIVER_PREFIX fmt, ##arg);\
-	} while (0)
+#define DBG_8723A_LEVEL(_level, fmt, arg...)
 
-#define DBG_8723A(...)							\
-	do {								\
-		if (_drv_err_ <= GlobalDebugLevel23A)			\
-			pr_info(DRIVER_PREFIX __VA_ARGS__);		\
-	} while (0)
+#define DBG_8723A(...)
 
-#define MSG_8723A(...)							\
-	do {								\
-		if (_drv_err_ <= GlobalDebugLevel23A)			\
-			pr_info(DRIVER_PREFIX __VA_ARGS__);		\
-	} while (0)
+#define MSG_8723A(...)
 
-extern u32 GlobalDebugLevel23A;
+extern u32 GlobalDebugLevel;
 
-__printf(3, 4)
-void rt_trace(int comp, int level, const char *fmt, ...);
 
-#define RT_TRACE(_Comp, _Level, Fmt, ...)				\
-do {									\
-	if (_Level <= GlobalDebugLevel23A)				\
-		rt_trace(_Comp, _Level, Fmt, ##__VA_ARGS__);		\
-} while (0)
+#define RT_TRACE(_Comp, _Level, Fmt)
 
-#define RT_PRINT_DATA(_Comp, _Level, _TitleString, _HexData,		\
-		      _HexDataLen)					\
-	if (_Level <= GlobalDebugLevel23A) {				\
-		int __i;						\
-		u8	*ptr = (u8 *)_HexData;				\
-		pr_info("%s", DRIVER_PREFIX);				\
-		pr_info(_TitleString);					\
-		for (__i = 0; __i < (int)_HexDataLen; __i++) {		\
-			printk("%02X%s", ptr[__i],			\
-			       (((__i + 1) % 4) == 0) ? "  " : " ");	\
-			if (((__i + 1) % 16) == 0)			\
-				printk("\n");				\
-		}							\
-		printk("\n");						\
-	}
+#define _func_enter_
+#define _func_exit_
+
+#define RT_PRINT_DATA(_Comp, _Level, _TitleString, _HexData, _HexDataLen)
+
+#ifdef CONFIG_PROC_DEBUG
+
+	int proc_get_drv_version(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_write_reg(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_write_reg(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+	int proc_get_read_reg(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_read_reg(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+
+	int proc_get_fwstate(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_sec_info(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_mlmext_state(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_qos_option(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_ht_option(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rf_info(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_ap_info(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_adapter_state(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_trx_info(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_mac_reg_dump1(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_mac_reg_dump2(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_mac_reg_dump3(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_bb_reg_dump1(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_bb_reg_dump2(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_bb_reg_dump3(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rf_reg_dump1(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rf_reg_dump2(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rf_reg_dump3(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rf_reg_dump4(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+#ifdef CONFIG_AP_MODE
+
+	int proc_get_all_sta_info(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+#endif
+
+#ifdef CONFIG_FIND_BEST_CHANNEL
+	int proc_get_best_channel(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+#endif
+
+	int proc_get_rx_signal(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_rx_signal(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+#ifdef CONFIG_80211N_HT
+
+	int proc_get_ht_enable(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_ht_enable(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+	int proc_get_cbw40_enable(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_cbw40_enable(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+	int proc_get_ampdu_enable(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_ampdu_enable(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+	int proc_get_rx_stbc(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_rx_stbc(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+#endif /* CONFIG_80211N_HT */
+
+	int proc_get_two_path_rssi(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_get_rssi_disp(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_rssi_disp(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+#ifdef CONFIG_BT_COEXIST
+	int proc_get_btcoex_dbg(char *page, char **start,
+			  off_t offset, int count,
+			  int *eof, void *data);
+
+	int proc_set_btcoex_dbg(struct file *file, const char __user *buffer,
+		unsigned long count, void *data);
+
+#endif /* CONFIG_BT_COEXIST */
+
+#if defined(DBG_CONFIG_ERROR_DETECT)
+int proc_get_sreset(char *page, char **start, off_t offset, int count, int *eof, void *data);
+int proc_set_sreset(struct file *file, const char __user *buffer, unsigned long count, void *data);
+#endif /* DBG_CONFIG_ERROR_DETECT */
+#endif /* CONFIG_PROC_DEBUG */
 
 #endif	/* __RTW_DEBUG_H__ */

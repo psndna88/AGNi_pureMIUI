@@ -63,7 +63,6 @@
 #define FSG		BIT(27)
 #define OWN		BIT(31)
 
-
 /* OFFSET 4 */
 #define PKT_OFFSET_SZ		0
 #define QSEL_SHT		8
@@ -159,6 +158,7 @@ struct txrpt_ccx_88e {
 void rtl8188e_fill_fake_txdesc(struct adapter *padapter, u8 *pDesc,
 			       u32 BufferLen, u8 IsPsPoll, u8 IsBTQosNull);
 s32 rtl8188eu_init_xmit_priv(struct adapter *padapter);
+void rtl8188eu_free_xmit_priv(struct adapter *padapter);
 s32 rtl8188eu_hal_xmit(struct adapter *padapter, struct xmit_frame *frame);
 s32 rtl8188eu_mgnt_xmit(struct adapter *padapter, struct xmit_frame *frame);
 s32 rtl8188eu_xmit_buf_handler(struct adapter *padapter);

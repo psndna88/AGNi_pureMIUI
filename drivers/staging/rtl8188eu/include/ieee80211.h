@@ -109,7 +109,6 @@ enum {
 #define IEEE_CRYPT_ERR_TX_KEY_SET_FAILED		6
 #define IEEE_CRYPT_ERR_CARD_CONF_FAILED		7
 
-
 #define	IEEE_CRYPT_ALG_NAME_LEN			16
 
 #define WPA_CIPHER_NONE		BIT(0)
@@ -119,9 +118,9 @@ enum {
 #define WPA_CIPHER_CCMP		BIT(4)
 
 
-
 #define WPA_SELECTOR_LEN 4
 extern u8 RTW_WPA_OUI_TYPE[];
+extern u16 RTW_WPA_VERSION;
 extern u8 WPA_AUTH_KEY_MGMT_NONE[];
 extern u8 WPA_AUTH_KEY_MGMT_UNSPEC_802_1X[];
 extern u8 WPA_AUTH_KEY_MGMT_PSK_OVER_802_1X[];
@@ -131,7 +130,6 @@ extern u8 WPA_CIPHER_SUITE_TKIP[];
 extern u8 WPA_CIPHER_SUITE_WRAP[];
 extern u8 WPA_CIPHER_SUITE_CCMP[];
 extern u8 WPA_CIPHER_SUITE_WEP104[];
-
 
 #define RSN_HEADER_LEN 4
 #define RSN_SELECTOR_LEN 4
@@ -211,7 +209,6 @@ enum NETWORK_TYPE {
 #define IsSupportedTxMCS(NetType)				\
 	((NetType) & (WIRELESS_11_24N|WIRELESS_11_5N) ? true : false)
 
-
 struct ieee_param {
 	u32 cmd;
 	u8 sta_addr[ETH_ALEN];
@@ -244,7 +241,7 @@ struct ieee_param {
 			u16 capability;
 			int flags;
 			u8 tx_supp_rates[16];
-			struct rtw_ieee80211_ht_cap ht_cap;
+			struct ieee80211_ht_cap ht_cap;
 		} add_sta;
 		struct {
 			u8	reserved[2];/* for set max_num_sta */
@@ -269,7 +266,7 @@ struct sta_data {
 	u32 sta_set;
 	u8 tx_supp_rates[16];
 	u32 tx_supp_rates_len;
-	struct rtw_ieee80211_ht_cap ht_cap;
+	struct ieee80211_ht_cap ht_cap;
 	u64	rx_pkts;
 	u64	rx_bytes;
 	u64	rx_drops;
@@ -288,10 +285,8 @@ struct sta_data {
    represents the 2304 bytes of real data, plus a possible 8 bytes of
    WEP IV and ICV. (this interpretation suggested by Ramiro Barreiro) */
 
-
 #define IEEE80211_HLEN			30
 #define IEEE80211_FRAME_LEN		(IEEE80211_DATA_LEN + IEEE80211_HLEN)
-
 
 /* this is stolen from ipw2200 driver */
 #define IEEE_IBSS_MAC_HASH_SIZE 31
@@ -433,7 +428,6 @@ enum eap_type {
 #define RTW_IEEE80211_SCTL_FRAG	0x000F
 #define RTW_IEEE80211_SCTL_SEQ	0xFFF0
 
-
 #define RTW_ERP_INFO_NON_ERP_PRESENT BIT(0)
 #define RTW_ERP_INFO_USE_PROTECTION BIT(1)
 #define RTW_ERP_INFO_BARKER_PREAMBLE_MODE BIT(2)
@@ -477,20 +471,99 @@ struct ieee80211_snap_hdr {
 #define WLAN_GET_SEQ_FRAG(seq) ((seq) & RTW_IEEE80211_SCTL_FRAG)
 #define WLAN_GET_SEQ_SEQ(seq)  ((seq) & RTW_IEEE80211_SCTL_SEQ)
 
-/* Non standard?  Not in <linux/ieee80211.h> */
+/* Authentication algorithms */
+#define WLAN_AUTH_OPEN 0
+#define WLAN_AUTH_SHARED_KEY 1
+
+#define WLAN_AUTH_CHALLENGE_LEN 128
+
+#define WLAN_CAPABILITY_BSS (1<<0)
+#define WLAN_CAPABILITY_IBSS (1<<1)
+#define WLAN_CAPABILITY_CF_POLLABLE (1<<2)
+#define WLAN_CAPABILITY_CF_POLL_REQUEST (1<<3)
+#define WLAN_CAPABILITY_PRIVACY (1<<4)
+#define WLAN_CAPABILITY_SHORT_PREAMBLE (1<<5)
+#define WLAN_CAPABILITY_PBCC (1<<6)
+#define WLAN_CAPABILITY_CHANNEL_AGILITY (1<<7)
+#define WLAN_CAPABILITY_SHORT_SLOT (1<<10)
+
+/* Status codes */
+#define WLAN_STATUS_SUCCESS 0
+#define WLAN_STATUS_UNSPECIFIED_FAILURE 1
+#define WLAN_STATUS_CAPS_UNSUPPORTED 10
+#define WLAN_STATUS_REASSOC_NO_ASSOC 11
+#define WLAN_STATUS_ASSOC_DENIED_UNSPEC 12
+#define WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG 13
+#define WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION 14
+#define WLAN_STATUS_CHALLENGE_FAIL 15
+#define WLAN_STATUS_AUTH_TIMEOUT 16
+#define WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA 17
+#define WLAN_STATUS_ASSOC_DENIED_RATES 18
+/* 802.11b */
+#define WLAN_STATUS_ASSOC_DENIED_NOSHORT 19
+#define WLAN_STATUS_ASSOC_DENIED_NOPBCC 20
+#define WLAN_STATUS_ASSOC_DENIED_NOAGILITY 21
+
+/* Reason codes */
+#define WLAN_REASON_UNSPECIFIED 1
+#define WLAN_REASON_PREV_AUTH_NOT_VALID 2
+#define WLAN_REASON_DEAUTH_LEAVING 3
+#define WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY 4
+#define WLAN_REASON_DISASSOC_AP_BUSY 5
+#define WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA 6
+#define WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA 7
+#define WLAN_REASON_DISASSOC_STA_HAS_LEFT 8
+#define WLAN_REASON_STA_REQ_ASSOC_WITHOUT_AUTH 9
+#define WLAN_REASON_JOIN_WRONG_CHANNEL       65534
 #define WLAN_REASON_EXPIRATION_CHK 65535
+
+/* Information Element IDs */
+#define WLAN_EID_SSID 0
+#define WLAN_EID_SUPP_RATES 1
+#define WLAN_EID_FH_PARAMS 2
+#define WLAN_EID_DS_PARAMS 3
+#define WLAN_EID_CF_PARAMS 4
+#define WLAN_EID_TIM 5
+#define WLAN_EID_IBSS_PARAMS 6
+#define WLAN_EID_CHALLENGE 16
+/* EIDs defined by IEEE 802.11h - START */
+#define WLAN_EID_PWR_CONSTRAINT 32
+#define WLAN_EID_PWR_CAPABILITY 33
+#define WLAN_EID_TPC_REQUEST 34
+#define WLAN_EID_TPC_REPORT 35
+#define WLAN_EID_SUPPORTED_CHANNELS 36
+#define WLAN_EID_CHANNEL_SWITCH 37
+#define WLAN_EID_MEASURE_REQUEST 38
+#define WLAN_EID_MEASURE_REPORT 39
+#define WLAN_EID_QUITE 40
+#define WLAN_EID_IBSS_DFS 41
+/* EIDs defined by IEEE 802.11h - END */
+#define WLAN_EID_ERP_INFO 42
+#define WLAN_EID_HT_CAP 45
+#define WLAN_EID_RSN 48
+#define WLAN_EID_EXT_SUPP_RATES 50
+#define WLAN_EID_MOBILITY_DOMAIN 54
+#define WLAN_EID_FAST_BSS_TRANSITION 55
+#define WLAN_EID_TIMEOUT_INTERVAL 56
+#define WLAN_EID_RIC_DATA 57
+#define WLAN_EID_HT_OPERATION 61
+#define WLAN_EID_SECONDARY_CHANNEL_OFFSET 62
+#define WLAN_EID_20_40_BSS_COEXISTENCE 72
+#define WLAN_EID_20_40_BSS_INTOLERANT 73
+#define WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS 74
+#define WLAN_EID_MMIE 76
+#define WLAN_EID_VENDOR_SPECIFIC 221
+#define WLAN_EID_GENERIC (WLAN_EID_VENDOR_SPECIFIC)
 
 #define IEEE80211_MGMT_HDR_LEN 24
 #define IEEE80211_DATA_HDR3_LEN 24
 #define IEEE80211_DATA_HDR4_LEN 30
-
 
 #define IEEE80211_STATMASK_SIGNAL (1<<0)
 #define IEEE80211_STATMASK_RSSI (1<<1)
 #define IEEE80211_STATMASK_NOISE (1<<2)
 #define IEEE80211_STATMASK_RATE (1<<3)
 #define IEEE80211_STATMASK_WEMASK 0x7
-
 
 #define IEEE80211_CCK_MODULATION    (1<<0)
 #define IEEE80211_OFDM_MODULATION   (1<<1)
@@ -500,7 +573,6 @@ struct ieee80211_snap_hdr {
 
 #define IEEE80211_CCK_RATE_LEN			4
 #define IEEE80211_NUM_OFDM_RATESLEN	8
-
 
 #define IEEE80211_CCK_RATE_1MB			0x02
 #define IEEE80211_CCK_RATE_2MB			0x04
@@ -779,7 +851,6 @@ struct ieee80211_txb {
 	struct sk_buff *fragments[0];
 };
 
-
 /* SWEEP TABLE ENTRIES NUMBER*/
 #define MAX_SWEEP_TAB_ENTRIES		  42
 #define MAX_SWEEP_TAB_ENTRIES_PER_PACKET  7
@@ -986,7 +1057,6 @@ enum rtw_ieee80211_back_parties {
 #define WME_TSPEC_DIRECTION_DOWNLINK 1
 #define WME_TSPEC_DIRECTION_BI_DIRECTIONAL 3
 
-
 #define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */
 
 #define VENDOR_HT_CAPAB_OUI_TYPE 0x33 /* 00-90-4c:0x33 */
@@ -1092,8 +1162,8 @@ enum parse_res rtw_ieee802_11_parse_elems(u8 *start, uint len,
 					  struct rtw_ieee802_11_elems *elems,
 					  int show_errors);
 
-u8 *rtw_set_fixed_ie(void *pbuf, unsigned int len,
-		     void *source, unsigned int *frlen);
+u8 *rtw_set_fixed_ie(unsigned char *pbuf, unsigned int len,
+		     unsigned char *source, unsigned int *frlen);
 u8 *rtw_set_ie(u8 *pbuf, int index, uint len, u8 *source, uint *frlen);
 
 enum secondary_ch_offset {
@@ -1151,11 +1221,23 @@ u8 *rtw_get_wps_attr_content(u8 *wps_ie, uint wps_ielen, u16 target_attr_id,
 void dump_ies(u8 *buf, u32 buf_len);
 void dump_wps_ie(u8 *ie, u32 ie_len);
 
+#ifdef CONFIG_88EU_P2P
+void dump_p2p_ie(u8 *ie, u32 ie_len);
+u8 *rtw_get_p2p_ie(u8 *in_ie, int in_len, u8 *p2p_ie, uint *p2p_ielen);
+u8 *rtw_get_p2p_attr(u8 *p2p_ie, uint p2p_ielen, u8 target_attr_id,
+		     u8 *buf_attr, u32 *len_attr);
+u8 *rtw_get_p2p_attr_content(u8 *p2p_ie, uint p2p_ielen, u8 target_attr_id,
+			     u8 *buf_content, uint *len_content);
+u32 rtw_set_p2p_attr_content(u8 *pbuf, u8 attr_id, u16 attr_len,
+			     u8 *pdata_attr);
+void rtw_wlan_bssid_ex_remove_p2p_attr(struct wlan_bssid_ex *bss_ex,
+				       u8 attr_id);
+#endif
+
 uint	rtw_get_rateset_len(u8	*rateset);
 
 struct registry_priv;
 int rtw_generate_ie(struct registry_priv *pregistrypriv);
-
 
 int rtw_get_bit_value_from_ieee_value(u8 val);
 

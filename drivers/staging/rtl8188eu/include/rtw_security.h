@@ -50,7 +50,6 @@ enum {
 	ENCRYP_PROTOCOL_MAX
 };
 
-
 #ifndef Ndis802_11AuthModeWPA2
 #define Ndis802_11AuthModeWPA2 (Ndis802_11AuthModeWPANone + 1)
 #endif
@@ -169,11 +168,13 @@ struct security_priv {
 	u8 bWepDefaultKeyIdxSet;
 };
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5, 8, 0)
 struct sha256_state {
 	u64 length;
 	u32 state[8], curlen;
 	u8 buf[64];
 };
+#endif
 
 #define GET_ENCRY_ALGO(psecuritypriv, psta, encry_algo, bmcst)		\
 do {									\
@@ -222,7 +223,6 @@ do {									\
 	}								\
 } while (0)
 
-
 #define GET_TKIP_PN(iv, dot11txpn)					\
 do {									\
 	dot11txpn._byte_.TSC0 = iv[2];					\
@@ -232,7 +232,6 @@ do {									\
 	dot11txpn._byte_.TSC4 = iv[6];					\
 	dot11txpn._byte_.TSC5 = iv[7];					\
 } while (0)
-
 
 #define ROL32(A, n)	(((A) << (n)) | (((A)>>(32-(n)))  & ((1UL << (n)) - 1)))
 #define ROR32(A, n)	ROL32((A), 32-(n))
@@ -245,6 +244,10 @@ struct mic_data {
 };
 
 extern const u32 Te0[256];
+extern const u32 Te1[256];
+extern const u32 Te2[256];
+extern const u32 Te3[256];
+extern const u32 Te4[256];
 extern const u32 Td0[256];
 extern const u32 Td1[256];
 extern const u32 Td2[256];
@@ -265,6 +268,28 @@ static inline u32 rotr(u32 val, int bits)
 #define TE1(i) rotr(Te0[((i) >> 16) & 0xff], 8)
 #define TE2(i) rotr(Te0[((i) >> 8) & 0xff], 16)
 #define TE3(i) rotr(Te0[(i) & 0xff], 24)
+#define TE41(i) ((Te0[((i) >> 24) & 0xff] << 8) & 0xff000000)
+#define TE42(i) (Te0[((i) >> 16) & 0xff] & 0x00ff0000)
+#define TE43(i) (Te0[((i) >> 8) & 0xff] & 0x0000ff00)
+#define TE44(i) ((Te0[(i) & 0xff] >> 8) & 0x000000ff)
+#define TE421(i) ((Te0[((i) >> 16) & 0xff] << 8) & 0xff000000)
+#define TE432(i) (Te0[((i) >> 8) & 0xff] & 0x00ff0000)
+#define TE443(i) (Te0[(i) & 0xff] & 0x0000ff00)
+#define TE414(i) ((Te0[((i) >> 24) & 0xff] >> 8) & 0x000000ff)
+#define TE4(i) ((Te0[(i)] >> 8) & 0x000000ff)
+
+#define TD0(i) Td0[((i) >> 24) & 0xff]
+#define TD1(i) rotr(Td0[((i) >> 16) & 0xff], 8)
+#define TD2(i) rotr(Td0[((i) >> 8) & 0xff], 16)
+#define TD3(i) rotr(Td0[(i) & 0xff], 24)
+#define TD41(i) (Td4s[((i) >> 24) & 0xff] << 24)
+#define TD42(i) (Td4s[((i) >> 16) & 0xff] << 16)
+#define TD43(i) (Td4s[((i) >> 8) & 0xff] << 8)
+#define TD44(i) (Td4s[(i) & 0xff])
+#define TD0_(i) Td0[(i) & 0xff]
+#define TD1_(i) rotr(Td0[(i) & 0xff], 8)
+#define TD2_(i) rotr(Td0[(i) & 0xff], 16)
+#define TD3_(i) rotr(Td0[(i) & 0xff], 24)
 
 #define GETU32(pt) (((u32)(pt)[0] << 24) ^ ((u32)(pt)[1] << 16) ^ \
 			((u32)(pt)[2] <<  8) ^ ((u32)(pt)[3]))
@@ -328,7 +353,7 @@ static const unsigned long K[64] = {
 #define RORc(x, y) \
 	(((((unsigned long)(x) & 0xFFFFFFFFUL) >> (unsigned long)((y)&31)) | \
 	 ((unsigned long)(x) << (unsigned long)(32-((y)&31)))) & 0xFFFFFFFFUL)
-#define Ch(x, y, z)       (z ^ (x & (y ^ z)))
+#define Ch(x, y ,z)       (z ^ (x & (y ^ z)))
 #define Maj(x, y, z)      (((x | y) & z) | (x & y))
 #define S(x, n)         RORc((x), (n))
 #define R(x, n)         (((x)&0xFFFFFFFFUL)>>(n))
@@ -336,6 +361,9 @@ static const unsigned long K[64] = {
 #define Sigma1(x)       (S(x, 6) ^ S(x, 11) ^ S(x, 25))
 #define Gamma0(x)       (S(x, 7) ^ S(x, 18) ^ R(x, 3))
 #define Gamma1(x)       (S(x, 17) ^ S(x, 19) ^ R(x, 10))
+#ifndef MIN
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif
 
 void rtw_secmicsetkey(struct mic_data *pmicdata, u8 *key);
 void rtw_secmicappendbyte(struct mic_data *pmicdata, u8 b);
@@ -349,5 +377,6 @@ void rtw_wep_encrypt(struct adapter *padapter, u8  *pxmitframe);
 u32 rtw_aes_decrypt(struct adapter *padapter, u8  *precvframe);
 u32 rtw_tkip_decrypt(struct adapter *padapter, u8  *precvframe);
 void rtw_wep_decrypt(struct adapter *padapter, u8  *precvframe);
+void rtw_use_tkipkey_handler(void *FunctionContext);
 
 #endif	/* __RTL871X_SECURITY_H_ */

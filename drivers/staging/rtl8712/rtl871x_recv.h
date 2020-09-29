@@ -132,7 +132,7 @@ int r8712_free_recvframe(union recv_frame *precvframe,
 void r8712_free_recvframe_queue(struct  __queue *pframequeue,
 				 struct  __queue *pfree_recv_queue);
 int r8712_wlanhdr_to_ethhdr(union recv_frame *precvframe);
-int recv_func(struct _adapter *padapter, void *pcontext);
+int recv_func_8712(struct _adapter *padapter, void *pcontext);
 
 static inline u8 *get_rxmem(union recv_frame *precvframe)
 {

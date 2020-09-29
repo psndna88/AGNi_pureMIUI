@@ -22,110 +22,7 @@
 #include <osdep_service.h>
 #include <drv_types.h>
 #include <osdep_intf.h>
-#include <usb_ops_linux.h>
 #include <linux/usb.h>
-
-static int rtw_hw_suspend(struct adapter *padapter)
-{
-	struct pwrctrl_priv *pwrpriv = &padapter->pwrctrlpriv;
-	struct net_device *pnetdev = padapter->pnetdev;
-
-
-	if ((!padapter->bup) || (padapter->bDriverStopped) ||
-	    (padapter->bSurpriseRemoved)) {
-		DBG_88E("padapter->bup=%d bDriverStopped=%d bSurpriseRemoved = %d\n",
-			padapter->bup, padapter->bDriverStopped,
-			padapter->bSurpriseRemoved);
-		goto error_exit;
-	}
-
-	/* system suspend */
-	LeaveAllPowerSaveMode(padapter);
-
-	DBG_88E("==> rtw_hw_suspend\n");
-	_enter_pwrlock(&pwrpriv->lock);
-	pwrpriv->bips_processing = true;
-	/* s1. */
-	if (pnetdev) {
-		netif_carrier_off(pnetdev);
-		netif_tx_stop_all_queues(pnetdev);
-	}
-
-	/* s2. */
-	rtw_disassoc_cmd(padapter, 500, false);
-
-	/* s2-2.  indicate disconnect to os */
-	{
-		struct	mlme_priv *pmlmepriv = &padapter->mlmepriv;
-
-		if (check_fwstate(pmlmepriv, _FW_LINKED)) {
-			_clr_fwstate_(pmlmepriv, _FW_LINKED);
-
-			rtw_led_control(padapter, LED_CTL_NO_LINK);
-
-			rtw_os_indicate_disconnect(padapter);
-
-			/* donnot enqueue cmd */
-			rtw_lps_ctrl_wk_cmd(padapter, LPS_CTRL_DISCONNECT, 0);
-		}
-	}
-	/* s2-3. */
-	rtw_free_assoc_resources(padapter);
-
-	/* s2-4. */
-	rtw_free_network_queue(padapter, true);
-	rtw_ips_dev_unload(padapter);
-	pwrpriv->rf_pwrstate = rf_off;
-	pwrpriv->bips_processing = false;
-
-	_exit_pwrlock(&pwrpriv->lock);
-
-	return 0;
-
-error_exit:
-	DBG_88E("%s, failed\n", __func__);
-	return -1;
-}
-
-static int rtw_hw_resume(struct adapter *padapter)
-{
-	struct pwrctrl_priv *pwrpriv = &padapter->pwrctrlpriv;
-	struct net_device *pnetdev = padapter->pnetdev;
-
-
-	/* system resume */
-	DBG_88E("==> rtw_hw_resume\n");
-	_enter_pwrlock(&pwrpriv->lock);
-	pwrpriv->bips_processing = true;
-	rtw_reset_drv_sw(padapter);
-
-	if (pm_netdev_open(pnetdev, false) != 0) {
-		_exit_pwrlock(&pwrpriv->lock);
-		goto error_exit;
-	}
-
-	netif_device_attach(pnetdev);
-	netif_carrier_on(pnetdev);
-
-	if (!netif_queue_stopped(pnetdev))
-		netif_start_queue(pnetdev);
-	else
-		netif_wake_queue(pnetdev);
-
-	pwrpriv->bkeepfwalive = false;
-	pwrpriv->brfoffbyhw = false;
-
-	pwrpriv->rf_pwrstate = rf_on;
-	pwrpriv->bips_processing = false;
-
-	_exit_pwrlock(&pwrpriv->lock);
-
-
-	return 0;
-error_exit:
-	DBG_88E("%s, Open net dev failed\n", __func__);
-	return -1;
-}
 
 void ips_enter(struct adapter *padapter)
 {
@@ -175,7 +72,6 @@ int ips_leave(struct adapter *padapter)
 	int result = _SUCCESS;
 	int keyid;
 
-
 	_enter_pwrlock(&pwrpriv->lock);
 
 	if ((pwrpriv->rf_pwrstate == rf_off) && (!pwrpriv->bips_processing)) {
@@ -203,7 +99,7 @@ int ips_leave(struct adapter *padapter)
 			}
 		}
 
-		DBG_88E("==> ips_leave.....LED(0x%08x)...\n", usb_read32(padapter, 0x4c));
+		DBG_88E("==> ips_leave.....LED(0x%08x)...\n", rtw_read32(padapter, 0x4c));
 		pwrpriv->bips_processing = false;
 
 		pwrpriv->bkeepfwalive = false;
@@ -217,18 +113,47 @@ int ips_leave(struct adapter *padapter)
 
 static bool rtw_pwr_unassociated_idle(struct adapter *adapter)
 {
+	struct adapter *buddy = adapter->pbuddy_adapter;
 	struct mlme_priv *pmlmepriv = &(adapter->mlmepriv);
+#ifdef CONFIG_88EU_P2P
+	struct wifidirect_info	*pwdinfo = &(adapter->wdinfo);
+#endif
+
 	bool ret = false;
 
-	if (time_after_eq(adapter->pwrctrlpriv.ips_deny_time, jiffies))
+	if (adapter->pwrctrlpriv.ips_deny_time >= jiffies)
 		goto exit;
 
 	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE|WIFI_SITE_MONITOR) ||
 	    check_fwstate(pmlmepriv, WIFI_UNDER_LINKING|WIFI_UNDER_WPS) ||
+	    check_fwstate(pmlmepriv, WIFI_UNDER_WPS) ||
 	    check_fwstate(pmlmepriv, WIFI_AP_STATE) ||
-	    check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE|WIFI_ADHOC_STATE))
+	    check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE|WIFI_ADHOC_STATE) ||
+#if defined(CONFIG_88EU_P2P)
+	    !rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
+#else
+	    0)
+#endif
 		goto exit;
 
+	/* consider buddy, if exist */
+	if (buddy) {
+		struct mlme_priv *b_pmlmepriv = &(buddy->mlmepriv);
+		#ifdef CONFIG_88EU_P2P
+		struct wifidirect_info *b_pwdinfo = &(buddy->wdinfo);
+		#endif
+
+		if (check_fwstate(b_pmlmepriv, WIFI_ASOC_STATE|WIFI_SITE_MONITOR) ||
+		    check_fwstate(b_pmlmepriv, WIFI_UNDER_LINKING|WIFI_UNDER_WPS) ||
+		    check_fwstate(b_pmlmepriv, WIFI_AP_STATE) ||
+		    check_fwstate(b_pmlmepriv, WIFI_ADHOC_MASTER_STATE|WIFI_ADHOC_STATE) ||
+#if defined(CONFIG_88EU_P2P)
+		    !rtw_p2p_chk_state(b_pwdinfo, P2P_STATE_NONE))
+#else
+		    0)
+#endif
+			goto exit;
+	}
 	ret = true;
 
 exit:
@@ -254,6 +179,7 @@ void rtw_ps_processor(struct adapter *padapter)
 			if (rfpwrstate == rf_off) {
 				pwrpriv->change_rfpwrstate = rf_off;
 				pwrpriv->brfoffbyhw = true;
+				padapter->bCardDisableWOHSM = true;
 				rtw_hw_suspend(padapter);
 			} else {
 				pwrpriv->change_rfpwrstate = rf_on;
@@ -279,11 +205,22 @@ void rtw_ps_processor(struct adapter *padapter)
 exit:
 	rtw_set_pwr_state_check_timer(&padapter->pwrctrlpriv);
 	pwrpriv->ps_processing = false;
+	return;
 }
 
-static void pwr_state_check_handler(unsigned long data)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+static void pwr_state_check_handler(struct timer_list *t)
+#else
+static void pwr_state_check_handler(void *FunctionContext)
+#endif
 {
-	struct adapter *padapter = (struct adapter *)data;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+	struct adapter *padapter =
+		from_timer(padapter, t,
+			   pwrctrlpriv.pwr_state_check_timer);
+#else
+	struct adapter *padapter = (struct adapter *)FunctionContext;
+#endif
 	rtw_ps_cmd(padapter);
 }
 
@@ -344,6 +281,7 @@ void rtw_set_rpwm(struct adapter *padapter, u8 pslv)
 
 	pwrpriv->tog += 0x80;
 	pwrpriv->cpwm = pslv;
+
 }
 
 static u8 PS_RDY_CHECK(struct adapter *padapter)
@@ -351,7 +289,6 @@ static u8 PS_RDY_CHECK(struct adapter *padapter)
 	u32 curr_time, delta_time;
 	struct pwrctrl_priv	*pwrpriv = &padapter->pwrctrlpriv;
 	struct mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-
 
 	curr_time = jiffies;
 	delta_time = curr_time - pwrpriv->DelayLPSLastTimeStamp;
@@ -377,6 +314,9 @@ static u8 PS_RDY_CHECK(struct adapter *padapter)
 void rtw_set_ps_mode(struct adapter *padapter, u8 ps_mode, u8 smart_ps, u8 bcn_ant_mode)
 {
 	struct pwrctrl_priv *pwrpriv = &padapter->pwrctrlpriv;
+#ifdef CONFIG_88EU_P2P
+	struct wifidirect_info	*pwdinfo = &(padapter->wdinfo);
+#endif /* CONFIG_88EU_P2P */
 
 	RT_TRACE(_module_rtl871x_pwrctrl_c_, _drv_notice_,
 		 ("%s: PowerMode=%d Smart_PS=%d\n",
@@ -398,6 +338,16 @@ void rtw_set_ps_mode(struct adapter *padapter, u8 ps_mode, u8 smart_ps, u8 bcn_a
 
 	/* if (pwrpriv->pwr_mode == PS_MODE_ACTIVE) */
 	if (ps_mode == PS_MODE_ACTIVE) {
+#ifdef CONFIG_88EU_P2P
+		if (pwdinfo->opp_ps == 0) {
+			DBG_88E("rtw_set_ps_mode: Leave 802.11 power save\n");
+			pwrpriv->pwr_mode = ps_mode;
+			rtw_set_rpwm(padapter, PS_STATE_S4);
+			rtw_hal_set_hwreg(padapter, HW_VAR_H2C_FW_PWRMODE, (u8 *)(&ps_mode));
+			pwrpriv->bFwCurrentInPSMode = false;
+		}
+	} else {
+#endif /* CONFIG_88EU_P2P */
 		if (PS_RDY_CHECK(padapter)) {
 			DBG_88E("%s: Enter 802.11 power save\n", __func__);
 			pwrpriv->bFwCurrentInPSMode = true;
@@ -405,9 +355,17 @@ void rtw_set_ps_mode(struct adapter *padapter, u8 ps_mode, u8 smart_ps, u8 bcn_a
 			pwrpriv->smart_ps = smart_ps;
 			pwrpriv->bcn_ant_mode = bcn_ant_mode;
 			rtw_hal_set_hwreg(padapter, HW_VAR_H2C_FW_PWRMODE, (u8 *)(&ps_mode));
+
+#ifdef CONFIG_88EU_P2P
+			/*  Set CTWindow after LPS */
+			if (pwdinfo->opp_ps == 1)
+				p2p_ps_wk_cmd(padapter, P2P_PS_ENABLE, 0);
+#endif /* CONFIG_88EU_P2P */
+
 			rtw_set_rpwm(padapter, PS_STATE_S2);
 		}
 	}
+
 }
 
 /*
@@ -421,7 +379,6 @@ s32 LPS_RF_ON_check(struct adapter *padapter, u32 delay_ms)
 	u32 start_time;
 	u8 bAwake = false;
 	s32 err = 0;
-
 
 	start_time = jiffies;
 	while (1) {
@@ -440,7 +397,7 @@ s32 LPS_RF_ON_check(struct adapter *padapter, u32 delay_ms)
 			DBG_88E("%s: Wait for FW LPS leave more than %u ms!!!\n", __func__, delay_ms);
 			break;
 		}
-		msleep(1);
+		rtw_usleep_os(100);
 	}
 
 	return err;
@@ -464,12 +421,14 @@ void LPS_Enter(struct adapter *padapter)
 				pwrpriv->bpower_saving = true;
 				DBG_88E("%s smart_ps:%d\n", __func__, pwrpriv->smart_ps);
 				/* For Tenda W311R IOT issue */
-				rtw_set_ps_mode(padapter, pwrpriv->power_mgnt, pwrpriv->smart_ps, 0);
+				rtw_set_ps_mode(padapter, pwrpriv->power_mgnt,
+						pwrpriv->smart_ps, 0x40);
 			}
 		} else {
 			pwrpriv->LpsIdleCount++;
 		}
 	}
+
 }
 
 #define LPS_LEAVE_TIMEOUT_MS 100
@@ -482,7 +441,7 @@ void LPS_Leave(struct adapter *padapter)
 
 	if (pwrpriv->bLeisurePs) {
 		if (pwrpriv->pwr_mode != PS_MODE_ACTIVE) {
-			rtw_set_ps_mode(padapter, PS_MODE_ACTIVE, 0, 0);
+			rtw_set_ps_mode(padapter, PS_MODE_ACTIVE, 0, 0x40);
 
 			if (pwrpriv->pwr_mode == PS_MODE_ACTIVE)
 				LPS_RF_ON_check(padapter, LPS_LEAVE_TIMEOUT_MS);
@@ -490,6 +449,7 @@ void LPS_Leave(struct adapter *padapter)
 	}
 
 	pwrpriv->bpower_saving = false;
+
 }
 
 /*  */
@@ -501,8 +461,12 @@ void LeaveAllPowerSaveMode(struct adapter *Adapter)
 	struct mlme_priv	*pmlmepriv = &(Adapter->mlmepriv);
 	u8	enqueue = 0;
 
-	if (check_fwstate(pmlmepriv, _FW_LINKED))
+	if (check_fwstate(pmlmepriv, _FW_LINKED)) { /* connect */
+		p2p_ps_wk_cmd(Adapter, P2P_PS_DISABLE, enqueue);
+
 		rtw_lps_ctrl_wk_cmd(Adapter, LPS_CTRL_LEAVE, enqueue);
+	}
+
 }
 
 void rtw_init_pwrctrl_priv(struct adapter *padapter)
@@ -526,7 +490,7 @@ void rtw_init_pwrctrl_priv(struct adapter *padapter)
 
 	pwrctrlpriv->LpsIdleCount = 0;
 	if (padapter->registrypriv.mp_mode == 1)
-		pwrctrlpriv->power_mgnt = PS_MODE_ACTIVE;
+		pwrctrlpriv->power_mgnt = PS_MODE_ACTIVE ;
 	else
 		pwrctrlpriv->power_mgnt = padapter->registrypriv.power_mgnt;/*  PS_MODE_MIN; */
 	pwrctrlpriv->bLeisurePs = (PS_MODE_ACTIVE != pwrctrlpriv->power_mgnt) ? true : false;
@@ -544,15 +508,39 @@ void rtw_init_pwrctrl_priv(struct adapter *padapter)
 
 	pwrctrlpriv->btcoex_rfon = false;
 
-	setup_timer(&pwrctrlpriv->pwr_state_check_timer,
-		    pwr_state_check_handler,
-		    (unsigned long)padapter);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+	timer_setup(&pwrctrlpriv->pwr_state_check_timer, pwr_state_check_handler, 0);
+#else
+	_init_timer(&(pwrctrlpriv->pwr_state_check_timer), padapter->pnetdev, pwr_state_check_handler, (u8 *)padapter);
+#endif
+}
+
+void rtw_free_pwrctrl_priv(struct adapter *adapter)
+{
+	struct pwrctrl_priv *pwrctrlpriv = &adapter->pwrctrlpriv;
+
+	_free_pwrlock(&pwrctrlpriv->lock);
+
+}
+
+u8 rtw_interface_ps_func(struct adapter *padapter, enum hal_intf_ps_func efunc_id, u8 *val)
+{
+	u8 bResult = true;
+	rtw_hal_intf_ps_func(padapter, efunc_id, val);
+
+	return bResult;
+}
+
+inline void rtw_set_ips_deny(struct adapter *padapter, u32 ms)
+{
+	struct pwrctrl_priv *pwrpriv = &padapter->pwrctrlpriv;
+	pwrpriv->ips_deny_time = jiffies + rtw_ms_to_systime(ms);
 }
 
 /*
 * rtw_pwr_wakeup - Wake the NIC up from: 1)IPS. 2)USB autosuspend
 * @adapter: pointer to struct adapter structure
-* @ips_deffer_ms: the ms will prevent from falling into IPS after wakeup
+* @ips_deffer_ms: the ms wiil prevent from falling into IPS after wakeup
 * Return _SUCCESS or _FAIL
 */
 
@@ -560,30 +548,32 @@ int _rtw_pwr_wakeup(struct adapter *padapter, u32 ips_deffer_ms, const char *cal
 {
 	struct pwrctrl_priv *pwrpriv = &padapter->pwrctrlpriv;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-	unsigned long expires;
 	int ret = _SUCCESS;
-
-	expires = jiffies + msecs_to_jiffies(ips_deffer_ms);
-	if (time_before(pwrpriv->ips_deny_time, expires))
-		pwrpriv->ips_deny_time = jiffies + msecs_to_jiffies(ips_deffer_ms);
-
-{
 	u32 start = jiffies;
+
+	if (pwrpriv->ips_deny_time < jiffies + rtw_ms_to_systime(ips_deffer_ms))
+		pwrpriv->ips_deny_time = jiffies + rtw_ms_to_systime(ips_deffer_ms);
+
 	if (pwrpriv->ps_processing) {
 		DBG_88E("%s wait ps_processing...\n", __func__);
 		while (pwrpriv->ps_processing && rtw_get_passing_time_ms(start) <= 3000)
-			usleep_range(1000, 3000);
+			rtw_msleep_os(10);
 		if (pwrpriv->ps_processing)
 			DBG_88E("%s wait ps_processing timeout\n", __func__);
 		else
 			DBG_88E("%s wait ps_processing done\n", __func__);
 	}
-}
 
 	/* System suspend is not allowed to wakeup */
-	if ((!pwrpriv->bInternalAutoSuspend) && (pwrpriv->bInSuspend)) {
-		ret = _FAIL;
-		goto exit;
+	if ((!pwrpriv->bInternalAutoSuspend) && pwrpriv->bInSuspend) {
+		while (pwrpriv->bInSuspend &&
+		       (rtw_get_passing_time_ms(start) <= 3000 ||
+		       (rtw_get_passing_time_ms(start) <= 500)))
+				rtw_msleep_os(10);
+		if (pwrpriv->bInSuspend)
+			DBG_88E("%s wait bInSuspend timeout\n", __func__);
+		else
+			DBG_88E("%s wait bInSuspend done\n", __func__);
 	}
 
 	/* block??? */
@@ -619,9 +609,8 @@ int _rtw_pwr_wakeup(struct adapter *padapter, u32 ips_deffer_ms, const char *cal
 	}
 
 exit:
-	expires = jiffies + msecs_to_jiffies(ips_deffer_ms);
-	if (time_before(pwrpriv->ips_deny_time, expires))
-		pwrpriv->ips_deny_time = jiffies + msecs_to_jiffies(ips_deffer_ms);
+	if (pwrpriv->ips_deny_time < jiffies + rtw_ms_to_systime(ips_deffer_ms))
+		pwrpriv->ips_deny_time = jiffies + rtw_ms_to_systime(ips_deffer_ms);
 	return ret;
 }
 
