@@ -1906,13 +1906,13 @@
 		};
 	};
 
-	funnel_merge: funnel@8045000 {
+	funnel_merg: funnel@8045000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x000bb908>;
 		reg = <0x08045000 0x1000>;
 		reg-names = "funnel-base";
 
-		coresight-name = "coresight-funnel-merge";
+		coresight-name = "coresight-funnel-merg";
 
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
