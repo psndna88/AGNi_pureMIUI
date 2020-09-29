@@ -150,7 +150,8 @@
 #define RECHARGE_VBATT_THR_v2_OFFSET	1
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
-#define SLOW_CHARGE_THRESHOLD		70
+#define SLOW_CHARGE_THRESHOLD_HVDCP		70
+#define SLOW_CHARGE_THRESHOLD		90
 
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
@@ -413,6 +414,7 @@ module_param_named(
 );
 
 bool is_charging = false;
+bool hvdcp_mode = false;
 
 bool charging_detected(void)
 {
@@ -424,6 +426,9 @@ static bool fg_sram_dump;
  int hwc_check_india;
  int hwc_check_global;
 extern bool is_poweroff_charge;
+#if defined(CONFIG_KERNEL_CUSTOM_E7T) || defined (CONFIG_KERNEL_CUSTOM_D2S)
+extern int rradc_die;
+#endif
 /* All getters HERE */
 
 #define VOLTAGE_15BIT_MASK	GENMASK(14, 0)
@@ -654,6 +659,9 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 {
 	int rc = 0, temp;
 	u8 buf[2];
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	struct thermal_zone_device *quiet_them;
+#endif
 
 	rc = fg_read(chip, BATT_INFO_BATT_TEMP_LSB(chip), buf, 2);
 	if (rc < 0) {
@@ -667,8 +675,26 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 
 	/* Value is in Kelvin; Convert it to deciDegC */
 	temp = (temp - 273) * 10;
+	//begin add for low temp detection of battery in 2017.11.02
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (temp < -40){
+		switch (temp){
+		case -50:
+			temp = -70;
+			break;
+		case -60:
+			temp = -80;
+			break;
+		case -70:
+			temp = -90;
+			break;
+		case -80:
+			temp = -100;
+			break;
+#else
 	if (temp < -80){
 		switch (temp){
+#endif
 		case -90:
 			temp = -110;
 			break;
@@ -699,6 +725,16 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 		};
 	}
 
+	//end add for low temp detection of battery in 2017.11.02
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (rradc_die == 1) {
+		quiet_them = thermal_zone_get_zone_by_name("quiet_therm");
+		if (quiet_them)
+			rc = thermal_zone_get_temp(quiet_them, &temp);
+		temp = (temp - 3) * 10;
+		pr_debug("E7T - LCT USE QUIET_THERM AS BATTERY TEMP \n");
+	}
+#endif
 	*val = temp;
 	return 0;
 }
@@ -3515,9 +3551,13 @@ cv_estimate:
 	}
 
 	/* tau is scaled linearly from SLOW_CHARGE_THRESHOLD(%) to 100% SOC */
-	if (msoc >= SLOW_CHARGE_THRESHOLD)
-		tau = tau * 2 * (100 - msoc) / 10;
-
+	if (hvdcp_mode) {
+		if (msoc >= SLOW_CHARGE_THRESHOLD_HVDCP)
+			tau = tau * 2 * (100 - msoc) / 10;
+	} else {
+		if (msoc >= SLOW_CHARGE_THRESHOLD)
+			tau = tau * 2 * (100 - msoc) / 10;
+	}
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);
 	t_predicted_cv = div_s64((s64)act_cap_mah * rbatt * tau *
 						HOURS_TO_SECONDS, NANO_UNIT);
@@ -4800,8 +4840,9 @@ static irqreturn_t fg_delta_bsoc_irq_handler(int irq, void *data)
 static irqreturn_t fg_delta_msoc_irq_handler(int irq, void *data)
 {
 	struct fg_chip *chip = data;
+	struct thermal_zone_device *quiet_them;
 	int rc;
-	int msoc, volt_uv, batt_temp, ibatt_now ;
+	int msoc, volt_uv, batt_temp, ibatt_now,temp_qt ;
 	bool input_present;
 	fg_dbg(chip, FG_IRQ, "irq %d triggered\n", irq);
 	fg_cycle_counter_update(chip);
@@ -4833,18 +4874,21 @@ static irqreturn_t fg_delta_msoc_irq_handler(int irq, void *data)
 		power_supply_changed(chip->batt_psy);
 
 	input_present = is_input_present(chip);
+	quiet_them = thermal_zone_get_zone_by_name("quiet_therm");
 	rc = fg_get_battery_voltage(chip, &volt_uv);
 	if (!rc)
 		rc = fg_get_prop_capacity(chip, &msoc);
 
 	if (!rc)
 		rc = fg_get_battery_temp(chip, &batt_temp);
+	if (quiet_them)
+		rc = thermal_zone_get_temp(quiet_them, &temp_qt);
 	if (!rc)
 		rc = fg_get_battery_current(chip, &ibatt_now);
 
 	if (!rc)
-		pr_err("lct battery SOC:%d voltage:%duV current:%duA temp:%d id:%dK charge_status:%d charge_type:%d health:%d input_present:%d \n",
-			msoc, volt_uv, ibatt_now, batt_temp, chip->batt_id_ohms / 1000, chip->charge_status, chip->charge_type, chip->health, input_present);
+		pr_err("lct battery SOC:%d voltage:%duV current:%duA temp:%d id:%dK charge_status:%d charge_type:%d health:%d input_present:%d temp_qt:%d \n",
+			msoc, volt_uv, ibatt_now, batt_temp, chip->batt_id_ohms / 1000, chip->charge_status, chip->charge_type, chip->health, input_present,temp_qt);
 	return IRQ_HANDLED;
 }
 
