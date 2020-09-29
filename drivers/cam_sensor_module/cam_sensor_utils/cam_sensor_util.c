@@ -1201,7 +1201,8 @@ int cam_sensor_util_request_gpio_table(
 	}
 
 	for (i = 0; i < size; i++) {
-		CAM_DBG(CAM_SENSOR, "i: %d, gpio %d dir %ld",  i,
+		CAM_DBG(CAM_SENSOR, "%s%d, i: %d, gpio %d dir %lld",
+			soc_info->dev_name, soc_info->index, i,
 			gpio_tbl[i].gpio, gpio_tbl[i].flags);
 	}
 
@@ -1227,7 +1228,7 @@ int cam_sensor_util_request_gpio_table(
 	return rc;
 }
 
-static bool cam_sensor_util_check_gpio_is_shared(
+bool cam_sensor_util_check_gpio_is_shared(
 	struct cam_hw_soc_info *soc_info)
 {
 	int rc = 0;
@@ -1255,7 +1256,7 @@ static bool cam_sensor_util_check_gpio_is_shared(
 		return false;
 	}
 
-	rc = cam_res_mgr_check_if_gpio_is_shared(
+	rc = cam_res_mgr_util_check_if_gpio_is_shared(
 		gpio_tbl, size);
 	if (!rc) {
 		CAM_DBG(CAM_SENSOR,
@@ -1988,7 +1989,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 		struct cam_hw_soc_info *soc_info)
 {
 	int rc = 0, index = 0, no_gpio = 0, ret = 0, num_vreg, j = 0, i = 0;
-	bool shared_gpio = false;
 	int32_t vreg_idx = -1;
 	struct cam_sensor_power_setting *power_setting = NULL;
 	struct msm_camera_gpio_num_info *gpio_num_info = NULL;
@@ -2007,9 +2007,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 		return -EINVAL;
 	}
 
-	if (soc_info->use_shared_clk)
-		cam_res_mgr_shared_clk_config(true);
-
 	ret = msm_camera_pinctrl_init(&(ctrl->pinctrl_info), ctrl->dev);
 	if (ret < 0) {
 		/* Some sensor subdev no pinctrl. */
@@ -2019,19 +2016,9 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 		ctrl->cam_pinctrl_status = 1;
 	}
 
-	shared_gpio = cam_sensor_util_check_gpio_is_shared(soc_info);
 	rc = cam_sensor_util_request_gpio_table(soc_info, 1);
-	if (rc < 0)
+	if (rc < 0) {
 		no_gpio = rc;
-
-	if (shared_gpio) {
-		rc = cam_res_mgr_shared_pinctrl_init();
-		if (rc) {
-			CAM_ERR(CAM_SENSOR,
-				"Failed to init shared pinctrl");
-			shared_gpio = false;
-			return -EINVAL;
-		}
 	}
 
 	if (ctrl->cam_pinctrl_status) {
@@ -2042,12 +2029,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 			CAM_ERR(CAM_SENSOR, "cannot set pin to active state");
 	}
 
-	if (shared_gpio) {
-		ret = cam_res_mgr_shared_pinctrl_select_state(true);
-		if (ret)
-			CAM_ERR(CAM_SENSOR,
-				"Cannot set shared pin to active state");
-	}
 	CAM_DBG(CAM_SENSOR, "power setting size: %d", ctrl->power_setting_size);
 
 	for (index = 0; index < ctrl->power_setting_size; index++) {
@@ -2332,16 +2313,7 @@ power_up_failed:
 		devm_pinctrl_put(ctrl->pinctrl_info.pinctrl);
 	}
 
-	if (soc_info->use_shared_clk)
-		cam_res_mgr_shared_clk_config(false);
-
-	if (shared_gpio) {
-		cam_res_mgr_shared_pinctrl_select_state(false);
-		cam_res_mgr_shared_pinctrl_put();
-	}
-
 	ctrl->cam_pinctrl_status = 0;
-
 	cam_sensor_util_request_gpio_table(soc_info, 0);
 
 	return rc;
@@ -2372,7 +2344,6 @@ int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 		struct cam_hw_soc_info *soc_info)
 {
 	int index = 0, ret = 0, num_vreg = 0, i;
-	bool shared_gpio = false;
 	struct cam_sensor_power_setting *pd = NULL;
 	struct cam_sensor_power_setting *ps = NULL;
 	struct msm_camera_gpio_num_info *gpio_num_info = NULL;
@@ -2383,7 +2354,6 @@ int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 		return -EINVAL;
 	}
 
-	shared_gpio = cam_sensor_util_check_gpio_is_shared(soc_info);
 	gpio_num_info = ctrl->gpio_num_info;
 	num_vreg = soc_info->num_rgltr;
 
@@ -2521,13 +2491,6 @@ int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 	}
 
 	cam_sensor_util_request_gpio_table(soc_info, 0);
-
-	if (soc_info->use_shared_clk)
-		cam_res_mgr_shared_clk_config(false);
-	if (shared_gpio) {
-		cam_res_mgr_shared_pinctrl_select_state(false);
-		cam_res_mgr_shared_pinctrl_put();
-	}
 	ctrl->cam_pinctrl_status = 0;
 
 	return 0;
