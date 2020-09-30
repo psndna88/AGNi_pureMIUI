@@ -104,6 +104,12 @@ struct cam_isp_in_port_generic_info {
 	uint32_t                        horizontal_bin;
 	uint32_t                        qcfa_bin;
 	uint32_t                        num_bytes_out;
+	uint32_t                        ipp_count;
+	uint32_t                        ppp_count;
+	uint32_t                        rdi_count;
+	uint32_t                        udi_count;
+	uint32_t                        lcr_count;
+	uint32_t                        ife_rd_count;
 	struct cam_isp_out_port_generic_info    *data;
 };
 
@@ -128,6 +134,7 @@ struct cam_isp_in_port_generic_info {
  * @priv:         private data to be sent in callback
  * @event_cb:     CSID event callback to hw manager
  * @phy_sel:      Phy selection number if tpg is enabled from userspace
+ * @can_use_lite: Flag to indicate if current call qualifies for acquire lite
  *
  */
 struct cam_csid_hw_reserve_resource_args {
@@ -144,6 +151,7 @@ struct cam_csid_hw_reserve_resource_args {
 	void                                     *priv;
 	cam_hw_mgr_event_cb_func                  event_cb;
 	uint32_t                                  phy_sel;
+	bool                                      can_use_lite;
 };
 
 /**

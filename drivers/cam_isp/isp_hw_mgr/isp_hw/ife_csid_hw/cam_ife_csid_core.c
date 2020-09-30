@@ -689,6 +689,7 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	uint32_t camera_hw_version;
 	uint32_t valid_vc_dt;
 	uint32_t res_type;
+	struct cam_csid_soc_private *soc_priv;
 
 	CAM_DBG(CAM_ISP,
 		"CSID:%d res_sel:0x%x Lane type:%d lane_num:%d dt:%d vc:%d",
@@ -698,6 +699,15 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 		cid_reserv->in_port->lane_num,
 		cid_reserv->in_port->dt[0],
 		cid_reserv->in_port->vc[0]);
+
+	soc_priv = (struct cam_csid_soc_private *)
+		(csid_hw->hw_info->soc_info.soc_private);
+
+	if (soc_priv->is_ife_csid_lite && !cid_reserv->can_use_lite) {
+		CAM_INFO(CAM_ISP, "CSID[%u] not lite context",
+			csid_hw->hw_intf->hw_idx);
+		return -EINVAL;
+	}
 
 	if (cid_reserv->in_port->res_type >= CAM_ISP_IFE_IN_RES_MAX) {
 		CAM_ERR(CAM_ISP, "CSID:%d  Invalid phy sel %d",
