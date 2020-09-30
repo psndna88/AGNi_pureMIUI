@@ -3993,16 +3993,17 @@ static int venus_hfi_get_fw_info(void *dev, struct hal_fw_info *fw_info)
 			smem_table_ptr + smem_image_index_venus,
 			VENUS_VERSION_LENGTH);
 
-	while (version[i++] != 'V' && i < VENUS_VERSION_LENGTH)
+	while (version[i] != 'V' && version[i] != 'v' &&
+			++i < VENUS_VERSION_LENGTH)
 		;
 
-	if (i == VENUS_VERSION_LENGTH - 1) {
+	if (i >= VENUS_VERSION_LENGTH - 1) {
 		d_vpr_e("Venus version string is not proper\n");
 		fw_info->version[0] = '\0';
 		goto fail_version_string;
 	}
 
-	for (i--; i < VENUS_VERSION_LENGTH && j < VENUS_VERSION_LENGTH - 1; i++)
+	for (; i < VENUS_VERSION_LENGTH && j < VENUS_VERSION_LENGTH - 1; i++)
 		fw_info->version[j++] = version[i];
 	fw_info->version[j] = '\0';
 
