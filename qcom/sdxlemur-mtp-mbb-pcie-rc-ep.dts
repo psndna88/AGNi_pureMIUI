@@ -2,6 +2,7 @@
 
 #include "sdxlemur.dtsi"
 #include "sdxlemur-mtp-mbb-pcie-rc-ep.dtsi"
+#include "sdxlemur-512mb.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB RC PCIE-EP";
