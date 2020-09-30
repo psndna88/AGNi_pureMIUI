@@ -42,6 +42,8 @@ Required properties:
 - interrupts:		The interrupt signal from the DSI block.
 - qcom,dsi-default-panel:	Specifies the default panel.
 - qcom,mdp:		Specifies the mdp node which can find panel node from this.
+- qcom,demura-panel-id:		Specifies the u64 demura panel ID as an array <2>
+				If demura is not used this node must be set to <0,0>.
 
 Bus Scaling Data:
 - qcom,msm-bus,name:		String property describing MDSS client.

@@ -107,6 +107,7 @@
 
 		qcom,mdp = <&mdss_mdp>;
 		qcom,dsi-default-panel = <&dsi_sw43404_amoled_cmd>;
+		qcom,demura-panel-id = <0x0 0x0>;
 	};
 
 	sde_dsi1: qcom,dsi-display-secondary {
@@ -116,6 +117,7 @@
 		qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
 		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
 		qcom,mdp = <&mdss_mdp>;
+		qcom,demura-panel-id = <0x0 0x0>;
 	};
 };
 
