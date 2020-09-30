@@ -1083,10 +1083,10 @@ static struct msm_vidc_common_data shima_common_data_v0[] = {
 	},
 	{
 		.key = "qcom,max-hw-load",
-		.value = 4147200,
+		.value = 3916800,
 		/**
 		 * (3840x2176)/256)@120fps decode,
-		 * (8192x4320)/256)@30fps decode
+		 * (7680x4320)/256)@30fps decode
 		 */
 	},
 	{
