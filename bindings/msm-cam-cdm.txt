@@ -57,13 +57,13 @@ to CDM interface node.
   Definition: Should be "qcom,cam170-cpas-cdm0", "qcom,cam480-cpas-cdm0",
 	"qcom,cam480-cpas-cdm1", "qcom,cam480-cpas-cdm2", "qcom,cam-cpas-cdm1_0",
 	"qcom,cam-cpas-cdm1_1", "qcom,cam-cpas-cdm1_2", "qcom,cam-ife-cdm1_2",
-	"qcom,cam-cpas-cdm2_0" or "qcom,cam-ope-cdm2_0",
-	"qcom,cam-cpas-cdm2_1" or "qcom,cam-ope-cdm2_1"
+	"qcom,cam-cpas-cdm2_0", "qcom,cam-ope-cdm2_0", "qcom,cam-cpas-cdm2_1",
+	"qcom,cam-rt-cdm2_1" or "qcom,cam-ope-cdm2_1"
 
 - label
   Usage: required
   Value type: <string>
-  Definition: Should be "cpas-cdm".
+  Definition: Should be "cpas-cdm", "ife-cdm", or "rt-cdm".
 
 - reg-names
   Usage: required
@@ -117,16 +117,33 @@ to CDM interface node.
   Value type: <u32>
   Definition: List of clocks rates.
 
-- cdm-client-names
-  Usage: required
-  Value type: <string>
-  Definition: List of Clients supported by CDM HW node.
-
 - clock-cntl-level
   Usage: required
   Value type: <string>
   Definition: List of strings corresponds clock-rates levels.
   Supported strings: minsvs, lowsvs, svs, svs_l1, nominal, turbo.
+
+- cdm-client-names
+  Usage: required
+  Value type: <string>
+  Definition: List of Clients supported by CDM HW node.
+
+- config-fifo
+  Usage: required
+  Value type: <empty>
+  Definition: Flag to let driver know whether to load fifo depths
+  from property fifo-depths or not.
+
+- fifo-depths
+  Usage: required
+  Value type: <u32>
+  Definition: List of fifo depths supported by device.
+
+- single-context-cdm
+  Usage: required
+  Value type: <empty>
+  Definition: Flag to indicate that the CDM is being used in single
+  context mode.
 
 Example:
 	qcom,cpas-cdm0@ac48000 {
@@ -152,7 +169,10 @@ Example:
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>,
 			<&clock_camcc CAM_CC_CAMNOC_AXI_CLK>;
 		qcom,clock-rates = <0 80000000 80000000 80000000 80000000 80000000>;
-		cdm-client-names = "ife";
 		clock-cntl-level = "turbo";
+		cdm-client-names = "ife0";
+		config-fifo;
+		fifo-depths = <64 0 0 0>;
+		single-context-cdm;
 		status = "ok";
 	};
