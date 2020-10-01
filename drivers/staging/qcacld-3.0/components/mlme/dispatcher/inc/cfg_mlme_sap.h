@@ -732,7 +732,7 @@
  */
 #define CFG_IS_SAP_SAE_ENABLED CFG_INI_BOOL( \
 				"enable_sae_for_sap", \
-				1, \
+				0, \
 				"Enable/Disable SAE support for SAP")
 
 #define CFG_SAP_SAE CFG(CFG_IS_SAP_SAE_ENABLED)
