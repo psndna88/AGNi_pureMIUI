@@ -953,25 +953,25 @@ static struct cam_camnoc_specific
 			.enable = false,
 		},
 		.qosgen_mainctl = {
-			.enable = false,
+			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2D08, /* JPEG_QOSGEN_MAINCTL */
-			.value = 0x0,
+			.value = 0x2,
 		},
 		.qosgen_shaping_low = {
-			.enable = false,
+			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2D20, /* JPEG_QOSGEN_SHAPING_LOW */
-			.value = 0x0,
+			.value = 0x10101010,
 		},
 		.qosgen_shaping_high = {
-			.enable = false,
+			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2D24, /* JPEG_QOSGEN_SHAPING_HIGH */
-			.value = 0x0,
+			.value = 0x10101010,
 		},
 	},
 	{
