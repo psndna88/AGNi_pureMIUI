@@ -324,7 +324,7 @@
 		"gFwDebugLogLevel", \
 		0, \
 		255, \
-		3, \
+		0, \
 		CFG_VALUE_OR_DEFAULT, \
 		"enable error and warning logs by default")
 
@@ -349,7 +349,7 @@
 		"gFwDebugLogType", \
 		0, \
 		255, \
-		3, \
+		0, \
 		CFG_VALUE_OR_DEFAULT, \
 		"Default value to be given to the net link cnss_diag service")
 
@@ -390,8 +390,8 @@
 	"gFwDebugModuleLoglevel", \
 	0, \
 	FW_MODULE_LOG_LEVEL_STRING_LENGTH, \
-	"2,1,3,1,4,1,5,1,9,1,13,1,14,1,17,1,18,1,19,1,22,1,26,1,28,1,29,1," \
-	"31,1,36,1,38,1,46,1,47,1,50,1,52,1,53,1,56,1,60,1,61,1", \
+	"2,0,3,0,4,0,5,0,9,0,13,0,14,0,17,0,18,0,19,0,22,0,26,0,28,0,29,0," \
+	"31,0,36,0,38,0,46,0,47,0,50,0,52,0,53,0,56,0,60,0,61,0", \
 	"Set modulized firmware debug log level")
 
 #ifdef FEATURE_WLAN_RA_FILTERING
@@ -627,7 +627,7 @@
 
 #define CFG_IS_SAE_ENABLED CFG_INI_BOOL( \
 		"sae_enabled", \
-		1, \
+		0, \
 		"SAE feature control")
 #define __CFG_IS_SAE_ENABLED CFG(CFG_IS_SAE_ENABLED)
 #else
