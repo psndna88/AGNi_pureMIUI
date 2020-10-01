@@ -529,26 +529,30 @@ static int cam_tfe_hw_mgr_free_hw_res(
 	return 0;
 }
 
-static int cam_tfe_mgr_csid_change_halt_mode(struct list_head  *halt_list,
-	uint32_t  base_idx, enum cam_tfe_csid_halt_mode halt_mode)
+static int cam_tfe_mgr_csid_change_halt_mode(struct cam_tfe_hw_mgr_ctx *ctx,
+	enum cam_tfe_csid_halt_mode halt_mode)
 {
-	struct cam_isp_hw_mgr_res      *hw_mgr_res;
-	struct cam_isp_resource_node   *isp_res;
-	struct cam_csid_hw_halt_args    halt;
-	struct cam_hw_intf             *hw_intf;
+	struct cam_isp_hw_mgr_res        *hw_mgr_res;
+	struct cam_isp_resource_node     *isp_res;
+	struct cam_tfe_csid_hw_halt_args halt;
+	struct cam_hw_intf               *hw_intf;
 	uint32_t i;
 	int rc = 0;
 
-	list_for_each_entry(hw_mgr_res, halt_list, list) {
+	if (!ctx->is_dual)
+		return 0;
+
+	list_for_each_entry(hw_mgr_res, &ctx->res_list_tfe_csid, list) {
 		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+			if (i == CAM_ISP_HW_SPLIT_LEFT)
+				continue;
+
 			if (!hw_mgr_res->hw_res[i] ||
 				(hw_mgr_res->hw_res[i]->res_state !=
 				CAM_ISP_RESOURCE_STATE_STREAMING))
 				continue;
 
 			isp_res = hw_mgr_res->hw_res[i];
-			if (isp_res->hw_intf->hw_idx != base_idx)
-				continue;
 
 			if ((isp_res->res_type == CAM_ISP_RESOURCE_PIX_PATH) &&
 				(isp_res->res_id ==
@@ -560,7 +564,8 @@ static int cam_tfe_mgr_csid_change_halt_mode(struct list_head  *halt_list,
 					hw_intf->hw_priv,
 					CAM_ISP_HW_CMD_CSID_CHANGE_HALT_MODE,
 					&halt,
-					sizeof(struct cam_csid_hw_halt_args));
+					sizeof(
+					struct cam_tfe_csid_hw_halt_args));
 				if (rc)
 					CAM_ERR(CAM_ISP, "Halt update failed");
 				break;
@@ -2668,16 +2673,9 @@ static int cam_tfe_mgr_stop_hw(void *hw_mgr_priv, void *stop_hw_args)
 		master_base_idx = ctx->base[0].idx;
 
 	/*Change slave mode*/
-	if (csid_halt_type == CAM_CSID_HALT_IMMEDIATELY) {
-		for (i = 0; i < ctx->num_base; i++) {
-			if (ctx->base[i].idx == master_base_idx)
-				continue;
-			cam_tfe_mgr_csid_change_halt_mode(
-				&ctx->res_list_tfe_csid,
-				ctx->base[i].idx,
-				CAM_TFE_CSID_HALT_MODE_INTERNAL);
-		}
-	}
+	if (csid_halt_type == CAM_CSID_HALT_IMMEDIATELY)
+		cam_tfe_mgr_csid_change_halt_mode(ctx,
+			CAM_TFE_CSID_HALT_MODE_INTERNAL);
 
 	CAM_DBG(CAM_ISP, "Stopping master CSID idx %d", master_base_idx);
 
