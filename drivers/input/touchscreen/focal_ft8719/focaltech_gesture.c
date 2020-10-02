@@ -271,21 +271,15 @@ static ssize_t fts_gesture_write(struct file *file, const char __user *buf,
 };
 #define FTS_GESTURE_NAME "fts_wake_gesture"
 
-static ssize_t proc_tp_gesture_read(struct file *file,
-		char __user *buf, size_t size, loff_t *ppos)
+static int proc_tp_gesture_read(struct seq_file *sf, void *ignored)
 {
-	ssize_t cnt;
-	char *page = NULL;
+	seq_printf(sf, "%d\n", fts_gesture_data.mode);
+	return 0;
+}
 
-	page = kzalloc(1, GFP_KERNEL);
-	if (IS_ERR_OR_NULL(page))
-		return -ENOMEM;
-
-	cnt = sprintf(page, "%s", (fts_gesture_data.mode ? "1\n" : "0\n"));
-	cnt = simple_read_from_buffer(buf, size, ppos, page, cnt);
-
-	kfree(page);
-	return cnt;
+static int proc_tp_gesture_open(struct inode *i, struct file *f)
+{
+	return single_open(f, proc_tp_gesture_read, i);
 }
 
 static ssize_t proc_tp_gesture_write(struct file *file,
@@ -295,39 +289,39 @@ static ssize_t proc_tp_gesture_write(struct file *file,
 	char *page = NULL;
 	unsigned int input = 0;
 
-	page = kzalloc(1, GFP_KERNEL);
+	page = kzalloc(128, GFP_KERNEL);
 	if (IS_ERR_OR_NULL(page))
 		return -ENOMEM;
 
-	cnt = simple_write_to_buffer(page, 1, ppos, buf, size);
+	cnt = simple_write_to_buffer(page, sizeof(page), ppos, buf, size);
 	if (cnt <= 0) {
-		cnt = -EINVAL;
-		goto out_free;
+		kfree(page);
+		return -EINVAL;
 	}
 
 	if (sscanf(page, "%u", &input) != 1) {
-		cnt = -EINVAL;
-		goto out_free;
+		kfree(page);
+		return -EINVAL;
 	}
 
-	fts_gesture_data.mode = input;
+	fts_gesture_data.mode = input > 1 ? 1 : 0;
 
-out_free:
 	kfree(page);
 	return cnt;
 }
 
 static const struct file_operations proc_tp_gesture_fops = {
-	.read		= proc_tp_gesture_read,
-	.write		= proc_tp_gesture_write,
+	.owner = THIS_MODULE,
+	.open = proc_tp_gesture_open,
+	.write = proc_tp_gesture_write,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek,
 };
 
 static void proc_tp_entry_init(void)
 {
-	struct proc_dir_entry *proc_entry_tp;
-
-	proc_entry_tp = proc_create_data("tp_gesture", 0666, NULL, &proc_tp_gesture_fops, NULL);
-	if (IS_ERR_OR_NULL(proc_entry_tp))
+	if (IS_ERR_OR_NULL(proc_create("tp_gesture", 0666, NULL, &proc_tp_gesture_fops)))
 		pr_err("%s: add /proc/tp_gesture error!\n", __func__);
 }
 /*****************************************************************************
