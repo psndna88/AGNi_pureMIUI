@@ -416,11 +416,13 @@ enum msm_isp_comp_irq_types {
 
 #define MSM_VFE_REQUESTQ_SIZE 8
 
+#ifndef CONFIG_PATCH_GCAM_FREEZE
 struct msm_isp_pending_buf_info {
 	uint32_t is_buf_done_pending;
 	struct msm_isp_buffer *buf;
 	uint32_t frame_id;
 };
+#endif
 struct msm_vfe_axi_stream {
 	uint32_t frame_id;
 	enum msm_vfe_axi_state state;
@@ -477,7 +479,9 @@ struct msm_vfe_axi_stream {
 	uint32_t vfe_mask;
 	uint32_t composite_irq[MSM_ISP_COMP_IRQ_MAX];
 	int lpm_mode;
+#ifndef CONFIG_PATCH_GCAM_FREEZE
 	struct msm_isp_pending_buf_info pending_buf_info;
+#endif
 };
 
 struct msm_vfe_axi_composite_info {
@@ -855,8 +859,10 @@ struct vfe_device {
 	uint64_t total_bandwidth;
 	struct isp_kstate *isp_page;
 
+#ifndef CONFIG_PATCH_GCAM_FREEZE
 	/* irq info */
 	uint32_t irq_sof_id;
+#endif
 };
 
 struct vfe_parent_device {
