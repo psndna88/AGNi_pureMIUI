@@ -562,8 +562,6 @@ static void msm_isp_cfg_framedrop_reg(
 	if (MSM_VFE_STREAM_STOP_PERIOD != framedrop_period)
 	{
 		framedrop_pattern = 0x1;
-		if(framedrop_period > 1)
-			framedrop_pattern = framedrop_pattern << (framedrop_period-1);
 	}
 
 	BUG_ON(0 == framedrop_period);
@@ -628,12 +626,7 @@ static void msm_isp_update_framedrop_reg(struct msm_vfe_axi_stream *stream_info,
 				MSM_VFE_STREAM_STOP_PERIOD;
 	}
 
-#ifdef CONFIG_PATCH_GCAM_FREEZE
 	if (stream_info->undelivered_request_cnt > 0)
-#else
-	if (stream_info->undelivered_request_cnt > 0 &&
-		drop_reconfig != 1)
-#endif
 		stream_info->current_framedrop_period =
 			MSM_VFE_STREAM_STOP_PERIOD;
 	/*
@@ -4109,9 +4102,7 @@ int msm_isp_update_axi_stream(struct vfe_device *vfe_dev, void *arg)
 			update_cmd->update_type !=
 			UPDATE_STREAM_REMOVE_BUFQ &&
 			update_cmd->update_type !=
-			UPDATE_STREAM_SW_FRAME_DROP &&
-			update_cmd->update_type !=
-			UPDATE_STREAM_REQUEST_FRAMES_VER2) {
+			UPDATE_STREAM_SW_FRAME_DROP) {
 			pr_err("%s: Invalid stream state %d, update cmd %d\n",
 				__func__, stream_info->state,
 				stream_info->stream_id);
