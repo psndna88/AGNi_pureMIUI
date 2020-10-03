@@ -465,13 +465,13 @@
 		trips {
 			mdmss10_config: active-config0 {
 				temperature = <95000>;
-				hysteresis = <5000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss11_config: active-config1 {
-				temperature = <100000>;
-				hysteresis = <5000>;
+				temperature = <98000>;
+				hysteresis = <2000>;
 				type = "passive";
 			};
 
@@ -508,13 +508,13 @@
 		trips {
 			mdmss20_config: active-config0 {
 				temperature = <95000>;
-				hysteresis = <5000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss21_config: active-config1 {
-				temperature = <100000>;
-				hysteresis = <5000>;
+				temperature = <98000>;
+				hysteresis = <2000>;
 				type = "passive";
 			};
 
