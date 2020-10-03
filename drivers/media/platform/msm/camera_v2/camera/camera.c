@@ -33,6 +33,7 @@
 #include "msm.h"
 #include "msm_vb2.h"
 
+bool camera_open = false;
 #define fh_to_private(__fh) \
 	container_of(__fh, struct camera_v4l2_private, fh)
 
@@ -711,6 +712,7 @@ static int camera_v4l2_open(struct file *filep)
 	idx |= (1 << find_first_zero_bit((const unsigned long *)&opn_idx,
 				MSM_CAMERA_STREAM_CNT_BITS));
 	atomic_cmpxchg(&pvdev->opened, opn_idx, idx);
+	camera_open = true;
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 
 	return rc;
@@ -727,6 +729,7 @@ stream_fail:
 vb2_q_fail:
 	camera_v4l2_fh_release(filep);
 fh_open_fail:
+	camera_open = false;
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 	return rc;
 }
@@ -800,6 +803,7 @@ static int camera_v4l2_close(struct file *filep)
 	msm_pm_qos_update_request(CAMERA_ENABLE_PC_LATENCY);
 	pm_relax(&pvdev->vdev->dev);
 	camera_v4l2_fh_release(filep);
+	camera_open = false;
 	mutex_unlock(&pvdev->video_drvdata_mutex);
 
 	return 0;

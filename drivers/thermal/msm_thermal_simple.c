@@ -21,6 +21,9 @@
 	ret;									\
 })
 
+extern int LctIsInCall;
+extern int LctIsInVideo;
+extern bool camera_open;
 struct thermal_zone {
 	u32 gold_khz;
 	u32 silver_khz;
@@ -77,7 +80,12 @@ static void thermal_throttle_worker(struct work_struct *work)
 
 	for (i = t->nr_zones - 1; i >= 0; i--) {
 		if (temp_deg >= t->zones[i].trip_deg) {
-			new_zone = t->zones + i;
+			if (((camera_open) && (LctIsInCall != 0)) || (LctIsInVideo != 0)) {
+				/* video calling in progress -- limit cpu frequency to reduce heating */
+				new_zone = 3;
+			} else {
+				new_zone = t->zones + i;
+			}
 			break;
 		}
 	}

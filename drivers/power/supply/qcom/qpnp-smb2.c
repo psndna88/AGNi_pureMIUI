@@ -52,9 +52,7 @@ union power_supply_propval lct_therm_india_level = {1,};
 #endif
 
 int LctIsInCall = 0;
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
 int LctIsInVideo = 0; 
-#endif
 extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
@@ -2379,7 +2377,6 @@ static void smb2_create_debugfs(struct smb2 *chip)
 #endif
 
 #ifdef THERMAL_CONFIG_FB
-#if defined(CONFIG_KERNEL_CUSTOM_D2S)
 static ssize_t lct_thermal_video_status_show(struct device *dev,
 					struct device_attribute *attr, char *buf)
 {
@@ -2400,7 +2397,6 @@ static ssize_t lct_thermal_video_status_store(struct device *dev,
 
 	return retval;
 }
-#endif
 
 static ssize_t lct_thermal_call_status_show(struct device *dev,
 					struct device_attribute *attr, char *buf)
