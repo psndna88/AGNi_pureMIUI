@@ -1218,6 +1218,12 @@
 				hysteresis = <1>;
 				type = "passive";
 			};
+
+			mx_pe_config3: mx-pe-config3 {
+				temperature = <3>;
+				hysteresis = <1>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
@@ -1229,6 +1235,11 @@
 			mx_pe_cdev_2 {
 				trip = <&mx_pe_config2>;
 				cooling-device = <&msm_gpu 1 1>;
+			};
+
+			mx_pe_cdev_3 {
+				trip = <&mx_pe_config3>;
+				cooling-device = <&modem_tj 1 1>;
 			};
 		};
 	};
@@ -1258,6 +1269,12 @@
 			};
 
 			cx_pe_config4: cx-pe-config4 {
+				temperature = <4>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+
+			cx_pe_config5: cx-pe-config5 {
 				temperature = <5>;
 				hysteresis = <2>;
 				type = "passive";
@@ -1282,6 +1299,11 @@
 
 			cx_pe_cdev_4 {
 				trip = <&cx_pe_config4>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
+			cx_pe_cdev_5 {
+				trip = <&cx_pe_config5>;
 				cooling-device = <&cdsp_sw 4 4>;
 			};
 		};
