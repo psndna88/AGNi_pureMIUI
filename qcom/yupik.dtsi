@@ -178,6 +178,123 @@
 		};
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		hyp_mem: hyp@80000000 {
+			no-map;
+			reg = <0x0 0x80000000 0x0 0x600000>;
+		};
+
+		xbl_aop_mem: xbl_aop_mem@80700000 {
+			no-map;
+			reg = <0x0 0x80700000 0x0 0x160000>;
+		};
+
+		cmd_db: cmd_db@80860000 {
+			compatible = "qcom,cmd-db";
+			no-map;
+			reg = <0x0 0x80860000 0x0 0x20000>;
+		};
+
+		reserved_xbl_uefi: reserved_xbl_uefi@80880000 {
+			no-map;
+			reg = <0x0 0x80880000 0x0 0x14000>;
+		};
+
+		secdata_apss_mem: secdata_apss@808ff000 {
+			no-map;
+			reg = <0x0 0x808ff000 0x0 0x1000>;
+		};
+
+		smem_mem: smem@80900000 {
+			no-map;
+			reg = <0x0 0x80900000 0x0 0x200000>;
+		};
+
+		fw_mem: fw@80b00000 {
+			no-map;
+			reg = <0x0 0x80b00000 0x0 0x100000>;
+		};
+
+		wlan_fw_mem: wlan_fw@80c00000 {
+			no-map;
+			reg = <0x0 0x80c00000 0x0 0xc00000>;
+		};
+
+		cdsp_secure_heap_mem: cdsp_secure_heap@81800000 {
+			no-map;
+			reg = <0x0 0x81800000 0x0 0x1e00000>;
+		};
+
+		pil_cvp_mem: camera@86200000 {
+			no-map;
+			reg = <0x0 0x86200000 0x0 0x500000>;
+		};
+
+		pil_adsp_mem: adsp@86700000 {
+			no-map;
+			reg = <0x0 0x86700000 0x0 0x2800000>;
+		};
+
+		pil_cdsp_mem: cdsp@88f00000 {
+			no-map;
+			reg = <0x0 0x88f00000 0x0 0x1e00000>;
+		};
+
+		pil_camera_mem: video@8ad00000 {
+			no-map;
+			reg = <0x0 0x8ad00000 0x0 0x500000>;
+		};
+
+		pil_video_mem: cvp@8b200000 {
+			no-map;
+			reg = <0x0 0x8b200000 0x0 0x500000>;
+		};
+
+		pil_ipa_fw_mem: ipa_fw@8b700000 {
+			no-map;
+			reg = <0x0 0x8b700000 0x0 0x10000>;
+		};
+
+		pil_ipa_gsi_mem: ipa_gsi@8b710000 {
+			no-map;
+			reg = <0x0 0x8b710000 0x0 0xa000>;
+		};
+
+		pil_gpu_micro_code_mem: gpu_micro_code@8b71a000 {
+			no-map;
+			reg = <0x0 0x8b71a000 0x0 0x2000>;
+		};
+
+		pil_mpss_mem: mpss@8b800000 {
+			no-map;
+			reg = <0x0 0x8b800000 0x0 0xf600000>;
+		};
+
+		pil_wpss_mem: wlan@9ae00000 {
+			no-map;
+			reg = <0x0 0x9ae00000 0x0 0x1900000>;
+		};
+
+		removed_mem: removed_region@c0000000 {
+			no-map;
+			reg = <0x0 0xc0000000 0x0 0x5100000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x2000000>;
+			linux,cma-default;
+		};
+	};
+
 	soc: soc { };
 
 	chosen { };
