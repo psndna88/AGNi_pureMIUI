@@ -26,6 +26,10 @@
 
 };
 
+&qnand_1 {
+	status = "ok";
+};
+
 &usb {
 	dwc3@a600000 {
 		usb-phy = <&usb_emu_phy_0>, <&usb_nop_phy>;
