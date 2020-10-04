@@ -110,6 +110,7 @@ static ssize_t show_fw_version(struct kobject *kobj,
 	return ret_val;
 };
 
+#ifdef CONFIG_DEBUG_FS
 struct power_stats_priv {
 	struct power_stats_response power_stats;
 };
@@ -255,6 +256,7 @@ static ssize_t show_device_power_stats(struct kobject *kobj,
 
 	return ret_val;
 }
+#endif
 
 #ifdef WLAN_FEATURE_BEACON_RECEPTION_STATS
 struct beacon_reception_stats_priv {
@@ -470,6 +472,7 @@ void hdd_sysfs_destroy_version_interface(void)
 	}
 }
 
+#ifdef CONFIG_DEBUG_FS
 void hdd_sysfs_create_powerstats_interface(void)
 {
 	int error;
@@ -492,6 +495,7 @@ void hdd_sysfs_destroy_powerstats_interface(void)
 	}
 	sysfs_remove_file(driver_kobject, &power_stats_attribute.attr);
 }
+#endif
 
 void hdd_sysfs_create_driver_root_obj(void)
 {

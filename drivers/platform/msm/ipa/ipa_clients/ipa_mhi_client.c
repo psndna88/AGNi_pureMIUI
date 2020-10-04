@@ -21,15 +21,10 @@
 #include "../ipa_common_i.h"
 
 #define IPA_MHI_DRV_NAME "ipa_mhi_client"
-#define IPA_MHI_DBG(fmt, args...) \
-	pr_debug(IPA_MHI_DRV_NAME " %s:%d " fmt, \
-		 __func__, __LINE__, ## args)
-#define IPA_MHI_ERR(fmt, args...) \
-	pr_err(IPA_MHI_DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args)
-#define IPA_MHI_FUNC_ENTRY() \
-	IPA_MHI_DBG("ENTRY\n")
-#define IPA_MHI_FUNC_EXIT() \
-	IPA_MHI_DBG("EXIT\n")
+#define IPA_MHI_DBG(fmt, args...)
+#define IPA_MHI_ERR(fmt, args...)
+#define IPA_MHI_FUNC_ENTRY()
+#define IPA_MHI_FUNC_EXIT()
 
 #define IPA_MHI_RM_TIMEOUT_MSEC 10000
 #define IPA_MHI_CH_EMPTY_TIMEOUT_MSEC 10
@@ -2314,10 +2309,12 @@ int ipa_mhi_destroy_all_channels(void)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void ipa_mhi_debugfs_destroy(void)
 {
 	debugfs_remove_recursive(dent);
 }
+#endif
 
 /**
  * ipa_mhi_destroy() - Destroy MHI IPA
