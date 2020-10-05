@@ -467,6 +467,12 @@ struct msm_vidc_core_ops {
 	int (*calc_bw)(struct vidc_bus_vote_data *vidc_data);
 };
 
+struct msm_vidc_ssr {
+	enum hal_ssr_trigger_type ssr_type;
+	u32 sub_client_id;
+	u32 test_addr;
+};
+
 struct msm_vidc_core {
 	struct list_head list;
 	struct mutex lock;
@@ -485,7 +491,7 @@ struct msm_vidc_core {
 	struct delayed_work fw_unload_work;
 	struct work_struct ssr_work;
 	struct workqueue_struct *vidc_core_workq;
-	enum hal_ssr_trigger_type ssr_type;
+	struct msm_vidc_ssr ssr;
 	bool smmu_fault_handled;
 	bool trigger_ssr;
 	unsigned long min_freq;
@@ -605,7 +611,7 @@ struct msm_vidc_ctrl {
 
 void handle_cmd_response(enum hal_command_response cmd, void *data);
 int msm_vidc_trigger_ssr(struct msm_vidc_core *core,
-	enum hal_ssr_trigger_type type);
+	u64 trigger_ssr_val);
 int msm_vidc_noc_error_info(struct msm_vidc_core *core);
 int msm_vidc_check_session_supported(struct msm_vidc_inst *inst);
 int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst);

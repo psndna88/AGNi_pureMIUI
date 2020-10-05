@@ -282,6 +282,11 @@ struct hfi_hybrid_hierp {
 	u32 layers;
 };
 
+struct hfi_ssr_payload {
+	u32 sub_client_id;
+	u32 test_addr;
+};
+
 #define HFI_PRIORITY_LOW		10
 #define HFI_PRIOIRTY_MEDIUM		20
 #define HFI_PRIORITY_HIGH		30

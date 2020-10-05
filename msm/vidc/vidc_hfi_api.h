@@ -133,6 +133,8 @@ enum hal_ssr_trigger_type {
 	SSR_ERR_FATAL = 1,
 	SSR_SW_DIV_BY_ZERO,
 	SSR_HW_WDOG_IRQ,
+	SSR_NOC_ERROR,
+	SSR_VCODEC_HUNG,
 };
 
 struct hal_profile_level {
@@ -634,7 +636,9 @@ struct hfi_device {
 	/*Add function pointers for all the hfi functions below*/
 	int (*core_init)(void *device);
 	int (*core_release)(void *device);
-	int (*core_trigger_ssr)(void *device, enum hal_ssr_trigger_type);
+	int (*core_trigger_ssr)(void *device,
+		enum hal_ssr_trigger_type ssr_type, u32 sub_client_id,
+		u32 test_addr);
 	int (*session_init)(void *device, void *inst_id,
 		enum hal_domain session_type, enum hal_video_codec codec_type,
 		void **new_session, u32 sid);
