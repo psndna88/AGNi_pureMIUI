@@ -2719,6 +2719,21 @@
 			reg = <0x6028 0x4>;
 		};
 	};
+
+	qfprom_sys: qfprom@0 {
+		compatible = "qcom,qfprom-sys";
+
+		nvmem-cells = <&gpu_speed_bin>,
+			      <&adsp_variant>,
+			      <&feat_conf8>,
+			      <&gpu_gaming_bin>,
+			      <&feat_conf9>;
+		nvmem-cell-names = "gpu_speed_bin",
+				   "adsp_variant",
+				   "feat_conf8",
+				   "gpu_gaming_bin",
+				   "feat_conf9";
+	};
 };
 
 #include "holi-gpu.dtsi"
