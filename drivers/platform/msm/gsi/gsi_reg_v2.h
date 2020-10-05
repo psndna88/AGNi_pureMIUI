@@ -592,6 +592,17 @@
 #define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_BMSK 0xffffffff
 #define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_SHFT 0x0
 
+#define GSI_EE_n_GSI_CH_k_SCRATCH_6_OFFS(k, n) \
+		(GSI_GSI_REG_BASE_OFFS + 0x0000f048 + 0x4000 * (n) + 0x80 * (k))
+#define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_BMSK 0xffffffff
+#define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_SHFT 0x0
+
+#define GSI_EE_n_GSI_CH_k_SCRATCH_7_OFFS(k, n) \
+		(GSI_GSI_REG_BASE_OFFS + 0x0000f04c + 0x4000 * (n) + 0x80 * (k))
+#define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_BMSK 0xffffffff
+#define GSI_EE_n_GSI_CH_k_SCRATCH_3_SCRATCH_SHFT 0x0
+
+
 #define GSI_EE_n_EV_CH_k_CNTXT_0_OFFS(k, n) \
 	(GSI_GSI_REG_BASE_OFFS + 0x00010000 + 0x4000 * (n) + 0x80 * (k))
 #define GSI_EE_n_EV_CH_k_CNTXT_0_ELEMENT_SIZE_BMSK 0xff000000

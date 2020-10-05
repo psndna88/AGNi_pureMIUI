@@ -7021,6 +7021,7 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	ipa3_ctx->rmnet_ctl_enable = resource_p->rmnet_ctl_enable;
 	ipa3_ctx->tx_wrapper_cache_max_size = get_tx_wrapper_cache_size(
 			resource_p->tx_wrapper_cache_max_size);
+	ipa3_ctx->gsi_wdi_db_polling = resource_p->gsi_wdi_db_polling;
 
 	if (resource_p->gsi_fw_file_name) {
 		ipa3_ctx->gsi_fw_file_name =
@@ -7813,7 +7814,7 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->ipa_endp_delay_wa = false;
 	ipa_drv_res->skip_ieob_mask_wa = false;
 	ipa_drv_res->ipa_gpi_event_rp_ddr = false;
-
+	ipa_drv_res->gsi_wdi_db_polling = false;
 	/* Get IPA HW Version */
 	result = of_property_read_u32(pdev->dev.of_node, "qcom,ipa-hw-ver",
 					&ipa_drv_res->ipa_hw_type);
@@ -8062,6 +8063,12 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 		ipa_drv_res->rmnet_ctl_enable
 		? "True" : "False");
 
+	ipa_drv_res->gsi_wdi_db_polling =
+				of_property_read_bool(pdev->dev.of_node,
+				"qcom,gsi_wdi_db_polling");
+		IPADBG(": gsi wdi db polling = %s\n",
+				ipa_drv_res->gsi_wdi_db_polling
+				? "True" : "False");
 	result = of_property_read_string(pdev->dev.of_node,
 			"qcom,use-gsi-ipa-fw", &ipa_drv_res->gsi_fw_file_name);
 	if (!result)

@@ -491,6 +491,11 @@ enum ipa_icc_type {
 
 #define IPA_ICC_MAX (IPA_ICC_PATH_MAX*IPA_ICC_TYPE_MAX)
 
+enum ipa3_wdi_polling_mode {
+	IPA_WDI_DB_POLLING_DISABLED,
+	IPA_WDI_DB_POLLING_ENABLED,
+};
+
 /**
  * struct  ipa_rx_page_data - information needed
  * to send to wlan driver on receiving data from ipa hw
@@ -988,6 +993,8 @@ struct ipa3_ep_context {
 	u32 qmi_request_sent;
 	u32 eot_in_poll_err;
 	bool ep_delay_set;
+	void *tr_doorbel_va;
+	dma_addr_t tr_doorbel_phy;
 
 	/* sys MUST be the last element of this struct */
 	struct ipa3_sys_context *sys;
@@ -2126,6 +2133,7 @@ struct ipa3_context {
 	bool rmnet_ctl_enable;
 	char *gsi_fw_file_name;
 	char *uc_fw_file_name;
+	bool gsi_wdi_db_polling;
 };
 
 struct ipa3_plat_drv_res {
@@ -2189,6 +2197,7 @@ struct ipa3_plat_drv_res {
 	const char *gsi_fw_file_name;
 	const char *uc_fw_file_name;
 	u32 tx_wrapper_cache_max_size;
+	bool gsi_wdi_db_polling;
 };
 
 /**

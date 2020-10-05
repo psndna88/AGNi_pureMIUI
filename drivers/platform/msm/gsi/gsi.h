@@ -850,6 +850,7 @@ struct __packed gsi_11ad_tx_channel_scratch {
  *                                  be updated.
  * @qmap_id: Rx only, used for setting metadata register in IPA. Read only field
  *           for MCS. Write for SW.
+ * @wdi_db_polling_enabled : set to true for cedros and lahaina WA
  * @resv: reserved bits.
  * @endp_metadata_reg_offset: Rx only, the offset of
  *                 IPA_ENDP_INIT_HDR_METADATA_n of the
@@ -858,16 +859,21 @@ struct __packed gsi_11ad_tx_channel_scratch {
  * @rx_pkt_offset: Rx only, Since Rx header length is not fixed,
  *                  WLAN host will pass this information to IPA.
  * @resv: reserved bits.
+ * @db_addr_wp_lsb: used to store 32-bit lsb for wdi db polling
+ * @db_addr_wp_msb: used to store 32-bit msb for wdi db polling
  */
 struct __packed gsi_wdi3_channel_scratch {
 	uint32_t wifi_rp_address_low;
 	uint32_t wifi_rp_address_high;
 	uint32_t update_rp_moderation_threshold : 5;
 	uint32_t qmap_id : 8;
-	uint32_t reserved1 : 3;
+	uint32_t wdi_db_polling_enabled : 1;
+	uint32_t reserved1 : 2;
 	uint32_t endp_metadata_reg_offset : 16;
 	uint32_t rx_pkt_offset : 16;
 	uint32_t reserved2 : 16;
+	uint32_t db_addr_wp_lsb;
+	uint32_t db_addr_wp_msb;
 };
 
 /**
@@ -972,6 +978,19 @@ union __packed gsi_wdi2_channel_scratch2_reg {
 	struct __packed gsi_wdi2_channel_scratch2 wdi;
 	struct __packed {
 		uint32_t word1;
+	} data;
+};
+
+struct __packed gsi_wdi3_channel_scratch_6_7 {
+	uint32_t db_addr_wp_lsb;
+	uint32_t db_addr_wp_msb;
+};
+
+union __packed gsi_wdi3_channel_scratch_6_7_reg {
+	struct __packed gsi_wdi3_channel_scratch_6_7 wdi3;
+	struct __packed {
+		uint32_t word1;
+		uint32_t word2;
 	} data;
 };
 
@@ -1780,6 +1799,18 @@ int gsi_write_channel_scratch2_reg(unsigned long chan_hdl,
  */
 int gsi_write_wdi3_channel_scratch2_reg(unsigned long chan_hdl,
 		union __packed gsi_wdi3_channel_scratch2_reg val);
+/**
+ * gsi_write_channel_scratch_reg - Peripheral should call this function to
+ * write to the scratch 6, 7 reg area of the channel context
+ *
+ * @chan_hdl:  Client handle previously obtained from
+ *             gsi_alloc_channel
+ * @val:       Value to write
+ *
+ * @Return gsi_status
+ */
+int gsi_write_wdi3_channel_scratch_6_7_reg(unsigned long chan_hdl,
+		union __packed gsi_wdi3_channel_scratch_6_7_reg val);
 
 /**
  * gsi_read_channel_scratch - Peripheral should call this function to

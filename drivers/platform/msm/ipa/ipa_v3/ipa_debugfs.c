@@ -2716,6 +2716,38 @@ static ssize_t ipa3_enable_ipc_low(struct file *file,
 	return count;
 }
 
+static ssize_t ipa3_read_gsi_wdi3_db_polling(struct file *file,
+	char __user *buf, size_t count, loff_t *ppos) {
+
+	int nbytes;
+	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
+				"gsi_wdi_db_polling = %d\n",
+				ipa3_ctx->gsi_wdi_db_polling);
+	return simple_read_from_buffer(buf, count, ppos, dbg_buff, nbytes);
+
+}
+static ssize_t ipa3_write_gsi_wdi3_db_polling(struct file *file,
+	const char __user *buf, size_t count, loff_t *ppos) {
+
+	int ret;
+	u32 gsi_wdi_db_polling =0;
+
+	if (count >= sizeof(dbg_buff))
+		return -EFAULT;
+
+	ret = kstrtou32_from_user(buf, count, 0, &gsi_wdi_db_polling);
+	if(ret)
+		return ret;
+
+	if(gsi_wdi_db_polling == 1)
+		ipa3_ctx->gsi_wdi_db_polling = true;
+	else if(gsi_wdi_db_polling == 0)
+		ipa3_ctx->gsi_wdi_db_polling = false;
+	else
+		IPAERR("Invalid value \n");
+	return count;
+}
+
 static const struct ipa3_debugfs_file debugfs_files[] = {
 	{
 		"gen_reg", IPA_READ_ONLY_MODE, NULL, {
@@ -2888,6 +2920,11 @@ static const struct ipa3_debugfs_file debugfs_files[] = {
 	}, {
 		"app_clk_vote_cnt", IPA_READ_ONLY_MODE, NULL, {
 			.read = ipa3_read_app_clk_vote,
+		}
+	},{
+		"wdi3_db_polling_enable", IPA_READ_WRITE_MODE, NULL, {
+			.read = ipa3_read_gsi_wdi3_db_polling,
+			.write = ipa3_write_gsi_wdi3_db_polling,
 		}
 	},
 };
