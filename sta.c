@@ -2968,15 +2968,16 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd)
+static enum sigma_cmd_result sta_set_owe(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname, *val;
 	int id;
 
 	if (intf == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strcmp(intf, get_main_ifname(dut)) == 0)
 		ifname = get_station_ifname(dut);
@@ -2988,13 +2989,13 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 		return id;
 
 	if (set_network(ifname, id, "key_mgmt", "OWE") < 0)
-		return -2;
+		return ERROR_SEND_STATUS;
 
 	if (dut->owe_ptk_workaround &&
 	    set_network(ifname, id, "owe_ptk_workaround", "1") < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set owe_ptk_workaround to 1");
-		return -2;
+		return ERROR_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "ECGroupID");
@@ -3003,15 +3004,15 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 				"VENDOR_ELEM_ADD 13 ff23200000783590fb7440e03d5b3b33911f86affdcc6b4411b707846ac4ff08ddc8831ccd") != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set OWE DH Param element override");
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
 	} else if (val && set_network(ifname, id, "owe_group", val) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set owe_group");
-		return -2;
+		return ERROR_SEND_STATUS;
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
