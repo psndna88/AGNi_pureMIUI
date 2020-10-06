@@ -1347,8 +1347,9 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			}
 
 			if (csiphy_dev->csiphy_info[offset].secure_mode == 1) {
-				if (cam_cpas_is_feature_supported(
-					CAM_CPAS_SECURE_CAMERA_ENABLE) != 1) {
+				if (!cam_cpas_is_feature_supported(
+					CAM_CPAS_SECURE_CAMERA_ENABLE,
+					CAM_CPAS_HW_IDX_ANY, NULL)) {
 					CAM_ERR(CAM_CSIPHY,
 						"sec_cam: camera fuse bit not set");
 					goto release_mutex;
@@ -1411,8 +1412,9 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		}
 
 		if (csiphy_dev->csiphy_info[offset].secure_mode == 1) {
-			if (cam_cpas_is_feature_supported(
-					CAM_CPAS_SECURE_CAMERA_ENABLE) != 1) {
+			if (!cam_cpas_is_feature_supported(
+					CAM_CPAS_SECURE_CAMERA_ENABLE,
+					CAM_CPAS_HW_IDX_ANY, NULL)) {
 				CAM_ERR(CAM_CSIPHY,
 					"sec_cam: camera fuse bit not set");
 				cam_cpas_stop(csiphy_dev->cpas_handle);

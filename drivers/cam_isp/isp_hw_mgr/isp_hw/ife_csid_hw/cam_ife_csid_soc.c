@@ -21,6 +21,16 @@ static int cam_ife_csid_get_dt_properties(struct cam_hw_soc_info *soc_info)
 
 	soc_private = (struct cam_csid_soc_private *)soc_info->soc_private;
 
+	rc = of_property_read_u32(of_node, "max-width",
+		&soc_private->max_width);
+	if (rc) {
+		CAM_DBG(CAM_ISP, "No max-width declared");
+		soc_private->max_width_enabled = false;
+		rc = 0;
+	} else {
+		soc_private->max_width_enabled = true;
+	}
+
 	soc_private->is_ife_csid_lite = false;
 	if (strnstr(soc_info->compatible, "lite",
 		strlen(soc_info->compatible)) != NULL) {

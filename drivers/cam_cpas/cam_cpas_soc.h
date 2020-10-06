@@ -11,6 +11,7 @@
 
 #define CAM_REGULATOR_LEVEL_MAX 16
 #define CAM_CPAS_MAX_TREE_NODES 50
+#define CAM_CPAS_MAX_FUSE_FEATURE 10
 
 /**
  * struct cam_cpas_vdd_ahb_mapping : Voltage to ahb level mapping
@@ -72,6 +73,23 @@ struct cam_cpas_tree_node {
 };
 
 /**
+ * struct cam_cpas_feature_info : CPAS fuse feature info
+ * @feature: Identifier for feature
+ * @type: Type of feature
+ * @value: Fuse value
+ * @enable: Feature enable or disable
+ * @hw_map: Each bit position indicates if the hw_id for the feature
+ */
+
+struct cam_cpas_feature_info {
+	uint32_t feature;
+	uint32_t type;
+	uint32_t value;
+	bool enable;
+	uint32_t hw_map;
+};
+
+/**
  * struct cam_cpas_private_soc : CPAS private DT info
  *
  * @arch_compat: ARCH compatible string
@@ -90,9 +108,10 @@ struct cam_cpas_tree_node {
  * @camnoc_axi_clk_bw_margin : BW Margin in percentage to add while calculating
  *      camnoc axi clock
  * @camnoc_axi_min_ib_bw: Min camnoc BW which varies based on target
- * @feature_mask: feature mask value for hw supported features
  * @fuse_info: fuse information
  * @rpmh_info: RPMH BCM info
+ * @num_feature_info: number of feature_info entries
+ * @feature_info: Structure for storing feature information
  */
 struct cam_cpas_private_soc {
 	const char *arch_compat;
@@ -109,9 +128,10 @@ struct cam_cpas_private_soc {
 	uint32_t camnoc_bus_width;
 	uint32_t camnoc_axi_clk_bw_margin;
 	uint64_t camnoc_axi_min_ib_bw;
-	uint32_t feature_mask;
 	struct cam_cpas_fuse_info fuse_info;
 	uint32_t rpmh_info[CAM_RPMH_BCM_INFO_MAX];
+	uint32_t num_feature_info;
+	struct cam_cpas_feature_info  feature_info[CAM_CPAS_MAX_FUSE_FEATURE];
 };
 
 void cam_cpas_util_debug_parse_data(struct cam_cpas_private_soc *soc_private);
