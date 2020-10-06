@@ -830,6 +830,14 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 
 	is_internal = cam_mem_util_is_map_internal(cmd->fd);
 
+	idx = cam_mem_get_slot();
+	if (idx < 0) {
+		CAM_ERR(CAM_MEM, "Failed in getting mem slot, idx=%d, fd=%d",
+			idx, cmd->fd);
+		rc = -ENOMEM;
+		goto slot_fail;
+	}
+
 	if ((cmd->flags & CAM_MEM_FLAG_HW_READ_WRITE) ||
 		(cmd->flags & CAM_MEM_FLAG_PROTECTED_MODE)) {
 		rc = cam_mem_util_map_hw_va(cmd->flags,
@@ -853,12 +861,6 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 			}
 			goto map_fail;
 		}
-	}
-
-	idx = cam_mem_get_slot();
-	if (idx < 0) {
-		rc = -ENOMEM;
-		goto map_fail;
 	}
 
 	mutex_lock(&tbl.bufq[idx].q_lock);
@@ -893,8 +895,9 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 		tbl.bufq[idx].len);
 
 	return rc;
-
 map_fail:
+	cam_mem_put_slot(idx);
+slot_fail:
 	dma_buf_put(dmabuf);
 	return rc;
 }
@@ -1266,6 +1269,7 @@ int cam_mem_mgr_request_mem(struct cam_mem_mgr_request_desc *inp,
 
 	idx = cam_mem_get_slot();
 	if (idx < 0) {
+		CAM_ERR(CAM_MEM, "Failed in getting mem slot, idx=%d", idx);
 		rc = -ENOMEM;
 		goto slot_fail;
 	}
@@ -1414,6 +1418,7 @@ int cam_mem_mgr_reserve_memory_region(struct cam_mem_mgr_request_desc *inp,
 
 	idx = cam_mem_get_slot();
 	if (idx < 0) {
+		CAM_ERR(CAM_MEM, "Failed in getting mem slot, idx=%d", idx);
 		rc = -ENOMEM;
 		goto slot_fail;
 	}
