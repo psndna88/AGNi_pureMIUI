@@ -51,7 +51,7 @@ enum UCI_DBG_LEVEL mhi_uci_msg_lvl = UCI_DBG_CRITICAL;
 #ifdef CONFIG_MSM_MHI_DEBUG
 enum UCI_DBG_LEVEL mhi_uci_ipc_log_lvl = UCI_DBG_VERBOSE;
 #else
-enum UCI_DBG_LEVEL mhi_uci_ipc_log_lvl = UCI_DBG_ERROR;
+enum UCI_DBG_LEVEL mhi_uci_ipc_log_lvl = UCI_DBG_CRITICAL;
 #endif
 
 struct __packed rs232_ctrl_msg {
@@ -220,15 +220,7 @@ struct mhi_uci_drv_ctxt {
 	(_PKT)->size = new_val; \
 };
 
-#define uci_log(uci_ipc_log, _msg_lvl, _msg, ...) do { \
-	if (_msg_lvl >= mhi_uci_msg_lvl) { \
-		pr_err("[%s] "_msg, __func__, ##__VA_ARGS__); \
-	} \
-	if (uci_ipc_log && (_msg_lvl >= mhi_uci_ipc_log_lvl)) { \
-		ipc_log_string(uci_ipc_log, \
-			"[%s] " _msg, __func__, ##__VA_ARGS__); \
-	} \
-} while (0)
+#define uci_log(uci_ipc_log, _msg_lvl, _msg, ...)
 
 module_param(mhi_uci_msg_lvl , uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mhi_uci_msg_lvl, "uci dbg lvl");

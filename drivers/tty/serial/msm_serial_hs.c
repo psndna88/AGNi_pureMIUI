@@ -91,45 +91,18 @@ enum {
 	DBG_LEV = 4U,
 };
 
-#define MSM_HS_DBG(x...) do { \
-	if (msm_uport->ipc_debug_mask >= DBG_LEV) { \
-		if (msm_uport->ipc_msm_hs_log_ctxt) \
-			ipc_log_string(msm_uport->ipc_msm_hs_log_ctxt, x); \
-	} \
-} while (0)
-
-#define MSM_HS_INFO(x...) do { \
-	if (msm_uport->ipc_debug_mask >= INFO_LEV) {\
-		if (msm_uport->ipc_msm_hs_log_ctxt) \
-			ipc_log_string(msm_uport->ipc_msm_hs_log_ctxt, x); \
-	} \
-} while (0)
+#define MSM_HS_DBG(x...)
+#define MSM_HS_INFO(x...)
 
 /* warnings and errors show up on console always */
-#define MSM_HS_WARN(x...) do { \
-	pr_warn(x); \
-	if (msm_uport->ipc_msm_hs_log_ctxt && \
-			msm_uport->ipc_debug_mask >= WARN_LEV) \
-		ipc_log_string(msm_uport->ipc_msm_hs_log_ctxt, x); \
-} while (0)
+#define MSM_HS_WARN(x...)
 
 /* ERROR condition in the driver sets the hs_serial_debug_mask
  * to ERR_FATAL level, so that this message can be seen
  * in IPC logging. Further errors continue to log on the console
  */
-#define MSM_HS_ERR(x...) do { \
-	pr_err(x); \
-	if (msm_uport->ipc_msm_hs_log_ctxt && \
-			msm_uport->ipc_debug_mask >= ERR_LEV) { \
-		ipc_log_string(msm_uport->ipc_msm_hs_log_ctxt, x); \
-		msm_uport->ipc_debug_mask = FATAL_LEV; \
-	} \
-} while (0)
-
-#define LOG_USR_MSG(ctx, x...) do { \
-	if (ctx) \
-		ipc_log_string(ctx, x); \
-} while (0)
+#define MSM_HS_ERR(x...)
+#define LOG_USR_MSG(ctx, x...)
 
 /*
  * There are 3 different kind of UART Core available on MSM.

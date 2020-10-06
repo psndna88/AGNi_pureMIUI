@@ -42,19 +42,8 @@
 #define MAX_RA_WAKE_LOCK_NAME_LEN 32
 #define SMD_TTY_LOG_PAGES 2
 
-#define SMD_TTY_INFO(buf...) \
-do { \
-	if (smd_tty_log_ctx) { \
-		ipc_log_string(smd_tty_log_ctx, buf); \
-	} \
-} while (0)
-
-#define SMD_TTY_ERR(buf...) \
-do { \
-	if (smd_tty_log_ctx) \
-		ipc_log_string(smd_tty_log_ctx, buf); \
-	pr_err(buf); \
-} while (0)
+#define SMD_TTY_INFO(buf...)
+#define SMD_TTY_ERR(buf...)
 
 #ifdef CONFIG_IPC_LOGGING
 static void *smd_tty_log_ctx;

@@ -143,19 +143,8 @@ void *smd_log_ctx;
 void *smsm_log_ctx;
 #define NUM_LOG_PAGES 4
 
-#define IPC_LOG_SMD(level, x...) do { \
-	if (smd_log_ctx) \
-		ipc_log_string(smd_log_ctx, x); \
-	else \
-		printk(level x); \
-	} while (0)
-
-#define IPC_LOG_SMSM(level, x...) do { \
-	if (smsm_log_ctx) \
-		ipc_log_string(smsm_log_ctx, x); \
-	else \
-		printk(level x); \
-	} while (0)
+#define IPC_LOG_SMD(level, x...)
+#define IPC_LOG_SMSM(level, x...)
 
 #if defined(CONFIG_MSM_SMD_DEBUG)
 #define SMD_DBG(x...) do {				\

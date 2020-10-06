@@ -68,14 +68,7 @@ struct __packed mhi_skb_priv {
 	size_t	   dma_size;
 };
 
-#define rmnet_log(rmnet_mhi_ptr, _msg_lvl, _msg, ...) do {	\
-		if ((_msg_lvl) >= rmnet_mhi_ptr->debug.rmnet_msg_lvl) \
-			pr_alert("[%s] " _msg, __func__, ##__VA_ARGS__);\
-		if (rmnet_mhi_ptr->rmnet_ipc_log && \
-		    ((_msg_lvl) >= rmnet_mhi_ptr->debug.rmnet_ipc_log_lvl)) \
-			ipc_log_string(rmnet_mhi_ptr->rmnet_ipc_log, \
-			       "[%s] " _msg, __func__, ##__VA_ARGS__);	\
-} while (0)
+#define rmnet_log(rmnet_mhi_ptr, _msg_lvl, _msg, ...)
 
 struct rmnet_mhi_private {
 	struct list_head	      node;
