@@ -240,7 +240,7 @@ static void cam_v4l2_event_queue_notify_error(const struct v4l2_event *old,
 				ev_header->u.frame_msg.link_hdl);
 		break;
 	case V4L_EVENT_CAM_REQ_MGR_ERROR:
-		CAM_ERR(CAM_CRM,
+		CAM_ERR_RATE_LIMIT(CAM_CRM,
 			"Failed to notify ERROR Sess %X ReqId %d Link %X Type %d",
 			ev_header->session_hdl,
 			ev_header->u.err_msg.request_id,

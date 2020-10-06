@@ -320,7 +320,7 @@ static int __cam_req_mgr_notify_error_on_link(
 		return -EINVAL;
 	}
 
-	CAM_ERR(CAM_CRM,
+	CAM_ERR_RATE_LIMIT(CAM_CRM,
 		"Notifying userspace to trigger recovery on link 0x%x for session %d",
 		link->link_hdl, session->session_hdl);
 
@@ -340,7 +340,7 @@ static int __cam_req_mgr_notify_error_on_link(
 		V4L_EVENT_CAM_REQ_MGR_EVENT);
 
 	if (rc)
-		CAM_ERR(CAM_CRM,
+		CAM_ERR_RATE_LIMIT(CAM_CRM,
 			"Error in notifying recovery for session %d link 0x%x rc %d",
 			session->session_hdl, link->link_hdl, rc);
 
@@ -2826,7 +2826,7 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 	}
 
 	if (link->state == CAM_CRM_LINK_STATE_ERR)
-		CAM_WARN(CAM_CRM, "Error recovery idx %d status %d",
+		CAM_WARN_RATE_LIMIT(CAM_CRM, "Error recovery idx %d status %d",
 			in_q->rd_idx,
 			in_q->slot[in_q->rd_idx].status);
 

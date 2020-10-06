@@ -3261,7 +3261,11 @@ static int cam_ife_csid_get_time_stamp(
 		time_stamp->boot_timestamp =
 			csid_hw->prev_boot_timestamp + time_delta;
 		if (time_delta == 0)
-			CAM_WARN(CAM_ISP, "No qtimer update");
+			CAM_WARN_RATE_LIMIT(CAM_ISP,
+				"CSID:%d No qtimer update ts: %lld prev ts:%lld",
+				csid_hw->hw_intf->hw_idx,
+				time_stamp->time_stamp_val,
+				csid_hw->prev_qtimer_ts);
 	}
 	csid_hw->prev_qtimer_ts = time_stamp->time_stamp_val;
 	csid_hw->prev_boot_timestamp = time_stamp->boot_timestamp;
