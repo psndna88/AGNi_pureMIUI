@@ -28,17 +28,9 @@
 static void *glink_lbsrv_log_ctx;
 #endif
 
-#define GLINK_LBSRV_IPC_LOG_STR(x...) do { \
-	if (glink_lbsrv_log_ctx) \
-		ipc_log_string(glink_lbsrv_log_ctx, x); \
-} while (0)
-
-#define LBSRV_INFO(x...) GLINK_LBSRV_IPC_LOG_STR("<LBSRV> " x)
-
-#define LBSRV_ERR(x...) do {                              \
-	pr_err("<LBSRV> " x); \
-	GLINK_LBSRV_IPC_LOG_STR("<LBSRV> " x);  \
-} while (0)
+#define GLINK_LBSRV_IPC_LOG_STR(x...)
+#define LBSRV_INFO(x...)
+#define LBSRV_ERR(x...) 
 
 enum ch_type {
 	CTL,

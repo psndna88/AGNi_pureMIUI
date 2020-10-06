@@ -60,7 +60,7 @@
 
 #define MHI_IPC_LOG_PAGES		(100)
 enum mhi_msg_level mhi_msg_lvl = MHI_MSG_ERROR;
-enum mhi_msg_level mhi_ipc_msg_lvl = MHI_MSG_VERBOSE;
+enum mhi_msg_level mhi_ipc_msg_lvl = MHI_MSG_CRITICAL;
 void *mhi_ipc_log;
 
 static struct mhi_dev *mhi_ctx;

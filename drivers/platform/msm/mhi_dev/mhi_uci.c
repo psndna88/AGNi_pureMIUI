@@ -50,7 +50,7 @@ enum uci_dbg_level {
 };
 
 static enum uci_dbg_level mhi_uci_msg_lvl = UCI_DBG_CRITICAL;
-static enum uci_dbg_level mhi_uci_ipc_log_lvl = UCI_DBG_INFO;
+static enum uci_dbg_level mhi_uci_ipc_log_lvl = UCI_DBG_CRITICAL;
 static void *mhi_uci_ipc_log;
 
 
@@ -110,16 +110,7 @@ struct mhi_uci_ctxt_t {
 
 #define CHAN_TO_CLIENT(_CHAN_NR) (_CHAN_NR / 2)
 
-#define uci_log(_msg_lvl, _msg, ...) do { \
-	if (_msg_lvl >= mhi_uci_msg_lvl) { \
-		pr_err("[%s] "_msg, __func__, ##__VA_ARGS__); \
-	} \
-	if (mhi_uci_ipc_log && (_msg_lvl >= mhi_uci_ipc_log_lvl)) { \
-		ipc_log_string(mhi_uci_ipc_log,                     \
-			"[%s] " _msg, __func__, ##__VA_ARGS__);     \
-	} \
-} while (0)
-
+#define uci_log(_msg_lvl, _msg, ...)
 
 module_param(mhi_uci_msg_lvl, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mhi_uci_msg_lvl, "uci dbg lvl");

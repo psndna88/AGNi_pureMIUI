@@ -39,10 +39,11 @@
 #define SSRESTART_STRLEN 256
 
 enum {
+	SHM_NONE_FLAG = 0x0,
 	SHM_INFO_FLAG = 0x1,
 	SHM_DEBUG_FLAG = 0x2,
 };
-static int shm_debug_mask = SHM_INFO_FLAG;
+static int shm_debug_mask = SHM_NONE_FLAG;
 module_param_named(debug_mask, shm_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
 static int shm_default_timeout_ms = 2000;
@@ -54,21 +55,9 @@ module_param_named(default_timeout_ms, shm_default_timeout_ms,
 
 #define SHM_ILCTXT_NUM_PAGES 2
 static void *shm_ilctxt;
-#define SHM_INFO_LOG(x...) do { \
-	if ((shm_debug_mask & SHM_INFO_FLAG) && shm_ilctxt) \
-		ipc_log_string(shm_ilctxt, x); \
-} while (0)
-
-#define SHM_DEBUG(x...) do { \
-	if ((shm_debug_mask & SHM_DEBUG_FLAG) && shm_ilctxt) \
-		ipc_log_string(shm_ilctxt, x); \
-} while (0)
-
-#define SHM_ERR(x...) do { \
-	if (shm_ilctxt) \
-		ipc_log_string(shm_ilctxt, x); \
-	pr_err(x); \
-} while (0)
+#define SHM_INFO_LOG(x...)
+#define SHM_DEBUG(x...)
+#define SHM_ERR(x...)
 
 struct class *system_health_monitor_classp;
 static dev_t system_health_monitor_dev;

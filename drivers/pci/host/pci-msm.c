@@ -345,66 +345,14 @@
 #define BDF_OFFSET(bus, devfn) \
 	((bus << 24) | (devfn << 16))
 
-#define PCIE_GEN_DBG(x...) do { \
-	if (msm_pcie_debug_mask) \
-		pr_alert(x); \
-	} while (0)
-
-#define PCIE_DBG(dev, fmt, arg...) do {			 \
-	if ((dev) && (dev)->ipc_log_long)   \
-		ipc_log_string((dev)->ipc_log_long, \
-			"DBG1:%s: " fmt, __func__, arg); \
-	if ((dev) && (dev)->ipc_log)   \
-		ipc_log_string((dev)->ipc_log, "%s: " fmt, __func__, arg); \
-	if (msm_pcie_debug_mask)   \
-		pr_alert("%s: " fmt, __func__, arg);		  \
-	} while (0)
-
-#define PCIE_DBG2(dev, fmt, arg...) do {			 \
-	if ((dev) && (dev)->ipc_log)   \
-		ipc_log_string((dev)->ipc_log, "DBG2:%s: " fmt, __func__, arg);\
-	if (msm_pcie_debug_mask)   \
-		pr_alert("%s: " fmt, __func__, arg);              \
-	} while (0)
-
-#define PCIE_DBG3(dev, fmt, arg...) do {			 \
-	if ((dev) && (dev)->ipc_log)   \
-		ipc_log_string((dev)->ipc_log, "DBG3:%s: " fmt, __func__, arg);\
-	if (msm_pcie_debug_mask)   \
-		pr_alert("%s: " fmt, __func__, arg);              \
-	} while (0)
-
-#define PCIE_DUMP(dev, fmt, arg...) do {			\
-	if ((dev) && (dev)->ipc_log_dump) \
-		ipc_log_string((dev)->ipc_log_dump, \
-			"DUMP:%s: " fmt, __func__, arg); \
-	} while (0)
-
-#define PCIE_DBG_FS(dev, fmt, arg...) do {			\
-	if ((dev) && (dev)->ipc_log_dump) \
-		ipc_log_string((dev)->ipc_log_dump, \
-			"DBG_FS:%s: " fmt, __func__, arg); \
-	pr_alert("%s: " fmt, __func__, arg); \
-	} while (0)
-
-#define PCIE_INFO(dev, fmt, arg...) do {			 \
-	if ((dev) && (dev)->ipc_log_long)   \
-		ipc_log_string((dev)->ipc_log_long, \
-			"INFO:%s: " fmt, __func__, arg); \
-	if ((dev) && (dev)->ipc_log)   \
-		ipc_log_string((dev)->ipc_log, "%s: " fmt, __func__, arg); \
-	pr_info("%s: " fmt, __func__, arg);  \
-	} while (0)
-
-#define PCIE_ERR(dev, fmt, arg...) do {			 \
-	if ((dev) && (dev)->ipc_log_long)   \
-		ipc_log_string((dev)->ipc_log_long, \
-			"ERR:%s: " fmt, __func__, arg); \
-	if ((dev) && (dev)->ipc_log)   \
-		ipc_log_string((dev)->ipc_log, "%s: " fmt, __func__, arg); \
-	pr_err("%s: " fmt, __func__, arg);  \
-	} while (0)
-
+#define PCIE_GEN_DBG(x...)
+#define PCIE_DBG(dev, fmt, arg...)
+#define PCIE_DBG2(dev, fmt, arg...)
+#define PCIE_DBG3(dev, fmt, arg...)
+#define PCIE_DUMP(dev, fmt, arg...)
+#define PCIE_DBG_FS(dev, fmt, arg...)
+#define PCIE_INFO(dev, fmt, arg...)
+#define PCIE_ERR(dev, fmt, arg...)
 
 enum msm_pcie_res {
 	MSM_PCIE_RES_PARF,
