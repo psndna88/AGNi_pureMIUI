@@ -228,6 +228,15 @@
 			     <GIC_PPI 12 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	qcom_smcinvoke {
+		compatible = "qcom,smcinvoke";
+	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+		qcom,support-hypervisor;
+	};
+
 	/*
 	 * QUPv3 Instances
 	 * Qup0 2: SE 10
