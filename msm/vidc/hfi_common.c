@@ -888,7 +888,7 @@ static int __vote_bandwidth(struct bus_info *bus,
 	int rc = 0;
 
 	s_vpr_p(sid, "Voting bus %s to ab %llu kbps\n", bus->name, bw_kbps);
-	rc = icc_set_bw(bus->path, kbps_to_icc(bw_kbps), 0);
+	rc = icc_set_bw(bus->path, bw_kbps, 0);
 	if (rc)
 		s_vpr_e(sid, "Failed voting bus %s to ab %llu, rc=%d\n",
 				bus->name, bw_kbps, rc);
