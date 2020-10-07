@@ -933,7 +933,6 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 		CAM_DBG(CAM_CPAS, "RPMH BCM info not available in DT, count=%d",
 			count);
 	}
-
 	return 0;
 
 cleanup_tree:

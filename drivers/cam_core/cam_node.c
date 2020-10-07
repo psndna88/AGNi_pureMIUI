@@ -96,8 +96,9 @@ static int __cam_node_handle_acquire_dev(struct cam_node *node,
 
 	ctx = cam_node_get_ctxt_from_free_list(node);
 	if (!ctx) {
-		CAM_ERR(CAM_CORE, "No free ctx in free list node %s",
-			node->name);
+		CAM_ERR(CAM_CORE,
+			"No free ctx in free list node %s with size:%d",
+			node->name, node->ctx_size);
 		cam_node_print_ctx_state(node);
 
 		rc = -ENOMEM;
@@ -818,14 +819,14 @@ int cam_node_handle_ioctl(struct cam_node *node, struct cam_control *cmd)
 			rc = __cam_node_handle_acquire_hw_v1(node, acquire_ptr);
 			if (rc) {
 				CAM_ERR(CAM_CORE,
-					"acquire device failed(rc = %d)", rc);
+					"acquire hw failed(rc = %d)", rc);
 				goto acquire_kfree;
 			}
 		} else if (api_version == 2) {
 			rc = __cam_node_handle_acquire_hw_v2(node, acquire_ptr);
 			if (rc) {
 				CAM_ERR(CAM_CORE,
-					"acquire device failed(rc = %d)", rc);
+					"acquire hw failed(rc = %d)", rc);
 				goto acquire_kfree;
 			}
 		}

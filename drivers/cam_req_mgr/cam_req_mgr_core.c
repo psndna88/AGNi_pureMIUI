@@ -15,6 +15,7 @@
 #include "cam_trace.h"
 #include "cam_debug_util.h"
 #include "cam_req_mgr_dev.h"
+#include "cam_req_mgr_debug.h"
 
 static struct cam_req_mgr_core_device *g_crm_core_dev;
 static struct cam_req_mgr_core_link g_links[MAXIMUM_LINKS_PER_SESSION];
@@ -1716,6 +1717,15 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 					"Max retry attempts (count %d) reached on link[0x%x] for req [%lld]",
 					max_retry, link->link_hdl,
 					in_q->slot[in_q->rd_idx].req_id);
+
+				cam_req_mgr_debug_delay_detect();
+				trace_cam_delay_detect("CRM",
+					"Max retry attempts reached",
+					in_q->slot[in_q->rd_idx].req_id,
+					CAM_DEFAULT_VALUE,
+					link->link_hdl,
+					CAM_DEFAULT_VALUE, rc);
+
 				__cam_req_mgr_notify_error_on_link(link, dev);
 				link->retry_cnt = 0;
 			}
@@ -2350,6 +2360,7 @@ int cam_req_mgr_process_flush_req(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	flush_info  = (struct cam_req_mgr_flush_info *)&task_data->u;
@@ -2667,6 +2678,7 @@ int cam_req_mgr_process_error(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	err_info  = (struct cam_req_mgr_error_notify *)&task_data->u;
@@ -2760,6 +2772,7 @@ int cam_req_mgr_process_stop(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	__cam_req_mgr_flush_req_slot(link);
 end:
@@ -2790,6 +2803,7 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	trigger_data = (struct cam_req_mgr_trigger_notify *)&task_data->u;
@@ -3260,7 +3274,7 @@ static int cam_req_mgr_cb_notify_trigger(
 
 	task = cam_req_mgr_workq_get_task(link->workq);
 	if (!task) {
-		CAM_ERR(CAM_CRM, "no empty task frame %lld",
+		CAM_ERR_RATE_LIMIT(CAM_CRM, "no empty task frame %lld",
 			trigger_data->frame_id);
 		rc = -EBUSY;
 		goto end;
@@ -3520,7 +3534,8 @@ int cam_req_mgr_create_session(
 	ses_info->session_hdl = session_hdl;
 
 	mutex_init(&cam_session->lock);
-	CAM_DBG(CAM_CRM, "LOCK_DBG session lock %pK", &cam_session->lock);
+	CAM_DBG(CAM_CRM, "LOCK_DBG session lock %pK hdl 0x%x",
+		&cam_session->lock, session_hdl);
 
 	mutex_lock(&cam_session->lock);
 	cam_session->session_hdl = session_hdl;
@@ -3685,7 +3700,7 @@ int cam_req_mgr_link(struct cam_req_mgr_ver_info *link_info)
 	memset(&root_dev, 0, sizeof(struct cam_create_dev_hdl));
 	root_dev.session_hdl = link_info->u.link_info_v1.session_hdl;
 	root_dev.priv = (void *)link;
-
+	root_dev.dev_id = CAM_CRM;
 	mutex_lock(&link->lock);
 	/* Create unique dev handle for link */
 	link->link_hdl = cam_create_device_hdl(&root_dev);
@@ -3795,6 +3810,7 @@ int cam_req_mgr_link_v2(struct cam_req_mgr_ver_info *link_info)
 	memset(&root_dev, 0, sizeof(struct cam_create_dev_hdl));
 	root_dev.session_hdl = link_info->u.link_info_v2.session_hdl;
 	root_dev.priv = (void *)link;
+	root_dev.dev_id = CAM_CRM;
 
 	mutex_lock(&link->lock);
 	/* Create unique dev handle for link */

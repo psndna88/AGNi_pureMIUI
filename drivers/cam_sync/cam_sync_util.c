@@ -4,6 +4,7 @@
  */
 
 #include "cam_sync_util.h"
+#include "cam_req_mgr_workq.h"
 
 int cam_sync_util_find_and_set_empty_row(struct sync_device *sync_dev,
 	long *idx)
@@ -293,6 +294,8 @@ void cam_sync_util_cb_dispatch(struct work_struct *cb_dispatch_work)
 		cb_dispatch_work);
 	sync_callback sync_data = cb_info->callback_func;
 
+	cam_req_mgr_thread_switch_delay_detect(
+			cb_info->workq_scheduled_ts);
 	sync_data(cb_info->sync_obj, cb_info->status, cb_info->cb_data);
 
 	kfree(cb_info);

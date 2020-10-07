@@ -19,6 +19,7 @@
 #include "cam_cdm_util.h"
 #include "cam_isp_context.h"
 #include "cam_common_util.h"
+#include "cam_req_mgr_debug.h"
 
 static const char isp_dev_name[] = "cam-isp";
 
@@ -1832,6 +1833,12 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	CAM_DBG(CAM_ISP, "next Substate[%s]",
 		__cam_isp_ctx_substate_val_to_type(
 		ctx_isp->substate_activated));
+
+	cam_req_mgr_debug_delay_detect();
+	trace_cam_delay_detect("ISP",
+		"bubble epoch_in_applied", req->request_id,
+		ctx->ctx_id, ctx->link_hdl, ctx->session_hdl,
+		CAM_DEFAULT_VALUE);
 end:
 	if (request_id == 0) {
 		req = list_last_entry(&ctx->active_req_list,
@@ -2048,6 +2055,13 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 	CAM_DBG(CAM_ISP, "next Substate[%s]",
 		__cam_isp_ctx_substate_val_to_type(
 		ctx_isp->substate_activated));
+
+	cam_req_mgr_debug_delay_detect();
+	trace_cam_delay_detect("ISP",
+		"bubble epoch_in_bubble_applied",
+		req->request_id, ctx->ctx_id,
+		ctx->link_hdl, ctx->session_hdl,
+		CAM_DEFAULT_VALUE);
 end:
 	req = list_last_entry(&ctx->active_req_list, struct cam_ctx_request,
 		list);
@@ -4223,6 +4237,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 	req_isp->num_fence_map_in = cfg.num_in_map_entries;
 	req_isp->num_acked = 0;
 	req_isp->bubble_detected = false;
+	req_isp->hw_update_data.packet = packet;
 
 	for (i = 0; i < req_isp->num_fence_map_out; i++) {
 		rc = cam_sync_get_obj_ref(req_isp->fence_map_out[i].sync_id);
@@ -4444,7 +4459,7 @@ get_dev_handle:
 	req_hdl_param.media_entity_flag = 0;
 	req_hdl_param.ops = ctx->crm_ctx_intf;
 	req_hdl_param.priv = ctx;
-
+	req_hdl_param.dev_id = CAM_ISP;
 	CAM_DBG(CAM_ISP, "get device handle form bridge");
 	ctx->dev_hdl = cam_create_device_hdl(&req_hdl_param);
 	if (ctx->dev_hdl <= 0) {

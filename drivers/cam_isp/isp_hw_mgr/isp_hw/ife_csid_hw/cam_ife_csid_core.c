@@ -4638,6 +4638,7 @@ static int cam_csid_handle_hw_err_irq(
 			"CSID[%d] Can not get cmd for tasklet, evt_type %d",
 			csid_hw->hw_intf->hw_idx,
 			evt_type);
+		cam_csid_put_evt_payload(csid_hw, &evt_payload);
 		return rc;
 	}
 

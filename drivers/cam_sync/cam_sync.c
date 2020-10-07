@@ -17,6 +17,7 @@
 #include "cam_debug_util.h"
 #include "cam_common_util.h"
 #include "camera_main.h"
+#include "cam_req_mgr_workq.h"
 
 struct sync_device *sync_dev;
 
@@ -130,6 +131,7 @@ int cam_sync_register_callback(sync_callback cb_func,
 			sync_cb->status = row->state;
 			CAM_DBG(CAM_SYNC, "Enqueue callback for sync object:%d",
 				sync_cb->sync_obj);
+			sync_cb->workq_scheduled_ts = ktime_get();
 			queue_work(sync_dev->work_queue,
 				&sync_cb->cb_dispatch_work);
 			spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
