@@ -3472,8 +3472,8 @@ static int cam_isp_classify_vote_info(
 	struct cam_isp_bw_config_v2          *bw_config,
 	struct cam_axi_vote                  *isp_vote,
 	uint32_t                              split_idx,
-	bool                                 *camif_l_bw_updated,
-	bool                                 *camif_r_bw_updated)
+	bool                                 *nrdi_l_bw_updated,
+	bool                                 *nrdi_r_bw_updated)
 {
 	int                                   rc = 0, i, j = 0;
 
@@ -3482,7 +3482,7 @@ static int cam_isp_classify_vote_info(
 		(hw_mgr_res->res_id == CAM_ISP_HW_VFE_IN_PDLIB) ||
 		(hw_mgr_res->res_id == CAM_ISP_HW_VFE_IN_LCR)) {
 		if (split_idx == CAM_ISP_HW_SPLIT_LEFT) {
-			if (*camif_l_bw_updated)
+			if (*nrdi_l_bw_updated)
 				return rc;
 
 			for (i = 0; i < bw_config->num_paths; i++) {
@@ -3497,9 +3497,9 @@ static int cam_isp_classify_vote_info(
 			}
 			isp_vote->num_paths = j;
 
-			*camif_l_bw_updated = true;
+			*nrdi_l_bw_updated = true;
 		} else {
-			if (*camif_r_bw_updated)
+			if (*nrdi_r_bw_updated)
 				return rc;
 
 			for (i = 0; i < bw_config->num_paths; i++) {
@@ -3514,7 +3514,7 @@ static int cam_isp_classify_vote_info(
 			}
 			isp_vote->num_paths = j;
 
-			*camif_r_bw_updated = true;
+			*nrdi_r_bw_updated = true;
 		}
 	} else if ((hw_mgr_res->res_id >= CAM_ISP_HW_VFE_IN_RDI0)
 		&& (hw_mgr_res->res_id <=
@@ -3570,8 +3570,8 @@ static int cam_isp_blob_bw_update_v2(
 	struct cam_vfe_bw_update_args_v2       bw_upd_args;
 	int                                    rc = -EINVAL;
 	uint32_t                               i, split_idx;
-	bool                                   camif_l_bw_updated = false;
-	bool                                   camif_r_bw_updated = false;
+	bool                                   nrdi_l_bw_updated = false;
+	bool                                   nrdi_r_bw_updated = false;
 
 	for (i = 0; i < bw_config->num_paths; i++) {
 		CAM_DBG(CAM_PERF,
@@ -3598,7 +3598,7 @@ static int cam_isp_blob_bw_update_v2(
 				sizeof(struct cam_axi_vote));
 			rc = cam_isp_classify_vote_info(hw_mgr_res, bw_config,
 				&bw_upd_args.isp_vote, split_idx,
-				&camif_l_bw_updated, &camif_r_bw_updated);
+				&nrdi_l_bw_updated, &nrdi_r_bw_updated);
 			if (rc)
 				return rc;
 

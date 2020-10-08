@@ -157,7 +157,7 @@ int cam_sfe_enable_soc_resources(struct cam_hw_soc_info *soc_info)
 	axi_vote.axi_path[0].mnoc_ib_bw = 10640000000L;
 
 	rc = cam_cpas_start(soc_private->cpas_handle,
-		&ahb_vote, &axi_vote);
+			&ahb_vote, &axi_vote);
 	if (rc) {
 		CAM_ERR(CAM_SFE, "CPAS start failed rc=%d", rc);
 		rc = -EFAULT;

@@ -96,6 +96,22 @@ const char *cam_cpas_axi_util_path_type_to_string(
 	case CAM_AXI_PATH_DATA_OPE_WR_REF:
 		return "OPE_WR_REF";
 
+	/* SFE Paths */
+	case CAM_AXI_PATH_DATA_SFE_NRDI:
+		return "SFE_NRDI";
+	case CAM_AXI_PATH_DATA_SFE_RDI0:
+		return "IFE_RDI0";
+	case CAM_AXI_PATH_DATA_SFE_RDI1:
+		return "IFE_RDI1";
+	case CAM_AXI_PATH_DATA_SFE_RDI2:
+		return "IFE_RDI2";
+	case CAM_AXI_PATH_DATA_SFE_RDI3:
+		return "IFE_RDI3";
+	case CAM_AXI_PATH_DATA_SFE_RDI4:
+		return "IFE_RDI4";
+	case CAM_AXI_PATH_DATA_SFE_STATS:
+		return "SFE_STATS";
+
 	/* Common Paths */
 	case CAM_AXI_PATH_DATA_ALL:
 		return "DATA_ALL";
