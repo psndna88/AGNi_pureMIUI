@@ -126,6 +126,11 @@
 	compatible = "qcom,lahaina-camcc-v2", "syscon";
 };
 
+&usb_qmp_phy {
+	vdd-supply = <&pm8350_l5>;
+	qcom,vdd-voltage-level = <0 880000 888000>;
+};
+
 #include "lahaina-v2-gpu.dtsi"
 
 &cpu0_cpu_l3_tbl {

@@ -10,6 +10,7 @@ Required properties :
 			"qcom,lahaina-epss-l3-cpu",
 			"qcom,shima-epss-l3-cpu",
 			"qcom,shima-epss-l3-shared";
+			"qcom,yupik-epss-l3-cpu",
 - reg : Address and length of the register set for the device
 - clock-names: should contain "xo", "alternate"
 - clocks: list of phandle and clock specifier pairs corresponding to

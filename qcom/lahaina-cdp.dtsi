@@ -124,6 +124,32 @@
 		atmel,display-coords = <0 0 339 729>;
 		panel = <&dsi_sharp_qhd_plus_dsc_cmd>;
 	};
+
+	synaptics_dsx@22 {
+		compatible = "synaptics,dsx-i2c";
+		reg = <0x22>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <23 0x2008>;
+		vdd-supply = <&L8C>;
+		avdd-supply = <&L3C>;
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend","pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+		synaptics,pwr-reg-name = "avdd";
+		synaptics,bus-reg-name = "vdd";
+		synaptics,ub-i2c-addr = <0x22>;
+		synaptics,max-y-for-2d = <1859>;
+		synaptics,irq-gpio = <&tlmm 23 0x2008>;
+		synaptics,reset-gpio = <&tlmm 22 0x00>;
+		synaptics,irq-on-state = <0>;
+		synaptics,power-delay-ms = <200>;
+		synaptics,reset-delay-ms = <200>;
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <20>;
+
+		panel = <&dsi_sharp_qsync_wqhd_cmd &dsi_sharp_qsync_wqhd_video>;
+	};
 };
 
 &sdhc_2 {
@@ -182,6 +208,15 @@
 	status = "ok";
 };
 
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_sw43404_amoled_cmd
+			  &dsi_sw43404_amoled_video
+			  &dsi_sw43404_amoled_fhd_plus_cmd
+			  &dsi_r66451_amoled_cmd
+			  &dsi_r66451_amoled_video
+			  &dsi_sharp_qhd_plus_dsc_cmd>;
+};
+
 &pm8350c_switch0 {
 	qcom,led-mask = <9>; /* Channels 1 & 4 */
 	qcom,symmetry-en;
@@ -209,6 +244,7 @@
 				&tert_mi2s_sd0_active>;
 		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 				&tert_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
 	};
 };
 
