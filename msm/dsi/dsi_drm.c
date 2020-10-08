@@ -11,6 +11,7 @@
 #include "sde_connector.h"
 #include "dsi_drm.h"
 #include "sde_trace.h"
+#include "sde_dbg.h"
 
 #define to_dsi_bridge(x)     container_of((x), struct dsi_bridge, base)
 #define to_dsi_state(x)      container_of((x), struct dsi_connector_state, base)
@@ -411,16 +412,32 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 		if ((dsi_mode.panel_mode != cur_dsi_mode.panel_mode) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR)) &&
 			(crtc_state->enable ==
-				crtc_state->crtc->state->enable))
+				crtc_state->crtc->state->enable)) {
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_POMS;
+
+			SDE_EVT32(SDE_EVTLOG_FUNC_CASE1,
+				dsi_mode.timing.h_active,
+				dsi_mode.timing.v_active,
+				dsi_mode.timing.refresh_rate,
+				dsi_mode.pixel_clk_khz,
+				dsi_mode.panel_mode);
+		}
 		/* No DMS/VRR when drm pipeline is changing */
 		if (!drm_mode_equal(cur_mode, adjusted_mode) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR)) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_POMS)) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK)) &&
 			(!crtc_state->active_changed ||
-			 display->is_cont_splash_enabled))
+			 display->is_cont_splash_enabled)) {
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
+
+			SDE_EVT32(SDE_EVTLOG_FUNC_CASE2,
+				dsi_mode.timing.h_active,
+				dsi_mode.timing.v_active,
+				dsi_mode.timing.refresh_rate,
+				dsi_mode.pixel_clk_khz,
+				dsi_mode.panel_mode);
+		}
 	}
 
 	/* Reject seamless transition when active changed */
@@ -437,6 +454,28 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 	dsi_convert_to_drm_mode(&dsi_mode, adjusted_mode);
 
 	return true;
+}
+
+u32 dsi_drm_get_dfps_maxfps(void *display)
+{
+	u32 dfps_maxfps = 0;
+	struct dsi_display *dsi_display = display;
+
+	/*
+	 * The time of SDE transmitting one frame active data
+	 * will not be changed, if frame rate is adjusted with
+	 * VFP method.
+	 * So only return max fps of DFPS for UIDLE update, if DFPS
+	 * is enabled with VFP.
+	 */
+	if (dsi_display && dsi_display->panel &&
+		dsi_display->panel->panel_mode == DSI_OP_VIDEO_MODE &&
+		dsi_display->panel->dfps_caps.type ==
+					DSI_DFPS_IMMEDIATE_VFP)
+		dfps_maxfps =
+			dsi_display->panel->dfps_caps.max_refresh_rate;
+
+	return dfps_maxfps;
 }
 
 u64 dsi_drm_find_bit_clk_rate(void *display,
@@ -492,6 +531,7 @@ int dsi_conn_get_mode_info(struct drm_connector *connector,
 	mode_info->jitter_numer = dsi_mode.priv_info->panel_jitter_numer;
 	mode_info->jitter_denom = dsi_mode.priv_info->panel_jitter_denom;
 	mode_info->clk_rate = dsi_drm_find_bit_clk_rate(display, drm_mode);
+	mode_info->dfps_maxfps = dsi_drm_get_dfps_maxfps(display);
 	mode_info->mdp_transfer_time_us =
 		dsi_mode.priv_info->mdp_transfer_time_us;
 

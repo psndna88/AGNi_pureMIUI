@@ -1603,6 +1603,7 @@ static void dp_debug_set_sim_mode(struct dp_debug_private *debug, bool sim)
 		debug->dp_debug.sim_mode = true;
 		debug->aux->set_sim_mode(debug->aux, true,
 			debug->edid, debug->dpcd);
+		debug->ctrl->set_sim_mode(debug->ctrl, true);
 	} else {
 		if (debug->hotplug) {
 			DP_WARN("sim mode off before hotplug disconnect\n");
@@ -1613,6 +1614,7 @@ static void dp_debug_set_sim_mode(struct dp_debug_private *debug, bool sim)
 		debug->ctrl->abort(debug->ctrl, true);
 
 		debug->aux->set_sim_mode(debug->aux, false, NULL, NULL);
+		debug->ctrl->set_sim_mode(debug->ctrl, false);
 		debug->dp_debug.sim_mode = false;
 
 		debug->panel->set_edid(debug->panel, 0);
@@ -1751,7 +1753,7 @@ static ssize_t dp_debug_read_dump(struct file *file,
 		goto end;
 
 	snprintf(prefix, sizeof(prefix), "%s: ", debug->reg_dump);
-	print_hex_dump(KERN_DEBUG, prefix, DUMP_PREFIX_NONE,
+	print_hex_dump_debug(prefix, DUMP_PREFIX_NONE,
 		16, 4, buf, len, false);
 
 	len = min_t(size_t, count, len);
@@ -2275,6 +2277,37 @@ static int dp_debug_init_feature_toggle(struct dp_debug_private *debug,
 	return rc;
 }
 
+static int dp_debug_init_configs(struct dp_debug_private *debug,
+		struct dentry *dir)
+{
+	int rc = 0;
+	struct dentry *file;
+
+	file = debugfs_create_ulong("connect_notification_delay_ms", 0644, dir,
+		&debug->dp_debug.connect_notification_delay_ms);
+	if (IS_ERR_OR_NULL(file)) {
+		rc = PTR_ERR(file);
+		DP_ERR("[%s] debugfs connect_notification_delay_ms failed, rc=%d\n",
+		       DEBUG_NAME, rc);
+		return rc;
+	}
+	debug->dp_debug.connect_notification_delay_ms =
+		DEFAULT_CONNECT_NOTIFICATION_DELAY_MS;
+
+	file = debugfs_create_u32("disconnect_delay_ms", 0644, dir,
+		&debug->dp_debug.disconnect_delay_ms);
+	if (IS_ERR_OR_NULL(file)) {
+		rc = PTR_ERR(file);
+		DP_ERR("[%s] debugfs disconnect_delay_ms failed, rc=%d\n",
+		       DEBUG_NAME, rc);
+		return rc;
+	}
+	debug->dp_debug.disconnect_delay_ms = DEFAULT_DISCONNECT_DELAY_MS;
+
+	return rc;
+
+}
+
 static int dp_debug_init(struct dp_debug *dp_debug)
 {
 	int rc = 0;
@@ -2338,6 +2371,10 @@ static int dp_debug_init(struct dp_debug *dp_debug)
 		goto error_remove_dir;
 
 	rc = dp_debug_init_feature_toggle(debug, dir);
+	if (rc)
+		goto error_remove_dir;
+
+	rc = dp_debug_init_configs(debug, dir);
 	if (rc)
 		goto error_remove_dir;
 

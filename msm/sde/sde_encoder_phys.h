@@ -52,16 +52,13 @@ enum sde_enc_split_role {
  * @SDE_ENC_ENABLED:	Encoder is enabled
  * @SDE_ENC_ERR_NEEDS_HW_RESET:	Encoder is enabled, but requires a hw_reset
  *				to recover from a previous error
- * @SDE_ENC_TIMING_ENGINE_RECONFIG: Encoder is enabled and timing engine
- *				parameters are updated
  */
 enum sde_enc_enable_state {
 	SDE_ENC_DISABLING,
 	SDE_ENC_DISABLED,
 	SDE_ENC_ENABLING,
 	SDE_ENC_ENABLED,
-	SDE_ENC_ERR_NEEDS_HW_RESET,
-	SDE_ENC_TIMING_ENGINE_RECONFIG,
+	SDE_ENC_ERR_NEEDS_HW_RESET
 };
 
 struct sde_encoder_phys;
@@ -642,6 +639,26 @@ static inline enum sde_3d_blend_mode sde_encoder_helper_get_3d_blend_mode(
 		return BLEND_3D_H_ROW_INT;
 
 	return BLEND_3D_NONE;
+}
+
+/**
+ * sde_encoder_phys_is_cwb_disabling - Check if CWB encoder attached to this
+ *	 CRTC and it is in SDE_ENC_DISABLING state.
+ * @phys_enc: Pointer to physical encoder structure
+ * @crtc: drm crtc
+ * @Return: true if cwb encoder is in disabling state
+ */
+static inline bool sde_encoder_phys_is_cwb_disabling(
+	struct sde_encoder_phys *phys, struct drm_crtc *crtc)
+{
+	struct sde_encoder_phys_wb *wb_enc;
+
+	if (!phys || !phys->in_clone_mode ||
+				phys->enable_state != SDE_ENC_DISABLING)
+		return false;
+
+	wb_enc = container_of(phys, struct sde_encoder_phys_wb, base);
+	return (wb_enc->crtc == crtc) ? true : false;
 }
 
 /**

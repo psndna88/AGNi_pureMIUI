@@ -603,7 +603,16 @@ void sde_core_perf_crtc_update_uidle(struct drm_crtc *crtc,
 	drm_for_each_crtc(tmp_crtc, crtc->dev) {
 		if (_sde_core_perf_crtc_is_power_on(tmp_crtc)) {
 
-			fps = sde_crtc_get_fps_mode(tmp_crtc);
+			/*
+			 * If DFPS is enabled with VFP, SDE clock and
+			 * transfer time will get fixed at max FPS
+			 * configuration of DFPS.
+			 * So get the max FPS of DFPS firstly for
+			 * UIDLE update, if DFPS is enabled with VFP.
+			 */
+			fps = sde_crtc_get_dfps_maxfps(tmp_crtc);
+			if (!fps)
+				fps = sde_crtc_get_fps_mode(tmp_crtc);
 
 			SDE_DEBUG("crtc=%d fps:%d wb:%d cwb:%d dis:%d en:%d\n",
 				tmp_crtc->base.id, fps,
@@ -974,8 +983,7 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 	if (kms->perf.bw_vote_mode == DISP_RSC_MODE &&
 	    ((get_sde_rsc_current_state(SDE_RSC_INDEX) != SDE_RSC_CLK_STATE
 	      && params_changed) ||
-	    (get_sde_rsc_current_state(SDE_RSC_INDEX) == SDE_RSC_CLK_STATE
-	      && update_bus)))
+	    (get_sde_rsc_current_state(SDE_RSC_INDEX) == SDE_RSC_CLK_STATE)))
 		sde_rsc_client_trigger_vote(sde_cstate->rsc_client,
 				update_bus ? true : false);
 

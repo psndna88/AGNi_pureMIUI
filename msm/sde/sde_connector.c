@@ -2380,6 +2380,8 @@ static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	bool skip_pre_kickoff)
 {
 	struct drm_event event;
+	struct dsi_display *display;
+	u32 const max_conseq_esd_fail_count = 5;
 
 	if (!conn)
 		return;
@@ -2392,16 +2394,28 @@ static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	if (conn->panel_dead)
 		return;
 
+	SDE_EVT32(SDE_EVTLOG_ERROR);
+	sde_encoder_display_failure_notification(conn->encoder,
+		skip_pre_kickoff);
+
 	conn->panel_dead = true;
 	event.type = DRM_EVENT_PANEL_DEAD;
 	event.length = sizeof(bool);
 	msm_mode_object_event_notify(&conn->base.base,
 		conn->base.dev, &event, (u8 *)&conn->panel_dead);
-	sde_encoder_display_failure_notification(conn->encoder,
-		skip_pre_kickoff);
-	SDE_EVT32(SDE_EVTLOG_ERROR);
 	SDE_ERROR("esd check failed report PANEL_DEAD conn_id: %d enc_id: %d\n",
 			conn->base.base.id, conn->encoder->base.id);
+
+	if (conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return;
+
+	display = (struct dsi_display *)conn->display;
+	display->esd_fail_count++;
+	if (display->esd_fail_count == max_conseq_esd_fail_count) {
+		SDE_ERROR("Triggered reset on multiple PANEL_DEAD instances\n");
+		SDE_DBG_DUMP("all", "dbg_bus", "dsi_dbg_bus",
+			"vbif_dbg_bus", "panic");
+	}
 }
 
 int sde_connector_esd_status(struct drm_connector *conn)
@@ -2439,8 +2453,16 @@ int sde_connector_esd_status(struct drm_connector *conn)
 		SDE_DEBUG("Successfully received TE from panel\n");
 		ret = 0;
 	}
-	SDE_EVT32(ret);
 
+	if (sde_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
+		/* Reset esd_fail_count on recovery */
+		if (!ret)
+			display->esd_fail_count = 0;
+		SDE_EVT32(ret, display->esd_fail_count);
+		return ret;
+	}
+
+	SDE_EVT32(ret);
 	return ret;
 }
 
@@ -2449,6 +2471,7 @@ static void sde_connector_check_status_work(struct work_struct *work)
 	struct sde_connector *conn;
 	int rc = 0;
 	struct device *dev;
+	struct dsi_display *display;
 
 	conn = container_of(to_delayed_work(work),
 			struct sde_connector, status_work);
@@ -2481,6 +2504,12 @@ static void sde_connector_check_status_work(struct work_struct *work)
 			conn->esd_status_interval : STATUS_CHECK_INTERVAL_MS;
 		schedule_delayed_work(&conn->status_work,
 			msecs_to_jiffies(interval));
+
+		/* Successful ESD check */
+		if (conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
+			display = conn->display;
+			display->esd_fail_count = 0;
+		}
 		return;
 	}
 
@@ -2706,6 +2735,12 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 				sizeof(dsi_display->panel->hdr_props),
 				CONNECTOR_PROP_HDR_INFO);
 		}
+
+		mutex_lock(&c_conn->base.dev->mode_config.mutex);
+		sde_connector_fill_modes(&c_conn->base,
+						dev->mode_config.max_width,
+						dev->mode_config.max_height);
+		mutex_unlock(&c_conn->base.dev->mode_config.mutex);
 	}
 
 	msm_property_install_volatile_range(

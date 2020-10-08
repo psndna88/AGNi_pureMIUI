@@ -380,14 +380,33 @@ static ssize_t vsync_event_show(struct device *device,
 			ktime_to_ns(sde_crtc->vblank_last_cb_time));
 }
 
+static ssize_t retire_frame_event_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct drm_crtc *crtc;
+	struct sde_crtc *sde_crtc;
+
+	if (!device || !buf) {
+		SDE_ERROR("invalid input param(s)\n");
+		return -EAGAIN;
+	}
+
+	crtc = dev_get_drvdata(device);
+	sde_crtc = to_sde_crtc(crtc);
+	return scnprintf(buf, PAGE_SIZE, "RETIRE_FRAME_TIME=%llu\n",
+			ktime_to_ns(sde_crtc->retire_frame_event_time));
+}
+
 static DEVICE_ATTR_RO(vsync_event);
 static DEVICE_ATTR_RO(measured_fps);
 static DEVICE_ATTR_RW(fps_periodicity_ms);
+static DEVICE_ATTR_RO(retire_frame_event);
 
 static struct attribute *sde_crtc_dev_attrs[] = {
 	&dev_attr_vsync_event.attr,
 	&dev_attr_measured_fps.attr,
 	&dev_attr_fps_periodicity_ms.attr,
+	&dev_attr_retire_frame_event.attr,
 	NULL
 };
 
@@ -411,6 +430,8 @@ static void sde_crtc_destroy(struct drm_crtc *crtc)
 
 	if (sde_crtc->vsync_event_sf)
 		sysfs_put(sde_crtc->vsync_event_sf);
+	if (sde_crtc->retire_frame_event_sf)
+		sysfs_put(sde_crtc->retire_frame_event_sf);
 	if (sde_crtc->sysfs_dev)
 		device_unregister(sde_crtc->sysfs_dev);
 
@@ -2242,6 +2263,12 @@ static void sde_crtc_frame_event_cb(void *data, u32 event)
 		}
 	}
 
+	if ((event & SDE_ENCODER_FRAME_EVENT_SIGNAL_RETIRE_FENCE) &&
+		(sde_crtc && sde_crtc->retire_frame_event_sf)) {
+		sde_crtc->retire_frame_event_time = ktime_get();
+		sysfs_notify_dirent(sde_crtc->retire_frame_event_sf);
+	}
+
 	fevent->event = event;
 	fevent->crtc = crtc;
 	fevent->connector = cb_data->connector;
@@ -2371,6 +2398,24 @@ u32 sde_crtc_get_fps_mode(struct drm_crtc *crtc)
 		if ((encoder->crtc == crtc)
 				&& !sde_encoder_in_cont_splash(encoder))
 			return sde_encoder_get_fps(encoder);
+
+	return 0;
+}
+
+u32 sde_crtc_get_dfps_maxfps(struct drm_crtc *crtc)
+{
+	struct drm_encoder *encoder;
+
+	if (!crtc || !crtc->dev) {
+		SDE_ERROR("invalid crtc\n");
+		return 0;
+	}
+
+	drm_for_each_encoder_mask(encoder, crtc->dev,
+			crtc->state->encoder_mask) {
+		if (!sde_encoder_in_cont_splash(encoder))
+			return sde_encoder_get_dfps_maxfps(encoder);
+	}
 
 	return 0;
 }
@@ -6105,6 +6150,7 @@ static int _sde_debugfs_fence_status_show(struct seq_file *s, void *data)
 			pstate->stage);
 
 		fence = pstate->input_fence;
+		SDE_EVT32(DRMID(crtc), fence);
 		if (fence)
 			sde_fence_list_dump(fence, &s);
 	}
@@ -6639,6 +6685,11 @@ int sde_crtc_post_init(struct drm_device *dev, struct drm_crtc *crtc)
 		SDE_ERROR("crtc:%d vsync_event sysfs create failed\n",
 						crtc->base.id);
 
+	sde_crtc->retire_frame_event_sf = sysfs_get_dirent(
+		sde_crtc->sysfs_dev->kobj.sd, "retire_frame_event");
+	if (!sde_crtc->retire_frame_event_sf)
+		SDE_ERROR("crtc:%d retire frame event sysfs create failed\n",
+						crtc->base.id);
 end:
 	return rc;
 }
