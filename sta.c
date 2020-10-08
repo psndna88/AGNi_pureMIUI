@@ -2503,6 +2503,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 		pos = strchr(buf, '\n');
 		if (pos)
 			*pos = '\0';
+		pos = strchr(buf, '\r');
+		if (pos)
+			*pos = '\0';
 		snprintf(buf2, sizeof(buf2), "hash://server/sha256/%s", buf);
 		if (set_network_quoted(ifname, id, "ca_cert", buf2) < 0)
 			return ERROR_SEND_STATUS;
