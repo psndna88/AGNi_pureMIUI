@@ -63,7 +63,7 @@ rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
-make -j12 O=$COMPILEDIR # COMPILE
+make -j8 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
@@ -100,7 +100,7 @@ rm $WLAN_MODP/*.ko 2>/dev/null
 rm $WLAN_MODPO/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG2
-make -j12 O=$COMPILEDIR # COMPILE
+make -j8 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG2
@@ -133,7 +133,7 @@ rm $WLAN_MODP/*.ko 2>/dev/null
 rm $WLAN_MODPO/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG3
-make -j12 O=$COMPILEDIR # COMPILE
+make -j8 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG3
