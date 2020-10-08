@@ -2768,6 +2768,44 @@ int gsi_write_channel_scratch2_reg(unsigned long chan_hdl,
 }
 EXPORT_SYMBOL(gsi_write_channel_scratch2_reg);
 
+int gsi_write_wdi3_channel_scratch_6_7_reg(unsigned long chan_hdl,
+		union __packed gsi_wdi3_channel_scratch_6_7_reg val)
+{
+	struct gsi_chan_ctx *ctx;
+
+	if (!gsi_ctx) {
+		pr_err("%s:%d gsi context not allocated\n", __func__, __LINE__);
+		return -GSI_STATUS_NODEV;
+	}
+
+	if (chan_hdl >= gsi_ctx->max_ch) {
+		GSIERR("bad params chan_hdl=%lu\n", chan_hdl);
+		return -GSI_STATUS_INVALID_PARAMS;
+	}
+
+	ctx = &gsi_ctx->chan[chan_hdl];
+
+	mutex_lock(&ctx->mlock);
+
+	ctx->scratch.wdi3.db_addr_wp_lsb = val.wdi3.db_addr_wp_lsb;
+	ctx->scratch.wdi3.db_addr_wp_msb = val.wdi3.db_addr_wp_msb;
+
+	GSIDBG(" scratch value lsb 32 bit here %x0x & %x0x\n",val.wdi3.db_addr_wp_lsb,
+				ctx->scratch.wdi3.db_addr_wp_lsb );
+	GSIDBG(" scratch value here %x0x & %x0x\n",val.wdi3.db_addr_wp_msb,
+				ctx->scratch.wdi3.db_addr_wp_msb );
+
+	gsi_writel(val.data.word1, gsi_ctx->base +
+		GSI_EE_n_GSI_CH_k_SCRATCH_6_OFFS(chan_hdl,
+			gsi_ctx->per.ee));
+	gsi_writel(val.data.word2, gsi_ctx->base +
+		GSI_EE_n_GSI_CH_k_SCRATCH_7_OFFS(chan_hdl,
+			gsi_ctx->per.ee));
+	mutex_unlock(&ctx->mlock);
+	return GSI_STATUS_SUCCESS;
+}
+EXPORT_SYMBOL(gsi_write_wdi3_channel_scratch_6_7_reg);
+
 static void __gsi_read_channel_scratch(unsigned long chan_hdl,
 		union __packed gsi_channel_scratch * val)
 {
@@ -3979,17 +4017,19 @@ int gsi_config_channel_mode(unsigned long chan_hdl, enum gsi_chan_mode mode)
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}
 
+	spin_lock_irqsave(&gsi_ctx->slock, flags);
+
 	if (atomic_read(&ctx->poll_mode))
 		curr = GSI_CHAN_MODE_POLL;
 	else
 		curr = GSI_CHAN_MODE_CALLBACK;
 
 	if (mode == curr) {
-		GSIDBG("already in requested mode %u chan_hdl=%lu\n",
+		GSIERR("already in requested mode %u chan_hdl=%lu\n",
 				curr, chan_hdl);
+		spin_unlock_irqrestore(&gsi_ctx->slock, flags);
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}
-	spin_lock_irqsave(&gsi_ctx->slock, flags);
 	if (curr == GSI_CHAN_MODE_CALLBACK &&
 			mode == GSI_CHAN_MODE_POLL) {
 		__gsi_config_ieob_irq(gsi_ctx->per.ee, 1 << ctx->evtr->id, 0);

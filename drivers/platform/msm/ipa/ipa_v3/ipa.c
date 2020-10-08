@@ -6152,7 +6152,7 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 			atomic_read(&ipa3_ctx->ipa3_active_clients.cnt));
 	/* move proxy vote for modem on ipa3_post_init */
 	if (ipa3_ctx->ipa_hw_type != IPA_HW_v4_0)
-		ipa3_proxy_clk_vote();
+		ipa3_proxy_clk_vote(false);
 
 	/* The following will retrieve and save the gsi fw version */
 	ipa_save_gsi_ver();
@@ -6587,7 +6587,7 @@ static void ipa3_load_ipa_fw(struct work_struct *work)
 		IPADBG("Loading IPA uC via PIL\n");
 
 		/* Unvoting will happen when uC loaded event received. */
-		ipa3_proxy_clk_vote();
+		ipa3_proxy_clk_vote(false);
 
 		if (ipa3_ctx->uc_fw_file_name)
 			result = ipa3_pil_load_ipa_fws(
@@ -7021,6 +7021,7 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	ipa3_ctx->rmnet_ctl_enable = resource_p->rmnet_ctl_enable;
 	ipa3_ctx->tx_wrapper_cache_max_size = get_tx_wrapper_cache_size(
 			resource_p->tx_wrapper_cache_max_size);
+	ipa3_ctx->gsi_wdi_db_polling = resource_p->gsi_wdi_db_polling;
 
 	if (resource_p->gsi_fw_file_name) {
 		ipa3_ctx->gsi_fw_file_name =
@@ -7284,6 +7285,13 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 		result = -ENOMEM;
 		goto fail_hdr_offset_cache;
 	}
+	ipa3_ctx->fnr_stats_cache = kmem_cache_create("IPA_FNR_STATS",
+		sizeof(struct ipa_ioc_flt_rt_counter_alloc), 0, 0, NULL);
+	if (!ipa3_ctx->fnr_stats_cache) {
+		IPAERR(":ipa fnr stats cache create failed\n");
+		result = -ENOMEM;
+		goto fail_fnr_stats_cache;
+	}
 	ipa3_ctx->hdr_proc_ctx_cache = kmem_cache_create("IPA_HDR_PROC_CTX",
 		sizeof(struct ipa3_hdr_proc_ctx_entry), 0, 0, NULL);
 	if (!ipa3_ctx->hdr_proc_ctx_cache) {
@@ -7535,6 +7543,8 @@ fail_rt_tbl_cache:
 fail_hdr_proc_ctx_offset_cache:
 	kmem_cache_destroy(ipa3_ctx->hdr_proc_ctx_cache);
 fail_hdr_proc_ctx_cache:
+	kmem_cache_destroy(ipa3_ctx->fnr_stats_cache);
+fail_fnr_stats_cache:
 	kmem_cache_destroy(ipa3_ctx->hdr_offset_cache);
 fail_hdr_offset_cache:
 	kmem_cache_destroy(ipa3_ctx->hdr_cache);
@@ -7804,7 +7814,7 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->ipa_endp_delay_wa = false;
 	ipa_drv_res->skip_ieob_mask_wa = false;
 	ipa_drv_res->ipa_gpi_event_rp_ddr = false;
-
+	ipa_drv_res->gsi_wdi_db_polling = false;
 	/* Get IPA HW Version */
 	result = of_property_read_u32(pdev->dev.of_node, "qcom,ipa-hw-ver",
 					&ipa_drv_res->ipa_hw_type);
@@ -8053,6 +8063,12 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 		ipa_drv_res->rmnet_ctl_enable
 		? "True" : "False");
 
+	ipa_drv_res->gsi_wdi_db_polling =
+				of_property_read_bool(pdev->dev.of_node,
+				"qcom,gsi_wdi_db_polling");
+		IPADBG(": gsi wdi db polling = %s\n",
+				ipa_drv_res->gsi_wdi_db_polling
+				? "True" : "False");
 	result = of_property_read_string(pdev->dev.of_node,
 			"qcom,use-gsi-ipa-fw", &ipa_drv_res->gsi_fw_file_name);
 	if (!result)
