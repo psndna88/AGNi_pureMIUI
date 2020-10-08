@@ -127,6 +127,7 @@ struct cam_isp_in_port_generic_info {
  * @drop_enable : Flag to indicate CSID drop enable
  * @priv:         private data to be sent in callback
  * @event_cb:     CSID event callback to hw manager
+ * @phy_sel:      Phy selection number if tpg is enabled from userspace
  *
  */
 struct cam_csid_hw_reserve_resource_args {
@@ -142,6 +143,7 @@ struct cam_csid_hw_reserve_resource_args {
 	bool                                      drop_enable;
 	void                                     *priv;
 	cam_hw_mgr_event_cb_func                  event_cb;
+	uint32_t                                  phy_sel;
 };
 
 /**

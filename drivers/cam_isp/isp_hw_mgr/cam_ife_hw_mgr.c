@@ -1667,6 +1667,13 @@ static int cam_ife_mgr_acquire_cid_res(
 	if (in_port->num_out_res)
 		out_port = &(in_port->data[0]);
 
+	if (ife_ctx->is_tpg) {
+		if (ife_ctx->res_list_tpg.hw_res[0]->hw_intf->hw_idx == 0)
+			csid_acquire.phy_sel = CAM_ISP_IFE_IN_RES_PHY_0;
+		else
+			csid_acquire.phy_sel = CAM_ISP_IFE_IN_RES_PHY_1;
+	}
+
 	/* Try acquiring CID resource from previously acquired HW */
 	list_for_each_entry(cid_res_iterator, &ife_ctx->res_list_ife_cid,
 		list) {
@@ -1766,6 +1773,15 @@ acquire_successful:
 		csid_acquire.node_res = NULL;
 		csid_acquire.res_type = CAM_ISP_RESOURCE_CID;
 		csid_acquire.in_port = in_port;
+
+		if (ife_ctx->is_tpg) {
+			if (ife_ctx->res_list_tpg.hw_res[0]->hw_intf->hw_idx
+				== 0)
+				csid_acquire.phy_sel = CAM_ISP_IFE_IN_RES_PHY_0;
+			else
+				csid_acquire.phy_sel = CAM_ISP_IFE_IN_RES_PHY_1;
+		}
+
 		for (j = 0; j < CAM_IFE_CSID_HW_NUM_MAX; j++) {
 			if (!ife_hw_mgr->csid_devices[j])
 				continue;

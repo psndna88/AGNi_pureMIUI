@@ -688,6 +688,7 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 	struct cam_ife_csid_cid_data       *cid_data;
 	uint32_t camera_hw_version;
 	uint32_t valid_vc_dt;
+	uint32_t res_type;
 
 	CAM_DBG(CAM_ISP,
 		"CSID:%d res_sel:0x%x Lane type:%d lane_num:%d dt:%d vc:%d",
@@ -951,6 +952,19 @@ int cam_ife_csid_cid_reserve(struct cam_ife_csid_hw *csid_hw,
 			cid_reserv->in_port->lane_type;
 		csid_hw->csi2_rx_cfg.lane_num =
 			cid_reserv->in_port->lane_num;
+
+		res_type = cid_reserv->in_port->res_type;
+		if ((res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_0) ||
+			(res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_1) ||
+			(res_type == CAM_ISP_IFE_IN_RES_CPHY_TPG_2)) {
+			csid_hw->csi2_rx_cfg.phy_sel =
+				(cid_reserv->phy_sel & 0xFF) - 1;
+			csid_hw->csi2_reserve_cnt++;
+			CAM_DBG(CAM_ISP, "CSID:%d CID:%d acquired",
+				csid_hw->hw_intf->hw_idx,
+				cid_reserv->node_res->res_id);
+			goto end;
+		}
 
 		if (cid_reserv->in_port->res_type != CAM_ISP_IFE_IN_RES_TPG) {
 			csid_hw->csi2_rx_cfg.phy_sel =
