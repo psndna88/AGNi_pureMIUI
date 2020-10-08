@@ -47,6 +47,7 @@
 				<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_USB3>;
 
 		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,pm-qos-latency = <61>;
 		qcom,gsi-reg-offset =
 			<0x0fc /* GSI_GENERAL_CFG */
 			 0x110 /* GSI_DBL_ADDR_L */
