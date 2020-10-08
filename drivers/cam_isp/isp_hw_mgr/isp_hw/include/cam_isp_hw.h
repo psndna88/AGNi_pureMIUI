@@ -86,6 +86,9 @@ enum cam_isp_resource_type {
 	CAM_ISP_RESOURCE_TPG,
 	CAM_ISP_RESOURCE_TFE_IN,
 	CAM_ISP_RESOURCE_TFE_OUT,
+	CAM_ISP_RESOURCE_SFE_IN,
+	CAM_ISP_RESOURCE_SFE_RD,
+	CAM_ISP_RESOURCE_SFE_OUT,
 	CAM_ISP_RESOURCE_MAX,
 };
 
@@ -131,6 +134,7 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD,
 	CAM_ISP_HW_CMD_CSID_CHANGE_HALT_MODE,
 	CAM_ISP_HW_CMD_DISABLE_UBWC_COMP,
+	CAM_ISP_HW_CMD_SET_SFE_DEBUG_CFG,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -245,6 +249,10 @@ struct cam_isp_hw_cmd_buf_update {
  * @ num_buf:          Number of buffers in the image_buf array
  * @ frame_header:     frame header iova
  * @ local_id:         local id for the wm
+ * @ width:            width of scratch buffer
+ * @ height:           height of scratch buffer
+ * @ stride:           stride of scratch buffer
+ * @ slice_height:     slice height of scratch buffer
  * @ io_cfg:           IO buffer config information sent from UMD
  *
  */
@@ -254,6 +262,10 @@ struct cam_isp_hw_get_wm_update {
 	uint32_t                        num_buf;
 	uint64_t                        frame_header;
 	uint32_t                        local_id;
+	uint32_t                        width;
+	uint32_t                        height;
+	uint32_t                        stride;
+	uint32_t                        slice_height;
 	struct cam_buf_io_cfg          *io_cfg;
 };
 
@@ -276,10 +288,11 @@ struct cam_isp_hw_get_res_for_mid {
  *
  * @Brief:         Get cmd buffer update for different CMD types
  *
- * @res:           Resource node
- * @cmd_type:      Command type for which to get update
- * @cdm_id  :      CDM id
- * @cmd:           Command buffer information
+ * @res:             Resource node
+ * @cmd_type:        Command type for which to get update
+ * @cdm_id:          CDM id
+ * @cmd:             Command buffer information
+ * @use_scratch_cfg: To indicate if it's scratch buffer config
  *
  */
 struct cam_isp_hw_get_cmd_update {
@@ -287,6 +300,7 @@ struct cam_isp_hw_get_cmd_update {
 	enum cam_isp_hw_cmd_type          cmd_type;
 	enum cam_cdm_id                   cdm_id;
 	struct cam_isp_hw_cmd_buf_update  cmd;
+	bool                              use_scratch_cfg;
 	union {
 		void                                 *data;
 		struct cam_isp_hw_get_wm_update      *wm_update;

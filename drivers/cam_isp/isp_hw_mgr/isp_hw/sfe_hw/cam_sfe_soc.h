@@ -37,7 +37,7 @@ struct cam_sfe_soc_private {
  *                           Non-zero: Failure
  */
 int cam_sfe_init_soc_resources(struct cam_hw_soc_info *soc_info,
-	irq_handler_t vfe_irq_handler, void *irq_data);
+	irq_handler_t sfe_irq_handler, void *irq_data);
 
 /*
  * cam_sfe_deinit_soc_resources()

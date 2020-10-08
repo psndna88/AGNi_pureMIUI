@@ -8,8 +8,9 @@
 
 #include "cam_isp_hw.h"
 
-#define CAM_SFE_HW_NUM_MAX            2
-#define SFE_CORE_BASE_IDX             0
+#define SFE_CORE_BASE_IDX           0
+#define SFE_RT_CDM_BASE_IDX         1
+#define CAM_SFE_HW_NUM_MAX          2
 
 enum cam_isp_hw_sfe_in {
 	CAM_ISP_HW_SFE_IN_PIX,
@@ -30,6 +31,86 @@ enum cam_sfe_hw_irq_status {
 	CAM_SFE_IRQ_STATUS_OVERFLOW,
 	CAM_SFE_IRQ_STATUS_VIOLATION,
 	CAM_SFE_IRQ_STATUS_MAX,
+};
+
+enum cam_sfe_bw_control_action {
+	CAM_SFE_BW_CONTROL_EXCLUDE,
+	CAM_SFE_BW_CONTROL_INCLUDE,
+};
+
+enum cam_sfe_hw_irq_regs {
+	CAM_SFE_IRQ_TOP_REG_STATUS0,
+	CAM_SFE_IRQ_REGISTERS_MAX,
+};
+
+enum cam_sfe_bus_irq_regs {
+	CAM_SFE_IRQ_BUS_REG_STATUS0,
+	CAM_SFE_BUS_IRQ_REGISTERS_MAX,
+};
+
+/*
+ * struct cam_sfe_fe_update_args:
+ *
+ * @node_res:             Resource to get fetch configuration
+ * @fe_config:            fetch engine configuration
+ *
+ */
+struct cam_sfe_fe_update_args {
+	struct cam_isp_resource_node      *node_res;
+	struct cam_fe_config               fe_config;
+};
+
+/*
+ * struct cam_sfe_clock_update_args:
+ *
+ * @node_res:                ISP Resource
+ * @clk_rate:                Clock rate requested
+ */
+struct cam_sfe_clock_update_args {
+	struct cam_isp_resource_node      *node_res;
+	uint64_t                           clk_rate;
+};
+
+/*
+ * struct cam_sfe_core_config_args:
+ *
+ * @node_res:                ISP Resource
+ * @core_config:             Core config for SFE
+ */
+struct cam_sfe_core_config_args {
+	struct cam_isp_resource_node      *node_res;
+	struct cam_isp_sfe_core_config     core_config;
+};
+
+/*
+ * struct cam_sfe_irq_evt_payload:
+ *
+ * @Brief:                   This structure is used to save payload for IRQ
+ *                           related to SFE resources
+ *
+ * @list:                    list_head node for the payload
+ * @core_index:              Index of SFE HW that generated this IRQ event
+ * @evt_id:                  IRQ event
+ * @irq_reg_val:             IRQ and Error register values, read when IRQ was
+ *                           handled
+ * @bus_irq_val              Bus irq register status
+ * @ccif_violation_status    ccif violation status
+ * @overflow_status          bus overflow status
+ * @image_size_vio_sts       image size violations status
+ * @error_type:              Identify different errors
+ * @ts:                      Timestamp
+ */
+struct cam_sfe_irq_evt_payload {
+	struct list_head           list;
+	uint32_t                   core_index;
+	uint32_t                   evt_id;
+	uint32_t                   irq_reg_val[CAM_SFE_IRQ_REGISTERS_MAX];
+	uint32_t                   bus_irq_val[CAM_SFE_BUS_IRQ_REGISTERS_MAX];
+	uint32_t                   ccif_violation_status;
+	uint32_t                   overflow_status;
+	uint32_t                   image_size_vio_sts;
+	uint32_t                   error_type;
+	struct cam_isp_timestamp   ts;
 };
 
 /*
@@ -54,18 +135,18 @@ struct cam_sfe_hw_get_hw_cap {
  *                           is successful
  * @res_id:                  Unique Identity of port to associate with this
  *                           resource.
- * @is_dual:                 Flag to indicate dual SFE usecase
  * @cdm_ops:                 CDM operations
  * @unpacket_fmt:            Unpacker format for read engine
  * @is_offline:              Flag to indicate offline usecase
+ * @secure_mode:             If fetch is from secure/non-secure buffer
  */
 struct cam_sfe_hw_sfe_bus_rd_acquire_args {
 	struct cam_isp_resource_node         *rsrc_node;
 	uint32_t                              res_id;
-	uint32_t                              is_dual;
 	struct cam_cdm_utils_ops             *cdm_ops;
 	uint32_t                              unpacker_fmt;
 	bool                                  is_offline;
+	bool                                  secure_mode;
 };
 
 /*
@@ -77,9 +158,7 @@ struct cam_sfe_hw_sfe_bus_rd_acquire_args {
  *                           resource.
  * @cdm_ops:                 CDM operations
  * @is_dual:                 Dual mode usecase
- * @sync_mode:               If in dual mode, indicates master/slave
  * @in_port:                 in port info
- * @is_fe_enabled:           Flag to indicate if FE is enabled
  * @is_offline:              Flag to indicate Offline IFE
  */
 struct cam_sfe_hw_sfe_in_acquire_args {
@@ -87,9 +166,7 @@ struct cam_sfe_hw_sfe_in_acquire_args {
 	uint32_t                              res_id;
 	struct cam_cdm_utils_ops             *cdm_ops;
 	uint32_t                              is_dual;
-	enum cam_isp_hw_sync_mode             sync_mode;
 	struct cam_isp_in_port_generic_info  *in_port;
-	bool                                  is_fe_enabled;
 	bool                                  is_offline;
 };
 
@@ -126,6 +203,7 @@ struct cam_sfe_hw_sfe_out_acquire_args {
  *                           with this resource.
  * @priv:                    Context data
  * @event_cb:                Callback function to hw mgr in case of hw events
+ * @buf_done_controller:     Buf done controller
  * @sfe_out:                 Acquire args for SFE_OUT
  * @sfe_bus_rd               Acquire args for SFE_BUS_READ
  * @sfe_in:                  Acquire args for SFE_IN
@@ -135,6 +213,7 @@ struct cam_sfe_acquire_args {
 	void                                *tasklet;
 	void                                *priv;
 	cam_hw_mgr_event_cb_func             event_cb;
+	void                                *buf_done_controller;
 	union {
 		struct cam_sfe_hw_sfe_out_acquire_args     sfe_out;
 		struct cam_sfe_hw_sfe_in_acquire_args      sfe_in;

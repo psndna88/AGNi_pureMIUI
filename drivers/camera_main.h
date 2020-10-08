@@ -19,6 +19,9 @@ extern struct platform_driver cam_top_tpg_driver;
 extern struct platform_driver cam_ife_csid17x_driver;
 extern struct platform_driver cam_ife_csid_lite_driver;
 extern struct platform_driver cam_vfe_driver;
+#ifdef CONFIG_SPECTRA_SFE
+extern struct platform_driver cam_sfe_driver;
+#endif
 extern struct platform_driver isp_driver;
 #endif
 #ifdef CONFIG_SPECTRA_TFE
@@ -89,6 +92,9 @@ static struct platform_driver *const cam_component_drivers[] = {
 	&cam_ife_csid17x_driver,
 	&cam_ife_csid_lite_driver,
 	&cam_vfe_driver,
+#ifdef CONFIG_SPECTRA_SFE
+	&cam_sfe_driver,
+#endif
 	&isp_driver,
 #endif
 #ifdef CONFIG_SPECTRA_SENSOR
