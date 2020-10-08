@@ -448,7 +448,7 @@
 	};
 
 	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7 mem_offline.bypass_send_msg=1";
+		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7 mem_offline.bypass_send_msg=1 kpti=off";
 	};
 };
 
