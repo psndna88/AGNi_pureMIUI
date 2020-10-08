@@ -95,7 +95,7 @@
 };
 
 &holi_snd {
-	qcom,model = "holi-mtp-usbc-snd-card";
+	qcom,model = "holi-usbc-snd-card";
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
