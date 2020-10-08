@@ -77,8 +77,6 @@ static const char *const vp9_level[] = {
 	"4.1",
 	"5.0",
 	"5.1",
-	"6.0",
-	"6.1",
 	NULL
 };
 
@@ -274,7 +272,6 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.default_value = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
 		.menu_skip_mask = ~(
 		(1 << V4L2_MPEG_VIDEO_VP9_PROFILE_0) |
-		(1 << V4L2_MPEG_VIDEO_VP9_PROFILE_1) |
 		(1 << V4L2_MPEG_VIDEO_VP9_PROFILE_2)
 		),
 		.qmenu = NULL,
@@ -284,8 +281,8 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.name = "VP9 Level",
 		.type = V4L2_CTRL_TYPE_MENU,
 		.minimum = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61,
-		.default_value = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61,
+		.maximum = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51,
+		.default_value = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51,
 		.menu_skip_mask = ~(
 		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED) |
 		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_1) |
@@ -297,9 +294,7 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_4) |
 		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_41) |
 		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_6) |
-		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61)
+		(1 << V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51)
 		),
 		.qmenu = vp9_level,
 	},
@@ -419,6 +414,15 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_HINT,
 		.name = "Low Latency Hint",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
+		.default_value = V4L2_MPEG_MSM_VIDC_DISABLE,
+		.step = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_DISABLE_TIMESTAMP_REORDER,
+		.name = "Disable TimeStamp Reorder",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.minimum = V4L2_MPEG_MSM_VIDC_DISABLE,
 		.maximum = V4L2_MPEG_MSM_VIDC_ENABLE,
@@ -956,6 +960,8 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		inst->batch.enable = is_batching_allowed(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_HINT:
+		break;
+	case V4L2_CID_MPEG_VIDC_VIDEO_DISABLE_TIMESTAMP_REORDER:
 		break;
 	case V4L2_CID_MPEG_VIDC_VDEC_HEIF_MODE:
 		if(get_v4l2_codec(inst) != V4L2_PIX_FMT_HEVC)

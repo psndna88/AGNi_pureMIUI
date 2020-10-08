@@ -433,7 +433,7 @@ int msm_vidc_qbuf(void *instance, struct media_device *mdev,
 	timestamp_us = (s64)((b->timestamp.tv_sec * 1000000) +
 		b->timestamp.tv_usec);
 	if (is_decode_session(inst) && b->type == INPUT_MPLANE &&
-		!is_heif_decoder(inst)) {
+		is_ts_reorder_allowed(inst)) {
 		if (inst->flush_timestamps)
 			msm_comm_release_timestamps(inst);
 		inst->flush_timestamps = false;
@@ -515,7 +515,7 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	if (is_decode_session(inst) &&
 		b->type == OUTPUT_MPLANE &&
 		!(b->flags & V4L2_BUF_FLAG_CODECCONFIG) &&
-		!is_heif_decoder(inst))
+		is_ts_reorder_allowed(inst))
 		msm_comm_fetch_ts_framerate(inst, b);
 
 	return rc;
@@ -598,14 +598,31 @@ int msm_vidc_enum_framesizes(void *instance, struct v4l2_frmsizeenum *fsize)
 
 	capability = &inst->capability;
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
-	fsize->stepwise.min_width = capability->cap[CAP_FRAME_WIDTH].min;
-	fsize->stepwise.max_width = capability->cap[CAP_FRAME_WIDTH].max;
-	fsize->stepwise.step_width =
-		capability->cap[CAP_FRAME_WIDTH].step_size;
-	fsize->stepwise.min_height = capability->cap[CAP_FRAME_HEIGHT].min;
-	fsize->stepwise.max_height = capability->cap[CAP_FRAME_HEIGHT].max;
-	fsize->stepwise.step_height =
-		capability->cap[CAP_FRAME_HEIGHT].step_size;
+	if(is_grid_session(inst)) {
+		fsize->stepwise.min_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].min;
+		fsize->stepwise.max_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].max;
+		fsize->stepwise.step_width =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_WIDTH].step_size;
+		fsize->stepwise.min_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].min;
+		fsize->stepwise.max_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].max;
+		fsize->stepwise.step_height =
+			capability->cap[CAP_HEIC_IMAGE_FRAME_HEIGHT].step_size;
+
+	}
+	else {
+		fsize->stepwise.min_width = capability->cap[CAP_FRAME_WIDTH].min;
+		fsize->stepwise.max_width = capability->cap[CAP_FRAME_WIDTH].max;
+		fsize->stepwise.step_width =
+			capability->cap[CAP_FRAME_WIDTH].step_size;
+		fsize->stepwise.min_height = capability->cap[CAP_FRAME_HEIGHT].min;
+		fsize->stepwise.max_height = capability->cap[CAP_FRAME_HEIGHT].max;
+		fsize->stepwise.step_height =
+			capability->cap[CAP_FRAME_HEIGHT].step_size;
+	}
 	return 0;
 }
 EXPORT_SYMBOL(msm_vidc_enum_framesizes);

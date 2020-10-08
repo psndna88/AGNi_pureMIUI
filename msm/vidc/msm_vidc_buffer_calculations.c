@@ -909,8 +909,9 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
 	frame_size = base_res_mbs * MB_SIZE_IN_PIXEL * 3 / 2 / div_factor;
 
 	 /* multiply by 10/8 (1.25) to get size for 10 bit case */
-	if ((f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_VP9) ||
-		(f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC))
+	if ((f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_VP9 ||
+		f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC) &&
+		inst->core->platform_data->vpu_ver != VPU_VERSION_AR50_LITE)
 		frame_size = frame_size + (frame_size >> 2);
 
 	if (inst->buffer_size_limit &&
@@ -1411,7 +1412,9 @@ static inline u32 calculate_enc_scratch_size(struct msm_vidc_inst *inst,
 		bitstream_size = aligned_width * aligned_height * 3;
 		bitbin_size = ALIGN(bitstream_size, VENUS_DMA_ALIGNMENT);
 	}
-	if (num_vpp_pipes > 2)
+	if (aligned_width * aligned_height >= 3840 * 2160)
+		size_singlePipe = bitbin_size / 4;
+	else if (num_vpp_pipes > 2)
 		size_singlePipe = bitbin_size / 2;
 	else
 		size_singlePipe = bitbin_size;
@@ -1815,7 +1818,7 @@ static inline u32 calculate_enc_scratch2_size(struct msm_vidc_inst *inst,
 			metadata_stride, meta_buf_height);
 		size = (aligned_height + chroma_height) * aligned_width +
 			meta_size_y + meta_size_c;
-		size = (size * (num_ref+3)) + 4096;
+		size = (size * (num_ref + 2)) + 4096;
 	} else {
 		ref_buf_height = (height + (HFI_VENUS_HEIGHT_ALIGNMENT - 1))
 			& (~(HFI_VENUS_HEIGHT_ALIGNMENT - 1));
@@ -1848,7 +1851,7 @@ static inline u32 calculate_enc_scratch2_size(struct msm_vidc_inst *inst,
 		meta_size_c = hfi_ubwc_metadata_plane_buffer_size(
 			metadata_stride, meta_buf_height);
 		size = ref_buf_size + meta_size_y + meta_size_c;
-		size = (size * (num_ref+3)) + 4096;
+		size = (size * (num_ref + 2)) + 4096;
 	}
 	return size;
 }
