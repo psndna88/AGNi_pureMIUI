@@ -140,6 +140,7 @@
 		qcom,sde-min-dram-ib-kbps = <1600000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <0>;
+		qcom,sde-max-trusted-vm-displays = <1>;
 
 		qcom,sde-uidle-off = <0x80000>;
 		qcom,sde-uidle-size = <0x70>;
@@ -174,6 +175,7 @@
 		qcom,sde-cdp-setting = <1 1>, <1 0>;
 
 		qcom,sde-qos-cpu-mask = <0x3>;
+		qcom,sde-qos-cpu-mask-performance = <0xf>;
 		qcom,sde-qos-cpu-dma-latency = <300>;
 		qcom,sde-qos-cpu-irq-latency = <300>;
 

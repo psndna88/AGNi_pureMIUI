@@ -2,6 +2,11 @@
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
 &soc {
+	disp_rdump_memory: disp_rdump_region@e1000000 {
+		reg = <0xe1000000 0x02300000>;
+		label = "disp_rdump_region";
+	};
+
 	ext_disp: qcom,msm-ext-disp {
 		compatible = "qcom,msm-ext-disp";
 
@@ -240,6 +245,7 @@
 	vdda-0p9-supply = <&L10C>;
 	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
+	memory-region = <&dfps_data_memory>;
 };
 
 &mdss_dsi_phy1 {

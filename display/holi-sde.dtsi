@@ -3,7 +3,7 @@
 
 &soc {
 	disp_rdump_memory: disp_rdump_region@85200000 {
-		reg = <0x0 0x85200000 0x0 0x00c00000>;
+		reg = <0x85200000 0x00c00000>;
 		label = "disp_rdump_region";
 	};
 
@@ -33,8 +33,6 @@
 
 		#list-cells = <1>;
 		qcom,mdss-rot-mode = <1>;
-		rot-vdd-supply = <&mdss_core_gdsc>;
-		qcom,supply-names = "rot-vdd";
 
 		clocks =
 			<&gcc GCC_DISP_AHB_CLK>,
@@ -142,6 +140,7 @@
 
 &mdss_dsi_phy0 {
 	vdda-0p9-supply = <&S5A_LEVEL>;
+	qcom,panel-allow-phy-poweroff;
 	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 	memory-region = <&dfps_data_memory>;
