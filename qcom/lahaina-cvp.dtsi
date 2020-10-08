@@ -70,6 +70,7 @@
 			buffer-types = <0xfff>;
 			dma-coherent-hint-cached;
 			qcom,iommu-dma-addr-pool = <0x4b000000 0x90000000>;
+			qcom,iommu-faults = "non-fatal";
 		};
 
 
@@ -81,6 +82,7 @@
 			buffer-types = <0x741>;
 			qcom,iommu-dma-addr-pool = <0x01000000 0x25800000>;
 			qcom,iommu-vmid = <0xB>;
+			qcom,iommu-faults = "non-fatal";
 		};
 
 		cvp_secure_pixel_cb {
@@ -91,6 +93,7 @@
 			buffer-types = <0x106>;
 			qcom,iommu-dma-addr-pool = <0x26800000 0x24800000>;
 			qcom,iommu-vmid = <0xA>;
+			qcom,iommu-faults = "non-fatal";
 		};
 
 		/* Memory Heaps */

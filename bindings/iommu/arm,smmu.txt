@@ -156,6 +156,12 @@ conditions.
                   clients who do not detach, it's not possible to keep regulator
                   vote while smmu is attached. Type is <u32>.
 
+- qcom,iommu-geometry:
+		  Allow clients to set the available IOVA space for fastmap
+		  clients. The new space created will be a superset of the IOVA
+		  range which was created through the qcom,iommu-dma-addr-pool
+		  DT property.
+
 - (%s)-supply   : Phandle of the regulator that should be powered on during
                   SMMU register access. (%s) is a string from the
 		  qcom,regulator-names property.
@@ -231,8 +237,6 @@ conditions.
 --- "default":
 		Pagetable coherency defaults to the coherency setting of the
 		IOMMU device.
---- "non-coherent":
-		Pagetables are not coherent nor cached in the system cache..
 --- "coherent"
 		Pagetables are io-coherent.
 --- "LLC"

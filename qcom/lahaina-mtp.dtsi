@@ -163,6 +163,14 @@
 	status = "ok";
 };
 
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_sw43404_amoled_cmd
+			  &dsi_sw43404_amoled_video
+			  &dsi_sw43404_amoled_fhd_plus_cmd
+			  &dsi_r66451_amoled_cmd
+			  &dsi_r66451_amoled_video>;
+};
+
 &pm8350c_switch0 {
 	qcom,led-mask = <9>; /* Channels 1 & 4 */
 	qcom,symmetry-en;
@@ -190,6 +198,7 @@
 				&tert_mi2s_sd0_active>;
 		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 				&tert_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
 	};
 };
 

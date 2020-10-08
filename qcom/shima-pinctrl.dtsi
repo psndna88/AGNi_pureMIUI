@@ -3080,6 +3080,20 @@
 					drive-strength = <2>;
 				};
 			};
+
+			usb3phy_portselect_gpio: usb3phy_portselect_gpio {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					drive-strength = <2>;
+					bias-pull-up;
+					input-enable;
+				};
+			};
 		};
 
 		bt_en_sleep: bt_en_sleep {

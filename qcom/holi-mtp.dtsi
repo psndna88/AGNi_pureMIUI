@@ -192,8 +192,7 @@
 		      <&smb1396_div2_cp_master PSY_IIO_CP_SWITCHER_EN>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ENABLE>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ILIM>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>;
+		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -224,8 +223,7 @@
 			   "cp_switcher_en",
 			   "cp_enable",
 			   "cp_ilim",
-			   "cp_die_temp",
-			   "current_capability";
+			   "cp_die_temp";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,sec-charger-config = <1>;
 	qcom,auto-recharge-soc = <98>;
@@ -307,20 +305,14 @@
 };
 
 &smb1396_div2_cp_master {
-	io-channels = <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_ENABLE>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_INPUT_CURRENT_MAX>,
-		      <&pm7250b_vadc ADC5_AMUX_THM2>,
+	io-channels = <&pm7250b_vadc ADC5_AMUX_THM2>,
 		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
 		      <&pm7250b_charger PSY_IIO_ADAPTER_CC_MODE>,
 		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
 		      <&pm7250b_charger PSY_IIO_USB_INPUT_CURRENT_SETTLED>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_MODE>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_REASON>;
-	io-channel-names = "current_capability",
-			   "cp_enable",
-			   "cp_input_current_max",
-			   "die_temp",
+	io-channel-names = "die_temp",
 			   "real_type",
 			   "adapter_cc_mode",
 			   "pd_current_max",
@@ -329,14 +321,6 @@
 			   "smb_en_reason";
 	qcom,parallel-input-mode = <1>; /* USBIN */
 	qcom,parallel-output-mode = <2>; /* VBAT */
-	status = "ok";
-};
-
-&smb1396_slave {
-	status = "ok";
-};
-
-&smb1396_div2_cp_slave {
 	status = "ok";
 };
 
@@ -392,4 +376,8 @@
 
 &usb0 {
 	extcon = <&pm7250b_pdphy>, <&eud>;
+
+	#io-channel-cells = <1>;
+	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
+	io-channel-names = "chg_type";
 };

@@ -2,6 +2,8 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay.dtsi"
+#include "display/holi-sde-display-mtp.dtsi"
+#include "holi-thermal-overlay.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
 &sdhc_1 {
@@ -69,10 +71,46 @@
 		status = "ok";
 };
 
+&qupv3_se0_i2c {
+	status = "ok";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	nq@28 {
+		compatible = "qcom,sn-nci";
+		reg = <0x28>;
+		qcom,sn-irq = <&tlmm 9 0x00>;
+		qcom,sn-ven = <&tlmm 6 0x00>;
+		qcom,sn-firm = <&tlmm 8 0x00>;
+		qcom,sn-clkreq = <&tlmm 7 0x00>;
+		qcom,sn-vdd-1p8-supply = <&L11A>;
+		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+		qcom,sn-vdd-1p8-current = <157000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <9 0>;
+		interrupt-names = "nfc_irq";
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	};
+};
+
 &holi_snd {
+	qcom,model = "holi-mtp-usbc-snd-card";
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
+	fsa4480-i2c-handle = <&fsa4480>;
+};
+
+&qupv3_se10_i2c {
+	status = "ok";
+	fsa4480: fsa4480@42 {
+		compatible = "qcom,fsa4480-i2c";
+		reg = <0x42>;
+		io-channels = <&pm7250b_charger PSY_IIO_TYPEC_ACCESSORY_MODE>;
+		io-channel-names = "typec_mode";
+		qcom,use-power-supply = <1>;
+	};
 };
 
 &soc {
@@ -99,6 +137,44 @@
 		#include "qg-batterydata-alium-3600mah.dtsi"
 		#include "qg-batterydata-atl466271_3300mAh.dtsi"
 		#include "qg-batterydata-atl436186020H_3780mAh.dtsi"
+	};
+};
+
+&pm6150a_amoled {
+	status = "ok";
+};
+
+&qupv3_se8_i2c {
+	status = "okay";
+	qcom,i2c-touch-active="synaptics,tcm-i2c";
+
+	synaptics_tcm@20 {
+		compatible = "synaptics,tcm-i2c";
+		reg = <0x20>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <22 0x2008>;
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&pmx_ts_release>;
+		vdd-supply = <&L11A>;
+		avdd-supply = <&L6A>;
+		synaptics,pwr-reg-name = "avdd";
+		synaptics,bus-reg-name = "vdd";
+		synaptics,irq-gpio = <&tlmm 22 0x2008>;
+		synaptics,irq-on-state = <0>;
+		synaptics,reset-gpio = <&tlmm 21 0x00>;
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <20>;
+		synaptics,reset-delay-ms = <200>;
+		synaptics,power-delay-ms = <200>;
+		synaptics,ubl-i2c-addr = <0x20>;
+		synaptics,extend_report;
+		synaptics,firmware-name = "synaptics_firmware.img";
+
+		panel = <&dsi_rm69299_visionox_amoled_video
+			&dsi_rm69299_visionox_amoled_cmd>;
 	};
 };
 
@@ -135,8 +211,7 @@
 		      <&smb1396_div2_cp_master PSY_IIO_CP_SWITCHER_EN>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ENABLE>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ILIM>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>;
+		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -167,8 +242,7 @@
 			   "cp_switcher_en",
 			   "cp_enable",
 			   "cp_ilim",
-			   "cp_die_temp",
-			   "current_capability";
+			   "cp_die_temp";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,sec-charger-config = <1>;
 	qcom,auto-recharge-soc = <98>;
@@ -214,9 +288,7 @@
 	qcom,use-cp-iin-sns;
 };
 
-&pm6150a_amoled {
-	status = "ok";
-};
+#include "camera/holi-camera-sensor-mtp.dtsi"
 
 &pm7250b_charger {
 	dpdm-supply = <&qusb_phy0>;
@@ -266,20 +338,14 @@
 };
 
 &smb1396_div2_cp_master {
-	io-channels = <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_ENABLE>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_INPUT_CURRENT_MAX>,
-		      <&pm7250b_vadc ADC5_AMUX_THM2>,
+	io-channels = <&pm7250b_vadc ADC5_AMUX_THM2>,
 		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
 		      <&pm7250b_charger PSY_IIO_ADAPTER_CC_MODE>,
 		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
 		      <&pm7250b_charger PSY_IIO_USB_INPUT_CURRENT_SETTLED>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_MODE>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_REASON>;
-	io-channel-names = "current_capability",
-			   "cp_enable",
-			   "cp_input_current_max",
-			   "die_temp",
+	io-channel-names = "die_temp",
 			   "real_type",
 			   "adapter_cc_mode",
 			   "pd_current_max",
@@ -288,14 +354,6 @@
 			   "smb_en_reason";
 	qcom,parallel-input-mode = <1>; /* USBIN */
 	qcom,parallel-output-mode = <2>; /* VBAT */
-	status = "ok";
-};
-
-&smb1396_slave {
-	status = "ok";
-};
-
-&smb1396_div2_cp_slave {
 	status = "ok";
 };
 
@@ -337,4 +395,8 @@
 
 &usb0 {
 	extcon = <&pm7250b_pdphy>, <&eud>;
+
+	#io-channel-cells = <1>;
+	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
+	io-channel-names = "chg_type";
 };
