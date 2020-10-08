@@ -147,12 +147,13 @@ struct cam_tfe_hw_mgr_ctx {
  * @tfe_dev_caps           tfe device capability per core
  * @work q                 work queue for TFE hw manager
  * @debug_cfg              debug configuration
+ * @support_consumed_addr  indicate whether hw supports last consumed address
  */
 struct cam_tfe_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
 	struct cam_hw_intf            *tpg_devices[CAM_TOP_TPG_HW_NUM_MAX];
 	struct cam_hw_intf            *csid_devices[CAM_TFE_CSID_HW_NUM_MAX];
-	struct cam_hw_intf            *tfe_devices[CAM_TFE_HW_NUM_MAX];
+	struct cam_isp_hw_intf_data   *tfe_devices[CAM_TFE_HW_NUM_MAX];
 	struct cam_soc_reg_map        *cdm_reg_map[CAM_TFE_HW_NUM_MAX];
 	struct mutex                   ctx_mutex;
 	atomic_t                       active_ctx_cnt;
@@ -165,6 +166,7 @@ struct cam_tfe_hw_mgr {
 	struct cam_tfe_hw_get_hw_cap   tfe_dev_caps[CAM_TFE_HW_NUM_MAX];
 	struct cam_req_mgr_core_workq *workq;
 	struct cam_tfe_hw_mgr_debug    debug_cfg;
+	bool                           support_consumed_addr;
 };
 
 /**

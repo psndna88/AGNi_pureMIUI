@@ -26,6 +26,8 @@
  */
 #define CAM_ISP_CTX_RES_MAX                     24
 
+/* max requests per ctx for isp */
+#define CAM_ISP_CTX_REQ_MAX                     8
 /*
  * Maximum configuration entry size  - This is based on the
  * worst case DUAL IFE use case plus some margin.
@@ -112,13 +114,15 @@ enum cam_isp_state_change_trigger {
 /**
  * struct cam_isp_ctx_debug -  Contains debug parameters
  *
- * @dentry:                    Debugfs entry
- * @enable_state_monitor_dump: Enable isp state monitor dump
+ * @dentry:                     Debugfs entry
+ * @enable_state_monitor_dump:  Enable isp state monitor dump
+ * @enable_cdm_cmd_buff_dump: Enable CDM Command buffer dump
  *
  */
 struct cam_isp_ctx_debug {
 	struct dentry  *dentry;
 	uint32_t        enable_state_monitor_dump;
+	uint8_t         enable_cdm_cmd_buff_dump;
 };
 
 /**
@@ -270,8 +274,8 @@ struct cam_isp_context {
 	struct cam_ctx_ops              *substate_machine;
 	struct cam_isp_ctx_irq_ops      *substate_machine_irq;
 
-	struct cam_ctx_request           req_base[CAM_CTX_REQ_MAX];
-	struct cam_isp_ctx_req           req_isp[CAM_CTX_REQ_MAX];
+	struct cam_ctx_request           req_base[CAM_ISP_CTX_REQ_MAX];
+	struct cam_isp_ctx_req           req_isp[CAM_ISP_CTX_REQ_MAX];
 
 	void                            *hw_ctx;
 	uint64_t                         sof_timestamp_val;

@@ -3852,11 +3852,14 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 		if (cfg->init_packet) {
 			rem_jiffies = wait_for_completion_timeout(
 				&ctx->config_done_complete,
-				msecs_to_jiffies(30));
+				msecs_to_jiffies(60));
 			if (rem_jiffies == 0) {
 				CAM_ERR(CAM_ISP,
 					"config done completion timeout for req_id=%llu ctx_index %d",
 					cfg->request_id, ctx->ctx_index);
+				if (cam_cdm_detect_hang_error(ctx->cdm_handle))
+					cam_cdm_dump_debug_registers(
+						ctx->cdm_handle);
 				rc = -ETIMEDOUT;
 			} else
 				CAM_DBG(CAM_ISP,
@@ -6689,7 +6692,6 @@ static void cam_ife_mgr_dump_pf_data(
 	struct cam_hw_cmd_args *hw_cmd_args)
 {
 	struct cam_ife_hw_mgr_ctx *ctx;
-
 	struct cam_isp_hw_mgr_res          *hw_mgr_res;
 	struct cam_isp_hw_get_cmd_update    cmd_update;
 	struct cam_isp_hw_get_res_for_mid   get_res;

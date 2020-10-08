@@ -33,7 +33,6 @@ struct hfi_mem {
  * @qdss: qdss mapped memory for fw
  * @io_mem: io memory info
  * @io_mem2: 2nd io memory info
- * @icp_base: icp base address
  */
 struct hfi_mem_info {
 	struct hfi_mem qtbl;
@@ -46,17 +45,18 @@ struct hfi_mem_info {
 	struct hfi_mem qdss;
 	struct hfi_mem io_mem;
 	struct hfi_mem io_mem2;
-	void __iomem *icp_base;
 };
 
 /**
  * struct hfi_ops
  * @irq_raise: called to raise H2ICP interrupt
  * @irq_enable: called to enable interrupts from ICP
+ * @iface_addr: called to get interface registers base address
  */
 struct hfi_ops {
 	void (*irq_raise)(void *data);
 	void (*irq_enable)(void *data);
+	void __iomem *(*iface_addr)(void *data);
 };
 
 /**
@@ -84,12 +84,11 @@ int hfi_read_message(uint32_t *pmsg, uint8_t q_id, uint32_t *words_read);
  * @hfi_ops: processor-specific hfi ops
  * @priv: device private data
  * @event_driven_mode: event mode
- * @icp_base: icp base address
  *
  * Returns success(zero)/failure(non zero)
  */
-int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
-		void *priv, uint8_t event_driven_mode, void *__iomem icp_base);
+int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
+		void *priv, uint8_t event_driven_mode);
 
 /**
  * hfi_get_hw_caps() - hardware capabilities from firmware
@@ -110,13 +109,13 @@ void hfi_send_system_cmd(uint32_t type, uint64_t data, uint32_t size);
 /**
  * cam_hfi_deinit() - cleanup HFI
  */
-void cam_hfi_deinit(void __iomem *icp_base);
+void cam_hfi_deinit(void);
 /**
  * hfi_set_debug_level() - set debug level
- * @a5_dbg_type: 1 for debug_q & 2 for qdss
+ * @icp_dbg_type: 1 for debug_q & 2 for qdss
  * @lvl: FW debug message level
  */
-int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl);
+int hfi_set_debug_level(u64 icp_dbg_type, uint32_t lvl);
 
 /**
  * hfi_set_fw_dump_level() - set firmware dump level
@@ -152,11 +151,10 @@ int hfi_cmd_ubwc_config(uint32_t *ubwc_cfg);
 /**
  * cam_hfi_resume() - function to resume
  * @hfi_mem: hfi memory info
- * @icp_base: icp base address
  *
  * Returns success(zero)/failure(non zero)
  */
-int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base);
+int cam_hfi_resume(struct hfi_mem_info *hfi_mem);
 
 /**
  * cam_hfi_queue_dump() - utility function to dump hfi queues

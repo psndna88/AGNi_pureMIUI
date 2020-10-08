@@ -18,6 +18,7 @@
 #define CAM_TFE_BUS_CLIENT_NAME_MAX_LENGTH 32
 
 #define CAM_TFE_BUS_1_0             0x1000
+#define CAM_TFE_BUS_MAX_MID_PER_PORT        1
 
 
 #define CAM_TFE_ADD_REG_VAL_PAIR(buf_array, index, offset, val)    \
@@ -157,6 +158,7 @@ struct cam_tfe_bus_reg_offset_bus_client {
  * max_height        Max height supported by outport
  * composite_group   Out port composite group id
  * rup_group_id      Reg update group of outport id
+ * mid:              ouport mid value
  */
 struct cam_tfe_bus_tfe_out_hw_info {
 	enum cam_tfe_bus_tfe_out_id         tfe_out_id;
@@ -164,6 +166,7 @@ struct cam_tfe_bus_tfe_out_hw_info {
 	uint32_t                            max_height;
 	uint32_t                            composite_group;
 	uint32_t                            rup_group_id;
+	uint32_t                            mid;
 };
 
 /*

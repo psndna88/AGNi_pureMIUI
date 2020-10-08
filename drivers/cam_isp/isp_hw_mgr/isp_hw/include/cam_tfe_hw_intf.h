@@ -248,6 +248,6 @@ struct cam_tfe_irq_evt_payload {
  *                          successful initialization
  * @hw_idx:                 Index of TFE HW
  */
-int cam_tfe_hw_init(struct cam_hw_intf **tfe_hw, uint32_t hw_idx);
+int cam_tfe_hw_init(struct cam_isp_hw_intf_data **tfe_hw, uint32_t hw_idx);
 
 #endif /* _CAM_TFE_HW_INTF_H_ */

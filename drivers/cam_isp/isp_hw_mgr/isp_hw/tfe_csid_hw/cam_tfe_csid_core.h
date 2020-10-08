@@ -387,6 +387,8 @@ struct cam_tfe_csid_path_cfg {
  * @ppi_hw_intf               interface to ppi hardware
  * @ppi_enabled               flag to specify if the hardware has ppi bridge
  *                            or not
+ * @prev_boot_timestamp       previous frame bootime stamp
+ * @prev_qtimer_ts            previous frame qtimer csid timestamp
  *
  */
 struct cam_tfe_csid_hw {
@@ -415,6 +417,8 @@ struct cam_tfe_csid_hw {
 	void                               *event_cb_priv;
 	struct cam_hw_intf                 *ppi_hw_intf[CAM_CSID_PPI_HW_MAX];
 	bool                                ppi_enable;
+	uint64_t                            prev_boot_timestamp;
+	uint64_t                            prev_qtimer_ts;
 };
 
 int cam_tfe_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,

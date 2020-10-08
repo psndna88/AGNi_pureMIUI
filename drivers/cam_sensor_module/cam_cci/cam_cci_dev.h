@@ -16,6 +16,7 @@
 #include <linux/iommu.h>
 #include <linux/timer.h>
 #include <linux/kernel.h>
+#include <linux/debugfs.h>
 #include <linux/platform_device.h>
 #include <linux/semaphore.h>
 #include <media/cam_sensor.h>
@@ -31,7 +32,6 @@
 #include "cam_soc_util.h"
 #include "cam_debug_util.h"
 
-#define V4L2_IDENT_CCI 50005
 #define CCI_I2C_QUEUE_0_SIZE 128
 #define CCI_I2C_QUEUE_1_SIZE 32
 #define CCI_I2C_QUEUE_0_SIZE_V_1_2 64
@@ -42,16 +42,8 @@
 #define CCI_TIMEOUT msecs_to_jiffies(1500)
 #define NUM_QUEUES 2
 
-#define CCI_PINCTRL_STATE_DEFAULT "cci_default"
-#define CCI_PINCTRL_STATE_SLEEP "cci_suspend"
-
-#define CCI_NUM_CLK_MAX 16
-#define CCI_NUM_CLK_CASES 5
-#define CCI_CLK_SRC_NAME "cci_src_clk"
-#define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_10 10
 #define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_11 11
 #define BURST_MIN_FREE_SIZE 8
-#define MAX_LRME_V4l2_EVENTS 30
 
 /* Max bytes that can be read per CCI read transaction */
 #define CCI_READ_MAX 256
@@ -67,6 +59,9 @@
 
 #define PRIORITY_QUEUE (QUEUE_0)
 #define SYNC_QUEUE (QUEUE_1)
+
+#define CAM_CCI_NACK_DUMP_EN      BIT(1)
+#define CAM_CCI_TIMEOUT_DUMP_EN   BIT(2)
 
 #define CCI_VERSION_1_2_9 0x10020009
 enum cci_i2c_sync {
@@ -200,6 +195,7 @@ enum cam_cci_state_t {
  * @irqs_disabled:              Mask for IRQs that are disabled
  * @init_mutex:                 Mutex for maintaining refcount for attached
  *                              devices to cci during init/deinit.
+ * @dump_en:                    To enable the selective dump
  */
 struct cci_device {
 	struct v4l2_subdev subdev;
@@ -230,6 +226,7 @@ struct cci_device {
 	bool is_burst_read;
 	uint32_t irqs_disabled;
 	struct mutex init_mutex;
+	uint64_t  dump_en;
 };
 
 enum cam_cci_i2c_cmd_type {
@@ -301,6 +298,8 @@ struct cci_write_async {
 irqreturn_t cam_cci_irq(int irq_num, void *data);
 
 struct v4l2_subdev *cam_cci_get_subdev(int cci_dev_index);
+void cam_cci_dump_registers(struct cci_device *cci_dev,
+		enum cci_i2c_master_t master, enum cci_i2c_queue_t queue);
 
 /**
  * @brief : API to register CCI hw to platform framework.

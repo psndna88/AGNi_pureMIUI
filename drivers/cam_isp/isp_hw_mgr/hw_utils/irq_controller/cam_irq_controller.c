@@ -722,19 +722,28 @@ irqreturn_t cam_irq_controller_handle_irq(int irq_num, void *priv)
 			if (irq_register->top_half_enable_mask[j] &
 				controller->irq_status_arr[i])
 				need_th_processing[j] = true;
-				CAM_DBG(CAM_IRQ_CTRL,
-					"i %d j %d need_th_processing = %d",
-					i, j, need_th_processing[j]);
+
+			CAM_DBG(CAM_IRQ_CTRL,
+				"i %d j %d need_th_processing = %d",
+				i, j, need_th_processing[j]);
 		}
 	}
 
 	CAM_DBG(CAM_IRQ_CTRL, "Status Registers read Successful");
 
-	if (controller->global_clear_offset)
+	if (controller->global_clear_offset) {
 		cam_io_w_mb(controller->global_clear_bitmask,
 			controller->mem_base + controller->global_clear_offset);
+		for (i = 0; i < controller->num_registers; i++) {
+			irq_register = &controller->irq_register_arr[i];
+			if (controller->irq_status_arr[i])
+				cam_io_w_mb(0x0, controller->mem_base +
+					irq_register->clear_reg_offset);
+		}
 
-	CAM_DBG(CAM_IRQ_CTRL, "Status Clear done");
+		CAM_DBG(CAM_IRQ_CTRL, "Global Clear done from %s",
+			controller->name);
+	}
 
 	for (i = 0; i < CAM_IRQ_PRIORITY_MAX; i++) {
 		if (need_th_processing[i]) {

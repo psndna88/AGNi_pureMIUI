@@ -53,6 +53,7 @@ void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
 	link->prev_sof_timestamp = 0;
 	link->skip_init_frame = false;
 	link->num_sync_links = 0;
+	link->last_applied_jiffies = 0;
 	atomic_set(&link->eof_event_cnt, 0);
 
 	for (pd = 0; pd < CAM_PIPELINE_DELAY_MAX; pd++) {
@@ -554,6 +555,8 @@ static void __cam_req_mgr_flush_req_slot(
 	atomic_set(&link->eof_event_cnt, 0);
 	in_q->wr_idx = 0;
 	in_q->rd_idx = 0;
+	link->trigger_cnt[0] = 0;
+	link->trigger_cnt[1] = 0;
 }
 
 /**
@@ -1584,6 +1587,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 {
 	int                                  rc = 0, idx, i;
 	int                                  reset_step = 0;
+	bool                                 check_retry_cnt = false;
 	uint32_t                             trigger = trigger_data->trigger;
 	struct cam_req_mgr_slot             *slot = NULL;
 	struct cam_req_mgr_req_queue        *in_q;
@@ -1694,10 +1698,14 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 
 	rc = __cam_req_mgr_send_req(link, link->req.in_q, trigger, &dev);
 	if (rc < 0) {
-		if (in_q->last_applied_idx < in_q->rd_idx) {
-			/* Apply req failed retry at next sof */
-			slot->status = CRM_SLOT_STATUS_REQ_PENDING;
+		/* Apply req failed retry at next sof */
+		slot->status = CRM_SLOT_STATUS_REQ_PENDING;
 
+		if (jiffies_to_msecs(jiffies - link->last_applied_jiffies) >
+			MINIMUM_WORKQUEUE_SCHED_TIME_IN_MS)
+			check_retry_cnt = true;
+
+		if ((in_q->last_applied_idx < in_q->rd_idx) && check_retry_cnt) {
 			link->retry_cnt++;
 			if (link->retry_cnt == MAXIMUM_RETRY_ATTEMPTS) {
 				CAM_DBG(CAM_CRM,
@@ -1770,6 +1778,16 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 			link->open_req_cnt--;
 		}
 	}
+
+	/*
+	 * Only update the jiffies of last applied request
+	 * for SOF trigger, since it is used to protect from
+	 * applying fails in ISP which is triggered at SOF.
+	 * And, also don't need to do update for error case
+	 * since error case doesn't check the retry count.
+	 */
+	if (trigger == CAM_TRIGGER_POINT_SOF)
+		link->last_applied_jiffies = jiffies;
 
 	mutex_unlock(&session->lock);
 	return rc;
@@ -3027,6 +3045,9 @@ static int __cam_req_mgr_check_for_dual_trigger(
 	struct cam_req_mgr_core_link    *link)
 {
 	int rc  = -EAGAIN;
+
+	CAM_DBG(CAM_CRM, "trigger_cnt [%u: %u]",
+		link->trigger_cnt[0], link->trigger_cnt[1]);
 
 	if (link->trigger_cnt[0] == link->trigger_cnt[1]) {
 		link->trigger_cnt[0] = 0;

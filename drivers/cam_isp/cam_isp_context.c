@@ -942,7 +942,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request(
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
 		} else if (!req_isp->bubble_report) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"Sync with failure: req %lld res 0x%x fd 0x%x, ctx %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
@@ -1083,7 +1083,7 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
 					 rc);
 		} else if (!req_isp->bubble_report) {
-			CAM_ERR(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"Sync with failure: req %lld res 0x%x fd 0x%x, ctx %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
@@ -1726,6 +1726,7 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	void *evt_data)
 {
 	uint64_t request_id = 0;
+	struct cam_req_mgr_trigger_notify   notify;
 	struct cam_ctx_request             *req;
 	struct cam_isp_ctx_req             *req_isp;
 	struct cam_context                 *ctx = ctx_isp->base;
@@ -1784,6 +1785,27 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 		atomic_set(&ctx_isp->process_bubble, 1);
 	} else {
 		req_isp->bubble_report = 0;
+		CAM_DBG(CAM_ISP, "Skip bubble recovery for req %lld ctx %u",
+			req->request_id, ctx->ctx_id);
+		if (ctx->ctx_crm_intf && ctx->ctx_crm_intf->notify_trigger &&
+			ctx_isp->active_req_cnt <= 1) {
+			if (ctx_isp->subscribe_event & CAM_TRIGGER_POINT_SOF) {
+				notify.link_hdl = ctx->link_hdl;
+				notify.dev_hdl = ctx->dev_hdl;
+				notify.frame_id = ctx_isp->frame_id;
+				notify.trigger = CAM_TRIGGER_POINT_SOF;
+				notify.req_id =
+					ctx_isp->req_info.last_bufdone_req_id;
+				notify.sof_timestamp_val =
+					ctx_isp->sof_timestamp_val;
+				notify.trigger_id = ctx_isp->trigger_id;
+
+				ctx->ctx_crm_intf->notify_trigger(&notify);
+				CAM_DBG(CAM_ISP,
+					"Notify CRM  SOF frame %lld ctx %u",
+					ctx_isp->frame_id, ctx->ctx_id);
+			}
+		}
 	}
 
 	/*
@@ -1905,6 +1927,7 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 	struct cam_isp_context *ctx_isp, void *evt_data)
 {
 	uint64_t  request_id = 0;
+	struct cam_req_mgr_trigger_notify   notify;
 	struct cam_ctx_request             *req;
 	struct cam_isp_ctx_req             *req_isp;
 	struct cam_context                 *ctx = ctx_isp->base;
@@ -1966,6 +1989,27 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 		atomic_set(&ctx_isp->process_bubble, 1);
 	} else {
 		req_isp->bubble_report = 0;
+		CAM_DBG(CAM_ISP, "Skip bubble recovery for req %lld ctx %u",
+			req->request_id, ctx->ctx_id);
+		if (ctx->ctx_crm_intf && ctx->ctx_crm_intf->notify_trigger &&
+			ctx_isp->active_req_cnt <= 1) {
+			if (ctx_isp->subscribe_event & CAM_TRIGGER_POINT_SOF) {
+				notify.link_hdl = ctx->link_hdl;
+				notify.dev_hdl = ctx->dev_hdl;
+				notify.frame_id = ctx_isp->frame_id;
+				notify.trigger = CAM_TRIGGER_POINT_SOF;
+				notify.req_id =
+					ctx_isp->req_info.last_bufdone_req_id;
+				notify.sof_timestamp_val =
+					ctx_isp->sof_timestamp_val;
+				notify.trigger_id = ctx_isp->trigger_id;
+
+				ctx->ctx_crm_intf->notify_trigger(&notify);
+				CAM_DBG(CAM_ISP,
+					"Notify CRM  SOF frame %lld ctx %u",
+					ctx_isp->frame_id, ctx->ctx_id);
+			}
+		}
 	}
 
 	/*
@@ -4490,6 +4534,9 @@ static int __cam_isp_ctx_acquire_hw_v1(struct cam_context *ctx,
 		goto free_res;
 	}
 
+	ctx_isp->support_consumed_addr =
+		param.support_consumed_addr;
+
 	/* Query the context has rdi only resource */
 	hw_cmd_args.ctxt_to_hw_map = param.ctxt_to_hw_map;
 	hw_cmd_args.cmd_type = CAM_HW_MGR_CMD_INTERNAL;
@@ -4986,9 +5033,11 @@ static int __cam_isp_ctx_start_dev_in_ready(struct cam_context *ctx,
 		/* HW failure. user need to clean up the resource */
 		CAM_ERR(CAM_ISP, "Start HW failed");
 		ctx->state = CAM_CTX_READY;
-		trace_cam_context_state("ISP", ctx);
-		if (rc == -ETIMEDOUT)
+		if ((rc == -ETIMEDOUT) &&
+			(isp_ctx_debug.enable_cdm_cmd_buff_dump))
 			rc = cam_isp_ctx_dump_req(req_isp, 0, 0, NULL, false);
+
+		trace_cam_context_state("ISP", ctx);
 		list_del_init(&req->list);
 		list_add(&req->list, &ctx->pending_req_list);
 		goto end;
@@ -5581,7 +5630,7 @@ static int cam_isp_context_debug_register(void)
 
 	dbgfileptr = debugfs_create_dir("camera_isp_ctx", NULL);
 	if (!dbgfileptr) {
-		CAM_ERR(CAM_ICP,"DebugFS could not create directory!");
+		CAM_ERR(CAM_ISP, "DebugFS could not create directory!");
 		rc = -ENOENT;
 		goto end;
 	}
@@ -5590,9 +5639,11 @@ static int cam_isp_context_debug_register(void)
 
 	dbgfileptr = debugfs_create_u32("enable_state_monitor_dump", 0644,
 		isp_ctx_debug.dentry, &isp_ctx_debug.enable_state_monitor_dump);
+	dbgfileptr = debugfs_create_u8("enable_cdm_cmd_buffer_dump", 0644,
+		isp_ctx_debug.dentry, &isp_ctx_debug.enable_cdm_cmd_buff_dump);
 	if (IS_ERR(dbgfileptr)) {
 		if (PTR_ERR(dbgfileptr) == -ENODEV)
-			CAM_WARN(CAM_ICP, "DebugFS not enabled in kernel!");
+			CAM_WARN(CAM_ISP, "DebugFS not enabled in kernel!");
 		else
 			rc = PTR_ERR(dbgfileptr);
 	}
@@ -5634,14 +5685,14 @@ int cam_isp_context_init(struct cam_isp_context *ctx,
 	ctx->init_timestamp = jiffies_to_msecs(jiffies);
 	ctx->isp_device_type = isp_device_type;
 
-	for (i = 0; i < CAM_CTX_REQ_MAX; i++) {
+	for (i = 0; i < CAM_ISP_CTX_REQ_MAX; i++) {
 		ctx->req_base[i].req_priv = &ctx->req_isp[i];
 		ctx->req_isp[i].base = &ctx->req_base[i];
 	}
 
 	/* camera context setup */
 	rc = cam_context_init(ctx_base, isp_dev_name, CAM_ISP, ctx_id,
-		crm_node_intf, hw_intf, ctx->req_base, CAM_CTX_REQ_MAX);
+		crm_node_intf, hw_intf, ctx->req_base, CAM_ISP_CTX_REQ_MAX);
 	if (rc) {
 		CAM_ERR(CAM_ISP, "Camera Context Base init failed");
 		goto err;

@@ -51,6 +51,16 @@ static void hfi_irq_enable(struct hfi_info *hfi)
 		hfi->ops.irq_enable(hfi->priv);
 }
 
+static void __iomem *hfi_iface_addr(struct hfi_info *hfi)
+{
+	void __iomem *ret = NULL;
+
+	if (hfi->ops.iface_addr)
+		ret = hfi->ops.iface_addr(hfi->priv);
+
+	return IS_ERR_OR_NULL(ret) ? NULL : ret;
+}
+
 void cam_hfi_queue_dump(void)
 {
 	struct hfi_qtbl *qtbl;
@@ -372,7 +382,7 @@ int hfi_enable_ipe_bps_pc(bool enable, uint32_t core_info)
 	return 0;
 }
 
-int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl)
+int hfi_set_debug_level(u64 icp_dbg_type, uint32_t lvl)
 {
 	uint8_t *prop;
 	struct hfi_cmd_prop *dbg_prop;
@@ -403,7 +413,7 @@ int hfi_set_debug_level(u64 a5_dbg_type, uint32_t lvl)
 	dbg_prop->num_prop = 1;
 	dbg_prop->prop_data[0] = HFI_PROP_SYS_DEBUG_CFG;
 	dbg_prop->prop_data[1] = lvl;
-	dbg_prop->prop_data[2] = a5_dbg_type;
+	dbg_prop->prop_data[2] = icp_dbg_type;
 	hfi_write_cmd(prop);
 
 	kfree(prop);
@@ -550,12 +560,16 @@ int hfi_get_hw_caps(void *query_buf)
 	return 0;
 }
 
-int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base)
+int cam_hfi_resume(struct hfi_mem_info *hfi_mem)
 {
 	int rc = 0;
 	uint32_t fw_version, status = 0;
+	void __iomem *icp_base = hfi_iface_addr(g_hfi);
 
-	g_hfi->csr_base = icp_base;
+	if (!icp_base) {
+		CAM_ERR(CAM_HFI, "invalid HFI interface address");
+		return -EINVAL;
+	}
 
 	if (readl_poll_timeout(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE,
 			       status, status == ICP_INIT_RESP_SUCCESS,
@@ -602,15 +616,16 @@ int cam_hfi_resume(struct hfi_mem_info *hfi_mem, void __iomem *icp_base)
 	return rc;
 }
 
-int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
-		void *priv, uint8_t event_driven_mode, void __iomem *icp_base)
+int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
+		void *priv, uint8_t event_driven_mode)
 {
 	int rc = 0;
+	uint32_t status = 0;
 	struct hfi_qtbl *qtbl;
 	struct hfi_qtbl_hdr *qtbl_hdr;
 	struct hfi_q_hdr *cmd_q_hdr, *msg_q_hdr, *dbg_q_hdr;
-	uint32_t hw_version, fw_version, status = 0;
 	struct sfr_buf *sfr_buffer;
+	void __iomem *icp_base;
 
 	if (!hfi_mem || !hfi_ops || !priv) {
 		CAM_ERR(CAM_HFI,
@@ -632,7 +647,8 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
 
 	if (g_hfi->hfi_state != HFI_DEINIT) {
 		CAM_ERR(CAM_HFI, "hfi_init: invalid state");
-		return -EINVAL;
+		rc = -EINVAL;
+		goto regions_fail;
 	}
 
 	memcpy(&g_hfi->map, hfi_mem, sizeof(g_hfi->map));
@@ -752,6 +768,16 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
 		break;
 	}
 
+	g_hfi->ops = *hfi_ops;
+	g_hfi->priv = priv;
+
+	icp_base = hfi_iface_addr(g_hfi);
+	if (!icp_base) {
+		CAM_ERR(CAM_HFI, "invalid HFI interface address");
+		rc = -EINVAL;
+		goto regions_fail;
+	}
+
 	cam_io_w_mb((uint32_t)hfi_mem->qtbl.iova,
 		icp_base + HFI_REG_QTBL_PTR);
 	cam_io_w_mb((uint32_t)hfi_mem->sfr_buf.iova,
@@ -792,17 +818,12 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, struct hfi_ops *hfi_ops,
 		goto regions_fail;
 	}
 
-	hw_version = cam_io_r(icp_base + HFI_REG_A5_HW_VERSION);
-	fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-	CAM_DBG(CAM_HFI, "hw version : : [%x], fw version : [%x]",
-		hw_version, fw_version);
+	CAM_DBG(CAM_HFI, "ICP fw version: 0x%x",
+		cam_io_r(icp_base + HFI_REG_FW_VERSION));
 
-	g_hfi->csr_base = icp_base;
 	g_hfi->hfi_state = HFI_READY;
 	g_hfi->cmd_q_state = true;
 	g_hfi->msg_q_state = true;
-	g_hfi->ops = *hfi_ops;
-	g_hfi->priv = priv;
 
 	hfi_irq_enable(g_hfi);
 
@@ -819,7 +840,7 @@ alloc_fail:
 	return rc;
 }
 
-void cam_hfi_deinit(void __iomem *icp_base)
+void cam_hfi_deinit(void)
 {
 	mutex_lock(&hfi_cmd_q_mutex);
 	mutex_lock(&hfi_msg_q_mutex);

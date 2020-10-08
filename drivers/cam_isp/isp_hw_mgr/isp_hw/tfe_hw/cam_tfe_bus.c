@@ -145,6 +145,7 @@ struct cam_tfe_bus_tfe_out_data {
 	uint32_t                         secure_mode;
 	void                            *priv;
 	cam_hw_mgr_event_cb_func         event_cb;
+	uint32_t                         mid;
 };
 
 struct cam_tfe_bus_priv {
@@ -1544,6 +1545,7 @@ static int cam_tfe_bus_init_tfe_out_resource(uint32_t  index,
 	rsrc_data->max_height      =
 		hw_info->tfe_out_hw_info[index].max_height;
 	rsrc_data->secure_mode  = CAM_SECURE_MODE_NON_SECURE;
+	rsrc_data->mid = hw_info->tfe_out_hw_info[index].mid;
 
 	tfe_out->hw_intf = bus_priv->common_data.hw_intf;
 
@@ -1945,6 +1947,7 @@ static int cam_tfe_bus_update_wm(void *priv, void *cmd_args,
 			update_buf->wm_update->image_buf[i]);
 		CAM_DBG(CAM_ISP, "WM %d image address 0x%x",
 			wm_data->index, reg_val_pair[j-1]);
+		update_buf->wm_update->image_buf_offset[i] = 0;
 
 		CAM_TFE_ADD_REG_VAL_PAIR(reg_val_pair, j,
 			wm_data->hw_regs->frame_incr, frame_inc);
@@ -2099,6 +2102,113 @@ static int cam_tfe_bus_update_stripe_cfg(void *priv, void *cmd_args,
 	return 0;
 }
 
+static int cam_tfe_bus_get_res_id_for_mid(
+	struct cam_tfe_bus_priv    *bus_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_tfe_bus_tfe_out_data     *tfe_out_data = NULL;
+	struct cam_isp_hw_get_cmd_update   *cmd_update =
+		(struct cam_isp_hw_get_cmd_update   *)cmd_args;
+	struct cam_isp_hw_get_res_for_mid       *get_res = NULL;
+	int i;
+
+	get_res = (struct cam_isp_hw_get_res_for_mid *)cmd_update->data;
+	if (!get_res) {
+		CAM_ERR(CAM_ISP,
+			"invalid get resource for mid paramas");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < bus_priv->num_out; i++) {
+		tfe_out_data = (struct cam_tfe_bus_tfe_out_data  *)
+			bus_priv->tfe_out[i].res_priv;
+
+		if (!tfe_out_data)
+			continue;
+
+		if (tfe_out_data->mid == get_res->mid)
+			goto end;
+	}
+
+	if (i == bus_priv->num_out) {
+		CAM_ERR(CAM_ISP,
+			"mid:%d does not match with any out resource",
+			get_res->mid);
+		get_res->out_res_id = 0;
+		return -EINVAL;
+	}
+
+end:
+	CAM_INFO(CAM_ISP, "match mid :%d  out resource:%d found",
+		get_res->mid, bus_priv->tfe_out[i].res_id);
+	get_res->out_res_id = bus_priv->tfe_out[i].res_id;
+	return 0;
+}
+
+static int cam_tfe_bus_dump_bus_info(
+	struct cam_tfe_bus_priv    *bus_priv,
+	void *cmd_args, uint32_t arg_size)
+{
+	struct cam_tfe_bus_tfe_out_data     *tfe_out_data = NULL;
+	struct cam_isp_hw_get_cmd_update   *cmd_update =
+		(struct cam_isp_hw_get_cmd_update   *)cmd_args;
+	struct cam_tfe_bus_wm_resource_data   *wm_data;
+	struct cam_tfe_bus_common_data        *common_data;
+	uint32_t i, addr_status0, addr_status1, addr_status2, addr_status3;
+
+	tfe_out_data = (struct cam_tfe_bus_tfe_out_data  *)
+		cmd_update->res->res_priv;
+	common_data = tfe_out_data->common_data;
+
+	for (i = 0; i < tfe_out_data->num_wm; i++) {
+		wm_data = tfe_out_data->wm_res[i]->res_priv;
+		addr_status0 = cam_io_r_mb(common_data->mem_base +
+			wm_data->hw_regs->addr_status_0);
+		addr_status1 = cam_io_r_mb(common_data->mem_base +
+			wm_data->hw_regs->addr_status_1);
+		addr_status2 = cam_io_r_mb(common_data->mem_base +
+			wm_data->hw_regs->addr_status_2);
+		addr_status3 = cam_io_r_mb(common_data->mem_base +
+			wm_data->hw_regs->addr_status_3);
+		CAM_INFO(CAM_ISP,
+			"TFE:%d WM:%d %s last consumed addr:0x%x last frame addr:0x%x fifo cnt:0x%x cur clt addr:0x%x",
+			common_data->hw_intf->hw_idx,
+			wm_data->index,
+			wm_data->hw_regs->client_name,
+			addr_status0,
+			addr_status1,
+			addr_status2,
+			addr_status3);
+
+		CAM_INFO(CAM_ISP,
+			"WM:%d %s width0x%x height:0x%x format:%d stride:0x%x offset:0x%x encfg:%x",
+			wm_data->index,
+			wm_data->hw_regs->client_name,
+			wm_data->acquired_width,
+			wm_data->acquired_height,
+			wm_data->format,
+			wm_data->acquired_stride,
+			wm_data->offset,
+			wm_data->en_cfg);
+
+		CAM_INFO(CAM_ISP,
+			"WM:%d current width:0x%x height:0x%x stride:0x%x",
+			wm_data->index,
+			wm_data->width,
+			wm_data->height,
+			wm_data->stride);
+	}
+
+	for (i = 0; i < CAM_TFE_BUS_MAX_CLIENTS; i++) {
+		wm_data = bus_priv->bus_client[i].res_priv;
+		/* disable WM */
+			cam_io_w_mb(0, common_data->mem_base +
+				wm_data->hw_regs->cfg);
+
+	}
+	return 0;
+}
+
 static int cam_tfe_bus_init_hw(void *hw_priv,
 	void *init_hw_args, uint32_t arg_size)
 {
@@ -2197,6 +2307,12 @@ static int cam_tfe_bus_process_cmd(void *priv,
 		support_consumed_addr = (bool *)cmd_args;
 		*support_consumed_addr =
 			bus_priv->common_data.support_consumed_addr;
+		break;
+	case CAM_ISP_HW_CMD_GET_RES_FOR_MID:
+		rc = cam_tfe_bus_get_res_id_for_mid(priv, cmd_args, arg_size);
+		break;
+	case CAM_ISP_HW_CMD_DUMP_BUS_INFO:
+		rc = cam_tfe_bus_dump_bus_info(priv, cmd_args, arg_size);
 		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",

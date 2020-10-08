@@ -290,4 +290,13 @@ struct cam_cdm_utils_ops *cam_cdm_publish_ops(void);
  * @return 0 on success
  */
 int cam_cdm_detect_hang_error(uint32_t handle);
+
+/**
+ * @brief : API to dump the CDM Debug registers
+ *
+ * @handle : Input handle of the CDM to dump the registers
+ *
+ * @return 0 on success
+ */
+int cam_cdm_dump_debug_registers(uint32_t handle);
 #endif /* _CAM_CDM_API_H_ */

@@ -30,10 +30,7 @@
 
 #define MAX_CSIPHY                  6
 
-#define MAX_LRME_V4l2_EVENTS        30
 #define CSIPHY_NUM_CLK_MAX          16
-#define MAX_CSIPHY_REG_ARRAY        70
-#define MAX_CSIPHY_CMN_REG_ARRAY    5
 
 #define MAX_LANES                   5
 #define MAX_SETTINGS_PER_LANE       43
@@ -42,9 +39,6 @@
 
 #define CAMX_CSIPHY_DEV_NAME "cam-csiphy-driver"
 #define CAM_CSIPHY_RX_CLK_SRC "cphy_rx_src_clk"
-
-#define CSIPHY_POWER_UP       0
-#define CSIPHY_POWER_DOWN     1
 
 #define CSIPHY_DEFAULT_PARAMS            0
 #define CSIPHY_LANE_ENABLE               1
@@ -60,8 +54,6 @@
 #define CAM_CSIPHY_MAX_DPHY_LANES    4
 #define CAM_CSIPHY_MAX_CPHY_LANES    3
 #define CAM_CSIPHY_MAX_CPHY_DPHY_COMBO_LN    3
-#define CAM_CSIPHY_MAX_CPHY_COMBO_LN         3
-
 
 #define DPHY_LANE_0    BIT(0)
 #define CPHY_LANE_0    BIT(1)

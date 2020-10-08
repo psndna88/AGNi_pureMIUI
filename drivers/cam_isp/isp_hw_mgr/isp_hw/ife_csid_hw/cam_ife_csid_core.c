@@ -538,7 +538,6 @@ static int cam_ife_csid_global_reset(struct cam_ife_csid_hw *csid_hw)
 			csid_hw->hw_intf->hw_idx, val);
 	csid_hw->error_irq_count = 0;
 	csid_hw->prev_boot_timestamp = 0;
-	csid_hw->epd_supported = 0;
 
 end:
 	return rc;
@@ -2085,6 +2084,7 @@ static int cam_ife_csid_enable_pxl_path(
 	bool                                      is_ipp;
 	uint32_t                                  val = 0;
 	struct cam_isp_sensor_dimension          *path_config;
+	unsigned int                              irq_mask_val = 0;
 
 	path_data = (struct cam_ife_csid_path_cfg   *) res->res_priv;
 	csid_reg = csid_hw->csid_info->csid_reg;
@@ -2117,6 +2117,25 @@ static int cam_ife_csid_enable_pxl_path(
 	}
 
 	CAM_DBG(CAM_ISP, "Enable %s path", (is_ipp) ? "IPP" : "PPP");
+
+	if ((csid_hw->csid_debug & CSID_DEBUG_ENABLE_UNMAPPED_VC_DT_IRQ) &&
+		(path_data->sync_mode != CAM_ISP_HW_SYNC_SLAVE)) {
+		irq_mask_val =
+			cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+
+		if (!(irq_mask_val &
+			CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT)) {
+			CAM_DBG(CAM_ISP,
+				"Subscribing to UNMAPPED_VC_DT event for sync_mode: %d",
+				path_data->sync_mode);
+			irq_mask_val |=
+				CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT;
+			cam_io_w_mb(irq_mask_val,
+			soc_info->reg_map[0].mem_base +
+				csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+		}
+	}
 
 	/* Set master or slave path */
 	if (path_data->sync_mode == CAM_ISP_HW_SYNC_MASTER) {
@@ -2756,6 +2775,7 @@ static int cam_ife_csid_enable_rdi_path(
 {
 	const struct cam_ife_csid_reg_offset      *csid_reg;
 	struct cam_hw_soc_info                    *soc_info;
+	unsigned int                               irq_mask_val = 0;
 	uint32_t id, val;
 
 	csid_reg = csid_hw->csid_info->csid_reg;
@@ -2770,6 +2790,22 @@ static int cam_ife_csid_enable_rdi_path(
 			csid_hw->hw_intf->hw_idx,
 			res->res_type, res->res_id, res->res_state);
 		return -EINVAL;
+	}
+
+	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_UNMAPPED_VC_DT_IRQ) {
+		irq_mask_val =
+			cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+
+		if (!(irq_mask_val &
+			CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT)) {
+			CAM_DBG(CAM_ISP, "Subscribing to UNMAPPED_VC_DT event");
+			irq_mask_val |=
+				CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT;
+			cam_io_w_mb(irq_mask_val,
+				soc_info->reg_map[0].mem_base +
+				csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+		}
 	}
 
 	/*resume at frame boundary */
@@ -2809,6 +2845,7 @@ static int cam_ife_csid_enable_udi_path(
 {
 	const struct cam_ife_csid_reg_offset      *csid_reg;
 	struct cam_hw_soc_info                    *soc_info;
+	unsigned int                               irq_mask_val = 0;
 	uint32_t id, val;
 
 	csid_reg = csid_hw->csid_info->csid_reg;
@@ -2824,6 +2861,23 @@ static int cam_ife_csid_enable_udi_path(
 			csid_hw->hw_intf->hw_idx,
 			res->res_type, res->res_id, res->res_state);
 		return -EINVAL;
+	}
+
+	if (csid_hw->csid_debug & CSID_DEBUG_ENABLE_UNMAPPED_VC_DT_IRQ) {
+		irq_mask_val =
+			cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+
+		if (!(irq_mask_val &
+			CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT)) {
+			CAM_DBG(CAM_ISP,
+				"Subscribing to UNMAPPED_VC_DT event");
+			irq_mask_val |=
+				CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT;
+			cam_io_w_mb(irq_mask_val,
+			soc_info->reg_map[0].mem_base +
+			csid_reg->csi2_reg->csid_csi2_rx_irq_mask_addr);
+		}
 	}
 
 	/*resume at frame boundary */
@@ -3733,7 +3787,6 @@ int cam_ife_csid_start(void *hw_priv, void *start_args,
 	if (!csid_hw->device_enabled)
 		cam_ife_csid_csi2_irq_ctrl(csid_hw, true);
 	csid_hw->device_enabled = 1;
-	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
 
 	CAM_DBG(CAM_ISP, "CSID:%d res_type :%d res_id:%d",
 		csid_hw->hw_intf->hw_idx, res->res_type, res->res_id);
@@ -3759,7 +3812,7 @@ int cam_ife_csid_start(void *hw_priv, void *start_args,
 		} else {
 			CAM_ERR(CAM_ISP, "Invalid res_id: %u", res->res_id);
 			rc = -EINVAL;
-			goto end;
+			goto irq_restore;
 		}
 
 		break;
@@ -3769,6 +3822,8 @@ int cam_ife_csid_start(void *hw_priv, void *start_args,
 			res->res_type);
 		break;
 	}
+irq_restore:
+	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
 end:
 	return rc;
 }
@@ -4208,6 +4263,8 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 	csid_hw_info = (struct cam_hw_info  *)hw_priv;
 	csid_hw = (struct cam_ife_csid_hw   *)csid_hw_info->core_info;
 
+	mutex_lock(&csid_hw->hw_info->hw_mutex);
+
 	switch (cmd_type) {
 	case CAM_IFE_CSID_CMD_GET_TIME_STAMP:
 		rc = cam_ife_csid_get_time_stamp(csid_hw, cmd_args);
@@ -4250,6 +4307,8 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 		rc = -EINVAL;
 		break;
 	}
+
+	mutex_unlock(&csid_hw->hw_info->hw_mutex);
 
 	return rc;
 
@@ -4655,6 +4714,20 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 			CSID_CSI2_RX_ERROR_MMAPPED_VC_DT) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP, "CSID:%d MMAPPED_VC_DT",
 				csid_hw->hw_intf->hw_idx);
+		}
+		if ((irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
+			CSID_CSI2_RX_ERROR_UNMAPPED_VC_DT) &&
+			(csid_hw->csid_debug &
+				CSID_DEBUG_ENABLE_UNMAPPED_VC_DT_IRQ)) {
+
+			val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
+			csi2_reg->csid_csi2_rx_captured_long_pkt_0_addr);
+
+			CAM_ERR_RATE_LIMIT(CAM_ISP,
+				"CSID:%d UNMAPPED_VC_DT. VC: %d DT: %d WC: %d",
+				csid_hw->hw_intf->hw_idx, (val >> 22),
+				((val >> 16) & 0x3F), (val & 0xFFFF));
+			csid_hw->error_irq_count++;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_STREAM_UNDERFLOW) {
@@ -5241,6 +5314,7 @@ int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 	ife_csid_hw->error_irq_count = 0;
 	ife_csid_hw->ipp_path_config.measure_enabled = 0;
 	ife_csid_hw->ppp_path_config.measure_enabled = 0;
+	ife_csid_hw->epd_supported = 0;
 	for (i = 0; i <= CAM_IFE_PIX_PATH_RES_RDI_3; i++)
 		ife_csid_hw->rdi_path_config[i].measure_enabled = 0;
 
