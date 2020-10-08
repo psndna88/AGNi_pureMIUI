@@ -66,9 +66,6 @@ struct cam_tfe_hw_mgr_debug {
  * @cdm_cmd                   cdm base and length request pointer
  * @last_submit_bl_cmd        last submiited CDM BL command data
  * @config_done_complete      indicator for configuration complete
- * @sof_cnt                   sof count value per core, used for dual TFE
- * @epoch_cnt                 epoch count value per core, used for dual TFE
- * @eof_cnt                   eof count value per core, used for dual TFE
  * @overflow_pending          flat to specify the overflow is pending for the
  *                            context
  * @cdm_done                  flag to indicate cdm has finished writing shadow
@@ -113,9 +110,6 @@ struct cam_tfe_hw_mgr_ctx {
 	struct cam_cdm_bl_info          last_submit_bl_cmd;
 	struct completion               config_done_complete;
 
-	uint32_t                        sof_cnt[CAM_TFE_HW_NUM_MAX];
-	uint32_t                        epoch_cnt[CAM_TFE_HW_NUM_MAX];
-	uint32_t                        eof_cnt[CAM_TFE_HW_NUM_MAX];
 	atomic_t                        overflow_pending;
 	atomic_t                        cdm_done;
 	uint32_t                        is_rdi_only_context;
