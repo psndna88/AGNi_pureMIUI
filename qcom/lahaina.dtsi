@@ -4423,6 +4423,8 @@
 		qcom,vdd_mss-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,proxy-reg-names = "vdd_cx", "vdd_mss";
 
+		interconnects = <&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>;
+
 		qcom,firmware-name = "modem";
 		memory-region = <&pil_modem_mem>;
 		qcom,proxy-timeout-ms = <10000>;
