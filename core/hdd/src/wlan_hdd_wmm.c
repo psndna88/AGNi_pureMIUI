@@ -1467,8 +1467,8 @@ static void __hdd_wmm_do_implicit_qos(struct hdd_wmm_qos_context *qos_context)
 		 * record
 		 */
 		hdd_wmm_free_context(qos_context);
-
-		/* fall through and start packets flowing */
+		/* start packets flowing */
+		/* fallthrough */
 	case SME_QOS_STATUS_SETUP_SUCCESS_NO_ACM_NO_APSD_RSP:
 		/* no ACM in effect, no need to setup U-APSD */
 	case SME_QOS_STATUS_SETUP_SUCCESS_APSD_SET_ALREADY:
@@ -2136,8 +2136,6 @@ QDF_STATUS hdd_wmm_acquire_access(struct hdd_adapter *adapter,
 		/* no memory for QoS context.  Nothing we can do but
 		 * let data flow
 		 */
-		QDF_TRACE(QDF_MODULE_ID_HDD_DATA, QDF_TRACE_LEVEL_ERROR,
-			  "%s: Unable to allocate context", __func__);
 		adapter->hdd_wmm_status.ac_status[ac_type].is_access_allowed =
 			true;
 		*granted = true;
@@ -2440,10 +2438,8 @@ bool hdd_wmm_is_acm_allowed(uint8_t vdev_id)
 	}
 
 	adapter = hdd_get_adapter_by_vdev(hdd_ctx, vdev_id);
-	if (hdd_validate_adapter(adapter)) {
-		hdd_err("Invalid adapter");
+	if (hdd_validate_adapter(adapter))
 		return false;
-	}
 
 	wmm_ac_status = adapter->hdd_wmm_status.ac_status;
 
@@ -2541,7 +2537,6 @@ hdd_wlan_wmm_status_e hdd_wmm_addts(struct hdd_adapter *adapter,
 	qos_context = qdf_mem_malloc(sizeof(*qos_context));
 	if (!qos_context) {
 		/* no memory for QoS context.  Nothing we can do */
-		hdd_err("Unable to allocate QoS context");
 		return HDD_WLAN_WMM_STATUS_INTERNAL_FAILURE;
 	}
 	/* we assume the tspec has already been validated by the caller */

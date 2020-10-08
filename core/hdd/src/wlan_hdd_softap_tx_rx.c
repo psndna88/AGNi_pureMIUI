@@ -477,6 +477,7 @@ int hdd_softap_inspect_dhcp_packet(struct hdd_adapter *adapter,
 						hdd_sta_info->sta_mac.bytes,
 						WMA_DHCP_START_IND);
 			hdd_sta_info->dhcp_nego_status = DHCP_NEGO_IN_PROGRESS;
+			/* fallthrough */
 		case QDF_PROTO_DHCP_DECLINE:
 			if (dir == QDF_RX)
 				hdd_sta_info->dhcp_phase = DHCP_PHASE_REQUEST;
@@ -1230,6 +1231,8 @@ QDF_STATUS hdd_softap_deregister_sta(struct hdd_adapter *adapter,
 				      mac_addr->bytes) != QDF_STATUS_SUCCESS)
 			hdd_debug("WLAN_CLIENT_DISCONNECT event failed");
 	}
+
+	hdd_del_latency_critical_client(adapter, sta->dot11_mode);
 	hdd_sta_info_detach(&adapter->sta_info_list, &sta);
 
 	ucfg_mlme_update_oce_flags(hdd_ctx->pdev);
@@ -1241,7 +1244,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 				   bool auth_required,
 				   bool privacy_required,
 				   struct qdf_mac_addr *sta_mac,
-				   bool wmm_enabled)
+				   tSap_StationAssocReassocCompleteEvent *event)
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	struct ol_txrx_desc_type txrx_desc = {0};
@@ -1250,6 +1253,13 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct hdd_ap_ctx *ap_ctx;
 	struct hdd_station_info *sta_info;
+	bool wmm_enabled = false;
+	enum qca_wlan_802_11_mode dot11mode = QCA_WLAN_802_11_MODE_INVALID;
+
+	if (event) {
+		wmm_enabled = event->wmmEnabled;
+		dot11mode = hdd_convert_dot11mode_from_phymode(event->chan_info.info);
+	}
 
 	ap_ctx = WLAN_HDD_GET_AP_CTX_PTR(adapter);
 
@@ -1275,6 +1285,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 	}
 
 	txrx_desc.is_qos_enabled = wmm_enabled;
+	hdd_add_latency_critical_client(adapter, dot11mode);
 
 	/* Register the vdev transmit and receive functions */
 	qdf_mem_zero(&txrx_ops, sizeof(txrx_ops));
@@ -1286,6 +1297,7 @@ QDF_STATUS hdd_softap_register_sta(struct hdd_adapter *adapter,
 		txrx_ops.rx.rx_stack = hdd_softap_rx_packet_cbk;
 		txrx_ops.rx.rx_flush = hdd_rx_flush_packet_cbk;
 		txrx_ops.rx.rx_gro_flush = hdd_rx_thread_gro_flush_ind_cbk;
+		adapter->rx_stack = hdd_softap_rx_packet_cbk;
 	} else {
 		txrx_ops.rx.rx = hdd_softap_rx_packet_cbk;
 		txrx_ops.rx.rx_stack = NULL;
@@ -1379,7 +1391,7 @@ QDF_STATUS hdd_softap_register_bc_sta(struct hdd_adapter *adapter,
 
 	qdf_status = hdd_softap_register_sta(adapter, false,
 					     privacy_required,
-					     &broadcast_macaddr, 0);
+					     &broadcast_macaddr, NULL);
 
 	return qdf_status;
 }

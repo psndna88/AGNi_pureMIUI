@@ -50,16 +50,21 @@ struct dp_txrx_handle {
 /**
  * dp_rx_napi_gro_flush() - do gro flush
  * @napi: napi used to do gro flush
+ * @flush_code: flush_code differentiating low_tput_flush and normal_flush
  *
  * if there is RX GRO_NORMAL packets pending in napi
  * rx_list, flush them manually right after napi_gro_flush.
  *
  * return: none
  */
-static inline void dp_rx_napi_gro_flush(struct napi_struct *napi)
+static inline void dp_rx_napi_gro_flush(struct napi_struct *napi,
+					enum dp_rx_gro_flush_code flush_code)
 {
 	if (napi->poll) {
-		napi_gro_flush(napi, false);
+		/* Skipping GRO flush in low TPUT */
+		if (flush_code != DP_RX_GRO_LOW_TPUT_FLUSH)
+			napi_gro_flush(napi, false);
+
 		if (napi->rx_count) {
 			netif_receive_skb_list(&napi->rx_list);
 			qdf_init_list_head(&napi->rx_list);
@@ -68,7 +73,7 @@ static inline void dp_rx_napi_gro_flush(struct napi_struct *napi)
 	}
 }
 #else
-#define dp_rx_napi_gro_flush(_napi) napi_gro_flush((_napi), false)
+#define dp_rx_napi_gro_flush(_napi, flush_code) napi_gro_flush((_napi), false)
 #endif
 
 #ifdef FEATURE_WLAN_DP_RX_THREADS
@@ -257,11 +262,13 @@ ret:
  * dp_rx_gro_flush_ind() - Flush GRO packets for a given RX CTX Id
  * @soc: ol_txrx_soc_handle object
  * @rx_ctx_id: Context Id (Thread for which GRO packets need to be flushed)
+ * @flush_code: flush_code differentiating normal_flush from low_tput_flush
  *
  * Return: QDF_STATUS_SUCCESS on success, error qdf status on failure
  */
 static inline
-QDF_STATUS dp_rx_gro_flush_ind(ol_txrx_soc_handle soc, int rx_ctx_id)
+QDF_STATUS dp_rx_gro_flush_ind(ol_txrx_soc_handle soc, int rx_ctx_id,
+			       enum dp_rx_gro_flush_code flush_code)
 {
 	struct dp_txrx_handle *dp_ext_hdl;
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
@@ -278,7 +285,8 @@ QDF_STATUS dp_rx_gro_flush_ind(ol_txrx_soc_handle soc, int rx_ctx_id)
 		goto ret;
 	}
 
-	qdf_status = dp_rx_tm_gro_flush_ind(&dp_ext_hdl->rx_tm_hdl, rx_ctx_id);
+	qdf_status = dp_rx_tm_gro_flush_ind(&dp_ext_hdl->rx_tm_hdl, rx_ctx_id,
+					    flush_code);
 ret:
 	return qdf_status;
 }
@@ -409,7 +417,8 @@ QDF_STATUS dp_rx_enqueue_pkt(ol_txrx_soc_handle soc, qdf_nbuf_t nbuf_list)
 }
 
 static inline
-QDF_STATUS dp_rx_gro_flush_ind(ol_txrx_soc_handle soc, int rx_ctx_id)
+QDF_STATUS dp_rx_gro_flush_ind(ol_txrx_soc_handle soc, int rx_ctx_id,
+			       enum dp_rx_gro_flush_code flush_code)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -491,6 +500,55 @@ void *dp_prealloc_get_coherent(uint32_t *size, void **base_vaddr_unaligned,
  */
 void dp_prealloc_put_coherent(qdf_size_t size, void *vaddr_unligned,
 			      qdf_dma_addr_t paddr);
+
+/**
+ * dp_prealloc_get_multi_page() - gets pre-alloc DP multi-pages memory
+ * @src_type: the source that do memory allocation
+ * @element_size: single element size
+ * @element_num: total number of elements should be allocated
+ * @pages: multi page information storage
+ * @cacheable: coherent memory or cacheable memory
+ *
+ * Return: None.
+ */
+void dp_prealloc_get_multi_pages(uint32_t src_type,
+				 size_t element_size,
+				 uint16_t element_num,
+				 struct qdf_mem_multi_page_t *pages,
+				 bool cacheable);
+
+/**
+ * dp_prealloc_put_multi_pages() - puts back pre-alloc DP multi-pages memory
+ * @src_type: the source that do memory freement
+ * @pages: multi page information storage
+ *
+ * Return: None
+ */
+void dp_prealloc_put_multi_pages(uint32_t src_type,
+				 struct qdf_mem_multi_page_t *pages);
+
+/**
+ * dp_prealloc_get_consistent_mem_unaligned() - gets pre-alloc unaligned
+						consistent memory
+ * @size: total memory size
+ * @base_addr: pointer to dma address
+ * @ring_type: HAL ring type that requires memory
+ *
+ * Return: memory virtual address pointer, NULL if fail
+ */
+void *dp_prealloc_get_consistent_mem_unaligned(size_t size,
+					       qdf_dma_addr_t *base_addr,
+					       uint32_t ring_type);
+
+/**
+ * dp_prealloc_put_consistent_mem_unaligned() - puts back pre-alloc unaligned
+						consistent memory
+ * @va_unaligned: memory virtual address pointer
+ *
+ * Return: None
+ */
+void dp_prealloc_put_consistent_mem_unaligned(void *va_unaligned);
+
 #else
 static inline QDF_STATUS dp_prealloc_init(void) { return QDF_STATUS_SUCCESS; }
 

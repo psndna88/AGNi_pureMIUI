@@ -5865,6 +5865,9 @@ static uint32_t ol_txrx_get_cfg(struct cdp_soc_t *soc_hdl, enum cdp_dp_cfg cfg)
 	case cfg_dp_enable_ip_tcp_udp_checksum_offload:
 		value = cfg_ctx->ip_tcp_udp_checksum_offload;
 		break;
+	case cfg_dp_enable_p2p_ip_tcp_udp_checksum_offload:
+		value = cfg_ctx->p2p_ip_tcp_udp_checksum_offload;
+		break;
 	case cfg_dp_tso_enable:
 		value = cfg_ctx->tso_enable;
 		break;
@@ -6180,8 +6183,9 @@ static struct cdp_ipa_ops ol_ops_ipa = {
 	.ipa_set_perf_level = ol_txrx_ipa_set_perf_level,
 #ifdef FEATURE_METERING
 	.ipa_uc_get_share_stats = ol_txrx_ipa_uc_get_share_stats,
-	.ipa_uc_set_quota = ol_txrx_ipa_uc_set_quota
+	.ipa_uc_set_quota = ol_txrx_ipa_uc_set_quota,
 #endif
+	.ipa_tx_buf_smmu_mapping = ol_txrx_ipa_tx_buf_smmu_mapping
 };
 #endif
 

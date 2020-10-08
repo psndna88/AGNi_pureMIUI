@@ -212,7 +212,6 @@ struct sap_context *sap_create_ctx(void)
 	struct sap_context *sap_ctx;
 	QDF_STATUS status;
 
-	/* dynamically allocate the sap_ctx */
 	sap_ctx = qdf_mem_malloc(sizeof(*sap_ctx));
 	if (!sap_ctx)
 		return NULL;
@@ -276,7 +275,7 @@ static void wlansap_owe_cleanup(struct sap_context *sap_ctx)
 			qdf_mem_free(owe_assoc_ind);
 			assoc_ind->owe_ie = NULL;
 			assoc_ind->owe_ie_len = 0;
-			assoc_ind->owe_status = eSIR_MAC_UNSPEC_FAILURE_STATUS;
+			assoc_ind->owe_status = STATUS_UNSPECIFIED_FAILURE;
 			status = sme_update_owe_info(mac, assoc_ind);
 			qdf_mem_free(assoc_ind);
 		} else {
@@ -2123,7 +2122,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-
+		/* fallthrough */
 	case eUPDATE_IE_ASSOC_RESP:
 		if (config->pAssocRespIEsBuffer) {
 			qdf_mem_free(config->pAssocRespIEsBuffer);
@@ -2132,7 +2131,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-
+		/* fallthrough */
 	case eUPDATE_IE_PROBE_BCN:
 		if (config->pProbeRespBcnIEsBuffer) {
 			qdf_mem_free(config->pProbeRespBcnIEsBuffer);
@@ -2141,7 +2140,7 @@ wlansap_reset_sap_config_add_ie(struct sap_config *config,
 		}
 		if (eUPDATE_IE_ALL != updateType)
 			break;
-
+		/* fallthrough */
 	default:
 		if (eUPDATE_IE_ALL != updateType)
 			sap_err("Invalid buffer type %d", updateType);
@@ -2358,7 +2357,7 @@ void wlansap_populate_del_sta_params(const uint8_t *mac,
 			     QDF_MAC_ADDR_SIZE);
 
 	if (reason_code == 0)
-		params->reason_code = eSIR_MAC_DEAUTH_LEAVING_BSS_REASON;
+		params->reason_code = REASON_DEAUTH_NETWORK_LEAVING;
 	else
 		params->reason_code = reason_code;
 
@@ -2895,10 +2894,13 @@ wlansap_get_safe_channel_from_pcl_and_acs_range(struct sap_context *sap_ctx)
 		return wlansap_get_safe_channel(sap_ctx);
 	}
 
-	status = policy_mgr_get_pcl_for_existing_conn(
-			mac->psoc, PM_SAP_MODE, pcl_freqs, &pcl_len,
-			pcl.weight_list, QDF_ARRAY_SIZE(pcl.weight_list),
-			false);
+	status =
+		policy_mgr_get_pcl_for_vdev_id(mac->psoc, PM_SAP_MODE,
+					       pcl_freqs, &pcl_len,
+					       pcl.weight_list,
+					       QDF_ARRAY_SIZE(pcl.weight_list),
+					       sap_ctx->sessionId);
+
 	if (QDF_IS_STATUS_ERROR(status)) {
 		sap_err("Get PCL failed");
 		return INVALID_CHANNEL_ID;
@@ -3010,12 +3012,6 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 		return 0;
 	}
 
-	if (wlan_reg_is_disable_for_freq(mac->pdev, sap_ctx->chan_freq)) {
-		sap_debug("channel is disabled");
-		*csa_reason = CSA_REASON_CHAN_DISABLED;
-		return wlansap_get_safe_channel_from_pcl_and_acs_range(sap_ctx);
-	}
-
 	if (ucfg_reg_get_band(mac->pdev, &band) != QDF_STATUS_SUCCESS) {
 		sap_err("Failed to get current band config");
 		return 0;
@@ -3047,6 +3043,11 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 		sap_debug("Restore chan freq: %d, width: %d",
 			  restart_freq, restart_ch_width);
 		*csa_reason = CSA_REASON_BAND_RESTRICTED;
+	} else if (wlan_reg_is_disable_for_freq(mac->pdev,
+						sap_ctx->chan_freq)) {
+		sap_debug("channel is disabled");
+		*csa_reason = CSA_REASON_CHAN_DISABLED;
+		return wlansap_get_safe_channel_from_pcl_and_acs_range(sap_ctx);
 	} else {
 		sap_debug("No need switch SAP/Go channel");
 		return 0;

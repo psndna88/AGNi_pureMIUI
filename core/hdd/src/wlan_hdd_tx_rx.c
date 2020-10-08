@@ -1010,11 +1010,8 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 	}
 
 	hdd_ctx = adapter->hdd_ctx;
-	if (wlan_hdd_validate_context(hdd_ctx)) {
-		QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_HDD_DATA,
-				   "Invalid HDD context");
+	if (wlan_hdd_validate_context(hdd_ctx))
 		goto drop_pkt;
-	}
 
 	wlan_hdd_classify_pkt(skb);
 	if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) == QDF_NBUF_CB_PACKET_TYPE_ARP) {
@@ -1669,7 +1666,8 @@ static QDF_STATUS hdd_gro_rx_bh_disable(struct hdd_adapter *adapter,
 		if (HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(gro_ret)) {
 			adapter->hdd_stats.tx_rx_stats.
 					rx_gro_low_tput_flush++;
-			dp_rx_napi_gro_flush(napi_to_use);
+			dp_rx_napi_gro_flush(napi_to_use,
+					     DP_RX_GRO_NORMAL_FLUSH);
 		}
 		if (!rx_aggregation)
 			hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] = 1;
@@ -1715,7 +1713,8 @@ static QDF_STATUS hdd_gro_rx_bh_disable(struct hdd_adapter *adapter,
 	if (hdd_get_current_throughput_level(hdd_ctx) == PLD_BUS_WIDTH_IDLE) {
 		if (HDD_IS_EXTRA_GRO_FLUSH_NECESSARY(gro_ret)) {
 			adapter->hdd_stats.tx_rx_stats.rx_gro_low_tput_flush++;
-			dp_rx_napi_gro_flush(napi_to_use);
+			dp_rx_napi_gro_flush(napi_to_use,
+					     DP_RX_GRO_NORMAL_FLUSH);
 		}
 	}
 	local_bh_enable();
@@ -1824,7 +1823,8 @@ static void hdd_rxthread_napi_gro_flush(void *data)
 	 * As we are breaking context in Rxthread mode, there is rx_thread NAPI
 	 * corresponds each hif_napi.
 	 */
-	dp_rx_napi_gro_flush(&qca_napii->rx_thread_napi);
+	dp_rx_napi_gro_flush(&qca_napii->rx_thread_napi,
+			     DP_RX_GRO_NORMAL_FLUSH);
 	local_bh_enable();
 }
 
@@ -2053,6 +2053,7 @@ static inline void hdd_tsf_timestamp_rx(struct hdd_context *hdd_ctx,
 QDF_STATUS hdd_rx_thread_gro_flush_ind_cbk(void *adapter, int rx_ctx_id)
 {
 	struct hdd_adapter *hdd_adapter = adapter;
+	enum dp_rx_gro_flush_code gro_flush_code = DP_RX_GRO_NORMAL_FLUSH;
 
 	if (qdf_unlikely((!hdd_adapter) || (!hdd_adapter->hdd_ctx))) {
 		hdd_err("Null params being passed");
@@ -2061,11 +2062,11 @@ QDF_STATUS hdd_rx_thread_gro_flush_ind_cbk(void *adapter, int rx_ctx_id)
 
 	if (hdd_is_low_tput_gro_enable(hdd_adapter->hdd_ctx)) {
 		hdd_adapter->hdd_stats.tx_rx_stats.rx_gro_flush_skip++;
-		return QDF_STATUS_SUCCESS;
+		gro_flush_code = DP_RX_GRO_LOW_TPUT_FLUSH;
 	}
 
 	return dp_rx_gro_flush_ind(cds_get_context(QDF_MODULE_ID_SOC),
-				   rx_ctx_id);
+				   rx_ctx_id, gro_flush_code);
 }
 
 QDF_STATUS hdd_rx_pkt_thread_enqueue_cbk(void *adapter,
@@ -2081,10 +2082,12 @@ QDF_STATUS hdd_rx_pkt_thread_enqueue_cbk(void *adapter,
 	}
 
 	hdd_adapter = (struct hdd_adapter *)adapter;
-	if (hdd_validate_adapter(hdd_adapter)) {
-		hdd_err_rl("adapter validate failed");
+	if (hdd_validate_adapter(hdd_adapter))
 		return QDF_STATUS_E_FAILURE;
-	}
+
+	if (hdd_adapter->runtime_disable_rx_thread &&
+	    hdd_adapter->rx_stack)
+		return hdd_adapter->rx_stack(adapter, nbuf_list);
 
 	vdev_id = hdd_adapter->vdev_id;
 	head_ptr = nbuf_list;
@@ -2256,8 +2259,9 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 	/* Account for GRO/LRO ineligible packets, mostly UDP */
 	hdd_ctx->no_rx_offload_pkt_cnt++;
 
-	if (qdf_likely(hdd_ctx->enable_dp_rx_threads ||
-		       hdd_ctx->enable_rxthread)) {
+	if (qdf_likely((hdd_ctx->enable_dp_rx_threads ||
+		        hdd_ctx->enable_rxthread) &&
+		        !adapter->runtime_disable_rx_thread)) {
 		local_bh_disable();
 		netif_status = netif_receive_skb(skb);
 		local_bh_enable();
@@ -2313,8 +2317,9 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 	/* Account for GRO/LRO ineligible packets, mostly UDP */
 	hdd_ctx->no_rx_offload_pkt_cnt++;
 
-	if (qdf_likely(hdd_ctx->enable_dp_rx_threads ||
-		       hdd_ctx->enable_rxthread)) {
+	if (qdf_likely((hdd_ctx->enable_dp_rx_threads ||
+		        hdd_ctx->enable_rxthread) &&
+		        !adapter->runtime_disable_rx_thread)) {
 		local_bh_disable();
 		netif_status = netif_receive_skb(skb);
 		local_bh_enable();
@@ -3568,9 +3573,11 @@ void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 		       struct hdd_context *hdd_ctx)
 {
 	struct hdd_config *config;
-	qdf_size_t array_out_size;
+	uint16_t cfg_len;
 
 	config = hdd_ctx->config;
+	cfg_len = qdf_str_len(cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST))
+		  + 1;
 	hdd_ini_tx_flow_control(config, psoc);
 	hdd_ini_bus_bandwidth(config, psoc);
 	hdd_ini_tcp_settings(config, psoc);
@@ -3586,9 +3593,18 @@ void hdd_dp_cfg_update(struct wlan_objmgr_psoc *psoc,
 	config->rx_thread_affinity_mask =
 		cfg_get(psoc, CFG_DP_RX_THREAD_CPU_MASK);
 	config->fisa_enable = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
-	qdf_uint8_array_parse(cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
-			      config->cpu_map_list,
-			      sizeof(config->cpu_map_list), &array_out_size);
+	if (cfg_len < CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN) {
+		qdf_str_lcopy(config->cpu_map_list,
+			      cfg_get(psoc, CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
+			      cfg_len);
+	} else {
+		hdd_err("ini string length greater than max size %d",
+			CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST_LEN);
+		cfg_len = qdf_str_len(cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST));
+		qdf_str_lcopy(config->cpu_map_list,
+			      cfg_default(CFG_DP_RPS_RX_QUEUE_CPU_MAP_LIST),
+			      cfg_len);
+	}
 	config->tx_orphan_enable = cfg_get(psoc, CFG_DP_TX_ORPHAN_ENABLE);
 	config->rx_mode = cfg_get(psoc, CFG_DP_RX_MODE);
 	hdd_set_rx_mode_value(hdd_ctx);

@@ -688,7 +688,7 @@ void
 lim_reject_association(struct mac_context *mac_ctx, tSirMacAddr peer_addr,
 			uint8_t sub_type, uint8_t add_pre_auth_context,
 			tAniAuthType auth_type, uint16_t sta_id,
-			uint8_t delete_sta, enum mac_status_code result_code,
+			uint8_t delete_sta, enum wlan_status_code result_code,
 			struct pe_session *session_entry)
 {
 	tpDphHashNode sta_ds;
@@ -719,7 +719,7 @@ lim_reject_association(struct mac_context *mac_ctx, tSirMacAddr peer_addr,
 	if (delete_sta == false) {
 		lim_send_assoc_rsp_mgmt_frame(
 				mac_ctx,
-				eSIR_MAC_MAX_ASSOC_STA_REACHED_STATUS,
+				STATUS_AP_UNABLE_TO_HANDLE_NEW_STA,
 				1, peer_addr, sub_type, 0, session_entry,
 				false);
 		pe_warn("received Re/Assoc req when max associated STAs reached from");
@@ -2103,6 +2103,7 @@ static void lim_update_he_stbc_capable(tpAddStaParams add_sta_params)
 static void lim_update_he_mcs_12_13(tpAddStaParams add_sta_params,
 				    tpDphHashNode sta_ds)
 {
+	pe_debug("he_mcs_12_13_map %0x", sta_ds->he_mcs_12_13_map);
 	if (sta_ds->he_mcs_12_13_map)
 		add_sta_params->he_mcs_12_13_map = sta_ds->he_mcs_12_13_map;
 }
@@ -2868,7 +2869,7 @@ void lim_handle_cnf_wait_timeout(struct mac_context *mac, uint16_t staId)
 					       true,
 					       sta->mlmStaContext.authType,
 					       sta->assocId, true,
-					       eSIR_MAC_UNSPEC_FAILURE_STATUS,
+					       STATUS_UNSPECIFIED_FAILURE,
 					       pe_session);
 		}
 		break;
@@ -3103,7 +3104,7 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 				QDF_MAC_ADDR_REF(session_entry->bssId),
 				session_entry->peSessionId);
 		mlm_join_cnf.resultCode = eSIR_SME_ASSOC_REFUSED;
-		mlm_join_cnf.protStatusCode = eSIR_MAC_UNSPEC_FAILURE_STATUS;
+		mlm_join_cnf.protStatusCode = STATUS_UNSPECIFIED_FAILURE;
 		session_entry->limMlmState = eLIM_MLM_IDLE_STATE;
 		mlm_join_cnf.sessionId = session_entry->peSessionId;
 		if (session_entry->pLimMlmJoinReq) {
@@ -3139,7 +3140,7 @@ lim_check_and_announce_join_success(struct mac_context *mac_ctx,
 	 * Join confirm to SME.
 	 */
 	mlm_join_cnf.resultCode = eSIR_SME_SUCCESS;
-	mlm_join_cnf.protStatusCode = eSIR_MAC_SUCCESS_STATUS;
+	mlm_join_cnf.protStatusCode = STATUS_SUCCESS;
 	/* Update PE sessionId */
 	mlm_join_cnf.sessionId = session_entry->peSessionId;
 	lim_post_sme_message(mac_ctx, LIM_MLM_JOIN_CNF,
@@ -3701,6 +3702,8 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 						 pBeaconStruct,
 						 pAssocRsp);
 			lim_update_he_stbc_capable(&pAddBssParams->staContext);
+			lim_update_he_mcs_12_13(&pAddBssParams->staContext,
+						sta);
 			lim_update_he_6gop_assoc_resp(pAddBssParams,
 						      &pAssocRsp->he_op,
 						      pe_session);
@@ -3751,8 +3754,6 @@ QDF_STATUS lim_sta_send_add_bss(struct mac_context *mac, tpSirAssocRsp pAssocRsp
 
 	if (QDF_P2P_CLIENT_MODE == pe_session->opmode)
 		pAddBssParams->staContext.p2pCapableSta = 1;
-
-	pAddBssParams->extSetStaKeyParamValid = 0;
 
 #ifdef WLAN_FEATURE_11W
 	if (pe_session->limRmfEnabled) {
@@ -4065,7 +4066,6 @@ QDF_STATUS lim_sta_send_add_bss_pre_assoc(struct mac_context *mac,
 
 	pAddBssParams->staContext.smesessionId = pe_session->smeSessionId;
 	pAddBssParams->staContext.sessionId = pe_session->peSessionId;
-	pAddBssParams->extSetStaKeyParamValid = 0;
 
 #ifdef WLAN_FEATURE_11W
 	if (pe_session->limRmfEnabled) {

@@ -31,6 +31,12 @@ bool ipa_is_ready(void)
 	return g_ipa_is_ready;
 }
 
+void ipa_disable_register_cb(void)
+{
+	ipa_debug("Don't register ready cb with IPA driver");
+	g_ipa_is_ready = false;
+}
+
 /**
  * ipa_pdev_obj_destroy_notification() - IPA pdev object destroy notification
  * @pdev: pdev handle
@@ -65,6 +71,7 @@ ipa_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev,
 
 	ipa_obj_cleanup(ipa_obj);
 	qdf_mem_free(ipa_obj);
+	ipa_disable_register_cb();
 
 	return status;
 }
@@ -91,10 +98,8 @@ ipa_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 	}
 
 	ipa_obj = qdf_mem_malloc(sizeof(*ipa_obj));
-	if (!ipa_obj) {
-		ipa_err("Failed to allocate memory for ipa pdev object");
+	if (!ipa_obj)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	status = wlan_objmgr_pdev_component_obj_attach(pdev,
 						       WLAN_UMAC_COMP_IPA,

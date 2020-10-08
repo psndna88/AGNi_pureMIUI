@@ -667,7 +667,6 @@ struct wma_invalid_peer_params {
  * @is_channel_switch: is channel switch
  * @pause_bitmap: pause bitmap
  * @nwType: network type (802.11a/b/g/n/ac)
- * @staKeyParams: sta key parameters
  * @ps_enabled: is powersave enable/disable
  * @peer_count: peer count
  * @roam_synch_in_progress: flag is in progress or not
@@ -715,7 +714,6 @@ struct wma_txrx_node {
 	uint8_t nss;
 	uint16_t pause_bitmap;
 	uint32_t nwType;
-	tSetStaKeyParams *staKeyParams;
 	uint32_t peer_count;
 	void *plink_status_req;
 	void *psnr_req;
@@ -1146,11 +1144,13 @@ struct wma_set_key_params {
  * @minTemp: minimum temprature
  * @maxTemp: maximum temprature
  * @thermalEnable: thermal enable
+ * @thermal_action: thermal action
  */
 typedef struct {
 	uint16_t minTemp;
 	uint16_t maxTemp;
 	uint8_t thermalEnable;
+	enum thermal_mgmt_action_code thermal_action;
 } t_thermal_cmd_params, *tp_thermal_cmd_params;
 
 /**

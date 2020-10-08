@@ -545,7 +545,7 @@ static void __lim_process_add_ts_rsp(struct mac_context *mac_ctx,
 		SIR_MAC_ACCESSPOLICY_HCCA) ||
 		(addts.tspec.tsinfo.traffic.accessPolicy ==
 			SIR_MAC_ACCESSPOLICY_BOTH)) &&
-		(addts.status == eSIR_MAC_SUCCESS_STATUS)) {
+		(addts.status == STATUS_SUCCESS)) {
 		/* add the classifier - this should always succeed */
 		if (addts.numTclas > 1) {
 			/* currently no support for multiple tclas elements */
@@ -565,7 +565,7 @@ static void __lim_process_add_ts_rsp(struct mac_context *mac_ctx,
 	/* deactivate the response timer */
 	lim_deactivate_and_change_timer(mac_ctx, eLIM_ADDTS_RSP_TIMER);
 
-	if (addts.status != eSIR_MAC_SUCCESS_STATUS) {
+	if (addts.status != STATUS_SUCCESS) {
 		pe_debug("Recv AddTsRsp: tsid: %d UP: %d status: %d",
 			addts.tspec.tsinfo.traffic.tsid,
 			addts.tspec.tsinfo.traffic.userPrio, addts.status);
@@ -1742,6 +1742,7 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 				pe_debug("p2p session active drop BTM frame");
 				break;
 			}
+			/* fallthrough */
 		case WNM_NOTIF_REQUEST:
 		case WNM_NOTIF_RESPONSE:
 			rssi = WMA_GET_RX_RSSI_NORMALIZED(rx_pkt_info);
@@ -1884,7 +1885,8 @@ void lim_process_action_frame(struct mac_context *mac_ctx,
 					pub_action->Oui[2], pub_action->Oui[3]);
 				break;
 			}
-			/* Fall through to send the frame to supplicant */
+			/* send the frame to supplicant */
+			/* fallthrough */
 		case SIR_MAC_ACTION_VENDOR_SPECIFIC_CATEGORY:
 		case SIR_MAC_ACTION_2040_BSS_COEXISTENCE:
 		case SIR_MAC_ACTION_GAS_INITIAL_REQUEST:
@@ -2080,7 +2082,7 @@ void lim_process_action_frame_no_session(struct mac_context *mac, uint8_t *pBd)
 					vendor_specific->Oui[3]);
 				break;
 			}
-			/* Fall through to send the frame to supplicant */
+			/* fallthrough */
 		case SIR_MAC_ACTION_GAS_INITIAL_REQUEST:
 		case SIR_MAC_ACTION_GAS_INITIAL_RESPONSE:
 		case SIR_MAC_ACTION_GAS_COMEBACK_REQUEST:

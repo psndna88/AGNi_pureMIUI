@@ -23,12 +23,41 @@
 #include "hal_rx_flow.h"
 #include "dp_htt.h"
 #include "dp_internal.h"
+#include "hif.h"
+
+/* Timeout in milliseconds to wait for CMEM FST HTT response */
+#define DP_RX_FST_CMEM_RESP_TIMEOUT 2000
 
 #ifdef WLAN_SUPPORT_RX_FISA
+void dp_fisa_rx_fst_update_work(void *arg);
 
 void dp_rx_dump_fisa_table(struct dp_soc *soc)
 {
-	hal_rx_dump_fse_table(soc->rx_fst->hal_rx_fst);
+	hal_soc_handle_t hal_soc_hdl = soc->hal_soc;
+	struct dp_rx_fst *fst = soc->rx_fst;
+	struct dp_fisa_rx_sw_ft *sw_ft_entry;
+	int i;
+
+	if (!fst->fst_in_cmem)
+		return hal_rx_dump_fse_table(soc->rx_fst->hal_rx_fst);
+
+	sw_ft_entry = (struct dp_fisa_rx_sw_ft *)fst->base;
+
+	if (hif_force_wake_request(((struct hal_soc *)hal_soc_hdl)->hif_handle)) {
+		dp_err("Wake up request failed");
+		qdf_check_state_before_panic();
+		return;
+	}
+
+	for (i = 0; i < fst->max_entries; i++)
+		hal_rx_dump_cmem_fse(hal_soc_hdl,
+				     sw_ft_entry[i].cmem_offset, i);
+
+	if (hif_force_wake_release(((struct hal_soc *)hal_soc_hdl)->hif_handle)) {
+		dp_err("Wake up release failed");
+		qdf_check_state_before_panic();
+		return;
+	}
 }
 
 /**
@@ -97,6 +126,56 @@ static void dp_fisa_fse_cache_flush_timer(void *arg)
 }
 
 /**
+ * dp_rx_fst_cmem_deinit() - De-initialize CMEM parameters
+ * @fst: Pointer to DP FST
+ *
+ * Return: None
+ */
+static void dp_rx_fst_cmem_deinit(struct dp_rx_fst *fst)
+{
+	int i;
+
+	qdf_cancel_work(&fst->fst_update_work);
+	qdf_flush_work(&fst->fst_update_work);
+	qdf_flush_workqueue(0, fst->fst_update_wq);
+
+	qdf_destroy_workqueue(0, fst->fst_update_wq);
+	qdf_list_destroy(&fst->fst_update_list);
+	qdf_event_destroy(&fst->cmem_resp_event);
+
+	for (i = 0; i < MAX_REO_DEST_RINGS; i++)
+		qdf_spinlock_destroy(&fst->dp_rx_sw_ft_lock[i]);
+}
+
+/**
+ * dp_rx_fst_cmem_init() - Initialize CMEM parameters
+ * @fst: Pointer to DP FST
+ *
+ * Return: Success/Failure
+ */
+static QDF_STATUS dp_rx_fst_cmem_init(struct dp_rx_fst *fst)
+{
+	int i;
+
+	fst->fst_update_wq =
+		qdf_alloc_high_prior_ordered_workqueue("dp_rx_fst_update_wq");
+	if (!fst->fst_update_wq) {
+		dp_err("failed to allocate fst update wq\n");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_create_work(0, &fst->fst_update_work,
+			dp_fisa_rx_fst_update_work, fst);
+	qdf_list_create(&fst->fst_update_list, 128);
+	qdf_event_create(&fst->cmem_resp_event);
+
+	for (i = 0; i < MAX_REO_DEST_RINGS; i++)
+		qdf_spinlock_create(&fst->dp_rx_sw_ft_lock[i]);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * dp_rx_fst_attach() - Initialize Rx FST and setup necessary parameters
  * @soc: SoC handle
  * @pdev: Pdev handle
@@ -133,11 +212,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	}
 
 	fst = qdf_mem_malloc(sizeof(struct dp_rx_fst));
-	if (!fst) {
-		QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
-			  "RX FST allocation failed\n");
+	if (!fst)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	fst->max_skid_length = wlan_cfg_rx_fst_get_max_search(cfg);
 	fst->max_entries = wlan_cfg_get_rx_flow_search_table_size(cfg);
@@ -151,13 +227,8 @@ QDF_STATUS dp_rx_fst_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	fst->base = (uint8_t *)qdf_mem_malloc(DP_RX_GET_SW_FT_ENTRY_SIZE *
 					       fst->max_entries);
 
-	if (!fst->base) {
-		QDF_TRACE(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_ERROR,
-			  "Rx fst->base allocation failed, #entries:%d\n",
-			  fst->max_entries);
-
+	if (!fst->base)
 		goto out2;
-	}
 
 	fst->hal_rx_fst = hal_rx_fst_attach(soc->osdev,
 					    &fst->hal_rx_fst_base_paddr,
@@ -206,6 +277,33 @@ out2:
 }
 
 /**
+ * dp_rx_fst_check_cmem_support() - Check if FW can allocate FSE in CMEM,
+ * allocate FSE in DDR if FW doesn't support CMEM allocation
+ * @soc: DP SoC handle
+ *
+ * Return: None
+ */
+static void dp_rx_fst_check_cmem_support(struct dp_soc *soc)
+{
+	struct dp_rx_fst *fst = soc->rx_fst;
+	QDF_STATUS status;
+
+	/* FW doesn't support CMEM FSE, keep it in DDR */
+	if (!soc->fst_in_cmem)
+		return;
+
+	status = dp_rx_fst_cmem_init(fst);
+	if (status != QDF_STATUS_SUCCESS)
+		return;
+
+	hal_rx_fst_detach(fst->hal_rx_fst, soc->osdev);
+	fst->hal_rx_fst = NULL;
+	fst->hal_rx_fst_base_paddr = 0;
+	fst->flow_deletion_supported = true;
+	fst->fst_in_cmem = true;
+}
+
+/**
  * dp_rx_flow_send_fst_fw_setup() - Program FST parameters in FW/HW post-attach
  * @soc: SoC handle
  * @pdev: Pdev handle
@@ -220,6 +318,9 @@ QDF_STATUS dp_rx_flow_send_fst_fw_setup(struct dp_soc *soc,
 	struct wlan_cfg_dp_soc_ctxt *cfg = soc->wlan_cfg_ctx;
 	QDF_STATUS status;
 
+	/* check if FW has support to place FST in CMEM */
+	dp_rx_fst_check_cmem_support(soc);
+
 	/* mac_id = 0 is used to configure both macs with same FT */
 	fisa_hw_fst_setup_cmd.pdev_id = 0;
 	fisa_hw_fst_setup_cmd.max_entries = fst->max_entries;
@@ -232,6 +333,15 @@ QDF_STATUS dp_rx_flow_send_fst_fw_setup(struct dp_soc *soc,
 	fisa_hw_fst_setup_cmd.hash_key = wlan_cfg_rx_fst_get_hash_key(cfg);
 
 	status  = dp_htt_rx_flow_fst_setup(pdev, &fisa_hw_fst_setup_cmd);
+
+	if (!fst->fst_in_cmem)
+		return status;
+
+	status = qdf_wait_single_event(&fst->cmem_resp_event,
+				       DP_RX_FST_CMEM_RESP_TIMEOUT);
+
+	dp_err("FST params after CMEM update FT size %d, hash_mask 0x%x",
+	       fst->max_entries, fst->hash_mask);
 
 	return status;
 }
@@ -250,7 +360,11 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	dp_fst = soc->rx_fst;
 	if (qdf_likely(dp_fst)) {
 		qdf_timer_sync_cancel(&dp_fst->fse_cache_flush_timer);
-		hal_rx_fst_detach(dp_fst->hal_rx_fst, soc->osdev);
+		if (dp_fst->fst_in_cmem)
+			dp_rx_fst_cmem_deinit(dp_fst);
+		else
+			hal_rx_fst_detach(dp_fst->hal_rx_fst, soc->osdev);
+
 		qdf_mem_free(dp_fst->base);
 		qdf_spinlock_destroy(&dp_fst->dp_rx_fst_lock);
 		qdf_mem_free(dp_fst);
@@ -259,6 +373,28 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
 		  "Rx FST detached\n");
 }
+
+/*
+ * dp_rx_fst_update_cmem_params() - Update CMEM FST params
+ * @soc:		DP SoC context
+ * @num_entries:	Number of flow search entries
+ * @cmem_ba_lo:		CMEM base address low
+ * @cmem_ba_hi:		CMEM base address high
+ *
+ * Return: None
+ */
+void dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
+				  uint32_t cmem_ba_lo, uint32_t cmem_ba_hi)
+{
+	struct dp_rx_fst *fst = soc->rx_fst;
+
+	fst->max_entries = num_entries;
+	fst->hash_mask = fst->max_entries - 1;
+	fst->cmem_ba = cmem_ba_lo;
+
+	qdf_event_set(&fst->cmem_resp_event);
+}
+
 #else /* WLAN_SUPPORT_RX_FISA */
 
 #endif /* !WLAN_SUPPORT_RX_FISA */

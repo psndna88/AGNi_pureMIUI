@@ -55,7 +55,6 @@
 #define REASON_ROAM_RESCAN_RSSI_DIFF_CHANGED        19
 #define REASON_ROAM_BMISS_FIRST_BCNT_CHANGED        20
 #define REASON_ROAM_BMISS_FINAL_BCNT_CHANGED        21
-#define REASON_ROAM_BEACON_RSSI_WEIGHT_CHANGED      22
 #define REASON_ROAM_DFS_SCAN_MODE_CHANGED           23
 #define REASON_ROAM_ABORT_ROAM_SCAN                 24
 #define REASON_ROAM_EXT_SCAN_PARAMS_CHANGED         25
@@ -186,6 +185,8 @@ struct wlan_roam_triggers {
  *                   absolute RSSI threshold. Zero means no absolute minimum
  *                   RSSI is required. units are the offset from the noise
  *                   floor in dB
+ * @bg_rssi_threshold: Value of rssi threshold to trigger roaming
+ *                     after background scan.
  */
 struct ap_profile {
 	uint32_t flags;
@@ -196,6 +197,7 @@ struct ap_profile {
 	uint32_t rsn_mcastcipherset;
 	uint32_t rsn_mcastmgmtcipherset;
 	uint32_t rssi_abs_thresh;
+	uint8_t bg_rssi_threshold;
 };
 
 /**
@@ -215,6 +217,7 @@ struct ap_profile {
  * @oce_wan_weightage OCE WAN metrics weightage out of total score in %.
  * @oce_ap_tx_pwr_weightage: OCE AP TX power score in %
  * @oce_subnet_id_weightage: OCE subnet id score in %
+ * @sae_pk_ap_weightage: SAE-PK AP score in %
  * @bw_index_score: channel BW scoring percentage information.
  *                 BITS 0-7   :- It contains scoring percentage of 20MHz   BW
  *                 BITS 8-15  :- It contains scoring percentage of 40MHz   BW
@@ -259,6 +262,7 @@ struct scoring_param {
 	int32_t oce_wan_weightage;
 	uint32_t oce_ap_tx_pwr_weightage;
 	uint32_t oce_subnet_id_weightage;
+	uint32_t sae_pk_ap_weightage;
 	uint32_t bw_index_score;
 	uint32_t band_index_score;
 	uint32_t nss_index_score;
@@ -1319,7 +1323,6 @@ struct wlan_cm_rso_configs {
 /**
  * struct wlan_cm_roam  - Connection manager roam configs, state and roam
  * data related structure
- * @tx_ops: Roam Tx ops to send roam offload commands to firmware
  * @pcl_vdev_cmd_active:  Flag to check if vdev level pcl command needs to be
  * sent or PDEV level PCL command needs to be sent
  * @control_param: vendor configured roam control param
@@ -1327,7 +1330,6 @@ struct wlan_cm_rso_configs {
  * legacy tpCsrNeighborRoamControlInfo structure.
  */
 struct wlan_cm_roam {
-	struct wlan_cm_roam_tx_ops tx_ops;
 	bool pcl_vdev_cmd_active;
 	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
 	struct wlan_cm_rso_configs vdev_rso_config;

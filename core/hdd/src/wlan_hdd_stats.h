@@ -34,8 +34,12 @@
 
 #define DATA_RATE_11AC_MCS_MASK    0x03
 
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 /* LL stats get request time out value */
+#define WLAN_WAIT_TIME_LL_STATS 2000
+#else
 #define WLAN_WAIT_TIME_LL_STATS 800
+#endif
 
 #define WLAN_HDD_TGT_NOISE_FLOOR_DBM     (-96)
 
@@ -493,7 +497,7 @@ void wlan_hdd_display_txrx_stats(struct hdd_context *hdd_ctx);
 /**
  * hdd_report_max_rate() - Fill the max rate stats in the station info structure
  * to be sent to the userspace.
- *
+ * @adapter: pointer to adapter
  * @mac_handle: The mac handle
  * @rate: The station_info tx/rx rate to be filled
  * @signal: signal from station_info
@@ -504,7 +508,8 @@ void wlan_hdd_display_txrx_stats(struct hdd_context *hdd_ctx);
  *
  * Return: True if fill is successful
  */
-bool hdd_report_max_rate(mac_handle_t mac_handle,
+bool hdd_report_max_rate(struct hdd_adapter *adapter,
+			 mac_handle_t mac_handle,
 			 struct rate_info *rate,
 			 int8_t signal,
 			 enum tx_rate_info rate_flags,

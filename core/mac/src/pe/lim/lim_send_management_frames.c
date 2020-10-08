@@ -1159,11 +1159,19 @@ static QDF_STATUS lim_assoc_rsp_tx_complete(
 		goto end;
 	}
 
-	lim_assoc_ind = qdf_mem_malloc(sizeof(tLimMlmAssocInd));
-	if (!lim_assoc_ind) {
-		pe_err("lim assoc ind is NULL");
-		goto free_assoc_req;
+	if (tx_complete != WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
+		lim_send_disassoc_mgmt_frame(mac_ctx,
+					     REASON_DISASSOC_DUE_TO_INACTIVITY,
+					     sta_ds->staAddr,
+					     session_entry, false);
+		lim_trigger_sta_deletion(mac_ctx, sta_ds, session_entry);
+		goto free_buffers;
 	}
+
+	lim_assoc_ind = qdf_mem_malloc(sizeof(tLimMlmAssocInd));
+	if (!lim_assoc_ind)
+		goto free_assoc_req;
+
 	if (!lim_fill_lim_assoc_ind_params(lim_assoc_ind, mac_ctx,
 					   sta_ds, session_entry)) {
 		pe_err("lim assoc ind fill error");
@@ -1171,10 +1179,9 @@ static QDF_STATUS lim_assoc_rsp_tx_complete(
 	}
 
 	sme_assoc_ind = qdf_mem_malloc(sizeof(struct assoc_ind));
-	if (!sme_assoc_ind) {
-		pe_err("sme assoc ind is NULL");
+	if (!sme_assoc_ind)
 		goto lim_assoc_ind;
-	}
+
 	sme_assoc_ind->messageType = eWNI_SME_ASSOC_IND_UPPER_LAYER;
 	lim_fill_sme_assoc_ind_params(
 				mac_ctx, lim_assoc_ind,
@@ -1191,6 +1198,8 @@ static QDF_STATUS lim_assoc_rsp_tx_complete(
 	lim_sys_process_mmh_msg_api(mac_ctx, &msg);
 
 	qdf_mem_free(lim_assoc_ind);
+
+free_buffers:
 	if (assoc_req->assocReqFrame) {
 		qdf_mem_free(assoc_req->assocReqFrame);
 		assoc_req->assocReqFrame = NULL;
@@ -1399,7 +1408,7 @@ lim_send_assoc_rsp_mgmt_frame(
 						    &frm.he_6ghz_band_cap);
 		}
 #ifdef WLAN_FEATURE_11W
-		if (eSIR_MAC_TRY_AGAIN_LATER == status_code) {
+		if (status_code == STATUS_ASSOC_REJECTED_TEMPORARILY) {
 			max_retries =
 			mac_ctx->mlme_cfg->gen.pmf_sa_query_max_retries;
 			retry_int =
@@ -2082,7 +2091,9 @@ lim_send_assoc_req_mgmt_frame(struct mac_context *mac_ctx,
 		pe_debug("Populate VHT IEs in Assoc Request");
 		populate_dot11f_vht_caps(mac_ctx, pe_session, &frm->VHTCaps);
 		vht_enabled = true;
-		if (pe_session->gLimOperatingMode.present) {
+		if (pe_session->gLimOperatingMode.present &&
+		    pe_session->ch_width == CH_WIDTH_20MHZ &&
+		    frm->VHTCaps.present) {
 			pe_debug("VHT OP mode IE in Assoc Req");
 			populate_dot11f_operating_mode(mac_ctx,
 					&frm->OperatingMode, pe_session);
@@ -2747,8 +2758,7 @@ lim_send_auth_mgmt_frame(struct mac_context *mac_ctx,
 	case SIR_MAC_AUTH_FRAME_2:
 		if ((auth_frame->authAlgoNumber == eSIR_OPEN_SYSTEM) ||
 		    ((auth_frame->authAlgoNumber == eSIR_SHARED_KEY) &&
-			(auth_frame->authStatusCode !=
-			 eSIR_MAC_SUCCESS_STATUS))) {
+			(auth_frame->authStatusCode != STATUS_SUCCESS))) {
 			/*
 			 * Allocate buffer for Authenticaton frame of size
 			 * equal to management frame header length plus
@@ -3133,7 +3143,7 @@ QDF_STATUS lim_send_disassoc_cnf(struct mac_context *mac_ctx)
 		}
 		if (LIM_IS_STA_ROLE(pe_session) &&
 		    (disassoc_req->reasonCode !=
-		    eSIR_MAC_DISASSOC_DUE_TO_FTHANDOFF_REASON)) {
+		     REASON_AUTHORIZED_ACCESS_LIMIT_REACHED)) {
 			pe_debug("FT Preauth Session (%pK %d) Clean up",
 				 pe_session, pe_session->peSessionId);
 
@@ -5104,7 +5114,7 @@ QDF_STATUS lim_send_addba_response_frame(struct mac_context *mac_ctx,
 	frm.DialogToken.token = dialog_token;
 	frm.Status.status = status_code;
 	if (mac_ctx->reject_addba_req) {
-		frm.Status.status = eSIR_MAC_REQ_DECLINED_STATUS;
+		frm.Status.status = STATUS_REQUEST_DECLINED;
 		pe_err("refused addba req");
 	}
 	frm.addba_param_set.tid = tid;
@@ -5510,10 +5520,8 @@ lim_handle_sae_auth_retry(struct mac_context *mac_ctx, uint8_t vdev_id,
 		lim_sae_auth_cleanup_retry(mac_ctx, vdev_id);
 
 	sae_retry->sae_auth.data = qdf_mem_malloc(frame_len);
-	if (!sae_retry->sae_auth.data) {
-		pe_err("failed to alloc memory for sae auth");
+	if (!sae_retry->sae_auth.data)
 		return;
-	}
 
 	pe_debug("SAE auth frame queued vdev_id %d seq_num %d",
 		 vdev_id, mac_ctx->mgmtSeqNum);

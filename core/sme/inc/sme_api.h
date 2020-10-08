@@ -156,6 +156,7 @@ struct sme_config_params {
 #endif /* FEATURE_WLAN_TDLS */
 
 struct wmi_twt_add_dialog_param;
+struct wmi_twt_del_dialog_param;
 
 /* Thermal Mitigation*/
 typedef struct {
@@ -573,13 +574,13 @@ QDF_STATUS sme_roam_reassoc(mac_handle_t mac_handle, uint8_t sessionId,
  * @mac_handle: Opaque handle to the global MAC context
  * @session: SME session identifier
  * @reason: Reason to disconnect
- * @mac_reason: Reason to disconnect as per enum eSirMacReasonCodes
+ * @mac_reason: Reason to disconnect as per enum wlan_reason_code
  *
  * Return: QDF Status success or failure
  */
 QDF_STATUS sme_roam_disconnect(mac_handle_t mac_handle, uint8_t session,
 			       eCsrRoamDisconnectReason reason,
-			       tSirMacReasonCodes mac_reason);
+			       enum wlan_reason_code mac_reason);
 
 void sme_dhcp_done_ind(mac_handle_t mac_handle, uint8_t session_id);
 QDF_STATUS sme_roam_stop_bss(mac_handle_t mac_handle, uint8_t sessionId);
@@ -1022,36 +1023,6 @@ QDF_STATUS sme_abort_roaming(mac_handle_t mac_handle, uint8_t vdev_id);
  * Return: true or false
  */
 bool sme_roaming_in_progress(mac_handle_t mac_handle, uint8_t vdev_id);
-
-/**
- * sme_set_pcl_for_first_connected_vdev  - Set the vdev pcl for the connected
- * STA vdev
- * @mac_handle: Pointer to opaque mac handle
- * @vdev_id: vdev id
- *
- * This API will be called from the association completion handler of the
- * 2nd STA to set the vdev pcl for the 1st.
- *
- * Return: None
- */
-void sme_set_pcl_for_first_connected_vdev(mac_handle_t mac_handle,
-					  uint8_t vdev_id);
-
-/**
- * sme_clear_and_set_pcl_for_connected_vdev  - Clear the vdev pcl for the
- * current connected VDEV and Set PDEV pcl for that vdev.
- *
- * @mac_handle: Pointer to opaque mac handle
- * @vdev_id: vdev id
- *
- * This API will be called from the disconnection handler of the 2nd STA.
- * In the disconnection path. Clear the existing vdev pcl for the 1st STA
- * and set the PDEV pcl.
- *
- * Return: None
- */
-void sme_clear_and_set_pcl_for_connected_vdev(mac_handle_t mac_handle,
-					      uint8_t vdev_id);
 
 #ifdef FEATURE_WLAN_ESE
 QDF_STATUS sme_update_is_ese_feature_enabled(mac_handle_t mac_handle,
@@ -1888,21 +1859,6 @@ QDF_STATUS sme_update_nss(mac_handle_t mac_handle, uint8_t nss);
 void sme_update_user_configured_nss(mac_handle_t mac_handle, uint8_t nss);
 
 bool sme_is_any_session_in_connected_state(mac_handle_t mac_handle);
-
-/**
- * sme_set_pcl() - Send set pcl command to the WMA via lim
- * @msg: PCL channel list and length structure
- * @vdev_id: Vdev id
- * @clear_vdev_pcl: flag to clear the configured vdev pcl
- *
- * Sends the set pcl command to lim->WMA to send WMI_PDEV_SET_PCL_CMDID to FW
- * if dual sta roaming is disabled. If dual sta roaming is enabled,
- * WMI_VDEV_SET_PCL_CMDID will be sent.
- *
- * Return: QDF_STATUS_SUCCESS on successful posting
- */
-QDF_STATUS sme_set_pcl(struct policy_mgr_pcl_list *msg, uint8_t vdev_id,
-		       bool clear_vdev_pcl);
 
 QDF_STATUS sme_pdev_set_hw_mode(struct policy_mgr_hw_mode msg);
 QDF_STATUS sme_nss_update_request(uint32_t vdev_id,
@@ -3660,6 +3616,37 @@ uint8_t sme_get_mcs_idx(uint16_t raw_rate, enum tx_rate_info rate_flags,
 			enum tx_rate_info *mcs_rate_flags);
 
 #ifdef WLAN_SUPPORT_TWT
+
+/**
+ * sme_test_config_twt_terminate() - send TWT del dialog wmi command
+ * to firmware
+ * @params: TWT del dialog parameters
+ *
+ * Return: QDF_STATUS_SUCCESS on Success, other QDF_STATUS error codes
+ * on failure
+ */
+QDF_STATUS
+sme_test_config_twt_terminate(struct wmi_twt_del_dialog_param *params);
+
+/**
+ * sme_test_config_twt_setup() - send TWT add dialog wmi command
+ * to firmware
+ * @params: TWT add dialog parameters
+ *
+ * Return: QDF_STATUS_SUCCESS on Success, other QDF_STATUS error codes
+ * on failure
+ */
+QDF_STATUS sme_test_config_twt_setup(struct wmi_twt_add_dialog_param *params);
+
+/**
+ * sme_init_twt_complete_cb() - Initialize TWT callbacks
+ * @mac_handle: MAC handle
+ *
+ * Return: QDF_STATUS_SUCCESS on Success, other QDF_STATUS error codes
+ * on failure
+ */
+QDF_STATUS sme_init_twt_complete_cb(mac_handle_t mac_handle);
+
 /**
  * sme_register_twt_enable_complete_cb() - TWT enable registrar
  * @mac_handle: MAC handle
@@ -3759,6 +3746,19 @@ QDF_STATUS sme_deregister_twt_enable_complete_cb(mac_handle_t mac_handle);
  * Return: QDF Status
  */
 QDF_STATUS sme_deregister_twt_disable_complete_cb(mac_handle_t mac_handle);
+#else
+
+static inline
+QDF_STATUS sme_test_config_twt_setup(struct wmi_twt_add_dialog_param *params)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+sme_test_config_twt_terminate(struct wmi_twt_del_dialog_param *params)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 
 /**

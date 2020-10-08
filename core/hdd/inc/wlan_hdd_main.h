@@ -76,6 +76,7 @@
 #include <wlan_hdd_lro.h>
 #include "cdp_txrx_flow_ctrl_legacy.h"
 #include <cdp_txrx_peer_ops.h>
+#include <cdp_txrx_misc.h>
 #include "wlan_hdd_nan_datapath.h"
 #if defined(CONFIG_HL_SUPPORT)
 #include "wlan_tgt_def_config_hl.h"
@@ -699,6 +700,12 @@ struct hdd_stats {
 #endif
 	struct hdd_eapol_stats_s hdd_eapol_stats;
 	struct hdd_dhcp_stats_s hdd_dhcp_stats;
+	struct pmf_bcn_protect_stats bcn_protect_stats;
+
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+	uint32_t sta_stats_cached_timestamp;
+	bool is_ll_stats_req_in_progress;
+#endif
 };
 
 /**
@@ -1417,6 +1424,8 @@ struct hdd_adapter {
 	uint8_t gro_disallowed[DP_MAX_RX_THREADS];
 	uint8_t gro_flushed[DP_MAX_RX_THREADS];
 	bool handle_feature_update;
+	bool runtime_disable_rx_thread;
+	ol_txrx_rx_fp rx_stack;
 
 	qdf_work_t netdev_features_update_work;
 };
@@ -1934,7 +1943,7 @@ struct hdd_context {
 	int radio_index;
 	qdf_work_t sap_pre_cac_work;
 	bool hbw_requested;
-	bool llm_enabled;
+	bool pm_qos_request;
 	enum RX_OFFLOAD ol_enable;
 #ifdef WLAN_FEATURE_NAN
 	bool nan_datapath_enabled;
@@ -1952,7 +1961,6 @@ struct hdd_context {
 	uint16_t wmi_max_len;
 	struct suspend_resume_stats suspend_resume_stats;
 	struct hdd_runtime_pm_context runtime_context;
-	bool roaming_in_progress;
 	struct scan_chan_info *chan_info;
 	struct mutex chan_info_lock;
 	/* bit map to set/reset TDLS by different sources */
@@ -2062,6 +2070,8 @@ struct hdd_context {
 #ifdef FW_THERMAL_THROTTLE_SUPPORT
 	uint8_t dutycycle_off_percent;
 #endif
+	uint8_t pm_qos_request_flags;
+	uint8_t high_bus_bw_request;
 	qdf_work_t country_change_work;
 	struct {
 		qdf_atomic_t rx_aggregation;
@@ -2071,6 +2081,9 @@ struct hdd_context {
 	qdf_workqueue_t *adapter_ops_wq;
 	struct hdd_adapter_ops_history adapter_ops_history;
 	bool ll_stats_per_chan_rx_tx_time;
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+	bool is_get_station_clubbed_in_ll_stats_req;
+#endif
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
 	bool multi_client_thermal_mitigation;
 #endif
@@ -2687,22 +2700,32 @@ bool hdd_is_any_adapter_connected(struct hdd_context *hdd_ctx);
 
 /**
  * hdd_add_latency_critical_client() - Add latency critical client
- * @hdd_ctx: Global HDD context
+ * @adapter: adapter handle (Should not be NULL)
  * @phymode: the phymode of the connected adapter
  *
- * This function adds to the latency critical count if the present
- * connection is also a latency critical one.
+ * This function checks if the present connection is latency critical
+ * and adds to the latency critical clients count and informs the
+ * datapath about this connection being latency critical.
  *
  * Returns: None
  */
 static inline void
-hdd_add_latency_critical_client(struct hdd_context *hdd_ctx,
+hdd_add_latency_critical_client(struct hdd_adapter *adapter,
 				enum qca_wlan_802_11_mode phymode)
 {
+	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
+
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
 	case QCA_WLAN_802_11_MODE_11G:
-		qdf_atomic_inc(&hdd_ctx->num_latency_critical_clients);
+		if (adapter->device_mode == QDF_STA_MODE)
+			qdf_atomic_inc(&hdd_ctx->num_latency_critical_clients);
+
+		hdd_info("Adding latency critical connection for vdev %d",
+			 adapter->vdev_id);
+		cdp_vdev_inform_ll_conn(cds_get_context(QDF_MODULE_ID_SOC),
+					adapter->vdev_id,
+					CDP_VDEV_LL_CONN_ADD);
 		break;
 	default:
 		break;
@@ -2711,22 +2734,32 @@ hdd_add_latency_critical_client(struct hdd_context *hdd_ctx,
 
 /**
  * hdd_del_latency_critical_client() - Add tlatency critical client
- * @hdd_ctx: Global HDD context
+ * @adapter: adapter handle (Should not be NULL)
  * @phymode: the phymode of the connected adapter
  *
- * This function removes from the latency critical count if the present
- * connection is also a latency critical one.
+ * This function checks if the present connection was latency critical
+ * and removes from the latency critical clients count and informs the
+ * datapath about the removed connection being latency critical.
  *
  * Returns: None
  */
 static inline void
-hdd_del_latency_critical_client(struct hdd_context *hdd_ctx,
+hdd_del_latency_critical_client(struct hdd_adapter *adapter,
 				enum qca_wlan_802_11_mode phymode)
 {
+	struct hdd_context *hdd_ctx = adapter->hdd_ctx;
+
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
 	case QCA_WLAN_802_11_MODE_11G:
-		qdf_atomic_dec(&hdd_ctx->num_latency_critical_clients);
+		if (adapter->device_mode == QDF_STA_MODE)
+			qdf_atomic_dec(&hdd_ctx->num_latency_critical_clients);
+
+		hdd_info("Removing latency critical connection for vdev %d",
+			 adapter->vdev_id);
+		cdp_vdev_inform_ll_conn(cds_get_context(QDF_MODULE_ID_SOC),
+					adapter->vdev_id,
+					CDP_VDEV_LL_CONN_DEL);
 		break;
 	default:
 		break;
@@ -4687,4 +4720,21 @@ static inline void hdd_beacon_latency_event_cb(uint32_t latency_level)
  */
 void hdd_netdev_update_features(struct hdd_adapter *adapter);
 
+#if defined(CLD_PM_QOS)
+/**
+ * wlan_hdd_set_pm_qos_request() - Function to set pm_qos config in wlm mode
+ * @hdd_ctx: HDD context
+ * @pm_qos_request: pm_qos_request flag
+ *
+ * Return: None
+ */
+void wlan_hdd_set_pm_qos_request(struct hdd_context *hdd_ctx,
+				 bool pm_qos_request);
+#else
+static inline
+void wlan_hdd_set_pm_qos_request(struct hdd_context *hdd_ctx,
+				 bool pm_qos_request)
+{
+}
+#endif
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

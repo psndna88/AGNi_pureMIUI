@@ -44,10 +44,8 @@ static QDF_STATUS policy_mgr_psoc_obj_create_cb(struct wlan_objmgr_psoc *psoc,
 
 	policy_mgr_ctx = qdf_mem_malloc(
 		sizeof(struct policy_mgr_psoc_priv_obj));
-	if (!policy_mgr_ctx) {
-		policy_mgr_err("memory allocation failed");
+	if (!policy_mgr_ctx)
 		return QDF_STATUS_E_FAILURE;
-	}
 
 	policy_mgr_ctx->psoc = psoc;
 	policy_mgr_ctx->old_hw_mode_index = POLICY_MGR_DEFAULT_HW_MODE_INDEX;
@@ -337,7 +335,6 @@ QDF_STATUS policy_mgr_psoc_open(struct wlan_objmgr_psoc *psoc)
 		sizeof(struct sta_ap_intf_check_work_ctx));
 	if (!pm_ctx->sta_ap_intf_check_work_info) {
 		qdf_mutex_destroy(&pm_ctx->qdf_conc_list_lock);
-		policy_mgr_err("Failed to alloc sta_ap_intf_check_work_info");
 		return QDF_STATUS_E_FAILURE;
 	}
 	pm_ctx->sta_ap_intf_check_work_info->psoc = psoc;
@@ -672,8 +669,6 @@ QDF_STATUS policy_mgr_register_sme_cb(struct wlan_objmgr_psoc *psoc,
 		sme_cbacks->sme_nss_update_request;
 	pm_ctx->sme_cbacks.sme_pdev_set_hw_mode =
 		sme_cbacks->sme_pdev_set_hw_mode;
-	pm_ctx->sme_cbacks.sme_set_pcl =
-		sme_cbacks->sme_set_pcl;
 	pm_ctx->sme_cbacks.sme_soc_set_dual_mac_config =
 		sme_cbacks->sme_soc_set_dual_mac_config;
 	pm_ctx->sme_cbacks.sme_change_mcc_beacon_interval =
@@ -720,8 +715,6 @@ QDF_STATUS policy_mgr_register_hdd_cb(struct wlan_objmgr_psoc *psoc,
 		hdd_cbacks->get_mode_for_non_connected_vdev;
 	pm_ctx->hdd_cbacks.hdd_get_device_mode =
 		hdd_cbacks->hdd_get_device_mode;
-	pm_ctx->hdd_cbacks.hdd_wapi_security_sta_exist =
-		hdd_cbacks->hdd_wapi_security_sta_exist;
 	pm_ctx->hdd_cbacks.hdd_is_chan_switch_in_progress =
 		hdd_cbacks->hdd_is_chan_switch_in_progress;
 	pm_ctx->hdd_cbacks.hdd_is_cac_in_progress =

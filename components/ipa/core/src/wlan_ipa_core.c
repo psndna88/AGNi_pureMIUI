@@ -158,10 +158,8 @@ static void wlan_ipa_uc_loaded_uc_cb(void *priv_ctxt)
 	}
 
 	msg = qdf_mem_malloc(sizeof(*msg));
-	if (!msg) {
-		ipa_err("op_msg allocation fails");
+	if (!msg)
 		return;
-	}
 
 	msg->op_code = WLAN_IPA_UC_OPCODE_UC_READY;
 
@@ -456,10 +454,8 @@ wlan_ipa_wdi_setup(struct wlan_ipa_priv *ipa_ctx,
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 
 	sys_in = qdf_mem_malloc(sizeof(*sys_in) * WLAN_IPA_MAX_IFACE);
-	if (!sys_in) {
-		ipa_err("sys_in allocation failed");
+	if (!sys_in)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	for (i = 0; i < WLAN_IPA_MAX_IFACE; i++)
 		qdf_mem_copy(sys_in + i,
@@ -1413,6 +1409,9 @@ static void wlan_ipa_cleanup_iface(struct wlan_ipa_iface_context *iface_context)
 			      iface_context->dev->name,
 			      wlan_ipa_is_ipv6_enabled(ipa_ctx->config));
 
+	if (iface_context->device_mode == QDF_SAP_MODE)
+		ipa_ctx->num_sap_connected--;
+
 	qdf_spin_lock_bh(&iface_context->interface_lock);
 	iface_context->dev = NULL;
 	iface_context->device_mode = QDF_MAX_NO_OF_MODE;
@@ -1525,8 +1524,11 @@ static QDF_STATUS wlan_ipa_setup_iface(struct wlan_ipa_priv *ipa_ctx,
 				}
 
 				ipa_err("Obsolete iface %u found, device_mode %u, will remove it.",
-					i,
-					iface_context->device_mode);
+					i, iface_context->device_mode);
+				wlan_ipa_cleanup_iface(iface_context);
+			} else if (iface_context->session_id == session_id) {
+				ipa_err("Obsolete iface %u found, net_dev %pK, will remove it.",
+					i, iface_context->dev);
 				wlan_ipa_cleanup_iface(iface_context);
 			}
 		}
@@ -1572,6 +1574,9 @@ static QDF_STATUS wlan_ipa_setup_iface(struct wlan_ipa_priv *ipa_ctx,
 
 	ipa_ctx->num_iface++;
 
+	if (device_mode == QDF_SAP_MODE)
+		ipa_ctx->num_sap_connected++;
+
 	ipa_debug("exit: num_iface=%d", ipa_ctx->num_iface);
 
 	return status;
@@ -1594,6 +1599,11 @@ end:
 static QDF_STATUS wlan_ipa_uc_handle_first_con(struct wlan_ipa_priv *ipa_ctx)
 {
 	ipa_debug("enter");
+
+	if (ipa_ctx->num_sap_connected > 1) {
+		ipa_debug("Multiple SAP connected. Not enabling pipes. Exit");
+		return QDF_STATUS_E_PERM;
+	}
 
 	if (wlan_ipa_uc_enable_pipes(ipa_ctx) != QDF_STATUS_SUCCESS) {
 		ipa_err("IPA WDI Pipe activation failed");
@@ -1881,11 +1891,8 @@ static QDF_STATUS wlan_ipa_send_msg(qdf_netdev_t net_dev,
 	QDF_IPA_MSG_META_MSG_LEN(&meta) = sizeof(qdf_ipa_wlan_msg_t);
 
 	msg = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-
-	if (!msg) {
-		ipa_err("msg allocation failed");
+	if (!msg)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	QDF_IPA_SET_META_MSG_TYPE(&meta, type);
 	strlcpy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name, IPA_RESOURCE_NAME_MAX);
@@ -1902,6 +1909,59 @@ static QDF_STATUS wlan_ipa_send_msg(qdf_netdev_t net_dev,
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wlan_ipa_handle_multiple_sap_evt() - Handle multiple SAP connect/disconnect
+ * @ipa_ctx: IPA global context
+ * @type: IPA event type.
+ *
+ * This function is used to disable pipes when multiple SAP are connected and
+ * enable pipes back when only one SAP is connected.
+ *
+ * Return: None
+ */
+static inline
+void wlan_ipa_handle_multiple_sap_evt(struct wlan_ipa_priv *ipa_ctx,
+				      qdf_ipa_wlan_event type)
+{
+	struct wlan_ipa_iface_context *iface_ctx;
+	int i;
+
+	if (type ==  QDF_IPA_AP_DISCONNECT) {
+		ipa_debug("Multiple SAP disconnecting. Enabling IPA");
+
+		if (ipa_ctx->sap_num_connected_sta > 0)
+			wlan_ipa_uc_handle_first_con(ipa_ctx);
+
+		for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
+			iface_ctx = &ipa_ctx->iface_context[i];
+
+			if (iface_ctx->device_mode == QDF_SAP_MODE) {
+				wlan_ipa_uc_offload_enable_disable(ipa_ctx,
+							SIR_AP_RX_DATA_OFFLOAD,
+							iface_ctx->session_id,
+							true);
+				break;
+			}
+		}
+	} else if (type ==  QDF_IPA_AP_CONNECT) {
+		ipa_debug("Multiple SAP connected. Disabling IPA");
+
+		for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
+			iface_ctx = &ipa_ctx->iface_context[i];
+
+			if (iface_ctx->device_mode == QDF_SAP_MODE) {
+				wlan_ipa_uc_offload_enable_disable(ipa_ctx,
+							SIR_AP_RX_DATA_OFFLOAD,
+							iface_ctx->session_id,
+							false);
+			}
+		}
+
+		if (!ipa_ctx->ipa_pipes_down)
+			wlan_ipa_uc_disable_pipes(ipa_ctx, true);
+	}
 }
 
 /**
@@ -2025,7 +2085,6 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 			}
 
 			if (!pending_event) {
-				ipa_err("Pending event memory alloc fail");
 				qdf_mutex_release(&ipa_ctx->ipa_lock);
 				return QDF_STATUS_E_NOMEM;
 			}
@@ -2052,6 +2111,11 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 								iface_ctx);
 						break;
 					}
+				}
+
+				if (ipa_ctx->num_sap_connected == 1) {
+					wlan_ipa_handle_multiple_sap_evt(ipa_ctx,
+									 type);
 				}
 			}
 
@@ -2167,8 +2231,13 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 
 		if (wlan_ipa_uc_is_enabled(ipa_ctx->config)) {
 			qdf_mutex_release(&ipa_ctx->event_lock);
-			wlan_ipa_uc_offload_enable_disable(ipa_ctx,
-				SIR_AP_RX_DATA_OFFLOAD, session_id, true);
+			if (ipa_ctx->num_sap_connected == 1) {
+				wlan_ipa_uc_offload_enable_disable(ipa_ctx,
+							SIR_AP_RX_DATA_OFFLOAD,
+							session_id, true);
+			} else {
+				wlan_ipa_handle_multiple_sap_evt(ipa_ctx, type);
+			}
 			qdf_mutex_acquire(&ipa_ctx->event_lock);
 		}
 
@@ -2305,6 +2374,9 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 			}
 		}
 
+		if (ipa_ctx->num_sap_connected == 1)
+			wlan_ipa_handle_multiple_sap_evt(ipa_ctx, type);
+
 		qdf_mutex_release(&ipa_ctx->event_lock);
 		break;
 
@@ -2381,11 +2453,9 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 			(sizeof(qdf_ipa_wlan_msg_ex_t) +
 				sizeof(qdf_ipa_wlan_hdr_attrib_val_t));
 		msg_ex = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-
-		if (!msg_ex) {
-			ipa_err("msg_ex allocation failed");
+		if (!msg_ex)
 			return QDF_STATUS_E_NOMEM;
-		}
+
 		strlcpy(msg_ex->name, net_dev->name,
 			IPA_RESOURCE_NAME_MAX);
 		msg_ex->num_of_attribs = 1;
@@ -2500,10 +2570,8 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 
 	QDF_IPA_MSG_META_MSG_LEN(&meta) = sizeof(qdf_ipa_wlan_msg_t);
 	msg = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-	if (!msg) {
-		ipa_err("msg allocation failed");
+	if (!msg)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	QDF_IPA_SET_META_MSG_TYPE(&meta, type);
 	strlcpy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name,
@@ -2698,11 +2766,8 @@ wlan_ipa_alloc_tx_desc_free_list(struct wlan_ipa_priv *ipa_ctx)
 
 	ipa_ctx->tx_desc_pool = qdf_mem_malloc(sizeof(struct wlan_ipa_tx_desc) *
 					       max_desc_cnt);
-
-	if (!ipa_ctx->tx_desc_pool) {
-		ipa_err("Free Tx descriptor allocation failed");
+	if (!ipa_ctx->tx_desc_pool)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	qdf_list_create(&ipa_ctx->tx_desc_free_list, max_desc_cnt);
 
@@ -2833,10 +2898,8 @@ static QDF_STATUS wlan_ipa_uc_send_wdi_control_msg(bool ctrl)
 	/* WDI enable message to IPA */
 	QDF_IPA_MSG_META_MSG_LEN(&meta) = sizeof(*ipa_msg);
 	ipa_msg = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-	if (!ipa_msg) {
-		ipa_err("msg allocation failed");
+	if (!ipa_msg)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	if (ctrl) {
 		QDF_IPA_SET_META_MSG_TYPE(&meta, QDF_WDI_ENABLE);
@@ -2991,10 +3054,8 @@ QDF_STATUS wlan_ipa_send_mcc_scc_msg(struct wlan_ipa_priv *ipa_ctx,
 	/* Send SCC/MCC Switching event to IPA */
 	QDF_IPA_MSG_META_MSG_LEN(&meta) = sizeof(*msg);
 	msg = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-	if (!msg) {
-		ipa_err("msg allocation failed");
+	if (!msg)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	if (mcc_mode) {
 		QDF_IPA_SET_META_MSG_TYPE(&meta, QDF_SWITCH_TO_MCC);
@@ -3096,6 +3157,7 @@ QDF_STATUS wlan_ipa_setup(struct wlan_ipa_priv *ipa_ctx,
 		ipa_ctx->ipa_p_rx_packets = 0;
 		ipa_ctx->resource_loading = false;
 		ipa_ctx->resource_unloading = false;
+		ipa_ctx->num_sap_connected = 0;
 		ipa_ctx->sta_connected = 0;
 		ipa_ctx->ipa_pipes_down = true;
 		qdf_atomic_set(&ipa_ctx->pipes_disabled, 1);
@@ -3637,6 +3699,7 @@ QDF_STATUS wlan_ipa_uc_ol_deinit(struct wlan_ipa_priv *ipa_ctx)
 
 	if (true == ipa_ctx->uc_loaded) {
 		status = cdp_ipa_cleanup(ipa_ctx->dp_soc,
+					 ipa_ctx->dp_pdev_id,
 					 ipa_ctx->tx_pipe_handle,
 					 ipa_ctx->rx_pipe_handle);
 		if (status)
@@ -3678,10 +3741,8 @@ static QDF_STATUS wlan_ipa_uc_send_evt(qdf_netdev_t net_dev,
 
 	QDF_IPA_MSG_META_MSG_LEN(&meta) = sizeof(qdf_ipa_wlan_msg_t);
 	msg = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-	if (!msg) {
-		ipa_err("msg allocation failed");
+	if (!msg)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	QDF_IPA_SET_META_MSG_TYPE(&meta, type);
 	qdf_str_lcopy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name,
@@ -3789,10 +3850,8 @@ void wlan_ipa_fw_rejuvenate_send_msg(struct wlan_ipa_priv *ipa_ctx)
 
 	meta.msg_len = sizeof(*msg);
 	msg = qdf_mem_malloc(meta.msg_len);
-	if (!msg) {
-		ipa_debug("msg allocation failed");
+	if (!msg)
 		return;
-	}
 
 	QDF_IPA_SET_META_MSG_TYPE(&meta, QDF_FWR_SSR_BEFORE_SHUTDOWN);
 	ipa_debug("ipa_send_msg(Evt:%d)",

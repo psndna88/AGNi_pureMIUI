@@ -29,6 +29,9 @@
 #include <sir_api.h>
 #include "wlan_cm_roam_public_struct.h"
 
+#define OWE_TRANSITION_OUI_TYPE "\x50\x6f\x9a\x1c"
+#define OWE_TRANSITION_OUI_SIZE 4
+
 #define CFG_VALID_CHANNEL_LIST_LEN              100
 
 #define CFG_PMKID_MODES_OKC                        (0x1)
@@ -1009,8 +1012,6 @@ struct mlme_tgt_caps {
  * @disable_high_ht_mcs_2x2: disable high mcs for 2x2 info
  * @supported_11b: supported 11B rates
  * @supported_11a: supported 11A rates
- * @opr_rate_set: operational rates set
- * @ext_opr_rate_set: extended operational rates set
  * @supported_mcs_set: supported MCS set
  * @basic_mcs_set: basic MCS set
  * @current_mcs_set: current MCS set
@@ -1024,8 +1025,6 @@ struct wlan_mlme_rates {
 	uint8_t disable_high_ht_mcs_2x2;
 	struct mlme_cfg_str supported_11b;
 	struct mlme_cfg_str supported_11a;
-	struct mlme_cfg_str opr_rate_set;
-	struct mlme_cfg_str ext_opr_rate_set;
 	struct mlme_cfg_str supported_mcs_set;
 	struct mlme_cfg_str basic_mcs_set;
 	struct mlme_cfg_str current_mcs_set;
@@ -1724,6 +1723,7 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t roam_preauth_retry_count;
 	uint32_t roam_preauth_no_ack_timeout;
 	uint8_t roam_rssi_diff;
+	uint8_t bg_rssi_threshold;
 	bool roam_scan_offload_enabled;
 	uint32_t neighbor_scan_timer_period;
 	uint32_t neighbor_scan_min_timer_period;
@@ -1736,7 +1736,6 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t empty_scan_refresh_period;
 	uint8_t roam_bmiss_first_bcnt;
 	uint8_t roam_bmiss_final_bcnt;
-	uint32_t roam_beacon_rssi_weight;
 	enum roaming_dfs_channel_type roaming_dfs_channel;
 	uint32_t roam_scan_hi_rssi_maxcount;
 	uint32_t roam_scan_hi_rssi_delta;
@@ -1938,6 +1937,7 @@ struct wlan_mlme_wmm_params {
  * @oce_wan_weightage: OCE WAN metrics weightage
  * @oce_ap_tx_pwr_weightage: weightage based on ap tx power
  * @oce_subnet_id_weightage: weightage based on subnet id
+ * @sae_pk_ap_weightage:SAE-PK AP weightage
  */
 struct  wlan_mlme_weight_config {
 	uint8_t rssi_weightage;
@@ -1953,6 +1953,7 @@ struct  wlan_mlme_weight_config {
 	uint8_t oce_wan_weightage;
 	uint8_t oce_ap_tx_pwr_weightage;
 	uint8_t oce_subnet_id_weightage;
+	uint8_t sae_pk_ap_weightage;
 };
 
 /**
@@ -2211,11 +2212,13 @@ struct wlan_mlme_btm {
  * @latency_enable: Flag to check if latency is enabled
  * @latency_level: WLM latency level
  * @latency_flags: WLM latency flags setting
+ * @latency_host_flags: WLM latency host flags setting
  */
 struct wlan_mlme_fe_wlm {
 	bool latency_enable;
 	uint8_t latency_level;
 	uint32_t latency_flags[MLME_NUM_WLM_LATENCY_LEVEL];
+	uint32_t latency_host_flags[MLME_NUM_WLM_LATENCY_LEVEL];
 };
 
 /**

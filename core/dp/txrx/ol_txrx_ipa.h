@@ -210,6 +210,17 @@ QDF_STATUS ol_txrx_ipa_enable_autonomy(struct cdp_soc_t *soc_hdl,
 QDF_STATUS ol_txrx_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl,
 					uint8_t pdev_id);
 
+/**
+ * ol_txrx_ipa_tx_buf_smmu_mapping() Create SMMU mappings for IPA
+ * allocated TX buffers
+ * @soc_hdl - handle to the soc
+ * @pdev_id - pdev id number, to get the handle
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS ol_txrx_ipa_tx_buf_smmu_mapping(
+	struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
+
 #ifdef CONFIG_IPA_WDI_UNIFIED_API
 /**
  * ol_txrx_ipa_setup() - Setup and connect IPA pipes
@@ -261,8 +272,9 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			     bool is_rm_enabled, uint32_t *tx_pipe_handle,
 			     uint32_t *rx_pipe_handle);
 #endif /* CONFIG_IPA_WDI_UNIFIED_API */
-QDF_STATUS ol_txrx_ipa_cleanup(uint32_t tx_pipe_handle,
-		uint32_t rx_pipe_handle);
+QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			       uint32_t tx_pipe_handle,
+			       uint32_t rx_pipe_handle);
 QDF_STATUS ol_txrx_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 		qdf_ipa_client_type_t prod_client,
 		qdf_ipa_client_type_t cons_client,

@@ -21,10 +21,14 @@
 #include "wlan_objmgr_pdev_obj.h"
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_policy_mgr_api.h"
+#include "wlan_policy_mgr_i.h"
 #include "wlan_if_mgr_roam.h"
+#include "wlan_if_mgr_public_struct.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_if_mgr_main.h"
 #include "wlan_p2p_ucfg_api.h"
+#include "cds_api.h"
+#include "sme_api.h"
 
 static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 					  void *object, void *arg)
@@ -39,8 +43,14 @@ static void if_mgr_enable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 	if (curr_vdev_id != vdev_id &&
 	    vdev->vdev_mlme.vdev_opmode == QDF_STA_MODE &&
 	    vdev->vdev_mlme.mlme_state == WLAN_VDEV_S_UP) {
-		wlan_cm_enable_rso(pdev, vdev_id, roam_arg->requestor,
-				   REASON_DRIVER_ENABLED);
+		/* IFMGR Verification: Temporary call to sme_start_roaming api,
+		 * will be replaced by converged roaming api
+		 * once roaming testing is complete.
+		 */
+		ifmgr_debug("Roaming started on vdev_id %d", vdev_id);
+		sme_start_roaming(cds_get_context(QDF_MODULE_ID_SME),
+				  vdev_id, REASON_DRIVER_DISABLED,
+				  roam_arg->requestor);
 	}
 }
 
@@ -78,8 +88,14 @@ static void if_mgr_disable_roaming_on_vdev(struct wlan_objmgr_pdev *pdev,
 	if (curr_vdev_id != vdev_id &&
 	    wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE &&
 	    vdev->vdev_mlme.mlme_state == WLAN_VDEV_S_UP) {
-		wlan_cm_disable_rso(pdev, vdev_id, roam_arg->requestor,
-				    REASON_DRIVER_DISABLED);
+		/* IFMGR Verification: Temporary call to sme_stop_roaming api,
+		 * will be replaced by converged roaming api
+		 * once roaming testing is complete.
+		 */
+		ifmgr_debug("Roaming stopped on vdev_id %d", vdev_id);
+		sme_stop_roaming(cds_get_context(QDF_MODULE_ID_SME),
+				 vdev_id, REASON_DRIVER_DISABLED,
+				 roam_arg->requestor);
 	}
 }
 
@@ -119,9 +135,15 @@ if_mgr_enable_roaming_on_connected_sta(struct wlan_objmgr_vdev *vdev,
 
 	if (policy_mgr_is_sta_active_connection_exists(psoc) &&
 	    wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) {
-		wlan_cm_enable_roaming_on_connected_sta(pdev, vdev_id);
-		policy_mgr_clear_and_set_pcl_for_connected_vdev(psoc, vdev_id,
-								true);
+		/* IFMGR Verification: Temporary call to
+		 * sme_enable_roaming_on_connected_sta api,
+		 * will be replaced by converged roaming api
+		 * once roaming testing is complete.
+		 */
+		ifmgr_debug("Enable roaming on connected sta for vdev_id %d", vdev_id);
+		sme_enable_roaming_on_connected_sta(cds_get_context(QDF_MODULE_ID_SME),
+						    vdev_id);
+		policy_mgr_set_pcl_for_connected_vdev(psoc, vdev_id, true);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -163,4 +185,98 @@ QDF_STATUS if_mgr_enable_roaming_after_p2p_disconnect(
 	}
 
 	return status;
+}
+
+static void if_mgr_get_vdev_id_from_bssid(struct wlan_objmgr_pdev *pdev,
+					  void *object, void *arg)
+{
+	struct bssid_search_arg *bssid_arg = arg;
+	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)object;
+	struct wlan_objmgr_peer *peer;
+
+	if (!(wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE ||
+	      wlan_vdev_mlme_get_opmode(vdev) == QDF_P2P_CLIENT_MODE))
+		return;
+
+	/* Need to check the connection manager state when that becomes
+	 * available
+	 */
+	if (wlan_vdev_mlme_get_state(vdev) != WLAN_VDEV_S_UP)
+		return;
+
+	peer = wlan_objmgr_vdev_try_get_bsspeer(vdev, WLAN_IF_MGR_ID);
+	if (!peer)
+		return;
+
+	if (WLAN_ADDR_EQ(bssid_arg->peer_addr.bytes,
+			 wlan_peer_get_macaddr(peer)) == QDF_STATUS_SUCCESS)
+		bssid_arg->vdev_id = wlan_vdev_get_id(vdev);
+
+	wlan_objmgr_peer_release_ref(peer, WLAN_IF_MGR_ID);
+}
+
+QDF_STATUS if_mgr_validate_candidate(struct wlan_objmgr_vdev *vdev,
+				     struct if_mgr_event_data *event_data)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_objmgr_pdev *pdev;
+	enum QDF_OPMODE op_mode;
+	enum policy_mgr_con_mode mode;
+	struct bssid_search_arg bssid_arg;
+	uint32_t chan_freq = event_data->validate_bss_info.chan_freq;
+
+	op_mode = wlan_vdev_mlme_get_opmode(vdev);
+
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc)
+		return QDF_STATUS_E_FAILURE;
+
+	/*
+	 * Ignore the BSS if any other vdev is already connected to it.
+	 */
+	qdf_copy_macaddr(&bssid_arg.peer_addr,
+			 &event_data->validate_bss_info.peer_addr);
+	bssid_arg.vdev_id = WLAN_INVALID_VDEV_ID;
+	wlan_objmgr_pdev_iterate_obj_list(pdev, WLAN_VDEV_OP,
+					  if_mgr_get_vdev_id_from_bssid,
+					  &bssid_arg, 0,
+					  WLAN_IF_MGR_ID);
+
+	if (bssid_arg.vdev_id != WLAN_INVALID_VDEV_ID) {
+		ifmgr_info("vdev_id %d already connected to "QDF_MAC_ADDR_FMT". select next bss for vdev_id %d",
+			   bssid_arg.vdev_id,
+			   QDF_MAC_ADDR_REF(bssid_arg.peer_addr.bytes),
+			   wlan_vdev_get_id(vdev));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/*
+	 * If concurrency enabled take the concurrent connected channel first.
+	 * Valid multichannel concurrent sessions exempted
+	 */
+	mode = policy_mgr_convert_device_mode_to_qdf_type(op_mode);
+	/* If concurrency is not allowed select next bss */
+	if (!policy_mgr_is_concurrency_allowed(psoc, mode, chan_freq,
+					       HW_MODE_20_MHZ)) {
+		ifmgr_info("Concurrency not allowed for this channel freq %d bssid "QDF_MAC_ADDR_FMT", selecting next",
+			   chan_freq, QDF_MAC_ADDR_REF(bssid_arg.peer_addr.bytes));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/*
+	 * check if channel is allowed for current hw mode, if not fetch
+	 * next BSS.
+	 */
+	if (!policy_mgr_is_hwmode_set_for_given_chnl(psoc, chan_freq)) {
+		ifmgr_info("HW mode isn't properly set, freq %d BSSID "QDF_MAC_ADDR_FMT,
+			   chan_freq,
+			   QDF_MAC_ADDR_REF(bssid_arg.peer_addr.bytes));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return QDF_STATUS_SUCCESS;
 }

@@ -135,10 +135,9 @@ static QDF_STATUS tdls_pe_add_peer(struct tdls_add_peer_request *req)
 	QDF_STATUS status;
 
 	addstareq = qdf_mem_malloc(sizeof(*addstareq));
-	if (!addstareq) {
-		tdls_err("allocate failed");
+	if (!addstareq)
 		return QDF_STATUS_E_NOMEM;
-	}
+
 	vdev = req->vdev;
 	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev);
 	if (!soc_obj) {
@@ -198,10 +197,9 @@ QDF_STATUS tdls_pe_del_peer(struct tdls_del_peer_request *req)
 	QDF_STATUS status;
 
 	delstareq = qdf_mem_malloc(sizeof(*delstareq));
-	if (!delstareq) {
-		tdls_err("allocate failed");
+	if (!delstareq)
 		return QDF_STATUS_E_NOMEM;
-	}
+
 	vdev = req->vdev;
 	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev);
 	if (!soc_obj) {
@@ -262,10 +260,9 @@ static QDF_STATUS tdls_pe_update_peer(struct tdls_update_peer_request *req)
 	QDF_STATUS status;
 
 	addstareq = qdf_mem_malloc(sizeof(*addstareq));
-	if (!addstareq) {
-		tdls_err("allocate failed");
+	if (!addstareq)
 		return QDF_STATUS_E_NOMEM;
-	}
+
 	vdev = req->vdev;
 	soc_obj = wlan_vdev_get_tdls_soc_obj(vdev);
 	if (!soc_obj) {
@@ -709,10 +706,16 @@ int tdls_validate_mgmt_request(struct tdls_action_frame_request *tdls_mgmt_req)
 			return -EAGAIN;
 		}
 	}
-
+	/*
+	 * In case another tdls request comes while tdls setup is already
+	 * ongoing with one peer. Reject only when status code is 0. If status
+	 * code is non-zero, it means supplicant already rejected it and
+	 * the same should be notified to peer.
+	 */
 	if (TDLS_IS_SETUP_ACTION(tdls_validate->action_code)) {
-		if (tdls_is_progress(tdls_vdev,
-			tdls_validate->peer_mac, true)) {
+		if (tdls_is_progress(tdls_vdev, tdls_validate->peer_mac,
+				     true) &&
+				     tdls_validate->status_code == 0) {
 			tdls_err("setup is ongoing. action %d declined for "
 				 QDF_MAC_ADDR_FMT,
 				 tdls_validate->action_code,
@@ -1624,7 +1627,6 @@ QDF_STATUS tdls_process_enable_link(struct tdls_oper_request *req)
 
 	peer_update_param = qdf_mem_malloc(sizeof(*peer_update_param));
 	if (!peer_update_param) {
-		tdls_err("memory allocation failed");
 		status = QDF_STATUS_E_NOMEM;
 		goto error;
 	}
@@ -1715,10 +1717,8 @@ static QDF_STATUS tdls_config_force_peer(
 	}
 
 	peer_update_param = qdf_mem_malloc(sizeof(*peer_update_param));
-	if (!peer_update_param) {
-		tdls_err("memory allocation failed");
+	if (!peer_update_param)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	peer = tdls_get_peer(vdev_obj, macaddr);
 	if (!peer) {
@@ -1898,7 +1898,6 @@ QDF_STATUS tdls_process_remove_force_peer(struct tdls_oper_request *req)
 	tdls_set_callback(peer, NULL);
 	peer_update_param = qdf_mem_malloc(sizeof(*peer_update_param));
 	if (!peer_update_param) {
-		tdls_err("memory allocation failed");
 		status = QDF_STATUS_E_NOMEM;
 		goto error;
 	}

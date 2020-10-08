@@ -1303,6 +1303,14 @@ QDF_STATUS
 ucfg_mlme_is_roam_prefer_5ghz(struct wlan_objmgr_psoc *psoc, bool *val);
 
 /**
+ * ucfg_mlme_is_roam_intra_band() - Get the preference to roam within band
+ * @psoc: pointer to psoc object
+ *
+ * Return: True if vdev should roam within band, false otherwise
+ */
+bool ucfg_mlme_is_roam_intra_band(struct wlan_objmgr_psoc *psoc);
+
+/**
  * ucfg_mlme_set_roam_intra_band() - Set roam intra modes
  * @psoc: pointer to psoc object
  * @val:  roam intra modes or not
@@ -2715,26 +2723,32 @@ ucfg_mlme_set_11d_enabled(struct wlan_objmgr_psoc *psoc, bool value)
 }
 
 /**
- * ucfg_mlme_get_opr_rate_set() - Get operational rate set
- * @psoc: pointer to psoc object
+ * ucfg_mlme_get_opr_rate() - Get operational rate set
+ * @psoc: pointer to vdev object
  * @buf: buffer to get rates set
  * @len: length of the buffer
  * Return: QDF Status
  */
-QDF_STATUS
-ucfg_mlme_get_opr_rate_set(struct wlan_objmgr_psoc *psoc, uint8_t *buf,
-			   qdf_size_t *len);
+static inline QDF_STATUS
+ucfg_mlme_get_opr_rate(struct wlan_objmgr_vdev *vdev, uint8_t *buf,
+		       qdf_size_t *len)
+{
+	return mlme_get_opr_rate(vdev, buf, len);
+}
 
 /**
- * ucfg_mlme_get_ext_opr_rate_set() - Get operational rate set
- * @psoc: pointer to psoc object
+ * ucfg_mlme_get_ext_opr_rate() - Get extended operational rate set
+ * @psoc: pointer to vdev object
  * @buf: buffer to get rates set
  * @len: length of the buffer
  * Return: QDF Status
  */
-QDF_STATUS
-ucfg_mlme_get_ext_opr_rate_set(struct wlan_objmgr_psoc *psoc, uint8_t *buf,
-			       qdf_size_t *len);
+static inline QDF_STATUS
+ucfg_mlme_get_ext_opr_rate(struct wlan_objmgr_vdev *vdev, uint8_t *buf,
+			   qdf_size_t *len)
+{
+	return mlme_get_ext_opr_rate(vdev, buf, len);
+}
 
 /**
  * ucfg_mlme_get_supported_mcs_set() - Get Supported MCS set
@@ -3602,6 +3616,29 @@ QDF_STATUS ucfg_wlan_mlme_get_rrm_enabled(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS
 ucfg_mlme_get_latency_enable(struct wlan_objmgr_psoc *psoc, bool *value);
+
+/**
+ * ucfg_mlme_get_latency_level() - Get the latency level
+ * @psoc: pointer to psoc object
+ * @value: Value that needs to be get from the caller
+ *         latency values are defined in WMI_WLM_LATENCY_LEVEL
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_latency_level(struct wlan_objmgr_psoc *psoc, uint8_t *value);
+
+/**
+ * ucfg_mlme_get_latency_host_flags() - Get host flags for latency level
+ * @psoc: pointer to psoc object
+ * @latency_level: latency level
+ * @value: Value that needs to be get from the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_latency_host_flags(struct wlan_objmgr_psoc *psoc,
+				 uint8_t latency_level, uint32_t *value);
 
 /**
  * ucfg_mlme_get_dtim_selection_diversity() - get dtim selection diversity

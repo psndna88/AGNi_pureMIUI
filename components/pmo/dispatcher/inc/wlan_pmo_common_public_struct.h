@@ -305,6 +305,8 @@ enum active_apf_mode {
  * @active_mc_bc_apf_mode: Setting that determines how APF is applied in
  *	active mode for MC/BC packets
  * @ito_repeat_count: Indicates ito repeated count
+ * @is_mod_dtim_on_sys_suspend_enabled: true when mod dtim is enabled for
+ * system suspend wow else false
  */
 struct pmo_psoc_cfg {
 	bool ptrn_match_enable_all_vdev;
@@ -333,6 +335,7 @@ struct pmo_psoc_cfg {
 	uint8_t sta_max_li_mod_dtim;
 	enum pmo_wow_enable_type wow_enable;
 	enum powersave_mode power_save_mode;
+	enum powersave_mode default_power_save_mode;
 #ifdef FEATURE_RUNTIME_PM
 	uint32_t runtime_pm_delay;
 #endif
@@ -367,6 +370,7 @@ struct pmo_psoc_cfg {
 	enum active_apf_mode active_uc_apf_mode;
 	enum active_apf_mode active_mc_bc_apf_mode;
 	uint8_t ito_repeat_count;
+	bool is_mod_dtim_on_sys_suspend_enabled;
 };
 
 /**

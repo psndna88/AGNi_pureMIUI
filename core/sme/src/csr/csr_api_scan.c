@@ -616,11 +616,7 @@ static void csr_diag_reset_country_information(struct mac_context *mac)
 				mac->scan.defaultPowerTable[Index].tx_power;
 		}
 	}
-	if (!mac->mlme_cfg->gen.enabled_11d)
-		p11dLog->supportMultipleDomain = WLAN_80211D_DISABLED;
-	else
-		p11dLog->supportMultipleDomain =
-			WLAN_80211D_SUPPORT_MULTI_DOMAIN;
+
 	WLAN_HOST_DIAG_LOG_REPORT(p11dLog);
 }
 #endif /* FEATURE_WLAN_DIAG_SUPPORT_CSR */
@@ -2599,10 +2595,8 @@ void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 		return;
 
 	filter = qdf_mem_malloc(sizeof(*filter));
-	if (!filter) {
-		sme_err("filter is NULL");
+	if (!filter)
 		return;
-	}
 
 	status = csr_fill_filter_from_vdev_crypto(mac_ctx, filter, sessionId);
 	if (QDF_IS_STATUS_ERROR(status)) {

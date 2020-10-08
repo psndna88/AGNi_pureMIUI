@@ -369,10 +369,8 @@ static QDF_STATUS oem_process_data_req_msg(int oem_data_len, char *oem_data)
 	qdf_mem_zero(&oem_data_req, sizeof(oem_data_req));
 
 	oem_data_req.data = qdf_mem_malloc(oem_data_len);
-	if (!oem_data_req.data) {
-		hdd_err("malloc failed for data req buffer");
+	if (!oem_data_req.data)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	oem_data_req.data_len = oem_data_len;
 	qdf_mem_copy(oem_data_req.data, oem_data, oem_data_len);
@@ -978,10 +976,8 @@ static void oem_cmd_handler(const void *data, int data_len, void *ctx, int pid)
 	struct nlattr *tb[CLD80211_ATTR_MAX + 1];
 
 	ret = wlan_hdd_validate_context(p_hdd_ctx);
-	if (ret) {
-		hdd_err("hdd ctx validate fails");
+	if (ret)
 		return;
-	}
 
 	/*
 	 * audit note: it is ok to pass a NULL policy here since only
@@ -1168,10 +1164,9 @@ void hdd_oem_event_handler_cb(const struct oem_data *oem_event_data,
 		oem_data = osif_request_priv(request);
 		oem_data->data_len = oem_event_data->data_len;
 		oem_data->data = qdf_mem_malloc(oem_data->data_len);
-		if (!oem_data->data) {
-			hdd_err("Memory allocation failure");
+		if (!oem_data->data)
 			return;
-		}
+
 		qdf_mem_copy(oem_data->data, oem_event_data->data,
 			     oem_data->data_len);
 		oem_data->vdev_id = hdd_adapter->vdev_id;

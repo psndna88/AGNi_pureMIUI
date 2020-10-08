@@ -505,7 +505,7 @@
  * roam_data_rssi_threshold_triggers - triggers of data rssi threshold for roam
  * @Min: 0
  * @Max: 0xffff
- * @Default: 0
+ * @Default: 0x3
  *
  * If the DUT is connected to an AP with weak signal, during latest
  * rx_data_inactivity_time, if there is no activity or avg of data_rssi is
@@ -1252,6 +1252,34 @@
 
 /*
  * <ini>
+ * bg_rssi_threshold - To set RSSI Threshold for BG scan roaming
+ * @Min: 0
+ * @Max: 100
+ * @Default: 5
+ *
+ * This INI is used to set the value of rssi threshold to trigger roaming
+ * after background scan. To trigger roam after bg scan, value of rssi of
+ * candidate AP should be higher by this threshold than the rssi of the
+ * currrently associated AP.
+ *
+ * Related: RoamRssiDiff
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_LFR_ROAM_BG_RSSI_TH CFG_INI_UINT( \
+	"bg_rssi_threshold", \
+	0, \
+	100, \
+	5, \
+	CFG_VALUE_OR_DEFAULT, \
+	"Enable roam based on rssi after BG scan")
+
+/*
+ * <ini>
  * gWESModeEnabled - Enable WES mode
  * @Min: 0
  * @Max: 1
@@ -1637,30 +1665,6 @@
 	20, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Final beacon miss count")
-
-/*
- * <ini>
- * gRoamBeaconRssiWeight - Set beacon miss weight
- * @Min: 5
- * @Max: 16
- * @Default: 14
- *
- * This ini controls how many beacons' RSSI values will be used to calculate
- * the average value of RSSI.
- *
- * Related: None
- *
- * Usage: External
- *
- * </ini>
- */
-#define CFG_LFR_ROAM_BEACON_RSSI_WEIGHT CFG_INI_UINT( \
-	"gRoamBeaconRssiWeight", \
-	0, \
-	16, \
-	14, \
-	CFG_VALUE_OR_DEFAULT, \
-	"Beacon miss weight")
 
 /*
  * <ini>
@@ -2893,6 +2897,7 @@
 	CFG(CFG_LFR_MAWC_FEATURE_ENABLED) \
 	CFG(CFG_LFR_FAST_TRANSITION_ENABLED) \
 	CFG(CFG_LFR_ROAM_RSSI_DIFF) \
+	CFG(CFG_LFR_ROAM_BG_RSSI_TH) \
 	CFG(CFG_LFR_ENABLE_WES_MODE) \
 	CFG(CFG_LFR_ROAM_SCAN_OFFLOAD_ENABLED) \
 	CFG(CFG_LFR_NEIGHBOR_SCAN_CHANNEL_LIST) \
@@ -2907,7 +2912,6 @@
 	CFG(CFG_LFR_EMPTY_SCAN_REFRESH_PERIOD) \
 	CFG(CFG_LFR_ROAM_BMISS_FIRST_BCNT) \
 	CFG(CFG_LFR_ROAM_BMISS_FINAL_BCNT) \
-	CFG(CFG_LFR_ROAM_BEACON_RSSI_WEIGHT) \
 	CFG(CFG_LFR_ROAMING_DFS_CHANNEL) \
 	CFG(CFG_LFR_ROAM_SCAN_HI_RSSI_MAXCOUNT) \
 	CFG(CFG_LFR_ROAM_SCAN_HI_RSSI_DELTA) \

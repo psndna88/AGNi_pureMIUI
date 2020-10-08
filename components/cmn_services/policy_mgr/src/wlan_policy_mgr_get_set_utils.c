@@ -38,7 +38,7 @@
 #include "wlan_cm_roam_public_struct.h"
 #include "csr_neighbor_roam.h"
 #include "wlan_mlme_main.h"
-
+#include "wlan_mlme_vdev_mgr_interface.h"
 /* invalid channel id. */
 #define INVALID_CHANNEL_ID 0
 
@@ -668,8 +668,8 @@ QDF_STATUS policy_mgr_update_hw_mode_list(struct wlan_objmgr_psoc *psoc,
 		qdf_mem_malloc(sizeof(*pm_ctx->hw_mode.hw_mode_list) *
 		pm_ctx->num_dbs_hw_modes);
 	if (!pm_ctx->hw_mode.hw_mode_list) {
-		policy_mgr_err("Memory allocation failed for DBS");
-		return QDF_STATUS_E_FAILURE;
+		pm_ctx->num_dbs_hw_modes = 0;
+		return QDF_STATUS_E_NOMEM;
 	}
 
 	policy_mgr_debug("Updated HW mode list: Num modes:%d",
@@ -725,9 +725,10 @@ void policy_mgr_init_dbs_hw_mode(struct wlan_objmgr_psoc *psoc,
 		qdf_mem_malloc(sizeof(*pm_ctx->hw_mode.hw_mode_list) *
 		pm_ctx->num_dbs_hw_modes);
 	if (!pm_ctx->hw_mode.hw_mode_list) {
-		policy_mgr_err("Memory allocation failed for DBS");
+		pm_ctx->num_dbs_hw_modes = 0;
 		return;
 	}
+
 	qdf_mem_copy(pm_ctx->hw_mode.hw_mode_list,
 		ev_wlan_dbs_hw_mode_list,
 		(sizeof(*pm_ctx->hw_mode.hw_mode_list) *
@@ -2218,11 +2219,15 @@ static bool policy_mgr_is_sub_20_mhz_enabled(struct wlan_objmgr_psoc *psoc)
 static bool policy_mgr_check_privacy_for_new_conn(
 	struct policy_mgr_psoc_priv_obj *pm_ctx)
 {
-	if (!pm_ctx->hdd_cbacks.hdd_wapi_security_sta_exist)
-		return true;
+	struct wlan_objmgr_pdev *pdev = pm_ctx->pdev;
 
-	if (pm_ctx->hdd_cbacks.hdd_wapi_security_sta_exist() &&
-	    (policy_mgr_get_connection_count(pm_ctx->psoc) > 0))
+	if (!pdev) {
+		policy_mgr_debug("pdev is Null");
+		return true;
+	}
+
+	if (mlme_is_wapi_sta_active(pdev) &&
+	    policy_mgr_get_connection_count(pm_ctx->psoc) > 0)
 		return false;
 
 	return true;

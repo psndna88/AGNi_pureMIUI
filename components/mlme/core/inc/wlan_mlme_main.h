@@ -39,9 +39,11 @@
 /**
  * struct wlan_mlme_psoc_ext_obj -MLME ext psoc priv object
  * @cfg:     cfg items
+ * @rso_tx_ops: Roam Tx ops to send roam offload commands to firmware
  */
 struct wlan_mlme_psoc_ext_obj {
 	struct wlan_mlme_cfg cfg;
+	struct wlan_cm_roam_tx_ops rso_tx_ops;
 };
 
 /**
@@ -50,7 +52,7 @@ struct wlan_mlme_psoc_ext_obj {
  *                   originated from driver
  * @peer_discon_ies: Disconnect IEs received in deauth/disassoc frames
  *                       from peer
- * @discon_reason: Disconnect reason as per enum eSirMacReasonCodes
+ * @discon_reason: Disconnect reason as per enum wlan_reason_code
  * @from_ap: True if the disconnection is initiated from AP
  */
 struct wlan_disconnect_info {
@@ -163,6 +165,8 @@ struct wlan_mlme_roam {
  * @roam_reason_better_ap: roam due to better AP found
  * @better_ap_hb_failure_rssi: heartbeat failure AP RSSI
  * @fils_con_info: Pointer to fils connection info from csr roam profile
+ * @opr_rate_set: operational rates set
+ * @ext_opr_rate_set: extended operational rates set
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -188,10 +192,21 @@ struct mlme_legacy_priv {
 #ifdef WLAN_FEATURE_FILS_SK
 	struct wlan_fils_connection_info *fils_con_info;
 #endif
+	struct mlme_cfg_str opr_rate_set;
+	struct mlme_cfg_str ext_opr_rate_set;
 };
 
+
 /**
- * wma_get_peer_mic_len() - get mic hdr len and mic length for peer
+ * mlme_init_rate_config() - initialize rate configuration of vdev
+ * @vdev_mlme: pointer to vdev mlme object
+ *
+ * Return: Success or Failure status
+ */
+QDF_STATUS mlme_init_rate_config(struct vdev_mlme_obj *vdev_mlme);
+
+/**
+ * mlme_get_peer_mic_len() - get mic hdr len and mic length for peer
  * @psoc: psoc
  * @pdev_id: pdev id for the peer
  * @peer_mac: peer mac

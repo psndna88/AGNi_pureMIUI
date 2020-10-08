@@ -280,6 +280,63 @@ QDF_STATUS ol_txrx_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl,
 	return QDF_STATUS_SUCCESS;
 }
 
+static QDF_STATUS __ol_txrx_ipa_tx_buf_smmu_mapping(
+	struct ol_txrx_soc_t  *soc,
+	struct ol_txrx_pdev_t *pdev,
+	bool create)
+{
+	uint32_t index;
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct htt_pdev_t *htt_pdev = pdev->htt_pdev;
+	uint32_t tx_buffer_cnt = htt_pdev->ipa_uc_tx_rsc.alloc_tx_buf_cnt;
+	qdf_mem_info_t *mem_map_table = NULL, *mem_info = NULL;
+
+	if (qdf_mem_smmu_s1_enabled(htt_pdev->osdev)) {
+		mem_map_table = qdf_mem_map_table_alloc(tx_buffer_cnt);
+		if (!mem_map_table) {
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				  "Failed to allocate memory");
+			return QDF_STATUS_E_FAILURE;
+		}
+		mem_info = mem_map_table;
+	}
+
+	for (index = 0; index < tx_buffer_cnt; index++) {
+		*mem_info = htt_pdev->ipa_uc_tx_rsc.tx_buf_pool_strg[
+						index]->mem_info;
+		if (!mem_info)
+			continue;
+		ret = cds_smmu_map_unmap(true, 1, mem_info);
+		mem_info++;
+	}
+	if (qdf_mem_smmu_s1_enabled(htt_pdev->osdev))
+		qdf_mem_free(mem_map_table);
+
+	return ret;
+}
+
+QDF_STATUS ol_txrx_ipa_tx_buf_smmu_mapping(
+	struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+	QDF_STATUS ret;
+	struct ol_txrx_soc_t *soc = cdp_soc_t_to_ol_txrx_soc_t(soc_hdl);
+	ol_txrx_pdev_handle pdev = ol_txrx_get_pdev_from_pdev_id(soc, pdev_id);
+
+	if (!pdev) {
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			  "invalid instance");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!qdf_mem_smmu_s1_enabled(pdev->htt_pdev->osdev)) {
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
+			  "SMMU S1 disabled");
+		return QDF_STATUS_SUCCESS;
+	}
+	ret = __ol_txrx_ipa_tx_buf_smmu_mapping(soc, pdev, true);
+	return ret;
+}
+
 #ifdef CONFIG_IPA_WDI_UNIFIED_API
 
 #ifndef QCA_LL_TX_FLOW_CONTROL_V2
@@ -602,10 +659,8 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	}
 
 	pipe_in = qdf_mem_malloc(sizeof(*pipe_in));
-	if (!pipe_in) {
-		ol_txrx_err("pipe_in allocation failed");
+	if (!pipe_in)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	ipa_res = &pdev->ipa_resource;
 	qdf_mem_zero(pipe_in, sizeof(*pipe_in));
@@ -706,22 +761,31 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 
 /**
  * ol_txrx_ipa_cleanup() - Disconnect IPA pipes
+ * @soc_hdl: soc handle
+ * @pdev_id: pdev id
  * @tx_pipe_handle: Tx pipe handle
  * @rx_pipe_handle: Rx pipe handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS ol_txrx_ipa_cleanup(uint32_t tx_pipe_handle, uint32_t rx_pipe_handle)
+QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			       uint32_t tx_pipe_handle,
+			       uint32_t rx_pipe_handle)
 {
 	int ret;
 	struct ol_txrx_ipa_resources *ipa_res;
 	struct ol_txrx_soc_t *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	qdf_device_t osdev = cds_get_context(QDF_MODULE_ID_QDF_DEVICE);
-	ol_txrx_pdev_handle pdev =
-		ol_txrx_get_pdev_from_pdev_id(soc, OL_TXRX_PDEV_ID);
+	ol_txrx_pdev_handle pdev;
 
-	if (!pdev || !osdev) {
+	if (!soc || !osdev) {
 		ol_txrx_err("%s invalid instance", __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pdev = ol_txrx_get_pdev_from_pdev_id(soc, OL_TXRX_PDEV_ID);
+	if (!pdev) {
+		ol_txrx_err("%s NULL pdev invalid instance", __func__);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1210,12 +1274,16 @@ QDF_STATUS ol_txrx_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 
 /**
  * ol_txrx_ipa_cleanup() - Disconnect IPA pipes
+ * @soc_hdl: soc handle
+ * @pdev_id: pdev id
  * @tx_pipe_handle: Tx pipe handle
  * @rx_pipe_handle: Rx pipe handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS ol_txrx_ipa_cleanup(uint32_t tx_pipe_handle, uint32_t rx_pipe_handle)
+QDF_STATUS ol_txrx_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			       uint32_t tx_pipe_handle,
+			       uint32_t rx_pipe_handle)
 {
 	int ret;
 

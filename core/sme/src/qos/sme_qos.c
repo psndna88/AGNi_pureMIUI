@@ -2876,7 +2876,7 @@ sme_qos_ese_save_tspec_response(struct mac_context *mac, uint8_t sessionId,
 	pAddtsRsp->rc = QDF_STATUS_SUCCESS;
 	pAddtsRsp->sessionId = sessionId;
 	pAddtsRsp->rsp.dialogToken = 0;
-	pAddtsRsp->rsp.status = eSIR_MAC_SUCCESS_STATUS;
+	pAddtsRsp->rsp.status = STATUS_SUCCESS;
 	pAddtsRsp->rsp.wmeTspecPresent = pTspec->present;
 	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
 		  "%s: Copy Tspec to local data structure ac=%d, tspecIdx=%d",
@@ -4800,7 +4800,7 @@ static QDF_STATUS sme_qos_process_handoff_assoc_req_ev(struct mac_context *mac,
 					  __func__, __LINE__);
 				break;
 			}
-
+			/* fallthrough */
 		case SME_QOS_CLOSED:
 		case SME_QOS_INIT:
 		default:
@@ -6796,8 +6796,9 @@ static QDF_STATUS sme_qos_add_ts_failure_fnp(struct mac_context *mac, tListElem
 		break;
 	case SME_QOS_REASON_MODIFY:
 		flow_info->reason = SME_QOS_REASON_REQ_SUCCESS;
+		/* fallthrough */
 	case SME_QOS_REASON_REQ_SUCCESS:
-	/* fallthrough */
+		/* fallthrough */
 	default:
 		inform_hdd = false;
 		break;

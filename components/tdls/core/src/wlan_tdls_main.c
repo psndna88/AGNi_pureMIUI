@@ -138,10 +138,8 @@ QDF_STATUS tdls_psoc_obj_create_notification(struct wlan_objmgr_psoc *psoc,
 	struct tdls_soc_priv_obj *tdls_soc_obj;
 
 	tdls_soc_obj = qdf_mem_malloc(sizeof(*tdls_soc_obj));
-	if (!tdls_soc_obj) {
-		tdls_err("Failed to allocate memory for tdls object");
+	if (!tdls_soc_obj)
 		return QDF_STATUS_E_NOMEM;
-	}
 
 	tdls_soc_obj->soc = psoc;
 
@@ -272,7 +270,6 @@ QDF_STATUS tdls_vdev_obj_create_notification(struct wlan_objmgr_vdev *vdev,
 
 	tdls_vdev_obj = qdf_mem_malloc(sizeof(*tdls_vdev_obj));
 	if (!tdls_vdev_obj) {
-		tdls_err("Failed to allocate memory for tdls vdev object");
 		status = QDF_STATUS_E_NOMEM;
 		goto err;
 	}
@@ -609,7 +606,8 @@ QDF_STATUS tdls_process_cmd(struct scheduler_msg *msg)
 		break;
 	case TDLS_CMD_SESSION_DECREMENT:
 		tdls_process_decrement_active_session(msg->bodyptr);
-	/*Fall through to take decision on connection tracker.*/
+		/* take decision on connection tracker */
+		/* fallthrough */
 	case TDLS_CMD_SESSION_INCREMENT:
 		tdls_process_policy_mgr_notification(msg->bodyptr);
 		break;
@@ -1122,12 +1120,8 @@ void tdls_send_update_to_fw(struct tdls_vdev_priv_obj *tdls_vdev_obj,
 	}
 
 	tdls_info_to_fw = qdf_mem_malloc(sizeof(struct tdls_info));
-
-	if (!tdls_info_to_fw) {
-		tdls_err("memory allocation failed for tdlsParams");
-		QDF_ASSERT(0);
+	if (!tdls_info_to_fw)
 		return;
-	}
 
 	threshold_params = &tdls_vdev_obj->threshold_config;
 
@@ -1371,10 +1365,8 @@ QDF_STATUS tdls_peers_deleted_notification(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 
 	notify = qdf_mem_malloc(sizeof(*notify));
-	if (!notify) {
-		tdls_err("memory allocation failed !!!");
+	if (!notify)
 		return QDF_STATUS_E_NULL_VALUE;
-	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
 						    vdev_id,
@@ -1422,10 +1414,8 @@ QDF_STATUS tdls_delete_all_peers_indication(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_vdev *vdev;
 
 	indication = qdf_mem_malloc(sizeof(*indication));
-	if (!indication) {
-		tdls_err("memory allocation failed !!!");
+	if (!indication)
 		return QDF_STATUS_E_NULL_VALUE;
-	}
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc,
 						    vdev_id,
@@ -1583,7 +1573,7 @@ static void tdls_set_current_mode(struct tdls_soc_priv_obj *tdls_soc,
 	if (vdev) {
 		tdls_debug("set mode in tdls vdev ");
 		tdls_vdev = wlan_vdev_get_tdls_vdev_obj(vdev);
-		if (!tdls_vdev)
+		if (tdls_vdev)
 			tdls_set_mode_in_vdev(tdls_vdev, tdls_soc,
 					      tdls_mode, source);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_NB_ID);
@@ -1596,7 +1586,7 @@ static void tdls_set_current_mode(struct tdls_soc_priv_obj *tdls_soc,
 	if (vdev) {
 		tdls_debug("set mode in tdls vdev ");
 		tdls_vdev = wlan_vdev_get_tdls_vdev_obj(vdev);
-		if (!tdls_vdev)
+		if (tdls_vdev)
 			tdls_set_mode_in_vdev(tdls_vdev, tdls_soc,
 					      tdls_mode, source);
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_TDLS_NB_ID);
@@ -1694,9 +1684,6 @@ void tdls_scan_complete_event_handler(struct wlan_objmgr_vdev *vdev,
 
 	device_mode = wlan_vdev_mlme_get_opmode(vdev);
 
-	if (device_mode != QDF_STA_MODE &&
-	    device_mode != QDF_P2P_CLIENT_MODE)
-		return;
 	tdls_soc = (struct tdls_soc_priv_obj *) arg;
 	tdls_post_scan_done_msg(tdls_soc);
 }

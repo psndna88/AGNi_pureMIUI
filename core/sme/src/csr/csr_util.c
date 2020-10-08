@@ -1911,6 +1911,11 @@ bool csr_is_phy_mode_match(struct mac_context *mac, uint32_t phyMode,
 	uint32_t bitMask, loopCount;
 	uint32_t bss_chan_freq;
 
+	if (!pProfile) {
+		sme_err("profile not found");
+		return fMatch;
+	}
+
 	if (!QDF_IS_STATUS_SUCCESS(csr_get_phy_mode_from_bss(mac, pSirBssDesc,
 					&phyModeInBssDesc, pIes)))
 		return fMatch;
@@ -1973,30 +1978,28 @@ bool csr_is_phy_mode_match(struct mac_context *mac, uint32_t phyMode,
 	cfgDot11ModeToUse = csr_get_vdev_dot11_mode(mac, pProfile->csrPersona,
 						    cfgDot11ModeToUse);
 	if (fMatch && pReturnCfgDot11Mode) {
-		if (pProfile) {
-			/*
-			 * IEEE 11n spec (8.4.3): HT STA shall
-			 * eliminate TKIP as a choice for the pairwise
-			 * cipher suite if CCMP is advertised by the AP
-			 * or if the AP included an HT capabilities
-			 * element in its Beacons and Probe Response.
-			 */
-			if ((!CSR_IS_11n_ALLOWED(
-					pProfile->negotiatedUCEncryptionType))
-					&& ((eCSR_CFG_DOT11_MODE_11N ==
-						cfgDot11ModeToUse) ||
-					(eCSR_CFG_DOT11_MODE_11AC ==
-						cfgDot11ModeToUse) ||
-					(eCSR_CFG_DOT11_MODE_11AX ==
-						cfgDot11ModeToUse))) {
-				/* We cannot do 11n here */
-				if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_chan_freq)) {
-					cfgDot11ModeToUse =
-						eCSR_CFG_DOT11_MODE_11G;
-				} else {
-					cfgDot11ModeToUse =
-						eCSR_CFG_DOT11_MODE_11A;
-				}
+		/*
+		 * IEEE 11n spec (8.4.3): HT STA shall
+		 * eliminate TKIP as a choice for the pairwise
+		 * cipher suite if CCMP is advertised by the AP
+		 * or if the AP included an HT capabilities
+		 * element in its Beacons and Probe Response.
+		 */
+		if ((!CSR_IS_11n_ALLOWED(
+				pProfile->negotiatedUCEncryptionType))
+				&& ((eCSR_CFG_DOT11_MODE_11N ==
+					cfgDot11ModeToUse) ||
+				(eCSR_CFG_DOT11_MODE_11AC ==
+					cfgDot11ModeToUse) ||
+				(eCSR_CFG_DOT11_MODE_11AX ==
+					cfgDot11ModeToUse))) {
+			/* We cannot do 11n here */
+			if (WLAN_REG_IS_24GHZ_CH_FREQ(bss_chan_freq)) {
+				cfgDot11ModeToUse =
+					eCSR_CFG_DOT11_MODE_11G;
+			} else {
+				cfgDot11ModeToUse =
+					eCSR_CFG_DOT11_MODE_11A;
 			}
 		}
 		*pReturnCfgDot11Mode = cfgDot11ModeToUse;
@@ -2846,6 +2849,7 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 	uint8_t ie_len = 0;
 	tDot11fBeaconIEs *local_ap_ie = ap_ie;
 	uint16_t rsn_cap = 0, self_rsn_cap;
+	int32_t rsn_val;
 	struct wlan_crypto_pmksa pmksa, *pmksa_peer;
 	struct csr_roam_session *session = &mac->roam.roamSession[sessionId];
 
@@ -2867,8 +2871,14 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 		return ie_len;
 	}
 
-	self_rsn_cap = (uint16_t)wlan_crypto_get_param(vdev,
-						   WLAN_CRYPTO_PARAM_RSN_CAP);
+	rsn_val = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_RSN_CAP);
+	if (rsn_val < 0) {
+		sme_err("Invalid mgmt cipher");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+		return ie_len;
+	}
+	self_rsn_cap = (uint16_t)rsn_val;
+
 	/* If AP is capable then use self capability else set PMF as 0 */
 	if (rsn_cap & WLAN_CRYPTO_RSN_CAP_MFP_ENABLED &&
 	    pProfile->MFPCapable) {

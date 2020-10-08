@@ -468,7 +468,7 @@ cm_roam_update_config_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	cm_roam_scan_bmiss_cnt(psoc, vdev_id, &update_req->beacon_miss_cnt);
 	cm_roam_fill_rssi_change_params(psoc, vdev_id,
 					&update_req->rssi_change_params);
-	if (!MLME_IS_ROAM_STATE_RSO_ENABLED(psoc, vdev_id)) {
+	if (MLME_IS_ROAM_STATE_RSO_ENABLED(psoc, vdev_id)) {
 		cm_roam_disconnect_params(psoc, vdev_id,
 					  &update_req->disconnect_params);
 		cm_roam_idle_params(psoc, vdev_id,
@@ -586,6 +586,12 @@ cm_roam_stop_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	stop_req = qdf_mem_malloc(sizeof(*stop_req));
 	if (!stop_req)
 		return QDF_STATUS_E_NOMEM;
+
+	stop_req->btm_config.vdev_id = vdev_id;
+	stop_req->disconnect_params.vdev_id = vdev_id;
+	stop_req->idle_params.vdev_id = vdev_id;
+	stop_req->roam_triggers.vdev_id = vdev_id;
+	stop_req->rssi_params.vdev_id = vdev_id;
 
 	/* do the filling as csr_post_rso_stop */
 	status = wlan_cm_roam_fill_stop_req(psoc, vdev_id, stop_req, reason);

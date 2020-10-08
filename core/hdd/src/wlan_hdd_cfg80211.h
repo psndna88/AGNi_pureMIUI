@@ -209,11 +209,6 @@ extern const struct nla_policy wlan_hdd_wisa_cmd_policy[
 #define USE_CFG80211_DEL_STA_V2
 #endif
 
-#define TWT_SETUP_WAKE_INTVL_MANTISSA_MAX       0xFFFF
-#define TWT_SETUP_WAKE_DURATION_MAX             0xFFFF
-#define TWT_SETUP_WAKE_INTVL_EXP_MAX            31
-#define TWT_WAKE_DURATION_MULTIPLICATION_FACTOR 256
-
 /**
  * enum eDFS_CAC_STATUS: CAC status
  *
@@ -585,7 +580,7 @@ int wlan_hdd_cfg80211_update_band(struct hdd_context *hdd_ctx,
  * @adapter: Pointer to adapter
  * @locally_generated: True if the disconnection is internally generated.
  *                     False if the disconnection is received from peer.
- * @reason: Disconnect reason as per @enum eSirMacReasonCodes
+ * @reason: Disconnect reason as per @enum wlan_reason_code
  * @disconnect_ies: IEs received in Deauth/Disassoc from peer
  * @disconnect_ies_len: Length of @disconnect_ies
  *
@@ -597,7 +592,7 @@ int wlan_hdd_cfg80211_update_band(struct hdd_context *hdd_ctx,
 void
 wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
 				      bool locally_generated,
-				      enum eSirMacReasonCodes reason,
+				      enum wlan_reason_code reason,
 				      uint8_t *disconnect_ies,
 				      uint16_t disconnect_ies_len);
 
@@ -677,27 +672,27 @@ uint8_t hdd_get_sap_operating_band(struct hdd_context *hdd_ctx);
 /**
  * wlan_hdd_try_disconnect() - try disconnnect from previous connection
  * @adapter: Pointer to adapter
- * @reason: Mac Disconnect reason code as per @enum eSirMacReasonCodes
+ * @reason: Mac Disconnect reason code as per @enum wlan_reason_code
  *
  * This function is used to disconnect from previous connection
  *
  * Return: 0 for success, non-zero for failure
  */
 int wlan_hdd_try_disconnect(struct hdd_adapter *adapter,
-			    enum eSirMacReasonCodes reason);
+			    enum wlan_reason_code reason);
 
 /**
  * wlan_hdd_disconnect() - hdd disconnect api
  * @adapter: Pointer to adapter
  * @reason: CSR disconnect reason code as per @enum eCsrRoamDisconnectReason
- * @mac_reason: Mac Disconnect reason code as per @enum eSirMacReasonCodes
+ * @mac_reason: Mac Disconnect reason code as per @enum wlan_reason_code
  *
  * This function is used to issue a disconnect request to SME
  *
  * Return: 0 for success, non-zero for failure
  */
 int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
-			tSirMacReasonCodes mac_reason);
+			enum wlan_reason_code mac_reason);
 
 /**
  * wlan_hdd_get_adjacent_chan(): Gets next/previous channel
@@ -802,22 +797,6 @@ QDF_STATUS wlan_hdd_send_sta_authorized_event(
 					const struct qdf_mac_addr *mac_addr);
 
 /**
- * wlan_hdd_set_wlm_mode() - Function to set pm_qos config in wlm mode
- * @hdd_ctx: HDD context
- * @latency level: latency value received
- *
- * Return: None
- */
-#if defined(CLD_PM_QOS) && defined(WLAN_FEATURE_LL_MODE)
-void wlan_hdd_set_wlm_mode(struct hdd_context *hdd_ctx, uint16_t latency_level);
-#else
-static inline
-void wlan_hdd_set_wlm_mode(struct hdd_context *hdd_ctx, uint16_t latency_level)
-{
-}
-#endif
-
-/**
  * hdd_set_dynamic_antenna_mode() - set dynamic antenna mode
  * @adapter: Pointer to network adapter
  * @num_rx_chains: number of chains to be used for receiving data
@@ -875,16 +854,4 @@ static inline void hdd_send_update_owe_info_event(struct hdd_adapter *adapter,
  */
 bool hdd_is_legacy_connection(struct hdd_adapter *adapter);
 
-/**
- * hdd_twt_get_add_dialog_values() - Get TWT add dialog parameter
- * values from QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS
- * @tb: nl attributes
- * @params: wmi twt add dialog parameters
- *
- * Handles QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX
- *
- * Return: 0 or -EINVAL.
- */
-int hdd_twt_get_add_dialog_values(struct nlattr **tb2,
-			       struct wmi_twt_add_dialog_param *params);
 #endif

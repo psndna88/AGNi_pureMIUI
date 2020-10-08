@@ -154,6 +154,12 @@ pld_pcie_smmu_map(struct device *dev,
 }
 
 static inline int
+pld_pcie_smmu_unmap(struct device *dev, uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+
+static inline int
 pld_pcie_get_fw_files_for_target(struct device *dev,
 				 struct pld_fw_files *pfw_files,
 				 u32 target_type, u32 target_version)
@@ -444,6 +450,20 @@ pld_pcie_smmu_map(struct device *dev,
 	return cnss_smmu_map(dev, paddr, iova_addr, size);
 }
 
+#ifdef CONFIG_SMMU_S1_UNMAP
+static inline int
+pld_pcie_smmu_unmap(struct device *dev, uint32_t iova_addr, size_t size)
+{
+	return cnss_smmu_unmap(dev, iova_addr, size);
+}
+#else /* !CONFIG_SMMU_S1_UNMAP */
+static inline int
+pld_pcie_smmu_unmap(struct device *dev, uint32_t iova_addr, size_t size)
+{
+	return 0;
+}
+#endif /* CONFIG_SMMU_S1_UNMAP */
+
 static inline int pld_pcie_prevent_l1(struct device *dev)
 {
 	return cnss_pci_prevent_l1(dev);
@@ -454,6 +474,7 @@ static inline void pld_pcie_allow_l1(struct device *dev)
 	cnss_pci_allow_l1(dev);
 }
 
+#ifdef PCIE_GEN_SWITCH
 /**
  * pld_pcie_set_gen_speed() - Wrapper for platform API to set PCIE gen speed
  * @dev: device
@@ -467,6 +488,12 @@ static inline int pld_pcie_set_gen_speed(struct device *dev, u8 pcie_gen_speed)
 {
 	return cnss_set_pcie_gen_speed(dev, pcie_gen_speed);
 }
+#else
+static inline int pld_pcie_set_gen_speed(struct device *dev, u8 pcie_gen_speed)
+{
+	return 0;
+}
+#endif
 
 static inline void pld_pcie_link_down(struct device *dev)
 {

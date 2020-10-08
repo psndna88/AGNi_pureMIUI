@@ -1282,10 +1282,8 @@ void hdd_send_wiphy_regd_sync_event(struct hdd_context *hdd_ctx)
 
 	regd = qdf_mem_malloc((reg_rules->num_of_reg_rules *
 				sizeof(*regd_rules) + sizeof(*regd)));
-	if (!regd) {
-		hdd_err("mem alloc failed for reg rules");
+	if (!regd)
 		return;
-	}
 
 	regd->n_reg_rules = reg_rules->num_of_reg_rules;
 	qdf_mem_copy(regd->alpha2, reg_rules->alpha2, REG_ALPHA2_LEN + 1);
@@ -1427,7 +1425,7 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 					hdd_ctx->mac_handle,
 					adapter->vdev_id,
 					eCSR_DISCONNECT_REASON_UNSPECIFIED,
-					eSIR_MAC_UNSPEC_FAILURE_REASON);
+					REASON_UNSPEC_FAILURE);
 				roam_profile->phyMode = csr_phy_mode;
 			}
 			break;

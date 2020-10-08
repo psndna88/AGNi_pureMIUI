@@ -366,6 +366,9 @@ HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dl_modes.o
 endif
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_policy_mgr.o
 HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_dp_aggregation.o
+ifeq ($(CONFIG_DP_SWLM), y)
+HDD_OBJS += $(HDD_SRC_DIR)/wlan_hdd_sysfs_swlm.o
+endif
 endif
 
 ifeq ($(CONFIG_QCACLD_FEATURE_FW_STATE), y)
@@ -762,6 +765,7 @@ QDF_OBJS := \
 	$(QDF_LINUX_OBJ_DIR)/qdf_status.o \
 	$(QDF_LINUX_OBJ_DIR)/qdf_threads.o \
 	$(QDF_LINUX_OBJ_DIR)/qdf_trace.o \
+	$(QDF_LINUX_OBJ_DIR)/qdf_nbuf_frag.o \
 	$(QDF_OBJ_DIR)/qdf_flex_mem.o \
 	$(QDF_OBJ_DIR)/qdf_parse.o \
 	$(QDF_OBJ_DIR)/qdf_platform.o \
@@ -856,12 +860,11 @@ OS_IF_OBJ += $(OS_IF_DIR)/linux/wlan_osif_request_manager.o \
 	     $(OS_IF_DIR)/linux/crypto/src/wlan_nl_to_crypto_params.o
 
 ifeq ($(CONFIG_CM_ENABLE), y)
-OS_IF_OBJ += $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_util.o \
-	     $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_connect_rsp.o \
-	     $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_disconnect_rsp.o \
-	     $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_disconnect_rsp.o \
-	     $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_req.o \
-	     $(OS_IF_DIR)/linux/mlme/src/wlan_cfg80211_cm_roam_rsp.o
+OS_IF_OBJ += $(OS_IF_DIR)/linux/mlme/src/osif_cm_util.o \
+	     $(OS_IF_DIR)/linux/mlme/src/osif_cm_connect_rsp.o \
+	     $(OS_IF_DIR)/linux/mlme/src/osif_cm_disconnect_rsp.o \
+	     $(OS_IF_DIR)/linux/mlme/src/osif_cm_req.o \
+	     $(OS_IF_DIR)/linux/mlme/src/osif_cm_roam_rsp.o
 endif
 
 CONFIG_CRYPTO_COMPONENT := y
@@ -1662,6 +1665,10 @@ TXRX3.0_OBJS := $(TXRX3.0_DIR)/dp_txrx.o \
 ifeq ($(CONFIG_RX_FISA), y)
 TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_fisa_rx.o
 TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_rx_fst.o
+endif
+
+ifeq ($(CONFIG_DP_SWLM), y)
+TXRX3.0_OBJS += $(TXRX3.0_DIR)/dp_swlm.o
 endif
 
 ifeq ($(CONFIG_LITHIUM), y)
@@ -2547,6 +2554,7 @@ cppflags-$(CONFIG_FEATURE_WLAN_LPHB) += -DFEATURE_WLAN_LPHB
 cppflags-$(CONFIG_QCA_SUPPORT_TX_THROTTLE) += -DQCA_SUPPORT_TX_THROTTLE
 cppflags-$(CONFIG_WMI_INTERFACE_EVENT_LOGGING) += -DWMI_INTERFACE_EVENT_LOGGING
 cppflags-$(CONFIG_WLAN_FEATURE_LINK_LAYER_STATS) += -DWLAN_FEATURE_LINK_LAYER_STATS
+cppflags-$(CONFIG_FEATURE_CLUB_LL_STATS_AND_GET_STATION) += -DFEATURE_CLUB_LL_STATS_AND_GET_STATION
 cppflags-$(CONFIG_WLAN_FEATURE_MIB_STATS) += -DWLAN_FEATURE_MIB_STATS
 cppflags-$(CONFIG_FEATURE_WLAN_EXTSCAN) += -DFEATURE_WLAN_EXTSCAN
 cppflags-$(CONFIG_160MHZ_SUPPORT) += -DCONFIG_160MHZ_SUPPORT
@@ -2594,7 +2602,8 @@ cppflags-$(CONFIG_WLAN_FW_OFFLOAD) += -DWLAN_FW_OFFLOAD
 cppflags-$(CONFIG_WLAN_FEATURE_ELNA) += -DWLAN_FEATURE_ELNA
 cppflags-$(CONFIG_FEATURE_COEX) += -DFEATURE_COEX
 cppflags-$(CONFIG_CM_ROAM_OFFLOAD) += -DROAM_OFFLOAD_V1
-cppflags-$(CONFIG_INTERFAC_MGR) += -DWLAN_FEATURE_INTERFACE_MGR
+cppflags-$(CONFIG_INTERFACE_MGR) += -DWLAN_FEATURE_INTERFACE_MGR
+cppflags-$(CONFIG_HOST_WAKEUP_OVER_QMI) += -DHOST_WAKEUP_OVER_QMI
 
 cppflags-$(CONFIG_PLD_IPCI_ICNSS_FLAG) += -DCONFIG_PLD_IPCI_ICNSS
 cppflags-$(CONFIG_PLD_SDIO_CNSS_FLAG) += -DCONFIG_PLD_SDIO_CNSS
@@ -2886,6 +2895,9 @@ cppflags-$(CONFIG_HL_DP_SUPPORT) += -DQCA_COMPUTE_TX_DELAY_PER_TID
 cppflags-$(CONFIG_LL_DP_SUPPORT) += -DCONFIG_LL_DP_SUPPORT
 cppflags-$(CONFIG_LL_DP_SUPPORT) += -DWLAN_FULL_REORDER_OFFLOAD
 
+# For PCIe GEN switch
+cppflags-$(CONFIG_PCIE_GEN_SWITCH) += -DPCIE_GEN_SWITCH
+
 # For OOB testing
 cppflags-$(CONFIG_WLAN_FEATURE_WOW_PULSE) += -DWLAN_FEATURE_WOW_PULSE
 
@@ -2989,6 +3001,9 @@ cppflags-$(CONFIG_IPA_OFFLOAD) += -DIPA_OFFLOAD
 
 cppflags-$(CONFIG_WDI3_IPA_OVER_GSI) += -DIPA_WDI3_GSI
 cppflags-$(CONFIG_WDI2_IPA_OVER_GSI) += -DIPA_WDI2_GSI
+
+#Enable WMI DIAG log over CE7
+cppflags-$(CONFIG_WLAN_FEATURE_WMI_DIAG_OVER_CE7) += -DWLAN_FEATURE_WMI_DIAG_OVER_CE7
 
 ifeq ($(CONFIG_ARCH_SDX20), y)
 cppflags-y += -DSYNC_IPA_READY
@@ -3595,6 +3610,8 @@ cppflags-$(CONFIG_6G_SCAN_CHAN_SORT_ALGO) += -DFEATURE_6G_SCAN_CHAN_SORT_ALGO
 
 cppflags-$(CONFIG_RX_FISA) += -DWLAN_SUPPORT_RX_FISA
 
+cppflags-$(CONFIG_DP_SWLM) += -DWLAN_DP_FEATURE_SW_LATENCY_MGR
+
 cppflags-$(CONFIG_RX_DEFRAG_DO_NOT_REINJECT) += -DRX_DEFRAG_DO_NOT_REINJECT
 
 cppflags-$(CONFIG_HANDLE_BC_EAP_TX_FRM) += -DHANDLE_BROADCAST_EAPOL_TX_FRAME
@@ -3631,6 +3648,8 @@ ifdef CONFIG_DP_RX_BUFFER_POOL_ALLOC_THRES
 ccflags-y += -DDP_RX_BUFFER_POOL_ALLOC_THRES=$(CONFIG_DP_RX_BUFFER_POOL_ALLOC_THRES)
 endif
 endif
+
+ccflags-$(CONFIG_GET_DRIVER_MODE) += -DFEATURE_GET_DRIVER_MODE
 
 KBUILD_CPPFLAGS += $(cppflags-y)
 

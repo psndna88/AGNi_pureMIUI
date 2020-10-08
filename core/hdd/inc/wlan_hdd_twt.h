@@ -39,12 +39,8 @@ struct wmi_twt_del_dialog_param;
 struct wmi_twt_pause_dialog_cmd_param;
 struct wmi_twt_resume_dialog_cmd_param;
 
-extern const struct nla_policy qca_wlan_vendor_twt_add_dialog_policy[
-		QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1];
-
 extern const struct nla_policy
-wlan_hdd_wifi_twt_config_policy[
-	QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX + 1];
+wlan_hdd_wifi_twt_config_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX + 1];
 
 #ifdef WLAN_SUPPORT_TWT
 /**
@@ -142,6 +138,34 @@ void wlan_hdd_twt_init(struct hdd_context *hdd_ctx);
  */
 void wlan_hdd_twt_deinit(struct hdd_context *hdd_ctx);
 
+/**
+ * hdd_test_config_twt_setup_session() - Process TWT setup
+ * operation in the received test config vendor command and
+ * send it to firmare
+ * @adapter: adapter pointer
+ * @tb: nl attributes
+ *
+ * Handles QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_TWT_SETUP
+ *
+ * Return: 0 for Success and negative value for failure
+ */
+int hdd_test_config_twt_setup_session(struct hdd_adapter *adapter,
+				      struct nlattr **tb);
+
+/**
+ * hdd_test_config_twt_terminate_session() - Process TWT terminate
+ * operation in the received test config vendor command and send
+ * it to firmare
+ * @adapter: adapter pointer
+ * @tb: nl attributes
+ *
+ * Handles QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_TWT_TERMINATE
+ *
+ * Return: 0 for Success and negative value for failure
+ */
+int hdd_test_config_twt_terminate_session(struct hdd_adapter *adapter,
+					  struct nlattr **tb);
+
 #define FEATURE_VENDOR_SUBCMD_WIFI_CONFIG_TWT                            \
 {                                                                        \
 	.info.vendor_id = QCA_NL80211_VENDOR_ID,                         \
@@ -176,6 +200,20 @@ static inline void wlan_hdd_twt_init(struct hdd_context *hdd_ctx)
 
 static inline void wlan_hdd_twt_deinit(struct hdd_context *hdd_ctx)
 {
+}
+
+static inline
+int hdd_test_config_twt_setup_session(struct hdd_adapter *adapter,
+				      struct nlattr **tb)
+{
+	return -EINVAL;
+}
+
+static inline
+int hdd_test_config_twt_terminate_session(struct hdd_adapter *adapter,
+					  struct nlattr **tb)
+{
+	return -EINVAL;
 }
 
 #define FEATURE_VENDOR_SUBCMD_WIFI_CONFIG_TWT

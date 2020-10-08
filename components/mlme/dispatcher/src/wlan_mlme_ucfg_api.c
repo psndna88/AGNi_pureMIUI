@@ -1013,6 +1013,17 @@ ucfg_mlme_is_roam_prefer_5ghz(struct wlan_objmgr_psoc *psoc, bool *val)
 	return QDF_STATUS_SUCCESS;
 }
 
+bool ucfg_mlme_is_roam_intra_band(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj)
+		return true;
+
+	return mlme_obj->cfg.lfr.roam_intra_band;
+}
+
 QDF_STATUS
 ucfg_mlme_set_roam_intra_band(struct wlan_objmgr_psoc *psoc, bool val)
 {
@@ -1075,34 +1086,6 @@ ucfg_mlme_is_ese_enabled(struct wlan_objmgr_psoc *psoc, bool *val)
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* FEATURE_WLAN_ESE */
-
-QDF_STATUS
-ucfg_mlme_get_opr_rate_set(struct wlan_objmgr_psoc *psoc,
-			   uint8_t *buf, qdf_size_t *len)
-{
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj)
-		return QDF_STATUS_E_INVAL;
-
-	return wlan_mlme_get_cfg_str(buf, &mlme_obj->cfg.rates.opr_rate_set,
-				     len);
-}
-
-QDF_STATUS
-ucfg_mlme_get_ext_opr_rate_set(struct wlan_objmgr_psoc *psoc,
-			       uint8_t *buf, qdf_size_t *len)
-{
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj)
-		return QDF_STATUS_E_INVAL;
-
-	return wlan_mlme_get_cfg_str(buf, &mlme_obj->cfg.rates.ext_opr_rate_set,
-				     len);
-}
 
 QDF_STATUS
 ucfg_mlme_get_supported_mcs_set(struct wlan_objmgr_psoc *psoc,
@@ -1383,6 +1366,37 @@ ucfg_mlme_get_latency_enable(struct wlan_objmgr_psoc *psoc, bool *value)
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+ucfg_mlme_get_latency_level(struct wlan_objmgr_psoc *psoc, uint8_t *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("mlme obj null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*value = mlme_obj->cfg.wlm_config.latency_level;
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+ucfg_mlme_get_latency_host_flags(struct wlan_objmgr_psoc *psoc,
+				 uint8_t latency_level, uint32_t *value)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+	if (!mlme_obj) {
+		mlme_legacy_err("mlme obj null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*value = mlme_obj->cfg.wlm_config.latency_host_flags[latency_level];
+	return QDF_STATUS_SUCCESS;
+}
+
 #ifdef MWS_COEX
 QDF_STATUS
 ucfg_mlme_get_mws_coex_4g_quick_tdm(struct wlan_objmgr_psoc *psoc,
@@ -1613,48 +1627,6 @@ ucfg_mlme_get_nol_across_regdmn(struct wlan_objmgr_psoc *psoc, bool *value)
 	}
 
 	*value = mlme_obj->cfg.reg.retain_nol_across_regdmn_update;
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS
-ucfg_mlme_get_valid_channel_freq_list(struct wlan_objmgr_psoc *psoc,
-				      uint32_t *channel_list,
-				      uint32_t *channel_list_num)
-{
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-	qdf_size_t valid_channel_list_num = 0;
-	uint8_t tmp_channel_list[CFG_VALID_CHANNEL_LIST_LEN];
-	uint8_t i;
-	struct wlan_objmgr_pdev *pdev = NULL;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj) {
-		qdf_uint8_array_parse(cfg_default(CFG_VALID_CHANNEL_LIST),
-				      tmp_channel_list,
-				      CFG_VALID_CHANNEL_LIST_LEN,
-				      &valid_channel_list_num);
-		*channel_list_num = (uint8_t)valid_channel_list_num;
-		mlme_legacy_err("Failed to get MLME Obj");
-		pdev = wlan_objmgr_get_pdev_by_id(psoc, 0, WLAN_MLME_NB_ID);
-		if (!pdev) {
-			mlme_legacy_err("null pdev");
-			return QDF_STATUS_E_INVAL;
-		}
-
-		for (i = 0; i < valid_channel_list_num; i++) {
-			channel_list[i] =
-				wlan_reg_chan_to_freq(pdev, tmp_channel_list[i]);
-		}
-
-		wlan_objmgr_pdev_release_ref(pdev, WLAN_MLME_NB_ID);
-
-		return QDF_STATUS_E_INVAL;
-	}
-
-	*channel_list_num = (uint32_t)mlme_obj->cfg.reg.valid_channel_list_num;
-	for (i = 0; i < *channel_list_num; i++)
-		channel_list[i] = mlme_obj->cfg.reg.valid_channel_freq_list[i];
-
 	return QDF_STATUS_SUCCESS;
 }
 

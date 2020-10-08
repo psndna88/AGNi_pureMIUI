@@ -44,7 +44,6 @@ static const char *lfr_get_config_item_string(uint8_t reason)
 	CASE_RETURN_STRING(REASON_ROAM_RESCAN_RSSI_DIFF_CHANGED);
 	CASE_RETURN_STRING(REASON_ROAM_BMISS_FIRST_BCNT_CHANGED);
 	CASE_RETURN_STRING(REASON_ROAM_BMISS_FINAL_BCNT_CHANGED);
-	CASE_RETURN_STRING(REASON_ROAM_BEACON_RSSI_WEIGHT_CHANGED);
 	default:
 		return "unknown";
 	}
@@ -212,15 +211,6 @@ QDF_STATUS csr_neighbor_roam_update_config(struct mac_context *mac_ctx,
 			old_value = cfg_params->nRoamBmissFinalBcnt;
 			cfg_params->nRoamBmissFinalBcnt = value;
 			pNeighborRoamInfo->currentRoamBmissFinalBcnt = value;
-			break;
-		case REASON_ROAM_BEACON_RSSI_WEIGHT_CHANGED:
-			old_value = cfg_params->nRoamBeaconRssiWeight;
-			cfg_params->nRoamBeaconRssiWeight = value;
-			pNeighborRoamInfo->currentRoamBeaconRssiWeight = value;
-			src_cfg.uint_value = value;
-			wlan_cm_roam_cfg_set_value(mac_ctx->psoc, session_id,
-						   BEACON_RSSI_WEIGHT,
-						   &src_cfg);
 			break;
 		default:
 			sme_debug("Unknown update cfg reason");
@@ -745,6 +735,7 @@ QDF_STATUS csr_neighbor_roam_indicate_disconnect(struct mac_context *mac,
 		/* Stop pre-auth to reassoc interval timer */
 		qdf_mc_timer_stop(&pSession->ftSmeContext.
 				preAuthReassocIntvlTimer);
+		/* fallthrough */
 	case eCSR_NEIGHBOR_ROAM_STATE_PREAUTHENTICATING:
 		csr_neighbor_roam_state_transition(mac,
 				eCSR_NEIGHBOR_ROAM_STATE_INIT, sessionId);
@@ -799,6 +790,7 @@ static void csr_neighbor_roam_info_ctx_init(struct mac_context *mac,
 {
 	tpCsrNeighborRoamControlInfo ngbr_roam_info =
 		&mac->roam.neighborRoamInfo[session_id];
+	struct cm_roam_values_copy src_cfg;
 	struct csr_roam_session *session = &mac->roam.roamSession[session_id];
 	int init_ft_flag = false;
 
@@ -820,9 +812,17 @@ static void csr_neighbor_roam_info_ctx_init(struct mac_context *mac,
 		ngbr_roam_info->cfgParams.nRoamBmissFirstBcnt;
 	ngbr_roam_info->currentRoamBmissFinalBcnt =
 		ngbr_roam_info->cfgParams.nRoamBmissFinalBcnt;
-	ngbr_roam_info->currentRoamBeaconRssiWeight =
-		ngbr_roam_info->cfgParams.nRoamBeaconRssiWeight;
 
+	/*
+	 * Update RSSI change params to vdev
+	 */
+	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_rescan_rssi_diff;
+	wlan_cm_roam_cfg_set_value(mac->psoc, session_id,
+				   RSSI_CHANGE_THRESHOLD, &src_cfg);
+
+	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_scan_hi_rssi_delay;
+	wlan_cm_roam_cfg_set_value(mac->psoc, session_id,
+				   HI_RSSI_DELAY_BTW_SCANS, &src_cfg);
 	/*
 	 * Now we can clear the preauthDone that
 	 * was saved as we are connected afresh
@@ -971,7 +971,8 @@ QDF_STATUS csr_neighbor_roam_indicate_connect(
 			ngbr_roam_info->uOsRequestedHandoff = 0;
 			break;
 		}
-	/* Fall through if the status is SUCCESS */
+		/* if the status is SUCCESS */
+		/* fallthrough */
 	case eCSR_NEIGHBOR_ROAM_STATE_INIT:
 		/* Reset all the data structures here */
 		csr_neighbor_roam_reset_init_state_control_info(mac,
@@ -1037,7 +1038,6 @@ QDF_STATUS csr_neighbor_roam_init(struct mac_context *mac, uint8_t sessionId)
 {
 	QDF_STATUS status;
 	tCsrChannelInfo *specific_chan_info;
-	struct cm_roam_values_copy src_cfg;
 	tpCsrNeighborRoamControlInfo pNeighborRoamInfo =
 		&mac->roam.neighborRoamInfo[sessionId];
 
@@ -1058,20 +1058,11 @@ QDF_STATUS csr_neighbor_roam_init(struct mac_context *mac, uint8_t sessionId)
 		mac->mlme_cfg->lfr.opportunistic_scan_threshold_diff;
 	pNeighborRoamInfo->cfgParams.nRoamRescanRssiDiff =
 		mac->mlme_cfg->lfr.roam_rescan_rssi_diff;
-	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_rescan_rssi_diff;
-	wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
-				   RSSI_CHANGE_THRESHOLD, &src_cfg);
 
 	pNeighborRoamInfo->cfgParams.nRoamBmissFirstBcnt =
 		mac->mlme_cfg->lfr.roam_bmiss_first_bcnt;
 	pNeighborRoamInfo->cfgParams.nRoamBmissFinalBcnt =
 		mac->mlme_cfg->lfr.roam_bmiss_final_bcnt;
-
-	pNeighborRoamInfo->cfgParams.nRoamBeaconRssiWeight =
-		mac->mlme_cfg->lfr.roam_beacon_rssi_weight;
-	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_beacon_rssi_weight;
-	wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
-				   BEACON_RSSI_WEIGHT, &src_cfg);
 
 	pNeighborRoamInfo->cfgParams.neighborScanPeriod =
 		mac->mlme_cfg->lfr.neighbor_scan_timer_period;
@@ -1127,14 +1118,13 @@ QDF_STATUS csr_neighbor_roam_init(struct mac_context *mac, uint8_t sessionId)
 
 	pNeighborRoamInfo->cfgParams.hi_rssi_scan_delay =
 		mac->mlme_cfg->lfr.roam_scan_hi_rssi_delay;
-	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_scan_hi_rssi_delay;
-	wlan_cm_roam_cfg_set_value(mac->psoc, sessionId,
-				   HI_RSSI_DELAY_BTW_SCANS, &src_cfg);
 
 	pNeighborRoamInfo->cfgParams.hi_rssi_scan_rssi_ub =
 		mac->mlme_cfg->lfr.roam_scan_hi_rssi_ub;
 	pNeighborRoamInfo->cfgParams.roam_rssi_diff =
 		mac->mlme_cfg->lfr.roam_rssi_diff;
+	pNeighborRoamInfo->cfgParams.bg_rssi_threshold =
+		mac->mlme_cfg->lfr.bg_rssi_threshold;
 
 	qdf_zero_macaddr(&pNeighborRoamInfo->currAPbssid);
 	pNeighborRoamInfo->currentNeighborLookupThreshold =
@@ -1147,8 +1137,6 @@ QDF_STATUS csr_neighbor_roam_init(struct mac_context *mac, uint8_t sessionId)
 		pNeighborRoamInfo->cfgParams.nRoamBmissFirstBcnt;
 	pNeighborRoamInfo->currentRoamBmissFinalBcnt =
 		pNeighborRoamInfo->cfgParams.nRoamBmissFinalBcnt;
-	pNeighborRoamInfo->currentRoamBeaconRssiWeight =
-		pNeighborRoamInfo->cfgParams.nRoamBeaconRssiWeight;
 	qdf_mem_zero(&pNeighborRoamInfo->prevConnProfile,
 		    sizeof(tCsrRoamConnectedProfile));
 
