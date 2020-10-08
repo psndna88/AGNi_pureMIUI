@@ -13,16 +13,16 @@ The TPG device is described in one level of the device node.
 First Level Node - CAM TPG device
 ======================================
 Required properties:
+- cell-index
+  Usage: required
+  Value type: <u32>
+  Definition: Should specify the hardware index id.
+
 - compatible
   Usage: required
   Value type: <string>
   Definition: Should specify the compatibility string for matching the
 	driver. e.g. "qcom,tpg101", "qcom,tpg102", "qcom,tpgv1", "qcom,tpg103"
-
-- cell-index
-  Usage: required
-  Value type: <u32>
-  Definition: Should specify the hardware index id.
 
 - reg-names
   Usage: required
@@ -34,15 +34,10 @@ Required properties:
   Value type: <u32>
   Definition: Register values.
 
-- interrupt-names
-  Usage: Required
-  Value type: <string>
-  Definition: Name of the interrupt.
-
-- interrupts
-  Usage: Required
+- reg-cam-base
+  Usage: required
   Value type: <u32>
-  Definition: Interrupt associated with TFE HW.
+  Definition: List of bases.
 
 - regulator-names
   Usage: required
@@ -54,6 +49,16 @@ Required properties:
   Value type: <phandle>
   Definition: Regulator reference corresponding to the names listed in
 	"regulator-names".
+
+- interrupt-names
+  Usage: Required
+  Value type: <string>
+  Definition: Name of the interrupt.
+
+- interrupts
+  Usage: Required
+  Value type: <u32>
+  Definition: Interrupt associated with TFE HW.
 
 - clock-names
   Usage: required
@@ -69,6 +74,11 @@ Required properties:
   Usage: required
   Value type: <u32>
   Definition: List of clocks rates.
+
+- clock-cntl-level
+  Usage: required
+  Value type: <string>
+  Definition: All different clock level node can support.
 
 - src-clock-name
   Usage: required
@@ -87,27 +97,30 @@ Required properties:
 	along with source clock.
 
 Example:
-	cam_tfe_tpg0: qcom,tpg0@5c66000 {
-		cell-index = <0>;
-		compatible = "qcom,tpg101";
-		reg-names = "tpg0", "top";
-		reg = <0x5c66000 0x400>,
-				<0x5c11000 0x1000>;
-		reg-cam-base = <0x66000 0x11000>;
-		regulator-names = "camss";
-		camss-supply = <&gcc_camss_top_gdsc>;
-		clock-names =
-			"cphy_rx_clk_src",
-			"tfe_0_cphy_rx_clk";
-		clocks =
-			<&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
-			<&gcc GCC_CAMSS_TFE_0_CPHY_RX_CLK>;
-		clock-rates =
-			<240000000 240000000>,
-			<341333333 341333333>,
-			<384000000 384000000>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
-		src-clock-name = "cphy_rx_clk_src";
-		clock-control-debugfs = "false";
-		status = "ok";
-	};
+cam_csiphy_tpg0: qcom,tpg0@acf6000 {
+	cell-index = <0>;
+	compatible = "qcom,tpg103";
+	reg-names = "tpg0", "cam_cpas_top";
+	reg = <0xacf6000 0x400>,
+		<0xac13000 0x1000>;
+	reg-cam-base = <0xf6000 0x13000>;
+	regulator-names = "camss";
+	camss-supply = <&cam_cc_titan_top_gdsc>;
+	interrupt-names = "tpg0";
+	interrupts = <GIC_SPI 413 IRQ_TYPE_EDGE_RISING>;
+	clock-names =
+		"cphy_rx_clk_src",
+		"csiphy0_clk",
+		"csi0phytimer_clk_src",
+		"csi0phytimer_clk";
+	clocks =
+		<&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSIPHY0_CLK>,
+		<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK>;
+	clock-rates =
+		<480000000 0 400000000 0>;
+	clock-cntl-level = "nominal";
+	src-clock-name = "csi0phytimer_clk_src";
+	status = "ok";
+};
