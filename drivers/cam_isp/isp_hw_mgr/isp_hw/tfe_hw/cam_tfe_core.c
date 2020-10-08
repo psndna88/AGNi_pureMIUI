@@ -1821,8 +1821,11 @@ int cam_tfe_top_reserve(void *device_priv,
 					acquire_args->in_port->line_start;
 				camif_data->last_line =
 					acquire_args->in_port->line_end;
-				camif_data->vbi_value =
-					acquire_args->in_port->sensor_vbi;
+				if (acquire_args->in_port->res_id == CAM_ISP_TFE_IN_RES_TPG)
+					camif_data->vbi_value = 0;
+				else
+					camif_data->vbi_value =
+						acquire_args->in_port->sensor_vbi;
 				camif_data->hbi_value =
 					acquire_args->in_port->sensor_hbi;
 				camif_data->camif_pd_enable =
