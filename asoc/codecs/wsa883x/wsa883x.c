@@ -544,6 +544,12 @@ static const char * const wsa_dev_mode_text[] = {
 	"speaker", "receiver", "ultrasound"
 };
 
+enum {
+	SPEAKER,
+	RECEIVER,
+	ULTRASOUND,
+};
+
 static const struct soc_enum wsa_dev_mode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(wsa_dev_mode_text), wsa_dev_mode_text);
 
@@ -1072,8 +1078,29 @@ static int wsa883x_spkr_event(struct snd_soc_dapm_widget *w,
 					    true);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
-		snd_soc_component_update_bits(component, WSA883X_DRE_CTL_1,
-						0x01, 0x01);
+		if (wsa883x->dev_mode == RECEIVER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x04);
+		} else if (wsa883x->dev_mode == SPEAKER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x90);
+			if (wsa883x->variant == WSA8830)
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x03);
+			else
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x02);
+		}
+		snd_soc_component_update_bits(component,
+					WSA883X_DRE_CTL_1,
+					0x01, 0x01);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
 		wcd_enable_irq(&wsa883x->irq_info, WSA883X_IRQ_INT_PA_ON_ERR);
