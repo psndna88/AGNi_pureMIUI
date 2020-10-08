@@ -759,14 +759,14 @@
 			compatible = "qcom,ipa-smmu-wlan-cb";
 			iommus = <&apps_smmu 0x5E1 0x0>;
 			dma-coherent;
-			qcom,iommu-dma = "fastmap";
+			qcom,iommu-dma = "atomic";
 		};
 
 		ipa_smmu_uc: ipa_smmu_uc {
 			compatible = "qcom,ipa-smmu-uc-cb";
 			iommus = <&apps_smmu 0x5E2 0x0>;
 			qcom,iommu-dma-addr-pool = <0x20000000 0x20000000>;
-			qcom,iommu-dma = "fastmap";
+			qcom,iommu-dma = "atomic";
 		};
 
 		ipa_smmu_11ad: ipa_smmu_11ad {
