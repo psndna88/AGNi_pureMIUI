@@ -7,3 +7,7 @@
 &qnand_1 {
 	status = "ok";
 };
+
+&usb {
+	extcon = <&vbus_detect>;
+};
