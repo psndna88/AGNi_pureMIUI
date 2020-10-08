@@ -29,6 +29,8 @@ struct cam_sfe_bus_rd_reg_offset_common {
 	uint32_t input_if_cmd;
 	uint32_t test_bus_ctrl;
 	uint32_t security_cfg;
+	uint32_t cons_violation_status;
+	struct cam_irq_controller_reg_info irq_reg_info;
 };
 
 /*
@@ -98,6 +100,7 @@ int cam_sfe_bus_rd_init(
 	struct cam_hw_soc_info               *soc_info,
 	struct cam_hw_intf                   *hw_intf,
 	void                                 *bus_hw_info,
+	void                                 *sfe_irq_controller,
 	struct cam_sfe_bus                  **sfe_bus);
 
 /*
@@ -105,7 +108,7 @@ int cam_sfe_bus_rd_init(
  *
  * @Brief:                   Deinitialize Bus layer
  *
- * @vfe_bus:                 Pointer to sfe_bus structure to deinitialize
+ * @sfe_bus:                 Pointer to sfe_bus structure to deinitialize
  *
  * @Return:                  0: Success
  *                           Non-zero: Failure

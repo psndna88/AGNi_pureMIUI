@@ -34,8 +34,6 @@ struct cam_sfe_hw_core_info {
 	struct cam_sfe_bus                 *sfe_bus_rd;
 	void                               *sfe_irq_controller;
 	void                               *tasklet_info;
-	struct cam_sfe_irq_evt_payload      evt_payload[CAM_SFE_EVT_MAX];
-	struct list_head                    free_payload_list;
 	spinlock_t                          spin_lock;
 };
 

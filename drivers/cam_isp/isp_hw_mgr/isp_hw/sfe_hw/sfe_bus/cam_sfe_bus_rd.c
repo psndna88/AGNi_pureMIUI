@@ -28,7 +28,12 @@ static const char drv_name[] = "sfe_bus_rd";
 #define MAX_REG_VAL_PAIR_SIZE    \
 	(MAX_BUF_UPDATE_REG_NUM * 2 * CAM_PACKET_MAX_PLANES)
 
-#define BUS_RD_DEFAULT_LATENCY_BUF_ALLOC 512
+#define BUS_RD_DEFAULT_LATENCY_BUF_ALLOC   512
+#define CAM_SFE_BUS_RD_PAYLOAD_MAX         16
+
+static uint32_t bus_rd_error_irq_mask[1] = {
+	0x00000001,
+};
 
 enum cam_sfe_bus_rd_unpacker_format {
 	BUS_RD_UNPACKER_FMT_PLAIN_128             = 0x0,
@@ -60,7 +65,12 @@ struct cam_sfe_bus_rd_common_data {
 	struct cam_sfe_bus_rd_reg_offset_common    *common_reg;
 	uint32_t                                    io_buf_update[
 		MAX_REG_VAL_PAIR_SIZE];
-
+	void                                       *bus_irq_controller;
+	void                                       *sfe_irq_controller;
+	spinlock_t                                  spin_lock;
+	struct list_head                            free_payload_list;
+	struct cam_sfe_bus_rd_irq_evt_payload       evt_payload[
+		CAM_SFE_BUS_RD_PAYLOAD_MAX];
 	cam_hw_mgr_event_cb_func                    event_cb;
 };
 
@@ -95,7 +105,6 @@ struct cam_sfe_bus_rd_data {
 	uint32_t                           max_height;
 	struct cam_cdm_utils_ops          *cdm_util_ops;
 	void                              *priv;
-	uint32_t                           status;
 	uint32_t                           secure_mode;
 	uint32_t                           fs_sync_enable;
 	uint32_t                           fs_line_sync_en;
@@ -112,6 +121,8 @@ struct cam_sfe_bus_rd_priv {
 	struct cam_isp_resource_node  sfe_bus_rd[
 		CAM_SFE_BUS_RD_MAX];
 
+	int                                 irq_handle;
+	int                                 error_irq_handle;
 	void                               *tasklet_info;
 	uint32_t                            top_irq_shift;
 };
@@ -278,6 +289,73 @@ static int cam_sfe_bus_get_rm_idx(
 	}
 
 	return rm_idx;
+}
+
+static int cam_sfe_bus_rd_get_evt_payload(
+	struct cam_sfe_bus_rd_common_data      *common_data,
+	struct cam_sfe_bus_rd_irq_evt_payload **evt_payload)
+{
+	int rc = 0;
+
+	spin_lock(&common_data->spin_lock);
+
+	if (list_empty(&common_data->free_payload_list)) {
+		CAM_ERR_RATE_LIMIT(CAM_SFE,
+			"No free BUS RD event payload");
+		*evt_payload = NULL;
+		rc = -ENODEV;
+		goto done;
+	}
+
+	*evt_payload = list_first_entry(&common_data->free_payload_list,
+		struct cam_sfe_bus_rd_irq_evt_payload, list);
+	list_del_init(&(*evt_payload)->list);
+
+done:
+	spin_unlock(&common_data->spin_lock);
+	return rc;
+}
+
+static int cam_sfe_bus_rd_put_evt_payload(
+	struct cam_sfe_bus_rd_common_data       *common_data,
+	struct cam_sfe_bus_rd_irq_evt_payload  **evt_payload)
+{
+	unsigned long flags;
+
+	if (!common_data) {
+		CAM_ERR(CAM_SFE, "Invalid param common_data NULL");
+		return -EINVAL;
+	}
+
+	if (*evt_payload == NULL) {
+		CAM_ERR(CAM_SFE, "No payload to put");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&common_data->spin_lock, flags);
+		list_add_tail(&(*evt_payload)->list,
+			&common_data->free_payload_list);
+	spin_unlock_irqrestore(&common_data->spin_lock, flags);
+
+	*evt_payload = NULL;
+
+	return 0;
+}
+
+static int cam_sfe_bus_rd_handle_irq(
+	uint32_t    evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+	struct cam_sfe_bus_rd_priv *bus_priv;
+	int rc = 0;
+
+	bus_priv = th_payload->handler_priv;
+	CAM_DBG(CAM_SFE, "Top Bus RD IRQ Received");
+
+	rc = cam_irq_controller_handle_irq(evt_id,
+		bus_priv->common_data.bus_irq_controller);
+
+	return (rc == IRQ_HANDLED) ? 0 : -EINVAL;
 }
 
 static int cam_sfe_bus_acquire_rm(
@@ -448,6 +526,99 @@ static int cam_sfe_bus_deinit_rm_resource(
 	if (!rsrc_data)
 		return -ENOMEM;
 	kfree(rsrc_data);
+
+	return 0;
+}
+
+static int cam_sfe_bus_rd_handle_irq_top_half(uint32_t evt_id,
+	struct cam_irq_th_payload *th_payload)
+{
+	int i, rc = 0;
+	struct cam_sfe_bus_rd_priv *bus_priv;
+	struct cam_sfe_bus_rd_irq_evt_payload *evt_payload = NULL;
+
+	bus_priv = th_payload->handler_priv;
+	rc  = cam_sfe_bus_rd_get_evt_payload(
+		&bus_priv->common_data, &evt_payload);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < th_payload->num_registers; i++) {
+		evt_payload->irq_reg_val[i] =
+			th_payload->evt_status_arr[i];
+		CAM_DBG(CAM_SFE, "SFE:%d Bus RD IRQ status_%d: 0x%x",
+			bus_priv->common_data.core_index, i,
+			th_payload->evt_status_arr[i]);
+	}
+
+	evt_payload->constraint_violation = cam_io_r_mb(
+		bus_priv->common_data.mem_base +
+		bus_priv->common_data.common_reg->cons_violation_status);
+	if (evt_payload->constraint_violation) {
+		CAM_ERR(CAM_SFE, "SFE:%d constraint violation:0x%x",
+			bus_priv->common_data.core_index,
+			evt_payload->constraint_violation);
+		cam_irq_controller_disable_irq(
+			bus_priv->common_data.bus_irq_controller,
+			 bus_priv->error_irq_handle);
+		cam_irq_controller_clear_and_mask(evt_id,
+			bus_priv->common_data.bus_irq_controller);
+	}
+
+	cam_isp_hw_get_timestamp(&evt_payload->ts);
+	th_payload->evt_payload_priv = evt_payload;
+	return 0;
+}
+
+static int cam_sfe_bus_rd_handle_irq_bottom_half(
+	void  *handler_priv, void *evt_payload_priv)
+{
+	struct cam_sfe_bus_rd_irq_evt_payload *evt_payload;
+	struct cam_sfe_bus_rd_priv            *bus_priv;
+	struct cam_sfe_bus_rd_common_data     *common_data = NULL;
+	struct cam_isp_hw_event_info           evt_info;
+	uint32_t status = 0, constraint_violation = 0;
+
+	if (!handler_priv || !evt_payload_priv)
+		return -EINVAL;
+
+	bus_priv = (struct cam_sfe_bus_rd_priv *)handler_priv;
+	evt_payload = (struct cam_sfe_bus_rd_irq_evt_payload *)evt_payload_priv;
+	common_data = &bus_priv->common_data;
+	status = evt_payload->irq_reg_val[CAM_SFE_IRQ_BUS_RD_REG_STATUS0];
+	constraint_violation = evt_payload->constraint_violation;
+	cam_sfe_bus_rd_put_evt_payload(common_data, &evt_payload);
+
+	if (status & 0x2)
+		CAM_DBG(CAM_SFE, "Received SFE:%d BUS RD RUP",
+			bus_priv->common_data.core_index);
+
+	if (status & 0x4)
+		CAM_DBG(CAM_SFE, "Received SFE:%d BUS RD0 BUF DONE",
+			bus_priv->common_data.core_index);
+
+	if (status & 0x8)
+		CAM_DBG(CAM_SFE, "Received SFE:%d BUS RD1 BUF DONE",
+			bus_priv->common_data.core_index);
+
+	if (status & 0x10)
+		CAM_DBG(CAM_SFE, "Received SFE:%d BUS RD2 BUF DONE",
+			bus_priv->common_data.core_index);
+
+	if (status & 0x1) {
+		CAM_ERR(CAM_SFE, "SFE:%d Constraint violation status:0x%x",
+			bus_priv->common_data.core_index,
+			constraint_violation);
+
+		evt_info.hw_idx = bus_priv->common_data.core_index;
+		evt_info.res_type = CAM_ISP_RESOURCE_SFE_RD;
+		evt_info.res_id = CAM_SFE_BUS_RD_MAX;
+		evt_info.err_type = CAM_SFE_IRQ_STATUS_VIOLATION;
+
+		if (common_data->event_cb)
+			common_data->event_cb(NULL,
+				CAM_ISP_HW_EVENT_ERROR, (void *)&evt_info);
+	}
 
 	return 0;
 }
@@ -639,7 +810,7 @@ static int cam_sfe_bus_start_bus_rd(
 	for (i = 0; i < rsrc_data->num_rm; i++)
 		rc = cam_sfe_bus_start_rm(rsrc_data->rm_res[i]);
 
-	/* Subscribe mask for buf_done */
+	/* TO DO Subscribe mask for buf_done */
 
 	sfe_bus_rd->res_state = CAM_ISP_RESOURCE_STATE_STREAMING;
 	return rc;
@@ -930,19 +1101,52 @@ static int cam_sfe_bus_init_hw(void *hw_priv,
 	void *init_hw_args, uint32_t arg_size)
 {
 	struct cam_sfe_bus_rd_priv    *bus_priv = hw_priv;
-	uint32_t                       sfe_top_irq_mask = 0;
 	uint32_t                       offset = 0;
 	struct cam_sfe_bus_rd_reg_offset_common  *common_reg;
+	uint32_t sfe_top_irq_mask[CAM_SFE_IRQ_REGISTERS_MAX] = {0};
 
 	if (!bus_priv) {
 		CAM_ERR(CAM_SFE, "Invalid args");
 		return -EINVAL;
 	}
 	common_reg = bus_priv->common_data.common_reg;
-	sfe_top_irq_mask = (1 << bus_priv->top_irq_shift);
+	sfe_top_irq_mask[0] = (1 << bus_priv->top_irq_shift);
 
-	/* Subscribe for error IRQs */
+	/* Subscribe for top IRQ */
+	bus_priv->irq_handle = cam_irq_controller_subscribe_irq(
+		bus_priv->common_data.sfe_irq_controller,
+		CAM_IRQ_PRIORITY_2,
+		sfe_top_irq_mask,
+		bus_priv,
+		cam_sfe_bus_rd_handle_irq,
+		NULL,
+		NULL,
+		NULL);
 
+	if (bus_priv->irq_handle < 1) {
+		CAM_ERR(CAM_SFE,
+			"Failed to subscribe TOP IRQ for BUS RD");
+		bus_priv->irq_handle = 0;
+		return -EFAULT;
+	}
+
+	if (bus_priv->tasklet_info != NULL) {
+		bus_priv->error_irq_handle = cam_irq_controller_subscribe_irq(
+			bus_priv->common_data.bus_irq_controller,
+			CAM_IRQ_PRIORITY_1,
+			bus_rd_error_irq_mask,
+			bus_priv,
+			cam_sfe_bus_rd_handle_irq_top_half,
+			cam_sfe_bus_rd_handle_irq_bottom_half,
+			bus_priv->tasklet_info,
+			&tasklet_bh_api);
+
+		if (bus_priv->error_irq_handle < 1) {
+			CAM_ERR(CAM_SFE, "Failed to subscribe error IRQ");
+			bus_priv->error_irq_handle = 0;
+			return -EFAULT;
+		}
+	}
 	/* BUS_RD_TEST_BUS_CTRL disabling test bus */
 	offset = common_reg->test_bus_ctrl;
 	cam_io_w_mb(0x0, bus_priv->common_data.mem_base + offset);
@@ -954,7 +1158,6 @@ static int cam_sfe_bus_deinit_hw(void *hw_priv,
 	void *deinit_hw_args, uint32_t arg_size)
 {
 	struct cam_sfe_bus_rd_priv    *bus_priv = hw_priv;
-	uint32_t                       sfe_top_irq_mask = 0;
 	int                            rc = 0;
 
 	if (!bus_priv) {
@@ -962,9 +1165,24 @@ static int cam_sfe_bus_deinit_hw(void *hw_priv,
 		return -EINVAL;
 	}
 
-	sfe_top_irq_mask = 1 << bus_priv->top_irq_shift;
+	/* Unsubscribe irqs */
+	if (bus_priv->irq_handle) {
+		rc =   cam_irq_controller_unsubscribe_irq(
+				bus_priv->common_data.sfe_irq_controller,
+				bus_priv->irq_handle);
+		if (rc)
+			CAM_ERR(CAM_SFE, "Failed to unsubscribe top irq");
+		bus_priv->irq_handle = 0;
+	}
 
-	/* Unsubscribe for err irqs */
+	if (bus_priv->error_irq_handle) {
+		rc =   cam_irq_controller_unsubscribe_irq(
+				bus_priv->common_data.bus_irq_controller,
+				bus_priv->error_irq_handle);
+		if (rc)
+			CAM_ERR(CAM_SFE, "Failed to unsubscribe error irq");
+		bus_priv->error_irq_handle = 0;
+	}
 
 	return rc;
 }
@@ -1005,6 +1223,7 @@ int cam_sfe_bus_rd_init(
 	struct cam_hw_soc_info               *soc_info,
 	struct cam_hw_intf                   *hw_intf,
 	void                                 *bus_hw_info,
+	void                                 *sfe_irq_controller,
 	struct cam_sfe_bus                  **sfe_bus)
 {
 	int i, rc = 0;
@@ -1036,7 +1255,6 @@ int cam_sfe_bus_rd_init(
 	}
 
 	sfe_bus_local->bus_priv = bus_priv;
-
 	bus_priv->num_client                    = bus_rd_hw_info->num_client;
 	bus_priv->num_bus_rd_resc               =
 		bus_rd_hw_info->num_bus_rd_resc;
@@ -1044,8 +1262,18 @@ int cam_sfe_bus_rd_init(
 	bus_priv->common_data.mem_base          =
 		CAM_SOC_GET_REG_MAP_START(soc_info, SFE_CORE_BASE_IDX);
 	bus_priv->common_data.hw_intf           = hw_intf;
+	bus_priv->common_data.sfe_irq_controller = sfe_irq_controller;
 	bus_priv->common_data.common_reg        = &bus_rd_hw_info->common_reg;
 	bus_priv->top_irq_shift                 = bus_rd_hw_info->top_irq_shift;
+
+	rc = cam_irq_controller_init(drv_name,
+		bus_priv->common_data.mem_base,
+		&bus_rd_hw_info->common_reg.irq_reg_info,
+		&bus_priv->common_data.bus_irq_controller, true);
+	if (rc) {
+		CAM_ERR(CAM_SFE, "IRQ controller init failed");
+		goto free_bus_priv;
+	}
 
 	for (i = 0; i < bus_priv->num_client; i++) {
 		rc = cam_sfe_bus_init_rm_resource(i, bus_priv, bus_hw_info,
@@ -1065,12 +1293,21 @@ int cam_sfe_bus_rd_init(
 		}
 	}
 
+	spin_lock_init(&bus_priv->common_data.spin_lock);
+	INIT_LIST_HEAD(&bus_priv->common_data.free_payload_list);
+	for (i = 0; i < CAM_SFE_BUS_RD_PAYLOAD_MAX; i++) {
+		INIT_LIST_HEAD(&bus_priv->common_data.evt_payload[i].list);
+		list_add_tail(&bus_priv->common_data.evt_payload[i].list,
+			&bus_priv->common_data.free_payload_list);
+	}
+
 	sfe_bus_local->hw_ops.reserve      = cam_sfe_bus_acquire_bus_rd;
 	sfe_bus_local->hw_ops.release      = cam_sfe_bus_release_bus_rd;
 	sfe_bus_local->hw_ops.start        = cam_sfe_bus_start_bus_rd;
 	sfe_bus_local->hw_ops.stop         = cam_sfe_bus_stop_bus_rd;
 	sfe_bus_local->hw_ops.init         = cam_sfe_bus_init_hw;
 	sfe_bus_local->hw_ops.deinit       = cam_sfe_bus_deinit_hw;
+	sfe_bus_local->top_half_handler    = cam_sfe_bus_rd_handle_irq;
 	sfe_bus_local->bottom_half_handler = NULL;
 	sfe_bus_local->hw_ops.process_cmd  = cam_sfe_bus_rd_process_cmd;
 
@@ -1090,6 +1327,7 @@ deinit_rm:
 	for (--i; i >= 0; i--)
 		cam_sfe_bus_deinit_rm_resource(&bus_priv->bus_client[i]);
 
+free_bus_priv:
 	kfree(sfe_bus_local->bus_priv);
 
 free_bus_local:
@@ -1103,6 +1341,7 @@ int cam_sfe_bus_rd_deinit(
 	struct cam_sfe_bus                  **sfe_bus)
 {
 	int i, rc = 0;
+	unsigned long flags;
 	struct cam_sfe_bus_rd_priv    *bus_priv = NULL;
 	struct cam_sfe_bus            *sfe_bus_local;
 
@@ -1119,6 +1358,12 @@ int cam_sfe_bus_rd_deinit(
 		goto free_bus_local;
 	}
 
+	spin_lock_irqsave(&bus_priv->common_data.spin_lock, flags);
+	INIT_LIST_HEAD(&bus_priv->common_data.free_payload_list);
+	for (i = 0; i < CAM_SFE_BUS_RD_PAYLOAD_MAX; i++)
+		INIT_LIST_HEAD(&bus_priv->common_data.evt_payload[i].list);
+	spin_unlock_irqrestore(&bus_priv->common_data.spin_lock, flags);
+
 	for (i = 0; i < bus_priv->num_client; i++) {
 		rc = cam_sfe_bus_deinit_rm_resource(&bus_priv->bus_client[i]);
 		if (rc < 0)
@@ -1133,11 +1378,16 @@ int cam_sfe_bus_rd_deinit(
 				"Deinit SFE RD failed rc=%d", rc);
 	}
 
+	rc = cam_irq_controller_deinit(
+		&bus_priv->common_data.bus_irq_controller);
+	if (rc)
+		CAM_ERR(CAM_SFE,
+			"Deinit IRQ Controller failed rc=%d", rc);
+
 	kfree(sfe_bus_local->bus_priv);
 
 free_bus_local:
 	kfree(sfe_bus_local);
-
 	*sfe_bus = NULL;
 
 	return rc;

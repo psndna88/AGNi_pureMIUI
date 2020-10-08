@@ -6,7 +6,6 @@
 #ifndef _CAM_SFE_BUS_H_
 #define _CAM_SFE_BUS_H_
 
-#include "cam_isp_hw.h"
 #include "cam_sfe_hw_intf.h"
 
 #define CAM_SFE_BUS_WR_VER_1_0          0x1000
@@ -50,8 +49,7 @@ enum cam_sfe_bus_type {
  * @bottom_half_handler:     Bottom Half handler function
  */
 struct cam_sfe_bus {
-	void               *bus_priv;
-
+	void                          *bus_priv;
 	struct cam_hw_ops              hw_ops;
 	CAM_IRQ_HANDLER_TOP_HALF       top_half_handler;
 	CAM_IRQ_HANDLER_BOTTOM_HALF    bottom_half_handler;
@@ -67,17 +65,20 @@ struct cam_sfe_bus {
  * @soc_info:                Soc Information for the associated HW
  * @hw_intf:                 HW Interface of HW to which this resource belongs
  * @bus_hw_info:             BUS HW info that contains details of BUS registers
+ * @sfe_irq_controller:      SFE irq controller
  * @sfe_bus:                 Pointer to sfe_bus structure which will be filled
  *                           and returned on successful initialize
  *
  * @Return:                  0: Success
  *                           Non-zero: Failure
  */
-int cam_sfe_bus_init(uint32_t      bus_version,
+int cam_sfe_bus_init(
+	uint32_t      bus_version,
 	int                            bus_type,
 	struct cam_hw_soc_info        *soc_info,
 	struct cam_hw_intf            *hw_intf,
 	void                          *bus_hw_info,
+	void                          *sfe_irq_controller,
 	struct cam_sfe_bus           **sfe_bus);
 
 /*

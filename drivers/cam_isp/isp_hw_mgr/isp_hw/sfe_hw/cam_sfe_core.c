@@ -407,17 +407,28 @@ int cam_sfe_core_init(
 	struct cam_hw_intf           *hw_intf,
 	struct cam_sfe_hw_info       *sfe_hw_info)
 {
-	int rc;
+	int rc = -EINVAL;
+
+	rc = cam_irq_controller_init(drv_name,
+		CAM_SOC_GET_REG_MAP_START(soc_info, SFE_CORE_BASE_IDX),
+		sfe_hw_info->irq_reg_info, &core_info->sfe_irq_controller,
+		true);
+	if (rc) {
+		CAM_ERR(CAM_SFE, "SFE irq controller init failed");
+		return rc;
+	}
 
 	rc = cam_sfe_top_init(sfe_hw_info->top_version, soc_info, hw_intf,
-		sfe_hw_info->top_hw_info, &core_info->sfe_top);
+		sfe_hw_info->top_hw_info, core_info->sfe_irq_controller,
+		&core_info->sfe_top);
 	if (rc) {
 		CAM_ERR(CAM_SFE, "SFE top init failed rc: %d", rc);
-		return rc;
+		goto deinit_controller;
 	}
 
 	rc = cam_sfe_bus_init(sfe_hw_info->bus_wr_version, BUS_TYPE_SFE_WR,
 		soc_info, hw_intf, sfe_hw_info->bus_wr_hw_info,
+		core_info->sfe_irq_controller,
 		&core_info->sfe_bus_wr);
 	if (rc) {
 		CAM_ERR(CAM_SFE, "SFE bus wr init failed rc: %d", rc);
@@ -426,13 +437,13 @@ int cam_sfe_core_init(
 
 	rc = cam_sfe_bus_init(sfe_hw_info->bus_rd_version, BUS_TYPE_SFE_RD,
 		soc_info, hw_intf, sfe_hw_info->bus_rd_hw_info,
+		core_info->sfe_irq_controller,
 		&core_info->sfe_bus_rd);
 	if (rc) {
 		CAM_ERR(CAM_SFE, "SFE bus rd init failed rc: %d", rc);
 		goto deinit_bus_wr;
 	}
 
-	INIT_LIST_HEAD(&core_info->free_payload_list);
 	spin_lock_init(&core_info->spin_lock);
 	CAM_DBG(CAM_SFE, "SFE device [%u] INIT success",
 		hw_intf->hw_idx);
@@ -445,6 +456,11 @@ deinit_bus_wr:
 deinit_top:
 	cam_sfe_top_deinit(sfe_hw_info->top_version,
 		&core_info->sfe_top);
+deinit_controller:
+	if (cam_irq_controller_deinit(&core_info->sfe_irq_controller))
+		CAM_ERR(CAM_SFE,
+			"Error cam_irq_controller_deinit failed rc=%d", rc);
+
 	return rc;
 }
 
@@ -452,14 +468,10 @@ int cam_sfe_core_deinit(
 	struct cam_sfe_hw_core_info  *core_info,
 	struct cam_sfe_hw_info       *sfe_hw_info)
 {
-	int                rc = -EINVAL, i;
+	int                rc = -EINVAL;
 	unsigned long      flags;
 
 	spin_lock_irqsave(&core_info->spin_lock, flags);
-
-	INIT_LIST_HEAD(&core_info->free_payload_list);
-	for (i = 0; i < CAM_SFE_EVT_MAX; i++)
-		INIT_LIST_HEAD(&core_info->evt_payload[i].list);
 
 	rc = cam_sfe_bus_deinit(BUS_TYPE_SFE_RD,
 		sfe_hw_info->bus_rd_version,
@@ -480,6 +492,11 @@ int cam_sfe_core_deinit(
 	if (rc)
 		CAM_ERR(CAM_SFE,
 			"SFE top deinit failed rc: %d", rc);
+
+	rc = cam_irq_controller_deinit(&core_info->sfe_irq_controller);
+	if (rc)
+		CAM_ERR(CAM_SFE,
+			"Error cam_irq_controller_deinit failed rc=%d", rc);
 
 	spin_unlock_irqrestore(&core_info->spin_lock, flags);
 	return rc;

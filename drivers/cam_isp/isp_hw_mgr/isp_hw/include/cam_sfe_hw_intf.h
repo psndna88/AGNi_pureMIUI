@@ -7,6 +7,7 @@
 #define _CAM_SFE_HW_INTF_H_
 
 #include "cam_isp_hw.h"
+#include "cam_isp_hw_mgr_intf.h"
 
 #define SFE_CORE_BASE_IDX           0
 #define SFE_RT_CDM_BASE_IDX         1
@@ -48,6 +49,11 @@ enum cam_sfe_bus_irq_regs {
 	CAM_SFE_BUS_IRQ_REGISTERS_MAX,
 };
 
+enum cam_sfe_bus_rd_irq_regs {
+	CAM_SFE_IRQ_BUS_RD_REG_STATUS0,
+	CAM_SFE_BUS_RD_IRQ_REGISTERS_MAX,
+};
+
 /*
  * struct cam_sfe_fe_update_args:
  *
@@ -83,33 +89,78 @@ struct cam_sfe_core_config_args {
 };
 
 /*
- * struct cam_sfe_irq_evt_payload:
+ * struct cam_sfe_top_irq_evt_payload:
  *
  * @Brief:                   This structure is used to save payload for IRQ
- *                           related to SFE resources
+ *                           related to SFE top resource
  *
  * @list:                    list_head node for the payload
  * @core_index:              Index of SFE HW that generated this IRQ event
  * @evt_id:                  IRQ event
  * @irq_reg_val:             IRQ and Error register values, read when IRQ was
  *                           handled
- * @bus_irq_val              Bus irq register status
- * @ccif_violation_status    ccif violation status
- * @overflow_status          bus overflow status
- * @image_size_vio_sts       image size violations status
+ * @violation_status         ccif violation status
  * @error_type:              Identify different errors
  * @ts:                      Timestamp
  */
-struct cam_sfe_irq_evt_payload {
+struct cam_sfe_top_irq_evt_payload {
 	struct list_head           list;
 	uint32_t                   core_index;
 	uint32_t                   evt_id;
 	uint32_t                   irq_reg_val[CAM_SFE_IRQ_REGISTERS_MAX];
-	uint32_t                   bus_irq_val[CAM_SFE_BUS_IRQ_REGISTERS_MAX];
+	uint32_t                   violation_status;
+	uint32_t                   error_type;
+	struct cam_isp_timestamp   ts;
+};
+
+/*
+ * struct cam_sfe_bus_wr_irq_evt_payload:
+ *
+ * @Brief:                   This structure is used to save payload for IRQ
+ *                           BUS related to SFE resources
+ *
+ * @list:                    list_head node for the payload
+ * @core_index:              Index of SFE HW that generated this IRQ event
+ * @irq_reg_val              Bus irq register status
+ * @ccif_violation_status    ccif violation status
+ * @overflow_status          bus overflow status
+ * @image_size_vio_sts       image size violations status
+ * @error_type:              Identify different errors
+ * @evt_id:                  IRQ event
+ * @ts:                      Timestamp
+ */
+struct cam_sfe_bus_wr_irq_evt_payload {
+	struct list_head           list;
+	uint32_t                   core_index;
+	uint32_t                   irq_reg_val[CAM_SFE_BUS_IRQ_REGISTERS_MAX];
 	uint32_t                   ccif_violation_status;
 	uint32_t                   overflow_status;
-	uint32_t                   image_size_vio_sts;
+	uint32_t                   image_size_violation_status;
 	uint32_t                   error_type;
+	uint32_t                   evt_id;
+	struct cam_isp_timestamp   ts;
+};
+
+/*
+ * struct cam_sfe_bus_rd_irq_evt_payload:
+ *
+ * @Brief:                   This structure is used to save payload for IRQ
+ *                           BUS related to SFE resources
+ *
+ * @list:                    list_head node for the payload
+ * @irq_reg_val              Bus irq register status
+ * @constraint_violation     constraint violation
+ * @error_type:              Identify different errors
+ * @evt_id:                  IRQ event
+ * @ts:                      Timestamp
+ */
+struct cam_sfe_bus_rd_irq_evt_payload {
+	struct list_head           list;
+	uint32_t                   irq_reg_val[
+		CAM_SFE_BUS_RD_IRQ_REGISTERS_MAX];
+	uint32_t                   constraint_violation;
+	uint32_t                   error_type;
+	uint32_t                   evt_id;
 	struct cam_isp_timestamp   ts;
 };
 
