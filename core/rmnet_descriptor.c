@@ -558,20 +558,36 @@ int rmnet_frag_flow_command(struct rmnet_frag_descriptor *frag_desc,
 }
 EXPORT_SYMBOL(rmnet_frag_flow_command);
 
-static int rmnet_frag_deaggregate_one(struct skb_shared_info *shinfo,
+static int rmnet_frag_deaggregate_one(struct sk_buff *skb,
 				      struct rmnet_port *port,
 				      struct list_head *list,
 				      u32 start_frag)
 {
+	struct skb_shared_info *shinfo = skb_shinfo(skb);
 	struct rmnet_frag_descriptor *frag_desc;
-	struct rmnet_map_header *maph;
+	struct rmnet_map_header *maph, __maph;
 	skb_frag_t *frag;
 	u32 i;
 	u32 pkt_len;
 	int rc;
 
 	frag = &shinfo->frags[start_frag];
-	maph = skb_frag_address(frag);
+	/* Grab the QMAP header. Careful, as there's no guarantee that it's
+	 * continugous!
+	 */
+	if (likely(skb_frag_size(frag) >= sizeof(*maph))) {
+		maph = skb_frag_address(frag);
+	} else {
+		/* The header's split across pages. We can rebuild it.
+		 * Probably not faster or stronger than before. But certainly
+		 * more linear.
+		 */
+		if (skb_copy_bits(skb, 0, &__maph, sizeof(__maph)) < 0)
+			return -1;
+
+		maph = &__maph;
+	}
+
 	pkt_len = ntohs(maph->pkt_len);
 	/* Catch empty frames */
 	if (!pkt_len)
@@ -590,9 +606,19 @@ static int rmnet_frag_deaggregate_one(struct skb_shared_info *shinfo,
 		u32 hsize = 0;
 		u8 type;
 
-		type = ((struct rmnet_map_v5_coal_header *)
-			(maph + 1))->header_type;
-		switch (type) {
+		/* Check the type. This seems like should be overkill for less
+		 * than a single byte, doesn't it?
+		 */
+		if (likely(skb_frag_size(frag) >= sizeof(*maph) + 1)) {
+			type = *((u8 *)maph + sizeof(*maph));
+		} else {
+			if (skb_copy_bits(skb, sizeof(*maph), &type,
+					  sizeof(type)) < 0)
+				return -1;
+		}
+
+		/* Type only uses the first 7 bits */
+		switch ((type & 0xFE) >> 1) {
 		case RMNET_MAP_HEADER_TYPE_COALESCING:
 			hsize = sizeof(struct rmnet_map_v5_coal_header);
 			break;
@@ -647,7 +673,7 @@ void rmnet_frag_deaggregate(struct sk_buff *skb, struct rmnet_port *port,
 	int rc;
 
 	while (i < shinfo->nr_frags) {
-		rc = rmnet_frag_deaggregate_one(shinfo, port, list, i);
+		rc = rmnet_frag_deaggregate_one(skb, port, list, i);
 		if (rc < 0)
 			return;
 
