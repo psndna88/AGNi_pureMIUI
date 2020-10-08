@@ -167,16 +167,16 @@ static QDF_STATUS __dp_ipa_tx_buf_smmu_mapping(
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
 	uint32_t tx_buffer_cnt = soc->ipa_uc_tx_rsc.alloc_tx_buf_cnt;
 	qdf_nbuf_t nbuf;
+	uint32_t buf_len;
 
 	for (index = 0; index < tx_buffer_cnt; index++) {
 		nbuf = (qdf_nbuf_t)
 			soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[index];
 		if (!nbuf)
 			continue;
+		buf_len = qdf_nbuf_get_data_len(nbuf);
 		ret = __dp_ipa_handle_buf_smmu_mapping(
-				soc, nbuf,
-				skb_end_pointer(nbuf) - nbuf->data,
-				true);
+				soc, nbuf, buf_len, true);
 	}
 	return ret;
 }
@@ -295,18 +295,17 @@ static void dp_tx_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	qdf_nbuf_t nbuf;
 	struct dp_ipa_resources *ipa_res;
 	bool is_ipa_ready = qdf_ipa_is_ready();
+	uint32_t buf_len;
 
 	for (idx = 0; idx < soc->ipa_uc_tx_rsc.alloc_tx_buf_cnt; idx++) {
 		nbuf = (qdf_nbuf_t)
 			soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[idx];
 		if (!nbuf)
 			continue;
-
+		buf_len = qdf_nbuf_get_data_len(nbuf);
 		if (qdf_mem_smmu_s1_enabled(soc->osdev) && is_ipa_ready)
 			__dp_ipa_handle_buf_smmu_mapping(
-					soc, nbuf,
-					skb_end_pointer(nbuf) - nbuf->data,
-					false);
+					soc, nbuf, buf_len, false);
 
 		qdf_nbuf_unmap_single(soc->osdev, nbuf, QDF_DMA_BIDIRECTIONAL);
 		qdf_nbuf_free(nbuf);
@@ -699,7 +698,7 @@ QDF_STATUS dp_ipa_get_resource(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	struct dp_ipa_resources *ipa_res;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -731,9 +730,12 @@ QDF_STATUS dp_ipa_get_resource(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 			soc->ipa_uc_rx_rsc.ipa_rx_refill_buf_ring_base_paddr,
 			soc->ipa_uc_rx_rsc.ipa_rx_refill_buf_ring_size);
 
-	if (!qdf_mem_get_dma_addr(soc->osdev,
+	if (!qdf_mem_get_dma_addr(soc->osdev, &ipa_res->tx_ring.mem_info) ||
+	    !qdf_mem_get_dma_addr(soc->osdev,
 				  &ipa_res->tx_comp_ring.mem_info) ||
-	    !qdf_mem_get_dma_addr(soc->osdev, &ipa_res->rx_rdy_ring.mem_info))
+	    !qdf_mem_get_dma_addr(soc->osdev, &ipa_res->rx_rdy_ring.mem_info) ||
+	    !qdf_mem_get_dma_addr(soc->osdev,
+				  &ipa_res->rx_refill_ring.mem_info))
 		return QDF_STATUS_E_FAILURE;
 
 	return QDF_STATUS_SUCCESS;
@@ -753,7 +755,7 @@ QDF_STATUS dp_ipa_set_doorbell_paddr(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	uint32_t rx_ready_doorbell_dmaaddr;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -799,7 +801,7 @@ QDF_STATUS dp_ipa_op_response(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -827,7 +829,7 @@ QDF_STATUS dp_ipa_register_op_cb(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -880,7 +882,7 @@ QDF_STATUS dp_ipa_enable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	uint32_t ix2;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -932,7 +934,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	uint32_t ix3;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1210,7 +1212,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	int ret;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1405,7 +1407,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	int ret;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1639,23 +1641,55 @@ QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 
 /**
  * dp_ipa_cleanup() - Disconnect IPA pipes
+ * @soc_hdl: dp soc handle
+ * @pdev_id: dp pdev id
  * @tx_pipe_handle: Tx pipe handle
  * @rx_pipe_handle: Rx pipe handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_ipa_cleanup(uint32_t tx_pipe_handle, uint32_t rx_pipe_handle)
+QDF_STATUS dp_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			  uint32_t tx_pipe_handle, uint32_t rx_pipe_handle)
 {
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_ipa_resources *ipa_res;
+	struct dp_pdev *pdev;
 	int ret;
 
 	ret = qdf_ipa_wdi_disconn_pipes();
 	if (ret) {
 		dp_err("ipa_wdi_disconn_pipes: IPA pipe cleanup failed: ret=%d",
 		       ret);
-		return QDF_STATUS_E_FAILURE;
+		status = QDF_STATUS_E_FAILURE;
 	}
 
-	return QDF_STATUS_SUCCESS;
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (qdf_unlikely(!pdev)) {
+		dp_err_rl("Invalid pdev for pdev_id %d", pdev_id);
+		status = QDF_STATUS_E_FAILURE;
+		goto exit;
+	}
+
+	if (qdf_mem_smmu_s1_enabled(soc->osdev)) {
+		ipa_res = &pdev->ipa_resource;
+
+		/* unmap has to be the reverse order of smmu map */
+		ret = pld_smmu_unmap(soc->osdev->dev,
+				     ipa_res->rx_ready_doorbell_paddr,
+				     sizeof(uint32_t));
+		if (ret)
+			dp_err_rl("IPA RX DB smmu unmap failed");
+
+		ret = pld_smmu_unmap(soc->osdev->dev,
+				     ipa_res->tx_comp_doorbell_paddr,
+				     sizeof(uint32_t));
+		if (ret)
+			dp_err_rl("IPA TX DB smmu unmap failed");
+	}
+
+exit:
+	return status;
 }
 
 /**
@@ -1691,7 +1725,7 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	QDF_STATUS result;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -1726,7 +1760,7 @@ QDF_STATUS dp_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	QDF_STATUS result;
 
 	if (!pdev) {
-		dp_err("%s invalid instance", __func__);
+		dp_err("Invalid instance");
 		return QDF_STATUS_E_FAILURE;
 	}
 

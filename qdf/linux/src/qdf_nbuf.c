@@ -119,6 +119,61 @@ static bool is_initial_mem_debug_disabled;
 #endif
 
 /**
+ *  __qdf_nbuf_get_ip_offset - Get IPV4/V6 header offset
+ * @data: Pointer to network data buffer
+ *
+ * Get the IP header offset in case of 8021Q and 8021AD
+ * tag is present in L2 header.
+ *
+ * Return: IP header offset
+ */
+static inline uint8_t __qdf_nbuf_get_ip_offset(uint8_t *data)
+{
+	uint16_t ether_type;
+
+	ether_type = *(uint16_t *)(data +
+				   QDF_NBUF_TRAC_ETH_TYPE_OFFSET);
+
+	if (unlikely(ether_type == QDF_SWAP_U16(QDF_ETH_TYPE_8021Q)))
+		return QDF_NBUF_TRAC_VLAN_IP_OFFSET;
+	else if (unlikely(ether_type == QDF_SWAP_U16(QDF_ETH_TYPE_8021AD)))
+		return QDF_NBUF_TRAC_DOUBLE_VLAN_IP_OFFSET;
+
+	return QDF_NBUF_TRAC_IP_OFFSET;
+}
+
+qdf_export_symbol(__qdf_nbuf_get_ip_offset);
+
+/**
+ *  __qdf_nbuf_get_ether_type - Get the ether type
+ * @data: Pointer to network data buffer
+ *
+ * Get the ether type in case of 8021Q and 8021AD tag
+ * is present in L2 header, e.g for the returned ether type
+ * value, if IPV4 data ether type 0x0800, return 0x0008.
+ *
+ * Return ether type.
+ */
+static inline uint16_t __qdf_nbuf_get_ether_type(uint8_t *data)
+{
+	uint16_t ether_type;
+
+	ether_type = *(uint16_t *)(data +
+				   QDF_NBUF_TRAC_ETH_TYPE_OFFSET);
+
+	if (unlikely(ether_type == QDF_SWAP_U16(QDF_ETH_TYPE_8021Q)))
+		ether_type = *(uint16_t *)(data +
+				QDF_NBUF_TRAC_VLAN_ETH_TYPE_OFFSET);
+	else if (unlikely(ether_type == QDF_SWAP_U16(QDF_ETH_TYPE_8021AD)))
+		ether_type = *(uint16_t *)(data +
+				QDF_NBUF_TRAC_DOUBLE_VLAN_ETH_TYPE_OFFSET);
+
+	return ether_type;
+}
+
+qdf_export_symbol(__qdf_nbuf_get_ether_type);
+
+/**
  * qdf_nbuf_tx_desc_count_display() - Displays the packet counter
  *
  * Return: none
@@ -581,7 +636,14 @@ void __qdf_nbuf_free(struct sk_buff *skb)
 	if (pld_nbuf_pre_alloc_free(skb))
 		return;
 
-	qdf_frag_count_dec(qdf_nbuf_get_nr_frags(skb));
+	/**
+	 * Decrement global frag counter only when last user of nbuf
+	 * does free so as to avoid decrementing count on every free
+	 * expect the last one in case where nbuf has multiple users
+	 */
+	if (qdf_nbuf_get_users(skb) == 1)
+		qdf_frag_count_dec(qdf_nbuf_get_nr_frags(skb));
+
 	qdf_nbuf_count_dec(skb);
 	qdf_mem_skb_dec(skb->truesize);
 	if (nbuf_free_cb)
@@ -1363,12 +1425,21 @@ bool __qdf_nbuf_data_is_ipv4_dhcp_pkt(uint8_t *data)
 {
 	uint16_t sport;
 	uint16_t dport;
+	uint8_t ipv4_offset;
+	uint8_t ipv4_hdr_len;
+	struct iphdr *iphdr;
 
-	sport = (uint16_t)(*(uint16_t *)(data + QDF_NBUF_TRAC_IPV4_OFFSET +
-					 QDF_NBUF_TRAC_IPV4_HEADER_SIZE));
-	dport = (uint16_t)(*(uint16_t *)(data + QDF_NBUF_TRAC_IPV4_OFFSET +
-					 QDF_NBUF_TRAC_IPV4_HEADER_SIZE +
-					 sizeof(uint16_t)));
+	if (__qdf_nbuf_get_ether_type(data) !=
+	    QDF_SWAP_U16(QDF_NBUF_TRAC_IPV4_ETH_TYPE))
+		return false;
+
+	ipv4_offset = __qdf_nbuf_get_ip_offset(data);
+	iphdr = (struct iphdr *)(data + ipv4_offset);
+	ipv4_hdr_len = iphdr->ihl * QDF_NBUF_IPV4_HDR_SIZE_UNIT;
+
+	sport = *(uint16_t *)(data + ipv4_offset + ipv4_hdr_len);
+	dport = *(uint16_t *)(data + ipv4_offset + ipv4_hdr_len +
+			      sizeof(uint16_t));
 
 	if (((sport == QDF_SWAP_U16(QDF_NBUF_TRAC_DHCP_SRV_PORT)) &&
 	     (dport == QDF_SWAP_U16(QDF_NBUF_TRAC_DHCP_CLI_PORT))) ||
@@ -1393,8 +1464,7 @@ bool __qdf_nbuf_data_is_ipv4_eapol_pkt(uint8_t *data)
 {
 	uint16_t ether_type;
 
-	ether_type = (uint16_t)(*(uint16_t *)(data +
-				QDF_NBUF_TRAC_ETH_TYPE_OFFSET));
+	ether_type = __qdf_nbuf_get_ether_type(data);
 
 	if (ether_type == QDF_SWAP_U16(QDF_NBUF_TRAC_EAPOL_ETH_TYPE))
 		return true;
@@ -1462,8 +1532,7 @@ bool __qdf_nbuf_data_is_ipv4_arp_pkt(uint8_t *data)
 {
 	uint16_t ether_type;
 
-	ether_type = (uint16_t)(*(uint16_t *)(data +
-				QDF_NBUF_TRAC_ETH_TYPE_OFFSET));
+	ether_type = __qdf_nbuf_get_ether_type(data);
 
 	if (ether_type == QDF_SWAP_U16(QDF_NBUF_TRAC_ARP_ETH_TYPE))
 		return true;
@@ -1838,12 +1907,14 @@ bool __qdf_nbuf_data_is_ipv6_dhcp_pkt(uint8_t *data)
 {
 	uint16_t sport;
 	uint16_t dport;
+	uint8_t ipv6_offset;
 
-	sport = *(uint16_t *)(data + QDF_NBUF_TRAC_IPV6_OFFSET +
-				QDF_NBUF_TRAC_IPV6_HEADER_SIZE);
-	dport = *(uint16_t *)(data + QDF_NBUF_TRAC_IPV6_OFFSET +
-					QDF_NBUF_TRAC_IPV6_HEADER_SIZE +
-					sizeof(uint16_t));
+	ipv6_offset = __qdf_nbuf_get_ip_offset(data);
+	sport = *(uint16_t *)(data + ipv6_offset +
+			      QDF_NBUF_TRAC_IPV6_HEADER_SIZE);
+	dport = *(uint16_t *)(data + ipv6_offset +
+			      QDF_NBUF_TRAC_IPV6_HEADER_SIZE +
+			      sizeof(uint16_t));
 
 	if (((sport == QDF_SWAP_U16(QDF_NBUF_TRAC_DHCP6_SRV_PORT)) &&
 	     (dport == QDF_SWAP_U16(QDF_NBUF_TRAC_DHCP6_CLI_PORT))) ||
@@ -2904,6 +2975,58 @@ qdf_nbuf_copy_expand_debug(qdf_nbuf_t buf, int headroom, int tailroom,
 
 qdf_export_symbol(qdf_nbuf_copy_expand_debug);
 
+qdf_nbuf_t
+qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name,
+		       uint32_t line_num)
+{
+	qdf_nbuf_t unshared_buf;
+	qdf_frag_t p_frag;
+	uint32_t num_nr_frags;
+	uint32_t idx = 0;
+
+	if (is_initial_mem_debug_disabled)
+		return __qdf_nbuf_unshare(buf);
+
+	/* Take care to delete the debug entries for frags */
+	num_nr_frags = qdf_nbuf_get_nr_frags(buf);
+
+	while (idx < num_nr_frags) {
+		p_frag = qdf_nbuf_get_frag_addr(buf, idx);
+		if (qdf_likely(p_frag))
+			qdf_frag_debug_refcount_dec(p_frag, func_name,
+						    line_num);
+		idx++;
+	}
+
+	unshared_buf = __qdf_nbuf_unshare(buf);
+
+	if (qdf_likely(buf != unshared_buf)) {
+		qdf_net_buf_debug_delete_node(buf);
+
+		if (unshared_buf)
+			qdf_net_buf_debug_add_node(unshared_buf, 0,
+						   func_name, line_num);
+	}
+
+	if (unshared_buf) {
+		/* Take care to add the debug entries for frags */
+		num_nr_frags = qdf_nbuf_get_nr_frags(unshared_buf);
+
+		idx = 0;
+		while (idx < num_nr_frags) {
+			p_frag = qdf_nbuf_get_frag_addr(unshared_buf, idx);
+			if (qdf_likely(p_frag))
+				qdf_frag_debug_refcount_inc(p_frag, func_name,
+							    line_num);
+			idx++;
+		}
+	}
+
+	return unshared_buf;
+}
+
+qdf_export_symbol(qdf_nbuf_unshare_debug);
+
 #endif /* NBUF_MEMORY_DEBUG */
 
 #if defined(FEATURE_TSO)
@@ -3194,7 +3317,7 @@ uint32_t __qdf_nbuf_get_tso_info(qdf_device_t osdev, struct sk_buff *skb,
 	if (unlikely(dma_mapping_error(osdev->dev,
 					tso_frag_paddr))) {
 		qdf_err("DMA mapping error!");
-		qdf_assert(0);
+		qdf_assert_always(0);
 		return 0;
 	}
 	TSO_DEBUG("%s[%d] skb frag len %d tso frag len %d\n", __func__,
@@ -3243,6 +3366,8 @@ uint32_t __qdf_nbuf_get_tso_info(qdf_device_t osdev, struct sk_buff *skb,
 				tso_cmn_info.tcp_seq_num += tso_frag_len;
 				curr_seg->seg.tso_frags[i].paddr =
 					tso_frag_paddr;
+
+				qdf_assert_always(curr_seg->seg.tso_frags[i].paddr);
 			}
 
 			TSO_DEBUG("%s[%d] frag %d frag len %d total_len %u vaddr %pK\n",
@@ -3327,7 +3452,7 @@ uint32_t __qdf_nbuf_get_tso_info(qdf_device_t osdev, struct sk_buff *skb,
 			if (unlikely(dma_mapping_error(osdev->dev,
 							tso_frag_paddr))) {
 				qdf_err("DMA mapping error!");
-				qdf_assert(0);
+				qdf_assert_always(0);
 				return 0;
 			}
 		}
@@ -4781,6 +4906,15 @@ void qdf_net_buf_debug_release_frag(qdf_nbuf_t buf, const char *func,
 	qdf_frag_t p_frag;
 
 	if (qdf_unlikely(!buf))
+		return;
+
+	/**
+	 * Decrement refcount for frag debug nodes only when last user
+	 * of nbuf calls this API so as to avoid decrementing refcount
+	 * on every call expect the last one in case where nbuf has multiple
+	 * users
+	 */
+	if (qdf_nbuf_get_users(buf) > 1)
 		return;
 
 	/* Take care to update the refcount in the debug entries for frags */

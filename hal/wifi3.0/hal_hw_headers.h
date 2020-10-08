@@ -116,8 +116,17 @@
 #define HAL_REG_WRITE_CONFIRM(_soc, _reg, _value) \
 	hal_write32_mb_confirm(_soc, (_reg), (_value))
 
+#define HAL_REG_WRITE_CONFIRM_RETRY(_soc, _reg, _value, _recovery) \
+	hal_write32_mb_confirm_retry(_soc, (_reg), (_value), (_recovery))
+
 #define HAL_REG_READ(_soc, _offset) \
 	hal_read32_mb(_soc, (_offset))
+
+#define HAL_CMEM_WRITE(_soc, _reg, _value) \
+	hal_write32_mb_cmem(_soc, (_reg), (_value))
+
+#define HAL_CMEM_READ(_soc, _offset) \
+	hal_read32_mb_cmem(_soc, (_offset))
 
 #define WBM_IDLE_DESC_LIST 1
 

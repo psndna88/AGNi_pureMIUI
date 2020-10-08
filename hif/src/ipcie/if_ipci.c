@@ -83,7 +83,7 @@ void hif_ipci_clear_stats(struct hif_softc *hif_ctx)
 	struct hif_ipci_softc *ipci_ctx = HIF_GET_IPCI_SOFTC(hif_ctx);
 
 	if (!ipci_ctx) {
-		HIF_ERROR("%s, hif_ctx null", __func__);
+		hif_err("hif_ctx null");
 		return;
 	}
 	hif_clear_ce_stats(&ipci_ctx->ce_sc);
@@ -131,8 +131,7 @@ int hif_ipci_bus_configure(struct hif_softc *hif_sc)
 
 	status = hif_wlan_enable(hif_sc);
 	if (status) {
-		HIF_ERROR("%s: hif_wlan_enable error = %d",
-			  __func__, status);
+		hif_err("hif_wlan_enable error = %d", status);
 		goto timer_free;
 	}
 
@@ -152,7 +151,7 @@ int hif_ipci_bus_configure(struct hif_softc *hif_sc)
 
 	hif_sc->wake_irq = hif_ce_msi_map_ce_to_irq(hif_sc, wake_ce_id);
 
-	HIF_INFO("expecting wake from ce %d, irq %d",
+	hif_info("expecting wake from ce %d, irq %d",
 		 wake_ce_id, hif_sc->wake_irq);
 
 	A_TARGET_ACCESS_UNLIKELY(hif_sc);
@@ -170,7 +169,7 @@ timer_free:
 	qdf_timer_free(&hif_state->sleep_timer);
 	hif_state->sleep_timer_init = false;
 
-	HIF_ERROR("%s: failed, status = %d", __func__, status);
+	hif_err("Failed, status = %d", status);
 	return status;
 }
 
@@ -285,7 +284,7 @@ void hif_ipci_disable_bus(struct hif_softc *scn)
 		}
 		scn->mem = NULL;
 	}
-	HIF_INFO("%s: X", __func__);
+	hif_info("X");
 }
 
 #if defined(CONFIG_PCI_MSM)
@@ -293,29 +292,37 @@ void hif_ipci_prevent_linkdown(struct hif_softc *scn, bool flag)
 {
 	int errno;
 
-	HIF_INFO("wlan: %s pcie power collapse", flag ? "disable" : "enable");
+	hif_info("wlan: %s pcie power collapse", flag ? "disable" : "enable");
 	hif_runtime_prevent_linkdown(scn, flag);
 
 	errno = pld_wlan_pm_control(scn->qdf_dev->dev, flag);
 	if (errno)
-		HIF_ERROR("%s: Failed pld_wlan_pm_control; errno %d",
-			  __func__, errno);
+		hif_err("Failed pld_wlan_pm_control; errno %d", errno);
 }
 #else
 void hif_ipci_prevent_linkdown(struct hif_softc *scn, bool flag)
 {
-	HIF_INFO("wlan: %s pcie power collapse", (flag ? "disable" : "enable"));
+	hif_info("wlan: %s pcie power collapse", (flag ? "disable" : "enable"));
 	hif_runtime_prevent_linkdown(scn, flag);
 }
 #endif
 
 int hif_ipci_bus_suspend(struct hif_softc *scn)
 {
-	return hif_apps_enable_irq_wake(GET_HIF_OPAQUE_HDL(scn));
+	int ret;
+
+	ret = hif_apps_enable_irq_wake(GET_HIF_OPAQUE_HDL(scn));
+
+	if (!ret)
+		scn->bus_suspended = true;
+
+	return ret;
 }
 
 int hif_ipci_bus_resume(struct hif_softc *scn)
 {
+	scn->bus_suspended = false;
+
 	return hif_apps_disable_irq_wake(GET_HIF_OPAQUE_HDL(scn));
 }
 
@@ -356,7 +363,7 @@ int hif_ipci_dump_registers(struct hif_softc *hif_ctx)
 	status = hif_dump_ce_registers(scn);
 
 	if (status)
-		HIF_ERROR("%s: Dump CE Registers Failed", __func__);
+		hif_err("Dump CE Registers Failed");
 
 	return 0;
 }
@@ -444,9 +451,9 @@ static int hif_ce_msi_configure_irq(struct hif_softc *scn)
 		unsigned int msi_data = (ce_id % msi_data_count) +
 			msi_irq_start;
 		irq = pld_get_msi_irq(scn->qdf_dev->dev, msi_data);
-		HIF_DBG("%s: (ce_id %d, msi_data %d, irq %d tasklet %pK)",
-			__func__, ce_id, msi_data, irq,
-			&ce_sc->tasklets[ce_id]);
+		hif_debug("(ce_id %d, msi_data %d, irq %d tasklet %pK)",
+			 ce_id, msi_data, irq,
+			 &ce_sc->tasklets[ce_id]);
 
 		/* implies the ce is also initialized */
 		if (!ce_sc->tasklets[ce_id].inited)
@@ -537,8 +544,7 @@ int hif_ipci_configure_grp_irq(struct hif_softc *scn,
 				       "wlan_EXT_GRP",
 				       hif_ext_group);
 		if (ret) {
-			HIF_ERROR("%s: request_irq failed ret = %d",
-				  __func__, ret);
+			hif_err("request_irq failed ret = %d", ret);
 			return -EFAULT;
 		}
 		hif_ext_group->os_irq[j] = irq;
@@ -551,7 +557,7 @@ int hif_configure_irq(struct hif_softc *scn)
 {
 	int ret = 0;
 
-	HIF_TRACE("%s: E", __func__);
+	hif_info("E");
 
 	if (hif_is_polled_mode_enabled(GET_HIF_OPAQUE_HDL(scn))) {
 		scn->request_irq_done = false;
@@ -563,8 +569,7 @@ int hif_configure_irq(struct hif_softc *scn)
 		goto end;
 
 	if (ret < 0) {
-		HIF_ERROR("%s: hif_ipci_configure_irq error = %d",
-			  __func__, ret);
+		hif_err("hif_ipci_configure_irq error = %d", ret);
 		return ret;
 	}
 end:
@@ -653,15 +658,14 @@ QDF_STATUS hif_ipci_enable_bus(struct hif_softc *ol_sc,
 	int device_id = QCA6750_DEVICE_ID;
 
 	if (!ol_sc) {
-		HIF_ERROR("%s: hif_ctx is NULL", __func__);
+		hif_err("hif_ctx is NULL");
 		return QDF_STATUS_E_NOMEM;
 	}
 
 	ret = qdf_set_dma_coherent_mask(dev,
 					DMA_COHERENT_MASK_DEFAULT);
 	if (ret) {
-		HIF_ERROR("%s: failed to set dma mask error = %d",
-			  __func__, ret);
+		hif_err("Failed to set dma mask error = %d", ret);
 		return qdf_status_from_os_return(ret);
 	}
 
@@ -669,16 +673,16 @@ QDF_STATUS hif_ipci_enable_bus(struct hif_softc *ol_sc,
 	tgt_info = hif_get_target_info_handle(hif_hdl);
 	hif_ipci_init_deinit_ops_attach(sc, device_id);
 	sc->hif_ipci_get_soc_info(sc, dev);
-	HIF_TRACE("%s: hif_enable_pci done", __func__);
+	hif_debug("hif_enable_pci done");
 
 	ret = hif_get_device_type(device_id, revision_id,
 				  &hif_type, &target_type);
 	if (ret < 0) {
-		HIF_ERROR("%s: invalid device id/revision_id", __func__);
+		hif_err("Invalid device id/revision_id");
 		return QDF_STATUS_E_ABORTED;
 	}
-	HIF_TRACE("%s: hif_type = 0x%x, target_type = 0x%x",
-		  __func__, hif_type, target_type);
+	hif_debug("hif_type = 0x%x, target_type = 0x%x",
+		 hif_type, target_type);
 
 	hif_register_tbl_attach(ol_sc, hif_type);
 	hif_target_register_tbl_attach(ol_sc, target_type);
@@ -686,7 +690,7 @@ QDF_STATUS hif_ipci_enable_bus(struct hif_softc *ol_sc,
 	tgt_info->target_type = target_type;
 
 	if (!ol_sc->mem_pa) {
-		HIF_ERROR("%s: ERROR - BAR0 uninitialized", __func__);
+		hif_err("BAR0 uninitialized");
 		return QDF_STATUS_E_ABORTED;
 	}
 

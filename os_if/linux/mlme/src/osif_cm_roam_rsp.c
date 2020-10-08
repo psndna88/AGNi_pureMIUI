@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, 2020, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,8 +15,7 @@
  */
 
 /**
- * DOC: wlan_cfg80211_cm_disconnect_rsp.c
+ * DOC: osif_cm_roam_rsp.c
  *
- * This file maintains definitaions of disconnect response
- * fucntions.
+ * This file maintains definitaions of roam response apis.
  */

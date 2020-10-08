@@ -153,14 +153,17 @@ struct dp_tx_msdu_info_s {
 	struct dp_tx_queue tx_queue;
 	uint32_t num_seg;
 	uint8_t tid;
+	uint8_t exception_fw;
+	uint8_t is_tx_sniffer;
+	uint8_t search_type;
 	union {
 		struct qdf_tso_info_t tso_info;
 		struct dp_tx_sg_info_s sg_info;
 	} u;
 	uint32_t meta_data[DP_TX_MSDU_INFO_META_DATA_DWORDS];
-	uint8_t exception_fw;
 	uint16_t ppdu_cookie;
-	uint8_t is_tx_sniffer;
+	uint16_t ast_idx;
+	uint16_t ast_hash;
 };
 
 /**
@@ -228,9 +231,18 @@ QDF_STATUS dp_tx_pdev_init(struct dp_pdev *pdev);
 
 qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc, uint8_t vdev_id, qdf_nbuf_t nbuf);
 
+qdf_nbuf_t dp_tx_send_vdev_id_check(struct cdp_soc_t *soc, uint8_t vdev_id,
+				    qdf_nbuf_t nbuf);
+
 qdf_nbuf_t dp_tx_send_exception(struct cdp_soc_t *soc, uint8_t vdev_id,
 				qdf_nbuf_t nbuf,
 				struct cdp_tx_exception_metadata *tx_exc);
+
+qdf_nbuf_t dp_tx_send_exception_vdev_id_check(struct cdp_soc_t *soc,
+					      uint8_t vdev_id,
+					      qdf_nbuf_t nbuf,
+				struct cdp_tx_exception_metadata *tx_exc);
+
 qdf_nbuf_t dp_tx_send_mesh(struct cdp_soc_t *soc, uint8_t vdev_id,
 			   qdf_nbuf_t nbuf);
 qdf_nbuf_t

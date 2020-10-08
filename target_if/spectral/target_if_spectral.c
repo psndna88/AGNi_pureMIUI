@@ -558,7 +558,7 @@ target_if_spectral_info_read(
 		return -EINVAL;
 	}
 
-	qdf_spin_lock(&info->osps_lock);
+	qdf_spin_lock_bh(&info->osps_lock);
 
 	if (is_cacheable) {
 		if (info->osps_cache.osc_is_valid) {
@@ -601,7 +601,7 @@ target_if_spectral_info_read(
 				/* We can't reach this point */
 				break;
 			}
-			qdf_spin_unlock(&info->osps_lock);
+			qdf_spin_unlock_bh(&info->osps_lock);
 			return 0;
 		}
 	}
@@ -615,7 +615,7 @@ target_if_spectral_info_read(
 	init_def_retval =
 			target_if_spectral_info_init_defaults(spectral, smode);
 	if (init_def_retval != QDF_STATUS_SUCCESS) {
-		qdf_spin_unlock(&info->osps_lock);
+		qdf_spin_unlock_bh(&info->osps_lock);
 		if (init_def_retval == QDF_STATUS_E_NOENT)
 			return -ENOENT;
 		else
@@ -660,7 +660,7 @@ target_if_spectral_info_read(
 		break;
 	}
 
-	qdf_spin_unlock(&info->osps_lock);
+	qdf_spin_unlock_bh(&info->osps_lock);
 
 	return 0;
 }
@@ -789,7 +789,7 @@ target_if_spectral_info_write(
 
 		pval = (uint8_t *)input;
 
-		qdf_spin_lock(&info->osps_lock);
+		qdf_spin_lock_bh(&info->osps_lock);
 		ret = target_if_send_vdev_spectral_enable_cmd(spectral, smode,
 							      1, *pval, 0, 0);
 
@@ -801,7 +801,7 @@ target_if_spectral_info_write(
 		if (ret < 0) {
 			spectral_err("target_if_send_vdev_spectral_enable_cmd failed with error=%d",
 				     ret);
-			qdf_spin_unlock(&info->osps_lock);
+			qdf_spin_unlock_bh(&info->osps_lock);
 			return ret;
 		}
 
@@ -810,7 +810,7 @@ target_if_spectral_info_write(
 		/* The cache is now valid */
 		info->osps_cache.osc_is_valid = 1;
 
-		qdf_spin_unlock(&info->osps_lock);
+		qdf_spin_unlock_bh(&info->osps_lock);
 		break;
 
 	case TARGET_IF_SPECTRAL_INFO_ENABLED:
@@ -819,7 +819,7 @@ target_if_spectral_info_write(
 
 		pval = (uint8_t *)input;
 
-		qdf_spin_lock(&info->osps_lock);
+		qdf_spin_lock_bh(&info->osps_lock);
 		ret = target_if_send_vdev_spectral_enable_cmd(spectral, smode,
 							      0, 0, 1, *pval);
 
@@ -831,7 +831,7 @@ target_if_spectral_info_write(
 		if (ret < 0) {
 			spectral_err("target_if_send_vdev_spectral_enable_cmd failed with error=%d",
 				     ret);
-			qdf_spin_unlock(&info->osps_lock);
+			qdf_spin_unlock_bh(&info->osps_lock);
 			return ret;
 		}
 
@@ -840,7 +840,7 @@ target_if_spectral_info_write(
 		/* The cache is now valid */
 		info->osps_cache.osc_is_valid = 1;
 
-		qdf_spin_unlock(&info->osps_lock);
+		qdf_spin_unlock_bh(&info->osps_lock);
 		break;
 
 	case TARGET_IF_SPECTRAL_INFO_PARAMS:
@@ -849,7 +849,7 @@ target_if_spectral_info_write(
 
 		param = (struct spectral_config *)input;
 
-		qdf_spin_lock(&info->osps_lock);
+		qdf_spin_lock_bh(&info->osps_lock);
 		ret = target_if_send_vdev_spectral_configure_cmd(spectral,
 								 smode, param);
 
@@ -861,7 +861,7 @@ target_if_spectral_info_write(
 		if (ret < 0) {
 			spectral_err("target_if_send_vdev_spectral_configure_cmd failed with error=%d",
 				     ret);
-			qdf_spin_unlock(&info->osps_lock);
+			qdf_spin_unlock_bh(&info->osps_lock);
 			return ret;
 		}
 
@@ -871,7 +871,7 @@ target_if_spectral_info_write(
 		/* The cache is now valid */
 		info->osps_cache.osc_is_valid = 1;
 
-		qdf_spin_unlock(&info->osps_lock);
+		qdf_spin_unlock_bh(&info->osps_lock);
 		break;
 
 	default:
@@ -5165,6 +5165,7 @@ target_if_spectral_wmi_unified_register_event_handler(
 {
 	wmi_unified_t wmi_handle;
 	struct target_if_psoc_spectral *psoc_spectral;
+	QDF_STATUS ret;
 
 	if (!psoc) {
 		spectral_err("psoc is null");
@@ -5183,8 +5184,10 @@ target_if_spectral_wmi_unified_register_event_handler(
 		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
 	}
 
-	return psoc_spectral->wmi_ops.wmi_unified_register_event_handler(
+	ret = psoc_spectral->wmi_ops.wmi_unified_register_event_handler(
 			wmi_handle, event_id, handler_func, rx_ctx);
+
+	return qdf_status_to_os_return(ret);
 }
 
 /**
@@ -5204,6 +5207,7 @@ target_if_spectral_wmi_unified_unregister_event_handler(
 {
 	wmi_unified_t wmi_handle;
 	struct target_if_psoc_spectral *psoc_spectral;
+	QDF_STATUS ret;
 
 	if (!psoc) {
 		spectral_err("psoc is null");
@@ -5222,8 +5226,10 @@ target_if_spectral_wmi_unified_unregister_event_handler(
 		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
 	}
 
-	return psoc_spectral->wmi_ops.wmi_unified_unregister_event_handler(
+	ret = psoc_spectral->wmi_ops.wmi_unified_unregister_event_handler(
 					wmi_handle, event_id);
+
+	return qdf_status_to_os_return(ret);
 }
 
 /**
@@ -5370,6 +5376,7 @@ target_if_spectral_wmi_unified_register_event_handler(
 				uint8_t rx_ctx)
 {
 	wmi_unified_t wmi_handle;
+	QDF_STATUS ret;
 
 	if (!psoc) {
 		spectral_err("psoc is null");
@@ -5382,8 +5389,10 @@ target_if_spectral_wmi_unified_register_event_handler(
 		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
 	}
 
-	return wmi_unified_register_event_handler(wmi_handle, event_id,
-						  handler_func, rx_ctx);
+	ret = wmi_unified_register_event_handler(wmi_handle, event_id,
+						 handler_func, rx_ctx);
+
+	return qdf_status_to_os_return(ret);
 }
 
 /**
@@ -5402,6 +5411,7 @@ target_if_spectral_wmi_unified_unregister_event_handler(
 				wmi_conv_event_id event_id)
 {
 	wmi_unified_t wmi_handle;
+	QDF_STATUS ret;
 
 	if (!psoc) {
 		spectral_err("psoc is null");
@@ -5414,7 +5424,9 @@ target_if_spectral_wmi_unified_unregister_event_handler(
 		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
 	}
 
-	return wmi_unified_unregister_event_handler(wmi_handle, event_id);
+	ret = wmi_unified_unregister_event_handler(wmi_handle, event_id);
+
+	return qdf_status_to_os_return(ret);
 }
 
 /**

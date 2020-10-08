@@ -435,6 +435,28 @@ dp_soc_iterate_peer_lock_safe(struct dp_soc *soc,
 #endif
 
 /**
+ * dp_peer_state_cmp() - compare dp peer state
+ *
+ * @peer	: DP peer
+ * @state	: state
+ *
+ * Return: true if state matches with peer state
+ *	   false if it does not match
+ */
+static inline bool
+dp_peer_state_cmp(struct dp_peer *peer,
+		  enum dp_peer_state state)
+{
+	bool is_status_equal = false;
+
+	qdf_spin_lock_bh(&peer->peer_state_lock);
+	is_status_equal = (peer->peer_state == state);
+	qdf_spin_unlock_bh(&peer->peer_state_lock);
+
+	return is_status_equal;
+}
+
+/**
  * dp_peer_update_state() - update dp peer state
  *
  * @soc		: core DP soc context
@@ -448,7 +470,10 @@ dp_peer_update_state(struct dp_soc *soc,
 		     struct dp_peer *peer,
 		     enum dp_peer_state state)
 {
-	uint8_t peer_state = peer->peer_state;
+	uint8_t peer_state;
+
+	qdf_spin_lock_bh(&peer->peer_state_lock);
+	peer_state = peer->peer_state;
 
 	switch (state) {
 	case DP_PEER_STATE_INIT:
@@ -488,12 +513,14 @@ dp_peer_update_state(struct dp_soc *soc,
 	default:
 		dp_alert("Invalid peer state %u for peer "QDF_MAC_ADDR_FMT,
 			 state, QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+		qdf_spin_unlock_bh(&peer->peer_state_lock);
 		return;
 	}
 	dp_info("Updating peer state from %u to %u mac "QDF_MAC_ADDR_FMT"\n",
 		peer_state, state,
 		QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 	peer->peer_state = state;
+	qdf_spin_unlock_bh(&peer->peer_state_lock);
 }
 
 void dp_print_ast_stats(struct dp_soc *soc);
@@ -796,10 +823,19 @@ static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
 {
 	struct dp_ast_entry *ast_entry, *temp_ast_entry;
 
+	/*
+	 * Delete peer self ast entry. This is done to handle scenarios
+	 * where peer is freed before peer map is received(for ex in case
+	 * of auth disallow due to ACL) in such cases self ast is not added
+	 * to peer->ast_list.
+	 */
+	if (peer->self_ast_entry) {
+		dp_peer_del_ast(soc, peer->self_ast_entry);
+		peer->self_ast_entry = NULL;
+	}
+
 	DP_PEER_ITERATE_ASE_LIST(peer, ast_entry, temp_ast_entry)
 		dp_peer_del_ast(soc, ast_entry);
-
-	peer->self_ast_entry = NULL;
 }
 #else
 static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,

@@ -26,7 +26,9 @@
 #ifdef FEATURE_CM_ENABLE
 #include <wlan_scan_public_structs.h>
 #include "wlan_crypto_global_def.h"
+#include "qdf_status.h"
 
+#define CM_ID_INVALID 0xFFFFFFFF
 typedef uint32_t wlan_cm_id;
 
 /**
@@ -55,7 +57,7 @@ struct wlan_cm_wep_key_params {
  * @akm_suites: AKM suites bitmask
  * @wep_keys: static WEP keys, if not NULL points to an array of
  *	MAX_WEP_KEYS WEP keys
- * @pmf_cap: Pmf capability
+ * @rsn_caps: rsn caps
  * @mgmt_ciphers: mgmt cipher bitmask
  */
 struct wlan_cm_connect_crypto_info {
@@ -65,7 +67,7 @@ struct wlan_cm_connect_crypto_info {
 	uint32_t ciphers_pairwise;
 	uint32_t akm_suites;
 	struct wlan_cm_wep_key_params wep_keys;
-	enum wlan_pmf_cap pmf_cap;
+	uint16_t rsn_caps;
 	uint32_t mgmt_ciphers;
 };
 
@@ -100,7 +102,7 @@ struct wlan_fils_con_info {
 
 /**
  * enum wlan_cm_source - connection manager req source
- * @CM_OSIF_CONENCT_REQ: Connect req initiated by OSIF or north bound
+ * @CM_OSIF_CONNECT: Connect req initiated by OSIF or north bound
  * @CM_ROAMING: Roaming request
  * @CM_OSIF_DISCONNECT: Disconnect req initiated by OSIF or north bound
  * @CM_PEER_DISCONNECT: Disconnect req initiated by peer sending deauth/disassoc
@@ -109,15 +111,19 @@ struct wlan_fils_con_info {
  * @CM_INTERNAL_DISCONNECT: Internal disconnect initiated by Connection manager
  * on receiving the back to back commands
  * @CM_ROAM_DISCONNECT: Disconnect req due to HO failure
+ * @CM_SOURCE_MAX: max value of connection manager source
+ * @CM_SOURCE_INVALID: Invalid connection manager req source
  */
 enum wlan_cm_source {
-	CM_OSIF_CONENCT_REQ,
+	CM_OSIF_CONNECT,
 	CM_ROAMING,
 	CM_OSIF_DISCONNECT,
 	CM_PEER_DISCONNECT,
 	CM_SB_DISCONNECT,
 	CM_INTERNAL_DISCONNECT,
 	CM_ROAM_DISCONNECT,
+	CM_SOURCE_MAX,
+	CM_SOURCE_INVALID = CM_SOURCE_MAX,
 };
 
 /**
@@ -182,7 +188,7 @@ struct wlan_cm_vdev_connect_req {
 struct wlan_cm_disconnect_req {
 	uint8_t vdev_id;
 	enum wlan_cm_source source;
-	uint16_t reason_code;
+	enum wlan_reason_code reason_code;
 	struct qdf_mac_addr bssid;
 };
 
@@ -200,6 +206,10 @@ struct wlan_cm_vdev_discon_req {
 /*
  * enum wlan_cm_connect_fail_reason: connection manager connect fail reason
  * @CM_NO_CANDIDATE_FOUND: No candidate found
+ * @CM_ABORT_DUE_TO_NEW_REQ_RECVD: Aborted as new command is received and
+ * @CM_BSS_SELECT_IND_FAILED: Failed BSS select indication
+ * State machine is not able to handle as state has changed due to new command.
+ * @CM_PEER_CREATE_FAILED: peer create failed
  * @CM_JOIN_FAILED: Failed in joining state
  * (BSS peer creation or other handling)
  * @CM_JOIN_TIMEOUT: Did not receive beacon or probe response after unicast
@@ -210,10 +220,14 @@ struct wlan_cm_vdev_discon_req {
  * @CM_ASSOC_TIMEOUT: No Assoc resp from AP
  * @CM_HW_MODE_FAILURE: failed to change HW mode
  * @CM_SER_FAILURE: Failed to serialize command
+ * @CM_SER_TIMEOUT: Serialization cmd timeout
  * @CM_GENERIC_FAILURE: Generic failure apart from above
  */
 enum wlan_cm_connect_fail_reason {
 	CM_NO_CANDIDATE_FOUND,
+	CM_ABORT_DUE_TO_NEW_REQ_RECVD,
+	CM_BSS_SELECT_IND_FAILED,
+	CM_PEER_CREATE_FAILED,
 	CM_JOIN_FAILED,
 	CM_JOIN_TIMEOUT,
 	CM_AUTH_FAILED,
@@ -222,6 +236,7 @@ enum wlan_cm_connect_fail_reason {
 	CM_ASSOC_TIMEOUT,
 	CM_HW_MODE_FAILURE,
 	CM_SER_FAILURE,
+	CM_SER_TIMEOUT,
 	CM_GENERIC_FAILURE,
 };
 
@@ -246,6 +261,7 @@ enum wlan_cm_connect_fail_reason {
  * @src_mac: src mac
  * @hlp_data: hlp data
  * @hlp_data_len: hlp data length
+ * @fils_seq_num: FILS sequence number
  */
 struct fils_connect_rsp_params {
 	uint8_t *fils_pmk;
@@ -261,6 +277,7 @@ struct fils_connect_rsp_params {
 	struct qdf_mac_addr src_mac;
 	uint8_t hlp_data[CM_FILS_MAX_HLP_DATA_LEN];
 	uint16_t hlp_data_len;
+	uint16_t fils_seq_num;
 };
 #endif
 
@@ -278,7 +295,7 @@ struct wlan_connect_rsp_ies {
 	struct element_info assoc_rsp;
 	struct element_info ric_resp_ie;
 #ifdef WLAN_FEATURE_FILS_SK
-	struct fils_connect_rsp_params fils_ie;
+	struct fils_connect_rsp_params *fils_ie;
 #endif
 };
 
@@ -287,20 +304,30 @@ struct wlan_connect_rsp_ies {
  * OSIF
  * @vdev_id: vdev id
  * @cm_id: Connect manager id
+ * @bssid: BSSID of the ap
+ * @ssid: SSID of the connection
+ * @freq: Channel frequency
  * @connect_status: connect status success or failure
  * @reason: connect fail reason, valid only in case of failure
  * @reason_code: protocol reason code of the connect failure
  * @aid: aid
  * @connect_ies: connect related IE required by osif to send to kernel
+ * @is_fils_connection: is fils connection
  */
 struct wlan_cm_connect_rsp {
 	uint8_t vdev_id;
 	wlan_cm_id cm_id;
-	uint8_t connect_status;
+	struct qdf_mac_addr bssid;
+	struct wlan_ssid ssid;
+	qdf_freq_t freq;
+	QDF_STATUS connect_status;
 	enum wlan_cm_connect_fail_reason reason;
 	uint8_t reason_code;
 	uint8_t aid;
 	struct wlan_connect_rsp_ies connect_ies;
+#ifdef WLAN_FEATURE_FILS_SK
+	bool is_fils_connection;
+#endif
 };
 
 

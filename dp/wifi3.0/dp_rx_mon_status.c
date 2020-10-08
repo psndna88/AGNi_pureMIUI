@@ -1838,7 +1838,7 @@ dp_rx_nbuf_prepare(struct dp_soc *soc, struct dp_pdev *pdev)
 			nbuf_retry_count++) {
 		/* Allocate a new skb using alloc_skb */
 		nbuf = qdf_nbuf_alloc_no_recycler(RX_MON_STATUS_BUF_SIZE,
-						  RX_BUFFER_RESERVATION,
+						  RX_MON_STATUS_BUF_RESERVATION,
 						  RX_DATA_BUFFER_ALIGNMENT);
 
 		if (!nbuf) {
@@ -1988,6 +1988,10 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 				if (reap_status == DP_MON_STATUS_NO_DMA)
 					continue;
 				else if (reap_status == DP_MON_STATUS_REPLENISH) {
+					qdf_nbuf_unmap_nbytes_single(
+							soc->osdev, status_nbuf,
+							QDF_DMA_FROM_DEVICE,
+							rx_desc_pool->buf_size);
 					qdf_nbuf_free(status_nbuf);
 					goto buf_replenish;
 				}
@@ -2152,6 +2156,7 @@ dp_rx_pdev_mon_status_desc_pool_alloc(struct dp_pdev *pdev, uint32_t mac_id)
 
 	dp_debug("Mon RX Desc Pool[%d] entries=%u", pdev_id, num_entries);
 
+	rx_desc_pool->desc_type = DP_RX_DESC_STATUS_TYPE;
 	return dp_rx_desc_pool_alloc(soc, num_entries + 1, rx_desc_pool);
 }
 

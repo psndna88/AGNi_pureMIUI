@@ -1161,6 +1161,7 @@ struct cdp_rx_stats {
  * @bcast: Number of broadcast packets
  * @raw_pkt: Total Raw packets
  * @dma_map_error: DMA map error
+ * @num_frags_overflow_err: msdu's nbuf count exceeds num of segemnts
  * @num_seg: No of segments in TSO packets
  * @tso_pkt:total no of TSO packets
  * @non_tso_pkts: non - TSO packets
@@ -1187,6 +1188,7 @@ struct cdp_rx_stats {
  * @enqueue_fail: hw enqueue fail
  * @dma_error: dma fail
  * @res_full: Resource Full: Congestion Control
+ * @fail_per_pkt_vdev_id_check: Per pkt vdev id check
  * @exception_fw: packets sent to fw
  * @completion_fw: packets completions received from fw
  * @cce_classified:Number of packets classified by CCE
@@ -1205,6 +1207,7 @@ struct cdp_tx_ingress_stats {
 		struct cdp_pkt_info raw_pkt;
 		uint32_t dma_map_error;
 		uint32_t invalid_raw_pkt_datatype;
+		uint32_t num_frags_overflow_err;
 	} raw;
 
 	/* Scatter Gather packet info */
@@ -1244,6 +1247,7 @@ struct cdp_tx_ingress_stats {
 		uint32_t res_full;
 		/* headroom insufficient */
 		uint32_t headroom_insufficient;
+		uint32_t fail_per_pkt_vdev_id_check;
 	} dropped;
 
 	/* Mesh packets info */
@@ -1967,6 +1971,7 @@ struct cdp_peer_hmwds_ast_add_status {
 
 enum cdp_soc_param_t {
 	DP_SOC_PARAM_MSDU_EXCEPTION_DESC,
+	DP_SOC_PARAM_CMEM_FSE_SUPPORT,
 	DP_SOC_PARAM_MAX,
 };
 

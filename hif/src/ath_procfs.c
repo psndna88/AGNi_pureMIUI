@@ -75,7 +75,7 @@ static ssize_t ath_procfs_diag_read(struct file *file, char __user *buf,
 	if (!read_buffer)
 		return -ENOMEM;
 
-	HIF_DBG("rd buff 0x%pK cnt %zu offset 0x%x buf 0x%pK",
+	hif_debug("rd buff 0x%pK cnt %zu offset 0x%x buf 0x%pK",
 		 read_buffer, count, (int)*pos, buf);
 
 	tgt_info = hif_get_target_info_handle(GET_HIF_OPAQUE_HDL(hif_hdl));
@@ -97,8 +97,8 @@ static ssize_t ath_procfs_diag_read(struct file *file, char __user *buf,
 	     (tgt_info->target_type == TARGET_TYPE_QCN7605))) {
 		memtype = ((uint32_t)(*pos) & 0xff000000) >> 24;
 		offset = (uint32_t)(*pos) & 0xffffff;
-		HIF_DBG("%s: offset 0x%x memtype 0x%x, datalen %zu\n",
-			__func__, offset, memtype, count);
+		hif_debug("offset 0x%x memtype 0x%x, datalen %zu",
+			 offset, memtype, count);
 		rv = pld_athdiag_read(scn->qdf_dev->dev,
 				      offset, memtype, count,
 				      (uint8_t *)read_buffer);
@@ -122,8 +122,7 @@ out:
 
 	if (copy_to_user(buf, read_buffer, count)) {
 		qdf_mem_free(read_buffer);
-		HIF_ERROR("%s: copy_to_user error in /proc/%s",
-			__func__, PROCFS_NAME);
+		hif_err("copy_to_user error in /proc/%s", PROCFS_NAME);
 		return -EFAULT;
 	}
 	qdf_mem_free(read_buffer);
@@ -153,12 +152,11 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 
 	if (copy_from_user(write_buffer, buf, count)) {
 		qdf_mem_free(write_buffer);
-		HIF_ERROR("%s: copy_to_user error in /proc/%s",
-			__func__, PROCFS_NAME);
+		hif_err("copy_to_user error in /proc/%s", PROCFS_NAME);
 		return -EFAULT;
 	}
 
-	HIF_DBG("wr buff 0x%pK buf 0x%pK cnt %zu offset 0x%x value 0x%x",
+	hif_debug("wr buff 0x%pK buf 0x%pK cnt %zu offset 0x%x value 0x%x",
 		 write_buffer, buf, count,
 		 (int)*pos, *((uint32_t *) write_buffer));
 
@@ -181,8 +179,8 @@ static ssize_t ath_procfs_diag_write(struct file *file,
 	     (tgt_info->target_type == TARGET_TYPE_QCN7605))) {
 		memtype = ((uint32_t)(*pos) & 0xff000000) >> 24;
 		offset = (uint32_t)(*pos) & 0xffffff;
-		HIF_DBG("%s: offset 0x%x memtype 0x%x, datalen %zu\n",
-			__func__, offset, memtype, count);
+		hif_debug("offset 0x%x memtype 0x%x, datalen %zu",
+			 offset, memtype, count);
 		rv = pld_athdiag_write(scn->qdf_dev->dev,
 				      offset, memtype, count,
 				      (uint8_t *)write_buffer);
@@ -229,8 +227,7 @@ int athdiag_procfs_init(void *scn)
 	proc_dir = proc_mkdir(PROCFS_DIR, NULL);
 	if (!proc_dir) {
 		remove_proc_entry(PROCFS_DIR, NULL);
-		HIF_ERROR("%s: Error: Could not initialize /proc/%s",
-			__func__, PROCFS_DIR);
+		hif_err("Could not initialize /proc/%s", PROCFS_DIR);
 		return -ENOMEM;
 	}
 
@@ -238,13 +235,12 @@ int athdiag_procfs_init(void *scn)
 				     &athdiag_fops, (void *)scn);
 	if (!proc_file) {
 		remove_proc_entry(PROCFS_NAME, proc_dir);
-		HIF_ERROR("%s: Could not initialize /proc/%s",
-			__func__, PROCFS_NAME);
+		hif_err("Could not initialize /proc/%s", PROCFS_NAME);
 		return -ENOMEM;
 	}
 
-	HIF_DBG("/proc/%s/%s created", PROCFS_DIR, PROCFS_NAME);
-	return 0;               /* everything is ok */
+	hif_debug("/proc/%s/%s created", PROCFS_DIR, PROCFS_NAME);
+	return 0;
 }
 
 /*
@@ -255,9 +251,9 @@ void athdiag_procfs_remove(void)
 {
 	if (proc_dir) {
 		remove_proc_entry(PROCFS_NAME, proc_dir);
-		HIF_DBG("/proc/%s/%s removed", PROCFS_DIR, PROCFS_NAME);
+		hif_debug("/proc/%s/%s removed", PROCFS_DIR, PROCFS_NAME);
 		remove_proc_entry(PROCFS_DIR, NULL);
-		HIF_DBG("/proc/%s removed", PROCFS_DIR);
+		hif_debug("/proc/%s removed", PROCFS_DIR);
 		proc_dir = NULL;
 	}
 }

@@ -695,7 +695,6 @@ QDF_STATUS (*send_roam_scan_offload_rssi_change_cmd)(
 QDF_STATUS (*send_roam_scan_offload_rssi_change_cmd)(wmi_unified_t wmi_handle,
 					uint32_t vdev_id,
 					int32_t rssi_change_thresh,
-					uint32_t bcn_rssi_weight,
 					uint32_t hirssi_delay_btw_scans);
 QDF_STATUS (*send_roam_scan_offload_chan_list_cmd)(wmi_unified_t wmi_handle,
 				   uint8_t chan_count,
@@ -819,6 +818,10 @@ QDF_STATUS (*send_process_ll_stats_set_cmd)(wmi_unified_t wmi_handle,
 
 QDF_STATUS (*send_process_ll_stats_get_cmd)(wmi_unified_t wmi_handle,
 				const struct ll_stats_get_params *get_req);
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+QDF_STATUS (*send_unified_ll_stats_get_sta_cmd)(wmi_unified_t wmi_handle,
+				const struct ll_stats_get_params *get_req);
+#endif
 #endif
 
 QDF_STATUS (*send_congestion_cmd)(wmi_unified_t wmi_handle,
@@ -1867,6 +1870,8 @@ QDF_STATUS (*send_adfs_ch_cfg_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_fw_test_cmd)(wmi_unified_t wmi_handle,
 			       struct set_fwtest_params *wmi_fwtest);
 
+QDF_STATUS (*send_wfa_test_cmd)(wmi_unified_t wmi_handle,
+				struct set_wfatest_params *wmi_wfatest);
 #ifdef WLAN_FEATURE_ACTION_OUI
 QDF_STATUS (*send_action_oui_cmd)(wmi_unified_t wmi_handle,
 				  struct action_oui_request *req);
@@ -2572,6 +2577,9 @@ struct wmi_soc {
 	uint16_t max_msg_len[WMI_MAX_RADIOS];
 	struct wmi_ops *ops;
 	const uint32_t *svc_ids;
+#ifdef WLAN_FEATURE_WMI_DIAG_OVER_CE7
+	HTC_ENDPOINT_ID wmi_diag_endpoint_id;
+#endif
 	uint32_t wmi_events[wmi_events_max];
 	/* WMI service bitmap received from target */
 	uint32_t *wmi_service_bitmap;
@@ -2972,33 +2980,6 @@ static inline struct wmi_ext_dbg_msg *wmi_ext_dbg_msg_get(uint32_t buflen)
 static inline void wmi_ext_dbg_msg_put(struct wmi_ext_dbg_msg *msg)
 {
 	qdf_mem_free(msg);
-}
-
-#else
-
-static inline QDF_STATUS wmi_ext_dbg_msg_cmd_record(struct wmi_unified
-						    *wmi_handle,
-						    uint8_t *buf, uint32_t len)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS wmi_ext_dbg_msg_event_record(struct wmi_unified
-						      *wmi_handle,
-						      uint8_t *buf,
-						      uint32_t len)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS wmi_ext_dbgfs_init(struct wmi_unified *wmi_handle)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline QDF_STATUS wmi_ext_dbgfs_deinit(struct wmi_unified *wmi_handle)
-{
-	return QDF_STATUS_SUCCESS;
 }
 
 #endif /*WMI_EXT_DBG */

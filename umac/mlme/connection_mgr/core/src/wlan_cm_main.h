@@ -28,8 +28,8 @@
 #ifdef FEATURE_CM_ENABLE
 #include <wlan_cm_public_struct.h>
 
-/* Max candidate to be tried to connect */
-#define CM_MAX_CANDIDATE_TO_BE_TRIED 5
+/* Max candidate/attempts to be tried to connect */
+#define CM_MAX_CONNECT_ATTEMPTS 5
 /* Max time to wait for scan for SSID */
 #define CM_SCAN_MAX_TIME 5000
 /* Max connect/disconnect/roam req that can be queued at a time */
@@ -99,6 +99,7 @@ struct cm_state_sm {
  * @rsn_ie: rsn_ie in connect req
  * @candidate_list: candidate list
  * @cur_candidate: current candidate
+ * @connect_attempts: number of connect attempts tried
  */
 struct cm_connect_req {
 	wlan_cm_id cm_id;
@@ -109,6 +110,7 @@ struct cm_connect_req {
 	struct element_info rsn_ie;
 	qdf_list_t *candidate_list;
 	struct scan_cache_node *cur_candidate;
+	uint8_t connect_attempts;
 };
 
 /**
@@ -124,14 +126,12 @@ struct cm_disconnect_req {
 /**
  * struct cm_req - connect manager req
  * @node: connection manager req node
- * @source: req source
  * @cm_id: cm id
  * @connect_req: connect req
  * @disconnect_req: disconnect req
  */
 struct cm_req {
 	qdf_list_node_t node;
-	enum wlan_cm_source source;
 	wlan_cm_id cm_id;
 	union {
 		struct cm_connect_req connect_req;
@@ -159,22 +159,34 @@ struct connect_ies {
  * struct cnx_mgr - connect manager req
  * @vdev: vdev back pointer
  * @sm: state machine
+ * @active_cm_id: cm_id of the active command, if any active command present
  * @req_list: connect/disconnect req list
+ * @cm_req_lock: lock to manupulate/read the cm req list
  * @disconnect_count: disconnect count
  * @connect_count: connect count
  * @force_rsne_override: if QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE is set by
  * framework
  * @req_ie: request ies for connect/disconnect set by osif/user separately from
  * connect req
+ * @global_cmd_id: global cmd id for getting cm id for connect/disconnect req
+ * @max_connect_attempts: Max attempts to be tried for a connect req
  */
 struct cnx_mgr {
 	struct wlan_objmgr_vdev *vdev;
 	struct cm_state_sm sm;
+	wlan_cm_id active_cm_id;
 	qdf_list_t req_list;
+#ifdef WLAN_CM_USE_SPINLOCK
+	qdf_spinlock_t cm_req_lock;
+#else
+	qdf_mutex_t cm_req_lock;
+#endif
 	uint8_t disconnect_count;
 	uint8_t connect_count;
 	bool force_rsne_override;
 	struct connect_ies req_ie;
+	qdf_atomic_t global_cmd_id;
+	uint8_t max_connect_attempts;
 };
 
 /**

@@ -261,6 +261,8 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 
 #define hal_write32_mb_confirm(_hal_soc, _offset, _value) \
 		hal_write32_mb(_hal_soc, _offset, _value)
+
+#define hal_write32_mb_cmem(_hal_soc, _offset, _value)
 #else
 static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 				  uint32_t value)
@@ -271,7 +273,7 @@ static inline void hal_write32_mb(struct hal_soc *hal_soc, uint32_t offset,
 
 	if (!TARGET_ACCESS_ALLOWED(HIF_GET_SOFTC(
 					hal_soc->hif_handle))) {
-		hal_err_rl("%s: target access is not allowed", __func__);
+		hal_err_rl("target access is not allowed");
 		return;
 	}
 
@@ -331,7 +333,7 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 
 	if (!TARGET_ACCESS_ALLOWED(HIF_GET_SOFTC(
 					hal_soc->hif_handle))) {
-		hal_err_rl("%s: target access is not allowed", __func__);
+		hal_err_rl("target access is not allowed");
 		return;
 	}
 
@@ -384,6 +386,35 @@ static inline void hal_write32_mb_confirm(struct hal_soc *hal_soc,
 			qdf_check_state_before_panic();
 			return;
 		}
+	}
+}
+
+static inline void hal_write32_mb_cmem(struct hal_soc *hal_soc, uint32_t offset,
+				       uint32_t value)
+{
+	unsigned long flags;
+	qdf_iomem_t new_addr;
+
+	if (!TARGET_ACCESS_ALLOWED(HIF_GET_SOFTC(
+					hal_soc->hif_handle))) {
+		hal_err_rl("%s: target access is not allowed", __func__);
+		return;
+	}
+
+	if (!hal_soc->use_register_windowing ||
+	    offset < MAX_UNWINDOWED_ADDRESS) {
+		qdf_iowrite32(hal_soc->dev_base_addr + offset, value);
+	} else if (hal_soc->static_window_map) {
+		new_addr = hal_get_window_address(
+					hal_soc,
+					hal_soc->dev_base_addr + offset);
+		qdf_iowrite32(new_addr, value);
+	} else {
+		hal_lock_reg_access(hal_soc, &flags);
+		hal_select_window_confirm(hal_soc, offset);
+		qdf_iowrite32(hal_soc->dev_base_addr + WINDOW_START +
+			  (offset & WINDOW_RANGE_MASK), value);
+		hal_unlock_reg_access(hal_soc, &flags);
 	}
 }
 #endif
@@ -481,6 +512,8 @@ static inline uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 
 	return ret;
 }
+
+#define hal_read32_mb_cmem(_hal_soc, _offset)
 #else
 static
 uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
@@ -491,7 +524,7 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 
 	if (!TARGET_ACCESS_ALLOWED(HIF_GET_SOFTC(
 					hal_soc->hif_handle))) {
-		hal_err_rl("%s: target access is not allowed", __func__);
+		hal_err_rl("target access is not allowed");
 		return 0;
 	}
 
@@ -531,7 +564,83 @@ uint32_t hal_read32_mb(struct hal_soc *hal_soc, uint32_t offset)
 
 	return ret;
 }
+
+static inline
+uint32_t hal_read32_mb_cmem(struct hal_soc *hal_soc, uint32_t offset)
+{
+	uint32_t ret;
+	unsigned long flags;
+	qdf_iomem_t new_addr;
+
+	if (!TARGET_ACCESS_ALLOWED(HIF_GET_SOFTC(
+					hal_soc->hif_handle))) {
+		hal_err_rl("%s: target access is not allowed", __func__);
+		return 0;
+	}
+
+	if (!hal_soc->use_register_windowing ||
+	    offset < MAX_UNWINDOWED_ADDRESS) {
+		ret = qdf_ioread32(hal_soc->dev_base_addr + offset);
+	} else if (hal_soc->static_window_map) {
+		new_addr = hal_get_window_address(
+					hal_soc,
+					hal_soc->dev_base_addr + offset);
+		ret = qdf_ioread32(new_addr);
+	} else {
+		hal_lock_reg_access(hal_soc, &flags);
+		hal_select_window_confirm(hal_soc, offset);
+		ret = qdf_ioread32(hal_soc->dev_base_addr + WINDOW_START +
+			       (offset & WINDOW_RANGE_MASK));
+		hal_unlock_reg_access(hal_soc, &flags);
+	}
+	return ret;
+}
 #endif
+
+/* Max times allowed for register writing retry */
+#define HAL_REG_WRITE_RETRY_MAX		5
+/* Delay milliseconds for each time retry */
+#define HAL_REG_WRITE_RETRY_DELAY	1
+
+/**
+ * hal_write32_mb_confirm_retry() - write register with confirming and
+				    do retry/recovery if writing failed
+ * @hal_soc: hal soc handle
+ * @offset: offset address from the BAR
+ * @value: value to write
+ * @recovery: is recovery needed or not.
+ *
+ * Write the register value with confirming and read it back, if
+ * read back value is not as expected, do retry for writing, if
+ * retry hit max times allowed but still fail, check if recovery
+ * needed.
+ *
+ * Return: None
+ */
+static inline void hal_write32_mb_confirm_retry(struct hal_soc *hal_soc,
+						uint32_t offset,
+						uint32_t value,
+						bool recovery)
+{
+	uint8_t retry_cnt = 0;
+	uint32_t read_value;
+
+	while (retry_cnt <= HAL_REG_WRITE_RETRY_MAX) {
+		hal_write32_mb_confirm(hal_soc, offset, value);
+		read_value = hal_read32_mb(hal_soc, offset);
+		if (qdf_likely(read_value == value))
+			break;
+
+		/* write failed, do retry */
+		hal_warn("Retry reg offset 0x%x, value 0x%x, read value 0x%x",
+			 offset, value, read_value);
+		qdf_mdelay(HAL_REG_WRITE_RETRY_DELAY);
+		retry_cnt++;
+	}
+
+	if (retry_cnt > HAL_REG_WRITE_RETRY_MAX && recovery)
+		qdf_trigger_self_recovery(NULL, QDF_HAL_REG_WRITE_FAILURE);
+}
 
 #ifdef FEATURE_HAL_DELAYED_REG_WRITE
 /**

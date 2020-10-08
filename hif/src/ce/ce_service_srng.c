@@ -735,7 +735,7 @@ static void ce_srng_msi_ring_params_setup(struct hif_softc *scn, uint32_t ce_id,
 	ring_params->msi_data = (ce_id % msi_data_count) + msi_data_start;
 	ring_params->flags |= HAL_SRNG_MSI_INTR;
 
-	HIF_DBG("%s: ce_id %d, msi_addr %pK, msi_data %d", __func__, ce_id,
+	hif_debug("ce_id %d, msi_addr %pK, msi_data %d", ce_id,
 		  (void *)ring_params->msi_addr, ring_params->msi_data);
 }
 
@@ -807,7 +807,7 @@ static void ce_srng_dest_ring_setup(struct hif_softc *scn,
 	struct hal_srng_params ring_params = {0};
 	bool status_ring_timer_thresh_work_arround = true;
 
-	HIF_INFO("%s: ce_id %d", __func__, ce_id);
+	hif_debug("ce_id: %d", ce_id);
 
 	ring_params.ring_base_paddr = dest_ring->base_addr_CE_space;
 	ring_params.ring_base_vaddr = dest_ring->base_addr_owner_space;
@@ -868,7 +868,7 @@ static void ce_srng_status_ring_setup(struct hif_softc *scn, uint32_t ce_id,
 {
 	struct hal_srng_params ring_params = {0};
 
-	HIF_INFO("%s: ce_id %d", __func__, ce_id);
+	hif_debug("ce_id: %d", ce_id);
 
 	ce_srng_msi_ring_params_setup(scn, ce_id, &ring_params);
 
@@ -931,8 +931,7 @@ static void ce_prepare_shadow_register_v2_cfg_srng(struct hif_softc *scn,
 		int *num_shadow_registers_configured)
 {
 	if (!scn->hal_soc) {
-		HIF_ERROR("%s: hal not initialized: not initializing shadow config",
-			  __func__);
+		hif_err("hal not initialized: not initializing shadow config");
 		return;
 	}
 
@@ -940,8 +939,7 @@ static void ce_prepare_shadow_register_v2_cfg_srng(struct hif_softc *scn,
 			      num_shadow_registers_configured);
 
 	if (*num_shadow_registers_configured != 0) {
-		HIF_ERROR("%s: hal shadow register configuration allready constructed",
-			  __func__);
+		hif_err("hal shadow register configuration allready constructed");
 
 		/* return with original configuration*/
 		return;

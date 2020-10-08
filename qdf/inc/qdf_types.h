@@ -389,8 +389,12 @@ typedef bool (*qdf_irqlocked_func_t)(void *);
  * @QDF_MODULE_ID_6GHZ: 6Ghz specific feature ID
  * @QDF_MODULE_ID_IOT_SIM: IOT Simulation for rogue AP module ID
  * @QDF_MODULE_ID_IFMGR: Interface Manager feature ID
+ * @QDF_MODULE_ID_MSCS: MSCS feature ID
+ * @QDF_MODULE_ID_GPIO: GPIO configuration module ID
  * @QDF_MODULE_ID_ANY: anything
  * @QDF_MODULE_ID_MAX: Max place holder module ID
+ *
+ * New module ID needs to be added in qdf trace along with this enum.
  */
 typedef enum {
 	QDF_MODULE_ID_MIN       = 0,
@@ -517,6 +521,7 @@ typedef enum {
 	QDF_MODULE_ID_IOT_SIM,
 	QDF_MODULE_ID_IFMGR,
 	QDF_MODULE_ID_MSCS,
+	QDF_MODULE_ID_GPIO,
 	QDF_MODULE_ID_ANY,
 	QDF_MODULE_ID_MAX,
 } QDF_MODULE_ID;
@@ -1339,6 +1344,7 @@ enum qdf_suspend_type {
  * @QDF_VDEV_DELETE_RESPONSE_TIMED_OUT: Delete response timeout from FW
  * @QDF_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT: Peer delete all resp timeout
  * @QDF_WMI_BUF_SEQUENCE_MISMATCH: WMI Tx completion buffer sequence mismatch
+ * @QDF_HAL_REG_WRITE_FAILURE: HAL register writing failures
  */
 enum qdf_hang_reason {
 	QDF_REASON_UNSPECIFIED,
@@ -1362,6 +1368,7 @@ enum qdf_hang_reason {
 	QDF_VDEV_DELETE_RESPONSE_TIMED_OUT,
 	QDF_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT,
 	QDF_WMI_BUF_SEQUENCE_MISMATCH,
+	QDF_HAL_REG_WRITE_FAILURE,
 };
 
 /**

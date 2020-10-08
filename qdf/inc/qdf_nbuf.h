@@ -51,6 +51,8 @@
 #define QDF_NBUF_TRAC_DHCP_SRV_PORT		67
 #define QDF_NBUF_TRAC_DHCP_CLI_PORT		68
 #define QDF_NBUF_TRAC_ETH_TYPE_OFFSET		12
+#define QDF_NBUF_TRAC_VLAN_ETH_TYPE_OFFSET	16
+#define QDF_NBUF_TRAC_DOUBLE_VLAN_ETH_TYPE_OFFSET	20
 #define QDF_NBUF_TRAC_EAPOL_ETH_TYPE		0x888E
 #define QDF_NBUF_TRAC_WAPI_ETH_TYPE		0x88b4
 #define QDF_NBUF_TRAC_ARP_ETH_TYPE		0x0806
@@ -84,7 +86,11 @@
 #define QDF_NBUF_TRAC_DHCP6_SRV_PORT		547
 #define QDF_NBUF_TRAC_DHCP6_CLI_PORT		546
 #define QDF_NBUF_TRAC_MDNS_SRC_N_DST_PORT	5353
-
+#define QDF_NBUF_TRAC_IP_OFFSET		14
+#define QDF_NBUF_TRAC_VLAN_IP_OFFSET		18
+#define QDF_NBUF_TRAC_DOUBLE_VLAN_IP_OFFSET	22
+/* One dword for IPv4 header size unit */
+#define QDF_NBUF_IPV4_HDR_SIZE_UNIT	4
 
 /* EAPOL Related MASK */
 #define EAPOL_PACKET_TYPE_OFFSET		15
@@ -1635,6 +1641,20 @@ qdf_nbuf_t
 qdf_nbuf_copy_expand_debug(qdf_nbuf_t buf, int headroom, int tailroom,
 			   const char *func, uint32_t line);
 
+/**
+ * qdf_nbuf_unshare() - make a copy of the shared nbuf
+ * @buf: Network buf instance
+ *
+ * Return: New nbuf which is a copy of the received nbuf if it is cloned,
+ *      else, return the original nbuf
+ */
+#define qdf_nbuf_unshare(d) \
+	qdf_nbuf_unshare_debug(d, __func__, __LINE__)
+
+qdf_nbuf_t
+qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name,
+		       uint32_t line_num);
+
 #else /* NBUF_MEMORY_DEBUG */
 
 static inline void qdf_net_buf_debug_init(void) {}
@@ -1766,6 +1786,10 @@ static inline qdf_nbuf_t qdf_nbuf_copy_expand(qdf_nbuf_t buf, int headroom,
 	return __qdf_nbuf_copy_expand(buf, headroom, tailroom);
 }
 
+static inline qdf_nbuf_t qdf_nbuf_unshare(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_unshare(buf);
+}
 #endif /* NBUF_MEMORY_DEBUG */
 
 /**
@@ -2203,7 +2227,10 @@ qdf_nbuf_queue_append(qdf_nbuf_queue_t *dest, qdf_nbuf_queue_t *src)
 static inline void
 qdf_nbuf_queue_free(qdf_nbuf_queue_t *head)
 {
-	__qdf_nbuf_queue_free(head);
+	qdf_nbuf_t  buf = NULL;
+
+	while ((buf = qdf_nbuf_queue_remove(head)) != NULL)
+		qdf_nbuf_free(buf);
 }
 
 static inline qdf_nbuf_t
@@ -3446,36 +3473,6 @@ qdf_nbuf_linearize(qdf_nbuf_t buf)
 	return __qdf_nbuf_linearize(buf);
 }
 
-#ifdef NBUF_MEMORY_DEBUG
-#define qdf_nbuf_unshare(d) \
-	qdf_nbuf_unshare_debug(d, __func__, __LINE__)
-
-static inline qdf_nbuf_t
-qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name, uint32_t line_num)
-{
-	qdf_nbuf_t unshared_buf;
-
-	unshared_buf = __qdf_nbuf_unshare(buf);
-
-	if (qdf_likely(buf != unshared_buf)) {
-		qdf_net_buf_debug_delete_node(buf);
-
-		if (unshared_buf)
-			qdf_net_buf_debug_add_node(unshared_buf, 0,
-						   func_name, line_num);
-	}
-
-	return unshared_buf;
-}
-
-#else
-static inline qdf_nbuf_t
-qdf_nbuf_unshare(qdf_nbuf_t buf)
-{
-	return __qdf_nbuf_unshare(buf);
-}
-#endif
-
 static inline bool
 qdf_nbuf_is_cloned(qdf_nbuf_t buf)
 {
@@ -3816,6 +3813,19 @@ static inline void qdf_nbuf_set_mark(qdf_nbuf_t nbuf, uint32_t mark)
 static inline uint32_t qdf_nbuf_get_mark(qdf_nbuf_t nbuf)
 {
 	return __qdf_nbuf_get_mark(nbuf);
+}
+
+/**
+ * qdf_nbuf_get_data_len() - Return the size of the nbuf from
+ * data pointer to end pointer
+ * @nbuf: qdf_nbuf_t
+ *
+ * Return: size of network buffer from data pointer to end
+ * pointer
+ */
+static inline qdf_size_t qdf_nbuf_get_data_len(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_data_len(nbuf);
 }
 
 #ifdef NBUF_FRAG_MEMORY_DEBUG

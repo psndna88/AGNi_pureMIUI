@@ -374,14 +374,13 @@ void hif_pm_runtime_start(struct hif_softc *scn)
 	struct hif_runtime_pm_ctx *rpm_ctx = hif_bus_get_rpm_ctx(scn);
 
 	if (!scn->hif_config.enable_runtime_pm) {
-		HIF_INFO("%s: RUNTIME PM is disabled in ini\n", __func__);
+		hif_info("RUNTIME PM is disabled in ini");
 		return;
 	}
 
 	if (mode == QDF_GLOBAL_FTM_MODE || QDF_IS_EPPING_ENABLED(mode) ||
 	    mode == QDF_GLOBAL_MONITOR_MODE) {
-		HIF_INFO("%s: RUNTIME PM is disabled for FTM/EPPING mode\n",
-			 __func__);
+		hif_info("RUNTIME PM is disabled for FTM/EPPING mode");
 		return;
 	}
 
@@ -389,7 +388,7 @@ void hif_pm_runtime_start(struct hif_softc *scn)
 		       hif_pm_runtime_lock_timeout_fn,
 		       scn, QDF_TIMER_TYPE_WAKE_APPS);
 
-	HIF_INFO("%s: Enabling RUNTIME PM, Delay: %d ms", __func__,
+	hif_info("Enabling RUNTIME PM, Delay: %d ms",
 		 scn->hif_config.runtime_pm_delay);
 
 	qdf_atomic_set(&rpm_ctx->pm_state, HIF_PM_RUNTIME_STATE_ON);
@@ -581,7 +580,7 @@ int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx)
 	pm_state = qdf_atomic_read(&rpm_ctx->pm_state);
 	if (pm_state == HIF_PM_RUNTIME_STATE_SUSPENDED ||
 	    pm_state == HIF_PM_RUNTIME_STATE_SUSPENDING)
-		HIF_INFO("Runtime PM resume is requested by %ps",
+		hif_info("Runtime PM resume is requested by %ps",
 			 (void *)_RET_IP_);
 
 	rpm_ctx->pm_stats.request_resume++;
@@ -619,8 +618,7 @@ static void __hif_runtime_pm_set_state(struct hif_softc *scn,
 	struct hif_runtime_pm_ctx *rpm_ctx = hif_bus_get_rpm_ctx(scn);
 
 	if (!rpm_ctx) {
-		HIF_ERROR("%s: HIF_CTX not initialized",
-			  __func__);
+		hif_err("HIF_CTX not initialized");
 		return;
 	}
 
@@ -748,7 +746,7 @@ int hif_pre_runtime_suspend(struct hif_opaque_softc *hif_ctx)
 	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
 
 	if (!hif_can_suspend_link(hif_ctx)) {
-		HIF_ERROR("Runtime PM not supported for link up suspend");
+		hif_err("Runtime PM not supported for link up suspend");
 		return -EINVAL;
 	}
 
@@ -811,7 +809,7 @@ int hif_runtime_suspend(struct hif_opaque_softc *hif_ctx)
 
 	errno = hif_bus_suspend(hif_ctx);
 	if (errno) {
-		HIF_ERROR("%s: failed bus suspend: %d", __func__, errno);
+		hif_err("Failed bus suspend: %d", errno);
 		return errno;
 	}
 
@@ -819,7 +817,7 @@ int hif_runtime_suspend(struct hif_opaque_softc *hif_ctx)
 
 	errno = hif_bus_suspend_noirq(hif_ctx);
 	if (errno) {
-		HIF_ERROR("%s: failed bus suspend noirq: %d", __func__, errno);
+		hif_err("Failed bus suspend noirq: %d", errno);
 		hif_pm_runtime_set_monitor_wake_intr(hif_ctx, 0);
 		goto bus_resume;
 	}
@@ -878,7 +876,7 @@ int hif_runtime_resume(struct hif_opaque_softc *hif_ctx)
 	QDF_BUG(!hif_bus_resume_noirq(hif_ctx));
 	errno = hif_bus_resume(hif_ctx);
 	if (errno)
-		HIF_ERROR("%s: failed runtime resume: %d", __func__, errno);
+		hif_err("Failed runtime resume: %d", errno);
 
 	return errno;
 }
@@ -1052,7 +1050,7 @@ int hif_pm_runtime_request_resume(struct hif_opaque_softc *hif_ctx)
 	pm_state = qdf_atomic_read(&rpm_ctx->pm_state);
 	if (pm_state == HIF_PM_RUNTIME_STATE_SUSPENDED ||
 	    pm_state == HIF_PM_RUNTIME_STATE_SUSPENDING)
-		HIF_INFO("Runtime PM resume is requested by %ps",
+		hif_info("Runtime PM resume is requested by %ps",
 			 (void *)_RET_IP_);
 
 	rpm_ctx->pm_stats.request_resume++;
@@ -1209,8 +1207,7 @@ int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx,
 	char *error = NULL;
 
 	if (!scn) {
-		HIF_ERROR("%s: Could not do runtime put, scn is null",
-			  __func__);
+		hif_err("Could not do runtime put, scn is null");
 		return -EFAULT;
 	}
 
@@ -1534,7 +1531,7 @@ int hif_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
 {
 	struct hif_pm_runtime_lock *context;
 
-	HIF_INFO("Initializing Runtime PM wakelock %s", name);
+	hif_info("Initializing Runtime PM wakelock %s", name);
 
 	context = qdf_mem_malloc(sizeof(*context));
 	if (!context)
@@ -1560,11 +1557,11 @@ void hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
 	struct hif_pm_runtime_lock *context = data;
 
 	if (!context) {
-		HIF_ERROR("Runtime PM wakelock context is NULL");
+		hif_err("Runtime PM wakelock context is NULL");
 		return;
 	}
 
-	HIF_INFO("Deinitializing Runtime PM wakelock %s", context->name);
+	hif_info("Deinitializing Runtime PM wakelock %s", context->name);
 
 	/*
 	 * Ensure to delete the context list entry and reduce the usage count

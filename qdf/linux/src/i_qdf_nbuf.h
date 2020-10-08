@@ -1737,23 +1737,6 @@ struct sk_buff *__qdf_nbuf_queue_remove(__qdf_nbuf_queue_t *qhead)
 }
 
 /**
- * __qdf_nbuf_queue_free() - free a queue
- * @qhead: head of queue
- *
- * Return: QDF status
- */
-static inline QDF_STATUS
-__qdf_nbuf_queue_free(__qdf_nbuf_queue_t *qhead)
-{
-	__qdf_nbuf_t  buf = NULL;
-
-	while ((buf = __qdf_nbuf_queue_remove(qhead)) != NULL)
-		__qdf_nbuf_free(buf);
-	return QDF_STATUS_SUCCESS;
-}
-
-
-/**
  * __qdf_nbuf_queue_first() - returns the first skb in the queue
  * @qhead: head of queue
  *
@@ -1903,7 +1886,15 @@ __qdf_nbuf_linearize(struct sk_buff *skb)
 static inline struct sk_buff *
 __qdf_nbuf_unshare(struct sk_buff *skb)
 {
-	return skb_unshare(skb, GFP_ATOMIC);
+	struct sk_buff *skb_new;
+
+	__qdf_frag_count_dec(__qdf_nbuf_get_nr_frags(skb));
+
+	skb_new = skb_unshare(skb, GFP_ATOMIC);
+	if (skb_new)
+		__qdf_frag_count_inc(__qdf_nbuf_get_nr_frags(skb_new));
+
+	return skb_new;
 }
 
 /**
@@ -2472,6 +2463,18 @@ static inline void __qdf_nbuf_set_mark(__qdf_nbuf_t buf, uint32_t mark)
 static inline uint32_t __qdf_nbuf_get_mark(__qdf_nbuf_t buf)
 {
 	return buf->mark;
+}
+
+/**
+ * __qdf_nbuf_get_data_len() - Return the size of the nbuf from
+ * the data pointer to the end pointer
+ * @nbuf: qdf_nbuf_t
+ *
+ * Return: size of skb from data pointer to end pointer
+ */
+static inline qdf_size_t __qdf_nbuf_get_data_len(__qdf_nbuf_t nbuf)
+{
+	return (skb_end_pointer(nbuf) - nbuf->data);
 }
 
 #ifdef CONFIG_NBUF_AP_PLATFORM

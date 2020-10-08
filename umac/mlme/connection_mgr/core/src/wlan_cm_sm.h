@@ -32,9 +32,13 @@
  * @WLAN_CM_SM_EV_SCAN:                   Event to start connect scan
  * @WLAN_CM_SM_EV_SCAN_SUCCESS:           Connect scan success event
  * @WLAN_CM_SM_EV_SCAN_FAILURE:           Connect scan fail event
+ * @WLAN_CM_SM_EV_HW_MODE_SUCCESS:        Hw mode change is success
+ * @WLAN_CM_SM_EV_HW_MODE_FAILURE:        Hw mode change is failure
  * @WLAN_CM_SM_EV_CONNECT_START:          Connect start process initiate
  * @WLAN_CM_SM_EV_CONNECT_ACTIVE:         Connect request is activated
  * @WLAN_CM_SM_EV_CONNECT_SUCCESS:        Connect success
+ * @WLAN_CM_SM_EV_BSS_SELECT_IND_SUCCESS: Mlme resp for BSS select indication
+ * @WLAN_CM_SM_EV_BSS_CREATE_PEER_SUCCESS: BSS peer create success
  * @WLAN_CM_SM_EV_CONNECT_GET_NEXT_CANDIDATE: Get next candidate for connection
  * @WLAN_CM_SM_EV_CONNECT_FAILURE:        Connect failed for all candidate
  * @WLAN_CM_SM_EV_DISCONNECT_REQ:         Disconnect request event from
@@ -60,26 +64,30 @@ enum wlan_cm_sm_evt {
 	WLAN_CM_SM_EV_SCAN = 1,
 	WLAN_CM_SM_EV_SCAN_SUCCESS = 2,
 	WLAN_CM_SM_EV_SCAN_FAILURE = 3,
-	WLAN_CM_SM_EV_CONNECT_START = 4,
-	WLAN_CM_SM_EV_CONNECT_ACTIVE = 5,
-	WLAN_CM_SM_EV_CONNECT_SUCCESS = 6,
-	WLAN_CM_SM_EV_CONNECT_GET_NEXT_CANDIDATE = 7,
-	WLAN_CM_SM_EV_CONNECT_FAILURE = 8,
-	WLAN_CM_SM_EV_DISCONNECT_REQ = 9,
-	WLAN_CM_SM_EV_DISCONNECT_START = 10,
-	WLAN_CM_SM_EV_DISCONNECT_ACTIVE = 11,
-	WLAN_CM_SM_EV_DISCONNECT_DONE = 12,
-	WLAN_CM_SM_EV_ROAM_START = 13,
-	WLAN_CM_SM_EV_ROAM_SYNC = 14,
-	WLAN_CM_SM_EV_ROAM_INVOKE_FAIL = 15,
-	WLAN_CM_SM_EV_ROAM_HO_FAIL = 16,
-	WLAN_CM_SM_EV_PREAUTH_DONE = 17,
-	WLAN_CM_SM_EV_GET_NEXT_PREAUTH_AP = 18,
-	WLAN_CM_SM_EV_PREAUTH_FAIL = 19,
-	WLAN_CM_SM_EV_START_REASSOC = 20,
-	WLAN_CM_SM_EV_REASSOC_DONE = 21,
-	WLAN_CM_SM_EV_REASSOC_FAILURE = 22,
-	WLAN_CM_SM_EV_ROAM_COMPLETE = 23,
+	WLAN_CM_SM_EV_HW_MODE_SUCCESS = 4,
+	WLAN_CM_SM_EV_HW_MODE_FAILURE = 5,
+	WLAN_CM_SM_EV_CONNECT_START = 6,
+	WLAN_CM_SM_EV_CONNECT_ACTIVE = 7,
+	WLAN_CM_SM_EV_CONNECT_SUCCESS = 8,
+	WLAN_CM_SM_EV_BSS_SELECT_IND_SUCCESS = 9,
+	WLAN_CM_SM_EV_BSS_CREATE_PEER_SUCCESS = 10,
+	WLAN_CM_SM_EV_CONNECT_GET_NEXT_CANDIDATE = 11,
+	WLAN_CM_SM_EV_CONNECT_FAILURE = 12,
+	WLAN_CM_SM_EV_DISCONNECT_REQ = 13,
+	WLAN_CM_SM_EV_DISCONNECT_START = 14,
+	WLAN_CM_SM_EV_DISCONNECT_ACTIVE = 15,
+	WLAN_CM_SM_EV_DISCONNECT_DONE = 16,
+	WLAN_CM_SM_EV_ROAM_START = 17,
+	WLAN_CM_SM_EV_ROAM_SYNC = 18,
+	WLAN_CM_SM_EV_ROAM_INVOKE_FAIL = 19,
+	WLAN_CM_SM_EV_ROAM_HO_FAIL = 20,
+	WLAN_CM_SM_EV_PREAUTH_DONE = 21,
+	WLAN_CM_SM_EV_GET_NEXT_PREAUTH_AP = 22,
+	WLAN_CM_SM_EV_PREAUTH_FAIL = 23,
+	WLAN_CM_SM_EV_START_REASSOC = 24,
+	WLAN_CM_SM_EV_REASSOC_DONE = 25,
+	WLAN_CM_SM_EV_REASSOC_FAILURE = 26,
+	WLAN_CM_SM_EV_ROAM_COMPLETE = 27,
 	WLAN_CM_SM_EV_MAX,
 };
 
@@ -274,40 +282,52 @@ void cm_sm_state_update(struct cnx_mgr *cm_ctx,
 			enum wlan_cm_sm_state substate);
 
 /**
- * cm_sm_deliver_event() - Delivers event to connection manager SM
+ * cm_sm_deliver_event_sync() - Delivers event to connection manager SM while
+ * holding lock
  * @cm_ctx: cm ctx
  * @event: CM event
  * @data_len: data size
  * @data: event data
  *
- * API to dispatch event to VDEV MLME SM without lock
+ * API to dispatch event to VDEV MLME SM without lock, in case lock is already
+ * held.
+ *
+ * Context: Can be called from any context, This should be called in case
+ * SM lock is already taken. If lock is not taken use cm_sm_deliver_event API
+ * instead.
  *
  * Return: SUCCESS: on handling event
- *         FAILURE: on ignoring the event
+ *         FAILURE: If event not handled
  */
 static inline
-QDF_STATUS cm_sm_deliver_event(struct cnx_mgr *cm_ctx,
-			       enum wlan_cm_sm_evt event,
-			       uint16_t data_len, void *data)
+QDF_STATUS cm_sm_deliver_event_sync(struct cnx_mgr *cm_ctx,
+				    enum wlan_cm_sm_evt event,
+				    uint16_t data_len, void *data)
 {
 	return wlan_sm_dispatch(cm_ctx->sm.sm_hdl, event, data_len, data);
 }
 
 /**
- * wlan_cm_sm_deliver_evt() - Delivers event to CM SM
+ * cm_sm_deliver_event() - Delivers event to connection manager SM
  * @vdev: Object manager VDEV object
  * @event: CM event
  * @data_len: data size
  * @data: event data
  *
- * API to dispatch event to VDEV MLME SM with lock acquired
+ * API to dispatch event to VDEV MLME SM with lock. To be used while paosting
+ * events from API called from publick API. i.e. indication/response/request
+ * from any other moudle or NB/SB.
+ *
+ * Context: Can be called from any context, This should be called in case
+ * SM lock is not taken, the API will take the lock before posting to SM.
+ * If lock is already taken use cm_sm_deliver_event_sync API instead.
  *
  * Return: SUCCESS: on handling event
- *         FAILURE: on ignoring the event
+ *         FAILURE: If event not handled
  */
-QDF_STATUS wlan_cm_sm_deliver_evt(struct wlan_objmgr_vdev *vdev,
-				  enum wlan_cm_sm_evt event,
-				  uint16_t data_len, void *data);
+QDF_STATUS  cm_sm_deliver_event(struct wlan_objmgr_vdev *vdev,
+				enum wlan_cm_sm_evt event,
+				uint16_t data_len, void *data);
 
 #endif /* FEATURE_CM_ENABLE */
 #endif /* __WLAN_CM_SM_H__ */

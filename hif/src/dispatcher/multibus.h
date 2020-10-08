@@ -94,7 +94,7 @@ int hif_snoc_get_context_size(void);
 #else
 static inline QDF_STATUS hif_initialize_snoc_ops(struct hif_bus_ops *hif_sc)
 {
-	HIF_ERROR("%s: not supported", __func__);
+	hif_warn("not supported");
 	return QDF_STATUS_E_NOSUPPORT;
 }
 /**
@@ -110,9 +110,17 @@ static inline int hif_snoc_get_context_size(void)
 
 #ifdef HIF_PCI
 QDF_STATUS hif_initialize_pci_ops(struct hif_softc *hif_sc);
+QDF_STATUS hif_update_irq_ops_with_pci(struct hif_softc *hif_sc);
 int hif_pci_get_context_size(void);
 #else
 static inline QDF_STATUS hif_initialize_pci_ops(struct hif_softc *hif_sc)
+{
+	hif_warn("not supported");
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline
+QDF_STATUS hif_update_irq_ops_with_pci(struct hif_softc *hif_sc)
 {
 	HIF_ERROR("%s: not supported", __func__);
 	return QDF_STATUS_E_NOSUPPORT;
@@ -146,7 +154,7 @@ int hif_ipci_get_context_size(void);
 #else
 static inline QDF_STATUS hif_initialize_ipci_ops(struct hif_softc *hif_sc)
 {
-	HIF_ERROR("%s: not supported", __func__);
+	hif_warn("not supported");
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
@@ -172,7 +180,7 @@ int hif_ahb_get_context_size(void);
  */
 static inline QDF_STATUS hif_initialize_ahb_ops(struct hif_bus_ops *bus_ops)
 {
-	HIF_ERROR("%s: not supported", __func__);
+	hif_warn("not supported");
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
@@ -199,7 +207,7 @@ int hif_sdio_get_context_size(void);
 
 static inline QDF_STATUS hif_initialize_sdio_ops(struct hif_softc *hif_sc)
 {
-	HIF_ERROR("%s: not supported", __func__);
+	hif_warn("not supported");
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
@@ -222,7 +230,7 @@ int hif_usb_get_context_size(void);
 #else
 static inline QDF_STATUS hif_initialize_usb_ops(struct hif_bus_ops *bus_ops)
 {
-	HIF_ERROR("%s: not supported", __func__);
+	hif_warn("not supported");
 	return QDF_STATUS_E_NOSUPPORT;
 }
 /**

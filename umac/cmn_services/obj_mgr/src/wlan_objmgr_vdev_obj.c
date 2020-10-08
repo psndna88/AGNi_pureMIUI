@@ -213,6 +213,7 @@ struct wlan_objmgr_vdev *wlan_objmgr_vdev_obj_create(
 	vdev->vdev_objmgr.c_flags = params->flags;
 	/* store os-specific pointer */
 	vdev->vdev_nif.osdev = wlan_objmgr_vdev_get_osif_priv(vdev);
+
 	/* peer count to 0 */
 	vdev->vdev_objmgr.wlan_peer_count = 0;
 	qdf_atomic_init(&vdev->vdev_objmgr.ref_cnt);

@@ -774,7 +774,7 @@ static QDF_STATUS dp_rx_defrag_tkip_demic(const uint8_t *key,
 	while (next) {
 		pktlen += (qdf_nbuf_len(next) - hdrlen);
 		prev = next;
-		dp_debug("%s pktlen %u", __func__,
+		dp_debug("pktlen %u",
 			 (uint32_t)(qdf_nbuf_len(next) - hdrlen));
 		next = qdf_nbuf_next(next);
 	}
@@ -1033,7 +1033,7 @@ dp_rx_defrag_nwifi_to_8023(struct dp_soc *soc, struct dp_peer *peer, int tid,
 						rx_desc_info))
 		fc = hal_rx_get_frame_ctrl_field(rx_desc_info);
 
-	dp_debug("%s: frame control type: 0x%x", __func__, fc);
+	dp_debug("Frame control type: 0x%x", fc);
 
 	switch (((fc & 0xff00) >> 8) & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
@@ -1767,12 +1767,12 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	 * Currently, we can have only 6 MSDUs per-MPDU, if the current
 	 * packet sequence has more than 6 MSDUs for some reason, we will
 	 * have to use the next MSDU link descriptor and chain them together
-	 * before reinjection
+	 * before reinjection.
+	 * ring_desc is validated in dp_rx_err_process.
 	 */
 	if ((fragno == 0) && (status == QDF_STATUS_SUCCESS) &&
 			(rx_reorder_array_elem->head == frag)) {
 
-		qdf_assert_always(ring_desc);
 		status = dp_rx_defrag_save_info_from_ring_desc(ring_desc,
 					rx_desc, peer, tid);
 
@@ -1786,8 +1786,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 		(*rx_bfs)++;
 
 		/* Return the non-head link desc */
-		if (ring_desc &&
-		    dp_rx_link_desc_return(soc, ring_desc,
+		if (dp_rx_link_desc_return(soc, ring_desc,
 					   HAL_BM_ACTION_PUT_IN_IDLE_LIST) !=
 		    QDF_STATUS_SUCCESS)
 			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,

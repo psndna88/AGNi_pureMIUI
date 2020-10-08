@@ -34,10 +34,6 @@
 #define WLAN_CFG_MAX_ALLOC_SIZE_MIN 0x80000
 #define WLAN_CFG_MAX_ALLOC_SIZE_MAX 0x200000
 
-#define WLAN_CFG_NUM_TCL_DATA_RINGS 3
-#define WLAN_CFG_NUM_TCL_DATA_RINGS_MIN 3
-#define WLAN_CFG_NUM_TCL_DATA_RINGS_MAX 3
-
 #if defined(QCA_LL_TX_FLOW_CONTROL_V2) || \
 	defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
 #define WLAN_CFG_TX_FLOW_START_QUEUE_OFFSET 10
@@ -891,6 +887,10 @@
 	CFG_INI_BOOL("dp_rx_monitor_protocol_flow_tag_enable", true, \
 		     "Enable/Disable Rx Protocol & Flow tags in Monitor mode")
 
+#define CFG_DP_TX_PER_PKT_VDEV_ID_CHECK \
+	CFG_INI_BOOL("dp_tx_allow_per_pkt_vdev_id_check", false, \
+		     "Enable/Disable tx Per Pkt vdev id check")
+
 /*
  * <ini>
  * dp_rx_fisa_enable - Control Rx datapath FISA
@@ -969,6 +969,9 @@
 		CFG_INI_BOOL("dp_poll_mode_enable", false, \
 		"Enable/Disable Polling mode for data path")
 
+#define CFG_DP_RX_FST_IN_CMEM \
+	CFG_INI_BOOL("dp_rx_fst_in_cmem", false, \
+		     "Enable/Disable flow search table in CMEM")
 /*
  * <ini>
  * gEnableSWLM - Control DP Software latency manager
@@ -1072,5 +1075,7 @@
 		CFG(CFG_DP_RX_PENDING_LO_THRESHOLD) \
 		CFG(CFG_DP_LEGACY_MODE_CSUM_DISABLE) \
 		CFG(CFG_DP_POLL_MODE_ENABLE) \
-		CFG(CFG_DP_SWLM_ENABLE)
+		CFG(CFG_DP_SWLM_ENABLE) \
+		CFG(CFG_DP_TX_PER_PKT_VDEV_ID_CHECK) \
+		CFG(CFG_DP_RX_FST_IN_CMEM)
 #endif /* _CFG_DP_H_ */

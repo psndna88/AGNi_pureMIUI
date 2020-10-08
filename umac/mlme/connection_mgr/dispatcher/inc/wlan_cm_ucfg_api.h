@@ -28,32 +28,78 @@
 #include <wlan_cm_api.h>
 
 /**
- * ucfg_wlan_cm_start_connect() - connect start request
+ * ucfg_cm_start_connect() - connect start request
  * @vdev: vdev pointer
  * @req: connect req
  *
  * Return: QDF_STATUS
  */
-static inline
-QDF_STATUS ucfg_wlan_cm_start_connect(struct wlan_objmgr_vdev *vdev,
-				      struct wlan_cm_connect_req *req)
-{
-	return wlan_cm_start_connect(vdev, req);
-}
-
+QDF_STATUS ucfg_cm_start_connect(struct wlan_objmgr_vdev *vdev,
+				 struct wlan_cm_connect_req *req);
 
 /**
- * ucfg_wlan_cm_start_disconnect() - disconnect start request
+ * ucfg_cm_start_disconnect() - disconnect start request
  * @vdev: vdev pointer
  * @req: disconnect req
  *
  * Return: QDF_STATUS
  */
+QDF_STATUS ucfg_cm_start_disconnect(struct wlan_objmgr_vdev *vdev,
+				    struct wlan_cm_disconnect_req *req);
+
+/**
+ * ucfg_cm_is_vdev_connecting() - check if vdev is in conneting state
+ * @vdev: vdev pointer
+ *
+ * Return: bool
+ */
+bool ucfg_cm_is_vdev_connecting(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cm_is_vdev_connected() - check if vdev is in conneted state
+ * @vdev: vdev pointer
+ *
+ * Return: bool
+ */
+bool ucfg_cm_is_vdev_connected(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cm_is_vdev_disconnecting() - check if vdev is in disconneting state
+ * @vdev: vdev pointer
+ *
+ * Return: bool
+ */
+bool ucfg_cm_is_vdev_disconnecting(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cm_is_vdev_disconnected() - check if vdev is disconnected/init state
+ * @vdev: vdev pointer
+ *
+ * Return: bool
+ */
+bool ucfg_cm_is_vdev_disconnected(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cm_is_vdev_roaming() - check if vdev is in roaming state
+ * @vdev: vdev pointer
+ *
+ * Return: bool
+ */
+bool ucfg_cm_is_vdev_roaming(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * ucfg_cm_reason_code_to_str() - return string conversion of reason code
+ * @reason: reason code.
+ *
+ * This utility function helps log string conversion of reason code.
+ *
+ * Return: string conversion of reason code, if match found;
+ *         "Unknown" otherwise.
+ */
 static inline
-QDF_STATUS ucfg_wlan_cm_start_disconnect(struct wlan_objmgr_vdev *vdev,
-					 struct wlan_cm_disconnect_req *req)
+const char *ucfg_cm_reason_code_to_str(enum wlan_reason_code reason)
 {
-	return wlan_cm_start_disconnect(vdev, req);
+	return wlan_cm_reason_code_to_str(reason);
 }
 
 #endif

@@ -22,6 +22,7 @@
 #include "wlan_if_mgr_sta.h"
 #include "wlan_if_mgr_ap.h"
 #include "wlan_if_mgr_main.h"
+#include "wlan_if_mgr_roam.h"
 
 QDF_STATUS if_mgr_deliver_event(struct wlan_objmgr_vdev *vdev,
 				enum wlan_if_mgr_evt event,
@@ -33,6 +34,8 @@ QDF_STATUS if_mgr_deliver_event(struct wlan_objmgr_vdev *vdev,
 	psoc = wlan_vdev_get_psoc(vdev);
 	if (!psoc)
 		return QDF_STATUS_E_FAILURE;
+
+	ifmgr_debug("IF MGR event received: %d", event);
 
 	switch (event) {
 	case WLAN_IF_MGR_EV_CONNECT_START:
@@ -52,6 +55,16 @@ QDF_STATUS if_mgr_deliver_event(struct wlan_objmgr_vdev *vdev,
 		break;
 	case WLAN_IF_MGR_EV_AP_STOP_BSS_COMPLETE:
 		status = if_mgr_ap_stop_bss_complete(vdev, event_data);
+		break;
+	case WLAN_IF_MGR_EV_DISCONNECT_START:
+		status = if_mgr_disconnect_start(vdev, event_data);
+		break;
+	case WLAN_IF_MGR_EV_DISCONNECT_COMPLETE:
+		status = if_mgr_disconnect_complete(vdev, event_data);
+		break;
+	case WLAN_IF_MGR_EV_VALIDATE_CANDIDATE:
+		status = if_mgr_validate_candidate(vdev, event_data);
+		break;
 	default:
 		status = QDF_STATUS_E_INVAL;
 		ifmgr_err("Invalid event");

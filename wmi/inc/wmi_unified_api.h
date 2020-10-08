@@ -375,14 +375,13 @@ QDF_STATUS wmi_unified_cmd_send_pm_chk(struct wmi_unified *wmi_handle,
 /**
  * wmi_unified_register_event() - WMI event handler
  * registration function for converged components
- *
  * @wmi_handle:   handle to WMI.
  * @event_id:     WMI event ID
  * @handler_func: Event handler call back function
  *
- *  @return 0  on success and -ve on failure.
+ * Return: QDF_STATUS
  */
-int
+QDF_STATUS
 wmi_unified_register_event(wmi_unified_t wmi_handle,
 				   uint32_t event_id,
 				   wmi_unified_event_handler handler_func);
@@ -390,30 +389,30 @@ wmi_unified_register_event(wmi_unified_t wmi_handle,
 /**
  * wmi_unified_register_event_handler() - WMI event handler
  * registration function
- *
  * @wmi_handle:   handle to WMI.
  * @event_id:     WMI event ID
  * @handler_func: Event handler call back function
  * @rx_ctx: rx event processing context
  *
- *  @return 0  on success and -ve on failure.
+ * Return: QDF_STATUS
  */
-int
+QDF_STATUS
 wmi_unified_register_event_handler(wmi_unified_t wmi_handle,
 				   wmi_conv_event_id event_id,
 				   wmi_unified_event_handler handler_func,
 				   uint8_t rx_ctx);
 
 /**
- * WMI event handler unregister function for converged componets
+ * wmi_unified_unregister_event() - WMI event handler unregister function
+ * for converged componets
+ * @wmi_handle:    handle to WMI.
+ * @event_id:      WMI event ID
  *
- *  @param wmi_handle      : handle to WMI.
- *  @param event_id        : WMI event ID
- *  @return 0  on success and -ve on failure.
+ * Return: QDF_STATUS
  */
-int
+QDF_STATUS
 wmi_unified_unregister_event(wmi_unified_t wmi_handle,
-					 uint32_t event_id);
+			     uint32_t event_id);
 
 /**
  * wmi_unified_register_raw_event_handler() - WMI event handler
@@ -425,24 +424,25 @@ wmi_unified_unregister_event(wmi_unified_t wmi_handle,
  *
  * Register event handler to get struct wmi_raw_event_buffer as arg
  *
- * @return: 0 on success and -ve on failure.
+ * Return: QDF_STATUS
  */
-int
+QDF_STATUS
 wmi_unified_register_raw_event_handler(wmi_unified_t wmi_handle,
 				       wmi_conv_event_id event_id,
 				       wmi_unified_event_handler handler_func,
 				       enum wmi_rx_exec_ctx rx_ctx);
 
 /**
- * WMI event handler unregister function
+ * wmi_unified_unregister_event_handler() - WMI event handler unregister
+ * function
+ * wmi_handle:  handle to WMI.
+ * event_id:    WMI event ID
  *
- *  @param wmi_handle      : handle to WMI.
- *  @param event_id        : WMI event ID
- *  @return 0  on success and -ve on failure.
+ * Return: QDF_STATUS
  */
-int
+QDF_STATUS
 wmi_unified_unregister_event_handler(wmi_unified_t wmi_handle,
-					 wmi_conv_event_id event_id);
+				     wmi_conv_event_id event_id);
 
 /**
  * wmi_unified_connect_htc_service() -  WMI API to get connect to HTC service
@@ -454,6 +454,27 @@ wmi_unified_unregister_event_handler(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_connect_htc_service(struct wmi_unified *wmi_handle,
 				HTC_HANDLE htc_handle);
+
+#ifdef WLAN_FEATURE_WMI_DIAG_OVER_CE7
+/**
+ * wmi_diag_connect_pdev_htc_service()
+ * WMI DIAG API to get connect to HTC service
+ * @wmi_handle: handle to WMI.
+ * @htc_handle: handle to HTC.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAULT for failure
+ */
+QDF_STATUS
+wmi_diag_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
+				  HTC_HANDLE htc_handle);
+#else
+static inline QDF_STATUS
+wmi_diag_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
+				  HTC_HANDLE htc_handle)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /*
  * WMI API to verify the host has enough credits to suspend
@@ -1445,6 +1466,20 @@ QDF_STATUS wmi_unified_process_ll_stats_set_cmd(wmi_unified_t wmi_handle,
  */
 QDF_STATUS wmi_unified_process_ll_stats_get_cmd(wmi_unified_t wmi_handle,
 				 const struct ll_stats_get_params *get_req);
+
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+/**
+ * wmi_process_unified_ll_stats_get_sta_cmd() - unified link layer stats and
+ *                                              get station request
+ * @wmi_handle: wmi handle
+ * @get_req: unified ll stats and get station request command params
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_process_unified_ll_stats_get_sta_cmd(
+				wmi_unified_t wmi_handle,
+				const struct ll_stats_get_params *get_req);
+#endif /* FEATURE_CLUB_LL_STATS_AND_GET_STATION */
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
 /**
@@ -3174,6 +3209,18 @@ QDF_STATUS wmi_extract_sar_cap_service_ready_ext(
  */
 QDF_STATUS wmi_unified_fw_test_cmd(wmi_unified_t wmi_handle,
 				   struct set_fwtest_params *wmi_fwtest);
+
+/**
+ * wmi_unified_wfa_test_cmd() - send wfa test command to fw.
+ * @handle: wmi handle
+ * @wmi_fwtest: wfa test param
+ *
+ * This function send wfa test command to fw.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_wfa_test_cmd(wmi_unified_t wmi_handle,
+				    struct set_wfatest_params *wmi_wfatest);
 
 /**
  * wmi_unified_peer_rx_reorder_queue_setup_send() - send rx reorder queue

@@ -123,6 +123,7 @@ struct channel_info {
  * @rnrie: reduced neighbor report IE
  * @adaptive_11r: pointer to adaptive 11r IE
  * @single_pmk: Pointer to sae single pmk IE
+ * @rsnxe: Pointer to rsnxe IE
  */
 struct ie_list {
 	uint8_t *tim;
@@ -175,6 +176,7 @@ struct ie_list {
 	uint8_t *extender;
 	uint8_t *adaptive_11r;
 	uint8_t *single_pmk;
+	uint8_t *rsnxe;
 };
 
 enum scan_entry_connection_state {
@@ -237,6 +239,7 @@ struct scan_cache_node {
  * @ucastcipherset: unicast cipher set
  * @mcastcipherset: multicast cipher set
  * @mgmtcipherset: mgmt cipher set
+ * @rsn_caps: rsn caps of scan entry
  */
 struct security_info {
 	uint32_t authmodeset;
@@ -244,6 +247,7 @@ struct security_info {
 	uint32_t ucastcipherset;
 	uint32_t mcastcipherset;
 	uint32_t mgmtcipherset;
+	uint16_t rsn_caps;
 };
 
 /**

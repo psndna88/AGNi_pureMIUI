@@ -890,7 +890,7 @@ QDF_STATUS dp_peer_add_ast(struct dp_soc *soc,
 
 	qdf_spin_lock_bh(&soc->ast_lock);
 
-	if (peer->peer_state != DP_PEER_STATE_ACTIVE) {
+	if (!dp_peer_state_cmp(peer, DP_PEER_STATE_ACTIVE)) {
 		if ((type != CDP_TXRX_AST_TYPE_STATIC) &&
 		    (type != CDP_TXRX_AST_TYPE_SELF)) {
 			qdf_spin_unlock_bh(&soc->ast_lock);
@@ -1319,7 +1319,7 @@ int dp_peer_update_ast(struct dp_soc *soc, struct dp_peer *peer,
 	 *  3) We did not get the HTT map for create event
 	 */
 	if (ast_entry->delete_in_progress ||
-	    (peer->peer_state != DP_PEER_STATE_ACTIVE) ||
+	    !dp_peer_state_cmp(peer, DP_PEER_STATE_ACTIVE) ||
 	    !ast_entry->is_mapped)
 		return ret;
 
@@ -1983,7 +1983,7 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 		 * if peer is in logical delete CP triggered delete before map
 		 * is received ignore this event
 		 */
-		if (peer->peer_state == DP_PEER_STATE_LOGICAL_DELETE) {
+		if (dp_peer_state_cmp(peer, DP_PEER_STATE_LOGICAL_DELETE)) {
 			dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
 			dp_alert("Peer %pK["QDF_MAC_ADDR_FMT"] logical delete state vid %d",
 				 peer, QDF_MAC_ADDR_REF(peer_mac_addr),
@@ -2171,13 +2171,7 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 	}
 
 	vdev = peer->vdev;
-	/* cleanup the peer data */
-	dp_peer_cleanup(vdev, peer);
 	DP_UPDATE_STATS(vdev, peer);
-
-	qdf_spin_lock_bh(&soc->inactive_peer_list_lock);
-	TAILQ_INSERT_TAIL(&soc->inactive_peer_list, peer, inactive_list_elem);
-	qdf_spin_unlock_bh(&soc->inactive_peer_list_lock);
 
 	dp_peer_update_state(soc, peer, DP_PEER_STATE_INACTIVE);
 	dp_peer_unref_delete(peer, DP_MOD_ID_HTT);
@@ -2665,8 +2659,7 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc, void *cb_ctxt,
 	} else if (reo_status->rx_queue_status.header.status !=
 		HAL_REO_CMD_SUCCESS) {
 		/* Should not happen normally. Just print error for now */
-		dp_info_rl("%s: Rx tid HW desc deletion failed(%d): tid %d",
-			   __func__,
+		dp_info_rl("Rx tid HW desc deletion failed(%d): tid %d",
 			   reo_status->rx_queue_status.header.status,
 			   freedesc->rx_tid.tid);
 	}
@@ -2773,8 +2766,8 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc, void *cb_ctxt,
 			 * In case of MCL path add the desc back to the free
 			 * desc list and defer deletion.
 			 */
-			dp_info_rl("%s: fail to send REO cmd to flush cache: tid %d",
-				   __func__, rx_tid->tid);
+			dp_info_rl("fail to send REO cmd to flush cache: tid %d",
+				   rx_tid->tid);
 			dp_reo_desc_clean_up(soc, desc, &reo_status);
 			DP_STATS_INC(soc, rx.err.reo_cmd_send_fail, 1);
 			break;
@@ -3135,11 +3128,11 @@ int dp_addba_resp_tx_completion_wifi3(struct cdp_soc_t *cdp_soc,
 	if (dp_rx_tid_update_wifi3(peer, tid,
 				   rx_tid->ba_win_size,
 				   rx_tid->startseqnum)) {
-		dp_err("%s: failed update REO SSN", __func__);
+		dp_err("Failed update REO SSN");
 	}
 
-	dp_info("%s: tid %u window_size %u start_seq_num %u",
-		__func__, tid, rx_tid->ba_win_size,
+	dp_info("tid %u window_size %u start_seq_num %u",
+		tid, rx_tid->ba_win_size,
 		rx_tid->startseqnum);
 
 	/* First Session */
@@ -4175,8 +4168,8 @@ bool dp_find_peer_exist_on_other_vdev(struct cdp_soc_t *soc_hdl,
 		peer = dp_peer_find_hash_find(soc, peer_addr, 0, i,
 					      DP_MOD_ID_CDP);
 		if (peer) {
-			dp_err("%s: Duplicate peer "QDF_MAC_ADDR_FMT" already exist on vdev %d",
-			       __func__, QDF_MAC_ADDR_REF(peer_addr), i);
+			dp_err("Duplicate peer "QDF_MAC_ADDR_FMT" already exist on vdev %d",
+			       QDF_MAC_ADDR_REF(peer_addr), i);
 			dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 			return true;
 		}

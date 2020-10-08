@@ -1207,15 +1207,15 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 	radarfound_freq = freq_center + radar_found->freq_offset;
 
 	if (radar_found->segment_id == SEG_ID_SECONDARY)
-		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS,
-			 "Radar found on second segment.Radarfound Freq=%d MHz.Secondary Chan cfreq=%d MHz.",
-			 radarfound_freq, freq_center);
+		dfs_debug(dfs, WLAN_DEBUG_DFS_ALWAYS,
+			  "Radar found on second segment.Radarfound Freq=%d MHz.Secondary Chan cfreq=%d MHz.",
+			  radarfound_freq, freq_center);
 	else
-		dfs_info(NULL, WLAN_DEBUG_DFS_ALWAYS,
-			 "Radar found on channel=%d, freq=%d MHz. Primary beaconning chan:%d, freq=%d MHz.",
-			 utils_dfs_freq_to_chan(radarfound_freq),
-			 radarfound_freq, dfs_curchan->dfs_ch_ieee,
-			 dfs_curchan->dfs_ch_freq);
+		dfs_debug(NULL, WLAN_DEBUG_DFS_ALWAYS,
+			  "Radar found on channel=%d, freq=%d MHz. Primary beaconning chan:%d, freq=%d MHz.",
+			  utils_dfs_freq_to_chan(radarfound_freq),
+			  radarfound_freq, dfs_curchan->dfs_ch_ieee,
+			  dfs_curchan->dfs_ch_freq);
 
 	utils_dfs_deliver_event(dfs->dfs_pdev_obj, radarfound_freq,
 				WLAN_EV_RADAR_DETECTED);
@@ -1261,8 +1261,7 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 	 */
 
 	dfs_debug(dfs, WLAN_DEBUG_DFS,
-		  "%s: %d Radar found on dfs detector:%d",
-		  __func__, __LINE__, radar_found->detector_id);
+		  "Radar found on dfs detector: %d", radar_found->detector_id);
 	dfs_mark_precac_nol_for_freq(dfs,
 				     dfs->is_radar_found_on_secondary_seg,
 				     radar_found->detector_id,
@@ -1307,11 +1306,11 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 		dfs_second_segment_radar_disable(dfs);
 	}
 
-	dfs_mlme_mark_dfs_for_freq(dfs->dfs_pdev_obj,
-				   dfs->dfs_curchan->dfs_ch_ieee,
-				   dfs->dfs_curchan->dfs_ch_freq,
-				   dfs->dfs_curchan->dfs_ch_mhz_freq_seg2,
-				   dfs->dfs_curchan->dfs_ch_flags);
+	dfs_mlme_mark_dfs(dfs->dfs_pdev_obj,
+			  dfs->dfs_curchan->dfs_ch_ieee,
+			  dfs->dfs_curchan->dfs_ch_freq,
+			  dfs->dfs_curchan->dfs_ch_mhz_freq_seg2,
+			  dfs->dfs_curchan->dfs_ch_flags);
 
 exit:
 	return status;

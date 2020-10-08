@@ -150,8 +150,7 @@ int hif_ahb_dump_registers(struct hif_softc *hif_ctx)
 
 	status = hif_dump_ce_registers(scn);
 	if (status)
-		HIF_ERROR("%s: Dump CE Registers Failed status %d", __func__,
-							status);
+		hif_err("Dump CE Registers Failed status %d", status);
 
 	return 0;
 }
@@ -453,11 +452,10 @@ int hif_target_sync_ahb(struct hif_softc *scn)
 			qdf_mdelay(10);
 		}
 		if (wait_limit < 0) {
-			HIF_TRACE("%s: FW signal timed out", __func__);
+			hif_info("FW signal timed out");
 			return -EIO;
 		}
-		HIF_TRACE("%s: Got FW signal, retries = %x", __func__,
-							500-wait_limit);
+		hif_info("Got FW signal, retries = %x", 500-wait_limit);
 	}
 
 	return 0;
@@ -490,8 +488,7 @@ void hif_ahb_disable_bus(struct hif_softc *scn)
 				(struct qdf_pfm_hndl *)pdev, &vmres,
 				IORESOURCE_MEM, 0);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			HIF_INFO("%s: Failed to get IORESOURCE_MEM\n",
-				 __func__);
+			hif_info("Failed to get IORESOURCE_MEM");
 			return;
 		}
 		memres = (struct resource *)vmres;
@@ -561,27 +558,26 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 	ret = hif_get_device_type(id->driver_data, revision_id,
 			&hif_type, &target_type);
 	if (ret < 0) {
-		HIF_ERROR("%s: invalid device  ret %d id %d revision_id %d",
-			__func__, ret, (int)id->driver_data, revision_id);
+		hif_err("Invalid device ret %d id %d revision_id %d",
+			ret, (int)id->driver_data, revision_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (target_type == TARGET_TYPE_QCN9100) {
 		hif_ahb_get_soc_info_pld(sc, dev);
+		hif_update_irq_ops_with_pci(ol_sc);
 	} else {
 		status = pfrm_platform_get_resource(&pdev->dev,
 						    (struct qdf_pfm_hndl *)pdev,
 						    &vmres,
 						    IORESOURCE_MEM, 0);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			HIF_INFO("%s: Failed to get IORESOURCE_MEM\n",
-				 __func__);
+			hif_err("Failed to get IORESOURCE_MEM");
 			return status;
 		}
 		memres = (struct resource *)vmres;
 		if (!memres) {
-			HIF_INFO("%s: Failed to get IORESOURCE_MEM\n",
-				 __func__);
+			hif_err("Failed to get IORESOURCE_MEM");
 			return QDF_STATUS_E_IO;
 		}
 
@@ -598,7 +594,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 					&mem);
 #endif
 		if (QDF_IS_STATUS_ERROR(status)) {
-			HIF_INFO("ath: ioremap error\n");
+			hif_err("ath: ioremap error");
 			ret = PTR_ERR(mem);
 			goto err_cleanup1;
 		}
@@ -610,7 +606,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 
 	ret = pfrm_dma_set_mask(dev, 32);
 	if (ret) {
-		HIF_INFO("ath: 32-bit DMA not available\n");
+		hif_err("ath: 32-bit DMA not available");
 		status = QDF_STATUS_E_IO;
 		goto err_cleanup1;
 	}
@@ -621,8 +617,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 	ret = pfrm_dma_set_coherent_mask(dev, 32);
 #endif
 	if (ret) {
-		HIF_ERROR("%s: failed to set dma mask error = %d",
-			  __func__, ret);
+		hif_err("Failed to set dma mask error = %d", ret);
 		return QDF_STATUS_E_IO;
 	}
 
@@ -640,7 +635,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 
 		sc->mem_ce = ioremap_nocache(HOST_CE_ADDRESS, HOST_CE_SIZE);
 		if (IS_ERR(sc->mem_ce)) {
-			HIF_INFO("CE: ioremap failed\n");
+			hif_err("CE: ioremap failed");
 			return QDF_STATUS_E_IO;
 		}
 		ol_sc->mem_ce = sc->mem_ce;
@@ -652,7 +647,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 			(tgt_info->target_type != TARGET_TYPE_QCN9100) &&
 			(tgt_info->target_type != TARGET_TYPE_QCA6018)) {
 		if (hif_ahb_enable_radio(sc, pdev, id) != 0) {
-			HIF_INFO("error in enabling soc\n");
+			hif_err("error in enabling soc");
 			return QDF_STATUS_E_IO;
 		}
 
@@ -661,8 +656,8 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 			goto err_target_sync;
 		}
 	}
-	HIF_TRACE("%s: X - hif_type = 0x%x, target_type = 0x%x",
-			__func__, hif_type, target_type);
+	hif_info("X - hif_type = 0x%x, target_type = 0x%x",
+		hif_type, target_type);
 
 	return QDF_STATUS_SUCCESS;
 err_target_sync:
@@ -671,7 +666,7 @@ err_target_sync:
 	    (tgt_info->target_type != TARGET_TYPE_QCN9100) &&
 	    (tgt_info->target_type != TARGET_TYPE_QCA5018) &&
 	    (tgt_info->target_type != TARGET_TYPE_QCA6018)) {
-		HIF_INFO("Error: Disabling target\n");
+		hif_err("Disabling target");
 		hif_ahb_disable_bus(ol_sc);
 	}
 err_cleanup1:
@@ -890,7 +885,7 @@ bool hif_ahb_needs_bmi(struct hif_softc *scn)
 void hif_ahb_display_stats(struct hif_softc *scn)
 {
 	if (!scn) {
-		HIF_ERROR("%s, hif_scn null", __func__);
+		hif_err("hif_scn null");
 		return;
 	}
 	hif_display_ce_stats(scn);
@@ -901,7 +896,7 @@ void hif_ahb_clear_stats(struct hif_softc *scn)
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
 
 	if (!hif_state) {
-		HIF_ERROR("%s, hif_state null", __func__);
+		hif_err("hif_state null");
 		return;
 	}
 	hif_clear_ce_stats(hif_state);

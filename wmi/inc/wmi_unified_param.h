@@ -1038,6 +1038,7 @@ typedef struct {
  * @peer_he_rx_mcs_set: Peer HE RX MCS MAP
  * @peer_he_tx_mcs_set: Peer HE TX MCS MAP
  * @peer_ppet: Peer HE PPET info
+ * @peer_bss_max_idle_option: Peer BSS Max Idle option update
  */
 struct peer_assoc_params {
 	uint32_t vdev_id;
@@ -1100,6 +1101,7 @@ struct peer_assoc_params {
 	uint32_t peer_he_tx_mcs_set[WMI_HOST_MAX_HE_RATE_SET];
 	struct wmi_host_ppe_threshold peer_ppet;
 	u_int8_t peer_bsscolor_rept_info;
+	uint32_t peer_bss_max_idle_option;
 };
 
 /**
@@ -1461,15 +1463,39 @@ struct wmi_peer_rate_report_params {
 };
 
 /**
- * struct t_thermal_cmd_params - thermal command parameters
+ * enum thermal_mgmt_action_code - thermal mgmt action code
+ * @THERMAL_MGMT_ACTION_DEFAULT: target chooses what action to take, based
+ *  on its default thermal management policy.
+ * @THERMAL_MGMT_ACTION_HALT_TRAFFIC: If the temperature rises above
+ *  configured upper thresh degreeC, the target will halt tx.
+ * @THERMAL_MGMT_ACTION_NOTIFY_HOST: the target will notify the host
+ *  if the temperature either rises above configured upper thresh degreeC or
+ *  falls below lower thresh degreeC.
+ * @THERMAL_MGMT_ACTION_CHAINSCALING: The target will switch tx chain
+ *  mask from multi chains to single chain if the temperature rises
+ *  above upper thresh degreeC.
+ *  The target will switch tx chainmask back to multi chains if the
+ *  temperature drops below upper_thresh_degreeC.
+ */
+enum thermal_mgmt_action_code {
+	THERMAL_MGMT_ACTION_DEFAULT,
+	THERMAL_MGMT_ACTION_HALT_TRAFFIC,
+	THERMAL_MGMT_ACTION_NOTIFY_HOST,
+	THERMAL_MGMT_ACTION_CHAINSCALING,
+};
+
+/**
+ * struct thermal_cmd_params - thermal command parameters
  * @min_temp: minimum temprature
  * @max_temp: maximum temprature
  * @thermal_enable: thermal enable
+ * @thermal_action: thermal action code
  */
 struct thermal_cmd_params {
 	uint16_t min_temp;
 	uint16_t max_temp;
 	uint8_t thermal_enable;
+	enum thermal_mgmt_action_code thermal_action;
 };
 
 #define WMI_LRO_IPV4_SEED_ARR_SZ 5
@@ -2758,6 +2784,58 @@ typedef struct {
 struct set_fwtest_params {
 	uint32_t arg;
 	uint32_t value;
+};
+
+/**
+ * enum wfa_test_cmds - WFA test config command
+ * @WFA_CONFIG_RXNE: configure an override for the RSNXE Used
+ * @WFA_CONFIG_CSA: configure the driver to ignore CSA
+ * @WFA_CONFIG_OCV: configure OCI
+ * @WFA_CONFIG_SA_QUERY: configure driver/firmware to ignore SAquery timeout
+ */
+enum wfa_test_cmds {
+	WFA_CONFIG_RXNE,
+	WFA_CONFIG_CSA,
+	WFA_CONFIG_OCV,
+	WFA_CONFIG_SA_QUERY,
+};
+
+/**
+ * enum wmi_host_wfa_config_ocv_frmtype - OCI override frame type
+ * @WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_SAQUERY_REQ: SA Query Request frame
+ * @WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_SAQUERY_RSP: SA Query Response frame
+ * @WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_FT_REASSOC_REQ: FT Reassociation Req frm
+ * @WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_FILS_REASSOC_REQ: FILS Reassoc Req frm
+ */
+enum wmi_host_wfa_config_ocv_frmtype {
+	WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_SAQUERY_REQ          = 0x00000001,
+	WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_SAQUERY_RSP          = 0x00000002,
+	WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_FT_REASSOC_REQ       = 0x00000004,
+	WMI_HOST_WFA_CONFIG_OCV_FRMTYPE_FILS_REASSOC_REQ     = 0x00000008,
+};
+
+/**
+ * struct ocv_wfatest_params - ocv WFA test params
+ * @frame_type: frame type req for OCV config
+ * @freq: frequency to set
+ */
+struct ocv_wfatest_params {
+	uint8_t frame_type;
+	uint32_t freq;
+};
+
+/**
+ * struct set_wfatest_params - WFA test params
+ * @vdev_id: vdev id
+ * @value: wfa test config value
+ * @cmd: WFA test command
+ * @ocv_param: pointer to ocv params
+ */
+struct set_wfatest_params {
+	uint8_t vdev_id;
+	uint32_t value;
+	enum wfa_test_cmds cmd;
+	struct ocv_wfatest_params *ocv_param;
 };
 
 /*
@@ -5285,6 +5363,10 @@ typedef enum {
 	wmi_service_ll_stats_per_chan_rx_tx_time,
 	wmi_service_thermal_multi_client_support,
 	wmi_service_mbss_param_in_vdev_start_support,
+	wmi_service_fse_cmem_alloc_support,
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+	wmi_service_get_station_in_ll_stats_req,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

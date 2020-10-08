@@ -769,6 +769,19 @@ QDF_STATUS wmi_unified_process_ll_stats_get_cmd(wmi_unified_t wmi_handle,
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+QDF_STATUS wmi_process_unified_ll_stats_get_sta_cmd(
+				wmi_unified_t wmi_handle,
+				const struct ll_stats_get_params *get_req)
+{
+	if (wmi_handle->ops->send_unified_ll_stats_get_sta_cmd)
+		return wmi_handle->ops->send_unified_ll_stats_get_sta_cmd(
+						wmi_handle, get_req);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
 
 QDF_STATUS wmi_unified_congestion_request_cmd(wmi_unified_t wmi_handle,
@@ -1004,6 +1017,16 @@ QDF_STATUS wmi_unified_fw_test_cmd(wmi_unified_t wmi_handle,
 
 	return QDF_STATUS_E_FAILURE;
 
+}
+
+QDF_STATUS wmi_unified_wfa_test_cmd(wmi_unified_t wmi_handle,
+				    struct set_wfatest_params *wmi_wfatest)
+{
+	if (wmi_handle->ops->send_wfa_test_cmd)
+		return wmi_handle->ops->send_wfa_test_cmd(wmi_handle,
+							  wmi_wfatest);
+
+	return QDF_STATUS_E_FAILURE;
 }
 
 QDF_STATUS wmi_unified_unit_test_cmd(wmi_unified_t wmi_handle,
@@ -1592,7 +1615,7 @@ bool wmi_service_enabled(wmi_unified_t wmi_handle, uint32_t service_id)
 				wmi_handle->services[service_id]);
 		}
 	} else {
-		WMI_LOGI("Service %d not supported", service_id);
+		wmi_info("Service %d not supported", service_id);
 	}
 
 	return false;
