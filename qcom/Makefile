@@ -171,7 +171,8 @@ ifeq ($(CONFIG_ARCH_LAHAINA), y)
 ifeq ($(CONFIG_ARCH_QTI_VM), y)
 dtb-$(CONFIG_ARCH_QTI_VM) += lahaina-vm-mtp.dtb \
 	lahaina-vm-cdp.dtb \
-	lahaina-vm-qrd.dtb
+	lahaina-vm-qrd.dtb \
+	lahaina-vm-mtp-v2.1.dtb
 endif
 endif
 
