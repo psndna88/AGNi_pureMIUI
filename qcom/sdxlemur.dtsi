@@ -6,6 +6,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interconnect/qcom,sdxlemur.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
 / {
 	#address-cells = <1>;
@@ -373,6 +374,26 @@
 		#reset-cells = <1>;
 	};
 
+	clock_apsscc: syscon@17811000 {
+		compatible = "syscon";
+		reg = <0x17811000 0x20>;
+	};
+
+	clock_mccc: syscon@90b0000 {
+		compatible = "syscon";
+		reg = <0x90b0000 0x54>;
+	};
+
+	clock_debugcc: qcom,cc-debug {
+		compatible = "qcom,sdxlemur-debugcc";
+		qcom,gcc = <&gcc>;
+		qcom,apsscc = <&clock_apsscc>;
+		qcom,mccc = <&clock_mccc>;
+		clock-names = "xo_clk_src";
+		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		#clock-cells = <1>;
+	};
+
 	serial_uart: serial@831000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x831000 0x200>;
@@ -403,10 +424,20 @@
 		status = "disabled";
 	};
 
-	apsscc: clock-controller@17808000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "apsscc_clocks";
-		#clock-cells = <1>;
+	apsscc: clock-controller@17808100 {
+		compatible = "qcom,sdxlemur-apsscc";
+		clocks = <&rpmhcc RPMH_CXO_CLK_A>, <&gcc GPLL0_OUT_EVEN>;
+		clock-names = "bi_tcxo_ao", "gpll0_out_even";
+		reg = <0x17810008 0x16>,
+			<0x17808100 0x100>;
+		reg-names = "apcs_cmd", "apcs_pll";
+		vdd-lucid-pll-supply = <&VDD_CX_LEVEL_AO>;
+		cpu-vdd-supply = <&VDD_CX_LEVEL_AO>;
+		qcom,speed0-bin-v0 =
+			<   345600000 RPMH_REGULATOR_LEVEL_LOW_SVS>,
+			<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
+			<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
+			<  1497600000 RPMH_REGULATOR_LEVEL_TURBO>;
 		#reset-cells = <1>;
 	};
 
