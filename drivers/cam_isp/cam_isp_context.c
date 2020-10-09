@@ -3998,7 +3998,7 @@ static int __cam_isp_ctx_release_hw_in_top_state(struct cam_context *ctx,
 			&rel_arg);
 		ctx_isp->hw_ctx = NULL;
 	} else {
-		CAM_ERR(CAM_ISP, "No hw resources acquired for this ctx");
+		CAM_ERR(CAM_ISP, "No hw resources acquired for ctx[%u]", ctx->ctx_id);
 	}
 
 	ctx->last_flush_req = 0;
