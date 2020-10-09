@@ -4412,8 +4412,6 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 	csid_hw_info = (struct cam_hw_info  *)hw_priv;
 	csid_hw = (struct cam_ife_csid_hw   *)csid_hw_info->core_info;
 
-	mutex_lock(&csid_hw->hw_info->hw_mutex);
-
 	switch (cmd_type) {
 	case CAM_IFE_CSID_CMD_GET_TIME_STAMP:
 		rc = cam_ife_csid_get_time_stamp(csid_hw, cmd_args);
@@ -4456,8 +4454,6 @@ static int cam_ife_csid_process_cmd(void *hw_priv,
 		rc = -EINVAL;
 		break;
 	}
-
-	mutex_unlock(&csid_hw->hw_info->hw_mutex);
 
 	return rc;
 
