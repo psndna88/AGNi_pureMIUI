@@ -294,6 +294,23 @@ static void wcn_config_ap_ldpc(struct sigma_dut *dut, const char *ifname)
 }
 
 
+static int wcn_config_ap_fils_dscv(struct sigma_dut *dut, const char *ifname)
+{
+#ifdef NL80211_SUPPORT
+	uint8_t enable_fils_dscv = dut->ap_filsdscv == VALUE_ENABLED;
+
+	return wcn_wifi_test_config_set_u8(
+		dut, ifname,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FILS_DISCOVERY_FRAMES_TX,
+		enable_fils_dscv);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"FILS Discovery frames configuration can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void mac80211_config_rts_force(struct sigma_dut *dut, const char *ifname,
 				      const char *val)
 {
@@ -8685,6 +8702,11 @@ skip_key_mgmt:
 	if (drv == DRIVER_WCN || drv == DRIVER_LINUX_WCN)
 		wcn_config_ap_ldpc(dut, ifname);
 
+	if ((drv == DRIVER_WCN || drv == DRIVER_LINUX_WCN) &&
+	     dut->program == PROGRAM_OCE && dut->dev_role == DEVROLE_STA_CFON &&
+	     wcn_config_ap_fils_dscv(dut, ifname))
+		return ERROR_SEND_STATUS;
+
 	if (dut->ap_l2tif) {
 		snprintf(path, sizeof(path),
 			 "/sys/class/net/%s/brport/hairpin_mode",
@@ -9294,7 +9316,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_oce = VALUE_ENABLED;
 		dut->ap_broadcast_ssid = VALUE_ENABLED;
 		dut->ap_fils_dscv_int = 20;
-		dut->ap_filsdscv = VALUE_ENABLED;
+		dut->ap_filsdscv = dut->dev_role == DEVROLE_STA_CFON ?
+			VALUE_DISABLED : VALUE_ENABLED;
 		dut->ap_filshlp = VALUE_DISABLED;
 		dut->ap_rnr = VALUE_DISABLED;
 		dut->ap_nairealm[0] = '\0';
