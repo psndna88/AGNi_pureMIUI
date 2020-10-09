@@ -15,17 +15,17 @@ i2c communication.
 First Level Node - CCI device
 ======================================
 
+- cell-index: cci hardware core index
+  Usage: required
+  Value type: <u32>
+  Definition: Should specify the Hardware index id.
+
 - compatible
   Usage: required
   Value type: <string>
   Definition: Should be "qcom,cci".
         In case of cci version 1.2,
         use "qcom,cci-v1.2".
-
-- cell-index: cci hardware core index
-  Usage: required
-  Value type: <u32>
-  Definition: Should specify the Hardware index id.
 
 - reg
   Usage: required
@@ -40,15 +40,20 @@ First Level Node - CCI device
   Definition: Should specify relevant names to each
 	reg property defined.
 
-- interrupts
+- reg-cam-base
   Usage: required
   Value type: <u32>
-  Definition: Interrupt associated with CCI HW.
+  Definition: List of bases.
 
 - interrupt-names
   Usage: required
   Value type: <string>
   Definition: Name of the interrupt.
+
+- interrupts
+  Usage: required
+  Value type: <u32>
+  Definition: Interrupt associated with CCI HW.
 
 - gpios
   Usage: required
@@ -254,10 +259,26 @@ sensor resource.
   Definition: should contain the gpios which are used by two or more
 	cameras, and these cameras may be opened together.
 
+- shared-pinctrl-gpios
+  Usage: optional
+  Value type: <u32>
+  Definition: should contain the pinctrl gpios which are used by two or more
+	cameras, and these cameras may be opened together.
+
+- shared-pctrl-gpio-names
+  Usage: optional
+  Value type: <string>
+  Definition: List of names to assign the shared pinctrl gpio defined in
+	shared-pinctrl-gpios entry
+	e.g "mclk0", "xyz"
+
 - pinctrl-names
   Usage: optional
   Value type: <string>
   Definition: List of names to assign the shared pin state defined in pinctrl device node
+	string should follow the strict rule which needs to start with shared-pinctrl-gpio-names
+	and followed by "_active" and "_suspend"
+	e.g. "mclk0_active", "mclk0_suspend", "xyz_active", "xyz_suspend"
 
 - pinctrl-<0..n>
   Usage: optional
@@ -758,9 +779,14 @@ Example:
          compatible = "qcom,cam-res-mgr";
          status = "ok";
          shared-gpios = <18 19>;
-         pinctrl-names = "cam_res_mgr_default", "cam_res_mgr_suspend";
-         pinctrl-0 = <&cam_shared_clk_active &cam_res_mgr_active>;
-         pinctrl-1 = <&cam_shared_clk_suspend &cam_res_mgr_suspend>;
+	 shared-pinctrl-gpios = <408 409>;
+	 shared-pctrl-gpio-names = "mclk0", "mclk1";
+         pinctrl-names = "mclk0_active", "mclk0_suspend",
+		"mclk1_active", "mclk1_suspend";
+         pinctrl-0 = <&cam_sensor_mclk0_active>;
+	 pinctrl-1 = <&cam_sensor_mclk0_suspend>;
+	 pintcrl-2 = <&cam_sensor_mclk1_active>;
+	 pinctrl-3 = <&cam_sensor_mclk1_suspend>;
     };
 
     qcom,cam-sensor0 {

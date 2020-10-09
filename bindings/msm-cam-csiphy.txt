@@ -9,6 +9,10 @@ first level describe the overall CSIPHY node structure.
 ======================================
 First Level Node - CSIPHY device
 ======================================
+- cell-index: csiphy hardware core index
+  Usage: required
+  Value type: <u32>
+  Definition: Should specify the Hardware index id.
 
 - compatible
   Usage: required
@@ -18,11 +22,6 @@ First Level Node - CSIPHY device
 	"qcom,csiphy-v1.2.2", "qcom,csiphy-v2.0", "qcom,csiphy-v1.2.2.2",
 	"qcom,csiphy-v1.2.3", "qcom,csiphy-v2.0.1", "qcom,csiphy-v2.1.0",
 	"qcom,csiphy-v1.2.4", "qcom,csiphy-v1.2.5", "qcom,csiphy".
-
-- cell-index: csiphy hardware core index
-  Usage: required
-  Value type: <u32>
-  Definition: Should specify the Hardware index id.
 
 - reg
   Usage: required
@@ -52,26 +51,6 @@ First Level Node - CSIPHY device
   Value type: <string>
   Definition: Name of the interrupt.
 
-- clock-names
-  Usage: required
-  Value type: <string>
-  Definition: List of clock names required for CSIPHY HW.
-
-- clock-rates
-  Usage: required
-  Value type: <u32>
-  Definition: List of clock rates in Hz for CSIPHY HW.
-
-- clock-cntl-level
-  Usage: required
-  Value type: <string>
-  Definition: All different clock level node can support.
-
-- clocks
-  Usage: required
-  Value type: <phandle>
-  Definition: all clock phandle and source clocks.
-
 - regulator-names
   Usage: required
   Value type: <string>
@@ -88,32 +67,96 @@ First Level Node - CSIPHY device
   Definition: should contain phandle for mipi-csi-vdd regulator used for
 	CSIPHY device.
 
+- csi-vdd-xxx-supply
+  Usage: required
+  Value type: <phandle>
+  Definition: should contain phandles for csi-vdd-1p2 and csi-vdd-0p9
+	regulators used for CSIPHY.
+
 - csi-vdd-voltage
   Usage: required
   Value type: <u32>
-  Definition: should contain required voltage for csi-vdd supply for CSIPHY.
+  Definition: should contain required voltage for csi-vdd supply
+	for CSIPHY.
+
+- rgltr-cntrl-support
+  Usage: required
+  Value type: <empty>
+  Definition: Flag to indicate whether regulator control support is
+	enabled or not.
+
+- rgltr-min-voltage
+  Usage: required
+  Value type: <u32>
+  Definition: should contain required min voltage for gdsr, csi-vdd-1p2
+	and csi-vdd-0p9 supply for CSIPHY.
+
+- rgltr-max-voltage
+  Usage: required
+  Value type: <u32>
+  Definition: should contain required max voltage for gdsr, csi-vdd-1p2
+	and csi-vdd-0p9 supply for CSIPHY.
+
+- rgltr-load-current
+  Usage: required
+  Value type: <u32>
+  Definition: should contain peak current for gdsr, csi-vdd-1p2
+	and csi-vdd-0p9 supply for CSIPHY.
+
+- clocks
+  Usage: required
+  Value type: <phandle>
+  Definition: all clock phandle and source clocks.
+
+- clock-names
+  Usage: required
+  Value type: <string>
+  Definition: List of clock names required for CSIPHY HW.
+
+- clock-cntl-level
+  Usage: required
+  Value type: <string>
+  Definition: All different clock level node can support.
+
+- src-clock-name
+  Usage: required
+  Value type: <string>
+  Definition: Source clock name.
+
+- clock-rates
+  Usage: required
+  Value type: <u32>
+  Definition: List of clock rates in Hz for CSIPHY HW.
 
 Example:
 
-qcom,csiphy@ac65000 {
-     cell-index = <0>;
-     compatible = "qcom,csiphy-v1.0", "qcom,csiphy";
-     reg = <0xac65000 0x200>;
-     reg-cam-base = <0x65000>;
-     reg-names = "csiphy";
-     interrupts = <0 477 0>;
-     interrupt-names = "csiphy";
-     regulator-names = "gdscr", "refgen";
-     mipi-csi-vdd-supply = <&pm8998_l1>;
-     csi-vdd-voltage = <1200000>;
-     gdscr-supply = <&titan_top_gdsc>;
-     clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
-              <&clock_camcc CAM_CC_CSIPHY0_CLK>,
-              <&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
-              <&clock_camcc CAM_CC_CSI0PHYTIMER_CLK>;
-     clock-names = "cphy_rx_clk_src", "csiphy0_clk",
-              "csi0phytimer_clk_src", "csi0phytimer_clk";
-     clock-rates = <400000000 0 300000000 0>;
-     clock-cntl-level = "turbo";
-     status = "ok";
+cam_csiphy0: qcom,csiphy0@ace4000 {
+	cell-index = <0>;
+	compatible = "qcom,csiphy-v2.1.0", "qcom,csiphy";
+	reg = < 0x0ace4000 0x2000>;
+	reg-names = "csiphy";
+	reg-cam-base = <0xe4000>;
+	interrupts = <GIC_SPI 477 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "csiphy0";
+	gdscr-supply = <&cam_cc_titan_top_gdsc>;
+	csi-vdd-1p2-supply = <&pm8350_l6>;
+	csi-vdd-0p9-supply = <&pm8350_l5>;
+	rgltr-cntrl-support;
+	regulator-names = "gdscr", "csi-vdd-1p2", "csi-vdd-0p9";
+	rgltr-min-voltage = <0 1200000 880000>;
+	rgltr-max-voltage = <0 1248000 912000>;
+	rgltr-load-current = <0 54700 102000>;
+	clocks = <&clock_camcc CAM_CC_CPHY_RX_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSIPHY0_CLK>,
+		<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
+		<&clock_camcc CAM_CC_CSI0PHYTIMER_CLK>;
+	clock-names = "cphy_rx_clk_src",
+		"csiphy0_clk",
+		"csi0phytimer_clk_src",
+		"csi0phytimer_clk";
+	src-clock-name = "csi0phytimer_clk_src";
+	clock-cntl-level = "nominal";
+	clock-rates =
+		<480000000 0 400000000 0>;
+	status = "ok";
 };

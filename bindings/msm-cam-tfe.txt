@@ -112,6 +112,11 @@ Optional properties:
   Definition: Scalable clock names to identify which clocks needs to update
 	along with source clock.
 
+- cam_hw_pid:
+  Usage: optional
+  Value type: <u32>
+  Definition: HW unique Pid values
+
 Example:
 	cam_tfe0: qcom,tfe0@5c6e000{
 		cell-index = <0>;
