@@ -548,3 +548,4 @@
 };
 
 #include "direwolf-pinctrl.dtsi"
+#include "direwolf-regulators.dtsi"
