@@ -216,7 +216,7 @@ int msm_smem_map_dma_buf(struct msm_vidc_inst *inst, struct msm_smem *smem)
 	rc = dma_buf_get_flags(dbuf, &ion_flags);
 	if (rc) {
 		s_vpr_e(inst->sid, "Failed to get dma buf flags: %d\n", rc);
-		goto exit;
+		goto fail_map_dma_buf;
 	}
 	if (ion_flags & ION_FLAG_CACHED)
 		smem->flags |= SMEM_CACHED;
@@ -230,7 +230,7 @@ int msm_smem_map_dma_buf(struct msm_vidc_inst *inst, struct msm_smem *smem)
 			smem->flags & SMEM_SECURE ? "secure" : "non-secure",
 			inst->flags & VIDC_SECURE ? "secure" : "non-secure");
 		rc = -EINVAL;
-		goto exit;
+		goto fail_map_dma_buf;
 	}
 	buffer_size = smem->size;
 
@@ -240,18 +240,25 @@ int msm_smem_map_dma_buf(struct msm_vidc_inst *inst, struct msm_smem *smem)
 			inst->sid);
 	if (rc) {
 		s_vpr_e(inst->sid, "Failed to get device address: %d\n", rc);
-		goto exit;
+		goto fail_map_dma_buf;
 	}
 	temp = (u32)iova;
 	if ((dma_addr_t)temp != iova) {
 		s_vpr_e(inst->sid, "iova(%pa) truncated to %#x", &iova, temp);
 		rc = -EINVAL;
-		goto exit;
+		goto fail_iova_truncation;
 	}
 
 	smem->device_addr = (u32)iova + smem->offset;
 
 	smem->refcount++;
+	return 0;
+
+fail_iova_truncation:
+	msm_dma_put_device_address(smem->flags, &smem->mapping_info,
+			smem->buffer_type, inst->sid);
+fail_map_dma_buf:
+	msm_smem_put_dma_buf(dbuf, inst->sid);
 exit:
 	return rc;
 }
