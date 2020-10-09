@@ -29,7 +29,6 @@
 #include <i_qdf_mem.h>
 #include <i_qdf_trace.h>
 
-#define QDF_ALLOC_GRANULARITY (PAGE_SIZE * 16)
 #define QDF_CACHE_LINE_SZ __qdf_cache_line_sz
 
 /**
@@ -40,7 +39,7 @@
  * Return: aligned value.
  */
 #define qdf_align(a, align_size)   __qdf_align(a, align_size)
-#define qdf_page_size QDF_ALLOC_GRANULARITY
+#define qdf_page_size __page_size
 
 /**
  * struct qdf_mem_dma_page_t - Allocated dmaable page

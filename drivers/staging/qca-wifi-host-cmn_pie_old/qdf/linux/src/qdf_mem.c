@@ -1283,10 +1283,10 @@ void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 	void **cacheable_pages = NULL;
 	uint16_t i;
 
-	pages->num_element_per_page = QDF_ALLOC_GRANULARITY / element_size;
+	pages->num_element_per_page = PAGE_SIZE / element_size;
 	if (!pages->num_element_per_page) {
 		qdf_print("Invalid page %d or element size %d",
-			  (int)QDF_ALLOC_GRANULARITY, (int)element_size);
+			  (int)PAGE_SIZE, (int)element_size);
 		goto out_fail;
 	}
 
@@ -1305,7 +1305,7 @@ void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 
 		cacheable_pages = pages->cacheable_pages;
 		for (page_idx = 0; page_idx < pages->num_pages; page_idx++) {
-			cacheable_pages[page_idx] = qdf_mem_malloc(QDF_ALLOC_GRANULARITY);
+			cacheable_pages[page_idx] = qdf_mem_malloc(PAGE_SIZE);
 			if (!cacheable_pages[page_idx]) {
 				qdf_print("cacheable page alloc fail, pi %d",
 					  page_idx);
@@ -1325,7 +1325,7 @@ void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 		for (page_idx = 0; page_idx < pages->num_pages; page_idx++) {
 			dma_pages->page_v_addr_start =
 				qdf_mem_alloc_consistent(osdev, osdev->dev,
-					 QDF_ALLOC_GRANULARITY,
+					 PAGE_SIZE,
 					&dma_pages->page_p_addr);
 			if (!dma_pages->page_v_addr_start) {
 				qdf_print("dmaable page alloc fail pi %d",
@@ -1333,7 +1333,7 @@ void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 				goto page_alloc_fail;
 			}
 			dma_pages->page_v_addr_end =
-				dma_pages->page_v_addr_start + QDF_ALLOC_GRANULARITY;
+				dma_pages->page_v_addr_start + PAGE_SIZE;
 			dma_pages++;
 		}
 		pages->cacheable_pages = NULL;
@@ -1348,7 +1348,7 @@ page_alloc_fail:
 	} else {
 		dma_pages = pages->dma_pages;
 		for (i = 0; i < page_idx; i++) {
-			qdf_mem_free_consistent(osdev, osdev->dev, QDF_ALLOC_GRANULARITY,
+			qdf_mem_free_consistent(osdev, osdev->dev, PAGE_SIZE,
 				dma_pages->page_v_addr_start,
 				dma_pages->page_p_addr, memctxt);
 			dma_pages++;
@@ -1389,7 +1389,7 @@ void qdf_mem_multi_pages_free(qdf_device_t osdev,
 	} else {
 		dma_pages = pages->dma_pages;
 		for (page_idx = 0; page_idx < pages->num_pages; page_idx++) {
-			qdf_mem_free_consistent(osdev, osdev->dev, QDF_ALLOC_GRANULARITY,
+			qdf_mem_free_consistent(osdev, osdev->dev, PAGE_SIZE,
 				dma_pages->page_v_addr_start,
 				dma_pages->page_p_addr, memctxt);
 			dma_pages++;
