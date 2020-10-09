@@ -103,6 +103,13 @@
 	};
 
 	soc: soc { };
+
+	firmware: firmware {
+		scm {
+			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr 0x13000>;
+		};
+	};
 };
 
 &soc {
@@ -226,6 +233,11 @@
 		qcom,wakeup-enable;
 	};
 
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
+	};
+
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
@@ -340,22 +352,6 @@
 		};
 	};
 
-	bi_tcxo: bi_tcxo {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <4>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
-	bi_tcxo_ao: bi_tcxo_ao {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <4>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
 	aopcc: clock-controller@0 {
 		compatible = "qcom,aop-qmp-clk";
 		mboxes = <&qmp_aop 0>;
@@ -363,16 +359,16 @@
 		#clock-cells = <1>;
 	};
 
-	rpmhcc: clock-controller@1 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "rpmhcc_clocks";
-		#clock-cells = <1>;
-		#reset-cells = <1>;
-	};
-
-	gcc: clock-controller@100000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "gcc_clocks";
+	gcc: clock-controller@0x100000 {
+		compatible = "qcom,sdxlemur-gcc", "syscon";
+		reg = <0x100000 0x1f7400>;
+		reg-name = "cc_base";
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&rpmhcc RPMH_CXO_CLK_A>, <&sleep_clk>,
+			 <&pcie_pipe_clk>, <&usb3_phy_wrapper_gcc_usb30_pipe_clk>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk",
+			      "pcie_pipe_clk", "usb3_phy_wrapper_gcc_usb30_pipe_clk";
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -388,6 +384,23 @@
 		pinctrl-0 = <&uart3_console_active>;
 		pinctrl-1 = <&uart3_console_sleep>;
 		status = "ok";
+	};
+
+	qnand_1: nand@1b00000 {
+		compatible = "qcom,msm-nand";
+		reg =   <0x01b00000 0x1000>,
+			<0x01b04000 0x1c000>;
+		reg-names =     "nand_phys",
+				"bam_phys";
+		qcom,reg-adjustment-offset = <0x4000>;
+
+		interrupts = <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "bam_irq";
+
+		clock-names = "core_clk";
+		clocks = <&rpmhcc RPMH_QPIC_CLK>;
+
+		status = "disabled";
 	};
 
 	apsscc: clock-controller@17808000 {
@@ -419,6 +432,11 @@
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
+
+		rpmhcc: clock-controller@1 {
+			compatible = "qcom,sdxlemur-rpmh-clk";
+			#clock-cells = <1>;
+		};
 	};
 
 	pdc: interrupt-controller@b210000 {
@@ -432,13 +450,13 @@
 
 	 /* GCC GDSCs */
 	gcc_pcie_gdsc: qcom,gdsc@143004 {
-		compatible = "regulator-fixed";
+		compatible = "qcom,gdsc";
 		reg = <0x143004 0x4>;
 		regulator-name = "gcc_pcie_gdsc";
 	};
 
 	gcc_usb30_gdsc: qcom,gdsc@117004 {
-		compatible = "regulator-fixed";
+		compatible = "qcom,gdsc";
 		reg = <0x117004 0x4>;
 		regulator-name = "gcc_usb30_gdsc";
 	};
@@ -475,6 +493,11 @@
 		compatible = "qcom,tcsr-mutex";
 		syscon = <&tcsr_mutex_block 0 0x1000>;
 		#hwlock-cells = <1>;
+	};
+
+	tcsr: syscon@1fc0000 {
+		compatible = "syscon";
+		reg = <0x1fc0000 0x30000>;
 	};
 
 	cache-controller@9200000 {

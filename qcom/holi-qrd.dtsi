@@ -269,8 +269,7 @@
 		      <&smb1396_div2_cp_master PSY_IIO_CP_SWITCHER_EN>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ENABLE>,
 		      <&smb1396_div2_cp_master PSY_IIO_CP_ILIM>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>;
+		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -301,8 +300,7 @@
 			   "cp_switcher_en",
 			   "cp_enable",
 			   "cp_ilim",
-			   "cp_die_temp",
-			   "current_capability";
+			   "cp_die_temp";
 	qcom,battery-data = <&qrd_batterydata>;
 	qcom,sec-charger-config = <1>;
 	qcom,auto-recharge-soc = <98>;
@@ -400,6 +398,54 @@
 
 &usb0 {
 	extcon = <&pm7250b_pdphy>, <&eud>;
+
+	#io-channel-cells = <1>;
+	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
+	io-channel-names = "chg_type";
+};
+
+&qusb_phy0 {
+	qcom,qusb-phy-init-seq =
+		/* <value reg_offset> */
+		<0x23 0x210 /* PWR_CTRL1 */
+		 0x03 0x04  /* PLL_ANALOG_CONTROLS_TWO */
+		 0x7c 0x18c /* PLL_CLOCK_INVERTERS */
+		 0x80 0x2c  /* PLL_CMODE */
+		 0x0a 0x184 /* PLL_LOCK_DELAY */
+		 0x19 0xb4  /* PLL_DIGITAL_TIMERS_TWO */
+		 0x40 0x194 /* PLL_BIAS_CONTROL_1 */
+		 0x15 0x198 /* PLL_BIAS_CONTROL_2 */
+		 0x21 0x214 /* PWR_CTRL2 */
+		 0x08 0x220 /* IMP_CTRL1 */
+		 0x58 0x224 /* IMP_CTRL2 */
+		 0x47 0x240 /* TUNE1 */
+		 0x29 0x244 /* TUNE2 */
+		 0xca 0x248 /* TUNE3 */
+		 0x04 0x24c /* TUNE4 */
+		 0x03 0x250 /* TUNE5 */
+		 0x30 0x23c /* CHG_CTRL2 */
+		 0x22 0x210>; /* PWR_CTRL1 */
+
+	qcom,qusb-phy-host-init-seq =
+		/* <value reg_offset> */
+		<0x23 0x210 /* PWR_CTRL1 */
+		0x03 0x04  /* PLL_ANALOG_CONTROLS_TWO */
+		0x7c 0x18c /* PLL_CLOCK_INVERTERS */
+		0x80 0x2c  /* PLL_CMODE */
+		0x0a 0x184 /* PLL_LOCK_DELAY */
+		0x19 0xb4  /* PLL_DIGITAL_TIMERS_TWO */
+		0x40 0x194 /* PLL_BIAS_CONTROL_1 */
+		0x15 0x198 /* PLL_BIAS_CONTROL_2 */
+		0x21 0x214 /* PWR_CTRL2 */
+		0x08 0x220 /* IMP_CTRL1 */
+		0x58 0x224 /* IMP_CTRL2 */
+		0x47 0x240 /* TUNE1 */
+		0x29 0x244 /* TUNE2 */
+		0xca 0x248 /* TUNE3 */
+		0x04 0x24c /* TUNE4 */
+		0x03 0x250 /* TUNE5 */
+		0x30 0x23c /* CHG_CTRL2 */
+		0x22 0x210>; /* PWR_CTRL1 */
 };
 
 &pm7250b_vadc {
@@ -438,20 +484,14 @@
 };
 
 &smb1396_div2_cp_master {
-	io-channels = <&smb1396_div2_cp_slave PSY_IIO_CURRENT_CAPABILITY>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_ENABLE>,
-		      <&smb1396_div2_cp_slave PSY_IIO_CP_INPUT_CURRENT_MAX>,
-		      <&pm7250b_vadc ADC5_AMUX_THM2>,
+	io-channels = <&pm7250b_vadc ADC5_AMUX_THM2>,
 		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
 		      <&pm7250b_charger PSY_IIO_ADAPTER_CC_MODE>,
 		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
 		      <&pm7250b_charger PSY_IIO_USB_INPUT_CURRENT_SETTLED>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_MODE>,
 		      <&pm7250b_charger PSY_IIO_SMB_EN_REASON>;
-	io-channel-names = "current_capability",
-			   "cp_enable",
-			   "cp_input_current_max",
-			   "die_temp",
+	io-channel-names = "die_temp",
 			   "real_type",
 			   "adapter_cc_mode",
 			   "pd_current_max",
@@ -460,13 +500,5 @@
 			   "smb_en_reason";
 	qcom,parallel-input-mode = <1>; /* USBIN */
 	qcom,parallel-output-mode = <2>; /* VBAT */
-	status = "ok";
-};
-
-&smb1396_slave {
-	status = "ok";
-};
-
-&smb1396_div2_cp_slave {
 	status = "ok";
 };

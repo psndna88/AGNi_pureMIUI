@@ -56,6 +56,9 @@ SoCs:
 - SHIMA
   compatible = "qcom,shima"
 
+- YUPIK
+  compatible = "qcom,yupik"
+
 - LITO
   compatible = "qcom,lito"
 
@@ -206,6 +209,7 @@ compatible = "qcom,shima-rumi"
 compatible = "qcom,shima-idp"
 compatible = "qcom,shima-atp"
 compatible = "qcom,shima-qrd"
+compatible = "qcom,yupik-rumi"
 compatible = "qcom,lito-rumi"
 compatible = "qcom,lito-mtp"
 compatible = "qcom,lito-cdp"

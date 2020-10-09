@@ -1,5 +1,13 @@
 #include "lahaina-qrd-common.dtsi"
 
+&wsa883x_0222 {
+	status = "disabled";
+};
+
+&wsa_spkr_en2 {
+	status = "disabled";
+};
+
 &lahaina_snd {
 	qcom,model = "lahaina-hdk-snd-card";
 
@@ -60,10 +68,119 @@
 	qcom,msm-mbhc-usbc-audio-supported = <0>;
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
+
+	qcom,wsa-max-devs = <1>;
 };
 
 &usb1 {
 	dwc3@a800000 {
 		dr_mode = "host";
+	};
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+};
+
+&qupv3_se15_i2c {
+	status = "ok";
+
+	lt9611: lt,lt9611@2b {
+		compatible = "lt,lt9611uxc";
+		reg = <0x2b>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <50 0>;
+		interrupt-names = "lt_irq";
+		lt,irq-gpio = <&tlmm 50 0x0>;
+		lt,reset-gpio = <&tlmm 48 0x0>;
+		lt,hdmi-3p3-en = <&tlmm 47 0x0>;
+		lt,hdmi-1p2-en = <&tlmm 49 0x0>;
+		lt,non-pluggable;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&lt9611_pins>;
+
+		lt,preferred-mode = "1920x1080";
+
+		lt,customize-modes {
+			lt,customize-mode-id@0 {
+				lt,mode-h-active = <1920>;
+				lt,mode-h-front-porch = <88>;
+				lt,mode-h-pulse-width = <44>;
+				lt,mode-h-back-porch = <148>;
+				lt,mode-h-active-high;
+				lt,mode-v-active = <1080>;
+				lt,mode-v-front-porch = <4>;
+				lt,mode-v-pulse-width = <5>;
+				lt,mode-v-back-porch = <36>;
+				lt,mode-v-active-high;
+				lt,mode-refresh-rate = <60>;
+				lt,mode-clock-in-khz = <148500>;
+			};
+
+			lt,customize-mode-id@1 {
+				lt,mode-h-active = <3840>;
+				lt,mode-h-front-porch = <176>;
+				lt,mode-h-pulse-width = <88>;
+				lt,mode-h-back-porch = <400>;
+				lt,mode-h-active-high;
+				lt,mode-v-active = <2160>;
+				lt,mode-v-front-porch = <8>;
+				lt,mode-v-pulse-width = <10>;
+				lt,mode-v-back-porch = <72>;
+				lt,mode-v-active-high;
+				lt,mode-refresh-rate = <60>;
+				lt,mode-clock-in-khz = <608040>;
+			};
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				lt9611_in_0: endpoint {
+					remote-endpoint = <&ext_dsi_0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				lt9611_in_1: endpoint {
+					remote-endpoint = <&ext_dsi_1_out>;
+				};
+			};
+		};
+	};
+};
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_ext_bridge_1080p>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			ext_dsi_0_out: endpoint {
+				remote-endpoint = <&lt9611_in_0>;
+			};
+		};
+	};
+};
+
+&sde_dsi1 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			ext_dsi_1_out: endpoint {
+				remote-endpoint = <&lt9611_in_1>;
+			};
+		};
 	};
 };

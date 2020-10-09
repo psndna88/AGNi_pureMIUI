@@ -123,6 +123,15 @@ dtb-$(CONFIG_ARCH_SHIMA) += shima-rumi.dtb  \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_YUPIK) +=    \
+	yupik-rumi-overlay.dtbo
+
+yupik-rumi-overlay.dtbo-base := yupik.dtb
+else
+dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_SM8150) += \
                 sm8150-cdp-overlay.dtbo \
                 sa8155-adp-star-overlay.dtbo \

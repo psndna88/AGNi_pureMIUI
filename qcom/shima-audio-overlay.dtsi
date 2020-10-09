@@ -33,7 +33,6 @@
 		qcom,va-dmic-sample-rate = <600000>;
 		qcom,default-clk-id = <TX_CORE_CLK>;
 		qcom,is-used-swr-gpio = <0>;
-		qcom,disable-afe-wakeup-event-listener = <1>;
 	};
 
 	tx_macro: tx-macro@3220000 {
@@ -44,6 +43,7 @@
 			 <&clock_audio_tx_2 0>;
 		qcom,tx-swr-gpios = <&tx_swr_gpios>;
 		qcom,tx-dmic-sample-rate = <2400000>;
+		qcom,disable-afe-wakeup-event-listener = <1>;
 		swr2: tx_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;
@@ -247,7 +247,7 @@
 	qcom,wcn-bt = <1>;
 	qcom,tdm-max-slots = <8>;
 	qcom,wcd-disabled = <0>;
-	qcom,ext-disp-audio-rx = <0>;
+	qcom,ext-disp-audio-rx = <1>;
 	qcom,audio-routing =
 		"AMIC1", "Analog Mic1",
 		"Analog Mic1", "MIC BIAS3",
@@ -310,10 +310,12 @@
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0221>, <&wsa883x_0222>;
+		      <&wsa883x_0221>, <&wsa883x_0222>,
+		      <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec1", "wsa-codec2";
+			   "wsa-codec1", "wsa-codec2",
+			   "msm-ext-disp-audio-codec-rx";
 	qcom,wsa-max-devs = <2>;
 	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;
 	qcom,cps_wsa_vbatt_temp_reg_addr = <0x0003429 0x0003422>;

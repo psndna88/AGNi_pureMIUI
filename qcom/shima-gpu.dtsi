@@ -37,12 +37,12 @@
 				"gcc_gpu_snoc_dvm_gfx",
 				"gpu_cc_ahb",
 				"apb_pclk",
-				"gpu_cc_hlos1_vote_gpu_smmu_clk",
+				"gpu_cc_hlos1_vote_gpu_smmu",
 				"gpu_cc_cx_gmu",
 				"gpu_cc_hub_aon",
 				"gpu_cc_hub_cx_int";
 
-		qcom,chipid = <0x06060001>;
+		qcom,chipid = <0x06060010>;
 
 		qcom,no-nap;
 
@@ -51,6 +51,8 @@
 		qcom,ubwc-mode = <4>;
 
 		qcom,gpu-qdss-stm = <0x161c0000 0x40000>; /* base addr, size */
+
+		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
 
 		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>;
 		interconnect-names = "gpu_icc_path";
@@ -141,10 +143,24 @@
 				#size-cells = <0>;
 
 				qcom,speed-bin = <0>;
-				qcom,initial-pwrlevel = <4>;
+				qcom,initial-pwrlevel = <5>;
 
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
+					qcom,gpu-freq = <747000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+
+					qcom,bus-freq-ddr7 = <11>;
+					qcom,bus-min-ddr7 = <11>;
+					qcom,bus-max-ddr7 = <11>;
+
+					qcom,bus-freq-ddr8 = <11>;
+					qcom,bus-min-ddr8 = <10>;
+					qcom,bus-max-ddr8 = <11>;
+				};
+
+				qcom,gpu-pwrlevel@1 {
+					reg = <1>;
 					qcom,gpu-freq = <676000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_NOM>;
 
@@ -152,13 +168,13 @@
 					qcom,bus-min-ddr7 = <10>;
 					qcom,bus-max-ddr7 = <11>;
 
-					qcom,bus-freq-ddr8 = <11>;
+					qcom,bus-freq-ddr8 = <10>;
 					qcom,bus-min-ddr8 = <9>;
 					qcom,bus-max-ddr8 = <11>;
 				};
 
-				qcom,gpu-pwrlevel@1 {
-					reg = <1>;
+				qcom,gpu-pwrlevel@2 {
+					reg = <2>;
 					qcom,gpu-freq = <608000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L2>;
 
@@ -171,8 +187,8 @@
 					qcom,bus-max-ddr8 = <11>;
 				};
 
-				qcom,gpu-pwrlevel@2 {
-					reg = <2>;
+				qcom,gpu-pwrlevel@3 {
+					reg = <3>;
 					qcom,gpu-freq = <540000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
 
@@ -185,8 +201,8 @@
 					qcom,bus-max-ddr8 = <10>;
 				};
 
-				qcom,gpu-pwrlevel@3 {
-					reg = <3>;
+				qcom,gpu-pwrlevel@4 {
+					reg = <4>;
 					qcom,gpu-freq = <443000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS>;
 
@@ -199,8 +215,8 @@
 					qcom,bus-max-ddr8 = <9>;
 				};
 
-				qcom,gpu-pwrlevel@4 {
-					reg = <4>;
+				qcom,gpu-pwrlevel@5 {
+					reg = <5>;
 					qcom,gpu-freq = <285000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
 
@@ -305,10 +321,24 @@
 				#size-cells = <0>;
 
 				qcom,speed-bin = <158>;
-				qcom,initial-pwrlevel = <4>;
+				qcom,initial-pwrlevel = <5>;
 
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
+					qcom,gpu-freq = <747000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+
+					qcom,bus-freq-ddr7 = <11>;
+					qcom,bus-min-ddr7 = <11>;
+					qcom,bus-max-ddr7 = <11>;
+
+					qcom,bus-freq-ddr8 = <11>;
+					qcom,bus-min-ddr8 = <10>;
+					qcom,bus-max-ddr8 = <11>;
+				};
+
+				qcom,gpu-pwrlevel@1 {
+					reg = <1>;
 					qcom,gpu-freq = <676000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_NOM>;
 
@@ -316,13 +346,13 @@
 					qcom,bus-min-ddr7 = <10>;
 					qcom,bus-max-ddr7 = <11>;
 
-					qcom,bus-freq-ddr8 = <11>;
+					qcom,bus-freq-ddr8 = <10>;
 					qcom,bus-min-ddr8 = <9>;
 					qcom,bus-max-ddr8 = <11>;
 				};
 
-				qcom,gpu-pwrlevel@1 {
-					reg = <1>;
+				qcom,gpu-pwrlevel@2 {
+					reg = <2>;
 					qcom,gpu-freq = <608000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L2>;
 
@@ -335,8 +365,8 @@
 					qcom,bus-max-ddr8 = <11>;
 				};
 
-				qcom,gpu-pwrlevel@2 {
-					reg = <2>;
+				qcom,gpu-pwrlevel@3 {
+					reg = <3>;
 					qcom,gpu-freq = <540000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
 
@@ -349,8 +379,8 @@
 					qcom,bus-max-ddr8 = <10>;
 				};
 
-				qcom,gpu-pwrlevel@3 {
-					reg = <3>;
+				qcom,gpu-pwrlevel@4 {
+					reg = <4>;
 					qcom,gpu-freq = <443000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_SVS>;
 
@@ -363,8 +393,8 @@
 					qcom,bus-max-ddr8 = <9>;
 				};
 
-				qcom,gpu-pwrlevel@4 {
-					reg = <4>;
+				qcom,gpu-pwrlevel@5 {
+					reg = <5>;
 					qcom,gpu-freq = <285000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
 
@@ -420,6 +450,9 @@
 
 		regulator-names = "vddcx", "vdd";
 
+		iommus = <&kgsl_smmu 0x5 0x400>;
+		qcom,iommu-dma = "disabled";
+
 		vddcx-supply = <&gpu_cx_gdsc>;
 		vdd-supply = <&gpu_gx_gdsc>;
 
@@ -436,18 +469,5 @@
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
-
-		gmu_user: gmu_user {
-			compatible = "qcom,smmu-gmu-user-cb";
-			iommus = <&kgsl_smmu 0x4 0x400>;
-			qcom,iommu-dma = "disabled";
-		};
-
-		gmu_kernel: gmu_kernel {
-			compatible = "qcom,smmu-gmu-kernel-cb";
-			iommus = <&kgsl_smmu 0x5 0x400>;
-			qcom,iommu-dma = "disabled";
-		};
-
 	};
 };

@@ -208,7 +208,7 @@
 			};
 		};
 
-		qcom,amoled-ecm@f900 {
+		pm8350b_amoled_ecm: qcom,amoled-ecm@f900 {
 			compatible = "qcom,amoled-ecm";
 			reg = <0xf900>;
 			nvmem-names = "amoled-ecm-sdam0", "amoled-ecm-sdam1";

@@ -78,7 +78,7 @@
 
 	vdd-io-supply = <&L6C>;
 	qcom,vdd-io-voltage-level = <1800000 2960000>;
-	qcom,vdd-io-current-level = <0 22000>;
+	qcom,vdd-io-current-level = <0 30000>;
 
 	cd-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
 };
@@ -293,10 +293,10 @@
 
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0222>;
+		      <&wsa883x_0222>, <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec2";
+			   "wsa-codec2", "msm-ext-disp-audio-codec-rx";
 	qcom,wsa-max-devs = <1>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
@@ -309,4 +309,46 @@
 			&tert_mi2s_sd0_active>;
 	pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 			&tert_mi2s_sd0_sleep>;
+};
+
+&usb0 {
+	ssusb_redriver = <&redriver>;
+};
+
+&usb_qmp_dp_phy {
+	pinctrl-names = "portselect";
+};
+
+&qupv3_se5_i2c {
+	status = "ok";
+
+	redriver: redriver@1c {
+		compatible = "onnn,redriver";
+		reg = <0x1c>;
+
+		pinctrl-names = "enable_gpio";
+		pinctrl-0 = <&usb3phy_portselect_gpio>;
+		orientation_gpio = <&tlmm 81 0>;
+
+		eq = /bits/ 8 <
+				/* Parameters for USB */
+				0x4 0x4 0x4 0x4
+				/* Parameters for DP */
+				0x6 0x4 0x4 0x6>;
+		flat-gain = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x1 0x1 0x3
+				/* Parameters for DP */
+				0x2 0x1 0x1 0x2>;
+		output-comp = /bits/ 8 <
+				/* Parameters for USB */
+				0x3 0x3 0x3 0x3
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+		loss-match = /bits/ 8 <
+				/* Parameters for USB */
+				0x1 0x3 0x3 0x1
+				/* Parameters for DP */
+				0x3 0x3 0x3 0x3>;
+	};
 };

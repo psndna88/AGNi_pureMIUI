@@ -105,6 +105,7 @@
 				&tert_mi2s_sd0_active>;
 		pinctrl-1 = <&tert_mi2s_sck_sleep &tert_mi2s_ws_sleep
 				&tert_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
 	};
 };
 
@@ -297,6 +298,11 @@
 		qcom,wf-vmax-mv = <1800>;
 		qcom,wf-pattern-period-us = <5880>;
 	};
+};
+
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_r66451_amoled_cmd
+			  &dsi_r66451_amoled_video>;
 };
 
 &soc {
