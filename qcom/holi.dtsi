@@ -2556,7 +2556,7 @@
 		vdd-1.3-rfa-supply = <&L2E>;
 		vdd-3.3-ch1-supply = <&L11E>;
 		vdd-3.3-ch0-supply = <&L10E>;
-		qcom,vdd-cx-mx-config = <0 0>;
+		qcom,vdd-cx-mx-config = <640000 640000>;
 		qcom,vdd-3.3-ch1-config = <3000000 3312000>;
 		qcom,vdd-3.3-ch0-config = <3000000 3312000>;
 		qcom,smp2p_map_wlan_1_in {
