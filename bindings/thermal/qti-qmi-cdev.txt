@@ -41,6 +41,9 @@ Subsystem properties:
 			"modem" -> for processor passive cooling device,
 			"modem_current" -> for current limiting device,
 			"modem_bw" ->  for bus bandwidth limiting device,
+			"modem_bw_backoff" ->  for bus bandwidth limit device with
+						absolute bandwidth reduction from max bandwidth
+						in 100mbbs resolution,
 			"vbatt_low" -> BCL vbat mitigation device,
 			"mmw0" -> Millimeter wave limiting device 0,
 			"mmw1" -> Millimeter wave limiting device 1,
@@ -53,6 +56,7 @@ Subsystem properties:
 			"mmw_skin3" -> MMW skin mitigation device3,
 			"cpr_cold" -> for cpr restriction,
 			"wlan" -> for modem wlan mitigation device,
+			"wlan_bw" -> for bus bandwidth limiting device,
 			"cdsp_sw" -> for CDSP DCVS mitigation device,
 			"cdsp_hw" -> for CDSP hardware mitigation device,
 			"mmw_skin0_dsc" -> DSC based MMW skin mitigation
