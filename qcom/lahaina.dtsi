@@ -4633,6 +4633,7 @@
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
 		qcom,ipa-uc-holb-monitor;
+		qcom,gsi_wdi_db_polling;
 		qcom,ipa-holb-monitor-poll-period = <5>;
 		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
