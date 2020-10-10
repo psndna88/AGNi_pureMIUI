@@ -39,7 +39,6 @@ extern struct g_nvt_data g_nvt;
 
 extern int hwc_check_global;
 extern bool slow_charge;
-extern bool hvdcp_mode;
 #ifdef CONFIG_KERNEL_CUSTOM_E7S
 #define LCT_JEITA_CCC_AUTO_ADJUST  1
 #else
@@ -384,7 +383,7 @@ jeita current = fcc - JEITA_CC_COMP_CFG_IN_UEFI*1000
 static int smblib_adjust_jeita_cc_config(struct smb_charger *chg,int val_u)
 {
 	int rc= 0;
-	int current_cc_minus_ua = 0;
+/*	int current_cc_minus_ua = 0;
 
 
 	pr_err("smblib_adjust_jeita_cc_config fcc val_u  = %d\n",val_u);
@@ -413,14 +412,14 @@ static int smblib_adjust_jeita_cc_config(struct smb_charger *chg,int val_u)
 		
 	}
 	else if((val_u < chg->batt_profile_fcc_ua) &&( (chg->batt_profile_fcc_ua - val_u) > JEITA_CC_COMP_CFG_IN_UEFI * 1000) )
-	{
+	{ */
 		rc = smblib_set_charge_param(chg,&chg->param.jeita_cc_comp,0);
 		pr_err("smblib_adjust_jeita_cc_config jeita need to set to zero,write result = %d\n",rc);
-	}
+/*	}
 	else
 	{
 		pr_err("smblib_adjust_jeita_cc_config do nothing \n");
-	}
+	} */
 	
 		
 	return rc;
@@ -1014,15 +1013,8 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 		}
 	} else {
 		set_sdp_current(chg, 100000);
-		if (!slow_charge) {
-			rc = smblib_set_charge_param(chg, &chg->param.usb_icl, HVDCP3_CURRENT_UA); //psndna88 HACK
-		} else {
-			if (hvdcp_mode) {
-				rc = smblib_set_charge_param(chg, &chg->param.usb_icl, CDP_CURRENT_UA); //psndna88 HACK
-			} else {
-				rc = smblib_set_charge_param(chg, &chg->param.usb_icl, 1000000); //psndna88 HACK
-			}
-		}
+		if (!slow_charge)
+			rc = smblib_set_charge_param(chg, &chg->param.usb_icl, DCP_CURRENT_UA); //psndna88 HACK
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
 			goto enable_icl_changed_interrupt;
@@ -3904,7 +3896,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #else
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, CDP_CURRENT_UA);
 #endif
-		hvdcp_mode = false;
 		break;
 	case POWER_SUPPLY_TYPE_USB_DCP:
 #if defined (CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
@@ -3914,7 +3905,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		rp_ua = get_rp_based_dcp_current(chg, typec_mode);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, rp_ua);
 		smblib_err(chg, "lct battery smblib_force_legacy_icl dcp\n");
-		hvdcp_mode = false;
 		break;
 	case POWER_SUPPLY_TYPE_USB_FLOAT:
 		/*
@@ -3930,7 +3920,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 1000000);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl float charger\n");
-		hvdcp_mode = false;
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
@@ -3939,7 +3928,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, HVDCP2_CURRENT_UA);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc2.0\n");
-		hvdcp_mode = true;
 		break;
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
 #if defined (CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
@@ -3949,12 +3937,10 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, HVDCP3_CURRENT_UA);
 #endif
 		smblib_err(chg, "lct battery smblib_force_legacy_icl qc3.0\n");
-		hvdcp_mode = true;
 		break;
 	default:
 		smblib_err(chg, "Unknown APSD %d; forcing 500mA\n", pst);
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
-		hvdcp_mode = false;
 		break;
 	}
 }

@@ -301,6 +301,8 @@ static int handle_jeita(struct step_chg_info *chip)
 	union power_supply_propval pval = {0, };
 	int rc = 0, fcc_ua = 0, fv_uv = 0;
 	u64 elapsed_us;
+	int temp = 1;
+
 #if defined(CONFIG_KERNEL_CUSTOM_D2S)
 	if (hwc_check_india) {
 		pr_err("lct video LctIsInVideo=%d, lct_therm_lvl_reserved=%d\n",
@@ -339,6 +341,8 @@ static int handle_jeita(struct step_chg_info *chip)
 		pr_err("Couldn't read %s property rc=%d\n",
 				step_chg_config.prop_name, rc);
 		return rc;
+	} else {
+		temp = pval.intval;
 	}
 
 	rc = get_val(jeita_fcc_config.fcc_cfg, jeita_fcc_config.hysteresis,
@@ -361,6 +365,11 @@ static int handle_jeita(struct step_chg_info *chip)
 
 	vote(chip->fcc_votable, JEITA_VOTER, true, fcc_ua);
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if ((temp < 0) || (temp >600)) {
+		vote(chip->fcc_votable, JEITA_VOTER, true, 0);
+	}
+#endif
 	rc = get_val(jeita_fv_config.fv_cfg, jeita_fv_config.hysteresis,
 			chip->jeita_fv_index,
 			pval.intval,

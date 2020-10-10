@@ -150,8 +150,7 @@
 #define RECHARGE_VBATT_THR_v2_OFFSET	1
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
-#define SLOW_CHARGE_THRESHOLD_HVDCP		70
-#define SLOW_CHARGE_THRESHOLD		90
+#define SLOW_CHARGE_THRESHOLD		80
 
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
@@ -170,6 +169,7 @@ static void fg_encode_default(struct fg_sram_param *sp,
 
 static struct fg_irq_info fg_irqs[FG_IRQ_MAX];
 bool slow_charge = false;
+bool full_charged = false;
 
 #define PARAM(_id, _addr_word, _addr_byte, _len, _num, _den, _offset,	\
 	      _enc, _dec)						\
@@ -414,7 +414,6 @@ module_param_named(
 );
 
 bool is_charging = false;
-bool hvdcp_mode = false;
 
 bool charging_detected(void)
 {
@@ -422,7 +421,7 @@ bool charging_detected(void)
 }
 
 static int fg_restart;
-static bool fg_sram_dump;
+static bool fg_sram_dump = false;
  int hwc_check_india;
  int hwc_check_global;
 extern bool is_poweroff_charge;
@@ -872,6 +871,11 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 
 	if (*msoc >= FULL_CAPACITY)
 		*msoc = FULL_CAPACITY;
+
+	if (*msoc < FULL_CAPACITY)
+		full_charged = false;
+	else
+		full_charged = true;
 
 	if (*msoc >= HIGH_CAPACITY)
 		batt_swap_push = true;
@@ -1435,11 +1439,6 @@ static int fg_save_learned_cap_to_sram(struct fg_chip *chip)
 	if (chip->battery_missing || !chip->cl.learned_cc_uah)
 		return -EPERM;
 
-#ifdef CONFIG_KERNEL_CUSTOM_D2S
-	chip->cl.learned_cc_uah = 3000000;
-#else
-	chip->cl.learned_cc_uah = 4000000;
-#endif
 	cc_mah = div64_s64(chip->cl.learned_cc_uah, 1000);
 	/* Write to a backup register to use across reboot */
 	rc = fg_sram_write(chip, chip->sp[FG_SRAM_ACT_BATT_CAP].addr_word,
@@ -1477,11 +1476,6 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 	}
 
 	chip->cl.learned_cc_uah = act_cap_mah * 1000;
-#ifdef CONFIG_KERNEL_CUSTOM_D2S
-	chip->cl.learned_cc_uah = (chip->cl.learned_cc_uah > 3000000) ? chip->cl.learned_cc_uah : 3000000;
-#else
-	chip->cl.learned_cc_uah = (chip->cl.learned_cc_uah > 4000000) ? chip->cl.learned_cc_uah : 4000000;
-#endif
 
 	if (chip->cl.learned_cc_uah != chip->cl.nom_cap_uah) {
 		if (chip->cl.learned_cc_uah == 0)
@@ -3551,13 +3545,9 @@ cv_estimate:
 	}
 
 	/* tau is scaled linearly from SLOW_CHARGE_THRESHOLD(%) to 100% SOC */
-	if (hvdcp_mode) {
-		if (msoc >= SLOW_CHARGE_THRESHOLD_HVDCP)
-			tau = tau * 2 * (100 - msoc) / 10;
-	} else {
-		if (msoc >= SLOW_CHARGE_THRESHOLD)
-			tau = tau * 2 * (100 - msoc) / 10;
-	}
+	if (msoc >= SLOW_CHARGE_THRESHOLD)
+		tau = tau * 2 * (100 - msoc) / 10;
+
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);
 	t_predicted_cv = div_s64((s64)act_cap_mah * rbatt * tau *
 						HOURS_TO_SECONDS, NANO_UNIT);
@@ -3961,8 +3951,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_OCV:
 		rc = fg_get_sram_prop(chip, FG_SRAM_OCV, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		if (-EINVAL != chip->bp.nom_cap_uah)
+		if (chip->bp.nom_cap_uah != -EINVAL)
 			pval->intval = chip->bp.nom_cap_uah * 1000;
 		else
 			pval->intval = chip->cl.nom_cap_uah;
@@ -3987,9 +3978,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		pval->intval = chip->cl.init_cc_uah;
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_FULL:
-		pval->intval = chip->cl.learned_cc_uah;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
 		rc = fg_get_charge_counter(chip, &pval->intval);
@@ -4739,12 +4727,7 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *data)
 	}
 
 	clear_battery_profile(chip);
-	if (charging_detected()) {
-		schedule_delayed_work(&chip->profile_load_work, 0);
-	} else {
-		queue_delayed_work(system_power_efficient_wq,
-			&chip->profile_load_work, 0);
-	}
+	schedule_delayed_work(&chip->profile_load_work, 0);
 
 	if (chip->fg_psy)
 		power_supply_changed(chip->fg_psy);

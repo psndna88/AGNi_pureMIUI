@@ -3728,7 +3728,7 @@ static DEVICE_ATTR_RW(get_battery_status);
 
 /*hguan add*/
 struct usbpd *pd_lobal;
-unsigned int pd_vbus_ctrl = 0;
+unsigned int pd_vbus_ctrl;
 
 module_param(pd_vbus_ctrl, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(pd_vbus_ctrl, "PD VBUS CONTROL");
