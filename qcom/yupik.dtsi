@@ -26,6 +26,12 @@
 		ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
 	};
 
+	firmware: firmware {
+		scm {
+			compatible = "qcom,scm";
+		};
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -325,6 +331,11 @@
 		reg = <0x17c10000 0x1000>;
 		reg-names = "wdt-base";
 		interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
 	};
 
 	ipcc_mproc: qcom,ipcc@408000 {
