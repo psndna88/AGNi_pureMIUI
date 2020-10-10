@@ -398,7 +398,7 @@
 	serial_uart: serial@831000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x831000 0x200>;
-		interrupts = <0 26 0>;
+		interrupts = <0 26 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&gcc GCC_BLSP1_UART3_APPS_CLK>,
 			 <&gcc GCC_BLSP1_AHB_CLK>;
 		clock-names = "core", "iface";
@@ -894,3 +894,4 @@
 #include "sdxlemur-usb.dtsi"
 #include "sdxlemur-pm.dtsi"
 #include "sdxlemur-pcie.dtsi"
+#include "sdxlemur-blsp.dtsi"
