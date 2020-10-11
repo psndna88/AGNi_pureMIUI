@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
+#include <linux/android_version.h>
 
 #define WLED_MOD_EN_REG(base, n)	(base + 0x60 + n*0x10)
 #define WLED_IDAC_DLY_REG(base, n)	(WLED_MOD_EN_REG(base, n) + 0x01)
@@ -253,6 +254,7 @@
 #define NUM_KPDBL_LEDS			4
 #define KPDBL_MASTER_BIT_INDEX		0
 
+extern bool miuirom;
 /**
  * enum qpnp_leds - QPNP supported led ids
  * @QPNP_ID_WLED - White led backlight
@@ -3626,8 +3628,33 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			goto bad_lpg_params;
 		}
 
-		prop = of_find_property(node, "qcom,duty-pcts",
-			&pwm_cfg->duty_cycles->num_duty_pcts);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if (miuirom) {
+			prop = of_find_property(node, "qcom,duty-pcts-pie",
+				&pwm_cfg->duty_cycles->num_duty_pcts);
+		} else {
+			if (get_android_version() <= 9) {
+				prop = of_find_property(node, "qcom,duty-pcts-pie",
+					&pwm_cfg->duty_cycles->num_duty_pcts);
+			} else {
+				prop = of_find_property(node, "qcom,duty-pcts",
+					&pwm_cfg->duty_cycles->num_duty_pcts);
+			}
+		}
+#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+		if (miuirom) {
+			prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
+				&pwm_cfg->duty_cycles->num_duty_pcts);
+		} else {
+			if (get_android_version() <= 9) {
+				prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
+					&pwm_cfg->duty_cycles->num_duty_pcts);
+			} else {
+				prop = of_find_property(node, "qcom,duty-pcts",
+					&pwm_cfg->duty_cycles->num_duty_pcts);
+			}
+		}
+#endif
 		if (!prop) {
 			dev_err(&pdev->dev, "Looking up property node qcom,duty-pcts failed\n");
 			rc =  -ENODEV;
@@ -3710,11 +3737,19 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 
 		pwm_cfg->lut_params.ramp_step_ms =
 				QPNP_LUT_RAMP_STEP_DEFAULT;
-		rc = of_property_read_u32(node, "qcom,ramp-step-ms", &val);
-		if (!rc)
-			pwm_cfg->lut_params.ramp_step_ms = val;
-		else if (rc != -EINVAL)
-			goto bad_lpg_params;
+		if (miuirom) {
+			pwm_cfg->lut_params.ramp_step_ms = 128;
+		} else {
+			if (get_android_version() <= 9) {
+				pwm_cfg->lut_params.ramp_step_ms = 128;
+			} else {
+				rc = of_property_read_u32(node, "qcom,ramp-step-ms", &val);
+				if (!rc)
+					pwm_cfg->lut_params.ramp_step_ms = val;
+				else if (rc != -EINVAL)
+					goto bad_lpg_params;
+			}
+		}
 
 		pwm_cfg->lut_params.flags = QPNP_LED_PWM_FLAGS;
 		rc = of_property_read_u32(node, "qcom,lut-flags", &val);

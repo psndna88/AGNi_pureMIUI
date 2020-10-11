@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/leds-qpnp-wled.h>
 #include <linux/qpnp/qpnp-revid.h>
+#include <linux/android_version.h>
 
 /* base addresses */
 #define QPNP_WLED_CTRL_BASE		"qpnp-wled-ctrl-base"
@@ -238,6 +239,7 @@
 #define QPNP_WLED_AVDD_MV_TO_REG(val) \
 		((val - QPNP_WLED_AVDD_MIN_MV) / QPNP_WLED_AVDD_STEP_MV)
 
+extern bool miuirom;
 /* output feedback mode */
 enum qpnp_wled_fdbk_op {
 	QPNP_WLED_FDBK_AUTO,
@@ -2577,8 +2579,22 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 			"qcom,en-9b-dim-res");
 	wled->en_phase_stag = of_property_read_bool(pdev->dev.of_node,
 			"qcom,en-phase-stag");
-	wled->en_cabc = of_property_read_bool(pdev->dev.of_node,
-			"qcom,en-cabc");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+	if ((miuirom) && (get_android_version() <= 9)) {
+		wled->en_cabc = true;
+	} else {
+		wled->en_cabc = false;
+	}
+#else
+	if (miuirom) {
+		wled->en_cabc = true;
+	} else {
+		wled->en_cabc = false;
+	}
+#endif
+//	wled->en_cabc = of_property_read_bool(pdev->dev.of_node,
+//			"qcom,en-cabc");
 
 	if (wled->pmic_rev_id->pmic_subtype == PM660L_SUBTYPE)
 		wled->max_strings = QPNP_PM660_WLED_MAX_STRINGS;
@@ -2613,8 +2629,12 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 	wled->lcd_psm_ctrl = of_property_read_bool(pdev->dev.of_node,
 				"qcom,lcd-psm-ctrl");
 
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
+	wled->auto_calib_enabled = true;
+#else
 	wled->auto_calib_enabled = of_property_read_bool(pdev->dev.of_node,
 					"qcom,auto-calibration-enable");
+#endif
 	return 0;
 }
 
