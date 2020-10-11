@@ -1035,12 +1035,30 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 	switch(first_cabc_state) {
 		case 0x1:
 			if (ctrl->cabc_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
@@ -1086,13 +1104,31 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 	switch(first_cabc_movie_state) {
 		case 0x1:
 			if (ctrl->cabc_movie_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 				pr_info("set cabc movie over\n");
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
@@ -1102,13 +1138,31 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 	switch(first_cabc_still_state) {
 		case 0x1:
 			if (ctrl->cabc_still_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 				pr_info("set cabc still over\n");
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
@@ -1283,12 +1337,30 @@ static ssize_t mdss_fb_set_cabc(struct device *dev,struct device_attribute *attr
 	switch(param) {
 		case 0x1:
 			if (ctrl->cabc_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
@@ -1573,12 +1645,30 @@ static ssize_t mdss_fb_set_cabc_movie(struct device *dev,struct device_attribute
 	switch(param) {
 		case 0x1:
 			if (ctrl->cabc_movie_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_movie_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
@@ -1663,12 +1753,30 @@ static ssize_t mdss_fb_set_cabc_still(struct device *dev,struct device_attribute
 	switch(param) {
 		case 0x1:
 			if (ctrl->cabc_still_on_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_still_on_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		case 0x2:
 			if (ctrl->cabc_off_cmds.cmd_cnt){
-//				mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			mdss_dsi_panel_cmds_send(ctrl, &ctrl->cabc_off_cmds,CMD_REQ_COMMIT);
+		}
+#endif
 			}
 			break;
 		default:
