@@ -32,6 +32,7 @@
 #include "mdss_livedisplay.h"
 #endif
 #include <linux/agni_meminfo.h>
+#include <linux/android_version.h>
 
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
@@ -1164,18 +1165,50 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 #endif
 	if(cabc_state == 11){
-//		if (cabc_on_cmds->cmd_cnt)
-//	       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			if (cabc_on_cmds->cmd_cnt)
+		       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
+		}
+#else
+		if (miuirom) {
+			if (cabc_on_cmds->cmd_cnt)
+		       mdss_dsi_panel_cmds_send(ctrl,cabc_on_cmds, CMD_REQ_COMMIT);
+		}
+#endif
 	}
 	if(cabc_movie_state == 1){
-//		if (cabc_movie_on_cmds->cmd_cnt)
-//	       mdss_dsi_panel_cmds_send(ctrl,cabc_movie_on_cmds, CMD_REQ_COMMIT);
-//		pr_info("set cabc movie on\n");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			if (cabc_movie_on_cmds->cmd_cnt)
+		       mdss_dsi_panel_cmds_send(ctrl,cabc_movie_on_cmds, CMD_REQ_COMMIT);
+			pr_info("set cabc movie on\n");
+		}
+#else
+		if (miuirom) {
+			if (cabc_movie_on_cmds->cmd_cnt)
+	    	   mdss_dsi_panel_cmds_send(ctrl,cabc_movie_on_cmds, CMD_REQ_COMMIT);
+			pr_info("set cabc movie on\n");
+		}
+#endif
 	}
 	if(cabc_still_state == 1){
-//		if (cabc_still_on_cmds->cmd_cnt)
-//	       mdss_dsi_panel_cmds_send(ctrl,cabc_still_on_cmds, CMD_REQ_COMMIT);
-//		pr_info("set cabc still on\n");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
+		if ((miuirom) && (get_android_version() <= 9)) {
+			if (cabc_still_on_cmds->cmd_cnt)
+		       mdss_dsi_panel_cmds_send(ctrl,cabc_still_on_cmds, CMD_REQ_COMMIT);
+			pr_info("set cabc still on\n");
+		}
+#else
+		if (miuirom) {
+			if (cabc_still_on_cmds->cmd_cnt)
+			     mdss_dsi_panel_cmds_send(ctrl,cabc_still_on_cmds, CMD_REQ_COMMIT);
+			pr_info("set cabc still on\n");
+		}
+#endif
 	}
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
