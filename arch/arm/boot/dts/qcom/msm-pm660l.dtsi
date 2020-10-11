@@ -240,6 +240,12 @@
 				linux,name = "red";
 				qcom,start-idx = <0>;
 				qcom,idx-len = <22>;
+				qcom,duty-pcts-pie =
+					[3C 3C 3B 3A 3B 37 35 33 31 2E 2A 27 23
+					 1F 1B 17 13 0E 09 05 00 00 00 00 00 00];
+				qcom,duty-pcts-f7a-pie =
+					[00 19 32 4B 64
+					 64 4B 32 19 00];
 				qcom,duty-pcts =
 					[01 0a 14 1e 28 32 3c 46 50 5a 64
 					64 5a 50 46 3c 32 28 1e 14 0a 01];
@@ -280,6 +286,8 @@
 				linux,name = "white";
 				qcom,start-idx = <1>;
 				qcom,duty-pcts = [ 00 0E 1C 2A 38 46 54 64 ];
+				qcom,duty-pcts-pie = [ 00 0E 1C 2A 38 46 54 64 ];
+				qcom,duty-pcts-f7a-pie = [ 00 0E 1C 2A 38 46 54 64 ];
 				qcom,idx-len = <8>;
 				qcom,pause-lo = <500>;
 				qcom,pause-hi = <500>;
@@ -312,9 +320,7 @@
 			qcom,cons-sync-write-delay-us = <1000>;
 			qcom,led-strings-list = [00 01 02];
 			qcom,loop-auto-gm-en;
-			qcom,en-cabc;
 			qcom,pmic-revid = <&pm660l_revid>;
-			qcom,auto-calibration-enable;
 			status = "ok";
 		};
 
