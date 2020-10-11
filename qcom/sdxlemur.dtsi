@@ -31,10 +31,10 @@
 		#size-cells = <1>;
 		ranges;
 
-	cmd_db: reserved-memory@8fe20000 {
+	cmd_db: reserved-memory@8fee0000 {
 		compatible = "qcom,cmd-db";
 		no-map;
-		reg = <0x8fe20000 0x20000>;
+		reg = <0x8fee0000 0x20000>;
 	};
 
 		mpss_adsp_mem: mpss_adsp_region@90800000 {
