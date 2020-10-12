@@ -13475,7 +13475,7 @@ enum hw_filter_mode {
  */
 
 #define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
-#define CFG_IS_SAE_ENABLED_DEFAULT (0)
+#define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
 
@@ -13498,7 +13498,7 @@ enum hw_filter_mode {
  */
 
 #define CFG_ENABLE_SAE_FOR_SAP_NAME    "enable_sae_for_sap"
-#define CFG_ENABLE_SAE_FOR_SAP_DEFAULT (0)
+#define CFG_ENABLE_SAE_FOR_SAP_DEFAULT (1)
 #define CFG_ENABLE_SAE_FOR_SAP_MIN     (0)
 #define CFG_ENABLE_SAE_FOR_SAP_MAX     (1)
 

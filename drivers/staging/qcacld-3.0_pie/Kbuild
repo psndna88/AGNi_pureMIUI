@@ -128,7 +128,7 @@ ifeq ($(KERNEL_BUILD), 0)
 
 	ifneq ($(CONFIG_ARCH_SDX20), y)
 	#Flag to enable FILS Feature (11ai)
-	CONFIG_WLAN_FEATURE_FILS := n
+	CONFIG_WLAN_FEATURE_FILS := y
 	endif
 
 	ifneq ($(CONFIG_QCA_CLD_WLAN),)
@@ -189,7 +189,7 @@ ifeq ($(KERNEL_BUILD), 0)
 	endif
 
 #Flag to enable SAE
-CONFIG_WLAN_FEATURE_SAE := n
+CONFIG_WLAN_FEATURE_SAE := y
 
 ifneq ($(CONFIG_ROME_IF),sdio)
 	#Flag to enable DISA

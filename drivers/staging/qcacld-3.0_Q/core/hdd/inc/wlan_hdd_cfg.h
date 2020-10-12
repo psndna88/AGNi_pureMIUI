@@ -13807,7 +13807,7 @@ enum hdd_external_acs_policy {
  */
 
 #define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
-#define CFG_IS_SAE_ENABLED_DEFAULT (0)
+#define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
 
@@ -13831,7 +13831,7 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 #define CFG_IS_SAP_SAE_ENABLED_NAME    "enable_sae_for_sap"
-#define CFG_IS_SAP_SAE_ENABLED_DEFAULT (0)
+#define CFG_IS_SAP_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAP_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAP_SAE_ENABLED_MAX     (1)
 
