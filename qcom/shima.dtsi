@@ -3630,6 +3630,7 @@
 		pinctrl-0 = <&bt_en_sleep>;
 		qcom,bt-reset-gpio = <&tlmm 65 0>; /* BT_EN */
 		qcom,bt-sw-ctrl-gpio = <&tlmm 91 0>; /* SW_CTRL */
+		qcom,wl-reset-gpio = <&tlmm 64 0>; /* WL_EN */
 
 		qcom,bt-vdd-io-supply = <&S10B>;
 		qcom,bt-vdd-aon-supply = <&S2C>;
