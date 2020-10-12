@@ -534,6 +534,18 @@
 		status = "ok";
 	};
 
+	dcc: dcc_v2@117f000 {
+		compatible = "qcom,dcc-v2";
+		reg = <0x117f000 0x1000>,
+		      <0x1112000 0x6000>;
+
+		qcom,transaction_timeout = <0>;
+
+		reg-names = "dcc-base", "dcc-ram-base";
+		dcc-ram-offset = <0x12000>;
+		status = "disabled";
+	};
+
 	qcom,msm-imem@146aa000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x146aa000 0x1000>;
