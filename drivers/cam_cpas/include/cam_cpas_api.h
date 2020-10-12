@@ -67,6 +67,7 @@ enum cam_cpas_camera_version {
 	CAM_CPAS_CAMERA_VERSION_580  = 0x00050800,
 	CAM_CPAS_CAMERA_VERSION_545  = 0x00050405,
 	CAM_CPAS_CAMERA_VERSION_570  = 0x00050700,
+	CAM_CPAS_CAMERA_VERSION_680  = 0x00060800,
 	CAM_CPAS_CAMERA_VERSION_MAX
 };
 
@@ -98,6 +99,7 @@ enum cam_cpas_camera_version_map_id {
 	CAM_CPAS_CAMERA_VERSION_ID_540  = 0x6,
 	CAM_CPAS_CAMERA_VERSION_ID_545  = 0x7,
 	CAM_CPAS_CAMERA_VERSION_ID_570  = 0x8,
+	CAM_CPAS_CAMERA_VERSION_ID_680  = 0x9,
 	CAM_CPAS_CAMERA_VERSION_ID_MAX
 };
 
@@ -135,6 +137,7 @@ enum cam_cpas_hw_version {
 	CAM_CPAS_TITAN_520_V100 = 0x520100,
 	CAM_CPAS_TITAN_545_V100 = 0x545100,
 	CAM_CPAS_TITAN_570_V200 = 0x570200,
+	CAM_CPAS_TITAN_680_V100 = 0x680100,
 	CAM_CPAS_TITAN_MAX
 };
 
@@ -146,6 +149,8 @@ enum cam_cpas_hw_version {
  *                              observed at any slave port is logged into
  *                              the error logger register and an IRQ is
  *                              triggered
+ * @CAM_CAMNOC_IRQ_IFE_UBWC_ENCODE_ERROR      : Triggered if any error detected
+ *                                              in the IFE UBWC encoder instance
  * @CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR: Triggered if any error detected
  *                                              in the IFE UBWC-Stats encoder
  *                                              instance
@@ -159,11 +164,20 @@ enum cam_cpas_hw_version {
  * @CAM_CAMNOC_IRQ_IFE1_WR_UBWC_ENCODE_ERROR  : Triggered if any error detected
  *                                            in the IFE1 UBWC encoder
  *                                            instance
+ * @CAM_CAMNOC_IRQ_IPE_UBWC_ENCODE_ERROR    : Triggered if any error detected
+ *                                            in the IPE write path encoder
+ *                                            instance
+ * @CAM_CAMNOC_IRQ_BPS_UBWC_ENCODE_ERROR    : Triggered if any error detected
+ *                                            in the BPS write path encoder
+ *                                            instance
  * @CAM_CAMNOC_IRQ_IPE1_BPS_UBWC_DECODE_ERROR: Triggered if any error detected
  *                                             in the IPE1/BPS read path decoder
  *                                             instance
  * @CAM_CAMNOC_IRQ_IPE0_UBWC_DECODE_ERROR    : Triggered if any error detected
  *                                             in the IPE0 read path decoder
+ *                                             instance
+ * @CAM_CAMNOC_IRQ_IPE1_UBWC_DECODE_ERROR    : Triggered if any error detected
+ *                                             in the IPE1 read path decoder
  *                                             instance
  * @CAM_CAMNOC_IRQ_IPE_BPS_UBWC_DECODE_ERROR: Triggered if any error detected
  *                                            in the IPE/BPS UBWC decoder
@@ -176,14 +190,18 @@ enum cam_cpas_hw_version {
  */
 enum cam_camnoc_irq_type {
 	CAM_CAMNOC_IRQ_SLAVE_ERROR,
+	CAM_CAMNOC_IRQ_IFE_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE02_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE13_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE0_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_IRQ_IPE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_IRQ_BPS_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE1_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE0_UBWC_DECODE_ERROR,
+	CAM_CAMNOC_IRQ_IPE1_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE_BPS_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_AHB_TIMEOUT,
