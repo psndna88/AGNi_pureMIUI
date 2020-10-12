@@ -266,9 +266,9 @@ sensor resource.
 	controller. These pin configurations are installed in the pinctrl device node.
 
 
-=============================
-CAMERA IMAGE SENSOR MODULE
-=============================
+==============================
+CAMERA IMAGE SENSOR/TPG MODULE
+==============================
 Image sensor node contains properties of camera image sensor
 
 - compatible
@@ -815,5 +815,27 @@ Example:
          clock-names = "cam_src_clk", "cam_clk";
          clock-cntl-leveli = "turbo";
          clock-rates = <24000000>;
+    };
+
+    qcom,cam-tpg0 {
+         cell-index = <4>;
+         compatible = "qcom,cam-sensor";
+         csiphy-sd-index = <4>;
+         sensor-position-roll = <270>;
+         sensor-position-pitch = <0>;
+         sensor-position-yaw = <180>;
+         gpios = <&tlmm 30 0>,
+               <&tlmm 35 0>;
+         gpio-reset = <1>;
+         gpio-req-tbl-num = <0 1>;
+         gpio-req-tbl-flags = <1 0>;
+         gpio-req-tbl-label = "CAMIF_MCLK1",
+                         "CAM_RESET1";
+         sensor-mode = <0>;
+         status = "ok";
+         clocks = <&gcc GCC_CAMSS_MCLK1_CLK>;
+         clock-names = "cam_clk";
+         clock-cntl-level = "turbo";
+         clock-rates = <19200000>;
     };
 };
