@@ -4199,7 +4199,7 @@ int msm_venc_set_vui_timing_info(struct msm_vidc_inst *inst)
 
 	timing_info.enable = 1;
 	timing_info.fixed_frame_rate = cfr;
-	timing_info.time_scale = NSEC_PER_SEC;
+	timing_info.time_scale = (inst->clk_data.frame_rate >> 16) * USEC_PER_SEC;
 
 	s_vpr_h(inst->sid, "%s: %d %d\n", __func__, timing_info.enable,
 		timing_info.fixed_frame_rate);
