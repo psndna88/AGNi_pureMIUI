@@ -52,6 +52,9 @@
 
 		qcom,gpu-qdss-stm = <0x161c0000 0x40000>; /* base addr, size */
 
+		nvmem-cells = <&gpu_speed_bin>;
+		nvmem-cell-names = "speed_bin";
+
 		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
 
 		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>;
