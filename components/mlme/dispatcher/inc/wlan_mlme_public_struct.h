@@ -94,6 +94,9 @@
  */
 #define AP_OFF_RSSI_OFFSET 20
 
+/* Default beacon interval of 100 ms */
+#define CUSTOM_CONC_GO_BI 100
+
 /**
  * struct mlme_cfg_str - generic structure for all mlme CFG string items
  *
@@ -2485,4 +2488,21 @@ struct wlan_ies {
 	uint16_t len;
 	uint8_t *data;
 };
+
+/**
+ * struct wlan_change_bi - Message struct to update beacon interval
+ * @message_type: type of message
+ * @length: length of message
+ * @beacon_interval: beacon interval to update to (seconds)
+ * @bssid: BSSID of vdev
+ * @session_id: session ID of vdev
+ */
+struct wlan_change_bi {
+	uint16_t message_type;
+	uint16_t length;
+	uint16_t beacon_interval;
+	struct qdf_mac_addr bssid;
+	uint8_t session_id;
+};
+
 #endif
