@@ -2550,7 +2550,6 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691200 MHZ_TO_MBPS(  300, 4) >,
 					<  940800 MHZ_TO_MBPS(  451, 4) >,
 					< 1171200 MHZ_TO_MBPS(  547, 4) >,
 					< 1516800 MHZ_TO_MBPS(  768, 4) >,
@@ -2560,7 +2559,6 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691200 MHZ_TO_MBPS(  300, 4) >,
 					<  940800 MHZ_TO_MBPS(  451, 4) >,
 					< 1171200 MHZ_TO_MBPS(  547, 4) >,
 					< 1516800 MHZ_TO_MBPS(  768, 4) >,
@@ -2667,14 +2665,14 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					< 2361600 MHZ_TO_MBPS( 300, 4) >,
+					< 2361600 MHZ_TO_MBPS( 451, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
 			};
 
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					< 2361600 MHZ_TO_MBPS( 300, 4) >,
+					< 2361600 MHZ_TO_MBPS( 451, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
 			};
 		};
