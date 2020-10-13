@@ -471,8 +471,10 @@ static int cam_vfe_camif_ver3_resource_start(
 		epoch0_line_cfg = ((rsrc_data->last_line +
 			rsrc_data->vbi_value) -
 			rsrc_data->first_line) / 4;
-		if (epoch0_line_cfg > rsrc_data->last_line)
-			epoch0_line_cfg = rsrc_data->last_line;
+		if ((epoch0_line_cfg * 2) >
+			(rsrc_data->last_line - rsrc_data->first_line))
+			epoch0_line_cfg = (rsrc_data->last_line -
+				rsrc_data->first_line)/2;
 	/* epoch line cfg will still be configured at midpoint of the
 	 * frame width. We use '/ 4' instead of '/ 2'
 	 * cause it is multipixel path
