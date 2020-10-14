@@ -203,6 +203,24 @@ static int __init set_cpuoc(int *val)
 	return 0;
 }
 __setup("androidboot.cpuoc=", set_cpuoc);
+bool agnisoundmod = false;
+static int __init set_soundmod(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	if (temp) {
+		agnisoundmod = true;
+		pr_info("Kernel: agni sound mod = 1");
+	} else {
+		agnisoundmod = false;
+		pr_info("Kernel: agni sound mod = 0");
+	}
+
+	return 0;
+}
+__setup("androidboot.agnisoundmod=", set_soundmod);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

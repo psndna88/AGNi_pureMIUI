@@ -59,6 +59,7 @@ static unsigned long tx_digital_gain_reg[] = {
 };
 
 #define SDM660_TX_UNMUTE_DELAY_MS 40
+extern bool agnisoundmod;
 static int tx_unmute_delay = SDM660_TX_UNMUTE_DELAY_MS;
 module_param(tx_unmute_delay, int,
 	S_IRUGO | S_IWUSR | S_IWGRP);
@@ -1790,6 +1791,7 @@ static const struct snd_soc_dapm_widget msm_dig_dapm_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT("I2S TX2", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("I2S TX3", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("I2S TX4", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("I2S TX5", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("I2S TX5", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("I2S TX6", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
 
@@ -1935,6 +1937,140 @@ static const struct soc_enum cf_decsva_enum =
 	SOC_ENUM_SINGLE(MSM89XX_CDC_CORE_TX5_MUX_CTL, 4, 3, cf_text);
 
 static const struct snd_kcontrol_new msm_dig_snd_controls[] = {
+	SOC_SINGLE_SX_TLV("DEC1 Volume",
+		MSM89XX_CDC_CORE_TX1_VOL_CTL_GAIN,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("DEC2 Volume",
+		  MSM89XX_CDC_CORE_TX2_VOL_CTL_GAIN,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("DEC3 Volume",
+		  MSM89XX_CDC_CORE_TX3_VOL_CTL_GAIN,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("DEC4 Volume",
+		  MSM89XX_CDC_CORE_TX4_VOL_CTL_GAIN,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("DEC5 Volume",
+		  MSM89XX_CDC_CORE_TX5_VOL_CTL_GAIN,
+		0, -84, 40, digital_gain),
+
+	SOC_SINGLE_SX_TLV("IIR1 INP1 Volume",
+			  MSM89XX_CDC_CORE_IIR1_GAIN_B1_CTL,
+			0,  -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("IIR1 INP2 Volume",
+			  MSM89XX_CDC_CORE_IIR1_GAIN_B2_CTL,
+			0,  -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("IIR1 INP3 Volume",
+			  MSM89XX_CDC_CORE_IIR1_GAIN_B3_CTL,
+			0,  -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("IIR1 INP4 Volume",
+			  MSM89XX_CDC_CORE_IIR1_GAIN_B4_CTL,
+			0,  -84,	40, digital_gain),
+	SOC_SINGLE_SX_TLV("IIR2 INP1 Volume",
+			  MSM89XX_CDC_CORE_IIR2_GAIN_B1_CTL,
+			0,  -84, 40, digital_gain),
+
+	SOC_SINGLE_SX_TLV("RX1 Digital Volume",
+		MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX2 Digital Volume",
+		MSM89XX_CDC_CORE_RX2_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
+		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+
+	SOC_SINGLE_EXT("IIR1 Enable Band1", IIR1, BAND1, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR1 Enable Band2", IIR1, BAND2, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR1 Enable Band3", IIR1, BAND3, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR1 Enable Band4", IIR1, BAND4, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR1 Enable Band5", IIR1, BAND5, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+
+	SOC_SINGLE_EXT("IIR2 Enable Band1", IIR2, BAND1, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR2 Enable Band2", IIR2, BAND2, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR2 Enable Band3", IIR2, BAND3, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR2 Enable Band4", IIR2, BAND4, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+	SOC_SINGLE_EXT("IIR2 Enable Band5", IIR2, BAND5, 1, 0,
+		msm_dig_cdc_get_iir_enable_audio_mixer,
+		msm_dig_cdc_put_iir_enable_audio_mixer),
+
+	SOC_SINGLE_MULTI_EXT("IIR1 Band1", IIR1, BAND1, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR1 Band2", IIR1, BAND2, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR1 Band3", IIR1, BAND3, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR1 Band4", IIR1, BAND4, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR1 Band5", IIR1, BAND5, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+
+	SOC_SINGLE_MULTI_EXT("IIR2 Band1", IIR2, BAND1, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR2 Band2", IIR2, BAND2, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR2 Band3", IIR2, BAND3, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR2 Band4", IIR2, BAND4, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+	SOC_SINGLE_MULTI_EXT("IIR2 Band5", IIR2, BAND5, 255, 0, 5,
+		msm_dig_cdc_get_iir_band_audio_mixer,
+		msm_dig_cdc_put_iir_band_audio_mixer),
+
+	SOC_SINGLE("RX1 HPF Switch",
+		MSM89XX_CDC_CORE_RX1_B5_CTL, 2, 1, 0),
+	SOC_SINGLE("RX2 HPF Switch",
+		MSM89XX_CDC_CORE_RX2_B5_CTL, 2, 1, 0),
+	SOC_SINGLE("RX3 HPF Switch",
+		MSM89XX_CDC_CORE_RX3_B5_CTL, 2, 1, 0),
+
+	SOC_ENUM("RX1 HPF cut off", cf_rxmix1_enum),
+	SOC_ENUM("RX2 HPF cut off", cf_rxmix2_enum),
+	SOC_ENUM("RX3 HPF cut off", cf_rxmix3_enum),
+
+	SOC_ENUM("TX1 HPF cut off", cf_dec1_enum),
+	SOC_ENUM("TX2 HPF cut off", cf_dec2_enum),
+	SOC_ENUM("TX3 HPF cut off", cf_dec3_enum),
+	SOC_ENUM("TX4 HPF cut off", cf_dec4_enum),
+	SOC_ENUM("TX5 HPF cut off", cf_decsva_enum),
+	SOC_SINGLE("TX1 HPF Switch",
+		MSM89XX_CDC_CORE_TX1_MUX_CTL, 3, 1, 0),
+	SOC_SINGLE("TX2 HPF Switch",
+		MSM89XX_CDC_CORE_TX2_MUX_CTL, 3, 1, 0),
+	SOC_SINGLE("TX3 HPF Switch",
+		MSM89XX_CDC_CORE_TX3_MUX_CTL, 3, 1, 0),
+	SOC_SINGLE("TX4 HPF Switch",
+		MSM89XX_CDC_CORE_TX4_MUX_CTL, 3, 1, 0),
+	SOC_SINGLE("TX5 HPF Switch",
+		MSM89XX_CDC_CORE_TX5_MUX_CTL, 3, 1, 0),
+};
+static const struct snd_kcontrol_new msm_dig_snd_controls_agni[] = {
 	SOC_SINGLE_SX_TLV("DEC1 Volume",
 		MSM89XX_CDC_CORE_TX1_VOL_CTL_GAIN,
 		0, -84, 40, digital_gain),
@@ -2165,6 +2301,19 @@ static struct snd_soc_codec_driver soc_msm_dig_codec = {
 	.num_dapm_routes = ARRAY_SIZE(audio_dig_map),
 	.get_regmap = msm_digital_get_regmap,
 };
+static struct snd_soc_codec_driver soc_msm_dig_codec_agni = {
+	.probe  = msm_dig_cdc_soc_probe,
+	.remove = msm_dig_cdc_soc_remove,
+	.suspend = msm_dig_cdc_suspend,
+	.resume = msm_dig_cdc_resume,
+	.controls = msm_dig_snd_controls_agni,
+	.num_controls = ARRAY_SIZE(msm_dig_snd_controls_agni),
+	.dapm_widgets = msm_dig_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(msm_dig_dapm_widgets),
+	.dapm_routes = audio_dig_map,
+	.num_dapm_routes = ARRAY_SIZE(audio_dig_map),
+	.get_regmap = msm_digital_get_regmap,
+};
 
 const struct regmap_config msm_digital_regmap_config = {
 	.reg_bits = 32,
@@ -2239,8 +2388,13 @@ static int msm_dig_cdc_probe(struct platform_device *pdev)
 	msm_dig_cdc->register_notifier = pdata->register_notifier;
 
 	dev_set_drvdata(&pdev->dev, msm_dig_cdc);
-	snd_soc_register_codec(&pdev->dev, &soc_msm_dig_codec,
-				msm_codec_dais, ARRAY_SIZE(msm_codec_dais));
+	if (agnisoundmod) {
+		snd_soc_register_codec(&pdev->dev, &soc_msm_dig_codec_agni,
+					msm_codec_dais, ARRAY_SIZE(msm_codec_dais));
+	} else {
+		snd_soc_register_codec(&pdev->dev, &soc_msm_dig_codec,
+					msm_codec_dais, ARRAY_SIZE(msm_codec_dais));
+	}
 	dev_dbg(&pdev->dev, "%s: registered DIG CODEC 0x%x\n",
 			__func__, dig_cdc_addr);
 	set_bit(ADSP_UP, &msm_dig_cdc->status_mask);
