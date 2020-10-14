@@ -140,7 +140,7 @@ static struct dev_config int_mi2s_cfg[] = {
 	[INT2_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[INT3_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[INT4_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
-	[INT5_MI2S] = {SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
+	[INT5_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 	[INT6_MI2S] = {SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 };
 
@@ -1347,8 +1347,13 @@ static void *def_msm_int_wcd_mbhc_cal(void)
 
 	btn_low[0] = 75;
 	btn_high[0] = 75;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 	btn_low[1] = 225;
 	btn_high[1] = 225;
+#else
+	btn_low[1] = 200;
+	btn_high[1] = 200;
+#endif
 	btn_low[2] = 450;
 	btn_high[2] = 450;
 	btn_low[3] = 500;
