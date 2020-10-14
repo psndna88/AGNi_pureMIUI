@@ -870,8 +870,8 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 	 *	unvote USBIN_I_VOTER) the status_changed_work enables
 	 *	USBIN_I_VOTER based on settled current.
 	 */
-	if (icl_ua <= 1300000){
-		pr_err("icl_ua <= 1300000 disable parallel charger smb1351 \n");
+	if (full_charged) {
+		pr_err("fully charged - disable parallel charger smb1351 \n");
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	}
 	else
@@ -1132,11 +1132,14 @@ static void handle_main_charge_type(struct pl_data *chip)
 		pr_err("Couldn't get batt charge type rc=%d\n", rc);
 		return;
 	}
+	if (!full_charged) {
+		pval.intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
+	}
 	pr_err("chip->charge_type =%d, pval.intval=%d \n", chip->charge_type,pval.intval);
 	/* not fast/not taper state to disables parallel */
 	if ((pval.intval != POWER_SUPPLY_CHARGE_TYPE_FAST)
 		&& (pval.intval != POWER_SUPPLY_CHARGE_TYPE_TAPER)) {
-		pr_err("main charge CHG_STATE_VOTER disable parllerl charging smb1351\n");
+		pr_err("main charge CHG_STATE_VOTER disable parallel charging smb1351\n");
 		vote(chip->pl_disable_votable, CHG_STATE_VOTER, true, 0);
 		chip->taper_pct = 100;
 		vote(chip->pl_disable_votable, TAPER_END_VOTER, false, 0);

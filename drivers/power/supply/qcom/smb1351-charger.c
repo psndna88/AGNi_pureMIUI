@@ -537,6 +537,7 @@ static int pre_chg_current[] = {
 	200, 300, 400, 500, 600, 700,
 };
 
+extern bool full_charged;
 struct battery_status {
 	bool			batt_hot;
 	bool			batt_warm;
@@ -1621,8 +1622,10 @@ static int smb1351_parallel_set_property(struct power_supply *psy,
 			rc = smb1351_usb_suspend(chip, USER, !val->intval);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
-		pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d \n",val->intval);
-		rc = smb1351_parallel_set_chg_suspend(chip, val->intval);
+		if (!full_charged) {
+			pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d \n",val->intval);
+			rc = smb1351_parallel_set_chg_suspend(chip, val->intval);
+		}
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
 		chip->target_fastchg_current_max_ma =
