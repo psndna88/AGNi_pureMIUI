@@ -386,6 +386,7 @@ static const struct fg_pt fg_tsmc_osc_table[] = {
 	{  90,		444992 },
 };
 
+extern bool device_charging;
 struct fg_saved_data {
 	union power_supply_propval val;
 	unsigned long last_req_expires;
