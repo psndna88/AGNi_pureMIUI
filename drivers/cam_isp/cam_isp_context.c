@@ -712,8 +712,7 @@ static void __cam_isp_ctx_send_sof_timestamp(
 {
 	struct cam_req_mgr_message   req_msg;
 
-	if ((ctx_isp->use_frame_header_ts) && (request_id) &&
-		(sof_event_status == CAM_REQ_MGR_SOF_EVENT_SUCCESS))
+	if ((ctx_isp->use_frame_header_ts) || (request_id == 0))
 		goto end;
 
 	req_msg.session_hdl = ctx_isp->base->session_hdl;
