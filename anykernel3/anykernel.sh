@@ -40,6 +40,7 @@ patch_cmdline androidboot.version androidboot.version=9;
 patch_cmdline androidboot.miui androidboot.miui=1;
 patch_cmdline androidboot.srgblock androidboot.srgblock=0;
 patch_cmdline androidboot.cpuoc androidboot.cpuoc=0;
+patch_cmdline androidboot.agnisoundmod androidboot.agnisoundmod=0;
 write_boot;
 ## end install
 

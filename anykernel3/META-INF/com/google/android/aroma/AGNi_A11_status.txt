@@ -1,0 +1,14 @@
+<@center><b><#selectbg_g>AGNi Kernel - Android 11 (R)</#></b>
+
+<b><#selectbg_g>Status information from developer</#></b></@>
+
+<@fill><q>Android 11 roms are not stable yet.
+This kernel is not tested on Android 11 and wil be done after its stable.
+Some people do use this kernel on Android 11 successfully.
+
+But,
+
+DO NOT INFORM ME OF BUGS IF USING ANDROID 11 !!!</q></@>
+
+
+<@center><b><#selectbg_g>HAVE FUN !</#></b></@>
