@@ -86,6 +86,7 @@ on property:sys.boot_completed=1
 	write /proc/sys/fs/lease-break-time 10
 	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 0	#MIUI
 	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 1	#AOSP
+	write /sys/kernel/sound_control/headphone_gain "2 2"	#SMOD
 	# Set the default IRQ affinity to the primary cluster.
     # Configure LPM
     write /sys/module/lpm_levels/system/pwr/cpu0/ret/idle_enabled N

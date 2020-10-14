@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v10.2_stable");
+ini_set("rom_version",	"v10.3_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"October, 13, 2020");
+ini_set("rom_date",		"October, 18, 2020");
 
 # Show Simple Splash
 splash(
@@ -107,6 +107,21 @@ agreebox(
     "Tick to proceed !"
 );
 
+agreebox(
+  #-- Title
+    "AGNi™ Android 11 Support Info",
+  #-- Subtitle / Description
+    "Android R support status",
+  #-- Icon:
+    "@license",
+  #-- Text Content 
+    resread("AGNi_A11_status.txt"),
+  #-- Checkbox Text
+    "Remember - Android 11 not fully supported yet...",
+  #-- Unchecked Alert Message
+    "I repeat, Android 11 not tested with this kernel !"
+);
+
 selectbox(
     "CPU Frequency Selection","<@center><b>\nWant to Overclock CPU ?</b>\n\n</@>","@install","cpuoc.prop",
     "Yes",	"Standard CPU OC to 2.2GHz Good for Gaming.", 0,   																							#-- selected.0 = 1	#SDM636
@@ -153,8 +168,8 @@ selectbox(
 
 selectbox(																											#SDM636
     "sRGB display colour","<@center><b>\nDo you require sRGB support?</b>\n\n</@>","@install","srgb.prop", 			#SDM636 
-    "YES",	"Default for Standard MIUI roms", 0, 												#-- selected.0 = 1	#SDM636
-    "NO",	"I use NON-MIUI/AOSP rom or my Ported-MIUI Android 10 rom need this disabled", 1 	#-- selected.0 = 2	#SDM636
+    "YES",	"Use for Official MIUI roms made for your device", 0,								#-- selected.0 = 1	#SDM636
+    "NO",	"I use NON-MIUI/AOSP rom or Ported-MIUI rom", 1 									#-- selected.0 = 2	#SDM636
 );																													#SDM636
 
 setvar("retstatus",

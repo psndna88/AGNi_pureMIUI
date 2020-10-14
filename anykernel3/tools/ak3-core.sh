@@ -644,6 +644,11 @@ patch_cmdline() {
   elif [ "$cpuoc" == "2" ]; then
   	sed -i 's/androidboot.cpuoc=0/androidboot.cpuoc=2/' $cmdfile;
   fi;
+  # AGNI SOUND MOD selection
+  soundmod="`cat $home/SOUND_MOD`";
+  if [ "$soundmod" == "1" ]; then
+	sed -i 's/androidboot.agnisoundmod=0/androidboot.agnisoundmod=1/' $cmdfile;
+  fi;
 
   if [ -f "$home/cmdtmp" ]; then
     sed -i "s|^cmdline=.*|cmdline=$(cat $cmdfile)|" $split_img/header;

@@ -666,6 +666,7 @@ else
 	ui_print " " "AGNi has NOT installed EAS Perf HAL." " ";
 fi;
 ### EAS Perf hal END
+# CPU OC
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
 		$BB cp -f $AKHOME/tools/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
@@ -692,6 +693,12 @@ else
 	fi;
 fi;
 $BB echo "$CPUOC_SELECT" > $AKHOME/CPU_OC;
+# Sound MOD
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/sound.prop`" ]; then
+	$BB echo "1" > $AKHOME/SOUND_MOD;
+else
+	$BB echo "0" > $AKHOME/SOUND_MOD;
+fi;
 if [ "$MIUI_ROM" == "true" ];then
 	$BB sed -i '/#AOSP/d' /vendor/etc/init/hw/init.agni.rc;
 else
@@ -913,6 +920,7 @@ else
 	if [ -f /vendor/etc/mixer_paths.xml.agnibak ]; then
 		$BB mv -f /vendor/etc/mixer_paths.xml.agnibak /vendor/etc/mixer_paths.xml;
 	fi;
+	$BB sed -i '/#SMOD/d' /vendor/etc/init/hw/init.agni.rc;
 fi;
 /sbin/restorecon -v /vendor/etc/mixer_paths.xml;
 
