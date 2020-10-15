@@ -33,7 +33,7 @@
 				0 0 0 3 &intc GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH
 				0 0 0 4 &intc GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
 
-		msi-parent = <&pcie0_msi>;
+		msi-parent = <&pcie0_msi_snps>;
 
 		perst-gpio = <&tlmm 94 0>;
 		wake-gpio = <&tlmm 96 0>;
@@ -192,6 +192,15 @@
 		pcie0_rp: pcie0_rp {
 			reg = <0 0 0 0 0>;
 		};
+	};
+
+	pcie0_msi_snps: qcom,pcie0_msi@a0000000 {
+		compatible = "qcom,pci-msi";
+		msi-controller;
+		reg = <0xa0000000 0x0>;
+		interrupt-parent = <&intc>;
+		interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,snps;
 	};
 
 	pcie0_msi: qcom,pcie0_msi@17a10040 {
