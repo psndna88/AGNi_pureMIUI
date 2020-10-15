@@ -2638,7 +2638,7 @@
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 			"TURBO";
 
-		qcom,throughput-threshold = <310 600 1000>;
+		qcom,throughput-threshold = <600 2500 5000>;
 		qcom,scaling-exceptions = <>;
 
 		/* smp2p information */
