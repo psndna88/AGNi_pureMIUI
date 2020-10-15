@@ -4,6 +4,7 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-video-cphy.dtsi"
+#include "dsi-panel-sharp-dsc-qhd-plus-cmd.dtsi"
 #include "dsi-panel-sim-video.dtsi"
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
@@ -145,6 +146,25 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 1e 17 04
 					19 03 02 04 00 00 00];
 			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_sharp_qhd_plus_dsc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* 120 FPS */
+			qcom,mdss-dsi-panel-phy-timings = [00 1a 07 06 16 15 07
+					07 07 02 04 00 17 0b];
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+
+		timing@1 { /* 60 FPS*/
+			qcom,mdss-dsi-panel-phy-timings = [00 1a 07 06 16 15 07
+					07 07 02 04 00 17 0b];
+			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
 	};
