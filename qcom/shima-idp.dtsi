@@ -189,7 +189,9 @@
 			 &dsi_r66451_amoled_video
 			&dsi_r66451_amoled_60hz_video
 			&dsi_r66451_amoled_60hz_cmd
-			&dsi_r66451_amoled_144hz_cmd>;
+			&dsi_r66451_amoled_144hz_cmd
+			&dsi_r66451_amoled_video_cphy
+			&dsi_r66451_amoled_cmd_cphy>;
 
 		focaltech,trusted-touch-mode = "vm_mode";
 		focaltech,touch-environment = "pvm";
