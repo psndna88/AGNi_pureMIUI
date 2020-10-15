@@ -205,15 +205,9 @@ static struct wcd_mbhc_config mbhc_cfg_miui = {
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-#if 0
-	.key_code[1] = KEY_VOLUMEUP,
-    .key_code[2] = KEY_VOLUMEDOWN,
-    .key_code[3] = KEY_VOICECOMMAND,
-#else
 	.key_code[1] = BTN_1,
 	.key_code[2] = BTN_2,
-	.key_code[3] = 0,
-#endif
+	.key_code[3] = KEY_VOICECOMMAND,
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -233,15 +227,9 @@ static struct wcd_mbhc_config mbhc_cfg = {
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-#ifdef CONFIG_KERNEL_CUSTOM_D2S  	//2017.11.15 wsy edit for compatible ndef CONFIG_SND_SOC_TAS2557
 	.key_code[1] = KEY_VOLUMEUP,  		//KEY_VOICECOMMAND,
     .key_code[2] = KEY_VOLUMEDOWN,  	//KEY_VOLUMEUP,
     .key_code[3] = KEY_VOICECOMMAND,	//KEY_VOLUMEDOWN,
-#else
-	.key_code[1] = KEY_VOLUMEUP,
-    .key_code[2] = KEY_VOLUMEDOWN,
-	.key_code[3] = 0,
-#endif
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
