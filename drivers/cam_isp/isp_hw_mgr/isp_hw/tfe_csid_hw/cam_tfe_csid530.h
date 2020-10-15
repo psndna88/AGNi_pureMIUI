@@ -165,6 +165,7 @@ static struct cam_tfe_csid_csi2_rx_reg_offset
 	.csi2_rx_phy_num_mask                         = 0x7,
 	.csi2_rx_long_pkt_hdr_rst_stb_shift           = 0x1,
 	.csi2_rx_short_pkt_hdr_rst_stb_shift          = 0x2,
+	.csi2_rx_cphy_pkt_hdr_rst_stb_shift           = 0x3,
 };
 
 static struct cam_tfe_csid_common_reg_offset
