@@ -106,8 +106,15 @@ static int32_t cam_actuator_power_up(struct cam_actuator_ctrl_t *a_ctrl)
 	}
 
 	rc = camera_io_init(&a_ctrl->io_master_info);
-	if (rc < 0)
+	if (rc < 0) {
 		CAM_ERR(CAM_ACTUATOR, "cci init failed: rc: %d", rc);
+		goto cci_failure;
+	}
+
+	return rc;
+cci_failure:
+	if (cam_sensor_util_power_down(power_info, soc_info))
+		CAM_ERR(CAM_ACTUATOR, "Power down failure");
 
 	return rc;
 }
