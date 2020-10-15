@@ -611,6 +611,12 @@
 		};
 	};
 
+	llcc_pmu: llcc-pmu@90cc000 {
+		compatible = "qcom,llcc-pmu-ver2";
+		reg = <0x090cc000 0x300>, <0x09648000 0x200>;
+		reg-names = "lagg-base", "beac-base";
+	};
+
 	llcc_bw_opp_table: llcc-bw-opp-table {
 		compatible = "operating-points-v2";
 		BW_OPP_ENTRY( 150, 16); /*  2288 MB/s */
@@ -844,6 +850,12 @@
 				< 2016000 MHZ_TO_MBPS(1017, 4) >,
 				< 2054400 MHZ_TO_MBPS(2092, 4) >;
 		};
+	};
+
+	cpu_pmu: cpu-pmu {
+		compatible = "arm,armv8-pmuv3";
+		qcom,irq-is-percpu;
+		interrupts = <GIC_PPI 5 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	clocks {
