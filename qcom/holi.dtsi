@@ -2182,12 +2182,18 @@
 		mmc-hs400-1_8v;
 		mmc-hs400-enhanced-strobe;
 
+		cap-mmc-hw-reset;
+
 		bus-width = <8>;
 		non-removable;
 		supports-cqe;
 
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
+		/* Add dt entry for gcc hw reset */
+		resets = <&gcc GCC_SDCC1_BCR>;
+		reset-names = "core_reset";
 
 		status = "disabled";
 
