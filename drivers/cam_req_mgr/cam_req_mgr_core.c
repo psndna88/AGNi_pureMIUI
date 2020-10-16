@@ -950,7 +950,7 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 
 			apply_req.trigger_point = trigger;
 			CAM_DBG(CAM_REQ,
-				"SEND: %d link_hdl: %x pd %d req_id %lld",
+				"SEND:  link_hdl: %x pd %d req_id %lld",
 				link->link_hdl, pd, apply_req.request_id);
 			if (dev->ops && dev->ops->apply_req) {
 				rc = dev->ops->apply_req(&apply_req);
@@ -1334,6 +1334,7 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 	uint64_t sof_timestamp_delta = 0;
 	uint64_t master_slave_diff = 0;
 	bool ready = true, sync_ready = true;
+	int slot_idx_diff = 0;
 
 	if (!sync_link || !link) {
 		CAM_ERR(CAM_CRM, "Sync link null");
@@ -1439,12 +1440,14 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 		return -EAGAIN;
 	}
 
+	slot_idx_diff = (sync_slot_idx - sync_rd_idx + sync_num_slots) %
+		sync_num_slots;
 	if ((sync_link->req.in_q->slot[sync_slot_idx].status !=
 		CRM_SLOT_STATUS_REQ_APPLIED) &&
-		(((sync_slot_idx - sync_rd_idx + sync_num_slots) %
-		sync_num_slots) >= 1) &&
+		((slot_idx_diff > 1) ||
+		((slot_idx_diff == 1) &&
 		(sync_rd_slot->status !=
-		CRM_SLOT_STATUS_REQ_APPLIED)) {
+		CRM_SLOT_STATUS_REQ_APPLIED)))) {
 		CAM_DBG(CAM_CRM,
 			"Req: %lld [other link] not next req to be applied on link: %x",
 			req_id, sync_link->link_hdl);
