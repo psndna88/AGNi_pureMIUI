@@ -13472,13 +13472,13 @@ static struct platform_driver msm_dai_cdc_dma_q6 = {
 int __init msm_dai_q6_init(void)
 {
 	int rc;
-
+#ifndef CONFIG_AUXPCM_DISABLE
 	rc = platform_driver_register(&msm_auxpcm_dev_driver);
 	if (rc) {
 		pr_err("%s: fail to register auxpcm dev driver", __func__);
-		goto fail;
+		return rc;
 	}
-
+#endif
 	rc = platform_driver_register(&msm_dai_q6);
 	if (rc) {
 		pr_err("%s: fail to register dai q6 driver", __func__);
@@ -13562,7 +13562,6 @@ dai_q6_dev_fail:
 	platform_driver_unregister(&msm_dai_q6);
 dai_q6_fail:
 	platform_driver_unregister(&msm_auxpcm_dev_driver);
-fail:
 	return rc;
 }
 
