@@ -217,6 +217,10 @@ dtb-$(CONFIG_ARCH_QTI_VM) += shima-vm-rumi.dtb \
 endif
 endif
 
+dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
+	sdxnightjar-cdp.dtb \
+	sdxnightjar-qrd.dtb
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo
