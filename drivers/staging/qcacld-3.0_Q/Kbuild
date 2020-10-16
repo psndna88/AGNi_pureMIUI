@@ -2266,6 +2266,10 @@ ccflags-y += -Wmissing-prototypes
 ifeq ($(call cc-option-yn, -Wheader-guard), y)
 ccflags-y += -Wheader-guard
 endif
+# To build without debug just ignore not used code.
+ccflags-y += $(call cc-disable-warning,unused-variable,)
+ccflags-y += $(call cc-disable-warning,unused-function,)
+
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
 # same a the QCA CHIP name. The host driver will then append MULTI_IF_NAME to
 # any string that must be unique for all instances of the driver on the system.
@@ -2284,6 +2288,9 @@ endif
 ifdef WLAN_HDD_ADAPTER_MAGIC
 ccflags-y += -DWLAN_HDD_ADAPTER_MAGIC=$(WLAN_HDD_ADAPTER_MAGIC)
 endif
+
+ccflags-y += $(call cc-option, -g0)
+ccflags-y += $(call cc-option, -Os)
 
 # Determine if we are building against an arm architecture host
 ifeq ($(findstring arm, $(ARCH)),)
