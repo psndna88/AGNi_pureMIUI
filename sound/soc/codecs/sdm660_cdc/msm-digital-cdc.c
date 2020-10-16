@@ -1292,6 +1292,7 @@ static void sdm660_tx_mute_update_callback(struct work_struct *work)
 #ifdef CONFIG_SOUND_CONTROL
 static struct snd_soc_codec *sound_control_codec_ptr;
 //Headphones
+static int agnisound_dboost = 4;
 static int headphones_boost_l = 0;
 static int headphones_boost_r = 0;
 static int headphones_boost_min = -20;
@@ -1343,16 +1344,31 @@ static ssize_t headphone_gain_store(struct kobject *kobj,
 
 	sscanf(buf, "%d %d", &input_l, &input_r);
 	if ((input_l != headphones_boost_l) || (input_r != headphones_boost_r)) {
-		if (input_l < headphones_boost_min)
-			input_l = headphones_boost_min;
-		if (input_l > headphones_boost_limit)
-			input_l = headphones_boost_limit;
-		if (input_r < headphones_boost_min)
-			input_r = headphones_boost_min;
-		if (input_r > headphones_boost_limit)
-			input_r = headphones_boost_limit;
-
-		pr_info("New headphones_boost: Left: %d Right: %d\n", input_l, input_r);
+		if (agnisoundmod) {
+			if (input_l < 0)
+				input_l = 0;
+			if (input_l > agnisound_dboost)
+				input_l = agnisound_dboost;
+			if (input_l == 2)
+				input_l = agnisound_dboost;
+			if (input_r < 0)
+				input_r = 0;
+			if (input_r > agnisound_dboost)
+				input_r = agnisound_dboost;
+			if (input_r == 2)
+				input_r = agnisound_dboost;
+			pr_info("AGNi Sound Mod headphones boost custom allowed settings active");
+		} else {
+			if (input_l < headphones_boost_min)
+				input_l = headphones_boost_min;
+			if (input_l > headphones_boost_limit)
+				input_l = headphones_boost_limit;
+			if (input_r < headphones_boost_min)
+				input_r = headphones_boost_min;
+			if (input_r > headphones_boost_limit)
+				input_r = headphones_boost_limit;
+			pr_info("New headphones_boost: Left: %d Right: %d\n", input_l, input_r);
+		}
 
 		headphones_boost_l = input_l;
 		headphones_boost_r = input_r;
