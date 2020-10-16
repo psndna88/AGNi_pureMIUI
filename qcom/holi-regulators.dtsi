@@ -26,6 +26,7 @@
 		status = "okay";
 		qcom,resource-name = "rwgx";
 		qcom,resource-id = <0>;
+		qcom,always-wait-for-ack;
 		VDD_GFX_LEVEL:
 		S3A_LEVEL: pm6350_s3_level: regulator-s3-level {
 			compatible = "qcom,rpm-smd-regulator";
@@ -46,7 +47,7 @@
 			regulator-name = "pm6350_s3_level_ao";
 			qcom,set = <1>;
 			regulator-min-microvolt =
-					<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+					<RPM_SMD_REGULATOR_LEVEL_NONE>;
 			regulator-max-microvolt =
 					<RPM_SMD_REGULATOR_LEVEL_BINNING>;
 			qcom,use-voltage-level;
