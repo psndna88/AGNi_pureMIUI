@@ -1015,7 +1015,7 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 	} else {
 		set_sdp_current(chg, 100000);
 		if (!slow_charge)
-			rc = smblib_set_charge_param(chg, &chg->param.usb_icl, DCP_CURRENT_UA); //psndna88 HACK
+			rc = smblib_set_charge_param(chg, &chg->param.usb_icl, HVDCP3_CURRENT_UA); //psndna88 HACK
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
 			goto enable_icl_changed_interrupt;
