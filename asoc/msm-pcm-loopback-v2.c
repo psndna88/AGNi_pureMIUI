@@ -198,11 +198,15 @@ static struct snd_kcontrol_new msm_loopback_controls[] = {
 
 static int msm_pcm_loopback_probe(struct snd_soc_component *component)
 {
-	snd_soc_add_component_controls(component, msm_loopback_controls,
-				      ARRAY_SIZE(msm_loopback_controls));
+	if (of_property_read_bool(component->dev->of_node,
+				  "qcom,msm-pcm-loopback")) {
+		snd_soc_add_component_controls(component, msm_loopback_controls,
+					       ARRAY_SIZE(msm_loopback_controls));
+	}
 
 	return 0;
 }
+
 static int pcm_loopback_set_volume(struct msm_pcm_loopback *prtd,
 				   uint32_t volume)
 {
