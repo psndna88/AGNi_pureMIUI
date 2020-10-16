@@ -96,7 +96,7 @@ enum cam_tfe_csid_halt_cmd {
 };
 
 /**
- * enum cam_tfe_csid_halt_mode_cmd - Specify the halt command type
+ * enum cam_tfe_csid_halt_mode - Specify the halt command type
  */
 enum cam_tfe_csid_halt_mode {
 	CAM_TFE_CSID_HALT_MODE_INTERNAL,
@@ -107,7 +107,7 @@ enum cam_tfe_csid_halt_mode {
 };
 
 /**
- * struct cam_csid_hw_halt_args
+ * struct cam_tfe_csid_hw_halt_args
  * @halt_mode : Applicable only for PATH resources
  *              0 Internal : The CSID responds to the HALT_CMD
  *              1 Global   : The CSID responds to the GLOBAL_HALT_CMD
@@ -117,9 +117,9 @@ enum cam_tfe_csid_halt_mode {
  * @node_res : reource pointer array( ie cid or CSID)
  *
  */
-struct cam_csid_hw_halt_args {
-	enum cam_tfe_csid_halt_mode   halt_mode;
-	struct cam_isp_resource_node *node_res;
+struct cam_tfe_csid_hw_halt_args {
+	enum cam_tfe_csid_halt_mode     halt_mode;
+	struct cam_isp_resource_node   *node_res;
 };
 
 /**
