@@ -82,16 +82,6 @@ static inline void force_page_cache_readahead(struct address_space *mapping,
 }
 
 /*
- * Submit IO for the read-ahead request in file_ra_state.
- */
-static inline void ra_submit(struct file_ra_state *ra,
-		struct address_space *mapping, struct file *file)
-{
-	DEFINE_READAHEAD(ractl, file, mapping, ra->start);
-	do_page_cache_ra(&ractl, ra->size, ra->async_size);
-}
-
-/*
  * Turn a non-refcounted page (->_refcount == 0) into refcounted with
  * a count of one.
  */
