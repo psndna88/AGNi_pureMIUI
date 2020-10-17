@@ -3898,6 +3898,7 @@ static int fg_psy_get_property(struct power_supply *psy,
 {
 	struct fg_chip *chip = power_supply_get_drvdata(psy);
 	struct fg_saved_data *sd = chip->saved_data + psp;
+	union power_supply_propval typec_sts = { .intval = -1 };
 	int rc = 0;
 
 	switch (psp) {
@@ -3916,7 +3917,11 @@ static int fg_psy_get_property(struct power_supply *psy,
 	default:
 		if (!sd->last_req_expires)
 			break;
- 		if ((!device_charging) && time_before(jiffies, sd->last_req_expires)) {
+ 		if (usb_psy_initialized(chip))
+			power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_TYPEC_MODE, &typec_sts);
+ 		if (typec_sts.intval == POWER_SUPPLY_TYPEC_NONE &&
+			time_before(jiffies, sd->last_req_expires)) {
 			*pval = sd->val;
 			return 0;
 		}

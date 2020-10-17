@@ -37,7 +37,6 @@ struct g_nvt_data {
 extern struct g_nvt_data g_nvt;
 #endif
 
-bool device_charging = false;
 extern int hwc_check_global;
 extern bool slow_charge;
 #ifdef CONFIG_KERNEL_CUSTOM_E7S
@@ -3500,12 +3499,10 @@ static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 	if (vbus_rising) {
 		/* use the typec flag even though its not typec */
 		chg->typec_present = 1;
-		device_charging = true;
 		smblib_err(chg, "lct micro usb plugin\n");
 	} else {
 		smblib_err(chg, "lct micro usb plugout\n");
 		chg->typec_present = 0;
-		device_charging = false;
 		smblib_update_usb_type(chg);
 		extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
 		smblib_uusb_removal(chg);
@@ -4532,7 +4529,6 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 
 	if (!chg->typec_present && chg->typec_mode != POWER_SUPPLY_TYPEC_NONE) {
 		chg->typec_present = true;
-		device_charging = true;
 		smblib_dbg(chg, PR_MISC, "TypeC %s insertion\n",
 			smblib_typec_mode_name[chg->typec_mode]);
 		smblib_err(chg, "lct TypeC insertion\n");
@@ -4540,7 +4536,6 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 	} else if (chg->typec_present &&
 				chg->typec_mode == POWER_SUPPLY_TYPEC_NONE) {
 		chg->typec_present = false;
-		device_charging = false;
 		smblib_dbg(chg, PR_MISC, "TypeC removal\n");
 		smblib_err(chg, "lct TypeC removal\n");
 		smblib_handle_typec_removal(chg);
