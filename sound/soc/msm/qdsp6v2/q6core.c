@@ -375,7 +375,7 @@ struct cal_block_data *cal_utils_get_cal_block_by_key(
 	return NULL;
 }
 
-#ifndef CONFIG_MACH_XIAOMI_SDM660
+#if 0
 static int q6core_send_get_avcs_fwk_ver_cmd(void)
 {
 	struct apr_hdr avcs_ver_cmd;
@@ -678,12 +678,19 @@ fail_cmd:
 	return ret;
 }
 
+#ifdef CONFIG_ARCH_MSM8996
 enum q6_subsys_image q6core_get_avs_version(void)
 {
 	if (q6core_lcl.q6_core_avs_version == 0)
 		core_get_adsp_ver();
 	return q6core_lcl.q6_core_avs_version;
 }
+#else
+enum q6_subsys_image q6core_get_avs_version(void)
+{
+	return Q6_SUBSYS_INVALID;
+}
+#endif
 
 int32_t core_get_license_status(uint32_t module_id)
 {
