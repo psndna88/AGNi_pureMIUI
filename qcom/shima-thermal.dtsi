@@ -110,6 +110,49 @@
 		};
 	};
 
+	qcom,cpu-hotplug {
+		compatible = "qcom,cpu-hotplug";
+		cpu0_hotplug: cpu0-hotplug {
+			qcom,cpu = <&CPU0>;
+			#cooling-cells = <2>;
+		};
+
+		cpu1_hotplug: cpu1-hotplug {
+			qcom,cpu = <&CPU1>;
+			#cooling-cells = <2>;
+		};
+
+		cpu2_hotplug: cpu2-hotplug {
+			qcom,cpu = <&CPU2>;
+			#cooling-cells = <2>;
+		};
+
+		cpu3_hotplug: cpu3-hotplug {
+			qcom,cpu = <&CPU3>;
+			#cooling-cells = <2>;
+		};
+
+		cpu4_hotplug: cpu4-hotplug {
+			qcom,cpu = <&CPU4>;
+			#cooling-cells = <2>;
+		};
+
+		cpu5_hotplug: cpu5-hotplug {
+			qcom,cpu = <&CPU5>;
+			#cooling-cells = <2>;
+		};
+
+		cpu6_hotplug: cpu6-hotplug {
+			qcom,cpu = <&CPU6>;
+			#cooling-cells = <2>;
+		};
+
+		cpu7_hotplug: cpu7-hotplug {
+			qcom,cpu = <&CPU7>;
+			#cooling-cells = <2>;
+		};
+	};
+
 	qcom,cpu-voltage-cdev {
 		compatible = "qcom,cc-cooling-devices";
 		apc1_cluster: qcom,apc1-cluster {
@@ -733,12 +776,29 @@
 				hysteresis = <10000>;
 				type = "passive";
 			};
+
+			cpu00_config1: cpu00-config1 {
+				temperature = <112000>;
+				hysteresis = <12000>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
 			cpu00_cdev {
 				trip = <&cpu00_config>;
 				cooling-device = <&cpu0_isolate 1 1>;
+			};
+
+			cpu00_cdev1 {
+				trip = <&cpu00_config>;
+				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu00_cdev2 {
+				trip = <&cpu00_config1>;
+				cooling-device = <&cpu0_hotplug 1 1>;
 			};
 		};
 	};
@@ -754,12 +814,29 @@
 				hysteresis = <10000>;
 				type = "passive";
 			};
+
+			cpu01_config1: cpu01-config1 {
+				temperature = <112000>;
+				hysteresis = <12000>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
 			cpu01_cdev {
 				trip = <&cpu01_config>;
 				cooling-device = <&cpu1_isolate 1 1>;
+			};
+
+			cpu01_cdev1 {
+				trip = <&cpu01_config>;
+				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu01_cdev2 {
+				trip = <&cpu01_config1>;
+				cooling-device = <&cpu1_hotplug 1 1>;
 			};
 		};
 	};
@@ -775,12 +852,29 @@
 				hysteresis = <10000>;
 				type = "passive";
 			};
+
+			cpu02_config1: cpu02-config1 {
+				temperature = <112000>;
+				hysteresis = <12000>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
 			cpu02_cdev {
 				trip = <&cpu02_config>;
 				cooling-device = <&cpu2_isolate 1 1>;
+			};
+
+			cpu02_cdev1 {
+				trip = <&cpu02_config>;
+				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu02_cdev2 {
+				trip = <&cpu02_config1>;
+				cooling-device = <&cpu2_hotplug 1 1>;
 			};
 		};
 	};
@@ -796,12 +890,29 @@
 				hysteresis = <10000>;
 				type = "passive";
 			};
+
+			cpu03_config1: cpu03-config1 {
+				temperature = <112000>;
+				hysteresis = <12000>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
 			cpu03_cdev {
 				trip = <&cpu03_config>;
 				cooling-device = <&cpu3_isolate 1 1>;
+			};
+
+			cpu03_cdev1 {
+				trip = <&cpu03_config>;
+				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			cpu03_cdev2 {
+				trip = <&cpu03_config1>;
+				cooling-device = <&cpu3_hotplug 1 1>;
 			};
 		};
 	};
@@ -813,6 +924,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu10_config: cpu10-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu10_config1: cpu10-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -830,6 +947,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu10_cdev2 {
+				trip = <&cpu10_config1>;
+				cooling-device = <&cpu4_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -840,6 +962,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu11_config: cpu11-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu11_config1: cpu11-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -857,6 +985,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu11_cdev2 {
+				trip = <&cpu11_config1>;
+				cooling-device = <&cpu4_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -867,6 +1000,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu12_config: cpu12-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu12_config1: cpu12-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -884,6 +1023,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu12_cdev2 {
+				trip = <&cpu12_config1>;
+				cooling-device = <&cpu5_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -894,6 +1038,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu13_config: cpu13-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu13_config1: cpu13-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -911,6 +1061,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu13_cdev2 {
+				trip = <&cpu13_config1>;
+				cooling-device = <&cpu5_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -921,6 +1076,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu14_config: cpu14-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu14_config1: cpu14-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -938,6 +1099,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu14_cdev2 {
+				trip = <&cpu14_config1>;
+				cooling-device = <&cpu6_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -948,6 +1114,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu15_config: cpu15-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu15_config1: cpu15-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -965,6 +1137,11 @@
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
+
+			cpu15_cdev2 {
+				trip = <&cpu15_config1>;
+				cooling-device = <&cpu6_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -975,6 +1152,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu16_config: cpu16-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu16_config1: cpu16-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -986,6 +1169,11 @@
 				trip = <&cpu16_config>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
+
+			cpu16_cdev2 {
+				trip = <&cpu16_config1>;
+				cooling-device = <&cpu7_hotplug 1 1>;
+			};
 		};
 	};
 
@@ -996,6 +1184,12 @@
 		thermal-governor = "step_wise";
 		trips {
 			cpu17_config: cpu17-config {
+				temperature = <108000>;
+				hysteresis = <8000>;
+				type = "passive";
+			};
+
+			cpu17_config1: cpu17-config1 {
 				temperature = <110000>;
 				hysteresis = <10000>;
 				type = "passive";
@@ -1007,17 +1201,21 @@
 				trip = <&cpu17_config>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
+
+			cpu17_cdev2 {
+				trip = <&cpu17_config1>;
+				cooling-device = <&cpu7_hotplug 1 1>;
+			};
 		};
 	};
 
-	gpuss-max-step {
+	gpuss-0-step {
 		polling-delay-passive = <10>;
-		polling-delay = <100>;
+		polling-delay = <0>;
 		thermal-governor = "step_wise";
-		thermal-sensors = <&tsens1 1>, <&tsens1 2>;
-		sensor-aggregation = <AGGREGATE_MAX_VALUE>;
+		thermal-sensors = <&tsens1 1>;
 		trips {
-			gpuss_config: active-config0 {
+			gpuss0_config: active-config0 {
 				temperature = <95000>;
 				hysteresis = <0>;
 				type = "passive";
@@ -1026,7 +1224,29 @@
 
 		cooling-maps {
 			gpu_cdev {
-				trip = <&gpuss_config>;
+				trip = <&gpuss0_config>;
+				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
+							THERMAL_NO_LIMIT>;
+			};
+		};
+	};
+
+	gpuss-1-step {
+		polling-delay-passive = <10>;
+		polling-delay = <100>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 2>;
+		trips {
+			gpuss1_config: active-config0 {
+				temperature = <95000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			gpu_cdev {
+				trip = <&gpuss1_config>;
 				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
 							THERMAL_NO_LIMIT>;
 			};
