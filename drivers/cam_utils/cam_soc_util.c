@@ -907,7 +907,7 @@ end:
 }
 
 int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
-	enum cam_vote_level clk_level)
+	enum cam_vote_level clk_level, bool do_not_set_src_clk)
 {
 	int i, rc = 0;
 	enum cam_vote_level apply_level;
@@ -928,6 +928,16 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 		cam_cx_ipeak_update_vote_cx_ipeak(soc_info, apply_level);
 
 	for (i = 0; i < soc_info->num_clk; i++) {
+		if (do_not_set_src_clk && (i == soc_info->src_clk_idx)) {
+			CAM_DBG(CAM_UTIL, "Skipping set rate for src clk %s",
+				soc_info->clk_name[i]);
+			continue;
+		}
+
+		CAM_DBG(CAM_UTIL, "Set rate for clk %s rate %d",
+			soc_info->clk_name[i],
+			soc_info->clk_rate[apply_level][i]);
+
 		rc = cam_soc_util_set_clk_rate(soc_info->clk[i],
 			soc_info->clk_name[i],
 			soc_info->clk_rate[apply_level][i]);
