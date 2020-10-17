@@ -126,19 +126,19 @@
  * ESD check & protection
  * default: disable
  */
-#define FTS_ESDCHECK_EN                         1
+#define FTS_ESDCHECK_EN                         0
 
 /*
  * Production test enable
  * 1: enable, 0:disable(default)
  */
-#define FTS_TEST_EN                             1
+#define FTS_TEST_EN                             0
 
 /*
  * Glove mode enable
  * 1: enable, 0:disable(default)
  */
-#define FTS_GLOVE_EN                            0
+#define FTS_GLOVE_EN                            1
 /*
  * cover enable
  * 1: enable, 0:disable(default)
@@ -185,7 +185,7 @@
 /*
  * auto upgrade, please keep enable
  */
-#define FTS_AUTO_UPGRADE_EN                     1
+#define FTS_AUTO_UPGRADE_EN                     0
 
 /*
  * auto upgrade for lcd cfg
