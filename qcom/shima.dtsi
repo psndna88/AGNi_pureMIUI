@@ -3467,6 +3467,21 @@
 		};
 	};
 
+	qfprom_sys: qfprom@0 {
+		compatible = "qcom,qfprom-sys";
+
+		nvmem-cells = <&gpu_speed_bin>,
+			      <&gpu_gaming_bin>,
+			      <&adsp_variant>,
+			      <&feat_conf_m7>,
+			      <&feat_conf_qc_spare_20_lsb>;
+		nvmem-cell-names = "gpu_speed_bin",
+				   "gpu_gaming_bin",
+				   "adsp_variant",
+				   "feat_conf_m7",
+				   "feat_conf_qc_spare_20_lsb";
+	};
+
 	wlan: qcom,cnss-qca6490@b0000000 {
 		compatible = "qcom,cnss-qca6490";
 		reg = <0xb0000000 0x10000>;
