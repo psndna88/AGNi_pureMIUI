@@ -121,6 +121,8 @@ struct ipa3_rmnet_mux_val {
 	bool ul_flt_reg;
 	bool mux_hdr_set;
 	uint32_t  hdr_hdl;
+	uint16_t mtu_v4;
+	uint16_t mtu_v6;
 };
 
 extern struct qmi_elem_info
@@ -304,6 +306,9 @@ int rmnet_ipa3_enable_per_client_stats(bool *data);
 
 int rmnet_ipa3_query_per_client_stats(
 	struct wan_ioctl_query_per_client_stats *data);
+
+int rmnet_ipa3_get_wan_mtu(
+	struct ipa_mtu_info *data);
 
 int ipa3_qmi_get_data_stats(struct ipa_get_data_stats_req_msg_v01 *req,
 	struct ipa_get_data_stats_resp_msg_v01 *resp);

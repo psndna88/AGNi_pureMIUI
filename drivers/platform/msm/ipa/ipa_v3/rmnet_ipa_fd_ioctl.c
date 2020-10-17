@@ -475,6 +475,28 @@ static long ipa3_wan_ioctl(struct file *filp,
 		}
 		break;
 
+	case WAN_IOC_GET_WAN_MTU:
+		IPAWANDBG_LOW("got WAN_IOC_GET_WAN_MTU :>>>\n");
+		pyld_sz = sizeof(struct ipa_mtu_info);
+		param = memdup_user((const void __user *)arg, pyld_sz);
+		if (IS_ERR(param)) {
+			retval = PTR_ERR(param);
+			break;
+		}
+		if (rmnet_ipa3_get_wan_mtu(
+			(struct ipa_mtu_info *)
+			param)) {
+			IPAWANERR("WAN_IOC_GET_WAN_MTU failed\n");
+			retval = -EFAULT;
+			break;
+		}
+
+		if (copy_to_user((void __user *)arg, param, pyld_sz)) {
+			retval = -EFAULT;
+			break;
+		}
+		break;
+
 	default:
 		retval = -ENOTTY;
 	}
