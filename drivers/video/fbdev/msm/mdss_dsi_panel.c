@@ -2564,36 +2564,38 @@ static int mdss_dsi_set_refresh_rate_range(struct device_node *pan_node,
 		struct mdss_panel_info *pinfo)
 {
 	int rc = 0;
-	rc = of_property_read_u32(pan_node,
+/*	rc = of_property_read_u32(pan_node,
 			"qcom,mdss-dsi-min-refresh-rate",
 			&pinfo->min_fps);
 	if (rc) {
 		pr_warn("%s:%d, Unable to read min refresh rate\n",
-				__func__, __LINE__);
+				__func__, __LINE__); */
 
 		/*
 		 * If min refresh rate is not specified, set it to the
 		 * default panel refresh rate.
 		 */
-		pinfo->min_fps = pinfo->mipi.frame_rate;
-		rc = 0;
-	}
+//		pinfo->min_fps = pinfo->mipi.frame_rate;
+//		rc = 0;
+//	}
 
-	rc = of_property_read_u32(pan_node,
+/*	rc = of_property_read_u32(pan_node,
 			"qcom,mdss-dsi-max-refresh-rate",
 			&pinfo->max_fps);
 	if (rc) {
 		pr_warn("%s:%d, Unable to read max refresh rate\n",
-				__func__, __LINE__);
+				__func__, __LINE__); */
 
 		/*
 		 * Since max refresh rate was not specified when dynamic
 		 * fps is enabled, using the default panel refresh rate
 		 * as max refresh rate supported.
 		 */
-		pinfo->max_fps = pinfo->mipi.frame_rate;
-		rc = 0;
-	}
+//		pinfo->max_fps = pinfo->mipi.frame_rate;
+//		rc = 0;
+//	}
+	pinfo->min_fps = 30;
+	pinfo->max_fps = 60;
 
 	pr_info("dyn_fps: min = %d, max = %d\n",
 			pinfo->min_fps, pinfo->max_fps);
@@ -2852,8 +2854,8 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-v-bottom-border", &tmp);
 	pt->timing.border_bottom = !rc ? tmp : 0;
 
-	rc = of_property_read_u32(np, "qcom,mdss-dsi-panel-framerate", &tmp);
-	pt->timing.frame_rate = !rc ? tmp : DEFAULT_FRAME_RATE;
+//	rc = of_property_read_u32(np, "qcom,mdss-dsi-panel-framerate", &tmp);
+	pt->timing.frame_rate = DEFAULT_FRAME_RATE;
 	rc = of_property_read_u64(np, "qcom,mdss-dsi-panel-clockrate", &tmp64);
 	if (rc == -EOVERFLOW) {
 		tmp64 = 0;
