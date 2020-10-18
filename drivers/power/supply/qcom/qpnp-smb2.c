@@ -56,6 +56,7 @@ int LctIsInVideo = 0;
 extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
+extern bool full_charged;
 #endif
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
@@ -1227,7 +1228,11 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		rc = smblib_dp_dm(chg, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
-		rc = smblib_set_prop_input_current_limited(chg, val);
+		if (full_charged) {
+			rc = smblib_set_prop_input_current_limited(chg, val);
+		} else {
+			rc = smblib_set_prop_input_current_limited(chg, 1);
+		}
 		break;
 	default:
 		rc = -EINVAL;

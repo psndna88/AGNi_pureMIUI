@@ -1207,7 +1207,11 @@ static void handle_settled_icl_change(struct pl_data *chip)
 		pr_err("Couldn't get aicl settled value rc=%d\n", rc);
 		return;
 	}
-	main_limited = pval.intval;
+	if (full_charged) {
+		main_limited = pval.intval;
+	} else {
+		main_limited = 1;
+	}
 #if defined(CONFIG_KERNEL_CUSTOM_E7T)
 	if (chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) {
 		rc = power_supply_get_property(chip->batt_psy,
