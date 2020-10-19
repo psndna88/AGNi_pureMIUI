@@ -46,6 +46,7 @@ enum {
 };
 
 extern bool miuirom;
+extern bool wired_btn_altmode;
 /* TDM default config */
 static struct dev_config tdm_rx_cfg[TDM_INTERFACE_MAX][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
@@ -197,7 +198,7 @@ static struct snd_soc_codec_conf *msm_codec_conf;
 
 static bool msm_swap_gnd_mic(struct snd_soc_codec *codec);
 
-static struct wcd_mbhc_config mbhc_cfg_miui = {
+static struct wcd_mbhc_config mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
 	.detect_extn_cable = true,
@@ -219,7 +220,7 @@ static struct wcd_mbhc_config mbhc_cfg_miui = {
 	.enable_anc_mic_detect = false,
 };
 
-static struct wcd_mbhc_config mbhc_cfg = {
+static struct wcd_mbhc_config mbhc_cfg_altmode = {
 	.read_fw_bin = false,
 	.calibration = NULL,
 	.detect_extn_cable = true,
@@ -3226,18 +3227,32 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 			pdata->snd_card_val = EXT_SND_CARD_TASHA;
 		else
 			pdata->snd_card_val = EXT_SND_CARD_TAVIL;
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
 		if (miuirom)
-			ret = msm_ext_cdc_init(pdev, pdata, &card, &mbhc_cfg_miui);
+			ret = msm_ext_cdc_init(pdev, pdata, &card, &mbhc_cfg);
+		else
+			ret = msm_ext_cdc_init(pdev, pdata, &card, &mbhc_cfg_altmode);
+#else
+		if (wired_btn_altmode)
+			ret = msm_ext_cdc_init(pdev, pdata, &card, &mbhc_cfg_altmode);
 		else
 			ret = msm_ext_cdc_init(pdev, pdata, &card, &mbhc_cfg);
+#endif
 		if (ret)
 			goto err;
 	} else if (!strcmp(match->data, "internal_codec")) {
 		pdata->snd_card_val = INT_SND_CARD;
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
 		if (miuirom)
-			ret = msm_int_cdc_init(pdev, pdata, &card, &mbhc_cfg_miui);
+			ret = msm_int_cdc_init(pdev, pdata, &card, &mbhc_cfg);
+		else
+			ret = msm_int_cdc_init(pdev, pdata, &card, &mbhc_cfg_altmode);
+#else
+		if (wired_btn_altmode)
+			ret = msm_int_cdc_init(pdev, pdata, &card, &mbhc_cfg_altmode);
 		else
 			ret = msm_int_cdc_init(pdev, pdata, &card, &mbhc_cfg);
+#endif
 		if (ret)
 			goto err;
 	} else {
@@ -3276,10 +3291,17 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	} else {
 		dev_dbg(&pdev->dev, "%s detected",
 			"qcom,us-euro-gpios");
+#ifdef CONFIG_KERNEL_CUSTOM_D2S
 		if (miuirom)
-			mbhc_cfg_miui.swap_gnd_mic = msm_swap_gnd_mic;
+			mbhc_cfg.swap_gnd_mic = msm_swap_gnd_mic;
+		else
+			mbhc_cfg_altmode.swap_gnd_mic = msm_swap_gnd_mic;
+#else
+		if (wired_btn_altmode)
+			mbhc_cfg_altmode.swap_gnd_mic = msm_swap_gnd_mic;
 		else
 			mbhc_cfg.swap_gnd_mic = msm_swap_gnd_mic;
+#endif
 	}
 
 	ret = msm_prepare_us_euro(card);
