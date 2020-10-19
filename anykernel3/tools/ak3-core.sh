@@ -599,13 +599,19 @@ patch_fstab() {
 
 # patch_cmdline <cmdline entry name> <replacement string>
 patch_cmdline() {
-  local cmdfile cmdtmp match osver;
+  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode ledmode;
   if [ -f "$split_img/cmdline.txt" ]; then
     cmdfile=$split_img/cmdline.txt;
   else
     cmdfile=$home/cmdtmp;
     grep "^cmdline=" $split_img/header | cut -d= -f2- > $cmdfile;
   fi;
+  sed -i 's/androidboot.version/android.ver/' $cmdfile;
+  sed -i 's/androidboot.miui/miui/' $cmdfile;
+  sed -i 's/androidboot.srgblock/srgblock/' $cmdfile;
+  sed -i 's/androidboot.cpuoc/cpuoc/' $cmdfile;
+  sed -i 's/androidboot.agnisoundmod/agnisoundmod/' $cmdfile;
+  sed -i 's/androidboot.wiredbtnaltmode/wiredbtnaltmode/' $cmdfile;
   if ! grep -q "$1" $cmdfile; then
     cmdtmp=$(cat $cmdfile);
     echo "$cmdtmp $2" > $cmdfile;
@@ -618,36 +624,46 @@ patch_cmdline() {
   osver="`cat $home/ANDROIDVER`";
   if [ "$osver" == "R" ]; then
     # Android R
-    sed -i 's/androidboot.version=9/androidboot.version=11/' $cmdfile;
+    sed -i 's/android.ver=9/android.ver=11/' $cmdfile;
   elif [ "$osver" == "Q" ]; then
     # Android Q
-    sed -i 's/androidboot.version=9/androidboot.version=10/' $cmdfile;
+    sed -i 's/android.ver=9/android.ver=10/' $cmdfile;
   elif [ "$osver" == "OREO" ]; then
     # Android Oreo
-  	sed -i 's/androidboot.version=9/androidboot.version=8/' $cmdfile;
+  	sed -i 's/android.ver=9/android.ver=8/' $cmdfile;
   fi;
  # AGNi MIUI detection
   miui="`cat $home/MIUI_ROM`";
   if [ "$miui" == "false" ]; then
-	sed -i 's/androidboot.miui=1/androidboot.miui=0/' $cmdfile;
+	sed -i 's/miui=1/miui=0/' $cmdfile;
   fi;
- # AGNi sRGB detection												#SDM636
-  srgblock="`cat $home/srgb_lock`";									#SDM636
-  if [ "$srgblock" == "true" ]; then								#SDM636
-  	# srgb to be locked												#SDM636
-	sed -i 's/androidboot.srgblock=0/androidboot.srgblock=1/' $cmdfile;		#SDM636
-  fi;																#SDM636
+ # AGNi sRGB detection								#SDM636
+  srgblock="`cat $home/srgb_lock`";					#SDM636
+  if [ "$srgblock" == "true" ]; then				#SDM636
+  	# srgb to be locked								#SDM636
+	sed -i 's/srgblock=0/srgblock=1/' $cmdfile;		#SDM636
+  fi;												#SDM636
   # AGNI CPU OC selection
   cpuoc="`cat $home/CPU_OC`";
   if [ "$cpuoc" == "1" ]; then
-	sed -i 's/androidboot.cpuoc=0/androidboot.cpuoc=1/' $cmdfile;
+	sed -i 's/cpuoc=0/cpuoc=1/' $cmdfile;
   elif [ "$cpuoc" == "2" ]; then
-  	sed -i 's/androidboot.cpuoc=0/androidboot.cpuoc=2/' $cmdfile;
+  	sed -i 's/cpuoc=0/cpuoc=2/' $cmdfile;
   fi;
   # AGNI SOUND MOD selection
   soundmod="`cat $home/SOUND_MOD`";
   if [ "$soundmod" == "1" ]; then
-	sed -i 's/androidboot.agnisoundmod=0/androidboot.agnisoundmod=1/' $cmdfile;
+	sed -i 's/agnisoundmod=0/agnisoundmod=1/' $cmdfile;
+  fi;
+  # Wired button alternate mode
+  wiredbtnmode="`cat $home/WIRED_BTN_ALTMODE`";
+  if [ "$wiredbtnmode" == "1" ]; then
+	sed -i 's/wiredbtnaltmode=0/wiredbtnaltmode=1/' $cmdfile;
+  fi;
+  # LED mode
+  userled="`cat $home/LED_MODE`";
+  if [ "$userled" == "1" ]; then
+	sed -i 's/ledmode=0/ledmode=1/' $cmdfile;
   fi;
 
   if [ -f "$home/cmdtmp" ]; then

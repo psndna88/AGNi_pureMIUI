@@ -36,11 +36,13 @@ set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 ## AnyKernel install
 dump_boot;
 
-patch_cmdline androidboot.version androidboot.version=9;
-patch_cmdline androidboot.miui androidboot.miui=1;
-patch_cmdline androidboot.srgblock androidboot.srgblock=0;
-patch_cmdline androidboot.cpuoc androidboot.cpuoc=0;
-patch_cmdline androidboot.agnisoundmod androidboot.agnisoundmod=0;
+patch_cmdline android.ver android.ver=9;
+patch_cmdline miui miui=1;
+patch_cmdline srgblock srgblock=0;
+patch_cmdline cpuoc cpuoc=0;
+patch_cmdline agnisoundmod agnisoundmod=0;
+patch_cmdline wiredbtnaltmode wiredbtnaltmode=0;
+patch_cmdline ledmode ledmode=0;
 write_boot;
 ## end install
 

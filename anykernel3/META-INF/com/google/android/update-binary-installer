@@ -494,6 +494,11 @@ else
 fi;
 $BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
+if [ "`$BB grep Nusantara $buildprop`" ]; then
+	$BB echo "1" > $AKHOME/WIRED_BTN_ALTMODE;
+else
+	$BB echo "0" > $AKHOME/WIRED_BTN_ALTMODE;
+fi;
 # AGNi: sRGB selector overrides										#SDM636
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/srgb.prop`" ]; then	#SDM636
 	# sRGB needed													#SDM636
@@ -501,6 +506,13 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/srgb.prop`" ]; then	#SDM636
 else																#SDM636
 	$BB echo "true" > $AKHOME/srgb_lock;							#SDM636
 fi;																	#SDM636
+# Notification LED mode selector
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/led.prop`" ]; then
+	# user mode 1 - miui-type
+	$BB echo "0" > $AKHOME/LED_MODE;
+else
+	$BB echo "1" > $AKHOME/LED_MODE;
+fi;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";
