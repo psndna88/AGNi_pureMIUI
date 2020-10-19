@@ -862,7 +862,7 @@ static int msm_vidc_get_extra_output_buff_count(struct msm_vidc_inst *inst)
 	return extra_output_count;
 }
 
-u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
+u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst, u32 buffer_size_limit)
 {
 	u32 frame_size, num_mbs;
 	u32 div_factor = 1;
@@ -914,9 +914,8 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst)
 		inst->core->platform_data->vpu_ver != VPU_VERSION_AR50_LITE)
 		frame_size = frame_size + (frame_size >> 2);
 
-	if (inst->buffer_size_limit &&
-		(inst->buffer_size_limit < frame_size)) {
-		frame_size = inst->buffer_size_limit;
+	if (buffer_size_limit && (buffer_size_limit < frame_size)) {
+		frame_size = buffer_size_limit;
 		s_vpr_h(inst->sid, "input buffer size limited to %d\n",
 			frame_size);
 	} else {
