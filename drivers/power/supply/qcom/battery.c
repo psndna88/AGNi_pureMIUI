@@ -90,6 +90,7 @@ enum print_reason {
 };
 
 extern bool full_charged;
+extern bool parallel_suspend_lock;
 static int debug_mask = 0;
 module_param_named(debug_mask, debug_mask, int, S_IRUSR | S_IWUSR);
 
@@ -649,6 +650,8 @@ static void fcc_step_update_work(struct work_struct *work)
 		/* Disable parallel */
 		parallel_fcc = 0;
 		pval.intval = 1;
+		parallel_suspend_lock = false;
+		pr_err("parallel_suspend_lock 1 = false");
 		rc = power_supply_set_property(chip->pl_psy,
 			POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
 		if (rc < 0)
@@ -709,6 +712,8 @@ static void fcc_step_update_work(struct work_struct *work)
 
 		if (parallel_fcc < MINIMUM_PARALLEL_FCC_UA) {
 			pval.intval = 1;
+			pr_err("parallel_suspend_lock 2 = false");
+			parallel_suspend_lock = false;
 			rc = power_supply_set_property(chip->pl_psy,
 				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
 			if (rc < 0) {
@@ -774,6 +779,8 @@ static void fcc_step_update_work(struct work_struct *work)
 		 */
 		if (pval.intval == 1 && parallel_fcc >= 100000) {
 			pval.intval = 0;
+			pr_err("parallel_suspend_lock 3 = false");
+			parallel_suspend_lock = false;
 			rc = power_supply_set_property(chip->pl_psy,
 				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
 			if (rc < 0) {
@@ -973,6 +980,8 @@ static int pl_disable_vote_callback(struct votable *votable,
 		 */
 		if (!chip->fcc_step_update) {
 			pval.intval = 0;
+			pr_err("parallel_suspend_lock 4 = false");
+			parallel_suspend_lock = false;
 			rc = power_supply_set_property(chip->pl_psy,
 				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
 			if (rc < 0)
@@ -1008,6 +1017,8 @@ static int pl_disable_vote_callback(struct votable *votable,
 			/* pl_psy may be NULL while in the disable branch */
 			if (chip->pl_psy) {
 				pval.intval = 1;
+				pr_err("parallel_suspend_lock 5 = false");
+				parallel_suspend_lock = false;
 				rc = power_supply_set_property(chip->pl_psy,
 					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
 				if (rc < 0)
