@@ -267,6 +267,7 @@ enum ipa_ver {
 	IPA_4_5,
 	IPA_4_5_MHI,
 	IPA_4_5_APQ,
+	IPA_4_5_AUTO,
 	IPA_4_7,
 	IPA_4_9,
 	IPA_4_11,
@@ -9589,4 +9590,18 @@ int ipa3_get_prot_id(enum ipa_client_type client)
 	}
 
 	return prot_id;
+}
+
+/**
+ * ipa3_get_max_pdn() - get max PDN number based on hardware version
+ * Returns:     IPA_MAX_PDN_NUM of IPAv4_5 and IPA_MAX_PDN_NUM_v4_2 for others
+ *
+ */
+
+int ipa3_get_max_pdn(void)
+{
+	if (ipa3_get_hw_type_index() == IPA_4_5_AUTO)
+		return IPA_MAX_PDN_NUM;
+	else
+		return IPA_MAX_PDN_NUM_v4;
 }
