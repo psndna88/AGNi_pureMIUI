@@ -137,7 +137,7 @@ static int __init set_android_version(char *val)
 	get_option(&val, &android_version);
 	return 0;
 }
-__setup("androidboot.version=", set_android_version);
+__setup("android.ver=", set_android_version);
 
 unsigned int get_android_version(void)
 {
@@ -164,7 +164,7 @@ static int __init set_miui_rom(char *val)
 
 	return 0;
 }
-__setup("androidboot.miui=", set_miui_rom);
+__setup("miui=", set_miui_rom);
 
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 bool srgb_locked = false;
@@ -176,15 +176,15 @@ static int __init set_srgb_lock(char *val)
 
 	if (temp) {
 		srgb_locked = true;
-		pr_info("Kernel: androidboot.srgblock = 1. So, srgb_locked = true");
+		pr_info("Kernel: srgb_locked = true");
 	} else {
 		srgb_locked = false;
-		pr_info("Kernel: androidboot.srgblock = 0. So, srgb_locked = false");
+		pr_info("Kernel: srgb_locked = false");
 	}
 
 	return 0;
 }
-__setup("androidboot.srgblock=", set_srgb_lock);
+__setup("srgblock=", set_srgb_lock);
 #endif
 int cpuoc_state = 0;
 static int __init set_cpuoc(int *val)
@@ -202,7 +202,7 @@ static int __init set_cpuoc(int *val)
 
 	return 0;
 }
-__setup("androidboot.cpuoc=", set_cpuoc);
+__setup("cpuoc=", set_cpuoc);
 bool wired_btn_altmode = false;
 static int __init set_wiredbtnmode(char *val)
 {
@@ -220,7 +220,7 @@ static int __init set_wiredbtnmode(char *val)
 
 	return 0;
 }
-__setup("androidboot.wiredbtnaltmode=", set_wiredbtnmode);
+__setup("wiredbtnaltmode=", set_wiredbtnmode);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.
