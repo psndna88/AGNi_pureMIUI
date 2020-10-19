@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v10.3_stable");
+ini_set("rom_version",	"v10.4_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"October, 18, 2020");
+ini_set("rom_date",		"October, 21, 2020");
 
 # Show Simple Splash
 splash(
@@ -172,6 +172,11 @@ selectbox(																											#SDM636
     "NO",	"I use NON-MIUI/AOSP rom or Ported-MIUI rom", 1 									#-- selected.0 = 2	#SDM636
 );																													#SDM636
 
+selectbox(
+    "Notification LED Mode","<@center><b>\nSelect notification led mode dependent on ROM</b>\n\n</@>","@install","led.prop",
+    "Mode 1",	"Default: use for MIUI roms or some AOSP roms (Change if u face issues)", 1,	#-- selected.0 = 1
+    "Mode 2",	"For most of the NON-MIUI/AOSP roms           (Change if u face issues)", 0 	#-- selected.0 = 2
+);
 setvar("retstatus",
   install(
 	#-- Title
