@@ -3439,11 +3439,6 @@ static int cam_tfe_mgr_release_hw(void *hw_mgr_priv,
 	ctx->last_submit_bl_cmd.bl_count = 0;
 	ctx->packet = NULL;
 
-	for (i = 0; i < CAM_TFE_HW_NUM_MAX; i++) {
-		ctx->sof_cnt[i] = 0;
-		ctx->eof_cnt[i] = 0;
-		ctx->epoch_cnt[i] = 0;
-	}
 	CAM_DBG(CAM_ISP, "Exit...ctx id:%d",
 		ctx->ctx_index);
 	cam_tfe_hw_mgr_put_ctx(&hw_mgr->free_ctx_list, &ctx);
@@ -4665,36 +4660,6 @@ outportlog:
 
 }
 
-static void cam_tfe_mgr_ctx_irq_dump(struct cam_tfe_hw_mgr_ctx *ctx)
-{
-	struct cam_isp_hw_mgr_res        *hw_mgr_res;
-	struct cam_hw_intf               *hw_intf;
-	struct cam_isp_hw_get_cmd_update  cmd_update;
-	int i = 0;
-
-	list_for_each_entry(hw_mgr_res, &ctx->res_list_tfe_in, list) {
-		if (hw_mgr_res->res_type == CAM_ISP_RESOURCE_UNINT)
-			continue;
-		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
-			if (!hw_mgr_res->hw_res[i])
-				continue;
-			switch (hw_mgr_res->hw_res[i]->res_id) {
-			case CAM_ISP_HW_TFE_IN_CAMIF:
-				hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
-				cmd_update.res = hw_mgr_res->hw_res[i];
-				cmd_update.cmd_type =
-					CAM_ISP_HW_CMD_GET_IRQ_REGISTER_DUMP;
-				hw_intf->hw_ops.process_cmd(hw_intf->hw_priv,
-					CAM_ISP_HW_CMD_GET_IRQ_REGISTER_DUMP,
-					&cmd_update, sizeof(cmd_update));
-				break;
-			default:
-				break;
-			}
-		}
-	}
-}
-
 static int cam_tfe_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 {
 	int rc = 0;
@@ -5310,82 +5275,6 @@ static int cam_tfe_hw_mgr_handle_hw_rup(
 	return 0;
 }
 
-static int cam_tfe_hw_mgr_check_irq_for_dual_tfe(
-	struct cam_tfe_hw_mgr_ctx            *tfe_hw_mgr_ctx,
-	uint32_t                              hw_event_type)
-{
-	int32_t                               rc = -EINVAL;
-	uint32_t                             *event_cnt = NULL;
-	uint32_t                              master_hw_idx;
-	uint32_t                              slave_hw_idx;
-
-	if (!tfe_hw_mgr_ctx->is_dual)
-		return 0;
-
-	master_hw_idx = tfe_hw_mgr_ctx->master_hw_idx;
-	slave_hw_idx = tfe_hw_mgr_ctx->slave_hw_idx;
-
-	switch (hw_event_type) {
-	case CAM_ISP_HW_EVENT_SOF:
-		event_cnt = tfe_hw_mgr_ctx->sof_cnt;
-		break;
-	case CAM_ISP_HW_EVENT_EPOCH:
-		event_cnt = tfe_hw_mgr_ctx->epoch_cnt;
-		break;
-	case CAM_ISP_HW_EVENT_EOF:
-		event_cnt = tfe_hw_mgr_ctx->eof_cnt;
-		break;
-	default:
-		return 0;
-	}
-
-	if (event_cnt[master_hw_idx] == event_cnt[slave_hw_idx]) {
-
-		event_cnt[master_hw_idx] = 0;
-		event_cnt[slave_hw_idx] = 0;
-
-		return 0;
-	}
-
-	if ((event_cnt[master_hw_idx] &&
-		(event_cnt[master_hw_idx] - event_cnt[slave_hw_idx] > 1)) ||
-		(event_cnt[slave_hw_idx] &&
-		(event_cnt[slave_hw_idx] - event_cnt[master_hw_idx] > 1))) {
-
-		if (tfe_hw_mgr_ctx->dual_tfe_irq_mismatch_cnt > 10) {
-			rc = -1;
-			return rc;
-		}
-
-		CAM_ERR_RATE_LIMIT(CAM_ISP,
-			"One TFE could not generate hw event %d master id :%d slave id:%d",
-			hw_event_type, event_cnt[master_hw_idx],
-			event_cnt[slave_hw_idx]);
-		if (event_cnt[master_hw_idx] >= 2) {
-			event_cnt[master_hw_idx]--;
-			tfe_hw_mgr_ctx->dual_tfe_irq_mismatch_cnt++;
-		}
-		if (event_cnt[slave_hw_idx] >= 2) {
-			event_cnt[slave_hw_idx]--;
-			tfe_hw_mgr_ctx->dual_tfe_irq_mismatch_cnt++;
-		}
-
-		if (tfe_hw_mgr_ctx->dual_tfe_irq_mismatch_cnt == 1) {
-			cam_tfe_mgr_ctx_irq_dump(tfe_hw_mgr_ctx);
-			trace_cam_delay_detect("ISP", "dual tfe irq mismatch",
-				CAM_DEFAULT_VALUE, tfe_hw_mgr_ctx->ctx_index,
-				CAM_DEFAULT_VALUE, CAM_DEFAULT_VALUE,
-				rc);
-		}
-		rc = 0;
-	}
-
-	CAM_DBG(CAM_ISP, "Only one core_index has given hw event %d",
-			hw_event_type);
-
-	return rc;
-}
-
 static int cam_tfe_hw_mgr_handle_hw_epoch(
 	void                                 *ctx,
 	void                                 *evt_info)
@@ -5394,22 +5283,16 @@ static int cam_tfe_hw_mgr_handle_hw_epoch(
 	struct cam_tfe_hw_mgr_ctx            *tfe_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  tfe_hw_irq_epoch_cb;
 	struct cam_isp_hw_epoch_event_data    epoch_done_event_data;
-	int                                   rc = 0;
 
 	tfe_hw_irq_epoch_cb =
 		tfe_hw_mgr_ctx->common.event_cb[CAM_ISP_HW_EVENT_EPOCH];
 
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_TFE_IN_CAMIF:
-		tfe_hw_mgr_ctx->epoch_cnt[event_info->hw_idx]++;
-		rc = cam_tfe_hw_mgr_check_irq_for_dual_tfe(tfe_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_EPOCH);
-		if (!rc) {
-			if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
-				break;
-			tfe_hw_irq_epoch_cb(tfe_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_EPOCH, &epoch_done_event_data);
-		}
+		if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
+			break;
+		tfe_hw_irq_epoch_cb(tfe_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_EPOCH, &epoch_done_event_data);
 		break;
 
 	case CAM_ISP_HW_TFE_IN_RDI0:
@@ -5436,27 +5319,22 @@ static int cam_tfe_hw_mgr_handle_hw_sof(
 	struct cam_tfe_hw_mgr_ctx            *tfe_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  tfe_hw_irq_sof_cb;
 	struct cam_isp_hw_sof_event_data      sof_done_event_data;
-	int                                   rc = 0;
 
 	tfe_hw_irq_sof_cb =
 		tfe_hw_mgr_ctx->common.event_cb[CAM_ISP_HW_EVENT_SOF];
 
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_TFE_IN_CAMIF:
-		tfe_hw_mgr_ctx->sof_cnt[event_info->hw_idx]++;
-		rc = cam_tfe_hw_mgr_check_irq_for_dual_tfe(tfe_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_SOF);
-		if (!rc) {
-			cam_tfe_mgr_cmd_get_sof_timestamp(tfe_hw_mgr_ctx,
-				&sof_done_event_data.timestamp,
-				&sof_done_event_data.boot_time);
+		cam_tfe_mgr_cmd_get_sof_timestamp(tfe_hw_mgr_ctx,
+			&sof_done_event_data.timestamp,
+			&sof_done_event_data.boot_time);
 
-			if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
-				break;
+		if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
+			break;
 
-			tfe_hw_irq_sof_cb(tfe_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_SOF, &sof_done_event_data);
-		}
+		tfe_hw_irq_sof_cb(tfe_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_SOF, &sof_done_event_data);
+
 		break;
 
 	case CAM_ISP_HW_TFE_IN_RDI0:
@@ -5492,22 +5370,17 @@ static int cam_tfe_hw_mgr_handle_hw_eof(
 	struct cam_tfe_hw_mgr_ctx            *tfe_hw_mgr_ctx = ctx;
 	cam_hw_event_cb_func                  tfe_hw_irq_eof_cb;
 	struct cam_isp_hw_eof_event_data      eof_done_event_data;
-	int                                   rc = 0;
 
 	tfe_hw_irq_eof_cb =
 		tfe_hw_mgr_ctx->common.event_cb[CAM_ISP_HW_EVENT_EOF];
 
 	switch (event_info->res_id) {
 	case CAM_ISP_HW_TFE_IN_CAMIF:
-		tfe_hw_mgr_ctx->eof_cnt[event_info->hw_idx]++;
-		rc = cam_tfe_hw_mgr_check_irq_for_dual_tfe(tfe_hw_mgr_ctx,
-			CAM_ISP_HW_EVENT_EOF);
-		if (!rc) {
-			if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
-				break;
-			tfe_hw_irq_eof_cb(tfe_hw_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_EOF, &eof_done_event_data);
-		}
+		if (atomic_read(&tfe_hw_mgr_ctx->overflow_pending))
+			break;
+		tfe_hw_irq_eof_cb(tfe_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_EOF, &eof_done_event_data);
+
 		break;
 
 	case CAM_ISP_HW_TFE_IN_RDI0:

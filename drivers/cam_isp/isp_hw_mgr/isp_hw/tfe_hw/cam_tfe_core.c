@@ -2003,7 +2003,7 @@ static int cam_tfe_camif_resource_start(
 	CAM_DBG(CAM_ISP, "hw id:%d RUP val:%d", camif_res->hw_intf->hw_idx,
 		rsrc_data->reg_data->reg_update_cmd_data);
 
-	/* Disable sof irq debug flag */
+	/* Disable sof irq debug flag */
 	rsrc_data->enable_sof_irq_debug = false;
 	rsrc_data->irq_debug_cnt = 0;
 
@@ -2015,9 +2015,10 @@ static int cam_tfe_camif_resource_start(
 			rsrc_data->common_reg->diag_config);
 	}
 
-	/* Enable the irq */
-	cam_tfe_irq_config(core_info, rsrc_data->reg_data->subscribe_irq_mask,
-		CAM_TFE_TOP_IRQ_REG_NUM, true);
+	/* Enable the irq only for master or single tfe usecase */
+	if (rsrc_data->sync_mode != CAM_ISP_HW_SYNC_SLAVE)
+		cam_tfe_irq_config(core_info, rsrc_data->reg_data->subscribe_irq_mask,
+			CAM_TFE_TOP_IRQ_REG_NUM, true);
 
 	/* Program perf counters */
 	val = (1 << rsrc_data->reg_data->perf_cnt_start_cmd_shift) |
