@@ -91,7 +91,6 @@
 		iommu-map = <0x0 &apps_smmu 0x0200 0x1>,
 			<0x100 &apps_smmu 0x0201 0x1>;
 
-		qcom,boot-option = <0x1>;
 		qcom,use-19p2mhz-aux-clk;
 		qcom,slv-addr-space-size = <0x40000000>;
 		qcom,ep-latency = <10>;
