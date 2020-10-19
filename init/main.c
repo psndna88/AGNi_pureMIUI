@@ -221,6 +221,24 @@ static int __init set_soundmod(char *val)
 	return 0;
 }
 __setup("androidboot.agnisoundmod=", set_soundmod);
+bool wired_btn_altmode = false;
+static int __init set_wiredbtnmode(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	if (temp) {
+		wired_btn_altmode = true;
+		pr_info("Kernel: alternate wired button mode = 1");
+	} else {
+		wired_btn_altmode = false;
+		pr_info("Kernel: alternate wired button mode = 0");
+	}
+
+	return 0;
+}
+__setup("androidboot.wiredbtnaltmode=", set_wiredbtnmode);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.
