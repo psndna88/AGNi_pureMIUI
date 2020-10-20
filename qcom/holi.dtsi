@@ -1496,6 +1496,11 @@
 			reg = <0x80>;
 			#clock-cells = <1>;
 		};
+
+		scmi_perf_lock: protocol@81 {
+			reg = <0x81>;
+			#clock-cells = <1>;
+		};
 	};
 
 	rimps_log: qcom,rimps_log@fd04780 {
