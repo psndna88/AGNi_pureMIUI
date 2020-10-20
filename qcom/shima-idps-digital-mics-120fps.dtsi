@@ -1,6 +1,0 @@
-#include "shima-idps-digital-mics.dtsi"
-
-&soc {
-};
-
-
