@@ -3809,6 +3809,12 @@ int msm_venc_set_hp_max_layer(struct msm_vidc_inst *inst)
 			__func__);
 		return rc;
 	}
+	if (!inst->hybrid_hp && max_layer->val > 4) {
+		update_ctrl(max_layer, 0, inst->sid);
+		s_vpr_h(inst->sid,
+			"%s: Hier-P requested beyond max capability\n", __func__);
+		return 0;
+	}
 
 	/*
 	 * We send enhancement layer count to FW,
