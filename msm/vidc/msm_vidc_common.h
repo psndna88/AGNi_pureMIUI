@@ -169,8 +169,8 @@ static inline bool is_ts_reorder_allowed(struct msm_vidc_inst *inst)
 	if (inst->session_type != MSM_VIDC_DECODER)
 		return true;
 
-	if (!is_heif_decoder(inst))
-		return true;
+	if (is_heif_decoder(inst))
+		return false;
 
 	ctrl = get_ctrl(inst,
 		V4L2_CID_MPEG_VIDC_VIDEO_DISABLE_TIMESTAMP_REORDER);
