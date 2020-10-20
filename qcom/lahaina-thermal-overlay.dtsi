@@ -184,12 +184,6 @@
 							THERMAL_MAX_LIMIT>;
 			};
 
-			pm8350_cpu0_freq {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
-			};
-
 			pm8350_cpu4_freq {
 				trip = <&pm8350_trip0>;
 				cooling-device = <&CPU4 THERMAL_MAX_LIMIT
@@ -200,21 +194,6 @@
 				trip = <&pm8350_trip0>;
 				cooling-device = <&CPU7 THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
-			};
-
-			pm8350_cpu1 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu1_isolate 1 1>;
-			};
-
-			pm8350_cpu2 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu2_isolate 1 1>;
-			};
-
-			pm8350_cpu3 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu3_isolate 1 1>;
 			};
 
 			pm8350_cpu4 {
