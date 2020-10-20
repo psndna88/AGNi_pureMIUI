@@ -1,4 +1,0 @@
-#include "shima-idp.dtsi"
-
-&soc {
-};
