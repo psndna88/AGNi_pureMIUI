@@ -44,8 +44,8 @@
 				entry-latency-us = <3263>;
 				exit-latency-us = <4562>;
 				min-residency-us = <8467>;
-				arm,psci-suspend-param = <0x1240>;
-				qcom,psci-mode = <0x124>;
+				arm,psci-suspend-param = <0x1340>;
+				qcom,psci-mode = <0x134>;
 				qcom,is-reset;
 				qcom,notify-rpm;
 				qcom,min-child-idx = <2>;
