@@ -343,7 +343,7 @@ static int set_socket_prio(struct sigma_stream *s)
 	case SIGMA_TC_VOICE:
 		if (s->user_priority_set) {
 			if (s->user_priority == 6)
-				tos = 48 << 2;
+				tos = 46 << 2;
 			else if (s->user_priority == 7)
 				tos = 56 << 2;
 			else

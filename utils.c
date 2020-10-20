@@ -569,6 +569,113 @@ void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx)
 	free(ctx);
 }
 
+
+static struct nl_msg *
+wcn_create_wifi_test_config_msg(struct sigma_dut *dut, const char *intf)
+{
+	int ifindex;
+	struct nl_msg *msg;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return NULL;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION)) {
+		nlmsg_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
+static int wcn_send_wifi_test_config_msg(struct sigma_dut *dut,
+					 struct nl_msg *msg,
+					 struct nlattr *params, int attr_id)
+{
+	int ret;
+
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d for %d",
+				__func__, ret, attr_id);
+	}
+
+	return ret;
+}
+
+
+int wcn_wifi_test_config_set_flag(struct sigma_dut *dut, const char *intf,
+				  int attr_id)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+
+	if (!(msg = wcn_create_wifi_test_config_msg(dut, intf)) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_flag(msg, attr_id)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding test config data for %d",
+				__func__, attr_id);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	return wcn_send_wifi_test_config_msg(dut, msg, params, attr_id);
+}
+
+
+int wcn_wifi_test_config_set_u8(struct sigma_dut *dut, const char *intf,
+				int attr_id, uint8_t val)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+
+	if (!(msg = wcn_create_wifi_test_config_msg(dut, intf)) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u8(msg, attr_id, val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding test config data for %d",
+				__func__, attr_id);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	return wcn_send_wifi_test_config_msg(dut, msg, params, attr_id);
+}
+
+
+int wcn_wifi_test_config_set_u16(struct sigma_dut *dut, const char *intf,
+				 int attr_id, uint16_t val)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+
+	if (!(msg = wcn_create_wifi_test_config_msg(dut, intf)) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u16(msg, attr_id, val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding test config data for %d",
+				__func__, attr_id);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	return wcn_send_wifi_test_config_msg(dut, msg, params, attr_id);
+}
+
 #endif /* NL80211_SUPPORT */
 
 
@@ -740,4 +847,29 @@ int wcn_driver_cmd(const char *ifname, char *buf)
 	res = ioctl(s, SIOCDEVPRIVATE + 1, &ifr);
 	close(s);
 	return res;
+}
+
+
+int set_ipv6_addr(struct sigma_dut *dut, const char *ip, const char *mask,
+		  const char *ifname)
+{
+	char buf[200];
+
+	snprintf(buf, sizeof(buf), "ip -6 addr del %s/%s dev %s", ip, mask,
+		 ifname);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
+	if (system(buf) != 0) {
+		/*
+		 * This command may fail if the address being deleted does not
+		 * exist. Inaction here is intentional.
+		 */
+	}
+
+	snprintf(buf, sizeof(buf), "ip -6 addr add %s/%s dev %s", ip, mask,
+		 ifname);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
+	if (system(buf) != 0)
+		return -1;
+
+	return 0;
 }

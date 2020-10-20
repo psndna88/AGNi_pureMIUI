@@ -1547,23 +1547,7 @@ static enum sigma_cmd_result cmd_sta_set_ip_config(struct sigma_dut *dut,
 						"Failed to disable IPv6 address before association");
 			}
 		} else {
-			snprintf(buf, sizeof(buf),
-				 "ip -6 addr del %s/%s dev %s",
-				 ip, mask, ifname);
-			sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
-			if (system(buf) != 0) {
-				/*
-				 * This command may fail if the address being
-				 * deleted does not exist. Inaction here is
-				 * intentional.
-				 */
-			}
-
-			snprintf(buf, sizeof(buf),
-				 "ip -6 addr add %s/%s dev %s",
-				 ip, mask, ifname);
-			sigma_dut_print(dut, DUT_MSG_DEBUG, "Run: %s", buf);
-			if (system(buf) != 0) {
+			if (set_ipv6_addr(dut, ip, mask, ifname) != 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set IPv6 address");
 				return 0;
@@ -2302,7 +2286,7 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 	     wpa_command(intf, "SET rsnxe_override_eapol "))) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Failed to clear RSNXE");
-		return ERROR_SEND_STATUS;
+		return STATUS_SENT_ERROR;
 	}
 
 	if (dut->sae_pwe == SAE_PWE_LOOP && get_param(cmd, "PasswordId"))
@@ -2315,6 +2299,16 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 		sae_pwe = 2;
 	snprintf(buf, sizeof(buf), "SET sae_pwe %d", sae_pwe);
 	if (sae_pwe >= 0 && wpa_command(ifname, buf) != 0)
+		return ERROR_SEND_STATUS;
+
+	val = get_param(cmd, "sae_pk");
+	if (val && strcmp(val, "0") == 0 &&
+	    set_network(ifname, id, "sae_pk", "2") < 0)
+		return ERROR_SEND_STATUS;
+
+	val = get_param(cmd, "sae_pk_only");
+	if (val && strcmp(val, "1") == 0 &&
+	    set_network(ifname, id, "sae_pk", "1") < 0)
 		return ERROR_SEND_STATUS;
 
 	if (dut->program == PROGRAM_60GHZ && network_mode &&
@@ -2507,6 +2501,9 @@ static int set_eap_common(struct sigma_dut *dut, struct sigma_conn *conn,
 			return STATUS_SENT_ERROR;
 		}
 		pos = strchr(buf, '\n');
+		if (pos)
+			*pos = '\0';
+		pos = strchr(buf, '\r');
 		if (pos)
 			*pos = '\0';
 		snprintf(buf2, sizeof(buf2), "hash://server/sha256/%s", buf);
@@ -2979,15 +2976,16 @@ static int sta_set_open(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
-		       struct sigma_cmd *cmd)
+static enum sigma_cmd_result sta_set_owe(struct sigma_dut *dut,
+					 struct sigma_conn *conn,
+					 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *ifname, *val;
 	int id;
 
 	if (intf == NULL)
-		return -1;
+		return INVALID_SEND_STATUS;
 
 	if (strcmp(intf, get_main_ifname(dut)) == 0)
 		ifname = get_station_ifname(dut);
@@ -2999,7 +2997,14 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 		return id;
 
 	if (set_network(ifname, id, "key_mgmt", "OWE") < 0)
-		return -2;
+		return ERROR_SEND_STATUS;
+
+	if (dut->owe_ptk_workaround &&
+	    set_network(ifname, id, "owe_ptk_workaround", "1") < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set owe_ptk_workaround to 1");
+		return ERROR_SEND_STATUS;
+	}
 
 	val = get_param(cmd, "ECGroupID");
 	if (val && strcmp(val, "0") == 0) {
@@ -3007,18 +3012,15 @@ static int sta_set_owe(struct sigma_dut *dut, struct sigma_conn *conn,
 				"VENDOR_ELEM_ADD 13 ff23200000783590fb7440e03d5b3b33911f86affdcc6b4411b707846ac4ff08ddc8831ccd") != 0) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set OWE DH Param element override");
-			return -2;
+			return ERROR_SEND_STATUS;
 		}
-	} else if (val &&
-		   (set_network(ifname, id, "owe_group", val) < 0 ||
-		    (dut->owe_ptk_workaround &&
-		     set_network(ifname, id, "owe_ptk_workaround", "1") < 0))) {
+	} else if (val && set_network(ifname, id, "owe_group", val) < 0) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to set owe_group");
-		return -2;
+		return ERROR_SEND_STATUS;
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
@@ -3415,28 +3417,87 @@ static int find_network(struct sigma_dut *dut, const char *ssid)
 }
 
 
-#ifdef NL80211_SUPPORT
-static int sta_config_rsnie(struct sigma_dut *dut, int val)
+/**
+ * enum qca_sta_helper_config_params - This helper enum defines the config
+ * parameters which can be delivered to sta.
+ */
+enum qca_sta_helper_config_params {
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE */
+	STA_SET_RSNIE,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_LDPC */
+	STA_SET_LDPC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_TX_STBC */
+	STA_SET_TX_STBC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RX_STBC */
+	STA_SET_RX_STBC,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MSDU_AGGREGATION */
+	STA_SET_TX_MSDU,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION */
+	STA_SET_RX_MSDU,
+};
+
+
+static int sta_config_params(struct sigma_dut *dut, const char *intf,
+			     enum qca_sta_helper_config_params config_cmd,
+			     int value)
 {
+#ifdef NL80211_SUPPORT
 	struct nl_msg *msg;
 	int ret;
 	struct nlattr *params;
 	int ifindex;
 
-	ifindex = if_nametoindex("wlan0");
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Interface %s does not exist",
+				__func__, intf);
+		return -1;
+	}
+
 	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
 				    NL80211_CMD_VENDOR)) ||
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
 			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE, val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)))
+		goto fail;
+
+	switch (config_cmd) {
+	case STA_SET_RSNIE:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE, value))
+			goto fail;
+		break;
+	case STA_SET_LDPC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_LDPC, value))
+			goto fail;
+		break;
+	case STA_SET_TX_STBC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_TX_STBC, value))
+			goto fail;
+		break;
+	case STA_SET_RX_STBC:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_RX_STBC, value))
+			goto fail;
+		break;
+	case STA_SET_TX_MSDU:
+		if (nla_put_u8(msg,
+			       QCA_WLAN_VENDOR_ATTR_CONFIG_TX_MSDU_AGGREGATION,
+			       value))
+			goto fail;
+		break;
+	case STA_SET_RX_MSDU:
+		if (nla_put_u8(msg,
+			       QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION,
+			       value))
+			goto fail;
+		break;
 	}
 	nla_nest_end(msg, params);
 
@@ -3449,20 +3510,30 @@ static int sta_config_rsnie(struct sigma_dut *dut, int val)
 	}
 
 	return 0;
-}
+
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"%s: err in adding vendor_cmd and vendor_data",
+			__func__);
+	nlmsg_free(msg);
 #endif /* NL80211_SUPPORT */
+	return -1;
+}
 
 
 static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
 {
-	/* const char *intf = get_param(cmd, "Interface"); */
+#ifdef NL80211_SUPPORT
+	const char *intf = get_param(cmd, "Interface");
+#endif /* NL80211_SUPPORT */
 	const char *ssid = get_param(cmd, "ssid");
 	const char *wps_param = get_param(cmd, "WPS");
 	const char *bssid = get_param(cmd, "bssid");
 	const char *chan = get_param(cmd, "channel");
 	const char *network_mode = get_param(cmd, "network_mode");
+	const char *ifname = get_station_ifname(dut);
 	int wps = 0;
 	char buf[1000], extra[50];
 	int e;
@@ -3480,7 +3551,7 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (dut->rsne_override) {
 #ifdef NL80211_SUPPORT
 		if (get_driver_type(dut) == DRIVER_WCN) {
-			sta_config_rsnie(dut, 1);
+			sta_config_params(dut, intf, STA_SET_RSNIE, 1);
 			dut->config_rsnie = 1;
 		}
 #endif /* NL80211_SUPPORT */
@@ -3557,8 +3628,9 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 			return 0;
 		}
 
-		if (dut->program == PROGRAM_WPA3 &&
-		    dut->sta_associate_wait_connect) {
+		if ((dut->program == PROGRAM_WPA3 &&
+		     dut->sta_associate_wait_connect) ||
+		    dut->program == PROGRAM_QM) {
 			ctrl = open_wpa_mon(get_station_ifname(dut));
 			if (!ctrl)
 				return ERROR_SEND_STATUS;
@@ -3674,6 +3746,28 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 						"Network profile TOD policy update: %d -> %d",
 						dut->sta_tod_policy, tod);
 				dut->sta_tod_policy = tod;
+			}
+			if (dut->program == PROGRAM_QM) {
+				unsigned char iface_mac_addr[ETH_ALEN];
+				char ipv6[100];
+
+				if (get_hwaddr(ifname, iface_mac_addr) < 0) {
+					sigma_dut_print(dut, DUT_MSG_ERROR,
+							"%s: get_hwaddr %s failed",
+							__func__, ifname);
+					ret = ERROR_SEND_STATUS;
+					break;
+				}
+
+				convert_mac_addr_to_ipv6_lladdr(iface_mac_addr,
+								ipv6,
+								sizeof(ipv6));
+
+				if (set_ipv6_addr(dut, ipv6, "64", ifname) !=
+				    0) {
+					ret = ERROR_SEND_STATUS;
+					break;
+				}
 			}
 			break;
 		}
@@ -4170,48 +4264,15 @@ static int wcn_sta_set_wmm(struct sigma_dut *dut, const char *intf,
 			   const char *val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
 	int wmmenable = 1;
 
 	if (val &&
 	    (strcasecmp(val, "off") == 0 || strcmp(val, "0") == 0))
 		wmmenable = 0;
 
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE,
-		       wmmenable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WMM_ENABLE,
+		wmmenable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"WMM cannot be changed without NL80211_SUPPORT defined");
@@ -4258,13 +4319,23 @@ static void iwpriv_sta_set_amsdu(struct sigma_dut *dut, const char *intf,
 				 const char *val)
 {
 	char buf[60];
+	int ret;
 
 	if (strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0)
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 2", intf);
 	else
 		snprintf(buf, sizeof(buf), "iwpriv %s amsdu 1", intf);
 
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret) {
+		int value = (strcasecmp(val, "Enable") == 0) ? 2 : 1;
+
+		ret = sta_config_params(dut, intf, STA_SET_TX_MSDU, value);
+		ret |= sta_config_params(dut, intf, STA_SET_RX_MSDU, value);
+	}
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv amsdu failed");
 }
 
@@ -4388,13 +4459,26 @@ static void wcn_sta_set_stbc(struct sigma_dut *dut, const char *intf,
 			     const char *val)
 {
 	char buf[60];
+	int ret;
 
 	snprintf(buf, sizeof(buf), "iwpriv %s tx_stbc %s", intf, val);
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret)
+		ret = sta_config_params(dut, intf, STA_SET_TX_STBC,
+					strcmp(val, "0") == 0 ? 0 : 1);
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv tx_stbc failed");
 
 	snprintf(buf, sizeof(buf), "iwpriv %s rx_stbc %s", intf, val);
-	if (system(buf) != 0)
+	ret = system(buf);
+#ifdef NL80211_SUPPORT
+	if (ret)
+		ret = sta_config_params(dut, intf, STA_SET_RX_STBC,
+					strcmp(val, "0") == 0 ? 0 : 1);
+#endif /* NL80211_SUPPORT */
+	if (ret)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "iwpriv rx_stbc failed");
 }
 
@@ -4602,131 +4686,26 @@ static int mbo_set_non_pref_ch_list(struct sigma_dut *dut,
 static int sta_set_he_htc_supp(struct sigma_dut *dut, const char *intf,
 			       uint8_t cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_HTC_HE_SUPP,
+		cfg);
 }
 
 
 static int sta_set_he_fragmentation(struct sigma_dut *dut, const char *intf,
 				    enum he_fragmentation_val frag)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION,
-		       frag)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_FRAGMENTATION, frag);
 }
 
 
 int wcn_set_he_ltf(struct sigma_dut *dut, const char *intf,
 		   enum qca_wlan_he_ltf_cfg ltf)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_LTF,
-		       ltf)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_LTF, ltf);
 }
 
 
@@ -4800,7 +4779,181 @@ static void wcn_sta_set_noack(struct sigma_dut *dut, const char *intf,
 	}
 }
 
+
+static int nlvendor_sta_set_phymode(struct sigma_dut *dut, const char *intf,
+				    enum qca_wlan_vendor_phy_mode val)
+{
+	struct nl_msg *msg;
+	struct nlattr *params;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+			      NL80211_CMD_VENDOR);
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd", __func__);
+		return -1;
+	}
+
+	if (nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_attr", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA);
+	if (!params || nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_PHY_MODE,
+				   val)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_data", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	nla_nest_end(msg, params);
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d (%s)",
+				__func__, ret, strerror(-ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+
+static enum qca_wlan_vendor_phy_mode get_qca_vendor_phymode(const char *val)
+{
+	if (strcmp(val, "11a") == 0) {
+		/* IEEE80211_MODE_11A */
+		return QCA_WLAN_VENDOR_PHY_MODE_11A;
+	}
+
+	if (strcmp(val, "11g") == 0) {
+		/* IEEE80211_MODE_11G */
+		return QCA_WLAN_VENDOR_PHY_MODE_11G;
+	}
+
+	if (strcmp(val, "11b") == 0) {
+		/* IEEE80211_MODE_11B */
+		return QCA_WLAN_VENDOR_PHY_MODE_11B;
+	}
+
+	if (strcmp(val, "11n") == 0 ||
+		   strcmp(val, "11nl") == 0 ||
+		   strcmp(val, "11nl(nabg)") == 0) {
+		/* IEEE80211_MODE_11AGN */
+		return QCA_WLAN_VENDOR_PHY_MODE_11AGN;
+	}
+
+	if (strcmp(val, "11ng") == 0) {
+		/* IEEE80211_MODE_11NG_HT40 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11NG_HT40;
+	}
+
+	if (strcmp(val, "AC") == 0 ||
+		   strcasecmp(val, "11AC") == 0) {
+		/* IEEE80211_MODE_11AC_VHT80 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11AC_VHT80;
+	}
+
+	if (strcmp(val, "11na") == 0 ||
+		   strcasecmp(val, "11an") == 0) {
+		/* IEEE80211_MODE_11NA_HT40 */
+		return QCA_WLAN_VENDOR_PHY_MODE_11NA_HT40;
+	}
+
+	if (strcmp(val, "11ax") == 0 ||
+		   strcmp(val, "auto") == 0) {
+		/* IEEE80211_MODE_AUTO */
+		return QCA_WLAN_VENDOR_PHY_MODE_AUTO;
+	}
+
+	return -1;
+}
+
 #endif /* NL80211_SUPPORT */
+
+
+static int get_phymode(const char *val)
+{
+	if (strcmp(val, "11a") == 0)
+		return 1; /* IEEE80211_MODE_11A */
+	if (strcmp(val, "11g") == 0)
+		return 3; /* IEEE80211_MODE_11G */
+	if (strcmp(val, "11b") == 0)
+		return 2; /* IEEE80211_MODE_11B */
+	if (strcmp(val, "11n") == 0 ||
+	    strcmp(val, "11nl") == 0 ||
+	    strcmp(val, "11nl(nabg)") == 0)
+		return 22; /* IEEE80211_MODE_11AGN */
+	if (strcmp(val, "11ng") == 0)
+		return 13; /* IEEE80211_MODE_11NG_HT40 */
+	if (strcmp(val, "AC") == 0 ||
+	    strcasecmp(val, "11AC") == 0)
+		return 19; /* IEEE80211_MODE_11AC_VHT80 */
+	if (strcmp(val, "11na") == 0 ||
+	    strcasecmp(val, "11an") == 0)
+		return 14; /* IEEE80211_MODE_11NA_HT40 */
+	if (strcmp(val, "11ax") == 0 ||
+	    strcmp(val, "auto") == 0)
+		return 0; /* IEEE80211_MODE_AUTO */
+	return -1;
+}
+
+
+static void sta_set_phymode(struct sigma_dut *dut, const char *intf,
+			    const char *val)
+{
+	char buf[100];
+	int len, phymode;
+#ifdef NL80211_SUPPORT
+	enum qca_wlan_vendor_phy_mode qca_phymode;
+
+	qca_phymode = get_qca_vendor_phymode(val);
+	if (qca_phymode == -1) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Ignoring mode change for mode: %s",
+				val);
+		return;
+	}
+
+	if (nlvendor_sta_set_phymode(dut, intf, qca_phymode) == 0)
+		return;
+#endif /* NL80211_SUPPORT */
+
+	phymode = get_phymode(val);
+	if (phymode == -1) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Ignoring mode change for mode: %s",
+				val);
+		return;
+	}
+
+	len = snprintf(buf, sizeof(buf), "iwpriv %s setphymode %d", intf,
+		       phymode);
+	if (len < 0 || len >= sizeof(buf)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set phymode");
+		return;
+	}
+
+	if (system(buf) != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"iwpriv setting of phymode failed");
+}
 
 
 static enum sigma_cmd_result
@@ -4861,7 +5014,8 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		return miracast_preset_testparameters(dut, conn, cmd);
 #endif /* MIRACAST */
 
-	if (val && strcasecmp(val, "MBO") == 0) {
+	if (val &&
+	    (strcasecmp(val, "MBO") == 0 || strcasecmp(val, "HE") == 0)) {
 		val = get_param(cmd, "Cellular_Data_Cap");
 		if (val &&
 		    mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
@@ -4964,44 +5118,7 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		 * and for 11a and 11g modes only. */
 		if (dut->program == PROGRAM_HE &&
 		    dut->device_type == STA_testbed) {
-			int phymode;
-			char buf[60];
-
-			if (strcmp(val, "11a") == 0) {
-				phymode = 1; /* IEEE80211_MODE_11A */
-			} else if (strcmp(val, "11g") == 0) {
-				phymode = 3; /* IEEE80211_MODE_11G */
-			} else if (strcmp(val, "11b") == 0) {
-				phymode = 2; /* IEEE80211_MODE_11B */
-			} else if (strcmp(val, "11n") == 0 ||
-				   strcmp(val, "11nl") == 0 ||
-				   strcmp(val, "11nl(nabg)") == 0) {
-				phymode = 22; /* IEEE80211_MODE_11AGN */
-			} else if (strcmp(val, "11ng") == 0) {
-				phymode = 13; /* IEEE80211_MODE_11NG_HT40 */
-			} else if (strcmp(val, "AC") == 0 ||
-				   strcasecmp(val, "11AC") == 0) {
-				phymode = 19; /* IEEE80211_MODE_11AC_VHT80 */
-			} else if (strcmp(val, "11na") == 0 ||
-				   strcasecmp(val, "11an") == 0) {
-				phymode = 14; /* IEEE80211_MODE_11NA_HT40 */
-			} else if (strcmp(val, "11ax") == 0) {
-				phymode = 0; /* IEEE80211_MODE_AUTO */
-			} else {
-				sigma_dut_print(dut, DUT_MSG_DEBUG,
-						"Ignoring mode change for mode: %s",
-						val);
-				phymode = -1;
-			}
-			if (phymode != -1) {
-				snprintf(buf, sizeof(buf),
-					 "iwpriv %s setphymode %d",
-					 intf, phymode);
-				if (system(buf) != 0) {
-					sigma_dut_print(dut, DUT_MSG_ERROR,
-							"iwpriv setting of phymode failed");
-				}
-			}
+			sta_set_phymode(dut, intf, val);
 		}
 	}
 
@@ -5190,6 +5307,28 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 #endif /* NL80211_SUPPORT */
+
+	val = get_param(cmd, "IncludeMSCSDescriptor");
+	if (val && strcasecmp(val, "1") == 0) {
+		char buf[128];
+		int len;
+
+		len = snprintf(buf, sizeof(buf),
+			       "MSCS add up_bitmap=F0 up_limit=7 stream_timeout=60000 frame_classifier=045F%032x",
+			       0);
+
+		if (len < 0 || len >= sizeof(buf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to build MSCS Descriptor IE");
+			return ERROR_SEND_STATUS;
+		}
+
+		if (wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				"ErrorCode,Failed to include MSCS descriptor");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	return 1;
 }
@@ -5382,44 +5521,10 @@ static int nlvendor_sta_set_addba_reject(struct sigma_dut *dut,
 					 const char *intf, int addbareject)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ,
-		       !addbareject)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ACCEPT_ADDBA_REQ,
+		!addbareject);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"ADDBA_REJECT cannot be set without NL80211_SUPPORT defined");
@@ -5458,44 +5563,9 @@ static int nlvendor_config_send_addba(struct sigma_dut *dut, const char *intf,
 				      int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SEND_ADDBA_REQ,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"Disable addba not possible without NL80211_SUPPORT defined");
@@ -6355,11 +6425,13 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *bssid = get_param(cmd, "bssid");
 	const char *val = get_param(cmd, "CHANNEL");
+	const char *freq_val = get_param(cmd, "ChnlFreq");
 	struct wpa_ctrl *ctrl;
 	char buf[1000];
 	char result[32];
 	int res;
 	int chan = 0;
+	int freq = 0;
 	enum sigma_cmd_result status = STATUS_SENT;
 	int fastreassoc = 1;
 	int ft_ds = 0;
@@ -6372,6 +6444,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 
 	if (val)
 		chan = atoi(val);
+
+	if (freq_val)
+		freq = atoi(freq_val);
 
 	if (wifi_chip_type != DRIVER_WCN && wifi_chip_type != DRIVER_AR6003) {
 		/* The current network may be from sta_associate or
@@ -6406,7 +6481,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 #ifdef NL80211_SUPPORT
 		if (get_driver_type(dut) == DRIVER_WCN &&
 		    dut->config_rsnie == 0) {
-			sta_config_rsnie(dut, 1);
+			sta_config_params(dut, intf, STA_SET_RSNIE, 1);
 			dut->config_rsnie = 1;
 		}
 #endif /* NL80211_SUPPORT */
@@ -6420,10 +6495,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 	}
 
 	if (ft_ds) {
-		if (chan) {
-			unsigned int freq;
-
-			freq = channel_to_freq(dut, chan);
+		if (chan || freq) {
+			if (!freq)
+				freq = channel_to_freq(dut, chan);
 			if (!freq) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Invalid channel number provided: %d",
@@ -6471,10 +6545,9 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 			goto close_mon_conn;
 		}
 	} else if (wifi_chip_type == DRIVER_WCN && fastreassoc) {
-		if (chan) {
-			unsigned int freq;
-
-			freq = channel_to_freq(dut, chan);
+		if (chan || freq) {
+			if (!freq)
+				freq = channel_to_freq(dut, chan);
 			if (!freq) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Invalid channel number provided: %d",
@@ -6717,6 +6790,204 @@ static int sta_get_parameter_he(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+#ifdef NL80211_SUPPORT
+
+struct station_info {
+	uint64_t filled;
+	uint32_t beacon_mic_error_count;
+	uint32_t beacon_replay_count;
+};
+
+
+static int qca_get_sta_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct station_info *data = arg;
+	struct nlattr *info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX + 1];
+	static struct nla_policy info_policy[
+		QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX + 1] = {
+		[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT] = {
+			.type = NLA_U32
+		},
+		[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT] = {
+			.type = NLA_U32
+		},
+	};
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb[NL80211_ATTR_VENDOR_DATA])
+		return NL_SKIP;
+
+	if (nla_parse_nested(info, QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX,
+			     tb[NL80211_ATTR_VENDOR_DATA], info_policy)) {
+		return NL_SKIP;
+	}
+
+	if (info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT]) {
+		data->filled |=
+			BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT);
+		data->beacon_mic_error_count =
+			nla_get_u32(info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT]);
+	}
+
+	if (info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT]) {
+		data->filled |=
+			BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT);
+		data->beacon_replay_count =
+			nla_get_u32(info[QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT]);
+	}
+
+	return NL_SKIP;
+}
+
+
+static int qca_nl80211_get_sta_info(struct sigma_dut *dut, const char *intf,
+				    struct station_info *sta_data)
+{
+	struct nl_msg *msg;
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s not found",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg,
+				 qca_get_sta_info_handler, sta_data);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+}
+#endif /* NL80211_SUPPORT */
+
+
+static int get_bip_mic_error_count(struct sigma_dut *dut,
+				   const char *ifname,
+				   unsigned int *count)
+{
+#ifdef NL80211_SUPPORT
+	struct station_info sta_data;
+#endif /* NL80211_SUPPORT */
+
+	if (get_driver_type(dut) != DRIVER_WCN) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"BIP MIC error count not supported");
+		return -1;
+	}
+
+#ifdef NL80211_SUPPORT
+	if (qca_nl80211_get_sta_info(dut, ifname, &sta_data) != 0 ||
+	    !(sta_data.filled &
+	      BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"BIP MIC error count fetching failed");
+		return -1;
+	}
+
+	*count = sta_data.beacon_mic_error_count;
+	return 0;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"BIP MIC error count cannot be fetched without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int get_cmac_replay_count(struct sigma_dut *dut, const char *ifname,
+				 unsigned int *count)
+{
+#ifdef NL80211_SUPPORT
+	struct station_info sta_data;
+#endif /* NL80211_SUPPORT */
+
+	if (get_driver_type(dut) != DRIVER_WCN) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"CMAC reply count not supported");
+		return -1;
+	}
+
+#ifdef NL80211_SUPPORT
+	if (qca_nl80211_get_sta_info(dut, ifname, &sta_data) != 0 ||
+	    !(sta_data.filled &
+	      BIT_ULL(QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT))) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"CMAC replay count fetching failed");
+		return -1;
+	}
+
+	*count = sta_data.beacon_replay_count;
+	return 0;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"CMAC replay count cannot be fetched without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static enum sigma_cmd_result sta_get_parameter_wpa3(struct sigma_dut *dut,
+						    struct sigma_conn *conn,
+						    struct sigma_cmd *cmd)
+{
+	char buf[MAX_CMD_LEN];
+	const char *ifname = get_param(cmd, "interface");
+	const char *parameter = get_param(cmd, "Parameter");
+	unsigned int val;
+
+	if (!ifname || !parameter)
+		return INVALID_SEND_STATUS;
+
+	if (strcasecmp(parameter, "BIPMICErrors") == 0) {
+		if (get_bip_mic_error_count(dut, ifname, &val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to get BIPMICErrors");
+			return STATUS_SENT_ERROR;
+		}
+		snprintf(buf, sizeof(buf), "BIPMICErrors,%d", val);
+		sigma_dut_print(dut, DUT_MSG_INFO, "BIPMICErrors %s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return STATUS_SENT;
+	}
+
+	if (strcasecmp(parameter, "CMACReplays") == 0) {
+		if (get_cmac_replay_count(dut, ifname, &val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to get CMACReplays");
+			return STATUS_SENT_ERROR;
+		}
+		snprintf(buf, sizeof(buf), "CMACReplays,%d", val);
+		sigma_dut_print(dut, DUT_MSG_INFO, "CMACReplays %s", buf);
+		send_resp(dut, conn, SIGMA_COMPLETE, buf);
+		return STATUS_SENT;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
+	return STATUS_SENT_ERROR;
+}
+
+
 static enum sigma_cmd_result sta_get_pmk(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -6808,6 +7079,8 @@ static enum sigma_cmd_result cmd_sta_get_parameter(struct sigma_dut *dut,
 	    strcasecmp(program, "DisplayR2") == 0)
 		return miracast_cmd_sta_get_parameter(dut, conn, cmd);
 #endif /* MIRACAST */
+	if (strcasecmp(program, "WPA3") == 0)
+		return sta_get_parameter_wpa3(dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "ErrorCode,Unsupported parameter");
 	return 0;
@@ -6885,43 +7158,8 @@ static void sta_reset_default_ath(struct sigma_dut *dut, const char *intf,
 static int sta_set_he_mcs(struct sigma_dut *dut, const char *intf,
 			  enum he_mcs_config mcs)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS,
-		       mcs)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MCS, mcs);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -6930,44 +7168,10 @@ static int sta_set_action_tx_in_he_tb_ppdu(struct sigma_dut *dut,
 					   const char *intf, int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_ACTION_TX_TB_PPDU,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE action Tx TB PPDU cannot be set without NL80211_SUPPORT defined");
@@ -6980,44 +7184,9 @@ static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 					 const char *intf, int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WEP_TKIP_IN_HE,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_WEP_TKIP_IN_HE,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE config enablement cannot be changed without NL80211_SUPPORT defined");
@@ -7031,87 +7200,18 @@ static int sta_set_heconfig_and_wep_tkip(struct sigma_dut *dut,
 static int sta_set_he_testbed_def(struct sigma_dut *dut,
 				  const char *intf, int cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SET_HE_TESTBED_DEFAULTS,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_SET_HE_TESTBED_DEFAULTS,
+		cfg);
 }
 
 
 static int sta_set_2g_vht_supp(struct sigma_dut *dut, const char *intf, int cfg)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_2G_VHT,
-		       cfg)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_2G_VHT,
+		cfg);
 }
 
 #endif /* NL80211_SUPPORT */
@@ -7121,44 +7221,9 @@ int sta_set_addba_buf_size(struct sigma_dut *dut,
 			   const char *intf, int bufsize)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u16(msg,
-			QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE,
-			bufsize)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u16(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE, bufsize);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"AddBA bufsize cannot be changed without NL80211_SUPPORT defined");
@@ -7171,44 +7236,10 @@ static int sta_set_tx_beamformee(struct sigma_dut *dut, const char *intf,
 				 int enable)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_TX_BEAMFORMEE,
-		       enable)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_TX_BEAMFORMEE,
+		enable);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"tx beamformee cannot be changed without NL80211_SUPPORT defined");
@@ -7221,44 +7252,10 @@ static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
 				  int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS,
+		val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"beamformee sts cannot be changed without NL80211_SUPPORT defined");
@@ -7271,44 +7268,9 @@ static int sta_set_beamformee_sts(struct sigma_dut *dut, const char *intf,
 static int sta_set_mac_padding_duration(struct sigma_dut *dut, const char *intf,
 					enum qca_wlan_he_mac_padding_dur val)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MAC_PADDING_DUR,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MAC_PADDING_DUR, val);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -7317,44 +7279,9 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 				  int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_SUPPDU,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_SUPPDU,
+		val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"Tx SU PPDU cannot be set without NL80211_SUPPORT defined");
@@ -7366,43 +7293,9 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 #ifdef NL80211_SUPPORT
 static int sta_set_he_om_ctrl_reset(struct sigma_dut *dut, const char *intf)
 {
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed",
-				__func__, intf);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_flag(msg,
-			 QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_CLEAR_HE_OM_CTRL_CONFIG)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data",
-				__func__);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d",
-				__func__, ret);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_flag(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_CLEAR_HE_OM_CTRL_CONFIG);
 }
 #endif /* NL80211_SUPPORT */
 
@@ -7411,44 +7304,9 @@ static int sta_set_mu_edca_override(struct sigma_dut *dut, const char *intf,
 				    int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OVERRIDE_MU_EDCA,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OVERRIDE_MU_EDCA, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"MU EDCA override cannot be changed without NL80211_SUPPORT defined");
@@ -7461,44 +7319,9 @@ static int sta_set_om_ctrl_supp(struct sigma_dut *dut, const char *intf,
 				int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret = 0;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_SUPP,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_SUPP, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"HE OM ctrl cannot be changed without NL80211_SUPPORT defined");
@@ -7511,44 +7334,9 @@ static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
 				   int val)
 {
 #ifdef NL80211_SUPPORT
-	struct nl_msg *msg;
-	int ret;
-	struct nlattr *params;
-	int ifindex;
-
-	ifindex = if_nametoindex(intf);
-	if (ifindex == 0) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: Index for interface %s failed, val:%d",
-				__func__, intf, val);
-		return -1;
-	}
-
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
-				    NL80211_CMD_VENDOR)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
-	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
-	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
-	    nla_put_u8(msg,
-		       QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TWT_REQ_SUPPORT,
-		       val)) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in adding vendor_cmd and vendor_data, val: %d",
-				__func__, val);
-		nlmsg_free(msg);
-		return -1;
-	}
-	nla_nest_end(msg, params);
-
-	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
-	if (ret) {
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: err in send_and_recv_msgs, ret=%d, val=%d",
-				__func__, ret, val);
-	}
-	return ret;
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TWT_REQ_SUPPORT, val);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT Request cannot be changed without NL80211_SUPPORT defined");
@@ -7564,11 +7352,7 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 	if (dut->program == PROGRAM_HE) {
 		/* resetting phymode to auto in case of HE program */
-		snprintf(buf, sizeof(buf), "iwpriv %s setphymode 0", intf);
-		if (system(buf) != 0) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"iwpriv %s setphymode failed", intf);
-		}
+		sta_set_phymode(dut, intf, "auto");
 
 		/* reset the rate to Auto rate */
 		snprintf(buf, sizeof(buf), "iwpriv %s set_11ax_rate 0xff",
@@ -7686,11 +7470,15 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"Set tx beamformee enable by default in sta_reset_default_wcn failed");
 		}
 
+		wpa_command(intf, "SET oce 1");
+
 		/* Set nss to 1 and MCS 0-7 in case of testbed */
 		if (type && strcasecmp(type, "Testbed") == 0) {
 #ifdef NL80211_SUPPORT
 			int ret;
 #endif /* NL80211_SUPPORT */
+
+			wpa_command(intf, "SET oce 0");
 
 			snprintf(buf, sizeof(buf), "iwpriv %s nss 1", intf);
 			if (system(buf) != 0) {
@@ -7982,7 +7770,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(get_station_ifname(dut), "SET interworking 0");
 	}
 
-	if (dut->program == PROGRAM_MBO) {
+	if (dut->program == PROGRAM_MBO || dut->program == PROGRAM_HE) {
 		free(dut->non_pref_ch_list);
 		dut->non_pref_ch_list = NULL;
 		free(dut->btm_query_cand_list);
@@ -8036,7 +7824,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	if (get_driver_type(dut) == DRIVER_WCN &&
 	    dut->config_rsnie == 1) {
 		dut->config_rsnie = 0;
-		sta_config_rsnie(dut, 0);
+		sta_config_params(dut, intf, STA_SET_RSNIE, 0);
 	}
 #endif /* NL80211_SUPPORT */
 
@@ -8048,6 +7836,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	wpa_command(intf, "SET setband AUTO");
 
 	dut->ocvc = 0;
+	dut->client_privacy = 0;
+	dut->saquery_oci_freq = 0;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
@@ -8252,6 +8042,10 @@ static void cmd_set_max_he_mcs(struct sigma_dut *dut, const char *intf,
 }
 
 
+#define TWT_REQUEST_CMD     0
+#define TWT_SUGGEST_CMD     1
+#define TWT_DEMAND_CMD      2
+
 static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 			   struct sigma_cmd *cmd)
 {
@@ -8266,7 +8060,7 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	int wake_interval_exp = 10, nominal_min_wake_dur = 255,
 		wake_interval_mantissa = 512;
 	int flow_type = 0, twt_trigger = 0, target_wake_time = 0,
-		protection = 0;
+		protection = 0, cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_SUGGEST;
 
 	ifindex = if_nametoindex(intf);
 	if (ifindex == 0) {
@@ -8308,6 +8102,21 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "SetupCommand");
+	if (val) {
+		cmd_type = atoi(val);
+		if (cmd_type == TWT_REQUEST_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_REQUEST;
+		else if (cmd_type == TWT_SUGGEST_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_SUGGEST;
+		else if (cmd_type == TWT_DEMAND_CMD)
+			cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_DEMAND;
+		else
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Default suggest is used for cmd %d",
+					cmd_type);
+	}
+
 	val = get_param(cmd, "TargetWakeTime");
 	if (val)
 		target_wake_time = atoi(val);
@@ -8336,7 +8145,7 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	    !(attr1 = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_EXP,
 		       wake_interval_exp) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE, 1) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE, cmd_type) ||
 	    (twt_trigger &&
 	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_TRIGGER)) ||
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE,
@@ -8525,6 +8334,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 	const char *program;
 	int tkip = -1;
 	int wep = -1;
+	int iwpriv_status;
 
 	program = get_param(cmd, "Program");
 	val = get_param(cmd, "SGI80");
@@ -8592,7 +8402,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		int ldpc;
 
 		ldpc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
-		run_iwpriv(dut, intf, "ldpc %d", ldpc);
+		iwpriv_status = run_iwpriv(dut, intf, "ldpc %d", ldpc);
+		if (iwpriv_status)
+			sta_config_params(dut, intf, STA_SET_LDPC, ldpc);
 	}
 
 	val = get_param(cmd, "BCC");
@@ -8602,7 +8414,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		bcc = strcmp(val, "1") == 0 || strcasecmp(val, "Enable") == 0;
 		/* use LDPC iwpriv itself to set bcc coding, bcc coding
 		 * is mutually exclusive to bcc */
-		run_iwpriv(dut, intf, "ldpc %d", !bcc);
+		iwpriv_status = run_iwpriv(dut, intf, "ldpc %d", !bcc);
+		if (iwpriv_status)
+			sta_config_params(dut, intf, STA_SET_LDPC, !bcc);
 	}
 
 	val = get_param(cmd, "MaxHE-MCS_1SS_RxMapLTE80");
@@ -9070,8 +8884,9 @@ static int sta_set_wireless_oce(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
-				 struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
+		      struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -9079,6 +8894,21 @@ static int sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
 	val = get_param(cmd, "ocvc");
 	if (val)
 		dut->ocvc = atoi(val);
+
+	val = get_param(cmd, "ClientPrivacy");
+	if (val) {
+		dut->client_privacy = atoi(val);
+		if (dut->client_privacy &&
+		    (wpa_command(intf, "SET mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET rand_addr_lifetime 1") < 0 ||
+		     wpa_command(intf, "SET preassoc_mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET gas_rand_mac_addr 1") < 0 ||
+		     wpa_command(intf, "SET gas_rand_addr_lifetime 1") < 0)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to enable random MAC address use");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);
 }
@@ -9599,6 +9429,47 @@ int hwaddr_aton(const char *txt, unsigned char *addr)
 
 #endif /* defined(__linux__) || defined(__QNXNTO__) */
 
+
+#ifdef NL80211_SUPPORT
+static int nl80211_send_frame_cmd(struct sigma_dut *dut, const char *intf,
+				  const u8 *data, size_t data_len, int freq)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	int ifindex;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_FRAME)) ||
+	    (freq && nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq)) ||
+	    nla_put(msg, NL80211_ATTR_FRAME, data_len, data)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Error in adding NL80211_CMD_FRAME",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"nl80211: Frame command failed: ret=%d (%s) req=%u",
+				ret, strerror(-ret), freq);
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* NL80211_SUPPORT */
+
+
 enum send_frame_type {
 	DISASSOC, DEAUTH, SAQUERY, AUTH, ASSOCREQ, REASSOCREQ, DLS_REQ
 };
@@ -9608,9 +9479,9 @@ enum send_frame_protection {
 
 
 static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
-			    enum send_frame_type frame,
+			    const char *intf, enum send_frame_type frame,
 			    enum send_frame_protection protected,
-			    const char *dest)
+			    const char *dest, int use_monitor)
 {
 #ifdef __linux__
 	unsigned char buf[1000], *pos;
@@ -9748,6 +9619,18 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			/* Transaction ID */
 			*pos++ = 0x12;
 			*pos++ = 0x34;
+			if (dut->saquery_oci_freq) {
+				/* OCI IE - Extended ID */
+				*pos++ = 0xFF;
+				*pos++ = 0x04;
+				*pos++ = 0x36;
+				/* Operating Class */
+				*pos++ = 0x74;
+				/* Primary Channel */
+				*pos++ = freq_to_channel(dut->saquery_oci_freq);
+				/* Frequency Segment 1 Channel Number */
+				*pos++ = 0x00;
+			}
 			break;
 		case AUTH:
 			/* Auth Alg (Open) */
@@ -9807,11 +9690,29 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 			/* Extended Supported Rates */
 			memcpy(pos, "\x32\x04\x30\x48\x60\x6c", 6);
 			pos += 6;
-			/* RSN */
-			memcpy(pos, "\x30\x1a\x01\x00\x00\x0f\xac\x04\x01\x00"
-			       "\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x02\xc0"
-			       "\x00\x00\x00\x00\x0f\xac\x06", 28);
-			pos += 28;
+			/* RSNE - Group and Pairwise ciphers */
+			memcpy(pos,
+			       "\x30\x1a\x01\x00\x00\x0f\xac\x04\x01\x00\x00\x0f\xac\x04",
+			       14);
+			pos += 14;
+			/* RSNE - AKM Suite count */
+			*pos++ = 0x01;
+			*pos++ = 0x00;
+			/* RSNE - AKM Suites */
+			if (dut->program == PROGRAM_WPA3)
+				memcpy(pos, "\x00\x0f\xac\x08", 4);
+			else
+				memcpy(pos, "\x00\x0f\xac\x02", 4);
+			pos += 4;
+			/* RSNE - Capabilities */
+			*pos++ = 0xc0;
+			if (dut->ocvc)
+				*pos++ = 0x40;
+			else
+				*pos++ = 0x00;
+			/* RSNE - PMKID list and Group Management Ciphers */
+			memcpy(pos, "\x00\x00\x00\x0f\xac\x06", 6);
+			pos += 6;
 			break;
 		case DLS_REQ:
 			/* Category - DLS */
@@ -9850,28 +9751,53 @@ static int sta_inject_frame(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
-	s = open_monitor("sigmadut");
-	if (s < 0) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to open "
-			  "monitor socket");
-		return 0;
-	}
+	if (use_monitor) {
+		s = open_monitor("sigmadut");
+		if (s < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to open monitor socket");
+			return 0;
+		}
 
-	res = inject_frame(s, buf, pos - buf, protected == CORRECT_KEY);
-	if (res < 0) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Failed to "
-			  "inject frame");
-		close(s);
-		return 0;
-	}
-	if (res < pos - buf) {
-		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Only partial "
-			  "frame sent");
-		close(s);
-		return 0;
-	}
+		res = inject_frame(s, buf, pos - buf, protected == CORRECT_KEY);
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to inject frame");
+			close(s);
+			return 0;
+		}
+		if (res < pos - buf) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Only partial frame sent");
+			close(s);
+			return 0;
+		}
 
-	close(s);
+		close(s);
+	} else {
+#ifdef NL80211_SUPPORT
+		int freq;
+		char freq_str[10];
+
+		if (get_wpa_status(get_station_ifname(dut), "freq",
+				   freq_str, sizeof(freq_str)) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not get current operating frequency");
+			return 0;
+		}
+		freq = atoi(freq_str);
+
+		if (nl80211_send_frame_cmd(dut, intf, buf, pos - buf, freq)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to inject frame");
+			return 0;
+		}
+#else /* NL80211_SUPPORT */
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to inject frame (no NL80211_SUPPORT)");
+		return 0;
+#endif /* NL80211_SUPPORT */
+	}
 
 	return 1;
 #else /* __linux__ */
@@ -10256,7 +10182,7 @@ static int cmd_sta_send_frame_hs2_dls_req(struct sigma_dut *dut,
 		return -2;
 	}
 
-	return sta_inject_frame(dut, conn, DLS_REQ, UNPROTECTED, dest);
+	return sta_inject_frame(dut, conn, intf, DLS_REQ, UNPROTECTED, dest, 1);
 }
 
 
@@ -10560,6 +10486,21 @@ static int ath_sta_send_frame_vht(struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_set_pmf_config(struct sigma_dut *dut, const char *intf,
+				  enum send_frame_protection protected)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PMF_PROTECTION,
+		protected);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"PMF config cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int cmd_sta_send_frame_vht(struct sigma_dut *dut,
 				  struct sigma_conn *conn,
 				  struct sigma_cmd *cmd)
@@ -10575,11 +10516,26 @@ static int cmd_sta_send_frame_vht(struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_send_disassoc(struct sigma_dut *dut, const char *intf)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_flag(
+		dut, intf, QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_DISASSOC_TX);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Disassoc Tx cannot be done without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 				 struct sigma_cmd *cmd)
 {
 	const char *val;
 	const char *intf = get_param(cmd, "Interface");
+	enum send_frame_protection protected;
+	const char *pmf;
 
 	if (!intf)
 		return -1;
@@ -10588,6 +10544,27 @@ static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (!val)
 		return -1;
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "framename is %s", val);
+
+	pmf = get_param(cmd, "PMFProtected");
+	if (!pmf)
+		pmf = get_param(cmd, "Protected");
+	if (pmf) {
+		if (strcasecmp(pmf, "Correct-key") == 0 ||
+		    strcasecmp(pmf, "CorrectKey") == 0) {
+			protected = CORRECT_KEY;
+		} else if (strcasecmp(pmf, "IncorrectKey") == 0) {
+			protected = INCORRECT_KEY;
+		} else if (strcasecmp(pmf, "Unprotected") == 0) {
+			protected = UNPROTECTED;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported PMFProtected");
+			return STATUS_SENT_ERROR;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Config PMF protection %d",
+				protected);
+		wcn_sta_set_pmf_config(dut, intf, protected);
+	}
 
 	/* Command sequence to generate Op mode notification */
 	if (val && strcasecmp(val, "action") == 0) {
@@ -10605,7 +10582,12 @@ static int wcn_sta_send_frame_he(struct sigma_dut *dut, struct sigma_conn *conn,
 
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Action Tx type is not defined");
+
+		return SUCCESS_SEND_STATUS;
 	}
+
+	if (strcasecmp(val, "disassoc") == 0)
+		wcn_sta_send_disassoc(dut, intf);
 
 	return 1;
 }
@@ -10940,6 +10922,207 @@ static int mbo_cmd_sta_send_frame(struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
+						     struct sigma_conn *conn,
+						     const char *intf,
+						     struct sigma_cmd *cmd)
+{
+	const char *val = get_param(cmd, "framename");
+
+	if (!val)
+		return INVALID_SEND_STATUS;
+
+	if (strcasecmp(val, "SAQueryReq") == 0) {
+		val = get_param(cmd, "OCIChannel");
+
+		if (!val) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,OCIChannel not present");
+			return STATUS_SENT_ERROR;
+		}
+
+		dut->saquery_oci_freq = channel_to_freq(dut, atoi(val));
+		if (!dut->saquery_oci_freq) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid OCIChannel number");
+			return STATUS_SENT_ERROR;
+		}
+
+		return sta_inject_frame(dut, conn, intf, SAQUERY, CORRECT_KEY,
+					NULL, 0);
+	}
+
+	if (strcasecmp(val, "reassocreq") == 0)
+		return sta_inject_frame(dut, conn, intf, REASSOCREQ,
+					CORRECT_KEY, NULL, 0);
+
+	if (strcasecmp(val, "ANQPQuery") == 0) {
+		char buf[50];
+		const char *dest = get_param(cmd, "DestMac");
+		const char *chan = get_param(cmd, "channel");
+		int len, freq;
+
+		freq = chan ? channel_to_freq(dut, atoi(chan)) : 0;
+		if (!dest || !freq)
+			return INVALID_SEND_STATUS;
+
+		len = snprintf(buf, sizeof(buf), "ANQP_GET %s freq=%d 257",
+			       dest, freq);
+		if (len < 0 || len >= sizeof(buf)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to allocate buf");
+			return ERROR_SEND_STATUS;
+		}
+
+		if (wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to send ANQP Query frame");
+			return STATUS_SENT_ERROR;
+		}
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"ANQP Query sent: %s", buf);
+
+		return SUCCESS_SEND_STATUS;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported framename");
+	return STATUS_SENT_ERROR;
+}
+
+
+static enum sigma_cmd_result
+cmd_sta_send_frame_mscs(struct sigma_dut *dut, struct sigma_conn *conn,
+			const char *intf, struct sigma_cmd *cmd)
+{
+	char buf[128], *pos;
+	const char *val, *classifier_type = "04", *type;
+	int len, rem_len;
+	u8 up_bitmap;
+
+	val = get_param(cmd, "FrameName");
+	type = get_param(cmd, "Request_Type");
+	if (!val || !type || strcasecmp(val, "MSCSReq") != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: frame name or type not valid", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	rem_len = sizeof(buf);
+	pos = buf;
+	if (strcasecmp(type, "add") == 0) {
+		len = snprintf(pos, rem_len, "MSCS add");
+	} else if (strcasecmp(type, "update") == 0) {
+		len = snprintf(pos, rem_len, "MSCS change");
+	} else if (strcasecmp(type, "remove") == 0) {
+		if (wpa_command(intf, "MSCS remove") != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to send MSCS frame req");
+			return STATUS_SENT_ERROR;
+		}
+		return SUCCESS_SEND_STATUS;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: request type invalid", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "User_Priority_Bitmap");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: user priority bitmap empty", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	switch (atoi(val)) {
+	case 0:
+		up_bitmap = 0x00;
+		break;
+	case 1:
+		up_bitmap = 0xF0;
+		break;
+	case 2:
+		up_bitmap = 0xF6;
+		break;
+	default:
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Unknown User_Priority_Bitmap value %d",
+				__func__, atoi(val));
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " up_bitmap=%02x", up_bitmap);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "User_Priority_Limit");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid user priority limit", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " up_limit=%s", val);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "Stream_Timeout");
+	if (!val)
+		val = get_param(cmd, "Stream_Timtout");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid stream timeout", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " stream_timeout=%s", val);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "TCLAS_Mask");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: invalid tclas mask", __func__);
+		return INVALID_SEND_STATUS;
+	}
+
+	len = snprintf(pos, rem_len, " frame_classifier=%s%lx%032x",
+		       classifier_type, strtol(val, NULL, 2), 0);
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	if (wpa_command(intf, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send MSCS frame req");
+		return STATUS_SENT_ERROR;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"MSCS frame request sent: %s", buf);
+
+	return SUCCESS_SEND_STATUS;
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Failed to create MSCS frame req");
+	return ERROR_SEND_STATUS;
+}
+
+
 enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -10977,6 +11160,10 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 		if (res != 2)
 			return res;
 	}
+	if (val && strcasecmp(val, "WPA3") == 0)
+		return cmd_sta_send_frame_wpa3(dut, conn, intf, cmd);
+	if (val && strcasecmp(val, "QM") == 0)
+		return cmd_sta_send_frame_mscs(dut, conn, intf, cmd);
 
 	val = get_param(cmd, "TD_DISC");
 	if (val) {
@@ -11129,7 +11316,7 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 		return -2;
 	}
 
-	return sta_inject_frame(dut, conn, frame, protected, NULL);
+	return sta_inject_frame(dut, conn, intf, frame, protected, NULL, 1);
 }
 
 
@@ -11812,6 +11999,14 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "Ch_Pref");
+	if (val && mbo_set_non_pref_ch_list(dut, conn, intf, cmd) == 0)
+		return STATUS_SENT;
+
+	val = get_param(cmd, "Cellular_Data_Cap");
+	if (val && mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
+		return STATUS_SENT;
+
 	return 1;
 
 failed:
@@ -12065,6 +12260,124 @@ static int cmd_sta_set_rfeature_60g(const char *intf, struct sigma_dut *dut,
 }
 
 
+static int wcn_sta_override_oci(struct sigma_dut *dut, const char *intf,
+				const char *oci_frametype, uint32_t oci_freq)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	int ret = 0;
+	struct nlattr *params;
+	struct nlattr *attr;
+	int ifindex;
+	u8 frame_type;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return -1;
+	}
+
+	if (strcasecmp(oci_frametype, "SAQueryReq") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_SA_QUERY_REQ;
+	} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_SA_QUERY_RESP;
+	} else if (strcasecmp(oci_frametype, "Reassocreq") == 0) {
+		frame_type = QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_FT_REASSOC_REQ;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: Unknown frametype %s",
+				__func__, oci_frametype);
+		return -1;
+	}
+
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION) ||
+	    !(attr = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    !(params = nla_nest_start(
+		      msg,
+		      QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OCI_OVERRIDE)) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_OCI_OVERRIDE_FRAME_TYPE,
+		       frame_type) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_OCI_OVERRIDE_FREQUENCY,
+			oci_freq)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nla_nest_end(msg, params);
+	nla_nest_end(msg, attr);
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, NULL, NULL);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+	}
+	return ret;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"OCI override not possible without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int wcn_sta_ignore_csa(struct sigma_dut *dut, const char *intf,
+			      uint8_t ignore_csa)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_CSA, ignore_csa);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"IgnoreCSA can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int wcn_sta_set_rsnxe_used(struct sigma_dut *dut, const char *intf,
+				  uint8_t rsnxe_used)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FT_REASSOCREQ_RSNXE_USED,
+		rsnxe_used);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"RSNXE_Used can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int wcn_sta_ignore_sa_query_timeout(struct sigma_dut *dut,
+					   const char *intf,
+					   uint8_t ignore_sa_query_timeout)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_SA_QUERY_TIMEOUT,
+		ignore_sa_query_timeout);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Ignore SA Query timeout can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			  struct sigma_conn *conn,
@@ -12074,7 +12387,14 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 
 	val = get_param(cmd, "ReassocReq_RSNXE_Used");
 	if (val && atoi(val) == 1) {
-		if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_set_rsnxe_used(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ft_rsnxe_used");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		} else if (wpa_command(intf, "SET ft_rsnxe_used 1") < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set ft_rsnxe_used");
 			return STATUS_SENT_ERROR;
@@ -12094,6 +12414,19 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 
+		if (wifi_chip_type == DRIVER_WCN &&
+		    (strcasecmp(oci_frametype, "SAQueryReq") == 0 ||
+		     strcasecmp(oci_frametype, "SAQueryResp") == 0 ||
+		     strcasecmp(oci_frametype, "Reassocreq") == 0)) {
+			if (wcn_sta_override_oci(dut, intf, oci_frametype,
+						 oci_freq)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to override OCI");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
+
 		if (strcasecmp(oci_frametype, "eapolM2") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "SET oci_freq_override_eapol %d", oci_freq);
@@ -12104,6 +12437,14 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 		} else if (strcasecmp(oci_frametype, "SAQueryResp") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "SET oci_freq_override_saquery_resp %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "GrpKeyM2") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_eapol_g2 %d",
+				 oci_freq);
+		} else if (strcasecmp(oci_frametype, "Reassocreq") == 0) {
+			snprintf(buf, sizeof(buf),
+				 "SET oci_freq_override_ft_assoc %d",
 				 oci_freq);
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -12116,6 +12457,30 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 		return SUCCESS_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "IgnoreCSA");
+	if (val && atoi(val) == 1) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_ignore_csa(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ignore CSA");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
+	}
+
+	val = get_param(cmd, "Deauth_Per_SAQueryResp");
+	if (val && atoi(val) == 0) {
+		if (wifi_chip_type == DRIVER_WCN) {
+			if (wcn_sta_ignore_sa_query_timeout(dut, intf, 1)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Failed to set ignore SA Query timeout");
+				return STATUS_SENT_ERROR;
+			}
+			return SUCCESS_SEND_STATUS;
+		}
 	}
 
 	send_resp(dut, conn, SIGMA_ERROR,
@@ -12897,11 +13262,12 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val, *bssid, *ssid, *scan_freq, *short_ssid;
-	char buf[4096];
+	char buf[4096], scan_res[20];
 	char ssid_hex[65];
 	int wildcard_ssid = 0;
 	int res;
 	enum sigma_cmd_result status;
+	struct wpa_ctrl *ctrl = NULL;
 
 	start_sta_mode(dut);
 
@@ -12976,6 +13342,22 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 	}
 
 	scan_freq = get_param(cmd, "ChnlFreq");
+	if (scan_freq) {
+		if (strcasecmp(scan_freq, "2G") == 0)
+			scan_freq = "2412-2462";
+		else if (strcasecmp(scan_freq, "5G") == 0)
+			scan_freq = "5180-5925";
+	}
+
+	val = get_param(cmd, "WaitCompletion");
+	if (val && atoi(val) == 1) {
+		ctrl = open_wpa_mon(intf);
+		if (!ctrl) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to open monitor socket");
+			return STATUS_SENT_ERROR;
+		}
+	}
 
 	res = snprintf(buf, sizeof(buf), "SCAN%s%s%s%s%s%s%s",
 			bssid ? " bssid=": "",
@@ -12992,7 +13374,15 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		goto remove_s_ssid;
 	}
 
-	if (wpa_command(intf, buf)) {
+	res = wpa_command_resp(intf, buf, scan_res, sizeof(scan_res));
+	if (strncmp(scan_res, "FAIL-BUSY", 9) == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Scan request rejected with busy status, abort ongoing scan and try again");
+		wpa_command(intf, "ABORT_SCAN");
+		res = wpa_command(intf, buf);
+	}
+
+	if (res < 0) {
 		send_resp(dut, conn, SIGMA_ERROR, "errorCode,Could not start "
 			  "scan");
 		status = STATUS_SENT_ERROR;
@@ -13004,6 +13394,22 @@ remove_s_ssid:
 	if (short_ssid && wpa_command(intf, "VENDOR_ELEM_REMOVE 14 *"))
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Failed to delete vendor element");
+
+	if (ctrl) {
+		if (status == SUCCESS_SEND_STATUS) {
+			res = get_wpa_cli_event(dut, ctrl,
+						"CTRL-EVENT-SCAN-RESULTS",
+						buf, sizeof(buf));
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,scan did not complete");
+				status = STATUS_SENT_ERROR;
+			}
+		}
+
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+	}
 
 	return status;
 }

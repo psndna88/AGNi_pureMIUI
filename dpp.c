@@ -12,6 +12,7 @@
 #include "wpa_helpers.h"
 
 extern char *sigma_wpas_ctrl;
+extern char *sigma_cert_path;
 
 #ifdef ANDROID
 char *dpp_qrcode_file = "/sdcard/wpadebug_qrdata.txt";
@@ -53,6 +54,7 @@ static int dpp_hostapd_beacon(struct sigma_dut *dut)
 	if (!dut->ap_start_disabled)
 		return 0;
 
+	sigma_dut_print(dut, DUT_MSG_INFO, "Start beaconing");
 	if (!ifname ||
 	    wpa_command(ifname, "SET start_disabled 0") < 0 ||
 	    wpa_command(ifname, "DISABLE") < 0 ||
@@ -88,10 +90,14 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 	const char *curve = dpp_get_curve(cmd, "DPPCryptoIdentifier");
 	const char *bs = get_param(cmd, "DPPBS");
 	const char *chan_list = get_param(cmd, "DPPChannelList");
+	const char *tcp = get_param(cmd, "DPPOverTCP");
 	char *pos, mac[50], buf[200], resp[1000], hex[2000];
 	const char *ifname = get_station_ifname(dut);
 	int res;
 	const char *type;
+	int include_mac;
+
+	include_mac = !tcp || strcasecmp(tcp, "yes") != 0;
 
 	if (success)
 		*success = 0;
@@ -149,8 +155,10 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 	    (strcmp(chan_list, "0/0") == 0 || chan_list[0] == '\0')) {
 		/* No channel list */
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s mac=%s",
-			       type, curve, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s%s%s",
+			       type, curve,
+			       include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	} else if (chan_list) {
 		/* Channel list override (CTT case) - space separated tuple(s)
 		 * of OperatingClass/Channel; convert to wpa_supplicant/hostapd
@@ -161,8 +169,9 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 				*pos = ',';
 		}
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s mac=%s",
-			       type, curve, resp, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=%s%s%s",
+			       type, curve, resp, include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	} else {
 		int channel = 11;
 
@@ -172,8 +181,9 @@ dpp_get_local_bootstrap(struct sigma_dut *dut, struct sigma_conn *conn,
 		    dut->ap_channel > 0 && dut->ap_channel <= 13)
 			channel = dut->ap_channel;
 		res = snprintf(buf, sizeof(buf),
-			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d mac=%s",
-			       type, curve, channel, mac);
+			       "DPP_BOOTSTRAP_GEN type=%s curve=%s chan=81/%d%s%s",
+			       type, curve, channel, include_mac ? " mac=" : "",
+			       include_mac ? mac : "");
 	}
 
 	if (res < 0 || res >= sizeof(buf) ||
@@ -447,6 +457,8 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 		}
 	}
 
+	if (dut->ap_start_disabled)
+		sigma_dut_print(dut, DUT_MSG_INFO, "Clear ap_start_disabled");
 	if (wpa_command(ifname, "SET start_disabled 0") < 0 &&
 	    dut->ap_start_disabled) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -460,6 +472,14 @@ static int dpp_hostapd_conf_update(struct sigma_dut *dut,
 	dut->default_timeout = 1;
 	get_wpa_cli_event(dut, ctrl, "DPP-TX-STATUS", buf, sizeof(buf));
 	dut->default_timeout = old_timeout;
+
+	if (dut->ap_oper_chn) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Set AP operating channel %d",
+				dut->ap_channel);
+		snprintf(buf, sizeof(buf), "SET channel %d", dut->ap_channel);
+		wpa_command(ifname, buf);
+	}
 	if (wpa_command(ifname, "DISABLE") < 0 ||
 	    wpa_command(ifname, "ENABLE") < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
@@ -965,6 +985,72 @@ static int dpp_process_auth_response(struct sigma_dut *dut,
 }
 
 
+static int dpp_process_csr(struct sigma_dut *dut, const char *ifname,
+			   char *csr_event)
+{
+	FILE *f;
+	char buf[2000], cmd[2500], tmp[300];
+	char *pos;
+	int peer;
+	size_t len;
+
+	pos = strstr(csr_event, " peer=");
+	if (!pos) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No peer id known for CSR");
+		return -1;
+	}
+	pos += 6;
+	peer = atoi(pos);
+
+	pos = strstr(csr_event, " csr=");
+	if (!pos) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No CSR found");
+		return -1;
+	}
+	pos += 5;
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-certbag", sigma_cert_path);
+	unlink(tmp);
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-csr", sigma_cert_path);
+	f = fopen(tmp, "w");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to write CSR file");
+		return -1;
+	}
+	fprintf(f, "%s", pos);
+	fclose(f);
+
+	if (run_system_wrapper(dut, "./dpp-ca.py %s", sigma_cert_path) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "Failed to run dpp-ca.py");
+		return -1;
+	}
+
+	snprintf(tmp, sizeof(tmp), "%s/dpp-ca-certbag", sigma_cert_path);
+	f = fopen(tmp, "r");
+	if (!f) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No certBag available");
+		return -1;
+	}
+	len = fread(buf, 1, sizeof(buf), f);
+	fclose(f);
+	if (len >= sizeof(buf)) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "No bufferroom for certBag");
+		return -1;
+	}
+	buf[len] = '\0';
+
+	snprintf(cmd, sizeof(cmd), "DPP_CA_SET peer=%d name=certBag value=%s",
+		 peer, buf);
+	if (wpa_command(ifname, cmd) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO, "DPP_CA_SET failed");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
@@ -992,6 +1078,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	char buf2[200];
 	char conf_ssid[100];
 	char conf_pass[100];
+	char csrattrs[200];
 	char pkex_identifier[200];
 	struct wpa_ctrl *ctrl;
 	int res;
@@ -1011,6 +1098,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		"DPP-CONF-RECEIVED",
 		"DPP-CONF-SENT",
 		"DPP-CONF-FAILED",
+		"DPP-MUD-URL",
 		NULL
 	};
 	const char *conn_events[] = {
@@ -1032,6 +1120,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	int chirp = 0;
 	int manual = strcasecmp(type, "ManualDPP") == 0;
 	time_t start, now;
+	FILE *f;
+	char *no_mud_url = "";
+	char *mud_url = no_mud_url;
 
 	time(&start);
 
@@ -1199,6 +1290,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 
 	conf_ssid[0] = '\0';
 	conf_pass[0] = '\0';
+	csrattrs[0] = '\0';
 	group_id[0] = '\0';
 	conf2[0] = '\0';
 	if (!enrollee_configurator) {
@@ -1341,6 +1433,48 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		if (res < 0 || res >= sizeof(conf2))
 			goto err;
 		break;
+	case 11:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,dot1x AKM provisioning not supported for AP");
+			goto out;
+		}
+		conf_role = "sta-dot1x";
+		snprintf(buf, sizeof(buf), "%s/dpp-ca-csrattrs",
+			 sigma_cert_path);
+		f = fopen(buf, "r");
+		if (f) {
+			size_t len;
+			int r;
+
+			len = fread(buf, 1, sizeof(buf), f);
+			fclose(f);
+			if (len >= sizeof(buf)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+			buf[len] = '\0';
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use csrAttrs from file");
+			r = snprintf(csrattrs, sizeof(csrattrs),
+				     " csrattrs=%s", buf);
+			if (r <= 0 || r >= sizeof(csrattrs)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use default csrAttrs");
+			snprintf(csrattrs, sizeof(csrattrs), "%s",
+				 " csrattrs=MAsGCSqGSIb3DQEJBw==");
+		}
+		break;
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported DPPConfIndex");
@@ -1412,11 +1546,16 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		goto wait_connect;
 	} else if (manual && strcasecmp(bs, "NFC") == 0) {
 		const char *val = get_param(cmd, "DPPNFCInit");
-		int init = val && atoi(val) > 0;
+		int init = !val || atoi(val) > 0;
 		pid_t pid;
 		int pid_status;
 		int enrollee = 0;
+		int tag_read = 0;
+		int tag_write_uri = 0;
+		int tag_write_hs = 0;
 		const char *tx_rx_events[] = { "DPP-TX", "DPP-RX", NULL };
+		const char *chan_list, *alt_chan_list;
+		char chan_list2[200], alt_chan_list2[200];
 
 		if (strcasecmp(prov_role, "Configurator") == 0 ||
 		    strcasecmp(prov_role, "Both") == 0) {
@@ -1426,25 +1565,60 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "", conf2);
+				 conn_status ? " conn_status=1" : "",
+				 csrattrs, conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set configurator parameters");
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "conf=%s %s %s configurator=%d%s%s%s%s",
+				 "conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "", conf2);
+				 conn_status ? " conn_status=1" : "", csrattrs,
+				 conf2);
 		} else {
 			buf[0] = '\0';
 			enrollee = 1;
+		}
+
+		val = get_param(cmd, "DPPNFCTag");
+		if (val) {
+			if (strcasecmp(val, "Read") == 0) {
+				tag_read = 1;
+			} else if (strcasecmp(val, "Write-HS") == 0) {
+				tag_write_hs = 1;
+			} else if (strcasecmp(val, "Write-URI") == 0) {
+				tag_write_uri = 1;
+			} else {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Unsupported DPPNFCTag value");
+				goto out;
+			}
+		}
+
+		chan_list = get_param(cmd, "DPPChannelList");
+		if (chan_list) {
+			strlcpy(chan_list2, chan_list, sizeof(chan_list2));
+			for (pos = chan_list2; *pos; pos++) {
+				if (*pos == ' ')
+					*pos = ',';
+			}
+		}
+		alt_chan_list = get_param(cmd, "DPPNFCAltChannelList");
+		if (alt_chan_list) {
+			strlcpy(alt_chan_list2, alt_chan_list,
+				sizeof(alt_chan_list2));
+			for (pos = alt_chan_list2; *pos; pos++) {
+				if (*pos == ' ')
+					*pos = ',';
+			}
 		}
 
 		run_system(dut, "killall dpp-nfc.py");
@@ -1464,15 +1638,46 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		}
 
 		if (pid == 0) {
-			char * argv[] = { "dpp-nfc.py",
-					  "--only-one", "--no-input",
-					  "-i", (char *) ifname,
-					  "--ctrl", sigma_wpas_ctrl,
-					  enrollee ? "--enrollee" :
-					  "--configurator",
-					  "--config-params", buf,
-					  init ? "-I" : NULL,
-					  NULL };
+			char *argv[100];
+			int pos = 0;
+
+			argv[pos++] = "dpp-nfc.py";
+			argv[pos++] = "--only-one";
+			argv[pos++] = "--no-input";
+			argv[pos++] = "-i";
+			argv[pos++] = (char *) ifname;
+			argv[pos++] = "--ctrl";
+			argv[pos++] = sigma_wpas_ctrl;
+			argv[pos++] = enrollee ? "--enrollee" :
+				"--configurator";
+			argv[pos++] = "--config-params";
+			argv[pos++] = buf;
+			if (chan_list && strcmp(chan_list, "0/0") != 0) {
+				argv[pos++] = "--chan";
+				argv[pos++] = chan_list2;
+			}
+			if (alt_chan_list &&
+			    strcmp(alt_chan_list, "0/0") != 0) {
+				argv[pos++] = "--altchan";
+				argv[pos++] = alt_chan_list2;
+			}
+			if (init)
+				argv[pos++] = "-I";
+			if (netrole) {
+				argv[pos++] = "--netrole";
+				argv[pos++] = (char *) netrole;
+			}
+			if (tag_read || tag_write_hs || tag_write_uri)
+				argv[pos++] = "--no-wait";
+			if (!tag_read && !tag_write_hs && !tag_write_uri)
+				argv[pos++] = "--handover-only";
+			if (tag_read)
+				argv[pos++] = "--tag-read-only";
+			else if (tag_write_hs)
+				argv[pos++] = "write-nfc-hs";
+			else if (tag_write_uri)
+				argv[pos++] = "write-nfc-uri";
+			argv[pos] = NULL;
 
 			execv("./dpp-nfc.py", argv);
 			perror("execv");
@@ -1483,8 +1688,16 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		usleep(300000);
 		for (;;) {
 			if (waitpid(pid, &pid_status, WNOHANG) > 0) {
+				int status = WEXITSTATUS(pid_status);
+
 				sigma_dut_print(dut, DUT_MSG_DEBUG,
-						"dpp-nfc.py exited");
+						"dpp-nfc.py exited (status %d)",
+						status);
+				if (status == 1) {
+					send_resp(dut, conn, SIGMA_ERROR,
+						  "errorCode,dpp-nfc.py operation failed");
+					goto out;
+				}
 				break;
 			}
 
@@ -1640,13 +1853,13 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					goto out;
 				}
 				snprintf(buf, sizeof(buf),
-					 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+					 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 					 conf_role, conf_ssid, conf_pass,
 					 dut->dpp_conf_id, group_id,
 					 akm_use_selector ?
 					 " akm_use_selector=1" : "",
 					 conn_status ? " conn_status=1" : "",
-					 conf2);
+					 csrattrs, conf2);
 				if (wpa_command(ifname, buf) < 0) {
 					send_resp(dut, conn, SIGMA_ERROR,
 						  "errorCode,Failed to set configurator parameters");
@@ -1655,6 +1868,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			}
 
 			if (tcp && strcasecmp(tcp, "yes") == 0) {
+				wpa_command(ifname, "DPP_STOP_LISTEN");
 				snprintf(buf, sizeof(buf),
 					 "DPP_CONTROLLER_START");
 			} else {
@@ -1674,7 +1888,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s%s%s",
+				 "DPP_AUTH_INIT peer=%d%s role=%s%s%s conf=%s %s %s configurator=%d%s%s%s%s%s%s%s%s",
 				 dpp_peer_bootstrap, own_txt, role,
 				 netrole ? " netrole=" : "",
 				 netrole ? netrole : "",
@@ -1684,7 +1898,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				 conn_status ? " conn_status=1" : "",
 				 tcp ? " tcp_addr=" : "",
 				 tcp ? tcp : "",
-				 conf2);
+				 csrattrs, conf2);
 		} else if (tcp && (strcasecmp(bs, "QR") == 0 ||
 				   strcasecmp(bs, "NFC") == 0)) {
 			snprintf(buf, sizeof(buf),
@@ -1710,10 +1924,10 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "DPP_PKEX_ADD own=%d init=1 role=%s conf=%s %s %s configurator=%d %scode=%s",
+				 "DPP_PKEX_ADD own=%d init=1 role=%s conf=%s %s %s configurator=%d%s %scode=%s",
 				 own_pkex_id, role, conf_role,
 				 conf_ssid, conf_pass, dut->dpp_conf_id,
-				 pkex_identifier, pkex_code);
+				 csrattrs, pkex_identifier, pkex_code);
 		} else if (strcasecmp(bs, "PKEX") == 0) {
 			snprintf(buf, sizeof(buf),
 				 "DPP_PKEX_ADD own=%d init=1 role=%s %scode=%s",
@@ -1741,12 +1955,6 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		    dut->ap_oper_chn)
 			freq = channel_to_freq(dut, dut->ap_channel);
 
-		if (sigma_dut_is_ap(dut) && dpp_hostapd_beacon(dut) < 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to start AP mode listen");
-			goto out;
-		}
-
 		if (strcasecmp(bs, "PKEX") == 0) {
 			/* default: channel 6 for PKEX */
 			freq = 2437;
@@ -1765,6 +1973,22 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 					  "errorCode,Unsupported DPPListenChannel value");
 				goto out;
 			}
+
+			if (sigma_dut_is_ap(dut) && !chirp &&
+			    dut->ap_start_disabled &&
+			    atoi(val) != dut->ap_channel) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"Use requested listen channel as the initial operating channel");
+				snprintf(buf, sizeof(buf), "SET channel %d",
+					 atoi(val));
+				wpa_command(ifname, buf);
+			}
+		}
+
+		if (sigma_dut_is_ap(dut) && dpp_hostapd_beacon(dut) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to start AP mode listen");
+			goto out;
 		}
 
 		if (strcasecmp(bs, "NFC") == 0 && nfc_handover &&
@@ -1836,11 +2060,11 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				goto out;
 			}
 			snprintf(buf, sizeof(buf),
-				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s",
+				 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
 				 conf_role, conf_ssid, conf_pass,
 				 dut->dpp_conf_id, group_id,
 				 akm_use_selector ? " akm_use_selector=1" : "",
-				 conn_status ? " conn_status=1" : "",
+				 conn_status ? " conn_status=1" : "", csrattrs,
 				 conf2);
 			if (wpa_command(ifname, buf) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
@@ -1864,7 +2088,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 				 "DPP_CHIRP own=%d iter=10 listen=%d",
 				 dut->dpp_local_bootstrap, freq);
 		} else if (tcp && strcasecmp(tcp, "yes") == 0) {
-			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START");
+			snprintf(buf, sizeof(buf), "DPP_CONTROLLER_START%s",
+				 (strcasecmp(bs, "QR") == 0 && mutual) ?
+				 " qr=mutual" : "");
 		} else {
 			snprintf(buf, sizeof(buf),
 				 "DPP_LISTEN %d role=%s%s%s%s",
@@ -2187,6 +2413,9 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 	if (frametype && strcasecmp(frametype, "ConfigurationResponse") == 0) {
 		res = get_wpa_cli_events(dut, ctrl, conf_events,
 					 buf, sizeof(buf));
+		if (res >= 0 && strstr(buf, "DPP-MUD-URL "))
+			res = get_wpa_cli_events(dut, ctrl, conf_events,
+						 buf, sizeof(buf));
 		if (res < 0)
 			result = "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout";
 		else
@@ -2195,7 +2424,41 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
+	if (strcasecmp(prov_role, "Configurator") == 0 && csrattrs[0]) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CSR", buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,No CSR received from Enrollee");
+			res = STATUS_SENT_ERROR;
+			goto out;
+		}
+
+		if (dpp_process_csr(dut, ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to process CSR");
+			res = STATUS_SENT_ERROR;
+			goto out;
+		}
+	}
+
 	res = get_wpa_cli_events(dut, ctrl, conf_events, buf, sizeof(buf));
+	if (res >= 0 && strstr(buf, "DPP-MUD-URL ")) {
+		size_t url_len;
+
+		pos = strchr(buf, ' ');
+		if (!pos)
+			goto err;
+		pos++;
+		url_len = strlen(buf);
+		mud_url = malloc(9 + url_len);
+		if (!mud_url)
+			goto err;
+		memcpy(mud_url, ",MUDURL,", 8);
+		memcpy(mud_url + 8, pos, url_len + 1);
+
+		res = get_wpa_cli_events(dut, ctrl, conf_events,
+					 buf, sizeof(buf));
+	}
 	if (res < 0) {
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,OK,ConfResult,Timeout");
@@ -2225,8 +2488,8 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			} else {
 				pos += 7;
 				snprintf(buf, sizeof(buf),
-					 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,StatusResult,%d",
-					 atoi(pos));
+					 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,StatusResult,%d%s",
+					 atoi(pos), mud_url);
 				send_resp(dut, conn, SIGMA_COMPLETE, buf);
 			}
 		}
@@ -2293,6 +2556,7 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 			/* SAE generates PMKSA-CACHE-ADDED event */
 			not_dpp_akm = 1;
 		}
+		dut->dpp_network_id = netw_id;
 	wait_connect:
 		if (frametype && strcasecmp(frametype,
 					    "PeerDiscoveryRequest") == 0) {
@@ -2342,6 +2606,30 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		send_resp(dut, conn, SIGMA_COMPLETE,
 			  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkConnectResult,OK");
 		goto out;
+	} else if (!sigma_dut_is_ap(dut) &&
+		   strcasecmp(prov_role, "Enrollee") == 0) {
+		/* Store DPP network id for reconfiguration */
+		char *pos;
+		unsigned int old_timeout;
+
+		old_timeout = dut->default_timeout;
+		dut->default_timeout = 3;
+		res = get_wpa_cli_event(dut, ctrl, "DPP-NETWORK-ID",
+					buf, sizeof(buf));
+		dut->default_timeout = old_timeout;
+
+		if (res < 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO, "No DPP-NETWORK-ID");
+		} else {
+			pos = strchr(buf, ' ');
+			if (!pos) {
+				sigma_dut_print(dut, DUT_MSG_INFO,
+						"Invalid DPP-NETWORK-ID");
+			} else {
+				pos++;
+				dut->dpp_network_id = atoi(pos);
+			}
+		}
 	}
 
 	if (strcasecmp(wait_conn, "Yes") == 0 &&
@@ -2354,9 +2642,12 @@ static enum sigma_cmd_result dpp_automatic_dpp(struct sigma_dut *dut,
 		goto out;
 	}
 
-	send_resp(dut, conn, SIGMA_COMPLETE,
-		  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK");
+	snprintf(buf, sizeof(buf),
+		 "BootstrapResult,OK,AuthResult,OK,ConfResult,OK%s", mud_url);
+	send_resp(dut, conn, SIGMA_COMPLETE, buf);
 out:
+	if (mud_url != no_mud_url)
+		free(mud_url);
 	wpa_ctrl_detach(ctrl);
 	wpa_ctrl_close(ctrl);
 	if (tcp && strcasecmp(tcp, "yes") == 0 &&
@@ -2382,12 +2673,6 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 	unsigned int old_timeout;
 	const char *bs = get_param(cmd, "DPPBS");
 
-	if (!auth_role) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Missing DPPAuthRole");
-		return STATUS_SENT_ERROR;
-	}
-
 	if (!self_conf)
 		self_conf = "no";
 
@@ -2407,6 +2692,12 @@ static enum sigma_cmd_result dpp_manual_dpp(struct sigma_dut *dut,
 	res = dpp_get_local_bootstrap(dut, conn, cmd, 0, &success);
 	if (res != STATUS_SENT || !success)
 		goto out;
+
+	if (!auth_role) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPAuthRole");
+		return STATUS_SENT_ERROR;
+	}
 
 	if (strcasecmp(auth_role, "Responder") == 0) {
 		if (dpp_display_own_qrcode(dut) < 0) {
@@ -2442,6 +2733,508 @@ out:
 }
 
 
+static enum sigma_cmd_result
+dpp_reconfigure_configurator(struct sigma_dut *dut, struct sigma_conn *conn,
+			     struct sigma_cmd *cmd)
+{
+	const char *val;
+	int freq;
+	struct wpa_ctrl *ctrl = NULL;
+	const char *ifname;
+	int conf_index;
+	const char *conf_role;
+	const char *group_id_str = NULL;
+	char *pos;
+	char buf[2000];
+	char buf2[200];
+	char conf_ssid[100];
+	char conf_pass[100];
+	char csrattrs[200];
+	char group_id[100];
+	char conf2[300];
+	FILE *f;
+	int enrollee_ap = 0;
+	int force_gas_fragm = 0;
+	int akm_use_selector = 0;
+	int conn_status;
+	int res;
+	const char *conf_events[] = {
+		"DPP-CONF-SENT",
+		"DPP-CONF-FAILED",
+		NULL
+	};
+
+	if (sigma_dut_is_ap(dut)) {
+		if (!dut->hostapd_ifname) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"hostapd ifname not specified (-j)");
+			return ERROR_SEND_STATUS;
+		}
+		ifname = dut->hostapd_ifname;
+	} else {
+		ifname = get_station_ifname(dut);
+	}
+
+	val = get_param(cmd, "DPPConfEnrolleeRole");
+	if (val)
+		enrollee_ap = strcasecmp(val, "AP") == 0;
+
+	val = get_param(cmd, "DPPStatusQuery");
+	conn_status = val && strcasecmp(val, "Yes") == 0;
+
+	conf_ssid[0] = '\0';
+	conf_pass[0] = '\0';
+	csrattrs[0] = '\0';
+	group_id[0] = '\0';
+	conf2[0] = '\0';
+
+	val = get_param(cmd, "DPPConfIndex");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"DPPConfIndex not specified for Configurator");
+		return ERROR_SEND_STATUS;
+	}
+	conf_index = atoi(val);
+
+	switch (conf_index) {
+	case 1:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			conf_role = "ap-dpp";
+		} else {
+			conf_role = "sta-dpp";
+		}
+		group_id_str = "DPPGROUP_DPP_INFRA";
+		break;
+	case 2:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		snprintf(conf_pass, sizeof(conf_pass),
+			 "psk=10506e102ad1e7f95112f6b127675bb8344dacacea60403f3fa4055aec85b0fc");
+		if (enrollee_ap)
+			conf_role = "ap-psk";
+		else
+			conf_role = "sta-psk";
+		break;
+	case 3:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		ascii2hexstr("ThisIsDppPassphrase", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
+		if (enrollee_ap)
+			conf_role = "ap-psk";
+		else
+			conf_role = "sta-psk";
+		break;
+	case 4:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			conf_role = "ap-dpp";
+		} else {
+			conf_role = "sta-dpp";
+		}
+		group_id_str = "DPPGROUP_DPP_INFRA2";
+		break;
+	case 5:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		ascii2hexstr("ThisIsDppPassphrase", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
+		if (enrollee_ap)
+			conf_role = "ap-sae";
+		else
+			conf_role = "sta-sae";
+		break;
+	case 6:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		ascii2hexstr("ThisIsDppPassphrase", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
+		if (enrollee_ap)
+			conf_role = "ap-psk-sae";
+		else
+			conf_role = "sta-psk-sae";
+		break;
+	case 7:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			conf_role = "ap-dpp";
+		} else {
+			conf_role = "sta-dpp";
+		}
+		group_id_str = "DPPGROUP_DPP_INFRA";
+		force_gas_fragm = 1;
+		break;
+	case 8:
+	case 9:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		ascii2hexstr("This_is_legacy_password", buf);
+		res = snprintf(conf_pass, sizeof(conf_pass), "pass=%s", buf);
+		if (res < 0 || res >= sizeof(conf_pass))
+			goto err;
+		if (enrollee_ap) {
+			conf_role = "ap-dpp+psk+sae";
+		} else {
+			conf_role = "sta-dpp+psk+sae";
+		}
+		group_id_str = "DPPGROUP_DPP_INFRA1";
+		if (conf_index == 9)
+			akm_use_selector = 1;
+		break;
+	case 10:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap)
+			conf_role = "ap-dpp";
+		else
+			conf_role = "sta-dpp";
+		group_id_str = "DPPGROUP_DPP_INFRA1";
+		ascii2hexstr("DPPNET02", buf);
+		ascii2hexstr("This_is_legacy_password", buf2);
+		res = snprintf(conf2, sizeof(conf2),
+			       " @CONF-OBJ-SEP@ conf=%s-dpp+psk+sae ssid=%s pass=%s group_id=DPPGROUP_DPP_INFRA2",
+			       enrollee_ap ? "ap" : "sta", buf, buf2);
+		if (res < 0 || res >= sizeof(conf2))
+			goto err;
+		break;
+	case 11:
+		ascii2hexstr("DPPNET01", buf);
+		res = snprintf(conf_ssid, sizeof(conf_ssid), "ssid=%s", buf);
+		if (res < 0 || res >= sizeof(conf_ssid))
+			goto err;
+		if (enrollee_ap) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,dot1x AKM provisioning not supported for AP");
+			goto out;
+		}
+		conf_role = "sta-dot1x";
+		snprintf(buf, sizeof(buf), "%s/dpp-ca-csrattrs",
+			 sigma_cert_path);
+		f = fopen(buf, "r");
+		if (f) {
+			size_t len;
+			int r;
+
+			len = fread(buf, 1, sizeof(buf), f);
+			fclose(f);
+			if (len >= sizeof(buf)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+			buf[len] = '\0';
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use csrAttrs from file");
+			r = snprintf(csrattrs, sizeof(csrattrs),
+				     " csrattrs=%s", buf);
+			if (r <= 0 || r >= sizeof(csrattrs)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,No room for csrAttrs");
+				goto out;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Use default csrAttrs");
+			snprintf(csrattrs, sizeof(csrattrs), "%s",
+				 " csrattrs=MAsGCSqGSIb3DQEJBw==");
+		}
+		break;
+	default:
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Unsupported DPPConfIndex");
+		goto out;
+	}
+
+	if (group_id_str)
+		snprintf(group_id, sizeof(group_id), " group_id=%s",
+			 group_id_str);
+
+	if (force_gas_fragm) {
+		char spaces[1500];
+
+		memset(spaces, ' ', sizeof(spaces));
+		spaces[sizeof(spaces) - 1] = '\0';
+
+		snprintf(buf, sizeof(buf),
+			 "SET dpp_discovery_override {\"ssid\":\"DPPNET01\"}%s",
+			 spaces);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to set discovery override");
+			goto out;
+		}
+	}
+
+	snprintf(buf, sizeof(buf),
+		 "SET dpp_configurator_params  conf=%s %s %s configurator=%d%s%s%s%s%s",
+		 conf_role, conf_ssid, conf_pass,
+		 dut->dpp_conf_id, group_id,
+		 akm_use_selector ? " akm_use_selector=1" : "",
+		 conn_status ? " conn_status=1" : "", csrattrs,
+		 conf2);
+	if (wpa_command(ifname, buf) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to set configurator parameters");
+		goto out;
+	}
+
+	ctrl = open_wpa_mon(ifname);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return ERROR_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "DPPListenChannel");
+	if (val) {
+		freq = channel_to_freq(dut, atoi(val));
+		if (freq == 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Unsupported DPPListenChannel value");
+			goto out;
+		}
+		snprintf(buf, sizeof(buf),
+			 "DPP_LISTEN %d role=configurator", freq);
+		if (wpa_command(ifname, buf) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not start listen state");
+			goto out;
+		}
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-CONF-REQ-RX",
+				buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,Timeout");
+		goto out;
+	}
+
+	res = get_wpa_cli_events(dut, ctrl, conf_events, buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,OK,ConfResult,Timeout");
+		goto out;
+	}
+	if (!strstr(buf, "DPP-CONF-SENT")) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,OK,ConfResult,FAILED");
+		goto out;
+	}
+
+	if (conn_status && strstr(buf, "wait_conn_status=1")) {
+		res = get_wpa_cli_event(dut, ctrl, "DPP-CONN-STATUS-RESULT",
+					buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "ReconfigAuthResult,OK,ConfResult,OK,StatusResult,Timeout");
+		} else {
+			pos = strstr(buf, "result=");
+			if (!pos) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "errorCode,Status result value not reported");
+			} else {
+				pos += 7;
+				snprintf(buf, sizeof(buf),
+					 "ReconfigAuthResult,OK,ConfResult,OK,StatusResult,%d",
+					 atoi(pos));
+				send_resp(dut, conn, SIGMA_COMPLETE, buf);
+			}
+		}
+		goto out;
+	}
+
+	send_resp(dut, conn, SIGMA_COMPLETE,
+		  "ReconfigAuthResult,OK,ConfResult,OK");
+
+out:
+	if (ctrl) {
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+	}
+	return STATUS_SENT;
+err:
+	send_resp(dut, conn, SIGMA_ERROR, NULL);
+	goto out;
+}
+
+
+static enum sigma_cmd_result dpp_reconfigure(struct sigma_dut *dut,
+					     struct sigma_conn *conn,
+					     struct sigma_cmd *cmd)
+{
+	const char *wait_conn;
+	char buf[200];
+	char *pos;
+	const char *ifname;
+	struct wpa_ctrl *ctrl;
+	const char *conf_events[] = {
+		"DPP-CONF-RECEIVED",
+		"DPP-CONF-FAILED",
+		NULL
+	};
+	const char *conn_events[] = {
+		"PMKSA-CACHE-ADDED",
+		"CTRL-EVENT-CONNECTED",
+		NULL
+	};
+	int res;
+
+	if (get_param(cmd, "DPPConfIndex"))
+		return dpp_reconfigure_configurator(dut, conn, cmd);
+
+	/* Enrollee reconfiguration steps */
+	ifname = get_station_ifname(dut);
+	wait_conn = get_param(cmd, "DPPWaitForConnect");
+	if (!wait_conn)
+		wait_conn = "no";
+
+	ctrl = open_wpa_mon(ifname);
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return ERROR_SEND_STATUS;
+	}
+
+	snprintf(buf, sizeof(buf), "DPP_RECONFIG %d iter=10",
+		 dut->dpp_network_id);
+	if (wpa_command(ifname, buf) < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to start reconfiguration");
+		goto out;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "GAS-QUERY-START",
+				buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,Timeout");
+		goto out;
+	}
+
+	res = get_wpa_cli_events(dut, ctrl, conf_events, buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,OK,ConfResult,Timeout");
+		goto out;
+	}
+	if (!strstr(buf, "DPP-CONF-RECEIVED")) {
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,OK,ConfResult,FAILED");
+		goto out;
+	}
+
+	res = get_wpa_cli_event(dut, ctrl, "DPP-NETWORK-ID", buf, sizeof(buf));
+	if (res < 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,No DPP-NETWORK-ID");
+		goto out;
+	}
+	pos = strchr(buf, ' ');
+	if (!pos) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Invalid DPP-NETWORK-ID");
+		goto out;
+	}
+	pos++;
+	dut->dpp_network_id = atoi(pos);
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"Network ID for the reconfigured network: %d",
+			dut->dpp_network_id);
+
+	if (strcasecmp(wait_conn, "Yes") == 0) {
+		int not_dpp_akm = 0;
+
+		snprintf(buf, sizeof(buf), "GET_NETWORK %d key_mgmt",
+			 dut->dpp_network_id);
+		if (wpa_command_resp(ifname, buf, buf, sizeof(buf)) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Could not fetch provisioned key_mgmt");
+			goto out;
+		}
+		if (strncmp(buf, "SAE", 3) == 0) {
+			/* SAE generates PMKSA-CACHE-ADDED event */
+			not_dpp_akm = 1;
+		}
+
+		res = get_wpa_cli_events(dut, ctrl, conn_events,
+					 buf, sizeof(buf));
+		if (res < 0) {
+			send_resp(dut, conn, SIGMA_COMPLETE,
+				  "BootstrapResult,OK,AuthResult,OK,ConfResult,OK,NetworkIntroResult,Timeout,NetworkConnectResult,Timeout");
+			goto out;
+		}
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP connect result: %s",
+				buf);
+
+		if (strstr(buf, "PMKSA-CACHE-ADDED")) {
+			res = get_wpa_cli_events(dut, ctrl, conn_events,
+						 buf, sizeof(buf));
+			if (res < 0) {
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkConnectResult,Timeout" :
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,Timeout");
+				goto out;
+			}
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"DPP connect result: %s", buf);
+			if (strstr(buf, "CTRL-EVENT-CONNECTED"))
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkConnectResult,OK" :
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,OK");
+			else
+				send_resp(dut, conn, SIGMA_COMPLETE,
+					  not_dpp_akm ?
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkConnectResult,Timeout" :
+					  "ReconfigAuthResult,OK,ConfResult,OK,NetworkIntroResult,OK,NetworkConnectResult,Timeout");
+			goto out;
+		}
+
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "ReconfigAuthResult,OK,ConfResult,OK,NetworkConnectResult,OK");
+		goto out;
+	}
+
+	send_resp(dut, conn, SIGMA_COMPLETE,
+		  "ReconfigAuthResult,OK,ConfResult,OK");
+
+out:
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+	return STATUS_SENT;
+}
+
+
 enum sigma_cmd_result dpp_dev_exec_action(struct sigma_dut *dut,
 					  struct sigma_conn *conn,
 					  struct sigma_cmd *cmd)
@@ -2449,15 +3242,18 @@ enum sigma_cmd_result dpp_dev_exec_action(struct sigma_dut *dut,
 	const char *type = get_param(cmd, "DPPActionType");
 	const char *bs = get_param(cmd, "DPPBS");
 
-	if (!bs) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Missing DPPBS");
-		return STATUS_SENT_ERROR;
-	}
-
 	if (!type) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Missing DPPActionType");
+		return STATUS_SENT_ERROR;
+	}
+
+	if (strcasecmp(type, "DPPReconfigure") == 0)
+		return dpp_reconfigure(dut, conn, cmd);
+
+	if (!bs) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Missing DPPBS");
 		return STATUS_SENT_ERROR;
 	}
 
