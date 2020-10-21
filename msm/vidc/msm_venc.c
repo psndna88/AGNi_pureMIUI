@@ -522,7 +522,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.minimum = EXTRADATA_NONE,
 		.maximum = EXTRADATA_ADVANCED | EXTRADATA_ENC_INPUT_ROI |
 			EXTRADATA_ENC_INPUT_HDR10PLUS |
-			EXTRADATA_ENC_INPUT_CVP,
+			EXTRADATA_ENC_INPUT_CVP | EXTRADATA_ENC_FRAME_QP,
 		.default_value = EXTRADATA_NONE,
 		.menu_skip_mask = 0,
 		.qmenu = NULL,
@@ -1782,7 +1782,8 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				msm_vidc_calculate_enc_input_extra_size(inst);
 		}
 
-		if (inst->prop.extradata_ctrls & EXTRADATA_ADVANCED) {
+		if ((inst->prop.extradata_ctrls & EXTRADATA_ADVANCED) ||
+		(inst->prop.extradata_ctrls & EXTRADATA_ENC_FRAME_QP)) {
 			f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
 			f->fmt.pix_mp.num_planes = 2;
 			f->fmt.pix_mp.plane_fmt[1].sizeimage =
@@ -4603,6 +4604,11 @@ int msm_venc_set_extradata(struct msm_vidc_inst *inst)
 		// Enable Advanced Extradata - LTR Info
 		msm_comm_set_extradata(inst,
 			HFI_PROPERTY_PARAM_VENC_LTR_INFO, 0x1);
+
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_FRAME_QP)
+		// Enable AvgQP Extradata
+		msm_comm_set_extradata(inst,
+			HFI_PROPERTY_PARAM_VENC_FRAME_QP_EXTRADATA, 0x1);
 
 	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_ROI)
 		// Enable ROIQP Extradata
