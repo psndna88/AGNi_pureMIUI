@@ -1349,10 +1349,16 @@ static bool cam_icp_check_clk_update(struct cam_icp_hw_mgr *hw_mgr,
 	if (!clk_info->frame_cycles)
 		return cam_icp_default_clk_update(hw_mgr_clk_info);
 
-	/* Calculate base clk rate */
-	base_clk = cam_icp_mgr_calc_base_clk(
-		clk_info->frame_cycles, clk_info->budget_ns);
 	ctx_data->clk_info.rt_flag = clk_info->rt_flag;
+
+	/* Override base clock to max or calculate base clk rate */
+	if (!ctx_data->clk_info.rt_flag &&
+		(ctx_data->icp_dev_acquire_info->dev_type !=
+		CAM_ICP_RES_TYPE_BPS))
+		base_clk = ctx_data->clk_info.clk_rate[CAM_MAX_VOTE-1];
+	else
+		base_clk = cam_icp_mgr_calc_base_clk(clk_info->frame_cycles,
+				clk_info->budget_ns);
 
 	if (busy)
 		rc = cam_icp_update_clk_busy(hw_mgr, ctx_data,
