@@ -1334,7 +1334,7 @@ static int tdm_get_sample_rate(int value)
 		sample_rate = SAMPLING_RATE_352P8KHZ;
 		break;
 	case 6:
-		sample_rate = SAMPLING_RATE_44P1KHZ:
+		sample_rate = SAMPLING_RATE_44P1KHZ;
 		break;
 	case 7:
 		sample_rate = SAMPLING_RATE_96KHZ;
