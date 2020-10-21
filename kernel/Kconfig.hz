@@ -4,7 +4,7 @@
 
 choice
 	prompt "Timer frequency"
-	default HZ_250
+	default HZ_100
 	help
 	 Allows the configuration of the timer frequency. It is customary
 	 to have the timer interrupt run at 1000 Hz but 100 Hz may be more
@@ -15,6 +15,13 @@ choice
 	 environment leading to NR_CPUS * HZ number of timer interrupts
 	 per second.
 
+
+	config HZ_80
+		bool "80 HZ"
+	help
+	  80 Hz is a decent choice for SMP and NUMA systems
+	  with lots of processors that may show reduced performance if
+	  too many timer interrupts are occurring.
 
 	config HZ_100
 		bool "100 HZ"
@@ -49,6 +56,7 @@ endchoice
 
 config HZ
 	int
+    default 80 if HZ_80
 	default 100 if HZ_100
 	default 250 if HZ_250
 	default 300 if HZ_300
