@@ -568,15 +568,15 @@ static int msm_geni_ir_change_protocol(struct rc_dev *dev, u64 *rc_type)
 	if (*rc_type & RC_PROTO_BIT_RC6_0) {
 		pr_debug("Loading RC6\n");
 		image = &rc6_geni_image;
-		*rc_type = RC_PROTO_RC6_0;
+		*rc_type = RC_PROTO_BIT_RC6_0;
 	} else if (*rc_type & RC_PROTO_BIT_RC5) {
 		pr_debug("Loading RC5\n");
 		image = &rc5_geni_image;
-		*rc_type = RC_PROTO_RC5;
+		*rc_type = RC_PROTO_BIT_RC5;
 	} else if (*rc_type & RC_PROTO_BIT_NEC) {
 		pr_debug("Loading NEC\n");
 		image = &nec_geni_image;
-		*rc_type = RC_PROTO_NEC;
+		*rc_type = RC_PROTO_BIT_NEC;
 #ifdef CONFIG_IR_MSM_GENI_FW_INJECT
 	} else if (*rc_type & RC_PROTO_BIT_OTHER) {
 		pr_debug("Loading OTHER\n");
@@ -593,7 +593,7 @@ static int msm_geni_ir_change_protocol(struct rc_dev *dev, u64 *rc_type)
 	} else if (*rc_type & RC_PROTO_BIT_UNKNOWN) {
 		pr_debug("Unknown proto\n");
 		image = NULL;
-		*rc_type = RC_PROTO_UNKNOWN;
+		*rc_type = RC_PROTO_BIT_UNKNOWN;
 	} else {
 		pr_debug("Invalid proto\n");
 		return -EINVAL;
@@ -1228,9 +1228,8 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 	}
 
 	rcdev->priv = ir;
-	rcdev->driver_type = RC_DRIVER_SCANCODE;
-	rcdev->allowed_protocols = RC_PROTO_RC5 | RC_PROTO_RC6_0 | RC_PROTO_NEC;
-	rcdev->enabled_protocols = RC_PROTO_RC5 | RC_PROTO_RC6_0 | RC_PROTO_NEC;
+	rcdev->allowed_protocols = RC_PROTO_BIT_RC5 | RC_PROTO_BIT_RC6_0 |
+							   RC_PROTO_BIT_NEC;
 	rcdev->driver_name = MSM_GENI_IR_DRIVER_NAME;
 	rcdev->device_name = MSM_GENI_IR_RX_DEVICE_NAME;
 	rcdev->change_protocol = msm_geni_ir_change_protocol;
