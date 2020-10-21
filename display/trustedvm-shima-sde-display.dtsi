@@ -27,7 +27,7 @@
 			"shadow_byte_clk1", "shadow_pixel_clk1";
 
 	qcom,panel-te-source = <0>;
-	qcom,dsi-default-panel = <&dsi_r66451_amoled_60hz_cmd>;
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_cmd>;
 };
 
 &mdss_mdp {
