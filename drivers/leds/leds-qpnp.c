@@ -255,6 +255,7 @@
 #define KPDBL_MASTER_BIT_INDEX		0
 
 extern bool miuirom;
+extern bool altledmode;
 /**
  * enum qpnp_leds - QPNP supported led ids
  * @QPNP_ID_WLED - White led backlight
@@ -3629,30 +3630,20 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 		}
 
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		if (miuirom) {
+		if ((miuirom) || (!altledmode)) {
 			prop = of_find_property(node, "qcom,duty-pcts-pie",
 				&pwm_cfg->duty_cycles->num_duty_pcts);
 		} else {
-			if (get_android_version() <= 9) {
-				prop = of_find_property(node, "qcom,duty-pcts-pie",
-					&pwm_cfg->duty_cycles->num_duty_pcts);
-			} else {
-				prop = of_find_property(node, "qcom,duty-pcts",
-					&pwm_cfg->duty_cycles->num_duty_pcts);
-			}
+			prop = of_find_property(node, "qcom,duty-pcts",
+				&pwm_cfg->duty_cycles->num_duty_pcts);
 		}
 #elif defined(CONFIG_KERNEL_CUSTOM_F7A)
-		if (miuirom) {
+		if ((miuirom) || (!altledmode)) {
 			prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
 				&pwm_cfg->duty_cycles->num_duty_pcts);
 		} else {
-			if (get_android_version() <= 9) {
-				prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
-					&pwm_cfg->duty_cycles->num_duty_pcts);
-			} else {
-				prop = of_find_property(node, "qcom,duty-pcts",
-					&pwm_cfg->duty_cycles->num_duty_pcts);
-			}
+			prop = of_find_property(node, "qcom,duty-pcts",
+				&pwm_cfg->duty_cycles->num_duty_pcts);
 		}
 #endif
 		if (!prop) {
@@ -3737,18 +3728,14 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 
 		pwm_cfg->lut_params.ramp_step_ms =
 				QPNP_LUT_RAMP_STEP_DEFAULT;
-		if (miuirom) {
+		if ((miuirom) || (!altledmode)) {
 			pwm_cfg->lut_params.ramp_step_ms = 128;
 		} else {
-			if (get_android_version() <= 9) {
-				pwm_cfg->lut_params.ramp_step_ms = 128;
-			} else {
-				rc = of_property_read_u32(node, "qcom,ramp-step-ms", &val);
-				if (!rc)
-					pwm_cfg->lut_params.ramp_step_ms = val;
-				else if (rc != -EINVAL)
-					goto bad_lpg_params;
-			}
+			rc = of_property_read_u32(node, "qcom,ramp-step-ms", &val);
+			if (!rc)
+				pwm_cfg->lut_params.ramp_step_ms = val;
+			else if (rc != -EINVAL)
+				goto bad_lpg_params;
 		}
 
 		pwm_cfg->lut_params.flags = QPNP_LED_PWM_FLAGS;
