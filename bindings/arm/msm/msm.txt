@@ -83,6 +83,9 @@ SoCs:
 - SDXLEMUR
   compatible = "qcom,sdxlemur"
 
+- SCUBA
+  compatible = "qcom,scuba-iot"
+
 - SDMMAGPIE
   compatible = "qcom,sdmmagpie"
 
@@ -235,6 +238,7 @@ compatible = "qcom,sdxprairie-cdp"
 compatible = "qcom,sdxlemur-rumi"
 compatible = "qcom,sdxlemur-mtp"
 compatible = "qcom,sdxlemur-cdp"
+compatible = "qcom,sdxlemur-rcm"
 compatible = "qcom,sdmmagpie-rumi"
 compatible = "qcom,sdmmagpie-idp"
 compatible = "qcom,sdmmagpie-qrd"
@@ -243,3 +247,4 @@ compatible = "qcom,holi-mtp"
 compatible = "qcom,holi-cdp"
 compatible = "qcom,holi-qrd"
 compatible = "qcom,holi-atp"
+compatible = "qcom,scuba-idp"

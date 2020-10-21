@@ -448,7 +448,7 @@
 	};
 
 	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7 mem_offline.bypass_send_msg=1";
+		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7 mem_offline.bypass_send_msg=1 kpti=off";
 	};
 };
 
@@ -1786,6 +1786,18 @@
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_adsp>;
 			};
+
+			qcom,msm_cdsprm_rpmsg {
+				compatible = "qcom,msm-cdsprm-rpmsg";
+				qcom,glink-channels = "cdsprmglink-apps-dsp";
+				qcom,intents = <0x20 12>;
+
+				msm_cdsp_rm: qcom,msm_cdsp_rm {
+					compatible = "qcom,msm-cdsp-rm";
+					qcom,qos-latency-us = <70>;
+					qcom,qos-maxhold-ms = <20>;
+				};
+			};
 		};
 	};
 
@@ -2170,12 +2182,18 @@
 		mmc-hs400-1_8v;
 		mmc-hs400-enhanced-strobe;
 
+		cap-mmc-hw-reset;
+
 		bus-width = <8>;
 		non-removable;
 		supports-cqe;
 
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
+		/* Add dt entry for gcc hw reset */
+		resets = <&gcc GCC_SDCC1_BCR>;
+		reset-names = "core_reset";
 
 		status = "disabled";
 
@@ -2556,7 +2574,7 @@
 		vdd-1.3-rfa-supply = <&L2E>;
 		vdd-3.3-ch1-supply = <&L11E>;
 		vdd-3.3-ch0-supply = <&L10E>;
-		qcom,vdd-cx-mx-config = <0 0>;
+		qcom,vdd-cx-mx-config = <640000 640000>;
 		qcom,vdd-3.3-ch1-config = <3000000 3312000>;
 		qcom,vdd-3.3-ch0-config = <3000000 3312000>;
 		qcom,smp2p_map_wlan_1_in {
@@ -2718,6 +2736,21 @@
 		feat_conf9: feat_conf9@6028 {
 			reg = <0x6028 0x4>;
 		};
+	};
+
+	qfprom_sys: qfprom@0 {
+		compatible = "qcom,qfprom-sys";
+
+		nvmem-cells = <&gpu_speed_bin>,
+			      <&adsp_variant>,
+			      <&feat_conf8>,
+			      <&gpu_gaming_bin>,
+			      <&feat_conf9>;
+		nvmem-cell-names = "gpu_speed_bin",
+				   "adsp_variant",
+				   "feat_conf8",
+				   "gpu_gaming_bin",
+				   "feat_conf9";
 	};
 };
 

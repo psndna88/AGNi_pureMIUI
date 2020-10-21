@@ -47,6 +47,8 @@
 		synaptics,reset-on-state = <0>;
 		synaptics,reset-active-ms = <20>;
 
-		panel = <&dsi_sharp_qsync_fhd_video>;
+		panel = <&dsi_sharp_qsync_fhd_video
+			 &dsi_sharp_qsync_fhd_cmd
+			 &dsi_sharp_qsync_fhd_60hz_cmd>;
 	};
 };

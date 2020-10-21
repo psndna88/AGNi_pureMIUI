@@ -779,6 +779,7 @@
 
 	qcom-secure-buffer {
 		compatible = "qcom,secure-buffer";
+		qcom,vmid-cp-camera-preview-ro;
 	};
 
 	qcom-mem-buf {
@@ -929,10 +930,8 @@
 		reg = <0x100000 0x1f0000>;
 		reg-names = "cc_base";
 		vdd_cx-supply = <&VDD_CX_LEVEL>;
-		vdd_cx_ao-supply = <&VDD_CX_LEVEL_AO>;
-		clocks = <&rpmhcc RPMH_CXO_CLK>, <&rpmhcc RPMH_CXO_CLK_A>,
-			<&sleep_clk>;
-		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk";
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&sleep_clk>;
+		clock-names = "bi_tcxo", "sleep_clk";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -1461,6 +1460,18 @@
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_adsp>;
 			};
+
+			qcom,msm_cdsprm_rpmsg {
+				compatible = "qcom,msm-cdsprm-rpmsg";
+				qcom,glink-channels = "cdsprmglink-apps-dsp";
+				qcom,intents = <0x20 12>;
+
+				msm_cdsp_rm: qcom,msm_cdsp_rm {
+					compatible = "qcom,msm-cdsp-rm";
+					qcom,qos-latency-us = <70>;
+					qcom,qos-maxhold-ms = <20>;
+				};
+			};
 		};
 	};
 
@@ -1711,7 +1722,7 @@
 		reset-names = "rst";
 
 		iommus = <&apps_smmu 0x80 0x0>;
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 
 		rpm-level = <3>;
@@ -1792,12 +1803,18 @@
 		mmc-hs400-1_8v;
 		mmc-hs400-enhanced-strobe;
 
+		cap-mmc-hw-reset;
+
 		bus-width = <8>;
 		non-removable;
 		supports-cqe;
 
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
+		/* Add dt entry for gcc hw reset */
+		resets = <&gcc GCC_SDCC1_BCR>;
+		reset-names = "core_reset";
 
 		status = "disabled";
 
@@ -2551,7 +2568,6 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691200 MHZ_TO_MBPS(  300, 4) >,
 					<  940800 MHZ_TO_MBPS(  451, 4) >,
 					< 1171200 MHZ_TO_MBPS(  547, 4) >,
 					< 1516800 MHZ_TO_MBPS(  768, 4) >,
@@ -2561,7 +2577,6 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691200 MHZ_TO_MBPS(  300, 4) >,
 					<  940800 MHZ_TO_MBPS(  451, 4) >,
 					< 1171200 MHZ_TO_MBPS(  547, 4) >,
 					< 1516800 MHZ_TO_MBPS(  768, 4) >,
@@ -2596,7 +2611,7 @@
 
 		cpu4_llcc_ddr_latmon: qcom,cpu4-llcc-ddr-latmon {
 			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU4 &CPU5 &CPU6>;
+			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,target-dev = <&cpu4_llcc_ddr_lat>;
 			qcom,cachemiss-ev = <0x1000>;
 			ddr4-map {
@@ -2620,26 +2635,6 @@
 					< 1900800 MHZ_TO_MBPS(1708, 4) >,
 					< 2361600 MHZ_TO_MBPS(2092, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
-			};
-		};
-
-		cpu7_llcc_ddr_latmon: qcom,cpu7-llcc-ddr-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU7>;
-			qcom,target-dev = <&cpu4_llcc_ddr_lat>;
-			qcom,cachemiss-ev = <0x1000>;
-			ddr4-map {
-				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
-				qcom,core-dev-table =
-					<  2361600 MHZ_TO_MBPS( 300, 4) >,
-					<  2707200 MHZ_TO_MBPS(2133, 4) >;
-			};
-
-			ddr5-map {
-				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
-				qcom,core-dev-table =
-					<  2361600 MHZ_TO_MBPS( 300, 4) >,
-					<  2707200 MHZ_TO_MBPS(3196, 4) >;
 			};
 		};
 
@@ -2688,14 +2683,14 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					< 2361600 MHZ_TO_MBPS( 300, 4) >,
+					< 2361600 MHZ_TO_MBPS( 451, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
 			};
 
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					< 2361600 MHZ_TO_MBPS( 300, 4) >,
+					< 2361600 MHZ_TO_MBPS( 451, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
 			};
 		};
@@ -3472,11 +3467,27 @@
 		};
 	};
 
+	qfprom_sys: qfprom@0 {
+		compatible = "qcom,qfprom-sys";
+
+		nvmem-cells = <&gpu_speed_bin>,
+			      <&gpu_gaming_bin>,
+			      <&adsp_variant>,
+			      <&feat_conf_m7>,
+			      <&feat_conf_qc_spare_20_lsb>;
+		nvmem-cell-names = "gpu_speed_bin",
+				   "gpu_gaming_bin",
+				   "adsp_variant",
+				   "feat_conf_m7",
+				   "feat_conf_qc_spare_20_lsb";
+	};
+
 	wlan: qcom,cnss-qca6490@b0000000 {
 		compatible = "qcom,cnss-qca6490";
 		reg = <0xb0000000 0x10000>;
 		reg-names = "smmu_iova_ipa";
 		wlan-en-gpio = <&tlmm 64 0>;
+		qcom,bt-en-gpio = <&tlmm 65 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;
 		pinctrl-1 = <&cnss_wlan_en_sleep>;
@@ -3653,6 +3664,7 @@
 		pinctrl-0 = <&bt_en_sleep>;
 		qcom,bt-reset-gpio = <&tlmm 65 0>; /* BT_EN */
 		qcom,bt-sw-ctrl-gpio = <&tlmm 91 0>; /* SW_CTRL */
+		qcom,wl-reset-gpio = <&tlmm 64 0>; /* WL_EN */
 
 		qcom,bt-vdd-io-supply = <&S10B>;
 		qcom,bt-vdd-aon-supply = <&S2C>;
@@ -3720,11 +3732,14 @@
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
 		qcom,ipa-uc-holb-monitor;
+		qcom,gsi_wdi_db_polling;
 		qcom,ipa-holb-monitor-poll-period = <5>;
 		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
+		/* Entry will be removed once shadow stack changes checked-in */
+		qcom,ipa-wan-aggr-pkt-cnt = <2>;
 		qcom,ipa-gpi-event-rp-ddr;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
