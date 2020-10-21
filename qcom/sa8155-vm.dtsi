@@ -192,8 +192,8 @@
 		vdd-wlan-rfa3-supply = <&pm8150_2_l15>;
 
 		wlan_vregs = "vdd-wlan-ctrl1", "vdd-wlan-ctrl2";
-		qcom,vdd-wlan-ctrl1-info = <0 0 0 0>;
-		qcom,vdd-wlan-ctrl2-info = <0 0 0 0>;
+		qcom,vdd-wlan-ctrl1-config = <0 0 0 0>;
+		qcom,vdd-wlan-ctrl2-config = <0 0 0 0>;
 		wlan-en-gpio = <&tlmm 169 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;
@@ -220,10 +220,10 @@
 			supported-ids = <0x1101>;
 			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
 				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-info = <1055000 1055000 0 0>;
-			qcom,vdd-wlan-rfa1-info = <1350000 1350000 0 0>;
-			qcom,vdd-wlan-rfa2-info = <2040000 2040000 0 0>;
-			qcom,vdd-wlan-rfa3-info = <1900000 1900000 0 0>;
+			qcom,vdd-wlan-aon-config = <1055000 1055000 0 0 1>;
+			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 1>;
+			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
+			qcom,vdd-wlan-rfa3-config = <1900000 1900000 0 0 1>;
 
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
@@ -330,10 +330,10 @@
 			supported-ids = <0x1102>;
 			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
 				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-info = <1055000 1055000 0 0>;
-			qcom,vdd-wlan-rfa1-info = <1370000 1370000 0 0>;
-			qcom,vdd-wlan-rfa2-info = <2040000 2040000 0 0>;
-			qcom,vdd-wlan-rfa3-info = <1900000 1900000 0 0>;
+			qcom,vdd-wlan-aon-config = <1055000 1055000 0 0 1>;
+			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
+			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
+			qcom,vdd-wlan-rfa3-config = <1900000 1900000 0 0 1>;
 
 			qcom,wlan-ramdump-dynamic = <0x300000>;
 			mhi,max-channels = <30>;
