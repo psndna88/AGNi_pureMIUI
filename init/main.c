@@ -239,6 +239,24 @@ static int __init set_wiredbtnmode(char *val)
 	return 0;
 }
 __setup("wiredbtnaltmode=", set_wiredbtnmode);
+bool altledmode = false;
+static int __init set_ledmode(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	if (temp) {
+		altledmode = true;
+		pr_info("Kernel: alternate led mode = 1");
+	} else {
+		altledmode = false;
+		pr_info("Kernel: alternate led mode = 0 (miui type)");
+	}
+
+	return 0;
+}
+__setup("ledmode=", set_ledmode);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

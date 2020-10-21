@@ -2580,8 +2580,10 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 	wled->en_phase_stag = of_property_read_bool(pdev->dev.of_node,
 			"qcom,en-phase-stag");
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	/* if miui rom & android version <= 9, not enabled for ported miuiQ Roms */
-	if ((miuirom) && (get_android_version() <= 9)) {
+	/* if miui rom & android version > 9, not enabled for ported miuiQ Roms */
+	if ((miuirom) && (get_android_version() > 9)) {
+		wled->en_cabc = false;
+	} else if ((miuirom) && (get_android_version() <= 9)) {
 		wled->en_cabc = true;
 	} else {
 		wled->en_cabc = false;
