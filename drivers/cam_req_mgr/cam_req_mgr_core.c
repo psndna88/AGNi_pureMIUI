@@ -314,6 +314,10 @@ static int __cam_req_mgr_notify_error_on_link(
 	int rc = 0, pd;
 
 	session = (struct cam_req_mgr_core_session *)link->parent;
+	if (!session) {
+		CAM_WARN(CAM_CRM, "session ptr NULL %x", link->link_hdl);
+		return -EINVAL;
+	}
 
 	pd = dev->dev_info.p_delay;
 	if (pd >= CAM_PIPELINE_DELAY_MAX) {
@@ -1116,12 +1120,19 @@ static int __cam_req_mgr_check_sync_for_mslave(
 	int64_t req_id = 0, sync_req_id = 0;
 	int32_t sync_num_slots = 0;
 
-	if (!sync_link) {
-		CAM_ERR(CAM_CRM, "Sync link null");
+	if (!sync_link  || !link) {
+		CAM_ERR(CAM_CRM, "Sync link or link is null");
 		return -EINVAL;
 	}
 
 	req_id = slot->req_id;
+
+	if (!sync_link->req.in_q) {
+		CAM_ERR(CAM_CRM, "Link hdl %x in_q is NULL",
+			sync_link->link_hdl);
+		return -EINVAL;
+	}
+
 	sync_num_slots = sync_link->req.in_q->num_slots;
 	sync_rd_idx = sync_link->req.in_q->rd_idx;
 
@@ -1189,7 +1200,6 @@ static int __cam_req_mgr_check_sync_for_mslave(
 			(sync_link->initial_sync_req <= sync_req_id)) {
 			sync_slot_idx = __cam_req_mgr_find_slot_for_req(
 				sync_link->req.in_q, sync_req_id);
-
 			if (sync_slot_idx == -1) {
 				CAM_DBG(CAM_CRM,
 					"Prev Req: %lld [master] not found on link: %x [slave]",
@@ -1323,20 +1333,27 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 	uint64_t master_slave_diff = 0;
 	bool ready = true, sync_ready = true;
 
-	if (!sync_link) {
+	if (!sync_link || !link) {
 		CAM_ERR(CAM_CRM, "Sync link null");
 		return -EINVAL;
 	}
 
 	req_id = slot->req_id;
+
+	if (!sync_link->req.in_q) {
+		CAM_ERR(CAM_CRM, "Link hdl %x in_q is NULL",
+			sync_link->link_hdl);
+		return -EINVAL;
+	}
+
 	sync_num_slots = sync_link->req.in_q->num_slots;
-	sync_rd_idx = sync_link->req.in_q->rd_idx;
-	sync_rd_slot = &sync_link->req.in_q->slot[sync_rd_idx];
-	sync_req_id = sync_rd_slot->req_id;
+	sync_rd_idx    = sync_link->req.in_q->rd_idx;
+	sync_rd_slot   = &sync_link->req.in_q->slot[sync_rd_idx];
+	sync_req_id    = sync_rd_slot->req_id;
 
 	CAM_DBG(CAM_REQ,
-		"link_hdl %x req %lld frame_skip_flag %d ",
-		link->link_hdl, req_id, link->sync_link_sof_skip);
+		"link_hdl %x sync link_hdl %x req %lld",
+		link->link_hdl, sync_link->link_hdl, req_id);
 
 	if (sync_link->initial_skip) {
 		link->initial_skip = false;
@@ -1440,13 +1457,20 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 		ready = false;
 	}
 
-	rc = __cam_req_mgr_check_link_is_ready(sync_link, sync_slot_idx, true);
-	if (rc && (sync_link->req.in_q->slot[sync_slot_idx].status !=
-		CRM_SLOT_STATUS_REQ_APPLIED)) {
-		CAM_DBG(CAM_CRM,
-			"Req: %lld not ready on [other link] link: %x, rc=%d",
-			req_id, sync_link->link_hdl, rc);
-		sync_ready = false;
+	if (sync_link->req.in_q) {
+		rc = __cam_req_mgr_check_link_is_ready(sync_link,
+			sync_slot_idx, true);
+		if (rc && (sync_link->req.in_q->slot[sync_slot_idx].status !=
+				CRM_SLOT_STATUS_REQ_APPLIED)) {
+			CAM_DBG(CAM_CRM,
+				"Req: %lld not ready on link: %x, rc=%d",
+				req_id, sync_link->link_hdl, rc);
+			sync_ready = false;
+		}
+	} else {
+		CAM_ERR(CAM_CRM, "Link hdl %x in_q is NULL",
+			sync_link->link_hdl);
+		return -EINVAL;
 	}
 
 	/*
@@ -1512,7 +1536,6 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 			return -EAGAIN;
 		}
 	}
-
 	CAM_DBG(CAM_REQ,
 		"Req: %lld ready to apply on link: %x [validation successful]",
 		req_id, link->link_hdl);
@@ -1526,8 +1549,20 @@ static int __cam_req_mgr_check_multi_sync_link_ready(
 {
 	int i, rc = 0;
 
+	if (link->state == CAM_CRM_LINK_STATE_IDLE) {
+		CAM_ERR(CAM_CRM, "link hdl %x is in idle state",
+				link->link_hdl);
+		return -EINVAL;
+	}
+
 	for (i = 0; i < link->num_sync_links; i++) {
 		if (link->sync_link[i]) {
+			if (link->sync_link[i]->state ==
+				CAM_CRM_LINK_STATE_IDLE) {
+				CAM_ERR(CAM_CRM, "sync link hdl %x is idle",
+					link->sync_link[i]->link_hdl);
+				return -EINVAL;
+			}
 			if (link->max_delay == link->sync_link[i]->max_delay) {
 				rc = __cam_req_mgr_check_sync_req_is_ready(
 						link, link->sync_link[i], slot);
@@ -1558,6 +1593,9 @@ static int __cam_req_mgr_check_multi_sync_link_ready(
 					return rc;
 				}
 			}
+		} else {
+			CAM_ERR(CAM_REQ, "Sync link is null");
+			return -EINVAL;
 		}
 	}
 
@@ -1597,9 +1635,14 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 	struct cam_req_mgr_core_link        *tmp_link = NULL;
 	uint32_t                             max_retry = 0;
 
-	in_q = link->req.in_q;
 	session = (struct cam_req_mgr_core_session *)link->parent;
+	if (!session) {
+		CAM_WARN(CAM_CRM, "session ptr NULL %x", link->link_hdl);
+		return -EINVAL;
+	}
+
 	mutex_lock(&session->lock);
+	in_q = link->req.in_q;
 	/*
 	 * Check if new read index,
 	 * - if in pending  state, traverse again to complete
@@ -2016,6 +2059,10 @@ static int __cam_req_mgr_process_sof_freeze(void *priv, void *data)
 
 	link = (struct cam_req_mgr_core_link *)priv;
 	session = (struct cam_req_mgr_core_session *)link->parent;
+	if (!session) {
+		CAM_WARN(CAM_CRM, "session ptr NULL %x", link->link_hdl);
+		return -EINVAL;
+	}
 
 	spin_lock_bh(&link->link_state_spin_lock);
 	if ((link->watchdog) && (link->watchdog->pause_timer)) {
@@ -2278,6 +2325,7 @@ static void __cam_req_mgr_free_link(struct cam_req_mgr_core_link *link)
 	ptrdiff_t i;
 	kfree(link->req.in_q);
 	link->req.in_q = NULL;
+	link->parent = NULL;
 	i = link - g_links;
 	CAM_DBG(CAM_CRM, "free link index %d", i);
 	cam_req_mgr_core_link_reset(link);
@@ -2839,7 +2887,8 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 	spin_lock_bh(&link->link_state_spin_lock);
 
 	if (link->state < CAM_CRM_LINK_STATE_READY) {
-		CAM_WARN(CAM_CRM, "invalid link state:%d", link->state);
+		CAM_WARN(CAM_CRM, "invalid link state:%d for link 0x%x",
+			link->state, link->link_hdl);
 		spin_unlock_bh(&link->link_state_spin_lock);
 		rc = -EPERM;
 		goto release_lock;
@@ -3622,6 +3671,7 @@ int cam_req_mgr_destroy_session(
 		goto end;
 
 	}
+	mutex_lock(&cam_session->lock);
 	if (cam_session->num_links) {
 		CAM_DBG(CAM_CRM, "destroy session %x num_active_links %d",
 			ses_info->session_hdl,
@@ -3629,10 +3679,11 @@ int cam_req_mgr_destroy_session(
 
 		for (i = 0; i < MAXIMUM_LINKS_PER_SESSION; i++) {
 			link = cam_session->links[i];
-
 			if (!link)
 				continue;
 
+			CAM_DBG(CAM_CRM, "Unlink link hdl 0x%x",
+				link->link_hdl);
 			/* Ignore return value since session is going away */
 			link->is_shutdown = is_shutdown;
 			__cam_req_mgr_unlink(link);
@@ -3640,7 +3691,9 @@ int cam_req_mgr_destroy_session(
 		}
 	}
 	list_del(&cam_session->entry);
+	mutex_unlock(&cam_session->lock);
 	mutex_destroy(&cam_session->lock);
+
 	kfree(cam_session);
 
 	rc = cam_destroy_session_hdl(ses_info->session_hdl);
