@@ -773,6 +773,7 @@
 #include "shima-gdsc.dtsi"
 #include "yupik-pinctrl.dtsi"
 #include "yupik-stub-regulator.dtsi"
+#include "ipcc-test-yupik.dtsi"
 
 &gcc_pcie_0_gdsc {
 	compatible = "regulator-fixed";
