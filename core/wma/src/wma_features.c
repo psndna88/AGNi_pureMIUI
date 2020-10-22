@@ -565,7 +565,7 @@ enum wlan_phymode wma_chan_phy_mode(uint32_t freq, enum phy_ch_width chan_width,
 	}
 
 	if (chan_width >= CH_WIDTH_INVALID) {
-		wma_err_rl("Invalid channel width");
+		wma_err_rl("Invalid channel width %d", chan_width);
 		return WLAN_PHYMODE_AUTO;
 	}
 
@@ -4392,24 +4392,6 @@ QDF_STATUS wma_send_coex_config_cmd(WMA_HANDLE wma_handle,
 
 	return wmi_unified_send_coex_config_cmd(wma->wmi_handle,
 					       coex_cfg_params);
-}
-
-QDF_STATUS wma_send_ocl_cmd(WMA_HANDLE wma_handle,
-			    struct ocl_cmd_params *ocl_params)
-{
-	tp_wma_handle wma = (tp_wma_handle)wma_handle;
-
-	if (!wma || !wma->wmi_handle) {
-		wma_err("WMA is closed, can not issue coex config command");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	if (!ocl_params) {
-		wma_err("ocl params ptr NULL");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return wmi_unified_send_ocl_cmd(wma->wmi_handle, ocl_params);
 }
 
 /**

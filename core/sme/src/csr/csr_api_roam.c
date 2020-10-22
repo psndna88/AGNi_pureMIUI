@@ -5080,7 +5080,7 @@ csr_check_for_allowed_ssid(struct mac_context *mac,
 		mac->roam.configParam.roam_params.num_ssid_allowed_list;
 
 	if (!roamed_bss_ies) {
-		sme_info(" Roamed BSS IEs NULL");
+		sme_debug(" Roamed BSS IEs NULL");
 		return false;
 	}
 
@@ -5453,10 +5453,10 @@ static bool csr_roam_select_bss(struct mac_context *mac_ctx,
 				(struct qdf_mac_addr *)
 				&result->BssDescriptor.bssId, &temp_vdev_id);
 		if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
-			sme_info("vdev_id %d already connected to "QDF_MAC_ADDR_FMT". select next bss for vdev_id %d",
-				 temp_vdev_id,
-				 QDF_MAC_ADDR_REF(result->BssDescriptor.bssId),
-				 vdev_id);
+			sme_debug("vdev_id %d already connected to "QDF_MAC_ADDR_FMT". select next bss for vdev_id %d",
+				  temp_vdev_id,
+				  QDF_MAC_ADDR_REF(result->BssDescriptor.bssId),
+				  vdev_id);
 			*roam_state = eCsrStopRoamingDueToConcurrency;
 			status = true;
 			*roam_bss_entry = csr_ll_next(&bss_list->List,
@@ -7874,10 +7874,6 @@ static void update_profile_fils_info(struct mac_context *mac,
 	qdf_mem_copy(des_profile->fils_con_info,
 			src_profile->fils_con_info,
 			sizeof(struct wlan_fils_connection_info));
-
-	wlan_cm_update_mlme_fils_connection_info(mac->psoc,
-						 des_profile->fils_con_info,
-						 vdev_id);
 	des_profile->hlp_ie =
 		qdf_mem_malloc(src_profile->hlp_ie_len);
 	if (!des_profile->hlp_ie)
@@ -11177,7 +11173,8 @@ csr_roam_get_scan_filter_from_profile(struct mac_context *mac_ctx,
 
 	csr_update_fils_scan_filter(filter, profile);
 
-	csr_update_adaptive_11r_scan_filter(mac_ctx, filter);
+	filter->enable_adaptive_11r =
+		wlan_mlme_adaptive_11r_enabled(mac_ctx->psoc);
 	csr_update_scan_filter_dot11mode(mac_ctx, filter);
 
 	return QDF_STATUS_SUCCESS;
@@ -16995,7 +16992,10 @@ csr_update_roam_scan_offload_request(struct mac_context *mac_ctx,
 	req_buf->roam_triggers.trigger_bitmap =
 		mlme_get_roam_trigger_bitmap(mac_ctx->psoc, session->vdev_id);
 	req_buf->roam_triggers.roam_score_delta =
-			mac_ctx->mlme_cfg->roam_scoring.roam_score_delta;
+		mac_ctx->mlme_cfg->roam_scoring.roam_score_delta;
+	req_buf->roam_triggers.roam_scan_scheme_bitmap =
+		wlan_cm_get_roam_scan_scheme_bitmap(mac_ctx->psoc,
+						    session->vdev_id);
 
 	req_buf->RoamKeyMgmtOffloadEnabled = session->RoamKeyMgmtOffloadEnabled;
 	req_buf->pmkid_modes.fw_okc =
@@ -20605,6 +20605,10 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 
 	rso_config->rso_11r_info.enable_ft_im_roaming =
 		mac->mlme_cfg->lfr.enable_ft_im_roaming;
+	rso_config->rso_11r_info.mdid.mdie_present =
+		session->connectedProfile.mdid.mdie_present;
+	rso_config->rso_11r_info.mdid.mobility_domain =
+		session->connectedProfile.mdid.mobility_domain;
 	rso_config->rso_11r_info.r0kh_id_length =
 			session->ftSmeContext.r0kh_id_len;
 	qdf_mem_copy(rso_config->rso_11r_info.r0kh_id,

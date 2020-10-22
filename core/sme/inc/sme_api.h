@@ -2382,14 +2382,6 @@ QDF_STATUS sme_set_sar_power_limits(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_send_coex_config_cmd(struct coex_config_params *coex_cfg_params);
 
-/**
- * sme_send_ocl_cmd() - Send OCL command
- * @ocl_params: OCL command params
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_send_ocl_cmd(struct ocl_cmd_params *ocl_params);
-
 void sme_set_cc_src(mac_handle_t mac_handle, enum country_src);
 
 
@@ -2748,6 +2740,18 @@ struct mac_context *sme_get_mac_context(void);
  * Return: None
  */
 void sme_display_disconnect_stats(mac_handle_t mac_handle, uint8_t session_id);
+
+#ifdef WLAN_FEATURE_MSCS
+/**
+ * sme_send_mscs_action_frame() - Send MSCS action frame
+ * @vdev_id: sme vdev_id
+ *
+ * This function is used to send down the mscs request to PE
+ *
+ * Return: None
+ */
+void sme_send_mscs_action_frame(uint8_t vdev_id);
+#endif
 
 /**
  * sme_process_msg_callback() - process callback message from LIM

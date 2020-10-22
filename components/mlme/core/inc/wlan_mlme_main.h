@@ -29,6 +29,7 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
 #include "wlan_cm_roam_public_struct.h"
+#include "wlan_wfa_config_public_struct.h"
 
 #define mlme_legacy_fatal(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_MLME, params)
 #define mlme_legacy_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MLME, params)
@@ -40,10 +41,12 @@
  * struct wlan_mlme_psoc_ext_obj -MLME ext psoc priv object
  * @cfg:     cfg items
  * @rso_tx_ops: Roam Tx ops to send roam offload commands to firmware
+ * @wfa_testcmd: WFA config tx ops to send to FW
  */
 struct wlan_mlme_psoc_ext_obj {
 	struct wlan_mlme_cfg cfg;
 	struct wlan_cm_roam_tx_ops rso_tx_ops;
+	struct wlan_mlme_wfa_cmd wfa_testcmd;
 };
 
 /**
@@ -141,6 +144,94 @@ struct wlan_mlme_roam {
 #endif
 };
 
+#ifdef WLAN_FEATURE_MSCS
+/**
+ * struct tclas_mask - TCLAS Mask Elements for mscs request
+ * @classifier_type: specifies the type of classifier parameters
+ * in TCLAS element. Currently driver supports classifier type = 4 only.
+ * @classifier_mask: Mask for tclas elements. For example, if
+ * classifier type = 4, value of classifier mask is 0x5F.
+ * @info: information of classifier type
+ */
+struct tclas_mask {
+	uint8_t classifier_type;
+	uint8_t classifier_mask;
+	union {
+		struct {
+			uint8_t version;
+			union {
+				struct {
+					uint8_t source[4];
+					uint8_t dest[4];
+					uint16_t src_port;
+					uint16_t dest_port;
+					uint8_t dscp;
+					uint8_t proto;
+					uint8_t reserved;
+				} ip_v4_params;
+				struct {
+					uint8_t source[16];
+					uint8_t dest[16];
+					uint16_t src_port;
+					uint16_t dest_port;
+					uint8_t DSCP;
+					uint8_t next_header;
+					uint8_t flow_label[3];
+				} ip_v6_params;
+			} params;
+		} ip_params; /* classifier_type = 4 */
+	} info;
+};
+
+/**
+ * enum scs_request_type - scs request type to peer
+ * @SCS_REQ_ADD: To set mscs parameters
+ * @SCS_REQ_REMOVE: Remove mscs parameters
+ * @SCS_REQ_CHANGE: Update mscs parameters
+ */
+enum scs_request_type {
+	SCS_REQ_ADD = 0,
+	SCS_REQ_REMOVE = 1,
+	SCS_REQ_CHANGE = 2,
+};
+
+/**
+ * struct descriptor_element - mscs Descriptor element
+ * @request_type: mscs request type defined in enum scs_request_type
+ * @user_priority_control: To set user priority of tx packet
+ * @stream_timeout: minimum timeout value, in TUs, for maintaining
+ * variable user priority in the MSCS list.
+ * @tclas_mask: to specify how incoming MSDUs are classified into
+ * streams in MSCS
+ * @status_code: status of mscs request
+ */
+struct descriptor_element {
+	uint8_t request_type;
+	uint16_t user_priority_control;
+	uint64_t stream_timeout;
+	struct tclas_mask tclas_mask;
+	uint8_t status_code;
+};
+
+/**
+ * struct mscs_req_info - mscs request information
+ * @vdev_id: session id
+ * @bssid: peer bssid
+ * @dialog_token: Token number of mscs req action frame
+ * @dec: mscs Descriptor element defines information about
+ * the parameters used to classify streams
+ * @is_mscs_req_sent: To Save mscs req request if any (only
+ * one can be outstanding at any time)
+ */
+struct mscs_req_info {
+	uint8_t vdev_id;
+	struct qdf_mac_addr bssid;
+	uint8_t dialog_token;
+	struct descriptor_element dec;
+	bool is_mscs_req_sent;
+};
+#endif
+
 /**
  * struct mlme_legacy_priv - VDEV MLME legacy priv object
  * @chan_switch_in_progress: flag to indicate that channel switch is in progress
@@ -163,10 +254,11 @@ struct wlan_mlme_roam {
  * @bigtk_vdev_support: BIGTK feature support for this vdev (SAP)
  * @sae_auth_retry: SAE auth retry information
  * @roam_reason_better_ap: roam due to better AP found
- * @better_ap_hb_failure_rssi: heartbeat failure AP RSSI
+ * @hb_failure_rssi: heartbeat failure AP RSSI
  * @fils_con_info: Pointer to fils connection info from csr roam profile
  * @opr_rate_set: operational rates set
  * @ext_opr_rate_set: extended operational rates set
+ * @mscs_req_info: Information related to mscs request
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -194,6 +286,9 @@ struct mlme_legacy_priv {
 #endif
 	struct mlme_cfg_str opr_rate_set;
 	struct mlme_cfg_str ext_opr_rate_set;
+#ifdef WLAN_FEATURE_MSCS
+	struct mscs_req_info mscs_req_info;
+#endif
 };
 
 

@@ -45,6 +45,7 @@ ifeq ($(CONFIG_CNSS_QCA6490), y)
 	CONFIG_HASTINGS_BT_WAR := y
 	CONFIG_WDI3_IPA_OVER_GSI :=y
 	CONFIG_PCIE_GEN_SWITCH := y
+	CONFIG_GENERIC_SHADOW_REGISTER_ACCESS_ENABLE :=y
 endif
 
 ifeq ($(CONFIG_CNSS_QCA6750), y)
@@ -299,6 +300,9 @@ CONFIG_ADAPTIVE_11R := y
 
 #Flag to enable sae single pmk feature
 CONFIG_SAE_SINGLE_PMK := y
+
+#Flag to enable mscs feature
+CONFIG_FEATURE_MSCS := y
 
 #Flag to enable FILS Feature (11ai)
 CONFIG_WLAN_FEATURE_FILS := y
@@ -1162,10 +1166,10 @@ CONFIG_RX_HASH_DEBUG := y
 CONFIG_CM_ENABLE := n
 
 #Flag to enable roam offload compilation of connection manager module
-CONFIG_CM_ROAM_OFFLOAD := n
+CONFIG_CM_ROAM_OFFLOAD := y
 
 #Flag to enable interface manager
-CONFIG_INTERFACE_MGR := n
+CONFIG_INTERFACE_MGR := y
 
 #Enable VDEV OPS wakelock feature
 CONFIG_FEATURE_VDEV_OPS_WAKELOCK := y

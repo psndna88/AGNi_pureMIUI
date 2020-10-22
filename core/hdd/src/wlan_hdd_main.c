@@ -142,6 +142,7 @@
 #include "enet.h"
 #include <cdp_txrx_cmn_struct.h>
 #include <dp_txrx.h>
+#include <dp_rx_thread.h>
 #include "wlan_hdd_sysfs.h"
 #include "wlan_disa_ucfg_api.h"
 #include "wlan_disa_obj_mgmt_api.h"
@@ -4045,7 +4046,8 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 				 hdd_softap_ipa_start_xmit);
 	ucfg_ipa_reg_send_to_nw_cb(hdd_ctx->pdev,
 				   hdd_ipa_send_nbuf_to_network);
-
+	ucfg_ipa_reg_rps_enable_cb(hdd_ctx->pdev,
+				   hdd_adapter_set_rps);
 	hdd_exit();
 
 	return 0;
@@ -5452,58 +5454,6 @@ bool hdd_is_vdev_in_conn_state(struct hdd_adapter *adapter)
 	return 0;
 }
 
-/**
- * hdd_send_ocl_cmd() - Send ocl command to FW
- * @hdd_ctx: HDD context
- * @adapter: Primary adapter context
- *
- * This function is used to send OCL mode configuration to FW
- *
- * Return: 0 on success and -EINVAL on failure
- */
-static int hdd_send_ocl_cmd(struct hdd_context *hdd_ctx,
-			    struct hdd_adapter *adapter)
-{
-	struct ocl_cmd_params ocl_params = {0};
-	struct wlan_objmgr_psoc *psoc;
-	QDF_STATUS status;
-
-	if (!hdd_ctx) {
-		hdd_err("hdd_ctx is invalid");
-		goto err;
-	}
-
-	if (!adapter) {
-		hdd_err("adapter is invalid");
-		goto err;
-	}
-
-	psoc = hdd_ctx->psoc;
-
-	if (!psoc) {
-		hdd_err("HDD psoc is invalid");
-		goto err;
-	}
-
-	status = ucfg_fwol_get_ocl_cfg(psoc, &ocl_params.en_dis_chain);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Unable to get OCL mode configuration");
-		goto err;
-	}
-
-	ocl_params.vdev_id = adapter->vdev_id;
-
-	status = sme_send_ocl_cmd(&ocl_params);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Failed to send ocl command");
-		goto err;
-	}
-
-	return 0;
-err:
-	return -EINVAL;
-}
-
 int hdd_vdev_create(struct hdd_adapter *adapter)
 {
 	QDF_STATUS status;
@@ -5614,8 +5564,6 @@ int hdd_vdev_create(struct hdd_adapter *adapter)
 		VDEV_CMD);
 	}
 	hdd_store_nss_chains_cfg_in_vdev(adapter);
-
-	hdd_send_ocl_cmd(hdd_ctx, adapter);
 
 	/* Configure vdev params */
 	ucfg_fwol_configure_vdev_params(hdd_ctx->psoc, hdd_ctx->pdev,
@@ -5905,6 +5853,12 @@ void hdd_deinit_adapter(struct hdd_context *hdd_ctx,
 
 	default:
 		break;
+	}
+
+	if (adapter->scan_info.default_scan_ies) {
+		qdf_mem_free(adapter->scan_info.default_scan_ies);
+		adapter->scan_info.default_scan_ies = NULL;
+		adapter->scan_info.default_scan_ies_len = 0;
 	}
 
 	hdd_exit();
@@ -7296,12 +7250,6 @@ QDF_STATUS hdd_stop_adapter(struct hdd_context *hdd_ctx,
 		break;
 	default:
 		break;
-	}
-
-	if (adapter->scan_info.default_scan_ies) {
-		qdf_mem_free(adapter->scan_info.default_scan_ies);
-		adapter->scan_info.default_scan_ies = NULL;
-		adapter->scan_info.default_scan_ies_len = 0;
 	}
 
 	/* This function should be invoked at the end of this api*/
@@ -9479,7 +9427,7 @@ static inline void hdd_pm_qos_update_request(struct hdd_context *hdd_ctx,
 	qdf_cpumask_copy(&hdd_ctx->qos_cpu_mask, pm_qos_cpu_mask);
 
 	if (qdf_cpumask_empty(pm_qos_cpu_mask)) {
-		latency = PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE;
+		latency = wlan_hdd_get_pm_qos_cpu_latency();
 		qdf_for_each_possible_cpu(cpu) {
 			dev_pm_qos_update_request(
 				&hdd_ctx->pm_qos_req[cpu],
@@ -9494,7 +9442,7 @@ static inline void hdd_pm_qos_update_request(struct hdd_context *hdd_ctx,
 		qdf_for_each_cpu_not(cpu, &hdd_ctx->qos_cpu_mask) {
 			dev_pm_qos_update_request(
 				&hdd_ctx->pm_qos_req[cpu],
-				PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE);
+				wlan_hdd_get_pm_qos_cpu_latency());
 		}
 		/* Set latency to 1 for CPUs included in mask */
 		qdf_for_each_cpu(cpu, &hdd_ctx->qos_cpu_mask) {
@@ -9521,7 +9469,7 @@ static inline void hdd_pm_qos_add_request(struct hdd_context *hdd_ctx)
 
 		dev_pm_qos_add_request(cpu_dev, &hdd_ctx->pm_qos_req[cpu],
 				       DEV_PM_QOS_RESUME_LATENCY,
-				       PM_QOS_CPU_DMA_LAT_DEFAULT_VALUE);
+				       wlan_hdd_get_pm_qos_cpu_latency());
 		hdd_debug("Set qos_cpu_mask %*pb for affine_cores",
 			 cpumask_pr_args(&hdd_ctx->qos_cpu_mask));
 	}
@@ -9680,21 +9628,24 @@ static inline void hdd_low_tput_gro_flush_skip_handler(
 			struct hdd_context *hdd_ctx,
 			enum pld_bus_width_type next_vote_level)
 {
-	uint32_t bus_low_cnt_threshold =
-				hdd_ctx->config->bus_low_cnt_threshold;
-	struct hdd_adapter *adapter;
+	uint32_t threshold = hdd_ctx->config->bus_low_cnt_threshold;
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
+	int i;
 
 	if (next_vote_level == PLD_BUS_WIDTH_LOW) {
-		if (++hdd_ctx->bus_low_vote_cnt >= bus_low_cnt_threshold)
+		if (++hdd_ctx->bus_low_vote_cnt >= threshold)
 			qdf_atomic_set(&hdd_ctx->low_tput_gro_enable, 1);
 	} else {
-		if (qdf_atomic_read(&hdd_ctx->low_tput_gro_enable)) {
+		if (qdf_atomic_read(&hdd_ctx->low_tput_gro_enable) &&
+		    hdd_ctx->enable_dp_rx_threads) {
 			/* flush pending rx pkts when LOW->IDLE */
 			hdd_debug("flush queued GRO pkts");
-			hdd_for_each_adapter(hdd_ctx, adapter)
-				hdd_rx_flush_packet_cbk(adapter,
-							adapter->vdev_id);
+			for (i = 0; i < cdp_get_num_rx_contexts(soc); i++) {
+				dp_rx_gro_flush_ind(soc, i,
+						    DP_RX_GRO_NORMAL_FLUSH);
+			}
 		}
+
 		hdd_ctx->bus_low_vote_cnt = 0;
 		qdf_atomic_set(&hdd_ctx->low_tput_gro_enable, 0);
 	}
@@ -10060,6 +10011,41 @@ void hdd_set_vdev_bundle_require_flag(uint16_t vdev_id,
 #endif
 
 #define HDD_BW_GET_DIFF(_x, _y) (unsigned long)((ULONG_MAX - (_y)) + (_x) + 1)
+
+#ifdef WLAN_FEATURE_MSCS
+static
+void hdd_send_mscs_action_frame(struct hdd_context *hdd_ctx,
+				struct hdd_adapter *adapter)
+{
+	uint64_t mscs_vo_pkt_delta;
+	unsigned long tx_vo_pkts;
+
+	tx_vo_pkts = adapter->hdd_stats.tx_rx_stats.tx_classified_ac[SME_AC_VO];
+
+	if (!adapter->mscs_counter)
+		adapter->mscs_prev_tx_vo_pkts = tx_vo_pkts;
+
+	adapter->mscs_counter++;
+
+	if (adapter->mscs_counter * hdd_ctx->config->bus_bw_compute_interval >=
+	    hdd_ctx->config->mscs_voice_interval * 1000) {
+	    adapter->mscs_counter = 0;
+		mscs_vo_pkt_delta =
+				HDD_BW_GET_DIFF(tx_vo_pkts,
+						adapter->mscs_prev_tx_vo_pkts);
+		if (mscs_vo_pkt_delta > hdd_ctx->config->mscs_pkt_threshold &&
+		    !mlme_get_is_mscs_req_sent(adapter->vdev))
+			sme_send_mscs_action_frame(adapter->vdev_id);
+	}
+}
+#else
+static inline
+void hdd_send_mscs_action_frame(struct hdd_context *hdd_ctx,
+				struct hdd_adapter *adapter)
+{
+}
+#endif
+
 static void __hdd_bus_bw_work_handler(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter = NULL, *con_sap_adapter = NULL;
@@ -10107,6 +10093,10 @@ static void __hdd_bus_bw_work_handler(struct hdd_context *hdd_ctx)
 					      adapter->prev_rx_packets);
 		tx_bytes = HDD_BW_GET_DIFF(adapter->stats.tx_bytes,
 					   adapter->prev_tx_bytes);
+
+		if (adapter->device_mode == QDF_STA_MODE &&
+		   hdd_conn_is_connected(WLAN_HDD_GET_STATION_CTX_PTR(adapter)))
+			hdd_send_mscs_action_frame(hdd_ctx, adapter);
 
 		if (adapter->device_mode == QDF_SAP_MODE ||
 		    adapter->device_mode == QDF_P2P_GO_MODE ||
@@ -11032,13 +11022,13 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 	bool is_vendor_acs_support =
 		cfg_default(CFG_USER_AUTO_CHANNEL_SELECTION);
 
-	hdd_for_each_adapter(hdd_ctxt, adapter) {
+	hdd_for_each_adapter_dev_held(hdd_ctxt, adapter) {
 		if (!(adapter->device_mode == QDF_SAP_MODE &&
 		    adapter->session.ap.sap_config.acs_cfg.acs_mode)) {
-			hdd_debug("skip device mode:%d acs:%d",
-				  adapter->device_mode,
-				  adapter->session.ap.sap_config.
-				  acs_cfg.acs_mode);
+			hdd_debug_rl("skip device mode:%d acs:%d",
+				     adapter->device_mode,
+			adapter->session.ap.sap_config.acs_cfg.acs_mode);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -11082,6 +11072,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 				restart_chan_store);
 			hdd_debug("ch:%d is safe. no need to change channel",
 				  ap_chan);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -11100,6 +11091,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 		if (is_vendor_acs_support && is_acs_support_for_dfs_ltecoex) {
 			hdd_update_acs_timer_reason(adapter,
 				QCA_WLAN_VENDOR_ACS_SELECT_REASON_LTE_COEX);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -11143,6 +11135,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 						CSA_REASON_UNSAFE_CHANNEL);
 				hdd_switch_sap_channel(adapter, restart_chan,
 						       true);
+				dev_put(adapter->dev);
 				return;
 			}
 			else {
@@ -11150,9 +11143,12 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 				wlan_hdd_send_svc_nlink_msg(
 						hdd_ctxt->radio_index,
 						WLAN_SVC_LTE_COEX_IND, NULL, 0);
+				dev_put(adapter->dev);
 				return;
 			}
 		}
+		/* dev_put has to be done here */
+		dev_put(adapter->dev);
 	}
 }
 

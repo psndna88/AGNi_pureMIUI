@@ -416,7 +416,8 @@ csr_neighbor_roam_get_scan_filter_from_profile(struct mac_context *mac,
 
 	csr_update_pmf_cap_from_connected_profile(profile, filter);
 
-	csr_update_adaptive_11r_scan_filter(mac, filter);
+	filter->enable_adaptive_11r =
+		wlan_mlme_adaptive_11r_enabled(mac->psoc);
 	csr_update_scan_filter_dot11mode(mac, filter);
 
 	return QDF_STATUS_SUCCESS;
@@ -823,6 +824,10 @@ static void csr_neighbor_roam_info_ctx_init(struct mac_context *mac,
 	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_scan_hi_rssi_delay;
 	wlan_cm_roam_cfg_set_value(mac->psoc, session_id,
 				   HI_RSSI_DELAY_BTW_SCANS, &src_cfg);
+
+	wlan_cm_update_roam_scan_scheme_bitmap(mac->psoc, session_id,
+					       DEFAULT_ROAM_SCAN_SCHEME_BITMAP);
+
 	/*
 	 * Now we can clear the preauthDone that
 	 * was saved as we are connected afresh

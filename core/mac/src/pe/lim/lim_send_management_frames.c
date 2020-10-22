@@ -56,6 +56,8 @@
 #include "lim_process_fils.h"
 #include "wlan_utility.h"
 #include <wlan_mlme_api.h>
+#include <wlan_mlme_main.h>
+#include "wlan_crypto_global_api.h"
 
 /**
  *
@@ -1092,6 +1094,132 @@ lim_send_addts_req_action_frame(struct mac_context *mac,
 		pe_err("Could not send an Add TS Request (%X",
 			qdf_status);
 } /* End lim_send_addts_req_action_frame. */
+
+#ifdef WLAN_FEATURE_MSCS
+/**
+ * lim_mscs_req_tx_complete_cnf()- Confirmation for mscs req sent over the air
+ * @context: pointer to global mac
+ * @buf: buffer
+ * @tx_complete : Sent status
+ * @params; tx completion params
+ *
+ * Return: This returns QDF_STATUS
+ */
+
+static QDF_STATUS lim_mscs_req_tx_complete_cnf(void *context, qdf_nbuf_t buf,
+					       uint32_t tx_complete,
+					       void *params)
+{
+	uint16_t mscs_ack_status;
+	uint16_t reason_code;
+
+	pe_debug("mscs req TX: %s (%d)",
+		 (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) ?
+		      "success" : "fail", tx_complete);
+
+	if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_OK) {
+		mscs_ack_status = ACKED;
+		reason_code = QDF_STATUS_SUCCESS;
+	} else {
+		mscs_ack_status = NOT_ACKED;
+		reason_code = QDF_STATUS_E_FAILURE;
+	}
+	if (buf)
+		qdf_nbuf_free(buf);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+void lim_send_mscs_req_action_frame(struct mac_context *mac,
+				    struct qdf_mac_addr peer_mac,
+				    struct mscs_req_info *mscs_req,
+				    struct pe_session *pe_session)
+{
+	uint8_t *frame;
+	tDot11fmscs_request_action_frame mscs_req_frame;
+	uint32_t payload, bytes;
+	tpSirMacMgmtHdr peer_mac_hdr;
+	void *packet;
+	QDF_STATUS qdf_status;
+	tpSirMacMgmtHdr mac_hdr;
+
+	qdf_mem_zero(&mscs_req_frame, sizeof(mscs_req_frame));
+
+	mscs_req_frame.Action.action = MCSC_REQ;
+	mscs_req_frame.DialogToken.token = mscs_req->dialog_token;
+	mscs_req_frame.Category.category = ACTION_CATEGORY_RVS;
+	populate_dot11f_mscs_dec_element(mscs_req, &mscs_req_frame);
+	bytes = dot11f_get_packed_mscs_request_action_frameSize(mac,
+					&mscs_req_frame, &payload);
+	if (DOT11F_FAILED(bytes)) {
+		pe_err("Failed to calculate the packed size for an MSCS Request (0x%08x)",
+		       bytes);
+		/* We'll fall back on the worst case scenario: */
+		payload = sizeof(tDot11fmscs_request_action_frame);
+	} else if (DOT11F_WARNED(bytes)) {
+		pe_warn("There were warnings while calculating the packed size for MSCS Request (0x%08x)",
+			bytes);
+	}
+
+	bytes = payload + sizeof(struct qdf_mac_addr);
+
+	qdf_status = cds_packet_alloc((uint16_t) bytes, (void **)&frame,
+				      (void **)&packet);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		pe_err("Failed to allocate %d bytes for an mscs request",
+		       bytes);
+		return;
+	}
+	/* Paranoia: */
+	qdf_mem_zero(frame, bytes);
+
+	lim_populate_mac_header(mac, frame, SIR_MAC_MGMT_FRAME,
+				SIR_MAC_MGMT_ACTION,
+				peer_mac.bytes, pe_session->self_mac_addr);
+	peer_mac_hdr = (tpSirMacMgmtHdr) frame;
+
+	qdf_mem_copy(peer_mac.bytes, pe_session->bssId, QDF_MAC_ADDR_SIZE);
+
+	lim_set_protected_bit(mac, pe_session, peer_mac.bytes, peer_mac_hdr);
+
+	bytes = dot11f_pack_mscs_request_action_frame(mac, &mscs_req_frame,
+						      frame +
+						      sizeof(tSirMacMgmtHdr),
+						      payload, &payload);
+	if (DOT11F_FAILED(bytes)) {
+		pe_err("Failed to pack an mscs Request " "(0x%08x)", bytes);
+		cds_packet_free((void *)packet);
+			return; /* allocated! */
+	} else if (DOT11F_WARNED(bytes)) {
+			pe_warn("There were warnings while packing an mscs Request (0x%08x)",
+				bytes);
+	}
+
+	mac_hdr = (tpSirMacMgmtHdr) frame;
+
+	pe_debug("mscs req TX: vdev id: %d to "QDF_MAC_ADDR_FMT" seq num[%d], frame subtype:%d ",
+		 mscs_req->vdev_id, QDF_MAC_ADDR_REF(peer_mac.bytes),
+		 mac->mgmtSeqNum, mac_hdr->fc.subType);
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   frame,
+			   (uint16_t)(sizeof(tSirMacMgmtHdr) + payload));
+	qdf_status =
+		wma_tx_frameWithTxComplete(mac, packet,
+			   (uint16_t) (sizeof(tSirMacMgmtHdr) + payload),
+			   TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS, 7,
+			   lim_tx_complete, frame, lim_mscs_req_tx_complete_cnf,
+			   HAL_USE_PEER_STA_REQUESTED_MASK, pe_session->vdev_id,
+			   false, 0, RATEID_DEFAULT);
+	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		mlme_set_is_mscs_req_sent(pe_session->vdev, true);
+	} else {
+		pe_err("Could not send an mscs Request (%X)", qdf_status);
+	}
+
+	/* Pkt will be freed up by the callback */
+} /* End lim_send_mscs_req_action_frame */
+#endif
 
 /**
  * lim_assoc_rsp_tx_complete() - Confirmation for assoc rsp OTA
@@ -4937,6 +5065,44 @@ returnAfterError:
 	return nSirStatus;
 } /* End lim_send_sa_query_request_frame */
 
+static bool
+lim_is_self_and_peer_ocv_capable(struct mac_context *mac,
+				 uint8_t *peer,
+				 struct pe_session *pe_session)
+{
+	uint16_t self_rsn_cap, aid;
+	tpDphHashNode sta_ds;
+
+	self_rsn_cap = wlan_crypto_get_param(pe_session->vdev,
+					     WLAN_CRYPTO_PARAM_RSN_CAP);
+	if (!(self_rsn_cap & WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED))
+		return false;
+
+	sta_ds = dph_lookup_hash_entry(mac, peer, &aid,
+				       &pe_session->dph.dphHashTable);
+
+	if (sta_ds && sta_ds->ocv_enabled)
+		return true;
+
+	return false;
+}
+
+static void
+lim_fill_oci_params(struct mac_context *mac, struct pe_session *session,
+		    tDot11fIEoci *oci)
+{
+	uint8_t country_code[CDS_COUNTRY_CODE_LEN + 1];
+
+	wlan_reg_read_current_country(mac->psoc, country_code);
+	oci->op_class = wlan_reg_dmn_get_opclass_from_channel(
+			country_code,
+			wlan_reg_freq_to_chan(mac->pdev, session->curr_op_freq),
+			session->ch_width);
+	oci->prim_ch_num = session->ch_center_freq_seg0;
+	oci->freq_seg_1_ch_num = session->ch_center_freq_seg1;
+	oci->present = 1;
+}
+
 /**
  * \brief Send SA query response action frame to peer
  *
@@ -4981,6 +5147,8 @@ QDF_STATUS lim_send_sa_query_response_frame(struct mac_context *mac,
 	/*11w SA query response transId is same as
 	   SA query request transId */
 	qdf_mem_copy(&frm.TransactionId.transId[0], &transId[0], 2);
+	if (lim_is_self_and_peer_ocv_capable(mac, peer, pe_session))
+		lim_fill_oci_params(mac, pe_session, &frm.oci);
 
 	nStatus = dot11f_get_packed_sa_query_rsp_size(mac, &frm, &nPayload);
 	if (DOT11F_FAILED(nStatus)) {
@@ -4992,7 +5160,6 @@ QDF_STATUS lim_send_sa_query_response_frame(struct mac_context *mac,
 		pe_warn("There were warnings while calculating the packed size for an SA Query Response (0x%08x)",
 			nStatus);
 	}
-
 	nBytes = nPayload + sizeof(tSirMacMgmtHdr);
 	qdf_status =
 		cds_packet_alloc(nBytes, (void **)&pFrame, (void **)&pPacket);
