@@ -40,7 +40,7 @@
 		src-clock-name = "csi0phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -74,7 +74,7 @@
 		src-clock-name = "csi1phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -108,7 +108,7 @@
 		src-clock-name = "csi2phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -142,7 +142,7 @@
 		src-clock-name = "csi3phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -176,7 +176,7 @@
 		src-clock-name = "csi4phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -210,7 +210,7 @@
 		src-clock-name = "csi5phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs";
 		clock-rates =
-			<320000000 0 300000000 0>,
+			<266666667 0 300000000 0>,
 			<400000000 0 300000000 0>;
 		status = "ok";
 	};
@@ -707,11 +707,11 @@
 			<&camcc CAM_CC_IFE_0_AHB_CLK>,
 			<&camcc CAM_CC_IFE_0_AXI_CLK>;
 		clock-rates =
-			<400000000 0 320000000 0 338000000 0 100000000 0 0>,
-			<400000000 0 400000000 0 475000000 0 200000000 0 0>,
-			<400000000 0 400000000 0 600000000 0 300000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>;
+			<400000000 0 0 0 338000000 0 100000000 0 0>,
+			<400000000 0 0 0 475000000 0 200000000 0 0>,
+			<400000000 0 0 0 600000000 0 300000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>;
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		src-clock-name = "ife_csid_clk_src";
@@ -794,11 +794,11 @@
 			<&camcc CAM_CC_IFE_1_AHB_CLK>,
 			<&camcc CAM_CC_IFE_1_AXI_CLK>;
 		clock-rates =
-			<400000000 0 320000000 0 338000000 0 100000000 0 0>,
-			<400000000 0 400000000 0 475000000 0 200000000 0 0>,
-			<400000000 0 400000000 0 600000000 0 300000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>;
+			<400000000 0 0 0 338000000 0 100000000 0 0>,
+			<400000000 0 0 0 475000000 0 200000000 0 0>,
+			<400000000 0 0 0 600000000 0 300000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>;
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		src-clock-name = "ife_csid_clk_src";
@@ -881,11 +881,11 @@
 			<&camcc CAM_CC_IFE_2_AHB_CLK>,
 			<&camcc CAM_CC_IFE_2_AXI_CLK>;
 		clock-rates =
-			<400000000 0 320000000 0 338000000 0 100000000 0 0>,
-			<400000000 0 400000000 0 475000000 0 200000000 0 0>,
-			<400000000 0 400000000 0 600000000 0 300000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>,
-			<400000000 0 400000000 0 720000000 0 400000000 0 0>;
+			<400000000 0 0 0 338000000 0 100000000 0 0>,
+			<400000000 0 0 0 475000000 0 200000000 0 0>,
+			<400000000 0 0 0 600000000 0 300000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>,
+			<400000000 0 0 0 720000000 0 400000000 0 0>;
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		src-clock-name = "ife_csid_clk_src";
@@ -1313,11 +1313,13 @@
 		label = "cpas";
 		arch-compat = "cpas_top";
 		status = "ok";
-		reg-names = "cam_cpas_top", "cam_camnoc";
+		reg-names = "cam_cpas_top", "cam_camnoc", "cam_rpmh";
 		reg = <0xac40000 0x1000>,
-			<0xac42000 0x8000>;
-		reg-cam-base = <0x40000 0x42000>;
-		cam_hw_fuse = <CAM_CPAS_MF_HDR_ENABLE 0x007801E0 22>;
+			<0xac42000 0x8000>,
+			<0xbbf0000 0x1F00>;
+		reg-cam-base = <0x40000 0x42000 0x0BBF0000>;
+		cam_hw_fuse = <CAM_CPAS_MF_HDR_ENABLE 0x007801E0 0x400000 CAM_CPAS_FEATURE_TYPE_ENABLE 0xFF>,
+			<CAM_CPAS_MP_LIMIT_FUSE 0x7801EC 0x18000000 CAM_CPAS_FEATURE_TYPE_VALUE 0xFF>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 459 IRQ_TYPE_EDGE_RISING>;
 		camnoc-axi-min-ib-bw = <3000000000>;
@@ -1366,6 +1368,7 @@
 		interconnect-names = "cam_ahb";
 		interconnects =<&gem_noc MASTER_APPSS_PROC
 			&config_noc SLAVE_CAMERA_CFG>;
+		rpmh-bcm-info = <12 0x4 0x800 0 4>;
 		cam-ahb-num-cases = <8>;
 		cam-ahb-bw-KBps =
 			<0 0>, <0 76800>, <0 76800>, <0 150000>, <0 150000>,
