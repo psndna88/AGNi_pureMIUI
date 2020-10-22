@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only
  *
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CUSTOM_CONTEXT_H_
@@ -65,6 +65,8 @@ struct cam_custom_ctx_irq_ops {
  * @num_acked:             Count to track acked entried for output.
  *                         If count equals the number of fence out, it means
  *                         the request has been completed.
+ * @bubble_report:         If bubble recovery is needed
+ * @bubble_detected:       request has bubbled
  * @hw_update_data:        HW update data for this request
  *
  */
@@ -80,6 +82,8 @@ struct cam_custom_dev_ctx_req {
 						[CAM_CUSTOM_DEV_CTX_RES_MAX];
 	uint32_t                                 num_fence_map_in;
 	uint32_t                                 num_acked;
+	int32_t                                  bubble_report;
+	bool                                     bubble_detected;
 	struct cam_custom_prepare_hw_update_data hw_update_data;
 };
 
@@ -95,6 +99,7 @@ struct cam_custom_dev_ctx_req {
  * @active_req_cnt: Counter for the active request
  * @frame_id: Frame id tracking for the custom context
  * @hw_acquired: Flag to indicate if HW is acquired for this context
+ * @process_bubble: If ctx currently processing bubble
  * @substate_actiavted: Current substate for the activated state.
  * @substate_machine: Custom substate machine for external interface
  * @substate_machine_irq: Custom substate machine for irq handling
@@ -113,6 +118,7 @@ struct cam_custom_context {
 	int64_t                        frame_id;
 	bool                           hw_acquired;
 	uint32_t                       substate_activated;
+	atomic_t                       process_bubble;
 	struct cam_ctx_ops            *substate_machine;
 	struct cam_custom_ctx_irq_ops *substate_machine_irq;
 	struct cam_ctx_request         req_base[CAM_CTX_REQ_MAX];
