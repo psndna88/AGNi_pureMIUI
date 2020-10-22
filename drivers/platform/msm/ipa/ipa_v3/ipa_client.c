@@ -420,14 +420,33 @@ int ipa3_smmu_map_peer_buff(u64 iova, u32 size, bool map, struct sg_table *sgt,
 			}
 		}
 	} else {
-		res = iommu_unmap(smmu_domain,
-		rounddown(iova, PAGE_SIZE),
-		roundup(size + iova - rounddown(iova, PAGE_SIZE),
-		PAGE_SIZE));
-		if (res != roundup(size + iova - rounddown(iova, PAGE_SIZE),
-			PAGE_SIZE)) {
-			IPAERR("Fail to unmap 0x%llx\n", iova);
-			return -EINVAL;
+		if (sgt != NULL) {
+			va = rounddown(iova, PAGE_SIZE);
+			len = 0;
+			for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+				len = PAGE_ALIGN(sg->offset + sg->length);
+				res = iommu_unmap(smmu_domain, va,
+						roundup(len, PAGE_SIZE));
+				if (res !=
+					roundup(len, PAGE_SIZE)) {
+					IPAERR("Fail to unmap iova=%llx\n",
+									iova);
+					return -EINVAL;
+				}
+				va += len;
+				count++;
+			}
+		} else {
+			res = iommu_unmap(smmu_domain,
+					rounddown(iova, PAGE_SIZE),
+					roundup(size + iova -
+						rounddown(iova, PAGE_SIZE),
+						PAGE_SIZE));
+			if (res != roundup(size + iova -
+				rounddown(iova, PAGE_SIZE), PAGE_SIZE)) {
+				IPAERR("Fail to unmap 0x%llx\n", iova);
+				return -EINVAL;
+			}
 		}
 	}
 	IPADBG("Peer buff %s 0x%llx\n", map ? "map" : "unmap", iova);
@@ -1523,6 +1542,12 @@ int ipa3_release_gsi_channel(u32 clnt_hdl)
 	if (!ep->keep_ipa_awake)
 		IPA_ACTIVE_CLIENTS_INC_EP(ipa3_get_client_mapping(clnt_hdl));
 
+	/* Set the disconnect in progress flag to avoid calling cb.*/
+	spin_lock(&ipa3_ctx->disconnect_lock);
+	atomic_set(&ep->disconnect_in_progress, 1);
+	spin_unlock(&ipa3_ctx->disconnect_lock);
+
+
 	gsi_res = gsi_dealloc_channel(ep->gsi_chan_hdl);
 	if (gsi_res != GSI_STATUS_SUCCESS) {
 		IPAERR("Error deallocating channel: %d\n", gsi_res);
@@ -1541,7 +1566,9 @@ int ipa3_release_gsi_channel(u32 clnt_hdl)
 	if (!ep->keep_ipa_awake)
 		IPA_ACTIVE_CLIENTS_DEC_EP(ipa3_get_client_mapping(clnt_hdl));
 
+	spin_lock(&ipa3_ctx->disconnect_lock);
 	memset(&ipa3_ctx->ep[clnt_hdl], 0, sizeof(struct ipa3_ep_context));
+	spin_unlock(&ipa3_ctx->disconnect_lock);
 
 	IPADBG("exit\n");
 	return 0;

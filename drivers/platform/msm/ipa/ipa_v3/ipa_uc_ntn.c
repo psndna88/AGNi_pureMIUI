@@ -259,7 +259,7 @@ static int ipa3_uc_send_ntn_setup_pipe_cmd(
 }
 
 static int ipa3_smmu_map_uc_ntn_pipes(struct ipa_ntn_setup_info *params,
-	bool map)
+	bool map, bool map_unmap_once)
 {
 	struct iommu_domain *smmu_domain;
 	int result;
@@ -275,14 +275,16 @@ static int ipa3_smmu_map_uc_ntn_pipes(struct ipa_ntn_setup_info *params,
 		return -EINVAL;
 	}
 
-	result = ipa3_smmu_map_peer_reg(rounddown(params->ntn_reg_base_ptr_pa,
-		PAGE_SIZE), map, IPA_SMMU_CB_UC);
-	if (result) {
-		IPAERR("failed to %s uC regs %d\n",
-			map ? "map" : "unmap", result);
-		goto fail;
+	if (map_unmap_once) {
+		result = ipa3_smmu_map_peer_reg(rounddown(
+					params->ntn_reg_base_ptr_pa, PAGE_SIZE),
+					map, IPA_SMMU_CB_UC);
+		if (result) {
+			IPAERR("failed to %s uC regs %d\n",
+					map ? "map" : "unmap", result);
+			goto fail;
+		}
 	}
-
 	if (params->smmu_enabled) {
 		IPADBG("smmu is enabled on EMAC\n");
 		result = ipa3_smmu_map_peer_buff((u64)params->ring_base_iova,
@@ -345,14 +347,13 @@ static int ipa3_smmu_map_uc_ntn_pipes(struct ipa_ntn_setup_info *params,
 				IPAERR("Fail to map 0x%llx\n", iova);
 		} else {
 			result = iommu_unmap(smmu_domain, iova_p, size_p);
-			if (result != params->data_buff_size)
+			if (result != size_p) {
 				IPAERR("Fail to unmap 0x%llx\n", iova);
-		}
-		if (result) {
-			if (params->smmu_enabled)
-				goto fail_map_data_buff_smmu_enabled;
-			else
-				goto fail_map_data_buff_smmu_disabled;
+				if (params->smmu_enabled)
+					goto fail_map_data_buff_smmu_enabled;
+				else
+					goto fail_map_data_buff_smmu_disabled;
+			}
 		}
 	}
 	return 0;
@@ -392,6 +393,7 @@ int ipa3_setup_uc_ntn_pipes(struct ipa_ntn_conn_in_params *in,
 	int ipa_ep_idx_ul;
 	int ipa_ep_idx_dl;
 	int result = 0;
+	bool unmapped = false;
 
 	if (in == NULL) {
 		IPAERR("invalid input\n");
@@ -445,7 +447,7 @@ int ipa3_setup_uc_ntn_pipes(struct ipa_ntn_conn_in_params *in,
 		goto fail;
 	}
 
-	result = ipa3_smmu_map_uc_ntn_pipes(&in->ul, true);
+	result = ipa3_smmu_map_uc_ntn_pipes(&in->ul, true, true);
 	if (result) {
 		IPAERR("failed to map SMMU for UL %d\n", result);
 		goto fail;
@@ -484,7 +486,7 @@ int ipa3_setup_uc_ntn_pipes(struct ipa_ntn_conn_in_params *in,
 		goto fail_disable_dp_ul;
 	}
 
-	result = ipa3_smmu_map_uc_ntn_pipes(&in->dl, true);
+	result = ipa3_smmu_map_uc_ntn_pipes(&in->dl, true, false);
 	if (result) {
 		IPAERR("failed to map SMMU for DL %d\n", result);
 		goto fail_disable_dp_ul;
@@ -515,11 +517,12 @@ int ipa3_setup_uc_ntn_pipes(struct ipa_ntn_conn_in_params *in,
 fail_disable_dp_dl:
 	ipa3_disable_data_path(ipa_ep_idx_dl);
 fail_smmu_unmap_dl:
-	ipa3_smmu_map_uc_ntn_pipes(&in->dl, false);
+	ipa3_smmu_map_uc_ntn_pipes(&in->dl, false, true);
+	unmapped = true;
 fail_disable_dp_ul:
 	ipa3_disable_data_path(ipa_ep_idx_ul);
 fail_smmu_unmap_ul:
-	ipa3_smmu_map_uc_ntn_pipes(&in->ul, false);
+	ipa3_smmu_map_uc_ntn_pipes(&in->ul, false, !unmapped);
 fail:
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 	return result;
@@ -600,7 +603,7 @@ int ipa3_tear_down_uc_offload_pipes(int ipa_ep_idx_ul,
 	}
 
 	/* unmap the DL pipe */
-	result = ipa3_smmu_map_uc_ntn_pipes(&params->dl, false);
+	result = ipa3_smmu_map_uc_ntn_pipes(&params->dl, false, false);
 	if (result) {
 		IPAERR("failed to unmap SMMU for DL %d\n", result);
 		goto fail;
@@ -621,7 +624,7 @@ int ipa3_tear_down_uc_offload_pipes(int ipa_ep_idx_ul,
 	}
 
 	/* unmap the UL pipe */
-	result = ipa3_smmu_map_uc_ntn_pipes(&params->ul, false);
+	result = ipa3_smmu_map_uc_ntn_pipes(&params->ul, false, true);
 	if (result) {
 		IPAERR("failed to unmap SMMU for UL %d\n", result);
 		goto fail;
