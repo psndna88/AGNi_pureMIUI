@@ -11,3 +11,7 @@
 &usb {
 	extcon = <&vbus_detect>;
 };
+
+&pcie0 {
+	qcom,boot-option = <0x1>;
+};
