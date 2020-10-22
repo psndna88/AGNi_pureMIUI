@@ -55,6 +55,14 @@
 			no-map;
 			size = <0x400000>;
 		};
+
+		cnss_wlan_mem: cnss_wlan_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
 	};
 
 	cpus {
