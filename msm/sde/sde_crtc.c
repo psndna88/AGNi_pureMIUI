@@ -1419,7 +1419,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	uint32_t stage_idx, lm_idx, layout_idx;
 	int zpos_cnt[MAX_LAYOUTS_PER_CRTC][SDE_STAGE_MAX + 1];
 	int i, mode, cnt = 0;
-	bool bg_alpha_enable = false, is_secure = false;
+	bool bg_alpha_enable = false;
 	u32 blend_type;
 	DECLARE_BITMAP(fetch_active, SSPP_MAX);
 
@@ -1454,9 +1454,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 
 		mode = sde_plane_get_property(pstate,
 				PLANE_PROP_FB_TRANSLATION_MODE);
-		is_secure = ((mode == SDE_DRM_FB_SEC) ||
-				(mode == SDE_DRM_FB_SEC_DIR_TRANS)) ?
-				true : false;
 
 		set_bit(sde_plane_pipe(plane), fetch_active);
 		sde_plane_ctl_flush(plane, ctl, true);
@@ -1488,7 +1485,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 					state->src_w >> 16, state->src_h >> 16,
 					state->crtc_x, state->crtc_y,
 					state->crtc_w, state->crtc_h,
-					pstate->rotation, is_secure);
+					pstate->rotation, mode);
 
 			/*
 			 * none or left layout will program to layer mixer
@@ -6457,13 +6454,10 @@ void __sde_crtc_static_cache_read_work(struct kthread_work *work)
 {
 	struct sde_crtc *sde_crtc = container_of(work, struct sde_crtc,
 			static_cache_read_work.work);
-	struct drm_crtc *crtc;
+	struct drm_crtc *crtc = &sde_crtc->base;
+	struct sde_hw_ctl *ctl = sde_crtc->mixers[0].hw_ctl;
 	struct drm_encoder *enc, *drm_enc = NULL;
-
-	if (!sde_crtc)
-		return;
-
-	crtc = &sde_crtc->base;
+	struct drm_plane *plane;
 
 	if (sde_crtc->cache_state != CACHE_STATE_FRAME_WRITE)
 		return;
@@ -6474,8 +6468,9 @@ void __sde_crtc_static_cache_read_work(struct kthread_work *work)
 			return;
 	}
 
-	if (!drm_enc) {
-		SDE_ERROR("invalid encoder\n");
+	if (!drm_enc || !ctl || !sde_crtc->num_mixers) {
+		SDE_ERROR("invalid object, drm_enc:%d, ctl:%d\n", !drm_enc,
+				!ctl);
 		return;
 	}
 
@@ -6483,7 +6478,14 @@ void __sde_crtc_static_cache_read_work(struct kthread_work *work)
 
 	sde_crtc_static_img_control(crtc, CACHE_STATE_FRAME_READ, false);
 
-	/* kickoff encoder with previous configuration and wait for VBLANK */
+	/* flush only the sys-cache enabled SSPPs */
+	if (ctl->ops.clear_pending_flush)
+		ctl->ops.clear_pending_flush(ctl);
+
+	drm_atomic_crtc_for_each_plane(plane, crtc)
+		sde_plane_ctl_flush(plane, ctl, true);
+
+	/* kickoff encoder and wait for VBLANK */
 	sde_encoder_kickoff(drm_enc, false, false);
 	sde_encoder_wait_for_event(drm_enc, MSM_ENC_VBLANK);
 

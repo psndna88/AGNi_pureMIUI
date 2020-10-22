@@ -205,64 +205,28 @@ static int _sde_kms_dump_clks_state(struct sde_kms *sde_kms)
 }
 #endif
 
-static bool _sde_kms_skip_vblank_op(struct sde_kms *sde_kms)
-{
-	struct sde_vm_ops *vm_ops = sde_vm_get_ops(sde_kms);
-
-	if (vm_ops && vm_ops->vm_owns_hw
-				&& !vm_ops->vm_owns_hw(sde_kms))
-		return true;
-
-	return false;
-}
-
 static int sde_kms_enable_vblank(struct msm_kms *kms, struct drm_crtc *crtc)
 {
-	int ret = 0;
-	struct sde_kms *sde_kms;
+	int ret;
 
-	if (!kms)
+	if (!kms || !crtc)
 		return -EINVAL;
-
-	sde_kms = to_sde_kms(kms);
-
-	sde_vm_lock(sde_kms);
-
-	if (_sde_kms_skip_vblank_op(sde_kms)) {
-		SDE_DEBUG("skipping vblank enable due to HW unavailablity\n");
-		goto done;
-	}
 
 	SDE_ATRACE_BEGIN("sde_kms_enable_vblank");
 	ret = sde_crtc_vblank(crtc, true);
 	SDE_ATRACE_END("sde_kms_enable_vblank");
-done:
-	sde_vm_unlock(sde_kms);
 
 	return ret;
 }
 
 static void sde_kms_disable_vblank(struct msm_kms *kms, struct drm_crtc *crtc)
 {
-	struct sde_kms *sde_kms;
-
-	if (!kms)
+	if (!kms || !crtc)
 		return;
-
-	sde_kms = to_sde_kms(kms);
-
-	sde_vm_lock(sde_kms);
-
-	if (_sde_kms_skip_vblank_op(sde_kms)) {
-		SDE_DEBUG("skipping vblank disable due to HW unavailablity\n");
-		goto done;
-	}
 
 	SDE_ATRACE_BEGIN("sde_kms_disable_vblank");
 	sde_crtc_vblank(crtc, false);
 	SDE_ATRACE_END("sde_kms_disable_vblank");
-done:
-	sde_vm_unlock(sde_kms);
 }
 
 static void sde_kms_wait_for_frame_transfer_complete(struct msm_kms *kms,
@@ -1071,6 +1035,9 @@ int sde_kms_vm_primary_prepare_commit(struct sde_kms *sde_kms,
 		if (drm_connector_mask(connector) & crtc->state->connector_mask)
 			sde_connector_schedule_status_work(connector, true);
 
+	/* enable vblank events */
+	drm_crtc_vblank_on(crtc);
+
 	/* handle non-SDE pre_acquire */
 	if (vm_ops->vm_client_post_acquire)
 		rc = vm_ops->vm_client_post_acquire(sde_kms);
@@ -1196,7 +1163,7 @@ static void sde_kms_commit(struct msm_kms *kms,
 	SDE_ATRACE_BEGIN("sde_kms_commit");
 	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
 		if (crtc->state->active) {
-			SDE_EVT32(DRMID(crtc));
+			SDE_EVT32(DRMID(crtc), old_state);
 			sde_crtc_commit_kickoff(crtc, old_crtc_state);
 		}
 	}
@@ -1398,6 +1365,9 @@ int sde_kms_vm_pre_release(struct sde_kms *sde_kms,
 	/* disable IRQ line */
 	sde_irq_update(&sde_kms->base, false);
 
+	/* disable vblank events */
+	drm_crtc_vblank_off(crtc);
+
 	return rc;
 }
 
@@ -1532,6 +1502,7 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 	struct drm_encoder *encoder;
 	struct drm_device *dev;
 	int ret;
+	bool cwb_disabling;
 
 	if (!kms || !crtc || !crtc->state) {
 		SDE_ERROR("invalid params\n");
@@ -1557,9 +1528,14 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 
 	SDE_ATRACE_BEGIN("sde_kms_wait_for_commit_done");
 	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
-		if (encoder->crtc != crtc &&
-				!sde_encoder_is_cwb_disabling(encoder, crtc))
-			continue;
+		cwb_disabling = false;
+		if (encoder->crtc != crtc) {
+			cwb_disabling = sde_encoder_is_cwb_disabling(encoder,
+					crtc);
+			if (!cwb_disabling)
+				continue;
+		}
+
 		/*
 		 * Wait for post-flush if necessary to delay before
 		 * plane_cleanup. For example, wait for vsync in case of video
@@ -1574,6 +1550,9 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 		}
 
 		sde_crtc_complete_flip(crtc, NULL);
+
+		if (cwb_disabling)
+			sde_encoder_virt_reset(encoder);
 	}
 
 	sde_crtc_static_cache_read_kickoff(crtc);
@@ -1752,6 +1731,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.cmd_receive = dsi_display_cmd_receive,
 		.install_properties = NULL,
 		.set_allowed_mode_switch = dsi_conn_set_allowed_mode_switch,
+		.get_qsync_min_fps = dsi_display_get_qsync_min_fps,
 	};
 	static const struct sde_connector_ops wb_ops = {
 		.post_init =    sde_wb_connector_post_init,
@@ -2525,33 +2505,29 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 	for_each_oldnew_crtc_in_state(state, crtc, old_cstate, new_cstate, i) {
 		struct sde_crtc_state *old_state = NULL, *new_state = NULL;
 
-		new_state = to_sde_crtc_state(new_cstate);
-
-		if (!new_cstate->active && !new_cstate->active_changed)
+		if (!new_cstate->active && !old_cstate->active)
 			continue;
 
+		new_state = to_sde_crtc_state(new_cstate);
 		new_vm_req = sde_crtc_get_property(new_state,
 				CRTC_PROP_VM_REQ_STATE);
 
-		commit_crtc_cnt++;
-
-		if (old_cstate) {
-			old_state = to_sde_crtc_state(old_cstate);
-			old_vm_req = sde_crtc_get_property(old_state,
-					CRTC_PROP_VM_REQ_STATE);
-		}
+		old_state = to_sde_crtc_state(old_cstate);
+		old_vm_req = sde_crtc_get_property(old_state,
+				CRTC_PROP_VM_REQ_STATE);
 
 		/**
 		 * No active request if the transition is from
 		 * VM_REQ_NONE to VM_REQ_NONE
 		 */
-		if (new_vm_req || (old_state && old_vm_req))
+		if (new_vm_req || old_vm_req)
 			vm_req_active = true;
 
 		idle_pc_state = sde_crtc_get_property(new_state,
 						CRTC_PROP_IDLE_PC_STATE);
 
 		active_crtc = crtc;
+		commit_crtc_cnt++;
 	}
 
 	list_for_each_entry(crtc, &dev->mode_config.crtc_list, head) {

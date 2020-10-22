@@ -34,6 +34,8 @@
 #define DSI_CLOCK_BITRATE_RADIX 10
 #define MAX_TE_SOURCE_ID  2
 
+#define SEC_PANEL_NAME_MAX_LEN  256
+
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
 static char dsi_display_secondary[MAX_CMDLINE_PARAM_LEN];
 static struct dsi_display_boot_param boot_displays[MAX_DSI_ACTIVE_DISPLAY] = {
@@ -1069,7 +1071,19 @@ static void _dsi_display_continuous_clk_ctrl(struct dsi_display *display,
 
 	display_for_each_ctrl(i, display) {
 		ctrl = &display->ctrl[i];
-		dsi_ctrl_set_continuous_clk(ctrl->ctrl, enable);
+
+		/*
+		 * For phy ver 4.0 chipsets, configure DSI controller and
+		 * DSI PHY to force clk lane to HS mode always whereas
+		 * for other phy ver chipsets, configure DSI controller only.
+		 */
+		if (ctrl->phy->hw.ops.set_continuous_clk) {
+			dsi_ctrl_hs_req_sel(ctrl->ctrl, true);
+			dsi_ctrl_set_continuous_clk(ctrl->ctrl, enable);
+			dsi_phy_set_continuous_clk(ctrl->phy, enable);
+		} else {
+			dsi_ctrl_set_continuous_clk(ctrl->ctrl, enable);
+		}
 	}
 }
 
@@ -1521,12 +1535,15 @@ static ssize_t debugfs_alter_esd_check_mode(struct file *file,
 		goto error;
 	}
 
-	if (!esd_config->esd_enabled)
+	if (!esd_config->esd_enabled) {
+		rc = -EINVAL;
 		goto error;
+	}
 
 	if (!strcmp(buf, "te_signal_check\n")) {
 		if (display->panel->panel_mode == DSI_OP_VIDEO_MODE) {
 			DSI_INFO("TE based ESD check for Video Mode panels is not allowed\n");
+			rc = -EINVAL;
 			goto error;
 		}
 		DSI_INFO("ESD check is switched to TE mode by user\n");
@@ -1769,9 +1786,15 @@ static int dsi_display_debugfs_init(struct dsi_display *display)
 	int rc = 0;
 	struct dentry *dir, *dump_file, *misr_data;
 	char name[MAX_NAME_SIZE];
+	char panel_name[SEC_PANEL_NAME_MAX_LEN];
+	char secondary_panel_str[] = "_secondary";
 	int i;
 
-	dir = debugfs_create_dir(display->name, NULL);
+	strlcpy(panel_name, display->name, SEC_PANEL_NAME_MAX_LEN);
+	if (strcmp(display->display_type, "secondary") == 0)
+		strlcat(panel_name, secondary_panel_str, SEC_PANEL_NAME_MAX_LEN);
+
+	dir = debugfs_create_dir(panel_name, NULL);
 	if (IS_ERR_OR_NULL(dir)) {
 		rc = PTR_ERR(dir);
 		DSI_ERR("[%s] debugfs create dir failed, rc = %d\n",
@@ -5079,7 +5102,7 @@ static int _dsi_display_dev_init(struct dsi_display *display)
 		return -EINVAL;
 	}
 
-	if (!display->panel_node)
+	if (!display->panel_node && !display->fw)
 		return 0;
 
 	mutex_lock(&display->display_lock);
@@ -5384,7 +5407,7 @@ static int dsi_display_bind(struct device *dev,
 				drm, display);
 		return -EINVAL;
 	}
-	if (!display->panel_node)
+	if (!display->panel_node && !display->fw)
 		return 0;
 
 	if (!display->fw)
@@ -5694,7 +5717,13 @@ static void dsi_display_firmware_display(const struct firmware *fw,
 			fw->size);
 
 		display->fw = fw;
-		display->name = "dsi_firmware_display";
+
+		if (!strcmp(display->display_type, "primary"))
+			display->name = "dsi_firmware_display";
+
+		else if (!strcmp(display->display_type, "secondary"))
+			display->name = "dsi_firmware_display_secondary";
+
 	} else {
 		DSI_INFO("no firmware available, fallback to device node\n");
 	}
@@ -5785,10 +5814,17 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 	if (!boot_disp->boot_disp_en &&
 			IS_ENABLED(CONFIG_DSI_PARSER) &&
 			!display->trusted_vm_env) {
-		firm_req = !request_firmware_nowait(
-			THIS_MODULE, 1, "dsi_prop",
-			&pdev->dev, GFP_KERNEL, display,
-			dsi_display_firmware_display);
+		if (!strcmp(display->display_type, "primary"))
+			firm_req = !request_firmware_nowait(
+				THIS_MODULE, 1, "dsi_prop",
+				&pdev->dev, GFP_KERNEL, display,
+				dsi_display_firmware_display);
+
+		else if (!strcmp(display->display_type, "secondary"))
+			firm_req = !request_firmware_nowait(
+				THIS_MODULE, 1, "dsi_prop_sec",
+				&pdev->dev, GFP_KERNEL, display,
+				dsi_display_firmware_display);
 	}
 
 	if (!firm_req) {
@@ -5847,7 +5883,8 @@ int dsi_display_get_num_of_displays(void)
 	for (i = 0; i < MAX_DSI_ACTIVE_DISPLAY; i++) {
 		struct dsi_display *display = boot_displays[i].disp;
 
-		if (display && display->panel_node)
+		if ((display && display->panel_node) ||
+					(display && display->fw))
 			count++;
 	}
 
@@ -5866,7 +5903,8 @@ int dsi_display_get_active_displays(void **display_array, u32 max_display_count)
 	for (index = 0; index < MAX_DSI_ACTIVE_DISPLAY; index++) {
 		struct dsi_display *display = boot_displays[index].disp;
 
-		if (display && display->panel_node)
+		if ((display && display->panel_node) ||
+					(display && display->fw))
 			display_array[count++] = display;
 	}
 
@@ -6434,7 +6472,10 @@ int dsi_display_get_info(struct drm_connector *connector,
 	info->max_width = 1920;
 	info->max_height = 1080;
 	info->qsync_min_fps =
-		display->panel->qsync_min_fps;
+		display->panel->qsync_caps.qsync_min_fps;
+	info->has_qsync_min_fps_list =
+		(display->panel->qsync_caps.qsync_min_fps_list_len > 0) ?
+		true : false;
 	info->poms_align_vsync = display->panel->poms_align_vsync;
 
 	switch (display->panel->panel_mode) {
@@ -6894,6 +6935,25 @@ int dsi_display_get_default_lms(void *dsi_display, u32 *num_lm)
 	mutex_unlock(&display->display_lock);
 
 	return rc;
+}
+
+int dsi_display_get_qsync_min_fps(void *display_dsi, u32 mode_fps)
+{
+	struct dsi_display *display = (struct dsi_display *)display_dsi;
+	struct dsi_panel *panel;
+	u32 i;
+
+	if (display == NULL || display->panel == NULL)
+		return -EINVAL;
+
+	panel = display->panel;
+	for (i = 0; i < panel->dfps_caps.dfps_list_len; i++) {
+		if (panel->dfps_caps.dfps_list[i] == mode_fps)
+			return panel->qsync_caps.qsync_min_fps_list[i];
+	}
+	SDE_EVT32(mode_fps);
+	DSI_DEBUG("Invalid mode_fps %d\n", mode_fps);
+	return -EINVAL;
 }
 
 int dsi_display_find_mode(struct dsi_display *display,
@@ -7743,7 +7803,7 @@ static int dsi_display_qsync(struct dsi_display *display, bool enable)
 	int i;
 	int rc = 0;
 
-	if (!display->panel->qsync_min_fps) {
+	if (!display->panel->qsync_caps.qsync_min_fps) {
 		DSI_ERR("%s:ERROR: qsync set, but no fps\n", __func__);
 		return 0;
 	}
@@ -7771,7 +7831,7 @@ static int dsi_display_qsync(struct dsi_display *display, bool enable)
 	}
 
 exit:
-	SDE_EVT32(enable, display->panel->qsync_min_fps, rc);
+	SDE_EVT32(enable, display->panel->qsync_caps.qsync_min_fps, rc);
 	mutex_unlock(&display->display_lock);
 	return rc;
 }
