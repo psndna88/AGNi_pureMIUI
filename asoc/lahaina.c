@@ -5101,8 +5101,14 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 		/* bits 24:27 carry read length in bytes */
 		val |= 1 << 24;
 
+		/* bits 16:19 carry command id */
+		val |= (i*2) << 16;
+
 		/* Update dev num in packed reg addr */
 		pdata->cps_config.spkr_dep_cfg[i].vbatt_pkd_reg_addr |= val;
+
+		val &= 0xFF0FFFF;
+		val |= ((i*2)+1) << 16;
 		pdata->cps_config.spkr_dep_cfg[i].temp_pkd_reg_addr |= val;
 		i++;
 		ch_configured++;
