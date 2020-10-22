@@ -68,6 +68,9 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #ifdef FEATURE_WDS
 #include "dp_txrx_wds.h"
 #endif
+#ifdef WLAN_SUPPORT_MSCS
+#include "dp_mscs.h"
+#endif
 #ifdef ATH_SUPPORT_IQUE
 #include "dp_txrx_me.h"
 #endif
@@ -1358,7 +1361,12 @@ dp_srng_configure_interrupt_thresholds(struct dp_soc *soc,
 				       int ring_type, int ring_num,
 				       int num_entries)
 {
-	if (ring_type == WBM2SW_RELEASE && (ring_num == 3)) {
+	if (ring_type == REO_DST) {
+		ring_params->intr_timer_thres_us =
+			wlan_cfg_get_int_timer_threshold_rx(soc->wlan_cfg_ctx);
+		ring_params->intr_batch_cntr_thres_entries =
+			wlan_cfg_get_int_batch_threshold_rx(soc->wlan_cfg_ctx);
+	} else if (ring_type == WBM2SW_RELEASE && (ring_num == 3)) {
 		ring_params->intr_timer_thres_us =
 				wlan_cfg_get_int_timer_threshold_other(soc->wlan_cfg_ctx);
 		ring_params->intr_batch_cntr_thres_entries =
@@ -2053,8 +2061,10 @@ static void dp_interrupt_timer(void *arg)
 	int budget = 0xffff, i;
 	uint32_t remaining_quota = budget;
 	uint64_t start_time;
-	uint32_t lmac_id;
-	uint8_t dp_intr_id;
+	uint32_t lmac_id = DP_MON_INVALID_LMAC_ID;
+	uint8_t dp_intr_id = wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx);
+	uint32_t lmac_iter;
+	int max_mac_rings = wlan_cfg_get_num_mac_rings(pdev->wlan_cfg_ctx);
 
 	/*
 	 * this logic makes all data path interfacing rings (UMAC/LMAC)
@@ -2075,32 +2085,36 @@ static void dp_interrupt_timer(void *arg)
 	if (!qdf_atomic_read(&soc->cmn_init_done))
 		return;
 
-	if (pdev->mon_chan_band == REG_BAND_UNKNOWN) {
-		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
-		return;
+	if (pdev->mon_chan_band != REG_BAND_UNKNOWN) {
+		lmac_id = pdev->ch_band_lmac_id_mapping[pdev->mon_chan_band];
+		if (qdf_likely(lmac_id != DP_MON_INVALID_LMAC_ID)) {
+			dp_intr_id = soc->mon_intr_id_lmac_map[lmac_id];
+			dp_srng_record_timer_entry(soc, dp_intr_id);
+		}
 	}
 
-	lmac_id = pdev->ch_band_lmac_id_mapping[pdev->mon_chan_band];
-	if (qdf_unlikely(lmac_id == DP_MON_INVALID_LMAC_ID)) {
-		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
-		return;
-	}
-
-	dp_intr_id = soc->mon_intr_id_lmac_map[lmac_id];
-	dp_srng_record_timer_entry(soc, dp_intr_id);
 	start_time = qdf_get_log_timestamp();
+	dp_is_hw_dbs_enable(soc, &max_mac_rings);
 
 	while (yield == DP_TIMER_NO_YIELD) {
-		work_done = dp_mon_process(soc, &soc->intr_ctx[dp_intr_id],
-					   lmac_id, remaining_quota);
-		if (work_done) {
-			budget -=  work_done;
-			if (budget <= 0) {
-				yield = DP_TIMER_WORK_EXHAUST;
-				goto budget_done;
+		for (lmac_iter = 0; lmac_iter < max_mac_rings; lmac_iter++) {
+			if (lmac_iter == lmac_id)
+				work_done = dp_mon_process(soc,
+						    &soc->intr_ctx[dp_intr_id],
+						    lmac_iter, remaining_quota);
+			else
+				work_done = dp_mon_drop_packets_for_mac(pdev,
+							       lmac_iter,
+							       remaining_quota);
+			if (work_done) {
+				budget -=  work_done;
+				if (budget <= 0) {
+					yield = DP_TIMER_WORK_EXHAUST;
+					goto budget_done;
+				}
+				remaining_quota = budget;
+				total_work_done += work_done;
 			}
-			remaining_quota = budget;
-			total_work_done += work_done;
 		}
 
 		yield = dp_should_timer_irq_yield(soc, total_work_done,
@@ -2115,7 +2129,8 @@ budget_done:
 	else
 		qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
 
-	dp_srng_record_timer_exit(soc, dp_intr_id);
+	if (lmac_id != DP_MON_INVALID_LMAC_ID)
+		dp_srng_record_timer_exit(soc, dp_intr_id);
 }
 
 #ifdef WLAN_FEATURE_DP_EVENT_HISTORY
@@ -7770,6 +7785,22 @@ void dp_print_napi_stats(struct dp_soc *soc)
 	hif_print_napi_stats(soc->hif_handle);
 }
 
+#ifdef QCA_PEER_EXT_STATS
+/**
+ * dp_txrx_host_peer_ext_stats_clr: Reinitialize the txrx peer ext stats
+ *
+ */
+static inline void dp_txrx_host_peer_ext_stats_clr(struct dp_peer *peer)
+{
+	if (peer->pext_stats)
+		qdf_mem_zero(peer->pext_stats, sizeof(*peer->pext_stats));
+}
+#else
+static inline void dp_txrx_host_peer_ext_stats_clr(struct dp_peer *peer)
+{
+}
+#endif
+
 /**
  * dp_txrx_host_peer_stats_clr): Reinitialize the txrx peer stats
  * @soc: Datapath soc
@@ -7790,7 +7821,10 @@ dp_txrx_host_peer_stats_clr(struct dp_soc *soc,
 		rx_tid = &peer->rx_tid[tid];
 		DP_STATS_CLR(rx_tid);
 	}
+
 	DP_STATS_CLR(peer);
+
+	dp_txrx_host_peer_ext_stats_clr(peer);
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, peer->vdev->pdev->soc,
@@ -10152,10 +10186,10 @@ dp_peer_teardown_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	dp_peer_update_state(soc, peer, DP_PEER_STATE_LOGICAL_DELETE);
+
 	qdf_spin_lock_bh(&soc->ast_lock);
 	dp_peer_delete_ast_entries(soc, peer);
-
-	dp_peer_update_state(soc, peer, DP_PEER_STATE_LOGICAL_DELETE);
 	qdf_spin_unlock_bh(&soc->ast_lock);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
@@ -10938,6 +10972,12 @@ static struct cdp_cfr_ops dp_ops_cfr = {
 };
 #endif
 
+#ifdef WLAN_SUPPORT_MSCS
+static struct cdp_mscs_ops dp_ops_mscs = {
+	.mscs_peer_lookup_n_get_priority = dp_mscs_peer_lookup_n_get_priority,
+};
+#endif
+
 #ifdef FEATURE_RUNTIME_PM
 /**
  * dp_runtime_suspend() - ensure DP is ready to runtime suspend
@@ -11385,6 +11425,7 @@ static struct cdp_ipa_ops dp_ops_ipa = {
 	.ipa_set_doorbell_paddr = dp_ipa_set_doorbell_paddr,
 	.ipa_op_response = dp_ipa_op_response,
 	.ipa_register_op_cb = dp_ipa_register_op_cb,
+	.ipa_deregister_op_cb = dp_ipa_deregister_op_cb,
 	.ipa_get_stat = dp_ipa_get_stat,
 	.ipa_tx_data_frame = dp_tx_send_ipa_data_frame,
 	.ipa_enable_autonomy = dp_ipa_enable_autonomy,
@@ -11397,7 +11438,8 @@ static struct cdp_ipa_ops dp_ops_ipa = {
 	.ipa_disable_pipes = dp_ipa_disable_pipes,
 	.ipa_set_perf_level = dp_ipa_set_perf_level,
 	.ipa_rx_intrabss_fwd = dp_ipa_rx_intrabss_fwd,
-	.ipa_tx_buf_smmu_mapping = dp_ipa_tx_buf_smmu_mapping
+	.ipa_tx_buf_smmu_mapping = dp_ipa_tx_buf_smmu_mapping,
+	.ipa_tx_buf_smmu_unmapping = dp_ipa_tx_buf_smmu_unmapping
 };
 #endif
 
@@ -11589,6 +11631,9 @@ static struct cdp_ops dp_txrx_ops = {
 #endif
 #if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
 	.cfr_ops = &dp_ops_cfr,
+#endif
+#ifdef WLAN_SUPPORT_MSCS
+	.mscs_ops = &dp_ops_mscs,
 #endif
 };
 

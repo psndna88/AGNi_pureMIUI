@@ -268,8 +268,9 @@ QDF_STATUS cm_add_req_to_list_and_indicate_osif(struct cnx_mgr *cm_ctx,
 	cm_req_lock_acquire(cm_ctx);
 	if (qdf_list_size(&cm_ctx->req_list) >= CM_MAX_REQ) {
 		cm_req_lock_release(cm_ctx);
-		mlme_err(CM_PREFIX_LOG "List full size %d",
-			 wlan_vdev_get_id(cm_ctx->vdev), cm_req->cm_id,
+		mlme_err(CM_PREFIX_FMT "List full size %d",
+			 CM_PREFIX_REF(wlan_vdev_get_id(cm_ctx->vdev),
+				       cm_req->cm_id),
 			 qdf_list_size(&cm_ctx->req_list));
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -336,8 +337,8 @@ cm_delete_req_from_list(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id)
 
 	if (!cm_req) {
 		cm_req_lock_release(cm_ctx);
-		mlme_err("vdev %d cm req id %d not found",
-			 wlan_vdev_get_id(cm_ctx->vdev), cm_id);
+		mlme_err(CM_PREFIX_FMT " req not found",
+			 CM_PREFIX_REF(wlan_vdev_get_id(cm_ctx->vdev), cm_id));
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -364,8 +365,8 @@ void cm_remove_cmd(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id)
 
 	psoc = wlan_vdev_get_psoc(cm_ctx->vdev);
 	if (!psoc) {
-		mlme_err(CM_PREFIX_LOG "Failed to find psoc",
-			 wlan_vdev_get_id(cm_ctx->vdev), cm_id);
+		mlme_err(CM_PREFIX_FMT "Failed to find psoc",
+			 CM_PREFIX_REF(wlan_vdev_get_id(cm_ctx->vdev), cm_id));
 		return;
 	}
 
@@ -430,6 +431,38 @@ void cm_set_max_connect_attempts(struct wlan_objmgr_vdev *vdev,
 	mlme_debug("vdev %d max connect attempts set to %d, requested %d",
 		   wlan_vdev_get_id(vdev),
 		   cm_ctx->max_connect_attempts, max_connect_attempts);
+}
+
+QDF_STATUS
+cm_fill_disconnect_resp_from_cm_id(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id,
+				   struct wlan_cm_discon_rsp *resp)
+{
+	qdf_list_node_t *cur_node = NULL, *next_node = NULL;
+	struct cm_req *cm_req;
+	uint32_t prefix = CM_ID_GET_PREFIX(cm_id);
+
+	if (prefix != DISCONNECT_REQ_PREFIX)
+		return QDF_STATUS_E_INVAL;
+
+	cm_req_lock_acquire(cm_ctx);
+	qdf_list_peek_front(&cm_ctx->req_list, &cur_node);
+	while (cur_node) {
+		qdf_list_peek_next(&cm_ctx->req_list, cur_node, &next_node);
+		cm_req = qdf_container_of(cur_node, struct cm_req, node);
+
+		if (cm_req->cm_id == cm_id) {
+			resp->req.cm_id = cm_id;
+			resp->req.req = cm_req->discon_req.req;
+			cm_req_lock_release(cm_ctx);
+			return QDF_STATUS_SUCCESS;
+		}
+
+		cur_node = next_node;
+		next_node = NULL;
+	}
+	cm_req_lock_release(cm_ctx);
+
+	return QDF_STATUS_E_FAILURE;
 }
 
 bool cm_is_vdev_connecting(struct wlan_objmgr_vdev *vdev)

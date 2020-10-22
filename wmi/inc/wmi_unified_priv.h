@@ -211,6 +211,23 @@ struct wmi_command_debug {
 };
 
 /**
+ * struct wmi_command_cmp_debug - WMI command completion log buffer data type
+ * @ command - Store WMI Command id
+ * @ data - Stores WMI command data
+ * @ time - Time of WMI command handling
+ * @ dma_addr - dma address of the WMI buffer
+ * @ phy_addr - physical address of the WMI buffer
+ */
+struct wmi_command_cmp_debug {
+	uint32_t command;
+	/* WMI cmd data excluding TLV and WMI headers */
+	uint32_t data[WMI_DEBUG_ENTRY_MAX_LENGTH / sizeof(uint32_t)];
+	uint64_t time;
+	qdf_dma_addr_t dma_addr;
+	uint64_t phy_addr;
+};
+
+/**
  * struct wmi_event_debug - WMI event log buffer data type
  * @ command - Store WMI Event id
  * @ data - Stores WMI Event data
@@ -820,7 +837,8 @@ QDF_STATUS (*send_process_ll_stats_get_cmd)(wmi_unified_t wmi_handle,
 				const struct ll_stats_get_params *get_req);
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 QDF_STATUS (*send_unified_ll_stats_get_sta_cmd)(wmi_unified_t wmi_handle,
-				const struct ll_stats_get_params *get_req);
+				const struct ll_stats_get_params *get_req,
+				bool is_always_over_qmi);
 #endif
 #endif
 
@@ -990,10 +1008,6 @@ QDF_STATUS (*send_process_del_periodic_tx_ptrn_cmd)(wmi_unified_t wmi_handle,
 
 QDF_STATUS (*send_set_auto_shutdown_timer_cmd)(wmi_unified_t wmi_handle,
 						  uint32_t timer_val);
-
-QDF_STATUS
-(*send_ocl_cmd)(wmi_unified_t wmi_handle,
-		struct ocl_cmd_params *param);
 
 #ifdef WLAN_FEATURE_NAN
 QDF_STATUS (*send_nan_req_cmd)(wmi_unified_t wmi_handle,

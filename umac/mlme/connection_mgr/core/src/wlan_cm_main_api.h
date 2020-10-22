@@ -36,7 +36,8 @@
 
 #define CM_ID_GET_PREFIX(cm_id)     cm_id & 0xFFFF0000
 
-#define CM_PREFIX_LOG "vdev %d cm_id 0x%x: "
+#define CM_PREFIX_FMT "vdev %d cm_id 0x%x: "
+#define CM_PREFIX_REF(vdev_id, cm_id) (vdev_id), (cm_id)
 
 /*************** CONNECT APIs ****************/
 
@@ -281,6 +282,51 @@ QDF_STATUS cm_add_disconnect_req_to_list(struct cnx_mgr *cm_ctx,
 QDF_STATUS cm_disconnect_start_req(struct wlan_objmgr_vdev *vdev,
 				   struct wlan_cm_disconnect_req *req);
 
+/**
+ * cm_bss_peer_delete_req() - Connection manager bss peer delete
+ * request
+ * @vdev: VDEV object
+ * @peer_mac: Peer mac address
+ *
+ * This function is called on peer delete indication and sends peer delete
+ * request to mlme.
+ *
+ * Context: Any context.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_bss_peer_delete_req(struct wlan_objmgr_vdev *vdev,
+				  struct qdf_mac_addr *peer_mac);
+
+/**
+ * cm_vdev_down_req() - Connection manager req to send vdev down to FW
+ * @vdev: VDEV object
+ * @status: status
+ *
+ * This function is called when peer delete response is received, to send
+ * vdev down request to mlme
+ *
+ * Context: Any context.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_vdev_down_req(struct wlan_objmgr_vdev *vdev, uint32_t status);
+
+/**
+ * cm_disconnect_rsp() - Connection manager api to post connect event
+ * @vdev: VDEV object
+ * @cm_discon_rsp: Disconnect response
+ *
+ * This function is called when disconnecte response is received, to deliver
+ * disconnect event to SM
+ *
+ * Context: Any context.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cm_disconnect_rsp(struct wlan_objmgr_vdev *vdev,
+			     struct wlan_cm_discon_rsp *resp);
+
 /*************** UTIL APIs ****************/
 
 /**
@@ -449,6 +495,22 @@ struct cm_req *cm_get_req_by_cm_id_fl(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id,
  */
 void cm_vdev_scan_cancel(struct wlan_objmgr_pdev *pdev,
 			 struct wlan_objmgr_vdev *vdev);
+
+/**
+ * cm_fill_disconnect_resp_from_cm_id() - Fill disconnect response
+ * @cm_ctx: connection manager context
+ * @cm_id: cm id of connect/disconnect req
+ * @resp: Disconnect response which needs to filled
+ *
+ * This function is called to fill disconnect response from cm id
+ *
+ * Context: Any Context.
+ *
+ * Return: Success if disconnect
+ */
+QDF_STATUS
+cm_fill_disconnect_resp_from_cm_id(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id,
+				   struct wlan_cm_discon_rsp *resp);
 
 /**
  * cm_set_max_connect_attempts() - Set max connect attempts

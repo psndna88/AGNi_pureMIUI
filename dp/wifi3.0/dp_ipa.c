@@ -31,6 +31,9 @@
 #include "dp_rx.h"
 #include "dp_ipa.h"
 
+/* Ring index for WBM2SW2 release ring */
+#define IPA_TX_COMP_RING_IDX HAL_IPA_TX_COMP_RING_IDX
+
 /* Hard coded config parameters until dp_ops_cfg.cfg_attach implemented */
 #define CFG_IPA_UC_TX_BUF_SIZE_DEFAULT            (2048)
 
@@ -106,11 +109,9 @@ static QDF_STATUS __dp_ipa_handle_buf_smmu_mapping(struct dp_soc *soc,
 				 size);
 
 	if (create)
-		qdf_ipa_wdi_create_smmu_mapping(1, &mem_map_table);
+		return qdf_ipa_wdi_create_smmu_mapping(1, &mem_map_table);
 	else
-		qdf_ipa_wdi_release_smmu_mapping(1, &mem_map_table);
-
-	return QDF_STATUS_SUCCESS;
+		return qdf_ipa_wdi_release_smmu_mapping(1, &mem_map_table);
 }
 
 QDF_STATUS dp_ipa_handle_rx_buf_smmu_mapping(struct dp_soc *soc,
@@ -169,6 +170,11 @@ static QDF_STATUS __dp_ipa_tx_buf_smmu_mapping(
 	qdf_nbuf_t nbuf;
 	uint32_t buf_len;
 
+	if (!ipa_is_ready()) {
+		dp_info("IPA is not READY");
+		return 0;
+	}
+
 	for (index = 0; index < tx_buffer_cnt; index++) {
 		nbuf = (qdf_nbuf_t)
 			soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[index];
@@ -176,8 +182,10 @@ static QDF_STATUS __dp_ipa_tx_buf_smmu_mapping(
 			continue;
 		buf_len = qdf_nbuf_get_data_len(nbuf);
 		ret = __dp_ipa_handle_buf_smmu_mapping(
-				soc, nbuf, buf_len, true);
+				soc, nbuf, buf_len, create);
+		qdf_assert_always(!ret);
 	}
+
 	return ret;
 }
 
@@ -294,19 +302,12 @@ static void dp_tx_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	int idx;
 	qdf_nbuf_t nbuf;
 	struct dp_ipa_resources *ipa_res;
-	bool is_ipa_ready = qdf_ipa_is_ready();
-	uint32_t buf_len;
 
 	for (idx = 0; idx < soc->ipa_uc_tx_rsc.alloc_tx_buf_cnt; idx++) {
 		nbuf = (qdf_nbuf_t)
 			soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[idx];
 		if (!nbuf)
 			continue;
-		buf_len = qdf_nbuf_get_data_len(nbuf);
-		if (qdf_mem_smmu_s1_enabled(soc->osdev) && is_ipa_ready)
-			__dp_ipa_handle_buf_smmu_mapping(
-					soc, nbuf, buf_len, false);
-
 		qdf_nbuf_unmap_single(soc->osdev, nbuf, QDF_DMA_BIDIRECTIONAL);
 		qdf_nbuf_free(nbuf);
 		soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[idx] =
@@ -317,7 +318,8 @@ static void dp_tx_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned = NULL;
 
 	ipa_res = &pdev->ipa_resource;
-	iounmap(ipa_res->tx_comp_doorbell_vaddr);
+	if (!ipa_res->is_db_ddr_mapped)
+		iounmap(ipa_res->tx_comp_doorbell_vaddr);
 
 	qdf_mem_free_sgtable(&ipa_res->tx_ring.sgtable);
 	qdf_mem_free_sgtable(&ipa_res->tx_comp_ring.sgtable);
@@ -763,7 +765,11 @@ QDF_STATUS dp_ipa_set_doorbell_paddr(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	if (!wlan_cfg_is_ipa_enabled(soc->wlan_cfg_ctx))
 		return QDF_STATUS_SUCCESS;
 
-	ipa_res->tx_comp_doorbell_vaddr =
+	if (ipa_res->is_db_ddr_mapped)
+		ipa_res->tx_comp_doorbell_vaddr =
+				phys_to_virt(ipa_res->tx_comp_doorbell_paddr);
+	else
+		ipa_res->tx_comp_doorbell_vaddr =
 				ioremap(ipa_res->tx_comp_doorbell_paddr, 4);
 
 	if (qdf_mem_smmu_s1_enabled(soc->osdev)) {
@@ -840,6 +846,21 @@ QDF_STATUS dp_ipa_register_op_cb(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	pdev->usr_ctxt = usr_ctxt;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+void dp_ipa_deregister_op_cb(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+
+	if (!pdev) {
+		dp_err("Invalid instance");
+		return;
+	}
+
+	dp_debug("Deregister OP handler callback");
+	pdev->ipa_uc_op_cb = NULL;
+	pdev->usr_ctxt = NULL;
 }
 
 QDF_STATUS dp_ipa_get_stat(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
@@ -1311,6 +1332,9 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	ipa_res->rx_ready_doorbell_paddr =
 		QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(&pipe_out);
 
+	ipa_res->is_db_ddr_mapped =
+		QDF_IPA_WDI_CONN_OUT_PARAMS_IS_DB_DDR_MAPPED(&pipe_out);
+
 	soc->ipa_first_tx_db_access = true;
 
 	return QDF_STATUS_SUCCESS;
@@ -1745,7 +1769,9 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	}
 
 	if (soc->ipa_first_tx_db_access) {
-		hal_srng_dst_init_hp(wbm_srng, ipa_res->tx_comp_doorbell_vaddr);
+		hal_srng_dst_init_hp(
+			soc->hal_soc, wbm_srng,
+			ipa_res->tx_comp_doorbell_vaddr);
 		soc->ipa_first_tx_db_access = false;
 	}
 
@@ -2041,6 +2067,30 @@ QDF_STATUS dp_ipa_tx_buf_smmu_mapping(
 		return QDF_STATUS_SUCCESS;
 	}
 	ret = __dp_ipa_tx_buf_smmu_mapping(soc, pdev, true);
+
+	return ret;
+}
+
+QDF_STATUS dp_ipa_tx_buf_smmu_unmapping(
+	struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+	QDF_STATUS ret;
+
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+
+	if (!pdev) {
+		dp_err("%s invalid instance", __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!qdf_mem_smmu_s1_enabled(soc->osdev)) {
+		dp_debug("SMMU S1 disabled");
+		return QDF_STATUS_SUCCESS;
+	}
+	ret = __dp_ipa_tx_buf_smmu_mapping(soc, pdev, false);
+
 	return ret;
 }
 

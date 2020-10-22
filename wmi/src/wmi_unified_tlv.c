@@ -1071,19 +1071,19 @@ static QDF_STATUS send_vdev_start_cmd_tlv(wmi_unified_t wmi_handle,
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
 		       cmd->num_noa_descriptors *
 		       sizeof(wmi_p2p_noa_descriptor));
-	wmi_info("%s: vdev_id %d freq %d chanmode %d ch_info: 0x%x is_dfs %d "
-		"beacon interval %d dtim %d center_chan %d center_freq2 %d "
-		"reg_info_1: 0x%x reg_info_2: 0x%x, req->max_txpow: 0x%x "
-		"Tx SS %d, Rx SS %d, ldpc_rx: %d, cac %d, regd %d, HE ops: %d"
-		"req->dis_hw_ack: %d ", __func__, req->vdev_id,
-		chan->mhz, req->channel.phy_mode, chan->info,
-		req->channel.dfs_set, req->beacon_interval, cmd->dtim_period,
-		chan->band_center_freq1, chan->band_center_freq2,
-		chan->reg_info_1, chan->reg_info_2, req->channel.maxregpower,
-		req->preferred_tx_streams, req->preferred_rx_streams,
-		req->ldpc_rx_enabled, req->cac_duration_ms,
-		req->regdomain, req->he_ops,
-		req->disable_hw_ack);
+	wmi_info("vdev_id %d freq %d chanmode %d ch_info: 0x%x is_dfs %d "
+		 "beacon interval %d dtim %d center_chan %d center_freq2 %d "
+		 "reg_info_1: 0x%x reg_info_2: 0x%x, req->max_txpow: 0x%x "
+		 "Tx SS %d, Rx SS %d, ldpc_rx: %d, cac %d, regd %d, HE ops: %d"
+		 "req->dis_hw_ack: %d ", req->vdev_id,
+		 chan->mhz, req->channel.phy_mode, chan->info,
+		 req->channel.dfs_set, req->beacon_interval, cmd->dtim_period,
+		 chan->band_center_freq1, chan->band_center_freq2,
+		 chan->reg_info_1, chan->reg_info_2, req->channel.maxregpower,
+		 req->preferred_tx_streams, req->preferred_rx_streams,
+		 req->ldpc_rx_enabled, req->cac_duration_ms,
+		 req->regdomain, req->he_ops,
+		 req->disable_hw_ack);
 
 	if (req->is_restart) {
 		wmi_mtrace(WMI_VDEV_RESTART_REQUEST_CMDID, cmd->vdev_id, 0);
@@ -1853,10 +1853,10 @@ static QDF_STATUS send_wow_enable_cmd_tlv(wmi_unified_t wmi_handle,
 		cmd->pause_iface_config = WOW_IFACE_PAUSE_DISABLED;
 	cmd->flags = param->flags;
 
-	wmi_info("suspend type: %s flag is 0x%x",
-		 cmd->pause_iface_config == WOW_IFACE_PAUSE_ENABLED ?
-		 "WOW_IFACE_PAUSE_ENABLED" : "WOW_IFACE_PAUSE_DISABLED",
-		 cmd->flags);
+	wmi_debug("suspend type: %s flag is 0x%x",
+		  cmd->pause_iface_config == WOW_IFACE_PAUSE_ENABLED ?
+		  "WOW_IFACE_PAUSE_ENABLED" : "WOW_IFACE_PAUSE_DISABLED",
+		  cmd->flags);
 
 	wmi_mtrace(WMI_WOW_ENABLE_CMDID, NO_SESSION, 0);
 	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
@@ -4183,9 +4183,9 @@ static QDF_STATUS send_peer_rate_report_cmd_tlv(wmi_unified_t wmi_handle,
 		}
 	}
 
-	wmi_err("enable %d backoff_time %d period %d",
-		 cmd->enable_rate_report,
-		 cmd->report_backoff_time, cmd->report_timer_period);
+	wmi_debug("enable %d backoff_time %d period %d",
+		  cmd->enable_rate_report,
+		  cmd->report_backoff_time, cmd->report_timer_period);
 
 	wmi_mtrace(WMI_PEER_SET_RATE_REPORT_CONDITION_CMDID, NO_SESSION, 0);
 	status = wmi_unified_cmd_send(wmi_handle, buf, len,
@@ -5229,18 +5229,20 @@ static QDF_STATUS send_process_ll_stats_get_cmd_tlv(wmi_unified_t wmi_handle,
  *                                           station request
  * @wmi_handle: wmi handle
  * @get_req: ll stats get request command params
+ * @is_always_over_qmi: flag to send stats request always over qmi
  *
  * Return: QDF_STATUS_SUCCESS for success or error code
  */
 static QDF_STATUS send_unified_ll_stats_get_sta_cmd_tlv(
 				wmi_unified_t wmi_handle,
-				const struct ll_stats_get_params *get_req)
+				const struct ll_stats_get_params *get_req,
+				bool is_always_over_qmi)
 {
 	wmi_request_unified_ll_get_sta_cmd_fixed_param *unified_cmd;
 	int32_t len;
 	wmi_buf_t buf;
 	void *buf_ptr;
-	int ret;
+	QDF_STATUS ret;
 
 	len = sizeof(*unified_cmd);
 	buf = wmi_buf_alloc(wmi_handle, len);
@@ -5279,14 +5281,23 @@ static QDF_STATUS send_unified_ll_stats_get_sta_cmd_tlv(
 		  QDF_MAC_ADDR_REF(get_req->peer_macaddr.bytes));
 
 	wmi_mtrace(WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID, get_req->vdev_id, 0);
-	ret = wmi_unified_cmd_send_pm_chk(wmi_handle, buf, len,
-					  WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID);
-	if (ret) {
+
+	if (is_always_over_qmi && wmi_is_qmi_stats_enabled(wmi_handle)) {
+		ret = wmi_unified_cmd_send_over_qmi(
+					wmi_handle, buf, len,
+					WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID);
+	} else {
+		ret = wmi_unified_cmd_send_pm_chk(
+					wmi_handle, buf, len,
+					WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID);
+	}
+
+	if (QDF_IS_STATUS_ERROR(ret)) {
 		wmi_buf_free(buf);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	return QDF_STATUS_SUCCESS;
+	return ret;
 }
 #endif
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
@@ -7191,6 +7202,8 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 	WMI_RSRC_CFG_HOST_SERVICE_FLAG_NAN_IFACE_SUPPORT_SET(
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->nan_separate_iface_support);
+	WMI_RSRC_CFG_HOST_SERVICE_FLAG_HOST_SUPPORT_MULTI_RADIO_EVTS_PER_RADIO_SET(
+		resource_cfg->host_service_flags, 1);
 
 }
 
@@ -8663,19 +8676,19 @@ static bool is_service_enabled_tlv(wmi_unified_t wmi_handle,
 		return false;
 	}
 
-	if (!soc->wmi_ext_service_bitmap) {
-		wmi_err("WMI service ext bit map is not saved yet");
-		return false;
-	}
-
 	/* if wmi_service_enabled was received with extended2 bitmap,
 	 * use WMI_SERVICE_EXT2_IS_ENABLED to check the services.
 	 */
-	if (soc->wmi_ext2_service_bitmap)
+	if (soc->wmi_ext2_service_bitmap) {
+		if (!soc->wmi_ext_service_bitmap) {
+			wmi_err("WMI service ext bit map is not saved yet");
+			return false;
+		}
 		return WMI_SERVICE_EXT2_IS_ENABLED(soc->wmi_service_bitmap,
 				soc->wmi_ext_service_bitmap,
 				soc->wmi_ext2_service_bitmap,
 				service_id);
+	}
 
 	if (service_id >= WMI_MAX_EXT_SERVICE) {
 		wmi_err("Service id %d but WMI ext2 service bitmap is NULL",
@@ -12049,17 +12062,17 @@ static QDF_STATUS extract_dfs_radar_detection_event_tlv(
 	radar_found->freq_offset = radar_event->freq_offset;
 	radar_found->sidx = radar_event->sidx;
 
-	wmi_info("processed radar found event pdev %d,"
-		"Radar Event Info:pdev_id %d,timestamp %d,chan_freq  (dur) %d,"
-		"chan_width (RSSI) %d,detector_id (false_radar) %d,"
-		"freq_offset (radar_check) %d,segment_id %d,sidx %d,"
-		"is_chirp %d,detection mode %d",
-		radar_event->pdev_id, radar_found->pdev_id,
-		radar_event->timestamp, radar_event->chan_freq,
-		radar_event->chan_width, radar_event->detector_id,
-		radar_event->freq_offset, radar_event->segment_id,
-		radar_event->sidx, radar_event->is_chirp,
-		radar_event->detection_mode);
+	wmi_debug("processed radar found event pdev %d,"
+		  "Radar Event Info:pdev_id %d,timestamp %d,chan_freq  (dur) %d,"
+		  "chan_width (RSSI) %d,detector_id (false_radar) %d,"
+		  "freq_offset (radar_check) %d,segment_id %d,sidx %d,"
+		  "is_chirp %d,detection mode %d",
+		  radar_event->pdev_id, radar_found->pdev_id,
+		  radar_event->timestamp, radar_event->chan_freq,
+		  radar_event->chan_width, radar_event->detector_id,
+		  radar_event->freq_offset, radar_event->segment_id,
+		  radar_event->sidx, radar_event->is_chirp,
+		  radar_event->detection_mode);
 
 	return QDF_STATUS_SUCCESS;
 }

@@ -1537,7 +1537,8 @@ struct cdp_throttle_ops {
  * @ipa_register_op_cb:
  * @ipa_get_stat:
  * @ipa_tx_data_frame:
- * @ipa_tx_buf_smmu_mapping: Provide SMMU mappings for Tx
+ * @ipa_tx_buf_smmu_mapping: Create SMMU mappings for Tx
+ * @ipa_tx_buf_smmu_unmapping: Release SMMU mappings for Tx
  * buffers to IPA
  */
 struct cdp_ipa_ops {
@@ -1554,6 +1555,8 @@ struct cdp_ipa_ops {
 					 void (*ipa_uc_op_cb_type)
 					 (uint8_t *op_msg, void *osif_ctxt),
 					 void *usr_ctxt);
+	void (*ipa_deregister_op_cb)(struct cdp_soc_t *soc_hdl,
+				     uint8_t pdev_id);
 	QDF_STATUS (*ipa_get_stat)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
 	qdf_nbuf_t (*ipa_tx_data_frame)(struct cdp_soc_t *soc_hdl,
 					uint8_t vdev_id, qdf_nbuf_t skb);
@@ -1605,6 +1608,8 @@ struct cdp_ipa_ops {
 				    qdf_nbuf_t nbuf, bool *fwd_success);
 	QDF_STATUS (*ipa_tx_buf_smmu_mapping)(struct cdp_soc_t *soc_hdl,
 					      uint8_t pdev_id);
+	QDF_STATUS (*ipa_tx_buf_smmu_unmapping)(struct cdp_soc_t *soc_hdl,
+						uint8_t pdev_id);
 };
 #endif
 
@@ -1690,6 +1695,18 @@ struct cdp_cfr_ops {
 };
 #endif
 
+#ifdef WLAN_SUPPORT_MSCS
+/**
+ * struct cdp_mscs_ops - data path ops for MSCS
+ * @mscs_peer_lookup_n_get_priority:
+ */
+struct cdp_mscs_ops {
+	int (*mscs_peer_lookup_n_get_priority)(struct cdp_soc_t *soc,
+			      uint8_t *peer_mac,
+				  qdf_nbuf_t nbuf);
+};
+#endif
+
 struct cdp_ops {
 	struct cdp_cmn_ops          *cmn_drv_ops;
 	struct cdp_ctrl_ops         *ctrl_ops;
@@ -1724,6 +1741,9 @@ struct cdp_ops {
 #endif
 #if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
 	struct cdp_cfr_ops          *cfr_ops;
+#endif
+#ifdef WLAN_SUPPORT_MSCS
+	struct cdp_mscs_ops         *mscs_ops;
 #endif
 
 };
