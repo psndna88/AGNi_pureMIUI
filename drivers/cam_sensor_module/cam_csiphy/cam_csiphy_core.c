@@ -1110,6 +1110,7 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		bridge_params.v4l2_sub_dev_flag = 0;
 		bridge_params.media_entity_flag = 0;
 		bridge_params.priv = csiphy_dev;
+		bridge_params.dev_id = CAM_CSIPHY;
 		index = csiphy_dev->acquire_count;
 		csiphy_acq_dev.device_handle =
 			cam_create_device_hdl(&bridge_params);
@@ -1347,8 +1348,9 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			}
 
 			if (csiphy_dev->csiphy_info[offset].secure_mode == 1) {
-				if (cam_cpas_is_feature_supported(
-					CAM_CPAS_SECURE_CAMERA_ENABLE) != 1) {
+				if (!cam_cpas_is_feature_supported(
+					CAM_CPAS_SECURE_CAMERA_ENABLE,
+					CAM_CPAS_HW_IDX_ANY, NULL)) {
 					CAM_ERR(CAM_CSIPHY,
 						"sec_cam: camera fuse bit not set");
 					goto release_mutex;
@@ -1411,8 +1413,9 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		}
 
 		if (csiphy_dev->csiphy_info[offset].secure_mode == 1) {
-			if (cam_cpas_is_feature_supported(
-					CAM_CPAS_SECURE_CAMERA_ENABLE) != 1) {
+			if (!cam_cpas_is_feature_supported(
+					CAM_CPAS_SECURE_CAMERA_ENABLE,
+					CAM_CPAS_HW_IDX_ANY, NULL)) {
 				CAM_ERR(CAM_CSIPHY,
 					"sec_cam: camera fuse bit not set");
 				cam_cpas_stop(csiphy_dev->cpas_handle);

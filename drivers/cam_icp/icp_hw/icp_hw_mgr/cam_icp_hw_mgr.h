@@ -352,6 +352,7 @@ struct cam_icp_clk_info {
  * @bps_dev_intf: Device interface for BPS
  * @ipe_clk_state: IPE clock state flag
  * @bps_clk_state: BPS clock state flag
+ * @disable_ubwc_comp: Disable UBWC compression
  * @recovery: Flag to validate if in previous session FW
  *            reported a fatal error or wdt. If set FW is
  *            re-downloaded for new camera session.
@@ -400,6 +401,7 @@ struct cam_icp_hw_mgr {
 	struct cam_hw_intf *bps_dev_intf;
 	bool ipe_clk_state;
 	bool bps_clk_state;
+	bool disable_ubwc_comp;
 	atomic_t recovery;
 };
 

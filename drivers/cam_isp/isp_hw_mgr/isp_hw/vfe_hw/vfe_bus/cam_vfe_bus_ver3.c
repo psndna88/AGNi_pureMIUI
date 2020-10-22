@@ -91,6 +91,7 @@ struct cam_vfe_bus_ver3_common_data {
 	bool                                        is_lite;
 	bool                                        hw_init;
 	bool                                        support_consumed_addr;
+	bool                                        disable_ubwc_comp;
 	cam_hw_mgr_event_cb_func                    event_cb;
 	int                        rup_irq_handle[CAM_VFE_BUS_VER3_SRC_GRP_MAX];
 };
@@ -1625,6 +1626,7 @@ static int cam_vfe_bus_ver3_start_wm(struct cam_isp_resource_node *wm_res)
 	struct cam_vfe_bus_ver3_common_data        *common_data =
 		rsrc_data->common_data;
 	struct cam_vfe_bus_ver3_reg_offset_ubwc_client *ubwc_regs;
+	bool disable_ubwc_comp = rsrc_data->common_data->disable_ubwc_comp;
 
 	ubwc_regs = (struct cam_vfe_bus_ver3_reg_offset_ubwc_client *)
 		rsrc_data->hw_regs->ubwc_regs;
@@ -1640,6 +1642,8 @@ static int cam_vfe_bus_ver3_start_wm(struct cam_isp_resource_node *wm_res)
 	if (rsrc_data->en_ubwc) {
 		val = cam_io_r_mb(common_data->mem_base + ubwc_regs->mode_cfg);
 		val |= 0x1;
+		if (disable_ubwc_comp)
+			val &= ~(0x1<<1);
 		cam_io_w_mb(val, common_data->mem_base + ubwc_regs->mode_cfg);
 	}
 
@@ -2985,6 +2989,9 @@ static int cam_vfe_bus_ver3_update_ubwc_regs(
 	CAM_DBG(CAM_ISP, "WM:%d meta stride 0x%X",
 		wm_data->index, reg_val_pair[*j-1]);
 
+	if (wm_data->common_data->disable_ubwc_comp)
+		wm_data->ubwc_mode_cfg &= ~(0x1<<1);
+
 	CAM_VFE_ADD_REG_VAL_PAIR(reg_val_pair, *j,
 		ubwc_regs->mode_cfg, wm_data->ubwc_mode_cfg);
 	CAM_DBG(CAM_ISP, "WM:%d ubwc_mode_cfg 0x%X",
@@ -3839,6 +3846,10 @@ static int cam_vfe_bus_ver3_process_cmd(
 		bus_priv = (struct cam_vfe_bus_ver3_priv *) priv;
 		rc = cam_vfe_bus_get_res_for_mid(bus_priv, cmd_args, arg_size);
 		break;
+	case CAM_ISP_HW_CMD_DISABLE_UBWC_COMP:
+		bus_priv = (struct cam_vfe_bus_ver3_priv *) priv;
+		bus_priv->common_data.disable_ubwc_comp = true;
+		break;
 	default:
 		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid camif process command:%d",
 			cmd_type);
@@ -3913,6 +3924,7 @@ int cam_vfe_bus_ver3_init(
 	bus_priv->common_data.is_lite = soc_private->is_ife_lite;
 	bus_priv->common_data.support_consumed_addr =
 		ver3_hw_info->support_consumed_addr;
+	bus_priv->common_data.disable_ubwc_comp = false;
 
 	for (i = 0; i < CAM_VFE_BUS_VER3_SRC_GRP_MAX; i++)
 		bus_priv->common_data.rup_irq_handle[i] = 0;

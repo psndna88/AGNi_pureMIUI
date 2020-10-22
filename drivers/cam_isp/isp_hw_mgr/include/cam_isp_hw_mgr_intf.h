@@ -20,8 +20,14 @@
 #define CAM_TFE_HW_NUM_MAX   3
 #define CAM_TFE_RDI_NUM_MAX  3
 
+/* maximum context numbers for TFE */
+#define CAM_TFE_CTX_MAX      4
+
+/* maximum context numbers for IFE */
+#define CAM_IFE_CTX_MAX      8
+
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
-#define CAM_ISP_MAX_PER_PATH_VOTES 30
+#define CAM_ISP_MAX_PER_PATH_VOTES 40
 
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events
@@ -122,6 +128,7 @@ struct cam_isp_bw_config_internal {
  *                          is valid or not
  * @reg_dump_buf_desc:     cmd buffer descriptors for reg dump
  * @num_reg_dump_buf:      Count of descriptors in reg_dump_buf_desc
+ * @packet                 CSL packet from user mode driver
  *
  */
 struct cam_isp_prepare_hw_update_data {
@@ -137,6 +144,7 @@ struct cam_isp_prepare_hw_update_data {
 	struct cam_cmd_buf_desc               reg_dump_buf_desc[
 						CAM_REG_DUMP_MAX_BUF_ENTRIES];
 	uint32_t                              num_reg_dump_buf;
+	struct cam_packet                     *packet;
 };
 
 

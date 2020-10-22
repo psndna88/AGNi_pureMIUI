@@ -15,9 +15,13 @@
 #include "include/cam_csiphy_2_0_hwreg.h"
 #include "include/cam_csiphy_2_1_0_hwreg.h"
 
+/* Clock divide factor for CPHY spec v1.0 */
 #define CSIPHY_DIVISOR_16           16
+/* Clock divide factor for CPHY spec v1.2 and up */
 #define CSIPHY_DIVISOR_32           32
+/* Clock divide factor for DPHY */
 #define CSIPHY_DIVISOR_8             8
+
 #define BYTES_PER_REGISTER           4
 #define NUM_REGISTER_PER_LINE        4
 #define REG_OFFSET(__start, __i)    ((__start) + ((__i) * BYTES_PER_REGISTER))
@@ -399,7 +403,7 @@ int32_t cam_csiphy_parse_dt_info(struct platform_device *pdev,
 		csiphy_dev->ctrl_reg->getclockvoting = get_clk_vote_default;
 		csiphy_dev->ctrl_reg->csiphy_reg = csiphy_v1_2_3;
 		csiphy_dev->is_csiphy_3phase_hw = CSI_3PHASE_HW;
-		csiphy_dev->is_divisor_32_comp = false;
+		csiphy_dev->is_divisor_32_comp = true;
 		csiphy_dev->hw_version = CSIPHY_VERSION_V123;
 		csiphy_dev->clk_lane = 0;
 		csiphy_dev->ctrl_reg->data_rates_settings_table =
@@ -416,10 +420,10 @@ int32_t cam_csiphy_parse_dt_info(struct platform_device *pdev,
 			csiphy_common_reg_1_2_3;
 		csiphy_dev->ctrl_reg->csiphy_reset_reg =
 			csiphy_reset_reg_1_2_3;
-		csiphy_dev->ctrl_reg->getclockvoting = get_clk_vote_default;
+		csiphy_dev->ctrl_reg->getclockvoting = get_clk_voting_dynamic;
 		csiphy_dev->ctrl_reg->csiphy_reg = csiphy_v1_2_3;
 		csiphy_dev->is_csiphy_3phase_hw = CSI_3PHASE_HW;
-		csiphy_dev->is_divisor_32_comp = false;
+		csiphy_dev->is_divisor_32_comp = true;
 		csiphy_dev->hw_version = CSIPHY_VERSION_V124;
 		csiphy_dev->clk_lane = 0;
 		csiphy_dev->ctrl_reg->data_rates_settings_table =
@@ -492,7 +496,7 @@ int32_t cam_csiphy_parse_dt_info(struct platform_device *pdev,
 		csiphy_dev->ctrl_reg->getclockvoting = get_clk_vote_default;
 		csiphy_dev->hw_version = CSIPHY_VERSION_V210;
 		csiphy_dev->is_csiphy_3phase_hw = CSI_3PHASE_HW;
-		csiphy_dev->is_divisor_32_comp = false;
+		csiphy_dev->is_divisor_32_comp = true;
 		csiphy_dev->clk_lane = 0;
 		csiphy_dev->ctrl_reg->data_rates_settings_table =
 			&data_rate_delta_table_2_1_0;

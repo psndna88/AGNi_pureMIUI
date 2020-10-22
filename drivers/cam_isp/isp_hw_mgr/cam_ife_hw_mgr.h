@@ -24,6 +24,8 @@
 #define CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS   BIT(0)
 #define CAM_IFE_CUSTOM_CFG_SW_SYNC_ON        BIT(1)
 
+#define CAM_IFE_UBWC_COMP_EN                 BIT(1)
+
 /**
  * struct cam_ife_hw_mgr_debug - contain the debug information
  *
@@ -34,6 +36,7 @@
  * @enable_diag_sensor_status: enable sensor diagnosis status
  * @enable_req_dump:           Enable request dump on HW errors
  * @per_req_reg_dump:          Enable per request reg dump
+ * @disable_ubwc_comp:         Disable UBWC compression
  *
  */
 struct cam_ife_hw_mgr_debug {
@@ -44,6 +47,7 @@ struct cam_ife_hw_mgr_debug {
 	uint32_t       camif_debug;
 	bool           enable_req_dump;
 	bool           per_req_reg_dump;
+	bool           disable_ubwc_comp;
 };
 
 /**
@@ -190,7 +194,7 @@ struct cam_ife_hw_mgr {
 	atomic_t                       active_ctx_cnt;
 	struct list_head               free_ctx_list;
 	struct list_head               used_ctx_list;
-	struct cam_ife_hw_mgr_ctx      ctx_pool[CAM_CTX_MAX];
+	struct cam_ife_hw_mgr_ctx      ctx_pool[CAM_IFE_CTX_MAX];
 
 	struct cam_ife_csid_hw_caps    ife_csid_dev_caps[
 						CAM_IFE_CSID_HW_NUM_MAX];
@@ -214,7 +218,7 @@ struct cam_ife_hw_mgr {
 struct cam_ife_hw_event_recovery_data {
 	uint32_t                   error_type;
 	uint32_t                   affected_core[CAM_ISP_HW_NUM_MAX];
-	struct cam_ife_hw_mgr_ctx *affected_ctx[CAM_CTX_MAX];
+	struct cam_ife_hw_mgr_ctx *affected_ctx[CAM_IFE_CTX_MAX];
 	uint32_t                   no_of_context;
 };
 

@@ -15,6 +15,7 @@
 #include "cam_trace.h"
 #include "cam_debug_util.h"
 #include "cam_req_mgr_dev.h"
+#include "cam_req_mgr_debug.h"
 
 static struct cam_req_mgr_core_device *g_crm_core_dev;
 static struct cam_req_mgr_core_link g_links[MAXIMUM_LINKS_PER_SESSION];
@@ -320,7 +321,7 @@ static int __cam_req_mgr_notify_error_on_link(
 		return -EINVAL;
 	}
 
-	CAM_ERR(CAM_CRM,
+	CAM_ERR_RATE_LIMIT(CAM_CRM,
 		"Notifying userspace to trigger recovery on link 0x%x for session %d",
 		link->link_hdl, session->session_hdl);
 
@@ -340,7 +341,7 @@ static int __cam_req_mgr_notify_error_on_link(
 		V4L_EVENT_CAM_REQ_MGR_EVENT);
 
 	if (rc)
-		CAM_ERR(CAM_CRM,
+		CAM_ERR_RATE_LIMIT(CAM_CRM,
 			"Error in notifying recovery for session %d link 0x%x rc %d",
 			session->session_hdl, link->link_hdl, rc);
 
@@ -1594,6 +1595,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 	struct cam_req_mgr_core_session     *session;
 	struct cam_req_mgr_connected_device *dev;
 	struct cam_req_mgr_core_link        *tmp_link = NULL;
+	uint32_t                             max_retry = 0;
 
 	in_q = link->req.in_q;
 	session = (struct cam_req_mgr_core_session *)link->parent;
@@ -1700,6 +1702,9 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 	if (rc < 0) {
 		/* Apply req failed retry at next sof */
 		slot->status = CRM_SLOT_STATUS_REQ_PENDING;
+		max_retry = MAXIMUM_RETRY_ATTEMPTS;
+		if (link->max_delay == 1)
+			max_retry++;
 
 		if (jiffies_to_msecs(jiffies - link->last_applied_jiffies) >
 			MINIMUM_WORKQUEUE_SCHED_TIME_IN_MS)
@@ -1707,11 +1712,20 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 
 		if ((in_q->last_applied_idx < in_q->rd_idx) && check_retry_cnt) {
 			link->retry_cnt++;
-			if (link->retry_cnt == MAXIMUM_RETRY_ATTEMPTS) {
+			if (link->retry_cnt == max_retry) {
 				CAM_DBG(CAM_CRM,
-					"Max retry attempts reached on link[0x%x] for req [%lld]",
-					link->link_hdl,
+					"Max retry attempts (count %d) reached on link[0x%x] for req [%lld]",
+					max_retry, link->link_hdl,
 					in_q->slot[in_q->rd_idx].req_id);
+
+				cam_req_mgr_debug_delay_detect();
+				trace_cam_delay_detect("CRM",
+					"Max retry attempts reached",
+					in_q->slot[in_q->rd_idx].req_id,
+					CAM_DEFAULT_VALUE,
+					link->link_hdl,
+					CAM_DEFAULT_VALUE, rc);
+
 				__cam_req_mgr_notify_error_on_link(link, dev);
 				link->retry_cnt = 0;
 			}
@@ -2346,6 +2360,7 @@ int cam_req_mgr_process_flush_req(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	flush_info  = (struct cam_req_mgr_flush_info *)&task_data->u;
@@ -2663,6 +2678,7 @@ int cam_req_mgr_process_error(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	err_info  = (struct cam_req_mgr_error_notify *)&task_data->u;
@@ -2756,6 +2772,7 @@ int cam_req_mgr_process_stop(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	__cam_req_mgr_flush_req_slot(link);
 end:
@@ -2786,6 +2803,7 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 		rc = -EINVAL;
 		goto end;
 	}
+
 	link = (struct cam_req_mgr_core_link *)priv;
 	task_data = (struct crm_task_payload *)data;
 	trigger_data = (struct cam_req_mgr_trigger_notify *)&task_data->u;
@@ -2805,6 +2823,8 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 		if (idx >= 0) {
 			if (idx == in_q->last_applied_idx)
 				in_q->last_applied_idx = -1;
+			if (idx == in_q->rd_idx)
+				__cam_req_mgr_dec_idx(&idx, 1, in_q->num_slots);
 			__cam_req_mgr_reset_req_slot(link, idx);
 		}
 	}
@@ -2826,7 +2846,7 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 	}
 
 	if (link->state == CAM_CRM_LINK_STATE_ERR)
-		CAM_WARN(CAM_CRM, "Error recovery idx %d status %d",
+		CAM_WARN_RATE_LIMIT(CAM_CRM, "Error recovery idx %d status %d",
 			in_q->rd_idx,
 			in_q->slot[in_q->rd_idx].status);
 
@@ -3034,6 +3054,7 @@ static int cam_req_mgr_cb_notify_err(
 	notify_err->link_hdl = err_info->link_hdl;
 	notify_err->dev_hdl = err_info->dev_hdl;
 	notify_err->error = err_info->error;
+	notify_err->trigger = err_info->trigger;
 	task->process_cb = &cam_req_mgr_process_error;
 	rc = cam_req_mgr_workq_enqueue_task(task, link, CRM_TASK_PRIORITY_0);
 
@@ -3253,7 +3274,7 @@ static int cam_req_mgr_cb_notify_trigger(
 
 	task = cam_req_mgr_workq_get_task(link->workq);
 	if (!task) {
-		CAM_ERR(CAM_CRM, "no empty task frame %lld",
+		CAM_ERR_RATE_LIMIT(CAM_CRM, "no empty task frame %lld",
 			trigger_data->frame_id);
 		rc = -EBUSY;
 		goto end;
@@ -3513,7 +3534,8 @@ int cam_req_mgr_create_session(
 	ses_info->session_hdl = session_hdl;
 
 	mutex_init(&cam_session->lock);
-	CAM_DBG(CAM_CRM, "LOCK_DBG session lock %pK", &cam_session->lock);
+	CAM_DBG(CAM_CRM, "LOCK_DBG session lock %pK hdl 0x%x",
+		&cam_session->lock, session_hdl);
 
 	mutex_lock(&cam_session->lock);
 	cam_session->session_hdl = session_hdl;
@@ -3678,7 +3700,7 @@ int cam_req_mgr_link(struct cam_req_mgr_ver_info *link_info)
 	memset(&root_dev, 0, sizeof(struct cam_create_dev_hdl));
 	root_dev.session_hdl = link_info->u.link_info_v1.session_hdl;
 	root_dev.priv = (void *)link;
-
+	root_dev.dev_id = CAM_CRM;
 	mutex_lock(&link->lock);
 	/* Create unique dev handle for link */
 	link->link_hdl = cam_create_device_hdl(&root_dev);
@@ -3788,6 +3810,7 @@ int cam_req_mgr_link_v2(struct cam_req_mgr_ver_info *link_info)
 	memset(&root_dev, 0, sizeof(struct cam_create_dev_hdl));
 	root_dev.session_hdl = link_info->u.link_info_v2.session_hdl;
 	root_dev.priv = (void *)link;
+	root_dev.dev_id = CAM_CRM;
 
 	mutex_lock(&link->lock);
 	/* Create unique dev handle for link */
@@ -4026,6 +4049,7 @@ int cam_req_mgr_sync_config(
 		link[i]->is_master = false;
 		link[i]->in_msync_mode = false;
 		link[i]->initial_sync_req = -1;
+		link[i]->num_sync_links = 0;
 
 		for (j = 0; j < sync_info->num_links-1; j++)
 			link[i]->sync_link[j] = NULL;
@@ -4054,7 +4078,6 @@ int cam_req_mgr_sync_config(
 		for (j = 0; j < sync_info->num_links; j++) {
 			link[j]->initial_skip = true;
 			link[j]->sof_timestamp = 0;
-			link[j]->num_sync_links = 0;
 		}
 	}
 

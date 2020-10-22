@@ -13,6 +13,7 @@
 
 #include "cam_ife_csid_dev.h"
 #include "cam_vfe.h"
+#include "cam_sfe_dev.h"
 #include "cam_isp_dev.h"
 
 #include "cam_res_mgr_api.h"
@@ -91,6 +92,9 @@ static const struct camera_submodule_component camera_isp[] = {
 	{&cam_ife_csid17x_init_module, &cam_ife_csid17x_exit_module},
 	{&cam_ife_csid_lite_init_module, &cam_ife_csid_lite_exit_module},
 	{&cam_vfe_init_module, &cam_vfe_exit_module},
+#ifdef CONFIG_SPECTRA_SFE
+	{&cam_sfe_init_module, &cam_sfe_exit_module},
+#endif
 	{&cam_isp_dev_init_module, &cam_isp_dev_exit_module},
 #endif
 };

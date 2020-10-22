@@ -19,6 +19,7 @@
 #include "cam_cdm_util.h"
 #include "cam_isp_context.h"
 #include "cam_common_util.h"
+#include "cam_req_mgr_debug.h"
 
 static const char isp_dev_name[] = "cam-isp";
 
@@ -1467,8 +1468,9 @@ static int __cam_isp_ctx_reg_upd_in_epoch_bubble_state(
 			__cam_isp_ctx_substate_val_to_type(
 			ctx_isp->substate_activated));
 	else
-		CAM_WARN(CAM_ISP,
-			"Unexpected reg update in activated Substate[%s] for frame_id:%lld",
+		CAM_WARN_RATE_LIMIT(CAM_ISP,
+			"ctx_id:%d Unexpected reg update in activated Substate[%s] for frame_id:%lld",
+			ctx_isp->base->ctx_id,
 			__cam_isp_ctx_substate_val_to_type(
 			ctx_isp->substate_activated),
 			ctx_isp->frame_id);
@@ -1761,7 +1763,7 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	req_isp->bubble_detected = true;
 	req_isp->reapply = true;
 
-	CAM_INFO(CAM_ISP, "ctx:%d Report Bubble flag %d req id:%lld",
+	CAM_INFO_RATE_LIMIT(CAM_ISP, "ctx:%d Report Bubble flag %d req id:%lld",
 		ctx->ctx_id, req_isp->bubble_report, req->request_id);
 	if (req_isp->bubble_report && ctx->ctx_crm_intf &&
 		ctx->ctx_crm_intf->notify_err) {
@@ -1776,7 +1778,7 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 			notify.trigger = CAM_TRIGGER_POINT_SOF;
 		notify.frame_id = ctx_isp->frame_id;
 		notify.sof_timestamp_val = ctx_isp->sof_timestamp_val;
-		CAM_WARN(CAM_ISP,
+		CAM_WARN_RATE_LIMIT(CAM_ISP,
 			"Notify CRM about Bubble req %lld frame %lld, ctx %u",
 			req->request_id, ctx_isp->frame_id, ctx->ctx_id);
 		trace_cam_log_event("Bubble", "Rcvd epoch in applied state",
@@ -1831,6 +1833,12 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	CAM_DBG(CAM_ISP, "next Substate[%s]",
 		__cam_isp_ctx_substate_val_to_type(
 		ctx_isp->substate_activated));
+
+	cam_req_mgr_debug_delay_detect();
+	trace_cam_delay_detect("ISP",
+		"bubble epoch_in_applied", req->request_id,
+		ctx->ctx_id, ctx->link_hdl, ctx->session_hdl,
+		CAM_DEFAULT_VALUE);
 end:
 	if (request_id == 0) {
 		req = list_last_entry(&ctx->active_req_list,
@@ -1965,7 +1973,7 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 		list);
 	req_isp = (struct cam_isp_ctx_req *)req->req_priv;
 	req_isp->bubble_detected = true;
-	CAM_INFO(CAM_ISP, "Ctx:%d Report Bubble flag %d req id:%lld",
+	CAM_INFO_RATE_LIMIT(CAM_ISP, "Ctx:%d Report Bubble flag %d req id:%lld",
 		ctx->ctx_id, req_isp->bubble_report, req->request_id);
 	req_isp->reapply = true;
 
@@ -1982,7 +1990,7 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 			notify.trigger = CAM_TRIGGER_POINT_SOF;
 		notify.frame_id = ctx_isp->frame_id;
 		notify.sof_timestamp_val = ctx_isp->sof_timestamp_val;
-		CAM_WARN(CAM_REQ,
+		CAM_WARN_RATE_LIMIT(CAM_REQ,
 			"Notify CRM about Bubble req_id %llu frame %lld, ctx %u",
 			req->request_id, ctx_isp->frame_id, ctx->ctx_id);
 		ctx->ctx_crm_intf->notify_err(&notify);
@@ -2047,6 +2055,13 @@ static int __cam_isp_ctx_epoch_in_bubble_applied(
 	CAM_DBG(CAM_ISP, "next Substate[%s]",
 		__cam_isp_ctx_substate_val_to_type(
 		ctx_isp->substate_activated));
+
+	cam_req_mgr_debug_delay_detect();
+	trace_cam_delay_detect("ISP",
+		"bubble epoch_in_bubble_applied",
+		req->request_id, ctx->ctx_id,
+		ctx->link_hdl, ctx->session_hdl,
+		CAM_DEFAULT_VALUE);
 end:
 	req = list_last_entry(&ctx->active_req_list, struct cam_ctx_request,
 		list);
@@ -2790,7 +2805,9 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	struct cam_hw_config_args        cfg = {0};
 
 	if (list_empty(&ctx->pending_req_list)) {
-		CAM_ERR(CAM_ISP, "No available request for Apply id %lld",
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"ctx_id:%d No available request for Apply id %lld",
+			ctx->ctx_id,
 			apply->request_id);
 		rc = -EFAULT;
 		goto end;
@@ -2805,8 +2822,9 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
 
 	if (atomic_read(&ctx_isp->process_bubble)) {
-		CAM_INFO(CAM_ISP,
-			"Processing bubble cannot apply Request Id %llu",
+		CAM_INFO_RATE_LIMIT(CAM_ISP,
+			"ctx_id:%d Processing bubble cannot apply Request Id %llu",
+			ctx->ctx_id,
 			apply->request_id);
 		rc = -EAGAIN;
 		goto end;
@@ -2814,8 +2832,9 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 
 	if (apply->re_apply)
 		if (apply->request_id <= ctx_isp->last_applied_req_id) {
-			CAM_INFO(CAM_ISP,
-				"Trying to reapply the same request %llu again",
+			CAM_INFO_RATE_LIMIT(CAM_ISP,
+				"ctx_id:%d Trying to reapply the same request %llu again",
+				ctx->ctx_id,
 				apply->request_id);
 			return 0;
 		}
@@ -2831,7 +2850,8 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	 */
 	if (req->request_id != apply->request_id) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP,
-			"Invalid Request Id asking %llu existing %llu",
+			"ctx_id:%d Invalid Request Id asking %llu existing %llu",
+			ctx->ctx_id,
 			apply->request_id, req->request_id);
 		rc = -EFAULT;
 		goto end;
@@ -2844,7 +2864,7 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 
 	if (ctx_isp->active_req_cnt >=  2) {
-		CAM_WARN(CAM_ISP,
+		CAM_WARN_RATE_LIMIT(CAM_ISP,
 			"Reject apply request (id %lld) due to congestion(cnt = %d) ctx %u",
 			req->request_id,
 			ctx_isp->active_req_cnt,
@@ -2884,7 +2904,9 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	rc = ctx->hw_mgr_intf->hw_config(ctx->hw_mgr_intf->hw_mgr_priv,
 		&cfg);
 	if (rc) {
-		CAM_ERR_RATE_LIMIT(CAM_ISP, "Can not apply the configuration");
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"ctx_id:%d ,Can not apply the configuration",
+			ctx->ctx_id);
 	} else {
 		spin_lock_bh(&ctx->lock);
 		ctx_isp->substate_activated = next_state;
@@ -3599,7 +3621,7 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_applied(
 		list);
 	req_isp = (struct cam_isp_ctx_req *)req->req_priv;
 	req_isp->bubble_detected = true;
-	CAM_INFO(CAM_ISP, "Ctx:%d Report Bubble flag %d req id:%lld",
+	CAM_INFO_RATE_LIMIT(CAM_ISP, "Ctx:%d Report Bubble flag %d req id:%lld",
 		ctx->ctx_id, req_isp->bubble_report, req->request_id);
 	req_isp->reapply = true;
 
@@ -3616,7 +3638,7 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_applied(
 			notify.trigger = CAM_TRIGGER_POINT_SOF;
 		notify.frame_id = ctx_isp->frame_id;
 		notify.sof_timestamp_val = ctx_isp->sof_timestamp_val;
-		CAM_WARN(CAM_ISP,
+		CAM_WARN_RATE_LIMIT(CAM_ISP,
 			"Notify CRM about Bubble req %lld frame %lld ctx %u",
 			req->request_id,
 			ctx_isp->frame_id,
@@ -3914,7 +3936,9 @@ static int __cam_isp_ctx_rdi_only_apply_req_top_state(
 		ctx_isp->substate_activated));
 
 	if (rc)
-		CAM_ERR(CAM_ISP, "Apply failed in Substate[%s], rc %d",
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"ctx_id:%d Apply failed in Substate[%s], rc %d",
+			ctx->ctx_id,
 			__cam_isp_ctx_substate_val_to_type(
 			ctx_isp->substate_activated), rc);
 
@@ -3988,7 +4012,7 @@ static int __cam_isp_ctx_release_hw_in_top_state(struct cam_context *ctx,
 			&rel_arg);
 		ctx_isp->hw_ctx = NULL;
 	} else {
-		CAM_ERR(CAM_ISP, "No hw resources acquired for this ctx");
+		CAM_ERR(CAM_ISP, "No hw resources acquired for ctx[%u]", ctx->ctx_id);
 	}
 
 	ctx->last_flush_req = 0;
@@ -4213,6 +4237,7 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 	req_isp->num_fence_map_in = cfg.num_in_map_entries;
 	req_isp->num_acked = 0;
 	req_isp->bubble_detected = false;
+	req_isp->hw_update_data.packet = packet;
 
 	for (i = 0; i < req_isp->num_fence_map_out; i++) {
 		rc = cam_sync_get_obj_ref(req_isp->fence_map_out[i].sync_id);
@@ -4434,7 +4459,7 @@ get_dev_handle:
 	req_hdl_param.media_entity_flag = 0;
 	req_hdl_param.ops = ctx->crm_ctx_intf;
 	req_hdl_param.priv = ctx;
-
+	req_hdl_param.dev_id = CAM_ISP;
 	CAM_DBG(CAM_ISP, "get device handle form bridge");
 	ctx->dev_hdl = cam_create_device_hdl(&req_hdl_param);
 	if (ctx->dev_hdl <= 0) {

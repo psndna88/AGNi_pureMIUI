@@ -94,18 +94,20 @@ struct sync_child_info {
  * struct sync_callback_info - Single node of information about a kernel
  * callback registered on a sync object
  *
- * @callback_func    : Callback function, registered by client driver
- * @cb_data          : Callback data, registered by client driver
- * @status........   : Status with which callback will be invoked in client
- * @sync_obj         : Sync id of the object for which callback is registered
- * @cb_dispatch_work : Work representing the call dispatch
- * @list             : List member used to append this node to a linked list
+ * @callback_func      : Callback function, registered by client driver
+ * @cb_data            : Callback data, registered by client driver
+ * @status             : Status with which callback will be invoked in client
+ * @sync_obj           : Sync id of the object for which callback is registered
+ * @workq_scheduled_ts : workqueue scheduled timestamp
+ * @cb_dispatch_work   : Work representing the call dispatch
+ * @list               : List member used to append this node to a linked list
  */
 struct sync_callback_info {
 	sync_callback callback_func;
 	void *cb_data;
 	int status;
 	int32_t sync_obj;
+	ktime_t workq_scheduled_ts;
 	struct work_struct cb_dispatch_work;
 	struct list_head list;
 };

@@ -13,6 +13,7 @@
 #include "cam_tfe_csid_hw_intf.h"
 #include "cam_top_tpg_hw_intf.h"
 #include "cam_tasklet_util.h"
+#include "cam_cdm_intf_api.h"
 
 
 
@@ -27,6 +28,7 @@
  * @dentry:                    Debugfs entry
  * @csid_debug:                csid debug information
  * @enable_recovery:           enable recovery
+ * @enable_csid_recovery:      enable csid recovery
  * @camif_debug:               enable sensor diagnosis status
  * @enable_reg_dump:           enable reg dump on error;
  * @per_req_reg_dump:          Enable per request reg dump
@@ -36,6 +38,7 @@ struct cam_tfe_hw_mgr_debug {
 	struct dentry  *dentry;
 	uint64_t       csid_debug;
 	uint32_t       enable_recovery;
+	uint32_t       enable_csid_recovery;
 	uint32_t       camif_debug;
 	uint32_t       enable_reg_dump;
 	uint32_t       per_req_reg_dump;
@@ -61,10 +64,8 @@ struct cam_tfe_hw_mgr_debug {
  * @cdm_ops                   cdm util operation pointer for building
  *                            cdm commands
  * @cdm_cmd                   cdm base and length request pointer
+ * @last_submit_bl_cmd        last submiited CDM BL command data
  * @config_done_complete      indicator for configuration complete
- * @sof_cnt                   sof count value per core, used for dual TFE
- * @epoch_cnt                 epoch count value per core, used for dual TFE
- * @eof_cnt                   eof count value per core, used for dual TFE
  * @overflow_pending          flat to specify the overflow is pending for the
  *                            context
  * @cdm_done                  flag to indicate cdm has finished writing shadow
@@ -82,6 +83,7 @@ struct cam_tfe_hw_mgr_debug {
  * @slave_hw_idx              slave hardware index in dual tfe case
  * @dual_tfe_irq_mismatch_cnt irq mismatch count value per core, used for
  *                              dual TFE
+ * packet                     CSL packet from user mode driver
  */
 struct cam_tfe_hw_mgr_ctx {
 	struct list_head                list;
@@ -105,11 +107,9 @@ struct cam_tfe_hw_mgr_ctx {
 	uint32_t                        cdm_handle;
 	struct cam_cdm_utils_ops       *cdm_ops;
 	struct cam_cdm_bl_request      *cdm_cmd;
+	struct cam_cdm_bl_info          last_submit_bl_cmd;
 	struct completion               config_done_complete;
 
-	uint32_t                        sof_cnt[CAM_TFE_HW_NUM_MAX];
-	uint32_t                        epoch_cnt[CAM_TFE_HW_NUM_MAX];
-	uint32_t                        eof_cnt[CAM_TFE_HW_NUM_MAX];
 	atomic_t                        overflow_pending;
 	atomic_t                        cdm_done;
 	uint32_t                        is_rdi_only_context;
@@ -125,6 +125,7 @@ struct cam_tfe_hw_mgr_ctx {
 	uint32_t                        master_hw_idx;
 	uint32_t                        slave_hw_idx;
 	uint32_t                        dual_tfe_irq_mismatch_cnt;
+	struct cam_packet              *packet;
 };
 
 /**
@@ -148,6 +149,7 @@ struct cam_tfe_hw_mgr_ctx {
  * @work q                 work queue for TFE hw manager
  * @debug_cfg              debug configuration
  * @support_consumed_addr  indicate whether hw supports last consumed address
+ * @ctx_lock               Spinlock for HW manager
  */
 struct cam_tfe_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
@@ -159,7 +161,7 @@ struct cam_tfe_hw_mgr {
 	atomic_t                       active_ctx_cnt;
 	struct list_head               free_ctx_list;
 	struct list_head               used_ctx_list;
-	struct cam_tfe_hw_mgr_ctx      ctx_pool[CAM_CTX_MAX];
+	struct cam_tfe_hw_mgr_ctx      ctx_pool[CAM_TFE_CTX_MAX];
 
 	struct cam_tfe_csid_hw_caps    tfe_csid_dev_caps[
 						CAM_TFE_CSID_HW_NUM_MAX];
@@ -167,6 +169,7 @@ struct cam_tfe_hw_mgr {
 	struct cam_req_mgr_core_workq *workq;
 	struct cam_tfe_hw_mgr_debug    debug_cfg;
 	bool                           support_consumed_addr;
+	spinlock_t                     ctx_lock;
 };
 
 /**
@@ -181,7 +184,7 @@ struct cam_tfe_hw_mgr {
 struct cam_tfe_hw_event_recovery_data {
 	uint32_t                   error_type;
 	uint32_t                   affected_core[CAM_TFE_HW_NUM_MAX];
-	struct cam_tfe_hw_mgr_ctx *affected_ctx[CAM_CTX_MAX];
+	struct cam_tfe_hw_mgr_ctx *affected_ctx[CAM_TFE_CTX_MAX];
 	uint32_t                   no_of_context;
 };
 

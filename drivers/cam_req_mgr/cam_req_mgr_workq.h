@@ -26,6 +26,13 @@
  */
 #define CAM_WORKQ_FLAG_SERIAL                    (1 << 1)
 
+/*
+ * Response time threshold in ms beyond which it is considered
+ * as workq scheduling/processing delay.
+ */
+#define CAM_WORKQ_RESPONSE_TIME_THRESHOLD   5
+
+
 /* Task priorities, lower the number higher the priority*/
 enum crm_task_priority {
 	CRM_TASK_PRIORITY_0,
@@ -54,14 +61,14 @@ enum crm_workq_context {
  * @ret        : return value in future to use for blocking calls
  */
 struct crm_workq_task {
-	int32_t                  priority;
-	void                    *payload;
-	int32_t                (*process_cb)(void *priv, void *data);
-	void                    *parent;
-	struct list_head         entry;
-	uint8_t                  cancel;
-	void                    *priv;
-	int32_t                  ret;
+	int32_t                    priority;
+	void                      *payload;
+	int32_t                  (*process_cb)(void *priv, void *data);
+	void                      *parent;
+	struct list_head           entry;
+	uint8_t                    cancel;
+	void                      *priv;
+	int32_t                    ret;
 };
 
 /** struct cam_req_mgr_core_workq
@@ -84,6 +91,7 @@ struct cam_req_mgr_core_workq {
 	struct workqueue_struct   *job;
 	spinlock_t                 lock_bh;
 	uint32_t                   in_irq;
+	ktime_t                    workq_scheduled_ts;
 
 	/* tasks */
 	struct {
@@ -141,6 +149,14 @@ void cam_req_mgr_workq_destroy(struct cam_req_mgr_core_workq **workq);
  */
 int cam_req_mgr_workq_enqueue_task(struct crm_workq_task *task,
 	void *priv, int32_t prio);
+
+/**
+ * cam_req_mgr_thread_switch_delay_detect()
+ * @brief: Detects if workq delay has occurred or not
+ * @timestamp: workq scheduled timestamp
+ */
+void cam_req_mgr_thread_switch_delay_detect(
+	ktime_t timestamp);
 
 /**
  * cam_req_mgr_workq_get_task()

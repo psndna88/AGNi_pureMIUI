@@ -162,7 +162,8 @@ static int cam_req_mgr_close(struct file *filep)
 	struct v4l2_subdev_fh *subdev_fh = to_v4l2_subdev_fh(vfh);
 
 	CAM_WARN(CAM_CRM,
-		"release invoked associated userspace process has died");
+		"release invoked associated userspace process has died, open_cnt: %d",
+		g_dev.open_cnt);
 	mutex_lock(&g_dev.cam_lock);
 
 	if (g_dev.open_cnt <= 0) {
@@ -240,7 +241,7 @@ static void cam_v4l2_event_queue_notify_error(const struct v4l2_event *old,
 				ev_header->u.frame_msg.link_hdl);
 		break;
 	case V4L_EVENT_CAM_REQ_MGR_ERROR:
-		CAM_ERR(CAM_CRM,
+		CAM_ERR_RATE_LIMIT(CAM_CRM,
 			"Failed to notify ERROR Sess %X ReqId %d Link %X Type %d",
 			ev_header->session_hdl,
 			ev_header->u.err_msg.request_id,

@@ -38,6 +38,22 @@ enum cam_cpas_reg_base {
 };
 
 /**
+ * enum cam_cpas_hw_index  - Enum for identify HW index
+ */
+enum cam_cpas_hw_index {
+	CAM_CPAS_HW_IDX_ANY = 0,
+	CAM_CPAS_HW_IDX_0 = 1<<0,
+	CAM_CPAS_HW_IDX_1 = 1<<1,
+	CAM_CPAS_HW_IDX_2 = 1<<2,
+	CAM_CPAS_HW_IDX_3 = 1<<3,
+	CAM_CPAS_HW_IDX_4 = 1<<4,
+	CAM_CPAS_HW_IDX_5 = 1<<5,
+	CAM_CPAS_HW_IDX_6 = 1<<6,
+	CAM_CPAS_HW_IDX_7 = 1<<7,
+	CAM_CPAS_HW_IDX_MAX = 1<<8
+};
+
+/**
  * enum cam_cpas_camera_version Enum for Titan Camera Versions
  */
 enum cam_cpas_camera_version {
@@ -51,6 +67,7 @@ enum cam_cpas_camera_version {
 	CAM_CPAS_CAMERA_VERSION_580  = 0x00050800,
 	CAM_CPAS_CAMERA_VERSION_545  = 0x00050405,
 	CAM_CPAS_CAMERA_VERSION_570  = 0x00050700,
+	CAM_CPAS_CAMERA_VERSION_680  = 0x00060800,
 	CAM_CPAS_CAMERA_VERSION_MAX
 };
 
@@ -82,6 +99,7 @@ enum cam_cpas_camera_version_map_id {
 	CAM_CPAS_CAMERA_VERSION_ID_540  = 0x6,
 	CAM_CPAS_CAMERA_VERSION_ID_545  = 0x7,
 	CAM_CPAS_CAMERA_VERSION_ID_570  = 0x8,
+	CAM_CPAS_CAMERA_VERSION_ID_680  = 0x9,
 	CAM_CPAS_CAMERA_VERSION_ID_MAX
 };
 
@@ -119,6 +137,7 @@ enum cam_cpas_hw_version {
 	CAM_CPAS_TITAN_520_V100 = 0x520100,
 	CAM_CPAS_TITAN_545_V100 = 0x545100,
 	CAM_CPAS_TITAN_570_V200 = 0x570200,
+	CAM_CPAS_TITAN_680_V100 = 0x680100,
 	CAM_CPAS_TITAN_MAX
 };
 
@@ -130,6 +149,8 @@ enum cam_cpas_hw_version {
  *                              observed at any slave port is logged into
  *                              the error logger register and an IRQ is
  *                              triggered
+ * @CAM_CAMNOC_IRQ_IFE_UBWC_ENCODE_ERROR      : Triggered if any error detected
+ *                                              in the IFE UBWC encoder instance
  * @CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR: Triggered if any error detected
  *                                              in the IFE UBWC-Stats encoder
  *                                              instance
@@ -143,11 +164,20 @@ enum cam_cpas_hw_version {
  * @CAM_CAMNOC_IRQ_IFE1_WR_UBWC_ENCODE_ERROR  : Triggered if any error detected
  *                                            in the IFE1 UBWC encoder
  *                                            instance
+ * @CAM_CAMNOC_IRQ_IPE_UBWC_ENCODE_ERROR    : Triggered if any error detected
+ *                                            in the IPE write path encoder
+ *                                            instance
+ * @CAM_CAMNOC_IRQ_BPS_UBWC_ENCODE_ERROR    : Triggered if any error detected
+ *                                            in the BPS write path encoder
+ *                                            instance
  * @CAM_CAMNOC_IRQ_IPE1_BPS_UBWC_DECODE_ERROR: Triggered if any error detected
  *                                             in the IPE1/BPS read path decoder
  *                                             instance
  * @CAM_CAMNOC_IRQ_IPE0_UBWC_DECODE_ERROR    : Triggered if any error detected
  *                                             in the IPE0 read path decoder
+ *                                             instance
+ * @CAM_CAMNOC_IRQ_IPE1_UBWC_DECODE_ERROR    : Triggered if any error detected
+ *                                             in the IPE1 read path decoder
  *                                             instance
  * @CAM_CAMNOC_IRQ_IPE_BPS_UBWC_DECODE_ERROR: Triggered if any error detected
  *                                            in the IPE/BPS UBWC decoder
@@ -160,14 +190,18 @@ enum cam_cpas_hw_version {
  */
 enum cam_camnoc_irq_type {
 	CAM_CAMNOC_IRQ_SLAVE_ERROR,
+	CAM_CAMNOC_IRQ_IFE_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE02_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE13_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE0_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_IRQ_IPE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_IRQ_BPS_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE1_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE0_UBWC_DECODE_ERROR,
+	CAM_CAMNOC_IRQ_IPE1_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_IRQ_IPE_BPS_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_IRQ_AHB_TIMEOUT,
@@ -608,11 +642,15 @@ int cam_cpas_get_cpas_hw_version(
  *
  * @flag  : Camera hw features to check
  *
+ * @hw_map : To indicate which HWs are supported
+ *
+ * @fule_val : Return fule value in case of value type feature
+ *
  * @return 1 if feature is supported
  *
  */
-int cam_cpas_is_feature_supported(
-	uint32_t flag);
+bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
+	uint32_t *fuse_val);
 
 /**
  * cam_cpas_axi_util_path_type_to_string()

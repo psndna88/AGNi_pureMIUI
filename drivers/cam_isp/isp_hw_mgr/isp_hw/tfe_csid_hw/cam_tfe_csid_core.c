@@ -18,6 +18,7 @@
 #include "cam_cpas_api.h"
 #include "cam_isp_hw_mgr_intf.h"
 #include "cam_subdev.h"
+#include "cam_tasklet_util.h"
 
 /* Timeout value in msec */
 #define TFE_CSID_TIMEOUT                               1000
@@ -869,6 +870,7 @@ static int cam_tfe_csid_enable_hw(struct cam_tfe_csid_hw  *csid_hw)
 	const struct cam_tfe_csid_reg_offset      *csid_reg;
 	struct cam_hw_soc_info              *soc_info;
 	uint32_t i, val, clk_lvl;
+	unsigned long flags;
 
 	csid_reg = csid_hw->csid_info->csid_reg;
 	soc_info = &csid_hw->hw_info->soc_info;
@@ -941,6 +943,12 @@ static int cam_tfe_csid_enable_hw(struct cam_tfe_csid_hw  *csid_hw)
 	if (rc)
 		goto disable_soc;
 
+	spin_lock_irqsave(&csid_hw->spin_lock, flags);
+	csid_hw->fatal_err_detected = false;
+	csid_hw->device_enabled = 1;
+	spin_unlock_irqrestore(&csid_hw->spin_lock, flags);
+	cam_tasklet_start(csid_hw->tasklet);
+
 	return rc;
 
 disable_soc:
@@ -994,6 +1002,7 @@ static int cam_tfe_csid_disable_hw(struct cam_tfe_csid_hw *csid_hw)
 		CAM_ERR(CAM_ISP, "CSID:%d Disable CSID SOC failed",
 			csid_hw->hw_intf->hw_idx);
 
+	cam_tasklet_stop(csid_hw->tasklet);
 	spin_lock_irqsave(&csid_hw->spin_lock, flags);
 	csid_hw->device_enabled = 0;
 	spin_unlock_irqrestore(&csid_hw->spin_lock, flags);
@@ -1248,48 +1257,34 @@ static int cam_tfe_csid_enable_pxl_path(
 	return 0;
 }
 
-static void cam_tfe_csid_change_pxl_halt_mode(
-	struct cam_tfe_csid_hw          *csid_hw,
-	struct cam_isp_resource_node    *res,
-	enum cam_tfe_csid_halt_mode      halt_mode)
+static int cam_tfe_csid_change_pxl_halt_mode(
+	struct cam_tfe_csid_hw            *csid_hw,
+	struct cam_tfe_csid_hw_halt_args  *csid_halt)
 {
 	uint32_t val = 0;
 	const struct cam_tfe_csid_reg_offset       *csid_reg;
 	struct cam_hw_soc_info                     *soc_info;
-	struct cam_tfe_csid_path_cfg               *path_data;
 	const struct cam_tfe_csid_pxl_reg_offset   *pxl_reg;
-	bool                                        is_ipp;
+	struct cam_isp_resource_node               *res;
 
-	path_data = (struct cam_tfe_csid_path_cfg *) res->res_priv;
+	res = csid_halt->node_res;
+
 	csid_reg = csid_hw->csid_info->csid_reg;
 	soc_info = &csid_hw->hw_info->soc_info;
 
-	if (res->res_id >= CAM_TFE_CSID_PATH_RES_MAX) {
-		CAM_ERR(CAM_ISP, "CSID:%d Invalid res id%d",
+	if (res->res_id != CAM_TFE_CSID_PATH_RES_IPP) {
+		CAM_ERR(CAM_ISP, "CSID:%d Invalid res id %d",
 			csid_hw->hw_intf->hw_idx, res->res_id);
-		goto end;
-	}
-
-	if (res->res_state == CAM_ISP_RESOURCE_STATE_INIT_HW ||
-		res->res_state == CAM_ISP_RESOURCE_STATE_RESERVED) {
-		CAM_ERR(CAM_ISP, "CSID:%d Res:%d already in stopped state:%d",
-			csid_hw->hw_intf->hw_idx, res->res_id, res->res_state);
-		goto end;
-	}
-
-	if (res->res_id == CAM_TFE_CSID_PATH_RES_IPP) {
-		is_ipp = true;
-		pxl_reg = csid_reg->ipp_reg;
-	} else {
-		goto end;
+		return -EINVAL;
 	}
 
 	if (res->res_state != CAM_ISP_RESOURCE_STATE_STREAMING) {
-		CAM_ERR(CAM_ISP, "CSID:%d %s path Res:%d Invalid state%d",
-			csid_hw->hw_intf->hw_idx, "IPP",
-			res->res_id, res->res_state);
-		goto end;
+		CAM_ERR(CAM_ISP, "CSID:%d Res:%d in invalid state:%d",
+			csid_hw->hw_intf->hw_idx, res->res_id, res->res_state);
+		return -EINVAL;
 	}
+
+	pxl_reg = csid_reg->ipp_reg;
 
 	cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_irq_mask_addr);
@@ -1298,11 +1293,13 @@ static void cam_tfe_csid_change_pxl_halt_mode(
 	val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_ctrl_addr);
 	val &= ~0xC;
-	val |= (halt_mode << 2);
+	val |= (csid_halt->halt_mode << 2);
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
 		pxl_reg->csid_pxl_ctrl_addr);
-end:
-	return;
+	CAM_DBG(CAM_ISP, "CSID:%d IPP path Res halt mode:%d configured:%x",
+		csid_hw->hw_intf->hw_idx, csid_halt->halt_mode, val);
+
+	return 0;
 }
 
 static int cam_tfe_csid_disable_pxl_path(
@@ -1933,6 +1930,9 @@ static int cam_tfe_csid_release(void *hw_priv,
 		goto end;
 	}
 
+	csid_hw->event_cb = NULL;
+	csid_hw->event_cb_priv = NULL;
+
 	if ((res->res_state <= CAM_ISP_RESOURCE_STATE_AVAILABLE) ||
 		(res->res_state >= CAM_ISP_RESOURCE_STATE_STREAMING)) {
 		CAM_WARN(CAM_ISP,
@@ -2199,14 +2199,15 @@ int cam_tfe_csid_halt(struct cam_tfe_csid_hw *csid_hw,
 	void *halt_args)
 {
 	struct cam_isp_resource_node         *res;
-	struct cam_csid_hw_halt_args         *csid_halt;
+	struct cam_tfe_csid_hw_halt_args     *csid_halt;
+	int rc = 0;
 
 	if (!csid_hw || !halt_args) {
 		CAM_ERR(CAM_ISP, "CSID: Invalid args");
 		return -EINVAL;
 	}
 
-	csid_halt = (struct cam_csid_hw_halt_args *)halt_args;
+	csid_halt = (struct cam_tfe_csid_hw_halt_args *)halt_args;
 
 	/* Change the halt mode */
 	res = csid_halt->node_res;
@@ -2214,20 +2215,25 @@ int cam_tfe_csid_halt(struct cam_tfe_csid_hw *csid_hw,
 		csid_hw->hw_intf->hw_idx,
 		res->res_type, res->res_id);
 
-	switch (res->res_type) {
-	case CAM_ISP_RESOURCE_PIX_PATH:
-		if (res->res_id == CAM_TFE_CSID_PATH_RES_IPP)
-			cam_tfe_csid_change_pxl_halt_mode(csid_hw, res,
-				csid_halt->halt_mode);
-		break;
-	default:
-		CAM_ERR(CAM_ISP, "CSID:%d Invalid res type%d",
+	if (res->res_type != CAM_ISP_RESOURCE_PIX_PATH) {
+		CAM_ERR(CAM_ISP, "CSID:%d Invalid res type %d",
 			csid_hw->hw_intf->hw_idx,
 			res->res_type);
+		return -EINVAL;
+	}
+
+	switch (res->res_id) {
+	case CAM_TFE_CSID_PATH_RES_IPP:
+		rc = cam_tfe_csid_change_pxl_halt_mode(csid_hw, csid_halt);
+		break;
+	default:
+		CAM_DBG(CAM_ISP, "CSID:%d res_id %d",
+			csid_hw->hw_intf->hw_idx,
+			res->res_id);
 		break;
 	}
 
-	return 0;
+	return rc;
 }
 
 static int cam_tfe_csid_stop(void *hw_priv,
@@ -2677,6 +2683,189 @@ static int cam_tfe_csid_process_cmd(void *hw_priv,
 	return rc;
 }
 
+static int cam_csid_get_evt_payload(
+	struct cam_tfe_csid_hw *csid_hw,
+	struct cam_csid_evt_payload **evt_payload)
+{
+
+	spin_lock(&csid_hw->spin_lock);
+
+	if (list_empty(&csid_hw->free_payload_list)) {
+		*evt_payload = NULL;
+		spin_unlock(&csid_hw->spin_lock);
+		CAM_ERR_RATE_LIMIT(CAM_ISP, "No free payload core %d",
+			csid_hw->hw_intf->hw_idx);
+		return -ENOMEM;
+	}
+
+	*evt_payload = list_first_entry(&csid_hw->free_payload_list,
+			struct cam_csid_evt_payload, list);
+	list_del_init(&(*evt_payload)->list);
+	spin_unlock(&csid_hw->spin_lock);
+
+	return 0;
+}
+
+static int cam_csid_put_evt_payload(
+	struct cam_tfe_csid_hw *csid_hw,
+	struct cam_csid_evt_payload **evt_payload)
+{
+	unsigned long flags;
+
+	if (*evt_payload == NULL) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP, "Invalid payload core %d",
+			csid_hw->hw_intf->hw_idx);
+		return -EINVAL;
+	}
+	spin_lock_irqsave(&csid_hw->spin_lock, flags);
+	list_add_tail(&(*evt_payload)->list,
+		&csid_hw->free_payload_list);
+	*evt_payload = NULL;
+	spin_unlock_irqrestore(&csid_hw->spin_lock, flags);
+
+	return 0;
+}
+static char *cam_csid_status_to_str(uint32_t status)
+{
+	switch (status) {
+	case TFE_CSID_IRQ_REG_TOP:
+		return "TOP";
+	case TFE_CSID_IRQ_REG_RX:
+		return "RX";
+	case TFE_CSID_IRQ_REG_IPP:
+		return "IPP";
+	case TFE_CSID_IRQ_REG_RDI0:
+		return "RDI0";
+	case TFE_CSID_IRQ_REG_RDI1:
+		return "RDI1";
+	case TFE_CSID_IRQ_REG_RDI2:
+		return "RDI2";
+	default:
+		return "Invalid IRQ";
+	}
+}
+
+static int cam_csid_evt_bottom_half_handler(
+	void *handler_priv,
+	void *evt_payload_priv)
+{
+	struct cam_tfe_csid_hw *csid_hw;
+	struct cam_csid_evt_payload *evt_payload;
+	int i;
+	int rc = 0;
+	struct cam_isp_hw_event_info event_info;
+
+	if (!handler_priv || !evt_payload_priv) {
+		CAM_ERR(CAM_ISP,
+			"Invalid Param handler_priv %pK evt_payload_priv %pK",
+			handler_priv, evt_payload_priv);
+		return 0;
+	}
+
+	csid_hw = (struct cam_tfe_csid_hw *)handler_priv;
+	evt_payload = (struct cam_csid_evt_payload *)evt_payload_priv;
+
+	if (!csid_hw->event_cb || !csid_hw->event_cb_priv) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"hw_idx %d Invalid args %pK %pK",
+			csid_hw->hw_intf->hw_idx,
+			csid_hw->event_cb,
+			csid_hw->event_cb_priv);
+		goto end;
+	}
+
+	if (csid_hw->event_cb_priv != evt_payload->priv) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"hw_idx %d priv mismatch %pK, %pK",
+			csid_hw->hw_intf->hw_idx,
+			csid_hw->event_cb_priv,
+			evt_payload->priv);
+		goto end;
+	}
+
+	CAM_ERR_RATE_LIMIT(CAM_ISP, "idx %d err %d phy %d",
+		csid_hw->hw_intf->hw_idx,
+		evt_payload->evt_type,
+		csid_hw->csi2_rx_cfg.phy_sel);
+
+	for (i = 0; i < TFE_CSID_IRQ_REG_MAX; i++)
+		CAM_ERR_RATE_LIMIT(CAM_ISP, "status %s: %x",
+			cam_csid_status_to_str(i),
+			evt_payload->irq_status[i]);
+
+	/* this hunk can be extended to handle more cases
+	 * which we want to offload to bottom half from
+	 * irq handlers
+	 */
+	event_info.err_type = evt_payload->evt_type;
+	event_info.hw_idx = evt_payload->hw_idx;
+
+	switch (evt_payload->evt_type) {
+	case CAM_ISP_HW_ERROR_CSID_FATAL:
+		if (csid_hw->fatal_err_detected)
+			break;
+		csid_hw->fatal_err_detected = true;
+		rc = csid_hw->event_cb(NULL,
+			CAM_ISP_HW_EVENT_ERROR, (void *)&event_info);
+		break;
+
+	default:
+		CAM_DBG(CAM_ISP, "CSID[%d] invalid error type %d",
+			csid_hw->hw_intf->hw_idx,
+			evt_payload->evt_type);
+		break;
+	}
+end:
+	cam_csid_put_evt_payload(csid_hw, &evt_payload);
+	return 0;
+}
+
+static int cam_csid_handle_hw_err_irq(
+	struct cam_tfe_csid_hw *csid_hw,
+	int                     evt_type,
+	uint32_t               *irq_status)
+{
+	int      rc = 0;
+	int      i;
+	void    *bh_cmd = NULL;
+	struct cam_csid_evt_payload *evt_payload;
+
+	CAM_DBG(CAM_ISP, "CSID[%d] error %d",
+		csid_hw->hw_intf->hw_idx, evt_type);
+
+	rc = cam_csid_get_evt_payload(csid_hw, &evt_payload);
+	if (rc) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"No free payload core %d",
+			csid_hw->hw_intf->hw_idx);
+		return rc;
+	}
+
+	rc = tasklet_bh_api.get_bh_payload_func(csid_hw->tasklet, &bh_cmd);
+	if (rc || !bh_cmd) {
+		CAM_ERR_RATE_LIMIT(CAM_ISP,
+			"CSID[%d] Can not get cmd for tasklet, evt_type %d",
+			csid_hw->hw_intf->hw_idx,
+			evt_type);
+		return rc;
+	}
+
+	evt_payload->evt_type = evt_type;
+	evt_payload->priv = csid_hw->event_cb_priv;
+	evt_payload->hw_idx = csid_hw->hw_intf->hw_idx;
+
+	for (i = 0; i < TFE_CSID_IRQ_REG_MAX; i++)
+		evt_payload->irq_status[i] = irq_status[i];
+
+	tasklet_bh_api.bottom_half_enqueue_func(csid_hw->tasklet,
+		bh_cmd,
+		csid_hw,
+		evt_payload,
+		cam_csid_evt_bottom_half_handler);
+
+	return rc;
+}
+
 irqreturn_t cam_tfe_csid_irq(int irq_num, void *data)
 {
 	struct cam_tfe_csid_hw                         *csid_hw;
@@ -2756,20 +2945,24 @@ irqreturn_t cam_tfe_csid_irq(int irq_num, void *data)
 		if (irq_status[TFE_CSID_IRQ_REG_RX] &
 			TFE_CSID_CSI2_RX_ERROR_LANE0_FIFO_OVERFLOW) {
 			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 
 		if (irq_status[TFE_CSID_IRQ_REG_RX] &
 			TFE_CSID_CSI2_RX_ERROR_LANE1_FIFO_OVERFLOW) {
 			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 
 		if (irq_status[TFE_CSID_IRQ_REG_RX] &
 			TFE_CSID_CSI2_RX_ERROR_LANE2_FIFO_OVERFLOW) {
 			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 		if (irq_status[TFE_CSID_IRQ_REG_RX] &
 			TFE_CSID_CSI2_RX_ERROR_LANE3_FIFO_OVERFLOW) {
 			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 
 		if (irq_status[TFE_CSID_IRQ_REG_RX] &
@@ -2800,6 +2993,7 @@ irqreturn_t cam_tfe_csid_irq(int irq_num, void *data)
 			TFE_CSID_CSI2_RX_ERROR_MMAPPED_VC_DT)
 			is_error_irq = true;
 	}
+handle_fatal_error:
 	spin_unlock_irqrestore(&csid_hw->spin_lock, flags);
 
 	if (csid_hw->error_irq_count || fatal_err_detected)
@@ -2825,6 +3019,8 @@ irqreturn_t cam_tfe_csid_irq(int irq_num, void *data)
 				CAM_SUBDEV_MESSAGE_IRQ_ERR,
 				(csid_hw->csi2_rx_cfg.phy_sel - 1));
 		}
+		cam_csid_handle_hw_err_irq(csid_hw,
+			CAM_ISP_HW_ERROR_CSID_FATAL, irq_status);
 	}
 
 	if (csid_hw->csid_debug & TFE_CSID_DEBUG_ENABLE_EOT_IRQ) {
@@ -3188,6 +3384,19 @@ int cam_tfe_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 			goto err;
 		}
 		tfe_csid_hw->rdi_res[i].res_priv = path_data;
+	}
+
+	rc = cam_tasklet_init(&tfe_csid_hw->tasklet, tfe_csid_hw, csid_idx);
+	if (rc) {
+		CAM_ERR(CAM_ISP, "Unable to create CSID tasklet rc %d", rc);
+		goto err;
+	}
+
+	INIT_LIST_HEAD(&tfe_csid_hw->free_payload_list);
+	for (i = 0; i < CAM_CSID_EVT_PAYLOAD_MAX; i++) {
+		INIT_LIST_HEAD(&tfe_csid_hw->evt_payload[i].list);
+		list_add_tail(&tfe_csid_hw->evt_payload[i].list,
+			&tfe_csid_hw->free_payload_list);
 	}
 
 	tfe_csid_hw->csid_debug = 0;

@@ -23,11 +23,11 @@ struct csiphy_reg_parms_t csiphy_v1_2_3 = {
 };
 
 struct csiphy_reg_t csiphy_common_reg_1_2_3[] = {
-	{0x0814, 0xd5, 0x00, CSIPHY_LANE_ENABLE},
+	{0x0814, 0xd5, 0x00, CSIPHY_2PH_REGS},
+	{0x0814, 0x2A, 0x00, CSIPHY_3PH_REGS},
 	{0x0818, 0x01, 0x00, CSIPHY_DEFAULT_PARAMS},
-	{0x081C, 0x5A, 0x00, CSIPHY_2PH_REGS},
+	{0x081C, 0x5A, 0x00, CSIPHY_DEFAULT_PARAMS},
 	{0x0824, 0x72, 0x00, CSIPHY_2PH_REGS},
-	{0x081C, 0x5A, 0x00, CSIPHY_3PH_REGS},
 	{0x0800, 0x01, 0x02, CSIPHY_DEFAULT_PARAMS},
 	{0x0800, 0x02, 0x00, CSIPHY_2PH_REGS},
 	{0x0800, 0x0E, 0x00, CSIPHY_3PH_REGS},
@@ -55,8 +55,7 @@ struct csiphy_reg_t csiphy_irq_reg_1_2_3[] = {
 	{0x0854, 0xFF, 0x00, CSIPHY_DEFAULT_PARAMS},
 };
 
-struct
-csiphy_reg_t csiphy_2ph_v1_2_3_reg[MAX_LANES][MAX_SETTINGS_PER_LANE] = {
+struct csiphy_reg_t csiphy_2ph_v1_2_3_reg[MAX_LANES][MAX_SETTINGS_PER_LANE] = {
 	{
 		{0x0030, 0x00, 0x00, CSIPHY_DEFAULT_PARAMS},
 		{0x0024, 0x00, 0x00, CSIPHY_DEFAULT_PARAMS},
@@ -253,7 +252,7 @@ struct csiphy_reg_t
 	{
 		{0x0630, 0x00, 0x00, CSIPHY_DEFAULT_PARAMS},
 		{0x0624, 0x00, 0x00, CSIPHY_DEFAULT_PARAMS},
-		{0x0628, 0x04, 0x00, CSIPHY_DEFAULT_PARAMS},
+		{0x0628, 0x0E, 0x00, CSIPHY_DEFAULT_PARAMS},
 		{0x0600, 0x80, 0x00, CSIPHY_DEFAULT_PARAMS},
 		{0x060c, 0xFF, 0x00, CSIPHY_DEFAULT_PARAMS},
 		{0x0638, 0x1F, 0x00, CSIPHY_DEFAULT_PARAMS},

@@ -440,6 +440,7 @@ struct cam_cdm_work_payload {
 	uint32_t irq_status;
 	uint32_t irq_data;
 	int fifo_idx;
+	ktime_t workq_scheduled_ts;
 	struct work_struct work;
 };
 
@@ -476,7 +477,7 @@ struct cam_cdm_bl_fifo {
 	uint8_t bl_tag;
 	uint32_t bl_depth;
 	uint8_t last_bl_tag_done;
-	uint32_t work_record;
+	atomic_t work_record;
 };
 
 /**

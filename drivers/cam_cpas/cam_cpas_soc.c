@@ -466,87 +466,155 @@ static int cam_cpas_parse_node_tree(struct cam_cpas *cpas_core,
 	return 0;
 }
 
-int cam_cpas_get_hw_fuse(struct platform_device *pdev,
-	struct cam_cpas_private_soc *soc_private)
-{
-	struct device_node *of_node;
-	void *fuse;
-	uint32_t fuse_addr, fuse_bit;
-	uint32_t fuse_val = 0, feature_bit_pos;
-	int count = 0, i = 0;
 
-	memset(&soc_private->fuse_info, 0, sizeof(soc_private->fuse_info));
-
-	of_node = pdev->dev.of_node;
-	count   = of_property_count_u32_elems(of_node, "cam_hw_fuse");
-	if (count <= 0) {
-		CAM_INFO(CAM_CPAS, "no or invalid fuse enrties %d", count);
-		return 0;
-	} else if (count%3 != 0) {
-		CAM_INFO(CAM_CPAS, "fuse entries should be multiple of 3 %d",
-			count);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < count; i = i + 3) {
-		of_property_read_u32_index(of_node, "cam_hw_fuse", i,
-				&feature_bit_pos);
-		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 1,
-				&fuse_addr);
-		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 2,
-				&fuse_bit);
-		CAM_INFO(CAM_CPAS, "feature_bit 0x%x addr 0x%x, bit %d",
-			feature_bit_pos, fuse_addr, fuse_bit);
-		fuse = ioremap(fuse_addr, 4);
-		if (fuse) {
-			fuse_val = cam_io_r(fuse);
-			soc_private->fuse_info.fuse_val[i].fuse_id = fuse_addr;
-			soc_private->fuse_info.fuse_val[i].fuse_val = fuse_val;
-		}
-		CAM_INFO(CAM_CPAS, "fuse_addr 0x%x, fuse_val %x",
-			fuse_addr, fuse_val);
-		soc_private->fuse_info.num_fuses++;
-		iounmap(fuse);
-	}
-
-	return 0;
-}
 
 int cam_cpas_get_hw_features(struct platform_device *pdev,
 	struct cam_cpas_private_soc *soc_private)
 {
 	struct device_node *of_node;
 	void *fuse;
-	uint32_t fuse_addr, fuse_bit;
-	uint32_t fuse_val = 0, feature_bit_pos;
-	int count = 0, i = 0;
+	uint32_t fuse_addr, fuse_mask, fuse_shift;
+	uint32_t val = 0, fuse_val = 0, feature;
+	uint32_t enable_type = 0, hw_map = 0;
+	int count = 0, i = 0, j = 0,  num_feature = 0, num_fuse = 0;
+	struct cam_cpas_feature_info *feature_info;
 
 	of_node = pdev->dev.of_node;
 	count = of_property_count_u32_elems(of_node, "cam_hw_fuse");
 
-	for (i = 0; (i + 3) <= count; i = i + 3) {
+	CAM_DBG(CAM_CPAS, "fuse info elements count %d", count);
+
+	if (count <= 0) {
+		CAM_INFO(CAM_CPAS, "No or invalid fuse entries count: %d",
+			count);
+		goto end;
+	} else if (count%5 != 0) {
+		CAM_INFO(CAM_CPAS, "fuse entries should be multiple of 5 %d",
+			count);
+		goto end;
+	}
+
+	for (i = 0; (i + 5) <= count; i = i + 5) {
 		of_property_read_u32_index(of_node, "cam_hw_fuse", i,
-				&feature_bit_pos);
+				&feature);
 		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 1,
 				&fuse_addr);
 		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 2,
-				&fuse_bit);
-		CAM_INFO(CAM_CPAS, "feature_bit 0x%x addr 0x%x, bit %d",
-				feature_bit_pos, fuse_addr, fuse_bit);
+				&fuse_mask);
+		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 3,
+				&enable_type);
+		of_property_read_u32_index(of_node, "cam_hw_fuse", i + 4,
+				&hw_map);
+		val = ffs(fuse_mask);
+		if (val == 0) {
+			CAM_ERR(CAM_CPAS, "fuse_mask not valid 0x%x",
+				fuse_mask);
+			fuse_shift = 0;
+		} else {
+			fuse_shift = val - 1;
+		}
+		CAM_INFO(CAM_CPAS,
+			"feature 0x%x addr 0x%x, mask 0x%x, shift 0x%x type 0x%x hw_map 0x%x",
+			feature, fuse_addr, fuse_mask, fuse_shift, enable_type,
+			hw_map);
 
 		fuse = ioremap(fuse_addr, 4);
 		if (fuse) {
 			fuse_val = cam_io_r(fuse);
-			if (fuse_val & BIT(fuse_bit))
-				soc_private->feature_mask |= feature_bit_pos;
-			else
-				soc_private->feature_mask &= ~feature_bit_pos;
-		}
-		CAM_INFO(CAM_CPAS, "fuse %pK, fuse_val %x, feature_mask %x",
-				fuse, fuse_val, soc_private->feature_mask);
+			for (j = 0; (j < num_fuse) && (j < CAM_CPAS_FUSES_MAX);
+				j++) {
+				if (soc_private->fuse_info.fuse_val[j].fuse_id
+					== fuse_addr)
+					break;
+			}
+			if (j >= CAM_CPAS_FUSES_MAX) {
+				CAM_ERR(CAM_CPAS,
+					"fuse_info array overflow! %d", j);
+				goto end;
+			}
+			if (j == num_fuse) {
+				soc_private->fuse_info.fuse_val[j].fuse_id =
+					fuse_addr;
+				soc_private->fuse_info.fuse_val[j].fuse_val =
+					fuse_val;
+				CAM_INFO(CAM_CPAS,
+					"fuse_addr 0x%x, fuse_val %x",
+					fuse_addr, fuse_val);
+				num_fuse++;
+			}
+		} else {
+			/* if fuse ioremap is failed, disable the feature */
+			CAM_ERR(CAM_CPAS,
+				"fuse register io remap failed fuse_addr:0x%x feature0x%x ",
+				fuse_addr, feature);
 
+			if (enable_type == CAM_CPAS_FEATURE_TYPE_ENABLE ||
+				enable_type == CAM_CPAS_FEATURE_TYPE_DISABLE)
+				fuse_val = (enable_type) ? ~fuse_mask :
+					fuse_mask;
+			else
+				fuse_val = 0;
+		}
+
+		if (num_feature >= CAM_CPAS_MAX_FUSE_FEATURE) {
+			CAM_ERR(CAM_CPAS, "feature_info array overflow %d",
+				num_feature);
+			goto end;
+		}
+
+		soc_private->feature_info[num_feature].feature =
+			feature;
+		soc_private->feature_info[num_feature].hw_map = hw_map;
+		soc_private->feature_info[num_feature].type = enable_type;
+		feature_info = &soc_private->feature_info[num_feature];
+
+		if (enable_type != CAM_CPAS_FEATURE_TYPE_VALUE) {
+			if (enable_type == CAM_CPAS_FEATURE_TYPE_ENABLE) {
+				/*
+				 * fuse is for enable feature
+				 * if fust bit is set means feature is enabled
+				 * or HW is enabled
+				 */
+				if (fuse_val & fuse_mask)
+					feature_info->enable = true;
+				else
+					feature_info->enable = false;
+			} else if (enable_type ==
+				CAM_CPAS_FEATURE_TYPE_DISABLE){
+				/*
+				 * fuse is for disable feature
+				 * if fust bit is set means feature is disabled
+				 * or HW is disabled
+				 */
+				if (fuse_val & fuse_mask)
+					feature_info->enable = false;
+				else
+					feature_info->enable = true;
+			} else {
+				CAM_ERR(CAM_CPAS,
+					"Feature type not valid, type: %d",
+					enable_type);
+				goto end;
+			}
+			CAM_INFO(CAM_CPAS,
+				"feature 0x%x enable=%d hw_map=0x%x",
+				feature_info->feature, feature_info->enable,
+				feature_info->hw_map);
+		} else {
+			feature_info->value =
+				(fuse_val & fuse_mask) >> fuse_shift;
+			CAM_INFO(CAM_CPAS,
+				"feature 0x%x value=0x%x hw_map=0x%x",
+				feature_info->feature, feature_info->value,
+				feature_info->hw_map);
+		}
+		num_feature++;
+		iounmap(fuse);
 	}
 
+end:
+	soc_private->fuse_info.num_fuses = num_fuse;
+	soc_private->num_feature_info = num_feature;
 	return 0;
 }
 
@@ -565,7 +633,6 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 	}
 
 	of_node = pdev->dev.of_node;
-	soc_private->feature_mask = 0xFFFFFFFF;
 
 	rc = of_property_read_string(of_node, "arch-compat",
 		&soc_private->arch_compat);
@@ -576,7 +643,6 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 	}
 
 	cam_cpas_get_hw_features(pdev, soc_private);
-	cam_cpas_get_hw_fuse(pdev, soc_private);
 
 	soc_private->camnoc_axi_min_ib_bw = 0;
 	rc = of_property_read_u64(of_node,
@@ -867,7 +933,6 @@ int cam_cpas_get_custom_dt_info(struct cam_hw_info *cpas_hw,
 		CAM_DBG(CAM_CPAS, "RPMH BCM info not available in DT, count=%d",
 			count);
 	}
-
 	return 0;
 
 cleanup_tree:

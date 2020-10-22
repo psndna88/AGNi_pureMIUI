@@ -12,49 +12,65 @@
 /**
  * enum cam_camnoc_hw_irq_type - Enum for camnoc error types
  *
- * @CAM_CAMNOC_HW_IRQ_SLAVE_ERROR: Each slave port in CAMNOC (3 QSB ports and
- *                                 1 QHB port) has an error logger. The error
- *                                 observed at any slave port is logged into
- *                                 the error logger register and an IRQ is
- *                                 triggered
- * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_ENCODE_ERROR: Triggered if any error
- *                                                 detected in the IFE UBWC-
- *                                                 Stats encoder instance
+ * @CAM_CAMNOC_HW_IRQ_SLAVE_ERROR                  : Each slave port in CAMNOC
+ *                                                  (3 QSB ports and 1 QHB port)
+ *                                                   has an error logger. The
+ *                                                   error observed at any slave
+ *                                                   port is logged into the
+ *                                                   error logger register and
+ *                                                   an IRQ is triggered
+ * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_ENCODE_ERROR        : Triggered if any error
+ *                                                   detected in the IFE UBWC
+ *                                                   encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_ENCODE_ERROR  : Triggered if any error
+ *                                                   detected in the IFE UBWC-
+ *                                                   Stats encoder instance
  * @CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR: Triggered if any error
- *                                                 detected in the IFE UBWC-
- *                                                 Stats 1 encoder instance
- * @CAM_CAMNOC_HW_IRQ_IFE02_UBWC_ENCODE_ERROR  : Triggered if any error
- *                                               detected in the IFE0 UBWC
- *                                               encoder instance
- * @CAM_CAMNOC_HW_IRQ_IFE13_UBWC_ENCODE_ERROR  : Triggered if any error
- *                                               detected in the IFE1 or IFE3
- *                                               UBWC encoder instance
- * @CAM_CAMNOC_HW_IRQ_IPE1_BPS_UBWC_DECODE_ERROR: Triggered if any error
- *                                                detected in the IPE1/BPS read
- *                                                path decoder instance
- * @CAM_CAMNOC_HW_IRQ_IPE0_UBWC_DECODE_ERROR   : Triggered if any error detected
- *                                               in the IPE0 read path decoder
- *                                               instance
- * @CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_DECODE_ERROR: Triggered if any error
- *                                               detected in the IPE/BPS
- *                                               UBWC decoder instance
- * @CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_ENCODE_ERROR: Triggered if any error
- *                                               detected in the IPE/BPS UBWC
- *                                               encoder instance
- * @CAM_CAMNOC_HW_IRQ_IFE0_UBWC_ENCODE_ERROR:    Triggered if any UBWC error
- *                                               is detected in IFE0 write path
- * @CAM_CAMNOC_HW_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR:  Triggered if any UBWC error
- *                                               is detected in IFE1 write path
- * @CAM_CAMNOC_HW_IRQ_AHB_TIMEOUT              : Triggered when the QHS_ICP
- *                                               slave  times out after 4000
- *                                               AHB cycles
- * @CAM_CAMNOC_HW_IRQ_RESERVED1                : Reserved
- * @CAM_CAMNOC_HW_IRQ_RESERVED2                : Reserved
- * @CAM_CAMNOC_HW_IRQ_CAMNOC_TEST              : To test the IRQ logic
+ *                                                   detected in the IFE UBWC-
+ *                                                   Stats 1 encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IFE02_UBWC_ENCODE_ERROR      : Triggered if any error
+ *                                                   detected in the IFE0 UBWC
+ *                                                   encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IFE13_UBWC_ENCODE_ERROR      : Triggered if any error
+ *                                                   detected in the IFE1 or
+ *                                                   IFE3 UBWC encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IFE0_UBWC_ENCODE_ERROR       : Triggered if any UBWC error
+ *                                                   is detected in IFE0 write
+ *                                                   path
+ * @CAM_CAMNOC_HW_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR : Triggered if any UBWC error
+ *                                                   is detected in IFE1 write
+ *                                                   path slave  times out after
+ *                                                   4000 AHB cycles
+ * @CAM_CAMNOC_HW_IRQ_IPE_UBWC_ENCODE_ERROR        : Triggered if any error
+ *                                                   detected in the IPE
+ *                                                   UBWC encoder instance
+ * @CAM_CAMNOC_HW_IRQ_BPS_UBWC_ENCODE_ERROR        : Triggered if any error
+ *                                                   detected in the BPS
+ *                                                   UBWC encoder instance
+ * @CAM_CAMNOC_HW_IRQ_IPE1_BPS_UBWC_DECODE_ERROR   : Triggered if any error
+ *                                                   detected in the IPE1/BPS
+ *                                                   read path decoder instance
+ * @CAM_CAMNOC_HW_IRQ_IPE0_UBWC_DECODE_ERROR       : Triggered if any error
+ *                                                   detected in the IPE0 read
+ *                                                   path decoder instance
+ * @CAM_CAMNOC_HW_IRQ_IPE1_UBWC_DECODE_ERROR       : Triggered if any error
+ *                                                   detected in the IPE1 read
+ *                                                   path decoder instance
+ * @CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_DECODE_ERROR    : Triggered if any error
+ *                                                   detected in the IPE/BPS
+ *                                                   UBWC decoder instance
+ * @CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_ENCODE_ERROR    : Triggered if any error
+ *                                                   detected in the IPE/BPS
+ *                                                   UBWC encoder instance
+ * @CAM_CAMNOC_HW_IRQ_RESERVED1                    : Reserved
+ * @CAM_CAMNOC_HW_IRQ_RESERVED2                    : Reserved
+ * @CAM_CAMNOC_HW_IRQ_CAMNOC_TEST                  : To test the IRQ logic
  */
 enum cam_camnoc_hw_irq_type {
 	CAM_CAMNOC_HW_IRQ_SLAVE_ERROR =
 		CAM_CAMNOC_IRQ_SLAVE_ERROR,
+	CAM_CAMNOC_HW_IRQ_IFE_UBWC_ENCODE_ERROR =
+		CAM_CAMNOC_IRQ_IFE_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_ENCODE_ERROR =
 		CAM_CAMNOC_IRQ_IFE_UBWC_STATS_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE_UBWC_STATS_1_ENCODE_ERROR =
@@ -67,10 +83,16 @@ enum cam_camnoc_hw_irq_type {
 		CAM_CAMNOC_IRQ_IFE0_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR =
 		CAM_CAMNOC_IRQ_IFE1_WRITE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_HW_IRQ_IPE_UBWC_ENCODE_ERROR =
+		CAM_CAMNOC_IRQ_IPE_UBWC_ENCODE_ERROR,
+	CAM_CAMNOC_HW_IRQ_BPS_UBWC_ENCODE_ERROR =
+		CAM_CAMNOC_IRQ_BPS_UBWC_ENCODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IPE1_BPS_UBWC_DECODE_ERROR =
 		CAM_CAMNOC_IRQ_IPE1_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IPE0_UBWC_DECODE_ERROR =
 		CAM_CAMNOC_IRQ_IPE0_UBWC_DECODE_ERROR,
+	CAM_CAMNOC_HW_IRQ_IPE1_UBWC_DECODE_ERROR =
+		CAM_CAMNOC_IRQ_IPE1_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_DECODE_ERROR =
 		CAM_CAMNOC_IRQ_IPE_BPS_UBWC_DECODE_ERROR,
 	CAM_CAMNOC_HW_IRQ_IPE_BPS_UBWC_ENCODE_ERROR =
@@ -88,9 +110,17 @@ enum cam_camnoc_hw_irq_type {
  *         each of these ports.
  *
  * @CAM_CAMNOC_CDM: Indicates CDM HW connection to camnoc
+ * @CAM_CAMNOC_SFE_RD: Indicates read data from all SFEs to cammnoc
  * @CAM_CAMNOC_IFE02: Indicates IFE0, IFE2 HW connection to camnoc
  * @CAM_CAMNOC_IFE13: Indicates IFE1, IFE3 HW connection to camnoc
+ * @CAM_CAMNOC_IFE_LITE: Indicates all IFE lites connection to camnoc
  * @CAM_CAMNOC_IFE_LINEAR: Indicates linear data from all IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_LINEAR_STATS: Indicates linear and stats data from certan
+ *         IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_LINEAR_STATS_1: Indicates linear and stats data from certan
+ *         IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_PDAF: Indicates pdaf data from all IFEs to cammnoc
+ * @CAM_CAMNOC_IFE_UBWC: Indicates ubwc from all IFEs to cammnoc
  * @CAM_CAMNOC_IFE_UBWC_STATS: Indicates ubwc+stats from certain IFEs to cammnoc
  * @CAM_CAMNOC_IFE_UBWC_STATS_1: Indicates ubwc+stats from certain
  *         IFEs to cammnoc
@@ -108,10 +138,14 @@ enum cam_camnoc_hw_irq_type {
  *         connection to camnoc
  * @CAM_CAMNOC_IPE_VID_DISP_WRITE: Indicates IPE's VID/DISP Wrire HW
  *         connection to camnoc
+ * @CAM_CAMNOC_IPE_WR: Indicates IPE HW's write connection to camnoc
  * @CAM_CAMNOC_IPE0_RD: Indicates IPE's Read0 HW connection to camnoc
+ * @CAM_CAMNOC_IPE1_RD: Indicates IPE's Read1 HW connection to camnoc
  * @CAM_CAMNOC_IPE1_BPS_RD: Indicates IPE's Read1 + BPS Read HW connection
  *         to camnoc
  * @CAM_CAMNOC_IPE_BPS_WR: Indicates IPE+BPS Write HW connection to camnoc
+ * @CAM_CAMNOC_BPS_WR: Indicates BPS HW's write connection to camnoc
+ * @CAM_CAMNOC_BPS_RD: Indicates BPS HW's read connection to camnoc
  * @CAM_CAMNOC_JPEG: Indicates JPEG HW connection to camnoc
  * @CAM_CAMNOC_FD: Indicates FD HW connection to camnoc
  * @CAM_CAMNOC_ICP: Indicates ICP HW connection to camnoc
@@ -122,9 +156,15 @@ enum cam_camnoc_hw_irq_type {
  */
 enum cam_camnoc_port_type {
 	CAM_CAMNOC_CDM,
+	CAM_CAMNOC_SFE_RD,
 	CAM_CAMNOC_IFE02,
 	CAM_CAMNOC_IFE13,
+	CAM_CAMNOC_IFE_LITE,
 	CAM_CAMNOC_IFE_LINEAR,
+	CAM_CAMNOC_IFE_LINEAR_STATS,
+	CAM_CAMNOC_IFE_LINEAR_STATS_1,
+	CAM_CAMNOC_IFE_PDAF,
+	CAM_CAMNOC_IFE_UBWC,
 	CAM_CAMNOC_IFE_UBWC_STATS,
 	CAM_CAMNOC_IFE_UBWC_STATS_1,
 	CAM_CAMNOC_IFE_RDI_WR,
@@ -137,9 +177,13 @@ enum cam_camnoc_port_type {
 	CAM_CAMNOC_IPE_BPS_LRME_READ,
 	CAM_CAMNOC_IPE_BPS_LRME_WRITE,
 	CAM_CAMNOC_IPE_VID_DISP_WRITE,
+	CAM_CAMNOC_IPE_WR,
 	CAM_CAMNOC_IPE0_RD,
+	CAM_CAMNOC_IPE1_RD,
 	CAM_CAMNOC_IPE1_BPS_RD,
 	CAM_CAMNOC_IPE_BPS_WR,
+	CAM_CAMNOC_BPS_WR,
+	CAM_CAMNOC_BPS_RD,
 	CAM_CAMNOC_JPEG,
 	CAM_CAMNOC_FD,
 	CAM_CAMNOC_ICP,
@@ -297,6 +341,7 @@ struct cam_camnoc_info {
  * @hw: Pointer to HW info
  * @irq_status: IRQ status value
  * @irq_data: IRQ data
+ * @workq_scheduled_ts: workqueue scheduled timestamp
  * @work: Work handle
  *
  */
@@ -304,6 +349,7 @@ struct cam_cpas_work_payload {
 	struct cam_hw_info *hw;
 	uint32_t irq_status;
 	uint32_t irq_data;
+	ktime_t workq_scheduled_ts;
 	struct work_struct work;
 };
 
