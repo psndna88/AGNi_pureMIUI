@@ -3,6 +3,7 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
+#include "dsi-panel-r66451-dsc-fhd-plus-video-cphy.dtsi"
 #include "dsi-panel-sim-video.dtsi"
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
@@ -14,8 +15,8 @@
 		qcom,panel-supply-entry@0 {
 			reg = <0>;
 			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1920000>;
-			qcom,supply-max-voltage = <1920000>;
+			qcom,supply-min-voltage = <1820000>;
+			qcom,supply-max-voltage = <1820000>;
 			qcom,supply-enable-load = <60700>;
 			qcom,supply-disable-load = <80>;
 			qcom,supply-post-on-sleep = <20>;
@@ -130,6 +131,19 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 22 09 09 19 17 09
 					09 09 02 04 00 1d 0e];
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_video_cphy {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"cphy_byte_clk0", "cphy_pixel_clk0";
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 1e 17 04
+					19 03 02 04 00 00 00];
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 		};
