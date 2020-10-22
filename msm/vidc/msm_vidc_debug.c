@@ -4,7 +4,7 @@
  */
 
 #define CREATE_TRACE_POINTS
-#define MAX_SSR_STRING_LEN 10
+#define MAX_SSR_STRING_LEN 64
 #define MAX_DEBUG_LEVEL_STRING_LEN 15
 #include "msm_vidc_debug.h"
 #include "vidc_hfi_api.h"

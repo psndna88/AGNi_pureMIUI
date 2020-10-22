@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 #ifndef __HFI_PACKETIZATION_H__
 #define __HFI_PACKETIZATION_H__
@@ -36,8 +36,9 @@ struct hfi_packetization_ops {
 	int (*sys_image_version)(struct hfi_cmd_sys_get_property_packet *pkt);
 	int (*sys_ubwc_config)(struct hfi_cmd_sys_set_property_packet *pkt,
 		struct msm_vidc_ubwc_config_data *ubwc_config);
-	int (*ssr_cmd)(enum hal_ssr_trigger_type type,
-		struct hfi_cmd_sys_test_ssr_packet *pkt);
+	int (*ssr_cmd)(struct hfi_cmd_sys_test_ssr_packet *pkt,
+		enum hal_ssr_trigger_type ssr_type, u32 sub_client_id,
+		u32 test_addr);
 	int (*session_init)(
 		struct hfi_cmd_sys_session_init_packet *pkt,
 		u32 sid, u32 session_domain, u32 session_codec);
