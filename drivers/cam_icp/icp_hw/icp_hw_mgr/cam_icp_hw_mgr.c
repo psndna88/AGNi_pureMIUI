@@ -64,10 +64,11 @@ static struct cam_icp_hw_mgr icp_hw_mgr;
 static void cam_icp_mgr_process_dbg_buf(unsigned int debug_lvl);
 
 static int cam_icp_dump_io_cfg(struct cam_icp_hw_ctx_data *ctx_data,
-	int32_t buf_handle)
+	int32_t buf_handle, uint32_t size)
 {
 	uintptr_t vaddr_ptr;
 	uint32_t  *ptr;
+	uint32_t  io_size;
 	size_t    len;
 	int       rc, i;
 	char      buf[512];
@@ -80,13 +81,13 @@ static int cam_icp_dump_io_cfg(struct cam_icp_hw_ctx_data *ctx_data,
 		return rc;
 	}
 
-	len = len / sizeof(uint32_t);
+	io_size = size / sizeof(uint32_t);
 	ptr = (uint32_t *)vaddr_ptr;
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < io_size; i++) {
 		used += snprintf(buf + used,
 			sizeof(buf) - used, "0X%08X-", ptr[i]);
 		if (!(i % 8)) {
-			CAM_INFO(CAM_ICP, "%s: %s", __func__, buf);
+			CAM_DBG(CAM_ICP, "%s: %s", __func__, buf);
 			used = 0;
 		}
 	}
@@ -3936,8 +3937,14 @@ static int cam_icp_mgr_send_config_io(struct cam_icp_hw_ctx_data *ctx_data,
 	uint32_t size_in_words;
 
 	task = cam_req_mgr_workq_get_task(icp_hw_mgr.cmd_work);
-	if (!task)
+	if (!task) {
+		CAM_ERR_RATE_LIMIT(CAM_ICP,
+			"No free task ctx id:%d dev hdl:0x%x session hdl:0x%x dev_type:%d",
+			ctx_data->ctx_id, ctx_data->acquire_dev_cmd.dev_handle,
+			ctx_data->acquire_dev_cmd.session_handle,
+			ctx_data->icp_dev_acquire_info->dev_type);
 		return -ENOMEM;
+	}
 
 	ioconfig_cmd.size = sizeof(struct hfi_cmd_ipebps_async);
 	ioconfig_cmd.pkt_type = HFI_CMD_IPEBPS_ASYNC_COMMAND_INDIRECT;
@@ -3962,14 +3969,26 @@ static int cam_icp_mgr_send_config_io(struct cam_icp_hw_ctx_data *ctx_data,
 	CAM_DBG(CAM_ICP, "size_in_words %u", size_in_words);
 	rc = cam_req_mgr_workq_enqueue_task(task, &icp_hw_mgr,
 		CRM_TASK_PRIORITY_0);
-	if (rc)
+	if (rc) {
+		CAM_ERR_RATE_LIMIT(CAM_ICP,
+			"Enqueue task failed ctx id:%d dev hdl:0x%x session hdl:0x%x dev_type:%d",
+			ctx_data->ctx_id, ctx_data->acquire_dev_cmd.dev_handle,
+			ctx_data->acquire_dev_cmd.session_handle,
+			ctx_data->icp_dev_acquire_info->dev_type);
 		return rc;
+	}
 
 	rem_jiffies = wait_for_completion_timeout(&ctx_data->wait_complete,
 		msecs_to_jiffies((timeout)));
 	if (!rem_jiffies) {
-		rc = -ETIMEDOUT;
-		CAM_ERR(CAM_ICP, "FW response timed out %d", rc);
+		/* send specific error for io config failure */
+		rc = -EREMOTEIO;
+		CAM_ERR(CAM_ICP,
+			"FW response timed out %d ctx id:%d dev hdl:0x%x session hdl:0x%x dev_type:%d",
+			rc,
+			ctx_data->ctx_id, ctx_data->acquire_dev_cmd.dev_handle,
+			ctx_data->acquire_dev_cmd.session_handle,
+			ctx_data->icp_dev_acquire_info->dev_type);
 		cam_icp_mgr_process_dbg_buf(icp_hw_mgr.icp_dbg_lvl);
 		cam_hfi_queue_dump();
 	}
@@ -5683,9 +5702,12 @@ static int cam_icp_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 
 	rc = cam_icp_mgr_send_config_io(ctx_data, io_buf_addr);
 	if (rc) {
-		CAM_ERR(CAM_ICP, "IO Config command failed %d", rc);
+		CAM_ERR_RATE_LIMIT(CAM_ICP,
+			"IO Config command failed %d size:%d",
+			rc, icp_dev_acquire_info->io_config_cmd_size);
 		cam_icp_dump_io_cfg(ctx_data,
-			icp_dev_acquire_info->io_config_cmd_handle);
+			icp_dev_acquire_info->io_config_cmd_handle,
+			icp_dev_acquire_info->io_config_cmd_size);
 		goto ioconfig_failed;
 	}
 
@@ -5703,16 +5725,29 @@ static int cam_icp_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	bitmap_size = BITS_TO_LONGS(CAM_FRAME_CMD_MAX) * sizeof(long);
 	ctx_data->hfi_frame_process.bitmap =
 			kzalloc(bitmap_size, GFP_KERNEL);
-	if (!ctx_data->hfi_frame_process.bitmap)
+	if (!ctx_data->hfi_frame_process.bitmap) {
+		CAM_ERR_RATE_LIMIT(CAM_ICP,
+			"hfi frame bitmap failed ctx id:%d dev hdl:0x%x session hdl:0x%x dev type %d",
+			ctx_data->ctx_id, ctx_data->acquire_dev_cmd.dev_handle,
+			ctx_data->acquire_dev_cmd.session_handle,
+			ctx_data->icp_dev_acquire_info->dev_type);
 		goto ioconfig_failed;
+	}
 
 	ctx_data->hfi_frame_process.bits = bitmap_size * BITS_PER_BYTE;
 	hw_mgr->ctx_data[ctx_id].ctxt_event_cb = args->event_cb;
 	icp_dev_acquire_info->scratch_mem_size = ctx_data->scratch_mem_size;
 
 	if (copy_to_user((void __user *)args->acquire_info,
-		icp_dev_acquire_info, sizeof(struct cam_icp_acquire_dev_info)))
+		icp_dev_acquire_info,
+		sizeof(struct cam_icp_acquire_dev_info))) {
+		CAM_ERR_RATE_LIMIT(CAM_ICP,
+			"copy from user failed ctx id:%d dev hdl:0x%x session hdl:0x%x dev type %d",
+			ctx_data->ctx_id, ctx_data->acquire_dev_cmd.dev_handle,
+			ctx_data->acquire_dev_cmd.session_handle,
+			ctx_data->icp_dev_acquire_info->dev_type);
 		goto copy_to_user_failed;
+	}
 
 	cam_icp_ctx_clk_info_init(ctx_data);
 	ctx_data->state = CAM_ICP_CTX_STATE_ACQUIRED;
