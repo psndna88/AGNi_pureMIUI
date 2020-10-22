@@ -537,7 +537,8 @@
 		qcom,apps-ch-pipes = <0x0>;
 		qcom,ea-pc = <0x3d0>;
 		iommus = <&apps_smmu 0x2026 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 
