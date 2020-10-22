@@ -436,6 +436,8 @@ typedef enum {
     WMI_PDEV_SET_NON_SRG_OBSS_BSSID_ENABLE_BITMAP_CMDID,
     /** TPC stats display command */
     WMI_PDEV_GET_TPC_STATS_CMDID,
+    /** ENABLE/DISABLE Duration based tx mode selection */
+    WMI_PDEV_ENABLE_DURATION_BASED_TX_MODE_SELECTION_CMDID,
 
     /* VDEV (virtual device) specific commands */
     /** vdev create */
@@ -15838,6 +15840,11 @@ enum {
      * Sytem Suspend WOW, BIT Reset- RTPM (DRV)
      */
     WMI_WOW_FLAG_SYSTEM_SUSPEND_WOW         = 0x00000020,
+    /*
+     * Feature flag for INI enable_mod_dtim_on_system_suspend
+     * This flag/bit will be set if INI settings enable mod_dtim_on_sys_suspend.
+     */
+    WMI_WOW_FLAG_MOD_DTIM_ON_SYS_SUSPEND    = 0x00000040,
 };
 
 typedef struct {
@@ -17180,6 +17187,9 @@ typedef enum
 
     /* Disable burst and assist, and restrict A-MPDU size to 32 */
     WMI_VENDOR_OUI_ACTION_DISABLE_AGGRESSIVE_TX = 6,
+
+    /* Disable FW triggered TWT if vendor OUI is received in beacon */
+    WMI_VENDOR_OUI_ACTION_DISABLE_FW_TRIGGERED_TWT = 7,
 
     /* Add any action before this line */
     WMI_VENDOR_OUI_ACTION_MAX_ACTION_ID
@@ -27214,6 +27224,7 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_AUDIO_AGGR_GET_SCHED_METHOD_CMDID);
         WMI_RETURN_STRING(WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID);
         WMI_RETURN_STRING(WMI_QOS_NULL_FRAME_TX_SEND_CMDID);
+        WMI_RETURN_STRING(WMI_PDEV_ENABLE_DURATION_BASED_TX_MODE_SELECTION_CMDID);
     }
 
     return "Invalid WMI cmd";
@@ -31853,6 +31864,20 @@ typedef struct {
      */
     A_UINT32 non_srg_obss_en_bssid_bitmap[2];
 } wmi_pdev_non_srg_obss_bssid_enable_bitmap_cmd_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_pdev_enable_duration_based_tx_mode_selection_cmd_fixed_param
+     */
+    A_UINT32 tlv_header;
+    /** pdev_id for identifying the MAC
+     * See macros starting with WMI_PDEV_ID_ for values.
+     * In non-DBDC case host should set it to 0
+     */
+    A_UINT32 pdev_id;
+    /* enable/disable Duration based Tx Mode selection */
+    A_UINT32 duration_based_tx_mode_selection;
+} wmi_pdev_enable_duration_based_tx_mode_selection_cmd_fixed_param;
 
 typedef enum {
     /* Simulation test command types */
