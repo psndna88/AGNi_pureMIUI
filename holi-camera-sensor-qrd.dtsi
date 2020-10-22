@@ -59,8 +59,8 @@
 			"cam_clk", "cam_vaf";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1800000 2800000 1056000 0 2800000>;
-		rgltr-max-voltage = <1800000 2800000 1056000 0 2800000>;
+		rgltr-min-voltage = <1800000 2880000 1056000 0 2800000>;
+		rgltr-max-voltage = <1800000 2880000 1056000 0 2800000>;
 		rgltr-load-current = <120000 80000 1200000 0 100000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
@@ -139,8 +139,8 @@
 			"cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1800000 2800000 1056000 0>;
-		rgltr-max-voltage = <1800000 2800000 1056000 0>;
+		rgltr-min-voltage = <1800000 2880000 1056000 0>;
+		rgltr-max-voltage = <1800000 2880000 1056000 0>;
 		rgltr-load-current = <120000 80000 1200000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
