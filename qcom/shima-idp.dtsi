@@ -98,21 +98,20 @@
 	vdd-hba-fixed-regulator;
 
 	vcc-supply = <&L7B>;
-	vcc-voltage-level = <2950000 2960000>;
+	vcc-voltage-level = <2504000 2960000>;
 	vcc-low-voltage-sup;
 	vcc-max-microamp = <800000>;
 
 	vccq-supply = <&L9B>;
 	vccq-max-microamp = <900000>;
-	vccq-min-microamp = <0>;
+	vccq-min-microamp = <10000>;
 
 	vccq2-supply = <&S10B>;
 	vccq2-voltage-level = <1800000 1800000>;
 	vccq2-max-microamp = <800000>;
 
 	qcom,vddp-ref-clk-supply = <&L9B>;
-	qcom,vddp-ref-clk-max-microamp = <100>;
-	qcom,vddp-ref-clk-min-microamp = <0>;
+	qcom,vddp-ref-clk-max-microamp = <10000>;
 
 	status = "ok";
 };
@@ -148,8 +147,17 @@
 	status = "ok";
 };
 
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_r66451_amoled_cmd
+			&dsi_r66451_amoled_video
+			&dsi_r66451_amoled_60hz_video
+			&dsi_r66451_amoled_60hz_cmd
+			&dsi_r66451_amoled_144hz_cmd>;
+};
+
 &battery_charger {
 	qcom,thermal-mitigation = <3000000 1500000 1000000 500000>;
+	qcom,wireless-fw-name = "idt9412.bin";
 };
 
 &qupv3_se10_i2c {
@@ -180,7 +188,8 @@
 		panel = <&dsi_r66451_amoled_cmd
 			 &dsi_r66451_amoled_video
 			&dsi_r66451_amoled_60hz_video
-			&dsi_r66451_amoled_60hz_cmd>;
+			&dsi_r66451_amoled_60hz_cmd
+			&dsi_r66451_amoled_144hz_cmd>;
 
 		focaltech,trusted-touch-mode = "vm_mode";
 		focaltech,touch-environment = "pvm";

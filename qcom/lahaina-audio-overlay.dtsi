@@ -72,6 +72,11 @@
 				<3 SWRM_TX3_CH1 0x1>, <3 SWRM_TX3_CH2 0x2>,
 				<3 SWRM_TX3_CH3 0x4>, <3 SWRM_TX3_CH4 0x8>;
 			qcom,swr-num-dev = <5>;
+			qcom,swr-phy-dev-addr = <0x0D 0x01170223>,
+						<0x08 0x58350223>,
+						<0x08 0x58350222>,
+						<0x08 0x58350221>,
+						<0x08 0x58350220>;
 			qcom,swr-clock-stop-mode0 = <1>;
 			qcom,swr-mstr-irq-wakeup-capable = <1>;
 			wcd938x_tx_slave: wcd938x-tx-slave {

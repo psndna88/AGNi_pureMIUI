@@ -39,14 +39,23 @@
 
 		qcom,core-clk-rate = <133333333>;
 		qcom,core-clk-rate-hs = <66666667>;
-		qcom,default-bus-vote = <2>; /* use svs bus voting */
 
 		interconnect-names = "usb-ddr", "usb-ipa", "ddr-usb";
 		interconnects = <&system_noc MASTER_USB3_0 &bimc SLAVE_EBI>,
 				<&system_noc MASTER_USB3_0 &config_noc SLAVE_IPA_CFG>,
 				<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_USB3>;
 
+		qcom,interconnect-values-nom = /* NOMINAL Votes */
+						<1000000 1550000>,
+						<0 2400>,
+						<0 40000>;
+		qcom,interconnect-values-svs = /* SVS Votes */
+						<240000 700000>,
+						<0 2400>,
+						<0 40000>;
+
 		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,pm-qos-latency = <61>;
 		qcom,gsi-reg-offset =
 			<0x0fc /* GSI_GENERAL_CFG */
 			 0x110 /* GSI_DBL_ADDR_L */
@@ -66,8 +75,6 @@
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,is-utmi-l1-suspend;
-			snps,dis-u1-entry-quirk;
-			snps,dis-u2-entry-quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,has-lpm-erratum;
 			snps,hird-threshold = /bits/ 8 <0x0>;

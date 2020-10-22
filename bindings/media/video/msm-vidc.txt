@@ -9,6 +9,7 @@ Required properties:
 	- "qcom,lahaina-vidc" : Invokes driver-specific data for LAHAINA.
 	- "qcom,shima-vidc" : Invokes driver-specific data for SHIMA.
 	- "qcom,holi-vidc" : Invokes driver-specific data for HOLI.
+	- "qcom,yupik-vidc" : Invokes driver-specific data for YUPIK.
 
 Optional properties:
 - vidc,firmware-name : Video Firmware ELF image name to be loaded by PIL
