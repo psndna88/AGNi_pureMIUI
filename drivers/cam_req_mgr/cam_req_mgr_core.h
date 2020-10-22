@@ -373,7 +373,8 @@ struct cam_req_mgr_connected_device {
  * @eof_event_cnt        : Atomic variable to track the number of EOF requests
  * @skip_init_frame      : skip initial frames crm_wd_timer validation in the
  *                         case of long exposure use case
- * @last_applied_jiffies : Record the jiffies of last applied req
+ * @last_sof_trigger_jiffies : Record the jiffies of last sof trigger jiffies
+ * @wq_congestion        : Indicates if WQ congestion is detected or not
  */
 struct cam_req_mgr_core_link {
 	int32_t                              link_hdl;
@@ -410,7 +411,8 @@ struct cam_req_mgr_core_link {
 	uint32_t    trigger_cnt[CAM_REQ_MGR_MAX_TRIGGERS];
 	atomic_t                             eof_event_cnt;
 	bool                                 skip_init_frame;
-	uint64_t                             last_applied_jiffies;
+	uint64_t                             last_sof_trigger_jiffies;
+	bool                                 wq_congestion;
 };
 
 /**
