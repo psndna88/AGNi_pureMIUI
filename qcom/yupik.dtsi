@@ -709,6 +709,13 @@
 				0x18040060 0x18050060 0x18060060 0x18070060>;
 	};
 
+	kryo-erp {
+		compatible = "arm,arm64-kryo-cpu-erp";
+		interrupts = <GIC_PPI 0 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "l1-l2-faultirq","l3-scu-faultirq";
+	};
+
 	cache-controller@9200000 {
 		compatible = "qcom,yupik-llcc","qcom,llcc-v2";
 		reg = <0x9200000 0xd0000>, <0x9600000 0x50000>;
