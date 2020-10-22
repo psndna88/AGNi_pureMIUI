@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,25 +16,31 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef QWLAN_VERSION_H
-#define QWLAN_VERSION_H
-/*===========================================================================
+#include <linux/string.h>
+#include <qdf_func_tracker.h>
+#include <qdf_mem.h>
 
-   FILE:
-   qwlan_version.h
+#ifdef FUNC_CALL_MAP
+char qdf_func_call_map_buf[QDF_FUNCTION_CALL_MAP_BUF_LEN] = {0};
 
-   BRIEF DESCRIPTION:
-   WLAN Host Version file.
-    Build number automatically updated by build scripts.
+void cc_func(unsigned int track)
+{
+	unsigned int index = 0;
+	unsigned int bit = 0;
 
-   ===========================================================================*/
+	index = track / 8;
+	bit = track % 8;
+	qdf_func_call_map_buf[index] |= (char)(1 << bit);
+}
 
-#define QWLAN_VERSION_MAJOR            5
-#define QWLAN_VERSION_MINOR            2
-#define QWLAN_VERSION_PATCH            03
-#define QWLAN_VERSION_EXTRA            "D"
-#define QWLAN_VERSION_BUILD            31
+void qdf_get_func_call_map(char *data)
+{
+	qdf_mem_copy(data, qdf_func_call_map_buf,
+		     QDF_FUNCTION_CALL_MAP_BUF_LEN);
+}
 
-#define QWLAN_VERSIONSTR               "5.2.03.31D"
-
-#endif /* QWLAN_VERSION_H */
+void qdf_clear_func_call_map(void)
+{
+	qdf_mem_zero(qdf_func_call_map_buf, QDF_FUNCTION_CALL_MAP_BUF_LEN);
+}
+#endif
