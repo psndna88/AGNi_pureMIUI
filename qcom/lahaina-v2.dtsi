@@ -22,6 +22,11 @@
 	dynamic-power-coefficient = <760>;
 };
 
+&kryo_erp {
+
+	/delete-property/ qcom,disable-panic-on-ce;
+};
+
 &sde_dp {
 	/delete-node/ qcom,pll-supply-entries;
 };

@@ -61,6 +61,7 @@ Subsystem properties:
 		28. mmw_pa2
 		29. mmw_pa3
 		30. sdr_mmw_therm
+		31. msm_skin_therm
 
 Example:
 

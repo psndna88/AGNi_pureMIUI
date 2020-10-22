@@ -95,7 +95,7 @@
 };
 
 &holi_snd {
-	qcom,model = "holi-mtp-usbc-snd-card";
+	qcom,model = "holi-usbc-snd-card";
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
@@ -236,9 +236,9 @@
 			   "cycle_count",
 			   "charge_full_design",
 			   "time_to_full_now",
-			   "parallel_mode",
-			   "parallel_output_mode",
-			   "min_icl",
+			   "cp_parallel_mode",
+			   "cp_parallel_output_mode",
+			   "cp_min_icl",
 			   "cp_switcher_en",
 			   "cp_enable",
 			   "cp_ilim",
