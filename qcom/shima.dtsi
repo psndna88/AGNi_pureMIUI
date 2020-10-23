@@ -2464,6 +2464,13 @@
 		mboxes = <&qmp_aop 0>;
 	};
 
+	cpu7_cpu_ddr_qoslatfloor: qcom,cpu7-cpu-ddr-qoslatfloor {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "mem_latency";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	cpu0_cpu_l3_tbl: qcom,cpu0-cpu-l3-tbl {
 		qcom,core-dev-table =
 			<  300000  300000000 >,
@@ -2732,6 +2739,16 @@
 			qcom,core-dev-table =
 				<  300000 1 >,
 				< 3000000 2 >;
+		};
+
+		cpu7_qoslatmon: qcom,cpu7-qoslatmon {
+			compatible = "qcom,arm-memlat-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_ddr_qoslatfloor>;
+			qcom,cachemiss-ev = <0x1000>;
+			qcom,core-dev-table =
+				< 2169600 1 >,
+				< 2707200 2 >;
 		};
 	};
 
