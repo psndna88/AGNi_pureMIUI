@@ -320,6 +320,70 @@
 				500000>;
 };
 
+&thermal_zones {
+	quiet-therm-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pm6150l_adc_tm ADC5_GPIO4_100K_PU>;
+
+		trips {
+			quiet_modem_trip0: quiet-modem-trip0 {
+				temperature = <42000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_modem_trip1: quiet-modem-trip1 {
+				temperature = <44000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_cx_trip: quiet-cx-trip {
+				temperature = <55000>;
+				hysteresis = <5000>;
+				type = "passive";
+			};
+
+			quiet_modem_trip2: quiet-modem-trip2 {
+				temperature = <56000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			gpu-cdev {
+				trip = <&quiet_cx_trip>;
+				/* throttle to 565000000Hz */
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-3)
+							(THERMAL_MAX_LIMIT-3)>;
+			};
+
+			cdsp-cdev0 {
+				trip = <&quiet_cx_trip>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			modem-skin-cdev0 {
+				trip = <&quiet_modem_trip0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+
+			modem-skin-cdev1 {
+				trip = <&quiet_modem_trip1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+
+			modem-skin-cdev2 {
+				trip = <&quiet_modem_trip2>;
+				cooling-device = <&modem_skin 3 3>;
+			};
+		};
+	};
+};
+
 &pm7250b_qg {
 	status = "ok";
 	#io-channel-cells = <1>;
