@@ -414,9 +414,9 @@
 		reg-names = "etm-base","debug-base";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
+		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
+		clock-names = "apb_pclk";
 
-		/*TODO: Fix the clock when tree is available*/
-		clock-names = "core_clk", "core_a_clk";
 	};
 
 	tcsr_mutex_regs: syscon@1905000 {
@@ -678,4 +678,5 @@
 #include "pmd9650-rpm-regulator.dtsi"
 #include "sdxnightjar-regulator.dtsi"
 #include "sdxnightjar-usb.dtsi"
+#include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
