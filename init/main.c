@@ -189,16 +189,7 @@ __setup("srgblock=", set_srgb_lock);
 int cpuoc_state = 0;
 static int __init set_cpuoc(int *val)
 {
-	int temp;
-
-	get_option(&val, &temp);
-
-	if (temp == 1)
-		cpuoc_state = 1;
-	else if (temp == 2)
-		cpuoc_state = 2;
-	else
-		cpuoc_state = 0;	
+	cpuoc_state = val;
 
 	return 0;
 }

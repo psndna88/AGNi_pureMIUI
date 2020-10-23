@@ -2338,20 +2338,22 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	policy->min = new_policy->min;
 	policy->max = new_policy->max;
+	if (!cpu_oc) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if ((!cpu_oc) && (cpuoc_state == 0)) {
-		if (policy->max > 1843200)
-			policy->max = 1843200;
-	} else if (cpuoc_state == 1) {
-		if (policy->max > 2208000)
-			policy->max = 2208000;
-	}
+		if (cpuoc_state == 0) {
+			if (policy->max > 1843200)
+				policy->max = 1843200;
+		} else if (cpuoc_state == 1) {
+			if (policy->max > 2208000)
+				policy->max = 2208000;
+		}
 #else
-	if ((!cpu_oc) && (cpuoc_state == 1)) {
-		if (policy->max > 2208000)
-			policy->max = 2208000;
-	}
+		if (cpuoc_state == 0) {
+			if (policy->max > 2208000)
+				policy->max = 2208000;
+		}
 #endif
+	}
 //	trace_cpu_frequency_limits(policy->max, policy->min, policy->cpu);
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
