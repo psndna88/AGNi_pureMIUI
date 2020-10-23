@@ -464,10 +464,10 @@
 				};
 
 				iova-mem-region-shared {
-					/* Shared region is 150MB long */
+					/* Shared region is 261MB long */
 					iova-region-name = "shared";
-					iova-region-start = <0x7400000>;
-					iova-region-len = <0x9600000>;
+					iova-region-start = <0x500000>;
+					iova-region-len = <0x10500000>;
 					iova-region-id = <0x1>;
 					status = "ok";
 				};
