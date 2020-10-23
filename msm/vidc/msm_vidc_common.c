@@ -6372,6 +6372,7 @@ int msm_comm_set_color_format(struct msm_vidc_inst *inst,
 void msm_comm_print_inst_info(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_buffer *mbuf;
+	struct dma_buf *dbuf;
 	struct internal_buf *buf;
 	bool is_decode = false;
 	enum vidc_ports port;
@@ -6405,26 +6406,35 @@ void msm_comm_print_inst_info(struct msm_vidc_inst *inst)
 
 	mutex_lock(&inst->scratchbufs.lock);
 	s_vpr_e(inst->sid, "scratch buffer list:\n");
-	list_for_each_entry(buf, &inst->scratchbufs.list, list)
-		s_vpr_e(inst->sid, "type: %d addr: %x size: %u\n",
-				buf->buffer_type, buf->smem.device_addr,
-				buf->smem.size);
+	list_for_each_entry(buf, &inst->scratchbufs.list, list) {
+		dbuf = (struct dma_buf *)buf->smem.dma_buf;
+		s_vpr_e(inst->sid, "type: %d addr: %x size: %u inode: %lu ref: %ld\n",
+				buf->buffer_type, buf->smem.device_addr, buf->smem.size,
+				(dbuf ? file_inode(dbuf->file)->i_ino : -1),
+				(dbuf ? file_count(dbuf->file) : -1));
+	}
 	mutex_unlock(&inst->scratchbufs.lock);
 
 	mutex_lock(&inst->persistbufs.lock);
 	s_vpr_e(inst->sid, "persist buffer list:\n");
-	list_for_each_entry(buf, &inst->persistbufs.list, list)
-		s_vpr_e(inst->sid, "type: %d addr: %x size: %u\n",
-				buf->buffer_type, buf->smem.device_addr,
-				buf->smem.size);
+	list_for_each_entry(buf, &inst->persistbufs.list, list) {
+		dbuf = (struct dma_buf *)buf->smem.dma_buf;
+		s_vpr_e(inst->sid, "type: %d addr: %x size: %u inode: %lu ref: %ld\n",
+				buf->buffer_type, buf->smem.device_addr, buf->smem.size,
+				(dbuf ? file_inode(dbuf->file)->i_ino : -1),
+				(dbuf ? file_count(dbuf->file) : -1));
+	}
 	mutex_unlock(&inst->persistbufs.lock);
 
 	mutex_lock(&inst->outputbufs.lock);
 	s_vpr_e(inst->sid, "dpb buffer list:\n");
-	list_for_each_entry(buf, &inst->outputbufs.list, list)
-		s_vpr_e(inst->sid, "type: %d addr: %x size: %u\n",
-				buf->buffer_type, buf->smem.device_addr,
-				buf->smem.size);
+	list_for_each_entry(buf, &inst->outputbufs.list, list) {
+		dbuf = (struct dma_buf *)buf->smem.dma_buf;
+		s_vpr_e(inst->sid, "type: %d addr: %x size: %u inode: %lu ref: %ld\n",
+				buf->buffer_type, buf->smem.device_addr, buf->smem.size,
+				(dbuf ? file_inode(dbuf->file)->i_ino : -1),
+				(dbuf ? file_count(dbuf->file) : -1));
+	}
 	mutex_unlock(&inst->outputbufs.lock);
 }
 
@@ -6499,34 +6509,43 @@ void print_vidc_buffer(u32 tag, const char *str, struct msm_vidc_inst *inst,
 		struct msm_vidc_buffer *mbuf)
 {
 	struct vb2_buffer *vb2 = NULL;
+	struct dma_buf *dbuf[2];
 
 	if (!(tag & msm_vidc_debug) || !inst || !mbuf)
 		return;
 
 	vb2 = &mbuf->vvb.vb2_buf;
+	dbuf[0] = (struct dma_buf *)mbuf->smem[0].dma_buf;
+	dbuf[1] = (struct dma_buf *)mbuf->smem[1].dma_buf;
 
 	if (vb2->num_planes == 1)
 		dprintk(tag, inst->sid,
-			"%s: %s: idx %2d fd %d off %d daddr %x size %d filled %d flags 0x%x ts %lld refcnt %d mflags 0x%x\n",
+			"%s: %s: idx %2d fd %d off %d daddr %x inode %lu ref %ld size %d filled %d flags 0x%x ts %lld refcnt %d mflags 0x%x\n",
 			str, vb2->type == INPUT_MPLANE ?
 			"OUTPUT" : "CAPTURE",
 			vb2->index, vb2->planes[0].m.fd,
 			vb2->planes[0].data_offset, mbuf->smem[0].device_addr,
+			(dbuf[0] ? file_inode(dbuf[0]->file)->i_ino : -1),
+			(dbuf[0] ? file_count(dbuf[0]->file) : -1),
 			vb2->planes[0].length, vb2->planes[0].bytesused,
 			mbuf->vvb.flags, mbuf->vvb.vb2_buf.timestamp,
 			mbuf->smem[0].refcount, mbuf->flags);
 	else
 		dprintk(tag, inst->sid,
-			"%s: %s: idx %2d fd %d off %d daddr %x size %d filled %d flags 0x%x ts %lld refcnt %d mflags 0x%x, extradata: fd %d off %d daddr %x size %d filled %d refcnt %d\n",
+			"%s: %s: idx %2d fd %d off %d daddr %x inode %lu ref %ld size %d filled %d flags 0x%x ts %lld refcnt %d mflags 0x%x, extradata: fd %d off %d daddr %x inode %lu ref %ld size %d filled %d refcnt %d\n",
 			str, vb2->type == INPUT_MPLANE ?
 			"OUTPUT" : "CAPTURE",
 			vb2->index, vb2->planes[0].m.fd,
 			vb2->planes[0].data_offset, mbuf->smem[0].device_addr,
+			(dbuf[0] ? file_inode(dbuf[0]->file)->i_ino : -1),
+			(dbuf[0] ? file_count(dbuf[0]->file) : -1),
 			vb2->planes[0].length, vb2->planes[0].bytesused,
 			mbuf->vvb.flags, mbuf->vvb.vb2_buf.timestamp,
 			mbuf->smem[0].refcount, mbuf->flags,
 			vb2->planes[1].m.fd, vb2->planes[1].data_offset,
-			mbuf->smem[1].device_addr, vb2->planes[1].length,
+			mbuf->smem[1].device_addr,
+			(dbuf[1] ? file_inode(dbuf[1]->file)->i_ino : -1),
+			(dbuf[1] ? file_count(dbuf[1]->file) : -1), vb2->planes[1].length,
 			vb2->planes[1].bytesused, mbuf->smem[1].refcount);
 }
 
