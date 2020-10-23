@@ -682,11 +682,11 @@ fi;
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
 		$BB cp -f $AKHOME/tools/init.agni_2.45.rc /vendor/etc/init/hw/init.agni.rc;
-		CPUOC_SELECT="2";
+		CPUOC_SELECT="1";
 		ui_print " " "AGNi installing with EXPERIMENTAL CPU OC @ 2.45GHz !" " ";
 	else
 		$BB cp -f $AKHOME/tools/init.agni_noc.rc /vendor/etc/init/hw/init.agni.rc;
-		CPUOC_SELECT="1";
+		CPUOC_SELECT="0";
 		ui_print " " "AGNi installing without CPU OC..." " ";
 	fi;
 else
