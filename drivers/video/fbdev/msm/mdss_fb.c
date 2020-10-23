@@ -351,6 +351,8 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		value = mfd->panel_info->brightness_max;
 
 	// Boeffla: apply min limits for LCD backlight (0 is exception for display off)
+	if (miuirom)
+		backlight_min = 20;
 	if (value != 0 && value < backlight_min)
 		value = backlight_min;
 
