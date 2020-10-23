@@ -42,6 +42,7 @@ static struct events events_group;
 static struct task_struct *events_notify_thread;
 
 bool cpu_oc = false;
+extern int cpuoc_state;
 module_param(cpu_oc, bool, S_IRUSR | S_IWUSR);
 bool cpu_minfreq_lock = false;
 bool cpu_maxfreq_lock = false;
@@ -152,21 +153,28 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 			return -EINVAL;
 		if (cpu > (num_present_cpus() - 1))
 			return -EINVAL;
+		if (!cpu_oc) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		if (!cpu_oc) {
-			if ((cpu >= 0) && (cpu <=3 ) && (val > 1612800))
-				val = 1612800;
-			if ((cpu >= 4) && (cpu <=7 ) && (val > 1804800))
-				val = 1804800;
-		}
+			if (cpuoc_state == 0) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val > 1612800))
+					val = 1612800;
+				if ((cpu >= 4) && (cpu <=7 ) && (val > 1804800))
+					val = 1804800;
+			} else if (cpuoc_state == 1) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val > 1843200))
+					val = 1843200;
+				if ((cpu >= 4) && (cpu <=7 ) && (val > 2208000))
+					val = 2208000;			
+			}
 #else
-		if (!cpu_oc) {
-			if ((cpu >= 0) && (cpu <=3 ) && (val > 1843200))
-				val = 1843200;
-			if ((cpu >= 4) && (cpu <=7 ) && (val > 2208000))
-				val = 2208000;
-		}
+			if (cpuoc_state == 0) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val > 1804800))
+					val = 1804800;
+				if ((cpu >= 4) && (cpu <=7 ) && (val > 2208000))
+					val = 2208000;
+			}
 #endif
+		}
 
 		i_cpu_stats = &per_cpu(cpu_stats, cpu);
 
