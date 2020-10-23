@@ -382,9 +382,9 @@
 		pm8350c_s2: regulator-pm8350c-s2 {
 			regulator-name = "pm8350c_s2";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <722000>;
+			regulator-min-microvolt = <550000>;
 			regulator-max-microvolt = <950000>;
-			qcom,init-voltage = <722000>;
+			qcom,init-voltage = <550000>;
 		};
 	};
 
