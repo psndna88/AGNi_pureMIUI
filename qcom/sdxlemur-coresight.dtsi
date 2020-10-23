@@ -1015,7 +1015,7 @@
 		reg-names = "tpdm-base";
 
 		coresight-name = "coresight-tpdm-ipa";
-
+		status = "disabled";
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
