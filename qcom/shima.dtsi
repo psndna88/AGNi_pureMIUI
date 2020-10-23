@@ -2373,6 +2373,16 @@
 			 &epss_l3_cpu SLAVE_EPSS_L3_CPU7>;
 	};
 
+	cpu7_cpu_l3_latfloor: qcom,cpu7-cpu-l3-latfloor {
+		compatible = "qcom,devfreq-icc-l3";
+		reg = <0x18590100 0xa0>;
+		reg-names = "ftbl-base";
+		governor = "compute";
+		interconnects =
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS
+			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+	};
+
 	cpu0_cpu_llcc_lat: qcom,cpu0-cpu-llcc-lat {
 		compatible = "qcom,devfreq-icc";
 		governor = "mem_latency";
@@ -2547,6 +2557,15 @@
 			qcom,access-ev = <0x2B>;
 			qcom,wb-ev = <0x18>;
 			qcom,core-dev-table = <&cpu7_cpu_l3_tbl>;
+		};
+
+		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
+			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
+			qcom,core-dev-table =
+				< 2169600  300000000 >,
+				< 2707200 1420800000 >;
 		};
 
 		cpu0_cpu_llcc_latmon: qcom,cpu0-cpu-llcc-latmon {
