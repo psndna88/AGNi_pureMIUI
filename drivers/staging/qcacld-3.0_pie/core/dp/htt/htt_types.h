@@ -431,6 +431,9 @@ struct htt_pdev_t {
 	tp_rx_pkt_dump_cb rx_pkt_dump_cb;
 
 	struct mon_channel mon_ch_info;
+
+	struct htt_htc_pkt_union *last_misc_pkt;
+	int last_misc_num;
 };
 
 #define HTT_EPID_GET(_htt_pdev_hdl)  \
