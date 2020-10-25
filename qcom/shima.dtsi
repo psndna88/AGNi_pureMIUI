@@ -3497,6 +3497,7 @@
 		qcom,wlan-cbc-enabled;
 		/* RPMH_PDC_WLAN_RF_TCS<6>_CMD<0> offset */
 		qcom,tcs_offset_int_pow_amp_vreg = <0x4B0>;
+		cnss-enable-self-recovery;
 
 		vdd-wlan-aon-supply = <&S2C>;
 		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
