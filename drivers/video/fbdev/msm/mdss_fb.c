@@ -1039,6 +1039,7 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 		pr_err("%s,not available\n",__func__);
 		return -1;
 	}
+	return 0;
 //This simply fixes sRGB reset after screen off/on (for aosp)
 	if(srgb_enabled == 1) {
 		if (!miuirom) {
