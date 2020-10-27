@@ -708,6 +708,7 @@ void qmi_rmnet_change_link(struct net_device *dev, void *port, void *tcm_pt)
 {
 	struct qmi_info *qmi = (struct qmi_info *)rmnet_get_qmi_pt(port);
 	struct tcmsg *tcm = (struct tcmsg *)tcm_pt;
+	void *wda_data = NULL;
 
 	switch (tcm->tcm_family) {
 	case NLMSG_FLOW_ACTIVATE:
@@ -750,6 +751,11 @@ void qmi_rmnet_change_link(struct net_device *dev, void *port, void *tcm_pt)
 			return;
 		if (tcm->tcm_handle == 0) { /* instance 0 */
 			rmnet_clear_powersave_format(port);
+			if (qmi->wda_client)
+				wda_data = qmi->wda_client;
+			else if (qmi->wda_pending)
+				wda_data = qmi->wda_pending;
+			wda_qmi_client_release(wda_data);
 			qmi_rmnet_work_exit(port);
 		}
 		qmi_rmnet_delete_client(port, qmi, tcm);
@@ -780,12 +786,13 @@ void qmi_rmnet_qmi_exit(void *qmi_pt, void *port)
 
 	ASSERT_RTNL();
 
-	qmi_rmnet_work_exit(port);
-
 	if (qmi->wda_client)
 		data = qmi->wda_client;
 	else if (qmi->wda_pending)
 		data = qmi->wda_pending;
+
+	wda_qmi_client_release(data);
+	qmi_rmnet_work_exit(port);
 
 	if (data) {
 		wda_qmi_client_exit(data);
