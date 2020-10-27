@@ -558,6 +558,8 @@ static void __cam_req_mgr_flush_req_slot(
 	in_q->rd_idx = 0;
 	link->trigger_cnt[0] = 0;
 	link->trigger_cnt[1] = 0;
+	link->trigger_mask = 0;
+	link->subscribe_event &= ~CAM_TRIGGER_POINT_EOF;
 }
 
 /**
@@ -809,12 +811,6 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			CAM_DBG(CAM_CRM,
 				"No special ops detected for this table slot");
 			continue;
-		}
-
-		if (slot->ops.apply_at_eof && slot->ops.skip_next_frame) {
-			CAM_ERR(CAM_CRM,
-				"Both EOF and SOF trigger is not supported");
-			return -EINVAL;
 		}
 
 		if (dev->dev_hdl != slot->ops.dev_hdl) {
@@ -2586,8 +2582,7 @@ int cam_req_mgr_process_add_req(void *priv, void *data)
 			(add_req->skip_before_applying & 0xFF));
 	}
 
-	/* Used when Precise Flash is enabled */
-	if ((add_req->trigger_eof) && (!add_req->skip_before_applying)) {
+	if (add_req->trigger_eof) {
 		slot->ops.apply_at_eof = true;
 		slot->ops.dev_hdl = add_req->dev_hdl;
 		CAM_DBG(CAM_REQ,
