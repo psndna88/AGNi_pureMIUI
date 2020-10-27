@@ -1476,6 +1476,14 @@ static struct msm_vidc_inst_smem_ops  msm_vidc_smem_ops = {
 	.smem_drain = msm_smem_memory_drain,
 };
 
+static void close_helper(struct kref *kref)
+{
+	struct msm_vidc_inst *inst = container_of(kref,
+			struct msm_vidc_inst, kref);
+
+	msm_vidc_destroy(inst);
+}
+
 void *msm_vidc_open(int core_id, int session_type)
 {
 	struct msm_vidc_inst *inst = NULL;
@@ -1598,7 +1606,9 @@ void *msm_vidc_open(int core_id, int session_type)
 	if (rc) {
 		s_vpr_e(inst->sid,
 			"Failed to move video instance to init state\n");
-		goto fail_init;
+		kref_put(&inst->kref, close_helper);
+		inst = NULL;
+		goto err_invalid_core;
 	}
 
 	if (msm_comm_check_for_inst_overload(core)) {
@@ -1784,14 +1794,6 @@ int msm_vidc_destroy(struct msm_vidc_inst *inst)
 	put_sid(inst->sid);
 	kfree(inst);
 	return 0;
-}
-
-static void close_helper(struct kref *kref)
-{
-	struct msm_vidc_inst *inst = container_of(kref,
-			struct msm_vidc_inst, kref);
-
-	msm_vidc_destroy(inst);
 }
 
 int msm_vidc_close(void *instance)
