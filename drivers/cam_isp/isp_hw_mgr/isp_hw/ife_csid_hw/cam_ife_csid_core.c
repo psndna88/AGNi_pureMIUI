@@ -4927,8 +4927,9 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 			fatal_err_detected = true;
 			goto handle_fatal_error;
 		}
-		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
-			CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION) {
+		if ((irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
+			CSID_CSI2_RX_ERROR_CPHY_EOT_RECEPTION) &&
+			(!csid_hw->epd_supported)) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
 				"CSID:%d CPHY_EOT_RECEPTION",
 				csid_hw->hw_intf->hw_idx);
