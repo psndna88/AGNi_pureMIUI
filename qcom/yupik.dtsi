@@ -1268,4 +1268,5 @@
 };
 
 #include "yupik-usb.dtsi"
+#include "yupik-ion.dtsi"
 #include "msm-arm-smmu-yupik.dtsi"
