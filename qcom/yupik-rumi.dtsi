@@ -1,3 +1,5 @@
+#include <dt-bindings/clock/qcom,gcc-yupik.h>
+
 &soc {
 	timer {
 		clock-frequency = <5000000>;
@@ -78,4 +80,9 @@
 
 &gcc {
 	clocks = <&bi_tcxo>, <&sleep_clk>;
+};
+
+&gpucc {
+	clocks = <&bi_tcxo>, <&gcc GCC_GPU_GPLL0_CLK_SRC>,
+		<&gcc GCC_GPU_GPLL0_DIV_CLK_SRC>, <&gcc GCC_GPU_CFG_AHB_CLK>;
 };
