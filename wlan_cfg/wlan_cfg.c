@@ -624,6 +624,8 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->fst_in_cmem = cfg_get(psoc, CFG_DP_RX_FST_IN_CMEM);
 	wlan_cfg_ctx->tx_per_pkt_vdev_id_check =
 			cfg_get(psoc, CFG_DP_TX_PER_PKT_VDEV_ID_CHECK);
+	wlan_cfg_ctx->wow_check_rx_pending_enable =
+			cfg_get(psoc, CFG_DP_WOW_CHECK_RX_PENDING);
 
 	return wlan_cfg_ctx;
 }
