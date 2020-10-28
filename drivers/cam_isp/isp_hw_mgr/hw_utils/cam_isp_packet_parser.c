@@ -476,7 +476,7 @@ int cam_isp_add_io_buffers(
 	struct cam_isp_hw_get_cmd_update    update_buf;
 	struct cam_isp_hw_get_wm_update     wm_update;
 	struct cam_isp_hw_get_wm_update     bus_rd_update;
-	struct cam_hw_fence_map_entry      *out_map_entries;
+	struct cam_hw_fence_map_entry      *out_map_entries = NULL;
 	struct cam_hw_fence_map_entry      *in_map_entries;
 	struct cam_isp_hw_get_cmd_update    secure_mode;
 	uint32_t                            kmd_buf_remain_size;
@@ -738,6 +738,11 @@ int cam_isp_add_io_buffers(
 			}
 			io_cfg_used_bytes += update_buf.cmd.used_bytes;
 
+			if (!out_map_entries) {
+				CAM_ERR(CAM_ISP, "out_map_entries is NULL");
+				rc = -EINVAL;
+				return rc;
+			}
 
 			image_buf_addr =
 				out_map_entries->image_buf_addr;
