@@ -218,7 +218,7 @@ static struct cam_iommu_cb_set iommu_cb_set;
 static enum dma_data_direction cam_smmu_translate_dir(
 	enum cam_smmu_map_dir dir);
 
-static int cam_smmu_check_handle_unique(int hdl);
+static bool cam_smmu_is_hdl_nonunique_or_null(int hdl);
 
 static int cam_smmu_create_iommu_handle(int idx);
 
@@ -810,13 +810,12 @@ void cam_smmu_reset_iommu_table(enum cam_smmu_init_dir ops)
 	}
 }
 
-static int cam_smmu_check_handle_unique(int hdl)
+static bool cam_smmu_is_hdl_nonunique_or_null(int hdl)
 {
 	int i;
 
-	if (hdl == HANDLE_INIT) {
-		CAM_DBG(CAM_SMMU,
-			"iommu handle is init number. Need to try again");
+	if ((hdl == HANDLE_INIT) || (!hdl)) {
+		CAM_DBG(CAM_SMMU, "iommu handle: %d is not valid", hdl);
 		return 1;
 	}
 
@@ -876,11 +875,12 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 
 			if (iommu_cb_set.cb_info[i].handle == HANDLE_INIT) {
 				mutex_lock(&iommu_cb_set.cb_info[i].lock);
-				/* make sure handle is unique */
+				/* make sure handle is unique and non-zero*/
 				do {
 					handle =
 						cam_smmu_create_iommu_handle(i);
-				} while (cam_smmu_check_handle_unique(handle));
+				} while (cam_smmu_is_hdl_nonunique_or_null(
+						handle));
 
 				/* put handle in the table */
 				iommu_cb_set.cb_info[i].handle = handle;
