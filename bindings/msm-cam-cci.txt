@@ -253,13 +253,13 @@ sensor resource.
   Value type: <string>
   Definition: Should be "qcom,cam-res-mgr".
 
-- shared-gpios
+- gpios-shared
   Usage: optional
   Value type: <u32>
   Definition: should contain the gpios which are used by two or more
 	cameras, and these cameras may be opened together.
 
-- shared-pinctrl-gpios
+- gpios-shared-pinctrl
   Usage: optional
   Value type: <u32>
   Definition: should contain the pinctrl gpios which are used by two or more
@@ -778,8 +778,8 @@ Example:
     qcom,cam-res-mgr {
          compatible = "qcom,cam-res-mgr";
          status = "ok";
-         shared-gpios = <18 19>;
-	 shared-pinctrl-gpios = <408 409>;
+         gpios-shared = <18 19>;
+	 gpios-shared-pinctrl = <408 409>;
 	 shared-pctrl-gpio-names = "mclk0", "mclk1";
          pinctrl-names = "mclk0_active", "mclk0_suspend",
 		"mclk1_active", "mclk1_suspend";
