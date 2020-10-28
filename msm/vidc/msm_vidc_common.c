@@ -7751,24 +7751,24 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_timestamps *node;
-	u32 max_framerate = 1 << 16;
-	int count = 0;
+	u64 avg_framerate = 0;
+	u32 count = 0;
 
 	if (!inst) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
-		return max_framerate;
+		return (1 << 16);
 	}
 
 	mutex_lock(&inst->timestamps.lock);
 	list_for_each_entry(node, &inst->timestamps.list, list) {
 		count++;
-		max_framerate = max_framerate < node->framerate ?
-			node->framerate : max_framerate;
+		avg_framerate += node->framerate;
 	}
-	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n",
-		__func__, max_framerate, count);
+	avg_framerate = count ? (avg_framerate / count) : (1 << 16);
+
+	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n", __func__, avg_framerate, count);
 	mutex_unlock(&inst->timestamps.lock);
-	return max_framerate;
+	return (u32)avg_framerate;
 }
 
 int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
