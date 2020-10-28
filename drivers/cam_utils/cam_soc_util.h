@@ -470,11 +470,12 @@ int cam_soc_util_clk_enable(struct clk *clk, const char *clk_name,
  *
  * @soc_info:           Device soc information
  * @clk_level:          Clock level number to set
+ * @do_not_set_src_clk: If true, set clock rates except the src clk
  *
  * @return:             Success or failure
  */
 int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
-	enum cam_vote_level clk_level);
+	enum cam_vote_level clk_level, bool do_not_set_src_clk);
 
 /**
  * cam_soc_util_clk_disable()

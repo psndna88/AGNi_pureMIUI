@@ -1204,7 +1204,7 @@ static int cam_cpas_util_apply_client_ahb_vote(struct cam_hw_info *cpas_hw,
 
 	if (cpas_core->streamon_clients) {
 		rc = cam_soc_util_set_clk_rate_level(&cpas_hw->soc_info,
-			highest_level);
+			highest_level, true);
 		if (rc) {
 			CAM_ERR(CAM_CPAS,
 				"Failed in scaling clock rate level %d for AHB",
