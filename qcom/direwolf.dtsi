@@ -5,6 +5,7 @@
 #include <dt-bindings/clock/qcom,gcc-direwolf.h>
 #include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
+#include <dt-bindings/interconnect/qcom,epss-l3.h>
 #include <dt-bindings/interconnect/qcom,icc.h>
 #include <dt-bindings/interconnect/qcom,direwolf.h>
 
@@ -1010,6 +1011,15 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	epss_l3_cpu: l3_cpu@18590000 {
+		reg = <0x18590000 0x3000>;
+		compatible = "qcom,direwolf-epss-l3-cpu";
+		#interconnect-cells = <1>;
+		clock-names = "xo", "alternate";
+		clocks = <&rpmhcc RPMH_CXO_CLK>,
+			<&gcc GCC_GPLL0>;
 	};
 
 	tlmm: pinctrl@f000000 {
