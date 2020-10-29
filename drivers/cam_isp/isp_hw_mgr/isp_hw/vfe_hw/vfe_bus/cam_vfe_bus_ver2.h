@@ -182,6 +182,7 @@ struct cam_vfe_bus_ver2_vfe_out_hw_info {
  * @vfe_out_hw_info:       VFE output capability
  * @top_irq_shift:         Mask shift for top level BUS WR irq
  * @support_consumed_addr: Indicate if bus support consumed address
+ * @max_out_res:           Max vfe out resource value supported for hw
  */
 struct cam_vfe_bus_ver2_hw_info {
 	struct cam_vfe_bus_ver2_reg_offset_common common_reg;
@@ -195,6 +196,7 @@ struct cam_vfe_bus_ver2_hw_info {
 		vfe_out_hw_info[CAM_VFE_BUS_VER2_VFE_OUT_MAX];
 	uint32_t top_irq_shift;
 	bool support_consumed_addr;
+	uint32_t max_out_res;
 };
 
 /*
