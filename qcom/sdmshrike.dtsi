@@ -65,16 +65,6 @@
 				      cache-level = <3>;
 				};
 			};
-
-			L1_I_0: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
-
-			L1_D_0: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
 		};
 
 		CPU1: cpu@100 {
@@ -92,16 +82,6 @@
 			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
-			};
-
-			L1_I_100: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
-
-			L1_D_100: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
 			};
 		};
 
@@ -121,16 +101,6 @@
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
-
-			L1_I_200: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
-
-			L1_D_200: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
 		};
 
 		CPU3: cpu@300 {
@@ -148,16 +118,6 @@
 			      cache-size = <0x20000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
-			};
-
-			L1_I_300: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
-			};
-
-			L1_D_300: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0xa000>;
 			};
 		};
 
@@ -177,16 +137,6 @@
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
-
-			L1_I_400: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
-
-			L1_D_400: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
 		};
 
 		CPU5: cpu@500 {
@@ -204,16 +154,6 @@
 			      cache-size = <0x80000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
-			};
-
-			L1_I_500: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
-
-			L1_D_500: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
 			};
 		};
 
@@ -233,16 +173,6 @@
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
 			};
-
-			L1_I_600: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
-
-			L1_D_600: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
 		};
 
 		CPU7: cpu@700 {
@@ -260,16 +190,6 @@
 			      cache-size = <0x80000>;
 			      cache-level = <2>;
 			      next-level-cache = <&L3_0>;
-			};
-
-			L1_I_700: l1-icache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
-			};
-
-			L1_D_700: l1-dcache {
-				compatible = "arm,arch-cache";
-				qcom,dump-size = <0x14000>;
 			};
 		};
 
@@ -489,6 +409,7 @@
 
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
 			size = <0 0x2400000>;
 		};
@@ -858,6 +779,141 @@
 		compatible = "arm,armv8-pmuv3";
 		qcom,irq-is-percpu;
 		interrupts = <GIC_PPI 5 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	mem_dump {
+		compatible = "qcom,mem-dump";
+		memory-region = <&dump_mem>;
+
+		rpmh {
+			qcom,dump-size = <0x2000000>;
+			qcom,dump-id = <0xec>;
+		};
+
+		rpm_sw {
+			qcom,dump-size = <0x28000>;
+			qcom,dump-id = <0xea>;
+		};
+
+		pmic {
+			qcom,dump-size = <0x80000>;
+			qcom,dump-id = <0xe4>;
+		};
+
+		fcm {
+			qcom,dump-size = <0x8400>;
+			qcom,dump-id = <0xee>;
+		};
+
+		tmc_etf {
+			qcom,dump-size = <0x10000>;
+			qcom,dump-id = <0xf0>;
+		};
+
+		etf_swao {
+			qcom,dump-size = <0x8400>;
+			qcom,dump-id = <0xf1>;
+		};
+
+		etr_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x100>;
+		};
+
+		etf_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x101>;
+		};
+
+		etfswao_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x102>;
+		};
+
+		misc_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe8>;
+		};
+
+		l1_icache0 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x60>;
+		};
+
+		l1_icache100 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x61>;
+		};
+
+		l1_icache200 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x62>;
+		};
+
+		l1_icache300 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x63>;
+		};
+
+		l1_icache400 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x64>;
+		};
+
+		l1_icache500 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x65>;
+		};
+
+		l1_icache600 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x66>;
+		};
+
+		l1_icache700 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x67>;
+		};
+
+		l1_dcache0 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x80>;
+		};
+
+		l1_dcache100 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x81>;
+		};
+
+		l1_dcache200 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x82>;
+		};
+
+		l1_dcache300 {
+			qcom,dump-size = <0xa000>;
+			qcom,dump-id = <0x83>;
+		};
+
+		l1_dcache400 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x84>;
+		};
+
+		l1_dcache500 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x85>;
+		};
+
+		l1_dcache600 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x86>;
+		};
+
+		l1_dcache700 {
+			qcom,dump-size = <0x14000>;
+			qcom,dump-id = <0x87>;
+		};
 	};
 
 	clocks {
