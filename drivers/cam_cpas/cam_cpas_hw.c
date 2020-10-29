@@ -1915,15 +1915,6 @@ static int cam_cpas_log_vote(struct cam_hw_info *cpas_hw)
 			curr_node->mnoc_ab_bw, curr_node->mnoc_ib_bw);
 	}
 
-	if (cpas_core->streamon_clients > 0) {
-		/*
-		 * Means, cpas has clocks turned on, so we can query clk freq.
-		 * Print clk frequencies that cpas enables - this will print
-		 * camcc_ahb, camcc_axi, gcc_hf, gcc_sf as well.
-		 */
-		cam_soc_util_print_clk_freq(&cpas_hw->soc_info);
-	}
-
 	cam_cpas_dump_monitor_array(cpas_core);
 
 	return 0;
