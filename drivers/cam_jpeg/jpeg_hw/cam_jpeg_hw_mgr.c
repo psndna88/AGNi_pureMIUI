@@ -139,6 +139,9 @@ static int cam_jpeg_process_next_hw_update(void *priv, void *data,
 		rc = -EINVAL;
 		goto end_error;
 	}
+
+	CAM_TRACE(CAM_JPEG, "Start JPEG ENC Req %llu", config_args->request_id);
+
 	rc = hw_mgr->devices[dev_type][0]->hw_ops.start(
 		hw_mgr->devices[dev_type][0]->hw_priv, NULL, 0);
 	if (rc) {
