@@ -3629,17 +3629,17 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			goto bad_lpg_params;
 		}
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+#ifdef CONFIG_KERNEL_CUSTOM_F7A
 		if ((miuirom) || (!altledmode)) {
-			prop = of_find_property(node, "qcom,duty-pcts-pie",
+			prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
 				&pwm_cfg->duty_cycles->num_duty_pcts);
 		} else {
 			prop = of_find_property(node, "qcom,duty-pcts",
 				&pwm_cfg->duty_cycles->num_duty_pcts);
 		}
-#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+#else
 		if ((miuirom) || (!altledmode)) {
-			prop = of_find_property(node, "qcom,duty-pcts-f7a-pie",
+			prop = of_find_property(node, "qcom,duty-pcts-pie",
 				&pwm_cfg->duty_cycles->num_duty_pcts);
 		} else {
 			prop = of_find_property(node, "qcom,duty-pcts",
