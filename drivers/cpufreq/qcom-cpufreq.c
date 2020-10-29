@@ -346,10 +346,14 @@ static unsigned long max_freq=0;
 static int cpumaxfreq_proc_show(struct seq_file *m, void *v)
 {
 	unsigned long freq = 0;
+	int max__freq;
 
-
-
-		freq=(max_freq/10000);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	max__freq = 1804800;
+#else
+	max__freq = 2208000;
+#endif
+	freq=(max__freq/10000);
 	seq_printf(m,"%lu.%02lu",freq/100,freq%100);
 	return 0;
 }
