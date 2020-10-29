@@ -24,6 +24,8 @@ echo " 4: Build lavender - Redmi Note 7"
 echo " 5: Build wayne    - MI 6X"
 echo " 6: Build jasmine  - MI A2"
 echo " "
+echo " 7: Build whyred ROG MIUI - Redmi Note 5 Pro"
+echo " "
 echo " 0:  X  Exit Compilation  X"
 echo "\n$HORIZONTALLINE"
 read -p "    Select what to build : " choice
@@ -35,6 +37,14 @@ if [ $choice -eq 1 ]; then
 	./scripts/agni/build_kernel_whyred.sh || exit 1
 	echo " "
 	echo "          BATCH MODE: Built AGNi whyred variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
+	echo " "
+	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
+	./scripts/agni/build_kernel_whyred_ROG.sh || exit 1
+	echo " "
+	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
@@ -108,6 +118,16 @@ elif [ $choice -eq 6 ]; then
 	./scripts/agni/build_kernel_jasmine.sh || exit 1
 	echo " "
 	echo "          BATCH MODE: Built AGNi jasmine variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+elif [ $choice -eq 7 ]; then
+	#### whyred ROG
+	echo $HORIZONTALLINE
+	echo " "
+	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
+	./scripts/agni/build_kernel_whyred_ROG.sh || exit 1
+	echo " "
+	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 elif [ $choice -eq 0 ]; then

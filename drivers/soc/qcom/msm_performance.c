@@ -207,11 +207,38 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 static int get_cpu_max_freq(char *buf, const struct kernel_param *kp)
 {
 	int cnt = 0, cpu;
+#ifdef CONFIG_ROG_SUPPORT
+	int freq;
+#endif
 
 	for_each_present_cpu(cpu) {
+#ifdef CONFIG_ROG_SUPPORT
+		freq = per_cpu(cpu_stats, cpu).max;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if ((cpu >= 0) && (cpu <= 3)) {
+			if (freq > 1612800)
+				freq = 1612800;
+		} else {
+			if (freq > 1804800)
+				freq = 1804800;
+		}
+#else
+		if ((cpu >= 0) && (cpu <= 3)) {
+			if (freq > 1804800)
+				freq = 1804800;
+		} else {
+			if (freq > 2208000)
+				freq = 2208000;
+		}
+#endif
+		cnt += snprintf(buf + cnt, PAGE_SIZE - cnt,
+				"%d:%u ", cpu, freq);
+	}
+#else
 		cnt += snprintf(buf + cnt, PAGE_SIZE - cnt,
 				"%d:%u ", cpu, per_cpu(cpu_stats, cpu).max);
 	}
+#endif
 	cnt += snprintf(buf + cnt, PAGE_SIZE - cnt, "\n");
 	return cnt;
 }

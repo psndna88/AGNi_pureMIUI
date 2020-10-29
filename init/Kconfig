@@ -87,6 +87,10 @@ config LOCALVERSION
 	  object and source tree, in that order.  Your total string can
 	  be a maximum of 64 characters.
 
+config ROG_SUPPORT
+	bool "Support MIUI Q ROG ROMS"
+	default n
+
 config LOCALVERSION_AUTO
 	bool "Automatically append version information to the version string"
 	default y

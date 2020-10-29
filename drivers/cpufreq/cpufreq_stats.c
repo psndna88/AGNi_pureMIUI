@@ -54,9 +54,24 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 
 	cpufreq_stats_update(stats);
 	for (i = 0; i < stats->state_num; i++) {
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if ((stats->freq_table[i] == 1747200) || (stats->freq_table[i] == 1843200) ||
+			(stats->freq_table[i] == 1958400) || (stats->freq_table[i] == 2150400) ||
+			(stats->freq_table[i] == 2208000) || (stats->freq_table[i] == 2457600)) {
+#else
+		if (stats->freq_table[i] > 2208000) {
+#endif
+		} else {
+			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
+				(unsigned long long)
+				jiffies_64_to_clock_t(stats->time_in_state[i]));
+		}
+#else
 		len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
 			(unsigned long long)
 			jiffies_64_to_clock_t(stats->time_in_state[i]));
+#endif
 	}
 	return len;
 }
