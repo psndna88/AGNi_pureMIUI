@@ -10,7 +10,6 @@
 #include "cam_irq_controller.h"
 #include "cam_vfe_bus.h"
 
-#define CAM_VFE_BUS_VER3_MAX_CLIENTS     26
 #define CAM_VFE_BUS_VER3_MAX_SUB_GRPS        6
 #define CAM_VFE_BUS_VER3_MAX_MID_PER_PORT 4
 #define CAM_VFE_BUS_VER3_480_MAX_CLIENTS     26
@@ -80,7 +79,11 @@ enum cam_vfe_bus_ver3_vfe_out_type {
 	CAM_VFE_BUS_VER3_VFE_OUT_LCR,
 	CAM_VFE_BUS_VER3_VFE_OUT_AWB_BFW,
 	CAM_VFE_BUS_VER3_VFE_OUT_2PD_STATS,
+	CAM_VFE_BUS_VER3_VFE_OUT_STATS_AEC_BE,
 	CAM_VFE_BUS_VER3_VFE_OUT_LTM_STATS,
+	CAM_VFE_BUS_VER3_VFE_OUT_STATS_GTM_BHIST,
+	CAM_VFE_BUS_VER3_VFE_OUT_STATS_BE,
+	CAM_VFE_BUS_VER3_VFE_OUT_GAMMA,
 	CAM_VFE_BUS_VER3_VFE_OUT_MAX,
 };
 
@@ -185,10 +188,13 @@ struct cam_vfe_bus_ver3_vfe_out_hw_info {
  * @num_client:            Total number of write clients
  * @bus_client_reg:        Bus client register info
  * @vfe_out_hw_info:       VFE output capability
+ * @num_comp_grp:          Number of composite groups
  * @comp_done_shift:       Mask shift for comp done mask
  * @top_irq_shift:         Mask shift for top level BUS WR irq
  * @support_consumed_addr: Indicate if bus support consumed address
  * @max_out_res:           Max vfe out resource value supported for hw
+ * @supported_irq:         Mask to indicate the IRQ supported
+ * @comp_cfg_needed:       Composite group config is needed for hw
  */
 struct cam_vfe_bus_ver3_hw_info {
 	struct cam_vfe_bus_ver3_reg_offset_common common_reg;
@@ -198,10 +204,13 @@ struct cam_vfe_bus_ver3_hw_info {
 	uint32_t num_out;
 	struct cam_vfe_bus_ver3_vfe_out_hw_info
 		vfe_out_hw_info[CAM_VFE_BUS_VER3_VFE_OUT_MAX];
+	uint32_t num_comp_grp;
 	uint32_t comp_done_shift;
 	uint32_t top_irq_shift;
 	bool support_consumed_addr;
 	uint32_t max_out_res;
+	uint32_t supported_irq;
+	bool comp_cfg_needed;
 };
 
 /*

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_VFE_CORE_H_
@@ -11,6 +11,13 @@
 #include "cam_vfe_top.h"
 #include "cam_vfe_bus.h"
 #include "cam_vfe_hw_intf.h"
+
+#define CAM_VFE_HW_IRQ_CAP_SOF             0x1
+#define CAM_VFE_HW_IRQ_CAP_EPOCH_0         0x2
+#define CAM_VFE_HW_IRQ_CAP_EPOCH_1         0x4
+#define CAM_VFE_HW_IRQ_CAP_RUP             0x8
+#define CAM_VFE_HW_IRQ_CAP_BUF_DONE        0x10
+#define CAM_VFE_HW_IRQ_CAP_EOF             0x20
 
 struct cam_vfe_hw_info {
 	struct cam_irq_controller_reg_info *irq_reg_info;
