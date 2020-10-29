@@ -849,6 +849,16 @@ skip_frags:
 		th->seq = frag_desc->tcp_seq;
 	}
 
+	if (frag_desc->tcp_flags_set) {
+		struct tcphdr *th;
+		__be16 *flags;
+
+		th = (struct tcphdr *)
+		     (rmnet_map_data_ptr(head_skb) + frag_desc->ip_len);
+		flags = (__be16 *)&tcp_flag_word(th);
+		*flags = frag_desc->tcp_flags;
+	}
+
 	/* Handle csum offloading */
 	if (frag_desc->csum_valid && frag_desc->hdrs_valid) {
 		/* Set the partial checksum information */
@@ -984,6 +994,24 @@ static void __rmnet_frag_segment_data(struct rmnet_frag_descriptor *coal_desc,
 		new_desc->tcp_seq_set = 1;
 		new_desc->tcp_seq = htonl(ntohl(th->seq) +
 					  coal_desc->data_offset);
+
+		/* Don't allow any dangerous flags to appear in any segments
+		 * other than the last.
+		 */
+		if (th->fin || th->psh) {
+			if (offset + dlen < coal_desc->len) {
+				__be32 flag_word = tcp_flag_word(th);
+
+				/* Clear the FIN and PSH flags from this
+				 * segment.
+				 */
+				flag_word &= ~TCP_FLAG_FIN;
+				flag_word &= ~TCP_FLAG_PSH;
+
+				new_desc->tcp_flags_set = 1;
+				new_desc->tcp_flags = *((__be16 *)&flag_word);
+			}
+		}
 	} else if (coal_desc->trans_proto == IPPROTO_UDP) {
 		struct udphdr *uh, __uh;
 
