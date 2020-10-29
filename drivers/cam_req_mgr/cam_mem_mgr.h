@@ -70,6 +70,7 @@ struct cam_mem_buf_queue {
  * @dentry: Debugfs entry
  * @alloc_profile_enable: Whether to enable alloc profiling
  * @dbg_buf_idx: debug buffer index to get usecases info
+ * @force_cache_allocs: Force all internal buffer allocations with cache
  */
 struct cam_mem_table {
 	struct mutex m_lock;
@@ -79,6 +80,7 @@ struct cam_mem_table {
 	struct dentry *dentry;
 	bool alloc_profile_enable;
 	size_t dbg_buf_idx;
+	bool force_cache_allocs;
 };
 
 /**
