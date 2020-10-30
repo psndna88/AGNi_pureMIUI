@@ -703,9 +703,6 @@ struct start_bss_req {
 	tSirMacRateSet extendedRateSet; /* Has 11g rates */
 	struct ht_config ht_config;
 	struct sir_vht_config vht_config;
-#ifdef WLAN_FEATURE_11AX
-	tDot11fIEhe_cap he_config;
-#endif
 #ifdef WLAN_FEATURE_11W
 	bool pmfCapable;
 	bool pmfRequired;
