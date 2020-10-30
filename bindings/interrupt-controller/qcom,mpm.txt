@@ -24,6 +24,7 @@ Properties:
 	Definition: Should contain "qcom,mpm-gic" and the respective
 	target compatible flag from below ones.
 		"qcom,mpm-gic-holi"
+		"qcom,mpm-gic-scuba"
 
 - interrupts:
 	Usage: required
