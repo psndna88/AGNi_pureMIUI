@@ -20,6 +20,7 @@
 #include "cam_isp_context.h"
 #include "cam_common_util.h"
 #include "cam_req_mgr_debug.h"
+#include "cam_cpas_api.h"
 
 static const char isp_dev_name[] = "cam-isp";
 
@@ -861,6 +862,8 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 			buf_done_req_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 		ctx_isp->req_info.last_bufdone_req_id = req->request_id;
 	}
+
+	cam_cpas_notify_event("IFE BufDone", buf_done_req_id);
 
 	__cam_isp_ctx_update_state_monitor_array(ctx_isp,
 		CAM_ISP_STATE_CHANGE_TRIGGER_DONE, buf_done_req_id);
