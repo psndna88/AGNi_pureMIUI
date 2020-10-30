@@ -29,7 +29,8 @@
 			<MASTER_QUP_CORE_0 SLAVE_QUP_CORE_0>,
 			<MASTER_QUP_0 SLAVE_EBI1>;
 		iommus = <&apps_smmu 0x4c3 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 	};
 
@@ -362,7 +363,8 @@
 			<MASTER_QUP_CORE_1 SLAVE_QUP_CORE_1>,
 			<MASTER_QUP_1 SLAVE_EBI1>;
 		iommus = <&apps_smmu 0x43 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 	};
 
