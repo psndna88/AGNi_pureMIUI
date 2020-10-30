@@ -523,21 +523,25 @@ struct irq_handler_info {
 
 /* USB input charge current */
 static int usb_chg_current[] = {
-	500, 685, 1000, 1100, 1200, 1300, 1500, 1600,
-	1700, 1800, 2000, 2200, 2500, 3000,
+	500, 685, 750, 800, 850, 900, 1000, 1100, 1200, 1300, 1500, 1600,
+	1700, 1800, 1900, 2000, 2200, 2300, 2500, 2700, 2900, 3000,
 };
 
 static int fast_chg_current[] = {
-	1000, 1200, 1400, 1600, 1800, 2000, 2200,
-	2400, 2600, 2800, 3000, 3400, 3600, 3800,
+	1000, 1200, 1400, 1600, 1800, 1900, 2000, 2200, 2300,
+	2400, 2600, 2700, 2800, 2900, 3000, 3400, 3600, 3800,
 	4000, 4640,
 };
 
 static int pre_chg_current[] = {
-	200, 300, 400, 500, 600, 700,
+	200, 300, 400, 500, 600, 700, 800, 900,
 };
 
 extern bool full_charged;
+extern bool slow_charge;
+extern bool hvdcp_mode;
+extern bool dcp_mode;
+extern bool miuirom;
 extern bool parallel_suspend_lock;
 struct battery_status {
 	bool			batt_hot;
@@ -1318,31 +1322,68 @@ static int smb1351_battery_set_property(struct power_supply *psy,
 			return -EINVAL;
 		switch (val->intval) {
 		case POWER_SUPPLY_STATUS_FULL:
-			rc = smb1351_battchg_disable(chip, SOC, true);
-			if (rc) {
-				pr_err("Couldn't disable charging  rc = %d\n",
-									rc);
+			if (miuirom) {
+				if (full_charged) {
+					rc = smb1351_battchg_disable(chip, SOC, true);
+					if (rc) {
+						pr_err("Couldn't disable charging  rc = %d\n",
+											rc);
+					} else {
+						chip->batt_full = true;
+						pr_debug("status = FULL, batt_full = %d\n",
+									chip->batt_full);
+					}
+				}
 			} else {
-				chip->batt_full = true;
-				pr_debug("status = FULL, batt_full = %d\n",
-							chip->batt_full);
+				rc = smb1351_battchg_disable(chip, SOC, true);
+				if (rc) {
+					pr_err("Couldn't disable charging  rc = %d\n",
+										rc);
+				} else {
+					chip->batt_full = true;
+					pr_debug("status = FULL, batt_full = %d\n",
+								chip->batt_full);
+				}
 			}
 			break;
 		case POWER_SUPPLY_STATUS_DISCHARGING:
-			chip->batt_full = false;
-			power_supply_changed(chip->batt_psy);
-			pr_debug("status = DISCHARGING, batt_full = %d\n",
-							chip->batt_full);
-			break;
-		case POWER_SUPPLY_STATUS_CHARGING:
-			rc = smb1351_battchg_disable(chip, SOC, false);
-			if (rc) {
-				pr_err("Couldn't enable charging rc = %d\n",
-									rc);
+			if (miuirom) {
+				if (!parallel_suspend_lock) {
+					chip->batt_full = false;
+					power_supply_changed(chip->batt_psy);
+					pr_debug("status = DISCHARGING, batt_full = %d\n",
+									chip->batt_full);
+				}
 			} else {
 				chip->batt_full = false;
-				pr_debug("status = CHARGING, batt_full = %d\n",
-							chip->batt_full);
+				power_supply_changed(chip->batt_psy);
+				pr_debug("status = DISCHARGING, batt_full = %d\n",
+								chip->batt_full);
+			}
+			break;
+		case POWER_SUPPLY_STATUS_CHARGING:
+			if (miuirom) {
+				if (parallel_suspend_lock) {
+					rc = smb1351_battchg_disable(chip, SOC, false);
+					if (rc) {
+						pr_err("Couldn't enable charging rc = %d\n",
+											rc);
+					} else {
+						chip->batt_full = false;
+						pr_debug("status = CHARGING, batt_full = %d\n",
+									chip->batt_full);
+					}
+				}
+			} else {
+				rc = smb1351_battchg_disable(chip, SOC, false);
+				if (rc) {
+					pr_err("Couldn't enable charging rc = %d\n",
+										rc);
+				} else {
+					chip->batt_full = false;
+					pr_debug("status = CHARGING, batt_full = %d\n",
+								chip->batt_full);
+				}
 			}
 			break;
 		default:
@@ -1350,10 +1391,24 @@ static int smb1351_battery_set_property(struct power_supply *psy,
 		}
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
-		smb1351_usb_suspend(chip, USER, !val->intval);
+		if (miuirom) {
+			if (parallel_suspend_lock || !full_charged)
+				smb1351_usb_suspend(chip, USER, 0);
+			else
+				smb1351_usb_suspend(chip, USER, !val->intval);
+		} else {
+			smb1351_usb_suspend(chip, USER, !val->intval);
+		}
 		break;
 	case POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED:
-		smb1351_battchg_disable(chip, USER, !val->intval);
+		if (miuirom) {
+			if (parallel_suspend_lock || !full_charged)
+				smb1351_battchg_disable(chip, USER, 0);
+			else
+				smb1351_battchg_disable(chip, USER, !val->intval);
+		} else {
+			smb1351_battchg_disable(chip, USER, !val->intval);
+		}
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
@@ -1618,19 +1673,49 @@ static int smb1351_parallel_set_property(struct power_supply *psy,
 		 *CHG EN is controlled by pin in the parallel charging.
 		 *Use suspend if disable charging by command.
 		 */
-		pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_CHARGING_ENABLED  chip->parallel_charger_suspended= %d, enabled=%d \n",chip->parallel_charger_suspended,val->intval);
-		if (!chip->parallel_charger_suspended)
-			rc = smb1351_usb_suspend(chip, USER, !val->intval);
+		if (miuirom) {
+			if (parallel_suspend_lock || !full_charged) {
+				pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_CHARGING_ENABLED  chip->parallel_charger_suspended= %d, enabled=%d forced 1 \n",chip->parallel_charger_suspended,val->intval);
+				if (!chip->parallel_charger_suspended)
+					rc = smb1351_usb_suspend(chip, USER, 0);
+			} else {
+				pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_CHARGING_ENABLED  chip->parallel_charger_suspended= %d, enabled=%d \n",chip->parallel_charger_suspended,val->intval);
+				if (!chip->parallel_charger_suspended)
+					rc = smb1351_usb_suspend(chip, USER, !val->intval);
+			}
+		} else {
+			pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_CHARGING_ENABLED  chip->parallel_charger_suspended= %d, enabled=%d \n",chip->parallel_charger_suspended,val->intval);
+			if (!chip->parallel_charger_suspended)
+				rc = smb1351_usb_suspend(chip, USER, !val->intval);
+		}
 		break;
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
-		if ((!parallel_suspend_lock) || (full_charged)) {
-			pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d \n",val->intval);
-			rc = smb1351_parallel_set_chg_suspend(chip, val->intval);
+		if (miuirom) {
+			if (parallel_suspend_lock || !full_charged) {
+				pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d, forced 0 \n",val->intval);
+				rc = smb1351_parallel_set_chg_suspend(chip, 0);
+			} else {
+				pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d \n",val->intval);
+				rc = smb1351_parallel_set_chg_suspend(chip, val->intval);
+			}
+		} else {
+			if ((!parallel_suspend_lock) || (full_charged)) {
+				pr_err("smb1351_parallel_set_property POWER_SUPPLY_PROP_INPUT_SUSPEND = %d \n",val->intval);
+				rc = smb1351_parallel_set_chg_suspend(chip, val->intval);
+			}
 		}
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
-		chip->target_fastchg_current_max_ma =
-						val->intval / 1000;
+		if (miuirom) {
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+			chip->target_fastchg_current_max_ma = 2300;
+#else
+			chip->target_fastchg_current_max_ma = 2700;
+#endif
+		} else {
+			chip->target_fastchg_current_max_ma =
+							val->intval / 1000;
+		}
 		pr_err("val->intval=%d, target_fastchg_current_max_ma = %d, parallel_charger_suspended= %d \n",val->intval,chip->target_fastchg_current_max_ma,chip->parallel_charger_suspended);
 		if (!chip->parallel_charger_suspended)
 			rc = smb1351_fastchg_current_set(chip,
@@ -1638,6 +1723,18 @@ static int smb1351_parallel_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		current_ma = val->intval / 1000;
+		if (miuirom) {
+			if (parallel_suspend_lock || !full_charged) {
+				if (hvdcp_mode) {
+					pr_err("Forcing current %d to HVDCP_3 mA \n", current_ma);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+					current_ma = 2300;
+#else
+					current_ma = 2700;
+#endif
+				}
+			}
+		}
 		if (current_ma > SUSPEND_CURRENT_MA) {
 			index = smb1351_get_closest_usb_setpoint(current_ma);
 			chip->usb_psy_ma = usb_chg_current[index];
