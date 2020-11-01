@@ -33,6 +33,7 @@
 #include "cpastop_v680_100.h"
 #include "cpastop_v165_100.h"
 #include "cam_req_mgr_workq.h"
+#include "cam_common_util.h"
 
 struct cam_camnoc_info *camnoc_info;
 struct cam_cpas_camnoc_qchannel *qchannel_info;
@@ -598,8 +599,10 @@ static void cam_cpastop_work(struct work_struct *work)
 		return;
 	}
 
-	cam_req_mgr_thread_switch_delay_detect(
-			payload->workq_scheduled_ts);
+	cam_common_util_thread_switch_delay_detect(
+		"CPAS workq schedule",
+		payload->workq_scheduled_ts,
+		CAM_WORKQ_SCHEDULE_TIME_THRESHOLD);
 
 	cpas_hw = payload->hw;
 	cpas_core = (struct cam_cpas *) cpas_hw->core_info;
