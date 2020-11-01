@@ -33,5 +33,6 @@
 };
 
 &ufshc_mem {
-	spm-level = <3>;
+	spm-level = <5>;
+	rpm-level = <5>;
 };
