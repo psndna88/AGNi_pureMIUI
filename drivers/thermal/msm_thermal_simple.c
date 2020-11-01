@@ -24,6 +24,7 @@
 extern int LctIsInCall;
 extern int LctIsInVideo;
 extern bool camera_open;
+extern int cpuoc_state;
 struct thermal_zone {
 	u32 gold_khz;
 	u32 silver_khz;
@@ -250,22 +251,58 @@ free_t:
 	return ret;
 }
 
-static const struct of_device_id msm_thermal_simple_match_table[] = {
-	{ .compatible = "qcom,msm-thermal-simple" },
+static const struct of_device_id msm_thermal_simple_match_table_0[] = {
+	{ .compatible = "qcom,msm-thermal-simple_0" },
+	{ }
+};
+static const struct of_device_id msm_thermal_simple_match_table_1[] = {
+	{ .compatible = "qcom,msm-thermal-simple_1" },
+	{ }
+};
+static const struct of_device_id msm_thermal_simple_match_table_2[] = {
+	{ .compatible = "qcom,msm-thermal-simple_2" },
 	{ }
 };
 
-static struct platform_driver msm_thermal_simple_device = {
+static struct platform_driver msm_thermal_simple_device_0 = {
 	.probe = msm_thermal_simple_probe,
 	.driver = {
 		.name = "msm-thermal-simple",
 		.owner = THIS_MODULE,
-		.of_match_table = msm_thermal_simple_match_table
+		.of_match_table = msm_thermal_simple_match_table_0
+	}
+};
+static struct platform_driver msm_thermal_simple_device_1 = {
+	.probe = msm_thermal_simple_probe,
+	.driver = {
+		.name = "msm-thermal-simple",
+		.owner = THIS_MODULE,
+		.of_match_table = msm_thermal_simple_match_table_1
+	}
+};
+static struct platform_driver msm_thermal_simple_device_2 = {
+	.probe = msm_thermal_simple_probe,
+	.driver = {
+		.name = "msm-thermal-simple",
+		.owner = THIS_MODULE,
+		.of_match_table = msm_thermal_simple_match_table_2
 	}
 };
 
 static int __init msm_thermal_simple_init(void)
 {
-	return platform_driver_register(&msm_thermal_simple_device);
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (cpuoc_state == 0)
+		return platform_driver_register(&msm_thermal_simple_device_0);
+	else if (cpuoc_state == 1)
+		return platform_driver_register(&msm_thermal_simple_device_1);
+	else if (cpuoc_state == 2)
+		return platform_driver_register(&msm_thermal_simple_device_2);
+#else
+	if (cpuoc_state == 0)
+		return platform_driver_register(&msm_thermal_simple_device_1);
+	else if (cpuoc_state == 1)
+		return platform_driver_register(&msm_thermal_simple_device_2);
+#endif
 }
 device_initcall(msm_thermal_simple_init);
