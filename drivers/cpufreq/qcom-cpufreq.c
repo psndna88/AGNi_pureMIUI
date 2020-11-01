@@ -37,6 +37,7 @@ static DEFINE_MUTEX(l2bw_lock);
 
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
+extern int cpuoc_state;
 static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
 static bool hotplug_ready;
 
@@ -349,9 +350,17 @@ static int cpumaxfreq_proc_show(struct seq_file *m, void *v)
 	int max__freq;
 
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	max__freq = 1804800;
+	if (cpuoc_state == 0)
+		max__freq = 1804800;
+	else if (cpuoc_state == 1)
+		max__freq = 2208000;
+	else if (cpuoc_state == 2)
+		max__freq = 2457600;
 #else
-	max__freq = 2208000;
+	if (cpuoc_state == 0)
+		max__freq = 2208000;
+	else if (cpuoc_state == 1)
+		max__freq = 2457600;
 #endif
 	freq=(max__freq/10000);
 	seq_printf(m,"%lu.%02lu",freq/100,freq%100);

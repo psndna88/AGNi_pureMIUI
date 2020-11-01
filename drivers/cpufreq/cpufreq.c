@@ -863,15 +863,31 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char 
 
 	if (cpu_maxfreq_lock)
 		return count;
-	if (cpu_oc) {
-		temp = new_policy.max;
-		ret = cpufreq_set_policy(policy, &new_policy);
-		if (!ret)
-			policy->user_policy.max = temp;
-		return ret ? ret : count;
-	} else {
-		return count;
+	if (!cpu_oc) {
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if (cpuoc_state == 0) {			/* NON OC MAX 1.8GHZ */
+			if (new_policy.max == 1843200)
+				new_policy.max = 1612800;
+			if ((new_policy.max == 1958400) || (new_policy.max == 2150400) ||
+				(new_policy.max == 2208000) || (new_policy.max == 2457600))
+				new_policy.max = 1804800;
+		} else if (cpuoc_state == 1) { 	/* 2.2GHZ OC */
+			if (new_policy.max == 2457600)
+				new_policy.max = 2208000;
+		}
+#else
+		if (cpuoc_state == 0) {			/* NON OC MAX 2.2GHZ */
+			if (new_policy.max == 2457600)
+				new_policy.max = 2208000;
+		}
+#endif
 	}
+
+	temp = new_policy.max;
+	ret = cpufreq_set_policy(policy, &new_policy);
+	if (!ret)
+		policy->user_policy.max = temp;
+	return ret ? ret : count;
 }
 
 /**
@@ -2404,22 +2420,6 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 
 	policy->min = new_policy->min;
 	policy->max = new_policy->max;
-	if (!cpu_oc) {
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-		if (cpuoc_state == 0) {
-			if (policy->max > 1843200)
-				policy->max = 1843200;
-		} else if (cpuoc_state == 1) {
-			if (policy->max > 2208000)
-				policy->max = 2208000;
-		}
-#else
-		if (cpuoc_state == 0) {
-			if (policy->max > 2208000)
-				policy->max = 2208000;
-		}
-#endif
-	}
 //	trace_cpu_frequency_limits(policy->max, policy->min, policy->cpu);
 
 	pr_debug("new min and max freqs are %u - %u kHz\n",
