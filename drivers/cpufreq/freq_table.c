@@ -255,7 +255,21 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
 		if (show_boost ^ (pos->flags & CPUFREQ_BOOST_FREQ))
 			continue;
 
-		count += sprintf(&buf[count], "%d ", pos->frequency);
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if ((pos->frequency == 1747200) || (pos->frequency == 1843200) ||
+			(pos->frequency == 1958400) || (pos->frequency == 2150400) ||
+			(pos->frequency == 2208000) || (pos->frequency == 2457600)) {
+		} else {
+#else
+		if (pos->frequency == 2457600) {
+		} else {
+#endif
+#endif
+			count += sprintf(&buf[count], "%d ", pos->frequency);
+#ifdef CONFIG_ROG_SUPPORT
+		}
+#endif
 	}
 	count += sprintf(&buf[count], "\n");
 

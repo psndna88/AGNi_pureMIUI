@@ -153,6 +153,23 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 			return -EINVAL;
 		if (cpu > (num_present_cpus() - 1))
 			return -EINVAL;
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if ((cpu >= 0) && (cpu <=3)) {
+			if ((val == 1612800) || (val == 1747200))
+				val = 1843200;
+		} else if ((cpu >= 4) && (cpu <=7)) {
+			if ((val == 1804800) || (val == 1958400) ||
+				(val == 2150400) || (val == 2457600))
+				val = 2208000;
+		}
+#else
+		if ((cpu >= 0) && (cpu <=3 ) && (val > 1804800))
+			val = 1804800;
+		if ((cpu >= 4) && (cpu <=7 ) && (val > 2208000))
+			val = 2208000;
+#endif
+#else
 		if (!cpu_oc) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 			if (cpuoc_state == 0) {
@@ -175,6 +192,7 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 			}
 #endif
 		}
+#endif
 
 		i_cpu_stats = &per_cpu(cpu_stats, cpu);
 

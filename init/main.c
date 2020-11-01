@@ -189,7 +189,15 @@ __setup("srgblock=", set_srgb_lock);
 int cpuoc_state = 0;
 static int __init set_cpuoc(int *val)
 {
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	cpuoc_state = 1;
+#else
+	cpuoc_state = 0;
+#endif
+#else
 	cpuoc_state = val;
+#endif
 
 	return 0;
 }

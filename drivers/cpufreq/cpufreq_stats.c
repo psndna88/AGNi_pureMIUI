@@ -51,6 +51,10 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	struct cpufreq_stats *stats = policy->stats;
 	ssize_t len = 0;
 	int i;
+#ifdef CONFIG_ROG_SUPPORT
+	unsigned long long stock_freq_time_b = 0;
+	unsigned long long stock_freq_time_s = 0;
+#endif
 
 	cpufreq_stats_update(stats);
 	for (i = 0; i < stats->state_num; i++) {
@@ -59,8 +63,27 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 		if ((stats->freq_table[i] == 1747200) || (stats->freq_table[i] == 1843200) ||
 			(stats->freq_table[i] == 1958400) || (stats->freq_table[i] == 2150400) ||
 			(stats->freq_table[i] == 2208000) || (stats->freq_table[i] == 2457600)) {
+			stock_freq_time_b = jiffies_64_to_clock_t(stats->time_in_state[i]);
+		} else if (stats->freq_table[i] == 1843200) {
+			stock_freq_time_s = jiffies_64_to_clock_t(stats->time_in_state[i]);
+		} else if (stats->freq_table[i] == 1804800) {
+			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
+				(unsigned long long)
+				jiffies_64_to_clock_t(stats->time_in_state[i]) + stock_freq_time_b);
+			stock_freq_time_b = 0;
+		} else if (stats->freq_table[i] == 1843200) {
+			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
+				(unsigned long long)
+				jiffies_64_to_clock_t(stats->time_in_state[i]) + stock_freq_time_s);
+			stock_freq_time_s = 0;
 #else
-		if (stats->freq_table[i] > 2208000) {
+		if (stats->freq_table[i] == 2457600) {
+			stock_freq_time_b = jiffies_64_to_clock_t(stats->time_in_state[i]);
+		} else if (stats->freq_table[i] == 2208000) {
+			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
+				(unsigned long long)
+				jiffies_64_to_clock_t(stats->time_in_state[i]) + stock_freq_time_b);
+			stock_freq_time_b = 0;
 #endif
 		} else {
 			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],

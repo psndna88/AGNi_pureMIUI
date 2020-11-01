@@ -349,6 +349,13 @@ static int cpumaxfreq_proc_show(struct seq_file *m, void *v)
 	unsigned long freq = 0;
 	int max__freq;
 
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	max__freq = 1804800;
+#else
+	max__freq = 2208000;
+#endif
+#else
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 	if (cpuoc_state == 0)
 		max__freq = 1804800;
@@ -361,6 +368,7 @@ static int cpumaxfreq_proc_show(struct seq_file *m, void *v)
 		max__freq = 2208000;
 	else if (cpuoc_state == 1)
 		max__freq = 2457600;
+#endif
 #endif
 	freq=(max__freq/10000);
 	seq_printf(m,"%lu.%02lu",freq/100,freq%100);

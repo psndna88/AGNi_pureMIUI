@@ -863,6 +863,18 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char 
 
 	if (cpu_maxfreq_lock)
 		return count;
+#ifdef CONFIG_ROG_SUPPORT
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (new_policy.max == 1612800)
+		new_policy.max = 1843200;
+	if ((new_policy.max == 1804800) || (new_policy.max == 1958400) ||
+		(new_policy.max == 2150400) || (new_policy.max == 2457600))
+		new_policy.max = 2208000;
+#else
+	if (new_policy.max == 2457600)
+		new_policy.max = 2208000;
+#endif
+#else
 	if (!cpu_oc) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 		if (cpuoc_state == 0) {			/* NON OC MAX 1.8GHZ */
@@ -882,6 +894,7 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char 
 		}
 #endif
 	}
+#endif
 
 	temp = new_policy.max;
 	ret = cpufreq_set_policy(policy, &new_policy);
