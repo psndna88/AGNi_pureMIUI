@@ -3,6 +3,9 @@
 #include <dt-bindings/clock/qcom,dispcc-monaco.h>
 #include <dt-bindings/clock/qcom,gcc-monaco.h>
 #include <dt-bindings/clock/qcom,gpucc-monaco.h>
+#include <dt-bindings/interconnect/qcom,monaco.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
+
 
 / {
 	model = "Qualcomm Technologies, Inc. Monaco";
@@ -780,6 +783,36 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+	}
+
+	clk_virt: interconnect {
+		compatible = "qcom,monaco-clk_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmnrt_virt: interconnect@0 {
+		compatible = "qcom,monaco-mmnrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmrt_virt: interconnect@1 {
+		compatible = "qcom,monaco-mmrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	system_noc: interconnect@1880000 {
+		compatible = "qcom,monaco-system_noc";
+		#interconnect-cells = <1>;
+	};
+
+	config_noc: interconnect@1900000 {
+		compatible = "qcom,monaco-config_noc";
+		#interconnect-cells = <1>;
+	};
+
+	bimc: interconnect@4480000 {
+		compatible = "qcom,monaco-bimc";
+		#interconnect-cells = <1>;
 	};
 };
 
