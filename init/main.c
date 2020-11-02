@@ -135,6 +135,7 @@ static unsigned int android_version = 9;
 static int __init set_android_version(char *val)
 {
 	get_option(&val, &android_version);
+	pr_err("Kernel: AGNi android version detected = %d \n", android_version);
 	return 0;
 }
 __setup("android.ver=", set_android_version);
@@ -155,11 +156,11 @@ static int __init set_miui_rom(char *val)
 	if (temp) {
 		miuirom = true;
 		srgb_enabled = 1;
-		pr_info("Kernel: miuirom = true, srgb_enabled = 1");
+		pr_err("Kernel: AGNi miuirom = true, srgb_enabled = 1");
 	} else {
 		miuirom = false;
 		srgb_enabled = 0;
-		pr_info("Kernel: miuirom = false, srgb_enabled = 0");
+		pr_err("Kernel: AGNi miuirom = false, srgb_enabled = 0");
 	}
 
 	return 0;
@@ -176,10 +177,10 @@ static int __init set_srgb_lock(char *val)
 
 	if (temp) {
 		srgb_locked = true;
-		pr_info("Kernel: srgb_locked = true");
+		pr_err("Kernel: AGNi srgb_locked = true");
 	} else {
 		srgb_locked = false;
-		pr_info("Kernel: srgb_locked = false");
+		pr_err("Kernel: AGNi srgb_locked = false");
 	}
 
 	return 0;
@@ -194,6 +195,7 @@ static int __init set_cpuoc(char *val)
 	get_option(&val, &temp);
 
 	cpuoc_state = temp;
+	pr_err("Kernel: AGNi cpu oc level = %d \n", cpuoc_state);
 
 	return 0;
 }
@@ -207,10 +209,10 @@ static int __init set_wiredbtnmode(char *val)
 
 	if (temp) {
 		wired_btn_altmode = true;
-		pr_info("Kernel: alternate wired button mode = 1");
+		pr_err("Kernel: AGNi alternate wired button mode = 1");
 	} else {
 		wired_btn_altmode = false;
-		pr_info("Kernel: alternate wired button mode = 0");
+		pr_err("Kernel: AGNi alternate wired button mode = 0");
 	}
 
 	return 0;
@@ -225,10 +227,10 @@ static int __init set_ledmode(char *val)
 
 	if (temp) {
 		altledmode = true;
-		pr_info("Kernel: alternate led mode = 1");
+		pr_err("Kernel: AGNi alternate led mode = 1");
 	} else {
 		altledmode = false;
-		pr_info("Kernel: alternate led mode = 0 (miui type)");
+		pr_err("Kernel: AGNi alternate led mode = 0 (miui type)");
 	}
 
 	return 0;
