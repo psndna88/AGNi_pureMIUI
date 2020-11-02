@@ -5460,7 +5460,6 @@ regulator_register(const struct regulator_desc *regulator_desc,
 {
 	const struct regulator_init_data *init_data;
 	struct regulator_config *config = NULL;
-	static atomic_t regulator_no = ATOMIC_INIT(-1);
 	struct regulator_dev *rdev;
 	bool dangling_cfg_gpiod = false;
 	bool dangling_of_gpiod = false;
@@ -5590,8 +5589,7 @@ regulator_register(const struct regulator_desc *regulator_desc,
 	/* register with sysfs */
 	rdev->dev.class = &regulator_class;
 	rdev->dev.parent = dev;
-	dev_set_name(&rdev->dev, "regulator.%lu",
-		    (unsigned long) atomic_inc_return(&regulator_no));
+	dev_set_name(&rdev->dev, "regulator:%s", regulator_desc->name);
 	dev_set_drvdata(&rdev->dev, rdev);
 
 	/* set regulator constraints */
