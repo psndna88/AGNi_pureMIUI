@@ -187,9 +187,13 @@ static int __init set_srgb_lock(char *val)
 __setup("srgblock=", set_srgb_lock);
 #endif
 int cpuoc_state = 0;
-static int __init set_cpuoc(int *val)
+static int __init set_cpuoc(char *val)
 {
-	cpuoc_state = val;
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	cpuoc_state = temp;
 
 	return 0;
 }
