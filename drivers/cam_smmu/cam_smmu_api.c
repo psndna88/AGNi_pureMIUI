@@ -3552,7 +3552,7 @@ static int cam_smmu_setup_cb(struct cam_context_bank_info *cb,
 	/* create a virtual mapping */
 	if (cb->io_support) {
 		cb->domain = iommu_get_domain_for_dev(dev);
-		if (IS_ERR(cb->domain)) {
+		if (IS_ERR_OR_NULL(cb->domain)) {
 			CAM_ERR(CAM_SMMU, "Error: create domain Failed");
 			rc = -ENODEV;
 			goto end;
