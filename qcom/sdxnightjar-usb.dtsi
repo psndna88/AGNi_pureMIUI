@@ -1,0 +1,94 @@
+&soc {
+	usb3: ssusb@8a00000 {
+		compatible = "qcom,dwc-usb3-msm";
+		reg = <0x08a00000 0xf8c00>,
+			<0x0007e000 0x400>;
+		reg-names = "core_base", "ahb2phy_base";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		interrupts-extended = <&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "pwr_event_irq";
+		USB3_GDSC-supply = <&gdsc_usb30>;
+
+		qcom,lpm-to-suspend-delay-ms = <2000>;
+
+		clocks = <&gcc GCC_USB30_MASTER_CLK>,
+			<&gcc GCC_SYS_NOC_USB3_AXI_CLK>,
+			<&gcc GCC_USB30_MOCK_UTMI_CLK>,
+			<&gcc GCC_USB30_SLEEP_CLK>,
+			<&rpmcc RPM_SMD_XO_CLK_SRC>,
+			<&gcc GCC_USB_PHY_CFG_AHB_CLK>;
+
+		clock-names = "core_clk", "iface_clk", "utmi_clk", "sleep_clk",
+				"xo", "cfg_ahb_clk";
+
+		resets = <&gcc GCC_USB_30_BCR>;
+		reset-names = "core_reset";
+
+		qcom,core-clk-rate = <120000000>;
+		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,gsi-reg-offset =
+			<0x0fc /* GSI_GENERAL_CFG */
+			0x110 /* GSI_DBL_ADDR_L */
+			0x120 /* GSI_DBL_ADDR_H */
+			0x130 /* GSI_RING_BASE_ADDR_L */
+			0x140 /* GSI_RING_BASE_ADDR_H */
+			0x1a4>; /* GSI_IF_STS */
+		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
+
+		dwc3@8a00000 {
+			compatible = "snps,dwc3";
+			reg = <0x08a00000 0xcd00>;
+			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
+			usb-phy = <&qusb_phy>, <&usb_nop_phy>;
+			tx-fifo-resize;
+			snps,is-utmi-l1-suspend;
+			snps,hird-threshold = /bits/ 8 <0x0>;
+			snps,bus-suspend-enable;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
+			xhci-imod-value = <4000>;
+			maximum-speed = "high-speed";
+			dr_mode = "otg";
+		};
+	};
+
+	qusb_phy: qusb@79000 {
+		compatible = "qcom,qusb2phy";
+		reg = <0x00079000 0x180>;
+		reg-names = "qusb_phy_base";
+		vdd-supply = <&pmd9650_l4>;
+		vdda18-supply = <&pmd9650_l5>;
+		vdda33-supply = <&pmd9650_l10>;
+		qcom,vdd-voltage-level = <0 928000 928000>;
+		qcom,qusb-phy-init-seq = <0xf8 0x80
+					0xb3 0x84
+					0x83 0x88
+					0xc0 0x8c
+					0x30 0x08
+					0x79 0x0c
+					0x21 0x10
+					0x14 0x9c
+					0x9f 0x1c
+					0x00 0x18>;
+		phy_type = "utmi";
+
+		clocks = <&rpmcc RPM_SMD_LN_BB_CLK>,
+			 <&gcc GCC_QUSB_REF_CLK>,
+			 <&gcc GCC_USB_PHY_CFG_AHB_CLK>,
+			 <&gcc GCC_SYS_NOC_USB3_AXI_CLK>;
+
+		clock-names = "ref_clk_src", "ref_clk", "cfg_ahb_clk",
+				"iface_clk";
+
+		resets = <&gcc GCC_QUSB2A_PHY_BCR>;
+		reset-names = "phy_reset";
+	};
+
+	usb_nop_phy: usb_nop_phy {
+		compatible = "usb-nop-xceiv";
+	};
+};
+
