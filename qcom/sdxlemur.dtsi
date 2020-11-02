@@ -921,3 +921,4 @@
 #include "sdxlemur-pcie.dtsi"
 #include "sdxlemur-blsp.dtsi"
 #include "sdxlemur-audio.dtsi"
+#include "sdxlemur-thermal.dtsi"
