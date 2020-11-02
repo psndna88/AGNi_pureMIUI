@@ -54,7 +54,8 @@ void cam_req_mgr_core_link_reset(struct cam_req_mgr_core_link *link)
 	link->prev_sof_timestamp = 0;
 	link->skip_init_frame = false;
 	link->num_sync_links = 0;
-	link->last_applied_jiffies = 0;
+	link->last_sof_trigger_jiffies = 0;
+	link->wq_congestion = false;
 	atomic_set(&link->eof_event_cnt, 0);
 
 	for (pd = 0; pd < CAM_PIPELINE_DELAY_MAX; pd++) {
@@ -214,11 +215,16 @@ static void __cam_req_mgr_find_dev_name(
 		if (dev->dev_info.p_delay == pd) {
 			if (masked_val & (1 << dev->dev_bit))
 				continue;
-
-			CAM_INFO(CAM_CRM,
-				"Skip Frame: req: %lld not ready on link: 0x%x for pd: %d dev: %s open_req count: %d",
-				req_id, link->link_hdl, pd, dev->dev_info.name,
-				link->open_req_cnt);
+			if (link->wq_congestion)
+				CAM_INFO_RATE_LIMIT(CAM_CRM,
+					"WQ congestion, Skip Frame: req: %lld not ready on link: 0x%x for pd: %d dev: %s open_req count: %d",
+					req_id, link->link_hdl, pd,
+					dev->dev_info.name, link->open_req_cnt);
+			else
+				CAM_INFO(CAM_CRM,
+					"Skip Frame: req: %lld not ready on link: 0x%x for pd: %d dev: %s open_req count: %d",
+					req_id, link->link_hdl, pd,
+					dev->dev_info.name, link->open_req_cnt);
 		}
 	}
 }
@@ -1622,7 +1628,6 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 {
 	int                                  rc = 0, idx, i;
 	int                                  reset_step = 0;
-	bool                                 check_retry_cnt = false;
 	uint32_t                             trigger = trigger_data->trigger;
 	struct cam_req_mgr_slot             *slot = NULL;
 	struct cam_req_mgr_req_queue        *in_q;
@@ -1656,18 +1661,18 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 	if (slot->status == CRM_SLOT_STATUS_NO_REQ) {
 		CAM_DBG(CAM_CRM, "No Pending req");
 		rc = 0;
-		goto error;
+		goto end;
 	}
 
 	if ((trigger != CAM_TRIGGER_POINT_SOF) &&
 		(trigger != CAM_TRIGGER_POINT_EOF))
-		goto error;
+		goto end;
 
 	if ((trigger == CAM_TRIGGER_POINT_EOF) &&
 		(!(link->trigger_mask & CAM_TRIGGER_POINT_SOF))) {
 		CAM_DBG(CAM_CRM, "Applying for last SOF fails");
 		rc = -EINVAL;
-		goto error;
+		goto end;
 	}
 
 	if (trigger == CAM_TRIGGER_POINT_SOF) {
@@ -1678,11 +1683,19 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		link->prev_sof_timestamp = link->sof_timestamp;
 		link->sof_timestamp = trigger_data->sof_timestamp_val;
 
+		/* Check for WQ congestion */
+		if (jiffies_to_msecs(jiffies -
+			link->last_sof_trigger_jiffies) <
+			MINIMUM_WORKQUEUE_SCHED_TIME_IN_MS)
+			link->wq_congestion = true;
+		else
+			link->wq_congestion = false;
+
 		if (link->trigger_mask) {
 			CAM_ERR_RATE_LIMIT(CAM_CRM,
 				"Applying for last EOF fails");
 			rc = -EINVAL;
-			goto error;
+			goto end;
 		}
 
 		if (slot->sync_mode == CAM_REQ_MGR_SYNC_MODE_SYNC) {
@@ -1733,7 +1746,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 			}
 			spin_unlock_bh(&link->link_state_spin_lock);
 			__cam_req_mgr_notify_frame_skip(link, trigger);
-			goto error;
+			goto end;
 		}
 	}
 
@@ -1745,11 +1758,8 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		if (link->max_delay == 1)
 			max_retry++;
 
-		if (jiffies_to_msecs(jiffies - link->last_applied_jiffies) >
-			MINIMUM_WORKQUEUE_SCHED_TIME_IN_MS)
-			check_retry_cnt = true;
-
-		if ((in_q->last_applied_idx < in_q->rd_idx) && check_retry_cnt) {
+		if ((in_q->last_applied_idx < in_q->rd_idx) &&
+			!link->wq_congestion) {
 			link->retry_cnt++;
 			if (link->retry_cnt == max_retry) {
 				CAM_DBG(CAM_CRM,
@@ -1769,7 +1779,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 				link->retry_cnt = 0;
 			}
 		} else
-			CAM_WARN(CAM_CRM,
+			CAM_WARN_RATE_LIMIT(CAM_CRM,
 				"workqueue congestion, last applied idx:%d rd idx:%d",
 				in_q->last_applied_idx,
 				in_q->rd_idx);
@@ -1831,20 +1841,14 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 			link->open_req_cnt--;
 		}
 	}
-
+end:
 	/*
-	 * Only update the jiffies of last applied request
-	 * for SOF trigger, since it is used to protect from
+	 * Only update the jiffies for SOF trigger,
+	 * since it is used to protect from
 	 * applying fails in ISP which is triggered at SOF.
-	 * And, also don't need to do update for error case
-	 * since error case doesn't check the retry count.
 	 */
 	if (trigger == CAM_TRIGGER_POINT_SOF)
-		link->last_applied_jiffies = jiffies;
-
-	mutex_unlock(&session->lock);
-	return rc;
-error:
+		link->last_sof_trigger_jiffies = jiffies;
 	mutex_unlock(&session->lock);
 	return rc;
 }
