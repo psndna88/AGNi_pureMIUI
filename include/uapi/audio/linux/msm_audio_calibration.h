@@ -137,6 +137,7 @@ enum {
 };
 
 #define MAX_IOCTL_CMD_SIZE	512
+#define ASM_CAL_SEND_VERSION_OFFSET	256
 
 /* common structures */
 

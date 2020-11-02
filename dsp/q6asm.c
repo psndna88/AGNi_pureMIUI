@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -128,7 +128,7 @@ static void q6asm_reset_buf_state(struct audio_client *ac);
 void *q6asm_mmap_apr_reg(void);
 
 static int q6asm_is_valid_session(struct apr_client_data *data, void *priv);
-static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info);
+static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struct audio_client *ac);
 
 /* for ASM custom topology */
 static struct cal_type_data *cal_data[ASM_MAX_CAL_TYPES];
@@ -770,6 +770,93 @@ static int q6asm_unmap_cal_memory(int32_t cal_type,
 	cal_block->map_data.q6map_handle = 0;
 done:
 	return result;
+}
+
+static struct cal_block_data *q6asm_find_cal_by_app_type(int cal_index,
+							  int app_type)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_audstrm *audstrm_info = NULL;
+
+	pr_debug("%s\n", __func__);
+
+	list_for_each_safe(ptr, next,
+			&cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_index == ASM_AUDSTRM_CAL) {
+			audstrm_info = cal_block->cal_info;
+			if (audstrm_info->app_type == app_type)
+				return cal_block;
+		}
+	}
+	pr_err("%s: Can't find ASM Cal for cal_index %d app_type %d\n",
+			__func__, cal_index, app_type);
+	return NULL;
+}
+
+static bool is_q6asm_topology_cal_send_by_v6(int path, int usecase)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	int buffer_idx_asm;
+
+	buffer_idx_asm = path + MAX_PATH_TYPE * usecase + ASM_CAL_SEND_VERSION_OFFSET;
+	pr_debug("%s: path(%d), usecase(%d), buffer_idx_asm(%d)\n",
+			__func__, path, usecase, buffer_idx_asm);
+
+	list_for_each_safe(ptr, next,
+			&cal_data[ASM_TOPOLOGY_CAL]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_block != NULL) {
+			if (cal_block->buffer_number == buffer_idx_asm)
+				return true;
+		}
+	}
+	return false;
+}
+
+static struct cal_block_data *q6asm_find_cal_by_buf_number(int cal_index,
+							  int app_type, int path, int usecase)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_audstrm *audstrm_info = NULL;
+	int buffer_idx_w_path = usecase;
+
+	pr_debug("%s\n", __func__);
+
+	if (cal_index == ASM_AUDSTRM_CAL)
+		buffer_idx_w_path = path + MAX_PATH_TYPE * usecase;
+
+	list_for_each_safe(ptr, next,
+			&cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_index == ASM_AUDSTRM_CAL) {
+			audstrm_info = cal_block->cal_info;
+			if ((audstrm_info->app_type == app_type) &&
+				(cal_block->buffer_number == buffer_idx_w_path)) {
+					return cal_block;
+			}
+		} else {
+			if (cal_block->buffer_number == buffer_idx_w_path) {
+					return cal_block;
+			}
+		}
+	}
+	pr_err("%s: Can't find ASM Cal for cal_index %d app_type %d buffer_number %d\n",
+			__func__, cal_index, app_type, buffer_idx_w_path);
+
+	return NULL;
 }
 
 int q6asm_unmap_cal_data(int cal_type, struct cal_block_data *cal_block)
@@ -3167,7 +3254,7 @@ static int __q6asm_open_read(struct audio_client *ac,
 	/* Stream prio : High, provide meta info with encoded frames */
 	open.src_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.preprocopo_id = cal_info.topology_id;
 
 
@@ -3514,7 +3601,7 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	open.sink_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 	open.bits_per_sample = bits_per_sample;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
 	if (ac->perf_mode != LEGACY_PCM_MODE)
@@ -3785,7 +3872,7 @@ static int __q6asm_open_read_write(struct audio_client *ac, uint32_t rd_format,
 	open.mode_flags = is_meta_data_mode ? BUFFER_META_ENABLE : 0;
 	open.bits_per_sample = bits_per_sample;
 	/* source endpoint : matrix */
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
 	open.postprocopo_id = overwrite_topology ?
@@ -4010,7 +4097,7 @@ int q6asm_open_loopback_v2(struct audio_client *ac, uint16_t bits_per_sample)
 		open.src_format_id = ASM_MEDIA_FMT_MULTI_CHANNEL_PCM_V2;
 		open.sink_format_id = ASM_MEDIA_FMT_MULTI_CHANNEL_PCM_V2;
 		/* source endpoint : matrix */
-		rc = q6asm_get_asm_topology_apptype(&cal_info);
+		rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 		open.audproc_topo_id = cal_info.topology_id;
 
 		ac->app_type = cal_info.app_type;
@@ -4042,7 +4129,7 @@ int q6asm_open_loopback_v2(struct audio_client *ac, uint16_t bits_per_sample)
 		open.src_endpointype = 0;
 		open.sink_endpointype = 0;
 		/* source endpoint : matrix */
-		rc = q6asm_get_asm_topology_apptype(&cal_info);
+		rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 		open.postprocopo_id = cal_info.topology_id;
 
 		ac->app_type = cal_info.app_type;
@@ -4149,7 +4236,7 @@ int q6asm_open_transcode_loopback(struct audio_client *ac,
 	}
 
 	/* source endpoint : matrix */
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.audproc_topo_id = cal_info.topology_id;
 
 
@@ -4405,7 +4492,7 @@ int q6asm_open_shared_io(struct audio_client *ac,
 	open->endpoint_type = ASM_END_POINT_DEVICE_MATRIX;
 	open->topo_bits_per_sample = config->bits_per_sample;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open->topo_id = cal_info.topology_id;
 
 	if (config->format == FORMAT_LINEAR_PCM)
@@ -10998,8 +11085,10 @@ done:
  * Hence it cannot be reused or resent unless the flag
  * is reset.
  */
-static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
+static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struct audio_client *ac)
 {
+	int path = 0;
+	int cal_buf_index = 0;
 	struct cal_block_data *cal_block = NULL;
 
 	cal_info->topology_id = DEFAULT_POPP_TOPOLOGY;
@@ -11007,11 +11096,38 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
 
 	if (cal_data[ASM_TOPOLOGY_CAL] == NULL)
 		goto done;
+	if (!ac) {
+		pr_err("%s: Audio client is NULL\n", __func__);
+		goto done;
+	}
+	if (ac->stream_type == SNDRV_PCM_STREAM_PLAYBACK)
+		path = RX_DEVICE;
+	else
+		path = TX_DEVICE;
 
 	mutex_lock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
-	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_TOPOLOGY_CAL]);
-	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
-		goto unlock;
+	if (is_q6asm_topology_cal_send_by_v6(path, ac->fedai_id)) {
+		pr_debug("%s: ASM topology cal block is send by acdb_loader_send_audio_cal_v6!\n",
+				 __func__);
+		cal_buf_index = path + MAX_PATH_TYPE * ac->fedai_id + ASM_CAL_SEND_VERSION_OFFSET;
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL,
+						   ac->app_type,
+						   path,
+						   cal_buf_index);
+		if (cal_block == NULL) {
+			pr_err("%s: Couldn't find cal_block with buf_number!\n", __func__);
+			goto unlock;
+		}
+	} else {
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, ac->fedai_id);
+		if (cal_block == NULL) {
+			pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
+				"search using CAL type only\n", __func__);
+			cal_block = cal_utils_get_only_cal_block(cal_data[ASM_TOPOLOGY_CAL]);
+		}
+		if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
+			goto unlock;
+	}
 	cal_info->topology_id = ((struct audio_cal_info_asm_top *)
 		cal_block->cal_info)->topology;
 	cal_info->app_type = ((struct audio_cal_info_asm_top *)
@@ -11041,6 +11157,7 @@ int q6asm_send_cal(struct audio_client *ac)
 	struct cal_block_data *cal_block = NULL;
 	struct mem_mapping_hdr mem_hdr;
 	u32 payload_size = 0;
+	int path = 0;
 	int rc = -EINVAL;
 	pr_debug("%s:\n", __func__);
 
@@ -11061,15 +11178,24 @@ int q6asm_send_cal(struct audio_client *ac)
 		goto done;
 	}
 
+	if (ac->stream_type == SNDRV_PCM_STREAM_PLAYBACK)
+		path = RX_DEVICE;
+	else
+		path = TX_DEVICE;
+
 	memset(&mem_hdr, 0, sizeof(mem_hdr));
 	mutex_lock(&cal_data[ASM_AUDSTRM_CAL]->lock);
-	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_AUDSTRM_CAL]);
+	cal_block = q6asm_find_cal_by_buf_number(ASM_AUDSTRM_CAL, ac->app_type, path, ac->fedai_id);
 	if (cal_block == NULL) {
-		pr_err("%s: cal_block is NULL\n",
-			__func__);
-		goto unlock;
+		pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
+			"search using app_type only\n", __func__);
+		cal_block = q6asm_find_cal_by_app_type(ASM_AUDSTRM_CAL, ac->app_type);
+		if (cal_block == NULL) {
+			pr_err("%s: cal_block is NULL\n",
+				__func__);
+			goto unlock;
+		}
 	}
-
 	if (cal_utils_is_cal_stale(cal_block)) {
 		rc = 0; /* not error case */
 		pr_debug("%s: cal_block is stale\n",

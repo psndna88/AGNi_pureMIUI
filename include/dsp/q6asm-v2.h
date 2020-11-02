@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019, 2021 The Linux Foundation. All rights reserved.
  */
 #ifndef __Q6_ASM_V2_H__
 #define __Q6_ASM_V2_H__
@@ -248,6 +248,8 @@ struct audio_client {
 	/* shared io */
 	struct audio_buffer shared_pos_buf;
 	struct shared_io_config config;
+	int stream_type;
+	int fedai_id;
 };
 
 struct q6asm_cal_info {
