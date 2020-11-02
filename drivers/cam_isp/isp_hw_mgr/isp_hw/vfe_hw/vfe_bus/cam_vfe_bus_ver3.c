@@ -2505,19 +2505,13 @@ static int cam_vfe_bus_ver3_print_dimensions(
 	struct cam_vfe_bus_ver3_vfe_out_data      *rsrc_data = NULL;
 	struct cam_vfe_bus_ver3_wm_resource_data  *wm_data   = NULL;
 	struct cam_vfe_bus_ver3_common_data  *common_data = NULL;
-	int                                        i, wm_idx;
+	int                                        i;
 	uint32_t addr_status0, addr_status1, addr_status2, addr_status3;
 
 	rsrc_node = &bus_priv->vfe_out[vfe_out_res_id];
 	rsrc_data = rsrc_node->res_priv;
 	for (i = 0; i < rsrc_data->num_wm; i++) {
-		wm_idx = 0;
-		if (wm_idx < 0 || wm_idx >= bus_priv->num_client) {
-			CAM_ERR(CAM_ISP, "Unsupported VFE out %d",
-				vfe_out_res_id);
-			return -EINVAL;
-		}
-		wm_data = bus_priv->bus_client[wm_idx].res_priv;
+		wm_data = rsrc_data->wm_res[i].res_priv;
 		common_data = rsrc_data->common_data;
 		addr_status0 = cam_io_r_mb(common_data->mem_base +
 			wm_data->hw_regs->addr_status_0);
@@ -2530,7 +2524,7 @@ static int cam_vfe_bus_ver3_print_dimensions(
 
 		CAM_INFO(CAM_ISP,
 			"VFE:%d WM:%d width:%u height:%u stride:%u x_init:%u en_cfg:%u acquired width:%u height:%u",
-			wm_data->common_data->core_index, wm_idx,
+			wm_data->common_data->core_index, wm_data->index,
 			wm_data->width,
 			wm_data->height,
 			wm_data->stride, wm_data->h_init,
