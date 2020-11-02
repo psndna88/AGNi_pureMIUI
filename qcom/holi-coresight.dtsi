@@ -1134,7 +1134,7 @@
 
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
-
+		status = "disabled";
 		out-ports {
 			port {
 				funnel_gpu_out_tpda_center2: endpoint {
