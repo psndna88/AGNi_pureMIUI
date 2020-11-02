@@ -3762,8 +3762,6 @@
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
-		/* Entry will be removed once shadow stack changes checked-in */
-		qcom,ipa-wan-aggr-pkt-cnt = <2>;
 		qcom,ipa-gpi-event-rp-ddr;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
