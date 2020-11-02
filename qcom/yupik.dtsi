@@ -1140,6 +1140,10 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
 	};
+
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
 };
 
 #include "shima-gdsc.dtsi"
@@ -1264,3 +1268,5 @@
 };
 
 #include "yupik-usb.dtsi"
+#include "yupik-ion.dtsi"
+#include "msm-arm-smmu-yupik.dtsi"
