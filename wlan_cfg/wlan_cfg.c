@@ -626,6 +626,8 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 			cfg_get(psoc, CFG_DP_TX_PER_PKT_VDEV_ID_CHECK);
 	wlan_cfg_ctx->wow_check_rx_pending_enable =
 			cfg_get(psoc, CFG_DP_WOW_CHECK_RX_PENDING);
+	wlan_cfg_ctx->send_icmp_req_to_fw =
+			cfg_get(psoc, CFG_DP_SEND_ICMP_REQ_TO_FW);
 
 	return wlan_cfg_ctx;
 }
@@ -1461,3 +1463,10 @@ bool wlan_cfg_is_swlm_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 	return false;
 }
 #endif
+
+#ifdef WLAN_DP_FEATURE_SEND_ICMP_TO_FW
+int wlan_cfg_send_icmp_req_to_fw(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->send_icmp_req_to_fw;
+}
+#endif /* WLAN_DP_FEATURE_SEND_ICMP_TO_FW */
