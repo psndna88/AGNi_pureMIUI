@@ -1143,6 +1143,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	struct cam_ife_csid_path_cfg    *path_data;
 	struct cam_isp_resource_node    *res;
 	bool                             is_rdi = false;
+	uint32_t                         width = 0;
 
 	/* CSID  CSI2 v2.0 supports 31 vc */
 	if (reserve->sync_mode >= CAM_ISP_HW_SYNC_MAX) {
@@ -1313,10 +1314,13 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	}
 
 	if (reserve->sync_mode == CAM_ISP_HW_SYNC_MASTER) {
+		width = reserve->in_port->left_stop -
+			reserve->in_port->left_start + 1;
+		if (path_data->horizontal_bin || path_data->qcfa_bin)
+			width /= 2;
 		if ((reserve->res_id == CAM_IFE_PIX_PATH_RES_IPP) &&
 			!(cam_ife_csid_is_resolution_supported(csid_hw,
-			reserve->in_port->left_stop -
-			reserve->in_port->left_start + 1))) {
+			width))) {
 			rc = -EINVAL;
 			goto end;
 		}
@@ -1339,10 +1343,13 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 			csid_hw->hw_intf->hw_idx, reserve->res_id,
 			path_data->start_line, path_data->end_line);
 	} else if (reserve->sync_mode == CAM_ISP_HW_SYNC_SLAVE) {
+		width = reserve->in_port->right_stop -
+			reserve->in_port->right_start + 1;
+		if (path_data->horizontal_bin || path_data->qcfa_bin)
+			width /= 2;
 		if ((reserve->res_id == CAM_IFE_PIX_PATH_RES_IPP) &&
 			!(cam_ife_csid_is_resolution_supported(csid_hw,
-			reserve->in_port->right_stop -
-			reserve->in_port->right_start + 1))) {
+			width))) {
 			rc = -EINVAL;
 			goto end;
 		}
@@ -1362,10 +1369,13 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 			csid_hw->hw_intf->hw_idx, reserve->res_id,
 			path_data->start_line, path_data->end_line);
 	} else {
+		width = reserve->in_port->left_stop -
+			reserve->in_port->left_start + 1;
+		if (path_data->horizontal_bin || path_data->qcfa_bin)
+			width /= 2;
 		if ((reserve->res_id == CAM_IFE_PIX_PATH_RES_IPP) &&
 			!(cam_ife_csid_is_resolution_supported(csid_hw,
-			reserve->in_port->left_stop -
-			reserve->in_port->left_start + 1))) {
+			width))) {
 			rc = -EINVAL;
 			goto end;
 		}
