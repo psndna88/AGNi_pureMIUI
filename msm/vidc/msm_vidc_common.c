@@ -2652,6 +2652,9 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 	}
 
 	if (inst->core->resources.ubwc_stats_in_fbd == 1) {
+		u32 frame_size =
+			(msm_vidc_get_mbs_per_frame(inst) / (32 * 8) * 3) / 2;
+
 		mutex_lock(&inst->ubwc_stats_lock);
 		inst->ubwc_stats.is_valid =
 			fill_buf_done->ubwc_cr_stat.is_valid;
@@ -2659,6 +2662,8 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 			fill_buf_done->ubwc_cr_stat.worst_cr;
 		inst->ubwc_stats.worst_cf =
 			fill_buf_done->ubwc_cr_stat.worst_cf;
+		if (frame_size)
+			inst->ubwc_stats.worst_cf /= frame_size;
 		mutex_unlock(&inst->ubwc_stats_lock);
 	}
 
