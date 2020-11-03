@@ -1345,6 +1345,10 @@ static int msm_vidc_comm_update_ctrl(struct msm_vidc_inst *inst,
 		return -EINVAL;
 	}
 
+	/* For menu type, keep original menu_skip_mask(step) */
+	if (ctrl->type == V4L2_CTRL_TYPE_MENU)
+		cap->step_size = (u32)ctrl->step;
+
 	rc = v4l2_ctrl_modify_range(ctrl, cap->min, cap->max,
 			cap->step_size, cap->default_value);
 	if (rc) {
