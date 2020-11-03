@@ -53,6 +53,25 @@
 		reg = <0x00635000 0x1000>;
 		interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
 	};
+
+	ddr_cdev: qcom,ddr-cdev {
+		compatible = "qcom,ddr-cooling-device";
+		#cooling-cells = <2>;
+		qcom,ddr-freq = <762000>,
+				<1720000>,
+				<2086000>,
+				<2597000>,
+				<2929000>,
+				<3879000>,
+				<5161000>,
+				<5931000>,
+				<6515000>,
+				<7980000>,
+				<8136000>,
+				<10437000>,
+				<12191000>;
+		interconnects = <&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>;
+	};
 };
 
 &cpufreq_hw {
@@ -751,7 +770,7 @@
 		thermal-governor = "step_wise";
 		trips {
 			pop_trip: pop-trip {
-				temperature = <95000>;
+				temperature = <90000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
@@ -763,6 +782,11 @@
 				cooling-device =
 					<&apc1_cluster THERMAL_NO_LIMIT
 						THERMAL_NO_LIMIT>;
+			};
+
+			pop_cdev1 {
+				trip = <&pop_trip>;
+				cooling-device = <&ddr_cdev 5 5>;
 			};
 		};
 	};
