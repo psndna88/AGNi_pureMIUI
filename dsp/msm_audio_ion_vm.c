@@ -948,6 +948,11 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 		dev_dbg(dev, "%s: SMMU is Disabled\n", __func__);
 		goto exit;
 	}
+	else {
+		rc = dma_set_mask(dev, DMA_BIT_MASK(64));
+		dev_dbg(dev, "%s: dma_set_mask returned 0x%x\n",
+			__func__, rc);
+	}
 
 	rc = habmm_socket_open(&msm_audio_ion_hab_handle,
 		HAB_MMID_CREATE(MM_AUD_3,
