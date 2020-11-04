@@ -1048,6 +1048,16 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 			QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_NOTIFY_COMP(skb) = 1;
 			is_dhcp = true;
 		}
+	} else if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
+		   QDF_NBUF_CB_PACKET_TYPE_ICMP) {
+		subtype = qdf_nbuf_get_icmp_subtype(skb);
+		/*
+		 * Mark the ICMP requests to be sent to FW.
+		 * The decision on whether its actually sent to FW
+		 * is done in the DATAPATH layer.
+		 */
+		if (subtype == QDF_PROTO_ICMP_REQ)
+			QDF_NBUF_CB_TX_PACKET_TO_FW(skb) = 1;
 	}
 	/* track connectivity stats */
 	if (adapter->pkt_type_bitmap)
