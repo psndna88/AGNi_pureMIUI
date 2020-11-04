@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v10.7_stable");
+ini_set("rom_version",	"v10.8_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"October, 30, 2020");
+ini_set("rom_date",		"November, 04, 2020");
 
 # Show Simple Splash
 splash(
@@ -122,18 +122,18 @@ agreebox(
     "I repeat, Android 11 not tested with this kernel !"
 );
 
-selectbox(																																									#SDM660
-    "CPU Frequency Selection","<@center><b>\nWant to Overclock SDM660 CPU ?</b>\n\n</@>","@install","cpuoc.prop",															#SDM660
-    "Yes",						"CPU OC to 2.45GHz (Experimental).", 0,																					#-- selected.0 = 1	#SDM660
-    "No, Not my cup of tea !",	"DEFAULT: You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 1  	#-- selected.0 = 2	#SDM660
-);																																											#SDM660
+selectbox(																																#SDM660
+    "CPU Frequency Selection","<@center><b>\nWant to Overclock SDM660 CPU ?</b>\n\n</@>","@install","cpuoc.prop",						#SDM660
+    "Yes",						"CPU OC to 2.45GHz (Experimental).", 0,												#-- selected.0 = 1	#SDM660
+    "No, Not my cup of tea !",	"DEFAULT 2.2GHz. You dont want to use CPU OC Performance boost.", 1  				#-- selected.0 = 2	#SDM660
+);																																		#SDM660
 
-selectbox(																																									#SDM636
-    "CPU Frequency Selection","<@center><b>\nWant to Overclock SDM636 CPU ?</b>\n\n</@>","@install","cpuoc.prop",															#SDM636
-    "Yes",						"Standard CPU OC to 2.2GHz Good for Gaming.", 0,   																		#-- selected.0 = 1	#SDM636
-    "Yes, but MORE..",			"Higher CPU OC to 2.45GHz (Experimental).", 0,																			#-- selected.0 = 2	#SDM636
-    "No, Not my cup of tea !",	"DEFAULT: You dont want to use CPU OC Performance boost. CPU will still show as 2.45GHz supported but not use it", 1  	#-- selected.0 = 3  #SDM636
-);																																											#SDM636
+selectbox(																																#SDM636
+    "CPU Frequency Selection","<@center><b>\nWant to Overclock SDM636 CPU ?</b>\n\n</@>","@install","cpuoc.prop",						#SDM636
+    "Yes",						"Standard CPU OC to 2.2GHz Good for Gaming.", 0,   									#-- selected.0 = 1	#SDM636
+    "Yes, but MORE..",			"Higher CPU OC to 2.45GHz (Experimental).", 0,										#-- selected.0 = 2	#SDM636
+    "No, Not my cup of tea !",	"DEFAULT 1.8GHz. You dont want to use CPU OC Performance boost.", 1  				#-- selected.0 = 3  #SDM636
+);																																		#SDM636
 
 selectbox(
     "Camera Libs Support Mode","<@center><b>\nSelect method of camera libs support</b>\n\n</@>","@install","cam.prop",  
