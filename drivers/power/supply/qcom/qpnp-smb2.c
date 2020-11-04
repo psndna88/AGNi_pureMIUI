@@ -53,15 +53,11 @@ union power_supply_propval lct_therm_india_level = {1,};
 
 int LctIsInCall = 0;
 int LctIsInVideo = 0;
-bool hvdcp_mode;
-bool dcp_mode;
 extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
-extern bool miuirom;
 #endif
-extern bool full_charged;
-extern bool parallel_suspend_lock;
+extern bool miuirom;
 
 #define SMB2_DEFAULT_WPWR_UW	8000000
 
@@ -159,7 +155,7 @@ static struct smb_params v1_params = {
 		.name	= "jeita fcc reduction",
 		.reg	= JEITA_CCCOMP_CFG_REG,
 		.min_u	= 0,
-		.max_u	= 2300000,
+		.max_u	= 1575000,
 		.step_u	= 25000,
 	},
 	.freq_buck		= {
@@ -412,16 +408,6 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 	struct smb_charger *chg = &chip->chg;
 	int rc = 0;
 
-	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)) {
-		hvdcp_mode = true;
-	} else {
-		hvdcp_mode = false;
-	}
-	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) {
-		dcp_mode = true;
-	} else {
-		dcp_mode = false;
-	}	
 	switch (psp) {
 	case POWER_SUPPLY_PROP_PRESENT:
 		if (chip->bad_part)
@@ -537,7 +523,7 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 					      USB_PSY_VOTER);
 		break;
 	default:
-		pr_err("get prop %d is not supported in usb\n", psp);
+		pr_debug("get prop %d is not supported in usb\n", psp);
 		rc = -EINVAL;
 		break;
 	}
@@ -691,7 +677,7 @@ static int smb2_usb_port_get_prop(struct power_supply *psy,
 		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	default:
-		pr_err_ratelimited("Get prop %d is not supported in pc_port\n",
+		pr_debug("Get prop %d is not supported in pc_port\n",
 				psp);
 		return -EINVAL;
 	}
@@ -822,29 +808,13 @@ static int smb2_usb_main_set_prop(struct power_supply *psy,
 		rc = smblib_set_charge_param(chg, &chg->param.fv, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
-		if (miuirom) {
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-			rc = smblib_set_charge_param(chg, &chg->param.fcc, 2300000);
-#else
-			rc = smblib_set_charge_param(chg, &chg->param.fcc, 2700000);
-#endif
-		} else {
-			rc = smblib_set_charge_param(chg, &chg->param.fcc, val->intval);
-		}
+		rc = smblib_set_charge_param(chg, &chg->param.fcc, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (miuirom) {
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-			rc = smblib_set_icl_current(chg, 2300000);
-#else
-			rc = smblib_set_icl_current(chg, 2700000);
-#endif
-		} else {
-			rc = smblib_set_icl_current(chg, val->intval);
-		}
+		rc = smblib_set_icl_current(chg, val->intval);
 		break;
 	default:
-		pr_err("set prop %d is not supported\n", psp);
+		pr_debug("set prop %d is not supported\n", psp);
 		rc = -EINVAL;
 		break;
 	}
@@ -935,25 +905,11 @@ static int smb2_dc_set_prop(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
-		if (miuirom) {
-			if (!parallel_suspend_lock || full_charged)
-				rc = vote(chg->dc_suspend_votable, WBC_VOTER,
-					(bool)val->intval, 0);
-		} else {
-			rc = vote(chg->dc_suspend_votable, WBC_VOTER,
-					(bool)val->intval, 0);
-		}
+		rc = vote(chg->dc_suspend_votable, WBC_VOTER,
+				(bool)val->intval, 0);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (miuirom) {
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-			rc = smblib_set_prop_dc_current_max(chg, 2300000);
-#else
-			rc = smblib_set_prop_dc_current_max(chg, 2700000);
-#endif
-		} else {
-			rc = smblib_set_prop_dc_current_max(chg, val);
-		}
+		rc = smblib_set_prop_dc_current_max(chg, val);
 		break;
 	default:
 		return -EINVAL;
@@ -1198,25 +1154,11 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	switch (prop) {
 #ifdef XIAOMI_CHARGER_RUNIN
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
-		if (miuirom) {
-			if (parallel_suspend_lock || !full_charged)
-				rc = lct_set_prop_input_suspend(chg, 0);
-			else
-				rc = lct_set_prop_input_suspend(chg, val);
-		} else {
-			rc = lct_set_prop_input_suspend(chg, val);
-		}
+		rc = lct_set_prop_input_suspend(chg, val);
 		break;
 #endif
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
-		if (miuirom) {
-			if (parallel_suspend_lock || !full_charged)
-				rc = smblib_set_prop_input_suspend(chg, 0);
-			else
-				rc = smblib_set_prop_input_suspend(chg, val);
-		} else {
-			rc = smblib_set_prop_input_suspend(chg, val);
-		}
+		rc = smblib_set_prop_input_suspend(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_set_prop_system_temp_level(chg, val);
@@ -1225,12 +1167,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		rc = smblib_set_prop_batt_capacity(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_PARALLEL_DISABLE:
-		if (miuirom) {
-			if (!parallel_suspend_lock || full_charged)
-				vote(chg->pl_disable_votable, USER_VOTER, (bool)val->intval, 0);
-		} else {
-			vote(chg->pl_disable_votable, USER_VOTER, (bool)val->intval, 0);
-		}
+		vote(chg->pl_disable_votable, USER_VOTER, (bool)val->intval, 0);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
 		chg->batt_profile_fv_uv = val->intval;
@@ -1272,12 +1209,8 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		}
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX:
-		if (miuirom) {
-			vote(chg->fcc_votable, BATT_PROFILE_VOTER, true, chg->batt_profile_fcc_ua);
-		} else {
-			chg->batt_profile_fcc_ua = val->intval;
-			vote(chg->fcc_votable, BATT_PROFILE_VOTER, true, val->intval);
-		}
+		chg->batt_profile_fcc_ua = val->intval;
+		vote(chg->fcc_votable, BATT_PROFILE_VOTER, true, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_SET_SHIP_MODE:
 		/* Not in ship mode as long as the device is active */
@@ -1295,11 +1228,7 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 		rc = smblib_dp_dm(chg, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED:
-		if (full_charged) {
-			rc = smblib_set_prop_input_current_limited(chg, val);
-		} else {
-			rc = smblib_set_prop_input_current_limited(chg, 1);
-		}
+		rc = smblib_set_prop_input_current_limited(chg, val);
 		break;
 	default:
 		rc = -EINVAL;

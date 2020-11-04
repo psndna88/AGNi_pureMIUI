@@ -168,6 +168,8 @@ static void fg_encode_default(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val, u8 *buf);
 
 static struct fg_irq_info fg_irqs[FG_IRQ_MAX];
+int charging_current_now_ma = 0;
+int battery_percent = 50;
 bool slow_charge = false;
 bool full_charged = false;
 
@@ -3355,7 +3357,7 @@ module_param_cb(restart, &fg_restart_ops, &fg_restart, 0644);
 static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 {
 	int rc, ibatt_avg, vbatt_avg, rbatt, msoc, full_soc, act_cap_mah,
-		i_cc2cv, soc_cc2cv, tau, divisor, iterm, ttf_mode,
+		i_cc2cv = 0, soc_cc2cv, tau, divisor, iterm, ttf_mode,
 		i, soc_per_step, msoc_this_step, msoc_next_step,
 		ibatt_this_step, t_predicted_this_step, ttf_slope,
 		t_predicted_cv, t_predicted = 0;
@@ -3419,12 +3421,14 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	ibatt_avg = -ibatt_avg / MILLI_UNIT;
 	vbatt_avg /= MILLI_UNIT;
 
-	if (msoc <= SLOW_CHARGE_THRESHOLD) {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (ibatt_avg > 2300)
 		ibatt_avg = 2300;
 #else
+	if (ibatt_avg > 2700)
 		ibatt_avg = 2700;
 #endif
+	if (msoc <= SLOW_CHARGE_THRESHOLD) {
 		slow_charge = false;
 	} else {
 		slow_charge = true;
@@ -3837,8 +3841,7 @@ static void ttf_work(struct work_struct *work)
 	ktime_t ktime_now;
 
 	mutex_lock(&chip->ttf.lock);
-	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING &&
-			chip->charge_status != POWER_SUPPLY_STATUS_DISCHARGING)
+	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING)
 		goto end_work;
 
 	rc = fg_get_battery_current(chip, &ibatt_now);
@@ -4872,6 +4875,11 @@ static irqreturn_t fg_delta_msoc_irq_handler(int irq, void *data)
 	if (!rc)
 		pr_err("lct battery SOC:%d voltage:%duV current:%duA temp:%d id:%dK charge_status:%d charge_type:%d health:%d input_present:%d temp_qt:%d \n",
 			msoc, volt_uv, ibatt_now, batt_temp, chip->batt_id_ohms / 1000, chip->charge_status, chip->charge_type, chip->health, input_present,temp_qt);
+	battery_percent = msoc;
+	if (ibatt_now < 0)
+		charging_current_now_ma = (ibatt_now * (-1)) / 1000;
+	else
+		charging_current_now_ma = 0;
 	return IRQ_HANDLED;
 }
 

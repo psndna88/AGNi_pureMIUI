@@ -89,10 +89,7 @@ enum print_reason {
 	PR_PARALLEL	= BIT(0),
 };
 
-extern bool full_charged;
 extern bool slow_charge;
-extern bool miuirom;
-extern bool parallel_suspend_lock;
 static int debug_mask = 0;
 module_param_named(debug_mask, debug_mask, int, S_IRUSR | S_IWUSR);
 
@@ -211,8 +208,7 @@ static void split_settled(struct pl_data *chip)
 	chip->total_settled_ua = total_settled_ua;
 	chip->pl_settled_ua = slave_ua;
 
-	pl_dbg(chip, PR_PARALLEL,
-		"Split total_current_ua=%d main_settled_ua=%d slave_ua=%d\n",
+	pr_err("Split total_current_ua=%d main_settled_ua=%d slave_ua=%d\n",
 		total_current_ua, main_settled_ua, slave_ua);
 }
 
@@ -653,23 +649,11 @@ static void fcc_step_update_work(struct work_struct *work)
 		/* Disable parallel */
 		parallel_fcc = 0;
 		pval.intval = 1;
-		parallel_suspend_lock = false;
-		pr_err("parallel_suspend_lock 1 = false");
-		if (miuirom) {
-			if (!parallel_suspend_lock) {
-				rc = power_supply_set_property(chip->pl_psy,
-					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-				if (rc < 0)
-					pr_err("Couldn't change slave suspend state rc=%d\n",
-						rc);
-			}
-		} else {
-			rc = power_supply_set_property(chip->pl_psy,
-				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-			if (rc < 0)
-				pr_err("Couldn't change slave suspend state rc=%d\n",
-					rc);
-		}
+		rc = power_supply_set_property(chip->pl_psy,
+			POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
+		if (rc < 0)
+			pr_err("Couldn't change slave suspend state rc=%d\n",
+				rc);
 
 		main_fcc = get_effective_result_locked(chip->fcc_votable);
 		pval.intval = main_fcc;
@@ -725,21 +709,12 @@ static void fcc_step_update_work(struct work_struct *work)
 
 		if (parallel_fcc < MINIMUM_PARALLEL_FCC_UA) {
 			pval.intval = 1;
-			if (miuirom) {
-				pr_err("parallel_suspend_lock 2 = true");
-				parallel_suspend_lock = true;
-			} else {
-				pr_err("parallel_suspend_lock 2 = false");
-				parallel_suspend_lock = false;
-			}
-			if (!parallel_suspend_lock) {
-				rc = power_supply_set_property(chip->pl_psy,
-					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-				if (rc < 0) {
-					pr_err("Couldn't change slave suspend state rc=%d\n",
-						rc);
-					return;
-				}
+			rc = power_supply_set_property(chip->pl_psy,
+				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
+			if (rc < 0) {
+				pr_err("Couldn't change slave suspend state rc=%d\n",
+					rc);
+				return;
 			}
 		}
 	} else {
@@ -799,26 +774,12 @@ static void fcc_step_update_work(struct work_struct *work)
 		 */
 		if (pval.intval == 1 && parallel_fcc >= 100000) {
 			pval.intval = 0;
-			pr_err("parallel_suspend_lock 3 = false");
-			parallel_suspend_lock = false;
-			if (miuirom) {
-				if (!parallel_suspend_lock) {
-					rc = power_supply_set_property(chip->pl_psy,
-						POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-					if (rc < 0) {
-						pr_err("Couldn't change slave suspend state rc=%d\n",
-								rc);
-						return;
-					}
-				}
-			} else {
-				rc = power_supply_set_property(chip->pl_psy,
-					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-				if (rc < 0) {
-					pr_err("Couldn't change slave suspend state rc=%d\n",
-							rc);
-					return;
-				}
+			rc = power_supply_set_property(chip->pl_psy,
+				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
+			if (rc < 0) {
+				pr_err("Couldn't change slave suspend state rc=%d\n",
+						rc);
+				return;
 			}
 
 			if ((chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) ||
@@ -879,6 +840,7 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 
 #define ICL_STEP_UA	25000
 #define PL_DELAY_MS     3000
+#define PL_THRESHOLD_ICL_UA	900000
 static int usb_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
 {
@@ -909,23 +871,13 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 	 *	unvote USBIN_I_VOTER) the status_changed_work enables
 	 *	USBIN_I_VOTER based on settled current.
 	 */
-	if (miuirom) {
-		if (!parallel_suspend_lock || full_charged) {
-			pr_err("fully charged - disable parallel charger smb1351 \n");
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-		} else {
-			schedule_delayed_work(&chip->status_change_work,
-							msecs_to_jiffies(PL_DELAY_MS));
-		}
-	} else {
-		if (full_charged) {
-			pr_err("fully charged - disable parallel charger smb1351 \n");
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-		}
-		else
-			schedule_delayed_work(&chip->status_change_work,
-							msecs_to_jiffies(PL_DELAY_MS));
+	if (icl_ua <= PL_THRESHOLD_ICL_UA){
+		pr_err("icl_ua <= 900000 disable parallel charger smb1351 \n");
+		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	}
+	else
+		schedule_delayed_work(&chip->status_change_work,
+						msecs_to_jiffies(PL_DELAY_MS));
 
 	/* rerun AICL */
 	/* get the settled current */
@@ -1022,20 +974,11 @@ static int pl_disable_vote_callback(struct votable *votable,
 		 */
 		if (!chip->fcc_step_update) {
 			pval.intval = 0;
-			if (miuirom) {
-				pr_err("parallel_suspend_lock 4 = true");
-				parallel_suspend_lock = true;
-			} else {
-				pr_err("parallel_suspend_lock 4 = false");
-				parallel_suspend_lock = false;
-			}
-			if (!parallel_suspend_lock) {
-				rc = power_supply_set_property(chip->pl_psy,
-					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-				if (rc < 0)
-					pr_err("Couldn't change slave suspend state rc=%d\n",
-						rc);
-			}
+			rc = power_supply_set_property(chip->pl_psy,
+				POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
+			if (rc < 0)
+				pr_err("Couldn't change slave suspend state rc=%d\n",
+					rc);
 
 			if ((chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) ||
 				(chip->pl_mode ==
@@ -1066,20 +1009,11 @@ static int pl_disable_vote_callback(struct votable *votable,
 			/* pl_psy may be NULL while in the disable branch */
 			if (chip->pl_psy) {
 				pval.intval = 1;
-				if (miuirom) {
-					pr_err("parallel_suspend_lock 5 = true");
-					parallel_suspend_lock = true;
-				} else {
-					pr_err("parallel_suspend_lock 5 = false");
-					parallel_suspend_lock = false;
-				}
-				if (!parallel_suspend_lock) {
-					rc = power_supply_set_property(chip->pl_psy,
-						POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
-					if (rc < 0)
-						pr_err("Couldn't change slave suspend state rc=%d\n",
-							rc);
-				}
+				rc = power_supply_set_property(chip->pl_psy,
+					POWER_SUPPLY_PROP_INPUT_SUSPEND, &pval);
+				if (rc < 0)
+					pr_err("Couldn't change slave suspend state rc=%d\n",
+						rc);
 			}
 		}
 
@@ -1199,16 +1133,15 @@ static void handle_main_charge_type(struct pl_data *chip)
 		pr_err("Couldn't get batt charge type rc=%d\n", rc);
 		return;
 	}
-	if (miuirom) {
-		if (parallel_suspend_lock || !full_charged) {
-			pval.intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
-		}
+//	POWER_SUPPLY_CHARGE_TYPE_UNKNOWN = 0, POWER_SUPPLY_CHARGE_TYPE_NONE = 1
+//	POWER_SUPPLY_CHARGE_TYPE_TRICKLE = 2, POWER_SUPPLY_CHARGE_TYPE_FAST= 3
+//	POWER_SUPPLY_CHARGE_TYPE_TAPER = 4
+	if (pval.intval == 4) {
+		pval.intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
+		pr_err("chip->charge_type =%d, FORCED pval.intval=%d \n", chip->charge_type,pval.intval);
 	} else {
-		if (!full_charged) {
-			pval.intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
-		}
+		pr_err("chip->charge_type =%d, pval.intval=%d \n", chip->charge_type,pval.intval);
 	}
-	pr_err("chip->charge_type =%d, pval.intval=%d \n", chip->charge_type,pval.intval);
 	/* not fast/not taper state to disables parallel */
 	if ((pval.intval != POWER_SUPPLY_CHARGE_TYPE_FAST)
 		&& (pval.intval != POWER_SUPPLY_CHARGE_TYPE_TAPER)) {
@@ -1280,19 +1213,7 @@ static void handle_settled_icl_change(struct pl_data *chip)
 		pr_err("Couldn't get aicl settled value rc=%d\n", rc);
 		return;
 	}
-	if (miuirom) {
-		if (!parallel_suspend_lock || full_charged) {
-			main_limited = pval.intval;
-		} else {
-			main_limited = 1;
-		}
-	} else {
-		if (full_charged) {
-			main_limited = pval.intval;
-		} else {
-			main_limited = 1;
-		}
-	}
+	main_limited = pval.intval;
 #if defined(CONFIG_KERNEL_CUSTOM_E7T)
 	if (chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) {
 		rc = power_supply_get_property(chip->batt_psy,
@@ -1304,73 +1225,48 @@ static void handle_settled_icl_change(struct pl_data *chip)
 		}
 		battery_temp = lct_pval.intval;
 		pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d , battery_temp=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua, battery_temp);
-		if (miuirom) {
-			if (main_limited && (!parallel_suspend_lock || full_charged)){
-				pr_err("full charged - disable parallel charger smb1351 \n");
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-				vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
-			} else {
-				if ((battery_temp > 20) && (battery_temp < 450)) {
-					vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
-					vote(chip->pl_disable_votable, PL_TEMP_VOTER, false, 0);
-				} else {
-					vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-					vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
-				}
-			}
-		} else {
-			if (main_limited && full_charged){ 
-				pr_err("full charged - disable parallel charger smb1351 \n");
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-				vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
+		if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < PL_THRESHOLD_ICL_UA)
+				|| (main_settled_ua == 0)
+				|| ((total_current_ua >= 0) &&
+					(total_current_ua <= PL_THRESHOLD_ICL_UA))){
+			pr_err("total_current_ua <= 900000 disable parallel charger smb1351 \n");
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
+			vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
+		}
+		else {
+			if ((battery_temp > 20) && (battery_temp < 450)) {
+				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
+				vote(chip->pl_disable_votable, PL_TEMP_VOTER, false, 0);
 			}
 			else {
-				if ((battery_temp > 20) && (battery_temp < 440)) {
-					vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
-					vote(chip->pl_disable_votable, PL_TEMP_VOTER, false, 0);
-				}
-				else {
-					vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-					vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
-				}
+				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
+				vote(chip->pl_disable_votable, PL_TEMP_VOTER, true, 0);
 			}
 		}
 	}
 	else {
 		pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua);
-		if (miuirom) {
-			if (main_limited && (!parallel_suspend_lock || full_charged)){
-				pr_err("full charged - disable parallel charger smb1351 \n");
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-			}
-			else
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
-		} else {
-			if (main_limited && full_charged){
-				pr_err("full charged - disable parallel charger smb1351 \n");
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-			}
-			else
-				vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
+		if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < PL_THRESHOLD_ICL_UA)
+				|| (main_settled_ua == 0)
+				|| ((total_current_ua >= 0) &&
+					(total_current_ua <= PL_THRESHOLD_ICL_UA))){
+			pr_err("total_current_ua <= 900000 disable parallel charger smb1351 \n");
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 		}
+		else
+			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
 	}
 #else
 	pr_err("main_limited=%d, main_settled_ua=%d, chip->pl_settled_ua=%d ,total_current_ua=%d\n", main_limited, main_settled_ua, chip->pl_settled_ua, total_current_ua);
-	if (miuirom) {
-		if (main_limited && (!parallel_suspend_lock || full_charged)){
-			pr_err("full charged - disable parallel charger smb1351 \n");
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-		}
-		else
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
-	} else {
-		if (main_limited && full_charged){
-			pr_err("full charged - disable parallel charger smb1351 \n");
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
-		}
-		else
-			vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
+	if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < PL_THRESHOLD_ICL_UA)
+			|| (main_settled_ua == 0)
+			|| ((total_current_ua >= 0) &&
+				(total_current_ua <= PL_THRESHOLD_ICL_UA))){
+		pr_err("total_current_ua <= 900000 disable parallel charger smb1351 \n");
+		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	}
+	else
+		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
 #endif
 
 	if (get_effective_result(chip->pl_disable_votable))

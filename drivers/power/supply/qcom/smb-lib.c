@@ -37,16 +37,12 @@ struct g_nvt_data {
 extern struct g_nvt_data g_nvt;
 #endif
 
-bool parallel_suspend_lock = false;
 extern int hwc_check_global;
-extern bool slow_charge;
-extern bool miuirom;
-extern bool hvdcp_mode;
-#ifdef CONFIG_KERNEL_CUSTOM_E7S
-#define LCT_JEITA_CCC_AUTO_ADJUST  1
-#else
+//#ifdef CONFIG_KERNEL_CUSTOM_E7S
+//#define LCT_JEITA_CCC_AUTO_ADJUST  1
+//#else
 #define LCT_JEITA_CCC_AUTO_ADJUST  0
-#endif
+//#endif
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
@@ -59,11 +55,9 @@ extern bool hvdcp_mode;
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 #define CDP_CURRENT_UA			500000
 #else
-#define CDP_CURRENT_UA_MIUI		2300000
-#define CDP_CURRENT_UA			2000000
+#define CDP_CURRENT_UA			1500000
 #endif
-#define DCP_CURRENT_UA_MIUI		2300000
-#define DCP_CURRENT_UA			2300000
+#define DCP_CURRENT_UA			2000000
 #define HVDCP2_CURRENT_UA		2000000
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 #define HVDCP3_CURRENT_UA		2700000
@@ -71,11 +65,9 @@ extern bool hvdcp_mode;
 #define HVDCP3_CURRENT_UA		2300000
 #endif
 #define TYPEC_DEFAULT_CURRENT_UA	 900000
-#define TYPEC_MEDIUM_CURRENT_UA		2100000
+#define TYPEC_MEDIUM_CURRENT_UA		1500000
 #define TYPEC_HIGH_CURRENT_UA		2700000
 
-int cdp_current = CDP_CURRENT_UA;
-int dcp_current = DCP_CURRENT_UA;
 static bool is_secure(struct smb_charger *chg, int addr)
 {
 	if (addr == SHIP_MODE_REG || addr == FREQ_CLK_DIV_REG)
@@ -390,7 +382,7 @@ jeita current = fcc - JEITA_CC_COMP_CFG_IN_UEFI*1000
 static int smblib_adjust_jeita_cc_config(struct smb_charger *chg,int val_u)
 {
 	int rc= 0;
-/*	int current_cc_minus_ua = 0;
+	int current_cc_minus_ua = 0;
 
 
 	pr_err("smblib_adjust_jeita_cc_config fcc val_u  = %d\n",val_u);
@@ -419,14 +411,14 @@ static int smblib_adjust_jeita_cc_config(struct smb_charger *chg,int val_u)
 		
 	}
 	else if((val_u < chg->batt_profile_fcc_ua) &&( (chg->batt_profile_fcc_ua - val_u) > JEITA_CC_COMP_CFG_IN_UEFI * 1000) )
-	{ */
+	{
 		rc = smblib_set_charge_param(chg,&chg->param.jeita_cc_comp,0);
 		pr_err("smblib_adjust_jeita_cc_config jeita need to set to zero,write result = %d\n",rc);
-/*	}
+	}
 	else
 	{
 		pr_err("smblib_adjust_jeita_cc_config do nothing \n");
-	} */
+	}
 	
 		
 	return rc;
@@ -1020,12 +1012,7 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 		}
 	} else {
 		set_sdp_current(chg, 100000);
-		if (miuirom) {
-			rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
-		} else {
-			if (!slow_charge)
-				rc = smblib_set_charge_param(chg, &chg->param.usb_icl, HVDCP3_CURRENT_UA); //psndna88 HACK
-		}
+		rc = smblib_set_charge_param(chg, &chg->param.usb_icl, icl_ua);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't set HC ICL rc=%d\n", rc);
 			goto enable_icl_changed_interrupt;
@@ -1035,10 +1022,6 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 override_suspend_config:
 	/* determine if override needs to be enforced */
 	override = true;
-	if (miuirom)
-		cdp_current = CDP_CURRENT_UA_MIUI;
-	else
-		cdp_current = CDP_CURRENT_UA;
 	if (icl_ua == INT_MAX) {
 		/* remove override if no voters - hw defaults is desired */
 		override = false;
@@ -1051,7 +1034,7 @@ override_suspend_config:
 			&& icl_ua == 500000)
 #else
 		else if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_CDP
-			&& icl_ua == cdp_current)
+			&& icl_ua == CDP_CURRENT_UA)
 #endif
 			/*
 			 * For std cable with type = CDP override only if
@@ -2673,10 +2656,6 @@ static int get_rp_based_dcp_current(struct smb_charger *chg, int typec_mode)
 {
 	int rp_ua;
 
-	if (miuirom)
-		dcp_current = DCP_CURRENT_UA_MIUI;
-	else
-		dcp_current = DCP_CURRENT_UA;
 	switch (typec_mode) {
 	case POWER_SUPPLY_TYPEC_SOURCE_HIGH:
 		rp_ua = TYPEC_HIGH_CURRENT_UA;
@@ -2685,7 +2664,7 @@ static int get_rp_based_dcp_current(struct smb_charger *chg, int typec_mode)
 	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
 	/* fall through */
 	default:
-		rp_ua = dcp_current;
+		rp_ua = DCP_CURRENT_UA;
 	}
 
 	return rp_ua;
@@ -2708,12 +2687,7 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S)
-#define FLOAT_CURRENT_UA		500000
-#else
 #define FLOAT_CURRENT_UA		1000000
-#endif
-#define FLOAT_CURRENT_UA_MIUI	1000000
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -2736,10 +2710,7 @@ static int smblib_handle_usb_current(struct smb_charger *chg,
 			 * of Rp
 			 */
 			typec_mode = smblib_get_prop_typec_mode(chg);
-			if (miuirom)
-				rp_ua = FLOAT_CURRENT_UA_MIUI;
-			else
-				rp_ua = FLOAT_CURRENT_UA;
+			rp_ua = FLOAT_CURRENT_UA;
 			rc = vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER,
 								true, rp_ua);
 			if (rc < 0)
@@ -3290,23 +3261,15 @@ int smblib_get_charge_current(struct smb_charger *chg,
 		return 0;
 	}
 
-	if (miuirom)
-		cdp_current = CDP_CURRENT_UA_MIUI;
-	else
-		cdp_current = CDP_CURRENT_UA;
-	if (miuirom)
-		dcp_current = DCP_CURRENT_UA_MIUI;
-	else
-		dcp_current = DCP_CURRENT_UA;
 	if (non_compliant) {
 		switch (apsd_result->bit) {
 		case CDP_CHARGER_BIT:
-			current_ua = cdp_current;
+			current_ua = CDP_CURRENT_UA;
 			break;
 		case DCP_CHARGER_BIT:
 		case OCP_CHARGER_BIT:
 		case FLOAT_CHARGER_BIT:
-			current_ua = dcp_current;
+			current_ua = DCP_CURRENT_UA;
 			break;
 		default:
 			current_ua = 0;
@@ -3321,7 +3284,7 @@ int smblib_get_charge_current(struct smb_charger *chg,
 	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
 		switch (apsd_result->bit) {
 		case CDP_CHARGER_BIT:
-			current_ua = cdp_current;
+			current_ua = CDP_CURRENT_UA;
 			break;
 		case DCP_CHARGER_BIT:
 		case OCP_CHARGER_BIT:
@@ -3530,14 +3493,12 @@ static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 	if (vbus_rising) {
 		/* use the typec flag even though its not typec */
 		chg->typec_present = 1;
-		pr_err("parallel_suspend_lock 6 = true");
-		parallel_suspend_lock = true;
+		pr_err("lct micro usb plugin \n");
 		smblib_err(chg, "lct micro usb plugin\n");
 	} else {
 		smblib_err(chg, "lct micro usb plugout\n");
 		chg->typec_present = 0;
-		pr_err("parallel_suspend_lock 7 = false");
-		parallel_suspend_lock = false;
+		pr_err("lct micro usb plugout \n");
 		smblib_update_usb_type(chg);
 		extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
 		smblib_uusb_removal(chg);
@@ -3603,10 +3564,6 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	smblib_set_opt_freq_buck(chg, vbus_rising ? chg->chg_freq.freq_5V :
 						chg->chg_freq.freq_removal);
 
-	if (miuirom)
-		cdp_current = CDP_CURRENT_UA_MIUI;
-	else
-		cdp_current = CDP_CURRENT_UA;
 	if (vbus_rising) {
 		rc = smblib_request_dpdm(chg, true);
 		if (rc < 0)
@@ -3638,7 +3595,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		/* Force 1500mA FCC on removal */
 		if (chg->fcc_stepper_mode)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER,
-						true, cdp_current);
+						true, CDP_CURRENT_UA);
 
 		rc = smblib_request_dpdm(chg, false);
 		if (rc < 0)
@@ -3914,14 +3871,6 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 	if (chg->pd_active)
 		return;
 
-	if (miuirom)
-		cdp_current = CDP_CURRENT_UA_MIUI;
-	else
-		cdp_current = CDP_CURRENT_UA;
-	if (miuirom)
-		dcp_current = DCP_CURRENT_UA_MIUI;
-	else
-		dcp_current = DCP_CURRENT_UA;
 	switch (pst) {
 	case POWER_SUPPLY_TYPE_USB:
 		/*
@@ -3941,7 +3890,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, 500000);
 #else
-		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, cdp_current);
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, CDP_CURRENT_UA);
 #endif
 		break;
 	case POWER_SUPPLY_TYPE_USB_DCP:
@@ -3950,15 +3899,7 @@ static void smblib_force_legacy_icl(struct smb_charger *chg, int pst)
 #endif
 		typec_mode = smblib_get_prop_typec_mode(chg);
 		rp_ua = get_rp_based_dcp_current(chg, typec_mode);
-		if (miuirom) {
-#if defined (CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-			vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, rp_ua);
-#else
-			vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, dcp_current);
-#endif
-		} else {
-			vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, rp_ua);
-		}
+		vote(chg->usb_icl_votable, LEGACY_UNKNOWN_VOTER, true, rp_ua);
 		smblib_err(chg, "lct battery smblib_force_legacy_icl dcp\n");
 		break;
 	case POWER_SUPPLY_TYPE_USB_FLOAT:
@@ -4584,8 +4525,7 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 
 	if (!chg->typec_present && chg->typec_mode != POWER_SUPPLY_TYPEC_NONE) {
 		chg->typec_present = true;
-		pr_err("parallel_suspend_lock 8 = true");
-		parallel_suspend_lock = true;
+		pr_err("lct TypeC insertion \n");
 		smblib_dbg(chg, PR_MISC, "TypeC %s insertion\n",
 			smblib_typec_mode_name[chg->typec_mode]);
 		smblib_err(chg, "lct TypeC insertion\n");
@@ -4593,8 +4533,7 @@ static void smblib_handle_typec_cc_state_change(struct smb_charger *chg)
 	} else if (chg->typec_present &&
 				chg->typec_mode == POWER_SUPPLY_TYPEC_NONE) {
 		chg->typec_present = false;
-		pr_err("parallel_suspend_lock 9 = false");
-		parallel_suspend_lock = false;
+		pr_err("lct TypeC removal \n");
 		smblib_dbg(chg, PR_MISC, "TypeC removal\n");
 		smblib_err(chg, "lct TypeC removal\n");
 		smblib_handle_typec_removal(chg);
