@@ -1235,6 +1235,7 @@
 #include "monaco-qupv3.dtsi"
 #include "monaco-pm.dtsi"
 #include "monaco-audio.dtsi"
+#include "monaco-usb.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
