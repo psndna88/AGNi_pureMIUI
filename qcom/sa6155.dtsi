@@ -1,5 +1,6 @@
 #include "sm6150.dtsi"
 #include "sa6155-pmic.dtsi"
+#include "display/sa6155-display.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA6155";
@@ -398,4 +399,8 @@
 			};
 		};
 	};
+};
+
+&mdss_dsi0_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
 };

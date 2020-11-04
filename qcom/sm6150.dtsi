@@ -454,6 +454,9 @@
 
 };
 
+#include "display/sm6150-sde-pll.dtsi"
+#include "display/sm6150-sde.dtsi"
+
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
