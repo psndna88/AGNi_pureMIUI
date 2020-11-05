@@ -148,6 +148,13 @@ struct cam_isp_ctx_irq_ops {
  * @num_acked:                 Count to track acked entried for output.
  *                             If count equals the number of fence out, it means
  *                             the request has been completed.
+ * @num_deferred_acks:         Number of buf_dones/acks that are deferred to
+ *                             handle or signalled in special scenarios.
+ *                             Increment this count instead of num_acked and
+ *                             handle the events later where eventually
+ *                             increment num_acked.
+ * @deferred_fence_map_index   Saves the indices of fence_map_out for which
+ *                             handling of buf_done is deferred.
  * @bubble_report:             Flag to track if bubble report is active on
  *                             current request
  * @hw_update_data:            HW update data for this request
@@ -167,6 +174,8 @@ struct cam_isp_ctx_req {
 	struct cam_hw_fence_map_entry         fence_map_in[CAM_ISP_CTX_RES_MAX];
 	uint32_t                              num_fence_map_in;
 	uint32_t                              num_acked;
+	uint32_t                              num_deferred_acks;
+	uint32_t                  deferred_fence_map_index[CAM_ISP_CTX_RES_MAX];
 	int32_t                               bubble_report;
 	struct cam_isp_prepare_hw_update_data hw_update_data;
 	ktime_t                               event_timestamp
@@ -261,6 +270,7 @@ struct cam_isp_context_event_record {
  * @custom_enabled:            Custom HW enabled for this ctx
  * @use_frame_header_ts:       Use frame header for qtimer ts
  * @support_consumed_addr:     Indicate whether HW has last consumed addr reg
+ * @apply_in_progress          Whether request apply is in progress
  * @init_timestamp:            Timestamp at which this context is initialized
  * @isp_device_type:           ISP device type
  * @rxd_epoch:                 Indicate whether epoch has been received. Used to
@@ -307,6 +317,7 @@ struct cam_isp_context {
 	bool                                  custom_enabled;
 	bool                                  use_frame_header_ts;
 	bool                                  support_consumed_addr;
+	atomic_t                              apply_in_progress;
 	unsigned int                          init_timestamp;
 	uint32_t                              isp_device_type;
 	atomic_t                              rxd_epoch;
