@@ -97,6 +97,11 @@ struct cam_tfe_top_reg_offset_common {
 	uint32_t perf_stall_count;
 	uint32_t perf_always_count;
 	uint32_t perf_count_status;
+
+	/*reg data */
+	uint32_t diag_min_hbi_error_shift;
+	uint32_t diag_neq_hbi_shift;
+	uint32_t diag_sensor_hbi_mask;
 };
 
 struct cam_tfe_camif_reg {
@@ -190,6 +195,8 @@ struct cam_tfe_rdi_reg_data {
 	uint32_t     error_irq_mask2;
 	uint32_t     subscribe_irq_mask[CAM_TFE_TOP_IRQ_REG_NUM];
 	uint32_t     enable_diagnostic_hw;
+	uint32_t     diag_sensor_sel;
+	uint32_t     diag_sensor_shift;
 };
 
 struct cam_tfe_clc_hw_status {

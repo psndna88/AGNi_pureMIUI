@@ -40,6 +40,9 @@ static struct cam_tfe_top_reg_offset_common  tfe530_top_commong_reg  = {
 	.perf_stall_count             = 0x000010EC,
 	.perf_always_count            = 0x000010F0,
 	.perf_count_status            = 0x000010F4,
+	.diag_min_hbi_error_shift     = 15,
+	.diag_neq_hbi_shift           = 14,
+	.diag_sensor_hbi_mask         = 0x3FFF,
 };
 
 static struct cam_tfe_camif_reg  tfe530_camif_reg = {
@@ -131,6 +134,8 @@ static struct cam_tfe_rdi_reg_data tfe530_rdi0_reg_data = {
 		0x00000000,
 	},
 	.enable_diagnostic_hw        = 0x1,
+	.diag_sensor_sel             = 0x1,
+	.diag_sensor_shift           = 0x1,
 };
 
 static struct cam_tfe_rdi_reg  tfe530_rdi1_reg = {
@@ -166,6 +171,8 @@ static struct cam_tfe_rdi_reg_data tfe530_rdi1_reg_data = {
 		0x00000000,
 	},
 	.enable_diagnostic_hw        = 0x1,
+	.diag_sensor_sel             = 0x2,
+	.diag_sensor_shift           = 0x1,
 };
 
 static struct cam_tfe_rdi_reg  tfe530_rdi2_reg = {
@@ -201,6 +208,9 @@ static struct cam_tfe_rdi_reg_data tfe530_rdi2_reg_data = {
 		0x00000000,
 	},
 	.enable_diagnostic_hw        = 0x1,
+	.diag_sensor_sel             = 0x3,
+	.diag_sensor_shift           = 0x1,
+
 };
 
 static struct cam_tfe_clc_hw_status  tfe530_clc_hw_info[CAM_TFE_MAX_CLC] = {
