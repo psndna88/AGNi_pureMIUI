@@ -5962,7 +5962,8 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 
 		if (!prepare || !prepare->priv ||
 			(bw_config->usage_type >= CAM_IFE_HW_NUM_MAX)) {
-			CAM_ERR(CAM_ISP, "Invalid inputs");
+			CAM_ERR(CAM_ISP, "Invalid inputs usage type %d",
+				bw_config->usage_type);
 			return -EINVAL;
 		}
 
@@ -5987,7 +5988,8 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 
 		bw_config = (struct cam_isp_bw_config_v2 *)blob_data;
 
-		if (bw_config->num_paths > CAM_ISP_MAX_PER_PATH_VOTES) {
+		if (bw_config->num_paths > CAM_ISP_MAX_PER_PATH_VOTES ||
+			!bw_config->num_paths) {
 			CAM_ERR(CAM_ISP, "Invalid num paths %d",
 				bw_config->num_paths);
 			return -EINVAL;
@@ -6022,7 +6024,8 @@ static int cam_isp_packet_generic_blob_handler(void *user_data,
 
 		if (!prepare || !prepare->priv ||
 			(bw_config->usage_type >= CAM_IFE_HW_NUM_MAX)) {
-			CAM_ERR(CAM_ISP, "Invalid inputs");
+			CAM_ERR(CAM_ISP, "Invalid inputs usage type %d",
+				bw_config->usage_type);
 			return -EINVAL;
 		}
 
