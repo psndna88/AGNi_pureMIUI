@@ -182,6 +182,13 @@ conditions.
 		  that interconnect votes will be maintained irrespective of
 		  the CPUSS' state (awake or asleep).
 
+- qcom,power-always-on:
+		  Boolean property which indicates that votes for power
+		  resources (i.e. regulators, clocks, buses) should
+		  always be maintained. This is required when the latency
+		  for the SMMU's operation is greatly increased by adding and
+		  removing votes for power resources.
+
 ** Deprecated properties:
 
 - mmu-masters (deprecated in favour of the generic "iommus" binding) :
