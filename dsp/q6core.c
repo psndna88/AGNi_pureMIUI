@@ -1762,12 +1762,33 @@ static int q6core_send_custom_topologies(void)
 {
 	int ret = 0;
 	int ret2 = 0;
+	int32_t adsp_ready = 0;
+	unsigned long timeout;
 	struct cal_block_data *cal_block = NULL;
 	struct avcs_cmd_register_topologies reg_top;
 
+	/*  If ADSP is down, retry till ADSP is up */
 	if (!q6core_is_adsp_ready()) {
-		pr_err("%s: ADSP is not ready!\n", __func__);
-		return -ENODEV;
+		pr_err("%s: ADSP is not ready.proceed with retry!\n",
+				 __func__);
+
+		timeout = jiffies +
+			msecs_to_jiffies(ADSP_STATE_READY_TIMEOUT_MS);
+
+		do {
+			adsp_ready = q6core_is_adsp_ready();
+			pr_debug("%s: ADSP Audio is %s\n", __func__,
+				adsp_ready ? "ready" : "not ready");
+			if (adsp_ready)
+				break;
+			msleep(50);
+		} while (time_after(timeout, jiffies));
+
+		if (!adsp_ready) {
+			pr_err_ratelimited("%s: Timeout. ADSP Audio is not ready\n",
+					__func__);
+			return -ENODEV;
+		}
 	}
 
 	memset(&reg_top, 0, sizeof(reg_top));
