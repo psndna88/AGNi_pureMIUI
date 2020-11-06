@@ -42,6 +42,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_0>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -76,6 +77,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_1>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -105,6 +107,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_2>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -134,6 +137,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_3>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -163,6 +167,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_4>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -201,6 +206,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_5>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -239,6 +245,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_6>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -277,6 +284,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_7>;
+			qcom,freq-domain = <&cpufreq_hw 2 4>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -847,6 +855,20 @@
 		clock-names = "xo_clk_src";
 		clocks = <&rpmhcc RPMH_CXO_CLK>;
 		#clock-cells = <1>;
+	};
+
+	cpufreq_hw: cpufreq@18323000 {
+		compatible = "qcom,cpufreq-hw";
+		reg = <0x18323000 0x1400>, <0x18325800 0x1400>,
+		      <0x18327800 0x1400>;
+		reg-names = "freq-domain0", "freq-domain1",
+			    "freq-domain2";
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
+		clock-names = "xo", "alternate";
+
+
+		#freq-domain-cells = <2>;
 	};
 
 	osm_l3: interconnect@0x18321000 {
