@@ -1621,7 +1621,7 @@ static int nfcc_reboot(struct notifier_block *notifier, unsigned long val,
 
 #include <linux/board_id.h>
 
-static int lct_check_hwversion()
+static int lct_check_hwversion(void)
 {
 	int ret = 0;
 	int project_number = 0;
