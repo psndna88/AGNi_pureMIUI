@@ -335,7 +335,9 @@
 
 	soc: soc { };
 
-	chosen { };
+	chosen {
+		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
+	};
 };
 
 &soc {
@@ -1140,6 +1142,10 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
 	};
+
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
 };
 
 #include "shima-gdsc.dtsi"
@@ -1264,3 +1270,6 @@
 };
 
 #include "yupik-usb.dtsi"
+#include "yupik-ion.dtsi"
+#include "msm-arm-smmu-yupik.dtsi"
+#include "yupik-qupv3.dtsi"

@@ -26,7 +26,8 @@
 			<MASTER_QUP_0 SLAVE_EBI>;
 		qcom,vote-for-bw;
 		iommus = <&apps_smmu 0x0003 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 	};
@@ -190,7 +191,8 @@
 			<MASTER_QUP_1 SLAVE_EBI>;
 		qcom,vote-for-bw;
 		iommus = <&apps_smmu 0x00c3 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 	};
