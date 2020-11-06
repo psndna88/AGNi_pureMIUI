@@ -1139,26 +1139,6 @@ u32 v4l2_to_hfi_flip(struct msm_vidc_inst *inst)
 	return flip;
 }
 
-inline bool vidc_scalar_enabled(struct msm_vidc_inst *inst)
-{
-	struct v4l2_format *f;
-	u32 output_height, output_width, input_height, input_width;
-	bool scalar_enable = false;
-
-	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
-	output_height = f->fmt.pix_mp.height;
-	output_width = f->fmt.pix_mp.width;
-	f = &inst->fmts[INPUT_PORT].v4l2_fmt;
-	input_height = f->fmt.pix_mp.height;
-	input_width = f->fmt.pix_mp.width;
-
-	if (output_height != input_height || output_width != input_width)
-		scalar_enable = true;
-
-	return scalar_enable;
-}
-
-
 static int msm_venc_set_csc(struct msm_vidc_inst *inst,
 					u32 color_primaries, u32 custom_matrix);
 
@@ -1672,7 +1652,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		if (inst->state < MSM_VIDC_LOAD_RESOURCES)
 			msm_vidc_calculate_buffer_counts(inst);
 		if (inst->state == MSM_VIDC_START_DONE) {
-			rc = msm_venc_set_frame_rate(inst);
+			rc = msm_venc_set_frame_rate(inst, true);
 			if (rc)
 				s_vpr_e(sid, "%s: set frame rate failed\n",
 					__func__);
@@ -2095,7 +2075,7 @@ int msm_venc_set_frame_size(struct msm_vidc_inst *inst)
 	return rc;
 }
 
-int msm_venc_set_frame_rate(struct msm_vidc_inst *inst)
+int msm_venc_set_frame_rate(struct msm_vidc_inst *inst, bool external_requested)
 {
 	int rc = 0;
 	struct hfi_device *hdev;
@@ -2128,9 +2108,16 @@ int msm_venc_set_frame_rate(struct msm_vidc_inst *inst)
 
 	s_vpr_h(inst->sid, "%s: %#x\n", __func__, frame_rate.frame_rate);
 
-	rc = call_hfi_op(hdev, session_set_property,
-		inst->session, HFI_PROPERTY_CONFIG_FRAME_RATE,
+	if (external_requested) {
+		rc = call_hfi_op(hdev, session_set_property,
+			inst->session, HFI_PROPERTY_CONFIG_FRAME_RATE,
+			&frame_rate, sizeof(frame_rate));
+	} else {
+		s_vpr_l(inst->sid, "Auto frame rate set");
+		rc = call_hfi_op(hdev, session_set_property,
+		inst->session, HFI_PROPERTY_CONFIG_VENC_AUTO_FRAME_RATE,
 		&frame_rate, sizeof(frame_rate));
+	}
 	if (rc)
 		s_vpr_e(inst->sid, "%s: set property failed\n", __func__);
 
@@ -2202,7 +2189,7 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 			inst->clk_data.frame_rate = entry->framerate;
 		s_vpr_l(inst->sid, "%s: updated fps to %u\n",
 			__func__, (inst->clk_data.frame_rate >> 16));
-		msm_venc_set_frame_rate(inst);
+		msm_venc_set_frame_rate(inst, false);
 	}
 
 unlock:
@@ -4910,7 +4897,7 @@ int msm_venc_set_properties(struct msm_vidc_inst *inst)
 	rc = msm_venc_set_frame_size(inst);
 	if (rc)
 		goto exit;
-	rc = msm_venc_set_frame_rate(inst);
+	rc = msm_venc_set_frame_rate(inst, true);
 	if (rc)
 		goto exit;
 	rc = msm_venc_set_secure_mode(inst);

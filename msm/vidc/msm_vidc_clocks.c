@@ -726,6 +726,13 @@ static unsigned long msm_vidc_calc_freq_iris2(struct msm_vidc_inst *inst,
 		if (fps == 480)
 			vpp_cycles += div_u64(vpp_cycles * 2, 100);
 
+		/*
+		 * Add 5 percent extra for 720p@960fps use case
+		 * to bump it to next level (366MHz).
+		 */
+		if (fps == 960)
+			vpp_cycles += div_u64(vpp_cycles * 5, 100);
+
 		/* VSP */
 		/* bitrate is based on fps, scale it using operating rate */
 		operating_rate = inst->clk_data.operating_rate >> 16;

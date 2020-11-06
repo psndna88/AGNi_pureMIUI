@@ -169,8 +169,8 @@ static inline bool is_ts_reorder_allowed(struct msm_vidc_inst *inst)
 	if (inst->session_type != MSM_VIDC_DECODER)
 		return true;
 
-	if (!is_heif_decoder(inst))
-		return true;
+	if (is_heif_decoder(inst))
+		return false;
 
 	ctrl = get_ctrl(inst,
 		V4L2_CID_MPEG_VIDC_VIDEO_DISABLE_TIMESTAMP_REORDER);
@@ -266,6 +266,7 @@ static inline int msm_comm_s_ctrl(struct msm_vidc_inst *inst,
 	return v4l2_s_ctrl(NULL, &inst->ctrl_handler, ctrl);
 }
 
+bool vidc_scalar_enabled(struct msm_vidc_inst *inst);
 bool is_single_session(struct msm_vidc_inst *inst, u32 ignore_flags);
 bool is_batching_allowed(struct msm_vidc_inst *inst);
 enum hal_buffer get_hal_buffer_type(unsigned int type,
