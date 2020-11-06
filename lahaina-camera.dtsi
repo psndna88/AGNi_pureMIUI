@@ -444,17 +444,11 @@
 			iommus = <&apps_smmu 0x20E2 0x400>,
 				<&apps_smmu 0x24E2 0x400>,
 				<&apps_smmu 0x2000 0x400>,
-				<&apps_smmu 0x2001 0xc60>,
 				<&apps_smmu 0x2400 0x400>,
-				<&apps_smmu 0x2401 0xc60>,
 				<&apps_smmu 0x2060 0x400>,
-				<&apps_smmu 0x2061 0xc60>,
 				<&apps_smmu 0x2460 0x400>,
-				<&apps_smmu 0x2461 0xc60>,
 				<&apps_smmu 0x2020 0x400>,
-				<&apps_smmu 0x2021 0xc60>,
-				<&apps_smmu 0x2420 0x400>,
-				<&apps_smmu 0x2421 0xc60>;
+				<&apps_smmu 0x2420 0x400>;
 			cam-smmu-label = "icp";
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
 			iova-region-discard = <0xdff00000 0x300000>;
@@ -470,10 +464,10 @@
 				};
 
 				iova-mem-region-shared {
-					/* Shared region is 150MB long */
+					/* Shared region is 261MB long */
 					iova-region-name = "shared";
-					iova-region-start = <0x7400000>;
-					iova-region-len = <0x9600000>;
+					iova-region-start = <0x500000>;
+					iova-region-len = <0x10500000>;
 					iova-region-id = <0x1>;
 					status = "ok";
 				};
