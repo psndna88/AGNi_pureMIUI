@@ -1708,10 +1708,10 @@ sme_reset_link_layer_stats_ind_cb(mac_handle_t mac_handle)
 QDF_STATUS sme_set_wisa_params(mac_handle_t mac_handle,
 			       struct sir_wisa_params *wisa_params);
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
-QDF_STATUS sme_update_roam_key_mgmt_offload_enabled(mac_handle_t mac_handle,
-		uint8_t session_id,
-		bool key_mgmt_offload_enabled,
-		struct pmkid_mode_bits *pmkid_modes);
+QDF_STATUS
+sme_update_roam_key_mgmt_offload_enabled(mac_handle_t mac_handle,
+					 uint8_t session_id,
+					 struct pmkid_mode_bits *pmkid_modes);
 #endif
 QDF_STATUS sme_get_link_status(mac_handle_t mac_handle,
 			       csr_link_status_callback callback,
@@ -3607,6 +3607,7 @@ static inline void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
  * sme_get_mcs_idx() - gets mcs index
  * @raw_rate: raw rate from fw
  * @rate_flags: rate flags
+ * @he_mcs_12_13_map: he mcs12/13 map
  * @nss: number of nss
  * @dcm: dcm will be calculated from rate
  * @guard_interval: guard interval info from rate
@@ -3615,6 +3616,7 @@ static inline void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
  * Return: return mcs index
  */
 uint8_t sme_get_mcs_idx(uint16_t raw_rate, enum tx_rate_info rate_flags,
+			uint16_t he_mcs_12_13_map,
 			uint8_t *nss, uint8_t *dcm,
 			enum txrate_gi *guard_interval,
 			enum tx_rate_info *mcs_rate_flags);

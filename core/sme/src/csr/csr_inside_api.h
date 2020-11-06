@@ -734,7 +734,6 @@ QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac, uint32_t sessionId,
 
 QDF_STATUS csr_roam_set_key_mgmt_offload(struct mac_context *mac_ctx,
 					 uint32_t session_id,
-					 bool roam_key_mgmt_offload_enabled,
 					 struct pmkid_mode_bits *pmkid_modes);
 #endif
 /*
@@ -894,6 +893,16 @@ QDF_STATUS csr_roam_del_pmkid_from_cache(struct mac_context *mac,
 					 uint32_t sessionId,
 					 tPmkidCacheInfo *pmksa,
 					 bool flush_cache);
+
+/**
+ * csr_update_pmk_cache_ft - API to update MDID in PMKSA cache entry
+ * @session_id: session ID
+ * @session: sme session pointer
+ *
+ * Return: None
+ */
+void csr_update_pmk_cache_ft(struct mac_context *mac, uint32_t session_id,
+			     struct csr_roam_session *session);
 
 #if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**

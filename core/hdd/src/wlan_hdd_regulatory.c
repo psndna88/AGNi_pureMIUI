@@ -764,7 +764,7 @@ uint32_t hdd_reg_legacy_setband_to_reg_wifi_band_bitmap(uint8_t qca_setband)
 
 	switch (qca_setband) {
 	case QCA_SETBAND_AUTO:
-		band_bitmap |= (BIT(REG_BAND_2G) | BIT(REG_BAND_5G));
+		band_bitmap |= REG_BAND_MASK_ALL;
 		break;
 	case QCA_SETBAND_5G:
 		band_bitmap |= BIT(REG_BAND_5G);
@@ -1389,7 +1389,7 @@ static void hdd_regulatory_chanlist_dump(struct regulatory_channel *chan_list)
  */
 static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 {
-	struct hdd_adapter *adapter = NULL;
+	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
 	struct hdd_station_ctx *sta_ctx = NULL;
 	struct csr_roam_profile *roam_profile = NULL;
 	struct wlan_objmgr_pdev *pdev = NULL;
@@ -1400,7 +1400,7 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 
 	pdev = hdd_ctx->pdev;
 
-	hdd_for_each_adapter_dev_held(hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		oper_freq = hdd_get_adapter_home_channel(adapter);
 		freq_changed = wlan_reg_is_disable_for_freq(pdev, oper_freq);
 
@@ -1518,7 +1518,7 @@ static void hdd_restart_sap_with_new_phymode(struct hdd_context *hdd_ctx,
  */
 static void hdd_country_change_update_sap(struct hdd_context *hdd_ctx)
 {
-	struct hdd_adapter *adapter = NULL;
+	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
 	struct sap_config *sap_config = NULL;
 	struct wlan_objmgr_pdev *pdev = NULL;
 	uint32_t reg_phy_mode, new_phy_mode;
@@ -1528,7 +1528,7 @@ static void hdd_country_change_update_sap(struct hdd_context *hdd_ctx)
 
 	pdev = hdd_ctx->pdev;
 
-	hdd_for_each_adapter_dev_held(hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		oper_freq = hdd_get_adapter_home_channel(adapter);
 
 		switch (adapter->device_mode) {
@@ -1572,6 +1572,8 @@ static void __hdd_country_change_work_handle(struct hdd_context *hdd_ctx)
 	 * selection for SAPs
 	 */
 	hdd_country_change_update_sta(hdd_ctx);
+	sme_generic_change_country_code(hdd_ctx->mac_handle,
+					hdd_ctx->reg.alpha2);
 	hdd_country_change_update_sap(hdd_ctx);
 }
 
@@ -1645,8 +1647,6 @@ static void hdd_regulatory_dyn_cbk(struct wlan_objmgr_psoc *psoc,
 	} else {
 		hdd_config_tdls_with_band_switch(hdd_ctx);
 
-		sme_generic_change_country_code(hdd_ctx->mac_handle,
-				hdd_ctx->reg.alpha2);
 		qdf_sched_work(0, &hdd_ctx->country_change_work);
 	}
 }

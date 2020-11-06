@@ -68,6 +68,8 @@
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT
 #define STA_INFO_BEACON_REPLAY_COUNT \
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT
+#define STA_INFO_CONNECT_FAIL_REASON_CODE \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE
 #define STA_INFO_MAX \
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX
 
@@ -292,6 +294,33 @@ static int hdd_convert_auth_type(uint32_t auth_type)
 	case eCSR_AUTH_TYPE_FT_SUITEB_EAP_SHA384:
 		ret_val = QCA_WLAN_AUTH_TYPE_FT_SUITEB_EAP_SHA384;
 		break;
+	case eCSR_AUTH_TYPE_SAE:
+		ret_val = QCA_WLAN_AUTH_TYPE_SAE;
+		break;
+	case eCSR_AUTH_TYPE_FILS_SHA256:
+		ret_val = QCA_WLAN_AUTH_TYPE_FILS_SHA256;
+		break;
+	case eCSR_AUTH_TYPE_FILS_SHA384:
+		ret_val = QCA_WLAN_AUTH_TYPE_FILS_SHA384;
+		break;
+	case eCSR_AUTH_TYPE_FT_FILS_SHA256:
+		ret_val = QCA_WLAN_AUTH_TYPE_FT_FILS_SHA256;
+		break;
+	case eCSR_AUTH_TYPE_FT_FILS_SHA384:
+		ret_val = QCA_WLAN_AUTH_TYPE_FT_FILS_SHA384;
+		break;
+	case eCSR_AUTH_TYPE_DPP_RSN:
+		ret_val = QCA_WLAN_AUTH_TYPE_DPP_RSN;
+		break;
+	case eCSR_AUTH_TYPE_OWE:
+		ret_val = QCA_WLAN_AUTH_TYPE_OWE;
+		break;
+	case eCSR_AUTH_TYPE_SUITEB_EAP_SHA256:
+		ret_val = QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA256;
+		break;
+	case eCSR_AUTH_TYPE_SUITEB_EAP_SHA384:
+		ret_val = QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA384;
+		break;
 	case eCSR_NUM_OF_SUPPORT_AUTH_TYPE:
 	case eCSR_AUTH_TYPE_FAILED:
 	case eCSR_AUTH_TYPE_NONE:
@@ -416,6 +445,7 @@ static void hdd_get_max_tx_bitrate(struct hdd_context *hdd_ctx,
 	uint8_t tx_mcs_index, tx_nss = 1;
 	uint16_t my_tx_rate;
 	struct hdd_station_ctx *hdd_sta_ctx;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
@@ -427,15 +457,24 @@ static void hdd_get_max_tx_bitrate(struct hdd_context *hdd_ctx,
 	my_tx_rate = adapter->hdd_stats.class_a_stat.tx_rate;
 
 	if (!(tx_rate_flags & TX_RATE_LEGACY)) {
-		tx_nss = adapter->hdd_stats.class_a_stat.tx_nss;
-		if (tx_nss > 1 &&
-		    policy_mgr_is_current_hwmode_dbs(hdd_ctx->psoc) &&
-		    !policy_mgr_is_hw_dbs_2x2_capable(hdd_ctx->psoc)) {
-			hdd_debug("Hw mode is DBS, Reduce nss(%d) to 1",
-				  tx_nss);
-			tx_nss--;
+		vdev = hdd_objmgr_get_vdev(adapter);
+		if (vdev) {
+			/*
+			 * Take static NSS for reporting max rates.
+			 * NSS from FW is not reliable as it changes
+			 * as per the environment quality.
+			 */
+			tx_nss = wlan_vdev_mlme_get_nss(vdev);
+			hdd_objmgr_put_vdev(vdev);
+		} else {
+			tx_nss = adapter->hdd_stats.class_a_stat.tx_nss;
 		}
+		hdd_check_and_update_nss(hdd_ctx, &tx_nss, NULL);
+
+		if (tx_mcs_index == INVALID_MCS_IDX)
+			tx_mcs_index = 0;
 	}
+
 	if (hdd_report_max_rate(adapter, hdd_ctx->mac_handle, &sinfo.txrate,
 				sinfo.signal, tx_rate_flags, tx_mcs_index,
 				my_tx_rate, tx_nss)) {
@@ -1512,7 +1551,6 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 	struct cdp_peer_stats *peer_stats;
 	struct stats_event *stats;
 	QDF_STATUS status;
-	bool found = false;
 	int i, ret = 0;
 
 	peer_stats = qdf_mem_malloc(sizeof(*peer_stats));
@@ -1552,14 +1590,10 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 	stainfo->tx_retry_fw = stats->peer_stats_info_ext->tx_retries;
 	stainfo->tx_retry_exhaust_fw = stats->peer_stats_info_ext->tx_failed;
 
-	wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
-
-	stats = wlan_cfg80211_mc_cp_stats_get_station_stats(adapter->vdev,
-							    &ret);
-	if (ret || !stats || !stats->num_peer_adv_stats) {
-		wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
-		hdd_err("Failed to get peer stats info");
-		return -EINVAL;
+	/* Optional, just print logs here */
+	if (!stats->num_peer_adv_stats) {
+		hdd_debug("Failed to get peer adv stats info");
+		stainfo->rx_fcs_count = 0;
 	}
 
 	for (i = 0; i < stats->num_peer_adv_stats; i++) {
@@ -1568,14 +1602,8 @@ static int hdd_get_peer_stats(struct hdd_adapter *adapter,
 				 QDF_MAC_ADDR_SIZE)) {
 			stainfo->rx_fcs_count = stats->peer_adv_stats[i].
 								      fcs_count;
-			found = true;
 			break;
 		}
-	}
-
-	if (!found) {
-		hdd_err("Peer not found");
-		ret = -EINVAL;
 	}
 
 	wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
@@ -1602,7 +1630,8 @@ hdd_add_peer_stats_get_len(struct hdd_station_info *stainfo)
 		nla_attr_size(sizeof(stainfo->tx_retry_exhaust)) +
 		nla_attr_size(sizeof(stainfo->tx_total_fw)) +
 		nla_attr_size(sizeof(stainfo->tx_retry_fw)) +
-		nla_attr_size(sizeof(stainfo->tx_retry_exhaust_fw)));
+		nla_attr_size(sizeof(stainfo->tx_retry_exhaust_fw)) +
+		nla_attr_size(sizeof(stainfo->rx_fcs_count)));
 }
 
 /**
@@ -1620,7 +1649,16 @@ hdd_get_pmf_bcn_protect_stats_len(struct hdd_adapter *adapter)
 		return 0;
 
 	/* 4 pmf becon protect counters each of 32 bit */
-	return nla_attr_size(sizeof(uint32_t) * 4);
+	return nla_total_size(sizeof(uint32_t)) * 4;
+}
+
+static uint32_t
+hdd_get_connect_fail_reason_code_len(struct hdd_adapter *adapter)
+{
+	if (adapter->connect_req_status == STATUS_SUCCESS)
+		return 0;
+
+	return nla_total_size(sizeof(uint32_t));
 }
 
 /**
@@ -1647,6 +1685,79 @@ static int hdd_add_pmf_bcn_protect_stats(struct sk_buff *skb,
 			adapter->hdd_stats.bcn_protect_stats.bcn_mic_fail_cnt) ||
 	    nla_put_u32(skb, STA_INFO_BEACON_REPLAY_COUNT,
 			adapter->hdd_stats.bcn_protect_stats.bcn_replay_cnt)) {
+		hdd_err("put fail");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
+ * hdd_get_umac_to_osif_connect_fail_reason() - Convert to qca internal connect
+ * fail reason
+ * @internal_reason: Mac reason code of type @wlan_status_code
+ *
+ * Check if it is internal status code and convert it to the
+ * enum qca_sta_connect_fail_reason_codes.
+ *
+ * Return: Reason code of type enum qca_sta_connect_fail_reason_codes
+ */
+static enum qca_sta_connect_fail_reason_codes
+hdd_get_umac_to_osif_connect_fail_reason(enum wlan_status_code internal_reason)
+{
+	enum qca_sta_connect_fail_reason_codes reason = 0;
+
+	if (internal_reason < STATUS_PROP_START)
+		return reason;
+
+	switch (internal_reason) {
+	case STATUS_NO_NETWORK_FOUND:
+		reason = QCA_STA_CONNECT_FAIL_REASON_NO_BSS_FOUND;
+		break;
+	case STATUS_AUTH_TX_FAIL:
+		reason = QCA_STA_CONNECT_FAIL_REASON_AUTH_TX_FAIL;
+		break;
+	case STATUS_AUTH_NO_ACK_RECEIVED:
+		reason = QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_ACK_RECEIVED;
+		break;
+	case STATUS_AUTH_NO_RESP_RECEIVED:
+		reason = QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_RESP_RECEIVED;
+		break;
+	case STATUS_ASSOC_TX_FAIL:
+		reason = QCA_STA_CONNECT_FAIL_REASON_ASSOC_REQ_TX_FAIL;
+		break;
+	case STATUS_ASSOC_NO_ACK_RECEIVED:
+		reason = QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_ACK_RECEIVED;
+		break;
+	case STATUS_ASSOC_NO_RESP_RECEIVED:
+		reason = QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_RESP_RECEIVED;
+		break;
+	default:
+		hdd_debug("QCA code not present for internal status code %d",
+			  internal_reason);
+	}
+
+	return reason;
+}
+
+/**
+ * hdd_add_connect_fail_reason_code() - Fills connect fail reason code
+ * @skb: pointer to skb
+ * @adapter: pointer to hdd adapter
+ *
+ * Return: on success 0 else error code
+ */
+static int hdd_add_connect_fail_reason_code(struct sk_buff *skb,
+					    struct hdd_adapter *adapter)
+{
+	uint32_t reason;
+
+	reason = hdd_get_umac_to_osif_connect_fail_reason(
+					adapter->connect_req_status);
+	if (!reason)
+		return 0;
+
+	if (nla_put_u32(skb, STA_INFO_CONNECT_FAIL_REASON_CODE, reason)) {
 		hdd_err("put fail");
 		return -EINVAL;
 	}
@@ -1852,20 +1963,29 @@ static int hdd_get_station_remote_ex(struct hdd_context *hdd_ctx,
 				hdd_get_sta_info_by_mac(&adapter->sta_info_list,
 					       mac_addr.bytes,
 					       STA_INFO_HDD_GET_STATION_REMOTE);
+	int status;
 
 	/* For now, only connected STAs are supported */
 	if (!stainfo) {
-		hdd_err_rl("Failed to get peer STA");
+		hdd_err_rl("Failed to get peer STA " QDF_MAC_ADDR_FMT,
+			   QDF_MAC_ADDR_REF(mac_addr.bytes));
 		return -EINVAL;
 	}
 
 	is_associated = hdd_is_peer_associated(adapter, &mac_addr);
 	if (!is_associated) {
-		hdd_err_rl("Peer STA is not associated");
+		hdd_err_rl("Peer STA is not associated " QDF_MAC_ADDR_FMT,
+			   QDF_MAC_ADDR_REF(mac_addr.bytes));
+		hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true,
+				     STA_INFO_HDD_GET_STATION_REMOTE);
 		return -EINVAL;
 	}
 
-	return hdd_get_connected_station_info_ex(hdd_ctx, adapter, stainfo);
+	status = hdd_get_connected_station_info_ex(hdd_ctx, adapter, stainfo);
+	hdd_put_sta_info_ref(&adapter->sta_info_list, &stainfo, true,
+			     STA_INFO_HDD_GET_STATION_REMOTE);
+
+	return status;
 }
 
 /**
@@ -1879,17 +1999,18 @@ static int hdd_get_station_info_ex(struct hdd_context *hdd_ctx,
 				   struct hdd_adapter *adapter)
 {
 	struct sk_buff *skb;
-	uint32_t nl_buf_len;
+	uint32_t nl_buf_len, connect_fail_rsn_len;
 	struct hdd_station_ctx *hdd_sta_ctx;
 
 	hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
-	if (wlan_hdd_get_station_stats(adapter)) {
+	if (wlan_hdd_get_station_stats(adapter))
 		hdd_err_rl("wlan_hdd_get_station_stats fail");
-		return -EINVAL;
-	}
 
 	nl_buf_len = hdd_get_pmf_bcn_protect_stats_len(adapter);
+	connect_fail_rsn_len = hdd_get_connect_fail_reason_code_len(adapter);
+	nl_buf_len += connect_fail_rsn_len;
+
 	if (!nl_buf_len) {
 		hdd_err_rl("Failed to get bcn pmf stats");
 		return -EINVAL;
@@ -1906,6 +2027,13 @@ static int hdd_get_station_info_ex(struct hdd_context *hdd_ctx,
 		hdd_err_rl("hdd_add_pmf_bcn_protect_stats fail");
 		kfree_skb(skb);
 		return -EINVAL;
+	}
+
+	if (connect_fail_rsn_len) {
+		if (hdd_add_connect_fail_reason_code(skb, adapter)) {
+			hdd_err_rl("hdd_add_connect_fail_reason_code fail");
+			return -ENOMEM;
+		}
 	}
 
 	return cfg80211_vendor_cmd_reply(skb);

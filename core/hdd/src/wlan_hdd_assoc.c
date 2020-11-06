@@ -405,7 +405,7 @@ hdd_conn_get_connected_cipher_algo(struct hdd_station_ctx *sta_ctx,
 struct hdd_adapter *hdd_get_sta_connection_in_progress(
 			struct hdd_context *hdd_ctx)
 {
-	struct hdd_adapter *adapter = NULL;
+	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
 	struct hdd_station_ctx *hdd_sta_ctx;
 
 	if (!hdd_ctx) {
@@ -413,7 +413,7 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 		return NULL;
 	}
 
-	hdd_for_each_adapter(hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 		if ((QDF_STA_MODE == adapter->device_mode) ||
 		    (QDF_P2P_CLIENT_MODE == adapter->device_mode) ||
@@ -422,6 +422,9 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 			    hdd_sta_ctx->conn_info.conn_state) {
 				hdd_debug("vdev_id %d: Connection is in progress",
 					  adapter->vdev_id);
+				dev_put(adapter->dev);
+				if (next_adapter)
+					dev_put(next_adapter->dev);
 				return adapter;
 			} else if ((eConnectionState_Associated ==
 				   hdd_sta_ctx->conn_info.conn_state) &&
@@ -430,9 +433,13 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 							adapter->vdev_id)) {
 				hdd_debug("vdev_id %d: Key exchange is in progress",
 					  adapter->vdev_id);
+				dev_put(adapter->dev);
+				if (next_adapter)
+					dev_put(next_adapter->dev);
 				return adapter;
 			}
 		}
+		dev_put(adapter->dev);
 	}
 	return NULL;
 }
@@ -2799,6 +2806,15 @@ static inline void hdd_netif_queue_enable(struct hdd_adapter *adapter)
 	}
 }
 
+static void hdd_save_connect_status(struct hdd_adapter *adapter,
+				    struct csr_roam_info *roam_info)
+{
+	if (!roam_info)
+		return;
+
+	adapter->connect_req_status = roam_info->reasonCode;
+}
+
 /**
  * hdd_association_completion_handler() - association completion handler
  * @adapter: pointer to adapter
@@ -2819,6 +2835,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 	struct net_device *dev = adapter->dev;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	int8_t snr = 0;
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 	uint8_t *reqRsnIe;
 	uint32_t reqRsnLength = DOT11F_IE_RSN_MAX_LEN, ie_len;
@@ -2845,6 +2862,24 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	hdd_get_rssi_snr_by_bssid(adapter, sta_ctx->conn_info.bssid.bytes,
+				  &adapter->rssi, &snr);
+
+	/* If RSSi is reported as positive then it is invalid */
+	if (adapter->rssi > 0) {
+		hdd_debug_rl("RSSI invalid %d", adapter->rssi);
+		adapter->rssi = 0;
+	}
+
+	hdd_debug("snr: %d, rssi: %d", snr, adapter->rssi);
+
+	sta_ctx->conn_info.signal = adapter->rssi;
+	sta_ctx->conn_info.noise =
+		sta_ctx->conn_info.signal - snr;
+	sta_ctx->cache_conn_info.signal = sta_ctx->conn_info.signal;
+	sta_ctx->cache_conn_info.noise = sta_ctx->conn_info.noise;
+
+	hdd_save_connect_status(adapter, roam_info);
 	/*
 	 * reset scan reject params if connection is success or we received
 	 * final failure from CSR after trying with all APs.

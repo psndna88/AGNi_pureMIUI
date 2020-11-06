@@ -4758,6 +4758,8 @@ hdd_send_roam_triggers_to_sme(struct hdd_context *hdd_ctx,
 	triggers.vdev_id = vdev_id;
 	triggers.trigger_bitmap =
 	    wlan_hdd_convert_control_roam_trigger_bitmap(roam_trigger_bitmap);
+	hdd_debug("trigger bitmap: 0x%x converted trigger_bitmap: 0x%x",
+		  roam_trigger_bitmap, triggers.trigger_bitmap);
 
 	/*
 	 * roam trigger bitmap is > 0 - Roam triggers are set.
@@ -5103,7 +5105,12 @@ hdd_set_roam_with_control_config(struct hdd_context *hdd_ctx,
 				  QCA_ROAM_TRIGGER_REASON_PERIODIC | \
 				  QCA_ROAM_TRIGGER_REASON_DENSE | \
 				  QCA_ROAM_TRIGGER_REASON_BTM | \
-				  QCA_ROAM_TRIGGER_REASON_BSS_LOAD)
+				  QCA_ROAM_TRIGGER_REASON_BSS_LOAD | \
+				  QCA_ROAM_TRIGGER_REASON_USER_TRIGGER | \
+				  QCA_ROAM_TRIGGER_REASON_DEAUTH | \
+				  QCA_ROAM_TRIGGER_REASON_IDLE | \
+				  QCA_ROAM_TRIGGER_REASON_TX_FAILURES | \
+				  QCA_ROAM_TRIGGER_REASON_EXTERNAL_SCAN)
 
 static int
 hdd_clear_roam_control_config(struct hdd_context *hdd_ctx,
@@ -5725,11 +5732,11 @@ wlan_hdd_set_no_dfs_flag_config_policy[QCA_WLAN_VENDOR_ATTR_SET_NO_DFS_FLAG_MAX
 static bool wlan_hdd_check_dfs_channel_for_adapter(struct hdd_context *hdd_ctx,
 				enum QDF_OPMODE device_mode)
 {
-	struct hdd_adapter *adapter;
+	struct hdd_adapter *adapter, *next_adapter = NULL;
 	struct hdd_ap_ctx *ap_ctx;
 	struct hdd_station_ctx *sta_ctx;
 
-	hdd_for_each_adapter(hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		if ((device_mode == adapter->device_mode) &&
 		    (device_mode == QDF_SAP_MODE)) {
 			ap_ctx =
@@ -5746,6 +5753,9 @@ static bool wlan_hdd_check_dfs_channel_for_adapter(struct hdd_context *hdd_ctx,
 				hdd_ctx->pdev,
 				ap_ctx->operating_chan_freq)) {
 				hdd_err("SAP running on DFS channel");
+				dev_put(adapter->dev);
+				if (next_adapter)
+					dev_put(next_adapter->dev);
 				return true;
 			}
 		}
@@ -5764,9 +5774,13 @@ static bool wlan_hdd_check_dfs_channel_for_adapter(struct hdd_context *hdd_ctx,
 				hdd_ctx->pdev,
 				sta_ctx->conn_info.chan_freq))) {
 				hdd_err("client connected on DFS channel");
+				dev_put(adapter->dev);
+				if (next_adapter)
+					dev_put(next_adapter->dev);
 				return true;
 			}
 		}
+		dev_put(adapter->dev);
 	}
 
 	return false;
@@ -6179,7 +6193,7 @@ static int __wlan_hdd_cfg80211_keymgmt_set_key(struct wiphy *wiphy,
 	mac_handle = hdd_ctx->mac_handle;
 	sme_update_roam_key_mgmt_offload_enabled(mac_handle,
 						 hdd_adapter->vdev_id,
-						 true, &pmkid_modes);
+						 &pmkid_modes);
 	qdf_mem_zero(&local_pmk, SIR_ROAM_SCAN_PSK_SIZE);
 	qdf_mem_copy(local_pmk, data, data_len);
 	sme_roam_set_psk_pmk(mac_handle, hdd_adapter->vdev_id,
@@ -11806,13 +11820,15 @@ static enum sta_roam_policy_dfs_mode wlan_hdd_get_sta_roam_dfs_mode(
  */
 uint8_t hdd_get_sap_operating_band(struct hdd_context *hdd_ctx)
 {
-	struct hdd_adapter *adapter;
+	struct hdd_adapter *adapter, *next_adapter = NULL;
 	uint32_t  operating_chan_freq;
 	uint8_t sap_operating_band = 0;
 
-	hdd_for_each_adapter(hdd_ctx, adapter) {
-		if (adapter->device_mode != QDF_SAP_MODE)
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
+		if (adapter->device_mode != QDF_SAP_MODE) {
+			dev_put(adapter->dev);
 			continue;
+		}
 
 		operating_chan_freq = adapter->session.ap.operating_chan_freq;
 		if (WLAN_REG_IS_24GHZ_CH_FREQ(operating_chan_freq))
@@ -11822,6 +11838,8 @@ uint8_t hdd_get_sap_operating_band(struct hdd_context *hdd_ctx)
 			sap_operating_band = BAND_5G;
 		else
 			sap_operating_band = BAND_ALL;
+
+		dev_put(adapter->dev);
 	}
 
 	return sap_operating_band;
@@ -23458,7 +23476,8 @@ static void hdd_update_chan_info(struct hdd_context *hdd_ctx,
 #endif
 
 #if defined(WLAN_FEATURE_FILS_SK) &&\
-	defined(CFG80211_FILS_SK_OFFLOAD_SUPPORT) &&\
+	(defined(CFG80211_FILS_SK_OFFLOAD_SUPPORT) ||\
+		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))) &&\
 	(defined(CFG80211_UPDATE_CONNECT_PARAMS) ||\
 		(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)))
 
