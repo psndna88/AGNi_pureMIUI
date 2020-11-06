@@ -252,9 +252,9 @@
 #define WLAN_CFG_RX_RELEASE_RING_SIZE_MAX 8192
 #endif
 
-#define WLAN_CFG_REO_EXCEPTION_RING_SIZE 128
+#define WLAN_CFG_REO_EXCEPTION_RING_SIZE 256
 #define WLAN_CFG_REO_EXCEPTION_RING_SIZE_MIN 128
-#define WLAN_CFG_REO_EXCEPTION_RING_SIZE_MAX 128
+#define WLAN_CFG_REO_EXCEPTION_RING_SIZE_MAX 512
 
 #define WLAN_CFG_REO_CMD_RING_SIZE 128
 #define WLAN_CFG_REO_CMD_RING_SIZE_MIN 64
@@ -999,6 +999,24 @@
 #define CFG_DP_SWLM_ENABLE \
 	CFG_INI_BOOL("gEnableSWLM", false, \
 		     "Enable/Disable DP SWLM")
+/*
+ * <ini>
+ * wow_check_rx_pending_enable - control to check RX frames pending in Wow
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to control DP Software to perform RX pending check
+ * before entering WoW mode
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_WOW_CHECK_RX_PENDING \
+		CFG_INI_BOOL("wow_check_rx_pending_enable", \
+		false, \
+		"enable rx frame pending check in WoW mode")
 
 #define CFG_DP \
 		CFG(CFG_DP_HTT_PACKET_TYPE) \
@@ -1086,5 +1104,6 @@
 		CFG(CFG_DP_POLL_MODE_ENABLE) \
 		CFG(CFG_DP_SWLM_ENABLE) \
 		CFG(CFG_DP_TX_PER_PKT_VDEV_ID_CHECK) \
-		CFG(CFG_DP_RX_FST_IN_CMEM)
+		CFG(CFG_DP_RX_FST_IN_CMEM) \
+		CFG(CFG_DP_WOW_CHECK_RX_PENDING)
 #endif /* _CFG_DP_H_ */

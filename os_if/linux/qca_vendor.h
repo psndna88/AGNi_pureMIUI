@@ -777,6 +777,12 @@ enum qca_wlan_vendor_hang_reason {
 	 * the FW on a specific VDEV.
 	 */
 	QCA_WLAN_HANG_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT = 22,
+	/* WMI sequence mismatch between WMI command and Tx completion */
+	QCA_WLAN_HANG_WMI_BUF_SEQUENCE_MISMATCH = 23,
+	/* Write to Device HAL register failed */
+	QCA_WLAN_HANG_REG_WRITE_FAILURE = 24,
+	/* No credit left to send the wow_wakeup_from_sleep to firmware */
+	QCA_WLAN_HANG_SUSPEND_NO_CREDIT = 25,
 };
 
 /**
@@ -913,8 +919,18 @@ enum qca_wlan_802_11_mode {
  * @QCA_WLAN_AUTH_TYPE_WAI_PSK wai psk key
  * @QCA_WLAN_AUTH_TYPE_CCKM_WPA: cckm wpa key
  * @QCA_WLAN_AUTH_TYPE_CCKM_RSN: cckm rsn key
+ * @QCA_WLAN_AUTH_TYPE_AUTOSWITCH: Autoswitch key
  * @QCA_WLAN_AUTH_TYPE_FT_SAE: FT sae akm
  * @QCA_WLAN_AUTH_TYPE_FT_SUITEB_EAP_SHA384: FT suite B SHA384
+ * @QCA_WLAN_AUTH_TYPE_SAE: SAE key
+ * @QCA_WLAN_AUTH_TYPE_FILS_SHA256: FILS SHA 256 key
+ * @QCA_WLAN_AUTH_TYPE_FILS_SHA384: FILS SAH 384 key
+ * @QCA_WLAN_AUTH_TYPE_FT_FILS_SHA256: FT FILS SHA 256 key
+ * @QCA_WLAN_AUTH_TYPE_FT_FILS_SHA384: FT FILS SHA 384 key
+ * @QCA_WLAN_AUTH_TYPE_DPP_RSN: DPP RSN key
+ * @QCA_WLAN_AUTH_TYPE_OWE: owe key
+ * @QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA256 : EAP SHA 256 key
+ * @QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA384 : EAP SHA 384 key
  */
 enum qca_wlan_auth_type {
 	QCA_WLAN_AUTH_TYPE_INVALID,
@@ -936,6 +952,15 @@ enum qca_wlan_auth_type {
 	QCA_WLAN_AUTH_TYPE_AUTOSWITCH,
 	QCA_WLAN_AUTH_TYPE_FT_SAE,
 	QCA_WLAN_AUTH_TYPE_FT_SUITEB_EAP_SHA384,
+	QCA_WLAN_AUTH_TYPE_SAE,
+	QCA_WLAN_AUTH_TYPE_FILS_SHA256,
+	QCA_WLAN_AUTH_TYPE_FILS_SHA384,
+	QCA_WLAN_AUTH_TYPE_FT_FILS_SHA256,
+	QCA_WLAN_AUTH_TYPE_FT_FILS_SHA384,
+	QCA_WLAN_AUTH_TYPE_DPP_RSN,
+	QCA_WLAN_AUTH_TYPE_OWE,
+	QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA256,
+	QCA_WLAN_AUTH_TYPE_SUITEB_EAP_SHA384,
 };
 
 /**
@@ -9567,6 +9592,15 @@ enum qca_vendor_wlan_sta_guard_interval {
  * only. This represents number of Beacon frames received from this station with
  * the packet number less than or equal to the last received packet number when
  * beacon protection is enabled.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE: u32, used in
+ * STA mode only. Driver uses this attribute to populate the connection failure
+ * reason codes and the values are defined in
+ * enum qca_sta_connect_fail_reason_codes. Userspace applications can send
+ * QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO vendor command after receiving
+ * connection failure from driver. The driver shall not include this attribute
+ * in response to QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO command if there is no
+ * connection failure observed in the last attempted connection.
  */
 enum qca_wlan_vendor_attr_get_sta_info {
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_INVALID = 0,
@@ -9609,6 +9643,7 @@ enum qca_wlan_vendor_attr_get_sta_info {
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BIP_REPLAY_COUNT = 40,
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT = 41,
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT = 42,
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE = 43,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_AFTER_LAST,
@@ -10009,6 +10044,34 @@ enum qca_wlan_vendor_oci_override_frame_type {
 	QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_SA_QUERY_RESP = 2,
 	QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_FT_REASSOC_REQ = 3,
 	QCA_WLAN_VENDOR_OCI_OVERRIDE_FRAME_FILS_REASSOC_REQ = 4,
+};
+
+/**
+ * enum qca_sta_connect_fail_reason_codes - Defines values carried
+ * by QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE vendor
+ * attribute.
+ * @QCA_STA_CONNECT_FAIL_REASON_NO_BSS_FOUND: No probe response frame received
+ * for unicast probe request.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_TX_FAIL: STA failed to send auth request.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_ACK_RECEIVED: AP didn't send ACK for
+ * ath request.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_RESP_RECEIVED: Auth response is not
+ * received from AP.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_REQ_TX_FAIL: STA failed to send assoc
+ * request.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_ACK_RECEIVED: AP didn't send ACK for
+ * assoc request.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_RESP_RECEIVED: Assoc response is not
+ * received from AP.
+ */
+enum qca_sta_connect_fail_reason_codes {
+	QCA_STA_CONNECT_FAIL_REASON_NO_BSS_FOUND = 1,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_TX_FAIL = 2,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_ACK_RECEIVED = 3,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_RESP_RECEIVED = 4,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_REQ_TX_FAIL = 5,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_ACK_RECEIVED = 6,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_RESP_RECEIVED = 7,
 };
 
 /**
