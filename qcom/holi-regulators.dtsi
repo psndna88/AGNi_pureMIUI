@@ -459,7 +459,7 @@
 		L1E: pm6150a_l1: regulator-l1 {
 			regulator-min-microvolt = <1650000>;
 			regulator-max-microvolt = <1980000>;
-			qcom,init-voltage = <1650000>;
+			qcom,init-voltage = <1800000>;
 			qcom,proxy-consumer-enable;
 			qcom,proxy-consumer-current = <62000>;
 			status = "okay";

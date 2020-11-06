@@ -37,15 +37,15 @@
 				qcom,min-child-idx = <2>;
 			};
 
-			CX_OFF: qcom,pm-cluster-level@2 { /* Cx Off */
+			CX_RET: qcom,pm-cluster-level@2 { /* Cx Ret */
 				reg = <2>;
 				compatible = "arm,idle-state";
-				idle-state-name = "cx-off";
+				idle-state-name = "cx-ret";
 				entry-latency-us = <3263>;
 				exit-latency-us = <4562>;
 				min-residency-us = <8467>;
-				arm,psci-suspend-param = <0x2240>;
-				qcom,psci-mode = <0x224>;
+				arm,psci-suspend-param = <0x1340>;
+				qcom,psci-mode = <0x134>;
 				qcom,is-reset;
 				qcom,notify-rpm;
 				qcom,min-child-idx = <2>;
@@ -58,8 +58,8 @@
 				entry-latency-us = <3638>;
 				exit-latency-us = <6562>;
 				min-residency-us = <9826>;
-				arm,psci-suspend-param = <0xc340>;
-				qcom,psci-mode = <0xc34>;
+				arm,psci-suspend-param = <0xb340>;
+				qcom,psci-mode = <0xb34>;
 				qcom,is-reset;
 				qcom,notify-rpm;
 				qcom,min-child-idx = <2>;

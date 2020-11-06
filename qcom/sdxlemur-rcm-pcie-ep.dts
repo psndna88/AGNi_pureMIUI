@@ -2,6 +2,7 @@
 
 #include "sdxlemur.dtsi"
 #include "sdxlemur-rcm-pcie-ep.dtsi"
+#include "sdxlemur-512mb.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR RCM PCIe-EP";

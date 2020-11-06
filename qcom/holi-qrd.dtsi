@@ -232,6 +232,10 @@
 	};
 };
 
+&pm6150a_l1 {
+	qcom,init-voltage = <1860000>;
+};
+
 &pm6150a_amoled {
 	status = "ok";
 };

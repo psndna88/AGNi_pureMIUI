@@ -62,6 +62,15 @@ Subsystem properties:
 		29. mmw_pa3
 		30. sdr_mmw_therm
 		31. msm_skin_therm
+		32. beamer_n_therm
+		33. beamer_e_therm
+		34. beamer_w_therm
+		35. qfe_ret_pa0_fr1
+		36. qfe_wtr_pa0_fr1
+		37. qfe_wtr_pa1_fr1
+		38. qfe_wtr_pa2_fr1
+		39. qfe_wtr_pa3_fr1
+		40. qfe_wtr0_fr1
 
 Example:
 

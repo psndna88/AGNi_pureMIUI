@@ -537,7 +537,8 @@
 		qcom,apps-ch-pipes = <0x0>;
 		qcom,ea-pc = <0x3d0>;
 		iommus = <&apps_smmu 0x2026 0x0>;
-		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+		qcom,iommu-geometry = <0x40000000 0x10000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 
@@ -2373,6 +2374,16 @@
 			 &epss_l3_cpu SLAVE_EPSS_L3_CPU7>;
 	};
 
+	cpu7_cpu_l3_latfloor: qcom,cpu7-cpu-l3-latfloor {
+		compatible = "qcom,devfreq-icc-l3";
+		reg = <0x18590100 0xa0>;
+		reg-names = "ftbl-base";
+		governor = "compute";
+		interconnects =
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS
+			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+	};
+
 	cpu0_cpu_llcc_lat: qcom,cpu0-cpu-llcc-lat {
 		compatible = "qcom,devfreq-icc";
 		governor = "mem_latency";
@@ -2547,6 +2558,15 @@
 			qcom,access-ev = <0x2B>;
 			qcom,wb-ev = <0x18>;
 			qcom,core-dev-table = <&cpu7_cpu_l3_tbl>;
+		};
+
+		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
+			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
+			qcom,core-dev-table =
+				< 2169600  300000000 >,
+				< 2707200 1420800000 >;
 		};
 
 		cpu0_cpu_llcc_latmon: qcom,cpu0-cpu-llcc-latmon {
@@ -3484,8 +3504,9 @@
 
 	wlan: qcom,cnss-qca6490@b0000000 {
 		compatible = "qcom,cnss-qca6490";
-		reg = <0xb0000000 0x10000>;
-		reg-names = "smmu_iova_ipa";
+		reg = <0xb0000000 0x10000>,
+		      <0xb2e5510 0x690>;
+		reg-names = "smmu_iova_ipa", "tcs_cmd";
 		wlan-en-gpio = <&tlmm 64 0>;
 		qcom,bt-en-gpio = <&tlmm 65 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
@@ -3494,6 +3515,9 @@
 		qcom,wlan-rc-num = <0>;
 		qcom,wlan-ramdump-dynamic = <0x420000>;
 		qcom,wlan-cbc-enabled;
+		/* RPMH_PDC_WLAN_RF_TCS<6>_CMD<0> offset */
+		qcom,tcs_offset_int_pow_amp_vreg = <0x4B0>;
+		cnss-enable-self-recovery;
 
 		vdd-wlan-aon-supply = <&S2C>;
 		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
@@ -3738,8 +3762,6 @@
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
-		/* Entry will be removed once shadow stack changes checked-in */
-		qcom,ipa-wan-aggr-pkt-cnt = <2>;
 		qcom,ipa-gpi-event-rp-ddr;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;

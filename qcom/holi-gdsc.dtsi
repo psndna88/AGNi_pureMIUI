@@ -97,6 +97,16 @@
 		reg = <0x5991008 0x4>;
 	};
 
+	gpu_gx_acd_reset: syscon@5991160 {
+		compatible = "syscon";
+		reg = <0x5991160 0x4>;
+	};
+
+	gpu_gx_acd_misc_reset: syscon@5998004 {
+		compatible = "syscon";
+		reg = <0x5998004 0x4>;
+	};
+
 	gpu_cx_gdsc: qcom,gdsc@599106c {
 		compatible = "qcom,gdsc";
 		reg = <0x599106c 0x4>;
@@ -113,6 +123,8 @@
 		reg = <0x599100c 0x4>;
 		regulator-name = "gpu_gx_gdsc";
 		sw-reset = <&gpu_gx_sw_reset>;
+		acd-reset = <&gpu_gx_acd_reset>;
+		acd-misc-reset = <&gpu_gx_acd_misc_reset>;
 		domain-addr = <&gpu_gx_domain_addr>;
 		qcom,reset-aon-logic;
 		status = "disabled";

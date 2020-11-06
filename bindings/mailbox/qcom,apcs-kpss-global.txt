@@ -17,6 +17,8 @@ platforms.
 		    "qcom,sm8150-apss-shared"
 		    "qcom,ipq8074-apcs-apps-global"
 		    "qcom,sdxlemur-apcs-gcc"
+		    "qcom,scuba-apcs-hmss-global"
+		    "qcom,monaco-apcs-hmss-global"
 
 - reg:
 	Usage: required

@@ -1,5 +1,15 @@
+#include "sdxlemur-pmic-overlay.dtsi"
+#include "pm7250b.dtsi"
+
+&pm7250b_clkdiv {
+	clocks = <&rpmhcc RPMH_CXO_CLK>;
+	clock-names = "xo";
+};
 
 &soc {
 
 };
 
+&pcie0 {
+	qcom,boot-option = <0x1>;
+};
