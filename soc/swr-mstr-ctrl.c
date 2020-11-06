@@ -129,6 +129,7 @@ static void swrm_unlock_sleep(struct swr_mstr_ctrl *swrm);
 static u32 swr_master_read(struct swr_mstr_ctrl *swrm, unsigned int reg_addr);
 static void swr_master_write(struct swr_mstr_ctrl *swrm, u16 reg_addr, u32 val);
 static int swrm_runtime_resume(struct device *dev);
+static void swrm_wait_for_fifo_avail(struct swr_mstr_ctrl *swrm, int swrm_rd_wr);
 
 static u64 swrm_phy_dev[] = {
 	0,
@@ -678,6 +679,9 @@ static int swr_master_bulk_write(struct swr_mstr_ctrl *swrm, u32 *reg_addr,
 		 * This still meets the hardware spec
 		 */
 			usleep_range(50, 55);
+			if (reg_addr[i] == SWRM_CMD_FIFO_WR_CMD)
+				swrm_wait_for_fifo_avail(swrm,
+							 SWRM_WR_CHECK_AVAIL);
 			swr_master_write(swrm, reg_addr[i], val[i]);
 		}
 		usleep_range(100, 110);
@@ -887,6 +891,11 @@ static int swrm_cmd_fifo_rd_cmd(struct swr_mstr_ctrl *swrm, int *cmd_data,
 	u32 val;
 	u32 retry_attempt = 0;
 
+	if (!dev_addr) {
+		dev_err(swrm->dev, "%s: invalid slave dev num\n", __func__);
+		return -EINVAL;
+	}
+
 	mutex_lock(&swrm->iolock);
 	val = swrm_get_packed_reg_val(&swrm->rcmd_id, len, dev_addr, reg_addr);
 	if (swrm->read) {
@@ -941,6 +950,11 @@ static int swrm_cmd_fifo_wr_cmd(struct swr_mstr_ctrl *swrm, u8 cmd_data,
 {
 	u32 val;
 	int ret = 0;
+
+	if (!dev_addr) {
+		dev_err(swrm->dev, "%s: invalid slave dev num\n", __func__);
+		return -EINVAL;
+	}
 
 	mutex_lock(&swrm->iolock);
 	if (!cmd_id)
@@ -1338,28 +1352,6 @@ static void swrm_cleanup_disabled_port_reqs(struct swr_master *master)
 	}
 }
 
-static u8 swrm_get_controller_offset1(struct swr_mstr_ctrl *swrm,
-					u8* dev_offset, u8 off1)
-{
-	u8 offset1 = 0x0F;
-	int i = 0;
-
-	if (swrm->master_id == MASTER_ID_TX) {
-		for (i = 1; i < SWRM_NUM_AUTO_ENUM_SLAVES; i++) {
-			pr_debug("%s: dev offset: %d\n",
-				__func__, dev_offset[i]);
-			if (offset1 > dev_offset[i])
-				offset1 = dev_offset[i];
-		}
-	} else {
-		offset1 = off1;
-	}
-
-	pr_debug("%s: offset: %d\n", __func__, offset1);
-
-	return offset1;
-}
-
 static void swrm_get_device_frame_shape(struct swr_mstr_ctrl *swrm,
 					struct swrm_mports *mport,
 					struct swr_port_info *port_req)
@@ -1417,14 +1409,12 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 	u8 hparams = 0;
 	u32 controller_offset = 0;
 	struct swr_mstr_ctrl *swrm = swr_get_ctrl_data(master);
-	u8 dev_offset[SWRM_NUM_AUTO_ENUM_SLAVES];
 
 	if (!swrm) {
 		pr_err("%s: swrm is null\n", __func__);
 		return;
 	}
 
-	memset(dev_offset, 0xff, SWRM_NUM_AUTO_ENUM_SLAVES);
 	dev_dbg(swrm->dev, "%s: master num_port: %d\n", __func__,
 		master->num_port);
 
@@ -1432,6 +1422,9 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 		mport = &(swrm->mport_cfg[i]);
 		if (!mport->port_en)
 			continue;
+
+		if (swrm->master_id == MASTER_ID_TX)
+			controller_offset = 0xFF;
 
 		if (mport->stream_type == SWR_PCM)
 			swrm_pcm_port_config(swrm, (i + 1), mport->dir, true);
@@ -1523,7 +1516,9 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 								slv_id, bank));
 			}
 			port_req->ch_en = port_req->req_ch;
-			dev_offset[port_req->dev_num] = port_req->offset1;
+			if (swrm->master_id == MASTER_ID_TX &&
+			    controller_offset > port_req->offset1)
+				controller_offset = port_req->offset1;
 		}
 		value = ((mport->req_ch)
 				<< SWRM_DP_PORT_CTRL_EN_CHAN_SHFT);
@@ -1531,8 +1526,8 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 		if (mport->offset2 != SWR_INVALID_PARAM)
 			value |= ((mport->offset2)
 					<< SWRM_DP_PORT_CTRL_OFFSET2_SHFT);
-		controller_offset = (swrm_get_controller_offset1(swrm,
-						dev_offset, mport->offset1));
+		if (swrm->master_id != MASTER_ID_TX)
+			controller_offset = mport->offset1;
 		value |= (controller_offset << SWRM_DP_PORT_CTRL_OFFSET1_SHFT);
 		mport->offset1 = controller_offset;
 		value |= (mport->sinterval & 0xFF);
@@ -2866,8 +2861,14 @@ static int swrm_probe(struct platform_device *pdev)
 	if (ret)
 		dev_dbg(swrm->dev, "%s: swrm irq wakeup capable not defined\n",
 			__func__);
-	if (swrm->swr_irq_wakeup_capable)
+	if (swrm->swr_irq_wakeup_capable) {
 		irq_set_irq_wake(swrm->irq, 1);
+		ret = device_init_wakeup(swrm->dev, true);
+		if (ret)
+			dev_info(swrm->dev,
+				 "%s: Device wakeup init failed: %d\n",
+				 __func__, ret);
+	}
 	ret = swr_register_master(&swrm->master);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: error adding swr master\n", __func__);
@@ -2883,6 +2884,10 @@ static int swrm_probe(struct platform_device *pdev)
 	mutex_lock(&swrm->mlock);
 	swrm_clk_request(swrm, true);
 	swrm->version = swr_master_read(swrm, SWRM_COMP_HW_VERSION);
+	swrm->rd_fifo_depth = ((swr_master_read(swrm, SWRM_COMP_PARAMS)
+				& SWRM_COMP_PARAMS_RD_FIFO_DEPTH) >> 15);
+	swrm->wr_fifo_depth = ((swr_master_read(swrm, SWRM_COMP_PARAMS)
+				& SWRM_COMP_PARAMS_WR_FIFO_DEPTH) >> 10);
 	ret = swrm_master_init(swrm);
 	if (ret < 0) {
 		dev_err(&pdev->dev,
@@ -2898,11 +2903,6 @@ static int swrm_probe(struct platform_device *pdev)
 
 	if (pdev->dev.of_node)
 		of_register_swr_devices(&swrm->master);
-
-	swrm->rd_fifo_depth = ((swr_master_read(swrm, SWRM_COMP_PARAMS)
-				& SWRM_COMP_PARAMS_RD_FIFO_DEPTH) >> 15);
-	swrm->wr_fifo_depth = ((swr_master_read(swrm, SWRM_COMP_PARAMS)
-				& SWRM_COMP_PARAMS_WR_FIFO_DEPTH) >> 10);
 
 #ifdef CONFIG_DEBUG_FS
 	swrm->debugfs_swrm_dent = debugfs_create_dir(dev_name(&pdev->dev), 0);
@@ -2921,12 +2921,6 @@ static int swrm_probe(struct platform_device *pdev)
 				   &swrm_debug_dump_ops);
 	}
 #endif
-	ret = device_init_wakeup(swrm->dev, true);
-	if (ret) {
-		dev_err(swrm->dev, "Device wakeup init failed: %d\n", ret);
-		goto err_irq_wakeup_fail;
-	}
-
 	pm_runtime_set_autosuspend_delay(&pdev->dev, auto_suspend_timer);
 	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);
@@ -2938,10 +2932,9 @@ static int swrm_probe(struct platform_device *pdev)
 	msm_aud_evt_register_client(&swrm->event_notifier);
 
 	return 0;
-err_irq_wakeup_fail:
-	device_init_wakeup(swrm->dev, false);
 err_mstr_init_fail:
 	swr_unregister_master(&swrm->master);
+	device_init_wakeup(swrm->dev, false);
 err_mstr_fail:
 	if (swrm->reg_irq) {
 		swrm->reg_irq(swrm->handle, swr_mstr_interrupt,
@@ -2982,8 +2975,10 @@ static int swrm_remove(struct platform_device *pdev)
 			irqd_set_trigger_type(
 				irq_get_irq_data(swrm->irq),
 				IRQ_TYPE_NONE);
-		if (swrm->swr_irq_wakeup_capable)
+		if (swrm->swr_irq_wakeup_capable) {
 			irq_set_irq_wake(swrm->irq, 0);
+			device_init_wakeup(swrm->dev, false);
+		}
 		free_irq(swrm->irq, swrm);
 	} else if (swrm->wake_irq > 0) {
 		free_irq(swrm->wake_irq, swrm);
@@ -2993,7 +2988,6 @@ static int swrm_remove(struct platform_device *pdev)
 	pm_runtime_set_suspended(&pdev->dev);
 	swr_unregister_master(&swrm->master);
 	msm_aud_evt_unregister_client(&swrm->event_notifier);
-	device_init_wakeup(swrm->dev, false);
 	mutex_destroy(&swrm->irq_lock);
 	mutex_destroy(&swrm->mlock);
 	mutex_destroy(&swrm->reslock);
