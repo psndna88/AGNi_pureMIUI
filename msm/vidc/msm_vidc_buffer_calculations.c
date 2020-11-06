@@ -1076,6 +1076,9 @@ u32 msm_vidc_calculate_enc_output_extra_size(struct msm_vidc_inst *inst)
 	if (inst->prop.extradata_ctrls & EXTRADATA_ADVANCED)
 		size += sizeof(struct msm_vidc_metadata_ltr_payload);
 
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_FRAME_QP)
+		size += sizeof(struct msm_vidc_frame_qp_payload);
+
 	/* Add size for extradata none */
 	if (size)
 		size += sizeof(struct msm_vidc_extradata_header);
