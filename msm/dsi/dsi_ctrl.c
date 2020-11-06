@@ -348,6 +348,13 @@ static int dsi_ctrl_debugfs_deinit(struct dsi_ctrl *dsi_ctrl)
 static int dsi_ctrl_debugfs_init(struct dsi_ctrl *dsi_ctrl,
 				 struct dentry *parent)
 {
+	char dbg_name[DSI_DEBUG_NAME_LEN];
+
+	snprintf(dbg_name, DSI_DEBUG_NAME_LEN, "dsi%d_ctrl",
+						dsi_ctrl->cell_index);
+	sde_dbg_reg_register_base(dbg_name,
+				dsi_ctrl->hw.base,
+				msm_iomap_size(dsi_ctrl->pdev, "dsi_ctrl"));
 	return 0;
 }
 static int dsi_ctrl_debugfs_deinit(struct dsi_ctrl *dsi_ctrl)
@@ -1352,7 +1359,8 @@ static void dsi_kickoff_msg_tx(struct dsi_ctrl *dsi_ctrl,
 	hw_flags |= (flags & DSI_CTRL_CMD_DEFER_TRIGGER) ?
 			DSI_CTRL_HW_CMD_WAIT_FOR_TRIGGER : 0;
 
-	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND))
+	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND) ||
+			(flags & DSI_CTRL_CMD_LAST_COMMAND))
 		hw_flags |= DSI_CTRL_CMD_LAST_COMMAND;
 
 	if (flags & DSI_CTRL_CMD_DEFER_TRIGGER) {
@@ -1488,6 +1496,8 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 
 	dsi_ctrl_validate_msg_flags(dsi_ctrl, msg, flags);
 
+	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY, flags);
+
 	if (dsi_ctrl->dma_wait_queued)
 		dsi_ctrl_flush_cmd_dma_queue(dsi_ctrl);
 
@@ -1527,7 +1537,23 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 		goto error;
 	}
 
-	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND))
+	/*
+	 * In case of broadcast CMD length cannot be greater than 512 bytes
+	 * as specified by HW limitations. Need to overwrite the flags to
+	 * set the LAST_COMMAND flag to ensure no command transfer failures.
+	 */
+	if ((*flags & DSI_CTRL_CMD_FETCH_MEMORY) &&
+			(*flags & DSI_CTRL_CMD_BROADCAST)) {
+		if ((dsi_ctrl->cmd_len + length) > 240) {
+			dsi_ctrl_mask_overflow(dsi_ctrl, true);
+			*flags |= DSI_CTRL_CMD_LAST_COMMAND;
+			SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_CASE1,
+					flags);
+		}
+	}
+
+	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND) ||
+			(*flags & DSI_CTRL_CMD_LAST_COMMAND))
 		buffer[3] |= BIT(7);//set the last cmd bit in header.
 
 	if (*flags & DSI_CTRL_CMD_FETCH_MEMORY) {
@@ -1548,7 +1574,8 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 
 		dsi_ctrl->cmd_len += length;
 
-		if (!(msg->flags & MIPI_DSI_MSG_LASTCOMMAND)) {
+		if (!(msg->flags & MIPI_DSI_MSG_LASTCOMMAND) &&
+				!(*flags & DSI_CTRL_CMD_LAST_COMMAND)) {
 			goto error;
 		} else {
 			cmd_mem.length = dsi_ctrl->cmd_len;
@@ -3683,6 +3710,7 @@ int dsi_ctrl_set_vid_engine_state(struct dsi_ctrl *dsi_ctrl,
 {
 	int rc = 0;
 	bool on;
+	bool vid_eng_busy;
 
 	if (!dsi_ctrl || (state >= DSI_CTRL_ENGINE_MAX)) {
 		DSI_CTRL_ERR(dsi_ctrl, "Invalid params\n");
@@ -3702,9 +3730,17 @@ int dsi_ctrl_set_vid_engine_state(struct dsi_ctrl *dsi_ctrl,
 	if (!skip_op) {
 		on = (state == DSI_CTRL_ENGINE_ON) ? true : false;
 		dsi_ctrl->hw.ops.video_engine_en(&dsi_ctrl->hw, on);
+		vid_eng_busy = dsi_ctrl->hw.ops.vid_engine_busy(&dsi_ctrl->hw);
 
-		/* perform a reset when turning off video engine */
-		if (!on && dsi_ctrl->version < DSI_CTRL_VERSION_1_3)
+		/*
+		 * During ESD check failure, DSI video engine can get stuck
+		 * sending data from display engine. In use cases where GDSC
+		 * toggle does not happen like DP MST connected or secure video
+		 * playback, display does not recover back after ESD failure.
+		 * Perform a reset if video engine is stuck.
+		 */
+		if (!on && (dsi_ctrl->version < DSI_CTRL_VERSION_1_3 ||
+								vid_eng_busy))
 			dsi_ctrl->hw.ops.soft_reset(&dsi_ctrl->hw);
 	}
 
