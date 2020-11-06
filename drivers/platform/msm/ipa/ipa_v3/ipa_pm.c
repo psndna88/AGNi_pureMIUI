@@ -445,7 +445,6 @@ static void activate_work_func(struct work_struct *work)
 			IPA_PM_CLIENT_ACTIVATED);
 	} else {
 		IPA_PM_ERR_RL("client has no callback");
-		WARN_ON_RATELIMIT_IPA(1);
 	}
 	mutex_unlock(&ipa_pm_ctx->client_mutex);
 
