@@ -567,6 +567,204 @@ dcc: dcc_v2@1be2000 {
 		#interrupt-cells = <4>;
 		cell-index = <0>;
 	};
+
+	tcsr_mutex_block: syscon@00340000 {
+		compatible = "syscon";
+		reg = <0x340000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	smem: qcom,smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_region>;
+		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	rpm_msg_ram: memory@045f0000 {
+			compatible = "qcom,rpm-msg-ram";
+			reg = <0x45f0000 0x7000>;
+	};
+
+	apcs_glb: mailbox@0f111000 {
+		compatible = "qcom,scuba-apcs-hmss-global";
+		reg = <0xF111000 0x1000>;
+
+		#mbox-cells = <1>;
+	};
+
+	rpm-glink {
+		compatible = "qcom,glink-rpm";
+		interrupts = <GIC_SPI 194 IRQ_TYPE_EDGE_RISING>;
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		mboxes = <&apcs_glb 0>;
+
+		qcom,rpm_glink_ssr {
+			qcom,glink-channels = "glink_ssr";
+			qcom,notify-edges = <&glink_modem>,
+					    <&glink_adsp>;
+		};
+
+	};
+
+	qcom,glink {
+		compatible = "qcom,glink";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		glink_modem: modem {
+			qcom,remote-pid = <1>;
+			transport = "smem";
+			mboxes = <&apcs_glb 12>;
+			mbox-names = "mpss_smem";
+			interrupts = <GIC_SPI 68 IRQ_TYPE_EDGE_RISING>;
+
+			label = "modem";
+			qcom,glink-label = "mpss";
+
+			qcom,modem_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,low-latency;
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,modem_ds {
+				qcom,glink-channels = "DS";
+				qcom,intents = <0x4000 2>;
+			};
+
+			qcom,modem_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_adsp>;
+			};
+		};
+
+		glink_adsp: adsp {
+			qcom,remote-pid = <2>;
+			transport = "smem";
+			mboxes = <&apcs_glb 8>;
+			mbox-names = "adsp_smem";
+			interrupts = <GIC_SPI 277 IRQ_TYPE_EDGE_RISING>;
+
+			label = "adsp";
+			qcom,glink-label = "lpass";
+
+			qcom,adsp_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,low-latency;
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+
+			qcom,adsp_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>;
+			};
+		};
+	};
+
+	qcom,glinkpkt {
+		compatible = "qcom,glinkpkt";
+
+		qcom,glinkpkt-at-mdm0 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DS";
+			qcom,glinkpkt-dev-name = "at_mdm0";
+		};
+
+		qcom,glinkpkt-apr-apps2 {
+			qcom,glinkpkt-edge = "adsp";
+			qcom,glinkpkt-ch-name = "apr_apps2";
+			qcom,glinkpkt-dev-name = "apr_apps2";
+		};
+
+		qcom,glinkpkt-data40-cntl {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA40_CNTL";
+			qcom,glinkpkt-dev-name = "smdcntl8";
+		};
+
+		qcom,glinkpkt-data1 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA1";
+			qcom,glinkpkt-dev-name = "smd7";
+		};
+
+		qcom,glinkpkt-data4 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA4";
+			qcom,glinkpkt-dev-name = "smd8";
+		};
+
+		qcom,glinkpkt-data11 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA11";
+			qcom,glinkpkt-dev-name = "smd11";
+		};
+	};
+
+	qcom,smp2p-modem {
+		compatible = "qcom,smp2p";
+		qcom,smem = <435>, <428>;
+		interrupts = <GIC_SPI 70 IRQ_TYPE_EDGE_RISING>;
+		mboxes = <&apcs_glb 14>;
+		qcom,local-pid = <0>;
+		qcom,remote-pid = <1>;
+
+		modem_smp2p_out: master-kernel {
+			qcom,entry-name = "master-kernel";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		modem_smp2p_in: slave-kernel {
+			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+
+	qcom,smp2p-adsp {
+		compatible = "qcom,smp2p";
+		qcom,smem = <443>, <429>;
+		interrupts = <GIC_SPI 279 IRQ_TYPE_EDGE_RISING>;
+		mboxes = <&apcs_glb 10>;
+		qcom,local-pid = <0>;
+		qcom,remote-pid = <2>;
+
+		adsp_smp2p_out: master-kernel {
+			qcom,entry-name = "master-kernel";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		adsp_smp2p_in: slave-kernel {
+			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+
+	slim_aud: slim@a5c0000 {
+		cell-index = <1>;
+		compatible = "qcom,slim-ngd";
+		reg = <0xa5c0000 0x2c000>,
+			<0xa584000 0x20000>, <0xa66e000 0x2000>;
+		reg-names = "slimbus_physical",
+			"slimbus_bam_physical","slimbus_lpass_mem";
+		interrupts = <GIC_SPI 283 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 284 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
+		qcom,apps-ch-pipes = <0x0>;
+		qcom,ea-pc = <0x360>;
+		status = "ok";
+	};
 };
 
 #include "pm2250.dtsi"

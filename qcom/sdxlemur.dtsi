@@ -432,6 +432,34 @@
 		status = "disabled";
 	};
 
+	sdhc_1: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x08804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC1_APPS_CLK>,
+			<&gcc GCC_SDCC1_AHB_CLK>;
+		clock-names = "core", "iface";
+
+		bus-width = <4>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x1>;
+			vote = <44>;
+		};
+	};
+
 	apsscc: clock-controller@17808100 {
 		compatible = "qcom,sdxlemur-apsscc";
 		clocks = <&rpmhcc RPMH_CXO_CLK_A>, <&gcc GPLL0_OUT_EVEN>;
@@ -812,7 +840,6 @@
 			qcom,additional-mapping =
 				/* modem tables in IMEM */
 				<0x14688000 0x14688000 0x3000>;
-			dma-coherent;
 			qcom,iommu-dma = "fastmap";
 			qcom,ipa-q6-smem-size = <36864>;
 		};
@@ -820,7 +847,6 @@
 		ipa_smmu_wlan: ipa_smmu_wlan {
 			compatible = "qcom,ipa-smmu-wlan-cb";
 			iommus = <&apps_smmu 0x5E1 0x0>;
-			dma-coherent;
 			qcom,iommu-dma = "atomic";
 		};
 
@@ -834,7 +860,6 @@
 		ipa_smmu_11ad: ipa_smmu_11ad {
 			compatible = "qcom,ipa-smmu-11ad-cb";
 			iommus = <&apps_smmu 0x5E3 0x0>;
-			dma-coherent;
 			qcom,shared-cb;
 			qcom,iommu-group = <>;
 		};
@@ -893,3 +918,4 @@
 #include "sdxlemur-pcie.dtsi"
 #include "sdxlemur-blsp.dtsi"
 #include "sdxlemur-audio.dtsi"
+#include "sdxlemur-thermal.dtsi"

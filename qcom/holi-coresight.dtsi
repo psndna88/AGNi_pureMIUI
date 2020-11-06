@@ -1134,7 +1134,7 @@
 
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
-
+		status = "disabled";
 		out-ports {
 			port {
 				funnel_gpu_out_tpda_center2: endpoint {
@@ -1959,6 +1959,9 @@
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
 		coresight-ctis = <&cti0 &cti6>;
+		cti-reset-trig-num = <5>;
+		cti-flush-trig-num = <1>;
+
 		in-ports {
 			port {
 				tmc_etf_in_funnel_merge: endpoint {
@@ -2039,6 +2042,8 @@
 		qcom,sw-usb;
 
 		coresight-ctis = <&cti0 &cti6>;
+		cti-reset-trig-num = <5>;
+		cti-flush-trig-num = <3>;
 		coresight-csr = <&csr>;
 		interrupts = <GIC_SPI 429 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "byte-cntr-irq";
