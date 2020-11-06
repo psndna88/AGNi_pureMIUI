@@ -17,7 +17,6 @@
 
 /* IFE resource constants */
 #define CAM_IFE_HW_IN_RES_MAX            (CAM_ISP_IFE_IN_RES_MAX & 0xFF)
-#define CAM_IFE_HW_OUT_RES_MAX           (CAM_ISP_IFE_OUT_RES_MAX & 0xFF)
 #define CAM_IFE_HW_RES_POOL_MAX          64
 
 /* IFE_HW_MGR custom config */
@@ -122,9 +121,7 @@ struct cam_ife_hw_mgr_ctx {
 	struct list_head                res_list_ife_csid;
 	struct list_head                res_list_ife_src;
 	struct list_head                res_list_ife_in_rd;
-	struct cam_isp_hw_mgr_res       res_list_ife_out[
-						CAM_IFE_HW_OUT_RES_MAX];
-
+	struct cam_isp_hw_mgr_res      *res_list_ife_out;
 	struct list_head                free_res_list;
 	struct cam_isp_hw_mgr_res       res_pool[CAM_IFE_HW_RES_POOL_MAX];
 
@@ -182,6 +179,7 @@ struct cam_ife_hw_mgr_ctx {
  * @ctx_lock               context lock
  * @support_consumed_addr  indicate whether hw supports last consumed address
  * @hw_pid_support         hw pid support for this target
+ * @max_vfe_out_res_type   max ife out res type value from hw
  */
 struct cam_ife_hw_mgr {
 	struct cam_isp_hw_mgr          mgr_common;
@@ -204,6 +202,7 @@ struct cam_ife_hw_mgr {
 	spinlock_t                     ctx_lock;
 	bool                           support_consumed_addr;
 	bool                           hw_pid_support;
+	uint32_t                       max_vfe_out_res_type;
 };
 
 /**

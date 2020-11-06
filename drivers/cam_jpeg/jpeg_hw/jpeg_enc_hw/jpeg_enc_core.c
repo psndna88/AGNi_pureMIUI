@@ -202,6 +202,7 @@ irqreturn_t cam_jpeg_enc_irq(int irq_num, void *data)
 	if (CAM_JPEG_HW_IRQ_IS_FRAME_DONE(irq_status, hw_info)) {
 		spin_lock(&jpeg_enc_dev->hw_lock);
 		if (core_info->core_state == CAM_JPEG_ENC_CORE_READY) {
+			CAM_TRACE(CAM_JPEG, "FrameDone IRQ");
 			encoded_size = cam_io_r_mb(mem_base +
 			core_info->jpeg_enc_hw_info->reg_offset.encode_size);
 			if (core_info->irq_cb.jpeg_hw_mgr_cb) {

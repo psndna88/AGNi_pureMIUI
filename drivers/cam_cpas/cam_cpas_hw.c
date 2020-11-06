@@ -1204,7 +1204,7 @@ static int cam_cpas_util_apply_client_ahb_vote(struct cam_hw_info *cpas_hw,
 
 	if (cpas_core->streamon_clients) {
 		rc = cam_soc_util_set_clk_rate_level(&cpas_hw->soc_info,
-			highest_level);
+			highest_level, true);
 		if (rc) {
 			CAM_ERR(CAM_CPAS,
 				"Failed in scaling clock rate level %d for AHB",
@@ -1913,15 +1913,6 @@ static int cam_cpas_log_vote(struct cam_hw_info *cpas_hw)
 			curr_node->camnoc_bw,
 			curr_node->camnoc_bw * curr_node->bus_width_factor,
 			curr_node->mnoc_ab_bw, curr_node->mnoc_ib_bw);
-	}
-
-	if (cpas_core->streamon_clients > 0) {
-		/*
-		 * Means, cpas has clocks turned on, so we can query clk freq.
-		 * Print clk frequencies that cpas enables - this will print
-		 * camcc_ahb, camcc_axi, gcc_hf, gcc_sf as well.
-		 */
-		cam_soc_util_print_clk_freq(&cpas_hw->soc_info);
 	}
 
 	cam_cpas_dump_monitor_array(cpas_core);

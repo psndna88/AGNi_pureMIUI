@@ -273,8 +273,14 @@ static int cam_top_tpg_ver1_start(
 			soc_info->reg_map[0].mem_base + tpg_reg->tpg_vbi_cfg);
 
 	/* Set the TOP tpg mux sel*/
-	cam_io_w_mb((1 << tpg_hw->hw_intf->hw_idx),
+	val = cam_io_r_mb(soc_info->reg_map[1].mem_base +
+			tpg_reg->top_mux_reg_offset);
+	val |= (1 << tpg_hw->hw_intf->hw_idx);
+
+	cam_io_w_mb(val,
 		soc_info->reg_map[1].mem_base + tpg_reg->top_mux_reg_offset);
+	CAM_DBG(CAM_ISP, "TPG:%d Set top Mux: 0x%x",
+		tpg_hw->hw_intf->hw_idx, val);
 
 	val = ((tpg_data->num_active_lanes - 1) <<
 		tpg_reg->tpg_num_active_lines_shift) |
@@ -307,6 +313,7 @@ static int cam_top_tpg_ver1_stop(
 	struct cam_isp_resource_node                 *tpg_res;
 	const struct cam_top_tpg_ver1_reg_offset     *tpg_reg;
 	struct cam_top_tpg_cfg                       *tpg_data;
+	uint32_t                                      val;
 
 	if (!hw_priv || !stop_args ||
 		(arg_size != sizeof(struct cam_isp_resource_node))) {
@@ -332,6 +339,16 @@ static int cam_top_tpg_ver1_stop(
 
 	cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
 		tpg_reg->tpg_ctrl);
+
+	/* Reset the TOP tpg mux sel*/
+	val = cam_io_r_mb(soc_info->reg_map[1].mem_base +
+			tpg_reg->top_mux_reg_offset);
+	val &= ~(1 << tpg_hw->hw_intf->hw_idx);
+
+	cam_io_w_mb(val,
+		soc_info->reg_map[1].mem_base + tpg_reg->top_mux_reg_offset);
+	CAM_DBG(CAM_ISP, "TPG:%d Reset Top Mux: 0x%x",
+		tpg_hw->hw_intf->hw_idx, val);
 
 	tpg_res->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
 

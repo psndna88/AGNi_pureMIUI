@@ -861,6 +861,7 @@ static struct cam_vfe_bus_ver2_hw_info vfe170_bus_hw_info = {
 	},
 	.top_irq_shift = 9,
 	.support_consumed_addr = false,
+	.max_out_res = CAM_ISP_IFE_OUT_RES_BASE + 19,
 };
 
 static struct cam_vfe_hw_info cam_vfe170_hw_info = {

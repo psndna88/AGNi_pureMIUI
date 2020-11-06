@@ -1339,7 +1339,7 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 				csiphy_dev->ctrl_reg->getclockvoting(
 					csiphy_dev, offset);
 			rc = cam_soc_util_set_clk_rate_level(
-				&csiphy_dev->soc_info, clk_vote_level);
+				&csiphy_dev->soc_info, clk_vote_level, false);
 			if (rc) {
 				CAM_WARN(CAM_CSIPHY,
 					"Failed to set the clk_rate level: %d",

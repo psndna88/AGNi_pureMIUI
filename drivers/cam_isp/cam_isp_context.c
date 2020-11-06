@@ -569,6 +569,20 @@ static const char *__cam_isp_resource_handle_id_to_type(
 		return "RDI_RD";
 	case CAM_ISP_IFE_OUT_RES_LCR:
 		return "LCR";
+	case CAM_ISP_IFE_OUT_RES_AWB_BFW:
+		return "AWB_BFW";
+	case CAM_ISP_IFE_OUT_RES_2PD_STATS:
+		return "2PD_STATS";
+	case CAM_ISP_IFE_OUT_RES_STATS_AEC_BE:
+		return "STATS_AEC_BE";
+	case CAM_ISP_IFE_OUT_RES_LTM_STATS:
+		return "LTM_STATS";
+	case CAM_ISP_IFE_OUT_RES_STATS_GTM_BHIST:
+		return "STATS_GTM_BHIST";
+	case CAM_ISP_IFE_LITE_OUT_RES_STATS_BE:
+		return "STATS_BE";
+	case CAM_ISP_IFE_LITE_OUT_RES_GAMMA:
+		return "GAMMA";
 	default:
 		return "CAM_ISP_Invalid_Resource_Type";
 	}

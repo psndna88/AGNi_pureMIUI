@@ -132,7 +132,7 @@ static int cam_isp_update_dual_config(
 	}
 	for (i = 0; i < dual_config->num_ports; i++) {
 
-		if (i >= CAM_ISP_IFE_OUT_RES_MAX) {
+		if (i >= CAM_ISP_IFE_OUT_RES_BASE + size_isp_out) {
 			CAM_ERR(CAM_ISP,
 				"failed update for i:%d > size_isp_out:%d",
 				i, size_isp_out);
@@ -151,7 +151,8 @@ static int cam_isp_update_dual_config(
 			res = hw_mgr_res->hw_res[j];
 
 			if (res->res_id < CAM_ISP_IFE_OUT_RES_BASE ||
-				res->res_id >= CAM_ISP_IFE_OUT_RES_MAX)
+				res->res_id >= (CAM_ISP_IFE_OUT_RES_BASE +
+				size_isp_out))
 				continue;
 
 			outport_id = res->res_id & 0xFF;

@@ -374,6 +374,10 @@ static struct cam_vfe_bus_ver3_hw_info vfe48x_bus_hw_info = {
 			.max_height    = -1,
 			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_0,
 			.mid[0]        = 16,
+			.num_wm        = 1,
+			.wm_idx        = {
+				0,
+			},
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_RDI1,
@@ -381,6 +385,10 @@ static struct cam_vfe_bus_ver3_hw_info vfe48x_bus_hw_info = {
 			.max_height    = -1,
 			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_1,
 			.mid[0]        = 17,
+			.num_wm        = 1,
+			.wm_idx        = {
+				1,
+			},
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_RDI2,
@@ -388,6 +396,10 @@ static struct cam_vfe_bus_ver3_hw_info vfe48x_bus_hw_info = {
 			.max_height    = -1,
 			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_2,
 			.mid[0]        = 18,
+			.num_wm        = 1,
+			.wm_idx        = {
+				2,
+			},
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER3_VFE_OUT_RDI3,
@@ -395,11 +407,19 @@ static struct cam_vfe_bus_ver3_hw_info vfe48x_bus_hw_info = {
 			.max_height    = -1,
 			.source_group  = CAM_VFE_BUS_VER3_SRC_GRP_3,
 			.mid[0]        = 19,
+			.num_wm        = 1,
+			.wm_idx        = {
+				3,
+			},
 		},
 	},
+	.num_comp_grp    = 4,
 	.comp_done_shift = 4,
 	.top_irq_shift   = 4,
 	.support_consumed_addr = true,
+	.max_out_res = CAM_ISP_IFE_OUT_RES_BASE + 25,
+	.supported_irq =  CAM_VFE_HW_IRQ_CAP_BUF_DONE | CAM_VFE_HW_IRQ_CAP_RUP,
+	.comp_cfg_needed = true,
 };
 
 static struct cam_vfe_hw_info cam_vfe_lite48x_hw_info = {

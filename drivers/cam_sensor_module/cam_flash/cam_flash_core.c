@@ -1546,12 +1546,9 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 
 			CAM_DBG(CAM_FLASH,
 				"FLASH_CMD_TYPE op:%d", flash_data->opcode);
-			if (flash_data->opcode == CAMERA_SENSOR_FLASH_OP_OFF)
-				add_req.skip_before_applying |= SKIP_NEXT_FRAME;
 
 			if (flash_data->opcode ==
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION) {
-				add_req.trigger_eof = true;
 				/* Active time for the preflash */
 				flash_data->flash_active_time_ms =
 				(flash_operation_info->time_on_duration_ns)
@@ -1748,12 +1745,12 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
 			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
+			add_req.skip_before_applying |= SKIP_NEXT_FRAME;
+			add_req.trigger_eof = true;
+
 			if ((flash_data->opcode !=
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION))
 				add_req.skip_before_applying |= 1;
-			else if (flash_data->opcode ==
-				CAMERA_SENSOR_FLASH_OP_FIREDURATION)
-				add_req.trigger_eof = true;
 			else
 				add_req.skip_before_applying = 0;
 		} else {

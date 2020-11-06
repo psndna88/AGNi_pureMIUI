@@ -185,9 +185,14 @@ static int cam_eeprom_power_up(struct cam_eeprom_ctrl_t *e_ctrl,
 		rc = camera_io_init(&(e_ctrl->io_master_info));
 		if (rc) {
 			CAM_ERR(CAM_EEPROM, "cci_init failed");
-			return -EINVAL;
+			goto cci_failure;
 		}
 	}
+	return rc;
+cci_failure:
+	if (cam_sensor_util_power_down(power_info, soc_info))
+		CAM_ERR(CAM_EEPROM, "Power down failure");
+
 	return rc;
 }
 
