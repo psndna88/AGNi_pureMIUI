@@ -1555,7 +1555,7 @@ static int msm_venc_update_bitrate(struct msm_vidc_inst *inst)
 	u32 cabac_max_bitrate = 0;
 
 	if (!inst) {
-		d_vpr_e("%s: invalid params %pK\n", __func__);
+		d_vpr_e("%s: invalid params\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1909,17 +1909,17 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			}
 		} else if (inst->state == MSM_VIDC_START_DONE) {
 			if (!inst->external_blur) {
-				s_vpr_e(sid, "external blur not enabled");
+				s_vpr_e(sid, "%s: external blur not enabled", __func__);
 				break;
 			}
 			if (ctrl->val == MSM_VIDC_BLUR_EXTERNAL_DYNAMIC) {
 				s_vpr_h(sid,
-					"external blur setting already enabled\n",
+					"%s: external blur setting already enabled\n",
 					__func__);
 				break;
 			} else if (ctrl->val == MSM_VIDC_BLUR_INTERNAL) {
 				s_vpr_e(sid,
-					"cannot change to internal blur config dynamically\n",
+					"%s: cannot change to internal blur config dynamically\n",
 					__func__);
 				break;
 			} else {
