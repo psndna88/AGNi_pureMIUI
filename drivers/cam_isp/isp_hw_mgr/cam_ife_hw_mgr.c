@@ -1840,9 +1840,9 @@ static int cam_ife_mgr_acquire_cid_res(
 		}
 	}
 
-	/* Acquire Left if not already acquired */
-	/* For dual IFE cases, start acquiring the lower idx first */
-	if (ife_ctx->is_fe_enabled || in_port->usage_type ||
+	/* Acquire right if not already acquired */
+	/* For dual IFE cases, master will be lower idx */
+	if (ife_ctx->is_fe_enabled ||
 		ife_ctx->dsp_enabled)
 		rc = cam_ife_hw_mgr_acquire_csid_hw(ife_hw_mgr,
 			&csid_acquire, true);
@@ -1854,10 +1854,15 @@ static int cam_ife_mgr_acquire_cid_res(
 		CAM_ERR(CAM_ISP, "No %d paths available", path_res_id);
 		goto put_res;
 	}
-	cid_res_temp->hw_res[acquired_cnt++] = csid_acquire.node_res;
+
+	if (in_port->usage_type)
+		cid_res_temp->hw_res[++acquired_cnt] = csid_acquire.node_res;
+	else
+		cid_res_temp->hw_res[acquired_cnt++] = csid_acquire.node_res;
 
 acquire_successful:
-	CAM_DBG(CAM_ISP, "CID left acquired success is_dual %d",
+	CAM_DBG(CAM_ISP, "CID %s acquired success is_dual %d",
+		(in_port->usage_type ? "Right" : " Left"),
 		in_port->usage_type);
 
 	cid_res_temp->res_type = CAM_ISP_RESOURCE_CID;
@@ -1865,16 +1870,13 @@ acquire_successful:
 	cid_res_temp->res_id = csid_acquire.node_res->res_id;
 	cid_res_temp->is_dual_isp = in_port->usage_type;
 	ife_ctx->is_dual = (bool)in_port->usage_type;
-	if (ife_ctx->is_dual)
-		ife_ctx->master_hw_idx =
-			cid_res_temp->hw_res[0]->hw_intf->hw_idx;
 	if (in_port->num_out_res)
 		cid_res_temp->is_secure = out_port->secure_mode;
 
 	cam_ife_hw_mgr_put_res(&ife_ctx->res_list_ife_cid, cid_res);
 
 	/*
-	 * Acquire Right if not already acquired.
+	 * Acquire left if not already acquired.
 	 * Dual IFE for RDI and PPP is not currently supported.
 	 */
 	if (cid_res_temp->is_dual_isp && path_res_id
@@ -1891,11 +1893,11 @@ acquire_successful:
 				csid_acquire.phy_sel = CAM_ISP_IFE_IN_RES_PHY_1;
 		}
 
-		for (j = 0; j < CAM_IFE_CSID_HW_NUM_MAX; j++) {
+		for (j = CAM_IFE_CSID_HW_NUM_MAX - 1; j >= 0; j--) {
 			if (!ife_hw_mgr->csid_devices[j])
 				continue;
 
-			if (j == cid_res_temp->hw_res[0]->hw_intf->hw_idx)
+			if (j == cid_res_temp->hw_res[1]->hw_intf->hw_idx)
 				continue;
 
 			hw_intf = ife_hw_mgr->csid_devices[j];
@@ -1909,14 +1911,18 @@ acquire_successful:
 
 		if (j == CAM_IFE_CSID_HW_NUM_MAX) {
 			CAM_ERR(CAM_ISP,
-				"Can not acquire ife csid rdi resource");
+				"Can not acquire ife csid dual resource");
 			goto end;
 		}
-		cid_res_temp->hw_res[1] = csid_acquire.node_res;
+		cid_res_temp->hw_res[0] = csid_acquire.node_res;
 		ife_ctx->slave_hw_idx =
 			cid_res_temp->hw_res[1]->hw_intf->hw_idx;
-		CAM_DBG(CAM_ISP, "CID right acquired success is_dual %d",
-			in_port->usage_type);
+		ife_ctx->master_hw_idx =
+			cid_res_temp->hw_res[0]->hw_intf->hw_idx;
+		CAM_DBG(CAM_ISP, "CID left acquired success is_dual %d [master %u: slave %u]",
+			in_port->usage_type,
+			ife_ctx->master_hw_idx,
+			ife_ctx->slave_hw_idx);
 	}
 
 	return 0;
