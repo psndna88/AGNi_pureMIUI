@@ -2030,15 +2030,27 @@ static const struct snd_kcontrol_new msm_dig_snd_controls[] = {
 			  MSM89XX_CDC_CORE_IIR2_GAIN_B1_CTL,
 			0,  -84, 40, digital_gain),
 
+#ifdef CONFIG_SOUND_CONTROL
+	SOC_SINGLE_SX_TLV("RX1 Digital Volume",
+		MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL_DUMMY,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX2 Digital Volume",
+		MSM89XX_CDC_CORE_RX2_VOL_CTL_B2_CTL_DUMMY,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
+		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL_DUMMY,
+		0, -84, 40, digital_gain),
+#else
 	SOC_SINGLE_SX_TLV("RX1 Digital Volume",
 		MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL,
-		-13, -84, 40, digital_gain),
+		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX2 Digital Volume",
 		MSM89XX_CDC_CORE_RX2_VOL_CTL_B2_CTL,
-		-13, -84, 40, digital_gain),
+		0, -84, 40, digital_gain),
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
 		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL,
-		-5, -84, 40, digital_gain),
+		0, -84, 40, digital_gain),
+#endif
 
 	SOC_SINGLE_EXT("IIR1 Enable Band1", IIR1, BAND1, 1, 0,
 		msm_dig_cdc_get_iir_enable_audio_mixer,
