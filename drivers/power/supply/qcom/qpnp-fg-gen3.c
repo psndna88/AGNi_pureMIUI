@@ -150,6 +150,7 @@
 #define RECHARGE_VBATT_THR_v2_OFFSET	1
 #define FLOAT_VOLT_v2_WORD		16
 #define FLOAT_VOLT_v2_OFFSET		2
+#define SLOW_CHARGE_THRESHOLD_HVDCP		70
 #define SLOW_CHARGE_THRESHOLD		80
 
 static int fg_decode_voltage_15b(struct fg_sram_param *sp,
@@ -172,6 +173,7 @@ int charging_current_now_ma = 0;
 int battery_percent = 50;
 bool slow_charge = false;
 bool full_charged = false;
+extern bool hvdcp_mode;
 
 #define PARAM(_id, _addr_word, _addr_byte, _len, _num, _den, _offset,	\
 	      _enc, _dec)						\
@@ -846,6 +848,7 @@ static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 #define HIGH_CAPACITY	80
 #define LOW_CAPACITY	15
 #define FULL_SOC_RAW	255
+#define FULL_SOC_REPORT_THR 250
 bool low_batt_swap_stall = false;
 bool batt_swap_push = false;
 
@@ -863,21 +866,24 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 	 * of the values 1-254 will be scaled to 1-99. DIV_ROUND_UP will not
 	 * be suitable here as it rounds up any value higher than 252 to 100.
 	 */
-	if (*msoc == FULL_SOC_RAW)
+	if (*msoc >= FULL_SOC_REPORT_THR) {
 		*msoc = 100;
-	else if (*msoc == 0)
+	} else if ((*msoc >= 247) && (*msoc < FULL_SOC_REPORT_THR)) {
+		*msoc = 99;
+	} else if ((*msoc >= 244) && (*msoc < 247)) {
+		*msoc = 98;
+	} else if (*msoc == 0) {
 		*msoc = 0;
-	else
-		*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY,
-				FULL_SOC_RAW);
+	} else {
+		*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY, FULL_SOC_REPORT_THR);
+	}
 
-	if (*msoc >= FULL_CAPACITY)
+	if (*msoc >= FULL_CAPACITY) {
 		*msoc = FULL_CAPACITY;
-
-	if (*msoc < FULL_CAPACITY)
-		full_charged = false;
-	else
 		full_charged = true;
+	} else {
+		full_charged = false;
+	}
 
 	if (*msoc >= HIGH_CAPACITY)
 		batt_swap_push = true;
@@ -1139,13 +1145,14 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		chip->bp.float_volt_uv = -EINVAL;
 	}
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	pr_info("set fastchg  2.3A");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
 	chip->bp.fastchg_curr_ma = 2300;
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+	chip->bp.fastchg_curr_ma = 2200;
 #else
-	pr_info("set fastchg  2.7A");
 	chip->bp.fastchg_curr_ma = 2700;
 #endif
+	pr_info("set battery parameter fastchg %d mA \n", chip->bp.fastchg_curr_ma);
 	rc = of_property_read_u32(profile_node, "qcom,fg-cc-cv-threshold-mv",
 			&chip->bp.vbatt_full_mv);
 	if (rc < 0) {
@@ -3428,11 +3435,27 @@ static int fg_get_time_to_full_locked(struct fg_chip *chip, int *val)
 	if (ibatt_avg > 2700)
 		ibatt_avg = 2700;
 #endif
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (hvdcp_mode) {
+		if (msoc <= SLOW_CHARGE_THRESHOLD_HVDCP) {
+			slow_charge = false;
+		} else {
+			slow_charge = true;
+		}
+	} else {
+		if (msoc <= SLOW_CHARGE_THRESHOLD) {
+			slow_charge = false;
+		} else {
+			slow_charge = true;
+		}
+	}
+#else
 	if (msoc <= SLOW_CHARGE_THRESHOLD) {
 		slow_charge = false;
 	} else {
 		slow_charge = true;
 	}
+#endif
 	if (msoc == 99) {
 		/* clamp ibatt_avg to iterm */
 		if (ibatt_avg < abs(chip->dt.sys_term_curr_ma))
@@ -3549,8 +3572,18 @@ cv_estimate:
 	}
 
 	/* tau is scaled linearly from SLOW_CHARGE_THRESHOLD(%) to 100% SOC */
+#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
+	if (hvdcp_mode) {
+		if (msoc >= SLOW_CHARGE_THRESHOLD_HVDCP)
+			tau = tau * 2 * (100 - msoc) / 10;
+	} else {
+		if (msoc >= SLOW_CHARGE_THRESHOLD)
+			tau = tau * 2 * (100 - msoc) / 10;
+	}
+#else
 	if (msoc >= SLOW_CHARGE_THRESHOLD)
 		tau = tau * 2 * (100 - msoc) / 10;
+#endif
 
 	fg_dbg(chip, FG_TTF, "tau=%d\n", tau);
 	t_predicted_cv = div_s64((s64)act_cap_mah * rbatt * tau *

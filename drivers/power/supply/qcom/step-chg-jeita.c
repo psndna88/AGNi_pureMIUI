@@ -126,14 +126,14 @@ static struct jeita_fcc_cfg jeita_fcc_config = {
 		{0,			50,			 400000},
 		{51,		150,		1200000},
 		{151,		410,		2700000},
-		{411,		420,		2300000},
-		{421,		430,		2000000},
-		{431,		450,		1500000},
+		{411,		430,		2300000},
+		{431,		440,		2000000},
+		{441,		450,		1500000},
 		{451,		470,		1200000},
 		{471,		600,		 800000},
 	},
 };
-#elif defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+#elif defined(CONFIG_KERNEL_CUSTOM_E7S)
 static struct jeita_fcc_cfg jeita_fcc_config = {
 	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
 	.prop_name	= "BATT_TEMP",
@@ -146,6 +146,23 @@ static struct jeita_fcc_cfg jeita_fcc_config = {
 		{421,		430,		2000000},
 		{431,		440,		1700000},
 		{441,		450,		1400000},
+		{451,		470,		1100000},
+		{471,		600,		 800000},
+	},
+};
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+static struct jeita_fcc_cfg jeita_fcc_config = {
+	.psy_prop	= POWER_SUPPLY_PROP_TEMP,
+	.prop_name	= "BATT_TEMP",
+	.hysteresis	= 0, /* 1degC hysteresis */
+	.fcc_cfg	= {
+		/* TEMP_LOW	TEMP_HIGH	FCC */
+		{0,			50,			 400000},
+		{51,		150,		1200000},
+		{151,		410,		2200000},
+		{411,		420,		2000000},
+		{421,		430,		1700000},
+		{431,		450,		1400000},
 		{451,		470,		1100000},
 		{471,		600,		 800000},
 	},

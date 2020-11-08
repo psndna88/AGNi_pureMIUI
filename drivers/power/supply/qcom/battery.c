@@ -1136,7 +1136,7 @@ static void handle_main_charge_type(struct pl_data *chip)
 //	POWER_SUPPLY_CHARGE_TYPE_UNKNOWN = 0, POWER_SUPPLY_CHARGE_TYPE_NONE = 1
 //	POWER_SUPPLY_CHARGE_TYPE_TRICKLE = 2, POWER_SUPPLY_CHARGE_TYPE_FAST= 3
 //	POWER_SUPPLY_CHARGE_TYPE_TAPER = 4
-	if (pval.intval == 4) {
+	if ((pval.intval == 0) || (pval.intval == 4)) {
 		pval.intval = POWER_SUPPLY_CHARGE_TYPE_FAST;
 		pr_err("chip->charge_type =%d, FORCED pval.intval=%d \n", chip->charge_type,pval.intval);
 	} else {

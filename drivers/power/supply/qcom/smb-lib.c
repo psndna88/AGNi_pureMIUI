@@ -61,6 +61,8 @@ extern int hwc_check_global;
 #define HVDCP2_CURRENT_UA		2000000
 #if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
 #define HVDCP3_CURRENT_UA		2700000
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+#define HVDCP3_CURRENT_UA		2200000
 #else
 #define HVDCP3_CURRENT_UA		2300000
 #endif
@@ -3246,18 +3248,14 @@ int smblib_get_charge_current(struct smb_charger *chg,
 	/* QC 3.0 adapter */
 	if (apsd_result->bit & QC_3P0_BIT) {
 		*total_current_ua = HVDCP3_CURRENT_UA;
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A)
-		pr_info("QC3.0 set icl to 2.7A\n");
-#else
-		pr_info("QC3.0 set icl to 2.3A\n");
-#endif
+		pr_info("QC3.0 set icl to %d A\n", HVDCP3_CURRENT_UA / 1000000);
 		return 0;
 	}
 
 	/* QC 2.0 adapter */
 	if (apsd_result->bit & QC_2P0_BIT) {
 		*total_current_ua = HVDCP2_CURRENT_UA;
-		pr_info("QC2.0 set icl to 1.5A\n");
+		pr_info("QC2.0 set icl to %d A\n", HVDCP2_CURRENT_UA / 1000000);
 		return 0;
 	}
 

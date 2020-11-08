@@ -53,6 +53,8 @@ union power_supply_propval lct_therm_india_level = {1,};
 
 int LctIsInCall = 0;
 int LctIsInVideo = 0;
+bool hvdcp_mode;
+bool dcp_mode;
 extern int hwc_check_india;
 extern int hwc_check_global;
 extern bool is_poweroff_charge;
@@ -261,13 +263,14 @@ static int smb2_parse_dt(struct smb2 *chip)
 	chip->dt.no_battery = of_property_read_bool(node,
 						"qcom,batteryless-platform");
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	pr_info("set fcc max 2.3A");
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
 	chg->batt_profile_fcc_ua = 2300000;
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+	chg->batt_profile_fcc_ua = 2200000;
 #else
-	pr_info("set fcc max 2.7A");
 	chg->batt_profile_fcc_ua = 2700000;
 #endif
+	pr_err("set fcc max %d uA \n", chg->batt_profile_fcc_ua);
 	rc = of_property_read_u32(node,
 				"qcom,fv-max-uv", &chg->batt_profile_fv_uv);
 	if (rc < 0)
@@ -408,6 +411,16 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 	struct smb_charger *chg = &chip->chg;
 	int rc = 0;
 
+	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)) {
+		hvdcp_mode = true;
+	} else {
+		hvdcp_mode = false;
+	}
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) {
+		dcp_mode = true;
+	} else {
+		dcp_mode = false;
+	}	
 	switch (psp) {
 	case POWER_SUPPLY_PROP_PRESENT:
 		if (chip->bad_part)
