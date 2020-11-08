@@ -1762,6 +1762,7 @@ int ipa3_tx_dp(enum ipa_client_type dst, struct sk_buff *skb,
 		goto fail_pipe_not_valid;
 	}
 
+	trace_ipa3_tx_dp(skb,sys->ep->client);
 	num_frags = skb_shinfo(skb)->nr_frags;
 	/*
 	 * make sure TLV FIFO supports the needed frags.
@@ -1914,6 +1915,7 @@ int ipa3_tx_dp(enum ipa_client_type dst, struct sk_buff *skb,
 		IPA_STATS_INC_CNT(ipa3_ctx->stats.tx_hw_pkts);
 	}
 
+	trace_ipa3_tx_done(sys->ep->client);
 	if (num_frags) {
 		kfree(desc);
 		IPA_STATS_INC_CNT(ipa3_ctx->stats.tx_non_linear);
@@ -4606,6 +4608,7 @@ void __ipa_gsi_irq_rx_scedule_poll(struct ipa3_sys_context *sys)
 	 */
 	clk_off = ipa_pm_activate(sys->pm_hdl);
 	if (!clk_off && sys->napi_obj) {
+		trace_ipa3_napi_schedule(sys->ep->client);
 		napi_schedule(sys->napi_obj);
 		IPA_STATS_INC_CNT(sys->napi_sch_cnt);
 	} else if (!clk_off &&
@@ -5285,6 +5288,9 @@ int ipa3_rx_poll(u32 clnt_hdl, int weight)
 		IPAERR("Invalid client.\n");
 		return cnt;
 	}
+	ep = &ipa3_ctx->ep[clnt_hdl];
+
+	trace_ipa3_napi_poll_entry(ep->client);
 
 	wan_def_sys = ipa3_ctx->ep[ipa_ep_idx].sys;
 	remain_aggr_weight = weight / ipa3_ctx->ipa_wan_aggr_pkt_cnt;
@@ -5295,7 +5301,6 @@ int ipa3_rx_poll(u32 clnt_hdl, int weight)
 		return -EINVAL;
 	}
 
-	ep = &ipa3_ctx->ep[clnt_hdl];
 start_poll:
 	while (remain_aggr_weight > 0 &&
 			atomic_read(&ep->sys->curr_polling_state)) {
@@ -5341,6 +5346,7 @@ start_poll:
 		IPADBG_LOW("Client = %d not replenished free descripotrs\n",
 				ep->client);
 	}
+	trace_ipa3_napi_poll_exit(ep->client);
 	return cnt;
 }
 
