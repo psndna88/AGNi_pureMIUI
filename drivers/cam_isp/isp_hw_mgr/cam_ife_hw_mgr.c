@@ -7589,19 +7589,21 @@ static int cam_ife_hw_mgr_handle_hw_dump_info(
 		}
 	}
 
-	out_port_id = event_info->res_id & 0xFF;
-	hw_mgr_res =
-		&ife_hw_mgr_ctx->res_list_ife_out[out_port_id];
-	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
-		if (!hw_mgr_res->hw_res[i])
-			continue;
-		hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
-		if (hw_intf->hw_ops.process_cmd) {
-			rc = hw_intf->hw_ops.process_cmd(
-				hw_intf->hw_priv,
-				CAM_ISP_HW_CMD_DUMP_BUS_INFO,
-				(void *)event_info,
-				sizeof(struct cam_isp_hw_event_info));
+	if (event_info->res_type == CAM_ISP_RESOURCE_VFE_OUT) {
+		out_port_id = event_info->res_id & 0xFF;
+		hw_mgr_res =
+			&ife_hw_mgr_ctx->res_list_ife_out[out_port_id];
+		for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+			if (!hw_mgr_res->hw_res[i])
+				continue;
+			hw_intf = hw_mgr_res->hw_res[i]->hw_intf;
+			if (hw_intf->hw_ops.process_cmd) {
+				rc = hw_intf->hw_ops.process_cmd(
+					hw_intf->hw_priv,
+					CAM_ISP_HW_CMD_DUMP_BUS_INFO,
+					(void *)event_info,
+					sizeof(struct cam_isp_hw_event_info));
+			}
 		}
 	}
 
