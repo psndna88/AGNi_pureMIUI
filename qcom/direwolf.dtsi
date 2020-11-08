@@ -5,6 +5,8 @@
 #include <dt-bindings/clock/qcom,gcc-direwolf.h>
 #include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,direwolf.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. Direwolf";
@@ -400,6 +402,10 @@
 		rpmhcc: qcom,rpmhclk {
 			compatible = "qcom,direwolf-rpmh-clk";
 			#clock-cells = <1>;
+		};
+
+		apps_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
 		};
 	};
 
@@ -910,6 +916,100 @@
 	};
 
 	thermal_zones: thermal-zones {
+	};
+
+	clk_virt: interconnect@0 {
+		compatible = "qcom,direwolf-clk_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	mc_virt: interconnect@1 {
+		compatible = "qcom,direwolf-mc_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	nspa_noc: interconnect@10c0000 {
+		compatible = "qcom,direwolf-nspa_noc";
+		reg = <0x10C0000 0x10000>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	config_noc: interconnect@1500000 {
+		compatible = "qcom,direwolf-config_noc";
+		reg = <0x1500000 0x2C000>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	system_noc: interconnect@1680000 {
+		compatible = "qcom,direwolf-system_noc_main";
+		reg = <0x01680000 0x1A400>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	aggre1_noc:interconnect@16c0000 {
+		compatible = "qcom,direwolf-aggre1_noc";
+		reg = <0x16C0000 0x3AF80>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	aggre2_noc: interconnect@1700000 {
+		compatible = "qcom,direwolf-aggre2_noc";
+		reg = <0x1700000 0x3AF80>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	mmss_noc: interconnect@1740000 {
+		compatible = "qcom,direwolf-mmss_noc";
+		reg = <0x1740000 0x1FA80>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	lpass_ag_noc: interconnect@3c40000 {
+		compatible = "qcom,direwolf-lpass_ag_noc";
+		reg = <0x3C40000 0xF080>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	dc_noc: interconnect@90e0000 {
+		compatible = "qcom,direwolf-dc_noc";
+		reg = <0x90E0000 0x5080>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	gem_noc: interconnect@9100000 {
+		compatible = "qcom,direwolf-gem_noc";
+		reg = <0x9100000 0xB8400>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	nspb_noc: interconnect@210C0000 {
+		compatible = "qcom,direwolf-nspb_noc";
+		reg = <0x210C0000 0x10000>;
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
 	};
 
 	tlmm: pinctrl@f000000 {
