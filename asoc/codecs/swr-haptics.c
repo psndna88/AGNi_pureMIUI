@@ -77,6 +77,7 @@ struct swr_haptics_dev {
 	struct regmap			*regmap;
 	struct swr_port			port;
 	struct regulator		*vdd;
+	u32 enable_cnt;
 };
 
 static bool swr_hap_volatile_register(struct device *dev, unsigned int reg)
@@ -324,6 +325,7 @@ static int swr_haptics_probe(struct swr_device *sdev)
 	swr_hap->swr_slave = sdev;
 	swr_hap->dev = &sdev->dev;
 	swr_set_dev_data(sdev, swr_hap);
+	swr_hap->enable_cnt = 0;
 
 	rc = swr_haptics_parse_port_mapping(sdev);
 	if (rc < 0) {
@@ -427,6 +429,8 @@ static int swr_haptics_device_up(struct swr_device *sdev)
 		dev_err(swr_hap->dev, "%s: enable swr-slave failed, rc=%d\n",
 				__func__, rc);
 		return rc;
+	} else {
+		swr_hap->enable_cnt++;
 	}
 
 	return 0;
@@ -443,13 +447,18 @@ static int swr_haptics_device_down(struct swr_device *sdev)
 	}
 
 	/* Put SWR slave into reset */
-	rc = regulator_disable(swr_hap->vdd);
-	if (rc < 0) {
-		dev_err(swr_hap->dev, "%s: disable swr-slave failed, rc=%d\n",
+	if (swr_hap->enable_cnt > 0) {
+		rc = regulator_disable(swr_hap->vdd);
+		if (rc < 0) {
+			dev_err(swr_hap->dev, "%s: disable swr-slave failed, rc=%d\n",
 				__func__, rc);
-		return rc;
+			return rc;
+		} else {
+			swr_hap->enable_cnt--;
+		}
+	} else {
+		swr_hap->enable_cnt = 0;
 	}
-
 	return 0;
 }
 
