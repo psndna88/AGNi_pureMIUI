@@ -3244,9 +3244,7 @@ static int swrm_runtime_suspend(struct device *dev)
 		}
 
 		if (swrm->clk_stop_mode0_supp) {
-			if ((swrm->wake_irq > 0) &&
-			    (irqd_irq_disabled(
-			    irq_get_irq_data(swrm->wake_irq)))) {
+			if (swrm->wake_irq > 0) {
 				enable_irq(swrm->wake_irq);
 			} else if (swrm->ipc_wakeup) {
 				msm_aud_evt_blocking_notifier_call_chain(
