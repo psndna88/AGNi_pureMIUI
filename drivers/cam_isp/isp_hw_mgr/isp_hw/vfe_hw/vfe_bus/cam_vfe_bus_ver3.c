@@ -853,17 +853,23 @@ static void cam_vfe_bus_ver3_print_constraint_errors(
 static void cam_vfe_bus_ver3_get_constraint_errors(
 	struct cam_vfe_bus_ver3_priv *bus_priv)
 {
-	uint32_t i, constraint_errors;
-	struct cam_vfe_bus_ver3_wm_resource_data *wm_data;
+	uint32_t i, j, constraint_errors;
+	struct cam_isp_resource_node              *out_rsrc_node = NULL;
+	struct cam_vfe_bus_ver3_vfe_out_data      *out_rsrc_data = NULL;
+	struct cam_vfe_bus_ver3_wm_resource_data  *wm_data   = NULL;
 
-	for (i = 0; i < bus_priv->num_client; i++) {
-		wm_data = bus_priv->bus_client[i].res_priv;
-		if (wm_data) {
-			constraint_errors = cam_io_r_mb(
-				bus_priv->common_data.mem_base +
-				wm_data->hw_regs->debug_status_1);
-			cam_vfe_bus_ver3_print_constraint_errors(i,
-				constraint_errors);
+	for (i = 0; i < bus_priv->num_out; i++) {
+		out_rsrc_node = &bus_priv->vfe_out[i];
+		out_rsrc_data = out_rsrc_node->res_priv;
+		for (j = 0; j < out_rsrc_data->num_wm; j++) {
+			wm_data = out_rsrc_data->wm_res[j].res_priv;
+			if (wm_data) {
+				constraint_errors = cam_io_r_mb(
+					bus_priv->common_data.mem_base +
+					wm_data->hw_regs->debug_status_1);
+				cam_vfe_bus_ver3_print_constraint_errors(j,
+					constraint_errors);
+			}
 		}
 	}
 }
