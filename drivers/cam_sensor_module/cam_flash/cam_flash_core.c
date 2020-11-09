@@ -1748,7 +1748,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 			add_req.skip_before_applying |= SKIP_NEXT_FRAME;
 			add_req.trigger_eof = true;
 
-			if ((flash_data->opcode !=
+			if (flash_data && (flash_data->opcode !=
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION))
 				add_req.skip_before_applying |= 1;
 			else
