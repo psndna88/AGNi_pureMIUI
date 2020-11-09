@@ -49,6 +49,8 @@
 		swr1 = &swr1;
 	};
 
+	firmware: firmware {};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -244,34 +246,7 @@
 		};
 	};
 
-
 	soc: soc { };
-
-	firmware: firmware {
-		scm {
-			compatible = "qcom,scm";
-		};
-
-		android {
-			compatible = "android,firmware";
-			vbmeta {
-				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
-			};
-
-			fstab {
-				compatible = "android,fstab";
-				vendor {
-					compatible = "android,vendor";
-					dev = "/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
-					status = "ok";
-				};
-			};
-		};
-	};
 
 	sram: sram@fd04480 {
 		#address-cells = <2>;
@@ -283,6 +258,32 @@
 		cpu_scp_lpri: scp-shmem@0 {
 			compatible = "arm,scp-shmem";
 			reg = <0x0 0x0 0x0 0x80>;
+		};
+	};
+};
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+	};
+
+	android {
+		compatible = "android,firmware";
+		vbmeta {
+			compatible = "android,vbmeta";
+			parts = "vbmeta,boot,system,vendor,dtbo";
+		};
+
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,slotselect,avb";
+				status = "ok";
+			};
 		};
 	};
 };
