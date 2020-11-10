@@ -61,8 +61,8 @@
 			  <0x1e04000 0x28000>;
 		reg-names = "ipa-base", "gsi-base";
 		interrupts =
-			<0 311 0>,
-			<0 432 0>;
+			<GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "ipa-irq", "gsi-irq";
 		qcom,ipa-hw-ver = <15>; /* IPA core version = IPAv4.1 */
 		qcom,ipa-hw-mode = <0>;
@@ -70,11 +70,11 @@
 		qcom,ee = <0>;
 		qcom,use-ipa-tethering-bridge;
 		qcom,use-64-bit-dma-mask;
+		qcom,ipa-wdi3-over-gsi;
 		qcom,arm-smmu;
 		qcom,use-ipa-pm;
 		qcom,ipa-config-is-auto;
 		qcom,bandwidth-vote-for-ipa;
-		qcom,manual-fw-load;
 		qcom,lan-rx-napi;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,tx-napi;
