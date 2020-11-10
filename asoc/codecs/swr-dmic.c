@@ -174,7 +174,7 @@ static int swr_dmic_tx_master_port_put(struct snd_kcontrol *kcontrol,
 				snd_soc_kcontrol_component(kcontrol);
 	struct swr_dmic_priv *swr_dmic = NULL;
 	int ret = 0;
-	unsigned int slave_port_idx = SWR_DMIC_MAX_PORTS;
+	unsigned int slave_port_idx = SWR_DMIC_MAX_PORTS, idx = 0;
 
 	if (NULL == component) {
 		pr_err("%s: swr dmic component is NULL\n", __func__);
@@ -199,8 +199,12 @@ static int swr_dmic_tx_master_port_put(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 
+	idx = ucontrol->value.enumerated.item[0];
+	if (idx < 0 || idx >= ARRAY_SIZE(swr_master_channel_map))
+		return -EINVAL;
+
 	swr_dmic->tx_master_port_map[slave_port_idx] =
-		swr_master_channel_map[ucontrol->value.enumerated.item[0]];
+			swr_master_channel_map[idx];
 	dev_dbg(component->dev, "%s: slv port id: %d, master_port_type: %d\n",
 		__func__, slave_port_idx,
 		swr_dmic->tx_master_port_map[slave_port_idx]);

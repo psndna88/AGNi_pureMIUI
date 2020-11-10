@@ -2869,7 +2869,7 @@ static int wcd938x_tx_master_ch_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component =
 				snd_soc_kcontrol_component(kcontrol);
 	struct wcd938x_priv *wcd938x = NULL;
-	int slave_ch_idx = -EINVAL;
+	int slave_ch_idx = -EINVAL, idx = 0;
 
 	if (component == NULL)
 		return -EINVAL;
@@ -2887,8 +2887,11 @@ static int wcd938x_tx_master_ch_put(struct snd_kcontrol *kcontrol,
 	dev_dbg(component->dev, "%s: ucontrol->value.enumerated.item[0] = %ld\n",
 			__func__, ucontrol->value.enumerated.item[0]);
 
-	wcd938x->tx_master_ch_map[slave_ch_idx] = wcd938x_slave_get_master_ch(
-				ucontrol->value.enumerated.item[0]);
+	idx = ucontrol->value.enumerated.item[0];
+	if (idx < 0 || idx >= ARRAY_SIZE(swr_master_ch_map))
+		return -EINVAL;
+
+	wcd938x->tx_master_ch_map[slave_ch_idx] = wcd938x_slave_get_master_ch(idx);
 	return 0;
 }
 
