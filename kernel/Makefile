@@ -120,8 +120,13 @@ obj-$(CONFIG_HAS_IOMEM) += memremap.o
 $(obj)/configs.o: $(obj)/config_data.h
 
 targets += config_data.gz
+ifeq ($(CONFIG_ARCH_ATOLL),y)
+$(obj)/config_data.gz: arch/arm64/configs/agni_atoll_defconfig FORCE
+	$(call if_changed,gzip)
+else
 $(obj)/config_data.gz: $(KCONFIG_CONFIG) FORCE
 	$(call if_changed,gzip)
+endif
 
       filechk_ikconfiggz = (echo "static const char kernel_config_data[] __used = MAGIC_START"; cat $< | scripts/basic/bin2c; echo "MAGIC_END;")
 targets += config_data.h
