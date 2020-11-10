@@ -354,7 +354,24 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_inv_data,
 				&dump_reg);
-			CAM_INFO(CAM_CDM, "Last Inv cmd: 0x%x", dump_reg);
+			CAM_INFO(CAM_CDM, "First word of Last Inv cmd: 0x%x",
+				dump_reg);
+
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_0,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "First word of Last Good cmd: 0x%x",
+				dump_reg);
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_1,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "Second word of Last Good cmd: 0x%x",
+				dump_reg);
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_2,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "Third word of Last Good cmd: 0x%x",
+				dump_reg);
 		}
 	}
 
