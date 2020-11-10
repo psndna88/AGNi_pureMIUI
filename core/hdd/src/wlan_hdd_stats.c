@@ -185,6 +185,20 @@ static int rssi_mcs_tbl[][14] = {
 
 static bool get_station_fw_request_needed = true;
 
+#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
+static void
+hdd_update_station_stats_cached_timestamp(struct hdd_adapter *adapter)
+{
+	adapter->hdd_stats.sta_stats_cached_timestamp =
+				qdf_system_ticks_to_msecs(qdf_system_ticks());
+}
+#else
+static void
+hdd_update_station_stats_cached_timestamp(struct hdd_adapter *adapter)
+{
+}
+#endif /* FEATURE_CLUB_LL_STATS_AND_GET_STATION */
+
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 
 /**
@@ -1578,20 +1592,6 @@ static void wlan_hdd_dealloc_ll_stats(void *priv)
 	}
 	qdf_list_destroy(&ll_stats_priv->ll_stats_q);
 }
-
-#ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
-static void
-hdd_update_station_stats_cached_timestamp(struct hdd_adapter *adapter)
-{
-	adapter->hdd_stats.sta_stats_cached_timestamp =
-				qdf_system_ticks_to_msecs(qdf_system_ticks());
-}
-#else
-static void
-hdd_update_station_stats_cached_timestamp(struct hdd_adapter *adapter)
-{
-}
-#endif /* FEATURE_CLUB_LL_STATS_AND_GET_STATION */
 
 /*
  * copy_station_stats_to_adapter() - Copy station stats to adapter
@@ -6448,6 +6448,8 @@ int wlan_hdd_get_station_stats(struct hdd_adapter *adapter)
 		goto out;
 	}
 
+	/* update get stats cached time stamp */
+	hdd_update_station_stats_cached_timestamp(adapter);
 	copy_station_stats_to_adapter(adapter, stats);
 	wlan_cfg80211_mc_cp_stats_free_stats_event(stats);
 
