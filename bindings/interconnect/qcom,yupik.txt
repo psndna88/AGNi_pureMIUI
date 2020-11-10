@@ -14,6 +14,8 @@ Required properties :
 			"qcom,yupik-aggre2_noc",
 			"qcom,yupik-clk_virt",
 			"qcom,yupik-config_noc",
+			"qcom,yupik-cnoc2",
+			"qcom,yupik-cnoc3",
 			"qcom,yupik-dc_noc",
 			"qcom,yupik-gem_noc",
 			"qcom,yupik-lpass_ag_noc",
