@@ -361,6 +361,18 @@
 		#clock-cells = <1>;
 	};
 
+	eud: qcom,msm-eud@ff0000 {
+		compatible = "qcom,msm-eud";
+		interrupt-names = "eud_irq";
+		interrupt-parent = <&pdc>;
+		interrupts = <15 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0xff0000 0x2000>,
+			<0xff2000 0x1000>;
+		reg-names = "eud_base", "eud_mode_mgr2";
+		qcom,secure-eud-en;
+		status = "ok";
+	};
+
 	serial_uart: serial@831000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x831000 0x200>;
