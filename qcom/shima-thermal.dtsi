@@ -79,14 +79,12 @@
 	cx_sdpm@0x00634000 {
 		compatible = "qcom,sdpm";
 		reg = <0x00634000 0x1000>;
-		clock-names = "cam_cc_csi0phytiimer", "video_cc_mvs0", "disp_cc_mdss_mdp";
+		clock-names = "cam_cc_csi0phytiimer", "video_cc_mvs0";
 		clocks = <&camcc CAM_CC_CSI0PHYTIMER_CLK_SRC>,
-			<&videocc VIDEO_CC_MVS0_CLK_SRC>,
-			<&dispcc DISP_CC_MDSS_MDP_CLK_SRC>;
+			<&videocc VIDEO_CC_MVS0_CLK_SRC>;
 		cam_cc_csi0phytiimer-supply = <&cam_cc_titan_top_gdsc>;
 		video_cc_mvs0-supply = <&video_cc_mvs0_gdsc>;
-		disp_cc_mdss-mdp-supply = <&disp_cc_mdss_core_gdsc>;
-		csr-id = <0 2 5>;
+		csr-id = <0 2>;
 	};
 
 	mx_pe: mx_rdpm_pe@0x00637000 {
