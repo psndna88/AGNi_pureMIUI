@@ -6,8 +6,8 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="whyred"
 CONFIG1="agni_whyred_ROG_defconfig"
-CONFIG2="agni_whyred-oldcam_defconfig"
-CONFIG3="agni_whyred-MIUI-Q_defconfig"
+CONFIG2=""
+CONFIG3=""
 SYNC_CONFIG=1
 WLAN_MODA11="$COMPILEDIR/drivers/staging/qcacld-3.0"
 WLAN_MODQ="$COMPILEDIR/drivers/staging/qcacld-3.0_Q"
@@ -46,9 +46,9 @@ rm -rf $KERNELDIR/$DIR
 mkdir -p $KERNELDIR/$DIR
 cd $KERNELDIR/
 
-###### COMPILE new cam
+###### COMPILE 
 echo ""
-echo " ~~~~~ Cross-compiling AGNi kernel $DEVICE ~~~~~"
+echo " ~~~~~ Cross-compiling AGNi kernel ROG $DEVICE ~~~~~"
 echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
 echo ""
 
@@ -73,11 +73,11 @@ rm $COMPILEDIR/.config $COMPILEDIR/.config.old
 if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
 	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-nc
 else
-	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
+	echo "         ERROR: Cross-compiling AGNi kernel ROG $DEVICE."
 	rm -rf $KERNELDIR/$DIR
 	exit;
 fi
-########## COMPILE new cam END
+########## COMPILE END
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
 mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
 mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
@@ -87,77 +87,11 @@ mv -f $RTL8712U/8712u.ko $KERNELDIR/$DIR 2>/dev/null
 mv -f $RTL8723AU/8723au.ko $KERNELDIR/$DIR 2>/dev/null
 mv -f $RTL8192EU/8192eu.ko $KERNELDIR/$DIR 2>/dev/null
 
-###### COMPILE old cam
-echo ""
-echo " ~~~~~ Cross-compiling AGNi (Old Cam) kernel $DEVICE ~~~~~"
-echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
-echo ""
-
-rm $COMPILEDIR/.config 2>/dev/null
-rm $WLAN_MODA11/*.ko 2>/dev/null
-rm $WLAN_MODQ/*.ko 2>/dev/null
-rm $WLAN_MODP/*.ko 2>/dev/null
-rm $WLAN_MODPO/*.ko 2>/dev/null
-
-make defconfig O=$COMPILEDIR $CONFIG2
-make -j8 O=$COMPILEDIR
-
-if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
-	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG2
-fi
-rm $COMPILEDIR/.config $COMPILEDIR/.config.old
-
-if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
-	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-oc
-else
-	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
-	rm -rf $KERNELDIR/$DIR
-	exit;
-fi
-########## COMPILE old cam END
-mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
-mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
-mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
-mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
-
-###### COMPILE MIUI-Q cam
-echo ""
-echo " ~~~~~ Cross-compiling AGNi kernel (MIUI-Q cam) $DEVICE ~~~~~"
-echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
-echo ""
-
-rm $COMPILEDIR/.config 2>/dev/null
-rm $WLAN_MODA11/*.ko 2>/dev/null
-rm $WLAN_MODQ/*.ko 2>/dev/null
-rm $WLAN_MODP/*.ko 2>/dev/null
-rm $WLAN_MODPO/*.ko 2>/dev/null
-
-make defconfig O=$COMPILEDIR $CONFIG3
-make -j8 O=$COMPILEDIR # COMPILE
-
-if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
-	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG3
-fi
-rm $COMPILEDIR/.config $COMPILEDIR/.config.old
-
-if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
-	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-mqc
-else
-	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
-	rm -rf $KERNELDIR/$DIR
-	exit;
-fi
-########## COMPILE MIUI-Q cam END
-mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
-mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
-mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
-mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
-
 echo ""
 
 ###### ZIP Packing
-if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-mqc ]); then
-	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
+if [ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ]; then
+	cp -r $KERNELDIR/anykernel3_ROG/* $KERNELDIR/$DIR/
 	sed -i 's/device.name1=/device.name1=whyred/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i '/#SDM660/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SETDEVICETYPE/SDM636_whyred (Redmi Note 5 Pro)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
@@ -167,10 +101,7 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	mv -f $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
 	mv -f $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	mv -f $KERNELDIR/$DIR/8*.ko $KERNELDIR/$DIR/tools 2>/dev/null
-	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm660
-	rm -rf $KERNELDIR/$DIR/tools/sdm660
 	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
-	rm -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm660
 	mv -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm636 $KERNELDIR/$DIR/tools/perf/powerhint.json
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
