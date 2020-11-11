@@ -1758,8 +1758,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		if (link->max_delay == 1)
 			max_retry++;
 
-		if ((in_q->last_applied_idx < in_q->rd_idx) &&
-			!link->wq_congestion) {
+		if (!link->wq_congestion) {
 			link->retry_cnt++;
 			if (link->retry_cnt == max_retry) {
 				CAM_DBG(CAM_CRM,
