@@ -297,6 +297,7 @@ int cam_a5_init_hw(void *device_priv,
 	struct cam_a5_device_core_info *core_info = NULL;
 	struct a5_soc_info *a5_soc_info;
 	struct cam_icp_cpas_vote cpas_vote;
+	unsigned long flags;
 	int rc = 0;
 
 	if (!device_priv) {
@@ -356,6 +357,10 @@ int cam_a5_init_hw(void *device_priv,
 				ICP_SIERRA_A5_CSR_ACCESS);
 	}
 
+	spin_lock_irqsave(&a5_dev->hw_lock, flags);
+	a5_dev->hw_state = CAM_HW_STATE_POWER_UP;
+	spin_unlock_irqrestore(&a5_dev->hw_lock, flags);
+
 error:
 	return rc;
 }
@@ -366,6 +371,7 @@ int cam_a5_deinit_hw(void *device_priv,
 	struct cam_hw_info *a5_dev = device_priv;
 	struct cam_hw_soc_info *soc_info = NULL;
 	struct cam_a5_device_core_info *core_info = NULL;
+	unsigned long flags;
 	int rc = 0;
 
 	if (!device_priv) {
@@ -380,6 +386,10 @@ int cam_a5_deinit_hw(void *device_priv,
 			soc_info, core_info);
 		return -EINVAL;
 	}
+
+	spin_lock_irqsave(&a5_dev->hw_lock, flags);
+	a5_dev->hw_state = CAM_HW_STATE_POWER_DOWN;
+	spin_unlock_irqrestore(&a5_dev->hw_lock, flags);
 
 	rc = cam_a5_disable_soc_resources(soc_info);
 	if (rc)
@@ -461,6 +471,14 @@ irqreturn_t cam_a5_irq(int irq_num, void *data)
 		CAM_ERR(CAM_ICP, "Invalid cam_dev_info or query_cap args");
 		return IRQ_HANDLED;
 	}
+
+	spin_lock(&a5_dev->hw_lock);
+	if (a5_dev->hw_state == CAM_HW_STATE_POWER_DOWN) {
+		CAM_WARN(CAM_ICP, "ICP HW powered off");
+		spin_unlock(&a5_dev->hw_lock);
+		return IRQ_HANDLED;
+	}
+	spin_unlock(&a5_dev->hw_lock);
 
 	soc_info = &a5_dev->soc_info;
 	core_info = (struct cam_a5_device_core_info *)a5_dev->core_info;
