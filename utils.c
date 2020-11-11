@@ -78,6 +78,40 @@ enum driver_type get_driver_type(struct sigma_dut *dut)
 }
 
 
+void sigma_dut_get_device_driver_name(const char *ifname, char *name,
+				      size_t size)
+{
+	char fname[128], path[128];
+	struct stat s;
+	ssize_t res;
+	char *pos;
+
+	name[0] = '\0';
+
+	snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211", ifname);
+	if (stat(path, &s) != 0)
+		return;
+
+	res = snprintf(fname, sizeof(fname),
+		       "/sys/class/net/%s/device/driver", ifname);
+	if (res < 0 || res >= sizeof(fname))
+		return;
+	res = readlink(fname, path, sizeof(path));
+	if (res < 0)
+		return;
+
+	if (res >= (int) sizeof(path))
+		res = sizeof(path) - 1;
+	path[res] = '\0';
+	pos = strrchr(path, '/');
+	if (!pos)
+		pos = path;
+	else
+		pos++;
+	snprintf(name, size, "%s", pos);
+}
+
+
 enum openwrt_driver_type get_openwrt_driver_type(void)
 {
 	struct stat s;

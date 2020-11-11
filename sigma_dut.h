@@ -968,6 +968,7 @@ struct sigma_dut {
 	int ocvc;
 	int client_privacy;
 	int saquery_oci_freq;
+	char device_driver[32];
 };
 
 
@@ -1041,6 +1042,8 @@ enum openwrt_driver_type {
 int set_wifi_chip(const char *chip_type);
 enum driver_type get_driver_type(struct sigma_dut *dut);
 enum openwrt_driver_type get_openwrt_driver_type(void);
+void sigma_dut_get_device_driver_name(const char *ifname, char *name,
+				      size_t size);
 int file_exists(const char *fname);
 
 struct wpa_ctrl;
