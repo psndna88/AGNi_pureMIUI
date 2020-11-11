@@ -630,6 +630,8 @@ static enum cam_vfe_bus_ver3_vfe_out_type
 	case CAM_ISP_IFE_LITE_OUT_RES_GAMMA:
 		return CAM_VFE_BUS_VER3_VFE_OUT_GAMMA;
 	default:
+		CAM_WARN(CAM_ISP, "Invalid isp res id: %d , assigning max",
+			res_type);
 		return CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 	}
 }
@@ -2508,8 +2510,26 @@ static int cam_vfe_bus_ver3_print_dimensions(
 	int                                        i;
 	uint32_t addr_status0, addr_status1, addr_status2, addr_status3;
 
+	if (!bus_priv) {
+		CAM_ERR(CAM_ISP, "Invalid bus private data, res_id: %d",
+			vfe_out_res_id);
+		return -EINVAL;
+	}
+
+	if (vfe_out_res_id >= CAM_VFE_BUS_VER3_VFE_OUT_MAX) {
+		CAM_ERR(CAM_ISP, "Invalid out resource for dump: %d",
+			vfe_out_res_id);
+		return -EINVAL;
+	}
+
 	rsrc_node = &bus_priv->vfe_out[vfe_out_res_id];
 	rsrc_data = rsrc_node->res_priv;
+	if (!rsrc_data) {
+		CAM_ERR(CAM_ISP, "VFE out data is null, res_id: %d",
+			vfe_out_res_id);
+		return -EINVAL;
+	}
+
 	for (i = 0; i < rsrc_data->num_wm; i++) {
 		wm_data = rsrc_data->wm_res[i].res_priv;
 		common_data = rsrc_data->common_data;
