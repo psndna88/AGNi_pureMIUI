@@ -474,3 +474,5 @@
 };
 
 #include "monaco-pinctrl.dtsi"
+#include "monaco-ion.dtsi"
+
