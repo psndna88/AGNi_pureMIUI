@@ -12,6 +12,8 @@
 
 &pcie0 {
 	qcom,boot-option = <0x1>;
+	qcom,l1-2-th-scale = <2>; /* 1us */
+	qcom,l1-2-th-value = <70>;
 };
 
 &sdhc_1 {
