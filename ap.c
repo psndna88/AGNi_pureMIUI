@@ -122,6 +122,19 @@ static int kill_process(struct sigma_dut *dut, char *proc_name,
 			unsigned char is_proc_instance_one, int sig);
 
 
+static int fwtest_cmd_wrapper(struct sigma_dut *dut, const char *arg,
+			       const char *ifname)
+{
+	int ret = -1;
+
+	if (strcmp(dut->device_driver, "ath11k") == 0)
+		ret = run_system_wrapper(dut, "ath11k-fwtest -i %s %s",
+					 ifname, arg);
+
+	return ret;
+}
+
+
 static int ap_ft_enabled(struct sigma_dut *dut)
 {
 	return dut->ap_ft_oa == 1 ||
@@ -13025,6 +13038,45 @@ static enum sigma_cmd_result mac80211_he_gi(struct sigma_dut *dut,
 }
 
 
+static void mac80211_set_ackpolicy_0(struct sigma_dut *dut, const char *ifname,
+				     unsigned char *mac_addr)
+{
+	char cmd[256];
+
+	/* Disable all-BAR ackpolicy for MU-MIMO */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 62 0", ifname);
+	/* Disable all-BAR ackpolicy first */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 64 0", ifname);
+
+	/*
+	 * Set the normal ack policy for the STA with the specified
+	 * MAC address in the DL TX case.
+	 */
+	snprintf(cmd, sizeof(cmd),
+		 "-m 0x4b -v 0 8 1 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x",
+		 mac_addr[0], mac_addr[1], mac_addr[2],
+		 mac_addr[3], mac_addr[4], mac_addr[5]);
+
+	fwtest_cmd_wrapper(dut, cmd, ifname);
+}
+
+
+static void mac80211_set_ackpolicy_3(struct sigma_dut *dut, const char *ifname)
+{
+	/* Enable all-BAR ackpolicy for MU-MIMO DL */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 62 1", ifname);
+	/* Enable all-BAR ackpolicy */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 64 1", ifname);
+}
+
+
+static void mac80211_set_ackpolicy_4(struct sigma_dut *dut, const char *ifname)
+{
+	/* Enable htp-ack ackpolicy */
+	fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 99 1", ifname);
+}
+
+
 static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
 						      struct sigma_conn *conn,
 						      struct sigma_cmd *cmd)
@@ -13032,6 +13084,9 @@ static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
 	const char *val;
 	const char *ifname;
 	enum sigma_cmd_result res;
+	unsigned char mac_addr[ETH_ALEN];
+	int he_ackpolicymac = 0;
+	int ap_he_ackpolicy;
 
 	ifname = get_main_ifname(dut);
 
@@ -13063,6 +13118,40 @@ static enum sigma_cmd_result mac80211_ap_set_rfeature(struct sigma_dut *dut,
 		res = mac80211_he_gi(dut, ifname, val);
 		if (res != SUCCESS_SEND_STATUS)
 			return res;
+	}
+
+	val = get_param(cmd, "AckPolicy_MAC");
+	if (val) {
+		if (parse_mac_address(dut, val, mac_addr) < 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,MAC address not in proper format");
+			return STATUS_SENT_ERROR;
+		}
+
+		he_ackpolicymac = 1;
+	}
+
+	val = get_param(cmd, "AckPolicy");
+	if (val) {
+		ap_he_ackpolicy = atoi(val);
+
+		switch (ap_he_ackpolicy) {
+		case 0:
+			if (!he_ackpolicymac)
+				break;
+			mac80211_set_ackpolicy_0(dut, ifname, mac_addr);
+			break;
+		case 3:
+			mac80211_set_ackpolicy_3(dut, ifname);
+			break;
+		case 4:
+			mac80211_set_ackpolicy_4(dut, ifname);
+			break;
+		default:
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid AckPolicy setting");
+			return STATUS_SENT_ERROR;
+		}
 	}
 
 	return SUCCESS_SEND_STATUS;
