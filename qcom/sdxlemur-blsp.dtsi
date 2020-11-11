@@ -294,7 +294,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x82f000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart1a_hs>;
@@ -330,7 +330,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x82f000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart1b_hs>;
@@ -366,7 +366,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x830000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart2a_hs>;
@@ -402,7 +402,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x830000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart2b_hs>;
@@ -438,7 +438,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x831000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart3_hs>;
@@ -474,7 +474,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x832000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart4a_hs>;
@@ -510,7 +510,7 @@
 		compatible = "qcom,msm-hsuart-v14";
 		reg-names = "core_mem", "bam_mem";
 		reg = <0x832000 0x200>,
-			<0x80400 0x23000>;
+			<0x804000 0x23000>;
 		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp1_uart4b_hs>;
