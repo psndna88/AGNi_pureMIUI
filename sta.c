@@ -7345,6 +7345,21 @@ static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_fullbw_ulmumimo(struct sigma_dut *dut, const char *intf,
+				   int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FULL_BW_UL_MU_MIMO, val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Full BW UL MU MIMO cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				  const char *type)
 {
@@ -8782,6 +8797,30 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set TWT_ReqSupport");
 			return STATUS_SENT;
+		}
+	}
+
+	val = get_param(cmd, "FullBW_ULMUMIMO");
+	if (val) {
+		int set_val;
+
+		if (strcasecmp(val, "Enable") == 0) {
+			set_val = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			set_val = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Invalid FullBW_ULMUMIMO");
+			return STATUS_SENT_ERROR;
+		}
+
+		if (sta_set_fullbw_ulmumimo(dut, intf, set_val)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set FullBW_ULMUMIMO %d",
+					set_val);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set FullBW_ULMUMIMO");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
