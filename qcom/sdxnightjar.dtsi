@@ -1,4 +1,6 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
+#include <dt-bindings/clock/qcom,rpmcc.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXNIGHTJAR";
@@ -96,19 +98,58 @@
 		};
 	};
 
-	clock_gcc: qcom,gcc@1800000 {
-		ompatible = "qcom,dummycc";
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			clock-frequency = <38400000>;
+			clock-output-names = "xo_board";
+			#clock-cells = <0>;
+		};
+
+		sleep_clk: sleep-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <32764>;
+			clock-output-names = "chip_sleep_clk";
+			#clock-cells = <0>;
+		};
+	};
+
+	rpmcc: qcom,rpmcc {
+		compatible = "qcom,rpmcc-sdxnightjar";
 		#clock-cells = <1>;
 	};
 
-	clock_debug: qcom,cc-debug@1874000 {
-		compatible = "qcom,dummycc";
+	gcc: qcom,gcc@1800000 {
+		compatible = "qcom,sdxnightjar-gcc", "syscon";
+		reg = <0x1800000 0x80000>;
+		reg-names = "cc_base";
+		vdd_cx-supply = <&pmd9650_s5_level>;
+		vdd_cx_ao-supply = <&pmd9650_s5_level_ao>;
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
+			<&rpmcc RPM_SMD_XO_A_CLK_SRC>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao";
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+	};
+
+	debugcc: qcom,cc-debug@1874000 {
+		compatible = "qcom,sdxnightjar-debugcc";
+		qcom,gcc = <&gcc>;
+		clock-names = "xo_clk_src";
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
 		#clock-cells = <1>;
 	};
 
-	clock_cpu: qcom,clock-a7@0b010008 {
-		compatible = "qcom,dummycc";
-		#clock-cells = <1>;
+	gdsc_usb30: qcom,gdsc@fc401e84 {
+		compatible = "qcom,gdsc";
+		regulator-name = "gdsc_usb30";
+		reg = <0x185e078 0x4>;
+	};
+
+	gdsc_pcie: qcom,gdsc@0xfc401e18 {
+		compatible = "qcom,gdsc";
+		regulator-name = "gdsc_pcie";
+		reg = <0x0185d044 0x4>;
 	};
 
 	qcom,msm-cpufreq {
