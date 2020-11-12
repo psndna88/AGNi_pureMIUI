@@ -121,6 +121,16 @@ enum {
 	AFE_FBSP_V4_EX_VI_MODE_FTM = 1
 };
 
+enum {
+	AFE_ISLAND_MODE_DISABLE = 0,
+	AFE_ISLAND_MODE_ENABLE = 1
+};
+
+enum {
+	AFE_POWER_MODE_DISABLE = 0,
+	AFE_POWER_MODE_ENABLE = 1
+};
+
 struct wlock {
 	struct wakeup_source *ws;
 };
@@ -3279,7 +3289,7 @@ int afe_send_port_power_mode(u16 port_id)
 			__func__, port_id);
 		return ret;
 	}
-	if (power_mode == 0) {
+	if (power_mode == AFE_POWER_MODE_DISABLE) {
 		pr_debug("%s: AFE port[%d] power mode is not enabled\n",
 			__func__, port_id);
 		return ret;
@@ -3357,7 +3367,7 @@ int afe_send_port_island_mode(u16 port_id)
 				__func__, port_id);
 		return ret;
 	}
-	if (island_mode == 0) {
+	if (island_mode == AFE_ISLAND_MODE_DISABLE) {
 		pr_debug("%s: AFE port[%d] island mode is not enabled\n",
 			__func__, port_id);
 		return ret;
@@ -5698,6 +5708,7 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	int index = 0;
 	enum afe_mad_type mad_type;
 	uint16_t port_index;
+	u32 power_mode = 0;
 
 	memset(&param_hdr, 0, sizeof(param_hdr));
 	memset(&port_cfg, 0, sizeof(port_cfg));
@@ -5998,6 +6009,18 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		port_cfg.slim_sch.data_format =
 			AFE_SB_DATA_FORMAT_GENERIC_COMPRESSED;
 	}
+
+	ret = afe_get_power_mode(port_id, &power_mode);
+	if (ret)
+		pr_err("%s: AFE port[0x%x] get power mode is invalid!\n",
+			__func__, port_id);
+	if (power_mode == AFE_POWER_MODE_ENABLE &&
+	    port_cfg.cdc_dma.bit_width != 16) {
+		port_cfg.cdc_dma.bit_width = 16;
+		pr_debug("%s: reset bit width to default in power mode\n",
+			__func__);
+	}
+
 	ret = q6afe_pack_and_set_param_in_band(port_id,
 					       q6audio_get_port_index(port_id),
 					       param_hdr, (u8 *) &port_cfg);
