@@ -1793,9 +1793,9 @@ enum ipa_client_cb_type {
  */
 struct ipa_flt_rt_counter {
 	struct idr hdl;
+	spinlock_t hdl_lock;
 	bool used_hw[IPA_FLT_RT_HW_COUNTER];
 	bool used_sw[IPA_FLT_RT_SW_COUNTER];
-	spinlock_t hdl_lock;
 };
 
 /**
