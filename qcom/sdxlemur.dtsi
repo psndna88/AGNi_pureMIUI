@@ -16,7 +16,7 @@
 
 	model = "Qualcomm Technologies, Inc. SDXLEMUR";
 	compatible = "qcom,sdxlemur";
-	qcom,msm-id = <458 0x10000>;
+	qcom,msm-id = <458 0x10000>, <483 0x10000>;
 	interrupt-parent = <&intc>;
 
 	aliases {
