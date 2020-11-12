@@ -1466,8 +1466,10 @@ static struct kobj_attribute earpiece_gain_attribute =
 static struct attribute *sound_control_attrs[] = {
 		&headphone_gain_attribute.attr,
 		&mic_gain_attribute.attr,
+#ifndef CONFIG_ROG_SUPPORT
 		&speaker_gain_attribute.attr,
 		&earpiece_gain_attribute.attr,
+#endif
 		NULL,
 };
 
@@ -2100,6 +2102,17 @@ static const struct snd_kcontrol_new msm_dig_snd_controls[] = {
 			  MSM89XX_CDC_CORE_IIR2_GAIN_B1_CTL,
 			0,  -84, 40, digital_gain),
 
+#ifdef CONFIG_ROG_SUPPORT
+	SOC_SINGLE_SX_TLV("RX1 Digital Volume",
+		MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX2 Digital Volume",
+		MSM89XX_CDC_CORE_RX2_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
+		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL,
+		0, -84, 40, digital_gain),
+#else
 #ifdef CONFIG_SOUND_CONTROL
 	SOC_SINGLE_SX_TLV("RX1 Digital Volume",
 		MSM89XX_CDC_CORE_RX1_VOL_CTL_B2_CTL_DUMMY,
@@ -2120,6 +2133,7 @@ static const struct snd_kcontrol_new msm_dig_snd_controls[] = {
 	SOC_SINGLE_SX_TLV("RX3 Digital Volume",
 		MSM89XX_CDC_CORE_RX3_VOL_CTL_B2_CTL,
 		0, -84, 40, digital_gain),
+#endif
 #endif
 
 	SOC_SINGLE_EXT("IIR1 Enable Band1", IIR1, BAND1, 1, 0,
