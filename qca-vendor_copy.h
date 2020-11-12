@@ -1445,6 +1445,15 @@ enum qca_wlan_vendor_acs_hw_mode {
  *	%QCA_WLAN_VENDOR_ATTR_THERMAL_LEVEL and
  *	%QCA_WLAN_VENDOR_ATTR_THERMAL_COMPLETION_WINDOW attributes from
  *	userspace.
+ * @QCA_WLAN_VENDOR_FEATURE_ADAPTIVE_11R: Device supports Adaptive 11r.
+ *	With Adaptive 11r feature, access points advertise the vendor
+ *	specific IEs and MDE but do not include FT AKM in the RSNE.
+ *	The Adaptive 11r supported stations are expected to identify
+ *	such vendor specific IEs and connect to the AP in FT mode though
+ *	the profile is configured in non-FT mode.
+ *	The driver-based SME cases also need to have this support for
+ *	Adaptive 11r to handle the connection and roaming scenarios.
+ *	This flag indicates the support for the same to the user space.
  * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
  */
 enum qca_wlan_vendor_features {
@@ -1460,6 +1469,7 @@ enum qca_wlan_vendor_features {
 	QCA_WLAN_VENDOR_FEATURE_11AX			= 9,
 	QCA_WLAN_VENDOR_FEATURE_6GHZ_SUPPORT		= 10,
 	QCA_WLAN_VENDOR_FEATURE_THERMAL_CONFIG		= 11,
+	QCA_WLAN_VENDOR_FEATURE_ADAPTIVE_11R		= 12,
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 
@@ -6222,6 +6232,12 @@ enum qca_wlan_vendor_hang_reason {
 	 * the FW on a specific VDEV.
 	 */
 	QCA_WLAN_HANG_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT = 22,
+	/* WMI sequence mismatch between WMI command and Tx completion */
+	QCA_WLAN_HANG_WMI_BUF_SEQUENCE_MISMATCH = 23,
+	/* Write to Device HAL register failed */
+	QCA_WLAN_HANG_REG_WRITE_FAILURE = 24,
+	/* No credit left to send the wow_wakeup_from_sleep to firmware */
+	QCA_WLAN_HANG_SUSPEND_NO_CREDIT = 25,
 };
 
 /**
@@ -7684,6 +7700,15 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 * configuration is valid until AP restart.
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FILS_DISCOVERY_FRAMES_TX = 44,
+
+	/* 8-bit unsigned value to configure the driver/firmware to enable or
+	 * disable full bandwidth UL MU-MIMO subfield in the HE PHY capabilities
+	 * information field.
+	 * 0 - Disable full bandwidth UL MU-MIMO subfield
+	 * 1 - Enable full bandwidth UL MU-MIMO subfield
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FULL_BW_UL_MU_MIMO = 45,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
@@ -9478,6 +9503,16 @@ enum qca_vendor_wlan_sta_guard_interval {
  * only. This represents number of Beacon frames received from this station with
  * the packet number less than or equal to the last received packet number when
  * beacon protection is enabled.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE: u32, used in
+ * STA mode only. The driver uses this attribute to populate the connection
+ * failure reason codes and the values are defined in
+ * enum qca_sta_connect_fail_reason_codes. Userspace applications can send
+ * QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO vendor command after receiving
+ * a connection failure indication from the driver. The driver shall not
+ * include this attribute in response to the
+ * QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO command if there is no connection
+ * failure observed in the last attempted connection.
  */
 enum qca_wlan_vendor_attr_get_sta_info {
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_INVALID = 0,
@@ -9523,6 +9558,7 @@ enum qca_wlan_vendor_attr_get_sta_info {
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BIP_REPLAY_COUNT = 40,
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_MIC_ERROR_COUNT = 41,
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_BEACON_REPLAY_COUNT = 42,
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE = 43,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_AFTER_LAST,
@@ -9970,6 +10006,34 @@ enum qca_wlan_vendor_attr_mbssid_tx_vdev_status {
 	QCA_WLAN_VENDOR_ATTR_MBSSID_TX_VDEV_STATUS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MBSSID_TX_VDEV_STATUS_MAX =
 	QCA_WLAN_VENDOR_ATTR_MBSSID_TX_VDEV_STATUS_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_sta_connect_fail_reason_codes - Defines values carried
+ * by QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_CONNECT_FAIL_REASON_CODE vendor
+ * attribute.
+ * @QCA_STA_CONNECT_FAIL_REASON_NO_BSS_FOUND: No Probe Response frame received
+ *	for unicast Probe Request frame.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_TX_FAIL: STA failed to send auth request.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_ACK_RECEIVED: AP didn't send ACK for
+ *	auth request.
+ * @QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_RESP_RECEIVED: Auth response is not
+ *	received from AP.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_REQ_TX_FAIL: STA failed to send
+ *	Association Request frame.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_ACK_RECEIVED: AP didn't send ACK for
+ *	Association Request frame.
+ * @QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_RESP_RECEIVED: Association Response
+ *	frame is not received from AP.
+ */
+enum qca_sta_connect_fail_reason_codes {
+	QCA_STA_CONNECT_FAIL_REASON_NO_BSS_FOUND = 1,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_TX_FAIL = 2,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_ACK_RECEIVED = 3,
+	QCA_STA_CONNECT_FAIL_REASON_AUTH_NO_RESP_RECEIVED = 4,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_REQ_TX_FAIL = 5,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_ACK_RECEIVED = 6,
+	QCA_STA_CONNECT_FAIL_REASON_ASSOC_NO_RESP_RECEIVED = 7,
 };
 
 #endif /* QCA_VENDOR_H */
