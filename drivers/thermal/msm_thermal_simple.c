@@ -23,8 +23,9 @@
 
 extern int LctIsInCall;
 extern int LctIsInVideo;
+extern bool camera_open;
 extern int cpuoc_state;
-static int call_zone;
+static s64 call_zone_temp = 65;
 struct thermal_zone {
 	u32 gold_khz;
 	u32 silver_khz;
@@ -79,14 +80,13 @@ static void thermal_throttle_worker(struct work_struct *work)
 	old_zone = t->curr_zone;
 	new_zone = NULL;
 
+	if (((camera_open) && (LctIsInCall != 0)) || (LctIsInVideo != 0)) {
+		/* video calling in progress -- limit cpu frequency to reduce heating */
+		temp_deg = call_zone_temp;
+	}
 	for (i = t->nr_zones - 1; i >= 0; i--) {
 		if (temp_deg >= t->zones[i].trip_deg) {
-			if (LctIsInCall || LctIsInVideo) {
-				/* calling in progress -- limit cpu frequency to reduce heating */
-				new_zone = call_zone;
-			} else {
-				new_zone = t->zones + i;
-			}
+			new_zone = t->zones + i;
 			break;
 		}
 	}
@@ -293,21 +293,16 @@ static int __init msm_thermal_simple_init(void)
 {
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 	if (cpuoc_state == 0) {
-		call_zone = 1;
 		return platform_driver_register(&msm_thermal_simple_device_0);
 	} else if (cpuoc_state == 1) {
-		call_zone = 2;
 		return platform_driver_register(&msm_thermal_simple_device_1);
 	} else if (cpuoc_state == 2) {
-		call_zone = 3;
 		return platform_driver_register(&msm_thermal_simple_device_2);
 	}
 #else
 	if (cpuoc_state == 0) {
-		call_zone = 2;
 		return platform_driver_register(&msm_thermal_simple_device_1);
 	} else if (cpuoc_state == 1) {
-		call_zone = 3;
 		return platform_driver_register(&msm_thermal_simple_device_2);
 	}
 #endif
