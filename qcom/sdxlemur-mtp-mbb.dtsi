@@ -14,6 +14,10 @@
 	qcom,boot-option = <0x1>;
 };
 
+&qnand_1 {
+	status = "ok";
+};
+
 &sdhc_1 {
 	reg = <0x08804000 0x1000>, <0x08805000 0x1000>;
 	reg-names = "hc_mem", "cqhci_mem";
@@ -39,5 +43,5 @@
 	pinctrl-0 = <&sdc1_on>;
 	pinctrl-1 = <&sdc1_off>;
 
-	status = "ok";
+	status = "disabled";
 };
