@@ -421,6 +421,14 @@
 		status="disabled";
 	};
 
+	qcom,rmtfs_sharedmem@0 {
+		compatible = "qcom,sharedmem-uio";
+		reg = <0x0 0x280000>;
+		reg-names = "rmtfs";
+		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
+	};
+
 	qfprom: qfprom@1b40000 {
 		compatible = "qcom,qfprom";
 		reg = <0x1b40000 0x7000>;
