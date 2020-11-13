@@ -4482,6 +4482,7 @@ static int msm_comm_qbuf_to_hfi(struct msm_vidc_inst *inst,
 		rc = -EINVAL;
 	}
 	if (rc) {
+		mbuf->flags |= MSM_VIDC_FLAG_DEFERRED;
 		s_vpr_e(inst->sid, "%s: Failed to qbuf: %d\n", __func__, rc);
 		goto err_bad_input;
 	}
@@ -4517,8 +4518,10 @@ void msm_vidc_batch_handler(struct work_struct *work)
 		__func__);
 
 	rc = msm_comm_qbufs_batch(inst, NULL);
-	if (rc)
+	if (rc) {
 		s_vpr_e(inst->sid, "%s: batch qbufs failed\n", __func__);
+		msm_vidc_queue_v4l2_event(inst, V4L2_EVENT_MSM_VIDC_SYS_ERROR);
+	}
 
 exit:
 	put_inst(inst);
