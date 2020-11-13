@@ -949,6 +949,8 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		if (this_afe.apr) {
 			apr_reset(this_afe.apr);
 			atomic_set(&this_afe.state, 0);
+			atomic_set(&this_afe.clk_state, 0);
+			atomic_set(&this_afe.clk_status, ADSP_ENOTREADY);
 			this_afe.apr = NULL;
 			rtac_set_afe_handle(this_afe.apr);
 		}
