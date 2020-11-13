@@ -10,7 +10,7 @@ qcom,alium_860_89032_0000_3600mAh {
 	qcom,qg-batt-profile-ver = <100>;
 
 	qcom,jeita-fcc-ranges = <0  50   2500000
-				51  400  5400000
+				51  400  3600000
 				401 450  2500000>;
 	qcom,jeita-fv-ranges = <0   50   4250000
 				51  400  4350000
