@@ -1774,6 +1774,7 @@ void cam_tfe_cam_cdm_callback(uint32_t handle, void *userdata,
 		(struct cam_tfe_hw_mgr_ctx *)hw_update_data->isp_mgr_ctx;
 		complete_all(&ctx->config_done_complete);
 		atomic_set(&ctx->cdm_done, 1);
+		ctx->last_cdm_done_req = cookie;
 		if (g_tfe_hw_mgr.debug_cfg.per_req_reg_dump)
 			cam_tfe_mgr_handle_reg_dump(ctx,
 				hw_update_data->reg_dump_buf_desc,
@@ -1891,6 +1892,7 @@ static int cam_tfe_mgr_acquire_hw(void *hw_mgr_priv, void *acquire_hw_args)
 	tfe_ctx->cdm_handle = cdm_acquire.handle;
 	tfe_ctx->cdm_ops = cdm_acquire.ops;
 	atomic_set(&tfe_ctx->cdm_done, 1);
+	tfe_ctx->last_cdm_done_req = 0;
 
 	acquire_hw_info = (struct cam_isp_tfe_acquire_hw_info *)
 		acquire_args->acquire_info;
@@ -2127,6 +2129,7 @@ static int cam_tfe_mgr_acquire_dev(void *hw_mgr_priv, void *acquire_hw_args)
 	tfe_ctx->cdm_handle = cdm_acquire.handle;
 	tfe_ctx->cdm_ops = cdm_acquire.ops;
 	atomic_set(&tfe_ctx->cdm_done, 1);
+	tfe_ctx->last_cdm_done_req = 0;
 
 	isp_resource = (struct cam_isp_resource *)acquire_args->acquire_info;
 
@@ -2440,6 +2443,7 @@ static int cam_tfe_mgr_config_hw(void *hw_mgr_priv,
 	struct cam_cdm_bl_request *cdm_cmd;
 	struct cam_tfe_hw_mgr_ctx *ctx;
 	struct cam_isp_prepare_hw_update_data *hw_update_data;
+	bool cdm_hang_detect = false;
 
 	if (!hw_mgr_priv || !config_hw_args) {
 		CAM_ERR(CAM_ISP, "Invalid arguments");
@@ -2462,6 +2466,31 @@ static int cam_tfe_mgr_config_hw(void *hw_mgr_priv,
 
 	hw_update_data = (struct cam_isp_prepare_hw_update_data  *) cfg->priv;
 	hw_update_data->isp_mgr_ctx = ctx;
+
+	if (cfg->reapply && cfg->cdm_reset_before_apply) {
+		if (ctx->last_cdm_done_req < cfg->request_id) {
+			cdm_hang_detect =
+				cam_cdm_detect_hang_error(ctx->cdm_handle);
+			CAM_ERR_RATE_LIMIT(CAM_ISP,
+				"CDM callback not received for req: %lld, last_cdm_done_req: %lld, cdm_hang_detect: %d",
+				cfg->request_id, ctx->last_cdm_done_req,
+				cdm_hang_detect);
+			rc = cam_cdm_reset_hw(ctx->cdm_handle);
+			if (rc) {
+				CAM_ERR_RATE_LIMIT(CAM_ISP,
+					"CDM reset unsuccessful for req: %lld, ctx: %d, rc: %d",
+					cfg->request_id, ctx->ctx_index, rc);
+				ctx->last_cdm_done_req = 0;
+				return rc;
+			}
+		} else {
+			CAM_ERR_RATE_LIMIT(CAM_ISP,
+				"CDM callback received, should wait for buf done for req: %lld",
+				cfg->request_id);
+			return -EALREADY;
+		}
+		ctx->last_cdm_done_req = 0;
+	}
 
 	for (i = 0; i < CAM_TFE_HW_NUM_MAX; i++) {
 		if (hw_update_data->bw_config_valid[i] == true) {
@@ -3436,6 +3465,7 @@ static int cam_tfe_mgr_release_hw(void *hw_mgr_priv,
 	ctx->is_tpg  = false;
 	ctx->num_reg_dump_buf = 0;
 	ctx->res_list_tpg.res_type = CAM_ISP_RESOURCE_MAX;
+	ctx->last_cdm_done_req = 0;
 	atomic_set(&ctx->overflow_pending, 0);
 
 	for (i = 0; i < ctx->last_submit_bl_cmd.bl_count; i++) {
@@ -4727,6 +4757,10 @@ static int cam_tfe_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 			else
 				isp_hw_cmd_args->u.packet_op_code =
 				CAM_ISP_TFE_PACKET_CONFIG_DEV;
+			break;
+		case CAM_ISP_HW_MGR_GET_LAST_CDM_DONE:
+			isp_hw_cmd_args->u.last_cdm_done =
+				ctx->last_cdm_done_req;
 			break;
 		default:
 			CAM_ERR(CAM_ISP, "Invalid HW mgr command:0x%x",
