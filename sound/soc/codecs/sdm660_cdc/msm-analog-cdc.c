@@ -61,11 +61,7 @@
 #define SPK_PMU 3
 
 /*modify for D2S main-mic 2.3-3.6v sub-mic 1.5-3.6v tsx 11/6 */
-#if defined(CONFIG_KERNEL_CUSTOM_D2S) || defined(CONFIG_KERNEL_CUSTOM_F7A) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 #define MICBIAS_DEFAULT_VAL 2600000
-#else
-#define MICBIAS_DEFAULT_VAL 1800000
-#endif
 #define MICBIAS_MIN_VAL 1600000
 #define MICBIAS_STEP_SIZE 50000
 
