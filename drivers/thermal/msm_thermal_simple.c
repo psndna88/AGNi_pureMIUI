@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/qpnp/qpnp-adc.h>
+#include <linux/charging_state.h>
 
 #define OF_READ_U32(node, prop, dst)						\
 ({										\
@@ -25,7 +26,6 @@ extern int LctIsInCall;
 extern int LctIsInVideo;
 extern bool camera_open;
 extern int cpuoc_state;
-static s64 call_zone_temp = 65;
 struct thermal_zone {
 	u32 gold_khz;
 	u32 silver_khz;
@@ -80,9 +80,11 @@ static void thermal_throttle_worker(struct work_struct *work)
 	old_zone = t->curr_zone;
 	new_zone = NULL;
 
-	if (((camera_open) && (LctIsInCall != 0)) || (LctIsInVideo != 0)) {
-		/* video calling in progress -- limit cpu frequency to reduce heating */
-		temp_deg = call_zone_temp;
+	/* video calling in progress -- limit cpu frequency to reduce heating */
+	/* limit cpu frequency when charging to reduce heating on heavy use */
+	if (charging_detected() || (camera_open && (LctIsInCall != 0 || LctIsInVideo != 0))) {
+		if (cpuoc_state > 0)
+			temp_deg = 67;
 	}
 	for (i = t->nr_zones - 1; i >= 0; i--) {
 		if (temp_deg >= t->zones[i].trip_deg) {
