@@ -791,8 +791,6 @@
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
 		qcom,ipa-wdi3-over-gsi;
-		qcom,lan-rx-napi;
-		qcom,wan-use-skb-page;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
 		clock-names = "core_clk";
