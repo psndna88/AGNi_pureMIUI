@@ -1344,8 +1344,8 @@
 #include "shima-gdsc.dtsi"
 #include "yupik-pinctrl.dtsi"
 #include "yupik-pm.dtsi"
-#include "yupik-stub-regulator.dtsi"
 #include "ipcc-test-yupik.dtsi"
+#include "yupik-regulators.dtsi"
 
 &gcc_pcie_0_gdsc {
 	qcom,support-hw-trigger;
