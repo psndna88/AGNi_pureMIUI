@@ -1154,6 +1154,11 @@
 	qcom-secure-buffer {
 		compatible = "qcom,secure-buffer";
 	};
+
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&aggre2_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
+	};
 };
 
 #include "shima-gdsc.dtsi"
