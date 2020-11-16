@@ -56,6 +56,8 @@ Optional properties:
                   shifted clock phase (CPHA) mode.
 
 - qcom,slv-ctrl : Set this flag to configure QUPV3 as SPI slave controller.
+- slv-cross-connected : Set this flag only when SPI-Slave MISO pin is connected
+			to SPI-Master MOSI and vice-versa.
 
 Other optional properties described in
 Documentation/devicetree/bindings/spi/spi-bus.txt
