@@ -905,13 +905,13 @@
 		thermal-governor = "step_wise";
 
 		trips {
-			cdsp_trip0: cdsp-trip0 {
+			q6_hvx_trip0: q6-hvx-trip0 {
 				temperature = <95000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
 
-			cdsp_cx_mon: cdsp-cx-mon {
+			q6_hvx_cx_mon: q6-hvx-cx-mon {
 				temperature = <100000>;
 				hysteresis = <5000>;
 				type = "passive";
@@ -919,32 +919,27 @@
 		};
 
 		cooling-maps {
-			cdsp-cdev0 {
-				trip = <&cdsp_trip0>;
+			q6-hvx-cdev0 {
+				trip = <&q6_hvx_trip0>;
 				cooling-device = <&cdsp_sw THERMAL_NO_LIMIT
 							THERMAL_NO_LIMIT>;
 			};
 
-			cdsp-cx-cdev0 {
-				trip = <&cdsp_cx_mon>;
-				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
+			q6-hvx-cx-cdev0 {
+				trip = <&q6_hvx_cx_mon>;
+				/* throttle to 565000000Hz */
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-3)
+							(THERMAL_MAX_LIMIT-3)>;
 			};
 
-			cdsp-cx-cdev1 {
-				trip = <&cdsp_cx_mon>;
-				cooling-device = <&modem_tj 3 3>;
+			q6-hvx-cx-cdev1 {
+				trip = <&q6_hvx_cx_mon>;
+				cooling-device = <&modem_skin 3 3>;
 			};
 
-			cdsp-cx-cdev2 {
-				trip = <&cdsp_cx_mon>;
-				cooling-device = <&modem_pa 3 3>;
-			};
-
-			cdsp-cx-cdev3 {
-				trip = <&cdsp_cx_mon>;
-				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
+			q6-hvx-cx-cdev2 {
+				trip = <&q6_hvx_cx_mon>;
+				cooling-device = <&cdsp_sw 4 4>;
 			};
 		};
 	};
