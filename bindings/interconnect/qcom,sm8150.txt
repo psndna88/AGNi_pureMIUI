@@ -21,9 +21,6 @@ Required properties :
 			"qcom,sm8150-mc_virt";
 			"qcom,sm8150-mmss_noc";
 			"qcom,sm8150-system_noc";
-			"qcom,sm8150-gem_noc_display";
-			"qcom,sm8150-mc_virt_display";
-			"qcom,sm8150-mmss_noc_display";
 - #interconnect-cells : should contain 1
 
 Examples:
