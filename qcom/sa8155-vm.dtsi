@@ -178,10 +178,7 @@
 
 		#address-cells=<1>;
 		#size-cells=<1>;
-		ranges = <0x10000000 0x10000000 0x10000000>,
-		      <0x20000000 0x20000000 0x10000>,
-		      <0xa0000000 0xa0000000 0x10000000>,
-		      <0xb0000000 0xb0000000 0x10000>;
+		ranges = <0xb0000000 0xb0000000 0x10000>;
 
 		vdd-wlan-ctrl1-supply = <&vreg_conn_pa>;
 		vdd-wlan-ctrl2-supply = <&vreg_conn_1p8>;
@@ -200,9 +197,8 @@
 		pinctrl-1 = <&cnss_wlan_en_sleep>;
 
 		chip_cfg@0 {
-			reg = <0x10000000 0x10000000>,
-			    <0x20000000 0x10000>;
-			reg-names = "smmu_iova_base", "smmu_iova_ipa";
+			reg = <0xb0000000 0x10000>;
+			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x003e>;
 			wlan_vregs = "vdd-wlan";
@@ -213,9 +209,8 @@
 		};
 
 		chip_cfg@1 {
-			reg = <0xa0000000 0x10000000>,
-			    <0xb0000000 0x10000>;
-			reg-names = "smmu_iova_base", "smmu_iova_ipa";
+			reg = <0xb0000000 0x10000>;
+			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1101>;
 			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
@@ -323,9 +318,8 @@
 		};
 
 		chip_cfg@2 {
-			reg = <0xa0000000 0x10000000>,
-			    <0xb0000000 0x10000>;
-			reg-names = "smmu_iova_base", "smmu_iova_ipa";
+			reg = <0xb0000000 0x10000>;
+			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1102>;
 			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
