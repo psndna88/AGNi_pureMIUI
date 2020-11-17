@@ -1,5 +1,5 @@
-#include "sdxlemur-pmic-overlay.dtsi"
 #include "pm7250b.dtsi"
+#include "sdxlemur-mtp.dtsi"
 
 &pm7250b_clkdiv {
 	clocks = <&rpmhcc RPMH_CXO_CLK>;
