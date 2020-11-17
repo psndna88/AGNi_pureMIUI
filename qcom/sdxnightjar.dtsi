@@ -426,4 +426,7 @@
 	};
 };
 
+#include "pmd9650.dtsi"
+#include "pmd9650-rpm-regulator.dtsi"
+#include "sdxnightjar-regulator.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
