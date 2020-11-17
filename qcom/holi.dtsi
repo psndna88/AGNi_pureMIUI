@@ -2482,6 +2482,7 @@
 			iommus = <&apps_smmu 0x1009 0x0000>;
 			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
 			qcom,iommu-faults = "stall-disable", "HUPCF";
+			qcom,iommu-vmid = <0xA>;       /* VMID_CP_PIXEL */
 		};
 
 		qcom,msm_fastrpc_compute_cb10 {
