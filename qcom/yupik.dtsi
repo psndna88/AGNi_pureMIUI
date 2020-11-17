@@ -26,6 +26,8 @@
 
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
+		sdhc0 = &sdhc_1; /*SDC1 eMMC slot*/
+		sdhc1 = &sdhc_2; /* SDC2 SD card slot */
 	};
 
 	firmware: firmware {
@@ -1227,6 +1229,81 @@
 	pil_scm_pas {
 		compatible = "qcom,pil-tz-scm-pas";
 		interconnects = <&aggre2_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
+	};
+
+	sdhc_1: sdhci@7C4000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x007C4000 0x1000>, <0x007C5000 0x1000>;
+		reg-names = "hc_mem", "cqhci_mem";
+
+		interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC1_APPS_CLK>,
+			<&gcc GCC_SDCC1_AHB_CLK>,
+			<&gcc GCC_SDCC1_ICE_CORE_CLK>;
+		clock-names = "core", "iface", "ice_core";
+
+		qcom,ice-clk-rates = <300000000 100000000>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x2C010800 0x80040868>;
+
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
+		mmc-hs400-enhanced-strobe;
+
+		bus-width = <8>;
+		non-removable;
+		supports-cqe;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <67>;
+		};
+	};
+
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x08804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_APPS_CLK>, <&gcc GCC_SDCC2_AHB_CLK>;
+		clock-names = "core", "iface";
+
+		bus-width = <4>;
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 202000000>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <61>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <67>;
+		};
 	};
 
 	qcom,lpass@3700000 {
