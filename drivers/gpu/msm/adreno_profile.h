@@ -62,16 +62,6 @@ struct adreno_profile {
 #define ADRENO_PROFILE_LOG_BUF_SIZE_DWORDS  (ADRENO_PROFILE_LOG_BUF_SIZE / \
 						sizeof(unsigned int))
 
-#ifdef CONFIG_DEBUG_FS
-void adreno_profile_init(struct adreno_device *adreno_dev);
-void adreno_profile_close(struct adreno_device *adreno_dev);
-int adreno_profile_process_results(struct  adreno_device *adreno_dev);
-void adreno_profile_preib_processing(struct adreno_device *adreno_dev,
-		struct adreno_context *drawctxt, unsigned int *cmd_flags,
-		unsigned int **rbptr);
-void adreno_profile_postib_processing(struct  adreno_device *adreno_dev,
-		unsigned int *cmd_flags, unsigned int **rbptr);
-#else
 static inline void adreno_profile_init(struct adreno_device *adreno_dev) { }
 static inline void adreno_profile_close(struct adreno_device *adreno_dev) { }
 static inline int adreno_profile_process_results(
@@ -88,7 +78,6 @@ static inline void adreno_profile_preib_processing(
 static inline void adreno_profile_postib_processing(
 		struct adreno_device *adreno_dev,
 		unsigned int *cmd_flags, unsigned int **rbptr) { }
-#endif
 
 static inline bool adreno_profile_enabled(struct adreno_profile *profile)
 {
