@@ -801,6 +801,7 @@ void cam_actuator_shutdown(struct cam_actuator_ctrl_t *a_ctrl)
 	power_info->power_down_setting = NULL;
 	power_info->power_setting_size = 0;
 	power_info->power_down_setting_size = 0;
+	a_ctrl->last_flush_req = 0;
 
 	a_ctrl->cam_act_state = CAM_ACTUATOR_INIT;
 }
