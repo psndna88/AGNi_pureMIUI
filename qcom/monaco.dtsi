@@ -17,6 +17,11 @@
 	#size-cells = <2>;
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
 
+	aliases {
+		serial0 = &qupv3_se6_2uart;
+		hsuart0 = &qupv3_se5_4uart;
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -820,6 +825,11 @@
 #include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
 #include "monaco-gdsc.dtsi"
+#include "monaco-qupv3.dtsi"
+
+&qupv3_se6_2uart {
+	status = "ok";
+};
 
 &gcc_camss_top_gdsc {
 	status = "ok";
