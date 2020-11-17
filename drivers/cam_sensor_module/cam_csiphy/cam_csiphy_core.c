@@ -517,8 +517,6 @@ void cam_csiphy_cphy_irq_disable(struct csiphy_device *csiphy_dev)
 
 irqreturn_t cam_csiphy_irq(int irq_num, void *data)
 {
-	uint32_t irq;
-	uint8_t i;
 	struct csiphy_device *csiphy_dev =
 		(struct csiphy_device *)data;
 	struct cam_hw_soc_info *soc_info = NULL;
@@ -531,25 +529,16 @@ irqreturn_t cam_csiphy_irq(int irq_num, void *data)
 	}
 
 	soc_info = &csiphy_dev->soc_info;
-	base =  csiphy_dev->soc_info.reg_map[0].mem_base;
+	base = csiphy_dev->soc_info.reg_map[0].mem_base;
 	csiphy_reg = &csiphy_dev->ctrl_reg->csiphy_reg;
 
-	for (i = 0; i < csiphy_dev->num_irq_registers; i++) {
-		irq = cam_io_r(base +
-			csiphy_reg->mipi_csiphy_interrupt_status0_addr +
-			(0x4 * i));
-		cam_io_w_mb(irq, base +
-			csiphy_reg->mipi_csiphy_interrupt_clear0_addr +
-			(0x4 * i));
-		CAM_ERR_RATE_LIMIT(CAM_CSIPHY,
-			"CSIPHY%d_IRQ_STATUS_ADDR%d = 0x%x",
-			soc_info->index, i, irq);
-		cam_io_w_mb(0x0, base +
-			csiphy_reg->mipi_csiphy_interrupt_clear0_addr +
-			(0x4 * i));
+	if (csiphy_dev->enable_irq_dump) {
+		cam_csiphy_status_dmp(csiphy_dev);
+		cam_io_w_mb(0x1,
+			base + csiphy_reg->mipi_csiphy_glbl_irq_cmd_addr);
+		cam_io_w_mb(0x0,
+			base + csiphy_reg->mipi_csiphy_glbl_irq_cmd_addr);
 	}
-	cam_io_w_mb(0x1, base + csiphy_reg->mipi_csiphy_glbl_irq_cmd_addr);
-	cam_io_w_mb(0x0, base + csiphy_reg->mipi_csiphy_glbl_irq_cmd_addr);
 
 	return IRQ_HANDLED;
 }

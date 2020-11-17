@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CSIPHY_DEV_H_
@@ -63,8 +63,6 @@
 #define CPHY_LANE_2    BIT(5)
 #define DPHY_LANE_3    BIT(6)
 #define DPHY_CLK_LN    BIT(7)
-
-#define ENABLE_IRQ false
 
 enum cam_csiphy_state {
 	CAM_CSIPHY_INIT,
@@ -266,6 +264,7 @@ struct cam_csiphy_param {
  * @combo_mode:                 Info regarding combo_mode is enable / disable
  * @ops:                        KMD operations
  * @crm_cb:                     Callback API pointers
+ * @enable_irq_dump:            Debugfs variable to enable hw IRQ register dump
  */
 struct csiphy_device {
 	char                           device_name[CAM_CTX_DEV_NAME_MAX_LENGTH];
@@ -298,6 +297,7 @@ struct csiphy_device {
 	uint8_t                        cphy_dphy_combo_mode;
 	struct cam_req_mgr_kmd_ops     ops;
 	struct cam_req_mgr_crm_cb     *crm_cb;
+	bool                           enable_irq_dump;
 };
 
 /**
