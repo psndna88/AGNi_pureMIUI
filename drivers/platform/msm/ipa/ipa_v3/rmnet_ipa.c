@@ -2764,8 +2764,9 @@ static int ipa3_wwan_remove(struct platform_device *pdev)
 	else
 		rmnet_ipa3_ctx->apps_to_ipa3_hdl = -1;
 	mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
-	IPAWANINFO("rmnet_ipa unregister_netdev\n");
+	IPAWANDBG("rmnet_ipa unregister_netdev started\n");
 	unregister_netdev(IPA_NETDEV());
+	IPAWANDBG("rmnet_ipa unregister_netdev completed\n");
 	ipa3_wwan_deregister_netdev_pm_client();
 	cancel_work_sync(&ipa3_tx_wakequeue_work);
 	cancel_delayed_work(&ipa_tether_stats_poll_wakequeue_work);
