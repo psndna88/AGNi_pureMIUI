@@ -1,3 +1,5 @@
+#include<dt-bindings/pinctrl/qcom,pmic-gpio.h>
+
 &soc {
 	tlmm_pinmux: pinctrl@1000000 {
 		compatible = "qcom,sdxnightjar-pinctrl";
@@ -1331,5 +1333,31 @@
 				};
 			};
 		};
+	};
+};
+
+&pmd9650_gpios {
+	gpio@c100 { /* GPIO 2 - VADC */
+		/* GPIO should be left off, and in the high
+		 * impedance state when the pin is used with the VADC
+		 */
+		pins = "gpio2";
+		function = "normal";
+		bias-high-impedance;   /* DISABLE GPIO */
+	};
+
+	gpio@c200 { /* GPIO 3 - LED */
+		pins = "gpio3";
+		function = "normal";
+		bias-high-impedance;   /* DISABLE GPIO */
+	};
+
+	gpio@c400 { /* GPIO 5 - USB_ID */
+		pins = "gpio5";
+		function = "normal";
+		input-enable;        /* Digital input */
+		bias-pull-up;
+		qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_1P5>;	/* Pull up 1.5 uA */
+		power-source = <1>;     /* 1.8 V */
 	};
 };
