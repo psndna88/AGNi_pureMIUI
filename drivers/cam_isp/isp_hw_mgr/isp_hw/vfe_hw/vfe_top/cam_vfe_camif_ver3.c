@@ -1487,6 +1487,7 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 			ts.tv_sec, ts.tv_nsec/1000);
 
 		ret = CAM_VFE_IRQ_STATUS_OVERFLOW;
+		evt_info.err_type = CAM_VFE_IRQ_STATUS_OVERFLOW;
 
 		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
 			soc_private->ife_clk_src);
@@ -1519,6 +1520,7 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 			ts.tv_sec, ts.tv_nsec/1000);
 
 		ret = CAM_VFE_IRQ_STATUS_VIOLATION;
+		evt_info.err_type = CAM_VFE_IRQ_STATUS_VIOLATION;
 
 		CAM_INFO(CAM_ISP, "ife_clk_src:%lld",
 			soc_private->ife_clk_src);
