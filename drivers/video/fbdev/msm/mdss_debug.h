@@ -61,8 +61,7 @@ struct vbif_debug_bus {
 	u32 test_pnt_cnt;
 };
 
-#define MDSS_XLOG(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_DEFAULT, \
-		##__VA_ARGS__, DATA_LIMITER)
+#define MDSS_XLOG(...)
 
 #define MDSS_XLOG_TOUT_HANDLER(...)	\
 	mdss_xlog_tout_handler_default(false, __func__, ##__VA_ARGS__, \
@@ -72,21 +71,17 @@ struct vbif_debug_bus {
 	mdss_xlog_tout_handler_default(true, __func__, ##__VA_ARGS__, \
 		XLOG_TOUT_DATA_LIMITER)
 
-#define MDSS_XLOG_DBG(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_DBG, \
-		##__VA_ARGS__, DATA_LIMITER)
+#define MDSS_XLOG_DBG(...)
 
-#define MDSS_XLOG_ALL(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_ALL,	\
-		##__VA_ARGS__, DATA_LIMITER)
+#define MDSS_XLOG_ALL(...)
 
-#define MDSS_XLOG_IOMMU(...) mdss_xlog(__func__, __LINE__, MDSS_XLOG_IOMMU, \
-		##__VA_ARGS__, DATA_LIMITER)
+#define MDSS_XLOG_IOMMU(...)
 
-#define ATRACE_END(name) trace_tracing_mark_write(current->tgid, name, 0)
-#define ATRACE_BEGIN(name) trace_tracing_mark_write(current->tgid, name, 1)
-#define ATRACE_FUNC() ATRACE_BEGIN(__func__)
+#define ATRACE_END(name)
+#define ATRACE_BEGIN(name)
+#define ATRACE_FUNC()
 
-#define ATRACE_INT(name, value) \
-	trace_mdp_trace_counter(current->tgid, name, value)
+#define ATRACE_INT(name, value)
 
 #if defined(CONFIG_DEBUG_FS) && defined(CONFIG_FB_MSM_MDSS)
 
