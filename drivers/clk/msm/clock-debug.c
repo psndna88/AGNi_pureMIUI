@@ -270,15 +270,7 @@ static const struct file_operations orphan_list_fops = {
 	.release	= seq_release,
 };
 
-#define clock_debug_output(m, c, fmt, ...)		\
-do {							\
-	if (m)						\
-		seq_printf(m, fmt, ##__VA_ARGS__);	\
-	else if (c)					\
-		pr_cont(fmt, ##__VA_ARGS__);		\
-	else						\
-		pr_info(fmt, ##__VA_ARGS__);		\
-} while (0)
+#define clock_debug_output(m, c, fmt, ...)
 
 static int clock_debug_print_clock(struct clk *c, struct seq_file *m)
 {

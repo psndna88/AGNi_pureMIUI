@@ -67,47 +67,13 @@
 #define IPA_MAX_NUM_REQ_CACHE 10
 #define IPA_TIMEOUT(value) (msecs_to_jiffies(value * 1000))
 
-#define IPADBG(fmt, args...) \
-	do { \
-		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
+#define IPADBG(fmt, args...)
 
-#define IPADBG_LOW(fmt, args...) \
-	do { \
-		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
+#define IPADBG_LOW(fmt, args...)
 
-#define IPAERR(fmt, args...) \
-	do { \
-		pr_err(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
+#define IPAERR(fmt, args...)
 
-#define IPAERR_RL(fmt, args...) \
-	do { \
-		pr_err_ratelimited_ipa(DRV_NAME " %s:%d " fmt, __func__,\
-		__LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
+#define IPAERR_RL(fmt, args...)
 
 #define WLAN_AMPDU_TX_EP 15
 #define WLAN_PROD_TX_EP  19
