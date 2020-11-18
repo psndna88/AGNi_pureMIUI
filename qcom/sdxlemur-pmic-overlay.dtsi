@@ -62,6 +62,14 @@
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
 	};
+
+	pmx65_die_temp {
+		reg = <PMX65_ADC7_DIE_TEMP>;
+		label = "pmx65_die_temp";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
 };
 
 &pmk8350_adc_tm {
@@ -215,4 +223,9 @@
 		nvmem-cells = <&restart_reason>;
 		nvmem-cell-names = "restart_reason";
 	};
+};
+
+&pmx65_tz {
+	io-channels = <&pmk8350_vadc PMX65_ADC7_DIE_TEMP>;
+	io-channel-names = "thermal";
 };
