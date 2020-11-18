@@ -7633,6 +7633,10 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	if (!program)
 		program = get_param(cmd, "prog");
 	dut->program = sigma_program_to_enum(program);
+
+	if (dut->program == PROGRAM_WFD && dut->user_config_timeout)
+		dut->default_timeout = dut->user_config_timeout;
+
 	dut->device_type = STA_unknown;
 	type = get_param(cmd, "type");
 	if (type && strcasecmp(type, "Testbed") == 0)

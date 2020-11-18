@@ -377,6 +377,7 @@ struct sigma_dut {
 
 	/* Default timeout value (seconds) for commands */
 	unsigned int default_timeout;
+	unsigned int user_config_timeout;
 
 	int next_streamid;
 

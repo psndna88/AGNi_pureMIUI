@@ -1000,6 +1000,7 @@ static void usage(void)
 	       "       [-z <client socket directory path \\\n"
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
 	       "       [-Z <Override default tmp dir path>] \\\n"
+	       "       [-5 <WFD timeout override>] \\\n"
 	       "       [-r <HT40 or 2.4_HT40>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
@@ -1023,7 +1024,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:Z:234");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1225,6 +1226,21 @@ int main(int argc, char *argv[])
 		case '4':
 			sigma_dut.client_privacy_default = 1;
 			break;
+		case '5': {
+			int timeout;
+
+			errno = 0;
+			timeout = strtol(optarg, NULL, 10);
+			if (errno || timeout < 0) {
+				sigma_dut_print(&sigma_dut, DUT_MSG_ERROR,
+					       "failed to set default_timeout");
+				return -1;
+			}
+			sigma_dut_print(&sigma_dut, DUT_MSG_INFO,
+					"default timeout set to %d", timeout);
+			sigma_dut.user_config_timeout = timeout;
+			break;
+		}
 		case 'h':
 		default:
 			usage();
