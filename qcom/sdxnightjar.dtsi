@@ -897,6 +897,8 @@
 		};
 	};
 
+	thermal_zones: thermal-zones {};
+
 	spmi_bus: qcom,spmi@200f000 {
 		compatible = "qcom,spmi-pmic-arb";
 		reg = <0x200f000 0x1000>,
@@ -1032,6 +1034,7 @@
 #include "sdxnightjar-pcie.dtsi"
 #include "sdxnightjar-audio.dtsi"
 #include "sdxnightjar-audio-overlay.dtsi"
+#include "sdxnightjar-thermal.dtsi"
 
 &i2c_3 {
 	status = "ok";
