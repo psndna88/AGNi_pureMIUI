@@ -184,3 +184,9 @@
 		};
 	};
 };
+
+&pcie1 {
+	qcom,link-check-max-count = <50>;
+	qcom,ep-gpio = <&tlmm 6 0>;
+	qcom,boot-option = <0x0>;
+};
