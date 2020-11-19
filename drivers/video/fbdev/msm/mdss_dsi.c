@@ -4249,7 +4249,9 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	else
 		ctrl_pdata->shared_data->dsi1_active = true;
 
+#ifdef CONFIG_DEBUG_FS_
 	mdss_dsi_debug_bus_init(mdss_dsi_res);
+#endif
 
 	ctrl_pdata->wake_notif.notifier_call = mdss_dsi_fb_unblank_cb;
 	ctrl_pdata->wake_notif.priority = INT_MAX - 1;

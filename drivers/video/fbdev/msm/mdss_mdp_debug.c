@@ -1773,6 +1773,7 @@ void mdss_mdp_hw_rev_debug_caps_init(struct mdss_data_type *mdata)
 	}
 }
 
+#ifdef CONFIG_DEBUG_FS_
 void mdss_mdp_debug_mid(u32 mid)
 {
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
@@ -1804,6 +1805,16 @@ void mdss_mdp_debug_mid(u32 mid)
 		}
 	}
 }
+#else
+void mdss_dump_reg(const char *dump_name, u32 reg_dump_flag, char *addr,
+	int len, u32 **dump_mem, bool from_isr) { }
+u32 get_dump_range(struct dump_offset *range_node, size_t max_offset)
+{
+	return 0;
+}
+
+void mdss_mdp_debug_mid(u32 mid) { }
+#endif
 
 static void __print_time(char *buf, u32 size, u64 ts)
 {
@@ -2077,7 +2088,7 @@ void mdss_mdp_dump(struct mdss_data_type *mdata)
 	kfree(s.buf);
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static void __dump_buf_data(struct seq_file *s, struct msm_fb_data_type *mfd)
 {
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
