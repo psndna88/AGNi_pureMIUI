@@ -110,7 +110,7 @@ static ssize_t show_fw_version(struct kobject *kobj,
 	return ret_val;
 };
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 struct power_stats_priv {
 	struct power_stats_response power_stats;
 };
@@ -410,8 +410,10 @@ static struct kobj_attribute dr_ver_attribute =
 	__ATTR(driver_version, 0440, show_driver_version, NULL);
 static struct kobj_attribute fw_ver_attribute =
 	__ATTR(version, 0440, show_fw_version, NULL);
+#ifdef WLAN_POWER_DEBUG
 static struct kobj_attribute power_stats_attribute =
 	__ATTR(power_stats, 0444, show_device_power_stats, NULL);
+#endif
 
 void hdd_sysfs_create_version_interface(struct wlan_objmgr_psoc *psoc)
 {
@@ -472,7 +474,7 @@ void hdd_sysfs_destroy_version_interface(void)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 void hdd_sysfs_create_powerstats_interface(void)
 {
 	int error;

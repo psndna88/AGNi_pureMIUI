@@ -165,7 +165,7 @@ ifneq ($(CONFIG_MOBILE_ROUTER), y)
 CONFIG_QCOM_TDLS := y
 
 CONFIG_WLAN_SYSFS := y
-CONFIG_WLAN_POWER_DEBUG := y
+CONFIG_WLAN_POWER_DEBUG := n
 #Enable Beacon Reception Stats
 CONFIG_FEATURE_BECN_STATS := y
 endif
@@ -488,7 +488,7 @@ endif
 ifeq ($(CONFIG_DEBUG_FS), y)
        # Flag to enable debugfs. Depends on CONFIG_DEBUG_FS in kernel
        # configuration.
-       CONFIG_WLAN_DEBUGFS := y
+       CONFIG_WLAN_DEBUGFS := n
 
        # Flag to enable streamfs. Depends on CONFIG_DEBUG_FS and
        # CONFIG_RELAY in kernel configuration.
@@ -508,7 +508,7 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := y
+BUILD_DEBUG_VERSION := n
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := y

@@ -336,17 +336,17 @@ endif
 ifeq ($(CONFIG_DEBUG_FS), y)
        # Flag to enable debugfs. Depends on CONFIG_DEBUG_FS in kernel
        # configuration.
-       CONFIG_WLAN_DEBUGFS := y
+       CONFIG_WLAN_DEBUGFS := n
 
-       CONFIG_WLAN_POWER_DEBUGFS := y
+       CONFIG_WLAN_POWER_DEBUGFS := n
 
-       CONFIG_WLAN_MWS_INFO_DEBUGFS := y
+       CONFIG_WLAN_MWS_INFO_DEBUGFS := n
 endif
 
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := y
+BUILD_DEBUG_VERSION := n
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := y
