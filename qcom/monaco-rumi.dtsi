@@ -12,3 +12,5 @@
 	};
 
 };
+
+#include "monaco-stub-regulator.dtsi"
