@@ -4061,6 +4061,95 @@ static ssize_t mdss_mdp_cmd_autorefresh_store(struct device *dev,
 	return len;
 }
 
+#ifndef CONFIG_DEBUG_FS_
+static struct mdss_mdp_misr_map {
+	u32 ctrl_reg;
+	u32 value_reg;
+	u32 crc_op_mode;
+	u32 crc_index;
+	u32 last_misr;
+	bool use_ping;
+	bool is_ping_full;
+	bool is_pong_full;
+	struct mutex crc_lock;
+	u32 crc_ping[MISR_CRC_BATCH_SIZE];
+	u32 crc_pong[MISR_CRC_BATCH_SIZE];
+} mdss_mdp_misr_table[DISPLAY_MISR_MAX] = {
+	[DISPLAY_MISR_DSI0] = {
+		.ctrl_reg = MDSS_MDP_LP_MISR_CTRL_DSI0,
+		.value_reg = MDSS_MDP_LP_MISR_SIGN_DSI0,
+		.crc_op_mode = 0,
+		.crc_index = 0,
+		.last_misr = 0,
+		.use_ping = true,
+		.is_ping_full = false,
+		.is_pong_full = false,
+	},
+	[DISPLAY_MISR_DSI1] = {
+		.ctrl_reg = MDSS_MDP_LP_MISR_CTRL_DSI1,
+		.value_reg = MDSS_MDP_LP_MISR_SIGN_DSI1,
+		.crc_op_mode = 0,
+		.crc_index = 0,
+		.last_misr = 0,
+		.use_ping = true,
+		.is_ping_full = false,
+		.is_pong_full = false,
+	},
+	[DISPLAY_MISR_EDP] = {
+		.ctrl_reg = MDSS_MDP_LP_MISR_CTRL_EDP,
+		.value_reg = MDSS_MDP_LP_MISR_SIGN_EDP,
+		.crc_op_mode = 0,
+		.crc_index = 0,
+		.last_misr = 0,
+		.use_ping = true,
+		.is_ping_full = false,
+		.is_pong_full = false,
+	},
+	[DISPLAY_MISR_HDMI] = {
+		.ctrl_reg = MDSS_MDP_LP_MISR_CTRL_HDMI,
+		.value_reg = MDSS_MDP_LP_MISR_SIGN_HDMI,
+		.crc_op_mode = 0,
+		.crc_index = 0,
+		.last_misr = 0,
+		.use_ping = true,
+		.is_ping_full = false,
+		.is_pong_full = false,
+	},
+	[DISPLAY_MISR_MDP] = {
+		.ctrl_reg = MDSS_MDP_LP_MISR_CTRL_MDP,
+		.value_reg = MDSS_MDP_LP_MISR_SIGN_MDP,
+		.crc_op_mode = 0,
+		.crc_index = 0,
+		.last_misr = 0,
+		.use_ping = true,
+		.is_ping_full = false,
+		.is_pong_full = false,
+	},
+};
+
+int mdss_dump_misr_data(char **buf, u32 size)
+{
+	struct mdss_mdp_misr_map  *dsi0_map;
+	struct mdss_mdp_misr_map  *dsi1_map;
+	struct mdss_mdp_misr_map  *hdmi_map;
+	int ret;
+
+	dsi0_map = &mdss_mdp_misr_table[DISPLAY_MISR_DSI0];
+	dsi1_map = &mdss_mdp_misr_table[DISPLAY_MISR_DSI1];
+	hdmi_map = &mdss_mdp_misr_table[DISPLAY_MISR_HDMI];
+
+	ret = scnprintf(*buf, PAGE_SIZE,
+			"\tDSI0 mode:%02d MISR:0x%08x\n"
+			"\tDSI1 mode:%02d MISR:0x%08x\n"
+			"\tHDMI mode:%02d MISR:0x%08x\n",
+			dsi0_map->crc_op_mode, dsi0_map->last_misr,
+			dsi1_map->crc_op_mode, dsi1_map->last_misr,
+			hdmi_map->crc_op_mode, hdmi_map->last_misr
+			);
+
+	return ret;
+}
+#endif
 
 /* Print the last CRC Value read for batch mode */
 static ssize_t mdss_mdp_misr_show(struct device *dev,

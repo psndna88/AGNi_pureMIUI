@@ -84,7 +84,7 @@ void mdss_mdp_dump(struct mdss_data_type *mdata);
 void mdss_mdp_hw_rev_debug_caps_init(struct mdss_data_type *mdata);
 
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 int mdss_mdp_debugfs_init(struct mdss_data_type *mdata);
 #else
 static inline int mdss_mdp_debugfs_init(struct mdss_data_type *mdata)
