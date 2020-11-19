@@ -267,9 +267,9 @@ CONFIG_WLAN_FEATURE_APF := y
 ifeq ($(CONFIG_DEBUG_FS), y)
        # Flag to enable debugfs. Depends on CONFIG_DEBUG_FS in kernel
        # configuration.
-       CONFIG_WLAN_DEBUGFS := y
+       CONFIG_WLAN_DEBUGFS := n
 
-       CONFIG_WLAN_POWER_DEBUGFS := y
+       CONFIG_WLAN_POWER_DEBUGFS := n
 endif
 
 # If not set, assume, Common driver is with in the build tree
