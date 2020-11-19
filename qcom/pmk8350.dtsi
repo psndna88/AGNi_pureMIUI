@@ -29,10 +29,12 @@
 
 		pon_hlos@1300 {
 			compatible = "qcom,qpnp-power-on";
-			reg = <0x1300>;
+			reg = <0x1300>, <0x800>;
+			reg-names = "pon_hlos", "pon_pbs";
 			interrupts = <0x0 0x13 0x7 IRQ_TYPE_EDGE_BOTH>,
 				     <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>;
 			interrupt-names = "kpdpwr", "resin";
+			qcom,kpdpwr-sw-debounce;
 
 			qcom,pon_1 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;
