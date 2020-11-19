@@ -11210,9 +11210,14 @@ static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
 		char buf[50];
 		const char *dest = get_param(cmd, "DestMac");
 		const char *chan = get_param(cmd, "channel");
+		const char *freq_str = get_param(cmd, "ChnlFreq");
 		int len, freq;
 
-		freq = chan ? channel_to_freq(dut, atoi(chan)) : 0;
+		if (freq_str)
+			freq = atoi(freq_str);
+		else
+			freq = chan ? channel_to_freq(dut, atoi(chan)) : 0;
+
 		if (!dest || !freq)
 			return INVALID_SEND_STATUS;
 
