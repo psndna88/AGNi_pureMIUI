@@ -24,8 +24,8 @@ FILENAME="AGNi_kernel_ROG_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
 fi
-if [ -f ~/WORKING_DIRECTORY/gcc-9.x_aarch64.sh ]; then
-	. ~/WORKING_DIRECTORY/gcc-9.x_aarch64.sh
+if [ -f ~/WORKING_DIRECTORY/snapdragon_llvm.sh ]; then
+	. ~/WORKING_DIRECTORY/snapdragon_llvm.sh
 fi
 
 if [ ! -d $COMPILEDIR ]; then
