@@ -752,6 +752,31 @@
 		};
 	};
 
+	qcom,chd {
+		compatible = "qcom,core-hang-detect";
+		label = "core";
+		qcom,threshold-arr = <0x18000058 0x18010058 0x18020058 0x18030058
+				0x18040058 0x18050058 0x18060058 0x18070058>;
+		qcom,config-arr = <0x18000060 0x18010060 0x18020060 0x18030060
+				0x18040060 0x18050060 0x18060060 0x18070060>;
+	};
+
+	kryo-erp {
+		compatible = "arm,arm64-kryo-cpu-erp";
+		interrupts = <GIC_PPI 0 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "l1-l2-faultirq","l3-scu-faultirq";
+	};
+
+	cache-controller@9200000 {
+		compatible = "qcom,yupik-llcc","qcom,llcc-v2";
+		reg = <0x9200000 0xd0000>, <0x9600000 0x50000>;
+		reg-names = "llcc_base", "llcc_broadcast_base";
+		cap-based-alloc-and-pwr-collapse;
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "qdss_clk";
+	};
+
 	clk_virt: interconnect {
 		compatible = "qcom,yupik-clk_virt";
 		#interconnect-cells = <1>;
@@ -1160,6 +1185,7 @@
 #include "yupik-pinctrl.dtsi"
 #include "yupik-pm.dtsi"
 #include "yupik-stub-regulator.dtsi"
+#include "ipcc-test-yupik.dtsi"
 
 &gcc_pcie_0_gdsc {
 	compatible = "regulator-fixed";
