@@ -136,11 +136,20 @@ endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_YUPIK) +=    \
-	yupik-rumi-overlay.dtbo
+	yupik-rumi-overlay.dtbo \
+	yupik-idp-overlay.dtbo \
+	yupik-atp-overlay.dtbo \
+	yupik-idps-digital-mics-overlay.dtbo
 
 yupik-rumi-overlay.dtbo-base := yupik.dtb
+yupik-idp-overlay.dtbo-base := yupik.dtb
+yupik-atp-overlay.dtbo-base := yupik.dtb
+yupik-idps-digital-mics-overlay.dtbo-base := yupik.dtb
 else
-dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb
+dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
+	yupik-idp.dtb \
+	yupik-atp.dtb \
+	yupik-idps-digital-mics.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
