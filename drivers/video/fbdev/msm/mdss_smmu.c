@@ -639,7 +639,9 @@ int mdss_smmu_fault_handler(struct iommu_domain *domain, struct device *dev,
 		if (i == MDSS_IOMMU_MAX_DOMAIN)
 			goto end;
 
+#ifdef CONFIG_DEBUG_FS_
 		mdss_mdp_debug_mid(mid);
+#endif
 	} else {
 		pr_err("mdss_smmu: iova:0x%lx flags:0x%x\n",
 			iova, flags);
