@@ -6485,6 +6485,7 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 			return rc;
 
 		frame_header_enable = true;
+		prepare_hw_data->frame_header_res_id = 0x0;
 	}
 
 	if (ctx->internal_cdm)
@@ -6588,6 +6589,14 @@ static int cam_ife_mgr_prepare_hw_update(void *hw_mgr_priv,
 				prepare_hw_data->frame_header_res_id,
 				prepare_hw_data->frame_header_cpu_addr);
 		}
+	}
+
+	/* Check if frame header was enabled for any WM */
+	if ((ctx->custom_config & CAM_IFE_CUSTOM_CFG_FRAME_HEADER_TS) &&
+		(prepare->num_out_map_entries) &&
+		(!prepare_hw_data->frame_header_res_id)) {
+		CAM_ERR(CAM_ISP, "Failed to configure frame header");
+		goto end;
 	}
 
 	/*
