@@ -172,3 +172,7 @@
 			   "typec_mode",
 			   "pe_start";
 };
+
+&vbus_detect {
+	status = "disabled";
+};
