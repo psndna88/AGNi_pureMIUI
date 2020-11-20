@@ -9,6 +9,7 @@
 #include <dt-bindings/interconnect/qcom,sdxlemur.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include <dt-bindings/spmi/spmi.h>
 
 / {
 	#address-cells = <1>;
@@ -902,6 +903,33 @@
 		cell-index = <0>;
 		qcom,channel = <0>;
 		qcom,ee = <0>;
+	};
+
+	spmi_debug_bus: qcom,spmi-debug@6b12000 {
+		compatible = "qcom,spmi-pmic-arb-debug";
+		reg = <0x6b12000 0x60>, <0x7820a8 0x4>;
+		reg-names = "core", "fuse";
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "core_clk";
+		qcom,fuse-disable-bit = <24>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		qcom,pmk8350-debug@0 {
+			compatible = "qcom,spmi-pmic";
+			reg = <0 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pmx65-debug@1 {
+			compatible = "qcom,spmi-pmic";
+			reg = <1 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
 	};
 
 	thermal_zones: thermal-zones {
