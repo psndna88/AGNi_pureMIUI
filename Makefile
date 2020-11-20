@@ -303,13 +303,9 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
-#O3_OPTS := -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-loop-vectorize -ftree-loop-distribution -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -fpeel-loops
-#O3_OPTS2 := -finline-functions -fgraphite-identity -floop-interchange -floop-strip-mine -ftree-loop-if-convert -floop-block -floop-interchange
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-#HOSTCFLAGS  := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 $(O3_OPTS) $(O3_OPTS2) -fomit-frame-pointer -std=gnu89
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
-#HOSTCXXFLAGS = -O2 $(O3_OPTS) $(O3_OPTS2)
+HOSTCFLAGS  := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
 HOSTCXXFLAGS = -O2
 
 # Decide whether to build built-in, modular, or both.
@@ -397,24 +393,10 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -w -W  -Wunused-variable -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
+		   -Wimplicit-function-declaration \
+		   -Wno-format-security -Wno-unused-function \
 		   -std=gnu89 $(call cc-option,-fno-PIE) \
-		   -march=armv8-a+crc+crypto -mtune=cortex-a73.cortex-a53 \
-		   -Wno-deprecated-declarations \
-		   -Wno-misleading-indentation \
-		   -Wno-shift-overflow \
-		   -Wno-bool-compare \
-		   -Wno-memset-transposed-args \
-		   -Wno-discarded-array-qualifiers \
-		   -Wno-tautological-compare -Wno-array-bounds \
-		   -Wno-duplicate-decl-specifier \
-		   -Wno-memset-elt-size -Wno-switch-unreachable \
-		   -Wno-format-truncation -Wno-format-overflow \
-		   -Wno-int-in-bool-context -Wno-bool-operation \
-		   -Wno-nonnull -Wno-stringop-overflow -Wno-attributes \
-		   -Wno-discarded-qualifiers \
-		   -Wno-parentheses
+		   -march=armv8-a+crc+crypto -mcpu=cortex-a53
 
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
@@ -647,7 +629,7 @@ endif
 ifneq ($(GCC_TOOLCHAIN),)
 CLANG_FLAGS	+= --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
-CLANG_FLAGS	+= -no-integrated-as
+#CLANG_FLAGS	+= -no-integrated-as
 CLANG_FLAGS	+= -Werror=unknown-warning-option
 CLANG_FLAGS    += $(call cc-option, -Wno-misleading-indentation)
 CLANG_FLAGS    += $(call cc-option, -Wno-bool-operation)
@@ -667,8 +649,8 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 # See modpost pattern 2
 KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
 KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
-KBUILD_CFLAGS += $(call cc-option, -no-integrated-as)
-KBUILD_AFLAGS += $(call cc-option, -no-integrated-as)
+#KBUILD_CFLAGS += $(call cc-option, -no-integrated-as)
+#KBUILD_AFLAGS += $(call cc-option, -no-integrated-as)
 else
 
 # These warnings generated too much noise in a regular build.
@@ -944,7 +926,7 @@ KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
 KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
 
 # require functions to have arguments in prototypes, not empty 'int foo()'
-KBUILD_CFLAGS   += $(call cc-option,-Werror=strict-prototypes)
+#KBUILD_CFLAGS   += $(call cc-option,-Werror=strict-prototypes)
 
 # Prohibit date/time macros, which would make the build non-deterministic
 KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
