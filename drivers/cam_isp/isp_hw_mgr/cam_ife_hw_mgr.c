@@ -1909,7 +1909,7 @@ acquire_successful:
 				break;
 		}
 
-		if (j == CAM_IFE_CSID_HW_NUM_MAX) {
+		if (j == -1 || !csid_acquire.node_res) {
 			CAM_ERR(CAM_ISP,
 				"Can not acquire ife csid dual resource");
 			goto end;
