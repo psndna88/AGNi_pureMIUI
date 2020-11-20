@@ -9,10 +9,18 @@ peripheral is connected to the host processor via the SPMI interface.
 
 Required properties:
 - compatible:			Must be "qcom,qpnp-power-on"
-- reg:				Specifies the SPMI base address for this PON
-				(power-on) peripheral.
+- reg:				Specifies the SPMI base address for this
+				PON (power-on) peripheral. For PMICs that have
+				PON peripheral (GEN3) split into PON_HLOS and
+				PON_PBS, this can hold addresses of both.
+				PON_PBS base address needs to be specified for
+				such devices if "qcom,kdpwr-sw-debounce" is
+				specified.
 
 Optional properties:
+- reg-names:			For PON GEN1 and GEN2, it should be "pon".
+				For PON GEN3, it should include "pon_hlos" and
+				optionally "pon_pbs".
 - interrupts:			Specifies the interrupts associated with PON.
 - interrupt-names:		Specifies the interrupt names associated with
 				the interrupts property. Must be a subset of
@@ -243,5 +251,25 @@ Examples:
 			regulator-name = "pon_spare_reg";
 			qcom,pon-spare-reg-addr = <0x8c>;
 			qcom,pon-spare-reg-bit = <1>;
+		};
+	};
+
+	pon_hlos@1300 {
+		compatible = "qcom,qpnp-power-on";
+		reg = <0x1300>, <0x800>;
+		reg-names = "pon_hlos", "pon_pbs";
+		interrupts = <0x0 0x13 0x7 IRQ_TYPE_EDGE_BOTH>,
+			     <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>;
+		interrupt-names = "kpdpwr", "resin";
+		qcom,kpdpwr-sw-debounce;
+
+		qcom,pon_1 {
+			qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;
+			linux,code = <KEY_POWER>;
+		};
+
+		qcom,pon_2 {
+			qcom,pon-type = <PON_POWER_ON_TYPE_RESIN>;
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
