@@ -46,11 +46,14 @@ obj-m += dsp/
 obj-m += asoc/
 obj-m += asoc/codecs/
 obj-m += soc/
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa8195 qtiquingvm))
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa8195))
 KBUILD_OPTIONS += CONFIG_SND_SOC_SA8155=m
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa6155))
 KBUILD_OPTIONS += CONFIG_SND_SOC_SA6155=m
+endif
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm))
+KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=m
 endif
 endif
 
