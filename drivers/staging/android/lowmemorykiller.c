@@ -69,7 +69,7 @@
 static int enable_lmk = 1;
 module_param_named(enable_lmk, enable_lmk, int, 0644);
 
-static u32 lowmem_debug_level = 1;
+static u32 lowmem_debug_level = 0;
 static short lowmem_adj[6] = {
 	0,
 	1,
@@ -79,10 +79,12 @@ static short lowmem_adj[6] = {
 
 static int lowmem_adj_size = 4;
 static int lowmem_minfree[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
+	18432,
+	23040,
+	27648,
+	32256,
+	55296,
+	80640,
 };
 
 static int lowmem_minfree_size = 4;
@@ -90,11 +92,7 @@ static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
 
-#define lowmem_print(level, x...)			\
-	do {						\
-		if (lowmem_debug_level >= (level))	\
-			pr_info(x);			\
-	} while (0)
+#define lowmem_print(level, x...)
 
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
