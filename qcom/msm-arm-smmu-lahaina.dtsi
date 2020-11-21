@@ -15,6 +15,7 @@
 		#address-cells = <1>;
 		ranges;
 		dma-coherent;
+		qcom,power-always-on;
 		qcom,regulator-names = "vdd";
 		vdd-supply = <&gpu_cc_cx_gdsc>;
 

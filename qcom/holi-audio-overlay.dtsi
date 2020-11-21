@@ -11,8 +11,8 @@
 	#size-cells = <1>;
 	bolero-clk-rsc-mngr {
 		compatible = "qcom,bolero-clk-rsc-mngr";
-		qcom,fs-gen-sequence = <0x3000 0x1>,
-					<0x3004 0x1>, <0x3080 0x2>;
+		qcom,fs-gen-sequence = <0x3000 0x1 0x1>, <0x3004 0x3 0x3>,
+					<0x3004 0x3 0x1>, <0x3080 0x2 0x2>;
 	qcom,rx_mclk_mode_muxsel = <0x0A5640D8>;
 	qcom,va_mclk_mode_muxsel = <0x0A7A0000>;
 	clock-names = "tx_core_clk", "tx_npl_clk", "rx_core_clk", "rx_npl_clk",

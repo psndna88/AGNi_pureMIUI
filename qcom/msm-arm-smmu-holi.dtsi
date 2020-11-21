@@ -7,6 +7,7 @@
 		#iommu-cells = <1>;
 		qcom,use-3-lvl-tables;
 		#global-interrupts = <2>;
+		qcom,power-always-on;
 		qcom,regulator-names = "vdd";
 		vdd-supply = <&gpu_cx_gdsc>;
 		clock-names = "gcc_gpu_memnoc_gfx_clk";
