@@ -9,7 +9,7 @@
 };
 
 &sdhc_1 {
-	status = "disabled";
+	status = "ok";
 
 	vdd-supply = <&vreg_sd_vdd>;
 	qcom,vdd-voltage-level = <2950000 2950000>;
