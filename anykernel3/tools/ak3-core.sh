@@ -398,6 +398,7 @@ flash_boot() {
     dd if=/dev/zero of=$block $customdd 2>/dev/null;
     dd if=boot-new.img of=$block $customdd;
   else
+    ui_print " " "Flashing boot.img ...";
     cat boot-new.img /dev/zero > $block 2>/dev/null || true;
   fi;
   if [ $? != 0 ]; then
@@ -429,6 +430,7 @@ flash_dtbo() {
       dd if=/dev/zero of=$dtboblock 2>/dev/null;
       dd if=$dtbo of=$dtboblock;
     else
+      ui_print " " "Flashing dtbo.img ...";
       cat $dtbo /dev/zero > $dtboblock 2>/dev/null || true;
     fi;
     if [ $? != 0 ]; then
