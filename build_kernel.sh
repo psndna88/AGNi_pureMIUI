@@ -4,14 +4,14 @@ export SUBARCH=arm64
 
 KERNELDIR=`readlink -f .`
 
-DEVICE="MIATOLL_720G"
+DEVICE="MIATOLL-720G"
 CONFIG1="agni_atoll_defconfig"
 SYNC_CONFIG=1
 WLAN_MODA11="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0"
 WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
 
 . $KERNELDIR/AGNi_version.sh
-FILENAME="AGNi_kernel_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
+FILENAME="AGNi_kernel_$DEVICE--$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
@@ -40,7 +40,7 @@ cd $KERNELDIR/
 
 echo ""
 echo " ~~~~~ Cross-compiling AGNi kernel $DEVICE ~~~~~"
-echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
+echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE"
 echo ""
 
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
@@ -85,7 +85,7 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb ] || [ -f $KERNELDIR/$DIR/Image.gz ]); the
 	fi
 	rm -rf $KERNELDIR/$DIR
 	echo " <<<<< AGNi has been built for $DEVICE !!! >>>>>>"
-	echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION"
+	echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE"
 	echo "            FILE: $FILENAME"
 else
 	echo " >>>>> AGNi $DEVICE BUILD ERROR <<<<<"
