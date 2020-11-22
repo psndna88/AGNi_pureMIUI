@@ -2776,6 +2776,9 @@ static int module_sig_check(struct load_info *info, int flags)
 	const unsigned long markerlen = sizeof(MODULE_SIG_STRING) - 1;
 	const void *mod = info->hdr;
 
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	return 0;
+#endif
 	/*
 	 * Require flags == 0, as a module with version information
 	 * removed is no longer the module that was signed
@@ -3678,6 +3681,10 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	long err;
 	char *after_dashes;
 
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	flags |= MODULE_INIT_IGNORE_MODVERSIONS;
+	flags |= MODULE_INIT_IGNORE_VERMAGIC;
+#endif
 	err = module_sig_check(info, flags);
 	if (err)
 		goto free_copy;
