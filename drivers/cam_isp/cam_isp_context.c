@@ -838,6 +838,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 				"Move active request %lld to free list(cnt = %d) [flushed], ctx %u",
 				buf_done_req_id, ctx_isp->active_req_cnt,
 				ctx->ctx_id);
+			ctx_isp->last_bufdone_error_apply_req_id = 0;
 		} else {
 			list_add(&req->list, &ctx->pending_req_list);
 			CAM_DBG(CAM_REQ,
@@ -863,6 +864,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 			"Move active request %lld to free list(cnt = %d) [all fences done], ctx %u",
 			buf_done_req_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 		ctx_isp->req_info.last_bufdone_req_id = req->request_id;
+		ctx_isp->last_bufdone_error_apply_req_id = 0;
 	}
 
 	__cam_isp_ctx_update_state_monitor_array(ctx_isp,
@@ -1164,11 +1166,11 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 			 */
 			req_isp->deferred_fence_map_index[deferred_indx] = j;
 			req_isp->num_deferred_acks++;
-			CAM_WARN(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"ctx[%d] : Deferred buf done for %llu with bubble state %d recovery %d",
 				ctx->ctx_id, req->request_id, bubble_state,
 				req_isp->bubble_report);
-			CAM_WARN(CAM_ISP,
+			CAM_DBG(CAM_ISP,
 				"ctx[%d] : Deferred info : num_acks=%d, fence_map_index=%d, resource_handle=0x%x, sync_id=%d",
 				ctx->ctx_id, req_isp->num_deferred_acks, j,
 				req_isp->fence_map_out[j].resource_handle,
@@ -1380,20 +1382,27 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 	struct cam_ctx_request *req;
 	struct cam_ctx_request *next_req = NULL;
 	struct cam_context *ctx = ctx_isp->base;
+	bool  req_in_wait_list = false;
 
 	if (list_empty(&ctx->active_req_list)) {
-		CAM_WARN(CAM_ISP,
-			"Buf done with no active request bubble_state=%d",
-			bubble_state);
 
 		if (!list_empty(&ctx->wait_req_list)) {
 			struct cam_isp_ctx_req *req_isp;
 
 			req = list_first_entry(&ctx->wait_req_list,
 				struct cam_ctx_request, list);
-			CAM_WARN(CAM_ISP,
-				"Buf done with no active request but with req in wait list, req %llu",
-				req->request_id);
+
+			req_in_wait_list = true;
+			if (ctx_isp->last_applied_req_id !=
+				ctx_isp->last_bufdone_error_apply_req_id) {
+				CAM_WARN(CAM_ISP,
+					"Buf done with no active request but with req in wait list, req %llu last apply id:%lld",
+					req->request_id,
+					ctx_isp->last_applied_req_id);
+				ctx_isp->last_bufdone_error_apply_req_id =
+					ctx_isp->last_applied_req_id;
+			}
+
 			req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 
 			/*
@@ -1406,6 +1415,15 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 			rc =
 			__cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 				ctx_isp, req, done, bubble_state, true, true);
+		}
+
+		if (!req_in_wait_list  && (ctx_isp->last_applied_req_id !=
+			ctx_isp->last_bufdone_error_apply_req_id)) {
+			CAM_WARN(CAM_ISP,
+				"Buf done with no active request bubble_state=%d last_applied_req_id:%lld ",
+				bubble_state, ctx_isp->last_applied_req_id);
+			ctx_isp->last_bufdone_error_apply_req_id =
+					ctx_isp->last_applied_req_id;
 		}
 		return 0;
 	}
