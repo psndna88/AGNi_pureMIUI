@@ -18,6 +18,7 @@
 		interrupt-names = "pwr_event_irq";
 
 		USB3_GDSC-supply = <&gcc_usb30_gdsc>;
+		dpdm-supply = <&usb2_phy>;
 		clocks = <&gcc GCC_USB30_MASTER_CLK>,
 			<&gcc GCC_USB30_SLV_AHB_CLK>,
 			<&gcc GCC_USB30_MSTR_AXI_CLK>,
@@ -100,9 +101,10 @@
 
 	usb2_phy: hsphy@ff4000 {
 		compatible = "qcom,usb-hsphy-snps-femto";
-		reg = <0xff4000 0x120>;
-		reg-names = "hsusb_phy_base";
-
+		reg = <0xff4000 0x120>,
+			<0xff2000 0x4>;
+		reg-names = "hsusb_phy_base",
+			"eud_enable_reg";
 		vdd-supply = <&pmx65_l4>;
 		qcom,vdd-voltage-level = <0 912000 912000>;
 		vdda18-supply = <&pmx65_l5>;
