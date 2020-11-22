@@ -27,7 +27,9 @@
 #include <linux/uaccess.h>
 #include <linux/dma-buf.h>
 #include <linux/kref.h>
+#ifdef CONFIG_RTMM
 #include <linux/rtmm.h>
+#endif
 
 #include <soc/qcom/scm.h>
 #include <asm/cacheflush.h>
