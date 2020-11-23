@@ -1443,7 +1443,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
-		reg = <0x0fd04980 0x300>;
+		reg = <0xfd04580 0x280>;
 		reg-names = "pmu-base";
 
 		cpu0_rimps_l3_latmon: qcom,cpu0-rimps-l3-latmon {
@@ -1469,7 +1469,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
-		reg = <0x0fd04980 0x300>;
+		reg = <0xfd04580 0x280>;
 		reg-names = "pmu-base";
 
 		cpu6_rimps_l3_latmon: qcom,cpu6-rimps-l3-latmon {
@@ -1512,8 +1512,8 @@
 
 	rimps_log: qcom,rimps_log@fd04780 {
 		compatible = "qcom,rimps-log";
-		reg = <0x0fd04580 0x200>,
-				<0x0fd04780 0x200>;
+		reg = <0x0fd04800 0x200>,
+				<0x0fd04A00 0x200>;
 		mboxes = <&rimps 1>;
 	};
 
