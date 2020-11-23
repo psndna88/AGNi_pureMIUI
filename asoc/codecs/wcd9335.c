@@ -11123,33 +11123,33 @@ static const struct snd_soc_dapm_widget tasha_dapm_widgets[] = {
 			    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_PRE_PMD),
 
 	SND_SOC_DAPM_INPUT("AMIC1"),
-	SND_SOC_DAPM_MICBIAS_E("MIC BIAS1", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY("MIC BIAS1", SND_SOC_NOPM, 0, 0,
 			       tasha_codec_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
 			       SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E("MIC BIAS2", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY("MIC BIAS2", SND_SOC_NOPM, 0, 0,
 			       tasha_codec_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
 			       SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E("MIC BIAS3", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY("MIC BIAS3", SND_SOC_NOPM, 0, 0,
 			       tasha_codec_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
 			       SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E("MIC BIAS4", SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY("MIC BIAS4", SND_SOC_NOPM, 0, 0,
 			       tasha_codec_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
 			       SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_MICBIAS_E(DAPM_MICBIAS1_STANDALONE, SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY(DAPM_MICBIAS1_STANDALONE, SND_SOC_NOPM, 0, 0,
 			       tasha_codec_force_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E(DAPM_MICBIAS2_STANDALONE, SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY(DAPM_MICBIAS2_STANDALONE, SND_SOC_NOPM, 0, 0,
 			       tasha_codec_force_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E(DAPM_MICBIAS3_STANDALONE, SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY(DAPM_MICBIAS3_STANDALONE, SND_SOC_NOPM, 0, 0,
 			       tasha_codec_force_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_MICBIAS_E(DAPM_MICBIAS4_STANDALONE, SND_SOC_NOPM, 0, 0,
+	SND_SOC_DAPM_SUPPLY(DAPM_MICBIAS4_STANDALONE, SND_SOC_NOPM, 0, 0,
 			       tasha_codec_force_enable_micbias,
 			       SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_SUPPLY(DAPM_LDO_H_STANDALONE, SND_SOC_NOPM, 0, 0,
@@ -12606,7 +12606,7 @@ int tasha_codec_info_create_codec_entry(struct snd_info_entry *codec_root,
 
 	tasha = snd_soc_component_get_drvdata(component);
 	card = component->card;
-	tasha->entry = snd_info_create_subdir(codec_root->module,
+	tasha->entry = snd_info_create_module_entry(codec_root->module,
 					      "tasha", codec_root);
 	if (!tasha->entry) {
 		dev_dbg(component->dev, "%s: failed to create wcd9335 entry\n",

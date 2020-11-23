@@ -39,6 +39,7 @@ USERINCLUDE     += \
 LINUXINCLUDE    += \
                 -I$(srctree)/techpack/audio/include/uapi \
                 -I$(srctree)/techpack/audio/include/uapi/audio \
+                -I$(srctree)/techpack/audio/include/asoc \
                 -I$(srctree)/techpack/audio/include
 
 ifeq ($(CONFIG_QTI_QUIN_GVM), y)
