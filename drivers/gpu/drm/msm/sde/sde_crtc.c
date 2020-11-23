@@ -6189,7 +6189,7 @@ void sde_crtc_misr_setup(struct drm_crtc *crtc, bool enable, u32 frame_count)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static int _sde_debugfs_status_show(struct seq_file *s, void *data)
 {
 	struct sde_crtc *sde_crtc;
@@ -6657,7 +6657,7 @@ static int _sde_crtc_init_debugfs(struct drm_crtc *crtc)
 static void _sde_crtc_destroy_debugfs(struct drm_crtc *crtc)
 {
 }
-#endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_DEBUG_FS_ */
 
 static int sde_crtc_late_register(struct drm_crtc *crtc)
 {

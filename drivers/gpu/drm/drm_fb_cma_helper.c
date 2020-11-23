@@ -201,7 +201,7 @@ int drm_fb_cma_prepare_fb(struct drm_plane *plane,
 }
 EXPORT_SYMBOL_GPL(drm_fb_cma_prepare_fb);
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static void drm_fb_cma_describe(struct drm_framebuffer *fb, struct seq_file *m)
 {
 	int i;

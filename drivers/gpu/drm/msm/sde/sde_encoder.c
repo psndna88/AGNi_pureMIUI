@@ -4939,7 +4939,7 @@ void sde_encoder_prepare_commit(struct drm_encoder *drm_enc)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static int _sde_encoder_status_show(struct seq_file *s, void *data)
 {
 	struct sde_encoder_virt *sde_enc;
