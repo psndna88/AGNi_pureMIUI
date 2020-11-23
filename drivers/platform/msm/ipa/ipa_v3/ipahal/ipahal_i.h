@@ -675,6 +675,7 @@ union ipa_pkt_status_hw {
 #define IPA_HDR_UCP_L2TP_UDP_HEADER_ADD	12
 #define IPA_HDR_UCP_L2TP_UDP_HEADER_REMOVE	13
 #define IPA_HDR_UCP_ETHII_TO_ETHII_EX		14
+#define IPA_HDR_UCP_SET_DSCP		16
 
 /* Processing context TLV type */
 #define IPA_PROC_CTX_TLV_TYPE_END 0

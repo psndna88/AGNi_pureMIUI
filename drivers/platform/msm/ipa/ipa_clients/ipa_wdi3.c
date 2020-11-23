@@ -126,6 +126,8 @@ static int ipa_wdi_cleanup_internal(void)
 	struct ipa_wdi_intf_info *entry;
 	struct ipa_wdi_intf_info *next;
 
+	ipa3_uc_dereg_rdyCB();
+
 	/* clear interface list */
 	list_for_each_entry_safe(entry, next,
 		&ipa_wdi_ctx->head_intf_list, link) {
@@ -635,6 +637,12 @@ static int ipa_wdi_enable_pipes_internal(void)
 	if (ipa_ep_idx_tx <= 0 || ipa_ep_idx_rx <= 0)
 		return -EFAULT;
 
+	ret = ipa_pm_activate_sync(ipa_wdi_ctx->ipa_pm_hdl);
+	if (ret) {
+		IPA_WDI_ERR("fail to activate ipa pm\n");
+		return -EFAULT;
+	}
+
 	if (ipa_wdi_ctx->wdi_version == IPA_WDI_3) {
 		if (ipa3_enable_wdi3_pipes(ipa_ep_idx_tx, ipa_ep_idx_rx)) {
 			IPA_WDI_ERR("fail to enable wdi pipes\n");
@@ -664,12 +672,6 @@ static int ipa_wdi_enable_pipes_internal(void)
 			IPA_WDI_ERR("fail to resume wdi rx pipe\n");
 			return -EFAULT;
 		}
-	}
-
-	ret = ipa_pm_activate_sync(ipa_wdi_ctx->ipa_pm_hdl);
-	if (ret) {
-		IPA_WDI_ERR("fail to activate ipa pm\n");
-		return -EFAULT;
 	}
 
 	return 0;

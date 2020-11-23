@@ -1793,9 +1793,9 @@ enum ipa_client_cb_type {
  */
 struct ipa_flt_rt_counter {
 	struct idr hdl;
+	spinlock_t hdl_lock;
 	bool used_hw[IPA_FLT_RT_HW_COUNTER];
 	bool used_sw[IPA_FLT_RT_SW_COUNTER];
-	spinlock_t hdl_lock;
 };
 
 /**
@@ -1946,6 +1946,9 @@ struct ipa3_app_clock_vote {
  * @rmnet_ctl_enable: enable pipe support fow low latency data
  * @gsi_fw_file_name: GSI IPA fw file name
  * @uc_fw_file_name: uC IPA fw file name
+ * @manual_fw_load: bool,if fw load is done manually
+ * @max_num_smmu_cb: number of smmu s1 cb supported
+ * @ipa_config_is_auto: flag to indicate auto config 
  */
 struct ipa3_context {
 	struct ipa3_char_device_context cdev;
@@ -2024,6 +2027,7 @@ struct ipa3_context {
 	enum gsi_ver gsi_ver;
 	enum ipa3_platform_type platform_type;
 	bool ipa_config_is_mhi;
+	bool ipa_config_is_auto;
 	bool use_ipa_teth_bridge;
 	bool modem_cfg_emb_pipe_flt;
 	bool ipa_wdi2;
@@ -2137,6 +2141,9 @@ struct ipa3_context {
 	char *uc_fw_file_name;
 	bool gsi_wdi_db_polling;
 	u32 ipa_wan_aggr_pkt_cnt;
+	bool manual_fw_load;
+	u32 num_smmu_cb_probed;
+	u32 max_num_smmu_cb;
 };
 
 struct ipa3_plat_drv_res {
@@ -2202,6 +2209,9 @@ struct ipa3_plat_drv_res {
 	u32 tx_wrapper_cache_max_size;
 	bool gsi_wdi_db_polling;
 	u32 ipa_wan_aggr_pkt_cnt;
+	bool manual_fw_load;
+	bool ipa_config_is_auto;
+	u32 max_num_smmu_cb;
 };
 
 /**
@@ -3083,6 +3093,8 @@ int ipa3_lan_rx_poll(u32 clnt_hdl, int weight);
 int ipa3_smmu_map_peer_reg(phys_addr_t phys_addr, bool map,
 	enum ipa_smmu_cb_type cb_type);
 int ipa3_smmu_map_peer_buff(u64 iova, u32 size, bool map, struct sg_table *sgt,
+	enum ipa_smmu_cb_type cb_type);
+int ipa3_smmu_map_ctg(u64 iova, u32 size, bool map, phys_addr_t pa,
 	enum ipa_smmu_cb_type cb_type);
 void ipa3_reset_freeze_vote(void);
 int ipa3_ntn_init(void);

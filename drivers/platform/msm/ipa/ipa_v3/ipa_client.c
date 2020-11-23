@@ -454,6 +454,51 @@ int ipa3_smmu_map_peer_buff(u64 iova, u32 size, bool map, struct sg_table *sgt,
 }
 EXPORT_SYMBOL(ipa3_smmu_map_peer_buff);
 
+int ipa3_smmu_map_ctg(u64 iova, u32 size, bool map, phys_addr_t pa,
+	enum ipa_smmu_cb_type cb_type)
+{
+	struct iommu_domain *smmu_domain;
+	int res;
+	phys_addr_t phys;
+	unsigned long va;
+	size_t len;
+
+	if (cb_type >= IPA_SMMU_CB_MAX) {
+		IPAERR("invalid cb_type\n");
+		return -EINVAL;
+	}
+
+	if (ipa3_ctx->s1_bypass_arr[cb_type]) {
+		IPADBG("CB# %d is set to s1 bypass\n", cb_type);
+		return 0;
+	}
+
+	smmu_domain = ipa3_get_smmu_domain_by_type(cb_type);
+	if (!smmu_domain) {
+		IPAERR("invalid smmu domain\n");
+		return -EINVAL;
+	}
+
+	if (map) {
+		va = rounddown(iova, PAGE_SIZE);
+		phys = rounddown(pa, PAGE_SIZE);
+		len = size + ((iova - va > pa - phys) ?
+			(iova-va) : (pa - phys));
+		res = ipa3_iommu_map(smmu_domain, va, phys,
+			roundup(len, PAGE_SIZE),
+			IOMMU_READ | IOMMU_WRITE);
+	} else {
+		va = rounddown(iova, PAGE_SIZE);
+		phys = rounddown(pa, PAGE_SIZE);
+		len = size + ((iova - va > pa - phys) ?
+			(iova-va) : (pa - phys));
+		res = iommu_unmap(smmu_domain, va,
+					roundup(len, PAGE_SIZE));
+	}
+	IPADBG("ctg %s 0x%llx to 0x%llx\n", map ? "map" : "unmap", pa, iova);
+	return 0;
+}
+
 static enum ipa_client_cb_type ipa_get_client_cb_type(
 					enum ipa_client_type client_type)
 {
