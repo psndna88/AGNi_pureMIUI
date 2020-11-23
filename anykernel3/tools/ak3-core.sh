@@ -395,10 +395,10 @@ flash_boot() {
     $bin/flash_erase $block 0 0;
     $bin/nandwrite -p $block boot-new.img;
   elif [ "$customdd" ]; then
-    ui_print " " "Flashing boot.img ...";
     dd if=/dev/zero of=$block $customdd 2>/dev/null;
     dd if=boot-new.img of=$block $customdd;
   else
+    ui_print " " "Flashing boot.img ...";
     cat boot-new.img /dev/zero > $block 2>/dev/null || true;
   fi;
   if [ $? != 0 ]; then
@@ -419,7 +419,7 @@ flash_dtbo() {
   done;
 
   if [ "$dtbo" ]; then
-    dtboblock=/dev/block/bootdevice/by-name/dtbo$slot;
+    dtboblock=/dev/block/bootdevice/by-name/dtbo;
     if [ ! -e "$dtboblock" ]; then
       abort "dtbo partition could not be found. Aborting...";
     fi;
@@ -427,10 +427,10 @@ flash_dtbo() {
       $bin/flash_erase $dtboblock 0 0;
       $bin/nandwrite -p $dtboblock $dtbo;
     elif [ "$customdd" ]; then
-      ui_print " " "Flashing dtbo.img ...";
       dd if=/dev/zero of=$dtboblock 2>/dev/null;
       dd if=$dtbo of=$dtboblock;
     else
+      ui_print " " "Flashing dtbo.img ...";
       cat $dtbo /dev/zero > $dtboblock 2>/dev/null || true;
     fi;
     if [ $? != 0 ]; then
