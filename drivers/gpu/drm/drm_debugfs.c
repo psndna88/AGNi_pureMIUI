@@ -36,7 +36,7 @@
 #include "drm_internal.h"
 #include "drm_crtc_internal.h"
 
-#if defined(CONFIG_DEBUG_FS)
+#if defined(CONFIG_DEBUG_FS_)
 
 /***************************************************
  * Initialization, etc.
@@ -411,4 +411,4 @@ void drm_debugfs_crtc_remove(struct drm_crtc *crtc)
 	crtc->debugfs_entry = NULL;
 }
 
-#endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_DEBUG_FS_ */

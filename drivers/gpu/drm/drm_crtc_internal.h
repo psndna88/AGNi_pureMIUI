@@ -174,7 +174,7 @@ int drm_mode_dirtyfb_ioctl(struct drm_device *dev,
 			   void *data, struct drm_file *file_priv);
 
 /* drm_atomic.c */
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 struct drm_minor;
 int drm_atomic_debugfs_init(struct drm_minor *minor);
 #endif
