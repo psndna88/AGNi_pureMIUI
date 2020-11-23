@@ -1138,8 +1138,8 @@ void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)
 	trace_kmalloc(_RET_IP_, ret, size, PAGE_SIZE << order, flags);
 	return ret;
 }
-EXPORT_SYMBOL(kmalloc_order_trace);
 #endif
+EXPORT_SYMBOL(kmalloc_order_trace);
 
 #ifdef CONFIG_SLAB_FREELIST_RANDOM
 /* Randomize a generic freelist */
