@@ -2786,8 +2786,8 @@ void *kmem_cache_alloc_trace(struct kmem_cache *s, gfp_t gfpflags, size_t size)
 	kasan_kmalloc(s, ret, size, gfpflags);
 	return ret;
 }
-EXPORT_SYMBOL(kmem_cache_alloc_trace);
 #endif
+EXPORT_SYMBOL(kmem_cache_alloc_trace);
 
 #ifdef CONFIG_NUMA
 void *kmem_cache_alloc_node(struct kmem_cache *s, gfp_t gfpflags, int node)
@@ -2814,8 +2814,8 @@ void *kmem_cache_alloc_node_trace(struct kmem_cache *s,
 	kasan_kmalloc(s, ret, size, gfpflags);
 	return ret;
 }
-EXPORT_SYMBOL(kmem_cache_alloc_node_trace);
 #endif
+EXPORT_SYMBOL(kmem_cache_alloc_node_trace);
 #endif
 
 /*
