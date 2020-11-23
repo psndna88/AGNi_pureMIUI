@@ -138,7 +138,7 @@ int ol_peer_recovery_notifier_cb(struct notifier_block *block,
 	struct qdf_notifer_data *notif_data = data;
 	qdf_notif_block *notif_block;
 	struct ol_txrx_peer_t *peer;
-	struct peer_hang_data hang_data;
+	struct peer_hang_data hang_data = {0};
 	enum peer_debug_id_type dbg_id;
 
 	if (!data || !block)
@@ -6202,8 +6202,10 @@ static void ol_txrx_post_data_stall_event(
 	data_stall_info->recovery_type = recovery_type;
 
 	if (data_stall_info->data_stall_type ==
-				DATA_STALL_LOG_FW_RX_REFILL_FAILED)
+				DATA_STALL_LOG_FW_RX_REFILL_FAILED) {
 		htt_log_rx_ring_info(pdev->htt_pdev);
+		htt_rx_refill_failure(pdev->htt_pdev);
+	}
 
 	sys_build_message_header(SYS_MSG_ID_DATA_STALL_MSG, &msg);
 	/* Save callback and data */

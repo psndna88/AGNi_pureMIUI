@@ -4466,7 +4466,7 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 		WMA_LOGE("%s: failed to send tdls peer update state command",
 			 __func__);
 		ret = -EIO;
-		goto end_tdls_peer_state;
+		/* Fall through to delete TDLS peer for teardown */
 	}
 
 	/* in case of teardown, remove peer from fw */
@@ -4490,7 +4490,6 @@ int wma_update_tdls_peer_state(WMA_HANDLE handle,
 		if (QDF_IS_STATUS_ERROR(qdf_status)) {
 			WMA_LOGE(FL("wma_remove_peer failed"));
 			ret = -EINVAL;
-			goto end_tdls_peer_state;
 		}
 		cdp_peer_update_last_real_peer(soc,
 				pdev, peer, &peer_id,
@@ -5833,6 +5832,46 @@ int wma_unified_beacon_debug_stats_event_handler(void *handle,
 						 uint8_t *cmd_param_info,
 						  uint32_t len)
 {
+	return 0;
+}
+#endif
+
+#if defined(CLD_PM_QOS) && defined(WLAN_FEATURE_LL_MODE)
+int
+wma_vdev_bcn_latency_event_handler(void *handle,
+				   uint8_t *event_info,
+				   uint32_t len)
+{
+	WMI_VDEV_BCN_LATENCY_EVENTID_param_tlvs *param_buf = NULL;
+	wmi_vdev_bcn_latency_fixed_param *bcn_latency = NULL;
+	tpAniSirGlobal mac =
+			(tpAniSirGlobal)cds_get_context(QDF_MODULE_ID_PE);
+	uint32_t latency_level;
+
+	param_buf = (WMI_VDEV_BCN_LATENCY_EVENTID_param_tlvs *)event_info;
+	if (!param_buf) {
+		wma_err("Invalid bcn latency event");
+		return -EINVAL;
+	}
+
+	bcn_latency = param_buf->fixed_param;
+	if (!bcn_latency) {
+		wma_debug("beacon latency event fixed param is NULL");
+		return -EINVAL;
+	}
+
+	/* Map the latency value to the level which host expects
+	 * 1 - normal, 2 - moderate, 3 - low, 4 - ultralow
+	 */
+	latency_level = bcn_latency->latency_level + 1;
+	if (latency_level < 1 || latency_level > 4) {
+		wma_debug("invalid beacon latency level value");
+		return -EINVAL;
+	}
+
+	/* Call the registered sme callback */
+	mac->sme.beacon_latency_event_cb(latency_level);
+
 	return 0;
 }
 #endif

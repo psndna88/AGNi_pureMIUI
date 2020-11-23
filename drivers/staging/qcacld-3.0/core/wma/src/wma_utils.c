@@ -2920,6 +2920,11 @@ int wma_link_status_event_handler(void *handle, uint8_t *cmd_param_info,
 						param_buf->fixed_param;
 	ht_info = (wmi_vdev_rate_ht_info *) param_buf->ht_info;
 
+	if (!ht_info) {
+		wma_err("Invalid ht_info");
+		return -EINVAL;
+	}
+
 	WMA_LOGD("num_vdev_stats: %d", event->num_vdev_stats);
 
 	if (event->num_vdev_stats > ((WMI_SVC_MSG_MAX_SIZE -
@@ -4712,7 +4717,8 @@ static void wma_update_roam_offload_flag(tp_wma_handle wma, uint8_t vdev_id,
 	}
 
 	for (id = 0; id < wma->max_bssid; id++) {
-		if (wma->interfaces[id].roam_offload_enabled)
+		if (wma_is_vdev_valid(id) &&
+		    wma->interfaces[id].roam_offload_enabled)
 			roam_offload_vdev_id = id;
 	}
 

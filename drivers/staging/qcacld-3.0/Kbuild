@@ -1705,6 +1705,8 @@ cppflags-$(CONFIG_WLAN_HANG_EVENT) += -DWLAN_HANG_EVENT
 
 cppflags-$(CONFIG_WLAN_FEATURE_PERIODIC_STA_STATS) += -DWLAN_FEATURE_PERIODIC_STA_STATS
 
+cppflags-$(CONFIG_RX_HASH_DEBUG) += -DRX_HASH_DEBUG
+
 ifeq ($(CONFIG_CNSS), y)
 ifeq ($(CONFIG_CNSS_SDIO), y)
 cppflags-y += -DCONFIG_PLD_SDIO_CNSS
@@ -1978,6 +1980,14 @@ cppflags-$(CONFIG_IPA_OFFLOAD) += -DIPA_OFFLOAD
 
 ifeq ($(CONFIG_ARCH_SDX20), y)
 cppflags-y += -DSYNC_IPA_READY
+endif
+
+ifeq ($(CONFIG_ARCH_MSM8996), y)
+CONFIG_RX_THREAD_PRIORITY := y
+endif
+
+ifeq ($(CONFIG_RX_THREAD_PRIORITY), y)
+cppflags-y += -DRX_THREAD_PRIORITY
 endif
 
 #Enable wbuff

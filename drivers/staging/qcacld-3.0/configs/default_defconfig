@@ -79,6 +79,7 @@ ifeq ($(CONFIG_ARCH_QCS40X), y)
 	CONFIG_MULTI_IF_LOG := y
 	CONFIG_DFS_PRI_MULTIPLIER := y
 	CONFIG_DFS_OVERRIDE_RF_THRESHOLD := y
+	CONFIG_RX_THREAD_PRIORITY := y
 endif
 
 #Flag to enable Legacy Fast Roaming2(LFR2)
@@ -185,6 +186,7 @@ ifeq ($(CONFIG_ROME_IF),usb)
 endif
 
 CONFIG_MPC_UT_FRAMEWORK := n
+
 CONFIG_FEATURE_EPPING := n
 
 #Flag to enable offload packets feature
@@ -620,6 +622,8 @@ CONFIG_CHANNEL_HOPPING_ALL_BANDS := y
 endif
 
 CONFIG_WLAN_LOGGING_SOCK_SVC := n
+CONFIG_DP_TRACE := n
+#Enable Beacon Reception Stats
 CONFIG_FEATURE_BECN_STATS := n
 
 #enable MPTA helper for QCS405
@@ -642,5 +646,11 @@ endif
 ifeq ($(CONFIG_ARCH_SDM660), y)
 CONFIG_WLAN_FEATURE_PKT_CAPTURE := y
 endif
+
+#Enable RX RING buffers debug
+CONFIG_DEBUG_RX_RING_BUFFER := n
+
+#Enable Hash debug
+CONFIG_RX_HASH_DEBUG := n
 
 CONFIG_WLAN_HANG_EVENT := n
