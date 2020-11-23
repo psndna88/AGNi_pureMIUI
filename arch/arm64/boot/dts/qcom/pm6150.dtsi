@@ -567,38 +567,6 @@
 		};
 	};
 
-	pm6150-ibat-lvl0 {
-		polling-delay-passive = <0>;
-		polling-delay = <0>;
-		thermal-governor = "step_wise";
-		thermal-sensors = <&pm6150_bcl 0>;
-		wake-capable-sensor;
-
-		trips {
-			ibat_lvl0:ibat-lvl0 {
-				temperature = <5500>;
-				hysteresis = <200>;
-				type = "passive";
-			};
-		};
-	};
-
-	pm6150-ibat-lvl1 {
-		polling-delay-passive = <0>;
-		polling-delay = <0>;
-		thermal-governor = "step_wise";
-		thermal-sensors = <&pm6150_bcl 1>;
-		wake-capable-sensor;
-
-		trips {
-			ibat_lvl1:ibat-lvl1 {
-				temperature = <6000>;
-				hysteresis = <200>;
-				type = "passive";
-			};
-		};
-	};
-
 	pm6150-vbat-lvl0 {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
@@ -698,20 +666,4 @@
 		};
 	};
 
-	soc {
-		polling-delay-passive = <100>;
-		polling-delay = <0>;
-		thermal-governor = "low_limits_cap";
-		thermal-sensors = <&bcl_soc>;
-		wake-capable-sensor;
-		tracks-low;
-
-		trips {
-			soc_trip:soc-trip {
-				temperature = <10>;
-				hysteresis = <0>;
-				type = "passive";
-			};
-		};
-	};
 };
