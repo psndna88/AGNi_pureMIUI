@@ -1758,8 +1758,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		if (link->max_delay == 1)
 			max_retry++;
 
-		if ((in_q->last_applied_idx < in_q->rd_idx) &&
-			!link->wq_congestion) {
+		if (!link->wq_congestion) {
 			link->retry_cnt++;
 			if (link->retry_cnt == max_retry) {
 				CAM_DBG(CAM_CRM,
@@ -3622,12 +3621,12 @@ static int __cam_req_mgr_unlink(struct cam_req_mgr_core_link *link)
 
 	mutex_lock(&link->lock);
 
-	/* Destroy workq of link */
-	cam_req_mgr_workq_destroy(&link->workq);
 	spin_lock_bh(&link->link_state_spin_lock);
 	/* Destroy timer of link */
 	crm_timer_exit(&link->watchdog);
 	spin_unlock_bh(&link->link_state_spin_lock);
+	/* Destroy workq of link */
+	cam_req_mgr_workq_destroy(&link->workq);
 
 	/* Cleanup request tables and unlink devices */
 	__cam_req_mgr_destroy_link_info(link);

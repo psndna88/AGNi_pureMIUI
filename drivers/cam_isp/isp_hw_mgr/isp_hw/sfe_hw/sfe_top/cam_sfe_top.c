@@ -866,7 +866,7 @@ static int cam_sfe_top_handle_irq_bottom_half(
 {
 	int i;
 	uint32_t irq_status[CAM_SFE_IRQ_REGISTERS_MAX] = {0};
-	enum cam_sfe_hw_irq_status          ret;
+	enum cam_sfe_hw_irq_status          ret = CAM_SFE_IRQ_STATUS_MAX;
 	struct cam_isp_hw_event_info        evt_info;
 	struct cam_isp_resource_node       *res = handler_priv;
 	struct cam_sfe_path_data           *path_data = res->res_priv;
@@ -1126,7 +1126,7 @@ int cam_sfe_top_init(
 	memset(top_priv->last_vote, 0x0, sizeof(struct cam_axi_vote) *
 		CAM_SFE_DELAY_BW_REDUCTION_NUM_FRAMES);
 	memset(&top_priv->core_cfg, 0x0,
-		sizeof(struct cam_sfe_core_config_args));
+		sizeof(struct cam_sfe_core_cfg));
 
 	CAM_DBG(CAM_SFE,
 		"Initializing SFE [%u] top with hw_version: 0x%x",
