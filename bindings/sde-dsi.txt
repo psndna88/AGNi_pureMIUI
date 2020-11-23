@@ -15,11 +15,12 @@ Required properties:
 			qcom,dsi-phy-v1.0, qcom,dsi-phy-v2.0,
 			qcom,dsi-phy-v3.0, qcom,dsi-phy-v4.0,
 			qcom,dsi-phy-v4.1, qcom,dsi-phy-v4.2
-- reg:                  Base address and length of DSI controller's memory
-			mapped regions.
+- reg:                  List of base address and length of memory mapped
+			regions of DSI controller, disp_cc and mdp_intf.
 - reg-names:            A list of strings that name the list of regs.
 			"dsi_ctrl" - DSI controller memory region.
-			"mmss_misc" - MMSS misc memory region.
+			"disp_cc_base" - Base address of disp_cc memory region.
+			"mdp_intf_base" - Base address of mdp_intf memory region.
 - cell-index:           Specifies the controller instance.
 - clocks:               Clocks required for DSI controller operation.
 - clock-names:          Names of the clocks corresponding to handles. Following

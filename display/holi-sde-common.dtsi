@@ -173,8 +173,9 @@
 		cell-index = <0>;
 		frame-threshold-time-us = <1000>;
 		reg = <0x05e94000 0x400>,
-			<0x05f08000 0x4>;
-		reg-names = "dsi_ctrl", "disp_cc_base";
+			<0x05f08000 0x4>,
+			<0x05e6b800 0x300>;
+		reg-names = "dsi_ctrl", "disp_cc_base", "mdp_intf_base";
 		interrupt-parent = <&mdss_mdp>;
 		interrupts = <4 0>;
 
