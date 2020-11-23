@@ -472,6 +472,7 @@ endif #CONFIG_HELIUMPLUS
 
 ifeq ($(CONFIG_LITHIUM), y)
 CONFIG_RX_DEFRAG_DO_NOT_REINJECT := y
+CONFIG_SEND_ICMP_PKT_TO_FW := y
 #
 # Enable VERBOSE debug INI mechanism
 #
@@ -706,6 +707,10 @@ CONFIG_WLAN_CUSTOM_DSCP_UP_MAP := y
 endif
 
 ifeq ($(CONFIG_ARCH_BENGAL), y)
+CONFIG_SMMU_S1_UNMAP := y
+endif
+
+ifeq ($(CONFIG_ICNSS2_HELIUM), y)
 CONFIG_SMMU_S1_UNMAP := y
 endif
 

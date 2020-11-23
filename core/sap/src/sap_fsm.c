@@ -235,6 +235,16 @@ static qdf_freq_t sap_random_channel_sel(struct sap_context *sap_ctx)
 		 sap_operating_chan_preferred_location == 2)
 		flag |= DFS_RANDOM_CH_FLAG_NO_LOWER_5G_CH;
 
+	/*
+	 * Dont choose 6ghz channel currently as legacy clients wont be able to
+	 * scan them. In future create an ini if any customer wants 6ghz freq
+	 * to be prioritize over 5ghz/2.4ghz.
+	 * Currently for SAP there is a high chance of 6ghz being selected as
+	 * an op frequency as PCL will have only 5, 6ghz freq as preferred for
+	 * standalone SAP, and 6ghz channels being high in number.
+	 */
+	flag |= DFS_RANDOM_CH_FLAG_NO_6GHZ_CH;
+
 	if (QDF_IS_STATUS_ERROR(utils_dfs_get_vdev_random_channel_for_freq(
 					pdev, sap_ctx->vdev, flag, ch_params,
 					&hw_mode, &chan_freq, &acs_info))) {
@@ -806,10 +816,11 @@ sap_validate_chan(struct sap_context *sap_context,
 					  sap_context->chan_freq,
 					con_ch_freq);
 				sap_context->chan_freq = con_ch_freq;
-				if (WLAN_REG_IS_24GHZ_CH_FREQ(
-				    sap_context->chan_freq))
-					sap_context->ch_params.ch_width =
-							CH_WIDTH_20MHZ;
+				sap_context->ch_params.ch_width =
+				    wlan_sap_get_concurrent_bw(mac_ctx->pdev,
+							       mac_ctx->psoc,
+							       con_ch_freq,
+					       sap_context->ch_params.ch_width);
 				wlan_reg_set_channel_params_for_freq(
 					mac_ctx->pdev,
 					sap_context->chan_freq,

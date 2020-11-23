@@ -485,6 +485,8 @@ int hdd_set_udp_qos_upgrade_config(struct hdd_adapter *adapter,
 
 	adapter->upgrade_udp_qos_threshold = priority;
 
+	hdd_debug("UDP packets qos upgrade to: %d", priority);
+
 	return 0;
 }
 
@@ -1048,6 +1050,16 @@ static void __hdd_hard_start_xmit(struct sk_buff *skb,
 			QDF_NBUF_CB_TX_EXTRA_FRAG_FLAGS_NOTIFY_COMP(skb) = 1;
 			is_dhcp = true;
 		}
+	} else if (QDF_NBUF_CB_GET_PACKET_TYPE(skb) ==
+		   QDF_NBUF_CB_PACKET_TYPE_ICMP) {
+		subtype = qdf_nbuf_get_icmp_subtype(skb);
+		/*
+		 * Mark the ICMP requests to be sent to FW.
+		 * The decision on whether its actually sent to FW
+		 * is done in the DATAPATH layer.
+		 */
+		if (subtype == QDF_PROTO_ICMP_REQ)
+			QDF_NBUF_CB_TX_PACKET_TO_FW(skb) = 1;
 	}
 	/* track connectivity stats */
 	if (adapter->pkt_type_bitmap)
@@ -2060,6 +2072,9 @@ QDF_STATUS hdd_rx_thread_gro_flush_ind_cbk(void *adapter, int rx_ctx_id)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	if (hdd_adapter->runtime_disable_rx_thread)
+		return QDF_STATUS_SUCCESS;
+
 	if (hdd_is_low_tput_gro_enable(hdd_adapter->hdd_ctx)) {
 		hdd_adapter->hdd_stats.tx_rx_stats.rx_gro_flush_skip++;
 		gro_flush_code = DP_RX_GRO_LOW_TPUT_FLUSH;
@@ -2231,7 +2246,8 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 
 	if (skb_receive_offload_ok && hdd_ctx->receive_offload_cb &&
 	    !hdd_ctx->dp_agg_param.gro_force_flush[rx_ctx_id] &&
-	    !adapter->gro_flushed[rx_ctx_id]) {
+	    !adapter->gro_flushed[rx_ctx_id] &&
+	    !adapter->runtime_disable_rx_thread) {
 		status = hdd_ctx->receive_offload_cb(adapter, skb);
 
 		if (QDF_IS_STATUS_SUCCESS(status)) {

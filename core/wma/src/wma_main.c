@@ -1018,6 +1018,13 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
 				wma_err("dbglog_module_log_enable failed ret %d",
 					ret);
 			break;
+		case WMI_DBGLOG_MOD_WOW_LOG_LEVEL:
+			ret = dbglog_set_mod_wow_log_lvl(wma->wmi_handle,
+							 privcmd->param_value);
+			if (ret)
+				wma_err("WMI_DBGLOG_MOD_WOW_LOG_LEVEL failed ret %d",
+					ret);
+			break;
 		case WMI_DBGLOG_TYPE:
 			ret = dbglog_parser_type_init(wma->wmi_handle,
 							privcmd->param_value);
@@ -1806,6 +1813,7 @@ static void wma_state_info_dump(char **buf_ptr, uint16_t *size)
 			"\tipv6_mcast_ns %u\n"
 			"\tipv6_mcast_na %u\n"
 			"\toem_response %u\n"
+			"\tuc_drop %u\n"
 			"dtimPeriod %d\n"
 			"chan_width %d\n"
 			"vdev_active %d\n"
@@ -1831,6 +1839,7 @@ static void wma_state_info_dump(char **buf_ptr, uint16_t *size)
 			stats.ipv6_mcast_ns_stats,
 			stats.ipv6_mcast_na_stats,
 			stats.oem_response_wake_up_count,
+			stats.uc_drop_wake_up_count,
 			iface->dtimPeriod,
 			iface->chan_width,
 			iface->vdev_active,
@@ -2749,6 +2758,18 @@ void wma_get_fw_phy_mode_for_freq_cb(uint32_t freq, uint32_t chan_width,
 	}
 
 	dot11_mode = mac->mlme_cfg->dot11_mode.dot11_mode;
+
+	/* Update invalid dot11 modes to valid dot11 modes */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(freq) &&
+	    dot11_mode == MLME_DOT11_MODE_11A)
+		dot11_mode = MLME_DOT11_MODE_11G;
+
+	if (WLAN_REG_IS_5GHZ_CH_FREQ(freq) &&
+	    (dot11_mode == MLME_DOT11_MODE_11B ||
+	     dot11_mode == MLME_DOT11_MODE_11G ||
+	     dot11_mode == MLME_DOT11_MODE_11G_ONLY))
+		dot11_mode = MLME_DOT11_MODE_11A;
+
 	host_phy_mode = wma_chan_phy_mode(freq, chan_width, dot11_mode);
 	*phy_mode = wma_host_to_fw_phymode(host_phy_mode);
 }
@@ -6676,6 +6697,7 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	struct wmi_unified *wmi_handle;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	target_resource_config *wlan_res_cfg;
+	uint8_t sta_sap_scc_on_dfs_chnl;
 
 	wma_debug("Enter");
 
@@ -6738,6 +6760,18 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	}
 	wma_init_scan_fw_mode_config(wma_handle->psoc, conc_scan_config_bits,
 				     fw_config_bits);
+
+	policy_mgr_get_sta_sap_scc_on_dfs_chnl(wma_handle->psoc,
+					       &sta_sap_scc_on_dfs_chnl);
+
+	/*
+	 * For non-dbs HW, disallow sta+sap on DFS channel as if SAP comes
+	 * on DFS master mode enable (sta_sap_scc_on_dfs_chnl = 2), scan will
+	 * be disabled and STA cannot connect to any other channel
+	 */
+	if (!policy_mgr_is_hw_dbs_capable(wma_handle->psoc) &&
+	    sta_sap_scc_on_dfs_chnl == 2)
+		policy_mgr_set_sta_sap_scc_on_dfs_chnl(wma_handle->psoc, 1);
 
 	target_psoc_set_num_radios(tgt_hdl, 1);
 

@@ -3912,7 +3912,7 @@ QDF_STATUS csr_roam_issue_disassociate_sta_cmd(struct mac_context *mac,
 					mac, sessionId,
 					p_del_sta_params->peerMacAddr);
 
-		status = csr_queue_sme_command(mac, pCommand, true);
+		status = csr_queue_sme_command(mac, pCommand, false);
 		if (!QDF_IS_STATUS_SUCCESS(status))
 			sme_err("fail to send message status: %d", status);
 	} while (0);
@@ -3957,7 +3957,7 @@ QDF_STATUS csr_roam_issue_deauth_sta_cmd(struct mac_context *mac,
 		csr_roam_issue_disconnect_stats(mac, sessionId,
 						pDelStaParams->peerMacAddr);
 
-		status = csr_queue_sme_command(mac, pCommand, true);
+		status = csr_queue_sme_command(mac, pCommand, false);
 		if (!QDF_IS_STATUS_SUCCESS(status))
 			sme_err("fail to send message status: %d", status);
 	} while (0);
@@ -11049,11 +11049,94 @@ static void csr_update_pmf_cap_from_profile(struct csr_roam_profile *profile,
 	if (profile->MFPRequired)
 		filter->pmf_cap = WLAN_PMF_REQUIRED;
 }
+
+static void
+csr_cm_roam_fill_11w_params(struct mac_context *mac_ctx,
+			    uint8_t vdev_id,
+			    struct ap_profile_params *req)
+{
+	uint32_t group_mgmt_cipher;
+	bool peer_rmf_capable = false;
+	uint32_t keymgmt;
+	struct wlan_objmgr_vdev *vdev;
+	uint16_t rsn_caps;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("Invalid vdev");
+		return;
+	}
+
+	/*
+	 * Get rsn cap of link, intersection of self cap and bss cap,
+	 * Only set PMF flags when both STA and current AP has MFP enabled
+	 */
+	rsn_caps = (uint16_t)wlan_crypto_get_param(vdev,
+						   WLAN_CRYPTO_PARAM_RSN_CAP);
+	if (wlan_crypto_vdev_has_mgmtcipher(vdev,
+					(1 << WLAN_CRYPTO_CIPHER_AES_GMAC) |
+					(1 << WLAN_CRYPTO_CIPHER_AES_GMAC_256) |
+					(1 << WLAN_CRYPTO_CIPHER_AES_CMAC)) &&
+					(rsn_caps &
+					 WLAN_CRYPTO_RSN_CAP_MFP_ENABLED))
+		peer_rmf_capable = true;
+
+	keymgmt = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_MGMT_CIPHER);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+
+	if (keymgmt & (1 << WLAN_CRYPTO_CIPHER_AES_CMAC))
+		group_mgmt_cipher = WMI_CIPHER_AES_CMAC;
+	else if (keymgmt & (1 << WLAN_CRYPTO_CIPHER_AES_GMAC))
+		group_mgmt_cipher = WMI_CIPHER_AES_GMAC;
+	else if (keymgmt & (1 << WLAN_CRYPTO_CIPHER_AES_GMAC_256))
+		group_mgmt_cipher = WMI_CIPHER_BIP_GMAC_256;
+	else
+		group_mgmt_cipher = WMI_CIPHER_NONE;
+
+	if (peer_rmf_capable) {
+		req->profile.rsn_mcastmgmtcipherset = group_mgmt_cipher;
+		req->profile.flags |= WMI_AP_PROFILE_FLAG_PMF;
+	} else {
+		req->profile.rsn_mcastmgmtcipherset = WMI_CIPHER_NONE;
+	}
+}
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void
+csr_cm_roam_fill_rsn_caps(struct mac_context *mac, uint8_t vdev_id,
+			  uint16_t *rsn_caps)
+{
+	tCsrRoamConnectedProfile *profile;
+
+	/* Copy the self RSN capabilities in roam offload request */
+	profile = &mac->roam.roamSession[vdev_id].connectedProfile;
+	*rsn_caps &= ~WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
+	*rsn_caps &= ~WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
+	if (profile->MFPRequired)
+		*rsn_caps |= WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
+	if (profile->MFPCapable)
+		*rsn_caps |= WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
+}
+#endif
 #else
 static inline
 void csr_update_pmf_cap_from_profile(struct csr_roam_profile *profile,
 				     struct scan_filter *filter)
 {}
+
+static inline
+void csr_cm_roam_fill_11w_params(struct mac_context *mac_ctx,
+				 uint8_t vdev_id,
+				 struct ap_profile_params *req)
+{}
+
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static inline
+void csr_cm_roam_fill_rsn_caps(struct mac_context *mac, uint8_t vdev_id,
+			       uint16_t *rsn_caps)
+{}
+#endif
 #endif
 
 QDF_STATUS csr_fill_filter_from_vdev_crypto(struct mac_context *mac_ctx,
@@ -14968,6 +15051,19 @@ csr_update_sae_single_pmk_ap_cap(struct mac_context *mac,
 }
 #endif
 
+static void csr_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq)
+{
+	/*
+	 * Some IOT APs don't send supported rates in
+	 * probe resp, hence add BSS basic rates in
+	 * supported rates IE of assoc request.
+	 */
+	if (WLAN_REG_IS_24GHZ_CH_FREQ(chan_freq))
+		csr_populate_basic_rates(b_rates, false, true);
+	else if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq))
+		csr_populate_basic_rates(b_rates, true, true);
+}
+
 /**
  * The communication between HDD and LIM is thru mailbox (MB).
  * Both sides will access the data structure "struct join_req".
@@ -15319,17 +15415,11 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				qdf_mem_copy(&csr_join_req->operationalRateSet.
 						rate, OpRateSet.rate,
 						OpRateSet.numRates);
-			} else if (pProfile->phyMode == eCSR_DOT11_MODE_AUTO &&
-				   WLAN_REG_IS_24GHZ_CH_FREQ(
-						pBssDescription->chan_freq)) {
-				/*
-				 * Some IOT APs don't send supported rates in
-				 * probe resp, hence add BSS basic rates in
-				 * supported rates IE of assoc request.
-				 */
-				tSirMacRateSet b_rates;
+			} else if (pProfile->phyMode == eCSR_DOT11_MODE_AUTO) {
+				tSirMacRateSet b_rates = {0};
 
-				csr_populate_basic_rates(&b_rates, false, true);
+				csr_get_basic_rates(&b_rates,
+						    pBssDescription->chan_freq);
 				csr_join_req->operationalRateSet = b_rates;
 			}
 			/* ExtendedRateSet */
@@ -15342,16 +15432,11 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 			} else {
 				csr_join_req->extendedRateSet.numRates = 0;
 			}
-		} else if (pProfile->phyMode == eCSR_DOT11_MODE_AUTO &&
-			   WLAN_REG_IS_24GHZ_CH_FREQ(
-					pBssDescription->chan_freq)) {
-			/*
-			 * To connect IOT AP, add basic rates in supported
-			 * rates IE of assoc req.
-			 */
-			tSirMacRateSet b_rates;
+		} else if (pProfile->phyMode == eCSR_DOT11_MODE_AUTO) {
+			tSirMacRateSet b_rates = {0};
 
-			csr_populate_basic_rates(&b_rates, false, true);
+			csr_get_basic_rates(&b_rates,
+					    pBssDescription->chan_freq);
 			csr_join_req->operationalRateSet = b_rates;
 		} else {
 			csr_join_req->operationalRateSet.numRates = 0;
@@ -18835,7 +18920,8 @@ static void csr_update_score_params(struct mac_context *mac_ctx,
 		score_config->nss_weight_per_index;
 
 	req_score_params->vendor_roam_score_algorithm =
-			roam_score_params->vendor_roam_score_algorithm;
+			score_config->vendor_roam_score_algorithm;
+
 
 	req_score_params->roam_score_delta =
 				roam_score_params->roam_score_delta;
@@ -20039,6 +20125,7 @@ csr_cm_roam_scan_offload_ap_profile(struct mac_context *mac_ctx,
 	tpCsrNeighborRoamControlInfo roam_info =
 			&mac_ctx->roam.neighborRoamInfo[session->vdev_id];
 
+	csr_cm_roam_fill_11w_params(mac_ctx, session->vdev_id, params);
 	params->vdev_id = session->vdev_id;
 	profile->ssid.length = session->connectedProfile.SSID.length;
 	qdf_mem_copy(profile->ssid.ssid, session->connectedProfile.SSID.ssId,
@@ -20542,7 +20629,6 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 			struct wlan_roam_scan_offload_params *rso_config,
 			uint8_t command, uint32_t *mode)
 {
-	struct wlan_objmgr_vdev *vdev;
 	tSirMacCapabilityInfo self_caps;
 	tSirMacQosInfoStation sta_qos_info;
 	enum csr_akm_type akm;
@@ -20554,6 +20640,7 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 	uint16_t vdev_id = session->vdev_id;
 	qdf_size_t val_len;
 	QDF_STATUS status;
+	uint16_t rsn_caps = 0;
 	tpCsrNeighborRoamControlInfo roam_info =
 		&mac->roam.neighborRoamInfo[vdev_id];
 
@@ -20561,14 +20648,6 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 		mac->mlme_cfg->lfr.lfr3_roaming_offload;
 	if (!rso_config->roam_offload_enabled)
 		return QDF_STATUS_SUCCESS;
-
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc,
-						    vdev_id,
-						    WLAN_LEGACY_SME_ID);
-	if (!vdev) {
-		sme_err("Vdev:%d is NULL", vdev_id);
-		return QDF_STATUS_E_FAILURE;
-	}
 
 	/* FILL LFR3 specific roam scan mode TLV parameters */
 	rso_config->rso_lfr3_params.roam_rssi_cat_gap =
@@ -20629,21 +20708,17 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 	final_caps_val = (uint16_t *)&self_caps;
 
 	/*
-	 * RSN caps arent been sent to firmware, so in case of PMF required,
+	 * Self rsn caps aren't sent to firmware, so in case of PMF required,
 	 * the firmware connects to a non PMF AP advertising PMF not required
 	 * in the re-assoc request which violates protocol.
-	 * So send this to firmware in the roam SCAN offload command to
+	 * So send self RSN caps to firmware in roam SCAN offload command to
 	 * let it configure the params in the re-assoc request too.
 	 * Instead of making another infra, send the RSN-CAPS in MSB of
 	 * beacon Caps.
 	 */
+	csr_cm_roam_fill_rsn_caps(mac, vdev_id, &rsn_caps);
 	rso_config->rso_lfr3_caps.capability =
-		(uint16_t)wlan_crypto_get_param(vdev,
-						WLAN_CRYPTO_PARAM_RSN_CAP);
-	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
-
-	rso_config->rso_lfr3_caps.capability <<= RSN_CAPS_SHIFT;
-	rso_config->rso_lfr3_caps.capability |= ((*final_caps_val) & 0xFFFF);
+		(rsn_caps << RSN_CAPS_SHIFT) | ((*final_caps_val) & 0xFFFF);
 
 	rso_config->rso_lfr3_caps.ht_caps_info =
 		*(uint16_t *)&mac->mlme_cfg->ht_caps.ht_cap_info;
@@ -21268,7 +21343,6 @@ wlan_cm_roam_fill_update_config_req(struct wlan_objmgr_psoc *psoc,
 						  &req->rso_chan_info,
 						  ROAM_SCAN_OFFLOAD_UPDATE_CFG,
 						  reason);
-
 	csr_cm_roam_scan_offload_ap_profile(mac_ctx, session,
 					    &req->profile_params);
 

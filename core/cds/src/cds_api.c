@@ -576,10 +576,9 @@ static int cds_hang_event_notifier_call(struct notifier_block *block,
 	if (!cds_hang_evt_buff)
 		return NOTIFY_STOP_MASK;
 
-	if (cds_hang_data->offset >= QDF_WLAN_MAX_HOST_OFFSET)
-		return NOTIFY_STOP_MASK;
-
 	total_len = sizeof(*cmd);
+	if (cds_hang_data->offset + total_len > QDF_WLAN_HANG_FW_OFFSET)
+		return NOTIFY_STOP_MASK;
 
 	cds_hang_evt_buff = cds_hang_data->hang_data + cds_hang_data->offset;
 	cmd = (struct cds_hang_event_fixed_param *)cds_hang_evt_buff;
@@ -588,11 +587,17 @@ static int cds_hang_event_notifier_call(struct notifier_block *block,
 
 	cmd->recovery_reason = gp_cds_context->recovery_reason;
 
+	/* userspace expects a fixed format */
+	qdf_mem_set(&cmd->driver_version, DRIVER_VER_LEN, ' ');
 	qdf_mem_copy(&cmd->driver_version, QWLAN_VERSIONSTR,
-		     DRIVER_VER_LEN);
+		     qdf_min(sizeof(QWLAN_VERSIONSTR) - 1,
+			     (size_t)DRIVER_VER_LEN));
 
+	/* userspace expects a fixed format */
+	qdf_mem_set(&cmd->hang_event_version, HANG_EVENT_VER_LEN, ' ');
 	qdf_mem_copy(&cmd->hang_event_version, QDF_HANG_EVENT_VERSION,
-		     HANG_EVENT_VER_LEN);
+		     qdf_min(sizeof(QDF_HANG_EVENT_VERSION) - 1,
+			     (size_t)HANG_EVENT_VER_LEN));
 
 	cds_hang_data->offset += total_len;
 	return NOTIFY_OK;
