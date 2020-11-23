@@ -5155,8 +5155,10 @@ static void lim_tx_mgmt_frame(tpAniSirGlobal mac_ctx,
 	MTRACE(qdf_trace(QDF_MODULE_ID_PE, TRACE_CODE_TX_COMPLETE,
 		session->peSessionId, qdf_status));
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+#ifdef WLAN_DEBUG
 		pe_err("*** Could not send Auth frame (subType: %d), retCode=%X ***",
 			fc->subType, qdf_status);
+#endif
 		mac_ctx->auth_ack_status = LIM_AUTH_ACK_RCD_FAILURE;
 		auth_ack_status = SENT_FAIL;
 		lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_AUTH_ACK_EVENT,

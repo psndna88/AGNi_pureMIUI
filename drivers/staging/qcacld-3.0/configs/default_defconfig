@@ -309,11 +309,11 @@ endif
 ifeq ($(CONFIG_DEBUG_FS), y)
        # Flag to enable debugfs. Depends on CONFIG_DEBUG_FS in kernel
        # configuration.
-       CONFIG_WLAN_DEBUGFS := y
+       CONFIG_WLAN_DEBUGFS := n
 
-       CONFIG_WLAN_POWER_DEBUGFS := y
+       CONFIG_WLAN_POWER_DEBUGFS := n
 
-       CONFIG_WLAN_MWS_INFO_DEBUGFS := y
+       CONFIG_WLAN_MWS_INFO_DEBUGFS := n
 endif
 
 # Feature flags which are not (currently) configurable via Kconfig
@@ -343,10 +343,10 @@ else
 endif
 
 # Compile all log levels by default
-CONFIG_WLAN_LOG_FATAL := y
-CONFIG_WLAN_LOG_ERROR := y
-CONFIG_WLAN_LOG_WARN := y
-CONFIG_WLAN_LOG_INFO := y
+CONFIG_WLAN_LOG_FATAL := n
+CONFIG_WLAN_LOG_ERROR := n
+CONFIG_WLAN_LOG_WARN := n
+CONFIG_WLAN_LOG_INFO := n
 
 #Enable OL debug and wmi unified functions
 CONFIG_ATH_PERF_PWR_OFFLOAD := y
