@@ -6573,6 +6573,13 @@ static void dp_flush_monitor_rings(struct dp_soc *soc)
 	int budget;
 	void *mon_dst_srng;
 
+	/* Reset monitor filters before reaping the ring*/
+	qdf_spin_lock_bh(&pdev->mon_lock);
+	dp_mon_filter_reset_mon_mode(pdev);
+	if (dp_mon_filter_update(pdev) != QDF_STATUS_SUCCESS)
+		dp_info("failed to reset monitor filters");
+	qdf_spin_unlock_bh(&pdev->mon_lock);
+
 	if (pdev->mon_chan_band == REG_BAND_UNKNOWN)
 		return;
 
@@ -10636,6 +10643,7 @@ static uint32_t dp_get_cfg(struct cdp_soc_t *soc, enum cdp_dp_cfg cfg)
 		break;
 	case cfg_dp_wow_check_rx_pending:
 		value = dpsoc->wlan_cfg_ctx->wow_check_rx_pending_enable;
+		break;
 	default:
 		value =  0;
 	}

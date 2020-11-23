@@ -1414,7 +1414,7 @@ dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 	hal_tx_desc_set_addr_search_flags(hal_tx_desc_cached,
 					  vdev->hal_desc_addr_search_flags);
 
-	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW)
+	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW || msdu_info->send_to_fw)
 		hal_tx_desc_set_to_fw(hal_tx_desc_cached, 1);
 
 	/* verify checksum offload configuration*/
@@ -2065,6 +2065,48 @@ fail_return:
 }
 
 /**
+ * dp_tx_comp_free_buf() - Free nbuf associated with the Tx Descriptor
+ * @soc: Soc handle
+ * @desc: software Tx descriptor to be processed
+ *
+ * Return: none
+ */
+static inline void dp_tx_comp_free_buf(struct dp_soc *soc,
+				       struct dp_tx_desc_s *desc)
+{
+	qdf_nbuf_t nbuf = desc->nbuf;
+
+	/* nbuf already freed in vdev detach path */
+	if (!nbuf)
+		return;
+
+	/* If it is TDLS mgmt, don't unmap or free the frame */
+	if (desc->flags & DP_TX_DESC_FLAG_TDLS_FRAME)
+		return dp_non_std_tx_comp_free_buff(soc, desc);
+
+	/* 0 : MSDU buffer, 1 : MLE */
+	if (desc->msdu_ext_desc) {
+		/* TSO free */
+		if (hal_tx_ext_desc_get_tso_enable(
+					desc->msdu_ext_desc->vaddr)) {
+			/* unmap eash TSO seg before free the nbuf */
+			dp_tx_tso_unmap_segment(soc, desc->tso_desc,
+						desc->tso_num_desc);
+			qdf_nbuf_free(nbuf);
+			return;
+		}
+	}
+
+	qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
+				     QDF_DMA_TO_DEVICE, nbuf->len);
+
+	if (desc->flags & DP_TX_DESC_FLAG_MESH_MODE)
+		return dp_mesh_tx_comp_free_buff(soc, desc);
+
+	qdf_nbuf_free(nbuf);
+}
+
+/**
  * dp_tx_send_msdu_multiple() - Enqueue multiple MSDUs
  * @vdev: DP vdev handle
  * @nbuf: skb
@@ -2149,6 +2191,22 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				i++;
 				continue;
 			}
+
+			if (msdu_info->frm_type == dp_tx_frm_tso) {
+				dp_tx_tso_unmap_segment(soc,
+							msdu_info->u.tso_info.
+							curr_seg,
+							msdu_info->u.tso_info.
+							tso_num_seg_list);
+
+				if (msdu_info->u.tso_info.curr_seg->next) {
+					msdu_info->u.tso_info.curr_seg =
+					msdu_info->u.tso_info.curr_seg->next;
+					i++;
+					continue;
+				}
+			}
+
 			goto done;
 		}
 
@@ -2242,7 +2300,13 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 			 */
 			if (msdu_info->frm_type == dp_tx_frm_tso &&
 			    msdu_info->u.tso_info.curr_seg) {
-				qdf_nbuf_free(nbuf);
+				/*
+				 * unmap and free current,
+				 * retransmit remaining segments
+				 */
+				dp_tx_comp_free_buf(soc, tx_desc);
+				i++;
+				continue;
 			}
 
 			goto done;
@@ -2956,6 +3020,63 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 }
 
+#ifdef WLAN_DP_FEATURE_SEND_ICMP_TO_FW
+/**
+ * dp_tx_mark_icmp_req_exception() - Mark the ICMP request at certain intervals
+ *				     as exception packets to be sent to FW.
+ * @soc: DP soc handle
+ * @nbuf: packet to be transmitted
+ * @msdu_info: MSDU info where the exception flag is setup.
+ *
+ * This function sets the is_exception flag in the msdu_info if the current
+ * packet is an ICMP request packet after a preset interval post the last
+ * marked ICMP request packet.
+ * The time interval is decided by an INI, which can be set to -1, to indicate
+ * that all the ICMP request packets need to be sent to FW.
+ *
+ * Since HTT metadata is not to be sent to FW, exception_fw flag cannot be used.
+ *
+ * Returns: None
+ */
+static void
+dp_tx_mark_icmp_req_exception(struct dp_soc *soc,
+			      qdf_nbuf_t nbuf,
+			      struct dp_tx_msdu_info_s *msdu_info)
+{
+	uint64_t curr_time, time_delta;
+	int time_interval_ms;
+	static uint64_t prev_marked_icmp_time;
+
+	/* If its an ICMP request packet, to_fw will be set in context block */
+	if (!qdf_unlikely(QDF_NBUF_CB_TX_PACKET_TO_FW(nbuf) == 1))
+		return;
+
+	time_interval_ms = wlan_cfg_send_icmp_req_to_fw(soc->wlan_cfg_ctx);
+	if (!time_interval_ms)
+		return;
+
+	if (time_interval_ms == WLAN_CFG_SEND_ALL_ICMP_REQ_TO_FW) {
+		msdu_info->send_to_fw = 1;
+		return;
+	}
+
+	curr_time = qdf_get_log_timestamp();
+	time_delta = curr_time - prev_marked_icmp_time;
+	if (time_delta >= (time_interval_ms *
+			   QDF_LOG_TIMESTAMP_CYCLES_PER_10_US * 100)) {
+		msdu_info->send_to_fw = 1;
+		prev_marked_icmp_time = curr_time;
+	}
+}
+#else
+static inline void
+dp_tx_mark_icmp_req_exception(struct dp_soc *soc,
+			      qdf_nbuf_t nbuf,
+			      struct dp_tx_msdu_info_s *msdu_info)
+{
+}
+#endif
+
 /**
  * dp_tx_send() - Transmit a frame on a given VAP
  * @soc: DP soc handle
@@ -3005,6 +3126,8 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	msdu_info.tid = HTT_TX_EXT_TID_INVALID;
 	dp_tx_wds_ext(soc, vdev, peer_id, &msdu_info);
 	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_len(nbuf));
+
+	dp_tx_mark_icmp_req_exception(soc, nbuf, &msdu_info);
 
 	if (qdf_unlikely(vdev->mesh_vdev)) {
 		qdf_nbuf_t nbuf_mesh = dp_tx_extract_mesh_meta_data(vdev, nbuf,
@@ -3444,48 +3567,6 @@ dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 {
 }
 #endif
-
-/**
- * dp_tx_comp_free_buf() - Free nbuf associated with the Tx Descriptor
- * @soc: Soc handle
- * @desc: software Tx descriptor to be processed
- *
- * Return: none
- */
-static inline void dp_tx_comp_free_buf(struct dp_soc *soc,
-				       struct dp_tx_desc_s *desc)
-{
-	qdf_nbuf_t nbuf = desc->nbuf;
-
-	/* nbuf already freed in vdev detach path */
-	if (!nbuf)
-		return;
-
-	/* If it is TDLS mgmt, don't unmap or free the frame */
-	if (desc->flags & DP_TX_DESC_FLAG_TDLS_FRAME)
-		return dp_non_std_tx_comp_free_buff(soc, desc);
-
-	/* 0 : MSDU buffer, 1 : MLE */
-	if (desc->msdu_ext_desc) {
-		/* TSO free */
-		if (hal_tx_ext_desc_get_tso_enable(
-					desc->msdu_ext_desc->vaddr)) {
-			/* unmap eash TSO seg before free the nbuf */
-			dp_tx_tso_unmap_segment(soc, desc->tso_desc,
-						desc->tso_num_desc);
-			qdf_nbuf_free(nbuf);
-			return;
-		}
-	}
-
-	qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
-				     QDF_DMA_TO_DEVICE, nbuf->len);
-
-	if (desc->flags & DP_TX_DESC_FLAG_MESH_MODE)
-		return dp_mesh_tx_comp_free_buff(soc, desc);
-
-	qdf_nbuf_free(nbuf);
-}
 
 #ifdef MESH_MODE_SUPPORT
 /**
@@ -4135,7 +4216,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 			(ts->status == HAL_TX_TQM_RR_REM_CMD_REM));
 
 	if (!peer) {
-		dp_err_rl("peer is null or deletion in progress");
+		dp_info_rl("peer is null or deletion in progress");
 		DP_STATS_INC_PKT(soc, tx.tx_invalid_peer, 1, length);
 		goto out;
 	}
