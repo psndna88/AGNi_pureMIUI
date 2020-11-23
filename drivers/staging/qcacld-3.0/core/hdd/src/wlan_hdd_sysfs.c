@@ -110,6 +110,7 @@ static ssize_t show_fw_version(struct kobject *kobj,
 	return ret_val;
 };
 
+#ifdef WLAN_POWER_DEBUGFS
 struct power_stats_priv {
 	struct power_stats_response power_stats;
 };
@@ -403,13 +404,16 @@ static ssize_t show_beacon_reception_stats(struct device *dev,
 static DEVICE_ATTR(beacon_stats, 0444,
 		   show_beacon_reception_stats, NULL);
 #endif
+#endif
 
 static struct kobj_attribute dr_ver_attribute =
 	__ATTR(driver_version, 0440, show_driver_version, NULL);
 static struct kobj_attribute fw_ver_attribute =
 	__ATTR(version, 0440, show_fw_version, NULL);
+#ifdef WLAN_POWER_DEBUGFS
 static struct kobj_attribute power_stats_attribute =
 	__ATTR(power_stats, 0444, show_device_power_stats, NULL);
+#endif
 
 void hdd_sysfs_create_version_interface(struct wlan_objmgr_psoc *psoc)
 {
@@ -479,9 +483,11 @@ void hdd_sysfs_create_powerstats_interface(void)
 		return;
 	}
 
+#ifdef WLAN_POWER_DEBUGFS
 	error = sysfs_create_file(driver_kobject, &power_stats_attribute.attr);
 	if (error)
 		hdd_err("could not create power_stats sysfs file");
+#endif
 }
 
 void hdd_sysfs_destroy_powerstats_interface(void)
@@ -490,7 +496,9 @@ void hdd_sysfs_destroy_powerstats_interface(void)
 		hdd_err("could not get driver kobject!");
 		return;
 	}
+#ifdef WLAN_POWER_DEBUGFS
 	sysfs_remove_file(driver_kobject, &power_stats_attribute.attr);
+#endif
 }
 
 void hdd_sysfs_create_driver_root_obj(void)
