@@ -3339,7 +3339,9 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 		hdd_register_policy_manager_callback(
 			hdd_ctx->psoc);
 
+#ifdef WLAN_POWER_DEBUGFS
 		hdd_sysfs_create_driver_root_obj();
+#endif
 		hdd_sysfs_create_version_interface(hdd_ctx->psoc);
 		hdd_sysfs_create_powerstats_interface();
 		hdd_update_hw_sw_info(hdd_ctx);
@@ -3383,7 +3385,9 @@ int hdd_wlan_start_modules(struct hdd_context *hdd_ctx, bool reinit)
 destroy_driver_sysfs:
 	hdd_sysfs_destroy_powerstats_interface();
 	hdd_sysfs_destroy_version_interface();
+#ifdef WLAN_POWER_DEBUGFS
 	hdd_sysfs_destroy_driver_root_obj();
+#endif
 	cds_post_disable();
 
 deregister_cb:
@@ -12612,7 +12616,9 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 
 	hdd_sysfs_destroy_powerstats_interface();
 	hdd_sysfs_destroy_version_interface();
+#ifdef WLAN_POWER_DEBUGFS
 	hdd_sysfs_destroy_driver_root_obj();
+#endif
 	hdd_debug("Closing CDS modules!");
 
 	qdf_status = cds_post_disable();
