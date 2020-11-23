@@ -440,8 +440,9 @@ static int alloc_dma_mem(size_t size, u32 align, u32 flags,
 	}
 
 	s_vpr_h(sid,
-		"%s: dma_buf = %pK, device_addr = %x, size = %d, kvaddr = %pK, buffer_type = %#x, flags = %#lx\n",
-		__func__, mem->dma_buf, mem->device_addr, mem->size,
+		"%s: dma_buf = %pK, inode = %lu, ref = %ld, device_addr = %x, size = %d, kvaddr = %pK, buffer_type = %#x, flags = %#lx\n",
+		__func__, mem->dma_buf, (dbuf ? file_inode(dbuf->file)->i_ino : -1),
+		(dbuf ? file_count(dbuf->file) : -1), mem->device_addr, mem->size,
 		mem->kvaddr, mem->buffer_type, mem->flags);
 	return rc;
 
@@ -456,10 +457,14 @@ fail_shared_mem_alloc:
 
 static int free_dma_mem(struct msm_smem *mem, u32 sid)
 {
+	struct dma_buf *dbuf = NULL;
+
+	dbuf = (struct dma_buf *)mem->dma_buf;
 	s_vpr_h(sid,
-		"%s: dma_buf = %pK, device_addr = %x, size = %d, kvaddr = %pK, buffer_type = %#x\n",
-		__func__, mem->dma_buf, mem->device_addr, mem->size,
-		mem->kvaddr, mem->buffer_type);
+		"%s: dma_buf = %pK, inode = %lu, ref = %ld, device_addr = %x, size = %d, kvaddr = %pK, buffer_type = %#x\n",
+		__func__, dbuf, (dbuf ? file_inode(dbuf->file)->i_ino : -1),
+		(dbuf ? file_count(dbuf->file) : -1), mem->device_addr,
+		mem->size, mem->kvaddr, mem->buffer_type);
 
 	if (mem->device_addr) {
 		msm_dma_put_device_address(mem->flags,
@@ -468,16 +473,16 @@ static int free_dma_mem(struct msm_smem *mem, u32 sid)
 	}
 
 	if (mem->kvaddr) {
-		dma_buf_vunmap(mem->dma_buf, mem->kvaddr);
+		dma_buf_vunmap(dbuf, mem->kvaddr);
 		mem->kvaddr = NULL;
-		dma_buf_end_cpu_access(mem->dma_buf, DMA_BIDIRECTIONAL);
+		dma_buf_end_cpu_access(dbuf, DMA_BIDIRECTIONAL);
 	}
 
-	if (mem->dma_buf) {
+	if (dbuf) {
 		trace_msm_smem_buffer_dma_op_start("FREE",
 				(u32)mem->buffer_type, -1, mem->size, -1,
 				mem->flags, -1);
-		dma_buf_put(mem->dma_buf);
+		dma_buf_put(dbuf);
 		mem->dma_buf = NULL;
 		trace_msm_smem_buffer_dma_op_end("FREE", (u32)mem->buffer_type,
 			-1, mem->size, -1, mem->flags, -1);

@@ -913,6 +913,8 @@ u32 msm_vidc_calculate_dec_input_frame_size(struct msm_vidc_inst *inst, u32 buff
 	if (inst->core->platform_data->vpu_ver == VPU_VERSION_AR50_LITE) {
 		base_res_mbs = inst->capability.cap[CAP_MBS_PER_FRAME].max;
 		div_factor = 1;
+		if (num_mbs < NUM_MBS_720P)
+			base_res_mbs = base_res_mbs * 2;
 	}
 	/* For HEIF image, use the actual resolution to calc buffer size */
 	if (is_heif_decoder(inst)) {
@@ -982,6 +984,7 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 	f = &inst->fmts[OUTPUT_PORT].v4l2_fmt;
 	/*
 	 * Encoder output size calculation: 32 Align width/height
+	 * For CQ or heic session : YUVsize * 2
 	 * For resolution < 720p : YUVsize * 4
 	 * For resolution > 720p & <= 4K : YUVsize / 2
 	 * For resolution > 4k : YUVsize / 4
@@ -996,6 +999,10 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 	mbs_per_frame = NUM_MBS_PER_FRAME(width, height);
 	frame_size = (width * height * 3);
 
+	if (inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ ||
+		is_grid_session(inst) || is_image_session(inst))
+		goto calc_done;
+
 	if (mbs_per_frame < NUM_MBS_720P)
 		frame_size = frame_size << 1;
 	else if (mbs_per_frame <= NUM_MBS_4k)
@@ -1003,17 +1010,19 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 	else
 		frame_size = frame_size >> 3;
 
-	if ((inst->rc_type == RATE_CONTROL_OFF) ||
-		(inst->rc_type == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ))
+	if (inst->rc_type == RATE_CONTROL_OFF)
 		frame_size = frame_size << 1;
 
 	if (inst->rc_type == RATE_CONTROL_LOSSLESS)
 		frame_size = (width * height * 9) >> 2;
 
 	/* multiply by 10/8 (1.25) to get size for 10 bit case */
-	if (f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC)
+	if (inst->core->platform_data->vpu_ver != VPU_VERSION_AR50_LITE &&
+		f->fmt.pix_mp.pixelformat == V4L2_PIX_FMT_HEVC) {
 		frame_size = frame_size + (frame_size >> 2);
+	}
 
+calc_done:
 	return ALIGN(frame_size, SZ_4K);
 }
 
@@ -1075,6 +1084,9 @@ u32 msm_vidc_calculate_enc_output_extra_size(struct msm_vidc_inst *inst)
 
 	if (inst->prop.extradata_ctrls & EXTRADATA_ADVANCED)
 		size += sizeof(struct msm_vidc_metadata_ltr_payload);
+
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_FRAME_QP)
+		size += sizeof(struct msm_vidc_frame_qp_payload);
 
 	/* Add size for extradata none */
 	if (size)
