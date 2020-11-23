@@ -219,6 +219,7 @@
 		atmel,display-coords = <0 0 339 729>;
 		panel = <&dsi_sharp_qhd_plus_dsc_cmd
 			&dsi_sharp_qhd_plus_dsc_video>;
+		status = "disabled";
 	};
 };
 
