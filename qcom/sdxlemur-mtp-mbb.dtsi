@@ -1,6 +1,7 @@
 #include "sdxlemur-mtp.dtsi"
 #include "pm7250b.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include <dt-bindings/spmi/spmi.h>
 
 &pm7250b_clkdiv {
 	clocks = <&rpmhcc RPMH_CXO_CLK>;
@@ -11,6 +12,16 @@
 	mbb_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "qg-batterydata-alium-3600mah.dtsi"
+	};
+};
+
+&spmi_debug_bus {
+	qcom,pm7250b-debug@2 {
+		compatible = "qcom,spmi-pmic";
+		reg = <2 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		qcom,can-sleep;
 	};
 };
 
