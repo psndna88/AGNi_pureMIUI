@@ -92,6 +92,12 @@ SoCs:
 - HOLI
   compatible = "qcom,holi"
 
+- MONACO
+  compatible = "qcom,monaco"
+
+- SDXNIGHTJAR
+  compatible = "qcom,sdxnightjar"
+
 Generic board variants:
 
 - CDP device:
@@ -251,3 +257,7 @@ compatible = "qcom,holi-cdp"
 compatible = "qcom,holi-qrd"
 compatible = "qcom,holi-atp"
 compatible = "qcom,scuba-idp"
+compatible = "qcom,monaco-rumi"
+compatible = "qcom,sdxnightjar-mtp"
+compatible = "qcom,sdxnightjar-cdp"
+compatible = "qcom,sdxnightjar-qrd"

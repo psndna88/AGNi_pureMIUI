@@ -565,6 +565,37 @@
 		method = "smc";
 	};
 
+	apps_rsc: rsc@18200000 {
+		label = "apps_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0x18200000 0x10000>,
+		      <0x18210000 0x10000>,
+		      <0x18220000 0x10000>;
+		reg-names = "drv-0", "drv-1", "drv-2";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			    <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0xd00>;
+		qcom,drv-id = <2>;
+		qcom,tcs-config = <ACTIVE_TCS  2>,
+				  <SLEEP_TCS   3>,
+				  <WAKE_TCS    3>,
+				  <CONTROL_TCS 0>;
+
+		apps_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+		};
+
+		system_pm {
+			compatible = "qcom,system-pm";
+		};
+
+		clock_rpmh: qcom,rpmhclk {
+			compatible = "qcom,lahaina-rpmh-clk";
+			#clock-cells = <1>;
+		};
+	};
+
 	slim_aud: slim@3ac0000 {
 		cell-index = <1>;
 		compatible = "qcom,slim-ngd";
@@ -2771,37 +2802,6 @@
 			0x18040060 0x18050060 0x18060060 0x18070060>;
 	};
 
-	apps_rsc: rsc@18200000 {
-		label = "apps_rsc";
-		compatible = "qcom,rpmh-rsc";
-		reg = <0x18200000 0x10000>,
-		      <0x18210000 0x10000>,
-		      <0x18220000 0x10000>;
-		reg-names = "drv-0", "drv-1", "drv-2";
-		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
-			    <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
-		qcom,tcs-offset = <0xd00>;
-		qcom,drv-id = <2>;
-		qcom,tcs-config = <ACTIVE_TCS  2>,
-				  <SLEEP_TCS   3>,
-				  <WAKE_TCS    3>,
-				  <CONTROL_TCS 0>;
-
-		apps_bcm_voter: bcm_voter {
-			compatible = "qcom,bcm-voter";
-		};
-
-		system_pm {
-			compatible = "qcom,system-pm";
-		};
-
-		clock_rpmh: qcom,rpmhclk {
-			compatible = "qcom,lahaina-rpmh-clk";
-			#clock-cells = <1>;
-		};
-	};
-
 	aggre1_noc: interconnect@16e0000 {
 		compatible = "qcom,lahaina-aggre1_noc";
 		reg = <0x016E0000 0x1f180>;
@@ -3045,8 +3045,9 @@
 	ufshc_mem: ufshc@1d84000 {
 		compatible = "qcom,ufshc";
 		reg = <0x1d84000 0x3000>,
-		      <0x1d88000 0x8000>;
-		reg-names = "ufs_mem", "ufs_ice";
+		      <0x1d88000 0x8000>,
+		      <0x1d90000 0x9000>;
+		reg-names = "ufs_mem", "ufs_ice", "ufs_ice_hwkm";
 		interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>;
 		phys = <&ufsphy_mem>;
 		phy-names = "ufsphy";

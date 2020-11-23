@@ -204,7 +204,7 @@
 		pinctrl-2 = <&ts_release>;
 
 		panel = <&dsi_r66451_amoled_cmd
-			 &dsi_r66451_amoled_video>;
+			 &dsi_r66451_amoled_video &dsi_r66451_amoled_144hz_cmd>;
 
 		focaltech,trusted-touch-mode = "vm_mode";
 		focaltech,touch-environment = "pvm";
@@ -346,4 +346,29 @@
 
 &pm8350c_flash {
 	status = "ok";
+};
+
+&thermal_zones {
+	gpu-skin-avg-step {
+		polling-delay-passive = <5000>;
+		polling-delay = <1000>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 1>, <&pmk8350_adc_tm PMK8350_ADC7_AMUX_THM1_100K_PU>;
+		sensor-aggregation = <AGGREGATE_COEFF_VALUE>;
+		coefficients = <3 7 0>;
+		trips {
+			gpuss_skin_config: active-config0 {
+				temperature = <570000>;
+				hysteresis = <20000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			gpu_cdev {
+				trip = <&gpuss_skin_config>;
+				cooling-device = <&msm_gpu THERMAL_NO_LIMIT 5>;
+			};
+		};
+	};
 };
