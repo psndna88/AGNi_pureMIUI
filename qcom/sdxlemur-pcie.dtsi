@@ -43,11 +43,11 @@
 			&pcie0_wake_default>;
 
 		gdsc-vdd-supply = <&gcc_pcie_gdsc>;
-		vreg-1.8-supply = <&pmx65_l1>;
-		vreg-0.9-supply = <&pmx65_l4>;
+		vreg-1p8-supply = <&pmx65_l1>;
+		vreg-0p9-supply = <&pmx65_l4>;
 		vreg-cx-supply = <&VDD_CX_LEVEL>;
-		qcom,vreg-1.8-voltage-level = <1200000 1200000 30000>;
-		qcom,vreg-0.9-voltage-level = <912000 912000 132000>;
+		qcom,vreg-1p8-voltage-level = <1200000 1200000 30000>;
+		qcom,vreg-0p9-voltage-level = <912000 912000 132000>;
 		qcom,vreg-cx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX
 						RPMH_REGULATOR_LEVEL_LOW_SVS 0>;
 		qcom,bw-scale =

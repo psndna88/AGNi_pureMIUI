@@ -144,6 +144,15 @@ dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_MONACO) +=    \
+	monaco-rumi-overlay.dtbo
+
+monaco-rumi-overlay.dtbo-base := monaco.dtb
+else
+dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
         dtbo-$(CONFIG_ARCH_SA8155) += \
 		sa8155-adp-star-overlay.dtbo \
 		sa8155p-adp-star-overlay.dtbo \
@@ -181,6 +190,7 @@ ifeq ($(CONFIG_ARCH_QTI_VM), y)
 dtb-$(CONFIG_ARCH_QTI_VM) += lahaina-vm-mtp.dtb \
 	lahaina-vm-cdp.dtb \
 	lahaina-vm-qrd.dtb \
+	lahaina-vm-mtp-v2.dtb \
 	lahaina-vm-mtp-v2.1.dtb
 endif
 endif
@@ -206,6 +216,10 @@ dtb-$(CONFIG_ARCH_QTI_VM) += shima-vm-rumi.dtb \
 	shima-vm-qrd.dtb
 endif
 endif
+
+dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
+	sdxnightjar-cdp.dtb \
+	sdxnightjar-qrd.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

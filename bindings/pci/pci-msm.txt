@@ -346,6 +346,12 @@ interconnects:
 	Definition: The latency(ms) between when PCIe link is up and before
 		any device over the switch is accessed
 
+- qcom,eq-pset-req-vec:
+	Usage: optional
+	Definition: EQ preset request vector. Determines which preset is
+		requested and evauluated during initial part of the EQ master
+		phase. Default will be 0 if entry is not present.
+
 - qcom,core-preset:
 	Usage: optional
 	Definition: Determines how aggressive the PCIe PHY equalization is for
@@ -522,6 +528,7 @@ Example
 		qcom,ep-latency = <20>;
 		qcom,switch-latency = <25>;
 
+		qcom,eq-pset-req-vec = <0>;
 		qcom,core-preset = <0x55555555> /* short channel */
 		qcom,pcie-phy-ver = <0x2101>; /* v2 version 1.01 */
 		qcom,phy-status-offset = <0x814>;

@@ -119,6 +119,20 @@ Properties:
 		haptics ISC (short circuit current) config during LRA impedance
 		detection.
 
+- qcom,hpwr-supply:
+  Usage:	optional
+  Value type:	<phandle>
+  Definition:	Phandle of the regulator device that supplies power for haptics
+		module. This is needed when haptics module is supplied by
+		non-HBoost regulator.
+
+- qcom,hpwr-voltage-mv:
+  Usage:	optional
+  Value type:	<u32>
+  Definition:	Specify the voltage level in mv unit requested from the
+		non-HBoost regulator. When BoB regulator is used, the
+		requested voltage shouldn't be higher than 4000 mV.
+
 The following properties are only required when LRA actuator is used:
 
 - qcom,lra-period-us:

@@ -1,3 +1,5 @@
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
+
 #define MHZ_TO_KBPS(mhz, w) ((mhz * 1000000 * w) / (1024))
 &soc {
 	pil_gpu: qcom,kgsl-hyp {
@@ -30,6 +32,8 @@ msm_gpu: qcom,kgsl-3d0@5900000 {
 
 		vddcx-supply = <&gpu_cx_gdsc>;
 		vdd-supply = <&gpu_gx_gdsc>;
+		vdd-parent-supply = <&VDD_GFX_LEVEL>;
+		vdd-parent-min-corner = <RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 		qcom,chipid = <0x06010900>;
 
 		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
