@@ -105,7 +105,7 @@ bool sde_is_custom_client(void)
 	return sdecustom;
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static int _sde_danger_signal_status(struct seq_file *s,
 		bool danger_status)
 {

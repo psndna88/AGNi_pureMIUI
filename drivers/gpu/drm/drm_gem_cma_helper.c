@@ -397,7 +397,7 @@ unsigned long drm_gem_cma_get_unmapped_area(struct file *filp,
 EXPORT_SYMBOL_GPL(drm_gem_cma_get_unmapped_area);
 #endif
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 /**
  * drm_gem_cma_describe - describe a CMA GEM object for debugfs
  * @cma_obj: CMA GEM object

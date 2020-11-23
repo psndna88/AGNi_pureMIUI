@@ -34,7 +34,7 @@
  * or shader programs (if not emitted inline in cmdstream).
  */
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 
 #include <linux/kfifo.h>
 #include <linux/debugfs.h>

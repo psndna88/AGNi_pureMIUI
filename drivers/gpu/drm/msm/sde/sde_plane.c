@@ -5158,7 +5158,7 @@ void sde_plane_clear_ubwc_error(struct drm_plane *plane)
 		psde->pipe_hw->ops.clear_ubwc_error(psde->pipe_hw);
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 static ssize_t _sde_plane_danger_read(struct file *file,
 			char __user *buff, size_t count, loff_t *ppos)
 {
