@@ -1417,7 +1417,7 @@
 		};
 
 		pmx_sec_mi2s_aux_din {
-			sec_din_sleep: sec_din_sleep {
+			bt_edl_default: sec_din_sleep: sec_din_sleep {
 				mux {
 					pins = "gpio17";
 					function = "gpio";
