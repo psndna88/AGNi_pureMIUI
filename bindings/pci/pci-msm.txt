@@ -341,6 +341,12 @@ interconnects:
 		de-asserted. This guarantees the 100MHz clock is available for
 		the PCIe devices
 
+- qcom,num-parf-testbus-sel:
+	Usage: optional
+	Value type: <u32>
+	Definition: Defines the number of testbus selectors available for PARF
+		for a given PCIe controller.
+
 - qcom,switch-latency:
 	Usage: optional
 	Definition: The latency(ms) between when PCIe link is up and before
@@ -526,6 +532,7 @@ Example
 		qcom,perst-delay-us-min = <10>;
 		qcom,perst-delay-us-max = <15>;
 		qcom,ep-latency = <20>;
+		qcom,num-parf-testbus-sel = <0xb9>;
 		qcom,switch-latency = <25>;
 
 		qcom,eq-pset-req-vec = <0>;
