@@ -3564,11 +3564,10 @@ static void _sde_crtc_remove_pipe_flush(struct drm_crtc *crtc)
 	}
 }
 
-static void _sde_crtc_schedule_idle_notify(struct drm_crtc *crtc,
-		struct drm_crtc_state *old_state)
+static void _sde_crtc_schedule_idle_notify(struct drm_crtc *crtc)
 {
 	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
-	struct sde_crtc_state *cstate = to_sde_crtc_state(old_state);
+	struct sde_crtc_state *cstate = to_sde_crtc_state(crtc->state);
 	struct sde_kms *sde_kms = _sde_crtc_get_kms(crtc);
 	struct msm_drm_private *priv;
 	struct msm_drm_thread *event_thread;
@@ -3815,7 +3814,7 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 
-	_sde_crtc_schedule_idle_notify(crtc, old_state);
+	_sde_crtc_schedule_idle_notify(crtc);
 
 	SDE_ATRACE_END("crtc_commit");
 }
@@ -3851,7 +3850,7 @@ static int _sde_crtc_vblank_enable_no_lock(
 			return ret;
 
 		drm_for_each_encoder_mask(enc, crtc->dev,
-			crtc->state->encoder_mask) {
+				crtc->state->encoder_mask) {
 			SDE_EVT32(DRMID(&sde_crtc->base), DRMID(enc), enable,
 					sde_crtc->enabled);
 
@@ -3860,7 +3859,7 @@ static int _sde_crtc_vblank_enable_no_lock(
 		}
 	} else {
 		drm_for_each_encoder_mask(enc, crtc->dev,
-			crtc->state->encoder_mask) {
+				crtc->state->encoder_mask) {
 			SDE_EVT32(DRMID(&sde_crtc->base), DRMID(enc), enable,
 					sde_crtc->enabled);
 
@@ -4159,11 +4158,9 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	msm_mode_object_event_notify(&crtc->base, crtc->dev, &event,
 			(u8 *)&power_on);
 
-	if (atomic_read(&sde_crtc->frame_pending)) {
-		mutex_unlock(&sde_crtc->crtc_lock);
-		_sde_crtc_flush_event_thread(crtc);
-		mutex_lock(&sde_crtc->crtc_lock);
-	}
+	mutex_unlock(&sde_crtc->crtc_lock);
+	_sde_crtc_flush_event_thread(crtc);
+	mutex_lock(&sde_crtc->crtc_lock);
 
 	kthread_cancel_delayed_work_sync(&sde_crtc->static_cache_read_work);
 	kthread_cancel_delayed_work_sync(&sde_crtc->idle_notify_work);
