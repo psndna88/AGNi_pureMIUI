@@ -1746,6 +1746,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 			}
 			spin_unlock_bh(&link->link_state_spin_lock);
 			__cam_req_mgr_notify_frame_skip(link, trigger);
+			__cam_req_mgr_validate_crm_wd_timer(link);
 			goto end;
 		}
 	}
@@ -3324,6 +3325,10 @@ static int cam_req_mgr_cb_notify_trigger(
 		CAM_ERR_RATE_LIMIT(CAM_CRM, "no empty task frame %lld",
 			trigger_data->frame_id);
 		rc = -EBUSY;
+		spin_lock_bh(&link->link_state_spin_lock);
+		if ((link->watchdog) && !(link->watchdog->pause_timer))
+			link->watchdog->pause_timer = true;
+		spin_unlock_bh(&link->link_state_spin_lock);
 		goto end;
 	}
 	task_data = (struct crm_task_payload *)task->payload;
