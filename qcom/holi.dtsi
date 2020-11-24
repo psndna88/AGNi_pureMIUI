@@ -320,7 +320,7 @@
 
 	cdsp_secure_heap_mem: cdsp_secure_heap_mem@80c00000 {
 		no-map;
-		reg = <0x0 0x80c00000 0x0 0x4600000>;
+		reg = <0x0 0x80c00000 0x0 0x1e00000>;
 	};
 
 	pil_wlan_mem: wlan@86500000 {
