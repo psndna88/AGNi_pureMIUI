@@ -57,7 +57,7 @@
 	ddr_cdev: qcom,ddr-cdev {
 		compatible = "qcom,ddr-cooling-device";
 		#cooling-cells = <2>;
-		qcom,ddr-freq = <762000>,
+		qcom,ddr-freq = <0>,
 				<1720000>,
 				<2086000>,
 				<2597000>,
