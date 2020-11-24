@@ -2,6 +2,7 @@
 #include "pm7250b.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 #include <dt-bindings/spmi/spmi.h>
+#include "sdxlemur-cnss.dtsi"
 
 &pm7250b_clkdiv {
 	clocks = <&rpmhcc RPMH_CXO_CLK>;
