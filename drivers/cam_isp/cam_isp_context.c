@@ -4567,11 +4567,10 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 		} else if ((ctx->state != CAM_CTX_FLUSHED) &&
 			(ctx->state >= CAM_CTX_READY) &&
 			ctx->ctx_crm_intf->add_req) {
+			memset(&add_req, 0, sizeof(add_req));
 			add_req.link_hdl = ctx->link_hdl;
 			add_req.dev_hdl  = ctx->dev_hdl;
 			add_req.req_id   = req->request_id;
-			add_req.skip_before_applying = 0;
-			add_req.trigger_eof = false;
 			rc = ctx->ctx_crm_intf->add_req(&add_req);
 			if (rc) {
 				CAM_ERR(CAM_ISP, "Add req failed: req id=%llu",

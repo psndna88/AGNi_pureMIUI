@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only
  *
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CUSTOM_CONTEXT_H_
@@ -94,8 +94,6 @@ struct cam_custom_dev_ctx_req {
  * @state: Common context state
  * @hw_ctx: HW object returned by the acquire device command
  * @init_received: Indicate whether init config packet is received
- * @subscribe_event: The irq event mask that CRM subscribes to,
- *                   custom HW will invoke CRM cb at those event.
  * @active_req_cnt: Counter for the active request
  * @frame_id: Frame id tracking for the custom context
  * @hw_acquired: Flag to indicate if HW is acquired for this context
@@ -113,7 +111,6 @@ struct cam_custom_context {
 	uint32_t                       state;
 	void                          *hw_ctx;
 	bool                           init_received;
-	uint32_t                       subscribe_event;
 	uint32_t                       active_req_cnt;
 	int64_t                        frame_id;
 	bool                           hw_acquired;
