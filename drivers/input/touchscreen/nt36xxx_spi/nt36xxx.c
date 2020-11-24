@@ -2000,7 +2000,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 #if defined(CONFIG_FB)
-	ts->workqueue = create_singlethread_workqueue("nvt_ts_workqueue");
+	ts->workqueue = alloc_workqueue("nvt_ts_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!ts->workqueue) {
 		NVT_ERR("create nvt_ts_workqueue fail");
 		ret = -ENOMEM;
