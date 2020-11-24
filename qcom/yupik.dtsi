@@ -663,8 +663,13 @@
 	};
 
 	videocc: clock-controller@aaf0000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "videocc_clocks";
+		compatible = "qcom,yupik-videocc", "syscon";
+		reg = <0xaaf0000 0x10000>;
+		reg-names = "cc_base";
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&rpmhcc RPMH_CXO_CLK_A>,
+			<&sleep_clk>, <&gcc GCC_VIDEO_AHB_CLK>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk", "cfg_ahb";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -1827,41 +1832,55 @@
 };
 
 &cam_cc_titan_top_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	reg = <0xad0c194 0x4>;
 	status = "ok";
 };
 
 &cam_cc_bps_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &cam_cc_ife_0_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &cam_cc_ife_1_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &cam_cc_ife_2_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &cam_cc_ipe_0_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &disp_cc_mdss_core_gdsc {
-	compatible = "regulator-fixed";
 	reg = <0xaf01004 0x4>;
+	clocks = <&gcc GCC_DISP_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	qcom,support-hw-trigger;
 	status = "ok";
 };
@@ -1884,14 +1903,18 @@
 };
 
 &video_cc_mvs0_gdsc {
-	compatible = "regulator-fixed";
 	reg = <0xaaf3004 0x4>;
+	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	qcom,support-hw-trigger;
 	status = "ok";
 };
 
 &video_cc_mvsc_gdsc {
-	compatible = "regulator-fixed";
+	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
+	clock-names = "ahb_clk";
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
