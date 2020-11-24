@@ -290,6 +290,13 @@ interconnects:
 	Definition: L1.2 LTR threshold value to be multipled with scale to
 		define L1.2 latency tolerance reporting (LTR)
 
+- qcom,eq-fmdc-t-min-phase23:
+	Usage: optional
+	Value type: <u32>
+	Definition: Determines minimum time (ms) to remain in equalization
+		master phase before checking for convergence of the
+		coefficients.
+
 - qcom,slv-addr-space-size:
 	Usage: required
 	Value type: <u32>
@@ -519,6 +526,7 @@ Example
 		qcom,no-l1-supported;
 		qcom,no-l1ss-supported;
 		qcom,no-aux-clk-sync;
+		qcom,eq-fmdc-t-min-phase23 = <1>; /* 1ms */
 		qcom,slv-addr-space-size = <0x1000000>; /* 16MB */
 		qcom,wr-halt-size = <0xa>; /* 1KB */
 		qcom,tlp-rd-size = <0x5>; /* 4KB */
