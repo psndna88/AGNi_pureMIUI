@@ -185,7 +185,7 @@
 		qcom,transaction_timeout = <0>;
 
 		reg-names = "dcc-base", "dcc-ram-base";
-		dcc-ram-offset = <0x800>;
+		dcc-ram-offset = <0x12000>;
 	};
 
 	wdog: qcom,wdt@17817000 {
