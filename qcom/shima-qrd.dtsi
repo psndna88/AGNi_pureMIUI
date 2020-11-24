@@ -205,27 +205,69 @@
 		thermal-sensors = <&pmk8350_adc_tm PM8350_ADC7_AMUX_THM1_100K_PU>;
 
 		trips {
-			quiet_gpu_trip: quiet-gpu-trip {
-				temperature = <45000>;
-				hysteresis = <0>;
+			quiet_batt_trip0: quiet-batt-trip0 {
+				temperature = <43000>;
+				hysteresis = <2000>;
 				type = "passive";
 			};
 
-			quiet_cpu4_trip: quiet-cpu4-trip {
+			quiet_batt_trip1: quiet-batt-trip1 {
+				temperature = <45000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_modem_skin_trip0: quiet-modem-skin-trip0 {
+				temperature = <45000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_gpu_trip: quiet-gpu-trip {
 				temperature = <46000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
 
-			quiet_cpu7_trip: quiet-cpu7-trip {
+			quiet_batt_trip2: quiet-batt-trip2 {
+				temperature = <47000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_modem_skin_trip1: quiet-modem-skin-trip1 {
+				temperature = <47000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_apc_trip: quiet-apc-trip {
 				temperature = <48000>;
 				hysteresis = <0>;
+				type = "passive";
+			};
+
+			quiet_batt_trip3: quiet-batt-trip3 {
+				temperature = <49000>;
+				hysteresis = <2000>;
 				type = "passive";
 			};
 
 			quiet_cpu0_trip: quiet-cpu0-trip {
 				temperature = <50000>;
 				hysteresis = <0>;
+				type = "passive";
+			};
+
+			quiet_batt_trip4: quiet-batt-trip4 {
+				temperature = <50000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+
+			quiet_modem_skin_trip2: quiet-modem-skin-trip2 {
+				temperature = <50000>;
+				hysteresis = <4000>;
 				type = "passive";
 			};
 
@@ -258,18 +300,9 @@
 						(THERMAL_MAX_LIMIT-7)>;
 			};
 
-			cpufreq4-cdev {
-				trip = <&quiet_cpu4_trip>;
-				/* throttle to 1651200KHz */
-				cooling-device = <&CPU4 THERMAL_NO_LIMIT
-						(THERMAL_MAX_LIMIT-5)>;
-			};
-
-			cpufreq7-cdev {
-				trip = <&quiet_cpu7_trip>;
-				/* throttle to 1862400KHz */
-				cooling-device = <&CPU7 THERMAL_NO_LIMIT
-						(THERMAL_MAX_LIMIT-5)>;
+			apc-cdev {
+				trip = <&quiet_apc_trip>;
+				cooling-device = <&apc1_cluster THERMAL_NO_LIMIT 5>;
 			};
 
 			cdsp-cdev {
@@ -285,6 +318,46 @@
 			modem-tj-cdev {
 				trip = <&quiet_cx_trip>;
 				cooling-device = <&modem_tj 3 3>;
+			};
+
+			modem-skin-cdev0 {
+				trip = <&quiet_modem_skin_trip0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+
+			modem-skin-cdev1 {
+				trip = <&quiet_modem_skin_trip1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+
+			modem-skin-cdev2 {
+				trip = <&quiet_modem_skin_trip2>;
+				cooling-device = <&modem_skin 3 3>;
+			};
+
+			modem-batt-cdev0 {
+				trip = <&quiet_batt_trip0>;
+				cooling-device = <&battery_charger 8 8>;
+			};
+
+			modem-batt-cdev1 {
+				trip = <&quiet_batt_trip1>;
+				cooling-device = <&battery_charger 12 12>;
+			};
+
+			modem-batt-cdev2 {
+				trip = <&quiet_batt_trip2>;
+				cooling-device = <&battery_charger 14 14>;
+			};
+
+			modem-batt-cdev3 {
+				trip = <&quiet_batt_trip3>;
+				cooling-device = <&battery_charger 16 16>;
+			};
+
+			modem-batt-cdev4 {
+				trip = <&quiet_batt_trip4>;
+				cooling-device = <&battery_charger 18 18>;
 			};
 		};
 	};
