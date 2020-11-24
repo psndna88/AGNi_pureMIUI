@@ -460,8 +460,6 @@
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
 
-		qcom,devfreq,freq-table = <50000000 200000000>;
-
 		status = "disabled";
 
 		qos0 {
