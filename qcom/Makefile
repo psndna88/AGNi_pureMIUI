@@ -355,6 +355,23 @@ dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
 	sa8195-vm-lv-lxc.dtb \
 	sa6155p-vm-la.dtb
 
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+	dtbo-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi-overlay.dtbo \
+		direwolf-ivi-adp-star-overlay.dtbo \
+		direwolf-adas-rumi-overlay.dtbo \
+		direwolf-adas-adp-star-overlay.dtbo
+
+direwolf-ivi-rumi-overlay.dtbo-base := direwolf-ivi.dtb
+direwolf-ivi-adp-star-overlay.dtbo-base := direwolf-ivi.dtb
+direwolf-adas-rumi-overlay.dtbo-base := direwolf-adas.dtb
+direwolf-adas-adp-star-overlay.dtbo-base := direwolf-adas.dtb
+else
+dtb-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi.dtb \
+	direwolf-ivi-adp-star.dtb \
+	direwolf-adas-rumi.dtb \
+	direwolf-adas-adp-star.dtb
+endif
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo
