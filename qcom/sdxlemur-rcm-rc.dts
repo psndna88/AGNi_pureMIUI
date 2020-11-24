@@ -3,6 +3,7 @@
 #include "sdxlemur.dtsi"
 #include "sdxlemur-rcm-rc.dtsi"
 #include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-bluetooth.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR RCM Root Complex";
