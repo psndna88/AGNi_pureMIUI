@@ -3896,22 +3896,18 @@
 };
 
 &gcc_pcie_0_gdsc {
-	qcom,retain-regs;
 	status = "ok";
 };
 
 &gcc_pcie_1_gdsc {
-	qcom,retain-regs;
 	status = "ok";
 };
 
 &gcc_ufs_phy_gdsc {
-	qcom,retain-regs;
 	status = "ok";
 };
 
 &gcc_usb30_prim_gdsc {
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3951,7 +3947,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3960,7 +3955,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3968,7 +3962,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3976,7 +3969,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3984,7 +3976,6 @@
 	clocks = <&gcc GCC_CAMERA_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -3993,7 +3984,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4002,7 +3992,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4010,7 +3999,6 @@
 	clocks = <&gcc GCC_GPU_CFG_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4018,7 +4006,6 @@
 	clocks = <&gcc GCC_GPU_CFG_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_GFX_LEVEL>;
-	qcom,retain-regs;
 	qcom,skip-disable-before-sw-enable;
 	status = "ok";
 };
@@ -4028,7 +4015,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4036,7 +4022,6 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4045,7 +4030,6 @@
 	clock-names = "ahb_clk";
 	qcom,support-hw-trigger;
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
@@ -4053,7 +4037,6 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_CX_LEVEL>;
-	qcom,retain-regs;
 	status = "ok";
 };
 
