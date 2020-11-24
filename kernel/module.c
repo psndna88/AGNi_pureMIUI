@@ -336,8 +336,8 @@ static inline int strong_try_module_get(struct module *mod)
 static inline void add_taint_module(struct module *mod, unsigned flag,
 				    enum lockdep_ok lockdep_ok)
 {
-	add_taint(flag, lockdep_ok);
-	set_bit(flag, &mod->taints);
+//	add_taint(flag, lockdep_ok);
+//	set_bit(flag, &mod->taints);
 }
 
 /*
