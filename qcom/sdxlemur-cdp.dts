@@ -3,6 +3,7 @@
 #include "sdxlemur.dtsi"
 #include "sdxlemur-cdp.dtsi"
 #include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-bluetooth.dtsi"
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR CDP";
 	compatible = "qcom,sdxlemur-cdp",
