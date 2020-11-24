@@ -14,8 +14,13 @@
 		ranges;
 		dma-ranges;
 
-		interrupts = <0 130 0>;
-		interrupt-names = "pwr_event_irq";
+		interrupts-extended = <&pdc 19 IRQ_TYPE_EDGE_RISING>,
+				<&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
+				<&pdc 76 IRQ_TYPE_LEVEL_HIGH>,
+				<&pdc 18 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "dp_hs_phy_irq", "pwr_event_irq",
+				"ss_phy_irq", "dm_hs_phy_irq";
+		qcom,use-pdc-interrupts;
 
 		USB3_GDSC-supply = <&gcc_usb30_gdsc>;
 		clocks = <&gcc GCC_USB30_MASTER_CLK>,
