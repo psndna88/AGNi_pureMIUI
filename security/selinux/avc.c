@@ -44,6 +44,7 @@
 #define avc_cache_stats_incr(field)	do {} while (0)
 #endif
 
+int avc_strict = 0;
 struct avc_entry {
 	u32			ssid;
 	u32			tsid;
@@ -446,24 +447,33 @@ static inline u32 avc_xperms_audit_required(u32 requested,
 {
 	u32 denied, audited;
 
-	denied = requested & ~avd->allowed;
-	if (unlikely(denied)) {
-		audited = denied & avd->auditdeny;
-		if (audited && xpd) {
-			if (avc_xperms_has_perm(xpd, perm, XPERMS_DONTAUDIT))
-				audited &= ~requested;
+	if (avc_strict) {
+		denied = requested & ~avd->allowed;
+		if (unlikely(denied)) {
+			audited = denied & avd->auditdeny;
+			if (audited && xpd) {
+				if (avc_xperms_has_perm(xpd, perm, XPERMS_DONTAUDIT))
+					audited &= ~requested;
+			}
+		} else if (result) {
+			audited = denied = requested;
+		} else {
+			audited = requested & avd->auditallow;
+			if (audited && xpd) {
+				if (!avc_xperms_has_perm(xpd, perm, XPERMS_AUDITALLOW))
+					audited &= ~requested;
+			}
 		}
-	} else if (result) {
-		audited = denied = requested;
+	
+		*deniedp = denied;
 	} else {
+		denied = 0;
 		audited = requested & avd->auditallow;
 		if (audited && xpd) {
 			if (!avc_xperms_has_perm(xpd, perm, XPERMS_AUDITALLOW))
 				audited &= ~requested;
 		}
 	}
-
-	*deniedp = denied;
 	return audited;
 }
 
@@ -480,6 +490,8 @@ static inline int avc_xperms_audit(u32 ssid, u32 tsid, u16 tclass,
 			requested, avd, xpd, perm, result, &denied);
 	if (likely(!audited))
 		return 0;
+	if (avc_strict)
+		denied = 0;
 	return slow_avc_audit(ssid, tsid, tclass, requested,
 			audited, denied, result, ad, 0);
 #else
@@ -718,7 +730,7 @@ static void avc_audit_pre_callback(struct audit_buffer *ab, void *a)
 {
 	struct common_audit_data *ad = a;
 	audit_log_format(ab, "avc:  %s ",
-			 ad->selinux_audit_data->denied ? "denied" : "granted");
+			 ad->selinux_audit_data->denied ? "denied" : "granted"); //
 	avc_dump_av(ab, ad->selinux_audit_data->tclass,
 			ad->selinux_audit_data->audited);
 	audit_log_format(ab, " for ");
@@ -737,9 +749,11 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 	avc_dump_query(ab, ad->selinux_audit_data->ssid,
 			   ad->selinux_audit_data->tsid,
 			   ad->selinux_audit_data->tclass);
-	if (ad->selinux_audit_data->denied) {
-		audit_log_format(ab, " permissive=%u",
-				 ad->selinux_audit_data->result ? 0 : 1);
+	if (avc_strict) {
+		if (ad->selinux_audit_data->denied) {
+			audit_log_format(ab, " permissive=%u",
+					 ad->selinux_audit_data->result ? 0 : 1);
+		}
 	}
 }
 
@@ -779,7 +793,10 @@ noinline int slow_avc_audit(u32 ssid, u32 tsid, u16 tclass,
 	sad.ssid = ssid;
 	sad.tsid = tsid;
 	sad.audited = audited;
-	sad.denied = denied;
+	if (avc_strict) {
+		sad.denied = denied;
+	else
+		sad.denied = 0;
 	sad.result = result;
 
 	a->selinux_audit_data = &sad;
@@ -996,7 +1013,7 @@ static noinline int avc_denied(u32 ssid, u32 tsid,
 				u8 driver, u8 xperm, unsigned flags,
 				struct av_decision *avd)
 {
-	if (flags & AVC_STRICT)
+	if (flags & avc_strict)
 		return -EACCES;
 
 	if (selinux_enforcing && !(avd->flags & AVD_FLAGS_PERMISSIVE))
@@ -1074,10 +1091,14 @@ int avc_has_extended_perms(u32 ssid, u32 tsid, u16 tclass, u32 requested,
 		avd.allowed &= ~requested;
 
 decision:
-	denied = requested & ~(avd.allowed);
-	if (unlikely(denied))
-		rc = avc_denied(ssid, tsid, tclass, requested, driver, xperm,
-				AVC_EXTENDED_PERMS, &avd);
+	if (avc_strict) {
+		denied = requested & ~(avd.allowed);
+		if (unlikely(denied))
+			rc = avc_denied(ssid, tsid, tclass, requested, driver, xperm,
+					AVC_EXTENDED_PERMS, &avd);
+	} else {
+		rc = 0;
+	}
 
 	rcu_read_unlock();
 
@@ -1094,7 +1115,7 @@ decision:
  * @tsid: target security identifier
  * @tclass: target security class
  * @requested: requested permissions, interpreted based on @tclass
- * @flags:  AVC_STRICT or 0
+ * @flags:  avc_strict or 0
  * @avd: access vector decisions
  *
  * Check the AVC to determine whether the @requested permissions are granted
@@ -1128,7 +1149,10 @@ inline int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 	else
 		memcpy(avd, &node->ae.avd, sizeof(*avd));
 
-	denied = requested & ~(avd->allowed);
+	if (avc_strict)
+		denied = requested & ~(avd->allowed);
+	else
+		denied = 0;
 	if (unlikely(denied))
 		rc = avc_denied(ssid, tsid, tclass, requested, 0, 0, flags, avd);
 

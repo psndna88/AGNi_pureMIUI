@@ -30,6 +30,7 @@
 #include <linux/uaccess.h>
 #include <linux/kobject.h>
 #include <linux/ctype.h>
+#include <linux/android_version.h>
 
 /* selinuxfs pseudo filesystem for exporting the security policy API.
    Based on the proc code and the fs/nfsd/nfsctl.c code. */
@@ -67,6 +68,9 @@ static struct dentry *bool_dir;
 static int bool_num;
 static char **bool_pending_names;
 static int *bool_pending_values;
+extern bool miuirom;
+extern int avc_strict;
+extern bool androidboot_permissive_flag;
 
 /* global data for classes */
 static struct dentry *class_dir;
@@ -126,6 +130,7 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 #define SEL_CLASS_INO_OFFSET		0x04000000
 #define SEL_POLICYCAP_INO_OFFSET	0x08000000
 #define SEL_INO_MASK			0x00ffffff
+#define ENFORCING_ON			1
 
 #define TMPBUFLEN	12
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
@@ -134,7 +139,8 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+	pr_info("selinux: real enforcement = %d, avc strict = %d   ", selinux_enforcing, avc_strict);
+	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", ENFORCING_ON);
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
@@ -171,7 +177,36 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 
 #ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
 	new_value = 0;
+	avc_strict = 0;
+#else
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if ((miuirom) && (get_android_version() >= 10)) { /* Ported MIUI Android 10+ */
+		new_value = 0;
+		avc_strict = 0;
+		pr_info("selinux: selinux permissive - PORTED MIUI, but will be shown as enforcing. \n");
+	} else if ((!miuirom) && (get_android_version() > 10)) {  /* New Android 11 early development */
+		new_value = 0;
+		avc_strict = 0;
+		pr_info("selinux: selinux permissive - Android 11, but will be shown as enforcing. \n");
+	} else {
+		if (new_value && !androidboot_permissive_flag)
+			avc_strict = 1;
+	}
+#else
+	if (get_android_version() > 10) {  /* New Android 11 early development */
+		new_value = 0;
+		avc_strict = 0;
+		pr_info("selinux: selinux permissive - Android 11, but will be shown as enforcing. \n");
+	} else {
+		if (new_value && !androidboot_permissive_flag)
+			avc_strict = 1;
+	}
 #endif
+#endif
+	if (androidboot_permissive_flag) {
+		new_value = 0;
+		avc_strict = 0;
+	}
 	if (new_value != selinux_enforcing) {
 		length = task_has_security(current, SECURITY__SETENFORCE);
 		if (length)
@@ -186,6 +221,7 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 			avc_ss_reset(0);
 		selnl_notify_setenforce(selinux_enforcing);
 		selinux_status_update_setenforce(selinux_enforcing);
+		pr_info("selinux: real enforcement = %d, avc strict = %d   ", selinux_enforcing, avc_strict);
 	}
 	length = count;
 out:
