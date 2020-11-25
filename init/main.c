@@ -261,20 +261,6 @@ static int __init set_ledmode(char *val)
 	return 0;
 }
 __setup("ledmode=", set_ledmode);
-bool androidboot_permissive_flag = false;
-extern int selinux_enforcing;
-static int __init selinux_permissive_param(char *str)
-{
-	if (*str)
-		return 0;
-
-	androidboot_permissive_flag = true;
-	selinux_enforcing = 0;
-	pr_info("selinux: ROM requested to be permissive, but will be shown as enforcing. \n");
-
-	return 1;
-}
-__setup("androidboot.selinux=permissive", selinux_permissive_param);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

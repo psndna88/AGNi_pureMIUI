@@ -83,7 +83,6 @@
 #include <linux/export.h>
 #include <linux/msg.h>
 #include <linux/shm.h>
-#include <linux/android_version.h>
 
 #include "avc.h"
 #include "objsec.h"
@@ -98,13 +97,10 @@
 /* SECMARK reference count */
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
 
-extern bool miuirom;
-extern int avc_strict;
-extern bool androidboot_permissive_flag;
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
-int selinux_enforcing = 1;
+int selinux_enforcing;
 
-/* static int __init enforcing_setup(char *str)
+static int __init enforcing_setup(char *str)
 {
 	unsigned long enforcing;
 	if (!kstrtoul(str, 0, &enforcing))
@@ -115,7 +111,7 @@ int selinux_enforcing = 1;
 #endif
 	return 1;
 }
-__setup("enforcing=", enforcing_setup); */
+__setup("enforcing=", enforcing_setup);
 #endif
 
 #ifdef CONFIG_SECURITY_SELINUX_BOOTPARAM
@@ -6133,36 +6129,6 @@ static __init int selinux_init(void)
 	cred_init_security();
 
 	default_noexec = !(VM_DATA_DEFAULT_FLAGS & VM_EXEC);
-#ifdef CONFIG_SECURITY_SELINUX_FORCE_PERMISSIVE
-	selinux_enforcing = 0;
-	avc_strict = 0;
-#else
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if ((miuirom) && (get_android_version() >= 10)) { /* Ported MIUI Android 10 */
-		selinux_enforcing = 0;
-		avc_strict = 0;
-		pr_info("selinux: selinux permissive - PORTED MIUI, but will be shown as enforcing. \n");
-	} else if ((!miuirom) && (get_android_version() > 10)) {  /* New Android 11 early development */
-		selinux_enforcing = 0;
-		avc_strict = 0;
-		pr_info("selinux: selinux permissive - Android 11, but will be shown as enforcing. \n");
-	} else {
-		avc_strict = 1;
-		if (!androidboot_permissive_flag)
-			selinux_enforcing = 1;
-	}
-#else
-	if (get_android_version() > 10) {  /* New Android 11 early development */
-		selinux_enforcing = 0;
-		avc_strict = 0;
-		pr_info("selinux: selinux permissive - Android 11, but will be shown as enforcing. \n");
-	} else {
-		avc_strict = 1;
-		if (!androidboot_permissive_flag)
-			selinux_enforcing = 1;
-	}
-#endif
-#endif
 
 	avc_init();
 
