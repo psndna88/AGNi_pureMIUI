@@ -373,37 +373,171 @@
 		clock-names = "core_clk", "core_a_clk";
 	};
 
-	qcom,smem@87e80000 {
-		compatible = "qcom,smem";
-		reg = <0x87e80000 0xc0000>,
-			<0xb011008 0x4>,
-			<0x60000 0x6000>,
-			<0x193d000 0x8>;
-		reg-names = "smem", "irq-reg-base", "aux-mem1",
-				"smem_targ_info_reg";
-		qcom,mpu-enabled;
+	tcsr_mutex_regs: syscon@1905000 {
+		compatible = "syscon";
+		reg = <0x1905000 0x20000>;
+	};
 
-		qcom,smd-modem {
-			compatible = "qcom,smd";
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_regs 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	apcs_glb: mailbox@0xb011008 {
+		compatible = "qcom,sdxnightjar-apcs-gcc";
+		reg = <0xb011008 0x4>;
+		#mbox-cells = <1>;
+	};
+
+	rpm_msg_ram: memory@60000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x60000 0x6000>;
+	};
+
+	smem_mem: smem_region@87e80000 {
+		reg = <0x87e80000 0xc0000>;
+		no-map;
+	};
+
+	smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_mem>;
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	qcom,smd {
+		compatible = "qcom,smd";
+
+		modem {
 			qcom,smd-edge = <0>;
-			qcom,smd-irq-offset = <0x0>;
-			qcom,smd-irq-bitmask = <0x1000>;
-			interrupts = <0 25 1>;
-			label = "modem";
+			mboxes = <&apcs_glb 12>;
+			qcom,remote-pid = <1>;
+			interrupts = <GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
+			label = "mpss";
+
+			qcom,smd-channels = "IPCRTR";
+			qcom,modem_qrtr {
+				qcom,low-latency;
+			};
 		};
 
-		qcom,smd-rpm {
-			compatible = "qcom,smd";
+		rpm {
 			qcom,smd-edge = <15>;
-			qcom,smd-irq-offset = <0x0>;
-			qcom,smd-irq-bitmask = <0x1>;
-			interrupts = <0 168 1>;
+			mboxes = <&apcs_glb 0>;
+			interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
 			label = "rpm";
-			qcom,irq-no-suspend;
-			qcom,not-loadable;
+
+			rpm_requests: rpm_requests@0 {
+				compatible = "qcom,rpm-smd";
+				qcom,smd-channels = "rpm_requests";
+			};
 		};
 	};
 
+	qcom,glink {
+		compatible = "qcom,glink";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		glink_modem: modem {
+			qcom,remote-pid = <1>;
+			transport = "smem";
+			mboxes = <&apcs_glb 15>;
+			mbox-names = "mpss_smem";
+			interrupts = <GIC_SPI 28 IRQ_TYPE_EDGE_RISING>;
+
+			label = "modem";
+			qcom,glink-label = "mpss";
+
+			qcom,modem_qrtr {
+				qcom,glink-channels = "IPCRTR";
+				qcom,intents = <0x800  5
+						0x2000 3
+						0x4400 2>;
+			};
+		};
+	};
+
+	qcom,glinkpkt {
+		compatible = "qcom,glinkpkt";
+
+		qcom,glinkpkt-at-mdm0 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DS";
+			qcom,glinkpkt-dev-name = "at_mdm0";
+		};
+
+		qcom,glinkpkt-data5-cntl {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA5_CNTL";
+			qcom,glinkpkt-dev-name = "smdcntl0";
+		};
+
+		qcom,glinkpkt-data6-cntl {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA6_CNTL";
+			qcom,glinkpkt-dev-name = "smdcntl1";
+		};
+
+		qcom,glinkpkt-data40-cntl {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA40_CNTL";
+			qcom,glinkpkt-dev-name = "smdcntl8";
+		};
+
+		qcom,glinkpkt-data1 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA1";
+			qcom,glinkpkt-dev-name = "smd7";
+		};
+
+		qcom,glinkpkt-data4 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA4";
+			qcom,glinkpkt-dev-name = "smd8";
+		};
+
+		qcom,glinkpkt-data11 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA11";
+			qcom,glinkpkt-dev-name = "smd11";
+		};
+
+		qcom,glinkpkt-data21 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA21";
+			qcom,glinkpkt-dev-name = "smd21";
+		};
+
+		qcom,glinkpkt-data22 {
+			qcom,glinkpkt-edge = "mpss";
+			qcom,glinkpkt-ch-name = "DATA22";
+			qcom,glinkpkt-dev-name = "smd22";
+		};
+	};
+
+	qcom,smp2p-modem {
+		compatible = "qcom,smp2p";
+		qcom,smem = <435>, <428>;
+		interrupts = <GIC_SPI 27 IRQ_TYPE_EDGE_RISING>;
+		mboxes = <&apcs_glb 14>;
+		qcom,local-pid = <0>;
+		qcom,remote-pid = <1>;
+
+		modem_smp2p_out: master-kernel {
+			qcom,entry-name = "master-kernel";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		modem_smp2p_in: slave-kernel {
+			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
 
 	spmi_bus: qcom,spmi@200f000 {
 		compatible = "qcom,spmi-pmic-arb";
