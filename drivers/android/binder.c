@@ -136,8 +136,7 @@ enum {
 	BINDER_DEBUG_PRIORITY_CAP           = 1U << 13,
 	BINDER_DEBUG_SPINLOCKS              = 1U << 14,
 };
-static uint32_t binder_debug_mask = BINDER_DEBUG_USER_ERROR |
-	BINDER_DEBUG_FAILED_TRANSACTION | BINDER_DEBUG_DEAD_TRANSACTION;
+static uint32_t binder_debug_mask = 0;
 module_param_named(debug_mask, binder_debug_mask, uint, 0644);
 
 static char *binder_devices_param = CONFIG_ANDROID_BINDER_DEVICES;
@@ -159,19 +158,9 @@ static int binder_set_stop_on_user_error(const char *val,
 module_param_call(stop_on_user_error, binder_set_stop_on_user_error,
 	param_get_int, &binder_stop_on_user_error, 0644);
 
-#define binder_debug(mask, x...) \
-	do { \
-		if (binder_debug_mask & mask) \
-			pr_info(x); \
-	} while (0)
+#define binder_debug(mask, x...)
 
-#define binder_user_error(x...) \
-	do { \
-		if (binder_debug_mask & BINDER_DEBUG_USER_ERROR) \
-			pr_info(x); \
-		if (binder_stop_on_user_error) \
-			binder_stop_on_user_error = 2; \
-	} while (0)
+#define binder_user_error(x...)
 
 #define to_flat_binder_object(hdr) \
 	container_of(hdr, struct flat_binder_object, hdr)
