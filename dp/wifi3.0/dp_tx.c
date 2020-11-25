@@ -870,6 +870,29 @@ dp_tx_wds_ext(struct dp_soc *soc, struct dp_vdev *vdev, uint16_t peer_id,
 }
 #endif
 
+#ifdef WLAN_DP_FEATURE_MARK_ICMP_REQ_TO_FW
+/**
+ * dp_tx_is_nbuf_marked_exception() - Check if the packet has been marked as
+ *				      exception by the upper layer (OS_IF)
+ * @soc: DP soc handle
+ * @nbuf: packet to be transmitted
+ *
+ * Returns: 1 if the packet is marked as exception,
+ *	    0, if the packet is not marked as exception.
+ */
+static inline int dp_tx_is_nbuf_marked_exception(struct dp_soc *soc,
+						 qdf_nbuf_t nbuf)
+{
+	return QDF_NBUF_CB_TX_PACKET_TO_FW(nbuf);
+}
+#else
+static inline int dp_tx_is_nbuf_marked_exception(struct dp_soc *soc,
+						 qdf_nbuf_t nbuf)
+{
+	return 0;
+}
+#endif
+
 /**
  * dp_tx_desc_prepare_single - Allocate and prepare Tx descriptor
  * @vdev: DP vdev handle
@@ -928,6 +951,9 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 	if (qdf_unlikely(dp_is_tx_extended(vdev, tx_exc_metadata)))
 		return tx_desc;
 
+	/* Packets marked by upper layer (OS-IF) to be sent to FW */
+	if (dp_tx_is_nbuf_marked_exception(soc, nbuf))
+		is_exception = 1;
 	/*
 	 * For special modes (vdev_type == ocb or mesh), data frames should be
 	 * transmitted using varying transmit parameters (tx spec) which include
@@ -1414,7 +1440,7 @@ dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 	hal_tx_desc_set_addr_search_flags(hal_tx_desc_cached,
 					  vdev->hal_desc_addr_search_flags);
 
-	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW || msdu_info->send_to_fw)
+	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW)
 		hal_tx_desc_set_to_fw(hal_tx_desc_cached, 1);
 
 	/* verify checksum offload configuration*/
@@ -3019,63 +3045,6 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 }
 
-#ifdef WLAN_DP_FEATURE_SEND_ICMP_TO_FW
-/**
- * dp_tx_mark_icmp_req_exception() - Mark the ICMP request at certain intervals
- *				     as exception packets to be sent to FW.
- * @soc: DP soc handle
- * @nbuf: packet to be transmitted
- * @msdu_info: MSDU info where the exception flag is setup.
- *
- * This function sets the is_exception flag in the msdu_info if the current
- * packet is an ICMP request packet after a preset interval post the last
- * marked ICMP request packet.
- * The time interval is decided by an INI, which can be set to -1, to indicate
- * that all the ICMP request packets need to be sent to FW.
- *
- * Since HTT metadata is not to be sent to FW, exception_fw flag cannot be used.
- *
- * Returns: None
- */
-static void
-dp_tx_mark_icmp_req_exception(struct dp_soc *soc,
-			      qdf_nbuf_t nbuf,
-			      struct dp_tx_msdu_info_s *msdu_info)
-{
-	uint64_t curr_time, time_delta;
-	int time_interval_ms;
-	static uint64_t prev_marked_icmp_time;
-
-	/* If its an ICMP request packet, to_fw will be set in context block */
-	if (!qdf_unlikely(QDF_NBUF_CB_TX_PACKET_TO_FW(nbuf) == 1))
-		return;
-
-	time_interval_ms = wlan_cfg_send_icmp_req_to_fw(soc->wlan_cfg_ctx);
-	if (!time_interval_ms)
-		return;
-
-	if (time_interval_ms == WLAN_CFG_SEND_ALL_ICMP_REQ_TO_FW) {
-		msdu_info->send_to_fw = 1;
-		return;
-	}
-
-	curr_time = qdf_get_log_timestamp();
-	time_delta = curr_time - prev_marked_icmp_time;
-	if (time_delta >= (time_interval_ms *
-			   QDF_LOG_TIMESTAMP_CYCLES_PER_10_US * 100)) {
-		msdu_info->send_to_fw = 1;
-		prev_marked_icmp_time = curr_time;
-	}
-}
-#else
-static inline void
-dp_tx_mark_icmp_req_exception(struct dp_soc *soc,
-			      qdf_nbuf_t nbuf,
-			      struct dp_tx_msdu_info_s *msdu_info)
-{
-}
-#endif
-
 /**
  * dp_tx_send() - Transmit a frame on a given VAP
  * @soc: DP soc handle
@@ -3125,8 +3094,6 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	msdu_info.tid = HTT_TX_EXT_TID_INVALID;
 	dp_tx_wds_ext(soc, vdev, peer_id, &msdu_info);
 	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_len(nbuf));
-
-	dp_tx_mark_icmp_req_exception(soc, nbuf, &msdu_info);
 
 	if (qdf_unlikely(vdev->mesh_vdev)) {
 		qdf_nbuf_t nbuf_mesh = dp_tx_extract_mesh_meta_data(vdev, nbuf,
