@@ -1921,7 +1921,7 @@ static int __init fts_ts_init(void)
 		FTS_ERROR("saved_command_line ERROR!");
 		return -ENOMEM;
 	} else {
-		if (strnstr(saved_command_line, "huaxing", 2048) != NULL) {
+		if (strnstr(saved_command_line, "huaxing", strlen(saved_command_line)) != NULL) {
 			FTS_INFO("TP info: [Vendor]huaxing [IC]ft8756");
 		} else {
 			FTS_ERROR("Unknown Touch");
@@ -1930,7 +1930,7 @@ static int __init fts_ts_init(void)
 	}
 
 	//Check android mode
-	if (strnstr(saved_command_line, "androidboot.mode=charger", 2048) != NULL) {
+	if (strnstr(saved_command_line, "androidboot.mode=charger", strlen(saved_command_line)) != NULL) {
 		FTS_INFO("androidboot.mode=charger, doesn't support touch in the charging mode!");
 		return -ENODEV;
 	}
