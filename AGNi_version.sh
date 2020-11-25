@@ -4,9 +4,9 @@
 KERNELDIR=`readlink -f .`
 
 export AGNI_VERSION_PREFIX="stable"
-export AGNI_VERSION="v2.0"
+export AGNI_VERSION="v3.0"
 export AGNI_BUILD_TYPE="MIUI"
-sed -i 's/v1.0-stable/v2.0-stable/' $KERNELDIR/arch/arm64/configs/agni_*
+sed -i 's/v2.0-stable/v3.0-stable/' $KERNELDIR/arch/arm64/configs/agni_*
 
 echo "	AGNi Version info loaded."
 
