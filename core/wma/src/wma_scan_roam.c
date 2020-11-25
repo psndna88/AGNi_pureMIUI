@@ -3701,6 +3701,29 @@ wma_rso_print_roam_initial_info(struct roam_initial_data *data,
 }
 
 /**
+ * wma_rso_print_roam_msg_info - Roaming related message details
+ * @data:    Pointer to the btm rsp data
+ * @vdev_id: vdev id
+ *
+ * Prints the vdev, msg_id, msg_param1, msg_param2 and timer
+ *
+ * Return: None
+ */
+static void wma_rso_print_roam_msg_info(struct roam_msg_info *data,
+					uint8_t vdev_id)
+{
+	char time[TIME_STRING_LEN];
+	static const char msg_id1_str[] = "Roam RSSI TH Reset";
+
+	if (data->msg_id == WMI_ROAM_MSG_RSSI_RECOVERED) {
+		mlme_get_converted_timestamp(data->timestamp, time);
+		wma_info("%s [ROAM MSG INFO]: VDEV[%d] %s, Current rssi: %d dbm, next_rssi_threshold: %d dbm",
+			 time, vdev_id, msg_id1_str, data->msg_param1,
+			 data->msg_param2);
+	}
+}
+
+/**
  * wma_log_roam_scan_candidates  - Print roam scan candidate AP info
  * @ap:           Pointer to the candidate AP list
  * @num_entries:  Number of candidate APs
@@ -3911,7 +3934,7 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 	wmi_roam_stats_event_fixed_param *fixed_param;
 	struct mlme_roam_debug_info *roam_info = NULL;
 	uint8_t vdev_id, i;
-	uint8_t num_tlv = 0, num_chan = 0, num_ap = 0, num_rpt = 0;
+	uint8_t num_tlv = 0, num_chan = 0, num_ap = 0, num_rpt = 0, rem_tlv = 0;
 	uint32_t rem_len;
 	QDF_STATUS status;
 
@@ -4005,67 +4028,12 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 		goto err;
 	}
 
-	if (!num_tlv) {
-		roam_info = qdf_mem_malloc(sizeof(*roam_info));
-		if (!roam_info)
-			return -ENOMEM;
-
-		status = wmi_unified_extract_roam_11kv_stats(
-					wma->wmi_handle, event,
-					&roam_info->data_11kv, 0, 0);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			wma_debug_rl("Roam 11kv stats extract failed vdev %d",
-				     vdev_id);
-			qdf_mem_free(roam_info);
-			goto err;
-		}
-
-		status = wmi_unified_extract_roam_trigger_stats(
-						wma->wmi_handle, event,
-						&roam_info->trigger, 0);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			wma_debug_rl("Extract roam trigger stats failed vdev %d",
-				     vdev_id);
-			qdf_mem_free(roam_info);
-			return -EINVAL;
-		}
-
-		status = wmi_unified_extract_roam_scan_stats(wma->wmi_handle,
-							     event,
-							     &roam_info->scan,
-							     0, 0, 0);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			wma_debug_rl("Roam scan stats extract failed vdev %d",
-				     vdev_id);
-			qdf_mem_free(roam_info);
-			return -EINVAL;
-		}
-
-		status = wlan_cm_roam_extract_btm_response(wma->wmi_handle,
-							   event,
-							   &roam_info->btm_rsp,
-							   0);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			wma_debug_rl("Roam btm rsp stats extract fail vdev %d",
-				     vdev_id);
-			qdf_mem_free(roam_info);
-			return -EINVAL;
-		}
-		if (roam_info->data_11kv.present)
-			wma_rso_print_11kv_info(&roam_info->data_11kv, vdev_id);
-
-		if (roam_info->trigger.present)
-			wma_rso_print_trigger_info(&roam_info->trigger,
-						   vdev_id);
-		if (roam_info->scan.present && roam_info->trigger.present)
-			wma_rso_print_scan_info(&roam_info->scan, vdev_id,
-					roam_info->trigger.trigger_reason,
-					roam_info->trigger.timestamp);
-		if (roam_info->btm_rsp.present)
-			wma_rso_print_btm_rsp_info(&roam_info->btm_rsp,
-						   vdev_id);
-		qdf_mem_free(roam_info);
-		return 0;
+	rem_len -= param_buf->num_roam_initial_info *
+			sizeof(wmi_roam_initial_info);
+	if (rem_len < param_buf->num_roam_msg_info *
+	    sizeof(wmi_roam_msg_info)) {
+		wma_err_rl("Invalid roam msg info");
+		goto err;
 	}
 
 	for (i = 0; i < num_tlv; i++) {
@@ -4135,6 +4103,17 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 			return -EINVAL;
 		}
 
+		/* Roam message info */
+		status = wlan_cm_roam_extract_roam_msg_info(
+				wma->wmi_handle, event,
+				&roam_info->roam_msg_info, i);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_err("roam msg stats extract fail vdev %d",
+				vdev_id);
+			qdf_mem_free(roam_info);
+			return -EINVAL;
+		}
+
 		/* BTM req/resp or Neighbor report/response info */
 		status = wmi_unified_extract_roam_11kv_stats(
 				wma->wmi_handle, event,
@@ -4171,7 +4150,94 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 			wma_rso_print_roam_initial_info(
 					&roam_info->roam_init_info, vdev_id);
 
+		if (roam_info->roam_msg_info.present) {
+			rem_tlv++;
+			wma_rso_print_roam_msg_info(
+					&roam_info->roam_msg_info, vdev_id);
+		}
+
 		qdf_mem_free(roam_info);
+	}
+
+	if (!num_tlv) {
+		roam_info = qdf_mem_malloc(sizeof(*roam_info));
+		if (!roam_info)
+			return -ENOMEM;
+		status = wmi_unified_extract_roam_11kv_stats(
+						wma->wmi_handle, event,
+						&roam_info->data_11kv, 0, 0);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_debug_rl("Roam 11kv stats extract failed vdev %d",
+				     vdev_id);
+			qdf_mem_free(roam_info);
+			goto err;
+		}
+		status = wmi_unified_extract_roam_trigger_stats(
+						wma->wmi_handle, event,
+						&roam_info->trigger, 0);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_debug_rl("Extract roam trigger stats failed vdev %d",
+				     vdev_id);
+			qdf_mem_free(roam_info);
+			return -EINVAL;
+		}
+		status = wmi_unified_extract_roam_scan_stats(wma->wmi_handle,
+							     event,
+							     &roam_info->scan,
+							     0, 0, 0);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_debug_rl("Roam scan stats extract failed vdev %d",
+				     vdev_id);
+			qdf_mem_free(roam_info);
+			return -EINVAL;
+		}
+		status = wlan_cm_roam_extract_btm_response(wma->wmi_handle,
+							   event,
+							   &roam_info->btm_rsp,
+							   0);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wma_debug_rl("Roam btm rsp stats extract fail vdev %d",
+				     vdev_id);
+			qdf_mem_free(roam_info);
+			return -EINVAL;
+		}
+		if (roam_info->data_11kv.present)
+			wma_rso_print_11kv_info(&roam_info->data_11kv, vdev_id);
+		if (roam_info->trigger.present)
+			wma_rso_print_trigger_info(&roam_info->trigger,
+						   vdev_id);
+		if (roam_info->scan.present && roam_info->trigger.present)
+			wma_rso_print_scan_info(&roam_info->scan, vdev_id,
+					roam_info->trigger.trigger_reason,
+					roam_info->trigger.timestamp);
+					if (roam_info->btm_rsp.present)
+		wma_rso_print_btm_rsp_info(&roam_info->btm_rsp, vdev_id);
+
+		qdf_mem_free(roam_info);
+	}
+
+	if (param_buf->roam_msg_info && param_buf->num_roam_msg_info &&
+	    param_buf->num_roam_msg_info - rem_tlv) {
+		for (i = 0; i < (param_buf->num_roam_msg_info - rem_tlv); i++) {
+			roam_info = qdf_mem_malloc(sizeof(*roam_info));
+			if (!roam_info)
+				return -ENOMEM;
+			status = wlan_cm_roam_extract_roam_msg_info(
+					wma->wmi_handle, event,
+					&roam_info->roam_msg_info, rem_tlv + i);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				wma_err("roam msg stats extract fail vdev %d",
+					vdev_id);
+				qdf_mem_free(roam_info);
+				return -EINVAL;
+			}
+
+			if (roam_info->roam_msg_info.present)
+				wma_rso_print_roam_msg_info(
+						&roam_info->roam_msg_info,
+						vdev_id);
+			qdf_mem_free(roam_info);
+		}
 	}
 
 	return 0;
