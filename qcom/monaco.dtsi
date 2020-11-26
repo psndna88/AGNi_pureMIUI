@@ -34,6 +34,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -58,6 +59,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -77,6 +79,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x2>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -96,6 +99,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x3>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -1119,6 +1123,7 @@
 #include "monaco-stub-regulator.dtsi"
 #include "monaco-gdsc.dtsi"
 #include "monaco-qupv3.dtsi"
+#include "monaco-pm.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
