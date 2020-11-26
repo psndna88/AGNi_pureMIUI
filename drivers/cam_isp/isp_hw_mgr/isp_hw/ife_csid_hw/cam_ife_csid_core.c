@@ -2559,7 +2559,8 @@ static int cam_ife_csid_init_config_rdi_path(
 	if (camera_hw_version == CAM_CPAS_TITAN_480_V100 ||
 		camera_hw_version == CAM_CPAS_TITAN_175_V130 ||
 		camera_hw_version == CAM_CPAS_TITAN_580_V100 ||
-		camera_hw_version == CAM_CPAS_TITAN_570_V200) {
+		camera_hw_version == CAM_CPAS_TITAN_570_V200 ||
+		camera_hw_version == CAM_CPAS_TITAN_165_V100) {
 		val |= (path_data->drop_enable <<
 			csid_reg->cmn_reg->drop_h_en_shift_val) |
 			(path_data->drop_enable <<
