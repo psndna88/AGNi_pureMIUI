@@ -816,59 +816,86 @@
 		#interconnect-cells = <1>;
 	};
 
-	config_noc: interconnect@1500000 {
-		compatible = "qcom,yupik-config_noc";
+	cnoc2: interconnect@1500000 {
+		reg = <0x1500000 0x1000>;
+		compatible = "qcom,yupik-cnoc2";
+		#interconnect-cells = <1>;
+	};
+
+	cnoc3: interconnect@1502000 {
+		reg = <0x1502000 0x1000>;
+		compatible = "qcom,yupik-cnoc3";
 		#interconnect-cells = <1>;
 	};
 
 	mc_virt: interconnect@1580000 {
+		reg = <0x1580000 0x4>;
 		compatible = "qcom,yupik-mc_virt";
 		#interconnect-cells = <1>;
 	};
 
 	system_noc: interconnect@1680000 {
+		reg = <0x1680000 0x15480>;
 		compatible = "qcom,yupik-system_noc";
 		#interconnect-cells = <1>;
 	};
 
 	aggre1_noc: interconnect@16e0000 {
 		compatible = "qcom,yupik-aggre1_noc";
+		reg = <0x016e0000 0x1c080>;
 		#interconnect-cells = <1>;
+		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>;
 	};
 
 	aggre2_noc: interconnect@1700000 {
+		reg = <0x1700000 0x2b080>;
 		compatible = "qcom,yupik-aggre2_noc";
 		#interconnect-cells = <1>;
+		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+			<&gcc GCC_AGGRE_NOC_PCIE_0_AXI_CLK>,
+			<&gcc GCC_AGGRE_NOC_PCIE_1_AXI_CLK>,
+			<&rpmhcc RPMH_IPA_CLK>;
 	};
 
 	mmss_noc: interconnect@1740000 {
+		reg = <0x1740000 0x1e080>;
 		compatible = "qcom,yupik-mmss_noc";
 		#interconnect-cells = <1>;
 	};
 
 	lpass_ag_noc: interconnect@3c40000 {
+		reg = <0x03c40000 0xf080>;
 		compatible = "qcom,yupik-lpass_ag_noc";
 		#interconnect-cells = <1>;
 	};
 
 	dc_noc: interconnect@90e0000 {
+		reg = <0x90e0000 0x5080>;
 		compatible = "qcom,yupik-dc_noc";
 		#interconnect-cells = <1>;
 	};
 
 	gem_noc: interconnect@9100000 {
+		reg = <0x9100000 0xe2200>;
 		compatible = "qcom,yupik-gem_noc";
 		#interconnect-cells = <1>;
 	};
 
 	nsp_noc: interconnect@a0c0000 {
+		reg = <0x0a0c0000 0x10000>;
 		compatible = "qcom,yupik-nsp_noc";
 		#interconnect-cells = <1>;
 	};
 
 	epss_l3_cpu: l3_cpu@18590000 {
-		compatible = "qcom,yupik-epss-l3-cpu";
+		reg = <0x18590000 0x4000>;
+		compatible = "qcom,lahaina-epss-l3-cpu";
 		#interconnect-cells = <1>;
+		clock-names = "xo", "alternate";
+		clocks = <&rpmhcc RPMH_CXO_CLK>,
+			<&gcc GCC_GPLL0>;
+		status = "disabled";
 	};
 
 	apps_rsc: rsc@18200000 {
