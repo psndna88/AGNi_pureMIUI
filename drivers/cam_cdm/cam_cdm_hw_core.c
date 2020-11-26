@@ -297,15 +297,15 @@ static void cam_hw_cdm_dump_bl_fifo_data(struct cam_hw_info *cdm_hw)
 void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 	bool pause_core)
 {
-	uint32_t dump_reg, core_dbg = 0x100;
+	uint32_t dump_reg[4], core_dbg = 0x100;
 	int i;
 	bool is_core_paused_already;
 	struct cam_cdm *core = (struct cam_cdm *)cdm_hw->core_info;
 	const struct cam_cdm_icl_regs *inv_cmd_log =
 		core->offsets->cmn_reg->icl_reg;
 
-	cam_cdm_read_hw_reg(cdm_hw, core->offsets->cmn_reg->core_en, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW core status=0x%x", dump_reg);
+	cam_cdm_read_hw_reg(cdm_hw, core->offsets->cmn_reg->core_en,
+		&dump_reg[0]);
 
 	if (pause_core) {
 		cam_hw_cdm_pause_core(cdm_hw, true);
@@ -314,23 +314,24 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 	cam_hw_cdm_enable_core_dbg(cdm_hw, core_dbg);
 
 	cam_cdm_read_hw_reg(cdm_hw, core->offsets->cmn_reg->usr_data,
-		&dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW core userdata=0x%x", dump_reg);
+		&dump_reg[1]);
 
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->debug_status,
-		&dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW Debug status reg=0x%x", dump_reg);
+		&dump_reg[2]);
+
+	CAM_INFO(CAM_CDM, "Core stat 0x%x udata 0x%x dbg_stat 0x%x",
+			dump_reg[0], dump_reg[1], dump_reg[2]);
 
 	if (core_dbg & 0x100) {
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->last_ahb_addr,
-			&dump_reg);
-		CAM_INFO(CAM_CDM, "AHB dump reglastaddr=0x%x", dump_reg);
+			&dump_reg[0]);
 		cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->last_ahb_data,
-			&dump_reg);
-		CAM_INFO(CAM_CDM, "AHB dump reglastdata=0x%x", dump_reg);
+			&dump_reg[1]);
+		CAM_INFO(CAM_CDM, "AHB dump lastaddr=0x%x lastdata=0x%x",
+			dump_reg[0], dump_reg[1]);
 	} else {
 		CAM_INFO(CAM_CDM, "CDM HW AHB dump not enable");
 	}
@@ -339,46 +340,41 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 		if (inv_cmd_log->misc_regs) {
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->misc_regs->icl_status,
-				&dump_reg);
-			CAM_INFO(CAM_CDM,
-				"Last Inv Cmd Log(ICL)Status: 0x%x",
-				dump_reg);
+				&dump_reg[0]);
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->misc_regs->icl_inv_bl_addr,
-				&dump_reg);
+				&dump_reg[1]);
 			CAM_INFO(CAM_CDM,
-				"Last Inv bl_addr: 0x%x",
-				dump_reg);
+				"Last Inv Cmd Log(ICL)Status: 0x%x bl_addr: 0x%x",
+				dump_reg[0], dump_reg[1]);
 		}
 		if (inv_cmd_log->data_regs) {
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_inv_data,
-				&dump_reg);
+				&dump_reg[0]);
 			CAM_INFO(CAM_CDM, "First word of Last Inv cmd: 0x%x",
-				dump_reg);
+				dump_reg[0]);
 
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_last_data_0,
-				&dump_reg);
-			CAM_INFO(CAM_CDM, "First word of Last Good cmd: 0x%x",
-				dump_reg);
+				&dump_reg[0]);
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_last_data_1,
-				&dump_reg);
-			CAM_INFO(CAM_CDM, "Second word of Last Good cmd: 0x%x",
-				dump_reg);
+				&dump_reg[1]);
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_last_data_2,
-				&dump_reg);
-			CAM_INFO(CAM_CDM, "Third word of Last Good cmd: 0x%x",
-				dump_reg);
+				&dump_reg[2]);
+
+
+			CAM_INFO(CAM_CDM, "Last good cmd word 0x%x 0x%x 0x%x",
+					dump_reg[0], dump_reg[1], dump_reg[2]);
 		}
 	}
 
 	if (core_dbg & 0x10000) {
 		cam_cdm_read_hw_reg(cdm_hw,
-			core->offsets->cmn_reg->core_en, &dump_reg);
-		is_core_paused_already = (bool)(dump_reg & 0x20);
+			core->offsets->cmn_reg->core_en, &dump_reg[0]);
+		is_core_paused_already = (bool)(dump_reg[0] & 0x20);
 		if (!is_core_paused_already) {
 			cam_hw_cdm_pause_core(cdm_hw, true);
 			usleep_range(1000, 1010);
@@ -390,48 +386,43 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 			cam_hw_cdm_pause_core(cdm_hw, false);
 	}
 
-	CAM_INFO(CAM_CDM, "CDM HW default dump");
 	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->core_cfg, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW core cfg=0x%x", dump_reg);
+		core->offsets->cmn_reg->core_cfg, &dump_reg[0]);
+	CAM_INFO(CAM_CDM, "CDM HW core cfg=0x%x", dump_reg[0]);
 
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo_irq; i++) {
 		cam_cdm_read_hw_reg(cdm_hw,
-			core->offsets->irq_reg[i]->irq_status, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq status%d=0x%x", i, dump_reg);
-
+			core->offsets->irq_reg[i]->irq_status, &dump_reg[0]);
 		cam_cdm_read_hw_reg(cdm_hw,
-			core->offsets->irq_reg[i]->irq_set, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq set%d=0x%x", i, dump_reg);
-
+			core->offsets->irq_reg[i]->irq_set, &dump_reg[1]);
 		cam_cdm_read_hw_reg(cdm_hw,
-			core->offsets->irq_reg[i]->irq_mask, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq mask%d=0x%x", i, dump_reg);
-
+			core->offsets->irq_reg[i]->irq_mask, &dump_reg[2]);
 		cam_cdm_read_hw_reg(cdm_hw,
-			core->offsets->irq_reg[i]->irq_clear, &dump_reg);
-		CAM_INFO(CAM_CDM, "CDM HW irq clear%d=0x%x", i, dump_reg);
+			core->offsets->irq_reg[i]->irq_clear, &dump_reg[3]);
+
+		CAM_INFO(CAM_CDM,
+			"cnt %d irq status 0x%x set 0x%x mask 0x%x clear 0x%x",
+			i, dump_reg[0], dump_reg[1], dump_reg[2], dump_reg[3]);
 	}
 
 	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->current_bl_base, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW current BL base=0x%x", dump_reg);
+		core->offsets->cmn_reg->current_bl_base, &dump_reg[0]);
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->current_used_ahb_base, &dump_reg[1]);
+	CAM_INFO(CAM_CDM, "curr BL base 0x%x AHB base 0x%x",
+		dump_reg[0], dump_reg[1]);
 
 	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->current_bl_len, &dump_reg);
+		core->offsets->cmn_reg->current_bl_len, &dump_reg[0]);
 	CAM_INFO(CAM_CDM,
 		"CDM HW current BL len=%d ARB %d FIFO %d tag=%d, ",
-		(dump_reg & CAM_CDM_CURRENT_BL_LEN),
-		(dump_reg & CAM_CDM_CURRENT_BL_ARB) >>
+		(dump_reg[0] & CAM_CDM_CURRENT_BL_LEN),
+		(dump_reg[0] & CAM_CDM_CURRENT_BL_ARB) >>
 			CAM_CDM_CURRENT_BL_ARB_SHIFT,
-		(dump_reg & CAM_CDM_CURRENT_BL_FIFO) >>
+		(dump_reg[0] & CAM_CDM_CURRENT_BL_FIFO) >>
 			CAM_CDM_CURRENT_BL_FIFO_SHIFT,
-		(dump_reg & CAM_CDM_CURRENT_BL_TAG) >>
+		(dump_reg[0] & CAM_CDM_CURRENT_BL_TAG) >>
 			CAM_CDM_CURRENT_BL_TAG_SHIFT);
-
-	cam_cdm_read_hw_reg(cdm_hw,
-		core->offsets->cmn_reg->current_used_ahb_base, &dump_reg);
-	CAM_INFO(CAM_CDM, "CDM HW current AHB base=0x%x", dump_reg);
 
 	cam_hw_cdm_disable_core_dbg(cdm_hw);
 	if (pause_core)
@@ -1128,10 +1119,14 @@ static void cam_hw_cdm_reset_cleanup(
 	int i;
 	struct cam_cdm_bl_cb_request_entry *node, *tnode;
 	bool flush_hw = false;
+	bool reset_err = false;
 
 	if (test_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status) ||
 		test_bit(CAM_CDM_FLUSH_HW_STATUS, &core->cdm_status))
 		flush_hw = true;
+
+	if (test_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status))
+		reset_err = true;
 
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++) {
 		list_for_each_entry_safe(node, tnode,
@@ -1141,12 +1136,19 @@ static void cam_hw_cdm_reset_cleanup(
 				CAM_DBG(CAM_CDM,
 					"Notifying client %d for tag %d",
 					node->client_hdl, node->bl_tag);
-				if (flush_hw)
+				if (flush_hw) {
+					enum cam_cdm_cb_status status;
+
+					status = reset_err ?
+						CAM_CDM_CB_STATUS_HW_ERROR :
+						CAM_CDM_CB_STATUS_HW_RESUBMIT;
+
 					cam_cdm_notify_clients(cdm_hw,
 						(node->client_hdl == handle) ?
 						CAM_CDM_CB_STATUS_HW_FLUSH :
-						CAM_CDM_CB_STATUS_HW_RESUBMIT,
+						status,
 						(void *)node);
+				}
 				else
 					cam_cdm_notify_clients(cdm_hw,
 						CAM_CDM_CB_STATUS_HW_RESET_DONE,
@@ -1695,7 +1697,7 @@ int cam_hw_cdm_handle_error_info(
 	if (time_left <= 0) {
 		rc = -ETIMEDOUT;
 		CAM_ERR(CAM_CDM, "CDM HW reset Wait failed rc=%d", rc);
-		goto end;
+		set_bit(CAM_CDM_RESET_ERR_STATUS, &cdm_core->cdm_status);
 	}
 
 	rc = cam_hw_cdm_set_cdm_core_cfg(cdm_hw);
@@ -1734,6 +1736,7 @@ int cam_hw_cdm_handle_error_info(
 end:
 	clear_bit(CAM_CDM_FLUSH_HW_STATUS, &cdm_core->cdm_status);
 	clear_bit(CAM_CDM_RESET_HW_STATUS, &cdm_core->cdm_status);
+	clear_bit(CAM_CDM_RESET_ERR_STATUS, &cdm_core->cdm_status);
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++)
 		mutex_unlock(&cdm_core->bl_fifo[i].fifo_lock);
 

@@ -686,9 +686,7 @@ static int32_t cam_ope_process_request_timer(void *priv, void *data)
 		}
 
 		CAM_ERR(CAM_OPE,
-			"pending requests means, issue is with HW for ctx %d",
-			ctx_data->ctx_id);
-		CAM_ERR(CAM_OPE, "ctx: %d, lrt: %llu, lct: %llu",
+			"pending req at HW, ctx %d lrt %llu lct %llu",
 			ctx_data->ctx_id, ctx_data->last_req_time,
 			ope_hw_mgr->last_callback_time);
 		hw_mgr->ope_dev_intf[i]->hw_ops.process_cmd(
