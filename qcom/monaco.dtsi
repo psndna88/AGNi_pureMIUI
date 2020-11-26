@@ -1115,6 +1115,10 @@
 			vote = <43>;
 		};
 	};
+
+	system_pm_rpm {
+		compatible = "qcom,system-pm-rpm";
+	};
 };
 
 #include "monaco-pinctrl.dtsi"
