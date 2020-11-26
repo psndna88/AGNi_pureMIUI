@@ -199,6 +199,7 @@ struct cam_vfe_bus_ver3_priv {
 	struct cam_isp_resource_node       *bus_client;
 	struct cam_isp_resource_node       *comp_grp;
 	struct cam_isp_resource_node       *vfe_out;
+	uint32_t  vfe_out_map_outtype[CAM_VFE_BUS_VER3_VFE_OUT_MAX];
 
 	struct list_head                    free_comp_grp;
 	struct list_head                    used_comp_grp;
@@ -566,74 +567,114 @@ static bool cam_vfe_bus_ver3_can_be_secure(uint32_t out_type)
 }
 
 static enum cam_vfe_bus_ver3_vfe_out_type
-	cam_vfe_bus_ver3_get_out_res_id(uint32_t res_type)
+	cam_vfe_bus_ver3_get_out_res_id_and_index(
+	struct cam_vfe_bus_ver3_priv  *bus_priv,
+	uint32_t res_type, uint32_t  *index)
 {
+	uint32_t  vfe_out_type;
+
 	switch (res_type) {
 	case CAM_ISP_IFE_OUT_RES_FULL:
-		return CAM_VFE_BUS_VER3_VFE_OUT_FULL;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_FULL;
+		break;
 	case CAM_ISP_IFE_OUT_RES_DS4:
-		return CAM_VFE_BUS_VER3_VFE_OUT_DS4;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_DS4;
+		break;
 	case CAM_ISP_IFE_OUT_RES_DS16:
-		return CAM_VFE_BUS_VER3_VFE_OUT_DS16;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_DS16;
+		break;
 	case CAM_ISP_IFE_OUT_RES_FD:
-		return CAM_VFE_BUS_VER3_VFE_OUT_FD;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_FD;
+		break;
 	case CAM_ISP_IFE_OUT_RES_RAW_DUMP:
-		return CAM_VFE_BUS_VER3_VFE_OUT_RAW_DUMP;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_RAW_DUMP;
+		break;
 	case CAM_ISP_IFE_OUT_RES_2PD:
-		return CAM_VFE_BUS_VER3_VFE_OUT_2PD;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_2PD;
+		break;
 	case CAM_ISP_IFE_OUT_RES_RDI_0:
-		return CAM_VFE_BUS_VER3_VFE_OUT_RDI0;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_RDI0;
+		break;
 	case CAM_ISP_IFE_OUT_RES_RDI_1:
-		return CAM_VFE_BUS_VER3_VFE_OUT_RDI1;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_RDI1;
+		break;
 	case CAM_ISP_IFE_OUT_RES_RDI_2:
-		return CAM_VFE_BUS_VER3_VFE_OUT_RDI2;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_RDI2;
+		break;
 	case CAM_ISP_IFE_OUT_RES_RDI_3:
-		return CAM_VFE_BUS_VER3_VFE_OUT_RDI3;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_RDI3;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_HDR_BE:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BE;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BE;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_HDR_BHIST:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BHIST;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_HDR_BHIST;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_TL_BG:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_TL_BG;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_TL_BG;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_BF:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_BF;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_BF;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_AWB_BG:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_AWB_BG;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_AWB_BG;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_BHIST:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_BHIST;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_BHIST;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_RS:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_RS;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_RS;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_CS:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_CS;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_CS;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_IHIST:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_IHIST;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_IHIST;
+		break;
 	case CAM_ISP_IFE_OUT_RES_FULL_DISP:
-		return CAM_VFE_BUS_VER3_VFE_OUT_FULL_DISP;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_FULL_DISP;
+		break;
 	case CAM_ISP_IFE_OUT_RES_DS4_DISP:
-		return CAM_VFE_BUS_VER3_VFE_OUT_DS4_DISP;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_DS4_DISP;
+		break;
 	case CAM_ISP_IFE_OUT_RES_DS16_DISP:
-		return CAM_VFE_BUS_VER3_VFE_OUT_DS16_DISP;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_DS16_DISP;
+		break;
 	case CAM_ISP_IFE_OUT_RES_LCR:
-		return CAM_VFE_BUS_VER3_VFE_OUT_LCR;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_LCR;
+		break;
 	case CAM_ISP_IFE_OUT_RES_AWB_BFW:
-		return CAM_VFE_BUS_VER3_VFE_OUT_AWB_BFW;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_AWB_BFW;
+		break;
 	case CAM_ISP_IFE_OUT_RES_2PD_STATS:
-		return CAM_VFE_BUS_VER3_VFE_OUT_2PD_STATS;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_2PD_STATS;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_AEC_BE:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_AEC_BE;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_AEC_BE;
+		break;
+
 	case CAM_ISP_IFE_OUT_RES_LTM_STATS:
-		return CAM_VFE_BUS_VER3_VFE_OUT_LTM_STATS;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_LTM_STATS;
+		break;
 	case CAM_ISP_IFE_OUT_RES_STATS_GTM_BHIST:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_GTM_BHIST;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_GTM_BHIST;
+		break;
 	case CAM_ISP_IFE_LITE_OUT_RES_STATS_BE:
-		return CAM_VFE_BUS_VER3_VFE_OUT_STATS_BE;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_STATS_BE;
+		break;
 	case CAM_ISP_IFE_LITE_OUT_RES_GAMMA:
-		return CAM_VFE_BUS_VER3_VFE_OUT_GAMMA;
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_GAMMA;
+		break;
 	default:
 		CAM_WARN(CAM_ISP, "Invalid isp res id: %d , assigning max",
 			res_type);
+		vfe_out_type = CAM_VFE_BUS_VER3_VFE_OUT_MAX;
+		*index = CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 		return CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 	}
+	*index = bus_priv->vfe_out_map_outtype[vfe_out_type];
+
+	return vfe_out_type;
 }
 
 static int cam_vfe_bus_ver3_get_comp_vfe_out_res_id_list(
@@ -1888,6 +1929,7 @@ static int cam_vfe_bus_ver3_acquire_vfe_out(void *bus_priv, void *acquire_args,
 	struct cam_vfe_bus_ver3_vfe_out_data   *rsrc_data = NULL;
 	uint32_t                                secure_caps = 0, mode;
 	struct cam_vfe_bus_ver3_comp_grp_acquire_args comp_acq_args = {0};
+	uint32_t       outmap_index = CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 
 	if (!bus_priv || !acquire_args) {
 		CAM_ERR(CAM_ISP, "Invalid Param");
@@ -1901,12 +1943,20 @@ static int cam_vfe_bus_ver3_acquire_vfe_out(void *bus_priv, void *acquire_args,
 		ver3_bus_priv->common_data.core_index,
 		out_acquire_args->out_port_info->res_type);
 
-	vfe_out_res_id = cam_vfe_bus_ver3_get_out_res_id(
-		out_acquire_args->out_port_info->res_type);
-	if (vfe_out_res_id == CAM_VFE_BUS_VER3_VFE_OUT_MAX)
+	vfe_out_res_id = cam_vfe_bus_ver3_get_out_res_id_and_index(
+				ver3_bus_priv,
+				out_acquire_args->out_port_info->res_type,
+				&outmap_index);
+	if ((vfe_out_res_id == CAM_VFE_BUS_VER3_VFE_OUT_MAX) ||
+		(outmap_index >= ver3_bus_priv->num_out)) {
+		CAM_WARN(CAM_ISP,
+			"target does not support req res id :0x%x outtype:%d index:%d",
+			out_acquire_args->out_port_info->res_type,
+			vfe_out_res_id, outmap_index);
 		return -ENODEV;
+	}
 
-	rsrc_node = &ver3_bus_priv->vfe_out[vfe_out_res_id];
+	rsrc_node = &ver3_bus_priv->vfe_out[outmap_index];
 	if (rsrc_node->res_state != CAM_ISP_RESOURCE_STATE_AVAILABLE) {
 		CAM_ERR(CAM_ISP,
 			"VFE:%d out_type:0x%X resource not available state:%d",
@@ -2307,15 +2357,20 @@ static uint32_t cam_vfe_bus_ver3_get_last_consumed_addr(
 	struct cam_vfe_bus_ver3_vfe_out_data     *rsrc_data = NULL;
 	struct cam_vfe_bus_ver3_wm_resource_data *wm_rsrc_data = NULL;
 	enum cam_vfe_bus_ver3_vfe_out_type        res_id;
+	uint32_t           outmap_index = CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 
-	res_id = cam_vfe_bus_ver3_get_out_res_id(res_type);
+	res_id = cam_vfe_bus_ver3_get_out_res_id_and_index(bus_priv,
+		res_type, &outmap_index);
 
-	if (res_id >= CAM_VFE_BUS_VER3_VFE_OUT_MAX) {
-		CAM_ERR(CAM_ISP, "invalid res id:%u", res_id);
+	if ((res_id >= CAM_VFE_BUS_VER3_VFE_OUT_MAX) ||
+		(outmap_index >= bus_priv->num_out)) {
+		CAM_WARN(CAM_ISP,
+			"target does not support req res id :0x%x outtype:%d index:%d",
+			res_type, res_id, outmap_index);
 		return 0;
 	}
 
-	rsrc_node = &bus_priv->vfe_out[res_id];
+	rsrc_node = &bus_priv->vfe_out[outmap_index];
 	rsrc_data = rsrc_node->res_priv;
 	wm_rsrc_data = rsrc_data->wm_res[PLANE_Y].res_priv;
 
@@ -2394,7 +2449,8 @@ static int cam_vfe_bus_ver3_init_vfe_out_resource(uint32_t  index,
 		return -EINVAL;
 	}
 
-	vfe_out = &ver3_bus_priv->vfe_out[vfe_out_type];
+	ver3_bus_priv->vfe_out_map_outtype[vfe_out_type] = index;
+	vfe_out = &ver3_bus_priv->vfe_out[index];
 	if (vfe_out->res_state != CAM_ISP_RESOURCE_STATE_UNAVAILABLE ||
 		vfe_out->res_priv) {
 		CAM_ERR(CAM_ISP, "vfe_out_type %d has already been initialized",
@@ -2506,7 +2562,7 @@ static int cam_vfe_bus_ver3_deinit_vfe_out_resource(
 }
 
 static int cam_vfe_bus_ver3_print_dimensions(
-	enum cam_vfe_bus_ver3_vfe_out_type         vfe_out_res_id,
+	uint32_t                                   res_id,
 	struct cam_vfe_bus_ver3_priv              *bus_priv)
 {
 	struct cam_isp_resource_node              *rsrc_node = NULL;
@@ -2515,20 +2571,29 @@ static int cam_vfe_bus_ver3_print_dimensions(
 	struct cam_vfe_bus_ver3_common_data  *common_data = NULL;
 	int                                        i;
 	uint32_t addr_status0, addr_status1, addr_status2, addr_status3;
+	enum cam_vfe_bus_ver3_vfe_out_type  vfe_out_res_id =
+		CAM_VFE_BUS_VER3_VFE_OUT_MAX;
+	uint32_t  outmap_index = CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 
 	if (!bus_priv) {
 		CAM_ERR(CAM_ISP, "Invalid bus private data, res_id: %d",
-			vfe_out_res_id);
+			res_id);
 		return -EINVAL;
 	}
 
-	if (vfe_out_res_id >= CAM_VFE_BUS_VER3_VFE_OUT_MAX) {
-		CAM_ERR(CAM_ISP, "Invalid out resource for dump: %d",
-			vfe_out_res_id);
+	vfe_out_res_id = cam_vfe_bus_ver3_get_out_res_id_and_index(bus_priv,
+				res_id, &outmap_index);
+
+	if ((vfe_out_res_id == CAM_VFE_BUS_VER3_VFE_OUT_MAX) ||
+		(outmap_index >= bus_priv->num_out)) {
+		CAM_WARN_RATE_LIMIT(CAM_ISP,
+			"target does not support req res id :0x%x outtype:%d index:%d",
+			res_id,
+			vfe_out_res_id, outmap_index);
 		return -EINVAL;
 	}
 
-	rsrc_node = &bus_priv->vfe_out[vfe_out_res_id];
+	rsrc_node = &bus_priv->vfe_out[outmap_index];
 	rsrc_data = rsrc_node->res_priv;
 	if (!rsrc_data) {
 		CAM_ERR(CAM_ISP, "VFE out data is null, res_id: %d",
@@ -3600,15 +3665,13 @@ static int cam_vfe_bus_ver3_process_cmd(
 		break;
 	case CAM_ISP_HW_CMD_DUMP_BUS_INFO: {
 		struct cam_isp_hw_event_info  *event_info;
-		enum cam_vfe_bus_ver3_vfe_out_type vfe_out_res_id;
 
 		event_info =
 			(struct cam_isp_hw_event_info *)cmd_args;
 		bus_priv = (struct cam_vfe_bus_ver3_priv  *) priv;
-		vfe_out_res_id =
-			cam_vfe_bus_ver3_get_out_res_id(event_info->res_id);
+
 		rc = cam_vfe_bus_ver3_print_dimensions(
-			vfe_out_res_id, bus_priv);
+			event_info->res_id, bus_priv);
 		break;
 		}
 	case CAM_ISP_HW_CMD_UBWC_UPDATE_V2:
@@ -3721,6 +3784,13 @@ int cam_vfe_bus_ver3_init(
 	bus_priv->common_data.comp_config_needed =
 		ver3_hw_info->comp_cfg_needed;
 
+	if (bus_priv->num_out >= CAM_VFE_BUS_VER3_VFE_OUT_MAX) {
+		CAM_ERR(CAM_ISP, "number of vfe out:%d more than max value:%d ",
+			bus_priv->num_out, CAM_VFE_BUS_VER3_VFE_OUT_MAX);
+		rc = -EINVAL;
+		goto free_bus_priv;
+	}
+
 	bus_priv->comp_grp = kzalloc((sizeof(struct cam_isp_resource_node) *
 		bus_priv->num_comp_grp), GFP_KERNEL);
 	if (!bus_priv->comp_grp) {
@@ -3774,6 +3844,10 @@ int cam_vfe_bus_ver3_init(
 			goto deinit_comp_grp;
 		}
 	}
+
+	for (i = 0; i < CAM_VFE_BUS_VER3_VFE_OUT_MAX; i++)
+		bus_priv->vfe_out_map_outtype[i] =
+			CAM_VFE_BUS_VER3_VFE_OUT_MAX;
 
 	for (i = 0; i < bus_priv->num_out; i++) {
 		rc = cam_vfe_bus_ver3_init_vfe_out_resource(i, bus_priv,
