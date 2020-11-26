@@ -339,14 +339,16 @@ static struct afe_ctl this_afe;
 #define TIMEOUT_MS 1000
 #define Q6AFE_MAX_VOLUME 0x3FFF
 
-static int pcm_afe_instance[2];
-static int proxy_afe_instance[2];
-bool afe_close_done[2] = {true, true};
+static int pcm_afe_instance[3];
+static int proxy_afe_instance[3];
+bool afe_close_done[3] = {true, true, true};
 
 static bool proxy_afe_started = false;
 
 #define SIZEOF_CFG_CMD(y) \
 		(sizeof(struct apr_hdr) + sizeof(u16) + (sizeof(struct y)))
+
+static bool is_afe_proxy_port(int port_id);
 
 static void q6afe_unload_avcs_modules(u16 port_id, int index)
 {
@@ -5737,28 +5739,30 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		proxy_afe_started = true;
 	}
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
-		(port_id == RT_PROXY_DAI_002_TX)) {
+		(port_id == RT_PROXY_DAI_002_TX) ||
+		(port_id == RT_PROXY_DAI_003_RX)) {
 		pr_debug("%s: before incrementing pcm_afe_instance %d port_id 0x%x\n",
 			__func__,
-			pcm_afe_instance[port_id & 0x1], port_id);
+			pcm_afe_instance[port_id & 0x3], port_id);
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
-		pcm_afe_instance[port_id & 0x1]++;
+		pcm_afe_instance[port_id & 0x3]++;
 		return 0;
 	}
 	if ((port_id == RT_PROXY_DAI_002_RX) ||
-			(port_id == RT_PROXY_DAI_001_TX)) {
+			(port_id == RT_PROXY_DAI_001_TX) ||
+			(port_id == RT_PROXY_DAI_003_TX)) {
 		pr_debug("%s: before incrementing proxy_afe_instance %d port_id 0x%x\n",
 			__func__,
-			proxy_afe_instance[port_id & 0x1], port_id);
+			proxy_afe_instance[port_id & 0x3], port_id);
 
-		if (!afe_close_done[port_id & 0x1]) {
+		if (!afe_close_done[port_id & 0x3]) {
 			/*close pcm dai corresponding to the proxy dai*/
 			afe_close(port_id - 0x10);
-			pcm_afe_instance[port_id & 0x1]++;
+			pcm_afe_instance[port_id & 0x3]++;
 			pr_debug("%s: reconfigure afe port again\n", __func__);
 		}
-		proxy_afe_instance[port_id & 0x1]++;
-		afe_close_done[port_id & 0x1] = false;
+		proxy_afe_instance[port_id & 0x3]++;
+		afe_close_done[port_id & 0x3] = false;
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
 	}
 
@@ -6654,12 +6658,14 @@ int afe_open(u16 port_id,
 	}
 
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
-		(port_id == RT_PROXY_DAI_002_TX)) {
+		(port_id == RT_PROXY_DAI_002_TX) ||
+		(port_id == RT_PROXY_DAI_003_RX)) {
 		pr_err("%s: wrong port 0x%x\n", __func__, port_id);
 		return -EINVAL;
 	}
 	if ((port_id == RT_PROXY_DAI_002_RX) ||
-		(port_id == RT_PROXY_DAI_001_TX))
+		(port_id == RT_PROXY_DAI_001_TX) ||
+		(port_id == RT_PROXY_DAI_003_TX))
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
 
 	ret = afe_q6_interface_prepare();
@@ -8828,6 +8834,29 @@ int afe_validate_port(u16 port_id)
 	return ret;
 }
 
+static bool is_afe_proxy_port(int port_id)
+{
+	bool ret = false;
+	switch(port_id) {
+	case RT_PROXY_DAI_001_RX:
+	case RT_PROXY_DAI_001_TX:
+	case RT_PROXY_DAI_002_RX:
+	case RT_PROXY_DAI_002_TX:
+	case RT_PROXY_DAI_003_RX:
+	case RT_PROXY_DAI_003_TX:
+	{
+		ret = true;
+		break;
+	}
+	default:
+		pr_debug("%s: afe port %d is not a proxy port\n",
+			__func__, port_id);
+		ret = false;
+	}
+
+	return ret;
+}
+
 int afe_convert_virtual_to_portid(u16 port_id)
 {
 	int ret;
@@ -8841,6 +8870,7 @@ int afe_convert_virtual_to_portid(u16 port_id)
 		    port_id == RT_PROXY_DAI_001_TX ||
 		    port_id == RT_PROXY_DAI_002_RX ||
 		    port_id == RT_PROXY_DAI_002_TX ||
+		    port_id == RT_PROXY_DAI_003_RX ||
 		    port_id == RT_PROXY_DAI_003_TX) {
 			ret = VIRTUAL_ID_TO_PORTID(port_id);
 		} else {
@@ -8903,43 +8933,50 @@ int afe_close(int port_id)
 
 	if (this_afe.apr == NULL) {
 		pr_err("%s: AFE is already closed\n", __func__);
-		if ((port_id == RT_PROXY_DAI_001_RX) ||
-		    (port_id == RT_PROXY_DAI_002_TX))
-			pcm_afe_instance[port_id & 0x1] = 0;
-		if ((port_id == RT_PROXY_DAI_002_RX) ||
-		    (port_id == RT_PROXY_DAI_001_TX))
-			proxy_afe_instance[port_id & 0x1] = 0;
-		afe_close_done[port_id & 0x1] = true;
+
+		if (is_afe_proxy_port(port_id)) {
+			if ((port_id == RT_PROXY_DAI_001_RX) ||
+			    (port_id == RT_PROXY_DAI_002_TX) ||
+			    (port_id == RT_PROXY_DAI_003_RX))
+				pcm_afe_instance[port_id & 0x3] = 0;
+			if ((port_id == RT_PROXY_DAI_002_RX) ||
+			    (port_id == RT_PROXY_DAI_001_TX) ||
+		 	   (port_id == RT_PROXY_DAI_003_TX))
+				proxy_afe_instance[port_id & 0x3] = 0;
+			afe_close_done[port_id & 0x3] = true;
+		}
 		ret = -EINVAL;
 		goto fail_cmd;
 	}
 	pr_debug("%s: port_id = 0x%x\n", __func__, port_id);
 	if ((port_id == RT_PROXY_DAI_001_RX) ||
-			(port_id == RT_PROXY_DAI_002_TX)) {
+			(port_id == RT_PROXY_DAI_002_TX) ||
+			(port_id == RT_PROXY_DAI_003_RX)) {
 		pr_debug("%s: before decrementing pcm_afe_instance %d\n",
-			__func__, pcm_afe_instance[port_id & 0x1]);
+			__func__, pcm_afe_instance[port_id & 0x3]);
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
-		pcm_afe_instance[port_id & 0x1]--;
-		if ((!(pcm_afe_instance[port_id & 0x1] == 0 &&
-			proxy_afe_instance[port_id & 0x1] == 0)) ||
-			afe_close_done[port_id & 0x1] == true)
+		pcm_afe_instance[port_id & 0x3]--;
+		if ((!(pcm_afe_instance[port_id & 0x3] == 0 &&
+			proxy_afe_instance[port_id & 0x3] == 0)) ||
+			afe_close_done[port_id & 0x3] == true)
 			return 0;
 
-		afe_close_done[port_id & 0x1] = true;
+		afe_close_done[port_id & 0x3] = true;
 	}
 
 	if ((port_id == RT_PROXY_DAI_002_RX) ||
-		(port_id == RT_PROXY_DAI_001_TX)) {
+		(port_id == RT_PROXY_DAI_001_TX) ||
+		(port_id == RT_PROXY_DAI_003_TX)) {
 		pr_debug("%s: before decrementing proxy_afe_instance %d\n",
-			__func__, proxy_afe_instance[port_id & 0x1]);
+			__func__, proxy_afe_instance[port_id & 0x3]);
 		port_id = VIRTUAL_ID_TO_PORTID(port_id);
-		proxy_afe_instance[port_id & 0x1]--;
-		if ((!(pcm_afe_instance[port_id & 0x1] == 0 &&
-			proxy_afe_instance[port_id & 0x1] == 0)) ||
-			afe_close_done[port_id & 0x1] == true)
+		proxy_afe_instance[port_id & 0x3]--;
+		if ((!(pcm_afe_instance[port_id & 0x3] == 0 &&
+			proxy_afe_instance[port_id & 0x3] == 0)) ||
+			afe_close_done[port_id & 0x3] == true)
 			return 0;
 
-		afe_close_done[port_id & 0x1] = true;
+		afe_close_done[port_id & 0x3] = true;
 	}
 
 	if (port_id == RT_PROXY_PORT_002_RX && proxy_afe_started)
