@@ -1387,7 +1387,7 @@
 		};
 	};
 
-	modem-lte-sub6-pa1 {
+	modem-lte-pa1-step {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
@@ -1431,7 +1431,7 @@
 		};
 	};
 
-	modem-lte-sub6-pa2 {
+	modem-lte-pa2-step {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
