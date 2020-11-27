@@ -37,3 +37,7 @@
 &sdhc_2 {
 	status = "ok";
 };
+
+&qupv3_se7_4uart {
+	status = "ok";
+};

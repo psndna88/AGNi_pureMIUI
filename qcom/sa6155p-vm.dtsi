@@ -11,6 +11,10 @@
 	qcom,msm-name = "SA6155P";
 	qcom,msm-id = <377 0x0>;
 
+	aliases {
+		hsuart0 = &qupv3_se7_4uart;
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -125,6 +129,24 @@
 			= <RPMH_REGULATOR_LEVEL_RETENTION>;
 		regulator-max-microvolt
 			= <RPMH_REGULATOR_LEVEL_MAX>;
+	};
+
+	/* PWR_CTR1_VDD_1P8 supply */
+	vreg_conn_1p8: vreg_conn_1p8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_conn_1p8";
+		startup-delay-us = <4000>;
+		enable-active-high;
+		gpio = <&pm6155_1_gpios 1 0>;
+	};
+
+	/* PWR_CTR2_VDD_PA supply */
+	vreg_conn_pa: vreg_conn_pa {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_conn_pa";
+		startup-delay-us = <4000>;
+		enable-active-high;
+		gpio = <&pm6155_1_gpios 6 0>;
 	};
 
 	apps_smmu: apps-smmu@0x15000000 {
@@ -309,6 +331,26 @@
 
 		/* 6155 have no Doorbell, only keep ifence */
 		db-off = <1>;
+	};
+
+	bluetooth: bt-qca-auto-converged {
+		compatible = "qcom,qca-auto-converged";
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_en_active>;
+		/* BT_EN */
+		qcom,bt-reset-gpio = <&tlmm 85 0>;
+		/* PWR_CTR1_VDD_PA */
+		qcom,bt-vdd-ctrl1-supply = <&vreg_conn_pa>;
+		/* PWR_CTR2_VDD_1P8 */
+		qcom,bt-vdd-ctrl2-supply = <&vreg_conn_1p8>;
+		qcom,bt-vdd-rfa1-supply = <&pm6155_1_s6>;
+		qcom,bt-vdd-rfa2-supply = <&pm6155_1_s5>;
+		qcom,bt-vdd-rfa3-supply = <&pm6155_1_l15>;
+
+		/* <vol_min, vol_max, load_curr, is_retention_supp> */
+		qcom,bt-vdd-rfa1-config = <1350000 1350000 0 0>;
+		qcom,bt-vdd-rfa2-config = <2040000 2040000 0 0>;
+		qcom,bt-vdd-rfa3-config = <1904000 1904000 0 0>;
 	};
 };
 
