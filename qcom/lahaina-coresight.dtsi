@@ -154,7 +154,6 @@
 		arm,buffer-size = <0x400000>;
 		arm,scatter-gather;
 
-		dma-coherent;
 		qcom,sw-usb;
 		coresight-name = "coresight-tmc-etr";
 		coresight-ctis = <&cti0 &cti3_swao>;
