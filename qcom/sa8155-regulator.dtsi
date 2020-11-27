@@ -344,6 +344,7 @@
 	rpmh-regulator-gfxlvl {
 		compatible = "qcom,rpmh-arc-regulator";
 		qcom,resource-name = "gfx.lvl";
+		VDD_GFX_LEVEL:
 		S3C_LEVEL: pm8150_2_s3_level: regulator-pm8150-2-s3-level {
 			regulator-name = "pm8150_2_s3_level";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;

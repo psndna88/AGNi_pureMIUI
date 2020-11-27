@@ -6,6 +6,7 @@
 		regulator-name = "gcc_pcie_0_gdsc";
 		qcom,gds-timeout = <500>;
 		qcom,no-status-check-on-disable;
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -15,6 +16,7 @@
 		regulator-name = "gcc_pcie_1_gdsc";
 		qcom,gds-timeout = <500>;
 		qcom,no-status-check-on-disable;
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -22,6 +24,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0x177004 0x4>;
 		regulator-name = "gcc_ufs_phy_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -29,6 +32,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0x10f004 0x4>;
 		regulator-name = "gcc_usb30_prim_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -36,6 +40,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0x19e004 0x4>;
 		regulator-name = "gcc_usb30_sec_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -116,6 +121,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad0c120 0x4>;
 		regulator-name = "cam_cc_titan_top_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -123,6 +129,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad07004 0x4>;
 		regulator-name = "cam_cc_bps_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -130,6 +137,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad0a004 0x4>;
 		regulator-name = "cam_cc_ife_0_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -137,6 +145,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad0b004 0x4>;
 		regulator-name = "cam_cc_ife_1_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -144,6 +153,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad0b070 0x4>;
 		regulator-name = "cam_cc_ife_2_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -151,6 +161,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xad08004 0x4>;
 		regulator-name = "cam_cc_ipe_0_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -161,6 +172,7 @@
 		regulator-name = "disp_cc_mdss_core_gdsc";
 		proxy-supply = <&disp_cc_mdss_core_gdsc>;
 		qcom,proxy-consumer-enable;
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -186,6 +198,7 @@
 		regulator-name = "gpu_cx_gdsc";
 		hw-ctrl-addr = <&gpu_cx_hw_ctrl>;
 		qcom,no-status-check-on-disable;
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -196,6 +209,7 @@
 		sw-reset = <&gpu_gx_sw_reset>;
 		domain-addr = <&gpu_gx_domain_addr>;
 		qcom,reset-aon-logic;
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -204,6 +218,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xabf0d18 0x4>;
 		regulator-name = "video_cc_mvs0_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -211,6 +226,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xabf0bf8 0x4>;
 		regulator-name = "video_cc_mvs0c_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -218,6 +234,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xabf0d98 0x4>;
 		regulator-name = "video_cc_mvs1_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -225,6 +242,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xabf0c98 0x4>;
 		regulator-name = "video_cc_mvs1c_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 
@@ -232,6 +250,7 @@
 		compatible = "qcom,gdsc";
 		reg = <0xaaf2004 0x4>;
 		regulator-name = "video_cc_mvsc_gdsc";
+		qcom,retain-regs;
 		status = "disabled";
 	};
 };

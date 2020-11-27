@@ -31,6 +31,7 @@ Required properties :
 			"qcom,shima-gcc"
 			"qcom,holi-gcc"
 			"qcom,sdxlemur-gcc"
+			"qcom,yupik-gcc"
 
 - reg : shall contain base register location and length
 - vdd_cx-supply: The vdd_cx logic rail supply.
