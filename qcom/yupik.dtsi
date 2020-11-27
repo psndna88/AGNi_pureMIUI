@@ -2343,6 +2343,19 @@
 			qcom,dump-id = <0x165>;
 		};
 	};
+
+	qfprom: qfprom@780000 {
+		compatible = "qcom,qfprom";
+		reg = <0x780000 0x7000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		read-only;
+		ranges;
+	};
+
+	qfprom_sys: qfprom@0 {
+		compatible = "qcom,qfprom-sys";
+	};
 };
 
 #include "shima-gdsc.dtsi"
