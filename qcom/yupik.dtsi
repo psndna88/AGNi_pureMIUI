@@ -3581,3 +3581,4 @@
 #include "yupik-audio.dtsi"
 #include "camera/yupik-camera.dtsi"
 #include "msm-rdbg.dtsi"
+#include "yupik-gpu.dtsi"
