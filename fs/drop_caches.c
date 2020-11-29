@@ -46,6 +46,18 @@ static void drop_pagecache_sb(struct super_block *sb, void *unused)
 	iput(toput_inode);
 }
 
+void mm_drop_caches(int val)
+{
+	if (val & 1) {
+		iterate_supers(drop_pagecache_sb, NULL);
+		count_vm_event(DROP_PAGECACHE);
+	}
+	if (val & 2) {
+		drop_slab();
+		count_vm_event(DROP_SLAB);
+	}
+}
+
 int drop_caches_sysctl_handler(struct ctl_table *table, int write,
 	void __user *buffer, size_t *length, loff_t *ppos)
 {
