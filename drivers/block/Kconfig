@@ -233,6 +233,14 @@ config BLK_DEV_LOOP_MIN_COUNT
 	  is used, it can be set to 0, since needed loop devices can be
 	  dynamically allocated with the /dev/loop-control interface.
 
+config BLK_DEV_LOOP_MAX_PARTITIONS
+	int "maxiumum partitions loop can support"
+	depends on BLK_DEV_LOOP
+	default 16
+	help
+	  Maximum number of partitions to be supported.
+	  Android 10 and above APEX requires 7 to 16
+
 config BLK_DEV_CRYPTOLOOP
 	tristate "Cryptoloop Support"
 	select CRYPTO
