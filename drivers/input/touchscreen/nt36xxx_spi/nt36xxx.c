@@ -128,6 +128,9 @@ const uint16_t gesture_key_array[] = {
 	KEY_WAKEUP,  //GESTURE_SLIDE_LEFT
 	KEY_WAKEUP,  //GESTURE_SLIDE_RIGHT
 	KEY_POWER,	 //FOR PALM USING ONLY
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+    KEY_DOUBLE_TAP,
+#endif
 };
 #endif
 
@@ -1104,8 +1107,14 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 
 	if (keycode > 0) {
 		input_report_key(ts->input_dev, keycode, 1);
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+		input_report_key(ts->input_dev, KEY_DOUBLE_TAP, 1);
+#endif
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, keycode, 0);
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+		input_report_key(ts->input_dev, KEY_DOUBLE_TAP, 0);
+#endif
 		input_sync(ts->input_dev);
 	}
 }
