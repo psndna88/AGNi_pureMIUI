@@ -1523,7 +1523,11 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 		goto err_get_regulator;
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+	ret = fts_ts_enable_regulator(true);
+#else
 	ret = fts_ts_enable_regulator(false);	//default disable regulator
+#endif
 	if (ret < 0) {
 		FTS_ERROR("Failed to enable regulator");
 		goto err_enable_regulator;
