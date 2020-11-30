@@ -1050,6 +1050,8 @@ const char * const vmstat_text[] = {
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	"nr_zspages",
 #endif
+	"nr_ion_heap",
+	"nr_gpu_heap",
 	"nr_free_cma",
 
 	/* enum numa_stat_item counters */
