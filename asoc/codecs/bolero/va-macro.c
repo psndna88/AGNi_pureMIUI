@@ -846,7 +846,8 @@ static bool is_amic_enabled(struct snd_soc_component *component, int decimator)
 	adc_mux_reg = BOLERO_CDC_VA_INP_MUX_ADC_MUX0_CFG1 +
 			VA_MACRO_ADC_MUX_CFG_OFFSET * decimator;
 	if (snd_soc_component_read32(component, adc_mux_reg) & SWR_MIC) {
-		if (va_priv->version == BOLERO_VERSION_2_1)
+		if (va_priv->version == BOLERO_VERSION_2_1 ||
+			va_priv->version == BOLERO_VERSION_2_0)
 			return true;
 		adc_reg = BOLERO_CDC_VA_INP_MUX_ADC_MUX0_CFG0 +
 			VA_MACRO_ADC_MUX_CFG_OFFSET * decimator;
