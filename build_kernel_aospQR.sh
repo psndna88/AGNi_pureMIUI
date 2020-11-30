@@ -5,8 +5,8 @@ export SUBARCH=arm64
 KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
-CONFIG1="agni_atoll_defconfig"
-AGNI_BUILD_TYPE="AOSP"
+CONFIG1="agni_atoll_aospQR_defconfig"
+export AGNI_BUILD_TYPE="AOSP-Q-R"
 SYNC_CONFIG=1
 WLAN_MODA11="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0"
 WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
@@ -65,7 +65,7 @@ else
 	rm -rf $KERNELDIR/$DIR
 	exit;
 fi
-#$KERNELDIR/scripts/mkdtimg/bin/mkdtimg create $KERNELDIR/$DIR/dtbo.img $COMPILEDIR_ATOLL/arch/arm64/boot/dts/qcom/*.dtbo
+$KERNELDIR/scripts/mkdtimg/bin/mkdtimg create $KERNELDIR/$DIR/dtbo.img $COMPILEDIR_ATOLL/arch/arm64/boot/dts/qcom/*.dtbo
 
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
 mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null

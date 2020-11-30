@@ -427,7 +427,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wno-strict-prototypes -Wno-trigraphs -pipe \
 		   -Wno-implicit-function-declaration \
 		   -Wno-format-security -Wno-unused-variable -Wno-unused-function \
 		   -std=gnu89 $(call cc-option,-fno-PIE) \
-		   -march=armv8-a+crc+crypto -mcpu=cortex-a55
+		   -march=armv8-a+crc+crypto -mcpu=cortex-a55 \
+		   -Wno-misleading-indentation
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
