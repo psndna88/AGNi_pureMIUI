@@ -983,6 +983,7 @@
 #include "sdxnightjar-usb.dtsi"
 #include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
+#include "sdxnightjar-ion.dtsi"
 #include "sdxnightjar-blsp.dtsi"
 
 &i2c_3 {
