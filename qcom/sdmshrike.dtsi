@@ -500,6 +500,15 @@
 		interrupt-parent = <&intc>;
 	};
 
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,sm8150-pdc";
+		reg = <0xb220000 0x30000>, <0x17c000f0 0x64>;
+		qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 1 0xf08>,
@@ -674,3 +683,4 @@
 
 #include "sdmshrike-pinctrl.dtsi"
 #include "sa8195-regulator.dtsi"
+#include "sm8150-pm.dtsi"
