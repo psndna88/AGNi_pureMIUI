@@ -16,6 +16,13 @@ properties:
   image_to_be_loaded:
     $ref: /schemas/types.yaml#/definitions/string
 
+  qcom,reserved-cpus:
+     Value type: <prop-encoded-array>
+     Definition: should contain cpus reserved for guestvm
+
+  qcom,unisolate-timeout-ms:
+    description: timeout, in ms, for unisolating reserved cpus.
+
 required:
   - compatible
   - image_to_be_loaded
@@ -25,5 +32,7 @@ examples:
     qcom,guestvm_loader {
       compatible = "qcom,guestvm-loader";
       image_to_be_loaded = "trustedvm";
+      qcom,reserved-cpus = <4 5>;
+      qcom,unisolate-timeout-ms = <8000>;
     };
 ...
