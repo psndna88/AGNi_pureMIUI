@@ -92,6 +92,13 @@ enum vidc_err_recovery_disable {
 	VIDC_DISABLE_NON_NOC_ERR_RECOV = 0x0002
 };
 
+struct log_cookie {
+	u32 used;
+	u32 session_type;
+	u32 codec_type;
+	char name[20];
+};
+
 extern int msm_vidc_debug;
 extern int msm_vidc_fw_debug_mode;
 extern bool msm_vidc_fw_coverage;
@@ -102,13 +109,7 @@ extern bool msm_vidc_lossless_encode;
 extern bool msm_vidc_cvp_usage;
 extern int msm_vidc_err_recovery_disable;
 extern int msm_vidc_vpp_delay;
-
-struct log_cookie {
-	u32 used;
-	u32 session_type;
-	u32 codec_type;
-	char name[20];
-};
+extern struct log_cookie ctxt[MAX_SUPPORTED_INSTANCES];
 
 #define dprintk(__level, sid, __fmt, ...)	\
 	do { \
@@ -200,9 +201,6 @@ void msm_vidc_debugfs_update(struct msm_vidc_inst *inst,
 int msm_vidc_check_ratelimit(void);
 int get_sid(u32 *sid, u32 session_type);
 void update_log_ctxt(u32 sid, u32 session_type, u32 fourcc);
-inline char *get_codec_name(u32 sid);
-inline void put_sid(u32 sid);
-inline bool is_print_allowed(u32 sid, u32 level);
 
 static inline char *get_debug_level_str(int level)
 {
@@ -223,6 +221,48 @@ static inline char *get_debug_level_str(int level)
 	default:
 		return "????";
 	}
+}
+
+/**
+ * 0xx -> allow prints for all sessions
+ * 1xx -> allow only encoder prints
+ * 2xx -> allow only decoder prints
+ * 4xx -> allow only cvp prints
+ */
+static inline bool is_print_allowed(u32 sid, u32 level)
+{
+	if (!(msm_vidc_debug & level))
+		return false;
+
+	if (!((msm_vidc_debug >> 8) & 0xF))
+		return true;
+
+	if (!sid || sid > MAX_SUPPORTED_INSTANCES)
+		return true;
+
+	if (ctxt[sid-1].session_type & msm_vidc_debug)
+		return true;
+
+	return false;
+}
+
+static inline char *get_codec_name(u32 sid)
+{
+	if (!sid || sid > MAX_SUPPORTED_INSTANCES)
+		return ".....";
+
+	return ctxt[sid-1].name;
+}
+
+static inline void put_sid(u32 sid)
+{
+	if (!sid || sid > MAX_SUPPORTED_INSTANCES) {
+		d_vpr_e("%s: invalid sid %#x\n",
+			__func__, sid);
+		return;
+	}
+	if (ctxt[sid-1].used)
+		ctxt[sid-1].used = 0;
 }
 
 static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
