@@ -24,7 +24,7 @@
 		pci-domain0 = &pcie0; /* PCIe0 domain */
 	};
 
-	chosen { };
+	chosen: chosen { };
 
 	memory { device_type = "memory"; reg = <0 0>; };
 
@@ -86,6 +86,10 @@
 			qcom,dload-mode = <&tcsr 0x13000>;
 		};
 	};
+};
+
+&chosen {
+
 };
 
 &soc {
