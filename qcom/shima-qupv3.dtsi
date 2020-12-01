@@ -59,6 +59,7 @@
 		qcom,ev-factor = <2>;
 		qcom,iommu-dma-addr-pool = <0x100000 0x100000>;
 		qcom,gpi-ee-offset = <0x10000>;
+		qcom,le-vm;
 		status = "ok";
 	};
 
@@ -197,8 +198,8 @@
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&qupv3_se10_spi_active>;
 		pinctrl-1 = <&qupv3_se10_spi_sleep>;
-		dmas = <&gpi_dma0 0 2 1 64 0>,
-			<&gpi_dma0 1 2 1 64 0>;
+		dmas = <&gpi_dma0 0 2 1 64 2>,
+			<&gpi_dma0 1 2 1 64 2>;
 		dma-names = "tx", "rx";
 		spi-max-frequency = <50000000>;
 		qcom,wrapper-core = <&qupv3_0>;
