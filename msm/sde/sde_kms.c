@@ -1272,59 +1272,6 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 	}
 }
 
-void _sde_kms_program_mode_info(struct sde_kms *sde_kms)
-{
-	struct drm_encoder *encoder;
-	struct drm_crtc *crtc;
-	struct drm_connector *connector;
-	struct drm_connector_list_iter conn_iter;
-	struct dsi_display *dsi_display;
-	struct drm_display_mode *drm_mode;
-	int i;
-	struct drm_device *dev;
-	u32 mode_index = 0;
-
-	if (!sde_kms->dev || !sde_kms->hw_mdp)
-		return;
-
-	dev = sde_kms->dev;
-	sde_kms->hw_mdp->ops.clear_mode_index(sde_kms->hw_mdp);
-
-	for (i = 0; i < sde_kms->dsi_display_count; i++) {
-		dsi_display = (struct dsi_display *)sde_kms->dsi_displays[i];
-
-		if (dsi_display->bridge->base.encoder) {
-			encoder = dsi_display->bridge->base.encoder;
-			crtc = encoder->crtc;
-
-			if (!crtc->state->active)
-				continue;
-
-			mutex_lock(&dev->mode_config.mutex);
-			drm_connector_list_iter_begin(dev, &conn_iter);
-			drm_for_each_connector_iter(connector, &conn_iter) {
-				if (connector->encoder_ids[0]
-						== encoder->base.id)
-					break;
-			}
-			drm_connector_list_iter_end(&conn_iter);
-			mutex_unlock(&dev->mode_config.mutex);
-
-			list_for_each_entry(drm_mode, &connector->modes, head) {
-				if (drm_mode_equal(
-						&crtc->state->mode, drm_mode))
-					break;
-				mode_index++;
-			}
-
-			sde_kms->hw_mdp->ops.set_mode_index(
-					sde_kms->hw_mdp, i, mode_index);
-			SDE_DEBUG("crtc:%d, display_idx:%d, mode_index:%d\n",
-					DRMID(crtc), i, mode_index);
-		}
-	}
-}
-
 int sde_kms_vm_trusted_post_commit(struct sde_kms *sde_kms,
 	struct drm_atomic_state *state)
 {
@@ -1420,6 +1367,9 @@ int sde_kms_vm_pre_release(struct sde_kms *sde_kms,
 	/* disable vblank events */
 	drm_crtc_vblank_off(crtc);
 
+	/* reset sw state */
+	sde_crtc_reset_sw_state(crtc);
+
 	return rc;
 }
 
@@ -1457,9 +1407,6 @@ int sde_kms_vm_primary_post_commit(struct sde_kms *sde_kms,
 
 	/* properly handoff color processing features */
 	sde_cp_crtc_vm_primary_handoff(crtc);
-
-	/* program the current drm mode info to scratch reg */
-	_sde_kms_program_mode_info(sde_kms);
 
 	/* handle non-SDE clients pre-release */
 	if (vm_ops->vm_client_pre_release) {
@@ -2701,6 +2648,9 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 				vm_ops->vm_owns_hw(sde_kms), rc);
 			goto end;
 		}
+
+		if (vm_ops->vm_resource_init)
+			rc = vm_ops->vm_resource_init(sde_kms, state);
 	}
 
 end:
@@ -3007,32 +2957,6 @@ static int _sde_kms_update_planes_for_cont_splash(struct sde_kms *sde_kms,
 	return 0;
 }
 
-static struct drm_display_mode *_sde_kms_get_splash_mode(
-		struct sde_kms *sde_kms, struct drm_connector *connector,
-		u32 display_idx)
-{
-	struct drm_display_mode *drm_mode = NULL, *curr_mode = NULL;
-	u32 i = 0, mode_index;
-
-	if (sde_kms->splash_data.type == SDE_SPLASH_HANDOFF) {
-		/* currently consider modes[0] as the preferred mode */
-		curr_mode = list_first_entry(&connector->modes,
-				struct drm_display_mode, head);
-	} else if (sde_kms->hw_mdp && sde_kms->hw_mdp->ops.get_mode_index) {
-		mode_index = sde_kms->hw_mdp->ops.get_mode_index(
-				sde_kms->hw_mdp, display_idx);
-		list_for_each_entry(drm_mode, &connector->modes, head) {
-			if (mode_index == i) {
-				curr_mode = drm_mode;
-				break;
-			}
-			i++;
-		}
-	}
-
-	return curr_mode;
-}
-
 static int sde_kms_inform_cont_splash_res_disable(struct msm_kms *kms,
 		struct dsi_display *dsi_display)
 {
@@ -3127,7 +3051,44 @@ static int sde_kms_vm_trusted_cont_splash_res_init(struct sde_kms *sde_kms)
 	return 0;
 }
 
-static int sde_kms_cont_splash_config(struct msm_kms *kms)
+static struct drm_display_mode *_sde_kms_get_splash_mode(
+		struct sde_kms *sde_kms, struct drm_connector *connector,
+		struct drm_atomic_state *state)
+{
+	struct drm_display_mode *mode, *cur_mode = NULL;
+	struct drm_crtc *crtc;
+	struct drm_crtc_state *new_cstate, *old_cstate;
+	u32 i = 0;
+
+	if (sde_kms->splash_data.type == SDE_SPLASH_HANDOFF) {
+		list_for_each_entry(mode, &connector->modes, head) {
+			if (mode->type & DRM_MODE_TYPE_PREFERRED) {
+				cur_mode = mode;
+				break;
+			}
+		}
+	} else if (state) {
+		/* get the mode from first atomic_check phase for trusted_vm*/
+		for_each_oldnew_crtc_in_state(state, crtc, old_cstate,
+				new_cstate, i) {
+
+			if (!new_cstate->active && !old_cstate->active)
+				continue;
+
+			list_for_each_entry(mode, &connector->modes, head) {
+				if (drm_mode_equal(&new_cstate->mode, mode)) {
+					cur_mode = mode;
+					break;
+				}
+			}
+		}
+	}
+
+	return cur_mode;
+}
+
+static int sde_kms_cont_splash_config(struct msm_kms *kms,
+		struct drm_atomic_state *state)
 {
 	void *display;
 	struct dsi_display *dsi_display;
@@ -3242,16 +3203,16 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms)
 
 		crtc->state->encoder_mask = (1 << drm_encoder_index(encoder));
 
-		drm_mode = _sde_kms_get_splash_mode(sde_kms, connector, i);
+		drm_mode = _sde_kms_get_splash_mode(sde_kms, connector, state);
 		if (!drm_mode) {
-			SDE_ERROR("invalid drm-mode type:%d, index:%d\n",
-				sde_kms->splash_data.type, i);
+			SDE_ERROR("drm_mode not found; handoff_type:%d\n",
+					sde_kms->splash_data.type);
 			return -EINVAL;
 		}
-
-		SDE_DEBUG("drm_mode->name = %s, type=0x%x, flags=0x%x\n",
+		SDE_DEBUG(
+		  "drm_mode->name:%s, type:0x%x, flags:0x%x, handoff_type:%d\n",
 				drm_mode->name, drm_mode->type,
-				drm_mode->flags);
+				drm_mode->flags, sde_kms->splash_data.type);
 
 		/* Update CRTC drm structure */
 		crtc->state->active = true;
@@ -4633,7 +4594,8 @@ void sde_kms_vm_trusted_resource_deinit(struct sde_kms *sde_kms)
 	memset(&sde_kms->splash_data, 0, sizeof(struct sde_splash_data));
 }
 
-int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms)
+int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms,
+		struct drm_atomic_state *state)
 {
 	struct drm_device *dev;
 	struct msm_drm_private *priv;
@@ -4674,7 +4636,7 @@ int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms)
 		goto error;
 	}
 
-	ret = sde_kms_cont_splash_config(&sde_kms->base);
+	ret = sde_kms_cont_splash_config(&sde_kms->base, state);
 	if (ret) {
 		SDE_ERROR("error in setting handoff configs\n");
 		goto error;
@@ -4689,8 +4651,6 @@ int sde_kms_vm_trusted_resource_init(struct sde_kms *sde_kms)
 	return 0;
 
 error:
-	sde_kms_vm_trusted_resource_deinit(sde_kms);
-
 	return ret;
 }
 
@@ -4709,18 +4669,24 @@ static int _sde_kms_register_events(struct msm_kms *kms,
 	}
 
 	sde_kms = to_sde_kms(kms);
-	vm_ops = sde_vm_get_ops(sde_kms);
-	sde_vm_lock(sde_kms);
-	if (vm_ops && vm_ops->vm_owns_hw && !vm_ops->vm_owns_hw(sde_kms)) {
-		sde_vm_unlock(sde_kms);
-		DRM_INFO("HW is owned by other VM\n");
-		return -EACCES;
-	}
 
+	/* check vm ownership, if event registration requires HW access */
 	switch (obj->type) {
 	case DRM_MODE_OBJECT_CRTC:
+		vm_ops = sde_vm_get_ops(sde_kms);
+		sde_vm_lock(sde_kms);
+
+		if (vm_ops && vm_ops->vm_owns_hw
+				&& !vm_ops->vm_owns_hw(sde_kms)) {
+			sde_vm_unlock(sde_kms);
+			SDE_DEBUG("HW is owned by other VM\n");
+			return -EACCES;
+		}
+
 		crtc = obj_to_crtc(obj);
 		ret = sde_crtc_register_custom_event(sde_kms, crtc, event, en);
+
+		sde_vm_unlock(sde_kms);
 		break;
 	case DRM_MODE_OBJECT_CONNECTOR:
 		conn = obj_to_connector(obj);
@@ -4729,7 +4695,6 @@ static int _sde_kms_register_events(struct msm_kms *kms,
 		break;
 	}
 
-	sde_vm_unlock(sde_kms);
 	return ret;
 }
 
