@@ -82,6 +82,11 @@ mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
 mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
 mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
 mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
+mv -f $RTL8188EU/8188eu.ko $KERNELDIR/$DIR 2>/dev/null
+mv -f $RTL8712U/8712u.ko $KERNELDIR/$DIR 2>/dev/null
+mv -f $RTL8723AU/8723au.ko $KERNELDIR/$DIR 2>/dev/null
+mv -f $RTL8192EU/8192eu.ko $KERNELDIR/$DIR 2>/dev/null
+mv -f $ALMK $KERNELDIR/$DIR 2>/dev/null
 
 ###### COMPILE old cam
 echo ""
@@ -115,10 +120,6 @@ mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
 mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
 mv -f $WLAN_MODP/wlan.ko $KERNELDIR/$DIR/wlan_pie.ko 2>/dev/null
 mv -f $WLAN_MODPO/wlan.ko $KERNELDIR/$DIR/wlan_pie_old.ko 2>/dev/null
-mv -f $RTL8188EU/8188eu.ko $KERNELDIR/$DIR 2>/dev/null
-mv -f $RTL8712U/8712u.ko $KERNELDIR/$DIR 2>/dev/null
-mv -f $RTL8723AU/8723au.ko $KERNELDIR/$DIR 2>/dev/null
-mv -f $RTL8192EU/8192eu.ko $KERNELDIR/$DIR 2>/dev/null
 
 ###### COMPILE MIUI-Q cam
 echo ""
