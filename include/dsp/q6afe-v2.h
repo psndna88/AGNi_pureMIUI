@@ -34,6 +34,7 @@
 #define RT_PROXY_DAI_001_TX	0xF0
 #define RT_PROXY_DAI_002_RX	0xF1
 #define RT_PROXY_DAI_002_TX	0xE1
+#define RT_PROXY_DAI_003_RX	0xE2
 #define RT_PROXY_DAI_003_TX	0xF2
 #define VIRTUAL_ID_TO_PORTID(val) ((val & 0xF) | 0x2000)
 #define PORTID_TO_IDX(val)	((val & 0xF) >> 1)
