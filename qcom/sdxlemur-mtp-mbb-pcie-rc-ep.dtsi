@@ -8,7 +8,7 @@
 	#address-cells = <5>;
 	#size-cells = <0>;
 
-	pcie0_generic_ep: pcie0_rp_ep {
+	pcie0_generic_ep: pcie0_generic_ep {
 		reg = <0 0 0 0 0>;
 		qcom,iommu-group = <&pcie0_generic_ep_iommu_group>;
 
