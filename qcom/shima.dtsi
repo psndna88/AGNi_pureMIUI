@@ -1174,6 +1174,8 @@
 	qcom,guestvm_loader {
 		compatible = "qcom,guestvm-loader";
 		image_to_be_loaded = "trustedvm";
+		qcom,reserved-cpus = <4 5>;
+		qcom,unisolate-timeout-ms = <8000>;
 	};
 
 
