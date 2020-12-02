@@ -113,6 +113,7 @@
 		qcom,l1-2-th-value = <70>;
 		qcom,slv-addr-space-size = <0x4000000>;
 		qcom,ep-latency = <10>;
+		qcom,num-parf-testbus-sel = <0xb9>;
 
 		qcom,phy-manage-pll = <1>;
 		qcom,phy-resetsm-cntrl2 = <0xa0>;
