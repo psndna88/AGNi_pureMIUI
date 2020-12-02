@@ -65,6 +65,11 @@
 #define EDID_VENDOR_ID_SIZE     4
 #define EDID_IEEE_REG_ID        0x0c03
 
+enum edid_screen_orientation {
+	LANDSCAPE = 1,
+	PORTRAIT = 2,
+};
+
 enum edid_sink_mode {
 	SINK_MODE_DVI,
 	SINK_MODE_HDMI
@@ -143,6 +148,8 @@ struct hdmi_edid_ctrl {
 	u8 cea_blks;
 	/* DC: MSB -> LSB: Y420_48|Y420_36|Y420_30|RGB48|RGB36|RGB30|Y444 */
 	u8 deep_color;
+	u8 physical_width;
+	u8 physical_height;
 	u16 physical_address;
 	u32 video_resolution; /* selected by user */
 	u32 sink_mode; /* HDMI or DVI */
@@ -166,6 +173,9 @@ struct hdmi_edid_ctrl {
 	bool y420_cmdb_present;
 	bool y420_cmdb_supports_all;
 	struct hdmi_edid_y420_cmdb y420_cmdb;
+
+	enum edid_screen_orientation orientation;
+	enum aspect_ratio aspect_ratio;
 
 	struct hdmi_edid_sink_data sink_data;
 	struct hdmi_edid_init_data init_data;
@@ -254,6 +264,11 @@ int hdmi_edid_reset_parser(void *input)
 	edid_ctrl->y420_cmdb_supports_all = false;
 	kfree(edid_ctrl->y420_cmdb.vic_list);
 	memset(&edid_ctrl->y420_cmdb, 0, sizeof(edid_ctrl->y420_cmdb));
+
+	edid_ctrl->physical_width = 0;
+	edid_ctrl->physical_height = 0;
+	edid_ctrl->orientation = 0;
+	edid_ctrl->aspect_ratio = HDMI_RES_AR_INVALID;
 	return 0;
 }
 
@@ -448,6 +463,30 @@ static ssize_t hdmi_edid_sysfs_rda_modes(struct device *dev,
 } /* hdmi_edid_sysfs_rda_modes */
 static DEVICE_ATTR(edid_modes, S_IRUGO | S_IWUSR, hdmi_edid_sysfs_rda_modes,
 	hdmi_edid_sysfs_wta_modes);
+
+static ssize_t hdmi_edid_sysfs_rda_screen_size(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	struct hdmi_edid_ctrl *edid_ctrl = hdmi_edid_get_ctrl(dev);
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	ret += scnprintf(buf + ret, PAGE_SIZE - ret, "%d",
+			(edid_ctrl->physical_width * 10));
+	ret += scnprintf(buf + ret, PAGE_SIZE - ret, " %d",
+			(edid_ctrl->physical_height * 10));
+
+	DEV_DBG("%s: '%s'\n", __func__, buf);
+	ret += scnprintf(buf + ret, PAGE_SIZE - ret, "\n");
+
+	return ret;
+} /* hdmi_edid_sysfs_rda_screen_size */
+static DEVICE_ATTR(edid_screen_size, S_IRUGO, hdmi_edid_sysfs_rda_screen_size,
+		NULL);
 
 static ssize_t hdmi_edid_sysfs_rda_res_info_data(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -855,6 +894,7 @@ static DEVICE_ATTR(hdr_data, S_IRUGO, hdmi_edid_sysfs_rda_hdr_data, NULL);
 
 static struct attribute *hdmi_edid_fs_attrs[] = {
 	&dev_attr_edid_modes.attr,
+	&dev_attr_edid_screen_size.attr,
 	&dev_attr_pa.attr,
 	&dev_attr_scan_info.attr,
 	&dev_attr_edid_3d_modes.attr,
@@ -1514,6 +1554,68 @@ static u32 hdmi_edid_extract_ieee_reg_id(struct hdmi_edid_ctrl *edid_ctrl,
 
 	return ((u32)vsd[3] << 16) + ((u32)vsd[2] << 8) + (u32)vsd[1];
 } /* hdmi_edid_extract_ieee_reg_id */
+
+static void hdmi_edid_extract_bdpf(struct hdmi_edid_ctrl *edid_ctrl)
+{
+	u8 *edid_buf = NULL;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return;
+	}
+
+	edid_buf = edid_ctrl->edid_buf;
+	if (edid_buf[21] && edid_buf[22]) {
+		edid_ctrl->physical_width = edid_buf[21];
+		edid_ctrl->physical_height = edid_buf[22];
+
+		DEV_DBG("%s: EDID: Horizontal Screen Size = %d cm\n",
+				__func__, edid_ctrl->physical_width);
+		DEV_DBG("%s: EDID: Vertical Screen Size = %d cm\n",
+				__func__, edid_ctrl->physical_height);
+	} else if (edid_buf[21]) {
+		edid_ctrl->orientation = LANDSCAPE;
+		switch (edid_buf[21]) {
+		case 0x4F:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_16_9;
+			break;
+		case 0x3D:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_16_10;
+			break;
+		case 0x22:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_4_3;
+			break;
+		case 0x1A:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_5_4;
+			break;
+		}
+		DEV_DBG("%s: EDID: Landscape Aspect Ratio = %d\n",
+				__func__, edid_ctrl->aspect_ratio);
+	} else if (edid_buf[22]) {
+		edid_ctrl->orientation = PORTRAIT;
+		switch (edid_buf[22]) {
+		case 0x4F:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_16_9;
+			break;
+		case 0x3D:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_16_10;
+			break;
+		case 0x22:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_4_3;
+			break;
+		case 0x1A:
+			edid_ctrl->aspect_ratio = HDMI_RES_AR_5_4;
+			break;
+		}
+		DEV_DBG("%s: EDID: Portrait Aspect Ratio = %d\n",
+				__func__, edid_ctrl->aspect_ratio);
+	} else {
+		pr_debug("%s: Undefined Screen size/Aspect ratio\n", __func__);
+		edid_ctrl->orientation = 0;
+		edid_ctrl->physical_width = 0;
+		edid_ctrl->physical_height = 0;
+	}
+}
 
 static void hdmi_edid_extract_vendor_id(struct hdmi_edid_ctrl *edid_ctrl)
 {
@@ -2462,6 +2564,8 @@ int hdmi_edid_parser(void *input)
 
 	hdmi_edid_extract_vendor_id(edid_ctrl);
 
+	hdmi_edid_extract_bdpf(edid_ctrl);
+
 	/* EDID_CEA_EXTENSION_FLAG[0x7E] - CEC extension byte */
 	num_of_cea_blocks = edid_buf[EDID_BLOCK_SIZE - 2];
 	DEV_DBG("%s: No. of CEA/Extended EDID blocks is  [%u]\n", __func__,
@@ -2912,6 +3016,30 @@ bool hdmi_edid_is_audio_supported(void *input)
 	 * data block was successfully parsed.
 	 */
 	return (edid_ctrl->basic_audio_supp || edid_ctrl->adb_size);
+}
+
+u32 hdmi_edid_get_phys_width(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid edid_ctrl data\n", __func__);
+		return 0;
+	}
+
+	return (u32)edid_ctrl->physical_width * 10; /* return in mm */
+}
+
+u32 hdmi_edid_get_phys_height(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid edid_ctrl data\n", __func__);
+		return 0;
+	}
+
+	return (u32)edid_ctrl->physical_height * 10; /* return in mm */
 }
 
 void hdmi_edid_deinit(void *input)
