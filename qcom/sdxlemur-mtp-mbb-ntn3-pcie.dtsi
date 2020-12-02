@@ -1,4 +1,4 @@
-#include "sdxlemur-pmic-overlay.dtsi"
+#include "sdxlemur-mtp.dtsi"
 
 &soc {
 

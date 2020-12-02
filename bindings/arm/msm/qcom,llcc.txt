@@ -13,6 +13,7 @@ Properties:
 	Value type: <string>
 	Definition: must be "qcom,sdm845-llcc" or "qcom,lahaina-llcc"
 	            or "qcom,shima-llcc" or "qcom,sdxlemur-llcc"
+	            or "qcom,yupik-llcc"
 		    "qcom,llcc-v2" must be appended for V2 hardware.
 
 - reg:
