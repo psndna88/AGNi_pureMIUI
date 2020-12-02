@@ -2930,8 +2930,6 @@ add_rsn_caps:
 			WLAN_CRYPTO_ADDSHORT(frm, 1);
 			qdf_mem_copy(frm, pmksa->pmkid, PMKID_LEN);
 			frm += PMKID_LEN;
-		} else {
-			WLAN_CRYPTO_ADDSHORT(frm, 0);
 		}
 	}
 
@@ -4061,7 +4059,6 @@ wlan_crypto_reset_prarams(struct wlan_crypto_params *params)
 	params->ucastcipherset = 0;
 	params->mcastcipherset = 0;
 	params->mgmtcipherset = 0;
-	params->cipher_caps = 0;
 	params->key_mgmt = 0;
 	params->rsn_caps = 0;
 }

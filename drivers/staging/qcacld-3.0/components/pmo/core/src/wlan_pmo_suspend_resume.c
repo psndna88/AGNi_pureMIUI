@@ -730,16 +730,19 @@ out:
  * @psoc: objmgr psoc handle
  * @psoc_ctx: pmo psoc private ctx
  * @wow_params: collection of wow enable override parameters
+ * @type: type of wow suspend
  *
  * Return: QDF status
  */
 static QDF_STATUS
 pmo_core_enable_wow_in_fw(struct wlan_objmgr_psoc *psoc,
 			  struct pmo_psoc_priv_obj *psoc_ctx,
-			  struct pmo_wow_enable_params *wow_params)
+			  struct pmo_wow_enable_params *wow_params,
+			  enum qdf_suspend_type type)
 {
 	int host_credits, wmi_pending_cmds;
 	struct pmo_wow_cmd_params param = {0};
+	struct pmo_psoc_cfg *psoc_cfg = &psoc_ctx->psoc_cfg;
 	QDF_STATUS status;
 
 	pmo_enter();
@@ -810,6 +813,19 @@ pmo_core_enable_wow_in_fw(struct wlan_objmgr_psoc *psoc,
 		pmo_info("Prevent link down, non-drv wow is enabled");
 	}
 
+	if (type == QDF_SYSTEM_SUSPEND) {
+		pmo_info("system suspend wow");
+		param.flags |= WMI_WOW_FLAG_SYSTEM_SUSPEND_WOW;
+	} else {
+		pmo_info("RTPM wow");
+	}
+
+	if ((psoc_cfg) &&
+	    (psoc_cfg->is_mod_dtim_on_sys_suspend_enabled)) {
+		pmo_info("mod DTIM enabled");
+		param.flags |= WMI_WOW_FLAG_MOD_DTIM_ON_SYS_SUSPEND;
+	}
+
 	status = pmo_tgt_psoc_send_wow_enable_req(psoc, &param);
 	if (status != QDF_STATUS_SUCCESS) {
 		pmo_err("Failed to enable wow in fw");
@@ -844,7 +860,7 @@ pmo_core_enable_wow_in_fw(struct wlan_objmgr_psoc *psoc,
 		pmo_err("No Credits after HTC ACK:%d, pending_cmds:%d,"
 			 "cannot resume back", host_credits, wmi_pending_cmds);
 		htc_dump_counter_info(pmo_core_psoc_get_htc_handle(psoc));
-		qdf_trigger_self_recovery(psoc, QDF_SUSPEND_TIMEOUT);
+		qdf_trigger_self_recovery(psoc, QDF_SUSPEND_NO_CREDIT);
 	}
 	pmo_debug("WOW enabled successfully in fw: credits:%d pending_cmds: %d",
 		host_credits, wmi_pending_cmds);
@@ -927,7 +943,9 @@ QDF_STATUS pmo_core_psoc_bus_suspend_req(struct wlan_objmgr_psoc *psoc,
 
 	begin = qdf_get_log_timestamp_usecs();
 	if (wow_mode_selected)
-		status = pmo_core_enable_wow_in_fw(psoc, psoc_ctx, wow_params);
+		status = pmo_core_enable_wow_in_fw(psoc, psoc_ctx,
+						   wow_params,
+						   type);
 	else
 		status = pmo_core_psoc_suspend_target(psoc, 0);
 	end = qdf_get_log_timestamp_usecs();
