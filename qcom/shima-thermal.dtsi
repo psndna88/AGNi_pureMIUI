@@ -834,12 +834,6 @@
 				cooling-device = <&cpu0_isolate 1 1>;
 			};
 
-			cpu00_cdev1 {
-				trip = <&cpu00_config>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
-			};
-
 			cpu00_cdev2 {
 				trip = <&cpu00_config1>;
 				cooling-device = <&cpu0_hotplug 1 1>;
@@ -870,12 +864,6 @@
 			cpu01_cdev {
 				trip = <&cpu01_config>;
 				cooling-device = <&cpu1_isolate 1 1>;
-			};
-
-			cpu01_cdev1 {
-				trip = <&cpu01_config>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
 			};
 
 			cpu01_cdev2 {
@@ -910,12 +898,6 @@
 				cooling-device = <&cpu2_isolate 1 1>;
 			};
 
-			cpu02_cdev1 {
-				trip = <&cpu02_config>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
-			};
-
 			cpu02_cdev2 {
 				trip = <&cpu02_config1>;
 				cooling-device = <&cpu2_hotplug 1 1>;
@@ -946,12 +928,6 @@
 			cpu03_cdev {
 				trip = <&cpu03_config>;
 				cooling-device = <&cpu3_isolate 1 1>;
-			};
-
-			cpu03_cdev1 {
-				trip = <&cpu03_config>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
 			};
 
 			cpu03_cdev2 {
@@ -1407,6 +1383,94 @@
 			modem-tj-cdev {
 				trip = <&nspss2_trip>;
 				cooling-device = <&modem_tj 3 3>;
+			};
+		};
+	};
+
+	modem-lte-sub6-pa1 {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_PA)>;
+		trips {
+			modem_trip0: modem-trip0 {
+				temperature = <46000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			modem_trip1: modem-trip1 {
+				temperature = <47000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			modem_trip2: modem-trip2 {
+				temperature = <54000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			modem_cdev0 {
+				trip = <&modem_trip0>;
+				cooling-device = <&modem_pa 1 1>;
+			};
+
+			modem_cdev1 {
+				trip = <&modem_trip1>;
+				cooling-device = <&modem_pa 2 2>;
+			};
+
+			modem_cdev2 {
+				trip = <&modem_trip2>;
+				cooling-device = <&modem_pa 3 3>;
+			};
+		};
+	};
+
+	modem-lte-sub6-pa2 {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_PA_1)>;
+		trips {
+			modem_pa_fr1_trip0: modem-pa-fr1-trip0 {
+				temperature = <46000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			modem_pa_fr1_trip1: modem-pa-fr1-trip1 {
+				temperature = <47000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			modem_pa_fr1_trip2: modem-pa-fr1-trip2 {
+				temperature = <55000>;
+				hysteresis = <5000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			modem_cdev0 {
+				trip = <&modem_pa_fr1_trip0>;
+				cooling-device = <&modem_pa_fr1 1 1>;
+			};
+
+			modem_cdev1 {
+				trip = <&modem_pa_fr1_trip1>;
+				cooling-device = <&modem_pa_fr1 2 2>;
+			};
+
+			modem_cdev2 {
+				trip = <&modem_pa_fr1_trip2>;
+				cooling-device = <&modem_pa_fr1 3 3>;
 			};
 		};
 	};

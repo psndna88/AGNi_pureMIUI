@@ -2,7 +2,6 @@
 
 &soc {
 	kgsl_smmu: kgsl-smmu@0x59a0000 {
-		status = "disabled";
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x59a0000 0x10000>,
 			<0x59c2000 0x20>;
@@ -40,7 +39,6 @@
 	};
 
 	apps_smmu: apps-smmu@0xc600000 {
-				status = "disabled";
 				compatible = "qcom,qsmmu-v500";
 				reg = <0xc600000 0x80000>,
 					<0xc782000 0x20>;

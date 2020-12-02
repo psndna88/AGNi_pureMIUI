@@ -9,6 +9,7 @@
 #include <dt-bindings/interconnect/qcom,sdxlemur.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include <dt-bindings/spmi/spmi.h>
 
 / {
 	#address-cells = <1>;
@@ -53,6 +54,14 @@
 			compatible = "shared-dma-pool";
 			no-map;
 			size = <0x400000>;
+		};
+
+		cnss_wlan_mem: cnss_wlan_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
 		};
 	};
 
@@ -184,7 +193,7 @@
 		qcom,transaction_timeout = <0>;
 
 		reg-names = "dcc-base", "dcc-ram-base";
-		dcc-ram-offset = <0x800>;
+		dcc-ram-offset = <0x12000>;
 	};
 
 	wdog: qcom,wdt@17817000 {
@@ -438,6 +447,16 @@
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_QPIC_CLK>;
 
+		interconnects = <&system_noc MASTER_QPIC &mc_virt SLAVE_EBI1>;
+		interconnect-names = "nand-ddr";
+		qcom,msm-bus,name = "qpic_nand";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<0 0>,
+		/* Voting for max b/w on PNOC bus for now */
+			<400000 400000>;
+
 		status = "disabled";
 	};
 
@@ -458,8 +477,6 @@
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
-
-		qcom,devfreq,freq-table = <50000000 200000000>;
 
 		status = "disabled";
 
@@ -904,6 +921,33 @@
 		qcom,ee = <0>;
 	};
 
+	spmi_debug_bus: qcom,spmi-debug@6b12000 {
+		compatible = "qcom,spmi-pmic-arb-debug";
+		reg = <0x6b12000 0x60>, <0x7820a8 0x4>;
+		reg-names = "core", "fuse";
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "core_clk";
+		qcom,fuse-disable-bit = <24>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		qcom,pmk8350-debug@0 {
+			compatible = "qcom,spmi-pmic";
+			reg = <0 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pmx65-debug@1 {
+			compatible = "qcom,spmi-pmic";
+			reg = <1 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+	};
+
 	thermal_zones: thermal-zones {
 	};
 
@@ -918,6 +962,7 @@
 
 #include "sdxlemur-pinctrl.dtsi"
 #include "sdxlemur-regulators.dtsi"
+#include "sdxlemur-coresight.dtsi"
 #include "msm-arm-smmu-sdxlemur.dtsi"
 #include "sdxlemur-ion.dtsi"
 #include "sdxlemur-usb.dtsi"
