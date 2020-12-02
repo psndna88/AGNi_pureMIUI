@@ -117,6 +117,7 @@ found:
 
 	return t;
 }
+EXPORT_SYMBOL(find_lock_task_mm);
 
 /*
  * order == -1 means the oom kill is required by sysrq, otherwise only
@@ -382,6 +383,7 @@ void dump_tasks(struct mem_cgroup *memcg, const nodemask_t *nodemask)
 	}
 	rcu_read_unlock();
 }
+EXPORT_SYMBOL(dump_tasks);
 
 static void dump_header(struct oom_control *oc, struct task_struct *p,
 			struct mem_cgroup *memcg)

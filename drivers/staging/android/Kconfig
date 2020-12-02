@@ -29,7 +29,7 @@ config ANDROID_TIMED_GPIO
 	  a gpio pin and restore it automatically after a specified timeout.
 
 config ANDROID_LOW_MEMORY_KILLER
-	bool "Android Low Memory Killer"
+	tristate "Android Low Memory Killer"
 	---help---
 	  Registers processes to be killed when low memory conditions, this is useful
 	  as there is no particular swap space on android.

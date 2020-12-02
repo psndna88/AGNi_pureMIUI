@@ -53,6 +53,7 @@
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <linux/poll.h>
+#include <linux/module.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/almk.h>
@@ -739,7 +740,7 @@ static int __init lowmem_init(void)
 	lmk_event_init();
 	return 0;
 }
-device_initcall(lowmem_init);
+static void __exit lowmem_exit(void) { }
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 static short lowmem_oom_adj_to_oom_score_adj(short oom_adj)
@@ -837,3 +838,9 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 
+module_init(lowmem_init);
+module_exit(lowmem_exit);
+
+MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR("LMK <lmk@vcaf.org>");
+MODULE_DESCRIPTION("Android LMK");

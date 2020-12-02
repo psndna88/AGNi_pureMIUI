@@ -286,6 +286,7 @@ EXPORT_SYMBOL(nr_online_nodes);
 #endif
 
 int page_group_by_mobility_disabled __read_mostly;
+EXPORT_SYMBOL(page_group_by_mobility_disabled);
 
 #ifdef CONFIG_DEFERRED_STRUCT_PAGE_INIT
 
@@ -1557,6 +1558,7 @@ int *get_migratetype_fallbacks(int mtype)
 {
 	return fallbacks[mtype];
 }
+EXPORT_SYMBOL(get_migratetype_fallbacks);
 
 #ifdef CONFIG_CMA
 static struct page *__rmqueue_cma_fallback(struct zone *zone,
@@ -2589,6 +2591,7 @@ bool zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 	return __zone_watermark_ok(z, order, mark, classzone_idx, alloc_flags,
 					zone_page_state(z, NR_FREE_PAGES));
 }
+EXPORT_SYMBOL(zone_watermark_ok);
 
 bool zone_watermark_ok_safe(struct zone *z, unsigned int order,
 			unsigned long mark, int classzone_idx)

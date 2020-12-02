@@ -163,6 +163,7 @@ u64 zcache_pages(void)
 
 	return count;
 }
+EXPORT_SYMBOL(zcache_pages);
 
 static struct kmem_cache *zcache_rbnode_cache;
 static int zcache_rbnode_cache_create(void)

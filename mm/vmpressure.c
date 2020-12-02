@@ -52,6 +52,7 @@ int vmpressure_notifier_register(struct notifier_block *nb)
 {
 	return blocking_notifier_chain_register(&vmpressure_notifier, nb);
 }
+EXPORT_SYMBOL(vmpressure_notifier_register);
 
 int vmpressure_notifier_unregister(struct notifier_block *nb)
 {

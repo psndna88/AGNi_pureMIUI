@@ -70,6 +70,7 @@ struct zoneref *next_zones_zonelist(struct zoneref *z,
 
 	return z;
 }
+EXPORT_SYMBOL(next_zones_zonelist);
 
 #ifdef CONFIG_ARCH_HAS_HOLES_MEMORYMODEL
 int memmap_valid_within(unsigned long pfn,
