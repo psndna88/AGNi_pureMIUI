@@ -535,8 +535,8 @@ int32_t cam_context_acquire_dev_to_hw(struct cam_context *ctx,
 		cmd->resource_hdl);
 
 	if (cmd->num_resources > CAM_CTX_RES_MAX) {
-		CAM_ERR(CAM_CTXT, "[%s][%d] resource limit exceeded",
-			ctx->dev_name, ctx->ctx_id);
+		CAM_ERR(CAM_CTXT, "[%s][%d] resource[%d] limit exceeded",
+			ctx->dev_name, ctx->ctx_id, cmd->num_resources);
 		rc = -ENOMEM;
 		goto end;
 	}

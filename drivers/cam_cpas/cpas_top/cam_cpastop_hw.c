@@ -683,6 +683,40 @@ done:
 	return IRQ_HANDLED;
 }
 
+static int cam_cpastop_print_poweron_settings(struct cam_hw_info *cpas_hw)
+{
+	int i;
+
+	for (i = 0; i < camnoc_info->specific_size; i++) {
+		if (camnoc_info->specific[i].enable) {
+			CAM_INFO(CAM_CPAS, "Reading QoS settings for %d",
+				camnoc_info->specific[i].port_type);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].priority_lut_low);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].priority_lut_high);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].urgency);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].danger_lut);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].safe_lut);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].ubwc_ctl);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].flag_out_set0_low);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].qosgen_mainctl);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].qosgen_shaping_low);
+			cam_cpas_util_reg_read(cpas_hw, CAM_CPAS_REG_CAMNOC,
+				&camnoc_info->specific[i].qosgen_shaping_high);
+		}
+	}
+
+	return 0;
+}
+
 static int cam_cpastop_poweron(struct cam_hw_info *cpas_hw)
 {
 	int i;
@@ -899,6 +933,8 @@ int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->power_on = cam_cpastop_poweron;
 	internal_ops->power_off = cam_cpastop_poweroff;
 	internal_ops->setup_qos_settings = cam_cpastop_setup_qos_settings;
+	internal_ops->print_poweron_settings =
+		cam_cpastop_print_poweron_settings;
 
 	return 0;
 }

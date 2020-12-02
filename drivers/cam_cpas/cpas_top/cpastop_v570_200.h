@@ -802,14 +802,14 @@ static struct cam_camnoc_specific
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2D20, /* JPEG_QOSGEN_SHAPING_LOW */
-			.value = 0x05050505,
+			.value = 0xA0A0A0A,
 		},
 		.qosgen_shaping_high = {
 			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x2D24, /* JPEG_QOSGEN_SHAPING_HIGH */
-			.value = 0x05050505,
+			.value = 0xA0A0A0A,
 		},
 	},
 	{

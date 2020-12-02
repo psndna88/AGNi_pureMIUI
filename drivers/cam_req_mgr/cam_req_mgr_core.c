@@ -1632,7 +1632,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 	struct cam_req_mgr_slot             *slot = NULL;
 	struct cam_req_mgr_req_queue        *in_q;
 	struct cam_req_mgr_core_session     *session;
-	struct cam_req_mgr_connected_device *dev;
+	struct cam_req_mgr_connected_device *dev = NULL;
 	struct cam_req_mgr_core_link        *tmp_link = NULL;
 	uint32_t                             max_retry = 0;
 
@@ -1746,6 +1746,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 			}
 			spin_unlock_bh(&link->link_state_spin_lock);
 			__cam_req_mgr_notify_frame_skip(link, trigger);
+			__cam_req_mgr_validate_crm_wd_timer(link);
 			goto end;
 		}
 	}
@@ -1758,7 +1759,7 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		if (link->max_delay == 1)
 			max_retry++;
 
-		if (!link->wq_congestion) {
+		if (!link->wq_congestion && dev) {
 			link->retry_cnt++;
 			if (link->retry_cnt == max_retry) {
 				CAM_DBG(CAM_CRM,
@@ -3324,6 +3325,10 @@ static int cam_req_mgr_cb_notify_trigger(
 		CAM_ERR_RATE_LIMIT(CAM_CRM, "no empty task frame %lld",
 			trigger_data->frame_id);
 		rc = -EBUSY;
+		spin_lock_bh(&link->link_state_spin_lock);
+		if ((link->watchdog) && !(link->watchdog->pause_timer))
+			link->watchdog->pause_timer = true;
+		spin_unlock_bh(&link->link_state_spin_lock);
 		goto end;
 	}
 	task_data = (struct crm_task_payload *)task->payload;
