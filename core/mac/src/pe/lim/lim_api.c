@@ -1210,7 +1210,7 @@ static QDF_STATUS pe_handle_mgmt_frame(struct wlan_objmgr_psoc *psoc,
 	int ret;
 
 	/* skip offload packets */
-	if (ucfg_pkt_capture_get_mode(psoc) &&
+	if ((ucfg_pkt_capture_get_mode(psoc) != PACKET_CAPTURE_MODE_DISABLE) &&
 	    mgmt_rx_params->status & WMI_RX_OFFLOAD_MON_MODE) {
 		qdf_nbuf_free(buf);
 		return QDF_STATUS_SUCCESS;
@@ -2866,7 +2866,7 @@ void lim_mon_deinit_session(struct mac_context *mac_ptr,
 {
 	struct pe_session *session;
 
-	session = pe_find_session_by_session_id(mac_ptr, msg->vdev_id);
+	session = pe_find_session_by_vdev_id(mac_ptr, msg->vdev_id);
 
 	if (session && session->bssType == eSIR_MONITOR_MODE)
 		pe_delete_session(mac_ptr, session);

@@ -1830,7 +1830,7 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	struct net_device *dev = adapter->dev;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-	bool sendDisconInd = true;
+	bool send_discon_ind = true;
 	mac_handle_t mac_handle;
 	struct wlan_ies disconnect_ies = {0};
 	bool from_ap = false;
@@ -1878,8 +1878,13 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	    sta_ctx->conn_info.conn_state) ||
 	    (eConnectionState_Connecting ==
 	    sta_ctx->conn_info.conn_state)) {
-		hdd_debug("HDD has initiated a disconnect, no need to send disconnect indication to kernel");
-		sendDisconInd = false;
+		if (hdd_ctx->disconnect_for_sta_mon_conc) {
+			hdd_debug("Disconnect triggered by HDD to add monitor intf notify kernel");
+			hdd_ctx->disconnect_for_sta_mon_conc = false;
+		} else {
+			hdd_debug("HDD has initiated a disconnect, don't send disconnect indication to kernel");
+			send_discon_ind = false;
+		}
 	} else {
 		INIT_COMPLETION(adapter->disconnect_comp_var);
 		hdd_conn_set_connection_state(adapter,
@@ -1917,7 +1922,7 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	 * Only send indication to kernel if not initiated
 	 * by kernel
 	 */
-	if (sendDisconInd) {
+	if (send_discon_ind) {
 		int reason = WLAN_REASON_UNSPECIFIED;
 
 		if (roam_info && roam_info->disconnect_ies) {
@@ -2030,6 +2035,28 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	 */
 	sta_ctx->hdd_reassoc_scenario = false;
 
+	/*
+	* Following code will be cleaned once the interface manager
+	* module is enabled.
+	*/
+#ifdef WLAN_FEATURE_INTERFACE_MGR
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (vdev) {
+		ucfg_if_mgr_deliver_event(vdev,
+					  WLAN_IF_MGR_EV_DISCONNECT_COMPLETE,
+					  NULL);
+		hdd_objmgr_put_vdev(vdev);
+	}
+#else
+	if (policy_mgr_is_sta_active_connection_exists(hdd_ctx->psoc) &&
+	    QDF_STA_MODE == adapter->device_mode) {
+		sme_enable_roaming_on_connected_sta(mac_handle,
+						    adapter->vdev_id);
+		policy_mgr_set_pcl_for_connected_vdev(hdd_ctx->psoc,
+						      adapter->vdev_id, true);
+	}
+#endif
+
 	/* Unblock anyone waiting for disconnect to complete */
 	complete(&adapter->disconnect_comp_var);
 
@@ -2040,23 +2067,6 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	hdd_reset_limit_off_chan(adapter);
 
 	hdd_print_bss_info(sta_ctx);
-
-	/*
-	 * Following code will be cleaned once the interface manager
-	 * module is enabled.
-	 */
-#ifdef WLAN_FEATURE_INTERFACE_MGR
-	ucfg_if_mgr_deliver_event(adapter->vdev,
-				  WLAN_IF_MGR_EV_DISCONNECT_COMPLETE, NULL);
-#else
-	if (policy_mgr_is_sta_active_connection_exists(hdd_ctx->psoc) &&
-	    QDF_STA_MODE == adapter->device_mode) {
-		sme_enable_roaming_on_connected_sta(mac_handle,
-						    adapter->vdev_id);
-		policy_mgr_set_pcl_for_connected_vdev(hdd_ctx->psoc,
-						      adapter->vdev_id, true);
-	}
-#endif
 
 	return status;
 }
@@ -3381,6 +3391,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					      eCSR_BSS_TYPE_INFRASTRUCTURE);
 			}
 
+			hdd_nud_indicate_roam(adapter);
 			/* Start the tx queues */
 			hdd_debug("Enabling queues");
 			hdd_netif_queue_enable(adapter);

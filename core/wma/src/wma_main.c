@@ -6842,7 +6842,8 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 		wma_update_num_peers_tids(wma_handle, wlan_res_cfg);
 	}
 
-	if (ucfg_pkt_capture_get_mode(wma_handle->psoc) &&
+	if ((ucfg_pkt_capture_get_mode(wma_handle->psoc) !=
+						PACKET_CAPTURE_MODE_DISABLE) &&
 	    wmi_service_enabled(wmi_handle,
 				wmi_service_packet_capture_support))
 		wlan_res_cfg->pktcapture_support = true;
@@ -8502,9 +8503,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 	case WMA_SET_MAX_TX_POWER_REQ:
 		wma_set_max_tx_power(wma_handle,
 				     (tpMaxTxPowerParams) msg->bodyptr);
-		break;
-	case WMA_SEND_MAX_TX_POWER:
-		wma_send_max_tx_pwrlmt(wma_handle, msg->bodyval);
 		break;
 	case WMA_SET_KEEP_ALIVE:
 		wma_set_keepalive_req(wma_handle, msg->bodyptr);
