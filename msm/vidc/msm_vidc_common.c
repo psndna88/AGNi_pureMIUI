@@ -1777,7 +1777,7 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 	} else if (rc == -ENOTSUPP) {
 		msm_vidc_queue_v4l2_event(inst,
 				V4L2_EVENT_MSM_VIDC_HW_UNSUPPORTED);
-	} else if (rc == -EBUSY) {
+	} else if (rc == -ENOMEM) {
 		msm_vidc_queue_v4l2_event(inst,
 				V4L2_EVENT_MSM_VIDC_HW_OVERLOAD);
 	}
@@ -5782,7 +5782,7 @@ static int msm_vidc_check_mbpf_supported(struct msm_vidc_inst *inst)
 
 	if (mbpf > core->resources.max_mbpf) {
 		msm_vidc_print_running_insts(inst->core);
-		return -EBUSY;
+		return -ENOMEM;
 	}
 
 	return 0;
@@ -5933,7 +5933,7 @@ static int msm_vidc_check_mbps_supported(struct msm_vidc_inst *inst)
 				"H/W is overloaded. needed: %d max: %d\n",
 				video_load, max_video_load);
 			msm_vidc_print_running_insts(inst->core);
-			return -EBUSY;
+			return -ENOMEM;
 		}
 
 		if (video_load + image_load > max_video_load + max_image_load) {
@@ -5942,7 +5942,7 @@ static int msm_vidc_check_mbps_supported(struct msm_vidc_inst *inst)
 				video_load, image_load,
 				max_video_load, max_image_load);
 			msm_vidc_print_running_insts(inst->core);
-			return -EBUSY;
+			return -ENOMEM;
 		}
 	}
 	return 0;
