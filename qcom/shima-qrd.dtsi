@@ -441,10 +441,10 @@
 		"VA DMIC4", "Digital Mic4",
 		"VA DMIC5", "Digital Mic5",
 		"VA DMIC0", "VA MIC BIAS1",
-		"VA DMIC1", "VA MIC BIAS3",
-		"VA DMIC2", "VA MIC BIAS4",
-		"VA DMIC3", "VA MIC BIAS1",
-		"VA DMIC4", "VA MIC BIAS3",
+		"VA DMIC1", "VA MIC BIAS1",
+		"VA DMIC2", "VA MIC BIAS3",
+		"VA DMIC3", "VA MIC BIAS3",
+		"VA DMIC4", "VA MIC BIAS4",
 		"VA DMIC5", "VA MIC BIAS4";
 	qcom,swr-dmic-max-devs = <0>;
 
