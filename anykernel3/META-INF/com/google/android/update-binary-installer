@@ -870,6 +870,12 @@ $BB chmod 600 /vendor/odm/etc/build.prop;
 /sbin/restorecon -v $buildproploc/build.prop;
 /sbin/restorecon -v /vendor/build.prop;
 /sbin/restorecon -v /vendor/odm/etc/build.prop;
+# Android LMK for Oreo, Pie & Q-only
+if [ "$ANDROID_VER" != "R" ]; then
+	$BB cp -f $AKHOME/tools/lowmemorykiller.ko /vendor/agni/;
+else
+	$BB rm /vendor/agni/lowmemorykiller.ko 2>/dev/null
+fi;
 
 $BB sync;
 umount_all;
