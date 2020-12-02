@@ -9,5 +9,5 @@
 	model = "Qualcomm Technologies, Inc. SDXLEMUR RCM Root Complex";
 	compatible = "qcom,sdxlemur-rcm",
 		"qcom,sdxlemur", "qcom,rcm";
-	qcom,board-id = <0x1010015 0>;
+	qcom,board-id = <0x1010015 0x301>;
 };

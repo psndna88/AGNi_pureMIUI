@@ -9,5 +9,5 @@
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB eMMC";
 	compatible = "qcom,sdxlemur-mtp",
 		"qcom,sdxlemur", "qcom,mtp";
-	qcom,board-id = <0x2010108 0>
+	qcom,board-id = <0x2010108 0x302>
 };
