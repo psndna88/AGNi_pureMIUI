@@ -190,3 +190,10 @@
 	qcom,ep-gpio = <&tlmm 6 0>;
 	qcom,boot-option = <0x0>;
 };
+
+&dsi_panel_pwr_supply {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-min-voltage = <1860000>;
+		qcom,supply-max-voltage = <1860000>;
+	};
+};
