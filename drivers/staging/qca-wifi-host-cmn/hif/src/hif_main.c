@@ -529,7 +529,7 @@ static void hif_cpuhp_unregister(struct hif_softc *scn)
 }
 #endif /* ifdef HIF_CPU_PERF_AFFINE_MASK */
 
-#ifdef HIF_CE_LOG_INFO
+#if defined(HIF_CE_LOG_INFO) || defined(HIF_BUS_LOG_INFO)
 /**
  * hif_recovery_notifier_cb - Recovery notifier callback to log
  *  hang event data
@@ -556,6 +556,8 @@ int hif_recovery_notifier_cb(struct notifier_block *block, unsigned long state,
 	if (!hif_handle)
 		return -EINVAL;
 
+	hif_log_bus_info(hif_handle, notif_data->hang_data,
+			 &notif_data->offset);
 	hif_log_ce_info(hif_handle, notif_data->hang_data,
 			&notif_data->offset);
 
@@ -1487,6 +1489,64 @@ int hif_get_bandwidth_level(struct hif_opaque_softc *hif_handle)
 }
 
 qdf_export_symbol(hif_get_bandwidth_level);
+
+#ifdef DP_MEM_PRE_ALLOC
+void *hif_mem_alloc_consistent_unaligned(struct hif_softc *scn,
+					 qdf_size_t size,
+					 qdf_dma_addr_t *paddr,
+					 uint32_t ring_type,
+					 uint8_t *is_mem_prealloc)
+{
+	void *vaddr = NULL;
+	struct hif_driver_state_callbacks *cbk =
+				hif_get_callbacks_handle(scn);
+
+	*is_mem_prealloc = false;
+	if (cbk && cbk->prealloc_get_consistent_mem_unaligned) {
+		vaddr = cbk->prealloc_get_consistent_mem_unaligned(size,
+								   paddr,
+								   ring_type);
+		if (vaddr) {
+			*is_mem_prealloc = true;
+			goto end;
+		}
+	}
+
+	vaddr = qdf_mem_alloc_consistent(scn->qdf_dev,
+					 scn->qdf_dev->dev,
+					 size,
+					 paddr);
+end:
+	dp_info("%s va_unaligned %pK pa_unaligned %pK size %d ring_type %d",
+		*is_mem_prealloc ? "pre-alloc" : "dynamic-alloc", vaddr,
+		(void *)*paddr, size, ring_type);
+
+	return vaddr;
+}
+
+void hif_mem_free_consistent_unaligned(struct hif_softc *scn,
+				       qdf_size_t size,
+				       void *vaddr,
+				       qdf_dma_addr_t paddr,
+				       qdf_dma_context_t memctx,
+				       uint8_t is_mem_prealloc)
+{
+	struct hif_driver_state_callbacks *cbk =
+				hif_get_callbacks_handle(scn);
+
+	if (is_mem_prealloc) {
+		if (cbk && cbk->prealloc_put_consistent_mem_unaligned) {
+			cbk->prealloc_put_consistent_mem_unaligned(vaddr);
+		} else {
+			dp_warn("dp_prealloc_put_consistent_unligned NULL");
+			QDF_BUG(0);
+		}
+	} else {
+		qdf_mem_free_consistent(scn->qdf_dev, scn->qdf_dev->dev,
+					size, vaddr, paddr, memctx);
+	}
+}
+#endif
 
 /**
  * hif_batch_send() - API to access hif specific function

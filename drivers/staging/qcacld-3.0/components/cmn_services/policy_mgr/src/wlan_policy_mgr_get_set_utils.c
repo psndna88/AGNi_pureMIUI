@@ -35,6 +35,7 @@
 #include "wlan_nan_api.h"
 #include "nan_public_structs.h"
 #include "wlan_reg_services_api.h"
+#include "wlan_mlme_vdev_mgr_interface.h"
 
 /* invalid channel id. */
 #define INVALID_CHANNEL_ID 0
@@ -2162,14 +2163,19 @@ static bool policy_mgr_is_sub_20_mhz_enabled(struct wlan_objmgr_psoc *psoc)
 static bool policy_mgr_check_privacy_for_new_conn(
 	struct policy_mgr_psoc_priv_obj *pm_ctx)
 {
-	if (!pm_ctx->hdd_cbacks.hdd_wapi_security_sta_exist)
-		return true;
+	struct wlan_objmgr_pdev *pdev = pm_ctx->pdev;
 
-	if (pm_ctx->hdd_cbacks.hdd_wapi_security_sta_exist() &&
-	    (policy_mgr_get_connection_count(pm_ctx->psoc) > 0))
+	if (!pdev) {
+		policy_mgr_debug("pdev is Null");
+		return true;
+	}
+
+	if (mlme_is_wapi_sta_active(pdev) &&
+	    policy_mgr_get_connection_count(pm_ctx->psoc) > 0)
 		return false;
 
 	return true;
+
 }
 
 #ifdef FEATURE_FOURTH_CONNECTION
@@ -2337,6 +2343,7 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 	uint32_t list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 	struct policy_mgr_psoc_priv_obj *pm_ctx;
 	bool sta_sap_scc_on_dfs_chan;
+	bool go_force_scc;
 	uint32_t sta_freq;
 	enum channel_state chan_state;
 	bool is_dfs_ch = false;
@@ -2398,9 +2405,9 @@ bool policy_mgr_is_concurrency_allowed(struct wlan_objmgr_psoc *psoc,
 
 		sta_sap_scc_on_dfs_chan =
 			policy_mgr_is_sta_sap_scc_allowed_on_dfs_chan(psoc);
-
-		if (!sta_sap_scc_on_dfs_chan && ((mode == PM_P2P_GO_MODE) ||
-		    (mode == PM_SAP_MODE))) {
+		go_force_scc = policy_mgr_go_scc_enforced(psoc);
+		if ((!sta_sap_scc_on_dfs_chan && mode == PM_SAP_MODE) ||
+		    (!go_force_scc && mode == PM_P2P_GO_MODE)) {
 			if (is_dfs_ch)
 				match = policy_mgr_disallow_mcc(psoc,
 								ch_freq);

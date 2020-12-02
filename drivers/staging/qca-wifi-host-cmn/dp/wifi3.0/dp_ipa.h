@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,6 @@
 
 #define DP_IPA_MAX_IFACE	3
 #define IPA_TCL_DATA_RING_IDX	2
-#define IPA_TX_COMP_RING_IDX	2
 #define IPA_REO_DEST_RING_IDX	3
 #define IPA_RX_REFILL_BUF_RING_IDX	2
 
@@ -186,8 +185,9 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			bool is_rm_enabled, uint32_t *tx_pipe_handle,
 			uint32_t *rx_pipe_handle);
 #endif /* CONFIG_IPA_WDI_UNIFIED_API */
-QDF_STATUS dp_ipa_cleanup(uint32_t tx_pipe_handle,
-		uint32_t rx_pipe_handle);
+QDF_STATUS dp_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			  uint32_t tx_pipe_handle,
+			  uint32_t rx_pipe_handle);
 QDF_STATUS dp_ipa_remove_header(char *name);
 int dp_ipa_add_header_info(char *ifname, uint8_t *mac_addr,
 		uint8_t session_id, bool is_ipv6_enabled);
