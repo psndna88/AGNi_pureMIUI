@@ -1043,5 +1043,9 @@ static struct cam_camnoc_info cam580_cpas100_camnoc_info = {
 	.errata_wa_list = &cam580_cpas100_errata_wa_list,
 };
 
+static struct cam_cpas_camnoc_qchannel cam580_cpas100_qchannel_info = {
+	.qchannel_ctrl   = 0x5C,
+	.qchannel_status = 0x60,
+};
 #endif /* _CPASTOP_V580_100_H_ */
 

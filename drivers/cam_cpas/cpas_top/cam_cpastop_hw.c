@@ -34,6 +34,8 @@
 #include "cam_req_mgr_workq.h"
 
 struct cam_camnoc_info *camnoc_info;
+struct cam_cpas_camnoc_qchannel *qchannel_info;
+
 
 #define CAMNOC_SLAVE_MAX_ERR_CODE 7
 static const char * const camnoc_salve_err_code[] = {
@@ -809,11 +811,65 @@ static int cam_cpastop_poweroff(struct cam_hw_info *cpas_hw)
 	return rc;
 }
 
+static int cam_cpastop_qchannel_handshake(struct cam_hw_info *cpas_hw,
+	bool power_on)
+{
+	struct cam_cpas *cpas_core = (struct cam_cpas *) cpas_hw->core_info;
+	struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
+	int32_t reg_indx = cpas_core->regbase_index[CAM_CPAS_REG_CPASTOP];
+	uint32_t mask = 0;
+	uint32_t wait_data, qchannel_status, qdeny;
+	int rc = 0;
+
+	if (reg_indx == -1)
+		return -EINVAL;
+
+	if (!qchannel_info)
+		return 0;
+
+	if (power_on) {
+		/* wait for QACCEPTN in QCHANNEL status*/
+		mask = BIT(0);
+		wait_data = 1;
+	} else {
+		/* Clear the quiecience request in QCHANNEL ctrl*/
+		cam_io_w_mb(0, soc_info->reg_map[reg_indx].mem_base +
+			qchannel_info->qchannel_ctrl);
+		/* wait for QACCEPTN and QDENY in QCHANNEL status*/
+		mask = BIT(1) | BIT(0);
+		wait_data = 0;
+	}
+
+	rc = cam_io_poll_value_wmask(
+		soc_info->reg_map[reg_indx].mem_base +
+		qchannel_info->qchannel_status,
+		wait_data, mask, CAM_CPAS_POLL_QH_RETRY_CNT,
+		CAM_CPAS_POLL_MIN_USECS, CAM_CPAS_POLL_MAX_USECS);
+	if (rc) {
+		CAM_ERR(CAM_CPAS,
+			"camnoc idle sequence failed, qstat 0x%x",
+			cam_io_r(soc_info->reg_map[reg_indx].mem_base +
+			qchannel_info->qchannel_status));
+		/* Do not return error, passthrough */
+		rc = 0;
+	}
+
+	/* check if deny bit is set */
+	qchannel_status = cam_io_r_mb(soc_info->reg_map[reg_indx].mem_base +
+				qchannel_info->qchannel_status);
+	qdeny = (qchannel_status & BIT(1));
+	if (!power_on && qdeny)
+		rc = -EBUSY;
+
+	return rc;
+}
+
 static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 	struct cam_cpas_hw_caps *hw_caps)
 {
 	int rc = 0;
 	struct cam_hw_soc_info *soc_info = &cpas_hw->soc_info;
+	qchannel_info = NULL;
 
 	CAM_DBG(CAM_CPAS,
 		"hw_version=0x%x Camera Version %d.%d.%d, cpas version %d.%d.%d",
@@ -855,18 +911,23 @@ static int cam_cpastop_init_hw_version(struct cam_hw_info *cpas_hw,
 		break;
 	case CAM_CPAS_TITAN_580_V100:
 		camnoc_info = &cam580_cpas100_camnoc_info;
+		qchannel_info = &cam580_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_540_V100:
 		camnoc_info = &cam540_cpas100_camnoc_info;
+		qchannel_info = &cam540_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_520_V100:
 		camnoc_info = &cam520_cpas100_camnoc_info;
+		qchannel_info = &cam520_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_545_V100:
 		camnoc_info = &cam545_cpas100_camnoc_info;
+		qchannel_info = &cam545_cpas100_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_570_V200:
 		camnoc_info = &cam570_cpas200_camnoc_info;
+		qchannel_info = &cam570_cpas200_qchannel_info;
 		break;
 	case CAM_CPAS_TITAN_680_V100:
 		camnoc_info = &cam680_cpas100_camnoc_info;
@@ -952,6 +1013,7 @@ int cam_cpastop_get_internal_ops(struct cam_cpas_internal_ops *internal_ops)
 	internal_ops->setup_qos_settings = cam_cpastop_setup_qos_settings;
 	internal_ops->print_poweron_settings =
 		cam_cpastop_print_poweron_settings;
+	internal_ops->qchannel_handshake = cam_cpastop_qchannel_handshake;
 
 	return 0;
 }

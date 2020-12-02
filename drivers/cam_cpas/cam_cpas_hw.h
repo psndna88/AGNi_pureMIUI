@@ -70,6 +70,8 @@ enum cam_cpas_access_type {
  * @power_off: Function pointer for hw core specific power off settings
  * @setup_qos_settings: Function pointer for hw to select a specific qos header
  * @print_poweron_settings: Function pointer for hw to print poweron settings
+ * @qchannel_handshake: Function pointer for hw core specific qchannel
+ *                      handshake settings
  *
  */
 struct cam_cpas_internal_ops {
@@ -85,6 +87,7 @@ struct cam_cpas_internal_ops {
 	int (*setup_qos_settings)(struct cam_hw_info *cpas_hw,
 		uint32_t selection_mask);
 	int (*print_poweron_settings)(struct cam_hw_info *cpas_hw);
+	int (*qchannel_handshake)(struct cam_hw_info *cpas_hw, bool power_on);
 };
 
 /**
