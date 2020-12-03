@@ -862,6 +862,11 @@ static void cam_vfe_bus_ver3_get_constraint_errors(
 
 	for (i = 0; i < bus_priv->num_out; i++) {
 		out_rsrc_node = &bus_priv->vfe_out[i];
+		if (!out_rsrc_node || !out_rsrc_node->res_priv) {
+			CAM_DBG(CAM_ISP,
+				"Vfe out:%d out rsrc node or data is NULL", i);
+			continue;
+		}
 		out_rsrc_data = out_rsrc_node->res_priv;
 		for (j = 0; j < out_rsrc_data->num_wm; j++) {
 			wm_data = out_rsrc_data->wm_res[j].res_priv;
