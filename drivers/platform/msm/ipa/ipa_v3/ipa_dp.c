@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -5271,7 +5271,7 @@ int ipa3_rx_poll(u32 clnt_hdl, int weight)
 	int remain_aggr_weight;
 	int ipa_ep_idx;
 	struct ipa_active_client_logging_info log;
-	struct gsi_chan_xfer_notify notify[IPA_WAN_NAPI_MAX_FRAMES];
+	static struct gsi_chan_xfer_notify notify[IPA_WAN_NAPI_MAX_FRAMES];
 
 	IPA_ACTIVE_CLIENTS_PREP_SPECIAL(log, "NAPI");
 
