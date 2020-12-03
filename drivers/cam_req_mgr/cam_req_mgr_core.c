@@ -2048,9 +2048,11 @@ static void __cam_req_mgr_notify_sof_freeze(
 static int __cam_req_mgr_process_sof_freeze(void *priv, void *data)
 {
 	struct cam_req_mgr_core_link    *link = NULL;
+	struct cam_req_mgr_req_queue    *in_q = NULL;
 	struct cam_req_mgr_core_session *session = NULL;
 	struct cam_req_mgr_message       msg;
 	int rc = 0;
+	int64_t last_applied_req_id = -EINVAL;
 
 	if (!data || !priv) {
 		CAM_ERR(CAM_CRM, "input args NULL %pK %pK", data, priv);
@@ -2064,6 +2066,13 @@ static int __cam_req_mgr_process_sof_freeze(void *priv, void *data)
 		return -EINVAL;
 	}
 
+	in_q = link->req.in_q;
+	if (in_q) {
+		mutex_lock(&link->req.lock);
+		last_applied_req_id = in_q->slot[in_q->last_applied_idx].req_id;
+		mutex_unlock(&link->req.lock);
+	}
+
 	spin_lock_bh(&link->link_state_spin_lock);
 	if ((link->watchdog) && (link->watchdog->pause_timer)) {
 		CAM_INFO(CAM_CRM, "Watchdog Paused");
@@ -2072,8 +2081,10 @@ static int __cam_req_mgr_process_sof_freeze(void *priv, void *data)
 	}
 	spin_unlock_bh(&link->link_state_spin_lock);
 
-	CAM_ERR(CAM_CRM, "SOF freeze for session %d link 0x%x",
-		session->session_hdl, link->link_hdl);
+	CAM_ERR(CAM_CRM,
+		"SOF freeze for session: %d link: 0x%x max_pd: %d last_req_id:%d",
+		session->session_hdl, link->link_hdl, link->max_delay,
+		last_applied_req_id);
 
 	__cam_req_mgr_notify_sof_freeze(link);
 	memset(&msg, 0, sizeof(msg));
