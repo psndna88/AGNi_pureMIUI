@@ -327,13 +327,12 @@ static int do_read_inode(struct inode *inode)
 	fi->i_flags = le32_to_cpu(ri->i_flags);
 	if (S_ISREG(inode->i_mode))
 		fi->i_flags &= ~F2FS_PROJINHERIT_FL;
-	fi->flags = 0;
+	bitmap_zero(fi->flags, FI_MAX);
 	fi->i_advise = ri->i_advise;
 	fi->i_pino = le32_to_cpu(ri->i_pino);
 	fi->i_dir_level = ri->i_dir_level;
 
-	if (f2fs_init_extent_tree(inode, &ri->i_ext))
-		set_page_dirty(node_page);
+	f2fs_init_extent_tree(inode, node_page);
 
 	get_inline_info(inode, ri);
 
@@ -367,6 +366,7 @@ static int do_read_inode(struct inode *inode)
 
 	/* try to recover cold bit for non-dir inode */
 	if (!S_ISDIR(inode->i_mode) && !is_cold_node(node_page)) {
+		f2fs_wait_on_page_writeback(node_page, NODE, true, true);
 		set_cold_node(node_page, false);
 		set_page_dirty(node_page);
 	}
@@ -427,7 +427,7 @@ struct inode *f2fs_iget(struct super_block *sb, unsigned long ino)
 		return ERR_PTR(-ENOMEM);
 
 	if (!(inode->i_state & I_NEW)) {
-//		trace_f2fs_iget(inode);
+		trace_f2fs_iget(inode);
 		return inode;
 	}
 	if (ino == F2FS_NODE_INO(sbi) || ino == F2FS_META_INO(sbi))
@@ -469,13 +469,13 @@ make_now:
 	}
 	f2fs_set_inode_flags(inode);
 	unlock_new_inode(inode);
-//	trace_f2fs_iget(inode);
+	trace_f2fs_iget(inode);
 	return inode;
 
 bad_inode:
 	f2fs_inode_synced(inode);
 	iget_failed(inode);
-//	trace_f2fs_iget_exit(inode, ret);
+	trace_f2fs_iget_exit(inode, ret);
 	return ERR_PTR(ret);
 }
 
@@ -611,10 +611,14 @@ int f2fs_write_inode(struct inode *inode, struct writeback_control *wbc)
 			inode->i_ino == F2FS_META_INO(sbi))
 		return 0;
 
-	if (!is_inode_flag_set(inode, FI_DIRTY_INODE))
+	/*
+	 * atime could be updated without dirtying f2fs inode in lazytime mode
+	 */
+	if (f2fs_is_time_consistent(inode) &&
+		!is_inode_flag_set(inode, FI_DIRTY_INODE))
 		return 0;
 
-	if (f2fs_is_checkpoint_ready(sbi))
+	if (!f2fs_is_checkpoint_ready(sbi))
 		return -ENOSPC;
 
 	/*
@@ -640,7 +644,7 @@ void f2fs_evict_inode(struct inode *inode)
 	if (f2fs_is_atomic_file(inode))
 		f2fs_drop_inmem_pages(inode);
 
-//	trace_f2fs_evict_inode(inode);
+	trace_f2fs_evict_inode(inode);
 	truncate_inode_pages_final(&inode->i_data);
 
 	if (inode->i_ino == F2FS_NODE_INO(sbi) ||
@@ -673,7 +677,7 @@ retry:
 		err = f2fs_truncate(inode);
 
 	if (time_to_inject(sbi, FAULT_EVICT_INODE)) {
-		f2fs_show_injection_info(FAULT_EVICT_INODE);
+		f2fs_show_injection_info(sbi, FAULT_EVICT_INODE);
 		err = -EIO;
 	}
 
@@ -703,7 +707,7 @@ no_delete:
 	stat_dec_inline_dir(inode);
 	stat_dec_inline_inode(inode);
 
-	if (likely(!is_set_ckpt_flags(sbi, CP_ERROR_FLAG) &&
+	if (likely(!f2fs_cp_error(sbi) &&
 				!is_sbi_flag_set(sbi, SBI_CP_DISABLED)))
 		f2fs_bug_on(sbi, is_inode_flag_set(inode, FI_DIRTY_INODE));
 	else
