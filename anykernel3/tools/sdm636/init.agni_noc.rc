@@ -15,9 +15,6 @@ on early-init
 	write /sys/module/msm_performance/parameters/cpu_oc N
 
 on init
-	write /sys/module/module/parameters/lock_wlanmodule N
-	insmod /vendor/agni/lowmemorykiller.ko
-	write /sys/module/module/parameters/lock_wlanmodule Y
     write /dev/stune/foreground/schedtune.prefer_idle 1
     write /dev/stune/top-app/schedtune.boost 5
     write /dev/stune/top-app/schedtune.prefer_idle 1
@@ -47,7 +44,6 @@ on boot
     insmod /vendor/agni/8723au.ko
 	write /sys/module/module/parameters/lock_wlanmodule Y
     chown wifi wifi /sys/module/wlan/parameters/fwpath
-	write /sys/module/adreno/parameters/true_gpu N
     # Set on boot cpusets
     write /dev/cpuset/top-app/cpus 0-7
     write /dev/cpuset/foreground/cpus 0-3,6-7

@@ -17,7 +17,6 @@ RTL8188EU="$COMPILEDIR/drivers/staging/rtl8188eu"
 RTL8712U="$COMPILEDIR/drivers/staging/rtl8712"
 RTL8723AU="$COMPILEDIR/drivers/staging/rtl8723au"
 RTL8192EU="$COMPILEDIR/drivers/staging/rtl8192eu"
-ALMK="$COMPILEDIR/drivers/staging/android/lowmemorykiller.ko"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_kernel_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
@@ -62,7 +61,6 @@ rm $RTL8188EU/*.ko 2>/dev/null
 rm $RTL8712U/*.ko 2>/dev/null
 rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
-rm $ALMK 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
 make -j8 O=$COMPILEDIR # COMPILE
@@ -174,7 +172,6 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	mv -f $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
 	mv -f $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	mv -f $KERNELDIR/$DIR/8*.ko $KERNELDIR/$DIR/tools 2>/dev/null
-	mv -f $KERNELDIR/$DIR/lowmemorykiller.ko $KERNELDIR/$DIR/tools 2>/dev/null
 	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm636
 	rm -rf $KERNELDIR/$DIR/tools/sdm636
 	cp -f $KERNELDIR/$DIR/tools/sdm660/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm660

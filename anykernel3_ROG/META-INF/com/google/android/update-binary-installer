@@ -607,12 +607,6 @@ ui_print " " "AGNi installing Q-sourced Wifi driver support in rom..." " ";
 # $BB chmod 644 /vendor/agni/wlan.ko;
 $BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 /sbin/restorecon -v /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-# Android LMK for Oreo, Pie & Q-only
-if [ "$ANDROID_VER" != "R" ]; then
-	$BB cp -f $AKHOME/tools/lowmemorykiller.ko /vendor/agni/;
-else
-	$BB rm /vendor/agni/lowmemorykiller.ko 2>/dev/null
-fi;
 
 $BB sync;
 umount_all;
