@@ -379,7 +379,6 @@ struct adreno_device {
 	struct kgsl_device dev;    /* Must be first field in this struct */
 	unsigned long priv;
 	unsigned int chipid;
-	unsigned int chipid_fake;
 	unsigned long gmem_base;
 	unsigned long gmem_size;
 	const struct adreno_gpu_core *gpucore;

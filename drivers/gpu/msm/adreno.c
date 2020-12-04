@@ -51,18 +51,6 @@ static bool nopreempt;
 module_param(nopreempt, bool, 0444);
 MODULE_PARM_DESC(nopreempt, "Disable GPU preemption");
 
-#define MODEL_A509	0x05000900
-#define MODEL_A512	0x05010200
-#define MODEL_A530	0x05030000
-#define MODEL_A612	0x06010200
-static bool true_gpu = true;
-module_param(true_gpu, bool, 0664);
-MODULE_PARM_DESC(true_gpu, "Toggle true adreno gpu model / fake model");
-static int fake_gpu_model = 512;
-static int fake_gpu_hex = MODEL_A512;
-module_param(fake_gpu_model, int, 0664);
-MODULE_PARM_DESC(fake_gpu_model, "Accepted values are: 509, 512, 530, 612");
-
 #define DRIVER_VERSION_MAJOR   3
 #define DRIVER_VERSION_MINOR   1
 
@@ -677,19 +665,6 @@ static inline const struct adreno_gpu_core *_get_gpu_core(unsigned int chipid)
 	return NULL;
 }
 
-static void fake_gpu_fn(void) {
-
-	if (fake_gpu_model == 509) {
-		fake_gpu_hex = MODEL_A509;
-	} else if (fake_gpu_model == 512) {
-		fake_gpu_hex = MODEL_A512;
-	} else if (fake_gpu_model == 530) {
-		fake_gpu_hex = MODEL_A530;
-	} else if (fake_gpu_model == 612) {
-		fake_gpu_hex = MODEL_A612;
-	}
-}
-
 static void
 adreno_identify_gpu(struct adreno_device *adreno_dev)
 {
@@ -697,13 +672,10 @@ adreno_identify_gpu(struct adreno_device *adreno_dev)
 	struct adreno_gpudev *gpudev;
 	int i;
 
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	adreno_dev->chipid = MODEL_A509;
-#else
-	adreno_dev->chipid = MODEL_A512;
-#endif
-	fake_gpu_fn();
-	adreno_dev->chipid_fake = fake_gpu_hex;
+	if (kgsl_property_read_u32(KGSL_DEVICE(adreno_dev), "qcom,chipid",
+		&adreno_dev->chipid))
+		KGSL_DRV_FATAL(KGSL_DEVICE(adreno_dev),
+			"No GPU chip ID was specified\n");
 
 	adreno_dev->gpucore = _get_gpu_core(adreno_dev->chipid);
 
@@ -1690,12 +1662,7 @@ static int adreno_getproperty(struct kgsl_device *device,
 
 			memset(&devinfo, 0, sizeof(devinfo));
 			devinfo.device_id = device->id+1;
-			fake_gpu_fn();
-			if (true_gpu) {
-				devinfo.chip_id = adreno_dev->chipid;
-			} else {
-				devinfo.chip_id = fake_gpu_hex;
-			}
+			devinfo.chip_id = adreno_dev->chipid;
 			devinfo.mmu_enabled =
 				MMU_FEATURE(&device->mmu, KGSL_MMU_PAGED);
 			devinfo.gmem_gpubaseaddr = adreno_dev->gmem_base;
@@ -2672,14 +2639,9 @@ static unsigned int adreno_gpuid(struct kgsl_device *device,
 	/* Some applications need to know the chip ID too, so pass
 	 * that as a parameter */
 
-	if (chipid != NULL) {
-		fake_gpu_fn();
-		if (true_gpu) {
-			*chipid = adreno_dev->chipid;
-		} else { 
-			*chipid = fake_gpu_hex;
-		}
-	}
+	if (chipid != NULL)
+		*chipid = adreno_dev->chipid;
+
 	/* Standard KGSL gpuid format:
 	 * top word is 0x0002 for 2D or 0x0003 for 3D
 	 * Bottom word is core specific identifer
@@ -2822,20 +2784,11 @@ static void adreno_gpu_model(struct kgsl_device *device, char *str,
 {
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
-	fake_gpu_fn();
-	if (true_gpu) {
-		snprintf(str, bufsz, "Adreno%d%d%dv%d",
-				ADRENO_CHIPID_CORE(adreno_dev->chipid),
-				 ADRENO_CHIPID_MAJOR(adreno_dev->chipid),
-				 ADRENO_CHIPID_MINOR(adreno_dev->chipid),
-				 ADRENO_CHIPID_PATCH(adreno_dev->chipid) + 1);
-	} else {
-		snprintf(str, bufsz, "Adreno%d%d%dv%d",
-				ADRENO_CHIPID_CORE(fake_gpu_hex),
-				 ADRENO_CHIPID_MAJOR(fake_gpu_hex),
-				 ADRENO_CHIPID_MINOR(fake_gpu_hex),
-				 ADRENO_CHIPID_PATCH(fake_gpu_hex) + 1);
-	}
+	snprintf(str, bufsz, "Adreno%d%d%dv%d",
+			ADRENO_CHIPID_CORE(adreno_dev->chipid),
+			 ADRENO_CHIPID_MAJOR(adreno_dev->chipid),
+			 ADRENO_CHIPID_MINOR(adreno_dev->chipid),
+			 ADRENO_CHIPID_PATCH(adreno_dev->chipid) + 1);
 }
 
 static void adreno_suspend_device(struct kgsl_device *device,
