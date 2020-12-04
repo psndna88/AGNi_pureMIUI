@@ -839,7 +839,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 				"Move active request %lld to free list(cnt = %d) [flushed], ctx %u",
 				buf_done_req_id, ctx_isp->active_req_cnt,
 				ctx->ctx_id);
-			ctx_isp->last_bufdone_error_apply_req_id = 0;
+			ctx_isp->last_bufdone_err_apply_req_id = 0;
 		} else {
 			list_add(&req->list, &ctx->pending_req_list);
 			CAM_DBG(CAM_REQ,
@@ -865,7 +865,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 			"Move active request %lld to free list(cnt = %d) [all fences done], ctx %u",
 			buf_done_req_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 		ctx_isp->req_info.last_bufdone_req_id = req->request_id;
-		ctx_isp->last_bufdone_error_apply_req_id = 0;
+		ctx_isp->last_bufdone_err_apply_req_id = 0;
 	}
 
 	cam_cpas_notify_event("IFE BufDone", buf_done_req_id);
@@ -1397,12 +1397,13 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 
 			req_in_wait_list = true;
 			if (ctx_isp->last_applied_req_id !=
-				ctx_isp->last_bufdone_error_apply_req_id) {
+				ctx_isp->last_bufdone_err_apply_req_id) {
 				CAM_WARN(CAM_ISP,
-					"Buf done with no active request but with req in wait list, req %llu last apply id:%lld",
+					"Buf done with no active request but with req in wait list, req %llu last apply id:%lld last err id:%lld",
 					req->request_id,
-					ctx_isp->last_applied_req_id);
-				ctx_isp->last_bufdone_error_apply_req_id =
+					ctx_isp->last_applied_req_id,
+					ctx_isp->last_bufdone_err_apply_req_id);
+				ctx_isp->last_bufdone_err_apply_req_id =
 					ctx_isp->last_applied_req_id;
 			}
 
@@ -1421,11 +1422,11 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 		}
 
 		if (!req_in_wait_list  && (ctx_isp->last_applied_req_id !=
-			ctx_isp->last_bufdone_error_apply_req_id)) {
+			ctx_isp->last_bufdone_err_apply_req_id)) {
 			CAM_WARN(CAM_ISP,
 				"Buf done with no active request bubble_state=%d last_applied_req_id:%lld ",
 				bubble_state, ctx_isp->last_applied_req_id);
-			ctx_isp->last_bufdone_error_apply_req_id =
+			ctx_isp->last_bufdone_err_apply_req_id =
 					ctx_isp->last_applied_req_id;
 		}
 		return 0;
