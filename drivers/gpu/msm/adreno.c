@@ -55,7 +55,7 @@ MODULE_PARM_DESC(nopreempt, "Disable GPU preemption");
 #define MODEL_A512	0x05010200
 #define MODEL_A530	0x05030000
 #define MODEL_A612	0x06010200
-bool true_gpu = true;
+static bool true_gpu = true;
 module_param(true_gpu, bool, 0664);
 MODULE_PARM_DESC(true_gpu, "Toggle true adreno gpu model / fake model");
 static int fake_gpu_model = 512;
