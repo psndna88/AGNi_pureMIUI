@@ -497,13 +497,13 @@ int msm_vidc_get_num_ref_frames(struct msm_vidc_inst *inst)
 		codec = get_v4l2_codec(inst);
 		/* LTR and B - frame not supported with hybrid HP */
 		if (inst->hybrid_hp)
-			num_ref = (max_layer->val - 1);
+			num_ref = max_layer->val >> 1;
 		else if (codec == V4L2_PIX_FMT_HEVC)
 			num_ref = ((max_layer->val + 1) / 2) + ltr_count;
-		else if ((codec == V4L2_PIX_FMT_H264) && (max_layer->val <= 4))
-			num_ref = ((1 << (max_layer->val - 1)) - 1) + ltr_count;
+		else if ((codec == V4L2_PIX_FMT_H264) && (max_layer->val < 4))
+			num_ref = (max_layer->val - 1) + ltr_count;
 		else
-			num_ref = ((max_layer->val + 1) / 2) + ltr_count;
+			num_ref = max_layer->val + ltr_count;
 	}
 
 	if (is_hier_b_session(inst)) {
