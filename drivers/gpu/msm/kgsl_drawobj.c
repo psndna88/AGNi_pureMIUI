@@ -466,9 +466,10 @@ static int drawobj_add_sync_timeline(struct kgsl_device *device,
 		}
 
 		kgsl_drawobj_put(drawobj);
+		return ret;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int drawobj_add_sync_fence(struct kgsl_device *device,
