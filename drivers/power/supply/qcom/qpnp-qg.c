@@ -1767,7 +1767,7 @@ static int qg_get_prop_soc_decimal(struct qpnp_qg *chip, int *val)
 
 	soc_dec = chip->sys_soc % 100;
 	soc = qg_get_prop_soc_decimal_rate(chip, &dec_rate);
-	pr_err("debug soc_dec=%d dec_rate=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+	pr_debug("debug soc_dec=%d dec_rate=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
 			soc_dec, dec_rate, last_val, last_soc_dec, last_hal_soc);
 
 	if (soc_dec >= 0 && soc_dec < (50 - dec_rate))
@@ -1795,7 +1795,7 @@ static int qg_get_prop_soc_decimal(struct qpnp_qg *chip, int *val)
 	if (last_hal_soc != hal_soc)
 		last_hal_soc = hal_soc;
 
-	pr_err("debug val=%d soc_dec=%d sys_soc=%d dec_rate=%d soc=%d hal_soc=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+	pr_debug("debug val=%d soc_dec=%d sys_soc=%d dec_rate=%d soc=%d hal_soc=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
 			*val, soc_dec, chip->sys_soc, dec_rate, soc, hal_soc, last_val, last_soc_dec, last_hal_soc);
 
 	return 0;
