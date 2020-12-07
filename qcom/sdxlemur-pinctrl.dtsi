@@ -318,20 +318,20 @@
 				config {
 					pins = "gpio10", "gpio11";
 					drive-strength = <2>;
-					bias-pull-up;
+					bias-disable;
 				};
 			};
 
 			i2c_3_sleep: i2c_3_sleep {
 				mux {
 					pins = "gpio10", "gpio11";
-					function = "gpio";
+					function = "blsp_i2c3";
 				};
 
 				config {
 					pins = "gpio10", "gpio11";
 					drive-strength = <2>;
-					bias-disable;
+					bias-pull-up;
 				};
 			};
 		};
