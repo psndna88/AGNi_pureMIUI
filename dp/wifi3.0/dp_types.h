@@ -981,6 +981,8 @@ struct dp_soc_stats {
 			uint32_t nbuf_sanity_fail;
 			/* Duplicate link desc refilled */
 			uint32_t dup_refill_link_desc;
+			/* REO OOR eapol drop count */
+			uint32_t reo_err_oor_eapol_drop;
 		} err;
 
 		/* packet count per core - per ring */
