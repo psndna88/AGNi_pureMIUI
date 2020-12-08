@@ -49,6 +49,11 @@
 				trip = <&b_bcl_lvl0>;
 				cooling-device = <&msm_gpu 2 2>;
 			};
+
+			vbat_cdsp0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&cdsp_sw 2 2>;
+			};
 		};
 	};
 
@@ -68,6 +73,11 @@
 				trip = <&b_bcl_lvl1>;
 				cooling-device = <&msm_gpu 4 4>;
 			};
+
+			vbat_cdsp1 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
 		};
 	};
 
@@ -76,6 +86,12 @@
 			vbat_gpu2 {
 				trip = <&b_bcl_lvl2>;
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			vbat_cdsp2 {
+				trip = <&b_bcl_lvl2>;
+				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
 		};
@@ -98,6 +114,11 @@
 				trip = <&c_bcl_lvl0>;
 				cooling-device = <&msm_gpu 2 2>;
 			};
+
+			vph_cdsp0 {
+				trip = <&c_bcl_lvl0>;
+				cooling-device = <&cdsp_sw 2 2>;
+			};
 		};
 	};
 
@@ -118,6 +139,11 @@
 				trip = <&c_bcl_lvl1>;
 				cooling-device = <&msm_gpu 4 4>;
 			};
+
+			vph_cdsp1 {
+				trip = <&c_bcl_lvl1>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
 		};
 	};
 
@@ -127,6 +153,12 @@
 			vph_gpu2 {
 				trip = <&c_bcl_lvl2>;
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			vph_cdsp2 {
+				trip = <&c_bcl_lvl2>;
+				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
 		};
@@ -149,27 +181,6 @@
 				trip = <&pm8350_trip0>;
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
-			};
-
-			pm8350_cpu0_freq {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&CPU0 THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
-			};
-
-			pm8350_cpu1 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu1_isolate 1 1>;
-			};
-
-			pm8350_cpu2 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu2_isolate 1 1>;
-			};
-
-			pm8350_cpu3 {
-				trip = <&pm8350_trip0>;
-				cooling-device = <&cpu3_isolate 1 1>;
 			};
 
 			pm8350_cpu4 {
