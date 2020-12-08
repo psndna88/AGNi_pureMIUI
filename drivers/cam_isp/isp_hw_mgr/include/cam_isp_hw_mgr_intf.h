@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_ISP_HW_MGR_INTF_H_
@@ -53,13 +53,13 @@ enum cam_isp_hw_event_type {
  *                         ISP hardware event CAM_ISP_HW_EVENT_ERROR
  */
 enum cam_isp_hw_err_type {
-	CAM_ISP_HW_ERROR_NONE,
-	CAM_ISP_HW_ERROR_OVERFLOW,
-	CAM_ISP_HW_ERROR_P2I_ERROR,
-	CAM_ISP_HW_ERROR_VIOLATION,
-	CAM_ISP_HW_ERROR_BUSIF_OVERFLOW,
-	CAM_ISP_HW_ERROR_CSID_FATAL,
-	CAM_ISP_HW_ERROR_MAX,
+	CAM_ISP_HW_ERROR_NONE = 0x0001,
+	CAM_ISP_HW_ERROR_OVERFLOW = 0x0002,
+	CAM_ISP_HW_ERROR_P2I_ERROR = 0x0004,
+	CAM_ISP_HW_ERROR_VIOLATION = 0x0008,
+	CAM_ISP_HW_ERROR_BUSIF_OVERFLOW = 0x0010,
+	CAM_ISP_HW_ERROR_CSID_FATAL = 0x0020,
+	CAM_ISP_HW_ERROR_CSID_OVERFLOW = 0x0040,
 };
 
 /**
