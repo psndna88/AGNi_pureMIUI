@@ -21,6 +21,7 @@
 #include "cam_cpas_api.h"
 #include "cam_subdev.h"
 #include "cam_tasklet_util.h"
+#include "dt-bindings/msm/msm-camera.h"
 
 /* Timeout value in msec */
 #define IFE_CSID_TIMEOUT                               1000
@@ -5522,6 +5523,17 @@ int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 	ife_csid_hw->device_enabled = 0;
 	ife_csid_hw->is_resetting = false;
 	ife_csid_hw->hw_info->hw_state = CAM_HW_STATE_POWER_DOWN;
+
+	if (!cam_cpas_is_feature_supported(CAM_CPAS_ISP_FUSE,
+		(1 << ife_csid_hw->hw_intf->hw_idx), 0) ||
+		!cam_cpas_is_feature_supported(CAM_CPAS_ISP_LITE_FUSE,
+		(1 << ife_csid_hw->hw_intf->hw_idx), 0)) {
+		CAM_DBG(CAM_ISP, "IFE:%d is not supported",
+			ife_csid_hw->hw_intf->hw_idx);
+		rc = -EINVAL;
+		return rc;
+	}
+
 	mutex_init(&ife_csid_hw->hw_info->hw_mutex);
 	spin_lock_init(&ife_csid_hw->hw_info->hw_lock);
 	spin_lock_init(&ife_csid_hw->lock_state);
