@@ -25,6 +25,7 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -108,7 +109,7 @@ extern const uint16_t gesture_key_array[];
 
 /*functions description*/
 //enable tp usb plugin feature
-#define NVT_USB_PLUGIN 1
+#define NVT_USB_PLUGIN 0
 
 #if NVT_USB_PLUGIN
 typedef struct touchscreen_usb_plugin_data {
@@ -193,6 +194,8 @@ struct nvt_ts_data {
 #ifdef CONFIG_SPI_MT65XX
     struct mtk_chip_config spi_ctrl;
 #endif
+
+	struct pm_qos_request pm_qos_req;
 
 	struct mutex reg_lock;
 	struct device *nvt_touch_dev;
