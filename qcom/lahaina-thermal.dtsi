@@ -774,6 +774,12 @@
 				hysteresis = <0>;
 				type = "passive";
 			};
+
+			pop_trip1: pop-trip1 {
+				temperature = <90000>;
+				hysteresis = <5000>;
+				type = "passive";
+			};
 		};
 
 		cooling-maps {
@@ -785,7 +791,7 @@
 			};
 
 			pop_cdev1 {
-				trip = <&pop_trip>;
+				trip = <&pop_trip1>;
 				cooling-device = <&ddr_cdev 5 5>;
 			};
 		};
