@@ -7768,6 +7768,8 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 {
 	u32 framerate = inst->clk_data.frame_rate;
 	u32 interval;
+	struct msm_vidc_capability *capability;
+	capability = &inst->capability;
 
 	if (timestamp_us <= prev_ts) {
 		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
@@ -7775,8 +7777,12 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 		return framerate;
 	}
 	interval = (u32)(timestamp_us - prev_ts);
-	framerate = ((1000000 + interval / 2) / interval) << 16;
-	return framerate;
+	framerate = (1000000 + interval / 2) / interval;
+	if (framerate > capability->cap[CAP_FRAMERATE].max)
+		framerate = capability->cap[CAP_FRAMERATE].max;
+	if (framerate < 1)
+		framerate = 1;
+	return framerate << 16;
 }
 
 u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
