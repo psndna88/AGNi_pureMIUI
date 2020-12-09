@@ -948,6 +948,11 @@
 		};
 	};
 
+	qcom_tzlog: tz-log@1468F720 {
+		compatible = "qcom,tz-log";
+		reg = <0x1468F720 0x2000>;
+	};
+
 	thermal_zones: thermal-zones {
 	};
 
