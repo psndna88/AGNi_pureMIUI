@@ -29,6 +29,12 @@
 /* Appliacble vote paths for dual ife, based on no. of UAPI definitions */
 #define CAM_ISP_MAX_PER_PATH_VOTES 40
 
+/*
+ * Maximum configuration entry size  - This is based on the
+ * worst case DUAL IFE use case plus some margin.
+ */
+#define CAM_ISP_CTX_CFG_MAX                     25
+
 /**
  *  enum cam_isp_hw_event_type - Collection of the ISP hardware events
  */
