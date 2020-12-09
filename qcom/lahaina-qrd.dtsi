@@ -20,7 +20,7 @@
 };
 
 &usb_qmp_dp_phy {
-	pinctrl-names = "portselect";
+	pinctrl-names = "unused";
 };
 
 &usb0 {
@@ -30,13 +30,15 @@
 &qupv3_se13_i2c {
 	status = "ok";
 
+	#address-cells = <1>;
+	#size-cells = <0>;
 	redriver: redriver@1c {
 		compatible = "onnn,redriver";
 		reg = <0x1c>;
 
-		pinctrl-names = "enable_gpio";
+		pinctrl-names = "default";
 		pinctrl-0 = <&usb3phy_portselect_gpio>;
-		orientation_gpio = <&tlmm 81 0>;
+		gpios = <&tlmm 81 0>;
 
 		eq = /bits/ 8 <
 				/* Parameters for USB */
