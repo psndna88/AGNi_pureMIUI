@@ -163,7 +163,9 @@ static int cam_hw_cdm_pause_core(struct cam_hw_info *cdm_hw, bool pause)
 
 	if (cam_cdm_write_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->core_en, val)) {
-		CAM_ERR(CAM_CDM, "Failed to Write CDM HW core_en");
+		CAM_ERR(CAM_CDM, "Failed to Write core_en for %s%u",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		rc = -EIO;
 	}
 
@@ -319,6 +321,8 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->debug_status,
 		&dump_reg[2]);
+	CAM_INFO(CAM_CDM, "Dumping debug data for %s%u",
+		cdm_hw->soc_info.label_name, cdm_hw->soc_info.index);
 
 	CAM_INFO(CAM_CDM, "Core stat 0x%x udata 0x%x dbg_stat 0x%x",
 			dump_reg[0], dump_reg[1], dump_reg[2]);
@@ -464,7 +468,9 @@ int cam_hw_cdm_set_cdm_blfifo_cfg(struct cam_hw_info *cdm_hw)
 			core->offsets->irq_reg[i]->irq_mask, 0x70003);
 		if (rc) {
 			CAM_ERR(CAM_CDM,
-				"Unable to write to cdm irq mask register");
+				"Unable to write to %s%u irq mask register",
+				cdm_hw->soc_info.label_name,
+				cdm_hw->soc_info.index);
 			rc = -EIO;
 			goto end;
 		}
@@ -478,7 +484,9 @@ int cam_hw_cdm_set_cdm_blfifo_cfg(struct cam_hw_info *cdm_hw)
 				<< CAM_CDM_BL_FIFO_LENGTH_CFG_SHIFT);
 			if (rc) {
 				CAM_ERR(CAM_CDM,
-					"Unable to write to cdm irq mask register");
+					"Unable to write to %s%u irq mask register",
+					cdm_hw->soc_info.label_name,
+					cdm_hw->soc_info.index);
 				rc = -EIO;
 				goto end;
 			}
@@ -506,7 +514,9 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 	if (cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->cdm_hw_version,
 			&cdm_version)) {
-		CAM_ERR(CAM_CDM, "Error reading CDM register");
+		CAM_ERR(CAM_CDM, "Error reading %s%u register",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		rc = -EIO;
 		goto end;
 	}
@@ -529,7 +539,9 @@ int cam_hw_cdm_set_cdm_core_cfg(struct cam_hw_info *cdm_hw)
 	rc = cam_cdm_write_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->core_cfg, cfg_mask);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Error writing cdm core cfg");
+		CAM_ERR(CAM_CDM, "Error writing %s%u core cfg",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		rc = -EIO;
 		goto end;
 	}
@@ -863,6 +875,8 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 
 	fifo_idx = CAM_CDM_GET_BLFIFO_IDX(client->handle);
 
+	CAM_DBG(CAM_CDM, "Submit bl to %s%u", cdm_hw->soc_info.label_name,
+		cdm_hw->soc_info.index);
 	if (fifo_idx >= CAM_CDM_BL_FIFO_MAX) {
 		rc = -EINVAL;
 		CAM_ERR(CAM_CDM, "Invalid handle 0x%x, rc = %d",
@@ -1202,7 +1216,9 @@ static void cam_hw_cdm_work(struct work_struct *work)
 				.last_bl_tag_done);
 
 		if (payload->irq_data == 0xff) {
-			CAM_INFO(CAM_CDM, "Debug genirq received");
+			CAM_INFO(CAM_CDM, "%s%u Debug genirq received",
+				cdm_hw->soc_info.label_name,
+				cdm_hw->soc_info.index);
 			kfree(payload);
 			payload = NULL;
 			return;
@@ -1264,7 +1280,9 @@ static void cam_hw_cdm_work(struct work_struct *work)
 	if (payload->irq_status &
 		CAM_CDM_IRQ_STATUS_BL_DONE_MASK) {
 		if (test_bit(payload->fifo_idx, &core->cdm_status)) {
-			CAM_DBG(CAM_CDM, "CDM HW BL done IRQ");
+			CAM_DBG(CAM_CDM, "%s%u HW BL done IRQ",
+				cdm_hw->soc_info.label_name,
+				cdm_hw->soc_info.index);
 			complete(&core->bl_fifo[payload->fifo_idx]
 				.bl_complete);
 		}
@@ -1274,8 +1292,9 @@ static void cam_hw_cdm_work(struct work_struct *work)
 		int reset_hw_hdl = 0x0;
 
 		CAM_ERR_RATE_LIMIT(CAM_CDM,
-			"CDM Error IRQ status %d\n",
-			payload->irq_status);
+			"%s%u Error IRQ status %d\n",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index, payload->irq_status);
 		set_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 		mutex_lock(&cdm_hw->hw_mutex);
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo;
@@ -1347,7 +1366,9 @@ static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 		if (cdm_hw->hw_state == CAM_HW_STATE_POWER_UP) {
 			cam_hw_cdm_dump_core_debug_registers(cdm_hw, true);
 		} else
-			CAM_INFO(CAM_CDM, "CDM hw is power in off state");
+			CAM_INFO(CAM_CDM, "%s%u hw is power in off state",
+				cdm_hw->soc_info.label_name,
+				cdm_hw->soc_info.index);
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
 			mutex_unlock(&core->bl_fifo[i].fifo_lock);
 		mutex_unlock(&cdm_hw->hw_mutex);
@@ -1365,6 +1386,7 @@ static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 {
 	struct cam_hw_info *cdm_hw = data;
+	struct cam_hw_soc_info *soc_info = &cdm_hw->soc_info;
 	struct cam_cdm *cdm_core = cdm_hw->core_info;
 	struct cam_cdm_work_payload *payload[CAM_CDM_BL_FIFO_MAX] = {0};
 	uint8_t rst_done_cnt = 0;
@@ -1374,7 +1396,9 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 	bool work_status;
 	int i;
 
-	CAM_DBG(CAM_CDM, "Got irq hw_version 0x%x", cdm_core->hw_version);
+	CAM_DBG(CAM_CDM, "Got irq hw_version 0x%x from %s%u",
+		cdm_core->hw_version, soc_info->label_name,
+		soc_info->index);
 	spin_lock(&cdm_hw->hw_lock);
 	if (cdm_hw->hw_state == CAM_HW_STATE_POWER_DOWN) {
 		CAM_DBG(CAM_CDM, "CDM is in power down state");
@@ -1395,23 +1419,30 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		if (cam_cdm_read_hw_reg(cdm_hw,
 			cdm_core->offsets->irq_reg[i]->irq_status,
 			&irq_status[i])) {
-			CAM_ERR(CAM_CDM, "Failed to read CDM HW IRQ status");
+			CAM_ERR(CAM_CDM, "Failed to read %s%u HW IRQ status",
+				soc_info->label_name,
+				soc_info->index);
 		}
 		if (cam_cdm_write_hw_reg(cdm_hw,
 			cdm_core->offsets->irq_reg[i]->irq_clear,
 			irq_status[i])) {
-			CAM_ERR(CAM_CDM,
-				"Failed to Write CDM HW IRQ Clear");
+			CAM_ERR(CAM_CDM, "Failed to Write %s%u HW IRQ Clear",
+				soc_info->label_name,
+				soc_info->index);
 		}
 	}
 
 	if (cam_cdm_write_hw_reg(cdm_hw,
 		cdm_core->offsets->irq_reg[0]->irq_clear_cmd, 0x01))
-		CAM_ERR(CAM_CDM, "Failed to Write CDM HW IRQ clr cmd");
+		CAM_ERR(CAM_CDM, "Failed to Write %s%u HW IRQ clr cmd",
+				soc_info->label_name,
+				soc_info->index);
 	if (cam_cdm_read_hw_reg(cdm_hw,
 			cdm_core->offsets->cmn_reg->usr_data,
 			&user_data))
-		CAM_ERR(CAM_CDM, "Failed to read CDM HW IRQ data");
+		CAM_ERR(CAM_CDM, "Failed to read %s%u HW IRQ data",
+				soc_info->label_name,
+				soc_info->index);
 	spin_unlock(&cdm_hw->hw_lock);
 
 	for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo_irq; i++) {
@@ -1460,8 +1491,9 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		if (cam_cdm_write_hw_reg(cdm_hw,
 				cdm_core->offsets->irq_reg[i]->irq_clear,
 				payload[i]->irq_status)) {
-			CAM_ERR(CAM_CDM,
-				"Failed to Write CDM HW IRQ Clear");
+			CAM_ERR(CAM_CDM, "Failed to Write %s%u HW IRQ Clear",
+				soc_info->label_name,
+				soc_info->index);
 			kfree(payload[i]);
 			return IRQ_HANDLED;
 		}
@@ -1482,14 +1514,17 @@ irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)
 		}
 	}
 	if (rst_done_cnt == cdm_core->offsets->reg_data->num_bl_fifo_irq) {
-		CAM_DBG(CAM_CDM, "CDM HW reset done IRQ");
+		CAM_DBG(CAM_CDM, "%s%u HW reset done IRQ",
+			soc_info->label_name,
+			soc_info->index);
 		complete(&cdm_core->reset_complete);
 	}
 	if (rst_done_cnt &&
 		(rst_done_cnt != cdm_core->offsets->reg_data->num_bl_fifo_irq))
 		CAM_INFO(CAM_CDM,
-			"Reset IRQ received for %d fifos instead of %d",
-			rst_done_cnt,
+			"%s%u Reset IRQ received for %d fifos instead of %d",
+			soc_info->label_name,
+			soc_info->index, rst_done_cnt,
 			cdm_core->offsets->reg_data->num_bl_fifo_irq);
 	return IRQ_HANDLED;
 }
@@ -1559,6 +1594,7 @@ int cam_hw_cdm_release_genirq_mem(void *hw_priv)
 int cam_hw_cdm_reset_hw(struct cam_hw_info *cdm_hw, uint32_t handle)
 {
 	struct cam_cdm *cdm_core = NULL;
+	struct cam_hw_soc_info *soc_info = &cdm_hw->soc_info;
 	long time_left;
 	int i, rc = -EIO;
 	int reset_val = 1;
@@ -1585,36 +1621,47 @@ int cam_hw_cdm_reset_hw(struct cam_hw_info *cdm_hw, uint32_t handle)
 		if (cam_cdm_write_hw_reg(cdm_hw,
 				cdm_core->offsets->irq_reg[i]->irq_mask,
 				0x70003)) {
-			CAM_ERR(CAM_CDM, "Failed to Write CDM HW IRQ mask");
+			CAM_ERR(CAM_CDM, "Failed to Write %s%u HW IRQ mask",
+				soc_info->label_name,
+				soc_info->index);
 			goto end;
 		}
 	}
 
 	if (cam_cdm_write_hw_reg(cdm_hw,
 			cdm_core->offsets->cmn_reg->rst_cmd, reset_val)) {
-		CAM_ERR(CAM_CDM, "Failed to Write CDM HW reset");
+		CAM_ERR(CAM_CDM, "Failed to Write %s%u HW reset",
+			soc_info->label_name,
+			soc_info->index);
 		goto end;
 	}
 
-	CAM_DBG(CAM_CDM, "Waiting for CDM HW reset done");
+	CAM_DBG(CAM_CDM, "Waiting for %s%u HW reset done",
+		soc_info->label_name, soc_info->index);
 	time_left = wait_for_completion_timeout(&cdm_core->reset_complete,
 		msecs_to_jiffies(CAM_CDM_HW_RESET_TIMEOUT));
 
 	if (time_left <= 0) {
 		rc = -ETIMEDOUT;
-		CAM_ERR(CAM_CDM, "CDM HW reset Wait failed rc=%d", rc);
+		CAM_ERR(CAM_CDM, "%s%u HW reset Wait failed rc=%d",
+			soc_info->label_name,
+			soc_info->index, rc);
 		goto end;
 	}
 
 	rc = cam_hw_cdm_set_cdm_core_cfg(cdm_hw);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Failed to configure CDM rc=%d", rc);
+		CAM_ERR(CAM_CDM, "Failed to configure %s%u rc=%d",
+			soc_info->label_name,
+			soc_info->index, rc);
 		goto end;
 	}
 
 	rc = cam_hw_cdm_set_cdm_blfifo_cfg(cdm_hw);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Failed to configure CDM fifo rc=%d", rc);
+		CAM_ERR(CAM_CDM, "Failed to configure %s%u fifo rc=%d",
+			soc_info->label_name,
+			soc_info->index, rc);
 		goto end;
 	}
 
@@ -1637,6 +1684,7 @@ int cam_hw_cdm_handle_error_info(
 	int i, rc = -EIO, reset_hw_hdl = 0x0;
 	uint32_t current_bl_data = 0, current_fifo = 0, current_tag = 0;
 	int reset_val = 1;
+	struct cam_hw_soc_info *soc_info = &cdm_hw->soc_info;
 
 	cdm_core = (struct cam_cdm *)cdm_hw->core_info;
 
@@ -1664,7 +1712,8 @@ int cam_hw_cdm_handle_error_info(
 		goto end;
 	}
 
-	CAM_ERR(CAM_CDM, "Hang detected for fifo %d with tag 0x%x",
+	CAM_ERR(CAM_CDM, "Hang detected for %s%u's fifo %d with tag 0x%x",
+		soc_info->label_name, soc_info->index,
 		current_fifo, current_tag);
 
 	/* dump cdm registers for further debug */
@@ -1807,14 +1856,16 @@ int cam_hw_cdm_get_cdm_config(struct cam_hw_info *cdm_hw)
 				soc_info->dev_name);
 		goto end;
 	} else {
-		CAM_DBG(CAM_CDM, "CDM init success");
+		CAM_DBG(CAM_CDM, "%s%u init success",
+			soc_info->label_name, soc_info->index);
 		cdm_hw->hw_state = CAM_HW_STATE_POWER_UP;
 	}
 
 	if (cam_cdm_read_hw_reg(cdm_hw,
 			core->offsets->cmn_reg->cdm_hw_version,
 			&core->hw_version)) {
-		CAM_ERR(CAM_CDM, "Failed to read CDM HW Version");
+		CAM_ERR(CAM_CDM, "Failed to read HW Version for %s%u",
+			soc_info->label_name, soc_info->index);
 		rc = -EIO;
 		goto disable_platform_resource;
 	}
@@ -1823,14 +1874,16 @@ int cam_hw_cdm_get_cdm_config(struct cam_hw_info *cdm_hw)
 		if (cam_cdm_read_hw_reg(cdm_hw,
 				core->offsets->cmn_reg->cam_version->hw_version,
 				&core->hw_family_version)) {
-			CAM_ERR(CAM_CDM, "Failed to read CDM family Version");
+			CAM_ERR(CAM_CDM, "Failed to read %s%d family Version",
+				soc_info->label_name, soc_info->index);
 			rc = -EIO;
 			goto disable_platform_resource;
 		}
 	}
 
 	CAM_DBG(CAM_CDM,
-		"CDM Hw version read success family =%x hw =%x",
+		"%s%d Hw version read success family =%x hw =%x",
+		soc_info->label_name, soc_info->index,
 		core->hw_family_version, core->hw_version);
 
 	core->ops = cam_cdm_get_ops(core->hw_version, NULL,
@@ -1850,7 +1903,8 @@ disable_platform_resource:
 		CAM_ERR(CAM_CDM, "disable platform failed for dev %s",
 				soc_info->dev_name);
 	} else {
-		CAM_DBG(CAM_CDM, "CDM Deinit success");
+		CAM_DBG(CAM_CDM, "%s%d Deinit success",
+			soc_info->label_name, soc_info->index);
 		cdm_hw->hw_state = CAM_HW_STATE_POWER_DOWN;
 	}
 end:
@@ -1875,14 +1929,16 @@ int cam_hw_cdm_init(void *hw_priv,
 	rc = cam_soc_util_enable_platform_resource(soc_info, true,
 		CAM_SVS_VOTE, true);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Enable platform failed");
+		CAM_ERR(CAM_CDM, "Enable platform failed for %s%d",
+			soc_info->label_name, soc_info->index);
 		goto end;
 	}
 	spin_lock_irqsave(&cdm_hw->hw_lock, flags);
 	cdm_hw->hw_state = CAM_HW_STATE_POWER_UP;
 	spin_unlock_irqrestore(&cdm_hw->hw_lock, flags);
 
-	CAM_DBG(CAM_CDM, "Enable soc done");
+	CAM_DBG(CAM_CDM, "Enable soc done for %s%d",
+		soc_info->label_name, soc_info->index);
 
 /* Before triggering the reset to HW, clear the reset complete */
 	clear_bit(CAM_CDM_ERROR_HW_STATUS, &cdm_core->cdm_status);
@@ -1899,10 +1955,13 @@ int cam_hw_cdm_init(void *hw_priv,
 	rc = cam_hw_cdm_reset_hw(cdm_hw, reset_hw_hdl);
 
 	if (rc) {
-		CAM_ERR(CAM_CDM, "CDM HW reset Wait failed rc=%d", rc);
+		CAM_ERR(CAM_CDM, "%s%u HW reset Wait failed rc=%d",
+			soc_info->label_name,
+			soc_info->index, rc);
 		goto disable_return;
 	} else {
-		CAM_DBG(CAM_CDM, "CDM Init success");
+		CAM_DBG(CAM_CDM, "%s%u Init success",
+			soc_info->label_name, soc_info->index);
 		for (i = 0; i < cdm_core->offsets->reg_data->num_bl_fifo; i++) {
 			if (!cdm_core->bl_fifo[i].bl_depth)
 				continue;
@@ -1981,13 +2040,15 @@ int cam_hw_cdm_deinit(void *hw_priv,
 		CAM_ERR(CAM_CDM, "Failed to Write CDM HW reset");
 	}
 
-	CAM_DBG(CAM_CDM, "Waiting for CDM HW reset done");
+	CAM_DBG(CAM_CDM, "Waiting for %s%u HW reset done",
+		soc_info->label_name, soc_info->index);
 	time_left = wait_for_completion_timeout(&cdm_core->reset_complete,
 		msecs_to_jiffies(CAM_CDM_HW_RESET_TIMEOUT));
 
 	if (time_left <= 0) {
 		rc = -ETIMEDOUT;
-		CAM_ERR(CAM_CDM, "CDM HW reset Wait failed rc=%d", rc);
+		CAM_ERR(CAM_CDM, "%s%u HW reset Wait failed rc=%d",
+		soc_info->label_name, soc_info->index, rc);
 	}
 
 	clear_bit(CAM_CDM_RESET_HW_STATUS, &cdm_core->cdm_status);
@@ -1999,9 +2060,11 @@ int cam_hw_cdm_deinit(void *hw_priv,
 	spin_unlock_irqrestore(&cdm_hw->hw_lock, flags);
 	rc = cam_soc_util_disable_platform_resource(soc_info, true, true);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "disable platform failed");
+		CAM_ERR(CAM_CDM, "disable platform failed for %s%u",
+			soc_info->label_name, soc_info->index);
 	} else {
-		CAM_DBG(CAM_CDM, "CDM Deinit success");
+		CAM_DBG(CAM_CDM, "%s%u Deinit success",
+			soc_info->label_name, soc_info->index);
 	}
 
 	return rc;
@@ -2136,7 +2199,10 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 	rc = cam_soc_util_request_platform_resource(&cdm_hw->soc_info,
 			cam_hw_cdm_irq, cdm_hw);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Failed to request platform resource");
+		CAM_ERR(CAM_CDM,
+			"Failed to request platform resource for %s%u",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		goto destroy_non_secure_hdl;
 	}
 	cpas_parms.cam_cpas_client_cb = cam_cdm_cpas_cb;
@@ -2198,7 +2264,9 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 
 	rc = cam_hw_cdm_init(cdm_hw, NULL, 0);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Failed to Init CDM HW");
+		CAM_ERR(CAM_CDM, "Failed to Init %s%u HW",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		goto cpas_stop;
 	}
 	cdm_hw->open_count++;
@@ -2207,7 +2275,9 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 		false);
 
 	if (!cdm_core->ops) {
-		CAM_ERR(CAM_CDM, "Failed to util ops for hw");
+		CAM_ERR(CAM_CDM, "Failed to util ops for %s%u HW",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		rc = -EINVAL;
 		goto deinit;
 	}
@@ -2221,7 +2291,9 @@ static int cam_hw_cdm_component_bind(struct device *dev,
 
 	rc = cam_hw_cdm_deinit(cdm_hw, NULL, 0);
 	if (rc) {
-		CAM_ERR(CAM_CDM, "Failed to Deinit CDM HW");
+		CAM_ERR(CAM_CDM, "Failed to Deinit %s%u HW",
+			cdm_hw->soc_info.label_name,
+			cdm_hw->soc_info.index);
 		cdm_hw->open_count--;
 		goto cpas_stop;
 	}
