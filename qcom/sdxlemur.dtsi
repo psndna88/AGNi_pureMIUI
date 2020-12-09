@@ -1350,6 +1350,15 @@
 		qcom,client-id = <0x00000001>;
 		qcom,vm-nav-path;
 	};
+
+	qcom_smcinvoke {
+		compatible = "qcom,smcinvoke";
+		qcom,support-legacy_smc;
+	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+	};
 };
 
 #include "sdxlemur-pinctrl.dtsi"
