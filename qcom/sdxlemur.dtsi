@@ -53,6 +53,31 @@
 			linux,cma-default;
 		};
 
+		user_contig_mem: user_contig_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
+
+		qseecom_mem: qseecom_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1000000>;
+		};
+
+
 		audio_mem: audio_region@0 {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x00000000 0xffffffff>;
@@ -1342,6 +1367,21 @@
 		qcom,no-clock-support;
 		iommus = <&apps_smmu 0x0064 0x0011>,
 			<&apps_smmu 0x0074 0x0011>;
+	};
+
+	qcom_qseecom: qseecom@90000000 {
+		compatible = "qcom,qseecom";
+		reg = <0x90000000 0x500000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+		interconnect-names = "data_path";
+		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
 	};
 
 	qcom,rmtfs_sharedmem@0 {
