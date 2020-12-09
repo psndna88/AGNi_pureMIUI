@@ -151,6 +151,9 @@ its hardware characteristcs.
 	* cti-flush-trig-num: Specifies the flush CTI trigger number for TMC
 	  ETR and TMC ETF.
 
+	* qcom,qdss-ipa-support : indicates whether qdss to ipa bam connection
+	   need to support.
+
 * Optional property for CATU and APSS :
 	* interrupts : Exactly one SPI may be listed for reporting the address
 	  error for CATU and four interrupts for TGU to get trigger from four
