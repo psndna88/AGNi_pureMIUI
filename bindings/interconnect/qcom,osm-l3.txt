@@ -1,7 +1,7 @@
-Qualcomm Technologies, Inc. EPSS L3 interconnect driver binding
+Qualcomm Technologies, Inc. OSM L3 interconnect driver binding
 -----------------------------------------------------------
 
-The EPSS L3 Interconnect provider supports the scaling of L3 cache
+The OSM L3 Interconnect provider supports the scaling of L3 cache
 performance states of the CPU subsystem.
 
 Required properties :
