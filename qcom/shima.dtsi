@@ -3754,7 +3754,7 @@
 		qcom,bt-vdd-dig-config = <950000 952000 0 1>;
 		qcom,bt-vdd-rfacmn-config  = <950000 952000 0 1>;
 		qcom,bt-vdd-rfa-0p8-config  = <950000 952000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1880000 2040000 0 1>;
 		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
 	};
