@@ -5,6 +5,10 @@
 
 };
 
+&chosen {
+	bootargs = "reboot=w";
+};
+
 &pcie0 {
 	status = "disabled";
 };
