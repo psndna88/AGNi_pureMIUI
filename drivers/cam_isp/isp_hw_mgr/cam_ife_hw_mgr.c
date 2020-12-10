@@ -1479,6 +1479,7 @@ static int cam_convert_hw_idx_to_ife_hw_num(int hw_idx)
 			break;
 		case CAM_CPAS_TITAN_580_V100:
 		case CAM_CPAS_TITAN_570_V200:
+		case CAM_CPAS_TITAN_165_V100:
 			if (hw_idx == 0)
 				return CAM_ISP_IFE0_HW;
 			else if (hw_idx == 1)
