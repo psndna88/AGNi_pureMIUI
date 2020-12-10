@@ -1372,6 +1372,48 @@
 		};
 	};
 
+	pil_wpss: qcom,wpss@8a00000 {
+		compatible = "qcom,pil-tz-generic";
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		/* Needs to add vdd_cx at SOD time.*/
+
+		qcom,firmware-name = "wpss";
+		memory-region = <&pil_wpss_mem>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,minidump-id = <4>;
+		qcom,ssctl-instance-id = <0x19>;
+		qcom,pas-id = <0x6>;
+		qcom,smem-id = <626>;
+		qcom,signal-aop;
+		qcom,complete-ramdump;
+
+		/* Inputs from wpss */
+		interrupts-extended = <&intc GIC_SPI 587 IRQ_TYPE_LEVEL_HIGH>,
+				<&wpss_smp2p_in 0 0>,
+				<&wpss_smp2p_in 2 0>,
+				<&wpss_smp2p_in 1 0>,
+				<&wpss_smp2p_in 3 0>,
+				<&wpss_smp2p_in 7 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
+
+		/* Outputs to wpss */
+		qcom,smem-states = <&wpss_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "wpss-pil";
+	};
+
 	qmp_aop: qcom,qmp-aop@c300000 {
 		compatible = "qcom,qmp-mbox";
 		mboxes = <&ipcc_mproc IPCC_CLIENT_AOP

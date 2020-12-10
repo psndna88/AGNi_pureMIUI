@@ -58,7 +58,10 @@
 		clocks = <&xo_board>;
 		#clock-cells = <0>;
 	};
+};
 
+&pil_wpss {
+	clocks = <&bi_tcxo>;
 };
 
 &usb0 {
