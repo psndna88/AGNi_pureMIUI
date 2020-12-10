@@ -83,6 +83,7 @@
 #define CAM_CDM_RESET_HW_STATUS 0x4
 #define CAM_CDM_ERROR_HW_STATUS 0x5
 #define CAM_CDM_FLUSH_HW_STATUS 0x6
+#define CAM_CDM_RESET_ERR_STATUS 0x7
 
 /* Curent BL command masks and shifts */
 #define CAM_CDM_CURRENT_BL_LEN   0xFFFFF
