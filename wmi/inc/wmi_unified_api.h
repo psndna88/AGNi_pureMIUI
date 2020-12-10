@@ -4214,4 +4214,18 @@ QDF_STATUS
 wmi_unified_extract_cp_stats_more_pending(wmi_unified_t wmi_handle,
 					  void *evt_buf, uint32_t *more_flag);
 
+/**
+ * wmi_extract_pdev_csa_switch_count_status() - extract CSA switch count status
+ * from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @param: Pointer to CSA switch count status param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_extract_pdev_csa_switch_count_status(
+		wmi_unified_t wmi_handle,
+		void *evt_buf,
+		struct pdev_csa_switch_count_status *param);
+
 #endif /* _WMI_UNIFIED_API_H_ */
