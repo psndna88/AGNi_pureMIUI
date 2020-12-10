@@ -597,7 +597,7 @@
 		reg = <0x1fc0000 0x30000>;
 	};
 
-	cache-controller@9200000 {
+	llcc: cache-controller@9200000 {
 		compatible = "qcom,sdxlemur-llcc", "qcom,llcc-v2";
 		reg = <0x9200000 0x50000>;
 		reg-names = "llcc_base";
