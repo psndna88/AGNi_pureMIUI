@@ -264,6 +264,7 @@
 #define HFI_VENUS_HEIGHT_ALIGNMENT 32
 
 #define SYSTEM_LAL_TILE10 192
+#define NUM_MBS_360P (((480 + 15) >> 4) * ((360 + 15) >> 4))
 #define NUM_MBS_720P (((1280 + 15) >> 4) * ((720 + 15) >> 4))
 #define NUM_MBS_4k (((4096 + 15) >> 4) * ((2304 + 15) >> 4))
 #define MB_SIZE_IN_PIXEL (16 * 16)
@@ -985,8 +986,8 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 	/*
 	 * Encoder output size calculation: 32 Align width/height
 	 * For CQ or heic session : YUVsize * 2
-	 * For resolution < 720p : YUVsize * 4
-	 * For resolution > 720p & <= 4K : YUVsize / 2
+	 * For resolution <= 480x360p : YUVsize * 2
+	 * For resolution > 360p & <= 4K : YUVsize / 2
 	 * For resolution > 4k : YUVsize / 4
 	 * Initially frame_size = YUVsize * 2;
 	 */
@@ -1003,8 +1004,8 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 		is_grid_session(inst) || is_image_session(inst))
 		goto calc_done;
 
-	if (mbs_per_frame < NUM_MBS_720P)
-		frame_size = frame_size << 1;
+	if (mbs_per_frame <= NUM_MBS_360P)
+		goto calc_done; /* Default frame_size = YUVsize * 2 */
 	else if (mbs_per_frame <= NUM_MBS_4k)
 		frame_size = frame_size >> 2;
 	else
