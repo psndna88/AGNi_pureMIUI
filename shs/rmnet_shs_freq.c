@@ -55,8 +55,9 @@ DATARMNET1159aa2cb6=DATARMNET81fe789d21;trace_rmnet_freq_reset(i,MIN_FREQ);}if(
 work_pending(&DATARMNETbfcbb4b8ac))return;if(DATARMNETde8f350999)queue_work(
 DATARMNETde8f350999,&DATARMNETbfcbb4b8ac);}static void DATARMNET009d37d173(void)
 {struct freq_qos_request*DATARMNETddcafd8b91;int i;for_each_possible_cpu(i){
-DATARMNETddcafd8b91=&per_cpu(DATARMNET17d6a9530a,i);freq_qos_remove_request(
-DATARMNETddcafd8b91);}}int DATARMNETe6e8431304(void){struct cpu_freq*
+DATARMNETddcafd8b91=&per_cpu(DATARMNET17d6a9530a,i);if(DATARMNETddcafd8b91&&
+freq_qos_request_active(DATARMNETddcafd8b91)){freq_qos_remove_request(
+DATARMNETddcafd8b91);}}}int DATARMNETe6e8431304(void){struct cpu_freq*
 DATARMNETe24d518157;int i;int ret=(0xd2d+202-0xdf7);struct freq_qos_request*
 DATARMNETddcafd8b91;struct cpufreq_policy*policy;DATARMNETc4b1be7898.
 DATARMNET9dd9bc4abb=alloc_percpu(struct cpu_freq);if(!DATARMNETc4b1be7898.
@@ -74,7 +75,6 @@ DATARMNETddcafd8b91,FREQ_QOS_MIN,MIN_FREQ);if(ret<(0xd2d+202-0xdf7)){pr_err(
 DATARMNET82d7f4ffa2();return(0xd2d+202-0xdf7);err:DATARMNET82d7f4ffa2();
 free_percpu(DATARMNETc4b1be7898.DATARMNET9dd9bc4abb);if(DATARMNETde8f350999){
 destroy_workqueue(DATARMNETde8f350999);DATARMNETde8f350999=NULL;}return ret;}int
- DATARMNETdf74db7e38(void){DATARMNET009d37d173();DATARMNET82d7f4ffa2();
-cancel_work_sync(&DATARMNETbfcbb4b8ac);if(DATARMNETde8f350999){destroy_workqueue
-(DATARMNETde8f350999);DATARMNETde8f350999=NULL;}free_percpu(DATARMNETc4b1be7898.
-DATARMNET9dd9bc4abb);return(0xd2d+202-0xdf7);}
+ DATARMNETdf74db7e38(void){DATARMNET009d37d173();if(DATARMNETde8f350999){
+destroy_workqueue(DATARMNETde8f350999);DATARMNETde8f350999=NULL;}free_percpu(
+DATARMNETc4b1be7898.DATARMNET9dd9bc4abb);return(0xd2d+202-0xdf7);}
