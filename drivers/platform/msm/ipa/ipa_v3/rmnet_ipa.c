@@ -2144,11 +2144,12 @@ static int ipa3_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			if (mtu_v4_set && mtu_v6_set)
 				iptype = IPA_IP_MAX;
 
-			rc = rmnet_ipa_send_set_mtu_notification(
-					ext_ioctl_data.u.mtu_params.if_name,
-					mux_channel[rmnet_index].mtu_v4,
-					mux_channel[rmnet_index].mtu_v6,
-					iptype);
+			if (mtu_v4_set || mtu_v6_set)
+				rc = rmnet_ipa_send_set_mtu_notification(
+						ext_ioctl_data.u.mtu_params.if_name,
+						mux_channel[rmnet_index].mtu_v4,
+						mux_channel[rmnet_index].mtu_v6,
+						iptype);
 
 			break;
 		default:
