@@ -117,6 +117,7 @@ struct csiphy_reg_parms_t {
 	uint32_t csiphy_cpas_cp_3ph_offset;
 	uint32_t csiphy_2ph_clock_lane;
 	uint32_t csiphy_2ph_combo_ck_ln;
+	uint32_t prgm_cmn_reg_across_csiphy;
 };
 
 /**
