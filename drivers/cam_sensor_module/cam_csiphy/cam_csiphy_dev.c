@@ -221,6 +221,10 @@ static int cam_csiphy_component_bind(struct device *dev,
 	CAM_DBG(CAM_CSIPHY, "CPAS registration successful handle=%d",
 		cpas_parms.client_handle);
 	new_csiphy_dev->cpas_handle = cpas_parms.client_handle;
+
+	cam_csiphy_register_baseaddress(new_csiphy_dev);
+
+
 	CAM_DBG(CAM_CSIPHY, "%s component bound successfully",
 		pdev->name);
 	return rc;
