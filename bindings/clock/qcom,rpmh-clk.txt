@@ -13,6 +13,7 @@ Required properties :
 		"qcom,sdm845-rpmh-clk"
 		"qcom,sm8150-rpmh-clk"
 		"qcom,sdxlemur-rpmh-clk"
+		"qcom,yupik-rpmh-clk"
 
 - #clock-cells : must contain 1
 
