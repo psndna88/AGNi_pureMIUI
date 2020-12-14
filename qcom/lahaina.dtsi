@@ -3238,6 +3238,10 @@
 			<&clock_gcc GCC_SDCC2_APPS_CLK>;
 		clock-names = "iface", "core";
 
+		no-mmc;
+		no-sdio;
+		max-frequency = <202000000>;
+
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642C 0xA800 0x10
 					0x2C010800 0x80040868>;
