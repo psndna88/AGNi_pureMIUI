@@ -1439,6 +1439,8 @@ struct hdd_adapter {
 	ol_txrx_rx_fp rx_stack;
 
 	qdf_work_t netdev_features_update_work;
+	/* Flag to indicate whether it is a pre cac adapter or not */
+	bool is_pre_cac_adapter;
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
