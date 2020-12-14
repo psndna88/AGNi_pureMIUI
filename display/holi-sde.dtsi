@@ -109,6 +109,7 @@
 	interconnect-names = "qcom,sde-data-bus0",
 				"qcom,sde-reg-bus";
 	qcom,sde-has-idle-pc;
+	qcom,sde-wakeup-with-touch;
 
 	qcom,platform-supply-entries {
 		#address-cells = <1>;
