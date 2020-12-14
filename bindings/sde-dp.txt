@@ -76,6 +76,8 @@ DP Controller: Required properties:
 - usb-controller:         Phandle for the USB controller.
 - qcom,pll-revision:    PLL hardware revision.
 - usb-phy:              Phandle for USB PHY driver. This is used to register for USB cable events.
+- qcom,dsc-continuous-pps:	Control node for sending PPS every frame in hardware for DSC over DP.
+				This is needed by certain bridge chips where there is such a requirement to do so.
 - qcom,dp-aux-switch:		Phandle for the driver used to program the AUX switch for Display Port orientation.
 - qcom,dp-hpd-gpio:		HPD gpio for direct DP connector without USB PHY or AUX switch.
 - qcom,dp-gpio-aux-switch:      Gpio DP AUX switch chipset support.
@@ -197,7 +199,7 @@ sde_dp: qcom,dp_display@0 {
 	qcom,mst-enable;
 	qcom,dsc-feature-enable;
 	qcom,fec-feature-enable;
-
+	qcom,dsc-continuous-pps;
 	vdda-1p2-supply = <&L6B>;
 	vdda-0p9-supply = <&L1B>;
 	vdd_mx-supply = <&VDD_MXA_LEVEL>;
