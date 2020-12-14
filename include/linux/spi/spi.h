@@ -595,6 +595,9 @@ static inline struct spi_master *spi_alloc_slave(struct device *host,
 	return __spi_alloc_controller(host, size, true);
 }
 
+extern struct spi_master *
+devm_spi_alloc_master(struct device *dev, unsigned int size);
+
 extern int spi_register_master(struct spi_master *master);
 extern int devm_spi_register_master(struct device *dev,
 				    struct spi_master *master);
