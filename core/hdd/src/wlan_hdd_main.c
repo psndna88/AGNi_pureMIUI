@@ -8628,6 +8628,7 @@ struct hdd_adapter *hdd_get_adapter_by_rand_macaddr(
 				dev_put(next_adapter->dev);
 			return adapter;
 		}
+		dev_put(adapter->dev);
 	}
 
 	return NULL;
@@ -9470,6 +9471,7 @@ static void hdd_display_periodic_stats(struct hdd_context *hdd_ctx,
 					  QDF_STATS_VERBOSITY_LEVEL_LOW);
 			wlan_hdd_display_netif_queue_history
 				(hdd_ctx, QDF_STATS_VERBOSITY_LEVEL_LOW);
+			cdp_display_txrx_hw_info(soc);
 			qdf_dp_trace_dump_stats();
 		}
 		counter = 0;
@@ -12265,6 +12267,7 @@ struct hdd_context *hdd_context_create(struct device *dev)
 	}
 
 	status = cfg_parse(WLAN_INI_FILE);
+	QDF_BUG(QDF_IS_STATUS_SUCCESS(status));
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Failed to parse cfg %s; status:%d\n",
 			WLAN_INI_FILE, status);
@@ -18303,6 +18306,7 @@ wlan_hdd_del_p2p_interface(struct hdd_context *hdd_ctx)
 			if (vdev_sync)
 				osif_vdev_sync_destroy(vdev_sync);
 		}
+		dev_put(adapter->dev);
 	}
 }
 

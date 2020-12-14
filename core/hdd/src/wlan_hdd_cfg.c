@@ -49,6 +49,7 @@
 #include "cfg_ucfg_api.h"
 #include "hdd_dp_cfg.h"
 #include <wma_api.h>
+#include "wlan_hdd_object_manager.h"
 
 /**
  * get_next_line() - find and locate the new line pointer
@@ -1063,7 +1064,8 @@ hdd_set_nss_params(struct hdd_adapter *adapter,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
+QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
+			  uint8_t rx_nss)
 {
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	uint32_t rx_supp_data_rate, tx_supp_data_rate;
@@ -1076,16 +1078,16 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 	uint8_t enable2x2;
 	mac_handle_t mac_handle;
 	bool bval = 0;
-	uint8_t tx_nss, rx_nss;
 	uint8_t band, max_supp_nss;
 
-	if ((nss == 2) && (hdd_ctx->num_rf_chains != 2)) {
+	if ((tx_nss == 2 || rx_nss == 2) && (hdd_ctx->num_rf_chains != 2)) {
 		hdd_err("No support for 2 spatial streams");
 		return QDF_STATUS_E_INVAL;
 	}
 
-	if (nss > MAX_VDEV_NSS) {
-		hdd_debug("Cannot support %d nss streams", nss);
+	if (tx_nss > MAX_VDEV_NSS || rx_nss > MAX_VDEV_NSS) {
+		hdd_debug("Cannot support tx_nss: %d rx_nss: %d", tx_nss,
+			  rx_nss);
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -1101,10 +1103,6 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 		return QDF_STATUS_E_INVAL;
 	}
 	max_supp_nss = MAX_VDEV_NSS;
-
-	/* Till now we dont have support for different rx, tx nss values */
-	tx_nss = nss;
-	rx_nss = nss;
 
 	/*
 	 * If FW is supporting the dynamic nss update, this command is meant to
@@ -1147,7 +1145,7 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 	 * update of nss and chains per vdev feature, for the upcoming
 	 * connection
 	 */
-	enable2x2 = (nss == 1) ? 0 : 1;
+	enable2x2 = (rx_nss == 2) ? 1 : 0;
 
 	if (bval == enable2x2) {
 		hdd_debug("NSS same as requested");
@@ -1165,14 +1163,18 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (!enable2x2) {
-		/* 1x1 */
-		rx_supp_data_rate = VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_1_1;
+	if (tx_nss == 1 && rx_nss == 2) {
+		/* 1x2 */
+		rx_supp_data_rate = VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2;
 		tx_supp_data_rate = VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_1_1;
-	} else {
+	} else if (enable2x2) {
 		/* 2x2 */
 		rx_supp_data_rate = VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_2_2;
 		tx_supp_data_rate = VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_2_2;
+	} else {
+		/* 1x1 */
+		rx_supp_data_rate = VHT_RX_HIGHEST_SUPPORTED_DATA_RATE_1_1;
+		tx_supp_data_rate = VHT_TX_HIGHEST_SUPPORTED_DATA_RATE_1_1;
 	}
 
 	/* Update Rx Highest Long GI data Rate */
@@ -1228,7 +1230,7 @@ skip_ht_cap_update:
 	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		mcs_set[0] = mcs_set_temp[0];
 		if (enable2x2)
-			for (val_len = 0; val_len < nss; val_len++)
+			for (val_len = 0; val_len < rx_nss; val_len++)
 				mcs_set[val_len] =
 				WLAN_HDD_RX_MCS_ALL_NSTREAM_RATES;
 		if (ucfg_mlme_set_supported_mcs_set(
@@ -1242,10 +1244,10 @@ skip_ht_cap_update:
 		status = false;
 		hdd_err("Could not get MCS SET from CFG");
 	}
-	sme_update_he_cap_nss(mac_handle, adapter->vdev_id, nss);
+	sme_update_he_cap_nss(mac_handle, adapter->vdev_id, rx_nss);
 #undef WLAN_HDD_RX_MCS_ALL_NSTREAM_RATES
 
-	if (QDF_STATUS_SUCCESS != sme_update_nss(mac_handle, nss))
+	if (QDF_STATUS_SUCCESS != sme_update_nss(mac_handle, rx_nss))
 		status = false;
 
 	hdd_set_policy_mgr_user_cfg(hdd_ctx);
@@ -1282,6 +1284,102 @@ QDF_STATUS hdd_get_nss(struct hdd_adapter *adapter, uint8_t *nss)
 		    policy_mgr_is_current_hwmode_dbs(hdd_ctx->psoc))
 			*nss = *nss - 1;
 	}
+
+	return status;
+}
+
+QDF_STATUS hdd_get_tx_nss(struct hdd_adapter *adapter, uint8_t *tx_nss)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_mlme_nss_chains *dynamic_cfg;
+	enum band_info operating_band;
+	uint8_t proto_generic_nss;
+
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	proto_generic_nss = wlan_vdev_mlme_get_nss(vdev);
+	if (hdd_ctx->dynamic_nss_chains_support) {
+		dynamic_cfg = mlme_get_dynamic_vdev_config(vdev);
+		if (!dynamic_cfg) {
+			hdd_err("nss chain dynamic config NULL");
+			hdd_objmgr_put_vdev(vdev);
+			return QDF_STATUS_E_INVAL;
+		}
+		if (adapter->device_mode == QDF_SAP_MODE ||
+		    adapter->device_mode == QDF_P2P_GO_MODE) {
+			operating_band = hdd_get_sap_operating_band(
+						adapter->hdd_ctx);
+		} else {
+			operating_band = hdd_conn_get_connected_band(
+						&adapter->session.station);
+		}
+		switch (operating_band) {
+		case BAND_2G:
+			*tx_nss = dynamic_cfg->tx_nss[NSS_CHAINS_BAND_2GHZ];
+			break;
+		case BAND_5G:
+			*tx_nss = dynamic_cfg->tx_nss[NSS_CHAINS_BAND_5GHZ];
+			break;
+		default:
+			*tx_nss = proto_generic_nss;
+		}
+		if (*tx_nss > proto_generic_nss)
+			*tx_nss = proto_generic_nss;
+	} else
+		*tx_nss = proto_generic_nss;
+	hdd_objmgr_put_vdev(vdev);
+
+	return status;
+}
+
+QDF_STATUS hdd_get_rx_nss(struct hdd_adapter *adapter, uint8_t *rx_nss)
+{
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_mlme_nss_chains *dynamic_cfg;
+	enum band_info operating_band;
+	uint8_t proto_generic_nss;
+
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	proto_generic_nss = wlan_vdev_mlme_get_nss(vdev);
+	if (hdd_ctx->dynamic_nss_chains_support) {
+		dynamic_cfg = mlme_get_dynamic_vdev_config(vdev);
+		if (!dynamic_cfg) {
+			hdd_err("nss chain dynamic config NULL");
+			hdd_objmgr_put_vdev(vdev);
+			return QDF_STATUS_E_INVAL;
+		}
+		if (adapter->device_mode == QDF_SAP_MODE ||
+		    adapter->device_mode == QDF_P2P_GO_MODE) {
+			operating_band = hdd_get_sap_operating_band(
+						adapter->hdd_ctx);
+		} else {
+			operating_band = hdd_conn_get_connected_band(
+						&adapter->session.station);
+		}
+		switch (operating_band) {
+		case BAND_2G:
+			*rx_nss = dynamic_cfg->rx_nss[NSS_CHAINS_BAND_2GHZ];
+			break;
+		case BAND_5G:
+			*rx_nss = dynamic_cfg->rx_nss[NSS_CHAINS_BAND_5GHZ];
+			break;
+		default:
+			*rx_nss = proto_generic_nss;
+		}
+		if (*rx_nss > proto_generic_nss)
+			*rx_nss = proto_generic_nss;
+	} else
+		*rx_nss = proto_generic_nss;
+	hdd_objmgr_put_vdev(vdev);
 
 	return status;
 }

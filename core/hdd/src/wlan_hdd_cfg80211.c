@@ -6963,6 +6963,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 		.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_NUM_TX_CHAINS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_NUM_RX_CHAINS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS] = {.type = NLA_U8 },
 
 };
 
@@ -7674,6 +7676,37 @@ static int hdd_config_vdev_chains(struct hdd_adapter *adapter,
 	if (hdd_ctx->dynamic_nss_chains_support)
 		return hdd_set_dynamic_antenna_mode(adapter, rx_chains,
 						    tx_chains);
+	return 0;
+}
+
+static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
+				  struct nlattr *tb[])
+{
+	uint8_t tx_nss, rx_nss;
+	QDF_STATUS status;
+
+	struct nlattr *tx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS];
+	struct nlattr *rx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS];
+
+	if (!tx_attr && !rx_attr)
+		return 0;
+
+	tx_nss = nla_get_u8(tx_attr);
+	rx_nss = nla_get_u8(rx_attr);
+	hdd_debug("tx_nss %d rx_nss %d", tx_nss, rx_nss);
+	/* Only allow NSS for tx_rx_nss for 1x1, 1x2, 2x2 */
+	if (!((tx_nss == 1 && rx_nss == 2) || (tx_nss == 1 && rx_nss == 1) ||
+	      (tx_nss == 2 && rx_nss == 2))) {
+		hdd_err("Setting tx_nss %d rx_nss %d not allowed", tx_nss,
+			rx_nss);
+		return 0;
+	}
+	status = hdd_update_nss(adapter, tx_nss, rx_nss);
+	if (status != QDF_STATUS_SUCCESS)
+		hdd_debug("Can't set tx_nss %d rx_nss %d", tx_nss, rx_nss);
+
 	return 0;
 }
 
@@ -8658,7 +8691,7 @@ static int hdd_set_nss(struct hdd_adapter *adapter,
 
 	nss = nla_get_u8(attr);
 
-	status = hdd_update_nss(adapter, nss);
+	status = hdd_update_nss(adapter, nss, nss);
 	ret = qdf_status_to_os_return(status);
 
 	if (ret == 0 && adapter->device_mode == QDF_SAP_MODE)
@@ -9149,6 +9182,78 @@ static int hdd_get_nss_config(struct hdd_adapter *adapter,
 }
 
 /**
+ * hdd_get_tx_nss_config() - Get the number of tx spatial streams supported by
+ * the adapter
+ * @adapter: Pointer to HDD adapter
+ * @skb: sk buffer to hold nl80211 attributes
+ * @attr: Pointer to struct nlattr
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static int hdd_get_tx_nss_config(struct hdd_adapter *adapter,
+				 struct sk_buff *skb,
+				 const struct nlattr *attr)
+{
+	uint8_t tx_nss;
+	QDF_STATUS status;
+
+	if (!hdd_is_vdev_in_conn_state(adapter)) {
+		hdd_err("Not in connected state");
+		return -EINVAL;
+	}
+
+	status = hdd_get_tx_nss(adapter, &tx_nss);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Failed to get nss");
+		return -EINVAL;
+	}
+
+	hdd_debug("tx_nss %d", tx_nss);
+	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS, tx_nss)) {
+		hdd_err("nla_put failure");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
+ * hdd_get_rx_nss_config() - Get the number of rx spatial streams supported by
+ * the adapter
+ * @adapter: Pointer to HDD adapter
+ * @skb: sk buffer to hold nl80211 attributes
+ * @attr: Pointer to struct nlattr
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static int hdd_get_rx_nss_config(struct hdd_adapter *adapter,
+				 struct sk_buff *skb,
+				 const struct nlattr *attr)
+{
+	uint8_t rx_nss;
+	QDF_STATUS status;
+
+	if (!hdd_is_vdev_in_conn_state(adapter)) {
+		hdd_err("Not in connected state");
+		return -EINVAL;
+	}
+
+	status = hdd_get_rx_nss(adapter, &rx_nss);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Failed to get nss");
+		return -EINVAL;
+	}
+
+	hdd_debug("rx_nss %d", rx_nss);
+	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS, rx_nss)) {
+		hdd_err("nla_put failure");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
  * hdd_get_optimized_power_config() - Get the number of spatial streams
  * supported by the adapter
  * @adapter: Pointer to HDD adapter
@@ -9249,6 +9354,12 @@ static const struct config_getters config_getters[] = {
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_OPTIMIZED_POWER_MANAGEMENT,
 	 sizeof(uint8_t),
 	 hdd_get_optimized_power_config},
+	 {QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS,
+	 sizeof(uint8_t),
+	 hdd_get_tx_nss_config},
+	 {QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS,
+	 sizeof(uint8_t),
+	 hdd_get_rx_nss_config},
 };
 
 /**
@@ -9375,6 +9486,7 @@ static const interdependent_setter_fn interdependent_setters[] = {
 	wlan_hdd_cfg80211_wifi_set_rx_blocksize,
 	hdd_config_msdu_aggregation,
 	hdd_config_vdev_chains,
+	hdd_config_tx_rx_nss,
 };
 
 /**
@@ -18832,18 +18944,17 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 		 */
 		if (adapter->device_mode == QDF_STA_MODE &&
 		    (adapter->scan_info.default_scan_ies ||
-		     adapter->scan_info.scan_add_ie.length) &&
-		    !roam_profile->nAddIEScanLength) {
-			if (adapter->scan_info.default_scan_ies) {
-				roam_profile->pAddIEScan =
-					adapter->scan_info.default_scan_ies;
-				roam_profile->nAddIEScanLength =
-					adapter->scan_info.default_scan_ies_len;
-			} else if (adapter->scan_info.scan_add_ie.length) {
+		     adapter->scan_info.scan_add_ie.length)) {
+			if (adapter->scan_info.scan_add_ie.length) {
 				roam_profile->pAddIEScan =
 					adapter->scan_info.scan_add_ie.addIEdata;
 				roam_profile->nAddIEScanLength =
 					adapter->scan_info.scan_add_ie.length;
+			} else if (adapter->scan_info.default_scan_ies) {
+				roam_profile->pAddIEScan =
+					adapter->scan_info.default_scan_ies;
+				roam_profile->nAddIEScanLength =
+					adapter->scan_info.default_scan_ies_len;
 			}
 		}
 
@@ -23732,7 +23843,8 @@ wlan_hdd_cfg80211_update_connect_params(struct wiphy *wiphy,
 #if defined(WLAN_FEATURE_SAE) && \
 		(defined(CFG80211_EXTERNAL_AUTH_SUPPORT) || \
 		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0))
-#if defined(CFG80211_EXTERNAL_AUTH_AP_SUPPORT)
+#if (defined(CFG80211_EXTERNAL_AUTH_AP_SUPPORT) || \
+		LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 /**
  * wlan_hdd_extauth_cache_pmkid() - Extract and cache pmkid
  * @adapter: hdd vdev/net_device context

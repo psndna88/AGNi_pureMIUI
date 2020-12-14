@@ -53,17 +53,39 @@ static void lim_process_auth_rsp_timeout(struct mac_context *, uint32_t);
 static void lim_process_periodic_join_probe_req_timer(struct mac_context *);
 static void lim_process_auth_retry_timer(struct mac_context *);
 
-static void lim_fill_status_code(enum tx_ack_status ack_status,
+static void lim_fill_status_code(uint8_t frame_type,
+				 enum tx_ack_status ack_status,
 				 enum wlan_status_code *proto_status_code)
 {
-	if (ack_status == LIM_TX_FAILED)
-		*proto_status_code = STATUS_AUTH_TX_FAIL;
-	else if (ack_status == LIM_ACK_RCD_FAILURE)
-		*proto_status_code = STATUS_AUTH_NO_ACK_RECEIVED;
-	else if (ack_status == LIM_ACK_RCD_SUCCESS)
-		*proto_status_code = STATUS_AUTH_NO_RESP_RECEIVED;
-	else
-		*proto_status_code = STATUS_UNSPECIFIED_FAILURE;
+	if (frame_type == SIR_MAC_MGMT_AUTH) {
+		switch (ack_status) {
+		case LIM_TX_FAILED:
+			*proto_status_code = STATUS_AUTH_TX_FAIL;
+			break;
+		case LIM_ACK_RCD_FAILURE:
+			*proto_status_code = STATUS_AUTH_NO_ACK_RECEIVED;
+			break;
+		case LIM_ACK_RCD_SUCCESS:
+			*proto_status_code = STATUS_AUTH_NO_RESP_RECEIVED;
+			break;
+		default:
+			*proto_status_code = STATUS_UNSPECIFIED_FAILURE;
+		}
+	} else if (frame_type == SIR_MAC_MGMT_ASSOC_RSP) {
+		switch (ack_status) {
+		case LIM_TX_FAILED:
+			*proto_status_code = STATUS_ASSOC_TX_FAIL;
+			break;
+		case LIM_ACK_RCD_FAILURE:
+			*proto_status_code = STATUS_ASSOC_NO_ACK_RECEIVED;
+			break;
+		case LIM_ACK_RCD_SUCCESS:
+			*proto_status_code = STATUS_ASSOC_NO_RESP_RECEIVED;
+			break;
+		default:
+			*proto_status_code = STATUS_UNSPECIFIED_FAILURE;
+		}
+	}
 }
 
 /**
@@ -91,7 +113,8 @@ static void lim_process_sae_auth_timeout(struct mac_context *mac_ctx)
 
 	switch (session->limMlmState) {
 	case eLIM_MLM_WT_SAE_AUTH_STATE:
-		lim_fill_status_code(mac_ctx->auth_ack_status,
+		lim_fill_status_code(SIR_MAC_MGMT_AUTH,
+				     mac_ctx->auth_ack_status,
 				     &proto_status_code);
 		/*
 		 * SAE authentication is not completed. Restore from
@@ -327,33 +350,21 @@ end:
 		lim_send_start_bss_confirm(mac_ctx, &mlm_start_cnf);
 }
 
-/**
- * lim_post_join_set_link_state_callback()- registered callback to perform post
- * peer creation operations
- *
- * @mac: pointer to global mac structure
- * @callback_arg: registered callback argument
- * @status: peer creation status
- *
- * this is registered callback function during association to perform
- * post peer creation operation based on the peer creation status
- *
- * Return: none
- */
-static void lim_post_join_set_link_state_callback(
-		struct mac_context *mac,
-		struct pe_session *session_entry, QDF_STATUS status)
+void
+lim_post_join_set_link_state_callback(struct mac_context *mac, uint32_t vdev_id,
+				      QDF_STATUS status)
 {
 	tLimMlmJoinCnf mlm_join_cnf;
+	struct pe_session *session_entry;
 
+	session_entry = pe_find_session_by_vdev_id(mac, vdev_id);
 	if (!session_entry) {
-		pe_err("sessionId is NULL");
+		pe_err("vdev_id:%d PE session is NULL", vdev_id);
 		return;
 	}
 
 	if (QDF_IS_STATUS_ERROR(status)) {
-		pe_err("failed to find pe session for session id:%d",
-			session_entry->peSessionId);
+		pe_err("vdev%d: Failed to create peer", session_entry->vdev_id);
 		goto failure;
 	}
 
@@ -361,8 +372,7 @@ static void lim_post_join_set_link_state_callback(
 	 * store the channel switch session_entry in the lim
 	 * global variable
 	 */
-	session_entry->channelChangeReasonCode =
-			 LIM_SWITCH_CHANNEL_JOIN;
+	session_entry->channelChangeReasonCode = LIM_SWITCH_CHANNEL_JOIN;
 	session_entry->pLimMlmReassocRetryReq = NULL;
 	lim_send_switch_chnl_params(mac, session_entry);
 
@@ -397,18 +407,13 @@ static void
 lim_process_mlm_post_join_suspend_link(struct mac_context *mac_ctx,
 				       struct pe_session *session)
 {
-	QDF_STATUS status;
-
 	lim_deactivate_and_change_timer(mac_ctx, eLIM_JOIN_FAIL_TIMER);
 
 	/* assign appropriate sessionId to the timer object */
 	mac_ctx->lim.lim_timers.gLimJoinFailureTimer.sessionId =
 		session->peSessionId;
 
-	status = wma_add_bss_peer_sta(session->vdev_id, session->bssId);
-	lim_post_join_set_link_state_callback(mac_ctx, session, status);
-
-	return;
+	wma_add_bss_peer_sta(session->vdev_id, session->bssId);
 }
 
 /**
@@ -1794,7 +1799,8 @@ void lim_process_auth_failure_timeout(struct mac_context *mac_ctx)
 			}
 			mac_ctx->mlme_cfg->timeouts.auth_failure_timeout = val;
 		}
-		lim_fill_status_code(mac_ctx->auth_ack_status,
+		lim_fill_status_code(SIR_MAC_MGMT_AUTH,
+				     mac_ctx->auth_ack_status,
 				     &proto_status_code);
 		lim_restore_from_auth_state(mac_ctx,
 				eSIR_SME_AUTH_TIMEOUT_RESULT_CODE,
@@ -1970,7 +1976,8 @@ void lim_process_assoc_failure_timeout(struct mac_context *mac_ctx,
 			lim_delete_pre_auth_node(mac_ctx,
 						 session->bssId);
 		}
-		lim_fill_status_code(mac_ctx->assoc_ack_status,
+		lim_fill_status_code(SIR_MAC_MGMT_ASSOC_RSP,
+				     mac_ctx->assoc_ack_status,
 				     &proto_status_code);
 
 		mlm_assoc_cnf.resultCode = eSIR_SME_ASSOC_TIMEOUT_RESULT_CODE;

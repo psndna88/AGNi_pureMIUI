@@ -1895,11 +1895,16 @@ static QDF_STATUS lim_assoc_tx_complete_cnf(void *context,
 		assoc_ack_status = ACKED;
 		reason_code = QDF_STATUS_SUCCESS;
 		mac_ctx->assoc_ack_status = LIM_ACK_RCD_SUCCESS;
-	} else {
+	} else if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_NO_ACK) {
 		assoc_ack_status = NOT_ACKED;
 		reason_code = QDF_STATUS_E_FAILURE;
 		mac_ctx->assoc_ack_status = LIM_ACK_RCD_FAILURE;
+	} else {
+		assoc_ack_status = SENT_FAIL;
+		reason_code = QDF_STATUS_E_FAILURE;
+		mac_ctx->assoc_ack_status = LIM_TX_FAILED;
 	}
+
 	if (buf)
 		qdf_nbuf_free(buf);
 
@@ -2776,9 +2781,13 @@ static QDF_STATUS lim_auth_tx_complete_cnf(void *context,
 		if (!sae_auth_acked)
 			lim_deactivate_and_change_timer(mac_ctx,
 							eLIM_AUTH_RETRY_TIMER);
-	} else {
+	} else if (tx_complete == WMI_MGMT_TX_COMP_TYPE_COMPLETE_NO_ACK) {
 		mac_ctx->auth_ack_status = LIM_ACK_RCD_FAILURE;
 		auth_ack_status = NOT_ACKED;
+		reason_code = QDF_STATUS_E_FAILURE;
+	} else {
+		mac_ctx->auth_ack_status = LIM_TX_FAILED;
+		auth_ack_status = SENT_FAIL;
 		reason_code = QDF_STATUS_E_FAILURE;
 	}
 
@@ -4792,8 +4801,12 @@ lim_send_radio_measure_report_action_frame(struct mac_context *mac,
 	uint8_t smeSessionId = 0;
 	bool is_last_report = false;
 
+	/* Malloc size of (tDot11fIEMeasurementReport) * (num_report - 1)
+	 * as memory for one Dot11fIEMeasurementReport is already calculated.
+	 */
 	tDot11fRadioMeasurementReport *frm =
-		qdf_mem_malloc(sizeof(tDot11fRadioMeasurementReport));
+		qdf_mem_malloc(sizeof(tDot11fRadioMeasurementReport) +
+		(sizeof(tDot11fIEMeasurementReport) * (num_report - 1)));
 	if (!frm)
 		return QDF_STATUS_E_NOMEM;
 
@@ -4805,15 +4818,11 @@ lim_send_radio_measure_report_action_frame(struct mac_context *mac,
 
 	smeSessionId = pe_session->smeSessionId;
 
-
 	frm->Category.category = ACTION_CATEGORY_RRM;
 	frm->Action.action = RRM_RADIO_MEASURE_RPT;
 	frm->DialogToken.token = dialog_token;
 
-	frm->num_MeasurementReport =
-		(num_report >
-		 RADIO_REPORTS_MAX_IN_A_FRAME) ? RADIO_REPORTS_MAX_IN_A_FRAME :
-		num_report;
+	frm->num_MeasurementReport = num_report;
 
 	for (i = 0; i < frm->num_MeasurementReport; i++) {
 		frm->MeasurementReport[i].type = pRRMReport[i].type;

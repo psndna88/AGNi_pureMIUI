@@ -266,6 +266,7 @@ struct hdd_config {
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 	uint32_t sta_stats_cache_expiry_time;
 #endif
+	int icmp_req_to_fw_mark_interval;
 };
 
 /**
@@ -317,7 +318,8 @@ void hdd_cfg_print_global_config(struct hdd_context *hdd_ctx);
  * hdd_update_nss() - Update the number of spatial streams supported.
  *
  * @adapter: the pointer to adapter
- * @nss: the number of spatial streams to be updated
+ * @tx_nss: the Tx number of spatial streams to be updated
+ * @rx_nss: the Rx number of spatial streams to be updated
  *
  * This function is used to modify the number of spatial streams
  * supported when not in connected state.
@@ -325,7 +327,8 @@ void hdd_cfg_print_global_config(struct hdd_context *hdd_ctx);
  * Return: QDF_STATUS_SUCCESS if nss is correctly updated,
  *              otherwise QDF_STATUS_E_FAILURE would be returned
  */
-QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss);
+QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t tx_nss,
+			  uint8_t rx_nss);
 
 /**
  * hdd_get_nss() - Get the number of spatial streams supported by the adapter
@@ -339,6 +342,33 @@ QDF_STATUS hdd_update_nss(struct hdd_adapter *adapter, uint8_t nss);
  * Return: QDF_STATUS
  */
 QDF_STATUS hdd_get_nss(struct hdd_adapter *adapter, uint8_t *nss);
+
+/**
+ * hdd_get_tx_nss() - Get the number of spatial streams supported by the adapter
+ *
+ * @adapter: the pointer to adapter
+ * @tx_nss: the number Tx of spatial streams supported by the adapter
+ *
+ * This function is used to get the number of Tx spatial streams supported by
+ * the adapter.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_get_tx_nss(struct hdd_adapter *adapter, uint8_t *tx_nss);
+
+/**
+ * hdd_get_rx_nss() - Get the number of spatial streams supported by the adapter
+ *
+ * @adapter: the pointer to adapter
+ * @rx_nss: the number Rx of spatial streams supported by the adapter
+ *
+ * This function is used to get the number of Rx spatial streams supported by
+ * the adapter.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS hdd_get_rx_nss(struct hdd_adapter *adapter, uint8_t *rx_nss);
+
 
 /**
  * hdd_dfs_indicate_radar() - Block tx as radar found on the channel

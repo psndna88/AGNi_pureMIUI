@@ -1500,6 +1500,7 @@ static void hdd_send_association_event(struct net_device *dev,
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 	union iwreq_data wrqu;
 	int we_event;
 	char *msg;
@@ -1651,6 +1652,7 @@ static void hdd_send_association_event(struct net_device *dev,
 		/* stop timer in sta/p2p_cli */
 		hdd_bus_bw_compute_reset_prev_txrx_stats(adapter);
 		hdd_bus_bw_compute_timer_try_stop(hdd_ctx);
+		cdp_display_txrx_hw_info(soc);
 	}
 	hdd_ipa_set_tx_flow_info();
 
@@ -3095,15 +3097,6 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			u8 *assoc_req = NULL;
 			unsigned int assoc_req_len = 0;
 			struct ieee80211_channel *chan;
-			uint32_t rsp_rsn_lemgth = DOT11F_IE_RSN_MAX_LEN;
-			uint8_t *rsp_rsn_ie =
-				qdf_mem_malloc(sizeof(uint8_t) *
-					       DOT11F_IE_RSN_MAX_LEN);
-			if (!rsp_rsn_ie) {
-				qdf_mem_free(reqRsnIe);
-				return QDF_STATUS_E_NOMEM;
-			}
-
 
 			/* add bss_id to cfg80211 data base */
 			bss =
@@ -3132,7 +3125,6 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					REASON_UNSPEC_FAILURE);
 				}
 				qdf_mem_free(reqRsnIe);
-				qdf_mem_free(rsp_rsn_ie);
 				return QDF_STATUS_E_FAILURE;
 			}
 
@@ -3286,10 +3278,6 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 							    &reqRsnLength,
 							    reqRsnIe);
 
-				sme_roam_get_wpa_rsn_rsp_ie(mac_handle,
-							    adapter->vdev_id,
-							    &rsp_rsn_lemgth,
-							    rsp_rsn_ie);
 				if (!hddDisconInProgress) {
 					if (ft_carrier_on)
 						hdd_send_re_assoc_event(dev,
@@ -3341,7 +3329,6 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				hdd_debug("Enabling queues");
 				hdd_netif_queue_enable(adapter);
 			}
-			qdf_mem_free(rsp_rsn_ie);
 		} else {
 			/*
 			 * wpa supplicant expecting WPA/RSN IE in connect result
