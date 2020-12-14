@@ -700,6 +700,7 @@ int cam_isp_add_io_buffers(
 			wm_update.num_buf   = plane_id;
 			wm_update.io_cfg    = &io_cfg[i];
 			wm_update.frame_header = 0;
+			wm_update.fh_enabled = false;
 
 			for (plane_id = 0; plane_id < CAM_PACKET_MAX_PLANES;
 				plane_id++)
@@ -709,14 +710,8 @@ int cam_isp_add_io_buffers(
 			if ((frame_header_info->frame_header_enable) &&
 				!(frame_header_info->frame_header_res_id)) {
 				wm_update.frame_header = iova_addr;
-				frame_header_info->frame_header_res_id =
-					res->res_id;
 				wm_update.local_id =
 					prepare->packet->header.request_id;
-				CAM_DBG(CAM_ISP,
-					"Frame header enabled for res: 0x%x iova: %pK",
-					frame_header_info->frame_header_res_id,
-					wm_update.frame_header);
 			}
 
 			update_buf.cmd.size = kmd_buf_remain_size;
@@ -736,6 +731,16 @@ int cam_isp_add_io_buffers(
 				rc = -ENOMEM;
 				return rc;
 			}
+
+			if (wm_update.fh_enabled) {
+				frame_header_info->frame_header_res_id =
+					res->res_id;
+				CAM_DBG(CAM_ISP,
+					"Frame header enabled for res: 0x%x iova: %pK",
+					frame_header_info->frame_header_res_id,
+					wm_update.frame_header);
+			}
+
 			io_cfg_used_bytes += update_buf.cmd.used_bytes;
 
 			if (!out_map_entries) {
