@@ -8,6 +8,7 @@
 #include "cam_csiphy_soc.h"
 #include "cam_csiphy_core.h"
 #include <media/cam_sensor.h>
+#include <dt-bindings/msm/msm-camera.h>
 #include "camera_main.h"
 
 static struct dentry *root_dentry;
@@ -207,6 +208,15 @@ static int cam_csiphy_component_bind(struct device *dev,
 	rc = cam_csiphy_parse_dt_info(pdev, new_csiphy_dev);
 	if (rc < 0) {
 		CAM_ERR(CAM_CSIPHY, "DT parsing failed: %d", rc);
+		goto csiphy_no_resource;
+	}
+	/* validate PHY FUSE only for CSIPHY4 */
+	if ((new_csiphy_dev->soc_info.index == 4) &&
+		!cam_cpas_is_feature_supported(
+			CAM_CPAS_CSIPHY_FUSE,
+			(1 << new_csiphy_dev->soc_info.index), NULL)) {
+		CAM_ERR(CAM_CSIPHY, "PHY%d is not supported: %d",
+			new_csiphy_dev->soc_info.index);
 		goto csiphy_no_resource;
 	}
 
