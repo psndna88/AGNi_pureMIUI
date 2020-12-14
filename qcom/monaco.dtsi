@@ -383,6 +383,11 @@
 		qcom,wakeup-enable;
 	};
 
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
+	};
+
 	qfprom: qfprom@1b40000 {
 		compatible = "qcom,qfprom";
 		reg = <0x1b40000 0x7000>;
