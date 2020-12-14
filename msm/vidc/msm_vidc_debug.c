@@ -31,7 +31,7 @@ int msm_vidc_vpp_delay;
 	atomic_read(&__binfo->ref_count) >= 2 ? "video driver" : "firmware";\
 })
 
-static struct log_cookie ctxt[MAX_SUPPORTED_INSTANCES];
+struct log_cookie ctxt[MAX_SUPPORTED_INSTANCES];
 
 struct core_inst_pair {
 	struct msm_vidc_core *core;
@@ -626,17 +626,6 @@ int get_sid(u32 *sid, u32 session_type)
 	return (i == MAX_SUPPORTED_INSTANCES);
 }
 
-void put_sid(u32 sid)
-{
-	if (!sid || sid > MAX_SUPPORTED_INSTANCES) {
-		d_vpr_e("%s: invalid sid %#x\n",
-			__func__, sid);
-		return;
-	}
-	if (ctxt[sid-1].used)
-		ctxt[sid-1].used = 0;
-}
-
 inline void update_log_ctxt(u32 sid, u32 session_type, u32 fourcc)
 {
 	const char *codec;
@@ -695,36 +684,6 @@ inline void update_log_ctxt(u32 sid, u32 session_type, u32 fourcc)
 	memcpy(&ctxt[sid-1].name, codec, 4);
 	ctxt[sid-1].name[4] = type;
 	ctxt[sid-1].name[5] = '\0';
-}
-
-inline char *get_codec_name(u32 sid)
-{
-	if (!sid || sid > MAX_SUPPORTED_INSTANCES)
-		return ".....";
-
-	return ctxt[sid-1].name;
-}
-
-/**
- * 0xx -> allow prints for all sessions
- * 1xx -> allow only encoder prints
- * 2xx -> allow only decoder prints
- */
-inline bool is_print_allowed(u32 sid, u32 level)
-{
-	if (!(msm_vidc_debug & level))
-		return false;
-
-	if (!((msm_vidc_debug >> 8) & 0xF))
-		return true;
-
-	if (!sid || sid > MAX_SUPPORTED_INSTANCES)
-		return true;
-
-	if (ctxt[sid-1].session_type & msm_vidc_debug)
-		return true;
-
-	return false;
 }
 
 /* Mock all the missing parts for successful compilation starts here */
