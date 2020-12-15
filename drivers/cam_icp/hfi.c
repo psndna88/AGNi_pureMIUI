@@ -31,7 +31,6 @@
 #define HFI_VERSION_INFO_STEP_BMSK   0xFF
 #define HFI_VERSION_INFO_STEP_SHFT  0
 
-#define HFI_MAX_POLL_TRY 5
 #define HFI_POLL_DELAY_US 100
 #define HFI_POLL_TIMEOUT_US 10000
 
@@ -650,11 +649,10 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
 		void *priv, uint8_t event_driven_mode)
 {
 	int rc = 0;
+	uint32_t status = 0;
 	struct hfi_qtbl *qtbl;
 	struct hfi_qtbl_hdr *qtbl_hdr;
 	struct hfi_q_hdr *cmd_q_hdr, *msg_q_hdr, *dbg_q_hdr;
-	uint32_t fw_version, status = 0;
-	uint32_t retry_cnt = 0;
 	struct sfr_buf *sfr_buffer;
 	void __iomem *icp_base;
 
@@ -840,41 +838,17 @@ int cam_hfi_init(struct hfi_mem_info *hfi_mem, const struct hfi_ops *hfi_ops,
 		hfi_mem->io_mem.iova, hfi_mem->io_mem.len,
 		hfi_mem->io_mem2.iova, hfi_mem->io_mem2.len);
 
-	fw_version = cam_io_r(icp_base + HFI_REG_FW_VERSION);
-
-	while (retry_cnt < HFI_MAX_POLL_TRY) {
-		readw_poll_timeout((icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE),
+	if (readl_poll_timeout(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE,
 			       status, status == ICP_INIT_RESP_SUCCESS,
-			       HFI_POLL_DELAY_US, HFI_POLL_TIMEOUT_US);
-		CAM_DBG(CAM_HFI, "1: status = %u rc = %d", status, rc);
-		status = cam_io_r_mb(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE);
-		CAM_DBG(CAM_HFI, "2: status = %u rc = %d", status, rc);
-		if (status == ICP_INIT_RESP_SUCCESS)
-			break;
-
-		if (status == ICP_INIT_RESP_FAILED) {
-			CAM_ERR(CAM_HFI, "ICP Init Failed. status = %u",
-				status);
-			CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
-			goto regions_fail;
-		}
-		retry_cnt++;
-	}
-
-	if ((retry_cnt == HFI_MAX_POLL_TRY) &&
-		(status != ICP_INIT_RESP_SUCCESS)) {
-		CAM_ERR(CAM_HFI, "Reached Max retries. status = %u",
-				status);
-		CAM_ERR(CAM_HFI, "fw version : [%x]", fw_version);
-
-		status =
-			cam_io_r_mb(icp_base + HFI_REG_ICP_HOST_INIT_RESPONSE);
-		if (status != ICP_INIT_RESP_SUCCESS)
-			BUG();
+			       HFI_POLL_DELAY_US, HFI_POLL_TIMEOUT_US)) {
+		CAM_ERR(CAM_HFI, "response poll timed out: status=0x%08x",
+			status);
+		rc = -ETIMEDOUT;
 		goto regions_fail;
 	}
 
-	CAM_WARN(CAM_HFI, "fw version : [%x]", fw_version);
+	CAM_DBG(CAM_HFI, "ICP fw version: 0x%x",
+		cam_io_r(icp_base + HFI_REG_FW_VERSION));
 
 	g_hfi->hfi_state = HFI_READY;
 	g_hfi->cmd_q_state = true;
