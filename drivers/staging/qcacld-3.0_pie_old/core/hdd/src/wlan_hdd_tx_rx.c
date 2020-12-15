@@ -2001,20 +2001,6 @@ QDF_STATUS hdd_rx_packet_cbk(void *context, qdf_nbuf_t rxBuf)
 		return QDF_STATUS_SUCCESS;
 	}
 
-	/* hold configurable wakelock for unicast traffic */
-	if (pHddCtx->config->rx_wakelock_timeout &&
-	    pHddStaCtx->conn_info.uIsAuthenticated)
-		wake_lock = hdd_is_rx_wake_lock_needed(skb);
-
-	if (wake_lock) {
-		cds_host_diag_log_work(&pHddCtx->rx_wake_lock,
-				       pHddCtx->config->rx_wakelock_timeout,
-				       WIFI_POWER_EVENT_WAKELOCK_HOLD_RX);
-		qdf_wake_lock_timeout_acquire(&pHddCtx->rx_wake_lock,
-					      pHddCtx->config->
-						      rx_wakelock_timeout);
-	}
-
 	/* Remove SKB from internal tracking table before submitting
 	 * it to stack
 	 */

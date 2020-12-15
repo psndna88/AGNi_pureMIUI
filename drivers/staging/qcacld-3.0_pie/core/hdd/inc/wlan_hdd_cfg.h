@@ -10833,12 +10833,6 @@ enum restart_beaconing_on_ch_avoid_rule {
 #define CFG_CRASH_FW_TIMEOUT_ENABLE     (1)
 #define CFG_CRASH_FW_TIMEOUT_DEFAULT    (1)
 
-/* Hold wakelock for unicast RX packets for the specified duration  */
-#define CFG_RX_WAKELOCK_TIMEOUT_NAME     "rx_wakelock_timeout"
-#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (50)
-#define CFG_RX_WAKELOCK_TIMEOUT_MIN      (0)
-#define CFG_RX_WAKELOCK_TIMEOUT_MAX      (100)
-
 /*
  * <ini>
  * enable_5g_band_pref - Enable preference for 5G from INI.
