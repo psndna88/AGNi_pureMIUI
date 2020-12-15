@@ -233,6 +233,15 @@ dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
 	sdxnightjar-cdp.dtb \
 	sdxnightjar-qrd.dtb
 
+ifeq ($(CONFIG_ARCH_YUPIK), y)
+ifeq ($(CONFIG_ARCH_QTI_VM), y)
+dtb-$(CONFIG_ARCH_QTI_VM) += yupik-vm-rumi.dtb \
+	yupik-vm-atp.dtb \
+	yupik-vm-idp.dtb \
+	yupik-vm-qrd.dtb
+endif
+endif
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb *.dtbo
