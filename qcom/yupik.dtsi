@@ -505,6 +505,11 @@
 		};
 	};
 
+	hyp_core_ctl: qcom,hyp-core-ctl {
+		compatible = "qcom,hyp-core-ctl";
+		status = "ok";
+	};
+
 	qcom,msm-imem@146aa000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x146aa000 0x1000>;
