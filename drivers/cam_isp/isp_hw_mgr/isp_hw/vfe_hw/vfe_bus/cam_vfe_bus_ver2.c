@@ -483,6 +483,7 @@ static int cam_vfe_bus_get_num_wm(
 		case CAM_FORMAT_DPCM_14_10_14:
 		case CAM_FORMAT_PLAIN8:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 		case CAM_FORMAT_PLAIN16_12:
 		case CAM_FORMAT_PLAIN16_14:
 		case CAM_FORMAT_PLAIN16_16:
@@ -506,6 +507,7 @@ static int cam_vfe_bus_get_num_wm(
 		case CAM_FORMAT_UBWC_TP10:
 		case CAM_FORMAT_UBWC_P010:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 			return 2;
 		default:
 			break;
@@ -518,6 +520,7 @@ static int cam_vfe_bus_get_num_wm(
 		case CAM_FORMAT_PLAIN8:
 		case CAM_FORMAT_TP10:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 			return 2;
 		case CAM_FORMAT_Y_ONLY:
 			return 1;
@@ -542,6 +545,7 @@ static int cam_vfe_bus_get_num_wm(
 		case CAM_FORMAT_ARGB_14:
 		case CAM_FORMAT_PLAIN8:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 		case CAM_FORMAT_PLAIN16_12:
 		case CAM_FORMAT_PLAIN16_14:
 			return 1;
@@ -553,6 +557,7 @@ static int cam_vfe_bus_get_num_wm(
 		switch (format) {
 		case CAM_FORMAT_PLAIN8:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 		case CAM_FORMAT_PLAIN16_12:
 		case CAM_FORMAT_PLAIN16_14:
 			return 1;
@@ -564,6 +569,7 @@ static int cam_vfe_bus_get_num_wm(
 		switch (format) {
 		case CAM_FORMAT_PLAIN16_8:
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 		case CAM_FORMAT_PLAIN16_12:
 		case CAM_FORMAT_PLAIN16_14:
 		case CAM_FORMAT_PLAIN16_16:
@@ -920,6 +926,7 @@ static enum cam_vfe_bus_packer_format
 	case CAM_FORMAT_PLAIN8:
 		return PACKER_FMT_PLAIN_8;
 	case CAM_FORMAT_PLAIN16_10:
+	case CAM_FORMAT_PLAIN16_10_LSB:
 		return PACKER_FMT_PLAIN_16_10BPP;
 	case CAM_FORMAT_PLAIN16_12:
 		return PACKER_FMT_PLAIN_16_12BPP;
@@ -1022,6 +1029,7 @@ static int cam_vfe_bus_acquire_wm(
 			rsrc_data->stride = rsrc_data->width;
 			break;
 		case CAM_FORMAT_PLAIN16_10:
+		case CAM_FORMAT_PLAIN16_10_LSB:
 		case CAM_FORMAT_PLAIN16_12:
 		case CAM_FORMAT_PLAIN16_14:
 		case CAM_FORMAT_PLAIN16_16:
@@ -1108,6 +1116,20 @@ static int cam_vfe_bus_acquire_wm(
 				CAM_ERR(CAM_ISP, "Invalid plane %d", plane);
 				return -EINVAL;
 			}
+			break;
+		case CAM_FORMAT_PLAIN16_10_LSB:
+			rsrc_data->pack_fmt |= 0x10;
+			switch (plane) {
+			case PLANE_C:
+				rsrc_data->height /= 2;
+				break;
+			case PLANE_Y:
+				break;
+			default:
+				CAM_ERR(CAM_ISP, "Invalid plane %d", plane);
+				return -EINVAL;
+			}
+			rsrc_data->width *= 2;
 			break;
 		case CAM_FORMAT_PLAIN16_10:
 			switch (plane) {
