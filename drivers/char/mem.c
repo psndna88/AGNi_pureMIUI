@@ -36,6 +36,10 @@
 
 #define DEVPORT_MINOR	4
 
+#ifdef CONFIG_SRANDOM
+#include <../drivers/char/srandom/srandom.h>
+#endif
+
 static inline unsigned long size_inside_page(unsigned long start,
 					     unsigned long size)
 {
@@ -841,8 +845,13 @@ static const struct memdev {
 #endif
 	 [5] = { "zero", 0666, &zero_fops, 0 },
 	 [7] = { "full", 0666, &full_fops, 0 },
+#ifdef CONFIG_SRANDOM
+	 [8] = { "random", 0666, &sfops, 0 },
+	 [9] = { "urandom", 0666, &sfops, 0 },
+#else
 	 [8] = { "random", 0666, &urandom_fops, 0 },
 	 [9] = { "urandom", 0666, &urandom_fops, 0 },
+#endif
 #ifdef CONFIG_PRINTK
 	[11] = { "kmsg", 0644, &kmsg_fops, 0 },
 #endif
