@@ -4,9 +4,14 @@
 		reg = <0x90800000 0xF800000>;
 	};
 
+	tz_apps_mem: tz_apps_mem_region@90000000 {
+		no-map;
+		reg = <0x90000000 0x500000>;
+	};
+
 	tz_mem: tz_mem_region@8ff00000 {
 		no-map;
-		reg = <0x8ff00000 0x600000>;
+		reg = <0x8ff00000 0x100000>;
 	};
 
 	cmd_db: reserved-memory@8fee0000 {
