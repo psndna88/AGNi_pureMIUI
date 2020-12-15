@@ -8618,6 +8618,7 @@ static int __ipa3_stop_gsi_channel(u32 clnt_hdl)
 	}
 
 	IPAERR("Failed  to stop GSI channel with retries\n");
+	ipa_assert();
 	return res;
 }
 
