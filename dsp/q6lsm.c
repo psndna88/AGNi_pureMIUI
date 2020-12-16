@@ -1735,21 +1735,24 @@ int q6lsm_deregister_sound_model(struct lsm_client *client)
 				break;
 		}
 	} else {
-		memset(&cmd, 0, sizeof(cmd));
-		q6lsm_add_hdr(client, &cmd.hdr, sizeof(cmd.hdr), false);
-		cmd.hdr.opcode = LSM_SESSION_CMD_DEREGISTER_SOUND_MODEL;
-
-		rc = q6lsm_apr_send_pkt(client, client->apr, &cmd.hdr, true, NULL);
-		if (rc) {
-			pr_err("%s: Failed cmd opcode 0x%x, rc %d\n", __func__,
-			       cmd.hdr.opcode, rc);
-		} else {
-			pr_debug("%s: Deregister sound model succeeded\n", __func__);
-		}
-
-		p_info.param_type = LSM_DEREG_SND_MODEL;
 		sm = &client->stage_cfg[p_info.stage_idx].sound_model;
-		q6lsm_snd_model_buf_free(client, &p_info, sm);
+
+		if (sm && sm->data) {
+			memset(&cmd, 0, sizeof(cmd));
+			q6lsm_add_hdr(client, &cmd.hdr, sizeof(cmd.hdr), false);
+			cmd.hdr.opcode = LSM_SESSION_CMD_DEREGISTER_SOUND_MODEL;
+			p_info.param_type = LSM_DEREG_SND_MODEL;
+
+			rc = q6lsm_apr_send_pkt(client, client->apr, &cmd.hdr, true, NULL);
+			if (rc) {
+				pr_err("%s: Failed cmd opcode 0x%x, rc %d\n", __func__,
+				       cmd.hdr.opcode, rc);
+			} else {
+				pr_debug("%s: Deregister sound model succeeded\n", __func__);
+			}
+
+			q6lsm_snd_model_buf_free(client, &p_info, sm);
+		}
 	}
 
 	return rc;
