@@ -7583,7 +7583,8 @@ static int  cam_ife_hw_mgr_find_affected_ctx(
 		 */
 		if (notify_err_cb)
 			notify_err_cb(ife_hwr_mgr_ctx->common.cb_priv,
-				CAM_ISP_HW_EVENT_ERROR, error_event_data);
+				CAM_ISP_HW_EVENT_ERROR,
+				(void *)error_event_data);
 		else {
 			CAM_WARN(CAM_ISP, "Error call back is not set");
 			goto end;
