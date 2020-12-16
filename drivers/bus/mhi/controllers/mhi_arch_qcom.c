@@ -210,7 +210,11 @@ static int mhi_arch_esoc_ops_power_on(void *priv, unsigned int flags)
 	}
 
 	mhi_dev->mdm_state = (flags & ESOC_HOOK_MDM_CRASH);
-	return mhi_pci_probe(pci_dev, NULL);
+	ret = mhi_pci_probe(pci_dev, NULL);
+	if (ret)
+		mhi_dev->powered_on = false;
+
+	return ret;
 }
 
 static void mhi_arch_link_off(struct mhi_controller *mhi_cntrl)
@@ -368,8 +372,6 @@ void mhi_arch_mission_mode_enter(struct mhi_controller *mhi_cntrl)
 	/* disable boot logger channel */
 	if (boot_dev)
 		mhi_unprepare_from_transfer(boot_dev);
-
-	pm_runtime_allow(&mhi_dev->pci_dev->dev);
 }
 
 static  int mhi_arch_pcie_scale_bw(struct mhi_controller *mhi_cntrl,
@@ -719,6 +721,9 @@ int mhi_arch_link_suspend(struct mhi_controller *mhi_cntrl)
 	if (!mhi_dev->allow_m1)
 		msm_pcie_l1ss_timeout_disable(pci_dev);
 
+	if (mhi_dev->disable_pci_lpm)
+		goto exit_suspend;
+
 	switch (mhi_dev->suspend_mode) {
 	case MHI_DEFAULT_SUSPEND:
 		pci_clear_master(pci_dev);
@@ -807,6 +812,9 @@ int mhi_arch_link_resume(struct mhi_controller *mhi_cntrl)
 	MHI_LOG("Entered with suspend_mode:%s\n",
 		TO_MHI_SUSPEND_MODE_STR(mhi_dev->suspend_mode));
 
+	if (mhi_dev->disable_pci_lpm)
+		goto resume_no_pci_lpm;
+
 	switch (mhi_dev->suspend_mode) {
 	case MHI_DEFAULT_SUSPEND:
 		ret = __mhi_arch_link_resume(mhi_cntrl);
@@ -823,6 +831,7 @@ int mhi_arch_link_resume(struct mhi_controller *mhi_cntrl)
 		return ret;
 	}
 
+resume_no_pci_lpm:
 	if (!mhi_dev->allow_m1)
 		msm_pcie_l1ss_timeout_enable(pci_dev);
 

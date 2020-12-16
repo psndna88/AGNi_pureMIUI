@@ -882,6 +882,20 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl);
  */
 char *mhi_get_restart_reason(const char *name);
 
+/**
+ * mhi_get_channel_db_base - retrieve the channel doorbell base address
+ * @mhi_dev: Device associated with the channels
+ * @value: Pointer to an address value which will be populated
+ */
+int mhi_get_channel_db_base(struct mhi_device *mhi_dev, phys_addr_t *value);
+
+/**
+ * mhi_get_event_ring_db_base - retrieve the event ring doorbell base address
+ * @mhi_dev: Device associated with the channels
+ * @value: Pointer to an address value which will be populated
+ */
+int mhi_get_event_ring_db_base(struct mhi_device *mhi_dev, phys_addr_t *value);
+
 #ifndef CONFIG_ARCH_QCOM
 
 #ifdef CONFIG_MHI_DEBUG

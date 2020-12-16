@@ -452,8 +452,10 @@ static struct ipa_ep_cfg usb_to_ipa_ep_cfg_deaggr_en = {
 	},
 	.deaggr = {
 		.deaggr_hdr_len = sizeof(struct rndis_pkt_hdr),
+		.syspipe_err_detection = true,
 		.packet_offset_valid = true,
 		.packet_offset_location = 8,
+		.ignore_min_pkt_err = true,
 		.max_packet_len = 8192, /* Will be overridden*/
 	},
 	.route = {

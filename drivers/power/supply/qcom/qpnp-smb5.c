@@ -503,7 +503,8 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chg->pd_not_supported = chg->pd_not_supported ||
 			of_property_read_bool(node, "qcom,usb-pd-disable");
 
-	chg->lpd_disabled = of_property_read_bool(node, "qcom,lpd-disable");
+	chg->lpd_disabled = chg->lpd_disabled ||
+			of_property_read_bool(node, "qcom,lpd-disable");
 
 	chg->qc_class_ab = of_property_read_bool(node,
 						"qcom,distinguish-qc-class-ab");

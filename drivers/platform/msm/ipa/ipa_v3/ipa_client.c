@@ -76,6 +76,10 @@ int ipa3_enable_data_path(u32 clnt_hdl)
 				ep->client == IPA_CLIENT_USB_CONS)) {
 			holb_cfg.en = IPA_HOLB_TMR_EN;
 			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL;
+		} else if ((ipa3_ctx->ipa_hw_type == IPA_HW_v4_5) &&
+			(ep->client == IPA_CLIENT_USB_CONS)) {
+			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL_4_5;
+			holb_cfg.en = IPA_HOLB_TMR_EN;
 		} else {
 			holb_cfg.tmr_val = 0;
 			holb_cfg.en = IPA_HOLB_TMR_DIS;
@@ -1846,26 +1850,87 @@ int ipa3_get_aqc_gsi_stats(struct ipa_uc_dbg_ring_stats *stats)
 	}
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 	for (i = 0; i < MAX_AQC_CHANNELS; i++) {
-		stats->ring[i].ringFull = ioread32(
+		stats->u.ring[i].ringFull = ioread32(
 			ipa3_ctx->aqc_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGFULL_OFF);
-		stats->ring[i].ringEmpty = ioread32(
+		stats->u.ring[i].ringEmpty = ioread32(
 			ipa3_ctx->aqc_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGEMPTY_OFF);
-		stats->ring[i].ringUsageHigh = ioread32(
+		stats->u.ring[i].ringUsageHigh = ioread32(
 			ipa3_ctx->aqc_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUSAGEHIGH_OFF);
-		stats->ring[i].ringUsageLow = ioread32(
+		stats->u.ring[i].ringUsageLow = ioread32(
 			ipa3_ctx->aqc_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUSAGELOW_OFF);
-		stats->ring[i].RingUtilCount = ioread32(
+		stats->u.ring[i].RingUtilCount = ioread32(
 			ipa3_ctx->aqc_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUTILCOUNT_OFF);
+	}
+	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
+
+
+	return 0;
+}
+/**
+ * ipa3_get_rtk_gsi_stats() - Query RTK gsi stats from uc
+ * @stats:	[inout] stats blob from client populated by driver
+ *
+ * Returns:	0 on success, negative on failure
+ *
+ * @note Cannot be called from atomic context
+ *
+ */
+int ipa3_get_rtk_gsi_stats(struct ipa_uc_dbg_ring_stats *stats)
+{
+	int i;
+
+	if (!ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio) {
+		IPAERR("bad parms NULL eth_gsi_stats_mmio\n");
+		return -EINVAL;
+	}
+	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
+	for (i = 0; i < MAX_RTK_CHANNELS; i++) {
+		stats->u.rtk[i].commStats.ringFull = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_RINGFULL_OFF);
+		stats->u.rtk[i].commStats.ringEmpty = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_RINGEMPTY_OFF);
+		stats->u.rtk[i].commStats.ringUsageHigh = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_RINGUSAGEHIGH_OFF);
+		stats->u.rtk[i].commStats.ringUsageLow = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_RINGUSAGELOW_OFF);
+		stats->u.rtk[i].commStats.RingUtilCount = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_RINGUTILCOUNT_OFF);
+		stats->u.rtk[i].trCount = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_TRCOUNT_OFF);
+		stats->u.rtk[i].erCount = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_ERCOUNT_OFF);
+		stats->u.rtk[i].totalAosCount = ioread32(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_AOSCOUNT_OFF);
+		stats->u.rtk[i].busyTime = ioread64(
+			ipa3_ctx->rtk_ctx.dbg_stats.uc_dbg_stats_mmio
+			+ i * IPA3_UC_DEBUG_STATS_RTK_OFF +
+			IPA3_UC_DEBUG_STATS_BUSYTIME_OFF);
 	}
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 

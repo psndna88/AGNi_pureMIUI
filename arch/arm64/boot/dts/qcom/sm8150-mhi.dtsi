@@ -324,7 +324,6 @@
 				mhi,data-type = <1>;
 				mhi,doorbell-mode = <3>;
 				mhi,ee = <0x4>;
-				mhi,db-mode-switch;
 			};
 
 			mhi_chan@101 {
@@ -345,8 +344,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@103 {
@@ -376,8 +373,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@107 {
@@ -387,7 +382,6 @@
 				mhi,chan-dir = <1>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
 			};
 
 			mhi_chan@108 {
@@ -397,8 +391,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@109 {
@@ -589,16 +581,11 @@
 
 		/* controller specific configuration */
 		qcom,smmu-cfg = <0x3>;
-		qcom,msm-bus,name = "mhi";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<45 512 0 0>,
-			<45 512 1200000000 650000000>;
 
 		/* mhi bus specific settings */
 		mhi,max-channels = <111>;
 		mhi,timeout = <2000>;
+		mhi,name = "esoc0";
 		mhi,buffer-len = <0x8000>;
 
 		mhi_channels {
@@ -895,7 +882,6 @@
 				mhi,data-type = <1>;
 				mhi,doorbell-mode = <3>;
 				mhi,ee = <0x4>;
-				mhi,db-mode-switch;
 			};
 
 			mhi_chan@101 {
@@ -916,8 +902,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@103 {
@@ -938,7 +922,6 @@
 				mhi,chan-dir = <1>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
 			};
 
 			mhi_chan@105 {
@@ -948,8 +931,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@107 {
@@ -959,7 +940,6 @@
 				mhi,chan-dir = <1>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
 			};
 
 			mhi_chan@108 {
@@ -969,8 +949,6 @@
 				mhi,chan-dir = <2>;
 				mhi,data-type = <3>;
 				mhi,ee = <0x4>;
-				mhi,offload-chan;
-				mhi,lpm-notify;
 			};
 
 			mhi_chan@109 {
@@ -1000,7 +978,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-				mhi_event@0 {
+			mhi_event@0 {
 				mhi,num-elements = <32>;
 				mhi,intmod = <0>;
 				mhi,msi = <1>;
@@ -1046,111 +1024,80 @@
 				mhi,num-elements = <1024>;
 				mhi,intmod = <5>;
 				mhi,msi = <5>;
-				mhi,chan = <100>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
 			};
 
 			mhi_event@6 {
-				mhi,num-elements = <1024>;
+				mhi,num-elements = <2048>;
 				mhi,intmod = <5>;
 				mhi,msi = <6>;
-				mhi,chan = <101>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
 			};
 
 			mhi_event@7 {
 				mhi,num-elements = <0>;
 				mhi,intmod = <0>;
 				mhi,msi = <7>;
-				mhi,chan = <102>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
-				mhi,offload;
 			};
 
 			mhi_event@8 {
 				mhi,num-elements = <1024>;
 				mhi,intmod = <5>;
 				mhi,msi = <8>;
-				mhi,chan = <103>;
 				mhi,priority = <1>;
 				mhi,brstmode = <2>;
-				mhi,hw-ev;
 			};
 
 			mhi_event@9 {
 				mhi,num-elements = <0>;
 				mhi,intmod = <0>;
 				mhi,msi = <9>;
-				mhi,chan = <105>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
-				mhi,offload;
 			};
 
 			mhi_event@10 {
 				mhi,num-elements = <0>;
 				mhi,intmod = <0>;
 				mhi,msi = <10>;
-				mhi,chan = <106>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
-				mhi,offload;
 			};
 
 			mhi_event@11 {
 				mhi,num-elements = <0>;
 				mhi,intmod = <0>;
 				mhi,msi = <11>;
-				mhi,chan = <107>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
-				mhi,offload;
 			};
 
 			mhi_event@12 {
 				mhi,num-elements = <0>;
 				mhi,intmod = <0>;
 				mhi,msi = <12>;
-				mhi,chan = <108>;
 				mhi,priority = <1>;
 				mhi,brstmode = <3>;
-				mhi,hw-ev;
-				mhi,client-manage;
-				mhi,offload;
 			};
 
 			mhi_event@13 {
 				mhi,num-elements = <1024>;
 				mhi,intmod = <1>;
 				mhi,msi = <13>;
-				mhi,chan = <109>;
 				mhi,priority = <0>;
 				mhi,brstmode = <2>;
-				mhi,hw-ev;
 			};
 
 			mhi_event@14 {
 				mhi,num-elements = <1024>;
 				mhi,intmod = <0>;
 				mhi,msi = <14>;
-				mhi,chan = <110>;
 				mhi,priority = <0>;
 				mhi,brstmode = <2>;
-				mhi,hw-ev;
 			};
 		};
 
@@ -1169,7 +1116,12 @@
 				reg = <0x1>;
 				mhi,chan = "IP_HW0_RSC";
 				mhi,mru = <0x8000>;
-				mhi,rsc-parent = <&mhi_netdev_0>;
+				mhi,rsc-parent = <&mhi_netdev_2>;
+			};
+
+			mhi_qrtr {
+				 mhi,chan = "IPCR";
+				 mhi,early-notify;
 			};
 		};
 	};

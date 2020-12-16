@@ -558,6 +558,8 @@
 		qcom,msm-bus,name = "ipa";
 		qcom,ipa-wdi3-over-gsi;
 		qcom,ipa-endp-delay-wa;
+		qcom,ipa-wdi3-holb-2g = <8>;
+		qcom,ipa-wdi3-holb-5g = <15>;
 		qcom,msm-bus,num-cases = <5>;
 		qcom,msm-bus,num-paths = <5>;
 		qcom,msm-bus,vectors-KBps =

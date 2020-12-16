@@ -2806,3 +2806,45 @@ char *mhi_get_restart_reason(const char *name)
 	return strlen(sfr_info->str) ? sfr_info->str : mhi_generic_sfr;
 }
 EXPORT_SYMBOL(mhi_get_restart_reason);
+
+int mhi_get_channel_db_base(struct mhi_device *mhi_dev, phys_addr_t *value)
+{
+	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
+	u32 offset;
+	int ret;
+
+	if (!MHI_REG_ACCESS_VALID(mhi_cntrl->pm_state))
+		return -EIO;
+
+	ret = mhi_read_reg_field(mhi_cntrl, mhi_cntrl->regs, CHDBOFF,
+				 CHDBOFF_CHDBOFF_MASK, CHDBOFF_CHDBOFF_SHIFT,
+				 &offset);
+	if (ret)
+		return -EIO;
+
+	*value = mhi_cntrl->base_addr + offset;
+
+	return ret;
+}
+EXPORT_SYMBOL(mhi_get_channel_db_base);
+
+int mhi_get_event_ring_db_base(struct mhi_device *mhi_dev, phys_addr_t *value)
+{
+	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
+	u32 offset;
+	int ret;
+
+	if (!MHI_REG_ACCESS_VALID(mhi_cntrl->pm_state))
+		return -EIO;
+
+	ret = mhi_read_reg_field(mhi_cntrl, mhi_cntrl->regs, ERDBOFF,
+				 ERDBOFF_ERDBOFF_MASK, ERDBOFF_ERDBOFF_SHIFT,
+				 &offset);
+	if (ret)
+		return -EIO;
+
+	*value = mhi_cntrl->base_addr + offset;
+
+	return ret;
+}
+EXPORT_SYMBOL(mhi_get_event_ring_db_base);

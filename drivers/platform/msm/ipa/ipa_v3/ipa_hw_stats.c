@@ -1160,6 +1160,17 @@ int ipa_get_flt_rt_stats(struct ipa_ioc_flt_rt_query *query)
 	return __ipa_get_flt_rt_stats(query);
 }
 
+int ipa_drop_stats_init(void)
+{
+	u32 pipe_bitmask = 0;
+
+	/* Always enable drop stats for USB CONS and DPL Pipe. */
+	pipe_bitmask |= IPA_CLIENT_BIT_32(IPA_CLIENT_USB_CONS) |
+			IPA_CLIENT_BIT_32(IPA_CLIENT_USB_DPL_CONS);
+
+	return ipa_init_drop_stats(pipe_bitmask);
+}
+
 int ipa_init_drop_stats(u32 pipe_bitmask)
 {
 	struct ipahal_stats_init_pyld *pyld;

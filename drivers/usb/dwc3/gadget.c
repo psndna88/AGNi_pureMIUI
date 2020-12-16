@@ -851,7 +851,7 @@ static void dwc3_remove_requests(struct dwc3 *dwc, struct dwc3_ep *dep)
 	dbg_log_string("START for %s(%d)", dep->name, dep->number);
 	dwc3_stop_active_transfer(dwc, dep->number, true);
 
-	if (dep->number == 1 && dwc->ep0state != EP0_SETUP_PHASE) {
+	if (dep->number == 0 && dwc->ep0state != EP0_SETUP_PHASE) {
 		unsigned int dir;
 
 		dbg_log_string("CTRLPEND", dwc->ep0state);
@@ -1619,6 +1619,9 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	unsigned long			flags;
 
 	int				ret;
+
+	if (dwc3_gadget_is_suspended(dwc))
+		return -EAGAIN;
 
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_queue(dep, req);

@@ -49,8 +49,7 @@
 
 enum ipa_eth_states {
 	IPA_ETH_ST_READY,
-	IPA_ETH_ST_UC_READY,
-	IPA_ETH_ST_IPA_READY,
+	IPA_ETH_ST_API_READY,
 	IPA_ETH_ST_MAX,
 };
 

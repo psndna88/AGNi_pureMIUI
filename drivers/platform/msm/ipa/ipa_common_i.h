@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,7 @@
 #include <linux/ipa_uc_offload.h>
 #include <linux/ipa_wdi3.h>
 #include <linux/ipa_wigig.h>
+#include <linux/ipa_eth.h>
 #include <linux/ratelimit.h>
 
 #define WARNON_RATELIMIT_BURST 1
@@ -428,11 +429,14 @@ int ipa_conn_wdi_pipes(struct ipa_wdi_conn_in_params *in,
 	struct ipa_wdi_conn_out_params *out,
 	ipa_wdi_meter_notifier_cb wdi_notify);
 
-int ipa_disconn_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
+int ipa_disconn_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+		int ipa_ep_idx_tx1);
 
-int ipa_enable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
+int ipa_enable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+		int ipa_ep_idx_tx1);
 
-int ipa_disable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
+int ipa_disable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+		int ipa_ep_idx_tx1);
 
 const char *ipa_get_version_string(enum ipa_hw_type ver);
 int ipa_start_gsi_channel(u32 clnt_hdl);
@@ -479,5 +483,33 @@ void ipa_register_client_callback(int (*client_cb)(bool is_lock),
 			bool (*teth_port_state)(void), u32 ipa_ep_idx);
 
 void ipa_deregister_client_callback(u32 ipa_ep_idx);
+
+int ipa_eth_rtk_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_aqc_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_emac_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_rtk_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_aqc_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_emac_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+
+int ipa_eth_client_conn_evt(struct ipa_ecm_msg *msg);
+
+int ipa_eth_client_disconn_evt(struct ipa_ecm_msg *msg);
 
 #endif /* _IPA_COMMON_I_H_ */

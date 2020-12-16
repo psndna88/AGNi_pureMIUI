@@ -1733,7 +1733,7 @@ static void smb1398_taper_work(struct work_struct *work)
 	struct smb1398_chip *chip = container_of(work,
 			struct smb1398_chip, taper_work);
 	union power_supply_propval pval = {0};
-	int rc, fcc_ua, fv_uv, stepper_ua, main_fcc_ua;
+	int rc, fcc_ua, fv_uv, stepper_ua, main_fcc_ua = 0;
 	bool slave_en;
 	int health, fast_charge_mode, smb_en_reason, taper_ibat_offset = 0;
 	bool ffc_cp_exiting = false;

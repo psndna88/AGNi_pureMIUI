@@ -1092,6 +1092,27 @@ static int marmot_setup_hw(struct mdm_ctrl *mdm,
 	return ret;
 }
 
+static int lemur_setup_hw(struct mdm_ctrl *mdm,
+					const struct mdm_ops *ops,
+					struct platform_device *pdev)
+{
+	int ret;
+
+	/* Same configuration as that of sdx50, except for the name */
+	ret = sdx50m_setup_hw(mdm, ops, pdev);
+	if (ret) {
+		dev_err(mdm->dev, "Hardware setup failed for lemur\n");
+		esoc_mdm_log("Hardware setup failed for lemur\n");
+		return ret;
+	}
+
+	mdm->esoc->name = LEMUR_LABEL;
+	esoc_mdm_log("Hardware setup done for lemur\n");
+
+	return ret;
+}
+
+
 static struct esoc_clink_ops mdm_cops = {
 	.cmd_exe = mdm_cmd_exe,
 	.get_status = mdm_get_status,
@@ -1120,6 +1141,12 @@ static struct mdm_ops sdxprairie_ops = {
 static struct mdm_ops marmot_ops = {
 	.clink_ops = &mdm_cops,
 	.config_hw = marmot_setup_hw,
+	.pon_ops = &sdxmarmot_pon_ops,
+};
+
+static struct mdm_ops lemur_ops = {
+	.clink_ops = &mdm_cops,
+	.config_hw = lemur_setup_hw,
 	.pon_ops = &sdx50m_pon_ops,
 };
 
@@ -1132,6 +1159,8 @@ static const struct of_device_id mdm_dt_match[] = {
 		.data = &sdxprairie_ops, },
 	{ .compatible = "qcom,ext-marmot",
 		.data = &marmot_ops, },
+	{ .compatible = "qcom,ext-lemur",
+		.data = &lemur_ops, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, mdm_dt_match);

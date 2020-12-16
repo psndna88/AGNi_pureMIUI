@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -388,6 +388,7 @@ static int usb_bam_alloc_buffer(struct usb_bam_pipe_connect *pipe_connect)
 			break;
 		}
 
+		data_fifo_size = data_buf->size = pipe_connect->data_fifo_size;
 		/* BAM would use system memory, allocate FIFOs */
 		data_buf->base = dma_alloc_attrs(dev, data_fifo_size,
 						&data_iova, GFP_KERNEL,

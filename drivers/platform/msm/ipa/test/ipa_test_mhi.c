@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -882,14 +882,16 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 	int rc = 0;
 	struct ipa_mhi_init_params init_params;
 	struct ipa_mhi_start_params start_params;
-	struct ipa_mhi_connect_params prod_params;
-	struct ipa_mhi_connect_params cons_params;
+	struct ipa_mhi_connect_params *prod_params;
+	struct ipa_mhi_connect_params *cons_params;
 	struct ipa_mhi_mmio_register_set *p_mmio;
 	struct ipa_mhi_channel_context_array *p_ch_ctx_array;
 	u64 phys_addr;
 
 	IPA_UT_LOG("Entry\n");
 
+	prod_params = kzalloc(sizeof(*prod_params), GFP_KERNEL);
+	cons_params = kzalloc(sizeof(*cons_params), GFP_KERNEL);
 	p_mmio = test_mhi_ctx->mmio_buf.base;
 
 	/* start IPA MHI */
@@ -941,21 +943,23 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 			p_ch_ctx_array, phys_addr,
 			ipa_mhi_get_state_str(p_ch_ctx_array->chstate));
 
-		memset(&prod_params, 0, sizeof(prod_params));
-		prod_params.sys.client = IPA_CLIENT_MHI_PROD;
-		prod_params.sys.ipa_ep_cfg.mode.mode = IPA_DMA;
-		prod_params.sys.ipa_ep_cfg.mode.dst = IPA_CLIENT_MHI_CONS;
-		prod_params.sys.ipa_ep_cfg.seq.seq_type =
+		memset(prod_params, 0, sizeof(*prod_params));
+		prod_params->sys.client = IPA_CLIENT_MHI_PROD;
+		prod_params->sys.ipa_ep_cfg.mode.mode = IPA_DMA;
+		prod_params->sys.ipa_ep_cfg.mode.dst = IPA_CLIENT_MHI_CONS;
+		prod_params->sys.ipa_ep_cfg.seq.seq_type =
 			IPA_MHI_TEST_SEQ_TYPE_DMA;
-		prod_params.sys.ipa_ep_cfg.seq.set_dynamic = true;
-		prod_params.channel_id = IPA_MHI_TEST_FIRST_CHANNEL_ID;
+		prod_params->sys.ipa_ep_cfg.seq.set_dynamic = true;
+		prod_params->channel_id = IPA_MHI_TEST_FIRST_CHANNEL_ID;
 		IPA_UT_LOG("BEFORE connect_pipe (PROD): client:%d ch_id:%u\n",
-			prod_params.sys.client, prod_params.channel_id);
-		rc = ipa_mhi_connect_pipe(&prod_params,
+			prod_params->sys.client, prod_params->channel_id);
+		rc = ipa_mhi_connect_pipe(prod_params,
 			&test_mhi_ctx->prod_hdl);
 		if (rc) {
 			IPA_UT_LOG("mhi_connect_pipe failed %d\n", rc);
 			IPA_UT_TEST_FAIL_REPORT("fail connect PROD pipe");
+			kfree(prod_params);
+			kfree(cons_params);
 			return rc;
 		}
 
@@ -964,6 +968,8 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 				ipa_mhi_get_state_str(
 				p_ch_ctx_array->chstate));
 			IPA_UT_TEST_FAIL_REPORT("PROD pipe state is not run");
+			kfree(prod_params);
+			kfree(cons_params);
 			return -EFAULT;
 		}
 
@@ -977,17 +983,19 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 			p_ch_ctx_array, phys_addr,
 			ipa_mhi_get_state_str(p_ch_ctx_array->chstate));
 
-		memset(&cons_params, 0, sizeof(cons_params));
-		cons_params.sys.client = IPA_CLIENT_MHI_CONS;
-		cons_params.sys.skip_ep_cfg = true;
-		cons_params.channel_id = IPA_MHI_TEST_FIRST_CHANNEL_ID + 1;
+		memset(cons_params, 0, sizeof(*cons_params));
+		cons_params->sys.client = IPA_CLIENT_MHI_CONS;
+		cons_params->sys.skip_ep_cfg = true;
+		cons_params->channel_id = IPA_MHI_TEST_FIRST_CHANNEL_ID + 1;
 		IPA_UT_LOG("BEFORE connect_pipe (CONS): client:%d ch_id:%u\n",
-			cons_params.sys.client, cons_params.channel_id);
-		rc = ipa_mhi_connect_pipe(&cons_params,
+			cons_params->sys.client, cons_params->channel_id);
+		rc = ipa_mhi_connect_pipe(cons_params,
 			&test_mhi_ctx->cons_hdl);
 		if (rc) {
 			IPA_UT_LOG("mhi_connect_pipe failed %d\n", rc);
 			IPA_UT_TEST_FAIL_REPORT("fail connect CONS pipe");
+			kfree(prod_params);
+			kfree(cons_params);
 			return rc;
 		}
 
@@ -996,10 +1004,14 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 				ipa_mhi_get_state_str(
 				p_ch_ctx_array->chstate));
 			IPA_UT_TEST_FAIL_REPORT("CONS pipe state is not run");
+			kfree(prod_params);
+			kfree(cons_params);
 			return -EFAULT;
 		}
 	}
 
+	kfree(prod_params);
+	kfree(cons_params);
 	return 0;
 }
 

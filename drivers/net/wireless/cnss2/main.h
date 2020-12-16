@@ -232,6 +232,7 @@ enum cnss_debug_quirks {
 	FBC_BYPASS,
 	ENABLE_DAEMON_SUPPORT,
 	IGNORE_PCI_LINK_FAILURE,
+	IGNORE_PROBE_FAIL_SHUTDOWN,
 };
 
 enum cnss_bdf_type {

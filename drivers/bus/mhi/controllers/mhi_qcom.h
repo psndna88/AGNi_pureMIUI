@@ -73,6 +73,8 @@ struct mhi_dev {
 	bool powered_on;
 	bool allow_m1;
 	bool mdm_state;
+	bool disable_pci_lpm;
+	bool skip_forced_suspend;
 	dma_addr_t iova_start;
 	dma_addr_t iova_stop;
 	enum mhi_suspend_mode suspend_mode;

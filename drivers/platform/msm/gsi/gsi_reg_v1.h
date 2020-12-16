@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018,2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -435,6 +435,9 @@
 #define GSI_GSI_IRAM_PTR_INT_MOD_STOPED_RMSK 0xfff
 #define GSI_GSI_IRAM_PTR_INT_MOD_STOPED_IRAM_PTR_BMSK 0xfff
 #define GSI_GSI_IRAM_PTR_INT_MOD_STOPED_IRAM_PTR_SHFT 0x0
+
+#define GSI_EE_n_GSI_SHRAM_n_OFFS(n) \
+	(GSI_GSI_REG_BASE_OFFS + 0x2000 + (0x4*(n)))
 
 #define GSI_GSI_INST_RAM_n_WORD_SZ 0x4
 #define GSI_GSI_INST_RAM_n_OFFS(n) \

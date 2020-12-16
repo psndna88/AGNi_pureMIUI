@@ -434,23 +434,23 @@ int ipa3_get_wdi_gsi_stats(struct ipa_uc_dbg_ring_stats *stats)
 
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 	for (i = 0; i < MAX_WDI2_CHANNELS; i++) {
-		stats->ring[i].ringFull = ioread32(
+		stats->u.ring[i].ringFull = ioread32(
 			ipa3_ctx->wdi2_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGFULL_OFF);
-		stats->ring[i].ringEmpty = ioread32(
+		stats->u.ring[i].ringEmpty = ioread32(
 			ipa3_ctx->wdi2_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGEMPTY_OFF);
-		stats->ring[i].ringUsageHigh = ioread32(
+		stats->u.ring[i].ringUsageHigh = ioread32(
 			ipa3_ctx->wdi2_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUSAGEHIGH_OFF);
-		stats->ring[i].ringUsageLow = ioread32(
+		stats->u.ring[i].ringUsageLow = ioread32(
 			ipa3_ctx->wdi2_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUSAGELOW_OFF);
-		stats->ring[i].RingUtilCount = ioread32(
+		stats->u.ring[i].RingUtilCount = ioread32(
 			ipa3_ctx->wdi2_ctx.dbg_stats.uc_dbg_stats_mmio
 			+ i * IPA3_UC_DEBUG_STATS_OFF +
 			IPA3_UC_DEBUG_STATS_RINGUTILCOUNT_OFF);
@@ -918,9 +918,12 @@ void ipa3_release_wdi3_gsi_smmu_mappings(u8 dir)
 	struct ipa_smmu_cb_ctx *cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_AP);
 	int i, j, start, end;
 
-	if (dir == IPA_WDI3_TX_DIR) {
-		start = IPA_WDI_TX_RING_RES;
-		end = IPA_WDI_TX_DB_RES;
+	if ((dir == IPA_WDI3_TX_DIR) || (dir == IPA_WDI3_TX1_DIR)) {
+		start = (dir == IPA_WDI3_TX_DIR) ?
+					IPA_WDI_TX_RING_RES :
+					IPA_WDI_TX1_RING_RES;
+		end = (dir == IPA_WDI3_TX_DIR) ?
+					IPA_WDI_TX_DB_RES : IPA_WDI_TX1_DB_RES;
 	} else {
 		start = IPA_WDI_RX_RING_RES;
 		end = IPA_WDI_RX_COMP_RING_WP_RES;
@@ -978,6 +981,8 @@ int ipa_create_gsi_smmu_mapping(int res_idx, bool wlan_smmu_en,
 		case IPA_WDI_RX_COMP_RING_WP_RES:
 		case IPA_WDI_CE_DB_RES:
 		case IPA_WDI_TX_DB_RES:
+		case IPA_WDI_CE1_DB_RES:
+		case IPA_WDI_TX1_DB_RES:
 			if (ipa_create_ap_smmu_mapping_pa(pa, len,
 				(res_idx == IPA_WDI_CE_DB_RES) ? true : false,
 						iova)) {
@@ -991,6 +996,8 @@ int ipa_create_gsi_smmu_mapping(int res_idx, bool wlan_smmu_en,
 		case IPA_WDI_RX_COMP_RING_RES:
 		case IPA_WDI_TX_RING_RES:
 		case IPA_WDI_CE_RING_RES:
+		case IPA_WDI_TX1_RING_RES:
+		case IPA_WDI_CE1_RING_RES:
 			if (ipa_create_ap_smmu_mapping_sgt(sgt, iova)) {
 				IPAERR("Fail to create mapping res %d\n",
 						res_idx);
@@ -2616,23 +2623,25 @@ int ipa3_suspend_gsi_wdi_pipe(u32 clnt_hdl)
 	}
 	if (ep->valid) {
 		IPADBG("suspended pipe %d\n", ipa_ep_idx);
-		source_pipe_bitmask = 1 <<
-			ipa3_get_ep_mapping(ep->client);
-		res = ipa3_enable_force_clear(clnt_hdl,
-				false, source_pipe_bitmask);
-		if (res) {
-			/*
-			 * assuming here modem SSR, AP can remove
-			 * the delay in this case
-			 */
-			IPAERR("failed to force clear %d\n", res);
-			IPAERR("remove delay from SCND reg\n");
-			ep_ctrl_scnd.endp_delay = false;
-			ipahal_write_reg_n_fields(
+		if (IPA_CLIENT_IS_PROD(ep->client)) {
+			source_pipe_bitmask = 1 <<
+				ipa3_get_ep_mapping(ep->client);
+			res = ipa3_enable_force_clear(clnt_hdl,
+					false, source_pipe_bitmask);
+			if (res) {
+				/*
+				 * assuming here modem SSR, AP can remove
+				 * the delay in this case
+				 */
+				IPAERR("failed to force clear %d\n", res);
+				IPAERR("remove delay from SCND reg\n");
+				ep_ctrl_scnd.endp_delay = false;
+				ipahal_write_reg_n_fields(
 					IPA_ENDP_INIT_CTRL_SCND_n, clnt_hdl,
-					&ep_ctrl_scnd);
-		} else {
-			disable_force_clear = true;
+						&ep_ctrl_scnd);
+			} else {
+				disable_force_clear = true;
+			}
 		}
 retry_gsi_stop:
 		res = ipa3_stop_gsi_channel(ipa_ep_idx);

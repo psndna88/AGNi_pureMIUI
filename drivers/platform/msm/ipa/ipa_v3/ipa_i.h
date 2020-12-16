@@ -245,7 +245,11 @@ enum {
 #define IPA_WDI_CE_RING_RES			5
 #define IPA_WDI_CE_DB_RES			6
 #define IPA_WDI_TX_DB_RES			7
-#define IPA_WDI_MAX_RES				8
+#define IPA_WDI_TX1_RING_RES		8
+#define IPA_WDI_CE1_RING_RES		9
+#define IPA_WDI_CE1_DB_RES			10
+#define IPA_WDI_TX1_DB_RES			11
+#define IPA_WDI_MAX_RES				12
 
 /* use QMAP header reserved bit to identify tethered traffic */
 #define IPA_QMAP_TETH_BIT (1 << 30)
@@ -284,6 +288,8 @@ enum {
 #define IPA_TRANSPORT_PROD_TIMEOUT_MSEC 100
 
 #define IPA3_ACTIVE_CLIENTS_TABLE_BUF_SIZE 4096
+
+#define IPA_UC_ACT_TBL_SIZE 1000
 
 #define IPA3_ACTIVE_CLIENT_LOG_TYPE_EP 0
 #define IPA3_ACTIVE_CLIENT_LOG_TYPE_SIMPLE 1
@@ -1383,6 +1389,12 @@ struct ipa3_stats {
 #define IPA3_UC_DEBUG_STATS_RINGUSAGELOW_OFF (12)
 #define IPA3_UC_DEBUG_STATS_RINGUTILCOUNT_OFF (16)
 #define IPA3_UC_DEBUG_STATS_OFF (20)
+#define IPA3_UC_DEBUG_STATS_TRCOUNT_OFF (20)
+#define IPA3_UC_DEBUG_STATS_ERCOUNT_OFF (24)
+#define IPA3_UC_DEBUG_STATS_AOSCOUNT_OFF (28)
+#define IPA3_UC_DEBUG_STATS_BUSYTIME_OFF (32)
+#define IPA3_UC_DEBUG_STATS_RTK_OFF (40)
+
 
 /**
  * struct ipa3_uc_dbg_stats - uC dbg stats for offloading
@@ -1575,6 +1587,12 @@ struct ipa3_aqc_ctx {
 	struct ipa3_uc_dbg_stats dbg_stats;
 };
 
+/**
+ * struct ipa3_rtk_ctx - IPA rtk context
+ */
+struct ipa3_rtk_ctx {
+	struct ipa3_uc_dbg_stats dbg_stats;
+};
 
 /**
  * struct ipa3_transport_pm - transport power management related members
@@ -1732,6 +1750,26 @@ struct ipa3_app_clock_vote {
 	u32 cnt;
 };
 
+struct ipa_eth_client_mapping {
+	enum ipa_client_type type;
+	int pipe_id;
+	int pipe_hdl;
+	int ch_id;
+	bool valid;
+};
+
+struct ipa3_eth_info {
+	u8 num_ch;
+	struct ipa_eth_client_mapping map[IPA_MAX_CH_STATS_SUPPORTED];
+};
+
+struct ipa3_eth_error_stats {
+	int rp;
+	int wp;
+	u32 err;
+};
+
+
 /**
  * struct ipa3_context - IPA context
  * @cdev: cdev context
@@ -1824,7 +1862,9 @@ struct ipa3_app_clock_vote {
  * @wdi3_ctx: IPA wdi3 context
  * @gsi_info: channel/protocol info for GSI offloading uC stats
  * @app_vote: holds userspace application clock vote count
+ * @ipa_in_cpe_cfg : boolean denotes whether CPE config is enabled
  * IPA context - holds all relevant info about IPA driver and its state
+ * @eth_info: ethernet client mapping
  */
 struct ipa3_context {
 	struct ipa3_char_device_context cdev;
@@ -1984,6 +2024,7 @@ struct ipa3_context {
 	struct ipa3_usb_ctx usb_ctx;
 	struct ipa3_mhip_ctx mhip_ctx;
 	struct ipa3_aqc_ctx aqc_ctx;
+	struct ipa3_rtk_ctx rtk_ctx;
 	atomic_t ipa_clk_vote;
 	int gsi_chk_intset_value;
 	int uc_mailbox17_chk;
@@ -1997,6 +2038,19 @@ struct ipa3_context {
 	bool ipa_mhi_proxy;
 	bool ipa_wan_skb_page;
 	struct ipa3_app_clock_vote app_clock_vote;
+	struct ipa_mem_buffer uc_act_tbl;
+	bool uc_act_tbl_valid;
+	struct mutex act_tbl_lock;
+	int uc_act_tbl_total;
+	int uc_act_tbl_socksv5_total;
+	int uc_act_tbl_ipv6_nat_total;
+	int uc_act_tbl_next_index;
+	bool ipa_in_cpe_cfg;
+	u32 ipa_wdi3_2g_holb_timeout;
+	u32 ipa_wdi3_5g_holb_timeout;
+	bool is_wdi3_tx1_needed;
+	struct ipa3_eth_info
+		eth_info[IPA_ETH_CLIENT_MAX][IPA_ETH_INST_ID_MAX];
 };
 
 struct ipa3_plat_drv_res {
@@ -2045,6 +2099,9 @@ struct ipa3_plat_drv_res {
 	u32 secure_debug_check_action;
 	bool ipa_mhi_proxy;
 	bool ipa_wan_skb_page;
+	bool ipa_in_cpe_cfg;
+	u32 ipa_wdi3_2g_holb_timeout;
+	u32 ipa_wdi3_5g_holb_timeout;
 };
 
 /**
@@ -2384,6 +2441,21 @@ int ipa3_cfg_ep_holb_by_client(enum ipa_client_type client,
 
 int ipa3_cfg_ep_ctrl(u32 clnt_hdl, const struct ipa_ep_cfg_ctrl *ep_ctrl);
 
+int ipa3_setup_uc_act_tbl(void);
+
+int ipa3_add_socksv5_conn(struct ipa_socksv5_info *info);
+
+int ipa3_del_socksv5_conn(uint32_t handle);
+
+int ipa3_add_socksv5_conn_usr(struct ipa_kernel_tests_socksv5_uc_tmpl *tmpl);
+
+int ipa3_add_ipv6_nat_uc_activation_entry(
+	struct ipa_ioc_ipv6_nat_uc_act_entry *entry);
+
+int ipa3_del_ipv6_nat_uc_activation_entry(uint16_t index);
+
+int ipa3_del_uc_act_entry(uint16_t index);
+
 /*
  * Header removal / addition
  */
@@ -2588,6 +2660,7 @@ int ipa3_get_wdi_gsi_stats(struct ipa_uc_dbg_ring_stats *stats);
 int ipa3_get_wdi3_gsi_stats(struct ipa_uc_dbg_ring_stats *stats);
 int ipa3_get_usb_gsi_stats(struct ipa_uc_dbg_ring_stats *stats);
 int ipa3_get_aqc_gsi_stats(struct ipa_uc_dbg_ring_stats *stats);
+int ipa3_get_rtk_gsi_stats(struct ipa_uc_dbg_ring_stats *stats);
 int ipa3_get_wdi_stats(struct IpaHwStatsWDIInfoData_t *stats);
 int ipa3_get_prot_id(enum ipa_client_type client);
 u16 ipa3_get_smem_restr_bytes(void);
@@ -2602,9 +2675,12 @@ void ipa3_ntn_uc_dereg_rdyCB(void);
 int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	struct ipa_wdi_conn_out_params *out,
 	ipa_wdi_meter_notifier_cb wdi_notify);
-int ipa3_disconn_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
-int ipa3_enable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
-int ipa3_disable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx);
+int ipa3_disconn_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1);
+int ipa3_enable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1);
+int ipa3_disable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1);
 
 int ipa3_conn_wigig_rx_pipe_i(void *in,
 	struct ipa_wigig_conn_out_params *out);
@@ -2791,6 +2867,8 @@ int ipa3_set_single_ndp_per_mbim(bool enable);
 void ipa3_debugfs_pre_init(void);
 void ipa3_debugfs_post_init(void);
 void ipa3_debugfs_remove(void);
+void ipa3_eth_debugfs_init(void);
+void ipa3_eth_debugfs_add(struct ipa_eth_client *client);
 
 void ipa3_dump_buff_internal(void *base, dma_addr_t phy_base, u32 size);
 
@@ -2989,6 +3067,8 @@ int ipa_reset_quota_stats(enum ipa_client_type client);
 
 int ipa_reset_all_quota_stats(void);
 
+int ipa_drop_stats_init(void);
+
 int ipa_init_drop_stats(u32 pipe_bitmask);
 
 int ipa_get_drop_stats(struct ipa_drop_stats_all *out);
@@ -3104,7 +3184,30 @@ void ipa_eth_exit(void);
 #else
 static inline int ipa_eth_init(void) { return 0; }
 static inline void ipa_eth_exit(void) { }
-#endif // CONFIG_IPA_ETH
+#endif
+void ipa3_eth_debugfs_add_node(struct ipa_eth_client *client);
+int ipa3_eth_rtk_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_aqc_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_emac_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_rtk_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_aqc_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_emac_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type);
+int ipa3_eth_client_conn_evt(struct ipa_ecm_msg *msg);
+int ipa3_eth_client_disconn_evt(struct ipa_ecm_msg *msg);
+void ipa3_eth_get_status(u32 client, int scratch_id,
+	struct ipa3_eth_error_stats *stats);
 int ipa3_get_gsi_chan_info(struct gsi_chan_info *gsi_chan_info,
 	unsigned long chan_hdl);
 #ifdef CONFIG_IPA3_MHI_PRIME_MANAGER

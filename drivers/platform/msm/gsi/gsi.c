@@ -2161,6 +2161,7 @@ static void gsi_program_chan_ctx(struct gsi_chan_props *props, unsigned int ee,
 	case GSI_CHAN_PROT_AQC:
 	case GSI_CHAN_PROT_11AD:
 	case GSI_CHAN_PROT_QDSS:
+	case GSI_CHAN_PROT_RTK:
 		prot_msb = 1;
 		break;
 	default:
@@ -4404,6 +4405,35 @@ void gsi_wdi3_write_evt_ring_db(unsigned long evt_ring_hdl,
 	gsi_writel(db_addr_high, gsi_ctx->base +
 		GSI_EE_n_EV_CH_k_CNTXT_13_OFFS(evt_ring_hdl, gsi_ctx->per.ee));
 }
+
+int gsi_get_refetch_reg(unsigned long chan_hdl, bool is_rp)
+{
+	if (is_rp) {
+		return gsi_readl(gsi_ctx->base +
+		GSI_EE_n_GSI_CH_k_RE_FETCH_READ_PTR_OFFS(chan_hdl,
+			gsi_ctx->per.ee));
+	} else {
+		return gsi_readl(gsi_ctx->base +
+		GSI_EE_n_GSI_CH_k_RE_FETCH_WRITE_PTR_OFFS(chan_hdl,
+			gsi_ctx->per.ee));
+	}
+}
+EXPORT_SYMBOL(gsi_get_refetch_reg);
+
+int gsi_get_drop_stats(unsigned long ep_id, int scratch_id)
+{
+	/* RTK use scratch 5 */
+	if (scratch_id == 5) {
+		/*
+		 * Read the address of GSI_SHRAM_n (0x1e06000)
+		 * and then add (physical_ch_idx * 12 + 7) in words
+		 */
+		return gsi_readl(gsi_ctx->base +
+		GSI_EE_n_GSI_SHRAM_n_OFFS(ep_id * 12 + 7));
+	}
+	return 0;
+}
+EXPORT_SYMBOL(gsi_get_drop_stats);
 
 void gsi_wdi3_dump_register(unsigned long chan_hdl)
 {

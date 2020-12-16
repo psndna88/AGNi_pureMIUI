@@ -161,6 +161,7 @@ enum gsi_evt_chtype {
 	GSI_EVT_CHTYPE_MHIP_EV = 0x7,
 	GSI_EVT_CHTYPE_AQC_EV = 0x8,
 	GSI_EVT_CHTYPE_11AD_EV = 0x9,
+	GSI_EVT_CHTYPE_RTK_EV = 0xC,
 };
 
 enum gsi_evt_ring_elem_size {
@@ -236,6 +237,7 @@ enum gsi_chan_prot {
 	GSI_CHAN_PROT_11AD = 0x9,
 	GSI_CHAN_PROT_MHIC = 0xA,
 	GSI_CHAN_PROT_QDSS = 0xB,
+	GSI_CHAN_PROT_RTK = 0xC,
 };
 
 enum gsi_chan_dir {
@@ -915,6 +917,29 @@ union __packed gsi_wdi3_channel_scratch2_reg {
 
 
 /**
+ * gsi_rtk_channel_scratch - Realtek SW config area of
+ * channel scratch
+ *
+ * @rtk_bar_low: Realtek bar address LSB
+ * @rtk_bar_high: Realtek bar address MSB
+ * @queue_number: dma channel number in rtk
+ * @fix_buff_size: buff size in KB
+ * @rtk_buff_addr_high: buffer addr where TRE points to
+ * @rtk_buff_addr_low: buffer addr where TRE points to
+ *			the descriptor
+ */
+struct __packed gsi_rtk_channel_scratch {
+	uint32_t rtk_bar_low;
+	uint32_t rtk_bar_high : 9;
+	uint32_t queue_number : 5;
+	uint32_t fix_buff_size : 4;
+	uint32_t reserved1 : 6;
+	uint32_t rtk_buff_addr_high : 8;
+	uint32_t rtk_buff_addr_low;
+	uint32_t reserved2;
+};
+
+/**
  * gsi_channel_scratch - channel scratch SW config area
  *
  */
@@ -929,6 +954,7 @@ union __packed gsi_channel_scratch {
 	struct __packed gsi_wdi3_channel_scratch wdi3;
 	struct __packed gsi_mhip_channel_scratch mhip;
 	struct __packed gsi_qdss_channel_scratch qdss;
+	struct __packed gsi_rtk_channel_scratch rtk;
 	struct __packed {
 		uint32_t word1;
 		uint32_t word2;
@@ -1040,6 +1066,17 @@ struct __packed gsi_wdi3_evt_scratch {
 };
 
 /**
+ * gsi_rtk_evt_scratch - realtek protocol SW config area of
+ * event scratch
+ * @reserved1: reserve bit.
+ * @reserved2: reserve bit.
+ */
+struct __packed gsi_rtk_evt_scratch {
+	uint32_t reserved1;
+	uint32_t reserved2;
+};
+
+/**
  * gsi_evt_scratch - event scratch SW config area
  *
  */
@@ -1050,6 +1087,7 @@ union __packed gsi_evt_scratch {
 	struct __packed gsi_11ad_evt_scratch w11ad;
 	struct __packed gsi_wdi3_evt_scratch wdi3;
 	struct __packed gsi_mhip_evt_scratch mhip;
+	struct __packed gsi_rtk_evt_scratch rtk;
 	struct __packed {
 		uint32_t word1;
 		uint32_t word2;
@@ -1661,8 +1699,23 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code);
 void gsi_wdi3_write_evt_ring_db(unsigned long chan_hdl, uint32_t db_addr_low,
 	uint32_t db_addr_high);
 
+/**
+ * gsi_get_refetch_reg - get WP/RP value from re_fetch register
+ *
+ * @chan_hdl: gsi channel handle
+ * @is_rp: rp or wp
+ */
+int gsi_get_refetch_reg(unsigned long chan_hdl, bool is_rp);
 
 /**
+ * gsi_get_drop_stats - get drop stats by GSI
+ *
+ * @ep_id: ep index
+ * @scratch_id: drop stats on which scratch register
+ */
+int gsi_get_drop_stats(unsigned long ep_id, int scratch_id);
+
+ /**
  * gsi_wdi3_dump_register - dump wdi3 related gsi registers
  *
  * @chan_hdl: gsi channel handle
@@ -2023,6 +2076,19 @@ static inline void gsi_wdi3_write_evt_ring_db(
 static inline void gsi_wdi3_dump_register(unsigned long chan_hdl)
 {
 }
+
+static inline int gsi_get_refetch_reg(unsigned long chan_hdl,
+	bool is_rp)
+{
+	return -GSI_STATUS_UNSUPPORTED_OP;
+}
+
+static inline int gsi_get_drop_stats(unsigned long ep_id,
+	int scratch_id)
+{
+	return -GSI_STATUS_UNSUPPORTED_OP;
+}
+
 
 #endif
 #endif

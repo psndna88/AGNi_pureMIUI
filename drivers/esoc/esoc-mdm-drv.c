@@ -641,6 +641,10 @@ static struct esoc_compat compat_table[] = {
 		.name = "SDXMARMOT",
 		.data = NULL,
 	},
+	{
+		.name = "SDXLEMUR",
+		.data = NULL,
+	},
 };
 
 static struct esoc_drv esoc_ssr_drv = {

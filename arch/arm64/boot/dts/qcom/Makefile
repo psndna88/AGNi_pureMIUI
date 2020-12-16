@@ -57,6 +57,8 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sm8150-sdxprairie-v3-mtp-overlay.dtbo \
 		sm8150-marmot-cdp-overlay.dtbo \
 		sm8150-marmot-mtp-overlay.dtbo \
+		sm8150-lemur-cdp-overlay.dtbo \
+		sm8150-lemur-mtp-overlay.dtbo \
 		sm8150-hdk-overlay.dtbo
 
 sm8150-cdp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
@@ -82,6 +84,8 @@ sm8150-sdxprairie-v2-mtp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.d
 sm8150-sdxprairie-v3-mtp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-marmot-cdp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 sm8150-marmot-mtp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
+sm8150-lemur-cdp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
+sm8150-lemur-mtp-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb sm8150p.dtb sm8150p-v2.dtb
 else
 dtb-$(CONFIG_ARCH_SM8150)	+= sm8150-rumi.dtb \
 	sm8150-mtp.dtb \
@@ -152,7 +156,12 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sa6155p-v2-adp-star-overlay.dtbo \
 		sa6155p-v2-adp-air-overlay.dtbo \
 		qcs610-iot-overlay.dtbo \
-		qcs410-iot-overlay.dtbo
+		qcs410-iot-overlay.dtbo \
+		prairie-iot-idp-overlay.dtbo \
+		prairie-iot-external-codec-idp-overlay.dtbo \
+		prairie-iot-usbc-idp-overlay.dtbo \
+		prairie-iot-cmd-mone-display-idp-overlay.dtbo \
+		prairie-iot-usbc-minidp-idp-overlay.dtbo
 
 sm6150-rumi-overlay.dtbo-base := sm6150.dtb
 sm6150-qrd-overlay.dtbo-base := sm6150.dtb
@@ -168,9 +177,15 @@ sa6155p-adp-star-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v2-adp-star-overlay.dtbo-base := sa6155p.dtb
 sa6155-adp-air-overlay.dtbo-base := sa6155.dtb
 sa6155p-adp-air-overlay.dtbo-base := sa6155p.dtb
+qcs610-ipc-overlay.dtbo-base := qcs610.dtb
 sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
-qcs610-iot-overlay.dtbo-base := sm6150.dtb
-qcs410-iot-overlay.dtbo-base := sm6150.dtb
+prairie-iot-idp-overlay.dtbo-base := qcs610.dtb
+prairie-iot-external-codec-idp-overlay.dtbo-base := qcs610.dtb
+prairie-iot-usbc-idp-overlay.dtbo-base := qcs610.dtb
+prairie-iot-cmd-mode-display-idp-overlay.dtbo-base := qcs610.dtb
+prairie-iot-usbc-minidp-idp-overlay.dtbo-base := qcs610.dtb
+qcs610-iot-overlay.dtbo-base := qcs610.dtb
+qcs410-iot-overlay.dtbo-base := qcs410.dtb
 else
 dtb-$(CONFIG_ARCH_SM6150)	+= sm6150-rumi.dtb \
 	sm6150-qrd.dtb \
@@ -188,7 +203,12 @@ dtb-$(CONFIG_ARCH_SM6150)	+= sm6150-rumi.dtb \
 	sa6155p-v2-adp-star.dtb \
 	sa6155p-v2-adp-air.dtb \
 	qcs610-iot.dtb \
-	qcs410-iot.dtb
+	qcs410-iot.dtb \
+	prairie-iot-idp.dtb \
+	prairie-iot-external-codec-idp.dtb \
+	prairie-iot-usbc-idp.dtb \
+	prairie-iot-cmd-mode-display-idp.dtb \
+	prairie-iot-usbc-minidp-idp.dtb
 
 endif
 
@@ -237,16 +257,16 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		trinket-usbc-external-codec-idp-overlay.dtbo \
 		trinket-usbc-idp-overlay.dtbo \
 		trinket-dp-idp-overlay.dtbo \
-		qcm6125-iot-idp-overlay.dtbo \
-		qcs6125-iot-idp-overlay.dtbo \
-		qcm6125-iot-external-codec-idp-overlay.dtbo \
-		qcs6125-iot-external-codec-idp-overlay.dtbo \
-		qcm6125-iot-usbc-external-codec-idp-overlay.dtbo \
-		qcs6125-iot-usbc-external-codec-idp-overlay.dtbo \
-		qcm6125-iot-usbc-idp-overlay.dtbo \
-		qcs6125-iot-usbc-idp-overlay.dtbo \
-		qcm6125-iot-dp-idp-overlay.dtbo \
-		qcs6125-iot-dp-idp-overlay.dtbo
+		trinket-iot-idp-overlay.dtbo \
+		trinketp-iot-idp-overlay.dtbo \
+		trinket-iot-external-codec-idp-overlay.dtbo \
+		trinketp-iot-external-codec-idp-overlay.dtbo \
+		trinket-iot-usbc-external-codec-idp-overlay.dtbo \
+		trinketp-iot-usbc-external-codec-idp-overlay.dtbo \
+		trinket-iot-usbc-idp-overlay.dtbo \
+		trinketp-iot-usbc-idp-overlay.dtbo \
+		trinket-iot-dp-idp-overlay.dtbo \
+		trinketp-iot-dp-idp-overlay.dtbo
 
 trinket-rumi-overlay.dtbo-base := trinket.dtb
 trinket-idp-overlay.dtbo-base := trinket.dtb
@@ -255,16 +275,16 @@ trinket-external-codec-idp-overlay.dtbo-base := trinket.dtb
 trinket-usbc-external-codec-idp-overlay.dtbo-base := trinket.dtb
 trinket-usbc-idp-overlay.dtbo-base := trinket.dtb
 trinket-dp-idp-overlay.dtbo-base := trinket.dtb
-qcm6125-iot-idp-overlay.dtbo-base := qcm6125.dtb
-qcs6125-iot-idp-overlay.dtbo-base := qcs6125.dtb
-qcm6125-iot-external-codec-idp-overlay.dtbo-base := qcm6125.dtb
-qcs6125-iot-external-codec-idp-overlay.dtbo-base := qcs6125.dtb
-qcm6125-iot-usbc-external-codec-idp-overlay.dtbo-base := qcm6125.dtb
-qcs6125-iot-usbc-external-codec-idp-overlay.dtbo-base := qcs6125.dtb
-qcm6125-iot-usbc-idp-overlay.dtbo-base := qcm6125.dtb
-qcs6125-iot-usbc-idp-overlay.dtbo-base := qcs6125.dtb
-qcm6125-iot-dp-idp-overlay.dtbo-base := qcm6125.dtb
-qcs6125-iot-dp-idp-overlay.dtbo-base := qcs6125.dtb
+trinket-iot-idp-overlay.dtbo-base := trinket-iot.dtb
+trinketp-iot-idp-overlay.dtbo-base := trinketp-iot.dtb
+trinket-iot-external-codec-idp-overlay.dtbo-base := trinket-iot.dtb
+trinketp-iot-external-codec-idp-overlay.dtbo-base := trinketp-iot.dtb
+trinket-iot-usbc-external-codec-idp-overlay.dtbo-base := trinket-iot.dtb
+trinketp-iot-usbc-external-codec-idp-overlay.dtbo-base := trinketp-iot.dtb
+trinket-iot-usbc-idp-overlay.dtbo-base := trinket-iot.dtb
+trinketp-iot-usbc-idp-overlay.dtbo-base := trinketp-iot.dtb
+trinket-iot-dp-idp-overlay.dtbo-base := trinket-iot.dtb
+trinketp-iot-dp-idp-overlay.dtbo-base := trinketp-iot.dtb
 else
 dtb-$(CONFIG_ARCH_TRINKET)	+= trinket-rumi.dtb \
 	trinket-idp.dtb \
@@ -273,16 +293,16 @@ dtb-$(CONFIG_ARCH_TRINKET)	+= trinket-rumi.dtb \
 	trinket-usbc-external-codec-idp.dtb \
 	trinket-usbc-idp.dtb \
 	trinket-dp-idp.dtb \
-	qcm6125-iot-idp.dtb \
-	qcs6125-iot-idp.dtb \
-	qcm6125-iot-external-codec-idp.dtb \
-	qcs6125-iot-external-codec-idp.dtb \
-	qcm6125-iot-usbc-external-codec-idp.dtb \
-	qcs6125-iot-usbc-external-codec-idp.dtb \
-	qcm6125-iot-usbc-idp.dtb \
-	qcs6125-iot-usbc-idp.dtb \
-	qcm6125-iot-dp-idp.dtb \
-	qcs6125-iot-dp-idp.dtb
+	trinket-iot-idp.dtb \
+	trinketp-iot-idp.dtb \
+	trinket-iot-external-codec-idp.dtb \
+	trinketp-iot-external-codec-idp.dtb \
+	trinket-iot-usbc-external-codec-idp.dtb \
+	trinketp-iot-usbc-external-codec-idp.dtb \
+	trinket-iot-usbc-idp.dtb \
+	trinketp-iot-usbc-idp.dtb \
+	trinket-iot-dp-idp.dtb \
+	trinketp-iot-dp-idp.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)

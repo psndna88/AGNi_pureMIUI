@@ -1738,8 +1738,10 @@ static void mhi_dev_process_cmd_ring(struct mhi_dev *mhi,
 					return;
 				}
 			}
+			mutex_lock(&mhi->ch[ch_id].ch_lock);
 			mhi_dev_alloc_evt_buf_evt_req(mhi, &mhi->ch[ch_id],
 					evt_ring);
+			mutex_unlock(&mhi->ch[ch_id].ch_lock);
 		}
 
 		if (MHI_USE_DMA(mhi))
@@ -2066,6 +2068,14 @@ static void mhi_update_state_info_all(enum mhi_ctrl_info info)
 
 	mhi_ctx->ctrl_info = info;
 	for (i = 0; i < MHI_MAX_SOFTWARE_CHANNELS; ++i) {
+		/*
+		 * Skip channel state info change
+		 * if channel is already in the desired state.
+		 */
+		if (channel_state_info[i].ctrl_info == info ||
+		    (info == MHI_STATE_DISCONNECTED &&
+		    channel_state_info[i].ctrl_info == MHI_STATE_CONFIGURED))
+			continue;
 		channel_state_info[i].ctrl_info = info;
 		/* Notify kernel clients */
 		mhi_dev_trigger_cb(i);
@@ -2942,6 +2952,14 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 	mutex_lock(&ch->ch_lock);
 
 	do {
+		if (ch->state == MHI_DEV_CH_STOPPED) {
+			mhi_log(MHI_MSG_VERBOSE,
+				"channel (%d) already stopped\n",
+				mreq->chan);
+			bytes_read = -1;
+			goto exit;
+		}
+
 		el = &ring->ring_cache[ring->rd_offset];
 		mhi_log(MHI_MSG_VERBOSE, "evtptr : 0x%llx\n",
 						el->tre.data_buf_ptr);
@@ -2963,13 +2981,6 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 				goto exit;
 			}
 
-			if (ch->state == MHI_DEV_CH_STOPPED) {
-				mhi_log(MHI_MSG_VERBOSE,
-					"channel (%d) already stopped\n",
-					mreq->chan);
-				bytes_read = -1;
-				goto exit;
-			}
 
 			ch->tre_loc = el->tre.data_buf_ptr;
 			ch->tre_size = el->tre.len;
