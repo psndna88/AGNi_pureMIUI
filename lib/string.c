@@ -203,7 +203,7 @@ ssize_t strscpy(char *dest, const char *src, size_t count)
 	while (max >= sizeof(unsigned long)) {
 		unsigned long c, data;
 
-		c = *(unsigned long *)(src+res);
+		c = read_word_at_a_time(src+res);
 		if (has_zero(c, &data, &constants)) {
 			data = prep_zero_mask(c, data, &constants);
 			data = create_zero_mask(data);
@@ -244,12 +244,12 @@ EXPORT_SYMBOL(strscpy);
  * @src: pointer to the beginning of string being copied from. Must not overlap
  *       dest.
  *
- * stpcpy differs from strcpy in a key way: the return value is the new
- * %NUL-terminated character. (for strcpy, the return value is a pointer to
- * src. This interface is considered unsafe as it doesn't perform bounds
- * checking of the inputs. As such it's not recommended for usage. Instead,
- * its definition is provided in case the compiler lowers other libcalls to
- * stpcpy.
+ * stpcpy differs from strcpy in a key way: the return value is a pointer
+ * to the new %NUL-terminating character in @dest. (For strcpy, the return
+ * value is a pointer to the start of @dest). This interface is considered
+ * unsafe as it doesn't perform bounds checking of the inputs. As such it's
+ * not recommended for usage. Instead, its definition is provided in case
+ * the compiler lowers other libcalls to stpcpy.
  */
 char *stpcpy(char *__restrict__ dest, const char *__restrict__ src);
 char *stpcpy(char *__restrict__ dest, const char *__restrict__ src)
