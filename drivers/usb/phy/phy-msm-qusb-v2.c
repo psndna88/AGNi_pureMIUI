@@ -448,7 +448,7 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 	qusb_phy_write_seq(qphy->base, qphy->qusb_phy_host_init_seq,
 			qphy->host_init_seq_len, 0);
 
-	if (qphy->efuse_reg) {
+	if (0) {
 		if (!qphy->tune_val)
 			qusb_phy_get_tune1_param(qphy);
 	} else {
