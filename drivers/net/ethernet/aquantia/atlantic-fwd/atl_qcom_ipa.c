@@ -1,4 +1,4 @@
-/* Copyright (c) 2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,11 @@
 
 #include "atl_fwd.h"
 #include "atl_qcom_ipa.h"
+#include <linux/etherdevice.h>
+#include <net/ip.h>
+#include <uapi/linux/ip.h>
+
+#define IPA_ETH_RX_SOFTIRQ_THRESH	16
 
 #if ATL_FWD_API_VERSION >= 2 && IPA_ETH_API_VER >= 4
 #define ATL_IPA_SUPPORT_NOTIFY
@@ -118,6 +123,14 @@ static int atl_ipa_fwd_notification(struct notifier_block *nb,
 	case ATL_FWD_NOTIFY_RESET_COMPLETE:
 		ipa_eth_device_notify(ai_dev->eth_dev,
 				      IPA_ETH_DEV_RESET_COMPLETE, NULL);
+		break;
+	case ATL_FWD_NOTIFY_MACSEC_ON:
+		ipa_eth_device_notify(ai_dev->eth_dev,
+				      IPA_ETH_DEV_ADD_MACSEC_IF, data);
+		break;
+	case ATL_FWD_NOTIFY_MACSEC_OFF:
+		ipa_eth_device_notify(ai_dev->eth_dev,
+				      IPA_ETH_DEV_DEL_MACSEC_IF, data);
 		break;
 	default:
 		return NOTIFY_DONE;
@@ -417,6 +430,8 @@ static void atl_ipa_release_event(struct ipa_eth_channel *ch,
 	/* An atl ring can have only one associated event */
 	atl_fwd_release_event(event);
 
+	kfree(event);
+
 	dma_unmap_resource(eth_dev->dev,
 			   daddr, sizeof(u32), DMA_FROM_DEVICE, 0);
 }
@@ -442,10 +457,37 @@ int atl_ipa_moderate_event(struct ipa_eth_channel *ch, unsigned long event,
 	return atl_fwd_set_ring_intr_mod(CH_RING(ch), min_usecs, max_usecs);
 }
 
-static int atl_ipa_receive_skb(struct ipa_eth_device *eth_dev,
-			       struct sk_buff *skb)
+static int atl_ipa_fwd_receive_skb(struct net_device *ndev, struct sk_buff *skb)
 {
-	return atl_fwd_receive_skb(eth_dev->net_dev, skb);
+	struct atl_nic *nic = netdev_priv(ndev);
+	struct iphdr *ip;
+
+	ip = (struct iphdr *)&skb->data[ETH_HLEN];
+
+	/* Submit packet to network stack */
+	/* If its a ping packet submit it via rx_ni else use rx */
+	if (ip->protocol == IPPROTO_ICMP) {
+		nic->stats.rx_fwd.packets++;
+		nic->stats.rx_fwd.bytes += skb->len;
+		skb->protocol = eth_type_trans(skb, ndev);
+		return netif_rx_ni(skb);
+	} else if ((nic->stats.rx_fwd.packets %
+		IPA_ETH_RX_SOFTIRQ_THRESH) == 0) {
+		nic->stats.rx_fwd.packets++;
+		nic->stats.rx_fwd.bytes += skb->len;
+		skb->protocol = eth_type_trans(skb, ndev);
+		return netif_rx_ni(skb);
+	} else {
+		return atl_fwd_receive_skb(ndev, skb);
+	}
+}
+
+static int atl_ipa_receive_skb(struct ipa_eth_device *eth_dev,
+			       struct sk_buff *skb, bool in_napi)
+{
+	return in_napi ?
+		atl_fwd_napi_receive_skb(eth_dev->net_dev, skb) :
+		atl_ipa_fwd_receive_skb(eth_dev->net_dev, skb);
 }
 
 static int atl_ipa_transmit_skb(struct ipa_eth_device *eth_dev,

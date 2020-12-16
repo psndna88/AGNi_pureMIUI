@@ -1,4 +1,4 @@
-/* Copyright (c) 2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,7 +10,10 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/rtnetlink.h>
+
 #include "ipa_eth_i.h"
+#include "ipa_eth_trace.h"
 
 #define ipa_eth_nd_op(eth_dev, op, args...) (eth_dev->nd->ops->op(args))
 
@@ -87,53 +90,371 @@ void ipa_eth_net_unregister_driver(struct ipa_eth_net_driver *nd)
 	ipa_eth_bus_unregister_driver(nd);
 }
 
-static int ipa_eth_net_process_event(
-	struct ipa_eth_device *eth_dev,
+static inline bool __is_netdev_link_up(struct ipa_eth_device *eth_dev)
+{
+	return netif_carrier_ok(eth_dev->net_dev);
+}
+
+static inline bool __is_netdev_iface_up(struct ipa_eth_device *eth_dev)
+{
+	return !!(eth_dev->net_dev->flags & IFF_UP);
+}
+
+bool ipa_eth_net_check_active(struct ipa_eth_device *eth_dev)
+{
+	bool active = false;
+	struct rtnl_link_stats64 curr_rtnl_stats;
+	struct ipa_eth_device_private *ipa_priv = eth_dev_priv(eth_dev);
+	struct rtnl_link_stats64 *last_rtnl_stats = &ipa_priv->last_rtnl_stats;
+
+	dev_get_stats(eth_dev->net_dev, &curr_rtnl_stats);
+
+	trace_net_check_active(eth_dev,
+		last_rtnl_stats, &curr_rtnl_stats, ipa_priv->assume_active);
+
+	if (ipa_priv->assume_active) {
+		ipa_priv->assume_active--;
+		active = true;
+	}
+
+	if (curr_rtnl_stats.rx_packets != last_rtnl_stats->rx_packets)
+		active = true;
+
+	*last_rtnl_stats = curr_rtnl_stats;
+
+	return active;
+}
+
+/* Event handler for netdevice events from upper interfaces */
+static int ipa_eth_net_upper_event(
+	struct ipa_eth_upper_device *upper_dev,
 	unsigned long event, void *ptr)
 {
-	bool link_changed = false;
-	bool iface_changed = false;
+	struct ipa_eth_device *eth_dev = upper_dev->eth_dev;
 
-	link_changed =
-		netif_carrier_ok(eth_dev->net_dev) ?
-		!test_and_set_bit(IPA_ETH_IF_ST_LOWER_UP, &eth_dev->if_state) :
-		test_and_clear_bit(IPA_ETH_IF_ST_LOWER_UP, &eth_dev->if_state);
+	ASSERT_RTNL();
+
+	ipa_eth_dev_log(eth_dev,
+			"Received netdev event %s (0x%04lx) for %s",
+			ipa_eth_net_device_event_name(event), event,
+			upper_dev->net_dev->name);
 
 	switch (event) {
 	case NETDEV_UP:
-		iface_changed = !test_and_set_bit(
-					IPA_ETH_IF_ST_UP, &eth_dev->if_state);
+		upper_dev->up = true;
 		break;
 	case NETDEV_DOWN:
-		iface_changed = test_and_clear_bit(
-					IPA_ETH_IF_ST_UP, &eth_dev->if_state);
+		upper_dev->up = false;
 		break;
 	default:
-		break;
+		return NOTIFY_DONE;
 	}
 
-	/* We can not wait for refresh to complete because we are holding
-	 * the rtnl mutex.
+	/* Register/unregister the upper interface from refresh wq to avoid
+	 * race conditions.
 	 */
-	if (link_changed || iface_changed)
-		ipa_eth_device_refresh_sched(eth_dev);
+	ipa_eth_device_refresh_sched(eth_dev);
 
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
 }
+
+static inline struct ipa_eth_upper_device *ipa_eth_search_upper(
+		struct ipa_eth_device *eth_dev,
+		struct net_device *net_dev)
+{
+	struct ipa_eth_upper_device *upper_dev = NULL;
+	struct ipa_eth_device_private *dev_priv = eth_dev->ipa_priv;
+
+	ASSERT_RTNL();
+
+	list_for_each_entry(upper_dev, &dev_priv->upper_devices, upper_list) {
+		if (upper_dev->net_dev == net_dev)
+			return upper_dev;
+	}
+
+	return NULL;
+}
+
+/* Register all active upper interfaces, unregistering ones that are down. */
+int ipa_eth_net_register_upper(struct ipa_eth_device *eth_dev)
+{
+	int rc = 0;
+	struct ipa_eth_device_private *dev_priv = eth_dev->ipa_priv;
+	struct ipa_eth_upper_device *upper_dev = NULL;
+
+	ipa_eth_dev_log(eth_dev, "Registering all active upper devices");
+
+	/* The list and its entries are updated by events from netdevice
+	 * notifier which will hold rtnl mutex; use same mutex to synchronize.
+	 */
+	rtnl_lock();
+
+	list_for_each_entry(upper_dev, &dev_priv->upper_devices, upper_list) {
+
+		/* Register upper interfaces that are up, unregister ones that
+		 * are down.
+		 */
+		if (upper_dev->up && !upper_dev->registered)
+			rc |= ipa_eth_ep_register_upper_interface(upper_dev);
+		else if (upper_dev->registered && !upper_dev->up)
+			rc |= ipa_eth_ep_unregister_upper_interface(upper_dev);
+	}
+
+	rtnl_unlock();
+
+	if (rc)
+		ipa_eth_dev_err(eth_dev,
+			"Failed to {un}register one or more upper devices");
+
+	return rc;
+}
+
+/* Unregister all upper interfaces */
+int ipa_eth_net_unregister_upper(struct ipa_eth_device *eth_dev)
+{
+	int rc = 0;
+	struct ipa_eth_device_private *dev_priv = eth_dev->ipa_priv;
+	struct ipa_eth_upper_device *upper_dev = NULL;
+
+	ipa_eth_dev_log(eth_dev, "Unregistering all upper devices");
+
+	rtnl_lock();
+
+	list_for_each_entry(upper_dev, &dev_priv->upper_devices, upper_list) {
+		if (likely(upper_dev->registered))
+			rc |= ipa_eth_ep_unregister_upper_interface(upper_dev);
+
+	}
+
+	rtnl_unlock();
+
+	if (rc)
+		ipa_eth_dev_err(eth_dev,
+			"Failed to unregister one or more upper devices");
+
+	return rc;
+}
+
+static int ipa_eth_net_link_upper(struct ipa_eth_device *eth_dev,
+	struct net_device *net_dev)
+{
+	struct ipa_eth_upper_device *upper_dev;
+	struct ipa_eth_device_private *dev_priv = eth_dev->ipa_priv;
+
+	ASSERT_RTNL();
+
+	ipa_eth_dev_log(eth_dev,
+		"Linking upper interface %s", net_dev->name);
+
+	upper_dev = kzalloc(sizeof(*upper_dev), GFP_KERNEL);
+	if (!upper_dev) {
+		ipa_eth_dev_err(eth_dev, "Failed to alloc upper dev");
+		return -ENOMEM;
+	}
+
+	upper_dev->eth_dev = eth_dev;
+	upper_dev->net_dev = net_dev;
+
+	/* Fetch link status for unlike scenarios where the upper interface is
+	 * being linked from ipa_eth_net_event_register().
+	 */
+	upper_dev->up = __is_netdev_iface_up(eth_dev);
+
+	list_add(&upper_dev->upper_list, &dev_priv->upper_devices);
+
+	return 0;
+}
+
+static int __ipa_eth_net_unlink_upper(struct ipa_eth_upper_device *upper_dev)
+{
+	ASSERT_RTNL();
+
+	ipa_eth_dev_log(upper_dev->eth_dev,
+		"Unlinking upper interface %s", upper_dev->net_dev->name);
+
+	/* Even though we would have received a NETDEV_DOWN event prior to
+	 * receiving a PRECHANGEUPPER(unlink) event, a device refresh may not
+	 * have completed by this time; explicitly unregister the upper device.
+	 */
+	ipa_eth_ep_unregister_upper_interface(upper_dev);
+
+	list_del(&upper_dev->upper_list);
+	kzfree(upper_dev);
+
+	return 0;
+}
+
+static int ipa_eth_net_unlink_upper(struct ipa_eth_device *eth_dev,
+	struct net_device *net_dev)
+{
+	struct ipa_eth_upper_device *upper_dev =
+			ipa_eth_search_upper(eth_dev, net_dev);
+
+	if (!upper_dev) {
+		ipa_eth_dev_bug(eth_dev,
+			"Failed to find upper dev %s", net_dev->name);
+		return -ENODEV;
+	}
+
+	return __ipa_eth_net_unlink_upper(upper_dev);
+}
+
+static bool ipa_eth_net_update_link(struct ipa_eth_device *eth_dev)
+{
+	return __is_netdev_link_up(eth_dev) ?
+		!test_and_set_bit(IPA_ETH_IF_ST_LOWER_UP, &eth_dev->if_state) :
+		test_and_clear_bit(IPA_ETH_IF_ST_LOWER_UP, &eth_dev->if_state);
+
+}
+
+/* Use the register event to detect any previously registered upper devices. */
+static bool ipa_eth_net_event_register(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	struct net_device *udev;
+	struct list_head *iter;
+
+	bool refresh_needed = false;
+	struct net_device *net_dev = eth_dev->net_dev;
+
+	/* In the unlikely scenario where an upper interface was created before
+	 * we registered with netdevice notifier, manually link the upper dev to
+	 * eth_dev.
+	 */
+	netdev_for_each_upper_dev_rcu(net_dev, udev, iter) {
+		if (!ipa_eth_net_link_upper(eth_dev, udev))
+			refresh_needed = true;
+	}
+
+	return refresh_needed;
+}
+
+static bool ipa_eth_net_event_unregister(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	struct ipa_eth_device_private *dev_priv = eth_dev->ipa_priv;
+	struct ipa_eth_upper_device *upper_dev = NULL;
+	struct ipa_eth_upper_device *tmp = NULL;
+
+	/* Any upper interfaces discovered previously are expected to have been
+	 * unlinked before the real dev deregisters with network sub-system.
+	 * Since offload sub-system never deregisters with netdevice notifier
+	 * until real dev is removed from the bus, and as the network driver is
+	 * expected to keep registered with network sub-system until a bus level
+	 * removal happens for the device, we really should not see any upper
+	 * interfaces in upper_devices list at this point.
+	 */
+	list_for_each_entry_safe(upper_dev, tmp,
+				&dev_priv->upper_devices, upper_list) {
+		ipa_eth_dev_bug(eth_dev,
+			"Upper interface %s is unexpected",
+			upper_dev->net_dev->name);
+
+		__ipa_eth_net_unlink_upper(upper_dev);
+	}
+
+	return false;
+}
+
+static bool ipa_eth_net_event_up(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	return !test_and_set_bit(IPA_ETH_IF_ST_UP, &eth_dev->if_state);
+}
+
+static bool ipa_eth_net_event_down(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	return test_and_clear_bit(IPA_ETH_IF_ST_UP, &eth_dev->if_state);
+}
+
+static bool ipa_eth_net_event_change(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	return ipa_eth_net_update_link(eth_dev);
+}
+
+static bool ipa_eth_net_event_pre_change_upper(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	struct netdev_notifier_changeupper_info *upper_info = ptr;
+
+	if (!upper_info->linking)
+		ipa_eth_net_unlink_upper(eth_dev, upper_info->upper_dev);
+
+	return true;
+}
+
+static bool ipa_eth_net_event_change_upper(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr)
+{
+	struct netdev_notifier_changeupper_info *upper_info = ptr;
+
+	if (upper_info->linking)
+		ipa_eth_net_link_upper(eth_dev, upper_info->upper_dev);
+
+	return true;
+}
+
+typedef bool (*ipa_eth_net_event_handler)(struct ipa_eth_device *eth_dev,
+		unsigned long event, void *ptr);
+
+/* Event handlers for netdevice events from real interface */
+static ipa_eth_net_event_handler
+		ipa_eth_net_event_handlers[IPA_ETH_NET_DEVICE_MAX_EVENTS] = {
+	[NETDEV_REGISTER] = ipa_eth_net_event_register,
+	[NETDEV_UNREGISTER] = ipa_eth_net_event_unregister,
+	[NETDEV_UP] = ipa_eth_net_event_up,
+	[NETDEV_DOWN] = ipa_eth_net_event_down,
+	[NETDEV_CHANGE] = ipa_eth_net_event_change,
+	[NETDEV_CHANGELOWERSTATE] = ipa_eth_net_event_change,
+	[NETDEV_PRECHANGEUPPER] = ipa_eth_net_event_pre_change_upper,
+	[NETDEV_CHANGEUPPER] = ipa_eth_net_event_change_upper,
+};
 
 static int ipa_eth_net_device_event(struct notifier_block *nb,
 	unsigned long event, void *ptr)
 {
+	struct ipa_eth_upper_device *upper_dev;
 	struct net_device *net_dev = netdev_notifier_info_to_dev(ptr);
 	struct ipa_eth_device *eth_dev = container_of(nb,
 				struct ipa_eth_device, netdevice_nb);
 
+	/* We re-use the notifier registered for real dev to also monitor for
+	 * events from its upper interfaces. Once an upper interface is detected
+	 * through CHANGEUPPER(linking) event from real dev and added to the
+	 * upper_devices list, we let ipa_eth_net_upper_event() receive future
+	 * events for the interface. The upper interface is similarly removed
+	 * from the list on receiving PRECHANGEUPPER(!linking) event. Although
+	 * this method will prevent us from handling REGISTER/UNREGISTER events,
+	 * those can be deduced from {PRE}CHANGEUPPER if needed.
+	 */
+	upper_dev = ipa_eth_search_upper(eth_dev, net_dev);
+	if (upper_dev)
+		return ipa_eth_net_upper_event(upper_dev, event, ptr);
+
 	if (net_dev != eth_dev->net_dev)
 		return NOTIFY_DONE;
 
-	ipa_eth_dev_log(eth_dev, "Received netdev event 0x%04lx", event);
+	ipa_eth_dev_log(eth_dev, "Received netdev event %s (0x%04lx)",
+			ipa_eth_net_device_event_name(event), event);
 
-	return ipa_eth_net_process_event(eth_dev, event, ptr);
+	if (event < IPA_ETH_NET_DEVICE_MAX_EVENTS) {
+		ipa_eth_net_event_handler handler =
+					ipa_eth_net_event_handlers[event];
+		bool refresh_needed = handler && handler(eth_dev, event, ptr);
+
+		/* We can not wait for refresh to complete as we are holding
+		 * the rtnl mutex.
+		 */
+		if (refresh_needed)
+			ipa_eth_device_refresh_sched(eth_dev);
+	} else {
+		ipa_eth_dev_err(eth_dev, "Event number out of bounds");
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
 }
 
 int ipa_eth_net_open_device(struct ipa_eth_device *eth_dev)
@@ -153,12 +474,24 @@ int ipa_eth_net_open_device(struct ipa_eth_device *eth_dev)
 		goto err_net_dev;
 	}
 
+	/* We need to register with netdevice notifier early in the real dev
+	 * lifetime as we need to also use the same registration to discover all
+	 * its upper devices using CHANGEUPPER events, and further accept any
+	 * events from those upper devices too.
+	 */
 	eth_dev->netdevice_nb.notifier_call = ipa_eth_net_device_event;
 	rc = register_netdevice_notifier(&eth_dev->netdevice_nb);
 	if (rc) {
 		ipa_eth_dev_err(eth_dev, "Failed to register netdev notifier");
 		goto err_register;
 	}
+
+	/* When registering with netdevice notifier, only REGISTER and UP events
+	 * are replayed. Fetch current link state; future link state updates
+	 * will be processed through CHANGE event.
+	 */
+	if (ipa_eth_net_update_link(eth_dev))
+		ipa_eth_device_refresh_sched(eth_dev);
 
 	return 0;
 
@@ -1168,7 +1501,8 @@ EXPORT_SYMBOL(ipa_eth_net_moderate_event);
 int ipa_eth_net_receive_skb(struct ipa_eth_device *eth_dev,
 	struct sk_buff *skb)
 {
-	return ipa_eth_nd_op(eth_dev, receive_skb, eth_dev, skb);
+	return ipa_eth_nd_op(eth_dev,
+		receive_skb, eth_dev, skb, ipa_get_lan_rx_napi());
 }
 EXPORT_SYMBOL(ipa_eth_net_receive_skb);
 

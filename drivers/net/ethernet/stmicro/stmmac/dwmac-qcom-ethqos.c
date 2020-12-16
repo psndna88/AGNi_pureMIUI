@@ -482,8 +482,8 @@ static void ethqos_handle_phy_interrupt(struct qcom_ethqos *ethqos)
 	else if (dev->phydev && (phy_intr_status & LINK_DOWN_STATE))
 		phy_mac_interrupt(dev->phydev, LINK_DOWN);
 
-	if ((dev->phydev->phy_id & dev->phydev->drv->phy_id_mask)
-		== MICREL_PHY_ID) {
+	if (dev->phydev && ((dev->phydev->phy_id &
+	    dev->phydev->drv->phy_id_mask) == MICREL_PHY_ID)) {
 		phy_intr_status = ethqos_mdio_read(
 			priv, priv->plat->phy_addr, DWC_ETH_QOS_BASIC_STATUS);
 		ETHQOSDBG(
@@ -582,15 +582,23 @@ static ssize_t read_phy_reg_dump(struct file *file, char __user *user_buf,
 				 size_t count, loff_t *ppos)
 {
 	struct qcom_ethqos *ethqos = file->private_data;
+	struct platform_device *pdev;
+	struct net_device *dev;
+	struct stmmac_priv *priv;
 	unsigned int len = 0, buf_len = 2000;
 	char *buf;
 	ssize_t ret_cnt;
 	int phydata = 0;
 	int i = 0;
 
-	struct platform_device *pdev = ethqos->pdev;
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct stmmac_priv *priv = netdev_priv(dev);
+	if (!ethqos) {
+		ETHQOSERR("NULL Pointer\n");
+		return -EINVAL;
+	}
+
+	pdev = ethqos->pdev;
+	dev = platform_get_drvdata(pdev);
+	priv = netdev_priv(dev);
 
 	if (!ethqos || !dev->phydev) {
 		ETHQOSERR("NULL Pointer\n");
@@ -626,13 +634,20 @@ static ssize_t read_rgmii_reg_dump(struct file *file,
 				   loff_t *ppos)
 {
 	struct qcom_ethqos *ethqos = file->private_data;
+	struct platform_device *pdev;
+	struct net_device *dev;
 	unsigned int len = 0, buf_len = 2000;
 	char *buf;
 	ssize_t ret_cnt;
 	int rgmii_data = 0;
-	struct platform_device *pdev = ethqos->pdev;
 
-	struct net_device *dev = platform_get_drvdata(pdev);
+	if (!ethqos) {
+		ETHQOSERR("NULL Pointer\n");
+		return -EINVAL;
+	}
+
+	pdev = ethqos->pdev;
+	dev = platform_get_drvdata(pdev);
 
 	if (!ethqos || !dev->phydev) {
 		ETHQOSERR("NULL Pointer\n");
@@ -969,8 +984,7 @@ static int qcom_ethqos_probe(struct platform_device *pdev)
 
 	ethqos = devm_kzalloc(&pdev->dev, sizeof(*ethqos), GFP_KERNEL);
 	if (!ethqos) {
-		ret = -ENOMEM;
-		goto err_mem;
+		return -ENOMEM;
 	}
 	ethqos->pdev = pdev;
 

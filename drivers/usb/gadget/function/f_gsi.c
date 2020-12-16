@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1843,9 +1843,41 @@ static int queue_notification_request(struct f_gsi *gsi)
 {
 	int ret;
 	unsigned long flags;
+	struct usb_function *func = &gsi->function;
+	struct usb_request *req = gsi->c_port.notify_req;
+	struct usb_ep *ep = gsi->c_port.notify;
+	struct usb_gadget *gadget = func->config->cdev->gadget;
 
-	ret = usb_func_ep_queue(&gsi->function, gsi->c_port.notify,
-			   gsi->c_port.notify_req, GFP_ATOMIC);
+	if (gsi->c_port.is_suspended) {
+		/*For remote wakeup, queue the req from gsi_resume*/
+		spin_lock_irqsave(&gsi->c_port.lock, flags);
+		gsi->c_port.notify_req_queued = false;
+		spin_unlock_irqrestore(&gsi->c_port.lock, flags);
+
+		if (gsi->rwake_inprogress) {
+			log_event_dbg("%s remote-wakeup in progress\n",
+							__func__);
+			return -EBUSY;
+		}
+
+		if (!usb_gsi_remote_wakeup_allowed(func)) {
+			log_event_dbg("%s remote-wakeup not capable\n",
+							__func__);
+			return -EOPNOTSUPP;
+		}
+
+		log_event_dbg("%s wakeup host\n", __func__);
+		if (gadget->speed >= USB_SPEED_SUPER
+		    && func->func_is_suspended)
+			ret = usb_func_wakeup(func);
+		else
+			ret = usb_gadget_wakeup(gadget);
+
+		gsi->rwake_inprogress = true;
+		return ret;
+	}
+
+	ret = usb_ep_queue(ep, req, GFP_ATOMIC);
 	if (ret < 0) {
 		spin_lock_irqsave(&gsi->c_port.lock, flags);
 		gsi->c_port.notify_req_queued = false;
@@ -2472,6 +2504,7 @@ static int gsi_set_alt(struct usb_function *f, unsigned int intf,
 				gsi->data_id, gsi->data_interface_up);
 	}
 
+	gsi->c_port.is_suspended = false;
 	atomic_set(&gsi->connected, 1);
 
 	/* send 0 len pkt to qti to notify state change */
@@ -2571,6 +2604,7 @@ static void gsi_suspend(struct usb_function *f)
 		return;
 	}
 
+	gsi->c_port.is_suspended = true;
 	block_db = true;
 	usb_gsi_ep_op(gsi->d_port.in_ep, (void *)&block_db,
 			GSI_EP_OP_SET_CLR_BLOCK_DBL);
@@ -2601,6 +2635,8 @@ static void gsi_resume(struct usb_function *f)
 
 	if (gsi->c_port.notify && !gsi->c_port.notify->desc)
 		config_ep_by_speed(cdev->gadget, f, gsi->c_port.notify);
+
+	gsi->c_port.is_suspended = false;
 
 	/* Check any pending cpkt, and queue immediately on resume */
 	gsi_ctrl_send_notification(gsi);
@@ -2893,6 +2929,7 @@ static int gsi_bind(struct usb_configuration *c, struct usb_function *f)
 	struct gsi_function_bind_info info = {0};
 	struct f_gsi *gsi = func_to_gsi(f);
 	struct rndis_params *params;
+	struct usb_os_desc *descs[1];
 	struct gsi_opts *opts;
 	struct net_device *net;
 	char *name = NULL;
@@ -3111,6 +3148,14 @@ static int gsi_bind(struct usb_configuration *c, struct usb_function *f)
 			f->os_desc_n = 1;
 			f->os_desc_table[0].os_desc = &opts->os_desc;
 			f->os_desc_table[0].if_id = gsi->data_id;
+			opts->os_desc.ext_compat_id = opts->ext_compat_id;
+			descs[0] = &opts->os_desc;
+			snprintf(sub_compatible_id, sizeof(sub_compatible_id),
+					"%u", c->bConfigurationValue);
+			memcpy(descs[0]->ext_compat_id, compatible_id,
+					strlen(compatible_id));
+			memcpy(descs[0]->ext_compat_id + 8, sub_compatible_id,
+					strlen(sub_compatible_id));
 		}
 		break;
 	case USB_PROT_RMNET_IPA:
@@ -3325,6 +3370,13 @@ static void gsi_unbind(struct usb_configuration *c, struct usb_function *f)
 	 */
 	drain_workqueue(gsi->d_port.ipa_usb_wq);
 	ipa_usb_deinit_teth_prot((enum ipa_usb_teth_prot)gsi->prot_id);
+
+	/* Reset string ids */
+	rndis_gsi_string_defs[0].id = 0;
+	ecm_gsi_string_defs[0].id   = 0;
+	rmnet_gsi_string_defs[0].id = 0;
+	mbim_gsi_string_defs[0].id  = 0;
+	qdss_gsi_string_defs[0].id  = 0;
 
 skip_ipa_dinit:
 	if (gsi->prot_id == USB_PROT_RNDIS_IPA) {

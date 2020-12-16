@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation.All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation.All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1513,6 +1513,13 @@
 		qcom,aux-minidump-ids = <4>;
 		qcom,complete-ramdump;
 
+		qcom,msm-bus,name = "pil-modem";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+				<129 512 0 0>,
+				<129 512 0 1041408>;
+
 		/* Inputs from mss */
 		interrupts-extended = <&pdc GIC_SPI 266 IRQ_TYPE_EDGE_RISING>,
 				      <&modem_smp2p_in 0 IRQ_TYPE_NONE>,
@@ -2972,6 +2979,7 @@
 			    "tsens_tm_physical";
 		interrupts = <0 506 0>, <0 508 0>;
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
+		tsens-reinit-wa;
 		#thermal-sensor-cells = <1>;
 	};
 
@@ -2983,6 +2991,7 @@
 			    "tsens_tm_physical";
 		interrupts = <0 507 0>, <0 509 0>;
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
+		tsens-reinit-wa;
 		#thermal-sensor-cells = <1>;
 	};
 
@@ -3006,6 +3015,7 @@
 			     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH /* CE10 */ >,
 			     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH /* CE11 */ >;
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
+		qcom,hyp_disabled;
 		vdd-cx-mx-supply = <&L9A>;
 		vdd-1.8-xo-supply = <&L1C>;
 		vdd-1.3-rfa-supply = <&L2C>;
@@ -3067,7 +3077,7 @@
 		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
 		qcom,apps-ch-pipes = <0x700000>;
 		qcom,ea-pc = <0x340>;
-		qcom,iommu-s1-bypass;
+		qcom,iommu-atomic-ctx;
 		status = "ok";
 
 		iommu_slim_aud_ctrl_cb: qcom,iommu_slim_ctrl_cb {
@@ -3609,7 +3619,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			qcom,speed-bin = <172>;
+			qcom,speed-bin = <174>;
 
 			qcom,initial-pwrlevel = <6>;
 			qcom,ca-target-pwrlevel = <5>;

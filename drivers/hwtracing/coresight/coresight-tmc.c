@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, 2017-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * Description: CoreSight Trace Memory Controller driver
  *
@@ -427,8 +427,32 @@ static ssize_t out_mode_store(struct device *dev,
 {
 	struct tmc_drvdata *drvdata = dev_get_drvdata(dev->parent);
 	char str[10] = "";
-	unsigned long flags;
 	int ret;
+
+	if (strlen(buf) >= 10)
+		return -EINVAL;
+	if (sscanf(buf, "%10s", str) != 1)
+		return -EINVAL;
+	ret = tmc_etr_switch_mode(drvdata, str);
+	return ret ? ret : size;
+}
+static DEVICE_ATTR_RW(out_mode);
+
+static ssize_t pcie_path_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct tmc_drvdata *drvdata = dev_get_drvdata(dev->parent);
+
+	return scnprintf(buf, PAGE_SIZE, "%s\n",
+			str_tmc_etr_pcie_path[drvdata->pcie_path]);
+}
+
+static ssize_t pcie_path_store(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t size)
+{
+	struct tmc_drvdata *drvdata = dev_get_drvdata(dev->parent);
+	char str[10] = "";
 
 	if (strlen(buf) >= 10)
 		return -EINVAL;
@@ -436,80 +460,23 @@ static ssize_t out_mode_store(struct device *dev,
 		return -EINVAL;
 
 	mutex_lock(&drvdata->mem_lock);
-	if (!strcmp(str, str_tmc_etr_out_mode[TMC_ETR_OUT_MODE_MEM])) {
-		if (drvdata->out_mode == TMC_ETR_OUT_MODE_MEM)
-			goto out;
-
-		spin_lock_irqsave(&drvdata->spinlock, flags);
-		if (!drvdata->enable) {
-			drvdata->out_mode = TMC_ETR_OUT_MODE_MEM;
-			spin_unlock_irqrestore(&drvdata->spinlock, flags);
-			goto out;
-		}
-
-		if (!drvdata->vaddr) {
-			spin_unlock_irqrestore(&drvdata->spinlock, flags);
-			ret = tmc_etr_alloc_mem(drvdata);
-			if (ret) {
-				mutex_unlock(&drvdata->mem_lock);
-				return ret;
-			}
-			spin_lock_irqsave(&drvdata->spinlock, flags);
-		}
-		__tmc_etr_disable_to_bam(drvdata);
-		tmc_etr_enable_hw(drvdata);
-		drvdata->out_mode = TMC_ETR_OUT_MODE_MEM;
-		spin_unlock_irqrestore(&drvdata->spinlock, flags);
-
-		coresight_cti_map_trigout(drvdata->cti_flush, 3, 0);
-		coresight_cti_map_trigin(drvdata->cti_reset, 2, 0);
-
-		tmc_etr_bam_disable(drvdata);
-		usb_qdss_close(drvdata->usbch);
-	} else if (!strcmp(str, str_tmc_etr_out_mode[TMC_ETR_OUT_MODE_USB])) {
-		if (drvdata->out_mode == TMC_ETR_OUT_MODE_USB)
-			goto out;
-
-		spin_lock_irqsave(&drvdata->spinlock, flags);
-		if (!drvdata->enable) {
-			drvdata->out_mode = TMC_ETR_OUT_MODE_USB;
-			spin_unlock_irqrestore(&drvdata->spinlock, flags);
-			goto out;
-		}
-		if (drvdata->reading) {
-			ret = -EBUSY;
-			goto err1;
-		}
-		tmc_etr_disable_hw(drvdata);
-		drvdata->out_mode = TMC_ETR_OUT_MODE_USB;
-		spin_unlock_irqrestore(&drvdata->spinlock, flags);
-
-		coresight_cti_unmap_trigout(drvdata->cti_flush, 3, 0);
-		coresight_cti_unmap_trigin(drvdata->cti_reset, 2, 0);
-
-		if (drvdata->vaddr) {
-			tmc_etr_byte_cntr_stop(drvdata->byte_cntr);
-			tmc_etr_free_mem(drvdata);
-		}
-
-		drvdata->usbch = usb_qdss_open("qdss", drvdata,
-					       usb_notifier);
-		if (IS_ERR(drvdata->usbch)) {
-			dev_err(drvdata->dev, "usb_qdss_open failed\n");
-			ret = PTR_ERR(drvdata->usbch);
-			goto err0;
-		}
+	if (drvdata->enable) {
+		mutex_unlock(&drvdata->mem_lock);
+		pr_err("ETR is in use, disable it to switch the pcie path\n");
+		return -EINVAL;
 	}
-out:
+
+	if (!strcmp(str, str_tmc_etr_pcie_path[TMC_ETR_PCIE_SW_PATH]))
+		drvdata->pcie_path = TMC_ETR_PCIE_SW_PATH;
+	else if (!strcmp(str, str_tmc_etr_pcie_path[TMC_ETR_PCIE_HW_PATH]))
+		drvdata->pcie_path = TMC_ETR_PCIE_HW_PATH;
+	else
+		size = -EINVAL;
+
 	mutex_unlock(&drvdata->mem_lock);
 	return size;
-err1:
-	spin_unlock_irqrestore(&drvdata->spinlock, flags);
-err0:
-	mutex_unlock(&drvdata->mem_lock);
-	return ret;
 }
-static DEVICE_ATTR_RW(out_mode);
+static DEVICE_ATTR_RW(pcie_path);
 
 static ssize_t available_out_modes_show(struct device *dev,
 				       struct device_attribute *attr,
@@ -681,6 +648,7 @@ static struct attribute *coresight_tmc_etr_attrs[] = {
 	&dev_attr_out_mode.attr,
 	&dev_attr_available_out_modes.attr,
 	&dev_attr_block_size.attr,
+	&dev_attr_pcie_path.attr,
 	NULL,
 };
 
@@ -802,6 +770,7 @@ static int tmc_probe(struct amba_device *adev, const struct amba_id *id)
 		drvdata->mem_size = drvdata->size;
 		drvdata->mem_type = drvdata->memtype;
 		drvdata->out_mode = TMC_ETR_OUT_MODE_MEM;
+		drvdata->pcie_path = TMC_ETR_PCIE_HW_PATH;
 	} else {
 		drvdata->size = readl_relaxed(drvdata->base + TMC_RSZ) * 4;
 	}
@@ -869,6 +838,14 @@ static int tmc_probe(struct amba_device *adev, const struct amba_id *id)
 		ret = tmc_etr_bam_init(adev, drvdata);
 		if (ret)
 			goto out_iommu_deinit;
+
+		if (of_property_read_bool(drvdata->dev->of_node,
+				"qcom,qdss-ipa-support")) {
+			ret = tmc_etr_ipa_init(adev, drvdata);
+			if (ret)
+				goto out_iommu_deinit;
+		}
+
 		break;
 	case TMC_CONFIG_TYPE_ETF:
 		desc.type = CORESIGHT_DEV_TYPE_LINKSINK;

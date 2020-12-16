@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,6 +10,5 @@
  * GNU General Public License for more details.
  */
 
-&mpss_adsp_mem {
-	reg = <0x90800000 0xf800000>;
-};
+#define CREATE_TRACE_POINTS
+#include "ipa_eth_trace.h"

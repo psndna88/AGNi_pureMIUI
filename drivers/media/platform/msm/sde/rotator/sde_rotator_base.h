@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -45,6 +45,7 @@
 #define SDE_MDP_HW_REV_107	SDE_MDP_REV(1, 0, 7)	/* 8996 v1.0 */
 #define SDE_MDP_HW_REV_300	SDE_MDP_REV(3, 0, 0)	/* 8998 v1.0 */
 #define SDE_MDP_HW_REV_301	SDE_MDP_REV(3, 0, 1)	/* 8998 v1.1 */
+#define SDE_MDP_HW_REV_320	SDE_MDP_REV(3, 2, 0)    /* sdm660 */
 #define SDE_MDP_HW_REV_400	SDE_MDP_REV(4, 0, 0)	/* sdm845 v1.0 */
 #define SDE_MDP_HW_REV_410	SDE_MDP_REV(4, 1, 0)	/* sdm670 v1.0 */
 #define SDE_MDP_HW_REV_500	SDE_MDP_REV(5, 0, 0)	/* sm8150 v1.0 */
@@ -60,6 +61,9 @@
 #define XIN_SSPP	0
 #define XIN_WRITEBACK	1
 #define MAX_XIN		2
+
+#define MDSS_MDP_HW_REV_320	0x30020000  /* sdm660 */
+#define MDSS_MDP_HW_REV_330	0x30030000  /* sdm630 */
 
 struct sde_mult_factor {
 	uint32_t numer;
@@ -276,7 +280,9 @@ struct sde_rot_data_type {
 
 	int iommu_attached;
 	int iommu_ref_cnt;
-
+	int (*iommu_ctrl)(int enable);
+	int (*secure_session_ctrl)(int enable);
+	int (*wait_for_transition)(int state, int request);
 	struct sde_rot_vbif_debug_bus *nrt_vbif_dbg_bus;
 	u32 nrt_vbif_dbg_bus_size;
 	struct sde_rot_debug_bus *rot_dbg_bus;
@@ -294,6 +300,7 @@ struct sde_rot_data_type {
 	struct sde_rot_lut_cfg inline_lut_cfg[SDE_ROT_OP_MAX];
 
 	bool clk_always_on;
+	bool callback_request;
 };
 
 int sde_rotator_base_init(struct sde_rot_data_type **pmdata,

@@ -1415,6 +1415,21 @@ Optional properties:
 - qcom,csra-devs : List of phandles of all possible CSRA66x0 devices supported for the target
 - qcom,csra-aux-dev-prefix : Name prefix in multi-channel configuration for CSRA66x0 device
 - qcom,afe-rxtx-lb: AFE RX to TX loopback.
+- qcom,ext-mclk-gpio: pinctrl referring to external mclk
+- qcom,ext-mclk-src: Device tree node referring to external mclk clock
+- qcom,pri-spdiftx-gpios: Pinctrl referring to primary spdif output gpios
+- qcom,sec-spdiftx-gpios: Pinctrl referring to secondary spdif output gpios
+- #ext-mclk-1-cfg-cells: Number of cells in ext-mclk-1-cfg-* nodes. Must be 6.
+- ext-mclk-1 cfg-11p2896: Frequnency table for 11.2896MHz mclk frequnecy.
+			  Fields are clock rate, div2x, m, n, d and clock root.
+- ext-mclk-1 cfg-12p288: Frequnency table for 12.288MHz mclk frequnecy.
+			 Fields are clock rate, div2x, m, n, d and clock root.
+- ext-mclk-1 cfg-16p384: Frequnency table for 16.384MHz mclk frequnecy.
+			 Fields are clock rate, div2x, m, n, d and clock root.
+- ext-mclk-1-cfg-22p5792: Frequency table for 22.5792MHz mclk frequency.
+                          Fields are clock rate, div2x, m, n, d and clock root.
+- ext-mclk-1 cfg-24p576: Frequnency table for 24.576MHz mclk frequnecy.
+			 Fields are clock rate, div2x, m, n, d and clock root.
 Example:
 
 	qcs405_snd {
@@ -2019,6 +2034,7 @@ Optional properties:
 - qcom,wcn-btfm : Property to specify if WCN BT/FM chip is used for the target
 - qcom,mi2s-audio-intf: Property to specify if MI2S interface is used for the target
 - qcom,auxpcm-audio-intf: Property to specify if Aux PCM interface is used for the target
+- qcom,tdm-audio-intf: Property to specify if Aux PCM interface is used for the target
 - qcom,cdc-dmic-gpios : phandle for Digital mic clk and data gpios.
 - qcom,msm_audio_ssr_devs: List the snd event framework clients
 - qcom,afe-rxtx-lb: AFE RX to TX loopback.
@@ -2031,6 +2047,7 @@ Example:
 		qcom,wcn-btfm = <1>;
 		qcom,mi2s-audio-intf = <1>;
 		qcom,auxpcm-audio-intf = <1>;
+		qcom,tdm-audio-intf = <1>;
 		qcom,afe-rxtx-lb = <1>;
 
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
@@ -2261,3 +2278,36 @@ Example:
 		asoc-codec = <&stub_codec>;
 		asoc-codec-names = "msm-stub-codec.1";
 	};
+
+* HANA55 ASoC Machine driver
+
+Required properties:
+- compatible : "qcom,sm8150-asoc-snd-hana55".
+- qcom,model : The user-visible name of this sound card.
+
+Example:
+
+    snd_934x {
+           compatible = "qcom,sm8150-asoc-snd-hana55";
+           qcom,model = "sm8150-hana55-snd-card";
+           qcom,quat-mi2s-gpios = <&quat_mi2s_gpios>;
+    };
+
+
+* msm-pcm-pcie
+
+Required properties:
+ - compatible : "qcom,msm-pcm-pcie"
+
+* PCIE ASoC Machine driver
+
+Required properties:
+- compatible : "qcom,sm8150-asoc-snd-pcie".
+- qcom,model : The user-visible name of this sound card.
+
+Example:
+
+snd_934x {
+»       compatible = "qcom,sm8150-asoc-snd-pcie";
+»       qcom,model = "sm8150-pcie-snd-card";
+};
