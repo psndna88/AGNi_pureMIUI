@@ -194,10 +194,10 @@ int mod_init(void)
         }
 
 
-        sarr_RND = kmalloc((num_arr_RND + 1) * arr_RND_SIZE * sizeof(uint64_t), GFP_KERNEL);
+        sarr_RND = kzalloc((num_arr_RND + 1) * arr_RND_SIZE * sizeof(uint64_t), GFP_KERNEL);
         while (!sarr_RND) {
-                printk(KERN_INFO "[srandom] mod_init kmalloc failed to allocate initial memory.  retrying...\n");
-                sarr_RND = kmalloc((num_arr_RND + 1) * arr_RND_SIZE * sizeof(uint64_t), GFP_KERNEL);
+                printk(KERN_INFO "[srandom] mod_init kzalloc failed to allocate initial memory.  retrying...\n");
+                sarr_RND = kzalloc((num_arr_RND + 1) * arr_RND_SIZE * sizeof(uint64_t), GFP_KERNEL);
         }
 
         /*
@@ -348,10 +348,10 @@ ssize_t sdevice_read(struct file * file, char * buf, size_t count, loff_t *ppos)
                         printk(KERN_INFO "[srandom] count_remaining:%ld count:%ld\n", count_remaining, count);
                         #endif
 
-                        new_buf = kmalloc((count_remaining + 512) * sizeof(uint8_t), GFP_KERNEL);
+                        new_buf = kzalloc((count_remaining + 512) * sizeof(uint8_t), GFP_KERNEL);
                         while (!new_buf) {
-                                printk(KERN_INFO "[srandom] buffered kmalloc failed to allocate buffer.  retrying...\n");
-                                new_buf = kmalloc((count_remaining + 512) * sizeof(uint8_t), GFP_KERNEL);
+                                printk(KERN_INFO "[srandom] buffered kzalloc failed to allocate buffer.  retrying...\n");
+                                new_buf = kzalloc((count_remaining + 512) * sizeof(uint8_t), GFP_KERNEL);
                         }
 
                         counter = 0;
@@ -442,9 +442,9 @@ ssize_t sdevice_write(struct file *file, const char __user *buf, size_t count, l
         /*
          * Allocate memory to read from device
          */
-        newdata = kmalloc(count, GFP_KERNEL);
+        newdata = kzalloc(count, GFP_KERNEL);
         while (!newdata) {
-                newdata = kmalloc(count, GFP_KERNEL);
+                newdata = kzalloc(count, GFP_KERNEL);
         }
 
         ret = COPY_FROM_USER(newdata, buf, count);
