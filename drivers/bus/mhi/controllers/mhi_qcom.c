@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,23 +33,34 @@ struct firmware_info {
 };
 
 static const struct firmware_info firmware_table[] = {
-	{.dev_id = 0x307, .fw_image = "sdx60m/sbl1.mbn"},
-	{.dev_id = 0x306, .fw_image = "sdx55m/sbl1.mbn"},
+	{.dev_id = 0x308, .fw_image = "sdx65m/xbl.elf",
+	 .edl_image = "sdx65m/edl.mbn"},
+	{.dev_id = 0x307, .fw_image = "sdx60m/sbl1.mbn",
+	 .edl_image = "sdx60m/edl.mbn"},
+	{.dev_id = 0x306, .fw_image = "sdx55m/sbl1.mbn",
+	 .edl_image = "sdx55m/edl.mbn"},
 	{.dev_id = 0x305, .fw_image = "sdx50m/sbl1.mbn"},
 	{.dev_id = 0x304, .fw_image = "sbl.mbn", .edl_image = "edl.mbn"},
 	/* default, set to debug.mbn */
-	{.fw_image = "debug.mbn"},
+	{.fw_image = "debug.mbn", .edl_image = "debug.mbn"},
 };
 
 static int debug_mode;
 module_param_named(debug_mode, debug_mode, int, 0644);
+
+const char * const mhi_suspend_mode_str[MHI_SUSPEND_MODE_MAX] = {
+	[MHI_ACTIVE_STATE] = "Active",
+	[MHI_DEFAULT_SUSPEND] = "Default",
+	[MHI_FAST_LINK_OFF] = "Fast Link Off",
+	[MHI_FAST_LINK_ON] = "Fast Link On",
+};
 
 int mhi_debugfs_trigger_m0(void *data, u64 val)
 {
 	struct mhi_controller *mhi_cntrl = data;
 	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
 
-	MHI_LOG("Trigger M3 Exit\n");
+	MHI_CNTRL_LOG("Trigger M3 Exit\n");
 	pm_runtime_get(&mhi_dev->pci_dev->dev);
 	pm_runtime_put(&mhi_dev->pci_dev->dev);
 
@@ -63,7 +74,7 @@ int mhi_debugfs_trigger_m3(void *data, u64 val)
 	struct mhi_controller *mhi_cntrl = data;
 	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
 
-	MHI_LOG("Trigger M3 Entry\n");
+	MHI_CNTRL_LOG("Trigger M3 Entry\n");
 	pm_runtime_mark_last_busy(&mhi_dev->pci_dev->dev);
 	pm_request_autosuspend(&mhi_dev->pci_dev->dev);
 
@@ -80,9 +91,6 @@ void mhi_deinit_pci_dev(struct mhi_controller *mhi_cntrl)
 	pm_runtime_mark_last_busy(&pci_dev->dev);
 	pm_runtime_dont_use_autosuspend(&pci_dev->dev);
 	pm_runtime_disable(&pci_dev->dev);
-
-	/* reset counter for lpm state changes */
-	mhi_dev->lpm_disable_depth = 0;
 
 	pci_free_irq_vectors(pci_dev);
 	kfree(mhi_cntrl->irq);
@@ -105,19 +113,19 @@ static int mhi_init_pci_dev(struct mhi_controller *mhi_cntrl)
 	mhi_dev->resn = MHI_PCI_BAR_NUM;
 	ret = pci_assign_resource(pci_dev, mhi_dev->resn);
 	if (ret) {
-		MHI_ERR("Error assign pci resources, ret:%d\n", ret);
+		MHI_CNTRL_ERR("Error assign pci resources, ret:%d\n", ret);
 		return ret;
 	}
 
 	ret = pci_enable_device(pci_dev);
 	if (ret) {
-		MHI_ERR("Error enabling device, ret:%d\n", ret);
+		MHI_CNTRL_ERR("Error enabling device, ret:%d\n", ret);
 		goto error_enable_device;
 	}
 
 	ret = pci_request_region(pci_dev, mhi_dev->resn, "mhi");
 	if (ret) {
-		MHI_ERR("Error pci_request_region, ret:%d\n", ret);
+		MHI_CNTRL_ERR("Error pci_request_region, ret:%d\n", ret);
 		goto error_request_region;
 	}
 
@@ -127,14 +135,14 @@ static int mhi_init_pci_dev(struct mhi_controller *mhi_cntrl)
 	len = pci_resource_len(pci_dev, mhi_dev->resn);
 	mhi_cntrl->regs = ioremap_nocache(mhi_cntrl->base_addr, len);
 	if (!mhi_cntrl->regs) {
-		MHI_ERR("Error ioremap region\n");
+		MHI_CNTRL_ERR("Error ioremap region\n");
 		goto error_ioremap;
 	}
 
 	ret = pci_alloc_irq_vectors(pci_dev, mhi_cntrl->msi_required,
 				    mhi_cntrl->msi_required, PCI_IRQ_MSI);
 	if (IS_ERR_VALUE((ulong)ret) || ret < mhi_cntrl->msi_required) {
-		MHI_ERR("Failed to enable MSI, ret:%d\n", ret);
+		MHI_CNTRL_ERR("Failed to enable MSI, ret:%d\n", ret);
 		goto error_req_msi;
 	}
 
@@ -384,7 +392,12 @@ static int mhi_force_suspend(struct mhi_controller *mhi_cntrl)
 	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
 	int itr = DIV_ROUND_UP(mhi_cntrl->timeout_ms, delayms);
 
-	MHI_LOG("Entered\n");
+	MHI_CNTRL_LOG("Entered\n");
+
+	if (debug_mode == MHI_DEBUG_NO_D3 || debug_mode == MHI_FWIMAGE_NO_D3) {
+		MHI_CNTRL_LOG("Exited due to debug mode:%d\n", debug_mode);
+		return ret;
+	}
 
 	mutex_lock(&mhi_cntrl->pm_mutex);
 
@@ -400,19 +413,19 @@ static int mhi_force_suspend(struct mhi_controller *mhi_cntrl)
 		if (!ret || ret != -EBUSY)
 			break;
 
-		MHI_LOG("MHI busy, sleeping and retry\n");
+		MHI_CNTRL_LOG("MHI busy, sleeping and retry\n");
 		msleep(delayms);
 	}
 
-	if (ret)
+	if (ret) {
+		MHI_CNTRL_ERR("Force suspend ret:%d\n", ret);
 		goto exit_force_suspend;
+	}
 
 	mhi_dev->suspend_mode = MHI_DEFAULT_SUSPEND;
 	ret = mhi_arch_link_suspend(mhi_cntrl);
 
 exit_force_suspend:
-	MHI_LOG("Force suspend ret with %d\n", ret);
-
 	mutex_unlock(&mhi_cntrl->pm_mutex);
 
 	return ret;
@@ -434,89 +447,26 @@ static int mhi_link_status(struct mhi_controller *mhi_cntrl, void *priv)
 /* disable PCIe L1 */
 static int mhi_lpm_disable(struct mhi_controller *mhi_cntrl, void *priv)
 {
-	struct mhi_dev *mhi_dev = priv;
-	struct pci_dev *pci_dev = mhi_dev->pci_dev;
-	int lnkctl = pci_dev->pcie_cap + PCI_EXP_LNKCTL;
-	u8 val;
-	unsigned long flags;
-	int ret = 0;
-
-	spin_lock_irqsave(&mhi_dev->lpm_lock, flags);
-
-	/* L1 is already disabled */
-	if (mhi_dev->lpm_disable_depth) {
-		mhi_dev->lpm_disable_depth++;
-		goto lpm_disable_exit;
-	}
-
-	ret = pci_read_config_byte(pci_dev, lnkctl, &val);
-	if (ret) {
-		MHI_ERR("Error reading LNKCTL, ret:%d\n", ret);
-		goto lpm_disable_exit;
-	}
-
-	/* L1 is not supported, do not increment lpm_disable_depth */
-	if (unlikely(!(val & PCI_EXP_LNKCTL_ASPM_L1)))
-		goto lpm_disable_exit;
-
-	val &= ~PCI_EXP_LNKCTL_ASPM_L1;
-	ret = pci_write_config_byte(pci_dev, lnkctl, val);
-	if (ret) {
-		MHI_ERR("Error writing LNKCTL to disable LPM, ret:%d\n", ret);
-		goto lpm_disable_exit;
-	}
-
-	mhi_dev->lpm_disable_depth++;
-
-lpm_disable_exit:
-	spin_unlock_irqrestore(&mhi_dev->lpm_lock, flags);
-
-	return ret;
+	return mhi_arch_link_lpm_disable(mhi_cntrl);
 }
 
 /* enable PCIe L1 */
 static int mhi_lpm_enable(struct mhi_controller *mhi_cntrl, void *priv)
 {
-	struct mhi_dev *mhi_dev = priv;
-	struct pci_dev *pci_dev = mhi_dev->pci_dev;
-	int lnkctl = pci_dev->pcie_cap + PCI_EXP_LNKCTL;
-	u8 val;
-	unsigned long flags;
-	int ret = 0;
+	return mhi_arch_link_lpm_enable(mhi_cntrl);
+}
 
-	spin_lock_irqsave(&mhi_dev->lpm_lock, flags);
+static void mhi_qcom_store_hwinfo(struct mhi_controller *mhi_cntrl)
+{
+	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
+	int i;
 
-	/*
-	 * Exit if L1 is not supported or is already disabled or
-	 * decrementing lpm_disable_depth still keeps it above 0
-	 */
-	if (!mhi_dev->lpm_disable_depth)
-		goto lpm_enable_exit;
+	mhi_dev->serial_num = readl_relaxed(mhi_cntrl->bhi +
+			MHI_BHI_SERIAL_NUM_OFFS);
 
-	if (mhi_dev->lpm_disable_depth > 1) {
-		mhi_dev->lpm_disable_depth--;
-		goto lpm_enable_exit;
-	}
-
-	ret = pci_read_config_byte(pci_dev, lnkctl, &val);
-	if (ret) {
-		MHI_ERR("Error reading LNKCTL, ret:%d\n", ret);
-		goto lpm_enable_exit;
-	}
-
-	val |= PCI_EXP_LNKCTL_ASPM_L1;
-	ret = pci_write_config_byte(pci_dev, lnkctl, val);
-	if (ret) {
-		MHI_ERR("Error writing LNKCTL to enable LPM, ret:%d\n", ret);
-		goto lpm_enable_exit;
-	}
-
-	mhi_dev->lpm_disable_depth = 0;
-
-lpm_enable_exit:
-	spin_unlock_irqrestore(&mhi_dev->lpm_lock, flags);
-
-	return ret;
+	for (i = 0; i < ARRAY_SIZE(mhi_dev->oem_pk_hash); i++)
+		mhi_dev->oem_pk_hash[i] = readl_relaxed(mhi_cntrl->bhi +
+			MHI_BHI_OEMPKHASH(i));
 }
 
 static int mhi_qcom_power_up(struct mhi_controller *mhi_cntrl)
@@ -545,14 +495,19 @@ static int mhi_qcom_power_up(struct mhi_controller *mhi_cntrl)
 			return -EIO;
 	}
 
-	/* when coming out of SSR, initial ee state is not valid */
+	/* when coming out of SSR, initial states are not valid */
 	mhi_cntrl->ee = 0;
+	mhi_cntrl->power_down = false;
 
 	ret = mhi_arch_power_up(mhi_cntrl);
 	if (ret)
 		return ret;
 
 	ret = mhi_async_power_up(mhi_cntrl);
+
+	/* Update modem serial Info */
+	if (!ret)
+		mhi_qcom_store_hwinfo(mhi_cntrl);
 
 	/* power up create the dentry */
 	if (mhi_cntrl->dentry) {
@@ -563,6 +518,22 @@ static int mhi_qcom_power_up(struct mhi_controller *mhi_cntrl)
 	}
 
 	return ret;
+}
+
+static void mhi_qcom_fatal_worker(struct work_struct *work)
+{
+	struct mhi_dev *mhi_dev = container_of(work, struct mhi_dev,
+					       fatal_worker);
+	struct device *dev = &mhi_dev->pci_dev->dev;
+	struct mhi_controller *mhi_cntrl = dev_get_drvdata(dev);
+	int ret;
+
+	mhi_power_down(mhi_cntrl, true);
+
+	ret = mhi_qcom_power_up(mhi_cntrl);
+	if (ret)
+		MHI_ERR("Power up failure after SYS ERROR in PBL, ret:%d\n",
+			ret);
 }
 
 static int mhi_runtime_get(struct mhi_controller *mhi_cntrl, void *priv)
@@ -602,12 +573,19 @@ static void mhi_status_cb(struct mhi_controller *mhi_cntrl,
 		 */
 		pm_runtime_get(dev);
 		ret = mhi_force_suspend(mhi_cntrl);
-		if (!ret)
+		if (!ret) {
+			MHI_CNTRL_LOG("Attempt resume after forced suspend\n");
 			mhi_runtime_resume(dev);
+		}
 		pm_runtime_put(dev);
+		mhi_arch_mission_mode_enter(mhi_cntrl);
+		break;
+	case MHI_CB_FATAL_ERROR:
+		MHI_CNTRL_ERR("Perform power cycle due to SYS ERROR in PBL\n");
+		schedule_work(&mhi_dev->fatal_worker);
 		break;
 	default:
-		MHI_ERR("Unhandled cb:0x%x\n", reason);
+		MHI_CNTRL_LOG("Unhandled cb:0x%x\n", reason);
 	}
 }
 
@@ -663,9 +641,45 @@ static ssize_t power_up_store(struct device *dev,
 }
 static DEVICE_ATTR_WO(power_up);
 
+static ssize_t serial_info_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct mhi_device *mhi_device = to_mhi_device(dev);
+	struct mhi_controller *mhi_cntrl = mhi_device->mhi_cntrl;
+	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
+	int n;
+
+	n = scnprintf(buf, PAGE_SIZE, "Serial Number:%u\n",
+		      mhi_dev->serial_num);
+
+	return n;
+}
+static DEVICE_ATTR_RO(serial_info);
+
+static ssize_t oempkhash_info_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct mhi_device *mhi_device = to_mhi_device(dev);
+	struct mhi_controller *mhi_cntrl = mhi_device->mhi_cntrl;
+	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
+	int i, n = 0;
+
+	for (i = 0; i < ARRAY_SIZE(mhi_dev->oem_pk_hash); i++)
+		n += scnprintf(buf + n, PAGE_SIZE - n, "OEMPKHASH[%d]:%u\n",
+		      i, mhi_dev->oem_pk_hash[i]);
+
+	return n;
+}
+static DEVICE_ATTR_RO(oempkhash_info);
+
+
 static struct attribute *mhi_qcom_attrs[] = {
 	&dev_attr_timeout_ms.attr,
 	&dev_attr_power_up.attr,
+	&dev_attr_serial_info.attr,
+	&dev_attr_oempkhash_info.attr,
 	NULL
 };
 
@@ -678,10 +692,10 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 	struct mhi_controller *mhi_cntrl;
 	struct mhi_dev *mhi_dev;
 	struct device_node *of_node = pci_dev->dev.of_node;
-	const struct firmware_info *firmware_info;
+	const struct firmware_info *firmware_info, *debug_info;
 	bool use_bb;
 	u64 addr_win[2];
-	int ret, i;
+	int ret, i, len;
 
 	if (!of_node)
 		return ERR_PTR(-ENODEV);
@@ -741,7 +755,6 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 	mhi_cntrl->of_node = of_node;
 
 	mhi_dev->pci_dev = pci_dev;
-	spin_lock_init(&mhi_dev->lpm_lock);
 
 	/* setup power management apis */
 	mhi_cntrl->status_cb = mhi_status_cb;
@@ -763,12 +776,23 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 	if (ret)
 		goto error_register;
 
-	for (i = 0; i < ARRAY_SIZE(firmware_table); i++) {
+	len = ARRAY_SIZE(firmware_table);
+	for (i = 0; i < len; i++) {
 		firmware_info = firmware_table + i;
 
-		/* debug mode always use default */
-		if (!debug_mode && mhi_cntrl->dev_id == firmware_info->dev_id)
+		if (mhi_cntrl->dev_id == firmware_info->dev_id)
 			break;
+	}
+
+	if (debug_mode) {
+		debug_info = firmware_table + (len - 1);
+		mhi_cntrl->fw_image_fallback = debug_info->fw_image;
+
+		if (debug_mode <= MHI_DEBUG_D3)
+			firmware_info = debug_info;
+		MHI_CNTRL_LOG("fw info: debug_mode:%d dev_id:%d image:%s\n",
+			      debug_mode, firmware_info->dev_id,
+			      firmware_info->fw_image);
 	}
 
 	mhi_cntrl->fw_image = firmware_info->fw_image;
@@ -779,8 +803,33 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 	if (ret)
 		goto error_register;
 
+	if (mhi_dev->allow_m1)
+		goto skip_offload;
+
+	mhi_cntrl->offload_wq = alloc_ordered_workqueue("offload_wq",
+			WQ_MEM_RECLAIM | WQ_HIGHPRI);
+	if (!mhi_cntrl->offload_wq)
+		goto error_register;
+
+	INIT_WORK(&mhi_cntrl->reg_write_work, mhi_reg_write_work);
+	INIT_WORK(&mhi_dev->fatal_worker, mhi_qcom_fatal_worker);
+
+	mhi_cntrl->reg_write_q = kcalloc(REG_WRITE_QUEUE_LEN,
+					sizeof(*mhi_cntrl->reg_write_q),
+					GFP_KERNEL);
+	if (!mhi_cntrl->reg_write_q)
+		goto error_free_wq;
+
+	atomic_set(&mhi_cntrl->write_idx, -1);
+
+skip_offload:
+	if (sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj, &mhi_qcom_group))
+		MHI_CNTRL_ERR("Error while creating the sysfs group\n");
+
 	return mhi_cntrl;
 
+error_free_wq:
+	destroy_workqueue(mhi_cntrl->offload_wq);
 error_register:
 	mhi_free_controller(mhi_cntrl);
 
@@ -830,7 +879,7 @@ int mhi_pci_probe(struct pci_dev *pci_dev,
 
 	pm_runtime_mark_last_busy(&pci_dev->dev);
 
-	MHI_LOG("Return successful\n");
+	MHI_CNTRL_LOG("Return successful\n");
 
 	return 0;
 
@@ -862,6 +911,7 @@ static struct pci_device_id mhi_pcie_device_id[] = {
 	{PCI_DEVICE(MHI_PCIE_VENDOR_ID, 0x0305)},
 	{PCI_DEVICE(MHI_PCIE_VENDOR_ID, 0x0306)},
 	{PCI_DEVICE(MHI_PCIE_VENDOR_ID, 0x0307)},
+	{PCI_DEVICE(MHI_PCIE_VENDOR_ID, 0x0308)},
 	{PCI_DEVICE(MHI_PCIE_VENDOR_ID, MHI_PCIE_DEBUG_ID)},
 	{0},
 };

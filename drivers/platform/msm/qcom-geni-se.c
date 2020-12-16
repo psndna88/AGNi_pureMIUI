@@ -60,6 +60,7 @@ struct bus_vectors {
  * @iommu_lock:		Lock to protect IOMMU Mapping & attachment.
  * @iommu_map:		IOMMU map of the memory space supported by this core.
  * @iommu_s1_bypass:	Bypass IOMMU stage 1 translation.
+ * @iommu_atomic_ctx:	Enable IOMMU in atomic context.
  * @base:		Base address of this instance of QUPv3 core.
  * @bus_bw:		Client handle to the bus bandwidth request.
  * @bus_bw_noc:		Client handle to the QUP clock and DDR path bus
@@ -99,6 +100,7 @@ struct geni_se_device {
 	struct mutex iommu_lock;
 	struct dma_iommu_mapping *iommu_map;
 	bool iommu_s1_bypass;
+	bool iommu_atomic_ctx;
 	void __iomem *base;
 	struct msm_bus_client_handle *bus_bw;
 	uint32_t bus_bw_noc;
@@ -911,8 +913,7 @@ int se_geni_clks_off(struct se_geni_rsc *rsc)
 		return -EINVAL;
 
 	geni_se_dev = dev_get_drvdata(rsc->wrapper_dev);
-	if (unlikely(!geni_se_dev || !(geni_se_dev->bus_bw ||
-					geni_se_dev->bus_bw_noc)))
+	if (unlikely(!geni_se_dev))
 		return -ENODEV;
 
 	clk_disable_unprepare(rsc->se_clk);
@@ -944,9 +945,7 @@ int se_geni_resources_off(struct se_geni_rsc *rsc)
 		return -EINVAL;
 
 	geni_se_dev = dev_get_drvdata(rsc->wrapper_dev);
-	if (unlikely(!geni_se_dev ||
-			!(geni_se_dev->bus_bw ||
-					geni_se_dev->bus_bw_noc)))
+	if (unlikely(!geni_se_dev))
 		return -ENODEV;
 
 	ret = se_geni_clks_off(rsc);
@@ -1364,6 +1363,35 @@ int geni_se_tx_dma_prep(struct device *wrapper_dev, void __iomem *base,
 EXPORT_SYMBOL(geni_se_tx_dma_prep);
 
 /**
+ * geni_se_rx_dma_start() - Prepare the Serial Engine registers for RX DMA
+				transfers.
+ * @base:		Base address of the SE register block.
+ * @rx_len:		Length of the RX buffer.
+ * @rx_dma:		Pointer to store the mapped DMA address.
+ *
+ * This function is used to prepare the Serial Engine registers for DMA RX.
+ *
+ * Return:	None.
+ */
+void geni_se_rx_dma_start(void __iomem *base, int rx_len, dma_addr_t *rx_dma)
+{
+
+	if (!*rx_dma || !base || !rx_len)
+		return;
+
+	geni_write_reg(7, base, SE_DMA_RX_IRQ_EN_SET);
+	geni_write_reg(GENI_SE_DMA_PTR_L(*rx_dma), base, SE_DMA_RX_PTR_L);
+	geni_write_reg(GENI_SE_DMA_PTR_H(*rx_dma), base, SE_DMA_RX_PTR_H);
+	/* RX does not have EOT bit */
+	geni_write_reg(0, base, SE_DMA_RX_ATTR);
+
+	/* Ensure that above register writes went through */
+	mb();
+	geni_write_reg(rx_len, base, SE_DMA_RX_LEN);
+}
+EXPORT_SYMBOL(geni_se_rx_dma_start);
+
+/**
  * geni_se_rx_dma_prep() - Prepare the Serial Engine for RX DMA transfer
  * @wrapper_dev:	QUPv3 Wrapper Device to which the RX buffer is mapped.
  * @base:		Base address of the SE register block.
@@ -1388,12 +1416,8 @@ int geni_se_rx_dma_prep(struct device *wrapper_dev, void __iomem *base,
 	if (ret)
 		return ret;
 
-	geni_write_reg(7, base, SE_DMA_RX_IRQ_EN_SET);
-	geni_write_reg(GENI_SE_DMA_PTR_L(*rx_dma), base, SE_DMA_RX_PTR_L);
-	geni_write_reg(GENI_SE_DMA_PTR_H(*rx_dma), base, SE_DMA_RX_PTR_H);
-	/* RX does not have EOT bit */
-	geni_write_reg(0, base, SE_DMA_RX_ATTR);
-	geni_write_reg(rx_len, base, SE_DMA_RX_LEN);
+	geni_se_rx_dma_start(base, rx_len, rx_dma);
+
 	return 0;
 }
 EXPORT_SYMBOL(geni_se_rx_dma_prep);
@@ -1466,7 +1490,7 @@ static int geni_se_iommu_map_and_attach(struct geni_se_device *geni_se_dev)
 {
 	dma_addr_t va_start = GENI_SE_IOMMU_VA_START;
 	size_t va_size = GENI_SE_IOMMU_VA_SIZE;
-	int bypass = 1;
+	int bypass = 1, atomic_ctx = 1;
 	struct device *cb_dev = geni_se_dev->cb_dev;
 
 	/*Don't proceed if IOMMU node is disabled*/
@@ -1489,17 +1513,20 @@ static int geni_se_iommu_map_and_attach(struct geni_se_device *geni_se_dev)
 		return PTR_ERR(geni_se_dev->iommu_map);
 	}
 
-	if (geni_se_dev->iommu_s1_bypass) {
-		if (iommu_domain_set_attr(geni_se_dev->iommu_map->domain,
-					  DOMAIN_ATTR_S1_BYPASS, &bypass)) {
-			GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
-				"%s:%s Couldn't bypass s1 translation\n",
-				__func__, dev_name(cb_dev));
-			arm_iommu_release_mapping(geni_se_dev->iommu_map);
-			geni_se_dev->iommu_map = NULL;
-			mutex_unlock(&geni_se_dev->iommu_lock);
-			return -EIO;
-		}
+	/* Set either s1_bypass or atomic context as defined in DT */
+	if ((geni_se_dev->iommu_s1_bypass &&
+			iommu_domain_set_attr(geni_se_dev->iommu_map->domain,
+				DOMAIN_ATTR_S1_BYPASS, &bypass)) ||
+		(geni_se_dev->iommu_atomic_ctx &&
+			iommu_domain_set_attr(geni_se_dev->iommu_map->domain,
+				DOMAIN_ATTR_ATOMIC, &atomic_ctx))) {
+		GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
+			"%s:%s Couldn't set iommu attribute\n",
+			__func__, dev_name(cb_dev));
+		arm_iommu_release_mapping(geni_se_dev->iommu_map);
+		geni_se_dev->iommu_map = NULL;
+		mutex_unlock(&geni_se_dev->iommu_lock);
+		return -EIO;
 	}
 
 	if (arm_iommu_attach_device(cb_dev, geni_se_dev->iommu_map)) {
@@ -1655,6 +1682,16 @@ int geni_se_iommu_free_buf(struct device *wrapper_dev, dma_addr_t *iova,
 	return 0;
 }
 EXPORT_SYMBOL(geni_se_iommu_free_buf);
+
+struct device *geni_get_iommu_dev(struct device *wrapper_dev)
+{
+	struct geni_se_device *geni_se_dev;
+
+	geni_se_dev = dev_get_drvdata(wrapper_dev);
+
+	return geni_se_dev->cb_dev;
+}
+EXPORT_SYMBOL(geni_get_iommu_dev);
 
 /**
  * geni_se_dump_dbg_regs() - Print relevant registers that capture most
@@ -1916,6 +1953,8 @@ static int geni_se_probe(struct platform_device *pdev)
 							"qcom,vote-for-bw");
 	geni_se_dev->iommu_s1_bypass = of_property_read_bool(dev->of_node,
 							"qcom,iommu-s1-bypass");
+	geni_se_dev->iommu_atomic_ctx = of_property_read_bool(dev->of_node,
+							"qcom,iommu-atomic-ctx");
 	geni_se_dev->bus_bw_set = default_bus_bw_set;
 	geni_se_dev->bus_bw_set_size =
 				ARRAY_SIZE(default_bus_bw_set);

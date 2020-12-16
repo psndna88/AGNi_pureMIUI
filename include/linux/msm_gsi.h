@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -102,6 +102,7 @@ enum gsi_intr_type {
  * @rel_clk_cb: callback to release peripheral clock
  * @user_data:  cookie used for notifications
  * @clk_status_cb: callback to update the current msm bus clock vote
+ * @enable_clk_bug_on: enable IPA clock for dump saving before assert
  *
  * All the callbacks are in interrupt context
  *
@@ -123,6 +124,7 @@ struct gsi_per_props {
 	void (*notify_cb)(struct gsi_per_notify *notify);
 	void (*req_clk_cb)(void *user_data, bool *granted);
 	int (*rel_clk_cb)(void *user_data);
+	void (*enable_clk_bug_on)(void);
 	void *user_data;
 	int (*clk_status_cb)(void);
 };
@@ -232,6 +234,8 @@ enum gsi_chan_prot {
 	GSI_CHAN_PROT_MHIP = 0x7,
 	GSI_CHAN_PROT_AQC = 0x8,
 	GSI_CHAN_PROT_11AD = 0x9,
+	GSI_CHAN_PROT_MHIC = 0xA,
+	GSI_CHAN_PROT_QDSS = 0xB,
 };
 
 enum gsi_chan_dir {
@@ -596,6 +600,53 @@ struct __packed gsi_mhi_channel_scratch {
 };
 
 /**
+ * gsi_mhi_channel_scratch_v2 - MHI protocol SW config area of
+ * channel scratch
+ *
+ * @mhi_host_wp_addr_lo: Valid only when UL/DL Sync En is asserted. Defines
+ *                       address in host from which channel write pointer
+ *                       should be read in polling mode
+ * @mhi_host_wp_addr_hi: Valid only when UL/DL Sync En is asserted. Defines
+ *                       address in host from which channel write pointer
+ *                       should be read in polling mode
+ * @assert_bit40:        1: bit #41 in address should be asserted upon
+ *                       IPA_IF.ProcessDescriptor routine (for MHI over PCIe
+ *                       transfers)
+ *                       0: bit #41 in address should be deasserted upon
+ *                       IPA_IF.ProcessDescriptor routine (for non-MHI over
+ *                       PCIe transfers)
+ * @polling_configuration: Uplink channels: Defines timer to poll on MHI
+ *                       context. Range: 1 to 31 milliseconds.
+ *                       Downlink channel: Defines transfer ring buffer
+ *                       availability threshold to poll on MHI context in
+ *                       multiple of 8. Range: 0 to 31, meaning 0 to 258 ring
+ *                       elements. E.g., value of 2 indicates 16 ring elements.
+ *                       Valid only when Burst Mode Enabled is set to 1
+ * @burst_mode_enabled:  0: Burst mode is disabled for this channel
+ *                       1: Burst mode is enabled for this channel
+ * @polling_mode:        0: the channel is not in polling mode, meaning the
+ *                       host should ring DBs.
+ *                       1: the channel is in polling mode, meaning the host
+ * @oob_mod_threshold:   Defines OOB moderation threshold. Units are in 8
+ *                       ring elements.
+ *                       should not ring DBs until notified of DB mode/OOB mode
+ */
+struct __packed gsi_mhi_channel_scratch_v2 {
+	uint32_t mhi_host_wp_addr_lo;
+	uint32_t mhi_host_wp_addr_hi:9;
+	uint32_t polling_configuration:5;
+	uint32_t rsvd1:18;
+	uint32_t rsvd2:1;
+	uint32_t assert_bit40:1;
+	uint32_t resvd3:5;
+	uint32_t burst_mode_enabled:1;
+	uint32_t polling_mode:1;
+	uint32_t oob_mod_threshold:5;
+	uint32_t resvd4:18; /* Not configured by AP */
+	uint32_t resvd5; /* Not configured by AP */
+};
+
+/**
  * gsi_xdci_channel_scratch - xDCI protocol SW config area of
  * channel scratch
  *
@@ -801,6 +852,32 @@ struct __packed gsi_wdi3_channel_scratch {
 };
 
 /**
+ * gsi_qdss_channel_scratch - QDSS SW config area of
+ * channel scratch
+ *
+ * @bam_p_evt_dest_addr: equivalent to event_ring_doorbell_pa
+ *			physical address of the doorbell that IPA uC
+ *			will update the headpointer of the event ring.
+ *			QDSS should send BAM_P_EVNT_REG address in this var
+ *			Configured with the GSI Doorbell Address.
+ *			GSI sends Update RP by doing a write to this address
+ * @data_fifo_base_addr: Base address of the data FIFO used by BAM
+ * @data_fifo_size: Size of the data FIFO
+ * @bam_p_evt_threshold: Threshold level of how many bytes consumed
+ * @override_eot: if override EOT==1, it doesn't check the EOT bit in
+ *			the descriptor
+ */
+struct __packed gsi_qdss_channel_scratch {
+	uint32_t bam_p_evt_dest_addr;
+	uint32_t data_fifo_base_addr;
+	uint32_t data_fifo_size : 16;
+	uint32_t bam_p_evt_threshold : 16;
+	uint32_t reserved1 : 2;
+	uint32_t override_eot : 1;
+	uint32_t reserved2 : 29;
+};
+
+/**
  * gsi_wdi3_channel_scratch2 - WDI3 protocol SW config area of
  * channel scratch2
  *
@@ -844,12 +921,14 @@ union __packed gsi_wdi3_channel_scratch2_reg {
 union __packed gsi_channel_scratch {
 	struct __packed gsi_gpi_channel_scratch gpi;
 	struct __packed gsi_mhi_channel_scratch mhi;
+	struct __packed gsi_mhi_channel_scratch_v2 mhi_v2;
 	struct __packed gsi_xdci_channel_scratch xdci;
 	struct __packed gsi_wdi_channel_scratch wdi;
 	struct __packed gsi_11ad_rx_channel_scratch rx_11ad;
 	struct __packed gsi_11ad_tx_channel_scratch tx_11ad;
 	struct __packed gsi_wdi3_channel_scratch wdi3;
 	struct __packed gsi_mhip_channel_scratch mhip;
+	struct __packed gsi_qdss_channel_scratch qdss;
 	struct __packed {
 		uint32_t word1;
 		uint32_t word2;
@@ -1024,6 +1103,15 @@ struct gsi_chan_info {
  *	   other error codes for failure
  */
 int gsi_register_device(struct gsi_per_props *props, unsigned long *dev_hdl);
+
+/**
+ * gsi_is_mcs_enabled - Peripheral should call this function to
+ * check if MCS is already loaded.
+ *
+ * @Return -GSI_STATUS_NODEV if node is already created.
+ *	   other error codes for failure
+ */
+int gsi_is_mcs_enabled(void);
 
 /**
  * gsi_complete_clk_grant - Peripheral should call this function to
@@ -1275,6 +1363,16 @@ int gsi_read_channel_scratch(unsigned long chan_hdl,
  */
 int gsi_read_wdi3_channel_scratch2_reg(unsigned long chan_hdl,
 		union __packed gsi_wdi3_channel_scratch2_reg *val);
+
+/**
+ * gsi_pending_irq_type - Peripheral should call this function to
+ * check if there is any pending irq
+ *
+ * This function can sleep
+ *
+ * @Return gsi_irq_type
+ */
+int gsi_pending_irq_type(void);
 
 /**
  * gsi_update_mhi_channel_scratch - MHI Peripheral should call this
@@ -1618,6 +1716,19 @@ int gsi_alloc_channel_ee(unsigned int chan_idx, unsigned int ee, int *code);
 
 
 int gsi_chk_intset_value(void);
+/**
+ * gsi_enable_flow_control_ee - Peripheral should call this function
+ * to enable flow control other EE's channel. This is usually done in USB
+ * connent and SSR scenarios.
+ *
+ * @chan_idx: Virtual channel index
+ * @ee: EE
+ * @code: [out] response code for operation
+
+ * @Return gsi_status
+ */
+int gsi_enable_flow_control_ee(unsigned int chan_idx, unsigned int ee,
+								int *code);
 
 /*
  * Here is a typical sequence of calls
@@ -1649,6 +1760,11 @@ int gsi_chk_intset_value(void);
 #else
 static inline int gsi_register_device(struct gsi_per_props *props,
 		unsigned long *dev_hdl)
+{
+	return -GSI_STATUS_UNSUPPORTED_OP;
+}
+
+static inline int gsi_is_mcs_enabled(void)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
@@ -1729,6 +1845,11 @@ static inline int gsi_write_channel_scratch3_reg(unsigned long chan_hdl,
 
 static inline int gsi_read_channel_scratch(unsigned long chan_hdl,
 		union __packed gsi_channel_scratch *val)
+{
+	return -GSI_STATUS_UNSUPPORTED_OP;
+}
+
+static inline int gsi_pending_irq_type(void)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
@@ -1882,8 +2003,13 @@ static inline int gsi_alloc_channel_ee(unsigned int chan_idx, unsigned int ee,
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }
 
-
 static inline int gsi_chk_intset_value(void)
+{
+	return -GSI_STATUS_UNSUPPORTED_OP;
+}
+
+static inline int gsi_enable_flow_control_ee(unsigned int chan_idx,
+			unsigned int ee, int *code)
 {
 	return -GSI_STATUS_UNSUPPORTED_OP;
 }

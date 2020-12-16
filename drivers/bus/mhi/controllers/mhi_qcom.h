@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,10 @@
 #define MHI_PCIE_VENDOR_ID (0x17cb)
 #define MHI_PCIE_DEBUG_ID (0xffff)
 
+#define MHI_BHI_SERIAL_NUM_OFFS (0x40)
+#define MHI_BHI_OEMPKHASH(n) (0x64 + (0x4 * (n)))
+#define MHI_BHI_OEMPKHASH_SEG (16)
+
 /* runtime suspend timer */
 #define MHI_RPM_SUSPEND_TMR_MS (250)
 #define MHI_PCI_BAR_NUM (0)
@@ -39,14 +43,26 @@
 extern const char * const mhi_ee_str[MHI_EE_MAX];
 #define TO_MHI_EXEC_STR(ee) (ee >= MHI_EE_MAX ? "INVALID_EE" : mhi_ee_str[ee])
 
+enum mhi_debug_mode {
+	MHI_DEBUG_MODE_OFF,
+	MHI_DEBUG_NO_D3, /* use debug.mbn as fw image and skip first M3/D3 */
+	MHI_DEBUG_D3, /* use debug.mbn as fw image and allow first M3/D3 */
+	MHI_FWIMAGE_NO_D3, /* use fw image if found and skip first M3/D3 */
+	MHI_FWIMAGE_D3, /* use fw image if found and allow first M3/D3 */
+	MHI_DEBUG_MODE_MAX = MHI_FWIMAGE_D3,
+};
+
 enum mhi_suspend_mode {
 	MHI_ACTIVE_STATE,
 	MHI_DEFAULT_SUSPEND,
 	MHI_FAST_LINK_OFF,
 	MHI_FAST_LINK_ON,
+	MHI_SUSPEND_MODE_MAX,
 };
 
-#define MHI_IS_SUSPENDED(mode) (mode)
+extern const char * const mhi_suspend_mode_str[MHI_SUSPEND_MODE_MAX];
+#define TO_MHI_SUSPEND_MODE_STR(mode) \
+	(mode >= MHI_SUSPEND_MODE_MAX ? "Invalid" : mhi_suspend_mode_str[mode])
 
 struct mhi_dev {
 	struct pci_dev *pci_dev;
@@ -56,21 +72,27 @@ struct mhi_dev {
 	void *arch_info;
 	bool powered_on;
 	bool allow_m1;
+	bool mdm_state;
 	dma_addr_t iova_start;
 	dma_addr_t iova_stop;
 	enum mhi_suspend_mode suspend_mode;
+	struct work_struct fatal_worker;
 
-	unsigned int lpm_disable_depth;
-	/* lock to toggle low power modes */
-	spinlock_t lpm_lock;
+	/* hardware info */
+	u32 serial_num;
+	u32 oem_pk_hash[MHI_BHI_OEMPKHASH_SEG];
 };
 
 void mhi_deinit_pci_dev(struct mhi_controller *mhi_cntrl);
 int mhi_pci_probe(struct pci_dev *pci_dev,
 		  const struct pci_device_id *device_id);
+void mhi_reg_write_work(struct work_struct *w);
 
 #ifdef CONFIG_ARCH_QCOM
 
+int mhi_arch_link_lpm_disable(struct mhi_controller *mhi_cntrl);
+int mhi_arch_link_lpm_enable(struct mhi_controller *mhi_cntrl);
+void mhi_arch_mission_mode_enter(struct mhi_controller *mhi_cntrl);
 int mhi_arch_power_up(struct mhi_controller *mhi_cntrl);
 int mhi_arch_pcie_init(struct mhi_controller *mhi_cntrl);
 void mhi_arch_pcie_deinit(struct mhi_controller *mhi_cntrl);
@@ -114,6 +136,20 @@ static inline int mhi_arch_link_resume(struct mhi_controller *mhi_cntrl)
 }
 
 static inline int mhi_arch_power_up(struct mhi_controller *mhi_cntrl)
+{
+	return 0;
+}
+
+static inline void mhi_arch_mission_mode_enter(struct mhi_controller *mhi_cntrl)
+{
+}
+
+static inline int mhi_arch_link_lpm_disable(struct mhi_controller *mhi_cntrl)
+{
+	return 0;
+}
+
+static inline int mhi_arch_link_lpm_enable(struct mhi_controller *mhi_cntrl)
 {
 	return 0;
 }

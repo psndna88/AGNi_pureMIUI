@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -229,6 +229,9 @@ static int ipa_translate_flt_tbl_to_hw_fmt(enum ipa_ip_type ip,
 			/* only body (no header) */
 			tbl_mem.size = tbl->sz[rlt] -
 				ipahal_get_hw_tbl_hdr_width();
+			/* Add prefetech buf size. */
+			tbl_mem.size +=
+				ipahal_get_hw_prefetch_buf_size();
 			if (ipahal_fltrt_allocate_hw_sys_tbl(&tbl_mem)) {
 				IPAERR("fail to alloc sys tbl of size %d\n",
 					tbl_mem.size);
@@ -829,7 +832,7 @@ static int __ipa_validate_flt_rule(const struct ipa_flt_rule_i *rule,
 					"PDN index should be 0 when action is not pass to NAT\n");
 				goto error;
 			} else {
-				if (rule->pdn_idx >= IPA_MAX_PDN_NUM) {
+				if (rule->pdn_idx >= ipa3_get_max_pdn()) {
 					IPAERR_RL("PDN index %d is too large\n",
 						rule->pdn_idx);
 					goto error;

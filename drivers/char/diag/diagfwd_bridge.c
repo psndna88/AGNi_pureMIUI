@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -58,8 +58,6 @@ static int diagfwd_bridge_mux_connect(int id, int mode)
 {
 	if (id < 0 || id >= NUM_REMOTE_DEV)
 		return -EINVAL;
-	if (bridge_info[id].dev_ops && bridge_info[id].dev_ops->open)
-		bridge_info[id].dev_ops->open(bridge_info[id].ctxt);
 	return 0;
 }
 
@@ -176,6 +174,11 @@ int diag_remote_dev_open(int id)
 
 void diag_remote_dev_close(int id)
 {
+
+	if (id < 0 || id >= NUM_REMOTE_DEV)
+		return;
+
+	diag_mux_close_device(BRIDGE_TO_MUX(id));
 
 }
 

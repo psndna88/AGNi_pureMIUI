@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +26,125 @@
 #include <linux/mhi.h>
 #include "mhi_internal.h"
 
+static void mhi_process_sfr(struct mhi_controller *mhi_cntrl,
+	struct file_info *info)
+{
+	struct mhi_buf *mhi_buf = mhi_cntrl->rddm_image->mhi_buf;
+	u8 *sfr_buf, *file_offset = info->file_offset;
+	u32 file_size = info->file_size;
+	u32 rem_seg_len = info->rem_seg_len;
+	u32 seg_idx = info->seg_idx;
+
+	sfr_buf = kzalloc(file_size + 1, GFP_KERNEL);
+	if (!sfr_buf)
+		return;
+
+	while (file_size) {
+		/* file offset starting from seg base */
+		if (!rem_seg_len) {
+			file_offset = mhi_buf[seg_idx].buf;
+			if (file_size > mhi_buf[seg_idx].len)
+				rem_seg_len = mhi_buf[seg_idx].len;
+			else
+				rem_seg_len = file_size;
+		}
+
+		if (file_size <= rem_seg_len) {
+			memcpy(sfr_buf, file_offset, file_size);
+			break;
+		}
+
+		memcpy(sfr_buf, file_offset, rem_seg_len);
+		sfr_buf += rem_seg_len;
+		file_size -= rem_seg_len;
+		rem_seg_len = 0;
+		seg_idx++;
+		if (seg_idx == mhi_cntrl->rddm_image->entries) {
+			MHI_CNTRL_ERR("invalid size for SFR file\n");
+			goto err;
+		}
+	}
+	sfr_buf[info->file_size] = '\0';
+
+	/* force sfr string to log in kernel msg */
+	MHI_ERR("%s\n", sfr_buf);
+err:
+	kfree(sfr_buf);
+}
+
+static int mhi_find_next_file_offset(struct mhi_controller *mhi_cntrl,
+	struct file_info *info, struct rddm_table_info *table_info)
+{
+	struct mhi_buf *mhi_buf = mhi_cntrl->rddm_image->mhi_buf;
+
+	if (info->rem_seg_len >= table_info->size) {
+		info->file_offset += (size_t)table_info->size;
+		info->rem_seg_len -= table_info->size;
+		return 0;
+	}
+
+	info->file_size = table_info->size - info->rem_seg_len;
+	info->rem_seg_len = 0;
+	/* iterate over segments until eof is reached */
+	while (info->file_size) {
+		info->seg_idx++;
+		if (info->seg_idx == mhi_cntrl->rddm_image->entries) {
+			MHI_CNTRL_ERR("invalid size for file %s\n",
+					table_info->file_name);
+			return -EINVAL;
+		}
+		if (info->file_size > mhi_buf[info->seg_idx].len) {
+			info->file_size -= mhi_buf[info->seg_idx].len;
+		} else {
+			info->file_offset = mhi_buf[info->seg_idx].buf +
+				info->file_size;
+			info->rem_seg_len = mhi_buf[info->seg_idx].len -
+				info->file_size;
+			info->file_size = 0;
+		}
+	}
+
+	return 0;
+}
+
+void mhi_dump_sfr(struct mhi_controller *mhi_cntrl)
+{
+	struct mhi_buf *mhi_buf = mhi_cntrl->rddm_image->mhi_buf;
+	struct rddm_header *rddm_header =
+		(struct rddm_header *)mhi_buf->buf;
+	struct rddm_table_info *table_info;
+	struct file_info info = {NULL};
+	u32 table_size, n;
+
+	if (rddm_header->header_size > sizeof(*rddm_header) ||
+			rddm_header->header_size < 8) {
+		MHI_CNTRL_ERR("invalid reported header size %u\n",
+				rddm_header->header_size);
+		return;
+	}
+
+	table_size = (rddm_header->header_size - 8) / sizeof(*table_info);
+	if (!table_size) {
+		MHI_CNTRL_ERR("invalid rddm table size %u\n", table_size);
+		return;
+	}
+
+	info.file_offset = (u8 *)rddm_header + rddm_header->header_size;
+	info.rem_seg_len = mhi_buf[0].len - rddm_header->header_size;
+	for (n = 0; n < table_size; n++) {
+		table_info = &rddm_header->table_info[n];
+
+		if (!strcmp(table_info->file_name, "Q6-SFR.bin")) {
+			info.file_size = table_info->size;
+			mhi_process_sfr(mhi_cntrl, &info);
+			return;
+		}
+
+		if (mhi_find_next_file_offset(mhi_cntrl, &info, table_info))
+			return;
+	}
+}
+EXPORT_SYMBOL(mhi_dump_sfr);
 
 /* setup rddm vector table for rddm transfer and program rxvec */
 void mhi_rddm_prepare(struct mhi_controller *mhi_cntrl,
@@ -38,21 +157,22 @@ void mhi_rddm_prepare(struct mhi_controller *mhi_cntrl,
 	int i = 0;
 
 	for (i = 0; i < img_info->entries - 1; i++, mhi_buf++, bhi_vec++) {
-		MHI_VERB("Setting vector:%pad size:%zu\n",
-			 &mhi_buf->dma_addr, mhi_buf->len);
+		MHI_CNTRL_LOG("Setting vector:%pad size:%zu\n",
+				&mhi_buf->dma_addr, mhi_buf->len);
 		bhi_vec->dma_addr = mhi_buf->dma_addr;
 		bhi_vec->size = mhi_buf->len;
 	}
 
-	MHI_LOG("BHIe programming for RDDM\n");
+	MHI_CNTRL_LOG("BHIe programming for RDDM\n");
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_RXVECADDR_HIGH_OFFS,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_RXVECADDR_HIGH_OFFS,
 		      upper_32_bits(mhi_buf->dma_addr));
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_RXVECADDR_LOW_OFFS,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_RXVECADDR_LOW_OFFS,
 		      lower_32_bits(mhi_buf->dma_addr));
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_RXVECSIZE_OFFS, mhi_buf->len);
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_RXVECSIZE_OFFS,
+			mhi_buf->len);
 	sequence_id = prandom_u32() & BHIE_RXVECSTATUS_SEQNUM_BMSK;
 
 	if (unlikely(!sequence_id))
@@ -62,8 +182,8 @@ void mhi_rddm_prepare(struct mhi_controller *mhi_cntrl,
 			    BHIE_RXVECDB_SEQNUM_BMSK, BHIE_RXVECDB_SEQNUM_SHFT,
 			    sequence_id);
 
-	MHI_LOG("address:%pad len:0x%lx sequence:%u\n",
-		&mhi_buf->dma_addr, mhi_buf->len, sequence_id);
+	MHI_CNTRL_LOG("address:%pad len:0x%lx sequence:%u\n",
+			&mhi_buf->dma_addr, mhi_buf->len, sequence_id);
 }
 
 /* collect rddm during kernel panic */
@@ -78,10 +198,10 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 	int rddm_retry = rddm_timeout_us / delayus; /* time to enter rddm */
 	void __iomem *base = mhi_cntrl->bhie;
 
-	MHI_LOG("Entered with pm_state:%s dev_state:%s ee:%s\n",
-		to_mhi_pm_state_str(mhi_cntrl->pm_state),
-		TO_MHI_STATE_STR(mhi_cntrl->dev_state),
-		TO_MHI_EXEC_STR(mhi_cntrl->ee));
+	MHI_CNTRL_LOG("Entered with pm_state:%s dev_state:%s ee:%s\n",
+			to_mhi_pm_state_str(mhi_cntrl->pm_state),
+			TO_MHI_STATE_STR(mhi_cntrl->dev_state),
+			TO_MHI_EXEC_STR(mhi_cntrl->ee));
 
 	/*
 	 * This should only be executing during a kernel panic, we expect all
@@ -106,10 +226,10 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 	ee = mhi_get_exec_env(mhi_cntrl);
 	if (ee != MHI_EE_RDDM) {
 
-		MHI_LOG("Trigger device into RDDM mode using SYSERR\n");
+		MHI_CNTRL_LOG("Trigger device into RDDM mode using SYSERR\n");
 		mhi_set_mhi_state(mhi_cntrl, MHI_STATE_SYS_ERR);
 
-		MHI_LOG("Waiting for device to enter RDDM\n");
+		MHI_CNTRL_LOG("Waiting for device to enter RDDM\n");
 		while (rddm_retry--) {
 			ee = mhi_get_exec_env(mhi_cntrl);
 			if (ee == MHI_EE_RDDM)
@@ -120,9 +240,9 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 
 		if (rddm_retry <= 0) {
 			/* Hardware reset; force device to enter rddm */
-			MHI_LOG(
+			MHI_CNTRL_LOG(
 				"Did not enter RDDM, do a host req. reset\n");
-			mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+			mhi_cntrl->write_reg(mhi_cntrl, mhi_cntrl->regs,
 				      MHI_SOC_RESET_REQ_OFFSET,
 				      MHI_SOC_RESET_REQ);
 			udelay(delayus);
@@ -131,8 +251,8 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 		ee = mhi_get_exec_env(mhi_cntrl);
 	}
 
-	MHI_LOG("Waiting for image download completion, current EE:%s\n",
-		TO_MHI_EXEC_STR(ee));
+	MHI_CNTRL_LOG("Waiting for image download completion, current EE:%s\n",
+			TO_MHI_EXEC_STR(ee));
 	while (retry--) {
 		ret = mhi_read_reg_field(mhi_cntrl, base, BHIE_RXVECSTATUS_OFFS,
 					 BHIE_RXVECSTATUS_STATUS_BMSK,
@@ -142,7 +262,7 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 			return -EIO;
 
 		if (rx_status == BHIE_RXVECSTATUS_STATUS_XFER_COMPL) {
-			MHI_LOG("RDDM successfully collected\n");
+			MHI_CNTRL_LOG("RDDM successfully collected\n");
 			return 0;
 		}
 
@@ -152,9 +272,9 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 	ee = mhi_get_exec_env(mhi_cntrl);
 	ret = mhi_read_reg(mhi_cntrl, base, BHIE_RXVECSTATUS_OFFS, &rx_status);
 
-	MHI_ERR("Did not complete RDDM transfer\n");
-	MHI_ERR("Current EE:%s\n", TO_MHI_EXEC_STR(ee));
-	MHI_ERR("RXVEC_STATUS:0x%x, ret:%d\n", rx_status, ret);
+	MHI_CNTRL_ERR("Did not complete RDDM transfer\n");
+	MHI_CNTRL_ERR("Current EE:%s\n", TO_MHI_EXEC_STR(ee));
+	MHI_CNTRL_ERR("RXVEC_STATUS:0x%x, ret:%d\n", rx_status, ret);
 
 	return -EIO;
 }
@@ -168,7 +288,7 @@ int mhi_download_rddm_img(struct mhi_controller *mhi_cntrl, bool in_panic)
 	if (in_panic)
 		return __mhi_download_rddm_in_panic(mhi_cntrl);
 
-	MHI_LOG("Waiting for image download completion\n");
+	MHI_CNTRL_LOG("Waiting for image download completion\n");
 
 	/* waiting for image download completion */
 	wait_event_timeout(mhi_cntrl->state_event,
@@ -196,27 +316,31 @@ static int mhi_fw_load_amss(struct mhi_controller *mhi_cntrl,
 		return -EIO;
 	}
 
-	MHI_LOG("Starting BHIe Programming\n");
+	MHI_CNTRL_LOG("Starting BHIe Programming\n");
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_TXVECADDR_HIGH_OFFS,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_TXVECADDR_HIGH_OFFS,
 		      upper_32_bits(mhi_buf->dma_addr));
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_TXVECADDR_LOW_OFFS,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_TXVECADDR_LOW_OFFS,
 		      lower_32_bits(mhi_buf->dma_addr));
 
-	mhi_write_reg(mhi_cntrl, base, BHIE_TXVECSIZE_OFFS, mhi_buf->len);
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHIE_TXVECSIZE_OFFS,
+			mhi_buf->len);
 
 	mhi_cntrl->sequence_id = prandom_u32() & BHIE_TXVECSTATUS_SEQNUM_BMSK;
+	if (unlikely(!mhi_cntrl->sequence_id))
+		mhi_cntrl->sequence_id = 1;
+
 	mhi_write_reg_field(mhi_cntrl, base, BHIE_TXVECDB_OFFS,
 			    BHIE_TXVECDB_SEQNUM_BMSK, BHIE_TXVECDB_SEQNUM_SHFT,
 			    mhi_cntrl->sequence_id);
 	read_unlock_bh(pm_lock);
 
-	MHI_LOG("Upper:0x%x Lower:0x%x len:0x%lx sequence:%u\n",
-		upper_32_bits(mhi_buf->dma_addr),
-		lower_32_bits(mhi_buf->dma_addr),
-		mhi_buf->len, mhi_cntrl->sequence_id);
-	MHI_LOG("Waiting for image transfer completion\n");
+	MHI_CNTRL_LOG("Upper:0x%x Lower:0x%x len:0x%lx sequence:%u\n",
+			upper_32_bits(mhi_buf->dma_addr),
+			lower_32_bits(mhi_buf->dma_addr),
+			mhi_buf->len, mhi_cntrl->sequence_id);
+	MHI_CNTRL_LOG("Waiting for image transfer completion\n");
 
 	/* waiting for image download completion */
 	wait_event_timeout(mhi_cntrl->state_event,
@@ -253,7 +377,7 @@ static int mhi_fw_load_sbl(struct mhi_controller *mhi_cntrl,
 		{ NULL },
 	};
 
-	MHI_LOG("Starting BHI programming\n");
+	MHI_CNTRL_LOG("Starting BHI programming\n");
 
 	/* program start sbl download via  bhi protocol */
 	read_lock_bh(pm_lock);
@@ -262,17 +386,21 @@ static int mhi_fw_load_sbl(struct mhi_controller *mhi_cntrl,
 		goto invalid_pm_state;
 	}
 
-	mhi_write_reg(mhi_cntrl, base, BHI_STATUS, 0);
-	mhi_write_reg(mhi_cntrl, base, BHI_IMGADDR_HIGH,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHI_STATUS, 0);
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHI_IMGADDR_HIGH,
 		      upper_32_bits(dma_addr));
-	mhi_write_reg(mhi_cntrl, base, BHI_IMGADDR_LOW,
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHI_IMGADDR_LOW,
 		      lower_32_bits(dma_addr));
-	mhi_write_reg(mhi_cntrl, base, BHI_IMGSIZE, size);
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHI_IMGSIZE, size);
 	mhi_cntrl->session_id = prandom_u32() & BHI_TXDB_SEQNUM_BMSK;
-	mhi_write_reg(mhi_cntrl, base, BHI_IMGTXDB, mhi_cntrl->session_id);
+	if (unlikely(!mhi_cntrl->session_id))
+		mhi_cntrl->session_id = 1;
+
+	mhi_cntrl->write_reg(mhi_cntrl, base, BHI_IMGTXDB,
+			mhi_cntrl->session_id);
 	read_unlock_bh(pm_lock);
 
-	MHI_LOG("Waiting for image transfer completion\n");
+	MHI_CNTRL_LOG("Waiting for image transfer completion\n");
 
 	/* waiting for image download completion */
 	wait_event_timeout(mhi_cntrl->state_event,
@@ -285,7 +413,7 @@ static int mhi_fw_load_sbl(struct mhi_controller *mhi_cntrl,
 		goto invalid_pm_state;
 
 	if (tx_status == BHI_STATUS_ERROR) {
-		MHI_ERR("Image transfer failed\n");
+		MHI_CNTRL_ERR("Image transfer failed\n");
 		read_lock_bh(pm_lock);
 		if (MHI_REG_ACCESS_VALID(mhi_cntrl->pm_state)) {
 			for (i = 0; error_reg[i].name; i++) {
@@ -293,8 +421,8 @@ static int mhi_fw_load_sbl(struct mhi_controller *mhi_cntrl,
 						   error_reg[i].offset, &val);
 				if (ret)
 					break;
-				MHI_ERR("reg:%s value:0x%x\n",
-					error_reg[i].name, val);
+				MHI_CNTRL_ERR("reg:%s value:0x%x\n",
+					      error_reg[i].name, val);
 			}
 		}
 		read_unlock_bh(pm_lock);
@@ -333,8 +461,8 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 	struct image_info *img_info;
 	struct mhi_buf *mhi_buf;
 
-	MHI_LOG("Allocating bytes:%zu seg_size:%zu total_seg:%u\n",
-		alloc_size, seg_size, segments);
+	MHI_CNTRL_LOG("Allocating bytes:%zu seg_size:%zu total_seg:%u\n",
+			alloc_size, seg_size, segments);
 
 	img_info = kzalloc(sizeof(*img_info), GFP_KERNEL);
 	if (!img_info)
@@ -361,7 +489,7 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 		if (!mhi_buf->buf)
 			goto error_alloc_segment;
 
-		MHI_LOG("Entry:%d Address:0x%llx size:%lu\n", i,
+		MHI_CNTRL_LOG("Entry:%d Address:0x%llx size:%lu\n", i,
 			mhi_buf->dma_addr, mhi_buf->len);
 	}
 
@@ -369,7 +497,7 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 	img_info->entries = segments;
 	*image_info = img_info;
 
-	MHI_LOG("Successfully allocated bhi vec table\n");
+	MHI_CNTRL_LOG("Successfully allocated bhi vec table\n");
 
 	return 0;
 
@@ -413,10 +541,9 @@ static void mhi_firmware_copy(struct mhi_controller *mhi_cntrl,
 	}
 }
 
-void mhi_fw_load_worker(struct work_struct *work)
+void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 {
 	int ret;
-	struct mhi_controller *mhi_cntrl;
 	const char *fw_name;
 	const struct firmware *firmware = NULL;
 	struct image_info *image_info;
@@ -424,22 +551,12 @@ void mhi_fw_load_worker(struct work_struct *work)
 	dma_addr_t dma_addr;
 	size_t size;
 
-	mhi_cntrl = container_of(work, struct mhi_controller, fw_worker);
-
-	MHI_LOG("Waiting for device to enter PBL from EE:%s\n",
-		TO_MHI_EXEC_STR(mhi_cntrl->ee));
-
-	ret = wait_event_timeout(mhi_cntrl->state_event,
-				 MHI_IN_PBL(mhi_cntrl->ee) ||
-				 MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state),
-				 msecs_to_jiffies(mhi_cntrl->timeout_ms));
-
-	if (!ret || MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
-		MHI_ERR("MHI is not in valid state\n");
+	if (MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
+		MHI_CNTRL_ERR("MHI is not in valid state\n");
 		return;
 	}
 
-	MHI_LOG("Device current EE:%s\n", TO_MHI_EXEC_STR(mhi_cntrl->ee));
+	MHI_CNTRL_LOG("Device current EE:%s\n", TO_MHI_EXEC_STR(mhi_cntrl->ee));
 
 	/* if device in pthru, do reset to ready state transition */
 	if (mhi_cntrl->ee == MHI_EE_PTHRU)
@@ -450,14 +567,28 @@ void mhi_fw_load_worker(struct work_struct *work)
 
 	if (!fw_name || (mhi_cntrl->fbc_download && (!mhi_cntrl->sbl_size ||
 						     !mhi_cntrl->seg_len))) {
-		MHI_ERR("No firmware image defined or !sbl_size || !seg_len\n");
+		MHI_CNTRL_ERR(
+			"No firmware image defined or !sbl_size || !seg_len\n");
 		return;
 	}
 
 	ret = request_firmware(&firmware, fw_name, mhi_cntrl->dev);
 	if (ret) {
-		MHI_ERR("Error loading firmware, ret:%d\n", ret);
-		return;
+		if (!mhi_cntrl->fw_image_fallback) {
+			MHI_CNTRL_ERR("Error loading fw, ret:%d\n", ret);
+			return;
+		}
+
+		/* re-try with fall back fw image */
+		ret = request_firmware(&firmware, mhi_cntrl->fw_image_fallback,
+				mhi_cntrl->dev);
+		if (ret) {
+			MHI_CNTRL_ERR("Error loading fw_fb, ret:%d\n", ret);
+			return;
+		}
+
+		mhi_cntrl->status_cb(mhi_cntrl, mhi_cntrl->priv_data,
+				     MHI_CB_FW_FALLBACK_IMG);
 	}
 
 	size = (mhi_cntrl->fbc_download) ? mhi_cntrl->sbl_size : firmware->size;
@@ -468,7 +599,7 @@ void mhi_fw_load_worker(struct work_struct *work)
 
 	buf = mhi_alloc_coherent(mhi_cntrl, size, &dma_addr, GFP_KERNEL);
 	if (!buf) {
-		MHI_ERR("Could not allocate memory for image\n");
+		MHI_CNTRL_ERR("Could not allocate memory for image\n");
 		release_firmware(firmware);
 		return;
 	}
@@ -497,11 +628,11 @@ void mhi_fw_load_worker(struct work_struct *work)
 		ret = mhi_alloc_bhie_table(mhi_cntrl, &mhi_cntrl->fbc_image,
 					   firmware->size);
 		if (ret) {
-			MHI_ERR("Error alloc size of %zu\n", firmware->size);
+			MHI_CNTRL_ERR("Error alloc size:%zu\n", firmware->size);
 			goto error_alloc_fw_table;
 		}
 
-		MHI_LOG("Copying firmware image into vector table\n");
+		MHI_CNTRL_LOG("Copying firmware image into vector table\n");
 
 		/* load the firmware into BHIE vec table */
 		mhi_firmware_copy(mhi_cntrl, firmware, mhi_cntrl->fbc_image);
@@ -511,16 +642,16 @@ fw_load_ee_pthru:
 	/* transitioning into MHI RESET->READY state */
 	ret = mhi_ready_state_transition(mhi_cntrl);
 
-	MHI_LOG("To Reset->Ready PM_STATE:%s MHI_STATE:%s EE:%s, ret:%d\n",
-		to_mhi_pm_state_str(mhi_cntrl->pm_state),
-		TO_MHI_STATE_STR(mhi_cntrl->dev_state),
-		TO_MHI_EXEC_STR(mhi_cntrl->ee), ret);
+	MHI_CNTRL_LOG("To Reset->Ready PM_STATE:%s MHI_STATE:%s EE:%s ret:%d\n",
+			to_mhi_pm_state_str(mhi_cntrl->pm_state),
+			TO_MHI_STATE_STR(mhi_cntrl->dev_state),
+			TO_MHI_EXEC_STR(mhi_cntrl->ee), ret);
 
 	if (!mhi_cntrl->fbc_download)
 		return;
 
 	if (ret) {
-		MHI_ERR("Did not transition to READY state\n");
+		MHI_CNTRL_ERR("Did not transition to READY state\n");
 		goto error_read;
 	}
 
@@ -531,7 +662,7 @@ fw_load_ee_pthru:
 				 msecs_to_jiffies(mhi_cntrl->timeout_ms));
 
 	if (!ret || MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
-		MHI_ERR("MHI did not enter BHIE\n");
+		MHI_CNTRL_ERR("MHI did not enter BHIE\n");
 		goto error_read;
 	}
 
@@ -541,7 +672,7 @@ fw_load_ee_pthru:
 			       /* last entry is vec table */
 			       &image_info->mhi_buf[image_info->entries - 1]);
 
-	MHI_LOG("amss fw_load, ret:%d\n", ret);
+	MHI_CNTRL_LOG("amss fw_load ret:%d\n", ret);
 
 	release_firmware(firmware);
 
@@ -553,4 +684,11 @@ error_read:
 
 error_alloc_fw_table:
 	release_firmware(firmware);
+}
+
+void mhi_perform_soc_reset(struct mhi_controller *mhi_cntrl)
+{
+	mhi_cntrl->write_reg(mhi_cntrl, mhi_cntrl->regs,
+			     MHI_SOC_RESET_REQ_OFFSET,
+			     MHI_SOC_RESET_REQ);
 }

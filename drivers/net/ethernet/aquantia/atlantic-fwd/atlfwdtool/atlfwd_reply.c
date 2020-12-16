@@ -1,10 +1,12 @@
-/*
- * aQuantia Corporation Network Driver
- * Copyright (C) 2019 aQuantia Corporation. All rights reserved
+// SPDX-License-Identifier: GPL-2.0-only
+/* Atlantic Network Driver
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
+ * Copyright (C) 2019 aQuantia Corporation
+ * Copyright (C) 2019-2020 Marvell International Ltd.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #include "atlfwd_reply.h"
@@ -21,6 +23,7 @@ int atlnl_process_ack(struct nl_context *ctx, const ssize_t len)
 	if (len < NLMSG_HDRLEN + tlv_offset)
 		return -EFAULT;
 
+#ifdef NLM_F_ACK_TLVS
 	if (ctx->nlhdr->nlmsg_flags & NLM_F_ACK_TLVS) {
 		if (!(ctx->nlhdr->nlmsg_flags & NLM_F_CAPPED))
 			tlv_offset += MNL_ALIGN(
@@ -40,6 +43,7 @@ int atlnl_process_ack(struct nl_context *ctx, const ssize_t len)
 			}
 		}
 	}
+#endif
 
 	if (nlerr->error) {
 		errno = -nlerr->error;

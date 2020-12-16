@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,7 +11,6 @@
  */
 
 #include "sdxprairie-v2.dtsi"
-#include "sdxprairie-cpe-memory-map.dtsi"
 #include "sdxprairie-mtp.dtsi"
 
 &qnand_1 {
@@ -58,7 +57,7 @@
 };
 
 &blsp1_uart2b_hs {
-	status = "ok";
+	status = "disabled";
 };
 
 &vbus_detect {
@@ -79,6 +78,7 @@
 
 &pcie_ep {
 	status = "ok";
+	qcom,pcie-perst-enum;
 };
 
 &mhi_device {
@@ -91,4 +91,20 @@
 
 &sdx_ext_ipc {
 	status = "ok";
+};
+
+&i2c_3 {
+	tavil_codec {
+		status = "disabled";
+	};
+};
+
+&soc {
+	sound-tavil {
+		status = "disabled";
+	};
+};
+
+&mhi_device {
+	qcom,no-m0-timeout;
 };

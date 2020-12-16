@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -134,6 +134,27 @@ int ipa_hw_stats_init(void)
 	return ret;
 }
 
+static bool ipa_validate_quota_stats_sram_size(u32 needed_len)
+{
+	u32 sram_size;
+
+	/* Starting IPA4.5 Quota stats is split between Q6 and AP */
+
+	if (ipa3_ctx->ipa_hw_type < IPA_HW_v4_5) {
+		IPAERR("Not supported ipa_ver=%d\n", ipa3_ctx->ipa_hw_type);
+		return false;
+	}
+
+	sram_size = IPA_MEM_PART(stats_quota_ap_size);
+	if (needed_len > sram_size) {
+		IPAERR("SRAM partition too small: %u needed %u\n",
+			sram_size, needed_len);
+		return false;
+	}
+
+	return true;
+}
+
 int ipa_init_quota_stats(u32 pipe_bitmask)
 {
 	struct ipahal_stats_init_pyld *pyld;
@@ -162,9 +183,7 @@ int ipa_init_quota_stats(u32 pipe_bitmask)
 		return -EPERM;
 	}
 
-	if (pyld->len > IPA_MEM_PART(stats_quota_size)) {
-		IPAERR("SRAM partition too small: %d needed %d\n",
-			IPA_MEM_PART(stats_quota_size), pyld->len);
+	if (!ipa_validate_quota_stats_sram_size(pyld->len)) {
 		ret = -EPERM;
 		goto destroy_init_pyld;
 	}
@@ -203,7 +222,7 @@ int ipa_init_quota_stats(u32 pipe_bitmask)
 	quota_base.offset = ipahal_get_reg_n_ofst(IPA_STAT_QUOTA_BASE_n,
 		ipa3_ctx->ee);
 	quota_base.value = ipa3_ctx->smem_restricted_bytes +
-		IPA_MEM_PART(stats_quota_ofst);
+		IPA_MEM_PART(stats_quota_ap_ofst);
 	quota_base.value_mask = ~0;
 	quota_base_pyld = ipahal_construct_imm_cmd(IPA_IMM_CMD_REGISTER_WRITE,
 		&quota_base, false);
@@ -223,7 +242,7 @@ int ipa_init_quota_stats(u32 pipe_bitmask)
 	cmd.size = pyld->len;
 	cmd.system_addr = dma_address;
 	cmd.local_addr = ipa3_ctx->smem_restricted_bytes +
-			IPA_MEM_PART(stats_quota_ofst);
+		IPA_MEM_PART(stats_quota_ap_ofst);
 	cmd_pyld = ipahal_construct_imm_cmd(
 		IPA_IMM_CMD_DMA_SHARED_MEM, &cmd, false);
 	if (!cmd_pyld) {
@@ -302,7 +321,7 @@ int ipa_get_quota_stats(struct ipa_quota_stats_all *out)
 	cmd.size = mem.size;
 	cmd.system_addr = mem.phys_base;
 	cmd.local_addr = ipa3_ctx->smem_restricted_bytes +
-		IPA_MEM_PART(stats_quota_ofst) + offset.offset;
+		IPA_MEM_PART(stats_quota_ap_ofst) + offset.offset;
 	cmd_pyld = ipahal_construct_imm_cmd(
 		IPA_IMM_CMD_DMA_SHARED_MEM, &cmd, false);
 	if (!cmd_pyld) {
@@ -1863,6 +1882,81 @@ static ssize_t ipa_debugfs_print_drop_stats(struct file *file,
 	return simple_read_from_buffer(ubuf, count, ppos, dbg_buff, nbytes);
 }
 
+static ssize_t ipa_debugfs_enable_disable_drop_stats(struct file *file,
+	const char __user *ubuf, size_t count, loff_t *ppos)
+{
+	unsigned long missing;
+	unsigned int pipe_num = 0;
+	bool enable_pipe = true;
+	u32 pipe_bitmask = ipa3_ctx->hw_stats.drop.init.enabled_bitmask;
+	char seprator = ',';
+	int i, j;
+	bool is_pipe = false;
+	ssize_t ret;
+
+	mutex_lock(&ipa3_ctx->lock);
+	if (sizeof(dbg_buff) < count + 1) {
+		ret = -EFAULT;
+		goto bail;
+	}
+
+	missing = copy_from_user(dbg_buff, ubuf, count);
+	if (missing) {
+		ret = -EFAULT;
+		goto bail;
+	}
+	dbg_buff[count] = '\0';
+	IPADBG("data is %s", dbg_buff);
+
+	i = 0;
+	while (dbg_buff[i] != ' ' && i < count)
+		i++;
+	j = i;
+	i++;
+	if (i < count) {
+		if (dbg_buff[i] == '0') {
+			enable_pipe = false;
+			IPADBG("Drop stats will be disabled for pipes:");
+		}
+	}
+
+	for (i = 0; i < j; i++) {
+		if (dbg_buff[i] >= '0' && dbg_buff[i] <= '9') {
+			pipe_num = (pipe_num * 10) + (dbg_buff[i] - '0');
+			is_pipe = true;
+		}
+		if (dbg_buff[i] == seprator) {
+			if (pipe_num >= 0 && pipe_num < ipa3_ctx->ipa_num_pipes
+				&& ipa3_get_client_by_pipe(pipe_num) <
+				IPA_CLIENT_MAX) {
+				IPADBG("pipe number %u\n", pipe_num);
+				if (enable_pipe)
+					pipe_bitmask = pipe_bitmask |
+							(1 << pipe_num);
+				else
+					pipe_bitmask = pipe_bitmask &
+							(~(1 << pipe_num));
+			}
+			pipe_num = 0;
+			is_pipe = false;
+		}
+	}
+	if (is_pipe && pipe_num >= 0 && pipe_num < ipa3_ctx->ipa_num_pipes &&
+		ipa3_get_client_by_pipe(pipe_num) < IPA_CLIENT_MAX) {
+		IPADBG("pipe number %u\n", pipe_num);
+		if (enable_pipe)
+			pipe_bitmask = pipe_bitmask | (1 << pipe_num);
+		else
+			pipe_bitmask = pipe_bitmask & (~(1 << pipe_num));
+	}
+
+	ipa_init_drop_stats(pipe_bitmask);
+	ret = count;
+bail:
+	mutex_unlock(&ipa3_ctx->lock);
+	return ret;
+}
+
 static const struct file_operations ipa3_quota_ops = {
 	.read = ipa_debugfs_print_quota_stats,
 	.write = ipa_debugfs_reset_quota_stats,
@@ -1883,10 +1977,14 @@ static const struct file_operations ipa3_drop_ops = {
 	.write = ipa_debugfs_reset_drop_stats,
 };
 
+static const struct file_operations ipa3_enable_drop_ops = {
+	.write = ipa_debugfs_enable_disable_drop_stats,
+};
 
 int ipa_debugfs_init_stats(struct dentry *parent)
 {
 	const mode_t read_write_mode = 0664;
+	const mode_t write_mode = 0220;
 	struct dentry *file;
 	struct dentry *dent;
 
@@ -1910,6 +2008,13 @@ int ipa_debugfs_init_stats(struct dentry *parent)
 		&ipa3_drop_ops);
 	if (IS_ERR_OR_NULL(file)) {
 		IPAERR("fail to create file %s\n", "drop");
+		goto fail;
+	}
+
+	file = debugfs_create_file("enable_drop_stats", write_mode, dent, NULL,
+		&ipa3_enable_drop_ops);
+	if (IS_ERR_OR_NULL(file)) {
+		IPAERR("fail to create file %s\n", "enable_drop_stats");
 		goto fail;
 	}
 

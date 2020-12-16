@@ -432,6 +432,10 @@ static struct msm_soc_info cpu_of_id[] = {
 	/* atollab ID */
 	[443] = {MSM_CPU_ATOLL_AB, "ATOLL-AB"},
 
+	/* QCM6125 IDs*/
+	[467] = {MSM_CPU_QCM6125, "QCM6125"},
+	[468] = {MSM_CPU_QCS6125, "QCS6125"},
+
 	/* Uninitialized IDs are not known to run Linux.
 	 * MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
 	 * considered as unknown CPU.
@@ -1435,6 +1439,14 @@ static void * __init setup_dummy_socinfo(void)
 	} else if (early_machine_is_atoll_ab()) {
 		dummy_socinfo.id = 443;
 		strlcpy(dummy_socinfo.build_id, "atoll-ab - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_qcm6125()) {
+		dummy_socinfo.id = 467;
+		strlcpy(dummy_socinfo.build_id, "qcm6125 - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_qcs6125()) {
+		dummy_socinfo.id = 468;
+		strlcpy(dummy_socinfo.build_id, "qcm6125 - ",
 		sizeof(dummy_socinfo.build_id));
 	} else
 		strlcat(dummy_socinfo.build_id, "Dummy socinfo",

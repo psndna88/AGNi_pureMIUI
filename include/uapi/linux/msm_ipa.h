@@ -123,6 +123,9 @@
 #define IPA_IOCTL_FNR_COUNTER_DEALLOC           75
 #define IPA_IOCTL_FNR_COUNTER_QUERY             76
 #define IPA_IOCTL_GET_NAT_IN_SRAM_INFO          77
+#define IPA_IOCTL_APP_CLOCK_VOTE                78
+#define IPA_IOCTL_PDN_CONFIG                    80
+#define IPA_IOCTL_SET_MAC_FLT                   81
 
 /**
  * max size of the header to be inserted
@@ -164,6 +167,11 @@
  * max number of destination pipes possible for a client.
  */
 #define QMI_IPA_MAX_CLIENT_DST_PIPES 4
+
+/**
+ * Max number of clients supported for mac based exception
+ */
+#define IPA_MAX_NUM_MAC_FLT 5
 
 /**
  * MAX number of the FLT_RT stats counter supported.
@@ -213,7 +221,8 @@
 /**
  * maximal number of NAT PDNs in the PDN config table
  */
-#define IPA_MAX_PDN_NUM 5
+#define IPA_MAX_PDN_NUM 16
+#define IPA_MAX_PDN_NUM_v4 5
 
 /**
  * enum ipa_client_type - names for the various IPA "clients"
@@ -379,9 +388,14 @@ enum ipa_client_type {
 	IPA_CLIENT_MHI_PRIME_RMNET_PROD		= 100,
 	IPA_CLIENT_MHI_PRIME_RMNET_CONS		= 101,
 	IPA_CLIENT_MHI_PRIME_DPL_PROD		= 102,
+	/* RESERVERD CONS			= 103, */
+	IPA_CLIENT_MHI_LOW_LAT_PROD = 104,
+	IPA_CLIENT_MHI_LOW_LAT_CONS = 105,
+	IPA_CLIENT_QDSS_PROD			= 106,
+	IPA_CLIENT_MHI_QDSS_CONS	= 107,
 };
 
-#define IPA_CLIENT_MAX (IPA_CLIENT_MHI_PRIME_DPL_PROD + 1)
+#define IPA_CLIENT_MAX (IPA_CLIENT_MHI_QDSS_CONS + 1)
 
 #define IPA_CLIENT_WLAN2_PROD IPA_CLIENT_A5_WLAN_AMPDU_PROD
 #define IPA_CLIENT_Q6_DL_NLO_DATA_PROD IPA_CLIENT_Q6_DL_NLO_DATA_PROD
@@ -402,6 +416,7 @@ enum ipa_client_type {
 #define IPA_CLIENT_MHI_PRIME_RMNET_PROD IPA_CLIENT_MHI_PRIME_RMNET_PROD
 #define IPA_CLIENT_MHI_PRIME_RMNET_CONS IPA_CLIENT_MHI_PRIME_RMNET_CONS
 #define IPA_CLIENT_MHI_PRIME_DPL_PROD IPA_CLIENT_MHI_PRIME_DPL_PROD
+#define IPA_CLIENT_MHI_QDSS_CONS IPA_CLIENT_MHI_QDSS_CONS
 
 #define IPA_CLIENT_IS_APPS_CONS(client) \
 	((client) == IPA_CLIENT_APPS_LAN_CONS || \
@@ -485,12 +500,18 @@ enum ipa_client_type {
 
 #define IPA_CLIENT_IS_MHI_CONS(client) \
 	((client) == IPA_CLIENT_MHI_CONS || \
-	(client) == IPA_CLIENT_MHI_DPL_CONS)
+	(client) == IPA_CLIENT_MHI_DPL_CONS || \
+	(client) == IPA_CLIENT_MHI_LOW_LAT_CONS || \
+	(client) == IPA_CLIENT_MHI_QDSS_CONS)
 
 #define IPA_CLIENT_IS_MHI(client) \
 	((client) == IPA_CLIENT_MHI_CONS || \
 	(client) == IPA_CLIENT_MHI_PROD || \
-	(client) == IPA_CLIENT_MHI_DPL_CONS)
+	(client) == IPA_CLIENT_MHI_DPL_CONS || \
+	(client) == IPA_CLIENT_MHI_LOW_LAT_CONS || \
+	(client) == IPA_CLIENT_MHI_LOW_LAT_PROD || \
+	(client) == IPA_CLIENT_MHI_QDSS_CONS)
+
 
 #define IPA_CLIENT_IS_TEST_PROD(client) \
 	((client) == IPA_CLIENT_TEST_PROD || \
@@ -682,11 +703,30 @@ enum ipa_coalesce_event {
 #define IPA_COALESCE_EVENT_MAX IPA_COALESCE_EVENT_MAX
 };
 
+enum ipa_peripheral_event {
+	IPA_PERIPHERAL_CONNECT = ECM_CONNECT,
+	IPA_PERIPHERAL_DISCONNECT = ECM_DISCONNECT
+};
+
 #define WIGIG_CLIENT_CONNECT (IPA_COALESCE_EVENT_MAX)
 #define WIGIG_FST_SWITCH (WIGIG_CLIENT_CONNECT + 1)
 #define WIGIG_EVENT_MAX (WIGIG_FST_SWITCH + 1)
 
-#define IPA_EVENT_MAX_NUM (WIGIG_EVENT_MAX)
+enum ipa_pdn_config_event {
+	IPA_PDN_DEFAULT_MODE_CONFIG = WIGIG_EVENT_MAX, /* Default mode. */
+	IPA_PDN_IP_COLLISION_MODE_CONFIG, /* IP Collision detected. */
+	IPA_PDN_IP_PASSTHROUGH_MODE_CONFIG, /* IP Passthrough mode. */
+	IPA_PDN_CONFIG_EVENT_MAX
+#define IPA_PDN_CONFIG_EVENT_MAX IPA_PDN_CONFIG_EVENT_MAX
+};
+
+enum ipa_mac_flt_event {
+	IPA_MAC_FLT_EVENT = IPA_PDN_CONFIG_EVENT_MAX,
+	IPA_MAC_FLT_EVENT_MAX
+#define IPA_MAC_FLT_EVENT_MAX IPA_MAC_FLT_EVENT_MAX
+};
+
+#define IPA_EVENT_MAX_NUM (IPA_MAC_FLT_EVENT_MAX)
 #define IPA_EVENT_MAX ((int)IPA_EVENT_MAX_NUM)
 
 /**
@@ -2560,6 +2600,53 @@ struct ipa_odl_modem_config {
 	 __u8 config_status;
 };
 
+/**
+ * struct ipa_ioc_pdn_config - provide pdn configuration
+ * @dev_name: PDN interface name
+ * @pdn_cfg_type: type of the pdn config applied.
+ * @enable: enable/disable pdn config type.
+ * @u.collison_cfg.pdn_ip_addr: pdn_ip_address used in collision config.
+ * @u.passthrough_cfg.pdn_ip_addr: pdn_ip_address used in passthrough config.
+ * @u.passthrough_cfg.device_type: Device type of the client.
+ * @u.passthrough_cfg.vlan_id: VLAN ID of the client.
+ * @u.passthrough_cfg.client_mac_addr: client mac for which passthough
+ *	is enabled.
+ * @u.passthrough_cfg.skip_nat: skip NAT processing.
+ * @default_pdn: bool to indicate the config is for default pdn.
+ */
+struct ipa_ioc_pdn_config {
+	char dev_name[IPA_RESOURCE_NAME_MAX];
+	enum ipa_pdn_config_event pdn_cfg_type;
+	uint8_t enable;
+	union {
+
+		struct ipa_pdn_ip_collision_cfg {
+			uint32_t pdn_ip_addr;
+		} collison_cfg;
+
+		struct ipa_pdn_ip_passthrough_cfg {
+			uint32_t pdn_ip_addr;
+			enum ipacm_per_client_device_type device_type;
+			uint16_t vlan_id;
+			uint8_t client_mac_addr[IPA_MAC_ADDR_SIZE];
+			uint8_t skip_nat;
+		} passthrough_cfg;
+	} u;
+	uint8_t default_pdn;
+};
+
+/**
+ * struct ipa_ioc_mac_client_list_type- mac addr exception list
+ * @mac_addr: an array to hold clients mac addrs
+ * @num_of_clients: holds num of clients to blacklist or whitelist
+ * @flt_state: true to block current mac addrs and false to clean
+ *		up all previous mac addrs
+ */
+struct ipa_ioc_mac_client_list_type {
+	uint8_t mac_addr[IPA_MAX_NUM_MAC_FLT][IPA_MAC_ADDR_SIZE];
+	int num_of_clients;
+	uint8_t flt_state;
+};
 
 /**
  *   actual IOCTLs supported by IPA driver
@@ -2814,6 +2901,18 @@ struct ipa_odl_modem_config {
 				IPA_IOCTL_GET_NAT_IN_SRAM_INFO, \
 				struct ipa_nat_in_sram_info)
 
+#define IPA_IOC_APP_CLOCK_VOTE _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_APP_CLOCK_VOTE, \
+				uint32_t)
+
+#define IPA_IOC_PDN_CONFIG _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_PDN_CONFIG, \
+				struct ipa_ioc_pdn_config)
+
+#define IPA_IOC_SET_MAC_FLT _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_SET_MAC_FLT, \
+				struct ipa_ioc_mac_client_list_type)
+
 /*
  * unique magic number of the Tethering bridge ioctls
  */
@@ -2917,6 +3016,18 @@ struct ipa_nat_in_sram_info {
 	uint32_t sram_mem_available_for_nat;
 	uint32_t nat_table_offset_into_mmap;
 	uint32_t best_nat_in_sram_size_rqst;
+};
+
+/**
+ * enum ipa_app_clock_vote_type
+ *
+ * The types of votes that can be accepted by the
+ * IPA_IOC_APP_CLOCK_VOTE ioctl
+ */
+enum ipa_app_clock_vote_type {
+	IPA_APP_CLK_DEVOTE     = 0,
+	IPA_APP_CLK_VOTE       = 1,
+	IPA_APP_CLK_RESET_VOTE = 2,
 };
 
 #define TETH_BRIDGE_IOC_SET_BRIDGE_MODE _IOW(TETH_BRIDGE_IOC_MAGIC, \

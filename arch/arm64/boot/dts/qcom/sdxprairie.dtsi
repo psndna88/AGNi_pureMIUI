@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -43,7 +43,7 @@
 		mpss_adsp_mem: mpss_adsp_region@90800000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x90800000 0xd800000>;
+			reg = <0x90800000 0xf800000>;
 			label = "mpss_adsp_mem";
 		};
 
@@ -69,6 +69,12 @@
 			no-map;
 			reg = <0x8fd00000 0x140000>;
 			label = "peripheral2_mem";
+		};
+
+		ipa_fw_mem: ipa_fw_region@8fced000 {
+			no-map;
+			reg = <0x8fced000 0x10000>;
+			label = "ipa_fw_mem";
 		};
 
 		secdata_mem: secdata_region@8fcfd000 {
@@ -118,7 +124,7 @@
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0 0x400000>;
+			size = <0x400000>;
 		};
 	};
 
@@ -461,19 +467,21 @@
 		qcom,pas-id = <4>;
 		qcom,smem-id = <421>;
 		qcom,sysmon-id = <0>;
-		qcom,ssctl-instance-id = <0x12>;
+		qcom,ssctl-instance-id = <0x22>;
 
 		interrupts-extended = <&intc 0 250 1>,
 				<&modem_smp2p_in 0 0>,
 				<&modem_smp2p_in 2 0>,
 				<&modem_smp2p_in 1 0>,
-				<&modem_smp2p_in 3 0>;
+				<&modem_smp2p_in 3 0>,
+				<&modem_smp2p_in 7 0>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
-				"qcom,stop-ack";
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
 
 		qcom,smem-states = <&modem_smp2p_out 0>;
 		qcom,smem-state-names = "qcom,force-stop";
@@ -540,11 +548,11 @@
 		qcom,ipa-hw-mode = <0>;
 		qcom,ee = <0>;
 		qcom,use-ipa-tethering-bridge;
-		qcom,mhi-event-ring-id-limits = <9 11>; /* start and end */
+		qcom,mhi-event-ring-id-limits = <9 14>; /* start and end */
 		qcom,modem-cfg-emb-pipe-flt;
 		qcom,use-ipa-pm;
+		qcom,use-xbl-boot;
 		qcom,arm-smmu;
-		qcom,smmu-fast-map;
 		qcom,wlan-ce-db-over-pcie;
 		qcom,bandwidth-vote-for-ipa;
 		qcom,msm-bus,name = "ipa";
@@ -605,6 +613,8 @@
 				/* modem tables in IMEM */
 				<0x14688000 0x14688000 0x3000>;
 			qcom,ipa-q6-smem-size = <26624>;
+			qcom,smmu-fast-map;
+			qcom,geometry-mapping = <0x0 0xF0000000>;
 		};
 
 		ipa_smmu_wlan: ipa_smmu_wlan {
@@ -841,7 +851,6 @@
 				<125 512 0 0>,
 				<125 512 393600 393600>;
 		qcom,no-clock-support;
-		qcom,smmu-s1-enable;
 		iommus = <&apps_smmu 0x0066 0x0011>,
 			<&apps_smmu 0x0076 0x0011>;
 	};
@@ -870,7 +879,6 @@
 		qcom,use-sw-ahash-algo;
 		qcom,use-sw-hmac-algo;
 		qcom,no-clock-support;
-		qcom,smmu-s1-enable;
 		iommus = <&apps_smmu 0x0064 0x0011>,
 			<&apps_smmu 0x0074 0x0011>;
 	};
@@ -1057,8 +1065,11 @@
 		qcom,wlan-rc-num = <0>;
 		qcom,wlan-ramdump-dynamic = <0x400000>;
 		qcom,smmu-s1-enable;
+		qcom,set-wlaon-pwr-ctrl;
+		qcom,iommu-geometry;
 
 		mhi,max-channels = <30>;
+		mhi,buffer-len = <0x8000>;
 		mhi,timeout = <10000>;
 
 		mhi_channels {
@@ -1229,7 +1240,8 @@
 		qcom,pcie-active-config;
 		qcom,pcie-aggregated-irq;
 		qcom,pcie-mhi-a7-irq;
-		qcom,phy-status-reg = <0x814>;
+		qcom,phy-status-reg2 = <0x1214>;
+		qcom,mhi-soc-reset-offset = <0xb01b8>;
 
 		qcom,phy-init = <0x1240 0x001 0x0 0x1
 				0x100c 0x002 0x0 0x1
@@ -1452,6 +1464,7 @@
 	emac_hw: qcom,emac@00020000 {
 		compatible = "qcom,emac-dwc-eqos";
 		qcom,arm-smmu;
+		emac-phy-addr = <7>;
 		reg = <0x20000 0x10000>,
 		   <0x36000 0x100>,
 		   <0xf100000 0x300000>;
@@ -1506,6 +1519,7 @@
 			compatible = "qcom,emac-smmu-embedded";
 			iommus = <&apps_smmu 0x1c0 0xf>;
 			qcom,iova-mapping = <0x80000000 0x40000000>;
+			qcom,smmu-geometry;
 		};
 	};
 
@@ -1531,6 +1545,7 @@
 #include "sdxprairie-coresight.dtsi"
 #include "sdxprairie-aqc.dtsi"
 #include "sdxprairie-thermal.dtsi"
+#include "sdxprairie-qcom-smmu.dtsi"
 
 &gdsc_usb30 {
 	status = "ok";

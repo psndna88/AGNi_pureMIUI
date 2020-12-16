@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -43,9 +43,6 @@ extern char *saved_command_line;
 
 #define SDE_ERROR_CONN(c, fmt, ...) SDE_ERROR("conn%d " fmt,\
 		(c) ? (c)->base.base.id : -1, ##__VA_ARGS__)
-static u32 dither_matrix[DITHER_MATRIX_SZ] = {
-	15, 7, 13, 5, 3, 11, 1, 9, 12, 4, 14, 6, 0, 8, 2, 10
-};
 
 static const struct drm_prop_enum_list e_topology_name[] = {
 	{SDE_RM_TOPOLOGY_NONE,	"sde_none"},
@@ -74,6 +71,12 @@ static const struct drm_prop_enum_list e_qsync_mode[] = {
 	{SDE_RM_QSYNC_DISABLED,	"none"},
 	{SDE_RM_QSYNC_CONTINUOUS_MODE,	"continuous"},
 	{SDE_RM_QSYNC_ONE_SHOT_MODE,	"one_shot"},
+};
+
+static const struct drm_prop_enum_list e_frame_trigger_mode[] = {
+	{FRAME_DONE_WAIT_DEFAULT, "default"},
+	{FRAME_DONE_WAIT_SERIALIZE, "serialize_frame_trigger"},
+	{FRAME_DONE_WAIT_POSTED_START, "posted_start"},
 };
 
 static int sde_backlight_device_update_status(struct backlight_device *bd)
@@ -249,60 +252,12 @@ void sde_connector_unregister_event(struct drm_connector *connector,
 	(void)sde_connector_register_event(connector, event_idx, 0, 0);
 }
 
-static int _sde_connector_get_default_dither_cfg_v1(
-		struct sde_connector *c_conn, void *cfg)
-{
-	struct drm_msm_dither *dither_cfg = (struct drm_msm_dither *)cfg;
-	enum dsi_pixel_format dst_format = DSI_PIXEL_FORMAT_MAX;
-
-	if (!c_conn || !cfg) {
-		SDE_ERROR("invalid argument(s), c_conn %pK, cfg %pK\n",
-				c_conn, cfg);
-		return -EINVAL;
-	}
-
-	if (!c_conn->ops.get_dst_format) {
-		SDE_DEBUG("get_dst_format is unavailable\n");
-		return 0;
-	}
-
-	dst_format = c_conn->ops.get_dst_format(&c_conn->base, c_conn->display);
-	switch (dst_format) {
-	case DSI_PIXEL_FORMAT_RGB888:
-		dither_cfg->c0_bitdepth = 8;
-		dither_cfg->c1_bitdepth = 8;
-		dither_cfg->c2_bitdepth = 8;
-		dither_cfg->c3_bitdepth = 8;
-		break;
-	case DSI_PIXEL_FORMAT_RGB666:
-	case DSI_PIXEL_FORMAT_RGB666_LOOSE:
-		dither_cfg->c0_bitdepth = 6;
-		dither_cfg->c1_bitdepth = 6;
-		dither_cfg->c2_bitdepth = 6;
-		dither_cfg->c3_bitdepth = 6;
-		break;
-	default:
-		SDE_DEBUG("no default dither config for dst_format %d\n",
-			dst_format);
-		return -ENODATA;
-	}
-
-	memcpy(&dither_cfg->matrix, dither_matrix,
-			sizeof(u32) * DITHER_MATRIX_SZ);
-	dither_cfg->temporal_en = 0;
-	return 0;
-}
-
 static void _sde_connector_install_dither_property(struct drm_device *dev,
 		struct sde_kms *sde_kms, struct sde_connector *c_conn)
 {
 	char prop_name[DRM_PROP_NAME_LEN];
 	struct sde_mdss_cfg *catalog = NULL;
-	struct drm_property_blob *blob_ptr;
-	void *cfg;
-	int ret = 0;
-	u32 version = 0, len = 0;
-	bool defalut_dither_needed = false;
+	u32 version = 0;
 
 	if (!dev || !sde_kms || !c_conn) {
 		SDE_ERROR("invld args (s), dev %pK, sde_kms %pK, c_conn %pK\n",
@@ -320,54 +275,51 @@ static void _sde_connector_install_dither_property(struct drm_device *dev,
 		msm_property_install_blob(&c_conn->property_info, prop_name,
 			DRM_MODE_PROP_BLOB,
 			CONNECTOR_PROP_PP_DITHER);
-		len = sizeof(struct drm_msm_dither);
-		cfg = kzalloc(len, GFP_KERNEL);
-		if (!cfg)
-			return;
-
-		ret = _sde_connector_get_default_dither_cfg_v1(c_conn, cfg);
-		if (!ret)
-			defalut_dither_needed = true;
 		break;
 	default:
 		SDE_ERROR("unsupported dither version %d\n", version);
 		return;
 	}
-
-	if (defalut_dither_needed) {
-		blob_ptr = drm_property_create_blob(dev, len, cfg);
-		if (IS_ERR_OR_NULL(blob_ptr))
-			goto exit;
-		c_conn->blob_dither = blob_ptr;
-	}
-exit:
-	kfree(cfg);
 }
 
 int sde_connector_get_dither_cfg(struct drm_connector *conn,
 			struct drm_connector_state *state, void **cfg,
-			size_t *len)
+			size_t *len, bool idle_pc)
 {
 	struct sde_connector *c_conn = NULL;
 	struct sde_connector_state *c_state = NULL;
 	size_t dither_sz = 0;
+	bool is_dirty;
 	u32 *p = (u32 *)cfg;
 
-	if (!conn || !state || !p)
+	if (!conn || !state || !p) {
+		SDE_ERROR("invalid arguments\n");
 		return -EINVAL;
+	}
 
 	c_conn = to_sde_connector(conn);
 	c_state = to_sde_connector_state(state);
 
-	/* try to get user config data first */
-	*cfg = msm_property_get_blob(&c_conn->property_info,
-					&c_state->property_state,
-					&dither_sz,
-					CONNECTOR_PROP_PP_DITHER);
-	/* if user config data doesn't exist, use default dither blob */
-	if (*cfg == NULL && c_conn->blob_dither) {
-		*cfg = &c_conn->blob_dither->data;
-		dither_sz = c_conn->blob_dither->length;
+	is_dirty = msm_property_is_dirty(&c_conn->property_info,
+			&c_state->property_state,
+			CONNECTOR_PROP_PP_DITHER);
+
+	if (!is_dirty && !idle_pc) {
+		return -ENODATA;
+	} else if (is_dirty || idle_pc) {
+		*cfg = msm_property_get_blob(&c_conn->property_info,
+				&c_state->property_state,
+				&dither_sz,
+				CONNECTOR_PROP_PP_DITHER);
+		/*
+		 * In idle_pc use case return early, when dither is
+		 * already disabled.
+		 */
+		if (idle_pc && *cfg == NULL)
+			return -ENODATA;
+		/* disable dither based on user config data */
+		else if (*cfg == NULL)
+			return 0;
 	}
 	*len = dither_sz;
 	return 0;
@@ -1265,19 +1217,18 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 		c_conn->bl_scale_ad = val;
 		c_conn->bl_scale_dirty = true;
 		break;
+	case CONNECTOR_PROP_HDR_METADATA:
+		rc = _sde_connector_set_ext_hdr_info(c_conn,
+			c_state, (void __user *)(uintptr_t)val);
+		if (rc)
+			SDE_ERROR_CONN(c_conn, "cannot set hdr info %d\n", rc);
+		break;
 	case CONNECTOR_PROP_QSYNC_MODE:
 		msm_property_set_dirty(&c_conn->property_info,
 				&c_state->property_state, idx);
 		break;
 	default:
 		break;
-	}
-
-	if (idx == CONNECTOR_PROP_HDR_METADATA) {
-		rc = _sde_connector_set_ext_hdr_info(c_conn,
-			c_state, (void *)(uintptr_t)val);
-		if (rc)
-			SDE_ERROR_CONN(c_conn, "cannot set hdr info %d\n", rc);
 	}
 
 	/* check for custom property handling */
@@ -1882,16 +1833,18 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 	c_conn = to_sde_connector(connector);
 	c_state = to_sde_connector_state(new_conn_state);
 
-	crtc_state = drm_atomic_get_new_crtc_state(new_conn_state->state,
-						   new_conn_state->crtc);
+	if (new_conn_state->crtc) {
+		crtc_state = drm_atomic_get_new_crtc_state(
+			new_conn_state->state, new_conn_state->crtc);
 
-	qsync_dirty = msm_property_is_dirty(&c_conn->property_info,
+		qsync_dirty = msm_property_is_dirty(&c_conn->property_info,
 					&c_state->property_state,
 					CONNECTOR_PROP_QSYNC_MODE);
 
-	if (drm_atomic_crtc_needs_modeset(crtc_state) && qsync_dirty) {
-		SDE_ERROR("invalid qsync update during modeset\n");
-		return -EINVAL;
+		if (drm_atomic_crtc_needs_modeset(crtc_state) && qsync_dirty) {
+			SDE_ERROR("invalid qsync update during modeset\n");
+			return -EINVAL;
+		}
 	}
 
 	if (c_conn->ops.atomic_check)
@@ -2257,6 +2210,136 @@ exit:
 	return rc;
 }
 
+static int _sde_connector_install_properties(struct drm_device *dev,
+	struct sde_kms *sde_kms, struct sde_connector *c_conn,
+	int connector_type, void *display,
+	struct msm_display_info *display_info)
+{
+	struct dsi_display *dsi_display;
+	int rc;
+
+	msm_property_install_blob(&c_conn->property_info, "capabilities",
+			DRM_MODE_PROP_IMMUTABLE, CONNECTOR_PROP_SDE_INFO);
+
+	rc = sde_connector_set_blob_data(&c_conn->base,
+			NULL, CONNECTOR_PROP_SDE_INFO);
+	if (rc) {
+		SDE_ERROR_CONN(c_conn,
+			"failed to setup connector info, rc = %d\n", rc);
+		return rc;
+	}
+
+	msm_property_install_blob(&c_conn->property_info, "mode_properties",
+			DRM_MODE_PROP_IMMUTABLE, CONNECTOR_PROP_MODE_INFO);
+
+	if (connector_type == DRM_MODE_CONNECTOR_DSI) {
+		dsi_display = (struct dsi_display *)(display);
+		if (dsi_display && dsi_display->panel &&
+			dsi_display->panel->hdr_props.hdr_enabled == true) {
+			msm_property_install_blob(&c_conn->property_info,
+				"hdr_properties",
+				DRM_MODE_PROP_IMMUTABLE,
+				CONNECTOR_PROP_HDR_INFO);
+
+			msm_property_set_blob(&c_conn->property_info,
+				&c_conn->blob_hdr,
+				&dsi_display->panel->hdr_props,
+				sizeof(dsi_display->panel->hdr_props),
+				CONNECTOR_PROP_HDR_INFO);
+		}
+	}
+
+	msm_property_install_volatile_range(
+			&c_conn->property_info, "sde_drm_roi_v1", 0x0,
+			0, ~0, 0, CONNECTOR_PROP_ROI_V1);
+
+	/* install PP_DITHER properties */
+	_sde_connector_install_dither_property(dev, sde_kms, c_conn);
+
+	if (connector_type == DRM_MODE_CONNECTOR_DisplayPort) {
+		struct drm_msm_ext_hdr_properties hdr = {0};
+
+		msm_property_install_blob(&c_conn->property_info,
+				"ext_hdr_properties",
+				DRM_MODE_PROP_IMMUTABLE,
+				CONNECTOR_PROP_EXT_HDR_INFO);
+
+		/* set default values to avoid reading uninitialized data */
+		msm_property_set_blob(&c_conn->property_info,
+			      &c_conn->blob_ext_hdr,
+			      &hdr,
+			      sizeof(hdr),
+			      CONNECTOR_PROP_EXT_HDR_INFO);
+        /* register esd irq and enable it after panel enabled */
+        if (dsi_display && dsi_display->panel &&
+	    	    dsi_display->panel->esd_config.esd_err_irq_gpio > 0) {
+    	        rc = request_threaded_irq(dsi_display->panel->esd_config.esd_err_irq,
+            	    NULL, esd_err_irq_handle,
+                	dsi_display->panel->esd_config.esd_err_irq_flags,
+                   "esd_err_irq", c_conn);
+                if (rc < 0) {
+              		pr_err("%s: request irq %d failed\n", __func__, dsi_display->panel->esd_config.esd_err_irq);
+                    dsi_display->panel->esd_config.esd_err_irq = 0;
+                } else {
+          	    	pr_info("%s: Request esd irq succeed!\n", __func__);
+                }
+    	}
+	}
+
+	msm_property_install_volatile_range(&c_conn->property_info,
+		"hdr_metadata", 0x0, 0, ~0, 0, CONNECTOR_PROP_HDR_METADATA);
+
+	msm_property_install_volatile_range(&c_conn->property_info,
+		"RETIRE_FENCE", 0x0, 0, ~0, 0, CONNECTOR_PROP_RETIRE_FENCE);
+
+	msm_property_install_range(&c_conn->property_info, "autorefresh",
+			0x0, 0, AUTOREFRESH_MAX_FRAME_CNT, 0,
+			CONNECTOR_PROP_AUTOREFRESH);
+
+	if (connector_type == DRM_MODE_CONNECTOR_DSI) {
+		if (sde_kms->catalog->has_qsync && display_info->qsync_min_fps)
+			msm_property_install_enum(&c_conn->property_info,
+					"qsync_mode", 0, 0, e_qsync_mode,
+					ARRAY_SIZE(e_qsync_mode),
+					CONNECTOR_PROP_QSYNC_MODE);
+
+		if (display_info->capabilities & MSM_DISPLAY_CAP_CMD_MODE)
+			msm_property_install_enum(&c_conn->property_info,
+				"frame_trigger_mode", 0, 0,
+				e_frame_trigger_mode,
+				ARRAY_SIZE(e_frame_trigger_mode),
+				CONNECTOR_PROP_CMD_FRAME_TRIGGER_MODE);
+	}
+
+	msm_property_install_range(&c_conn->property_info, "bl_scale",
+		0x0, 0, MAX_BL_SCALE_LEVEL, MAX_BL_SCALE_LEVEL,
+		CONNECTOR_PROP_BL_SCALE);
+
+	msm_property_install_range(&c_conn->property_info, "ad_bl_scale",
+		0x0, 0, MAX_AD_BL_SCALE_LEVEL, MAX_AD_BL_SCALE_LEVEL,
+		CONNECTOR_PROP_AD_BL_SCALE);
+
+	c_conn->bl_scale_dirty = false;
+	c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
+	c_conn->bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;
+
+	/* enum/bitmask properties */
+	msm_property_install_enum(&c_conn->property_info, "topology_name",
+			DRM_MODE_PROP_IMMUTABLE, 0, e_topology_name,
+			ARRAY_SIZE(e_topology_name),
+			CONNECTOR_PROP_TOPOLOGY_NAME);
+	msm_property_install_enum(&c_conn->property_info, "topology_control",
+			0, 1, e_topology_control,
+			ARRAY_SIZE(e_topology_control),
+			CONNECTOR_PROP_TOPOLOGY_CONTROL);
+	msm_property_install_enum(&c_conn->property_info, "LP",
+			0, 0, e_power_mode,
+			ARRAY_SIZE(e_power_mode),
+			CONNECTOR_PROP_LP);
+
+	return 0;
+}
+
 struct drm_connector *sde_connector_init(struct drm_device *dev,
 		struct drm_encoder *encoder,
 		struct drm_panel *panel,
@@ -2268,7 +2351,6 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 	struct msm_drm_private *priv;
 	struct sde_kms *sde_kms;
 	struct sde_connector *c_conn = NULL;
-	struct dsi_display *dsi_display;
 	struct msm_display_info display_info;
 	int rc;
 	esd_irq_count = 0;
@@ -2376,60 +2458,6 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 		}
 	}
 
-	msm_property_install_blob(&c_conn->property_info,
-			"capabilities",
-			DRM_MODE_PROP_IMMUTABLE,
-			CONNECTOR_PROP_SDE_INFO);
-
-	rc = sde_connector_set_blob_data(&c_conn->base,
-			NULL,
-			CONNECTOR_PROP_SDE_INFO);
-	if (rc) {
-		SDE_ERROR_CONN(c_conn,
-			"failed to setup connector info, rc = %d\n", rc);
-		goto error_cleanup_fence;
-	}
-
-	msm_property_install_blob(&c_conn->property_info,
-			"mode_properties",
-			DRM_MODE_PROP_IMMUTABLE,
-			CONNECTOR_PROP_MODE_INFO);
-
-	if (connector_type == DRM_MODE_CONNECTOR_DSI) {
-		dsi_display = (struct dsi_display *)(display);
-		if (dsi_display && dsi_display->panel &&
-			dsi_display->panel->hdr_props.hdr_enabled == true) {
-			msm_property_install_blob(&c_conn->property_info,
-				"hdr_properties",
-				DRM_MODE_PROP_IMMUTABLE,
-				CONNECTOR_PROP_HDR_INFO);
-
-			msm_property_set_blob(&c_conn->property_info,
-				&c_conn->blob_hdr,
-				&dsi_display->panel->hdr_props,
-				sizeof(dsi_display->panel->hdr_props),
-				CONNECTOR_PROP_HDR_INFO);
-		}
-
-               /* register esd irq and enable it after panel enabled */
-               if (dsi_display && dsi_display->panel &&
-                       dsi_display->panel->esd_config.esd_err_irq_gpio > 0) {
-                       rc = request_threaded_irq(dsi_display->panel->esd_config.esd_err_irq,
-                                                       NULL, esd_err_irq_handle,
-                                                       dsi_display->panel->esd_config.esd_err_irq_flags,
-                                                       "esd_err_irq", c_conn);
-                       if (rc < 0) {
-                               pr_err("%s: request irq %d failed\n", __func__, dsi_display->panel->esd_config.esd_err_irq);
-                                       dsi_display->panel->esd_config.esd_err_irq = 0;
-                       } else {
-                               pr_info("%s: Request esd irq succeed!\n", __func__);
-                       }
-               }
-
-	}
-
-
-
 	rc = sde_connector_get_info(&c_conn->base, &display_info);
 	if (!rc && (connector_type == DRM_MODE_CONNECTOR_DSI) &&
 			(display_info.capabilities & MSM_DISPLAY_CAP_VID_MODE))
@@ -2438,73 +2466,10 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 			sde_connector_handle_disp_recovery,
 			c_conn);
 
-	msm_property_install_volatile_range(
-			&c_conn->property_info, "sde_drm_roi_v1", 0x0,
-			0, ~0, 0, CONNECTOR_PROP_ROI_V1);
-
-	/* install PP_DITHER properties */
-	_sde_connector_install_dither_property(dev, sde_kms, c_conn);
-
-	if (connector_type == DRM_MODE_CONNECTOR_DisplayPort) {
-		struct drm_msm_ext_hdr_properties hdr = {0};
-
-		c_conn->hdr_capable = true;
-
-		msm_property_install_blob(&c_conn->property_info,
-				"ext_hdr_properties",
-				DRM_MODE_PROP_IMMUTABLE,
-				CONNECTOR_PROP_EXT_HDR_INFO);
-
-		/* set default values to avoid reading uninitialized data */
-		msm_property_set_blob(&c_conn->property_info,
-			      &c_conn->blob_ext_hdr,
-			      &hdr,
-			      sizeof(hdr),
-			      CONNECTOR_PROP_EXT_HDR_INFO);
-	}
-
-	msm_property_install_volatile_range(&c_conn->property_info,
-		"hdr_metadata", 0x0, 0, ~0, 0, CONNECTOR_PROP_HDR_METADATA);
-
-	msm_property_install_volatile_range(&c_conn->property_info,
-		"RETIRE_FENCE", 0x0, 0, ~0, 0, CONNECTOR_PROP_RETIRE_FENCE);
-
-	msm_property_install_range(&c_conn->property_info, "autorefresh",
-			0x0, 0, AUTOREFRESH_MAX_FRAME_CNT, 0,
-			CONNECTOR_PROP_AUTOREFRESH);
-
-	if (connector_type == DRM_MODE_CONNECTOR_DSI &&
-			sde_kms->catalog->has_qsync &&
-			display_info.qsync_min_fps)
-		msm_property_install_enum(&c_conn->property_info, "qsync_mode",
-				0, 0, e_qsync_mode, ARRAY_SIZE(e_qsync_mode),
-				CONNECTOR_PROP_QSYNC_MODE);
-
-	msm_property_install_range(&c_conn->property_info, "bl_scale",
-		0x0, 0, MAX_BL_SCALE_LEVEL, MAX_BL_SCALE_LEVEL,
-		CONNECTOR_PROP_BL_SCALE);
-
-	msm_property_install_range(&c_conn->property_info, "ad_bl_scale",
-		0x0, 0, MAX_AD_BL_SCALE_LEVEL, MAX_AD_BL_SCALE_LEVEL,
-		CONNECTOR_PROP_AD_BL_SCALE);
-
-	c_conn->bl_scale_dirty = false;
-	c_conn->bl_scale = MAX_BL_SCALE_LEVEL;
-	c_conn->bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;
-
-	/* enum/bitmask properties */
-	msm_property_install_enum(&c_conn->property_info, "topology_name",
-			DRM_MODE_PROP_IMMUTABLE, 0, e_topology_name,
-			ARRAY_SIZE(e_topology_name),
-			CONNECTOR_PROP_TOPOLOGY_NAME);
-	msm_property_install_enum(&c_conn->property_info, "topology_control",
-			0, 1, e_topology_control,
-			ARRAY_SIZE(e_topology_control),
-			CONNECTOR_PROP_TOPOLOGY_CONTROL);
-	msm_property_install_enum(&c_conn->property_info, "LP",
-			0, 0, e_power_mode,
-			ARRAY_SIZE(e_power_mode),
-			CONNECTOR_PROP_LP);
+	rc = _sde_connector_install_properties(dev, sde_kms, c_conn,
+		connector_type, display, &display_info);
+	if (rc)
+		goto error_cleanup_fence;
 
 	rc = msm_property_install_get_status(&c_conn->property_info);
 	if (rc) {

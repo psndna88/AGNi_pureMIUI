@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -142,6 +142,7 @@
 #define DIAG_GET_TIME_API	0x21B
 #define DIAG_SET_TIME_API	0x21C
 #define DIAG_GET_DIAG_ID	0x222
+#define DIAG_QUERY_TRANSPORT	0x223
 #define DIAG_SWITCH_COMMAND	0x081B
 #define DIAG_BUFFERING_MODE	0x080C
 
@@ -208,6 +209,11 @@
 
 #define DEFAULT_LOW_WM_VAL	15
 #define DEFAULT_HIGH_WM_VAL	85
+
+#define HDLC_CTXT		1
+#define NON_HDLC_CTXT	2
+
+#define PKT_PROCESS_TIMEOUT		200
 
 #define TYPE_DATA		0
 #define TYPE_CNTL		1
@@ -312,8 +318,10 @@ do {						\
 #define DIAG_ID_UNKNOWN		0
 #define DIAG_ID_APPS		1
 
-#define DIAG_ROUTE_TO_USB 0
-#define DIAG_ROUTE_TO_PCIE 1
+#define DIAG_ROUTE_TO_UART	1
+#define DIAG_ROUTE_TO_USB	2
+#define DIAG_ROUTE_TO_PCIE	3
+
 /* List of remote processor supported */
 enum remote_procs {
 	MDM = 1,
@@ -637,6 +645,7 @@ struct diagchar_dev {
 	struct list_head diag_id_list;
 	struct mutex diag_id_mutex;
 	struct mutex cmd_reg_mutex;
+	spinlock_t dci_mempool_lock;
 	uint32_t cmd_reg_count;
 	struct mutex diagfwd_channel_mutex[NUM_PERIPHERALS];
 	int transport_set;

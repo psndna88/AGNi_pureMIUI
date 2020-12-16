@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -190,11 +190,14 @@
 			<&mdss_dsi0_pll CPHY_BYTECLK_SRC_0_CLK>,
 			<&mdss_dsi0_pll CPHY_PCLK_SRC_0_CLK>,
 			 <&mdss_dsi0_pll SHADOW_BYTECLK_SRC_0_CLK>,
-			 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>;
+			 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>,
+			<&mdss_dsi0_pll SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+			<&mdss_dsi0_pll SHADOW_CPHY_PCLK_SRC_0_CLK>;
 		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 				"src_byte_clk0", "src_pixel_clk0",
 				"cphy_byte_clk0", "cphy_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
+				"shadow_byte_clk0", "shadow_pixel_clk0",
+				"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend";
 		pinctrl-0 = <&sde_te_active &disp_pins_default>;
