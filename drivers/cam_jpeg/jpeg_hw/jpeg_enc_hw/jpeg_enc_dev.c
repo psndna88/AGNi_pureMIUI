@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -66,8 +66,10 @@ static int cam_jpeg_enc_component_bind(struct device *dev,
 	const struct of_device_id *match_dev = NULL;
 	struct cam_jpeg_enc_device_core_info *core_info = NULL;
 	struct cam_jpeg_enc_device_hw_info *hw_info = NULL;
-	int rc;
 	struct platform_device *pdev = to_platform_device(dev);
+	struct cam_jpeg_enc_soc_private  *soc_private;
+	int i;
+	int rc;
 
 	jpeg_enc_dev_intf = kzalloc(sizeof(struct cam_hw_intf), GFP_KERNEL);
 	if (!jpeg_enc_dev_intf)
@@ -135,6 +137,16 @@ static int cam_jpeg_enc_component_bind(struct device *dev,
 	spin_lock_init(&jpeg_enc_dev->hw_lock);
 	init_completion(&jpeg_enc_dev->hw_complete);
 	CAM_DBG(CAM_JPEG, "JPEG-Encoder component bound successfully");
+
+	soc_private = (struct cam_jpeg_enc_soc_private  *)
+		jpeg_enc_dev->soc_info.soc_private;
+
+	core_info->num_pid = soc_private->num_pid;
+	for (i = 0; i < soc_private->num_pid; i++)
+		core_info->pid[i] = soc_private->pid[i];
+
+	core_info->rd_mid = soc_private->rd_mid;
+	core_info->wr_mid = soc_private->wr_mid;
 
 	return rc;
 

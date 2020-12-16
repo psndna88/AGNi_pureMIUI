@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_JPEG_HW_INTF_H
@@ -17,6 +17,7 @@
 
 #define CAM_JPEG_HW_DUMP_TAG_MAX_LEN 32
 #define CAM_JPEG_HW_DUMP_NUM_WORDS   5
+#define CAM_JPEG_HW_MAX_NUM_PID      2
 
 enum cam_jpeg_hw_type {
 	CAM_JPEG_DEV_ENC,
@@ -43,10 +44,19 @@ struct cam_jpeg_hw_dump_header {
 	uint32_t    word_size;
 };
 
+struct cam_jpeg_match_pid_args {
+	uint32_t    pid;
+	uint32_t    fault_mid;
+	bool        pid_match_found;
+	uint32_t    match_res;
+};
+
 enum cam_jpeg_cmd_type {
 	CAM_JPEG_CMD_CDM_CFG,
 	CAM_JPEG_CMD_SET_IRQ_CB,
 	CAM_JPEG_CMD_HW_DUMP,
+	CAM_JPEG_CMD_GET_NUM_PID,
+	CAM_JPEG_CMD_MATCH_PID_MID,
 	CAM_JPEG_CMD_MAX,
 };
 
