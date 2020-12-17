@@ -1,4 +1,5 @@
-/* Copyright (c) 2010-2018, 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2018, 2020-2021,
+ * The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1910,7 +1911,7 @@ static int hdmi_tx_init_cec_hw(struct hdmi_tx_ctrl *hdmi_ctrl)
 	cec_init_data.pinfo = &hdmi_ctrl->panel_data.panel_info;
 	cec_init_data.ops = &hdmi_ctrl->hdmi_cec_ops;
 	cec_init_data.cbs = &hdmi_ctrl->hdmi_cec_cbs;
-
+	cec_init_data.dev = &hdmi_ctrl->pdev->dev;
 	cec_hw_data = hdmi_cec_init(&cec_init_data);
 	if (IS_ERR_OR_NULL(cec_hw_data)) {
 		DEV_ERR("%s: cec init failed\n", __func__);
@@ -1919,29 +1920,6 @@ static int hdmi_tx_init_cec_hw(struct hdmi_tx_ctrl *hdmi_ctrl)
 		hdmi_ctrl->panel_data.panel_info.is_cec_supported = true;
 		hdmi_tx_set_fd(HDMI_TX_FEAT_CEC_HW, cec_hw_data);
 		DEV_DBG("%s: cec hw initialized\n", __func__);
-	}
-
-	return rc;
-}
-
-static int hdmi_tx_init_cec_abst(struct hdmi_tx_ctrl *hdmi_ctrl)
-{
-	struct cec_abstract_init_data cec_abst_init_data = {0};
-	void *cec_abst_data;
-	int rc = 0;
-
-	cec_abst_init_data.kobj  = hdmi_ctrl->kobj;
-	cec_abst_init_data.ops   = &hdmi_ctrl->hdmi_cec_ops;
-	cec_abst_init_data.cbs   = &hdmi_ctrl->hdmi_cec_cbs;
-
-	cec_abst_data = cec_abstract_init(&cec_abst_init_data);
-	if (IS_ERR_OR_NULL(cec_abst_data)) {
-		DEV_ERR("%s: cec abst init failed\n", __func__);
-		rc = -EINVAL;
-	} else {
-		hdmi_tx_set_fd(HDMI_TX_FEAT_CEC_ABST, cec_abst_data);
-		hdmi_ctrl->panel_data.panel_info.cec_data = cec_abst_data;
-		DEV_DBG("%s: cec abst initialized\n", __func__);
 	}
 
 	return rc;
@@ -2088,15 +2066,6 @@ static void hdmi_tx_deinit_features(struct hdmi_tx_ctrl *hdmi_ctrl,
 {
 	void *fd;
 
-	if (features & HDMI_TX_FEAT_CEC_ABST) {
-		fd = hdmi_tx_get_fd(HDMI_TX_FEAT_CEC_ABST);
-
-		cec_abstract_deinit(fd);
-
-		hdmi_ctrl->panel_data.panel_info.cec_data = NULL;
-		hdmi_tx_set_fd(HDMI_TX_FEAT_CEC_ABST, 0);
-	}
-
 	if (features & HDMI_TX_FEAT_CEC_HW) {
 		fd = hdmi_tx_get_fd(HDMI_TX_FEAT_CEC_HW);
 
@@ -2166,12 +2135,6 @@ static int hdmi_tx_init_features(struct hdmi_tx_ctrl *hdmi_ctrl,
 	ret = hdmi_tx_init_cec_hw(hdmi_ctrl);
 	if (ret) {
 		deinit_features |= HDMI_TX_FEAT_HDCP;
-		goto err;
-	}
-
-	ret = hdmi_tx_init_cec_abst(hdmi_ctrl);
-	if (ret) {
-		deinit_features |= HDMI_TX_FEAT_CEC_HW;
 		goto err;
 	}
 
