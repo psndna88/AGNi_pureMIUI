@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020, The Linux foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -393,9 +394,6 @@ static int msm_geni_serial_ioctl(struct uart_port *uport, unsigned int cmd,
 	int ret;
 
 	mutex_lock(&port->ioctl_mutex);
-
-	if (port->pm_auto_suspend_disable)
-		return ret;
 
 	switch (cmd) {
 	case TIOCPMGET:
@@ -1774,11 +1772,6 @@ static void msm_geni_serial_shutdown(struct uart_port *uport)
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 	unsigned long flags;
 	int ret;
-
-	if (!uart_console(uport)) {
-		msm_geni_serial_power_on(uport);
-		wait_for_transfers_inflight(uport);
-	}
 
 	disable_irq(uport->irq);
 	free_irq(uport->irq, uport);
