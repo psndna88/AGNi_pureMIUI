@@ -68,6 +68,7 @@ config FB_MSM_MDSS_HDMI_PANEL
 	bool "MDSS HDMI Tx Panel"
 	depends on FB_MSM_MDSS
 	select MSM_EXT_DISPLAY
+	select CEC_CORE
 	default n
 	---help---
 	The MDSS HDMI Panel provides support for transmitting TMDS signals of
