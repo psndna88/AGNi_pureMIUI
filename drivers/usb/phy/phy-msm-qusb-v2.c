@@ -491,6 +491,10 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 	/* Require to get phy pll lock successfully */
 	usleep_range(150, 160);
 
+	reg = readb_relaxed(qphy->base + qphy->phy_reg[PORT_TUNE1]);
+	dev_dbg(phy->dev, "tune1= %x\n", reg);
+	reg = readb_relaxed(qphy->base + qphy->phy_reg[BIAS_CTRL_2]);
+	dev_dbg(phy->dev, "bias_ctrl2= %x\n", reg);
 	reg = readb_relaxed(qphy->base + qphy->phy_reg[PLL_COMMON_STATUS_ONE]);
 	dev_dbg(phy->dev, "QUSB2PHY_PLL_COMMON_STATUS_ONE:%x\n", reg);
 	if (!(reg & CORE_READY_STATUS)) {
