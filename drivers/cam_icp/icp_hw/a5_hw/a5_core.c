@@ -709,6 +709,9 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 			if (*disable_ubwc_comp) {
 				ubwc_ipe_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
 				ubwc_bps_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
+				CAM_DBG(CAM_ICP,
+					"Force disable UBWC compression, ubwc_ipe_cfg: 0x%x, ubwc_bps_cfg: 0x%x",
+					ubwc_ipe_cfg[1], ubwc_bps_cfg[1]);
 			}
 			rc = hfi_cmd_ubwc_config_ext(&ubwc_ipe_cfg[0],
 					&ubwc_bps_cfg[0]);
