@@ -722,7 +722,6 @@
 
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
-		status = "disabled";
 	};
 
 	qcom,msm-imem@146aa000 {
