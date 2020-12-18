@@ -1364,11 +1364,12 @@ null_buf:
 }
 
 void
-lim_send_assoc_rsp_mgmt_frame(
-	struct mac_context *mac_ctx,
-	uint16_t status_code, uint16_t aid, tSirMacAddr peer_addr,
-	uint8_t subtype, tpDphHashNode sta, struct pe_session *pe_session,
-	bool tx_complete)
+lim_send_assoc_rsp_mgmt_frame(struct mac_context *mac_ctx,
+			      uint16_t status_code, uint16_t aid,
+			      tSirMacAddr peer_addr,
+			      uint8_t subtype, tpDphHashNode sta,
+			      struct pe_session *pe_session,
+			      bool tx_complete)
 {
 	static tDot11fAssocResponse frm;
 	uint8_t *frame;
@@ -1382,7 +1383,7 @@ lim_send_assoc_rsp_mgmt_frame(
 	tUpdateBeaconParams beacon_params;
 	uint8_t tx_flag = 0;
 	uint32_t addn_ie_len = 0;
-	uint8_t add_ie[WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN];
+	uint8_t *add_ie;
 	tpSirAssocReq assoc_req = NULL;
 	uint8_t sme_session = 0;
 	bool is_vht = false;
@@ -1595,6 +1596,10 @@ lim_send_assoc_rsp_mgmt_frame(
 
 	lim_obss_send_detection_cfg(mac_ctx, pe_session, false);
 
+	add_ie = qdf_mem_malloc(WNI_CFG_ASSOC_RSP_ADDNIE_DATA_LEN);
+	if (!add_ie)
+		return;
+
 	if (assoc_req) {
 		addn_ie_len = pe_session->add_ie_params.assocRespDataLen;
 
@@ -1640,7 +1645,7 @@ lim_send_assoc_rsp_mgmt_frame(
 	if (DOT11F_FAILED(status)) {
 		pe_err("get Association Response size failure (0x%08x)",
 			status);
-		return;
+		goto error;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("get Association Response size warning (0x%08x)",
 			status);
@@ -1655,7 +1660,7 @@ lim_send_assoc_rsp_mgmt_frame(
 				      (void **)&packet);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
 		pe_err("cds_packet_alloc failed");
-		return;
+		goto error;
 	}
 	/* Paranoia: */
 	qdf_mem_zero(frame, bytes);
@@ -1677,7 +1682,7 @@ lim_send_assoc_rsp_mgmt_frame(
 		pe_err("Association Response pack failure(0x%08x)",
 			status);
 		cds_packet_free((void *)packet);
-		return;
+		goto error;
 	} else if (DOT11F_WARNED(status)) {
 		pe_warn("Association Response pack warning (0x%08x)",
 			status);
@@ -1737,7 +1742,8 @@ lim_send_assoc_rsp_mgmt_frame(
 	 * counter inside this function.
 	 */
 	lim_util_count_sta_add(mac_ctx, sta, pe_session);
-
+error:
+	qdf_mem_free(add_ie);
 }
 
 void
