@@ -454,3 +454,4 @@
 # 438 reserved for pidfd_getfd
 # 439 reserved for faccessat2
 440	common	process_madvise			sys_process_madvise
+441	common	epoll_pwait2			sys_epoll_pwait2
