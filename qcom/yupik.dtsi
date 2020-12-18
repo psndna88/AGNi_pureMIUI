@@ -1777,6 +1777,14 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "cdsp-pil";
 	};
+
+	qcom,rmtfs_sharedmem@0 {
+		compatible = "qcom,sharedmem-uio";
+		reg = <0x0 0x280000>;
+		reg-names = "rmtfs";
+		qcom,client-id = <0x00000001>;
+		qcom,vm-nav-path;
+	};
 };
 
 #include "shima-gdsc.dtsi"
