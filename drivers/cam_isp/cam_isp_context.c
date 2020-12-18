@@ -1776,6 +1776,7 @@ static int __cam_isp_ctx_notify_sof_in_activated_state(
 					"CDM callback not happened for req: %lld, possible CDM stuck or workqueue delay",
 					req->request_id);
 				req_isp->num_acked = 0;
+				req_isp->num_deferred_acks = 0;
 				ctx_isp->bubble_frame_cnt = 0;
 				req_isp->bubble_detected = false;
 				req_isp->cdm_reset_before_apply = true;
