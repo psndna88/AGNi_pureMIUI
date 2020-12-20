@@ -7586,6 +7586,29 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_client_privacy(struct sigma_dut *dut,
+				  struct sigma_conn *conn, const char *intf,
+				  int enable)
+{
+	if (enable &&
+	    (wpa_command(intf, "SET mac_addr 1") < 0 ||
+	     wpa_command(intf, "SET rand_addr_lifetime 1") < 0 ||
+	     wpa_command(intf, "SET preassoc_mac_addr 1") < 0 ||
+	     wpa_command(intf, "SET gas_rand_mac_addr 1") < 0 ||
+	     wpa_command(intf, "SET gas_rand_addr_lifetime 1") < 0))
+		return -1;
+
+	if (!enable &&
+	    (wpa_command(intf, "SET mac_addr 0") < 0 ||
+	     wpa_command(intf, "SET preassoc_mac_addr 0") < 0 ||
+	     wpa_command(intf, "SET gas_rand_mac_addr 0") < 0))
+		return -1;
+
+	dut->client_privacy = enable;
+	return 0;
+}
+
+
 static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 						   struct sigma_conn *conn,
 						   struct sigma_cmd *cmd)
@@ -7858,7 +7881,16 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 			       sizeof(resp));
 	dut->beacon_prot = ret == 0 && strncmp(resp, "supported", 9) == 0;
 
-	dut->client_privacy = 0;
+	if (sta_set_client_privacy(dut, conn, intf,
+				   dut->program == PROGRAM_WPA3 &&
+				   dut->device_type == STA_dut &&
+				   dut->client_privacy_default)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to set client privacy functionality");
+		/* sta_reset_default command is not really supposed to fail,
+		 * so allow this to continue. */
+	}
+
 	dut->saquery_oci_freq = 0;
 
 	if (dut->program != PROGRAM_VHT)
@@ -9153,18 +9185,11 @@ sta_set_wireless_wpa3(struct sigma_dut *dut, struct sigma_conn *conn,
 		dut->ocvc = atoi(val);
 
 	val = get_param(cmd, "ClientPrivacy");
-	if (val) {
-		dut->client_privacy = atoi(val);
-		if (dut->client_privacy &&
-		    (wpa_command(intf, "SET mac_addr 1") < 0 ||
-		     wpa_command(intf, "SET rand_addr_lifetime 1") < 0 ||
-		     wpa_command(intf, "SET preassoc_mac_addr 1") < 0 ||
-		     wpa_command(intf, "SET gas_rand_mac_addr 1") < 0 ||
-		     wpa_command(intf, "SET gas_rand_addr_lifetime 1") < 0)) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "errorCode,Failed to enable random MAC address use");
-			return STATUS_SENT_ERROR;
-		}
+	if (val && dut->client_privacy != atoi(val) &&
+	    sta_set_client_privacy(dut, conn, intf, atoi(val))) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "errorCode,Failed to configure random MAC address use");
+		return STATUS_SENT_ERROR;
 	}
 
 	return cmd_sta_set_wireless_common(intf, dut, conn, cmd);

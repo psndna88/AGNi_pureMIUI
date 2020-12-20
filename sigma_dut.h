@@ -968,6 +968,7 @@ struct sigma_dut {
 	int ocvc;
 	int beacon_prot;
 	int client_privacy;
+	int client_privacy_default;
 	int saquery_oci_freq;
 	char device_driver[32];
 };
