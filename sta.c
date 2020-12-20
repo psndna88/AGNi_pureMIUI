@@ -7593,14 +7593,16 @@ static int sta_set_client_privacy(struct sigma_dut *dut,
 	if (enable &&
 	    (wpa_command(intf, "SET mac_addr 1") < 0 ||
 	     wpa_command(intf, "SET rand_addr_lifetime 1") < 0 ||
-	     wpa_command(intf, "SET preassoc_mac_addr 1") < 0 ||
+	     (wpa_command(intf, "MAC_RAND_SCAN enable=1 all") < 0 &&
+	      wpa_command(intf, "SET preassoc_mac_addr 1") < 0) ||
 	     wpa_command(intf, "SET gas_rand_mac_addr 1") < 0 ||
 	     wpa_command(intf, "SET gas_rand_addr_lifetime 1") < 0))
 		return -1;
 
 	if (!enable &&
 	    (wpa_command(intf, "SET mac_addr 0") < 0 ||
-	     wpa_command(intf, "SET preassoc_mac_addr 0") < 0 ||
+	     (wpa_command(intf, "MAC_RAND_SCAN enable=0 all") < 0 &&
+	      wpa_command(intf, "SET preassoc_mac_addr 0") < 0) ||
 	     wpa_command(intf, "SET gas_rand_mac_addr 0") < 0))
 		return -1;
 
