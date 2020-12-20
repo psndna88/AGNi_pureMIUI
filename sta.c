@@ -2100,6 +2100,9 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	    set_network(ifname, id, "beacon_prot", "1") < 0)
 		return ERROR_SEND_STATUS;
 
+	if (dut->ocvc && set_network(ifname, id, "ocv", "1") < 0)
+		return ERROR_SEND_STATUS;
+
 	return id;
 }
 
@@ -3581,11 +3584,6 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 	if (wps_param &&
 	    (strcmp(wps_param, "1") == 0 || strcasecmp(wps_param, "On") == 0))
 		wps = 1;
-
-	if (dut->ocvc &&
-	    set_network(get_station_ifname(dut), dut->infra_network_id,
-			"ocv", "1") < 0)
-		return ERROR_SEND_STATUS;
 
 	if (wps) {
 		if (dut->program == PROGRAM_60GHZ && network_mode &&
