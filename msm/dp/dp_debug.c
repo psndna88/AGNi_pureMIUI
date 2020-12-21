@@ -520,10 +520,10 @@ static ssize_t dp_debug_write_mst_con_id(struct file *file,
 	debug->dp_debug.mst_hpd_sim = true;
 
 	if (status == connector_status_connected) {
-		DP_INFO("plug mst connector\n", con_id, status);
+		DP_INFO("plug mst connector %d\n", con_id);
 		debug->dp_debug.mst_sim_add_con = true;
 	} else {
-		DP_INFO("unplug mst connector %d\n", con_id, status);
+		DP_INFO("unplug mst connector %d\n", con_id);
 	}
 
 	debug->hpd->simulate_attention(debug->hpd, vdo);
