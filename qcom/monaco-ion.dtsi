@@ -1,3 +1,4 @@
+#include <dt-bindings/arm/msm/msm_ion_ids.h>
 &soc {
 	qcom,ion {
 		compatible = "qcom,msm-ion";
