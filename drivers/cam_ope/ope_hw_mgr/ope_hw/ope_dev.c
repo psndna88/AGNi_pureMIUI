@@ -21,8 +21,9 @@
 #include "ope_dev_intf.h"
 #include "camera_main.h"
 
+static struct cam_ope_hw_intf_data cam_ope_dev_list[OPE_DEV_MAX];
 static struct cam_ope_device_hw_info ope_hw_info;
-static struct ope_dev_soc ope_soc_info;
+static struct cam_ope_soc_private ope_soc_info;
 EXPORT_SYMBOL(ope_soc_info);
 
 static struct hw_version_reg ope_hw_version_reg = {
@@ -115,10 +116,13 @@ static int cam_ope_component_bind(struct device *dev,
 	struct cam_hw_info                *ope_dev = NULL;
 	const struct of_device_id         *match_dev = NULL;
 	struct cam_ope_device_core_info   *core_info = NULL;
-	int                                rc = 0;
+	struct cam_ope_dev_probe           ope_probe;
+	struct cam_ope_cpas_vote           cpas_vote;
+	struct cam_ope_soc_private        *soc_private;
+	int i;
 	uint32_t hw_idx;
-	struct cam_ope_dev_probe ope_probe;
-	struct cam_ope_cpas_vote cpas_vote;
+	int rc = 0;
+
 	struct platform_device *pdev = to_platform_device(dev);
 
 	of_property_read_u32(pdev->dev.of_node,
@@ -156,7 +160,12 @@ static int cam_ope_component_bind(struct device *dev,
 		ope_dev_intf->hw_type,
 		ope_dev_intf->hw_idx);
 
+	if (ope_dev_intf->hw_idx < OPE_DEV_MAX)
+		cam_ope_dev_list[ope_dev_intf->hw_idx].hw_intf =
+			ope_dev_intf;
+
 	platform_set_drvdata(pdev, ope_dev_intf);
+
 
 	ope_dev->core_info = kzalloc(sizeof(struct cam_ope_device_core_info),
 		GFP_KERNEL);
@@ -232,6 +241,14 @@ static int cam_ope_component_bind(struct device *dev,
 
 	CAM_DBG(CAM_OPE, "OPE:%d component bound successfully",
 		ope_dev_intf->hw_idx);
+	soc_private = ope_dev->soc_info.soc_private;
+	cam_ope_dev_list[ope_dev_intf->hw_idx].num_hw_pid =
+		soc_private->num_pid;
+
+	for (i = 0; i < soc_private->num_pid; i++)
+		cam_ope_dev_list[ope_dev_intf->hw_idx].hw_pid[i] =
+			soc_private->pid[i];
+
 	return rc;
 
 init_hw_failure:
@@ -255,6 +272,21 @@ static void cam_ope_component_unbind(struct device *dev,
 	CAM_DBG(CAM_OPE, "Unbinding component: %s", pdev->name);
 }
 
+int cam_ope_hw_init(struct cam_ope_hw_intf_data **ope_hw_intf_data,
+		uint32_t hw_idx)
+{
+	int rc = 0;
+
+	if (cam_ope_dev_list[hw_idx].hw_intf) {
+		*ope_hw_intf_data = &cam_ope_dev_list[hw_idx];
+		rc = 0;
+	} else {
+		CAM_ERR(CAM_OPE, "inval param");
+		*ope_hw_intf_data = NULL;
+		rc = -ENODEV;
+	}
+	return rc;
+}
 
 const static struct component_ops cam_ope_component_ops = {
 	.bind = cam_ope_component_bind,

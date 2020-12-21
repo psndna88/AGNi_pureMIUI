@@ -9,6 +9,7 @@
 #define OPE_BUS_RD_TYPE_BAYER            0x0
 #define OPE_BUS_RD_TYPE_YUV_Y            0x0
 #define OPE_BUS_RD_TYPE_YUC_C            0x1
+#define OPE_BUS_RD_TYPE_CDM              0x2
 
 #define OPE_BUS_WR_TYPE_VID_Y            0x0
 #define OPE_BUS_WR_TYPE_VID_C            0x1
@@ -18,6 +19,81 @@
 #define OPE_BUS_WR_TYPE_RS               0x5
 #define OPE_BUS_WR_TYPE_IHIST            0x6
 #define OPE_BUS_WR_TYPE_LTM              0x7
+
+static struct cam_ope_pid_mid_info g_ope_mid_info[OPE_DEV_MAX][MAX_RW_CLIENTS] = {
+	{
+		{
+			.cam_ope_res_type = OPE_IN_RES_FULL,
+			.pid = 0,
+			.mid = 0,
+			.read = true,
+		},
+		{
+			.cam_ope_res_type = OPE_IN_RES_FULL,
+			.pid = 0,
+			.mid = 1,
+			.read = true,
+		},
+		{
+			.cam_ope_res_type = OPE_IN_RES_FULL,
+			.pid = 0,
+			.mid = 2,
+			.read = true,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_VIDEO,
+			.pid = 1,
+			.mid = 16,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_VIDEO,
+			.pid = 1,
+			.mid = 17,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_DISP,
+			.pid = 1,
+			.mid = 18,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_DISP,
+			.pid = 1,
+			.mid = 19,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_ARGB,
+			.pid = 1,
+			.mid = 20,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_STATS_RS,
+			.pid = 1,
+			.mid = 21,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_STATS_IHIST,
+			.pid = 1,
+			.mid = 22,
+			.read = false,
+		},
+		{
+			.cam_ope_res_type = OPE_OUT_RES_STATS_LTM,
+			.pid = 1,
+			.mid = 23,
+			.read = false,
+		},
+	},
+};
+
+static struct cam_ope_common common_data = {
+	.ope_mid_info = g_ope_mid_info,
+};
 
 enum cam_ope_bus_rd_unpacker_format {
 	BUS_RD_VER1_PACKER_FMT_PLAIN_128_BYPASS            = 0x0,
@@ -100,8 +176,8 @@ static struct cam_ope_top_reg_val ope_top_reg_val = {
 	.incr_mask     = 0xF0000000,
 	.incr_shift    = 0x1B,
 	.irq_mask      = 0x0000000F,
-	.sw_reset_cmd     = 0x2,
-	.hw_reset_cmd     = 0x1,
+	.sw_reset_cmd  = 0x2,
+	.hw_reset_cmd  = 0x1,
 	.irq_set_clear = 0x1,
 	.rst_done      = 0x1,
 	.we_done       = 0x2,
@@ -657,6 +733,7 @@ static struct ope_hw ope_hw_100 = {
 	.bus_wr_reg  = &ope_bus_wr_reg,
 	.bus_wr_reg_val  = &ope_bus_wr_reg_val,
 	.pp_reg  = &ope_pp_reg,
+	.common  = &common_data,
 };
 
 #endif /* CAM_OPE_HW_100_H */

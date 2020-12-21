@@ -3627,7 +3627,7 @@ static int cam_vfe_bus_get_res_for_mid(
 {
 	struct cam_vfe_bus_ver2_vfe_out_data   *out_data = NULL;
 	struct cam_isp_hw_get_cmd_update       *cmd_update = cmd_args;
-	struct cam_isp_hw_get_res_for_mid       *get_res = NULL;
+	struct cam_isp_hw_get_res_for_mid      *get_res = NULL;
 	int i, j;
 
 	get_res = (struct cam_isp_hw_get_res_for_mid *)cmd_update->data;
