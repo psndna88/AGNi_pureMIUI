@@ -48,7 +48,6 @@ enum cam_isp_hw_event_type {
 	CAM_ISP_HW_EVENT_MAX
 };
 
-
 /**
  * enum cam_isp_hw_err_type - Collection of the ISP error types for
  *                         ISP hardware event CAM_ISP_HW_EVENT_ERROR
@@ -241,6 +240,7 @@ enum cam_isp_hw_mgr_command {
 	CAM_ISP_HW_MGR_CMD_CTX_TYPE,
 	CAM_ISP_HW_MGR_GET_PACKET_OPCODE,
 	CAM_ISP_HW_MGR_GET_LAST_CDM_DONE,
+	CAM_ISP_HW_MGR_CMD_UPDATE_CLOCK,
 	CAM_ISP_HW_MGR_CMD_MAX,
 };
 

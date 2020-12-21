@@ -406,6 +406,19 @@ long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
 	uint32_t clk_index, unsigned long clk_rate);
 
 /**
+ * cam_soc_util_get_clk_rate()
+ *
+ * @brief:              Get the rate on the source clock.
+ * @clk:                Src clock reference pointer to get clock rate
+ * @clk_name:           Name of src clock
+ * @clk_rate:           Clock rate associated with the src clk
+ *
+ * @return:             success or failure
+ */
+int cam_soc_util_get_clk_rate(struct clk *clk, const char *clk_name,
+	uint32_t *clk_rate);
+
+/**
  * cam_soc_util_set_src_clk_rate()
  *
  * @brief:              Set the rate on the source clock.

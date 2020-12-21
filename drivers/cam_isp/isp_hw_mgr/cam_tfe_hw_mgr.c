@@ -306,6 +306,82 @@ err:
 	return rc;
 }
 
+static int cam_tfe_hw_mgr_get_clock_rate(
+	struct cam_isp_hw_mgr_res   *isp_hw_res,
+	uint32_t                    *get_clock_rate)
+{
+	int i;
+	int rc = -EINVAL;
+	struct cam_hw_intf      *hw_intf;
+
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		if (!isp_hw_res->hw_res[i])
+			continue;
+
+		hw_intf = isp_hw_res->hw_res[i]->hw_intf;
+		CAM_DBG(CAM_ISP, "hw type %d hw index:%d",
+			hw_intf->hw_type, hw_intf->hw_idx);
+		if (hw_intf && hw_intf->hw_ops.process_cmd) {
+			rc = hw_intf->hw_ops.process_cmd(
+				hw_intf->hw_priv,
+				CAM_ISP_HW_CMD_GET_CLOCK_RATE,
+				get_clock_rate,
+				sizeof(uint32_t));
+			if (rc) {
+				CAM_ERR(CAM_ISP, "Failed to get Clock rate");
+				return rc;
+			}
+		}
+	}
+
+	return rc;
+}
+
+static int cam_tfe_hw_mgr_update_clock_rate(
+	struct cam_isp_hw_mgr_res   *isp_hw_res,
+	uint32_t                    *set_clock_rate,
+	uint32_t                    *updated_clock_rate)
+{
+	int i;
+	int rc = 0;
+	struct cam_hw_intf      *hw_intf;
+
+	for (i = 0; i < CAM_ISP_HW_SPLIT_MAX; i++) {
+		if (!isp_hw_res->hw_res[i])
+			continue;
+
+		hw_intf = isp_hw_res->hw_res[i]->hw_intf;
+		CAM_DBG(CAM_ISP, "hw type %d hw index:%d",
+			hw_intf->hw_type, hw_intf->hw_idx);
+
+		if (hw_intf && hw_intf->hw_ops.process_cmd) {
+			rc = hw_intf->hw_ops.process_cmd(
+				hw_intf->hw_priv,
+				CAM_ISP_HW_CMD_DYNAMIC_CLOCK_UPDATE,
+				set_clock_rate,
+				sizeof(uint32_t));
+			if (rc) {
+				CAM_ERR(CAM_ISP, "Failed to get Clock rate");
+				return rc;
+			}
+		}
+
+		if (hw_intf && hw_intf->hw_ops.process_cmd) {
+			rc = hw_intf->hw_ops.process_cmd(
+				hw_intf->hw_priv,
+				CAM_ISP_HW_CMD_GET_CLOCK_RATE,
+				updated_clock_rate,
+				sizeof(uint32_t));
+			if (rc) {
+				CAM_ERR(CAM_ISP, "Failed to get Clock rate");
+				return rc;
+			}
+		}
+	}
+
+	return rc;
+}
+
 static int cam_tfe_hw_mgr_start_hw_res(
 	struct cam_isp_hw_mgr_res   *isp_hw_res,
 	struct cam_tfe_hw_mgr_ctx   *ctx)
@@ -1822,6 +1898,105 @@ void cam_tfe_cam_cdm_callback(uint32_t handle, void *userdata,
 			"Called by CDM hdl=%x, udata=%pK, status=%d, cookie=%llu",
 			 handle, userdata, status, cookie);
 	}
+}
+
+int cam_tfe_cshiphy_callback(
+	struct cam_tfe_hw_mgr_ctx *ctx, void *cmd_args)
+{
+	int                          rc = -EINVAL;
+	struct cam_isp_hw_mgr_res    *hw_mgr_res;
+	uint32_t                     *phy_clock_rate;
+	uint32_t                     clock_rate = 0;
+	uint32_t                     csid_clock_rate = 0, tfe_clock_rate = 0;
+	uint32_t                     updated_tfe_clk = 0, updated_csid_clk = 0;
+
+	if (!ctx || !cmd_args) {
+		CAM_ERR(CAM_ISP, "Invalid arguments");
+		return -EINVAL;
+	}
+
+	phy_clock_rate = (uint32_t *)cmd_args;
+	CAM_DBG(CAM_ISP, "clk rate csid ... in ctx id:%d",
+		ctx->ctx_index);
+	list_for_each_entry(hw_mgr_res, &ctx->res_list_tfe_csid, list) {
+		rc = cam_tfe_hw_mgr_get_clock_rate(hw_mgr_res,
+			&clock_rate);
+		if (rc) {
+			CAM_ERR(CAM_ISP,
+				"Can not get CSID clock rate(id :%d)",
+				hw_mgr_res->res_id);
+			return rc;
+		}
+
+		if (!csid_clock_rate)
+			csid_clock_rate = clock_rate;
+
+		if (clock_rate < csid_clock_rate)
+			csid_clock_rate = clock_rate;
+
+		CAM_DBG(CAM_ISP, "clk rate csid: %lld %lld",
+			clock_rate, csid_clock_rate);
+	}
+
+	CAM_DBG(CAM_ISP, "clk rate TFE in resource ctx id:%d",
+		ctx->ctx_index);
+	list_for_each_entry(hw_mgr_res, &ctx->res_list_tfe_in, list) {
+		rc = cam_tfe_hw_mgr_get_clock_rate(hw_mgr_res,
+			&clock_rate);
+		if (rc) {
+			CAM_ERR(CAM_ISP,
+				"Can not get TFE clock rate (%d)",
+				hw_mgr_res->res_id);
+			return rc;
+		}
+
+		if (!tfe_clock_rate)
+			tfe_clock_rate = clock_rate;
+
+		if (clock_rate < tfe_clock_rate)
+			tfe_clock_rate = clock_rate;
+
+		CAM_DBG(CAM_ISP, "clk rate tfe: %lld %lld",
+			clock_rate, tfe_clock_rate);
+	}
+
+	if (*phy_clock_rate > csid_clock_rate) {
+		list_for_each_entry(hw_mgr_res,
+		&ctx->res_list_tfe_csid, list) {
+			rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
+				phy_clock_rate, &updated_csid_clk);
+		}
+
+		if (updated_csid_clk > tfe_clock_rate) {
+			list_for_each_entry(hw_mgr_res,
+			&ctx->res_list_tfe_in, list) {
+				rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
+					&updated_csid_clk, &updated_tfe_clk);
+			}
+		}
+		goto end;
+	}
+
+	if (csid_clock_rate > tfe_clock_rate) {
+		list_for_each_entry(hw_mgr_res,
+		&ctx->res_list_tfe_in, list) {
+			rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
+				&csid_clock_rate, &updated_tfe_clk);
+		}
+	}
+end:
+	/* final check */
+	if ((*phy_clock_rate > updated_csid_clk) ||
+		(updated_csid_clk > updated_tfe_clk) ||
+		(*phy_clock_rate > updated_tfe_clk)) {
+		CAM_ERR(CAM_ISP,
+			"improper clock rates, phy:%lld csid:%lld tfe:%lld",
+			*phy_clock_rate, updated_csid_clk, updated_tfe_clk);
+
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 /* entry function: acquire_hw */
@@ -4760,6 +4935,9 @@ static int cam_tfe_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 		case CAM_ISP_HW_MGR_GET_LAST_CDM_DONE:
 			isp_hw_cmd_args->u.last_cdm_done =
 				ctx->last_cdm_done_req;
+			break;
+		case CAM_ISP_HW_MGR_CMD_UPDATE_CLOCK:
+			rc = cam_tfe_cshiphy_callback(ctx, isp_hw_cmd_args->cmd_data);
 			break;
 		default:
 			CAM_ERR(CAM_ISP, "Invalid HW mgr command:0x%x",
