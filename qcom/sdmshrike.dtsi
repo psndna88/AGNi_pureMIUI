@@ -1,4 +1,6 @@
 #include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,scshrike.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
 
@@ -648,6 +650,10 @@
 				  <WAKE_TCS    3>,
 				  <CONTROL_TCS 1>;
 
+		apps_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+		};
+
 		system_pm {
 			compatible = "qcom,system-pm";
 		};
@@ -665,6 +671,96 @@
 				  <WAKE_TCS    1>,
 				  <ACTIVE_TCS  2>,
 				  <CONTROL_TCS 0>;
+
+		disp_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+			qcom,tcs-wait = <QCOM_ICC_TAG_AMC>;
+		};
+	};
+
+	config_noc: interconnect@1500000 {
+		reg = <0x1500000 0x7400>;
+		compatible = "qcom,scshrike-config_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	system_noc: interconnect@1620000 {
+		reg = <0x1620000 0x29400>;
+		compatible = "qcom,scshrike-system_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	ipa_virt: interconnect@0 {
+		compatible = "qcom,scshrike-ipa_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	camnoc_virt: interconnect@1 {
+		compatible = "qcom,scshrike-camnoc_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	aggre1_noc: interconnect@16e0000 {
+		reg = <0x16E0000 0x1A080>;
+		compatible = "qcom,scshrike-aggre1_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	aggre2_noc: interconnect@1700000 {
+		reg = <0x1700000 0x3A080>;
+		compatible = "qcom,scshrike-aggre2_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	mmss_noc: interconnet@1740000 {
+		reg = <0x1740000 0x1C100>;
+		compatible = "qcom,scshrike-mmss_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+	};
+
+	dc_noc: interconnect@9160000 {
+		reg = <0x9160000 0x3200>;
+		compatible = "qcom,scshrike-dc_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
+	};
+
+	gem_noc: interconnect@9680000 {
+		reg = <0x9680000 0x3E200>;
+		compatible = "qcom,scshrike-gem_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+	};
+
+	mc_virt: interconnect@2 {
+		compatible = "qcom,scshrike-mc_virt";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos", "disp";
+		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+	};
+
+	compute_noc: interconnect@9800000 {
+		reg = <0x9800000 0x40000>;
+		compatible = "qcom,scshrike-compute_noc";
+		#interconnect-cells = <1>;
+		qcom,bcm-voter-names = "hlos";
+		qcom,bcm-voters = <&apps_bcm_voter>;
 	};
 
 	qupv3_id_1: geniqup@ac0000 {
