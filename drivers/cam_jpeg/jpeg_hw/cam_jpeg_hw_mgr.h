@@ -98,6 +98,7 @@ struct cam_jpeg_hw_cfg_req {
  * @in_use: Flag for context usage
  * @wait_complete: Completion info
  * @cdm_cmd: Cdm cmd submitted for that context.
+ * @last_flush_req: req id which was flushed last.
  */
 struct cam_jpeg_hw_ctx_data {
 	void *context_priv;
@@ -107,6 +108,7 @@ struct cam_jpeg_hw_ctx_data {
 	bool in_use;
 	struct completion wait_complete;
 	struct cam_cdm_bl_request *cdm_cmd;
+	uint64_t last_flush_req;
 };
 
 /**
