@@ -48,9 +48,13 @@
 #define TX_MACRO_DMIC_HPF_DELAY_MS	300
 #define TX_MACRO_AMIC_HPF_DELAY_MS	300
 
-static int tx_unmute_delay = TX_MACRO_DMIC_UNMUTE_DELAY_MS;
-module_param(tx_unmute_delay, int, 0664);
-MODULE_PARM_DESC(tx_unmute_delay, "delay to unmute the tx path");
+static int tx_amic_unmute_delay = TX_MACRO_AMIC_UNMUTE_DELAY_MS;
+module_param(tx_amic_unmute_delay, int, 0664);
+MODULE_PARM_DESC(tx_amic_unmute_delay, "delay to unmute the tx amic path");
+
+static int tx_dmic_unmute_delay = TX_MACRO_DMIC_UNMUTE_DELAY_MS;
+module_param(tx_dmic_unmute_delay, int, 0664);
+MODULE_PARM_DESC(tx_dmic_unmute_delay, "delay to unmute the tx dmic path");
 
 static const DECLARE_TLV_DB_SCALE(digital_gain, 0, 1, 0);
 
@@ -1099,13 +1103,16 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 		if (is_amic_enabled(component, decimator)) {
 			hpf_delay = TX_MACRO_AMIC_HPF_DELAY_MS;
 			unmute_delay = TX_MACRO_AMIC_UNMUTE_DELAY_MS;
+			if (unmute_delay < tx_amic_unmute_delay)
+				unmute_delay = tx_amic_unmute_delay;
+		} else {
+			if (unmute_delay < tx_dmic_unmute_delay)
+				unmute_delay = tx_dmic_unmute_delay;
 		}
-		if (tx_unmute_delay < unmute_delay)
-			tx_unmute_delay = unmute_delay;
 		/* schedule work queue to Remove Mute */
 		queue_delayed_work(system_freezable_wq,
 				   &tx_priv->tx_mute_dwork[decimator].dwork,
-				   msecs_to_jiffies(tx_unmute_delay));
+				   msecs_to_jiffies(unmute_delay));
 		if (tx_priv->tx_hpf_work[decimator].hpf_cut_off_freq !=
 							CF_MIN_3DB_150HZ) {
 			queue_delayed_work(system_freezable_wq,
