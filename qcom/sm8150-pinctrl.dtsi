@@ -68,160 +68,55 @@
 			};
 		};
 
-		storage_cd: storage_cd {
-			mux {
-				pins = "gpio96";
-				function = "gpio";
+		sdc2_on: sdc2_on {
+			clk {
+				pins = "sdc2_clk";
+				bias-disable;		/* NO pull */
+				drive-strength = <16>;	/* 16 MA */
 			};
 
-			config {
+			cmd {
+				pins = "sdc2_cmd";
+				bias-pull-up;		/* pull up */
+				drive-strength = <16>;	/* 16 MA */
+			};
+
+			data {
+				pins = "sdc2_data";
+				bias-pull-up;		/* pull up */
+				drive-strength = <16>;	/* 16 MA */
+			};
+
+			sd-cd {
 				pins = "gpio96";
 				bias-pull-up;           /* pull up */
 				drive-strength = <2>;   /* 2 MA */
 			};
 		};
 
-		sdc2_clk_on: sdc2_clk_on {
-			config {
-				pins = "sdc2_clk";
-				bias-disable;		/* NO pull */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_clk_off: sdc2_clk_off {
-			config {
+		sdc2_off: sdc2_off {
+			clk {
 				pins = "sdc2_clk";
 				bias-disable;		/* NO pull */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_clk_ds_400KHz: sdc2_clk_ds_400KHz {
-			config {
-				pins = "sdc2_clk";
-				bias-disable;		/* NO pull */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_clk_ds_50MHz: sdc2_clk_ds_50MHz {
-			config {
-				pins = "sdc2_clk";
-				bias-disable;		/* NO pull */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_clk_ds_100MHz: sdc2_clk_ds_100MHz {
-			config {
-				pins = "sdc2_clk";
-				bias-disable;		/* NO pull */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_clk_ds_200MHz: sdc2_clk_ds_200MHz {
-			config {
-				pins = "sdc2_clk";
-				bias-disable;		/* NO pull */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_cmd_on: sdc2_cmd_on {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_cmd_off: sdc2_cmd_off {
-			config {
+			cmd {
 				pins = "sdc2_cmd";
 				bias-pull-up;		/* pull up */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_cmd_ds_400KHz: sdc2_cmd_ds_400KHz {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_cmd_ds_50MHz: sdc2_cmd_ds_50MHz {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_cmd_ds_100MHz: sdc2_cmd_ds_100MHz {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_cmd_ds_200MHz: sdc2_cmd_ds_200MHz {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_data_on: sdc2_data_on {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_data_off: sdc2_data_off {
-			config {
+			data {
 				pins = "sdc2_data";
 				bias-pull-up;		/* pull up */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_data_ds_400KHz: sdc2_data_ds_400KHz {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_data_ds_50MHz: sdc2_data_ds_50MHz {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_data_ds_100MHz: sdc2_data_ds_100MHz {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
-			};
-		};
-
-		sdc2_data_ds_200MHz: sdc2_data_ds_200MHz {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <16>;	/* 16 MA */
+			sd-cd {
+				pins = "gpio96";
+				bias-pull-up;           /* pull up */
+				drive-strength = <2>;   /* 2 MA */
 			};
 		};
 
