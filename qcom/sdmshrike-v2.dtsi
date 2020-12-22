@@ -6,3 +6,28 @@
 	qcom,msm-id = <340 0x20000>;
 };
 
+/delete-node/ &ufs_card_gdsc;
+
+&camcc {
+	compatible = "qcom,scshrike-camcc-v2", "syscon";
+};
+
+&dispcc {
+	compatible = "qcom,scshrike-dispcc-v2", "syscon";
+};
+
+&gcc {
+	compatible = "qcom,scshrike-gcc-v2", "syscon";
+};
+
+&npucc {
+	compatible = "qcom,sm8150-npucc-v2", "syscon";
+};
+
+&scc {
+	compatible = "qcom,sa8195-scc-v2", "syscon";
+};
+
+&videocc {
+	compatible = "qcom,sm8150-videocc-v2", "syscon";
+};
