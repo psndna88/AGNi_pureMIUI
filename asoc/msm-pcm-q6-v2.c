@@ -265,12 +265,19 @@ static void event_handler(uint32_t opcode,
 				break;
 			}
 			if (prtd->mmap_flag) {
-				pr_debug("%s:writing %d bytes of buffer to dsp\n",
-					__func__,
-					prtd->pcm_count);
-				q6asm_write_nolock(prtd->audio_client,
-					prtd->pcm_count,
-					0, 0, NO_TIMESTAMP);
+				int cnt = prtd->pcm_size / prtd->pcm_count;
+
+				pr_debug("%s %d:buffer %d, period %d, %d writes\n",
+					__func__, __LINE__,
+					prtd->pcm_size, prtd->pcm_count, cnt);
+				while (cnt--) {
+					pr_debug("%s %d:writing %d bytes of buffer to dsp\n",
+						__func__, __LINE__,
+						prtd->pcm_count);
+					q6asm_write_nolock(prtd->audio_client,
+						prtd->pcm_count,
+						0, 0, NO_TIMESTAMP);
+				}
 			} else {
 				while (atomic_read(&prtd->out_needed)) {
 					pr_debug("%s:writing %d bytes of buffer to dsp\n",
