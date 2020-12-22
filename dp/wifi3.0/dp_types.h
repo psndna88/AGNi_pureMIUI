@@ -3001,6 +3001,7 @@ struct dp_rx_fst {
 	qdf_event_t cmem_resp_event;
 	bool flow_deletion_supported;
 	bool fst_in_cmem;
+	bool pm_suspended;
 };
 
 #endif /* WLAN_SUPPORT_RX_FISA */
