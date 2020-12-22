@@ -984,6 +984,7 @@
 #include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
 #include "sdxnightjar-blsp.dtsi"
+#include "sdxnightjar-pcie.dtsi"
 
 &i2c_3 {
 	status = "ok";
