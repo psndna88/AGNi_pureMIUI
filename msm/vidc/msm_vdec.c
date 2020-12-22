@@ -904,7 +904,9 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_DECODE_ORDER:
 	case V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_8BIT:
 	case V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_10BIT:
+		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE:
+		inst->clk_data.frame_rate = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_SYNC_FRAME_DECODE:
 		inst->flags &= ~VIDC_THUMBNAIL;
