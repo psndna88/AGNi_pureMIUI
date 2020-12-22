@@ -9104,6 +9104,77 @@ static void ath_reset_vht_defaults(struct sigma_dut *dut)
 }
 
 
+#ifdef NL80211_SUPPORT
+
+static int antenna_mask_to_nss(unsigned int mask)
+{
+	unsigned int i;
+	int msb = 0;
+
+	for (i = 0; i < sizeof(mask) * 8; i++)
+		if ((mask >> i) & 1)
+			msb = i;
+
+	return msb + 1;
+}
+
+
+static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct sigma_dut *dut = arg;
+	unsigned int tx_antenna_mask;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_WIPHY_ANTENNA_TX]) {
+		tx_antenna_mask =
+			nla_get_u32(tb[NL80211_ATTR_WIPHY_ANTENNA_TX]);
+		dut->ap_tx_streams = antenna_mask_to_nss(tx_antenna_mask);
+	}
+
+	return 0;
+}
+
+
+static int mac80211_get_wiphy(struct sigma_dut *dut)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+	int ifindex;
+
+	ifindex = if_nametoindex(dut->main_ifname);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: Index for interface %s failed",
+				__func__, dut->main_ifname);
+		return -1;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_GET_WIPHY)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex)) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: could not build get wiphy cmd", __func__);
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, wiphy_info_handler,
+				 dut);
+	if (ret)
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+
+	return ret;
+}
+
+#endif /* NL80211_SUPPORT */
+
+
 static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -9468,6 +9539,12 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 	}
+
+#ifdef NL80211_SUPPORT
+	if (get_driver_type(dut) == DRIVER_MAC80211 && mac80211_get_wiphy(dut))
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Failed to get wiphy data from the driver");
+#endif /* NL80211_SUPPORT */
 
 	dut->ap_oper_chn = 0;
 
