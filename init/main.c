@@ -130,12 +130,33 @@ static char *initcall_command_line;
 static char *execute_command;
 static char *ramdisk_execute_command;
 
+int devicemodel;
+bool sdm660;
 static unsigned int android_version = 9;
 
 static int __init set_android_version(char *val)
 {
 	get_option(&val, &android_version);
 	pr_err("Kernel: AGNi android version detected = %d \n", android_version);
+#ifdef CONFIG_KERNEL_CUSTOM_E7S
+	devicemodel=1; /* whyred */
+	sdm660=false;
+#elif defined(CONFIG_KERNEL_CUSTOM_E7T)
+	devicemodel=2; /* tulip */
+	sdm660=false;
+#elif defined(CONFIG_KERNEL_CUSTOM_D2S) && !defined(CONFIG_KERNEL_CUSTOM_D2S_JASMINE)
+	devicemodel=3; /* wayne */
+	sdm660=true;
+#elif defined(CONFIG_KERNEL_CUSTOM_D2S_JASMINE)
+	devicemodel=4; /* jasmine */
+	sdm660=true;
+#elif defined(CONFIG_KERNEL_CUSTOM_F7A)
+	devicemodel=5; /* lavender */
+	sdm660=true;
+#else
+	devicemodel=0;
+	sdm660=false;
+#endif
 	return 0;
 }
 __setup("android.ver=", set_android_version);
@@ -145,6 +166,8 @@ unsigned int get_android_version(void)
 	return android_version;
 }
 EXPORT_SYMBOL_GPL(get_android_version);
+EXPORT_SYMBOL_GPL(devicemodel);
+EXPORT_SYMBOL_GPL(sdm660);
 
 bool miuirom = true;
 extern int srgb_enabled;
