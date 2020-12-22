@@ -12,8 +12,10 @@ on early-init
 	write /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq 1113600
 	write /sys/module/msm_performance/parameters/cpu_max_freq "0:1843200 1:1843200 2:1843200 3:1843200 4:2208000 5:2208000 6:2208000 7:2208000"
 	write /sys/module/msm_performance/parameters/cpu_min_freq "0:633600 1:633600 2:633600 3:633600 4:1113600 5:1113600 6:1113600 7:1113600"
+	write /sys/module/msm_performance/parameters/cpu_oc N
 
 on init
+	setenforce 1
     write /dev/stune/foreground/schedtune.prefer_idle 1
     write /dev/stune/top-app/schedtune.boost 5
     write /dev/stune/top-app/schedtune.prefer_idle 1

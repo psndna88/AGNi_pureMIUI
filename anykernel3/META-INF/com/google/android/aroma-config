@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v11.5_stable");
+ini_set("rom_version",	"v11.6_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"December, 11, 2020");
+ini_set("rom_date",		"December, 23, 2020");
 
 # Show Simple Splash
 splash(
@@ -182,6 +182,13 @@ selectbox(
     "Mode 1",	"Default: use for MIUI roms or some AOSP roms (Change if u face issues)", 1,	#-- selected.0 = 1
     "Mode 2",	"For most of the NON-MIUI/AOSP roms           (Change if u face issues)", 0 	#-- selected.0 = 2
 );
+
+selectbox(
+    "Wired Earphone Volume Buttons Operation Mode","<@center><b>\nSome roms work differently so select mode</b>\n\n</@>","@install","wevol.prop",
+    "Mode 1",	"Default: use for MIUI roms or most AOSP roms", 1,					#-- selected.0 = 1
+    "Mode 2",	"For few NON-MIUI roms like Nusantara, EvoX or maybe others", 0 	#-- selected.0 = 2
+);
+
 setvar("retstatus",
   install(
 	#-- Title
