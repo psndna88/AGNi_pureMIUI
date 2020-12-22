@@ -48,6 +48,10 @@
 				<GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 687 IRQ_TYPE_LEVEL_HIGH>;
 
+		qcom,actlr =
+			/* All CBs of GFX: +15 deep PF */
+			<0x0 0x7ff 0x32B>;
+
 		gfx_0_tbu: gfx_0_tbu@3dd9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x3dd9000 0x1000>,
@@ -160,6 +164,19 @@
 				<GIC_SPI 406 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>;
+
+		qcom,actlr =
+			/* For Camera: Disable prefetch */
+			<0x800 0x24E1 0x1>,
+			<0x2000 0x163 0x1>,
+			<0x2080 0x461 0x1>,
+			<0x2100 0x161 0x1>,
+			/* For Display: +3 deep PF */
+			<0x900 0x407 0x103>,
+			/* For Video : +3 deep PF */
+			<0x2180 0x27 0x103>,
+			/* For Compute: +15 deep PF */
+			<0x1000 0x7ff 0x303>;
 
 		interconnects = <&gem_noc MASTER_APPSS_PROC
 				&cnoc3 SLAVE_TCU>;
