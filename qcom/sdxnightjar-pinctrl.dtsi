@@ -1392,7 +1392,7 @@
 		bias-high-impedance;   /* DISABLE GPIO */
 	};
 
-	gpio@c400 { /* GPIO 5 - USB_ID */
+	usb_id_detect: gpio@c400 { /* GPIO 5 - USB_ID */
 		pins = "gpio5";
 		function = "normal";
 		input-enable;        /* Digital input */
