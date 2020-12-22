@@ -64,6 +64,7 @@
 			snps,hird-threshold = /bits/ 8 <0x10>;
 			snps,ssp-u3-u0-quirk;
 			snps,usb3-u1u2-disable;
+			snps,bus-suspend-enable;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
