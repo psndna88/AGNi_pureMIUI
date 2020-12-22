@@ -15,6 +15,7 @@ on early-init
 	write /sys/module/msm_performance/parameters/cpu_oc N
 
 on init
+	setenforce 1
     write /dev/stune/foreground/schedtune.prefer_idle 1
     write /dev/stune/top-app/schedtune.boost 5
     write /dev/stune/top-app/schedtune.prefer_idle 1

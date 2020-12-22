@@ -65,7 +65,8 @@ set_perm_recursive() {
 ### dump_boot functions:
 # split_boot (dump and split image only)
 split_boot() {
-  local dumpfail;
+  local dumpfail osver;
+  osver="`cat $home/ANDROIDVER`";
 
   if [ ! -e "$(echo $block | cut -d\  -f1)" ]; then
     abort "Invalid partition. Aborting...";
@@ -126,7 +127,11 @@ split_boot() {
   elif [ -f "$bin/rkcrc" ]; then
     dd bs=4096 skip=8 iflag=skip_bytes conv=notrunc if=$bootimg of=ramdisk.cpio.gz;
   else
-    $bin/magiskboot unpack -h $bootimg;
+  	if [ "$osver" == "R" ]; then
+	    $bin/magiskboot unpack -h $bootimg;
+  	else
+	    $bin/magiskbootQ unpack -h $bootimg;
+    fi;
     case $? in
       1) dumpfail=1;;
       2) touch chromeos;;
@@ -141,7 +146,8 @@ split_boot() {
 
 # unpack_ramdisk (extract ramdisk only)
 unpack_ramdisk() {
-  local comp;
+  local comp osver;
+  osver="`cat $home/ANDROIDVER`";
 
   cd $split_img;
   if [ -f ramdisk.cpio.gz ]; then
@@ -153,13 +159,21 @@ unpack_ramdisk() {
   fi;
 
   if [ -f ramdisk.cpio ]; then
-    comp=$($bin/magiskboot decompress ramdisk.cpio 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+  	if [ "$osver" == "R" ]; then
+	    comp=$($bin/magiskboot decompress ramdisk.cpio 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+	else
+	    comp=$($bin/magiskbootQ decompress ramdisk.cpio 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+    fi;
   else
     echo "No ramdisk found to unpack, but not aborting...";
   fi;
   if [ "$comp" ]; then
     mv -f ramdisk.cpio ramdisk.cpio.$comp;
-    $bin/magiskboot decompress ramdisk.cpio.$comp ramdisk.cpio;
+  	if [ "$osver" == "R" ]; then
+    	$bin/magiskboot decompress ramdisk.cpio.$comp ramdisk.cpio;
+  	else
+    	$bin/magiskbootQ decompress ramdisk.cpio.$comp ramdisk.cpio;
+    fi;
     if [ $? != 0 ]; then
       echo "Attempting ramdisk unpack with busybox $comp..." >&2;
       $comp -dc ramdisk.cpio.$comp > ramdisk.cpio;
@@ -189,7 +203,8 @@ dump_boot() {
 ### write_boot functions:
 # repack_ramdisk (repack ramdisk only)
 repack_ramdisk() {
-  local comp packfail mtktype;
+  local comp packfail mtktype osver;
+  osver="`cat $home/ANDROIDVER`";
 
   cd $home;
   case $ramdisk_compression in
@@ -211,11 +226,23 @@ repack_ramdisk() {
   test $? != 0 && packfail=1;
 
   cd $home;
-  $bin/magiskboot cpio ramdisk-new.cpio test;
+  if [ "$osver" == "R" ]; then
+  	$bin/magiskboot cpio ramdisk-new.cpio test;
+  else
+  	$bin/magiskbootQ cpio ramdisk-new.cpio test;
+  fi;
   magisk_patched=$?;
-  test $((magisk_patched & 3)) -eq 1 && $bin/magiskboot cpio ramdisk-new.cpio "extract .backup/.magisk $split_img/.magisk";
+  if [ "$osver" == "R" ]; then
+	test $((magisk_patched & 3)) -eq 1 && $bin/magiskboot cpio ramdisk-new.cpio "extract .backup/.magisk $split_img/.magisk";
+  else
+	test $((magisk_patched & 3)) -eq 1 && $bin/magiskbootQ cpio ramdisk-new.cpio "extract .backup/.magisk $split_img/.magisk";
+  fi;
   if [ "$comp" ]; then
-    $bin/magiskboot compress=$comp ramdisk-new.cpio;
+    if [ "$osver" == "R" ]; then
+    	$bin/magiskboot compress=$comp ramdisk-new.cpio;
+    else
+    	$bin/magiskbootQ compress=$comp ramdisk-new.cpio;
+    fi;
     if [ $? != 0 ]; then
       echo "Attempting ramdisk repack with busybox $comp..." >&2;
       $comp -9c ramdisk-new.cpio > ramdisk-new.cpio.$comp;
@@ -237,7 +264,8 @@ repack_ramdisk() {
 
 # flash_boot (build, sign and write image only)
 flash_boot() {
-  local varlist i kernel ramdisk fdt cmdline comp part0 part1 nocompflag signfail pk8 cert avbtype kernel_type;
+  local varlist i kernel ramdisk fdt cmdline comp part0 part1 nocompflag signfail pk8 cert avbtype kernel_type osver;
+  osver="`cat $home/ANDROIDVER`";
 
   cd $split_img;
   if [ -f "$bin/mkimage" ]; then
@@ -324,34 +352,59 @@ flash_boot() {
     case $kernel in
       *Image*)
         if [ ! "$magisk_patched" ]; then
-          $bin/magiskboot cpio ramdisk.cpio test;
+          if [ "$osver" == "R" ]; then
+          	$bin/magiskboot cpio ramdisk.cpio test;
+          else
+          	$bin/magiskbootQ cpio ramdisk.cpio test;
+          fi;
           magisk_patched=$?;
         fi;
         if [ $((magisk_patched & 3)) -eq 1 ]; then
           ui_print " " "Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
-          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
-          ($bin/magiskboot split $kernel || $bin/magiskboot decompress $kernel kernel) 2>/dev/null;
+          if [ "$osver" == "R" ]; then
+	          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+	          ($bin/magiskboot split $kernel || $bin/magiskboot decompress $kernel kernel) 2>/dev/null;
+		  else
+	          comp=$($bin/magiskbootQ decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+	          ($bin/magiskbootQ split $kernel || $bin/magiskbootQ decompress $kernel kernel) 2>/dev/null;
+		  fi;
           if [ $? != 0 -a "$comp" ]; then
             echo "Attempting kernel unpack with busybox $comp..." >&2;
             $comp -dc $kernel > kernel;
           fi;
-          $bin/magiskboot hexpatch kernel 736B69705F696E697472616D667300 77616E745F696E697472616D667300;
+          if [ "$osver" == "R" ]; then
+          	$bin/magiskboot hexpatch kernel 736B69705F696E697472616D667300 77616E745F696E697472616D667300;
+          else
+          	$bin/magiskbootQ hexpatch kernel 736B69705F696E697472616D667300 77616E745F696E697472616D667300;
+          fi;
           if [ "$(file_getprop $home/anykernel.sh do.systemless)" == 1 ]; then
             strings kernel | grep -E 'Linux version.*#' > $home/vertmp;
           fi;
           if [ "$comp" ]; then
-            $bin/magiskboot compress=$comp kernel kernel.$comp;
+          	if [ "$osver" == "R" ]; then
+            	$bin/magiskboot compress=$comp kernel kernel.$comp;
+          	else
+            	$bin/magiskbootQ compress=$comp kernel kernel.$comp;
+          	fi;
             if [ $? != 0 ]; then
               echo "Attempting kernel repack with busybox $comp..." >&2;
               $comp -9c kernel > kernel.$comp;
             fi;
             mv -f kernel.$comp kernel;
           fi;
-          test ! -f .magisk && $bin/magiskboot cpio ramdisk.cpio "extract .backup/.magisk .magisk";
+          if [ "$osver" == "R" ]; then
+          	test ! -f .magisk && $bin/magiskboot cpio ramdisk.cpio "extract .backup/.magisk .magisk";
+          else
+          	test ! -f .magisk && $bin/magiskbootQ cpio ramdisk.cpio "extract .backup/.magisk .magisk";
+          fi;
           export $(cat .magisk);
           test $((magisk_patched & 8)) -ne 0 && export TWOSTAGEINIT=true;
           for fdt in dtb extra kernel_dtb recovery_dtbo; do
-            test -f $fdt && $bin/magiskboot dtb $fdt patch;
+            if [ "$osver" == "R" ]; then
+            	test -f $fdt && $bin/magiskboot dtb $fdt patch;
+			else
+            	test -f $fdt && $bin/magiskbootQ dtb $fdt patch;
+			fi;
           done;
         else
           case $kernel in
@@ -364,7 +417,11 @@ flash_boot() {
     case $ramdisk_compression in
       none|cpio) nocompflag="-n";;
     esac;
-    $bin/magiskboot repack $nocompflag $bootimg $home/boot-new.img;
+    if [ "$osver" == "R" ]; then
+    	$bin/magiskboot repack $nocompflag $bootimg $home/boot-new.img;
+    else
+    	$bin/magiskbootQ repack $nocompflag $bootimg $home/boot-new.img;
+   	fi;
   fi;
   if [ $? != 0 ]; then
     abort "Repacking image failed. Aborting...";

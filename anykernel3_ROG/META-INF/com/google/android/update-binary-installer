@@ -545,9 +545,6 @@ fi;
 if [ ! -f /vendor/etc/msm_irqbalance.conf.bak ]; then
 	$BB mv /vendor/etc/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf.bak;
 fi;
-if [ ! -f /vendor/etc/powerhint.json.bak ]; then
-	$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak 2>/dev/null;
-fi;
 # Copy files
 $BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
 $BB cp -f $AKHOME/tools/perf/perfboostsconfig.xml /vendor/etc/perf/perfboostsconfig.xml;
@@ -555,19 +552,22 @@ $BB cp -f $AKHOME/tools/perf/perfconfigstore.xml /vendor/etc/perf/perfconfigstor
 $BB cp -f $AKHOME/tools/perf/targetconfig.xml /vendor/etc/perf/targetconfig.xml;
 $BB cp -f $AKHOME/tools/perf/targetresourceconfigs.xml /vendor/etc/perf/targetresourceconfigs.xml;
 $BB cp -f $AKHOME/tools/perf/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf;
-if [ -f /vendor/etc/powerhint.json ]; then
-	$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
-fi;
 # Permissions
 $BB chmod 0644 /vendor/etc/perf/*;
 /sbin/restorecon -R -v /vendor/etc/perf;
 $BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
-$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
 /sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
-/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
 ui_print " " "AGNi has installed Perf HAL (uvera)" " ";
 ### EAS Perf hal END
-
+# Force replace powerhint if found
+if [ -f /vendor/etc/powerhint.json ]; then
+	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
+		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak 2>/dev/null;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
+	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
+	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
+fi;
 # CPU OC
 $BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
 CPUOC_SELECT="0";
@@ -637,15 +637,6 @@ if [ "`$BB grep system_root /etc/fstab`" ]; then
 	$BB mount /system_root;
 else
 	$BB mount /system;
-fi;
-
-# AGNi: WIFI HAL FOR MIUI 12 Q
-if [ "$ANDROID_VER" == "Q" ]; then
-	if [ "$MIUI_VER" == "12" ]; then
-		ui_print " " "AGNi now installing WIFI HAL..." " ";
-		$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
-		$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
-	fi;
 fi;
 
 # AGNi: Wired Earphone Analog Amplification boost

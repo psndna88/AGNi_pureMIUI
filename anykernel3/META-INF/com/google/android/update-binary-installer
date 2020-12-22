@@ -494,10 +494,10 @@ else
 fi;
 $BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
-if [ "`$BB grep Nusantara $buildprop`" ]; then
-	$BB echo "1" > $AKHOME/WIRED_BTN_ALTMODE;
-else
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/wevol.prop`" ]; then
 	$BB echo "0" > $AKHOME/WIRED_BTN_ALTMODE;
+else
+	$BB echo "1" > $AKHOME/WIRED_BTN_ALTMODE;
 fi;
 # AGNi: sRGB selector overrides										#SDM636
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/srgb.prop`" ]; then	#SDM636
@@ -628,9 +628,6 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
 	if [ ! -f /vendor/etc/msm_irqbalance.conf.bak ]; then
 		$BB mv /vendor/etc/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf.bak;
 	fi;
-	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
-		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak 2>/dev/null;
-	fi;
 	# Copy files
 	if [ "$PIXEL_PERF" == "0" ]; then
 		$BB cp -f $AKHOME/tools/perf/commonresourceconfigs.xml /vendor/etc/perf/commonresourceconfigs.xml;
@@ -641,18 +638,13 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/easperfhal.prop`" ]; then
 #		$BB cp -f $AKHOME/tools/perf/perf-profile0.conf /vendor/etc/perf/perf-profile0.conf;
 	fi;
 	$BB cp -f $AKHOME/tools/perf/msm_irqbalance.conf /vendor/etc/msm_irqbalance.conf;
-	if [ -f /vendor/etc/powerhint.json ]; then
-		$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
-	fi;
 	# Permissions
 	if [ "$PIXEL_PERF" == "0" ]; then
 		$BB chmod 0644 /vendor/etc/perf/*;
 		/sbin/restorecon -R -v /vendor/etc/perf;
 	fi;
 	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
-	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
 	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
-	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
 	ui_print " " "AGNi has installed Perf HAL (uvera)" " ";
 else
 	# Restore Backups
@@ -665,19 +657,25 @@ else
 #		$BB mv /vendor/etc/perf/perf-profile0.conf.bak /vendor/etc/perf/perf-profile0.conf;
 	fi;
 	$BB mv -f /vendor/etc/msm_irqbalance.conf.bak /vendor/etc/msm_irqbalance.conf 2>/dev/null;
-	$BB mv -f /vendor/etc/powerhint.json.bak /vendor/etc/powerhint.json 2>/dev/null;
 	# Permissions
 	if [ "$PIXEL_PERF" == "0" ]; then
 		$BB chmod 0644 /vendor/etc/perf/*;
 		/sbin/restorecon -R -v /vendor/etc/perf;
 	fi;
 	$BB chmod 0644 /vendor/etc/msm_irqbalance.conf;
-	$BB chmod 0644 /vendor/etc/powerhint.json 2>/dev/null;
 	/sbin/restorecon -v /vendor/etc/msm_irqbalance.conf;
-	/sbin/restorecon -v /vendor/etc/powerhint.json 2>/dev/null;
 	ui_print " " "AGNi has NOT installed EAS Perf HAL." " ";
 fi;
 ### EAS Perf hal END
+# Force replace powerhint if found
+if [ -f /vendor/etc/powerhint.json ]; then
+	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
+		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak;
+	fi;
+	$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
+	$BB chmod 0644 /vendor/etc/powerhint.json;
+	/sbin/restorecon -v /vendor/etc/powerhint.json;
+fi;
 # CPU OC
 if [ "$DEVICE_NATIVE_MIUIQ" == "YES" ]; then #essentially its sdm660
 	if [ "`$BB grep selected.0=1 /tmp/aroma-data/cpuoc.prop`" ]; then # CPU OC 2.45 selection
@@ -908,15 +906,6 @@ if [ "$ANDROID_VER" == "PIE" ]; then
 		ui_print " " "AGNi now installing 64bit libdpmframework.so ..." " ";
 		$BB cp -f $AKHOME/tools/libdpmframework.so.lib /system/lib64/libdpmframework.so;
 		$BB chmod 0644 /system/lib64/libdpmframework.so;
-	fi;
-fi;
-
-# AGNi: WIFI HAL FOR MIUI 12 Q
-if [ "$ANDROID_VER" == "Q" ]; then
-	if [ "$MIUI_VER" == "12" ]; then
-		ui_print " " "AGNi now installing WIFI HAL..." " ";
-		$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
-		$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
 	fi;
 fi;
 
