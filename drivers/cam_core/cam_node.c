@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -619,6 +619,24 @@ static int __cam_node_crm_flush_req(struct cam_req_mgr_flush_request *flush)
 	return cam_context_handle_crm_flush_req(ctx, flush);
 }
 
+static int __cam_node_crm_state_change_req(
+	struct cam_req_mgr_request_change_state *state_info)
+{
+	struct cam_context *ctx = NULL;
+
+	if (!state_info)
+		return -EINVAL;
+
+	ctx = (struct cam_context *) cam_get_device_priv(state_info->dev_hdl);
+	if (!ctx) {
+		CAM_ERR(CAM_CORE, "Can not get context for handle %d",
+			state_info->dev_hdl);
+		return -EINVAL;
+	}
+
+	return cam_context_handle_crm_state_change(ctx, state_info);
+}
+
 static int __cam_node_crm_process_evt(
 	struct cam_req_mgr_link_evt_data *evt_data)
 {
@@ -715,6 +733,7 @@ int cam_node_init(struct cam_node *node, struct cam_hw_mgr_intf *hw_mgr_intf,
 	node->crm_node_intf.dump_req = __cam_node_crm_dump_req;
 	node->crm_node_intf.notify_frame_skip =
 		__cam_node_crm_notify_frame_skip;
+	node->crm_node_intf.change_state = __cam_node_crm_state_change_req;
 
 	mutex_init(&node->list_mutex);
 	INIT_LIST_HEAD(&node->free_ctx_list);

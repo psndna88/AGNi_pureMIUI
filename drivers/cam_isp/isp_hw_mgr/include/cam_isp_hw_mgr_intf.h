@@ -260,15 +260,17 @@ enum cam_isp_ctx_type {
  * @ctx_type:              RDI_ONLY, PIX and RDI, or FS2
  * @packet_op_code:        Packet opcode
  * @last_cdm_done:         Last cdm done request
+ * @cam_isp_hw_sof_event_data  sof event timestamp
  */
 struct cam_isp_hw_cmd_args {
 	uint32_t                          cmd_type;
 	void                             *cmd_data;
 	union {
-		uint32_t                      sof_irq_enable;
-		uint32_t                      ctx_type;
-		uint32_t                      packet_op_code;
-		uint64_t                      last_cdm_done;
+		uint32_t                          sof_irq_enable;
+		uint32_t                          ctx_type;
+		uint32_t                          packet_op_code;
+		uint64_t                          last_cdm_done;
+		struct cam_isp_hw_sof_event_data  sof_done_event_data;
 	} u;
 };
 
