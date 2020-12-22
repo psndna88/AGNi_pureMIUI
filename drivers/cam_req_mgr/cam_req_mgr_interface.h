@@ -22,7 +22,6 @@ struct cam_req_mgr_apply_request;
 struct cam_req_mgr_flush_request;
 struct cam_req_mgr_link_evt_data;
 struct cam_req_mgr_dump_info;
-struct cam_req_mgr_request_change_state;
 
 /* Request Manager -- camera device driver interface */
 /**
@@ -34,9 +33,8 @@ struct cam_req_mgr_request_change_state;
  *                              userspace
  * @cam_req_mgr_notify_timer  : start the timer
  */
-typedef int (*cam_req_mgr_notify_trigger)(
-	struct cam_req_mgr_trigger_notify *);
-typedef bool (*cam_req_mgr_notify_err)(struct cam_req_mgr_error_notify *);
+typedef int (*cam_req_mgr_notify_trigger)(struct cam_req_mgr_trigger_notify *);
+typedef int (*cam_req_mgr_notify_err)(struct cam_req_mgr_error_notify *);
 typedef int (*cam_req_mgr_add_req)(struct cam_req_mgr_add_request *);
 typedef int (*cam_req_mgr_notify_timer)(struct cam_req_mgr_timer_notify *);
 typedef int (*cam_req_mgr_notify_stop)(struct cam_req_mgr_notify_stop *);
@@ -50,9 +48,8 @@ typedef int (*cam_req_mgr_notify_stop)(struct cam_req_mgr_notify_stop *);
  * @cam_req_mgr_notify_frame_skip: CRM asks device to apply setting for
  *                                 frame skip
  * @cam_req_mgr_flush_req        : Flush or cancel request
- * @cam_req_mgr_process_evt      : generic events
+ * cam_req_mgr_process_evt       : generic events
  * @cam_req_mgr_dump_req         : dump request
- * @cam_req_mgr_change_state     : CRM asks device to change its state
  */
 typedef int (*cam_req_mgr_get_dev_info) (struct cam_req_mgr_device_info *);
 typedef int (*cam_req_mgr_link_setup)(struct cam_req_mgr_core_dev_link_setup *);
@@ -62,8 +59,6 @@ typedef int (*cam_req_mgr_notify_frame_skip)(
 typedef int (*cam_req_mgr_flush_req)(struct cam_req_mgr_flush_request *);
 typedef int (*cam_req_mgr_process_evt)(struct cam_req_mgr_link_evt_data *);
 typedef int (*cam_req_mgr_dump_req)(struct cam_req_mgr_dump_info *);
-typedef int (*cam_req_mgr_change_state)(
-	struct cam_req_mgr_request_change_state *);
 
 /**
  * @brief          : cam_req_mgr_crm_cb - func table
@@ -92,17 +87,15 @@ struct cam_req_mgr_crm_cb {
  * @flush_req        : payload to flush request
  * @process_evt      : payload to generic event
  * @dump_req         : payload to dump request
- * @change_state     : payload to change state
  */
 struct cam_req_mgr_kmd_ops {
-	cam_req_mgr_get_dev_info     get_dev_info;
-	cam_req_mgr_link_setup       link_setup;
-	cam_req_mgr_apply_req        apply_req;
+	cam_req_mgr_get_dev_info      get_dev_info;
+	cam_req_mgr_link_setup        link_setup;
+	cam_req_mgr_apply_req         apply_req;
 	cam_req_mgr_notify_frame_skip notify_frame_skip;
-	cam_req_mgr_flush_req        flush_req;
-	cam_req_mgr_process_evt      process_evt;
-	cam_req_mgr_dump_req         dump_req;
-	cam_req_mgr_change_state     change_state;
+	cam_req_mgr_flush_req         flush_req;
+	cam_req_mgr_process_evt       process_evt;
+	cam_req_mgr_dump_req          dump_req;
 };
 
 /**
@@ -223,7 +216,6 @@ enum cam_req_mgr_link_evt_type {
  * @trigger  : trigger point of this notification, CRM will send apply
  *             only to the devices which subscribe to this point.
  * @sof_timestamp_val: Captured time stamp value at sof hw event
- * @sof_boottime : Captured boot time stamp value at sof hw event
  * @req_id   : req id which returned buf_done
  * @trigger_id: ID to differentiate between the trigger devices
  */
@@ -233,7 +225,6 @@ struct cam_req_mgr_trigger_notify {
 	int64_t  frame_id;
 	uint32_t trigger;
 	uint64_t sof_timestamp_val;
-	uint64_t sof_boottime;
 	uint64_t req_id;
 	int32_t  trigger_id;
 };
@@ -258,8 +249,6 @@ struct cam_req_mgr_timer_notify {
  * @frame_id : frame id for internal tracking
  * @trigger  : trigger point of this notification, CRM will send apply
  * @sof_timestamp_val : Captured time stamp value at sof hw event
- * @sof_boottime_val  : Captured boottime stamp value at sof hw event
- * @need_recovery     : flag to check if recovery is needed
  * @error    : what error device hit while processing this req
  */
 struct cam_req_mgr_error_notify {
@@ -269,8 +258,6 @@ struct cam_req_mgr_error_notify {
 	int64_t  frame_id;
 	uint32_t trigger;
 	uint64_t sof_timestamp_val;
-	uint64_t sof_boottime_val;
-	bool     need_recovery;
 	enum cam_req_mgr_device_error error;
 };
 
@@ -315,7 +302,6 @@ struct cam_req_mgr_notify_stop {
  * @p_delay : delay between time settings applied and take effect
  * @trigger : Trigger point for the client
  * @trigger_on : This device provides trigger
- * @sof_ts_cb  : callback to real time drivers
  */
 struct cam_req_mgr_device_info {
 	int32_t                     dev_hdl;
@@ -324,7 +310,6 @@ struct cam_req_mgr_device_info {
 	enum cam_pipeline_delay     p_delay;
 	uint32_t                    trigger;
 	bool                        trigger_on;
-	int32_t                     (*sof_ts_cb)(int32_t dev_hdl, void *data);
 };
 
 /**
@@ -423,37 +408,4 @@ struct cam_req_mgr_dump_info {
 	int32_t     link_hdl;
 	int32_t     dev_hdl;
 };
-
-/**
- * struct cam_req_mgr_dev_info
- * @link_hdl    : link identifier
- * @state       : Current substate for the activated state.
- * @timestamp   : time stamp for the sof event
- * @boot_time   : boot time stamp for the sof event
- * @frame_id    : frame id
- * @is_applied  : if ISP is in applied state
- *
- */
-struct cam_req_mgr_dev_info {
-	int32_t     link_hdl;
-	uint32_t    state;
-	uint64_t    timestamp;
-	uint64_t    boot_time;
-	uint64_t    frame_id;
-	bool        is_applied;
-};
-
-/**
- * struct cam_req_mgr_request_change_state
- * @link_hdl    : link identifier
- * @dev_hdl     : device handle or identifier
- * @req_id      : request id
- *
- */
-struct cam_req_mgr_request_change_state {
-	int32_t    link_hdl;
-	int32_t    dev_hdl;
-	uint64_t   req_id;
-};
-
 #endif
