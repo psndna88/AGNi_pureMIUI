@@ -37,6 +37,7 @@
 	firmware: firmware {
 		scm {
 			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr 0x13000>;
 		};
 		android {
 			compatible = "android,firmware";
@@ -976,6 +977,10 @@
 				0x18040058 0x18050058 0x18060058 0x18070058>;
 		qcom,config-arr = <0x18000060 0x18010060 0x18020060 0x18030060
 				0x18040060 0x18050060 0x18060060 0x18070060>;
+	};
+
+	dload_mode {
+		compatible = "qcom,dload-mode";
 	};
 
 	kryo-erp {
