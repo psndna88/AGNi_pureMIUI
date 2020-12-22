@@ -1785,8 +1785,6 @@ int cam_flash_publish_dev_info(struct cam_req_mgr_device_info *info)
 	strlcpy(info->name, CAM_FLASH_NAME, sizeof(info->name));
 	info->p_delay = CAM_FLASH_PIPELINE_DELAY;
 	info->trigger = CAM_TRIGGER_POINT_SOF;
-	info->sof_ts_cb = NULL;
-
 	return 0;
 }
 

@@ -1129,7 +1129,6 @@ int cam_sensor_publish_dev_info(struct cam_req_mgr_device_info *info)
 	else
 		info->p_delay = 2;
 	info->trigger = CAM_TRIGGER_POINT_SOF;
-	info->sof_ts_cb = NULL;
 
 	return rc;
 }

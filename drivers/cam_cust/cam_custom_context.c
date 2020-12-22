@@ -549,7 +549,6 @@ static int __cam_custom_ctx_get_dev_info_in_acquired(struct cam_context *ctx,
 	dev_info->dev_id = CAM_REQ_MGR_DEVICE_CUSTOM_HW;
 	dev_info->p_delay = 1;
 	dev_info->trigger = CAM_TRIGGER_POINT_SOF;
-	dev_info->sof_ts_cb = NULL;
 
 	return 0;
 }
