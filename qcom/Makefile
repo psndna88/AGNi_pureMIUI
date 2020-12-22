@@ -185,6 +185,36 @@ dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+        dtbo-$(CONFIG_ARCH_SA6155) += \
+		sa6155-adp-star-overlay.dtbo \
+		sa6155p-adp-star-overlay.dtbo \
+		sa6155p-adp-star-lpass-overlay.dtbo \
+		sa6155-adp-air-overlay.dtbo \
+		sa6155p-adp-air-overlay.dtbo \
+		sa6155p-v2-adp-star-overlay.dtbo \
+		sa6155p-v2-adp-air-overlay.dtbo \
+		sa6155p-v2-adp-air-lpass-overlay.dtbo
+
+sa6155-adp-star-overlay.dtbo-base := sa6155.dtb
+sa6155p-adp-star-overlay.dtbo-base := sa6155p.dtb
+sa6155p-adp-star-lpass-overlay.dtbo-base :=sa6155p.dtb
+sa6155p-v2-adp-star-overlay.dtbo-base := sa6155p.dtb
+sa6155-adp-air-overlay.dtbo-base := sa6155.dtb
+sa6155p-adp-air-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-lpass-overlay.dtbo-base := sa6155p.dtb
+else
+dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
+	sa6155p-adp-star.dtb \
+	sa6155p-adp-star-lpass.dtb \
+	sa6155-adp-air.dtb \
+	sa6155p-adp-air.dtb \
+	sa6155p-v2-adp-star.dtb \
+	sa6155p-v2-adp-air.dtb \
+	sa6155p-v2-adp-air-lpass.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SA8195) += \
 		sa8195p-adp-star-overlay.dtbo \
 		sa8195p-v2-adp-air-overlay.dtbo
