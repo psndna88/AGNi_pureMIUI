@@ -1899,6 +1899,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegenc_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <25 26>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 
@@ -1922,6 +1925,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegdma_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <24 27>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 };
