@@ -144,6 +144,7 @@ unsigned int get_android_version(void)
 {
 	return android_version;
 }
+EXPORT_SYMBOL_GPL(get_android_version);
 
 bool miuirom = true;
 extern int srgb_enabled;
@@ -166,6 +167,7 @@ static int __init set_miui_rom(char *val)
 	return 0;
 }
 __setup("miui=", set_miui_rom);
+EXPORT_SYMBOL_GPL(miuirom);
 
 #if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
 bool srgb_locked = false;
