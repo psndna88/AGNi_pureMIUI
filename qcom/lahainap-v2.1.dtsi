@@ -3,5 +3,5 @@
 / {
 	model = "Qualcomm Technologies, Inc. LahainaP v2.1";
 	compatible = "qcom,lahainap";
-	qcom,msm-id = <439 0x20001>;
+	qcom,msm-id = <439 0x20001>, <502 0x20001>;
 };
