@@ -3,9 +3,9 @@
 ## AGNi version info
 KERNELDIR=`readlink -f .`
 
-export AGNI_VERSION_PREFIX="beta3"
+export AGNI_VERSION_PREFIX="stable"
 export AGNI_VERSION="v7.0"
-sed -i 's/v7.0-beta2/v7.0-beta3/' $KERNELDIR/arch/arm64/configs/agni_*
+sed -i 's/v7.0-beta3/v7.0-stable/' $KERNELDIR/arch/arm64/configs/agni_*
 
 echo "	AGNi Version info loaded."
 
