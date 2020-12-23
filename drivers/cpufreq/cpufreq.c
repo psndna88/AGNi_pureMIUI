@@ -821,6 +821,7 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 				
+extern bool cpu_oc;
 extern bool cpu_minfreq_lock;
 static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy, const char *buf, size_t count) {
 
@@ -829,7 +830,6 @@ static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy, const char 
 
 	memcpy(&new_policy, policy, sizeof(*policy));
 	new_policy.min = policy->user_policy.min;
-	new_policy.max = policy->user_policy.max;
 
 	ret = sscanf(buf, "%u", &new_policy.min);
 	if (ret != 1)
@@ -837,6 +837,38 @@ static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy, const char 
 
 	if (cpu_minfreq_lock)
 		return count;
+	if (!cpu_oc) {
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if (cpuoc_state == 0) {			/* NON OC MAX 1.8GHZ */
+			if (new_policy.min == 1612800)
+				new_policy.min = 902400;
+			if (new_policy.min == 1804800)
+				new_policy.min = 1113600;
+		} else if (cpuoc_state == 1) { 	/* 2.2GHZ OC */
+			if (new_policy.min == 1843200)
+				new_policy.min = 902400;
+			if (new_policy.min == 2208000)
+				new_policy.min = 1113600;
+		} else if (cpuoc_state == 2) { 	/* 2.4GHZ OC */
+			if (new_policy.min == 1843200)
+				new_policy.min = 902400;
+			if (new_policy.min == 2457600)
+				new_policy.min = 1113600;
+		}
+#else
+		if (cpuoc_state == 0) {			/* NON OC MAX 2.2GHZ */
+			if (new_policy.min == 1843200)
+				new_policy.min = 902400;
+			if (new_policy.min == 2208000)
+				new_policy.min = 1113600;
+		} else if (cpuoc_state == 1) { 	/* 2.4GHZ OC */
+			if (new_policy.min == 1843200)
+				new_policy.min = 902400;
+			if (new_policy.min == 2457600)
+				new_policy.min = 1113600;
+		}
+#endif
+	}
 
 	temp = new_policy.min;
 	ret = cpufreq_set_policy(policy, &new_policy);
@@ -846,7 +878,6 @@ static ssize_t store_scaling_min_freq(struct cpufreq_policy *policy, const char 
 	return ret ? ret : count;
 }
 
-extern bool cpu_oc;
 extern bool cpu_maxfreq_lock;
 static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char *buf, size_t count) {									\
 
@@ -854,7 +885,6 @@ static ssize_t store_scaling_max_freq(struct cpufreq_policy *policy, const char 
 	struct cpufreq_policy new_policy;
 
 	memcpy(&new_policy, policy, sizeof(*policy));
-	new_policy.min = policy->user_policy.min;
 	new_policy.max = policy->user_policy.max;
 
 	ret = sscanf(buf, "%u", &new_policy.max);

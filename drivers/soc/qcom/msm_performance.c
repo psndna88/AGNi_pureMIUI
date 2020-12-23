@@ -74,6 +74,38 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 			return -EINVAL;
 		if (cpu > (num_present_cpus() - 1))
 			return -EINVAL;
+		if (!cpu_oc) {
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+			if (cpuoc_state == 0) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val == 1612800))
+					val = 633600;
+				if ((cpu >= 4) && (cpu <=7 ) && (val == 1804800))
+					val = 1113600;
+			} else if (cpuoc_state == 1) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val == 1843200))
+					val = 633600;
+				if ((cpu >= 4) && (cpu <=7 ) && (val == 2208000))
+					val = 1113600;			
+			} else if (cpuoc_state == 2) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val == 1843200))
+					val = 633600;
+				if ((cpu >= 4) && (cpu <=7 ) && (val == 2457600))
+					val = 1113600;			
+			}
+#else
+			if (cpuoc_state == 0) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val == 1804800))
+					val = 633600;
+				if ((cpu >= 4) && (cpu <=7 ) && (val == 2208000))
+					val = 1113600;
+			} else if (cpuoc_state == 1) {
+				if ((cpu >= 0) && (cpu <=3 ) && (val == 1804800))
+					val = 633600;
+				if ((cpu >= 4) && (cpu <=7 ) && (val == 2457600))
+					val = 1113600;
+			}
+#endif
+		}
 
 		i_cpu_stats = &per_cpu(cpu_stats, cpu);
 
