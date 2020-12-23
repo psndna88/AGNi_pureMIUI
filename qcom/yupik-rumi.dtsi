@@ -186,3 +186,8 @@
 &camcc {
 	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>, <&gcc GCC_CAMERA_AHB_CLK>;
 };
+
+&cpufreq_hw {
+	clocks = <&bi_tcxo>, <&gcc GCC_GPLL0>;
+	status = "disabled";
+};
