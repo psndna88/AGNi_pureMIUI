@@ -33,6 +33,8 @@
 			"gpu_cc_hub_cx_int_clk",
 			"gpu_cc_hub_aon_clk";
 
+		interconnects = <&gem_noc MASTER_GPU_TCU &mc_virt SLAVE_EBI1>;
+
 		interrupts =	<GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 678 IRQ_TYPE_LEVEL_HIGH>,
@@ -159,12 +161,19 @@
 				<GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>;
 
+		interconnects = <&gem_noc MASTER_APPSS_PROC
+				&cnoc3 SLAVE_TCU>;
+		qcom,active-only;
+
 		anoc_1_tbu: anoc_1_tbu@151dd000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x151dd000 0x1000>,
 				<0x151da200 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x0 0x400>;
+			interconnects = <&gem_noc MASTER_APPSS_PROC
+					&cnoc3 SLAVE_TCU>;
+			qcom,active-only;
 		};
 
 		anoc_2_tbu: anoc_2_tbu@151e1000 {
@@ -173,6 +182,9 @@
 				<0x151da208 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x400 0x400>;
+			interconnects = <&gem_noc MASTER_APPSS_PROC
+					&cnoc3 SLAVE_TCU>;
+			qcom,active-only;
 		};
 
 		mnoc_hf_0_tbu: mnoc_hf_0_tbu@151e5000 {
@@ -181,6 +193,11 @@
 				<0x151da210 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x800 0x400>;
+			qcom,regulator-names = "vdd";
+			vdd-supply = <&hlos1_vote_mmnoc_mmu_tbu_hf0_gdsc>;
+			interconnects = <&mmss_noc MASTER_MDP0
+					&mc_virt SLAVE_EBI1>;
+			qcom,active-only;
 		};
 
 		mnoc_hf_1_tbu: mnoc_hf_1_tbu@151e9000 {
@@ -189,6 +206,11 @@
 				<0x151da218 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0xc00 0x400>;
+			qcom,regulator-names = "vdd";
+			vdd-supply = <&hlos1_vote_mmnoc_mmu_tbu_hf1_gdsc>;
+			interconnects = <&mmss_noc MASTER_MDP0
+					&mc_virt SLAVE_EBI1>;
+			qcom,active-only;
 		};
 
 		compute_dsp_1_tbu: compute_dsp_1_tbu@151ed000 {
@@ -197,6 +219,11 @@
 				<0x151da220 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1000 0x400>;
+			qcom,regulator-names = "vdd";
+			vdd-supply = <&hlos1_vote_turing_mmu_tbu1_gdsc>;
+			interconnects = <&nsp_noc MASTER_CDSP_PROC
+					&mc_virt SLAVE_EBI1>;
+			qcom,active-only;
 		};
 
 		compute_dsp_0_tbu: compute_dsp_0_tbu@151f1000 {
@@ -205,6 +232,11 @@
 				<0x151da228 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1400 0x400>;
+			qcom,regulator-names = "vdd";
+			vdd-supply = <&hlos1_vote_turing_mmu_tbu0_gdsc>;
+			interconnects = <&nsp_noc MASTER_CDSP_PROC
+					&mc_virt SLAVE_EBI1>;
+			qcom,active-only;
 		};
 
 		adsp_tbu: adsp_tbu@151f5000 {
@@ -213,6 +245,9 @@
 				<0x151da230 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1800 0x400>;
+			interconnects = <&gem_noc MASTER_APPSS_PROC
+					&lpass_ag_noc SLAVE_LPASS_CORE_CFG>;
+			qcom,active-only;
 		};
 
 		anoc_1_pcie_tbu: anoc_1_pcie_tbu@151f9000 {
@@ -221,6 +256,9 @@
 				<0x151da238 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1c00 0x400>;
+			interconnects = <&gem_noc MASTER_APPSS_PROC
+					&cnoc3 SLAVE_TCU>;
+			qcom,active-only;
 		};
 
 		mnoc_sf_0_tbu: mnoc_sf_0_tbu@151fd000 {
@@ -229,6 +267,11 @@
 				<0x151da240 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2000 0x400>;
+			qcom,regulator-names = "vdd";
+			vdd-supply = <&hlos1_vote_mmnoc_mmu_tbu_sf0_gdsc>;
+			interconnects = <&mmss_noc MASTER_CAMNOC_SF
+					&mc_virt SLAVE_EBI1>;
+			qcom,active-only;
 		};
 	};
 

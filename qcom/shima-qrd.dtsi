@@ -265,12 +265,6 @@
 				type = "passive";
 			};
 
-			quiet_modem_skin_trip2: quiet-modem-skin-trip2 {
-				temperature = <50000>;
-				hysteresis = <4000>;
-				type = "passive";
-			};
-
 			quiet_cx_trip: quiet-cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
@@ -331,7 +325,7 @@
 			};
 
 			modem-skin-cdev2 {
-				trip = <&quiet_modem_skin_trip2>;
+				trip = <&quiet_cx_trip>;
 				cooling-device = <&modem_skin 3 3>;
 			};
 
@@ -447,10 +441,10 @@
 		"VA DMIC4", "Digital Mic4",
 		"VA DMIC5", "Digital Mic5",
 		"VA DMIC0", "VA MIC BIAS1",
-		"VA DMIC1", "VA MIC BIAS3",
-		"VA DMIC2", "VA MIC BIAS4",
-		"VA DMIC3", "VA MIC BIAS1",
-		"VA DMIC4", "VA MIC BIAS3",
+		"VA DMIC1", "VA MIC BIAS1",
+		"VA DMIC2", "VA MIC BIAS3",
+		"VA DMIC3", "VA MIC BIAS3",
+		"VA DMIC4", "VA MIC BIAS4",
 		"VA DMIC5", "VA MIC BIAS4";
 	qcom,swr-dmic-max-devs = <0>;
 

@@ -33,7 +33,7 @@
 	#size-cells = <2>;
 
 	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
+		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off";
 	};
 
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
@@ -50,8 +50,8 @@
 
 	aliases {
 			ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
-			sdhc1 = &sdhc_1; /*SDC1 eMMC slot*/
-			sdhc2 = &sdhc_2; /* SDC2 SD card slot */
+			sdhc0 = &sdhc_1; /*SDC1 eMMC slot*/
+			sdhc1 = &sdhc_2; /* SDC2 SD card slot */
 			swr0 = &swr0;
 			swr1 = &swr1;
 			swr2 = &swr2;
@@ -1174,6 +1174,8 @@
 	qcom,guestvm_loader {
 		compatible = "qcom,guestvm-loader";
 		image_to_be_loaded = "trustedvm";
+		qcom,reserved-cpus = <4 5>;
+		qcom,unisolate-timeout-ms = <8000>;
 	};
 
 
@@ -2303,6 +2305,28 @@
 		qcom,count-unit = <0x10000>;
 	};
 
+	snoop_l3_bw: qcom,snoop-l3-bw {
+		compatible = "qcom,devfreq-icc-l3bw";
+		reg = <0x18590100 0xa0>;
+		reg-names = "ftbl-base";
+		qcom,bus-width = <32>;
+		governor = "bw_hwmon";
+		interconnects =
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS
+			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+	};
+
+	snoop_l3_bwmon: qcom,snoop-l3-bwmon@9091000 {
+		compatible = "qcom,bimc-bwmon4";
+		reg = <0x90b9100 0x300>, <0x90b9000 0x200>;
+		reg-names = "base", "global_base";
+		interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,mport = <0>;
+		qcom,hw-timer-hz = <19200000>;
+		qcom,target-dev = <&snoop_l3_bw>;
+		qcom,count-unit = <0x10000>;
+	};
+
 	cpu0_cpu_l3_lat: qcom,cpu0-cpu-l3-lat {
 		compatible = "qcom,devfreq-icc-l3";
 		reg = <0x18590100 0xa0>;
@@ -2458,6 +2482,13 @@
 	};
 
 	cpu4_cpu_ddr_qoslat: qcom,cpu4-cpu-ddr-qoslat {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "mem_latency";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
+	cpu7_cpu_ddr_qoslatfloor: qcom,cpu7-cpu-ddr-qoslatfloor {
 		compatible = "qcom,devfreq-qoslat";
 		governor = "mem_latency";
 		operating-points-v2 = <&qoslat_opp_table>;
@@ -2732,6 +2763,16 @@
 			qcom,core-dev-table =
 				<  300000 1 >,
 				< 3000000 2 >;
+		};
+
+		cpu7_qoslatmon: qcom,cpu7-qoslatmon {
+			compatible = "qcom,arm-memlat-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_ddr_qoslatfloor>;
+			qcom,cachemiss-ev = <0x1000>;
+			qcom,core-dev-table =
+				< 2169600 1 >,
+				< 2707200 2 >;
 		};
 	};
 
@@ -3535,7 +3576,7 @@
 		vdd-wlan-io-supply = <&S10B>;
 		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 1>;
 		vdd-wlan-rfa1-supply = <&S11B>;
-		qcom,vdd-wlan-rfa1-config = <1880000 1880000 0 0 1>;
+		qcom,vdd-wlan-rfa1-config = <1880000 2040000 0 0 1>;
 		vdd-wlan-rfa2-supply = <&S12B>;
 		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
 		wlan-ant-switch-supply = <&L11C>;
@@ -3713,7 +3754,7 @@
 		qcom,bt-vdd-dig-config = <950000 952000 0 1>;
 		qcom,bt-vdd-rfacmn-config  = <950000 952000 0 1>;
 		qcom,bt-vdd-rfa-0p8-config  = <950000 952000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1880000 2040000 0 1>;
 		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
 	};

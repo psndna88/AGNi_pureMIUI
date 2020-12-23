@@ -8,5 +8,5 @@
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB NTN3 PCIE";
 	compatible = "qcom,sdxlemur-mtp",
 		"qcom,sdxlemur", "qcom,mtp";
-	qcom,board-id = <0x5010008 0>;
+	qcom,board-id = <0x5010008 0x305>;
 };

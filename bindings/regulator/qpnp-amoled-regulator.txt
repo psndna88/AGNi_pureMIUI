@@ -77,6 +77,12 @@ Subnode common properties for OLEDB and AB/IBB regulator devices.
 	Definition: A boolean property to specify that IBB regulator needs to
 		    be configured in single phase always.
 
+- qcom,ibb-enable-force-ccm-wa:
+	Usage:      optional
+	Value type: <empty>
+	Definition: A boolean property to specify that IBB regulator needs to
+		    be forced into CCM mode when it gets enabled.
+
 Example:
 
 pm8150a_amoled: oledb@e000 {
