@@ -3,6 +3,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXNIGHTJAR";
@@ -125,8 +126,8 @@
 		compatible = "qcom,sdxnightjar-gcc", "syscon";
 		reg = <0x1800000 0x80000>;
 		reg-names = "cc_base";
-		vdd_cx-supply = <&pmd9650_s5_level>;
-		vdd_cx_ao-supply = <&pmd9650_s5_level_ao>;
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_cx_ao-supply = <&VDD_CX_LEVEL_AO>;
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
 			<&rpmcc RPM_SMD_XO_A_CLK_SRC>;
 		clock-names = "bi_tcxo", "bi_tcxo_ao";
@@ -134,9 +135,15 @@
 		#reset-cells = <1>;
 	};
 
+	cpucc: syscon@b01101c {
+		compatible = "syscon";
+		reg = <0xb01101c 0x4>;
+	};
+
 	debugcc: qcom,cc-debug@1874000 {
 		compatible = "qcom,sdxnightjar-debugcc";
 		qcom,gcc = <&gcc>;
+		qcom,cpucc = <&cpucc>;
 		clock-names = "xo_clk_src";
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
 		#clock-cells = <1>;
@@ -152,6 +159,24 @@
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_pcie";
 		reg = <0x0185d044 0x4>;
+	};
+
+	 apsscc: clock-controller@b010008 {
+		compatible = "qcom,sdxnightjar-apsscc";
+		clocks = <&rpmcc RPM_SMD_XO_A_CLK_SRC>,
+			<&gcc GPLL0_AO>;
+		clock-names = "bi_tcxo_ao", "gpll0_out_even";
+		reg = <0xb010008 0x8>, <0xb008018 0x28>;
+		reg-names = "apcs_cmd", "apcs_pll";
+		vdd-pll-supply = <&VDD_CX_LEVEL_AO>;
+		cpu-vdd-supply = <&VDD_CX_LEVEL_AO>;
+		qcom,speed0-bin-v0 =
+			<           0 RPM_SMD_REGULATOR_LEVEL_NONE>,
+			<   200000000 RPM_SMD_REGULATOR_LEVEL_LOW_SVS>,
+			<   384000000 RPM_SMD_REGULATOR_LEVEL_SVS>,
+			<   787200000 RPM_SMD_REGULATOR_LEVEL_NOM>,
+			<  1286400000 RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		#clock-cells = <1>;
 	};
 
 	qcom,msm-cpufreq {
