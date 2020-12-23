@@ -1,3 +1,5 @@
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,sdxnightjar.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
@@ -672,6 +674,37 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 		cell-index = <0>;
+	};
+
+	bimc: interconnect@400000 {
+		reg = <0x400000 0x62000>;
+		compatible = "qcom,sdxnightjar-bimc";
+		qcom,util-factor = <153>;
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_BIMC_CLK>,
+			<&rpmcc RPM_SMD_BIMC_A_CLK>;
+	};
+
+	pc_noc: interconnect@500000 {
+		reg = <0x500000 0x11000>;
+		compatible = "qcom,sdxnightjar-pcnoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_PCNOC_CLK>,
+			<&rpmcc RPM_SMD_PCNOC_A_CLK>;
+	};
+
+	system_noc: interconnect@580000 {
+		reg = <0x580000 0x14000>;
+		compatible = "qcom,sdxnightjar-snoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_SNOC_CLK>,
+			<&rpmcc RPM_SMD_SNOC_A_CLK>;
 	};
 };
 
