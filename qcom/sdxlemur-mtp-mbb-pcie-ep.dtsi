@@ -43,3 +43,7 @@
 		qcom,iommu-dma = "bypass";
 	};
 };
+
+&usb {
+	qcom,iommu-dma = "bypass";
+};
