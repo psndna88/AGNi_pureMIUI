@@ -35,6 +35,65 @@
 			qcom,vib-ldo-volt-uv = <3000000>;
 			qcom,disable-overdrive;
 		};
+
+		pm7325b_lcdb: qcom,lcdb@fd00 {
+			compatible = "qcom,lcdb-pm7325b";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0xfd00>;
+			interrupts = <0x3 0xfd 0x1 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "sc-irq";
+
+			lcdb_ldo_vreg: ldo {
+				label = "ldo";
+				regulator-name = "lcdb_ldo";
+				regulator-min-microvolt = <4400000>;
+				regulator-max-microvolt = <6000000>;
+			};
+
+			lcdb_ncp_vreg: ncp {
+				label = "ncp";
+				regulator-name = "lcdb_ncp";
+				regulator-min-microvolt = <4400000>;
+				regulator-max-microvolt = <6000000>;
+			};
+
+			lcdb_bst_vreg: bst {
+				label = "bst";
+				regulator-name = "lcdb_bst";
+				regulator-min-microvolt = <4700000>;
+				regulator-max-microvolt = <6400000>;
+			};
+		};
+
+		pm7325b_wled: qcom,wled@d800 {
+			compatible = "qcom,pm7325b-spmi-wled";
+			reg = <0xfb00>, <0xfc00>;
+			reg-names = "wled-ctrl-base", "wled-sink-base";
+			label = "backlight";
+			interrupts = <0x3 0xfb 0x1 IRQ_TYPE_EDGE_RISING>,
+				     <0x3 0xfb 0x4 IRQ_TYPE_EDGE_BOTH>,
+				     <0x3 0xfb 0x5 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "ovp-irq", "pre-flash-irq",
+					  "flash-irq";
+			qcom,auto-calibration;
+
+			wled_flash: qcom,wled-flash {
+				label = "flash";
+				qcom,default-led-trigger = "wled_flash";
+			};
+
+			wled_torch: qcom,wled-torch {
+				label = "torch";
+				qcom,default-led-trigger = "wled_torch";
+				qcom,wled-torch-timer = <1200>;
+			};
+
+			wled_switch: qcom,wled-switch {
+				label = "switch";
+				qcom,default-led-trigger = "wled_switch";
+			};
+		};
 	};
 };
 
