@@ -746,17 +746,59 @@ static ssize_t show_scaling_max_freq(struct cpufreq_policy *policy, char *buf)
 
 	return sprintf(buf, "%u\n", fake_max);
 }
-#endif
+#else
+static ssize_t show_cpuinfo_max_freq(struct cpufreq_policy *policy, char *buf)
+{
+	int fake_max_freq;
 
-show_one(cpuinfo_min_freq, cpuinfo.min_freq);
-#ifndef CONFIG_ROG_SUPPORT
-show_one(cpuinfo_max_freq, cpuinfo.max_freq);
+	fake_max_freq = policy->cpuinfo.max_freq;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if (cpuoc_state == 0) {
+			if ((policy->cpuinfo.max_freq == 1747200) || (policy->cpuinfo.max_freq == 1843200))
+				fake_max_freq = 1612800;
+			if ((policy->cpuinfo.max_freq == 1958400) || (policy->cpuinfo.max_freq == 2150400) ||
+				(policy->cpuinfo.max_freq == 2208000) || (policy->cpuinfo.max_freq == 2457600))
+				fake_max_freq = 1804800;
+		} else if (cpuoc_state == 1) {
+			if (policy->cpuinfo.max_freq == 2457600)
+				fake_max_freq = 2208000;
+		}
+#else
+		if (cpuoc_state == 0) {
+			if (policy->cpuinfo.max_freq == 2457600)
+				fake_max_freq = 2208000;
+		}
 #endif
+	return sprintf(buf, "%u\n", fake_max_freq);
+}
+static ssize_t show_scaling_max_freq(struct cpufreq_policy *policy, char *buf)
+{
+	int fake_max;
+
+	fake_max = policy->max;
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+	if (cpuoc_state == 0) {
+		if ((policy->max == 1747200) || (policy->max == 1843200))
+			fake_max = 1612800;
+		if ((policy->max == 1958400) || (policy->max == 2150400) ||
+			(policy->max == 2208000) || (policy->max == 2457600))
+			fake_max = 1804800;
+	} else if (cpuoc_state == 1) {
+		if (policy->max == 2457600)
+			fake_max = 2208000;
+	}
+#else
+	if (cpuoc_state == 0) {
+		if (policy->max == 2457600)
+			fake_max = 2208000;
+	}
+#endif
+	return sprintf(buf, "%u\n", fake_max);
+}
+#endif
+show_one(cpuinfo_min_freq, cpuinfo.min_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
-#ifndef CONFIG_ROG_SUPPORT
-show_one(scaling_max_freq, max);
-#endif
 
 static ssize_t show_scaling_cur_freq(struct cpufreq_policy *policy, char *buf)
 {

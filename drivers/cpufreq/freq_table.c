@@ -228,6 +228,7 @@ int cpufreq_frequency_table_get_index(struct cpufreq_policy *policy,
 }
 EXPORT_SYMBOL_GPL(cpufreq_frequency_table_get_index);
 
+extern int cpuoc_state;
 /**
  * show_available_freqs - show available frequencies for the specified CPU
  */
@@ -265,11 +266,20 @@ static ssize_t show_available_freqs(struct cpufreq_policy *policy, char *buf,
 		if (pos->frequency == 2457600) {
 		} else {
 #endif
+#else
+#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
+		if ((cpuoc_state == 0) && ((pos->frequency == 1747200) || (pos->frequency == 1843200) ||
+			(pos->frequency == 1958400) || (pos->frequency == 2150400) ||
+			(pos->frequency == 2208000) || (pos->frequency == 2457600))) {
+		} else if ((cpuoc_state == 1) && (pos->frequency == 2457600)) {
+		} else {
+#else
+		if ((cpuoc_state == 0) && (pos->frequency == 2457600)) {
+		} else {
+#endif
 #endif
 			count += sprintf(&buf[count], "%d ", pos->frequency);
-#ifdef CONFIG_ROG_SUPPORT
 		}
-#endif
 	}
 	count += sprintf(&buf[count], "\n");
 
