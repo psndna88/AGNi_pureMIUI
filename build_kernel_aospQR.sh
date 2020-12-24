@@ -56,16 +56,14 @@ if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
-if [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ]; then
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
-elif [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ]; then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
 	exit;
 fi
-$KERNELDIR/scripts/mkdtimg/bin/mkdtimg create $KERNELDIR/$DIR/dtbo.img $COMPILEDIR_ATOLL/arch/arm64/boot/dts/qcom/*.dtbo
 
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
 mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
