@@ -1432,6 +1432,7 @@
 #include "sm8150-pm.dtsi"
 #include "sa8195-smp2p.dtsi"
 #include "sa8195-gdsc.dtsi"
+#include "msm-arm-smmu-sdmshrike.dtsi"
 
 &emac_gdsc {
 	status = "ok";
