@@ -286,6 +286,27 @@ static int __init set_ledmode(char *val)
 	return 0;
 }
 __setup("ledmode=", set_ledmode);
+bool selaltmode = false;
+int selinux_enforcing = 0;
+int avc_strict = 0;
+static int __init set_selaltmode(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	if (temp) {
+		selaltmode = true;
+		selinux_enforcing = 1;
+		avc_strict = 1;
+		pr_err("Kernel: AGNi alternate sel mode = 1");
+	} else {
+		pr_err("Kernel: AGNi alternate sel mode = 0 -- default");
+	}
+
+	return 0;
+}
+__setup("selmode=", set_selaltmode);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

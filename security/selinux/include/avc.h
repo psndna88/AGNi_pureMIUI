@@ -146,7 +146,7 @@ static inline int avc_audit(u32 ssid, u32 tsid,
 #endif
 }
 
-#define AVC_STRICT 0
+extern int avc_strict;
 #define AVC_EXTENDED_PERMS 2	/* update extended permissions */
 int avc_has_perm_noaudit(u32 ssid, u32 tsid,
 			 u16 tclass, u32 requested,

@@ -98,7 +98,8 @@
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
-int selinux_enforcing = 0;
+extern int selinux_enforcing;
+extern bool selaltmode;
 
 /* static int __init enforcing_setup(char *str)
 {
@@ -6137,8 +6138,15 @@ static __init int selinux_init(void)
 	if (avc_add_callback(selinux_netcache_avc_callback, AVC_CALLBACK_RESET))
 		panic("SELinux: Unable to register AVC netcache callback\n");
 
-	printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
-	printk(KERN_DEBUG "AGNi: selinux in special mode\n");
+	if (selaltmode) {
+		if (selinux_enforcing)
+			printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
+		else
+			printk(KERN_DEBUG "SELinux:  Starting in permissive mode\n");
+	} else {
+		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
+		printk(KERN_DEBUG "AGNi: selinux in special mode\n");
+	}
 
 	return 0;
 }
