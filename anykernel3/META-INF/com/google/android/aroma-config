@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v11.6_stable");
+ini_set("rom_version",	"v11.7_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"December, 23, 2020");
+ini_set("rom_date",		"December, 27, 2020");
 
 # Show Simple Splash
 splash(
@@ -155,14 +155,7 @@ selectbox(
 selectbox(
     "Wired Earphone Sound Enhancement","<@center><b>\nWant AGNi Wired Sound Enhancement ?</b>\n\n</@>","@install","sound.prop",  
     "YESSSS!",	"DEFAULT. AGNi's Wired Earphone Sound Enhancement doesnt consume extra battery unlike other sound mods like Dolby or V4A", 1,   #-- selected.0 = 1
-    "No...",	"Select if you really don't want or want to use only other Sound mods", 0  #-- selected.0 = 2
-);
-
-selectbox(
-    "AGNi Game Graphics Unlock","<@center><b>\nWant AGNi to unlock High Graphics on games ?</b>\n\n</@>","@install","pubg.prop",  
-    "PUBG Smooth-Extreme Graphics",	"PUBG is part of my soul! Note: Performance may vary and don't report for lag or heating.", 0,				#-- selected.0 = 1
-    "COD Mobile High Graphics",		"Die Hard COD lover! Note: Performance may vary and don't report for lag or heating.", 0,  					#-- selected.0 = 2
-    "No",							"DEFAULT: Also select this if using AGNi game unlock module. (This will also revert changes made above)", 1 #-- selected.0 = 3
+    "No...",	"Select if you really don't want or want to use only other Sound mods like DOLBY", 0  #-- selected.0 = 2
 );
 
 selectbox(
@@ -187,6 +180,12 @@ selectbox(
     "Wired Earphone Volume Buttons Operation Mode","<@center><b>\nSome roms work differently so select mode</b>\n\n</@>","@install","wevol.prop",
     "Mode 1",	"Default: use for MIUI roms or most AOSP roms", 1,					#-- selected.0 = 1
     "Mode 2",	"For few NON-MIUI roms like Nusantara, EvoX or maybe others", 0 	#-- selected.0 = 2
+);
+
+selectbox(
+    "Selinux Mode selection","<@center><b>\nSometimes unfinished roms dont boot because of this</b>\n\n</@>","@install","sel.prop",
+    "Enforcing",	"Default: use for all MIUI roms or most AOSP Pie/Q roms", 1,	#-- selected.0 = 1
+    "Permissive",	"For some Android 11 roms that have boot problems      ", 0 	#-- selected.0 = 2
 );
 
 setvar("retstatus",
