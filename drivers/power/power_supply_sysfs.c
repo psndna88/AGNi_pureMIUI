@@ -60,7 +60,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"Unknown", "Good", "Overheat", "Dead", "Over voltage",
 		"Unspecified failure", "Cold", "Watchdog timer expire",
 		"Safety timer expire",
-		"Over current", "Warm", "Cool", "Hot","Low_Cool"
+		"Warm", "Cool", "Hot","Low_Cool"
 	};
 	static char *technology_text[] = {
 		"Unknown", "NiMH", "Li-ion", "Li-poly", "LiFe", "NiCd",
