@@ -484,8 +484,8 @@ if [ "`$BB grep ro.miui $buildprop`" ]; then
 		MIUI_VER="10";
 		ui_print " " "AGNi detected MIUI 10" " ";
 	else
-		MIUI_VER="UNSUPPORTED";
-		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
+		MIUI_VER="12";
+		ui_print " " ">> Unsupported MIUI version, assuming MIUI 12" " ";
 	fi;
 else
 	MIUI_ROM="false";
@@ -494,6 +494,7 @@ else
 fi;
 $BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
+# Wired Earphone Volume Button mode
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/wevol.prop`" ]; then
 	$BB echo "0" > $AKHOME/WIRED_BTN_ALTMODE;
 else
@@ -512,6 +513,12 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/led.prop`" ]; then
 	$BB echo "0" > $AKHOME/LED_MODE;
 else
 	$BB echo "1" > $AKHOME/LED_MODE;
+fi;
+# Selinux mode
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/sel.prop`" ]; then
+	$BB echo "0" > $AKHOME/SEL_MODE;
+else
+	$BB echo "1" > $AKHOME/SEL_MODE;
 fi;
 
 ### AGNi: Camera Libs type detection
@@ -591,12 +598,6 @@ if [ ! "`$BB grep AGNI_HERE /vendor/etc/init/hw/init.qcom.rc`" ]; then
     $BB echo "`$BB cat $AKHOME/tools/init.rc-append`" >> /vendor/etc/init/hw/init.qcom.rc;
     /sbin/restorecon -v /vendor/etc/init/hw/init.qcom.rc;
 fi;
-$BB sed -i '/#AGNI_HERE/d' /vendor/bin/init.qcom.early_boot.sh;
-########$BB echo "`$BB cat $AKHOME/tools/init.rc.early_boot-append`" >> /vendor/bin/init.qcom.early_boot.sh;
-$BB chmod 0755 /vendor/bin/init.qcom.early_boot.sh;
-/sbin/restorecon -v /vendor/bin/init.qcom.early_boot.sh;
-/sbin/restorecon -v /vendor/bin/init.qcom.sh;
-########$BB rm /cache/cleaned;
 ### EAS Perf hal
 if [ ! -d /vendor/etc/perf ]; then
 	PIXEL_PERF=1;
@@ -791,83 +792,22 @@ $BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 if [ -d /firmware/image/agni_bakup ]; then
 	$BB rm -rf /firmware/image/agni_bakup;
 fi;
-### AGNi Games Graphics Unlock
-if [ "`$BB grep selected.0=1 /tmp/aroma-data/pubg.prop`" ]; then #PUBG
-	if [ ! -f $buildproploc/build.prop.bak.agni ];then
-		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
-	else
-		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' $buildproploc/build.prop;
-	if [ ! -f /vendor/build.prop.bak.agni ];then
-		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
-	else
-		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/'/vendor/build.prop;
-	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
-		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
-	else
-		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' /vendor/odm/etc/build.prop;
-	ui_print " " "AGNi applied PUBG smooth-extreme graphics tweak...(NeFeroN+)" " ";
-elif [ "`$BB grep selected.0=2 /tmp/aroma-data/pubg.prop`" ]; then #COD mobile
-	if [ ! -f $buildproploc/build.prop.bak.agni ];then
-		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
-	else
-		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' $buildproploc/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' $buildproploc/build.prop;
-	if [ ! -f /vendor/build.prop.bak.agni ];then
-		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
-	else
-		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/build.prop;
-	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
-		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
-	else
-		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
-	fi;
-	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/odm/etc/build.prop;
-	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/odm/etc/build.prop;
-	ui_print " " "AGNi applied COD mobile High graphics tweak...(NeFeroN+)" " ";
-else
-	if [ -f $buildproploc/build.prop.bak.agni ];then
-		$BB mv -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
-	fi;
-	if [ -f /vendor/build.prop.bak.agni ];then
-		$BB mv -f /vendor/build.prop.bak.agni /vendor/build.prop;
-	fi;
-	if [ -f /vendor/odm/etc/build.prop.bak.agni ];then
-		$BB mv -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
-	fi;
-	ui_print " " "AGNi NOT applied(reverted) Game Graphics Unlock." " ";
+### Revert Game graphics unlock as magisk module should be used
+if [ -f $buildproploc/build.prop.bak.agni ];then
+	$BB mv -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	$BB chmod 600 $buildproploc/build.prop;
+	/sbin/restorecon -v $buildproploc/build.prop;
 fi;
-$BB chmod 600 $buildproploc/build.prop;
-$BB chmod 600 /vendor/build.prop;
-$BB chmod 600 /vendor/odm/etc/build.prop;
-/sbin/restorecon -v $buildproploc/build.prop;
-/sbin/restorecon -v /vendor/build.prop;
-/sbin/restorecon -v /vendor/odm/etc/build.prop;
+if [ -f /vendor/build.prop.bak.agni ];then
+	$BB mv -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	$BB chmod 600 /vendor/build.prop;
+	/sbin/restorecon -v /vendor/build.prop;
+fi;
+if [ -f /vendor/odm/etc/build.prop.bak.agni ];then
+	$BB mv -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	$BB chmod 600 /vendor/odm/etc/build.prop;
+	/sbin/restorecon -v /vendor/odm/etc/build.prop;
+fi;
 
 $BB sync;
 umount_all;
@@ -906,6 +846,17 @@ if [ "$ANDROID_VER" == "PIE" ]; then
 		ui_print " " "AGNi now installing 64bit libdpmframework.so ..." " ";
 		$BB cp -f $AKHOME/tools/libdpmframework.so.lib /system/lib64/libdpmframework.so;
 		$BB chmod 0644 /system/lib64/libdpmframework.so;
+		/sbin/restorecon -v /system/lib64/libdpmframework.so;
+	fi;
+fi;
+
+# AGNi: WIFI HAL FOR MIUI 12 Q
+if [ "$ANDROID_VER" == "Q" ]; then
+	if [ "$MIUI_VER" == "12" ]; then
+		ui_print " " "AGNi now installing WIFI HAL..." " ";
+		$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
+		$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
+		/sbin/restorecon -v /vendor/lib64/libwifi-hal.so;
 	fi;
 fi;
 
@@ -924,18 +875,7 @@ else
 	$BB sed -i '/#SMOD/d' /vendor/etc/init/hw/init.agni.rc;
 fi;
 /sbin/restorecon -v /vendor/etc/mixer_paths.xml;
-
-# Facebook app watcher killer
-if [ -d /data/data/com.facebook.katana ]; then
-	$BB chmod -R 660 /data/data/com.facebook.katana/app_watcher;
-fi;
-
-# Thermal Modules for Universal Rom Fixes REVERT
-if [ -d /vendor/etc/thermalbak-agni ]; then
-	$BB mv -f /vendor/etc/thermalbak-agni/* /vendor/etc;
-	$BB rm -rf /vendor/etc/thermalbak-agni;
-	$BB chmod 0644 /vendor/etc/thermal-engin*;
-fi;
+/sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
 ## Unmount /system /vendor
 umount_all;
 
