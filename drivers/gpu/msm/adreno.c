@@ -6,7 +6,6 @@
 #include <linux/component.h>
 #include <linux/delay.h>
 #include <linux/firmware.h>
-#include <linux/input.h>
 #include <linux/interconnect.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -34,6 +33,7 @@
 /* Include the master list of GPU cores that are supported */
 #include "adreno-gpulist.h"
 
+static void adreno_pwr_on_work(struct work_struct *work);
 static int adreno_soft_reset(struct kgsl_device *device);
 static unsigned int counter_delta(struct kgsl_device *device,
 	unsigned int reg, unsigned int *counter);
@@ -60,9 +60,6 @@ static unsigned int adreno_ft_regs_default[] = {
 
 /* Nice level for the higher priority GPU start thread */
 int adreno_wake_nice = -7;
-
-/* Number of milliseconds to stay active active after a wake on touch */
-unsigned int adreno_wake_timeout = 100;
 
 static u32 get_ucode_version(const u32 *data)
 {
@@ -337,6 +334,29 @@ void adreno_fault_detect_stop(struct adreno_device *adreno_dev)
 	}
 
 	adreno_dev->fast_hang_detect = 0;
+}
+
+static void adreno_touch_wakeup(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+
+	/*
+	 * Don't schedule adreno_start in a high priority workqueue, we are
+	 * already in a workqueue which should be sufficient
+	 */
+	kgsl_pwrctrl_change_state(device, KGSL_STATE_ACTIVE);
+}
+
+static void adreno_pwr_on_work(struct work_struct *work)
+{
+	struct adreno_device *adreno_dev =
+		container_of(work, typeof(*adreno_dev), pwr_on_work);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	const struct adreno_power_ops *ops = ADRENO_POWER_OPS(adreno_dev);
+
+	mutex_lock(&device->mutex);
+	ops->touch_wakeup(adreno_dev);
+	mutex_unlock(&device->mutex);
 }
 
 /*
@@ -1234,6 +1254,8 @@ static void adreno_setup_device(struct adreno_device *adreno_dev)
 
 	/* Enable command timeouts by default */
 	adreno_dev->long_ib_detect = true;
+
+	INIT_WORK(&adreno_dev->pwr_on_work, adreno_pwr_on_work);
 
 	INIT_LIST_HEAD(&adreno_dev->active_list);
 	spin_lock_init(&adreno_dev->active_list_lock);
@@ -3777,6 +3799,7 @@ const struct adreno_power_ops adreno_power_operations = {
 	.active_count_put = adreno_pwrctrl_active_count_put,
 	.pm_suspend = adreno_suspend,
 	.pm_resume = adreno_resume,
+	.touch_wakeup = adreno_touch_wakeup,
 };
 
 static int _compare_of(struct device *dev, void *data)
