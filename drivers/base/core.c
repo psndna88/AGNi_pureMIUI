@@ -300,7 +300,7 @@ struct device_link *device_link_add(struct device *consumer,
 	list_add_tail_rcu(&link->s_node, &supplier->links.consumers);
 	list_add_tail_rcu(&link->c_node, &consumer->links.suppliers);
 
-	dev_info(consumer, "Linked as a consumer to %s\n", dev_name(supplier));
+	dev_dbg(consumer, "Linked as a consumer to %s\n", dev_name(supplier));
 
  out:
 	device_pm_unlock();
@@ -328,7 +328,7 @@ static void __device_link_free_srcu(struct rcu_head *rhead)
 
 static void __device_link_del(struct device_link *link)
 {
-	dev_info(link->consumer, "Dropping the link to %s\n",
+	dev_dbg(link->consumer, "Dropping the link to %s\n",
 		 dev_name(link->supplier));
 
 	if (link->flags & DL_FLAG_PM_RUNTIME)
@@ -341,7 +341,7 @@ static void __device_link_del(struct device_link *link)
 #else /* !CONFIG_SRCU */
 static void __device_link_del(struct device_link *link)
 {
-	dev_info(link->consumer, "Dropping the link to %s\n",
+	dev_dbg(link->consumer, "Dropping the link to %s\n",
 		 dev_name(link->supplier));
 
 	if (link->flags & DL_FLAG_PM_RUNTIME)
