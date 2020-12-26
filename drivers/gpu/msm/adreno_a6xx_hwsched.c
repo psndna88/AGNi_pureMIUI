@@ -466,6 +466,43 @@ static int a6xx_hwsched_gmu_init(struct adreno_device *adreno_dev)
 	return a6xx_hwsched_hfi_init(adreno_dev);
 }
 
+static void a6xx_hwsched_touch_wakeup(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	struct a6xx_gmu_device *gmu = to_a6xx_gmu(adreno_dev);
+	int ret;
+
+	/*
+	 * Do not wake up a suspended device or until the first boot sequence
+	 * has been completed.
+	 */
+	if (test_bit(GMU_PRIV_PM_SUSPEND, &gmu->flags) ||
+		!test_bit(GMU_PRIV_FIRST_BOOT_DONE, &gmu->flags))
+		return;
+
+	if (test_bit(GMU_PRIV_GPU_STARTED, &gmu->flags))
+		return;
+
+	trace_kgsl_pwr_request_state(device, KGSL_STATE_ACTIVE);
+
+	ret = a6xx_hwsched_gmu_boot(adreno_dev);
+	if (ret)
+		return;
+
+	ret = a6xx_hwsched_gpu_boot(adreno_dev);
+	if (ret)
+		return;
+
+	kgsl_pwrscale_wake(device);
+
+	set_bit(GMU_PRIV_GPU_STARTED, &gmu->flags);
+
+	device->pwrctrl.last_stat_updated = ktime_get();
+	device->state = KGSL_STATE_ACTIVE;
+
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_ACTIVE);
+}
+
 static int a6xx_hwsched_boot(struct adreno_device *adreno_dev)
 {
 	struct a6xx_gmu_device *gmu = to_a6xx_gmu(adreno_dev);

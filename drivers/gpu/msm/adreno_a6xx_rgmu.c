@@ -914,6 +914,43 @@ static int a6xx_boot(struct adreno_device *adreno_dev)
 	return 0;
 }
 
+static void a6xx_rgmu_touch_wakeup(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	struct a6xx_rgmu_device *rgmu = to_a6xx_rgmu(adreno_dev);
+	int ret;
+
+	/*
+	 * Do not wake up a suspended device or until the first boot sequence
+	 * has been completed.
+	 */
+	if (test_bit(RGMU_PRIV_PM_SUSPEND, &rgmu->flags) ||
+		!test_bit(RGMU_PRIV_FIRST_BOOT_DONE, &rgmu->flags))
+		return;
+
+	if (test_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags))
+		return;
+
+	trace_kgsl_pwr_request_state(device, KGSL_STATE_ACTIVE);
+
+	ret = a6xx_rgmu_boot(adreno_dev);
+	if (ret)
+		return;
+
+	ret = a6xx_gpu_boot(adreno_dev);
+	if (ret)
+		return;
+
+	kgsl_pwrscale_wake(device);
+
+	set_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags);
+
+	device->pwrctrl.last_stat_updated = ktime_get();
+	device->state = KGSL_STATE_ACTIVE;
+
+	trace_kgsl_pwr_set_state(device, KGSL_STATE_ACTIVE);
+}
+
 static int a6xx_first_boot(struct adreno_device *adreno_dev)
 {
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
@@ -1256,6 +1293,7 @@ const struct adreno_power_ops a6xx_rgmu_power_ops = {
 	.active_count_put = a6xx_rgmu_active_count_put,
 	.pm_suspend = a6xx_rgmu_pm_suspend,
 	.pm_resume = a6xx_rgmu_pm_resume,
+	.touch_wakeup = a6xx_rgmu_touch_wakeup,
 	.gpu_clock_set = a6xx_rgmu_clock_set,
 };
 
