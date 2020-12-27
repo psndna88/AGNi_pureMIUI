@@ -2666,9 +2666,7 @@ int skb_shift(struct sk_buff *tgt, struct sk_buff *skb, int shiftlen)
 	struct skb_frag_struct *fragfrom, *fragto;
 
 	BUG_ON(shiftlen > skb->len);
-
-	if (skb_headlen(skb))
-		return 0;
+	BUG_ON(skb_headlen(skb));	/* Would corrupt stream */
 
 	todo = shiftlen;
 	from = 0;
@@ -3802,18 +3800,10 @@ void __skb_tstamp_tx(struct sk_buff *orig_skb,
 	if (!skb_may_tx_timestamp(sk, tsonly))
 		return;
 
-	if (tsonly) {
-#ifdef CONFIG_INET
-		if ((sk->sk_tsflags & SOF_TIMESTAMPING_OPT_STATS) &&
-		    sk->sk_protocol == IPPROTO_TCP &&
-		    sk->sk_type == SOCK_STREAM)
-			skb = tcp_get_timestamping_opt_stats(sk);
-		else
-#endif
-			skb = alloc_skb(0, GFP_ATOMIC);
-	} else {
+	if (tsonly)
+		skb = alloc_skb(0, GFP_ATOMIC);
+	else
 		skb = skb_clone(orig_skb, GFP_ATOMIC);
-	}
 	if (!skb)
 		return;
 

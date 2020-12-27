@@ -521,6 +521,7 @@ void tcp_init_metrics(struct sock *sk)
 	val = tcp_metric_get(tm, TCP_METRIC_REORDERING);
 	if (val && tp->reordering != val) {
 		tcp_disable_fack(tp);
+		tcp_disable_early_retrans(tp);
 		tp->reordering = val;
 	}
 
@@ -572,7 +573,7 @@ reset:
 		tp->snd_cwnd = 1;
 	else
 		tp->snd_cwnd = tcp_init_cwnd(tp, dst);
-	tp->snd_cwnd_stamp = tcp_jiffies32;
+	tp->snd_cwnd_stamp = tcp_time_stamp;
 }
 
 bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst,
