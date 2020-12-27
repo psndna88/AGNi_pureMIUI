@@ -79,10 +79,10 @@ static u32 cookie_hash(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport,
  * Since subsequent timestamps use the normal tcp_time_stamp value, we
  * must make sure that the resulting initial timestamp is <= tcp_time_stamp.
  */
-u64 cookie_init_timestamp(struct request_sock *req)
+__u32 cookie_init_timestamp(struct request_sock *req)
 {
 	struct inet_request_sock *ireq;
-	u32 ts, ts_now = tcp_time_stamp_raw();
+	u32 ts, ts_now = tcp_time_stamp;
 	u32 options = 0;
 
 	ireq = inet_rsk(req);
@@ -101,7 +101,7 @@ u64 cookie_init_timestamp(struct request_sock *req)
 		ts <<= TSBITS;
 		ts |= options;
 	}
-	return (u64)ts * (USEC_PER_SEC / TCP_TS_HZ);
+	return ts;
 }
 
 
@@ -343,7 +343,6 @@ struct sock *cookie_v4_check(struct sock *sk, struct sk_buff *skb)
 	treq->rcv_isn		= ntohl(th->seq) - 1;
 	treq->snt_isn		= cookie;
 	treq->txhash		= net_tx_rndhash();
-	treq->ts_off		= 0;
 	req->mss		= mss;
 	ireq->ir_num		= ntohs(th->dest);
 	ireq->ir_rmt_port	= th->source;
@@ -355,7 +354,7 @@ struct sock *cookie_v4_check(struct sock *sk, struct sk_buff *skb)
 	ireq->wscale_ok		= tcp_opt.wscale_ok;
 	ireq->tstamp_ok		= tcp_opt.saw_tstamp;
 	req->ts_recent		= tcp_opt.saw_tstamp ? tcp_opt.rcv_tsval : 0;
-	treq->snt_synack	= 0;
+	treq->snt_synack.v64	= 0;
 	treq->tfo_listener	= false;
 
 	ireq->ir_iif = sk->sk_bound_dev_if;
