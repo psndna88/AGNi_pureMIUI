@@ -1733,7 +1733,7 @@ static void smb1398_taper_work(struct work_struct *work)
 	struct smb1398_chip *chip = container_of(work,
 			struct smb1398_chip, taper_work);
 	union power_supply_propval pval = {0};
-	int rc, fcc_ua, fv_uv, stepper_ua, main_fcc_ua;
+	int rc, fcc_ua, fv_uv, stepper_ua, main_fcc_ua = 0, min_ilim_ua;
 	bool slave_en;
 	int health, fast_charge_mode, smb_en_reason, taper_ibat_offset = 0;
 	bool ffc_cp_exiting = false;
@@ -1793,8 +1793,8 @@ static void smb1398_taper_work(struct work_struct *work)
 				TAPER_STEPPER_UA_IN_CC_MODE :
 				TAPER_STEPPER_UA_DEFAULT;
 
-			if (fast_charge_mode && (smb_en_reason == POWER_SUPPLY_CP_PPS)
-					&& (health == POWER_SUPPLY_HEALTH_GOOD) && false) {
+			if(fast_charge_mode && (smb_en_reason == POWER_SUPPLY_CP_PPS)
+					&& (health == POWER_SUPPLY_HEALTH_GOOD)) {
 				ffc_cp_exiting = true;
 				stepper_ua = TAPER_STEPPER_UA_SIX_PIN;
 				taper_ibat_offset = TAPER_IBAT_OFFSET_UA;
