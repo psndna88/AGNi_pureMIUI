@@ -4,6 +4,7 @@
 #include "yupik-pmic-overlay.dtsi"
 #include "pm8350b.dtsi"
 #include "yupik-audio-overlay.dtsi"
+#include "yupik-thermal-overlay-qrd.dtsi"
 
 &soc {
 	gpio_keys {
