@@ -36,13 +36,14 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 
 static struct kthread_work input_boost_work;
 
-static bool input_boost_enabled;
+static bool input_boost_enabled = false;
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static unsigned int sched_boost_on_input;
-module_param(sched_boost_on_input, uint, 0644);
+static unsigned int sched_boost_on_input = 0;
+static unsigned int sched_boost_on_input_fake;
+module_param(sched_boost_on_input_fake, uint, 0644);
 
 static bool sched_boost_active;
 
@@ -106,7 +107,7 @@ check_enable:
 			break;
 		}
 	}
-	input_boost_enabled = enabled;
+//	input_boost_enabled = enabled;
 
 	return 0;
 }
