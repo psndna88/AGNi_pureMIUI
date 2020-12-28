@@ -41,7 +41,7 @@ static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
 static struct work_struct powerkey_input_boost_work;
-static bool input_boost_enabled;
+static bool input_boost_enabled = false;
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
@@ -49,11 +49,13 @@ module_param(input_boost_ms, uint, 0644);
 static unsigned int powerkey_input_boost_ms = 400;
 module_param(powerkey_input_boost_ms, uint, 0644);
 
-static unsigned int sched_boost_on_input;
-module_param(sched_boost_on_input, uint, 0644);
+static unsigned int sched_boost_on_input = 0;
+static unsigned int sched_boost_on_input_fake;
+module_param(sched_boost_on_input_fake, uint, 0644);
 
-static bool sched_boost_on_powerkey_input = true;
-module_param(sched_boost_on_powerkey_input, bool, 0644);
+static bool sched_boost_on_powerkey_input = false;
+static bool sched_boost_on_powerkey_input_fake = false;
+module_param(sched_boost_on_powerkey_input_fake, bool, 0644);
 
 static bool sched_boost_active;
 
@@ -117,7 +119,7 @@ check_enable:
 			break;
 		}
 	}
-	input_boost_enabled = enabled;
+//	input_boost_enabled = enabled;
 
 	return 0;
 }
