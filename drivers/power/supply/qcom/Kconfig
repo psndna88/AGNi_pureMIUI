@@ -139,10 +139,4 @@ config PD_VERIFY
 	help
 	  Say Y to include support for usbpd digest verify.
 
-config J6B_CHARGE_THERMAL
-	bool "j6b charge thermal"
-	default n
-	help
-	  Say Y to include support for j6b charge thermal.
-
 endmenu

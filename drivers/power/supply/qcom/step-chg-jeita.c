@@ -763,8 +763,9 @@ static int handle_jeita(struct step_chg_info *chip)
 	int rc = 0, fcc_ua = 0, fv_uv = 0;
 	u64 elapsed_us;
 	int curr_vfloat_uv, curr_vbat_uv;
-	int temp, fastcharge_mode = 0, pd_authen_result = 0;
+	int temp, pd_authen_result = 0;
 	enum power_supply_type real_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	static bool fast_mode_dis;
 
 	pr_err("handle_jeita enter\n");
 	rc = power_supply_get_property(chip->batt_psy,
@@ -865,7 +866,7 @@ static int handle_jeita(struct step_chg_info *chip)
 		rc = power_supply_get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_PD_AUTHENTICATION, &pval);
 		if (rc < 0)
-			pr_err("Get pd authentication status failed, rc=%d\n", rc);
+			pr_err("Get fastcharge mode status failed, rc=%d\n", rc);
 		pd_authen_result = pval.intval;
 
 		rc = power_supply_get_property(chip->usb_psy,
@@ -880,16 +881,8 @@ static int handle_jeita(struct step_chg_info *chip)
 		if ((real_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)
 					|| (pval.intval == HVDCP3_CLASS_B_27W)
 					|| (pd_authen_result == 1)) {
-			rc = power_supply_get_property(chip->bms_psy,
-				POWER_SUPPLY_PROP_FASTCHARGE_MODE, &pval);
-			if (rc < 0) {
-				pr_err("Couldn't read fastcharge mode fail rc=%d\n", rc);
-				return rc;
-			}
-			fastcharge_mode = pval.intval;
-
 			if ((temp >= BATT_WARM_THRESHOLD || temp <= BATT_COOL_THRESHOLD)
-						&& fastcharge_mode) {
+						&& !fast_mode_dis) {
 				pr_err("temp:%d disable fastcharge mode\n", temp);
 				pval.intval = false;
 				rc = power_supply_set_property(chip->usb_psy,
@@ -898,9 +891,10 @@ static int handle_jeita(struct step_chg_info *chip)
 					pr_err("Set fastcharge mode failed, rc=%d\n", rc);
 					return rc;
 				}
+				fast_mode_dis = true;
 			} else if ((temp < BATT_WARM_THRESHOLD - chip->jeita_fv_config->param.hysteresis)
 						&& (temp > BATT_COOL_THRESHOLD + chip->jeita_fv_config->param.hysteresis)
-							&& !fastcharge_mode) {
+							&& fast_mode_dis) {
 				pr_err("temp:%d enable fastcharge mode\n", temp);
 				pval.intval = true;
 				rc = power_supply_set_property(chip->usb_psy,
@@ -909,7 +903,10 @@ static int handle_jeita(struct step_chg_info *chip)
 					pr_err("Set fastcharge mode failed, rc=%d\n", rc);
 					return rc;
 				}
+				fast_mode_dis = false;
 			}
+		} else {
+			fast_mode_dis = false;
 		}
 	}
 

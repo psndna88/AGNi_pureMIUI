@@ -538,7 +538,6 @@ static const struct file_operations onewire_dev_fops = {
 
 static const struct of_device_id onewire_gpio_dt_match[] = {
 	{.compatible = "xiaomi,onewire_gpio"},
-	{},
 };
 
 static struct platform_driver onewire_gpio_driver = {
