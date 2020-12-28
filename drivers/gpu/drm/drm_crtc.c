@@ -186,7 +186,7 @@ void drm_crtc_unregister_all(struct drm_device *dev)
 
 static int drm_crtc_crc_init(struct drm_crtc *crtc)
 {
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 	spin_lock_init(&crtc->crc.lock);
 	init_waitqueue_head(&crtc->crc.wq);
 	crtc->crc.source = kstrdup("auto", GFP_KERNEL);
@@ -198,7 +198,7 @@ static int drm_crtc_crc_init(struct drm_crtc *crtc)
 
 static void drm_crtc_crc_fini(struct drm_crtc *crtc)
 {
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 	kfree(crtc->crc.source);
 #endif
 }
