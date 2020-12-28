@@ -174,5 +174,6 @@ int cnss_pci_update_status(struct cnss_pci_data *pci_priv,
 int cnss_pci_get_iova(struct cnss_pci_data *pci_priv, u64 *addr, u64 *size);
 int cnss_pci_get_iova_ipa(struct cnss_pci_data *pci_priv, u64 *addr,
 			  u64 *size);
+bool cnss_pci_is_smmu_s1_enabled(struct cnss_pci_data *pci_priv);
 
 #endif /* _CNSS_PCI_H */

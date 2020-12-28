@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,6 +12,12 @@
  */
 
 &soc {
+	ir_led: camera-ir-led@0 {
+		cell-index = <0>;
+		reg = <0x00>;
+		compatible = "qcom,camera-ir-led";
+		status = "ok";
+	};
 
 	led_flash_rear: qcom,camera-flash@0 {
 		cell-index = <0>;
@@ -329,6 +335,7 @@
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
 		led-flash-src = <&led_flash_rear>;
+		ir-led-src = <&ir_led>;
 		actuator-src = <&actuator_rear>;
 		ois-src = <&ois_rear>;
 		eeprom-src = <&eeprom_rear>;

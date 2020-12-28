@@ -173,7 +173,7 @@
 /**
  * Max number of clients supported for mac based exception
  */
-#define IPA_MAX_NUM_MAC_FLT 5
+#define IPA_MAX_NUM_MAC_FLT 32
 
 /**
  * MAX number of the FLT_RT stats counter supported.

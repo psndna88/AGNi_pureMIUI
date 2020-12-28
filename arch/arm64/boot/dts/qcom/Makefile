@@ -385,9 +385,7 @@ dtb-$(CONFIG_ARCH_SDXPRAIRIE) += sdxprairie-rumi.dtb \
 	sdxprairie-v2-mtp-v1.1.dtb \
 	sdxprairie-v2-mtp-v1.1-cpe.dtb \
 	sdxprairie-v2-pcie-ep-mtp.dtb \
-	sa515m-ccard.dtb \
-	sa515m-ccard-pcie-ep.dtb \
-	sa515m-ccard-usb-ep.dtb
+	sdxprairie-v2-makena-pcie-ep-mtp.dtb
 
 endif
 
