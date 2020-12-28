@@ -70,4 +70,5 @@ int cnss_get_msi_assignment(struct cnss_plat_data *plat_priv,
 int cnss_bus_get_iova(struct cnss_plat_data *plat_priv, u64 *addr, u64 *size);
 int cnss_bus_get_iova_ipa(struct cnss_plat_data *plat_priv, u64 *addr,
 			  u64 *size);
+bool cnss_bus_is_smmu_s1_enabled(struct cnss_plat_data *plat_priv);
 #endif /* _CNSS_BUS_H */
