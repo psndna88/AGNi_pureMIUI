@@ -1694,6 +1694,12 @@
 
 	qcom-secure-buffer {
 		compatible = "qcom,secure-buffer";
+		qcom,vmid-cp-camera-preview-ro;
+	};
+
+	qcom-mem-buf {
+		compatible = "qcom,mem-buf";
+		qcom,mem-buf-capabilities = "supplier";
 	};
 
 	pil_scm_pas {
