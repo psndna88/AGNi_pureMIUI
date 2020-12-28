@@ -51,6 +51,13 @@
 
 	aliases { };
 
+	firmware: firmware {
+		scm {
+			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr 0x6100>;
+		};
+	};
+
 	cpus {
 		#size-cells = <0>;
 		#address-cells = <1>;
@@ -371,6 +378,11 @@
 		qcom,rmnet-ipa-ssr;
 	};
 
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
+	};
+
 	blsp1_uart1: serial@78af000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x78af000 0x200>;
@@ -443,6 +455,11 @@
 		compatible = "qcom,tcsr-mutex";
 		syscon = <&tcsr_mutex_regs 0 0x1000>;
 		#hwlock-cells = <1>;
+	};
+
+	tcsr: syscon@0x1937000 {
+		compatible = "syscon";
+		reg = <0x1937000 0x21000>;
 	};
 
 	apcs_glb: mailbox@0xb011008 {
