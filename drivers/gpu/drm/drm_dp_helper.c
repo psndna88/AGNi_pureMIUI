@@ -31,11 +31,6 @@
 #include <drm/drm_dp_helper.h>
 #include <drm/drmP.h>
 
-#ifndef CONFIG_DEBUG_FS_
-#include <linux/circ_buf.h>
-#include <linux/ctype.h>
-#include "drm_internal.h"
-#endif
 #include "drm_crtc_helper_internal.h"
 
 /**
@@ -998,57 +993,6 @@ static const struct i2c_lock_operations drm_dp_i2c_lock_ops = {
 	.unlock_bus = unlock_bus,
 };
 
-#ifndef CONFIG_DEBUG_FS_
-/**
- * drm_crtc_add_crc_entry - Add entry with CRC information for a frame
- * @crtc: CRTC to which the frame belongs
- * @has_frame: whether this entry has a frame number to go with
- * @frame: number of the frame these CRCs are about
- * @crcs: array of CRC values, with length matching #drm_crtc_crc.values_cnt
- *
- * For each frame, the driver polls the source of CRCs for new data and calls
- * this function to add them to the buffer from where userspace reads.
- */
-int drm_crtc_add_crc_entry(struct drm_crtc *crtc, bool has_frame,
-			   uint32_t frame, uint32_t *crcs)
-{
-	struct drm_crtc_crc *crc = &crtc->crc;
-	struct drm_crtc_crc_entry *entry;
-	int head, tail;
-
-	spin_lock(&crc->lock);
-
-	/* Caller may not have noticed yet that userspace has stopped reading */
-	if (!crc->entries) {
-		spin_unlock(&crc->lock);
-		return -EINVAL;
-	}
-
-	head = crc->head;
-	tail = crc->tail;
-
-	if (CIRC_SPACE(head, tail, DRM_CRC_ENTRIES_NR) < 1) {
-		spin_unlock(&crc->lock);
-		DRM_ERROR("Overflow of CRC buffer, userspace reads too slow.\n");
-		return -ENOBUFS;
-	}
-
-	entry = &crc->entries[head];
-	entry->frame = frame;
-	entry->has_frame_counter = has_frame;
-	memcpy(&entry->crcs, crcs, sizeof(*crcs) * crc->values_cnt);
-
-	head = (head + 1) & (DRM_CRC_ENTRIES_NR - 1);
-	crc->head = head;
-
-	spin_unlock(&crc->lock);
-
-	wake_up_interruptible(&crc->wq);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(drm_crtc_add_crc_entry);
-#endif
 static int drm_dp_aux_get_crc(struct drm_dp_aux *aux, u8 *crc)
 {
 	u8 buf, count;
