@@ -33,13 +33,14 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
-static bool input_boost_enabled;
+static bool input_boost_enabled = false;
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static bool sched_boost_on_input;
-module_param(sched_boost_on_input, bool, 0644);
+static bool sched_boost_on_input = false;
+static bool sched_boost_on_input_fake;
+module_param(sched_boost_on_input_fake, bool, 0644);
 
 static bool sched_boost_active;
 
@@ -89,7 +90,7 @@ check_enable:
 			break;
 		}
 	}
-	input_boost_enabled = enabled;
+//	input_boost_enabled = enabled;
 
 	return 0;
 }
