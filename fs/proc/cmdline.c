@@ -46,7 +46,6 @@ static void patch_safetynet_flags(char *cmd)
 	patch_flag(cmd, "androidboot.flash.locked=", "1");
 	patch_flag(cmd, "androidboot.verifiedbootstate=", "green");
 	patch_flag(cmd, "androidboot.veritymode=", "enforcing");
-	patch_flag(cmd, "androidboot.vbmeta.device_state=", "locked");
 }
 
 static int __init proc_cmdline_init(void)
