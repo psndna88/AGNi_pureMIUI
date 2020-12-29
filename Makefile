@@ -50,4 +50,12 @@ ifeq ($(CONFIG_ARCH_BENGAL), y)
 LINUXINCLUDE    += -include $(srctree)/techpack/display/config/bengaldispconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_MONACO), y)
+include $(srctree)/techpack/display/config/monacodisp.conf
+endif
+
+ifeq ($(CONFIG_ARCH_MONACO), y)
+LINUXINCLUDE    += -include $(srctree)/techpack/display/config/monacodispconf.h
+endif
+
 obj-$(CONFIG_DRM_MSM) += msm/
