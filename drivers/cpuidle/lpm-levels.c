@@ -1345,9 +1345,6 @@ static void cluster_unprepare(struct lpm_cluster *cluster,
 
 		lpm_wa_cx_unvote_send();
 		msm_mpm_exit_sleep(from_idle);
-
-		if (!from_idle)
-			suspend_wake_time = 0;
 	}
 
 	update_debug_pc_event(CLUSTER_EXIT, cluster->last_level,
