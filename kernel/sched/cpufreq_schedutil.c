@@ -12,7 +12,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/cpufreq.h>
-#include <linux/fb.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <trace/events/power.h>
@@ -61,10 +60,6 @@ struct sugov_policy {
 
 	bool limits_changed;
 	bool need_freq_update;
-
-	/* Framebuffer callbacks */
-	struct notifier_block fb_notif;
-	bool is_panel_blank;
 };
 
 struct sugov_cpu {
@@ -233,14 +228,6 @@ static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 {
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
 
-	if (!sg_policy->tunables->iowait_boost_enable ||
-	     sg_policy->is_panel_blank)
-		return;
-	if (adreno_load_perc > GPULOADTRIGGER) {
-		sg_policy->tunables->iowait_boost_enable = 1;
-	} else {
-		sg_policy->tunables->iowait_boost_enable = 0;
-	}
 	if (!sg_policy->tunables->iowait_boost_enable)
 		return;
 
@@ -622,7 +609,7 @@ static void sugov_policy_free(struct sugov_policy *sg_policy)
 static int sugov_kthread_create(struct sugov_policy *sg_policy)
 {
 	struct task_struct *thread;
-	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO - 1 };
+	struct sched_param param = { .sched_priority = MAX_USER_RT_PRIO / 2 };
 	struct cpufreq_policy *policy = sg_policy->policy;
 	int ret;
 
@@ -731,23 +718,6 @@ static void sugov_tunables_restore(struct cpufreq_policy *policy)
 					   sg_policy->down_rate_delay_ns);
 }
 
-static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
-			  void *data)
-{
-	struct sugov_policy *sg_policy = container_of(nb, struct sugov_policy, fb_notif);
-	int *blank = ((struct fb_event *)data)->data;
-
-	if (action != FB_EARLY_EVENT_BLANK)
-		return NOTIFY_OK;
-
-	if (*blank == FB_BLANK_UNBLANK)
-		sg_policy->is_panel_blank = false;
-	else
-		sg_policy->is_panel_blank = true;
-
-	return NOTIFY_OK;
-}
-
 static int sugov_init(struct cpufreq_policy *policy)
 {
 	struct sugov_policy *sg_policy;
@@ -805,11 +775,10 @@ static int sugov_init(struct cpufreq_policy *policy)
                 }
 	}
 
-	tunables->iowait_boost_enable = policy->iowait_boost_enable;
+	tunables->iowait_boost_enable = 1;
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
-	sg_policy->is_panel_blank = false;
 
 	sugov_tunables_restore(policy);
 
@@ -821,15 +790,6 @@ static int sugov_init(struct cpufreq_policy *policy)
 
 out:
 	mutex_unlock(&global_tunables_lock);
-
-	sg_policy->fb_notif.notifier_call = fb_notifier_cb;
-	sg_policy->fb_notif.priority = INT_MAX;
-	ret = fb_register_client(&sg_policy->fb_notif);
-	if (ret) {
-		pr_err("Failed to register fb notifier, err: %d\n", ret);
-		goto fail;
-	}
-
 	return 0;
 
 fail:
@@ -866,8 +826,6 @@ static int sugov_exit(struct cpufreq_policy *policy)
 		sugov_tunables_save(policy, tunables);
 		sugov_tunables_free(tunables);
 	}
-
-	fb_unregister_client(&sg_policy->fb_notif);
 
 	mutex_unlock(&global_tunables_lock);
 
