@@ -191,3 +191,12 @@
 	clocks = <&bi_tcxo>, <&gcc GCC_GPLL0>;
 	status = "disabled";
 };
+
+&dispcc {
+	clocks = <&bi_tcxo>, <&gcc GCC_DISP_GPLL0_CLK_SRC>,
+		<&gcc GCC_DISP_AHB_CLK>;
+};
+
+&debugcc {
+	clocks = <&bi_tcxo>;
+};
