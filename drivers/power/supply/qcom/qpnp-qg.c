@@ -1722,6 +1722,85 @@ static int qg_get_battery_capacity_real(struct qpnp_qg *chip, int *soc)
 	return 0;
 }
 
+static int qg_get_prop_soc_decimal_rate(struct qpnp_qg *chip, int *val)
+{
+	int i, soc = 0, rc = 0;
+
+	rc = qg_get_battery_capacity(chip, &soc);
+	if (rc < 0) {
+		pr_err("Failed to get battery capacity, rc=%d\n", rc);
+		return 0;
+	}
+
+	if (chip->dt.dec_rate_len <= 0) {
+		*val = 10;
+		pr_err("Failed to get soc decimal rate, default val:%d\n", *val);
+		return soc;
+	}
+
+	for (i = 0; i < chip->dt.dec_rate_len; i += 2) {
+		if (soc < chip->dt.dec_rate_seq[i]) {
+			*val = chip->dt.dec_rate_seq[i - 1];
+			return soc;
+		}
+	}
+
+	*val = chip->dt.dec_rate_seq[chip->dt.dec_rate_len - 1];
+
+	return soc;
+}
+
+static int qg_get_prop_soc_decimal(struct qpnp_qg *chip, int *val)
+{
+	int dec_rate, soc_dec, soc, hal_soc, rc = 0;
+	static int last_val = 0;
+	static int last_soc_dec = 0;
+	static int last_hal_soc = 0;
+	union power_supply_propval pval = {0,};
+
+	rc = power_supply_get_property(chip->qg_psy,
+			POWER_SUPPLY_PROP_CAPACITY, &pval);
+	if (rc < 0) {
+		pr_err("Failed to get hal_soc, rc=%d\n", rc);
+	}
+	hal_soc = pval.intval;
+
+	soc_dec = chip->sys_soc % 100;
+	soc = qg_get_prop_soc_decimal_rate(chip, &dec_rate);
+	pr_err("debug soc_dec=%d dec_rate=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+			soc_dec, dec_rate, last_val, last_soc_dec, last_hal_soc);
+
+	if (soc_dec >= 0 && soc_dec < (50 - dec_rate))
+		*val = soc_dec + 50;
+	else if (soc_dec >= (50 - dec_rate) && soc_dec < 50)
+		*val = soc_dec + 50 - dec_rate;
+	else
+		*val = soc_dec -50;
+
+	if (last_hal_soc == hal_soc) {
+		if ((last_val > *val && hal_soc != soc) || (last_soc_dec == soc_dec && hal_soc == soc)) {
+			if (last_val > 50)
+				*val = last_val + (100 - last_val - dec_rate) / 2;
+			else
+				*val = last_val + dec_rate / 4;
+		} else if (last_val > *val) {
+			*val = last_val;
+		}
+	}
+
+	if (last_val != *val)
+		last_val = *val;
+	if (last_soc_dec != soc_dec)
+		last_soc_dec = soc_dec;
+	if (last_hal_soc != hal_soc)
+		last_hal_soc = hal_soc;
+
+	pr_err("debug val=%d soc_dec=%d sys_soc=%d dec_rate=%d soc=%d hal_soc=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+			*val, soc_dec, chip->sys_soc, dec_rate, soc, hal_soc, last_val, last_soc_dec, last_hal_soc);
+
+	return 0;
+}
+
 static int qg_get_charge_counter(struct qpnp_qg *chip, int *charge_counter)
 {
 	int rc, cc_soc = 0;
@@ -2164,6 +2243,12 @@ static int qg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_REAL_CAPACITY:
 		rc = qg_get_battery_capacity_real(chip, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_SOC_DECIMAL:
+		rc = qg_get_prop_soc_decimal(chip, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_SOC_DECIMAL_RATE:
+		rc = qg_get_prop_soc_decimal_rate(chip, &pval->intval);
+		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = qg_get_battery_voltage(chip, &pval->intval);
 		break;
@@ -2320,6 +2405,8 @@ static enum power_supply_property qg_psy_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_RAW,
 	POWER_SUPPLY_PROP_REAL_CAPACITY,
+	POWER_SUPPLY_PROP_SOC_DECIMAL,
+	POWER_SUPPLY_PROP_SOC_DECIMAL_RATE,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_OCV,
@@ -4218,7 +4305,7 @@ static int qg_alg_init(struct qpnp_qg *chip)
 #define DEFAULT_TCSS_ENTRY_SOC		90
 static int qg_parse_dt(struct qpnp_qg *chip)
 {
-	int rc = 0;
+	int rc = 0, size;
 	struct device_node *revid_node, *child, *node = chip->dev->of_node;
 	u32 base, temp;
 	u8 type;
@@ -4607,6 +4694,28 @@ static int qg_parse_dt(struct qpnp_qg *chip)
 			chip->cl->dt.min_start_soc, chip->cl->dt.max_start_soc,
 			chip->cl->dt.min_temp, chip->cl->dt.max_temp);
 	}
+
+	size = 0;
+	of_get_property(node, "qcom,soc_decimal_rate", &size);
+	if (size) {
+		chip->dt.dec_rate_seq = devm_kzalloc(chip->dev,
+				size, GFP_KERNEL);
+		if (chip->dt.dec_rate_seq) {
+			chip->dt.dec_rate_len =
+				(size / sizeof(*chip->dt.dec_rate_seq));
+			if (chip->dt.dec_rate_len % 2) {
+				pr_err("invalid soc decimal rate seq\n");
+				return -EINVAL;
+			}
+			of_property_read_u32_array(node,
+					"qcom,soc_decimal_rate",
+					chip->dt.dec_rate_seq,
+					chip->dt.dec_rate_len);
+		} else {
+			pr_err("error allocating memory for dec_rate_seq\n");
+		}
+	}
+
 	qg_dbg(chip, QG_DEBUG_PON, "DT: vbatt_empty_mv=%dmV vbatt_low_mv=%dmV delta_soc=%d ext-sns=%d\n",
 			chip->dt.vbatt_empty_mv, chip->dt.vbatt_low_mv,
 			chip->dt.delta_soc, chip->dt.qg_ext_sense);

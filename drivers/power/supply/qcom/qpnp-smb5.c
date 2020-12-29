@@ -1285,6 +1285,8 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 		if (chg->support_ffc) {
 			rc = smblib_set_fastcharge_mode(chg, val->intval);
 			power_supply_changed(chg->bms_psy);
+			schedule_delayed_work(&chg->charger_soc_decimal,
+					msecs_to_jiffies(CHARGER_SOC_DECIMAL_MS));
 		}
 		break;
 	case POWER_SUPPLY_PROP_PD_REMOVE_COMPENSATION:

@@ -6107,6 +6107,13 @@ static void smblib_cc_un_compliant_charge_work(struct work_struct *work)
 	}
 }
 
+static void smblib_charger_soc_decimal(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+			charger_soc_decimal.work);
+	power_supply_changed(chg->bms_psy);
+}
+
 static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 {
 	if (!vbus_rising) {
@@ -9357,6 +9364,7 @@ int smblib_init(struct smb_charger *chg)
 					smblib_pr_swap_detach_work);
 	INIT_DELAYED_WORK(&chg->pr_lock_clear_work,
 					smblib_pr_lock_clear_work);
+	INIT_DELAYED_WORK(&chg->charger_soc_decimal, smblib_charger_soc_decimal);
 
 	if (chg->wa_flags & CHG_TERMINATION_WA) {
 		INIT_WORK(&chg->chg_termination_work,
@@ -9513,6 +9521,7 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->raise_qc3_vbus_work);
 		cancel_delayed_work_sync(&chg->charger_type_recheck);
 		cancel_delayed_work_sync(&chg->cc_un_compliant_charge_work);
+		cancel_delayed_work_sync(&chg->charger_soc_decimal);
 		if (chg->reg_dump_enable) {
 			cancel_delayed_work_sync(&chg->reg_work);
 		}
