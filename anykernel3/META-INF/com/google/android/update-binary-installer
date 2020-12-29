@@ -728,35 +728,36 @@ if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
 	$BB mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/wifi.prop`" ]; then # Automatic
-	if [ "$ANDROID_VER" == "R" ]; then
-		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
-		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
-		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
-		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
-		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
-	elif [ "$ANDROID_VER" == "Q" ]; then
-		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
-		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
-		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
-		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-		$BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
-		ui_print " " "AGNi enabled latest Q-sourced Wifi driver..." " ";
-	elif [ "$ANDROID_VER" == "PIE" ]; then
-		ui_print " " "AGNi now modifying firmware for latest Pie Wifi driver support.." " ";
+#	if [ "$ANDROID_VER" == "R" ]; then
+#		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
+#		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+#		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+#		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
+#		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
+#	elif [ "$ANDROID_VER" == "Q" ]; then
+#		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
+#		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+#		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+#		$BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
+#		ui_print " " "AGNi enabled latest Q-sourced Wifi driver..." " ";
+#	elif [ "$ANDROID_VER" == "PIE" ]; then
+		ui_print " " "AGNi now modifying firmware for DEFAULT latest Pie Wifi driver support.." " ";
+		ui_print " " "   This one has proved to give best Performance & low ping." " ";
 		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
 		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
 		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 		$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
 		ui_print " " "AGNi enabled latest Pie-sourced Wifi driver..." " ";
-	else
-		ui_print " " "AGNi now modifying firmware for OLD Pie Wifi driver support.." " ";
-		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
-		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
-		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-		$BB cp -f /vendor/agni/wlan_pie_old.ko /vendor/agni/wlan.ko;
-		ui_print " " "AGNi enabled latest OLD Pie-sourced Wifi driver..." " ";
-	fi;
+#	else
+#		ui_print " " "AGNi now modifying firmware for OLD Pie Wifi driver support.." " ";
+#		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
+#		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
+#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+#		$BB cp -f /vendor/agni/wlan_pie_old.ko /vendor/agni/wlan.ko;
+#		ui_print " " "AGNi enabled latest OLD Pie-sourced Wifi driver..." " ";
+#	fi;
 elif [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then #A11
 	ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
 	$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
@@ -792,22 +793,83 @@ $BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 if [ -d /firmware/image/agni_bakup ]; then
 	$BB rm -rf /firmware/image/agni_bakup;
 fi;
-### Revert Game graphics unlock as magisk module should be used
-if [ -f $buildproploc/build.prop.bak.agni ];then
-	$BB mv -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
-	$BB chmod 600 $buildproploc/build.prop;
-	/sbin/restorecon -v $buildproploc/build.prop;
+### AGNi Games Graphics Unlock
+if [ "`$BB grep selected.0=1 /tmp/aroma-data/pubg.prop`" ]; then #PUBG
+	if [ ! -f $buildproploc/build.prop.bak.agni ];then
+		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
+	else
+		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' $buildproploc/build.prop;
+	if [ ! -f /vendor/build.prop.bak.agni ];then
+		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/'/vendor/build.prop;
+	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=GM1917/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=GM1917/' /vendor/odm/etc/build.prop;
+	ui_print " " "AGNi applied PUBG smooth-extreme graphics tweak...(NeFeroN+)" " ";
+elif [ "`$BB grep selected.0=2 /tmp/aroma-data/pubg.prop`" ]; then #COD mobile
+	if [ ! -f $buildproploc/build.prop.bak.agni ];then
+		$BB cp -f $buildproploc/build.prop $buildproploc/build.prop.bak.agni;
+	else
+		$BB cp -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' $buildproploc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' $buildproploc/build.prop;
+	if [ ! -f /vendor/build.prop.bak.agni ];then
+		$BB cp -f /vendor/build.prop /vendor/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/build.prop;
+	if [ ! -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB cp -f /vendor/odm/etc/build.prop /vendor/odm/etc/build.prop.bak.agni;
+	else
+		$BB cp -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	$BB sed -i '/ro.product.model/s/.*/ro.product.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.system.model/s/.*/ro.product.system.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.vendor.model/s/.*/ro.product.vendor.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	$BB sed -i '/ro.product.odm.model/s/.*/ro.product.odm.model=SM-G965F/' /vendor/odm/etc/build.prop;
+	ui_print " " "AGNi applied COD mobile High graphics tweak...(NeFeroN+)" " ";
+else
+	if [ -f $buildproploc/build.prop.bak.agni ];then
+		$BB mv -f $buildproploc/build.prop.bak.agni $buildproploc/build.prop;
+	fi;
+	if [ -f /vendor/build.prop.bak.agni ];then
+		$BB mv -f /vendor/build.prop.bak.agni /vendor/build.prop;
+	fi;
+	if [ -f /vendor/odm/etc/build.prop.bak.agni ];then
+		$BB mv -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
+	fi;
+	ui_print " " "AGNi NOT applied(reverted) Game Graphics Unlock." " ";
 fi;
-if [ -f /vendor/build.prop.bak.agni ];then
-	$BB mv -f /vendor/build.prop.bak.agni /vendor/build.prop;
-	$BB chmod 600 /vendor/build.prop;
-	/sbin/restorecon -v /vendor/build.prop;
-fi;
-if [ -f /vendor/odm/etc/build.prop.bak.agni ];then
-	$BB mv -f /vendor/odm/etc/build.prop.bak.agni /vendor/odm/etc/build.prop;
-	$BB chmod 600 /vendor/odm/etc/build.prop;
-	/sbin/restorecon -v /vendor/odm/etc/build.prop;
-fi;
+$BB chmod 600 $buildproploc/build.prop;
+$BB chmod 600 /vendor/build.prop;
+$BB chmod 600 /vendor/odm/etc/build.prop;
+/sbin/restorecon -v $buildproploc/build.prop;
+/sbin/restorecon -v /vendor/build.prop;
+/sbin/restorecon -v /vendor/odm/etc/build.prop;
 
 $BB sync;
 umount_all;
