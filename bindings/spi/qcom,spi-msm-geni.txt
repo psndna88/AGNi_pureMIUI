@@ -36,7 +36,9 @@ Optional properties:
 - qcom,shared_se: 	Specifies that this serial engine is shared simultaneously
 			between execution environments. A true multi-EE usecase.
 - qcom,le_vm:		Specifies that this serial engine is operating in a trusted VM.
-
+- qcom,use-fixed-timeout : Set this flag to use 250ms fixed timeout value. This
+			will improve overall SPI KPI value but not preferred
+			for large transfer.
 
 SPI slave nodes must be children of the SPI master node and can contain
 the following properties.
