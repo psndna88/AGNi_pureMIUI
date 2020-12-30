@@ -31,7 +31,6 @@
 #include <linux/migrate.h>
 #include <linux/task_work.h>
 #include <linux/module.h>
-#include <linux/sched_energy.h>
 
 #include "sched.h"
 #include <trace/events/sched.h>
@@ -8081,60 +8080,7 @@ static struct task_struct *detach_one_task(struct lb_env *env)
 	return NULL;
 }
 
-/* must hold runqueue lock for queue se is currently on */
-static struct task_struct *hisi_get_heaviest_task(
-				struct task_struct *p, int cpu)
-{
-	int num_tasks = 5;
-	struct sched_entity *se = &p->se;
-	unsigned long int max_util = task_util(p), max_preferred_util= 0, util;
-	struct task_struct *tsk, *max_preferred_tsk = NULL, *max_util_task = p;
-	bool boosted, prefer_idle;
-
-	/* The currently running task is not on the runqueue */
-	se = __pick_first_entity(cfs_rq_of(se));
-
-	while (num_tasks && se) {
-		if (!entity_is_task(se)) {
-			se = __pick_next_entity(se);
-			num_tasks--;
-			continue;
-		}
-
-		tsk = task_of(se);
-		util = boosted_task_util(tsk);
-
-#ifdef CONFIG_CGROUP_SCHEDTUNE
-		boosted = schedtune_task_boost(p) > 0;
-		prefer_idle = schedtune_prefer_idle(p) > 0;
-#else
-		boosted = get_sysctl_sched_cfs_boost() > 0;
-		prefer_idle = 0;
-#endif
-
-		if (cpumask_test_cpu(cpu, tsk_cpus_allowed(tsk))) {
-			if (boosted || prefer_idle) {
-				if (util > max_preferred_util) {
-					max_preferred_util = util;
-					max_preferred_tsk = tsk;
-				}
-			} else {
-				if (util > max_util) {
-					max_util = util;
-					max_util_task = tsk;
-				}
-			}
-		}
-
-		se = __pick_next_entity(se);
-		num_tasks--;
-	}
-
-	return max_preferred_tsk ? max_preferred_tsk : max_util_task;
-}
-
 static const unsigned int sched_nr_migrate_break = 32;
-static const unsigned int up_migration_util_filter = 25;
 
 /*
  * detach_tasks() -- tries to detach up to imbalance weighted load from
@@ -8148,7 +8094,6 @@ static int detach_tasks(struct lb_env *env)
 	struct task_struct *p;
 	unsigned long load;
 	int detached = 0;
-	bool boosted, prefer_idle;
 
 	lockdep_assert_held(&env->src_rq->lock);
 
@@ -8176,25 +8121,6 @@ static int detach_tasks(struct lb_env *env)
 			env->flags |= LBF_NEED_BREAK;
 			break;
 		}
-
-#if 1
-		if (sched_feat(HISI_FILTER) && energy_aware() &&
-		    (capacity_orig_of(env->dst_cpu) > capacity_orig_of(env->src_cpu))) {
-			p = hisi_get_heaviest_task(p, env->dst_cpu);
-
-#ifdef CONFIG_CGROUP_SCHEDTUNE
-			boosted = schedtune_task_boost(p) > 0;
-			prefer_idle = schedtune_prefer_idle(p) > 0;
-#else
-			boosted = get_sysctl_sched_cfs_boost() > 0;
-			prefer_idle = 0;
-#endif
-			if (!boosted && !prefer_idle &&
-				task_util(p) * 100 < capacity_orig_of(env->src_cpu) * up_migration_util_filter)
-				goto next;
-
-		}
-#endif
 
 		if (!can_migrate_task(p, env))
 			goto next;
