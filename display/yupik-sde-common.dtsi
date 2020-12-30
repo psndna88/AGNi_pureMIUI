@@ -147,14 +147,6 @@
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <0>;
 
-		qcom,sde-dspp-spr-off = <0x15400 0x14400>;
-		qcom,sde-dspp-spr-size = <0x200>;
-		qcom,sde-dspp-spr-version = <0x00010000>;
-
-		qcom,sde-dspp-demura-off = <0x15600 0x14800>;
-		qcom,sde-dspp-demura-size = <0x200>;
-		qcom,sde-dspp-demura-version = <0x00010000>;
-
 		qcom,sde-uidle-off = <0x80000>;
 		qcom,sde-uidle-size = <0x70>;
 
@@ -187,7 +179,7 @@
 		qcom,sde-qos-cpu-dma-latency = <300>;
 		qcom,sde-qos-cpu-irq-latency = <300>;
 
-		/* offsets are relative to "mdp_phys + qcom,sde-off */
+		/* offsets are relative to regdma_phys */
 		qcom,sde-reg-dma-off = <0 0x400>;
 		qcom,sde-reg-dma-id = <0 1>;
 		qcom,sde-reg-dma-version = <0x00020000>;
