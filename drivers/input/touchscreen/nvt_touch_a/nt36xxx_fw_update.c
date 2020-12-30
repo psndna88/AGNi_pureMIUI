@@ -147,6 +147,54 @@ int32_t Check_FW_Ver(void)
 
 /*******************************************************
 Description:
+	Novatek touchscreen resume from deep power down function.
+
+return:
+	Executive outcomes. 0---succeed. negative---failed.
+*******************************************************/
+int32_t Resume_PD(void)
+{
+	uint8_t buf[8] = {0};
+	int32_t ret = 0;
+	int32_t retry = 0;
+
+
+	buf[0] = 0x00;
+	buf[1] = 0xAB;
+	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
+	if (ret < 0) {
+		NVT_ERR("Write Enable error!!(%d)\n", ret);
+		return ret;
+	}
+
+
+	retry = 0;
+	while(1) {
+		msleep(1);
+		buf[0] = 0x00;
+		buf[1] = 0x00;
+		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
+		if (ret < 0) {
+			NVT_ERR("Check 0xAA (Resume Command) error!!(%d)\n", ret);
+			return ret;
+		}
+		if (buf[1] == 0xAA) {
+			break;
+		}
+		retry++;
+		if (unlikely(retry > 20)) {
+			NVT_ERR("Check 0xAA (Resume Command) error!! status=0x%02X\n", buf[1]);
+			return -1;
+		}
+	}
+	msleep(10);
+
+	NVT_LOG("Resume PD OK\n");
+	return 0;
+}
+
+/*******************************************************
+Description:
 	Novatek touchscreen check firmware checksum function.
 
 return:
@@ -246,6 +294,60 @@ int32_t Check_CheckSum(void)
 
 	NVT_LOG("firmware checksum match\n");
 	return 1;
+}
+
+/*******************************************************
+Description:
+	Novatek touchscreen initial bootloader and flash
+	block function.
+
+return:
+	Executive outcomes. 0---succeed. negative---failed.
+*******************************************************/
+int32_t Init_BootLoader(void)
+{
+	uint8_t buf[64] = {0};
+	int32_t ret = 0;
+	int32_t retry = 0;
+
+
+	nvt_sw_reset_idle();
+
+
+	buf[0] = 0x00;
+	buf[1] = 0x00;
+	buf[2] = I2C_FW_Address;
+	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 3);
+	if (ret < 0) {
+		NVT_ERR("Inittial Flash Block error!!(%d)\n", ret);
+		return ret;
+	}
+
+
+	retry = 0;
+	while(1) {
+		msleep(1);
+		buf[0] = 0x00;
+		buf[1] = 0x00;
+		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
+		if (ret < 0) {
+			NVT_ERR("Check 0xAA (Inittial Flash Block) error!!(%d)\n", ret);
+			return ret;
+		}
+		if (buf[1] == 0xAA) {
+			break;
+		}
+		retry++;
+		if (unlikely(retry > 20)) {
+			NVT_ERR("Check 0xAA (Inittial Flash Block) error!! status=0x%02X\n", buf[1]);
+			return -1;
+		}
+	}
+
+	NVT_LOG("Init OK \n");
+	msleep(20);
+
+	return 0;
 }
 
 /*******************************************************
@@ -948,106 +1050,3 @@ void Boot_Update_Firmware(struct work_struct *work)
 	nvt_get_fw_info();
 }
 #endif /* BOOT_UPDATE_FIRMWARE */
-
-/*******************************************************
-Description:
-	Novatek touchscreen resume from deep power down function.
-
-return:
-	Executive outcomes. 0---succeed. negative---failed.
-*******************************************************/
-int32_t Resume_PD(void)
-{
-	uint8_t buf[8] = {0};
-	int32_t ret = 0;
-	int32_t retry = 0;
-
-
-	buf[0] = 0x00;
-	buf[1] = 0xAB;
-	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
-	if (ret < 0) {
-		NVT_ERR("Write Enable error!!(%d)\n", ret);
-		return ret;
-	}
-
-
-	retry = 0;
-	while(1) {
-		msleep(1);
-		buf[0] = 0x00;
-		buf[1] = 0x00;
-		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
-		if (ret < 0) {
-			NVT_ERR("Check 0xAA (Resume Command) error!!(%d)\n", ret);
-			return ret;
-		}
-		if (buf[1] == 0xAA) {
-			break;
-		}
-		retry++;
-		if (unlikely(retry > 20)) {
-			NVT_ERR("Check 0xAA (Resume Command) error!! status=0x%02X\n", buf[1]);
-			return -1;
-		}
-	}
-	msleep(10);
-
-	NVT_LOG("Resume PD OK\n");
-	return 0;
-}
-
-/*******************************************************
-Description:
-	Novatek touchscreen initial bootloader and flash
-	block function.
-
-return:
-	Executive outcomes. 0---succeed. negative---failed.
-*******************************************************/
-int32_t Init_BootLoader(void)
-{
-	uint8_t buf[64] = {0};
-	int32_t ret = 0;
-	int32_t retry = 0;
-
-
-	nvt_sw_reset_idle();
-
-
-	buf[0] = 0x00;
-	buf[1] = 0x00;
-	buf[2] = I2C_FW_Address;
-	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 3);
-	if (ret < 0) {
-		NVT_ERR("Inittial Flash Block error!!(%d)\n", ret);
-		return ret;
-	}
-
-
-	retry = 0;
-	while(1) {
-		msleep(1);
-		buf[0] = 0x00;
-		buf[1] = 0x00;
-		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
-		if (ret < 0) {
-			NVT_ERR("Check 0xAA (Inittial Flash Block) error!!(%d)\n", ret);
-			return ret;
-		}
-		if (buf[1] == 0xAA) {
-			break;
-		}
-		retry++;
-		if (unlikely(retry > 20)) {
-			NVT_ERR("Check 0xAA (Inittial Flash Block) error!! status=0x%02X\n", buf[1]);
-			return -1;
-		}
-	}
-
-	NVT_LOG("Init OK \n");
-	msleep(20);
-
-	return 0;
-}
-

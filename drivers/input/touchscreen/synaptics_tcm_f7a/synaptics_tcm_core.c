@@ -3589,18 +3589,15 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	}
 
 	LOGV("INIT_WORK : syna_tcm_helper\n");
-	tcm_hcd->helper.workqueue =
-		alloc_workqueue("syna_tcm_helper", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	tcm_hcd->helper.workqueue =	create_singlethread_workqueue("syna_tcm_helper");
 	INIT_WORK(&tcm_hcd->helper.work, syna_tcm_helper_work);
 
 	LOGV("INIT_DELAYED_WORK : syna_tcm_watchdog\n");
-	tcm_hcd->watchdog.workqueue =
-		alloc_workqueue("syna_tcm_watchdog", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	tcm_hcd->watchdog.workqueue = create_singlethread_workqueue("syna_tcm_watchdog");
 	INIT_DELAYED_WORK(&tcm_hcd->watchdog.work, syna_tcm_watchdog_work);
 
 	LOGV("INIT_DELAYED_WORK : syna_tcm_polling\n");
-	tcm_hcd->polling_workqueue =
-		alloc_workqueue("syna_tcm_polling", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	tcm_hcd->polling_workqueue = create_singlethread_workqueue("syna_tcm_polling");
 	INIT_DELAYED_WORK(&tcm_hcd->polling_work, syna_tcm_polling_work);
 
 	/* add reset work by wanghan start */
@@ -3613,8 +3610,7 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	/* add resume work by wanghan end */
 
 	LOGV("INIT_DELAYED_WORK : syna_tcm_glove\n");
-	tcm_hcd->glove.workqueue =
-		alloc_workqueue("syna_tcm_glove", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	tcm_hcd->glove.workqueue = create_singlethread_workqueue("syna_tcm_glove");
 	INIT_DELAYED_WORK(&tcm_hcd->glove.work, syna_tcm_glove_work);
 
 	LOGV("enable interrupt\n");
@@ -3644,7 +3640,7 @@ static int syna_tcm_probe(struct platform_device *pdev)
 
 	LOGV("INIT_WORK : syna_tcm_module\n");
 	mod_pool.workqueue =
-		alloc_workqueue("syna_tcm_module", WQ_FREEZABLE | WQ_HIGHPRI | WQ_UNBOUND, 0);
+		create_singlethread_workqueue("syna_tcm_module");
 	INIT_WORK(&mod_pool.work, syna_tcm_module_work);
 	mod_pool.tcm_hcd = tcm_hcd;
 	mod_pool.queue_work = true;
