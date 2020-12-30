@@ -19,7 +19,7 @@
 		reg = <0 0>;
 	};
 
-	reserved-memory {
+	reserved_memory: reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -32,8 +32,20 @@
 
 		peripheral2_mem: peripheral2_region@0x87d00000 {
 			no-map;
-			reg = <0x87d00000 0x300000>;
+			reg = <0x87d00000 0x100000>;
 			label = "peripheral2_mem";
+		};
+
+		smem_mem: smem_region@0x87e80000 {
+			no-map;
+			reg = <0x87e80000 0xc0000>;
+			label = "smem_mem";
+		};
+
+		mss_mem: mss_region@0x88000000 {
+			no-map;
+			reg = <0x88000000 0x7300000>;
+			label = "mss_mem";
 		};
 	};
 
