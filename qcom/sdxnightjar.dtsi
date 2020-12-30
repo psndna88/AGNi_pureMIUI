@@ -725,3 +725,4 @@
 #include "sdxnightjar-regulator.dtsi"
 #include "sdxnightjar-usb.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
+#include "sdxnightjar-blsp.dtsi"
