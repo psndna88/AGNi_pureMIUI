@@ -552,7 +552,7 @@ static int get_val(struct range_data *range, int hysteresis, int current_index,
 	return 0;
 }
 
-#define TAPERED_STEP_CHG_FCC_REDUCTION_STEP_MA		50000 /* 50 mA */
+#define TAPERED_STEP_CHG_FCC_REDUCTION_STEP_MA		100000 /* 100 mA */
 static void taper_fcc_step_chg(struct step_chg_info *chip, int index,
 					int current_voltage)
 {
@@ -1126,7 +1126,7 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->jeita_fcc_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fcc_config->param.prop_name = "BATT_TEMP";
-	chip->jeita_fcc_config->param.hysteresis = 5;
+	chip->jeita_fcc_config->param.hysteresis = 0;
 	chip->jeita_fv_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fv_config->param.prop_name = "BATT_TEMP";
 	chip->jeita_fv_config->param.hysteresis = 5;
