@@ -2146,6 +2146,7 @@ struct ipa3_context {
 	bool manual_fw_load;
 	u32 num_smmu_cb_probed;
 	u32 max_num_smmu_cb;
+	bool ipa_endp_delay_wa_v2;
 };
 
 struct ipa3_plat_drv_res {
@@ -2214,6 +2215,7 @@ struct ipa3_plat_drv_res {
 	bool manual_fw_load;
 	bool ipa_config_is_auto;
 	u32 max_num_smmu_cb;
+	bool ipa_endp_delay_wa_v2;
 };
 
 /**
@@ -2906,6 +2908,7 @@ void ipa3_skb_recycle(struct sk_buff *skb);
 void ipa3_install_dflt_flt_rules(u32 ipa_ep_idx);
 void ipa3_delete_dflt_flt_rules(u32 ipa_ep_idx);
 
+int ipa3_remove_secondary_flow_ctrl(int gsi_chan_hdl);
 int ipa3_enable_data_path(u32 clnt_hdl);
 int ipa3_disable_data_path(u32 clnt_hdl);
 int ipa3_disable_gsi_data_path(u32 clnt_hdl);
