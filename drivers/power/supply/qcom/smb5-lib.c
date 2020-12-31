@@ -29,12 +29,6 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 #include "schgm-flash.h"
-#ifdef CONFIG_DEBUG_USB
-#undef dev_dbg
-#undef pr_debug
-#define dev_dbg dev_err
-#define pr_debug pr_err
-#endif
 /*part of charger mode function*/
 #ifdef CONFIG_TOUCHSCREEN_COMMON
 

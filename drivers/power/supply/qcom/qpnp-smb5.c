@@ -34,12 +34,6 @@
 #include <linux/msm_drm_notify.h>
 #include <linux/fb.h>
 #include <linux/board_id.h>
-#ifdef CONFIG_DEBUG_USB
-#undef dev_dbg
-#undef pr_debug
-#define dev_dbg dev_err
-#define pr_debug pr_err
-#endif
 
 union power_supply_propval lct_therm_lvl_reserved;
 union power_supply_propval lct_therm_level;
@@ -4017,7 +4011,7 @@ static int thermal_notifier_callback(struct notifier_block *noti, unsigned long 
 	if (ev_data && ev_data->data && chg) {
 		blank = ev_data->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK && *blank == MSM_DRM_BLANK_UNBLANK) {
-			lct_backlight_off = false;
+			lct_backlight_off = true; // fake screen off
 			pr_info("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
 		}
