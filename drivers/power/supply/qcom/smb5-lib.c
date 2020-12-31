@@ -29,6 +29,12 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 #include "schgm-flash.h"
+#ifdef CONFIG_DEBUG_USB
+#undef dev_dbg
+#undef pr_debug
+#define dev_dbg dev_err
+#define pr_debug pr_err
+#endif
 /*part of charger mode function*/
 
 typedef struct touchscreen_usb_piugin_data{
@@ -2973,10 +2979,93 @@ int smblib_set_prop_battery_charging_enabled(struct smb_charger *chg,
 
   return 0;
 }
+extern union power_supply_propval lct_therm_lvl_reserved;
+extern bool lct_backlight_off;
+extern int LctIsInCall;
+extern int LctThermal;
 
 int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 				const union power_supply_propval *val)
 {
+	int rc;
+	union power_supply_propval batt_temp ={0,};
+
+    if (board_get_33w_supported()) {
+        LCT_THERM_CALL_LEVEL = 14;
+        LCT_THERM_LCDOFF_LEVEL = 13;
+    } else {
+        LCT_THERM_CALL_LEVEL = 7;
+        LCT_THERM_LCDOFF_LEVEL = 4;
+    }
+
+	if (val->intval < 0)
+		return -EINVAL;
+
+	if (chg->thermal_levels <= 0)
+		return -EINVAL;
+
+	if (val->intval > chg->thermal_levels)
+		return -EINVAL;
+
+	rc = smblib_get_prop_from_bms(chg,
+				POWER_SUPPLY_PROP_TEMP, &batt_temp);
+	if (rc < 0) {
+		pr_err("Couldn't get batt temp rc=%d\n", rc);
+		return -EINVAL;
+	}
+	smblib_dbg(chg, PR_OEM, "thermal level:%d, batt temp:%d, thermal_levels:%d"
+					 "chg->system_temp_level:%d, charger_type:%d\n",
+					 val->intval, batt_temp.intval, chg->thermal_levels,
+					 chg->system_temp_level, chg->real_charger_type);
+
+	pr_info("%s val=%d, chg->system_temp_level=%d, LctThermal=%d, lct_backlight_off= %d, IsInCall=%d \n "
+		,__FUNCTION__,val->intval,chg->system_temp_level, LctThermal, lct_backlight_off, LctIsInCall);
+
+	if (LctThermal == 0) { //from therml-engine always store lvl_sel
+		lct_therm_lvl_reserved.intval = val->intval;
+	}
+
+	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > LCT_THERM_LCDOFF_LEVEL)) {
+		pr_info("leve ignored:backlight_off:%d level:%d",lct_backlight_off,val->intval);
+		return 0;
+	}
+
+	if ((LctIsInCall == 1) && (val->intval != LCT_THERM_CALL_LEVEL)) {
+		pr_info("leve ignored:LctIsInCall:%d level:%d",LctIsInCall,val->intval);
+		return 0;
+	}
+
+	if (val->intval == chg->system_temp_level)
+		return 0;
+
+	chg->system_temp_level = val->intval;
+
+	if (chg->system_temp_level == chg->thermal_levels) {
+		if (!chg->cp_disable_votable)
+			chg->cp_disable_votable = find_votable("CP_DISABLE");
+		if (chg->cp_disable_votable)
+			vote(chg->cp_disable_votable, THERMAL_DAEMON_VOTER, true, 0);
+		return vote(chg->chg_disable_votable,
+			THERMAL_DAEMON_VOTER, true, 0);
+	}
+
+	pr_info("%s intval:%d system temp level:%d thermal_levels:%d",
+		__FUNCTION__,val->intval,chg->system_temp_level,chg->thermal_levels);
+
+	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
+
+	if (chg->cp_disable_votable)
+		vote(chg->cp_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
+
+	if (board_get_33w_supported()) {
+	smblib_therm_charging(chg);
+	} else {
+	if (chg->system_temp_level == 0)
+		return vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, false, 0);
+
+	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
+			chg->thermal_mitigation[chg->system_temp_level]);
+	}
 	return 0;
 }
 
@@ -6018,13 +6107,6 @@ static void smblib_cc_un_compliant_charge_work(struct work_struct *work)
 	}
 }
 
-static void smblib_charger_soc_decimal(struct work_struct *work)
-{
-	struct smb_charger *chg = container_of(work, struct smb_charger,
-			charger_soc_decimal.work);
-	power_supply_changed(chg->bms_psy);
-}
-
 static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 {
 	if (!vbus_rising) {
@@ -6440,9 +6522,6 @@ static int qc3p5_authenticate(struct smb_charger *chg)
 	smblib_dbg(chg, PR_MISC, "QC3P5 AUTH: QC3.5 Authenticated\n");
 	smblib_dbg(chg, PR_MISC, "QC3P5 AUTH: Power Limit = %d\n",
 			chg->qc3p5_power_limit_w);
-
-	if (chg->support_ffc && (!smblib_get_fastcharge_mode(chg)))
-		smblib_set_fastcharge_mode(chg, true);
 
 	if( (lct_check_hwversion() == GLOBAL_HWVERSION) || (lct_check_hwversion() == INDIA_HWVERSION) )
 	{
@@ -9278,7 +9357,6 @@ int smblib_init(struct smb_charger *chg)
 					smblib_pr_swap_detach_work);
 	INIT_DELAYED_WORK(&chg->pr_lock_clear_work,
 					smblib_pr_lock_clear_work);
-	INIT_DELAYED_WORK(&chg->charger_soc_decimal, smblib_charger_soc_decimal);
 
 	if (chg->wa_flags & CHG_TERMINATION_WA) {
 		INIT_WORK(&chg->chg_termination_work,
@@ -9435,7 +9513,6 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->raise_qc3_vbus_work);
 		cancel_delayed_work_sync(&chg->charger_type_recheck);
 		cancel_delayed_work_sync(&chg->cc_un_compliant_charge_work);
-		cancel_delayed_work_sync(&chg->charger_soc_decimal);
 		if (chg->reg_dump_enable) {
 			cancel_delayed_work_sync(&chg->reg_work);
 		}

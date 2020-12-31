@@ -1857,7 +1857,6 @@ static const struct file_operations ds28e16_dev_fops = {
 
 static const struct of_device_id ds28e16_dt_match[] = {
 	{.compatible = "maxim,ds28e16"},
-	{},
 };
 
 static struct platform_driver ds28e16_driver = {

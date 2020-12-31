@@ -154,7 +154,7 @@ enum print_reason {
 #else
 #define CDP_CURRENT_UA			1500000
 #endif
-#define DCP_CURRENT_UA			2100000
+#define DCP_CURRENT_UA			1600000
 #define HVDCP_CURRENT_UA		3000000
 #define HVDCP_CLASS_B_CURRENT_UA		3100000
 #define HVDCP2_CURRENT_UA		1500000
@@ -217,7 +217,6 @@ enum print_reason {
 #define CP_COOL_THRESHOLD		150
 #define CP_WARM_THRESHOLD		450
 #define SOFT_JEITA_HYSTERESIS		5
-#define CHARGER_SOC_DECIMAL_MS		200
 
 /* lct thermal */
 static int LCT_THERM_CALL_LEVEL;
@@ -601,7 +600,6 @@ struct smb_charger {
 	struct delayed_work	reg_work;
 	struct delayed_work	pr_lock_clear_work;
 	struct delayed_work	six_pin_batt_step_chg_work;
-	struct delayed_work     charger_soc_decimal;
 
 	struct alarm		lpd_recheck_timer;
 	struct alarm		moisture_protection_alarm;
