@@ -2325,6 +2325,7 @@
 };
 
 #include "shima-gdsc.dtsi"
+#include "yupik-coresight.dtsi"
 #include "yupik-pinctrl.dtsi"
 #include "yupik-pm.dtsi"
 #include "ipcc-test-yupik.dtsi"
