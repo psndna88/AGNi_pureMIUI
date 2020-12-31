@@ -29,12 +29,6 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 #include "schgm-flash.h"
-#ifdef CONFIG_DEBUG_USB
-#undef dev_dbg
-#undef pr_debug
-#define dev_dbg dev_err
-#define pr_debug pr_err
-#endif
 /*part of charger mode function*/
 
 typedef struct touchscreen_usb_piugin_data{
@@ -6522,6 +6516,9 @@ static int qc3p5_authenticate(struct smb_charger *chg)
 	smblib_dbg(chg, PR_MISC, "QC3P5 AUTH: QC3.5 Authenticated\n");
 	smblib_dbg(chg, PR_MISC, "QC3P5 AUTH: Power Limit = %d\n",
 			chg->qc3p5_power_limit_w);
+
+	if (chg->support_ffc && (!smblib_get_fastcharge_mode(chg)))
+		smblib_set_fastcharge_mode(chg, true);
 
 	if( (lct_check_hwversion() == GLOBAL_HWVERSION) || (lct_check_hwversion() == INDIA_HWVERSION) )
 	{
