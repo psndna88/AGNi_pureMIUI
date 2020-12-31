@@ -14,7 +14,7 @@
 
 qcom,unknown_5020mAh {
 	qcom,max-voltage-uv = <4450000>;
-	qcom,fastchg-current-ma = <3400>;
+	qcom,fastchg-current-ma = <3600>;
 	qcom,batt-id-kohm = <330>;
 	qcom,battery-beta = <4250>;
 	qcom,battery-therm-kohm = <100>;
@@ -26,14 +26,9 @@ qcom,unknown_5020mAh {
 
 	qcom,jeita-fcc-ranges = <0  50  984000
 				51  100  2460000
-				101 150  3200000
-				151 370  3400000
-				371 380  3000000
-				381 390  2800000
-				391 400  2500000
-				401 420	 2200000
-				421 440  2000000
-				441 580  1800000>;
+				101 150  3444000
+				151 450  3600000
+				451 600  2460000>;
 
 	qcom,jeita-fv-ranges = <0   50  4450000
 				51  100  4450000
@@ -41,7 +36,7 @@ qcom,unknown_5020mAh {
 				151 450  4480000
 				451 600  4100000>;
 
-	qcom,step-chg-ranges = <3001000  4250000  3400000
+	qcom,step-chg-ranges = <3001000  4250000  3600000
 				4250001  4430000  3300000
 				4430001  4450000  3000000>;
 
