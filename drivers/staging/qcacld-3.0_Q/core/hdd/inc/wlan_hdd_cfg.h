@@ -350,7 +350,7 @@ enum hdd_dot11_mode {
  * </ini>
  */
 
-#define CFG_CHANNEL_BONDING_MODE_24GHZ_NAME    "gChannelBondingMode24GHz"
+#define CFG_CHANNEL_BONDING_MODE_24GHZ_NAME    "gChannelBondingMode24GHzBLOCK"
 #define CFG_CHANNEL_BONDING_MODE_MIN           WNI_CFG_CHANNEL_BONDING_MODE_STAMIN
 #define CFG_CHANNEL_BONDING_MODE_MAX           WNI_CFG_CHANNEL_BONDING_MODE_STAMAX
 #define CFG_CHANNEL_BONDING_MODE_DEFAULT       WNI_CFG_CHANNEL_BONDING_MODE_STADEF
@@ -374,10 +374,10 @@ enum hdd_dot11_mode {
  * </ini>
  */
 
-#define CFG_OVERRIDE_HT40_20_24GHZ_NAME    "override_ht20_40_24g"
+#define CFG_OVERRIDE_HT40_20_24GHZ_NAME    "override_ht20_40_24gBLOCK"
 #define CFG_OVERRIDE_HT40_20_24GHZ_MIN           0
 #define CFG_OVERRIDE_HT40_20_24GHZ_MAX           1
-#define CFG_OVERRIDE_HT40_20_24GHZ_DEFAULT       0
+#define CFG_OVERRIDE_HT40_20_24GHZ_DEFAULT       1
 
 /*
  * <ini>
@@ -397,7 +397,7 @@ enum hdd_dot11_mode {
  * </ini>
  */
 
-#define CFG_CHANNEL_BONDING_MODE_5GHZ_NAME     "gChannelBondingMode5GHz"
+#define CFG_CHANNEL_BONDING_MODE_5GHZ_NAME     "gChannelBondingMode5GHzBLOCK"
 #define CFG_CHANNEL_BONDING_MODE_MIN           WNI_CFG_CHANNEL_BONDING_MODE_STAMIN
 #define CFG_CHANNEL_BONDING_MODE_MAX           WNI_CFG_CHANNEL_BONDING_MODE_STAMAX
 #define CFG_CHANNEL_BONDING_MODE_DEFAULT       WNI_CFG_CHANNEL_BONDING_MODE_STADEF
@@ -949,10 +949,10 @@ enum hdd_dot11_mode {
  *
  * </ini>
  */
-#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH      "drop_bcn_on_chan_mismatch"
+#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH      "drop_bcn_on_chan_mismatchBLOCK"
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MIN       (0)
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MAX       (1)
-#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (1)
+#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (0)
 
 /*
  * <ini>
@@ -3864,10 +3864,10 @@ enum station_keepalive_method {
  *
  * </ini>
  */
-#define CFG_QOS_WMM_MODE_NAME                          "WmmIsEnabled"
+#define CFG_QOS_WMM_MODE_NAME                          "WmmIsEnabledBLOCK"
 #define CFG_QOS_WMM_MODE_MIN                           (0)
 #define CFG_QOS_WMM_MODE_MAX                           (2) /* HDD_WMM_NO_QOS */
-#define CFG_QOS_WMM_MODE_DEFAULT                       (0) /* HDD_WMM_AUTO */
+#define CFG_QOS_WMM_MODE_DEFAULT                       (1) /* HDD_WMM_AUTO */
 
 /*
  * <ini>
@@ -5012,10 +5012,10 @@ enum station_keepalive_method {
  *
  * </ini>
  */
-#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterMode"
+#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterModeBLOCK"
 #define CFG_HW_FILTER_MODE_BITMAP_MIN		(0)
 #define CFG_HW_FILTER_MODE_BITMAP_MAX		(3)
-#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(1)
+#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(3)
 
 /*
  * <ini>
@@ -5097,10 +5097,10 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_VHT_CHANNEL_WIDTH                "gVhtChannelWidth"
+#define CFG_VHT_CHANNEL_WIDTH                "gVhtChannelWidthBLOCK"
 #define CFG_VHT_CHANNEL_WIDTH_MIN            (0)
 #define CFG_VHT_CHANNEL_WIDTH_MAX            (4)
-#define CFG_VHT_CHANNEL_WIDTH_DEFAULT        (2)
+#define CFG_VHT_CHANNEL_WIDTH_DEFAULT        (4)
 
 /*
  * <ini>
@@ -5123,10 +5123,10 @@ enum hdd_link_speed_rpt_type {
  * </ini>
  */
 
-#define CFG_VHT_ENABLE_RX_MCS_8_9               "gVhtRxMCS"
+#define CFG_VHT_ENABLE_RX_MCS_8_9               "gVhtRxMCSBLOCK"
 #define CFG_VHT_ENABLE_RX_MCS_8_9_MIN           (0)
 #define CFG_VHT_ENABLE_RX_MCS_8_9_MAX           (2)
-#define CFG_VHT_ENABLE_RX_MCS_8_9_DEFAULT       (0)
+#define CFG_VHT_ENABLE_RX_MCS_8_9_DEFAULT       (2)
 
 /*
  * <ini>
@@ -5149,10 +5149,10 @@ enum hdd_link_speed_rpt_type {
  * </ini>
  */
 
-#define CFG_VHT_ENABLE_TX_MCS_8_9               "gVhtTxMCS"
+#define CFG_VHT_ENABLE_TX_MCS_8_9               "gVhtTxMCSBLOCK"
 #define CFG_VHT_ENABLE_TX_MCS_8_9_MIN           (0)
 #define CFG_VHT_ENABLE_TX_MCS_8_9_MAX           (2)
-#define CFG_VHT_ENABLE_TX_MCS_8_9_DEFAULT       (0)
+#define CFG_VHT_ENABLE_TX_MCS_8_9_DEFAULT       (2)
 
 /*
  * <ini>
@@ -5358,10 +5358,10 @@ enum hdd_link_speed_rpt_type {
  * </ini>
  */
 
-#define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE         "gEnableMuBformee"
+#define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE         "gEnableMuBformeeBLOCK"
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_MIN     (0)
 #define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_MAX     (1)
-#define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_DEFAULT (0)
+#define CFG_VHT_ENABLE_MU_BFORMEE_CAP_FEATURE_DEFAULT (1)
 
 #define CFG_VHT_ENABLE_PAID_FEATURE             "gEnablePAID"
 #define CFG_VHT_ENABLE_PAID_FEATURE_MIN         (0)
@@ -5578,10 +5578,10 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_MAX        (1)
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_DEFAULT    (0)
 
-#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeed"
+#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeedBLOCK"
 #define CFG_REPORT_MAX_LINK_SPEED_MIN              (eHDD_LINK_SPEED_REPORT_ACTUAL)
 #define CFG_REPORT_MAX_LINK_SPEED_MAX              (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
-#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_ACTUAL)
+#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
 
 /*
  * <ini>
@@ -5799,14 +5799,10 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_CCK_TX_FIR_OVERRIDE_DEFAULT  (0)
 
 #ifndef REMOVE_PKT_LOG
-#define CFG_ENABLE_PACKET_LOG            "gEnablePacketLog"
+#define CFG_ENABLE_PACKET_LOG            "gEnablePacketLogBLOCK"
 #define CFG_ENABLE_PACKET_LOG_MIN        (0)
 #define CFG_ENABLE_PACKET_LOG_MAX        (1)
-#ifdef FEATURE_PKTLOG
-#define CFG_ENABLE_PACKET_LOG_DEFAULT    (1)
-#else
 #define CFG_ENABLE_PACKET_LOG_DEFAULT    (0)
-#endif
 
 #define CFG_PACKET_LOG_BUFFER_SIZE_NAME    "PktlogBufSize"
 #define CFG_PACKET_LOG_BUFFER_SIZE_DEFAULT (10)
@@ -5837,8 +5833,8 @@ enum hdd_link_speed_rpt_type {
 /* For valid values of log levels check enum DBGLOG_LOG_LVL and
  * for valid values of module ids check enum WLAN_MODULE_ID.
  */
-#define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevel"
-#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,1,3,1,5,1,9,1,13,1,14,1,18,1,19,1,26,1,28,1,29,1,31,1,36,1,38,1,46,1,47,1,50,1,52,1,53,1,56,1,60,1,61,1,4,1"
+#define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevelBLOCK"
+#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,0,3,0,5,0,9,0,13,0,14,0,18,0,19,0,26,0,28,0,29,0,31,0,36,0,38,0,46,0,47,0,50,0,52,0,53,0,56,0,60,0,61,0,4,0"
 
 /*
  * <ini>
@@ -7323,7 +7319,7 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_MCC_ADATIVE_SCHEDULER_ENABLED_MAX              (1)
 #define CFG_ENABLE_MCC_ADATIVE_SCHEDULER_ENABLED_DEFAULT          (1)
 
-#define CFG_VHT_SU_BEAMFORMEE_CAP_FEATURE         "gTxBFEnable"
+#define CFG_VHT_SU_BEAMFORMEE_CAP_FEATURE         "gTxBFEnableBLOCK"
 #define CFG_VHT_SU_BEAMFORMEE_CAP_FEATURE_MIN     (WNI_CFG_VHT_SU_BEAMFORMEE_CAP_STAMIN)
 #define CFG_VHT_SU_BEAMFORMEE_CAP_FEATURE_MAX     (WNI_CFG_VHT_SU_BEAMFORMEE_CAP_STAMAX)
 #define CFG_VHT_SU_BEAMFORMEE_CAP_FEATURE_DEFAULT (WNI_CFG_VHT_SU_BEAMFORMEE_CAP_STADEF)
@@ -7395,10 +7391,10 @@ enum hdd_link_speed_rpt_type {
 #define CFG_DISABLE_LDPC_WITH_TXBF_AP_DEFAULT     (0)
 
 /* Parameter to control VHT support in 2.4 GHz band */
-#define CFG_ENABLE_VHT_FOR_24GHZ_NAME             "gEnableVhtFor24GHzBand"
+#define CFG_ENABLE_VHT_FOR_24GHZ_NAME             "gEnableVhtFor24GHzBandBLOCK"
 #define CFG_ENABLE_VHT_FOR_24GHZ_MIN              (0)
 #define CFG_ENABLE_VHT_FOR_24GHZ_MAX              (1)
-#define CFG_ENABLE_VHT_FOR_24GHZ_DEFAULT          (0)
+#define CFG_ENABLE_VHT_FOR_24GHZ_DEFAULT          (1)
 
 /*
  * gEnableVendorVhtFor24GHzBand:Parameter to control VHT support
@@ -7545,13 +7541,13 @@ enum hdd_link_speed_rpt_type {
 /*
  * Firmware log
  */
-#define CFG_ENABLE_FW_LOG_NAME                   "gEnablefwlog"
+#define CFG_ENABLE_FW_LOG_NAME                   "gEnablefwlogBLOCK"
 #define CFG_ENABLE_FW_LOG_DISABLE                (0)
 #define CFG_ENABLE_FW_LOG_WMI                    (1)
 #define CFG_ENABLE_FW_LOG_DIAG                   (2)
 #define CFG_ENABLE_FW_LOG_MIN                    (CFG_ENABLE_FW_LOG_DISABLE)
 #define CFG_ENABLE_FW_LOG_MAX                    (CFG_ENABLE_FW_LOG_DIAG)
-#define CFG_ENABLE_FW_LOG_DEFAULT                (CFG_ENABLE_FW_LOG_WMI)
+#define CFG_ENABLE_FW_LOG_DEFAULT                (CFG_ENABLE_FW_LOG_DISABLE)
 
 /* Macro to handle maximum receive AMPDU size configuration */
 #define CFG_VHT_AMPDU_LEN_EXPONENT_NAME                "gVhtAmpduLenExponent"
@@ -9056,10 +9052,10 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_TSO_ENABLED_NAME           "TSOEnable"
+#define CFG_TSO_ENABLED_NAME           "TSOEnableBLOCK"
 #define CFG_TSO_ENABLED_MIN            (0)
 #define CFG_TSO_ENABLED_MAX            (1)
-#define CFG_TSO_ENABLED_DEFAULT        (0)
+#define CFG_TSO_ENABLED_DEFAULT        (1)
 
 /*
  * <ini>
@@ -9077,7 +9073,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_LRO_ENABLED_NAME           "LROEnable"
+#define CFG_LRO_ENABLED_NAME           "LROEnableBLOCK"
 #define CFG_LRO_ENABLED_MIN            (0)
 #define CFG_LRO_ENABLED_MAX            (1)
 #define CFG_LRO_ENABLED_DEFAULT        (0)
@@ -9098,7 +9094,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_GRO_ENABLED_NAME           "GROEnable"
+#define CFG_GRO_ENABLED_NAME           "GROEnableBLOCK"
 #define CFG_GRO_ENABLED_MIN            (0)
 #define CFG_GRO_ENABLED_MAX            (1)
 #define CFG_GRO_ENABLED_DEFAULT        (0)
@@ -9109,10 +9105,10 @@ enum hdd_link_speed_rpt_type {
  * Parallel Rx paths.
  * 1 - enable  0 - disable
  */
-#define CFG_FLOW_STEERING_ENABLED_NAME        "gEnableFlowSteering"
+#define CFG_FLOW_STEERING_ENABLED_NAME        "gEnableFlowSteeringBLOCK"
 #define CFG_FLOW_STEERING_ENABLED_MIN         (0)
 #define CFG_FLOW_STEERING_ENABLED_MAX         (1)
-#define CFG_FLOW_STEERING_ENABLED_DEFAULT     (0)
+#define CFG_FLOW_STEERING_ENABLED_DEFAULT     (1)
 
 /*
  * Max number of MSDUs per HTT RX IN ORDER INDICATION msg.
@@ -11208,7 +11204,7 @@ enum dot11p_mode {
  *
  * </ini>
  */
-#define CFG_RX_MODE_NAME     "rx_mode"
+#define CFG_RX_MODE_NAME     "rx_modeBLOCK"
 #define CFG_RX_MODE_MIN      (0)
 #define CFG_RX_MODE_MAX      (CFG_ENABLE_RX_THREAD | CFG_ENABLE_RPS | \
 				 CFG_ENABLE_NAPI | CFG_ENABLE_DYNAMIC_RPS)
@@ -13867,7 +13863,7 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 
-#define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
+#define CFG_IS_SAE_ENABLED_NAME    "sae_enabledBLOCK"
 #define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)

@@ -6028,8 +6028,8 @@ enum hdd_link_speed_rpt_type {
 /* For valid values of log levels check enum DBGLOG_LOG_LVL and
  * for valid values of module ids check enum WLAN_MODULE_ID.
  */
-#define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevel"
-#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,1,3,1,5,1,9,1,13,1,14,1,18,1,19,1,26,1,28,1,29,1,31,1,36,1,38,1,46,1,47,1,50,1,52,1,53,1,56,1,60,1,61,1,4,1"
+#define CFG_ENABLE_FW_MODULE_LOG_LEVEL    "gFwDebugModuleLoglevelBLOCK"
+#define CFG_ENABLE_FW_MODULE_LOG_DEFAULT  "2,0,3,0,5,0,9,0,13,0,14,0,18,0,19,0,26,0,28,0,29,0,31,0,36,0,38,0,46,0,47,0,50,0,52,0,53,0,56,0,60,0,61,0,4,0"
 
 /*
  * <ini>
@@ -11904,10 +11904,10 @@ enum hw_filter_mode {
  *
  * </ini>
  */
-#define CFG_HW_FILTER_MODE_NAME		"gHwFilterMode"
+#define CFG_HW_FILTER_MODE_NAME		"gHwFilterModeBLOCK"
 #define CFG_HW_FILTER_MODE_MIN		(0)
 #define CFG_HW_FILTER_MODE_MAX		(3)
-#define CFG_HW_FILTER_MODE_DEFAULT	(1)
+#define CFG_HW_FILTER_MODE_DEFAULT	(3)
 
 /*
  * <ini>
@@ -13468,7 +13468,7 @@ enum hw_filter_mode {
  * </ini>
  */
 
-#define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
+#define CFG_IS_SAE_ENABLED_NAME    "sae_enabledBLOCK"
 #define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
