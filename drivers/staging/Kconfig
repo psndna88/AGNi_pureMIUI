@@ -118,6 +118,13 @@ source "drivers/staging/vboxvideo/Kconfig"
 
 source "drivers/staging/pi433/Kconfig"
 
+comment "Qualcomm Atheros CLD WLAN module"
+
+config QCA_CLD_WLAN_PIE
+	bool "Qualcomm Atheros CLD WLAN module from CAF Pie tag"
+	default n
+
+source "drivers/staging/qcacld-3.0_pie/Kconfig"
 source "drivers/staging/qcacld-3.0/Kconfig"
 
 endif # STAGING
