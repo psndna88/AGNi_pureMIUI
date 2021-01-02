@@ -253,6 +253,7 @@ struct sde_dbg_regbuf {
  * @cur_evt_index: index used for tracking event logs dump in hw recovery
  * @dbgbus_dump_idx: index used for tracking dbg-bus dump in hw recovery
  * @vbif_dbgbus_dump_idx: index for tracking vbif dumps in hw recovery
+ * @hw_ownership: indicates if the VM owns the HW resources
  */
 static struct sde_dbg_base {
 	struct sde_dbg_evtlog *evtlog;
@@ -278,6 +279,7 @@ static struct sde_dbg_base {
 	struct sde_dbg_regbuf regbuf;
 	u32 cur_evt_index;
 	enum sde_dbg_dump_context dump_mode;
+	bool hw_ownership;
 } sde_dbg_base;
 
 static LIST_HEAD(sde_dbg_dsi_list);
@@ -5609,6 +5611,12 @@ static ssize_t sde_recovery_regdump_read(struct file *file, char __user *ubuf,
 	struct sde_dbg_regbuf *rbuf = &dbg_base->regbuf;
 
 	mutex_lock(&sde_dbg_base.mutex);
+	if (!sde_dbg_base.hw_ownership) {
+		pr_debug("op not supported due to HW unavailablity\n");
+		len = -EOPNOTSUPP;
+		goto err;
+	}
+
 	if (!rbuf->dump_done && !rbuf->cur_blk) {
 		if (!rbuf->buf)
 			rbuf->buf = kzalloc(DUMP_BUF_SIZE, GFP_KERNEL);
@@ -5689,6 +5697,12 @@ static ssize_t sde_recovery_dbgbus_dump_read(struct file *file,
 
 	memset(log_buf,  0, sizeof(log_buf));
 	mutex_lock(&sde_dbg_base.mutex);
+	if (!sde_dbg_base.hw_ownership) {
+		pr_debug("op not supported due to HW unavailablity\n");
+		len = -EOPNOTSUPP;
+		goto dump_done;
+	}
+
 	if (!cmn->dumped_content || !cmn->entries_size)
 		goto dump_done;
 
@@ -6011,31 +6025,40 @@ static ssize_t sde_dbg_reg_base_reg_write(struct file *file,
 		return -EFAULT;
 
 	mutex_lock(&sde_dbg_base.mutex);
+	if (!sde_dbg_base.hw_ownership) {
+		pr_debug("op not supported due to hw unavailablity\n");
+		count = -EOPNOTSUPP;
+		goto end;
+	}
+
 	if (off >= dbg->max_offset) {
-		mutex_unlock(&sde_dbg_base.mutex);
-		return -EFAULT;
+		count = -EFAULT;
+		goto end;
 	}
 
 	if (!list_empty(&dbg->sub_range_list)) {
 		rc = sde_dbg_reg_base_is_valid_range(dbg, off, cnt);
-		if (!rc)
-			return -EINVAL;
+		if (!rc) {
+			count = -EINVAL;
+			goto end;
+		}
 	}
 
 	rc = pm_runtime_get_sync(sde_dbg_base.dev);
 	if (rc < 0) {
-		mutex_unlock(&sde_dbg_base.mutex);
 		pr_err("failed to enable power %d\n", rc);
-		return rc;
+		count = rc;
+		goto end;
 	}
 
 	writel_relaxed(data, dbg->base + off);
 
 	pm_runtime_put_sync(sde_dbg_base.dev);
 
-	mutex_unlock(&sde_dbg_base.mutex);
-
 	pr_debug("addr=%zx data=%x\n", off, data);
+
+end:
+	mutex_unlock(&sde_dbg_base.mutex);
 
 	return count;
 }
@@ -6068,6 +6091,12 @@ static ssize_t sde_dbg_reg_base_reg_read(struct file *file,
 		return -EINVAL;
 
 	mutex_lock(&sde_dbg_base.mutex);
+	if (!sde_dbg_base.hw_ownership) {
+		pr_debug("op not supported due to hw unavailablity\n");
+		len = -EOPNOTSUPP;
+		goto end;
+	}
+
 	if (!dbg->buf) {
 		char dump_buf[64];
 		char *ptr;
@@ -6078,13 +6107,13 @@ static ssize_t sde_dbg_reg_base_reg_read(struct file *file,
 		dbg->buf = kzalloc(dbg->buf_len, GFP_KERNEL);
 
 		if (!dbg->buf) {
-			mutex_unlock(&sde_dbg_base.mutex);
-			return -ENOMEM;
+			len = -ENOMEM;
+			goto end;
 		}
 
 		if (dbg->off % sizeof(u32)) {
-			mutex_unlock(&sde_dbg_base.mutex);
-			return -EFAULT;
+			len = -EFAULT;
+			goto end;
 		}
 
 		ptr = dbg->base + dbg->off;
@@ -6092,9 +6121,9 @@ static ssize_t sde_dbg_reg_base_reg_read(struct file *file,
 
 		rc = pm_runtime_get_sync(sde_dbg_base.dev);
 		if (rc < 0) {
-			mutex_unlock(&sde_dbg_base.mutex);
 			pr_err("failed to enable power %d\n", rc);
-			return rc;
+			len = rc;
+			goto end;
 		}
 
 		for (cnt = dbg->cnt; cnt > 0; cnt -= ROW_BYTES) {
@@ -6119,18 +6148,20 @@ static ssize_t sde_dbg_reg_base_reg_read(struct file *file,
 	}
 
 	if (*ppos >= dbg->buf_len) {
-		mutex_unlock(&sde_dbg_base.mutex);
-		return 0; /* done reading */
+		len = 0; /* done reading */
+		goto end;
 	}
 
 	len = min(count, dbg->buf_len - (size_t) *ppos);
 	if (copy_to_user(user_buf, dbg->buf + *ppos, len)) {
-		mutex_unlock(&sde_dbg_base.mutex);
 		pr_err("failed to copy to user\n");
-		return -EFAULT;
+		len = -EFAULT;
+		goto end;
 	}
 
 	*ppos += len; /* increase offset */
+
+end:
 	mutex_unlock(&sde_dbg_base.mutex);
 
 	return len;
@@ -6561,6 +6592,13 @@ void sde_dbg_reg_register_dump_range(const char *base_name,
 	pr_debug("base %s, range %s, start 0x%X, end 0x%X\n",
 			base_name, range->range_name,
 			range->offset.start, range->offset.end);
+}
+
+void sde_dbg_set_hw_ownership_status(bool enable)
+{
+	mutex_lock(&sde_dbg_base.mutex);
+	sde_dbg_base.hw_ownership = enable;
+	mutex_unlock(&sde_dbg_base.mutex);
 }
 
 void sde_dbg_set_sde_top_offset(u32 blk_off)

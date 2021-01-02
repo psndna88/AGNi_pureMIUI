@@ -40,6 +40,7 @@
 #include "sde_power_handle.h"
 #include "sde_core_perf.h"
 #include "sde_trace.h"
+#include "sde_vm.h"
 
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
 #define SDE_MULTIRECT_PLANE_MAX (SDE_STAGE_MAX * 2)
@@ -3256,7 +3257,6 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	struct drm_encoder *encoder;
 	struct drm_device *dev;
 	struct sde_kms *sde_kms;
-	struct drm_plane *plane;
 	struct sde_splash_display *splash_display;
 	bool cont_splash_enabled = false, apply_cp_prop = false;
 	size_t i;
@@ -3316,14 +3316,8 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	_sde_crtc_blend_setup(crtc, old_state, true);
 	_sde_crtc_dest_scaler_setup(crtc);
 
-	if (old_state->mode_changed) {
+	if (crtc->state->mode_changed)
 		sde_core_perf_crtc_update_uidle(crtc, true);
-		drm_atomic_crtc_for_each_plane(plane, crtc) {
-			if (plane->state && plane->state->fb)
-				_sde_plane_set_qos_lut(plane, crtc,
-					plane->state->fb);
-		}
-	}
 
 	/*
 	 * Since CP properties use AXI buffer to program the
@@ -3504,7 +3498,7 @@ static void sde_crtc_destroy_state(struct drm_crtc *crtc,
 			&cstate->property_state);
 }
 
-static int _sde_crtc_flush_event_thread(struct drm_crtc *crtc)
+static int _sde_crtc_flush_frame_events(struct drm_crtc *crtc)
 {
 	struct sde_crtc *sde_crtc;
 	int i;
@@ -3780,7 +3774,7 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 
 	sde_crtc_calc_fps(sde_crtc);
 	SDE_ATRACE_BEGIN("flush_event_thread");
-	_sde_crtc_flush_event_thread(crtc);
+	_sde_crtc_flush_frame_events(crtc);
 	SDE_ATRACE_END("flush_event_thread");
 	sde_crtc->plane_mask_old = crtc->state->plane_mask;
 
@@ -4162,7 +4156,7 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 			(u8 *)&power_on);
 
 	mutex_unlock(&sde_crtc->crtc_lock);
-	_sde_crtc_flush_event_thread(crtc);
+	kthread_flush_worker(&priv->event_thread[crtc->index].worker);
 	mutex_lock(&sde_crtc->crtc_lock);
 
 	kthread_cancel_delayed_work_sync(&sde_crtc->static_cache_read_work);
@@ -6003,6 +5997,7 @@ static ssize_t _sde_crtc_misr_read(struct file *file,
 	struct sde_crtc *sde_crtc;
 	struct sde_kms *sde_kms;
 	struct sde_crtc_mixer *m;
+	struct sde_vm_ops *vm_ops;
 	int i = 0, rc;
 	ssize_t len = 0;
 	char buf[MISR_BUFF_SIZE + 1] = {'\0'};
@@ -6023,8 +6018,17 @@ static ssize_t _sde_crtc_misr_read(struct file *file,
 	if (rc < 0)
 		return rc;
 
+	vm_ops = sde_vm_get_ops(sde_kms);
+	sde_vm_lock(sde_kms);
+	if (vm_ops && vm_ops->vm_owns_hw && !vm_ops->vm_owns_hw(sde_kms)) {
+		SDE_DEBUG("op not supported due to HW unavailability\n");
+		rc = -EOPNOTSUPP;
+		goto end;
+	}
+
 	if (sde_kms_is_secure_session_inprogress(sde_kms)) {
 		SDE_DEBUG("crtc:%d misr read not allowed\n", DRMID(crtc));
+		rc = -EOPNOTSUPP;
 		goto end;
 	}
 
@@ -6074,6 +6078,7 @@ buff_check:
 	*ppos += len;   /* increase offset */
 
 end:
+	sde_vm_unlock(sde_kms);
 	pm_runtime_put_sync(crtc->dev->dev);
 	return len;
 }

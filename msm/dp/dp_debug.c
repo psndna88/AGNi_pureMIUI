@@ -157,7 +157,7 @@ static ssize_t dp_debug_write_edid(struct file *file,
 	edid = debug->edid;
 bail:
 	kfree(buf);
-	debug->panel->set_edid(debug->panel, edid);
+	debug->panel->set_edid(debug->panel, edid, debug->edid_size);
 
 	/*
 	 * print edid status as this code is executed
@@ -520,10 +520,10 @@ static ssize_t dp_debug_write_mst_con_id(struct file *file,
 	debug->dp_debug.mst_hpd_sim = true;
 
 	if (status == connector_status_connected) {
-		DP_INFO("plug mst connector\n", con_id, status);
+		DP_INFO("plug mst connector %d\n", con_id);
 		debug->dp_debug.mst_sim_add_con = true;
 	} else {
-		DP_INFO("unplug mst connector %d\n", con_id, status);
+		DP_INFO("unplug mst connector %d\n", con_id);
 	}
 
 	debug->hpd->simulate_attention(debug->hpd, vdo);
@@ -1617,7 +1617,7 @@ static void dp_debug_set_sim_mode(struct dp_debug_private *debug, bool sim)
 		debug->ctrl->set_sim_mode(debug->ctrl, false);
 		debug->dp_debug.sim_mode = false;
 
-		debug->panel->set_edid(debug->panel, 0);
+		debug->panel->set_edid(debug->panel, 0, 0);
 		if (debug->edid) {
 			devm_kfree(debug->dev, debug->edid);
 			debug->edid = NULL;
