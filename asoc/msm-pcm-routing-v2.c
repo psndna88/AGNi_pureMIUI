@@ -3243,6 +3243,7 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	int mux = ucontrol->value.enumerated.item[0];
 	int lsm_port = AFE_PORT_ID_SLIMBUS_MULTI_CHAN_5_TX;
+	int lsm_port_idx = 0;
 	u8 fe_idx = 0;
 
 	if (mux >= e->items) {
@@ -3252,6 +3253,7 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 
 	pr_debug("%s: LSM enable %ld\n", __func__,
 			ucontrol->value.integer.value[0]);
+	lsm_port_idx = ucontrol->value.integer.value[0];
 	switch (ucontrol->value.integer.value[0]) {
 	case 1:
 		lsm_port = AFE_PORT_ID_SLIMBUS_MULTI_CHAN_0_TX;
@@ -3308,6 +3310,10 @@ static int msm_routing_lsm_port_put(struct snd_kcontrol *kcontrol,
 	set_lsm_port(lsm_port);
 	msm_routing_get_lsm_fe_idx(kcontrol, &fe_idx);
 	lsm_port_index[fe_idx] = ucontrol->value.integer.value[0];
+        /* Set the default AFE LSM Port to 0xffff */
+	if(lsm_port_idx <= 0 || lsm_port_idx >= ARRAY_SIZE(lsm_port_text))
+		lsm_port = 0xffff;
+	afe_set_lsm_afe_port_id(fe_idx, lsm_port);
 
 	return 0;
 }
@@ -6019,6 +6025,9 @@ static int msm_routing_ext_ec_put(struct snd_kcontrol *kcontrol,
 		break;
 	case EXT_EC_REF_SEC_TDM_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_SECONDARY_TDM_TX;
+		break;
+	case EXT_EC_REF_SENARY_MI2S_TX:
+		ext_ec_ref_port_id = AFE_PORT_ID_SENARY_MI2S_TX;
 		break;
 	case EXT_EC_REF_NONE:
 	default:
@@ -30314,11 +30323,13 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"VOC_EXT_EC MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"VOC_EXT_EC MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
 	{"VOC_EXT_EC MUX", "QUIN_MI2S_TX", "QUIN_MI2S_TX"},
+	{"VOC_EXT_EC MUX", "SENARY_MI2S_TX", "SENARY_MI2S_TX"},
 
 	{"AUDIO_REF_EC_UL1 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"AUDIO_REF_EC_UL1 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"AUDIO_REF_EC_UL1 MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"AUDIO_REF_EC_UL1 MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
+	{"AUDIO_REF_EC_UL1 MUX", "SENARY_MI2S_TX", "SENARY_MI2S_TX"},
 
 	{"AUDIO_REF_EC_UL2 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"AUDIO_REF_EC_UL2 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
@@ -30359,6 +30370,7 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"AUDIO_REF_EC_UL10 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
 	{"AUDIO_REF_EC_UL10 MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"AUDIO_REF_EC_UL10 MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
+	{"AUDIO_REF_EC_UL10 MUX", "SENARY_MI2S_TX", "SENARY_MI2S_TX"},
 
 	{"AUDIO_REF_EC_UL16 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
 	{"AUDIO_REF_EC_UL16 MUX", "SEC_MI2S_TX", "SEC_MI2S_TX"},
@@ -31513,6 +31525,637 @@ static const struct snd_kcontrol_new
 		},
 };
 
+#define ASRC_PARAM_MAX				10
+#define ASRC_SCHED_DELAY_MS 			50
+
+#define MODULE_ID_AUTO_ASRC			0x123A7000
+#define PARAM_ID_AUTO_ASRC_ENABLE		0x123A7001
+#define PARAM_ID_AUTO_ASRC_BASE_CONFIG		0x123A7002
+#define PARAM_ID_AUTO_ASRC_RATIO		0x123A7004
+#define PARAM_ID_AUTO_ASRC_STATE		0x123A7005
+#define PARAM_ID_AUTO_ASRC_INPUT_TIMING_STATS	0x123A7006
+#define PARAM_ID_AUTO_ASRC_OUTPUT_TIMING_STATS	0x123A7007
+
+enum {
+	DISABLE_ASRC = 0,
+	ENABLE_ASRC_DRIFT_HW,
+	ENABLE_ASRC_DRIFT_SW,
+	ENABLE_ASRC_MAX,
+};
+
+enum {
+	MODULE_PORT_OUT = 0,
+	MODULE_PORT_IN,
+	MODULE_PORT_MAX,
+};
+
+enum {
+	DRIFT_SRC_SW = 0,
+	DRIFT_SRC_AFE_PRI,
+	DRIFT_SRC_AFE_SEC,
+	DRIFT_SRC_AFE_TERT,
+	DRIFT_SRC_AFE_QUAT,
+	DRIFT_SRC_AFE_QUIN,
+	DRIFT_SRC_MAX,
+};
+
+struct asrc_module_config_params {
+	int enable;
+	int fe_id;
+	int dir;
+	int be_id;
+	int m_io;
+	int param;
+};
+
+struct asrc_module_config_node {
+	struct list_head list;
+	struct asrc_module_config_params params;
+};
+
+struct asrc_config {
+	struct mutex lock;
+	int drift_src;
+	int idx;
+	struct afe_param_id_dev_timing_stats timing_stats;
+	struct list_head modules;
+	struct delayed_work drift_work;
+};
+
+static struct asrc_config asrc_cfg[ASRC_PARAM_MAX];
+
+static int sched_delay_ms = ASRC_SCHED_DELAY_MS;
+
+static int get_drift_src_idx(int drift_src)
+{
+	if (drift_src == DRIFT_SRC_SW)
+		return DRIFT_SRC_SW;
+	else if ((drift_src >= AFE_PORT_ID_PRIMARY_TDM_RX)
+		&& (drift_src <= AFE_PORT_ID_PRIMARY_TDM_TX_7))
+		return DRIFT_SRC_AFE_PRI;
+	else if ((drift_src >= AFE_PORT_ID_SECONDARY_TDM_RX)
+		&& (drift_src <= AFE_PORT_ID_SECONDARY_TDM_TX_7))
+		return DRIFT_SRC_AFE_SEC;
+	else if ((drift_src >= AFE_PORT_ID_TERTIARY_TDM_RX)
+		&& (drift_src <= AFE_PORT_ID_TERTIARY_TDM_TX_7))
+		return DRIFT_SRC_AFE_TERT;
+	else if ((drift_src >= AFE_PORT_ID_QUATERNARY_TDM_RX)
+		&& (drift_src <= AFE_PORT_ID_QUATERNARY_TDM_TX_7))
+		return DRIFT_SRC_AFE_QUAT;
+	else if ((drift_src >= AFE_PORT_ID_QUINARY_TDM_RX)
+		&& (drift_src <= AFE_PORT_ID_QUINARY_TDM_TX_7))
+		return DRIFT_SRC_AFE_QUIN;
+	else
+		return -EINVAL;
+}
+
+static bool asrc_modules_identical(struct asrc_module_config_params *p1,
+				struct asrc_module_config_params *p2)
+{
+	if (!p1 || !p2
+		|| (p1->fe_id != p2->fe_id)
+		|| (p1->dir != p2->dir)
+		|| (p1->be_id != p2->be_id))
+		return false;
+	else
+		return true;
+}
+
+static bool asrc_module_exists_in_config(int idx, struct asrc_module_config_params *params)
+{
+	struct asrc_module_config_node *config_node = NULL;
+	struct list_head *ptr, *next;
+
+	if (!params)
+		return false;
+
+	mutex_lock(&asrc_cfg[idx].lock);
+	list_for_each_safe(ptr, next, &asrc_cfg[idx].modules) {
+		config_node = list_entry(ptr, struct asrc_module_config_node, list);
+		if (asrc_modules_identical(&config_node->params, params)) {
+			mutex_unlock(&asrc_cfg[idx].lock);
+			return true;
+		}
+	}
+	mutex_unlock(&asrc_cfg[idx].lock);
+
+	return false;
+}
+
+static int asrc_del_modules_from_config(int idx, struct asrc_module_config_params *params)
+{
+	struct asrc_module_config_node *config_node = NULL;
+	struct list_head *ptr, *next;
+
+	if (!params)
+		return -EINVAL;
+
+	mutex_lock(&asrc_cfg[idx].lock);
+	list_for_each_safe(ptr, next, &asrc_cfg[idx].modules) {
+		config_node = list_entry(ptr, struct asrc_module_config_node, list);
+		if (asrc_modules_identical(&config_node->params, params)) {
+			list_del_init(&config_node->list);
+			kfree(config_node);
+		}
+	}
+	mutex_unlock(&asrc_cfg[idx].lock);
+
+	return 0;
+}
+
+static bool asrc_modules_and_ports_identical(struct asrc_module_config_params *p1,
+				struct asrc_module_config_params *p2)
+{
+	if (!p1 || !p2
+		|| (p1->fe_id != p2->fe_id)
+		|| (p1->dir != p2->dir)
+		|| (p1->be_id != p2->be_id)
+		|| (p1->m_io != p2->m_io))
+		return false;
+	else
+		return true;
+}
+
+static bool asrc_module_and_port_exists_in_config(int idx,
+					struct asrc_module_config_params *params)
+{
+	struct asrc_module_config_node *config_node = NULL;
+	struct list_head *ptr, *next;
+
+	if (!params)
+		return false;
+
+	mutex_lock(&asrc_cfg[idx].lock);
+	list_for_each_safe(ptr, next, &asrc_cfg[idx].modules) {
+		config_node = list_entry(ptr, struct asrc_module_config_node, list);
+		if (asrc_modules_and_ports_identical(&config_node->params, params)) {
+			mutex_unlock(&asrc_cfg[idx].lock);
+			return true;
+		}
+	}
+	mutex_unlock(&asrc_cfg[idx].lock);
+
+	return false;
+}
+
+static int asrc_add_module_and_port_to_config(int idx,
+					struct asrc_module_config_params *params)
+{
+	struct asrc_module_config_node *config_node = NULL;
+
+	if (!params)
+		return -EINVAL;
+
+	/* asrc module does not exist, create a new node */
+	config_node = kmalloc(sizeof(*config_node), GFP_KERNEL);
+	if (config_node == NULL)
+		return -ENOMEM;
+
+	mutex_lock(&asrc_cfg[idx].lock);
+	INIT_LIST_HEAD(&config_node->list);
+	memcpy(&config_node->params, params,
+		sizeof(struct asrc_module_config_params));
+	list_add_tail(&config_node->list, &asrc_cfg[idx].modules);
+	mutex_unlock(&asrc_cfg[idx].lock);
+
+	return 0;
+}
+
+static int asrc_get_module_location(struct asrc_module_config_params *params,
+					int *copp_index, int *port_id)
+{
+	int ret = 0;
+	int fe_id = params->fe_id;
+	int dir = params->dir;
+	int be_id = params->be_id;
+	int copp_idx = 0;
+	unsigned long copp = -1;
+	bool copp_is_found = false;
+	struct msm_pcm_routing_bdai_data *bedai = NULL;
+	int port_type = (dir == SESSION_TYPE_RX) ? MSM_AFE_PORT_TYPE_RX :
+			       MSM_AFE_PORT_TYPE_TX;
+
+	mutex_lock(&routing_lock);
+
+	if (NULL == params || NULL == copp_index || NULL == port_id) {
+		pr_err("%s: Invalid params\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	bedai = &msm_bedais[be_id];
+	if (afe_get_port_type(bedai->port_id) != port_type) {
+		pr_err("%s: port_type not match: be_dai %d type %d\n",
+			__func__, be_id, port_type);
+		ret = -EINVAL;
+		goto done;
+	}
+	if (!bedai->active) {
+		pr_err("%s: be_dai %d not active\n", __func__, be_id);
+		ret = 0;
+		goto done;
+	}
+
+	if (!test_bit(fe_id, &bedai->fe_sessions[0])) {
+		pr_err("%s: fe %d session not active\n", __func__, fe_id);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	copp = session_copp_map[fe_id][dir][be_id];
+	for (; copp_idx < MAX_COPPS_PER_PORT; copp_idx++) {
+		if (test_bit(copp_idx, &copp)) {
+			copp_is_found = true;
+			break;
+		}
+	}
+
+	if (copp_is_found) {
+		*copp_index = copp_idx;
+		*port_id = bedai->port_id;
+	} else {
+		*copp_index = -1;
+		*port_id = -1;
+	}
+
+done:
+	mutex_unlock(&routing_lock);
+	return ret;
+}
+
+static int asrc_pack_and_set_params(int module_id, int instance_id, int param_id,
+			int param_size, void *params, int port_id, int copp_idx)
+{
+	int ret = 0;
+	u8 *packed_params = NULL;
+	struct param_hdr_v3 param_hdr = {0};
+	u32 packed_param_size = (sizeof(struct param_hdr_v3) + param_size);
+
+	packed_params = kzalloc(packed_param_size, GFP_KERNEL);
+	if (!packed_params)
+		return -ENOMEM;
+
+	memset(&param_hdr, 0, sizeof(param_hdr));
+	param_hdr.module_id = module_id;
+	param_hdr.instance_id = instance_id;
+	param_hdr.param_id = param_id;
+	param_hdr.param_size = param_size;
+
+	packed_param_size = 0;
+
+	mutex_lock(&routing_lock);
+
+	ret = q6common_pack_pp_params(packed_params,
+				&param_hdr,
+				(u8 *) params,
+				&packed_param_size);
+	if (ret) {
+		pr_err("%s: Failed to pack pp params, error=%d\n",
+			__func__, ret);
+		goto done;
+	}
+
+	ret = adm_set_pp_params(port_id,
+				 copp_idx, NULL,
+				 packed_params,
+				 packed_param_size);
+	if (ret) {
+		pr_err("%s: Failed to set pp params, error=%d\n",
+			__func__, ret);
+		goto done;
+	}
+done:
+	mutex_unlock(&routing_lock);
+	kfree(packed_params);
+	return ret;
+}
+
+static int asrc_enable_module(struct asrc_module_config_params *params)
+{
+	int ret = 0;
+	int module_id = MODULE_ID_AUTO_ASRC;
+	int instance_id = 0;
+	int param_id = PARAM_ID_AUTO_ASRC_ENABLE;
+	int param_size = sizeof(params->enable);
+	void *param_module = (void *)&params->enable;
+	int port_id = -1;
+	int copp_idx = -1;
+
+	ret = asrc_get_module_location(params, &copp_idx, &port_id);
+	if (ret) {
+		pr_err("%s: Failed to get module copp_idx, ret=%d\n",
+			__func__, ret);
+		goto done;
+	}
+
+	ret = asrc_pack_and_set_params(module_id, instance_id,
+					param_id, param_size,
+					param_module, port_id, copp_idx);
+	if (ret) {
+		pr_err("%s: Failed to set module params, ret=%d \
+			module_id=0x%x, instance_id=0x%x, param_id=0x%x, \
+			param_size=%d, port_id=0x%x, copp_idx=%d\n",
+			__func__, ret, module_id, instance_id, param_id,
+			param_size, port_id, copp_idx);
+		goto done;
+	}
+done:
+	return ret;
+}
+
+static int asrc_put_drift_to_module(
+		struct afe_param_id_dev_timing_stats *timing_stats,
+		struct asrc_module_config_params *params)
+{
+	int ret = 0;
+	int module_id = MODULE_ID_AUTO_ASRC;
+	int instance_id = 0;
+	int param_id = ((params->m_io == MODULE_PORT_IN)
+			? PARAM_ID_AUTO_ASRC_INPUT_TIMING_STATS
+			: PARAM_ID_AUTO_ASRC_OUTPUT_TIMING_STATS);
+	int param_size = sizeof(struct afe_param_id_dev_timing_stats);
+	void *param_module = (void *)timing_stats;
+	int port_id = -1;
+	int copp_idx = -1;
+
+	ret = asrc_get_module_location(params, &copp_idx, &port_id);
+	if (ret) {
+		pr_err("%s: Failed to get module copp_idx, ret=%d\n",
+			__func__, ret);
+		goto done;
+	}
+
+	ret = asrc_pack_and_set_params(module_id, instance_id,
+					param_id, param_size,
+					param_module, port_id, copp_idx);
+	if (ret) {
+		pr_err("%s: Failed to set module params, ret=%d \
+			module_id=0x%x, instance_id=0x%x, param_id=0x%x, \
+			param_size=%d, port_id=0x%x, copp_idx=%d\n",
+			__func__, ret, module_id, instance_id, param_id,
+			param_size, port_id, copp_idx);
+		goto done;
+	}
+done:
+	return ret;
+}
+
+static void get_drift_and_put_asrc(struct work_struct *work)
+{
+	int ret = 0, continue_to_sched = 0;
+	int be_id = -1;
+	struct msm_pcm_routing_bdai_data *bedai = NULL;
+	struct delayed_work *delayed_drift_work = NULL;
+	struct asrc_config *p_asrc_cfg = NULL;
+	struct afe_param_id_dev_timing_stats timing_stats = {0};
+	struct asrc_module_config_node *config_node = NULL;
+	struct list_head *ptr, *next;
+
+	delayed_drift_work = to_delayed_work(work);
+	if (NULL == delayed_drift_work) {
+		pr_err("%s: Failed to get delayed drift work\n", __func__);
+		goto exit;
+	}
+	p_asrc_cfg = container_of(delayed_drift_work, struct asrc_config,
+				drift_work);
+	if (NULL == p_asrc_cfg) {
+		pr_err("%s: Failed to get asrc config\n", __func__);
+		goto exit;
+	}
+
+	mutex_lock(&p_asrc_cfg->lock);
+	be_id = msm_pcm_get_be_id_from_port_id(p_asrc_cfg->drift_src);
+	if (be_id < 0 || be_id >= MSM_BACKEND_DAI_MAX) {
+		pr_err("%s: Invalid be_id %d\n", __func__, be_id);
+		goto done;
+	}
+	bedai = &msm_bedais[be_id];
+	if (!bedai->active) {
+		pr_err("%s: bedai %d not active\n", __func__, be_id);
+		goto done;
+	}
+
+	ret = afe_get_av_dev_drift(&timing_stats, p_asrc_cfg->drift_src);
+	if (ret)
+		pr_err("%s: Failed to get drift\n", __func__);
+	else
+		pr_debug("%s: Succeed to get drift\n", __func__);
+
+	list_for_each_safe(ptr, next, &p_asrc_cfg->modules) {
+		config_node = list_entry(ptr, struct asrc_module_config_node,
+					list);
+		if (NULL != config_node) {
+			ret = asrc_put_drift_to_module(&timing_stats,
+							&config_node->params);
+			if (ret)
+				pr_err("%s: Failed to set asrc\n", __func__);
+			else
+				pr_debug("%s: src_cfg[%d].drift_src=0x%x, \
+					drift=%d\n", __func__, p_asrc_cfg->idx,
+					p_asrc_cfg->drift_src,
+					timing_stats.acc_drift_value);
+			continue_to_sched = 1;
+		}
+	}
+
+	if (continue_to_sched)
+		schedule_delayed_work(&p_asrc_cfg->drift_work,
+					msecs_to_jiffies(sched_delay_ms));
+done:
+	mutex_unlock(&p_asrc_cfg->lock);
+exit:
+	return;
+}
+
+static void asrc_drift_init(void)
+{
+	int i = DRIFT_SRC_SW;
+
+	for (; i < DRIFT_SRC_MAX; ++i) {
+		mutex_init(&asrc_cfg[i].lock);
+
+		mutex_lock(&asrc_cfg[i].lock);
+
+		asrc_cfg[i].drift_src = 0;
+		asrc_cfg[i].idx = i;
+
+		INIT_LIST_HEAD(&asrc_cfg[i].modules);
+
+		memset(&asrc_cfg[i].timing_stats, 0,
+			sizeof(struct afe_param_id_dev_timing_stats));
+
+		INIT_DELAYED_WORK(&asrc_cfg[i].drift_work,
+					get_drift_and_put_asrc);
+		mutex_unlock(&asrc_cfg[i].lock);
+	}
+}
+
+static void asrc_drift_deinit(void)
+{
+	int i = DRIFT_SRC_SW;
+	struct asrc_module_config_node *config_node = NULL;
+	struct list_head *ptr, *next;
+
+	for (; i < DRIFT_SRC_MAX; ++i) {
+		mutex_lock(&asrc_cfg[i].lock);
+
+		cancel_delayed_work(&asrc_cfg[i].drift_work);
+
+		list_for_each_safe(ptr, next, &asrc_cfg[i].modules) {
+			config_node = list_entry(ptr,
+					struct asrc_module_config_node, list);
+			list_del_init(&config_node->list);
+			kfree(config_node);
+		}
+		mutex_unlock(&asrc_cfg[i].lock);
+
+		mutex_destroy(&asrc_cfg[i].lock);
+	}
+}
+
+static int msm_dai_q6_asrc_config_get(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	int i = DRIFT_SRC_AFE_PRI;
+
+	for (; i < DRIFT_SRC_MAX; ++i) {
+		mutex_lock(&asrc_cfg[i].lock);
+		ucontrol->value.integer.value[i] =
+			asrc_cfg[i].drift_src;
+		mutex_unlock(&asrc_cfg[i].lock);
+	}
+	return 0;
+}
+
+static int msm_dai_q6_asrc_config_put(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0, idx = 0, i = 0, be_id = -1, module_enabled = 0;
+	struct afe_param_id_dev_timing_stats timing_stats = {0};
+	struct asrc_module_config_params params = {0};
+
+	int enable = ucontrol->value.integer.value[0];
+	int fe_id  = ucontrol->value.integer.value[1];
+	int dir    = ucontrol->value.integer.value[2];
+	int be_afe = ucontrol->value.integer.value[3];
+	int m_io   = ucontrol->value.integer.value[4];
+	int param  = ucontrol->value.integer.value[5];
+	int delay  = ucontrol->value.integer.value[6];
+
+	/* group device */
+	be_id = msm_pcm_get_be_id_from_port_id(be_afe & ~0x0100);
+
+	/* validate parameters */
+	if (enable >= ENABLE_ASRC_MAX
+		|| fe_id >= MSM_FRONTEND_DAI_MAX
+		|| dir >= MAX_SESSION_TYPES
+		|| be_id >= MSM_BACKEND_DAI_MAX
+		|| m_io >= MODULE_PORT_MAX) {
+		pr_err("%s:Invalid input param: enable=%d, fe_id=%d, dir=%d, \
+			be_id=%d, m_io=%d, param=0x%x\n", __func__, enable,
+			fe_id, dir, be_id, m_io, param);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	if (delay <= 0 || delay > 10 * ASRC_SCHED_DELAY_MS)
+		sched_delay_ms = ASRC_SCHED_DELAY_MS;
+	else
+		sched_delay_ms = delay;
+
+	params.fe_id = fe_id;
+	params.dir = dir;
+	params.be_id = be_id;
+	params.m_io = m_io;
+	params.param = param;
+
+	/* The module is already enabled if it exists in config */
+	for (i = 0; i < DRIFT_SRC_MAX; ++i) {
+		if (asrc_module_exists_in_config(i, &params)) {
+			module_enabled = 1;
+			break;
+		}
+	}
+
+	switch (enable) {
+	case ENABLE_ASRC_DRIFT_SW:
+		idx = DRIFT_SRC_SW;
+		timing_stats.reference_timer = 1; /* indicate SW drift */
+		timing_stats.acc_drift_value = params.param;
+		params.enable = 1;
+		break;
+	case ENABLE_ASRC_DRIFT_HW:
+		idx = get_drift_src_idx(param & ~0x0100); /* group device */
+		mutex_lock(&asrc_cfg[idx].lock);
+		asrc_cfg[idx].drift_src = param & ~0x0100;
+		mutex_unlock(&asrc_cfg[idx].lock);
+		params.enable = 1;
+		break;
+	case DISABLE_ASRC:
+		break;
+	default:
+		pr_err("%s Invalid enable: %d\n", __func__, enable);
+		ret = -EINVAL;
+		goto done;
+	};
+
+	/* branch: disable module */
+	if (enable == DISABLE_ASRC) {
+		params.enable = 0;
+		if (module_enabled) {
+			if (asrc_enable_module(&params)) {
+				pr_err("%s: Failed to disable module\n",
+					__func__);
+				ret = -EINVAL;
+				goto done;
+			}
+		}
+		/* remove all modules from store */
+		for (i = DRIFT_SRC_SW; i < DRIFT_SRC_MAX; ++i)
+			asrc_del_modules_from_config(i, &params);
+		goto done;
+	}
+
+	/* branch: enable module */
+	if (!asrc_module_and_port_exists_in_config(idx, &params)) {
+		if (!module_enabled) {
+			if (asrc_enable_module(&params)) {
+				pr_err("%s: Failed to enable module\n",
+					__func__);
+				ret = -EINVAL;
+				goto done;
+			}
+		}
+		ret = asrc_add_module_and_port_to_config(idx, &params);
+		if (ret) {
+			pr_err("%s: Failed to add module and port to config\n",
+				__func__);
+			ret = -EINVAL;
+			goto done;
+		}
+	}
+
+	/* put drift to module */
+	if (enable == ENABLE_ASRC_DRIFT_SW) {
+		ret = asrc_put_drift_to_module(&timing_stats, &params);
+		goto done;
+	} else if (enable == ENABLE_ASRC_DRIFT_HW) {
+		mutex_lock(&asrc_cfg[idx].lock);
+		schedule_delayed_work(&asrc_cfg[idx].drift_work, 0);
+		mutex_unlock(&asrc_cfg[idx].lock);
+	}
+
+done:
+	return ret;
+}
+
+static const struct snd_kcontrol_new asrc_config_controls[] = {
+	SOC_SINGLE_MULTI_EXT("ASRC Config", SND_SOC_NOPM, 0,
+				 0xFFFF, 0, ASRC_PARAM_MAX,
+				 msm_dai_q6_asrc_config_get,
+				 msm_dai_q6_asrc_config_put),
+};
+
 static const struct snd_pcm_ops msm_routing_pcm_ops = {
 	.hw_params	= msm_pcm_routing_hw_params,
 	.close          = msm_pcm_routing_close,
@@ -31703,9 +32346,10 @@ static int msm_routing_probe(struct snd_soc_component *component)
 
 	snd_soc_add_component_controls(component, pll_clk_drift_controls,
 				      ARRAY_SIZE(pll_clk_drift_controls));
-
 	snd_soc_add_component_controls(component, mclk_src_controls,
 				      ARRAY_SIZE(mclk_src_controls));
+	snd_soc_add_component_controls(component, asrc_config_controls,
+				      ARRAY_SIZE(asrc_config_controls));
 	return 0;
 }
 
@@ -31873,11 +32517,14 @@ int __init msm_soc_routing_platform_init(void)
 	memset(&be_dai_name_table, 0, sizeof(be_dai_name_table));
 	memset(&last_be_id_configured, 0, sizeof(last_be_id_configured));
 
+	asrc_drift_init();
+
 	return platform_driver_register(&msm_routing_pcm_driver);
 }
 
 void msm_soc_routing_platform_exit(void)
 {
+	asrc_drift_deinit();
 	msm_routing_delete_cal_data();
 	memset(&be_dai_name_table, 0, sizeof(be_dai_name_table));
 	mutex_destroy(&routing_lock);
