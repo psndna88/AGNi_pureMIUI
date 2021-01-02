@@ -3109,6 +3109,19 @@
 				bias-pull-down;
 			};
 		};
+
+		trigout_a: trigout_a {
+			mux {
+					pins = "gpio14";
+					function = "qdss_cti";
+			};
+
+			config {
+				pins = "gpio14";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
 	};
 };
 

@@ -1,4 +1,6 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
+#include <dt-bindings/clock/qcom,rpmcc.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXNIGHTJAR";
@@ -96,19 +98,58 @@
 		};
 	};
 
-	clock_gcc: qcom,gcc@1800000 {
-		ompatible = "qcom,dummycc";
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			clock-frequency = <38400000>;
+			clock-output-names = "xo_board";
+			#clock-cells = <0>;
+		};
+
+		sleep_clk: sleep-clk {
+			compatible = "fixed-clock";
+			clock-frequency = <32764>;
+			clock-output-names = "chip_sleep_clk";
+			#clock-cells = <0>;
+		};
+	};
+
+	rpmcc: qcom,rpmcc {
+		compatible = "qcom,rpmcc-sdxnightjar";
 		#clock-cells = <1>;
 	};
 
-	clock_debug: qcom,cc-debug@1874000 {
-		compatible = "qcom,dummycc";
+	gcc: qcom,gcc@1800000 {
+		compatible = "qcom,sdxnightjar-gcc", "syscon";
+		reg = <0x1800000 0x80000>;
+		reg-names = "cc_base";
+		vdd_cx-supply = <&pmd9650_s5_level>;
+		vdd_cx_ao-supply = <&pmd9650_s5_level_ao>;
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
+			<&rpmcc RPM_SMD_XO_A_CLK_SRC>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao";
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+	};
+
+	debugcc: qcom,cc-debug@1874000 {
+		compatible = "qcom,sdxnightjar-debugcc";
+		qcom,gcc = <&gcc>;
+		clock-names = "xo_clk_src";
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
 		#clock-cells = <1>;
 	};
 
-	clock_cpu: qcom,clock-a7@0b010008 {
-		compatible = "qcom,dummycc";
-		#clock-cells = <1>;
+	gdsc_usb30: qcom,gdsc@fc401e84 {
+		compatible = "qcom,gdsc";
+		regulator-name = "gdsc_usb30";
+		reg = <0x185e078 0x4>;
+	};
+
+	gdsc_pcie: qcom,gdsc@0xfc401e18 {
+		compatible = "qcom,gdsc";
+		regulator-name = "gdsc_pcie";
+		reg = <0x0185d044 0x4>;
 	};
 
 	qcom,msm-cpufreq {
@@ -212,8 +253,10 @@
 		};
 	};
 
-
-
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
+	};
 
 	qcom,msm_gsi {
 		compatible = "qcom,msm_gsi";
@@ -542,6 +585,74 @@
 		};
 	};
 
+	qnand_1: nand@7980000 {
+		compatible = "qcom,msm-nand";
+		reg = <0x07980000 0x1000>,
+			<0x07984000 0x1a000>;
+		reg-names = "nand_phys",
+			"bam_phys";
+		qcom,reg-adjustment-offset = <0x4000>;
+
+		interrupts = <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "bam_irq";
+
+		clock-names = "core_clk";
+		clocks = <&rpmcc RPM_SMD_QPIC_CLK>;
+
+		interconnects = <&pc_noc MASTER_QPIC &bimc SLAVE_EBI_CH0>;
+		interconnect-names = "nand-ddr";
+		qcom,msm-bus,name = "qpic_nand";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<0 0>,
+		/* Voting for max b/w on PNOC bus for now */
+			<400000 400000>;
+
+		status = "disabled";
+	};
+
+	sdhc_1: sdhci@7824000 {
+		compatible = "qcom,sdhci-msm-v4";
+		reg = <0x07824900 0x500>, <0x07824000 0x800>;
+		reg-names = "hc_mem", "core_mem";
+
+		interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
+		interconnects = <&pc_noc MASTER_SDCC_1 &bimc SLAVE_EBI_CH0>;
+		interconnect-names = "sdhc-ddr";
+		qcom,msm-bus,name = "sdhc1";
+		qcom,msm-bus,num-cases = <7>;
+		qcom,msm-bus,num-paths = <1>;
+
+		qcom,msm-bus,vectors-KBps = <0 0>, /* No vote */
+				<1600 3200>,    /* 400 KB/s*/
+				<100000 200000>, /* 25 MB/s */
+				<200000 400000>, /* 50 MB/s */
+				<400000 800000>, /* 100 MB/s */
+				<400000 800000>, /* 200 MB/s */
+				<2048000 4096000>; /* Max. bandwidth */
+		qcom,bus-bw-vectors-bps = <0 400000 25000000 50000000
+			100000000 200000000 4294967295>;
+
+		clocks = <&gcc GCC_SDCC1_AHB_CLK>,
+			 <&gcc GCC_SDCC1_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x1>;
+			vote = <70>;
+		};
+	};
+
 	spmi_bus: qcom,spmi@200f000 {
 		compatible = "qcom,spmi-pmic-arb";
 		reg = <0x200f000 0x1000>,
@@ -551,13 +662,13 @@
 			<0x200a000 0x2100>; /* includes SPMI_CFG and GENI_CFG */
 		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
 		interrupts = <0 190 0>;
-		qcom,pmic-arb-channel = <0>;
-		qcom,pmic-arb-ee = <0>;
+		qcom,channel = <0>;
+		qcom,ee = <0>;
 		qcom,pmic-arb-max-peripherals = <256>;
 		qcom,pmic-arb-max-periph-interrupts = <256>;
-		#interrupt-cells = <3>;
+		#interrupt-cells = <4>;
 		interrupt-controller;
-		#address-cells = <1>;
+		#address-cells = <2>;
 		#size-cells = <0>;
 		cell-index = <0>;
 	};
@@ -566,4 +677,5 @@
 #include "pmd9650.dtsi"
 #include "pmd9650-rpm-regulator.dtsi"
 #include "sdxnightjar-regulator.dtsi"
+#include "sdxnightjar-usb.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"

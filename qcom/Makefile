@@ -139,16 +139,19 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupik-rumi-overlay.dtbo \
 	yupik-idp-overlay.dtbo \
 	yupik-atp-overlay.dtbo \
+	yupik-qrd-overlay.dtbo \
 	yupik-idps-digital-mics-overlay.dtbo
 
 yupik-rumi-overlay.dtbo-base := yupik.dtb
 yupik-idp-overlay.dtbo-base := yupik.dtb
 yupik-atp-overlay.dtbo-base := yupik.dtb
+yupik-qrd-overlay.dtbo-base := yupik.dtb
 yupik-idps-digital-mics-overlay.dtbo-base := yupik.dtb
 else
 dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupik-idp.dtb \
 	yupik-atp.dtb \
+	yupik-qrd.dtb \
 	yupik-idps-digital-mics.dtb
 endif
 
@@ -209,6 +212,7 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-mtp.dtb \
 	sdxlemur-mtp-mbb.dtb \
 	sdxlemur-mtp-cpe.dtb \
+	sdxlemur-mtp-mbb-emmc.dtb \
 	sdxlemur-mtp-mbb-ntn3-pcie.dtb \
 	sdxlemur-mtp-mbb-pcie-ep.dtb \
 	sdxlemur-mtp-mbb-pcie-rc-ep.dtb \
@@ -229,6 +233,20 @@ endif
 dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
 	sdxnightjar-cdp.dtb \
 	sdxnightjar-qrd.dtb
+
+ifeq ($(CONFIG_ARCH_YUPIK), y)
+ifeq ($(CONFIG_ARCH_QTI_VM), y)
+dtb-$(CONFIG_ARCH_QTI_VM) += yupik-vm-rumi.dtb \
+	yupik-vm-atp.dtb \
+	yupik-vm-idp.dtb \
+	yupik-vm-qrd.dtb
+endif
+endif
+
+dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
+	sa8155-vm-lv.dtb \
+	sa8155-vm-la-mt.dtb \
+	sa8155-vm-lv-mt.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

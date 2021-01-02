@@ -1,0 +1,6 @@
+&reserved_memory {
+	pmem_shared: pmem_shared_region {
+		reg = <0x1 0x2c200000 0x0 0x53e00000>;
+		label = "pmem_shared_mem";
+	};
+};
