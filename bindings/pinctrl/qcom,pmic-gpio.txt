@@ -34,6 +34,8 @@ PMIC's from Qualcomm.
 		    "qcom,pm6150l-gpio"
 		    "qcom,pmx65-gpio"
 		    "qcom,pmd9650-gpio"
+		    "qcom,pm7325-gpio"
+		    "qcom,pm7325b-gpio"
 
 		    And must contain either "qcom,spmi-gpio" or "qcom,ssbi-gpio"
 		    if the device is on an spmi bus or an ssbi bus respectively
@@ -122,6 +124,8 @@ to specify in a pin configuration subnode:
 		    gpio1-gpio12 for pm6150l
 		    gpio1-gpio16 for pmx65
 		    gpio1-gpio12 for pmd9650
+		    gpio1-gpio10 for pm7325
+		    gpio1-gpio8 for pm7325b
 
 - function:
 	Usage: required

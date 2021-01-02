@@ -32,6 +32,9 @@ Required properties :
 			"qcom,holi-gcc"
 			"qcom,sdxlemur-gcc"
 			"qcom,yupik-gcc"
+			"qcom,sdxnightjar-gcc"
+			"qcom,scshrike-gcc"
+			"qcom,scshrike-gcc-v2"
 
 - reg : shall contain base register location and length
 - vdd_cx-supply: The vdd_cx logic rail supply.

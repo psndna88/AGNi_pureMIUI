@@ -1,0 +1,196 @@
+#include <dt-bindings/clock/qcom,gcc-sm8150.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/gpio/gpio.h>
+#include "quin-vm-common.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SA8155 Virtual Machine";
+	qcom,msm-name = "SA8155 V2";
+	qcom,msm-id = <362 0x20000>;
+};
+
+
+&soc {
+	apps_smmu: apps-smmu@0x15000000 {
+		compatible = "qcom,qsmmu-v500";
+		reg = <0x15000000 0x100000>,
+			<0x15182000 0x20>;
+		reg-names = "base", "tcu-base";
+		#iommu-cells = <2>;
+		qcom,skip-init;
+		qcom,use-3-lvl-tables;
+		qcom,disable-atos;
+		#global-interrupts = <1>;
+		#size-cells = <1>;
+		#address-cells = <1>;
+		ranges;
+		interrupts =	<GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 182 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 185 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 187 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 191 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 318 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 319 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 322 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 324 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 325 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 326 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 327 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 331 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 335 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 338 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 339 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 340 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 341 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 342 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 343 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 344 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 345 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 395 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 396 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 398 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 399 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 400 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 404 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 405 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 406 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>;
+	};
+};
+
+&regulator {
+	usb30_prim_gdsc: usb30_prim_gdsc {
+		regulator-name = "usb30_prim_gdsc";
+	};
+
+	usb30_sec_gdsc: usb30_sec_gdsc {
+		regulator-name = "usb30_sec_gdsc";
+	};
+
+	pcie_0_gdsc: pcie_0_gdsc {
+		regulator-name = "pcie_0_gdsc";
+	};
+
+	pcie_1_gdsc: pcie_1_gdsc {
+		regulator-name = "pcie_1_gdsc";
+	};
+
+	L2A: pm8150_1_l2: regulator-pm8150-1-l2 {
+		regulator-name = "ldoa2";
+		regulator-min-microvolt = <3072000>;
+		regulator-max-microvolt = <3072000>;
+	};
+
+	L5A: pm8150_1_l5: regulator-pm8150-1-l5 {
+		regulator-name = "ldoa5";
+		regulator-min-microvolt = <880000>;
+		regulator-max-microvolt = <880000>;
+	};
+
+	L12A: pm8150_1_l12: regulator-pm8150-1-l12 {
+		regulator-name = "ldoa12";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	L17A: pm8150_1_l17: regulator-pm8150-1-l17 {
+		regulator-name = "ldoa17";
+		regulator-min-microvolt = <2704000>;
+		regulator-max-microvolt = <2960000>;
+	};
+
+	L8C: pm8150_2_l8: regulator-pm8150-2-l8 {
+		regulator-name = "ldoc8";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-allow-set-load;
+	};
+
+	L13C: pm8150_2_l13: regulator-pm8150-2-l13 {
+		regulator-name = "ldoc13";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <2960000>;
+	};
+
+	L15C: pm8150_2_l15: regulator-pm8150-2-l15 {
+		regulator-name = "ldoc15";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1904000>;
+	};
+
+	L18C: pm8150_2_l18: regulator-pm8150-2-l18 {
+		regulator-name = "ldoc18";
+		regulator-min-microvolt = <880000>;
+		regulator-max-microvolt = <880000>;
+		regulator-allow-set-load;
+	};
+
+	S6A: pm8150_1_s6: regulator-pm8150-1-s6 {
+		regulator-name = "smpa6";
+		regulator-min-microvolt = <600000>;
+		regulator-max-microvolt = <1352000>;
+	};
+
+	S4C: pm8150_2_s4: regulator-pm8150-2-s4 {
+		regulator-name = "smpc4";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1400000>;
+	};
+
+	S5C: pm8150_2_s5: regulator-pm8150-2-s5 {
+		regulator-name = "smpc5";
+		regulator-min-microvolt = <1824000>;
+		regulator-max-microvolt = <2040000>;
+	};
+};

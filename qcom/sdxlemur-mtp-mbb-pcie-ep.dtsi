@@ -1,8 +1,13 @@
 #include "sdxlemur-mtp.dtsi"
 #include "sdxlemur.dtsi"
+#include "sdxlemur-mtp-audio-overlay.dtsi"
 
 &soc {
 
+};
+
+&chosen {
+	bootargs = "reboot=w";
 };
 
 &pcie0 {
