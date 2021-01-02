@@ -133,15 +133,16 @@
 		eeprom-src = <&eeprom_rear>;
 		cam_vio-supply = <&L6P>;
 		cam_vana-supply = <&L4P>;
+		cam_vaf-supply = <&L5P>;
 		cam_vdig-supply = <&L2P>;
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig",
+		regulator-names = "cam_vio", "cam_vana", "cam_vaf", "cam_vdig",
 			"cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1800000 2880000 1056000 0>;
-		rgltr-max-voltage = <1800000 2880000 1056000 0>;
-		rgltr-load-current = <120000 80000 1200000 0>;
+		rgltr-min-voltage = <1800000 2880000 2800000 1056000 0>;
+		rgltr-max-voltage = <1800000 2880000 2800000 1056000 0>;
+		rgltr-load-current = <120000 80000 100000 1200000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
