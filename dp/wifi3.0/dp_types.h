@@ -368,6 +368,14 @@ struct dp_rx_nbuf_frag_info {
 };
 
 /**
+ * enum dp_ctxt - context type
+ * @DP_PDEV_TYPE: PDEV context
+ */
+enum dp_ctxt_type {
+	DP_PDEV_TYPE
+};
+
+/**
  * enum dp_desc_type - source type for multiple pages allocation
  * @DP_TX_DESC_TYPE: DP SW TX descriptor
  * @DP_TX_EXT_DESC_TYPE: DP TX msdu extension descriptor
@@ -973,6 +981,8 @@ struct dp_soc_stats {
 			uint32_t nbuf_sanity_fail;
 			/* Duplicate link desc refilled */
 			uint32_t dup_refill_link_desc;
+			/* REO OOR eapol drop count */
+			uint32_t reo_err_oor_eapol_drop;
 		} err;
 
 		/* packet count per core - per ring */

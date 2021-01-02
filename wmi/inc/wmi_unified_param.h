@@ -1324,6 +1324,7 @@ struct tx_send_params {
  * @use_6mbps: specify whether management frame to transmit should
  * @tx_flags: additional configuration flags for mgmt frames
  *  use 6 Mbps rather than 1 Mbps min rate(for 5GHz band or P2P)
+ * @peer_rssi: peer RSSI value
  */
 struct wmi_mgmt_params {
 	void *tx_frame;
@@ -1339,6 +1340,7 @@ struct wmi_mgmt_params {
 	bool tx_params_valid;
 	uint8_t use_6mbps;
 	uint32_t tx_flags;
+	int8_t peer_rssi;
 };
 
 /**
@@ -5368,6 +5370,9 @@ typedef enum {
 	wmi_service_get_station_in_ll_stats_req,
 #endif
 	wmi_service_scan_conf_per_ch_support,
+	wmi_service_csa_beacon_template,
+	wmi_service_twt_bcast_req_support,
+	wmi_service_twt_bcast_resp_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

@@ -495,8 +495,10 @@ dp_rx_oor_handle(struct dp_soc *soc,
 	 * duplicated EAP response.
 	 */
 	if (mpdu_desc_info->mpdu_flags & HAL_MPDU_F_RETRY_BIT &&
-	    peer->rx_tid[tid].ba_status == DP_RX_BA_ACTIVE)
+	    peer->rx_tid[tid].ba_status == DP_RX_BA_ACTIVE) {
 		frame_mask &= ~FRAME_MASK_IPV4_EAPOL;
+		DP_STATS_INC(soc, rx.err.reo_err_oor_eapol_drop, 1);
+	}
 
 	if (dp_rx_deliver_special_frame(soc, peer, nbuf, frame_mask,
 					rx_tlv_hdr)) {
@@ -1762,7 +1764,7 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 			goto next_entry;
 		}
 
-		dp_info("Got pkt with REO ERROR: %d", error);
+		dp_info_rl("Got pkt with REO ERROR: %d", error);
 
 		if (mpdu_desc_info.mpdu_flags & HAL_MPDU_F_FRAGMENT) {
 			/*
