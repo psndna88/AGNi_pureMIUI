@@ -695,9 +695,7 @@ static int32_t cam_ope_process_request_timer(void *priv, void *data)
 		}
 
 		CAM_ERR(CAM_OPE,
-			"pending requests means, issue is with HW for ctx %d",
-			ctx_data->ctx_id);
-		CAM_ERR(CAM_OPE, "ctx: %d, lrt: %llu, lct: %llu",
+			"pending req at HW, ctx %d lrt %llu lct %llu",
 			ctx_data->ctx_id, ctx_data->last_req_time,
 			ope_hw_mgr->last_callback_time);
 		hw_mgr->ope_dev_intf[i]->hw_ops.process_cmd(
@@ -1978,6 +1976,14 @@ static int cam_ope_mgr_process_cmd_io_buf_req(struct cam_ope_hw_mgr *hw_mgr,
 				alignment = in_res->alignment;
 				unpack_format = in_res->unpacker_format;
 				pack_format = 0;
+				if (in_io_buf->pix_pattern >
+					PIXEL_PATTERN_CRYCBY) {
+					CAM_ERR(CAM_OPE,
+						 "Invalid pix pattern = %u",
+						in_io_buf->pix_pattern);
+					return -EINVAL;
+				}
+				io_buf->pix_pattern = in_io_buf->pix_pattern;
 			} else if (in_io_buf->direction == CAM_BUF_OUTPUT) {
 				out_res =
 					&ctx_data->ope_acquire.out_res[rsc_idx];
@@ -2751,6 +2757,10 @@ static int cam_ope_mgr_acquire_hw(void *hw_priv, void *hw_acquire_args)
 	ctx->ctxt_event_cb = args->event_cb;
 	cam_ope_ctx_clk_info_init(ctx);
 	ctx->ctx_state = OPE_CTX_STATE_ACQUIRED;
+	kzfree(cdm_acquire);
+	cdm_acquire = NULL;
+	kzfree(bw_update);
+	bw_update = NULL;
 
 	mutex_unlock(&ctx->ctx_mutex);
 	mutex_unlock(&hw_mgr->hw_mgr_mutex);

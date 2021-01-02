@@ -31,14 +31,22 @@ static struct ope_top ope_top_info;
 
 static int cam_ope_top_dump_debug_reg(struct ope_hw *ope_hw_info)
 {
-	uint32_t i, val;
+	uint32_t i, val[3];
 	struct cam_ope_top_reg *top_reg;
 
 	top_reg = ope_hw_info->top_reg;
-	for (i = 0; i < top_reg->num_debug_registers; i++) {
-		val = cam_io_r_mb(top_reg->base +
+	for (i = 0; i < top_reg->num_debug_registers; i = i+3) {
+		val[0] = cam_io_r_mb(top_reg->base +
 			top_reg->debug_regs[i].offset);
-		CAM_INFO(CAM_OPE, "Debug_status_%d val: 0x%x", i, val);
+		val[1] = ((i+1) < top_reg->num_debug_registers) ?
+			cam_io_r_mb(top_reg->base +
+			top_reg->debug_regs[i+1].offset) : 0;
+		val[2] = ((i+2) < top_reg->num_debug_registers) ?
+			cam_io_r_mb(top_reg->base +
+			top_reg->debug_regs[i+2].offset) : 0;
+
+		CAM_INFO(CAM_OPE, "status[%d-%d] : 0x%x 0x%x 0x%x",
+			i, i+2, val[0], val[1], val[2]);
 	}
 	return 0;
 }

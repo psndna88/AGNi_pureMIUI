@@ -1266,7 +1266,6 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 			"WARNING: req_id %lld num_acked %d > map_out %d, ctx %u",
 			req->request_id, req_isp->num_acked,
 			req_isp->num_fence_map_out, ctx->ctx_id);
-		WARN_ON(req_isp->num_acked > req_isp->num_fence_map_out);
 	}
 
 	if (req_isp->num_acked != req_isp->num_fence_map_out)

@@ -142,6 +142,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x00000E58,
 	.off_lossy_var    = 0x00000E5C,
 	.bw_limit         = 0x00000E1C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -155,6 +156,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x00000F58,
 	.off_lossy_var    = 0x00000F5C,
 	.bw_limit         = 0x00000F1C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -168,6 +170,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x00001258,
 	.off_lossy_var    = 0x0000125C,
 	.bw_limit         = 0x0000121C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -181,6 +184,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x00001358,
 	.off_lossy_var    = 0x0000135C,
 	.bw_limit         = 0x0000131C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_hw_info vfe680_bus_hw_info = {

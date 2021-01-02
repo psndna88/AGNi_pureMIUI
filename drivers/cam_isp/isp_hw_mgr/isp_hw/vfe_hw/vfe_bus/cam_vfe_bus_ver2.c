@@ -1259,17 +1259,26 @@ static int cam_vfe_bus_start_wm(
 				(struct
 				cam_vfe_bus_ver2_reg_offset_ubwc_client *)
 				rsrc_data->hw_regs->ubwc_regs;
+			if (!ubwc_regs) {
+				CAM_ERR(CAM_ISP, "ubwc_regs is NULL");
+				return -EINVAL;
+			}
 			val = cam_io_r_mb(common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 			val |= 0x1;
-			if (disable_ubwc_comp)
-				val &= ~CAM_IFE_UBWC_COMP_EN;
+			if (disable_ubwc_comp) {
+				val &= ~ubwc_regs->ubwc_comp_en_bit;
+				CAM_DBG(CAM_ISP,
+					"Force disable UBWC compression, ubwc_mode_cfg: 0x%x",
+					val);
+			}
 			cam_io_w_mb(val, common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 		} else if ((camera_hw_version == CAM_CPAS_TITAN_175_V100) ||
 			(camera_hw_version == CAM_CPAS_TITAN_175_V101) ||
 			(camera_hw_version == CAM_CPAS_TITAN_175_V120) ||
-			(camera_hw_version == CAM_CPAS_TITAN_175_V130)) {
+			(camera_hw_version == CAM_CPAS_TITAN_175_V130) ||
+			(camera_hw_version == CAM_CPAS_TITAN_165_V100)) {
 			struct cam_vfe_bus_ver2_reg_offset_ubwc_3_client
 				*ubwc_regs;
 
@@ -1277,11 +1286,19 @@ static int cam_vfe_bus_start_wm(
 				(struct
 				cam_vfe_bus_ver2_reg_offset_ubwc_3_client *)
 				rsrc_data->hw_regs->ubwc_regs;
+			if (!ubwc_regs) {
+				CAM_ERR(CAM_ISP, "ubwc_regs is NULL");
+				return -EINVAL;
+			}
 			val = cam_io_r_mb(common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 			val |= 0x1;
-			if (disable_ubwc_comp)
-				val &= ~CAM_IFE_UBWC_COMP_EN;
+			if (disable_ubwc_comp) {
+				val &= ~ubwc_regs->ubwc_comp_en_bit;
+				CAM_DBG(CAM_ISP,
+					"Force disable UBWC compression, ubwc_mode_cfg: 0x%x",
+					val);
+			}
 			cam_io_w_mb(val, common_data->mem_base +
 				ubwc_regs->mode_cfg_0);
 		} else {
@@ -2068,6 +2085,8 @@ static int cam_vfe_bus_acquire_vfe_out(void *bus_priv, void *acquire_args,
 
 	rsrc_data = rsrc_node->res_priv;
 	rsrc_data->common_data->event_cb = acq_args->event_cb;
+	rsrc_data->common_data->disable_ubwc_comp =
+		out_acquire_args->disable_ubwc_comp;
 	rsrc_data->priv = acq_args->priv;
 
 	secure_caps = cam_vfe_bus_can_be_secure(rsrc_data->out_type);
@@ -2620,6 +2639,7 @@ static void cam_vfe_bus_update_ubwc_meta_addr(
 	case CAM_CPAS_TITAN_175_V101:
 	case CAM_CPAS_TITAN_175_V120:
 	case CAM_CPAS_TITAN_175_V130:
+	case CAM_CPAS_TITAN_165_V100:
 		ubwc_3_regs =
 			(struct cam_vfe_bus_ver2_reg_offset_ubwc_3_client *)
 			regs;
@@ -2684,6 +2704,13 @@ static int cam_vfe_bus_update_ubwc_3_regs(
 		ubwc_regs->meta_stride, wm_data->ubwc_meta_stride);
 	CAM_DBG(CAM_ISP, "WM %d meta stride 0x%x",
 		wm_data->index, reg_val_pair[*j-1]);
+
+	if (wm_data->common_data->disable_ubwc_comp) {
+		wm_data->ubwc_mode_cfg_0 &= ~ubwc_regs->ubwc_comp_en_bit;
+		CAM_DBG(CAM_ISP,
+			"Force disable UBWC compression on VFE:%d WM:%d",
+			wm_data->common_data->core_index, wm_data->index);
+	}
 
 	CAM_VFE_ADD_REG_VAL_PAIR(reg_val_pair, *j,
 		ubwc_regs->mode_cfg_0, wm_data->ubwc_mode_cfg_0);
@@ -2764,6 +2791,12 @@ static int cam_vfe_bus_update_ubwc_legacy_regs(
 	CAM_DBG(CAM_ISP, "WM %d meta stride 0x%x",
 		wm_data->index, reg_val_pair[*j-1]);
 
+	if (wm_data->common_data->disable_ubwc_comp) {
+		wm_data->ubwc_mode_cfg_0 &= ~ubwc_regs->ubwc_comp_en_bit;
+		CAM_DBG(CAM_ISP,
+			"Force disable UBWC compression on VFE:%d WM:%d",
+			wm_data->common_data->core_index, wm_data->index);
+	}
 	CAM_VFE_ADD_REG_VAL_PAIR(reg_val_pair, *j,
 		ubwc_regs->mode_cfg_0, wm_data->ubwc_mode_cfg_0);
 	CAM_DBG(CAM_ISP, "WM %d ubwc_mode_cfg_0 0x%x",
@@ -2835,6 +2868,7 @@ static int cam_vfe_bus_update_ubwc_regs(
 	case CAM_CPAS_TITAN_175_V101:
 	case CAM_CPAS_TITAN_175_V120:
 	case CAM_CPAS_TITAN_175_V130:
+	case CAM_CPAS_TITAN_165_V100:
 		rc = cam_vfe_bus_update_ubwc_3_regs(
 			wm_data, reg_val_pair, i, j);
 		break;
@@ -3689,10 +3723,6 @@ static int cam_vfe_bus_process_cmd(
 	case CAM_ISP_HW_CMD_GET_RES_FOR_MID:
 		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
 		rc = cam_vfe_bus_get_res_for_mid(bus_priv, cmd_args, arg_size);
-		break;
-	case CAM_ISP_HW_CMD_DISABLE_UBWC_COMP:
-		bus_priv = (struct cam_vfe_bus_ver2_priv *) priv;
-		bus_priv->common_data.disable_ubwc_comp = true;
 		break;
 	case CAM_ISP_HW_CMD_QUERY_BUS_CAP:
 		bus_priv = (struct cam_vfe_bus_ver2_priv  *) priv;

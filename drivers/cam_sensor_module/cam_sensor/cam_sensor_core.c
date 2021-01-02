@@ -932,6 +932,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		break;
 	}
 	case CAM_START_DEV: {
+		struct cam_req_mgr_timer_notify timer;
 		if ((s_ctrl->sensor_state == CAM_SENSOR_INIT) ||
 			(s_ctrl->sensor_state == CAM_SENSOR_START)) {
 			rc = -EINVAL;
@@ -952,6 +953,21 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 			}
 		}
 		s_ctrl->sensor_state = CAM_SENSOR_START;
+
+		if (s_ctrl->bridge_intf.crm_cb &&
+			s_ctrl->bridge_intf.crm_cb->notify_timer) {
+			timer.link_hdl = s_ctrl->bridge_intf.link_hdl;
+			timer.dev_hdl = s_ctrl->bridge_intf.device_hdl;
+			timer.state = true;
+			rc = s_ctrl->bridge_intf.crm_cb->notify_timer(&timer);
+			if (rc) {
+				CAM_ERR(CAM_SENSOR,
+					"Enable CRM SOF freeze timer failed rc: %d",
+					rc);
+				return rc;
+			}
+		}
+
 		CAM_INFO(CAM_SENSOR,
 			"CAM_START_DEV Success, sensor_id:0x%x,sensor_slave_addr:0x%x",
 			s_ctrl->sensordata->slave_info.sensor_id,
