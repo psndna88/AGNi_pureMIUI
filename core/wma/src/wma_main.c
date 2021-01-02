@@ -906,7 +906,7 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
 		pdev_param.param_value = privcmd->param_value;
 		ret = wmi_unified_pdev_param_send(wma->wmi_handle,
 						 &pdev_param,
-						 WMA_WILDCARD_PDEV_ID);
+						 privcmd->param_sec_value);
 		if (QDF_IS_STATUS_ERROR(ret)) {
 			wma_err("wma_vdev_set_param failed ret %d", ret);
 			return;
@@ -3415,9 +3415,7 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 			wma_vdev_bss_color_collision_info_handler,
 			WMA_RX_WORK_CTX);
 
-#ifdef WLAN_SUPPORT_TWT
 	wma_register_twt_events(wma_handle);
-#endif
 
 	wma_register_apf_events(wma_handle);
 	wma_register_md_events(wma_handle);
@@ -5207,25 +5205,6 @@ static void wma_update_obss_detection_support(tp_wma_handle wh,
 		tgt_cfg->obss_detection_offloaded = true;
 	else
 		tgt_cfg->obss_detection_offloaded = false;
-}
-
-/**
- * wma_update_bcast_twt_support() - update bcost twt support
- * @wh: wma handle
- * @tgt_cfg: target configuration to be updated
- *
- * Update braodcast twt support based on service bit.
- *
- * Return: None
- */
-static void wma_update_bcast_twt_support(tp_wma_handle wh,
-					 struct wma_tgt_cfg *tgt_cfg)
-{
-	if (wmi_service_enabled(wh->wmi_handle,
-				wmi_service_bcast_twt_support))
-		tgt_cfg->bcast_twt_support = true;
-	else
-		tgt_cfg->bcast_twt_support = false;
 }
 
 /**

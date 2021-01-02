@@ -67,6 +67,8 @@ extern "C" {
 #define SAP_DEFAULT_5GHZ_CHANNEL      (40)
 #define SAP_CHANNEL_NOT_SELECTED (0)
 
+#define SAP_PRE_CAC_IFNAME "precac"
+
 /*--------------------------------------------------------------------------
  * reasonCode taken from 802.11 standard.
  * ------------------------------------------------------------------------*/
@@ -832,6 +834,7 @@ QDF_STATUS wlan_sap_update_next_channel(struct sap_context *sap_ctx,
 					uint8_t channel,
 					enum phy_ch_width chan_bw);
 
+#ifdef FEATURE_SAP_COND_CHAN_SWITCH
 /**
  * wlan_sap_set_pre_cac_status() - Set the pre cac status
  * @sap_ctx: SAP context
@@ -845,16 +848,31 @@ QDF_STATUS wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx,
 				       bool status);
 
 /**
- * wlan_sap_set_chan_before_pre_cac() - Save the channel before pre cac
+ * wlan_sap_set_chan_freq_before_pre_cac() - Save the channel before pre cac
  * @sap_ctx: SAP context
- * @chan_before_pre_cac: Channel before pre cac
+ * @freq_before_pre_cac: Channel frequency before pre cac
  *
- * Saves the channel that was in use before pre cac operation
+ * Saves the channel frequency that was in use before pre cac operation
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS wlan_sap_set_chan_before_pre_cac(struct sap_context *sap_ctx,
-					    uint8_t chan_before_pre_cac);
+QDF_STATUS
+wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
+				      qdf_freq_t freq_before_pre_cac);
+#else
+static inline QDF_STATUS
+wlan_sap_set_pre_cac_status(struct sap_context *sap_ctx, bool status)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wlan_sap_set_chan_freq_before_pre_cac(struct sap_context *sap_ctx,
+				      qdf_freq_t freq_before_pre_cac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * wlan_sap_set_pre_cac_complete_status() - Sets pre cac complete status

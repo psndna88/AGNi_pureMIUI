@@ -1194,11 +1194,15 @@ static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
 static void mlme_init_twt_cfg(struct wlan_objmgr_psoc *psoc,
 			      struct wlan_mlme_cfg_twt *twt_cfg)
 {
+	uint32_t bcast_conf = cfg_get(psoc, CFG_BCAST_TWT_REQ_RESP);
+
 	twt_cfg->is_twt_bcast_enabled = cfg_get(psoc, CFG_BCAST_TWT);
 	twt_cfg->is_twt_enabled = cfg_get(psoc, CFG_ENABLE_TWT);
 	twt_cfg->is_twt_responder_enabled = cfg_get(psoc, CFG_TWT_RESPONDER);
 	twt_cfg->is_twt_requestor_enabled = cfg_get(psoc, CFG_TWT_REQUESTOR);
 	twt_cfg->twt_congestion_timeout = cfg_get(psoc, CFG_TWT_CONGESTION_TIMEOUT);
+	twt_cfg->is_bcast_requestor_enabled = CFG_TWT_GET_BCAST_REQ(bcast_conf);
+	twt_cfg->is_bcast_responder_enabled = CFG_TWT_GET_BCAST_RES(bcast_conf);
 }
 
 #ifdef WLAN_FEATURE_SAE
@@ -2832,6 +2836,8 @@ mlme_get_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	}
 
 	bitmap = mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap;
+	mlme_legacy_debug("vdev[%d] bitmap[0x%x]", vdev_id,
+			  mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 
 	return bitmap;
@@ -2862,6 +2868,34 @@ mlme_set_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap &= ~reqs;
 	else
 		mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap |= reqs;
+
+	mlme_legacy_debug("vdev[%d] bitmap[0x%x], reqs: %d, clear: %d", vdev_id,
+			  mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap,
+			  reqs, clear);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+}
+
+void
+mlme_clear_operations_bitmap(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_legacy_priv *mlme_priv;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_OBJMGR_ID);
+	if (!vdev) {
+		mlme_legacy_err("vdev object is NULL");
+		return;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
+		return;
+	}
+
+	mlme_priv->mlme_roam.roam_sm.mlme_operations_bitmap = 0;
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_OBJMGR_ID);
 }
 

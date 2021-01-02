@@ -110,6 +110,7 @@
 #include <wlan_cfg80211_mc_cp_stats.h>
 #include <wlan_cp_stats_mc_ucfg_api.h>
 #include "wlan_tdls_cfg_api.h"
+#include "wlan_tdls_ucfg_api.h"
 #include <wlan_hdd_bss_transition.h>
 #include <wlan_hdd_concurrency_matrix.h>
 #include <wlan_hdd_p2p_listen_offload.h>
@@ -3999,6 +4000,16 @@ __wlan_hdd_cfg80211_get_features(struct wiphy *wiphy,
 	if (value)
 		wlan_hdd_cfg80211_set_feature(feature_flags,
 					  QCA_WLAN_VENDOR_FEATURE_OCE_STA_CFON);
+
+	value = false;
+	status = ucfg_mlme_get_adaptive11r_enabled(hdd_ctx->psoc, &value);
+	if (QDF_IS_STATUS_ERROR(status))
+		hdd_err("could not get FT-Adaptive 11R info");
+	if (value) {
+		hdd_debug("FT-Adaptive 11R is Enabled");
+		wlan_hdd_cfg80211_set_feature(feature_flags,
+					  QCA_WLAN_VENDOR_FEATURE_ADAPTIVE_11R);
+	}
 
 	ucfg_mlme_get_twt_requestor(hdd_ctx->psoc, &twt_req);
 	ucfg_mlme_get_twt_responder(hdd_ctx->psoc, &twt_res);
@@ -18095,8 +18106,13 @@ void wlan_hdd_cfg80211_unlink_bss(struct hdd_adapter *adapter,
 	struct net_device *dev = adapter->dev;
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct wiphy *wiphy = wdev->wiphy;
+	struct hdd_context *hdd_ctx;
 
-	__wlan_cfg80211_unlink_bss_list(wiphy, bssid, ssid, ssid_len);
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (wlan_hdd_validate_context(hdd_ctx))
+		return;
+	__wlan_cfg80211_unlink_bss_list(wiphy, hdd_ctx->pdev, bssid, ssid,
+					ssid_len);
 }
 
 #ifdef WLAN_ENABLE_AGEIE_ON_SCAN_RESULTS
@@ -18757,11 +18773,24 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 		goto ret_status;
 	}
 
+	/**
+	 * Following code will be cleaned once the interface manager
+	 * module is enabled.
+	 */
+#ifdef WLAN_FEATURE_INTERFACE_MGR
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev)
+		return -EINVAL;
+
+	ucfg_if_mgr_deliver_event(vdev, WLAN_IF_MGR_EV_CONNECT_START, NULL);
+
+	hdd_objmgr_put_vdev(vdev);
+#else
 	/* Disable roaming on all other adapters before connect start */
 	wlan_hdd_disable_roaming(adapter, RSO_CONNECT_START);
 
-	hdd_notify_teardown_tdls_links(hdd_ctx->psoc);
-
+	ucfg_tdls_teardown_links_sync(hdd_ctx->psoc);
+#endif
 	qdf_mem_zero(&hdd_sta_ctx->conn_info.conn_flag,
 		     sizeof(hdd_sta_ctx->conn_info.conn_flag));
 
@@ -20723,6 +20752,8 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	 */
 #ifndef WLAN_FEATURE_INTERFACE_MGR
 	uint32_t sap_cnt, sta_cnt;
+	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS], i;
+	bool disable_nan = true;
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
@@ -20785,25 +20816,28 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	 * Following code will be cleaned up once the interface manager
 	 * module is enabled
 	 */
-#ifdef WLAN_FEATURE_INTERFACE_MGR
-	ucfg_if_mgr_deliver_event(adapter->vdev, WLAN_IF_MGR_EV_CONNECT_START,
-				  NULL);
-#else
+#ifndef WLAN_FEATURE_INTERFACE_MGR
 	/*
 	 * Disable NAN Discovery if incoming connection is P2P or if a STA
 	 * connection already exists and if this is a case of STA+STA
 	 * or SAP+STA concurrency
 	 */
-	sta_cnt = policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
-							    PM_STA_MODE, NULL);
-	sap_cnt = policy_mgr_mode_specific_connection_count(hdd_ctx->psoc,
-							    PM_SAP_MODE, NULL);
+	sta_cnt = policy_mgr_get_mode_specific_conn_info(hdd_ctx->psoc, NULL,
+							 vdev_id_list,
+							 PM_STA_MODE);
+	sap_cnt = policy_mgr_get_mode_specific_conn_info(hdd_ctx->psoc, NULL,
+							 &vdev_id_list[sta_cnt],
+							 PM_SAP_MODE);
 
 	if (adapter->device_mode == QDF_P2P_CLIENT_MODE || sap_cnt || sta_cnt) {
 		hdd_debug("Invalid NAN concurrency. SAP: %d STA: %d P2P: %d",
 			  sap_cnt, sta_cnt,
 			  (adapter->device_mode == QDF_P2P_CLIENT_MODE));
-		ucfg_nan_disable_concurrency(hdd_ctx->psoc);
+		for (i = 0; i < sta_cnt + sap_cnt; i++)
+			if (vdev_id_list[i] == vdev_id)
+				disable_nan = false;
+		if (disable_nan)
+			ucfg_nan_disable_concurrency(hdd_ctx->psoc);
 	}
 	/*
 	 * STA+NDI concurrency gets preference over NDI+NDI. Disable
@@ -21017,9 +21051,10 @@ wlan_hdd_sir_mac_to_qca_reason(enum wlan_reason_code internal_reason)
 					QCA_DISCONNECT_REASON_UNSPECIFIED;
 	switch (internal_reason) {
 	case REASON_HOST_TRIGGERED_ROAM_FAILURE:
+	case REASON_FW_TRIGGERED_ROAM_FAILURE:
 		reason = QCA_DISCONNECT_REASON_INTERNAL_ROAM_FAILURE;
 		break;
-	case REASON_FW_TRIGGERED_ROAM_FAILURE:
+	case REASON_USER_TRIGGERED_ROAM_FAILURE:
 		reason = QCA_DISCONNECT_REASON_EXTERNAL_ROAM_FAILURE;
 		break;
 	case REASON_GATEWAY_REACHABILITY_FAILURE:
@@ -21063,9 +21098,6 @@ wlan_hdd_sir_mac_to_qca_reason(enum wlan_reason_code internal_reason)
 		break;
 	case REASON_BEACON_MISSED:
 		reason = QCA_DISCONNECT_REASON_BEACON_MISS_FAILURE;
-		break;
-	case REASON_USER_TRIGGERED_ROAM_FAILURE:
-		reason = QCA_DISCONNECT_REASON_USER_TRIGGERED;
 		break;
 	default:
 		hdd_debug("No QCA reason code for mac reason: %u",
@@ -23271,8 +23303,9 @@ static int __wlan_hdd_cfg80211_channel_switch(struct wiphy *wiphy,
 {
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(dev);
 	struct hdd_context *hdd_ctx;
-	int ret;
+	int ret, channel;
 	enum phy_ch_width ch_width;
+	bool status;
 
 	if (wlan_hdd_validate_vdev_id(adapter->vdev_id))
 		return -EINVAL;
@@ -23286,6 +23319,15 @@ static int __wlan_hdd_cfg80211_channel_switch(struct wiphy *wiphy,
 	if ((QDF_P2P_GO_MODE != adapter->device_mode) &&
 		(QDF_SAP_MODE != adapter->device_mode))
 		return -ENOTSUPP;
+
+	channel = ieee80211_frequency_to_channel(
+			csa_params->chandef.chan->center_freq);
+
+	status = policy_mgr_is_sap_allowed_on_dfs_chan(hdd_ctx->pdev,
+						adapter->vdev_id, channel);
+	if (!status)
+		return -EINVAL;
+
 	wlan_hdd_set_sap_csa_reason(hdd_ctx->psoc, adapter->vdev_id,
 				    CSA_REASON_USER_INITIATED);
 

@@ -13136,6 +13136,21 @@ QDF_STATUS sme_delete_mon_session(mac_handle_t mac_handle, uint8_t vdev_id)
 	return status;
 }
 
+void
+sme_set_del_peers_ind_callback(mac_handle_t mac_handle,
+			       void (*callback)(struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id))
+{
+	struct mac_context *mac;
+
+	if (!mac_handle) {
+		QDF_ASSERT(0);
+		return;
+	}
+	mac = MAC_CONTEXT(mac_handle);
+	mac->del_peers_ind_cb = callback;
+}
+
 void sme_set_chan_info_callback(mac_handle_t mac_handle,
 			void (*callback)(struct scan_chan_info *chan_info))
 {
@@ -13231,6 +13246,17 @@ void sme_set_pdev_ht_vht_ies(mac_handle_t mac_handle, bool enable2x2)
 
 		sme_release_global_lock(&mac_ctx->sme);
 	}
+}
+
+void sme_get_sap_vdev_type_nss(mac_handle_t mac_handle, uint8_t *vdev_nss,
+			       enum band_info band)
+{
+	struct mac_context *mac_ctx = MAC_CONTEXT(mac_handle);
+
+	if (band == BAND_5G)
+		*vdev_nss = mac_ctx->vdev_type_nss_5g.sap;
+	else
+		*vdev_nss = mac_ctx->vdev_type_nss_2g.sap;
 }
 
 void sme_update_vdev_type_nss(mac_handle_t mac_handle, uint8_t max_supp_nss,
@@ -15544,12 +15570,12 @@ void sme_reset_he_caps(mac_handle_t mac_handle, uint8_t vdev_id)
 #endif
 
 uint8_t sme_get_mcs_idx(uint16_t raw_rate, enum tx_rate_info rate_flags,
-			uint16_t he_mcs_12_13_map,
+			bool is_he_mcs_12_13_supported,
 			uint8_t *nss, uint8_t *dcm,
 			enum txrate_gi *guard_interval,
 			enum tx_rate_info *mcs_rate_flags)
 {
-	return wma_get_mcs_idx(raw_rate, rate_flags, he_mcs_12_13_map,
+	return wma_get_mcs_idx(raw_rate, rate_flags, is_he_mcs_12_13_supported,
 			       nss, dcm, guard_interval, mcs_rate_flags);
 }
 

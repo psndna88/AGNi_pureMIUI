@@ -3737,13 +3737,21 @@ QDF_STATUS csr_roam_call_callback(struct mac_context *mac, uint32_t sessionId,
 }
 
 static bool csr_peer_mac_match_cmd(tSmeCmd *sme_cmd,
-				   struct qdf_mac_addr peer_macaddr)
+				   struct qdf_mac_addr peer_macaddr,
+				   uint8_t vdev_id)
 {
 	if (sme_cmd->command == eSmeCommandRoam &&
 	    (sme_cmd->u.roamCmd.roamReason == eCsrForcedDisassocSta ||
 	     sme_cmd->u.roamCmd.roamReason == eCsrForcedDeauthSta) &&
 	    !qdf_mem_cmp(peer_macaddr.bytes, sme_cmd->u.roamCmd.peerMac,
 			 QDF_MAC_ADDR_SIZE))
+		return true;
+
+	/*
+	 * For STA/CLI mode for NB disconnect peer mac is not stored, so check
+	 * vdev id as there is only one bssid/peer for STA/CLI.
+	 */
+	if (CSR_IS_DISCONNECT_COMMAND(sme_cmd) && sme_cmd->vdev_id == vdev_id)
 		return true;
 
 	if (sme_cmd->command == eSmeCommandWmStatusChange) {
@@ -3778,7 +3786,7 @@ csr_is_deauth_disassoc_in_pending_q(struct mac_context *mac_ctx,
 	while (entry) {
 		sme_cmd = GET_BASE_ADDR(entry, tSmeCmd, Link);
 		if ((sme_cmd->vdev_id == vdev_id) &&
-		    csr_peer_mac_match_cmd(sme_cmd, peer_macaddr))
+		    csr_peer_mac_match_cmd(sme_cmd, peer_macaddr, vdev_id))
 			return true;
 		entry = csr_nonscan_pending_ll_next(mac_ctx, entry,
 						    LL_ACCESS_NOLOCK);
@@ -3797,13 +3805,13 @@ csr_is_deauth_disassoc_in_active_q(struct mac_context *mac_ctx,
 	sme_cmd = wlan_serialization_get_active_cmd(mac_ctx->psoc, vdev_id,
 						WLAN_SER_CMD_FORCE_DEAUTH_STA);
 
-	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr))
+	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr, vdev_id))
 		return true;
 
 	sme_cmd = wlan_serialization_get_active_cmd(mac_ctx->psoc, vdev_id,
 					WLAN_SER_CMD_FORCE_DISASSOC_STA);
 
-	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr))
+	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr, vdev_id))
 		return true;
 
 	/*
@@ -3812,7 +3820,7 @@ csr_is_deauth_disassoc_in_active_q(struct mac_context *mac_ctx,
 	 */
 	sme_cmd = wlan_serialization_get_active_cmd(mac_ctx->psoc, vdev_id,
 						WLAN_SER_CMD_WM_STATUS_CHANGE);
-	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr))
+	if (sme_cmd && csr_peer_mac_match_cmd(sme_cmd, peer_macaddr, vdev_id))
 		return true;
 
 	return false;
@@ -10649,10 +10657,8 @@ csr_issue_set_context_req_helper(struct mac_context *mac_ctx,
 	 * send OBSS scan and QOS event.
 	 */
 	if (profile &&
-	    profile->negotiatedUCEncryptionType == eCSR_ENCRYPT_TYPE_NONE) {
-		if (unicast)
-			return QDF_STATUS_SUCCESS;
-
+	    profile->negotiatedUCEncryptionType == eCSR_ENCRYPT_TYPE_NONE &&
+	    !unicast) {
 		install_key_rsp.length = sizeof(install_key_rsp);
 		install_key_rsp.status_code = eSIR_SME_SUCCESS;
 		install_key_rsp.sessionId = session_id;
@@ -17056,7 +17062,9 @@ static void csr_update_btm_offload_config(struct mac_context *mac_ctx,
 					  struct csr_roam_session *session)
 {
 	struct wlan_objmgr_peer *peer;
-	bool is_pmf_enabled;
+	struct wlan_objmgr_vdev *vdev;
+	bool is_pmf_enabled, is_open_connection = false;
+	int32_t cipher;
 
 	*btm_offload_config =
 			mac_ctx->mlme_cfg->btm.btm_offload_config;
@@ -17087,16 +17095,35 @@ static void csr_update_btm_offload_config(struct mac_context *mac_ctx,
 	}
 
 	is_pmf_enabled = mlme_get_peer_pmf_status(peer);
-	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_SME_ID);
-	sme_debug("get is_pmf_enabled %d for "QDF_MAC_ADDR_FMT, is_pmf_enabled,
-		  QDF_MAC_ADDR_REF(session->pConnectBssDesc->bssId));
 
-	/* If peer does not support PMF in case of OCE/MBO
+	wlan_objmgr_peer_release_ref(peer, WLAN_LEGACY_SME_ID);
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+						    session->vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("vdev:%d is NULL", session->vdev_id);
+		return;
+	}
+
+	cipher = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_UCAST_CIPHER);
+	if (!cipher || QDF_HAS_PARAM(cipher, WLAN_CRYPTO_CIPHER_NONE))
+		is_open_connection = true;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+
+	/*
+	 * If peer does not support PMF in case of OCE/MBO
 	 * Connection, Disable BTM offload to firmware.
 	 */
 	if (session->pConnectBssDesc->mbo_oce_enabled_ap &&
-	    !is_pmf_enabled)
+	    (!is_pmf_enabled && !is_open_connection))
 		*btm_offload_config = 0;
+
+	sme_debug("is_open:%d is_pmf_enabled %d btm_offload_cfg:%d for "QDF_MAC_ADDR_FMT,
+		  is_open_connection, is_pmf_enabled,
+		  *btm_offload_config,
+		  QDF_MAC_ADDR_REF(session->pConnectBssDesc->bssId));
 }
 
 #ifndef ROAM_OFFLOAD_V1

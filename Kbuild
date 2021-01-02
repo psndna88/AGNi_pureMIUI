@@ -1414,6 +1414,7 @@ TDLS_OBJS := $(TDLS_DIR)/core/src/wlan_tdls_main.o \
        $(TDLS_DIR)/dispatcher/src/wlan_tdls_ucfg_api.o \
        $(TDLS_DIR)/dispatcher/src/wlan_tdls_utils_api.o \
        $(TDLS_DIR)/dispatcher/src/wlan_tdls_cfg.o \
+       $(TDLS_DIR)/dispatcher/src/wlan_tdls_api.o \
        $(TDLS_OS_IF_SRC)/wlan_cfg80211_tdls.o \
        $(TDLS_TARGET_IF_SRC)/target_if_tdls.o
 endif
@@ -2568,9 +2569,12 @@ cppflags-$(CONFIG_DIRECT_BUF_RX_ENABLE) += -DDBR_MULTI_SRNG_ENABLE
 endif
 cppflags-$(CONFIG_WMI_CMD_STRINGS) += -DWMI_CMD_STRINGS
 cppflags-$(CONFIG_WLAN_FEATURE_TWT) += -DWLAN_SUPPORT_TWT
+
 ifdef CONFIG_WLAN_TWT_SAP_STA_COUNT
-ccflags-y += -DWLAN_TWT_SAP_STA_COUNT=$(CONFIG_WLAN_TWT_SAP_STA_COUNT)
+WLAN_TWT_SAP_STA_COUNT ?= 32
+ccflags-y += -DWLAN_TWT_SAP_STA_COUNT=$(WLAN_TWT_SAP_STA_COUNT)
 endif
+
 cppflags-$(CONFIG_WLAN_TWT_SAP_PDEV_COUNT) += -DWLAN_TWT_AP_PDEV_COUNT_NUM_PHY
 cppflags-$(CONFIG_WLAN_DISABLE_EXPORT_SYMBOL) += -DWLAN_DISABLE_EXPORT_SYMBOL
 cppflags-$(CONFIG_WIFI_POS_CONVERGED) += -DWIFI_POS_CONVERGED
