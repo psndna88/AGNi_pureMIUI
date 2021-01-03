@@ -643,6 +643,14 @@ static int cam_jpeg_mgr_config_hw(void *hw_mgr_priv, void *config_hw_args)
 	p_cfg_req->dev_type = ctx_data->jpeg_dev_acquire_info.dev_type;
 
 	request_id = (uintptr_t)config_args->priv;
+	if (request_id <= ctx_data->last_flush_req) {
+		CAM_WARN(CAM_JPEG,
+			"Anomaly submitting flushed req %llu [last_flush %llu] in ctx %u",
+			request_id, ctx_data->last_flush_req);
+		mutex_unlock(&hw_mgr->hw_mgr_mutex);
+		return -EINVAL;
+	}
+
 	p_cfg_req->req_id = request_id;
 	p_cfg_req->num_hw_entry_processed = 0;
 	hw_update_entries = config_args->hw_update_entries;
@@ -1085,6 +1093,7 @@ static int cam_jpeg_mgr_hw_flush(void *hw_mgr_priv, void *flush_hw_args)
 		return -EINVAL;
 	}
 
+	ctx_data->last_flush_req = flush_args->last_flush_req;
 	switch (flush_args->flush_type) {
 	case CAM_FLUSH_TYPE_ALL:
 		rc = cam_jpeg_mgr_flush(hw_mgr_priv, ctx_data);
