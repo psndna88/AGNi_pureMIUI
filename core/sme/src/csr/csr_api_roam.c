@@ -22851,6 +22851,8 @@ csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 
 #define IS_ROAM_REASON_STA_KICKOUT(reason) ((reason & 0xF) == \
 	WMI_ROAM_TRIGGER_REASON_STA_KICKOUT)
+#define IS_ROAM_REASON_DISCONNECTION(reason) ((reason & 0xF) == \
+	WMI_ROAM_TRIGGER_REASON_DEAUTH)
 
 static QDF_STATUS
 csr_process_roam_sync_callback(struct mac_context *mac_ctx,
@@ -23322,9 +23324,8 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		roam_synch_data->join_rsp->tspecIeLen);
 #endif
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		FL("LFR3: RIC length - %d"),
-		roam_synch_data->join_rsp->parsedRicRspLen);
+	sme_debug("LFR3: RIC length - %d",
+		  roam_synch_data->join_rsp->parsedRicRspLen);
 	if (len) {
 		session->connectedInfo.pbFrames =
 			qdf_mem_malloc(len);
@@ -23440,6 +23441,12 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	csr_roam_call_callback(mac_ctx, session_id, roam_info, 0,
 		eCSR_ROAM_ASSOCIATION_COMPLETION, eCSR_ROAM_RESULT_ASSOCIATED);
 	csr_reset_pmkid_candidate_list(mac_ctx, session_id);
+
+	if (IS_ROAM_REASON_DISCONNECTION(roam_synch_data->roamReason))
+		sme_qos_csr_event_ind(mac_ctx, session_id,
+				      SME_QOS_CSR_DISCONNECT_ROAM_COMPLETE,
+				      NULL);
+
 	if (!CSR_IS_WAIT_FOR_KEY(mac_ctx, session_id)) {
 		QDF_TRACE(QDF_MODULE_ID_SME,
 				QDF_TRACE_LEVEL_DEBUG,
