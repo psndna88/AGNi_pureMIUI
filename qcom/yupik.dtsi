@@ -1149,6 +1149,10 @@
 			<0 0>,
 			<0 0>;
 
+		interconnects = <&aggre1_noc MASTER_UFS_MEM &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &cnoc2 SLAVE_UFS_MEM_CFG>;
+		interconnect-names = "ufs-ddr", "cpu-ufs";
+
 		qcom,ufs-bus-bw,name = "ufshc_mem";
 		qcom,ufs-bus-bw,num-cases = <26>;
 		qcom,ufs-bus-bw,num-paths = <2>;
@@ -1209,21 +1213,30 @@
 		resets = <&gcc GCC_UFS_PHY_BCR>;
 		reset-names = "rst";
 
+		iommus = <&apps_smmu 0x80 0x0>;
+		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 
 		rpm-level = <3>;
+		/*
+		 * UFS2.2 is drawing 40mA current during APPS PC.
+		 * Issue is seen only if PX10 is turned off and Vccq2 is ON.
+		 * Since Vccq2 is always-on supply we can't turn it off,
+		 * so don't turn off PX10, by updating spm_lvl to 3.
+		 * In sleep state (spm-lvl=3) its drawing only .5mA.
+		 */
 		spm-level = <3>;
 
 		status = "disabled";
 
 		qos0 {
 			mask = <0xf0>;
-			vote = <59>;
+			vote = <65>;
 		};
 
 		qos1 {
 			mask = <0x0f>;
-			vote = <65>;
+			vote = <59>;
 		};
 	};
 
