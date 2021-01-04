@@ -262,6 +262,7 @@
 
 &swr_haptics {
 	status = "okay";
+	swr-slave-supply = <&hap_swr_slave_reg>;
 };
 
 &yupik_snd {
