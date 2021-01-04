@@ -5141,6 +5141,7 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	bool go_force_11n_for_11ac = 0;
 	bool bval = false;
 	bool enable_dfs_scan = true;
+	bool deliver_start_evt = true;
 	struct s_ext_cap *p_ext_cap;
 	enum reg_phymode reg_phy_mode, updated_phy_mode;
 
@@ -5170,12 +5171,18 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 	 * module is enabled.
 	 */
 #ifdef WLAN_FEATURE_INTERFACE_MGR
-	status = ucfg_if_mgr_deliver_event(adapter->vdev,
-				      WLAN_IF_MGR_EV_AP_START_BSS,
-				      NULL);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_err("start bss failed!!");
-		return -EINVAL;
+	if (test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags))
+		deliver_start_evt = false;
+
+	if (deliver_start_evt) {
+		status = ucfg_if_mgr_deliver_event(
+					adapter->vdev,
+					WLAN_IF_MGR_EV_AP_START_BSS,
+					NULL);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("start bss failed!!");
+			return -EINVAL;
+		}
 	}
 #else
 	if (policy_mgr_is_hw_mode_change_in_progress(hdd_ctx->psoc)) {
@@ -5875,12 +5882,15 @@ free:
 	 * module is enabled.
 	 */
 #ifdef WLAN_FEATURE_INTERFACE_MGR
-	status = ucfg_if_mgr_deliver_event(adapter->vdev,
-				      WLAN_IF_MGR_EV_AP_START_BSS_COMPLETE,
-				      NULL);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		hdd_err("start bss complete failed!!");
-		ret = -EINVAL;
+	if (deliver_start_evt) {
+		status = ucfg_if_mgr_deliver_event(
+					adapter->vdev,
+					WLAN_IF_MGR_EV_AP_START_BSS_COMPLETE,
+					NULL);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("start bss complete failed!!");
+			ret = -EINVAL;
+		}
 	}
 #else
 	/*
