@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "msm_drv.h"
@@ -550,7 +550,7 @@ static int sde_vdc_populate_core_params(struct msm_display_vdc_info *vdc_info,
 	temp = temp << 16;
 	vdc_info->ramp_bits = temp;
 
-	temp = vdc_info->ramp_bits / vdc_info->ramp_blocks;
+	temp = div_u64(vdc_info->ramp_bits, vdc_info->ramp_blocks);
 	vdc_info->rc_fullness_offset_slope = temp;
 
 	temp = (2 * SSM_MAX_SE_SIZE) - 2;
