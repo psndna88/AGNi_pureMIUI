@@ -13,6 +13,8 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/soc/qcom,rpmh-rsc.h>
 #include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. SM8150";
@@ -27,7 +29,11 @@
 
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
-		serial0 = &uart2;
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
+		pci-domain0 = &pcie0; /* PCIe0 domain */
+		pci-domain1 = &pcie1; /* PCIe1 domain */
+		serial0 = &qupv3_se12_2uart;
+		hsuart0 = &qupv3_se13_4uart;
 	};
 
 	cpus {
@@ -42,6 +48,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_0>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -76,6 +83,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_1>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -105,6 +113,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_2>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -134,6 +143,7 @@
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			next-level-cache = <&L2_3>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -163,6 +173,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_4>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -201,6 +212,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_5>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -239,6 +251,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_6>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -277,6 +290,7 @@
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
 			next-level-cache = <&L2_7>;
+			qcom,freq-domain = <&cpufreq_hw 2 4>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -847,6 +861,102 @@
 		clock-names = "xo_clk_src";
 		clocks = <&rpmhcc RPMH_CXO_CLK>;
 		#clock-cells = <1>;
+	};
+
+	cpufreq_hw: cpufreq@18323000 {
+		compatible = "qcom,cpufreq-hw";
+		reg = <0x18323000 0x1400>, <0x18325800 0x1400>,
+		      <0x18327800 0x1400>;
+		reg-names = "freq-domain0", "freq-domain1",
+			    "freq-domain2";
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
+		clock-names = "xo", "alternate";
+
+
+		#freq-domain-cells = <2>;
+	};
+
+	spmi_bus: qcom,spmi@c440000 {
+		compatible = "qcom,spmi-pmic-arb";
+		reg = <0xc440000 0x1100>,
+		      <0xc600000 0x2000000>,
+		      <0xe600000 0x100000>,
+		      <0xe700000 0xa0000>,
+		      <0xc40a000 0x26000>;
+		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
+		interrupts-extended = <&pdc 1 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "periph_irq";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		cell-index = <0>;
+		qcom,channel = <0>;
+		qcom,ee = <0>;
+	};
+
+	spmi_debug_bus: qcom,spmi-debug@6b22000 {
+		compatible = "qcom,spmi-pmic-arb-debug";
+		reg = <0x6b22000 0x60>, <0x7820a8 0x4>;
+		reg-names = "core", "fuse";
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "core_clk";
+		qcom,fuse-disable-bit = <24>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+		status = "disabled";
+
+		qcom,pm8150-debug@0 {
+			compatible = "qcom,spmi-pmic";
+			reg = <0 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pm8150-debug@1 {
+			compatible = "qcom,spmi-pmic";
+			reg = <1 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pm8150b-debug@2 {
+			compatible = "qcom,spmi-pmic";
+			reg = <2 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pm8150b-debug@3 {
+			compatible = "qcom,spmi-pmic";
+			reg = <3 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pm8150l-debug@4 {
+			compatible = "qcom,spmi-pmic";
+			reg = <4 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+
+		qcom,pm8150l-debug@5 {
+			compatible = "qcom,spmi-pmic";
+			reg = <5 SPMI_USID>;
+			#address-cells = <2>;
+			#size-cells = <0>;
+			qcom,can-sleep;
+		};
+	};
+
+	thermal_zones: thermal-zones {
 	};
 
 	osm_l3: interconnect@0x18321000 {
@@ -1468,6 +1578,63 @@
 		interrupts = <0 0>;
 		interrupt-names = "smp2p-sleepstate-in";
 	};
+
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		interconnects = <&aggre2_noc MASTER_SDCC_2 &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_SDCC_2>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>,<100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>,<133320 133320>,
+			/* 100 MB/s */
+			<261438 200000>,<150000 150000>,
+			/* 200 MB/s */
+			<261438 400000>,<300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>,<1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 25000000 50000000 100750000
+				200000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 201500000>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <44>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <44>;
+		};
+	};
 };
 
 &firmware {
@@ -1480,9 +1647,12 @@
 #include "sm8150-pinctrl.dtsi"
 #include "sm8150-regulator.dtsi"
 #include "sm8150-pm.dtsi"
+#include "sm8150-qupv3.dtsi"
 #include "sm8150-slpi-pinctrl.dtsi"
+#include "sm8150-ssc-qupv3.dtsi"
 #include "sm8150-smp2p.dtsi"
 #include "sm8150-gdsc.dtsi"
+#include "msm-arm-smmu-sm8150.dtsi"
 
 &emac_gdsc {
 	status = "ok";
@@ -1638,3 +1808,5 @@
 	clocks = <&gcc GCC_NPU_CFG_AHB_CLK>;
 	status = "ok";
 };
+#include "sm8150-pcie.dtsi"
+#include "sm8150-usb.dtsi"

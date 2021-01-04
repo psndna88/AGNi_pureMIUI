@@ -1,3 +1,5 @@
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,sdxnightjar.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
@@ -390,6 +392,7 @@
 	rpm_bus: qcom,rpm-smd {
 		compatible = "qcom,rpm-smd";
 		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
 		rpm-channel-type = <15>; /* SMD_APPS_RPM */
 	};
 
@@ -585,6 +588,74 @@
 		};
 	};
 
+	qnand_1: nand@7980000 {
+		compatible = "qcom,msm-nand";
+		reg = <0x07980000 0x1000>,
+			<0x07984000 0x1a000>;
+		reg-names = "nand_phys",
+			"bam_phys";
+		qcom,reg-adjustment-offset = <0x4000>;
+
+		interrupts = <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "bam_irq";
+
+		clock-names = "core_clk";
+		clocks = <&rpmcc RPM_SMD_QPIC_CLK>;
+
+		interconnects = <&pc_noc MASTER_QPIC &bimc SLAVE_EBI_CH0>;
+		interconnect-names = "nand-ddr";
+		qcom,msm-bus,name = "qpic_nand";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<0 0>,
+		/* Voting for max b/w on PNOC bus for now */
+			<400000 400000>;
+
+		status = "disabled";
+	};
+
+	sdhc_1: sdhci@7824000 {
+		compatible = "qcom,sdhci-msm-v4";
+		reg = <0x07824900 0x500>, <0x07824000 0x800>;
+		reg-names = "hc_mem", "core_mem";
+
+		interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
+		interconnects = <&pc_noc MASTER_SDCC_1 &bimc SLAVE_EBI_CH0>;
+		interconnect-names = "sdhc-ddr";
+		qcom,msm-bus,name = "sdhc1";
+		qcom,msm-bus,num-cases = <7>;
+		qcom,msm-bus,num-paths = <1>;
+
+		qcom,msm-bus,vectors-KBps = <0 0>, /* No vote */
+				<1600 3200>,    /* 400 KB/s*/
+				<100000 200000>, /* 25 MB/s */
+				<200000 400000>, /* 50 MB/s */
+				<400000 800000>, /* 100 MB/s */
+				<400000 800000>, /* 200 MB/s */
+				<2048000 4096000>; /* Max. bandwidth */
+		qcom,bus-bw-vectors-bps = <0 400000 25000000 50000000
+			100000000 200000000 4294967295>;
+
+		clocks = <&gcc GCC_SDCC1_AHB_CLK>,
+			 <&gcc GCC_SDCC1_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x1>;
+			vote = <70>;
+		};
+	};
+
 	spmi_bus: qcom,spmi@200f000 {
 		compatible = "qcom,spmi-pmic-arb";
 		reg = <0x200f000 0x1000>,
@@ -604,9 +675,41 @@
 		#size-cells = <0>;
 		cell-index = <0>;
 	};
+
+	bimc: interconnect@400000 {
+		reg = <0x400000 0x62000>;
+		compatible = "qcom,sdxnightjar-bimc";
+		qcom,util-factor = <153>;
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_BIMC_CLK>,
+			<&rpmcc RPM_SMD_BIMC_A_CLK>;
+	};
+
+	pc_noc: interconnect@500000 {
+		reg = <0x500000 0x11000>;
+		compatible = "qcom,sdxnightjar-pcnoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_PCNOC_CLK>,
+			<&rpmcc RPM_SMD_PCNOC_A_CLK>;
+	};
+
+	system_noc: interconnect@580000 {
+		reg = <0x580000 0x14000>;
+		compatible = "qcom,sdxnightjar-snoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_SNOC_CLK>,
+			<&rpmcc RPM_SMD_SNOC_A_CLK>;
+	};
 };
 
 #include "pmd9650.dtsi"
 #include "pmd9650-rpm-regulator.dtsi"
 #include "sdxnightjar-regulator.dtsi"
+#include "sdxnightjar-usb.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"

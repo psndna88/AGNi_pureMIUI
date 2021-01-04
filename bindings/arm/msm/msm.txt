@@ -59,6 +59,9 @@ SoCs:
 - YUPIK
   compatible = "qcom,yupik"
 
+- YUPIKP
+  compatible = "qcom,yupikp"
+
 - LITO
   compatible = "qcom,lito"
 
@@ -225,6 +228,9 @@ compatible = "qcom,yupik-rumi"
 compatible = "qcom,yupik-idp"
 compatible = "qcom,yupik-atp"
 compatible = "qcom,yupik-qrd"
+compatible = "qcom,yupikp-idp"
+compatible = "qcom,yupikp-atp"
+compatible = "qcom,yupikp-qrd"
 compatible = "qcom,lito-rumi"
 compatible = "qcom,lito-mtp"
 compatible = "qcom,lito-cdp"
@@ -239,6 +245,12 @@ compatible = "qcom,sm6150-mtp"
 compatible = "qcom,sm6150-cdp"
 compatible = "qcom,sm6150-qrd"
 compatible = "qcom,sm6150-idp"
+compatible = "qcom,sm6150p"
+compatible = "qcom,sa6155-adp-star"
+compatible = "qcom,sa6155p-adp-star"
+compatible = "qcom,sa6155p"
+compatible = "qcom,sa6155-adp-air"
+compatible = "qcom,sa6155p-adp-air"
 compatible = "qcom,qcs405-rumi"
 compatible = "qcom,qcs405-iot"
 compatible = "qcom,qcs403-iot"

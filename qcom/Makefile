@@ -140,19 +140,32 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupik-idp-overlay.dtbo \
 	yupik-atp-overlay.dtbo \
 	yupik-qrd-overlay.dtbo \
-	yupik-idps-digital-mics-overlay.dtbo
+	yupik-idps-digital-mics-overlay.dtbo \
+	yupikp-idp-overlay.dtbo \
+	yupikp-atp-overlay.dtbo \
+	yupikp-qrd-overlay.dtbo \
+	yupikp-idps-digital-mics-overlay.dtbo
+
 
 yupik-rumi-overlay.dtbo-base := yupik.dtb
 yupik-idp-overlay.dtbo-base := yupik.dtb
 yupik-atp-overlay.dtbo-base := yupik.dtb
 yupik-qrd-overlay.dtbo-base := yupik.dtb
 yupik-idps-digital-mics-overlay.dtbo-base := yupik.dtb
+yupikp-idp-overlay.dtbo-base := yupikp.dtb
+yupikp-atp-overlay.dtbo-base := yupikp.dtb
+yupikp-qrd-overlay.dtbo-base := yupikp.dtb
+yupikp-idps-digital-mics-overlay.dtbo-base := yupikp.dtb
 else
 dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupik-idp.dtb \
 	yupik-atp.dtb \
 	yupik-qrd.dtb \
-	yupik-idps-digital-mics.dtb
+	yupik-idps-digital-mics.dtb \
+	yupikp-idp.dtb \
+	yupikp-atp.dtb \
+	yupikp-qrd.dtb \
+	yupikp-idps-digital-mics.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
@@ -185,6 +198,36 @@ dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+        dtbo-$(CONFIG_ARCH_SA6155) += \
+		sa6155-adp-star-overlay.dtbo \
+		sa6155p-adp-star-overlay.dtbo \
+		sa6155p-adp-star-lpass-overlay.dtbo \
+		sa6155-adp-air-overlay.dtbo \
+		sa6155p-adp-air-overlay.dtbo \
+		sa6155p-v2-adp-star-overlay.dtbo \
+		sa6155p-v2-adp-air-overlay.dtbo \
+		sa6155p-v2-adp-air-lpass-overlay.dtbo
+
+sa6155-adp-star-overlay.dtbo-base := sa6155.dtb
+sa6155p-adp-star-overlay.dtbo-base := sa6155p.dtb
+sa6155p-adp-star-lpass-overlay.dtbo-base :=sa6155p.dtb
+sa6155p-v2-adp-star-overlay.dtbo-base := sa6155p.dtb
+sa6155-adp-air-overlay.dtbo-base := sa6155.dtb
+sa6155p-adp-air-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-lpass-overlay.dtbo-base := sa6155p.dtb
+else
+dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
+	sa6155p-adp-star.dtb \
+	sa6155p-adp-star-lpass.dtb \
+	sa6155-adp-air.dtb \
+	sa6155p-adp-air.dtb \
+	sa6155p-v2-adp-star.dtb \
+	sa6155p-v2-adp-air.dtb \
+	sa6155p-v2-adp-air-lpass.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SA8195) += \
 		sa8195p-adp-star-overlay.dtbo \
 		sa8195p-v2-adp-air-overlay.dtbo
@@ -212,6 +255,7 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-mtp.dtb \
 	sdxlemur-mtp-mbb.dtb \
 	sdxlemur-mtp-cpe.dtb \
+	sdxlemur-mtp-mbb-emmc.dtb \
 	sdxlemur-mtp-mbb-ntn3-pcie.dtb \
 	sdxlemur-mtp-mbb-pcie-ep.dtb \
 	sdxlemur-mtp-mbb-pcie-rc-ep.dtb \

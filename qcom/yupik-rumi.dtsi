@@ -167,10 +167,18 @@
 };
 
 &gcc {
-	clocks = <&bi_tcxo>, <&sleep_clk>;
+	clocks = <&bi_tcxo>,
+		<&sleep_clk>,
+		<&pcie_0_pipe_clk>,
+		<&pcie_1_pipe_clk>,
+		<&usb3_phy_wrapper_gcc_usb30_pipe_clk>;
 };
 
 &gpucc {
 	clocks = <&bi_tcxo>, <&gcc GCC_GPU_GPLL0_CLK_SRC>,
 		<&gcc GCC_GPU_GPLL0_DIV_CLK_SRC>, <&gcc GCC_GPU_CFG_AHB_CLK>;
+};
+
+&videocc {
+	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>, <&gcc GCC_VIDEO_AHB_CLK>;
 };

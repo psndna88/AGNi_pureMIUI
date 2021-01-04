@@ -1,0 +1,18 @@
+
+&soc {
+	qupv3_0: qcom,qupv3_0_geni_se@8c0000 {
+		compatible = "qcom,geni-se-qup";
+		reg = <0x008c0000 0x6000>;
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		status = "disabled";
+
+		qupv3_se0_2uart: qcom,qup_uart@0x880000 {
+			compatible = "qcom,geni-debug-uart";
+			reg = <0x0 0x00880000 0x0 0x4000>;
+			interrupts = <GIC_SPI 601 IRQ_TYPE_LEVEL_HIGH>;
+			status = "ok";
+		};
+	};
+};

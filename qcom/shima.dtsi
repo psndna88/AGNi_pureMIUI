@@ -4089,6 +4089,7 @@
 		fmint-gpio = <&tlmm 50 0>;
 		vdd-supply = <&L11C>;
 		rtc6226,vdd-supply-voltage = <2800000 2800000>;
+		rtc6226,vdd-load = <30000>;
 		vio-supply = <&S10B>;
 		rtc6226,vio-supply-voltage = <1800000 1800000 >;
 	};
