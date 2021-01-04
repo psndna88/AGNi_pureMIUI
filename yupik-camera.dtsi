@@ -10,7 +10,7 @@
 	qcom,cam-sync {
 		compatible = "qcom,cam-sync";
 		status = "ok";
-	}
+	};
 
 	qcom,cam_smmu {
 		compatible = "qcom,msm-cam-smmu", "simple-bus";
@@ -573,7 +573,7 @@
 	qcom,cam-icp {
 		compatible = "qcom,cam-icp";
 		compat-hw-name = "qcom,a5",
-			"qcom,ipe",
+			"qcom,ipe0",
 			"qcom,bps";
 		num-a5 = <1>;
 		num-ipe = <1>;
@@ -618,11 +618,11 @@
 		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x7073 0x707b>;
 		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
-		/* qos-val = <0x00000A0A> */
+		qos-val = <0x00000A0A>;
 		status = "ok";
 	};
 
-	cam_ipe: qcom,ipe0 {
+	cam_ipe0: qcom,ipe0 {
 		cell-index = <0>;
 		compatible = "qcom,cam-ipe";
 		reg = <0xac87000 0xa000>;
@@ -759,7 +759,7 @@
 		reg-cam-base = <0x6b000>;
 		interrupt-names = "lrme";
 		interrupts = <GIC_SPI 476 IRQ_TYPE_EDGE_RISING>;
-		regulator-names = "camss";
+		regulator-names = "camss-vdd";
 		camss-supply = <&cam_cc_titan_top_gdsc>;
 		clock-names = "lrme_clk_src",
 			"lrme_clk";
@@ -792,7 +792,6 @@
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&cam_cc_titan_top_gdsc>;
 		clock-names =
-			"gcc_ahb_clk",
 			"gcc_axi_hf_clk",
 			"gcc_axi_sf_clk",
 			"slow_ahb_clk_src",
@@ -800,7 +799,6 @@
 			"camnoc_axi_clk_src",
 			"camnoc_axi_clk";
 		clocks =
-			<&gcc GCC_CAMERA_AHB_CLK>,
 			<&gcc GCC_CAMERA_HF_AXI_CLK>,
 			<&gcc GCC_CAMERA_SF_AXI_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
@@ -809,21 +807,20 @@
 			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
 		src-clock-name = "camnoc_axi_clk_src";
 		clock-rates =
-			<0 0 0 0 0 0 0>,
-			<0 0 0 80000000 0 150000000 0>,
-			<0 0 0 80000000 0 240000000 0>,
-			<0 0 0 80000000 0 320000000 0>,
-			<0 0 0 80000000 0 400000000 0>,
-			<0 0 0 80000000 0 480000000 0>,
-			<0 0 0 80000000 0 480000000 0>;
+			<0 0 0 0 0 0>,
+			<0 0 80000000 0 150000000 0>,
+			<0 0 80000000 0 240000000 0>,
+			<0 0 80000000 0 320000000 0>,
+			<0 0 80000000 0 400000000 0>,
+			<0 0 80000000 0 480000000 0>;
 		clock-cntl-level = "suspend", "lowsvs", "svs",
-			"svs_l1", "nominal", "turbo", "turbo_l1";
+			"svs_l1", "nominal", "turbo";
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;
 		camnoc-axi-clk-bw-margin-perc = <20>;
 		interconnect-names = "cam_ahb";
 		interconnects =<&gem_noc MASTER_APPSS_PROC
-			&config_noc SLAVE_CAMERA_CFG>;
+			&cnoc2 SLAVE_CAMERA_CFG>;
 		cam-ahb-num-cases = <7>;
 		cam-ahb-bw-KBps =
 			<0 0>, <0 76800>, <0 150000>, <0 150000>,
@@ -841,7 +838,7 @@
 		vdd-corner-ahb-mapping = "suspend",
 			"lowsvs", "lowsvs", "svs", "svs_l1",
 			"nominal", "nominal", "nominal",
-			"turbo", "turbo_l1";
+			"turbo", "turbo";
 		client-id-based;
 		client-names =
 			"csiphy0", "csiphy1", "csiphy2", "csiphy3", "csiphy4",
