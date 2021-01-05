@@ -1149,7 +1149,7 @@ static void cam_hw_cdm_reset_cleanup(
 		test_bit(CAM_CDM_FLUSH_HW_STATUS, &core->cdm_status))
 		flush_hw = true;
 
-	if (test_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status))
+	if (test_bit(CAM_CDM_RESET_ERR_STATUS, &core->cdm_status))
 		reset_err = true;
 
 	for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++) {
