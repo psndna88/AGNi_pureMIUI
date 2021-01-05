@@ -2407,10 +2407,17 @@
 		#size-cells = <1>;
 		read-only;
 		ranges;
+
+		feat_conf_m7: feat_conf_m7@6020 {
+			reg = <0x6020 0x4>;
+		};
 	};
 
 	qfprom_sys: qfprom@0 {
 		compatible = "qcom,qfprom-sys";
+
+		nvmem-cells = <&feat_conf_m7>;
+		nvmem-cell-names = "feat_conf_m7";
 	};
 };
 
