@@ -3686,6 +3686,7 @@
 #include "yupik-pm.dtsi"
 #include "ipcc-test-yupik.dtsi"
 #include "yupik-regulators.dtsi"
+#include "display/yupik-sde.dtsi"
 
 &gcc_ufs_phy_gdsc {
 	qcom,support-hw-trigger;
