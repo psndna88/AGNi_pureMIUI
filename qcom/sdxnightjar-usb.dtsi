@@ -75,6 +75,7 @@
 					0x00 0x18>;
 		phy_type = "utmi";
 
+		USB3_GDSC-supply = <&gdsc_usb30>;
 		clocks = <&rpmcc RPM_SMD_LN_BB_CLK>,
 			 <&gcc GCC_QUSB_REF_CLK>,
 			 <&gcc GCC_USB_PHY_CFG_AHB_CLK>,
