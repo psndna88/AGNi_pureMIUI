@@ -8498,7 +8498,6 @@ static void hdd_delete_sta(struct hdd_adapter *adapter)
 QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
-	eConnectionState conn_state;
 	bool value;
 	struct wlan_objmgr_vdev *vdev;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_START_ALL_ADAPTERS;
@@ -8525,52 +8524,10 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 		case QDF_P2P_DEVICE_MODE:
 		case QDF_NAN_DISC_MODE:
 
-			conn_state = (WLAN_HDD_GET_STATION_CTX_PTR(adapter))
-					->conn_info.conn_state;
-
 			hdd_start_station_adapter(adapter);
 			/* Open the gates for HDD to receive Wext commands */
 			adapter->is_link_up_service_needed = false;
 
-			/* Indicate disconnect event to supplicant
-			 * if associated previously
-			 */
-			if (eConnectionState_Associated == conn_state ||
-			    eConnectionState_NotConnected == conn_state ||
-			    eConnectionState_Disconnecting == conn_state) {
-				union iwreq_data wrqu;
-				struct hdd_station_ctx *sta_ctx =
-					WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-
-				memset(&wrqu, '\0', sizeof(wrqu));
-				wrqu.ap_addr.sa_family = ARPHRD_ETHER;
-				memset(wrqu.ap_addr.sa_data, '\0', ETH_ALEN);
-				hdd_wext_send_event(adapter->dev, SIOCGIWAP,
-						    &wrqu, NULL);
-				adapter->session.station.
-				hdd_reassoc_scenario = false;
-				wlan_rec_conn_info(adapter->vdev_id,
-						   DEBUG_CONN_DISCONNECT_IND,
-						   sta_ctx->conn_info.
-						   bssid.bytes,
-						   REASON_DEVICE_RECOVERY,
-						   0);
-
-				/* indicate disconnected event to nl80211 */
-				wlan_hdd_cfg80211_indicate_disconnect(
-					adapter, true,
-					REASON_DEVICE_RECOVERY,
-					NULL, 0);
-			} else if (eConnectionState_Connecting == conn_state) {
-				/*
-				 * Indicate connect failure to supplicant if we
-				 * were in the process of connecting
-				 */
-				hdd_connect_result(adapter->dev, NULL, NULL,
-						   NULL, 0, NULL, 0,
-						   WLAN_STATUS_ASSOC_DENIED_UNSPEC,
-						   GFP_KERNEL, false, 0);
-			}
 			if ((adapter->device_mode == QDF_NAN_DISC_MODE ||
 			     (adapter->device_mode == QDF_STA_MODE &&
 			      !ucfg_nan_is_vdev_creation_allowed(
