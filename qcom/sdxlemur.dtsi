@@ -257,6 +257,11 @@
 		};
 	};
 
+	cpu_pmu: cpu-pmu {
+		compatible = "arm,cortex-a7-pmu";
+		interrupts = <GIC_PPI 8 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 	qcom,msm-imem@1468f000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x1468f000 0x1000>; /* Address and size of IMEM */
