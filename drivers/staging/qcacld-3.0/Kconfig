@@ -1,4 +1,4 @@
-if QCA_CLD_WLAN_PIE = n
+comment "Qualcomm Atheros CLD WLAN module"
 
 config QCA_CLD_WLAN
 	tristate "Qualcomm Atheros CLD WLAN module"
@@ -18,4 +18,3 @@ config QCA_CLD_WLAN_PROFILE
 	  Profiles are located at drivers/staging/qcacld-3.0/configs.
 
 endif # QCA_CLD_WLAN
-endif # QCA_CLD_WLAN_PIE
