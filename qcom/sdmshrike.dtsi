@@ -1661,6 +1661,7 @@
 #include "sa8195-qupv3.dtsi"
 #include "sa8195-ssc-qupv3.dtsi"
 #include "sa8195-usb.dtsi"
+#include "sdmshrike-gpu.dtsi"
 
 &firmware {
 	scm {
