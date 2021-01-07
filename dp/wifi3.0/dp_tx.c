@@ -1364,7 +1364,7 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 	int ret;
 
 	ret = hif_pm_runtime_get(soc->hif_handle,
-				 RTPM_ID_DW_TX_HW_ENQUEUE);
+				 RTPM_ID_DW_TX_HW_ENQUEUE, true);
 	switch (ret) {
 	case 0:
 		dp_tx_ring_access_end(soc, hal_ring_hdl, coalesce);

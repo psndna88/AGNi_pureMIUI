@@ -1042,7 +1042,8 @@ int hif_pm_runtime_put_sync_suspend(struct hif_opaque_softc *hif_ctx,
 				    wlan_rtpm_dbgid rtpm_dbgid);
 int hif_pm_runtime_request_resume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx,
-		       wlan_rtpm_dbgid rtpm_dbgid);
+		       wlan_rtpm_dbgid rtpm_dbgid,
+		       bool is_critical_ctx);
 void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx,
 				 wlan_rtpm_dbgid rtpm_dbgid);
 int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx,
@@ -1106,7 +1107,8 @@ hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx,
 {}
 
 static inline int
-hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx, wlan_rtpm_dbgid rtpm_dbgid)
+hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx, wlan_rtpm_dbgid rtpm_dbgid,
+		   bool is_critical_ctx)
 { return 0; }
 static inline int
 hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx, wlan_rtpm_dbgid rtpm_dbgid)
