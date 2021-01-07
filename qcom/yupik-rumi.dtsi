@@ -169,8 +169,6 @@
 &gcc {
 	clocks = <&bi_tcxo>,
 		<&sleep_clk>,
-		<&pcie_0_pipe_clk>,
-		<&pcie_1_pipe_clk>,
 		<&usb3_phy_wrapper_gcc_usb30_pipe_clk>;
 };
 
