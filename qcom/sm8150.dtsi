@@ -2401,3 +2401,4 @@
 };
 #include "sm8150-pcie.dtsi"
 #include "sm8150-usb.dtsi"
+#include "sm8150-gpu.dtsi"
