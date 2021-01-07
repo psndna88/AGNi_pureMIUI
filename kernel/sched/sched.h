@@ -3058,7 +3058,7 @@ static inline u64 scale_load_to_cpu(u64 load, int cpu)
 #ifdef CONFIG_SMP
 static inline int cpu_capacity(int cpu)
 {
-	return SCHED_CAPACITY_SCALE;
+	return capacity_orig_of(cpu);
 }
 #endif
 
