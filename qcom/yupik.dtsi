@@ -440,7 +440,7 @@
 		redistributor-stride = <0x0 0x20000>;
 		reg = <0x17a00000 0x10000>,     /* GICD */
 		      <0x17a60000 0x100000>;    /* GICR * 8 */
-		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	pdc: interrupt-controller@b220000 {
