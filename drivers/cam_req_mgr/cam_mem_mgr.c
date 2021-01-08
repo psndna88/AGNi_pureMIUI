@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -244,9 +244,8 @@ int cam_mem_get_io_buf(int32_t buf_handle, int32_t mmu_handle,
 		return -ENOENT;
 
 	if (!tbl.bufq[idx].active) {
-		CAM_ERR(CAM_MEM,
-			"Buffer at idx=%d is already unmapped, vaddr 0x%x unmaped_vaddr 0x%x",
-			idx, tbl.bufq[idx].vaddr, tbl.bufq[idx].unmaped_vaddr);
+		CAM_ERR(CAM_MEM, "Buffer at idx=%d is already unmapped,",
+			idx);
 		return -EAGAIN;
 	}
 
@@ -758,7 +757,6 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 
 	tbl.bufq[idx].kmdvaddr = kvaddr;
 	tbl.bufq[idx].vaddr = hw_vaddr;
-	tbl.bufq[idx].unmaped_vaddr = 0;
 	tbl.bufq[idx].dma_buf = dmabuf;
 	tbl.bufq[idx].len = cmd->len;
 	tbl.bufq[idx].num_hdl = cmd->num_hdl;
@@ -885,12 +883,10 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 		CAM_MEM_MGR_SET_SECURE_HDL(tbl.bufq[idx].buf_handle, true);
 	tbl.bufq[idx].kmdvaddr = 0;
 
-	if (cmd->num_hdl > 0) {
+	if (cmd->num_hdl > 0)
 		tbl.bufq[idx].vaddr = hw_vaddr;
-		tbl.bufq[idx].unmaped_vaddr = 0;
-	} else {
+	else
 		tbl.bufq[idx].vaddr = 0;
-	}
 
 	tbl.bufq[idx].dma_buf = dmabuf;
 	tbl.bufq[idx].len = len;
@@ -1024,7 +1020,6 @@ static int cam_mem_mgr_cleanup_table(void)
 		tbl.bufq[i].flags = 0;
 		tbl.bufq[i].buf_handle = -1;
 		tbl.bufq[i].vaddr = 0;
-		tbl.bufq[i].unmaped_vaddr = 0;
 		tbl.bufq[i].len = 0;
 		memset(tbl.bufq[i].hdls, 0,
 			sizeof(int32_t) * tbl.bufq[i].num_hdl);
@@ -1083,7 +1078,6 @@ static int cam_mem_util_unmap(int32_t idx,
 	/* Deactivate the buffer queue to prevent multiple unmap */
 	mutex_lock(&tbl.bufq[idx].q_lock);
 	tbl.bufq[idx].active = false;
-	tbl.bufq[idx].unmaped_vaddr = tbl.bufq[idx].vaddr;
 	tbl.bufq[idx].vaddr = 0;
 	mutex_unlock(&tbl.bufq[idx].q_lock);
 	mutex_unlock(&tbl.m_lock);
@@ -1300,7 +1294,6 @@ int cam_mem_mgr_request_mem(struct cam_mem_mgr_request_desc *inp,
 	tbl.bufq[idx].kmdvaddr = kvaddr;
 
 	tbl.bufq[idx].vaddr = iova;
-	tbl.bufq[idx].unmaped_vaddr = 0;
 
 	tbl.bufq[idx].len = inp->size;
 	tbl.bufq[idx].num_hdl = num_hdl;
@@ -1450,7 +1443,6 @@ int cam_mem_mgr_reserve_memory_region(struct cam_mem_mgr_request_desc *inp,
 	tbl.bufq[idx].kmdvaddr = 0;
 
 	tbl.bufq[idx].vaddr = iova;
-	tbl.bufq[idx].unmaped_vaddr = 0;
 
 	tbl.bufq[idx].len = request_len;
 	tbl.bufq[idx].num_hdl = num_hdl;

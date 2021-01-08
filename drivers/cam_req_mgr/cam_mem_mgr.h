@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_MEM_MGR_H_
@@ -26,22 +26,21 @@ enum cam_smmu_mapping_client {
 /**
  * struct cam_mem_buf_queue
  *
- * @dma_buf:       pointer to the allocated dma_buf in the table
- * @q_lock:        mutex lock for buffer
- * @hdls:          list of mapped handles
- * @num_hdl:       number of handles
- * @fd:            file descriptor of buffer
- * @buf_handle:    unique handle for buffer
- * @align:         alignment for allocation
- * @len:           size of buffer
- * @flags:         attributes of buffer
- * @vaddr:         IOVA of buffer
- * @kmdvaddr:      Kernel virtual address
- * @active:        state of the buffer
- * @is_imported:   Flag indicating if buffer is imported from an FD in user space
- * @is_internal:   Flag indicating kernel allocated buffer
- * @timestamp:     Timestamp at which this entry in tbl was made
- * @unmaped_vaddr: This will cache the vaddr if it is unmapped.
+ * @dma_buf:     pointer to the allocated dma_buf in the table
+ * @q_lock:      mutex lock for buffer
+ * @hdls:        list of mapped handles
+ * @num_hdl:     number of handles
+ * @fd:          file descriptor of buffer
+ * @buf_handle:  unique handle for buffer
+ * @align:       alignment for allocation
+ * @len:         size of buffer
+ * @flags:       attributes of buffer
+ * @vaddr:       IOVA of buffer
+ * @kmdvaddr:    Kernel virtual address
+ * @active:      state of the buffer
+ * @is_imported: Flag indicating if buffer is imported from an FD in user space
+ * @is_internal: Flag indicating kernel allocated buffer
+ * @timestamp:   Timestamp at which this entry in tbl was made
  */
 struct cam_mem_buf_queue {
 	struct dma_buf *dma_buf;
@@ -54,7 +53,6 @@ struct cam_mem_buf_queue {
 	size_t len;
 	uint32_t flags;
 	uint64_t vaddr;
-	uint64_t unmaped_vaddr;
 	uintptr_t kmdvaddr;
 	bool active;
 	bool is_imported;
