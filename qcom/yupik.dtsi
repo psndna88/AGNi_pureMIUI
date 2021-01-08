@@ -1014,6 +1014,7 @@
 		compatible = "qcom,wcn6750";
 		reg = <0x17a10040 0x0>;
 		reg-names = "msi_addr";
+		iommus = <&apps_smmu 0x1c00 0x1>;
 		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 770 IRQ_TYPE_EDGE_RISING>,
@@ -1047,8 +1048,21 @@
 			   <GIC_SPI 798 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 799 IRQ_TYPE_EDGE_RISING>;
 
+		qcom,iommu-dma = "bypass";
+		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
+		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
 		cnss-daemon-support;
+		qcom,fw-prefix;
+		qcom,smem-states = <&smp2p_wlan_1_out 0>;
+		qcom,smem-state-names = "wlan-smp2p-out";
+
+		qcom,smp2p_map_wlan_1_in {
+			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
+					      <&smp2p_wlan_1_in 1 0>;
+			interrupt-names = "qcom,smp2p-force-fatal-error",
+					  "qcom,smp2p-early-crash-ind";
+		};
 	};
 
 	ufshc_mem: ufshc@1d84000 {
@@ -1641,6 +1655,17 @@
 			qcom,entry-name = "slave-kernel";
 			interrupt-controller;
 			#interrupt-cells = <2>;
+		};
+
+		smp2p_wlan_1_in: qcom,smp2p-wlan-1-in {
+			qcom,entry-name = "wlan";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		smp2p_wlan_1_out: qcom,smp2p-wlan-1-out {
+			qcom,entry-name = "wlan";
+			#qcom,smem-state-cells = <1>;
 		};
 	};
 
