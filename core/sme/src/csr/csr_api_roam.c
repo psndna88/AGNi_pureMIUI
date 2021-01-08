@@ -14497,6 +14497,7 @@ static inline void csr_update_sae_config(struct join_req *csr_join_req,
 { }
 #endif
 
+#if defined(WLAN_FEATURE_11AX) && defined(WLAN_SUPPORT_TWT)
 /**
  * csr_get_nss_supported_by_sta_and_ap() - finds out nss from session
  * and beacon from AP
@@ -14591,16 +14592,21 @@ csr_check_vendor_ap_3_present(struct mac_context *mac_ctx, uint8_t *ie,
 static bool csr_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 {
 
-	if (mac_ctx->mlme_cfg->twt_cfg.is_twt_requestor_enabled && ie &&
+	if (mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request && ie &&
 	    (ie->qcn_ie.present || ie->he_cap.twt_responder)) {
 		sme_debug("TWT is supported, hence disable UAPSD; twt req supp: %d,twt respon supp: %d, QCN_IE: %d",
-			  mac_ctx->mlme_cfg->twt_cfg.is_twt_requestor_enabled,
-			  ie->he_cap.twt_responder,
-			  ie->qcn_ie.present);
+			  mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request,
+			  ie->he_cap.twt_responder, ie->qcn_ie.present);
 		return true;
 	}
 	return false;
 }
+#else
+static bool csr_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
+{
+	return false;
+}
+#endif
 
 #ifdef WLAN_FEATURE_11AX
 static void
