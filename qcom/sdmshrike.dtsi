@@ -28,8 +28,9 @@
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
 
 	aliases {
-		serial0 = &uart2;
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
+		serial0 = &qupv3_se12_2uart;
+		sdhc2 = &sdhc_2; /* SDC2 SD Card slot */
 	};
 
 	cpus {
@@ -1409,19 +1410,60 @@
 		};
 	};
 
-	qupv3_id_1: geniqup@ac0000 {
-		compatible = "qcom,geni-se-qup";
-		reg = <0x00ac0000 0x6000>;
-		ranges;
-		#address-cells = <2>;
-		#size-cells = <2>;
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		interconnects = <&aggre2_noc MASTER_SDCC_2 &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_SDCC_2>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>,<100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>,<100000 100000>,
+			/* 100 MB/s */
+			<261438 200000>,<130000 130000>,
+			/* 200 MB/s */
+			<261438 400000>,<300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>,<1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 25000000 50000000
+			100000000 200000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
 		status = "disabled";
 
-		uart2: serial@a90000 {
-			compatible = "qcom,geni-debug-uart";
-			reg = <0x0 0x00a90000 0x0 0x4000>;
-			interrupts = <GIC_SPI 357 IRQ_TYPE_LEVEL_HIGH>;
-			status = "ok";
+		qos0 {
+			mask = <0x0f>;
+			vote = <70>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <70>;
 		};
 	};
 
@@ -1435,6 +1477,9 @@
 #include "msm-arm-smmu-sdmshrike.dtsi"
 #include "sm8150-slpi-pinctrl.dtsi"
 #include "sdmshrike-ion.dtsi"
+#include "sa8195-qupv3.dtsi"
+#include "sa8195-ssc-qupv3.dtsi"
+#include "sa8195-usb.dtsi"
 
 &emac_gdsc {
 	status = "ok";
