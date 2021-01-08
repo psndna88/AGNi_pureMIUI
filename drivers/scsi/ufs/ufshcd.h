@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -1120,6 +1120,11 @@ static inline bool ufshcd_is_auto_hibern8_supported(struct ufs_hba *hba)
 {
 	return !!((hba->capabilities & MASK_AUTO_HIBERN8_SUPPORT) &&
 		!(hba->quirks & UFSHCD_QUIRK_BROKEN_AUTO_HIBERN8));
+}
+
+static inline bool ufshcd_is_auto_hibern8_enabled(struct ufs_hba *hba)
+{
+	return ufshcd_is_auto_hibern8_supported(hba) && !!hba->ahit;
 }
 
 static inline bool ufshcd_is_crypto_supported(struct ufs_hba *hba)
