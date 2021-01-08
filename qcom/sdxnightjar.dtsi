@@ -684,11 +684,10 @@
 			<0x3800000 0x200000>,
 			<0x200a000 0x2100>; /* includes SPMI_CFG and GENI_CFG */
 		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
-		interrupts = <0 190 0>;
+		interrupt-names = "periph_irq";
+		interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,channel = <0>;
 		qcom,ee = <0>;
-		qcom,pmic-arb-max-peripherals = <256>;
-		qcom,pmic-arb-max-periph-interrupts = <256>;
 		#interrupt-cells = <4>;
 		interrupt-controller;
 		#address-cells = <2>;
