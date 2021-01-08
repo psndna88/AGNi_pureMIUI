@@ -456,11 +456,6 @@
 		reg = <0x60000 0x6000>;
 	};
 
-	smem_mem: smem_region@87e80000 {
-		reg = <0x87e80000 0xc0000>;
-		no-map;
-	};
-
 	smem {
 		compatible = "qcom,smem";
 		memory-region = <&smem_mem>;
