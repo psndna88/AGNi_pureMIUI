@@ -199,6 +199,15 @@
 
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
+
+		link_list1 {
+			qcom,curr-link-list = <2>;
+			qcom,data-sink = "sram";
+			qcom,link-list = <DCC_READ 0xb204520 1 0>,
+				<DCC_READ 0xb201020 1 0>,
+				<DCC_READ 0xb201024 1 0>,
+				<DCC_READ 0xb204524 1 0>;
+		};
 	};
 
 	wdog: qcom,wdt@17817000 {
