@@ -9812,6 +9812,7 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buffer)
 
 static const struct attribute_group *ufshcd_driver_groups[] = {
 	&ufs_sysfs_unit_descriptor_group,
+	&ufs_sysfs_lun_attributes_group,
 	NULL,
 };
 
