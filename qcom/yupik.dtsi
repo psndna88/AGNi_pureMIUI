@@ -82,6 +82,7 @@
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			dynamic-power-coefficient = <100>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -103,6 +104,7 @@
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			dynamic-power-coefficient = <100>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_1>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -119,6 +121,7 @@
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			dynamic-power-coefficient = <100>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_2>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -135,6 +138,7 @@
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
 			dynamic-power-coefficient = <100>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_3>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -151,6 +155,7 @@
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1946>;
 			dynamic-power-coefficient = <520>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			next-level-cache = <&L2_4>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -167,6 +172,7 @@
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1946>;
 			dynamic-power-coefficient = <520>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			next-level-cache = <&L2_5>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -183,6 +189,7 @@
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1946>;
 			dynamic-power-coefficient = <520>;
+			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			next-level-cache = <&L2_6>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -199,6 +206,7 @@
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1985>;
 			dynamic-power-coefficient = <552>;
+			qcom,freq-domain = <&cpufreq_hw 2 4>;
 			next-level-cache = <&L2_7>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -956,6 +964,35 @@
 		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk", "cfg_ahb";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
+	};
+
+	cpufreq_hw: qcom,cpufreq-hw {
+		compatible = "qcom,cpufreq-hw-epss";
+		reg = <0x18591000 0x1000>, <0x18592000 0x1000>,
+			<0x18593000 0x1000>;
+		reg-names = "freq-domain0", "freq-domain1",
+				"freq-domain2";
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GCC_GPLL0>;
+		clock-names = "xo", "alternate";
+
+		qcom,lut-row-size = <4>;
+		qcom,skip-enable-check;
+
+		interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "dcvsh0_int", "dcvsh1_int", "dcvsh2_int";
+
+		#freq-domain-cells = <2>;
+	};
+
+	qcom,cpufreq-hw-debug@18591000 {
+		compatible = "qcom,cpufreq-hw-epss-debug";
+		reg = <0x18591000 0x800>;
+		reg-names = "domain-top";
+		qcom,freq-hw-domain = <&cpufreq_hw 0>, <&cpufreq_hw 1>,
+					<&cpufreq_hw 2>;
 	};
 
 	qcom,venus@aab0000 {
