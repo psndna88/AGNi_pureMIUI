@@ -602,12 +602,12 @@ $BB mount -t vfat -o rw,noatime,nodiratime,fmask=0337,dmask=0000,allow_utime=002
 if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
 	$BB mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
-ui_print " " "AGNi now modifying firmware for DEFAULT latest Pie Wifi driver support.." " ";
-ui_print " " "   This one has proved to give best Performance & low ping." " ";
-$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
-$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
-$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-ui_print " " "AGNi enabled latest Pie-sourced Wifi driver..." " ";
+ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
+$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+# $BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
+ui_print " " "AGNi installing Q-sourced Wifi driver support in rom..." " ";
 # $BB chmod 644 /vendor/agni/wlan.ko;
 $BB chmod 644 /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 /sbin/restorecon -v /vendor/etc/wifi/WCNSS_qcom_cfg.ini;

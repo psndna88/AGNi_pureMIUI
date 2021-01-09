@@ -728,36 +728,36 @@ if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
 	$BB mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/wifi.prop`" ]; then # Automatic
-#	if [ "$ANDROID_VER" == "R" ]; then
-#		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
-#		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
-#		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
-#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-#		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
-#		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
-#	elif [ "$ANDROID_VER" == "Q" ]; then
-#		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
-#		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
-#		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
-#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-#		$BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
-#		ui_print " " "AGNi enabled latest Q-sourced Wifi driver..." " ";
-#	elif [ "$ANDROID_VER" == "PIE" ]; then
-		ui_print " " "AGNi now modifying firmware for DEFAULT latest Pie Wifi driver support.." " ";
+	if [ "$ANDROID_VER" == "R" ]; then
+		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
+		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
+		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
+	elif [ "$ANDROID_VER" == "Q" ]; then
+		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
+		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+		$BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
+		ui_print " " "AGNi enabled latest Q-sourced Wifi driver..." " ";
+	elif [ "$ANDROID_VER" == "PIE" ]; then
+		ui_print " " "AGNi now modifying firmware for latest Pie Wifi driver support.." " ";
 		ui_print " " "   This one has proved to give best Performance & low ping." " ";
 		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
 		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
 		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
 		$BB cp -f /vendor/agni/wlan_pie.ko /vendor/agni/wlan.ko;
 		ui_print " " "AGNi enabled latest Pie-sourced Wifi driver..." " ";
-#	else
-#		ui_print " " "AGNi now modifying firmware for OLD Pie Wifi driver support.." " ";
-#		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
-#		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
-#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-#		$BB cp -f /vendor/agni/wlan_pie_old.ko /vendor/agni/wlan.ko;
-#		ui_print " " "AGNi enabled latest OLD Pie-sourced Wifi driver..." " ";
-#	fi;
+	else
+		ui_print " " "AGNi now modifying firmware for OLD Pie Wifi driver support.." " ";
+		$BB rm /firmware/image/AGNIWIFI-Q 2>/dev/null;
+		$BB cp -f $AKHOME/tools/wlan/Pie/* /firmware/image;
+		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Pie.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+		$BB cp -f /vendor/agni/wlan_pie_old.ko /vendor/agni/wlan.ko;
+		ui_print " " "AGNi enabled latest OLD Pie-sourced Wifi driver..." " ";
+	fi;
 elif [ "`$BB grep selected.0=2 /tmp/aroma-data/wifi.prop`" ]; then #A11
 	ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
 	$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
@@ -902,24 +902,20 @@ else
 	$BB mount /system;
 fi;
 
-# AGNi: 64bit libDPMframework for MIUI 11 PIE 
-if [ "$ANDROID_VER" == "PIE" ]; then
-	if [ "$MIUI_VER" == "11" ]; then
-		ui_print " " "AGNi now installing 64bit libdpmframework.so ..." " ";
-		$BB cp -f $AKHOME/tools/libdpmframework.so.lib /system/lib64/libdpmframework.so;
-		$BB chmod 0644 /system/lib64/libdpmframework.so;
-		/sbin/restorecon -v /system/lib64/libdpmframework.so;
-	fi;
+# AGNi: 64bit libframework for all MIUI PIE 
+if ([ "$ANDROID_VER" == "PIE" ] && [ "$MIUI_ROM" == "true" ]); then
+	ui_print " " "AGNi now installing 64bit libdpmframework.so ..." " ";
+	$BB cp -f $AKHOME/tools/libdpmframework.so.lib /system/lib64/libdpmframework.so;
+	$BB chmod 0644 /system/lib64/libdpmframework.so;
+	/sbin/restorecon -v /system/lib64/libdpmframework.so;
 fi;
 
-# AGNi: WIFI HAL FOR MIUI 12 Q
-if [ "$ANDROID_VER" == "Q" ]; then
-	if [ "$MIUI_VER" == "12" ]; then
-		ui_print " " "AGNi now installing WIFI HAL..." " ";
-		$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
-		$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
-		/sbin/restorecon -v /vendor/lib64/libwifi-hal.so;
-	fi;
+# AGNi: WIFI HAL FOR MIUI Q
+if ([ "$ANDROID_VER" == "Q" ] && [ "$MIUI_ROM" == "true" ]); then
+	ui_print " " "AGNi now installing WIFI HAL..." " ";
+	$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
+	$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
+	/sbin/restorecon -v /vendor/lib64/libwifi-hal.so;
 fi;
 
 # AGNi: Wired Earphone Analog Amplification boost
