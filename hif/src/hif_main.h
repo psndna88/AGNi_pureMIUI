@@ -264,6 +264,10 @@ struct hif_softc {
 	/* Should the unlzay support for interrupt delivery be disabled */
 	/* Flag to indicate whether bus is suspended */
 	bool bus_suspended;
+#ifdef FEATURE_RUNTIME_PM
+	/* Variable to track the link state change in RTPM */
+	qdf_atomic_t pm_link_state;
+#endif
 };
 
 static inline
