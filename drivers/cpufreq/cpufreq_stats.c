@@ -117,6 +117,11 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 #else
 		if ((cpuoc_state == 0) && (stats->freq_table[i] == 2457600)) {
 			stock_freq_time_b = jiffies_64_to_clock_t(stats->time_in_state[i]);
+		} else if ((cpuoc_state == 0) && (stats->freq_table[i] == 2208000)) {
+			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
+				(unsigned long long)
+				jiffies_64_to_clock_t(stats->time_in_state[i]) + stock_freq_time_s);
+			stock_freq_time_s = 0;
 		} else {
 			len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
 				(unsigned long long)
