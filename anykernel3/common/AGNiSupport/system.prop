@@ -1,0 +1,3 @@
+# Disable QCOM SVI
+ro.vendor.display.svi=0
+

@@ -44,5 +44,25 @@ set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 dump_boot;
 
 write_boot;
+
+# AGNi Support magisk module installation
+ui_print ">> Installing AGNi Support Module..";
+ASUP=/data/adb/modules/AGNiSupport;
+rm -rf $ASUP;
+mkdir -p $ASUP;
+cp -rf /tmp/anykernel/common/AGNiSupport/* $ASUP;
+chmod 755 $ASUP/system.prop;
+# AGNi Sound magisk module installation
+ui_print ">> Installing AGNi Wired Sound Clarity Module..";
+ASND=/data/adb/modules/AGNiSound;
+rm -rf $ASND;
+mkdir -p $ASND;
+cp -rf /tmp/anykernel/common/AGNiSound/* $ASND;
+chmod 755 $ASND/system.prop;
+# remove other AGNi modules
+rm -rf /data/adb/modules/AGNiLMKD;
+rm -rf /data/adb/modules/AGNiQCOMSVI;
+# end magisk module installation
+
 ## end install
 
