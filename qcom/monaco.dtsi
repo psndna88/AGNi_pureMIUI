@@ -10,7 +10,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. Monaco";
 	compatible = "qcom,monaco";
-	qcom,msm-id = <459 0x10000>;
+	qcom,msm-id = <486 0x10000>;
 	interrupt-parent = <&intc>;
 
 	#address-cells = <2>;
