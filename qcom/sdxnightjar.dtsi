@@ -785,13 +785,13 @@
 		qcom,ipa-tz-unlock-reg =
 			<0x4043583c 0x1000>; /* 32-bit reg addr and size */
 		/* smp2p gpio information */
-		qcom,smp2pgpio_map_ipa_1_out {
+		qcom,smp2p_map_ipa_1_out {
 			compatible = "qcom,smp2p-map-ipa-1-out";
 			qcom,smem-states = <&smp2p_ipa_1_out 0>;
 			qcom,smem-state-names = "ipa-smp2p-out";
 		};
 
-		qcom,smp2pgpio_map_ipa_1_in {
+		qcom,smp2p_map_ipa_1_in {
 			compatible = "qcom,smp2p-map-ipa-1-in";
 			interrupts-extended = <&smp2p_ipa_1_in 0 0>;
 			interrupt-names = "ipa-smp2p-in";
