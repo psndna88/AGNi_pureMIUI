@@ -6,6 +6,7 @@
 #include "yupik-audio-overlay.dtsi"
 #include "yupik-thermal-overlay-qrd.dtsi"
 #include "display/yupik-sde-display-qrd.dtsi"
+#include "camera/yupik-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {
