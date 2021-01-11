@@ -121,7 +121,6 @@
 				status = "disabled";
 				compatible = "qcom,pm8350b-swr-haptics";
 				reg = <0x01 0xf0170220>;
-				swr-slave-supply = <&hap_swr_slave_reg>;
 				qcom,rx_swr_ch_map = <0 0x01 0x01 0 PCM_OUT1>;
 			};
 
@@ -367,10 +366,10 @@
 	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
-		      <&wcd937x_codec>, <&swr_haptics>,
+		      <&wcd937x_codec>,
 		      <&wsa883x_0221>, <&wsa883x_0222>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
-			   "wcd937x_codec", "swr-haptics",
+			   "wcd937x_codec",
 			   "wsa-codec1", "wsa-codec2";
 	qcom,wsa-max-devs = <2>;
 	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;

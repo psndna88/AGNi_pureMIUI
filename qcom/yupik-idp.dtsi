@@ -3,6 +3,7 @@
 #include <dt-bindings/iio/qcom,spmi-adc7-smb139x.h>
 #include "yupik-pmic-overlay.dtsi"
 #include "pm7325b.dtsi"
+#include "yupik-audio-overlay.dtsi"
 
 &soc {
 	gpio_keys {
