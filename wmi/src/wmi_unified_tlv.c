@@ -15776,6 +15776,9 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_TWT_STATS;
 #endif
 	wmi_populate_service_get_sta_in_ll_stats_req(wmi_service);
+
+	wmi_service[wmi_service_wapi_concurrency_supported] =
+			WMI_SERVICE_WAPI_CONCURRENCY_SUPPORTED;
 }
 
 /**
