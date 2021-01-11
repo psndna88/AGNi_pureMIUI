@@ -8110,6 +8110,9 @@ void hdd_connect_result(struct net_device *dev, const u8 *bssid,
 			roam_info->u.pConnectedProfile->SSID.ssId,
 			roam_info->u.pConnectedProfile->SSID.length);
 	}
+	wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_CONNECT_RESULT,
+			   bssid ? bssid : NULL,
+			   status << 16 | connect_timeout, timeout_reason);
 
 	if (hdd_fils_update_connect_results(dev, bssid, bss,
 			roam_info, req_ie, req_ie_len, resp_ie,
@@ -8355,6 +8358,8 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 			    eConnectionState_NotConnected == conn_state ||
 			    eConnectionState_Disconnecting == conn_state) {
 				union iwreq_data wrqu;
+				struct hdd_station_ctx *sta_ctx =
+					WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
 				memset(&wrqu, '\0', sizeof(wrqu));
 				wrqu.ap_addr.sa_family = ARPHRD_ETHER;
@@ -8363,6 +8368,12 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 						    &wrqu, NULL);
 				adapter->session.station.
 				hdd_reassoc_scenario = false;
+				wlan_rec_conn_info(adapter->vdev_id,
+						   DEBUG_CONN_DISCONNECT_IND,
+						   sta_ctx->conn_info.
+						   bssid.bytes,
+						   REASON_DEVICE_RECOVERY,
+						   0);
 
 				/* indicate disconnected event to nl80211 */
 				wlan_hdd_cfg80211_indicate_disconnect(

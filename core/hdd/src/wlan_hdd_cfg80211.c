@@ -165,6 +165,7 @@
 #include "wlan_if_mgr_public_struct.h"
 #endif
 #include "wlan_wfa_ucfg_api.h"
+#include "wlan_roam_debug.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -21222,6 +21223,7 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
 {
 	int ret;
 	mac_handle_t mac_handle;
+	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 
 	mac_handle = hdd_adapter_get_mac_handle(adapter);
 	wlan_hdd_wait_for_roaming(mac_handle, adapter);
@@ -21231,7 +21233,9 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
 	reset_mscs_params(adapter);
 	wlan_hdd_netif_queue_control(adapter,
 		WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER, WLAN_CONTROL_PATH);
-
+	wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_DISCONNECT,
+			   sta_ctx->conn_info.bssid.bytes,
+			   sta_ctx->conn_info.conn_state, mac_reason);
 	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason,
 					   mac_reason);
 
@@ -21366,6 +21370,7 @@ static int __wlan_hdd_cfg80211_disconnect(struct wiphy *wiphy,
 		hdd_err("Unexpected cfg disconnect called while in state: %d",
 		       sta_ctx->conn_info.conn_state);
 		hdd_set_disconnect_status(adapter, false);
+		wlan_rec_debug_dump_table(REC_CONN, 20, true);
 	}
 
 	return status;
