@@ -3293,6 +3293,11 @@
 		feat_conf_m7: feat_conf_m7@6020 {
 			reg = <0x6020 0x4>;
 		};
+
+		adsp_variant: adsp_variant@6020 {
+			reg = <0x6022 0x1>;
+			bits = <2 4>;
+		};
 	};
 
 	qfprom_sys: qfprom@0 {
