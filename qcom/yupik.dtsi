@@ -3818,3 +3818,17 @@
 #include "msm-rdbg.dtsi"
 #include "yupik-gpu.dtsi"
 #include "yupik-thermal.dtsi"
+
+&qupv3_se1_i2c {
+	status = "ok";
+	nq@64 {
+		compatible = "rtc6226";
+		reg = <0x64>;
+		fmint-gpio = <&tlmm 18 0>;
+		vdd-supply = <&L11C>;
+		rtc6226,vdd-supply-voltage = <2800000 2800000>;
+		rtc6226,vdd-load = <15000>;
+		vio-supply = <&L19B>;
+		rtc6226,vio-supply-voltage = <1800000 1800000>;
+	};
+};
