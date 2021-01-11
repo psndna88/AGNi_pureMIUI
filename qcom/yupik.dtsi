@@ -3681,7 +3681,6 @@
 #include "yupik-pm.dtsi"
 #include "ipcc-test-yupik.dtsi"
 #include "yupik-regulators.dtsi"
-#include "yupik-thermal.dtsi"
 
 &gcc_ufs_phy_gdsc {
 	qcom,support-hw-trigger;
@@ -3813,3 +3812,4 @@
 #include "camera/yupik-camera.dtsi"
 #include "msm-rdbg.dtsi"
 #include "yupik-gpu.dtsi"
+#include "yupik-thermal.dtsi"
