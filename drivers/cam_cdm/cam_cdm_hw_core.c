@@ -586,13 +586,9 @@ int cam_hw_cdm_wait_for_bl_fifo(
 				pending_bl);
 			break;
 		}
-		if (bl_count < (available_bl_slots - 1)) {
-			CAM_DBG(CAM_CDM,
-				"BL slot available_cnt=%d requested=%d",
-				(available_bl_slots - 1), bl_count);
-				rc = available_bl_slots - 1;
-				break;
-		} else if (0 == (available_bl_slots - 1)) {
+		if (0 == (available_bl_slots - 1)) {
+			reinit_completion(&core->bl_fifo[fifo_idx].bl_complete);
+
 			rc = cam_hw_cdm_enable_bl_done_irq(cdm_hw,
 				true, fifo_idx);
 			if (rc) {
@@ -619,7 +615,10 @@ int cam_hw_cdm_wait_for_bl_fifo(
 			rc = 1;
 			CAM_DBG(CAM_CDM, "CDM HW is ready for data");
 		} else {
-			rc = (bl_count - (available_bl_slots - 1));
+			CAM_DBG(CAM_CDM,
+				"BL slot available_cnt=%d requested=%d",
+				(available_bl_slots - 1), bl_count);
+			rc = available_bl_slots - 1;
 			break;
 		}
 	} while (1);
