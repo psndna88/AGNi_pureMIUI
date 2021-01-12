@@ -131,6 +131,15 @@ static const uint32_t cam_cpas_hw_version_map
 		0,
 		CAM_CPAS_TITAN_570_V200,
 	},
+	/* for camera_680 */
+	{
+		CAM_CPAS_TITAN_680_V100,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
 	/* for camera_165 */
 	{
 		CAM_CPAS_TITAN_165_V100,
