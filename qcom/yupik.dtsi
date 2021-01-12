@@ -1169,8 +1169,22 @@
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
 		cnss-daemon-support;
 		qcom,fw-prefix;
+		vdd-cx-mx-supply = <&S7B>;
+		qcom,vdd-cx-mx-config = <824000 1120000 0 0 1>;
+		vdd-1.8-xo-supply = <&S1B>;
+		qcom,vdd-1.8-xo-config = <1872000 2040000 0 0 0>;
+		vdd-1.3-rfa-supply = <&S8B>;
+		qcom,vdd-1.3-rfa-config = <1256000 1500000 0 0 0>;
 		qcom,smem-states = <&smp2p_wlan_1_out 0>;
 		qcom,smem-state-names = "wlan-smp2p-out";
+
+		icnss_cdev_apss: qcom,icnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+
+		icnss_cdev_wpss: qcom,icnss_cdev2 {
+			#cooling-cells = <2>;
+		};
 
 		qcom,smp2p_map_wlan_1_in {
 			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
@@ -2617,7 +2631,11 @@
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
-		/* Needs to add vdd_cx at SOD time.*/
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
+		qcom,vdd_mx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,proxy-reg-names = "vdd_cx","vdd_mx";
 
 		qcom,firmware-name = "wpss";
 		memory-region = <&pil_wpss_mem>;
