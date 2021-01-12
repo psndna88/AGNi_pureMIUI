@@ -1527,7 +1527,7 @@ struct sde_hw_intr *sde_hw_intr_init(void __iomem *addr,
 	}
 
 	if (count <= 0 || count > MDSS_INTR_MAX) {
-		pr_err("wrong mapping of supported irqs 0x%x\n",
+		pr_err("wrong mapping of supported irqs 0x%lx\n",
 			m->mdss_irqs[0]);
 		ret = -EINVAL;
 		goto exit;
