@@ -1,10 +1,10 @@
 &soc {
 	timer {
-		clock-frequency = <500000>;
+		clock-frequency = <5000000>;
 	};
 
 	timer@f120000 {
-		clock-frequency = <500000>;
+		clock-frequency = <5000000>;
 	};
 
 	wdog: qcom,wdt@f017000 {
