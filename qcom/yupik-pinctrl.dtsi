@@ -2868,5 +2868,65 @@
 				};
 			};
 		};
+
+		pmx_ts_active {
+			ts_active: ts_active {
+				mux {
+					pins = "gpio105", "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio105", "gpio81";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+			};
+		};
+
+		pmx_ts_reset_suspend {
+			ts_reset_suspend: ts_reset_suspend {
+				mux {
+					pins = "gpio105";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio105";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+		};
+
+		pmx_ts_int_suspend {
+			ts_int_suspend: ts_int_suspend {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+		};
+
+		pmx_ts_release {
+			ts_release: ts_release {
+				mux {
+					pins = "gpio105", "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio105", "gpio81";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
 	};
 };
