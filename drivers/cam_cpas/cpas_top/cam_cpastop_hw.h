@@ -356,4 +356,16 @@ struct cam_cpas_work_payload {
 	struct work_struct work;
 };
 
+/**
+ * struct cam_cpas_camnoc_qchannel : Cpas camnoc qchannel info
+ *
+ * @qchannel_ctrl: offset to configure to control camnoc qchannel interface
+ * @qchannel_status: offset to read camnoc qchannel interface status
+ *
+ */
+struct cam_cpas_camnoc_qchannel {
+	uint32_t qchannel_ctrl;
+	uint32_t qchannel_status;
+};
+
 #endif /* _CAM_CPASTOP_HW_H_ */

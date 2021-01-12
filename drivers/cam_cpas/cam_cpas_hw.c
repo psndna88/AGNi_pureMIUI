@@ -1544,6 +1544,7 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 	struct cam_cpas_private_soc *soc_private = NULL;
 	int rc = 0;
 	long result;
+	int retry_camnoc_idle = 0;
 
 	if (!hw_priv || !stop_args) {
 		CAM_ERR(CAM_CPAS, "Invalid arguments %pK %pK",
@@ -1597,6 +1598,18 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 			}
 		}
 
+		if (cpas_core->internal_ops.qchannel_handshake) {
+			rc = cpas_core->internal_ops.qchannel_handshake(
+				cpas_hw, false);
+			if (rc) {
+				CAM_ERR(CAM_CPAS,
+					"failed in qchannel_handshake rc=%d",
+					rc);
+				retry_camnoc_idle = 1;
+				/* Do not return error, passthrough */
+			}
+		}
+
 		rc = cam_cpas_soc_disable_irq(&cpas_hw->soc_info);
 		if (rc) {
 			CAM_ERR(CAM_CPAS, "disable_irq failed, rc=%d", rc);
@@ -1610,6 +1623,19 @@ static int cam_cpas_hw_stop(void *hw_priv, void *stop_args,
 		if (result == 0) {
 			CAM_ERR(CAM_CPAS, "Wait failed: irq_count=%d",
 				atomic_read(&cpas_core->irq_count));
+		}
+
+		/* try again incase camnoc is still not idle */
+		if (cpas_core->internal_ops.qchannel_handshake &&
+			retry_camnoc_idle) {
+			rc = cpas_core->internal_ops.qchannel_handshake(
+				cpas_hw, false);
+			if (rc) {
+				CAM_ERR(CAM_CPAS,
+					"failed in qchannel_handshake rc=%d",
+					rc);
+				/* Do not return error, passthrough */
+			}
 		}
 
 		rc = cam_cpas_soc_disable_resources(&cpas_hw->soc_info,
