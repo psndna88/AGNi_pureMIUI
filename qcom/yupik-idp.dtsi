@@ -182,6 +182,12 @@
 	};
 };
 
+&pm7325b_wled {
+	qcom,string-cfg = <3>;
+	qcom,leds-per-string = <8>;
+	qcom,fs-current-limit = <22500>;
+};
+
 &spmi_debug_bus {
 	status = "ok";
 };
