@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _SDE_HW_CATALOG_H
@@ -333,6 +333,7 @@ enum {
 	SDE_DISP_SECONDARY_PREF,
 	SDE_DISP_CWB_PREF,
 	SDE_MIXER_COMBINED_ALPHA,
+	SDE_MIXER_IS_VIRTUAL,
 	SDE_MIXER_MAX
 };
 
@@ -1540,6 +1541,7 @@ struct sde_mdss_cfg {
 
 	u32 mixer_count;
 	struct sde_lm_cfg mixer[MAX_BLOCKS];
+	u32 cwb_virtual_mixers_mask;
 
 	struct sde_dspp_top_cfg dspp_top;
 

@@ -2109,6 +2109,9 @@ static int sde_mixer_parse_dt(struct device_node *np,
 		if (cwb_pref && !strcmp(cwb_pref, "cwb"))
 			set_bit(SDE_DISP_CWB_PREF, &mixer->features);
 
+		if (BIT(mixer->id - LM_0) & sde_cfg->cwb_virtual_mixers_mask)
+			set_bit(SDE_MIXER_IS_VIRTUAL, &mixer->features);
+
 		mixer->pingpong = pp_count > 0 ? pp_idx + PINGPONG_0
 							: PINGPONG_MAX;
 		mixer->dspp = dspp_count > 0 ? dspp_idx + DSPP_0
@@ -4828,6 +4831,7 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		sde_cfg->mdss_hw_block_size = 0x158;
 		sde_cfg->has_trusted_vm_support = true;
 		sde_cfg->rc_lm_flush_override = false;
+		sde_cfg->cwb_virtual_mixers_mask = 0x2;
 	} else {
 		SDE_ERROR("unsupported chipset id:%X\n", hw_rev);
 		sde_cfg->perf.min_prefill_lines = 0xffff;
