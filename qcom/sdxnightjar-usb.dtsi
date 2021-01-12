@@ -43,6 +43,7 @@
 			reg = <0x08a00000 0xcd00>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
 			usb-phy = <&qusb_phy>, <&ssphy>;
+			linux,sysdev_is_parent;
 			tx-fifo-resize;
 			snps,is-utmi-l1-suspend;
 			snps,hird-threshold = /bits/ 8 <0x0>;
