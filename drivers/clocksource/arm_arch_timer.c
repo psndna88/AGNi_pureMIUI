@@ -291,6 +291,7 @@ static struct ate_acpi_oem_info hisi_161010101_oem_info[] = {
 };
 #endif
 
+#ifdef CONFIG_ARM_ARCH_TIMER_OOL_WORKAROUND
 #ifdef CONFIG_ARM64_ERRATUM_858921
 static u64 notrace arm64_858921_read_cntvct_el0(void)
 {
@@ -309,7 +310,6 @@ static u64 notrace arm64_1188873_read_cntvct_el0(void)
 }
 #endif
 
-#ifdef CONFIG_ARM_ARCH_TIMER_OOL_WORKAROUND
 DEFINE_PER_CPU(const struct arch_timer_erratum_workaround *,
 	       timer_unstable_counter_workaround);
 EXPORT_SYMBOL_GPL(timer_unstable_counter_workaround);
