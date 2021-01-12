@@ -29,12 +29,12 @@
 		qcom,sde-ctl-display-pref = "primary", "none", "none",
 			    "none", "none", "none";
 
-		qcom,sde-mixer-off = <0x45000 0x47000 0x48000>;
+		qcom,sde-mixer-off = <0x45000 0x45000 0x47000 0x48000>;
 		qcom,sde-mixer-size = <0x320>;
-		qcom,sde-mixer-display-pref = "primary",
+		qcom,sde-mixer-display-pref = "primary", "none",
 					      "none", "none";
 
-		qcom,sde-mixer-cwb-pref = "none",
+		qcom,sde-mixer-cwb-pref = "none", "cwb",
 						"none", "none";
 
 		qcom,sde-dspp-top-off = <0x1300>;
@@ -60,9 +60,9 @@
 		qcom,sde-intf-type = "dp", "dsi", "dp";
 		qcom,sde-intf-tear-irq-off = <0 0x36800 0>;
 
-		qcom,sde-pp-off = <0x6a000
+		qcom,sde-pp-off = <0x6a000 0x6b000
 					0x6c000 0x6d000>;
-		qcom,sde-pp-slave = <0x0 0x0 0x0>;
+		qcom,sde-pp-slave = <0x0 0x0 0x0 0x0>;
 		qcom,sde-pp-size = <0xd4>;
 
 		qcom,sde-cdm-off = <0x7a200>;
@@ -78,7 +78,7 @@
 		qcom,sde-dsc-native422-supp = <1>;
 		qcom,sde-dsc-linewidth = <2048>;
 
-		qcom,sde-dither-off = <0xe0 0xe0 0xe0>;
+		qcom,sde-dither-off = <0xe0 0xe0 0xe0 0xe0>;
 		qcom,sde-dither-version = <0x00020000>;
 		qcom,sde-dither-size = <0x20>;
 
@@ -95,7 +95,7 @@
 		qcom,sde-sspp-smart-dma-priority = <4 1 2 3>;
 		qcom,sde-smart-dma-rev = "smart_dma_v2p5";
 
-		qcom,sde-mixer-pair-mask = <0 3 2>;
+		qcom,sde-mixer-pair-mask = <0 0 4 3>;
 
 		qcom,sde-mixer-blend-op-off = <0x20 0x38 0x50 0x68 0x80 0x98
 						0xb0 0xc8 0xe0 0xf8 0x110>;
