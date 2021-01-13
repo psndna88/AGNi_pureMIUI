@@ -4710,6 +4710,7 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 				    wmi_service_ll_stats_per_chan_rx_tx_time);
 
 	wma_get_service_cap_club_get_sta_in_ll_stats_req(wmi_handle, cfg);
+
 }
 
 /**
@@ -5543,6 +5544,7 @@ static int wma_update_hdd_cfg(tp_wma_handle wma_handle)
 	wma_update_hdd_cfg_ndp(wma_handle, &tgt_cfg);
 	wma_update_nan_target_caps(wma_handle, &tgt_cfg);
 	wma_update_bcast_twt_support(wma_handle, &tgt_cfg);
+	wma_update_twt_tgt_cap(wma_handle, &tgt_cfg);
 	wma_update_restricted_80p80_bw_support(wma_handle, &tgt_cfg);
 	/* Take the max of chains supported by FW, which will limit nss */
 	for (i = 0; i < tgt_hdl->info.total_mac_phy_cnt; i++)
