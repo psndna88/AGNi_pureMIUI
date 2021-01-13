@@ -12,7 +12,7 @@
 };
 
 &soc {
-	bluetooth: bt_qca6490 {
+	bluetooth: bt_qca6174 {
 		compatible = "qcom,qca6174";
 		pinctrl-names = "default";
 		pinctrl-0 = <&bt_en_default>;
