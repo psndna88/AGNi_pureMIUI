@@ -4509,7 +4509,7 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 		GSI_EE_n_GSI_EE_GENERIC_CMD_OFFS(gsi_ctx->per.ee));
 
 	res = wait_for_completion_timeout(&gsi_ctx->gen_ee_cmd_compl,
-		msecs_to_jiffies(GSI_CMD_TIMEOUT));
+		msecs_to_jiffies(GSI_STOP_CMD_TIMEOUT_MS));
 	if (res == 0) {
 		GSIERR("chan_idx=%u ee=%u timed out\n", chan_idx, ee);
 		res = -GSI_STATUS_TIMED_OUT;

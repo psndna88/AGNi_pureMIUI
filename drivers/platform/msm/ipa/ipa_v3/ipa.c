@@ -3458,16 +3458,18 @@ static void ipa3_halt_q6_gsi_channels(bool prod)
 					gsi_ep_cfg->ipa_gsi_chan_num,
 					gsi_ep_cfg->ee, &code);
 			}
-			if (ret == GSI_STATUS_SUCCESS)
+			if (ret == GSI_STATUS_SUCCESS) {
 				IPADBG("halted gsi ch %d ee %d with code %d\n",
 				gsi_ep_cfg->ipa_gsi_chan_num,
 				gsi_ep_cfg->ee,
 				code);
-			else
+			} else {
 				IPAERR("failed to halt ch %d ee %d code %d\n",
 				gsi_ep_cfg->ipa_gsi_chan_num,
 				gsi_ep_cfg->ee,
 				code);
+				ipa_assert();
+			}
 		}
 	}
 }
