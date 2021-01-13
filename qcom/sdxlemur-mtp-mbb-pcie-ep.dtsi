@@ -1,5 +1,4 @@
 #include "sdxlemur-mtp.dtsi"
-#include "sdxlemur.dtsi"
 #include "sdxlemur-mtp-audio-overlay.dtsi"
 
 &soc {
@@ -43,4 +42,8 @@
 	ipa_smmu_11ad {
 		qcom,iommu-dma = "bypass";
 	};
+};
+
+&usb {
+	qcom,iommu-dma = "bypass";
 };
