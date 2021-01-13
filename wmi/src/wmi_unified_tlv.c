@@ -15516,6 +15516,12 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_BROADCAST_TWT_REQUESTER;
 	wmi_service[wmi_service_twt_bcast_resp_support] =
 			WMI_SERVICE_BROADCAST_TWT_RESPONDER;
+	wmi_service[wmi_service_twt_nudge] =
+			WMI_SERVICE_TWT_NUDGE;
+	wmi_service[wmi_service_all_twt] =
+			WMI_SERVICE_TWT_ALL_DIALOG_ID;
+	wmi_service[wmi_service_twt_statistics] =
+			WMI_SERVICE_TWT_STATS;
 #endif
 	wmi_populate_service_get_sta_in_ll_stats_req(wmi_service);
 }
