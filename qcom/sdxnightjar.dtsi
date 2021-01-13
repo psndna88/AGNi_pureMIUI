@@ -1,3 +1,5 @@
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,sdxnightjar.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
@@ -17,7 +19,7 @@
 		reg = <0 0>;
 	};
 
-	reserved-memory {
+	reserved_memory: reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -30,8 +32,20 @@
 
 		peripheral2_mem: peripheral2_region@0x87d00000 {
 			no-map;
-			reg = <0x87d00000 0x300000>;
+			reg = <0x87d00000 0x100000>;
 			label = "peripheral2_mem";
+		};
+
+		smem_mem: smem_region@0x87e80000 {
+			no-map;
+			reg = <0x87e80000 0xc0000>;
+			label = "smem_mem";
+		};
+
+		mss_mem: mss_region@0x88000000 {
+			no-map;
+			reg = <0x88000000 0x7300000>;
+			label = "mss_mem";
 		};
 	};
 
@@ -390,6 +404,7 @@
 	rpm_bus: qcom,rpm-smd {
 		compatible = "qcom,rpm-smd";
 		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
 		rpm-channel-type = <15>; /* SMD_APPS_RPM */
 	};
 
@@ -414,9 +429,9 @@
 		reg-names = "etm-base","debug-base";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
+		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
+		clock-names = "apb_pclk";
 
-		/*TODO: Fix the clock when tree is available*/
-		clock-names = "core_clk", "core_a_clk";
 	};
 
 	tcsr_mutex_regs: syscon@1905000 {
@@ -583,6 +598,19 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		smp2p_ipa_1_out: qcom,smp2p-ipa-1-out {
+			qcom,entry-name = "ipa";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		/* ipa - inbound entry from mss */
+		smp2p_ipa_1_in: qcom,smp2p-ipa-1-in {
+			qcom,entry-name = "ipa";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
 	};
 
 	qnand_1: nand@7980000 {
@@ -672,10 +700,115 @@
 		#size-cells = <0>;
 		cell-index = <0>;
 	};
+
+	bimc: interconnect@400000 {
+		reg = <0x400000 0x62000>;
+		compatible = "qcom,sdxnightjar-bimc";
+		qcom,util-factor = <153>;
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_BIMC_CLK>,
+			<&rpmcc RPM_SMD_BIMC_A_CLK>;
+	};
+
+	pc_noc: interconnect@500000 {
+		reg = <0x500000 0x11000>;
+		compatible = "qcom,sdxnightjar-pcnoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_PCNOC_CLK>,
+			<&rpmcc RPM_SMD_PCNOC_A_CLK>;
+	};
+
+	system_noc: interconnect@580000 {
+		reg = <0x580000 0x14000>;
+		compatible = "qcom,sdxnightjar-snoc";
+		qcom,keepalive;
+		#interconnect-cells = <1>;
+		clock-names = "bus", "bus_a";
+		clocks = <&rpmcc RPM_SMD_SNOC_CLK>,
+			<&rpmcc RPM_SMD_SNOC_A_CLK>;
+	};
+
+	qcom,msm_gsi {
+		compatible = "qcom,msm_gsi";
+	};
+
+	qcom,rmnet-ipa {
+		compatible = "qcom,rmnet-ipa3";
+		qcom,rmnet-ipa-ssr;
+	};
+
+	ipa_hw: qcom,ipa@07B00000 {
+		compatible = "qcom,ipa";
+		reg = <0x07B00000 0x34000>,
+			<0x07B84000 0x31FFFF>,
+			<0x07B04000 0x2C000>;
+		reg-names = "ipa-base", "bam-base", "gsi-base";
+		interrupts =
+			<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "ipa-irq", "bam-irq", "gsi-irq";
+		qcom,ipa-hw-ver = <10>; /* IPA core version = IPAv3.0 */
+		qcom,ipa-hw-mode = <0>; /* IPA hw type = Normal */
+		qcom,platform-type = <0>; /* MDM platform */
+		qcom,ee = <0>;
+		qcom,use-rg10-limitation-mitigation;
+		qcom,use-ipa-tethering-bridge;
+		qcom,modem-cfg-emb-pipe-flt;
+		clock-names = "core_clk";
+		clocks = <&rpmcc RPM_SMD_IPA_CLK>;
+		qcom,interconnect,num-cases = <5>;
+		qcom,interconnect,num-paths = <3>;
+		interconnects = <&system_noc MASTER_IPA &bimc SLAVE_EBI_CH0>,
+				<&system_noc MASTER_IPA &system_noc SLAVE_OCIMEM>,
+				<&bimc MASTER_AMPSS_M0 &pc_noc SLAVE_IPA_CFG>;
+		interconnect-names = "ipa_to_ebi1", "ipa_to_imem", "appss_to_ipa";
+		/* No vote */
+		qcom,no-vote =
+			<0 0 0 0 0 0>;
+		/* SVS2 */
+		qcom,svs2 =
+			<80000 64000 80000 64000 80000 16000>;
+		/* SVS */
+		qcom,svs =
+			<80000 640000 80000 640000 80000 160000>;
+		/* NOMINAL */
+		qcom,nominal =
+			<206000 960000 206000 960000 206000 400000>;
+		/* TURBO */
+		qcom,turbo =
+			<206000 3600000 206000 3600000 206000 960000>;
+		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL", "TURBO";
+
+		qcom,throughput-threshold = <310 600 1000>;
+		qcom,scaling-exceptions = <>;
+
+		/* ipa tz unlock registers */
+		qcom,ipa-tz-unlock-reg =
+			<0x4043583c 0x1000>; /* 32-bit reg addr and size */
+		/* smp2p gpio information */
+		qcom,smp2pgpio_map_ipa_1_out {
+			compatible = "qcom,smp2p-map-ipa-1-out";
+			qcom,smem-states = <&smp2p_ipa_1_out 0>;
+			qcom,smem-state-names = "ipa-smp2p-out";
+		};
+
+		qcom,smp2pgpio_map_ipa_1_in {
+			compatible = "qcom,smp2p-map-ipa-1-in";
+			interrupts-extended = <&smp2p_ipa_1_in 0 0>;
+			interrupt-names = "ipa-smp2p-in";
+		};
+	};
 };
 
 #include "pmd9650.dtsi"
 #include "pmd9650-rpm-regulator.dtsi"
 #include "sdxnightjar-regulator.dtsi"
 #include "sdxnightjar-usb.dtsi"
+#include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
+#include "sdxnightjar-blsp.dtsi"
