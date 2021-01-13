@@ -1281,7 +1281,7 @@ QDF_STATUS lim_sta_handle_connect_fail(join_params *param)
 		 * make sure PE is sending eWNI_SME_JOIN_RSP
 		 * to SME
 		 */
-		lim_cleanup_rx_path(mac_ctx, sta_ds, session);
+		lim_cleanup_rx_path(mac_ctx, sta_ds, session, true);
 		qdf_mem_free(session->lim_join_req);
 		session->lim_join_req = NULL;
 		/* Cleanup if add bss failed */
@@ -1977,7 +1977,14 @@ void lim_process_ap_mlm_add_sta_rsp(struct mac_context *mac,
 	 * 2) PE receives eWNI_SME_ASSOC_CNF from SME
 	 * 3) BTAMP-AP sends Re/Association Response to BTAMP-STA
 	 */
-	lim_send_mlm_assoc_ind(mac, sta, pe_session);
+	if (lim_send_mlm_assoc_ind(mac, sta, pe_session) != QDF_STATUS_SUCCESS)
+		lim_reject_association(mac, sta->staAddr,
+				       sta->mlmStaContext.subType,
+				       true, sta->mlmStaContext.authType,
+				       sta->assocId, true,
+				       STATUS_UNSPECIFIED_FAILURE,
+				       pe_session);
+
 	/* fall though to reclaim the original Add STA Response message */
 end:
 	if (0 != limMsgQ->bodyptr) {
