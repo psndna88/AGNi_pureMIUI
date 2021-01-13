@@ -52,7 +52,7 @@
 
 		audio_mem: audio_region@0 {
 			compatible = "shared-dma-pool";
-			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			alloc-ranges = <0x00000000 0xffffffff>;
 			reusable;
 			size = <0x400000>;
 		};
@@ -674,7 +674,7 @@
 						0x4400 2>;
 			};
 
-			qcom,gpr {
+			audio_gpr: qcom,gpr {
 				compatible = "qcom,gpr";
 				qcom,glink-channels = "modem_apps";
 				qcom,intents = <0x200 20>;
