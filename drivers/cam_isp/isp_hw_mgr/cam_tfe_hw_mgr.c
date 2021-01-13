@@ -5606,7 +5606,7 @@ static int cam_tfe_hw_mgr_debug_register(void)
 	int rc = 0;
 	struct dentry *dbgfileptr = NULL;
 
-	dbgfileptr = debugfs_create_dir("camera_ife", NULL);
+	dbgfileptr = debugfs_create_dir("camera_tfe", NULL);
 	if (!dbgfileptr) {
 		CAM_ERR(CAM_ISP,"DebugFS could not create directory!");
 		rc = -ENOENT;
