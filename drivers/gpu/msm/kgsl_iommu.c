@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -270,7 +270,6 @@ static void kgsl_setup_qdss_desc(struct kgsl_device *device)
 		return;
 	}
 
-	spin_lock_init(&gpu_qdss_desc.lock);
 	gpu_qdss_desc.flags = 0;
 	gpu_qdss_desc.priv = 0;
 	gpu_qdss_desc.physaddr = gpu_qdss_entry[0];
@@ -316,7 +315,6 @@ static void kgsl_setup_qtimer_desc(struct kgsl_device *device)
 		return;
 	}
 
-	spin_lock_init(&gpu_qtimer_desc.lock);
 	gpu_qtimer_desc.flags = 0;
 	gpu_qtimer_desc.priv = 0;
 	gpu_qtimer_desc.physaddr = gpu_qtimer_entry[0];
@@ -1509,7 +1507,6 @@ static int _setstate_alloc(struct kgsl_device *device,
 {
 	int ret;
 
-	spin_lock_init(&iommu->setstate.lock);
 	ret = kgsl_sharedmem_alloc_contig(device, &iommu->setstate, PAGE_SIZE);
 
 	if (!ret) {
@@ -2488,11 +2485,6 @@ static int kgsl_iommu_get_gpuaddr(struct kgsl_pagetable *pagetable,
 		goto out;
 	}
 
-	/*
-	 * This path is only called in a non-SVM path with locks so we can be
-	 * sure we aren't racing with anybody so we don't need to worry about
-	 * taking the lock
-	 */
 	ret = _insert_gpuaddr(pagetable, addr, size);
 	if (ret == 0) {
 		memdesc->gpuaddr = addr;
