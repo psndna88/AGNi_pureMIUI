@@ -32,7 +32,7 @@
 			<0x88eaa00 0x200>,
 			<0x88ea200 0x200>,
 			<0x88ea600 0x200>,
-			<0xaf01068 0x1a0>,
+			<0xaf00f98 0x1a0>,
 			<0x88ea000 0x200>,
 			<0x88e8000 0x20>,
 			<0x0aee1000 0x034>,
@@ -45,6 +45,7 @@
 		interrupt-parent = <&mdss_mdp>;
 		interrupts = <12 0>;
 
+		qcom,pll-revision = "7nm";
 		#clock-cells = <1>;
 		clocks =  <&clock_dispcc DISP_CC_MDSS_DP_AUX_CLK>,
 			<&clock_rpmh RPMH_CXO_CLK>,
