@@ -18664,19 +18664,21 @@ wlan_hdd_add_monitor_check(struct hdd_context *hdd_ctx,
 		return -EINVAL;
 	}
 
-	num_open_session = policy_mgr_mode_specific_connection_count(
-					hdd_ctx->psoc,
-					PM_STA_MODE,
-					NULL);
+	if (ucfg_mlme_is_sta_mon_conc_supported(hdd_ctx->psoc)) {
+		num_open_session = policy_mgr_mode_specific_connection_count(
+						hdd_ctx->psoc,
+						PM_STA_MODE,
+						NULL);
 
-	if (num_open_session == 1) {
-		hdd_ctx->disconnect_for_sta_mon_conc = true;
-		/* Try disconnecting if already in connected state */
-		errno = wlan_hdd_try_disconnect(sta_adapter,
-						REASON_UNSPEC_FAILURE);
-		if (errno > 0) {
-			hdd_err("Failed to disconnect the existing connection");
-			return -EALREADY;
+		if (num_open_session == 1) {
+			hdd_ctx->disconnect_for_sta_mon_conc = true;
+			/* Try disconnecting if already in connected state */
+			errno = wlan_hdd_try_disconnect(sta_adapter,
+							REASON_UNSPEC_FAILURE);
+			if (errno > 0) {
+				hdd_err("Failed to disconnect the existing connection");
+				return -EALREADY;
+			}
 		}
 	}
 
