@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 
@@ -1065,6 +1065,8 @@ int dsi_conn_post_kickoff(struct drm_connector *connector,
 						ctrl->ctrl);
 				if (rc)
 					DSI_ERR("wait4dfps refresh failed\n");
+				dsi_display_dfps_update_parent(display);
+				dsi_phy_dynamic_refresh_clear(ctrl->phy);
 			}
 		}
 
