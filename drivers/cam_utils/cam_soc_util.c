@@ -346,6 +346,23 @@ int cam_soc_util_irq_disable(struct cam_hw_soc_info *soc_info)
 	return 0;
 }
 
+int cam_soc_util_get_clk_rate(struct clk *clk, const char *clk_name,
+	uint32_t *clk_rate)
+{
+	uint32_t clk_rate_round;
+
+	clk_rate_round = clk_get_rate(clk);
+	if (clk_rate_round < 0) {
+		CAM_ERR(CAM_UTIL, "get_rate failed on %s", clk_name);
+		return clk_rate_round;
+	}
+
+	*clk_rate = clk_rate_round;
+	CAM_DBG(CAM_UTIL, "get rate %lld on %s", *clk_rate, clk_name);
+
+	return 0;
+}
+
 long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
 	uint32_t clk_index, unsigned long clk_rate)
 {
