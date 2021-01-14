@@ -1087,6 +1087,7 @@
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
 		qcom,interconnect,num-paths = <4>;
+		qcom,max_num_smmu_cb = <6>;
 		interconnects = <&system_noc MASTER_IPA &mem_noc SLAVE_LLCC>,
 		<&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
 		<&system_noc MASTER_IPA &system_noc SLAVE_IMEM>,
@@ -1142,11 +1143,22 @@
 			qcom,iommu-dma = "atomic";
 		};
 
-		ipa_smmu_11ad: ipa_smmu_11ad {
-			compatible = "qcom,ipa-smmu-11ad-cb";
+		ipa_smmu_eth: ipa_smmu_eth {
+			compatible = "qcom,ipa-smmu-eth-cb";
 			iommus = <&apps_smmu 0x5E3 0x0>;
-			qcom,shared-cb;
-			qcom,iommu-group = <>;
+			qcom,iommu-dma = "atomic";
+		};
+
+		ipa_smmu_eth1: ipa_smmu_eth1 {
+			compatible = "qcom,ipa-smmu-eth1-cb";
+			iommus = <&apps_smmu 0x5E4 0x0>;
+			qcom,iommu-dma = "atomic";
+		};
+
+		ipa_smmu_wlan1: ipa_smmu_wlan1 {
+			compatible = "qcom,ipa-smmu-wlan1-cb";
+			iommus = <&apps_smmu 0x5E5 0x0>;
+			qcom,iommu-dma = "atomic";
 		};
 
 		/* smp2p information */
