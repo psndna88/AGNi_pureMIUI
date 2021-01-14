@@ -47,6 +47,8 @@ DATARMNET5fc54f7a13 __read_mostly={.notifier_call=DATARMNETe9173bbe0e,.priority=
 "\x49\x38\x38\x66\x32\x37\x65\x64\x36\x62\x35\x34\x65\x31\x61\x32\x64\x65\x31\x66\x35\x62\x31\x35\x63\x62\x65\x37\x35\x65\x38\x30\x38\x62\x38\x37\x33\x36\x31\x61\x32"
 ,
 "\x49\x35\x62\x33\x65\x64\x30\x65\x63\x34\x66\x33\x36\x37\x39\x30\x64\x38\x65\x64\x30\x35\x39\x33\x32\x62\x37\x38\x34\x66\x32\x35\x33\x33\x66\x36\x31\x37\x33\x62\x62"
+,
+"\x49\x37\x32\x33\x65\x63\x63\x32\x62\x37\x36\x30\x31\x38\x32\x34\x64\x66\x32\x61\x66\x32\x33\x66\x62\x35\x35\x39\x64\x38\x64\x66\x35\x33\x63\x66\x65\x32\x63\x63\x31"
 };static int DATARMNET2cb9ae589c;int __init DATARMNET163e93649e(void){pr_info(
 "\x25\x73\x28\x29\x3a\x20\x53\x74\x61\x72\x74\x69\x6e\x67\x20\x72\x6d\x6e\x65\x74\x20\x53\x48\x53\x20\x6d\x6f\x64\x75\x6c\x65\x20\x25\x73\x20" "\n"
 ,__func__,DATARMNETbc8418e817[(0xd2d+202-0xdf7)]);trace_rmnet_shs_high(
@@ -74,12 +76,14 @@ DATARMNETfc89d842ae){unsigned int DATARMNET9f4bc49c6f;pr_info(
 "\x72\x6d\x6e\x65\x74\x5f\x73\x68\x73\x20\x64\x65\x69\x6e\x69\x74\x20\x25\x73\x20\x67\x6f\x69\x6e\x67\x20\x64\x6f\x77\x6e\x20"
 ,dev->name);RCU_INIT_POINTER(rmnet_shs_skb_entry,NULL);RCU_INIT_POINTER(
 rmnet_shs_switch,NULL);qmi_rmnet_ps_ind_deregister(DATARMNETecc0627c70.port,&
-DATARMNETecc0627c70.rmnet_idl_ind_cb);DATARMNETeacad8334e();DATARMNET9f4bc49c6f=
-DATARMNET02cdd9b125();DATARMNETf7dcab9a9e();DATARMNET9297340f58(
-DATARMNET9f4bc49c6f);trace_rmnet_shs_high(DATARMNET1790979ccf,
-DATARMNET443dab7031,(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),
-(0x16e8+787-0xc0c),NULL,NULL);}break;case NETDEV_REGISTER:DATARMNET2cb9ae589c++;
-if(DATARMNET2cb9ae589c&&!DATARMNETecc0627c70.DATARMNETfc89d842ae){pr_info(
+DATARMNETecc0627c70.rmnet_idl_ind_cb);rmnet_map_dl_ind_deregister(
+DATARMNETecc0627c70.port,&DATARMNETecc0627c70.DATARMNET08dbb5ab35);
+DATARMNETeacad8334e();DATARMNET9f4bc49c6f=DATARMNET02cdd9b125();
+DATARMNETf7dcab9a9e();DATARMNET9297340f58(DATARMNET9f4bc49c6f);
+trace_rmnet_shs_high(DATARMNET1790979ccf,DATARMNET443dab7031,(0x16e8+787-0xc0c),
+(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),NULL,NULL);}break;case 
+NETDEV_REGISTER:DATARMNET2cb9ae589c++;if(DATARMNET2cb9ae589c&&!
+DATARMNETecc0627c70.DATARMNETfc89d842ae){pr_info(
 "\x72\x6d\x6e\x65\x74\x5f\x73\x68\x73\x20\x69\x6e\x69\x74\x69\x61\x6c\x69\x7a\x69\x6e\x67\x20\x25\x73"
 ,dev->name);priv=netdev_priv(dev);port=rmnet_get_port(priv->real_dev);if(!port){
 pr_err(
