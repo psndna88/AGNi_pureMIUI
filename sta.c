@@ -11971,6 +11971,383 @@ static enum sigma_cmd_result cmd_sta_send_frame_wpa3(struct sigma_dut *dut,
 }
 
 
+static int
+get_type4_frame_classifier(struct sigma_dut *dut, struct sigma_cmd *cmd,
+			   char *pos, int rem_len, int num_of_scs_desc,
+			   int num_of_tclas_elem)
+{
+	const char *val;
+	int ipv6;
+	int len, total_len = 0;
+
+	val = get_param_fmt(cmd, "TCLASElem_Version_%d_%d", num_of_scs_desc,
+			    num_of_tclas_elem);
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: ip_version empty",
+				__func__);
+		return -1;
+	}
+
+	if (strcmp(val, "6") == 0) {
+		ipv6 = 1;
+	} else if (strcmp(val, "4") == 0) {
+		ipv6 = 0;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: ip_version invalid",
+				__func__);
+		return -1;
+	}
+
+	len = snprintf(pos, rem_len, " ip_version=%s", ipv6 ? "ipv6" : "ipv4");
+	if (len < 0 || len >= rem_len)
+		return -1;
+
+	pos += len;
+	rem_len -= len;
+	total_len += len;
+
+	val = get_param_fmt(cmd, "TCLASElem_SourceIPAddr_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " src_ip=%s", val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_DestinationIPAddr_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " dst_ip=%s", val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_SourcePort_%d_%d", num_of_scs_desc,
+			    num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " src_port=%s", val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_DestinationPort_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " dst_port=%s", val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_DSCP_%d_%d", num_of_scs_desc,
+			    num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " dscp=%s", val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_ProtocolNxtHeader_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		char *prot;
+
+		switch (atoi(val)) {
+		case 17:
+			prot = "udp";
+			break;
+		case 6:
+			prot = "tcp";
+			break;
+		case 50:
+			prot = "esp";
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid protocol %d", atoi(val));
+			return -1;
+		}
+
+		if (ipv6)
+			len = snprintf(pos, rem_len, " next_header=%s", prot);
+		else
+			len = snprintf(pos, rem_len, " protocol=%s", prot);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	return total_len;
+}
+
+
+static int
+get_type10_frame_classifier(struct sigma_dut *dut, struct sigma_cmd *cmd,
+			    char *pos, int rem_len, int num_of_scs_desc,
+			    int num_of_tclas_elem)
+{
+	const char *val;
+	int len, total_len = 0;
+
+	val = get_param_fmt(cmd, "TCLASElem_ProtoInstance_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " prot_instance=%s",
+			       val);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_ProtoNumNextHeader_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		char *prot;
+
+		switch (atoi(val)) {
+		case 17:
+			prot = "udp";
+			break;
+		case 6:
+			prot = "tcp";
+			break;
+		case 50:
+			prot = "esp";
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid protocol %d",
+					atoi(val));
+			return -1;
+		}
+
+		len = snprintf(pos, rem_len, " prot_number=%s", prot);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_FilterValue_%d_%d",
+			    num_of_scs_desc, num_of_tclas_elem);
+	if (val) {
+		len = snprintf(pos, rem_len, " filter_value=%s", (val + 2));
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	val = get_param_fmt(cmd, "TCLASElem_FilterMask_%d_%d", num_of_scs_desc,
+			    num_of_tclas_elem);
+	if (val && strlen(val) >= 2) {
+		len = snprintf(pos, rem_len, " filter_mask=%s", val + 2);
+		if (len < 0 || len >= rem_len)
+			return -1;
+
+		pos += len;
+		rem_len -= len;
+		total_len += len;
+	}
+
+	return total_len;
+}
+
+
+static enum sigma_cmd_result
+cmd_sta_send_frame_scs(struct sigma_dut *dut, struct sigma_conn *conn,
+		       const char *intf, struct sigma_cmd *cmd)
+{
+	char buf[4096], *pos;
+	const char *val, *scs_id, *classifier_type;
+	int len, rem_len, total_bytes;
+	int num_of_scs_desc = 0, num_of_tclas_elem = 0;
+
+	scs_id = get_param(cmd, "SCSDescrElem_SCSID_1");
+	if (!scs_id) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "SCS ID empty");
+		return INVALID_SEND_STATUS;
+	}
+
+	rem_len = sizeof(buf);
+	pos = buf;
+
+	len = snprintf(buf, sizeof(buf), "SCS");
+	if (len < 0 || len > rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	while (scs_id) {
+		num_of_scs_desc++;
+
+		val = get_param_fmt(cmd, "SCSDescrElem_RequestType_%d",
+				    num_of_scs_desc);
+		if (!val)
+			return INVALID_SEND_STATUS;
+
+		if (strcasecmp(val, "Add") == 0) {
+			len = snprintf(pos, rem_len, " scs_id=%s add",
+				       scs_id);
+		} else if (strcasecmp(val, "Change") == 0) {
+			len = snprintf(pos, rem_len, " scs_id=%s change",
+				       scs_id);
+		} else if (strcasecmp(val, "Remove") == 0) {
+			len = snprintf(pos, rem_len, " scs_id=%s remove",
+				       scs_id);
+			if (len < 0 || len >= rem_len)
+				goto fail;
+
+			pos += len;
+			rem_len -= len;
+			goto scs_desc_end;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: request type - %s is invalid",
+					__func__, val);
+			return INVALID_SEND_STATUS;
+		}
+
+		if (len < 0 || len >= rem_len)
+			goto fail;
+
+		pos += len;
+		rem_len -= len;
+
+		val = get_param_fmt(cmd, "IntraAccessCatElem_UP_%d",
+				    num_of_scs_desc);
+		if (!val) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"IntraAccess Priority empty");
+			return INVALID_SEND_STATUS;
+		}
+
+		len = snprintf(pos, rem_len, " scs_up=%s", val);
+		if (len < 0 || len >= rem_len)
+			goto fail;
+
+		pos += len;
+		rem_len -= len;
+
+		classifier_type = get_param_fmt(cmd,
+						"TCLASElem_ClassifierType_%d_1",
+						num_of_scs_desc);
+		if (!classifier_type) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"classifier type missing");
+			return INVALID_SEND_STATUS;
+		}
+
+		while (classifier_type) {
+			num_of_tclas_elem++;
+
+			len = snprintf(pos, rem_len, " classifier_type=%s",
+				       classifier_type);
+			if (len < 0 || len >= rem_len)
+				goto fail;
+
+			pos += len;
+			rem_len -= len;
+
+			if (strcmp(classifier_type, "10") == 0) {
+				total_bytes = get_type10_frame_classifier(
+					dut, cmd, pos, rem_len,
+					num_of_scs_desc,
+					num_of_tclas_elem);
+			} else if (strcmp(classifier_type, "4") == 0) {
+				total_bytes = get_type4_frame_classifier(
+					dut, cmd, pos, rem_len,
+					num_of_scs_desc,
+					num_of_tclas_elem);
+			} else {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"classifier_type invalid");
+				goto fail;
+			}
+
+			if (total_bytes < 0)
+				goto fail;
+
+			pos += total_bytes;
+			rem_len -= total_bytes;
+
+			classifier_type = get_param_fmt(
+				cmd, "TCLASElem_ClassifierType_%d_%d",
+				num_of_scs_desc, num_of_tclas_elem + 1);
+		}
+
+		if (num_of_tclas_elem > 1) {
+			val = get_param_fmt(cmd,
+					    "TCLASProcessingElem_Processing_%d",
+					    num_of_scs_desc);
+			if (!val) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Tclas_processing element %d empty",
+						num_of_scs_desc);
+				goto fail;
+			}
+
+			len = snprintf(pos, rem_len,
+				       " tclas_processing=%s", val);
+			if (len < 0 || len >= rem_len)
+				goto fail;
+
+			pos += len;
+			rem_len -= len;
+		}
+scs_desc_end:
+		num_of_tclas_elem = 0;
+		scs_id = get_param_fmt(cmd, "SCSDescrElem_SCSID_%d",
+				       num_of_scs_desc + 1);
+	}
+
+	if (wpa_command(intf, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send SCS frame request");
+		return STATUS_SENT_ERROR;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"SCS frame request sent: %s", buf);
+
+	return SUCCESS_SEND_STATUS;
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Failed to create SCS frame request");
+	return ERROR_SEND_STATUS;
+}
+
+
 static enum sigma_cmd_result
 cmd_sta_send_frame_mscs(struct sigma_dut *dut, struct sigma_conn *conn,
 			const char *intf, struct sigma_cmd *cmd)
@@ -11980,11 +12357,10 @@ cmd_sta_send_frame_mscs(struct sigma_dut *dut, struct sigma_conn *conn,
 	int len, rem_len;
 	u8 up_bitmap;
 
-	val = get_param(cmd, "FrameName");
 	type = get_param(cmd, "Request_Type");
-	if (!val || !type || strcasecmp(val, "MSCSReq") != 0) {
+	if (!type) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"%s: frame name or type not valid", __func__);
+				"%s: type not valid", __func__);
 		return INVALID_SEND_STATUS;
 	}
 
@@ -12103,6 +12479,28 @@ fail:
 }
 
 
+static enum sigma_cmd_result
+cmd_sta_send_frame_qm(struct sigma_dut *dut, struct sigma_conn *conn,
+		      const char *intf, struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "FrameName");
+	if (val) {
+		if (strcasecmp(val, "MSCSReq") == 0)
+			return cmd_sta_send_frame_mscs(dut, conn, intf, cmd);
+		if (strcasecmp(val, "SCSReq") == 0)
+			return cmd_sta_send_frame_scs(dut, conn, intf, cmd);
+
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: frame name - %s is invalid",
+				__func__, val);
+	}
+
+	return INVALID_SEND_STATUS;
+}
+
+
 enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 					 struct sigma_conn *conn,
 					 struct sigma_cmd *cmd)
@@ -12143,7 +12541,7 @@ enum sigma_cmd_result cmd_sta_send_frame(struct sigma_dut *dut,
 	if (val && strcasecmp(val, "WPA3") == 0)
 		return cmd_sta_send_frame_wpa3(dut, conn, intf, cmd);
 	if (val && strcasecmp(val, "QM") == 0)
-		return cmd_sta_send_frame_mscs(dut, conn, intf, cmd);
+		return cmd_sta_send_frame_qm(dut, conn, intf, cmd);
 
 	val = get_param(cmd, "TD_DISC");
 	if (val) {
