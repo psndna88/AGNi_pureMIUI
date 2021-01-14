@@ -4,6 +4,28 @@
 	/delete-property/qcom,initial-pwrlevel;
 	/delete-node/qcom,gpu-pwrlevels;
 
+	qcom,l3-pwrlevels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			compatible = "qcom,l3-pwrlevels";
+
+			qcom,l3-pwrlevel@0 {
+				reg = <0>;
+				qcom,l3-freq = <0>;
+			};
+
+			qcom,l3-pwrlevel@1 {
+				reg = <1>;
+				qcom,l3-freq = <614400000>;
+			};
+
+			qcom,l3-pwrlevel@2 {
+				reg = <2>;
+				qcom,l3-freq = <1593600000>;
+			};
+		};
+
 	/* Power levels bins */
 	qcom,gpu-pwrlevel-bins {
 		compatible="qcom,gpu-pwrlevel-bins";
