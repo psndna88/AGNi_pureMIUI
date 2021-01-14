@@ -48,6 +48,13 @@
 			reg = <0x88000000 0x7300000>;
 			label = "mss_mem";
 		};
+
+		dump_mem: mem_dump_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			size = <0x400000>;
+		};
 	};
 
 	aliases { };
@@ -289,6 +296,76 @@
 			interrupts = <0 14 0x4>;
 			reg = <0xb029000 0x1000>;
 			status = "disabled";
+		};
+	};
+
+	mem_dump {
+		compatible = "qcom,mem-dump";
+		memory-region = <&dump_mem>;
+
+		c0_context {
+			qcom,dump-size = <0x800>;
+			qcom,dump-id = <0x0>;
+		};
+
+		cnss_wlan {
+			qcom,dump-size = <0x200000>;
+			qcom,dump-id = <0xe1>;
+		};
+
+		etr_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x100>;
+		};
+
+		tmc_etf {
+			qcom,dump-size = <0x2000>;
+			qcom,dump-id = <0xf0>;
+		};
+
+		etf_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x101>;
+		};
+
+		dbgui_reg  {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe5>;
+		};
+
+		etm_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xa0>;
+		};
+
+		log_buf {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x110>;
+		};
+
+		log_idx {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x111>;
+		};
+
+		misc_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe8>;
+		};
+
+		pmic_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe4>;
+		};
+
+		vsense_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe9>;
+		};
+
+		rpm_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xea>;
 		};
 	};
 
