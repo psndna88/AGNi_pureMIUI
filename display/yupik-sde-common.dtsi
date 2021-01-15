@@ -24,10 +24,10 @@
 		qcom,sde-len = <0x494>;
 
 		qcom,sde-ctl-off = <0x16000 0x17000 0x18000
-					0x19000 0x1a000 0x1b000>;
+					0x19000>;
 		qcom,sde-ctl-size = <0x1e8>;
 		qcom,sde-ctl-display-pref = "primary", "none", "none",
-			    "none", "none", "none";
+			    "none";
 
 		qcom,sde-mixer-off = <0x45000 0x45000 0x47000 0x48000>;
 		qcom,sde-mixer-size = <0x320>;
@@ -64,6 +64,10 @@
 					0x6c000 0x6d000>;
 		qcom,sde-pp-slave = <0x0 0x0 0x0 0x0>;
 		qcom,sde-pp-size = <0xd4>;
+		qcom,sde-pp-merge-3d-id = <0x0 0x0 0x1 0x1>;
+
+		qcom,sde-merge-3d-off = <0x50000 0x50000>;
+		qcom,sde-merge-3d-size = <0x10>;
 
 		qcom,sde-cdm-off = <0x7a200>;
 		qcom,sde-cdm-size = <0x224>;
@@ -109,7 +113,7 @@
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 		qcom,sde-sspp-clk-ctrl =
 				<0x2ac 0>,
-				 <0x2ac 8>, <0x2b4 8>, <0x2bc 8>;
+				 <0x2ac 8>, <0x2b4 8>, <0x2c4 8>;
 		qcom,sde-sspp-clk-status =
 				<0x2b0 0>,
 				 <0x2b0 12>, <0x2b8 12>, <0x2c8 12>;
