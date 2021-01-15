@@ -127,6 +127,65 @@
 		};
 	};
 
+	mss: qcom,mss@4080000{
+		compatible = "qcom,pil-q6v55-mss";
+		reg = <0x4080000 0x100>,
+		      <0x194e000 0x400>,
+		      <0x4180000 0x040>,
+		      <0x1810000 0x004>;
+		reg-names = "qdsp6_base", "halt_base", "rmb_base",
+			    "restart_reg";
+
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
+			 <&gcc GCC_MSS_CFG_AHB_CLK>,
+			 <&gcc GCC_MSS_Q6_BIMC_AXI_CLK >,
+			 <&gcc GCC_BOOT_ROM_AHB_CLK>,
+			 <&gcc GCC_MSS_GPLL0_CLK_SRC>,
+			 <&rpmcc RPM_SMD_QPIC_CLK>;
+
+		clock-names = "xo", "iface_clk", "bus_clk", "mem_clk",
+			      "gpll0_mss_clk", "qpic";
+		qcom,proxy-clock-names = "xo";
+		qcom,active-clock-names = "iface_clk", "bus_clk", "mem_clk",
+					"gpll0_mss_clk";
+
+		vdd_cx-supply = <&pmd9650_s5_level>;
+		interrupts = <0 24 1>;
+		vdd_cx-voltage = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		vdd_mx-supply = <&pmd9650_l9_level>;
+		vdd_mx-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		vdd_pll-supply = <&pmd9650_l5>;
+		qcom,vdd_pll = <1800000>;
+		qcom,firmware-name = "modem";
+		qcom,pil-self-auth;
+		qcom,sysmon-id = <0>;
+		qcom,ssctl-instance-id = <0x12>;
+		qcom,override-acc;
+		qcom,qdsp6v61-1-1;
+		memory-region = <&mss_mem>;
+		qcom,reset-clk;
+		qcom,sequential-fw-load;
+
+		interrupts-extended = <&intc GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
+				<&modem_smp2p_in 0 0>,
+				<&modem_smp2p_in 2 0>,
+				<&modem_smp2p_in 1 0>,
+				<&modem_smp2p_in 3 0>,
+				<&modem_smp2p_in 7 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
+
+		qcom,smem-states = <&modem_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+
+		status = "ok";
+	};
+
 	clocks {
 		xo_board: xo-board {
 			compatible = "fixed-clock";
