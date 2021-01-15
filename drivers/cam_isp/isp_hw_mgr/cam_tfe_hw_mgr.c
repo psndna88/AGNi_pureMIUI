@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -1984,6 +1984,12 @@ int cam_tfe_cshiphy_callback(
 				&csid_clock_rate, &updated_tfe_clk);
 		}
 	}
+
+	if (!updated_csid_clk)
+		updated_csid_clk = csid_clock_rate;
+
+	if (!updated_tfe_clk)
+		updated_tfe_clk = tfe_clock_rate;
 end:
 	/* final check */
 	if ((*phy_clock_rate > updated_csid_clk) ||
