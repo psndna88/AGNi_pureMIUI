@@ -64,7 +64,7 @@ unsigned long image_size;
 
 void __init hibernate_image_size_init(void)
 {
-	image_size = ((totalram_pages * 2) / 5) * PAGE_SIZE;
+	image_size = ((totalram_pages() * 2) / 5) * PAGE_SIZE;
 }
 
 /* List of PBEs needed for restoring the pages that were allocated before

@@ -226,9 +226,9 @@ static int htable_create(struct net *net, struct xt_hashlimit_mtinfo1 *minfo,
 	if (minfo->cfg.size) {
 		size = minfo->cfg.size;
 	} else {
-		size = (totalram_pages << PAGE_SHIFT) / 16384 /
+		size = (totalram_pages() << PAGE_SHIFT) / 16384 /
 		       sizeof(struct list_head);
-		if (totalram_pages > 1024 * 1024 * 1024 / PAGE_SIZE)
+		if (totalram_pages() > 1024 * 1024 * 1024 / PAGE_SIZE)
 			size = 8192;
 		if (size < 16)
 			size = 16;

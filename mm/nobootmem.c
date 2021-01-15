@@ -87,7 +87,7 @@ void free_bootmem_late(unsigned long addr, unsigned long size)
 
 	for (; cursor < end; cursor++) {
 		__free_pages_bootmem(pfn_to_page(cursor), cursor, 0);
-		totalram_pages++;
+		totalram_pages_inc();
 	}
 }
 
@@ -196,7 +196,7 @@ unsigned long __init free_all_bootmem(void)
 	 *  low ram will be on Node1
 	 */
 	pages = free_low_memory_core_early();
-	totalram_pages += pages;
+	totalram_pages_add(pages);
 
 	return pages;
 }
