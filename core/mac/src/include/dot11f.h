@@ -10249,6 +10249,8 @@ typedef struct sDot11fBeacon{
 	tDot11fIEP2PBeacon                   P2PBeacon;
 	tDot11fIEVHTCaps                     VHTCaps;
 	tDot11fIEVHTOperation                VHTOperation;
+	uint16_t                             num_transmit_power_env;
+	tDot11fIEtransmit_power_env          transmit_power_env[8];
 	tDot11fIEVHTExtBssLoad               VHTExtBssLoad;
 	tDot11fIEExtCap                      ExtCap;
 	tDot11fIEOperatingMode               OperatingMode;
