@@ -182,6 +182,7 @@
 			snps,is-utmi-l1-suspend;
 			snps,dis-u1-entry-quirk;
 			snps,dis-u2-entry-quirk;
+			snps,dis_u3_susphy_quirk;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
