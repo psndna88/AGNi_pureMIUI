@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/err.h>
@@ -52,6 +52,7 @@ static int dp_pll_clock_register(struct dp_pll *pll)
 	switch (pll->revision) {
 	case DP_PLL_5NM_V1:
 	case DP_PLL_5NM_V2:
+	case DP_PLL_7NM:
 		rc = dp_pll_clock_register_5nm(pll);
 		break;
 	default:
@@ -67,6 +68,7 @@ static void dp_pll_clock_unregister(struct dp_pll *pll)
 	switch (pll->revision) {
 	case DP_PLL_5NM_V1:
 	case DP_PLL_5NM_V2:
+	case DP_PLL_7NM:
 		dp_pll_clock_unregister_5nm(pll);
 		break;
 	default:
@@ -102,6 +104,8 @@ struct dp_pll *dp_pll_get(struct dp_pll_in *in)
 			pll->revision = DP_PLL_5NM_V1;
 		} else if (!strcmp(label, "5nm-v2")) {
 			pll->revision = DP_PLL_5NM_V2;
+		} else if (!strcmp(label, "7nm")) {
+			pll->revision = DP_PLL_7NM;
 		} else {
 			DP_ERR("Unsupported pll revision\n");
 			rc = -ENOTSUPP;
