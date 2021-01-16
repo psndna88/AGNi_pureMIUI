@@ -1005,7 +1005,7 @@ u32 msm_vidc_calculate_enc_output_frame_size(struct msm_vidc_inst *inst)
 		goto calc_done;
 
 	if (mbs_per_frame <= NUM_MBS_360P)
-		goto calc_done; /* Default frame_size = YUVsize * 2 */
+		(void)frame_size; /* Default frame_size = YUVsize * 2 */
 	else if (mbs_per_frame <= NUM_MBS_4k)
 		frame_size = frame_size >> 2;
 	else
