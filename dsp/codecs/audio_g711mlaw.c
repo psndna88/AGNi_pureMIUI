@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2016-2017, 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2017, 2019-2021 The Linux Foundation. All rights reserved.
  */
 
 #include <linux/types.h>
@@ -212,17 +212,22 @@ static int audio_open(struct inode *inode, struct file *file)
 {
 	struct q6audio_aio *audio = NULL;
 	int rc = 0;
+	unsigned long flags = 0;
 	/* 4 bytes represents decoder number, 1 byte for terminate string */
 	char name[sizeof "msm_g711_" + 5];
 
+	spin_lock_irqsave(&enc_dec_lock, flags);
 	audio = kzalloc(sizeof(struct q6audio_aio), GFP_KERNEL);
 
-	if (!audio)
+	if (!audio) {
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		return -ENOMEM;
+	}
 	audio->codec_cfg = kzalloc(sizeof(struct msm_audio_g711_dec_config),
 					GFP_KERNEL);
 	if (!audio->codec_cfg) {
 		kfree(audio);
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		return -ENOMEM;
 	}
 
@@ -241,14 +246,17 @@ static int audio_open(struct inode *inode, struct file *file)
 					__func__);
 		kfree(audio->codec_cfg);
 		kfree(audio);
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		return -ENOMEM;
 	}
 	rc = audio_aio_open(audio, file);
 	if (rc < 0) {
 		pr_err_ratelimited("%s: audio_aio_open rc=%d\n",
 			__func__, rc);
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		goto fail;
 	}
+	spin_unlock_irqrestore(&enc_dec_lock, flags);
 	/* open in T/NT mode */ /*foramt:G711_ALAW*/
 	if ((file->f_mode & FMODE_WRITE) && (file->f_mode & FMODE_READ)) {
 		rc = q6asm_open_read_write(audio->ac, FORMAT_LINEAR_PCM,
