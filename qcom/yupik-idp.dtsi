@@ -5,6 +5,7 @@
 #include "pm7325b.dtsi"
 #include "yupik-audio-overlay.dtsi"
 #include "yupik-thermal-overlay.dtsi"
+#include "display/yupik-sde-display-idp.dtsi"
 
 &soc {
 	gpio_keys {
@@ -324,5 +325,7 @@
 		novatek,reset-gpio = <&tlmm 105 0x00>;
 		novatek,irq-gpio = <&tlmm 81 0x2008>;
 
+		panel = <&dsi_nt36672e_fhd_plus_60_video
+			&dsi_nt36672e_fhd_plus_144_video>;
 	};
 };
