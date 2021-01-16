@@ -1103,6 +1103,20 @@
 			};
 		};
 
+		bt_en_sleep: bt_en_sleep {
+			mux {
+				pins = "gpio85";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio85";
+				drive-strength = <2>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+
 		qupv3_se14_2uart_pins: qupv3_se14_2uart_pins {
 			qupv3_se14_default_txrx: qupv3_se14_default_txrx {
 				mux {
