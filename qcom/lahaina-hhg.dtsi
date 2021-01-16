@@ -44,3 +44,56 @@
 
 	qcom,wsa-max-devs = <2>;
 };
+
+&tlmm {
+	fan: fan_pin {
+		mux {
+			pins = "gpio107","gpio108";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio107","gpio108";
+			bias-pull-up;
+			drive-strength = <16>;
+		};
+	};
+};
+
+&pm8008i_l7 {
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3400000>;
+};
+
+&soc {
+	i2c@0 {
+		compatible = "i2c-gpio";
+		reg = <0x0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan>;
+		gpios = <&tlmm 107 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN) /* sda */>,
+			<&tlmm 108 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN) /* scl */>;
+
+		i2c-gpio,sda-open-drain;
+		i2c-gpio,scl-open-drain;
+		i2c-gpio,delay-us = <5>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		fancontroller: max31760@50 {
+			compatible = "maxim,max31760";
+			reg = <0x50>;
+			maxim,vdd-supply = <&pm8008i_l7>;
+			regulator-names = "maxim,vdd";
+			maxim,vdd-max-uv = <3400000>;
+			maxim,vdd-min-uv = <3300000>;
+			maxim,vdd-load-ua = <300000>;
+			maxim,vcca-supply = <&pm8350_s10>;
+			maxim,vcca-max-uv = <1800000>;
+			maxim,vcca-min-uv = <1800000>;
+			maxim,vcca-load-ua = <600000>;
+			maxim,fan_en_gpio = <&tlmm 48 0x00>;
+			status = "ok";
+		};
+	};
+};
