@@ -198,6 +198,7 @@ static unsigned long zcache_scan(struct shrinker *s, struct shrink_control *sc)
 	static bool running;
 	int i = 0;
 	int retries;
+	unsigned long int totalrampages;
 
 	if (running)
 		goto end;
@@ -208,9 +209,10 @@ static unsigned long zcache_scan(struct shrinker *s, struct shrink_control *sc)
 	pool = zcache_pages();
 
 	file_gap = pool - file;
+	totalrampages = totalram_pages();
 
 	if ((file_gap >= 0) &&
-		(totalram_pages * zcache_clear_percent / 100 > file)) {
+		(totalrampages * zcache_clear_percent / 100 > file)) {
 		file_gap = pool;
 		zcache_pool_shrink++;
 		goto reclaim;
@@ -399,11 +401,13 @@ cleanup:
  */
 static bool zcache_is_full(void)
 {
+	unsigned long int totalrampages;
 	long file = global_page_state(NR_FILE_PAGES);
+	totalrampages = totalram_pages();
 
-	return ((totalram_pages * zcache_max_pool_percent / 100 <
+	return ((totalrampages * zcache_max_pool_percent / 100 <
 			zcache_pages()) ||
-			(totalram_pages * zcache_clear_percent / 100 >
+			(totalrampages * zcache_clear_percent / 100 >
 			file));
 }
 
