@@ -169,6 +169,7 @@ err_oom:
 
 int wg_ratelimiter_init(void)
 {
+	unsigned long int totalrampages;
 	mutex_lock(&init_lock);
 	if (++init_refcnt != 1)
 		goto out;
@@ -182,9 +183,10 @@ int wg_ratelimiter_init(void)
 	 * we borrow their wisdom about good table sizes on different systems
 	 * dependent on RAM. This calculation here comes from there.
 	 */
-	table_size = (totalram_pages() > (1U << 30) / PAGE_SIZE) ? 8192 :
+	totalrampages = totalram_pages();
+	table_size = (totalrampages > (1U << 30) / PAGE_SIZE) ? 8192 :
 		max_t(unsigned long, 16, roundup_pow_of_two(
-			(totalram_pages() << PAGE_SHIFT) /
+			(totalrampages << PAGE_SHIFT) /
 			(1U << 14) / sizeof(struct hlist_head)));
 	max_entries = table_size * 8;
 

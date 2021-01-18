@@ -6,7 +6,6 @@
 #ifndef _LINUX_AGNI_MEMINFO_H
 #define _LINUX_AGNI_MEMINFO_H
 
-extern unsigned long totalram_pages;
 extern long si_mem_available(void);
 extern bool triggerswapping;
 extern bool agni_memprober(void);
