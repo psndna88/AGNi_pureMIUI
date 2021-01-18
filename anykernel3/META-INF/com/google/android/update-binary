@@ -86,6 +86,10 @@ umount_apex() {
   unset ANDROID_RUNTIME_ROOT ANDROID_TZDATA_ROOT BOOTCLASSPATH;
 }
 mount_all() {
+  /bin/blockdev --setrw /dev/block/mapper/system;
+  /bin/blockdev --setrw /dev/block/mapper/system_ext;
+  /bin/blockdev --setrw /dev/block/mapper/vendor;
+  /bin/blockdev --setrw /dev/block/mapper/product;
   if ! is_mounted /data; then
     $BB mount /data;
     UMOUNT_DATA=1;

@@ -1,9 +1,10 @@
 # LMKD
-ro.config.low_ram=false
-ro.lmk.log_stats=false
-ro.lmk.use_psi=true
-ro.lmk.psi_partial_stall_ms=70
-ro.lmk.debug=false
+#ro.config.low_ram=false
+#ro.lmk.log_stats=false
+#ro.lmk.use_psi=true
+#ro.lmk.psi_partial_stall_ms=70
+#ro.lmk.debug=false
+
 # Disable QCOM SVI
 ro.vendor.display.svi=0
 

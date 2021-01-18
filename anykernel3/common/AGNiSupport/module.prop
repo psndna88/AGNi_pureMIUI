@@ -1,6 +1,6 @@
 id=AGNiSupport
 name=AGNi Kernel MIATOLL Support Module (AOSP)
-version=1.0
-versionCode=09012021
+version=2.0
+versionCode=18012021
 author=psndna88
-description=This module disables Qualcomm SVI feature causing random reboots, ensures LMKD runs & tweaks the EAS HAL.
+description=This module disables Qualcomm SVI feature causing random reboots & tweaks the EAS HAL.
