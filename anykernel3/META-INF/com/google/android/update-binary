@@ -86,6 +86,10 @@ umount_apex() {
   unset ANDROID_RUNTIME_ROOT ANDROID_TZDATA_ROOT BOOTCLASSPATH;
 }
 mount_all() {
+  /bin/blockdev --setrw /dev/block/mapper/system;
+  /bin/blockdev --setrw /dev/block/mapper/system_ext;
+  /bin/blockdev --setrw /dev/block/mapper/vendor;
+  /bin/blockdev --setrw /dev/block/mapper/product;
   if ! is_mounted /data; then
     $BB mount /data;
     UMOUNT_DATA=1;
@@ -421,6 +425,87 @@ fi;
 ui_print " " "AGNi Kernel by psndna88 @ xda-developers" " ";
 ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
+### AGNi: ROM type detection
+umount_all;
+# $BB mount -o rw /vendor;
+$BB mount /vendor;
+if [ "`$BB grep system_root /etc/fstab`" ]; then
+#	$BB mount -o rw /system_root;
+	$BB mount /system_root;
+else
+#	$BB mount -o rw /system;
+	$BB mount /system;
+fi;
+if [ -f /system/build.prop ]; then
+	buildprop=/system/build.prop;
+	buildproploc=/system;
+elif [ -f /system/system/build.prop ]; then
+	buildprop=/system/system/build.prop;
+	buildproploc=/system/system;
+elif [ -f /system_root/system/build.prop ]; then
+	buildprop=/system_root/system/build.prop;
+	buildproploc=/system_root/system;
+elif [ -f /system_root/build.prop ]; then
+	buildprop=/system_root/build.prop;
+	buildproploc=/system_root;
+else
+	ui_print " " "Unable to read from build.prop" " ";
+#	ui_print "   DON'T YOU HAVE ANY ROM INSTALLED ?????";
+#	ui_print " " " Terminating Installation !" " ";
+#	cleanup;
+#	exit;
+fi;
+aver=$(file_getprop $buildprop ro.build.version.release);
+$BB echo "Detected android version: $aver";
+if ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
+	ANDROID_VER="R";
+	ui_print " " "AGNi detected Android R" " ";
+elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
+	ANDROID_VER="Q";
+	ui_print "AGNi detected Android Q";
+else
+	ANDROID_VER="Q";
+#	ANDROID_VER="UNSUPPORTED";
+	ui_print " " ">> Unsupported Android Version OR couldn't read from system." " ";
+	ui_print " " "  So, Assuming Android 10 and continuing..." " ";
+#	ui_print " " " Terminating Installation !" " ";
+#	cleanup;
+#	exit;
+fi;
+$BB echo "$ANDROID_VER" > $AKHOME/ANDROIDVER;
+if [ "`$BB grep ro.miui $buildprop`" ]; then
+	MIUI_ROM="true";
+	ui_print " " "AGNi detected MIUI rom." " ";
+#	if [ "`$BB grep ro.miui.ui.version.name=V12 $buildprop`" ]; then
+#		MIUI_VER="12";
+#		ui_print " " "AGNi detected MIUI 12" " ";
+#	elif [ "`$BB grep ro.miui.ui.version.name=V11 $buildprop`" ]; then
+#		MIUI_VER="11";
+#		ui_print " " "AGNi detected MIUI 11" " ";
+#	else
+#		MIUI_VER="UNSUPPORTED";
+#		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
+#	fi;
+else
+	MIUI_ROM="false";
+#	MIUI_VER="none";
+	ui_print " " "AGNi detected non-MIUI rom." " ";
+fi;
+#$BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
+$BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
+
+### AGNi: init exec hooks START
+#if [ ! "`$BB grep AGNI_HERE /vendor/etc/init/hw/init.qcom.rc`" ]; then
+#	$BB cp /vendor/etc/init/hw/init.qcom.rc /vendor/etc/init/hw/init.qcom.rc.bak;
+#    $BB echo "`$BB cat $AKHOME/tools/init.rc-append`" >> /vendor/etc/init/hw/init.qcom.rc;
+#    $BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
+#    /sbin/restorecon -v /vendor/etc/init/hw/init.qcom.rc;
+#fi;
+#/sbin/restorecon -v /vendor/etc/init/hw/init.qcom.sh;
+#/sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
+### AGNi: init exec hooks END
+$BB sync;
+umount_all;
 setup_env;
 do_devicecheck;
 do_versioncheck;
