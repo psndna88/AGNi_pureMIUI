@@ -14497,7 +14497,6 @@ static inline void csr_update_sae_config(struct join_req *csr_join_req,
 { }
 #endif
 
-#if defined(WLAN_FEATURE_11AX) && defined(WLAN_SUPPORT_TWT)
 /**
  * csr_get_nss_supported_by_sta_and_ap() - finds out nss from session
  * and beacon from AP
@@ -14580,6 +14579,7 @@ csr_check_vendor_ap_3_present(struct mac_context *mac_ctx, uint8_t *ie,
 	return ret;
 }
 
+#if defined(WLAN_FEATURE_11AX) && defined(WLAN_SUPPORT_TWT)
 /**
  * csr_enable_twt() - Check if its allowed to enable twt for this session
  * @ie: pointer to beacon/probe resp ie's
