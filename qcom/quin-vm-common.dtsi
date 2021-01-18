@@ -21,7 +21,7 @@
 		ranges;
 
 		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
+		linux_cma: linux,cma {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
@@ -50,22 +50,32 @@
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
+			boot_devices = "vdevs/1c140000.virtio_blk,vdevs/1c0b0000.virtio_blk,vdevs/1c0f0000.virtio_blk";
+
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,system,vendor";
 			};
 
 			fstab {
 				compatible = "android,fstab";
 				vendor {
 					compatible = "android,vendor";
-					dev="/dev/block/platform/vdevs/1c0f0000.virtio_blk/vdc";
+					dev="/dev/block/platform/vdevs/1c0f0000.virtio_blk/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait";
+					fsmgr_flags = "wait,avb";
 					status = "ok";
 				};
 			};
+		};
+	};
+
+	vdevs {
+		compatible = "simple-bus";
+		virtio_input_keyboard@1c150000 {
+			compatible = "virtio,mmio";
+			virtio,wakeup;
 		};
 	};
 };
@@ -115,7 +125,7 @@
 
 		system_heap: qcom,ion-heap@25 {
 			reg = <ION_SYSTEM_HEAP_ID>;
-			qcom,ion-heap-type = "SYSTEM";
+			qcom,ion-heap-type = "MSM_SYSTEM";
 		};
 
 		qcom,ion-heap@27 { /* QSEECOM HEAP */
@@ -128,6 +138,83 @@
 			reg = <ION_QSECOM_TA_HEAP_ID>;
 			memory-region = <&qseecom_ta_mem>;
 			qcom,ion-heap-type = "DMA";
+		};
+	};
+
+	hab: qcom,hab {
+		compatible = "qcom,hab";
+		vmid = <2>;
+
+		mmidgrp100: mmidgrp100 {
+			grp-start-id = <100>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp200: mmidgrp200 {
+			grp-start-id = <200>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp300: mmidgrp300 {
+			grp-start-id = <300>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp400: mmidgrp400 {
+			grp-start-id = <400>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp500: mmidgrp500 {
+			grp-start-id = <500>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp600: mmidgrp600 {
+			grp-start-id = <600>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp700: mmidgrp700 {
+			grp-start-id = <700>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp800: mmidgrp800 {
+			grp-start-id = <800>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp900: mmidgrp900 {
+			grp-start-id = <900>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp1000: mmidgrp1000 {
+			grp-start-id = <1000>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp1100: mmidgrp1100 {
+			grp-start-id = <1100>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp1200: mmidgrp1200 {
+			grp-start-id = <1200>;
+			role = "fe";
+			remote-vmids = <0>;
 		};
 	};
 
