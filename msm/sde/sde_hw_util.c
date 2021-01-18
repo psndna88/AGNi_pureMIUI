@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
 
@@ -77,6 +77,8 @@ void sde_reg_write(struct sde_hw_blk_reg_map *c,
 		SDE_DEBUG_DRIVER("[%s:0x%X] <= 0x%X\n",
 				name, c->blk_off + reg_off, val);
 	writel_relaxed(val, c->base_off + c->blk_off + reg_off);
+	SDE_REG_LOG(c->log_mask ? ilog2(c->log_mask)+1 : 0,
+			val, c->blk_off + reg_off);
 }
 
 int sde_reg_read(struct sde_hw_blk_reg_map *c, u32 reg_off)
