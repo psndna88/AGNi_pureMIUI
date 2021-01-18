@@ -32,7 +32,7 @@
 	qcom,platform-te-gpio = <&tlmm 80 0>;
 	qcom,panel-te-source = <0>;
 
-	vddio-supply = <&L12C>;
+	vddio-supply = <&L8C>;
 	lab-supply = <&lcdb_ldo_vreg>;
 	ibb-supply = <&lcdb_ncp_vreg>;
 };
