@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_csiphy_soc.h"
@@ -14,6 +14,7 @@
 #include "include/cam_csiphy_1_2_5_hwreg.h"
 #include "include/cam_csiphy_2_0_hwreg.h"
 #include "include/cam_csiphy_2_1_0_hwreg.h"
+#include "cam_subdev.h"
 
 /* Clock divide factor for CPHY spec v1.0 */
 #define CSIPHY_DIVISOR_16           16
@@ -189,6 +190,7 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 	int32_t rc = 0;
 	struct cam_hw_soc_info   *soc_info;
 	enum cam_vote_level vote_level = CAM_SVS_VOTE;
+	unsigned long clk_rate = 0;
 
 	soc_info = &csiphy_dev->soc_info;
 
@@ -209,6 +211,11 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 
 	rc = cam_soc_util_set_src_clk_rate(soc_info,
 		soc_info->clk_rate[0][soc_info->src_clk_idx]);
+	clk_rate = cam_soc_util_get_clk_rate_applied(soc_info,
+		soc_info->src_clk_idx, true, vote_level);
+	cam_subdev_notify_message(CAM_TFE_DEVICE_TYPE,
+		CAM_SUBDEV_MESSAGE_CLOCK_UPDATE,
+		clk_rate);
 
 	if (rc < 0) {
 		CAM_ERR(CAM_CSIPHY, "csiphy_clk_set_rate failed rc: %d", rc);

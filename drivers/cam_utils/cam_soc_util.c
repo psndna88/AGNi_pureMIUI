@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -310,6 +310,32 @@ static int cam_soc_util_get_clk_level_to_apply(
 		req_level, *apply_level);
 
 	return 0;
+}
+
+unsigned long cam_soc_util_get_clk_rate_applied(
+	struct cam_hw_soc_info *soc_info, int32_t index, bool is_src,
+	enum cam_vote_level clk_level)
+{
+	unsigned long clk_rate = 0;
+	struct clk *clk = NULL;
+	int rc = 0;
+	enum cam_vote_level apply_level;
+
+	if (is_src) {
+		clk = soc_info->clk[index];
+		clk_rate = clk_get_rate(clk);
+	}
+	else {
+		rc = cam_soc_util_get_clk_level_to_apply(soc_info, clk_level,
+			&apply_level);
+		if (rc)
+			return rc;
+		if(soc_info->clk_rate[apply_level][index] > 0) {
+				clk = soc_info->clk[index];
+				clk_rate = clk_get_rate(clk);
+		}
+	}
+	return clk_rate;
 }
 
 int cam_soc_util_irq_enable(struct cam_hw_soc_info *soc_info)
