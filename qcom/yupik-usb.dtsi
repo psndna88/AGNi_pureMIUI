@@ -49,6 +49,8 @@
 			0x144 /* GSI_RING_BASE_ADDR_H */
 			0x1a4>; /* GSI_IF_STS */
 		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
+		usb-role-switch;
+		extcon = <&eud>;
 
 		interconnect-names = "usb-ddr", "usb-ipa", "ddr-usb";
 		interconnects = <&aggre1_noc MASTER_USB3_0 &mc_virt SLAVE_EBI1>,
@@ -73,7 +75,13 @@
 			snps,ssp-u3-u0-quirk;
 			tx-fifo-resize;
 			maximum-speed = "super-speed";
-			dr_mode = "peripheral";
+			dr_mode = "otg";
+		};
+
+		port {
+			usb_port0: endpoint {
+				remote-endpoint = <&usb_port0_connector>;
+			};
 		};
 	};
 
