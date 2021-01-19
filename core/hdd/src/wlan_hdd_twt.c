@@ -2493,15 +2493,15 @@ hdd_twt_pack_get_stats_resp_nlmsg(struct sk_buff *reply_skb,
 			return QDF_STATUS_E_INVAL;
 		}
 
-		hdd_debug("%d wake duration %d num sp cycles %d",
-			  params[i].dialog_id, wake_duration,
-			  params[i].num_sp_cycles);
 		wake_duration = get_session_wake_duration(params[i].dialog_id);
 		attr = QCA_WLAN_VENDOR_ATTR_TWT_STATS_SESSION_WAKE_DURATION;
 		if (nla_put_u32(reply_skb, attr, wake_duration)) {
 			hdd_err("get_params failed to put Wake duration");
 			return QDF_STATUS_E_INVAL;
 		}
+		hdd_debug("%d wake duration %d num sp cycles %d",
+			  params[i].dialog_id, wake_duration,
+			  params[i].num_sp_cycles);
 
 		attr = QCA_WLAN_VENDOR_ATTR_TWT_STATS_NUM_SP_ITERATIONS;
 		if (nla_put_u32(reply_skb, attr, params[i].num_sp_cycles)) {
@@ -2651,6 +2651,9 @@ hdd_twt_request_session_traffic_stats(struct hdd_adapter *adapter,
 		wlan_cfg80211_vendor_free_skb(reply_skb);
 		return qdf_status_to_os_return(status);
 	}
+
+	qdf_mem_free(event->twt_infra_cp_stats);
+	qdf_mem_free(event);
 
 	return wlan_cfg80211_vendor_cmd_reply(reply_skb);
 }
