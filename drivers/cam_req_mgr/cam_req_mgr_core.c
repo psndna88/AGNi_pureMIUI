@@ -3153,8 +3153,12 @@ static int __cam_req_mgr_check_for_dual_trigger(
 		(link->trigger_cnt[1] &&
 		(link->trigger_cnt[1] - link->trigger_cnt[0] > 1))) {
 
-		CAM_ERR(CAM_CRM,
+		CAM_WARN(CAM_CRM,
 			"One of the devices could not generate trigger");
+
+		link->trigger_cnt[0] = 0;
+		link->trigger_cnt[1] = 0;
+		CAM_DBG(CAM_CRM, "Reset the trigger cnt");
 		return rc;
 	}
 
