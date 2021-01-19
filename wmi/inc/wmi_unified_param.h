@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5465,6 +5465,7 @@ struct wmi_host_fw_abi_ver {
  * @max_frag_entries: Max frag entries
  * @agile_capability: Target Agile Capability
  *      End common
+ * @enable_pci_gen: To enable pci gen switch
  * @max_peer_ext_stats: Max peer EXT stats
  * @smart_ant_cap: Smart antenna capabilities
  * @BK_Minfree: BIN configuration for BK traffic
@@ -5559,6 +5560,7 @@ typedef struct {
 	uint32_t max_frag_entries;
 	uint32_t scheduler_params;
 	uint32_t agile_capability;
+	uint32_t enable_pci_gen;
 	/* End common */
 
 	/* Added for Beeliner */
