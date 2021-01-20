@@ -336,10 +336,12 @@
 		L17A: pm8195_1_l17: regulator-pm8195-1-l17 {
 			regulator-name = "pm8195_1_l17";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1700000>;
+			regulator-min-microvolt = <2504000>;
 			regulator-max-microvolt = <3544000>;
-			qcom,init-voltage = <1700000>;
+			qcom,init-voltage = <2904000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
+			regulator-system-load = <1>;
+			regulator-always-on;
 		};
 	};
 
@@ -694,6 +696,7 @@
 			regulator-max-microvolt = <3544000>;
 			qcom,init-voltage = <2500000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
+			regulator-always-on;
 		};
 	};
 
