@@ -1416,7 +1416,6 @@
 
 		coresight-name = "coresight-tpdm-dlct";
 
-		status = "disabled";
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
