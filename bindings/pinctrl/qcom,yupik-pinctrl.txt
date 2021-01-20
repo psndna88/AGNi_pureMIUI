@@ -45,6 +45,11 @@ YUPIK platform.
 	Value type: <phandle>
 	Definition: A phandle to the wakeup interrupt controller for the SoC.
 
+- qcom,tlmm-mpm-wake-control:
+	Usage: optional
+	Value type: <bool>
+	Definition: provide mpm wake control capability for a pin.
+
 Please refer to ../gpio/gpio.txt and ../interrupt-controller/interrupts.txt for
 a general description of GPIO and interrupt bindings.
 
