@@ -508,6 +508,7 @@ struct sigma_dut {
 		AP_inval
 	} ap_mode;
 	int ap_channel;
+	int ap_tag_channel[MAX_WLAN_TAGS - 1];
 	int ap_rts;
 	int ap_frgmnt;
 	int ap_bcnint;
@@ -608,6 +609,7 @@ struct sigma_dut {
 	int ap_sae_pk_omit;
 	int sae_confirm_immediate;
 	char ap_passphrase[101];
+	char ap_tag_passphrase[MAX_WLAN_TAGS - 1][101];
 	char ap_psk[65];
 	char *ap_sae_passwords;
 	char *ap_sae_pk_modifier;

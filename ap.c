@@ -757,12 +757,17 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 
 	val = get_param(cmd, "CHANNEL");
 	if (val) {
-		const char *pos;
-		dut->ap_channel = atoi(val);
-		pos = strchr(val, ';');
-		if (pos) {
-			pos++;
-			dut->ap_channel_1 = atoi(pos);
+		if (wlan_tag == 1) {
+			const char *pos;
+
+			dut->ap_channel = atoi(val);
+			pos = strchr(val, ';');
+			if (pos) {
+				pos++;
+				dut->ap_channel_1 = atoi(pos);
+			}
+		} else {
+			dut->ap_tag_channel[wlan_tag - 2] = atoi(val);
 		}
 	}
 
@@ -777,7 +782,10 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	/* Overwrite the AP channel with DFS channel if configured */
 	val = get_param(cmd, "dfs_chan");
 	if (val) {
-		dut->ap_channel = atoi(val);
+		if (wlan_tag == 1)
+			dut->ap_channel = atoi(val);
+		else
+			dut->ap_tag_channel[wlan_tag - 2] = atoi(val);
 	}
 
 	val = get_param(cmd, "dfs_mode");
@@ -801,8 +809,8 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		pos = strchr(str, ';');
 		if (pos)
 			*pos++ = '\0';
-
-		dut->ap_is_dual = 0;
+		if (wlan_tag != 2)
+			dut->ap_is_dual = 0;
 		dut->ap_mode = get_mode(str);
 		if (dut->ap_mode == AP_inval) {
 			send_resp(dut, conn, SIGMA_INVALID,
@@ -867,6 +875,9 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	case AP_inval:
 		break;
 	}
+
+	if (dut->ap_is_dual)
+		dut->use_5g = 1;
 
 	val = get_param(cmd, "WME");
 	if (val) {
@@ -2238,8 +2249,25 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 					  "errorCode,Unsupported KEYMGNT");
 				return 0;
 			}
-			return 1;
 		}
+
+		val = get_param(cmd, "PSK");
+		if (!val)
+			val = get_param(cmd, "passphrase");
+		if (val) {
+			if (strlen(val) > 64) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Too long PSK/passphrase");
+				return -1;
+			}
+			if (strlen(val) >
+			    sizeof(dut->ap_tag_passphrase[wlan_tag - 2]) - 1)
+				return -1;
+			strlcpy(dut->ap_tag_passphrase[wlan_tag - 2], val,
+				sizeof(dut->ap_tag_passphrase[wlan_tag - 2]));
+		}
+
+		return 1;
 	}
 
 	val = get_param(cmd, "KEYMGNT");
@@ -9397,9 +9425,13 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		/*
 		 * Reset all tagged SSIDs to NULL-string and all key management
 		 * to open.
+		 * Reset all tagged passphrases to NULL-string and all channel
+		 * to zero.
 		 */
 		dut->ap_tag_ssid[i][0] = '\0';
 		dut->ap_tag_key_mgmt[i] = AP2_OPEN;
+		dut->ap_tag_passphrase[i][0] = '\0';
+		dut->ap_tag_channel[i] = 0;
 	}
 
 	drv = get_driver_type(dut);
