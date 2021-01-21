@@ -24,7 +24,6 @@
 			io-channels = <&pm8195_1_vadc ADC5_DIE_TEMP>;
 			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
-			qcom,temperature-threshold-set = <1>;
 		};
 
 		pm8195_1_vadc: vadc@3100 {
@@ -136,7 +135,6 @@
 			io-channels = <&pm8195_2_vadc ADC5_DIE_TEMP>;
 			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
-			qcom,temperature-threshold-set = <1>;
 		};
 
 		pm8195_2_vadc: vadc@3100 {
@@ -216,7 +214,6 @@
 			io-channels = <&pm8195_3_vadc ADC5_DIE_TEMP>;
 			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
-			qcom,temperature-threshold-set = <1>;
 		};
 
 		pm8195_3_vadc: vadc@3100 {

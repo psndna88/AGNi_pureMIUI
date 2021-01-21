@@ -30,11 +30,10 @@ pm8150_1_gpios: &pm8150_gpios {
 		pm8150_2_tz: qcom,temp-alarm@2400 {
 			compatible = "qcom,spmi-temp-alarm";
 			reg = <0x2400>;
-			interrupts = <0x4 0x24 0x0 IRQ_TYPE_EDGE_RISING>;
+			interrupts = <0x4 0x24 0x0 IRQ_TYPE_EDGE_BOTH>;
 			io-channels = <&pm8150_2_vadc ADC5_DIE_TEMP>;
 			io-channel-names = "thermal";
 			#thermal-sensor-cells = <0>;
-			qcom,temperature-threshold-set = <1>;
 		};
 
 		qcom,power-on@800 {
@@ -142,25 +141,24 @@ pm8150_1_gpios: &pm8150_gpios {
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150_2_tz>;
-		wake-capable-sensor;
 
 		trips {
 			pm8150_2_trip0: trip0 {
-				temperature = <95000>;
+				temperature = <105000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
 
 			pm8150_2_trip1: trip1 {
-				temperature = <115000>;
+				temperature = <125000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 
 			trip2 {
-				temperature = <145000>;
+				temperature = <155000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 		};
 
