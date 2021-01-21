@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/ratelimit.h>
@@ -2639,11 +2639,6 @@ static void cam_vfe_bus_update_ubwc_meta_addr(
 	if (rc) {
 		CAM_ERR(CAM_ISP, "Failed to get HW version rc: %d", rc);
 		goto end;
-	} else if ((camera_hw_version < CAM_CPAS_TITAN_170_V100) ||
-		(camera_hw_version > CAM_CPAS_TITAN_175_V130)) {
-		CAM_ERR(CAM_ISP, "Invalid HW version: %d",
-			camera_hw_version);
-		goto end;
 	}
 
 	switch (camera_hw_version) {
@@ -2670,6 +2665,8 @@ static void cam_vfe_bus_update_ubwc_meta_addr(
 			image_buf);
 		break;
 	default:
+		CAM_ERR(CAM_ISP, "Invalid HW version: %d",
+			camera_hw_version);
 		break;
 	}
 end:
