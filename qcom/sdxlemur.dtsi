@@ -535,6 +535,22 @@
 				<GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
+		interconnects = <&system_noc MASTER_SDCC_1 &mc_virt SLAVE_EBI1>;
+		interconnect-names = "sdhc-ddr";
+		qcom,msm-bus,name = "sdhc1";
+		qcom,msm-bus,num-cases = <7>;
+		qcom,msm-bus,num-paths = <1>;
+
+		qcom,msm-bus,vectors-KBps = <0 0>, /* No vote */
+				<273000 210000>,    /* 400 KB/s*/
+				<273000 210000>, /* 25 MB/s */
+				<273000 210000>, /* 50 MB/s */
+				<273000 210000>, /* 100 MB/s */
+				<1057000 725000>, /* 200 MB/s */
+				<2048000 4096000>; /* Max. bandwidth */
+		qcom,bus-bw-vectors-bps = <0 400000 25000000 50000000
+			100000000 200000000 4294967295>;
+
 		clocks = <&gcc GCC_SDCC1_APPS_CLK>,
 			<&gcc GCC_SDCC1_AHB_CLK>;
 		clock-names = "core", "iface";
@@ -543,6 +559,8 @@
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
 
 		status = "disabled";
 
