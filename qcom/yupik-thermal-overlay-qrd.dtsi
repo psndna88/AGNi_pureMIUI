@@ -10,6 +10,7 @@
 
 &thermal_zones {
 	socd {
+		disable-thermal-zone;
 		cooling-maps {
 			socd_cpu4 {
 				trip = <&socd_trip>;
@@ -34,6 +35,7 @@
 	};
 
 	pm8350b-bcl-lvl0 {
+		disable-thermal-zone;
 		cooling-maps {
 			vbat_cpu4 {
 				trip = <&b_bcl_lvl0>;
@@ -58,6 +60,7 @@
 	};
 
 	pm8350b-bcl-lvl1 {
+		disable-thermal-zone;
 		cooling-maps {
 			vbat_cpu6 {
 				trip = <&b_bcl_lvl1>;
@@ -82,6 +85,7 @@
 	};
 
 	pm8350b-bcl-lvl2 {
+		disable-thermal-zone;
 		cooling-maps {
 			vbat_gpu2 {
 				trip = <&b_bcl_lvl2>;
@@ -165,6 +169,7 @@
 	};
 
 	pm8350b_tz {
+		disable-thermal-zone;
 		cooling-maps {
 			battery_cdev {
 				trip = <&pm8350b_trip0>;
@@ -176,6 +181,7 @@
 	};
 
 	pm7325_tz {
+		disable-thermal-zone;
 		cooling-maps {
 			pm7325_gpu {
 				trip = <&pm7325_trip0>;
@@ -221,6 +227,7 @@
 	};
 
 	pm8350c_tz {
+		disable-thermal-zone;
 		cooling-maps {
 			pm8350c_gpu {
 				trip = <&pm8350c_trip0>;
@@ -243,6 +250,7 @@
 	};
 
 	pmr735a_tz {
+		disable-thermal-zone;
 		cooling-maps {
 			pmr735a_pa {
 				trip = <&pmr735a_trip0>;
