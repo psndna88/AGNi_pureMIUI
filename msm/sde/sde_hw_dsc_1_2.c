@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
  */
 
 #include "sde_hw_mdss.h"
@@ -63,12 +63,12 @@ static int _dsc_calc_ob_max_addr(struct sde_hw_dsc *hw_dsc, int num_ss)
 
 	idx = hw_dsc->idx;
 
-	if ((idx == DSC_0) || (idx == DSC_1)) {
+	if (!(hw_dsc->caps->features & BIT(SDE_DSC_NATIVE_422_EN))) {
 		if (num_ss == 1)
 			return 2399;
 		else if (num_ss == 2)
 			return 1199;
-	} else if ((idx == DSC_2) || (idx == DSC_3)) {
+	} else {
 		if (num_ss == 1)
 			return 1199;
 		else if (num_ss == 2)
