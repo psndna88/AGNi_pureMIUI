@@ -1016,6 +1016,7 @@ void send_resp(struct sigma_dut *dut, struct sigma_conn *conn,
 const char * get_param(struct sigma_cmd *cmd, const char *name);
 const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
 			       int index);
+const char * get_param_fmt(struct sigma_cmd *cmd, const char *name, ...);
 
 int sigma_dut_reg_cmd(const char *cmd,
 		      int (*validate)(struct sigma_cmd *cmd),

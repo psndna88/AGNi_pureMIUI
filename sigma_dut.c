@@ -362,6 +362,23 @@ const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
 }
 
 
+const char * get_param_fmt(struct sigma_cmd *cmd, const char *name, ...)
+{
+	va_list ap;
+	char buf[100];
+	int ret;
+
+	va_start(ap, name);
+	ret = vsnprintf(buf, sizeof(buf), name, ap);
+	va_end(ap);
+
+	if (ret < 0 || ret >= sizeof(buf))
+		return NULL;
+
+	return get_param(cmd, buf);
+}
+
+
 static void process_cmd(struct sigma_dut *dut, struct sigma_conn *conn,
 			char *buf)
 {
