@@ -50,13 +50,41 @@
 			cmd {
 				pins = "sdc1_cmd";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <16>;
 			};
 
 			data {
 				pins = "sdc1_data";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <16>;
+			};
+
+			data_4 {
+				pins = "gpio98";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_5 {
+				pins = "gpio99";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_6 {
+				pins = "gpio100";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_7 {
+				pins = "gpio101";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
 			};
 		};
 
@@ -77,6 +105,34 @@
 				pins = "sdc1_data";
 				bias-pull-up;
 				drive-strength = <2>;
+			};
+
+			data_4 {
+				pins = "gpio98";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_5 {
+				pins = "gpio99";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_6 {
+				pins = "gpio100";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_7 {
+				pins = "gpio101";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
 			};
 		};
 
