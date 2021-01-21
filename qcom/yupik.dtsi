@@ -3395,6 +3395,11 @@
 		read-only;
 		ranges;
 
+		gpu_speed_bin: gpu_speed_bin@1e9 {
+			reg = <0x1e9 0x2>;
+			bits = <5 8>;
+		};
+
 		feat_conf_m7: feat_conf_m7@6020 {
 			reg = <0x6020 0x4>;
 		};
