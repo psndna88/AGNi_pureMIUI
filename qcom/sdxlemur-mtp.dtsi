@@ -24,6 +24,10 @@
 	pinctrl-0 = <&sdc2_on>;
 	pinctrl-1 = <&sdc2_off>;
 
+	no-mmc;
+	no-sdio;
+	max-frequency = <200000000>;
+
 	cd-gpios = <&tlmm 99 GPIO_ACTIVE_LOW>;
 };
 

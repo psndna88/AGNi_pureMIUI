@@ -14,6 +14,10 @@
 	bus-width = <8>;
 	non-removable;
 
+	no-sd;
+	no-sdio;
+	max-frequency = <192000000>;
+
 	vdd-supply = <&vreg_sd_vdd>;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <0 570000>;
