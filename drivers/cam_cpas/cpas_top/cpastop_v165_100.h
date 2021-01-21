@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  */
 
  #ifndef _CPASTOP_V165_100_H_
@@ -337,7 +337,7 @@ static struct cam_camnoc_specific
 			 * Power on default values are taking care of required
 			 * register settings.
 			 */
-			.enable = true,
+			.enable = false,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x3B88, /* IFE01_NRDI_ENCCTL_LOW */
@@ -555,7 +555,7 @@ static struct cam_camnoc_specific
 	{
 		/*SidebandManager_main_SidebandManager_FlagOutSet0_Low*/
 		.port_type = CAM_CAMNOC_ICP,
-		.enable = true,
+		.enable = false,
 		.flag_out_set0_low = {
 			.enable = true,
 			.access_type = CAM_REG_TYPE_WRITE,
