@@ -10,6 +10,7 @@
 };
 
 &usb0 {
+	qcom,pm-qos-latency = <67>; /* CPU6-WFI-LVL latency +1 */ 
 	dwc3@a600000 {
 		usb-phy = <&qusb_phy0>, <&usb_nop_phy>;
 		maximum-speed = "high-speed";
