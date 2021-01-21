@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -3143,6 +3143,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 
 	if (topology == VPM_TX_VOICE_SMECNS_V2_COPP_TOPOLOGY ||
 	    topology == VPM_TX_VOICE_FLUENCE_SM_COPP_TOPOLOGY ||
+	    topology == VPM_TX_VOICE_FLUENCE_NN_COPP_TOPOLOGY ||
 	    topology == AUDIO_RX_MONO_VOIP_COPP_TOPOLOGY)
 		channel_mode = 1;
 
