@@ -1147,22 +1147,26 @@
 			"slow_ahb_clk_src",
 			"cpas_ahb_clk",
 			"camnoc_axi_clk_src",
-			"camnoc_axi_clk";
+			"camnoc_axi_clk",
+			"icp_ahb_clk",
+			"icp_clk";
 		clocks =
 			<&gcc GCC_CAMERA_HF_AXI_CLK>,
 			<&gcc GCC_CAMERA_SF_AXI_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&camcc CAM_CC_CPAS_AHB_CLK>,
 			<&camcc CAM_CC_CAMNOC_AXI_CLK_SRC>,
-			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
+			<&camcc CAM_CC_CAMNOC_AXI_CLK>,
+			<&camcc CAM_CC_ICP_AHB_CLK>,
+			<&camcc CAM_CC_ICP_CLK>;
 		src-clock-name = "camnoc_axi_clk_src";
 		clock-rates =
-			<0 0 0 0 0 0>,
-			<0 0 80000000 0 150000000 0>,
-			<0 0 80000000 0 240000000 0>,
-			<0 0 80000000 0 320000000 0>,
-			<0 0 80000000 0 400000000 0>,
-			<0 0 80000000 0 480000000 0>;
+			<0 0 0 0 0 0 0 0>,
+			<0 0 80000000 0 150000000 0 0 0>,
+			<0 0 80000000 0 240000000 0 0 0>,
+			<0 0 80000000 0 320000000 0 0 0>,
+			<0 0 80000000 0 400000000 0 0 0>,
+			<0 0 80000000 0 480000000 0 0 0>;
 		clock-cntl-level = "suspend", "lowsvs", "svs",
 			"svs_l1", "nominal", "turbo";
 		control-camnoc-axi-clk;
