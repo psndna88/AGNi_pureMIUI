@@ -1256,6 +1256,13 @@ int main(int argc, char *argv[])
 	if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 		get_nl80211_config_enable_option(&sigma_dut);
 
+	sigma_dut_get_device_driver_name(get_main_ifname(&sigma_dut),
+					 sigma_dut.device_driver,
+					 sizeof(sigma_dut.device_driver));
+	if (sigma_dut.device_driver[0])
+		sigma_dut_print(&sigma_dut, DUT_MSG_DEBUG, "device driver: %s",
+				sigma_dut.device_driver);
+
 #ifdef NL80211_SUPPORT
 	sigma_dut.nl_ctx = nl80211_init(&sigma_dut);
 #endif /* NL80211_SUPPORT */
