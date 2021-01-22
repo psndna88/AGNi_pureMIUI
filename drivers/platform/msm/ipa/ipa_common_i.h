@@ -124,7 +124,7 @@
  * Printing one warning message in 5 seconds if multiple warning messages
  * are coming back to back.
  */
-
+#ifdef CONFIG_IPA_DEBUG
 #define WARN_ON_RATELIMIT_IPA(condition)				\
 ({								\
 	static DEFINE_RATELIMIT_STATE(_rs,			\
@@ -135,6 +135,9 @@
 	if (unlikely(rtn && __ratelimit(&_rs)))			\
 		WARN_ON(rtn);					\
 })
+#else
+#define WARN_ON_RATELIMIT_IPA(condition)
+#endif
 
 /*
  * Printing one error message in 5 seconds if multiple error messages
