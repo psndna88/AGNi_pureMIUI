@@ -11,6 +11,9 @@
 #include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 #include <dt-bindings/spmi/spmi.h>
 
+#define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
+#define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
+
 / {
 	#address-cells = <1>;
 	#size-cells = <1>;
@@ -52,7 +55,7 @@
 
 		audio_mem: audio_region@0 {
 			compatible = "shared-dma-pool";
-			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			alloc-ranges = <0x00000000 0xffffffff>;
 			reusable;
 			size = <0x400000>;
 		};
@@ -199,6 +202,15 @@
 
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
+
+		link_list1 {
+			qcom,curr-link-list = <2>;
+			qcom,data-sink = "sram";
+			qcom,link-list = <DCC_READ 0xb204520 1 0>,
+				<DCC_READ 0xb201020 1 0>,
+				<DCC_READ 0xb201024 1 0>,
+				<DCC_READ 0xb204524 1 0>;
+		};
 	};
 
 	wdog: qcom,wdt@17817000 {
@@ -266,6 +278,11 @@
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0xe8>;
 		};
+	};
+
+	cpu_pmu: cpu-pmu {
+		compatible = "arm,cortex-a7-pmu";
+		interrupts = <GIC_PPI 8 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
 	qcom,msm-imem@1468f000 {
@@ -465,6 +482,50 @@
 		status = "disabled";
 	};
 
+	ddr_bw_opp_table: ddr-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY(  100, 4); /*   381 MB/s */
+		BW_OPP_ENTRY(  200, 4); /*   762 MB/s */
+		BW_OPP_ENTRY(  300, 4); /*  1144 MB/s */
+		BW_OPP_ENTRY(  451, 4); /*  1720 MB/s */
+		BW_OPP_ENTRY(  547, 4); /*  2086 MB/s */
+		BW_OPP_ENTRY(  681, 4); /*  2597 MB/s */
+		BW_OPP_ENTRY(  768, 4); /*  2929 MB/s */
+		BW_OPP_ENTRY( 1017, 4); /*  3879 MB/s */
+		BW_OPP_ENTRY( 1353, 4); /*  5161 MB/s */
+		BW_OPP_ENTRY( 1555, 4); /*  5931 MB/s */
+		BW_OPP_ENTRY( 1804, 4); /*  6881 MB/s */
+		BW_OPP_ENTRY( 2092, 4); /*  7980 MB/s */
+	};
+
+	cpu0_cpu_ddr_lat: qcom,cpu0-cpu-ddr-lat {
+		compatible = "qcom,devfreq-icc";
+		governor = "compute";
+		interconnects = <&mem_noc MASTER_APPSS_PROC &mc_virt SLAVE_EBI1>;
+		qcom,active-only;
+		operating-points-v2 = <&ddr_bw_opp_table>;
+	};
+
+	cpu0_cpu_ddr_tbl: qcom,cpu0-cpu-ddr-tbl {
+		qcom,core-dev-table =
+			<   345600  MHZ_TO_MBPS( 300, 4) >,
+			<   576000  MHZ_TO_MBPS( 768, 4) >,
+			<  1440000  MHZ_TO_MBPS(1555, 4) >,
+			<  1497600  MHZ_TO_MBPS(2092, 4) >;
+	};
+
+	memlat_cpugrp: qcom,memlat-cpugrp {
+		compatible = "qcom,arm-memlat-cpugrp";
+		qcom,cpulist = <&CPU0>;
+
+		cpu0_cpu_ddr_latmon: qcom,cpu0-cpu-ddr-latmon {
+			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU0>;
+			qcom,target-dev = <&cpu0_cpu_ddr_lat>;
+			qcom,core-dev-table = <&cpu0_cpu_ddr_tbl>;
+		};
+	};
+
 	sdhc_1: sdhci@8804000 {
 		compatible = "qcom,sdhci-msm-v5";
 		reg = <0x08804000 0x1000>;
@@ -498,7 +559,7 @@
 		reg = <0x17810008 0x16>,
 			<0x17808100 0x100>;
 		reg-names = "apcs_cmd", "apcs_pll";
-		vdd-lucid-pll-supply = <&VDD_CX_LEVEL_AO>;
+		vdd-pll-supply = <&VDD_CX_LEVEL_AO>;
 		cpu-vdd-supply = <&VDD_CX_LEVEL_AO>;
 		qcom,speed0-bin-v0 =
 			<   345600000 RPMH_REGULATOR_LEVEL_LOW_SVS>,
@@ -674,7 +735,7 @@
 						0x4400 2>;
 			};
 
-			qcom,gpr {
+			audio_gpr: qcom,gpr {
 				compatible = "qcom,gpr";
 				qcom,glink-channels = "modem_apps";
 				qcom,intents = <0x200 20>;
@@ -1070,10 +1131,15 @@
 		qcom,ipa-wdi3-over-gsi;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
+		qcom,ipa-uc-holb-monitor;
+		qcom,ipa-holb-monitor-poll-period = <5>;
+		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
+		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
 		qcom,interconnect,num-paths = <4>;
+		qcom,max_num_smmu_cb = <6>;
 		interconnects = <&system_noc MASTER_IPA &mem_noc SLAVE_LLCC>,
 		<&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
 		<&system_noc MASTER_IPA &system_noc SLAVE_IMEM>,
@@ -1129,11 +1195,22 @@
 			qcom,iommu-dma = "atomic";
 		};
 
-		ipa_smmu_11ad: ipa_smmu_11ad {
-			compatible = "qcom,ipa-smmu-11ad-cb";
+		ipa_smmu_eth: ipa_smmu_eth {
+			compatible = "qcom,ipa-smmu-eth-cb";
 			iommus = <&apps_smmu 0x5E3 0x0>;
-			qcom,shared-cb;
-			qcom,iommu-group = <>;
+			qcom,iommu-dma = "atomic";
+		};
+
+		ipa_smmu_eth1: ipa_smmu_eth1 {
+			compatible = "qcom,ipa-smmu-eth1-cb";
+			iommus = <&apps_smmu 0x5E4 0x0>;
+			qcom,iommu-dma = "atomic";
+		};
+
+		ipa_smmu_wlan1: ipa_smmu_wlan1 {
+			compatible = "qcom,ipa-smmu-wlan1-cb";
+			iommus = <&apps_smmu 0x5E5 0x0>;
+			qcom,iommu-dma = "atomic";
 		};
 
 		/* smp2p information */

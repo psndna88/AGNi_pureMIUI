@@ -28,8 +28,9 @@
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
 
 	aliases {
-		serial0 = &uart2;
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
+		serial0 = &qupv3_se12_2uart;
+		sdhc2 = &sdhc_2; /* SDC2 SD Card slot */
 	};
 
 	cpus {
@@ -502,6 +503,10 @@
 		compatible = "simple-bus";
 	};
 
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 	soc: soc { };
 };
 
@@ -616,6 +621,13 @@
 		};
 	};
 
+	cache-controller@9200000 {
+		compatible = "qcom,sdmshrike-llcc";
+		reg = <0x9200000 0x1d0000> , <0x9600000 0x50000>;
+		reg-names = "llcc_base", "llcc_broadcast_base";
+		cap-based-alloc-and-pwr-collapse;
+	};
+
 	qcom,msm-imem@146bf000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x146bf000 0x1000>;
@@ -662,6 +674,12 @@
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
+	};
+
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&aggre2_noc MASTER_CRYPTO
+			&mc_virt SLAVE_EBI1>;
 	};
 
 	qcom,mpm2-sleep-counter@c221000 {
@@ -1409,29 +1427,246 @@
 		};
 	};
 
-	qupv3_id_1: geniqup@ac0000 {
-		compatible = "qcom,geni-se-qup";
-		reg = <0x00ac0000 0x6000>;
-		ranges;
-		#address-cells = <2>;
-		#size-cells = <2>;
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		interconnects = <&aggre2_noc MASTER_SDCC_2 &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_SDCC_2>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>,<100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>,<100000 100000>,
+			/* 100 MB/s */
+			<261438 200000>,<130000 130000>,
+			/* 200 MB/s */
+			<261438 400000>,<300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>,<1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 25000000 50000000
+			100000000 200000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
 		status = "disabled";
 
-		uart2: serial@a90000 {
-			compatible = "qcom,geni-debug-uart";
-			reg = <0x0 0x00a90000 0x0 0x4000>;
-			interrupts = <GIC_SPI 357 IRQ_TYPE_LEVEL_HIGH>;
-			status = "ok";
+		qos0 {
+			mask = <0x0f>;
+			vote = <70>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <70>;
 		};
 	};
 
+	qcom,lpass@17300000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x17300000 0x00100>;
+
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
+		qcom,proxy-reg-names = "vdd_cx";
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		qcom,pas-id = <1>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,smem-id = <423>;
+		qcom,sysmon-id = <1>;
+		qcom,ssctl-instance-id = <0x14>;
+		qcom,firmware-name = "adsp";
+		memory-region = <&pil_adsp_mem>;
+		qcom,signal-aop;
+		qcom,complete-ramdump;
+		qcom,pil-force-shutdown;
+
+		/* Inputs from lpass */
+		interrupts-extended = <&intc GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>,
+				<&adsp_smp2p_in 0 0>,
+				<&adsp_smp2p_in 2 0>,
+				<&adsp_smp2p_in 1 0>,
+				<&adsp_smp2p_in 3 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack";
+
+		/* Outputs to lpass */
+		qcom,smem-states = <&adsp_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "adsp-pil";
+	};
+
+	qcom,turing@8300000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x8300000 0x100000>;
+
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,proxy-reg-names = "vdd_cx";
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		qcom,pas-id = <18>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,smem-id = <601>;
+		qcom,sysmon-id = <7>;
+		qcom,ssctl-instance-id = <0x17>;
+		qcom,firmware-name = "cdsp";
+		memory-region = <&pil_cdsp_mem>;
+		qcom,signal-aop;
+		qcom,complete-ramdump;
+
+		qcom,msm-bus,name = "pil-cdsp";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+				<154 10070 0 0>,
+				<154 10070 0 1>;
+
+		/* Inputs from turing */
+		interrupts-extended = <&intc GIC_SPI 578 IRQ_TYPE_LEVEL_HIGH>,
+					<&cdsp_smp2p_in 0 0>,
+					<&cdsp_smp2p_in 2 0>,
+					<&cdsp_smp2p_in 1 0>,
+					<&cdsp_smp2p_in 3 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack";
+
+		/* Outputs to turing */
+		qcom,smem-states = <&cdsp_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "cdsp-pil";
+	};
+
+	qcom,npu@9800000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x9800000 0x800000>;
+
+		status = "ok";
+		qcom,pas-id = <23>;
+		qcom,firmware-name = "npu";
+
+		memory-region = <&pil_npu_mem>;
+	};
+
+	qcom,spss@1880000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x188101c 0x4>,
+			<0x1881024 0x4>,
+			<0x1881028 0x4>,
+			<0x188103c 0x4>,
+			<0x1882014 0x4>;
+		reg-names = "sp2soc_irq_status", "sp2soc_irq_clr",
+			"sp2soc_irq_mask", "rmb_err", "rmb_err_spare2";
+		interrupts = <0 352 1>;
+
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,proxy-reg-names = "vdd_cx";
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
+		vdd_mx-uV = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+
+		clocks = <&rpmhcc RPMH_CXO_CLK>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+		qcom,pil-generic-irq-handler;
+		status = "ok";
+		qcom,signal-aop;
+		qcom,complete-ramdump;
+
+		qcom,pas-id = <14>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,firmware-name = "spss";
+		memory-region = <&pil_spss_mem>;
+		qcom,spss-scsr-bits = <24 25>;
+
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "spss-pil";
+	};
+
+	qcom,venus@aae0000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0xaae0000 0x4000>;
+
+		vdd-supply = <&mvsc_gdsc>;
+		qcom,proxy-reg-names = "vdd";
+		qcom,complete-ramdump;
+
+		clocks = <&videocc VIDEO_CC_XO_CLK>,
+				<&videocc VIDEO_CC_MVSC_CORE_CLK>,
+				<&videocc VIDEO_CC_IRIS_AHB_CLK>;
+		clock-names = "xo", "core", "ahb";
+		qcom,proxy-clock-names = "xo",  "core", "ahb";
+
+		qcom,core-freq = <200000000>;
+		qcom,ahb-freq = <200000000>;
+
+		qcom,pas-id = <9>;
+		interconnect-names = "pil-venus";
+		interconnects = <&mmss_noc MASTER_VIDEO_P0
+				&mc_virt SLAVE_EBI1>;
+		qcom,proxy-timeout-ms = <100>;
+		qcom,firmware-name = "venus";
+		memory-region = <&pil_video_mem>;
+	};
 };
 
 #include "sdmshrike-pinctrl.dtsi"
 #include "sa8195-regulator.dtsi"
-#include "sm8150-pm.dtsi"
+#include "sdmshrike-pm.dtsi"
 #include "sa8195-smp2p.dtsi"
 #include "sa8195-gdsc.dtsi"
+#include "msm-arm-smmu-sdmshrike.dtsi"
+#include "sm8150-slpi-pinctrl.dtsi"
+#include "sdmshrike-ion.dtsi"
+#include "sa8195-qupv3.dtsi"
+#include "sa8195-ssc-qupv3.dtsi"
+#include "sa8195-usb.dtsi"
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+	};
+};
 
 &emac_gdsc {
 	status = "ok";
@@ -1619,5 +1854,9 @@
 	clocks = <&gcc GCC_VIDEO_AHB_CLK>;
 	clock-names = "ahb_clk";
 	parent-supply = <&VDD_MMCX_LEVEL>;
+	status = "ok";
+};
+
+&slpi_tlmm {
 	status = "ok";
 };

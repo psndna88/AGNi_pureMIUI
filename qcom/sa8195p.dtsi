@@ -1,5 +1,6 @@
 #include "sdmshrike-v2.dtsi"
 #include "sa8195-pmic.dtsi"
+#include "sa8195p-pcie.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA8195P";
@@ -40,4 +41,17 @@
 	qcom,vccq-parent-max-microamp = <210000>;
 
 	status= "ok";
+};
+
+&usb2_phy0 {
+	vdd-supply = <&pm8195_3_l5>;
+	vdda18-supply = <&pm8195_1_l12>;
+	vdda33-supply = <&pm8195_3_l16>;
+};
+
+
+&usb2_phy1 {
+	vdd-supply = <&pm8195_3_l5>;
+	vdda18-supply = <&pm8195_1_l12>;
+	vdda33-supply = <&pm8195_3_l16>;
 };

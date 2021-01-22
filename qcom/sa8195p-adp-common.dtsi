@@ -1,5 +1,50 @@
 #include <dt-bindings/gpio/gpio.h>
 
-&qupv3_id_1 {
+&qupv3_3 {
 	status = "ok";
+};
+
+&qupv3_se12_2uart {
+	status = "ok";
+};
+
+&sdhc_2 {
+	vdd-supply = <&pm8195_1_l10>;
+	qcom,vdd-voltage-level = <2950000 2960000>;
+	qcom,vdd-current-level = <200 800000>;
+
+	vdd-io-supply = <&pm8195_1_l2>;
+	qcom,vdd-io-voltage-level = <1808000 2960000>;
+	qcom,vdd-io-current-level = <200 22000>;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	cd-gpios = <&pm8195_1_gpios 4 GPIO_ACTIVE_LOW>;
+
+	status = "ok";
+};
+
+&soc {
+	qcom,lpass@17300000 {
+		status = "ok";
+		qcom,pil-force-shutdown;
+	};
+
+	qcom,turing@8300000 {
+		status = "ok";
+	};
+
+	qcom,venus@aae0000 {
+		status = "ok";
+	};
+
+	qcom,spss@1880000 {
+		status = "ok";
+	};
+
+	qcom,npu@9800000 {
+		status = "ok";
+	};
 };

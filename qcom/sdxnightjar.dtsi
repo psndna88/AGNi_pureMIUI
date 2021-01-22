@@ -3,6 +3,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXNIGHTJAR";
@@ -19,7 +20,7 @@
 		reg = <0 0>;
 	};
 
-	reserved-memory {
+	reserved_memory: reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -32,12 +33,38 @@
 
 		peripheral2_mem: peripheral2_region@0x87d00000 {
 			no-map;
-			reg = <0x87d00000 0x300000>;
+			reg = <0x87d00000 0x100000>;
 			label = "peripheral2_mem";
+		};
+
+		smem_mem: smem_region@0x87e80000 {
+			no-map;
+			reg = <0x87e80000 0xc0000>;
+			label = "smem_mem";
+		};
+
+		mss_mem: mss_region@0x88000000 {
+			no-map;
+			reg = <0x88000000 0x7300000>;
+			label = "mss_mem";
+		};
+
+		dump_mem: mem_dump_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			size = <0x400000>;
 		};
 	};
 
 	aliases { };
+
+	firmware: firmware {
+		scm {
+			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr 0x6100>;
+		};
+	};
 
 	cpus {
 		#size-cells = <0>;
@@ -100,6 +127,65 @@
 		};
 	};
 
+	mss: qcom,mss@4080000{
+		compatible = "qcom,pil-q6v55-mss";
+		reg = <0x4080000 0x100>,
+		      <0x194e000 0x400>,
+		      <0x4180000 0x040>,
+		      <0x1810000 0x004>;
+		reg-names = "qdsp6_base", "halt_base", "rmb_base",
+			    "restart_reg";
+
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
+			 <&gcc GCC_MSS_CFG_AHB_CLK>,
+			 <&gcc GCC_MSS_Q6_BIMC_AXI_CLK >,
+			 <&gcc GCC_BOOT_ROM_AHB_CLK>,
+			 <&gcc GCC_MSS_GPLL0_CLK_SRC>,
+			 <&rpmcc RPM_SMD_QPIC_CLK>;
+
+		clock-names = "xo", "iface_clk", "bus_clk", "mem_clk",
+			      "gpll0_mss_clk", "qpic";
+		qcom,proxy-clock-names = "xo";
+		qcom,active-clock-names = "iface_clk", "bus_clk", "mem_clk",
+					"gpll0_mss_clk";
+
+		vdd_cx-supply = <&pmd9650_s5_level>;
+		interrupts = <0 24 1>;
+		vdd_cx-voltage = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		vdd_mx-supply = <&pmd9650_l9_level>;
+		vdd_mx-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		vdd_pll-supply = <&pmd9650_l5>;
+		qcom,vdd_pll = <1800000>;
+		qcom,firmware-name = "modem";
+		qcom,pil-self-auth;
+		qcom,sysmon-id = <0>;
+		qcom,ssctl-instance-id = <0x12>;
+		qcom,override-acc;
+		qcom,qdsp6v61-1-1;
+		memory-region = <&mss_mem>;
+		qcom,reset-clk;
+		qcom,sequential-fw-load;
+
+		interrupts-extended = <&intc GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
+				<&modem_smp2p_in 0 0>,
+				<&modem_smp2p_in 2 0>,
+				<&modem_smp2p_in 1 0>,
+				<&modem_smp2p_in 3 0>,
+				<&modem_smp2p_in 7 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack",
+				"qcom,shutdown-ack";
+
+		qcom,smem-states = <&modem_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+
+		status = "ok";
+	};
+
 	clocks {
 		xo_board: xo-board {
 			compatible = "fixed-clock";
@@ -125,8 +211,8 @@
 		compatible = "qcom,sdxnightjar-gcc", "syscon";
 		reg = <0x1800000 0x80000>;
 		reg-names = "cc_base";
-		vdd_cx-supply = <&pmd9650_s5_level>;
-		vdd_cx_ao-supply = <&pmd9650_s5_level_ao>;
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_cx_ao-supply = <&VDD_CX_LEVEL_AO>;
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
 			<&rpmcc RPM_SMD_XO_A_CLK_SRC>;
 		clock-names = "bi_tcxo", "bi_tcxo_ao";
@@ -134,9 +220,15 @@
 		#reset-cells = <1>;
 	};
 
+	cpucc: syscon@b01101c {
+		compatible = "syscon";
+		reg = <0xb01101c 0x4>;
+	};
+
 	debugcc: qcom,cc-debug@1874000 {
 		compatible = "qcom,sdxnightjar-debugcc";
 		qcom,gcc = <&gcc>;
+		qcom,cpucc = <&cpucc>;
 		clock-names = "xo_clk_src";
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
 		#clock-cells = <1>;
@@ -152,6 +244,24 @@
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_pcie";
 		reg = <0x0185d044 0x4>;
+	};
+
+	 apsscc: clock-controller@b010008 {
+		compatible = "qcom,sdxnightjar-apsscc";
+		clocks = <&rpmcc RPM_SMD_XO_A_CLK_SRC>,
+			<&gcc GPLL0_AO>;
+		clock-names = "bi_tcxo_ao", "gpll0_out_even";
+		reg = <0xb010008 0x8>, <0xb008018 0x28>;
+		reg-names = "apcs_cmd", "apcs_pll";
+		vdd-pll-supply = <&VDD_CX_LEVEL_AO>;
+		cpu-vdd-supply = <&VDD_CX_LEVEL_AO>;
+		qcom,speed0-bin-v0 =
+			<           0 RPM_SMD_REGULATOR_LEVEL_NONE>,
+			<   200000000 RPM_SMD_REGULATOR_LEVEL_LOW_SVS>,
+			<   384000000 RPM_SMD_REGULATOR_LEVEL_SVS>,
+			<   787200000 RPM_SMD_REGULATOR_LEVEL_NOM>,
+			<  1286400000 RPM_SMD_REGULATOR_LEVEL_TURBO>;
+		#clock-cells = <1>;
 	};
 
 	qcom,msm-cpufreq {
@@ -252,6 +362,76 @@
 			interrupts = <0 14 0x4>;
 			reg = <0xb029000 0x1000>;
 			status = "disabled";
+		};
+	};
+
+	mem_dump {
+		compatible = "qcom,mem-dump";
+		memory-region = <&dump_mem>;
+
+		c0_context {
+			qcom,dump-size = <0x800>;
+			qcom,dump-id = <0x0>;
+		};
+
+		cnss_wlan {
+			qcom,dump-size = <0x200000>;
+			qcom,dump-id = <0xe1>;
+		};
+
+		etr_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x100>;
+		};
+
+		tmc_etf {
+			qcom,dump-size = <0x2000>;
+			qcom,dump-id = <0xf0>;
+		};
+
+		etf_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x101>;
+		};
+
+		dbgui_reg  {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe5>;
+		};
+
+		etm_reg {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xa0>;
+		};
+
+		log_buf {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x110>;
+		};
+
+		log_idx {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0x111>;
+		};
+
+		misc_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe8>;
+		};
+
+		pmic_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe4>;
+		};
+
+		vsense_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe9>;
+		};
+
+		rpm_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xea>;
 		};
 	};
 
@@ -359,6 +539,11 @@
 		qcom,rmnet-ipa-ssr;
 	};
 
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
+	};
+
 	blsp1_uart1: serial@78af000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x78af000 0x200>;
@@ -417,9 +602,9 @@
 		reg-names = "etm-base","debug-base";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
+		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
+		clock-names = "apb_pclk";
 
-		/*TODO: Fix the clock when tree is available*/
-		clock-names = "core_clk", "core_a_clk";
 	};
 
 	tcsr_mutex_regs: syscon@1905000 {
@@ -433,6 +618,11 @@
 		#hwlock-cells = <1>;
 	};
 
+	tcsr: syscon@0x1937000 {
+		compatible = "syscon";
+		reg = <0x1937000 0x21000>;
+	};
+
 	apcs_glb: mailbox@0xb011008 {
 		compatible = "qcom,sdxnightjar-apcs-gcc";
 		reg = <0xb011008 0x4>;
@@ -442,11 +632,6 @@
 	rpm_msg_ram: memory@60000 {
 		compatible = "qcom,rpm-msg-ram";
 		reg = <0x60000 0x6000>;
-	};
-
-	smem_mem: smem_region@87e80000 {
-		reg = <0x87e80000 0xc0000>;
-		no-map;
 	};
 
 	smem {
@@ -586,6 +771,19 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		smp2p_ipa_1_out: qcom,smp2p-ipa-1-out {
+			qcom,entry-name = "ipa";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		/* ipa - inbound entry from mss */
+		smp2p_ipa_1_in: qcom,smp2p-ipa-1-in {
+			qcom,entry-name = "ipa";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
 	};
 
 	qnand_1: nand@7980000 {
@@ -664,11 +862,10 @@
 			<0x3800000 0x200000>,
 			<0x200a000 0x2100>; /* includes SPMI_CFG and GENI_CFG */
 		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
-		interrupts = <0 190 0>;
+		interrupt-names = "periph_irq";
+		interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,channel = <0>;
 		qcom,ee = <0>;
-		qcom,pmic-arb-max-peripherals = <256>;
-		qcom,pmic-arb-max-periph-interrupts = <256>;
 		#interrupt-cells = <4>;
 		interrupt-controller;
 		#address-cells = <2>;
@@ -706,10 +903,111 @@
 		clocks = <&rpmcc RPM_SMD_SNOC_CLK>,
 			<&rpmcc RPM_SMD_SNOC_A_CLK>;
 	};
+
+	qcom,msm_gsi {
+		compatible = "qcom,msm_gsi";
+	};
+
+	qcom,rmnet-ipa {
+		compatible = "qcom,rmnet-ipa3";
+		qcom,rmnet-ipa-ssr;
+	};
+
+	ipa_hw: qcom,ipa@07B00000 {
+		compatible = "qcom,ipa";
+		reg = <0x07B00000 0x34000>,
+			<0x07B84000 0x31FFFF>,
+			<0x07B04000 0x2C000>;
+		reg-names = "ipa-base", "bam-base", "gsi-base";
+		interrupts =
+			<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "ipa-irq", "bam-irq", "gsi-irq";
+		qcom,ipa-hw-ver = <10>; /* IPA core version = IPAv3.0 */
+		qcom,ipa-hw-mode = <0>; /* IPA hw type = Normal */
+		qcom,platform-type = <0>; /* MDM platform */
+		qcom,ee = <0>;
+		qcom,use-rg10-limitation-mitigation;
+		qcom,use-ipa-tethering-bridge;
+		qcom,modem-cfg-emb-pipe-flt;
+		clock-names = "core_clk";
+		clocks = <&rpmcc RPM_SMD_IPA_CLK>;
+		qcom,interconnect,num-cases = <5>;
+		qcom,interconnect,num-paths = <3>;
+		interconnects = <&system_noc MASTER_IPA &bimc SLAVE_EBI_CH0>,
+				<&system_noc MASTER_IPA &system_noc SLAVE_OCIMEM>,
+				<&bimc MASTER_AMPSS_M0 &pc_noc SLAVE_IPA_CFG>;
+		interconnect-names = "ipa_to_ebi1", "ipa_to_imem", "appss_to_ipa";
+		/* No vote */
+		qcom,no-vote =
+			<0 0 0 0 0 0>;
+		/* SVS2 */
+		qcom,svs2 =
+			<80000 64000 80000 64000 80000 16000>;
+		/* SVS */
+		qcom,svs =
+			<80000 640000 80000 640000 80000 160000>;
+		/* NOMINAL */
+		qcom,nominal =
+			<206000 960000 206000 960000 206000 400000>;
+		/* TURBO */
+		qcom,turbo =
+			<206000 3600000 206000 3600000 206000 960000>;
+		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL", "TURBO";
+
+		qcom,throughput-threshold = <310 600 1000>;
+		qcom,scaling-exceptions = <>;
+
+		/* ipa tz unlock registers */
+		qcom,ipa-tz-unlock-reg =
+			<0x4043583c 0x1000>; /* 32-bit reg addr and size */
+		/* smp2p gpio information */
+		qcom,smp2p_map_ipa_1_out {
+			compatible = "qcom,smp2p-map-ipa-1-out";
+			qcom,smem-states = <&smp2p_ipa_1_out 0>;
+			qcom,smem-state-names = "ipa-smp2p-out";
+		};
+
+		qcom,smp2p_map_ipa_1_in {
+			compatible = "qcom,smp2p-map-ipa-1-in";
+			interrupts-extended = <&smp2p_ipa_1_in 0 0>;
+			interrupt-names = "ipa-smp2p-in";
+		};
+	};
 };
 
 #include "pmd9650.dtsi"
 #include "pmd9650-rpm-regulator.dtsi"
 #include "sdxnightjar-regulator.dtsi"
 #include "sdxnightjar-usb.dtsi"
+#include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
+#include "sdxnightjar-blsp.dtsi"
+
+&i2c_3 {
+	status = "ok";
+	smb1351_otg_supply: smb1351-charger@55 {
+		compatible = "qcom,smb1351-charger";
+		reg = <0x55>;
+		interrupt-parent = <&tlmm_pinmux>;
+		interrupts = <83 IRQ_TYPE_LEVEL_LOW>;
+		interrupts-extended = <&tlmm_pinmux 83 IRQ_TYPE_LEVEL_LOW>, <&pmd9650_gpios 5 0>;
+		interrupt-names = "smb1351_chg_stat_irq","smb1351_usb_id_irq";
+		qcom,usb-id-gpio = <&pmd9650_gpios 5 0>;
+		qcom,float-voltage-mv = <4200>;
+		qcom,charging-timeout = <1536>;
+		qcom,recharge-thresh-mv = <200>;
+		qcom,iterm-ma = <100>;
+		regulator-name = "smb1351_otg_supply";
+		pinctrl-names = "default";
+		pinctrl-0 = <&smb_stat_active>, <&usb_id_detect>;
+		qcom,switch-freq = <2>;
+		qcom,id-line-not-connected;
+		dpdm-supply = <&qusb_phy>;
+	};
+};
+
+&usb3 {
+	extcon = <&smb1351_otg_supply>;
+};

@@ -15,6 +15,7 @@ Required properties:
                 "qcom,cnss-qca6290" for QCA6290 device
                 "qcom,cnss-qca6390" for QCA6390 device
                 "qcom,cnss-qca6490" for QCA6490 device
+                "qcom,cnss-wcn7850" for WCN7850 device
   - wlan-en-gpio: WLAN_EN GPIO signal specified by the chip specifications
   - vdd-wlan-supply: phandle to the regulator device tree node
   - pinctrl-names: Names corresponding to the numbered pinctrl states
@@ -90,6 +91,7 @@ Optional properties:
   - qcom,bt-en-gpio: QCA6490 requires synchronization for BT and WLAN GPIO
 		enable to resolve PMU power up issues. Provide BT GPIO using
 		this config param.
+  - qcom,xo-clk-gpio: Added for QCA6490 XO CLK selection leakage prevention.
 
 Example:
 
