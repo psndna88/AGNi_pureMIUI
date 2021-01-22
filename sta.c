@@ -2096,8 +2096,9 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	val = get_param(cmd, "BeaconProtection");
-	if (val && atoi(val) == 1 &&
-	    set_network(ifname, id, "beacon_prot", "1") < 0)
+	if (val)
+		dut->beacon_prot = atoi(val);
+	if (dut->beacon_prot && set_network(ifname, id, "beacon_prot", "1") < 0)
 		return ERROR_SEND_STATUS;
 
 	if (dut->ocvc && set_network(ifname, id, "ocv", "1") < 0)
@@ -7594,6 +7595,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	const char *type;
 	const char *program = get_param(cmd, "program");
 	const char *dev_role = get_param(cmd, "DevRole");
+	char resp[20];
+	int ret;
 
 	if (dut->station_ifname_2g &&
 	    strcmp(dut->station_ifname_2g, intf) == 0)
@@ -7848,7 +7851,13 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	wpa_command(intf, "SET setband AUTO");
 
-	dut->ocvc = 0;
+	ret = wpa_command_resp(intf, "GET_CAPABILITY ocv", resp, sizeof(resp));
+	dut->ocvc = ret == 0 && strncmp(resp, "supported", 9) == 0;
+
+	ret = wpa_command_resp(intf, "GET_CAPABILITY beacon_prot", resp,
+			       sizeof(resp));
+	dut->beacon_prot = ret == 0 && strncmp(resp, "supported", 9) == 0;
+
 	dut->client_privacy = 0;
 	dut->saquery_oci_freq = 0;
 

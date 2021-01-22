@@ -966,6 +966,7 @@ struct sigma_dut {
 	} sae_pwe;
 	int owe_ptk_workaround;
 	int ocvc;
+	int beacon_prot;
 	int client_privacy;
 	int saquery_oci_freq;
 	char device_driver[32];
