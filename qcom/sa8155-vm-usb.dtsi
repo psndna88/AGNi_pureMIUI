@@ -40,7 +40,6 @@
 		qcom,core-clk-rate = <200000000>;
 		qcom,core-clk-rate-hs = <66666667>;
 		qcom,dwc-usb3-msm-tx-fifo-size = <27696>;
-		qcom,charging-disabled;
 		qcom,ignore-wakeup-src-in-hostmode;
 
 		status = "disabled";
@@ -53,9 +52,8 @@
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,has-lpm-erratum;
-			snps,hird-threshold = /bits/ 8 <0x10>;
-			usb-core-id = <0>;
-			tx-fifo-resize;
+			snps,hird-threshold = /bits/ 8 <0x0>;
+			snps,is-utmi-l1-suspend;
 			maximum-speed = "high-speed";
 			dr_mode = "otg";
 		};
@@ -163,7 +161,6 @@
 		qcom,core-clk-rate = <200000000>;
 		qcom,core-clk-rate-hs = <66666667>;
 		qcom,dwc-usb3-msm-tx-fifo-size = <27696>;
-		qcom,charging-disabled;
 
 		status = "disabled";
 
@@ -175,10 +172,12 @@
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
 			snps,has-lpm-erratum;
-			snps,hird-threshold = /bits/ 8 <0x10>;
+			snps,hird-threshold = /bits/ 8 <0x0>;
 			snps,ssp-u3-u0-quirk;
-			snps,usb3-u1u2-disable;
-			usb-core-id = <1>;
+			snps,is-utmi-l1-suspend;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
+			snps,dis_u3_susphy_quirk;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
@@ -224,7 +223,6 @@
 		qcom,vdd-voltage-level = <0 880000 880000>;
 		qcom,vdd-max-load-uA = <47000>;
 		core-supply = <&pm8150_2_l8>;
-		qcom,vbus-valid-override;
 		qcom,qmp-phy-init-seq =
 		    /* <reg_offset, value, delay> */
 		    <USB3_UNI_QSERDES_COM_SYSCLK_EN_SEL 0x1a 0
