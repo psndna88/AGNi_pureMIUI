@@ -1768,7 +1768,7 @@
 
 		iommus = <&apps_smmu 0xc0 0x0>;
 		dma-coherent;
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
 
 		interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>;
