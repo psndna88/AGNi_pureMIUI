@@ -4,3 +4,27 @@
 		label = "pmem_shared_mem";
 	};
 };
+
+&usb0 {
+	status = "ok";
+};
+
+&usb2_phy0 {
+	status = "ok";
+};
+
+&qupv3_se13_4uart {
+	status = "ok";
+};
+
+&pcie0_msi {
+	status = "ok";
+};
+
+&pcie0 {
+	status = "ok";
+};
+
+&sdhc_2 {
+	status = "ok";
+};
