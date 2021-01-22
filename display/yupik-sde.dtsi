@@ -15,7 +15,6 @@
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status="disabled";
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
