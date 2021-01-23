@@ -97,6 +97,9 @@
 
 &dsi_nt36672e_fhd_plus_144_video {
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,dsi-supported-dfps-list = <144 120 60 48>;
+	qcom,mdss-dsi-pan-enable-dynamic-fps;
+	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08
