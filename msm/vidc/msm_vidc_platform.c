@@ -538,7 +538,7 @@ static struct msm_vidc_codec_capability yupik_capabilities_v0[] = {
 	 *  to set higher level than supported
 	 */
 	{CAP_H264_LEVEL, ENC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-				V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+				V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, ENC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
@@ -646,7 +646,7 @@ static struct msm_vidc_codec_capability yupik_capabilities_v1[] = {
 	 *  to set higher level than supported
 	 */
 	{CAP_H264_LEVEL, ENC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-				V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+				V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, ENC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
@@ -654,7 +654,7 @@ static struct msm_vidc_codec_capability yupik_capabilities_v1[] = {
 
 	/* Level for AVC and HEVC decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-				V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
+				V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
