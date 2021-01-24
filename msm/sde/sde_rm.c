@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s] " fmt, __func__
@@ -1001,6 +1001,12 @@ static bool _sde_rm_check_lm_and_get_connected_blks(
 	SDE_DEBUG("check lm %d: dspp %d ds %d pp %d features %d disp type %d\n",
 		 lm_cfg->id, lm_cfg->dspp, lm_cfg->ds, lm_cfg->pingpong,
 		 lm_cfg->features, (int)reqs->hw_res.display_type);
+
+	if (!RM_RQ_CWB(reqs) && (lm_cfg->features & BIT(SDE_MIXER_IS_VIRTUAL))) {
+		SDE_DEBUG("lm %d is a virtual mixer and use case is not CWB",
+				lm_cfg->id);
+		return false;
+	}
 
 	/* Check if this layer mixer is a peer of the proposed primary LM */
 	if (primary_lm) {

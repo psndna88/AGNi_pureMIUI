@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 /*
@@ -146,10 +146,13 @@
 
 /* Tx tran offsets */
 #define DP_TRAN_DRVR_EMP_EN			0x00C0
+#define DP_TRAN_DRVR_EMP_EN_7nm			0x00B8
 #define DP_TX_INTERFACE_MODE			0x00C4
+#define DP_TX_INTERFACE_MODE_7nm		0x00BC
 
 /* Tx VMODE offsets */
 #define DP_VMODE_CTRL1				0x00C8
+#define DP_VMODE_CTRL1_7nm			0x00E8
 
 #define DP_PHY_PLL_POLL_SLEEP_US		500
 #define DP_PHY_PLL_POLL_TIMEOUT_US		10000
@@ -239,6 +242,79 @@ static int dp_vco_pll_init_db_5nm(struct dp_pll_db *pdb,
 		return -EINVAL;
 	}
 	return 0;
+}
+
+static void dp_pll_config_tx_7nm(struct dp_pll *pll)
+{
+	/* TX-0 register configuration */
+	dp_pll_write(dp_phy, DP_PHY_TX0_TX1_LANE_CTL, 0x05);
+	dp_pll_write(dp_ln_tx0, DP_VMODE_CTRL1_7nm, 0x40);
+	dp_pll_write(dp_ln_tx0, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
+	dp_pll_write(dp_ln_tx0, TXn_INTERFACE_SELECT, 0x3b);
+	dp_pll_write(dp_ln_tx0, TXn_CLKBUF_ENABLE, 0x0f);
+	dp_pll_write(dp_ln_tx0, TXn_RESET_TSYNC_EN, 0x03);
+	dp_pll_write(dp_ln_tx0, DP_TRAN_DRVR_EMP_EN_7nm, 0xf);
+	dp_pll_write(dp_ln_tx0, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
+	dp_pll_write(dp_ln_tx0, DP_TX_INTERFACE_MODE_7nm, 0x00);
+	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
+	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
+	dp_pll_write(dp_ln_tx0, TXn_TX_BAND, 0x04);
+
+	/* Make sure the PLL register writes are done */
+	wmb();
+
+	/* TX-1 register configuration */
+	dp_pll_write(dp_phy, DP_PHY_TX2_TX3_LANE_CTL, 0x05);
+	dp_pll_write(dp_ln_tx1, DP_VMODE_CTRL1_7nm, 0x40);
+	dp_pll_write(dp_ln_tx1, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
+	dp_pll_write(dp_ln_tx1, TXn_INTERFACE_SELECT, 0x3b);
+	dp_pll_write(dp_ln_tx1, TXn_CLKBUF_ENABLE, 0x0f);
+	dp_pll_write(dp_ln_tx1, TXn_RESET_TSYNC_EN, 0x03);
+	dp_pll_write(dp_ln_tx1, DP_TRAN_DRVR_EMP_EN_7nm, 0xf);
+	dp_pll_write(dp_ln_tx1, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
+	dp_pll_write(dp_ln_tx1, DP_TX_INTERFACE_MODE_7nm, 0x00);
+	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
+	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
+	dp_pll_write(dp_ln_tx1, TXn_TX_BAND, 0x04);
+
+	/* Make sure the PHY register writes are done */
+	wmb();
+}
+
+static void dp_pll_config_tx_5nm(struct dp_pll *pll)
+{
+	/* TX-0 register configuration */
+	dp_pll_write(dp_phy, DP_PHY_TX0_TX1_LANE_CTL, 0x05);
+	dp_pll_write(dp_ln_tx0, DP_VMODE_CTRL1, 0x40);
+	dp_pll_write(dp_ln_tx0, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
+	dp_pll_write(dp_ln_tx0, TXn_INTERFACE_SELECT, 0x3b);
+	dp_pll_write(dp_ln_tx0, TXn_CLKBUF_ENABLE, 0x0f);
+	dp_pll_write(dp_ln_tx0, TXn_RESET_TSYNC_EN, 0x03);
+	dp_pll_write(dp_ln_tx0, DP_TRAN_DRVR_EMP_EN, 0xf);
+	dp_pll_write(dp_ln_tx0, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
+	dp_pll_write(dp_ln_tx0, DP_TX_INTERFACE_MODE, 0x00);
+	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
+	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
+	dp_pll_write(dp_ln_tx0, TXn_TX_BAND, 0x04);
+	/* Make sure the PLL register writes are done */
+	wmb();
+
+	/* TX-1 register configuration */
+	dp_pll_write(dp_phy, DP_PHY_TX2_TX3_LANE_CTL, 0x05);
+	dp_pll_write(dp_ln_tx1, DP_VMODE_CTRL1, 0x40);
+	dp_pll_write(dp_ln_tx1, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
+	dp_pll_write(dp_ln_tx1, TXn_INTERFACE_SELECT, 0x3b);
+	dp_pll_write(dp_ln_tx1, TXn_CLKBUF_ENABLE, 0x0f);
+	dp_pll_write(dp_ln_tx1, TXn_RESET_TSYNC_EN, 0x03);
+	dp_pll_write(dp_ln_tx1, DP_TRAN_DRVR_EMP_EN, 0xf);
+	dp_pll_write(dp_ln_tx1, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
+	dp_pll_write(dp_ln_tx1, DP_TX_INTERFACE_MODE, 0x00);
+	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
+	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
+	dp_pll_write(dp_ln_tx1, TXn_TX_BAND, 0x04);
+
+	/* Make sure the PHY register writes are done */
+	wmb();
 }
 
 static int dp_config_vco_rate_5nm(struct dp_pll_vco_clk *vco,
@@ -340,37 +416,10 @@ static int dp_config_vco_rate_5nm(struct dp_pll_vco_clk *vco,
 	/* Make sure the PLL register writes are done */
 	wmb();
 
-	/* TX-0 register configuration */
-	dp_pll_write(dp_phy, DP_PHY_TX0_TX1_LANE_CTL, 0x05);
-	dp_pll_write(dp_ln_tx0, DP_VMODE_CTRL1, 0x40);
-	dp_pll_write(dp_ln_tx0, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
-	dp_pll_write(dp_ln_tx0, TXn_INTERFACE_SELECT, 0x3b);
-	dp_pll_write(dp_ln_tx0, TXn_CLKBUF_ENABLE, 0x0f);
-	dp_pll_write(dp_ln_tx0, TXn_RESET_TSYNC_EN, 0x03);
-	dp_pll_write(dp_ln_tx0, DP_TRAN_DRVR_EMP_EN, 0xf);
-	dp_pll_write(dp_ln_tx0, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
-	dp_pll_write(dp_ln_tx0, DP_TX_INTERFACE_MODE, 0x00);
-	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
-	dp_pll_write(dp_ln_tx0, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
-	dp_pll_write(dp_ln_tx0, TXn_TX_BAND, 0x04);
-	/* Make sure the PLL register writes are done */
-	wmb();
-
-	/* TX-1 register configuration */
-	dp_pll_write(dp_phy, DP_PHY_TX2_TX3_LANE_CTL, 0x05);
-	dp_pll_write(dp_ln_tx1, DP_VMODE_CTRL1, 0x40);
-	dp_pll_write(dp_ln_tx1, TXn_PRE_STALL_LDO_BOOST_EN, 0x30);
-	dp_pll_write(dp_ln_tx1, TXn_INTERFACE_SELECT, 0x3b);
-	dp_pll_write(dp_ln_tx1, TXn_CLKBUF_ENABLE, 0x0f);
-	dp_pll_write(dp_ln_tx1, TXn_RESET_TSYNC_EN, 0x03);
-	dp_pll_write(dp_ln_tx1, DP_TRAN_DRVR_EMP_EN, 0xf);
-	dp_pll_write(dp_ln_tx1, TXn_PARRATE_REC_DETECT_IDLE_EN, 0x00);
-	dp_pll_write(dp_ln_tx1, DP_TX_INTERFACE_MODE, 0x00);
-	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_TX, 0x11);
-	dp_pll_write(dp_ln_tx1, TXn_RES_CODE_LANE_OFFSET_RX, 0x11);
-	dp_pll_write(dp_ln_tx1, TXn_TX_BAND, 0x04);
-	/* Make sure the PHY register writes are done */
-	wmb();
+	if (pll->revision == DP_PLL_7NM)
+		dp_pll_config_tx_7nm(pll);
+	else
+		dp_pll_config_tx_5nm(pll);
 
 	return res;
 }
