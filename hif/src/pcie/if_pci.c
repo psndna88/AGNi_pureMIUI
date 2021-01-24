@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2300,6 +2300,7 @@ int hif_pci_bus_suspend(struct hif_softc *scn)
 	return 0;
 }
 
+#ifdef PCI_LINK_STATUS_SANITY
 /**
  * __hif_check_link_status() - API to check if PCIe link is active/not
  * @scn: HIF Context
@@ -2338,6 +2339,13 @@ static int __hif_check_link_status(struct hif_softc *scn)
 	pld_is_pci_link_down(sc->dev);
 	return -EACCES;
 }
+#else
+static inline int __hif_check_link_status(struct hif_softc *scn)
+{
+	return 0;
+}
+#endif
+
 
 #ifdef HIF_BUS_LOG_INFO
 void hif_log_pcie_info(struct hif_softc *scn, uint8_t *data,
@@ -2827,6 +2835,9 @@ static void hif_ce_srng_msi_irq_disable(struct hif_softc *hif_sc, int ce_id)
 
 static void hif_ce_srng_msi_irq_enable(struct hif_softc *hif_sc, int ce_id)
 {
+	if (__hif_check_link_status(hif_sc))
+		return;
+
 	pfrm_enable_irq(hif_sc->qdf_dev->dev,
 			hif_ce_msi_map_ce_to_irq(hif_sc, ce_id));
 }
@@ -2864,6 +2875,7 @@ static int hif_ce_msi_configure_irq(struct hif_softc *scn)
 
 		scn->wake_irq = pld_get_msi_irq(scn->qdf_dev->dev,
 						msi_irq_start);
+		scn->wake_irq_type = HIF_PM_MSI_WAKE;
 
 		ret = pfrm_request_irq(scn->qdf_dev->dev, scn->wake_irq,
 				       hif_wake_interrupt_handler,
@@ -2937,6 +2949,7 @@ free_wake_irq:
 		pfrm_free_irq(scn->qdf_dev->dev,
 			      scn->wake_irq, scn->qdf_dev->dev);
 		scn->wake_irq = 0;
+		scn->wake_irq_type = HIF_PM_INVALID_WAKE;
 	}
 
 	return ret;
