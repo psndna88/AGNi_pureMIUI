@@ -10,7 +10,7 @@
 		qcom,skip-init;
 		qcom,use-3-lvl-tables;
 		qcom,split-tables;
-		#global-interrupts = <2>;
+		#global-interrupts = <1>;
 		#size-cells = <1>;
 		#address-cells = <1>;
 		ranges;
@@ -33,10 +33,7 @@
 			"gpu_cc_hub_cx_int_clk",
 			"gpu_cc_hub_aon_clk";
 
-		interconnects = <&gem_noc MASTER_GPU_TCU &mc_virt SLAVE_EBI1>;
-
 		interrupts =	<GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 678 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 679 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH>,
@@ -77,13 +74,12 @@
 		#iommu-cells = <2>;
 		qcom,skip-init;
 		qcom,use-3-lvl-tables;
-		#global-interrupts = <2>;
+		#global-interrupts = <1>;
 		#size-cells = <1>;
 		#address-cells = <1>;
 		ranges;
 		dma-coherent;
 		interrupts =	<GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,

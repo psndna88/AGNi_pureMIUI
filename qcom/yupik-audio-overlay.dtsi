@@ -121,7 +121,6 @@
 				status = "disabled";
 				compatible = "qcom,pm8350b-swr-haptics";
 				reg = <0x01 0xf0170220>;
-				swr-slave-supply = <&hap_swr_slave_reg>;
 				qcom,rx_swr_ch_map = <0 0x01 0x01 0 PCM_OUT1>;
 			};
 
@@ -173,7 +172,7 @@
 			wsa883x_0221: wsa883x@02170221 {
 				compatible = "qcom,wsa883x";
 				reg = <0x2 0x2170221>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
+				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
 				qcom,bolero-handle = <&bolero>;
 
 				cdc-vdd-1p8-supply = <&L18B>;
@@ -186,7 +185,7 @@
 			wsa883x_0222: wsa883x@02170222 {
 				compatible = "qcom,wsa883x";
 				reg = <0x2 0x2170222>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
+				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
 				qcom,bolero-handle = <&bolero>;
 
 				cdc-vdd-1p8-supply = <&L18B>;
@@ -367,10 +366,10 @@
 	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
-		      <&wcd937x_codec>, <&swr_haptics>,
+		      <&wcd937x_codec>,
 		      <&wsa883x_0221>, <&wsa883x_0222>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
-			   "wcd937x_codec", "swr-haptics",
+			   "wcd937x_codec",
 			   "wsa-codec1", "wsa-codec2";
 	qcom,wsa-max-devs = <2>;
 	qcom,cps_reg_phy_addr = <0x3250300 0x3250304 0x3250318>;
@@ -474,3 +473,9 @@
 	};
 };
 
+&adsp_loader {
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
+	adsp-fw-names = "adsp2";
+	adsp-fw-bit-values = <0x4>;
+};

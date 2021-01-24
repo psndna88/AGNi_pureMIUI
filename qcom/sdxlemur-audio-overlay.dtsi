@@ -24,22 +24,23 @@
 		"DMIC4", "MIC BIAS4",
 		"DMIC5", "Digital Mic5",
 		"DMIC5", "MIC BIAS4",
-		"SpkrLeft IN", "SPK2 OUT";
+		"SpkrLeft IN", "SPK1 OUT";
 
 	qcom,msm-mbhc-hphl-swh = <1>;
 	qcom,msm-mbhc-gnd-swh = <1>;
 	qcom,msm-mbhc-hs-mic-max-threshold-mv = <1700>;
 	qcom,msm-mbhc-hs-mic-min-threshold-mv = <50>;
-	qcom,cdc-ext-clk-rate = <19200000>;
-	qcom,tavil-mclk-clk-freq = <12288000>;
+	qcom,cdc-ext-clk-rate = <9600000>;
+	qcom,tavil-mclk-clk-freq = <9600000>;
 
-	asoc-codec = <&stub_codec>;
-	asoc-codec-names = "msm-stub-codec.1";
+	asoc-codec = <&stub_codec>, <&wsa881x_0214>;
+	asoc-codec-names = "msm-stub-codec.1", "wsa-codec.1";
 
 	qcom,wsa-max-devs = <1>;
 	qcom,swr-num-dev = <1>;
 	qcom,wsa-devs = <&wsa881x_0214>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft";
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&wcd934x_cdc>;
 };
 
 &soc {

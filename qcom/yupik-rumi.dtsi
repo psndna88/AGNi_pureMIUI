@@ -169,8 +169,6 @@
 &gcc {
 	clocks = <&bi_tcxo>,
 		<&sleep_clk>,
-		<&pcie_0_pipe_clk>,
-		<&pcie_1_pipe_clk>,
 		<&usb3_phy_wrapper_gcc_usb30_pipe_clk>;
 };
 
@@ -185,4 +183,18 @@
 
 &camcc {
 	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>, <&gcc GCC_CAMERA_AHB_CLK>;
+};
+
+&cpufreq_hw {
+	clocks = <&bi_tcxo>, <&gcc GCC_GPLL0>;
+	status = "disabled";
+};
+
+&dispcc {
+	clocks = <&bi_tcxo>, <&gcc GCC_DISP_GPLL0_CLK_SRC>,
+		<&gcc GCC_DISP_AHB_CLK>;
+};
+
+&debugcc {
+	clocks = <&bi_tcxo>;
 };

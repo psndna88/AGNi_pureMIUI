@@ -1,6 +1,6 @@
 /dts-v1/;
 
-#include "lahainap-v2.1.dtsi"
+#include "lahaina-v2.1.dtsi"
 #include "lahaina-hhg.dtsi"
 
 / {
