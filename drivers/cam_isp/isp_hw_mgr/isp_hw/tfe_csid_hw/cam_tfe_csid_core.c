@@ -2404,6 +2404,52 @@ static int cam_tfe_csid_set_csid_clock(
 	return 0;
 }
 
+static int cam_tfe_csid_get_csid_clock(
+	struct cam_tfe_csid_hw *csid_hw, void *cmd_args)
+{
+	struct cam_hw_soc_info   *soc_info;
+	uint32_t                 *curr_clk_rate;
+	int                       src_clk_idx;
+	int rc = 0;
+
+	if (!csid_hw)
+		return -EINVAL;
+
+	soc_info = &csid_hw->hw_info->soc_info;
+	src_clk_idx = soc_info->src_clk_idx;
+
+	curr_clk_rate = (uint32_t *)cmd_args;
+
+	rc = cam_soc_util_get_clk_rate(soc_info->clk[src_clk_idx],
+			soc_info->clk_name[src_clk_idx], curr_clk_rate);
+
+	CAM_DBG(CAM_ISP, "CSID clock rate %llu", *curr_clk_rate);
+
+	return rc;
+}
+
+static int cam_tfe_csid_set_csid_clock_dynamically(
+	struct cam_tfe_csid_hw *csid_hw, void *cmd_args)
+{
+	struct cam_hw_soc_info   *soc_info;
+	uint32_t                 *clk_rate;
+	int rc = 0;
+
+	soc_info = &csid_hw->hw_info->soc_info;
+	clk_rate = (uint32_t *)cmd_args;
+
+	CAM_DBG(CAM_ISP, "CSID clock rate %lld", *clk_rate);
+
+	rc = cam_soc_util_set_src_clk_rate(soc_info, *clk_rate);
+	if (rc) {
+		CAM_ERR(CAM_ISP,
+			"unable to set clock dynamically rate:%lld", *clk_rate);
+		return rc;
+	}
+
+	return rc;
+}
+
 static int cam_tfe_csid_get_regdump(struct cam_tfe_csid_hw *csid_hw,
 	void *cmd_args)
 {
@@ -2675,6 +2721,12 @@ static int cam_tfe_csid_process_cmd(void *hw_priv,
 		break;
 	case CAM_TFE_CSID_LOG_ACQUIRE_DATA:
 		rc = cam_tfe_csid_log_acquire_data(csid_hw, cmd_args);
+		break;
+	case CAM_ISP_HW_CMD_GET_CLOCK_RATE:
+		rc = cam_tfe_csid_get_csid_clock(csid_hw, cmd_args);
+		break;
+	case CAM_ISP_HW_CMD_DYNAMIC_CLOCK_UPDATE:
+		rc = cam_tfe_csid_set_csid_clock_dynamically(csid_hw, cmd_args);
 		break;
 	default:
 		CAM_ERR(CAM_ISP, "CSID:%d unsupported cmd:%d",

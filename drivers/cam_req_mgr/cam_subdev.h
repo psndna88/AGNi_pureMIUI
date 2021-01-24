@@ -17,7 +17,8 @@
 #define CAM_SUBDEVICE_EVENT_MAX 30
 
 enum cam_subdev_message_type_t {
-	CAM_SUBDEV_MESSAGE_IRQ_ERR = 0x1
+	CAM_SUBDEV_MESSAGE_IRQ_ERR = 0x1,
+	CAM_SUBDEV_MESSAGE_CLOCK_UPDATE
 };
 
 /**

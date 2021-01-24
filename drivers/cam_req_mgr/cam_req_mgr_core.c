@@ -2072,7 +2072,9 @@ static int __cam_req_mgr_process_sof_freeze(void *priv, void *data)
 	in_q = link->req.in_q;
 	if (in_q) {
 		mutex_lock(&link->req.lock);
-		last_applied_req_id = in_q->slot[in_q->last_applied_idx].req_id;
+		if (in_q->last_applied_idx >= 0)
+			last_applied_req_id =
+				in_q->slot[in_q->last_applied_idx].req_id;
 		mutex_unlock(&link->req.lock);
 	}
 

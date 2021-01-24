@@ -53,6 +53,9 @@ typedef int (*cam_hw_pagefault_cb_func)(void *context,
 typedef int (*cam_ctx_info_dump_cb_func)(void *context,
 	enum cam_context_dump_id dump_id);
 
+/* message callback function type */
+typedef int (*cam_ctx_message_cb_func)(void *context,
+	uint32_t message_type, uint32_t *data);
 /**
  * struct cam_hw_update_entry - Entry for hardware config
  *
