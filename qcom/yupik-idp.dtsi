@@ -3,6 +3,9 @@
 #include <dt-bindings/iio/qcom,spmi-adc7-smb139x.h>
 #include "yupik-pmic-overlay.dtsi"
 #include "pm7325b.dtsi"
+#include "yupik-audio-overlay.dtsi"
+#include "yupik-thermal-overlay.dtsi"
+#include "display/yupik-sde-display-idp.dtsi"
 
 &soc {
 	gpio_keys {
@@ -22,6 +25,70 @@
 			linux,can-disable;
 		};
 	};
+};
+
+&qupv3_se9_i2c {
+	status = "ok";
+	qcom,clk-freq-out = <1000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	nq@28 {
+		compatible = "qcom,sn-nci";
+		reg = <0x28>;
+		qcom,sn-irq = <&tlmm 41 0x00>;
+		qcom,sn-ven = <&tlmm 38 0x00>;
+		qcom,sn-firm = <&tlmm 40 0x00>;
+		qcom,sn-clkreq = <&tlmm 39 0x00>;
+		qcom,sn-vdd-1p8-supply = <&L18B>;
+		qcom,sn-vdd-1p8-voltage = <1800000 1800000>;
+		qcom,sn-vdd-1p8-current = <157000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <41 0>;
+		interrupt-names = "nfc_irq";
+		pinctrl-names = "nfc_active", "nfc_suspend";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	};
+};
+
+&ufsphy_mem {
+	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+
+	vdda-phy-supply = <&L10C>;
+	vdda-pll-supply = <&L6B>;
+	vdda-phy-max-microamp = <97500>;
+	vdda-pll-max-microamp = <18400>;
+
+	status = "ok";
+};
+
+&ufshc_mem {
+	vdd-hba-supply = <&gcc_ufs_phy_gdsc>;
+	vdd-hba-fixed-regulator;
+
+	vcc-supply = <&L7B>;
+	vcc-voltage-level = <2504000 2952000>;
+	vcc-low-voltage-sup;
+	vcc-max-microamp = <800000>;
+
+	vccq-supply = <&L9B>;
+	vccq-max-microamp = <900000>;
+	vccq-min-microamp = <10000>;
+
+	/*
+	 * Vccq2 voltage level should be 1.8V but in case of yupik
+	 * vccq2 is supplied via eLDO, and that is controlled via
+	 * L9B which supports a max voltage of 1.2V, but eLDO would
+	 * supply 1.8V.
+	 */
+	vccq2-supply = <&L9B>;
+	vccq2-voltage-level = <1200000 1200000>;
+	vccq2-max-microamp = <800000>;
+
+	qcom,vddp-ref-clk-supply = <&L9B>;
+	qcom,vddp-ref-clk-max-microamp = <100>;
+
+	status = "ok";
 };
 
 &pmk8350_vadc {
@@ -156,6 +223,12 @@
 	};
 };
 
+&pm7325b_wled {
+	qcom,string-cfg = <3>;
+	qcom,leds-per-string = <8>;
+	qcom,fs-current-limit = <22500>;
+};
+
 &spmi_debug_bus {
 	status = "ok";
 };
@@ -190,4 +263,69 @@
 &pm7325b_tz {
 	io-channels = <&pmk8350_vadc PM7325B_ADC7_DIE_TEMP>;
 	io-channel-names = "thermal";
+};
+
+&sdhc_1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc1_on>;
+	pinctrl-1 = <&sdc1_off>;
+
+	vdd-supply = <&L7B>;
+	qcom,vdd-voltage-level = <2952000 2952000>;
+	qcom,vdd-current-level = <0 570000>;
+
+	vdd-io-supply = <&L19B>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-lpm-sup;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <0 325000>;
+
+	status = "ok";
+};
+
+&sdhc_2 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on>;
+	pinctrl-1 = <&sdc2_off>;
+
+	vdd-supply = <&L9C>;
+	qcom,vdd-voltage-level = <2960000 2960000>;
+	qcom,vdd-current-level = <0 800000>;
+
+	vdd-io-supply = <&L6C>;
+	qcom,vdd-io-voltage-level = <1800000 2960000>;
+	qcom,vdd-io-current-level = <0 22000>;
+
+	cd-gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
+
+	status = "ok";
+};
+
+&qupv3_se13_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	status = "ok";
+	qcom,i2c-touch-active="novatek,NVT-ts";
+
+	novatek@62 {
+		compatible = "novatek,NVT-ts";
+		reg = <0x62>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <81 0x2008>;
+
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
+					"pmx_ts_release";
+
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+
+		novatek,reset-gpio = <&tlmm 105 0x00>;
+		novatek,irq-gpio = <&tlmm 81 0x2008>;
+
+		panel = <&dsi_nt36672e_fhd_plus_60_video
+			&dsi_nt36672e_fhd_plus_144_video>;
+	};
 };

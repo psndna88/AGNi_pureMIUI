@@ -10,7 +10,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. Monaco";
 	compatible = "qcom,monaco";
-	qcom,msm-id = <459 0x10000>;
+	qcom,msm-id = <486 0x10000>;
 	interrupt-parent = <&intc>;
 
 	#address-cells = <2>;
@@ -252,7 +252,7 @@
 		#redistributor-regions = <1>;
 		redistributor-stride = <0x0 0x20000>;
 		reg = <0xf200000 0x10000>,     /* GICD */
-		      <0xf300000 0x80000>;    /* GICR * 4 */
+		      <0xf300000 0x100000>;    /* GICR * 8 */
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
@@ -783,7 +783,7 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
-	}
+	};
 
 	clk_virt: interconnect {
 		compatible = "qcom,monaco-clk_virt";
@@ -817,6 +817,7 @@
 };
 
 #include "monaco-pinctrl.dtsi"
+#include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
 #include "monaco-gdsc.dtsi"
 

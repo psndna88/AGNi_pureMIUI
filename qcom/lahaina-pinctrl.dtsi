@@ -13,6 +13,20 @@
 		};
 	};
 
+	wcnss_en_sleep: wcnss_en_sleep {
+		mux {
+			pins = "gpio201";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio201";
+			drive-strength = <2>;
+			output-low;
+			bias-pull-down;
+		};
+	};
+
 	trigout_a: trigout_a {
 		mux {
 			pins = "gpio14";
