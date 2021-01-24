@@ -640,60 +640,6 @@ static void update_min_rate_limit_ns(struct sugov_policy *sg_policy)
 	mutex_unlock(&min_rate_lock);
 }
 
-static ssize_t up_rate_limit_us_show(struct gov_attr_set *attr_set, char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return sprintf(buf, "%u\n", tunables->up_rate_limit_us);
-}
-
-static ssize_t down_rate_limit_us_show(struct gov_attr_set *attr_set, char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return sprintf(buf, "%u\n", tunables->down_rate_limit_us);
-}
-
-static ssize_t up_rate_limit_us_store(struct gov_attr_set *attr_set,
-				      const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int rate_limit_us;
-
-	if (kstrtouint(buf, 10, &rate_limit_us))
-		return -EINVAL;
-
-	tunables->up_rate_limit_us = rate_limit_us;
-
-	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		sg_policy->up_rate_delay_ns = rate_limit_us * NSEC_PER_USEC;
-		update_min_rate_limit_ns(sg_policy);
-	}
-
-	return count;
-}
-
-static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
-					const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	struct sugov_policy *sg_policy;
-	unsigned int rate_limit_us;
-
-	if (kstrtouint(buf, 10, &rate_limit_us))
-		return -EINVAL;
-
-	tunables->down_rate_limit_us = rate_limit_us;
-
-	list_for_each_entry(sg_policy, &attr_set->policy_list, tunables_hook) {
-		sg_policy->down_rate_delay_ns = rate_limit_us * NSEC_PER_USEC;
-		update_min_rate_limit_ns(sg_policy);
-	}
-
-	return count;
-}
-
 static ssize_t hispeed_load_show(struct gov_attr_set *attr_set, char *buf)
 {
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
@@ -764,42 +710,14 @@ static ssize_t pl_store(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
-static ssize_t iowait_boost_enable_show(struct gov_attr_set *attr_set,
-					char *buf)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-
-	return sprintf(buf, "%u\n", tunables->iowait_boost_enable);
-}
-
-static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
-					 const char *buf, size_t count)
-{
-	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
-	bool enable;
-
-	if (kstrtobool(buf, &enable))
-		return -EINVAL;
-
-	tunables->iowait_boost_enable = enable;
-
-	return count;
-}
-
-static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
-static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
 static struct governor_attr hispeed_load = __ATTR_RW(hispeed_load);
 static struct governor_attr hispeed_freq = __ATTR_RW(hispeed_freq);
 static struct governor_attr pl = __ATTR_RW(pl);
-static struct governor_attr iowait_boost_enable = __ATTR_RW(iowait_boost_enable);
 
 static struct attribute *sugov_attributes[] = {
-	&up_rate_limit_us.attr,
-	&down_rate_limit_us.attr,
 	&hispeed_load.attr,
 	&hispeed_freq.attr,
 	&pl.attr,
-	&iowait_boost_enable.attr,
 	NULL
 };
 
