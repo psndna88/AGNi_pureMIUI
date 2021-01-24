@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, 2021 The Linux Foundation. All rights reserved.
  */
 
 #include <linux/compat.h>
@@ -115,16 +115,18 @@ static int audio_open(struct inode *inode, struct file *file)
 {
 	struct q6audio_aio *audio = NULL;
 	int rc = 0;
-
+	unsigned long flags = 0;
 #ifdef CONFIG_DEBUG_FS
 	/* 4 bytes represents decoder number, 1 byte for terminate string */
 	char name[sizeof "msm_amrwb_" + 5];
 #endif
+	spin_lock_irqsave(&enc_dec_lock, flags);
 	audio = kzalloc(sizeof(struct q6audio_aio), GFP_KERNEL);
 
-	if (audio == NULL)
+	if (audio == NULL) {
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		return -ENOMEM;
-
+	}
 	audio->pcm_cfg.buffer_size = PCM_BUFSZ_MIN;
 	audio->miscdevice = &audio_amrwb_misc;
 	audio->wakelock_voted = false;
@@ -136,15 +138,17 @@ static int audio_open(struct inode *inode, struct file *file)
 	if (!audio->ac) {
 		pr_err("Could not allocate memory for audio client\n");
 		kfree(audio);
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		return -ENOMEM;
 	}
 	rc = audio_aio_open(audio, file);
 	if (rc < 0) {
 		pr_err("%s: audio_aio_open rc=%d\n",
 			__func__, rc);
+		spin_unlock_irqrestore(&enc_dec_lock, flags);
 		goto fail;
 	}
-
+	spin_unlock_irqrestore(&enc_dec_lock, flags);
 	/* open in T/NT mode */
 	if ((file->f_mode & FMODE_WRITE) && (file->f_mode & FMODE_READ)) {
 		rc = q6asm_open_read_write(audio->ac, FORMAT_LINEAR_PCM,
