@@ -525,7 +525,10 @@ static int msm_dcvs_scale_clocks(struct msm_vidc_inst *inst,
 	} else if ((dcvs->dcvs_flags & MSM_VIDC_DCVS_DECR &&
 		    bufs_with_fw >= dcvs->nom_threshold) ||
 		   (dcvs->dcvs_flags & MSM_VIDC_DCVS_INCR &&
-		    bufs_with_fw <= dcvs->nom_threshold))
+		    bufs_with_fw <= dcvs->nom_threshold) ||
+		   (inst->session_type == MSM_VIDC_ENCODER &&
+		    dcvs->dcvs_flags & MSM_VIDC_DCVS_DECR &&
+		    bufs_with_fw >= dcvs->min_threshold))
 		dcvs->dcvs_flags = 0;
 
 	s_vpr_p(inst->sid, "DCVS: bufs_with_fw %d Th[%d %d %d] Flag %#x\n",
