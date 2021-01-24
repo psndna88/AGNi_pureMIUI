@@ -1935,7 +1935,7 @@
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				<  691000 MHZ_TO_MBPS(  300, 16) >,
+				<  691200 MHZ_TO_MBPS(  300, 16) >,
 				<  940800 MHZ_TO_MBPS(  466, 16) >,
 				< 1228800 MHZ_TO_MBPS(  600, 16) >,
 				< 1651200 MHZ_TO_MBPS(  806, 16) >,
@@ -1951,10 +1951,10 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					<  940800 MHZ_TO_MBPS( 547, 4) >,
 					< 1228800 MHZ_TO_MBPS(1017, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 2380800 MHZ_TO_MBPS(1708, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
 			};
@@ -1962,10 +1962,10 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					<  940800 MHZ_TO_MBPS( 547, 4) >,
 					< 1228800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 1900800 MHZ_TO_MBPS(1708, 4) >,
 					< 2380800 MHZ_TO_MBPS(2092, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
@@ -1979,10 +1979,10 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					< 1228800 MHZ_TO_MBPS( 547, 4) >,
 					< 1516800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1017, 4) >,
+					< 1651200 MHZ_TO_MBPS(1017, 4) >,
 					< 1900800 MHZ_TO_MBPS(1555, 4) >,
 					< 2400000 MHZ_TO_MBPS(1708, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
@@ -1991,10 +1991,10 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					< 1228800 MHZ_TO_MBPS( 547, 4) >,
 					< 1516800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 1900800 MHZ_TO_MBPS(1708, 4) >,
 					< 2400000 MHZ_TO_MBPS(2092, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
