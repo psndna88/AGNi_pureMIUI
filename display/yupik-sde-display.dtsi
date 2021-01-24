@@ -1,0 +1,42 @@
+#include "yupik-sde-display-common.dtsi"
+
+&soc {
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+};
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"cphy_byte_clk0", "cphy_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0",
+			"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
+
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 80 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&L8C>;
+	lab-supply = <&lcdb_ldo_vreg>;
+	ibb-supply = <&lcdb_ncp_vreg>;
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &sde_dsi>;
+};
