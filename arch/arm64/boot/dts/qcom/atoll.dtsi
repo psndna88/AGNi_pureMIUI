@@ -3832,7 +3832,7 @@
 			qcom,initial-pwrlevel = <5>;
 			qcom,ca-target-pwrlevel = <4>;
 
-			/* NOM_L1 */
+			/* TURBO */
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
 				qcom,gpu-freq = <750000000>;
