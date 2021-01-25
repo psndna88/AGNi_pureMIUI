@@ -1181,7 +1181,7 @@
 	};
 
 	bluetooth: bt_wcn6750 {
-		compatible = "qcom,wcn6750";
+		compatible = "qcom,wcn6750-bt";
 		pinctrl-names = "default";
 		pinctrl-0 = <&bt_en_sleep>;
 		qcom,bt-reset-gpio = <&tlmm 85 0>; /* BT_EN */
