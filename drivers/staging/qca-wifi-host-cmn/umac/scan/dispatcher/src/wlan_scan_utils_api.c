@@ -843,7 +843,8 @@ util_scan_parse_vendor_ie(struct scan_cache_entry *scan_params,
 		 * Bandwidth-NSS map has sub-type & version.
 		 * hence copy data just after version byte
 		 */
-		scan_params->ie_list.bwnss_map = (((uint8_t *)ie) + 8);
+		if (ie->ie_len > WLAN_BWNSS_MAP_OFFSET)
+			scan_params->ie_list.bwnss_map = (((uint8_t *)ie) + 8);
 	} else if (is_mbo_oce_oui((uint8_t *)ie)) {
 		scan_params->ie_list.mbo_oce = (uint8_t *)ie;
 	} else if (is_extender_oui((uint8_t *)ie)) {
@@ -904,8 +905,15 @@ util_scan_populate_bcn_ie_list(struct wlan_objmgr_pdev *pdev,
 		}
 
 		if (ie_len < ie->ie_len) {
-			scm_debug("Incomplete corrupted IE:%x",
-				ie->ie_id);
+			if (scan_obj->allow_bss_with_incomplete_ie) {
+				scm_debug(QDF_MAC_ADDR_FMT": Scan allowed with incomplete corrupted IE:%x, ie_len: %d, ie->ie_len: %d, stop processing further",
+					  QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
+					  ie->ie_id, ie_len, ie->ie_len);
+				break;
+			}
+			scm_debug(QDF_MAC_ADDR_FMT": Scan not allowed with incomplete corrupted IE:%x, ie_len: %d, ie->ie_len: %d, stop processing further",
+				  QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
+				  ie->ie_id, ie_len, ie->ie_len);
 			return QDF_STATUS_E_INVAL;
 		}
 

@@ -11531,6 +11531,7 @@ void sme_update_he_cap_nss(mac_handle_t mac_handle, uint8_t session_id,
 
 	if (!nss || (nss > 2)) {
 		sme_err("invalid Nss value %d", nss);
+		return;
 	}
 	csr_session = CSR_GET_SESSION(mac_ctx, session_id);
 	if (!csr_session) {
@@ -12570,10 +12571,10 @@ QDF_STATUS sme_soc_set_dual_mac_config(struct policy_mgr_dual_mac_config msg)
 	sme_debug("set_dual_mac_config scan_config: %x fw_mode_config: %x",
 		cmd->u.set_dual_mac_cmd.scan_config,
 		cmd->u.set_dual_mac_cmd.fw_mode_config);
-	csr_queue_sme_command(mac, cmd, false);
+	status = csr_queue_sme_command(mac, cmd, false);
 
 	sme_release_global_lock(&mac->sme);
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 #ifdef FEATURE_LFR_SUBNET_DETECTION
@@ -13289,6 +13290,21 @@ QDF_STATUS sme_delete_mon_session(mac_handle_t mac_handle, uint8_t vdev_id)
 	}
 
 	return status;
+}
+
+void
+sme_set_del_peers_ind_callback(mac_handle_t mac_handle,
+			       void (*callback)(struct wlan_objmgr_psoc *psoc,
+						uint8_t vdev_id))
+{
+	struct mac_context *mac;
+
+	if (!mac_handle) {
+		QDF_ASSERT(0);
+		return;
+	}
+	mac = MAC_CONTEXT(mac_handle);
+	mac->del_peers_ind_cb = callback;
 }
 
 void sme_set_chan_info_callback(mac_handle_t mac_handle,

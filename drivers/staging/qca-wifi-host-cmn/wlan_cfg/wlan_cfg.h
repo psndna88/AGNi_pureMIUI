@@ -156,6 +156,7 @@ struct wlan_srng_cfg {
  * @rxdma_err_dst_ring: rxdma error detination ring size
  * @raw_mode_war: enable/disable raw mode war
  * @enable_data_stall_detection: flag to enable data stall detection
+ * @enable_force_rx_64_ba: flag to enable force 64 blockack in RX
  * @disable_intra_bss_fwd: flag to disable intra bss forwarding
  * @rxdma1_enable: flag to indicate if rxdma1 is enabled
  * @tx_desc_limit_0: tx_desc limit for 5G H
@@ -185,6 +186,7 @@ struct wlan_srng_cfg {
  * @is_rx_fisa_enabled: flag to enable/disable FISA Rx
  * @rx_pending_high_threshold: threshold of starting pkt drop
  * @rx_pending_low_threshold: threshold of stopping pkt drop
+ * @wow_check_rx_pending_enable: Enable RX frame pending check in WoW
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -260,6 +262,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint32_t per_pkt_trace;
 	bool raw_mode_war;
 	bool enable_data_stall_detection;
+	bool enable_force_rx_64_ba;
 	bool disable_intra_bss_fwd;
 	bool rxdma1_enable;
 	int max_ast_idx;
@@ -287,6 +290,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t is_rx_fisa_enabled;
 	uint32_t rx_pending_high_threshold;
 	uint32_t rx_pending_low_threshold;
+	bool wow_check_rx_pending_enable;
 };
 
 /**
@@ -1330,4 +1334,12 @@ void wlan_cfg_fill_interrupt_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
  * Return: true if enabled, false otherwise.
  */
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/**
+ * wlan_cfg_is_dp_force_rx_64_ba() - Get force use 64 BA flag
+ * @cfg: config context
+ *
+ * Return: force use 64 BA flag
+ */
+bool wlan_cfg_is_dp_force_rx_64_ba(struct wlan_cfg_dp_soc_ctxt *cfg);
 #endif
