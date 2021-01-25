@@ -365,6 +365,7 @@
 	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
 	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
 	qcom,cdc-dmic45-gpios = <&cdc_dmic45_gpios>;
+	qcom,sec-mi2s-gpios = <&cdc_sec_mi2s_gpios>;
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd937x_codec>,
 		      <&wsa883x_0221>, <&wsa883x_0222>;
@@ -471,6 +472,23 @@
 		qcom,codec-lpass-clk-id = <0x310>;
 		#clock-cells = <1>;
 	};
+};
+
+&q6core {
+	cdc_sec_mi2s_gpios: msm_cdc_pinctrl_sec {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&sec_mi2s_sck_active &sec_mi2s_ws_active
+				&sec_mi2s_sd0_active>;
+		pinctrl-1 = <&sec_mi2s_sck_sleep &sec_mi2s_ws_sleep
+				&sec_mi2s_sd0_sleep>;
+		#gpio-cells = <0>;
+	};
+};
+
+&dai_mi2s1 {
+	qcom,msm-mi2s-rx-lines = <0>;
+	qcom,msm-mi2s-tx-lines = <1>;
 };
 
 &adsp_loader {
