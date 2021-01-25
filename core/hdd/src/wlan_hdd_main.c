@@ -223,6 +223,9 @@
 /* PCIe gen speed change idle shutdown timer 100 milliseconds */
 #define HDD_PCIE_GEN_SPEED_CHANGE_TIMEOUT_MS (100)
 
+#define MAX_NET_DEV_REF_LEAK_ITERATIONS 10
+#define NET_DEV_REF_LEAK_ITERATION_SLEEP_TIME_MS 10
+
 int wlan_start_ret_val;
 static DECLARE_COMPLETION(wlan_start_comp);
 static qdf_atomic_t wlan_hdd_state_fops_ref;
@@ -5938,10 +5941,17 @@ static char *net_dev_ref_debug_string_from_id(wlan_net_dev_ref_dbgid dbgid)
 
 static void hdd_check_for_net_dev_ref_leak(struct hdd_adapter *adapter)
 {
-	int id;
+	int i, id;
 
 	for (id = 0; id < NET_DEV_HOLD_ID_MAX; id++) {
-		if (adapter->net_dev_hold_ref_count[id]) {
+		for (i = 0; i < MAX_NET_DEV_REF_LEAK_ITERATIONS; i++) {
+			if (!adapter->net_dev_hold_ref_count[id])
+				break;
+			hdd_info("net_dev held for debug id %s",
+				 net_dev_ref_debug_string_from_id(id));
+			qdf_sleep(NET_DEV_REF_LEAK_ITERATION_SLEEP_TIME_MS);
+		}
+		if (i == MAX_NET_DEV_REF_LEAK_ITERATIONS) {
 			hdd_err("net_dev hold reference leak detected for debug id: %s",
 				net_dev_ref_debug_string_from_id(id));
 		}
@@ -6070,7 +6080,6 @@ static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx,
 	qdf_spinlock_destroy(&adapter->vdev_lock);
 	hdd_sta_info_deinit(&adapter->sta_info_list);
 	hdd_sta_info_deinit(&adapter->cache_sta_info_list);
-	hdd_check_for_net_dev_ref_leak(adapter);
 
 	wlan_hdd_debugfs_csr_deinit(adapter);
 
@@ -6960,6 +6969,7 @@ void hdd_close_adapter(struct hdd_context *hdd_ctx,
 	 */
 	hdd_bus_bw_compute_timer_stop(hdd_ctx);
 
+	hdd_check_for_net_dev_ref_leak(adapter);
 	hdd_remove_adapter(hdd_ctx, adapter);
 	__hdd_close_adapter(hdd_ctx, adapter, rtnl_held);
 
@@ -6974,8 +6984,10 @@ void hdd_close_all_adapters(struct hdd_context *hdd_ctx, bool rtnl_held)
 
 	hdd_enter();
 
-	while (QDF_IS_STATUS_SUCCESS(hdd_remove_front_adapter(hdd_ctx,
-							      &adapter))) {
+	while (QDF_IS_STATUS_SUCCESS(hdd_get_front_adapter(
+							hdd_ctx, &adapter))) {
+		hdd_check_for_net_dev_ref_leak(adapter);
+		hdd_remove_front_adapter(hdd_ctx, &adapter);
 		vdev_sync = osif_vdev_sync_unregister(adapter->dev);
 		if (vdev_sync)
 			osif_vdev_sync_wait_for_ops(vdev_sync);
