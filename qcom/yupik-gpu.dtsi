@@ -137,7 +137,7 @@
 
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
-					qcom,gpu-freq = <812000000>;
+					qcom,gpu-freq = <802000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
 
 					qcom,bus-freq-ddr7 = <11>;
@@ -224,12 +224,13 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 
+				/* Keeping speed bin for FMAX 812 */
 				qcom,speed-bin = <172>;
 				qcom,initial-pwrlevel = <5>;
 
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
-					qcom,gpu-freq = <812000000>;
+					qcom,gpu-freq = <802000000>;
 					qcom,level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
 
 					qcom,bus-freq-ddr7 = <11>;
