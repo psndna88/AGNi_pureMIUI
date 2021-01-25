@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -2906,7 +2906,7 @@ static uint32_t get_iir_band_coeff(struct snd_soc_component *component,
 	/* Mask bits top 2 bits since they are reserved */
 	value |= ((snd_soc_component_read32(component,
 				(BOLERO_CDC_RX_SIDETONE_IIR0_IIR_COEF_B2_CTL +
-				 16 * iir_idx)) & 0x3F) << 24);
+				 0x80 * iir_idx)) & 0x3F) << 24);
 
 	return value;
 }
@@ -2993,7 +2993,7 @@ static int rx_macro_iir_band_audio_mixer_put(struct snd_kcontrol *kcontrol,
 	 * Updates addr automatically for each B2 write
 	 */
 	snd_soc_component_write(component,
-		(BOLERO_CDC_RX_SIDETONE_IIR0_IIR_COEF_B1_CTL + 16 * iir_idx),
+		(BOLERO_CDC_RX_SIDETONE_IIR0_IIR_COEF_B1_CTL + 0x80 * iir_idx),
 		(band_idx * BAND_MAX * sizeof(uint32_t)) & 0x7F);
 
 	/* Store the coefficients in sidetone coeff array */
