@@ -191,7 +191,7 @@
 		qcom,sde-reg-dma-xin-id = <7>;
 		qcom,sde-reg-dma-clk-ctrl = <0x2bc 20>;
 
-		qcom,sde-secure-sid-mask = <0x4000901>;
+		qcom,sde-secure-sid-mask = <0x901 0xD01>;
 
 		/* SPMI address related to display */
 		qcom,pmic-arb = <&spmi_bus>;
