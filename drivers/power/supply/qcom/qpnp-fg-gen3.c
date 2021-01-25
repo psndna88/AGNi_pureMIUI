@@ -4082,14 +4082,14 @@ static int fg_bcl_reset(struct fg_chip *chip)
 	int i, ret, rc = 0;
 	u8 val, peek_mux;
 	bool success = false;
-	pr_err("FG_BCL_RESET START\n");
+
 	/* Read initial value of peek mux1 */
 	rc = fg_read(chip, BATT_INFO_PEEK_MUX1(chip), &peek_mux, 1);
 	if (rc < 0) {
 		pr_err("Error in writing peek mux1, rc=%d\n", rc);
 		return rc;
 	}
-	pr_err("FG_BCL_RESET PEEK_MUX = %d\n",peek_mux);
+
 	val = 0x83;
 	rc = fg_write(chip, BATT_INFO_PEEK_MUX1(chip), &val, 1);
 	if (rc < 0) {
@@ -4099,7 +4099,6 @@ static int fg_bcl_reset(struct fg_chip *chip)
 
 	mutex_lock(&chip->sram_rw_lock);
 	for (i = 0; i < BCL_RESET_RETRY_COUNT; i++) {
-		pr_err("FG_BCL_RESET RETRY\n");
 		rc = fg_dma_mem_req(chip, true);
 		if (rc < 0) {
 			pr_err("Error in locking memory, rc=%d\n", rc);
@@ -4123,7 +4122,8 @@ static int fg_bcl_reset(struct fg_chip *chip)
 
 			rc = fg_dma_mem_req(chip, false);
 			if (rc < 0)
-				pr_err("Error in unlocking memory, rc=%d\n", rc);
+				pr_err("Error in unlocking memory, rc=%d\n",
+						rc);
 
 			/* Delay of 2ms */
 			usleep_range(2000, 3000);
@@ -4139,7 +4139,8 @@ static int fg_bcl_reset(struct fg_chip *chip)
 		} else {
 			rc = fg_dma_mem_req(chip, false);
 			if (rc < 0) {
-				pr_err("Error in unlocking memory, rc=%d\n", rc);
+				pr_err("Error in unlocking memory, rc=%d\n",
+						rc);
 				goto unlock;
 			}
 			success = false;
