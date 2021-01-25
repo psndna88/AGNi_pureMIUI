@@ -40,6 +40,12 @@
 	};
 };
 
+&pmk8350 {
+	pon_pbs@800 {
+		status = "disabled";
+	};
+};
+
 &pmk8350_vadc {
 	/delete-node/ pm8350_ref_gnd;
 	/delete-node/ pm8350_vref_1p25;
