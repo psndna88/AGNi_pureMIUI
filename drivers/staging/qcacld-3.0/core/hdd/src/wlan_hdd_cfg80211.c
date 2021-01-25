@@ -1129,6 +1129,9 @@ hdd_convert_hang_reason(enum qdf_hang_reason reason)
 	case QDF_SUSPEND_NO_CREDIT:
 		ret_val = QCA_WLAN_HANG_SUSPEND_NO_CREDIT;
 		break;
+	case QCA_HANG_BUS_FAILURE:
+		ret_val = QCA_WLAN_HANG_BUS_FAILURE;
+		break;
 	case QDF_REASON_UNSPECIFIED:
 	default:
 		ret_val = QCA_WLAN_HANG_REASON_UNSPECIFIED;
@@ -6703,6 +6706,8 @@ wlan_hdd_wifi_config_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_MAX + 1] = {
 		.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_NUM_TX_CHAINS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_NUM_RX_CHAINS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS] = {.type = NLA_U8 },
 
 };
 
@@ -7290,6 +7295,37 @@ static int hdd_config_vdev_chains(struct hdd_adapter *adapter,
 	if (hdd_ctx->dynamic_nss_chains_support)
 		return hdd_set_dynamic_antenna_mode(adapter, rx_chains,
 						    tx_chains);
+	return 0;
+}
+
+static int hdd_config_tx_rx_nss(struct hdd_adapter *adapter,
+				  struct nlattr *tb[])
+{
+	uint8_t tx_nss, rx_nss;
+	QDF_STATUS status;
+
+	struct nlattr *tx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS];
+	struct nlattr *rx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS];
+
+	if (!tx_attr && !rx_attr)
+		return 0;
+
+	tx_nss = nla_get_u8(tx_attr);
+	rx_nss = nla_get_u8(rx_attr);
+	hdd_debug("tx_nss %d rx_nss %d", tx_nss, rx_nss);
+	/* Only allow NSS for tx_rx_nss for 1x1, 1x2, 2x2 */
+	if (!((tx_nss == 1 && rx_nss == 2) || (tx_nss == 1 && rx_nss == 1) ||
+	      (tx_nss == 2 && rx_nss == 2))) {
+		hdd_err("Setting tx_nss %d rx_nss %d not allowed", tx_nss,
+			rx_nss);
+		return 0;
+	}
+	status = hdd_update_nss(adapter, tx_nss, rx_nss);
+	if (status != QDF_STATUS_SUCCESS)
+		hdd_debug("Can't set tx_nss %d rx_nss %d", tx_nss, rx_nss);
+
 	return 0;
 }
 
@@ -8293,6 +8329,78 @@ static int hdd_get_optimized_power_config(struct hdd_adapter *adapter,
 	return 0;
 }
 
+/**
+ * hdd_get_tx_nss_config() - Get the number of tx spatial streams supported by
+ * the adapter
+ * @adapter: Pointer to HDD adapter
+ * @skb: sk buffer to hold nl80211 attributes
+ * @attr: Pointer to struct nlattr
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static int hdd_get_tx_nss_config(struct hdd_adapter *adapter,
+				 struct sk_buff *skb,
+				 const struct nlattr *attr)
+{
+	uint8_t tx_nss;
+	QDF_STATUS status;
+
+	if (!hdd_is_vdev_in_conn_state(adapter)) {
+		hdd_err("Not in connected state");
+		return -EINVAL;
+	}
+
+	status = hdd_get_tx_nss(adapter, &tx_nss);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Failed to get nss");
+		return -EINVAL;
+	}
+
+	hdd_debug("tx_nss %d", tx_nss);
+	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS, tx_nss)) {
+		hdd_err("nla_put failure");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/**
+ * hdd_get_rx_nss_config() - Get the number of rx spatial streams supported by
+ * the adapter
+ * @adapter: Pointer to HDD adapter
+ * @skb: sk buffer to hold nl80211 attributes
+ * @attr: Pointer to struct nlattr
+ *
+ * Return: 0 on success; error number otherwise
+ */
+static int hdd_get_rx_nss_config(struct hdd_adapter *adapter,
+				 struct sk_buff *skb,
+				 const struct nlattr *attr)
+{
+	uint8_t rx_nss;
+	QDF_STATUS status;
+
+	if (!hdd_is_vdev_in_conn_state(adapter)) {
+		hdd_err("Not in connected state");
+		return -EINVAL;
+	}
+
+	status = hdd_get_rx_nss(adapter, &rx_nss);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		hdd_err("Failed to get nss");
+		return -EINVAL;
+	}
+
+	hdd_debug("rx_nss %d", rx_nss);
+	if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS, rx_nss)) {
+		hdd_err("nla_put failure");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /* vtable for config getters */
 static const struct config_getters config_getters[] = {
 #ifdef WLAN_FEATURE_ELNA
@@ -8306,6 +8414,12 @@ static const struct config_getters config_getters[] = {
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_OPTIMIZED_POWER_MANAGEMENT,
 	 sizeof(uint8_t),
 	 hdd_get_optimized_power_config},
+	 {QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS,
+	 sizeof(uint8_t),
+	 hdd_get_tx_nss_config},
+	 {QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS,
+	 sizeof(uint8_t),
+	 hdd_get_rx_nss_config},
 };
 
 /**
@@ -8427,6 +8541,7 @@ static const interdependent_setter_fn interdependent_setters[] = {
 	wlan_hdd_cfg80211_wifi_set_reorder_timeout,
 	wlan_hdd_cfg80211_wifi_set_rx_blocksize,
 	hdd_config_vdev_chains,
+	hdd_config_tx_rx_nss,
 };
 
 /**

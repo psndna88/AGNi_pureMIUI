@@ -162,6 +162,8 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_fwol_ucfg_api.h"
 #include "wlan_policy_mgr_ucfg.h"
+#include "qdf_func_tracker.h"
+
 #ifdef CNSS_GENL
 #include <net/cnss_nl.h>
 #endif
@@ -2747,6 +2749,11 @@ wlan_hdd_update_dbs_scan_and_fw_mode_config(void)
 	if (!policy_mgr_find_if_fw_supports_dbs(hdd_ctx->psoc))
 		return QDF_STATUS_SUCCESS;
 
+	if (hdd_ctx->is_dual_mac_cfg_updated) {
+		hdd_debug("dual mac config has already been updated, skip");
+		return QDF_STATUS_SUCCESS;
+	}
+
 	cfg.scan_config = 0;
 	cfg.fw_mode_config = 0;
 	cfg.set_dual_mac_cb = policy_mgr_soc_set_dual_mac_cfg_cb;
@@ -2793,6 +2800,8 @@ wlan_hdd_update_dbs_scan_and_fw_mode_config(void)
 		/* wait for sme_soc_set_dual_mac_config to complete */
 		status =
 		    policy_mgr_wait_for_dual_mac_configuration(hdd_ctx->psoc);
+		if (QDF_IS_STATUS_SUCCESS(status))
+			hdd_ctx->is_dual_mac_cfg_updated = true;
 	} else {
 		hdd_err("sme_soc_set_dual_mac_config failed %d", status);
 		return status;
@@ -6491,6 +6500,36 @@ hdd_peer_cleanup(struct hdd_context *hdd_ctx, struct hdd_adapter *adapter)
 		hdd_debug("peer_cleanup_done wait fail");
 }
 
+#ifdef FUNC_CALL_MAP
+
+/**
+ * hdd_dump_func_call_map() - Dump the function call map
+ *
+ * Return: None
+ */
+
+static void hdd_dump_func_call_map(void)
+{
+	char *cc_buf;
+
+	cc_buf = qdf_mem_malloc(QDF_FUNCTION_CALL_MAP_BUF_LEN);
+	/*
+	 * These logs are required as these indicates the start and end of the
+	 * dump for the auto script to parse
+	 */
+	hdd_info("Function call map dump start");
+	qdf_get_func_call_map(cc_buf);
+	qdf_trace_hex_dump(QDF_MODULE_ID_HDD,
+		QDF_TRACE_LEVEL_DEBUG, cc_buf, QDF_FUNCTION_CALL_MAP_BUF_LEN);
+	hdd_info("Function call map dump end");
+	qdf_mem_free(cc_buf);
+}
+#else
+static inline void hdd_dump_func_call_map(void)
+{
+}
+#endif
+
 QDF_STATUS hdd_stop_adapter(struct hdd_context *hdd_ctx,
 			    struct hdd_adapter *adapter)
 {
@@ -6808,6 +6847,8 @@ QDF_STATUS hdd_stop_adapter(struct hdd_context *hdd_ctx,
 		adapter->scan_info.default_scan_ies_len = 0;
 	}
 
+	/* This function should be invoked at the end of this api*/
+	hdd_dump_func_call_map();
 	hdd_exit();
 
 	return QDF_STATUS_SUCCESS;
@@ -8545,6 +8586,9 @@ void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 #ifdef FEATURE_WLAN_CH_AVOID
 	mutex_destroy(&hdd_ctx->avoid_freq_lock);
 #endif
+
+	/* This function should be invoked at the end of this api*/
+	hdd_dump_func_call_map();
 }
 
 /**
@@ -10222,13 +10266,13 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 	bool is_vendor_acs_support =
 		cfg_default(CFG_USER_AUTO_CHANNEL_SELECTION);
 
-	hdd_for_each_adapter(hdd_ctxt, adapter) {
+	hdd_for_each_adapter_dev_held(hdd_ctxt, adapter) {
 		if (!(adapter->device_mode == QDF_SAP_MODE &&
 		    adapter->session.ap.sap_config.acs_cfg.acs_mode)) {
-			hdd_debug("skip device mode:%d acs:%d",
-				  adapter->device_mode,
-				  adapter->session.ap.sap_config.
-				  acs_cfg.acs_mode);
+			hdd_debug_rl("skip device mode:%d acs:%d",
+				     adapter->device_mode,
+			adapter->session.ap.sap_config.acs_cfg.acs_mode);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -10272,6 +10316,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 				restart_chan_store);
 			hdd_debug("ch:%d is safe. no need to change channel",
 				  ap_chan);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -10290,6 +10335,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 		if (is_vendor_acs_support && is_acs_support_for_dfs_ltecoex) {
 			hdd_update_acs_timer_reason(adapter,
 				QCA_WLAN_VENDOR_ACS_SELECT_REASON_LTE_COEX);
+			dev_put(adapter->dev);
 			continue;
 		}
 
@@ -10333,6 +10379,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 						CSA_REASON_UNSAFE_CHANNEL);
 				hdd_switch_sap_channel(adapter, restart_chan,
 						       true);
+				dev_put(adapter->dev);
 				return;
 			}
 			else {
@@ -10340,9 +10387,12 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 				wlan_hdd_send_svc_nlink_msg(
 						hdd_ctxt->radio_index,
 						WLAN_SVC_LTE_COEX_IND, NULL, 0);
+				dev_put(adapter->dev);
 				return;
 			}
 		}
+		/* dev_put has to be done here */
+		dev_put(adapter->dev);
 	}
 }
 
@@ -13294,6 +13344,7 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 
 	/* Once the firmware sequence is completed reset this flag */
 	hdd_ctx->imps_enabled = false;
+	hdd_ctx->is_dual_mac_cfg_updated = false;
 	hdd_ctx->driver_status = DRIVER_MODULES_CLOSED;
 	hdd_debug("Wlan transitioned (now CLOSED)");
 

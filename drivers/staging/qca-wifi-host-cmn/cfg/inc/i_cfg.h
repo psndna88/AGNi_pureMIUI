@@ -35,6 +35,7 @@
 #define cfg_exit()
 
 #define cfg_err_rl(params...)
+#define cfg_warn_rl(params...)
 #define cfg_info_rl(params...)
 #define cfg_debug_rl(params...)
 
