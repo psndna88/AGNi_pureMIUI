@@ -80,8 +80,8 @@
 			<0>,   /* Off */
 			<100>; /* On */
 
-		nvmem-cells = <&gpu_speed_bin>;
-		nvmem-cell-names = "speed_bin";
+		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
+		nvmem-cell-names = "speed_bin", "gaming_bin";
 
 		qcom,gpu-mempools {
 			#address-cells = <1>;
