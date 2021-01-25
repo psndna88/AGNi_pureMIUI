@@ -38,5 +38,5 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb &sde_dsi>;
+	connectors = <&sde_wb &sde_dsi &sde_rscc>;
 };

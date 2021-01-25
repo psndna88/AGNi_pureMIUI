@@ -122,7 +122,6 @@
 	sde_rscc: qcom,sde_rscc@af20000 {
 		cell-index = <0>;
 		compatible = "qcom,sde-rsc";
-		status = "disabled";
 		reg = <0xaf20000 0x4d68>,
 				<0xaf30000 0x3fd4>;
 		reg-names = "drv", "wrapper";
@@ -180,25 +179,10 @@
 				&cnoc2 SLAVE_DISPLAY_CFG>;
 	interconnect-names = "qcom,sde-data-bus0", "qcom,sde-reg-bus";
 
-	vdd-supply = <&disp_cc_mdss_core_gdsc>;
 	qcom,sde-has-idle-pc;
 	qcom,sde-dspp-ltm-version = <0x00010001>;
 	/* offsets are based off dspp 0 */
 	qcom,sde-dspp-ltm-off = <0x15300>;
-
-	qcom,platform-supply-entries {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			qcom,platform-supply-entry@0 {
-				reg = <0>;
-				qcom,supply-name = "vdd";
-				qcom,supply-min-voltage = <0>;
-				qcom,supply-max-voltage = <0>;
-				qcom,supply-enable-load = <0>;
-				qcom,supply-disable-load = <0>;
-			};
-	};
 };
 
 &mdss_dsi0 {
