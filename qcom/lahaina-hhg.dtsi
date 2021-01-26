@@ -94,6 +94,10 @@
 	};
 };
 
+&usb1 {
+        qcom,ignore-wakeup-src-in-hostmode;
+};
+
 &thermal_zones {
 	cpu-1-6-step {
 		trips {
