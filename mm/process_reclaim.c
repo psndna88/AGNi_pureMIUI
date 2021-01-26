@@ -21,17 +21,25 @@
 #include <linux/notifier.h>
 #include <linux/vmpressure.h>
 
+#ifdef CONFIG_ANDROID_PR_KILL
+#include <linux/delay.h>
+#endif
+
+#ifndef CONFIG_ANDROID_PR_KILL
 #define CREATE_TRACE_POINTS
 #include <trace/events/process_reclaim.h>
+#endif
 
 #define MAX_SWAP_TASKS SWAP_CLUSTER_MAX
 
 static void swap_fn(struct work_struct *work);
 DECLARE_WORK(swap_work, swap_fn);
 
+#ifndef CONFIG_ANDROID_PR_KILL
 /* User knob to enable/disable process reclaim feature */
 static int enable_process_reclaim;
 module_param_named(enable_process_reclaim, enable_process_reclaim, int, 0644);
+#endif
 
 /* The max number of pages tried to be reclaimed in a single run */
 int per_swap_size = SWAP_CLUSTER_MAX * 32;
@@ -63,6 +71,16 @@ module_param_named(swap_eff_win, swap_eff_win, int, 0644);
 
 static int swap_opt_eff = 50;
 module_param_named(swap_opt_eff, swap_opt_eff, int, 0644);
+
+#ifdef CONFIG_ANDROID_PR_KILL
+/* Number of SWAP pages in MiB below which tasks should be killed */
+static int free_swap_limit = 40;
+module_param_named(free_swap_limit, free_swap_limit, int, 0644);
+
+/* Minimum OOM score above which tasks should be killed */
+static short score_kill_limit = 300;
+module_param_named(score_kill_limit, score_kill_limit, short, 0644);
+#endif
 
 static atomic_t skip_reclaim = ATOMIC_INIT(0);
 /* Not atomic since only a single instance of swap_fn run at a time */
@@ -104,6 +122,78 @@ static int test_task_flag(struct task_struct *p, int flag)
 	return 0;
 }
 
+#ifdef CONFIG_ANDROID_PR_KILL
+static void mark_lmk_victim(struct task_struct *tsk)
+{
+	struct mm_struct *mm = tsk->mm;
+
+	if (!cmpxchg(&tsk->signal->oom_mm, NULL, mm)) {
+		atomic_inc(&tsk->signal->oom_mm->mm_count);
+		set_bit(MMF_OOM_VICTIM, &mm->flags);
+	}
+}
+
+
+static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
+{
+	int i, j, max = tsi;
+	struct task_struct *temp;
+
+	/*
+	 * We sort tasks based on (stime+utime) since last accessed,
+	 * in descending order.
+	 *
+	 * TODO: Use sort() next time?
+	 */
+	rcu_read_lock();
+	for (i = 0; i < tsi; i++) {
+		for (j = i + 1; j < tsi; j++) {
+
+			if (tasks_to_kill[i]->acct_timexpd <
+					tasks_to_kill[j]->acct_timexpd) {
+
+				temp = tasks_to_kill[i];
+				tasks_to_kill[i] = tasks_to_kill[j];
+				tasks_to_kill[j] = temp;
+
+			}
+		}
+	}
+	rcu_read_unlock();
+
+	/* We kill tasks with the lowest (stime+utime) */
+	while (tsi--) {
+		struct task_struct *tsk = tasks_to_kill[tsi];
+		int cur_swap = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
+
+		if (cur_swap > free_swap_limit)
+			break;
+
+		task_lock(tsk);
+		send_sig(SIGKILL, tsk, 0);
+		if (tsk->mm) {
+			if (!test_bit(MMF_OOM_SKIP, &tsk->mm->flags)) {
+				mark_lmk_victim(tsk);
+				wake_oom_reaper(tsk);
+			}
+		}
+		task_unlock(tsk);
+
+		pr_debug("process_reclaim: total:%d[%d] comm:%s(%d) txpd:%llu KILLED!",
+				max,
+				(tsi + 1),
+				tsk->comm,
+				tsk->signal->oom_score_adj,
+				cputime_to_nsecs(tsk->acct_timexpd));
+
+		msleep(20);
+		if (tsk)
+			put_task_struct(tsk);
+
+	}
+}
+#endif
+
 static void swap_fn(struct work_struct *work)
 {
 	struct task_struct *tsk;
@@ -111,6 +201,10 @@ static void swap_fn(struct work_struct *work)
 
 	/* Pick the best MAX_SWAP_TASKS tasks in terms of anon size */
 	struct selected_task selected[MAX_SWAP_TASKS] = {{0, 0, 0},};
+#ifdef CONFIG_ANDROID_PR_KILL
+	struct task_struct *tasks_to_kill[MAX_SWAP_TASKS];
+	int tsi = 0;
+#endif
 	int si = 0;
 	int i;
 	int tasksize;
@@ -179,6 +273,17 @@ static void swap_fn(struct work_struct *work)
 	rcu_read_unlock();
 
 	while (si--) {
+#ifdef CONFIG_ANDROID_PR_KILL
+		int cur_swap = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
+
+		if (cur_swap < free_swap_limit &&
+			selected[si].oom_score_adj > score_kill_limit) {
+
+			tasks_to_kill[tsi] = selected[si].p;
+			tsi += 1;
+
+		} else {
+#endif
 		nr_to_reclaim =
 			(selected[si].tasksize * per_swap_size) / total_sz;
 		/* scan atleast a page */
@@ -187,14 +292,25 @@ static void swap_fn(struct work_struct *work)
 
 		rp = reclaim_task_anon(selected[si].p, nr_to_reclaim);
 
+#ifndef CONFIG_ANDROID_PR_KILL
 		trace_process_reclaim(selected[si].tasksize,
 				selected[si].oom_score_adj, rp.nr_scanned,
 				rp.nr_reclaimed, per_swap_size, total_sz,
 				nr_to_reclaim);
+#endif
 		total_scan += rp.nr_scanned;
 		total_reclaimed += rp.nr_reclaimed;
 		put_task_struct(selected[si].p);
+
+#ifdef CONFIG_ANDROID_PR_KILL
+		}
+#endif
 	}
+
+#ifdef CONFIG_ANDROID_PR_KILL
+	if (tsi > 1)
+		sort_and_kill_tasks(tasks_to_kill, tsi);
+#endif
 
 	if (total_scan) {
 		efficiency = (total_reclaimed * 100) / total_scan;
@@ -210,7 +326,9 @@ static void swap_fn(struct work_struct *work)
 
 		reclaim_avg_efficiency =
 			(efficiency + reclaim_avg_efficiency) / 2;
+#ifndef CONFIG_ANDROID_PR_KILL
 		trace_process_reclaim_eff(efficiency, reclaim_avg_efficiency);
+#endif
 	}
 }
 
@@ -219,8 +337,10 @@ static int vmpressure_notifier(struct notifier_block *nb,
 {
 	unsigned long pressure = action;
 
+#ifndef CONFIG_ANDROID_PR_KILL
 	if (!enable_process_reclaim)
 		return 0;
+#endif
 
 	if (!current_is_kswapd())
 		return 0;
@@ -238,6 +358,33 @@ static struct notifier_block vmpr_nb = {
 	.notifier_call = vmpressure_notifier,
 };
 
+
+#ifdef CONFIG_ANDROID_PR_KILL
+/*
+ * Needed to prevent Android from thinking there's no LMK and thus rebooting.
+ * Taken from Simple LMK (@kerneltoast).
+ */
+static int process_reclaim_init(const char *val, const struct kernel_param *kp)
+{
+	static atomic_t init_done = ATOMIC_INIT(0);
+
+	if (!atomic_cmpxchg(&init_done, 0, 1)) {
+		BUG_ON(vmpressure_notifier_register(&vmpr_nb));
+	}
+
+	return 0;
+}
+
+static const struct kernel_param_ops process_reclaim_ops = {
+	.set = process_reclaim_init
+};
+
+#undef MODULE_PARAM_PREFIX
+#define MODULE_PARAM_PREFIX "lowmemorykiller."
+module_param_cb(minfree, &process_reclaim_ops, NULL, 0200);
+
+#else /*CONFIG_ANDROID_PR_KILL*/
+
 static int __init process_reclaim_init(void)
 {
 	vmpressure_notifier_register(&vmpr_nb);
@@ -251,3 +398,5 @@ static void __exit process_reclaim_exit(void)
 
 module_init(process_reclaim_init);
 module_exit(process_reclaim_exit);
+
+#endif
