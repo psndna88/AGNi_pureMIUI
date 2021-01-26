@@ -54,8 +54,10 @@ static unsigned long pressure_max = 90;
 module_param_named(pressure_min, pressure_min, ulong, 0644);
 module_param_named(pressure_max, pressure_max, ulong, 0644);
 
+#ifndef CONFIG_ANDROID_PR_KILL
 static short min_score_adj = 360;
 module_param_named(min_score_adj, min_score_adj, short, 0644);
+#endif
 
 /*
  * Scheduling process reclaim workqueue unecessarily
@@ -99,6 +101,14 @@ struct selected_task {
 	short oom_score_adj;
 };
 
+#ifdef CONFIG_ANDROID_PR_KILL
+static const short never_reclaim[] = {
+	0, /* Foreground task */
+	50,
+	200 /* Running service */
+};
+#endif
+
 int selected_cmp(const void *a, const void *b)
 {
 	const struct selected_task *x = a;
@@ -130,6 +140,18 @@ static int test_task_flag(struct task_struct *p, int flag)
 }
 
 #ifdef CONFIG_ANDROID_PR_KILL
+static int score_adj_check(short oom_score_adj)
+{
+	int i;
+	short never_reclaim_size = ARRAY_SIZE(never_reclaim);
+
+	for (i = 0; i < never_reclaim_size; i++)
+		if (oom_score_adj == never_reclaim[i])
+			return 1;
+
+	return 0;
+}
+
 static void mark_lmk_victim(struct task_struct *tsk)
 {
 	struct mm_struct *mm = tsk->mm;
@@ -288,7 +310,11 @@ static void swap_fn(struct work_struct *work)
 			continue;
 
 		oom_score_adj = p->signal->oom_score_adj;
+#ifdef CONFIG_ANDROID_PR_KILL
+		if (score_adj_check(oom_score_adj) || oom_score_adj < 0) {
+#else
 		if (oom_score_adj < min_score_adj) {
+#endif
 			task_unlock(p);
 			continue;
 		}
