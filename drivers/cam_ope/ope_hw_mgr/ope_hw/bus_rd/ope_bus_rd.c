@@ -871,4 +871,3 @@ int cam_ope_bus_rd_process(struct ope_hw *ope_hw_info,
 
 	return rc;
 }
-
