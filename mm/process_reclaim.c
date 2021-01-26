@@ -133,6 +133,32 @@ static void mark_lmk_victim(struct task_struct *tsk)
 	}
 }
 
+/*
+ * Low-memory notification levels
+ *
+ * LOWMEM_NONE: No low-memory scenario detected.
+ *
+ * LOWMEM_NORMAL: A scenario in which the SWAP
+ * memory levels are below defined thresholds.
+ * (swap_mem as defined below)
+ */
+enum lowmem_levels {
+	LOWMEM_NONE,
+	LOWMEM_NORMAL,
+};
+
+static int is_low_mem(void)
+{
+	unsigned long cur_swap_mem = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
+	unsigned long swap_mem = free_swap_limit * 1024;
+
+	bool lowmem_normal = cur_swap_mem < swap_mem;
+
+	if (lowmem_normal)
+		return LOWMEM_NORMAL;
+	else
+		return LOWMEM_NONE;
+}
 
 static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
 {
@@ -164,9 +190,8 @@ static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
 	/* We kill tasks with the lowest (stime+utime) */
 	while (tsi--) {
 		struct task_struct *tsk = tasks_to_kill[tsi];
-		int cur_swap = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
 
-		if (cur_swap > free_swap_limit)
+		if (is_low_mem() == LOWMEM_NONE)
 			break;
 
 		task_lock(tsk);
@@ -274,9 +299,7 @@ static void swap_fn(struct work_struct *work)
 
 	while (si--) {
 #ifdef CONFIG_ANDROID_PR_KILL
-		int cur_swap = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
-
-		if (cur_swap < free_swap_limit &&
+		if (is_low_mem() > LOWMEM_NONE &&
 			selected[si].oom_score_adj > score_kill_limit) {
 
 			tasks_to_kill[tsi] = selected[si].p;
