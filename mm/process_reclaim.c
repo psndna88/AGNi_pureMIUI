@@ -148,20 +148,35 @@ static void mark_lmk_victim(struct task_struct *tsk)
  * LOWMEM_NORMAL: A scenario in which the SWAP
  * memory levels are below defined thresholds.
  * (swap_mem as defined below)
+ *
+ * LOWMEM_CRITICAL: A scenario in which the LOWMEM_NORMAL
+ * condition is satisfied, as well as when the reclaimable
+ * file pages (active) are below a certain threshold.
+ * (free_file_limit as defined above)
  */
 enum lowmem_levels {
 	LOWMEM_NONE,
 	LOWMEM_NORMAL,
+	LOWMEM_CRITICAL,
 };
 
 static int is_low_mem(void)
 {
+	const int lru_base = NR_LRU_BASE - LRU_BASE;
+
+	unsigned long cur_file_mem =
+			global_page_state(lru_base + LRU_ACTIVE_FILE);
+
 	unsigned long cur_swap_mem = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
 	unsigned long swap_mem = free_swap_limit * 1024;
 
 	bool lowmem_normal = cur_swap_mem < swap_mem;
+	bool lowmem_critical = lowmem_normal &&
+				cur_file_mem < free_file_limit;
 
-	if (lowmem_normal)
+	if (lowmem_critical)
+		return LOWMEM_CRITICAL;
+	else if (lowmem_normal)
 		return LOWMEM_NORMAL;
 	else
 		return LOWMEM_NONE;
