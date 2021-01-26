@@ -261,6 +261,17 @@ static void swap_fn(struct work_struct *work)
 	int nr_to_reclaim;
 	int efficiency;
 
+#ifdef CONFIG_ANDROID_PR_KILL
+	/*
+	 * In case memory is critically low, i.e at a
+	 * LOWMEM_CRITICAL level as defined above lowmem_levels,
+	 * we kill a memory-hogging task as fast as possible,
+	 * so as to prevent a system-freeze.
+	 */
+	if (is_low_mem() == LOWMEM_CRITICAL)
+		pagefault_out_of_memory();
+#endif
+
 	rcu_read_lock();
 	for_each_process(tsk) {
 		struct task_struct *p;
