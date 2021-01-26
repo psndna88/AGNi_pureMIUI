@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_IFE_CSID_HW_H_
@@ -599,7 +599,7 @@ struct cam_csid_evt_payload {
  * @csid_udin_reset_complete: udi n completion
  * @csid_debug:               csid debug information to enable the SOT, EOT,
  *                            SOF, EOF, measure etc in the csid hw
- * @clk_rate                  Clock rate
+ * @clk_rate                  Current clock rate
  * @sof_irq_triggered:        Flag is set on receiving event to enable sof irq
  *                            incase of SOF freeze.
  * @is_resetting:             informs whether reset is started or not.

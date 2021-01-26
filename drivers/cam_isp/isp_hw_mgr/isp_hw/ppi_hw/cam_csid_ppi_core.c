@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -75,7 +75,7 @@ static int cam_csid_ppi_enable_hw(struct cam_csid_ppi_hw  *ppi_hw)
 
 	for (i = 0; i < soc_info->num_clk; i++) {
 		rc = cam_soc_util_clk_enable(soc_info->clk[i],
-			soc_info->clk_name[i], 0);
+			soc_info->clk_name[i], 0, NULL);
 		if (rc)
 			goto clk_disable;
 	}

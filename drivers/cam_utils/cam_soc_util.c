@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -378,19 +378,20 @@ long cam_soc_util_get_clk_round_rate(struct cam_hw_soc_info *soc_info,
 /**
  * cam_soc_util_set_clk_rate()
  *
- * @brief:          Sets the given rate for the clk requested for
+ * @brief:            Sets the given rate for the clk requested for
  *
- * @clk:            Clock structure information for which rate is to be set
- * @clk_name:       Name of the clock for which rate is being set
- * @clk_rate        Clock rate to be set
+ * @clk:              Clock structure information for which rate is to be set
+ * @clk_name:         Name of the clock for which rate is being set
+ * @clk_rate:         Clock rate to be set
+ * @applied_clk_rate: Final clock rate set to the clk
  *
  * @return:         Success or failure
  */
 static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
-	int64_t clk_rate)
+	int64_t clk_rate, unsigned long *applied_clk_rate)
 {
 	int rc = 0;
-	long clk_rate_round;
+	long clk_rate_round = -1;
 
 	if (!clk || !clk_name)
 		return -EINVAL;
@@ -426,6 +427,9 @@ static int cam_soc_util_set_clk_rate(struct clk *clk, const char *clk_name,
 			return rc;
 		}
 	}
+
+	if (applied_clk_rate)
+		*applied_clk_rate = clk_rate_round;
 
 	return rc;
 }
@@ -475,7 +479,8 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 	}
 
 	rc = cam_soc_util_set_clk_rate(clk,
-		soc_info->clk_name[src_clk_idx], clk_rate);
+		soc_info->clk_name[src_clk_idx], clk_rate,
+		&soc_info->applied_src_clk_rate);
 	if (rc) {
 		CAM_ERR(CAM_UTIL,
 			"SET_RATE Failed: src clk: %s, rate %lld, dev_name = %s rc: %d",
@@ -495,7 +500,8 @@ int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
 		clk = soc_info->clk[scl_clk_idx];
 		rc = cam_soc_util_set_clk_rate(clk,
 			soc_info->clk_name[scl_clk_idx],
-			soc_info->clk_rate[apply_level][scl_clk_idx]);
+			soc_info->clk_rate[apply_level][scl_clk_idx],
+			NULL);
 		if (rc) {
 			CAM_WARN(CAM_UTIL,
 			"SET_RATE Failed: scl clk: %s, rate %d dev_name = %s, rc: %d",
@@ -602,14 +608,15 @@ int cam_soc_util_get_option_clk_by_name(struct cam_hw_soc_info *soc_info,
 }
 
 int cam_soc_util_clk_enable(struct clk *clk, const char *clk_name,
-	int32_t clk_rate)
+	int32_t clk_rate, unsigned long *applied_clock_rate)
 {
 	int rc = 0;
 
 	if (!clk || !clk_name)
 		return -EINVAL;
 
-	rc = cam_soc_util_set_clk_rate(clk, clk_name, clk_rate);
+	rc = cam_soc_util_set_clk_rate(clk, clk_name, clk_rate,
+		applied_clock_rate);
 	if (rc)
 		return rc;
 
@@ -647,8 +654,9 @@ int cam_soc_util_clk_disable(struct clk *clk, const char *clk_name)
 int cam_soc_util_clk_enable_default(struct cam_hw_soc_info *soc_info,
 	enum cam_vote_level clk_level)
 {
-	int i, rc = 0;
-	enum cam_vote_level apply_level;
+	int                          i, rc = 0;
+	enum cam_vote_level          apply_level;
+	unsigned long                applied_clk_rate;
 
 	if ((soc_info->num_clk == 0) ||
 		(soc_info->num_clk >= CAM_SOC_MAX_CLK)) {
@@ -668,9 +676,14 @@ int cam_soc_util_clk_enable_default(struct cam_hw_soc_info *soc_info,
 	for (i = 0; i < soc_info->num_clk; i++) {
 		rc = cam_soc_util_clk_enable(soc_info->clk[i],
 			soc_info->clk_name[i],
-			soc_info->clk_rate[apply_level][i]);
+			soc_info->clk_rate[apply_level][i],
+			&applied_clk_rate);
 		if (rc)
 			goto clk_disable;
+
+		if (i == soc_info->src_clk_idx)
+			soc_info->applied_src_clk_rate = applied_clk_rate;
+
 		if (soc_info->cam_cx_ipeak_enable) {
 			CAM_DBG(CAM_UTIL,
 			"dev name = %s clk name = %s idx = %d\n"
@@ -928,6 +941,7 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 {
 	int i, rc = 0;
 	enum cam_vote_level apply_level;
+	unsigned long applied_clk_rate;
 
 	if ((soc_info->num_clk == 0) ||
 		(soc_info->num_clk >= CAM_SOC_MAX_CLK)) {
@@ -957,7 +971,8 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 
 		rc = cam_soc_util_set_clk_rate(soc_info->clk[i],
 			soc_info->clk_name[i],
-			soc_info->clk_rate[apply_level][i]);
+			soc_info->clk_rate[apply_level][i],
+			&applied_clk_rate);
 		if (rc < 0) {
 			CAM_DBG(CAM_UTIL,
 				"dev name = %s clk_name = %s idx = %d\n"
@@ -968,6 +983,9 @@ int cam_soc_util_set_clk_rate_level(struct cam_hw_soc_info *soc_info,
 				cam_cx_ipeak_update_vote_cx_ipeak(soc_info, 0);
 			break;
 		}
+
+		if (i == soc_info->src_clk_idx)
+			soc_info->applied_src_clk_rate = applied_clk_rate;
 	}
 
 	return rc;

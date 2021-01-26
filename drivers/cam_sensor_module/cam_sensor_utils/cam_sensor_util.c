@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -2098,7 +2098,8 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 			for (j = 0; j < soc_info->num_clk; j++) {
 				rc = cam_soc_util_clk_enable(soc_info->clk[j],
 					soc_info->clk_name[j],
-					soc_info->clk_rate[0][j]);
+					soc_info->clk_rate[0][j],
+					NULL);
 				if (rc)
 					break;
 			}
