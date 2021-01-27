@@ -1,7 +1,5 @@
-#include "sdxlemur-mtp.dtsi"
-#include "sdxlemur-mtp-audio-overlay.dtsi"
+#include "sdxlemur-mtp-mbb.dtsi"
 
 &soc {
 
 };
-
