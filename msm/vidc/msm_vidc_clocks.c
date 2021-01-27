@@ -1282,6 +1282,7 @@ decision_done:
 
 	/* For WORK_MODE_1, set Low Latency mode by default to HW. */
 
+	latency.enable = false;
 	if (inst->session_type == MSM_VIDC_ENCODER &&
 			inst->clk_data.work_mode == HFI_WORKMODE_1) {
 		latency.enable = true;
@@ -1290,6 +1291,10 @@ decision_done:
 			HFI_PROPERTY_PARAM_VENC_LOW_LATENCY_MODE,
 			(void *)&latency, sizeof(latency));
 	}
+
+	s_vpr_h(inst->sid, "Configuring work mode = %u low latency = %u",
+			pdata.video_work_mode,
+			latency.enable);
 
 	rc = msm_comm_scale_clocks_and_bus(inst, 1);
 
