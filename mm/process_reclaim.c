@@ -152,16 +152,6 @@ static int score_adj_check(short oom_score_adj)
 	return 0;
 }
 
-static void mark_lmk_victim(struct task_struct *tsk)
-{
-	struct mm_struct *mm = tsk->mm;
-
-	if (!cmpxchg(&tsk->signal->oom_mm, NULL, mm)) {
-		atomic_inc(&tsk->signal->oom_mm->mm_count);
-		set_bit(MMF_OOM_VICTIM, &mm->flags);
-	}
-}
-
 /*
  * Low-memory notification levels
  *
@@ -187,7 +177,7 @@ static int is_low_mem(void)
 	const int lru_base = NR_LRU_BASE - LRU_BASE;
 
 	unsigned long cur_file_mem =
-			global_page_state(lru_base + LRU_ACTIVE_FILE);
+			global_zone_page_state(lru_base + LRU_ACTIVE_FILE);
 
 	unsigned long cur_swap_mem = (get_nr_swap_pages() << (PAGE_SHIFT - 10));
 	unsigned long swap_mem = free_swap_limit * 1024;
@@ -240,12 +230,6 @@ static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
 
 		task_lock(tsk);
 		send_sig(SIGKILL, tsk, 0);
-		if (tsk->mm) {
-			if (!test_bit(MMF_OOM_SKIP, &tsk->mm->flags)) {
-				mark_lmk_victim(tsk);
-				wake_oom_reaper(tsk);
-			}
-		}
 		task_unlock(tsk);
 
 		pr_debug("process_reclaim: total:%d[%d] comm:%s(%d) txpd:%llu KILLED!",
@@ -253,7 +237,7 @@ static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
 				(tsi + 1),
 				tsk->comm,
 				tsk->signal->oom_score_adj,
-				cputime_to_nsecs(tsk->acct_timexpd));
+				tsk->acct_timexpd);
 
 		msleep(20);
 		if (tsk)
