@@ -12,6 +12,7 @@ provides the reserved RAM dump memory location and size.
 
 Required properties:
   - compatible: "qcom,cnss" for QCA6174 device
+                "qcom,cnss_sdio" for TF device
                 "qcom,cnss-qca6290" for QCA6290 device
                 "qcom,cnss-qca6390" for QCA6390 device
                 "qcom,cnss-qca6490" for QCA6490 device
