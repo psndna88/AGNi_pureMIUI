@@ -126,6 +126,9 @@ Optional properties:
 				power off trigger during system shutdown case.
 - qcom,ps-hold-hard-reset-disable:	Boolean property to disable PS_HOLD
 				power off trigger during system hard reset case.
+- qcom,use-legacy-hard-reset-offset       Boolean property to support legacy
+				hard-reset offset of the PON_RB_SPARE register for
+				some (PON gen2) platforms.
 
 Optional Sub-nodes:
 - qcom,pon_1 ... qcom,pon_n:	These PON child nodes correspond to features
