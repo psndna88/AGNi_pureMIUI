@@ -5,6 +5,15 @@
 		qcom,supply-min-voltage = <1800000>;
 		qcom,supply-max-voltage = <1800000>;
 	};
+	qcom,panel-supply-entry@4 {
+		reg = <4>;
+		qcom,supply-name = "extvdd";
+		qcom,supply-min-voltage = <1200000>;
+		qcom,supply-max-voltage = <1200000>;
+		qcom,supply-enable-load = <60700>;
+		qcom,supply-disable-load = <80>;
+		qcom,supply-post-on-sleep = <0>;
+	};
 };
 
 &dsi_r66451_amoled_90hz_cmd_cphy {
@@ -32,5 +41,6 @@
 	vdd-supply = <&L13C>;
 	lab-supply = <&ab_vreg>;
 	ibb-supply = <&ibb_vreg>;
-	qcom,dsi-default-panel = <&dsi_r66451_amoled_144hz_cmd_cphy >;
+	extvdd-supply = <&pm8350b_l1>;
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_144hz_cmd_cphy>;
 };
