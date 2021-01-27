@@ -719,3 +719,4 @@
 #include "sm6150-qupv3.dtsi"
 #include "sm6150-pinctrl.dtsi"
 #include "sm6150-pm.dtsi"
+#include "sm6150-regulator.dtsi"
