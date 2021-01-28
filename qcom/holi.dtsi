@@ -772,6 +772,26 @@
 			qcom,dump-id = <0x87>;
 		};
 
+		l1_itlb102 {
+			qcom,dump-size = <0x300>;
+			qcom,dump-id = <0x26>;
+		};
+
+		l1_itlb103 {
+			qcom,dump-size = <0x300>;
+			qcom,dump-id = <0x27>;
+		};
+
+		l1_dtlb102 {
+			qcom,dump-size = <0x480>;
+			qcom,dump-id = <0x46>;
+		};
+
+		l1_dtlb103 {
+			qcom,dump-size = <0x480>;
+			qcom,dump-id = <0x47>;
+		};
+
 		l2_tlb0 {
 			qcom,dump-size = <0x5a00>;
 			qcom,dump-id = <0x120>;
