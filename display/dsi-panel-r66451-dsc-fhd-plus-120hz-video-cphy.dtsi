@@ -1,16 +1,15 @@
 &mdss_mdp {
-	dsi_r66451_amoled_90hz_cmd_cphy: qcom,mdss_dsi_r66451_fhd_plus_90hz_cphy_cmd {
+	dsi_r66451_amoled_120hz_video_cphy: qcom,mdss_dsi_r66451_fhd_plus_cphy_120hz_vid {
 		qcom,mdss-dsi-panel-name =
-			"r66451 amoled cmd mode dsi visionox panel with DSC";
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+			"r66451 amoled video mode dsi visionox panel with DSC";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-physical-type = "oled";
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-border-color = <0>;
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
 
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
 		qcom,mdss-dsi-bllp-eof-power-mode;
@@ -21,19 +20,11 @@
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
-		qcom,mdss-dsi-tx-eot-append;
-		qcom,mdss-dsi-rx-eot-ignore;
-
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
+		qcom,adjust-timer-wakeup-ms = <1>;
 		qcom,panel-cphy-mode;
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
-				qcom,mdss-dsi-panel-framerate = <90>;
+				qcom,mdss-dsi-panel-framerate = <120>;
 				qcom,mdss-dsi-panel-width = <1080>;
 				qcom,mdss-dsi-panel-height = <2340>;
 				qcom,mdss-dsi-h-front-porch = <96>;
@@ -47,19 +38,21 @@
 				qcom,mdss-dsi-h-right-border = <0>;
 				qcom,mdss-dsi-v-top-border = <0>;
 				qcom,mdss-dsi-v-bottom-border = <0>;
-				qcom,mdss-dsi-panel-jitter = <0x4 0x1>;
 				qcom,mdss-dsi-on-command = [
-					39 01 00 00 00 00 02 b0 80
-					39 01 00 00 00 00 02 e6 00
+					39 01 00 00 00 00 02 b0 00
+					39 01 00 00 00 00 02 b3 01
 					39 01 00 00 00 00 02 b0 04
+					39 01 00 00 00 00 03 e8 00 02
+					39 01 00 00 00 00 03 e4 00 08
 					39 01 00 00 00 00 03 b4 20 1c
 					39 01 00 00 00 00 0d b6 6c 00 06 23 af
 					   13 1a 05 04 fa 05 20
-					39 01 00 00 00 00 0c c2 09 24 0c 00 00
-					   10 00 00 00 09 40
-					39 01 00 00 00 00 1a d7 00 b9 40 00 40
-					   00 00 e0 0e 00 40 00 00 00 00 00 00
-					   19 40 00 00 00 00 e0 0e
+					39 01 00 00 00 00 02 b0 00
+					39 01 00 00 00 00 32 c4 00 00 00 00 00
+					   00 00 00 10 00 00 02 00 00 00 29 00
+					   01 00 00 00 00 00 00 00 00 00 00 00
+					   22 00 00 00 00 11 00 00 0c 00 00 00
+					   00 30 00 00 00 00 00 00
 					39 01 00 00 00 00 86 cf 64 0b 00 22 00
 					   cd 03 33 04 00 0b 77 01 01 01 02 02
 					   03 03 04 04 04 04 05 00 00 00 3b 00
@@ -74,8 +67,29 @@
 					   f6 0f f6 0f f6 0f f6 19
 					39 01 00 00 00 00 09 d1 05 00 21 02 24
 					   19 24 2d
+					39 01 00 00 00 00 15 d3 49 00 00 01 1a
+					   15 00 15 07 0f 77 77 77 37 b2 11 00
+					   a0 3c 9a
+					39 01 00 00 00 00 1a d7 00 b9 34 00 40
+					   04 00 f0 0f 00 40 00 00 00 00 00 00
+					   19 34 00 40 04 00 f0 0f
+					39 01 00 00 00 00 34 d8 00 00 00 00 00
+					   00 00 00 00 3a 00 3a 00 3a 00 3a 00
+					   3a 05 00 00 00 00 00 00 00 00 00 0f
+					   00 0f 00 00 00 00 00 00 00 00 00 00
+					   00 00 00 0f 00 2f 00 0f 00 20
+					39 01 00 00 00 00 2b df 50 42 58 81 2d
+					   00 00 00 00 00 00 6b 00 00 00 00 00
+					   00 00 00 01 0f ff d4 0e 00 00 00 00
+					   00 00 0f 53 18 00 0f 00 00 00 00 00
+					   00
 					39 01 00 00 00 00 03 eb 8b 8b
 					39 01 00 00 00 00 02 f7 01
+					39 01 00 00 00 00 02 b0 80
+					39 01 00 00 00 00 0a e4 34 b4 00 00 00
+					   30 04 0c e2
+					39 01 00 00 00 00 02 e6 00
+					39 01 00 00 00 00 02 b0 04
 					39 01 00 00 00 00 03 df 50 40
 					39 01 00 00 00 00 06 f3 50 00 00 00 00
 					39 01 00 00 00 00 02 f2 11
@@ -83,13 +97,11 @@
 					39 01 00 00 00 00 03 f4 00 02
 					39 01 00 00 00 00 02 f2 19
 					39 01 00 00 00 00 03 df 50 42
-					39 01 00 00 00 00 02 35 00
 					39 01 00 00 00 00 05 2a 00 00 04 37
 					39 01 00 00 00 00 05 2b 00 00 09 23
 					05 01 00 00 78 00 01 11
 					05 01 00 00 00 00 01 29
 				];
-
 				qcom,mdss-dsi-off-command = [
 					05 01 00 00 14 00 02 28 00
 					05 01 00 00 78 00 02 10 00];
