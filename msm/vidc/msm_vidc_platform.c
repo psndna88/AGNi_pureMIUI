@@ -514,7 +514,7 @@ static struct msm_vidc_codec_capability yupik_capabilities_v0[] = {
 	/* Batch Mode Decode */
 	{CAP_BATCH_MAX_MB_PER_FRAME, DEC, CODECS_ALL, 36, 8160, 1, 8160},
 	/* (1920 * 1088) / 256 */
-	{CAP_BATCH_MAX_FPS, DEC, CODECS_ALL, 1, 30, 1, 30},
+	{CAP_BATCH_MAX_FPS, DEC, CODECS_ALL, 1, 60, 1, 30},
 
 	/* Lossless encoding usecase specific */
 	{CAP_LOSSLESS_FRAME_WIDTH, ENC, H264|HEVC, 128, 4096, 2, 1920},
@@ -622,7 +622,7 @@ static struct msm_vidc_codec_capability yupik_capabilities_v1[] = {
 	/* Batch Mode Decode */
 	{CAP_BATCH_MAX_MB_PER_FRAME, DEC, CODECS_ALL, 36, 8160, 1, 8160},
 	/* (1920 * 1088) / 256 */
-	{CAP_BATCH_MAX_FPS, DEC, CODECS_ALL, 1, 30, 1, 30},
+	{CAP_BATCH_MAX_FPS, DEC, CODECS_ALL, 1, 60, 1, 30},
 
 	/* Lossless encoding usecase specific */
 	{CAP_LOSSLESS_FRAME_WIDTH, ENC, H264|HEVC, 128, 4096, 2, 1920},
