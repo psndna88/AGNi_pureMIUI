@@ -876,7 +876,7 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 	chlist = nla_nest_start(vendor_event,
 				QCA_WLAN_VENDOR_ATTR_LL_STATS_CH_INFO);
 	if (!chlist) {
-		hdd_err("nla_nest_start failed");
+		hdd_err("nla_nest_start failed, %u", radiostat->num_channels);
 		return -EINVAL;
 	}
 
@@ -887,7 +887,8 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 
 		chinfo = nla_nest_start(vendor_event, i);
 		if (!chinfo) {
-			hdd_err("nla_nest_start failed");
+			hdd_err("nla_nest_start failed, chan number %u",
+				radiostat->num_channels);
 			return -EINVAL;
 		}
 
@@ -909,7 +910,9 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 		    nla_put_u32(vendor_event,
 				QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_CCA_BUSY_TIME,
 				channel_stats->cca_busy_time)) {
-			hdd_err("nla_put failed");
+			hdd_err("nla_put failed for channel info (%u, %d, %u)",
+				radiostat->num_channels, i,
+				channel_stats->channel.center_freq);
 			return -EINVAL;
 		}
 
@@ -923,7 +926,8 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 				vendor_event,
 				QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_RX_TIME,
 				channel_stats->rx_time)) {
-				hdd_err("nla_put failed");
+				hdd_err("nla_put failed for tx time (%u, %d)",
+					radiostat->num_channels, i);
 				return -EINVAL;
 			}
 		}
