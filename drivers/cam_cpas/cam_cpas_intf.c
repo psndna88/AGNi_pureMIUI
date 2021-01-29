@@ -161,11 +161,8 @@ bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
 		if (soc_private->feature_info[i].feature == flag)
 			break;
 
-	if (i == soc_private->num_feature_info) {
-		CAM_INFO(CAM_CPAS, "Feature not found, no of featues: %d",
-			soc_private->num_feature_info);
+	if (i == soc_private->num_feature_info)
 		goto end;
-	}
 
 	if (soc_private->feature_info[i].type == CAM_CPAS_FEATURE_TYPE_DISABLE
 		|| (soc_private->feature_info[i].type ==
