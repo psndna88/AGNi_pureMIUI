@@ -2584,6 +2584,8 @@ static int hdd_twt_clear_session_traffic_stats(struct hdd_adapter *adapter,
 	int ret, id;
 	uint32_t dialog_id;
 	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+	bool is_stats_tgt_cap_enabled;
+	QDF_STATUS status;
 
 	ret = wlan_cfg80211_nla_parse_nested(
 				tb,
@@ -2592,6 +2594,13 @@ static int hdd_twt_clear_session_traffic_stats(struct hdd_adapter *adapter,
 				qca_wlan_vendor_twt_stats_dialog_policy);
 	if (ret)
 		return ret;
+
+	ucfg_mlme_get_twt_statistics_tgt_cap(adapter->hdd_ctx->psoc,
+					     &is_stats_tgt_cap_enabled);
+	if (!is_stats_tgt_cap_enabled) {
+		hdd_debug("TWT Stats not supported by target");
+		return -EOPNOTSUPP;
+	}
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_STATS_FLOW_ID;
 	if (!tb[id]) {
@@ -2607,6 +2616,19 @@ static int hdd_twt_clear_session_traffic_stats(struct hdd_adapter *adapter,
 	hdd_debug("dialog_id %d peer mac_addr " QDF_MAC_ADDR_FMT,
 		  dialog_id, QDF_MAC_ADDR_REF(peer_mac));
 
+	status = hdd_twt_check_all_twt_support(adapter->hdd_ctx->psoc,
+					       dialog_id);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_debug("All TWT sessions not supported by target");
+		return -EOPNOTSUPP;
+	}
+
+	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
+					 &hdd_sta_ctx->conn_info.bssid,
+					 dialog_id)) {
+		hdd_debug("TWT session %d setup incomplete", dialog_id);
+		return -EINVAL;
+	}
 	ret = wlan_cfg80211_mc_twt_clear_infra_cp_stats(adapter->vdev,
 							dialog_id, peer_mac);
 
@@ -2685,6 +2707,7 @@ static int hdd_twt_get_session_traffic_stats(struct hdd_adapter *adapter,
 	QDF_STATUS qdf_status;
 	uint32_t dialog_id;
 	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+	bool is_stats_tgt_cap_enabled;
 
 	ret = wlan_cfg80211_nla_parse_nested(
 				tb,
@@ -2693,6 +2716,13 @@ static int hdd_twt_get_session_traffic_stats(struct hdd_adapter *adapter,
 				qca_wlan_vendor_twt_stats_dialog_policy);
 	if (ret)
 		return ret;
+
+	ucfg_mlme_get_twt_statistics_tgt_cap(adapter->hdd_ctx->psoc,
+					     &is_stats_tgt_cap_enabled);
+	if (!is_stats_tgt_cap_enabled) {
+		hdd_debug("TWT Stats not supported by target");
+		return -EOPNOTSUPP;
+	}
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_STATS_FLOW_ID;
 	if (tb[id])
@@ -2707,6 +2737,13 @@ static int hdd_twt_get_session_traffic_stats(struct hdd_adapter *adapter,
 		     QDF_MAC_ADDR_SIZE);
 	hdd_debug("get_stats peer mac_addr " QDF_MAC_ADDR_FMT,
 		  QDF_MAC_ADDR_REF(peer_mac));
+
+	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
+					 &hdd_sta_ctx->conn_info.bssid,
+					 dialog_id)) {
+		hdd_debug("TWT session %d setup incomplete", dialog_id);
+		return -EINVAL;
+	}
 
 	qdf_status = hdd_twt_request_session_traffic_stats(adapter,
 							   dialog_id, peer_mac);
