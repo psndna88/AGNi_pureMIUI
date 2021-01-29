@@ -226,6 +226,10 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 		*util = min((*util + rt), max_cap);
 
 	*max = max_cap;
+#ifdef CONFIG_UCLAMP_TASK
+	*util = uclamp_util_with(rq, *util, NULL);
+	*util = min(*max, *util);
+#endif
 }
 
 static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
