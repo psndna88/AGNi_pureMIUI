@@ -3261,6 +3261,12 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			{ 16, 7, 9, 9, IPA_EE_Q6, GSI_ESCAPE_BUF_ONLY, 0 } },
 
 	/* IPA_4_11 */
+	[IPA_4_11][IPA_CLIENT_WLAN2_PROD] 	         = {
+			true, IPA_v4_11_GROUP_UL_DL,
+			true,
+			IPA_DPS_HPS_SEQ_TYPE_2ND_PKT_PROCESS_PASS_NO_DEC_UCP,
+			QMB_MASTER_SELECT_DDR,
+			{ 3, 3, 8, 16, IPA_EE_AP, GSI_SMART_PRE_FETCH, 3 } },
 	[IPA_4_11][IPA_CLIENT_WLAN1_PROD]		   = {
 			true, IPA_v4_11_GROUP_UL_DL,
 			true,
@@ -3346,6 +3352,12 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			IPA_DPS_HPS_SEQ_TYPE_2ND_PKT_PROCESS_PASS_NO_DEC_UCP,
 			QMB_MASTER_SELECT_DDR,
 			{ 1, 1, 8, 16, IPA_EE_AP } },
+	[IPA_4_11][IPA_CLIENT_WLAN2_CONS]          = {
+			true, IPA_v4_11_GROUP_UL_DL,
+			false,
+			IPA_DPS_HPS_SEQ_TYPE_INVALID,
+			QMB_MASTER_SELECT_DDR,
+			{ 18, 9, 8, 14, IPA_EE_AP, GSI_SMART_PRE_FETCH, 3 } },
 	[IPA_4_11][IPA_CLIENT_WLAN1_CONS]		   = {
 			true, IPA_v4_11_GROUP_UL_DL,
 			false,
