@@ -46,6 +46,8 @@
 		qcom,min-access-length = <32>;
 		qcom,ubwc-mode = <4>;
 
+		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
+
 		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>;
 		interconnect-names = "gpu_icc_path";
 
