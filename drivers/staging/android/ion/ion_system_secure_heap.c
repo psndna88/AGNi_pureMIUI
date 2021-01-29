@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -62,7 +62,8 @@ static bool is_cp_flag_present(unsigned long flags)
 			ION_FLAG_CP_PIXEL |
 			ION_FLAG_CP_NON_PIXEL |
 			ION_FLAG_CP_CAMERA |
-			ION_FLAG_CP_CAMERA_ENCODE);
+			ION_FLAG_CP_CAMERA_ENCODE |
+			ION_FLAG_CP_CAMERA_GFX);
 }
 
 static void ion_system_secure_heap_free(struct ion_buffer *buffer)

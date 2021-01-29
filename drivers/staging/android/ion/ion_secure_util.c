@@ -32,6 +32,7 @@ bool is_secure_vmid_valid(int vmid)
 		vmid == VMID_CP_SPSS_SP_SHARED ||
 		vmid == VMID_CP_SPSS_HLOS_SHARED ||
 		vmid == VMID_CP_CAMERA_ENCODE ||
+		vmid == VMID_CP_CAMERA_GFX ||
 		vmid == VMID_CP_CDSP ||
 		vmid == VMID_CP_DSP_EXT);
 }
@@ -67,6 +68,8 @@ int get_secure_vmid(unsigned long flags)
 		return VMID_CP_SPSS_HLOS_SHARED;
 	if (flags & ION_FLAG_CP_CAMERA_ENCODE)
 		return VMID_CP_CAMERA_ENCODE;
+	if (flags & ION_FLAG_CP_CAMERA_GFX)
+		return VMID_CP_CAMERA_GFX;
 	if (flags & ION_FLAG_CP_CDSP)
 		return VMID_CP_CDSP;
 	if (flags & ION_FLAG_CP_DSP_EXT)
