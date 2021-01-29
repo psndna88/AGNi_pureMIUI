@@ -12751,8 +12751,8 @@ struct afe_param_id_group_device_tdm_cfg {
 	 */
 
 	u32	num_channels;
-	/* Number of enabled slots for TDM frame.
-	 * @values 1 to 8
+	/* Number of active channels = num of active slots * num of active lanes.
+	 * @values 1 to 64
 	 */
 
 	u32	sample_rate;
