@@ -7627,6 +7627,66 @@ static int write_hostapd_conf_password(struct sigma_dut *dut, FILE *f, int sae)
 }
 
 
+static void fwtest_set_he_params(struct sigma_dut *dut, const char *ifname)
+{
+	/* disable sending basic triggers */
+	fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 42 0", ifname);
+	/* disable MU BAR */
+	fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 64 1", ifname);
+	/* disable PSD Boost */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 142 1", ifname);
+	/* Enable mix bw */
+	fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 141 1", ifname);
+	/* Disable preferred AC */
+	fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 186 0", ifname);
+	/* enable full_band_probing */
+	fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 194 0", ifname);
+	/* enable the equal RU allocation */
+	fwtest_cmd_wrapper(dut, "-m 0x4b -v 0 0 1", ifname);
+
+	if (dut->ap_he_ulofdma == VALUE_ENABLED) {
+		/* Disable sounding for UL OFDMA */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 7 0", ifname);
+		/* Set random RU allocation */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 9 1", ifname);
+		/* To set TBTT PPDU duration (us) */
+		fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 63 1908", ifname);
+		/* disable enable_ul_ofdma_efficiency_check */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 131 0", ifname);
+	}
+
+	if (dut->ap_he_ppdu == PPDU_MU &&
+	    dut->ap_he_dlofdma == VALUE_ENABLED) {
+		/* Increase the min TX time limit for MU MIMO to
+		 * disable MU MIMO scheduling.
+		 */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 11 1000000", ifname);
+		/* Increase the max TX time limit for DL OFDMA
+		 * to enable OFDMA scheduling.
+		 */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 17 1000000", ifname);
+		/* Disable 'force SU schedule' to enable MU sch */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 8 0", ifname);
+		/* Enable MU 11ax support in sch algo */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 29 0", ifname);
+		/* Enable to sort RU allocation */
+		fwtest_cmd_wrapper(dut, "-m 0x4b -v 0 2 1", ifname);
+	}
+
+	if (dut->ap_txBF) {
+		/* Ignore TBTT for NDP */
+		fwtest_cmd_wrapper(dut, "-m 0x48 -v 0 2 1", ifname);
+		/* cv query enable */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 7 1", ifname);
+		/* override TPC calculations & set TxBF flag to true */
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 47 1", ifname);
+	}
+
+	if (dut->he_sounding == VALUE_ENABLED)
+		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 7 0", ifname);
+}
+
+
 enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_conn *conn,
 					   struct sigma_cmd *cmd)
@@ -8824,6 +8884,9 @@ skip_key_mgmt:
 			return STATUS_SENT;
 		}
 	}
+
+	if (drv == DRIVER_MAC80211 && dut->program == PROGRAM_HE)
+		fwtest_set_he_params(dut, ifname);
 
 	dut->hostapd_running = 1;
 	return 1;
