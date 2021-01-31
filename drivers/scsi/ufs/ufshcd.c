@@ -4743,12 +4743,29 @@ int ufshcd_read_desc_param(struct ufs_hba *hba,
 		return ret;
 	}
 
+	/*
+	 * Since WB feature has been added, WB related sysfs entries can be
+	 * accessed even when an UFS device does not support WB feature.
+	 * In that case, the descriptors which are not supported by the UFS
+	 * device may be wrongly reported when they are accessed from their
+	 * corrsponding sysfs entries. Fix it by adding this sanity check of
+	 * parameter offset against the actual decriptor length
+	 */
+	if (param_offset >= buff_len ||
+		param_offset + param_size > buff_len) {
+		dev_err(hba->dev, "%s: Invalid offset 0x%x or size 0x%x ",
+			__func__, param_offset, param_size);
+		dev_err(hba->dev, "in descriptor IDN 0x%x, length 0x%x\n",
+				desc_id, buff_len);
+		return -EINVAL;
+	}
+
 	/* Check whether we need temp memory */
 	if (param_offset + param_size > buff_len)
 		return -EINVAL;
 
 	if (param_offset != 0 || param_size < buff_len) {
-		desc_buf = kmalloc(buff_len, GFP_KERNEL);
+		desc_buf = kzalloc(buff_len, GFP_KERNEL);
 		if (!desc_buf)
 			return -ENOMEM;
 	} else {
