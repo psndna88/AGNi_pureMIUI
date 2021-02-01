@@ -1175,11 +1175,13 @@ FWOL_INC := -I$(WLAN_ROOT)/$(FWOL_CORE_INC) \
 	    -I$(WLAN_ROOT)/$(FWOL_TARGET_IF_INC) \
 	    -I$(WLAN_ROOT)/$(FWOL_OS_IF_INC)
 
+ifeq ($(CONFIG_WLAN_FW_OFFLOAD), y)
 FWOL_OBJS :=	$(FWOL_CORE_SRC)/wlan_fw_offload_main.o \
 		$(FWOL_DISPATCHER_SRC)/wlan_fwol_ucfg_api.o \
 		$(FWOL_DISPATCHER_SRC)/wlan_fwol_tgt_api.o \
 		$(FWOL_TARGET_IF_SRC)/target_if_fwol.o \
 		$(FWOL_OS_IF_SRC)/os_if_fwol.o
+endif
 
 ######## SM FRAMEWORK  ##############
 UMAC_SM_DIR := umac/cmn_services/sm_engine
@@ -2473,9 +2475,7 @@ OBJS +=		$(PLD_OBJS)
 OBJS +=		$(UMAC_SM_OBJS)
 OBJS +=		$(UMAC_MLME_OBJS)
 OBJS +=		$(MLME_OBJS)
-ifeq ($(CONFIG_WLAN_FW_OFFLOAD), y)
 OBJS +=		$(FWOL_OBJS)
-endif
 OBJS +=		$(BLM_OBJS)
 OBJS +=		$(COEX_OBJS)
 OBJS +=		$(OCB_OBJS)
