@@ -2447,10 +2447,7 @@ ifneq ($(CONFIG_LITHIUM), y)
 OBJS += 	$(HTT_OBJS)
 endif
 
-ifeq ($(CONFIG_LITHIUM), y)
 OBJS += 	$(HAL_OBJS)
-endif
-
 OBJS +=		$(FWLOG_OBJS)
 OBJS += 	$(EPPING_OBJS)
 OBJS +=		$(DFS_OBJS)
