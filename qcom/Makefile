@@ -156,10 +156,12 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupik-atp-overlay.dtbo \
 	yupik-qrd-overlay.dtbo \
 	yupik-idps-digital-mics-overlay.dtbo \
+	yupik-idps-amoled-overlay.dtbo \
 	yupikp-idp-overlay.dtbo \
 	yupikp-atp-overlay.dtbo \
 	yupikp-qrd-overlay.dtbo \
-	yupikp-idps-digital-mics-overlay.dtbo
+	yupikp-idps-digital-mics-overlay.dtbo \
+	yupikp-idps-amoled-overlay.dtbo
 
 
 yupik-rumi-overlay.dtbo-base := yupik.dtb
@@ -167,20 +169,24 @@ yupik-idp-overlay.dtbo-base := yupik.dtb
 yupik-atp-overlay.dtbo-base := yupik.dtb
 yupik-qrd-overlay.dtbo-base := yupik.dtb
 yupik-idps-digital-mics-overlay.dtbo-base := yupik.dtb
+yupik-idps-amoled-overlay.dtbo-base := yupik.dtb
 yupikp-idp-overlay.dtbo-base := yupikp.dtb
 yupikp-atp-overlay.dtbo-base := yupikp.dtb
 yupikp-qrd-overlay.dtbo-base := yupikp.dtb
 yupikp-idps-digital-mics-overlay.dtbo-base := yupikp.dtb
+yupikp-idps-amoled-overlay.dtbo-base := yupikp.dtb
 else
 dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupik-idp.dtb \
 	yupik-atp.dtb \
 	yupik-qrd.dtb \
 	yupik-idps-digital-mics.dtb \
+	yupik-idps-amoled.dtb \
 	yupikp-idp.dtb \
 	yupikp-atp.dtb \
 	yupikp-qrd.dtb \
-	yupikp-idps-digital-mics.dtb
+	yupikp-idps-digital-mics.dtb \
+	yupikp-idps-amoled.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
