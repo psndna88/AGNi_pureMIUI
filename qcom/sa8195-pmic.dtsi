@@ -106,54 +106,45 @@
 		};
 
 		cooling-maps {
-			/*
-			 * trip0 cooling map is dummy node to enable
-			 * passive polling on trip0 violation.
-			 */
 			trip0_cpu0 {
 				trip = <&pm8195_1_trip0>;
-				cooling-device = <&CPU0 0 0>;
-			};
-
-			trip1_cpu0 {
-				trip = <&pm8195_1_trip1>;
 				cooling-device =
 					<&CPU0 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 
-			trip1_cpu1 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu1 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu1_isolate 1 1>;
 			};
 
-			trip1_cpu2 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu2 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu2_isolate 1 1>;
 			};
 
-			trip1_cpu3 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu3 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu3_isolate 1 1>;
 			};
 
-			trip1_cpu4 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu4 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu4_isolate 1 1>;
 			};
 
-			trip1_cpu5 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu5 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu5_isolate 1 1>;
 			};
 
-			trip1_cpu6 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu6 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu6_isolate 1 1>;
 			};
 
-			trip1_cpu7 {
-				trip = <&pm8195_1_trip1>;
+			trip0_cpu7 {
+				trip = <&pm8195_1_trip0>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
 		};
@@ -186,54 +177,45 @@
 		};
 
 		cooling-maps {
-			/*
-			 * trip0 cooling map is dummy node to enable
-			 * passive polling on trip0 violation.
-			 */
 			trip0_cpu0 {
 				trip = <&pm8195_2_trip0>;
-				cooling-device = <&CPU0 0 0>;
-			};
-
-			trip1_cpu0 {
-				trip = <&pm8195_2_trip1>;
 				cooling-device =
 					<&CPU0 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 
-			trip1_cpu1 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu1 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu1_isolate 1 1>;
 			};
 
-			trip1_cpu2 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu2 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu2_isolate 1 1>;
 			};
 
-			trip1_cpu3 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu3 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu3_isolate 1 1>;
 			};
 
-			trip1_cpu4 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu4 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu4_isolate 1 1>;
 			};
 
-			trip1_cpu5 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu5 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu5_isolate 1 1>;
 			};
 
-			trip1_cpu6 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu6 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu6_isolate 1 1>;
 			};
 
-			trip1_cpu7 {
-				trip = <&pm8195_2_trip1>;
+			trip0_cpu7 {
+				trip = <&pm8195_2_trip0>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
 		};
@@ -266,54 +248,45 @@
 		};
 
 		cooling-maps {
-			/*
-			 * trip0 cooling map is dummy node to enable
-			 * passive polling on trip0 violation.
-			 */
 			trip0_cpu0 {
 				trip = <&pm8195_3_trip0>;
-				cooling-device = <&CPU0 0 0>;
-			};
-
-			trip1_cpu0 {
-				trip = <&pm8195_3_trip1>;
 				cooling-device =
 					<&CPU0 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 
-			trip1_cpu1 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu1 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu1_isolate 1 1>;
 			};
 
-			trip1_cpu2 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu2 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu2_isolate 1 1>;
 			};
 
-			trip1_cpu3 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu3 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu3_isolate 1 1>;
 			};
 
-			trip1_cpu4 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu4 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu4_isolate 1 1>;
 			};
 
-			trip1_cpu5 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu5 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu5_isolate 1 1>;
 			};
 
-			trip1_cpu6 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu6 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu6_isolate 1 1>;
 			};
 
-			trip1_cpu7 {
-				trip = <&pm8195_3_trip1>;
+			trip0_cpu7 {
+				trip = <&pm8195_3_trip0>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
 		};
