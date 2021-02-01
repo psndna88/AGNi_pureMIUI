@@ -32,7 +32,14 @@
 
 	#address-cells = <2>;
 	#size-cells = <2>;
+
+	chosen {
+		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off";
+	};
+
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
+
+	reserved_memory: reserved-memory { };
 
 	mem-offline {
 		compatible = "qcom,mem-offline";
@@ -54,32 +61,7 @@
 		swr2 = &swr2;
 	};
 
-	firmware: firmware {
-		scm {
-			compatible = "qcom,scm";
-			qcom,dload-mode = <&tcsr 0x13000>;
-		};
-		android {
-			compatible = "android,firmware";
-			vbmeta {
-				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
-			};
-
-			fstab {
-				compatible = "android,fstab";
-				vendor {
-					compatible = "android,vendor";
-					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
-
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
-					status = "ok";
-				};
-			};
-		};
-	};
+	firmware: firmware {};
 
 	cpus {
 		#address-cells = <2>;
@@ -268,207 +250,232 @@
 		};
 	};
 
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		hyp_mem: hyp@80000000 {
-			no-map;
-			reg = <0x0 0x80000000 0x0 0x600000>;
-		};
-
-		xbl_aop_mem: xbl_aop_mem@80700000 {
-			no-map;
-			reg = <0x0 0x80700000 0x0 0x160000>;
-		};
-
-		cmd_db: cmd_db@80860000 {
-			compatible = "qcom,cmd-db";
-			no-map;
-			reg = <0x0 0x80860000 0x0 0x20000>;
-		};
-
-		reserved_xbl_uefi: reserved_xbl_uefi@80880000 {
-			no-map;
-			reg = <0x0 0x80880000 0x0 0x14000>;
-		};
-
-		secdata_apss_mem: secdata_apss@808ff000 {
-			no-map;
-			reg = <0x0 0x808ff000 0x0 0x1000>;
-		};
-
-		smem_mem: smem@80900000 {
-			no-map;
-			reg = <0x0 0x80900000 0x0 0x200000>;
-		};
-
-		fw_mem: fw@80b00000 {
-			no-map;
-			reg = <0x0 0x80b00000 0x0 0x100000>;
-		};
-
-		wlan_fw_mem: wlan_fw@80c00000 {
-			no-map;
-			reg = <0x0 0x80c00000 0x0 0xc00000>;
-		};
-
-		cdsp_secure_heap_mem: cdsp_secure_heap@81800000 {
-			no-map;
-			reg = <0x0 0x81800000 0x0 0x1e00000>;
-		};
-
-		pil_cvp_mem: camera@86200000 {
-			no-map;
-			reg = <0x0 0x86200000 0x0 0x500000>;
-		};
-
-		pil_adsp_mem: adsp@86700000 {
-			no-map;
-			reg = <0x0 0x86700000 0x0 0x2800000>;
-		};
-
-		pil_cdsp_mem: cdsp@88f00000 {
-			no-map;
-			reg = <0x0 0x88f00000 0x0 0x1e00000>;
-		};
-
-		adsp_mem: adsp_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0xC00000>;
-		};
-
-		pil_camera_mem: video@8ad00000 {
-			no-map;
-			reg = <0x0 0x8ad00000 0x0 0x500000>;
-		};
-
-		pil_video_mem: cvp@8b200000 {
-			no-map;
-			reg = <0x0 0x8b200000 0x0 0x500000>;
-		};
-
-		pil_ipa_fw_mem: ipa_fw@8b700000 {
-			no-map;
-			reg = <0x0 0x8b700000 0x0 0x10000>;
-		};
-
-		pil_ipa_gsi_mem: ipa_gsi@8b710000 {
-			no-map;
-			reg = <0x0 0x8b710000 0x0 0xa000>;
-		};
-
-		pil_gpu_micro_code_mem: gpu_micro_code@8b71a000 {
-			no-map;
-			reg = <0x0 0x8b71a000 0x0 0x2000>;
-		};
-
-		pil_mpss_mem: mpss@8b800000 {
-			no-map;
-			reg = <0x0 0x8b800000 0x0 0xf600000>;
-		};
-
-		pil_wpss_mem: wlan@9ae00000 {
-			no-map;
-			reg = <0x0 0x9ae00000 0x0 0x1900000>;
-		};
-
-		removed_mem: removed_region@c0000000 {
-			no-map;
-			reg = <0x0 0xc0000000 0x0 0x5100000>;
-		};
-
-		pil_trustedvm_mem: pil_trustedvm_region@d0800000 {
-			no-map;
-			reg = <0x0 0xd0800000 0x0 0x76f7000>;
-		};
-
-		qrtr_shbuf: qrtr-shmem {
-			no-map;
-			reg = <0x0 0xd7ef7000 0x0 0x9000>;
-		};
-
-		chan0_shbuf: neuron_block@0 {
-			no-map;
-			reg = <0x0 0xd7f00000 0x0 0x80000>;
-		};
-
-		chan1_shbuf: neuron_block@1 {
-			no-map;
-			reg = <0x0 0xd7f80000 0x0 0x80000>;
-		};
-
-		user_contig_mem: user_contig_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1000000>;
-		};
-
-		qseecom_mem: qseecom_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1400000>;
-		};
-
-		qseecom_ta_mem: qseecom_ta_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1000000>;
-		};
-
-		secure_display_memory: secure_display_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0 0x00000000 0 0xffffffff>;
-			reusable;
-			alignment = <0 0x400000>;
-			size = <0 0x8c00000>;
-		};
-
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x2000000>;
-			linux,cma-default;
-		};
-
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			size = <0 0x2c00000>;
-		};
-
-		audio_cma_mem: audio_cma_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1C00000>;
-		};
-
-		splash_memory:splash_region {
-			reg = <0x0 0xe1000000 0x0 0x02400000>;
-			label = "cont_splash_region";
-		};
-	};
-
 	soc: soc { };
 
-	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x994000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off";
+};
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+		qcom,dload-mode = <&tcsr 0x13000>;
+	};
+
+	android {
+		compatible = "android,firmware";
+		vbmeta {
+			compatible = "android,vbmeta";
+			parts = "vbmeta,boot,system,vendor,dtbo";
+		};
+
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
+
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,slotselect,avb";
+				status = "ok";
+			};
+		};
+	};
+};
+
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	ranges;
+
+	hyp_mem: hyp@80000000 {
+		no-map;
+		reg = <0x0 0x80000000 0x0 0x600000>;
+	};
+
+	xbl_aop_mem: xbl_aop_mem@80700000 {
+		no-map;
+		reg = <0x0 0x80700000 0x0 0x160000>;
+	};
+
+	cmd_db: cmd_db@80860000 {
+		compatible = "qcom,cmd-db";
+		no-map;
+		reg = <0x0 0x80860000 0x0 0x20000>;
+	};
+
+	reserved_xbl_uefi: reserved_xbl_uefi@80880000 {
+		no-map;
+		reg = <0x0 0x80880000 0x0 0x14000>;
+	};
+
+	secdata_apss_mem: secdata_apss@808ff000 {
+		no-map;
+		reg = <0x0 0x808ff000 0x0 0x1000>;
+	};
+
+	smem_mem: smem@80900000 {
+		no-map;
+		reg = <0x0 0x80900000 0x0 0x200000>;
+	};
+
+	fw_mem: fw@80b00000 {
+		no-map;
+		reg = <0x0 0x80b00000 0x0 0x100000>;
+	};
+
+	wlan_fw_mem: wlan_fw@80c00000 {
+		no-map;
+		reg = <0x0 0x80c00000 0x0 0xc00000>;
+	};
+
+	cdsp_secure_heap_mem: cdsp_secure_heap@81800000 {
+		no-map;
+		reg = <0x0 0x81800000 0x0 0x1e00000>;
+	};
+
+	pil_cvp_mem: camera@86200000 {
+		no-map;
+		reg = <0x0 0x86200000 0x0 0x500000>;
+	};
+
+	pil_adsp_mem: adsp@86700000 {
+		no-map;
+		reg = <0x0 0x86700000 0x0 0x2800000>;
+	};
+
+	pil_cdsp_mem: cdsp@88f00000 {
+		no-map;
+		reg = <0x0 0x88f00000 0x0 0x1e00000>;
+	};
+
+	adsp_mem: adsp_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0xC00000>;
+	};
+
+	pil_camera_mem: video@8ad00000 {
+		no-map;
+		reg = <0x0 0x8ad00000 0x0 0x500000>;
+	};
+
+	pil_video_mem: cvp@8b200000 {
+		no-map;
+		reg = <0x0 0x8b200000 0x0 0x500000>;
+	};
+
+	pil_ipa_fw_mem: ipa_fw@8b700000 {
+		no-map;
+		reg = <0x0 0x8b700000 0x0 0x10000>;
+	};
+
+	pil_ipa_gsi_mem: ipa_gsi@8b710000 {
+		no-map;
+		reg = <0x0 0x8b710000 0x0 0xa000>;
+	};
+
+	pil_gpu_micro_code_mem: gpu_micro_code@8b71a000 {
+		no-map;
+		reg = <0x0 0x8b71a000 0x0 0x2000>;
+	};
+
+	pil_mpss_mem: mpss@8b800000 {
+		no-map;
+		reg = <0x0 0x8b800000 0x0 0xf600000>;
+	};
+
+	pil_wpss_mem: wlan@9ae00000 {
+		no-map;
+		reg = <0x0 0x9ae00000 0x0 0x1900000>;
+	};
+
+	removed_mem: removed_region@c0000000 {
+		no-map;
+		reg = <0x0 0xc0000000 0x0 0x5100000>;
+	};
+
+	pil_trustedvm_mem: pil_trustedvm_region@d0800000 {
+		no-map;
+		reg = <0x0 0xd0800000 0x0 0x76f7000>;
+	};
+
+	qrtr_shbuf: qrtr-shmem {
+		no-map;
+		reg = <0x0 0xd7ef7000 0x0 0x9000>;
+	};
+
+	chan0_shbuf: neuron_block@0 {
+		no-map;
+		reg = <0x0 0xd7f00000 0x0 0x80000>;
+	};
+
+	chan1_shbuf: neuron_block@1 {
+		no-map;
+		reg = <0x0 0xd7f80000 0x0 0x80000>;
+	};
+
+	user_contig_mem: user_contig_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1000000>;
+	};
+
+	qseecom_mem: qseecom_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1400000>;
+	};
+
+	qseecom_ta_mem: qseecom_ta_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1000000>;
+	};
+
+	secure_display_memory: secure_display_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0 0x00000000 0 0xffffffff>;
+		reusable;
+		alignment = <0 0x400000>;
+		size = <0 0x8c00000>;
+	};
+
+	/* global autoconfigured region for contiguous allocations */
+	linux,cma {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x2000000>;
+		linux,cma-default;
+	};
+
+	dump_mem: mem_dump_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		size = <0 0x2c00000>;
+	};
+
+	audio_cma_mem: audio_cma_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1C00000>;
+	};
+
+	splash_memory:splash_region {
+		reg = <0x0 0xe1000000 0x0 0x02400000>;
+		label = "cont_splash_region";
 	};
 };
 
