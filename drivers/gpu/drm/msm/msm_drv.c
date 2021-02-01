@@ -787,12 +787,13 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->fbdev = msm_fbdev_init(ddev);
 #endif
 
+#ifdef CONFIG_DEBUG_FS 
 	if (!msm_debugfs_late_init(ddev)) {
 		priv->debug_root = debugfs_create_dir("debug",
 						ddev->primary->debugfs_root);
 		sde_dbg_debugfs_register(priv->debug_root);
 	}
-
+#endif
 	/* perform subdriver post initialization */
 	if (kms && kms->funcs && kms->funcs->postinit) {
 		ret = kms->funcs->postinit(kms);
