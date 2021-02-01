@@ -1036,6 +1036,12 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
+		clocks = <&gcc GCC_AGGRE_UFS_CARD_AXI_CLK>,
+			<&gcc GCC_AGGRE_UFS_CARD_2_AXI_CLK>,
+			<&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB3_SEC_AXI_CLK>,
+			<&gcc GCC_AGGRE_USB3_MP_AXI_CLK>;
 	};
 
 	aggre2_noc: interconnect@1700000 {
@@ -1068,6 +1074,7 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos", "disp";
 		qcom,bcm-voters = <&apps_bcm_voter>, <&disp_bcm_voter>;
+		clocks = <&gcc GCC_DDRSS_GPU_AXI_CLK>;
 	};
 
 	mc_virt: interconnect@2 {
