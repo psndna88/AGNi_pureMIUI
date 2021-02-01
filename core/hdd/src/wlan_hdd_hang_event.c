@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -50,7 +50,6 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 	struct wlan_objmgr_vdev *vdev;
 	struct hdd_hang_event_fixed_param *cmd;
 	struct hdd_scan_fixed_param *cmd_scan;
-	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_RECOVERY_NOTIFIER_CALL;
 
 	if (!data)
 		return NOTIFY_STOP_MASK;
@@ -77,11 +76,10 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 		hdd_hang_data->offset += total_len;
 	}
 
-	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
-					   dbgid) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		vdev = hdd_objmgr_get_vdev(adapter);
 		if (!vdev) {
-			hdd_adapter_dev_put_debug(adapter, dbgid);
+			dev_put(adapter->dev);
 			continue;
 		}
 		total_len = sizeof(*cmd);
@@ -89,10 +87,9 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 		if (hdd_hang_data->offset + total_len >
 				QDF_WLAN_HANG_FW_OFFSET) {
 			hdd_objmgr_put_vdev(vdev);
-			hdd_adapter_dev_put_debug(adapter, dbgid);
+			dev_put(adapter->dev);
 			if (next_adapter)
-				hdd_adapter_dev_put_debug(next_adapter,
-							  dbgid);
+				dev_put(next_adapter->dev);
 			return NOTIFY_STOP_MASK;
 		}
 		cmd = (struct hdd_hang_event_fixed_param *)hdd_buf_ptr;
@@ -105,7 +102,7 @@ static int wlan_hdd_recovery_notifier_call(struct notifier_block *block,
 		cmd->vdev_substate = wlan_vdev_mlme_get_substate(vdev);
 		hdd_hang_data->offset += total_len;
 		hdd_objmgr_put_vdev(vdev);
-		hdd_adapter_dev_put_debug(adapter, dbgid);
+		dev_put(adapter->dev);
 	}
 
 	return NOTIFY_OK;
