@@ -1341,6 +1341,20 @@ enum roam_scan_freq_scheme {
 	ROAM_SCAN_FREQ_SCHEME_FULL_SCAN = 2,
 };
 
+/*
+ * roam_fail_params: different types of params to set or get roam fail states
+ * for the vdev
+ * @ROAM_TRIGGER_REASON: Roam trigger reason(enum WMI_ROAM_TRIGGER_REASON_ID)
+ * @ROAM_INVOKE_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for roam failure
+ * in case of forced roam
+ * @ROAM_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for roam failure
+ */
+enum roam_fail_params {
+	ROAM_TRIGGER_REASON,
+	ROAM_INVOKE_FAIL_REASON,
+	ROAM_FAIL_REASON,
+};
+
 /**
  * struct wlan_cm_rso_configs  - Roam scan offload related per vdev
  * configuration parameters.
@@ -1355,12 +1369,19 @@ enum roam_scan_freq_scheme {
  * Ex: roam_scan_scheme_bitmap - 0x00110 will enable partial scan for below
  * triggers:
  * ROAM_TRIGGER_REASON_PER, ROAM_TRIGGER_REASON_BMISS
+ * @roam_fail_reason: One of WMI_ROAM_FAIL_REASON_ID
+ * @roam_trigger_reason: Roam trigger reason(enum WMI_ROAM_TRIGGER_REASON_ID)
+ * @roam_invoke_fail_reason: One of reason id from enum
+ * wmi_roam_invoke_status_error in case of forced roam
  */
 struct wlan_cm_rso_configs {
 	uint8_t rescan_rssi_delta;
 	uint8_t beacon_rssi_weight;
 	uint32_t hi_rssi_scan_delay;
 	uint32_t roam_scan_scheme_bitmap;
+	uint32_t roam_fail_reason;
+	uint32_t roam_trigger_reason;
+	uint32_t roam_invoke_fail_reason;
 };
 
 /**
