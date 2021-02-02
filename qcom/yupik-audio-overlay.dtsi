@@ -172,7 +172,7 @@
 			wsa883x_0221: wsa883x@02170221 {
 				compatible = "qcom,wsa883x";
 				reg = <0x2 0x2170221>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
+				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
 				qcom,bolero-handle = <&bolero>;
 
 				cdc-vdd-1p8-supply = <&L18B>;
@@ -185,7 +185,7 @@
 			wsa883x_0222: wsa883x@02170222 {
 				compatible = "qcom,wsa883x";
 				reg = <0x2 0x2170222>;
-				qcom,spkr-sd-n-node = <&wsa_spkr_en1>;
+				qcom,spkr-sd-n-node = <&wsa_spkr_en2>;
 				qcom,bolero-handle = <&bolero>;
 
 				cdc-vdd-1p8-supply = <&L18B>;
