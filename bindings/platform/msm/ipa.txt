@@ -127,6 +127,8 @@ memory allocation over a PCIe bridge
 				registers, collected upon crash, reside.
 - qcom,ipa-endp-delay-wa: Boolean context flag to indicate end point delay work around
 				supported or not.
+- qcom,ipa-wdi3-holb-2g: HOLB timeout in milliseconds for the WLAN 2g pipe.
+- qcom,ipa-wdi3-holb-5g: HOLB timeout in milliseconds for the WLAN 5g pipe.
 - qcom,secure-debug-check-action: Drives secure memory debug check. Three values allowed:
 				0 (use scm call),
 				1 (override scm call as though it returned true), and
