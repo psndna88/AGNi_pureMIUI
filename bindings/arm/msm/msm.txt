@@ -101,6 +101,9 @@ SoCs:
 - HOLI
   compatible = "qcom,holi"
 
+- BLAIR
+  compatible = "qcom,blair"
+
 - MONACO
   compatible = "qcom,monaco"
 
@@ -284,6 +287,7 @@ compatible = "qcom,holi-mtp"
 compatible = "qcom,holi-cdp"
 compatible = "qcom,holi-qrd"
 compatible = "qcom,holi-atp"
+compatible = "qcom,blair-rumi"
 compatible = "qcom,scuba-idp"
 compatible = "qcom,monaco-rumi"
 compatible = "qcom,sdxnightjar-mtp"
