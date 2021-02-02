@@ -42,6 +42,19 @@
 	ipa_smmu_11ad {
 		qcom,iommu-dma = "bypass";
 	};
+
+	ipa_smmu_eth {
+		qcom,iommu-dma = "bypass";
+	};
+
+	ipa_smmu_eth1 {
+		qcom,iommu-dma = "bypass";
+	};
+
+	ipa_smmu_wlan1 {
+		qcom,iommu-dma = "bypass";
+	};
+
 };
 
 &usb {
