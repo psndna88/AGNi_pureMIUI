@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -1625,6 +1625,10 @@ static void _sde_encoder_rc_restart_delayed(struct sde_encoder_virt *sde_enc,
 	struct msm_drm_private *priv;
 	unsigned int lp, idle_pc_duration;
 	struct msm_drm_thread *disp_thread;
+
+	/* return early if called from esd thread */
+	if (!sde_enc->delay_kickoff)
+		return;
 
 	/* set idle timeout based on master connector's lp value */
 	if (sde_enc->cur_master)
