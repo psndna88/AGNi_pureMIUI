@@ -2,6 +2,8 @@
 
 #include "sa8155p-v2.dtsi"
 #include "sa8155-adp-common.dtsi"
+#include "display/sa8155-adp-star-display.dtsi"
+#include "display/sa8155-adp-star-display-shd.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA8155P V2 ADP AIR";
