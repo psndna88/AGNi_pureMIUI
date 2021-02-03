@@ -13,4 +13,8 @@
 
 };
 
+&gcc {
+	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>;
+};
+
 #include "monaco-stub-regulator.dtsi"
