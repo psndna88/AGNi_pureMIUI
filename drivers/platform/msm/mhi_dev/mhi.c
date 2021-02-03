@@ -2685,6 +2685,11 @@ static int mhi_dev_cache_host_cfg(struct mhi_dev *mhi)
 			rc = -ENOMEM;
 			goto exit;
 		}
+
+		mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d CMD_CTX_CACHE\n",
+			sizeof(struct mhi_dev_cmd_ctx));
+
 	}
 	memset(mhi->cmd_ctx_cache, 0, sizeof(struct mhi_dev_cmd_ctx));
 
@@ -2698,6 +2703,10 @@ static int mhi_dev_cache_host_cfg(struct mhi_dev *mhi)
 			rc = -ENOMEM;
 			goto exit;
 		}
+		mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d EV_CTX_CACHE\n",
+			sizeof(struct mhi_dev_ev_ctx) *
+			mhi->cfg.event_rings);
 	}
 	memset(mhi->ev_ctx_cache, 0, sizeof(struct mhi_dev_ev_ctx) *
 						mhi->cfg.event_rings);
@@ -2712,6 +2721,11 @@ static int mhi_dev_cache_host_cfg(struct mhi_dev *mhi)
 			rc = -ENOMEM;
 			goto exit;
 		}
+		mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d CH_CTX_CACHE\n",
+			sizeof(struct mhi_dev_ch_ctx) *
+			mhi->cfg.channels);
+
 	}
 	memset(mhi->ch_ctx_cache, 0, sizeof(struct mhi_dev_ch_ctx) *
 						mhi->cfg.channels);
@@ -2934,6 +2948,10 @@ static int mhi_dev_alloc_cmd_ack_buf_req(struct mhi_dev *mhi)
 	if (!mhi->cmd_ctx)
 		return -ENOMEM;
 
+	mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d CMD_CTX\n",
+			sizeof(struct mhi_cmd_cmpl_ctx));
+
 	cmd_ctx = mhi->cmd_ctx;
 	/* Allocate event requests */
 	cmd_ctx->ereqs = kcalloc(NUM_CMD_EVENTS_DEFAULT,
@@ -2944,6 +2962,10 @@ static int mhi_dev_alloc_cmd_ack_buf_req(struct mhi_dev *mhi)
 		goto free_ereqs;
 	}
 
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC: size:%d EREQ CMD\n", NUM_CMD_EVENTS_DEFAULT);
+
+
 	/* Allocate buffers to queue transfer completion events */
 	cmd_ctx->cmd_events = kcalloc(NUM_CMD_EVENTS_DEFAULT,
 							sizeof(*cmd_events),
@@ -2952,6 +2974,10 @@ static int mhi_dev_alloc_cmd_ack_buf_req(struct mhi_dev *mhi)
 		rc = -ENOMEM;
 		goto free_ereqs;
 	}
+
+	mhi_log(MHI_MSG_INFO, "MEM_ALLOC: size:%d CMD_EVENTS\n",
+		NUM_CMD_EVENTS_DEFAULT);
+
 
 	/* Organize event flush requests into a linked list */
 	INIT_LIST_HEAD(&cmd_ctx->cmd_req_buffers);
@@ -2971,6 +2997,9 @@ static int mhi_dev_alloc_cmd_ack_buf_req(struct mhi_dev *mhi)
 	return 0;
 free_ereqs:
 		kfree(cmd_ctx->ereqs);
+		mhi_log(MHI_MSG_INFO,
+			"MEM_DEALLOC: size:%d EREQ CMD\n",
+			NUM_CMD_EVENTS_DEFAULT);
 		cmd_ctx->ereqs = NULL;
 
 		kfree(mhi->cmd_ctx);
@@ -3008,7 +3037,14 @@ static int mhi_dev_alloc_evt_buf_evt_req(struct mhi_dev *mhi,
 	 */
 	if (ch->evt_buf_size) {
 		kfree(ch->ereqs);
+		mhi_log(MHI_MSG_INFO,
+			"MEM_DEALLOC:ch:%d size:%d EREQ\n",
+			ch->ch_id, ch->evt_req_size);
 		kfree(ch->tr_events);
+		mhi_log(MHI_MSG_INFO,
+			"MEM_DEALLOC:ch:%d size:%d TR_EVENTS\n",
+			ch->ch_id, ch->evt_buf_size);
+
 	}
 	/*
 	 * Set number of event flush req buffers equal to size of
@@ -3026,6 +3062,9 @@ static int mhi_dev_alloc_evt_buf_evt_req(struct mhi_dev *mhi,
 	if (!ch->ereqs)
 		return -ENOMEM;
 
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC:ch:%d size:%d EREQ\n", ch->ch_id, ch->evt_req_size);
+
 	/* Allocate buffers to queue transfer completion events */
 	ch->tr_events = kcalloc(ch->evt_buf_size, sizeof(*ch->tr_events),
 			GFP_KERNEL);
@@ -3033,6 +3072,10 @@ static int mhi_dev_alloc_evt_buf_evt_req(struct mhi_dev *mhi,
 		rc = -ENOMEM;
 		goto free_ereqs;
 	}
+
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC:ch:%d size:%d TR_EVENTS\n",
+		ch->ch_id, ch->evt_buf_size);
 
 	/* Organize event flush requests into a linked list */
 	INIT_LIST_HEAD(&ch->event_req_buffers);
@@ -3057,6 +3100,9 @@ static int mhi_dev_alloc_evt_buf_evt_req(struct mhi_dev *mhi,
 
 free_ereqs:
 	kfree(ch->ereqs);
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC:ch:%d size:%d EREQ\n",
+		ch->ch_id, ch->evt_req_size);
 	ch->ereqs = NULL;
 	ch->evt_buf_size = 0;
 	ch->evt_req_size = 0;
@@ -3093,6 +3139,10 @@ int mhi_dev_open_channel(uint32_t chan_id,
 		goto exit;
 	}
 
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC:ch:%d size:%d CLNT_HANDLE\n",
+		ch->ch_id, sizeof(struct mhi_dev_client));
+
 	rc = mhi_dev_alloc_evt_buf_evt_req(mhi_ctx, ch, NULL);
 	if (rc)
 		goto free_client;
@@ -3114,6 +3164,9 @@ int mhi_dev_open_channel(uint32_t chan_id,
 
 free_client:
 	kfree(*handle_client);
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC:ch:%d size:%d CLNT_HANDLE\n",
+		ch->ch_id, sizeof(struct mhi_dev_client));
 	*handle_client = NULL;
 
 exit:
@@ -3199,12 +3252,22 @@ void mhi_dev_close_channel(struct mhi_dev_client *handle)
 	ch->state = MHI_DEV_CH_CLOSED;
 	ch->active_client = NULL;
 	kfree(ch->ereqs);
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC:ch:%d size:%d EREQ\n",
+		ch->ch_id, ch->evt_req_size);
 	kfree(ch->tr_events);
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC:ch:%d size:%d TR_EVENTS\n",
+		ch->ch_id, ch->evt_buf_size);
+
 	ch->evt_buf_size = 0;
 	ch->evt_req_size = 0;
 	ch->ereqs = NULL;
 	ch->tr_events = NULL;
 	kfree(handle);
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC:ch:%d size:%d CLNT_HANDLE\n",
+		ch->ch_id, sizeof(struct mhi_dev_client));
 
 	mutex_unlock(&ch->ch_lock);
 	return;
@@ -3786,6 +3849,10 @@ int mhi_register_state_cb(void (*mhi_state_cb)
 		mutex_unlock(&mhi_ctx->mhi_lock);
 		return -ENOMEM;
 	}
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC: size:%d CB_INFO\n",
+		sizeof(*cb_info));
+
 
 	cb_info->cb = mhi_state_cb;
 	cb_info->cb_data.user_data = data;
@@ -3981,6 +4048,10 @@ static int mhi_deinit(struct mhi_dev *mhi)
 
 	devm_kfree(&pdev->dev, mhi->mmio_backup);
 
+	mhi_log(MHI_MSG_INFO,
+		"MEM_DEALLOC: size:%d MMIO_BACKUP\n",
+		MHI_DEV_MMIO_RANGE);
+
 	mhi_dev_sm_exit(mhi);
 
 	mhi->mmio_initialized = false;
@@ -4010,10 +4081,15 @@ static int mhi_init(struct mhi_dev *mhi)
 		if (!mhi->ch)
 			return -ENOMEM;
 
+		mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d CH_ALLOC\n",
+			(sizeof(struct mhi_dev_channel) *
+			(mhi->cfg.channels)));
+
 		for (i = 0; i < mhi->cfg.channels; i++) {
 			mhi->ch[i].ch_id = i;
 			mutex_init(&mhi->ch[i].ch_lock);
-			}
+		}
 	}
 
 	spin_lock_init(&mhi->lock);
@@ -4021,6 +4097,10 @@ static int mhi_init(struct mhi_dev *mhi)
 			MHI_DEV_MMIO_RANGE, GFP_KERNEL);
 	if (!mhi->mmio_backup)
 		return -ENOMEM;
+
+	mhi_log(MHI_MSG_INFO,
+		"MEM_ALLOC: size:%d MMIO_BACKUP\n",
+		MHI_DEV_MMIO_RANGE);
 
 	return 0;
 }
@@ -4187,6 +4267,10 @@ static int mhi_dev_resume_mmio_mhi_init(struct mhi_dev *mhi_ctx)
 	if (!mhi_ctx->dma_cache)
 		return -ENOMEM;
 
+	mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d DMA_CACHE\n",
+			TRB_MAX_DATA_SIZE * 4);
+
 	mhi_ctx->read_handle = dma_alloc_coherent(&pdev->dev,
 			(TRB_MAX_DATA_SIZE * 4),
 			&mhi_ctx->read_dma_handle,
@@ -4194,12 +4278,20 @@ static int mhi_dev_resume_mmio_mhi_init(struct mhi_dev *mhi_ctx)
 	if (!mhi_ctx->read_handle)
 		return -ENOMEM;
 
+	mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d READ_HANDLE\n",
+			TRB_MAX_DATA_SIZE * 4);
+
 	mhi_ctx->write_handle = dma_alloc_coherent(&pdev->dev,
 			(TRB_MAX_DATA_SIZE * 24),
 			&mhi_ctx->write_dma_handle,
 			GFP_KERNEL);
 	if (!mhi_ctx->write_handle)
 		return -ENOMEM;
+
+	mhi_log(MHI_MSG_INFO,
+			"MEM_ALLOC: size:%d WRITE_HANDLE\n",
+			TRB_MAX_DATA_SIZE * 24);
 
 	rc = mhi_dev_mmio_write(mhi_ctx, MHIVER, mhi_ctx->mhi_version);
 	if (rc) {
