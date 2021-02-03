@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,3 +28,4 @@
 #define CONFIG_SOUNDWIRE 1
 #define CONFIG_SOUNDWIRE_MSTR_CTRL 1
 #define CONFIG_SND_EVENT 1
+#define CONFIG_MSM_INTERNAL_MCLK 1

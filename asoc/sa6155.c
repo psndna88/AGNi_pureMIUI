@@ -140,6 +140,8 @@ static const char *const tdm_gpio_phandle[] = {"qcom,pri-tdm-gpios",
 						"qcom,quat-tdm-gpios",
 						"qcom,quin-tdm-gpios"};
 
+static const char *const mclk_gpio_phandle[] = { "qcom,internal-mclk2-gpios" };
+
 enum {
 	TDM_0 = 0,
 	TDM_1,
@@ -159,6 +161,16 @@ enum {
 	TDM_QUAT,
 	TDM_QUIN,
 	TDM_INTERFACE_MAX,
+};
+
+enum {
+	MCLK2 = 0,
+	MCLK_MAX,
+};
+
+enum pinctrl_mode {
+	TDM_PINCTRL,
+	MCLK_PINCTRL,
 };
 
 struct tdm_port {
@@ -701,6 +713,17 @@ static SOC_ENUM_SINGLE_EXT_DECL(mi2s_tx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_rx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_tx_format, bit_format_text);
 
+static struct afe_clk_set internal_mclk[MCLK_MAX] = {
+	{
+		AFE_API_VERSION_CLOCK_SET_V2,
+		Q6AFE_LPASS_CLK_ID_MCLK_2,
+		Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
+		Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+		Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+		1,
+	}
+};
+
 static struct afe_clk_set mi2s_clk[MI2S_MAX] = {
 	{
 		AFE_API_VERSION_I2S_CONFIG,
@@ -747,6 +770,7 @@ static struct afe_clk_set mi2s_clk[MI2S_MAX] = {
 
 struct msm_asoc_mach_data {
 	struct msm_pinctrl_info pinctrl_info[TDM_INTERFACE_MAX];
+	struct msm_pinctrl_info mclk_pinctrl_info[MCLK_MAX];
 	struct mi2s_conf mi2s_intf_conf[MI2S_MAX];
 	struct tdm_conf tdm_intf_conf[TDM_INTERFACE_MAX];
 };
@@ -3857,24 +3881,45 @@ static void msm_release_pinctrl(struct platform_device *pdev)
 	}
 }
 
-static int msm_get_pinctrl(struct platform_device *pdev)
+static int msm_pinctrl_init(struct platform_device *pdev, enum pinctrl_mode mode)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	struct msm_pinctrl_info *pinctrl_info = NULL;
 	struct pinctrl *pinctrl = NULL;
+	int pinctrl_num;
 	int i, j;
 	struct device_node *np = NULL;
 	struct platform_device *pdev_np = NULL;
 	int ret = 0;
 
-	for (i = TDM_PRI; i < TDM_INTERFACE_MAX; i++) {
-		np = of_parse_phandle(pdev->dev.of_node,
-					tdm_gpio_phandle[i], 0);
-		if (!np) {
-			pr_debug("%s: device node %s is null\n",
+	if (mode == TDM_PINCTRL) {
+		pinctrl_num = TDM_INTERFACE_MAX;
+	} else if (mode == MCLK_PINCTRL) {
+		pinctrl_num = MCLK_MAX;
+	} else {
+		pr_err("%s: invalid mode %d\n", __func__, mode);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < pinctrl_num; i++) {
+		if (mode == TDM_PINCTRL) {
+			np = of_parse_phandle(pdev->dev.of_node,
+				tdm_gpio_phandle[i], 0);
+			if (!np) {
+				pr_debug("%s: device node %s is null\n",
 					__func__, tdm_gpio_phandle[i]);
-			continue;
+				continue;
+			}
+		}
+		else {
+			np = of_parse_phandle(pdev->dev.of_node,
+				mclk_gpio_phandle[i], 0);
+			if (!np) {
+				pr_debug("%s: device node %s is null\n",
+					__func__, mclk_gpio_phandle[i]);
+				continue;
+			}
 		}
 
 		pdev_np = of_find_device_by_node(np);
@@ -3883,7 +3928,10 @@ static int msm_get_pinctrl(struct platform_device *pdev)
 			continue;
 		}
 
-		pinctrl_info = &pdata->pinctrl_info[i];
+		if (mode == TDM_PINCTRL)
+			pinctrl_info = &pdata->pinctrl_info[i];
+		else
+			pinctrl_info = &pdata->mclk_pinctrl_info[i];
 		if (pinctrl_info == NULL) {
 			pr_err("%s: pinctrl info is null\n", __func__);
 			continue;
@@ -3898,35 +3946,59 @@ static int msm_get_pinctrl(struct platform_device *pdev)
 
 		/* get all the states handles from Device Tree */
 		pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
-							"sleep");
+			"sleep");
 		if (IS_ERR(pinctrl_info->sleep)) {
 			pr_err("%s: could not get sleep pin state\n", __func__);
 			goto err;
 		}
 		pinctrl_info->active = pinctrl_lookup_state(pinctrl,
-							"default");
+			"default");
 		if (IS_ERR(pinctrl_info->active)) {
 			pr_err("%s: could not get active pin state\n",
 				__func__);
 			goto err;
 		}
 
-		/* Reset the TLMM pins to a sleep state */
-		ret = pinctrl_select_state(pinctrl_info->pinctrl,
-						pinctrl_info->sleep);
-		if (ret != 0) {
-			pr_err("%s: set pin state to sleep failed with %d\n",
-				__func__, ret);
-			ret = -EIO;
-			goto err;
+		if (mode == TDM_PINCTRL) {
+			/* Reset the TLMM pins to a sleep state */
+			ret = pinctrl_select_state(pinctrl_info->pinctrl, pinctrl_info->sleep);
+			if (ret != 0) {
+				pr_err("%s: set pin state to sleep failed with %d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+			pinctrl_info->curr_state = STATE_SLEEP;
 		}
-		pinctrl_info->curr_state = STATE_SLEEP;
+		else {
+			/* Reset the mclk pins to a active state */
+			ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+				&internal_mclk[i]);
+			if (ret < 0) {
+				pr_err("%s: afe lpass clock failed to enable clock, err:%d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+
+			ret = pinctrl_select_state(pinctrl_info->pinctrl, pinctrl_info->active);
+			if (ret != 0) {
+				pr_err("%s: set pin state to active failed with %d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+			pinctrl_info->curr_state = STATE_ACTIVE;
+		}
 	}
 	return 0;
 
 err:
 	for (j = i; j >= 0; j--) {
-		pinctrl_info = &pdata->pinctrl_info[j];
+		if (mode == TDM_PINCTRL)
+			pinctrl_info = &pdata->pinctrl_info[i];
+		else
+			pinctrl_info = &pdata->mclk_pinctrl_info[i];
 		if (pinctrl_info == NULL)
 			continue;
 		if (pinctrl_info->pinctrl) {
@@ -3935,6 +4007,26 @@ err:
 		}
 	}
 	return -EINVAL;
+}
+
+static int msm_get_pinctrl(struct platform_device *pdev)
+{
+	int ret = 0;
+
+	ret = msm_pinctrl_init(pdev, TDM_PINCTRL);
+	if (ret != 0) {
+		pr_err("%s: set tdm pin state to sleep failed with %d\n",
+			__func__, ret);
+		return -EIO;
+	}
+
+	ret = msm_pinctrl_init(pdev, MCLK_PINCTRL);
+	if (ret != 0) {
+		pr_err("%s: set mclk pin state to active failed with %d\n",
+			__func__, ret);
+		return -EIO;
+	}
+	return ret;
 }
 
 static int msm_tdm_get_intf_idx(u16 id)

@@ -32224,6 +32224,62 @@ static const struct snd_kcontrol_new asrc_config_controls[] = {
 				 msm_dai_q6_asrc_config_put),
 };
 
+enum {
+	IDX_MCLK1 = 1,
+	IDX_MCLK2,
+};
+
+/* default internal mclk config. Only MCLK2 is needed now */
+static struct afe_clk_set internal_mclk = {
+	AFE_API_VERSION_CLOCK_SET_V2,
+	Q6AFE_LPASS_CLK_ID_MCLK_2,
+	Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
+	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+	1,
+};
+
+static int msm_internal_mclk_ctl_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	/* default mclk id is 2 */
+	ucontrol->value.integer.value[0] = 2;
+	ucontrol->value.integer.value[1] = internal_mclk.clk_freq_in_hz;
+	ucontrol->value.integer.value[2] = internal_mclk.enable;
+
+	return 0;
+}
+
+static int msm_internal_mclk_ctl_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = -EINVAL;
+	int32_t mclk_id = 0;
+
+	mclk_id = ucontrol->value.integer.value[0];
+	if (mclk_id != IDX_MCLK2) {
+		pr_err("%s: invalid mclk id: %d, only mclk2 is supported now\n",
+			__func__, mclk_id);
+		return -EINVAL;
+	}
+	internal_mclk.clk_freq_in_hz = ucontrol->value.integer.value[1];
+	internal_mclk.enable = ucontrol->value.integer.value[2];
+
+	ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+				     &internal_mclk);
+	if (ret)
+		pr_err("%s: mclk enable failed %d\n", __func__, ret);
+
+	return ret;
+}
+
+static const struct snd_kcontrol_new internal_mclk_control[] = {
+	SOC_SINGLE_MULTI_EXT("internal mclk enable", SND_SOC_NOPM, 0,
+				 0x7FFFFFFF, 0, 3,
+				 msm_internal_mclk_ctl_get,
+				 msm_internal_mclk_ctl_put),
+};
+
 static const struct snd_pcm_ops msm_routing_pcm_ops = {
 	.hw_params	= msm_pcm_routing_hw_params,
 	.close          = msm_pcm_routing_close,
@@ -32418,6 +32474,10 @@ static int msm_routing_probe(struct snd_soc_component *component)
 				      ARRAY_SIZE(mclk_src_controls));
 	snd_soc_add_component_controls(component, asrc_config_controls,
 				      ARRAY_SIZE(asrc_config_controls));
+#ifdef CONFIG_MSM_INTERNAL_MCLK
+	snd_soc_add_component_controls(component, internal_mclk_control,
+				      ARRAY_SIZE(internal_mclk_control));
+#endif
 	return 0;
 }
 
