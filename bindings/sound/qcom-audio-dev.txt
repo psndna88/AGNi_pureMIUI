@@ -2431,6 +2431,8 @@ Required properties:
 
 Required properties:
 - compatible : "qcom,sdx-asoc-snd-tavil"
+- compatible : "qcom,mdm-audio-tasha" for SDXNIGHTJAR target.
+- compatible : "qcom,tasha-i2c-pgd".
 - qcom,model : The user-visible name of this sound card.
 - qcom,prim_mi2s_aux_master : Handle to prim_master pinctrl configurations
 - qcom,prim_mi2s_aux_slave : Handle to prim_slave pinctrl configurations
