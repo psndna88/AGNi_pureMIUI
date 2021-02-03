@@ -4772,13 +4772,15 @@ int gsi_flow_control_ee(unsigned int chan_idx, unsigned int ee,
 		res = -GSI_STATUS_RES_ALLOC_FAILURE;
 		goto free_lock;
 	} else if (gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code ==
-			GSI_GEN_EE_CMD_RETURN_CODE_INCORRECT_CHANNEL_TYPE ||
-			gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code ==
-			GSI_GEN_EE_CMD_RETURN_CODE_INCORRECT_CHANNEL_INDEX){
+			GSI_GEN_EE_CMD_RETURN_CODE_INCORRECT_CHANNEL_TYPE) {
 		GSIERR("chan_idx=%u ee=%u not in correct state\n",
 				chan_idx, ee);
 		GSI_ASSERT();
+	} else if (gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code ==
+			GSI_GEN_EE_CMD_RETURN_CODE_INCORRECT_CHANNEL_INDEX) {
+		GSIERR("Channel ID = %u ee = %u not allocated\n", chan_idx, ee);
 	}
+
 	if (gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code == 0) {
 		GSIERR("No response received\n");
 		res = -GSI_STATUS_ERROR;
