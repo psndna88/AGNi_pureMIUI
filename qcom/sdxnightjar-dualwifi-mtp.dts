@@ -10,3 +10,20 @@
 		   "qcom,sdxnightjar", "qcom,mtp";
 	qcom,board-id = <8 3>;
 };
+
+&sdhc_1 {
+	vdd-io-supply = <&pmd9650_l7>;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-current-level = <0 10000>;
+
+	keep-power-in-suspend;
+	qcom,core_3_0v_support;
+	non-removable;
+
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdc2_on &sdc2_wlan_gpio_active>;
+	pinctrl-1 = <&sdc2_off &sdc2_wlan_gpio_sleep>;
+
+	status = "ok";
+};
