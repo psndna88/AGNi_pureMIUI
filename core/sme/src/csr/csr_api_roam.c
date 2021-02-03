@@ -13924,6 +13924,7 @@ csr_store_sae_single_pmk_to_global_cache(struct mac_context *mac,
 					 uint8_t vdev_id)
 {
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_crypto_pmksa *pmksa;
 	struct mlme_pmk_info *pmk_info;
 
 	if (!session->pConnectBssDesc)
@@ -13954,6 +13955,21 @@ csr_store_sae_single_pmk_to_global_cache(struct mac_context *mac,
 
 	qdf_mem_copy(pmk_info->pmk, session->psk_pmk, session->pmk_len);
 	pmk_info->pmk_len = session->pmk_len;
+
+	pmksa = wlan_crypto_get_pmksa(vdev,
+				      (struct qdf_mac_addr *)session->pConnectBssDesc->bssId);
+	if (pmksa) {
+		pmk_info->spmk_timeout_period =
+			(pmksa->pmk_lifetime *
+			 pmksa->pmk_lifetime_threshold) / 100;
+		pmk_info->spmk_timestamp = pmksa->pmk_entry_ts;
+		sme_debug("spmk_ts:%ld spmk_timeout_prd:%d secs",
+			  pmk_info->spmk_timestamp,
+			  pmk_info->spmk_timeout_period);
+	} else {
+		sme_debug("PMK entry not found for bss:" QDF_MAC_ADDR_FMT,
+			  QDF_MAC_ADDR_REF(session->pConnectBssDesc->bssId));
+	}
 
 	wlan_mlme_update_sae_single_pmk(vdev, pmk_info);
 
@@ -20164,11 +20180,13 @@ csr_cm_fill_rso_channel_list(struct mac_context *mac_ctx,
 #ifdef WLAN_SAE_SINGLE_PMK
 static bool
 csr_cm_fill_rso_sae_single_pmk_info(struct mac_context *mac_ctx,
-				    struct wlan_rso_11i_params *rso_11i_info,
+				    struct wlan_roam_scan_offload_params *rso_cfg,
 				    uint8_t vdev_id)
 {
-	struct wlan_mlme_sae_single_pmk single_pmk;
+	struct wlan_mlme_sae_single_pmk single_pmk = {0};
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_rso_11i_params *rso_11i_info = &rso_cfg->rso_11i_info;
+	uint64_t time_expired;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
 						    WLAN_LEGACY_SME_ID);
@@ -20181,15 +20199,27 @@ csr_cm_fill_rso_sae_single_pmk_info(struct mac_context *mac_ctx,
 
 	if (single_pmk.pmk_info.pmk_len && single_pmk.sae_single_pmk_ap &&
 	    mac_ctx->mlme_cfg->lfr.sae_single_pmk_feature_enabled) {
-		sme_debug("Update pmk with len %d same_pmk_info %d",
-			  single_pmk.pmk_info.pmk_len,
-			  single_pmk.sae_single_pmk_ap);
 
 		rso_11i_info->pmk_len = single_pmk.pmk_info.pmk_len;
 		/* Update sae same pmk info in rso */
 		qdf_mem_copy(rso_11i_info->psk_pmk, single_pmk.pmk_info.pmk,
 			     rso_11i_info->pmk_len);
 		rso_11i_info->is_sae_same_pmk = single_pmk.sae_single_pmk_ap;
+
+		/* get the time expired in seconds */
+		time_expired = (qdf_get_system_timestamp() -
+				single_pmk.pmk_info.spmk_timestamp) / 1000;
+
+		rso_cfg->sae_offload_params.spmk_timeout = 0;
+		if (time_expired < single_pmk.pmk_info.spmk_timeout_period)
+			rso_cfg->sae_offload_params.spmk_timeout =
+				(single_pmk.pmk_info.spmk_timeout_period  -
+				 time_expired);
+
+		sme_debug("Update spmk with len %d is_spmk_ap:%d time_exp:%lld time left:%d",
+			  single_pmk.pmk_info.pmk_len,
+			  single_pmk.sae_single_pmk_ap, time_expired,
+			  rso_cfg->sae_offload_params.spmk_timeout);
 
 		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		return true;
@@ -20202,7 +20232,7 @@ csr_cm_fill_rso_sae_single_pmk_info(struct mac_context *mac_ctx,
 #else
 static inline bool
 csr_cm_fill_rso_sae_single_pmk_info(struct mac_context *mac_ctx,
-				    struct wlan_rso_11i_params *rso_11i_info,
+				    struct wlan_roam_scan_offload_params *rso_cfg,
 				    uint8_t vdev_id)
 {
 	return false;
@@ -20406,8 +20436,7 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 
 	/* Check whether to send psk_pmk or sae_single pmk info */
 	if (!csr_cm_fill_rso_sae_single_pmk_info(mac,
-						 &rso_config->rso_11i_info,
-						 vdev_id)) {
+						 rso_config, vdev_id)) {
 		rso_config->rso_11i_info.is_sae_same_pmk = false;
 		qdf_mem_copy(rso_config->rso_11i_info.psk_pmk, session->psk_pmk,
 			     sizeof(rso_config->rso_11i_info.psk_pmk));
@@ -22767,6 +22796,11 @@ csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 			qdf_mem_copy(pmk_info->pmk, pmkid_cache->pmk,
 				     session->pmk_len);
 			pmk_info->pmk_len = pmkid_cache->pmk_len;
+			pmk_info->spmk_timestamp = pmkid_cache->pmk_ts;
+			pmk_info->spmk_timeout_period  =
+				(pmkid_cache->pmk_lifetime *
+				 pmkid_cache->pmk_lifetime_threshold / 100);
+
 			wlan_mlme_update_sae_single_pmk(vdev, pmk_info);
 
 			qdf_mem_zero(pmk_info, sizeof(*pmk_info));
