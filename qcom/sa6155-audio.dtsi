@@ -459,6 +459,13 @@
 			&pri_aux_pcm_data0_sleep &pri_aux_pcm_data1_sleep>;
 	};
 
+	internal_mclk2: qcom,msm-internal-mclk2 {
+		compatible = "qcom,msm-pcm-routing";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&audio_internal_mclk2_active>;
+		pinctrl-1 = <&audio_internal_mclk2_sleep>;
+	};
+
 qcom,msm-dai-q6 {
 		compatible = "qcom,msm-dai-q6";
 
@@ -491,6 +498,7 @@ qcom,msm-dai-q6 {
 		qcom,tert-tdm-gpios = <&tdm_tert_rx>;
 		qcom,quat-tdm-gpios = <&tdm_quat_rx>;
 		qcom,quin-tdm-gpios = <&tdm_quin_rx>;
+		qcom,internal-mclk2-gpios = <&internal_mclk2>;
 
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,

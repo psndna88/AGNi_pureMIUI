@@ -1603,6 +1603,32 @@
 			};
 		};
 
+		audio_internal_mclk2_active: audio_internal_mclk2_active {
+			mux {
+				pins = "gpio122";
+				function = "mclk2";
+			};
+
+			config {
+				pins = "gpio122";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		audio_internal_mclk2_sleep: audio_internal_mclk2_sleep {
+			mux {
+				pins = "gpio122";
+				function = "mclk2";
+			};
+
+			config {
+				pins = "gpio122";
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+
 		pmx_ts_int_active {
 			ts_int_active: ts_int_active {
 				mux {
