@@ -1080,11 +1080,13 @@ UMAC_INTERFACE_MGR_CMN_DIR := $(WLAN_COMMON_ROOT)/umac/cmn_services/interface_mg
 UMAC_INTERFACE_MGR_INC := -I$(WLAN_COMMON_INC)/umac/cmn_services/interface_mgr/inc \
 			 -I$(WLAN_ROOT)/components/cmn_services/interface_mgr/inc
 
+ifeq ($(CONFIG_INTERFACE_MGR), y)
 UMAC_INTERFACE_MGR_OBJS := $(UMAC_INTERFACE_MGR_CMN_DIR)/src/wlan_if_mgr_main.o \
 			  $(UMAC_INTERFACE_MGR_CMN_DIR)/src/wlan_if_mgr_core.o \
 			  $(UMAC_INTERFACE_MGR_COMP_DIR)/src/wlan_if_mgr_sta.o \
 			  $(UMAC_INTERFACE_MGR_COMP_DIR)/src/wlan_if_mgr_sap.o \
 			  $(UMAC_INTERFACE_MGR_COMP_DIR)/src/wlan_if_mgr_roam.o
+endif
 
 ########## POWER MANAGEMENT OFFLOADS (PMO) ##########
 PMO_DIR :=	components/pmo
@@ -2492,9 +2494,7 @@ OBJS +=		$(UMAC_GPIO_OBJS)
 OBJS +=		$(UMAC_GREEN_AP_OBJS)
 OBJS +=		$(UMAC_CRYPTO_OBJS)
 OBJS +=		$(DP_OBJS)
-ifeq ($(CONFIG_INTERFACE_MGR), y)
 OBJS += 	$(UMAC_INTERFACE_MGR_OBJS)
-endif
 OBJS +=		$(TXRX3.0_OBJS)
 
 ccflags-y += $(INCS)
