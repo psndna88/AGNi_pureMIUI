@@ -250,6 +250,20 @@
 		};
 	};
 
+	sram: sram@18509400 {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "mmio-sram";
+		no-memory-wc;
+		reg = <0x0 0x18509400 0x0 0x400>;
+		ranges = <0x0 0x0 0x0 0x18509400 0x0 0x400>;
+
+		cpu_scp_lpri: scp-shmem@0 {
+			compatible = "arm,scp-shmem";
+			reg = <0x0 0x0 0x0 0x80>;
+		};
+	};
+
 	soc: soc { };
 
 };
@@ -1629,96 +1643,6 @@
 		qcom,count-unit = <0x10000>;
 	};
 
-	cpu0_cpu_l3_lat: qcom,cpu0-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU0>;
-	};
-
-	cpu1_cpu_l3_lat: qcom,cpu1-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU1>;
-	};
-
-	cpu2_cpu_l3_lat: qcom,cpu2-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU2>;
-	};
-
-	cpu3_cpu_l3_lat: qcom,cpu3-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU3>;
-	};
-
-	cpu4_cpu_l3_lat: qcom,cpu4-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU4>;
-	};
-
-	cpu5_cpu_l3_lat: qcom,cpu5-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU5>;
-	};
-
-	cpu6_cpu_l3_lat: qcom,cpu6-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU6>;
-	};
-
-	cpu7_cpu_l3_lat: qcom,cpu7-cpu-l3-lat {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "mem_latency";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_CPU7>;
-	};
-
-	cpu7_cpu_l3_latfloor: qcom,cpu7-cpu-l3-latfloor {
-		compatible = "qcom,devfreq-icc-l3";
-		reg = <0x18590100 0xa0>;
-		reg-names = "ftbl-base";
-		governor = "compute";
-		interconnects =
-			<&epss_l3_cpu MASTER_EPSS_L3_APPS
-			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
-	};
-
 	cpu0_cpu_llcc_lat: qcom,cpu0-cpu-llcc-lat {
 		compatible = "qcom,devfreq-icc";
 		governor = "mem_latency";
@@ -1783,6 +1707,16 @@
 		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
+	cpu7_cpu_l3_latfloor: qcom,cpu7-cpu-l3-latfloor {
+		compatible = "qcom,devfreq-icc-l3";
+		reg = <0x18590100 0xa0>;
+		reg-names = "ftbl-base";
+		governor = "compute";
+		interconnects =
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS
+			 &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+	};
+
 	cpu4_cpu_ddr_qoslat: qcom,cpu4-cpu-ddr-qoslat {
 		compatible = "qcom,devfreq-qoslat";
 		governor = "mem_latency";
@@ -1797,121 +1731,9 @@
 		mboxes = <&qmp_aop 0>;
 	};
 
-	cpu0_cpu_l3_tbl: qcom,cpu0-cpu-l3-tbl {
-		qcom,core-dev-table =
-			<  300000  300000000 >,
-			<  691200  556800000 >,
-			<  806400  652800000 >,
-			<  940800  768000000 >,
-			< 1152000  844800000 >,
-			< 1324800 1065600000 >,
-			< 1516800 1190400000 >,
-			< 1651200 1305600000 >,
-			< 1804800 1516800000 >;
-	};
-
-	cpu4_cpu_l3_tbl: qcom,cpu4-cpu-l3-tbl {
-		qcom,core-dev-table =
-			<  940800  556800000 >,
-			< 12288000 768000000 >,
-			< 1651200 1190400000 >,
-			< 1900800 1401600000 >,
-			< 2400000 1516800000 >;
-	};
-
-	cpu7_cpu_l3_tbl: qcom,cpu7-cpu-l3-tbl {
-		qcom,core-dev-table =
-			< 1056000  556800000 >,
-			< 1324800  768000000 >,
-			< 1766400 1190400000 >,
-			< 2208000 1401600000 >,
-			< 2707200 1516800000 >;
-	};
-
 	cpu0_memlat_cpugrp: qcom,cpu0-cpugrp {
 		compatible = "qcom,arm-memlat-cpugrp";
 		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3 &CPU4 &CPU5 &CPU6 &CPU7>;
-
-		cpu0_cpu_l3_latmon: qcom,cpu0-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU0>;
-			qcom,target-dev = <&cpu0_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,core-dev-table = <&cpu0_cpu_l3_tbl>;
-		};
-
-		cpu1_cpu_l3_latmon: qcom,cpu1-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU1>;
-			qcom,target-dev = <&cpu1_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,core-dev-table = <&cpu0_cpu_l3_tbl>;
-		};
-
-		cpu2_cpu_l3_latmon: qcom,cpu2-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU2>;
-			qcom,target-dev = <&cpu2_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,core-dev-table = <&cpu0_cpu_l3_tbl>;
-		};
-
-		cpu3_cpu_l3_latmon: qcom,cpu3-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU3>;
-			qcom,target-dev = <&cpu3_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,core-dev-table = <&cpu0_cpu_l3_tbl>;
-		};
-
-		cpu4_cpu_l3_latmon: qcom,cpu4-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU4>;
-			qcom,target-dev = <&cpu4_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,access-ev = <0x2B>;
-			qcom,wb-ev = <0x18>;
-			qcom,core-dev-table = <&cpu4_cpu_l3_tbl>;
-		};
-
-		cpu5_cpu_l3_latmon: qcom,cpu5-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU5>;
-			qcom,target-dev = <&cpu5_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,access-ev = <0x2B>;
-			qcom,wb-ev = <0x18>;
-			qcom,core-dev-table = <&cpu4_cpu_l3_tbl>;
-		};
-
-		cpu6_cpu_l3_latmon: qcom,cpu6-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU6>;
-			qcom,target-dev = <&cpu6_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,access-ev = <0x2B>;
-			qcom,wb-ev = <0x18>;
-			qcom,core-dev-table = <&cpu4_cpu_l3_tbl>;
-		};
-
-		cpu7_cpu_l3_latmon: qcom,cpu7-cpu-l3-latmon {
-			compatible = "qcom,arm-memlat-mon";
-			qcom,cpulist = <&CPU7>;
-			qcom,target-dev = <&cpu7_cpu_l3_lat>;
-			qcom,cachemiss-ev = <0x17>;
-			qcom,access-ev = <0x2B>;
-			qcom,wb-ev = <0x18>;
-			qcom,core-dev-table = <&cpu7_cpu_l3_tbl>;
-		};
-
-		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
-			compatible = "qcom,arm-compute-mon";
-			qcom,cpulist = <&CPU7>;
-			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
-			qcom,core-dev-table =
-				< 2035200  300000000 >,
-				< 2707200 1516800000 >;
-		};
 
 		cpu0_cpu_llcc_latmon: qcom,cpu0-cpu-llcc-latmon {
 			compatible = "qcom,arm-memlat-mon";
@@ -2058,6 +1880,15 @@
 			};
 		};
 
+		cpu7_l3_computemon: qcom,cpu7-l3-computemon {
+			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU7>;
+			qcom,target-dev = <&cpu7_cpu_l3_latfloor>;
+			qcom,core-dev-table =
+				< 2035200  300000000 >,
+				< 2707200 1516800000 >;
+		};
+
 		cpu4_qoslatmon: qcom,cpu4-qoslatmon {
 			compatible = "qcom,arm-memlat-mon";
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
@@ -2077,6 +1908,120 @@
 				< 2035200 1 >,
 				< 2707200 2 >;
 		};
+	};
+
+	rimps: qcom,rimps@17C00000 {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "qcom,rimps";
+		reg =   <0x17C00000 0x10>,
+			<0x18590000 0x2000>;
+		#mbox-cells = <1>;
+		interrupts = <0 62 4>;
+	};
+
+	cpu0_grp: qcom,cpu0_grp {
+		compatible = "qcom,rimps-memlat-cpugrp";
+		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		reg = <0x185098E0 0x320>;
+		reg-names = "pmu-base";
+
+		cpu0_rimps_l3_latmon: qcom,cpu0-rimps-l3-latmon {
+			compatible = "qcom,rimps-memlat-mon-l3";
+			qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
+			qcom,cachemiss-ev = <0x17>;
+			reg = <0x18590100 0xa0>, <0x18590340 0x4>;
+			reg-names = "ftbl-base", "perf-base";
+
+			qcom,core-dev-table =
+				<  300000  300000000 >,
+				<  691200  556800000 >,
+				<  806400  652800000 >,
+				<  940800  768000000 >,
+				< 1152000  844800000 >,
+				< 1324800 1065600000 >,
+				< 1516800 1190400000 >,
+				< 1651200 1305600000 >,
+				< 1804800 1516800000 >;
+		};
+	};
+
+	cpu4_grp: qcom,cpu4_grp {
+		compatible = "qcom,rimps-memlat-cpugrp";
+		qcom,cpulist = <&CPU4 &CPU5 &CPU6>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		reg = <0x185098E0 0x320>;
+		reg-names = "pmu-base";
+
+		cpu4_rimps_l3_latmon: qcom,cpu4-rimps-l3-latmon {
+			compatible = "qcom,rimps-memlat-mon-l3";
+			qcom,cpulist = <&CPU4 &CPU5 &CPU6>;
+			qcom,cachemiss-ev = <0x17>;
+			qcom,wb-ev = <0x18>;
+			qcom,access-ev = <0x2B>;
+			reg = <0x18590100 0xa0>, <0x18590340 0x4>;
+			reg-names = "ftbl-base", "perf-base";
+
+			qcom,core-dev-table =
+				<  940800  556800000 >,
+				< 12288000 768000000 >,
+				< 1651200 1190400000 >,
+				< 1900800 1401600000 >,
+				< 2400000 1516800000 >;
+		};
+	};
+
+	cpu7_grp: qcom,cpu7_grp {
+		compatible = "qcom,rimps-memlat-cpugrp";
+		qcom,cpulist = <&CPU7>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		reg = <0x185098E0 0x320>;
+		reg-names = "pmu-base";
+
+		cpu7_rimps_l3_latmon: qcom,cpu7-rimps-l3-latmon {
+			compatible = "qcom,rimps-memlat-mon-l3";
+			qcom,cpulist = <&CPU7>;
+			qcom,cachemiss-ev = <0x17>;
+			qcom,wb-ev = <0x18>;
+			qcom,access-ev = <0x2B>;
+			reg = <0x18590100 0xa0>, <0x18590340 0x4>;
+			reg-names = "ftbl-base", "perf-base";
+
+			qcom,core-dev-table =
+				< 1056000  556800000 >,
+				< 1324800  768000000 >,
+				< 1766400 1190400000 >,
+				< 2208000 1401600000 >,
+				< 2707200 1516800000 >;
+		};
+	};
+
+	scmi: qcom,scmi {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "arm,scmi";
+		mboxes = <&rimps 0>;
+		mbox-names = "tx";
+		shmem = <&cpu_scp_lpri>;
+
+		scmi_memlat: protocol@80 {
+			reg = <0x80>;
+			#clock-cells = <1>;
+		};
+	};
+
+	rimps_log: qcom,rimps_log@18509C00 {
+		compatible = "qcom,rimps-log";
+		reg = <0x18509C00 0x200>,
+				<0x18509E00 0x200>;
+		mboxes = <&rimps 1>;
 	};
 
 	apps_rsc: rsc@18200000 {
