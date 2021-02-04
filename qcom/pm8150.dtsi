@@ -139,25 +139,24 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm8150_tz>;
-		wake-capable-sensor;
 
 		trips {
 			pm8150_trip0: trip0 {
-				temperature = <95000>;
+				temperature = <105000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
 
 			pm8150_trip1: trip1 {
-				temperature = <115000>;
+				temperature = <125000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 
 			trip2 {
-				temperature = <145000>;
+				temperature = <155000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 		};
 	};

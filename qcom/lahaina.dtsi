@@ -2229,7 +2229,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_TZ
-				      IRQ_TYPE_EDGE_RISING>;
+				      IRQ_TYPE_LEVEL_HIGH>;
 			label = "spss";
 		};
 	};
@@ -4376,7 +4376,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_GLINK_QMP
-				      IRQ_TYPE_EDGE_RISING>;
+				      IRQ_TYPE_LEVEL_HIGH>;
 
 			reg = <0x1885008 0x8>,
 			      <0x1885010 0x4>;

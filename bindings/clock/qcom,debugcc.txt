@@ -12,6 +12,8 @@ Required properties :
 			"qcom,yupik-debugcc"
 			"qcom,sdxnightjar-debugcc"
 			"qcom,scshrike-debugcc"
+			"qcom,sm6150-debugcc"
+			"qcom,monaco-debugcc"
 
 - qcom,gcc: phandle to the GCC device node.
 - qcom,videocc: phandle to the Video CC device node.

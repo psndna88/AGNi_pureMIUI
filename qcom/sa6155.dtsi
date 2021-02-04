@@ -1,8 +1,37 @@
 #include "sm6150.dtsi"
+#include "sa6155-pmic.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA6155";
 	compatible = "qcom,sa6155";
 	qcom,msm-name = "SA6155";
 	qcom,msm-id = <384 0x10000>;
+};
+
+&gcc {
+	compatible = "qcom,sa6155-gcc", "syscon";
+	/delete-property/ protected-clocks;
+};
+
+&camcc {
+	compatible = "qcom,sa6155-camcc", "syscon";
+	vdd_mx-supply = <&VDD_CX_LEVEL>;
+};
+
+&dispcc {
+	compatible = "qcom,sa6155-dispcc", "syscon";
+};
+
+&gpucc {
+	compatible = "qcom,sa6155-gpucc", "syscon";
+	vdd_mx-supply = <&VDD_CX_LEVEL>;
+};
+
+&scc {
+	vdd_cx-supply = <&VDD_CX_LEVEL>;
+	status = "ok";
+};
+
+&videocc {
+	compatible = "qcom,sa6155-videocc", "syscon";
 };

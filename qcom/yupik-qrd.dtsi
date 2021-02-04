@@ -5,6 +5,8 @@
 #include "pm8350b.dtsi"
 #include "yupik-audio-overlay.dtsi"
 #include "yupik-thermal-overlay-qrd.dtsi"
+#include "display/yupik-sde-display-qrd.dtsi"
+#include "camera/yupik-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {
@@ -273,10 +275,14 @@
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <1100000>;
 			regulator-max-microvolt = <1300000>;
-			qcom,init-voltage = <1100000>;
+			qcom,init-voltage = <1200000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 	};
+};
+
+&pm8350c_l12 {
+	qcom,init-voltage = <1800000>;
 };
 
 &spmi_debug_bus {
@@ -476,10 +482,12 @@
 
 	asoc-codec  = <&stub_codec>, <&bolero>,
 		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0222>;
+		      <&wsa883x_0222>,
+		      <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec2";
+			   "wsa-codec2",
+			   "msm-ext-disp-audio-codec-rx";
 	qcom,wsa-max-devs = <1>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
@@ -519,4 +527,35 @@
 	cd-gpios = <&tlmm 91 GPIO_ACTIVE_LOW>;
 
 	status = "ok";
+};
+
+&qupv3_se13_i2c {
+	status = "disabled";
+};
+
+&qupv3_se13_spi {
+	status = "ok";
+	qcom,spi-touch-active = "focaltech,fts_ts";
+
+	focaltech@0 {
+		compatible = "focaltech,fts_ts";
+		reg = <0x0>;
+		spi-max-frequency = <6000000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <81 0x2008>;
+		focaltech,reset-gpio = <&tlmm 105 0x00>;
+		focaltech,irq-gpio = <&tlmm 81 0x2008>;
+		focaltech,display-coords = <0 0 1080 2340>;
+		focaltech,max-touch-number = <5>;
+		focaltech,ic-type = <0x3658D488>;
+
+		vdd-supply = <&L3C>;
+
+		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend","pmx_ts_release";
+		pinctrl-0 = <&ts_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		pinctrl-2 = <&ts_release>;
+		panel = <&dsi_r66451_amoled_144hz_cmd_cphy &dsi_r66451_amoled_90hz_cmd_cphy>;
+	};
+
 };

@@ -1,5 +1,7 @@
 #include <dt-bindings/clock/qcom,gcc-sm8150.h>
+#include <dt-bindings/clock/qcom,scc-sm8150.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
 #include "quin-vm-common.dtsi"
@@ -8,10 +10,24 @@
 	model = "Qualcomm Technologies, Inc. SA8155 Virtual Machine";
 	qcom,msm-name = "SA8155 V2";
 	qcom,msm-id = <362 0x20000>;
+
+	aliases {
+		hsuart0 = &qupv3_se13_4uart;
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
+	};
 };
 
-
 &soc {
+	VDD_CX_LEVEL: VDD_MMCX_LEVEL:
+	S9C_LEVEL: pm8150_2_s9_level: regulator-pm8150-2-s9-level {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8150_2_s9_level";
+		regulator-min-microvolt
+			= <RPMH_REGULATOR_LEVEL_RETENTION>;
+		regulator-max-microvolt
+			= <RPMH_REGULATOR_LEVEL_MAX>;
+	};
+
 	apps_smmu: apps-smmu@0x15000000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x15000000 0x100000>,
@@ -107,6 +123,140 @@
 				<GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>;
 	};
+
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+			   <GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>, <100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>, <133320 133320>,
+			/* 100 MB/s */
+			<261438 200000>, <150000 150000>,
+			/* 200 MB/s */
+			<261438 400000>, <300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>, <1338562 4096000>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 201500000>;
+
+		vdd-supply = <&pm8150_1_l17>;
+		qcom,vdd-voltage-level = <2950000 2960000>;
+		qcom,vdd-current-level = <200 800000>;
+
+		vdd-io-supply = <&pm8150_2_l13>;
+		qcom,vdd-io-voltage-level = <1808000 2960000>;
+		qcom,vdd-io-current-level = <200 22000>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&sdc2_on>;
+		pinctrl-1 = <&sdc2_off>;
+
+		broken-cd;
+		qcom,nonhotplug;
+		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <44>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <44>;
+		};
+	};
+
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,sm8150-pdc";
+		reg = <0xb220000 0x30000>;
+		qcom,pdc-ranges = <6 486 6>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
+	tcsr_compute_signal_glb: syscon@0x1fd8000 {
+		compatible = "syscon";
+		reg = <0x1fd8000 0x1000>;
+	};
+
+	tcsr_compute_signal_sender0: syscon@0x1fd9000 {
+		compatible = "syscon";
+		reg = <0x1fd9000 0x1000>;
+	};
+
+	tcsr_compute_signal_sender1: syscon@0x1fdd000 {
+		compatible = "syscon";
+		reg = <0x1fdd000 0x1000>;
+	};
+
+	tcsr_compute_signal_receiver0: syscon@0x1fdb000 {
+		compatible = "syscon";
+		reg = <0x1fdb000 0x1000>;
+	};
+
+	tcsr_compute_signal_receiver1: syscon@0x1fdf000 {
+		compatible = "syscon";
+		reg = <0x1fdf000 0x1000>;
+	};
+
+	hgsl_tcsr_sender0: hgsl_tcsr_sender0 {
+		compatible = "qcom,hgsl-tcsr-sender";
+		syscon = <&tcsr_compute_signal_sender0>;
+		syscon-glb = <&tcsr_compute_signal_glb>;
+	};
+
+	hgsl_tcsr_sender1: hgsl_tcsr_sender1 {
+		compatible = "qcom,hgsl-tcsr-sender";
+		syscon = <&tcsr_compute_signal_sender1>;
+		syscon-glb = <&tcsr_compute_signal_glb>;
+	};
+
+	hgsl_tcsr_receiver0: hgsl_tcsr_receiver0 {
+		compatible = "qcom,hgsl-tcsr-receiver";
+		syscon = <&tcsr_compute_signal_receiver0>;
+		interrupts = <0 238 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	hgsl_tcsr_receiver1: hgsl_tcsr_receiver1 {
+		compatible = "qcom,hgsl-tcsr-receiver";
+		syscon = <&tcsr_compute_signal_receiver1>;
+		interrupts = <0 239 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	msm_gpu_hyp: qcom,hgsl@0x2c00000 {
+		compatible = "qcom,hgsl";
+		reg = <0x2c00000 0x8>, <0x2c8f000 0x4>;
+		reg-names = "hgsl_reg_hwinf", "hgsl_reg_gmucx";
+
+		qcom,glb-db-senders = <&hgsl_tcsr_sender0
+					&hgsl_tcsr_sender1>;
+		qcom,glb-db-receivers = <&hgsl_tcsr_receiver0
+					&hgsl_tcsr_receiver1>;
+	};
 };
 
 &regulator {
@@ -193,4 +343,39 @@
 		regulator-min-microvolt = <1824000>;
 		regulator-max-microvolt = <2040000>;
 	};
+};
+
+#include "sm8150-pinctrl.dtsi"
+#include "sm8150-slpi-pinctrl.dtsi"
+#include "sa8155-vm-usb.dtsi"
+#include "sa8155-vm-pcie.dtsi"
+#include "sm8150-qupv3.dtsi"
+#include "sm8150-ssc-qupv3.dtsi"
+
+&tlmm {
+	/delete-property/ wakeup-parent;
+};
+
+&slpi_tlmm {
+	status = "ok";
+};
+
+&qupv3_0 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_1 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_2 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_3 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
 };
