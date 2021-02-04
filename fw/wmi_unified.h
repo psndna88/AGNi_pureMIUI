@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2021 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -3806,7 +3806,13 @@ typedef struct {
      *      Refer to the below definitions of the
      *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_SPLIT_AST_FEATURE_HOST_SUPPORT_GET
      *      and _SET macros.
-     *  Bits 31:3 - Reserved
+     *  Bit 3
+     *      This bit will be set when host is able to enable EAPOL offload to
+     *      FW for SAE roaming feature.
+     *      Refer to the below definitions of the
+     *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_GET
+     *      and _SET macros.
+     *  Bits 31:4 - Reserved
      */
     A_UINT32 host_service_flags;
 
@@ -4079,6 +4085,11 @@ typedef struct {
     WMI_GET_BITS(host_service_flags, 2, 1)
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SPLIT_AST_FEATURE_HOST_SUPPORT_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 2, 1, val)
+
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_GET(host_service_flags) \
+    WMI_GET_BITS(host_service_flags, 3, 1)
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_SET(host_service_flags, val) \
+    WMI_SET_BITS(host_service_flags, 3, 1, val)
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_init_cmd_fixed_param */
@@ -5837,11 +5848,15 @@ typedef struct {
      *     Access Category (0x0=BE, 0x1=BK, 0x2=VI, 0x3=VO)
      *     If tx_ac_enable bit is not set, tx_aggr_size is applied
      *     for all Access Categories
-     * bit 2 (aggr_type):            TX Aggregation Type (0=A-MPDU, 1=A-MSDU)
-     * bit 3 (tx_aggr_size_disable): If set tx_aggr_size is invalid
-     * bit 4 (rx_aggr_size_disable): If set rx_aggr_size is invalid
-     * bit 5 (tx_ac_enable):         If set, above ac bitmap is valid.
-     * bits 31:6:                    Reserved bits. should be set to zero.
+     * bit 2 (aggr_type):             TX Aggregation Type (0=A-MPDU, 1=A-MSDU)
+     * bit 3 (tx_aggr_size_disable):  If set tx_aggr_size is invalid
+     * bit 4 (rx_aggr_size_disable):  If set rx_aggr_size is invalid
+     * bit 5 (tx_ac_enable):          If set, above ac bitmap is valid.
+     * bit 6 (256 BA support enable)  If set, Default 256 BA size is expected
+     *                                from host
+     * bit 7 (1024 BA support enable) If set, Default 1024 BA size is expected
+     *                                from host
+     * bits 31:8:                     Reserved bits. should be set to zero.
      */
     A_UINT32 enable_bitmap;
 } wmi_vdev_set_custom_aggr_size_cmd_fixed_param;
@@ -5862,6 +5877,10 @@ typedef enum {
 #define WMI_VDEV_CUSTOM_RX_AGGR_SZ_DIS_NUM_BITS  1
 #define WMI_VDEV_CUSTOM_TX_AC_EN_BITPOS          5
 #define WMI_VDEV_CUSTOM_TX_AC_EN_NUM_BITS        1
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS    6
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS  1
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS   7
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS 1
 
 #define WMI_VDEV_CUSTOM_AGGR_AC_SET(param, value) \
     WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_AC_BITPOS, \
@@ -5897,6 +5916,20 @@ typedef enum {
 #define WMI_VDEV_CUSTOM_TX_AC_EN_GET(param)         \
     WMI_GET_BITS(param, WMI_VDEV_CUSTOM_TX_AC_EN_BITPOS, \
         WMI_VDEV_CUSTOM_TX_AC_EN_NUM_BITS)
+
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_SET(param, value) \
+    WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS, value)
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_GET(param)         \
+    WMI_GET_BITS(param, WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS)
+
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_SET(param, value) \
+    WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS, value)
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_GET(param)         \
+    WMI_GET_BITS(param, WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS)
 
 typedef enum {
     WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR = 0,
@@ -7151,7 +7184,11 @@ typedef enum {
     /* Param to enable per USERPD SSR - for MultiPD enabled chips */
     WMI_PDEV_PARAM_MPD_USERPD_SSR,
 
-    /* Param to disable Hardware Assist feature */
+    /*
+     * Param to disable Hardware Assist feature,
+     * i.e. Disables HW feature that reconstructs the PPDU
+     * by picking failing MPDUs from prior FES attempt.
+     */
     WMI_PDEV_PARAM_DISABLE_HW_ASSIST,
 
 } WMI_PDEV_PARAM;
@@ -12018,6 +12055,9 @@ typedef enum {
      */
     WMI_VDEV_PARAM_NON_DATA_HE_RANGE_EXT,    /* 0xA5 */
 
+    /** Prohibit data & mgmt except keepalive pkt */
+    WMI_VDEV_PARAM_PROHIBIT_DATA_MGMT,       /* 0xA6 */
+
 
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
@@ -12321,6 +12361,12 @@ WMI_VDEV_PARAM_ROAM_FW_OFFLOAD WMI_VDEV_PARAM **/
  * value = 1 --> Chanmap scan only
  */
 #define WMI_ROAM_BMISS_FINAL_SCAN_TYPE_FLAG                      0x8
+/* Bit 4:
+ * To enable/disable feature: EAPOL offload to FW while SAE roaming.
+ * param value = 0 --> Enable EAPOL offload to FW for SAE roaming
+ * param value = 1 --> Disable EAPOL offload to FW for SAE roaming
+ */
+#define WMI_VDEV_PARAM_SKIP_SAE_ROAM_4WAY_HANDSHAKE              0x10
 
 /** slot time long */
 #define WMI_VDEV_SLOT_TIME_LONG                                  0x1
@@ -16294,6 +16340,8 @@ typedef enum wake_reason_e {
     WOW_REASON_DFS_CAC,
     WOW_REASON_VDEV_DISCONNECT,
     WOW_REASON_LOCAL_DATA_UC_DROP,
+    WOW_REASON_GENERIC_WAKE, /* A generic reason that host should be woken up */
+    WOW_REASON_ERR_PKT_TRIGGERED_WAKEUP,
 
     /* add new WOW_REASON_ defs before this line */
     WOW_REASON_MAX,
@@ -26601,6 +26649,36 @@ typedef enum wmi_hw_mode_config_type {
     WMI_HW_MODE_2G_PHYB     = 7, /* Ony PhyB 2G active */
 } WMI_HW_MODE_CONFIG_TYPE;
 
+/*
+ * Per HW mode MLO capability flags
+ * use bits 31:28 of A_UINT32 hw_mode_config_type for Per HW mode MLO
+ * capability flags...
+ * WMI_MLO_CAP_FLAG_NONE:           Do not support MLO for the specific HW mode
+ * WMI_MLO_CAP_FLAG_NON_STR_IN_DBS: Support STR MLO when DBS for the specific
+ *                                  HW mode
+ * WMI_MLO_CAP_FLAG_STR_IN_DBS:     Support Non-STR MLO when DBS for the
+ *                                  specific HW mode
+ * WMI_MLO_CAP_FLAG_NON_STR_IN_SBS: Support STR MLO when SBS for the specific
+ *                                  HW mode
+ * WMI_MLO_CAP_FLAG_STR_IN_SBS:     Support Non-STR MLO when SBS for the
+ *                                  specific HW mode
+ */
+#define WMI_MLO_CAP_FLAG_NONE           0x0
+#define WMI_MLO_CAP_FLAG_NON_STR_IN_DBS 0x1
+#define WMI_MLO_CAP_FLAG_STR_IN_DBS     0x2
+#define WMI_MLO_CAP_FLAG_NON_STR_IN_SBS 0x4
+#define WMI_MLO_CAP_FLAG_STR_IN_SBS     0x8
+
+/*
+ * hw_mode_config_type sub-fields for chips that support 802.11BE/MLO:
+ * bits 28:0  - hw_mode_config
+ * bits 31:28 - per HW mode MLO capability flags
+ */
+#define WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_mode_config_type) WMI_GET_BITS(hw_mode_config_type, 0, 28)
+#define WMI_BECAP_PHY_SET_HW_MODE_CFG(hw_mode_config_type, value) WMI_SET_BITS(hw_mode_config_type, 0, 28, value)
+#define WMI_BECAP_PHY_GET_MLO_CAP(hw_mode_config_type) WMI_GET_BITS(hw_mode_config_type, 28, 4)
+#define WMI_BECAP_PHY_SET_MLO_CAP(hw_mode_config_type, value) WMI_SET_BITS(hw_mode_config_type, 28, 4, value)
+
 #define WMI_SUPPORT_11B_GET(flags) WMI_GET_BITS(flags, 0, 1)
 #define WMI_SUPPORT_11B_SET(flags, value) WMI_SET_BITS(flags, 0, 1, value)
 
@@ -26618,6 +26696,9 @@ typedef enum wmi_hw_mode_config_type {
 
 #define WMI_SUPPORT_11AX_GET(flags) WMI_GET_BITS(flags, 5, 1)
 #define WMI_SUPPORT_11AX_SET(flags, value) WMI_SET_BITS(flags, 5, 1, value)
+
+#define WMI_SUPPORT_11BE_GET(flags) WMI_GET_BITS(flags, 6, 1)
+#define WMI_SUPPORT_11BE_SET(flags, value) WMI_SET_BITS(flags, 6, 1, value)
 
 #define WMI_MAX_MUBFEE_GET(flags) WMI_GET_BITS(flags, 28, 4)
 #define WMI_MAX_MUBFEE_SET(flags, value) WMI_SET_BITS(flags, 28, 4, value)
@@ -26711,8 +26792,9 @@ typedef struct {
                      supports_11n:1,
                      supports_11ac:1,
                      supports_11ax:1,
+                     supports_11be:1,
 
-                     unused: 22,
+                     unused: 21,
 
                      max_mubfee: 4; /* max MU beamformees supported per MAC */
         };
@@ -26894,8 +26976,20 @@ typedef struct {
     /* hw_mode_config_type
      * Identify a particular type of HW mode such as SBS, DBS etc.
      * Refer to WMI_HW_MODE_CONFIG_TYPE values.
+     *
+     * Use bits 31:28 of hw_mode_config_type for Per HW mode MLO capability
+     * flags.
+     * Refer to WMI_MLO_CAP_FLAG_XXX. For legacy chips which do not support
+     * MLO, these top bits will always be set to 0, so it won't impact the
+     * legacy chips which treat hw_mode_config_type as 32 bits.
      */
-    A_UINT32 hw_mode_config_type;
+    union {
+        struct {
+            A_UINT32 hw_mode_config   :28,
+                     mlo_cap_flag     :4; /* see WMI_MLO_CAP_FLAG_ defs */
+        };
+        A_UINT32 hw_mode_config_type;
+    };
 
     /**************************************************************************
      * DON'T ADD ANY FURTHER FIELDS HERE -
@@ -28732,6 +28826,10 @@ typedef enum {
 #define WLM_FLAGS_PS_SET_PCIE_L11_ENABLE(flag, val)       WMI_SET_BITS(flag, 19, 1, val)
 #define WLM_FLAGS_PS_IS_PHYRF_PS_ENABLED(flag)            WMI_GET_BITS(flag, 20, 1)
 #define WLM_FLAGS_PS_SET_PHYRF_PS_ENABLE(flag, val)       WMI_SET_BITS(flag, 20, 1, val)
+#define WLM_FLAGS_SCAN_IS_SPLIT_PAS_CH_ENABLED(flag)      WMI_GET_BITS(flag, 21, 1)
+#define WLM_FLAGS_SCAN_SET_SPLIT_PAS_CH_ENABLE(flag, val) WMI_SET_BITS(flag, 21, 1, val)
+#define WLM_FLAGS_SCAN_IS_ADAPT_SCAN_ENABLED(flag)        WMI_GET_BITS(flag, 22, 1)
+#define WLM_FLAGS_SCAN_SET_ADAPT_SCAN_ENABLE(flag, val)   WMI_SET_BITS(flag, 22, 1, val)
 
 typedef struct {
     /** TLV tag and len; tag equals
@@ -29144,6 +29242,7 @@ typedef enum _WMI_TWT_NUDGE_STATUS_T {
     WMI_NUDGE_TWT_STATUS_NO_RESOURCE,         /* FW resource exhausted */
     WMI_NUDGE_TWT_STATUS_NO_ACK,              /* peer AP/STA did not ACK the request/response frame */
     WMI_NUDGE_TWT_STATUS_UNKNOWN_ERROR,       /* nudging TWT dialog failed with an unknown reason */
+    WMI_NUDGE_TWT_STATUS_ALREADY_PAUSED,      /* The TWT dialog is already paused */
 } WMI_TWT_NUDGE_STATUS_T;
 
 typedef struct {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -509,6 +509,17 @@ typedef  enum  {
      * be sent on the WMI communication link.
      */
     WMI_SERVICE_UNIFIED_LL_GET_STA_OVER_QMI_SUPPORT = 274,
+    /*
+     * Indicates FW supports EAPOL offload for SAE roaming if PMK of
+     * candidate AP is present in FW.
+     */
+    WMI_SERVICE_SAE_EAPOL_OFFLOAD_SUPPORT = 275,
+    /*
+     * Indicates FW supports sending events to host during Thermal Throttling
+     * every duty cycle on detecting temperature change when dc_per_event is 0.
+     */
+    WMI_SERVICE_THERM_THROT_TEMP_CHANGE_DYNAMIC_EVENT_SUPPORT = 276,
+    WMI_SERVICE_WAPI_CONCURRENCY_SUPPORTED = 277, /* Indicates FW support for WAPI concurrency */
 
 
     WMI_MAX_EXT2_SERVICE
