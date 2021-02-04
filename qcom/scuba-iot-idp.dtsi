@@ -1,6 +1,5 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/iio/qcom,spmi-vadc.h>
-#include "msm-arm-smmu-scuba.dtsi"
 #include "scuba-ion.dtsi"
 
 &soc {
