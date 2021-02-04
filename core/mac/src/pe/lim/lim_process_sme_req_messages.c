@@ -1214,6 +1214,7 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 	const uint8_t *vendor_ie;
 	struct bss_description *bss_desc;
 	QDF_STATUS status;
+	int8_t reg_max = 0;
 
 	if (!mac_ctx || !msg_buf) {
 		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
@@ -1553,10 +1554,28 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 			&session->gLimCurrentBssUapsd,
 			&local_power_constraint, session, &is_pwr_constraint);
 
-		mlme_obj->reg_tpc_obj.ap_constraint_power = local_power_constraint;
+		if (wlan_reg_is_ext_tpc_supported(mac_ctx->psoc)) {
+			mlme_obj->reg_tpc_obj.ap_constraint_power =
+							local_power_constraint;
+		} else {
+			reg_max = wlan_reg_get_channel_reg_power_for_freq(
+					mac_ctx->pdev, session->curr_op_freq);
+			if (is_pwr_constraint)
+				local_power_constraint = reg_max -
+							local_power_constraint;
+			if (!local_power_constraint)
+				local_power_constraint = reg_max;
 
-		session->maxTxPower = lim_get_max_tx_power(mac_ctx, mlme_obj);
-		session->def_max_tx_pwr = session->maxTxPower;
+			mlme_obj->reg_tpc_obj.reg_max[0] = reg_max;
+			mlme_obj->reg_tpc_obj.ap_constraint_power =
+							local_power_constraint;
+			mlme_obj->reg_tpc_obj.frequency[0] =
+						session->curr_op_freq;
+
+			session->maxTxPower = lim_get_max_tx_power(mac_ctx,
+								   mlme_obj);
+			session->def_max_tx_pwr = session->maxTxPower;
+		}
 
 		pe_debug("Reg %d local %d session %d join req %d",
 			 reg_max, local_power_constraint, session->maxTxPower,
