@@ -31,6 +31,7 @@ struct fscrypt_operations {
 	bool (*empty_dir)(struct inode *);
 	unsigned int max_namelen;
 	bool (*is_encrypted)(struct inode *);
+	bool (*inline_crypt_enabled)(struct super_block *sb);
 };
 
 struct fscrypt_ctx {
