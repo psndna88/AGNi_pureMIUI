@@ -332,6 +332,7 @@
 		novatek,irq-gpio = <&tlmm 81 0x2008>;
 
 		panel = <&dsi_nt36672e_fhd_plus_60_video
+			&dsi_nt36672e_fhd_plus_120_video
 			&dsi_nt36672e_fhd_plus_144_video>;
 
 		novatek,trusted-touch-mode = "vm_mode";
