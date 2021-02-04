@@ -2,6 +2,11 @@
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
 &soc {
+	disp_rdump_memory: disp_rdump_region@e1000000 {
+		reg = <0xe1000000 0x02300000>;
+		label = "disp_rdump_region";
+	};
+
 	ext_disp: qcom,msm-ext-disp {
 		compatible = "qcom,msm-ext-disp";
 
@@ -15,7 +20,6 @@
 	};
 
 	sde_dp: qcom,dp_display@ae90000 {
-		status="disabled";
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
@@ -122,7 +126,6 @@
 	sde_rscc: qcom,sde_rscc@af20000 {
 		cell-index = <0>;
 		compatible = "qcom,sde-rsc";
-		status = "disabled";
 		reg = <0xaf20000 0x4d68>,
 				<0xaf30000 0x3fd4>;
 		reg-names = "drv", "wrapper";
@@ -154,7 +157,8 @@
 
 	smmu_sde_sec: qcom,smmu_sde_sec_cb {
 		compatible = "qcom,smmu_sde_sec";
-		iommus = <&apps_smmu 0x901 0x400>;
+		iommus = <&apps_smmu 0x901 0x0>,
+			<&apps_smmu 0xD01 0x0>;
 		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
 		qcom,iommu-faults = "non-fatal";
 		qcom,iommu-vmid = <0xa>;
@@ -180,25 +184,10 @@
 				&cnoc2 SLAVE_DISPLAY_CFG>;
 	interconnect-names = "qcom,sde-data-bus0", "qcom,sde-reg-bus";
 
-	vdd-supply = <&disp_cc_mdss_core_gdsc>;
 	qcom,sde-has-idle-pc;
 	qcom,sde-dspp-ltm-version = <0x00010001>;
 	/* offsets are based off dspp 0 */
 	qcom,sde-dspp-ltm-off = <0x15300>;
-
-	qcom,platform-supply-entries {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			qcom,platform-supply-entry@0 {
-				reg = <0>;
-				qcom,supply-name = "vdd";
-				qcom,supply-min-voltage = <0>;
-				qcom,supply-max-voltage = <0>;
-				qcom,supply-enable-load = <0>;
-				qcom,supply-disable-load = <0>;
-			};
-	};
 };
 
 &mdss_dsi0 {
