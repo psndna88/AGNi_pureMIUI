@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 #include <linux/slab.h>
 #include <linux/debugfs.h>
@@ -975,6 +975,20 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		mutex_lock(&this_afe.afe_cmd_lock);
 		for (i = 0; i < AFE_LPASS_CORE_HW_VOTE_MAX; i++)
 			this_afe.lpass_hw_core_client_hdl[i] = 0;
+
+		/*
+		 * Free the port mapping structures used for AVCS module
+		 * load/unload.
+		 */
+		for (i = 0; i < MAX_ALLOWED_USE_CASES; i++) {
+			if (pm[i]) {
+				kfree(pm[i]->payload);
+				pm[i]->payload = NULL;
+				kfree(pm[i]);
+				pm[i] = NULL;
+			}
+		}
+
 		mutex_unlock(&this_afe.afe_cmd_lock);
 
 		/*
