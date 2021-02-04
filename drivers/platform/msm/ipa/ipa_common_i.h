@@ -103,11 +103,28 @@
 		ipa3_dec_client_disable_clks(&log_info); \
 	} while (0)
 
+#define IPA_ACTIVE_CLIENTS_INC_EP_NO_BLOCK(client) ({\
+	int __ret = 0; \
+	do { \
+		struct ipa_active_client_logging_info log_info; \
+		IPA_ACTIVE_CLIENTS_PREP_EP(log_info, client); \
+		__ret = ipa3_inc_client_enable_clks_no_block(&log_info); \
+	} while (0); \
+	(__ret); \
+})
+
+#define IPA_ACTIVE_CLIENTS_DEC_EP_NO_BLOCK(client) \
+	do { \
+		struct ipa_active_client_logging_info log_info; \
+		IPA_ACTIVE_CLIENTS_PREP_EP(log_info, client); \
+		ipa3_dec_client_disable_clks_no_block(&log_info); \
+	} while (0)
+
 /*
  * Printing one warning message in 5 seconds if multiple warning messages
  * are coming back to back.
  */
-
+#ifdef CONFIG_IPA_DEBUG
 #define WARN_ON_RATELIMIT_IPA(condition)				\
 ({								\
 	static DEFINE_RATELIMIT_STATE(_rs,			\
@@ -118,6 +135,9 @@
 	if (unlikely(rtn && __ratelimit(&_rs)))			\
 		WARN_ON(rtn);					\
 })
+#else
+#define WARN_ON_RATELIMIT_IPA(condition)
+#endif
 
 /*
  * Printing one error message in 5 seconds if multiple error messages
