@@ -2015,6 +2015,13 @@ QDF_STATUS (*extract_reg_chan_list_update_event)(wmi_unified_t wmi_handle,
 						 struct cur_regulatory_info
 						 *reg_info,
 						 uint32_t len);
+#ifdef CONFIG_BAND_6GHZ
+QDF_STATUS (*extract_reg_chan_list_ext_update_event)(wmi_unified_t wmi_handle,
+						     uint8_t *evt_buf,
+						     struct cur_regulatory_info
+						     *reg_info,
+						     uint32_t len);
+#endif
 
 QDF_STATUS (*extract_reg_11d_new_country_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
@@ -2221,6 +2228,9 @@ QDF_STATUS (*send_twt_del_dialog_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*send_twt_pause_dialog_cmd)(wmi_unified_t wmi_handle,
 			struct wmi_twt_pause_dialog_cmd_param *params);
 
+QDF_STATUS (*send_twt_nudge_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct wmi_twt_nudge_dialog_cmd_param *params);
+
 QDF_STATUS (*send_twt_resume_dialog_cmd)(wmi_unified_t wmi_handle,
 			struct wmi_twt_resume_dialog_cmd_param *params);
 
@@ -2259,10 +2269,17 @@ QDF_STATUS (*extract_twt_pause_dialog_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
 		struct wmi_twt_pause_dialog_complete_event_param *params);
 
+QDF_STATUS (*extract_twt_nudge_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct wmi_twt_nudge_dialog_complete_event_param *params);
+
 QDF_STATUS (*extract_twt_resume_dialog_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
 		struct wmi_twt_resume_dialog_complete_event_param *params);
 
+QDF_STATUS (*extract_twt_notify_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct wmi_twt_notify_event_param *params);
 #ifdef WLAN_SUPPORT_BCAST_TWT
 QDF_STATUS (*extract_twt_btwt_invite_sta_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
@@ -2462,6 +2479,20 @@ QDF_STATUS (*send_cp_stats_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_cp_stats_more_pending)(wmi_unified_t wmi_handle,
 					    void *evt_buf,
 					    uint32_t *more_flag);
+
+QDF_STATUS (*send_set_tpc_power_cmd)(wmi_unified_t wmi_handle,
+				     uint8_t vdev_id,
+				     struct reg_tpc_power_info *param);
+#ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
+QDF_STATUS
+(*extract_infra_cp_stats)(wmi_unified_t wmi_handle,
+			  void *evt_buf, uint32_t evt_buf_len,
+			  struct infra_cp_stats_event *params);
+
+QDF_STATUS
+(*send_infra_cp_stats_request_cmd)(wmi_unified_t wmi_handle,
+				   struct infra_cp_stats_cmd_info *param);
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 };
 
 /* Forward declartion for psoc*/

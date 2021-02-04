@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4218,6 +4218,24 @@ wmi_unified_send_injector_frame_config_cmd(wmi_unified_t wmi_handle,
 QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
 					 void *buf_ptr, uint32_t buf_len);
 
+#ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
+/**
+ * wmi_unified_extract_infra_cp_stats() - extract various infra cp statistics
+ * @wmi_handle: wmi handle
+ * @evt_buf: event buffer
+ * @evt_buf_len: length of event buffer
+ * @params: pointer to store the extracted event info
+ *
+ * This function extracts the infra cp statistics from the event
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_extract_infra_cp_stats(wmi_unified_t wmi_handle,
+				   void *evt_buf, uint32_t evt_buf_len,
+				   struct infra_cp_stats_event *params);
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+
 /**
  * wmi_unified_extract_cp_stats_more_pending() - extract more flag
  * @wmi_handle: wmi handle
@@ -4245,5 +4263,17 @@ QDF_STATUS wmi_extract_pdev_csa_switch_count_status(
 		wmi_unified_t wmi_handle,
 		void *evt_buf,
 		struct pdev_csa_switch_count_status *param);
+
+/**
+ * wmi_unified_send_set_tpc_power_cmd() - send set transmit power info
+ * @wmi_handle: wmi handle
+ * @vdev_id: vdev id
+ * @param: regulatory TPC info
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_unified_send_set_tpc_power_cmd(wmi_unified_t wmi_handle,
+					      uint8_t vdev_id,
+					      struct reg_tpc_power_info *param);
 
 #endif /* _WMI_UNIFIED_API_H_ */

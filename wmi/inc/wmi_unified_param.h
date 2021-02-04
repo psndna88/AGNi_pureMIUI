@@ -1039,6 +1039,7 @@ typedef struct {
  * @peer_he_tx_mcs_set: Peer HE TX MCS MAP
  * @peer_ppet: Peer HE PPET info
  * @peer_bss_max_idle_option: Peer BSS Max Idle option update
+ * @akm: AKM info
  */
 struct peer_assoc_params {
 	uint32_t vdev_id;
@@ -1102,6 +1103,7 @@ struct peer_assoc_params {
 	struct wmi_host_ppe_threshold peer_ppet;
 	u_int8_t peer_bsscolor_rept_info;
 	uint32_t peer_bss_max_idle_option;
+	uint16_t akm;
 };
 
 /**
@@ -4725,6 +4727,7 @@ typedef enum {
 	wmi_peer_delete_all_response_event_id,
 	wmi_pdev_csa_switch_count_status_event_id,
 	wmi_reg_chan_list_cc_event_id,
+	wmi_reg_chan_list_cc_ext_event_id,
 	wmi_offchan_data_tx_completion_event,
 	wmi_dfs_cac_complete_id,
 	wmi_dfs_radar_detection_event_id,
@@ -4777,7 +4780,9 @@ typedef enum {
 	wmi_twt_del_dialog_complete_event_id,
 	wmi_twt_pause_dialog_complete_event_id,
 	wmi_twt_resume_dialog_complete_event_id,
+	wmi_twt_nudge_dialog_complete_event_id,
 	wmi_twt_session_stats_event_id,
+	wmi_twt_notify_event_id,
 #endif
 	wmi_apf_get_vdev_work_memory_resp_event_id,
 	wmi_roam_scan_stats_event_id,
@@ -5373,6 +5378,12 @@ typedef enum {
 	wmi_service_csa_beacon_template,
 	wmi_service_twt_bcast_req_support,
 	wmi_service_twt_bcast_resp_support,
+#ifdef WLAN_SUPPORT_TWT
+	wmi_service_twt_nudge,
+	wmi_service_all_twt,
+	wmi_service_twt_statistics,
+#endif
+	wmi_service_wapi_concurrency_supported,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

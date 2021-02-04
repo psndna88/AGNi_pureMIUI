@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3326,6 +3326,22 @@ QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
+QDF_STATUS
+wmi_unified_extract_infra_cp_stats(wmi_unified_t wmi_handle,
+				   void *evt_buf, uint32_t evt_buf_len,
+				   struct infra_cp_stats_event *params)
+{
+	if (wmi_handle->ops->extract_infra_cp_stats)
+		return wmi_handle->ops->extract_infra_cp_stats(wmi_handle,
+								   evt_buf,
+								   evt_buf_len,
+								   params);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+
 QDF_STATUS
 wmi_unified_extract_cp_stats_more_pending(wmi_unified_t wmi_handle,
 					  void *evt_buf, uint32_t *more_flag)
@@ -3348,6 +3364,18 @@ QDF_STATUS wmi_extract_pdev_csa_switch_count_status(
 				wmi_handle,
 				evt_buf,
 				param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS wmi_unified_send_set_tpc_power_cmd(wmi_unified_t wmi_handle,
+					      uint8_t vdev_id,
+					      struct reg_tpc_power_info *param)
+{
+	if (wmi_handle->ops->send_set_tpc_power_cmd)
+		return wmi_handle->ops->send_set_tpc_power_cmd(wmi_handle,
+								   vdev_id,
+								   param);
 
 	return QDF_STATUS_E_FAILURE;
 }
