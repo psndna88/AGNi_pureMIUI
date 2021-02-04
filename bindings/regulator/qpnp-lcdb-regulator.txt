@@ -39,6 +39,12 @@ First Level Node - LCDB module
 		     to be enabled only on platforms where voltage needs to
 		     be ramped up with multiple steps.
 
+- qcom,ncp-symmetry
+	Usage:      optional
+	Value type: <bool>
+	Definition:  Enabling this will make NCP voltage follow LDO voltage
+		     directly.
+
 - qcom,pwrdn-delay-ms
 	Usage:      optional
 	Value type: <u32>

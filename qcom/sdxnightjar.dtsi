@@ -4,6 +4,10 @@
 #include <dt-bindings/clock/qcom,gcc-sdxnightjar.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
+#include <dt-bindings/clock/qcom,apsscc-sdxlemur.h>
+
+#define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
+#define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXNIGHTJAR";
@@ -266,9 +270,8 @@
 
 	qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
-		/*TODO: Fix the clock when tree is available*/
-		clock-names = "cpu0_clk", "cpu1_clk",
-				"cpu2_clk", "cpu3_clk";
+		clocks = <&apsscc APCS_MUX_CLK>;
+		clock-names = "cpu0_clk";
 		qcom,cpufreq-table =
 			<  200000 >,
 			<  300000 >,
@@ -282,14 +285,48 @@
 
 	ahb_clk: qcom,ahb-clk-src {
 		compatible = "devfreq-simple-dev";
+		clocks = <&gcc APSS_AHB_CLK_SRC>;
 		clock-names = "devfreq_clk";
-		/*TODO: Fix the clock when tree is available*/
 		governor = "powersave";
 		freq-tbl-khz =
 			<  19200 >,
 			<  50000 >,
 			<  100000 >,
 			<  133330 >;
+	};
+
+	cpubw: qcom,cpubw {
+		compatible = "qcom,devfreq-icc";
+		governor = "cpufreq";
+		interconnects = <&bimc MASTER_AMPSS_M0 &bimc SLAVE_EBI_CH0>;
+		qcom,active-only;
+		operating-points-v2 = <&ddr_bw_opp_table>;
+	};
+
+	ddr_bw_opp_table: ddr-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY(  202, 8); /*  1541 MB/s */
+		BW_OPP_ENTRY(  404, 8); /*  3082 MB/s */
+		BW_OPP_ENTRY(  518, 8); /*  3952 MB/s */
+	};
+
+	devfreq-cpufreq {
+		cpubw-cpufreq {
+			target-dev = <&cpubw>;
+			cpu-to-dev-map =
+				<  600000 1541 >,
+				<  787200 3082 >,
+				< 1286400 3952 >;
+		};
+
+		cpuahb-cpufreq {
+			target-dev = <&ahb_clk>;
+			cpu-to-dev-map =
+				<  200000  19200 >,
+				<  384000  50000 >,
+				<  787200  100000 >,
+				<  1286400 133330 >;
+		};
 	};
 
 	restart@4ab000 {
@@ -983,7 +1020,10 @@
 #include "sdxnightjar-usb.dtsi"
 #include "sdxnightjar-coresight.dtsi"
 #include "sdxnightjar-pinctrl.dtsi"
+#include "sdxnightjar-ion.dtsi"
 #include "sdxnightjar-blsp.dtsi"
+#include "sdxnightjar-cnss.dtsi"
+#include "sdxnightjar-pcie.dtsi"
 
 &i2c_3 {
 	status = "ok";

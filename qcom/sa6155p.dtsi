@@ -1,7 +1,49 @@
 #include "sm6150.dtsi"
+#include "sa6155-pmic.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA6155P";
 	qcom,msm-name = "SA6155P";
 	qcom,msm-id = <377 0>, <380 0>;
+};
+
+&apps_rsc {
+	/delete-node/ rpmh-regulator-modemlvl;
+	/delete-node/ rpmh-regulator-ldoc2;
+	/delete-node/ rpmh-regulator-ldoc3;
+	/delete-node/ rpmh-regulator-ldoc4;
+	/delete-node/ rpmh-regulator-ldoc13;
+	/delete-node/ rpmh-regulator-ldoc14;
+	/delete-node/ rpmh-regulator-ldoc16;
+	/delete-node/ rpmh-regulator-ldoc17;
+	/delete-node/ rpmh-regulator-ldoc18;
+	/delete-node/ bt_wcn3990;
+};
+
+&gcc {
+	compatible = "qcom,sa6155-gcc", "syscon";
+	/delete-property/ protected-clocks;
+};
+
+&camcc {
+	compatible = "qcom,sa6155-camcc", "syscon";
+	vdd_mx-supply = <&VDD_CX_LEVEL>;
+};
+
+&dispcc {
+	compatible = "qcom,sa6155-dispcc", "syscon";
+};
+
+&gpucc {
+	compatible = "qcom,sa6155-gpucc", "syscon";
+	vdd_mx-supply = <&VDD_CX_LEVEL>;
+};
+
+&scc {
+	vdd_cx-supply = <&VDD_CX_LEVEL>;
+	status = "ok";
+};
+
+&videocc {
+	compatible = "qcom,sa6155-videocc", "syscon";
 };

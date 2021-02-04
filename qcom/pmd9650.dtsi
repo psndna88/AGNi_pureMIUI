@@ -24,6 +24,7 @@
 			interrupt-names = "kpdpwr";
 			qcom,system-reset;
 			qcom,store-hard-reset-reason;
+			qcom,use-legacy-hard-reset-offset;
 
 			qcom,pon_1 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;

@@ -35,6 +35,9 @@ Required properties :
 			"qcom,sdxnightjar-gcc"
 			"qcom,scshrike-gcc"
 			"qcom,scshrike-gcc-v2"
+			"qcom,sm6150-gcc"
+			"qcom,sa6155-gcc"
+			"qcom,monaco-gcc"
 
 - reg : shall contain base register location and length
 - vdd_cx-supply: The vdd_cx logic rail supply.
