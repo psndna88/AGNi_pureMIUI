@@ -1353,11 +1353,31 @@ static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 {
 	struct cam_hw_info *cdm_hw = NULL;
 	struct cam_cdm *core = NULL;
+	struct cam_cdm_pid_mid_data *pid_mid_info = NULL;
 	int i;
 
 	if (pf_info->token) {
 		cdm_hw = (struct cam_hw_info *)pf_info->token;
 		core = (struct cam_cdm *)cdm_hw->core_info;
+		pid_mid_info = core->offsets->cmn_reg->cdm_pid_mid_info;
+		CAM_ERR_RATE_LIMIT(CAM_CDM, "Page fault iova addr %pK\n",
+			(void *)pf_info->iova);
+
+		if (pid_mid_info) {
+			/*
+			 * If its CDM or OPE CDM then only handle the pf for CDM
+			 * else return.
+			 */
+			if (((pf_info->pid == pid_mid_info->cdm_pid) &&
+				(pf_info->mid == pid_mid_info->cdm_mid)) ||
+				((pf_info->pid == pid_mid_info->ope_cdm_pid) &&
+				(pf_info->mid == pid_mid_info->ope_cdm_mid)))
+				goto handle_cdm_pf;
+			else
+				return;
+		}
+
+handle_cdm_pf:
 		set_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 		mutex_lock(&cdm_hw->hw_mutex);
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
@@ -1371,15 +1391,12 @@ static void cam_hw_cdm_iommu_fault_handler(struct cam_smmu_pf_info *pf_info)
 		for (i = 0; i < core->offsets->reg_data->num_bl_fifo; i++)
 			mutex_unlock(&core->bl_fifo[i].fifo_lock);
 		mutex_unlock(&cdm_hw->hw_mutex);
-		CAM_ERR_RATE_LIMIT(CAM_CDM, "Page fault iova addr %pK\n",
-			(void *)pf_info->iova);
 		cam_cdm_notify_clients(cdm_hw, CAM_CDM_CB_STATUS_PAGEFAULT,
 			(void *)pf_info->iova);
 		clear_bit(CAM_CDM_ERROR_HW_STATUS, &core->cdm_status);
 	} else {
 		CAM_ERR(CAM_CDM, "Invalid token");
 	}
-
 }
 
 irqreturn_t cam_hw_cdm_irq(int irq_num, void *data)

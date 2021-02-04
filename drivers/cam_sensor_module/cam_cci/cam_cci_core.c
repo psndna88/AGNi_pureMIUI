@@ -104,13 +104,20 @@ static int32_t cam_cci_validate_queue(struct cci_device *cci_dev,
 	if ((read_val + len + 1) >
 		cci_dev->cci_i2c_queue_info[master][queue].max_queue_size) {
 		uint32_t reg_val = 0;
-		uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8);
+		uint32_t report_id =
+			cci_dev->cci_i2c_queue_info[master][queue].report_id;
+		uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8) |
+			(1 << 9) | (report_id << 4);
 
 		CAM_DBG(CAM_CCI, "CCI_I2C_REPORT_CMD");
 		cam_io_w_mb(report_val,
 			base + CCI_I2C_M0_Q0_LOAD_DATA_ADDR +
 			reg_offset);
 		read_val++;
+		cci_dev->cci_i2c_queue_info[master][queue].report_id++;
+		if (cci_dev->cci_i2c_queue_info[master][queue].report_id == REPORT_IDSIZE)
+			cci_dev->cci_i2c_queue_info[master][queue].report_id = 0;
+
 		CAM_DBG(CAM_CCI,
 			"CCI_I2C_M0_Q0_EXEC_WORD_CNT_ADDR %d, queue: %d",
 			read_val, queue);
@@ -305,13 +312,21 @@ static void cam_cci_load_report_cmd(struct cci_device *cci_dev,
 	uint32_t reg_offset = master * 0x200 + queue * 0x100;
 	uint32_t read_val = cam_io_r_mb(base +
 		CCI_I2C_M0_Q0_CUR_WORD_CNT_ADDR + reg_offset);
-	uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8);
+	uint32_t report_id =
+		cci_dev->cci_i2c_queue_info[master][queue].report_id;
+	uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8) |
+		(1 << 9) | (report_id << 4);
 
-	CAM_DBG(CAM_CCI, "CCI_I2C_REPORT_CMD curr_w_cnt: %d", read_val);
+	CAM_DBG(CAM_CCI, "CCI_I2C_REPORT_CMD curr_w_cnt: %d report_id %d",
+		read_val, report_id);
 	cam_io_w_mb(report_val,
 		base + CCI_I2C_M0_Q0_LOAD_DATA_ADDR +
 		reg_offset);
 	read_val++;
+
+	cci_dev->cci_i2c_queue_info[master][queue].report_id++;
+	if (cci_dev->cci_i2c_queue_info[master][queue].report_id == REPORT_IDSIZE)
+		cci_dev->cci_i2c_queue_info[master][queue].report_id = 0;
 
 	CAM_DBG(CAM_CCI, "CCI_I2C_M0_Q0_EXEC_WORD_CNT_ADDR %d", read_val);
 	cam_io_w_mb(read_val, base +

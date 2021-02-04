@@ -45,6 +45,9 @@ static struct cam_ope_hw_mgr *ope_hw_mgr;
 
 static int cam_ope_req_timer_reset(struct cam_ope_ctx *ctx_data);
 
+static void cam_ope_mgr_dump_pf_data(struct cam_ope_hw_mgr  *hw_mgr,
+	struct cam_hw_cmd_args  *hw_cmd_args);
+
 static int cam_ope_mgr_get_rsc_idx(struct cam_ope_ctx *ctx_data,
 	struct ope_io_buf_info *in_io_buf)
 {
@@ -1767,7 +1770,6 @@ static int cam_ope_mgr_process_io_cfg(struct cam_ope_hw_mgr *hw_mgr,
 	struct cam_hw_prepare_update_args *prep_arg,
 	struct cam_ope_ctx *ctx_data, uint32_t req_idx)
 {
-
 	int i, j = 0, k = 0, l, rc = 0;
 	struct ope_io_buf *io_buf;
 	int32_t sync_in_obj[CAM_MAX_IN_RES];
@@ -2724,7 +2726,7 @@ static int cam_ope_mgr_acquire_hw(void *hw_priv, void *hw_acquire_args)
 
 	bw_update = kzalloc(sizeof(struct cam_ope_dev_bw_update), GFP_KERNEL);
 	if (!bw_update) {
-		CAM_ERR(CAM_ISP, "Out of memory");
+		CAM_ERR(CAM_OPE, "Out of memory");
 		goto ope_clk_update_failed;
 	}
 	bw_update->ahb_vote_valid = false;
@@ -3281,6 +3283,8 @@ static int cam_ope_mgr_prepare_hw_update(void *hw_priv,
 		(uintptr_t)ctx_data->req_list[request_idx]->cdm_cmd;
 	prepare_args->priv = ctx_data->req_list[request_idx];
 	prepare_args->pf_data->packet = packet;
+	prepare_args->pf_data->req    = ope_req;
+	CAM_INFO(CAM_REQ, "OPE req %x num_batch %d", ope_req, ope_req->num_batch);
 	ope_req->hang_data.packet = packet;
 	ktime_get_boottime_ts64(&ts);
 	ctx_data->last_req_time = (uint64_t)((ts.tv_sec * 1000000000) +
@@ -3433,84 +3437,6 @@ config_err:
 	return rc;
 }
 
-static void cam_ope_mgr_print_io_bufs(struct cam_packet *packet,
-	int32_t iommu_hdl, int32_t sec_mmu_hdl, uint32_t pf_buf_info,
-	bool *mem_found)
-{
-	dma_addr_t   iova_addr;
-	size_t     src_buf_size;
-	int        i;
-	int        j;
-	int        rc = 0;
-	int32_t    mmu_hdl;
-
-	struct cam_buf_io_cfg  *io_cfg = NULL;
-
-	if (mem_found)
-		*mem_found = false;
-
-	io_cfg = (struct cam_buf_io_cfg *)((uint32_t *)&packet->payload +
-		packet->io_configs_offset / 4);
-
-	for (i = 0; i < packet->num_io_configs; i++) {
-		for (j = 0; j < CAM_PACKET_MAX_PLANES; j++) {
-			if (!io_cfg[i].mem_handle[j])
-				break;
-
-			if (GET_FD_FROM_HANDLE(io_cfg[i].mem_handle[j]) ==
-				GET_FD_FROM_HANDLE(pf_buf_info)) {
-				CAM_INFO(CAM_OPE,
-					"Found PF at port: %d mem %x fd: %x",
-					io_cfg[i].resource_type,
-					io_cfg[i].mem_handle[j],
-					pf_buf_info);
-				if (mem_found)
-					*mem_found = true;
-			}
-
-			CAM_INFO(CAM_OPE, "port: %d f: %u format: %d dir %d",
-				io_cfg[i].resource_type,
-				io_cfg[i].fence,
-				io_cfg[i].format,
-				io_cfg[i].direction);
-
-			mmu_hdl = cam_mem_is_secure_buf(
-				io_cfg[i].mem_handle[j]) ? sec_mmu_hdl :
-				iommu_hdl;
-			rc = cam_mem_get_io_buf(io_cfg[i].mem_handle[j],
-				mmu_hdl, &iova_addr, &src_buf_size);
-			if (rc < 0) {
-				CAM_ERR(CAM_UTIL,
-					"get src buf address fail rc %d mem %x",
-					rc, io_cfg[i].mem_handle[j]);
-				continue;
-			}
-			if ((iova_addr & 0xFFFFFFFF) != iova_addr) {
-				CAM_ERR(CAM_OPE, "Invalid mapped address");
-				rc = -EINVAL;
-				continue;
-			}
-
-			CAM_INFO(CAM_OPE,
-				"pln %d dir %d w %d h %d s %u sh %u sz %d addr 0x%x off 0x%x memh %x",
-				j, io_cfg[i].direction,
-				io_cfg[i].planes[j].width,
-				io_cfg[i].planes[j].height,
-				io_cfg[i].planes[j].plane_stride,
-				io_cfg[i].planes[j].slice_height,
-				(int32_t)src_buf_size,
-				(unsigned int)iova_addr,
-				io_cfg[i].offsets[j],
-				io_cfg[i].mem_handle[j]);
-
-			iova_addr += io_cfg[i].offsets[j];
-
-		}
-	}
-	cam_packet_dump_patch_info(packet, ope_hw_mgr->iommu_hdl,
-		ope_hw_mgr->iommu_sec_hdl);
-}
-
 static int cam_ope_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 {
 	int rc = 0;
@@ -3524,16 +3450,11 @@ static int cam_ope_mgr_cmd(void *hw_mgr_priv, void *cmd_args)
 
 	switch (hw_cmd_args->cmd_type) {
 	case CAM_HW_MGR_CMD_DUMP_PF_INFO:
-		cam_ope_mgr_print_io_bufs(
-			hw_cmd_args->u.pf_args.pf_data.packet,
-			hw_mgr->iommu_hdl,
-			hw_mgr->iommu_sec_hdl,
-			hw_cmd_args->u.pf_args.buf_info,
-			hw_cmd_args->u.pf_args.mem_found);
-
+		cam_ope_mgr_dump_pf_data(hw_mgr, hw_cmd_args);
 		break;
 	default:
-		CAM_ERR(CAM_OPE, "Invalid cmd");
+		CAM_ERR(CAM_OPE, "Invalid cmd: %d",
+			hw_cmd_args->cmd_type);
 	}
 
 	return rc;
@@ -3854,13 +3775,14 @@ static int cam_ope_mgr_init_devs(struct device_node *of_node)
 	}
 
 	ope_hw_mgr->num_ope = count;
+
 	for (i = 0; i < count; i++) {
 		ope_hw_mgr->ope_dev_intf[i] =
 			ope_hw_mgr->devices[OPE_DEV_OPE][i];
-			ope_dev = ope_hw_mgr->ope_dev_intf[i]->hw_priv;
-			soc_info = &ope_dev->soc_info;
-			ope_hw_mgr->cdm_reg_map[i][0] =
-				soc_info->reg_map[0].mem_base;
+		ope_dev = ope_hw_mgr->ope_dev_intf[i]->hw_priv;
+		soc_info = &ope_dev->soc_info;
+		ope_hw_mgr->cdm_reg_map[i][0] =
+			soc_info->reg_map[0].mem_base;
 	}
 
 	ope_hw_mgr->hfi_en = of_property_read_bool(of_node, "hfi_en");
@@ -4027,20 +3949,20 @@ int cam_ope_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 
 	hw_mgr_intf->hw_mgr_priv = ope_hw_mgr;
 	hw_mgr_intf->hw_get_caps = cam_ope_mgr_get_hw_caps;
-	hw_mgr_intf->hw_acquire = cam_ope_mgr_acquire_hw;
-	hw_mgr_intf->hw_release = cam_ope_mgr_release_hw;
-	hw_mgr_intf->hw_start   = NULL;
-	hw_mgr_intf->hw_stop    = NULL;
+	hw_mgr_intf->hw_acquire  = cam_ope_mgr_acquire_hw;
+	hw_mgr_intf->hw_release  = cam_ope_mgr_release_hw;
+	hw_mgr_intf->hw_start    = NULL;
+	hw_mgr_intf->hw_stop     = NULL;
 	hw_mgr_intf->hw_prepare_update = cam_ope_mgr_prepare_hw_update;
 	hw_mgr_intf->hw_config_stream_settings = NULL;
 	hw_mgr_intf->hw_config = cam_ope_mgr_config_hw;
 	hw_mgr_intf->hw_read   = NULL;
 	hw_mgr_intf->hw_write  = NULL;
-	hw_mgr_intf->hw_cmd = cam_ope_mgr_cmd;
-	hw_mgr_intf->hw_open = cam_ope_mgr_hw_open_u;
-	hw_mgr_intf->hw_close = cam_ope_mgr_hw_close_u;
-	hw_mgr_intf->hw_flush = cam_ope_mgr_hw_flush;
-	hw_mgr_intf->hw_dump = cam_ope_mgr_hw_dump;
+	hw_mgr_intf->hw_cmd    = cam_ope_mgr_cmd;
+	hw_mgr_intf->hw_open   = cam_ope_mgr_hw_open_u;
+	hw_mgr_intf->hw_close  = cam_ope_mgr_hw_close_u;
+	hw_mgr_intf->hw_flush  = cam_ope_mgr_hw_flush;
+	hw_mgr_intf->hw_dump   = cam_ope_mgr_hw_dump;
 
 	ope_hw_mgr->secure_mode = false;
 	mutex_init(&ope_hw_mgr->hw_mgr_mutex);
@@ -4078,6 +4000,12 @@ int cam_ope_hw_mgr_init(struct device_node *of_node, uint64_t *hw_mgr_hdl,
 
 	ope_hw_mgr->ctx_bits = ope_hw_mgr->ctx_bitmap_size *
 		BITS_PER_BYTE;
+
+	for (i = 0; i < OPE_DEV_MAX; i++) {
+		rc = cam_ope_hw_init(&ope_hw_mgr->ope_dev_data[i], i);
+		if (rc)
+			goto ctx_bitmap_alloc_failed;
+	}
 
 	rc = cam_smmu_get_handle("ope", &ope_hw_mgr->iommu_hdl);
 	if (rc) {
@@ -4146,5 +4074,169 @@ ope_ctx_bitmap_failed:
 	ope_hw_mgr = NULL;
 
 	return rc;
+}
+
+static void cam_ope_mgr_dump_pf_data(
+	struct cam_ope_hw_mgr  *hw_mgr,
+	struct cam_hw_cmd_args *hw_cmd_args)
+{
+	struct cam_ope_ctx             *ctx_data;
+	struct cam_packet              *packet;
+	struct cam_buf_io_cfg          *io_cfg = NULL;
+	struct cam_ope_request         *ope_request;
+	struct ope_io_buf              *io_buf = NULL;
+	struct cam_ope_match_pid_args  ope_pid_mid_args;
+
+	dma_addr_t   iova_addr;
+	int          device_idx;
+	bool         *ctx_found;
+	bool         io_buf_found = false;
+	size_t       src_buf_size;
+	int          i, j;
+	int32_t      mmu_hdl;
+	bool         hw_pid_support = true;
+	bool         hw_id_found = false;
+	uint32_t     *resource_type;
+	int          stripe_num;
+	int          rc = 0;
+
+	ctx_data    = (struct cam_ope_ctx *)hw_cmd_args->ctxt_to_hw_map;
+	packet      = hw_cmd_args->u.pf_args.pf_data.packet;
+	ope_request = hw_cmd_args->u.pf_args.pf_data.req;
+
+	if (ctx_data->pf_mid_found)
+		goto stripedump;
+
+	ope_pid_mid_args.fault_mid = hw_cmd_args->u.pf_args.mid;
+	ope_pid_mid_args.fault_pid = hw_cmd_args->u.pf_args.pid;
+	ctx_found = hw_cmd_args->u.pf_args.ctx_found;
+	resource_type = hw_cmd_args->u.pf_args.resource_type;
+
+	if (*ctx_found && *resource_type) {
+		hw_pid_support = false;
+		goto stripedump;
+	} else {
+		*ctx_found = false;
+	}
+
+	for (i = 0; i < ope_hw_mgr->num_ope; i++) {
+		if (!ope_hw_mgr->ope_dev_data[i]->hw_intf)
+			continue;
+		for (j = 0; j < ope_hw_mgr->ope_dev_data[i]->num_hw_pid; j++) {
+			if (ope_hw_mgr->ope_dev_data[i]->hw_pid[j] ==
+					hw_cmd_args->u.pf_args.pid) {
+				hw_id_found = true;
+				device_idx = i;
+				*ctx_found = true;
+				break;
+			}
+		}
+		if (hw_id_found)
+			break;
+	}
+
+	if (i == ope_hw_mgr->num_ope) {
+		CAM_INFO(CAM_OPE,
+			"PID:%d  is not matching with any OPE HW PIDs ctx id:%d",
+			hw_cmd_args->u.pf_args.pid, ctx_data->ctx_id);
+		return;
+	}
+
+	ope_pid_mid_args.device_idx = device_idx;
+
+	rc = hw_mgr->devices[OPE_DEV_OPE][device_idx]->hw_ops.process_cmd(
+		hw_mgr->devices[OPE_DEV_OPE][device_idx]->hw_priv,
+		OPE_HW_MATCH_PID_MID,
+		&ope_pid_mid_args, sizeof(ope_pid_mid_args));
+	if (rc) {
+		CAM_ERR(CAM_OPE,
+			"CAM_OPE_CMD_MATCH_PID_MID failed %d", rc);
+			return;
+	}
+
+	io_cfg = (struct cam_buf_io_cfg *)((uint32_t *)&packet->payload +
+			packet->io_configs_offset / 4);
+
+	*resource_type = ope_pid_mid_args.match_res;
+	CAM_INFO(CAM_OPE, "Fault port %d", *resource_type);
+
+stripedump:
+	if (!ope_request)
+		goto iodump;
+
+	CAM_INFO(CAM_OPE, "req_id %d Num of batches %d",
+			ope_request->request_id, ope_request->num_batch);
+
+	for (i = 0; i < ope_request->num_batch; i++) {
+		for (j = 0; j < ope_request->num_io_bufs[i]; j++) {
+			io_buf = ope_request->io_buf[i][j];
+			if (io_buf) {
+				if (io_buf->resource_type == *resource_type) {
+					io_buf_found = true;
+					break;
+				}
+			}
+		}
+		if (io_buf_found)
+			break;
+	}
+iodump:
+	for (i = 0; i < packet->num_io_configs; i++) {
+		if (hw_pid_support) {
+			if (io_cfg[i].resource_type !=
+				*resource_type)
+				continue;
+		}
+
+		for (j = 0; j < CAM_PACKET_MAX_PLANES; j++) {
+			if (!io_cfg[i].mem_handle[j])
+				break;
+			CAM_INFO(CAM_OPE, "port: %d f: %u format: %d dir %d",
+				io_cfg[i].resource_type,
+				io_cfg[i].fence,
+				io_cfg[i].format,
+				io_cfg[i].direction);
+
+			mmu_hdl = cam_mem_is_secure_buf(
+					io_cfg[i].mem_handle[j]) ?
+					hw_mgr->iommu_sec_hdl :
+					hw_mgr->iommu_hdl;
+			rc = cam_mem_get_io_buf(io_cfg[i].mem_handle[j],
+					mmu_hdl, &iova_addr, &src_buf_size);
+			if (rc < 0) {
+				CAM_ERR(CAM_UTIL, "get src buf address fail");
+				continue;
+			}
+			if ((iova_addr & 0xFFFFFFFF) != iova_addr) {
+				CAM_ERR(CAM_OPE, "Invalid mapped address");
+				rc = -EINVAL;
+				continue;
+			}
+			CAM_INFO(CAM_OPE,
+				"pln %u w %u h %u stride %u slice %u size %d addr 0x%x offset 0x%x memh %x",
+				j, io_cfg[i].planes[j].width,
+				io_cfg[i].planes[j].height,
+				io_cfg[i].planes[j].plane_stride,
+				io_cfg[i].planes[j].slice_height,
+				(int32_t)src_buf_size,
+				(unsigned int)iova_addr,
+				io_cfg[i].offsets[j],
+				io_cfg[i].mem_handle[j]);
+
+			if (io_buf_found) {
+				for (stripe_num = 0; stripe_num < io_buf->num_stripes[j];
+						stripe_num++) {
+					CAM_INFO(CAM_OPE,
+						"pln_num %d stripe_num %d width %d height %d stride %d io vaddr 0x%x",
+						j, stripe_num, io_buf->s_io[j][stripe_num].width,
+						io_buf->s_io[j][stripe_num].height,
+						io_buf->s_io[j][stripe_num].stride,
+						io_buf->s_io[j][stripe_num].iova_addr);
+				}
+			}
+		}
+		if (hw_pid_support)
+			return;
+	}
 }
 

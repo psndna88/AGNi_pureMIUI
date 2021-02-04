@@ -182,10 +182,12 @@ struct cam_hw_stop_args {
 /**
  * struct cam_hw_mgr_dump_pf_data - page fault debug data
  *
- * packet:     pointer to packet
+ * @packet:     pointer to packet
+ * @req:        pointer to req (HW specific)
  */
 struct cam_hw_mgr_dump_pf_data {
 	void    *packet;
+	void    *req;
 };
 
 /**

@@ -54,7 +54,7 @@ static int cam_ope_context_dump_active_request(void *data,
 		pf_dbg_entry = &(req->pf_data);
 		CAM_INFO(CAM_OPE, "req_id : %lld", req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
 			&b_mem_found, &b_ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_OPE, "Failed to dump pf info");

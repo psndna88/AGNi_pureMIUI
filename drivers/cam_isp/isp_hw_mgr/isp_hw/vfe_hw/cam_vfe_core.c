@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -601,6 +601,7 @@ int cam_vfe_process_cmd(void *hw_priv, uint32_t cmd_type,
 	case CAM_ISP_HW_CMD_ADD_WAIT:
 	case CAM_ISP_HW_CMD_ADD_WAIT_TRIGGER:
 	case CAM_ISP_HW_CMD_CAMIF_DATA:
+	case CAM_ISP_HW_DUMP_HW_SRC_CLK_RATE:
 	case CAM_ISP_HW_CMD_BLANKING_UPDATE:
 		rc = core_info->vfe_top->hw_ops.process_cmd(
 			core_info->vfe_top->top_priv, cmd_type, cmd_args,

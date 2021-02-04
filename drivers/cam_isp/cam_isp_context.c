@@ -5835,7 +5835,7 @@ static int cam_isp_context_dump_requests(void *data,
 		CAM_INFO(CAM_ISP, "Active List: req_id : %lld ",
 			req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
 			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
@@ -5854,7 +5854,7 @@ static int cam_isp_context_dump_requests(void *data,
 		pf_dbg_entry = &(req->pf_data);
 		CAM_INFO(CAM_ISP, "Wait List: req_id : %lld ", req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
 			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
@@ -5884,7 +5884,7 @@ static int cam_isp_context_dump_requests(void *data,
 		CAM_INFO(CAM_ISP, "Pending List: req_id : %lld ",
 			req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
 			&mem_found, &ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ISP, "Failed to dump pf info");
