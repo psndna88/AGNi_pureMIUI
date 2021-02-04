@@ -573,7 +573,8 @@
 			<&camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife3", "ife4", "dualife";
+		cdm-client-names = "ife0", "ife1", "ife2",
+				   "ife3", "ife4", "dualife";
 		status = "ok";
 	};
 
@@ -1132,7 +1133,7 @@
 			<0x0ac9f000 0x10000>;
 		reg-cam-base = <0x40000 0x9f000>;
 		cam_hw_fuse = <CAM_CPAS_ISP_FUSE 0x7801FC 0x10 CAM_CPAS_FEATURE_TYPE_DISABLE 0x4>,
-			      <CAM_CPAS_ISP_LITE_FUSE 0x7801FC 0x20 CAM_CPAS_FEATURE_TYPE_DISABLE 0x18>,
+			      <CAM_CPAS_ISP_LITE_FUSE 0x7801FC 0x20 CAM_CPAS_FEATURE_TYPE_DISABLE 0x10>,
 			      <CAM_CPAS_SHDR_FUSE 0x7801FC 0x40 CAM_CPAS_FEATURE_TYPE_DISABLE 0xFF>,
 			      <CAM_CPAS_QCFA_BINNING_ENABLE 0x7801FC 0x80 CAM_CPAS_FEATURE_TYPE_DISABLE 0xFF>;
 		interrupt-names = "cpas_camnoc";
@@ -1146,22 +1147,26 @@
 			"slow_ahb_clk_src",
 			"cpas_ahb_clk",
 			"camnoc_axi_clk_src",
-			"camnoc_axi_clk";
+			"camnoc_axi_clk",
+			"icp_ahb_clk",
+			"icp_clk";
 		clocks =
 			<&gcc GCC_CAMERA_HF_AXI_CLK>,
 			<&gcc GCC_CAMERA_SF_AXI_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&camcc CAM_CC_CPAS_AHB_CLK>,
 			<&camcc CAM_CC_CAMNOC_AXI_CLK_SRC>,
-			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
+			<&camcc CAM_CC_CAMNOC_AXI_CLK>,
+			<&camcc CAM_CC_ICP_AHB_CLK>,
+			<&camcc CAM_CC_ICP_CLK>;
 		src-clock-name = "camnoc_axi_clk_src";
 		clock-rates =
-			<0 0 0 0 0 0>,
-			<0 0 80000000 0 150000000 0>,
-			<0 0 80000000 0 240000000 0>,
-			<0 0 80000000 0 320000000 0>,
-			<0 0 80000000 0 400000000 0>,
-			<0 0 80000000 0 480000000 0>;
+			<0 0 0 0 0 0 0 0>,
+			<0 0 80000000 0 150000000 0 0 0>,
+			<0 0 80000000 0 240000000 0 0 0>,
+			<0 0 80000000 0 320000000 0 0 0>,
+			<0 0 80000000 0 400000000 0 0 0>,
+			<0 0 80000000 0 480000000 0 0 0>;
 		clock-cntl-level = "suspend", "lowsvs", "svs",
 			"svs_l1", "nominal", "turbo";
 		control-camnoc-axi-clk;
