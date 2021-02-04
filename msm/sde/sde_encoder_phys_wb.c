@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -1327,6 +1327,9 @@ static int _sde_encoder_phys_wb_wait_for_commit_done(
 		SDE_DEBUG("no output framebuffer\n");
 		_sde_encoder_phys_wb_frame_done_helper(wb_enc, false);
 	}
+
+	if (atomic_read(&phys_enc->pending_retire_fence_cnt) > 1)
+		wait_info.count_check = 1;
 
 	wait_info.wq = &phys_enc->pending_kickoff_wq;
 	wait_info.atomic_cnt = &phys_enc->pending_retire_fence_cnt;
