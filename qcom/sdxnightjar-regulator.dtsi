@@ -263,7 +263,7 @@
 		regulator-name = "rome_vreg";
 		startup-delay-us = <4000>;
 		enable-active-high;
-		gpio = <&pmd9650_gpios 6 0>;
+		gpios = <&pmd9650_gpios 6 0>;
 	};
 
 	/* SD card 2.95 V supply */

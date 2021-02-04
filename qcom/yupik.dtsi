@@ -47,6 +47,8 @@
 		ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
 		sdhc0 = &sdhc_1; /*SDC1 eMMC slot*/
 		sdhc1 = &sdhc_2; /* SDC2 SD card slot */
+		serial0 = &qupv3_se5_2uart;
+		hsuart0 = &qupv3_se7_4uart;
 		swr0 = &swr0;
 		swr1 = &swr1;
 		swr2 = &swr2;
@@ -448,6 +450,19 @@
 			reusable;
 			size = <0 0x2c00000>;
 		};
+
+		audio_cma_mem: audio_cma_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x1C00000>;
+		};
+
+		splash_memory:splash_region {
+			reg = <0x0 0xe1000000 0x0 0x02400000>;
+			label = "cont_splash_region";
+		};
 	};
 
 	soc: soc { };
@@ -722,7 +737,6 @@
 
 		reg-names = "dcc-base", "dcc-ram-base";
 		dcc-ram-offset = <0x12000>;
-		status = "disabled";
 	};
 
 	qcom,msm-imem@146aa000 {
@@ -942,7 +956,14 @@
 		<GCC_PCIE_1_MSTR_AXI_CLK>, <GCC_PCIE_1_PHY_RCHNG_CLK_SRC>,
 		<GCC_PCIE_1_PIPE_CLK>, <GCC_PCIE_1_PIPE_CLK_SRC>,
 		<GCC_PCIE_1_SLV_AXI_CLK>, <GCC_PCIE_1_SLV_Q2A_AXI_CLK>,
-		<GCC_PCIE_THROTTLE_CORE_CLK>, <GCC_THROTTLE_PCIE_AHB_CLK>;
+		<GCC_PCIE_THROTTLE_CORE_CLK>, <GCC_THROTTLE_PCIE_AHB_CLK>,
+		<GCC_AGGRE_USB3_SEC_AXI_CLK>, <GCC_CFG_NOC_USB3_SEC_AXI_CLK>,
+		<GCC_USB30_SEC_MASTER_CLK>, <GCC_USB30_SEC_MASTER_CLK_SRC>,
+		<GCC_USB30_SEC_MOCK_UTMI_CLK>, <GCC_USB30_SEC_MOCK_UTMI_CLK_SRC>,
+		<GCC_USB30_SEC_MOCK_UTMI_POSTDIV_CLK_SRC>, <GCC_USB30_SEC_SLEEP_CLK>,
+		<GCC_USB3_SEC_PHY_AUX_CLK>, <GCC_USB3_SEC_PHY_AUX_CLK_SRC>,
+		<GCC_USB3_SEC_PHY_COM_AUX_CLK>, <GCC_USB3_SEC_PHY_PIPE_CLK>,
+		<GCC_USB3_SEC_PHY_PIPE_CLK_SRC>;
 
 		#clock-cells = <1>;
 		#reset-cells = <1>;
@@ -1106,8 +1127,10 @@
 
 	icnss2: qcom,wcn6750 {
 		compatible = "qcom,wcn6750";
-		reg = <0x17a10040 0x0>;
-		reg-names = "msi_addr";
+		reg = <0x17a10040 0x0>,
+		      <0xb0000000 0x10000>,
+		      <0xb2e5510 0x5c0>;
+		reg-names = "msi_addr", "smmu_iova_ipa", "tcs_cmd";
 		iommus = <&apps_smmu 0x1c00 0x1>;
 		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
@@ -1142,14 +1165,30 @@
 			   <GIC_SPI 798 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 799 IRQ_TYPE_EDGE_RISING>;
 
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
 		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
+		qcom,cmd_db_name = "smpb7";
 		cnss-daemon-support;
+		dma-coherent;
 		qcom,fw-prefix;
+		vdd-cx-mx-supply = <&S7B>;
+		qcom,vdd-cx-mx-config = <824000 1120000 0 0 1>;
+		vdd-1.8-xo-supply = <&S1B>;
+		qcom,vdd-1.8-xo-config = <1872000 2040000 0 0 0>;
+		vdd-1.3-rfa-supply = <&S8B>;
+		qcom,vdd-1.3-rfa-config = <1256000 1500000 0 0 0>;
 		qcom,smem-states = <&smp2p_wlan_1_out 0>;
 		qcom,smem-state-names = "wlan-smp2p-out";
+
+		icnss_cdev_apss: qcom,icnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+
+		icnss_cdev_wpss: qcom,icnss_cdev2 {
+			#cooling-cells = <2>;
+		};
 
 		qcom,smp2p_map_wlan_1_in {
 			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
@@ -1160,7 +1199,7 @@
 	};
 
 	bluetooth: bt_wcn6750 {
-		compatible = "qcom,wcn6750";
+		compatible = "qcom,wcn6750-bt";
 		pinctrl-names = "default";
 		pinctrl-0 = <&bt_en_sleep>;
 		qcom,bt-reset-gpio = <&tlmm 85 0>; /* BT_EN */
@@ -1177,13 +1216,14 @@
 		qcom,bt-vdd-ipa-2p2-supply = <&S1C>; /*IPA 2p2*/
 		qcom,bt-vdd-asd-supply = <&L11C>;
 
-		qcom,bt-vdd-io-config = <1800000 1800000 0 1>;
-		qcom,bt-vdd-aon-config = <824000 952000 0 1>;
-		qcom,bt-vdd-dig-config = <824000 952000 0 1>;
-		qcom,bt-vdd-rfacmn-config  = <824000 952000 0 1>;
-		qcom,bt-vdd-rfa-0p8-config  = <824000 952000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1872000 1872000 0 1>;
-		qcom,bt-vdd-rfa2-config = <1256000 1352000 0 1>;
+		/* max voltage are set to regulator max voltage supported */
+		qcom,bt-vdd-io-config = <1800000 2000000 0 1>;
+		qcom,bt-vdd-aon-config = <824000 1120000 0 1>;
+		qcom,bt-vdd-dig-config = <824000 1120000 0 1>;
+		qcom,bt-vdd-rfacmn-config  = <824000 1120000 0 1>;
+		qcom,bt-vdd-rfa-0p8-config  = <824000 1120000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1872000 2040000 0 1>;
+		qcom,bt-vdd-rfa2-config = <1256000 1500000 0 1>;
 		qcom,bt-vdd-ipa-2p2-config = <2200000 2210000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 3544000 0 1>;
 	};
@@ -1414,7 +1454,9 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
-		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+		clocks = <&gcc GCC_AGGRE_NOC_PCIE_0_AXI_CLK>,
+			<&gcc GCC_AGGRE_NOC_PCIE_1_AXI_CLK>,
+			<&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
 			<&gcc GCC_AGGRE_USB3_PRIM_AXI_CLK>;
 	};
 
@@ -1424,10 +1466,7 @@
 		#interconnect-cells = <1>;
 		qcom,bcm-voter-names = "hlos";
 		qcom,bcm-voters = <&apps_bcm_voter>;
-		clocks = <&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
-			<&gcc GCC_AGGRE_NOC_PCIE_0_AXI_CLK>,
-			<&gcc GCC_AGGRE_NOC_PCIE_1_AXI_CLK>,
-			<&rpmhcc RPMH_IPA_CLK>;
+		clocks = <&rpmhcc RPMH_IPA_CLK>;
 	};
 
 	mmss_noc: interconnect@1740000 {
@@ -1477,7 +1516,6 @@
 		clock-names = "xo", "alternate";
 		clocks = <&rpmhcc RPMH_CXO_CLK>,
 			<&gcc GCC_GPLL0>;
-		status = "disabled";
 	};
 
 	llcc_pmu: llcc-pmu@9095000 {
@@ -1919,7 +1957,7 @@
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,cachemiss-ev = <0x2A>;
 			qcom,core-dev-table =
-				<  691000 MHZ_TO_MBPS(  300, 16) >,
+				<  691200 MHZ_TO_MBPS(  300, 16) >,
 				<  940800 MHZ_TO_MBPS(  466, 16) >,
 				< 1228800 MHZ_TO_MBPS(  600, 16) >,
 				< 1651200 MHZ_TO_MBPS(  806, 16) >,
@@ -1935,10 +1973,10 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					<  940800 MHZ_TO_MBPS( 547, 4) >,
 					< 1228800 MHZ_TO_MBPS(1017, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 2380800 MHZ_TO_MBPS(1708, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
 			};
@@ -1946,10 +1984,10 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					<  940800 MHZ_TO_MBPS( 547, 4) >,
 					< 1228800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 1900800 MHZ_TO_MBPS(1708, 4) >,
 					< 2380800 MHZ_TO_MBPS(2092, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
@@ -1963,10 +2001,10 @@
 			ddr4-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR4X>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					< 1228800 MHZ_TO_MBPS( 547, 4) >,
 					< 1516800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1017, 4) >,
+					< 1651200 MHZ_TO_MBPS(1017, 4) >,
 					< 1900800 MHZ_TO_MBPS(1555, 4) >,
 					< 2400000 MHZ_TO_MBPS(1708, 4) >,
 					< 2707200 MHZ_TO_MBPS(2133, 4) >;
@@ -1975,10 +2013,10 @@
 			ddr5-map {
 				qcom,ddr-type = <DDR_TYPE_LPDDR5>;
 				qcom,core-dev-table =
-					<  691000 MHZ_TO_MBPS( 451, 4) >,
+					<  691200 MHZ_TO_MBPS( 451, 4) >,
 					< 1228800 MHZ_TO_MBPS( 547, 4) >,
 					< 1516800 MHZ_TO_MBPS( 768, 4) >,
-					< 1651800 MHZ_TO_MBPS(1555, 4) >,
+					< 1651200 MHZ_TO_MBPS(1555, 4) >,
 					< 1900800 MHZ_TO_MBPS(1708, 4) >,
 					< 2400000 MHZ_TO_MBPS(2092, 4) >,
 					< 2707200 MHZ_TO_MBPS(3196, 4) >;
@@ -2083,6 +2121,11 @@
 			compatible = "qcom,bcm-voter";
 			qcom,tcs-wait = <QCOM_ICC_TAG_AMC>;
 		};
+
+		sde_rsc_rpmh {
+			compatible = "qcom,sde-rsc-rpmh";
+			cell-index = <0>;
+		};
 	};
 
 	spmi_bus: qcom,spmi@c440000 {
@@ -2168,6 +2211,11 @@
 
 		qcom,ucsi {
 			compatible = "qcom,ucsi-glink";
+			port {
+				usb_port0_connector: endpoint {
+					remote-endpoint = <&usb_port0>;
+				};
+			};
 		};
 
 		altmode: qcom,altmode {
@@ -2591,7 +2639,11 @@
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
-		/* Needs to add vdd_cx at SOD time.*/
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		vdd_mx-supply = <&VDD_MX_LEVEL>;
+		qcom,vdd_mx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,proxy-reg-names = "vdd_cx","vdd_mx";
 
 		qcom,firmware-name = "wpss";
 		memory-region = <&pil_wpss_mem>;
@@ -3388,6 +3440,16 @@
 		read-only;
 		ranges;
 
+		gpu_speed_bin: gpu_speed_bin@1e9 {
+			reg = <0x1e9 0x2>;
+			bits = <5 8>;
+		};
+
+		gpu_gaming_bin: gpu_gaming_bin@1f5 {
+			reg = <0x1f5 0x1>;
+			bits = <5 1>;
+		};
+
 		feat_conf_m7: feat_conf_m7@6020 {
 			reg = <0x6020 0x4>;
 		};
@@ -3633,7 +3695,6 @@
 		qcom,rmnet-ctl-enable;
 		qcom,ipa-uc-holb-monitor;
 		qcom,use-gsi-ipa-fw = "yupik_ipa_fws";
-		qcom,gsi_wdi_db_polling;
 		qcom,ipa-holb-monitor-poll-period = <5>;
 		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
@@ -3720,6 +3781,12 @@
 			qcom,iommu-group = <>;
 		};
 	};
+
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
+	};
+
 };
 
 #include "shima-gdsc.dtsi"
@@ -3736,11 +3803,6 @@
 };
 
 &gcc_usb30_prim_gdsc {
-	status = "ok";
-};
-
-&gcc_usb30_sec_gdsc {
-	qcom,support-hw-trigger;
 	status = "ok";
 };
 

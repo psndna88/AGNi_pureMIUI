@@ -1,0 +1,468 @@
+#include <dt-bindings/clock/qcom,gcc-scshrike.h>
+#include <dt-bindings/clock/qcom,scc-sm8150.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interconnect/qcom,scshrike.h>
+#include "quin-vm-common.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SA8195 Virtual Machine";
+	qcom,msm-name = "SA8195P";
+	qcom,msm-id = <405 0x20000>;
+	aliases {
+		hsuart0 = &qupv3_se13_4uart;
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
+	};
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		CPU0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x0>;
+			capacity-dmips-mhz = <1024>;
+		};
+
+		CPU1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x1>;
+			capacity-dmips-mhz = <1024>;
+		};
+
+		CPU2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x2>;
+			capacity-dmips-mhz = <1024>;
+		};
+
+		CPU3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x3>;
+			capacity-dmips-mhz = <1024>;
+		};
+
+		CPU4: cpu@4 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x4>;
+			capacity-dmips-mhz = <306>;
+		};
+
+		CPU5: cpu@5 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x5>;
+			capacity-dmips-mhz = <306>;
+		};
+
+		CPU6: cpu@6 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x6>;
+			capacity-dmips-mhz = <306>;
+		};
+
+		CPU7: cpu@7 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0 0x7>;
+			capacity-dmips-mhz = <306>;
+		};
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+
+				core1 {
+					cpu = <&CPU1>;
+				};
+
+				core2 {
+					cpu = <&CPU2>;
+				};
+
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&CPU4>;
+				};
+
+				core1 {
+					cpu = <&CPU5>;
+				};
+
+				core2 {
+					cpu = <&CPU6>;
+				};
+
+				core3 {
+					cpu = <&CPU7>;
+				};
+			};
+		};
+	};
+};
+
+&soc {
+	apps_smmu: apps-smmu@0x15000000 {
+		compatible = "qcom,qsmmu-v500";
+		reg = <0x15000000 0x100000>,
+			<0x15182000 0x20>;
+		reg-names = "base", "tcu-base";
+		#iommu-cells = <2>;
+		qcom,skip-init;
+		qcom,use-3-lvl-tables;
+		qcom,disable-atos;
+		#global-interrupts = <1>;
+		#size-cells = <1>;
+		#address-cells = <1>;
+		ranges;
+		interrupts =	<GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 182 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 185 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 187 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 191 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 318 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 319 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 322 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 324 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 325 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 326 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 327 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 331 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 335 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 338 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 339 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 340 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 341 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 342 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 343 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 344 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 345 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 395 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 396 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 398 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 399 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 400 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 404 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 405 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 406 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 410 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 411 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 412 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 642 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 643 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 644 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 707 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 708 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 709 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 710 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 711 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 712 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 713 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 714 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 715 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 716 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 769 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 771 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 772 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 773 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 774 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 775 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 776 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 777 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 778 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 779 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 780 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 781 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 782 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 783 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 784 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 785 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 786 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 787 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 788 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 789 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 790 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 791 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 792 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 793 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 794 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 795 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 796 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 797 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 798 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+			   <GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>, <100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>, <100000 100000>,
+			/* 100 MB/s */
+			<261438 200000>, <130000 130000>,
+			/* 200 MB/s */
+			<261438 400000>, <300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>, <1338562 4096000>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
+		vdd-supply = <&pm8195_1_l10>;
+		qcom,vdd-voltage-level = <2950000 2960000>;
+		qcom,vdd-current-level = <200 800000>;
+
+		vdd-io-supply = <&pm8195_1_l2>;
+		qcom,vdd-io-voltage-level = <1808000 2960000>;
+		qcom,vdd-io-current-level = <200 22000>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&sdc2_on>;
+		pinctrl-1 = <&sdc2_off>;
+
+		broken-cd;
+		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <70>;
+		};
+
+		qos1 {
+			mask = <0xf0>;
+			vote = <70>;
+		};
+	};
+
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,sm8150-pdc";
+		reg = <0xb220000 0x30000>;
+		qcom,pdc-ranges = <6 486 6>, <30 510 1>, <40 520 1>, <46 526 1>,
+				  <59 539 1>, <68 548 1>, <71 551 1>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
+	VDD_CX_LEVEL:
+	S3E_LEVEL: pm8195_3_s3_level: regulator-pm8195-3-s3-level {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8195_3_s3_level";
+		regulator-min-microvolt = <RPMH_REGULATOR_LEVEL_RETENTION>;
+		regulator-max-microvolt = <RPMH_REGULATOR_LEVEL_MAX>;
+	};
+};
+
+&regulator {
+	usb30_prim_gdsc: usb30_prim_gdsc {
+		regulator-name = "usb30_prim_gdsc";
+	};
+
+	usb30_sec_gdsc: usb30_sec_gdsc {
+		regulator-name = "usb30_sec_gdsc";
+	};
+
+	pcie_0_gdsc: pcie_0_gdsc {
+		regulator-name = "pcie_0_gdsc";
+	};
+
+	pcie_1_gdsc: pcie_1_gdsc {
+		regulator-name = "pcie_1_gdsc";
+	};
+
+	pcie_2_gdsc: pcie_2_gdsc {
+		regulator-name = "pcie_2_gdsc";
+	};
+
+	pcie_3_gdsc: pcie_3_gdsc {
+		regulator-name = "pcie_3_gdsc";
+	};
+
+	L2A: pm8195_1_l2: regulator-pm8195-1-l2 {
+		regulator-name = "ldoa2";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	L9A: pm8195_1_l9: regulator-pm8195-1-l9 {
+		regulator-name = "ldoa9";
+		regulator-min-microvolt = <1150000>;
+		regulator-max-microvolt = <1250000>;
+		regulator-allow-set-load;
+	};
+
+	L10A: pm8195_1_l10: regulator-pm8195-1-l10 {
+		regulator-name = "ldoa10";
+		regulator-min-microvolt = <2700000>;
+		regulator-max-microvolt = <3544000>;
+	};
+
+	L12A: pm8195_1_l12: regulator-pm8195-1-l12 {
+		regulator-name = "ldoa12";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1890000>;
+	};
+
+	L7C: pm8195_2_l7: regulator-pm8195-2-l7 {
+		regulator-name = "ldoc7";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <2040000>;
+	};
+
+	L5E: pm8195_3_l5: regulator-pm8195-3-l5 {
+		regulator-name = "ldoe5";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <920000>;
+		regulator-allow-set-load;
+	};
+
+	L16E: pm8195_3_l16: regulator-pm8195-3-l16 {
+		regulator-name = "ldoe16";
+		regulator-min-microvolt = <2921000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	S2A: pm8195_1_s2: regulator-pm8195-1-s2 {
+		regulator-name = "smpa2";
+		regulator-min-microvolt = <1179000>;
+		regulator-max-microvolt = <1379000>;
+	};
+
+	S5A: pm8195_1_s5: regulator-pm8195-1-s5 {
+		regulator-name = "smpa5";
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <1000000>;
+	};
+
+	S5C: pm8195_2_s5: regulator-pm8195-2-s5 {
+		regulator-name = "smpc5";
+		regulator-min-microvolt = <1713000>;
+		regulator-max-microvolt = <2040000>;
+	};
+};
+
+#include "sdmshrike-pinctrl.dtsi"
+#include "sm8150-slpi-pinctrl.dtsi"
+#include "sa8195-vm-usb.dtsi"
+#include "sa8195-vm-pcie.dtsi"
+#include "sa8195-qupv3.dtsi"
+#include "sa8195-ssc-qupv3.dtsi"
+
+&tlmm {
+	/delete-property/ wakeup-parent;
+};
+
+&slpi_tlmm {
+	status = "ok";
+};
+
+&qupv3_0 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_1 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_2 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_3 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};

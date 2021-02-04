@@ -161,8 +161,8 @@
 		compatible = "qcom,lahaina-asoc-snd";
 		qcom,mi2s-audio-intf = <1>;
 		qcom,auxpcm-audio-intf = <1>;
-		qcom,wcn-bt = <0>;
-		qcom,ext-disp-audio-rx = <0>;
+		qcom,wcn-bt = <1>;
+		qcom,ext-disp-audio-rx = <1>;
 		qcom,afe-rxtx-lb = <0>;
 
 		clock-names = "lpass_audio_hw_vote";
