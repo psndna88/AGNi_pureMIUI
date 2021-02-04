@@ -1536,4 +1536,23 @@ reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev)
 	return REG_INDOOR_AP;
 }
 #endif
+
+/**
+ * reg_set_ext_tpc_supported() - Set if FW supports new WMI command for TPC
+ * @psoc: Pointer to psoc
+ * @val: value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_set_ext_tpc_supported(struct wlan_objmgr_psoc *psoc,
+				     bool val);
+
+/**
+ * reg_is_ext_tpc_supported() - Whether FW supports new WMI command for TPC
+ *
+ * @psoc: pointer to psoc
+ *
+ * Return: true if FW supports the new TPC command, else false
+ */
+bool reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 #endif
