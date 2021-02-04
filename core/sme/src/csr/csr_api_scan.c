@@ -2666,8 +2666,6 @@ void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 			&mac_ctx->scan.occupiedChannels[sessionId],
 			true);
 	list = ucfg_scan_get_result(pdev, filter);
-	if (list)
-		sme_debug("num_entries %d", qdf_list_size(list));
 	if (!list || (list && !qdf_list_size(list))) {
 		goto err;
 	}
@@ -2767,4 +2765,16 @@ QDF_STATUS csr_scan_filter_results(struct mac_context *mac_ctx)
 
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_LEGACY_MAC_ID);
 	return QDF_STATUS_SUCCESS;
+}
+
+void csr_update_beacon(struct mac_context *mac)
+{
+	struct scheduler_msg msg = { 0 };
+	QDF_STATUS status;
+
+	msg.type = SIR_LIM_UPDATE_BEACON;
+	status = scheduler_post_message(QDF_MODULE_ID_SME, QDF_MODULE_ID_PE,
+					QDF_MODULE_ID_PE, &msg);
+	if (status != QDF_STATUS_SUCCESS)
+		sme_err("scheduler_post_message failed, status = %u", status);
 }

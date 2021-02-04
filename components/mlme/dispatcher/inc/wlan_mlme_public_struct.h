@@ -86,6 +86,13 @@
 #define CFG_VALID_CHANNEL_LIST_STRING_LEN (CFG_VALID_CHANNEL_LIST_LEN * 4)
 
 #define DEFAULT_ROAM_TRIGGER_BITMAP 0xFFFFFFFF
+
+/**
+ * detect AP off based FW reported last RSSI > roaming Low rssi
+ * and not less than 20db of host cached RSSI
+ */
+#define AP_OFF_RSSI_OFFSET 20
+
 /**
  * struct mlme_cfg_str - generic structure for all mlme CFG string items
  *
@@ -1333,21 +1340,19 @@ struct wlan_mlme_acs {
 
 /*
  * struct wlan_mlme_cfg_twt - All twt related cfg items
- * @is_twt_bcast_enabled: twt capability for the session
  * @is_twt_enabled: global twt configuration
- * @is_twt_responder_enabled: twt responder
- * @is_twt_requestor_enabled: twt requestor
+ * @bcast_requestor_tgt_cap: Broadcast requestor target capability
+ * @bcast_responder_tgt_cap: Broadcast responder target capability
  * @is_bcast_responder_enabled: bcast responder enable/disable
  * @is_bcast_requestor_enabled: bcast requestor enable/disable
  * @twt_congestion_timeout: congestion timeout value
  */
 struct wlan_mlme_cfg_twt {
-	bool is_twt_bcast_enabled;
 	bool is_twt_enabled;
-	bool is_twt_responder_enabled;
-	bool is_twt_requestor_enabled;
 	bool is_bcast_responder_enabled;
 	bool is_bcast_requestor_enabled;
+	bool bcast_requestor_tgt_cap;
+	bool bcast_responder_tgt_cap;
 	uint32_t twt_congestion_timeout;
 };
 

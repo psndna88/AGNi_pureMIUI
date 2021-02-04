@@ -79,6 +79,7 @@
 #include "wlan_if_mgr_public_struct.h"
 #include "wlan_if_mgr_ucfg_api.h"
 #endif
+#include "wlan_roam_debug.h"
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -14578,6 +14579,7 @@ csr_check_vendor_ap_3_present(struct mac_context *mac_ctx, uint8_t *ie,
 	return ret;
 }
 
+#if defined(WLAN_FEATURE_11AX) && defined(WLAN_SUPPORT_TWT)
 /**
  * csr_enable_twt() - Check if its allowed to enable twt for this session
  * @ie: pointer to beacon/probe resp ie's
@@ -14590,16 +14592,21 @@ csr_check_vendor_ap_3_present(struct mac_context *mac_ctx, uint8_t *ie,
 static bool csr_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
 {
 
-	if (mac_ctx->mlme_cfg->twt_cfg.is_twt_requestor_enabled && ie &&
+	if (mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request && ie &&
 	    (ie->qcn_ie.present || ie->he_cap.twt_responder)) {
 		sme_debug("TWT is supported, hence disable UAPSD; twt req supp: %d,twt respon supp: %d, QCN_IE: %d",
-			  mac_ctx->mlme_cfg->twt_cfg.is_twt_requestor_enabled,
-			  ie->he_cap.twt_responder,
-			  ie->qcn_ie.present);
+			  mac_ctx->mlme_cfg->he_caps.dot11_he_cap.twt_request,
+			  ie->he_cap.twt_responder, ie->qcn_ie.present);
 		return true;
 	}
 	return false;
 }
+#else
+static bool csr_enable_twt(struct mac_context *mac_ctx, tDot11fBeaconIEs *ie)
+{
+	return false;
+}
+#endif
 
 #ifdef WLAN_FEATURE_11AX
 static void
@@ -14894,6 +14901,10 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 			      pProfile->negotiatedMCEncryptionType,
 			      mac->scan.countryCodeCurrent[0],
 			      mac->scan.countryCodeCurrent[1]);
+		wlan_rec_conn_info(sessionId, DEBUG_CONN_CONNECTING,
+				   pBssDescription->bssId,
+				   pProfile->negotiatedAuthType,
+				   pBssDescription->chan_freq);
 		/* bsstype */
 		dw_tmp = csr_translate_bsstype_to_mac_type
 						(pProfile->BSSType);
@@ -22840,6 +22851,8 @@ csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 
 #define IS_ROAM_REASON_STA_KICKOUT(reason) ((reason & 0xF) == \
 	WMI_ROAM_TRIGGER_REASON_STA_KICKOUT)
+#define IS_ROAM_REASON_DISCONNECTION(reason) ((reason & 0xF) == \
+	WMI_ROAM_TRIGGER_REASON_DEAUTH)
 
 static QDF_STATUS
 csr_process_roam_sync_callback(struct mac_context *mac_ctx,
@@ -22896,7 +22909,10 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	sme_debug("LFR3: reason: %d roam invoke in progress %d, source %d",
 		  reason, vdev_roam_params->roam_invoke_in_progress,
 		  vdev_roam_params->source);
-
+	if (reason == SIR_ROAM_SYNCH_PROPAGATION)
+		wlan_rec_conn_info(session_id, DEBUG_CONN_ROAMING,
+				   bss_desc ? bss_desc->bssId : NULL,
+				   reason, session->connectState);
 	switch (reason) {
 	case SIR_ROAMING_DEREGISTER_STA:
 		/*
@@ -23308,9 +23324,8 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		roam_synch_data->join_rsp->tspecIeLen);
 #endif
 
-	QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_DEBUG,
-		FL("LFR3: RIC length - %d"),
-		roam_synch_data->join_rsp->parsedRicRspLen);
+	sme_debug("LFR3: RIC length - %d",
+		  roam_synch_data->join_rsp->parsedRicRspLen);
 	if (len) {
 		session->connectedInfo.pbFrames =
 			qdf_mem_malloc(len);
@@ -23426,6 +23441,12 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	csr_roam_call_callback(mac_ctx, session_id, roam_info, 0,
 		eCSR_ROAM_ASSOCIATION_COMPLETION, eCSR_ROAM_RESULT_ASSOCIATED);
 	csr_reset_pmkid_candidate_list(mac_ctx, session_id);
+
+	if (IS_ROAM_REASON_DISCONNECTION(roam_synch_data->roamReason))
+		sme_qos_csr_event_ind(mac_ctx, session_id,
+				      SME_QOS_CSR_DISCONNECT_ROAM_COMPLETE,
+				      NULL);
+
 	if (!CSR_IS_WAIT_FOR_KEY(mac_ctx, session_id)) {
 		QDF_TRACE(QDF_MODULE_ID_SME,
 				QDF_TRACE_LEVEL_DEBUG,

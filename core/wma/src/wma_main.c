@@ -187,6 +187,16 @@ struct wma_ini_config *wma_get_ini_handle(tp_wma_handle wma)
 	return &wma->ini_config;
 }
 
+int __wma_validate_handle(tp_wma_handle wma_handle, const char *func)
+{
+	if (!wma_handle) {
+		wma_err("Invalid WMA handle (via %s)", func);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 #define MAX_SUPPORTED_PEERS_REV1_1 14
 #define MAX_SUPPORTED_PEERS_REV1_3 32
 #ifdef WLAN_MAX_CLIENTS_ALLOWED
@@ -9055,6 +9065,10 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		break;
 	case WMA_TWT_RESUME_DIALOG_REQUEST:
 		wma_twt_process_resume_dialog(wma_handle, msg->bodyptr);
+		qdf_mem_free(msg->bodyptr);
+		break;
+	case WMA_TWT_NUDGE_DIALOG_REQUEST:
+		wma_twt_process_nudge_dialog(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
 	default:

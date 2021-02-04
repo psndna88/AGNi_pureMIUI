@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1397,10 +1397,12 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 	bool freq_changed, phy_changed;
 	qdf_freq_t oper_freq;
 	eCsrPhyMode csr_phy_mode;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_COUNTRY_CHANGE_UPDATE_STA;
 
 	pdev = hdd_ctx->pdev;
 
-	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
 		oper_freq = hdd_get_adapter_home_channel(adapter);
 		freq_changed = wlan_reg_is_disable_for_freq(pdev, oper_freq);
 
@@ -1433,7 +1435,7 @@ static void hdd_country_change_update_sta(struct hdd_context *hdd_ctx)
 			break;
 		}
 		/* dev_put has to be done here */
-		dev_put(adapter->dev);
+		hdd_adapter_dev_put_debug(adapter, dbgid);
 	}
 }
 
@@ -1525,10 +1527,12 @@ static void hdd_country_change_update_sap(struct hdd_context *hdd_ctx)
 	bool phy_changed;
 	qdf_freq_t oper_freq;
 	eCsrPhyMode csr_phy_mode;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_COUNTRY_CHANGE_UPDATE_SAP;
 
 	pdev = hdd_ctx->pdev;
 
-	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
 		oper_freq = hdd_get_adapter_home_channel(adapter);
 
 		switch (adapter->device_mode) {
@@ -1561,7 +1565,7 @@ static void hdd_country_change_update_sap(struct hdd_context *hdd_ctx)
 			break;
 		}
 		/* dev_put has to be done here */
-		dev_put(adapter->dev);
+		hdd_adapter_dev_put_debug(adapter, dbgid);
 	}
 }
 
@@ -1621,6 +1625,12 @@ static void hdd_regulatory_dyn_cbk(struct wlan_objmgr_psoc *psoc,
 	wiphy = pdev_priv->wiphy;
 	hdd_ctx = wiphy_priv(wiphy);
 
+	if (avoid_freq_ind) {
+		hdd_ch_avoid_ind(hdd_ctx, &avoid_freq_ind->chan_list,
+				 &avoid_freq_ind->freq_list);
+		return;
+	}
+
 	hdd_debug("process channel list update from regulatory");
 	hdd_regulatory_chanlist_dump(chan_list);
 
@@ -1641,14 +1651,8 @@ static void hdd_regulatory_dyn_cbk(struct wlan_objmgr_psoc *psoc,
 		hdd_send_wiphy_regd_sync_event(hdd_ctx);
 #endif
 
-	if (avoid_freq_ind) {
-		hdd_ch_avoid_ind(hdd_ctx, &avoid_freq_ind->chan_list,
-				&avoid_freq_ind->freq_list);
-	} else {
-		hdd_config_tdls_with_band_switch(hdd_ctx);
-
-		qdf_sched_work(0, &hdd_ctx->country_change_work);
-	}
+	hdd_config_tdls_with_band_switch(hdd_ctx);
+	qdf_sched_work(0, &hdd_ctx->country_change_work);
 }
 
 int hdd_update_regulatory_config(struct hdd_context *hdd_ctx)

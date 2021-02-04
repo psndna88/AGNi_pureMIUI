@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -82,6 +82,7 @@
 #include "wlan_if_mgr_ucfg_api.h"
 #include "wlan_if_mgr_public_struct.h"
 #endif
+#include "wlan_roam_debug.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -407,13 +408,16 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 {
 	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;
 	struct hdd_station_ctx *hdd_sta_ctx;
+	wlan_net_dev_ref_dbgid dbgid =
+				NET_DEV_HOLD_GET_STA_CONNECTION_IN_PROGRESS;
 
 	if (!hdd_ctx) {
 		hdd_err("HDD context is NULL");
 		return NULL;
 	}
 
-	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
 		hdd_sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 		if ((QDF_STA_MODE == adapter->device_mode) ||
 		    (QDF_P2P_CLIENT_MODE == adapter->device_mode) ||
@@ -422,9 +426,10 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 			    hdd_sta_ctx->conn_info.conn_state) {
 				hdd_debug("vdev_id %d: Connection is in progress",
 					  adapter->vdev_id);
-				dev_put(adapter->dev);
+				hdd_adapter_dev_put_debug(adapter, dbgid);
 				if (next_adapter)
-					dev_put(next_adapter->dev);
+					hdd_adapter_dev_put_debug(next_adapter,
+								  dbgid);
 				return adapter;
 			} else if ((eConnectionState_Associated ==
 				   hdd_sta_ctx->conn_info.conn_state) &&
@@ -433,13 +438,14 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
 							adapter->vdev_id)) {
 				hdd_debug("vdev_id %d: Key exchange is in progress",
 					  adapter->vdev_id);
-				dev_put(adapter->dev);
+				hdd_adapter_dev_put_debug(adapter, dbgid);
 				if (next_adapter)
-					dev_put(next_adapter->dev);
+					hdd_adapter_dev_put_debug(next_adapter,
+								  dbgid);
 				return adapter;
 			}
 		}
-		dev_put(adapter->dev);
+		hdd_adapter_dev_put_debug(adapter, dbgid);
 	}
 	return NULL;
 }
@@ -1808,6 +1814,57 @@ static void hdd_print_bss_info(struct hdd_station_ctx *hdd_sta_ctx)
 }
 
 /**
+ * hdd_pmkid_clear_on_ap_off() - clear pmkid cache when ap off
+ * @adapter: pointer to adapter
+ *
+ * In AP side power off/on case, AP security has been cleanup.
+ * The STA side might still cache PMK ID in driver and it will always use
+ * PMK cache to connect to AP and get continuously connect failure in SAE
+ * security. This function is to detect AP off based on FW reported BMISS
+ * event. Meanwhile judge FW reported last RSSI > roaming Low rssi
+ * and not less than 20db of host cached RSSI to avoid some false
+ * alarm such as normal DUT roll in/out roaming.
+ *
+ * Return: void
+ */
+static void hdd_pmkid_clear_on_ap_off(struct hdd_adapter *adapter)
+{
+	struct hdd_station_ctx *sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
+	int8_t cache_rssi = 0;
+	int32_t bmiss_rssi;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	uint8_t lookup_threshold = 0;
+	struct wlan_crypto_pmksa *pmksa;
+
+	if (sta_ctx->conn_info.auth_type != eCSR_AUTH_TYPE_SAE)
+		return;
+	hdd_get_rssi_snr_by_bssid(adapter, sta_ctx->conn_info.bssid.bytes,
+				  &cache_rssi, NULL);
+	sme_get_neighbor_lookup_rssi_threshold(hdd_ctx->mac_handle,
+					       adapter->vdev_id,
+					       &lookup_threshold);
+	bmiss_rssi = adapter->rssi_on_disconnect;
+	if (!bmiss_rssi || !lookup_threshold || !cache_rssi)
+		return;
+	hdd_nofl_debug("sta bmiss on rssi %d scan rssi %d th %d", bmiss_rssi,
+		       cache_rssi, lookup_threshold);
+	if (bmiss_rssi > (lookup_threshold * (-1))) {
+		if (bmiss_rssi + AP_OFF_RSSI_OFFSET > cache_rssi) {
+			pmksa = qdf_mem_malloc(sizeof(*pmksa));
+			if (!pmksa)
+				return;
+			qdf_mem_copy(pmksa->bssid.bytes,
+				     sta_ctx->conn_info.bssid.bytes,
+				     sizeof(tSirMacAddr));
+			sme_roam_del_pmkid_from_cache(hdd_ctx->mac_handle,
+						      adapter->vdev_id,
+						      pmksa, false);
+			qdf_mem_free(pmksa);
+		}
+	}
+}
+
+/**
  * hdd_dis_connect_handler() - disconnect event handler
  * @adapter: pointer to adapter
  * @roam_info: pointer to roam info
@@ -1893,7 +1950,6 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 					      eConnectionState_Disconnecting);
 	}
 
-	hdd_clear_roam_profile_ie(adapter);
 	hdd_wmm_dscp_initial_state(adapter);
 	wlan_deregister_txrx_packetdump(OL_TXRX_PDEV_ID);
 
@@ -1918,6 +1974,13 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 		wlan_hdd_enable_roaming(adapter, RSO_CONNECT_START);
 	}
 #endif
+	wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_DISCONNECT_HANDLER,
+			   sta_ctx->conn_info.bssid.bytes,
+			   (roam_result << 24) | (roam_status << 16) |
+			   (sta_ctx->conn_info.conn_state << 8) |
+			    send_discon_ind,
+			   (roam_info ? roam_info->status_code : 0) << 16 |
+			   (roam_info ? roam_info->disassoc_reason : 0));
 
 	/* indicate disconnected event to nl80211 */
 	/*
@@ -1953,7 +2016,12 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 						disconnect_ies.data,
 						disconnect_ies.len);
 	}
+	if (adapter->device_mode == QDF_STA_MODE &&
+	    roam_status == eCSR_ROAM_LOSTLINK &&
+	    reason_code == REASON_BEACON_MISSED)
+		hdd_pmkid_clear_on_ap_off(adapter);
 
+	hdd_clear_roam_profile_ie(adapter);
 	/* update P2P connection status */
 	ucfg_p2p_status_disconnect(adapter->vdev);
 
@@ -2569,6 +2637,12 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 	hdd_debug("Req RSN IE:");
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_DEBUG,
 			   final_req_ie, (ssid_ie_len + reqRsnLength));
+	wlan_rec_conn_info(adapter->vdev_id,
+			   DEBUG_CONN_ROAMED_IND,
+			   bss ? bss->bssid : NULL,
+			   roam_info->u.pConnectedProfile->AuthType,
+			   0);
+
 	hdd_send_roamed_ind(dev, bss, final_req_ie,
 			    (ssid_ie_len + reqRsnLength), rsp_rsn_ie,
 			    rsp_rsn_lemgth);
@@ -2960,6 +3034,11 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		/* Save the connection info from CSR... */
 		hdd_conn_save_connect_info(adapter, roam_info,
 					   eCSR_BSS_TYPE_INFRASTRUCTURE);
+		wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_ASSOCIATION,
+				   sta_ctx->conn_info.bssid.bytes,
+				   (roam_result << 16) | roam_status,
+				   (sta_ctx->conn_info.conn_state << 16) |
+				   (roam_info ? roam_info->status_code : 0));
 
 		if (hdd_add_beacon_filter(adapter) != 0)
 			hdd_err("hdd_add_beacon_filter() failed");
@@ -3236,7 +3315,14 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						cdp_hl_fc_set_td_limit(soc,
 							adapter->vdev_id,
 							conn_info_freq);
-
+						wlan_rec_conn_info(
+						adapter->vdev_id,
+						DEBUG_CONN_ROAMED,
+						roam_bss ? roam_bss->bssid :
+						NULL,
+						roam_info->u.
+						pConnectedProfile->AuthType,
+						0);
 						hdd_send_roamed_ind(
 								dev,
 								roam_bss,
@@ -3445,6 +3531,11 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				 adapter->vdev_id,
 				 QDF_MAC_ADDR_REF(sta_ctx->requested_bssid.bytes),
 				 roam_result, roam_status);
+		wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_ASSOCIATION,
+				   sta_ctx->conn_info.bssid.bytes,
+				   (roam_result << 16) | roam_status,
+				   (sta_ctx->conn_info.conn_state << 16) |
+				   (roam_info ? roam_info->status_code : 0));
 
 		if ((eCSR_ROAM_RESULT_SCAN_FOR_SSID_FAILURE == roam_result) ||
 		   (roam_info &&
@@ -4314,6 +4405,8 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	mac_handle_t mac_handle = hdd_adapter_get_mac_handle(adapter);
 	struct hdd_station_ctx *sta_ctx;
+	uint8_t connected_vdev;
+	bool notify = true;
 
 	/* Enable Roaming on STA interface which was disabled before CSA */
 	if (adapter->device_mode == QDF_STA_MODE)
@@ -4342,12 +4435,27 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 		hdd_err("%s: unable to create BSS entry", adapter->dev->name);
 	else
 		cfg80211_put_bss(wiphy, bss);
-
-	status = hdd_chan_change_notify(adapter, adapter->dev, chan_change,
-				roam_info->mode == SIR_SME_PHY_MODE_LEGACY);
-	if (QDF_IS_STATUS_ERROR(status))
-		hdd_err("channel change notification failed");
-
+	if ((adapter->device_mode == QDF_STA_MODE ||
+	     adapter->device_mode == QDF_P2P_CLIENT_MODE)) {
+		if (!wlan_get_connected_vdev_by_bssid(
+				hdd_ctx->pdev, sta_ctx->conn_info.bssid.bytes,
+				&connected_vdev))
+			notify = false;
+		else if (adapter->vdev_id != connected_vdev)
+			notify = false;
+	}
+	if (notify) {
+		status = hdd_chan_change_notify(adapter, adapter->dev,
+						chan_change,
+						roam_info->mode ==
+						SIR_SME_PHY_MODE_LEGACY);
+		if (QDF_IS_STATUS_ERROR(status))
+			hdd_err("channel change notification failed");
+	} else {
+		hdd_err("BSS "QDF_MAC_ADDR_FMT" no connected with vdev %d (%d)",
+			QDF_MAC_ADDR_REF(sta_ctx->conn_info.bssid.bytes),
+			adapter->vdev_id, connected_vdev);
+	}
 	status = policy_mgr_set_hw_mode_on_channel_switch(hdd_ctx->psoc,
 		adapter->vdev_id);
 	if (QDF_IS_STATUS_ERROR(status))
