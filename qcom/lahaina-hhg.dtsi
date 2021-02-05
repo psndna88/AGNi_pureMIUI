@@ -97,3 +97,7 @@
 		};
 	};
 };
+
+&usb1 {
+	qcom,ignore-wakeup-src-in-hostmode;
+};
