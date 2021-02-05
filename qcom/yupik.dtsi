@@ -3461,6 +3461,10 @@
 			reg = <0x6020 0x4>;
 		};
 
+		feat_conf_m9: feat_conf_m9@6028 {
+			reg = <0x6028 0x4>;
+		};
+
 		adsp_variant: adsp_variant@6020 {
 			reg = <0x6022 0x1>;
 			bits = <2 4>;
@@ -3470,8 +3474,10 @@
 	qfprom_sys: qfprom@0 {
 		compatible = "qcom,qfprom-sys";
 
-		nvmem-cells = <&feat_conf_m7>;
-		nvmem-cell-names = "feat_conf_m7";
+		nvmem-cells = <&feat_conf_m7>,
+			      <&feat_conf_m9>;
+		nvmem-cell-names = "feat_conf_m7",
+				   "feat_conf_m9";
 	};
 
 	qcom,msm-cdsp-loader {
