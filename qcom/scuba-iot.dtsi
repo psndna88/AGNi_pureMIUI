@@ -1038,6 +1038,7 @@ dcc: dcc_v2@1be2000 {
 #include "scuba-ion.dtsi"
 #include "msm-arm-smmu-scuba.dtsi"
 #include "scuba-audio.dtsi"
+#include "scuba-vidc.dtsi"
 
 &qupv3_se1_i2c {
 	#address-cells = <1>;
