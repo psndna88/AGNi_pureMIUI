@@ -260,7 +260,7 @@
 		};
 
 		tmc_etf {
-			qcom,dump-size = <0x4000>;
+			qcom,dump-size = <0x10000>;
 			qcom,dump-id = <0xf1>;
 		};
 
