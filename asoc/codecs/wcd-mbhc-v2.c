@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/init.h>
@@ -328,7 +328,8 @@ out_micb_en:
 		else
 			/* Disable micbias, pullup & enable cs */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
-		mutex_unlock(&mbhc->hphl_pa_lock);
+		if (mutex_is_locked(&mbhc->hphl_pa_lock))
+			mutex_unlock(&mbhc->hphl_pa_lock);
 		clear_bit(WCD_MBHC_ANC0_OFF_ACK, &mbhc->hph_anc_state);
 		break;
 	case WCD_EVENT_PRE_HPHR_PA_OFF:
@@ -348,7 +349,8 @@ out_micb_en:
 		else
 			/* Disable micbias, pullup & enable cs */
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
-		mutex_unlock(&mbhc->hphr_pa_lock);
+		if (mutex_is_locked(&mbhc->hphr_pa_lock))
+			mutex_unlock(&mbhc->hphr_pa_lock);
 		clear_bit(WCD_MBHC_ANC1_OFF_ACK, &mbhc->hph_anc_state);
 		break;
 	case WCD_EVENT_PRE_HPHL_PA_ON:
@@ -2067,6 +2069,10 @@ void wcd_mbhc_deinit(struct wcd_mbhc *mbhc)
 		WCD_MBHC_RSC_UNLOCK(mbhc);
 	}
 	mutex_destroy(&mbhc->codec_resource_lock);
+	if (mutex_is_locked(&mbhc->hphl_pa_lock))
+		mutex_unlock(&mbhc->hphl_pa_lock);
+	if (mutex_is_locked(&mbhc->hphr_pa_lock))
+		mutex_unlock(&mbhc->hphr_pa_lock);
 	mutex_destroy(&mbhc->hphl_pa_lock);
 	mutex_destroy(&mbhc->hphr_pa_lock);
 }
