@@ -1985,8 +1985,23 @@ static void ttwu_queue(struct task_struct *p, int cpu)
 	struct rq *rq = cpu_rq(cpu);
 
 #if defined(CONFIG_SMP)
-	if (sched_feat(TTWU_QUEUE) && !cpus_share_cache(smp_processor_id(), cpu)) {
-		sched_clock_cpu(cpu); /* sync clocks x-cpu */
+	/*
+	 * If we are using the TTWU_QUEUE sched feature,
+	 * queue *p on the origin CPU if these conditions
+	 * are met:
+	 *
+	 * 1. The origin CPU is not in an idle state
+	 * 2. The origin CPU and the current CPU do not
+	 *    share a cache with each other.
+	 *
+	 * Condition (2) does not need to be met if sched
+	 * feature TTWU_QUEUE_SAME_FORCE is enabled.
+	 */
+	if (sched_feat(TTWU_QUEUE) &&
+			!idle_cpu(cpu) &&
+			(sched_feat(TTWU_QUEUE_SAME_FORCE) ||
+			!cpus_share_cache(smp_processor_id(), cpu))) {
+		sched_clock_cpu(cpu); /* Sync clocks across CPUs */
 		ttwu_queue_remote(p, cpu);
 		return;
 	}
