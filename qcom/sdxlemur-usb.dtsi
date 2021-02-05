@@ -63,7 +63,8 @@
 			snps,has-lpm-erratum;
 			snps,hird-threshold = /bits/ 8 <0x10>;
 			snps,ssp-u3-u0-quirk;
-			snps,usb3-u1u2-disable;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
 			snps,bus-suspend-enable;
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
