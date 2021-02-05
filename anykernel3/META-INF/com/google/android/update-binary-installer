@@ -668,12 +668,9 @@ else
 	ui_print " " "AGNi has NOT installed EAS Perf HAL." " ";
 fi;
 ### EAS Perf hal END
-# Force replace powerhint if found
-if [ -f /vendor/etc/powerhint.json ]; then
-	if [ ! -f /vendor/etc/powerhint.json.bak ]; then
-		$BB cp -f /vendor/etc/powerhint.json /vendor/etc/powerhint.json.bak;
-	fi;
-	$BB cp -f $AKHOME/tools/perf/powerhint.json /vendor/etc/powerhint.json;
+# Force revert powerhint if found
+if [ -f /vendor/etc/powerhint.json.bak ]; then
+	$BB mv -f /vendor/etc/powerhint.json.bak /vendor/etc/powerhint.json;
 	$BB chmod 0644 /vendor/etc/powerhint.json;
 	/sbin/restorecon -v /vendor/etc/powerhint.json;
 fi;
