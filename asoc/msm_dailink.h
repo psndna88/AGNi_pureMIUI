@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <sound/soc.h>
@@ -78,6 +78,11 @@ SND_SOC_DAILINK_DEFS(multimedia8,
 
 SND_SOC_DAILINK_DEFS(hdmi_rx_hostless,
 	DAILINK_COMP_ARRAY(COMP_CPU("HDMI_HOSTLESS")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy", "snd-soc-dummy-dai")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-hostless")));
+
+SND_SOC_DAILINK_DEFS(display_port_hostless,
+	DAILINK_COMP_ARRAY(COMP_CPU("DISPLAY_PORT_HOSTLESS")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("snd-soc-dummy", "snd-soc-dummy-dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-hostless")));
 
