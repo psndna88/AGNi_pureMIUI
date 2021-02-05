@@ -2603,7 +2603,7 @@
 		coresight-name = "coresight-tpda-apss";
 
 		qcom,tpda-atid = <66>;
-		qcom,dsb-elem-size = <3 64>;
+		qcom,dsb-elem-size = <3 32>;
 		qcom,cmb-elem-size = <0 32>,
 				     <1 32>,
 				     <2 64>;
