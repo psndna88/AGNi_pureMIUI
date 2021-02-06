@@ -1223,7 +1223,7 @@
 		cpu = <&CPU0>;
 
 		qcom,tupwr-disable;
-		coresight-name = "coresight-coresight-etm0";
+		coresight-name = "coresight-etm0";
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
