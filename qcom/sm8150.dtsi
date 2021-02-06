@@ -442,6 +442,9 @@
 	};
 };
 
+#include "display/sm8150-sde.dtsi"
+#include "display/sm8150-sde-pll.dtsi"
+
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
