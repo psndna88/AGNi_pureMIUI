@@ -3,11 +3,11 @@
 
 #include "sa8155-adp-common.dtsi"
 #include "display/sa8155-adp-star-display.dtsi"
-#include "display/sa8155-adp-star-display-shd.dtsi"
+#include "display/sa8155-v2-adp-air-display-lxc-shd.dtsi"
 
 / {
 	model = "ADP-AIR";
-	compatible = "qcom,sa8155-v2-adp-air", "qcom,sa8155",
+	compatible = "qcom,sa8155p-v2-adp-air", "qcom,sa8155p",
 		"qcom,adp-air";
-	qcom,board-id = <0X01000019 0>;
+	qcom,board-id = <0x01000019 0>;
 };
