@@ -3,3 +3,28 @@
 &soc {
 
 };
+
+&pcie0_rp {
+	#address-cells = <5>;
+	#size-cells = <0>;
+
+	/* BDF 1.0.0 */
+	pcie0_bus1_dev0_fn0: pcie0_bus1_dev0_fn0 {
+		reg = <0 0 0 0 0>;
+
+		/* BDF 2.1.0 */
+		pcie0_bus2_dev1_fn0: pcie0_bus2_dev1_fn0 {
+			reg = <0x800 0x0 0x0 0x0 0x0>;
+		};
+
+		/* BDF 2.2.0 */
+		pcie0_bus2_dev2_fn0: pcie0_bus2_dev2_fn0 {
+			reg = <0x1000 0x0 0x0 0x0 0x0>;
+		};
+
+		/* BDF 2.3.0 */
+		pcie0_bus2_dev3_fn0: pcie0_bus2_dev3_fn0 {
+			reg = <0x1800 0x0 0x0 0x0 0x0>;
+		};
+	};
+};
