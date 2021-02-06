@@ -328,6 +328,8 @@ enum {
 	NAPI_STATE_DISABLE,	/* Disable pending */
 	NAPI_STATE_NPSVC,	/* Netpoll - don't dequeue from poll_list */
 	NAPI_STATE_HASHED,	/* In NAPI hash */
+	NAPI_STATE_NO_BUSY_POLL,/* Do not add in napi_hash, no busy polling */
+	NAPI_STATE_IN_BUSY_POLL,/* sk_busy_loop() owns this NAPI */
 };
 
 enum gro_result {
