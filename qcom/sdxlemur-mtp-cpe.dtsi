@@ -2,7 +2,37 @@
 #include "sdxlemur-mtp-audio-overlay.dtsi"
 
 &soc {
+	ntn3_vreg: ntn3_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "ntn3_vreg";
+		gpio = <&tlmm 107 GPIO_ACTIVE_HIGH>;
+		regulator-min-microvolt = <1000000>;
+		regulator-max-microvolt = <1000000>;
+		enable-active-high;
+		regulator-enable-ramp-delay = <4300>;
+	};
 
+	qca_vreg: qca_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "qca_vreg";
+		gpio = <&tlmm 106 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&ntn3_vreg>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		enable-active-high;
+		regulator-enable-ramp-delay = <200000>;
+	};
+
+	aqr_vreg: aqr_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "aqr_vreg";
+		gpio = <&tlmm 105 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&qca_vreg>;
+		regulator-min-microvolt = <1000000>;
+		regulator-max-microvolt = <1000000>;
+		enable-active-high;
+		regulator-enable-ramp-delay = <2400>;
+	};
 };
 
 &pcie0 {
