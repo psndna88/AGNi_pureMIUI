@@ -745,7 +745,7 @@
 		reg-names = "tpda-base";
 		coresight-name = "coresight-tpda-dlct_5";
 
-		qcom,tpda-atid = <71>;
+		qcom,tpda-atid = <78>;
 		qcom,cmb-elem-size = <11 64>,
 				     <12 64>,
 				     <15 32>,
