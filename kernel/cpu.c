@@ -461,7 +461,9 @@ int cpu_down(unsigned int cpu)
 	struct cpumask newmask;
 	int err;
 
+	preempt_disable();
 	cpumask_andnot(&newmask, cpu_online_mask, cpumask_of(cpu));
+	preempt_enable();
 
 	/* One big cluster CPU and one little cluster CPU must remain online */
 	if (!cpumask_intersects(&newmask, cpu_perf_mask) ||
