@@ -7,6 +7,12 @@
 	qcom,msm-id = <377 0>, <380 0>;
 };
 
+/* Delete second instance of pm6155 definitions for APQ version */
+&spmi_bus {
+	/delete-node/ qcom,pm6155@4;
+	/delete-node/ qcom,pm6155@5;
+};
+
 &apps_rsc {
 	/delete-node/ rpmh-regulator-modemlvl;
 	/delete-node/ rpmh-regulator-ldoc2;
