@@ -10,7 +10,7 @@
 &sde_dsi {
 	vddio-supply = <&L12C>;
 	vdd-supply = <&L13C>;
-	qcom,dsi-default-panel = <&dsi_r66451_amoled_144hz_cmd_cphy>;
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_120hz_cmd_cphy>;
 };
 
 &qupv3_se13_i2c {
@@ -40,6 +40,8 @@
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&ts_release>;
 
-		panel = <&dsi_r66451_amoled_144hz_cmd_cphy &dsi_r66451_amoled_90hz_cmd_cphy>;
+		panel = <&dsi_r66451_amoled_144hz_cmd_cphy
+			 &dsi_r66451_amoled_120hz_cmd_cphy
+			 &dsi_r66451_amoled_90hz_cmd_cphy>;
 	};
 };
