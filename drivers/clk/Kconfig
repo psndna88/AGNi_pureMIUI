@@ -12,6 +12,7 @@ config COMMON_CLK
 	select CLKDEV_LOOKUP
 	select SRCU
 	select RATIONAL
+	default y
 	---help---
 	  The common clock framework is a single definition of struct
 	  clk, useful across many platforms, as well as an
