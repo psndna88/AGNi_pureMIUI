@@ -90,6 +90,9 @@ VDSO_CFLAGS += -Wno-int-to-pointer-cast
 VDSO_AFLAGS := $(VDSO_CAFLAGS)
 VDSO_AFLAGS += -D__ASSEMBLY__
 
+VDSO_CFLAGS += -march=armv8.2-a -mtune=cortex-a76.cortex-a55
+VDSO_AFLAGS += -march=armv8.2-a -mtune=cortex-a76.cortex-a55
+
 VDSO_LDFLAGS := $(VDSO_CPPFLAGS)
 # From arm vDSO Makefile
 VDSO_LDFLAGS += -Wl,-Bsymbolic -Wl,--no-undefined -Wl,-soname=linux-vdso.so.1
