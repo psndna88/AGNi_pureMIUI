@@ -236,7 +236,6 @@ lim_mlm_add_bss(struct mac_context *mac_ctx,
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
 	struct bss_params *addbss_param = NULL;
-	struct wlan_lmac_if_reg_tx_ops *tx_ops;
 
 	if (!wma) {
 		pe_err("Invalid wma handle");
@@ -294,15 +293,6 @@ lim_mlm_add_bss(struct mac_context *mac_ctx,
 		goto peer_cleanup;
 	wma_post_vdev_start_setup(vdev_id);
 
-	if (wlan_reg_is_ext_tpc_supported(mac_ctx->psoc)) {
-		tx_ops = wlan_reg_get_tx_ops(mac_ctx->psoc);
-
-		lim_calculate_tpc(mac_ctx, session, false);
-
-		if (tx_ops->set_tpc_power)
-			tx_ops->set_tpc_power(mac_ctx->psoc, session->vdev_id,
-					      &mlme_obj->reg_tpc_obj);
-	}
 	return eSIR_SME_SUCCESS;
 
 peer_cleanup:
