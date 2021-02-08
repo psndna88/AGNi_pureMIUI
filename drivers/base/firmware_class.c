@@ -105,7 +105,7 @@ static int loading_timeout = 60;	/* In seconds */
 
 static inline long firmware_loading_timeout(void)
 {
-	return loading_timeout > 0 ? loading_timeout * HZ : MAX_JIFFY_OFFSET;
+	return loading_timeout > 0 ? loading_timeout * msecs_to_jiffies(1000) : MAX_JIFFY_OFFSET;
 }
 
 /*

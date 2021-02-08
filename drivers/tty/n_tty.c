@@ -1229,7 +1229,7 @@ static void n_tty_receive_overrun(struct tty_struct *tty)
 	struct n_tty_data *ldata = tty->disc_data;
 
 	ldata->num_overrun++;
-	if (time_after(jiffies, ldata->overrun_time + HZ) ||
+	if (time_after(jiffies, ldata->overrun_time + msecs_to_jiffies(1000)) ||
 			time_after(ldata->overrun_time, jiffies)) {
 		tty_warn(tty, "%d input overrun(s)\n", ldata->num_overrun);
 		ldata->overrun_time = jiffies;
@@ -2192,9 +2192,9 @@ static ssize_t n_tty_read(struct tty_struct *tty, struct file *file,
 	if (!ldata->icanon) {
 		minimum = MIN_CHAR(tty);
 		if (minimum) {
-			time = (HZ / 10) * TIME_CHAR(tty);
+			time = (msecs_to_jiffies(100)) * TIME_CHAR(tty);
 		} else {
-			timeout = (HZ / 10) * TIME_CHAR(tty);
+			timeout = (msecs_to_jiffies(100)) * TIME_CHAR(tty);
 			minimum = 1;
 		}
 	}
