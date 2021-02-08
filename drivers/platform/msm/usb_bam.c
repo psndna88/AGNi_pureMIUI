@@ -25,7 +25,7 @@
 
 #define USB_THRESHOLD 512
 #define USB_BAM_MAX_STR_LEN 50
-#define USB_BAM_TIMEOUT (10*HZ)
+#define USB_BAM_TIMEOUT (msecs_to_jiffies(10000))
 #define DBG_MAX_MSG   512UL
 #define DBG_MSG_LEN   160UL
 #define TIME_BUF_LEN  17

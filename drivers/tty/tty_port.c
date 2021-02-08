@@ -66,8 +66,8 @@ void tty_port_init(struct tty_port *port)
 	mutex_init(&port->mutex);
 	mutex_init(&port->buf_mutex);
 	spin_lock_init(&port->lock);
-	port->close_delay = (50 * HZ) / 100;
-	port->closing_wait = (3000 * HZ) / 100;
+	port->close_delay = (msecs_to_jiffies(50000)) / 100;
+	port->closing_wait = (msecs_to_jiffies(3000000)) / 100;
 	port->client_ops = &tty_port_default_client_ops;
 	kref_init(&port->kref);
 }
@@ -553,10 +553,10 @@ static void tty_port_drain_delay(struct tty_port *port, struct tty_struct *tty)
 	long timeout;
 
 	if (bps > 1200) {
-		timeout = (HZ * 10 * port->drain_delay) / bps;
-		timeout = max_t(long, timeout, HZ / 10);
+		timeout = (msecs_to_jiffies(1000) * 10 * port->drain_delay) / bps;
+		timeout = max_t(long, timeout, msecs_to_jiffies(100));
 	} else {
-		timeout = 2 * HZ;
+		timeout = msecs_to_jiffies(2000);
 	}
 	schedule_timeout_interruptible(timeout);
 }

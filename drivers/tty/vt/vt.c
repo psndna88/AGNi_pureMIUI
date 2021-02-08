@@ -135,7 +135,7 @@ const struct consw *conswitchp;
  * Here is the default bell parameters: 750HZ, 1/8th of a second
  */
 #define DEFAULT_BELL_PITCH	750
-#define DEFAULT_BELL_DURATION	(HZ/8)
+#define DEFAULT_BELL_DURATION	(msecs_to_jiffies(125))
 #define DEFAULT_CURSOR_BLINK_MS	200
 
 struct vc vc_cons [MAX_NR_CONSOLES];

@@ -724,7 +724,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		if (cc->mode == MIGRATE_ASYNC)
 			return 0;
 
-		congestion_wait(BLK_RW_ASYNC, HZ/10);
+		congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(100));
 
 		if (fatal_signal_pending(current))
 			return 0;
