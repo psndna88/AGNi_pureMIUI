@@ -55,7 +55,7 @@
 			(ETH_FRAME_LEN + sizeof(struct rndis_pkt_hdr)))
 #define BAM_DMA_DESC_FIFO_SIZE \
 		(BAM_DMA_MAX_PKT_NUMBER * (sizeof(struct sps_iovec)))
-#define TX_TIMEOUT (5 * HZ)
+#define TX_TIMEOUT msecs_to_jiffies(5000)
 #define MIN_TX_ERROR_SLEEP_PERIOD 500
 #define DEFAULT_AGGR_TIME_LIMIT 1000 /* 1ms */
 #define DEFAULT_AGGR_PKT_LIMIT 0

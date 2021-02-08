@@ -1273,7 +1273,7 @@ static int tty_reopen(struct tty_struct *tty)
 	if (ld) {
 		tty_ldisc_deref(ld);
 	} else {
-		retval = tty_ldisc_lock(tty, 5 * HZ);
+		retval = tty_ldisc_lock(tty, msecs_to_jiffies(5000));
 		if (retval)
 			return retval;
 
@@ -1346,7 +1346,7 @@ struct tty_struct *tty_init_dev(struct tty_driver *driver, int idx)
 			"%s: %s driver does not set tty->port. This will crash the kernel later. Fix the driver!\n",
 			__func__, tty->driver->name);
 
-	retval = tty_ldisc_lock(tty, 5 * HZ);
+	retval = tty_ldisc_lock(tty, msecs_to_jiffies(5000));
 	if (retval)
 		goto err_release_lock;
 	tty->port->itty = tty;
@@ -1716,7 +1716,7 @@ int tty_release(struct inode *inode, struct file *filp)
 			tty_warn(tty, "read/write wait queue active!\n");
 		}
 		schedule_timeout_killable(timeout);
-		if (timeout < 120 * HZ)
+		if (timeout < 120 * msecs_to_jiffies(120000))
 			timeout = 2 * timeout + 1;
 		else
 			timeout = MAX_SCHEDULE_TIMEOUT;

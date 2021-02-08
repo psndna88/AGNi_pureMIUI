@@ -805,7 +805,7 @@ int ipa_wdi_enable_pipes(void)
 		ret = ipa_rm_request_resource(IPA_RM_RESOURCE_WLAN_PROD);
 		if (ret == -EINPROGRESS) {
 			if (wait_for_completion_timeout(
-				&ipa_wdi_ctx->wdi_completion, 10*HZ) == 0) {
+				&ipa_wdi_ctx->wdi_completion, msecs_to_jiffies(10000)) == 0) {
 				IPA_WDI_ERR("WLAN_PROD res req time out\n");
 				return -EFAULT;
 			}

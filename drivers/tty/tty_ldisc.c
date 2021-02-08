@@ -575,7 +575,7 @@ int tty_set_ldisc(struct tty_struct *tty, int disc)
 		return PTR_ERR(new_ldisc);
 
 	tty_lock(tty);
-	retval = tty_ldisc_lock(tty, 5 * HZ);
+	retval = tty_ldisc_lock(tty, msecs_to_jiffies(5000));
 	if (retval)
 		goto err;
 
