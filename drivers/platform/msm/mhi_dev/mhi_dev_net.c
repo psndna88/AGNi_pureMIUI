@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -741,6 +741,14 @@ int mhi_dev_net_interface_init(void)
 	/*Process pending packet work queue*/
 	mhi_net_client->pending_pckt_wq =
 		create_singlethread_workqueue("pending_xmit_pckt_wq");
+
+	if (!mhi_net_client->pending_pckt_wq) {
+		mhi_dev_net_log(MHI_ERROR,
+				"Unable to alloc pending_pckt_wq\n");
+		ret_val = -ENOMEM;
+		goto pending_pckt_wq_alloc_fail;
+	}
+
 	INIT_WORK(&mhi_net_client->xmit_work,
 			mhi_dev_net_process_queue_packets);
 
@@ -805,6 +813,7 @@ register_state_cb_fail:
 client_register_fail:
 channel_init_fail:
 	destroy_workqueue(mhi_net_client->pending_pckt_wq);
+pending_pckt_wq_alloc_fail:
 	kfree(mhi_net_client);
 	kfree(mhi_net_ipc_log);
 	return ret_val;
