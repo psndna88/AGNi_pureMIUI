@@ -95,7 +95,7 @@
 };
 
 &usb1 {
-        qcom,ignore-wakeup-src-in-hostmode;
+	qcom,ignore-wakeup-src-in-hostmode;
 };
 
 &thermal_zones {
