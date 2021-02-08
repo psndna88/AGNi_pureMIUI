@@ -400,6 +400,9 @@ interconnects:
 	Value type: <prop-encoded array>
 	Definition: PCIe PHY initialization sequence
 
+- qcom,msi_mask_disable:
+	Usage: optional
+	Definition: Disable masking MSI interrupts at EP side
 
 ==============
 Root port node
