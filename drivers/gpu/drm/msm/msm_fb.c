@@ -84,7 +84,7 @@ static const struct drm_framebuffer_funcs msm_framebuffer_funcs = {
 	.destroy = msm_framebuffer_destroy,
 };
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS_
 void msm_framebuffer_describe(struct drm_framebuffer *fb, struct seq_file *m)
 {
 	struct msm_framebuffer *msm_fb;
