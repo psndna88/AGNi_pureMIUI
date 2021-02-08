@@ -439,9 +439,6 @@
 	soc: soc { };
 };
 
-#include "display/sdmshrike-sde-pll.dtsi"
-#include "display/sdmshrike-sde.dtsi"
-
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
@@ -2021,6 +2018,9 @@
 #include "sa8195-usb.dtsi"
 #include "sdmshrike-gpu.dtsi"
 #include "sa8195-vidc.dtsi"
+
+#include "display/sdmshrike-sde-pll.dtsi"
+#include "display/sdmshrike-sde.dtsi"
 
 &firmware {
 	scm {
