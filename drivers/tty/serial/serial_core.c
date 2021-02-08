@@ -379,7 +379,7 @@ uart_update_timeout(struct uart_port *port, unsigned int cflag,
 	 * Figure the timeout to send the above number of bits.
 	 * Add .02 seconds of slop
 	 */
-	port->timeout = (HZ * bits) / baud + HZ/50;
+	port->timeout = (msecs_to_jiffies(1000) * bits) / baud + msecs_to_jiffies(20);
 }
 
 EXPORT_SYMBOL(uart_update_timeout);
@@ -1585,7 +1585,7 @@ static void uart_wait_until_sent(struct tty_struct *tty, int timeout)
 	 * Note: we have to use pretty tight timings here to satisfy
 	 * the NIST-PCTS.
 	 */
-	char_time = (port->timeout - HZ/50) / port->fifosize;
+	char_time = (port->timeout - msecs_to_jiffies(20)) / port->fifosize;
 	char_time = char_time / 5;
 	if (char_time == 0)
 		char_time = 1;
