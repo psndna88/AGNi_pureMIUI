@@ -6,7 +6,7 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
 CONFIG1="agni_atoll_aospQR_defconfig"
-export AGNI_BUILD_TYPE="AOSP-Q-R"
+export AGNI_BUILD_TYPE="AOSP-QR"
 SYNC_CONFIG=1
 WLAN_MODA11="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0"
 WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
