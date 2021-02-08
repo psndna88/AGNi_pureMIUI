@@ -5128,6 +5128,11 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 		return;
 	}
 
+	if (!ch_mask) {
+		pr_err("%s: channel mask is 0\n", __func__);
+		return;
+	}
+
 	if (!pdata->get_wsa_dev_num) {
 		pr_err("%s: get_wsa_dev_num is NULL\n", __func__);
 		return;
