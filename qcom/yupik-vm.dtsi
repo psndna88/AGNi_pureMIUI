@@ -1,4 +1,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,dispcc-yupik.h>
+#include <dt-bindings/clock/qcom,gcc-yupik.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 
 / {
 	#address-cells = <0x2>;
@@ -297,3 +300,5 @@
 	};
 };
 #include "lahaina-vm-ion.dtsi"
+#include "display/trustedvm-yupik-sde.dtsi"
+#include "display/trustedvm-yupik-sde-display.dtsi"
