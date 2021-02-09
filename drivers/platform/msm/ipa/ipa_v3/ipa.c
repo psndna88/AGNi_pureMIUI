@@ -7629,11 +7629,14 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 			goto fail_wwan_init;
 		}
 
-		result = ipa3_rmnet_ctl_init();
-		if (result) {
-			IPAERR(":ipa3_rmnet_ctl_init err=%d\n", -result);
-			result = -ENODEV;
-			goto fail_rmnet_ctl_init;
+		if (ipa3_ctx->rmnet_ctl_enable) {
+			result = ipa3_rmnet_ctl_init();
+			if (result) {
+				IPAERR(":ipa3_rmnet_ctl_init err=%d\n",
+					-result);
+				result = -ENODEV;
+				goto fail_rmnet_ctl_init;
+			}
 		}
 	}
 	mutex_init(&ipa3_ctx->app_clock_vote.mutex);

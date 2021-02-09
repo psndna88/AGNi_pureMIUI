@@ -484,7 +484,7 @@ static int ipa3_wdi_gsi_db(phys_addr_t* db_addr, struct ipa3_ep_context *ep_ctx)
 	/* write channel scratch */
 	memset(&gsi_ch_scratch, 0, sizeof(gsi_ch_scratch));
 	gsi_ch_scratch.wdi3.db_addr_wp_lsb = (u32)mem.phys_base;
-	gsi_ch_scratch.wdi3.db_addr_wp_msb = (u32)(mem.phys_base >> 32);
+	gsi_ch_scratch.wdi3.db_addr_wp_msb = (u32)((mem.phys_base & 0xFFFFFFFF00000000) >> 32);
 	IPADBG("gsi written lsb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_lsb);
 	IPADBG("gsi written msb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_msb);
 
