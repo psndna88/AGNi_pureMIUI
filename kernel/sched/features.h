@@ -122,7 +122,7 @@ SCHED_FEAT(ENERGY_AWARE, false)
  *   ON: If the target CPU saves any energy, use that.
  *   OFF: Use whichever of target or backup saves most.
  */
-SCHED_FEAT(EAS_PREFER_IDLE, false)
+SCHED_FEAT(EAS_PREFER_IDLE, true)
 SCHED_FEAT(FIND_BEST_TARGET, true)
 SCHED_FEAT(FBT_STRICT_ORDER, false)
 
