@@ -3734,6 +3734,14 @@ cppflags-$(CONFIG_DP_FT_LOCK_HISTORY) += -DDP_FT_LOCK_HISTORY
 
 ccflags-$(CONFIG_GET_DRIVER_MODE) += -DFEATURE_GET_DRIVER_MODE
 
+ifeq ($(CONFIG_SMP), y)
+ifeq ($(CONFIG_HIF_DETECTION_LATENCY_ENABLE), y)
+cppflags-y += -DHIF_DETECTION_LATENCY_ENABLE
+cppflags-y += -DDETECTION_TIMER_TIMEOUT=2000
+cppflags-y += -DDETECTION_LATENCY_THRESHOLD=1900
+endif
+endif
+
 KBUILD_CPPFLAGS += $(cppflags-y)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
