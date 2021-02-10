@@ -2386,6 +2386,7 @@
 #include "sm8150-gdsc.dtsi"
 #include "msm-arm-smmu-sm8150.dtsi"
 #include "sm8150-vidc.dtsi"
+#include "camera/sm8150-camera.dtsi"
 
 &emac_gdsc {
 	status = "ok";

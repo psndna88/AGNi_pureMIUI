@@ -516,3 +516,4 @@
 		iommus = <&apps_smmu 0x2304 0x60>;
 	};
 };
+#include "camera/sm8150-v2-camera.dtsi"
