@@ -4510,11 +4510,8 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 
 	res = wait_for_completion_timeout(&gsi_ctx->gen_ee_cmd_compl,
 		msecs_to_jiffies(GSI_STOP_CMD_TIMEOUT_MS));
-	if (res == 0) {
+	if (res == 0)
 		GSIERR("chan_idx=%u ee=%u timed out\n", chan_idx, ee);
-		res = -GSI_STATUS_TIMED_OUT;
-		goto free_lock;
-	}
 
 	gsi_ctx->scratch.word0.val = gsi_readl(gsi_ctx->base +
 		GSI_EE_n_CNTXT_SCRATCH_0_OFFS(gsi_ctx->per.ee));
