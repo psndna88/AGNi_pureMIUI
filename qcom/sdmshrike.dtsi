@@ -466,6 +466,38 @@
 		interrupt-controller;
 	};
 
+	apps_rsc: rsc@18200000 {
+		label = "apps_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0x18200000 0x10000>,
+		      <0x18210000 0x10000>,
+		      <0x18220000 0x10000>;
+		reg-names = "drv-0", "drv-1", "drv-2";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0xd00>;
+		qcom,drv-id = <2>;
+		qcom,tcs-config = <ACTIVE_TCS  2>,
+				  <SLEEP_TCS   3>,
+				  <WAKE_TCS    3>,
+				  <CONTROL_TCS 1>;
+
+		apps_bcm_voter: bcm_voter {
+			compatible = "qcom,bcm-voter";
+		};
+
+		rpmhcc: clock-controller {
+			compatible = "qcom,sm8150-rpmh-clk";
+			#clock-cells = <1>;
+			status = "okay";
+		};
+
+		system_pm {
+			compatible = "qcom,system-pm";
+		};
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 1 0xf08>,
@@ -1016,38 +1048,6 @@
 		compatible = "qcom,mpm2-sleep-counter";
 		reg = <0xc221000 0x1000>;
 		clock-frequency = <32768>;
-	};
-
-	apps_rsc: rsc@18200000 {
-		label = "apps_rsc";
-		compatible = "qcom,rpmh-rsc";
-		reg = <0x18200000 0x10000>,
-		      <0x18210000 0x10000>,
-		      <0x18220000 0x10000>;
-		reg-names = "drv-0", "drv-1", "drv-2";
-		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
-			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
-		qcom,tcs-offset = <0xd00>;
-		qcom,drv-id = <2>;
-		qcom,tcs-config = <ACTIVE_TCS  2>,
-				  <SLEEP_TCS   3>,
-				  <WAKE_TCS    3>,
-				  <CONTROL_TCS 1>;
-
-		apps_bcm_voter: bcm_voter {
-			compatible = "qcom,bcm-voter";
-		};
-
-		rpmhcc: clock-controller {
-			compatible = "qcom,sm8150-rpmh-clk";
-			#clock-cells = <1>;
-			status = "okay";
-		};
-
-		system_pm {
-			compatible = "qcom,system-pm";
-		};
 	};
 
 	disp_rsc: rsc@af20000 {
