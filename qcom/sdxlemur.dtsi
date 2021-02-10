@@ -973,6 +973,7 @@
 			qcom,phy-status-reg2 = <0x1214>;
 			qcom,mhi-soc-reset-offset = <0xb01b8>;
 			qcom,aoss-rst-clr;
+			qcom,aux-clk = <0x11>;
 
 			qcom,phy-init = <0x1240 0x01 0x0
 				0x100c 0x02 0x0
