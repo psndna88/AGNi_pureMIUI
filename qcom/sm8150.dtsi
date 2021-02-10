@@ -40,6 +40,7 @@
 		pci-domain1 = &pcie1; /* PCIe1 domain */
 		serial0 = &qupv3_se12_2uart;
 		hsuart0 = &qupv3_se13_4uart;
+		spi2 = &qupv3_se22_spi;
 	};
 
 	cpus {
