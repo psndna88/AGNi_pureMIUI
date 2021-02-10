@@ -980,6 +980,115 @@ dcc: dcc_v2@1be2000 {
 #include "scuba-ion.dtsi"
 #include "msm-arm-smmu-scuba.dtsi"
 
+&qupv3_se1_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "ok";
+
+	pm8008_8: qcom,pm8008@8 {
+		compatible = "qcom,i2c-pmic";
+		reg = <0x8>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pm8008_active>;
+
+		pm8008_chip: qcom,pm8008-chip@900 {
+			compatible = "qcom,pm8008-chip";
+			reg = <0x900>;
+
+			PM8008_EN: qcom,pm8008-chip-en {
+				regulator-name = "pm8008-chip-en";
+			};
+		};
+
+		qcom,revid@100 {
+			compatible = "qcom,qpnp-revid";
+			reg = <0x100>;
+		};
+	};
+
+	pm8008_9: qcom,pm8008@9 {
+		compatible = "qcom,i2c-pmic";
+		reg = <0x9>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pm8008_regulators: qcom,pm8008-regulator {
+			compatible = "qcom,pm8008-regulator";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pm8008_en-supply = <&PM8008_EN>;
+
+			vdd_l1_l2-supply = <&S3A>;
+
+			L1P: qcom,pm8008-l1@4000 {
+				reg = <0x4000>;
+				regulator-name = "pm8008_l1";
+				regulator-min-microvolt = <528000>;
+				regulator-max-microvolt = <1256000>;
+				qcom,min-dropout-voltage = <75000>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L2P: qcom,pm8008-l2@4100 {
+				reg = <0x4100>;
+				regulator-name = "pm8008_l2";
+				regulator-min-microvolt = <528000>;
+				regulator-max-microvolt = <1144000>;
+				qcom,min-dropout-voltage = <187500>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L3P: qcom,pm8008-l3@4200 {
+				reg = <0x4200>;
+				regulator-name = "pm8008_l3";
+				regulator-min-microvolt = <2704000>;
+				regulator-max-microvolt = <2896000>;
+				qcom,min-dropout-voltage = <200000>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L4P: qcom,pm8008-l4@4300 {
+				reg = <0x4300>;
+				regulator-name = "pm8008_l4";
+				regulator-min-microvolt = <2704000>;
+				regulator-max-microvolt = <2896000>;
+				qcom,min-dropout-voltage = <200000>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L5P: qcom,pm8008-l5@4400 {
+				reg = <0x4400>;
+				regulator-name = "pm8008_l5";
+				regulator-min-microvolt = <2704000>;
+				regulator-max-microvolt = <2896000>;
+				qcom,min-dropout-voltage = <300000>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L6P: qcom,pm8008-l6@4500 {
+				reg = <0x4500>;
+				regulator-name = "pm8008_l6";
+				regulator-min-microvolt = <2704000>;
+				regulator-max-microvolt = <2896000>;
+				qcom,min-dropout-voltage = <300000>;
+				qcom,hpm-min-load = <10000>;
+			};
+
+			L7P: qcom,pm8008-l7@4600 {
+				reg = <0x4600>;
+				regulator-name = "pm8008_l7";
+				regulator-min-microvolt = <1656000>;
+				regulator-max-microvolt = <1896000>;
+				qcom,min-dropout-voltage = <300000>;
+				qcom,hpm-min-load = <10000>;
+			};
+		};
+	};
+};
+
 &pm2250_vadc {
 	#address-cells = <1>;
 	#size-cells = <0>;
