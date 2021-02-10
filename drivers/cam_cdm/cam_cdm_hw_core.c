@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -415,6 +415,17 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 		core->offsets->cmn_reg->current_used_ahb_base, &dump_reg[1]);
 	CAM_INFO(CAM_CDM, "curr BL base 0x%x AHB base 0x%x",
 		dump_reg[0], dump_reg[1]);
+
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->wait_status, &dump_reg[0]);
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->comp_wait[0]->comp_wait_status,
+		&dump_reg[1]);
+	cam_cdm_read_hw_reg(cdm_hw,
+		core->offsets->cmn_reg->comp_wait[1]->comp_wait_status,
+		&dump_reg[2]);
+	CAM_INFO(CAM_CDM, "wait status 0x%x comp wait status 0x%x: 0x%x",
+		dump_reg[0], dump_reg[1], dump_reg[2]);
 
 	cam_cdm_read_hw_reg(cdm_hw,
 		core->offsets->cmn_reg->current_bl_len, &dump_reg[0]);

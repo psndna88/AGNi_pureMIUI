@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -48,6 +48,10 @@ static int cam_ope_top_dump_debug_reg(struct ope_hw *ope_hw_info)
 		CAM_INFO(CAM_OPE, "status[%d-%d] : 0x%x 0x%x 0x%x",
 			i, i+2, val[0], val[1], val[2]);
 	}
+
+	CAM_INFO(CAM_OPE, "scrath reg: 0x%x, stripe_idx: %d",
+		top_reg->offset + top_reg->scratch_reg,
+		cam_io_r_mb(top_reg->base + top_reg->scratch_reg));
 	return 0;
 }
 
