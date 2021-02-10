@@ -324,6 +324,7 @@ struct wlan_ipa_priv;
  * @interface_lock: Interface lock
  * @ifa_address: Interface address
  * @stats: Interface stats
+ * @bssid: BSSID. valid only for sta iface ctx;
  */
 struct wlan_ipa_iface_context {
 	struct wlan_ipa_priv *ipa_ctx;
@@ -341,6 +342,7 @@ struct wlan_ipa_iface_context {
 	qdf_spinlock_t interface_lock;
 	uint32_t ifa_address;
 	struct wlan_ipa_iface_stats stats;
+	struct qdf_mac_addr bssid;
 };
 
 /**
