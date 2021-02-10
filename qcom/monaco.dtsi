@@ -334,6 +334,12 @@
 		};
 	};
 
+	cpu_pmu: cpu-pmu {
+		ompatible = "arm,armv8-pmuv3";
+		qcom,irq-is-percpu;
+		interrupts = <GIC_PPI 6 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 	qcom,msm-imem@c125000 {
 		compatible = "qcom,msm-imem";
 		reg = <0xc125000 0x1000>;
