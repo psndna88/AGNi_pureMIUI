@@ -15825,6 +15825,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_SAP_CONNECTED_D3WOW;
 	wmi_service[wmi_service_go_connected_d3_wow] =
 			WMI_SERVICE_SAP_CONNECTED_D3WOW;
+	wmi_service[wmi_service_ndi_txbf_support] =
+			WMI_SERVICE_NDI_TXBF_SUPPORT;
 }
 
 /**
