@@ -726,6 +726,15 @@ static struct cam_ope_pp_reg ope_pp_reg = {
 		{
 			.hw_status = 0x3C04,
 		},
+		{
+			.hw_status = 0x3E04,
+		},
+		{
+			.hw_status = 0x4004,
+		},
+		{
+			.hw_status = 0x4204,
+		},
 	},
 };
 

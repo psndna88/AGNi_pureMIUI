@@ -14,7 +14,7 @@
 
 #define MAX_RD_CLIENTS   3
 #define MAX_WR_CLIENTS   8
-#define MAX_PP_CLIENTS   29
+#define MAX_PP_CLIENTS   32
 
 #define MAX_RW_CLIENTS   (MAX_RD_CLIENTS + MAX_WR_CLIENTS)
 

@@ -33,8 +33,12 @@ static int cam_ope_top_dump_debug_reg(struct ope_hw *ope_hw_info)
 {
 	uint32_t i, val[3];
 	struct cam_ope_top_reg *top_reg;
+	struct cam_ope_pp_reg *pp_reg;
+	uint32_t pp_hw_status = 0;
 
 	top_reg = ope_hw_info->top_reg;
+	pp_reg = ope_hw_info->pp_reg;
+
 	for (i = 0; i < top_reg->num_debug_registers; i = i+3) {
 		val[0] = cam_io_r_mb(top_reg->base +
 			top_reg->debug_regs[i].offset);
@@ -52,6 +56,20 @@ static int cam_ope_top_dump_debug_reg(struct ope_hw *ope_hw_info)
 	CAM_INFO(CAM_OPE, "scrath reg: 0x%x, stripe_idx: %d",
 		top_reg->offset + top_reg->scratch_reg,
 		cam_io_r_mb(top_reg->base + top_reg->scratch_reg));
+
+	for (i = 0; i < pp_reg->num_clients ; i++) {
+		pp_hw_status = 0;
+		pp_hw_status =
+			cam_io_r_mb(pp_reg->base +
+				pp_reg->pp_clients[i]
+					.hw_status);
+
+		if (pp_hw_status)
+			CAM_ERR(CAM_OPE,
+				"ope pp hw_status offset 0x%x val 0x%x",
+				pp_reg->pp_clients[i].hw_status,
+				pp_hw_status);
+	}
 	return 0;
 }
 
