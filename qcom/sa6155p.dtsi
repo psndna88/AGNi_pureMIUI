@@ -53,3 +53,7 @@
 &videocc {
 	compatible = "qcom,sa6155-videocc", "syscon";
 };
+
+&slpi_tlmm {
+	status = "ok";
+};
