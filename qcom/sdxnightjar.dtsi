@@ -53,6 +53,22 @@
 			label = "mss_mem";
 		};
 
+		qseecom_mem: qseecom_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x400000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x400000>;
+		};
+
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x00000000 0xffffffff>;
@@ -74,6 +90,10 @@
 		scm {
 			compatible = "qcom,scm";
 			qcom,dload-mode = <&tcsr 0x6100>;
+		};
+
+		qtee_shmbridge {
+			compatible = "qcom,tee-shared-memory-bridge";
 		};
 	};
 
@@ -560,19 +580,23 @@
 		compatible = "qcom,qseecom";
 		reg = <0x87800000 0x200000>;
 		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
 		qcom,hlos-ce-hw-instance = <0>;
 		qcom,qsee-ce-hw-instance = <0>;
-		qcom,msm-bus,name = "qseecom-noc";
-		qcom,msm-bus,num-cases = <4>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-				<47 512 0 0>,
-				<47 512 200000 400000>,
-				<47 512 300000 800000>,
-				<47 512 400000 1000000>;
+		qcom,qsee-reentrancy-support = <2>;
+		qcom,support-bus-scaling;
+		qcom,appsbl-qseecom-support;
+		interconnect-names = "data_path";
+		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
 		/*TODO: Fix the clock when tree is available*/
 		clock-names = "core_clk", "iface_clk",
 			"bus_clk","core_clk_src";
+		clocks =
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>;
 		qcom,ce-opp-freq = <100000000>;
 	};
 
