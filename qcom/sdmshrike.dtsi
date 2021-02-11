@@ -37,6 +37,7 @@
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
 		serial0 = &qupv3_se12_2uart;
 		sdhc2 = &sdhc_2; /* SDC2 SD Card slot */
+		spi22 = &qupv3_se22_spi;
 	};
 
 	cpus {
@@ -2063,6 +2064,7 @@
 #include "sa8195-usb.dtsi"
 #include "sdmshrike-gpu.dtsi"
 #include "sa8195-vidc.dtsi"
+#include "sa8155-audio.dtsi"
 
 #include "display/sdmshrike-sde-pll.dtsi"
 #include "display/sdmshrike-sde.dtsi"
