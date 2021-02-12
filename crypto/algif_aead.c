@@ -111,7 +111,7 @@ static void aead_wmem_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_sync_poll(&wq->wait, POLLIN |
 							   POLLRDNORM |
 							   POLLRDBAND);
@@ -162,7 +162,7 @@ static void aead_data_wakeup(struct sock *sk)
 
 	rcu_read_lock();
 	wq = rcu_dereference(sk->sk_wq);
-	if (wq_has_sleeper(wq))
+	if (skwq_has_sleeper(wq))
 		wake_up_interruptible_sync_poll(&wq->wait, POLLOUT |
 							   POLLRDNORM |
 							   POLLRDBAND);
