@@ -261,6 +261,7 @@ static enum sigma_cmd_result cmd_traffic_stop_ping(struct sigma_dut *dut,
 static int get_ip_addr(const char *ifname, int ipv6, char *buf, size_t len)
 {
 	struct ifaddrs *ifa, *ifa_tmp;
+	bool non_ll_addr_found = false;
 
 	if (getifaddrs(&ifa) == -1)
 		return -1;
@@ -283,13 +284,22 @@ static int get_ip_addr(const char *ifname, int ipv6, char *buf, size_t len)
 			struct sockaddr_in6 *in6;
 
 			in6 = (struct sockaddr_in6 *) ifa_tmp->ifa_addr;
-			if (!inet_ntop(AF_INET6, &in6->sin6_addr, buf, len))
-				return -1;
-			return 0;
+
+			/* get link local address if available */
+			if (IN6_IS_ADDR_LINKLOCAL(&in6->sin6_addr)) {
+				if (!inet_ntop(AF_INET6, &in6->sin6_addr, buf,
+					       len))
+					return -1;
+				return 0;
+			}
+
+			if (!non_ll_addr_found &&
+			    inet_ntop(AF_INET6, &in6->sin6_addr, buf, len))
+				non_ll_addr_found = true;
 		}
 	}
 
-	return -1;
+	return non_ll_addr_found ? 0 : -1;
 }
 
 
