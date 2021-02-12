@@ -146,4 +146,5 @@ on property:sys.boot_completed=1
     write /sys/block/dm-0/queue/discard_max_bytes 134217728
     # Set network hostname
     setprop net.hostname SDM636
+    write /proc/sys/net/core/default_qdisc "fq"
 
