@@ -318,7 +318,7 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	int server, ipv6 = 0;
 	char *pos;
 	int dscp, reverse = 0;
-	char tos[20], client_port_str[100];
+	char tos[20], client_port_str[100], bitrate[20];
 
 	val = get_param(cmd, "mode");
 	if (!val) {
@@ -352,6 +352,14 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	val = get_param(cmd, "transproto");
 	if (val && strcasecmp(val, "udp") == 0)
 		proto = "-u";
+
+	bitrate[0] = '\0';
+	val = get_param(cmd, "bitrate");
+	if (val) {
+		int ret = snprintf(bitrate, sizeof(bitrate), " -b %s", val);
+		if (ret < 0 || ret >= sizeof(bitrate))
+			return ERROR_SEND_STATUS;
+	}
 
 	dst = get_param(cmd, "destination");
 	pos = dst ? strchr(dst, '%') : NULL;
@@ -445,10 +453,10 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		else
 			snprintf(buf, sizeof(buf), "%s", dst);
 		fprintf(f, "#!" SHELL "\n"
-			"iperf3 -c %s -t %d %s %s %s%s%s%s > %s"
+			"iperf3 -c %s -t %d %s %s%s %s%s%s%s > %s"
 			"/sigma_dut-iperf &\n"
 			"echo $! > %s/sigma_dut-iperf-pid\n",
-			buf, duration, iptype, proto, port_str,
+			buf, duration, iptype, proto, bitrate, port_str,
 			client_port_str, tos, reverse ? " -R" : "",
 			dut->sigma_tmpdir, dut->sigma_tmpdir);
 	}
