@@ -241,21 +241,12 @@ tcp_dsack - BOOLEAN
 	Allows TCP to send "duplicate" SACKs.
 
 tcp_early_retrans - INTEGER
-	Enable Early Retransmit (ER), per RFC 5827. ER lowers the threshold
-	for triggering fast retransmit when the amount of outstanding data is
-	small and when no previously unsent data can be transmitted (such
-	that limited transmit could be used). Also controls the use of
-	Tail loss probe (TLP) that converts RTOs occurring due to tail
-	losses into fast recovery (draft-dukkipati-tcpm-tcp-loss-probe-01).
+	Tail loss probe (TLP) converts RTOs occurring due to tail
+	losses into fast recovery (draft-ietf-tcpm-rack). Note that
+	TLP requires RACK to function properly (see tcp_recovery below)
 	Possible values:
-		0 disables ER
-		1 enables ER
-		2 enables ER but delays fast recovery and fast retransmit
-		  by a fourth of RTT. This mitigates connection falsely
-		  recovers when network has a small degree of reordering
-		  (less than 3 packets).
-		3 enables delayed ER and TLP.
-		4 enables TLP only.
+		0 disables TLP
+		3 or 4 enables TLP
 	Default: 3
 
 tcp_ecn - INTEGER
@@ -600,6 +591,14 @@ tcp_fwmark_accept - BOOLEAN
 	unaffected.
 	Default: 0
 
+tcp_fastopen_blackhole_timeout_sec - INTEGER
+	Initial time period in second to disable Fastopen on active TCP sockets
+	when a TFO firewall blackhole issue happens.
+	This time period will grow exponentially when more blackhole issues
+	get detected right after Fastopen is re-enabled and will reset to
+	initial value when the blackhole issue goes away.
+	By default, it is set to 1hr.
+
 tcp_syn_retries - INTEGER
 	Number of times initial SYNs for an active TCP connection attempt
 	will be retransmitted. Should not be higher than 255. Default value
@@ -607,8 +606,13 @@ tcp_syn_retries - INTEGER
 	with the current initial RTO of 1second. With this the final timeout
 	for an active TCP connection attempt will happen after 127seconds.
 
-tcp_timestamps - BOOLEAN
-	Enable timestamps as defined in RFC1323.
+tcp_timestamps - INTEGER
+Enable timestamps as defined in RFC1323.
+	0: Disabled.
+	1: Enable timestamps as defined in RFC1323 and use random offset for
+	each connection rather than only using the current time.
+	2: Like 1, but without random offsets.
+	Default: 1
 
 tcp_min_tso_segs - INTEGER
 	Minimal number of segments per TSO frame.
@@ -700,18 +704,6 @@ tcp_thin_linear_timeouts - BOOLEAN
 	timeouts may be performed before exponential backoff mode is
 	initiated. This improves retransmission latency for
 	non-aggressive thin streams, often found to be time-dependent.
-	For more information on thin streams, see
-	Documentation/networking/tcp-thin.txt
-	Default: 0
-
-tcp_thin_dupack - BOOLEAN
-	Enable dynamic triggering of retransmissions after one dupACK
-	for thin streams. If set, a check is performed upon reception
-	of a dupACK to determine if the stream is thin (less than 4
-	packets in flight). As long as the stream is found to be thin,
-	data is retransmitted on the first received dupACK. This
-	improves retransmission latency for non-aggressive thin
-	streams, often found to be time-dependent.
 	For more information on thin streams, see
 	Documentation/networking/tcp-thin.txt
 	Default: 0
