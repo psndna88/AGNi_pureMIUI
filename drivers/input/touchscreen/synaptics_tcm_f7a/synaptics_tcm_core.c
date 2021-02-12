@@ -46,8 +46,8 @@
 extern char g_lcd_id[128];
 bool lct_syna_verify_flag = true;
 EXPORT_SYMBOL(lct_syna_verify_flag);
-bool synaptics_gesture_enable_flag;
-bool gesture_delay;
+bool synaptics_gesture_enable_flag = false;
+bool gesture_delay = false;
 EXPORT_SYMBOL(synaptics_gesture_enable_flag);
 EXPORT_SYMBOL(gesture_delay);
 /* add check F7A LCM by wanghan end */
