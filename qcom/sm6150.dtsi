@@ -28,6 +28,8 @@
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
 		serial0 = &qupv3_se0_2uart;
+		sdhc1 = &sdhc_1;
+		sdhc2 = &sdhc_2;
 	};
 
 	cpus {
@@ -1720,9 +1722,133 @@
 		hyplog-size-offset = <0x414>;
 	};
 
+	sdhc_1: sdhci@7c4000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x7c4000 0x1000>, <0x7c5000 0x1000>, <0x7C8000 0x8000>;
+		reg-names = "hc_mem", "cqhci_mem", "cqhci_ice";
+
+		interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 644 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC1_AHB_CLK>,
+			<&gcc GCC_SDCC1_APPS_CLK>,
+			<&gcc GCC_SDCC1_ICE_CORE_CLK>;
+		clock-names = "iface", "core", "ice_core";
+
+		qcom,ice-clk-rates = <300000000 75000000>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+
+		bus-width = <8>;
+		qcom,restore-after-cx-collapse;
+		supports-cqe;
+
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
+		mmc-hs400-enhanced-strobe;
+		non-removable;
+
+		interconnects = <&aggre1_noc MASTER_SDCC_1 &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_SDCC_1>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+
+		qcom,msm-bus,name = "sdhc1";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 50 MB/s */
+			<130718 200000>,<133320 133320>,
+			/* 100 MB/s */
+			<130718 200000>,<150000 150000>,
+			/* 200 MB/s */
+			<261438 400000>,<300000 300000>,
+			/* 400 MB/s */
+			<261438 2718822>,<300000 1359411>,
+			/* Max. bandwidth */
+			<1338562 4096000>,<1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 50000000 100750000
+				200000000 400000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x000F642C 0x0 0x0 0x00010800 0x80040868>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <67>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <67>;
+		};
+	};
+
+	sdhc_2: sdhci@8804000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x8804000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "iface", "core";
+
+		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642C 0x0 0x0 0x00010800 0x80040868>;
+
+		qcom,devfreq,freq-table = <50000000 202000000>;
+
+		interconnects = <&aggre1_noc MASTER_SDCC_2 &mc_virt SLAVE_EBI1>,
+			<&gem_noc MASTER_APPSS_PROC &config_noc SLAVE_SDCC_2>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <6>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<0 0>, <0 0>,
+			/* 25 MB/s */
+			<65360 100000>,<100000 100000>,
+			/* 50 MB/s */
+			<130718 200000>,<133320 133320>,
+			/* 100 MB/s */
+			<261438 200000>,<150000 150000>,
+			/* 200 MB/s */
+			<261438 400000>,<300000 300000>,
+			/* Max. bandwidth */
+			<1338562 4096000>,<1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 25000000 50000000
+			100750000 200000000 4294967295>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x3f>;
+			vote = <67>;
+		};
+
+		qos1 {
+			mask = <0xc0>;
+			vote = <67>;
+		};
+	};
 };
 
 #include "sm6150-qupv3.dtsi"
+#include "sm6150-ssc-qupv3.dtsi"
 #include "sm6150-pinctrl.dtsi"
 #include "sm6150-pm.dtsi"
 #include "sm6150-regulator.dtsi"
@@ -1826,3 +1952,4 @@
 
 #include "msm-arm-smmu-sm6150.dtsi"
 #include "sm6150-slpi-pinctrl.dtsi"
+#include "sm6150-usb.dtsi"
