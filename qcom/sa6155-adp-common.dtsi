@@ -1,6 +1,6 @@
 #include <dt-bindings/gpio/gpio.h>
 
-&qupv3_0 {
+&qupv3_se0_2uart {
 	status = "ok";
 };
 
