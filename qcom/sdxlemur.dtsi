@@ -1124,6 +1124,11 @@
 		qcom,pil-force-shutdown;
 	};
 
+	ipa_eth_group1: ipa_eth_group1 {
+		qcom,iommu-dma-addr-pool = <0x80000000 0x0fe20000>;
+		qcom,iommu-dma = "atomic";
+	};
+
 	ipa_hw: qcom,ipa@03e00000 {
 		compatible = "qcom,ipa";
 		mboxes = <&qmp_aop 0>;
