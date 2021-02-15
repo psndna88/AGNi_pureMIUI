@@ -168,7 +168,7 @@
 		linux,pci-domain = <0>;
 
 		qcom,pcie-phy-ver = <2110>;
-		qcom,use-19p2mhz-aux-clk;
+		qcom,aux-clk-freq = <20>; /* 19.2 MHz */
 
 		qcom,smmu-sid-base = <0x1d80>;
 
@@ -476,7 +476,7 @@
 		linux,pci-domain = <1>;
 
 		qcom,pcie-phy-ver = <2113>;
-		qcom,use-19p2mhz-aux-clk;
+		qcom,aux-clk-freq = <20>; /* 19.2 MHz */
 
 		qcom,smmu-sid-base = <0x1c80>;
 
@@ -784,7 +784,7 @@
 		linux,pci-domain = <2>;
 
 		qcom,pcie-phy-ver = <2105>;
-		qcom,use-19p2mhz-aux-clk;
+		qcom,aux-clk-freq = <20>; /* 19.2 MHz */
 
 		qcom,smmu-sid-base = <0x1d00>;
 
@@ -1222,7 +1222,7 @@
 		linux,pci-domain = <3>;
 
 		qcom,pcie-phy-ver = <2105>;
-		qcom,use-19p2mhz-aux-clk;
+		qcom,aux-clk-freq = <20>; /* 19.2 MHz */
 
 		qcom,smmu-sid-base = <0x1e00>;
 
