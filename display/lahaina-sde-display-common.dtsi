@@ -15,6 +15,7 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd-cphy.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-video.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd.dtsi"
+#include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
 #include "dsi-panel-ext-bridge-1080p.dtsi"
 #include "dsi-panel-sim-cmd.dtsi"
@@ -268,6 +269,29 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 1e 17 04
 				19 03 02 04 00 00 00];
 			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_60hz_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+	qcom,dsi-dyn-clk-enable;
+	qcom,dsi-dyn-clk-list = <327096544 325733641 324370739>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1e 1e 04
+				04 03 02 04 00 10 14];
+			qcom,display-topology = <1 1 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};
