@@ -1013,7 +1013,7 @@
 
 		qcom,smp2p_map_ipa_1_in {
 			compatible = "qcom,smp2p-map-ipa-1-in";
-			interrupts-extended = <&smp2p_ipa_1_in 0 0>;
+			interrupts-extended = <&smp2p_ipa_1_in 0 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ipa-smp2p-in";
 		};
 	};
