@@ -2664,11 +2664,13 @@ int smblib_get_prop_batt_charge_done(struct smb_charger *chg,
 
 	/*	if charge is done, clear CHG_AWAKE_VOTER */
 	if (val->intval == 1) {
+#if 0
 		/*disable FFC when charge done*/
 		if (chg->support_ffc) {
 			if (smblib_get_fastcharge_mode(chg) == 1)
 				rc = smblib_set_fastcharge_mode(chg, false);
 		}
+#endif
 		vote(chg->awake_votable, CHG_AWAKE_VOTER, false, 0);
 	}
 
@@ -7457,6 +7459,7 @@ static void typec_src_removal(struct smb_charger *chg)
 	if (chg->use_extcon)
 		smblib_notify_device_mode(chg, false);
 
+#if 0
 	if (chg->support_ffc) {
 		if (smblib_get_fastcharge_mode(chg) == 1)
 			smblib_set_fastcharge_mode(chg, false);
@@ -7464,6 +7467,7 @@ static void typec_src_removal(struct smb_charger *chg)
 		vote(chg->fv_votable, NON_FFC_VFLOAT_VOTER,
 				true, NON_FFC_VFLOAT_UV);
 	}
+#endif
 
 	chg->typec_legacy = false;
 	chg->detect_low_power_qc3_charger = false;
