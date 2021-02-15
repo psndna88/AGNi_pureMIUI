@@ -1304,6 +1304,15 @@
 		reg = <0x1468F720 0x2000>;
 	};
 
+	qcom_rng: qrng@793000 {
+		compatible = "qcom,msm-rng";
+		reg = <0x793000 0x1000>;
+		qcom,no-qrng-config;
+		interconnect-names = "data_path";
+		interconnects = <&mem_noc MASTER_APPSS_PROC &system_noc SLAVE_PRNG>;
+		qcom,no-clock-support;
+	};
+
 	thermal_zones: thermal-zones {
 	};
 
