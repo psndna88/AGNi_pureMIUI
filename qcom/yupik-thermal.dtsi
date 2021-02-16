@@ -1243,12 +1243,13 @@
 		cooling-maps {
 			cdsp-cdev {
 				trip = <&nspss0_trip>;
-				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+				cooling-device = <&cdsp_sw (THERMAL_MAX_LIMIT-2)
+							(THERMAL_MAX_LIMIT-2)>;
 			};
 
 			gpu_cdev {
 				trip = <&nspss0_trip>;
+				/* throttle to 315000000Hz */
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
@@ -1276,12 +1277,13 @@
 		cooling-maps {
 			cdsp-cdev {
 				trip = <&nspss1_trip>;
-				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+				cooling-device = <&cdsp_sw (THERMAL_MAX_LIMIT-2)
+							(THERMAL_MAX_LIMIT-2)>;
 			};
 
 			gpu_cdev {
 				trip = <&nspss1_trip>;
+				/* throttle to 315000000Hz */
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
 							THERMAL_MAX_LIMIT>;
 			};
