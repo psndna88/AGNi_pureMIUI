@@ -14,7 +14,7 @@ Properties:
 	Definition: must be "qcom,sdm845-llcc" or "qcom,lahaina-llcc"
 	            or "qcom,shima-llcc" or "qcom,sdxlemur-llcc"
 	            or "qcom,yupik-llcc" or "qcom,sm8150-llcc"
-		    or "qcom,sdmshrike-llcc"
+		    or "qcom,sdmshrike-llcc" or "qcom,sm6150-llcc"
 		    "qcom,llcc-v2" must be appended for V2 hardware.
 
 - reg:
