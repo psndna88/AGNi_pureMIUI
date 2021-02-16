@@ -45,6 +45,21 @@
 
 	};
 
+	realtek,rtl8125@pcie0_rp {
+		reg = <0 0 0 0 0>;
+
+		/* ipa shares this group with rtl */
+		qcom,iommu-group = <&ipa_eth_group1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pci-ids =
+			"10ec:8125",
+			"10ec:3000";
+
+	};
+
 	pcie0_generic_ep: pcie0_generic_ep {
 		reg = <0 0 0 0 0>;
 		qcom,iommu-group = <&pcie0_generic_ep_iommu_group>;

@@ -1249,7 +1249,8 @@
 		ipa_smmu_eth: ipa_smmu_eth {
 			compatible = "qcom,ipa-smmu-eth-cb";
 			iommus = <&apps_smmu 0x5E3 0x0>;
-			qcom,iommu-dma = "atomic";
+			qcom,shared-cb;
+			qcom,iommu-group = <&ipa_eth_group1>;
 		};
 
 		ipa_smmu_eth1: ipa_smmu_eth1 {
