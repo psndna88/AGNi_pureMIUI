@@ -26,6 +26,8 @@
 			"ANCLeft Headset Mic", "MIC BIAS2",
 			"AMIC5", "Handset Mic",
 			"Handset Mic", "MIC BIAS3",
+			"DMIC0", "Digital Mic0",
+			"DMIC0", "MIC BIAS1",
 			"DMIC1", "Digital Mic1",
 			"DMIC1", "MIC BIAS1",
 			"DMIC2", "Digital Mic2",
