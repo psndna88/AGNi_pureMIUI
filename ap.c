@@ -23,6 +23,7 @@
 #include <ifaddrs.h>
 #include <net/if_dl.h>
 #endif /* __QNXNTO__ */
+#include <net/if.h>
 #include "wpa_ctrl.h"
 #include "wpa_helpers.h"
 #ifdef ANDROID
@@ -7833,6 +7834,124 @@ static void find_ap_ampdu_exp_and_max_mpdu_len(struct sigma_dut *dut)
 }
 
 
+static int ap_create_or_remove_interface(struct sigma_dut *dut,
+					 const char *new_iface,
+					 bool create_iface)
+{
+#ifdef NL80211_SUPPORT
+	const char *ifname = "wlan0";
+	int ret = -1;
+	struct nl_msg *msg = NULL;
+	struct nl_cb *cb = NULL;
+	struct nl_cb *s_cb;
+	struct nl_sock *nl_sock = NULL;
+	int nl80211_id;
+	enum nl80211_iftype type = NL80211_IFTYPE_AP;
+
+	/*  Allocate a netlink socket */
+	s_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!s_cb) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to allocate netlink socket");
+		goto nla_put_failure;
+	}
+
+	nl_sock = nl_socket_alloc_cb(s_cb);
+	if (!nl_sock) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Netlink socket allocation failure");
+		goto nla_put_failure;
+	}
+
+	/* Connect to generic netlink socket */
+	if (genl_connect(nl_sock)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Netlink socket connection failure");
+		goto nla_put_failure;
+	}
+
+	nl80211_id = genl_ctrl_resolve(nl_sock, "nl80211");
+	if (nl80211_id < 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"nl80211 generic netlink not found");
+		goto nla_put_failure;
+	}
+
+	msg = nlmsg_alloc();
+	if (!msg) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to allocate netlink message");
+		goto nla_put_failure;
+	}
+
+	cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!cb) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to allocate netlink callback");
+		goto nla_put_failure;
+	}
+
+	if (create_iface) {
+		/* Issue NL80211_CMD_NEW_INTERFACE */
+		genlmsg_put(msg, 0, 0, nl80211_id, 0, 0,
+			    NL80211_CMD_NEW_INTERFACE, 0);
+		nla_put_u32(msg, NL80211_ATTR_IFINDEX,
+			    if_nametoindex(ifname));
+		NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, new_iface);
+		nla_put_u32(msg, NL80211_ATTR_IFTYPE, type);
+	} else {
+		genlmsg_put(msg, 0, 0, nl80211_id, 0, 0,
+			    NL80211_CMD_DEL_INTERFACE, 0);
+		nla_put_u32(msg, NL80211_ATTR_IFINDEX,
+			    if_nametoindex(new_iface));
+	}
+
+	ret = nl_send_auto_complete(nl_sock, msg);
+	if (ret < 0)
+		goto nla_put_failure;
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "%s interface %s - Ok",
+			create_iface ? "Created" : "Removed", new_iface);
+
+nla_put_failure:
+	if (nl_sock)
+		nl_socket_free(nl_sock);
+	if (s_cb)
+		nl_cb_put(s_cb);
+	if (msg)
+		nlmsg_free(msg);
+	if (cb)
+		nl_cb_put(cb);
+	return ret;
+#else /* NL80211_SUPPORT */
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static void set_second_ap_security_conf(FILE *file, struct sigma_dut *dut)
+{
+	const char *key_mgmt;
+
+	switch (dut->ap_tag_key_mgmt[0]) {
+	case AP2_OPEN:
+		if (dut->ap_cipher == AP_WEP)
+			fprintf(file, "wep_key0=%s\n", dut->ap_wepkey);
+		break;
+	case AP2_WPA2_PSK:
+		fprintf(file, "wpa=2\n");
+		key_mgmt = "WPA-PSK";
+		fprintf(file, "wpa_key_mgmt=%s\n", key_mgmt);
+		fprintf(file, "wpa_pairwise=%s\n",
+			hostapd_cipher_name(dut->ap_cipher));
+		fprintf(file, "wpa_passphrase=%s\n", dut->ap_tag_passphrase[0]);
+		break;
+	default:
+		fprintf(file, "wpa=1\n");
+		break;
+	}
+}
+
+
 enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_conn *conn,
 					   struct sigma_cmd *cmd)
@@ -7843,8 +7962,10 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	char buf[500];
 	char path[100];
 	char ap_conf_path[100];
+	char ap_conf_path_1[100];
 	enum driver_type drv;
 	const char *key_mgmt;
+	int conf_counter = 0;
 #ifdef ANDROID
 	struct group *gr;
 #endif /* ANDROID */
@@ -7880,6 +8001,24 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 	if (drv == DRIVER_OPENWRT)
 		return cmd_owrt_ap_config_commit(dut, conn, cmd);
 
+write_conf:
+	if (conf_counter) {
+		const char *f1, *f2;
+
+		f1 = concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf",
+					 ap_conf_path_1,
+					 sizeof(ap_conf_path_1));
+		f2 = concat_sigma_tmpdir(dut, "/sigma_dut-ap_0.conf",
+					 ap_conf_path, sizeof(ap_conf_path));
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "f1 %s, f2 %s", f1, f2);
+		if (run_system_wrapper(dut, "cp %s %s", f1, f2) != 0)
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Failed to copy %s to %s", f1, f2);
+	} else {
+		ap_conf_path_1[0] = '\0';
+	}
+
 	concat_sigma_tmpdir(dut, "/sigma_dut-ap.conf", ap_conf_path,
 			    sizeof(ap_conf_path));
 	f = fopen(ap_conf_path, "w");
@@ -7907,10 +8046,29 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		fprintf(f, "hw_mode=ad\n");
 		break;
 	case AP_11ax:
-		if (dut->use_5g)
-			fprintf(f, "hw_mode=a\n");
-		else
+		/* In the case of dual band AP, both 2.4 GHz and 5 GHz hw_mode
+		 * should be set. So check the channel parameter of 2.4 GHz and
+		 * 5 GHz respectively, and then set hw_mode; other conditions
+		 * remain. */
+		if (dut->use_5g) {
+			if (dut->ap_is_dual) {
+				int chan;
+
+				if (conf_counter)
+					chan = dut->ap_tag_channel[0];
+				else
+					chan = dut->ap_channel;
+
+				if (chan >= 36 && chan <= 171)
+					fprintf(f, "hw_mode=a\n");
+				else
+					fprintf(f, "hw_mode=g\n");
+			} else {
+				fprintf(f, "hw_mode=a\n");
+			}
+		} else {
 			fprintf(f, "hw_mode=g\n");
+		}
 		break;
 	default:
 		fclose(f);
@@ -8018,20 +8176,45 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 		}
 	}
 
-	fprintf(f, "interface=%s\n", ifname);
+	if (conf_counter == 1) {
+		char ifname2[50];
+
+		snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
+		if (if_nametoindex(ifname2) == 0) {
+			if (ap_create_or_remove_interface(dut, ifname2, true)
+			    >= 0) {
+				fprintf(f, "interface=%s\n", ifname2);
+			} else {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to add the second interface");
+				return -2;
+			}
+		} else {
+			fprintf(f, "interface=%s\n", ifname2);
+		}
+	} else {
+		fprintf(f, "interface=%s\n", ifname);
+	}
 	if (dut->bridge)
 		fprintf(f, "bridge=%s\n", dut->bridge);
-	fprintf(f, "channel=%d\n", dut->ap_channel);
+
+	if (dut->ap_is_dual && conf_counter == 1)
+		fprintf(f, "channel=%d\n", dut->ap_tag_channel[0]);
+	else
+		fprintf(f, "channel=%d\n", dut->ap_channel);
 
 	if (sigma_hapd_ctrl)
 		fprintf(f, "ctrl_interface=%s\n", sigma_hapd_ctrl);
 	else
 		fprintf(f, "ctrl_interface=/var/run/hostapd\n");
 
-	if (dut->ap_ssid[0])
+	if (dut->ap_ssid[0] && conf_counter == 0)
 		fprintf(f, "ssid=%s\n", dut->ap_ssid);
+	else if (dut->ap_tag_ssid[0][0] && conf_counter == 1)
+		fprintf(f, "ssid=%s\n", dut->ap_tag_ssid[0]);
 	else
 		fprintf(f, "ssid=QCA AP OOB\n");
+
 	if (dut->ap_bcnint)
 		fprintf(f, "beacon_int=%d\n", dut->ap_bcnint);
 	if (dut->ap_start_disabled)
@@ -8104,6 +8287,11 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 			fprintf(f, "auth_server_shared_secret=%s\n",
 				dut->ap_radius_password);
 		}
+		goto skip_key_mgmt;
+	}
+
+	if (dut->ap_is_dual && conf_counter == 1) {
+		set_second_ap_security_conf(f, dut);
 		goto skip_key_mgmt;
 	}
 
@@ -8783,6 +8971,12 @@ skip_key_mgmt:
 			dut->dev_role == DEVROLE_STA_CFON ? 2 : 1);
 	}
 	fclose(f);
+
+	if (dut->ap_is_dual && conf_counter == 0) {
+		conf_counter++;
+		goto write_conf;
+	}
+
 	if (dut->use_hostapd_pid_file)
 		kill_hostapd_process_pid(dut);
 #ifdef __QNXNTO__
@@ -8817,8 +9011,17 @@ skip_key_mgmt:
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"Error changing permissions");
 
+	if (dut->ap_is_dual && ap_conf_path_1[0] &&
+	    chmod(ap_conf_path_1, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Error changing permissions");
+
 	gr = getgrnam("wifi");
 	if (!gr || chown(ap_conf_path, -1, gr->gr_gid) < 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
+
+	if (dut->ap_is_dual && ap_conf_path_1[0] &&
+	    (!gr || chown(ap_conf_path_1, -1, gr->gr_gid) < 0))
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Error changing groupid");
 #endif /* ANDROID */
 
@@ -8860,7 +9063,7 @@ skip_key_mgmt:
 		snprintf(path, sizeof(path), "%shostapd",
 			 file_exists("hostapd") ? "./" : "");
 		snprintf(buf, sizeof(buf),
-			 "%s -B%s%s%s%s%s%s %s/sigma_dut-ap.conf",
+			 "%s -B%s%s%s%s%s%s %s/sigma_dut-ap.conf %s%s",
 			 dut->hostapd_bin ? dut->hostapd_bin : path,
 			 dut->hostapd_debug_log ? " -dddKt" : "",
 			 (dut->hostapd_debug_log && dut->hostapd_debug_log[0]) ?
@@ -8871,7 +9074,9 @@ skip_key_mgmt:
 			 "",
 			 dut->use_hostapd_pid_file ?
 			 " -P " SIGMA_DUT_HOSTAPD_PID_FILE : "",
-			 dut->sigma_tmpdir);
+			 dut->sigma_tmpdir,
+			 dut->ap_is_dual ? dut->sigma_tmpdir : "",
+			 dut->ap_is_dual ? "/sigma_dut-ap_0.conf" : "");
 	}
 
 	sigma_dut_print(dut, DUT_MSG_DEBUG, "hostapd command: %s", buf);
@@ -8920,6 +9125,9 @@ skip_key_mgmt:
 			if (dut->bridge)
 				ifname_ptr = dut->bridge;
 		}
+
+		if (dut->ap_is_dual && dut->bridge)
+			ifname_ptr = dut->bridge;
 
 		sigma_dut_print(dut, DUT_MSG_INFO,
 				"setting ip addr %s mask %s ifname %s",
@@ -9054,6 +9262,16 @@ skip_key_mgmt:
 
 	if (drv == DRIVER_MAC80211 && dut->program == PROGRAM_HE)
 		fwtest_set_he_params(dut, ifname);
+
+	if (dut->bridge && dut->ap_is_dual) {
+		if (run_system_wrapper(dut, "ifconfig %s up", dut->bridge)
+		    != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set bridge interface up");
+			return -1;
+		}
+		sigma_dut_print(dut, DUT_MSG_INFO, "Started bridge");
+	}
 
 	dut->hostapd_running = 1;
 	return 1;
@@ -9420,6 +9638,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	enum driver_type drv;
 	char buf[128];
 	int i;
+	const char *ifname;
+	char ifname2[50];
 
 	for (i = 0; i < MAX_WLAN_TAGS - 1; i++) {
 		/*
@@ -9914,6 +10134,11 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	    system("iw dev sigmadut del") != 0)
 		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to remove "
 				"monitor interface");
+
+	ifname = get_hostapd_ifname(dut);
+	snprintf(ifname2, sizeof(ifname2), "%s_1", ifname);
+	if (if_nametoindex(ifname2) > 0)
+		ap_create_or_remove_interface(dut, ifname2, 0);
 
 	return 1;
 }
