@@ -24,6 +24,7 @@ Main node
 		- "elbi"	External local bus interface registers
 		- "iatu"	Internal translation unit registers
 		- "config"	PCIe device configuration space
+		- "mhi" (opt)	PCIe MHI registers
 		- "tcsr" (opt)	PCIe clock scheme register
 		- "rumi" (opt)	PCIe RUMI register
 
