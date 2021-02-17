@@ -1276,3 +1276,155 @@ cm_roam_state_change(struct wlan_objmgr_pdev *pdev,
 
 	return status;
 }
+
+uint32_t cm_crypto_cipher_wmi_cipher(int32_t cipherset)
+{
+	if (!cipherset || cipherset < 0)
+		return WMI_CIPHER_NONE;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_GCM) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_GCM_256))
+		return WMI_CIPHER_AES_GCM;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_CCM) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_OCB) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_CCM_256))
+		return WMI_CIPHER_AES_CCM;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_TKIP))
+		return WMI_CIPHER_TKIP;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_CMAC) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_CMAC_256))
+		return WMI_CIPHER_AES_CMAC;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_WAPI_GCM4) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_WAPI_SMS4))
+		return WMI_CIPHER_WAPI;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_GMAC) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_AES_GMAC_256))
+		return WMI_CIPHER_AES_GMAC;
+
+	if (QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_WEP) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_WEP_40) ||
+	    QDF_HAS_PARAM(cipherset, WLAN_CRYPTO_CIPHER_WEP_104))
+		return WMI_CIPHER_WEP;
+
+	return WMI_CIPHER_NONE;
+}
+
+static uint32_t cm_get_rsn_wmi_auth_type(int32_t akm)
+{
+	/* Try the more preferred ones first. */
+	if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384))
+		return WMI_AUTH_FT_RSNA_FILS_SHA384;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA256))
+		return WMI_AUTH_FT_RSNA_FILS_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA384))
+		return WMI_AUTH_RSNA_FILS_SHA384;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256))
+		return WMI_AUTH_RSNA_FILS_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
+		return WMI_AUTH_FT_RSNA_SAE;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE))
+		return WMI_AUTH_WPA3_SAE;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_OWE))
+		return WMI_AUTH_WPA3_OWE;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X))
+		return WMI_AUTH_FT_RSNA;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK))
+		return WMI_AUTH_FT_RSNA_PSK;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X))
+		return WMI_AUTH_RSNA;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK))
+		return WMI_AUTH_RSNA_PSK;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_CCKM))
+		return WMI_AUTH_CCKM_RSNA;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256))
+		return WMI_AUTH_RSNA_PSK_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256))
+		return WMI_AUTH_RSNA_8021X_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B))
+		return WMI_AUTH_RSNA_SUITE_B_8021X_SHA256;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192))
+		return WMI_AUTH_RSNA_SUITE_B_8021X_SHA384;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384))
+		return WMI_AUTH_FT_RSNA_SUITE_B_8021X_SHA384;
+	else
+		return WMI_AUTH_NONE;
+}
+
+static uint32_t cm_get_wpa_wmi_auth_type(int32_t akm)
+{
+	/* Try the more preferred ones first. */
+	if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X))
+		return WMI_AUTH_WPA;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK))
+		return WMI_AUTH_WPA_PSK;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_CCKM))
+		return WMI_AUTH_CCKM_WPA;
+	else
+		return WMI_AUTH_NONE;
+}
+
+static uint32_t cm_get_wapi_wmi_auth_type(int32_t akm)
+{
+	/* Try the more preferred ones first. */
+	if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_WAPI_CERT))
+		return WMI_AUTH_WAPI;
+	else if (QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_WAPI_PSK))
+		return WMI_AUTH_WAPI_PSK;
+	else
+		return WMI_AUTH_NONE;
+}
+
+uint32_t cm_crypto_authmode_to_wmi_authmode(int32_t authmodeset,
+					    int32_t akm, int32_t ucastcipherset)
+{
+	if (!authmodeset || authmodeset < 0)
+		return WMI_AUTH_OPEN;
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_OPEN))
+		return WMI_AUTH_OPEN;
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_AUTO) ||
+	    QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_NONE)) {
+		if ((QDF_HAS_PARAM(ucastcipherset, WLAN_CRYPTO_CIPHER_WEP) ||
+		     QDF_HAS_PARAM(ucastcipherset, WLAN_CRYPTO_CIPHER_WEP_40) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_WEP_104) ||
+		     QDF_HAS_PARAM(ucastcipherset, WLAN_CRYPTO_CIPHER_TKIP) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_AES_GCM) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_AES_GCM_256) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_AES_CCM) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_AES_OCB) ||
+		     QDF_HAS_PARAM(ucastcipherset,
+				   WLAN_CRYPTO_CIPHER_AES_CCM_256)))
+			return WMI_AUTH_OPEN;
+		else
+			return WMI_AUTH_NONE;
+	}
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_SHARED))
+		return WMI_AUTH_SHARED;
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_8021X) ||
+	    QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_RSNA) ||
+	    QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_CCKM) ||
+	    QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_SAE) ||
+	    QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_FILS_SK))
+		return cm_get_rsn_wmi_auth_type(akm);
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_WPA))
+		return cm_get_wpa_wmi_auth_type(akm);
+
+	if (QDF_HAS_PARAM(authmodeset, WLAN_CRYPTO_AUTH_WAPI))
+		return cm_get_wapi_wmi_auth_type(akm);
+
+	return WMI_AUTH_OPEN;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -77,6 +77,7 @@
 #include <qdf_hang_event_notifier.h>
 #include <qdf_notifier.h>
 #include "wlan_pkt_capture_ucfg_api.h"
+#include "wlan_crypto_def_i.h"
 
 struct pe_hang_event_fixed_param {
 	uint16_t tlv_header;
@@ -1789,6 +1790,7 @@ static void pe_set_rmf_caps(struct mac_context *mac_ctx,
 	tDot11fReAssocRequest *assoc_req;
 	uint32_t status;
 	tSirMacRsnInfo rsn_ie;
+	uint32_t value = WPA_TYPE_OUI;
 
 	assoc_body = (uint8_t *)roam_synch + roam_synch->reassoc_req_offset +
 			sizeof(tSirMacMgmtHdr);
@@ -1813,16 +1815,31 @@ static void pe_set_rmf_caps(struct mac_context *mac_ctx,
 			 status, len);
 	}
 	ft_session->limRmfEnabled = false;
-	if (!assoc_req->RSNOpaque.present) {
+	if (!assoc_req->RSNOpaque.present && !assoc_req->WPAOpaque.present) {
 		qdf_mem_free(assoc_req);
 		return;
 	}
-	rsn_ie.info[0] = WLAN_ELEMID_RSN;
-	rsn_ie.info[1] = assoc_req->RSNOpaque.num_data;
 
-	rsn_ie.length = assoc_req->RSNOpaque.num_data + 2;
-	qdf_mem_copy(&rsn_ie.info[2], assoc_req->RSNOpaque.data,
-		     assoc_req->RSNOpaque.num_data);
+	if (assoc_req->RSNOpaque.present) {
+		rsn_ie.info[0] = WLAN_ELEMID_RSN;
+		rsn_ie.info[1] = assoc_req->RSNOpaque.num_data;
+
+		rsn_ie.length = assoc_req->RSNOpaque.num_data + 2;
+		qdf_mem_copy(&rsn_ie.info[2], assoc_req->RSNOpaque.data,
+			     assoc_req->RSNOpaque.num_data);
+	} else if (assoc_req->WPAOpaque.present) {
+		rsn_ie.info[0] = WLAN_ELEMID_VENDOR;
+		rsn_ie.info[1] = WLAN_OUI_SIZE + assoc_req->WPAOpaque.num_data;
+
+		rsn_ie.length = WLAN_OUI_SIZE +
+				assoc_req->WPAOpaque.num_data + 2;
+
+		qdf_mem_copy(&rsn_ie.info[2], (uint8_t *)&value, WLAN_OUI_SIZE);
+		qdf_mem_copy(&rsn_ie.info[WLAN_OUI_SIZE + 2],
+			     assoc_req->WPAOpaque.data,
+			     assoc_req->WPAOpaque.num_data);
+	}
+
 	qdf_mem_free(assoc_req);
 	wlan_set_vdev_crypto_prarams_from_ie(ft_session->vdev, rsn_ie.info,
 					     rsn_ie.length);

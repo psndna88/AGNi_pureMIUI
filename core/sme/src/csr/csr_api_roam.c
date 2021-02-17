@@ -19763,6 +19763,38 @@ csr_cm_roam_scan_offload_scan_period(struct mac_context *mac_ctx,
 			roam_info->cfgParams.full_roam_scan_period;
 }
 
+static void
+csr_cm_roam_fill_crypto_params(struct mac_context *mac_ctx,
+			       struct csr_roam_session *session,
+			       struct ap_profile *profile)
+{
+	struct wlan_objmgr_vdev *vdev;
+	int32_t uccipher, authmode, mccipher, akm;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+						    session->vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev) {
+		sme_err("Invalid vdev");
+		return;
+	}
+
+	akm = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	authmode = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_AUTH_MODE);
+	mccipher = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_MCAST_CIPHER);
+	uccipher = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_UCAST_CIPHER);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+
+	profile->rsn_authmode =
+		cm_crypto_authmode_to_wmi_authmode(authmode, akm, uccipher);
+
+	/* Pairwise cipher suite */
+	profile->rsn_ucastcipherset = cm_crypto_cipher_wmi_cipher(uccipher);
+
+	/* Group cipher suite */
+	profile->rsn_mcastcipherset = cm_crypto_cipher_wmi_cipher(mccipher);
+}
+
 /**
  * csr_cm_roam_scan_offload_ap_profile() - set roam ap profile parameters
  * @mac_ctx: global mac ctx
@@ -19789,19 +19821,8 @@ csr_cm_roam_scan_offload_ap_profile(struct mac_context *mac_ctx,
 	profile->ssid.length = session->connectedProfile.SSID.length;
 	qdf_mem_copy(profile->ssid.ssid, session->connectedProfile.SSID.ssId,
 		     profile->ssid.length);
-	profile->rsn_authmode =
-		e_csr_auth_type_to_rsn_authmode(
-			session->connectedProfile.AuthType,
-			session->connectedProfile.EncryptionType);
-	/* Pairwise cipher suite */
-	profile->rsn_ucastcipherset =
-		e_csr_encryption_type_to_rsn_cipherset(
-			session->connectedProfile.EncryptionType);
-	/* Group cipher suite */
-	profile->rsn_mcastcipherset =
-		e_csr_encryption_type_to_rsn_cipherset(
-			session->connectedProfile.mcEncryptionType);
-	/* Group management cipher suite */
+
+	csr_cm_roam_fill_crypto_params(mac_ctx, session, profile);
 
 	profile->rssi_threshold = roam_info->cfgParams.roam_rssi_diff;
 	profile->bg_rssi_threshold =
