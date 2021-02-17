@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -274,6 +274,7 @@ struct sde_kms {
 	int irq_num;	/* mdss irq number */
 	bool irq_enabled;
 
+	int recovery_mask;
 	struct sde_core_perf perf;
 
 	/* saved atomic state during system suspend */
@@ -754,4 +755,14 @@ int sde_kms_vm_trusted_prepare_commit(struct sde_kms *sde_kms,
  */
 int sde_kms_vm_primary_prepare_commit(struct sde_kms *sde_kms,
 					   struct drm_atomic_state *state);
+
+/**
+ * sde_kms_update_recovery_mask - function to update recovery ctl mask
+ *				  during error cases
+ * @sde_kms: pointer to sde_kms
+ * @crtc: pointer to drm_crtc
+ * @flag: to determine whether to clear/set recovery mask
+ */
+void sde_kms_update_recovery_mask(struct sde_kms *sde_kms,
+					struct drm_crtc *crtc, bool flag);
 #endif /* __sde_kms_H__ */
