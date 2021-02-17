@@ -120,11 +120,21 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo
+dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo \
+	blair-mtp-overlay.dtbo \
+	blair-cdp-overlay.dtbo \
+	blair-atp-overlay.dtbo
 
 blair-rumi-overlay.dtbo-base := blair.dtb
+blair-mtp-overlay.dtbo-base := blair.dtb
+blair-cdp-overlay.dtbo-base := blair.dtb
+blair-atp-overlay.dtbo-base := blair.dtb
+
 else
-dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb
+dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb \
+	blair-mtp.dtb \
+	blair-cdp.dtb \
+	blair-atp.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
