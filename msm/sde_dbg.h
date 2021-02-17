@@ -43,6 +43,7 @@ enum sde_dbg_evtlog_flag {
 enum sde_dbg_dump_flag {
 	SDE_DBG_DUMP_IN_LOG = BIT(0),
 	SDE_DBG_DUMP_IN_MEM = BIT(1),
+	SDE_DBG_DUMP_IN_LOG_LIMITED = BIT(2),
 };
 
 enum sde_dbg_dump_context {
