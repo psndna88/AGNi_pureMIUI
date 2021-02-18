@@ -44,7 +44,7 @@
 		qcom,no-nap;
 
 		qcom,min-access-length = <32>;
-		qcom,ubwc-mode = <4>;
+		qcom,ubwc-mode = <3>;
 
 		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
 
