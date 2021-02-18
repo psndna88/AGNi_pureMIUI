@@ -17,6 +17,8 @@
 #include "cam_ife_hw_mgr.h"
 #include "cam_debug_util.h"
 #include "cam_cpas_api.h"
+#include <dt-bindings/msm/msm-camera.h>
+
 
 static const char drv_name[] = "vfe";
 
@@ -680,6 +682,15 @@ int cam_vfe_core_init(struct cam_vfe_hw_core_info  *core_info,
 	if (!soc_private) {
 		CAM_ERR(CAM_ISP, "Invalid soc_private");
 		return -ENODEV;
+	}
+
+	if (!cam_cpas_is_feature_supported(CAM_CPAS_ISP_FUSE,
+		(1 << hw_intf->hw_idx), 0) ||
+		!cam_cpas_is_feature_supported(CAM_CPAS_ISP_LITE_FUSE,
+		(1 << hw_intf->hw_idx), 0)) {
+		CAM_DBG(CAM_ISP, "IFE:%d is not supported",
+			hw_intf->hw_idx);
+		return -ENXIO;
 	}
 
 	rc = cam_irq_controller_init(drv_name,
