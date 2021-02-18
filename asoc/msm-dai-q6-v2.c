@@ -4325,6 +4325,9 @@ static const struct snd_kcontrol_new afe_dec_config_controls[] = {
 	SOC_ENUM_EXT("AFE Output Bit Format", afe_bit_format_enum[0],
 		     msm_dai_q6_afe_output_bit_format_get,
 		     msm_dai_q6_afe_output_bit_format_put),
+	SOC_ENUM_EXT("AFE Output Channels SLIM7", afe_chs_enum[0],
+		     msm_dai_q6_afe_output_channel_get,
+		     msm_dai_q6_afe_output_channel_put),
 };
 
 static const struct snd_kcontrol_new afe_ttp_config_controls[] = {
@@ -4569,6 +4572,9 @@ static int msm_dai_q6_dai_probe(struct snd_soc_dai *dai)
 	case SLIMBUS_7_TX:
 		rc = snd_ctl_add(dai->component->card->snd_card,
 				 snd_ctl_new1(&afe_dec_config_controls[0],
+				 dai_data));
+		rc = snd_ctl_add(dai->component->card->snd_card,
+				 snd_ctl_new1(&afe_dec_config_controls[4],
 				 dai_data));
 		break;
 	case SLIMBUS_9_TX:

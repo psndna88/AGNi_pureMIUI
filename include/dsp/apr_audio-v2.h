@@ -4672,16 +4672,18 @@ struct afe_lc3_dec_cfg_t {
 	struct afe_lc3_cfg_t FromAir;
 	uint32_t decoder_output_channel;
 	uint32_t stream_map_size;
-	struct afe_stream_map_t streamMapIn[16];
+	struct afe_stream_map_t streamMapIn[2];
 } __packed;
 
 struct avs_cop_v2_param_id_stream_info_t {
 	uint32_t stream_map_size;
-	struct afe_lc3_stream_map_t streamMap[16];
+	struct afe_lc3_stream_map_t streamMap[2];
 } __packed;
 
 struct afe_lc3_dec_config_t {
+	struct afe_lc3_dec_cfg_t from_Air_cfg;
 	struct avs_cop_v2_param_id_stream_info_t streamMapToAir;
+	struct avs_cop_v2_param_id_stream_info_t streamMapFromAir;
 } __packed;
 
 struct afe_lc3_enc_config_t {

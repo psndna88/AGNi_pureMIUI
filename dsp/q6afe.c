@@ -446,7 +446,6 @@ static int q6afe_load_avcs_modules(int num_modules, u16 port_id,
 				if (format_id == ASM_MEDIA_FMT_LC3) {
 					pm[i]->payload->load_unload_info[0].id1 =
 					AVS_MODULE_ID_DEPACKETIZER_COP_V2;
-					goto load_unload;
 				}
 
 				pm[i]->payload->load_unload_info[1].module_type =
@@ -4981,6 +4980,7 @@ static int q6afe_send_dec_config(u16 port_id,
 	struct asm_aptx_ad_speech_mode_cfg_t speech_codec_init_param;
 	struct param_hdr_v3 param_hdr;
 	struct avs_cop_v2_param_id_stream_info_t lc3_enc_stream_info;
+	struct afe_lc3_dec_cfg_t lc3_dec_config_init;
 	int ret;
 	u32 dec_fmt;
 
@@ -4991,6 +4991,7 @@ static int q6afe_send_dec_config(u16 port_id,
 	memset(&matched_port_param, 0, sizeof(matched_port_param));
 	memset(&speech_codec_init_param, 0, sizeof(speech_codec_init_param));
 	memset(&lc3_enc_stream_info, 0, sizeof(lc3_enc_stream_info));
+	memset(&lc3_dec_config_init, 0, sizeof(lc3_dec_config_init));
 	memset(&param_hdr, 0, sizeof(param_hdr));
 
 	param_hdr.module_id = AFE_MODULE_ID_DECODER;
@@ -5176,6 +5177,55 @@ static int q6afe_send_dec_config(u16 port_id,
 	}
 
 	if (format == ASM_MEDIA_FMT_LC3) {
+		if (cfg->data.lc3_dec_config.dec_codec.from_Air_cfg
+			    .stream_map_size != 0) {
+			/* create LC3 deocder before sending init params */
+			pr_debug("%s: sending AFE_DECODER_PARAM_ID_DEC_MEDIA_FMT to DSP payload\n",
+				  __func__);
+			param_hdr.module_id = AFE_MODULE_ID_DECODER;
+			param_hdr.instance_id = INSTANCE_ID_0;
+			param_hdr.param_id = AFE_DECODER_PARAM_ID_DEC_FMT_ID;
+			param_hdr.param_size = sizeof(dec_fmt);
+			dec_fmt = format;
+			ret = q6afe_pack_and_set_param_in_band(port_id,
+							       q6audio_get_port_index(port_id),
+							       param_hdr, (u8 *) &dec_fmt);
+			if (ret) {
+				pr_err("%s: AFE_DECODER_PARAM_ID_DEC_MEDIA_FMT for port 0x%x failed %d\n",
+					__func__, port_id, ret);
+				goto exit;
+			}
+
+			pr_debug("%s: sending CAPI_V2_PARAM_LC3_DEC_MODULE_INIT to DSP\n",
+				__func__);
+			param_hdr.param_id = CAPI_V2_PARAM_LC3_DEC_MODULE_INIT;
+			param_hdr.param_size = sizeof(struct afe_lc3_dec_cfg_t);
+			lc3_dec_config_init =
+				cfg->data.lc3_dec_config.dec_codec.from_Air_cfg;
+			ret = q6afe_pack_and_set_param_in_band(
+				port_id, q6audio_get_port_index(port_id),
+				param_hdr, (u8 *)&lc3_dec_config_init);
+			if (ret) {
+				pr_err("%s: CAPI_V2_PARAM_LC3_DEC_MODULE_INIT for port 0x%x failed %d\n",
+				       __func__, port_id, ret);
+				goto exit;
+			}
+
+			pr_debug("%s: sending AVS_COP_V2_PARAM_ID_STREAM_INFO to DSP\n",
+				__func__);
+			param_hdr.param_id = AVS_COP_V2_PARAM_ID_STREAM_INFO;
+			param_hdr.param_size = sizeof(
+				struct avs_cop_v2_param_id_stream_info_t);
+			lc3_enc_stream_info = cfg->data.lc3_dec_config.dec_codec.streamMapFromAir;
+			ret = q6afe_pack_and_set_param_in_band(
+				port_id, q6audio_get_port_index(port_id),
+				param_hdr, (u8 *)&lc3_enc_stream_info);
+			if (ret) {
+				pr_err("%s: AVS_COP_V2_PARAM_ID_STREAM_INFO for port 0x%x failed %d\n",
+				       __func__, port_id, ret);
+				goto exit;
+			}
+		}
 		pr_debug("%s: sending AVS_COP_V2_PARAM_ID_STREAM_INFO to DSP\n",
 			 __func__);
 		param_hdr.module_id = AFE_MODULE_ID_DECODER;
