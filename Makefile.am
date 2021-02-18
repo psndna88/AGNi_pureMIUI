@@ -1,15 +1,9 @@
 AUDIO_ROOT=$(PWD)
 UAPI_OUT=$(PWD)
-HEADER_INSTALL_DIR=$(KERNEL_SRC)/scripts
-KERNEL_BINARY_DIR=$(KERNEL_SRC)/../kernel-build-artifacts
 
 KBUILD_OPTIONS := AUDIO_ROOT=$(PWD)
 KBUILD_OPTIONS += MODNAME=audio
 KBUILD_OPTIONS += UAPI_OUT=$(PWD)
-
-AUDIO_KERNEL_HEADERS_PATH1 =  $(shell ls ./include/uapi/audio/linux/*.h)
-AUDIO_KERNEL_HEADERS_PATH2 =  $(shell ls ./include/uapi/audio/linux/mfd/wcd9xxx/*.h)
-AUDIO_KERNEL_HEADERS_PATH3 =  $(shell ls ./include/uapi/audio/sound/*.h)
 
 ifeq ($(TARGET_SUPPORT),qcs40x)
 KBUILD_OPTIONS += CONFIG_ARCH_QCS405=y
@@ -57,10 +51,6 @@ KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=m
 endif
 endif
 
-define PROCESS_HEADERS
-	$(foreach name,$(1),$(shell cd $(KERNEL_BINARY_DIR) && $(KERNEL_SRC)/scripts/headers_install.sh $(2)$(name) $(3)$(name)))
-endef
-
 all:
 	$(shell rm -fr $(shell pwd)/soc/core.h)
 	$(shell ln -s $(KERNEL_SRC)/drivers/pinctrl/core.h $(shell pwd)/soc/core.h)
@@ -70,21 +60,6 @@ all:
 	$(shell ln -s $(KERNEL_SRC)/drivers/pinctrl/pinctrl-utils.h $(shell pwd)/soc/pinctrl-utils.h)
 	$(shell rm -fr $(shell pwd)/include/soc/qcom/secure_buffer.h)
 	$(shell ln -s $(KERNEL_SRC)/include/soc/qcom/secure_buffer.h $(shell pwd)/include/soc/qcom/secure_buffer.h)
-	$(shell mkdir $(shell pwd)/linux)
-	$(shell mkdir $(shell pwd)/sound)
-	$(shell mkdir $(shell pwd)/linux/mfd)
-	$(shell mkdir $(shell pwd)/linux/mfd/wcd9xxx)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/linux/*.h)), $(AUDIO_ROOT)/include/uapi/audio/linux/, $(UAPI_OUT)/linux/)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/linux/mfd/wcd9xxx/*.h)), $(AUDIO_ROOT)/include/uapi/audio/linux/mfd/wcd9xxx/, $(UAPI_OUT)/linux/mfd/wcd9xxx/)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/sound/*.h)), $(AUDIO_ROOT)/include/uapi/audio/sound/, $(UAPI_OUT)/sound/)
-	$(shell mkdir $(KERNEL_BINARY_DIR)/usr/include/audio)
-	$(shell mkdir $(KERNEL_BINARY_DIR)/usr/include/audio/sound)
-	$(shell mkdir $(KERNEL_BINARY_DIR)/usr/include/audio/linux)
-	$(shell mkdir $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd)
-	$(shell mkdir $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd/wcd9xxx)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/linux/*.h)), $(AUDIO_ROOT)/include/uapi/audio/linux/, $(KERNEL_BINARY_DIR)/usr/include/audio/linux/)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/linux/mfd/wcd9xxx/*.h)), $(AUDIO_ROOT)/include/uapi/audio/linux/mfd/wcd9xxx/, $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd/wcd9xxx/)
-	$(call PROCESS_HEADERS, $(notdir $(shell ls $(AUDIO_ROOT)/include/uapi/audio/sound/*.h)), $(AUDIO_ROOT)/include/uapi/audio/sound/, $(KERNEL_BINARY_DIR)/usr/include/audio/sound/)
 	$(MAKE) -C $(KERNEL_SRC) M=$(shell pwd) modules $(KBUILD_OPTIONS)
 
 modules_install:
