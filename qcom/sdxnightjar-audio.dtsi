@@ -41,8 +41,8 @@
 			"SpkrLeft IN", "SPK1 OUT";
 
 		qcom,tasha-mclk-clk-freq = <12288000>;
-		qcom,msm-mbhc-hphl-swh = <1>;
-		qcom,msm-mbhc-gnd-swh = <1>;
+		qcom,msm-mbhc-hphl-swh = <0>;
+		qcom,msm-mbhc-gnd-swh = <0>;
 		qcom,msm-mbhc-hs-mic-max-threshold-mv = <1700>;
 		qcom,msm-mbhc-hs-mic-min-threshold-mv = <50>;
 
