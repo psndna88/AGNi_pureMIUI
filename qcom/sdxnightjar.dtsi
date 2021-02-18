@@ -992,9 +992,9 @@
 		reg = <0x55>;
 		interrupt-parent = <&tlmm_pinmux>;
 		interrupts = <83 IRQ_TYPE_LEVEL_LOW>;
-		interrupts-extended = <&tlmm_pinmux 83 IRQ_TYPE_LEVEL_LOW>, <&pmd9650_gpios 5 0>;
+		interrupts-extended = <&tlmm_pinmux 83 IRQ_TYPE_LEVEL_LOW>, <&pmd9650_gpios 5 IRQ_TYPE_LEVEL_LOW>;
 		interrupt-names = "smb1351_chg_stat_irq","smb1351_usb_id_irq";
-		qcom,usb-id-gpio = <&pmd9650_gpios 5 0>;
+		qcom,usb-id-gpio = <&pmd9650_gpios 5 IRQ_TYPE_LEVEL_LOW>;
 		qcom,float-voltage-mv = <4200>;
 		qcom,charging-timeout = <1536>;
 		qcom,recharge-thresh-mv = <200>;
