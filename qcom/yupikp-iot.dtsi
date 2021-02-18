@@ -1,0 +1,7 @@
+#include "yupik-iot.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. YUPIKP-IOT";
+	compatible = "qcom,yupikp-iot";
+	qcom,msm-id = <498 0x10000>;
+};

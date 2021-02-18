@@ -62,6 +62,12 @@ SoCs:
 - YUPIKP
   compatible = "qcom,yupikp"
 
+- YUPIK-IOT
+  compatible = "qcom,yupik-iot"
+
+- YUPIKP-IOT
+  compatible = "qcom,yupikp-iot"
+
 - LITO
   compatible = "qcom,lito"
 
@@ -228,9 +234,13 @@ compatible = "qcom,yupik-rumi"
 compatible = "qcom,yupik-idp"
 compatible = "qcom,yupik-atp"
 compatible = "qcom,yupik-qrd"
+compatible = "qcom,yupik-iot-idp"
+compatible = "qcom,yupik-iot-qrd"
 compatible = "qcom,yupikp-idp"
 compatible = "qcom,yupikp-atp"
 compatible = "qcom,yupikp-qrd"
+compatible = "qcom,yupikp-iot-idp"
+compatible = "qcom,yupikp-iot-qrd"
 compatible = "qcom,lito-rumi"
 compatible = "qcom,lito-mtp"
 compatible = "qcom,lito-cdp"
