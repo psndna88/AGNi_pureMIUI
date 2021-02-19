@@ -8,7 +8,7 @@
 		pm7325_s1: regulator-pm7325-s1 {
 			regulator-name = "pm7325_s1";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1856000>;
+			regulator-min-microvolt = <1840000>;
 			regulator-max-microvolt = <2040000>;
 			qcom,init-voltage = <1872000>;
 		};
@@ -50,7 +50,7 @@
 		pm7325_s8: regulator-pm7325-s8 {
 			regulator-name = "pm7325_s8";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1256000>;
+			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1500000>;
 			qcom,init-voltage = <1272000>;
 		};
