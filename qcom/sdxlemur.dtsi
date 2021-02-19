@@ -894,6 +894,9 @@
 		compatible = "qcom,msm_gsi";
 	};
 
+	ioss: qcom,ioss {
+		compatible = "qcom,ioss-v2";
+	};
 
 	pcie_ep: qcom,pcie@40002000 {
 		compatible = "qcom,pcie-ep";
