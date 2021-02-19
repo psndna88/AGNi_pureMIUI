@@ -2351,6 +2351,7 @@
 		reg-names = "tpdm-base";
 		qcom,cmb-msr-skip;
 
+		status = "disabled";
 		coresight-name = "coresight-tpdm-sdcc-1";
 
 		clocks = <&aopcc QDSS_CLK>;
@@ -2373,6 +2374,7 @@
 		reg-names = "tpdm-base";
 		qcom,cmb-msr-skip;
 
+		status = "disabled";
 		coresight-name = "coresight-tpdm-sdcc-4";
 
 		clocks = <&aopcc QDSS_CLK>;
@@ -2538,6 +2540,7 @@
 		reg-names = "tpdm-base";
 		qcom,cmb-msr-skip;
 
+		status = "disabled";
 		coresight-name = "coresight-tpdm-sdcc-2";
 
 		clocks = <&aopcc QDSS_CLK>;
