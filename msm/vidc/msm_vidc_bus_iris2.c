@@ -115,7 +115,15 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 	dpb_factor = FP(1, 50, 100);
 	dpb_write_factor = FP(1, 5, 100);
 
-	tnbr_per_lcu = lcu_size == 16 ? 128 :
+	/* Ref A: This change is applicable for all
+	 * IRIS2 targets, but currently being done for
+	 * 1 pipe only due to timeline constraints.
+	 */
+	if (num_vpp_pipes == 1)
+		tnbr_per_lcu = lcu_size == 16 ? 64 :
+		lcu_size == 32 ? 64 : 128;
+	else
+		tnbr_per_lcu = lcu_size == 16 ? 128 :
 		lcu_size == 32 ? 64 : 128;
 
 	/* .... For DDR & LLC  ...... */
@@ -166,11 +174,11 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 	ddr.line_buffer_read =
 		fp_div(FP_INT(tnbr_per_lcu * lcu_per_frame * fps),
 			FP_INT(bps(1)));
-	/* This change is applicable for all IRIS2 targets,
-	 * but currently being done for IRIS2 with 2 pipes
-	 * and 1 pipe only due to timeline constraints.
+	/* This change is applicable when 'Ref A' code change
+	 * is missing. But currently being done for IRIS2
+	 * with 2 pipes only due to timeline constraints.
 	 */
-	if((num_vpp_pipes != 4) && (is_h264_category))
+	if ((num_vpp_pipes == 2) && (is_h264_category))
 		ddr.line_buffer_write = fp_div(ddr.line_buffer_read,FP_INT(2));
 	else
 		ddr.line_buffer_write = ddr.line_buffer_read;
@@ -289,6 +297,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d)
 		total_ref_read_crcb,
 		qsmmu_bw_overhead_factor;
 	fp_t integer_part, frac_part;
+	unsigned int num_vpp_pipes;
 	unsigned long ret = 0;
 
 	/* Output parameters */
@@ -307,7 +316,6 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d)
 	/* Encoder Parameters setup */
 	rotation = d->rotation;
 	cropping_or_scaling = false;
-	vertical_tile_width = 960;
 	/*
 	 * recon_write_bw_factor varies according to resolution and bit-depth,
 	 * here use 1.08(1.075) for worst case.
@@ -321,6 +329,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d)
 
 
 	/* Derived Parameters */
+	num_vpp_pipes = d->num_vpp_pipes;
 	fps = d->fps;
 	width = max(d->output_width, BASELINE_DIMENSIONS.width);
 	height = max(d->output_height, BASELINE_DIMENSIONS.height);
@@ -346,9 +355,15 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d)
 	}
 
 	b_frames_enabled = d->b_frames_enabled;
+	if (num_vpp_pipes == 1 && b_frames_enabled)
+		vertical_tile_width = 480;
+	else if (num_vpp_pipes == 1 && !b_frames_enabled)
+		vertical_tile_width = 672;
+	else
+		vertical_tile_width = 960;
+
 	original_color_format = d->num_formats >= 1 ?
 		d->color_formats[0] : HFI_COLOR_FORMAT_NV12_UBWC;
-
 	original_compression_enabled = __ubwc(original_color_format);
 
 	work_mode_1 = d->work_mode == HFI_WORKMODE_1;
