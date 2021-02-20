@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
  * MSM PCIe switch controller
  */
 
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/of_pci.h>
@@ -39,6 +40,79 @@ enum {
 struct pci_qcom_switch_errata {
 	int (*config_errata)(struct device *dev, void *data);
 };
+
+/*
+ * Supports configuring Port Arbitration for VC0 only. Also,
+ * current support is only dword updates for parb_phase_value.
+ */
+static int config_port_arbitration(struct device *dev, int parb_select,
+				   u32 parb_phase_value)
+{
+	struct pci_dev *pcidev = to_pci_dev(dev);
+	int i, pos, size;
+	int timeout = 100;
+	u32 parb_offset, parb_phase, parb_size;
+	u32 val;
+	u16 status;
+
+	pos = pci_find_ext_capability(pcidev, PCI_EXT_CAP_ID_VC);
+	if (!pos) {
+		pr_err("port %s: could not find VC capability register\n");
+		return -EIO;
+	}
+
+	pci_read_config_dword(pcidev, pos + PCI_VC_RES_CAP, &val);
+	parb_offset = ((val & PCI_VC_RES_CAP_ARB_OFF) >> 24) * 16;
+
+	if (val & PCI_VC_RES_CAP_256_PHASE)
+		parb_phase = 256;
+	else if (val & (PCI_VC_RES_CAP_128_PHASE |
+			PCI_VC_RES_CAP_128_PHASE_TB))
+		parb_phase = 128;
+	else if (val & PCI_VC_RES_CAP_64_PHASE)
+		parb_phase = 64;
+	else if (val & PCI_VC_RES_CAP_32_PHASE)
+		parb_phase = 32;
+
+	pci_read_config_dword(pcidev, pos + PCI_VC_PORT_CAP1, &val);
+	/* Port Arbitration Table Entry Size (bits) */
+	parb_size = 1 << ((val & PCI_VC_CAP1_ARB_SIZE) >> 10);
+
+	/* parb size (b) * number of phases / bits to byte / byte per dword */
+	size = (parb_size * parb_phase) / 8 / 4;
+	if (!size)
+		return -EIO;
+
+	/* update Port Arbitration Table */
+	for (i = 0; i < size; i++)
+		pci_write_config_dword(pcidev, pos + parb_offset + i * 4,
+				       parb_phase_value);
+
+	/* set Load Port Arbitration Table bit to update the port arbitration */
+	pci_read_config_dword(pcidev, pos + PCI_VC_RES_CTRL, &val);
+	val |= PCI_VC_RES_CTRL_LOAD_TABLE;
+	pci_write_config_dword(pcidev, pos + PCI_VC_RES_CTRL, val);
+
+	/* poll Port Arbitration Status until H/W completes with the update */
+	do {
+		usleep_range(1000, 1005);
+		pci_read_config_word(pcidev, pos + PCI_VC_RES_STATUS, &status);
+	} while ((status & PCI_VC_RES_STATUS_TABLE) && --timeout);
+
+	if (!timeout) {
+		pr_err("port %s failed to load Port Arbitration Table\n",
+		       dev_name(&pcidev->dev));
+		return -EIO;
+	}
+
+	/* update Port Arbitration Select field to select scheme */
+	pci_read_config_dword(pcidev, pos + PCI_VC_RES_CTRL, &val);
+	val &= ~PCI_VC_RES_CTRL_ARB_SELECT;
+	val |= parb_select << 17;
+	pci_write_config_dword(pcidev, pos + PCI_VC_RES_CTRL, val);
+
+	return 0;
+}
 
 static int config_common_port_diode(struct device *dev, void *data)
 {
@@ -101,6 +175,26 @@ static int config_upstream_port_diode(struct device *dev, void *data)
 	ret = config_common_port_diode(dev, NULL);
 	if (ret) {
 		pr_err("%s: Applying common configuration failed\n", __func__);
+		return ret;
+	}
+
+	/*
+	 * Update Port Arbitration table
+	 *
+	 * Port arbitation scheme: 3: WRR 128 Phase
+	 *
+	 * 4-bits per phase
+	 *
+	 * Every 8th phase will be for Port2 while the rest is for Port1
+	 * ex:
+	 *	Phase[7]: Port2 Phase [6:0]: Port1
+	 *	Phase[15]: Port2 Phase [14:8]: Port1
+	 *	...
+	 *	Phase[127]: Port2 Phase [126:120]: Port1
+	 */
+	ret = config_port_arbitration(dev, 3, 0x21111111);
+	if (ret) {
+		pr_err("%s: Failed to setup Port Arbitration\n", __func__);
 		return ret;
 	}
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -93,6 +93,7 @@ enum session_type {
 	MSM_VIDC_ENCODER = 0,
 	MSM_VIDC_DECODER,
 	MSM_VIDC_CVP,
+	MSM_VIDC_ENCODER_CMA,
 	MSM_VIDC_UNKNOWN,
 	MSM_VIDC_MAX_DEVICES = MSM_VIDC_UNKNOWN,
 };

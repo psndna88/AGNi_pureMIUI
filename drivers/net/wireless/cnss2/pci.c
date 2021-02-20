@@ -2793,37 +2793,41 @@ void cnss_pci_collect_dump_info(struct cnss_pci_data *pci_priv, bool in_panic)
 	rddm_image = pci_priv->mhi_ctrl->rddm_image;
 	dump_data->nentries = 0;
 
-	cnss_pr_dbg("Collect FW image dump segment, nentries %d\n",
-		    fw_image->entries);
+	if (fw_image) {
+		cnss_pr_dbg("Collect FW image dump segment, nentries %d\n",
+			    fw_image->entries);
 
-	for (i = 0; i < fw_image->entries; i++) {
-		dump_seg->address = fw_image->mhi_buf[i].dma_addr;
-		dump_seg->v_address = fw_image->mhi_buf[i].buf;
-		dump_seg->size = fw_image->mhi_buf[i].len;
-		dump_seg->type = CNSS_FW_IMAGE;
-		cnss_pr_dbg("seg-%d: address 0x%lx, v_address %pK, size 0x%lx\n",
-			    i, dump_seg->address,
-			    dump_seg->v_address, dump_seg->size);
-		dump_seg++;
+		for (i = 0; i < fw_image->entries; i++) {
+			dump_seg->address = fw_image->mhi_buf[i].dma_addr;
+			dump_seg->v_address = fw_image->mhi_buf[i].buf;
+			dump_seg->size = fw_image->mhi_buf[i].len;
+			dump_seg->type = CNSS_FW_IMAGE;
+			cnss_pr_dbg("seg-%d: address 0x%lx, v_address %pK, size 0x%lx\n",
+				    i, dump_seg->address,
+				    dump_seg->v_address, dump_seg->size);
+			dump_seg++;
+		}
+
+		dump_data->nentries += fw_image->entries;
 	}
 
-	dump_data->nentries += fw_image->entries;
+	if (rddm_image) {
+		cnss_pr_dbg("Collect RDDM image dump segment, nentries %d\n",
+			    rddm_image->entries);
 
-	cnss_pr_dbg("Collect RDDM image dump segment, nentries %d\n",
-		    rddm_image->entries);
+		for (i = 0; i < rddm_image->entries; i++) {
+			dump_seg->address = rddm_image->mhi_buf[i].dma_addr;
+			dump_seg->v_address = rddm_image->mhi_buf[i].buf;
+			dump_seg->size = rddm_image->mhi_buf[i].len;
+			dump_seg->type = CNSS_FW_RDDM;
+			cnss_pr_dbg("seg-%d: address 0x%lx, v_address %pK, size 0x%lx\n",
+				    i, dump_seg->address,
+				    dump_seg->v_address, dump_seg->size);
+			dump_seg++;
+		}
 
-	for (i = 0; i < rddm_image->entries; i++) {
-		dump_seg->address = rddm_image->mhi_buf[i].dma_addr;
-		dump_seg->v_address = rddm_image->mhi_buf[i].buf;
-		dump_seg->size = rddm_image->mhi_buf[i].len;
-		dump_seg->type = CNSS_FW_RDDM;
-		cnss_pr_dbg("seg-%d: address 0x%lx, v_address %pK, size 0x%lx\n",
-			    i, dump_seg->address,
-			    dump_seg->v_address, dump_seg->size);
-		dump_seg++;
+		dump_data->nentries += rddm_image->entries;
 	}
-
-	dump_data->nentries += rddm_image->entries;
 
 	cnss_pr_dbg("Collect remote heap dump segment\n");
 

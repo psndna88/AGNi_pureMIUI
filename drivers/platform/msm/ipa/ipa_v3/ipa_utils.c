@@ -4977,6 +4977,10 @@ int ipa3_cfg_ep_holb(u32 clnt_hdl, const struct ipa_ep_cfg_holb *ep_holb)
 			return res;
 		}
 	}
+	/* For targets > IPA_4.0 issue requires HOLB_EN to be written twice */
+	if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_0)
+		ipahal_write_reg_n_fields(IPA_ENDP_INIT_HOL_BLOCK_EN_n,
+			clnt_hdl, ep_holb);
 
 	ipahal_write_reg_n_fields(IPA_ENDP_INIT_HOL_BLOCK_TIMER_n,
 		clnt_hdl, &ipa3_ctx->ep[clnt_hdl].holb);
@@ -7422,8 +7426,7 @@ static int __ipa3_stop_gsi_channel(u32 clnt_hdl)
 	}
 
 	IPAERR("Failed  to stop GSI channel with retries\n");
-	ipa_assert();
-	return -EFAULT;
+	return res;
 }
 
 /**
