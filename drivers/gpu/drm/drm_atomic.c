@@ -2399,7 +2399,7 @@ int drm_mode_atomic_ioctl(struct drm_device *dev, void *data,
 	/* Don't let this CPU use deep idle states while the ioctl runs */
 	req = (typeof(req)){
 		.type = PM_QOS_REQ_AFFINE_CORES,
-		.cpus_affine = ATOMIC_INIT(BIT(cpu))
+		.cpus_affine = ATOMIC_INIT(BIT(cpu) | *cpumask_bits(cpu_perf_mask))
 	};
 	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
 	preempt_enable_no_resched();
