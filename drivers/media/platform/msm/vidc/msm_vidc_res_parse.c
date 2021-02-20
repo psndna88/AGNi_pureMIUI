@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,7 +20,13 @@
 #include "msm_vidc_resources.h"
 #include "msm_vidc_res_parse.h"
 #include "venus_boot.h"
+#include <soc/qcom/scm.h>
 #include "soc/qcom/secure_buffer.h"
+#include <asm/cacheflush.h>
+#include <linux/io.h>
+
+#define VENUS_DEVICE_ID 0x0
+#define SECURE_SYSCALL_ID 0x18
 
 enum clock_properties {
 	CLOCK_PROP_HAS_SCALING = 1 << 0,
@@ -1024,12 +1030,65 @@ static int get_secure_vmid(struct context_bank_info *cb)
 	return VMID_INVAL;
 }
 
-static int msm_vidc_setup_context_bank(struct msm_vidc_platform_resources *res,
-		struct context_bank_info *cb, struct device *dev)
+static int msm_vidc_switch_vmid(int vmid, struct context_bank_info *cb)
+{
+	struct scm_desc desc = {0};
+	uint32_t *sid_info = NULL;
+	int rc = 0;
+
+	if (!cb) {
+		dprintk(VIDC_ERR,
+			"%s: invalid context bank device\n", __func__);
+		return -EIO;
+	}
+
+	sid_info = kzalloc(sizeof(uint32_t) * cb->num_sids, GFP_KERNEL);
+	if (!sid_info) {
+		dprintk(VIDC_ERR, "%s: memory allocation failred\n", __func__);
+		return -ENOMEM;
+	}
+
+	memcpy(sid_info, &cb->sids, sizeof(uint32_t) * cb->num_sids);
+	desc.arginfo = SCM_ARGS(4, SCM_VAL, SCM_RW, SCM_VAL, SCM_VAL);
+	desc.args[0] = VENUS_DEVICE_ID;
+	desc.args[1] = SCM_BUFFER_PHYS(sid_info);
+	desc.args[2] = sizeof(uint32_t) * cb->num_sids;
+	desc.args[3] = vmid;
+
+	dmac_flush_range(sid_info, sid_info + 1);
+	if (scm_call2(SCM_SIP_FNID(SCM_SVC_MP, SECURE_SYSCALL_ID), &desc)) {
+		dprintk(VIDC_ERR, "call to hypervisor failed\n");
+		rc = -EINVAL;
+	}
+
+	dprintk(VIDC_DBG, "%s switched to 0x%x vmid\n", cb->name, vmid);
+	kfree(sid_info);
+
+	return rc;
+}
+
+static void msm_vidc_detach_context_banks(
+			struct msm_vidc_platform_resources *res)
+{
+	struct context_bank_info *cb = NULL;
+
+	list_for_each_entry(cb, &res->context_banks, list) {
+		arm_iommu_detach_device(cb->dev);
+		if (cb->mapping)
+			arm_iommu_release_mapping(cb->mapping);
+	}
+}
+
+static int msm_vidc_setup_context_bank(
+		struct msm_vidc_platform_resources *res,
+		struct context_bank_info *cb, struct device *dev,
+						int cma_enable)
 {
 	int rc = 0;
 	int secure_vmid = VMID_INVAL;
 	struct bus_type *bus;
+	u32 start_addr = 0, pool_size = 0;
+	int s1_bypass = 1;
 
 	if (!dev || !cb || !res) {
 		dprintk(VIDC_ERR,
@@ -1045,8 +1104,15 @@ static int msm_vidc_setup_context_bank(struct msm_vidc_platform_resources *res,
 		goto remove_cb;
 	}
 
-	cb->mapping = arm_iommu_create_mapping(bus, cb->addr_range.start,
-					cb->addr_range.size);
+	if (cma_enable) {
+		start_addr = cb->cma.addr_range.start;
+		pool_size = cb->cma.addr_range.size;
+	} else {
+		start_addr = cb->addr_range.start;
+		pool_size = cb->addr_range.size;
+	}
+
+	cb->mapping = arm_iommu_create_mapping(bus, start_addr, pool_size);
 	if (IS_ERR_OR_NULL(cb->mapping)) {
 		dprintk(VIDC_ERR, "%s - failed to create mapping\n", __func__);
 		rc = PTR_ERR(cb->mapping) ?: -ENODEV;
@@ -1055,12 +1121,26 @@ static int msm_vidc_setup_context_bank(struct msm_vidc_platform_resources *res,
 
 	if (cb->is_secure) {
 		secure_vmid = get_secure_vmid(cb);
+		if (cma_enable && cb->cma.s1_bypass)
+			secure_vmid = VMID_CP_CAMERA_ENCODE;
 		rc = iommu_domain_set_attr(cb->mapping->domain,
 				DOMAIN_ATTR_SECURE_VMID, &secure_vmid);
 		if (rc) {
 			dprintk(VIDC_ERR,
-					"%s - programming secure vmid failed: %s %d\n",
+					"%s - programming secure vmid failed: %s 0x%x\n",
 					__func__, dev_name(dev), rc);
+			goto release_mapping;
+		}
+	}
+
+	if (cma_enable && cb->cma.s1_bypass) {
+		s1_bypass = cb->cma.s1_bypass;
+		rc = iommu_domain_set_attr(cb->mapping->domain,
+			DOMAIN_ATTR_S1_BYPASS, &s1_bypass);
+		if (rc) {
+			dprintk(VIDC_ERR,
+				"%s S1 bypass failed rc %d ", __func__, rc);
+
 			goto release_mapping;
 		}
 	}
@@ -1096,11 +1176,12 @@ static int msm_vidc_setup_context_bank(struct msm_vidc_platform_resources *res,
 	dma_set_max_seg_size(dev, DMA_BIT_MASK(32));
 	dma_set_seg_boundary(dev, (unsigned long)DMA_BIT_MASK(64));
 
-	dprintk(VIDC_DBG, "Attached %s and created mapping\n", dev_name(dev));
+	dprintk(VIDC_DBG, "Attached %s and created mapping cma status %d\n",
+						dev_name(dev), cma_enable);
 	dprintk(VIDC_DBG,
 		"Context bank name:%s, buffer_type: %#x, is_secure: %d, address range start: %#x, size: %#x, dev: %pK, mapping: %pK",
-		cb->name, cb->buffer_type, cb->is_secure, cb->addr_range.start,
-		cb->addr_range.size, cb->dev, cb->mapping);
+		cb->name, cb->buffer_type, cb->is_secure, start_addr,
+		pool_size, cb->dev, cb->mapping);
 
 	return rc;
 
@@ -1154,6 +1235,8 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 	int rc = 0;
 	struct context_bank_info *cb = NULL;
 	struct device_node *np = NULL;
+	unsigned int i = 0, j = 0, count = 0;
+	u32 mask = 0;
 
 	if (!dev || !core) {
 		dprintk(VIDC_ERR, "%s - invalid inputs\n", __func__);
@@ -1178,6 +1261,22 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 	}
 
 	dprintk(VIDC_DBG, "%s: context bank has name %s\n", __func__, cb->name);
+	of_get_property(np, "iommus", &count);
+	memset(&cb->sids, -1, sizeof(cb->sids));
+	count /= 4;
+	for (i = 1, j = 0 ; i < count; i = i+2, j++) {
+		rc = of_property_read_u32_index
+			(dev->of_node, "iommus", i, &cb->sids[j]);
+		if (rc < 0)
+			dprintk(VIDC_ERR, "can't fetch SID\n");
+		rc = of_property_read_u32_index
+					(dev->of_node, "iommus", i+1, &mask);
+		cb->sids[j] = (mask << 16 | cb->sids[j]);
+		dprintk(VIDC_DBG, "%s sid[%d]:0x%x\n",
+				cb->name, j, cb->sids[j]);
+	}
+	cb->num_sids = j;
+
 	rc = of_property_read_u32_array(np, "virtual-addr-pool",
 			(u32 *)&cb->addr_range, 2);
 	if (rc) {
@@ -1186,6 +1285,12 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 			cb->name, rc);
 		goto err_setup_cb;
 	}
+
+	rc = of_property_read_u32_array(np, "cma-addr-pool",
+			(u32 *)&cb->cma.addr_range, 2);
+	cb->cma.s1_bypass = of_property_read_bool(np, "qcom,cma-s1-bypass");
+	if (cb->cma.s1_bypass && !rc)
+		core->resources.cma_exist = true;
 
 	cb->is_secure = of_property_read_bool(np, "qcom,secure-context-bank");
 	dprintk(VIDC_DBG, "context bank %s : secure = %d\n",
@@ -1199,11 +1304,14 @@ static int msm_vidc_populate_context_bank(struct device *dev,
 		goto err_setup_cb;
 	}
 	dprintk(VIDC_DBG,
-		"context bank %s address start = %x address size = %x buffer_type = %x\n",
+"cb %s addr: %x size: %x cma_addr: %x cma__size: %x s1_bp: %d  buf_typ: %x\n",
 		cb->name, cb->addr_range.start,
-		cb->addr_range.size, cb->buffer_type);
+		cb->addr_range.size, cb->cma.addr_range.start,
+		cb->cma.addr_range.size,
+		cb->cma.s1_bypass, cb->buffer_type);
 
-	rc = msm_vidc_setup_context_bank(&core->resources, cb, dev);
+	rc = msm_vidc_setup_context_bank(&core->resources, cb, dev, false);
+
 	if (rc) {
 		dprintk(VIDC_ERR, "Cannot setup context bank %d\n", rc);
 		goto err_setup_cb;
@@ -1315,7 +1423,7 @@ static int msm_vidc_populate_legacy_context_bank(
 			goto err_setup_cb;
 		}
 
-		rc = msm_vidc_setup_context_bank(res, cb, cb->dev);
+		rc = msm_vidc_setup_context_bank(res, cb, cb->dev, false);
 		if (rc) {
 			dprintk(VIDC_ERR, "Cannot setup context bank %d\n", rc);
 			goto err_setup_cb;
@@ -1401,6 +1509,45 @@ int read_bus_resources_from_dt(struct platform_device *pdev)
 	}
 
 	return msm_vidc_populate_bus(&pdev->dev, &core->resources);
+}
+
+int msm_vidc_enable_cma(struct msm_vidc_platform_resources *res, bool enable)
+{
+	int rc;
+	int secure_vmid = VMID_INVAL;
+	struct context_bank_info *cb = NULL;
+
+	dprintk(VIDC_DBG, "%s: In enable status %d\n", __func__, enable);
+
+	msm_vidc_detach_context_banks(res);
+	list_for_each_entry(cb, &res->context_banks, list) {
+		if (cb->is_secure && cb->cma.s1_bypass) {
+			if (enable) {
+				rc = msm_vidc_switch_vmid
+				(VMID_CP_CAMERA_ENCODE, cb);
+				if (rc) {
+					dprintk(VIDC_ERR,
+						"Failed SID switching\n");
+					goto detach_cb;
+				}
+			} else {
+				secure_vmid = get_secure_vmid(cb);
+				rc = msm_vidc_switch_vmid(secure_vmid, cb);
+				if (rc)
+					goto detach_cb;
+			}
+		}
+		rc = msm_vidc_setup_context_bank(res, cb, cb->dev, enable);
+		if (rc)
+			goto detach_cb;
+	}
+
+	return rc;
+
+detach_cb:
+	dprintk(VIDC_DBG, "%s: - failed %d\n", __func__, enable);
+	msm_vidc_detach_context_banks(res);
+	return rc;
 }
 
 int read_mem_cdsp_resources_from_dt(struct platform_device *pdev)

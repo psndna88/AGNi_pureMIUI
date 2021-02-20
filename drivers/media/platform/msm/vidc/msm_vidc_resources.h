@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019,2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,7 @@
 #include "soc/qcom/cx_ipeak.h"
 
 #define MAX_BUFFER_TYPES 32
+#define VENUS_SID_MAX 32
 
 struct dcvs_table {
 	u32 load;
@@ -54,6 +55,11 @@ struct addr_set {
 	int count;
 };
 
+struct cma_info {
+	struct addr_range addr_range;
+	bool s1_bypass;
+};
+
 struct context_bank_info {
 	struct list_head list;
 	const char *name;
@@ -62,6 +68,9 @@ struct context_bank_info {
 	struct addr_range addr_range;
 	struct device *dev;
 	struct dma_iommu_mapping *mapping;
+	u32 sids[VENUS_SID_MAX];
+	int num_sids;
+	struct cma_info cma;
 };
 
 struct buffer_usage_table {
@@ -215,6 +224,8 @@ struct msm_vidc_platform_resources {
 	struct cx_ipeak_client *cx_ipeak_context;
 	struct msm_vidc_ubwc_config *ubwc_config;
 	uint32_t ubwc_config_length;
+	bool cma_exist;
+	bool cma_status;
 };
 
 /**

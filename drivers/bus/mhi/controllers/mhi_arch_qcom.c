@@ -372,6 +372,9 @@ void mhi_arch_mission_mode_enter(struct mhi_controller *mhi_cntrl)
 	/* disable boot logger channel */
 	if (boot_dev)
 		mhi_unprepare_from_transfer(boot_dev);
+
+	if (mhi_dev->skip_forced_suspend && !mhi_dev->allow_m1)
+		msm_pcie_l1ss_timeout_enable(mhi_dev->pci_dev);
 }
 
 static  int mhi_arch_pcie_scale_bw(struct mhi_controller *mhi_cntrl,

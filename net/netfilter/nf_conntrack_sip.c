@@ -262,7 +262,7 @@ static struct sip_list *sip_coalesce_segments(struct nf_conn *ct,
 						sip_entry->entry->skb;
 						*success = true;
 						list_del(list_trav_node);
-					} else{
+					} else {
 						skb_push(*skb_ref, dataoff);
 					}
 				}
@@ -1849,6 +1849,7 @@ static int sip_help_tcp(struct sk_buff *skb, unsigned int protoff,
 	enum ip_conntrack_dir dir = IP_CT_DIR_MAX;
 	struct sk_buff *combined_skb = NULL;
 	bool content_len_exists = 1;
+	bool sip_frag_in_queue = false;
 
 	packet_count++;
 	pr_debug("packet count %d\n", packet_count);
@@ -1868,6 +1869,9 @@ static int sip_help_tcp(struct sk_buff *skb, unsigned int protoff,
 	if (dataoff >= skb->len)
 		return NF_ACCEPT;
 
+	if (!ct)
+		return NF_DROP;
+
 	nf_ct_refresh(ct, skb, sip_timeout * HZ);
 
 	if (unlikely(skb_linearize(skb)))
@@ -1875,11 +1879,21 @@ static int sip_help_tcp(struct sk_buff *skb, unsigned int protoff,
 
 	dptr = skb->data + dataoff;
 	datalen = skb->len - dataoff;
-	if (datalen < strlen("SIP/2.0 200"))
+
+	if (nf_ct_enable_sip_segmentation &&
+	    ct->sip_segment_list.next != &ct->sip_segment_list) {
+		sip_frag_in_queue = true;
+	}
+
+	/* We will not check the below "if" conditions if
+	 * sip segmentation is enabled and first fragment is
+	 * already in the queue.
+	 */
+	if (datalen < strlen("SIP/2.0 200") && !sip_frag_in_queue)
 		return NF_ACCEPT;
 
 	/* Check if the header contains SIP version */
-	if (!strnstr(dptr, "SIP/2.0", datalen))
+	if (!strnstr(dptr, "SIP/2.0", datalen) && !sip_frag_in_queue)
 		return NF_ACCEPT;
 
 	/* here we save the original datalength and data offset of the skb, this
@@ -1888,8 +1902,6 @@ static int sip_help_tcp(struct sk_buff *skb, unsigned int protoff,
 	oldlen1 = skb->len - protoff;
 	dataoff_orig = dataoff;
 
-	if (!ct)
-		return NF_DROP;
 	while (1) {
 		if (ct_sip_get_header(ct, dptr, 0, datalen,
 				      SIP_HDR_CONTENT_LENGTH,
@@ -1928,7 +1940,7 @@ destination:
 			origlen = end - dptr;
 			msglen = origlen;
 		}
-		pr_debug("mslgen %d datalen %d\n", msglen, datalen);
+		pr_debug("msglen %d datalen %d\n", msglen, datalen);
 		dir = CTINFO2DIR(ctinfo);
 		combined_skb = skb;
 		if (nf_ct_enable_sip_segmentation) {
@@ -1975,8 +1987,15 @@ destination:
 			break;
 		sip_calculate_parameters(&diff, &tdiff, &dataoff, &dptr,
 					 &datalen, msglen, origlen);
-		if (nf_ct_enable_sip_segmentation && skb_is_combined)
+		if (nf_ct_enable_sip_segmentation && skb_is_combined) {
 			break;
+		} else {
+			/* skb is not combined and we did not receive
+			 * the second fragment immediately after the
+			 * first fragment.
+			 */
+			return NF_ACCEPT;
+		}
 	}
 	if (skb_is_combined) {
 		/* once combined skb is processed, split the skbs again The

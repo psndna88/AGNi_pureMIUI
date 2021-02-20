@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -400,16 +400,6 @@
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,platform-te-gpio = <&tlmm 90 0>;
 	qcom,platform-reset-gpio = <&tlmm 91 0>;
-};
-
-&soc {
-	qcom,rmnet-ipa {
-		status="okay";
-	};
-};
-
-&ipa_hw {
-	status="okay";
 };
 
 &pil_modem_mem {

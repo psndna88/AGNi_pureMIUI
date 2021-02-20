@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,7 +21,7 @@
 #define RGMU_OOB_IRQ_ERR_MSG_MASK	GENMASK(31, 24)
 #define RGMU_OOB_IRQ_MASK		RGMU_OOB_IRQ_ERR_MSG_MASK
 
-#define MAX_RGMU_CLKS  8
+#define MAX_RGMU_CLKS  9
 
 /**
  * struct rgmu_device - rGMU device structure
