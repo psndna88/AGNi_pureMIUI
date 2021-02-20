@@ -102,7 +102,6 @@ if [ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ]; then
 	mv -f $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	mv -f $KERNELDIR/$DIR/8*.ko $KERNELDIR/$DIR/tools 2>/dev/null
 	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
-	mv -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm636 $KERNELDIR/$DIR/tools/perf/powerhint.json
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then

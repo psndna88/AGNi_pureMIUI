@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v12.4_beta1");
+ini_set("rom_version",	"v12.4_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"February, 13, 2021");
+ini_set("rom_date",		"February, 20, 2021");
 
 # Show Simple Splash
 splash(
