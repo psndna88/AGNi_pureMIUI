@@ -2375,6 +2375,7 @@
 
 #include "msm-arm-smmu-sm6150.dtsi"
 #include "sm6150-slpi-pinctrl.dtsi"
+#include "sm6150-gpu.dtsi"
 #include "sm6150-usb.dtsi"
 #include "sm6150-vidc.dtsi"
 #include "sm6150-ion.dtsi"
