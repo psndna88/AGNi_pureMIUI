@@ -787,19 +787,6 @@ QDF_STATUS csr_roam_get_wpa_rsn_req_ie(tpAniSirGlobal pMac, uint32_t sessionId,
 				       uint32_t *pLen, uint8_t *pBuf);
 
 /*
- * csr_roam_get_wpa_rsn_rsp_ie() -
- * Return the WPA or RSN IE from the beacon or probe rsp if connected
- *
- * pLen - caller allocated memory that has the length of pBuf as input.
- * Upon returned, *pLen has the needed or IE length in pBuf.
- * pBuf - Caller allocated memory that contain the IE field, if any, upon return
- * Return QDF_STATUS - when fail, it usually means the buffer allocated is not
- * big enough
- */
-QDF_STATUS csr_roam_get_wpa_rsn_rsp_ie(tpAniSirGlobal pMac, uint32_t sessionId,
-				       uint32_t *pLen, uint8_t *pBuf);
-
-/*
  * csr_roam_get_num_pmkid_cache() -
  * Return number of PMKID cache entries
  *
