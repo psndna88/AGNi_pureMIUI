@@ -929,7 +929,7 @@
 		scl-clk-names = "ife_2_areg";
 		clock-control-debugfs = "true";
 		ubwc-static-cfg = <0x1016 0x1026>;
-		cam_hw_pid = < 23 6 18 10>;
+		cam_hw_pid = < 30 6 18 10>;
 		status = "ok";
 	};
 
