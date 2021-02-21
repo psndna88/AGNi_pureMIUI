@@ -39,4 +39,11 @@
 	/delete-node/ rpmh-regulator-bobc1;
 };
 
+&soc {
+		qcom,lpass@62400000 {
+			vdd_cx-supply = <&VDD_CX_LEVEL>;
+		};
+};
+
 #include "sa6155-regulator.dtsi"
+#include "pm6155.dtsi"

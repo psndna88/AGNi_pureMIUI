@@ -124,3 +124,7 @@
 &ufsphy_mem {
 	vdda-phy-supply = <&pm8150_2_l18>;
 };
+
+#include "camera/sa8155-camera.dtsi"
+#include "camera/sa8155-camera-sensor.dtsi"
+#include "sa8155-audio.dtsi"

@@ -450,8 +450,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_swao1_out_tpda_swao: endpoint {
@@ -745,7 +743,7 @@
 		reg-names = "tpda-base";
 		coresight-name = "coresight-tpda-dlct_5";
 
-		qcom,tpda-atid = <71>;
+		qcom,tpda-atid = <78>;
 		qcom,cmb-elem-size = <11 64>,
 				     <12 64>,
 				     <15 32>,
@@ -919,8 +917,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_lpass_out_funnel_lpass: endpoint {
@@ -941,8 +937,6 @@
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
-
-		qcom,msr-fix-req;
 
 		out-ports {
 			port {
@@ -1081,8 +1075,6 @@
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
-
-		qcom,msr-fix-req;
 
 		out-ports {
 			port {
@@ -1244,8 +1236,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_ddr_ch01_out_funnel_ddr_ch01: endpoint {
@@ -1268,8 +1258,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_ddr_out_funnel_ddr_0: endpoint {
@@ -1291,8 +1279,6 @@
 		status = "disabled";
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
-
-		qcom,msr-fix-req;
 
 		out-ports {
 			port {
@@ -1420,8 +1406,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_dlct_out_tpda_dlct5: endpoint {
@@ -1442,8 +1426,6 @@
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
-
-		qcom,msr-fix-req;
 
 		out-ports {
 			port {
@@ -1689,8 +1671,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
-
 		out-ports {
 			port {
 				tpdm_modem_0_out_tpda_modem: endpoint {
@@ -1712,7 +1692,6 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 
-		qcom,msr-fix-req;
 		out-ports {
 			port {
 				tpdm_modem_1_out_tpda_modem: endpoint {
@@ -2603,7 +2582,7 @@
 		coresight-name = "coresight-tpda-apss";
 
 		qcom,tpda-atid = <66>;
-		qcom,dsb-elem-size = <3 64>;
+		qcom,dsb-elem-size = <3 32>;
 		qcom,cmb-elem-size = <0 32>,
 				     <1 32>,
 				     <2 64>;

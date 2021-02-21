@@ -70,19 +70,25 @@
 	vcc-low-voltage-sup;
 	vcc-max-microamp = <800000>;
 
+	/*
+	 * Yupik target supports both UFS2.2 & UFS3.1, here
+	 * vccq2 is supplied via eLDO, and that is controlled via
+	 * L9B which supports a max voltage of 1.2V, but eLDO would
+	 * supply 1.8V. and same L9B acts as vccq voltage for UFS3.1
+	 * devices.
+	 * Here L9B can max support for 1.2V but UFS GKI driver code
+	 * votes for 1.8V, which is leading to failure from pmic
+	 * regulator.
+	 *
+	 * Now since vccq and control of eLDO are common that is L9B
+	 * we can use vccq vote as control of eLDO for vccq2.
+	 * Hence vccq entries shall be used for both type of UFS
+	 * devices only. And vccq entries should not be changed/removed
+	 * for any design alteration.
+	 */
 	vccq-supply = <&L9B>;
 	vccq-max-microamp = <900000>;
 	vccq-min-microamp = <10000>;
-
-	/*
-	 * Vccq2 voltage level should be 1.8V but in case of yupik
-	 * vccq2 is supplied via eLDO, and that is controlled via
-	 * L9B which supports a max voltage of 1.2V, but eLDO would
-	 * supply 1.8V.
-	 */
-	vccq2-supply = <&L9B>;
-	vccq2-voltage-level = <1200000 1200000>;
-	vccq2-max-microamp = <800000>;
 
 	qcom,vddp-ref-clk-supply = <&L9B>;
 	qcom,vddp-ref-clk-max-microamp = <100>;
@@ -326,11 +332,6 @@
 	status = "disabled";
 };
 
-&swr_haptics {
-	status = "okay";
-	swr-slave-supply = <&hap_swr_slave_reg>;
-};
-
 &yupik_snd {
 	qcom,model = "lahaina-yupikqrd-snd-card";
 	qcom,audio-routing =
@@ -357,7 +358,6 @@
 		"IN1_HPHL", "HPHL_OUT",
 		"IN2_HPHR", "HPHR_OUT",
 		"IN3_AUX", "AUX_OUT",
-		"HAP_IN", "PCM_OUT",
 		"WSA SRC0_INP", "SRC0",
 		"WSA_TX DEC0_INP", "TX DEC0 MUX",
 		"WSA_TX DEC1_INP", "TX DEC1 MUX",
@@ -390,11 +390,13 @@
 	qcom,msm-mbhc-gnd-swh = <1>;
 
 	asoc-codec  = <&stub_codec>, <&bolero>,
-		      <&wcd938x_codec>, <&swr_haptics>,
-		      <&wsa883x_0222>;
+		      <&wcd938x_codec>,
+		      <&wsa883x_0222>,
+		      <&ext_disp_audio_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
-			   "wcd938x_codec", "swr-haptics",
-			   "wsa-codec2";
+			   "wcd938x_codec",
+			   "wsa-codec2",
+			   "msm-ext-disp-audio-codec-rx";
 	qcom,wsa-max-devs = <1>;
 	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
 				  <&bolero>;
