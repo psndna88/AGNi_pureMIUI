@@ -168,9 +168,9 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d)
 			FP_INT(bps(1)));
 	/* This change is applicable for all IRIS2 targets,
 	 * but currently being done for IRIS2 with 2 pipes
-	 * only due to timeline constraints.
+	 * and 1 pipe only due to timeline constraints.
 	 */
-	if((num_vpp_pipes == 2) && (is_h264_category))
+	if((num_vpp_pipes != 4) && (is_h264_category))
 		ddr.line_buffer_write = fp_div(ddr.line_buffer_read,FP_INT(2));
 	else
 		ddr.line_buffer_write = ddr.line_buffer_read;
