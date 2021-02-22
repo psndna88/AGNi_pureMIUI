@@ -1921,7 +1921,7 @@ static QDF_STATUS sme_process_dual_mac_config_resp(struct mac_context *mac,
 			sme_err("Callback failed-Dual mac config is NULL");
 		} else {
 			sme_debug("Calling HDD callback for Dual mac config");
-			callback(mac->psoc, param->status,
+			callback(param->status,
 				command->u.set_dual_mac_cmd.scan_config,
 				command->u.set_dual_mac_cmd.fw_mode_config);
 		}
@@ -10718,6 +10718,7 @@ QDF_STATUS sme_power_debug_stats_req(
 		if (mac_ctx->sme.power_debug_stats_context ||
 		    mac_ctx->sme.power_stats_resp_callback) {
 			sme_err("Already one power stats req in progress");
+			sme_release_global_lock(&mac_ctx->sme);
 			return QDF_STATUS_E_ALREADY;
 		}
 		mac_ctx->sme.power_debug_stats_context = power_stats_context;

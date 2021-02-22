@@ -1639,7 +1639,6 @@ void policy_mgr_set_dual_mac_fw_mode_config(struct wlan_objmgr_psoc *psoc,
 
 /**
  * policy_mgr_soc_set_dual_mac_cfg_cb() - Callback for set dual mac config
- * @psoc: PSOC object information
  * @status: Status of set dual mac config
  * @scan_config: Current scan config whose status is the first param
  * @fw_mode_config: Current FW mode config whose status is the first param
@@ -1648,10 +1647,8 @@ void policy_mgr_set_dual_mac_fw_mode_config(struct wlan_objmgr_psoc *psoc,
  *
  * Return: None
  */
-void policy_mgr_soc_set_dual_mac_cfg_cb(struct wlan_objmgr_psoc *psoc,
-					enum set_hw_mode_status status,
-					uint32_t scan_config,
-					uint32_t fw_mode_config);
+void policy_mgr_soc_set_dual_mac_cfg_cb(enum set_hw_mode_status status,
+		uint32_t scan_config, uint32_t fw_mode_config);
 
 /**
  * policy_mgr_map_concurrency_mode() - to map concurrency mode
@@ -1819,44 +1816,6 @@ QDF_STATUS policy_mgr_reset_connection_update(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS policy_mgr_set_connection_update(struct wlan_objmgr_psoc *psoc);
 
 /**
- * policy_mgr_reset_dual_mac_configuration() - Reset dual MAC configuration
- * complete event
- * @psoc: PSOC object information
- * Resets the concurrent dual MAC configuration complete event
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-policy_mgr_reset_dual_mac_configuration(struct wlan_objmgr_psoc *psoc);
-
-
-/**
- * policy_mgr_wait_for_dual_mac_configuration() - Wait for set dual MAC
- * configuration command to get processed
- * @psoc: PSOC object information
- * Waits for DUAL_MAC_CONFIG_TIMEOUT duration until
- * policy_mgr_soc_set_dual_mac_cfg_cb sets the event
- * dual_mac_configuration_complete_evt
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-policy_mgr_wait_for_dual_mac_configuration(struct wlan_objmgr_psoc *psoc);
-
-
-/**
- * policy_mgr_dual_mac_configuration_complete() - Complete dual MAC
- * configuration wait event
- * @psoc: PSOC object information
- * Sets the concurrent dual MAC configuration complete event
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-policy_mgr_dual_mac_configuration_complete(struct wlan_objmgr_psoc *psoc);
-
-
-/**
  * policy_mgr_set_chan_switch_complete_evt() - set channel
  * switch completion event
  * @psoc: PSOC object information
@@ -2012,7 +1971,8 @@ QDF_STATUS policy_mgr_get_nss_for_vdev(struct wlan_objmgr_psoc *psoc,
 /**
  * policy_mgr_get_sap_mandatory_channel() - Get the mandatory channel for SAP
  * @psoc: PSOC object information
- * @ch_freq: Pointer to the SAP mandatory channel frequency
+ * @sap_ch_freq: sap current frequency in MHz
+ * @intf_ch_freq: input/out interference channel frequency to sap
  *
  * Gets the mandatory channel for SAP operation
  *
@@ -2020,7 +1980,8 @@ QDF_STATUS policy_mgr_get_nss_for_vdev(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS
 policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
-				     uint32_t *ch_freq);
+				     uint32_t sap_ch_freq,
+				     uint32_t *intf_ch_freq);
 
 /**
  * policy_mgr_set_sap_mandatory_channels() - Set the mandatory channel for SAP
@@ -3144,15 +3105,17 @@ uint32_t policy_mgr_get_sap_mandatory_chan_list_len(
 		struct wlan_objmgr_psoc *psoc);
 
 /**
- * policy_mgr_init_sap_mandatory_2g_chan() - Init 2.4G SAP mandatory channel
+ * policy_mgr_init_sap_mandatory_chan() - Init 2.4G 5G 6G SAP mandatory channel
  * list
  * @psoc: Pointer to soc
+ * @org_ch_freq: sap initial channel frequency MHz
  *
- * Initialize the 2.4G SAP mandatory channels
+ * Initialize the 2.4G 5G 6G SAP mandatory channels
  *
  * Return: None
  */
-void  policy_mgr_init_sap_mandatory_2g_chan(struct wlan_objmgr_psoc *psoc);
+void  policy_mgr_init_sap_mandatory_chan(struct wlan_objmgr_psoc *psoc,
+					 uint32_t org_ch_freq);
 
 /**
  * policy_mgr_remove_sap_mandatory_chan() - Remove channel from SAP mandatory

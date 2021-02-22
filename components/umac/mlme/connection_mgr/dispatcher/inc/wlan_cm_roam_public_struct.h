@@ -289,8 +289,10 @@ struct scoring_param {
 #define IDLE_ROAM_TRIGGER 0
 #define BTM_ROAM_TRIGGER  1
 
+#define NUM_OF_ROAM_MIN_RSSI 3
 #define DEAUTH_MIN_RSSI 0
 #define BMISS_MIN_RSSI  1
+#define MIN_RSSI_2G_TO_5G_ROAM 2
 
 /**
  * enum roam_trigger_reason - Reason for triggering roam
@@ -381,7 +383,7 @@ struct ap_profile_params {
 	uint8_t vdev_id;
 	struct ap_profile profile;
 	struct scoring_param param;
-	struct roam_trigger_min_rssi min_rssi_params[NUM_OF_ROAM_TRIGGERS];
+	struct roam_trigger_min_rssi min_rssi_params[NUM_OF_ROAM_MIN_RSSI];
 	struct roam_trigger_score_delta score_delta_param[NUM_OF_ROAM_TRIGGERS];
 };
 
@@ -1219,6 +1221,25 @@ struct roam_initial_data {
 	uint32_t rssi_th;
 	uint32_t cu_th;
 	uint32_t fw_cancel_timer_bitmap;
+};
+
+/**
+ * struct roam_msg_info - Roam message related information
+ * @present:    Flag to check if the roam msg info tlv is present
+ * @timestamp:  Timestamp is the absolute time w.r.t host timer which is
+ * synchronized between the host and target
+ * @msg_id:     Message ID from WMI_ROAM_MSG_ID
+ * @msg_param1: msg_param1, values is based on the host & FW
+ * understanding and depend on the msg ID
+ * @msg_param2: msg_param2 value is based on the host & FW understanding
+ * and depend on the msg ID
+ */
+struct roam_msg_info {
+	bool present;
+	uint32_t timestamp;
+	uint32_t msg_id;
+	uint32_t msg_param1;
+	uint32_t msg_param2;
 };
 
 /**

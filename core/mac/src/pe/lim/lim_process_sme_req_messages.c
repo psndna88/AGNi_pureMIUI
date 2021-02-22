@@ -710,7 +710,7 @@ __lim_handle_sme_start_bss_request(struct mac_context *mac_ctx, uint32_t *msg_bu
 
 		if (IS_DOT11_MODE_HE(session->dot11mode)) {
 			lim_update_session_he_capable(mac_ctx, session);
-			lim_copy_bss_he_cap(session, sme_start_bss_req);
+			lim_copy_bss_he_cap(session);
 		} else if (wlan_reg_is_6ghz_chan_freq(session->curr_op_freq)) {
 			pe_err("Invalid oper_ch_freq %d for dot11mode %d",
 			       session->curr_op_freq, session->dot11mode);
@@ -1405,7 +1405,7 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 
 		if (IS_DOT11_MODE_HE(session->dot11mode)) {
 			lim_update_session_he_capable(mac_ctx, session);
-			lim_copy_join_req_he_cap(session, sme_join_req);
+			lim_copy_join_req_he_cap(session);
 		}
 
 
@@ -3303,9 +3303,9 @@ static void lim_process_sme_set_addba_accept(struct mac_context *mac_ctx,
 		return;
 	}
 	if (!msg->addba_accept)
-		mac_ctx->reject_addba_req = 1;
+		mac_ctx->mlme_cfg->qos_mlme_params.reject_addba_req = 1;
 	else
-		mac_ctx->reject_addba_req = 0;
+		mac_ctx->mlme_cfg->qos_mlme_params.reject_addba_req = 0;
 }
 
 static void lim_process_sme_update_edca_params(struct mac_context *mac_ctx,
@@ -5007,6 +5007,7 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 	uint8_t session_id;      /* PE session_id */
 	int8_t max_tx_pwr;
 	uint32_t target_freq;
+	bool is_curr_ch_2g, is_new_ch_2g, update_he_cap;
 
 	if (!msg_buf) {
 		pe_err("msg_buf is NULL");
@@ -5057,6 +5058,27 @@ static void lim_process_sme_channel_change_request(struct mac_context *mac_ctx,
 		lim_is_session_he_capable(session_entry))) {
 		lim_update_session_he_capable_chan_switch
 			(mac_ctx, session_entry, target_freq);
+		is_new_ch_2g = wlan_reg_is_24ghz_ch_freq(target_freq);
+		is_curr_ch_2g = wlan_reg_is_24ghz_ch_freq(
+					session_entry->curr_op_freq);
+		if ((is_new_ch_2g && !is_curr_ch_2g) ||
+		    (!is_new_ch_2g && is_curr_ch_2g))
+			update_he_cap = true;
+		else
+			update_he_cap = false;
+		if (!update_he_cap) {
+			if ((session_entry->ch_width !=
+			     ch_change_req->ch_width) &&
+			    (session_entry->ch_width > CH_WIDTH_80MHZ ||
+			     ch_change_req->ch_width > CH_WIDTH_80MHZ))
+				update_he_cap = true;
+		}
+		if (update_he_cap) {
+			session_entry->curr_op_freq = target_freq;
+			session_entry->ch_width = ch_change_req->ch_width;
+			lim_copy_bss_he_cap(session_entry);
+			lim_update_he_bw_cap_mcs(session_entry, NULL);
+		}
 	} else if (wlan_reg_is_6ghz_chan_freq(target_freq)) {
 		pe_debug("Invalid target_freq %d for dot11mode %d cur HE %d",
 			 target_freq, ch_change_req->dot11mode,

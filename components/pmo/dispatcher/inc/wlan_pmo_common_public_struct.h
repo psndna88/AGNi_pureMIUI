@@ -371,7 +371,8 @@ struct pmo_psoc_cfg {
 	enum active_apf_mode active_mc_bc_apf_mode;
 	uint8_t ito_repeat_count;
 	bool is_mod_dtim_on_sys_suspend_enabled;
-	bool is_bus_suspend_enabled_in_beaconing_mode;
+	bool is_bus_suspend_enabled_in_sap_mode;
+	bool is_bus_suspend_enabled_in_go_mode;
 };
 
 /**

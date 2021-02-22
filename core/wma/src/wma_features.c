@@ -1479,6 +1479,10 @@ static const uint8_t *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "VDEV_DISCONNECT";
 	case WOW_REASON_LOCAL_DATA_UC_DROP:
 		return "LOCAL_DATA_UC_DROP";
+	case WOW_REASON_GENERIC_WAKE:
+		return "GENERIC_WAKE";
+	case WOW_REASON_TWT:
+		return "TWT Event";
 	default:
 		return "unknown";
 	}
@@ -1749,6 +1753,7 @@ static bool is_piggybacked_event(int32_t reason)
 	case WOW_REASON_ROAM_HO:
 	case WOW_REASON_ROAM_PMKID_REQUEST:
 	case WOW_REASON_VDEV_DISCONNECT:
+	case WOW_REASON_TWT:
 		return true;
 	default:
 		return false;
@@ -2290,6 +2295,11 @@ static void wma_acquire_wow_wakelock(t_wma_handle *wma, int wake_reason)
 	case WOW_REASON_ROAM_PREAUTH_START:
 		wl = &wma->roam_preauth_wl;
 		ms = WMA_ROAM_PREAUTH_WAKE_LOCK_DURATION;
+		break;
+	case WOW_REASON_PROBE_REQ_WPS_IE_RECV:
+		wl = &wma->probe_req_wps_wl;
+		ms = WMA_REASON_PROBE_REQ_WPS_IE_RECV_DURATION;
+		break;
 	default:
 		return;
 	}
@@ -2444,6 +2454,11 @@ static int wma_wake_event_no_payload(
 
 	case WOW_REASON_NLOD:
 		return wma_wake_reason_nlod(wma, wake_info->vdev_id);
+
+	case WOW_REASON_GENERIC_WAKE:
+		wma_info("Wake reason %s",
+			 wma_wow_wake_reason_str(wake_info->wake_reason));
+		return 0;
 
 	default:
 		return 0;

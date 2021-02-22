@@ -931,6 +931,7 @@ struct wlan_mlme_vht_caps {
  * @sap_max_inactivity_override: Override updating ap_sta_inactivity from
  * hostapd.conf
  * @sap_uapsd_enabled: Flag to enable/disable UAPSD for SAP
+ * @reject_addba_req: Flag to decline ADDBA Req from SAP
  */
 struct wlan_mlme_qos {
 	uint32_t tx_aggregation_size;
@@ -951,6 +952,7 @@ struct wlan_mlme_qos {
 	uint32_t tx_non_aggr_sw_retry_threshold;
 	bool sap_max_inactivity_override;
 	bool sap_uapsd_enabled;
+	bool reject_addba_req;
 };
 
 #ifdef WLAN_FEATURE_11AX
@@ -2399,7 +2401,7 @@ struct wlan_mlme_cfg {
 	struct wlan_mlme_dot11_mode dot11_mode;
 	struct wlan_mlme_reg reg;
 	struct roam_trigger_score_delta trig_score_delta[NUM_OF_ROAM_TRIGGERS];
-	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_TRIGGERS];
+	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_MIN_RSSI];
 	struct wlan_mlme_ratemask ratemask_cfg;
 };
 
@@ -2437,6 +2439,7 @@ struct wlan_mlme_sae_single_pmk {
  * @data_11kv:          Neighbor report/BTM parameters.
  * @btm_rsp:            BTM response information
  * @roam_init_info:     Roam initial info
+ * @roam_msg_info:      roam related message information
  */
 struct mlme_roam_debug_info {
 	struct wmi_roam_trigger_info trigger;
@@ -2445,6 +2448,7 @@ struct mlme_roam_debug_info {
 	struct wmi_neighbor_report_data data_11kv;
 	struct roam_btm_response_data btm_rsp;
 	struct roam_initial_data roam_init_info;
+	struct roam_msg_info roam_msg_info;
 };
 
 /**

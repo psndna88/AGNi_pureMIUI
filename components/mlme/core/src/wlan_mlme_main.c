@@ -767,6 +767,8 @@ static void mlme_init_qos_cfg(struct wlan_objmgr_psoc *psoc,
 				cfg_get(psoc, CFG_SAP_MAX_INACTIVITY_OVERRIDE);
 	qos_aggr_params->sap_uapsd_enabled =
 				cfg_get(psoc, CFG_SAP_QOS_UAPSD);
+	qos_aggr_params->reject_addba_req =
+				cfg_get(psoc, CFG_REJECT_ADDBA_REQ);
 }
 
 static void mlme_init_mbo_cfg(struct wlan_objmgr_psoc *psoc,
@@ -2152,6 +2154,12 @@ mlme_init_roam_score_config(struct wlan_objmgr_psoc *psoc,
 	min_rssi_param->min_rssi =
 		cfg_get(psoc, CFG_BMISS_ROAM_MIN_RSSI);
 	min_rssi_param->trigger_reason = ROAM_TRIGGER_REASON_BMISS;
+
+	min_rssi_param = &mlme_cfg->trig_min_rssi[MIN_RSSI_2G_TO_5G_ROAM];
+	min_rssi_param->min_rssi =
+		cfg_get(psoc, CFG_2G_TO_5G_ROAM_MIN_RSSI);
+	min_rssi_param->trigger_reason = ROAM_TRIGGER_REASON_HIGH_RSSI;
+
 }
 
 /**

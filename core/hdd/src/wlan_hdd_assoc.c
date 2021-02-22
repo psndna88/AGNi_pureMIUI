@@ -157,8 +157,8 @@ static const
 u8 ccp_rsn_oui_13[HDD_RSN_OUI_SIZE] = {0x50, 0x6F, 0x9A, 0x01};
 
 /* Offset where the EID-Len-IE, start. */
-#define FT_ASSOC_RSP_IES_OFFSET 6  /* Capability(2) + AID(2) + Status Code(2) */
-#define FT_ASSOC_REQ_IES_OFFSET 4  /* Capability(2) + LI(2) */
+#define ASSOC_RSP_IES_OFFSET 6  /* Capability(2) + AID(2) + Status Code(2) */
+#define ASSOC_REQ_IES_OFFSET 4  /* Capability(2) + LI(2) */
 
 #define HDD_PEER_AUTHORIZE_WAIT 10
 
@@ -1226,7 +1226,7 @@ hdd_send_ft_assoc_response(struct net_device *dev,
 	unsigned int len = 0;
 	u8 *assoc_rsp = NULL;
 
-	if (roam_info->nAssocRspLength < FT_ASSOC_RSP_IES_OFFSET) {
+	if (roam_info->nAssocRspLength < ASSOC_RSP_IES_OFFSET) {
 		hdd_debug("Invalid assoc rsp length %d",
 			  roam_info->nAssocRspLength);
 		return;
@@ -1240,10 +1240,10 @@ hdd_send_ft_assoc_response(struct net_device *dev,
 		return;
 	}
 	/* assoc_rsp needs to point to the IEs */
-	assoc_rsp += FT_ASSOC_RSP_IES_OFFSET;
+	assoc_rsp += ASSOC_RSP_IES_OFFSET;
 
 	/* Send the Assoc Resp, the supplicant needs this for initial Auth. */
-	len = roam_info->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
+	len = roam_info->nAssocRspLength - ASSOC_RSP_IES_OFFSET;
 	if (len > IW_GENERIC_IE_MAX) {
 		hdd_err("Invalid Assoc resp length %d", len);
 		return;
@@ -2043,7 +2043,6 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	if (adapter->device_mode == QDF_STA_MODE) {
 		vdev = hdd_objmgr_get_vdev(adapter);
 		if (vdev) {
-			wlan_crypto_free_vdev_key(vdev);
 			wlan_crypto_reset_vdev_params(vdev);
 			hdd_objmgr_put_vdev(vdev);
 		}
@@ -2560,7 +2559,7 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 		goto done;
 	}
 
-	if (roam_info->nAssocRspLength < FT_ASSOC_RSP_IES_OFFSET) {
+	if (roam_info->nAssocRspLength < ASSOC_RSP_IES_OFFSET) {
 		hdd_err("Invalid assoc rsp length %d",
 			roam_info->nAssocRspLength);
 		goto done;
@@ -2573,7 +2572,7 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 		goto done;
 
 	/* assoc_rsp needs to point to the IEs */
-	assoc_rsp += FT_ASSOC_RSP_IES_OFFSET;
+	assoc_rsp += ASSOC_RSP_IES_OFFSET;
 
 	/*
 	 * Active session count is decremented upon disconnection, but during
@@ -2591,7 +2590,7 @@ static void hdd_send_re_assoc_event(struct net_device *dev,
 	}
 
 	/* Send the Assoc Resp, the supplicant needs this for initial Auth */
-	len = roam_info->nAssocRspLength - FT_ASSOC_RSP_IES_OFFSET;
+	len = roam_info->nAssocRspLength - ASSOC_RSP_IES_OFFSET;
 	if (len > IW_GENERIC_IE_MAX) {
 		hdd_err("Invalid Assoc resp length %d", len);
 		goto done;
@@ -3222,10 +3221,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				/*
 				 * assoc_rsp needs to point to the IEs
 				 */
-				assoc_rsp += FT_ASSOC_RSP_IES_OFFSET;
+				assoc_rsp += ASSOC_RSP_IES_OFFSET;
 				assoc_rsp_len =
 					roam_info->nAssocRspLength -
-					FT_ASSOC_RSP_IES_OFFSET;
+					ASSOC_RSP_IES_OFFSET;
 
 				hdd_debug("assoc_rsp_len %d", assoc_rsp_len);
 			} else {
@@ -3242,11 +3241,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					 * assoc_req needs to point to
 					 * the IEs
 					 */
-					assoc_req +=
-						FT_ASSOC_REQ_IES_OFFSET;
+					assoc_req += ASSOC_REQ_IES_OFFSET;
 					assoc_req_len =
 					    roam_info->nAssocReqLength -
-						FT_ASSOC_REQ_IES_OFFSET;
+						ASSOC_REQ_IES_OFFSET;
 				} else {
 					/*
 					 * This should contain only the
@@ -3580,21 +3578,47 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 		    && !hddDisconInProgress) {
 			u8 *assoc_rsp = NULL;
 			u8 *assoc_req = NULL;
+			unsigned int assoc_rsp_len = 0;
+			unsigned int assoc_req_len = 0;
 
 			if (roam_info) {
 				if (roam_info->pbFrames) {
-				/* Association Request */
+					/* Association Request */
 					assoc_req =
 						(u8 *)(roam_info->pbFrames +
-						      roam_info->nBeaconLength);
+						       roam_info->nBeaconLength);
+					if (assoc_req) {
+						/*
+						 * assoc_req needs to point to
+						 * the IEs
+						 */
+						assoc_req +=
+							ASSOC_REQ_IES_OFFSET;
+						assoc_req_len =
+						    roam_info->nAssocReqLength -
+							ASSOC_REQ_IES_OFFSET;
+					} else {
+						assoc_req_len = 0;
+					}
+
 					/* Association Response */
 					assoc_rsp =
 						(u8 *)(roam_info->pbFrames +
 						      roam_info->nBeaconLength +
 						    roam_info->nAssocReqLength);
-					hdd_debug("assoc_req_len %d assoc resp len %d",
-						  roam_info->nAssocReqLength,
-						  roam_info->nAssocRspLength);
+					if (assoc_rsp) {
+						/*
+						 * assoc_rsp needs to point to the IEs
+						 */
+						assoc_rsp += ASSOC_RSP_IES_OFFSET;
+						assoc_rsp_len =
+							roam_info->nAssocRspLength -
+							ASSOC_RSP_IES_OFFSET;
+					} else {
+						assoc_rsp_len = 0;
+					}
+					hdd_debug("Assoc req len:%d rsp len:%d",
+						  assoc_req_len, assoc_rsp_len);
 				}
 				hdd_err("send connect failure to nl80211: for bssid "
 					QDF_MAC_ADDR_FMT
@@ -3621,12 +3645,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
 						roam_info, assoc_req,
-						roam_info->nAssocReqLength,
-						assoc_rsp,
-						roam_info->nAssocRspLength,
+						assoc_req_len,
+						assoc_rsp, assoc_rsp_len,
 						WLAN_STATUS_ASSOC_DENIED_UNSPEC,
-						GFP_KERNEL,
-						connect_timeout,
+						GFP_KERNEL, connect_timeout,
 						roam_info->status_code);
 				else
 					hdd_connect_result(dev,
@@ -3641,9 +3663,8 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					hdd_connect_result(dev,
 						roam_info->bssid.bytes,
 						roam_info, assoc_req,
-						roam_info->nAssocReqLength,
-						assoc_rsp,
-						roam_info->nAssocRspLength,
+						assoc_req_len,
+						assoc_rsp, assoc_rsp_len,
 						roam_info->reasonCode ?
 						roam_info->reasonCode :
 						WLAN_STATUS_UNSPECIFIED_FAILURE,

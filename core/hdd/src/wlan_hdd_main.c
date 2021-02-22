@@ -223,6 +223,9 @@
 /* PCIe gen speed change idle shutdown timer 100 milliseconds */
 #define HDD_PCIE_GEN_SPEED_CHANGE_TIMEOUT_MS (100)
 
+#define MAX_NET_DEV_REF_LEAK_ITERATIONS 10
+#define NET_DEV_REF_LEAK_ITERATION_SLEEP_TIME_MS 10
+
 int wlan_start_ret_val;
 static DECLARE_COMPLETION(wlan_start_comp);
 static qdf_atomic_t wlan_hdd_state_fops_ref;
@@ -3021,23 +3024,14 @@ wlan_hdd_update_dbs_scan_and_fw_mode_config(void)
 	hdd_debug("send scan_cfg: 0x%x fw_mode_cfg: 0x%x to fw",
 		cfg.scan_config, cfg.fw_mode_config);
 
-	status = policy_mgr_reset_dual_mac_configuration(hdd_ctx->psoc);
-	if (QDF_IS_STATUS_ERROR(status))
-		return status;
-
 	status = sme_soc_set_dual_mac_config(cfg);
-	if (QDF_IS_STATUS_SUCCESS(status)) {
-		/* wait for sme_soc_set_dual_mac_config to complete */
-		status =
-		    policy_mgr_wait_for_dual_mac_configuration(hdd_ctx->psoc);
-		if (QDF_IS_STATUS_SUCCESS(status))
-			hdd_ctx->is_dual_mac_cfg_updated = true;
-	} else {
+	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("sme_soc_set_dual_mac_config failed %d", status);
 		return status;
 	}
+	hdd_ctx->is_dual_mac_cfg_updated = true;
 
-	return status;
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -3293,7 +3287,7 @@ int hdd_set_11ax_rate(struct hdd_adapter *adapter, int set_value,
 		return -EIO;
 	}
 
-	if (set_value != 0xff) {
+	if (set_value != 0xffff) {
 		rix = RC_2_RATE_IDX_11AX(set_value);
 		preamble = WMI_RATE_PREAMBLE_HE;
 		nss = HT_RC_2_STREAMS_11AX(set_value);
@@ -5246,6 +5240,7 @@ hdd_alloc_station_adapter(struct hdd_context *hdd_ctx, tSirMacAddr mac_addr,
 	dev->tx_queue_len = HDD_NETDEV_TX_QUEUE_LEN;
 	adapter->wdev.wiphy = hdd_ctx->wiphy;
 	adapter->wdev.netdev = dev;
+	adapter->latency_level = cfg_get(hdd_ctx->psoc, CFG_LATENCY_LEVEL);
 
 	/* set dev's parent to underlying device */
 	SET_NETDEV_DEV(dev, hdd_ctx->parent_dev);
@@ -5938,10 +5933,18 @@ static char *net_dev_ref_debug_string_from_id(wlan_net_dev_ref_dbgid dbgid)
 
 static void hdd_check_for_net_dev_ref_leak(struct hdd_adapter *adapter)
 {
-	int id;
+	int i, id;
 
 	for (id = 0; id < NET_DEV_HOLD_ID_MAX; id++) {
-		if (adapter->net_dev_hold_ref_count[id]) {
+		for (i = 0; i < MAX_NET_DEV_REF_LEAK_ITERATIONS; i++) {
+			if (!qdf_atomic_read(
+				&adapter->net_dev_hold_ref_count[id]))
+				break;
+			hdd_info("net_dev held for debug id %s",
+				 net_dev_ref_debug_string_from_id(id));
+			qdf_sleep(NET_DEV_REF_LEAK_ITERATION_SLEEP_TIME_MS);
+		}
+		if (i == MAX_NET_DEV_REF_LEAK_ITERATIONS) {
 			hdd_err("net_dev hold reference leak detected for debug id: %s",
 				net_dev_ref_debug_string_from_id(id));
 		}
@@ -6070,7 +6073,6 @@ static void hdd_cleanup_adapter(struct hdd_context *hdd_ctx,
 	qdf_spinlock_destroy(&adapter->vdev_lock);
 	hdd_sta_info_deinit(&adapter->sta_info_list);
 	hdd_sta_info_deinit(&adapter->cache_sta_info_list);
-	hdd_check_for_net_dev_ref_leak(adapter);
 
 	wlan_hdd_debugfs_csr_deinit(adapter);
 
@@ -6672,6 +6674,7 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx, uint8_t sessio
 	struct net_device *ndev = NULL;
 	struct hdd_adapter *adapter = NULL;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+	uint32_t i;
 
 	if (hdd_ctx->current_intf_count >= WLAN_MAX_VDEVS) {
 		/*
@@ -6886,6 +6889,10 @@ struct hdd_adapter *hdd_open_adapter(struct hdd_context *hdd_ctx, uint8_t sessio
 	hdd_sta_info_init(&adapter->sta_info_list);
 	hdd_sta_info_init(&adapter->cache_sta_info_list);
 
+	for (i = 0; i < NET_DEV_HOLD_ID_MAX; i++)
+		qdf_atomic_init(
+			&adapter->net_dev_hold_ref_count[NET_DEV_HOLD_ID_MAX]);
+
 	/* Add it to the hdd's session list. */
 	status = hdd_add_adapter_back(hdd_ctx, adapter);
 	if (QDF_STATUS_SUCCESS != status)
@@ -6960,6 +6967,7 @@ void hdd_close_adapter(struct hdd_context *hdd_ctx,
 	 */
 	hdd_bus_bw_compute_timer_stop(hdd_ctx);
 
+	hdd_check_for_net_dev_ref_leak(adapter);
 	hdd_remove_adapter(hdd_ctx, adapter);
 	__hdd_close_adapter(hdd_ctx, adapter, rtnl_held);
 
@@ -6974,8 +6982,10 @@ void hdd_close_all_adapters(struct hdd_context *hdd_ctx, bool rtnl_held)
 
 	hdd_enter();
 
-	while (QDF_IS_STATUS_SUCCESS(hdd_remove_front_adapter(hdd_ctx,
-							      &adapter))) {
+	while (QDF_IS_STATUS_SUCCESS(hdd_get_front_adapter(
+							hdd_ctx, &adapter))) {
+		hdd_check_for_net_dev_ref_leak(adapter);
+		hdd_remove_front_adapter(hdd_ctx, &adapter);
 		vdev_sync = osif_vdev_sync_unregister(adapter->dev);
 		if (vdev_sync)
 			osif_vdev_sync_wait_for_ops(vdev_sync);
@@ -8632,7 +8642,7 @@ void hdd_adapter_dev_hold_debug(struct hdd_adapter *adapter,
 		QDF_BUG(0);
 	}
 	dev_hold(adapter->dev);
-	adapter->net_dev_hold_ref_count[dbgid]++;
+	qdf_atomic_inc(&adapter->net_dev_hold_ref_count[dbgid]);
 }
 
 void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
@@ -8643,14 +8653,14 @@ void hdd_adapter_dev_put_debug(struct hdd_adapter *adapter,
 		QDF_BUG(0);
 	}
 
-	if (adapter->net_dev_hold_ref_count[dbgid] == 0) {
+	if (qdf_atomic_dec_return(
+			&adapter->net_dev_hold_ref_count[dbgid]) < 0) {
 		hdd_err("dev_put detected without dev_hold for debug id: %s",
 			net_dev_ref_debug_string_from_id(dbgid));
 		QDF_BUG(0);
 	}
 
 	dev_put(adapter->dev);
-	adapter->net_dev_hold_ref_count[dbgid]--;
 }
 
 QDF_STATUS hdd_get_front_adapter(struct hdd_context *hdd_ctx,
@@ -10711,6 +10721,7 @@ QDF_STATUS hdd_adapter_feature_update_work_init(struct hdd_adapter *adapter)
 
 	status = qdf_create_work(0, &adapter->netdev_features_update_work,
 				 hdd_adapter_param_update_work, adapter);
+	adapter->netdev_features_update_work_status = HDD_WORK_INITIALIZED;
 
 	hdd_exit();
 
@@ -10721,8 +10732,14 @@ void hdd_adapter_feature_update_work_deinit(struct hdd_adapter *adapter)
 {
 	hdd_enter();
 
+	if (adapter->netdev_features_update_work_status !=
+	    HDD_WORK_INITIALIZED) {
+		hdd_debug("work not yet init");
+		return;
+	}
 	qdf_cancel_work(&adapter->netdev_features_update_work);
 	qdf_flush_work(&adapter->netdev_features_update_work);
+	adapter->netdev_features_update_work_status = HDD_WORK_UNINITIALIZED;
 
 	hdd_exit();
 }
@@ -16212,6 +16229,24 @@ void hdd_deinit(void)
 #define HDD_WLAN_START_WAIT_TIME (CDS_WMA_TIMEOUT + 5000)
 #endif
 
+static void hdd_set_adapter_wlm_def_level(struct hdd_context *hdd_ctx)
+{
+	struct hdd_adapter *adapter, *next_adapter = NULL;
+	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_GET_ADAPTER;
+	int ret;
+
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret != 0)
+		return;
+
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter,
+					   dbgid) {
+		adapter->latency_level =
+				cfg_get(hdd_ctx->psoc, CFG_LATENCY_LEVEL);
+		hdd_adapter_dev_put_debug(adapter, dbgid);
+	}
+}
+
 static int wlan_hdd_state_ctrl_param_open(struct inode *inode,
 					  struct file *file)
 {
@@ -16247,6 +16282,7 @@ static void hdd_inform_wifi_off(void)
 	if (ret)
 		return;
 
+	hdd_set_adapter_wlm_def_level(hdd_ctx);
 	__hdd_inform_wifi_off();
 
 	osif_psoc_sync_op_stop(psoc_sync);
@@ -18604,13 +18640,16 @@ wlan_hdd_del_p2p_interface(struct hdd_context *hdd_ctx)
 			if (vdev_sync)
 				osif_vdev_sync_wait_for_ops(vdev_sync);
 
+			hdd_adapter_dev_put_debug(
+				adapter, NET_DEV_HOLD_DEL_P2P_INTERFACE);
+
 			hdd_clean_up_interface(hdd_ctx, adapter);
 
 			if (vdev_sync)
 				osif_vdev_sync_destroy(vdev_sync);
-		}
-		hdd_adapter_dev_put_debug(adapter,
-					  NET_DEV_HOLD_DEL_P2P_INTERFACE);
+		} else
+			hdd_adapter_dev_put_debug(
+				adapter, NET_DEV_HOLD_DEL_P2P_INTERFACE);
 	}
 }
 

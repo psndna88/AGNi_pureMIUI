@@ -5928,11 +5928,10 @@ uint8_t lim_op_class_from_bandwidth(struct mac_context *mac_ctx,
 	} else if (ch_bandwidth == CH_WIDTH_80P80MHZ) {
 		ch_behav_limit = BEHAV_BW80_PLUS;
 	}
-	wlan_reg_freq_width_to_chan_op_class_auto
-		(mac_ctx->pdev, channel_freq,
-		 ch_width_in_mhz(ch_bandwidth),
-		 true, BIT(ch_behav_limit), &op_class,
-		 &channel);
+	wlan_reg_freq_width_to_chan_op_class(mac_ctx->pdev, channel_freq,
+					     ch_width_in_mhz(ch_bandwidth),
+					     true, BIT(ch_behav_limit),
+					     &op_class, &channel);
 
 	return op_class;
 }
@@ -6809,6 +6808,10 @@ void lim_update_stads_he_caps(struct mac_context *mac_ctx,
 			      struct pe_session *session_entry,
 			      tSchBeaconStruct *beacon)
 {
+	/* If HE is not supported, do not fill sta_ds and return */
+	if (!IS_DOT11_MODE_HE(session_entry->dot11mode))
+		goto out;
+
 	if (!assoc_rsp->he_cap.present && beacon && beacon->he_cap.present) {
 		/* Use beacon HE caps if assoc resp doesn't have he caps */
 		pe_debug("he_caps missing in assoc rsp");
@@ -6818,7 +6821,7 @@ void lim_update_stads_he_caps(struct mac_context *mac_ctx,
 
 	/* assoc resp and beacon doesn't have he caps */
 	if (!assoc_rsp->he_cap.present)
-		return;
+		goto out;
 
 	sta_ds->mlmStaContext.he_capable = assoc_rsp->he_cap.present;
 
@@ -6834,18 +6837,12 @@ void lim_update_stads_he_caps(struct mac_context *mac_ctx,
 	qdf_mem_copy(&sta_ds->he_config, &assoc_rsp->he_cap,
 		     sizeof(tDot11fIEhe_cap));
 
-	/* If HE is not supported, do not fill sta_ds and return */
-	if (!IS_DOT11_MODE_HE(session_entry->dot11mode))
-		return;
-
 	/* If MCS 12/13 is supported by the assoc resp QCN IE */
 	if (assoc_rsp->qcn_ie.present &&
 	    assoc_rsp->qcn_ie.he_mcs13_attr.present) {
 		sta_ds->he_mcs_12_13_map =
 		assoc_rsp->qcn_ie.he_mcs13_attr.he_mcs_12_13_supp_80 |
 		assoc_rsp->qcn_ie.he_mcs13_attr.he_mcs_12_13_supp_160 << 8;
-	} else {
-		return;
 	}
 
 	/* Take intersection of the FW capability for HE MCS 12/13 */
@@ -6855,7 +6852,11 @@ void lim_update_stads_he_caps(struct mac_context *mac_ctx,
 	else
 		sta_ds->he_mcs_12_13_map &=
 			mac_ctx->mlme_cfg->he_caps.he_mcs_12_13_supp_5g;
-
+out:
+	pe_debug("he_mcs_12_13_map: sta_ds 0x%x, 2g_fw 0x%x, 5g_fw 0x%x",
+		 sta_ds->he_mcs_12_13_map,
+		 mac_ctx->mlme_cfg->he_caps.he_mcs_12_13_supp_2g,
+		 mac_ctx->mlme_cfg->he_caps.he_mcs_12_13_supp_5g);
 	lim_update_he_mcs_12_13_map(mac_ctx->psoc,
 				    session_entry->smeSessionId,
 				    sta_ds->he_mcs_12_13_map);
@@ -6897,6 +6898,8 @@ void lim_update_usr_he_cap(struct mac_context *mac_ctx, struct pe_session *sessi
 	uint8_t extracted_buff[DOT11F_IE_HE_CAP_MAX_LEN + 2];
 	QDF_STATUS status;
 	struct sir_vht_config *vht_cfg = &session->vht_config;
+	struct mlme_legacy_priv *mlme_priv;
+
 	qdf_mem_zero(extracted_buff, sizeof(extracted_buff));
 	status = lim_strip_ie(mac_ctx, add_ie->probeRespBCNData_buff,
 			&add_ie->probeRespBCNDataLen,
@@ -6937,6 +6940,19 @@ void lim_update_usr_he_cap(struct mac_context *mac_ctx, struct pe_session *sessi
 		vht_cfg->su_beam_formee = 0;
 		vht_cfg->mu_beam_formee = 0;
 		vht_cfg->csnof_beamformer_antSup = 0;
+	}
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(session->vdev);
+	if (mlme_priv) {
+		mlme_priv->he_config.mu_beamformer = he_cap->mu_beamformer;
+		mlme_priv->he_config.su_beamformer = he_cap->su_beamformer;
+		mlme_priv->he_config.su_beamformee = he_cap->su_beamformee;
+		mlme_priv->he_config.bfee_sts_lt_80 = he_cap->bfee_sts_lt_80;
+		mlme_priv->he_config.bfee_sts_gt_80 = he_cap->bfee_sts_gt_80;
+		mlme_priv->he_config.num_sounding_lt_80 =
+						he_cap->num_sounding_lt_80;
+		mlme_priv->he_config.num_sounding_gt_80 =
+						he_cap->num_sounding_gt_80;
 	}
 	wma_set_he_txbf_params(session->vdev_id, he_cap->su_beamformer,
 			       he_cap->su_beamformee, he_cap->mu_beamformer);
@@ -6999,17 +7015,59 @@ void lim_decide_he_op(struct mac_context *mac_ctx, uint32_t *mlme_he_ops,
 	wma_update_vdev_he_ops(mlme_he_ops, &he_ops);
 }
 
-void lim_copy_bss_he_cap(struct pe_session *session,
-			 struct start_bss_req *sme_start_bss_req)
+static void
+lim_revise_req_he_cap_per_band(struct mlme_legacy_priv *mlme_priv,
+			       struct pe_session *session)
 {
-	qdf_mem_copy(&(session->he_config), &(sme_start_bss_req->he_config),
+	struct mac_context *mac = session->mac_ctx;
+	tDot11fIEhe_cap *he_config;
+
+	he_config = &mlme_priv->he_config;
+	if (wlan_reg_is_24ghz_ch_freq(session->curr_op_freq)) {
+		he_config->bfee_sts_lt_80 =
+			mac->he_cap_2g.bfee_sts_lt_80;
+	} else {
+		he_config->bfee_sts_lt_80 =
+			mac->he_cap_5g.bfee_sts_lt_80;
+
+		he_config->num_sounding_lt_80 =
+			mac->he_cap_5g.num_sounding_lt_80;
+		if (he_config->chan_width_2 ||
+		    he_config->chan_width_3) {
+			he_config->bfee_sts_gt_80 =
+				mac->he_cap_5g.bfee_sts_gt_80;
+			he_config->num_sounding_gt_80 =
+				mac->he_cap_5g.num_sounding_gt_80;
+			he_config->he_ppdu_20_in_160_80p80Mhz =
+				mac->he_cap_5g.he_ppdu_20_in_160_80p80Mhz;
+			he_config->he_ppdu_80_in_160_80p80Mhz =
+				mac->he_cap_5g.he_ppdu_80_in_160_80p80Mhz;
+		}
+	}
+}
+
+void lim_copy_bss_he_cap(struct pe_session *session)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(session->vdev);
+	if (!mlme_priv)
+		return;
+	lim_revise_req_he_cap_per_band(mlme_priv, session);
+	qdf_mem_copy(&(session->he_config), &(mlme_priv->he_config),
 		     sizeof(session->he_config));
 }
 
-void lim_copy_join_req_he_cap(struct pe_session *session,
-			      struct join_req *sme_join_req)
+void lim_copy_join_req_he_cap(struct pe_session *session)
 {
-	qdf_mem_copy(&(session->he_config), &(sme_join_req->he_config),
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(session->vdev);
+	if (!mlme_priv)
+		return;
+	if (!session->mac_ctx->usr_cfg_tx_bfee_nsts)
+		lim_revise_req_he_cap_per_band(mlme_priv, session);
+	qdf_mem_copy(&(session->he_config), &(mlme_priv->he_config),
 		     sizeof(session->he_config));
 }
 
