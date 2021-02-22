@@ -1555,4 +1555,45 @@ QDF_STATUS reg_set_ext_tpc_supported(struct wlan_objmgr_psoc *psoc,
  * Return: true if FW supports the new TPC command, else false
  */
 bool reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
+
+#if defined(CONFIG_BAND_6GHZ) && defined(CONFIG_REG_CLIENT)
+/**
+ * reg_set_lower_6g_edge_ch_supp() - Set if lower 6ghz edge channel is
+ * supported by FW
+ *
+ * @psoc: Pointer to psoc
+ * @val: value
+ */
+QDF_STATUS reg_set_lower_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc,
+					 bool val);
+
+/**
+ * reg_set_disable_upper_6g_edge_ch_supp() - Set if upper 6ghz edge channel is
+ * disabled by FW
+ *
+ * @psoc: Pointer to psoc
+ * @val: value
+ */
+QDF_STATUS
+reg_set_disable_upper_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc,
+				      bool val);
+
+/**
+ * reg_is_lower_6g_edge_ch_supp() - Check whether 6GHz lower edge channel
+ * (5935 MHz) is supported.
+ * @psoc: pointer to psoc
+ *
+ * Return: true if edge channels are supported, else false
+ */
+bool reg_is_lower_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * reg_is_upper_6g_edge_ch_disabled() - Check whether 6GHz upper edge
+ * channel (7115 MHz) is disabled.
+ * @psoc: pointer to psoc
+ *
+ * Return: true if edge channels are supported, else false
+ */
+bool reg_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc);
+#endif
 #endif
