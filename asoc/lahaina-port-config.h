@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _LAHAINA_PORT_CONFIG
@@ -64,7 +64,7 @@ static struct port_params tx_frame_params_default[SWR_MSTR_PORT_LEN] = {
 /* TX UC1: TX1: 1ch, TX2: 2chs, TX3: 1ch(MBHC) */
 static struct port_params tx_frame_params_shima[SWR_MSTR_PORT_LEN] = {
 	{3,  0,  0,  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 1, 0x00, 0x00}, /* TX1 */
-	{3,  2,  0,  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0x00, 0x00}, /* TX2 */
+	{7,  5,  0,  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0x00, 0x00}, /* TX2 */
 	{7,  2,  0,  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0x00, 0x00}, /* TX3 */
 };
 
