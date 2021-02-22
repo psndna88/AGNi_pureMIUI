@@ -1,4 +1,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,dispcc-yupik.h>
+#include <dt-bindings/clock/qcom,gcc-yupik.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 
 / {
 	#address-cells = <0x2>;
@@ -100,7 +103,7 @@
 		image-name = "qcom,trustedvm";
 		qcom,pasid = <0x0 0x1c>;
 
-		iomemory-ranges = <0x0 0x92c000 0x0 0x92c000 0x0 0x4000 0x0
+		iomemory-ranges = <0x0 0xa24000 0x0 0xa24000 0x0 0x4000 0x0
 				0x0 0xc400000 0x0 0xc400000 0x0 0x30000 0x1
 				0x0 0xc440000 0x0 0xc440000 0x0 0x10000 0x1
 				0x0 0xc600000 0x0 0xc600000 0x0 0x2000000 0x1
@@ -108,7 +111,7 @@
 				0x0 0xe700000 0x0 0xe700000 0x0 0xa0000 0x1
 				0x0 0xae8f000 0x0 0xae8f000 0x0 0x1000 0x0>;
 
-		gic-irq-ranges = <283 283>; /* PVM->SVM IRQ transfer */
+		gic-irq-ranges = <316 316>; /* PVM->SVM IRQ transfer */
 
 		memory {
 			#address-cells = <0x2>;
@@ -225,6 +228,15 @@
 			     <GIC_PPI 12 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	qcom_smcinvoke {
+		compatible = "qcom,smcinvoke";
+	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+		qcom,support-hypervisor;
+	};
+
 	/* Qup3_1 SE5: se_13 */
 	qupv3_1: qcom,qupv3_1_geni_se@ac0000 {
 		compatible = "qcom,qupv3-geni-se";
@@ -269,7 +281,16 @@
 		dma-names = "tx", "rx";
 		qcom,wrapper-core = <&qupv3_1>;
 		qcom,le-vm;
-		status = "disabled";
+		status = "ok";
+		novatek@62 {
+			compatible = "novatek,NVT-ts";
+			reg = <0x62>;
+			novatek,trusted-touch-mode = "vm_mode";
+			novatek,touch-environment = "tvm";
+			novatek,trusted-touch-spi-irq = <601>;
+			novatek,trusted-touch-io-bases = <0xf134000 0xf135000 0xf169000 0xf151000 0xa94000 0x00a10000>;
+			novatek,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
+		};
 	};
 
 	qupv3_se13_spi: spi@a94000 {
@@ -288,3 +309,5 @@
 	};
 };
 #include "lahaina-vm-ion.dtsi"
+#include "display/trustedvm-yupik-sde.dtsi"
+#include "display/trustedvm-yupik-sde-display.dtsi"

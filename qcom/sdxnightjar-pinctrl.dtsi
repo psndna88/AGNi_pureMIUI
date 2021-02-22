@@ -441,6 +441,36 @@
 			};
 		};
 
+		sdc2_wlan_gpio {
+			sdc2_wlan_gpio_active: sdc2_wlan_gpio_active {
+				mux {
+					pins = "gpio80";
+					function  = "gpio";
+				};
+
+				config {
+					pins  = "gpio80";
+					output-high;
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+			};
+
+			sdc2_wlan_gpio_sleep: sdc2_wlan_gpio_sleep {
+				mux {
+					pins = "gpio80";
+					function  = "gpio";
+				};
+
+				config {
+					pins  = "gpio80";
+					drive-strength = <2>;
+					bias-pull-down;
+					output-low;
+				};
+			};
+		};
+
 		/* SMB CONFIGURATION */
 		pmx_smb_stat {
 			smb_stat_active: smb_stat_active {
@@ -797,6 +827,52 @@
 				drive-strength = <2>; /* 2 mA */
 				bias-disable; /* NO pull */
 				output-low;
+			};
+		};
+
+		wcd9xxx_intr {
+			wcd_intr_default: wcd_intr_default {
+				mux {
+					pins = "gpio94";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio94";
+					drive-strength = <2>; /* 2 mA */
+					bias-pull-down; /* pull down */
+					input-enable;
+				};
+			};
+		};
+
+		spkr_1_wcd {
+			spkr_1_wcd_en_active: spkr_1_wcd_en_active {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					drive-strength = <16>;   /* 16 mA */
+					bias-disable;
+					output-high;
+				};
+			};
+
+			spkr_1_wcd_en_sleep: spkr_1_wcd_en_sleep {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					drive-strength = <2>;   /* 2 mA */
+					bias-pull-down;
+					input-enable;
+				};
 			};
 		};
 
@@ -1268,6 +1344,37 @@
 				drive-strength = <2>;	/* 2 MA */
 			};
 		};
+
+		cdc_reset_ctrl {
+			cdc_reset_sleep: cdc_reset_sleep {
+				mux {
+					pins = "gpio90";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90";
+					drive-strength = <2>;
+					bias-disable;
+					output-low;
+				};
+			};
+
+			cdc_reset_active:cdc_reset_active {
+				mux {
+					pins = "gpio90";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio90";
+					drive-strength = <8>;
+					bias-pull-down;
+					output-high;
+				};
+			};
+		};
+
 
 		sdc1_cmd_on: sdc1_cmd_on {
 			config {

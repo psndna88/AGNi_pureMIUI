@@ -1,5 +1,19 @@
 #include <dt-bindings/gpio/gpio.h>
 
-&qupv3_0 {
+&qupv3_se0_2uart {
 	status = "ok";
+};
+
+&soc {
+	qcom,lpass@62400000 {
+	status = "ok";
+	};
+
+	qcom,venus@aae0000 {
+	status = "ok";
+	};
+
+	qcom,turing@8300000 {
+	status = "ok";
+	};
 };

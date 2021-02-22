@@ -396,6 +396,12 @@ Charger specific properties:
   Value type: bool
   Definition: Boolean flag which when present disables FCC restriction.
 
+- qcom,jeita-arb-enable
+  Usage:      optional
+  Value type: bool
+  Definition: Boolean flag which indicates if JETIA ARB handling when
+		Vjeita > Vbatt is enabled.
+
 =============================================
 Second Level Nodes - SMB5 Charger Peripherals
 =============================================

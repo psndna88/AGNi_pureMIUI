@@ -20,7 +20,7 @@
 
 	model = "Qualcomm Technologies, Inc. SDXLEMUR";
 	compatible = "qcom,sdxlemur";
-	qcom,msm-id = <458 0x10000>, <483 0x10000>;
+	qcom,msm-id = <458 0x10000>, <483 0x10000>, <509 0x10000>;
 	interrupt-parent = <&intc>;
 
 	aliases {
@@ -52,6 +52,31 @@
 			size = <0xC00000>;
 			linux,cma-default;
 		};
+
+		user_contig_mem: user_contig_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
+
+		qseecom_mem: qseecom_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1000000>;
+		};
+
 
 		audio_mem: audio_region@0 {
 			compatible = "shared-dma-pool";
@@ -260,7 +285,7 @@
 		};
 
 		tmc_etf {
-			qcom,dump-size = <0x4000>;
+			qcom,dump-size = <0x10000>;
 			qcom,dump-id = <0xf1>;
 		};
 
@@ -1124,6 +1149,11 @@
 		qcom,pil-force-shutdown;
 	};
 
+	ipa_eth_group1: ipa_eth_group1 {
+		qcom,iommu-dma-addr-pool = <0x80000000 0x0fe20000>;
+		qcom,iommu-dma = "atomic";
+	};
+
 	ipa_hw: qcom,ipa@03e00000 {
 		compatible = "qcom,ipa";
 		mboxes = <&qmp_aop 0>;
@@ -1147,6 +1177,9 @@
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
 		qcom,ipa-wdi3-over-gsi;
+		qcom,ipa-wdi3-holb-2g = <8>;
+		qcom,ipa-wdi3-holb-5g = <15>;
+		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
 		qcom,ipa-uc-holb-monitor;
@@ -1216,7 +1249,8 @@
 		ipa_smmu_eth: ipa_smmu_eth {
 			compatible = "qcom,ipa-smmu-eth-cb";
 			iommus = <&apps_smmu 0x5E3 0x0>;
-			qcom,iommu-dma = "atomic";
+			qcom,shared-cb;
+			qcom,iommu-group = <&ipa_eth_group1>;
 		};
 
 		ipa_smmu_eth1: ipa_smmu_eth1 {
@@ -1296,6 +1330,15 @@
 		reg = <0x1468F720 0x2000>;
 	};
 
+	qcom_rng: qrng@793000 {
+		compatible = "qcom,msm-rng";
+		reg = <0x793000 0x1000>;
+		qcom,no-qrng-config;
+		interconnect-names = "data_path";
+		interconnects = <&mem_noc MASTER_APPSS_PROC &system_noc SLAVE_PRNG>;
+		qcom,no-clock-support;
+	};
+
 	thermal_zones: thermal-zones {
 	};
 
@@ -1341,12 +1384,36 @@
 			<&apps_smmu 0x0074 0x0011>;
 	};
 
+	qcom_qseecom: qseecom@90000000 {
+		compatible = "qcom,qseecom";
+		reg = <0x90000000 0x500000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+		interconnect-names = "data_path";
+		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
+	};
+
 	qcom,rmtfs_sharedmem@0 {
 		compatible = "qcom,sharedmem-uio";
 		reg = <0x0 0x400000>;
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
 		qcom,vm-nav-path;
+	};
+
+	qcom_smcinvoke {
+		compatible = "qcom,smcinvoke";
+		qcom,support-legacy_smc;
+	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
 	};
 };
 

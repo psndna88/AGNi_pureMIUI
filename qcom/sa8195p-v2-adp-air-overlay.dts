@@ -2,6 +2,7 @@
 /plugin/;
 
 #include "sa8195p-v2-adp-air.dtsi"
+#include "display/sa8195p-adp-star-display-shd.dtsi"
 
 / {
 	model = "ADP-AIR";

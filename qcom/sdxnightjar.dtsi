@@ -59,6 +59,13 @@
 			reusable;
 			size = <0x400000>;
 		};
+
+		audio_mem: audio_region@0 {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			size = <0x400000>;
+		};
 	};
 
 	aliases { };
@@ -170,15 +177,13 @@
 		qcom,reset-clk;
 		qcom,sequential-fw-load;
 
-		interrupts-extended = <&intc GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
-				<&modem_smp2p_in 0 0>,
+		interrupts-extended = <&modem_smp2p_in 0 0>,
 				<&modem_smp2p_in 2 0>,
 				<&modem_smp2p_in 1 0>,
 				<&modem_smp2p_in 3 0>,
 				<&modem_smp2p_in 7 0>;
 
-		interrupt-names = "qcom,wdog",
-				"qcom,err-fatal",
+		interrupt-names = "qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
 				"qcom,stop-ack",
@@ -1008,7 +1013,7 @@
 
 		qcom,smp2p_map_ipa_1_in {
 			compatible = "qcom,smp2p-map-ipa-1-in";
-			interrupts-extended = <&smp2p_ipa_1_in 0 0>;
+			interrupts-extended = <&smp2p_ipa_1_in 0 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ipa-smp2p-in";
 		};
 	};
@@ -1024,6 +1029,8 @@
 #include "sdxnightjar-blsp.dtsi"
 #include "sdxnightjar-cnss.dtsi"
 #include "sdxnightjar-pcie.dtsi"
+#include "sdxnightjar-audio.dtsi"
+#include "sdxnightjar-audio-overlay.dtsi"
 
 &i2c_3 {
 	status = "ok";

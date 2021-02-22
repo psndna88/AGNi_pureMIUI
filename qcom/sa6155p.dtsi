@@ -5,6 +5,16 @@
 	model = "Qualcomm Technologies, Inc. SA6155P";
 	qcom,msm-name = "SA6155P";
 	qcom,msm-id = <377 0>, <380 0>;
+
+	aliases {
+		pci-domain0 = &pcie0; /* PCIe0 domain */
+	};
+};
+
+/* Delete second instance of pm6155 definitions for APQ version */
+&spmi_bus {
+	/delete-node/ qcom,pm6155@4;
+	/delete-node/ qcom,pm6155@5;
 };
 
 &apps_rsc {
@@ -18,6 +28,23 @@
 	/delete-node/ rpmh-regulator-ldoc17;
 	/delete-node/ rpmh-regulator-ldoc18;
 	/delete-node/ bt_wcn3990;
+};
+
+&qusb_phy0 {
+	vdd-supply = <&L5A>;
+	vdda18-supply = <&L12A>;
+	vdda33-supply = <&L13A>;
+};
+
+&usb_qmp_phy {
+	vdd-supply = <&L5A>;
+	core-supply = <&L12A>;
+};
+
+&qusb_phy1 {
+	vdd-supply = <&L5A>;
+	vdda18-supply = <&L12A>;
+	vdda33-supply = <&L13A>;
 };
 
 &gcc {
@@ -46,4 +73,9 @@
 
 &videocc {
 	compatible = "qcom,sa6155-videocc", "syscon";
+};
+
+#include "sa6155-pcie.dtsi"
+&slpi_tlmm {
+	status = "ok";
 };
