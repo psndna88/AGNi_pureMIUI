@@ -1,6 +1,8 @@
 #include "sdmshrike-v2.dtsi"
 #include "sa8195-pmic.dtsi"
 #include "sa8195p-pcie.dtsi"
+#include "camera/sa8195p-camera.dtsi"
+#include "camera/sa8195p-camera-sensor.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA8195P";

@@ -127,6 +127,29 @@
 
 	soc: soc { };
 
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible="android,vbmeta";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+			};
+
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					dev =
+			"/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
+				};
+			};
+		};
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -334,6 +357,12 @@
 		};
 	};
 
+	cpu_pmu: cpu-pmu {
+		ompatible = "arm,armv8-pmuv3";
+		qcom,irq-is-percpu;
+		interrupts = <GIC_PPI 6 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 	qcom,msm-imem@c125000 {
 		compatible = "qcom,msm-imem";
 		reg = <0xc125000 0x1000>;
@@ -532,7 +561,7 @@
 	bi_tcxo: bi_tcxo {
 		compatible = "fixed-factor-clock";
 		clock-mult = <1>;
-		clock-div = <1>;
+		clock-div = <2>;
 		clocks = <&xo_board>;
 		#clock-cells = <0>;
 	};
@@ -540,7 +569,7 @@
 	bi_tcxo_ao: bi_tcxo_ao {
 		compatible = "fixed-factor-clock";
 		clock-mult = <1>;
-		clock-div = <1>;
+		clock-div = <2>;
 		clocks = <&xo_board>;
 		#clock-cells = <0>;
 	};
@@ -553,8 +582,15 @@
 	};
 
 	gcc: clock-controller@1410000 {
-		compatible = "qcom,dummycc";
-		clock-output-names = "gcc_clocks";
+		compatible = "qcom,monaco-gcc", "syscon";
+		reg = <0x1400000 0x1e0000>;
+		reg-names = "cc_base";
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_mx-supply = <&VDD_MXA_LEVEL>;
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
+			 <&rpmcc RPM_SMD_XO_A_CLK_SRC>,
+			 <&sleep_clk>;
+		clock-names = "bi_tcxo", "bi_tcxo_ao", "sleep_clk";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -824,6 +860,7 @@
 #include "monaco-pinctrl.dtsi"
 #include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
+#include "monaco-stub-regulator.dtsi"
 #include "monaco-gdsc.dtsi"
 #include "monaco-qupv3.dtsi"
 
@@ -832,38 +869,47 @@
 };
 
 &gcc_camss_top_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &gcc_usb20_prim_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &gcc_vcodec0_gdsc {
 	qcom,support-hw-trigger;
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &gcc_venus_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &hlos1_vote_mm_snoc_mmu_tbu_rt_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &hlos1_vote_mm_snoc_mmu_tbu_nrt_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &mdss_core_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &gpu_cx_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };
 
 &gpu_gx_gdsc {
+	parent-supply = <&VDD_CX_LEVEL>;
 	status = "ok";
 };

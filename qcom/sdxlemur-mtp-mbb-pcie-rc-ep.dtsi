@@ -9,6 +9,57 @@
 	#address-cells = <5>;
 	#size-cells = <0>;
 
+	aquantia,aqc@pcie0_rp {
+		reg = <0 0 0 0 0>;
+
+		/* ipa shares this group with aqc */
+		qcom,iommu-group = <&ipa_eth_group1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pci-ids =
+			"1d6a:0001",
+			"1d6a:d107",
+			"1d6a:07b1",
+			"1d6a:87b1",
+			"1d6a:d108",
+			"1d6a:08b1",
+			"1d6a:88b1",
+			"1d6a:d109",
+			"1d6a:09b1",
+			"1d6a:89b1",
+			"1d6a:d100",
+			"1d6a:00b1",
+			"1d6a:80b1",
+			"1d6a:11b1",
+			"1d6a:91b1",
+			"1d6a:12b1",
+			"1d6a:92b1",
+			"1d6a:00c0",
+			"1d6a:04c0",
+			"1d6a:12c0",
+			"1d6a:14c0",
+			"1d6a:93c0",
+			"1d6a:94c0";
+
+	};
+
+	realtek,rtl8125@pcie0_rp {
+		reg = <0 0 0 0 0>;
+
+		/* ipa shares this group with rtl */
+		qcom,iommu-group = <&ipa_eth_group1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pci-ids =
+			"10ec:8125",
+			"10ec:3000";
+
+	};
+
 	pcie0_generic_ep: pcie0_generic_ep {
 		reg = <0 0 0 0 0>;
 		qcom,iommu-group = <&pcie0_generic_ep_iommu_group>;

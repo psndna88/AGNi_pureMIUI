@@ -264,6 +264,41 @@
 			};
 		};
 	};
+
+	quiet-therm-step {
+		polling-delay-passive = <2000>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&pmk8350_adc_tm PM7325_ADC7_AMUX_THM1_100K_PU>;
+
+		trips {
+			quiet_cx_trip: quiet-cx-trip {
+				temperature = <55000>;
+				hysteresis = <5000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			gpu-cdev {
+				trip = <&quiet_cx_trip>;
+				/* throttle to 315000000Hz */
+				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			cdsp-cdev {
+				trip = <&quiet_cx_trip>;
+				cooling-device = <&cdsp_sw (THERMAL_MAX_LIMIT-2)
+							(THERMAL_MAX_LIMIT-2)>;
+			};
+
+			modem-pa-cdev {
+				trip = <&quiet_cx_trip>;
+				cooling-device = <&modem_pa 3 3>;
+			};
+		};
+	};
 };
 
 &apps_rsc {
@@ -565,7 +600,13 @@
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&ts_release>;
-		panel = <&dsi_r66451_amoled_144hz_cmd_cphy &dsi_r66451_amoled_90hz_cmd_cphy>;
+		panel = <&dsi_r66451_amoled_144hz_cmd_cphy &dsi_r66451_amoled_120hz_cmd_cphy
+			&dsi_r66451_amoled_90hz_cmd_cphy &dsi_r66451_amoled_60hz_cmd_cphy>;
 	};
 
+};
+
+&usb2_phy0 {
+	qcom,param-override-seq = <0x0f 0x70
+			0x2c 0x74>;
 };

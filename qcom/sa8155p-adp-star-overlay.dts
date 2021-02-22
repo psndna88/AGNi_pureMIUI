@@ -2,6 +2,7 @@
 /plugin/;
 
 #include "sa8155-adp-star.dtsi"
+#include "display/sa8155-adp-star-display-shd.dtsi"
 
 / {
 	model = "ADP-STAR";

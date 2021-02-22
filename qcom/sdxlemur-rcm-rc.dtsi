@@ -1,6 +1,7 @@
 #include "sdxlemur-pmic-overlay.dtsi"
 #include "pm7250b.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/spmi/spmi.h>
 #include "sdxlemur-cnss.dtsi"
 
@@ -69,6 +70,10 @@
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
+	};
+
+	smb1390_therm@e {
+		qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_SMB1398_TEMP>;
 	};
 };
 
@@ -156,7 +161,14 @@
 		      <&pm7250b_qg PSY_IIO_CHARGE_COUNTER>,
 		      <&pm7250b_qg PSY_IIO_CYCLE_COUNT>,
 		      <&pm7250b_qg PSY_IIO_CHARGE_FULL_DESIGN>,
-		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>;
+		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>,
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_OUTPUT_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_MIN_ICL>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_SWITCHER_EN>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ENABLE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ILIM>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -180,8 +192,16 @@
 			   "charge_counter",
 			   "cycle_count",
 			   "charge_full_design",
-			   "time_to_full_now";
+			   "time_to_full_now",
+			   "cp_parallel_mode",
+			   "cp_parallel_output_mode",
+			   "cp_min_icl",
+			   "cp_switcher_en",
+			   "cp_enable",
+			   "cp_ilim",
+			   "cp_die_temp";
 	qcom,battery-data = <&rcm_batterydata>;
+	qcom,sec-charger-config = <1>;
 	qcom,auto-recharge-soc = <98>;
 	qcom,step-charging-enable;
 	qcom,sw-jeita-enable;
@@ -213,13 +233,15 @@
 		      <&pm7250b_charger PSY_IIO_INPUT_CURRENT_LIMITED>,
 		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
 		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
-		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>;
+		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ENABLE>;
 	io-channel-names = "batt-therm",
 			   "batt-id",
 			   "input_current_limited",
 			   "recharge_soc",
 			   "force_recharge",
-			   "charge_done";
+			   "charge_done",
+			   "cp_charging_enabled";
 	qcom,battery-data = <&rcm_batterydata>;
 	qcom,qg-iterm-ma = <150>;
 	qcom,hold-soc-while-full;
@@ -229,6 +251,7 @@
 	qcom,fvss-enable;
 	qcom,fvss-vbatt-mv = <3300>;
 	qcom,bass-enable;
+	qcom,use-cp-iin-sns;
 };
 
 &pm7250b_pdphy {
@@ -267,10 +290,61 @@
 			   "pe_start";
 };
 
+&pm7250b_gpios {
+	smb_stat {
+		smb_stat_default: smb_stat_default {
+			pins = "gpio6";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_30>;
+			power-source = <0>;
+		};
+	};
+};
+
+&i2c_3 {
+	status = "ok";
+	#include "smb1394.dtsi"
+};
+
+&smb1394 {
+	interrupts = <0x2 0xc5 0x0 IRQ_TYPE_LEVEL_LOW>;
+	interrupt-parent = <&spmi_bus>;
+	interrupt-names = "smb1394";
+	pinctrl-names = "default";
+	pinctrl-0 = <&smb_stat_default>;
+	status = "ok";
+};
+
+&smb1394_div2_cp_primary {
+	io-channels = <&pm7250b_vadc ADC5_AMUX_THM2>,
+		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
+		      <&pm7250b_charger PSY_IIO_ADAPTER_CC_MODE>,
+		      <&pm7250b_charger PSY_IIO_PD_CURRENT_MAX>,
+		      <&pm7250b_charger PSY_IIO_USB_INPUT_CURRENT_SETTLED>,
+		      <&pm7250b_charger PSY_IIO_SMB_EN_MODE>,
+		      <&pm7250b_charger PSY_IIO_SMB_EN_REASON>;
+	io-channel-names = "die_temp",
+			   "real_type",
+			   "adapter_cc_mode",
+			   "pd_current_max",
+			   "input_current_settled",
+			   "smb_en_mode",
+			   "smb_en_reason";
+	qcom,parallel-input-mode = <1>; /* USBIN */
+	qcom,parallel-output-mode = <2>; /* VBAT */
+	status = "ok";
+};
+
 &usb {
 	extcon = <&pm7250b_pdphy>, <&eud>;
 
 	#io-channel-cells = <1>;
 	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
 	io-channel-names = "chg_type";
+};
+
+&vbus_detect {
+	status = "disabled";
 };
