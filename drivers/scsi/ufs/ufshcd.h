@@ -383,14 +383,6 @@ struct ufs_hba_variant_ops {
 };
 
 /**
-* struct ufs_hba_pm_qos_variant_ops - variant specific PM QoS callbacks
-*/
-struct ufs_hba_pm_qos_variant_ops {
-	void		(*req_start)(struct ufs_hba *, struct request *);
-	void		(*req_end)(struct ufs_hba *, struct request *, bool);
-};
-
-/**
  * struct ufs_hba_variant - variant specific parameters
  * @name: variant name
  */
@@ -398,7 +390,6 @@ struct ufs_hba_variant {
 	struct device				*dev;
 	const char				*name;
 	struct ufs_hba_variant_ops		*vops;
-	struct ufs_hba_pm_qos_variant_ops	*pm_qos_vops;
 };
 
 struct keyslot_mgmt_ll_ops;
@@ -1537,20 +1528,5 @@ static inline void ufshcd_vops_remove_debugfs(struct ufs_hba *hba)
 {
 }
 #endif
-
-static inline void ufshcd_vops_pm_qos_req_start(struct ufs_hba *hba,
-		struct request *req)
-{
-	if (hba->var && hba->var->pm_qos_vops &&
-		hba->var->pm_qos_vops->req_start)
-		hba->var->pm_qos_vops->req_start(hba, req);
-}
-
-static inline void ufshcd_vops_pm_qos_req_end(struct ufs_hba *hba,
-		struct request *req, bool lock)
-{
-	if (hba->var && hba->var->pm_qos_vops && hba->var->pm_qos_vops->req_end)
-		hba->var->pm_qos_vops->req_end(hba, req, lock);
-}
 
 #endif /* End of Header */
