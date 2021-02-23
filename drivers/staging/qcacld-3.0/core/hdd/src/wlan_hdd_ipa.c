@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -33,7 +33,7 @@
 
 void hdd_ipa_set_tx_flow_info(void)
 {
-	struct hdd_adapter *adapter;
+	struct hdd_adapter *adapter, *next_adapter = NULL;
 	struct hdd_station_ctx *sta_ctx;
 	struct hdd_ap_ctx *hdd_ap_ctx;
 	struct hdd_hostapd_state *hostapd_state;
@@ -70,7 +70,7 @@ void hdd_ipa_set_tx_flow_info(void)
 
 	psoc = hdd_ctx->psoc;
 
-	hdd_for_each_adapter(hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(hdd_ctx, adapter, next_adapter) {
 		switch (adapter->device_mode) {
 		case QDF_STA_MODE:
 			sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -208,6 +208,7 @@ void hdd_ipa_set_tx_flow_info(void)
 
 					if (!preAdapterContext) {
 						hdd_err("SCC: Previous adapter context NULL");
+						dev_put(adapter->dev);
 						continue;
 					}
 
@@ -256,6 +257,7 @@ void hdd_ipa_set_tx_flow_info(void)
 
 					if (!adapter5) {
 						hdd_err("MCC: 5GHz adapter context NULL");
+						dev_put(adapter->dev);
 						continue;
 					}
 					adapter5->tx_flow_low_watermark =
@@ -284,6 +286,7 @@ void hdd_ipa_set_tx_flow_info(void)
 
 					if (!adapter2_4) {
 						hdd_err("MCC: 2.4GHz adapter context NULL");
+						dev_put(adapter->dev);
 						continue;
 					}
 					adapter2_4->tx_flow_low_watermark =
@@ -316,6 +319,7 @@ void hdd_ipa_set_tx_flow_info(void)
 		}
 		targetChannel = 0;
 #endif /* QCA_LL_LEGACY_TX_FLOW_CONTROL */
+		dev_put(adapter->dev);
 	}
 }
 
@@ -492,14 +496,10 @@ void hdd_ipa_send_nbuf_to_network(qdf_nbuf_t nbuf, qdf_netdev_t dev)
 	adapter->stats.rx_bytes += nbuf->len;
 
 	result = hdd_ipa_aggregated_rx_ind(nbuf);
-	if (result == NET_RX_SUCCESS) {
+	if (result == NET_RX_SUCCESS)
 		++adapter->hdd_stats.tx_rx_stats.rx_delivered[cpu_index];
-	} else {
+	else
 		++adapter->hdd_stats.tx_rx_stats.rx_refused[cpu_index];
-		DPTRACE(qdf_dp_log_proto_pkt_info(NULL, NULL, 0, 0, QDF_RX,
-						  QDF_TRACE_DEFAULT_MSDU_ID,
-						  QDF_TX_RX_STATUS_DROP));
-	}
 
 	/*
 	 * Restore PF_WAKE_UP_IDLE flag in the task structure
