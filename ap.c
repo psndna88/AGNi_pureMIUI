@@ -9106,6 +9106,64 @@ static void ath_reset_vht_defaults(struct sigma_dut *dut)
 
 #ifdef NL80211_SUPPORT
 
+#define IEEE80211_HT_AMPDU_PARAM_FACTOR        0x3
+#define IEEE80211_HT_AMPDU_PARAM_DENSITY_SHIFT	2
+
+static void phy_info_ht_capa(struct dut_hw_modes *mode, struct nlattr *capa,
+			     struct nlattr *ampdu_factor,
+			     struct nlattr *ampdu_density,
+			     struct nlattr *mcs_set)
+{
+	if (capa)
+		mode->ht_capab = nla_get_u16(capa);
+
+	if (ampdu_factor)
+		mode->ampdu_params |= nla_get_u8(ampdu_factor) &
+			IEEE80211_HT_AMPDU_PARAM_FACTOR;
+
+	if (ampdu_density)
+		mode->ampdu_params |= nla_get_u8(ampdu_density) <<
+			IEEE80211_HT_AMPDU_PARAM_DENSITY_SHIFT;
+
+	if (mcs_set && nla_len(mcs_set) >= sizeof(mode->mcs_set))
+		memcpy(mode->mcs_set, nla_data(mcs_set), sizeof(mode->mcs_set));
+}
+
+
+static void phy_info_vht_capa(struct dut_hw_modes *mode,
+			      struct nlattr *capa,
+			      struct nlattr *mcs_set)
+{
+	if (capa)
+		mode->vht_capab = nla_get_u32(capa);
+
+	if (mcs_set && nla_len(mcs_set) >= sizeof(mode->vht_mcs_set))
+		memcpy(mode->vht_mcs_set, nla_data(mcs_set),
+		       sizeof(mode->vht_mcs_set));
+}
+
+
+static int phy_info_band(struct dut_hw_modes *mode, struct nlattr *nl_band)
+{
+	struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
+
+	nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
+		  nla_len(nl_band), NULL);
+
+	phy_info_ht_capa(mode, tb_band[NL80211_BAND_ATTR_HT_CAPA],
+			 tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR],
+			 tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY],
+			 tb_band[NL80211_BAND_ATTR_HT_MCS_SET]);
+
+	phy_info_vht_capa(mode, tb_band[NL80211_BAND_ATTR_VHT_CAPA],
+			  tb_band[NL80211_BAND_ATTR_VHT_MCS_SET]);
+
+	/* Other nl80211 band attributes can be parsed here, if required */
+
+	return NL_OK;
+}
+
+
 static int antenna_mask_to_nss(unsigned int mask)
 {
 	unsigned int i;
@@ -9125,6 +9183,8 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct sigma_dut *dut = arg;
 	unsigned int tx_antenna_mask;
+	struct nlattr *nl_band;
+	int rem_band;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -9133,6 +9193,16 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		tx_antenna_mask =
 			nla_get_u32(tb[NL80211_ATTR_WIPHY_ANTENNA_TX]);
 		dut->ap_tx_streams = antenna_mask_to_nss(tx_antenna_mask);
+	}
+
+	if (!tb[NL80211_ATTR_WIPHY_BANDS])
+		return 1;
+
+	nla_for_each_nested(nl_band, tb[NL80211_ATTR_WIPHY_BANDS], rem_band) {
+		int res = phy_info_band(&dut->hw_modes, nl_band);
+
+		if (res != NL_OK)
+			return res;
 	}
 
 	return 0;
@@ -9540,6 +9610,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 	}
 
+	memset(&dut->hw_modes, 0, sizeof(struct dut_hw_modes));
 #ifdef NL80211_SUPPORT
 	if (get_driver_type(dut) == DRIVER_MAC80211 && mac80211_get_wiphy(dut))
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
