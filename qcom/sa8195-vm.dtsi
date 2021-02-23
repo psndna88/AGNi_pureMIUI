@@ -325,6 +325,25 @@
 		};
 	};
 
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+		/*Boolean property to disable shmbridge*/
+		qcom,disable-shmbridge-support;
+	};
+
+	qcom_qseecom: qseecom@87a00000 {
+		compatible = "qcom,qseecom";
+		reg = <0x87a00000 0x2100000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+	};
+
 	pdc: interrupt-controller@b220000 {
 		compatible = "qcom,sm8150-pdc";
 		reg = <0xb220000 0x30000>;
@@ -489,6 +508,12 @@
 		regulator-name = "smpc5";
 		regulator-min-microvolt = <1713000>;
 		regulator-max-microvolt = <2040000>;
+	};
+};
+
+&firmware {
+	scm {
+		compatible = "qcom,scm";
 	};
 };
 
