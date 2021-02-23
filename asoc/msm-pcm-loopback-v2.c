@@ -198,8 +198,8 @@ static struct snd_kcontrol_new msm_loopback_controls[] = {
 
 static int msm_pcm_loopback_probe(struct snd_soc_component *component)
 {
-	if (of_property_read_bool(component->dev->of_node,
-				  "qcom,msm-pcm-loopback")) {
+	if (!of_property_read_bool(component->dev->of_node,
+				   "qcom,msm-pcm-loopback-low-latency")) {
 		snd_soc_add_component_controls(component, msm_loopback_controls,
 					       ARRAY_SIZE(msm_loopback_controls));
 	}
