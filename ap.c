@@ -7687,6 +7687,44 @@ static void fwtest_set_he_params(struct sigma_dut *dut, const char *ifname)
 }
 
 
+#define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_3895                    0x0
+#define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_7991                    0x1
+#define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454                   0x2
+#define IEEE80211_VHT_CAP_MAX_MPDU_MASK                           0x3
+#define IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT        23
+#define IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK         \
+	(7 << IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT)
+
+static void find_ap_ampdu_exp_and_max_mpdu_len(struct sigma_dut *dut)
+{
+
+#ifdef NL80211_SUPPORT
+	int ampdu_exp = 0;
+	int max_mpdu_len = 0;
+	u32 vht_caps = dut->hw_modes.vht_capab;
+
+	ampdu_exp = (vht_caps &
+		     IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK) >>
+		IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT;
+
+	if (ampdu_exp >= 0 && ampdu_exp <= 7)
+		dut->ap_ampdu_exp = ampdu_exp;
+
+	max_mpdu_len = vht_caps & IEEE80211_VHT_CAP_MAX_MPDU_MASK;
+
+	if (max_mpdu_len == IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454)
+		dut->ap_max_mpdu_len = 11454;
+	else if (max_mpdu_len == IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_7991)
+		dut->ap_max_mpdu_len = 7991;
+	else if (max_mpdu_len == IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_3895)
+		dut->ap_max_mpdu_len = 3895;
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"nl80211 is not supported to get A-MPDU parameters");
+#endif /* NL80211_SUPPORT */
+}
+
+
 enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 					   struct sigma_conn *conn,
 					   struct sigma_cmd *cmd)
@@ -8499,10 +8537,13 @@ skip_key_mgmt:
 				vht_oper_centr_freq_idx);
 		}
 
+		find_ap_ampdu_exp_and_max_mpdu_len(dut);
+
 		if (dut->ap_sgi80 || dut->ap_txBF ||
 		    dut->ap_ldpc != VALUE_NOT_SET ||
-		    dut->ap_tx_stbc || dut->ap_mu_txBF) {
-			fprintf(f, "vht_capab=%s%s%s%s%s\n",
+		    dut->ap_tx_stbc || dut->ap_mu_txBF ||
+		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len) {
+			fprintf(f, "vht_capab=%s%s%s%s%s",
 				dut->ap_sgi80 ? "[SHORT-GI-80]" : "",
 				dut->ap_txBF ?
 				"[SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2]" : "",
@@ -8510,6 +8551,16 @@ skip_key_mgmt:
 				"[RXLDPC]" : "",
 				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
 				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "");
+
+			if (dut->ap_ampdu_exp)
+				fprintf(f, "[MAX-A-MPDU-LEN-EXP%d]",
+					dut->ap_ampdu_exp);
+
+			if (dut->ap_max_mpdu_len)
+				fprintf(f, "[MAX-MPDU-%d]",
+					dut->ap_max_mpdu_len);
+
+			fprintf(f, "\n");
 		}
 	}
 
@@ -9301,6 +9352,8 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_txBF = 0;
 	dut->ap_mu_txBF = 0;
 	dut->ap_chwidth = AP_AUTO;
+	dut->ap_ampdu_exp = 0;
+	dut->ap_max_mpdu_len = 0;
 
 	dut->ap_rsn_preauth = 0;
 	dut->ap_wpsnfc = 0;

@@ -484,6 +484,7 @@ struct sigma_dut {
 	enum value_not_set_enabled_disabled ap_amsdu;
 	enum value_not_set_enabled_disabled ap_rx_amsdu;
 	int ap_ampdu_exp;
+	int ap_max_mpdu_len;
 	enum value_not_set_enabled_disabled ap_addba_reject;
 	int ap_fixed_rate;
 	int ap_mcs;
