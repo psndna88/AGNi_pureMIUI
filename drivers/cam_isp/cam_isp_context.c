@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -772,11 +772,11 @@ static void __cam_isp_ctx_handle_buf_done_fail_log(
 		return;
 	}
 
-	CAM_WARN(CAM_ISP,
+	CAM_WARN_RATE_LIMIT(CAM_ISP,
 		"Prev Req[%lld] : num_out=%d, num_acked=%d, bubble : report=%d, detected=%d",
 		request_id, req_isp->num_fence_map_out, req_isp->num_acked,
 		req_isp->bubble_report, req_isp->bubble_detected);
-	CAM_WARN(CAM_ISP,
+	CAM_WARN_RATE_LIMIT(CAM_ISP,
 		"Resource Handles that fail to generate buf_done in prev frame");
 	for (i = 0; i < req_isp->num_fence_map_out; i++) {
 		if (req_isp->fence_map_out[i].sync_id != -1) {
@@ -800,7 +800,7 @@ static void __cam_isp_ctx_handle_buf_done_fail_log(
 				request_id, req_isp->fence_map_out[i].sync_id);
 			}
 
-			CAM_WARN(CAM_ISP,
+			CAM_WARN_RATE_LIMIT(CAM_ISP,
 			"Resource_Handle: [%s][0x%x] Sync_ID: [0x%x]",
 			handle_type,
 			req_isp->fence_map_out[i].resource_handle,
