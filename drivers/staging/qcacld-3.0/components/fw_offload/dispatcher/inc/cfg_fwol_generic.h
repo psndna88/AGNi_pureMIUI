@@ -394,6 +394,44 @@
 	"31,0,36,0,38,0,46,0,47,0,50,0,52,0,53,0,56,0,60,0,61,0", \
 	"Set modulized firmware debug log level")
 
+/*
+ * <ini>
+ * gFwDebugWowModuleLoglevel - modulized firmware wow debug log level
+ * @Min: N/A
+ * @Max: N/A
+ * @Default: N/A
+ *
+ * This ini is used to set modulized firmware wow debug log level.
+ * FW module log level input string format looks like below:
+ * gFwDebugWowModuleLoglevel="<FW Module ID>,<Log Level>,..."
+ * For example:
+ * gFwDebugWowModuleLoglevel="1,0,2,1,3,2,4,3,5,4,6,5,7,6"
+ * The above input string means:
+ * For FW module ID 1 enable log level 0
+ * For FW module ID 2 enable log level 1
+ * For FW module ID 3 enable log level 2
+ * For FW module ID 4 enable log level 3
+ * For FW module ID 5 enable log level 4
+ * For FW module ID 6 enable log level 5
+ * For FW module ID 7 enable log level 6
+ * For valid values of log levels check enum DBGLOG_LOG_LVL and
+ * for valid values of module ids check enum WLAN_MODULE_ID.
+ *
+ * Related: None
+ *
+ * Supported Feature: Debugging
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ENABLE_FW_WOW_MODULE_LOG_LEVEL CFG_INI_STRING( \
+	"gFwDebugWowModuleLoglevel", \
+	0, \
+	FW_MODULE_LOG_LEVEL_STRING_LENGTH, \
+	"5,3,18,3,31,3,36,3", \
+	"Set modulized firmware wow debug log level")
+
 #ifdef FEATURE_WLAN_RA_FILTERING
 /* <ini>
  * gRAFilterEnable
@@ -728,6 +766,27 @@
 		0, \
 		"SAP xLNA bypass control")
 
+/*
+ * <ini>
+ * g_disable_hw_assist - Flag to disable HW assist feature
+ * @Default: 0
+ *
+ * This ini is used to enable/disable the HW assist feature in FW
+ *
+ * Related: none
+ *
+ * Supported Feature: STA/SAP
+ *
+ * Usage: External
+ *
+ * <ini>
+ */
+
+#define CFG_DISABLE_HW_ASSIST CFG_INI_BOOL( \
+		"g_disable_hw_assist", \
+		0, \
+		"Disable HW assist feature in FW")
+
 #define CFG_FWOL_GENERIC_ALL \
 	CFG_FWOL_DHCP \
 	CFG(CFG_ENABLE_ANI) \
@@ -754,6 +813,8 @@
 	CFG(CFG_ENABLE_GCMP) \
 	CFG(CFG_TX_SCH_DELAY) \
 	CFG(CFG_ENABLE_SECONDARY_RATE) \
-	CFG(CFG_SET_SAP_XLNA_BYPASS)
+	CFG(CFG_SET_SAP_XLNA_BYPASS) \
+	CFG(CFG_ENABLE_FW_WOW_MODULE_LOG_LEVEL) \
+	CFG(CFG_DISABLE_HW_ASSIST)
 
 #endif

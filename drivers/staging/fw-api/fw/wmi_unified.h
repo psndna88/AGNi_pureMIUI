@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2021 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -3575,6 +3575,12 @@ typedef struct {
     #define WMI_RSRC_CFG_FLAG_IPA_DISABLE_S 30
     #define WMI_RSRC_CFG_FLAG_IPA_DISABLE_M 0x40000000
 
+    /*
+     * If this bit is set, target should use the PCIe GEN switching feature.
+     */
+    #define WMI_RSRC_CFG_FLAG_PCIE_GEN_SWITCH_CAPABLITY_S 31
+    #define WMI_RSRC_CFG_FLAG_PCIE_GEN_SWITCH_CAPABLITY_M 0x80000000
+
     A_UINT32 flag1;
 
     /** @brief smart_ant_cap - Smart Antenna capabilities information
@@ -3800,7 +3806,13 @@ typedef struct {
      *      Refer to the below definitions of the
      *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_SPLIT_AST_FEATURE_HOST_SUPPORT_GET
      *      and _SET macros.
-     *  Bits 31:3 - Reserved
+     *  Bit 3
+     *      This bit will be set when host is able to enable EAPOL offload to
+     *      FW for SAE roaming feature.
+     *      Refer to the below definitions of the
+     *      WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_GET
+     *      and _SET macros.
+     *  Bits 31:4 - Reserved
      */
     A_UINT32 host_service_flags;
 
@@ -4044,6 +4056,11 @@ typedef struct {
 #define WMI_RSRC_CFG_FLAG_IPA_DISABLE_GET(word32) \
     WMI_RSRC_CFG_FLAG_GET((word32), IPA_DISABLE)
 
+#define WMI_RSRC_CFG_FLAG_PCIE_GEN_SWITCH_CAPABLITY_SET(word32, value) \
+    WMI_RSRC_CFG_FLAG_SET((word32), PCIE_GEN_SWITCH_CAPABLITY, (value))
+#define WMI_RSRC_CFG_FLAG_PCIE_GEN_SWITCH_CAPABLITY_GET(word32) \
+    WMI_RSRC_CFG_FLAG_GET((word32), PCIE_GEN_SWITCH_CAPABLITY)
+
 #define WMI_RSRC_CFG_FLAGS2_RE_ULRESP_PDEV_CFG_GET(flags2, pdev_id) \
     WMI_GET_BITS(flags2, pdev_id, 1)
 #define WMI_RSRC_CFG_FLAGS2_RE_ULRESP_PDEV_CFG_SET(flags2, pdev_id, value) \
@@ -4068,6 +4085,11 @@ typedef struct {
     WMI_GET_BITS(host_service_flags, 2, 1)
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SPLIT_AST_FEATURE_HOST_SUPPORT_SET(host_service_flags, val) \
     WMI_SET_BITS(host_service_flags, 2, 1, val)
+
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_GET(host_service_flags) \
+    WMI_GET_BITS(host_service_flags, 3, 1)
+#define WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_SET(host_service_flags, val) \
+    WMI_SET_BITS(host_service_flags, 3, 1, val)
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_init_cmd_fixed_param */
@@ -5826,11 +5848,15 @@ typedef struct {
      *     Access Category (0x0=BE, 0x1=BK, 0x2=VI, 0x3=VO)
      *     If tx_ac_enable bit is not set, tx_aggr_size is applied
      *     for all Access Categories
-     * bit 2 (aggr_type):            TX Aggregation Type (0=A-MPDU, 1=A-MSDU)
-     * bit 3 (tx_aggr_size_disable): If set tx_aggr_size is invalid
-     * bit 4 (rx_aggr_size_disable): If set rx_aggr_size is invalid
-     * bit 5 (tx_ac_enable):         If set, above ac bitmap is valid.
-     * bits 31:6:                    Reserved bits. should be set to zero.
+     * bit 2 (aggr_type):             TX Aggregation Type (0=A-MPDU, 1=A-MSDU)
+     * bit 3 (tx_aggr_size_disable):  If set tx_aggr_size is invalid
+     * bit 4 (rx_aggr_size_disable):  If set rx_aggr_size is invalid
+     * bit 5 (tx_ac_enable):          If set, above ac bitmap is valid.
+     * bit 6 (256 BA support enable)  If set, Default 256 BA size is expected
+     *                                from host
+     * bit 7 (1024 BA support enable) If set, Default 1024 BA size is expected
+     *                                from host
+     * bits 31:8:                     Reserved bits. should be set to zero.
      */
     A_UINT32 enable_bitmap;
 } wmi_vdev_set_custom_aggr_size_cmd_fixed_param;
@@ -5851,6 +5877,10 @@ typedef enum {
 #define WMI_VDEV_CUSTOM_RX_AGGR_SZ_DIS_NUM_BITS  1
 #define WMI_VDEV_CUSTOM_TX_AC_EN_BITPOS          5
 #define WMI_VDEV_CUSTOM_TX_AC_EN_NUM_BITS        1
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS    6
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS  1
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS   7
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS 1
 
 #define WMI_VDEV_CUSTOM_AGGR_AC_SET(param, value) \
     WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_AC_BITPOS, \
@@ -5886,6 +5916,20 @@ typedef enum {
 #define WMI_VDEV_CUSTOM_TX_AC_EN_GET(param)         \
     WMI_GET_BITS(param, WMI_VDEV_CUSTOM_TX_AC_EN_BITPOS, \
         WMI_VDEV_CUSTOM_TX_AC_EN_NUM_BITS)
+
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_SET(param, value) \
+    WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS, value)
+#define WMI_VDEV_CUSTOM_AGGR_256_BA_EN_GET(param)         \
+    WMI_GET_BITS(param, WMI_VDEV_CUSTOM_AGGR_256_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_256_BA_EN_NUM_BITS)
+
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_SET(param, value) \
+    WMI_SET_BITS(param, WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS, value)
+#define WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_GET(param)         \
+    WMI_GET_BITS(param, WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_BITPOS, \
+        WMI_VDEV_CUSTOM_AGGR_1024_BA_EN_NUM_BITS)
 
 typedef enum {
     WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR = 0,
@@ -7136,6 +7180,16 @@ typedef enum {
 
     /* Param to enable low latency mode */
     WMI_PDEV_PARAM_LOW_LATENCY_SCHED_MODE,
+
+    /* Param to enable per USERPD SSR - for MultiPD enabled chips */
+    WMI_PDEV_PARAM_MPD_USERPD_SSR,
+
+    /*
+     * Param to disable Hardware Assist feature,
+     * i.e. Disables HW feature that reconstructs the PPDU
+     * by picking failing MPDUs from prior FES attempt.
+     */
+    WMI_PDEV_PARAM_DISABLE_HW_ASSIST,
 
 } WMI_PDEV_PARAM;
 
@@ -9564,50 +9618,59 @@ typedef struct {
 } wmi_ctrl_path_twt_stats_struct;
 
 typedef enum {
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_COLD_BOOT_CAL       = 0,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_FULL_CHAN_SWITCH    = 1,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_SCAN_CHAN_SWITCH    = 2,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_DPD_SPLIT_CAL       = 3,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_TEMP_TRIGEER_CAL    = 4,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_POWER_SAVE_WAKE_UP  = 5,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_TIMER_TRIGGER_CAL   = 6,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_FTM_TRIGGER_CAL     = 7,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_AGILE_OR_POWER_DOWN_DTIM = 8,
-    WMI_CTRL_PATH_STATS_CAL_PROFILE_NOISY_ENV_RXDO      = 9,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_COLD_BOOT_CAL       = 0x0,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_FULL_CHAN_SWITCH    = 0x1,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_SCAN_CHAN_SWITCH    = 0x2,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_DPD_SPLIT_CAL       = 0x3,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_TEMP_TRIGEER_CAL    = 0x4,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_POWER_SAVE_WAKE_UP  = 0x5,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_TIMER_TRIGGER_CAL   = 0x6,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_FTM_TRIGGER_CAL     = 0x7,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_AGILE_OR_POWER_DOWN_DTIM = 0x8,
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_NOISY_ENV_RXDO      = 0x9,
+
+    /* add new cal profiles above this line */
+    WMI_CTRL_PATH_STATS_CAL_PROFILE_INVALID             = 0x1F
 } wmi_ctrl_path_stats_cal_profile_ids;
 
 typedef enum {
-    WMI_CTRL_PATH_STATS_CAL_TYPE_ADC                     = 0,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DAC                     = 1,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_PROCESS                 = 2,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_NOISE_FLOOR             = 3,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO                   = 4,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_COMB_TXLO_TXIQ_RXIQ     = 5,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_TXLO                    = 6,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_TXIQ                    = 7,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_RXIQ                    = 8,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_IM2                     = 9,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_LNA                     = 10,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_LP_RXDCO            = 11,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_LP_RXIQ             = 12,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_MEMORYLESS          = 13,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_MEMORY              = 14,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_IBF                     = 15,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_PDET_AND_PAL            = 16,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO_IQ                = 17,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO_DTIM              = 18,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_TPC_CAL                 = 19,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_TIMEREQ             = 20,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_BWFILTER                = 21,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_PEF                     = 22,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_PADROOP                 = 23,
-    WMI_CTRL_PATH_STATS_CAL_TYPE_SELFCALTPC              = 24,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_ADC                     = 0x0,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DAC                     = 0x1,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_PROCESS                 = 0x2,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_NOISE_FLOOR             = 0x3,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO                   = 0x4,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_COMB_TXLO_TXIQ_RXIQ     = 0x5,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_TXLO                    = 0x6,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_TXIQ                    = 0x7,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_RXIQ                    = 0x8,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_IM2                     = 0x9,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_LNA                     = 0xa,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_LP_RXDCO            = 0xb,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_LP_RXIQ             = 0xc,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_MEMORYLESS          = 0xd,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_MEMORY              = 0xe,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_IBF                     = 0xf,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_PDET_AND_PAL            = 0x10,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO_IQ                = 0x11,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_RXDCO_DTIM              = 0x12,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_TPC_CAL                 = 0x13,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_DPD_TIMEREQ             = 0x14,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_BWFILTER                = 0x15,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_PEF                     = 0x16,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_PADROOP                 = 0x17,
+    WMI_CTRL_PATH_STATS_CAL_TYPE_SELFCALTPC              = 0x18,
+
+    /* add new cal types above this line */
+    WMI_CTRL_PATH_STATS_CAL_TYPE_INVALID                 = 0xFF
 } wmi_ctrl_path_stats_cal_type_ids;
 
 typedef enum {
-    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_NOISE_FLOOR    = 0,
-    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_DPD_MEMORYLESS = 1,
-    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_DPD_MEMORY     = 2,
+    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_NOISE_FLOOR    = 0x0,
+    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_DPD_MEMORYLESS = 0x1,
+    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_DPD_MEMORY     = 0x2,
+
+    /* add new periodic cal types above this line */
+    WMI_CTRL_PATH_STATS_PERIODIC_CAL_TYPE_INVALID        = 0xFF
 } wmi_ctrl_path_stats_periodic_cal_type_ids;
 
 /*
@@ -9720,14 +9783,14 @@ typedef struct {
     A_UINT32 cal_fcs_fail_cnt;    /* Count of number of times FCS failed for cal */
 } wmi_ctrl_path_calibration_stats_struct;
 
-#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_TYPE_GET(value)             WMI_GET_BITS(value, 0, 8)
-#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_TYPE_SET(value, cal_type)   WMI_SET_BITS(value, 0, 8, cal_type)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_TYPE_GET(cal_info)             WMI_GET_BITS(cal_info, 0, 8)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_TYPE_SET(cal_info, cal_type)   WMI_SET_BITS(cal_info, 0, 8, cal_type)
 
-#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_PROFILE_GET(value)              WMI_GET_BITS(value, 8, 5)
-#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_PROFILE_SET(value, cal_profile) WMI_SET_BITS(value, 8, 5, cal_profile)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_PROFILE_GET(cal_info)              WMI_GET_BITS(cal_info, 8, 5)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_CAL_PROFILE_SET(cal_info, cal_profile) WMI_SET_BITS(cal_info, 8, 5, cal_profile)
 
-#define WMI_CTRL_PATH_CALIBRATION_STATS_IS_PERIODIC_CAL_GET(value)              WMI_GET_BITS(value, 13, 1)
-#define WMI_CTRL_PATH_CALIBRATION_STATS_IS_PERIODIC_CAL_SET(value, is_periodic) WMI_SET_BITS(value, 13, 1, is_periodic)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_IS_PERIODIC_CAL_GET(cal_info)              WMI_GET_BITS(cal_info, 13, 1)
+#define WMI_CTRL_PATH_CALIBRATION_STATS_IS_PERIODIC_CAL_SET(cal_info, is_periodic) WMI_SET_BITS(cal_info, 13, 1, is_periodic)
 
 typedef struct {
     /** TLV tag and len; tag equals
@@ -11992,6 +12055,9 @@ typedef enum {
      */
     WMI_VDEV_PARAM_NON_DATA_HE_RANGE_EXT,    /* 0xA5 */
 
+    /** Prohibit data & mgmt except keepalive pkt */
+    WMI_VDEV_PARAM_PROHIBIT_DATA_MGMT,       /* 0xA6 */
+
 
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
@@ -12022,9 +12088,72 @@ typedef enum {
         WMI_VDEV_PARAM_SET_HEMU_MODE,                         /* 0x8002 */
         WMI_VDEV_PARAM_HEOPS_0_31,                            /* 0x8003 */
         WMI_VDEV_PARAM_OBSSPD,                                /* 0x8004 */
+
+        /*
+         * Enable / disable trigger access for a AP vdev's peers.
+         * For a STA mode vdev this will enable/disable triggered access
+         * and enable/disable Multi User mode of operation.
+         * A value of 0 in a given bit disables corresponding mode.
+         * bit | hemu mode
+         * ---------------
+         *  0  | EHT SUBFEE
+         *  1  | EHT SUBFER
+         *  2  | EHT MUBFEE
+         *  3  | EHT MUBFER
+         *  4  | EHT DL OFDMA, for AP its DL Tx OFDMA for Sta its Rx OFDMA
+         *  5  | EHT UL OFDMA, for AP its Tx OFDMA trigger for Sta its Rx OFDMA
+         *     |           trigger receive & UL response
+         *  6  | EHT MUMIMO
+         *  7  | EHT DL OFDMA + TXBF
+         *  8  | EHT DL OFDMA + MU-MIMO
+         *  9  | EHT UL OFDMA + MU-MIMO
+         */
+        WMI_VDEV_PARAM_SET_EHT_MU_MODE,                       /* 0x8005 */
     /*=== END VDEV_PARAM_PROTOTYPE SECTION ===*/
 } WMI_VDEV_PARAM;
 
+/* EHT Modes */
+#define WMI_VDEV_EHT_SUBFEE_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 0, 1)
+#define WMI_VDEV_EHT_SUBFEE_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 0, 1, 1)
+#define WMI_VDEV_EHT_SUBFEE_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 0, 1, 0)
+
+#define WMI_VDEV_EHT_SUBFER_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 1, 1)
+#define WMI_VDEV_EHT_SUBFER_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 1, 1, 1)
+#define WMI_VDEV_EHT_SUBFER_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 1, 1, 0)
+
+#define WMI_VDEV_EHT_MUBFEE_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 2, 1)
+#define WMI_VDEV_EHT_MUBFEE_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 2, 1, 1)
+#define WMI_VDEV_EHT_MUBFEE_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 2, 1, 0)
+
+#define WMI_VDEV_EHT_MUBFER_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 3, 1)
+#define WMI_VDEV_EHT_MUBFER_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 3, 1, 1)
+#define WMI_VDEV_EHT_MUBFER_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 3, 1, 0)
+
+#define WMI_VDEV_EHT_DLOFDMA_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 4, 1)
+#define WMI_VDEV_EHT_DLOFDMA_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 4, 1, 1)
+#define WMI_VDEV_EHT_DLOFDMA_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 4, 1, 0)
+
+#define WMI_VDEV_EHT_ULOFDMA_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 5, 1)
+#define WMI_VDEV_EHT_ULOFDMA_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 5, 1, 1)
+#define WMI_VDEV_EHT_ULOFDMA_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 5, 1, 0)
+
+#define WMI_VDEV_EHT_ULMUMIMO_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 6, 1)
+#define WMI_VDEV_EHT_ULMUMIMO_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 6, 1, 1)
+#define WMI_VDEV_EHT_ULMUMIMO_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 6, 1, 0)
+
+#define WMI_VDEV_EHT_TXBF_OFDMA_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 7, 1)
+#define WMI_VDEV_EHT_TXBF_OFDMA_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 7, 1, 1)
+#define WMI_VDEV_EHT_TXBF_OFDMA_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 7, 1, 0)
+
+#define WMI_VDEV_EHT_DLOFDMA_W_MUMIMO_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 8, 1)
+#define WMI_VDEV_EHT_DLOFDMA_W_MUMIMO_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 8, 1, 1)
+#define WMI_VDEV_EHT_DLOFDMA_W_MUMIMO_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 8, 1, 0)
+
+#define WMI_VDEV_EHT_ULOFDMA_W_MUMIMO_IS_ENABLED(eht_mu_mode) WMI_GET_BITS((eht_mu_mode), 9, 1)
+#define WMI_VDEV_EHT_ULOFDMA_W_MUMIMO_ENABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 9, 1, 1)
+#define WMI_VDEV_EHT_ULOFDMA_W_MUMIMO_DISABLE(eht_mu_mode) WMI_SET_BITS((eht_mu_mode), 9, 1, 0)
+
+/* HE Modes */
 #define WMI_VDEV_HE_SUBFEE_IS_ENABLED(hemu_mode) WMI_GET_BITS(hemu_mode, 0, 1)
 #define WMI_VDEV_HE_SUBFEE_ENABLE(hemu_mode) WMI_SET_BITS(hemu_mode, 0, 1, 1)
 #define WMI_VDEV_HE_SUBFEE_DISABLE(hemu_mode) WMI_SET_BITS(hemu_mode, 0, 1, 0)
@@ -12232,6 +12361,12 @@ WMI_VDEV_PARAM_ROAM_FW_OFFLOAD WMI_VDEV_PARAM **/
  * value = 1 --> Chanmap scan only
  */
 #define WMI_ROAM_BMISS_FINAL_SCAN_TYPE_FLAG                      0x8
+/* Bit 4:
+ * To enable/disable feature: EAPOL offload to FW while SAE roaming.
+ * param value = 0 --> Enable EAPOL offload to FW for SAE roaming
+ * param value = 1 --> Disable EAPOL offload to FW for SAE roaming
+ */
+#define WMI_VDEV_PARAM_SKIP_SAE_ROAM_4WAY_HANDSHAKE              0x10
 
 /** slot time long */
 #define WMI_VDEV_SLOT_TIME_LONG                                  0x1
@@ -14026,6 +14161,14 @@ typedef struct {
      */
     A_UINT32 bss_max_idle_option;
 
+    /*
+     * Connected AP auth mode values are from  WMI_AUTH_ enum.
+     * The target shall ignore an auth_mode value of 0 / WMI_AUTH_NONE,
+     * due to ambiguity whether a zero value was provided explicitly or
+     * simply as a default.
+     */
+    A_UINT32 auth_mode;
+
 /* Following this struct are the TLV's:
  *     A_UINT8 peer_legacy_rates[];
  *     A_UINT8 peer_ht_rates[];
@@ -14372,7 +14515,9 @@ typedef struct {
  *  BIT 6     : Enable/Disable solicited BTM
  *  BIT 7     : Roam BTM candidates based on the roam score instead of BTM preferred value
  *  BIT 8     : BTM query preference over 11k neighbor report request
- *  BIT 9-31  : Reserved
+ *  BIT 9     : Send BTM query with preferred candidates list
+ *  BIT 10    : Forward MBO BTM Request to Host if MBO ASSOC RETRY attribute is set
+ *  BIT 11-31 : Reserved
  */
 #define WMI_ROAM_BTM_SET_ENABLE(flags, val)                        WMI_SET_BITS(flags, 0, 1, val)
 #define WMI_ROAM_BTM_GET_ENABLE(flags)                             WMI_GET_BITS(flags, 0, 1)
@@ -14388,6 +14533,8 @@ typedef struct {
 #define WMI_ROAM_BTM_GET_BTM_QUERY_PREFERENCE_OVER_11K(flags)      WMI_GET_BITS(flags, 8, 1)
 #define WMI_ROAM_BTM_SET_BTM_QUERY_WITH_CANDIDATE_LIST(flags, val) WMI_SET_BITS(flags, 9, 1, val)
 #define WMI_ROAM_BTM_GET_BTM_QUERY_WITH_CANDIDATE_LIST(flags)      WMI_GET_BITS(flags, 9, 1)
+#define WMI_ROAM_BTM_SET_FORWARD_MBO_ASSOC_RETRY_BTM_REQUEST_TO_HOST(flags, val)    WMI_SET_BITS(flags, 10, 1, val)
+#define WMI_ROAM_BTM_GET_FORWARD_MBO_ASSOC_RETRY_BTM_REQUEST_TO_HOST(flags)         WMI_GET_BITS(flags, 10, 1)
 
 
 /** WMI_ROAM_BTM_SET_NON_MATCHING_CNDS_ACTION definition: When BTM candidate is not matched with cache by WMI_ROAM_BTM_SET_CNDS_MATCH_CONDITION, determine what to do */
@@ -16193,6 +16340,8 @@ typedef enum wake_reason_e {
     WOW_REASON_DFS_CAC,
     WOW_REASON_VDEV_DISCONNECT,
     WOW_REASON_LOCAL_DATA_UC_DROP,
+    WOW_REASON_GENERIC_WAKE, /* A generic reason that host should be woken up */
+    WOW_REASON_ERR_PKT_TRIGGERED_WAKEUP,
 
     /* add new WOW_REASON_ defs before this line */
     WOW_REASON_MAX,
@@ -26271,10 +26420,11 @@ typedef enum {
      * within this enum represents a bit position within a stats bitmap.
      */
     /* bit 0 is currently unused / reserved */
-    WMI_REQUEST_CTRL_PATH_PDEV_TX_STAT   = 1,
-    WMI_REQUEST_CTRL_PATH_VDEV_EXTD_STAT = 2,
-    WMI_REQUEST_CTRL_PATH_MEM_STAT       = 3,
-    WMI_REQUEST_CTRL_PATH_TWT_STAT       = 4,
+    WMI_REQUEST_CTRL_PATH_PDEV_TX_STAT      = 1,
+    WMI_REQUEST_CTRL_PATH_VDEV_EXTD_STAT    = 2,
+    WMI_REQUEST_CTRL_PATH_MEM_STAT          = 3,
+    WMI_REQUEST_CTRL_PATH_TWT_STAT          = 4,
+    WMI_REQUEST_CTRL_PATH_CALIBRATION_STAT  = 5,
 } wmi_ctrl_path_stats_id;
 
 typedef enum {
@@ -26499,6 +26649,36 @@ typedef enum wmi_hw_mode_config_type {
     WMI_HW_MODE_2G_PHYB     = 7, /* Ony PhyB 2G active */
 } WMI_HW_MODE_CONFIG_TYPE;
 
+/*
+ * Per HW mode MLO capability flags
+ * use bits 31:28 of A_UINT32 hw_mode_config_type for Per HW mode MLO
+ * capability flags...
+ * WMI_MLO_CAP_FLAG_NONE:           Do not support MLO for the specific HW mode
+ * WMI_MLO_CAP_FLAG_NON_STR_IN_DBS: Support STR MLO when DBS for the specific
+ *                                  HW mode
+ * WMI_MLO_CAP_FLAG_STR_IN_DBS:     Support Non-STR MLO when DBS for the
+ *                                  specific HW mode
+ * WMI_MLO_CAP_FLAG_NON_STR_IN_SBS: Support STR MLO when SBS for the specific
+ *                                  HW mode
+ * WMI_MLO_CAP_FLAG_STR_IN_SBS:     Support Non-STR MLO when SBS for the
+ *                                  specific HW mode
+ */
+#define WMI_MLO_CAP_FLAG_NONE           0x0
+#define WMI_MLO_CAP_FLAG_NON_STR_IN_DBS 0x1
+#define WMI_MLO_CAP_FLAG_STR_IN_DBS     0x2
+#define WMI_MLO_CAP_FLAG_NON_STR_IN_SBS 0x4
+#define WMI_MLO_CAP_FLAG_STR_IN_SBS     0x8
+
+/*
+ * hw_mode_config_type sub-fields for chips that support 802.11BE/MLO:
+ * bits 28:0  - hw_mode_config
+ * bits 31:28 - per HW mode MLO capability flags
+ */
+#define WMI_BECAP_PHY_GET_HW_MODE_CFG(hw_mode_config_type) WMI_GET_BITS(hw_mode_config_type, 0, 28)
+#define WMI_BECAP_PHY_SET_HW_MODE_CFG(hw_mode_config_type, value) WMI_SET_BITS(hw_mode_config_type, 0, 28, value)
+#define WMI_BECAP_PHY_GET_MLO_CAP(hw_mode_config_type) WMI_GET_BITS(hw_mode_config_type, 28, 4)
+#define WMI_BECAP_PHY_SET_MLO_CAP(hw_mode_config_type, value) WMI_SET_BITS(hw_mode_config_type, 28, 4, value)
+
 #define WMI_SUPPORT_11B_GET(flags) WMI_GET_BITS(flags, 0, 1)
 #define WMI_SUPPORT_11B_SET(flags, value) WMI_SET_BITS(flags, 0, 1, value)
 
@@ -26516,6 +26696,9 @@ typedef enum wmi_hw_mode_config_type {
 
 #define WMI_SUPPORT_11AX_GET(flags) WMI_GET_BITS(flags, 5, 1)
 #define WMI_SUPPORT_11AX_SET(flags, value) WMI_SET_BITS(flags, 5, 1, value)
+
+#define WMI_SUPPORT_11BE_GET(flags) WMI_GET_BITS(flags, 6, 1)
+#define WMI_SUPPORT_11BE_SET(flags, value) WMI_SET_BITS(flags, 6, 1, value)
 
 #define WMI_MAX_MUBFEE_GET(flags) WMI_GET_BITS(flags, 28, 4)
 #define WMI_MAX_MUBFEE_SET(flags, value) WMI_SET_BITS(flags, 28, 4, value)
@@ -26609,8 +26792,9 @@ typedef struct {
                      supports_11n:1,
                      supports_11ac:1,
                      supports_11ax:1,
+                     supports_11be:1,
 
-                     unused: 22,
+                     unused: 21,
 
                      max_mubfee: 4; /* max MU beamformees supported per MAC */
         };
@@ -26792,8 +26976,20 @@ typedef struct {
     /* hw_mode_config_type
      * Identify a particular type of HW mode such as SBS, DBS etc.
      * Refer to WMI_HW_MODE_CONFIG_TYPE values.
+     *
+     * Use bits 31:28 of hw_mode_config_type for Per HW mode MLO capability
+     * flags.
+     * Refer to WMI_MLO_CAP_FLAG_XXX. For legacy chips which do not support
+     * MLO, these top bits will always be set to 0, so it won't impact the
+     * legacy chips which treat hw_mode_config_type as 32 bits.
      */
-    A_UINT32 hw_mode_config_type;
+    union {
+        struct {
+            A_UINT32 hw_mode_config   :28,
+                     mlo_cap_flag     :4; /* see WMI_MLO_CAP_FLAG_ defs */
+        };
+        A_UINT32 hw_mode_config_type;
+    };
 
     /**************************************************************************
      * DON'T ADD ANY FURTHER FIELDS HERE -
@@ -28630,6 +28826,10 @@ typedef enum {
 #define WLM_FLAGS_PS_SET_PCIE_L11_ENABLE(flag, val)       WMI_SET_BITS(flag, 19, 1, val)
 #define WLM_FLAGS_PS_IS_PHYRF_PS_ENABLED(flag)            WMI_GET_BITS(flag, 20, 1)
 #define WLM_FLAGS_PS_SET_PHYRF_PS_ENABLE(flag, val)       WMI_SET_BITS(flag, 20, 1, val)
+#define WLM_FLAGS_SCAN_IS_SPLIT_PAS_CH_ENABLED(flag)      WMI_GET_BITS(flag, 21, 1)
+#define WLM_FLAGS_SCAN_SET_SPLIT_PAS_CH_ENABLE(flag, val) WMI_SET_BITS(flag, 21, 1, val)
+#define WLM_FLAGS_SCAN_IS_ADAPT_SCAN_ENABLED(flag)        WMI_GET_BITS(flag, 22, 1)
+#define WLM_FLAGS_SCAN_SET_ADAPT_SCAN_ENABLE(flag, val)   WMI_SET_BITS(flag, 22, 1, val)
 
 typedef struct {
     /** TLV tag and len; tag equals
@@ -29042,6 +29242,7 @@ typedef enum _WMI_TWT_NUDGE_STATUS_T {
     WMI_NUDGE_TWT_STATUS_NO_RESOURCE,         /* FW resource exhausted */
     WMI_NUDGE_TWT_STATUS_NO_ACK,              /* peer AP/STA did not ACK the request/response frame */
     WMI_NUDGE_TWT_STATUS_UNKNOWN_ERROR,       /* nudging TWT dialog failed with an unknown reason */
+    WMI_NUDGE_TWT_STATUS_ALREADY_PAUSED,      /* The TWT dialog is already paused */
 } WMI_TWT_NUDGE_STATUS_T;
 
 typedef struct {

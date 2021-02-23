@@ -29,6 +29,7 @@
 
 #define MAX_MEASUREMENT_REQUEST      5
 #define MAX_NUM_CHANNELS             255
+
 #define DEFAULT_RRM_IDX 0
 
 typedef enum eRrmRetStatus {

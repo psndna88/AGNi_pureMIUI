@@ -62,6 +62,7 @@ static int populate_oem_data_cap(struct hdd_adapter *adapter,
 	uint32_t num_chan, i;
 	uint32_t *chan_freq_list;
 	uint8_t band_capability;
+	uint32_t band_bitmap;
 	uint16_t neighbor_scan_min_chan_time;
 	uint16_t neighbor_scan_max_chan_time;
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
@@ -72,11 +73,13 @@ static int populate_oem_data_cap(struct hdd_adapter *adapter,
 		return -EINVAL;
 	}
 
-	status = ucfg_mlme_get_band_capability(hdd_ctx->psoc, &band_capability);
+	status = ucfg_mlme_get_band_capability(hdd_ctx->psoc, &band_bitmap);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_err("Failed to get MLME band capability");
 		return -EIO;
 	}
+
+	band_capability = wlan_reg_band_bitmap_to_band_info(band_bitmap);
 
 	chan_freq_list =
 		qdf_mem_malloc(sizeof(uint32_t) * OEM_CAP_MAX_NUM_CHANNELS);
@@ -187,7 +190,7 @@ static void send_oem_reg_rsp_nlink_msg(void)
 	uint8_t *num_interfaces;
 	uint8_t *device_mode;
 	uint8_t *vdev_id;
-	struct hdd_adapter *adapter;
+	struct hdd_adapter *adapter, *next_adapter = NULL;
 
 	/* OEM msg is always to a specific process & cannot be a broadcast */
 	if (p_hdd_ctx->oem_pid == 0) {
@@ -218,7 +221,7 @@ static void send_oem_reg_rsp_nlink_msg(void)
 	*num_interfaces = 0;
 
 	/* Iterate through each adapter and fill device mode and vdev id */
-	hdd_for_each_adapter(p_hdd_ctx, adapter) {
+	hdd_for_each_adapter_dev_held_safe(p_hdd_ctx, adapter, next_adapter) {
 		device_mode = buf++;
 		vdev_id = buf++;
 		*device_mode = adapter->device_mode;
@@ -227,6 +230,7 @@ static void send_oem_reg_rsp_nlink_msg(void)
 		hdd_debug("num_interfaces: %d, device_mode: %d, vdev_id: %d",
 			  *num_interfaces, *device_mode,
 			  *vdev_id);
+		dev_put(adapter->dev);
 	}
 
 	ani_hdr->length =
