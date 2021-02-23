@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -3520,6 +3520,17 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 			CAM_ISP_STATE_CHANGE_TRIGGER_FLUSH, req->request_id);
 	}
 
+	if (list_empty(&flush_list)) {
+		/*
+		 * Maybe the req isn't sent to KMD since UMD already skip
+		 * req in CSL layer.
+		 */
+		CAM_INFO(CAM_ISP,
+			"flush list is empty, flush type %d for req %llu",
+			flush_req->type, flush_req->req_id);
+		return 0;
+	}
+
 	list_for_each_entry_safe(req, req_temp, &flush_list, list) {
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		for (i = 0; i < req_isp->num_fence_map_out; i++) {
@@ -3544,12 +3555,6 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 		list_del_init(&req->list);
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
-
-	if (flush_req->type == CAM_REQ_MGR_FLUSH_TYPE_CANCEL_REQ &&
-		!cancel_req_id_found)
-		CAM_DBG(CAM_ISP,
-			"Flush request id:%lld is not found in the list",
-			flush_req->req_id);
 
 	return 0;
 }
