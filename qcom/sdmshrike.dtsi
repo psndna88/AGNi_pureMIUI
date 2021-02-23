@@ -2090,6 +2090,7 @@
 #include "sdmshrike-gpu.dtsi"
 #include "sa8195-vidc.dtsi"
 #include "sa8155-audio.dtsi"
+#include "sm8150-npu.dtsi"
 
 #include "display/sdmshrike-sde-pll.dtsi"
 #include "display/sdmshrike-sde.dtsi"
