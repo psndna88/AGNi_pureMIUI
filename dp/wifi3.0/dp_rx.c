@@ -301,6 +301,7 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 		"requested %d buffers for replenish", num_req_buffers);
 
 	hal_srng_access_start(dp_soc->hal_soc, rxdma_srng);
+
 	num_entries_avail = hal_srng_src_num_avail(dp_soc->hal_soc,
 						   rxdma_srng,
 						   sync_hw_ptr);
@@ -349,6 +350,8 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 
 
 	count = 0;
+
+	dp_rx_refill_buff_pool_lock(dp_soc);
 
 	while (count < num_req_buffers) {
 		/* Flag is set while pdev rx_desc_pool initialization */
@@ -405,6 +408,8 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 		*desc_list = next;
 
 	}
+
+	dp_rx_refill_buff_pool_unlock(dp_soc);
 
 	hal_srng_access_end(dp_soc->hal_soc, rxdma_srng);
 
