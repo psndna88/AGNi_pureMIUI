@@ -265,6 +265,7 @@ config DEVFREQ_SPDM
 
 config DEVFREQ_BOOST
 	bool "Devfreq Boost"
+	default y
 	help
 	  Boosts enumerated devfreq devices upon input, and allows for boosting
 	  specific devfreq devices on other custom events. The boost frequencies
