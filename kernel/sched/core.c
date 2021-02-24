@@ -1292,7 +1292,9 @@ static inline void uclamp_rq_dec_id(struct rq *rq, struct task_struct *p,
 
 	bucket = &uc_rq->bucket[uc_se->bucket_id];
 
-	SCHED_WARN_ON(!bucket->tasks);
+#ifdef CONFIG_SCHED_DEBUG
+	WARN_ON_ONCE(!bucket->tasks);
+#endif
 	if (likely(bucket->tasks))
 		bucket->tasks--;
 
@@ -1312,7 +1314,9 @@ static inline void uclamp_rq_dec_id(struct rq *rq, struct task_struct *p,
 	 * Defensive programming: this should never happen. If it happens,
 	 * e.g. due to future modification, warn and fixup the expected value.
 	 */
-	SCHED_WARN_ON(bucket->value > rq_clamp);
+#ifdef CONFIG_SCHED_DEBUG
+	WARN_ON_ONCE(bucket->value > rq_clamp);
+#endif
 	if (bucket->value >= rq_clamp) {
 		bkt_clamp = uclamp_rq_max_value(rq, clamp_id, uc_se->value);
 		WRITE_ONCE(uc_rq->value, bkt_clamp);
