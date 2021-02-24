@@ -138,7 +138,6 @@ struct f2fs_mount_info {
 	int alloc_mode;			/* segment allocation policy */
 	int fsync_mode;			/* fsync policy */
 	bool test_dummy_encryption;	/* test dummy encryption */
-	bool inlinecrypt;		/* inline encryption enabled */
 };
 
 #define F2FS_FEATURE_ENCRYPT		0x0001
