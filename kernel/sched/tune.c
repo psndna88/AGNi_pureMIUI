@@ -425,7 +425,7 @@ int schedtune_can_attach(struct cgroup_taskset *tset)
 	struct task_struct *task;
 	struct cgroup_subsys_state *css;
 	struct boost_groups *bg;
-	unsigned long irq_flags;
+	struct rq_flags irq_flags;
 	unsigned int cpu;
 	struct rq *rq;
 	int src_bg; /* Source boost group index */
@@ -545,7 +545,7 @@ void schedtune_dequeue_task(struct task_struct *p, int cpu)
 void schedtune_exit_task(struct task_struct *tsk)
 {
 	struct schedtune *st;
-	unsigned long irq_flags;
+	struct rq_flags irq_flags;
 	unsigned int cpu;
 	struct rq *rq;
 	int idx;
