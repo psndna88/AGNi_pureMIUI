@@ -2384,6 +2384,12 @@
 
 };
 
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+	};
+};
+
 #include "sm6150-qupv3.dtsi"
 #include "sm6150-ssc-qupv3.dtsi"
 #include "sm6150-pinctrl.dtsi"
