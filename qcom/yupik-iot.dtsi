@@ -16,3 +16,11 @@
 
 	/delete-property/ protected-clocks;
 };
+
+&gcc_pcie_0_gdsc {
+	status = "ok";
+};
+
+&gcc_pcie_1_gdsc {
+	status = "ok";
+};
