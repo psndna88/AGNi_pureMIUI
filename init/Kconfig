@@ -959,6 +959,7 @@ endchoice
 config UCLAMP_TASK
 	bool "Enable utilization clamping for RT/FAIR tasks"
 	depends on CPU_FREQ_GOV_SCHEDUTIL
+	default y
 	help
 	  This feature enables the scheduler to track the clamped utilization
 	  of each CPU based on RUNNABLE tasks scheduled on that CPU.
@@ -1092,7 +1093,7 @@ config UCLAMP_TASK_GROUP
 	bool "Utilization clamping per group of tasks"
 	depends on CGROUP_SCHED
 	depends on UCLAMP_TASK
-	default n
+	default y
 	help
 	  This feature enables the scheduler to track the clamped utilization
 	  of each CPU based on RUNNABLE tasks currently scheduled on that CPU.
@@ -1411,7 +1412,7 @@ config SCHED_AUTOGROUP
 
 config SCHED_TUNE
 	bool "Boosting for CFS tasks (EXPERIMENTAL)"
-	depends on SMP
+	depends on SMP && !UCLAMP_TASK
 	help
 	  This option enables the system-wide support for task boosting.
 	  When this support is enabled a new sysctl interface is exposed to
