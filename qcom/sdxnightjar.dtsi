@@ -590,7 +590,6 @@
 		qcom,qsee-ce-hw-instance = <0>;
 		qcom,qsee-reentrancy-support = <2>;
 		qcom,support-bus-scaling;
-		qcom,appsbl-qseecom-support;
 		interconnect-names = "data_path";
 		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
 		/*TODO: Fix the clock when tree is available*/
