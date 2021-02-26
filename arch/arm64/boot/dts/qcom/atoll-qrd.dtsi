@@ -89,7 +89,7 @@
 };
 
 &pm6150a_amoled {
-	status = "ok";
+	status = "disabled";
 };
 
 &pm6150_qg {
