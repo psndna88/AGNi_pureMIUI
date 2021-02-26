@@ -151,28 +151,6 @@ static void a6xx_receive_ack_async(struct adreno_device *adreno_dev, void *rcvd)
 			MSG_HDR_GET_SEQNUM(waiters[i]));
 }
 
-static void log_profiling_info(struct adreno_device *adreno_dev, u32 *rcvd)
-{
-	struct hfi_ts_retire_cmd *cmd = (struct hfi_ts_retire_cmd *)rcvd;
-	struct kgsl_context *context;
-	struct retire_info info = {0};
-
-	context = kgsl_context_get(KGSL_DEVICE(adreno_dev), cmd->ctxt_id);
-	if (context == NULL)
-		return;
-
-	info.timestamp = cmd->ts;
-	info.rb_id = adreno_get_level(context->priority);
-	info.gmu_dispatch_queue = context->gmu_dispatch_queue;
-	info.submitted_to_rb = cmd->submitted_to_rb;
-	info.sop = cmd->sop;
-	info.eop = cmd->eop;
-	info.retired_on_gmu = cmd->retired_on_gmu;
-
-	trace_adreno_cmdbatch_retired(context, &info, 0, 0, 0);
-	kgsl_context_put(context);
-}
-
 struct f2h_packet {
 	/** @rcvd: the contents of the fw to host packet */
 	u32 rcvd[MAX_RCVD_SIZE];
@@ -908,7 +886,6 @@ int a6xx_hwsched_cp_init(struct adreno_device *adreno_dev)
 
 static void process_ts_retire(struct adreno_device *adreno_dev, u32 *rcvd)
 {
-	log_profiling_info(adreno_dev, rcvd);
 	adreno_hwsched_trigger(adreno_dev);
 }
 
@@ -1012,54 +989,6 @@ int a6xx_hwsched_hfi_probe(struct adreno_device *adreno_dev)
 	f2h_cache = KMEM_CACHE(f2h_packet, 0);
 
 	return 0;
-}
-
-static void add_profile_events(struct adreno_device *adreno_dev,
-	struct kgsl_drawobj *drawobj, struct adreno_submit_time *time)
-{
-	unsigned long flags;
-	u64 time_in_s;
-	unsigned long time_in_ns;
-	struct kgsl_context *context = drawobj->context;
-	struct submission_info info = {0};
-
-	/*
-	 * Here we are attempting to create a mapping between the
-	 * GPU time domain (alwayson counter) and the CPU time domain
-	 * (local_clock) by sampling both values as close together as
-	 * possible. This is useful for many types of debugging and
-	 * profiling. In order to make this mapping as accurate as
-	 * possible, we must turn off interrupts to avoid running
-	 * interrupt handlers between the two samples.
-	 */
-
-	local_irq_save(flags);
-
-	/* Read always on registers */
-	time->ticks = a6xx_read_alwayson(adreno_dev);
-
-	/* Trace the GPU time to create a mapping to ftrace time */
-	trace_adreno_cmdbatch_sync(context->id, context->priority,
-		drawobj->timestamp, time->ticks);
-
-	/* Get the kernel clock for time since boot */
-	time->ktime = local_clock();
-
-	/* Get the timeofday for the wall time (for the user) */
-	getnstimeofday(&time->utime);
-
-	local_irq_restore(flags);
-
-	/* Return kernel clock time to the client if requested */
-	time_in_s = time->ktime;
-	time_in_ns = do_div(time_in_s, 1000000000);
-
-	info.inflight = -1;
-	info.rb_id = adreno_get_level(context->priority);
-	info.gmu_dispatch_queue = context->gmu_dispatch_queue;
-
-	trace_adreno_cmdbatch_submitted(drawobj, &info, time->ticks,
-		(unsigned long) time_in_s, time_in_ns / 1000, 0);
 }
 
 #define CTXT_FLAG_PMODE                 0x00000001
@@ -1255,10 +1184,6 @@ skipib:
 	 * an interrupt is raised
 	 */
 	wmb();
-
-	add_profile_events(adreno_dev, drawobj, &time);
-
-	cmdobj->submit_ticks = time.ticks;
 
 	/* Send interrupt to GMU to receive the message */
 	gmu_core_regwrite(KGSL_DEVICE(adreno_dev), A6XX_GMU_HOST2GMU_INTR_SET,
