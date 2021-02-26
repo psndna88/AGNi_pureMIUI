@@ -61,14 +61,6 @@
 			size = <0x400000>;
 		};
 
-		qseecom_ta_mem: qseecom_ta_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			alignment = <0x400000>;
-			size = <0x400000>;
-		};
-
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x00000000 0xffffffff>;
