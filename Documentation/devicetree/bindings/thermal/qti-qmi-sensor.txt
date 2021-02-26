@@ -89,7 +89,8 @@ Subsystem properties:
 		56. qfe_wtr_pa4_fr1
 		57. qfe_wtr_pa5_fr1
 		58. qfe_wtr_pa6_fr1
-
+		59. qfe_ret_pa1
+		60. qfe_ret_pa1_fr1
 
 Example:
 
