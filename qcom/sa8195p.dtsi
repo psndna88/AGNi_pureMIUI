@@ -8,6 +8,9 @@
 	model = "Qualcomm Technologies, Inc. SA8195P";
 	qcom,msm-name = "SA8195P";
 	qcom,msm-id = <405 0x20000>;
+	aliases {
+		hsuart0 = &qupv3_se13_4uart;
+	};
 };
 
 &soc {
