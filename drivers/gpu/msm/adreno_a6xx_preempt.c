@@ -27,6 +27,8 @@ static void _update_wptr(struct adreno_device *adreno_dev, bool reset_timer)
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct adreno_ringbuffer *rb = adreno_dev->cur_rb;
 	unsigned long flags;
+	bool write = false;
+	unsigned int val;
 	int ret = 0;
 
 	spin_lock_irqsave(&rb->preempt_lock, flags);
@@ -38,9 +40,8 @@ static void _update_wptr(struct adreno_device *adreno_dev, bool reset_timer)
 		 */
 		if (rb->skip_inline_wptr) {
 
-			ret = adreno_gmu_fenced_write(adreno_dev,
-				ADRENO_REG_CP_RB_WPTR, rb->wptr,
-				FENCE_STATUS_WRITEDROPPED0_MASK);
+			write = true;
+			val = rb->wptr;
 
 			reset_timer = true;
 			rb->skip_inline_wptr = false;
@@ -60,6 +61,10 @@ static void _update_wptr(struct adreno_device *adreno_dev, bool reset_timer)
 			msecs_to_jiffies(adreno_drawobj_timeout);
 
 	spin_unlock_irqrestore(&rb->preempt_lock, flags);
+
+	if (write)
+		ret = adreno_gmu_fenced_write(adreno_dev, ADRENO_REG_CP_RB_WPTR,
+			val, FENCE_STATUS_WRITEDROPPED0_MASK);
 
 	if (in_interrupt() == 0) {
 		/* If WPTR update fails, set the fault and trigger recovery */
