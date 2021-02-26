@@ -632,10 +632,14 @@ int wcd9xxx_request_irq(struct wcd9xxx_core_resource *wcd9xxx_res,
 			const char *name, void *data)
 {
 	int virq;
+	int flags = IRQF_TRIGGER_RISING;
 
 	virq = phyirq_to_virq(wcd9xxx_res, irq);
 
-	return request_threaded_irq(virq, NULL, handler, IRQF_TRIGGER_RISING,
+	if (!strncmp(name, "Button ", strlen("Button") + 1))
+		flags |= IRQF_NO_SUSPEND;
+
+	return request_threaded_irq(virq, NULL, handler, flags,
 				    name, data);
 }
 EXPORT_SYMBOL(wcd9xxx_request_irq);
