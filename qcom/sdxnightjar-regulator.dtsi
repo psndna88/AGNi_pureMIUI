@@ -92,6 +92,14 @@
 					<RPM_SMD_REGULATOR_LEVEL_TURBO_NO_CPR>;
 			qcom,use-voltage-floor-level;
 		};
+
+		cx_cdev: cx-cdev {
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&pmd9650_s5_floor_level>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_RETENTION
+					RPM_SMD_REGULATOR_LEVEL_NOM>;
+			#cooling-cells = <2>;
+		};
 	};
 
 	rpm-regulator-ldoa1 {
