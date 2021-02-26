@@ -34,8 +34,8 @@
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
 		serial0 = &qupv3_se0_2uart;
-		sdhc1 = &sdhc_1;
-		sdhc2 = &sdhc_2;
+		sdhc0 = &sdhc_1;
+		sdhc1 = &sdhc_2;
 	};
 
 	cpus {
