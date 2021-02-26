@@ -4583,8 +4583,6 @@ int q6asm_get_shared_pos(struct audio_client *ac, uint32_t *read_index,
 			continue;
 		return 0;
 	}
-	pr_err("%s out of tries trying to get a good read, try again\n",
-	       __func__);
 	return -EAGAIN;
 }
 EXPORT_SYMBOL(q6asm_get_shared_pos);
