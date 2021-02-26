@@ -71,6 +71,8 @@
 #define QMI_QFE_WTR_PA_4_FR1	55
 #define QMI_QFE_WTR_PA_5_FR1	56
 #define QMI_QFE_WTR_PA_6_FR1	57
+#define QMI_QFE_RET_PA_1	58
+#define QMI_QFE_RET_PA_1_FR1	59
 
 
 #define QMI_MODEM_INST_ID	0x0
