@@ -393,6 +393,7 @@
 #include "sa8155-vm-pcie.dtsi"
 #include "sm8150-qupv3.dtsi"
 #include "sm8150-ssc-qupv3.dtsi"
+#include "pm8150-vm.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;
