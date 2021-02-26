@@ -35,6 +35,24 @@ on init
     write /dev/blkio/background/blkio.weight 1000
     write /dev/blkio/blkio.group_idle 0
     write /dev/blkio/background/blkio.group_idle 0
+    # AGNi Wifi Tweaks
+	write /proc/sys/net/ipv4/tcp_ecn 0
+	write /proc/sys/net/ipv4/tcp_notsent_lowat 16384
+	write /proc/sys/net/core/default_qdisc "fq_codel"
+	write /proc/sys/net/ipv4/tcp_congestion_control "veno"
+	write /proc/sys/net/ipv4/tcp_tw_reuse 1
+	write /proc/sys/net/ipv4/tcp_slow_start_after_idle 0
+	write /proc/sys/net/ipv4/tcp_mtu_probing 1
+	write /proc/sys/net/ipv4/tcp_sack 1
+	write /proc/sys/net/ipv4/tcp_timestamps 0
+	write /proc/sys/net/core/netdev_max_backlog 10000
+	write /proc/sys/net/core/rmem_max 16777216
+	write /proc/sys/net/core/wmem_max 8388608
+	write /proc/sys/net/ipv4/tcp_rmem "524288 1048576 5505024"
+	write /proc/sys/net/ipv4/tcp_wmem "262144 524288 4194304"
+	write /proc/sys/net/ipv4/tcp_no_metrics_save 1
+	write /proc/sys/net/ipv4/tcp_moderate_rcvbuf 0
+	write /proc/sys/net/ipv4/tcp_syncookies 1
 
 on boot
 	write /sys/module/module/parameters/lock_wlanmodule N
@@ -144,23 +162,6 @@ on property:sys.boot_completed=1
     write /sys/block/dm-0/queue/discard_max_bytes 134217728
     # Set network hostname
     setprop net.hostname SDM636
-    # AGNi Wifi Tweaks
-	write /proc/sys/net/ipv4/tcp_ecn 0
-	write /proc/sys/net/ipv4/tcp_notsent_lowat 16384
-	write /proc/sys/net/core/default_qdisc "fq"
-	write /proc/sys/net/ipv4/tcp_congestion_control "bbr"
-	write /proc/sys/net/ipv4/tcp_tw_reuse 1
-	write /proc/sys/net/ipv4/tcp_slow_start_after_idle 0
-	write /proc/sys/net/ipv4/tcp_mtu_probing 1
-	write /proc/sys/net/ipv4/tcp_sack 1
-	write /proc/sys/net/ipv4/tcp_timestamps 0
-	write /proc/sys/net/core/netdev_max_backlog 10000
-	write /proc/sys/net/core/rmem_max 16777216
-	write /proc/sys/net/core/wmem_max 8388608
-	write /proc/sys/net/ipv4/tcp_rmem "524288 1048576 5505024"
-	write /proc/sys/net/ipv4/tcp_wmem "262144 524288 4194304"
-	write /proc/sys/net/ipv4/tcp_no_metrics_save 1
-	write /proc/sys/net/ipv4/tcp_moderate_rcvbuf 0
 	# Uclamp tuning
 	write /proc/sys/kernel/sched_util_clamp_min_rt_default 96
 	write /proc/sys/kernel/sched_util_clamp_min 128
