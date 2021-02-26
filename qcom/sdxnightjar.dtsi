@@ -502,6 +502,10 @@
 		qcom,pipe-attr-ee;
 	};
 
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 	qcom,msm_gsi {
 		compatible = "qcom,msm_gsi";
 	};
