@@ -11,6 +11,7 @@ Required properties:
 		qcom,qca6390
 		qcom,qca6490
 		qcom,wcn6750-bt
+		qcom,qca-auto-converged
 	- qcom,bt-reset-gpio: GPIO pin to bring BT Controller out of reset
 	- qcom,wl-reset-gpio: GPIO pin for WL_EN toggle
 

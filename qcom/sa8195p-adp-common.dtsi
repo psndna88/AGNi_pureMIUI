@@ -1,5 +1,7 @@
 #include <dt-bindings/gpio/gpio.h>
 
+#include "sa8195p-cnss.dtsi"
+
 &qupv3_3 {
 	status = "ok";
 };
