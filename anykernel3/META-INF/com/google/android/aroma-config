@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v12.4_stable");
+ini_set("rom_version",	"v12.6_stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"February, 20, 2021");
+ini_set("rom_date",		"February, 27, 2021");
 
 # Show Simple Splash
 splash(
@@ -148,7 +148,7 @@ selectbox(
     "Automatic",							"DEFAULT: Select Wifi driver based on my installed rom's Android version", 1, 	#-- selected.0 = 1
     "Android 11 Source based new WiFi",		"New Android 11 based wifi driver (under testing)", 0, 							#-- selected.0 = 2
     "Q Latest Source based Enhanced WiFi",	"Major revamped. Now gives Improved Speeds than before.", 0, 					#-- selected.0 = 3
-    "Pie Latest Source based WiFi",			"BEST FOT GAMING. Widely used. Gives good speed.", 0,							#-- selected.0 = 4
+    "Pie Latest Source based WiFi",			"BEST FOR GAMING. Widely used. Gives good speed.", 0,							#-- selected.0 = 4
     "Pie OLD Source based WiFi",			"Obsolete, solves rare Hotspot problems with Pie wifi driver", 0				#-- selected.0 = 5
 );
 
