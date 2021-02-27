@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019,2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,7 +14,12 @@
 
 int cam_ir_led_stop_dev(struct cam_ir_led_ctrl *ictrl)
 {
-	return ictrl->func_tbl->camera_ir_led_off(ictrl);
+	int rc = 0;
+
+	if (ictrl->func_tbl->camera_ir_led_off != NULL)
+		rc = ictrl->func_tbl->camera_ir_led_off(ictrl);
+
+	return rc;
 }
 
 int cam_ir_led_release_dev(struct cam_ir_led_ctrl *ictrl)
