@@ -170,8 +170,6 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	rm -rf $KERNELDIR/$DIR/tools/thermals-sdm660
 	rm -rf $KERNELDIR/$DIR/tools/sdm660
 	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
-	rm -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm660
-	mv -f $KERNELDIR/$DIR/tools/perf/powerhint.json.sdm636 $KERNELDIR/$DIR/tools/perf/powerhint.json
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
