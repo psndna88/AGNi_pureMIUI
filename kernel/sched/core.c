@@ -1994,16 +1994,6 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
 
-static const struct cpumask *get_adjusted_cpumask(const struct task_struct *p,
-	const struct cpumask *req_mask)
-{
-	/* Force all performance-critical kthreads onto the big cluster */
-	if (p->flags & PF_PERF_CRITICAL)
-		return cpu_perf_mask;
-
-	return req_mask;
-}
-
 void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	struct rq *rq = task_rq(p);
@@ -2052,7 +2042,9 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	struct rq *rq;
 	int ret = 0;
 
-	new_mask = get_adjusted_cpumask(p, new_mask);
+	/* Force all performance-critical kthreads onto the big cluster */
+	if (p->flags & PF_PERF_CRITICAL)
+		new_mask = cpu_perf_mask;
 
 	rq = task_rq_lock(p, &rf);
 
