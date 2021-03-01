@@ -106,6 +106,10 @@ module_param_named(
 	tmr_add, tmr_add, uint, S_IRUGO | S_IWUSR | S_IWGRP
 );
 
+// AGNi marker sysfs node
+static bool agni_present = true;
+module_param(agni_present, bool, 0444);
+
 struct lpm_history {
 	uint32_t resi[MAXSAMPLES];
 	int mode[MAXSAMPLES];
