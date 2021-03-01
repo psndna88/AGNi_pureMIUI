@@ -3695,12 +3695,7 @@
 		qcom,tx-napi;
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
-		qcom,ipa-uc-holb-monitor;
 		qcom,use-gsi-ipa-fw = "yupik_ipa_fws";
-		qcom,ipa-holb-monitor-poll-period = <5>;
-		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
-		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
-		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
 		clock-names = "core_clk";
