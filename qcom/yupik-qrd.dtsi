@@ -172,7 +172,7 @@
 	smb139x_1_ichg_smb {
 		reg = <SMB139x_1_ADC7_ICHG_SMB>;
 		label = "smb139x_1_ichg_smb";
-		qcom,pre-scaling = <14 100>;
+		qcom,pre-scaling = <16 100>;
 	};
 
 	smb139x_1_ichg_smb_pt {
@@ -184,7 +184,7 @@
 	smb139x_1_iin_smb {
 		reg = <SMB139x_1_ADC7_IIN_SMB>;
 		label = "smb139x_1_iin_smb";
-		qcom,pre-scaling = <28 100>;
+		qcom,pre-scaling = <32 100>;
 	};
 
 	smb139x_2_smb_temp {
@@ -196,7 +196,7 @@
 	smb139x_2_ichg_smb {
 		reg = <SMB139x_2_ADC7_ICHG_SMB>;
 		label = "smb139x_2_ichg_smb";
-		qcom,pre-scaling = <14 100>;
+		qcom,pre-scaling = <16 100>;
 	};
 
 	smb139x_2_ichg_smb_pt {
@@ -208,7 +208,7 @@
 	smb139x_2_iin_smb {
 		reg = <SMB139x_2_ADC7_IIN_SMB>;
 		label = "smb139x_2_iin_smb";
-		qcom,pre-scaling = <28 100>;
+		qcom,pre-scaling = <32 100>;
 	};
 };
 
