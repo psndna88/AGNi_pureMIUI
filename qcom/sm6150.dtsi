@@ -49,6 +49,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -74,6 +75,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_100>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -94,6 +96,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_200>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -113,6 +116,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_300>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -132,6 +136,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_400>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -151,6 +156,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_500>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -170,6 +176,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <404>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_600>;
 			qcom,freq-domain = <&cpufreq_hw 1 2>;
@@ -189,6 +196,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <404>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_700>;
 			qcom,freq-domain = <&cpufreq_hw 1 2>;
