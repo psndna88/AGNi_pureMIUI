@@ -94,6 +94,9 @@ static uint32_t bias_hyst;
 module_param_named(bias_hyst, bias_hyst, uint, 0664);
 static bool lpm_ipi_prediction = true;
 module_param_named(lpm_ipi_prediction, lpm_ipi_prediction, bool, 0664);
+// AGNi marker sysfs node
+static bool agni_present = true;
+module_param(agni_present, bool, 0444);
 
 struct lpm_history {
 	uint32_t resi[MAXSAMPLES];
