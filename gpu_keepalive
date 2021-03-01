@@ -1,0 +1,190 @@
+drivers/gpu/msm/adreno.c:		kgsl_regread(device, gpudev->reg_offsets->offsets[lo], &val_lo);
+drivers/gpu/msm/adreno.c:		kgsl_regread(device, gpudev->reg_offsets->offsets[hi], &val_hi);
+drivers/gpu/msm/adreno.c:			gpudev->reg_offsets->offsets[lo], lower_32_bits(val));
+drivers/gpu/msm/adreno.c:			gpudev->reg_offsets->offsets[hi], upper_32_bits(val));
+drivers/gpu/msm/adreno.c:	for (i = 0; i < gpudev->ft_perf_counters_count; i++) {
+drivers/gpu/msm/adreno.c:		_get_counter(adreno_dev, gpudev->ft_perf_counters[i].counter,
+drivers/gpu/msm/adreno.c:			 gpudev->ft_perf_counters[i].countable,
+drivers/gpu/msm/adreno.c:	for (i = 0; i < gpudev->ft_perf_counters_count; i++) {
+drivers/gpu/msm/adreno.c:		_put_counter(adreno_dev, gpudev->ft_perf_counters[i].counter,
+drivers/gpu/msm/adreno.c:			 gpudev->ft_perf_counters[i].countable,
+drivers/gpu/msm/adreno.c:	if (gpudev->regulator_enable)
+drivers/gpu/msm/adreno.c:		gpudev->regulator_enable(adreno_dev);
+drivers/gpu/msm/adreno.c:	unsigned int mask = state ? gpudev->irq->mask : 0;
+drivers/gpu/msm/adreno.c:	struct adreno_irq *irq_params = gpudev->irq;
+drivers/gpu/msm/adreno.c:	if (gpudev->gpu_keepalive)
+drivers/gpu/msm/adreno.c:		gpudev->gpu_keepalive(adreno_dev, true);
+drivers/gpu/msm/adreno.c:	gpudev->irq_trace(adreno_dev, status);
+drivers/gpu/msm/adreno.c:	if (gpudev->gpu_keepalive) {
+drivers/gpu/msm/adreno.c:			gpudev->gpu_keepalive(adreno_dev, false);
+drivers/gpu/msm/adreno.c:	reg_offsets = gpudev->reg_offsets;
+drivers/gpu/msm/adreno.c:	if (gpudev->platform_setup != NULL)
+drivers/gpu/msm/adreno.c:		gpudev->platform_setup(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->remove != NULL)
+drivers/gpu/msm/adreno.c:		gpudev->remove(adreno_dev);
+drivers/gpu/msm/adreno.c:		gpudev->ft_perf_counters_count*2);
+drivers/gpu/msm/adreno.c:					gpudev->gbif_gx_halt_mask);
+drivers/gpu/msm/adreno.c:					gpudev->gbif_gx_halt_mask);
+drivers/gpu/msm/adreno.c:				gpudev->gbif_client_halt_mask);
+drivers/gpu/msm/adreno.c:				gpudev->gbif_client_halt_mask);
+drivers/gpu/msm/adreno.c:				gpudev->gbif_arb_halt_mask);
+drivers/gpu/msm/adreno.c:				gpudev->gbif_arb_halt_mask);
+drivers/gpu/msm/adreno.c:		unsigned int mask = gpudev->vbif_xin_halt_ctrl0_mask;
+drivers/gpu/msm/adreno.c:	ret = gpudev->microcode_read(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->init != NULL)
+drivers/gpu/msm/adreno.c:		gpudev->init(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->enable_64bit &&
+drivers/gpu/msm/adreno.c:		gpudev->enable_64bit(adreno_dev);
+drivers/gpu/msm/adreno.c:	gpudev->start(adreno_dev);
+drivers/gpu/msm/adreno.c:	if ((status & gpudev->irq->mask) ||
+drivers/gpu/msm/adreno.c:	if (gpudev->hw_isidle)
+drivers/gpu/msm/adreno.c:		return gpudev->hw_isidle(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->soft_reset)
+drivers/gpu/msm/adreno.c:		ret = gpudev->soft_reset(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->enable_64bit &&
+drivers/gpu/msm/adreno.c:		gpudev->enable_64bit(adreno_dev);
+drivers/gpu/msm/adreno.c:	gpudev->start(adreno_dev);
+drivers/gpu/msm/adreno.c:	unsigned int reg_offset = gpudev->reg_offsets->offsets[offset];
+drivers/gpu/msm/adreno.c:		if (gpudev->read_throttling_counters) {
+drivers/gpu/msm/adreno.c:			adj = gpudev->read_throttling_counters(adreno_dev);
+drivers/gpu/msm/adreno.c:			gpudev->count_throttles)
+drivers/gpu/msm/adreno.c:		gpudev->count_throttles(adreno_dev, adj);
+drivers/gpu/msm/adreno.c:	if (gpudev->regulator_enable &&
+drivers/gpu/msm/adreno.c:		ret = gpudev->regulator_enable(adreno_dev);
+drivers/gpu/msm/adreno.c:	return adreno_isidle(device) && (gpudev->is_sptp_idle ?
+drivers/gpu/msm/adreno.c:				gpudev->is_sptp_idle(adreno_dev) : true);
+drivers/gpu/msm/adreno.c:	if (gpudev->regulator_disable &&
+drivers/gpu/msm/adreno.c:		gpudev->regulator_disable(adreno_dev);
+drivers/gpu/msm/adreno.c:	if (gpudev->pwrlevel_change_settings)
+drivers/gpu/msm/adreno.c:		gpudev->pwrlevel_change_settings(adreno_dev, prelevel,
+drivers/gpu/msm/adreno.c:		if (gpudev->zap_shader_unload != NULL)
+drivers/gpu/msm/adreno.c:			gpudev->zap_shader_unload(adreno_dev);
+drivers/gpu/msm/adreno.c:		if (gpudev->secure_pt_hibernate != NULL)
+drivers/gpu/msm/adreno.c:			ret = gpudev->secure_pt_hibernate(adreno_dev);
+drivers/gpu/msm/adreno.c:		if (gpudev->secure_pt_restore != NULL) {
+drivers/gpu/msm/adreno.c:			ret = gpudev->secure_pt_restore(adreno_dev);
+drivers/gpu/msm/adreno.h:#define ADRENO_INT_BIT(a, _bit) (((a)->gpucore->gpudev->int_bits) ? \
+drivers/gpu/msm/adreno.h:		gpudev->reg_offsets->offsets[offset_name] == ADRENO_REG_UNUSED)
+drivers/gpu/msm/adreno.h:	if (gpudev->reg_offsets->offsets[offset_name] == ADRENO_REG_SKIP)
+drivers/gpu/msm/adreno.h:				gpudev->reg_offsets->offsets[offset_name], val);
+drivers/gpu/msm/adreno.h:				gpudev->reg_offsets->offsets[offset_name], val);
+drivers/gpu/msm/adreno.h:	return gpudev->reg_offsets->offsets[offset_name];
+drivers/gpu/msm/adreno.h:				gpudev->reg_offsets->offsets[offset_name], val);
+drivers/gpu/msm/adreno.h:				gpudev->reg_offsets->offsets[offset_name], val);
+drivers/gpu/msm/adreno.h:	return gpudev->int_bits[bit_name];
+drivers/gpu/msm/adreno_a3xx.c:		gpudev->vbif_xin_halt_ctrl0_mask =
+drivers/gpu/msm/adreno_a3xx.c:		gpudev->snapshot_data->sect_sizes->cp_pfp =
+drivers/gpu/msm/adreno_a3xx.c:		gpudev->snapshot_data->sect_sizes->roq =
+drivers/gpu/msm/adreno_a3xx.c:		gpudev->snapshot_data->sect_sizes->cp_merciu =
+drivers/gpu/msm/adreno_a3xx.c:		gpudev->irq->mask |= (1 << A3XX_INT_MISC_HANG_DETECT);
+drivers/gpu/msm/adreno_a3xx_snapshot.c:	struct adreno_snapshot_data *snap_data = gpudev->snapshot_data;
+drivers/gpu/msm/adreno_a4xx.c:	gpudev->irq->mask |= (1 << A4XX_INT_MISC_HANG_DETECT);
+drivers/gpu/msm/adreno_a4xx.c:		gpudev->vbif_xin_halt_ctrl0_mask =
+drivers/gpu/msm/adreno_a4xx.c:			gpudev->irq->mask & ~(1 << A4XX_INT_CP_HW_FAULT));
+drivers/gpu/msm/adreno_a4xx.c:		struct adreno_perfcounters *counters = gpudev->perfcounters;
+drivers/gpu/msm/adreno_a4xx.c:		gpudev->invalid_countables = a420_perfctr_invalid_countables;
+drivers/gpu/msm/adreno_a4xx_snapshot.c:	struct adreno_snapshot_data *snap_data = gpudev->snapshot_data;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->cp_meq = 32;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->cp_merciu = 1024;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->roq = 256;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->vbif_xin_halt_ctrl0_mask =
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->cp_meq = 32;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->cp_merciu = 32;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->roq = 256;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->vbif_xin_halt_ctrl0_mask =
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->snapshot_data->sect_sizes->cp_merciu = 1024;
+drivers/gpu/msm/adreno_a5xx.c:		gpudev->irq->mask |= (1 << A5XX_INT_MISC_HANG_DETECT);
+drivers/gpu/msm/adreno_a5xx.c:	gpudev->irq->mask |= BIT(A5XX_INT_CP_CACHE_FLUSH_TS);
+drivers/gpu/msm/adreno_a5xx.c:			gpudev->irq->mask);
+drivers/gpu/msm/adreno_a5xx.c:			gpudev->irq->mask &= ~BIT(A5XX_INT_CP_CACHE_FLUSH_TS);
+drivers/gpu/msm/adreno_a5xx.c:					gpudev->irq->mask);
+drivers/gpu/msm/adreno_a5xx_snapshot.c:	struct adreno_snapshot_data *snap_data = gpudev->snapshot_data;
+drivers/gpu/msm/adreno_a6xx.c:	unsigned int *const regs = gpudev->reg_offsets->offsets;
+drivers/gpu/msm/adreno_a6xx.c:		gpudev->gbif_client_halt_mask = A6XX_GBIF_CLIENT_HALT_MASK;
+drivers/gpu/msm/adreno_a6xx.c:		gpudev->gbif_arb_halt_mask = A6XX_GBIF_ARB_HALT_MASK;
+drivers/gpu/msm/adreno_a6xx.c:		gpudev->gbif_gx_halt_mask = A6XX_GBIF_GX_HALT_MASK;
+drivers/gpu/msm/adreno_a6xx.c:		gpudev->vbif_xin_halt_ctrl0_mask =
+drivers/gpu/msm/adreno_a6xx_gmu.c:				gpudev->gbif_gx_halt_mask,
+drivers/gpu/msm/adreno_a6xx_gmu.c:			gpudev->gbif_arb_halt_mask, "CX");
+drivers/gpu/msm/adreno_a6xx_snapshot.c:	sptprac_on = gpudev->sptprac_is_on(adreno_dev);
+drivers/gpu/msm/adreno_coresight.c:	coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	struct adreno_coresight *coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	struct adreno_coresight *coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	coresight = gpudev->coresight[cs_id];
+drivers/gpu/msm/adreno_coresight.c:	return gpudev->coresight[cs_id]->atid;
+drivers/gpu/msm/adreno_coresight.c:		if (gpudev->coresight[i] == NULL)
+drivers/gpu/msm/adreno_coresight.c:		desc.groups = gpudev->coresight[i]->groups;
+drivers/gpu/msm/adreno_coresight.c:			&gpudev->coresight[i]->atid))
+drivers/gpu/msm/adreno_dispatch.c:	if (gpudev->preemption_schedule)
+drivers/gpu/msm/adreno_dispatch.c:		gpudev->preemption_schedule(adreno_dev);
+drivers/gpu/msm/adreno_dispatch.c:	if (gpudev->gpu_keepalive && fault & ADRENO_HARD_FAULT)
+drivers/gpu/msm/adreno_dispatch.c:		gpudev->gpu_keepalive(adreno_dev, false);
+drivers/gpu/msm/adreno_dispatch.c:	if (gpudev->reset)
+drivers/gpu/msm/adreno_dispatch.c:		ret = gpudev->reset(device, fault);
+drivers/gpu/msm/adreno_dispatch.c:		if (gpudev->preemption_schedule)
+drivers/gpu/msm/adreno_dispatch.c:			gpudev->preemption_schedule(adreno_dev);
+drivers/gpu/msm/adreno_drawctxt.c:	if (gpudev->preemption_context_init) {
+drivers/gpu/msm/adreno_drawctxt.c:		ret = gpudev->preemption_context_init(&drawctxt->base);
+drivers/gpu/msm/adreno_drawctxt.c:	if (gpudev->preemption_context_destroy)
+drivers/gpu/msm/adreno_drawctxt.c:		gpudev->preemption_context_destroy(context);
+drivers/gpu/msm/adreno_ioctl.c:	if (levels_to_copy > gpudev->num_prio_levels)
+drivers/gpu/msm/adreno_ioctl.c:		levels_to_copy = gpudev->num_prio_levels;
+drivers/gpu/msm/adreno_llc.h:			if (gpudev->llc_configure_gpu_scid)
+drivers/gpu/msm/adreno_llc.h:				gpudev->llc_configure_gpu_scid(adreno_dev);
+drivers/gpu/msm/adreno_llc.h:			if (gpudev->llc_configure_gpuhtw_scid)
+drivers/gpu/msm/adreno_llc.h:				gpudev->llc_configure_gpuhtw_scid(adreno_dev);
+drivers/gpu/msm/adreno_llc.h:		if (gpudev->llc_enable_overrides)
+drivers/gpu/msm/adreno_llc.h:			gpudev->llc_enable_overrides(adreno_dev);
+drivers/gpu/msm/adreno_perfcounter.c:	if (gpudev->perfcounter_init)
+drivers/gpu/msm/adreno_perfcounter.c:		gpudev->perfcounter_init(adreno_dev);
+drivers/gpu/msm/adreno_perfcounter.c:	if (gpudev->perfcounter_close)
+drivers/gpu/msm/adreno_perfcounter.c:		gpudev->perfcounter_close(adreno_dev);
+drivers/gpu/msm/adreno_perfcounter.c:	if (gpudev->invalid_countables) {
+drivers/gpu/msm/adreno_perfcounter.c:			gpudev->invalid_countables[group];
+drivers/gpu/msm/adreno_perfcounter.c:		if (gpudev->perfcounter_update && (grp->flags &
+drivers/gpu/msm/adreno_perfcounter.c:			gpudev->perfcounter_update(adreno_dev, reg, false);
+drivers/gpu/msm/adreno_perfcounter.c:		if (gpudev->perfcounter_update && (grp->flags &
+drivers/gpu/msm/adreno_perfcounter.c:			ret = gpudev->perfcounter_update(adreno_dev, reg, true);
+drivers/gpu/msm/adreno_perfcounter.c:		if (gpudev->enable_pwr_counters)
+drivers/gpu/msm/adreno_perfcounter.c:			return gpudev->enable_pwr_counters(adreno_dev, counter);
+drivers/gpu/msm/adreno_profile.c:	struct adreno_perfcounters *counters = gpudev->perfcounters;
+drivers/gpu/msm/adreno_ringbuffer.c:			if (gpudev->gpu_keepalive)
+drivers/gpu/msm/adreno_ringbuffer.c:				gpudev->gpu_keepalive(adreno_dev, true);
+drivers/gpu/msm/adreno_ringbuffer.c:			if (gpudev->gpu_keepalive)
+drivers/gpu/msm/adreno_ringbuffer.c:				gpudev->gpu_keepalive(adreno_dev, false);
+drivers/gpu/msm/adreno_ringbuffer.c:	return gpudev->rb_start(adreno_dev, start_type);
+drivers/gpu/msm/adreno_ringbuffer.c:		adreno_dev->num_ringbuffers = gpudev->num_prio_levels;
+drivers/gpu/msm/adreno_ringbuffer.c:		if (gpudev->preemption_init)
+drivers/gpu/msm/adreno_ringbuffer.c:			r = gpudev->preemption_init(adreno_dev);
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->preemption_close)
+drivers/gpu/msm/adreno_ringbuffer.c:		gpudev->preemption_close(adreno_dev);
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->preemption_pre_ibsubmit &&
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->preemption_post_ibsubmit &&
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->set_marker)
+drivers/gpu/msm/adreno_ringbuffer.c:				gpudev->preemption_pre_ibsubmit)
+drivers/gpu/msm/adreno_ringbuffer.c:		ringcmds += gpudev->preemption_pre_ibsubmit(
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->set_marker) {
+drivers/gpu/msm/adreno_ringbuffer.c:			ringcmds += gpudev->set_marker(ringcmds, IB1LIST_START);
+drivers/gpu/msm/adreno_ringbuffer.c:			ringcmds += gpudev->set_marker(ringcmds, IFPC_DISABLE);
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->set_marker) {
+drivers/gpu/msm/adreno_ringbuffer.c:			ringcmds += gpudev->set_marker(ringcmds, IB1LIST_END);
+drivers/gpu/msm/adreno_ringbuffer.c:			ringcmds += gpudev->set_marker(ringcmds, IFPC_ENABLE);
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->preemption_post_ibsubmit &&
+drivers/gpu/msm/adreno_ringbuffer.c:		ringcmds += gpudev->preemption_post_ibsubmit(adreno_dev,
+drivers/gpu/msm/adreno_ringbuffer.c:		if (gpudev->preemption_yield_enable)
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->set_marker && numibs && adreno_is_a6xx(adreno_dev) &&
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->ccu_invalidate)
+drivers/gpu/msm/adreno_ringbuffer.c:			cmds += gpudev->set_marker(cmds, IB1LIST_START);
+drivers/gpu/msm/adreno_ringbuffer.c:			cmds += gpudev->set_marker(cmds, IB1LIST_END);
+drivers/gpu/msm/adreno_ringbuffer.c:	if (gpudev->ccu_invalidate)
+drivers/gpu/msm/adreno_ringbuffer.c:		cmds += gpudev->ccu_invalidate(adreno_dev, cmds);
+drivers/gpu/msm/adreno_ringbuffer.c:		if (gpudev->preemption_yield_enable)
+drivers/gpu/msm/adreno_ringbuffer.c:			cmds += gpudev->preemption_yield_enable(cmds);
+drivers/gpu/msm/adreno_snapshot.c:		if (gpudev->snapshot_preemption)
+drivers/gpu/msm/adreno_snapshot.c:				gpudev->snapshot_preemption,
+drivers/gpu/msm/adreno_snapshot.c:	if (gpudev->snapshot)
+drivers/gpu/msm/adreno_snapshot.c:		gpudev->snapshot(adreno_dev, snapshot);
+drivers/gpu/msm/kgsl_iommu.c:		if (gpudev->iommu_fault_block) {
+drivers/gpu/msm/kgsl_iommu.c:				gpudev->iommu_fault_block(device, fsynr1));
