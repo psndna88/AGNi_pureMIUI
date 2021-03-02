@@ -5150,6 +5150,7 @@ static enum hal_buffer scratch_buf_sufficient(struct msm_vidc_inst *inst,
 
 	list_for_each_entry(buf, &inst->scratchbufs.list, list) {
 		if (buf->buffer_type == buffer_type &&
+			bufreq->buffer_size &&
 			buf->smem.size >= bufreq->buffer_size)
 			count++;
 	}
