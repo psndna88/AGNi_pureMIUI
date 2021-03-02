@@ -107,6 +107,9 @@ SoCs:
 - SDXNIGHTJAR
   compatible = "qcom,sdxnightjar"
 
+- DIREWOLF
+  compatible = "qcom,direwolf"
+
 Generic board variants:
 
 - CDP device:
@@ -286,3 +289,9 @@ compatible = "qcom,monaco-rumi"
 compatible = "qcom,sdxnightjar-mtp"
 compatible = "qcom,sdxnightjar-cdp"
 compatible = "qcom,sdxnightjar-qrd"
+compatible = "qcom,direwolf-ivi"
+compatible = "qcom,direwolf-ivi-rumi"
+compatible = "qcom,direwolf-ivi-adp-star"
+compatible = "qcom,direwolf-adas"
+compatible = "qcom,direwolf-adas-rumi"
+compatible = "qcom,direwolf-adas-adp-star"
