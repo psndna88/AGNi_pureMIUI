@@ -8,6 +8,13 @@
 		memory-region = <&pil_gpu_micro_code_mem>;
 	};
 
+	kgsl_ddr_qos: qcom,kgsl-ddr-qos {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "powersave";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	msm_gpu: qcom,kgsl-3d0@3d00000 {
 		compatible = "qcom,kgsl-3d0";
 		status = "ok";
