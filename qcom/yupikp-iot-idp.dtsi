@@ -1,1 +1,2 @@
 #include "yupikp-idp.dtsi"
+#include "qcx6490-cnss.dtsi"
