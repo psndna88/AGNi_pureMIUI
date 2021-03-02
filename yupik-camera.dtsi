@@ -391,6 +391,7 @@
 				<&apps_smmu 0xCE0 0x4E0>;
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			dma-coherent-hint-cached;
 			cam-smmu-label = "ife";
 			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
@@ -412,6 +413,7 @@
 			cam-smmu-label = "jpeg";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			dma-coherent-hint-cached;
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -441,6 +443,7 @@
 			cam-smmu-label = "icp";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
+			dma-coherent-hint-cached;
 			iova-region-discard = <0xdff00000 0x300000>;
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
@@ -498,6 +501,7 @@
 			cam-smmu-label = "cpas-cdm";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			dma-coherent-hint-cached;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 3.4 GB */
@@ -523,6 +527,7 @@
 			cam-smmu-label = "lrme";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			dma-coherent-hint-cached;
 			lrme_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
 					/* Shared region is 100MB long */
