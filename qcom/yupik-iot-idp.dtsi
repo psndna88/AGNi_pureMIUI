@@ -8,3 +8,21 @@
 &pcie0_msi {
 	status = "ok";
 };
+
+&pcie1 {
+	status = "ok";
+	qcom,boot-option = <0x0>;
+	qcom,ep-gpio = <&tlmm 19 0>;
+	pinctrl-0 = <&pcie1_perst_default
+			&pcie1_clkreq_default
+			&pcie1_wake_default
+			&pcie1_ep_default>;
+	pinctrl-1 = <&pcie1_perst_default
+			&pcie1_clkreq_sleep
+			&pcie1_wake_default
+			&pcie1_ep_default>;
+};
+
+&pcie1_msi {
+	status = "ok";
+};
