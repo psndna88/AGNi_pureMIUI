@@ -422,3 +422,5 @@
 &mdss_dsi0_pll {
 	/delete-property/ qcom,dsi-pll-ssc-en;
 };
+
+#include "sa6155-audio.dtsi"
