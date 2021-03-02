@@ -150,6 +150,12 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
+	pm7325b_iin_fb {
+		reg = <PM7325B_ADC7_IIN_FB>;
+		label = "pm7325b_iin_fb";
+		qcom,pre-scaling = <32 100>;
+	};
+
 	pm7325b_ichg_fb {
 		reg = <PM7325B_ADC7_ICHG_FB>;
 		label = "pm7325b_ichg_fb";
@@ -168,9 +174,39 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
-	pm7325b_iin_fb {
-		reg = <PM7325B_ADC7_SMB_IIN_IN>;
-		label = "pm7325b_iin_fb";
+	smb139x_1_iin_smb {
+		reg = <SMB139x_1_ADC7_IIN_SMB>;
+		label = "smb139x_1_iin_smb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_2_iin_smb {
+		reg = <SMB139x_2_ADC7_IIN_SMB>;
+		label = "smb139x_2_iin_smb";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_1_ichg_smb {
+		reg = <SMB139x_1_ADC7_ICHG_SMB>;
+		label = "smb139x_1_ichg_smb";
+		qcom,pre-scaling = <16 100>;
+	};
+
+	smb139x_1_ichg_smb_pt {
+		reg = <SMB139x_1_ADC7_ICHG_SMB>;
+		label = "smb139x_1_ichg_smb_pt";
+		qcom,pre-scaling = <32 100>;
+	};
+
+	smb139x_2_ichg_smb {
+		reg = <SMB139x_2_ADC7_ICHG_SMB>;
+		label = "smb139x_2_ichg_smb";
+		qcom,pre-scaling = <16 100>;
+	};
+
+	smb139x_2_ichg_smb_pt {
+		reg = <SMB139x_2_ADC7_ICHG_SMB>;
+		label = "smb139x_2_ichg_smb_pt";
 		qcom,pre-scaling = <32 100>;
 	};
 };
