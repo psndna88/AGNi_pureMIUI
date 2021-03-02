@@ -381,6 +381,9 @@ struct msm_geni_ir {
 	u32                      rx_data;
 	u32                      wakeup_codes[GENI_IR_MAX_WAKEUP_CODES];
 	u8                       num_wakeup_codes;
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	struct rc_dev            *rcdev_sec;
+#endif
 };
 
 static struct msm_geni_fw_data rc5_geni_image = {
@@ -606,6 +609,20 @@ EXPORT_SYMBOL(msm_geni_ir_change_protocol);
 static irqreturn_t geni_ir_wakeup_handler(int irq, void *data)
 {
 	pr_debug("%s:Received wake up Interrupt\n", __func__);
+
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	do {
+		struct msm_geni_ir *ir = data;
+		int val = gpio_get_value(ir->gpio_rx);
+
+		if (val < 0)
+			break;
+
+		val = !val;
+
+		ir_raw_event_store_edge(ir->rcdev_sec, val);
+	} while (0);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -773,6 +790,9 @@ static int msm_geni_ir_get_res(struct platform_device *pdev,
 		return rc;
 	}
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	ir->gpio_rx = rc;
+#endif
 	ir->wakeup_irq = gpio_to_irq(rc);
 	rc = platform_get_irq_byname(pdev, "geni-ir-core-irq");
 	if (rc < 0) {
@@ -821,6 +841,51 @@ static void msm_geni_ir_rel_res(struct platform_device *pdev,
 		iounmap(ir->base);
 }
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+int msm_geni_ir_sec_dev_probe(struct platform_device *pdev,
+			      struct msm_geni_ir *ir)
+{
+	struct gpio_rc_dev *gpio_dev;
+	struct rc_dev *rcdev;
+	int rc;
+
+	do {
+		rcdev = rc_allocate_device(RC_DRIVER_IR_RAW);
+		if (!rcdev) {
+			pr_err("failed to allocate rc device\n");
+			rc = -ENOMEM;
+			break;
+		}
+
+		rcdev->priv = ir;
+		rcdev->driver_name = MSM_GENI_IR_DRIVER_NAME;
+		rcdev->device_name = MSM_GENI_IR_RX_DEVICE_NAME;
+		rcdev->input_id.bustype = BUS_HOST;
+		rcdev->allowed_protocols = RC_PROTO_BIT_ALL_IR_DECODER;
+		rcdev->timeout = IR_DEFAULT_TIMEOUT;
+		rcdev->min_timeout = 1;
+		rcdev->max_timeout = IR_DEFAULT_TIMEOUT * 10;
+		rcdev->map_name = RC_MAP_EMPTY;
+		rcdev->dev.parent = &pdev->dev;
+
+		ir->rcdev_sec = rcdev;
+
+		rc = rc_register_device(rcdev);
+		if (rc) {
+			pr_err("failed to register secondary rc device\n");
+			break;
+		}
+
+		return 0;
+	} while (0);
+
+	if (rcdev)
+		rc_free_device(rcdev);
+
+	return rc;
+}
+#endif
+
 int msm_geni_ir_probe(struct platform_device *pdev)
 {
 	struct rc_dev *rcdev;
@@ -848,6 +913,12 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 		pr_err("rx gpio request failed %d\n", rc);
 		goto gpio_err;
 	}
+	rc = gpio_direction_input(ir->gpio_rx);
+	if (rc) {
+		pr_err("failed to set direction gpio %d\n", rc);
+		goto gpio_err;
+	}
+
 	rc = request_irq(ir->irq, geni_ir_interrupt,
 			 IRQ_TYPE_LEVEL_HIGH, "geni-ir-core-irq", ir);
 	if (rc) {
@@ -890,11 +961,9 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 		goto rc_register_err;
 	}
 
-	rc = regulator_enable(ir->vdda33);
-	if (rc) {
-		pr_err("Unable to enable vdda33:%d\n", rc);
-		return rc;
-	}
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	msm_geni_ir_sec_dev_probe(pdev, ir);
+#endif
 
 #ifdef CONFIG_IR_MSM_GENI_TX
 	ir->misc.minor = MISC_DYNAMIC_MINOR;
@@ -924,10 +993,25 @@ resource_err:
 }
 EXPORT_SYMBOL(msm_geni_ir_probe);
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+static void msm_geni_ir_sec_dev_remove(struct platform_device *pdev)
+{
+	struct msm_geni_ir *ir = platform_get_drvdata(pdev);
+
+	if (ir->rcdev_sec) {
+		rc_unregister_device(ir->rcdev_sec);
+		rc_free_device(ir->rcdev_sec);
+	}
+}
+#endif
+
 static int msm_geni_ir_remove(struct platform_device *pdev)
 {
 	struct msm_geni_ir *ir = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	msm_geni_ir_sec_dev_remove(pdev);
+#endif
 	rc_unregister_device(ir->rcdev);
 	rc_free_device(ir->rcdev);
 	mutex_destroy(&ir->lock);
