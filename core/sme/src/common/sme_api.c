@@ -14728,6 +14728,18 @@ QDF_STATUS sme_add_dialog_cmd(mac_handle_t mac_handle,
 		return status;
 	}
 
+	mlme_set_twt_command_in_progress(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id, WLAN_TWT_SETUP);
+
+	/*
+	 * Add the dialog id to TWT context to drop back to back
+	 * commands
+	 */
+	mlme_add_twt_session(mac->psoc,
+			     (struct qdf_mac_addr *)twt_params->peer_macaddr,
+			     twt_params->dialog_id);
+
 	/* Serialize the req through MC thread */
 	mac->sme.twt_add_dialog_cb = twt_add_dialog_cb;
 	twt_msg.bodyptr = cmd_params;
@@ -14741,21 +14753,13 @@ QDF_STATUS sme_add_dialog_cmd(mac_handle_t mac_handle,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  FL("Post twt add dialog msg fail"));
-		qdf_mem_free(cmd_params);
-	} else {
-		/*
-		 * Add the dialog id to TWT context to drop back to back
-		 * commands
-		 */
-		mlme_add_twt_session(
-			mac->psoc,
-			(struct qdf_mac_addr *)twt_params->peer_macaddr,
-			twt_params->dialog_id);
-
-		mlme_set_twt_command_in_progress(
-				mac->psoc,
+		mlme_set_twt_command_in_progress(mac->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
-				twt_params->dialog_id, WLAN_TWT_SETUP);
+				twt_params->dialog_id, WLAN_TWT_NONE);
+		mlme_init_twt_context(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id);
+		qdf_mem_free(cmd_params);
 	}
 
 	SME_EXIT();
@@ -14809,6 +14813,10 @@ QDF_STATUS sme_del_dialog_cmd(mac_handle_t mac_handle,
 		return status;
 	}
 
+	mlme_set_twt_command_in_progress(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id, WLAN_TWT_TERMINATE);
+
 	/* Serialize the req through MC thread */
 	mac->sme.twt_del_dialog_cb = del_dialog_cb;
 	twt_msg.bodyptr = cmd_params;
@@ -14822,12 +14830,11 @@ QDF_STATUS sme_del_dialog_cmd(mac_handle_t mac_handle,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  FL("Post twt del dialog msg fail"));
-		qdf_mem_free(cmd_params);
-	} else {
 		mlme_set_twt_command_in_progress(
 				mac->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
-				twt_params->dialog_id, WLAN_TWT_TERMINATE);
+				twt_params->dialog_id, WLAN_TWT_NONE);
+		qdf_mem_free(cmd_params);
 	}
 
 	SME_EXIT();
@@ -14876,6 +14883,10 @@ sme_pause_dialog_cmd(mac_handle_t mac_handle,
 		return status;
 	}
 
+	mlme_set_twt_command_in_progress(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id, WLAN_TWT_SUSPEND);
+
 	/* Serialize the req through MC thread */
 	twt_msg.bodyptr = cmd_params;
 	twt_msg.type = WMA_TWT_PAUSE_DIALOG_REQUEST;
@@ -14888,12 +14899,11 @@ sme_pause_dialog_cmd(mac_handle_t mac_handle,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  FL("Post twt pause dialog msg fail"));
-		qdf_mem_free(cmd_params);
-	} else {
 		mlme_set_twt_command_in_progress(
 				mac->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
-				twt_params->dialog_id, WLAN_TWT_SUSPEND);
+				twt_params->dialog_id, WLAN_TWT_NONE);
+		qdf_mem_free(cmd_params);
 	}
 
 	SME_EXIT();
@@ -14941,6 +14951,10 @@ sme_nudge_dialog_cmd(mac_handle_t mac_handle,
 		return status;
 	}
 
+	mlme_set_twt_command_in_progress(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id, WLAN_TWT_NUDGE);
+
 	/* Serialize the req through MC thread */
 	twt_msg.bodyptr = cmd_params;
 	twt_msg.type = WMA_TWT_NUDGE_DIALOG_REQUEST;
@@ -14953,12 +14967,11 @@ sme_nudge_dialog_cmd(mac_handle_t mac_handle,
 	if (QDF_IS_STATUS_ERROR(status)) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  FL("Post twt nudge dialog msg fail"));
-		qdf_mem_free(cmd_params);
-	} else {
 		mlme_set_twt_command_in_progress(
 			mac->psoc,
 			(struct qdf_mac_addr *)twt_params->peer_macaddr,
-			twt_params->dialog_id, WLAN_TWT_NUDGE);
+			twt_params->dialog_id, WLAN_TWT_NONE);
+		qdf_mem_free(cmd_params);
 	}
 
 	SME_EXIT();
@@ -15007,6 +15020,10 @@ sme_resume_dialog_cmd(mac_handle_t mac_handle,
 		return status;
 	}
 
+	mlme_set_twt_command_in_progress(mac->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id, WLAN_TWT_RESUME);
+
 	/* Serialize the req through MC thread */
 	twt_msg.bodyptr = cmd_params;
 	twt_msg.type = WMA_TWT_RESUME_DIALOG_REQUEST;
@@ -15017,12 +15034,11 @@ sme_resume_dialog_cmd(mac_handle_t mac_handle,
 					QDF_MODULE_ID_WMA, &twt_msg);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		sme_err("Post twt resume dialog msg fail");
-		qdf_mem_free(cmd_params);
-	} else {
 		mlme_set_twt_command_in_progress(
 				mac->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
-				twt_params->dialog_id, WLAN_TWT_RESUME);
+				twt_params->dialog_id, WLAN_TWT_NONE);
+		qdf_mem_free(cmd_params);
 	}
 
 	SME_EXIT();
