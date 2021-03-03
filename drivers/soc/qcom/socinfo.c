@@ -1767,7 +1767,7 @@ static void socinfo_print(void)
 	}
 }
 
-static void socinfo_select_format(void)
+static void __init socinfo_select_format(void)
 {
 	uint32_t f_maj = SOCINFO_VERSION_MAJOR(socinfo->v0_1.format);
 	uint32_t f_min = SOCINFO_VERSION_MINOR(socinfo->v0_1.format);
