@@ -90,11 +90,7 @@ static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
 
-#define lowmem_print(level, x...)			\
-	do {						\
-		if (lowmem_debug_level >= (level))	\
-			pr_info(x);			\
-	} while (0)
+#define lowmem_print(level, x...)
 
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
@@ -450,11 +446,13 @@ static int get_minfree_scalefactor(gfp_t gfp_mask)
 	struct zoneref *z;
 	struct zone *zone;
 	unsigned long nr_usable = 0;
+	int totalrampages;
 
 	for_each_zone_zonelist(zone, z, zonelist, gfp_zone(gfp_mask))
 		nr_usable += zone->managed_pages;
+	totalrampages = totalram_pages();
 
-	return max_t(int, 1, mult_frac(100, nr_usable, totalram_pages));
+	return max_t(int, 1, mult_frac(100, nr_usable, totalrampages));
 }
 
 static void mark_lmk_victim(struct task_struct *tsk)
