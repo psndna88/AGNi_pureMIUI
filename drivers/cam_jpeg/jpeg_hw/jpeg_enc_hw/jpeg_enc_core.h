@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_JPEG_ENC_CORE_H
@@ -66,6 +66,10 @@ struct cam_jpeg_enc_device_core_info {
 	struct cam_jpeg_set_irq_cb irq_cb;
 	int32_t ref_count;
 	struct mutex core_mutex;
+	uint32_t num_pid;
+	uint32_t pid[CAM_JPEG_HW_MAX_NUM_PID];
+	uint32_t rd_mid;
+	uint32_t wr_mid;
 };
 
 int cam_jpeg_enc_init_hw(void *device_priv,

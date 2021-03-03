@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -377,7 +377,9 @@ int cam_jpeg_dma_process_cmd(void *device_priv, uint32_t cmd_type,
 {
 	struct cam_hw_info *jpeg_dma_dev = device_priv;
 	struct cam_jpeg_dma_device_core_info *core_info = NULL;
-	int rc;
+	struct cam_jpeg_match_pid_args       *match_pid_mid = NULL;
+	uint32_t    *num_pid = NULL;
+	int i, rc = 0;
 
 	if (!device_priv) {
 		CAM_ERR(CAM_JPEG, "Invalid arguments");
@@ -412,6 +414,47 @@ int cam_jpeg_dma_process_cmd(void *device_priv, uint32_t cmd_type,
 		rc = 0;
 		break;
 	}
+	case CAM_JPEG_CMD_GET_NUM_PID:
+		if (!cmd_args) {
+			CAM_ERR(CAM_JPEG, "cmd args NULL");
+			return -EINVAL;
+		}
+
+		num_pid = (uint32_t    *)cmd_args;
+		*num_pid = core_info->num_pid;
+
+		break;
+	case CAM_JPEG_CMD_MATCH_PID_MID:
+		match_pid_mid = (struct cam_jpeg_match_pid_args *)cmd_args;
+
+		if (!cmd_args) {
+			CAM_ERR(CAM_JPEG, "cmd args NULL");
+			return -EINVAL;
+		}
+
+		for (i = 0; i < core_info->num_pid; i++) {
+			if (core_info->pid[i] == match_pid_mid->pid)
+				break;
+		}
+
+		if (i == core_info->num_pid)
+			match_pid_mid->pid_match_found = false;
+		else
+			match_pid_mid->pid_match_found = true;
+
+		if (match_pid_mid->pid_match_found) {
+			if (match_pid_mid->fault_mid == core_info->rd_mid) {
+				match_pid_mid->match_res =
+					CAM_JPEG_DMA_INPUT_IMAGE;
+			} else if (match_pid_mid->fault_mid ==
+				core_info->wr_mid) {
+				match_pid_mid->match_res =
+					CAM_JPEG_DMA_OUTPUT_IMAGE;
+			} else
+				match_pid_mid->pid_match_found = false;
+		}
+
+		break;
 	default:
 		rc = -EINVAL;
 		break;
