@@ -6391,6 +6391,19 @@ static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(sec_mi2s_tx_hostless),
 	},
+	/* DISP PORT Hostless */
+	{/* hw:x,45 */
+		.name = "DISPLAY_PORT_RX_HOSTLESS",
+		.stream_name = "DISPLAY_PORT_RX_HOSTLESS",
+		.dynamic = 1,
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(display_port_hostless),
+	},
 };
 
 static struct snd_soc_dai_link msm_common_be_dai_links[] = {
