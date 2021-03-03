@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_VFE_LITE16X_H_
@@ -315,21 +315,25 @@ static struct cam_vfe_bus_ver2_hw_info vfe16x_bus_hw_info = {
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI0,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 4,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI1,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 5,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI2,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 6,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI3,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 7,
 		},
 	},
 	.top_irq_shift = 9,

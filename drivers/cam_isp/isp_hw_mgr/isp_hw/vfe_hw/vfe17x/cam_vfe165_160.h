@@ -1021,115 +1021,143 @@ static struct cam_vfe_bus_ver2_hw_info vfe165_160_bus_hw_info = {
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI0,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 4,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI1,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 5,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RDI2,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 6,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_FULL,
 			.max_width     = 4096,
 			.max_height    = 4096,
+			.mid[0]        = 32,
+			.mid[1]        = 33,
+			.mid[2]        = 34,
+			.mid[3]        = 35,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_DS4,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 36,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_DS16,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 37,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_RAW_DUMP,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 40,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_FD,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 38,
+			.mid[1]        = 39,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_PDAF,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 41,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_HDR_BE,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 42,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_HDR_BHIST,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 43,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_TL_BG,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 44,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_BF,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 45,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_AWB_BG,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 46,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_BHIST,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 47,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_RS,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 48,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_CS,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 49,
 		},
 		{
 			.vfe_out_type  =
 				CAM_VFE_BUS_VER2_VFE_OUT_STATS_IHIST,
 			.max_width     = -1,
 			.max_height    = -1,
+			.mid[0]        = 50,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_FULL_DISP,
 			.max_width     = 4096,
 			.max_height    = 4096,
+			.mid[0]        = 51,
+			.mid[1]        = 52,
+			.mid[2]        = 53,
+			.mid[3]        = 54,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_DS4_DISP,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 55,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_DS16_DISP,
 			.max_width     = 1920,
 			.max_height    = 1080,
+			.mid[0]        = 56,
 		},
 		{
 			.vfe_out_type  = CAM_VFE_BUS_VER2_VFE_OUT_2PD,
