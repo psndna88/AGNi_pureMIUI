@@ -1273,7 +1273,8 @@ static int cam_vfe_bus_start_wm(
 			return rc;
 		}
 		if ((camera_hw_version > CAM_CPAS_TITAN_NONE) &&
-			(camera_hw_version < CAM_CPAS_TITAN_175_V100)) {
+			(camera_hw_version < CAM_CPAS_TITAN_175_V100) &&
+			(camera_hw_version != CAM_CPAS_TITAN_165_V100)) {
 			struct cam_vfe_bus_ver2_reg_offset_ubwc_client
 				*ubwc_regs;
 
