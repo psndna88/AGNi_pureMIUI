@@ -415,6 +415,11 @@
 				2500000 2000000 1500000 1000000 500000>;
 };
 
+&pm8350b_amoled_ecm {
+	display-panels = <&dsi_r66451_amoled_90hz_cmd_cphy
+			&dsi_r66451_amoled_144hz_cmd_cphy>;
+};
+
 &pm8350b_tz {
 	io-channels = <&pmk8350_vadc PM8350B_ADC7_DIE_TEMP>;
 	io-channel-names = "thermal";

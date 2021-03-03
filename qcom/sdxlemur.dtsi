@@ -502,7 +502,7 @@
 		qcom,msm-bus,vectors-KBps =
 			<0 0>,
 		/* Voting for max b/w on PNOC bus for now */
-			<400000 400000>;
+			<1057800 725760>;
 
 		status = "disabled";
 	};
@@ -894,6 +894,9 @@
 		compatible = "qcom,msm_gsi";
 	};
 
+	ioss: qcom,ioss {
+		compatible = "qcom,ioss-v2";
+	};
 
 	pcie_ep: qcom,pcie@40002000 {
 		compatible = "qcom,pcie-ep";
@@ -1119,7 +1122,7 @@
 		compatible = "qcom,msm-mhi-dev";
 		reg = <0x1c03000 0x1000>,
 			<0x3E28000 0x4>,
-			<0x3E28148 0x4>;
+			<0x3E28800 0x4>;
 			reg-names = "mhi_mmio_base", "ipa_uc_mbox_crdb",
 				"ipa_uc_mbox_erdb";
 			qcom,mhi-ep-msi = <0>;

@@ -4,7 +4,7 @@
 	tlmm_pinmux: pinctrl@1000000 {
 		compatible = "qcom,sdxnightjar-pinctrl";
 		reg = <0x1000000 0x300000>;
-		interrupts = <0 208 0>;
+		interrupts = <0 208 IRQ_TYPE_LEVEL_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;

@@ -152,7 +152,7 @@
 		linux,pci-domain = <0>;
 
 		qcom,pcie-phy-ver = <2609>;
-		qcom,use-19p2mhz-aux-clk;
+		qcom,aux-clk-freq = <20>; /* 19.2 MHz */
 
 		qcom,smmu-sid-base = <0x0400>;
 

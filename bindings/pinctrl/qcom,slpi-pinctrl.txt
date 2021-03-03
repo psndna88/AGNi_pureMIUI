@@ -20,6 +20,10 @@ Following properties are for SLPI Pin controller device main node.
 	Value type: <u32>
 	Definition: Number of PINs supported by the SLPI TLMM.
 
+- clock-names: Should be "ssc-clk"
+
+- clocks: Handles to clocks specified in "clock-names" property.
+
 Please refer to pinctrl-bindings.txt in this directory for details of the
 common pinctrl bindings used by client devices, including the meaning of the
 phrase "pin configuration node".
@@ -92,6 +96,8 @@ Example:
 	slpi_tlmm: slpi_pinctrl@02b40000 {
 		compatible = "qcom,slpi-pinctrl";
 		qcom,num-pins = <14>;
+		clock-names = "ssc-clk";
+		clocks =  <&clock_scc SCC_QUPV3_S_HCLK_CLK>;
 		reg = <0x02b40000 0x20000>;
 
 		slpi_mclk0_active: slpi_mclk0_active {

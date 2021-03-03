@@ -275,6 +275,24 @@
 		qcom,qsee-reentrancy-support = <2>;
 	};
 
+	subsys_notif_virt: qcom,subsys_notif_virt@2D000000 {
+		compatible = "qcom,subsys-notif-virt";
+		reg = <0x2D000000 0x400>;
+		reg-names = "vdev_base";
+		adsp {
+			subsys-name = "adsp";
+			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "state-irq";
+			type = "virtual";
+			offset = <0>;
+		};
+
+		wlan {
+			subsys-name = "wlan";
+			type = "native";
+			offset = <512>;
+		};
+	};
 };
 
 &regulator {
@@ -375,6 +393,7 @@
 #include "sa8155-vm-pcie.dtsi"
 #include "sm8150-qupv3.dtsi"
 #include "sm8150-ssc-qupv3.dtsi"
+#include "pm8150-vm.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;
