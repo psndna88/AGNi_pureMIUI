@@ -40,7 +40,7 @@
 
 &pm6150l_rgb_led {
 	red {
-		label = "white";
+		label = "red";
 	};
 
 	green {
