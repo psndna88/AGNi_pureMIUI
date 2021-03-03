@@ -1,3 +1,4 @@
+#include <dt-bindings/sound/qcom,gpr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/spmi/spmi.h>
@@ -20,6 +21,11 @@
 				<0x1 0xc0000000 0x0 0x80000000>,
 				<0x2 0xc0000000 0x1 0x40000000>;
 		granule = <512>;
+	};
+
+	aliases {
+		swr0 = &swr0;
+		swr1 = &swr1;
 	};
 
 	cpus {
@@ -484,6 +490,11 @@
 			reg = <0x6018 0x4>;
 		};
 
+		adsp_variant: adsp_variant@6011 {
+			reg = <0x6011 0x1>;
+			bits = <3 1>;
+		};
+
 	};
 
 	wdog: qcom,wdt@f017000 {
@@ -865,6 +876,28 @@ dcc: dcc_v2@1be2000 {
 						0x4400 2>;
 			};
 
+			audio_gpr: qcom,gpr {
+				compatible = "qcom,gpr";
+				qcom,glink-channels = "adsp_apps";
+				qcom,intents = <0x200 20>;
+				reg = <GPR_DOMAIN_ADSP>;
+				spf_core {
+					compatible = "qcom,spf_core";
+					reg = <GPR_SVC_ADSP_CORE>;
+				};
+
+				audio-pkt {
+					compatible = "qcom,audio-pkt";
+					qcom,audiopkt-ch-name = "apr_audio_svc";
+					reg = <GPR_SVC_MAX>;
+				};
+
+				audio_prm: q6prm {
+					compatible = "qcom,audio_prm";
+					reg = <GPR_SVC_ASM>;
+				};
+			};
+
 			qcom,adsp_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_modem>;
@@ -979,6 +1012,7 @@ dcc: dcc_v2@1be2000 {
 #include "scuba-iot-pinctrl.dtsi"
 #include "scuba-ion.dtsi"
 #include "msm-arm-smmu-scuba.dtsi"
+#include "scuba-audio.dtsi"
 
 &qupv3_se1_i2c {
 	#address-cells = <1>;
