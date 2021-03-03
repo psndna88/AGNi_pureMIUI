@@ -221,12 +221,12 @@
 	dcc: dcc_v2@117f000 {
 		compatible = "qcom,dcc-v2";
 		reg = <0x117f000 0x1000>,
-		      <0x1100000 0x2000>;
+		      <0x1100800 0x1800>;
 
 		qcom,transaction_timeout = <0>;
 
 		reg-names = "dcc-base", "dcc-ram-base";
-		dcc-ram-offset = <0x12000>;
+		dcc-ram-offset = <0x800>;
 
 		link_list1 {
 			qcom,curr-link-list = <2>;
