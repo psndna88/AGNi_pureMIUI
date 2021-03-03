@@ -49,8 +49,8 @@ unsigned long max_mapnr;
 EXPORT_SYMBOL(max_mapnr);
 unsigned long highest_memmap_pfn;
 struct percpu_counter vm_committed_as;
-int sysctl_overcommit_memory = OVERCOMMIT_GUESS; /* heuristic overcommit */
-int sysctl_overcommit_ratio = 50; /* default is 50% */
+int sysctl_overcommit_memory = OVERCOMMIT_ALWAYS; /* heuristic overcommit */
+int sysctl_overcommit_ratio = 100; /* default is 50% */
 unsigned long sysctl_overcommit_kbytes __read_mostly;
 int sysctl_max_map_count = DEFAULT_MAX_MAP_COUNT;
 int sysctl_nr_trim_pages = CONFIG_NOMMU_INITIAL_TRIM_EXCESS;
