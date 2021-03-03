@@ -969,6 +969,24 @@
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 	};
+
+	rpmh-regulator-vregsp {
+		compatible = "qcom,rpmh-xob-regulator";
+		qcom,resource-name = "vreg.sp";
+		spss_vreg: regulator-spss-vreg {
+			regulator-name = "spss_vreg";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+		};
+	};
+
+	rpmh-regulator-gpiosp {
+		compatible = "qcom,rpmh-xob-regulator";
+		qcom,resource-name = "gpio.sp";
+		spss_gpio_vreg: regulator-spss-gpio-vreg {
+			regulator-name = "spss_gpio_vreg";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+		};
+	};
 };
 
 &soc {

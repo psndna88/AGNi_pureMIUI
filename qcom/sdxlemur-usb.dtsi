@@ -24,6 +24,7 @@
 
 		USB3_GDSC-supply = <&gcc_usb30_gdsc>;
 		dpdm-supply = <&usb2_phy>;
+		qcom,usb-charger;
 		clocks = <&gcc GCC_USB30_MASTER_CLK>,
 			<&gcc GCC_USB30_SLV_AHB_CLK>,
 			<&gcc GCC_USB30_MSTR_AXI_CLK>,
