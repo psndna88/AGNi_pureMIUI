@@ -28,8 +28,7 @@
 #include "qrtr.h"
 
 #define QRTR_LOG_PAGE_CNT 4
-#define QRTR_INFO(ctx, x, ...)				\
-	ipc_log_string(ctx, x, ##__VA_ARGS__)
+#define QRTR_INFO(ctx, x, ...)
 
 #define QRTR_PROTO_VER_1 1
 #define QRTR_PROTO_VER_2 3
@@ -840,7 +839,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 	    cb->type != QRTR_TYPE_RESUME_TX)
 		goto err;
 
-	__pm_wakeup_event(node->ws, 0);
+	__pm_wakeup_event(node->ws, 500);
 
 	skb->data_len = size;
 	skb->len = size;
