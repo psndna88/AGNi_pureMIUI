@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -157,6 +157,7 @@ int ion_hyp_assign_sg(struct sg_table *sgt, int *dest_vm_list,
 	int ret = 0;
 	int j = -1;
 	int k = -1;
+	int l = -1;
 
 	if (dest_nelems <= 0) {
 		pr_err("%s: dest_nelems invalid\n",
@@ -181,12 +182,18 @@ int ion_hyp_assign_sg(struct sg_table *sgt, int *dest_vm_list,
 		} else if (dest_vm_list[i] == VMID_CP_CAMERA) {
 			k = i;
 			dest_perms[i] = PERM_READ | PERM_WRITE;
+		} else if (dest_vm_list[i] == VMID_CP_CDSP) {
+			l = i;
+			dest_perms[i] = PERM_READ | PERM_WRITE;
 		}
 		else
 			dest_perms[i] = PERM_READ | PERM_WRITE;
 	}
 
-	if ((j != -1) && (k != -1))
+	if ((j != -1) && (k != -1) && (l != -1)) {
+		dest_perms[j] = PERM_READ;
+		dest_perms[l] = PERM_READ;
+	} else if ((j != -1) && (k != -1))
 		dest_perms[j] = PERM_READ;
 
 	ret = hyp_assign_table(sgt, &source_vmid, 1,
