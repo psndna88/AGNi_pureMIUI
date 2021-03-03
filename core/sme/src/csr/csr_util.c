@@ -1418,9 +1418,16 @@ QDF_STATUS csr_parse_bss_description_ies(struct mac_context *mac_ctx,
 					 tDot11fBeaconIEs *pIEStruct)
 {
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
-	int ieLen =
-		(int)(bss_desc->length + sizeof(bss_desc->length) -
-		      GET_FIELD_OFFSET(struct bss_description, ieFields));
+	uint16_t ieFields_offset;
+	int ieLen;
+
+	ieFields_offset = GET_FIELD_OFFSET(struct bss_description, ieFields);
+	if (!bss_desc->length ||
+	    (bss_desc->length - sizeof(bss_desc->length) <= ieFields_offset))
+		return status;
+
+	ieLen =	(int)(bss_desc->length + sizeof(bss_desc->length) -
+		ieFields_offset);
 
 	if (ieLen > 0 && pIEStruct) {
 		if (!DOT11F_FAILED(dot11f_unpack_beacon_i_es
@@ -2758,6 +2765,10 @@ bool csr_lookup_pmkid_using_bssid(struct mac_context *mac,
 	qdf_mem_copy(pmk_cache->PMKID, pmksa->pmkid, sizeof(pmk_cache->PMKID));
 	qdf_mem_copy(pmk_cache->pmk, pmksa->pmk, pmksa->pmk_len);
 	pmk_cache->pmk_len = pmksa->pmk_len;
+	pmk_cache->pmk_lifetime = pmksa->pmk_lifetime;
+	pmk_cache->pmk_lifetime_threshold = pmksa->pmk_lifetime_threshold;
+	pmk_cache->pmk_ts = pmksa->pmk_entry_ts;
+
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 
 	return true;

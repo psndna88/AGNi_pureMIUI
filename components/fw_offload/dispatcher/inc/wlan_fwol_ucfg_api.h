@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -48,6 +48,22 @@ QDF_STATUS ucfg_fwol_psoc_open(struct wlan_objmgr_psoc *psoc);
  * Return: None
  */
 void ucfg_fwol_psoc_close(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_fwol_psoc_enable() - FWOL component enable
+ * @psoc: pointer to psoc object
+ *
+ * Return: None
+ */
+void ucfg_fwol_psoc_enable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * ucfg_fwol_psoc_disable() - FWOL component disable
+ * @psoc: pointer to psoc object
+ *
+ * Return: None
+ */
+void ucfg_fwol_psoc_disable(struct wlan_objmgr_psoc *psoc);
 
 /**
  * ucfg_fwol_init() - initialize fwol_ctx context.

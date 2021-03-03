@@ -28,6 +28,7 @@
 #include <wmi_unified_param.h>
 #include <sir_api.h>
 #include "wlan_cm_roam_public_struct.h"
+#include "wlan_mlme_twt_public_struct.h"
 #include "cfg_mlme_generic.h"
 
 #define OWE_TRANSITION_OUI_TYPE "\x50\x6f\x9a\x1c"
@@ -1343,10 +1344,13 @@ struct wlan_mlme_acs {
 /*
  * struct wlan_mlme_cfg_twt - All twt related cfg items
  * @is_twt_enabled: global twt configuration
- * @bcast_requestor_tgt_cap: Broadcast requestor target capability
- * @bcast_responder_tgt_cap: Broadcast responder target capability
  * @is_bcast_responder_enabled: bcast responder enable/disable
  * @is_bcast_requestor_enabled: bcast requestor enable/disable
+ * @bcast_requestor_tgt_cap: Broadcast requestor target capability
+ * @bcast_responder_tgt_cap: Broadcast responder target capability
+ * @is_twt_nudge_tgt_cap_enabled: support for nudge request enable/disable
+ * @is_all_twt_tgt_cap_enabled: support for all twt enable/disable
+ * @is_twt_statistics_tgt_cap_enabled: support for twt statistics
  * @twt_congestion_timeout: congestion timeout value
  */
 struct wlan_mlme_cfg_twt {
@@ -1355,6 +1359,9 @@ struct wlan_mlme_cfg_twt {
 	bool is_bcast_requestor_enabled;
 	bool bcast_requestor_tgt_cap;
 	bool bcast_responder_tgt_cap;
+	bool is_twt_nudge_tgt_cap_enabled;
+	bool is_all_twt_tgt_cap_enabled;
+	bool is_twt_statistics_tgt_cap_enabled;
 	uint32_t twt_congestion_timeout;
 };
 
@@ -2414,10 +2421,14 @@ enum pkt_origin {
  * struct mlme_pmk_info - SAE Roaming using single pmk info
  * @pmk: pmk
  * @pmk_len: pmk length
+ * @spmk_timeout_period: Time to generate new SPMK in seconds.
+ * @spmk_timestamp: System timestamp at which the Single PMK entry was added.
  */
 struct mlme_pmk_info {
 	uint8_t pmk[CFG_MAX_PMK_LEN];
 	uint8_t pmk_len;
+	uint16_t spmk_timeout_period;
+	qdf_time_t spmk_timestamp;
 };
 
 /**

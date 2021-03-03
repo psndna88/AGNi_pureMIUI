@@ -612,9 +612,8 @@ QDF_STATUS mlme_update_tgt_he_caps_in_cfg(struct wlan_objmgr_psoc *psoc,
 			mlme_obj->cfg.he_caps.dot11_he_cap.broadcast_twt);
 	mlme_obj->cfg.he_caps.dot11_he_cap.broadcast_twt = value;
 
-	value = QDF_MIN(he_cap->flex_twt_sched,
-			mlme_obj->cfg.he_caps.dot11_he_cap.flex_twt_sched);
-	mlme_obj->cfg.he_caps.dot11_he_cap.flex_twt_sched = value;
+	mlme_obj->cfg.he_caps.dot11_he_cap.flex_twt_sched =
+			he_cap->flex_twt_sched;
 
 	mlme_obj->cfg.he_caps.dot11_he_cap.ba_32bit_bitmap =
 					he_cap->ba_32bit_bitmap;
@@ -3690,6 +3689,8 @@ char *mlme_get_roam_trigger_str(uint32_t roam_scan_trigger)
 		return "WTC BTM";
 	case WMI_ROAM_TRIGGER_REASON_NONE:
 		return "NONE";
+	case WMI_ROAM_TRIGGER_REASON_PMK_TIMEOUT:
+		return "PMK Expired";
 	default:
 		return "UNKNOWN";
 	}
@@ -3769,7 +3770,7 @@ void wlan_mlme_get_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
 				       struct wlan_mlme_sae_single_pmk *pmksa)
 {
 	struct mlme_legacy_priv *mlme_priv;
-	struct mlme_pmk_info pmk_info;
+	struct mlme_pmk_info *pmk_info;
 
 	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
 	if (!mlme_priv) {
@@ -3777,15 +3778,17 @@ void wlan_mlme_get_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
-	pmk_info = mlme_priv->mlme_roam.sae_single_pmk.pmk_info;
+	pmk_info = &mlme_priv->mlme_roam.sae_single_pmk.pmk_info;
 
 	pmksa->sae_single_pmk_ap =
 		mlme_priv->mlme_roam.sae_single_pmk.sae_single_pmk_ap;
+	pmksa->pmk_info.spmk_timeout_period = pmk_info->spmk_timeout_period;
+	pmksa->pmk_info.spmk_timestamp = pmk_info->spmk_timestamp;
 
-	if (pmk_info.pmk_len) {
-		qdf_mem_copy(pmksa->pmk_info.pmk, pmk_info.pmk,
-			     pmk_info.pmk_len);
-		pmksa->pmk_info.pmk_len = pmk_info.pmk_len;
+	if (pmk_info->pmk_len) {
+		qdf_mem_copy(pmksa->pmk_info.pmk, pmk_info->pmk,
+			     pmk_info->pmk_len);
+		pmksa->pmk_info.pmk_len = pmk_info->pmk_len;
 		return;
 	}
 
@@ -4698,16 +4701,3 @@ bool wlan_mlme_is_sta_mon_conc_supported(struct wlan_objmgr_psoc *psoc)
 
 	return false;
 }
-
-#ifdef WLAN_SUPPORT_TWT
-bool mlme_is_twt_enabled(struct wlan_objmgr_psoc *psoc)
-{
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj)
-		return cfg_default(CFG_ENABLE_TWT);
-
-	return mlme_obj->cfg.twt_cfg.is_twt_enabled;
-}
-#endif

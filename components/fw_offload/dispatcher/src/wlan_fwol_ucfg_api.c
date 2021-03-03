@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -34,14 +34,21 @@ QDF_STATUS ucfg_fwol_psoc_open(struct wlan_objmgr_psoc *psoc)
 	if (QDF_IS_STATUS_ERROR(status))
 		fwol_err("Failed to initialize FWOL CFG");
 
-	tgt_fwol_register_ev_handler(psoc);
-
 	return status;
 }
 
 void ucfg_fwol_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
 	/* Clear the FWOL CFG Structure */
+}
+
+void ucfg_fwol_psoc_enable(struct wlan_objmgr_psoc *psoc)
+{
+	tgt_fwol_register_ev_handler(psoc);
+}
+
+void ucfg_fwol_psoc_disable(struct wlan_objmgr_psoc *psoc)
+{
 
 	tgt_fwol_unregister_ev_handler(psoc);
 }

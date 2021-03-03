@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -42,6 +42,7 @@
 #include "lim_send_messages.h"
 #include "lim_process_fils.h"
 #include "wlan_blm_api.h"
+#include "wlan_mlme_twt_api.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -913,6 +914,13 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		lim_update_obss_scanparams(session_entry,
 				&assoc_rsp->obss_scanparams);
 
+	if (lim_is_session_he_capable(session_entry))
+		mlme_set_twt_peer_capabilities(
+				mac_ctx->psoc,
+				(struct qdf_mac_addr *)current_bssid,
+				&assoc_rsp->he_cap,
+				&assoc_rsp->he_op);
+
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT,
 			      session_entry,
 			      (assoc_rsp->status_code ? QDF_STATUS_E_FAILURE :
@@ -1086,7 +1094,6 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			session_entry->ap_mu_edca_params[QCA_WLAN_AC_VO] =
 				assoc_rsp->mu_edca.acvo;
 		}
-
 	}
 
 	if (beacon->VHTCaps.present)
