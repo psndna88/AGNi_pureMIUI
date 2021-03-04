@@ -1185,6 +1185,7 @@
 		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x7073 0x707b>;
 		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
+		qos-val = <0x00000A0A>;
 		status = "ok";
 	};
 
