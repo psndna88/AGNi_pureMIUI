@@ -1448,6 +1448,7 @@ static int cam_icp_update_clk_rate(struct cam_icp_hw_mgr *hw_mgr,
 	struct cam_hw_intf *icp_dev_intf = NULL;
 	struct cam_hw_intf *dev_intf = NULL;
 	struct cam_icp_clk_update_cmd clk_upd_cmd;
+	uint32_t camera_hw_version;
 
 	ipe0_dev_intf = hw_mgr->ipe0_dev_intf;
 	ipe1_dev_intf = hw_mgr->ipe1_dev_intf;
@@ -1470,8 +1471,17 @@ static int cam_icp_update_clk_rate(struct cam_icp_hw_mgr *hw_mgr,
 		id = CAM_ICP_IPE_CMD_UPDATE_CLK;
 	}
 
-	CAM_DBG(CAM_PERF, "clk_rate %u for dev_type %d", curr_clk_rate,
-		ctx_data->icp_dev_acquire_info->dev_type);
+	cam_cpas_get_cpas_hw_version(&camera_hw_version);
+	if ((camera_hw_version == 0x570200)&&
+		(curr_clk_rate > ctx_data->clk_info.clk_rate[CAM_MAX_VOTE-1]) &&
+		(ctx_data->icp_dev_acquire_info->dev_type != CAM_ICP_RES_TYPE_BPS)) {
+
+		curr_clk_rate = ctx_data->clk_info.clk_rate[CAM_MAX_VOTE-1];
+	}
+
+	CAM_DBG(CAM_PERF, "clk_rate %u for dev_type %d, ver %x", curr_clk_rate,
+		ctx_data->icp_dev_acquire_info->dev_type, camera_hw_version);
+
 	clk_upd_cmd.curr_clk_rate = curr_clk_rate;
 	clk_upd_cmd.ipe_bps_pc_enable = icp_hw_mgr.ipe_bps_pc_flag;
 	clk_upd_cmd.clk_level = -1;
