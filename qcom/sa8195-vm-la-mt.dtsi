@@ -15,4 +15,6 @@
 				"persist", "modem", "bluetooth",
 				"misc", "vbmeta";
 	};
+
+	/delete-node/ cpus;
 };
