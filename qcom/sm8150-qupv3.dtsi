@@ -33,6 +33,7 @@
 		qcom,msm-bus,vectors-bus-ids =
 			<MASTER_QUP_0 SLAVE_EBI1>;
 		iommus = <&apps_smmu 0xc3 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 	};
@@ -334,6 +335,7 @@
 		qcom,msm-bus,vectors-bus-ids =
 			<MASTER_QUP_1 SLAVE_EBI1>;
 		iommus = <&apps_smmu 0x603 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 	};
@@ -568,6 +570,7 @@
 		qcom,msm-bus,vectors-bus-ids =
 			<MASTER_QUP_2 SLAVE_EBI1>;
 		iommus = <&apps_smmu 0x7a3 0x0>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0xc0000000>;
 		qcom,iommu-dma = "fastmap";
 		status = "ok";
 	};
