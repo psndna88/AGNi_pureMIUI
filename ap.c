@@ -8542,15 +8542,19 @@ skip_key_mgmt:
 		if (dut->ap_sgi80 || dut->ap_txBF ||
 		    dut->ap_ldpc != VALUE_NOT_SET ||
 		    dut->ap_tx_stbc || dut->ap_mu_txBF ||
-		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len) {
-			fprintf(f, "vht_capab=%s%s%s%s%s",
+		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len ||
+		    dut->ap_chwidth == AP_160 || dut->ap_chwidth == AP_80_80) {
+			fprintf(f, "vht_capab=%s%s%s%s%s%s",
 				dut->ap_sgi80 ? "[SHORT-GI-80]" : "",
 				dut->ap_txBF ?
 				"[SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2]" : "",
 				(dut->ap_ldpc == VALUE_ENABLED) ?
 				"[RXLDPC]" : "",
 				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
-				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "");
+				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "",
+				dut->ap_chwidth == AP_160 ? "[VHT160]" :
+				(dut->ap_chwidth == AP_80_80 ?
+				 "[VHT160-80PLUS80]" : ""));
 
 			if (dut->ap_ampdu_exp)
 				fprintf(f, "[MAX-A-MPDU-LEN-EXP%d]",
