@@ -926,7 +926,7 @@
 		vreg-1p8-supply = <&pmx65_l1>;
 		vreg-0p9-supply = <&pmx65_l4>;
 
-		qcom,vreg-1p8-voltage-level = <1200000 1200000 3000>;
+		qcom,vreg-1p8-voltage-level = <1200000 1200000 30000>;
 		qcom,vreg-0p9-voltage-level = <912000 912000 132000>;
 
 		clocks = <&gcc GCC_PCIE_PIPE_CLK>,
