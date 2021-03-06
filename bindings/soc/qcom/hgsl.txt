@@ -12,6 +12,7 @@ Required properties:
 	      reg_doorbell_idx: address of GMUAO_DOORBELL_IDX
 
 Optional properties:
+- db-off: Disable Doorbell feature but keep hgsl for ifence service
 - qcom,glb-db-senders : Point to possible nodes of HGSL TCSR sender. The user will select
 		        which sender to use. The driver will use TCSR compute signal to
 		        send signal to GPU.
@@ -25,6 +26,7 @@ Example:
 		reg = <0x2c00000 0x8>, <0x2c8f000 0x4>;
 		reg-names = "hgsl_reg_hwinf", "hgsl_reg_gmucx";
 
+		db-off = <0>;
 		qcom,glb-db-senders = <&hgsl_tcsr_sender0 &hgsl_tcsr_sender1>;
 		qcom,glb-db-receivers = <&hgsl_tcsr_receiver0 &hgsl_tcsr_receiver1>;
 	};
