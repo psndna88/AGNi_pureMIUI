@@ -236,6 +236,13 @@
 		interrupt-parent = <&intc>;
 		interrupt-controller;
 	};
+
+	msm_gpu_hyp: qcom,hgsl {
+		compatible = "qcom,hgsl";
+
+		/* 6155 have no Doorbell, only keep ifence */
+		db-off = <1>;
+	};
 };
 
 &regulator {
