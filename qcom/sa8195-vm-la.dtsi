@@ -151,4 +151,8 @@
 		memory-region = <&pil_ipa_fw_mem>;
 	};
 
+	qcom,veth-ipa {
+		compatible = "qcom,veth-ipa";
+	};
+
 };
