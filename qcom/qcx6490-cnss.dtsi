@@ -25,6 +25,11 @@
 		wlan-ant-switch-supply = <&L11C>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
 
+		interconnects =
+		<&aggre1_noc MASTER_PCIE_0 &aggre1_noc SLAVE_ANOC_PCIE_GEM_NOC>,
+		<&gem_noc MASTER_ANOC_PCIE_GEM_NOC &mc_virt SLAVE_EBI1>;
+		interconnect-names = "pcie_to_memnoc", "memnoc_to_ddr";
+
 		qcom,icc-path-count = <2>;
 		qcom,bus-bw-cfg-count = <7>;
 		qcom,bus-bw-cfg =

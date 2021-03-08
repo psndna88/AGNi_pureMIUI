@@ -1,6 +1,7 @@
 /dts-v1/;
 /plugin/;
 
+#include <dt-bindings/interconnect/qcom,yupik.h>
 #include "yupikp-idp.dtsi"
 
 / {
