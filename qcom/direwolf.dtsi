@@ -172,7 +172,157 @@
 
 	soc: soc { };
 
-	reserved_memory: reserved-memory { };
+	reserved_memory: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		hyp_mem: hyp_region@80000000 {
+			no-map;
+			reg = <0x0 0x80000000 0x0 0x600000>;
+		};
+
+		xbl_boot: xbl_boot_region@80600000 {
+			no-map;
+			reg = <0x0 0x80600000 0x0 0x200000>;
+		};
+
+		xbl_aop_mem: xbl_aop_region@80800000 {
+			no-map;
+			reg = <0x0 0x80800000 0x0 0x60000>;
+		};
+
+		cmd_db: reserved-memory@80860000 {
+			compatible = "qcom,cmd-db";
+			no-map;
+			reg = <0x0 0x80860000 0x0 0x20000>;
+		};
+
+		gpu_prr: gpu_prr_region@80880000 {
+			no-map;
+			reg = <0x0 0x80880000 0x0 0x10000>;
+		};
+
+		tpm_control: tmp_control@80890000 {
+			no-map;
+			reg = <0x0 0x80890000 0x0 0x10000>;
+		};
+
+		reserved_0: reserved_0_region@808F0000 {
+			no-map;
+			reg = <0x0 0x808F0000 0x0 0xF000>;
+		};
+
+		secdata: secdata_region@808FF000 {
+			no-map;
+			reg = <0x0 0x808FF000 0x0 0x1000>;
+		};
+
+		smem_mem: smem_mem_region@80900000 {
+			no-map;
+			reg = <0x0 0x80900000 0x0 0x200000>;
+		};
+
+		cpucp_fw: cpucp_fw_region@80B00000 {
+			no-map;
+			reg = <0x0 0x80B00000 0x0 0x100000>;
+		};
+
+		lpass_ml: lpass_ml_region@0x83B00000 {
+			no-map;
+			reg = <0x0 0x83B00000 0x0 0xF00000>;
+		};
+
+		adsp_rpc: adsp_rpc_remote_heap@0x84A00000 {
+			no-map;
+			reg = <0x0 0x84A00000 0x0 0x800000>;
+		};
+
+		pil_camera_mem: pil_camera_region@85200000 {
+			no-map;
+			reg = <0x0 0x85200000 0x0 0x500000>;
+		};
+
+		pil_spss_mem: pil_spss_mem_region@85700000 {
+			no-map;
+			reg = <0x0 0x85700000 0x0 0x400000>;
+		};
+
+		pil_adsp_boot_mem: pil_adsp_boot_region@85B00000 {
+			no-map;
+			reg = <0x0 0x85B00000 0x0 0xA00000>;
+		};
+
+		pil_video_mem: pil_video_region@86500000 {
+			no-map;
+			reg = <0x0 0x86500000 0x0 0x500000>;
+		};
+
+		pil_adsp_mem: pil_adsp_region@86A00000 {
+			no-map;
+			reg = <0x0 0x86A00000 0x0 0x2000000>;
+		};
+
+		pil_slpi_mem: pil_slpi_region@88A00000 {
+			no-map;
+			reg = <0x0 0x88A00000 0x0 0x1500000>;
+		};
+
+		pil_cdsp_mem: pil_cdsp_region@89F00000 {
+			no-map;
+			reg = <0x0 0x89F00000 0x0 0x1e00000>;
+		};
+
+		pil_gpu_mem: pil_gpu_region@8BD00000 {
+			no-map;
+			reg = <0x0 0x8BD00000 0x0 0x2000>;
+		};
+
+		pil_smss_mem: pil_smss_region@8BE00000 {
+			no-map;
+			reg = <0x0 0x8BE00000 0x0 0x300000>;
+		};
+
+		pil_reserved_mem: pil_reserved_region@8C100000 {
+			no-map;
+			reg = <0x0 0x8C100000 0x0 0x500000>;
+		};
+
+		pil_cdsp1_mem: pil_cdsp1_region@8C600000 {
+			no-map;
+			reg = <0x0 0x8C600000 0x0 0x1E00000>;
+		};
+
+		uefi_mem: uefi_mem_region@9F000000 {
+			no-map;
+			reg = <0x0 0x9F000000 0x0 0x1000000>;
+		};
+
+		hyp_tz_mem: hyp_tz_mem_region@AEB00000 {
+			no-map;
+			reg = <0x0 0xAEB00000 0x0 0x11500000>;
+		};
+
+		tz_stat_mem: adsp_rpc_mem_region@C0000000 {
+			no-map;
+			reg = <0x0 0xC0000000 0x0 0x100000>;
+		};
+
+		pIMEM: pIMEM_valut_mem_region@C0100000 {
+			no-map;
+			reg = <0x0 0xC0100000 0x0 0x5000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xdfffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x2000000>;
+			linux,cma-default;
+		};
+	};
 
 	chosen { };
 
@@ -263,4 +413,72 @@
 			status = "disabled";
 		};
 	};
+
+	qcom,msm-imem@146bf000 {
+		compatible = "qcom,msm-imem";
+		reg = <0x146bf000 0x1000>;
+		ranges = <0x0 0x146bf000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		mem_dump_table@10 {
+			compatible = "qcom,msm-imem-mem_dump_table";
+			reg = <0x10 0x8>;
+		};
+
+		restart_reason@65c {
+			compatible = "qcom,msm-imem-restart_reason";
+			reg = <0x65c 0x4>;
+		};
+
+		dload_type@1c {
+			compatible = "qcom,msm-imem-dload-type";
+			reg = <0x1c 0x4>;
+		};
+
+		boot_stats@6b0 {
+			compatible = "qcom,msm-imem-boot_stats";
+			reg = <0x6b0 0x20>;
+		};
+
+		kaslr_offset@6d0 {
+			compatible = "qcom,msm-imem-kaslr_offset";
+			reg = <0x6d0 0xc>;
+		};
+
+		pil@94c {
+			compatible = "qcom,msm-imem-pil";
+			reg = <0x94c 0xc8>;
+		};
+
+		diag_dload@c8 {
+			compatible = "qcom,msm-imem-diag-dload";
+			reg = <0xc8 0xc8>;
+		};
+	};
+
+	tlmm: pinctrl@f000000 {
+		compatible = "qcom,direwolf-pinctrl";
+		reg = <0x0F000000 0x1000000>;
+		interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
+
+	wdog: qcom,wdt@17c10000 {
+		compatible = "qcom,msm-watchdog";
+		reg = <0x17c10000 0x1000>;
+		reg-names = "wdt-base";
+		interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,bark-time = <11000>;
+		qcom,pet-time = <9360>;
+		qcom,ipi-ping;
+		qcom,wakeup-enable;
+	};
+
 };
+
+#include "direwolf-pinctrl.dtsi"
