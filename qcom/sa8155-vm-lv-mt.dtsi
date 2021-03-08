@@ -1,3 +1,7 @@
+/ {
+	/delete-node/ cpus;
+};
+
 &hab {
 	vmid = <3>;
 };
