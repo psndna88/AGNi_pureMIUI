@@ -97,6 +97,19 @@
 #define DEFAULT_ROAM_SCAN_SCHEME_BITMAP 0
 #define ROAM_MAX_CFG_VALUE 0xffffffff
 
+/*
+ * Currently roam score delta value is sent for 2 triggers and min rssi
+ * values are sent for 3 triggers
+ */
+#define NUM_OF_ROAM_TRIGGERS 2
+#define IDLE_ROAM_TRIGGER 0
+#define BTM_ROAM_TRIGGER  1
+
+#define NUM_OF_ROAM_MIN_RSSI 3
+#define DEAUTH_MIN_RSSI 0
+#define BMISS_MIN_RSSI  1
+#define MIN_RSSI_2G_TO_5G_ROAM 2
+
 /**
  * enum roam_cfg_param  - Type values for roaming parameters used as index
  * for get/set of roaming config values(pNeighborRoamInfo in legacy)
@@ -155,26 +168,6 @@ struct wlan_cm_roam_vendor_btm_params {
 	uint32_t connected_rssi_threshold;
 	uint32_t candidate_rssi_threshold;
 	uint32_t user_roam_reason;
-};
-
-/**
- * struct wlan_roam_triggers - vendor configured roam triggers
- * @vdev_id: vdev id
- * @trigger_bitmap: vendor configured roam trigger bitmap as
- *		    defined @enum roam_control_trigger_reason
- * @roam_score_delta: Value of roam score delta
- * percentage to trigger roam
- * @roam_scan_scheme_bitmap: Bitmap of roam triggers as defined in
- * enum roam_trigger_reason, for which the roam scan scheme should
- * be partial scan
- * @control_param: roam trigger param
- */
-struct wlan_roam_triggers {
-	uint32_t vdev_id;
-	uint32_t trigger_bitmap;
-	uint32_t roam_score_delta;
-	uint32_t roam_scan_scheme_bitmap;
-	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
 };
 
 /**
@@ -281,19 +274,6 @@ struct scoring_param {
 	struct per_slot_score oce_wan_scoring;
 };
 
-/*
- * Currently roam score delta value is sent for 2 triggers and min rssi values
- * are sent for 3 triggers
- */
-#define NUM_OF_ROAM_TRIGGERS 2
-#define IDLE_ROAM_TRIGGER 0
-#define BTM_ROAM_TRIGGER  1
-
-#define NUM_OF_ROAM_MIN_RSSI 3
-#define DEAUTH_MIN_RSSI 0
-#define BMISS_MIN_RSSI  1
-#define MIN_RSSI_2G_TO_5G_ROAM 2
-
 /**
  * enum roam_trigger_reason - Reason for triggering roam
  * ROAM_TRIGGER_REASON_NONE: Roam trigger reason none
@@ -371,6 +351,30 @@ struct roam_trigger_min_rssi {
 struct roam_trigger_score_delta {
 	uint32_t roam_score_delta;
 	enum roam_trigger_reason trigger_reason;
+};
+
+/**
+ * struct wlan_roam_triggers - vendor configured roam triggers
+ * @vdev_id: vdev id
+ * @trigger_bitmap: vendor configured roam trigger bitmap as
+ *		    defined @enum roam_control_trigger_reason
+ * @roam_score_delta: Value of roam score delta
+ * percentage to trigger roam
+ * @roam_scan_scheme_bitmap: Bitmap of roam triggers as defined in
+ * enum roam_trigger_reason, for which the roam scan scheme should
+ * be partial scan
+ * @control_param: roam trigger param
+ * @min_rssi_params: Min RSSI values for different roam triggers
+ * @score_delta_params: Roam score delta values for different triggers
+ */
+struct wlan_roam_triggers {
+	uint32_t vdev_id;
+	uint32_t trigger_bitmap;
+	uint32_t roam_score_delta;
+	uint32_t roam_scan_scheme_bitmap;
+	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
+	struct roam_trigger_min_rssi min_rssi_params[NUM_OF_ROAM_MIN_RSSI];
+	struct roam_trigger_score_delta score_delta_param[NUM_OF_ROAM_TRIGGERS];
 };
 
 /**
