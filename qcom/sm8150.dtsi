@@ -40,7 +40,7 @@
 		pci-domain1 = &pcie1; /* PCIe1 domain */
 		serial0 = &qupv3_se12_2uart;
 		hsuart0 = &qupv3_se13_4uart;
-		spi2 = &qupv3_se22_spi;
+		spi22 = &qupv3_se22_spi;
 	};
 
 	cpus {
@@ -54,6 +54,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_0: l2-cache {
@@ -75,6 +76,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_1>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_1: l2-cache {
@@ -91,6 +93,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_2>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_2: l2-cache {
@@ -107,6 +110,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_3>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_3: l2-cache {
@@ -123,6 +127,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_4>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_4: l2-cache {
@@ -139,6 +144,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_5>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_5: l2-cache {
@@ -155,6 +161,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_6: l2-cache {
@@ -171,6 +178,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <431>;
 			next-level-cache = <&L2_7>;
 			qcom,freq-domain = <&cpufreq_hw 2 4>;
 			L2_7: l2-cache {
@@ -230,7 +238,28 @@
 
 	soc: soc { };
 
-	firmware: firmware { };
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,boot,system,vendor,dtbo";
+			};
+
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc
+						/1d84000.ufshc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
+				};
+			};
+		};
+	};
 
 	reserved_memory: reserved-memory {
 		#address-cells = <2>;
@@ -403,7 +432,7 @@
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
-			size = <0 0x2400000>;
+			size = <0 0x2800000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -541,6 +570,12 @@
 			reg = <0x17c2d000 0x1000>;
 			status = "disabled";
 		};
+	};
+
+	qcom,mpm2-sleep-counter@c221000 {
+		compatible = "qcom,mpm2-sleep-counter";
+		reg = <0xc221000 0x1000>;
+		clock-frequency = <32768>;
 	};
 
 	qcom,msm-imem@146bf000 {
@@ -855,6 +890,25 @@
 		};
 	};
 
+	npu_npu_ddr_bw: qcom,npu-npu-ddr-bw {
+		compatible = "qcom,devfreq-icc-ddr";
+		governor = "performance";
+		interconnects = <&compute_noc MASTER_NPU &mc_virt SLAVE_EBI1>;
+		operating-points-v2 = <&ddr_bw_opp_table>;
+		qcom,active-only;
+	};
+
+	npu_npu_ddr_bwmon: qcom,npu-npu-ddr-bwmon@9960300 {
+		compatible = "qcom,bimc-bwmon4";
+		reg = <0x9960300 0x300>, <0x9960200 0x200>;
+		reg-names = "base", "global_base";
+		interrupts = <GIC_SPI 365 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,mport = <0>;
+		qcom,hw-timer-hz = <19200000>;
+		qcom,target-dev = <&npu_npu_ddr_bw>;
+		qcom,count-unit = <0x10000>;
+	};
+
 	cpu_pmu: cpu-pmu {
 		compatible = "arm,armv8-pmuv3";
 		qcom,irq-is-percpu;
@@ -1068,7 +1122,7 @@
 
 		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
 		clock-names = "xo", "alternate";
-
+		qcom,no-accumulative-counter;
 
 		#freq-domain-cells = <2>;
 	};

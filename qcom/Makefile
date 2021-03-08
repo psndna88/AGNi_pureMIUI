@@ -164,7 +164,13 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupikp-atp-overlay.dtbo \
 	yupikp-qrd-overlay.dtbo \
 	yupikp-idps-digital-mics-overlay.dtbo \
-	yupikp-idps-amoled-overlay.dtbo
+	yupikp-idps-amoled-overlay.dtbo \
+	yupik-iot-idp-overlay.dtbo \
+	yupik-iot-qrd-overlay.dtbo \
+	yupik-iot-idps-amoled-overlay.dtbo \
+	yupikp-iot-idp-overlay.dtbo \
+	yupikp-iot-qrd-overlay.dtbo \
+	yupikp-iot-idps-amoled-overlay.dtbo
 
 
 yupik-rumi-overlay.dtbo-base := yupik.dtb
@@ -178,6 +184,12 @@ yupikp-atp-overlay.dtbo-base := yupikp.dtb
 yupikp-qrd-overlay.dtbo-base := yupikp.dtb
 yupikp-idps-digital-mics-overlay.dtbo-base := yupikp.dtb
 yupikp-idps-amoled-overlay.dtbo-base := yupikp.dtb
+yupik-iot-idp-overlay.dtbo-base := yupik-iot.dtb
+yupik-iot-qrd-overlay.dtbo-base := yupik-iot.dtb
+yupik-iot-idps-amoled-overlay.dtbo-base := yupik-iot.dtb
+yupikp-iot-idp-overlay.dtbo-base := yupikp-iot.dtb
+yupikp-iot-qrd-overlay.dtbo-base := yupikp-iot.dtb
+yupikp-iot-idps-amoled-overlay.dtbo-base := yupikp-iot.dtb
 else
 dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupik-idp.dtb \
@@ -189,7 +201,13 @@ dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupikp-atp.dtb \
 	yupikp-qrd.dtb \
 	yupikp-idps-digital-mics.dtb \
-	yupikp-idps-amoled.dtb
+	yupikp-idps-amoled.dtb \
+	yupik-iot-idp.dtb \
+	yupik-iot-qrd.dtb \
+	yupik-iot-idps-amoled.dtb \
+	yupikp-iot-idp.dtb \
+	yupikp-iot-qrd.dtb \
+	yupikp-iot-idps-amoled.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
@@ -328,7 +346,8 @@ dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
 	sa8195-vm-lv.dtb \
 	sa8195-vm-la-mt.dtb \
 	sa8195-vm-lv-mt.dtb \
-	sa8195-vm-lv-lxc.dtb
+	sa8195-vm-lv-lxc.dtb \
+	sa6155p-vm-la.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

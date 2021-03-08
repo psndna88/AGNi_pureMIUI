@@ -90,7 +90,7 @@
 		qcom,cdc-micbias2-mv = <1800>;
 		qcom,cdc-micbias3-mv = <1800>;
 		qcom,cdc-micbias4-mv = <1800>;
-		qcom,cdc-mclk-clk-rate = <9600000>;
+		qcom,cdc-mclk-clk-rate = <12288000>;
 		qcom,cdc-dmic-sample-rate = <4800000>;
 
 		swr_master {

@@ -34,8 +34,8 @@
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
 		serial0 = &qupv3_se0_2uart;
-		sdhc1 = &sdhc_1;
-		sdhc2 = &sdhc_2;
+		sdhc0 = &sdhc_1;
+		sdhc1 = &sdhc_2;
 	};
 
 	cpus {
@@ -49,6 +49,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -74,6 +75,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_100>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -94,6 +96,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_200>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -113,6 +116,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_300>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -132,6 +136,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_400>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -151,6 +156,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&SLVR_OFF &SLVR_RAIL_OFF>;
 			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <100>;
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_500>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
@@ -170,6 +176,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <404>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_600>;
 			qcom,freq-domain = <&cpufreq_hw 1 2>;
@@ -189,6 +196,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&GOLD_OFF &GOLD_RAIL_OFF>;
 			capacity-dmips-mhz = <1740>;
+			dynamic-power-coefficient = <404>;
 			cache-size = <0x10000>;
 			next-level-cache = <&L2_700>;
 			qcom,freq-domain = <&cpufreq_hw 1 2>;
@@ -252,6 +260,26 @@
 	soc: soc { };
 
 	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,boot,system,vendor,dtbo";
+			};
+
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc
+						/1d84000.ufshc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
+				};
+			};
+		};
 	};
 
 	reserved_memory: reserved-memory {
@@ -335,7 +363,7 @@
 			reg = <0x0 0x97715000 0x0 0x2000>;
 		};
 
-		qseecom_mem: qseecom_region@0x9e400000 {
+		qseecom_mem: qseecom_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
@@ -362,6 +390,14 @@
 			reusable;
 			alignment = <0 0x400000>;
 			size = <0 0x400000>;
+		};
+
+		user_contig_mem: user_contig_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x1000000>;
 		};
 
 		qseecom_ta_mem: qseecom_ta_region {
@@ -425,6 +461,9 @@
 	};
 
 };
+
+#include "display/sm6150-sde-pll.dtsi"
+#include "display/sm6150-sde.dtsi"
 
 &soc {
 	#address-cells = <1>;
@@ -1352,6 +1391,7 @@
 		reg-names = "freq-domain0", "freq-domain1";
 		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
 		clock-names = "xo", "alternate";
+		qcom,no-accumulative-counter;
 		#freq-domain-cells = <2>;
 	};
 
@@ -1611,6 +1651,126 @@
 		reg = <0x17c00000 0x1000>;
 
 		#mbox-cells = <1>;
+	};
+
+	qcom,msm-cdsp-loader {
+		compatible = "qcom,cdsp-loader";
+		qcom,proc-img-to-load = "cdsp";
+	};
+
+	qcom,msm-adsprpc-mem {
+		compatible = "qcom,msm-adsprpc-mem-region";
+		memory-region = <&adsp_mem>;
+		restrict-access;
+	};
+
+	qcom,msm_fastrpc {
+		compatible = "qcom,msm-fastrpc-compute";
+		qcom,rpc-latency-us = <611>;
+		qcom,adsp-remoteheap-vmid = <22 37>;
+		qcom,fastrpc-adsp-audio-pdr;
+		qcom,fastrpc-adsp-sensors-pdr;
+
+		qcom,msm_fastrpc_compute_cb1 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1081 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb2 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1082 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb3 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1083 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb4 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1084 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb5 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1085 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb6 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			iommus = <&apps_smmu 0x1086 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb9 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "cdsprpc-smd";
+			qcom,secure-context-bank;
+			iommus = <&apps_smmu 0x1089 0x0>;
+			qcom,iommu-dma-addr-pool = <0x60000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb10 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "adsprpc-smd";
+			iommus = <&apps_smmu 0x1723 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb11 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "adsprpc-smd";
+			iommus = <&apps_smmu 0x1724 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb12 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "adsprpc-smd";
+			iommus = <&apps_smmu 0x1725 0x0>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
+
+		qcom,msm_fastrpc_compute_cb13 {
+			compatible = "qcom,msm-fastrpc-compute-cb";
+			label = "adsprpc-smd";
+			iommus = <&apps_smmu 0x1726 0x0>;
+			shared-cb = <5>;
+			qcom,iommu-dma-addr-pool = <0x80000000 0x78000000>;
+			qcom,iommu-faults = "stall-disable";
+			dma-coherent-hint-cached;
+		};
 	};
 
 	qcom,glink {
@@ -2256,6 +2416,12 @@
 
 };
 
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+	};
+};
+
 #include "sm6150-qupv3.dtsi"
 #include "sm6150-ssc-qupv3.dtsi"
 #include "sm6150-pinctrl.dtsi"
@@ -2367,5 +2533,7 @@
 
 #include "msm-arm-smmu-sm6150.dtsi"
 #include "sm6150-slpi-pinctrl.dtsi"
+#include "sm6150-gpu.dtsi"
 #include "sm6150-usb.dtsi"
 #include "sm6150-vidc.dtsi"
+#include "sm6150-ion.dtsi"

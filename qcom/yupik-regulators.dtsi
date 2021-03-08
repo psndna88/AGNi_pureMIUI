@@ -8,7 +8,7 @@
 		pm7325_s1: regulator-pm7325-s1 {
 			regulator-name = "pm7325_s1";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1856000>;
+			regulator-min-microvolt = <1840000>;
 			regulator-max-microvolt = <2040000>;
 			qcom,init-voltage = <1872000>;
 		};
@@ -50,7 +50,7 @@
 		pm7325_s8: regulator-pm7325-s8 {
 			regulator-name = "pm7325_s8";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1256000>;
+			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1500000>;
 			qcom,init-voltage = <1272000>;
 		};
@@ -153,6 +153,7 @@
 			<RPMH_REGULATOR_MODE_LPM
 			RPMH_REGULATOR_MODE_HPM>;
 		qcom,mode-threshold-currents = <0 30000>;
+		proxy-supply = <&pm7325_l6>;
 		L6B:
 		pm7325_l6: regulator-pm7325-l6 {
 			regulator-name = "pm7325_l6";
@@ -160,6 +161,8 @@
 			regulator-min-microvolt = <1140000>;
 			regulator-max-microvolt = <1260000>;
 			qcom,init-voltage = <1200000>;
+			qcom,proxy-consumer-enable;
+			qcom,proxy-consumer-current = <8350>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 	};
@@ -730,6 +733,7 @@
 			<RPMH_REGULATOR_MODE_LPM
 			RPMH_REGULATOR_MODE_HPM>;
 		qcom,mode-threshold-currents = <0 30000>;
+		proxy-supply = <&pm8350c_l10>;
 		L10C:
 		pm8350c_l10: regulator-pm8350c-l10 {
 			regulator-name = "pm8350c_l10";
@@ -737,6 +741,8 @@
 			regulator-min-microvolt = <720000>;
 			regulator-max-microvolt = <1050000>;
 			qcom,init-voltage = <880000>;
+			qcom,proxy-consumer-enable;
+			qcom,proxy-consumer-current = <37550>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 

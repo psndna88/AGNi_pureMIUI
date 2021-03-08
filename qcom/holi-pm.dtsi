@@ -153,6 +153,14 @@
 		reg = <0x04690000 0x400>;
 	};
 
+	rpmh-master-stats {
+		compatible = "qcom,rpmh-master-stats-v1";
+	};
+
+	subsystem-sleep-stats {
+		compatible = "qcom,subsystem-sleep-stats";
+	};
+
 	qcom,rpm-master-stats@45f0150 {
 		compatible = "qcom,rpm-master-stats";
 		reg = <0x45f0150 0x5000>;
