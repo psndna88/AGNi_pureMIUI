@@ -659,8 +659,8 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/sound.prop`" ]; then
 	if [ ! -f /vendor/etc/mixer_paths.xml.agnibak ]; then
 		$BB cp -f /vendor/etc/mixer_paths.xml /vendor/etc/mixer_paths.xml.agnibak;
 	fi;
-	$BB sed -i '/HPHL Volume/c\    <ctl name="HPHL Volume" value="18" />' /vendor/etc/mixer_paths.xml;
-	$BB sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="18" />' /vendor/etc/mixer_paths.xml;
+	$BB sed -i '/HPHL Volume/c\    <ctl name="HPHL Volume" value="15" />' /vendor/etc/mixer_paths.xml;
+	$BB sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="15" />' /vendor/etc/mixer_paths.xml;
 else
 	if [ -f /vendor/etc/mixer_paths.xml.agnibak ]; then
 		$BB mv -f /vendor/etc/mixer_paths.xml.agnibak /vendor/etc/mixer_paths.xml;
@@ -669,6 +669,9 @@ else
 fi;
 /sbin/restorecon -v /vendor/etc/mixer_paths.xml;
 /sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
+## Auto Cleaner
+$BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d;
+$BB chmod 0777 /data/adb/post-fs-data.d/atools.sh;
 ## Unmount /system /vendor
 umount_all;
 

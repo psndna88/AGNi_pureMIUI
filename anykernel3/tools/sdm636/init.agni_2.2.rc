@@ -16,9 +16,6 @@ on early-init
 
 on init
 	setenforce 1
-    write /dev/stune/foreground/schedtune.prefer_idle 1
-    write /dev/stune/top-app/schedtune.boost 5
-    write /dev/stune/top-app/schedtune.prefer_idle 1
     # Set Memory parameters
     write /sys/module/process_reclaim/parameters/enable_process_reclaim 1
     write /sys/module/process_reclaim/parameters/pressure_min 50
@@ -31,17 +28,12 @@ on init
     write /proc/sys/vm/page-cluster 0
     write /proc/sys/vm/min_free_kbytes 54688
     write /proc/sys/vm/oom_kill_allocating_task 1
-    # blkio init setting
-    write /dev/blkio/blkio.weight 1000
-    write /dev/blkio/background/blkio.weight 1000
-    write /dev/blkio/blkio.group_idle 0
-    write /dev/blkio/background/blkio.group_idle 0
     # AGNi Wifi Tweaks
 	write /proc/sys/net/ipv4/tcp_ecn 0
 	write /proc/sys/net/ipv4/tcp_notsent_lowat 16384
 	write /proc/sys/net/core/default_qdisc "fq_codel"
 	write /proc/sys/net/ipv4/tcp_congestion_control "veno"
-	write /proc/sys/net/ipv4/tcp_tw_reuse 1
+	write /proc/sys/net/ipv4/tcp_tw_reuse 0
 	write /proc/sys/net/ipv4/tcp_slow_start_after_idle 0
 	write /proc/sys/net/ipv4/tcp_mtu_probing 1
 	write /proc/sys/net/ipv4/tcp_sack 1
@@ -70,11 +62,30 @@ on boot
     write /dev/cpuset/system-background/cpus 0-3
     write /dev/cpuset/restricted/cpus 0-3
     mkdir /dev/cpuset/camera-daemon
-    write /dev/cpuset/camera-daemon/cpus 0-3
+    write /dev/cpuset/camera-daemon/cpus 0-7
     write /dev/cpuset/camera-daemon/mems 0
     chown system system /dev/cpuset/camera-daemon
     chown system system /dev/cpuset/camera-daemon/tasks
     chmod 0664 /dev/cpuset/camera-daemon/tasks
+	# Uclamp tuning
+	write /proc/sys/kernel/sched_util_clamp_min_rt_default 128
+	write /proc/sys/kernel/sched_util_clamp_min 250
+	write /dev/cpuset/top-app/uclamp.max "max"
+	write /dev/cpuset/top-app/uclamp.min 20
+	write /dev/cpuset/top-app/uclamp.boosted 1
+	write /dev/cpuset/top-app/uclamp.latency_sensitive 1
+	write /dev/cpuset/foreground/uclamp.max 50
+	write /dev/cpuset/foreground/uclamp.min 20
+	write /dev/cpuset/foreground/uclamp.boosted 0
+	write /dev/cpuset/foreground/uclamp.latency_sensitive 0
+	write /dev/cpuset/background/uclamp.max "max"
+	write /dev/cpuset/background/uclamp.min 20
+	write /dev/cpuset/background/uclamp.boosted 0
+	write /dev/cpuset/background/uclamp.latency_sensitive 0
+	write /dev/cpuset/system-background/uclamp.max 50
+	write /dev/cpuset/system-background/uclamp.min 10
+	write /dev/cpuset/system-background/uclamp.boosted 0
+	write /dev/cpuset/system-background/uclamp.latency_sensitive 0
 
 on post-fs
     # Set RLIMIT_MEMLOCK to 64MB
@@ -105,55 +116,6 @@ on property:sys.boot_completed=1
 	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 0	#MIUI
 	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 1	#AOSP
 	write /sys/kernel/sound_control/headphone_gain "2 2"	#SMOD
-	# Set the default IRQ affinity to the primary cluster.
-    # Configure LPM
-    write /sys/module/lpm_levels/system/pwr/cpu0/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/pwr/cpu1/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/pwr/cpu2/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/pwr/cpu3/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/cpu4/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/cpu5/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/cpu6/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/cpu7/ret/idle_enabled N
-    write /sys/module/lpm_levels/system/pwr/pwr-l2-dynret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/perf-l2-dynret/idle_enabled N
-    write /sys/module/lpm_levels/system/pwr/pwr-l2-ret/idle_enabled N
-    write /sys/module/lpm_levels/system/perf/perf-l2-ret/idle_enabled N
-    write /sys/module/lpm_levels/parameters/sleep_disabled N
-    # Setup post-boot cpusets
-    write /dev/cpuset/top-app/cpus 0-7
-    write /dev/cpuset/foreground/cpus 0-3,6-7
-    write /dev/cpuset/background/cpus 0-1
-    write /dev/cpuset/system-background/cpus 0-3
-    write /dev/cpuset/camera-daemon/cpus 0-7
-    write /dev/cpuset/restricted/cpus 0-3
-    # Disable thermal bcl hotplug to switch governor
-    # Enable bus-dcvs
-    write /sys/class/devfreq/soc:qcom,cpubw/governor "bw_hwmon"
-    write /sys/class/devfreq/soc:qcom,cpubw/polling_interval 50
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/mbps_zones "1525 3143 5859 7759 9887 10327 11863 13763"
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/sample_ms 4
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/io_percent 34
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/hist_memory 20
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/hyst_length 10
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/guard_band_mbps 0
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/up_scale 250
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/idle_mbps 1600
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/low_power_ceil_mbps 0
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/low_power_io_percent 34
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/low_power_delay 20
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/bw_step 50
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/decay_rate 100
-    write /sys/class/devfreq/soc:qcom,cpubw/bw_hwmon/down_thres 80
-    #Set mincpubw devfreq governor
-    write /sys/class/devfreq/soc:qcom,mincpubw/governor "cpufreq"
-    # Enable memlat governor
-    write /sys/class/devfreq/soc:qcom,memlat-cpu0/governor "mem_latency"
-    write /sys/class/devfreq/soc:qcom,memlat-cpu0/polling_interval 10
-    write /sys/class/devfreq/soc:qcom,memlat-cpu0/mem_latency/ratio_ceil 400
-    write /sys/class/devfreq/soc:qcom,memlat-cpu4/governor "mem_latency"
-    write /sys/class/devfreq/soc:qcom,memlat-cpu4/polling_interval 10
-    write /sys/class/devfreq/soc:qcom,memlat-cpu4/mem_latency/ratio_ceil 400
     # Setup final blkio - value for group_idle is us
     write /dev/blkio/blkio.weight 1000
     write /dev/blkio/background/blkio.weight 10
@@ -164,23 +126,4 @@ on property:sys.boot_completed=1
     write /sys/block/dm-0/queue/discard_max_bytes 134217728
     # Set network hostname
     setprop net.hostname SDM636
-	# Uclamp tuning
-	write /proc/sys/kernel/sched_util_clamp_min_rt_default 96
-	write /proc/sys/kernel/sched_util_clamp_min 128
-	write /dev/cpuset/top-app/uclamp.max "max"
-	write /dev/cpuset/top-app/uclamp.min 20
-	write /dev/cpuset/top-app/uclamp.boosted 1
-	write /dev/cpuset/top-app/uclamp.latency_sensitive 1
-	write /dev/cpuset/foreground/uclamp.max 50
-	write /dev/cpuset/foreground/uclamp.min 20
-	write /dev/cpuset/foreground/uclamp.boosted 0
-	write /dev/cpuset/foreground/uclamp.latency_sensitive 0
-	write /dev/cpuset/background/uclamp.max "max"
-	write /dev/cpuset/background/uclamp.min 20
-	write /dev/cpuset/background/uclamp.boosted 0
-	write /dev/cpuset/background/uclamp.latency_sensitive 0
-	write /dev/cpuset/system-background/uclamp.max 50
-	write /dev/cpuset/system-background/uclamp.min 10
-	write /dev/cpuset/system-background/uclamp.boosted 0
-	write /dev/cpuset/system-background/uclamp.latency_sensitive 0
 
