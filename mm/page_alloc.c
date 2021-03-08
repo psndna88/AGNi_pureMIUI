@@ -63,6 +63,7 @@
 #include <linux/sched/rt.h>
 #include <linux/page_owner.h>
 #include <linux/kthread.h>
+#include <linux/devfreq_boost.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -3181,6 +3182,9 @@ retry:
 		}
 		wake_all_kswapds(order, ac);
 	}
+
+	/* Boost DDR bus when memory is low so allocation latency doesn't get too bad */
+	devfreq_boost_kick(DEVFREQ_MSM_CPUBW);
 
 	/*
 	 * OK, we're below the kswapd watermark and have kicked background
