@@ -35,7 +35,7 @@
 
 	chosen {
 		stdout-path = "serial0";
-		bootargs = "rcupdate.rcu_expedited=1 quiet noirqdebug";
+		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-3 quiet noirqdebug";
 	};
 
 	psci {
