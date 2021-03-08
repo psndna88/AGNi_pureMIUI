@@ -52,6 +52,7 @@
 
 		qcom,min-access-length = <32>;
 		qcom,ubwc-mode = <3>;
+		qcom,gpu-quirk-two-pass-use-wfi;
 
 		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
 		nvmem-cell-names = "speed_bin", "gaming_bin";
