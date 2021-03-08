@@ -601,7 +601,7 @@ patch_fstab() {
 
 # patch_cmdline <cmdline entry name> <replacement string>
 patch_cmdline() {
-  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled selselection;
+  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled;
   if [ -f "$split_img/cmdline.txt" ]; then
     cmdfile=$split_img/cmdline.txt;
   else
@@ -666,11 +666,6 @@ patch_cmdline() {
   userled="`cat $home/LED_MODE`";
   if [ "$userled" == "1" ]; then
 	sed -i 's/ledmode=0/ledmode=1/' $cmdfile;
-  fi;
-  # Selinux mode
-  selselection="`cat $home/SEL_MODE`";
-  if [ "$selselection" == "1" ]; then
-	sed -i 's/selmode=0/selmode=1/' $cmdfile;
   fi;
 
   if [ -f "$home/cmdtmp" ]; then

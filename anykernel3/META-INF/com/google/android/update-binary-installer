@@ -514,12 +514,6 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/led.prop`" ]; then
 else
 	$BB echo "1" > $AKHOME/LED_MODE;
 fi;
-# Selinux mode
-if [ "`$BB grep selected.0=1 /tmp/aroma-data/sel.prop`" ]; then
-	$BB echo "0" > $AKHOME/SEL_MODE;
-else
-	$BB echo "1" > $AKHOME/SEL_MODE;
-fi;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";
@@ -921,8 +915,8 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/sound.prop`" ]; then
 	if [ ! -f /vendor/etc/mixer_paths.xml.agnibak ]; then
 		$BB cp -f /vendor/etc/mixer_paths.xml /vendor/etc/mixer_paths.xml.agnibak;
 	fi;
-	$BB sed -i '/HPHL Volume/c\    <ctl name="HPHL Volume" value="18" />' /vendor/etc/mixer_paths.xml;
-	$BB sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="18" />' /vendor/etc/mixer_paths.xml;
+	$BB sed -i '/HPHL Volume/c\    <ctl name="HPHL Volume" value="15" />' /vendor/etc/mixer_paths.xml;
+	$BB sed -i '/HPHR Volume/c\    <ctl name="HPHR Volume" value="15" />' /vendor/etc/mixer_paths.xml;
 else
 	if [ -f /vendor/etc/mixer_paths.xml.agnibak ]; then
 		$BB mv -f /vendor/etc/mixer_paths.xml.agnibak /vendor/etc/mixer_paths.xml;
@@ -931,6 +925,19 @@ else
 fi;
 /sbin/restorecon -v /vendor/etc/mixer_paths.xml;
 /sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
+# A11 Livedisplay HACK
+if [ ! -f /vendor/etc/vintf/manifest.xml.bak ]; then
+	if [ "`$BB grep IAdaptiveBacklight /vendor/etc/vintf/manifest.xml`" ]; then
+		$BB cp -f /vendor/etc/vintf/manifest.xml /vendor/etc/vintf/manifest.xml.bak;
+	fi;
+fi;
+$BB sed -i '/2.0::IAdaptiveBacklight/d' /vendor/etc/vintf/manifest.xml;
+$BB echo "`$BB awk '/IAdaptiveBacklight/{for(x=NR-1;x<=NR+2;x++)d[x];}{a[NR]=$0}END{for(i=1;i<=NR;i++)if(!(i in d))print a[i]}' /vendor/etc/vintf/manifest.xml`" > /vendor/etc/vintf/manifest.xml;
+$BB chmod 0644 /vendor/etc/vintf/manifest.xml;
+/sbin/restorecon -v /vendor/etc/vintf/manifest.xml;
+## Auto Cleaner
+$BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d;
+$BB chmod 0777 /data/adb/post-fs-data.d/atools.sh;
 ## Unmount /system /vendor
 umount_all;
 
