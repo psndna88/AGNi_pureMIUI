@@ -954,8 +954,8 @@ static int dpp_process_auth_response(struct sigma_dut *dut,
 
 		sigma_dut_print(dut, DUT_MSG_DEBUG, "DPP auth result: %s", buf);
 	} else if (strstr(buf, "DPP-AUTH-INIT-FAILED")) {
-		send_resp(dut, conn, SIGMA_ERROR,
-			  "errorCode,Peer did not reply to DPP Authentication Request");
+		send_resp(dut, conn, SIGMA_COMPLETE,
+			  "BootstrapResult,OK,AuthResult,Timeout");
 		return -1;
 	}
 
