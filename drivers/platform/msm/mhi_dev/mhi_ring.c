@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -199,7 +199,7 @@ int mhi_dev_process_ring_element(struct mhi_dev_ring *ring, size_t offset)
 						el->tre.len, offset);
 
 	if (ring->ring_cb)
-		ring->ring_cb(ring->mhi_dev, el, (void *)ring);
+		return ring->ring_cb(ring->mhi_dev, el, (void *)ring);
 	else
 		mhi_log(MHI_MSG_ERROR, "No callback registered for ring %d\n",
 				ring->id);
@@ -525,7 +525,7 @@ void mhi_ring_init(struct mhi_dev_ring *ring, enum mhi_dev_ring_type type,
 EXPORT_SYMBOL(mhi_ring_init);
 
 void mhi_ring_set_cb(struct mhi_dev_ring *ring,
-			void (*ring_cb)(struct mhi_dev *dev,
+			int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el, void *ctx))
 {
 	if (WARN_ON(!ring || !ring_cb))
