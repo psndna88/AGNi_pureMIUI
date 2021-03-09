@@ -312,6 +312,9 @@ static int wcn_config_ap_fils_dscv(struct sigma_dut *dut, const char *ifname)
 #ifdef NL80211_SUPPORT
 	uint8_t enable_fils_dscv = dut->ap_filsdscv == VALUE_ENABLED;
 
+	if (dut->ap_filsdscv == VALUE_NOT_SET)
+		return 0;
+
 	return wcn_wifi_test_config_set_u8(
 		dut, ifname,
 		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FILS_DISCOVERY_FRAMES_TX,
@@ -319,6 +322,8 @@ static int wcn_config_ap_fils_dscv(struct sigma_dut *dut, const char *ifname)
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"FILS Discovery frames configuration can't be set without NL80211_SUPPORT defined");
+	if (dut->ap_filsdscv == VALUE_NOT_SET)
+		return 0;
 	return -1;
 #endif /* NL80211_SUPPORT */
 }
@@ -9588,7 +9593,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_broadcast_ssid = VALUE_ENABLED;
 		dut->ap_fils_dscv_int = 20;
 		dut->ap_filsdscv = dut->dev_role == DEVROLE_STA_CFON ?
-			VALUE_DISABLED : VALUE_ENABLED;
+			VALUE_NOT_SET : VALUE_ENABLED;
 		dut->ap_filshlp = VALUE_DISABLED;
 		dut->ap_rnr = VALUE_DISABLED;
 		dut->ap_nairealm[0] = '\0';
