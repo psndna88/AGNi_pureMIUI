@@ -223,7 +223,11 @@ void mhi_dev_write_to_host_ipa(struct mhi_dev *mhi, struct mhi_addr *transfer,
 			cb_func = ereq->rd_offset_cb;
 		} else if (ereq->event_type == SEND_MSI) {
 			cb_func = ereq->msi_cb;
+		} else {
+			pr_err("Invalid event type : %d\n", ereq->event_type);
+			return;
 		}
+
 		rc = ipa_dma_async_memcpy(host_addr_pa, (uint64_t)dma,
 				(int)transfer->size,
 				cb_func, ereq);
