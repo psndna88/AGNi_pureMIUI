@@ -135,7 +135,7 @@ memory allocation over a PCIe bridge
 				2 (override scm call as though it returned false)
 - qcom,ipa-gpi-event-rp-ddr: Boolean context flag to control whether GPI and GCI event
                                 rings read pointer should be read from the ddr.
-- qcom,max_num_smmu_cb: number of active smmu context banks for target.
+- qcom,max_num_smmu_cb: 	Total number of context banks used for the target
 
 IPA pipe sub nodes (A2 static pipes configurations):
 
