@@ -1492,6 +1492,7 @@
 #include "direwolf-regulators.dtsi"
 #include "direwolf-pm.dtsi"
 #include "direwolf-gdsc.dtsi"
+#include "direwolf-ion.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
