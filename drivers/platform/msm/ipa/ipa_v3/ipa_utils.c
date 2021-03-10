@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <net/ip.h>
@@ -3994,14 +3994,14 @@ static struct ipa3_mem_partition ipa_4_11_mem_part = {
         .apps_hdr_proc_ctx_size         = 0x200,
         .apps_hdr_proc_ctx_size_ddr     = 0x0,
         .nat_tbl_ofst                   = 0x17A0,
-        .nat_tbl_size                   = 0x800,
-        .pdn_config_ofst                = 0x24A8,
+        .nat_tbl_size                   = 0x500,
+        .pdn_config_ofst                = 0x1CA8,
         .pdn_config_size                = 0x50,
-        .stats_quota_q6_ofst            = 0x2500,
+        .stats_quota_q6_ofst            = 0x1D00,
         .stats_quota_q6_size            = 0x30,
-        .stats_quota_ap_ofst            = 0x2530,
+        .stats_quota_ap_ofst            = 0x1D30,
         .stats_quota_ap_size            = 0x48,
-        .stats_tethering_ofst           = 0x2578,
+        .stats_tethering_ofst           = 0x1D78,
         .stats_tethering_size           = 0x238,
         .stats_flt_v4_ofst              = 0,
         .stats_flt_v4_size              = 0,
@@ -4011,8 +4011,8 @@ static struct ipa3_mem_partition ipa_4_11_mem_part = {
         .stats_rt_v4_size               = 0,
         .stats_rt_v6_ofst               = 0,
         .stats_rt_v6_size               = 0,
-        .stats_fnr_ofst                 = 0x27B0,
-        .stats_fnr_size                 = 0x0,
+        .stats_fnr_ofst                 = 0x1FB0,
+        .stats_fnr_size                 = 0x800,
         .stats_drop_ofst                = 0x27B0,
         .stats_drop_size                = 0x20,
         .modem_comp_decomp_ofst         = 0x0,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  */
 
 /*
@@ -3290,8 +3290,9 @@ static int rmnet_ipa3_set_data_quota_wifi(struct wan_ioctl_set_data_quota *data)
 	IPAWANDBG("iface name %s, quota %lu\n",
 		  data->interface_name, (unsigned long) data->quota_mbytes);
 
-	if (ipa3_ctx_get_type(IPA_HW_TYPE) >= IPA_HW_v4_5 &&
-		ipa3_ctx_get_type(IPA_HW_TYPE) != IPA_HW_v4_11) {
+	if ((ipa3_ctx_get_type(IPA_HW_TYPE) >= IPA_HW_v4_5 &&
+		ipa3_ctx_get_type(IPA_HW_TYPE) != IPA_HW_v4_11) ||
+		ipa3_ctx->is_bw_monitor_supported) {
 		IPADBG("use ipa-uc for quota\n");
 		rc = ipa3_uc_quota_monitor(data->set_quota);
 	} else {
