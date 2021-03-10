@@ -4426,10 +4426,7 @@ void dp_tx_process_htt_completion(struct dp_tx_desc_s *tx_desc, uint8_t *status,
 	 * continue to next descriptor
 	 */
 	if ((tx_desc->vdev_id == DP_INVALID_VDEV_ID) && !tx_desc->flags) {
-		QDF_TRACE(QDF_MODULE_ID_DP,
-			  QDF_TRACE_LEVEL_INFO,
-			  "Descriptor freed in vdev_detach %d",
-			  tx_desc->id);
+		dp_info_rl("Descriptor freed in vdev_detach %d", tx_desc->id);
 		return;
 	}
 
@@ -4437,10 +4434,7 @@ void dp_tx_process_htt_completion(struct dp_tx_desc_s *tx_desc, uint8_t *status,
 	soc = pdev->soc;
 
 	if (qdf_unlikely(tx_desc->pdev->is_pdev_down)) {
-		QDF_TRACE(QDF_MODULE_ID_DP,
-			  QDF_TRACE_LEVEL_INFO,
-			  "pdev in down state %d",
-			  tx_desc->id);
+		dp_info_rl("pdev in down state %d", tx_desc->id);
 		dp_tx_comp_free_buf(soc, tx_desc);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 		return;
@@ -4698,18 +4692,13 @@ more_data:
 			if (qdf_unlikely
 				((tx_desc->vdev_id == DP_INVALID_VDEV_ID) &&
 				 !tx_desc->flags)) {
-				QDF_TRACE(QDF_MODULE_ID_DP,
-					  QDF_TRACE_LEVEL_INFO,
-					  "Descriptor freed in vdev_detach %d",
-					  tx_desc_id);
+				dp_info_rl("Descriptor freed in vdev_detach %d",
+					   tx_desc_id);
 				continue;
 			}
 
 			if (qdf_unlikely(tx_desc->pdev->is_pdev_down)) {
-				QDF_TRACE(QDF_MODULE_ID_DP,
-					  QDF_TRACE_LEVEL_INFO,
-					  "pdev in down state %d",
-					  tx_desc_id);
+				dp_info_rl("pdev in down state %d", tx_desc_id);
 
 				dp_tx_comp_free_buf(soc, tx_desc);
 				dp_tx_desc_release(tx_desc, tx_desc->pool_id);
