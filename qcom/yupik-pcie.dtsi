@@ -226,6 +226,8 @@
 				0x0800 0x00 0x0
 				0x0844 0x03 0x0>;
 
+		status = "disabled";
+
 		pcie0_rp: pcie0_rp {
 			reg = <0 0 0 0 0>;
 		};
@@ -268,5 +270,8 @@
 			<GIC_SPI 797 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 798 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 799 IRQ_TYPE_EDGE_RISING>;
+
+		status = "disabled";
+
 	};
 };
