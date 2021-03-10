@@ -1548,11 +1548,13 @@ int sps_bam_pipe_transfer_one(struct sps_bam *dev,
 					       next_write);
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	if (dev->ipc_loglevel == 0)
 		SPS_DBG(dev,
 			"sps:%s: BAM phy addr:%pa; pipe %d; write pointer to tell HW: 0x%x; write pointer read from HW: 0x%x\n",
 			__func__, BAM_ID(dev), pipe_index, next_write,
 			bam_pipe_get_desc_write_offset(&dev->base, pipe_index));
+#endif
 
 	return 0;
 }
@@ -1848,12 +1850,14 @@ static void pipe_handler_eot(struct sps_bam *dev, struct sps_pipe *pipe)
 	/* Get offset of last descriptor completed by the pipe */
 	end_offset = bam_pipe_get_desc_read_offset(&dev->base, pipe_index);
 
+#ifdef CONFIG_IPC_LOGGING
 	if (dev->ipc_loglevel == 0)
 		SPS_DBG(dev,
 			"sps:%s; pipe index:%d; read pointer:0x%x; write pointer:0x%x; sys.acked_offset:0x%x.\n",
 			__func__, pipe->pipe_index, end_offset,
 			bam_pipe_get_desc_write_offset(&dev->base, pipe_index),
 			pipe->sys.acked_offset);
+#endif
 
 	if (producer && pipe->late_eot) {
 		struct sps_iovec *desc_end;

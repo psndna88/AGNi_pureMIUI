@@ -28,20 +28,7 @@
 
 #define RPM_MASTERS_BUF_LEN 400
 
-#define SNPRINTF(buf, size, format, ...) \
-	do { \
-		if (size > 0) { \
-			int ret; \
-			ret = snprintf(buf, size, format, ## __VA_ARGS__); \
-			if (ret > size) { \
-				buf += size; \
-				size = 0; \
-			} else { \
-				buf += ret; \
-				size -= ret; \
-			} \
-		} \
-	} while (0)
+#define SNPRINTF(buf, size, format, ...)
 
 #define GET_MASTER_NAME(a, prvdata) \
 	((a >= prvdata->num_masters) ? "Invalid Master Name" : \

@@ -65,7 +65,7 @@ static void irq_affinity_change_notifier(struct irq_affinity_notify *notify,
 						const cpumask_t *new_cpu_mask);
 static void irq_affinity_release(struct kref *ref);
 
-static int msm_event_debug_mask;
+static int msm_event_debug_mask = 0;
 module_param_named(debug_mask, msm_event_debug_mask, int, 0664);
 
 enum {

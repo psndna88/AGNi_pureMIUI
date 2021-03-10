@@ -26,39 +26,17 @@
  * NOTE: Make sure to have dwc as local variable in function before using
  * below macros.
  */
-#define dbg_event(ep_num, name, status) \
-	dwc3_dbg_print(dwc, ep_num, name, status, "")
-
-#define dbg_print(ep_num, name, status, extra) \
-	dwc3_dbg_print(dwc, ep_num, name, status, extra)
-
-#define dbg_print_reg(name, reg) \
-	dwc3_dbg_print_reg(dwc, name, reg)
-
-#define dbg_done(ep_num, count, status) \
-	dwc3_dbg_done(dwc, ep_num, count, status)
-
-#define dbg_queue(ep_num, req, status) \
-	dwc3_dbg_queue(dwc, ep_num, req, status)
-
-#define dbg_setup(ep_num, req) \
-	dwc3_dbg_setup(dwc, ep_num, req)
-
-#define dbg_ep_queue(ep_num, req) \
-	dwc3_dbg_dma_queue(dwc, ep_num, req)
-
-#define dbg_ep_dequeue(ep_num, req) \
-	dwc3_dbg_dma_dequeue(dwc, ep_num, req)
-
-#define dbg_ep_unmap(ep_num, req) \
-	dwc3_dbg_dma_unmap(dwc, ep_num, req)
-
-#define dbg_ep_map(ep_num, req) \
-	dwc3_dbg_dma_map(dwc, ep_num, req)
-
-#define dbg_log_string(fmt, ...) \
-	ipc_log_string(dwc->dwc_ipc_log_ctxt,\
-			"%s: " fmt, __func__, ##__VA_ARGS__)
+#define dbg_event(ep_num, name, status)
+#define dbg_print(ep_num, name, status, extra)
+#define dbg_print_reg(name, reg)
+#define dbg_done(ep_num, count, status)
+#define dbg_queue(ep_num, req, status)
+#define dbg_setup(ep_num, req)
+#define dbg_ep_queue(ep_num, req)
+#define dbg_ep_dequeue(ep_num, req)
+#define dbg_ep_unmap(ep_num, req)
+#define dbg_ep_map(ep_num, req)
+#define dbg_log_string(fmt, ...)
 /**
  * dwc3_gadget_ep_cmd_string - returns endpoint command string
  * @cmd: command code
