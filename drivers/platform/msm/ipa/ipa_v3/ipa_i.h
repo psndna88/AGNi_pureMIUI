@@ -102,47 +102,10 @@
 #define IPA_LOW_16_BIT_MASK (0xFFFF)
 #define IPA4_5_GSI_RING_SIZE_ALIGN (16 * PAGE_SIZE)
 
-#define IPADBG(fmt, args...) \
-	do { \
-		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
-
-#define IPADBG_LOW(fmt, args...) \
-	do { \
-		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
-
-#define IPAERR(fmt, args...) \
-	do { \
-		pr_err(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
-
-#define IPAERR_RL(fmt, args...) \
-	do { \
-		pr_err_ratelimited_ipa(DRV_NAME " %s:%d " fmt, __func__,\
-		__LINE__, ## args);\
-		if (ipa3_ctx) { \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
-				DRV_NAME " %s:%d " fmt, ## args); \
-		} \
-	} while (0)
+#define IPADBG(fmt, args...)
+#define IPADBG_LOW(fmt, args...)
+#define IPAERR(fmt, args...)
+#define IPAERR_RL(fmt, args...)
 
 /* round addresses for closes page per SMMU requirements */
 #define IPA_SMMU_ROUND_TO_PAGE(iova, pa, size, iova_p, pa_p, size_p) \
