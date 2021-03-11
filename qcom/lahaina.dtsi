@@ -5258,6 +5258,9 @@
 		qcom,spcom-soc2sp-rmb-sp-ssr-bit = <0>;
 		qcom,boot-enabled;
 		status = "ok";
+
+		vreg_sp-supply = <&spss_vreg>;
+		gpio_sp-supply = <&spss_gpio_vreg>;
 	};
 
 	spss_utils: qcom,spss_utils {
