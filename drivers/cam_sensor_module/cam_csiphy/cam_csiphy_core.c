@@ -942,6 +942,15 @@ void cam_csiphy_shutdown(struct csiphy_device *csiphy_dev)
 			cam_csiphy_reset_phyconfig_param(csiphy_dev, i);
 		}
 
+		if (csiphy_dev->ctrl_reg->csiphy_reg
+			.prgm_cmn_reg_across_csiphy) {
+			mutex_lock(&active_csiphy_cnt_mutex);
+			active_csiphy_hw_cnt--;
+			mutex_unlock(&active_csiphy_cnt_mutex);
+
+			cam_csiphy_prgm_cmn_data(csiphy_dev, true);
+		}
+
 		cam_csiphy_reset(csiphy_dev);
 		cam_soc_util_disable_platform_resource(soc_info, true, true);
 
