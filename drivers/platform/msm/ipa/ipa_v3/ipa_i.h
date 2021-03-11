@@ -1704,6 +1704,7 @@ struct ipa3_smp2p_info {
 	u32 in_base_id;
 	bool ipa_clk_on;
 	bool res_sent;
+	bool disabled;
 	unsigned int smem_bit;
 	struct qcom_smem_state *smem_state;
 };
@@ -2151,6 +2152,7 @@ struct ipa3_context {
 	bool ipa_endp_delay_wa_v2;
 	bool is_eth_bridging_supported;
 	bool is_bw_monitor_supported;
+	bool modem_load_ipa_fw;
 };
 
 struct ipa3_plat_drv_res {
@@ -2222,6 +2224,7 @@ struct ipa3_plat_drv_res {
 	bool ipa_endp_delay_wa_v2;
 	bool is_eth_bridging_supported;
 	bool is_bw_monitor_supported;
+	bool modem_load_ipa_fw;
 };
 
 /**

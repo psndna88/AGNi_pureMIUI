@@ -7577,6 +7577,8 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 		}
 	}
 
+	ipa3_ctx->modem_load_ipa_fw = resource_p->modem_load_ipa_fw;
+
 	cdev = &ipa3_ctx->cdev.cdev;
 	cdev_init(cdev, &ipa3_drv_fops);
 	cdev->owner = THIS_MODULE;
@@ -7949,6 +7951,7 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->ipa_endp_delay_wa_v2 = false;
 	ipa_drv_res->is_eth_bridging_supported = false;
 	ipa_drv_res->is_bw_monitor_supported = false;
+	ipa_drv_res->modem_load_ipa_fw = false;
 
 	/* Get IPA HW Version */
 	result = of_property_read_u32(pdev->dev.of_node, "qcom,ipa-hw-ver",
@@ -8236,6 +8239,13 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 		IPADBG(": gsi wdi db polling = %s\n",
 				ipa_drv_res->gsi_wdi_db_polling
 				? "True" : "False");
+	ipa_drv_res->modem_load_ipa_fw =
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,modem-load-ipa-fw");
+	IPADBG(": Load IPA_FW by modem = %s\n",
+		ipa_drv_res->modem_load_ipa_fw
+		? "True" : "False");
+
 	result = of_property_read_string(pdev->dev.of_node,
 			"qcom,use-gsi-ipa-fw", &ipa_drv_res->gsi_fw_file_name);
 	if (!result)
@@ -8964,6 +8974,27 @@ static int ipa3_attach_to_smmu(void)
 	return 0;
 }
 
+static irqreturn_t ipa_smp2p_modem_fw_load_ready_isr(int irq, void *ctxt)
+{
+	int result;
+
+	if (!ipa3_ctx->smp2p_info.disabled) {
+		result = ipa3_attach_to_smmu();
+		if (result) {
+			IPAERR("IPA attach to smmu failed %d\n", result);
+			goto bail;
+		}
+		result = ipa3_post_init(&ipa3_res, ipa3_ctx->cdev.dev);
+		if (result) {
+			IPAERR("IPA post init failed %d\n", result);
+			goto bail;
+		}
+		ipa3_ctx->smp2p_info.disabled = true;
+	}
+
+bail:
+	return IRQ_HANDLED;
+}
 static irqreturn_t ipa3_smp2p_modem_clk_query_isr(int irq, void *ctxt)
 {
 	ipa3_freeze_clock_vote_and_notify_modem();
@@ -9015,6 +9046,23 @@ static int ipa3_smp2p_probe(struct device *dev)
 		if (res) {
 			IPAERR("fail to register smp2p irq=%d\n", irq);
 			return -ENODEV;
+		}
+
+		if (ipa3_ctx->modem_load_ipa_fw) {
+			res = irq = of_irq_get_byname(node, "ipa-fw-load-ready");
+			if (res < 0) {
+				IPADBG("of_irq_get_byname returned %d\n", irq);
+				return res;
+			}
+
+			res = devm_request_threaded_irq(dev, irq, NULL,
+				(irq_handler_t)ipa_smp2p_modem_fw_load_ready_isr,
+				IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+				"ipa_fw_load_ready", dev);
+			if (res) {
+				IPAERR("fail to register smp2p irq=%d\n", irq);
+				return -ENODEV;
+			}
 		}
 	}
 	return 0;
