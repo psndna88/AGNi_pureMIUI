@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -602,7 +602,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 	struct cam_hw_flush_args flush_args;
 	struct list_head temp_list;
 	struct cam_ctx_request *req;
-	uint32_t i;
+	uint32_t i, j;
 	int rc = 0;
 	bool free_req;
 
@@ -618,15 +618,31 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 	INIT_LIST_HEAD(&temp_list);
 	spin_lock(&ctx->lock);
 	list_splice_init(&ctx->pending_req_list, &temp_list);
+	flush_args.num_req_pending = 0;
+	list_for_each_entry(req, &temp_list, list) {
+		flush_args.num_req_pending++;
+	}
 	spin_unlock(&ctx->lock);
+
+	flush_args.flush_req_pending = kcalloc(flush_args.num_req_pending,
+		sizeof(void *), GFP_KERNEL);
+	if (!flush_args.flush_req_pending) {
+		rc = -ENOMEM;
+		CAM_ERR(CAM_CTXT,
+			"[%s][%d] : Failed to malloc memory for flush_req_pending",
+			ctx->dev_name, ctx->ctx_id);
+		mutex_unlock(&ctx->sync_mutex);
+		goto err;
+	}
 
 	if (cam_debug_ctx_req_list & ctx->dev_id)
 		CAM_INFO(CAM_CTXT,
 			"[%s][%d] : Moving all pending requests from pending_list to temp_list",
 			ctx->dev_name, ctx->ctx_id);
 
-	flush_args.num_req_pending = 0;
 	flush_args.last_flush_req = ctx->last_flush_req;
+
+	j = 0;
 	while (true) {
 		spin_lock(&ctx->lock);
 		if (list_empty(&temp_list)) {
@@ -641,7 +657,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 		spin_unlock(&ctx->lock);
 		req->flushed = 1;
 
-		flush_args.flush_req_pending[flush_args.num_req_pending++] =
+		flush_args.flush_req_pending[j++] =
 			req->req_priv;
 
 		free_req = false;
@@ -692,11 +708,31 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 	}
 	mutex_unlock(&ctx->sync_mutex);
 
+	kfree(flush_args.flush_req_pending);
+	flush_args.flush_req_pending = NULL;
+
 	if (ctx->hw_mgr_intf->hw_flush) {
-		flush_args.num_req_active = 0;
 		spin_lock(&ctx->lock);
+		flush_args.num_req_active = 0;
 		list_for_each_entry(req, &ctx->active_req_list, list) {
-			flush_args.flush_req_active[flush_args.num_req_active++]
+			flush_args.num_req_active++;
+		}
+		spin_unlock(&ctx->lock);
+
+		flush_args.flush_req_active = kcalloc(flush_args.num_req_active,
+			sizeof(void *), GFP_KERNEL);
+		if (!flush_args.flush_req_active) {
+			rc = -ENOMEM;
+			CAM_ERR(CAM_CTXT,
+				"[%s][%d] : Failed to malloc memory for flush_req_active",
+				ctx->dev_name, ctx->ctx_id);
+			goto err;
+		}
+
+		spin_lock(&ctx->lock);
+		j = 0;
+		list_for_each_entry(req, &ctx->active_req_list, list) {
+			flush_args.flush_req_active[j++]
 				= req->req_priv;
 		}
 		spin_unlock(&ctx->lock);
@@ -708,6 +744,9 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 				ctx->hw_mgr_intf->hw_mgr_priv, &flush_args);
 		}
 	}
+
+	kfree(flush_args.flush_req_active);
+	flush_args.flush_req_active = NULL;
 
 	INIT_LIST_HEAD(&temp_list);
 	spin_lock(&ctx->lock);
@@ -762,7 +801,8 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 
 	CAM_DBG(CAM_CTXT, "[%s] X: NRT flush ctx", ctx->dev_name);
 
-	return 0;
+err:
+	return rc;
 }
 
 int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
@@ -785,6 +825,25 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 	list_for_each_entry(req, &ctx->pending_req_list, list) {
 		if (req->request_id != cmd->req_id)
 			continue;
+		flush_args.num_req_pending++;
+	}
+	spin_unlock(&ctx->lock);
+
+	flush_args.flush_req_pending = kcalloc(flush_args.num_req_pending,
+		sizeof(void *), GFP_KERNEL);
+	if (!flush_args.flush_req_pending) {
+		rc = -ENOMEM;
+		CAM_ERR(CAM_CTXT,
+			"[%s][%d] : Failed to malloc memory for flush_req_pending",
+			ctx->dev_name, ctx->ctx_id);
+		goto err;
+	}
+
+	spin_lock(&ctx->lock);
+	i = 0;
+	list_for_each_entry(req, &ctx->pending_req_list, list) {
+		if (req->request_id != cmd->req_id)
+			continue;
 
 		if (cam_debug_ctx_req_list & ctx->dev_id)
 			CAM_INFO(CAM_CTXT,
@@ -794,12 +853,11 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 		list_del_init(&req->list);
 		req->flushed = 1;
 
-		flush_args.flush_req_pending[flush_args.num_req_pending++] =
+		flush_args.flush_req_pending[i++] =
 			req->req_priv;
 		break;
 	}
 	spin_unlock(&ctx->lock);
-	mutex_unlock(&ctx->sync_mutex);
 
 	if (ctx->hw_mgr_intf->hw_flush) {
 		if (!flush_args.num_req_pending) {
@@ -807,11 +865,29 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 			list_for_each_entry(req, &ctx->active_req_list, list) {
 				if (req->request_id != cmd->req_id)
 					continue;
+				flush_args.num_req_active++;
+			}
+			spin_unlock(&ctx->lock);
+
+			flush_args.flush_req_active = kcalloc(flush_args.num_req_active,
+				sizeof(void *), GFP_KERNEL);
+			if (!flush_args.flush_req_pending) {
+				rc = -ENOMEM;
+				CAM_ERR(CAM_CTXT,
+					"[%s][%d] : Failed to malloc memory for flush_req_pending",
+					ctx->dev_name, ctx->ctx_id);
+				goto err;
+			}
+
+			spin_lock(&ctx->lock);
+			i = 0;
+			list_for_each_entry(req, &ctx->active_req_list, list) {
+				if (req->request_id != cmd->req_id)
+					continue;
 
 				list_del_init(&req->list);
 
-				flush_args.flush_req_active[
-					flush_args.num_req_active++] =
+				flush_args.flush_req_active[i++] =
 					req->req_priv;
 				break;
 			}
@@ -823,6 +899,10 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 			flush_args.flush_type = CAM_FLUSH_TYPE_REQ;
 			ctx->hw_mgr_intf->hw_flush(
 				ctx->hw_mgr_intf->hw_mgr_priv, &flush_args);
+			kfree(flush_args.flush_req_pending);
+			flush_args.flush_req_pending = NULL;
+			kfree(flush_args.flush_req_active);
+			flush_args.flush_req_active = NULL;
 		}
 	}
 
@@ -878,7 +958,9 @@ int32_t cam_context_flush_req_to_hw(struct cam_context *ctx,
 	}
 	CAM_DBG(CAM_CTXT, "[%s] X: NRT flush req", ctx->dev_name);
 
-	return 0;
+err:
+	mutex_unlock(&ctx->sync_mutex);
+	return rc;
 }
 
 int32_t cam_context_flush_dev_to_hw(struct cam_context *ctx,
