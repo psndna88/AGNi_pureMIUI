@@ -3069,6 +3069,17 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	struct cam_isp_context          *ctx_isp = NULL;
 	struct cam_hw_config_args        cfg = {0};
 
+	ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
+
+	if (apply->re_apply)
+		if (apply->request_id <= ctx_isp->last_applied_req_id) {
+			CAM_INFO_RATE_LIMIT(CAM_ISP,
+				"ctx_id:%d Trying to reapply the same request %llu again",
+				ctx->ctx_id,
+				apply->request_id);
+			return 0;
+		}
+
 	if (list_empty(&ctx->pending_req_list)) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP,
 			"ctx_id:%d No available request for Apply id %lld",
@@ -3084,8 +3095,6 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	 * The maximum number of request allowed to be outstanding is 2.
 	 *
 	 */
-	ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
-
 	if (atomic_read(&ctx_isp->process_bubble)) {
 		CAM_INFO_RATE_LIMIT(CAM_ISP,
 			"ctx_id:%d Processing bubble cannot apply Request Id %llu",
@@ -3094,15 +3103,6 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 		rc = -EAGAIN;
 		goto end;
 	}
-
-	if (apply->re_apply)
-		if (apply->request_id <= ctx_isp->last_applied_req_id) {
-			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"ctx_id:%d Trying to reapply the same request %llu again",
-				ctx->ctx_id,
-				apply->request_id);
-			return 0;
-		}
 
 	spin_lock_bh(&ctx->lock);
 	req = list_first_entry(&ctx->pending_req_list, struct cam_ctx_request,
