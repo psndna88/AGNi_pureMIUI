@@ -223,6 +223,10 @@ struct sde_dbg_evtlog *sde_evtlog_init(void)
 	if (!evtlog)
 		return ERR_PTR(-ENOMEM);
 
+	if (sde_mini_dump_add_region("evt_log", sizeof(*evtlog),
+			evtlog) < 0)
+		pr_err("minidump add region failed for evtlog\n");
+
 	spin_lock_init(&evtlog->spin_lock);
 	evtlog->enable = SDE_EVTLOG_DEFAULT_ENABLE;
 

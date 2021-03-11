@@ -300,6 +300,18 @@ struct sde_dbg_evtlog *sde_dbg_base_evtlog;
 /* sde_dbg_base_reglog - global pointer to main sde reg log for macro use */
 struct sde_dbg_reglog *sde_dbg_base_reglog;
 
+u32 sde_mini_dump_add_region(const char *name, u32 size, void *virt_addr)
+{
+	struct md_region md_entry;
+
+	strlcpy(md_entry.name, name, sizeof(md_entry.name));
+	md_entry.virt_addr = (uintptr_t)virt_addr;
+	md_entry.phys_addr = virt_to_phys(virt_addr);
+	md_entry.size = size;
+
+	return msm_minidump_add_region(&md_entry);
+}
+
 static void _sde_debug_bus_xbar_dump(void __iomem *mem_base,
 		struct sde_debug_bus_entry *entry, u32 val, u32 block_id_off,
 		u32 test_id_off)
