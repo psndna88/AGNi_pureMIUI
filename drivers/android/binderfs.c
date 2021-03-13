@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-#include <linux/compiler_types.h>
+#include <linux/compiler.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/fsnotify.h>
@@ -140,7 +140,7 @@ static int binderfs_binder_device_create(struct inode *ref_inode,
 		goto err;
 
 	inode->i_ino = minor + INODE_OFFSET;
-	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	init_special_inode(inode, S_IFCHR | 0600,
 			   MKDEV(MAJOR(binderfs_dev), minor));
 	inode->i_fop = &binder_fops;
@@ -371,7 +371,7 @@ static int binderfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	    is_binderfs_control_device(new_dentry))
 		return -EPERM;
 
-	return simple_rename(old_dir, old_dentry, new_dir, new_dentry, flags);
+	return simple_rename2(old_dir, old_dentry, new_dir, new_dentry, flags);
 }
 
 static int binderfs_unlink(struct inode *dir, struct dentry *dentry)
@@ -441,7 +441,7 @@ static int binderfs_binder_ctl_create(struct super_block *sb)
 	}
 
 	inode->i_ino = SECOND_INODE;
-	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	init_special_inode(inode, S_IFCHR | 0600,
 			   MKDEV(MAJOR(binderfs_dev), minor));
 	inode->i_fop = &binder_ctl_fops;
@@ -483,7 +483,7 @@ static struct inode *binderfs_make_inode(struct super_block *sb, int mode)
 	if (ret) {
 		ret->i_ino = iunique(sb, BINDERFS_MAX_MINOR + INODE_OFFSET);
 		ret->i_mode = mode;
-		ret->i_atime = ret->i_mtime = ret->i_ctime = current_time(ret);
+		ret->i_atime = ret->i_mtime = ret->i_ctime = CURRENT_TIME;
 	}
 	return ret;
 }
@@ -693,10 +693,10 @@ static int binderfs_fill_super(struct super_block *sb, void *data, int silent)
 	if (ret)
 		return ret;
 
-	info->root_gid = make_kgid(sb->s_user_ns, 0);
+	info->root_gid = make_kgid(&init_user_ns, 0);
 	if (!gid_valid(info->root_gid))
 		info->root_gid = GLOBAL_ROOT_GID;
-	info->root_uid = make_kuid(sb->s_user_ns, 0);
+	info->root_uid = make_kuid(&init_user_ns, 0);
 	if (!uid_valid(info->root_uid))
 		info->root_uid = GLOBAL_ROOT_UID;
 
@@ -707,7 +707,7 @@ static int binderfs_fill_super(struct super_block *sb, void *data, int silent)
 	inode->i_ino = FIRST_INODE;
 	inode->i_fop = &simple_dir_operations;
 	inode->i_mode = S_IFDIR | 0755;
-	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
 	inode->i_op = &binderfs_dir_inode_operations;
 	set_nlink(inode, 2);
 
