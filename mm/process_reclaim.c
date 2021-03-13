@@ -120,6 +120,22 @@ int selected_cmp(const void *a, const void *b)
 	return ret;
 }
 
+#ifdef CONFIG_ANDROID_PR_KILL
+int txpd_cmp(const void *a, const void *b)
+{
+	struct task_struct *x = *((struct task_struct **)a);
+	struct task_struct *y = *((struct task_struct **)b);
+
+	if (x->acct_timexpd < y->acct_timexpd)
+		return 1;
+
+	if (x->acct_timexpd > y->acct_timexpd)
+		return -1;
+
+	return 0;
+}
+#endif
+
 static int test_task_flag(struct task_struct *p, int flag)
 {
 	struct task_struct *t = p;
@@ -197,29 +213,13 @@ static int is_low_mem(void)
 static void sort_and_kill_tasks(struct task_struct *tasks_to_kill[], int tsi)
 {
 	int i, j, max = tsi;
-	struct task_struct *temp;
 
 	/*
 	 * We sort tasks based on (stime+utime) since last accessed,
 	 * in descending order.
-	 *
-	 * TODO: Use sort() next time?
 	 */
-	rcu_read_lock();
-	for (i = 0; i < tsi; i++) {
-		for (j = i + 1; j < tsi; j++) {
-
-			if (tasks_to_kill[i]->acct_timexpd <
-					tasks_to_kill[j]->acct_timexpd) {
-
-				temp = tasks_to_kill[i];
-				tasks_to_kill[i] = tasks_to_kill[j];
-				tasks_to_kill[j] = temp;
-
-			}
-		}
-	}
-	rcu_read_unlock();
+	sort(tasks_to_kill, tsi, sizeof(*tasks_to_kill),
+					txpd_cmp, NULL);
 
 	/* We kill tasks with the lowest (stime+utime) */
 	while (tsi--) {
