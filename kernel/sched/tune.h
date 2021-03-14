@@ -1,6 +1,4 @@
 
-#ifdef CONFIG_SCHED_TUNE
-
 #include <linux/reciprocal_div.h>
 
 /*
@@ -12,11 +10,12 @@ struct target_nrg {
 	struct reciprocal_value rdiv;
 };
 
+int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
+#ifdef CONFIG_SCHED_TUNE
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 
 int schedtune_cpu_boost(int cpu);
 int schedtune_task_boost(struct task_struct *tsk);
-int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
 
 int schedtune_prefer_idle(struct task_struct *tsk);
 
