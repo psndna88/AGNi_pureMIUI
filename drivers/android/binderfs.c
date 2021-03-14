@@ -44,6 +44,7 @@
 /* Ensure that the initial ipc namespace always has devices available. */
 #define BINDERFS_MAX_MINOR_CAPPED (BINDERFS_MAX_MINOR - 4)
 
+extern bool detected_android_r;
 static dev_t binderfs_dev;
 static DEFINE_MUTEX(binderfs_minors_mutex);
 static DEFINE_IDA(binderfs_minors);
@@ -768,6 +769,8 @@ int __init init_binderfs(void)
 	const char *name;
 	size_t len;
 
+	if (!detected_android_r)
+		return 0;
 	/* Verify that the default binderfs device names are valid. */
 	name = binder_devices_param;
 	for (len = strcspn(name, ","); len > 0; len = strcspn(name, ",")) {
