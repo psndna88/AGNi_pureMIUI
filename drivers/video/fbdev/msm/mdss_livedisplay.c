@@ -572,8 +572,8 @@ int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pi
 	if (mlc->ce_on_cmds_len) {
 		mlc->ce_off_cmds = of_get_property(np,
 				"cm,mdss-livedisplay-color-enhance-off", &mlc->ce_off_cmds_len);
-//		if (mlc->ce_off_cmds_len)
-//			mlc->caps |= MODE_COLOR_ENHANCE;
+		if (mlc->ce_off_cmds_len)
+			mlc->caps |= MODE_COLOR_ENHANCE;
 	}
 
 	for (i = 0; i < MAX_PRESETS; i++) {
