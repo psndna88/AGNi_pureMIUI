@@ -12,6 +12,7 @@
 #include <linux/stddef.h>
 #include <linux/types.h>
 #include <linux/uidgid.h>
+#include <linux/android_version.h>
 
 struct binder_context {
 	struct binder_node *binder_context_mgr_node;
@@ -75,35 +76,12 @@ extern const struct file_operations binder_fops;
 
 extern char *binder_devices_param;
 
-#ifdef CONFIG_ANDROID_BINDERFS
 extern bool is_binderfs_device(const struct inode *inode);
 extern struct dentry *binderfs_create_file(struct dentry *dir, const char *name,
 					   const struct file_operations *fops,
 					   void *data);
 extern void binderfs_remove_file(struct dentry *dentry);
-#else
-static inline bool is_binderfs_device(const struct inode *inode)
-{
-	return false;
-}
-static inline struct dentry *binderfs_create_file(struct dentry *dir,
-					   const char *name,
-					   const struct file_operations *fops,
-					   void *data)
-{
-	return NULL;
-}
-static inline void binderfs_remove_file(struct dentry *dentry) {}
-#endif
-
-#ifdef CONFIG_ANDROID_BINDERFS
 extern int __init init_binderfs(void);
-#else
-static inline int __init init_binderfs(void)
-{
-	return 0;
-}
-#endif
 
 int binder_stats_show(struct seq_file *m, void *unused);
 DEFINE_SHOW_ATTRIBUTE(binder_stats);
