@@ -40,6 +40,7 @@
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 extern bool dsb_boosting;
 #endif
+extern int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
 
 /*
  * Targeted preemption latency for CPU-bound tasks:
@@ -6012,10 +6013,11 @@ static inline int __energy_diff(struct energy_env *eenv)
 	return eenv->nrg.diff;
 }
 
-#ifdef CONFIG_SCHED_TUNE
+
 
 struct target_nrg schedtune_target_nrg;
 
+#ifdef CONFIG_SCHED_TUNE
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 extern bool schedtune_initialized;
 #endif /* CONFIG_CGROUP_SCHEDTUNE */
@@ -6237,10 +6239,10 @@ static bool cpu_overutilized(int cpu)
 	return __cpu_overutilized(cpu, 0);
 }
 
-#ifdef CONFIG_SCHED_TUNE
 
 struct reciprocal_value schedtune_spc_rdiv;
 
+#ifdef CONFIG_SCHED_TUNE
 static long
 schedtune_margin(unsigned long signal, long boost)
 {
