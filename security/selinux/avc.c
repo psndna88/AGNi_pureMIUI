@@ -996,7 +996,7 @@ static noinline int avc_denied(u32 ssid, u32 tsid,
 				struct av_decision *avd)
 {
 	if (selinux_enforcing) {
-	if (flags & avc_strict)
+	if (flags & AVC_STRICT)
 		return -EACCES;
 
 	if (selinux_enforcing && !(avd->flags & AVD_FLAGS_PERMISSIVE))
@@ -1095,7 +1095,7 @@ decision:
  * @tsid: target security identifier
  * @tclass: target security class
  * @requested: requested permissions, interpreted based on @tclass
- * @flags:  avc_strict or 0
+ * @flags:  AVC_STRICT or 0
  * @avd: access vector decisions
  *
  * Check the AVC to determine whether the @requested permissions are granted
