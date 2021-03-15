@@ -4334,6 +4334,13 @@ static int cam_ife_csid_sof_irq_debug(
 			(sof_irq_enable) ? "enabled" : "disabled",
 			csid_hw->hw_intf->hw_idx);
 
+	CAM_INFO(CAM_ISP, "Notify CSIPHY: %d",
+		csid_hw->csi2_rx_cfg.phy_sel);
+
+	cam_subdev_notify_message(CAM_CSIPHY_DEVICE_TYPE,
+		CAM_SUBDEV_MESSAGE_IRQ_ERR,
+		csid_hw->csi2_rx_cfg.phy_sel);
+
 	return 0;
 }
 
