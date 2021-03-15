@@ -2055,8 +2055,10 @@ static int cam_ife_csid_init_config_pxl_path(
 	}
 
 	if (is_ipp && csid_hw->binning_supported &&
-		csid_hw->binning_enable)
+		csid_hw->binning_enable) {
 		val |= (1 << pxl_reg->quad_cfa_bin_en_shift_val);
+		val |= (1 << pxl_reg->horizontal_bin_en_shift_val);
+	}
 
 	val |= (1 << pxl_reg->pix_store_en_shift_val);
 	cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
