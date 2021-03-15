@@ -2473,6 +2473,11 @@ QDF_STATUS
 (*send_infra_cp_stats_request_cmd)(wmi_unified_t wmi_handle,
 				   struct infra_cp_stats_cmd_info *param);
 #endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+#ifdef WLAN_FEATURE_BIG_DATA_STATS
+QDF_STATUS (*send_big_data_stats_request_cmd)(
+		wmi_unified_t wmi_handle,
+		struct stats_request_params *param);
+#endif
 };
 
 /* Forward declartion for psoc*/
