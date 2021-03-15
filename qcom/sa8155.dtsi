@@ -134,6 +134,11 @@
 		};
 	};
 
+	aop-set-ddr-freq {
+		compatible = "qcom,aop-set-ddr-freq";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 &usb2_phy0 {
