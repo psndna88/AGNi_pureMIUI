@@ -15,7 +15,6 @@ on early-init
 	write /sys/module/msm_performance/parameters/cpu_oc N
 
 on init
-	setenforce 1
     # Set Memory parameters
     write /sys/module/process_reclaim/parameters/enable_process_reclaim 1
     write /sys/module/process_reclaim/parameters/pressure_min 50
