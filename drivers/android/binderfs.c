@@ -44,7 +44,6 @@
 /* Ensure that the initial ipc namespace always has devices available. */
 #define BINDERFS_MAX_MINOR_CAPPED (BINDERFS_MAX_MINOR - 4)
 
-extern bool detected_android_r;
 static dev_t binderfs_dev;
 static DEFINE_MUTEX(binderfs_minors_mutex);
 static DEFINE_IDA(binderfs_minors);

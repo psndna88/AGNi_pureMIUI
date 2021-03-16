@@ -12,7 +12,6 @@
 #include <linux/stddef.h>
 #include <linux/types.h>
 #include <linux/uidgid.h>
-#include <linux/android_version.h>
 
 struct binder_context {
 	struct binder_node *binder_context_mgr_node;
@@ -21,6 +20,7 @@ struct binder_context {
 	const char *name;
 };
 
+extern bool detected_android_r;
 /**
  * struct binder_device - information about a binder device node
  * @hlist:          list of binder devices (only used for devices requested via
