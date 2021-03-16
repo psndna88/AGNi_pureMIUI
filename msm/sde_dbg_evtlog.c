@@ -244,6 +244,9 @@ struct sde_dbg_reglog *sde_reglog_init(void)
 		return ERR_PTR(-ENOMEM);
 
 	atomic64_set(&reglog->curr, 0);
+	if (sde_mini_dump_add_region("reg_log", sizeof(*reglog),
+			reglog) < 0)
+		pr_err("minidump add region failed for reglog\n");
 
 	return reglog;
 }
