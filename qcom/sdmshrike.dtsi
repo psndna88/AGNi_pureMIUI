@@ -861,6 +861,11 @@
 		interrupts = <GIC_PPI 5 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
+	};
+
 	mem_dump {
 		compatible = "qcom,mem-dump";
 		memory-region = <&dump_mem>;
