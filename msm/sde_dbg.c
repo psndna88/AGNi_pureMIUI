@@ -868,6 +868,9 @@ static void _sde_dbg_dump_sde_dbg_bus(struct sde_dbg_sde_debug_bus *bus)
 			dev_info(sde_dbg_base.dev,
 				"%s: start_addr:0x%pK len:0x%x\n",
 				__func__, dump_addr, list_size);
+			if (sde_mini_dump_add_region("sde_dbgbus", list_size,
+				*dump_mem) < 0)
+				pr_err("minidump add sde debug bus failed\n");
 		} else {
 			in_mem = false;
 			pr_err("dump_mem: allocation fails\n");
@@ -998,6 +1001,9 @@ static void _sde_dbg_dump_vbif_dbg_bus(struct sde_dbg_vbif_debug_bus *bus)
 			dev_info(sde_dbg_base.dev,
 				"%s: start_addr:0x%pK len:0x%x\n",
 				__func__, dump_addr, list_size);
+			if (sde_mini_dump_add_region("vbif_dbgbus", list_size,
+				*dump_mem) < 0)
+				pr_err("minidump add vbif debug bus failed\n");
 		} else {
 			in_mem = false;
 			pr_err("dump_mem: allocation fails\n");
