@@ -89,7 +89,6 @@ static DEFINE_MUTEX(binder_procs_lock);
 static HLIST_HEAD(binder_dead_nodes);
 static DEFINE_SPINLOCK(binder_dead_nodes_lock);
 
-bool detected_android_r = false;
 static struct dentry *binder_debugfs_dir_entry_root;
 static struct dentry *binder_debugfs_dir_entry_proc;
 static atomic_t binder_last_id;
@@ -6218,11 +6217,6 @@ static int __init binder_init(void)
 				    &binder_transaction_log_failed,
 				    &binder_transaction_log_fops);
 	}
-
-	if (get_android_version() > 10)
-		detected_android_r = true;
-	else
-		detected_android_r = false;
 
 	if (!detected_android_r &&
 	    strcmp(binder_devices_param, "") != 0) {

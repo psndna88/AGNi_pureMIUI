@@ -132,6 +132,7 @@ static char *ramdisk_execute_command;
 
 int devicemodel;
 bool sdm660;
+bool detected_android_r = false;
 static unsigned int android_version = 9;
 
 static int __init set_android_version(char *val)
@@ -157,6 +158,12 @@ static int __init set_android_version(char *val)
 	devicemodel=0;
 	sdm660=false;
 #endif
+
+	if (android_version > 10)
+		detected_android_r = true;
+	else
+		detected_android_r = false;
+
 	return 0;
 }
 __setup("android.ver=", set_android_version);
