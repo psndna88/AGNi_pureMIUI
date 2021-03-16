@@ -156,7 +156,43 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 				 size_t count, loff_t *ppos)
 
 {
-	return count;
+	char *page = NULL;
+	ssize_t length;
+	int new_value;
+
+	length = -ENOMEM;
+	if (count >= PAGE_SIZE)
+		goto out;
+
+	/* No partial writes. */
+	length = -EINVAL;
+	if (*ppos != 0)
+		goto out;
+
+	length = -ENOMEM;
+	page = (char *)get_zeroed_page(GFP_KERNEL);
+	if (!page)
+		goto out;
+
+	length = -EFAULT;
+	if (copy_from_user(page, buf, count))
+		goto out;
+
+	length = -EINVAL;
+	if (sscanf(page, "%d", &new_value) != 1)
+		goto out;
+
+	//new_value = 0;
+	if (new_value != enforcing_status) {
+		length = task_has_security(current, SECURITY__SETENFORCE);
+		if (length)
+			goto out;
+		enforcing_status = new_value;
+	}
+	length = count;
+out:
+	free_page((unsigned long) page);
+	return length;
 }
 #else
 #define sel_write_enforce NULL
