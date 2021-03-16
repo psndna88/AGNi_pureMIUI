@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -411,7 +411,7 @@ struct wlan_roam_mawc_params {
 	uint8_t rssi_stationary_low_adjust;
 };
 
-#define MAX_SSID_ALLOWED_LIST    4
+#define MAX_SSID_ALLOWED_LIST    8
 #define MAX_BSSID_AVOID_LIST     16
 #define MAX_BSSID_FAVORED      16
 
