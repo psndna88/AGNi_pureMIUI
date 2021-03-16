@@ -663,11 +663,11 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 		return;
 	}
 
-	pe_nofl_info("Assoc rsp RX: subtype %d vdev %d sys role %d lim state %d rssi %d from " QDF_MAC_ADDR_FMT,
-		     subtype, vdev_id,
-		     GET_LIM_SYSTEM_ROLE(session_entry),
-		     session_entry->limMlmState, rssi,
-		     QDF_MAC_ADDR_REF(hdr->sa));
+	pe_nofl_rl_info("Assoc rsp RX: subtype %d vdev %d sys role %d lim state %d rssi %d from " QDF_MAC_ADDR_FMT,
+			subtype, vdev_id,
+			GET_LIM_SYSTEM_ROLE(session_entry),
+			session_entry->limMlmState, rssi,
+			QDF_MAC_ADDR_REF(hdr->sa));
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   (uint8_t *)hdr, frame_len + SIR_MAC_HDR_LEN_3A);
 
