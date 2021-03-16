@@ -312,6 +312,9 @@ static int wcn_config_ap_fils_dscv(struct sigma_dut *dut, const char *ifname)
 #ifdef NL80211_SUPPORT
 	uint8_t enable_fils_dscv = dut->ap_filsdscv == VALUE_ENABLED;
 
+	if (dut->ap_filsdscv == VALUE_NOT_SET)
+		return 0;
+
 	return wcn_wifi_test_config_set_u8(
 		dut, ifname,
 		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FILS_DISCOVERY_FRAMES_TX,
@@ -319,6 +322,8 @@ static int wcn_config_ap_fils_dscv(struct sigma_dut *dut, const char *ifname)
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"FILS Discovery frames configuration can't be set without NL80211_SUPPORT defined");
+	if (dut->ap_filsdscv == VALUE_NOT_SET)
+		return 0;
 	return -1;
 #endif /* NL80211_SUPPORT */
 }
@@ -8542,15 +8547,19 @@ skip_key_mgmt:
 		if (dut->ap_sgi80 || dut->ap_txBF ||
 		    dut->ap_ldpc != VALUE_NOT_SET ||
 		    dut->ap_tx_stbc || dut->ap_mu_txBF ||
-		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len) {
-			fprintf(f, "vht_capab=%s%s%s%s%s",
+		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len ||
+		    dut->ap_chwidth == AP_160 || dut->ap_chwidth == AP_80_80) {
+			fprintf(f, "vht_capab=%s%s%s%s%s%s",
 				dut->ap_sgi80 ? "[SHORT-GI-80]" : "",
 				dut->ap_txBF ?
 				"[SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2]" : "",
 				(dut->ap_ldpc == VALUE_ENABLED) ?
 				"[RXLDPC]" : "",
 				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
-				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "");
+				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "",
+				dut->ap_chwidth == AP_160 ? "[VHT160]" :
+				(dut->ap_chwidth == AP_80_80 ?
+				 "[VHT160-80PLUS80]" : ""));
 
 			if (dut->ap_ampdu_exp)
 				fprintf(f, "[MAX-A-MPDU-LEN-EXP%d]",
@@ -9584,7 +9593,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_broadcast_ssid = VALUE_ENABLED;
 		dut->ap_fils_dscv_int = 20;
 		dut->ap_filsdscv = dut->dev_role == DEVROLE_STA_CFON ?
-			VALUE_DISABLED : VALUE_ENABLED;
+			VALUE_NOT_SET : VALUE_ENABLED;
 		dut->ap_filshlp = VALUE_DISABLED;
 		dut->ap_rnr = VALUE_DISABLED;
 		dut->ap_nairealm[0] = '\0';
