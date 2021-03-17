@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <ifaddrs.h>
+#include <netdb.h>
 
 #include "wpa_helpers.h"
 
@@ -319,6 +320,8 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	char *pos;
 	int dscp, reverse = 0;
 	char tos[20], client_port_str[100], bitrate[20];
+	struct hostent *host_addr;
+	char ip_addr[INET6_ADDRSTRLEN];
 
 	val = get_param(cmd, "mode");
 	if (!val) {
@@ -372,7 +375,27 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		ifname = get_station_ifname(dut);
 	}
 
-	if (!server && (!dst || (!is_ip_addr(dst) && !is_ipv6_addr(dst)))) {
+	if (dst && !ipv6 && !is_ip_addr(dst)) {
+		host_addr = gethostbyname2(dst, AF_INET);
+		if (!host_addr) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid IPv4 address/domain name");
+			return STATUS_SENT;
+		}
+		dst = inet_ntop(AF_INET, host_addr->h_addr_list[0], ip_addr,
+				sizeof(ip_addr));
+	} else if (dst && ipv6 && !is_ipv6_addr(dst)) {
+		host_addr = gethostbyname2(dst, AF_INET6);
+		if (!host_addr) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid IPv6 address/domain name");
+			return STATUS_SENT;
+		}
+		dst = inet_ntop(AF_INET6, host_addr->h_addr_list[0], ip_addr,
+				sizeof(ip_addr));
+	}
+
+	if (!server && !dst) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Invalid destination address");
 		return STATUS_SENT;
