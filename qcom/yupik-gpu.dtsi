@@ -8,6 +8,13 @@
 		memory-region = <&pil_gpu_micro_code_mem>;
 	};
 
+	kgsl_ddr_qos: qcom,kgsl-ddr-qos {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "powersave";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	msm_gpu: qcom,kgsl-3d0@3d00000 {
 		compatible = "qcom,kgsl-3d0";
 		status = "ok";
@@ -46,10 +53,14 @@
 		qcom,min-access-length = <32>;
 		qcom,ubwc-mode = <3>;
 
+		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
+		nvmem-cell-names = "speed_bin", "gaming_bin";
+
 		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
 
-		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>;
-		interconnect-names = "gpu_icc_path";
+		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>,
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
+		interconnect-names = "gpu_icc_path", "l3_path";
 
 		qcom,bus-table-ddr7 =
 			<MHZ_TO_KBPS(0, 4)>,    /* index=0 */
@@ -82,8 +93,27 @@
 			<0>,   /* Off */
 			<100>; /* On */
 
-		nvmem-cells = <&gpu_speed_bin>, <&gpu_gaming_bin>;
-		nvmem-cell-names = "speed_bin", "gaming_bin";
+		qcom,l3-pwrlevels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			compatible = "qcom,l3-pwrlevels";
+
+			qcom,l3-pwrlevel@0 {
+				reg = <0>;
+				qcom,l3-freq = <0>;
+			};
+
+			qcom,l3-pwrlevel@1 {
+				reg = <1>;
+				qcom,l3-freq = <614400000>;
+			};
+
+			qcom,l3-pwrlevel@2 {
+				reg = <2>;
+				qcom,l3-freq = <1516800000>;
+			};
+		};
 
 		qcom,gpu-mempools {
 			#address-cells = <1>;

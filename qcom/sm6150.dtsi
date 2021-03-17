@@ -36,6 +36,7 @@
 		serial0 = &qupv3_se0_2uart;
 		sdhc0 = &sdhc_1;
 		sdhc1 = &sdhc_2;
+		spi10 = &qupv3_se10_spi;
 	};
 
 	cpus {
@@ -914,6 +915,11 @@
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
+	};
+
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
 	};
 
 	pil_scm_pas {

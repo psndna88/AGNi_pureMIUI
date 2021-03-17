@@ -1098,6 +1098,22 @@
 		clock-frequency = <32768>;
 	};
 
+	ufs_ice: ufsice@1d90000 {
+		compatible = "qcom,ice";
+		reg = <0x1d90000 0x8000>;
+		qcom,enable-ice-clk;
+		clock-names = "ufs_core_clk",
+			      "iface_clk", "ice_core_clk";
+		clocks = <&gcc GCC_UFS_PHY_AXI_CLK>,
+			 <&gcc GCC_UFS_PHY_AHB_CLK>,
+			 <&gcc GCC_UFS_PHY_ICE_CORE_CLK>;
+		qcom,op-freq-hz = <0>, <0>, <300000000>;
+		vdd-hba-supply = <&ufs_phy_gdsc>;
+		qcom,bus-vector-names = "MIN",
+					"MAX";
+		qcom,instance-type = "ufs";
+	};
+
 	disp_rsc: rsc@af20000 {
 		label = "disp_rsc";
 		compatible = "qcom,rpmh-rsc";
@@ -2300,6 +2316,7 @@
 #include "sdmshrike-gpu.dtsi"
 #include "sa8195-vidc.dtsi"
 #include "sa8155-audio.dtsi"
+#include "sm8150-npu.dtsi"
 
 #include "display/sdmshrike-sde-pll.dtsi"
 #include "display/sdmshrike-sde.dtsi"

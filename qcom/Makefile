@@ -167,9 +167,11 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupikp-idps-amoled-overlay.dtbo \
 	yupik-iot-idp-overlay.dtbo \
 	yupik-iot-qrd-overlay.dtbo \
+	yupik-iot-hsp-overlay.dtbo \
 	yupik-iot-idps-amoled-overlay.dtbo \
 	yupikp-iot-idp-overlay.dtbo \
 	yupikp-iot-qrd-overlay.dtbo \
+	yupikp-iot-hsp-overlay.dtbo \
 	yupikp-iot-idps-amoled-overlay.dtbo
 
 
@@ -186,9 +188,11 @@ yupikp-idps-digital-mics-overlay.dtbo-base := yupikp.dtb
 yupikp-idps-amoled-overlay.dtbo-base := yupikp.dtb
 yupik-iot-idp-overlay.dtbo-base := yupik-iot.dtb
 yupik-iot-qrd-overlay.dtbo-base := yupik-iot.dtb
+yupik-iot-hsp-overlay.dtbo-base := yupik-iot.dtb
 yupik-iot-idps-amoled-overlay.dtbo-base := yupik-iot.dtb
 yupikp-iot-idp-overlay.dtbo-base := yupikp-iot.dtb
 yupikp-iot-qrd-overlay.dtbo-base := yupikp-iot.dtb
+yupikp-iot-hsp-overlay.dtbo-base := yupikp-iot.dtb
 yupikp-iot-idps-amoled-overlay.dtbo-base := yupikp-iot.dtb
 else
 dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
@@ -204,9 +208,11 @@ dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupikp-idps-amoled.dtb \
 	yupik-iot-idp.dtb \
 	yupik-iot-qrd.dtb \
+	yupik-iot-hsp.dtb \
 	yupik-iot-idps-amoled.dtb \
 	yupikp-iot-idp.dtb \
 	yupikp-iot-qrd.dtb \
+	yupikp-iot-hsp.dtb \
 	yupikp-iot-idps-amoled.dtb
 endif
 
@@ -348,6 +354,23 @@ dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
 	sa8195-vm-lv-mt.dtb \
 	sa8195-vm-lv-lxc.dtb \
 	sa6155p-vm-la.dtb
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+	dtbo-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi-overlay.dtbo \
+		direwolf-ivi-adp-star-overlay.dtbo \
+		direwolf-adas-rumi-overlay.dtbo \
+		direwolf-adas-adp-star-overlay.dtbo
+
+direwolf-ivi-rumi-overlay.dtbo-base := direwolf-ivi.dtb
+direwolf-ivi-adp-star-overlay.dtbo-base := direwolf-ivi.dtb
+direwolf-adas-rumi-overlay.dtbo-base := direwolf-adas.dtb
+direwolf-adas-adp-star-overlay.dtbo-base := direwolf-adas.dtb
+else
+dtb-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi.dtb \
+	direwolf-ivi-adp-star.dtb \
+	direwolf-adas-rumi.dtb \
+	direwolf-adas-adp-star.dtb
+endif
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)

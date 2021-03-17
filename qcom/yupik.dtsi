@@ -27,7 +27,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. Yupik";
 	compatible = "qcom,yupik";
-	qcom,msm-id = <475 0x10000>;
+	qcom,msm-id = <475 0x10000>, <515 0x10000>;
 	interrupt-parent = <&intc>;
 
 	#address-cells = <2>;
@@ -2732,7 +2732,9 @@
 
 		iommus = <&apps_smmu 0xc0 0x0>;
 		dma-coherent;
-		qcom,iommu-dma = "bypass";
+		qcom,iommu-dma = "fastmap";
+		qcom,iommu-dma-addr-pool = <0x40000000 0x20000000>;
+		qcom,iommu-geometry = <0x40000000 0x20000000>;
 
 		interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>;
@@ -3496,6 +3498,7 @@
 		qcom,fastrpc-adsp-sensors-pdr;
 		qcom,rpc-latency-us = <235>;
 		qcom,fastrpc-gids = <2908>;
+		qcom,qos-cores = <0 1 2 3>;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
@@ -3802,6 +3805,7 @@
 #include "ipcc-test-yupik.dtsi"
 #include "yupik-regulators.dtsi"
 #include "display/yupik-sde.dtsi"
+#include "yupik-pcie.dtsi"
 
 &gcc_ufs_phy_gdsc {
 	qcom,support-hw-trigger;
