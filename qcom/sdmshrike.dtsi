@@ -54,6 +54,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -79,7 +80,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_1>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -98,7 +99,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_2>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -117,7 +118,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_3>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -136,6 +137,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_4>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -155,7 +157,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_5>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -174,7 +176,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -193,7 +195,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_7>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -2317,6 +2319,7 @@
 #include "sa8195-vidc.dtsi"
 #include "sa8155-audio.dtsi"
 #include "sm8150-npu.dtsi"
+#include "sa8195-thermal.dtsi"
 
 #include "display/sdmshrike-sde-pll.dtsi"
 #include "display/sdmshrike-sde.dtsi"
