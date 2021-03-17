@@ -162,7 +162,8 @@ static int score_adj_check(short oom_score_adj)
 	short never_reclaim_size = ARRAY_SIZE(never_reclaim);
 
 	for (i = 0; i < never_reclaim_size; i++)
-		if (oom_score_adj == never_reclaim[i])
+		if (oom_score_adj == never_reclaim[i] ||
+				oom_score_adj < 0)
 			return 1;
 
 	return 0;
@@ -290,7 +291,7 @@ static void swap_fn(struct work_struct *work)
 
 		oom_score_adj = p->signal->oom_score_adj;
 #ifdef CONFIG_ANDROID_PR_KILL
-		if (score_adj_check(oom_score_adj) || oom_score_adj < 0) {
+		if (score_adj_check(oom_score_adj)) {
 #else
 		if (oom_score_adj < min_score_adj) {
 #endif
