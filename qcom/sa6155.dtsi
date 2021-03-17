@@ -195,6 +195,12 @@
 	};
 };
 
+&reserved_memory {
+	uefi_log: uefi_log@0x9241C000 {
+		reg = <0x0 0x9241C000 0x0 0x10000>;
+		label = "uefi_log";
+	};
+};
 
 #include "sa6155-pcie.dtsi"
 &slpi_tlmm {
