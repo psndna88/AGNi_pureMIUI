@@ -246,6 +246,17 @@
 		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
 	};
 
+	qcom,msm-cpufreq {
+		compatible = "qcom,msm-cpufreq";
+		clocks = <&apsscc APCS_MUX_CLK>;
+		clock-names = "cpu0_clk";
+		qcom,cpufreq-table =
+			<  345600 >,
+			<  576000 >,
+			<  1094400 >,
+			<  1497600 >;
+	};
+
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>;
