@@ -220,3 +220,4 @@
 
 #include "direwolf-pinctrl.dtsi"
 #include "pm8540-vm.dtsi"
+#include "direwolf-vm-audio.dtsi"
