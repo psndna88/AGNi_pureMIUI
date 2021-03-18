@@ -104,7 +104,7 @@ struct selinux_state selinux_state;
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
-static int selinux_enforcing_boot;
+int selinux_enforcing_boot;
 
 static int __init enforcing_setup(char *str)
 {
@@ -6992,10 +6992,7 @@ static __init int selinux_init(void)
 	if (avc_add_callback(selinux_lsm_notifier_avc_callback, AVC_CALLBACK_RESET))
 		panic("SELinux: Unable to register AVC LSM notifier callback\n");
 
-	if (selinux_enforcing_boot)
-		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
-	else
-		printk(KERN_DEBUG "SELinux:  Starting in permissive mode\n");
+	printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
 
 	return 0;
 }
