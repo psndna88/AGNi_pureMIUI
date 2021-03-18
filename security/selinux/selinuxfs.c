@@ -130,7 +130,38 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 				 size_t count, loff_t *ppos)
 
 {
-	return count;
+	char *page = NULL;
+	ssize_t length;
+	int new_value;
+
+	if (count >= PAGE_SIZE)
+		return -ENOMEM;
+
+	/* No partial writes. */
+	if (*ppos != 0)
+		return -EINVAL;
+
+	page = memdup_user_nul(buf, count);
+	if (IS_ERR(page))
+		return PTR_ERR(page);
+
+	length = -EINVAL;
+	if (sscanf(page, "%d", &new_value) != 1)
+		goto out;
+
+	//new_value = 0;
+	if (new_value != enforcing_status) {
+		length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
+				      SECCLASS_SECURITY, SECURITY__SETENFORCE,
+				      NULL);
+		if (length)
+			goto out;
+		enforcing_status = new_value;
+	}
+	length = count;
+out:
+	kfree(page);
+	return length;
 }
 #else
 #define sel_write_enforce NULL
