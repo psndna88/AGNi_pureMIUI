@@ -520,6 +520,8 @@ int afe_send_custom_tdm_header_cfg(
 int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 		       u32 rate, u16 num_groups);
 void afe_set_routing_callback(routing_cb cb);
+int afe_port_send_logging_cfg(u16 port_id,
+	struct afe_param_id_port_data_log_disable_t *log_disable);
 int afe_get_av_dev_drift(struct afe_param_id_dev_timing_stats *timing_stats,
 		u16 port);
 int afe_get_sp_rx_tmax_xmax_logging_data(
