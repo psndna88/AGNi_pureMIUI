@@ -101,7 +101,7 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 #define SEL_POLICYCAP_INO_OFFSET	0x08000000
 #define SEL_INO_MASK			0x00ffffff
 
-static int user_selinux;
+static int enforcing_status = 1;
 #define TMPBUFLEN	12
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
@@ -109,9 +109,21 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", user_selinux);
+	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_status);
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
+
+static int __init selinux_permissive_param(char *str)
+{
+	if (*str)
+		return 0;
+
+	enforcing_status = 0;
+	pr_info("selinux: ROM requested to be permissive, disabling spoofing\n");
+
+	return 1;
+}
+__setup("androidboot.selinux=permissive", selinux_permissive_param);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
 static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
@@ -137,24 +149,14 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
 
-	new_value = !!new_value;
-
-	user_selinux = new_value;
-	new_value = 0;
-	if (new_value != selinux_enforcing) {
+	//new_value = 0;
+	if (new_value != enforcing_status) {
 		length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
 				      SECCLASS_SECURITY, SECURITY__SETENFORCE,
 				      NULL);
 		if (length)
 			goto out;
-		printk(KERN_DEBUG "AGNi: selinux in special mode\n");
-		selinux_enforcing = new_value;
-		if (selinux_enforcing)
-			avc_ss_reset(0);
-		selnl_notify_setenforce(selinux_enforcing);
-		selinux_status_update_setenforce(selinux_enforcing);
-		if (!selinux_enforcing)
-			call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+		enforcing_status = new_value;
 	}
 	length = count;
 out:
