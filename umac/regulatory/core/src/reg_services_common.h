@@ -1435,6 +1435,15 @@ QDF_STATUS reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
 					    qdf_freq_t chan_freq,
 					    bool *is_psd, uint16_t *tx_power,
 					    uint16_t *eirp_psd_power);
+
+/**
+ * reg_decide_6g_ap_pwr_type() - Decide which power mode AP should operate in
+ *
+ * @pdev: pdev ptr
+ *
+ * Return: AP power type
+ */
+enum reg_6g_ap_type reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev);
 #else
 static inline QDF_STATUS
 reg_set_cur_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev,
@@ -1520,5 +1529,30 @@ QDF_STATUS reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
 	*eirp_psd_power = 0;
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline enum reg_6g_ap_type
+reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev)
+{
+	return REG_INDOOR_AP;
+}
 #endif
+
+/**
+ * reg_set_ext_tpc_supported() - Set if FW supports new WMI command for TPC
+ * @psoc: Pointer to psoc
+ * @val: value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_set_ext_tpc_supported(struct wlan_objmgr_psoc *psoc,
+				     bool val);
+
+/**
+ * reg_is_ext_tpc_supported() - Whether FW supports new WMI command for TPC
+ *
+ * @psoc: pointer to psoc
+ *
+ * Return: true if FW supports the new TPC command, else false
+ */
+bool reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 #endif

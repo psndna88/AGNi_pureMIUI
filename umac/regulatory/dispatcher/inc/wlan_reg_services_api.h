@@ -1163,6 +1163,17 @@ bool wlan_reg_is_same_band_freqs(qdf_freq_t freq1, qdf_freq_t freq2);
 enum channel_enum wlan_reg_get_chan_enum_for_freq(qdf_freq_t freq);
 
 /**
+ * wlan_reg_is_freq_present_in_cur_chan_list() - Check if channel is present
+ * in the current channel list
+ * @pdev: pdev pointer
+ * @freq: Channel center frequency
+ *
+ * Return: true if channel is present in current channel list
+ */
+bool wlan_reg_is_freq_present_in_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+					       qdf_freq_t freq);
+
+/**
  * wlan_reg_update_nol_history_ch_for_freq() - Set nol-history flag for the
  * channels in the list.
  *
@@ -1707,6 +1718,17 @@ wlan_reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
 				      qdf_freq_t chan_freq,
 				      bool *is_psd, uint16_t *tx_power,
 				      uint16_t *eirp_psd_power);
+
+/**
+ * wlan_reg_decide_6g_ap_pwr_type() - Decide which power mode AP should operate
+ * in
+ *
+ * @pdev: pdev ptr
+ *
+ * Return: AP power type
+ */
+enum reg_6g_ap_type
+wlan_reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev);
 #else
 static inline QDF_STATUS
 wlan_reg_get_cur_6g_client_type(struct wlan_objmgr_pdev *pdev,
@@ -1776,5 +1798,21 @@ wlan_reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
 	*eirp_psd_power = 0;
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline
+enum reg_6g_ap_type
+wlan_reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev)
+{
+	return REG_INDOOR_AP;
+}
 #endif
+
+/**
+ * wlan_reg_is_ext_tpc_supported() - Checks if FW supports new WMI cmd for TPC
+ *
+ * @psoc: psoc ptr
+ *
+ * Return: true if FW supports new command or false otherwise
+ */
+bool wlan_reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 #endif
