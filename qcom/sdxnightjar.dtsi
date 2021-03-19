@@ -61,14 +61,6 @@
 			size = <0x400000>;
 		};
 
-		qseecom_ta_mem: qseecom_ta_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			alignment = <0x400000>;
-			size = <0x400000>;
-		};
-
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x00000000 0xffffffff>;
@@ -535,7 +527,7 @@
 		reg = <0x720000 0x20000>,
 			<0x704000 0x20000>;
 		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 207 0>;
+		interrupts = <0 207 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,bam-pipe-pair = <1>;
 		qcom,ce-hw-instance = <0>;
 		qcom,ce-device = <0>;
@@ -557,7 +549,7 @@
 		reg = <0x720000 0x20000>,
 			<0x704000 0x20000>;
 		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 207 0>;
+		interrupts = <0 207 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <0>;
 		qcom,ce-device = <0>;

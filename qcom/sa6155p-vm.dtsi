@@ -236,6 +236,13 @@
 		interrupt-parent = <&intc>;
 		interrupt-controller;
 	};
+
+	msm_gpu_hyp: qcom,hgsl {
+		compatible = "qcom,hgsl";
+
+		/* 6155 have no Doorbell, only keep ifence */
+		db-off = <1>;
+	};
 };
 
 &regulator {
@@ -310,6 +317,7 @@
 #include "sa6155p-vm-usb.dtsi"
 #include "sa6155p-vm-pcie.dtsi"
 #include "sm6150-qupv3.dtsi"
+#include "sa8155-vm-audio.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;

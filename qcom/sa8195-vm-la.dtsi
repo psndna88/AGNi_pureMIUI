@@ -54,10 +54,12 @@
 &soc {
 	pil_scm_pas {
 		compatible = "qcom,pil-tz-scm-pas";
+		status = "disabled";
 	};
 
 	qcom,msm_gsi {
 		compatible = "qcom,msm_gsi";
+		status = "disabled";
 	};
 
 	ipa_hw: qcom,ipa@1e00000 {
@@ -110,6 +112,7 @@
 		"TURBO";
 		qcom,throughput-threshold = <310 600 1000>;
 		qcom,scaling-exceptions = <>;
+		status = "disabled";
 	};
 
 	ipa_smmu_ap: ipa_smmu_ap {
@@ -141,6 +144,7 @@
 		qcom,firmware-name = "ipa_fws";
 		qcom,pil-force-shutdown;
 		memory-region = <&pil_ipa_gsi_mem>;
+		status = "disabled";
 	};
 
 	qcom,ipa_uc {
@@ -149,6 +153,7 @@
 		qcom,firmware-name = "ipa_uc";
 		qcom,pil-force-shutdown;
 		memory-region = <&pil_ipa_fw_mem>;
+		status = "disabled";
 	};
 
 };

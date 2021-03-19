@@ -80,6 +80,8 @@
 	};
 };
 
+#include "display/quin-vm-display.dtsi"
+
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
@@ -278,5 +280,22 @@
 		#interrupt-cells = <4>;
 		cell-index = <0>;
 		status = "okay";
+	};
+
+	wdog: qcom,wdt@17c10000 {
+		compatible = "qcom,msm-watchdog";
+		reg = <0x17c10000 0x1000>;
+		reg-names = "wdt-base";
+		interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>,
+			     <0 1 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,bark-time = <11000>;
+		qcom,pet-time = <9360>;
+		qcom,ipi-ping;
+		qcom,wakeup-enable;
+	};
+
+	vm_restart: restart {
+		compatible = "qcom,vm-restart";
+		status = "ok";
 	};
 };

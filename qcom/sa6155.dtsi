@@ -1,5 +1,6 @@
 #include "sm6150.dtsi"
 #include "sa6155-pmic.dtsi"
+#include "display/sa6155-display.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA6155";
@@ -9,6 +10,17 @@
 
 	aliases {
 		pci-domain0 = &pcie0; /* PCIe0 domain */
+	};
+};
+
+&soc {
+	qfprom: qfprom@780130 {
+		compatible = "qcom,qfprom";
+		reg = <0x00780130 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		read-only;
+		ranges;
 	};
 };
 
@@ -398,4 +410,8 @@
 			};
 		};
 	};
+};
+
+&mdss_dsi0_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
 };
