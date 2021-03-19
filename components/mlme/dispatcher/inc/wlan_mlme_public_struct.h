@@ -1358,6 +1358,8 @@ struct wlan_mlme_acs {
  * @is_all_twt_tgt_cap_enabled: support for all twt enable/disable
  * @is_twt_statistics_tgt_cap_enabled: support for twt statistics
  * @twt_congestion_timeout: congestion timeout value
+ * @enable_twt_24ghz: Enable/disable host TWT when STA is connected in
+ * 2.4Ghz
  */
 struct wlan_mlme_cfg_twt {
 	bool is_twt_enabled;
@@ -1370,6 +1372,7 @@ struct wlan_mlme_cfg_twt {
 	bool is_all_twt_tgt_cap_enabled;
 	bool is_twt_statistics_tgt_cap_enabled;
 	uint32_t twt_congestion_timeout;
+	bool enable_twt_24ghz;
 };
 
 /**
