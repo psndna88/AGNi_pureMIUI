@@ -20,13 +20,15 @@ Required properties:
 
 Optional properties:
 - qcom,label: Label for the sysfs node.
-
+- qcom,default-clk-trigger: This parameter, if present, is a string
+			defining the trigger assigned to the LED.
 
 Example:
 
 qcom_clk_led {
 	compatible = "qcom,clk-led-pwm";
 	qcom,label = "led_clk_pwm";
+	qcom,default-clk-trigger = "led_clk_pwm";
 	qcom,max_duty = <80>;
 	clocks = <&clock_gcc GCC_GP2_CLK>;
 	clock-names = "core";

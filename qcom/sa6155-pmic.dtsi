@@ -47,3 +47,17 @@
 
 #include "sa6155-regulator.dtsi"
 #include "pm6155.dtsi"
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&pm6155_1_l11>;
+};
+
+&sde_dp {
+	vdda-1p2-supply = <&pm6155_1_l11>;
+	vdda-0p9-supply = <&pm6155_1_l5>;
+};
+
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&pm6155_1_l5>;
+};
+

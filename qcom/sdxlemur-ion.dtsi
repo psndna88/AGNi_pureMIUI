@@ -14,11 +14,6 @@
 		qcom,ion-heap@8 { /* AUDIO HEAP */
 			reg = <ION_AUDIO_HEAP_ID>;
 			memory-region = <&audio_mem>;
-		};
-
-		qcom,ion-heap@26 { /* USER CONTIG HEAP */
-			reg = <ION_USER_CONTIG_HEAP_ID>;
-			memory-region = <&user_contig_mem>;
 			qcom,ion-heap-type = "DMA";
 		};
 

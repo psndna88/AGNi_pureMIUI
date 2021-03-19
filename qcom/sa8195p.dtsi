@@ -71,3 +71,25 @@
 	vdda18-supply = <&pm8195_1_l12>;
 	vdda33-supply = <&pm8195_3_l16>;
 };
+
+&usb2_phy2 {
+	vdd-supply = <&pm8195_3_l5>;
+	vdda18-supply = <&pm8195_1_l12>;
+	vdda33-supply = <&pm8195_3_l16>;
+};
+
+&usb_qmp_phy0 {
+	vdd-supply = <&pm8195_3_l9>;
+	core-supply = <&pm8195_1_l9>;
+};
+
+&usb2_phy3 {
+	vdd-supply = <&pm8195_3_l5>;
+	vdda18-supply = <&pm8195_1_l12>;
+	vdda33-supply = <&pm8195_3_l16>;
+};
+
+&usb_qmp_phy1 {
+	vdd-supply = <&pm8195_3_l9>;
+	core-supply = <&pm8195_1_l9>;
+};

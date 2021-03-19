@@ -1,5 +1,6 @@
 #include "sm6150.dtsi"
 #include "sa6155-pmic.dtsi"
+#include "display/sa6155-display.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA6155P";
@@ -28,6 +29,17 @@
 	/delete-node/ rpmh-regulator-ldoc17;
 	/delete-node/ rpmh-regulator-ldoc18;
 	/delete-node/ bt_wcn3990;
+};
+
+&soc {
+	qfprom: qfprom@780130 {
+		compatible = "qcom,qfprom";
+		reg = <0x00780130 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		read-only;
+		ranges;
+	};
 };
 
 &qusb_phy0 {
@@ -417,3 +429,9 @@
 		};
 	};
 };
+
+&mdss_dsi0_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+};
+
+#include "sa6155-audio.dtsi"
