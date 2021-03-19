@@ -8,11 +8,10 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts-extended = <&intc GIC_SPI 202 IRQ_TYPE_LEVEL_HIGH
-				       &intc GIC_SPI 203 IRQ_TYPE_LEVEL_HIGH
-				       &intc GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "hs_phy_irq", "ss_phy_irq","pwr_event_irq";
-
+		interrupts-extended = <&intc GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>,
+					<&wakegic 54 IRQ_TYPE_LEVEL_HIGH>,
+					<&wakegic 49 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "pwr_event_irq","ss_phy_irq", "hs_phy_irq";
 		USB3_GDSC-supply = <&gdsc_usb30>;
 
 		qcom,lpm-to-suspend-delay-ms = <2000>;
