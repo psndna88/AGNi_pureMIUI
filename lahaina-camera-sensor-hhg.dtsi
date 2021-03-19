@@ -1,5 +1,4 @@
 &cam_cci1 {
-/delete-node/ qcom,eeprom5;
 /delete-node/ qcom,cam-sensor5;
 
 	qcom,eeprom5 {

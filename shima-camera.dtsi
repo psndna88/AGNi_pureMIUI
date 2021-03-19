@@ -1185,6 +1185,7 @@
 		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x7073 0x707b>;
 		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
+		qos-val = <0x00000A0A>;
 		status = "ok";
 	};
 
@@ -1214,9 +1215,9 @@
 		clock-rates =
 			<0 0 0 300000000 0>,
 			<0 0 0 450000000 0>,
-			<0 0 0 525000000 0>,
-			<0 0 0 700000000 0>,
-			<0 0 0 700000000 0>;
+			<0 0 0 450000000 0>,
+			<0 0 0 450000000 0>,
+			<0 0 0 450000000 0>;
 		clock-cntl-level = "lowsvs", "svs", "svs_l1", "nominal",
 			"turbo";
 		status = "ok";
@@ -1285,6 +1286,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegenc_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <25 26>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 
@@ -1308,6 +1312,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegdma_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <24 27>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 

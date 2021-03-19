@@ -122,6 +122,21 @@ the device register map, interrupt map, clocks and regulators.
   Definition: List of strings corresponds clock-rates levels.
   Supported strings: minsvs, lowsvs, svs, svs_l1, nominal, turbo.
 
+- cam_hw_pid:
+  Usage: optional
+  Value type: <u32>
+  Definition: HW unique Pid values
+
+- cam_hw_rd_mid:
+  Usage: optional
+  Value type: <u32>
+  Definition: HW port read mid value
+
+- cam_hw_wr_mid:
+  Usage: optional
+  Value type: <u32>
+  Definition: HW port write mid value
+
 Examples:
 	cam_jpeg_enc: qcom,jpegenc@ac4e000 {
 		cell-index = <0>;
