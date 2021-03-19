@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -661,7 +661,8 @@ void fwol_release_rx_event(struct wlan_fwol_rx_event *event)
 	qdf_mem_free(event);
 }
 
-QDF_STATUS fwol_set_ilp_config(struct wlan_objmgr_pdev *pdev, bool enable_ilp)
+QDF_STATUS fwol_set_ilp_config(struct wlan_objmgr_pdev *pdev,
+			       uint32_t enable_ilp)
 {
 	QDF_STATUS status;
 	struct pdev_params pdev_param;

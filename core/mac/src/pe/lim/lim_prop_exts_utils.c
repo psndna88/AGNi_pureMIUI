@@ -127,7 +127,8 @@ static void lim_extract_he_op(struct pe_session *session,
 		session->he_op.oper_info_6g.info.center_freq_seg0;
 	session->ch_center_freq_seg1 =
 		session->he_op.oper_info_6g.info.center_freq_seg1;
-
+	session->ap_power_type =
+		session->he_op.oper_info_6g.info.reg_info;
 	pe_debug("6G op info: ch_wd %d cntr_freq_seg0 %d cntr_freq_seg1 %d",
 		 session->ch_width, session->ch_center_freq_seg0,
 		 session->ch_center_freq_seg1);
@@ -375,7 +376,8 @@ static void lim_check_peer_ldpc_and_update(struct pe_session *session,
 void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 			       uint16_t ie_len, uint8_t *qos_cap,
 			       uint8_t *uapsd, int8_t *local_constraint,
-			       struct pe_session *session)
+			       struct pe_session *session,
+			       bool *is_pwr_constraint)
 {
 	tSirProbeRespBeacon *beacon_struct;
 	uint8_t ap_bcon_ch_width;
@@ -603,12 +605,14 @@ void lim_extract_ap_capability(struct mac_context *mac_ctx, uint8_t *p_ie,
 
 	if (mac_ctx->mlme_cfg->sta.allow_tpc_from_ap) {
 		if (beacon_struct->powerConstraintPresent) {
-			*local_constraint -=
+			*local_constraint =
 				beacon_struct->localPowerConstraint.
 					localPowerConstraints;
+			*is_pwr_constraint = true;
 		} else {
 			get_local_power_constraint_probe_response(
 				beacon_struct, local_constraint, session);
+			*is_pwr_constraint = false;
 		}
 	}
 

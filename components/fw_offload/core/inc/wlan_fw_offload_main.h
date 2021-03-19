@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 - 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012 - 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -268,7 +268,7 @@ struct wlan_fwol_cfg {
 	uint32_t dhcp_max_num_clients;
 #endif
 	struct adaptive_dwelltime_params dwelltime_params;
-	bool enable_ilp;
+	uint32_t enable_ilp;
 	bool disable_hw_assist;
 };
 
@@ -385,12 +385,13 @@ fwol_set_adaptive_dwelltime_config(
 /**
  * fwol_set_ilp_config() - API to set ILP HW block config
  * @pdev: pointer to the pdev object
- * @enable_ilp: enable/disable config for ILP
+ * @enable_ilp: ILP HW block configuration with various options
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS fwol_set_ilp_config(struct wlan_objmgr_pdev *pdev,
-			       bool enable_ilp);
+			       uint32_t enable_ilp);
+
 /**
  * fwol_configure_hw_assist() - API to configure HW assist feature in FW
  * @pdev: pointer to the pdev object
