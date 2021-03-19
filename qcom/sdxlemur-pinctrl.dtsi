@@ -1210,6 +1210,139 @@
 				};
 			};
 		};
+
+		qpic_cs_active: qpic_cs_active {
+			mux {
+				pins = "gpio90";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio90";
+				drive-strength = <10>; /* 10 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_cs_sleep: qpic_cs_sleep {
+			mux {
+				pins = "gpio90";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio90";
+				drive-strength = <2>; /* 2 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_te_active: qpic_te_active {
+			mux {
+				pins = "gpio84";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio84";
+				drive-strength = <10>; /* 10 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_te_sleep: qpic_te_sleep {
+			mux {
+				pins = "gpio84";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio84";
+				drive-strength = <2>; /* 2 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_rs_active: qpic_rs_active {
+			mux {
+				pins = "gpio85";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio85";
+				drive-strength = <10>; /* 10 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_rs_sleep: qpic_rs_sleep {
+			mux {
+				pins = "gpio85";
+				function = "ebi2_lcd";
+			};
+
+			config {
+				pins = "gpio85";
+				drive-strength = <2>; /* 2 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_ad_active: qpic_ad_active {
+			mux {
+				pins = "gpio89";
+				function = "ebi2_a";
+			};
+
+			config {
+				pins = "gpio89";
+				drive-strength = <10>; /* 10 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_ad_sleep: qpic_ad_sleep {
+			mux {
+				pins = "gpio89";
+				function = "ebi2_a";
+			};
+
+			config {
+				pins = "gpio89";
+				drive-strength = <2>; /* 2 mA */
+				bias-disable; /* NO pull */
+			};
+		};
+
+		qpic_bl_active: qpic_bl_active {
+			mux {
+				pins = "gpio97";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio97";
+				drive-strength = <10>; /* 10 mA */
+				bias-disable; /* NO pull */
+				output-high;
+			};
+		};
+
+		qpic_bl_sleep: qpic_bl_sleep {
+			mux {
+				pins = "gpio97";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio97";
+				drive-strength = <2>; /* 2 mA */
+				bias-disable; /* NO pull */
+				output-low;
+			};
+		};
+
 		wcd9xxx_intr {
 			wcd_intr_default: wcd_intr_default {
 				mux {
