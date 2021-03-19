@@ -6,6 +6,7 @@
 #include "sdxlemur-audio.dtsi"
 #include "sdxlemur-mtp-audio-overlay.dtsi"
 #include "sdxlemur-bluetooth.dtsi"
+#include "display/sdxlemur-qpic-display.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB";
