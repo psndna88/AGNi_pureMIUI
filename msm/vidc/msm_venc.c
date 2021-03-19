@@ -1231,6 +1231,7 @@ int msm_venc_inst_init(struct msm_vidc_inst *inst)
 	msm_vidc_init_buffer_size_calculators(inst);
 	inst->static_rotation_flip_enabled = false;
 	inst->external_blur = false;
+	inst->hdr10_sei_enabled = false;
 	return rc;
 }
 
@@ -1722,6 +1723,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		u32 info_type = ((u32)ctrl->val >> 28) & 0xF;
 		u32 val = (ctrl->val & 0xFFFFFFF);
 
+		inst->hdr10_sei_enabled = true;
 		s_vpr_h(sid, "Ctrl:%d, HDR Info with value %u (%#X)",
 				info_type, val, ctrl->val);
 		switch (info_type) {
@@ -4569,7 +4571,8 @@ int msm_venc_set_hdr_info(struct msm_vidc_inst *inst)
 	}
 	hdev = inst->core->device;
 
-	if (get_v4l2_codec(inst) != V4L2_PIX_FMT_HEVC)
+	if (get_v4l2_codec(inst) != V4L2_PIX_FMT_HEVC ||
+		!inst->hdr10_sei_enabled)
 		return 0;
 
 	profile = get_ctrl(inst, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE);
