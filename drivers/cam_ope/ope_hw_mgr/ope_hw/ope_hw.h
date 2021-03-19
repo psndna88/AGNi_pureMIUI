@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_OPE_HW_H
@@ -14,7 +14,7 @@
 
 #define MAX_RD_CLIENTS   3
 #define MAX_WR_CLIENTS   8
-#define MAX_PP_CLIENTS   29
+#define MAX_PP_CLIENTS   32
 
 #define MAX_RW_CLIENTS   (MAX_RD_CLIENTS + MAX_WR_CLIENTS)
 
@@ -82,6 +82,7 @@ struct cam_ope_top_reg {
 	uint32_t violation_status;
 	uint32_t throttle_cnt_cfg;
 	uint32_t debug_cfg;
+	uint32_t scratch_reg;
 	uint32_t num_debug_registers;
 	struct cam_ope_debug_register *debug_regs;
 };

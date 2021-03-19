@@ -3069,6 +3069,17 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	struct cam_isp_context          *ctx_isp = NULL;
 	struct cam_hw_config_args        cfg = {0};
 
+	ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
+
+	if (apply->re_apply)
+		if (apply->request_id <= ctx_isp->last_applied_req_id) {
+			CAM_INFO_RATE_LIMIT(CAM_ISP,
+				"ctx_id:%d Trying to reapply the same request %llu again",
+				ctx->ctx_id,
+				apply->request_id);
+			return 0;
+		}
+
 	if (list_empty(&ctx->pending_req_list)) {
 		CAM_ERR_RATE_LIMIT(CAM_ISP,
 			"ctx_id:%d No available request for Apply id %lld",
@@ -3084,8 +3095,6 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 	 * The maximum number of request allowed to be outstanding is 2.
 	 *
 	 */
-	ctx_isp = (struct cam_isp_context *) ctx->ctx_priv;
-
 	if (atomic_read(&ctx_isp->process_bubble)) {
 		CAM_INFO_RATE_LIMIT(CAM_ISP,
 			"ctx_id:%d Processing bubble cannot apply Request Id %llu",
@@ -3094,15 +3103,6 @@ static int __cam_isp_ctx_apply_req_in_activated_state(
 		rc = -EAGAIN;
 		goto end;
 	}
-
-	if (apply->re_apply)
-		if (apply->request_id <= ctx_isp->last_applied_req_id) {
-			CAM_INFO_RATE_LIMIT(CAM_ISP,
-				"ctx_id:%d Trying to reapply the same request %llu again",
-				ctx->ctx_id,
-				apply->request_id);
-			return 0;
-		}
 
 	spin_lock_bh(&ctx->lock);
 	req = list_first_entry(&ctx->pending_req_list, struct cam_ctx_request,
@@ -3520,6 +3520,17 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 			CAM_ISP_STATE_CHANGE_TRIGGER_FLUSH, req->request_id);
 	}
 
+	if (list_empty(&flush_list)) {
+		/*
+		 * Maybe the req isn't sent to KMD since UMD already skip
+		 * req in CSL layer.
+		 */
+		CAM_INFO(CAM_ISP,
+			"flush list is empty, flush type %d for req %llu",
+			flush_req->type, flush_req->req_id);
+		return 0;
+	}
+
 	list_for_each_entry_safe(req, req_temp, &flush_list, list) {
 		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 		for (i = 0; i < req_isp->num_fence_map_out; i++) {
@@ -3544,12 +3555,6 @@ static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 		list_del_init(&req->list);
 		list_add_tail(&req->list, &ctx->free_req_list);
 	}
-
-	if (flush_req->type == CAM_REQ_MGR_FLUSH_TYPE_CANCEL_REQ &&
-		!cancel_req_id_found)
-		CAM_DBG(CAM_ISP,
-			"Flush request id:%lld is not found in the list",
-			flush_req->req_id);
 
 	return 0;
 }

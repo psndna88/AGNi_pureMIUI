@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -568,8 +568,6 @@ static void __cam_req_mgr_flush_req_slot(
 	in_q->rd_idx = 0;
 	link->trigger_cnt[0] = 0;
 	link->trigger_cnt[1] = 0;
-	link->trigger_mask = 0;
-	link->subscribe_event &= ~CAM_TRIGGER_POINT_EOF;
 }
 
 /**
@@ -823,6 +821,12 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			continue;
 		}
 
+		if (slot->ops.apply_at_eof && slot->ops.skip_next_frame) {
+			CAM_ERR(CAM_CRM,
+				"Both EOF and SOF trigger is not supported");
+			return -EINVAL;
+		}
+
 		if (dev->dev_hdl != slot->ops.dev_hdl) {
 			CAM_DBG(CAM_CRM,
 				"Dev_hdl : %d Not matched:: Expected dev_hdl: %d",
@@ -924,6 +928,19 @@ static int __cam_req_mgr_send_req(struct cam_req_mgr_core_link *link,
 			slot = &dev->pd_tbl->slot[idx];
 			apply_req.report_if_bubble =
 				in_q->slot[idx].recover;
+
+			/*
+			 * If it is dual trigger usecase, need to tell
+			 * devices that the req is re-applied, then the
+			 * devices need to skip applying if the req has
+			 * been handled.
+			 * e.x. ISP device
+			 */
+			if (link->retry_cnt > 0) {
+				if (!apply_req.report_if_bubble &&
+					link->dual_trigger)
+					apply_req.re_apply = true;
+			}
 
 			if ((slot->ops.dev_hdl == dev->dev_hdl) &&
 				(slot->ops.is_applied)) {
@@ -2652,7 +2669,8 @@ int cam_req_mgr_process_add_req(void *priv, void *data)
 			(add_req->skip_before_applying & 0xFF));
 	}
 
-	if (add_req->trigger_eof) {
+	/* Used when Precise Flash is enabled */
+	if ((add_req->trigger_eof) && (!add_req->skip_before_applying)) {
 		slot->ops.apply_at_eof = true;
 		slot->ops.dev_hdl = add_req->dev_hdl;
 		CAM_DBG(CAM_REQ,
@@ -3148,8 +3166,12 @@ static int __cam_req_mgr_check_for_dual_trigger(
 		(link->trigger_cnt[1] &&
 		(link->trigger_cnt[1] - link->trigger_cnt[0] > 1))) {
 
-		CAM_ERR(CAM_CRM,
+		CAM_WARN(CAM_CRM,
 			"One of the devices could not generate trigger");
+
+		link->trigger_cnt[0] = 0;
+		link->trigger_cnt[1] = 0;
+		CAM_DBG(CAM_CRM, "Reset the trigger cnt");
 		return rc;
 	}
 

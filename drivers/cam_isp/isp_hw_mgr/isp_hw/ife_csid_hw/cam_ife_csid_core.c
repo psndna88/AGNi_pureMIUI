@@ -21,6 +21,7 @@
 #include "cam_cpas_api.h"
 #include "cam_subdev.h"
 #include "cam_tasklet_util.h"
+#include "dt-bindings/msm/msm-camera.h"
 
 /* Timeout value in msec */
 #define IFE_CSID_TIMEOUT                               1000
@@ -1854,8 +1855,9 @@ static int cam_ife_csid_enable_csi2(
 
 	csid_reg = csid_hw->csid_info->csid_reg;
 	soc_info = &csid_hw->hw_info->soc_info;
-	CAM_DBG(CAM_ISP, "CSID:%d count:%d config csi2 rx",
-		csid_hw->hw_intf->hw_idx, csid_hw->csi2_cfg_cnt);
+	CAM_DBG(CAM_ISP, "CSID:%d count:%d config csi2 rx res_id: %d",
+		csid_hw->hw_intf->hw_idx, csid_hw->csi2_cfg_cnt,
+		res->res_id);
 
 	/* overflow check before increment */
 	if (csid_hw->csi2_cfg_cnt == UINT_MAX) {
@@ -1865,7 +1867,7 @@ static int cam_ife_csid_enable_csi2(
 	}
 
 	cid_data = (struct cam_ife_csid_cid_data *)res->res_priv;
-
+	cid_data->init_cnt++;
 	res->res_state  = CAM_ISP_RESOURCE_STATE_STREAMING;
 	csid_hw->csi2_cfg_cnt++;
 	if (csid_hw->csi2_cfg_cnt > 1)
@@ -1912,6 +1914,7 @@ static int cam_ife_csid_disable_csi2(
 {
 	const struct cam_ife_csid_reg_offset      *csid_reg;
 	struct cam_hw_soc_info                    *soc_info;
+	struct cam_ife_csid_cid_data              *cid_data;
 
 	if (res->res_id >= CAM_IFE_CSID_CID_MAX) {
 		CAM_ERR(CAM_ISP, "CSID:%d Invalid res id :%d",
@@ -1921,11 +1924,21 @@ static int cam_ife_csid_disable_csi2(
 
 	csid_reg = csid_hw->csid_info->csid_reg;
 	soc_info = &csid_hw->hw_info->soc_info;
-	CAM_DBG(CAM_ISP, "CSID:%d cnt : %d Disable csi2 rx",
-		csid_hw->hw_intf->hw_idx, csid_hw->csi2_cfg_cnt);
+	cid_data = (struct cam_ife_csid_cid_data *)res->res_priv;
+	CAM_DBG(CAM_ISP, "CSID:%d cnt : %d Disable csi2 rx res->res_id: %d",
+		csid_hw->hw_intf->hw_idx, csid_hw->csi2_cfg_cnt,
+		res->res_id);
+
+	if (cid_data->init_cnt)
+		cid_data->init_cnt--;
+	if (!cid_data->init_cnt)
+		res->res_state = CAM_ISP_RESOURCE_STATE_RESERVED;
 
 	if (csid_hw->csi2_cfg_cnt)
 		csid_hw->csi2_cfg_cnt--;
+
+	CAM_DBG(CAM_ISP, "res_id %d res_state=%d",
+		res->res_id, res->res_state);
 
 	if (csid_hw->csi2_cfg_cnt)
 		return 0;
@@ -4841,6 +4854,7 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 	uint32_t                                        irq_status[CAM_IFE_CSID_IRQ_REG_MAX] = {0};
 	uint32_t                                        i, val, val2;
 	bool                                            fatal_err_detected = false;
+	bool                                            non_fatal_detected = false;
 	uint32_t                                        sof_irq_debug_en = 0;
 	uint32_t                                        event_type = 0;
 	unsigned long                                   flags;
@@ -5023,6 +5037,7 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 				"CSID:%d CPHY_EOT_RECEPTION: No EOT on lane/s",
 				csid_hw->hw_intf->hw_idx);
 			csid_hw->error_irq_count++;
+			non_fatal_detected = true;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_CPHY_SOT_RECEPTION) {
@@ -5030,13 +5045,15 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 				"CSID:%d CPHY_SOT_RECEPTION: Less SOTs on lane/s",
 				csid_hw->hw_intf->hw_idx);
 			csid_hw->error_irq_count++;
+			non_fatal_detected = true;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_CPHY_PH_CRC) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
 				"CSID:%d CPHY_PH_CRC CPHY: Pkt Hdr CRC mismatch",
 				csid_hw->hw_intf->hw_idx);
-			csid_hw->error_irq_count++;
+			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_CRC) {
@@ -5044,13 +5061,15 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 				"CSID:%d ERROR_CRC CPHY: Long pkt payload CRC mismatch",
 				csid_hw->hw_intf->hw_idx);
 			csid_hw->error_irq_count++;
+			non_fatal_detected = true;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_ECC) {
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
 				"CSID:%d ERROR_ECC: Dphy pkt hdr errors unrecoverable",
 				csid_hw->hw_intf->hw_idx);
-			csid_hw->error_irq_count++;
+			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_MMAPPED_VC_DT) {
@@ -5068,13 +5087,14 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 				CSID_DEBUG_ENABLE_UNMAPPED_VC_DT_IRQ)) {
 
 			val = cam_io_r_mb(soc_info->reg_map[0].mem_base +
-			csi2_reg->csid_csi2_rx_captured_long_pkt_0_addr);
+			csi2_reg->csid_csi2_rx_cap_unmap_long_pkt_hdr_0_addr);
 
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
 				"CSID:%d UNMAPPED_VC_DT: VC:%d DT:%d WC:%d not mapped to any csid paths",
 				csid_hw->hw_intf->hw_idx, (val >> 22),
 				((val >> 16) & 0x3F), (val & 0xFFFF));
 			csid_hw->error_irq_count++;
+			non_fatal_detected = true;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_STREAM_UNDERFLOW) {
@@ -5084,7 +5104,8 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 			CAM_ERR_RATE_LIMIT(CAM_ISP,
 				"CSID:%d ERROR_STREAM_UNDERFLOW: Fewer bytes rcvd than WC:%d in pkt hdr",
 				csid_hw->hw_intf->hw_idx, (val & 0xFFFF));
-			csid_hw->error_irq_count++;
+			fatal_err_detected = true;
+			goto handle_fatal_error;
 		}
 		if (irq_status[CAM_IFE_CSID_IRQ_REG_RX] &
 			CSID_CSI2_RX_ERROR_UNBOUNDED_FRAME) {
@@ -5092,7 +5113,13 @@ irqreturn_t cam_ife_csid_irq(int irq_num, void *data)
 				"CSID:%d UNBOUNDED_FRAME: Frame started with EOF or No EOF",
 				csid_hw->hw_intf->hw_idx);
 			csid_hw->error_irq_count++;
+			non_fatal_detected = true;
 		}
+
+		if (non_fatal_detected)
+			CAM_INFO(CAM_ISP, "CSID: %u Error IRQ Count:%u",
+				csid_hw->hw_intf->hw_idx,
+				csid_hw->error_irq_count++);
 	}
 
 handle_fatal_error:
@@ -5556,6 +5583,16 @@ int cam_ife_csid_hw_probe_init(struct cam_hw_intf  *csid_hw_intf,
 	ife_csid_hw->device_enabled = 0;
 	ife_csid_hw->is_resetting = false;
 	ife_csid_hw->hw_info->hw_state = CAM_HW_STATE_POWER_DOWN;
+
+	if (!cam_cpas_is_feature_supported(CAM_CPAS_ISP_FUSE,
+		(1 << ife_csid_hw->hw_intf->hw_idx), 0) ||
+		!cam_cpas_is_feature_supported(CAM_CPAS_ISP_LITE_FUSE,
+		(1 << ife_csid_hw->hw_intf->hw_idx), 0)) {
+		CAM_DBG(CAM_ISP, "IFE:%d is not supported",
+			ife_csid_hw->hw_intf->hw_idx);
+		return -ENODEV;
+	}
+
 	mutex_init(&ife_csid_hw->hw_info->hw_mutex);
 	spin_lock_init(&ife_csid_hw->hw_info->hw_lock);
 	spin_lock_init(&ife_csid_hw->lock_state);

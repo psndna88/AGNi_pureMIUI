@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef CAM_OPE_HW_100_H
@@ -146,6 +146,9 @@ static struct cam_ope_debug_register ope_debug_regs[OPE_MAX_DEBUG_REGISTER] = {
 	{
 		.offset = 0xD0,
 	},
+	{
+		.offset = 0xD4,
+	},
 };
 
 static struct cam_ope_top_reg ope_top_reg = {
@@ -163,7 +166,8 @@ static struct cam_ope_top_reg ope_top_reg = {
 	.violation_status    = 0x28,
 	.throttle_cnt_cfg    = 0x2C,
 	.debug_cfg           = 0xDC,
-	.num_debug_registers = 9,
+	.scratch_reg         = 0x1F0,
+	.num_debug_registers = 10,
 	.debug_regs          = ope_debug_regs,
 };
 
@@ -721,6 +725,15 @@ static struct cam_ope_pp_reg ope_pp_reg = {
 		},
 		{
 			.hw_status = 0x3C04,
+		},
+		{
+			.hw_status = 0x3E04,
+		},
+		{
+			.hw_status = 0x4004,
+		},
+		{
+			.hw_status = 0x4204,
 		},
 	},
 };
