@@ -3382,6 +3382,7 @@
 #include "holi-qupv3.dtsi"
 #include "display/holi-sde.dtsi"
 #include "holi-audio.dtsi"
+#include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
 
 &gcc_camss_top_gdsc {

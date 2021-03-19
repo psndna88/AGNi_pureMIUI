@@ -149,3 +149,10 @@
 &gcc {
 	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>;
 };
+&usb0 {
+	dwc3@4e00000 {
+		usb-phy = <&usb_emu_phy_0>, <&usb_nop_phy>;
+		maximum-speed = "high-speed";
+		dr_mode = "peripheral";
+	};
+};
