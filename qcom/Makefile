@@ -341,7 +341,9 @@ endif
 dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
 	sdxnightjar-cdp.dtb \
 	sdxnightjar-qrd.dtb \
-	sdxnightjar-dualwifi-mtp.dtb
+	sdxnightjar-dualwifi-mtp.dtb \
+	sdxnightjar-512mb-mtp.dtb \
+	sdxnightjar-dualwifi-512mb-mtp.dtb
 
 ifeq ($(CONFIG_ARCH_YUPIK), y)
 ifeq ($(CONFIG_ARCH_QTI_VM), y)
