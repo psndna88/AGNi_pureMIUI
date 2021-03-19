@@ -610,11 +610,6 @@
 		qcom,rmnet-ipa-ssr;
 	};
 
-	pil_scm_pas {
-		compatible = "qcom,pil-tz-scm-pas";
-		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
-	};
-
 	blsp1_uart1: serial@78af000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x78af000 0x200>;
