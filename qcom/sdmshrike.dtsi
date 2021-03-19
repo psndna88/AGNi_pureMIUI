@@ -2312,6 +2312,12 @@
 		qcom,config-arr = <0x18040060 0x18050060
 					0x18060060 0x18070060>;
 	};
+
+	aop-set-ddr-freq {
+		compatible = "qcom,aop-set-ddr-freq";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 #include "sdmshrike-pinctrl.dtsi"
