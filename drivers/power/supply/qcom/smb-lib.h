@@ -158,6 +158,19 @@ static const unsigned int smblib_extcon_cable[] = {
 	EXTCON_NONE,
 };
 
+enum quick_charge_type {
+	QUICK_CHARGE_NORMAL = 0,
+	QUICK_CHARGE_FAST,
+	QUICK_CHARGE_FLASH,
+	QUICK_CHARGE_TURPE,
+	QUICK_CHARGE_MAX,
+};
+
+struct quick_charge {
+	enum power_supply_type adap_type;
+	enum quick_charge_type adap_cap;
+};
+
 /* EXTCON_USB and EXTCON_USB_HOST are mutually exclusive */
 static const u32 smblib_extcon_exclusive[] = {0x3, 0};
 
@@ -390,6 +403,8 @@ int smblib_write(struct smb_charger *chg, u16 addr, u8 val);
 int smblib_get_charge_param(struct smb_charger *chg,
 			    struct smb_chg_param *param, int *val_u);
 int smblib_get_usb_suspend(struct smb_charger *chg, int *suspend);
+
+int smblib_get_quick_charge_type(struct smb_charger *chg);
 
 int smblib_enable_charging(struct smb_charger *chg, bool enable);
 int smblib_set_charge_param(struct smb_charger *chg,
