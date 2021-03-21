@@ -621,8 +621,6 @@
 
 	qtee_shmbridge {
 		compatible = "qcom,tee-shared-memory-bridge";
-		/*Boolean property to disable shmbridge*/
-		qcom,disable-shmbridge-support;
 	};
 
 	qcom_qseecom: qseecom@87a00000 {
