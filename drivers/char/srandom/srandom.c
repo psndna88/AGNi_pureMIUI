@@ -19,8 +19,6 @@
 #define sDEVICE_NAME "srandom"      /* Dev name as it appears in /proc/devices */
 #define AppVERSION "1.38.0"
 #define THREAD_SLEEP_VALUE 7        /* Amount of time worker thread should sleep between each operation. Recommended prime */
-#define PAID 0
-// #define DEBUG 0
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
     #define COPY_TO_USER raw_copy_to_user
@@ -123,7 +121,7 @@ uint64_t (*sarr_RND)[num_arr_RND + 1];  /* Array of Array of SECURE RND numbers 
 uint16_t CC_Busy_Flags = 0;             /* Binary Flags for Busy Arrays */
 int      CC_buffer_position = 0;        /* Array reserved to determine which buffer to use */
 uint64_t tm_seed;
-struct   TIMESPEC ts;
+static struct   TIMESPEC ts;
 
 /*
  * Global counters
@@ -177,22 +175,10 @@ int mod_init(void)
                 printk(KERN_INFO "[srandom] mod_init /proc/srandom registion regisered..\n");
 
         printk(KERN_INFO "[srandom] mod_init Module version         : "AppVERSION"\n");
-        if (PAID == 0) {
-                printk(KERN_INFO "-----------------------:----------------------\n");
-                printk(KERN_INFO "Please support my work and efforts contributing\n");
-                printk(KERN_INFO "to the Linux community.  A $25 payment per\n");
-                printk(KERN_INFO "server would be highly appreciated.\n");
-        }
         printk(KERN_INFO "-----------------------:----------------------\n");
         printk(KERN_INFO "Author                 : Jonathan Senkerik\n");
         printk(KERN_INFO "Website                : http://www.jintegrate.co\n");
         printk(KERN_INFO "github                 : http://github.com/josenk/srandom\n");
-        if (PAID == 0) {
-                printk(KERN_INFO "Paypal                 : josenk@jintegrate.co\n");
-                printk(KERN_INFO "Bitcoin                : 1MTNg7SqcEWs5uwLKwNiAfYqBfnKFJu65p\n");
-                printk(KERN_INFO "Commercial Invoice     : Avail on request.\n");
-        }
-
 
         sarr_RND = kzalloc((num_arr_RND + 1) * arr_RND_SIZE * sizeof(uint64_t), GFP_KERNEL);
         while (!sarr_RND) {
@@ -642,21 +628,10 @@ int proc_read(struct seq_file *m, void *v)
         seq_printf(m, "Current open count     : %d\n",sdev_open);
         seq_printf(m, "Total open count       : %d\n",sdev_openCount);
         seq_printf(m, "Total K bytes          : %llu\n",PRNGCount / 2);
-        if (PAID == 0) {
-                seq_printf(m, "-----------------------:----------------------\n");
-                seq_printf(m, "Please support my work and efforts contributing\n");
-                seq_printf(m, "to the Linux community.  A $25 payment per\n");
-                seq_printf(m, "server would be highly appreciated.\n");
-        }
         seq_printf(m, "-----------------------:----------------------\n");
         seq_printf(m, "Author                 : Jonathan Senkerik\n");
         seq_printf(m, "Website                : http://www.jintegrate.co\n");
         seq_printf(m, "github                 : http://github.com/josenk/srandom\n");
-        if (PAID == 0) {
-                seq_printf(m, "Paypal                 : josenk@jintegrate.co\n");
-                seq_printf(m, "Bitcoin                : 1GEtkAm97DphwJbJTPyywv6NbqJKLMtDzA\n");
-                seq_printf(m, "Commercial Invoice     : Avail on request.\n");
-        }
         return 0;
 }
 
