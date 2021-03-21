@@ -601,7 +601,7 @@
 			<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
 			<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
 			<  1497600000 RPMH_REGULATOR_LEVEL_TURBO>;
-		#reset-cells = <1>;
+		#clock-cells = <1>;
 	};
 
 	apps_rsc: rsc@17830000 {
