@@ -4,9 +4,9 @@
 KERNELDIR=`readlink -f .`
 
 export AGNI_VERSION_PREFIX="stable"
-export AGNI_VERSION="v12.8"
-sed -i 's/v12.7_stable-EAS/v12.8_stable-EAS/' $KERNELDIR/arch/arm64/configs/agni_*
-sed -i 's/ini_set("rom_version",	"v12.7_stable");/ini_set("rom_version",	"v12.8_stable");/' $KERNELDIR/anykernel3/META-INF/com/google/android/aroma-config
+export AGNI_VERSION="v12.9"
+sed -i 's/v12.9_beta2-EAS/v12.9_stable-EAS/' $KERNELDIR/arch/arm64/configs/agni_*
+sed -i 's/ini_set("rom_version",	"v12.9_beta2");/ini_set("rom_version",	"v12.9_stable");/' $KERNELDIR/anykernel3/META-INF/com/google/android/aroma-config
 
 echo "	AGNi Version info loaded."
 
