@@ -54,5 +54,9 @@
 			reg-names = "rtc", "alarm";
 			interrupts = <0x0 0x65 0x1 IRQ_TYPE_EDGE_RISING>;
 		};
+
+		pm5100_cdc: qcom,pm5100-cdc {
+			compatible = "qcom,pm5100-spmi";
+		};
 	};
 };
