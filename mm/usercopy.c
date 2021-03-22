@@ -235,6 +235,9 @@ void __check_object_size(const void *ptr, unsigned long n, bool to_user)
 {
 	const char *err;
 
+	/* Kill the hardened usercopy overhead but keep existing for miui modules */
+	return;
+
 	/* Skip all tests if size is zero. */
 	if (!n)
 		return;
