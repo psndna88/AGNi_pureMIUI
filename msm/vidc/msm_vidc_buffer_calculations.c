@@ -1439,7 +1439,7 @@ static inline u32 calculate_enc_scratch_size(struct msm_vidc_inst *inst,
 		bitbin_size = ALIGN(bitstream_size, VENUS_DMA_ALIGNMENT);
 	}
 	if (aligned_width * aligned_height >= 3840 * 2160)
-		size_singlePipe = bitbin_size / 4;
+		size_singlePipe = bitbin_size / num_vpp_pipes;
 	else if (num_vpp_pipes > 2)
 		size_singlePipe = bitbin_size / 2;
 	else
