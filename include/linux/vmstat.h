@@ -138,6 +138,16 @@ static inline unsigned long zone_page_state(struct zone *zone,
 	return x;
 }
 
+static inline unsigned long global_zone_page_state(enum zone_stat_item item)
+{
+	long x = atomic_long_read(&vm_stat[item]);
+#ifdef CONFIG_SMP
+	if (x < 0)
+		x = 0;
+#endif
+	return x;
+}
+
 /*
  * More accurate version that also considers the currently pending
  * deltas. For that we need to loop over all cpus to find the current
