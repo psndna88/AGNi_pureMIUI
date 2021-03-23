@@ -1626,10 +1626,6 @@ static void _sde_encoder_rc_restart_delayed(struct sde_encoder_virt *sde_enc,
 	unsigned int lp, idle_pc_duration;
 	struct msm_drm_thread *disp_thread;
 
-	/* return early if called from esd thread */
-	if (sde_enc->delay_kickoff)
-		return;
-
 	/* set idle timeout based on master connector's lp value */
 	if (sde_enc->cur_master)
 		lp = sde_connector_get_lp(
@@ -1717,7 +1713,9 @@ static int _sde_encoder_rc_kickoff(struct drm_encoder *drm_enc,
 	sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
 
 end:
-	_sde_encoder_rc_kickoff_delayed(sde_enc, sw_event);
+	/* avoid delayed off work if called from esd thread */
+	if (!sde_enc->delay_kickoff)
+		_sde_encoder_rc_kickoff_delayed(sde_enc, sw_event);
 
 	mutex_unlock(&sde_enc->rc_lock);
 	return ret;
@@ -1921,7 +1919,8 @@ static int _sde_encoder_rc_idle(struct drm_encoder *drm_enc,
 				SDE_EVTLOG_ERROR);
 		goto end;
 	} else if (sde_crtc_frame_pending(sde_enc->crtc) ||
-			sde_crtc->kickoff_in_progress) {
+			sde_crtc->kickoff_in_progress ||
+			sde_enc->delay_kickoff) {
 		SDE_DEBUG_ENC(sde_enc, "skip idle entry");
 		SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			sde_crtc_frame_pending(sde_enc->crtc),
