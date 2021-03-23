@@ -48,15 +48,13 @@
 
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&hostless>, <&afe>, <&routing>,
-				<&pcm_dtmf>, <&host_pcm>,
-				<&pcm_noirq>;
+				<&pcm_dtmf>, <&host_pcm>;
 		asoc-platform-names = "msm-pcm-dsp.0", "msm-pcm-dsp.1",
 				"msm-pcm-dsp.2",
 				"msm-voip-dsp", "msm-pcm-voice",
 				"msm-pcm-loopback", "msm-pcm-hostless",
 				"msm-pcm-afe", "msm-pcm-routing",
-				"msm-pcm-dtmf", "msm-voice-host-pcm",
-				"msm-pcm-dsp-noirq";
+				"msm-pcm-dtmf", "msm-voice-host-pcm";
 		asoc-cpu = <&dai_pri_auxpcm>, <&mi2s_prim>, <&mi2s_sec>,
 				<&dtmf_tx>,
 				<&rx_capture_tx>, <&rx_playback_rx>,
