@@ -20,6 +20,7 @@
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
 #include <linux/vmpressure.h>
+#include <linux/moduleparam.h>
 
 #ifdef CONFIG_ANDROID_PR_KILL
 #include <linux/delay.h>
@@ -417,29 +418,67 @@ static struct notifier_block vmpr_nb = {
 
 
 #ifdef CONFIG_ANDROID_PR_KILL
+#undef MODULE_PARAM_PREFIX
+#define MODULE_PARAM_PREFIX "lowmemorykiller."
 /*
  * Needed to prevent Android from thinking there's no LMK and thus rebooting.
  * Taken from Simple LMK (@kerneltoast).
  */
-static int process_reclaim_init(const char *val, const struct kernel_param *kp)
+static int lowmem_minfree[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+};
+static int lowmem_minfree_size = 4;
+module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size, S_IRUGO | S_IWUSR);
+
+static int enable_lmk = 1;
+module_param_named(enable_lmk, enable_lmk, int, 0644);
+
+static short adj_max_shift = 353;
+module_param_named(adj_max_shift, adj_max_shift, short, 0644);
+
+static int enable_adaptive_lmk = 0;
+module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
+
+static int vmpressure_file_min;
+module_param_named(vmpressure_file_min, vmpressure_file_min, int, 0644);
+
+static int oom_reaper = 1;
+module_param_named(oom_reaper, oom_reaper, int, 0644);
+
+static int lowmem_shrinker_seeks = 32;
+module_param_named(cost, lowmem_shrinker_seeks, int, 0644);
+
+static short lowmem_adj[6] = {
+	0,
+	1,
+	6,
+	12,
+};
+static int lowmem_adj_size = 4;
+module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size, 0644);
+
+static u32 lowmem_debug_level = 0;
+module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
+
+static int lmk_fast_run = 1;
+module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
+
+static int __init process_reclaim_prlmk_init(void)
 {
-	static atomic_t init_done = ATOMIC_INIT(0);
-
-	if (!atomic_cmpxchg(&init_done, 0, 1)) {
-		BUG_ON(vmpressure_notifier_register(&vmpr_nb));
-	}
-
+	vmpressure_notifier_register(&vmpr_nb);
 	return 0;
 }
 
-static const struct kernel_param_ops process_reclaim_ops = {
-	.set = process_reclaim_init
-};
+static void __exit process_reclaim_prlmk_exit(void)
+{
+	vmpressure_notifier_unregister(&vmpr_nb);
+}
 
-#undef MODULE_PARAM_PREFIX
-#define MODULE_PARAM_PREFIX "lowmemorykiller."
-module_param_cb(minfree, &process_reclaim_ops, NULL, 0200);
-
+module_init(process_reclaim_prlmk_init);
+module_exit(process_reclaim_prlmk_exit);
 #else /*CONFIG_ANDROID_PR_KILL*/
 
 static int __init process_reclaim_init(void)
