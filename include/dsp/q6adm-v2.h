@@ -55,6 +55,14 @@ enum {
 
 #define ADSP_ADM_API_VERSION_V3 3
 
+struct msm_ec_ref_port_cfg {
+	int rx;
+	int port_id;
+	int ch;
+	int bit_width;
+	int sampling_rate;
+};
+
 /* multiple copp per stream. */
 struct route_payload {
 	unsigned int copp_idx[MAX_COPPS_PER_PORT];
@@ -121,6 +129,13 @@ int adm_open(int port, int path, int rate, int mode, int topology,
 			   int perf_mode, uint16_t bits_per_sample,
 			   int app_type, int acdbdev_id, int session_type,
 			   uint32_t pass_thr, uint32_t copp_token);
+
+int adm_open_v2(int port, int path, int rate, int mode, int topology,
+			   int perf_mode, uint16_t bits_per_sample,
+			   int app_type, int acdbdev_id, int session_type,
+			   uint32_t pass_thr, uint32_t copp_token,
+			   struct msm_ec_ref_port_cfg *ec_ref_port_cfg,
+			   struct msm_pcm_channel_mixer *ec_ref_chmix_cfg);
 
 int adm_map_rtac_block(struct rtac_cal_block_data *cal_block);
 
