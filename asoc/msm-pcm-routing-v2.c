@@ -94,6 +94,8 @@ static int num_app_cfg_types;
 static int msm_ec_ref_port_id;
 static int afe_loopback_tx_port_index;
 static int afe_loopback_tx_port_id = -1;
+static struct msm_pcm_channel_mixer ec_ref_chmix_cfg[MSM_FRONTEND_DAI_MAX];
+static struct msm_ec_ref_port_cfg ec_ref_port_cfg;
 
 #define WEIGHT_0_DB 0x4000
 /* all the FEs which can support channel mixer */
@@ -1258,6 +1260,85 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 }
 EXPORT_SYMBOL(msm_pcm_routing_set_channel_mixer_cfg);
 
+
+/**
+ * msm_pcm_routing_set_stream_ec_ref_chmix_cfg
+ *
+ * Receives fedai_id, ec_ref chmix configuration.
+ * Returns 0 on success. On failure returns
+ * -EINVAL and does not alter passed values.
+ *
+ * fedai_id - Passed value, front end ID for which ec_ref config is wanted
+ * cfg_data - Passed value, configuration data used by ec_ref
+ */
+int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
+	int fedai_id, struct msm_pcm_channel_mixer *cfg_data)
+{
+	int i, j, ret = 0;
+
+	if (cfg_data == NULL) {
+		pr_err("%s: Received NULL pointer for cfg_data\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+	if (cfg_data->input_channel != msm_ec_ref_ch) {
+		pr_err("%s: mismatched input ch %d with port config ch %d\n",
+				__func__, cfg_data->input_channel,
+				 msm_ec_ref_ch);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	pr_debug("%s: fedai_id %d, input_channel %d output_channel %d\n",
+		__func__, fedai_id,
+		 cfg_data->input_channel, cfg_data->output_channel);
+
+	for (i = 0; i < cfg_data->output_channel; i++)
+		for (j = 0; j < cfg_data->input_channel; j++)
+			pr_debug("%s: ch[%d][%d] weight = %d",
+				 __func__, i, j, cfg_data->channel_weight[i][j]);
+
+	if (fedai_id < 0 || fedai_id > MSM_FRONTEND_DAI_MAX) {
+		pr_err("%s: Received out of bounds fedai_id %d\n",
+			__func__, fedai_id);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	mutex_lock(&routing_lock);
+
+	ec_ref_chmix_cfg[fedai_id].input_channel =
+						cfg_data->input_channel;
+	ec_ref_chmix_cfg[fedai_id].output_channel =
+						cfg_data->output_channel;
+	for (i = 0; i < cfg_data->output_channel; i++)
+		for (j = 0; j < cfg_data->input_channel; j++)
+			ec_ref_chmix_cfg[fedai_id].channel_weight[i][j] =
+						cfg_data->channel_weight[i][j];
+
+	ec_ref_chmix_cfg[fedai_id].override_in_ch_map =
+			cfg_data->override_in_ch_map;
+	if (ec_ref_chmix_cfg[fedai_id].override_in_ch_map) {
+		for (i = 0; i < ec_ref_chmix_cfg[fedai_id].input_channel; i++)
+			ec_ref_chmix_cfg[fedai_id].in_ch_map[i] =
+				cfg_data->in_ch_map[i];
+	}
+
+	ec_ref_chmix_cfg[fedai_id].override_out_ch_map =
+			cfg_data->override_out_ch_map;
+	if (ec_ref_chmix_cfg[fedai_id].override_out_ch_map) {
+		for (i = 0; i < ec_ref_chmix_cfg[fedai_id].output_channel; i++)
+			ec_ref_chmix_cfg[fedai_id].out_ch_map[i] =
+				cfg_data->out_ch_map[i];
+	}
+
+	mutex_unlock(&routing_lock);
+
+done:
+	return ret;
+}
+EXPORT_SYMBOL(msm_pcm_routing_set_stream_ec_ref_chmix_cfg);
+
 int msm_pcm_routing_reg_stream_app_type_cfg(
 	int fedai_id, int session_type, int be_id,
 	struct msm_pcm_stream_app_type_cfg *cfg_data)
@@ -2174,7 +2255,33 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 				&& be_bit_width == 32)
 				bits_per_sample = msm_routing_get_bit_width(
 							SNDRV_PCM_FORMAT_S32_LE);
-			copp_idx = adm_open(port_id, path_type,
+			if ((session_type == SESSION_TYPE_TX) &&
+				 (ec_ref_chmix_cfg[fedai_id].output_channel)) {
+				/* per-session ec_ref configuration */
+				ec_ref_port_cfg.rx = msm_route_ec_ref_rx;
+				ec_ref_port_cfg.port_id = msm_ec_ref_port_id;
+				ec_ref_port_cfg.ch = msm_ec_ref_ch;
+				ec_ref_port_cfg.sampling_rate =
+						msm_ec_ref_sampling_rate;
+				if (msm_ec_ref_bit_format ==
+						SNDRV_PCM_FORMAT_S16_LE)
+					ec_ref_port_cfg.bit_width = 16;
+				else if (msm_ec_ref_bit_format ==
+						SNDRV_PCM_FORMAT_S24_LE)
+					ec_ref_port_cfg.bit_width = 24;
+
+				copp_idx = adm_open_v2(port_id, path_type,
+						sample_rate, channels, topology,
+						perf_mode, bits_per_sample,
+						app_type, acdb_dev_id,
+						session_type, passthr_mode,
+						copp_token,
+						&ec_ref_port_cfg,
+						&ec_ref_chmix_cfg[fedai_id]);
+				/* reset ec_ref config */
+				ec_ref_chmix_cfg[fedai_id].output_channel = 0;
+			} else
+				copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
 					    perf_mode, bits_per_sample,
 					    app_type, acdb_dev_id,
