@@ -5570,21 +5570,24 @@ static int msm_ec_ref_rate_put(struct snd_kcontrol *kcontrol,
 		msm_ec_ref_sampling_rate = 16000;
 		break;
 	case 3:
-		msm_ec_ref_sampling_rate = 32000;
+		msm_ec_ref_sampling_rate = 24000;
 		break;
 	case 4:
-		msm_ec_ref_sampling_rate = 44100;
+		msm_ec_ref_sampling_rate = 32000;
 		break;
 	case 5:
-		msm_ec_ref_sampling_rate = 48000;
+		msm_ec_ref_sampling_rate = 44100;
 		break;
 	case 6:
-		msm_ec_ref_sampling_rate = 96000;
+		msm_ec_ref_sampling_rate = 48000;
 		break;
 	case 7:
-		msm_ec_ref_sampling_rate = 192000;
+		msm_ec_ref_sampling_rate = 96000;
 		break;
 	case 8:
+		msm_ec_ref_sampling_rate = 192000;
+		break;
+	case 9:
 		msm_ec_ref_sampling_rate = 384000;
 		break;
 	default:
@@ -5807,7 +5810,7 @@ static int msm_routing_afe_lb_tx_port_put(struct snd_kcontrol *kcontrol,
 }
 
 static const char *const ec_ref_rate_text[] = {"0", "8000", "16000",
-	"32000", "44100", "48000", "96000", "192000", "384000"};
+	"24000", "32000", "44100", "48000", "96000", "192000", "384000"};
 
 static const struct soc_enum msm_route_ec_ref_params_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ec_ref_ch_text), ec_ref_ch_text),
