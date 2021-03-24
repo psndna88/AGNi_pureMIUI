@@ -179,10 +179,23 @@ wlan_pmo_get_igmp_version_support_cfg(struct wlan_objmgr_psoc *psoc,
 	psoc_cfg->igmp_version_support =
 				cfg_get(psoc, CFG_IGMP_VERSION_SUPPORT);
 }
+
+static void
+wlan_pmo_get_igmp_offload_enable_cfg(struct wlan_objmgr_psoc *psoc,
+				     struct pmo_psoc_cfg *psoc_cfg)
+{
+	psoc_cfg->igmp_offload_enable = cfg_get(psoc,
+						CFG_PMO_ENABLE_IGMP_OFFLOAD);
+}
 #else
 static void
 wlan_pmo_get_igmp_version_support_cfg(struct wlan_objmgr_psoc *psoc,
 				      struct pmo_psoc_cfg *psoc_cfg)
+{}
+
+static void
+wlan_pmo_get_igmp_offload_enable_cfg(struct wlan_objmgr_psoc *psoc,
+				     struct pmo_psoc_cfg *psoc_cfg)
 {}
 #endif
 
@@ -233,6 +246,7 @@ static void wlan_pmo_init_cfg(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_ACTIVE_MC_BC_APF_MODE);
 	psoc_cfg->ito_repeat_count = cfg_get(psoc, CFG_ITO_REPEAT_COUNT);
 	wlan_pmo_ra_filtering_init_cfg(psoc, psoc_cfg);
+	wlan_pmo_get_igmp_offload_enable_cfg(psoc, psoc_cfg);
 }
 
 QDF_STATUS pmo_psoc_open(struct wlan_objmgr_psoc *psoc)

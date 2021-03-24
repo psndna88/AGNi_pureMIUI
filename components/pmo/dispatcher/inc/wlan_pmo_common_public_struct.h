@@ -311,6 +311,7 @@ enum active_apf_mode {
  * @is_mod_dtim_on_sys_suspend_enabled: true when mod dtim is enabled for
  * system suspend wow else false
  * @igmp_version_support: igmp version support
+ * @igmp_offload_enable: enable/disable igmp offload feature to fw
  */
 struct pmo_psoc_cfg {
 	bool ptrn_match_enable_all_vdev;
@@ -380,6 +381,7 @@ struct pmo_psoc_cfg {
 	bool is_bus_suspend_enabled_in_go_mode;
 #ifdef WLAN_FEATURE_IGMP_OFFLOAD
 	uint32_t igmp_version_support;
+	bool igmp_offload_enable;
 #endif
 };
 
