@@ -17316,42 +17316,16 @@ csr_roam_offload_scan(struct mac_context *mac_ctx, uint8_t session_id,
 }
 
 QDF_STATUS
-wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
-			 uint8_t command, uint8_t reason)
+cm_akm_roam_allowed(struct mac_context *mac_ctx, uint8_t vdev_id)
 {
-	uint8_t *state = NULL;
 	struct csr_roam_session *session;
-	struct mac_context *mac_ctx;
-	tpCsrNeighborRoamControlInfo roam_info;
 	enum csr_akm_type roam_profile_akm = eCSR_AUTH_TYPE_UNKNOWN;
 	uint32_t fw_akm_bitmap;
-	bool p2p_disable_sta_roaming = 0, nan_disable_sta_roaming = 0;
-
-	mac_ctx = sme_get_mac_context();
-	if (!mac_ctx) {
-		sme_err("mac_ctx is NULL");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	sme_debug("RSO Command %d, vdev %d, Reason %d",
-		  command, vdev_id, reason);
 
 	session = CSR_GET_SESSION(mac_ctx, vdev_id);
 	if (!session) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  "session is null");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	roam_info = &mac_ctx->roam.neighborRoamInfo[vdev_id];
-
-	if (roam_info->neighborRoamState !=
-	    eCSR_NEIGHBOR_ROAM_STATE_CONNECTED &&
-	    (command == ROAM_SCAN_OFFLOAD_UPDATE_CFG ||
-	     command == ROAM_SCAN_OFFLOAD_START ||
-	     command == ROAM_SCAN_OFFLOAD_RESTART)) {
-		sme_debug("Session not in connected state, RSO not sent and state=%d ",
-			  roam_info->neighborRoamState);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -17418,6 +17392,44 @@ wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			return QDF_STATUS_E_NOSUPPORT;
 		}
 	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 uint8_t command, uint8_t reason)
+{
+	uint8_t *state = NULL;
+	struct mac_context *mac_ctx;
+	tpCsrNeighborRoamControlInfo roam_info;
+	bool p2p_disable_sta_roaming = 0, nan_disable_sta_roaming = 0;
+	QDF_STATUS status;
+
+	mac_ctx = sme_get_mac_context();
+	if (!mac_ctx) {
+		sme_err("mac_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	sme_debug("RSO Command %d, vdev %d, Reason %d",
+		  command, vdev_id, reason);
+
+	roam_info = &mac_ctx->roam.neighborRoamInfo[vdev_id];
+
+	if (roam_info->neighborRoamState !=
+	    eCSR_NEIGHBOR_ROAM_STATE_CONNECTED &&
+	    (command == ROAM_SCAN_OFFLOAD_UPDATE_CFG ||
+	     command == ROAM_SCAN_OFFLOAD_START ||
+	     command == ROAM_SCAN_OFFLOAD_RESTART)) {
+		sme_debug("Session not in connected state, RSO not sent and state=%d ",
+			  roam_info->neighborRoamState);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = cm_akm_roam_allowed(mac_ctx, vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
 
 	p2p_disable_sta_roaming =
 		(cfg_p2p_is_roam_config_disabled(psoc) &&
