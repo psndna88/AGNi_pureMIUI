@@ -49,7 +49,7 @@
 
 		mss_mem: mss_region@0x88000000 {
 			no-map;
-			reg = <0x88000000 0x7300000>;
+			reg = <0x88000000 0x6e00000>;
 			label = "mss_mem";
 		};
 
