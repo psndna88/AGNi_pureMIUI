@@ -482,20 +482,44 @@ static void gsi_dbg_update_ch_dp_stats(struct gsi_chan_ctx *ctx)
 	int ee = gsi_ctx->per.ee;
 	uint16_t used_hw;
 
-	rp_hw = gsi_readl(gsi_ctx->base +
-		GSI_EE_n_GSI_CH_k_CNTXT_4_OFFS(ctx->props.ch_id, ee));
-	rp_hw |= ((uint64_t)gsi_readl(gsi_ctx->base +
-		GSI_EE_n_GSI_CH_k_CNTXT_5_OFFS(ctx->props.ch_id, ee)))
-		<< 32;
+	if ( ctx->props.prot == GSI_CHAN_PROT_WDI2) {
+		rp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_4_OFFS(ctx->props.ch_id, gsi_ctx->per.ee)) &
+			0x0000ffff;
 
-	wp_hw = gsi_readl(gsi_ctx->base +
-		GSI_EE_n_GSI_CH_k_CNTXT_6_OFFS(ctx->props.ch_id, ee));
-	wp_hw |= ((uint64_t)gsi_readl(gsi_ctx->base +
-		GSI_EE_n_GSI_CH_k_CNTXT_7_OFFS(ctx->props.ch_id, ee)))
-		<< 32;
+		wp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_RE_FETCH_WRITE_PTR_OFFS(ctx->props.ch_id,
+			gsi_ctx->per.ee));
 
-	start_hw = gsi_find_idx_from_addr(&ctx->ring, rp_hw);
-	end_hw = gsi_find_idx_from_addr(&ctx->ring, wp_hw);
+		start_hw = rp_hw / ctx->ring.elem_sz;
+		end_hw = wp_hw / ctx->ring.elem_sz;
+	} else if ( ctx->props.prot == GSI_CHAN_PROT_WDI3) {
+		rp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_4_OFFS(ctx->props.ch_id, gsi_ctx->per.ee)) &
+			0x000fffff;
+
+		wp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_RE_FETCH_WRITE_PTR_OFFS(ctx->props.ch_id,
+			gsi_ctx->per.ee));
+
+		start_hw = rp_hw / ctx->ring.elem_sz;
+		end_hw = wp_hw / ctx->ring.elem_sz;
+	} else {
+		rp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_4_OFFS(ctx->props.ch_id, ee));
+		rp_hw |= ((uint64_t)gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_5_OFFS(ctx->props.ch_id, ee)))
+			<< 32;
+
+		wp_hw = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_6_OFFS(ctx->props.ch_id, ee));
+		wp_hw |= ((uint64_t)gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_7_OFFS(ctx->props.ch_id, ee)))
+			<< 32;
+
+		start_hw = gsi_find_idx_from_addr(&ctx->ring, rp_hw);
+		end_hw = gsi_find_idx_from_addr(&ctx->ring, wp_hw);
+	}
 
 	if (end_hw >= start_hw)
 		used_hw = end_hw - start_hw;
