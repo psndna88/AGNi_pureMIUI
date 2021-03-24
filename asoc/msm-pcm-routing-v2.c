@@ -79,6 +79,9 @@ static int msm_ec_ref_ch = 4;
 static int msm_ec_ref_ch_downmixed = 4;
 static int msm_ec_ref_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 static int msm_ec_ref_sampling_rate = 48000;
+static uint16_t msm_ec_ref_ch_weights[PCM_FORMAT_MAX_NUM_CHANNEL_V8]
+				[PCM_FORMAT_MAX_NUM_CHANNEL_V8];
+
 static uint32_t voc_session_id = ALL_SESSION_VSID;
 static int msm_route_ext_ec_ref;
 static bool is_custom_stereo_on;
@@ -5477,19 +5480,34 @@ static int msm_ec_ref_ch_downmixed_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int msm_ec_ref_chmixer_weights_put(struct snd_kcontrol *kcontrol,
+static int msm_ec_ref_chmixer_weights_get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
 	int i = 0, ret = 0;
-	uint16_t weights[PCM_FORMAT_MAX_NUM_CHANNEL_V8] = {0};
 	int out_channel_idx = ((struct soc_multi_mixer_control *)
 				kcontrol->private_value)->shift;
 
 	for (; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
-		weights[i] = ucontrol->value.integer.value[i];
+		ucontrol->value.integer.value[i] =
+			msm_ec_ref_ch_weights[out_channel_idx][i];
+
+	return ret;
+}
+
+static int msm_ec_ref_chmixer_weights_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	int i = 0, ret = 0;
+	int out_channel_idx = ((struct soc_multi_mixer_control *)
+				kcontrol->private_value)->shift;
+
+	for (; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+		msm_ec_ref_ch_weights[out_channel_idx][i] =
+			ucontrol->value.integer.value[i];
 
 	ret = adm_ec_ref_chmixer_weights(out_channel_idx,
-					weights, PCM_FORMAT_MAX_NUM_CHANNEL_V8);
+					msm_ec_ref_ch_weights[out_channel_idx],
+					PCM_FORMAT_MAX_NUM_CHANNEL_V8);
 	pr_debug("%s: ch_index = %d, ret = %d\n", __func__, out_channel_idx, ret);
 	return ret;
 }
@@ -5849,28 +5867,36 @@ static const struct snd_kcontrol_new ec_ref_param_controls[] = {
 		msm_route_ec_ref_params_enum[0],
 		msm_ec_ref_ch_downmixed_get, msm_ec_ref_ch_downmixed_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch1", SND_SOC_NOPM,
-		0, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		0, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch2", SND_SOC_NOPM,
-		1, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		1, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch3", SND_SOC_NOPM,
-		2, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		2, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch4", SND_SOC_NOPM,
-		3, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		3, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch5", SND_SOC_NOPM,
-		4, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		4, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch6", SND_SOC_NOPM,
-		5, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		5, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch7", SND_SOC_NOPM,
-		6, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		6, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_SINGLE_MULTI_EXT("EC Reference ChMixer Weights Ch8", SND_SOC_NOPM,
-		7, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8, NULL,
+		7, 16384, 0, PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+		msm_ec_ref_chmixer_weights_get,
 		msm_ec_ref_chmixer_weights_put),
 	SOC_ENUM_EXT("AFE_LOOPBACK_TX Port", msm_route_ec_ref_rx_enum[0],
 		msm_routing_afe_lb_tx_port_get, msm_routing_afe_lb_tx_port_put),
@@ -31376,6 +31402,13 @@ static const struct snd_kcontrol_new pll_clk_drift_controls[] = {
 	0, 128, msm_routing_get_pll_clk_drift, msm_routing_put_pll_clk_drift),
 };
 
+static int msm_routing_get_port_chmap_mixer(struct snd_kcontrol *kcontrol,
+					    struct snd_ctl_elem_value *ucontrol)
+{
+	/* can't get the chmap info without be_idx */
+	return 0;
+}
+
 static int msm_routing_put_port_chmap_mixer(struct snd_kcontrol *kcontrol,
 					    struct snd_ctl_elem_value *ucontrol)
 {
@@ -31404,7 +31437,8 @@ static int msm_routing_put_port_chmap_mixer(struct snd_kcontrol *kcontrol,
 static const struct snd_kcontrol_new port_multi_channel_map_mixer_controls[] = {
 	SOC_SINGLE_MULTI_EXT("Backend Device Channel Map", SND_SOC_NOPM, 0,
 			MSM_BACKEND_DAI_MAX, 0,
-			PCM_FORMAT_MAX_NUM_CHANNEL_V8 + 1, NULL,
+			PCM_FORMAT_MAX_NUM_CHANNEL_V8 + 1,
+			msm_routing_get_port_chmap_mixer,
 			msm_routing_put_port_chmap_mixer),
 };
 
