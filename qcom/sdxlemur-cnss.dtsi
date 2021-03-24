@@ -1,4 +1,18 @@
 
+&reserved_memory {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+
+	cnss_wlan_mem: cnss_wlan_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x00000000 0xffffffff>;
+		reusable;
+		alignment = <0x400000>;
+		size = <0x1400000>;
+	};
+};
+
 &soc {
 	wlan: qcom,cnss-qca6490@b0000000 {
 		compatible = "qcom,cnss-qca6490";
