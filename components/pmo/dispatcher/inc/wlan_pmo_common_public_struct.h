@@ -310,6 +310,7 @@ enum active_apf_mode {
  * @ito_repeat_count: Indicates ito repeated count
  * @is_mod_dtim_on_sys_suspend_enabled: true when mod dtim is enabled for
  * system suspend wow else false
+ * @igmp_version_support: igmp version support
  */
 struct pmo_psoc_cfg {
 	bool ptrn_match_enable_all_vdev;
@@ -377,6 +378,9 @@ struct pmo_psoc_cfg {
 	bool is_mod_dtim_on_sys_suspend_enabled;
 	bool is_bus_suspend_enabled_in_sap_mode;
 	bool is_bus_suspend_enabled_in_go_mode;
+#ifdef WLAN_FEATURE_IGMP_OFFLOAD
+	uint32_t igmp_version_support;
+#endif
 };
 
 /**
