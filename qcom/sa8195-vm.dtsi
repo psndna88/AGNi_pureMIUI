@@ -746,6 +746,14 @@
 		regulator-name = "usb30_sec_gdsc";
 	};
 
+	usb30_mp_gdsc: qcom,gdsc@1a6004 {
+		regulator-name = "usb30_mp_gdsc";
+	};
+
+	ufs_card_2_gdsc: ufs_card_2_gdsc {
+		regulator-name = "ufs_card_2_gdsc";
+	};
+
 	pcie_0_gdsc: pcie_0_gdsc {
 		regulator-name = "pcie_0_gdsc";
 	};
@@ -798,6 +806,12 @@
 		regulator-min-microvolt = <800000>;
 		regulator-max-microvolt = <920000>;
 		regulator-allow-set-load;
+	};
+
+	L9E: pm8195_3_l9: regulator-pm8195-3-l9 {
+		regulator-name = "ldoe9";
+		regulator-min-microvolt = <830000>;
+		regulator-max-microvolt = <920000>;
 	};
 
 	L16E: pm8195_3_l16: regulator-pm8195-3-l16 {
