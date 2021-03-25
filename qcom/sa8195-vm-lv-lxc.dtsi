@@ -38,6 +38,10 @@
 	status = "ok";
 };
 
+&linux_cma {
+	size = <0x0 0x3c00000>;
+};
+
 &pcie0_msi {
 	status = "ok";
 };
@@ -53,3 +57,5 @@
 &pcie2 {
 	status = "ok";
 };
+
+#include "sa8195-vm-lv-cnss-lxc.dtsi"

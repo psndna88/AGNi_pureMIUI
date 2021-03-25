@@ -145,7 +145,7 @@
 		gpio = <&tlmm 174 0>;
 	};
 
-	qcom,cnss-qca-converged {
+	cnss_pcie: qcom,cnss-qca-converged {
 		compatible = "qcom,cnss-qca-converged";
 
 		qcom,converged-dt;
