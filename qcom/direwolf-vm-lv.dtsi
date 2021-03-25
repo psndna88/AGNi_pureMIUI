@@ -8,3 +8,5 @@
 		label = "pmem_shared_mem";
 	};
 };
+
+#include "display/direwolf-vm-lv-display.dtsi"
