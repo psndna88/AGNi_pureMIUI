@@ -59,3 +59,12 @@
 };
 
 #include "sa8195-vm-lv-cnss-lxc.dtsi"
+#include "sa8195-vm-ufs.dtsi"
+
+&ufs2phy_mem {
+	status = "ok";
+};
+
+&ufshc2_mem {
+	status = "ok";
+};

@@ -770,6 +770,10 @@
 		regulator-name = "pcie_3_gdsc";
 	};
 
+	ufs_card_2_gdsc: ufs_card_2_gdsc {
+		regulator-name = "ufs_card_2_gdsc";
+	};
+
 	L2A: pm8195_1_l2: regulator-pm8195-1-l2 {
 		regulator-name = "ldoa2";
 		regulator-min-microvolt = <1800000>;
