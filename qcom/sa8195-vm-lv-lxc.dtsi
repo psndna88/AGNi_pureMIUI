@@ -22,6 +22,14 @@
 	status = "ok";
 };
 
+&qupv3_se13_4uart {
+	status = "ok";
+};
+
+&qupv3_se4_4uart {
+	status = "ok";
+};
+
 &pcie0_msi {
 	status = "ok";
 };
