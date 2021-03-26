@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -5442,13 +5442,17 @@ EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_v2);
 
 static int __q6asm_enc_cfg_blk_pcm_v5(struct audio_client *ac,
 				      uint32_t rate, uint32_t channels,
+				      bool use_default_chmap,
+				      char *channel_map,
 				      uint16_t bits_per_sample,
 				      uint16_t sample_word_size,
 				      uint16_t endianness,
 				      uint16_t mode)
 {
 	return q6asm_enc_cfg_blk_pcm_v5(ac, rate, channels,
-					bits_per_sample, true, false, NULL,
+					bits_per_sample,
+					use_default_chmap, false,
+					channel_map,
 					sample_word_size, endianness, mode);
 }
 
@@ -5557,20 +5561,28 @@ EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_format_support_v4);
  * @rate: sample rate
  * @channels: number of channels
  * @bits_per_sample: bit width of encoder session
+ * @use_default_chmap: true if default channel map to be used
+ * @channel_map: input channel map
  * @sample_word_size: Size in bits of the word that holds a sample of a channel
  * @endianness: endianness of the pcm data
  * @mode: Mode to provide additional info about the pcm input data
  */
 int q6asm_enc_cfg_blk_pcm_format_support_v5(struct audio_client *ac,
 					    uint32_t rate, uint32_t channels,
+					    bool use_default_chmap,
+					    char *channel_map,
 					    uint16_t bits_per_sample,
 					    uint16_t sample_word_size,
 					    uint16_t endianness,
 					    uint16_t mode)
 {
 	 return __q6asm_enc_cfg_blk_pcm_v5(ac, rate, channels,
-					   bits_per_sample, sample_word_size,
-					   endianness, mode);
+					   use_default_chmap,
+					   channel_map,
+					   bits_per_sample,
+					   sample_word_size,
+					   endianness,
+					   mode);
 }
 
 EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_format_support_v5);

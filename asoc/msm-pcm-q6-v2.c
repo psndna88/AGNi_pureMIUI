@@ -59,6 +59,11 @@ struct snd_msm {
 	struct snd_pcm *pcm;
 };
 
+struct msm_pcm_channel_map {
+	bool set_channel_map;
+	char channel_map[PCM_FORMAT_MAX_NUM_CHANNEL_V8];
+};
+
 #define CMD_EOS_MIN_TIMEOUT_LENGTH  50
 #define CMD_EOS_TIMEOUT_MULTIPLIER  (HZ * 50)
 #define MAX_PB_COPY_RETRIES         3
@@ -122,6 +127,8 @@ static struct snd_pcm_hw_constraint_list constraints_sample_rates = {
 	.list = supported_sample_rates,
 	.mask = 0,
 };
+
+struct msm_pcm_channel_map *chmap_pspd[MSM_FRONTEND_DAI_MM_SIZE][2];
 
 static void msm_pcm_route_event_handler(enum msm_pcm_routing_event event,
 					void *priv_data)
@@ -324,6 +331,23 @@ static void event_handler(uint32_t opcode,
 	}
 }
 
+static struct msm_pcm_channel_map *msm_pcm_get_chmap(u64 fe_id,
+			int session_type)
+{
+	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+		pr_err("%s: invalid FE %llu\n", __func__, fe_id);
+		return NULL;
+	}
+
+	if ((session_type != SESSION_TYPE_TX) &&
+		(session_type != SESSION_TYPE_RX)) {
+		pr_err("%s: invalid session type %d\n", __func__, session_type);
+		return NULL;
+	}
+
+	return chmap_pspd[fe_id][session_type];
+}
+
 static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -333,6 +357,7 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 	struct msm_audio *prtd = runtime->private_data;
 	struct msm_plat_data *pdata;
 	struct snd_pcm_hw_params *params;
+	struct msm_pcm_channel_map *chmap;
 	int ret;
 	uint32_t fmt_type = FORMAT_LINEAR_PCM;
 	uint16_t bits_per_sample;
@@ -355,6 +380,12 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 		return -EINVAL;
 	}
 	params = &soc_prtd->dpcm[substream->stream].hw_params;
+
+	chmap = msm_pcm_get_chmap(soc_prtd->dai_link->id, SESSION_TYPE_RX);
+	if (!chmap) {
+		pr_err("%s: invalid chmap handle\n", __func__);
+		return -EINVAL;
+	}
 
 	pr_debug("%s\n", __func__);
 	prtd->pcm_size = snd_pcm_lib_buffer_bytes(substream);
@@ -455,8 +486,8 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 
 			ret = q6asm_media_format_block_multi_ch_pcm_v5(
 				prtd->audio_client, runtime->rate,
-				runtime->channels, !prtd->set_channel_map,
-				prtd->channel_map, bits_per_sample,
+				runtime->channels, !chmap->set_channel_map,
+				chmap->channel_map, bits_per_sample,
 				sample_word_size, ASM_LITTLE_ENDIAN,
 				DEFAULT_QF);
 		} else {
@@ -469,7 +500,7 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 		}
 	}
 	if (ret < 0)
-		pr_info("%s: CMD Format block failed\n", __func__);
+		pr_err("%s: CMD Format block failed\n", __func__);
 
 	atomic_set(&prtd->out_count, runtime->periods);
 
@@ -490,6 +521,7 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 	struct msm_plat_data *pdata;
 	struct snd_pcm_hw_params *params;
 	struct msm_pcm_routing_evt event;
+	struct msm_pcm_channel_map *chmap;
 	int ret = 0;
 	int i = 0;
 	uint16_t bits_per_sample = 16;
@@ -509,6 +541,12 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 	if (!prtd || !prtd->audio_client) {
 		pr_err("%s: private data null or audio client freed\n",
 			__func__);
+		return -EINVAL;
+	}
+
+	chmap = msm_pcm_get_chmap(soc_prtd->dai_link->id, SESSION_TYPE_TX);
+	if (!chmap) {
+		pr_err("%s: invalid chmap handle\n", __func__);
 		return -EINVAL;
 	}
 
@@ -616,6 +654,8 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 						prtd->audio_client,
 						prtd->samp_rate,
 						prtd->channel_mode,
+						!chmap->set_channel_map,
+						chmap->channel_map,
 						bits_per_sample,
 						sample_word_size,
 						ASM_LITTLE_ENDIAN,
@@ -1835,9 +1875,12 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	struct msm_plat_data *pdata = NULL;
 	struct msm_pcm_channel_mixer *chmixer_pspd = NULL;
 	struct snd_soc_component *component = NULL;
-	u64 fe_id = 0;
+	struct msm_pcm_channel_map *chmap;
+	u64 fe_id = kcontrol->private_value & 0xFF;
+	int session_type = (kcontrol->private_value >> 8) & 0xFF;
 
-	pr_debug("%s", __func__);
+	pr_debug("%s: chmap ctl for fe_id: %d, session_type: %d\n",
+			__func__, fe_id, session_type);
 	substream = snd_pcm_chmap_substream(info, idx);
 	if (!substream)
 		return -ENODEV;
@@ -1857,6 +1900,17 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 			return -EINVAL;
 		}
 	}
+
+	chmap = msm_pcm_get_chmap(fe_id, session_type);
+	if (!chmap) {
+		pr_err("%s: invalid chmap handle\n", __func__);
+		return -EINVAL;
+	}
+	for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+		chmap->channel_map[i] =
+			ucontrol->value.integer.value[i];
+
+	chmap->set_channel_map = true;
 
 	if (!rtd)
 		return 0;
@@ -1899,60 +1953,23 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
-	int i;
-	struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
-	unsigned int idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
-	struct snd_pcm_substream *substream;
-	struct msm_audio *prtd;
-	struct snd_soc_pcm_runtime *rtd = NULL;
-	struct msm_plat_data *pdata = NULL;
-	struct snd_soc_component *component = NULL;
+	int i = 0;
+	struct msm_pcm_channel_map *chmap;
+	u64 fe_id = kcontrol->private_value & 0xFF;
+	int session_type = (kcontrol->private_value >> 8) & 0xFF;
 
-	pr_debug("%s", __func__);
-	substream = snd_pcm_chmap_substream(info, idx);
-	if (!substream)
-		return -ENODEV;
+	pr_debug("%s: chmap ctl for fe_id: %d, session_type: %d\n",
+			__func__, fe_id, session_type);
 
-	rtd = substream->private_data;
-	if (rtd) {
-		component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
-		if (component) {
-			pdata = (struct msm_plat_data *)
-						dev_get_drvdata(component->dev);
-			if (!pdata) {
-				pr_err("%s: pdata not found\n", __func__);
-				return -ENODEV;
-			}
-		} else {
-			pr_err("%s: component is NULL\n", __func__);
-			return -EINVAL;
-		}
-	}
-
-	memset(ucontrol->value.integer.value, 0,
-		sizeof(ucontrol->value.integer.value));
-	if (!rtd)
-		return 0; /* no channels set */
-
-	mutex_lock(&pdata->lock);
-	if (substream->runtime && substream->ref_count <= 0) {
-		pr_err_ratelimited("%s: substream ref_count:%d invalid\n",
-				__func__, substream->ref_count);
-		mutex_unlock(&pdata->lock);
+	chmap = msm_pcm_get_chmap(fe_id, session_type);
+	if (!chmap) {
+		pr_err("%s: invalid chmap handle\n", __func__);
 		return -EINVAL;
 	}
-	prtd = substream->runtime ? substream->runtime->private_data : NULL;
+	for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+		ucontrol->value.integer.value[i] =
+			chmap->channel_map[i];
 
-	if (prtd && prtd->set_channel_map == true) {
-		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
-			ucontrol->value.integer.value[i] =
-					(int)prtd->channel_map[i];
-	} else {
-		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
-			ucontrol->value.integer.value[i] = 0;
-	}
-
-	mutex_unlock(&pdata->lock);
 	return 0;
 }
 
@@ -1965,24 +1982,82 @@ static int msm_pcm_add_chmap_controls(struct snd_soc_pcm_runtime *rtd)
 	int i, ret = 0;
 
 	pr_debug("%s, Channel map cntrl add\n", __func__);
-	ret = snd_pcm_add_chmap_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
-				     snd_pcm_std_chmaps,
-				     PCM_FORMAT_MAX_NUM_CHANNEL_V8, 0,
-				     &chmap_info);
-	if (ret < 0) {
-		pr_err("%s, channel map cntrl add failed\n", __func__);
-		return ret;
+
+	if (rtd->pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream &&
+			!chmap_pspd[rtd->dai_link->id][SESSION_TYPE_RX]) {
+
+		chmap_pspd[rtd->dai_link->id][SESSION_TYPE_RX] =
+			kzalloc(sizeof(struct msm_pcm_channel_map), GFP_KERNEL);
+		if (!chmap_pspd[rtd->dai_link->id][SESSION_TYPE_RX]) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+
+		ret = snd_pcm_add_chmap_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
+					     snd_pcm_std_chmaps,
+					     PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+					     (rtd->dai_link->id) | (SESSION_TYPE_RX << 8),
+					     &chmap_info);
+		if (ret < 0) {
+			pr_err("%s, channel map cntrl add failed\n", __func__);
+			goto fail;
+		}
+		kctl = chmap_info->kctl;
+		for (i = 0; i < kctl->count; i++)
+			kctl->vd[i].access |= SNDRV_CTL_ELEM_ACCESS_WRITE;
+
+		snprintf(device_num, sizeof(device_num), "%d", pcm->device);
+		strlcat(kctl->id.name, device_num, sizeof(kctl->id.name));
+		pr_debug("%s, Overwriting channel map control name to: %s\n",
+			__func__, kctl->id.name);
+
+		kctl->put = msm_pcm_chmap_ctl_put;
+		kctl->get = msm_pcm_chmap_ctl_get;
 	}
-	kctl = chmap_info->kctl;
-	for (i = 0; i < kctl->count; i++)
-		kctl->vd[i].access |= SNDRV_CTL_ELEM_ACCESS_WRITE;
-	snprintf(device_num, sizeof(device_num), "%d", pcm->device);
-	strlcat(kctl->id.name, device_num, sizeof(kctl->id.name));
-	pr_debug("%s, Overwriting channel map control name to: %s\n",
-		__func__, kctl->id.name);
-	kctl->put = msm_pcm_chmap_ctl_put;
-	kctl->get = msm_pcm_chmap_ctl_get;
+
+	if (rtd->pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream &&
+			!chmap_pspd[rtd->dai_link->id][SESSION_TYPE_TX]) {
+
+		chmap_pspd[rtd->dai_link->id][SESSION_TYPE_TX] =
+			kzalloc(sizeof(struct msm_pcm_channel_map), GFP_KERNEL);
+		if (!chmap_pspd[rtd->dai_link->id][SESSION_TYPE_TX]) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+
+		ret = snd_pcm_add_chmap_ctls(pcm, SNDRV_PCM_STREAM_CAPTURE,
+					     snd_pcm_std_chmaps,
+					     PCM_FORMAT_MAX_NUM_CHANNEL_V8,
+					     (rtd->dai_link->id) | (SESSION_TYPE_TX << 8),
+					     &chmap_info);
+		if (ret < 0) {
+			pr_err("%s, channel map cntrl add failed\n", __func__);
+			goto fail;
+		}
+		kctl = chmap_info->kctl;
+		for (i = 0; i < kctl->count; i++)
+			kctl->vd[i].access |= SNDRV_CTL_ELEM_ACCESS_WRITE;
+
+		snprintf(device_num, sizeof(device_num), "%d", pcm->device);
+		strlcat(kctl->id.name, device_num, sizeof(kctl->id.name));
+		pr_debug("%s, Overwriting channel map control name to: %s\n",
+			__func__, kctl->id.name);
+
+		kctl->put = msm_pcm_chmap_ctl_put;
+		kctl->get = msm_pcm_chmap_ctl_get;
+	}
+
 	return 0;
+
+fail:
+	pr_err("%s: failed add chmap ctls, err = %d\n", __func__, ret);
+
+	kfree(chmap_pspd[rtd->dai_link->id][SESSION_TYPE_RX]);
+	kfree(chmap_pspd[rtd->dai_link->id][SESSION_TYPE_TX]);
+	chmap_pspd[rtd->dai_link->id][SESSION_TYPE_RX] = NULL;
+	chmap_pspd[rtd->dai_link->id][SESSION_TYPE_TX] = NULL;
+
+	return ret;
 }
 
 #if IS_ENABLED(CONFIG_AUDIO_QGKI)
