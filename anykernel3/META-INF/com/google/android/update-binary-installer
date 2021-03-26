@@ -563,15 +563,9 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/cam.prop`" ]; then
 		fi;
 	fi;
 elif [ "`$BB grep selected.0=2 /tmp/aroma-data/cam.prop`" ]; then
-		if ([ "$DEVICE_NATIVE_MIUIQ" == "YES" ] && [ "$ANDROID_VER" == "Q" ] && [ "$MIUI_VER" == "12" ]); then
-			#FORCE MIUIQ CAM MODE
-			KERNEL="MIUIQ";
-			ui_print " " "AGNi installing with New Camera libs support (MIUI Q mode).." " ";
-		else
-			#FORCE NEW CAM MODE
-			KERNEL="NEW";
-			ui_print " " "AGNi installing with New Camera libs support.." " ";
-		fi;
+		#FORCE NEW CAM MODE
+		KERNEL="NEW";
+		ui_print " " "AGNi installing with New Camera libs support.." " ";
 		ui_print " " "  Make sure you have new camera libs in your rom else camera wont work!" " ";
 		ui_print " " "  (If unsure & camera doesn't work & want to use this option, flash any NEW camera libs patch zip availabe for your device & try again)" " ";
 elif [ "`$BB grep selected.0=3 /tmp/aroma-data/cam.prop`" ]; then
