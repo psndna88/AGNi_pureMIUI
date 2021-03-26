@@ -427,6 +427,7 @@
 #include "sa6155p-vm-pcie.dtsi"
 #include "sm6150-qupv3.dtsi"
 #include "sa8155-vm-audio.dtsi"
+#include "pm6155-vm.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;
