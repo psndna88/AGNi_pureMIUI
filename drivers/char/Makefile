@@ -69,4 +69,3 @@ obj-$(CONFIG_MSM_ADSPRPC)       += adsprpc_compat.o
 endif
 obj-$(CONFIG_MSM_RDBG)		+= rdbg.o
 obj-$(CONFIG_QTI_SDIO_CLIENT)	+= qti_sdio_client.o
-obj-$(CONFIG_SRANDOM)		+= srandom/
