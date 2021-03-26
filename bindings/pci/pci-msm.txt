@@ -400,6 +400,11 @@ interconnects:
 	Definition: PCIe PHY initialization sequence
 
 
+- qcom,filtered-bdfs:
+	Usage: optional
+	Value type: <u32 array of bdfs>
+	Definition: Skip enumeration for the list of 32-bit BDFs.
+
 ==============
 Root port node
 ==============
@@ -557,6 +562,7 @@ Example
 		qcom,ep-latency = <20>;
 		qcom,num-parf-testbus-sel = <0xb9>;
 		qcom,switch-latency = <25>;
+		qcom,filtered-bdfs = <0x02080000>;
 
 		qcom,eq-pset-req-vec = <0>;
 		qcom,core-preset = <0x55555555> /* short channel */
