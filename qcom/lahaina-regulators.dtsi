@@ -134,7 +134,7 @@
 			regulator-name = "pm8350_s11";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <752000>;
-			regulator-max-microvolt = <1000000>;
+			regulator-max-microvolt = <1012000>;
 			qcom,init-voltage = <952000>;
 		};
 	};
@@ -827,7 +827,7 @@
 			regulator-name = "pmr735a_s2";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <500000>;
-			regulator-max-microvolt = <976000>;
+			regulator-max-microvolt = <1020000>;
 			qcom,init-voltage = <852000>;
 		};
 	};

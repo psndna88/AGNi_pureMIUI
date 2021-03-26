@@ -58,7 +58,7 @@
 			alloc-ranges = <0x00000000 0xffffffff>;
 			reusable;
 			alignment = <0x400000>;
-			size = <0x1400000>;
+			size = <0x400000>;
 		};
 
 		qseecom_ta_mem: qseecom_ta_region {
@@ -601,7 +601,7 @@
 			<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
 			<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
 			<  1497600000 RPMH_REGULATOR_LEVEL_TURBO>;
-		#reset-cells = <1>;
+		#clock-cells = <1>;
 	};
 
 	apps_rsc: rsc@17830000 {

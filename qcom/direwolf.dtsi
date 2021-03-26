@@ -1,5 +1,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/soc/qcom,ipcc.h>
+#include <dt-bindings/soc/qcom,rpmh-rsc.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. Direwolf";
@@ -355,6 +357,55 @@
 		clock-frequency = <19200000>;
 	};
 
+	apps_rsc: rsc@18200000 {
+		label = "apps_rsc";
+		compatible = "qcom,rpmh-rsc";
+		reg = <0x18200000 0x10000>,
+		      <0x18210000 0x10000>,
+		      <0x18220000 0x10000>;
+		reg-names = "drv-0", "drv-1", "drv-2";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,tcs-offset = <0xd00>;
+		qcom,drv-id = <2>;
+		qcom,tcs-config = <ACTIVE_TCS  2>,
+				  <SLEEP_TCS   3>,
+				  <WAKE_TCS    3>,
+				  <CONTROL_TCS 0>;
+
+		system_pm {
+			compatible = "qcom,system-pm";
+		};
+	};
+
+	pdc: interrupt-controller@b220000 {
+		compatible = "qcom,direwolf-pdc";
+		reg = <0xb220000 0x30000>, <0x17c000f0 0x64>;
+		qcom,pdc-ranges = <0 480 40>, <40 140 14>, <54 263 1>,
+				  <55 306 4>, <59 312 3>, <62 374 2>,
+				  <64 434 2>, <66 438 3>, <69 86 1>,
+				  <70 520 54>, <124 609 28>, <159 638 1>,
+				  <160 720 8>, <168 801 1>, <169 728 30>,
+				  <199 416 2>, <201 449 1>, <202 89 1>,
+				  <203 451 1>, <204 462 1>, <205 264 1>,
+				  <206 579 1>, <207 653 1>, <208 656 1>,
+				  <209 659 1>, <210 122 1>, <211 699 1>,
+				  <212 705 1>, <213 450 1>, <214 643 2>,
+				  <216 646 5>, <221 390 5>, <226 700 3>,
+				  <229 240 3>, <232 269 1>, <233 377 1>,
+				  <234 372 1>, <235 138 1>, <236 857 1>,
+				  <237 860 1>, <238 137 1>, <239 668 1>,
+				  <240 366 1>, <241 949 1>, <242 815 5>,
+				  <247 769 1>, <248 768 1>, <249 663 1>,
+				  <250 799 2>, <252 798 1>, <253 765 1>,
+				  <254 763 1>, <255 454 3>, <258 139 1>,
+				  <259 786 2>, <261 370 2>, <263 158 2>;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&intc>;
+		interrupt-controller;
+	};
+
 	memtimer: timer@17c20000 {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -471,6 +522,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		wakeup-parent = <&pdc>;
 	};
 
 	wdog: qcom,wdt@17c10000 {
@@ -485,6 +537,34 @@
 		qcom,wakeup-enable;
 	};
 
+	ipcc_mproc: qcom,ipcc@408000 {
+		compatible = "qcom,ipcc";
+		 reg = <0x408000 0x1000>;
+		 interrupts = <GIC_SPI 229 IRQ_TYPE_LEVEL_HIGH>;
+		 interrupt-controller;
+		 #interrupt-cells = <3>;
+		 #mbox-cells = <2>;
+	};
+
+	qmp_aop: qcom,qmp-aop@c300000 {
+		compatible = "qcom,qmp-mbox";
+		mboxes = <&ipcc_mproc IPCC_CLIENT_AOP
+			  IPCC_MPROC_SIGNAL_GLINK_QMP>;
+		mbox-names = "aop_qmp";
+		interrupt-parent = <&ipcc_mproc>;
+		interrupts = <IPCC_CLIENT_AOP
+			      IPCC_MPROC_SIGNAL_GLINK_QMP
+			      IRQ_TYPE_EDGE_RISING>;
+		reg = <0xc300000 0x400>;
+		reg-names = "msgram";
+
+		label = "aop";
+		qcom,early-boot;
+		priority = <0>;
+		mbox-desc-offset = <0x0>;
+		#mbox-cells = <1>;
+	};
 };
 
 #include "direwolf-pinctrl.dtsi"
+#include "direwolf-regulators.dtsi"

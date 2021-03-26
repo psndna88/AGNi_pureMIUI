@@ -78,15 +78,6 @@
 			<&tlmm 124 2>;
 		interrupt-names = "macirq", "eth_lpi",
 			"phy-intr";
-		qcom,msm-bus,name = "emac";
-		qcom,msm-bus,num-cases = <4>;
-		qcom,msm-bus,num-paths = <2>;
-		qcom,msm-bus,vectors-KBps =
-			<98 512 0 0>, <1 781 0 0>, /* No vote */
-			<98 512 2500 0>, <1 781 0 40000>, /* 10Mbps vote */
-			<98 512 25000 0>, <1 781 0 40000>, /* 100Mbps vote */
-			<98 512 250000 0>, <1 781 0 40000>; /* 1000Mbps vote */
-		qcom,bus-vector-names = "0", "10", "100", "1000";
 		snps,tso;
 		rx-fifo-depth = <4096>;
 		tx-fifo-depth = <4096>;
@@ -139,11 +130,15 @@
 		ethqos_emb_smmu: ethqos_emb_smmu {
 			compatible = "qcom,emac-smmu-embedded";
 			iommus = <&apps_smmu 0x3C0 0x0>;
-			qcom,iommu-dma = "atomic";
 			qcom,iommu-dma-addr-pool = <0x80000000 0x40000000>;
 		};
 	};
 
+	aop-set-ddr-freq {
+		compatible = "qcom,aop-set-ddr-freq";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 &usb2_phy0 {
@@ -214,3 +209,138 @@
 #include "camera/sa8155-camera.dtsi"
 #include "camera/sa8155-camera-sensor.dtsi"
 #include "sa8155-audio.dtsi"
+
+&lmh_dcvs1 {
+	isens_vref_0p8-supply = <&pm8150_1_l5_ao>;
+	isens_vref_1p8-supply = <&pm8150_1_l12_ao>;
+};
+
+&thermal_zones {
+	gpuss-max-step {
+		trips {
+			gpu-trip0 {
+				temperature = <105000>;
+			};
+		};
+	};
+
+	pop-mem-step {
+		status = "disabled";
+	};
+
+	npu-step {
+		trips {
+			npu-trip0 {
+				temperature = <105000>;
+			};
+		};
+	};
+
+	cpu-0-0-step {
+		trips {
+			cpu00-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-1-step {
+		trips {
+			cpu01-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-2-step {
+		trips {
+			cpu02-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-3-step {
+		trips {
+			cpu03-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-0-step {
+		trips {
+			cpu10-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-1-step {
+		trips {
+			cpu11-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-2-step {
+		trips {
+			cpu12-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-3-step {
+		trips {
+			cpu13-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-4-step {
+		trips {
+			cpu14-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-5-step {
+		trips {
+			cpu15-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-6-step {
+		trips {
+			cpu16-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-7-step {
+		trips {
+			cpu17-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	q6-hvx-step {
+		trips {
+			q6-hvx-step0 {
+				temperature = <105000>;
+			};
+
+			q6-hvx-step1 {
+				temperature = <115000>;
+			};
+		};
+	};
+};

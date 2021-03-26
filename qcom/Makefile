@@ -126,6 +126,14 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo
+
+blair-rumi-overlay.dtbo-base := blair.dtb
+else
+dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_SHIMA) +=    \
 	shima-rumi-overlay.dtbo \
 	shima-idp-overlay.dtbo  \
@@ -333,7 +341,9 @@ endif
 dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
 	sdxnightjar-cdp.dtb \
 	sdxnightjar-qrd.dtb \
-	sdxnightjar-dualwifi-mtp.dtb
+	sdxnightjar-dualwifi-mtp.dtb \
+	sdxnightjar-512mb-mtp.dtb \
+	sdxnightjar-dualwifi-512mb-mtp.dtb
 
 ifeq ($(CONFIG_ARCH_YUPIK), y)
 ifeq ($(CONFIG_ARCH_QTI_VM), y)
