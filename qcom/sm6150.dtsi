@@ -297,7 +297,7 @@
 
 		xbl_aop_mem: xbl_aop_mem@85e00000 {
 			no-map;
-			reg = <0x0 0x85e00000 0x0 0x140000>;
+			reg = <0x0 0x85e00000 0x0 0x120000>;
 		};
 
 		aop_cmd_db: memory@85f20000 {
