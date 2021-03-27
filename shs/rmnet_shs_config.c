@@ -55,6 +55,8 @@ DATARMNET5fc54f7a13 __read_mostly={.notifier_call=DATARMNETe9173bbe0e,.priority=
 "\x49\x34\x63\x61\x64\x33\x39\x34\x66\x65\x66\x66\x31\x39\x33\x35\x63\x30\x39\x63\x33\x64\x31\x66\x30\x66\x30\x66\x34\x62\x65\x35\x66\x30\x35\x38\x33\x64\x34\x61\x64"
 ,
 "\x49\x37\x66\x66\x34\x66\x66\x31\x36\x62\x62\x36\x36\x31\x39\x63\x36\x65\x36\x39\x32\x37\x30\x37\x32\x37\x63\x31\x34\x66\x30\x31\x36\x65\x64\x31\x66\x37\x35\x61\x32"
+,
+"\x49\x63\x30\x39\x31\x36\x62\x35\x39\x37\x36\x35\x37\x30\x32\x35\x32\x32\x63\x36\x66\x64\x33\x36\x38\x31\x39\x64\x63\x34\x38\x31\x37\x66\x66\x66\x33\x37\x32\x30\x39"
 };static int DATARMNET2cb9ae589c;int __init DATARMNET163e93649e(void){pr_info(
 "\x25\x73\x28\x29\x3a\x20\x53\x74\x61\x72\x74\x69\x6e\x67\x20\x72\x6d\x6e\x65\x74\x20\x53\x48\x53\x20\x6d\x6f\x64\x75\x6c\x65\x20\x25\x73\x20" "\n"
 ,__func__,DATARMNETbc8418e817[(0xd2d+202-0xdf7)]);trace_rmnet_shs_high(
@@ -74,11 +76,10 @@ net_device*dev=netdev_notifier_info_to_dev(data);struct rmnet_priv*priv;struct
 rmnet_port*port;int ret=(0xd2d+202-0xdf7);if(!dev){DATARMNET68d84e7b98[
 DATARMNETf5157a9b85]++;return NOTIFY_DONE;}if(!(strncmp(dev->name,
 "\x72\x6d\x6e\x65\x74\x5f\x64\x61\x74\x61",(0xd27+224-0xdfd))==(0xd2d+202-0xdf7)
-||strncmp(dev->name,"\x72\x5f\x72\x6d\x6e\x65\x74\x5f\x64\x61\x74\x61",
-(0xd19+238-0xdfb))==(0xd2d+202-0xdf7)))return NOTIFY_DONE;switch(
-DATARMNET7f045a1e6e){case NETDEV_UNREGISTER:DATARMNETd6ee05f1b4(dev);
-DATARMNET2cb9ae589c--;if(!DATARMNET2cb9ae589c&&DATARMNETecc0627c70.
-DATARMNETfc89d842ae){unsigned int DATARMNET9f4bc49c6f;pr_info(
+))return NOTIFY_DONE;switch(DATARMNET7f045a1e6e){case NETDEV_DOWN:
+DATARMNETd6ee05f1b4(dev);break;case NETDEV_UNREGISTER:DATARMNET2cb9ae589c--;if(!
+DATARMNET2cb9ae589c&&DATARMNETecc0627c70.DATARMNETfc89d842ae){unsigned int 
+DATARMNET9f4bc49c6f;pr_info(
 "\x72\x6d\x6e\x65\x74\x5f\x73\x68\x73\x20\x64\x65\x69\x6e\x69\x74\x20\x25\x73\x20\x67\x6f\x69\x6e\x67\x20\x64\x6f\x77\x6e\x20"
 ,dev->name);RCU_INIT_POINTER(rmnet_shs_skb_entry,NULL);RCU_INIT_POINTER(
 rmnet_shs_switch,NULL);qmi_rmnet_ps_ind_deregister(DATARMNETecc0627c70.port,&
@@ -96,9 +97,9 @@ pr_err(
 "\x72\x6d\x6e\x65\x74\x5f\x73\x68\x73\x3a\x20\x69\x6e\x76\x61\x6c\x69\x64\x20\x72\x6d\x6e\x65\x74\x5f\x70\x6f\x72\x74"
 );break;}DATARMNET45d8cdb224(priv->real_dev,dev);DATARMNET3ae0d614d6();
 DATARMNETe1f95274f1();DATARMNETecc0627c70.DATARMNETf5ab31b9b0=(0xd26+209-0xdf6);
-}DATARMNET7492293980(dev);break;case NETDEV_UP:if(!DATARMNETecc0627c70.
-DATARMNET9c869c1ec2&&DATARMNETecc0627c70.DATARMNETfc89d842ae){port=
-DATARMNETecc0627c70.port;if(!port){pr_err(
+}break;case NETDEV_UP:if(!DATARMNETecc0627c70.DATARMNET9c869c1ec2&&
+DATARMNETecc0627c70.DATARMNETfc89d842ae){port=DATARMNETecc0627c70.port;if(!port)
+{pr_err(
 "\x72\x6d\x6e\x65\x74\x5f\x73\x68\x73\x3a\x20\x69\x6e\x76\x61\x6c\x69\x64\x20\x72\x6d\x6e\x65\x74\x5f\x63\x66\x67\x5f\x70\x6f\x72\x74"
 );break;}DATARMNETecc0627c70.DATARMNET08dbb5ab35.priority=RMNET_SHS;if(port->
 data_format&RMNET_INGRESS_FORMAT_DL_MARKER_V2){DATARMNETecc0627c70.
@@ -112,10 +113,10 @@ pr_err(
 ,__func__);ret=qmi_rmnet_ps_ind_register(port,&DATARMNETecc0627c70.
 rmnet_idl_ind_cb);if(ret)pr_err(
 "\x25\x73\x28\x29\x3a\x20\x72\x6d\x6e\x65\x74\x20\x70\x73\x5f\x69\x6e\x64\x20\x72\x65\x67\x69\x73\x74\x72\x61\x74\x69\x6f\x6e\x20\x66\x61\x69\x6c" "\n"
-,__func__);DATARMNET039ac6d55d();DATARMNETe46c480d71();DATARMNET0a6fb12cb2();
-DATARMNETecc0627c70.DATARMNET9c869c1ec2=(0xd26+209-0xdf6);trace_rmnet_shs_high(
-DATARMNET1790979ccf,DATARMNET443dab7031,(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),
-(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),NULL,NULL);RCU_INIT_POINTER(
-rmnet_shs_switch,NULL);RCU_INIT_POINTER(rmnet_shs_skb_entry,DATARMNET756778f14f)
-;}break;default:break;}return NOTIFY_DONE;}module_init(DATARMNET163e93649e);
-module_exit(DATARMNETf3298dab6f);
+,__func__);DATARMNET039ac6d55d();DATARMNET0a6fb12cb2();DATARMNET7492293980(dev);
+DATARMNETe46c480d71();DATARMNETecc0627c70.DATARMNET9c869c1ec2=(0xd26+209-0xdf6);
+trace_rmnet_shs_high(DATARMNET1790979ccf,DATARMNET443dab7031,(0x16e8+787-0xc0c),
+(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),(0x16e8+787-0xc0c),NULL,NULL);
+RCU_INIT_POINTER(rmnet_shs_switch,NULL);RCU_INIT_POINTER(rmnet_shs_skb_entry,
+DATARMNET756778f14f);break;}DATARMNET7492293980(dev);break;default:break;}return
+ NOTIFY_DONE;}module_init(DATARMNET163e93649e);module_exit(DATARMNETf3298dab6f);
