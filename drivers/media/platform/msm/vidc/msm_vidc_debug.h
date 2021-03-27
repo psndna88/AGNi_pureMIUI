@@ -69,34 +69,11 @@ extern bool msm_vidc_thermal_mitigation_disabled;
 extern int msm_vidc_clock_voting;
 extern bool msm_vidc_syscache_disable;
 
-#define dprintk(__level, __fmt, arg...)	\
-	do { \
-		if (msm_vidc_debug & __level) { \
-			if (msm_vidc_debug_out == VIDC_OUT_PRINTK) { \
-				pr_info(VIDC_DBG_TAG __fmt, \
-					get_debug_level_str(__level),	\
-					## arg); \
-			} \
-		} \
-	} while (0)
+#define dprintk(__level, __fmt, arg...)
 
-#define dprintk_ratelimit(__level, __fmt, arg...) \
-	do { \
-		if (msm_vidc_debug & __level) { \
-			if (msm_vidc_debug_out == VIDC_OUT_PRINTK && \
-					msm_vidc_check_ratelimit()) { \
-				pr_info(VIDC_DBG_TAG __fmt, \
-					get_debug_level_str(__level),	\
-					## arg); \
-			} \
-		} \
-	} while (0)
+#define dprintk_ratelimit(__level, __fmt, arg...)
 
-#define MSM_VIDC_ERROR(value)					\
-	do {	if (value)					\
-			dprintk(VIDC_DBG, "BugOn");		\
-		BUG_ON(value);					\
-	} while (0)
+#define MSM_VIDC_ERROR(value)
 
 
 struct dentry *msm_vidc_debugfs_init_drv(void);
