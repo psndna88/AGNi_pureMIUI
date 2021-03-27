@@ -27,10 +27,10 @@ EXPORT_SYMBOL(msm_vidc_debug_out);
 int msm_vidc_fw_debug = 0;
 int msm_vidc_fw_debug_mode = 0;
 int msm_vidc_fw_low_power_mode = 1;
-bool msm_vidc_fw_coverage = !true;
-bool msm_vidc_thermal_mitigation_disabled = !true;
-int msm_vidc_clock_voting = !1;
-bool msm_vidc_syscache_disable = !true;
+bool msm_vidc_fw_coverage = false;
+bool msm_vidc_thermal_mitigation_disabled = false;
+int msm_vidc_clock_voting = 0;
+bool msm_vidc_syscache_disable = false;
 
 #define MAX_DBG_BUF_SIZE 4096
 
