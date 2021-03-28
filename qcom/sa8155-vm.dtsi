@@ -223,6 +223,7 @@
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
 			mhi,timeout = <10000>;
+			mhi,buffer-len = <0x8000>;
 
 			mhi_channels {
 				#address-cells = <1>;
@@ -831,6 +832,23 @@
 
 &slpi_tlmm {
 	status = "ok";
+};
+
+&pcie_rc0 {
+	cnss_pci: cnss_pci {
+		reg = <0 0 0 0 0>;
+		qcom,iommu-group = <&cnss_pci_iommu_group>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		cnss_pci_iommu_group: cnss_pci_iommu_group {
+			qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
+			qcom,iommu-dma = "fastmap";
+			qcom,iommu-faults = "stall-disable", "no-CFRE",
+						"non-fatal";
+		};
+	};
 };
 
 &qupv3_0 {
