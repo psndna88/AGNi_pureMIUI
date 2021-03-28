@@ -27,6 +27,8 @@
 &pcie0 {
 	qcom,filtered-bdfs = <0x02080000>;
 
+	vreg-3p3-supply = <&aqr_vreg>;
+
 	iommu-map = <0x0 &apps_smmu 0x0200 0x1>,
 		<0x100 &apps_smmu 0x0201 0x1>,
 		<0x208 &apps_smmu 0x0202 0x1>,
