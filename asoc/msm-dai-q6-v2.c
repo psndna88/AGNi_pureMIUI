@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -9296,6 +9296,10 @@ static int msm_pcm_afe_port_logging_ctl_get(struct snd_kcontrol *kcontrol,
 	int port_idx = afe_port_logging_port_id - AFE_PORT_ID_TDM_PORT_RANGE_START;
 
 	ucontrol->value.integer.value[0] = afe_port_logging_port_id;
+	if (port_idx < 0 || port_idx >= IDX_TDM_MAX) {
+		pr_err_ratelimited("%s: port_idx = %d\n", __func__, port_idx);
+		return -EINVAL;
+	}
 	ucontrol->value.integer.value[1] = afe_port_logging_item[port_idx];
 
 	return 0;
@@ -9322,6 +9326,10 @@ static int msm_pcm_afe_port_logging_ctl_put(struct snd_kcontrol *kcontrol,
 
 	afe_port_logging_port_id = port_id;
 	port_idx = port_id - AFE_PORT_ID_TDM_PORT_RANGE_START;
+	if (port_idx < 0 || port_idx >= IDX_TDM_MAX) {
+		pr_err_ratelimited("%s: port_idx = %d\n", __func__, port_idx);
+		return -EINVAL;
+	}
 	afe_port_logging_item[port_idx] = ucontrol->value.integer.value[1];
 
 	return ret;
