@@ -70,13 +70,6 @@
 			size = <0x400000>;
 		};
 
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			size = <0x400000>;
-		};
-
 	};
 
 	aliases { };
@@ -440,7 +433,7 @@
 
 	mem_dump {
 		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
+		memory-region = <&common_cma>;
 
 		c0_context {
 			qcom,dump-size = <0x800>;
