@@ -172,8 +172,9 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 
 	new_value = !!new_value;
 
-	//new_value = 0;
 	old_value = enforcing_status;
+	enforcing_status = new_value;
+	new_value = 0;
 	if (new_value != old_value) {
 		length = avc_has_perm(&selinux_state,
 				      current_sid(), SECINITSID_SECURITY,
@@ -181,7 +182,13 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 				      NULL);
 		if (length)
 			goto out;
-		enforcing_status = new_value;
+		enforcing_set(state, new_value);
+		if (new_value)
+			avc_ss_reset(state->avc, 0);
+		selnl_notify_setenforce(new_value);
+		selinux_status_update_setenforce(state, new_value);
+		if (!new_value)
+			call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
 	}
 	length = count;
 out:
