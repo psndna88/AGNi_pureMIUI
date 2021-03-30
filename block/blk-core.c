@@ -47,7 +47,7 @@
 
 #include <linux/math64.h>
 
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_BLK_DEV_IO_TRACE)
 struct dentry *blk_debugfs_root;
 #endif
 
@@ -3780,7 +3780,7 @@ int __init blk_dev_init(void)
 	blk_requestq_cachep = kmem_cache_create("request_queue",
 			sizeof(struct request_queue), 0, SLAB_PANIC, NULL);
 
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_BLK_DEV_IO_TRACE)
 	blk_debugfs_root = debugfs_create_dir("block", NULL);
 #endif
 

@@ -15,7 +15,7 @@
 /* Max future timer expiry for timeouts */
 #define BLK_MAX_TIMEOUT		(5 * HZ)
 
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_BLK_DEV_IO_TRACE)
 extern struct dentry *blk_debugfs_root;
 #endif
 
