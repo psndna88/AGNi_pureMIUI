@@ -3998,7 +3998,7 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 					pr_debug("%s: cma_alloc %d\n",
 						 __func__, cal_block->cma_mem);
 				}
-				if (app_type == 0) {
+				if (result && app_type == 0) {
 					audproc_cal_info = cal_block->cal_info;
 					app_type = audproc_cal_info->app_type;
 				}
@@ -4088,7 +4088,7 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 			pr_debug("%s: cma_alloc %d\n",
 				 __func__, cal_block->cma_mem);
 		}
-		if (app_type == 0) {
+		if (result && app_type == 0) {
 			audproc_cal_info = cal_block->cal_info;
 			app_type = audproc_cal_info->app_type;
 		}
