@@ -1,3 +1,5 @@
+#include <dt-bindings/clock/qcom,gcc-monaco.h>
+
 &soc {
 	timer {
 		clock-frequency = <5000000>;
@@ -15,6 +17,10 @@
 
 &gcc {
 	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>;
+};
+
+&cpufreq_hw {
+	clocks = <&bi_tcxo>, <&gcc GPLL0>;
 };
 
 #include "monaco-stub-regulator.dtsi"
