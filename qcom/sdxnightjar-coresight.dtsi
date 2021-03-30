@@ -319,8 +319,8 @@
 		in-ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
-			port@0 {
-				reg = <0>;
+			port@6 {
+				reg = <6>;
 				funnel_in1_in_modem_etm0: endpoint {
 					remote-endpoint =
 					<&modem_etm0_out_funnel_in1>;
