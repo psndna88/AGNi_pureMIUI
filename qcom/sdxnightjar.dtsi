@@ -440,11 +440,6 @@
 			qcom,dump-id = <0x0>;
 		};
 
-		cnss_wlan {
-			qcom,dump-size = <0x200000>;
-			qcom,dump-id = <0xe1>;
-		};
-
 		etr_reg {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0x100>;
