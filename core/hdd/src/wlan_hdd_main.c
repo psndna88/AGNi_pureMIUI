@@ -5920,6 +5920,7 @@ static void hdd_check_for_net_dev_ref_leak(struct hdd_adapter *adapter)
 		if (i == MAX_NET_DEV_REF_LEAK_ITERATIONS) {
 			hdd_err("net_dev hold reference leak detected for debug id: %s",
 				net_dev_ref_debug_string_from_id(id));
+			QDF_BUG(0);
 		}
 	}
 }
