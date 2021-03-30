@@ -80,8 +80,6 @@
 	};
 };
 
-#include "display/quin-vm-display.dtsi"
-
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
@@ -299,3 +297,5 @@
 		status = "ok";
 	};
 };
+
+#include "display/quin-vm-display.dtsi"
