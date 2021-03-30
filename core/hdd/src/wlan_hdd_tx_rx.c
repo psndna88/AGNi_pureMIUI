@@ -2593,13 +2593,11 @@ QDF_STATUS hdd_rx_packet_cbk(void *adapter_context,
 		dest_mac_addr = (struct qdf_mac_addr *)(skb->data);
 		mac_addr = (struct qdf_mac_addr *)(skb->data+QDF_MAC_ADDR_SIZE);
 
-		if (!hdd_is_current_high_throughput(hdd_ctx)) {
-			vdev = hdd_objmgr_get_vdev(adapter);
-			if (vdev) {
-				ucfg_tdls_update_rx_pkt_cnt(vdev, mac_addr,
-							    dest_mac_addr);
-				hdd_objmgr_put_vdev(vdev);
-			}
+		vdev = hdd_objmgr_get_vdev(adapter);
+		if (vdev) {
+			ucfg_tdls_update_rx_pkt_cnt(vdev, mac_addr,
+						    dest_mac_addr);
+			hdd_objmgr_put_vdev(vdev);
 		}
 
 		skb->dev = adapter->dev;
