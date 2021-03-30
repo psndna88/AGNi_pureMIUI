@@ -25,7 +25,7 @@
 #include <linux/init.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/debugfs.h>
+#include "debugfs.h"
 #include <linux/export.h>
 #include <linux/time.h>
 #include <linux/uaccess.h>
@@ -498,8 +498,10 @@ static int do_blk_trace_setup(struct request_queue *q, char *name, dev_t dev,
 	if (!buts->buf_size || !buts->buf_nr)
 		return -EINVAL;
 
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_BLK_DEV_IO_TRACE)
 	if (!blk_debugfs_root)
 		return -ENOENT;
+#endif
 
 	strncpy(buts->name, name, BLKTRACE_BDEV_SIZE);
 	buts->name[BLKTRACE_BDEV_SIZE - 1] = '\0';

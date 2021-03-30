@@ -466,7 +466,6 @@ config BLK_DEV_IO_TRACE
 	depends on SYSFS
 	depends on BLOCK
 	select RELAY
-	select DEBUG_FS
 	select TRACEPOINTS
 	select GENERIC_TRACER
 	select STACKTRACE
