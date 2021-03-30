@@ -1369,7 +1369,7 @@ static int hdd_twt_setup_session(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	if (hdd_is_roaming_in_progress(hdd_ctx))
@@ -1657,7 +1657,11 @@ static int hdd_twt_terminate_session(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		/*
+		 * Return success, since STA is not associated and
+		 * there is no TWT session.
+		 */
+		return 0;
 	}
 
 	qdf_mem_copy(params.peer_macaddr,
@@ -1684,7 +1688,7 @@ static int hdd_twt_terminate_session(struct hdd_adapter *adapter,
 					       params.dialog_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("All TWT sessions not supported by target");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
@@ -1692,7 +1696,7 @@ static int hdd_twt_terminate_session(struct hdd_adapter *adapter,
 					 params.dialog_id)) {
 		hdd_debug("vdev%d: TWT session %d setup incomplete",
 			  params.vdev_id, params.dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	hdd_debug("twt_terminate: vdev_id %d dialog_id %d peer mac_addr "
@@ -1985,7 +1989,7 @@ static int hdd_twt_pause_session(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	qdf_mem_copy(params.peer_macaddr, hdd_sta_ctx->conn_info.bssid.bytes,
@@ -2011,7 +2015,7 @@ static int hdd_twt_pause_session(struct hdd_adapter *adapter,
 					       params.dialog_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("All TWT sessions not supported by target");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
@@ -2019,7 +2023,7 @@ static int hdd_twt_pause_session(struct hdd_adapter *adapter,
 					 params.dialog_id)) {
 		hdd_debug("vdev%d: TWT session %d setup incomplete",
 			  params.vdev_id, params.dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	hdd_debug("twt_pause: vdev_id %d dialog_id %d peer mac_addr "
@@ -2082,14 +2086,14 @@ static int hdd_twt_nudge_session(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	ucfg_mlme_get_twt_nudge_tgt_cap(adapter->hdd_ctx->psoc,
 					&is_nudge_tgt_cap_enabled);
 	if (!is_nudge_tgt_cap_enabled) {
 		hdd_debug("Nudge not supported by target");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	params.vdev_id = adapter->vdev_id;
@@ -2114,7 +2118,7 @@ static int hdd_twt_nudge_session(struct hdd_adapter *adapter,
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_FLOW_ID;
 	if (!tb[id]) {
-		hdd_debug("TWT: FLOW_ID not specified.");
+		hdd_debug("TWT: FLOW_ID not specified");
 		return -EINVAL;
 	}
 	params.dialog_id = nla_get_u8(tb[id]);
@@ -2123,12 +2127,12 @@ static int hdd_twt_nudge_session(struct hdd_adapter *adapter,
 					       params.dialog_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("All TWT sessions not supported by target");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_WAKE_TIME;
 	if (!tb[id]) {
-		hdd_debug("TWT: WAKE_TIME not specified.");
+		hdd_debug("TWT: WAKE_TIME not specified");
 		return -EINVAL;
 	}
 	params.suspend_duration = nla_get_u32(tb[id]);
@@ -2145,7 +2149,7 @@ static int hdd_twt_nudge_session(struct hdd_adapter *adapter,
 					 params.dialog_id)) {
 		hdd_debug("vdev%d: TWT session %d setup incomplete",
 			  params.vdev_id, params.dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	hdd_debug("twt_nudge: vdev_id %d dialog_id %d ", params.vdev_id,
@@ -2418,7 +2422,7 @@ static int hdd_twt_get_capabilities(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	if (hdd_is_roaming_in_progress(hdd_ctx))
@@ -2461,7 +2465,7 @@ static int hdd_twt_resume_session(struct hdd_adapter *adapter,
 		hdd_err_rl("Invalid state, vdev %d mode %d state %d",
 			   adapter->vdev_id, adapter->device_mode,
 			   hdd_sta_ctx->conn_info.conn_state);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 	qdf_mem_copy(params.peer_macaddr, hdd_sta_ctx->conn_info.bssid.bytes,
 		     QDF_MAC_ADDR_SIZE);
@@ -2486,7 +2490,7 @@ static int hdd_twt_resume_session(struct hdd_adapter *adapter,
 					       params.dialog_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		hdd_debug("All TWT sessions not supported by target");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
@@ -2494,7 +2498,7 @@ static int hdd_twt_resume_session(struct hdd_adapter *adapter,
 					 params.dialog_id)) {
 		hdd_debug("vdev%d: TWT session %d setup incomplete",
 			  params.vdev_id, params.dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_RESUME_NEXT_TWT;
@@ -2735,7 +2739,7 @@ static int hdd_twt_clear_session_traffic_stats(struct hdd_adapter *adapter,
 					 &hdd_sta_ctx->conn_info.bssid,
 					 dialog_id)) {
 		hdd_debug("TWT session %d setup incomplete", dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	ret = wlan_cfg80211_mc_twt_clear_infra_cp_stats(adapter->vdev,
@@ -2864,7 +2868,7 @@ static int hdd_twt_get_session_traffic_stats(struct hdd_adapter *adapter,
 					 &hdd_sta_ctx->conn_info.bssid,
 					 dialog_id)) {
 		hdd_debug("TWT session %d setup incomplete", dialog_id);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	ucfg_mlme_set_twt_command_in_progress(adapter->hdd_ctx->psoc,
