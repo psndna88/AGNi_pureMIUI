@@ -1009,6 +1009,7 @@
 		qcom,platform-type = <0>; /* MDM platform */
 		qcom,ee = <0>;
 		qcom,use-rg10-limitation-mitigation;
+		qcom,use-wrapper-pm-support;
 		qcom,use-ipa-tethering-bridge;
 		qcom,modem-cfg-emb-pipe-flt;
 		clock-names = "core_clk";
