@@ -735,6 +735,14 @@
 		qcom,bt-vdd-rfa2-config = <2040000 2040000 0 0>;
 		qcom,bt-vdd-rfa3-config = <1900000 1900000 450000 0>;
 	};
+
+	qcom_rng: qrng@793000 {
+		compatible = "qcom,msm-rng";
+		reg = <0x793000 0x1000>;
+		qcom,no-qrng-config;
+		clocks = <&gcc GCC_PRNG_AHB_CLK>;
+		clock-names = "km_clk_src";
+	};
 };
 
 &regulator {
