@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export KERNELDIR=`readlink -f .`
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
@@ -22,3 +22,8 @@ fi
 
 echo "   Compile folder EMPTY !"
 
+# AGNi CCACHE RESET
+export CCACHE_SDM660="0"
+export CCACHE_MIATOLL_Q="0"
+export CCACHE_MIATOLL_R="0"
+. ~/WORKING_DIRECTORY/ccache_shifter.sh

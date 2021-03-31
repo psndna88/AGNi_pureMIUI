@@ -2,7 +2,7 @@
 # Please don't hardcode /magisk/modname/... ; instead, please use $MODDIR/...
 # This will make your scripts compatible even if Magisk change its mount point in the future
 
-if [ ! -f /sys/module/lpm_levels/parameters/agni_present ] || [ ! `uname -r | grep AGNi` ]; then
+if [ ! -f /sys/module/vmpressure/parameters/agni_present ] || [ ! `uname -r | grep AGNi` ]; then
 	mount -o rw,remount /vendor
 	mount -o rw,remount /system
 	mv -f /vendor/etc/init/hw/init.qcom.rc.bak /vendor/etc/init/hw/init.qcom.rc 2>/dev/null;

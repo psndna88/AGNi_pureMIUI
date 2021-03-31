@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 COUT="~/WORKING_DIRECTORY/COMPILED_OUT"
 KERNELDIR=`readlink -f .`
 
@@ -14,7 +14,8 @@ chmod +x $KERNELDIR/scripts/agni/*
 
 HORIZONTALLINE="-----------------------------------------------------------------------"
 clear
-echo "\n$HORIZONTALLINE"
+echo "$HORIZONTALLINE"
+echo " "
 echo "        AGNi kernel by psndna88 !!!"
 echo $HORIZONTALLINE
 echo " 1: Build All Devices"
@@ -27,7 +28,8 @@ echo " "
 echo " 7: Build whyred ROG MIUI - Redmi Note 5 Pro"
 echo " "
 echo " 0:  X  Exit Compilation  X"
-echo "\n$HORIZONTALLINE"
+echo " "
+echo "$HORIZONTALLINE"
 read -p "    Select what to build : " choice
 
 if [ $choice -eq 1 ]; then
@@ -133,5 +135,6 @@ elif [ $choice -eq 7 ]; then
 elif [ $choice -eq 0 ]; then
 	exit
 else
-	echo -e "\n====> Enter corrent input <===="
+	echo " "
+	echo -e "====> Enter corrent input <===="
 fi
