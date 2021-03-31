@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
 
@@ -20,6 +20,21 @@ RTL8192EU="$COMPILEDIR/drivers/staging/rtl8192eu"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_kernel_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
+
+# AGNi CCACHE SHIFTING TO SDM660
+export CCACHE_SDM660="1"
+export CCACHE_MIATOLL_Q="0"
+export CCACHE_MIATOLL_R="0"
+. ~/WORKING_DIRECTORY/ccache_shifter.sh
+
+exit_reset() {
+	export CCACHE_SDM660="0"
+	export CCACHE_MIATOLL_Q="0"
+	export CCACHE_MIATOLL_R="0"
+	. ~/WORKING_DIRECTORY/ccache_shifter.sh
+	sync
+	exit
+}
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
@@ -75,7 +90,7 @@ if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
 else
 	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
-	exit;
+	exit_reset;
 fi
 ########## COMPILE new cam END
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
@@ -112,7 +127,7 @@ if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
 else
 	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
-	exit;
+	exit_reset;
 fi
 ########## COMPILE old cam END
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
@@ -145,7 +160,7 @@ if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
 else
 	echo "         ERROR: Cross-compiling AGNi (Old Cam) kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
-	exit;
+	exit_reset;
 fi
 ########## COMPILE MIUI-Q cam END
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
@@ -190,3 +205,8 @@ else
 	echo " >>>>> AGNi $DEVICE BUILD ERROR <<<<<"
 fi
 
+# AGNi CCACHE RESET
+export CCACHE_SDM660="0"
+export CCACHE_MIATOLL_Q="0"
+export CCACHE_MIATOLL_R="0"
+. ~/WORKING_DIRECTORY/ccache_shifter.sh

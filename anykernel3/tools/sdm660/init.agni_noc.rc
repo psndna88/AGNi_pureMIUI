@@ -94,6 +94,7 @@ on post-fs
     write /sys/devices/virtual/graphics/fb0/idle_time 100
 
 on property:sys.boot_completed=1
+    write /proc/sys/vm/vfs_cache_pressure 50
 	write /sys/devices/system/cpu/cpu0/core_ctl/enable 0
 	write /sys/module/lowmemorykiller/parameters/minfree "18432,23040,27648,32256,55296,80640"
 	write /sys/module/vmpressure/parameters/allocstall_threshold 0
