@@ -7359,6 +7359,22 @@ static int sta_set_fullbw_ulmumimo(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_punctured_preamble_rx(struct sigma_dut *dut,
+					 const char *intf, int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PUNCTURED_PREAMBLE_RX,
+		val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Punctured preamble Rx cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 				  const char *type)
 {
@@ -7529,6 +7545,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			if (sta_set_beamformee_sts(dut, intf, 3)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set BeamformeeSTS");
+			}
+
+			if (sta_set_punctured_preamble_rx(dut, intf, 0)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to reset PreamblePunctRx support");
 			}
 
 			/* +HTC-HE support default off */
@@ -9040,6 +9061,30 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set TWT_ReqSupport");
 			return STATUS_SENT;
+		}
+	}
+
+	val = get_param(cmd, "PreamblePunctRx");
+	if (val && get_driver_type(dut) == DRIVER_WCN) {
+		int set_val;
+
+		if (strcasecmp(val, "Enable") == 0) {
+			set_val = 1;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			set_val = 0;
+		} else {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Invalid PreamblePunctRx");
+			return STATUS_SENT_ERROR;
+		}
+
+		if (sta_set_punctured_preamble_rx(dut, intf, set_val)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to set PreamblePunctRx support %d",
+					set_val);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set PreamblePunctRx");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
