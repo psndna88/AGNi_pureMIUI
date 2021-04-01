@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_SENSOR_UTIL_H_
@@ -40,6 +40,9 @@ int msm_camera_pinctrl_init
 	(struct msm_pinctrl_info *sensor_pctrl, struct device *dev);
 
 int32_t cam_sensor_util_get_current_qtimer_ns(uint64_t *qtime_ns);
+
+int32_t cam_sensor_util_regulator_powerup(
+	struct cam_hw_soc_info *soc_info);
 
 int32_t cam_sensor_util_write_qtimer_to_io_buffer(
 	struct cam_buf_io_cfg *io_cfg);
