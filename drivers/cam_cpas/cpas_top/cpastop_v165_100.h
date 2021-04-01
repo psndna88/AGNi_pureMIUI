@@ -289,6 +289,27 @@ static struct cam_camnoc_specific
 			 */
 			.enable = false,
 		},
+		.qosgen_mainctl = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4808, /* IFE01234_RDI_QOSGEN_MAINCTL */
+			.value = 0x2,
+		},
+		.qosgen_shaping_low = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4820, /* IFE01234_RDI_QOSGEN_SHAPING_LOW */
+			.value = 0x07070707,
+		},
+		.qosgen_shaping_high = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4824, /* IFE01234_RDI_QOSGEN_SHAPING_HIGH */
+			.value = 0x07070707,
+		},
 	},
 	{
 		.port_type = CAM_CAMNOC_IFE01_NRDI_WRITE,
@@ -343,6 +364,27 @@ static struct cam_camnoc_specific
 			.offset = 0x3B88, /* IFE01_NRDI_ENCCTL_LOW */
 			.value = 1,
 		},
+		.qosgen_mainctl = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4708, /* IFE01_NRDI_QOSGEN_MAINCTL */
+			.value = 0x2,
+		},
+		.qosgen_shaping_low = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4720, /* IFE01_NRDI_QOSGEN_SHAPING_LOW */
+			.value = 0x07070707,
+		},
+		.qosgen_shaping_high = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x4724, /* IFE01_NRDI_QOSGEN_SHAPING_HIGH */
+			.value = 0x07070707,
+		},
 	},
 	{
 		.port_type = CAM_CAMNOC_IFE2_NRDI_WRITE,
@@ -396,6 +438,27 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			.offset = 0x5588, /* IFE2_NRDI_ENCCTL_LOW */
 			.value = 0,
+		},
+		.qosgen_mainctl = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x5188, /* IFE2_NRDI_QOSGEN_MAINCTL */
+			.value = 0x2,
+		},
+		.qosgen_shaping_low = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x51A0, /* IFE2_NRDI_QOSGEN_SHAPING_LOW */
+			.value = 0x07070707,
+		},
+		.qosgen_shaping_high = {
+			.enable = true,
+			.access_type = CAM_REG_TYPE_READ_WRITE,
+			.masked_value = 0,
+			.offset = 0x51A4, /* IFE2_NRDI_QOSGEN_SHAPING_HIGH */
+			.value = 0x07070707,
 		},
 	},
 	{
