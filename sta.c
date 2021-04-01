@@ -7289,6 +7289,22 @@ static int sta_set_tx_su_ppdu_cfg(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_mgmt_data_tx_disable_cfg(struct sigma_dut *dut,
+					    const char *intf, int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_DISABLE_DATA_MGMT_RSP_TX,
+		val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Tx disable config cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 #ifdef NL80211_SUPPORT
 static int sta_set_he_om_ctrl_reset(struct sigma_dut *dut, const char *intf)
 {
@@ -7454,6 +7470,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_beamformee_sts(dut, intf, 7)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set BeamformeeSTS");
+		}
+
+		if (sta_set_mgmt_data_tx_disable_cfg(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to reset mgmt/data Tx disable config");
 		}
 
 		if (sta_set_mac_padding_duration(
@@ -12275,6 +12296,22 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set Tx SU PPDU config");
 			return 0;
+		}
+	}
+
+	val = get_param(cmd, "Mgmt_Data_TX_Resp_Frame");
+	if (val) {
+		int set_val = 0;
+
+		if (strcasecmp(val, "Enable") == 0)
+			set_val = 0;
+		else if (strcasecmp(val, "Disable") == 0)
+			set_val = 1;
+
+		if (sta_set_mgmt_data_tx_disable_cfg(dut, intf, set_val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set mgmt/data Tx disable config");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
