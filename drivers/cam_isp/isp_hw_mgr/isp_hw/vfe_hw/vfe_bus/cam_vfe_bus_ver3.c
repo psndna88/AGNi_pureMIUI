@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 
@@ -76,6 +76,9 @@ struct cam_vfe_bus_error_info {
 struct cam_vfe_bus_ver3_common_data {
 	uint32_t                                    core_index;
 	void __iomem                               *mem_base;
+	void __iomem                               *camnoc_mem_base;
+	uint32_t                                    cpas_version;
+	struct cam_hw_soc_info                     *soc_info;
 	struct cam_hw_intf                         *hw_intf;
 	void                                       *bus_irq_controller;
 	void                                       *rup_irq_controller;
@@ -950,6 +953,7 @@ static int cam_vfe_bus_ver3_handle_rup_bottom_half(void *handler_priv,
 
 	evt_info.hw_idx = rsrc_data->common_data->core_index;
 	evt_info.res_type = CAM_ISP_RESOURCE_VFE_IN;
+	evt_info.evt_param = payload->evt_param;
 
 	if (!rsrc_data->common_data->is_lite) {
 		if (irq_status & 0x1) {
@@ -2309,13 +2313,17 @@ static int cam_vfe_bus_ver3_stop_vfe_out(
 static int cam_vfe_bus_ver3_handle_vfe_out_done_top_half(uint32_t evt_id,
 	struct cam_irq_th_payload *th_payload)
 {
-	int32_t                                     rc;
-	int                                         i;
-	struct cam_isp_resource_node               *vfe_out = NULL;
-	struct cam_vfe_bus_ver3_vfe_out_data       *rsrc_data = NULL;
-	struct cam_vfe_bus_irq_evt_payload         *evt_payload;
-	struct cam_vfe_bus_ver3_comp_grp_data      *resource_data;
-	uint32_t                                    status_0;
+	int32_t                                 rc;
+	int                                     i;
+	struct cam_isp_resource_node           *vfe_out = NULL;
+	struct cam_vfe_bus_ver3_vfe_out_data   *rsrc_data = NULL;
+	struct cam_vfe_bus_irq_evt_payload     *evt_payload;
+	struct cam_vfe_bus_ver3_comp_grp_data  *resource_data;
+	uint32_t                                status_0;
+	struct cam_vfe_bus_ver3_priv           *bus_priv;
+	void __iomem                           *camnoc_mem_base = NULL;
+	uint32_t                                val0 = 0, val1 = 0, val2 = 0;
+	uint32_t                                comp_mask = 0;
 
 	vfe_out = th_payload->handler_priv;
 	if (!vfe_out) {
@@ -2326,14 +2334,15 @@ static int cam_vfe_bus_ver3_handle_vfe_out_done_top_half(uint32_t evt_id,
 	rsrc_data = vfe_out->res_priv;
 	resource_data = rsrc_data->comp_grp->res_priv;
 
+	bus_priv = rsrc_data->bus_priv;
+	camnoc_mem_base = bus_priv->common_data.camnoc_mem_base;
+
 	CAM_DBG(CAM_ISP, "VFE:%d Bus IRQ status_0: 0x%X status_1: 0x%X",
 		rsrc_data->common_data->core_index,
 		th_payload->evt_status_arr[0],
 		th_payload->evt_status_arr[1]);
-
 	rc  = cam_vfe_bus_ver3_get_evt_payload(rsrc_data->common_data,
 		&evt_payload);
-
 	if (rc) {
 		CAM_INFO_RATE_LIMIT(CAM_ISP,
 			"VFE:%d Bus IRQ status_0: 0x%X status_1: 0x%X",
@@ -2347,9 +2356,46 @@ static int cam_vfe_bus_ver3_handle_vfe_out_done_top_half(uint32_t evt_id,
 
 	evt_payload->core_index = rsrc_data->common_data->core_index;
 	evt_payload->evt_id = evt_id;
+	evt_payload->evt_param = 0;
 
 	for (i = 0; i < th_payload->num_registers; i++)
 		evt_payload->irq_reg_val[i] = th_payload->evt_status_arr[i];
+
+	if (bus_priv->common_data.cpas_version == CAM_CPAS_TITAN_570_V200) {
+		rc = cam_vfe_bus_ver3_handle_comp_done_bottom_half(
+			rsrc_data->comp_grp, evt_payload, &comp_mask);
+
+		if ((comp_mask & (1 << CAM_VFE_BUS_VER3_VFE_OUT_RDI0)) ||
+			(comp_mask & (1 << CAM_VFE_BUS_VER3_VFE_OUT_RDI1)) ||
+			(comp_mask & (1 << CAM_VFE_BUS_VER3_VFE_OUT_RDI2)) ||
+			(comp_mask & (1 << CAM_VFE_BUS_VER3_VFE_OUT_RDI3))) {
+
+			/* Read Fill Level */
+			val0 = cam_io_r_mb(camnoc_mem_base + 0xA20);
+			val1 = cam_io_r_mb(camnoc_mem_base + 0x1420);
+			val2 = cam_io_r_mb(camnoc_mem_base + 0x1A20);
+			CAM_DBG(CAM_ISP,
+				"comp_mask %d: CAMNOC REG[Queued Pending] ife_niu_1[%d %d] ife_niu_3[%d %d] ife_niu_0[%d %d]",
+				comp_mask,
+				(val0 & 0x7FF), (val0 & 0x7F0000) >> 16,
+				(val1 & 0x7FF), (val1 & 0x7F0000) >> 16,
+				(val2 & 0x7FF), (val2 & 0x7F0000) >> 16);
+
+			if ((val1 & 0x7FF) > 205) {
+				CAM_ERR(CAM_ISP, "VFE:%d, Potential Error!!!",
+					rsrc_data->common_data->core_index);
+				CAM_INFO(CAM_ISP,
+				"comp_mask %d: CAMNOC REG[Queued Pending] ife_niu_1[%d %d] ife_niu_3[%d %d] ife_niu_0[%d %d]",
+				comp_mask,
+				(val0 & 0x7FF), (val0 & 0x7F0000) >> 16,
+				(val1 & 0x7FF), (val1 & 0x7F0000) >> 16,
+				(val2 & 0x7FF), (val2 & 0x7F0000) >> 16);
+
+				evt_payload->evt_param = 1;
+			}
+
+		}
+	}
 
 	th_payload->evt_payload_priv = evt_payload;
 
@@ -2412,7 +2458,7 @@ static int cam_vfe_bus_ver3_handle_vfe_out_done_bottom_half(
 	struct cam_isp_hw_event_info          evt_info;
 	void                                 *ctx = NULL;
 	uint32_t                              evt_id = 0, comp_mask = 0;
-	uint32_t                         out_list[CAM_VFE_BUS_VER3_VFE_OUT_MAX];
+	uint32_t                              out_list[CAM_VFE_BUS_VER3_VFE_OUT_MAX];
 
 	rc = cam_vfe_bus_ver3_handle_comp_done_bottom_half(
 		rsrc_data->comp_grp, evt_payload_priv, &comp_mask);
@@ -2429,6 +2475,7 @@ static int cam_vfe_bus_ver3_handle_vfe_out_done_bottom_half(
 
 		evt_info.res_type = vfe_out->res_type;
 		evt_info.hw_idx   = vfe_out->hw_intf->hw_idx;
+		evt_info.evt_param = evt_payload->evt_param;
 
 		rc = cam_vfe_bus_ver3_get_comp_vfe_out_res_id_list(
 			comp_mask, out_list, &num_out);
@@ -3790,6 +3837,9 @@ int cam_vfe_bus_ver3_init(
 	bus_priv->common_data.core_index         = soc_info->index;
 	bus_priv->common_data.mem_base           =
 		CAM_SOC_GET_REG_MAP_START(soc_info, VFE_CORE_BASE_IDX);
+	bus_priv->common_data.camnoc_mem_base           =
+		CAM_SOC_GET_REG_MAP_START(soc_info, CAMNOC_CORE_BASE_IDX);
+	bus_priv->common_data.cpas_version        = soc_private->cpas_version;
 	bus_priv->common_data.hw_intf            = hw_intf;
 	bus_priv->common_data.vfe_irq_controller = vfe_irq_controller;
 	bus_priv->common_data.common_reg         = &ver3_hw_info->common_reg;
