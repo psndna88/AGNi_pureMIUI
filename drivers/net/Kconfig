@@ -493,6 +493,11 @@ config FUJITSU_ES
 	  This driver provides support for Extended Socket network device
           on Extended Partitioning of FUJITSU PRIMEQUEST 2000 E2 series.
 
+config GENERIC_SOFTWARE_BRIDGE_XIAOMI
+	bool "Generic software bridge - Xiaomi OSS"
+	depends on NETDEVICES
+	default y
+
 source "drivers/net/hyperv/Kconfig"
 
 endif # NETDEVICES
