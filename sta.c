@@ -7360,6 +7360,21 @@ static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_bss_max_idle_period(struct sigma_dut *dut, const char *intf,
+				       int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u16(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BSS_MAX_IDLE_PERIOD, val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"BSS max idle period cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_fullbw_ulmumimo(struct sigma_dut *dut, const char *intf,
 				   int val)
 {
@@ -7492,6 +7507,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_om_ctrl_supp(dut, intf, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set OM ctrl supp");
+		}
+
+		if (sta_set_bss_max_idle_period(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				  "Failed to reset BSS max idle period");
 		}
 
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, 1)) {
@@ -9169,6 +9189,13 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 				  "ErrorCode,Failed to set OM ctrl supp");
 			return 0;
 		}
+	}
+
+	val = get_param(cmd, "BSSMaxIdlePeriod");
+	if (val && sta_set_bss_max_idle_period(dut, intf, atoi(val))) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to set BSS max idle period");
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "ADDBAResp_BufSize");
