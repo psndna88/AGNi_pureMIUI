@@ -292,3 +292,7 @@
 		};
 	};
 };
+
+&pm8195_1_rtc {
+	disable-alarm-wakeup;
+};
