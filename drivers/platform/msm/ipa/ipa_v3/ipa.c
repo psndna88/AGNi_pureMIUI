@@ -154,6 +154,7 @@ static struct clk *ipa3_clk;
 
 struct ipa3_context *ipa3_ctx = NULL;
 
+void ipa3_plat_drv_shutdown(struct platform_device *pdev_p);
 int ipa3_plat_drv_probe(struct platform_device *pdev_p);
 int ipa3_pci_drv_probe(
 	struct pci_dev            *pci_dev,
@@ -443,6 +444,7 @@ static const struct dev_pm_ops ipa_pm_ops = {
 
 static struct platform_driver ipa_plat_drv = {
 	.probe = ipa3_plat_drv_probe,
+	.shutdown = ipa3_plat_drv_shutdown,
 	.driver = {
 		.name = DRV_NAME,
 		.pm = &ipa_pm_ops,
@@ -6524,6 +6526,8 @@ fail_teth_bridge_driver_init:
 	ipa3_teardown_apps_pipes();
 fail_alloc_gsi_channel:
 fail_setup_apps_pipes:
+	ipahal_print_all_regs(false);
+	ipa_save_registers();
 	gsi_deregister_device(ipa3_ctx->gsi_dev_hdl, false);
 fail_register_device:
 	ipa3_destroy_flt_tbl_idrs();
@@ -8996,6 +9000,17 @@ static void ipa_smmu_update_fw_loader(void)
 	} else {
 		IPADBG("smmu is disabled\n");
 	}
+}
+
+void ipa3_plat_drv_shutdown(struct platform_device *pdev_p)
+{
+	pr_debug("ipa: driver shutdown invoked for %s\n",
+		pdev_p->dev.of_node->name);
+	if (ipa3_ctx && atomic_read(&ipa3_ctx->ipa_clk_vote)) {
+		ipahal_print_all_regs(false);
+		ipa_save_registers();
+	}
+	return;
 }
 
 int ipa3_plat_drv_probe(struct platform_device *pdev_p)
