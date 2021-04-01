@@ -575,3 +575,20 @@
 		};
 	};
 };
+
+&soc {
+	tlmm: pinctrl@3000000 {
+		bt_en_active: bt_en_active {
+			mux {
+				pins = "gpio172", "gpio171";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio172", "gpio171";
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+	};
+};
