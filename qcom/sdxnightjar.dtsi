@@ -62,14 +62,6 @@
 			linux,cma-default;
 		};
 
-		qseecom_mem: qseecom_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			alignment = <0x400000>;
-			size = <0x400000>;
-		};
-
 	};
 
 	aliases { };
@@ -583,7 +575,7 @@
 		compatible = "qcom,qseecom";
 		reg = <0x87800000 0x200000>;
 		reg-names = "secapp-region";
-		memory-region = <&qseecom_mem>;
+		memory-region = <&common_cma>;
 		qcom,hlos-num-ce-hw-instances = <1>;
 		qcom,hlos-ce-hw-instance = <0>;
 		qcom,qsee-ce-hw-instance = <0>;
