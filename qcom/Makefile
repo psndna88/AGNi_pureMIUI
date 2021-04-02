@@ -228,16 +228,24 @@ dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-        dtbo-$(CONFIG_ARCH_SA8155) += \
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA8155) += \
+		sa8155-v2-adp-air-lxc-overlay.dtbo \
+		sa8155p-v2-adp-air-lxc-overlay.dtbo
+else
+	dtbo-$(CONFIG_ARCH_SA8155) += \
 		sa8155-adp-star-overlay.dtbo \
 		sa8155p-adp-star-overlay.dtbo \
 		sa8155-v2-adp-air-overlay.dtbo \
 		sa8155p-v2-adp-air-overlay.dtbo
+endif
 
 sa8155-adp-star-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
 sa8155p-adp-star-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
 sa8155-v2-adp-air-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
 sa8155p-v2-adp-air-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
+sa8155-v2-adp-air-lxc-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
+sa8155p-v2-adp-air-lxc-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
 else
 dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 	sa8155p-adp-star.dtb \
@@ -248,7 +256,11 @@ dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-        dtbo-$(CONFIG_ARCH_SA6155) += \
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA6155) += \
+		sa6155p-v2-adp-air-lxc-overlay.dtbo
+else
+	dtbo-$(CONFIG_ARCH_SA6155) += \
 		sa6155-adp-star-overlay.dtbo \
 		sa6155p-adp-star-overlay.dtbo \
 		sa6155p-adp-star-lpass-overlay.dtbo \
@@ -257,6 +269,7 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sa6155p-v2-adp-star-overlay.dtbo \
 		sa6155p-v2-adp-air-overlay.dtbo \
 		sa6155p-v2-adp-air-lpass-overlay.dtbo
+endif
 
 sa6155-adp-star-overlay.dtbo-base := sa6155.dtb
 sa6155p-adp-star-overlay.dtbo-base := sa6155p.dtb
@@ -266,6 +279,7 @@ sa6155-adp-air-overlay.dtbo-base := sa6155.dtb
 sa6155p-adp-air-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v2-adp-air-lpass-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-lxc-overlay.dtbo-base := sa6155p.dtb
 else
 dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
 	sa6155p-adp-star.dtb \
@@ -278,12 +292,18 @@ dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA8195) += \
+		sa8195p-v2-adp-air-lxc-overlay.dtbo
+else
 	dtbo-$(CONFIG_ARCH_SA8195) += \
 		sa8195p-adp-star-overlay.dtbo \
 		sa8195p-v2-adp-air-overlay.dtbo
+endif
 
 sa8195p-adp-star-overlay.dtbo-base := sa8195p.dtb
 sa8195p-v2-adp-air-overlay.dtbo-base := sa8195p.dtb
+sa8195p-v2-adp-air-lxc-overlay.dtbo-base := sa8195p.dtb
 else
 dtb-$(CONFIG_ARCH_SA8195)	+= sa8195p-adp-star.dtb \
 	sa8195p-v2-adp-air.dtb
