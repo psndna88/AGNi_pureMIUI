@@ -36,6 +36,26 @@
 	status = "ok";
 };
 
+&usb2 {
+	status = "ok";
+};
+
+&usb2_phy2 {
+	status = "ok";
+};
+
+&usb_qmp_phy0 {
+	status = "ok";
+};
+
+&usb2_phy3 {
+	status = "ok";
+};
+
+&usb_qmp_phy1 {
+	status = "ok";
+};
+
 &qupv3_se13_4uart {
 	status = "ok";
 };
