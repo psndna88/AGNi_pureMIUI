@@ -1284,6 +1284,8 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 	if (status != QDF_STATUS_SUCCESS)
 		goto fail;
 
+	hif_process_runtime_resume_success(hif_ctx);
+
 	if (htc_runtime_resume(htc_ctx)) {
 		status = QDF_STATUS_E_FAILURE;
 		goto fail;
@@ -1292,8 +1294,6 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 	status = cdp_runtime_resume(dp_soc, pdev_id);
 	if (status != QDF_STATUS_SUCCESS)
 		goto fail;
-
-	hif_process_runtime_resume_success(hif_ctx);
 
 fail:
 	if (status != QDF_STATUS_SUCCESS)
