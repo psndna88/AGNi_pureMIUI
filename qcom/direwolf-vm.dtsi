@@ -5,6 +5,18 @@
 	model = "Qualcomm Technologies, Inc. Direwolf Virtual Machine";
 	qcom,msm-name = "Direwolf V1";
 	qcom,msm-id = <460 0x10000>;
+
+	firmware:firmware {
+		android {
+			/delete-property/ boot_devices;
+			fstab {
+				vendor {
+					dev="/dev/block/platform/vdevs/1c160000.virtio_blk/vdc";
+					fsmgr_flags = "wait";
+				};
+			};
+		};
+	};
 };
 
 &soc {
