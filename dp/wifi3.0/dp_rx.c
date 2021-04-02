@@ -1004,16 +1004,13 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 	}
 
 	if (qdf_nbuf_len(mpdu) < sizeof(struct ieee80211_frame)) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			  "Invalid nbuf length");
+		dp_info_rl("Invalid nbuf length");
 		goto free;
 	}
 
 	pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	if (!pdev) {
-		QDF_TRACE(QDF_MODULE_ID_DP,
-			  QDF_TRACE_LEVEL_ERROR,
-			  "PDEV not found");
+		dp_info_rl("PDEV not found");
 		goto free;
 	}
 
@@ -1028,8 +1025,7 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 	qdf_spin_unlock_bh(&pdev->vdev_list_lock);
 
 	if (!vdev) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			  "VDEV not found");
+		dp_info_rl("VDEV not found");
 		goto free;
 	}
 
