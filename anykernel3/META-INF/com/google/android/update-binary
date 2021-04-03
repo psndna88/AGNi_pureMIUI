@@ -425,6 +425,24 @@ fi;
 ui_print " " "AGNi Kernel by psndna88 @ xda-developers" " ";
 ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
+### AGNi: MIATOLL device detection
+if [ "`$BB cat /proc/cmdline | $BB grep curtana`" ]; then
+	device="curtana";
+	ui_print " " "AGNi detected device MIATOLL curtana - Redmi Note 9S/Pro India" " ";
+elif [ "`$BB cat /proc/cmdline | $BB grep excalibur`" ]; then
+	device="excalibur";
+	ui_print " " "AGNi detected device MIATOLL excalibur - Redmi Note 9 Pro Max India" " ";
+elif [ "`$BB cat /proc/cmdline | $BB grep gram`" ]; then
+	device="gram";
+	ui_print " " "AGNi detected device MIATOLL gram - Poco M2 Pro" " ";
+elif [ "`$BB cat /proc/cmdline | $BB grep joyeuse`" ]; then
+	device="joyeuse";
+	ui_print " " "AGNi detected device MIATOLL joyeuse - Redmi Note 9 Pro Global" " ";
+else
+	device="unidentified";
+	ui_print " " "AGNi doesn't think this is a MIATOLL device. Exiting installer.." " ";
+	exit;
+fi;
 ### AGNi: ROM type detection
 umount_all;
 # $BB mount -o rw /vendor;
@@ -494,16 +512,63 @@ fi;
 #$BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 
-### AGNi: init exec hooks START
-#if [ ! "`$BB grep AGNI_HERE /vendor/etc/init/hw/init.qcom.rc`" ]; then
-#	$BB cp /vendor/etc/init/hw/init.qcom.rc /vendor/etc/init/hw/init.qcom.rc.bak;
-#    $BB echo "`$BB cat $AKHOME/tools/init.rc-append`" >> /vendor/etc/init/hw/init.qcom.rc;
-#    $BB cp -f $AKHOME/tools/init.agni.rc /vendor/etc/init/hw/init.agni.rc;
-#    /sbin/restorecon -v /vendor/etc/init/hw/init.qcom.rc;
-#fi;
-#/sbin/restorecon -v /vendor/etc/init/hw/init.qcom.sh;
-#/sbin/restorecon -v /vendor/etc/init/hw/init.agni.rc;
-### AGNi: init exec hooks END
+$BB mount /data;
+# AGNi Support magisk module installation
+ui_print ">> Installing AGNi Support Module..";
+ASUP=/data/adb/modules/AGNiSupport;
+$BB mv -f $ASUP/disable /data/adb/modules;
+$BB rm -rf $ASUP;
+mkdir -p $ASUP;
+$BB cp -rf $AKHOME/common/AGNiSupport/* $ASUP;
+$BB chmod 0644 $ASUP/*.prop;
+$BB chmod 0777 $ASUP/*.sh;
+$BB mv -f /data/adb/modules/disable $ASUP;
+# AGNi Sound magisk module installation
+ui_print ">> Installing AGNi Sound Module..";
+ASND=/data/adb/modules/AGNiSound;
+$BB mv -f $ASND/disable /data/adb/modules;
+$BB rm -rf $ASND;
+$BB mkdir -p $ASND;
+$BB cp -rf $AKHOME/common/AGNiSound/* $ASND;
+if [ "$device" == "curtana" ]; then
+	$BB rm $ASND/vendor/etc/device_features/excalibur.xml;
+	$BB rm $ASND/vendor/etc/device_features/gram.xml;
+	$BB rm $ASND/vendor/etc/device_features/joyeuse.xml;
+elif [ "$device" == "excalibur" ]; then
+	$BB rm $ASND/vendor/etc/device_features/curtana.xml;
+	$BB rm $ASND/vendor/etc/device_features/gram.xml;
+	$BB rm $ASND/vendor/etc/device_features/joyeuse.xml;
+elif [ "$device" == "gram" ]; then
+	$BB rm $ASND/vendor/etc/device_features/curtana.xml;
+	$BB rm $ASND/vendor/etc/device_features/excalibur.xml;
+	$BB rm $ASND/vendor/etc/device_features/joyeuse.xml;
+elif [ "$device" == "joyeuse" ]; then
+	$BB rm $ASND/vendor/etc/device_features/curtana.xml;
+	$BB rm $ASND/vendor/etc/device_features/excalibur.xml;
+	$BB rm $ASND/vendor/etc/device_features/gram.xml;
+fi;
+$BB chmod -R 0644 $ASUP;
+$BB chmod 0755 $ASUP/vendor;
+$BB chmod 0755 $ASUP/vendor/etc;
+$BB chmod 0755 $ASUP/vendor/etc/device_features;
+$BB chmod 0777 $ASUP/*.sh;
+$BB mv -f /data/adb/modules/disable $ASND;
+# AGNi WIFI tuning module
+ui_print ">> Installing AGNi WIFI tuning Module..";
+AWLAN=/data/adb/modules/AGNiWIFI;
+$BB mv -f $AWLAN/disable /data/adb/modules;
+$BB rm -rf $AWLAN;
+$BB mkdir -p $AWLAN;
+$BB cp -rf $AKHOME/common/AGNiWIFI/* $AWLAN;
+$BB chmod 0644 $ASUP/*.prop;
+$BB chmod 0777 $ASUP/*.sh;
+$BB mv -f /data/adb/modules/disable $AWLAN;
+## Auto Cleaner
+$BB mkdir -p /data/adb/post-fs-data.d;
+$BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d/atools.sh;
+$BB chmod 0777 /data/adb/post-fs-data.d/atools.sh;
+$BB rm -rf /data/adb/modules/AGNiEAS;
+# end magisk module installation
 $BB sync;
 umount_all;
 setup_env;
