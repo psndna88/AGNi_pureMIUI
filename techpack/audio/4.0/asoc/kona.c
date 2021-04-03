@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  */
 
 #include <linux/clk.h>
@@ -887,14 +888,14 @@ static void *def_wcd_mbhc_cal(void);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
-	.detect_extn_cable = true,
+	.detect_extn_cable = false,//2020.3.27 longcheer puqirui edit,default is true
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = KEY_VOLUMEUP,
-	.key_code[2] = KEY_VOLUMEDOWN,
-	.key_code[3] = 0,
+	.key_code[1] = BTN_1,//2019.12.13 longcheer puqirui edit,default is KEY_VOICECOMMAND
+	.key_code[2] = BTN_2,//2019.12.13 longcheer puqirui edit,default is KEY_VOLUMEUP
+	.key_code[3] = 0,//2019.12.13 longcheer puqirui edit,default isKEY_VOLUMEDOWN
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
