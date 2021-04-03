@@ -235,7 +235,7 @@ void rpmh_status_print_enabled(void)
 		data.count = msm_rpmstats_read_long_register(reg_base, i,
 				offsetof(struct msm_rpm_stats_data, count));
 		memcpy(stat_type, &data.stat_type, sizeof(u32));
-		pr_info("RPM Mode:%s----count:%d\n",stat_type, data.count);
+		pr_debug("RPM Mode:%s----count:%d\n",stat_type, data.count);
 	}
 
 }

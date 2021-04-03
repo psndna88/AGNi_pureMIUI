@@ -1357,6 +1357,7 @@ static int dwc3_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
 					dev_name(dwc->dev), 0);
 	if (!dwc->dwc_ipc_log_ctxt)
@@ -1368,6 +1369,7 @@ static int dwc3_probe(struct platform_device *pdev)
 						dma_ipc_log_ctx_name, 0);
 	if (!dwc->dwc_dma_ipc_log_ctxt)
 		dev_err(dwc->dev, "Error getting ipc_log_ctxt for ep_events\n");
+#endif
 
 	dwc3_instance[count] = dwc;
 	dwc->index = count;
@@ -1416,10 +1418,12 @@ static int dwc3_remove(struct platform_device *pdev)
 	dwc3_free_event_buffers(dwc);
 	dwc3_free_scratch_buffers(dwc);
 
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(dwc->dwc_ipc_log_ctxt);
 	dwc->dwc_ipc_log_ctxt = NULL;
 	ipc_log_context_destroy(dwc->dwc_dma_ipc_log_ctxt);
 	dwc->dwc_dma_ipc_log_ctxt = NULL;
+#endif
 	count--;
 	dwc3_instance[dwc->index] = NULL;
 
