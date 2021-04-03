@@ -79,7 +79,7 @@
 #define GET_VERIFY_RETRY				8
 #define GET_S_SECRET_RETRY				4
 
-// aaabbb's battery identity
+// xiaomi's battery identity
 #define FAMILY_CODE						0x9f
 #define CUSTOM_ID_MSB					0x04
 #define CUSTOM_ID_LSB					0xF0

@@ -6393,11 +6393,13 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	smblib_dbg(chg, PR_OEM, "IRQ: usbin-plugin %s\n",
 					vbus_rising ? "attached" : "detached");
 /*part of charger mode function*/
+#ifdef CONFIG_TOUCHSCREEN_COMMON
 	g_touchscreen_usb_pulgin.usb_plugged_in = vbus_rising;
 	if (g_touchscreen_usb_pulgin.valid){
 		g_touchscreen_usb_pulgin.event_callback();
 	}
 
+#endif
 
 }
 

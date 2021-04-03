@@ -1,10 +1,10 @@
 &soc {
 	onewire_gpio: onewire_gpio {
-		compatible = "aaabbb,onewire_gpio";
+		compatible = "xiaomi,onewire_gpio";
 		label = "xm_onewire";
-		aaabbb,version = <1>;
-		aaabbb,ow_gpio = <&tlmm 93 0x00>;
-		aaabbb,gpio_number = <93>;
+		xiaomi,version = <1>;
+		xiaomi,ow_gpio = <&tlmm 93 0x00>;
+		xiaomi,gpio_number = <93>;
 		mi,onewire-gpio-cfg-addr = <0x0395D000 0x4>;
 		pinctrl-names = "onewire_active", "onewire_sleep";
 		pinctrl-0 = <&onewire_gpio_active>;

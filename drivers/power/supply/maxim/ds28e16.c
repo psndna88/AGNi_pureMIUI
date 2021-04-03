@@ -1886,6 +1886,6 @@ static void __exit ds28e16_exit(void)
 module_init(ds28e16_init);
 module_exit(ds28e16_exit);
 
-MODULE_AUTHOR("aaabbb Inc.");
+MODULE_AUTHOR("xiaomi Inc.");
 MODULE_DESCRIPTION("ds28e16 driver");
 MODULE_LICENSE("GPL");

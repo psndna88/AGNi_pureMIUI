@@ -64,8 +64,26 @@
 #include <linux/kthread.h>
 #include <linux/dma-mapping.h>
 #include "focaltech_common.h"
+
+// include longcheer header
+#include "../lct_tp_info.h"
+#include "../lct_tp_selftest.h"
 #ifdef CONFIG_PM
 #include <linux/pm_runtime.h>
+#endif
+#include "../lct_tp_gesture.h"
+#if LCT_TP_WORK_EN
+#include "../lct_tp_work.h"
+#endif
+#if LCT_TP_GRIP_AREA_EN
+#include "../lct_tp_grip_area.h"
+#endif
+#if LCT_TP_PALM_EN
+#include "../lct_tp_palm.h"
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+#include "../xiaomi/xiaomi_touch.h"
 #endif
 
 /*****************************************************************************
@@ -107,11 +125,13 @@
 #define FTX_MAX_COMPATIBLE_TYPE             4
 #define FTX_MAX_COMMMAND_LENGTH             16
 
+/* 2019.12.2 longcheer yanglintao add (xiaomi game mode ) start */
 #define FTS_REG_MONITOR_MODE                0x8600
 #define FTS_REG_THDIFF                      0x9E00
 #define FTS_REG_SENSIVITY                   0x9D00
 #define FTS_REG_EDGE_FILTER_LEVEL           0x9C00
 #define FTS_REG_EDGE_FILTER_ORIENTATION     0x8C00
+/* 2019.12.2 longcheer yanglintao add (xiaomi game mode ) end */
 
 /*****************************************************************************
 * Private enumerations, structures and unions using typedef
@@ -210,9 +230,17 @@ struct fts_ts_data {
 	struct early_suspend early_suspend;
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+    u8 palm_sensor_switch;
+    bool palm_sensor_changed;
+    bool gamemode_enabled;
+#endif
 	struct mutex reg_lock;
 	struct device *fts_touch_dev;
 	struct class *fts_tp_class;
+#if LCT_TP_PALM_EN
+	int palm_changed;
+#endif
 };
 
 #if LCT_TP_USB_PLUGIN
@@ -244,6 +272,18 @@ int fts_gesture_readdata(struct fts_ts_data *ts_data, u8 *data);
 int fts_gesture_suspend(struct fts_ts_data *ts_data);
 int fts_gesture_resume(struct fts_ts_data *ts_data);
 
+/* Apk and functions */
+int fts_create_apk_debug_channel(struct fts_ts_data *);
+void fts_release_apk_debug_channel(struct fts_ts_data *);
+
+/* Longcheer procfs */
+int lct_create_procfs(struct fts_ts_data *ts_data);
+int lct_remove_procfs(struct fts_ts_data *ts_data);
+
+/* Longcheer get firmware version */
+int lct_fts_get_tpfwver(const char *cmd);
+
+/* Longcheer set gesture mode */
 int lct_fts_tp_gesture_callback(bool flag);
 
 /* ADB functions */
@@ -259,6 +299,19 @@ int fts_esdcheck_proc_busy(bool proc_debug);
 int fts_esdcheck_set_intr(bool intr);
 int fts_esdcheck_suspend(void);
 int fts_esdcheck_resume(void);
+#endif
+
+/* FTS TEST */
+#if FTS_TEST_EN
+int fts_test_init(struct fts_ts_data *ts_data);
+int fts_test_exit(struct fts_ts_data *ts_data);
+int lct_tp_selftest_all(void);
+#endif
+
+/* Production test */
+#if FTS_TEST_EN
+int fts_test_init(struct fts_ts_data *ts_data);
+int fts_test_exit(struct fts_ts_data *ts_data);
 #endif
 
 /* Point Report Check*/

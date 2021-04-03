@@ -35,6 +35,7 @@
 #define NVT_DUMP_PARTITION_LEN  (1024)
 #define NVT_DUMP_PARTITION_PATH "/data/local/tmp"
 
+//2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
 extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
 #endif
@@ -941,6 +942,7 @@ void Boot_Update_Firmware(struct work_struct *work)
 	mutex_lock(&ts->lock);
 	nvt_update_firmware(ts->boot_update_firmware_name);
 	mutex_unlock(&ts->lock);
+//2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
 	if (!IS_ERR_OR_NULL(g_touchscreen_usb_pulgin.event_callback))
 		g_touchscreen_usb_pulgin.valid = true;

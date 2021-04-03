@@ -3,6 +3,7 @@
 # Makefile for misc devices that really don't fit anywhere else.
 #
 
+#board id
 obj-y += board_id.o
 
 obj-$(CONFIG_AW8624_HAPTIC) += aw8624_haptic/

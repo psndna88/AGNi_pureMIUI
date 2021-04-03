@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,6 +24,14 @@
 #include "dsi_display.h"
 #include "sde_crtc.h"
 #include "sde_rm.h"
+
+//2019.12.11 longcheer zhaoxiangxiang add for esd check start
+static int esd_irq_count = 0;
+static bool tp_update_firmware = false;
+extern void lcd_esd_handler(bool en);
+extern char *saved_command_line;
+
+//2019.12.11 longcheer zhaoxiangxiang add for esd check start
 
 #define BL_NODE_NAME_SIZE 32
 
@@ -1147,6 +1156,12 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 	/* connector-specific property handling */
 	idx = msm_property_index(&c_conn->property_info, property);
 	switch (idx) {
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+	case CONNECTOR_PROP_LP:
+		if (connector->dev)
+			connector->dev->doze_state = val;
+		break;
+	}
 	case CONNECTOR_PROP_OUT_FB:
 		/* clear old fb, if present */
 		if (c_state->out_fb)
@@ -1845,10 +1860,6 @@ static int sde_connector_atomic_check(struct drm_connector *connector,
 
 	return 0;
 }
-
-static int esd_irq_count = 0;
-static bool tp_update_firmware = false;
-extern void lcd_esd_handler(bool en);
 
 void lcd_esd_enable(bool en)
 {

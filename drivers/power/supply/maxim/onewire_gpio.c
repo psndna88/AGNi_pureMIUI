@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016  aaabbb Inc.
+ * Copyright (c) 2016  xiaomi Inc.
  * Copyright (C) 2020 XiaoMi, Inc.
  */
 #define pr_fmt(fmt)	"[Onewire] %s: " fmt, __func__
@@ -185,7 +185,7 @@ static int onewire_gpio_parse_dt(struct device *dev,
 
 	// parse version
 	pdata->version = 0;
-	error = of_property_read_u32(np, "aaabbb,version", &val);
+	error = of_property_read_u32(np, "xiaomi,version", &val);
 	if (error && (error != -EINVAL))
 		ow_err("Unable to read version\n");
 	else if (error != -EINVAL)
@@ -193,12 +193,12 @@ static int onewire_gpio_parse_dt(struct device *dev,
 
 	// parse gpio
 	pdata->ow_gpio = of_get_named_gpio_flags(np,
-					"aaabbb,ow_gpio", 0, NULL);
+					"xiaomi,ow_gpio", 0, NULL);
 	ow_dbg("ow_gpio: %d\n", pdata->ow_gpio);
 
 	// parse gpio_num
 	pdata->gpio_num = 0;
-	error = of_property_read_u32(np, "aaabbb,gpio_number", &val);
+	error = of_property_read_u32(np, "xiaomi,gpio_number", &val);
 	if (error && (error != -EINVAL))
 		ow_err("Unable to read gpio number\n");
 	else if (error != -EINVAL)
@@ -537,7 +537,7 @@ static const struct file_operations onewire_dev_fops = {
 };
 
 static const struct of_device_id onewire_gpio_dt_match[] = {
-	{.compatible = "aaabbb,onewire_gpio"},
+	{.compatible = "xiaomi,onewire_gpio"},
 	{},
 };
 
@@ -590,6 +590,6 @@ static void __exit onewire_gpio_exit(void)
 module_init(onewire_gpio_init);
 module_exit(onewire_gpio_exit);
 
-MODULE_AUTHOR("aaabbb Inc.");
+MODULE_AUTHOR("xiaomi Inc.");
 MODULE_DESCRIPTION("onewire driver");
 MODULE_LICENSE("GPL");

@@ -28,6 +28,7 @@
 #define NVT_BASELINE "nvt_baseline"
 #define NVT_RAW "nvt_raw"
 #define NVT_DIFF "nvt_diff"
+#define NVT_XIAOMI_CONFIG_INFO "nvt_xiaomi_config_info"
 #define NVT_PF_SWITCH "nvt_pf_switch"
 #define NVT_SENSITIVITY_SWITCH "nvt_sensitivity_switch"
 #define NVT_ER_RANGE_SWITCH "nvt_er_range_switch"
@@ -35,6 +36,7 @@
 #define NVT_EDGE_REJECT_SWITCH "nvt_edge_reject_switch"
 #define NVT_POCKET_PALM_SWITCH "nvt_pocket_palm_switch"
 #define NVT_CHARGER_SWITCH "nvt_charger_switch"
+#define LCT_TP_DATA_DUMP "tp_data_dump"
 
 #define SPI_TANSFER_LENGTH  256
 
@@ -52,6 +54,7 @@ static struct proc_dir_entry *NVT_proc_fw_version_entry;
 static struct proc_dir_entry *NVT_proc_baseline_entry;
 static struct proc_dir_entry *NVT_proc_raw_entry;
 static struct proc_dir_entry *NVT_proc_diff_entry;
+static struct proc_dir_entry *NVT_proc_xiaomi_config_info_entry;
 static struct proc_dir_entry *NVT_proc_pf_switch_entry;
 static struct proc_dir_entry *NVT_proc_sensitivity_switch_entry;
 static struct proc_dir_entry *NVT_proc_er_range_switch_entry;
@@ -60,6 +63,12 @@ static struct proc_dir_entry *NVT_proc_edge_reject_switch_entry;
 static struct proc_dir_entry *NVT_proc_pocket_palm_switch_entry;
 static struct proc_dir_entry *NVT_proc_charger_switch_entry;
 static int32_t diff_data[2048] = {0};
+static struct proc_dir_entry *LCT_proc_tp_data_dump_entry;
+
+// Xiaomi Config Info.
+static uint8_t nvt_xiaomi_conf_info_fw_ver = 0;
+static uint8_t nvt_xiaomi_conf_info_fae_id = 0;
+static uint64_t nvt_xiaomi_conf_info_reservation = 0;
 
 /*******************************************************
 Description:
@@ -527,6 +536,54 @@ static const struct file_operations nvt_diff_fops = {
 	.release = seq_release,
 };
 
+static int nvt_xiaomi_config_info_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "FW version/Config version, Debug version: 0x%02X\n", nvt_xiaomi_conf_info_fw_ver);
+	seq_printf(m, "FAE ID: 0x%02X\n", nvt_xiaomi_conf_info_fae_id);
+	seq_printf(m, "Reservation byte: 0x%012llX\n", nvt_xiaomi_conf_info_reservation);
+
+	return 0;
+}
+
+static int32_t nvt_xiaomi_config_info_open(struct inode *inode, struct file *file)
+{
+	uint8_t buf[16] = {0};
+
+	if (mutex_lock_interruptible(&ts->lock)) {
+		return -ERESTARTSYS;
+	}
+
+	NVT_LOG("++\n");
+
+#if NVT_TOUCH_ESD_PROTECT
+	nvt_esd_check_enable(false);
+#endif /* #if NVT_TOUCH_ESD_PROTECT */
+
+	//---set xdata index to EVENT BUF ADDR---
+	nvt_set_page(ts->mmap->EVENT_BUF_ADDR | 0x9C);
+
+	buf[0] = 0x9C;
+	CTP_SPI_READ(ts->client, buf, 9);
+
+	nvt_xiaomi_conf_info_fw_ver = buf[1];
+	nvt_xiaomi_conf_info_fae_id = buf[2];
+	nvt_xiaomi_conf_info_reservation = (((uint64_t)buf[3] << 40) | ((uint64_t)buf[4] << 32) | ((uint64_t)buf[5] << 24) | ((uint64_t)buf[6] << 16) | ((uint64_t)buf[7] << 8) | (uint64_t)buf[8]);
+
+	mutex_unlock(&ts->lock);
+
+	NVT_LOG("--\n");
+
+	return single_open(file, nvt_xiaomi_config_info_show, NULL);
+}
+
+static const struct file_operations nvt_xiaomi_config_info_fops = {
+	.owner = THIS_MODULE,
+	.open = nvt_xiaomi_config_info_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 /*******************************************************
 Description:
 	Novatek touchscreen read diff meta data function.
@@ -616,6 +673,175 @@ void nvt_read_diff_mdata(uint32_t xdata_addr, uint32_t xdata_btn_addr)
 	nvt_set_page(ts->mmap->EVENT_BUF_ADDR);
 }
 
+/*******************************************************
+Description:
+	Novatek touchscreen tp_data_dump sequence print show
+	function.
+
+return:
+	Executive outcomes. 0---succeed.
+*******************************************************/
+static int32_t c_tp_data_dump_show(struct seq_file *m, void *v)
+{
+	int32_t i = 0;
+	int32_t j = 0;
+
+	seq_printf(m, "\nRAW DATA\n");
+#if 0 //0
+	for (i = 0; i < ts->y_num; i++) {
+		for (j = 0; j < ts->x_num; j++) {
+			seq_printf(m, "%6d", xdata[ts->x_num * i + j]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 1 //90
+	for (i = 0; i < ts->x_num; i++) {
+		for (j = 0; j < ts->y_num; j++) {
+			seq_printf(m, "%6d", xdata[ts->x_num * j + (ts->x_num - 1 - i)]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 0 //180
+	for (i = 0; i < ts->y_num; i++) {
+		for (j = 0; j < ts->x_num; j++) {
+			seq_printf(m, "%6d", xdata[ts->x_num * (ts->y_num - 1 - i) + j]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 0 //270
+	for (i = 0; i < ts->x_num; i++) {
+		for (j = 0; j < ts->y_num; j++) {
+			seq_printf(m, "%6d", xdata[ts->x_num * (ts->y_num - 1 - j) + i]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+
+
+#if TOUCH_KEY_NUM > 0
+	for (i = 0; i < TOUCH_KEY_NUM; i++) {
+		seq_printf(m, "%6d", xdata[ts->x_num * ts->y_num + i]);
+	}
+	seq_puts(m, "\n");
+#endif
+
+	seq_printf(m, "\nDIFF DATA\n");
+#if 0 //0
+	for (i = 0; i < ts->y_num; i++) {
+		for (j = 0; j < ts->x_num; j++) {
+			seq_printf(m, "%6d", diff_data[ts->x_num * i + j]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 1 //90
+	for (i = 0; i < ts->x_num; i++) {
+		for (j = 0; j < ts->y_num; j++) {
+			seq_printf(m, "%6d", diff_data[ts->x_num * j + (ts->x_num - 1 - i)]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 0 //180
+	for (i = 0; i < ts->y_num; i++) {
+		for (j = 0; j < ts->x_num; j++) {
+			seq_printf(m, "%6d", diff_data[ts->x_num * (ts->y_num - 1 - i) + j]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+#if 0 //270
+	for (i = 0; i < ts->x_num; i++) {
+		for (j = 0; j < ts->y_num; j++) {
+			seq_printf(m, "%6d", diff_data[ts->x_num * (ts->y_num - 1 - j) + i]);
+		}
+		seq_puts(m, "\n");
+	}
+#endif
+
+#if TOUCH_KEY_NUM > 0
+	for (i = 0; i < TOUCH_KEY_NUM; i++) {
+		seq_printf(m, "%6d", diff_data[ts->x_num * ts->y_num + i]);
+	}
+	seq_puts(m, "\n");
+#endif
+
+	return 0;
+}
+
+const struct seq_operations lct_tp_data_dump_seq_ops = {
+	.start  = c_start,
+	.next   = c_next,
+	.stop   = c_stop,
+	.show   = c_tp_data_dump_show
+};
+
+/*******************************************************
+Description:
+	Novatek touchscreen /proc/tp_data_dump open function.
+
+return:
+	Executive outcomes. 0---succeed.
+*******************************************************/
+static int32_t lct_tp_data_dump_open(struct inode *inode, struct file *file)
+{
+	if (mutex_lock_interruptible(&ts->lock)) {
+		return -ERESTARTSYS;
+	}
+
+	NVT_LOG("++\n");
+
+#if NVT_TOUCH_ESD_PROTECT
+	nvt_esd_check_enable(false);
+#endif /* #if NVT_TOUCH_ESD_PROTECT */
+
+	if (nvt_clear_fw_status()) {
+		mutex_unlock(&ts->lock);
+		return -EAGAIN;
+	}
+
+	nvt_change_mode(TEST_MODE_2);
+
+	if (nvt_check_fw_status()) {
+		mutex_unlock(&ts->lock);
+		return -EAGAIN;
+	}
+
+	if (nvt_get_fw_info()) {
+		mutex_unlock(&ts->lock);
+		return -EAGAIN;
+	}
+
+	if (nvt_get_fw_pipe() == 0)
+		nvt_read_mdata(ts->mmap->RAW_PIPE0_ADDR, ts->mmap->RAW_BTN_PIPE0_ADDR);
+	else
+		nvt_read_mdata(ts->mmap->RAW_PIPE1_ADDR, ts->mmap->RAW_BTN_PIPE1_ADDR);
+
+	if (nvt_get_fw_pipe() == 0)
+		nvt_read_diff_mdata(ts->mmap->DIFF_PIPE0_ADDR, ts->mmap->DIFF_BTN_PIPE0_ADDR);
+	else
+		nvt_read_diff_mdata(ts->mmap->DIFF_PIPE1_ADDR, ts->mmap->DIFF_BTN_PIPE1_ADDR);
+
+	nvt_change_mode(NORMAL_MODE);
+
+	mutex_unlock(&ts->lock);
+
+	NVT_LOG("--\n");
+
+	return seq_open(file, &lct_tp_data_dump_seq_ops);
+}
+
+static const struct file_operations lct_tp_data_dump_fops = {
+	.owner = THIS_MODULE,
+	.open = lct_tp_data_dump_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+/*2019.12.10 longcheer taocheng add for charger mode & other node start*/
 /*function description*/
 int32_t nvt_set_pf_switch(uint8_t pf_switch)
 {
@@ -712,6 +938,7 @@ static ssize_t nvt_pf_switch_proc_read(struct file *filp, char __user *buf, size
 	nvt_get_pf_switch(&pf_switch);
 
 	mutex_unlock(&ts->lock);
+//2019.12.21 longcheer taocheng edit for enable pf_proc
 	cnt = snprintf(tmp_buf, sizeof(tmp_buf), "pf_switch: %d\n", pf_switch);
 	if (copy_to_user(buf, tmp_buf, sizeof(tmp_buf))) {
 		NVT_ERR("copy_to_user() error!\n");
@@ -739,6 +966,7 @@ static ssize_t nvt_pf_switch_proc_write(struct file *filp,const char __user *buf
 		goto out;
 	}
 
+	/*2019.12.21 longcheer taocheng add for enable pf_proc start*/
 	/*function description*/
 	tmp_buf = kzalloc(count, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -751,6 +979,7 @@ static ssize_t nvt_pf_switch_proc_write(struct file *filp,const char __user *buf
 		ret = -EFAULT;
 		goto out;
 	}
+	/*2019.12.21 longcheer taocheng add for enable pf_proc end*/
 
 	ret = sscanf(tmp_buf, "%d", &tmp);
 	if (ret != 1) {
@@ -914,6 +1143,7 @@ static ssize_t nvt_sensitivity_switch_proc_write(struct file *filp,const char __
 		ret = -EINVAL;
 		goto out;
 	}
+	/*2019.12.21 longcheer taocheng add for enable sensitivity_proc start*/
 	/*function description*/
 	tmp_buf = kzalloc(count, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -926,6 +1156,7 @@ static ssize_t nvt_sensitivity_switch_proc_write(struct file *filp,const char __
 		ret = -EFAULT;
 		goto out;
 	}
+	/*2019.12.21 longcheer taocheng add for enable sensitivity_proc end*/
 
 	ret = sscanf(tmp_buf, "%d", &tmp);
 	if (ret != 1) {
@@ -955,6 +1186,7 @@ static ssize_t nvt_sensitivity_switch_proc_write(struct file *filp,const char __
 
 	ret = count;
 out:
+	//2019.12.21 longcheer taocheng add for enable sensitivity_proc
 	kfree(tmp_buf);
 	NVT_LOG("--\n");
 	return ret;
@@ -1089,6 +1321,8 @@ static ssize_t nvt_er_range_switch_proc_write(struct file *filp,const char __use
 		ret = -EINVAL;
 		goto out;
 	}
+
+	/*2019.12.21 longcheer taocheng add for enable er_range_proc start*/
 	/*function description*/
 	tmp_buf = kzalloc(count, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -1101,6 +1335,7 @@ static ssize_t nvt_er_range_switch_proc_write(struct file *filp,const char __use
 		ret = -EFAULT;
 		goto out;
 	}
+	/*2019.12.21 longcheer taocheng add for enable er_range_proc end*/
 	ret = sscanf(tmp_buf, "%d", &tmp);
 	if (ret != 1) {
 		NVT_ERR("Invalid value! ret = %d\n", ret);
@@ -1576,6 +1811,7 @@ static ssize_t nvt_pocket_palm_switch_proc_read(struct file *filp, char __user *
 	nvt_get_pocket_palm_switch(&pocket_palm_switch);
 
 	mutex_unlock(&ts->lock);
+//2020.01.02 longcheer taocheng edit for enable pocket_proc
 	cnt = snprintf(tmp_buf, sizeof(tmp_buf), "pocket_palm_switch: %d\n", pocket_palm_switch);
 	if (copy_to_user(buf, tmp_buf, sizeof(tmp_buf))) {
 		NVT_LOG("copy_to_user() error!\n");
@@ -1602,6 +1838,7 @@ static ssize_t nvt_pocket_palm_switch_proc_write(struct file *filp,const char __
 		ret = -EINVAL;
 		goto out;
 	}
+	/*2020.01.02 longcheer taocheng add for enable pocket_palm_proc start*/
 	/*function description*/
 	tmp_buf = kzalloc(count, GFP_KERNEL);
 	if (!tmp_buf) {
@@ -1614,6 +1851,8 @@ static ssize_t nvt_pocket_palm_switch_proc_write(struct file *filp,const char __
 		ret = -EFAULT;
 		goto out;
 	}
+	/*2020.01.02 longcheer taocheng add for enable pocket_palm_proc end*/
+
 	ret = sscanf(tmp_buf, "%d", &tmp);
 	if (ret != 1) {
 		NVT_ERR("Invalid value!, ret = %d\n", ret);
@@ -1835,6 +2074,8 @@ static const struct file_operations nvt_charger_switch_fops = {
 	.read = nvt_charger_switch_proc_read,
 	.write = nvt_charger_switch_proc_write,
 };
+/*2019.12.10 longcheer taocheng add for charger mode & other nodes end*/
+
 /*******************************************************
 Description:
 	Novatek touchscreen extra function proc. file node
@@ -1876,6 +2117,15 @@ int32_t nvt_extra_proc_init(void)
 	} else {
 		NVT_LOG("create proc/%s Succeeded!\n", NVT_DIFF);
 	}
+
+	NVT_proc_xiaomi_config_info_entry = proc_create(NVT_XIAOMI_CONFIG_INFO, 0444, NULL, &nvt_xiaomi_config_info_fops);
+	if (NVT_proc_xiaomi_config_info_entry == NULL) {
+		NVT_ERR("create proc/%s Failed!\n", NVT_XIAOMI_CONFIG_INFO);
+		return -ENOMEM;
+	} else {
+		NVT_LOG("create proc/%s Succeeded!\n", NVT_XIAOMI_CONFIG_INFO);
+	}
+/*2019.12.10 longcheer taocheng add for creating nodes begin*/
 /*function description*/
 	NVT_proc_pf_switch_entry = proc_create(NVT_PF_SWITCH, 0666, NULL,&nvt_pf_switch_fops);
 	if (NVT_proc_pf_switch_entry == NULL) {
@@ -1933,8 +2183,16 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/nvt_charger_switch Succeeded!\n");
 	}
 
+	LCT_proc_tp_data_dump_entry = proc_create(LCT_TP_DATA_DUMP, 0444, NULL, &lct_tp_data_dump_fops);
+	if (LCT_proc_tp_data_dump_entry == NULL) {
+		NVT_ERR("create proc/%s Failed!\n", LCT_TP_DATA_DUMP);
+		return -ENOMEM;
+	} else {
+		NVT_LOG("create proc/%s Succeeded!\n", LCT_TP_DATA_DUMP);
+	}
 	return 0;
 }
+/*2019.12.10 longcheer taocheng add for creating nodes end*/
 
 /*******************************************************
 Description:
@@ -1970,6 +2228,12 @@ void nvt_extra_proc_deinit(void)
 		NVT_LOG("Removed /proc/%s\n", NVT_DIFF);
 	}
 
+	if (NVT_proc_xiaomi_config_info_entry != NULL) {
+		remove_proc_entry(NVT_XIAOMI_CONFIG_INFO, NULL);
+		NVT_proc_xiaomi_config_info_entry = NULL;
+		NVT_LOG("Removed /proc/%s\n", NVT_XIAOMI_CONFIG_INFO);
+	}
+/*2019.12.10 longcheer taocheng add for charger extra proc begin*/
 /*function description*/
 	if (NVT_proc_pf_switch_entry != NULL) {
 		remove_proc_entry(NVT_PF_SWITCH, NULL);
@@ -2011,6 +2275,12 @@ void nvt_extra_proc_deinit(void)
 		remove_proc_entry(NVT_CHARGER_SWITCH, NULL);
 		NVT_proc_charger_switch_entry = NULL;
 		NVT_LOG("Removed /proc/%s\n", NVT_CHARGER_SWITCH);
+	}
+/*2019.12.10 longcheer taocheng add for charger extra proc end*/
+	if (LCT_proc_tp_data_dump_entry != NULL) {
+		remove_proc_entry(LCT_TP_DATA_DUMP, NULL);
+		LCT_proc_tp_data_dump_entry = NULL;
+		NVT_LOG("Removed /proc/%s\n", LCT_TP_DATA_DUMP);
 	}
 }
 #endif
