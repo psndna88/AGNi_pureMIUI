@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  */
 
 #include <linux/module.h>
@@ -949,6 +950,10 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 					hpf_gate_reg, 0x03, 0x00);
 			snd_soc_update_bits(codec,
 					hpf_gate_reg, 0x03, 0x01);
+			usleep_range(1000, 1010);
+			snd_soc_update_bits(codec, hpf_gate_reg, 0x02, 0x00);
+			snd_soc_update_bits(codec,
+					hpf_gate_reg, 0x01, 0x01);
 			/*
 			 * 6ms delay is required as per HW spec
 			 */
