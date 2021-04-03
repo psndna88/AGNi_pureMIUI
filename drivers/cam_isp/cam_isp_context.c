@@ -1993,6 +1993,7 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 {
 	bool rc = false;
 	uint64_t request_id = 0;
+	uint32_t sof_event_status = CAM_REQ_MGR_SOF_EVENT_SUCCESS;
 	struct cam_req_mgr_trigger_notify   notify;
 	struct cam_ctx_request             *req;
 	struct cam_isp_ctx_req             *req_isp;
@@ -2100,15 +2101,36 @@ static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	CAM_DBG(CAM_REQ, "move request %lld to active list(cnt = %d), ctx %u",
 		req->request_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 
-	if ((req->request_id > ctx_isp->reported_req_id)
-		&& !req_isp->bubble_report) {
-		request_id = req->request_id;
-		ctx_isp->reported_req_id = request_id;
-	}
-	__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
-		CAM_REQ_MGR_SOF_EVENT_ERROR);
+	/*
+	 * Update the record before req pointer to
+	 * other invalid req.
+	 */
 	__cam_isp_ctx_update_event_record(ctx_isp,
 		CAM_ISP_CTX_EVENT_EPOCH, req);
+
+	/*
+	 * Get the req again from active_req_list in case
+	 * the active req cnt is 2.
+	 */
+	list_for_each_entry(req, &ctx->active_req_list, list) {
+		req_isp = (struct cam_isp_ctx_req *) req->req_priv;
+		if ((!req_isp->bubble_report) &&
+			(req->request_id > ctx_isp->reported_req_id)) {
+			request_id = req->request_id;
+			ctx_isp->reported_req_id = request_id;
+			CAM_DBG(CAM_ISP,
+				"ctx %d reported_req_id update to %lld",
+				ctx->ctx_id, ctx_isp->reported_req_id);
+			break;
+		}
+	}
+
+	if ((request_id != 0) && req_isp->bubble_detected)
+		sof_event_status = CAM_REQ_MGR_SOF_EVENT_ERROR;
+
+	__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
+		sof_event_status);
+
 	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_BUBBLE;
 	CAM_DBG(CAM_ISP, "next Substate[%s]",
 		__cam_isp_ctx_substate_val_to_type(
