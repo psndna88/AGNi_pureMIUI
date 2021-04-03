@@ -533,6 +533,7 @@ TAS2562_INTERRUPTCONFIGURATION_PININTCONFIG10_ASSERT2MSONLATCHEDINTERRUPTS \
 #define TAS2562_CLASSDCONFIGURATION4	TAS2562_REG(0x0, 0xfd, 0x3f)
 #define TAS2562_EFFICIENCYCONFIGURATION	TAS2562_REG(0x0, 0xfd, 0x5f)
 
+#define TAS2562_HPF TAS2562_REG(0x64, 0x2, 0x70)
 #define TAS2562_CLASSHHEADROOM TAS2562_REG(0x64, 0x7, 0x48)
 #define TAS2562_CLASSHHYSTERESIS TAS2562_REG(0x64, 0x7, 0x4c)
 #define TAS2562_CLASSHMTCT TAS2562_REG(0x64, 0x5, 0x4c)
@@ -610,7 +611,7 @@ int mn_r_current_book;
 int mn_r_current_page;
 int mn_l_addr;
 int mn_r_addr;
-int mn_asi_format;
+unsigned int mn_asi_format;
 int mn_reset_gpio;
 int mn_irq_gpio;
 int mn_irq;

@@ -1,6 +1,7 @@
 /*
  * =============================================================================
  * Copyright (c) 2016  Texas Instruments Inc.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License as published by the Free Software
@@ -43,6 +44,8 @@
 #include <sound/tlv.h>
 
 #include "tas2562.h"
+#include "tas2562-codec.h"
+
 #ifdef CONFIG_TAS25XX_ALGO
 #include <dsp/tas_smart_amp_v2.h>
 #include "tas25xx-calib.h"
@@ -53,15 +56,19 @@
 #define TAS2562_IVSENSER_DISABLE 0
 /* #define TAS2558_CODEC */
 
-static char p_icn[] = {0x00, 0x00, 0x2f, 0x2c};//2019.12.06 longcheer lixiaona add for AUD test spk no signal
+static char HPF_reverse_path[] = {0x7F, 0xFF,  0xFF,  0xFF, 
+								0x00, 0x00, 0x00, 0x00, 
+								0x00, 0x00, 0x00, 0x00};
+                                
+char p_icn[] = {0x00, 0x00, 0x2f, 0x2c};//2019.12.06 longcheer lixiaona add for AUD test spk no signal
 static char const *iv_enable_text[] = {"Off", "On"};
-static int tas2562iv_enable;
+int tas2562iv_enable;
 static int mb_mute;
 
 static const struct soc_enum tas2562_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(iv_enable_text), iv_enable_text),
 };
-static int tas2562_set_fmt(struct tas2562_priv *p_tas2562, unsigned int fmt);
+int tas2562_set_fmt(struct tas2562_priv *p_tas2562, unsigned int fmt);
 
 static int tas2562_i2c_load_data(struct tas2562_priv *p_tas2562,
 			enum channel chn, unsigned int *p_data);
@@ -104,7 +111,7 @@ static unsigned int tas2562_codec_read(struct snd_soc_codec *codec,
 	return value;
 }
 
-static int tas2562_iv_enable(struct tas2562_priv *p_tas2562, int enable)
+int tas2562_iv_enable(struct tas2562_priv *p_tas2562, int enable)
 {
 	int n_result;
 
@@ -298,7 +305,7 @@ static int tas2562_codec_resume(struct snd_soc_codec *codec)
 }
 #endif
 
-static int tas2562_set_power_state(struct tas2562_priv *p_tas2562,
+int tas2562_set_power_state(struct tas2562_priv *p_tas2562,
 			enum channel chn, int state)
 {
 	int n_result = 0;
@@ -487,7 +494,7 @@ static int tas2562_mute(struct snd_soc_dai *dai, int mute)
 	return 0;
 }
 
-static int tas2562_iv_slot_config(struct tas2562_priv *p_tas2562)
+int tas2562_iv_slot_config(struct tas2562_priv *p_tas2562)
 {
 	int ret = 0;
 
@@ -562,7 +569,7 @@ static int tas2562_iv_bitwidth_config(struct tas2562_priv *p_tas2562)
 	return ret;
 }
 
-static int tas2562_set_slot(struct tas2562_priv *p_tas2562, int slot_width)
+int tas2562_set_slot(struct tas2562_priv *p_tas2562, int slot_width)
 {
 	int ret = 0;
 
@@ -603,7 +610,7 @@ static int tas2562_set_slot(struct tas2562_priv *p_tas2562, int slot_width)
 	return ret;
 }
 
-static int tas2562_set_bitwidth(struct tas2562_priv *p_tas2562, int bitwidth)
+int tas2562_set_bitwidth(struct tas2562_priv *p_tas2562, int bitwidth)
 {
 	int slot_width_tmp = 16;
 
@@ -659,7 +666,7 @@ static int tas2562_set_bitwidth(struct tas2562_priv *p_tas2562, int bitwidth)
 	return 0;
 }
 
-static int tas2562_set_samplerate(struct tas2562_priv *p_tas2562,
+int tas2562_set_samplerate(struct tas2562_priv *p_tas2562,
 			int samplerate)
 {
 	switch (samplerate) {
@@ -845,7 +852,7 @@ ret:
 	return n_result;
 }
 
-static int tas2562_set_fmt(struct tas2562_priv *p_tas2562, unsigned int fmt)
+int tas2562_set_fmt(struct tas2562_priv *p_tas2562, unsigned int fmt)
 {
 	u8 tdm_rx_start_slot = 0, asi_cfg_1 = 0;
 	int ret = 0;
@@ -982,7 +989,7 @@ static struct snd_soc_dai_driver tas2562_dai_driver[] = {
 	},
 };
 
-static int tas2562_load_init(struct tas2562_priv *p_tas2562)
+int tas2562_load_init(struct tas2562_priv *p_tas2562)
 {
 	int ret;
 
@@ -1031,6 +1038,42 @@ static int tas2562_load_init(struct tas2562_priv *p_tas2562)
 #endif
 	ret = p_tas2562->write(p_tas2562, channel_both,
 		TAS2562_CLOCKCONFIGURATION, 0x0c);
+	if (ret < 0)
+		return ret;
+	/*For algo 30402*/
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 13), 0x0d);
+	if (ret < 0)
+		return ret;
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 51), 0x8e);
+	if (ret < 0)
+		return ret;
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 50), 0x49);
+	if (ret < 0)
+		return ret;
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 63), 0x21);
+	if (ret < 0)
+		return ret;
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 25), 0x80);
+	if (ret < 0)
+		return ret;
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_REG(0, 253, 95), 0xc1);
+	if (ret < 0)
+		return ret;
+    /*Disable the HPF in Forward Path*/
+	ret = p_tas2562->write(p_tas2562, channel_both,
+		TAS2562_PLAYBACKCONFIGURATIONREG0, 0x60);
+	if (ret < 0)
+		return ret;
+	/*Disable the HPF in Reverse Path*/
+	ret = p_tas2562->bulk_write(p_tas2562, channel_both,
+		TAS2562_HPF, HPF_reverse_path, 
+		sizeof(HPF_reverse_path)/sizeof(HPF_reverse_path[0]));
 	if (ret < 0)
 		return ret;
 	ret = tas2562_i2c_load_data(p_tas2562, channel_both,

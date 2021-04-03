@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  */
 
 #include <linux/init.h>
@@ -31,6 +32,8 @@
 #include <dsp/q6core.h>
 #include <dsp/q6common.h>
 #include <dsp/audio_cal_utils.h>
+#include <dsp/apr_elliptic.h>
+#include <elliptic/elliptic_mixer_controls.h>
 
 #include "msm-pcm-routing-v2.h"
 #include "msm-pcm-routing-devdep.h"
@@ -3129,6 +3132,10 @@ static int msm_routing_lsm_func_get(struct snd_kcontrol *kcontrol,
 			strlen(lsm_port_text[10])))
 		port_id = AFE_PORT_ID_INT3_MI2S_TX;
 
+	if (strnstr(kcontrol->id.name, lsm_port_text[13],
+			strlen(lsm_port_text[13])))
+		port_id = AFE_PORT_ID_TX_CODEC_DMA_TX_3;
+
 	if (strnstr(kcontrol->id.name, lsm_port_text[14],
 			strlen(lsm_port_text[14])))
 		port_id = AFE_PORT_ID_TX_CODEC_DMA_TX_3;
@@ -3220,6 +3227,10 @@ static int msm_routing_lsm_func_put(struct snd_kcontrol *kcontrol,
 	if (strnstr(kcontrol->id.name, lsm_port_text[10],
 			strlen(lsm_port_text[10])))
 		port_id = AFE_PORT_ID_INT3_MI2S_TX;
+
+	if (strnstr(kcontrol->id.name, lsm_port_text[13],
+			strlen(lsm_port_text[13])))
+		port_id = AFE_PORT_ID_TX_CODEC_DMA_TX_3;
 
 	if (strnstr(kcontrol->id.name, lsm_port_text[14],
 			strlen(lsm_port_text[14])))
@@ -7864,6 +7875,18 @@ static const struct snd_kcontrol_new tert_mi2s_rx_port_mixer_controls[] = {
 	MSM_BACKEND_DAI_TERTIARY_MI2S_RX,
 	MSM_BACKEND_DAI_SLIMBUS_8_TX, 1, 0, msm_routing_get_port_mixer,
 	msm_routing_put_port_mixer),
+	// Add for mic2 to speaker loopback test lct_20191105
+	SOC_DOUBLE_EXT("TX_CDC_DMA_TX_3", SND_SOC_NOPM,
+	MSM_BACKEND_DAI_TERTIARY_MI2S_RX,
+	MSM_BACKEND_DAI_TX_CDC_DMA_TX_3, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
+    /* 2019.11.26 longcheer lixiaona edit start */
+    /* add TX4  */
+	SOC_DOUBLE_EXT("TX_CDC_DMA_TX_4", SND_SOC_NOPM,
+	MSM_BACKEND_DAI_TERTIARY_MI2S_RX,
+	MSM_BACKEND_DAI_TX_CDC_DMA_TX_4, 1, 0, msm_routing_get_port_mixer,
+	msm_routing_put_port_mixer),
+    /* 2019.11.26 longcheer lixiaona edit end */
 };
 
 static const struct snd_kcontrol_new quin_mi2s_rx_port_mixer_controls[] = {
@@ -25691,6 +25714,8 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia4 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
 	{"MultiMedia17 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia17 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
+	{"MultiMedia17 Mixer", "SLIM_7_TX", "SLIMBUS_7_TX"},
+	{"MultiMedia17 Mixer", "USB_AUDIO_TX", "USB_AUDIO_TX"},
 	{"MultiMedia18 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
 	{"MultiMedia18 Mixer", "SLIM_1_TX", "SLIMBUS_1_TX"},
 	{"MultiMedia19 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
@@ -25727,6 +25752,8 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"MultiMedia28 Mixer", "SEC_SPDIF_TX", "SEC_SPDIF_TX"},
 	{"MultiMedia29 Mixer", "SEC_SPDIF_TX", "SEC_SPDIF_TX"},
 	{"MultiMedia30 Mixer", "SEC_SPDIF_TX", "SEC_SPDIF_TX"},
+	{"MultiMedia5 Mixer", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
+	{"MultiMedia5 Mixer", "QUIN_MI2S_TX", "QUIN_MI2S_TX"},
 
 
 	{"MultiMedia1 Mixer", "SLIM_0_TX", "SLIMBUS_0_TX"},
@@ -30542,6 +30569,7 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 	snd_soc_add_platform_controls(platform,
 			port_multi_channel_map_mixer_controls,
 			ARRAY_SIZE(port_multi_channel_map_mixer_controls));
+	elliptic_add_platform_controls(platform);
 
 	return 0;
 }
