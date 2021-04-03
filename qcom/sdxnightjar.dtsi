@@ -53,18 +53,20 @@
 			label = "mss_mem";
 		};
 
+		common_cma: linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0xc00000>;
+			linux,cma-default;
+		};
+
 		qseecom_mem: qseecom_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x00000000 0xffffffff>;
 			reusable;
 			alignment = <0x400000>;
-			size = <0x400000>;
-		};
-
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
 			size = <0x400000>;
 		};
 
@@ -431,16 +433,11 @@
 
 	mem_dump {
 		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
+		memory-region = <&common_cma>;
 
 		c0_context {
 			qcom,dump-size = <0x800>;
 			qcom,dump-id = <0x0>;
-		};
-
-		cnss_wlan {
-			qcom,dump-size = <0x200000>;
-			qcom,dump-id = <0xe1>;
 		};
 
 		etr_reg {
