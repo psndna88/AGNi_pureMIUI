@@ -49,15 +49,15 @@ rm $WLAN_MODA11/*.ko 2>/dev/null
 rm $WLAN_MODQ/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
-make -j12 O=$COMPILEDIR_ATOLL
+make -j4 O=$COMPILEDIR_ATOLL
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_ATOLL/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
-if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
@@ -71,7 +71,7 @@ mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
 echo ""
 
 ###### ZIP Packing
-if ([ -f $KERNELDIR/$DIR/Image.gz-dtb ] || [ -f $KERNELDIR/$DIR/Image.gz ]); then
+if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	mv $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
 	mv $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null

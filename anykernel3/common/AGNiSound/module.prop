@@ -1,6 +1,6 @@
 id=AGNiSound
-name=AGNi Kernel MIATOLL Wired Audio Clarity (AOSP)
-version=2.0
-versionCode=18012021
-author=psndna88
-description=This module helps to enhance audio clarity.
+name=AGNi Kernel MIATOLL Audio Clarity (AOSP)
+version=2.6.1
+versionCode=25032021
+author=psndna88,tommyhellatigr
+description=This module gives enhanced bass & quality. NOTE: Xiaomi Audio Enhancer will be disabled. Do not use with any other sound mods.
