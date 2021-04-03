@@ -2007,10 +2007,12 @@ static int geni_se_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&geni_se_dev->ib_list_head_noc);
 	}
 	mutex_init(&geni_se_dev->geni_dev_lock);
+#ifdef CONFIG_IPC_LOGGING
 	geni_se_dev->log_ctx = ipc_log_context_create(NUM_LOG_PAGES,
 						dev_name(geni_se_dev->dev), 0);
 	if (!geni_se_dev->log_ctx)
 		dev_err(dev, "%s Failed to allocate log context\n", __func__);
+#endif
 	dev_set_drvdata(dev, geni_se_dev);
 
 	ret = of_platform_populate(dev->of_node, geni_se_dt_match, NULL, dev);
@@ -2076,7 +2078,9 @@ static int geni_se_remove(struct platform_device *pdev)
 		sysfs_remove_file(&geni_se_dev->dev->kobj,
 				&dev_attr_ssc_qup_state.attr);
 	}
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(geni_se_dev->log_ctx);
+#endif
 	devm_iounmap(dev, geni_se_dev->base);
 	devm_kfree(dev, geni_se_dev);
 	return 0;
