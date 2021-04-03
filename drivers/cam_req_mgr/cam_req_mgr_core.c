@@ -2747,6 +2747,14 @@ int cam_req_mgr_process_error(void *priv, void *data)
 			in_q->rd_idx = idx;
 			in_q->slot[idx].status = CRM_SLOT_STATUS_REQ_ADDED;
 
+			/* The next req may also be applied */
+			idx = in_q->rd_idx;
+			__cam_req_mgr_inc_idx(&idx, 1,
+				link->req.l_tbl->num_slots);
+
+			if (in_q->slot[idx].status == CRM_SLOT_STATUS_REQ_APPLIED)
+				in_q->slot[idx].status = CRM_SLOT_STATUS_REQ_ADDED;
+
 			spin_lock_bh(&link->link_state_spin_lock);
 			link->state = CAM_CRM_LINK_STATE_ERR;
 			spin_unlock_bh(&link->link_state_spin_lock);
