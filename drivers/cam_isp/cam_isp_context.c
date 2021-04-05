@@ -899,8 +899,9 @@ static int __cam_isp_ctx_handle_buf_done_for_request(
 
 	req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 
-	CAM_DBG(CAM_ISP, "Enter with bubble_state %d, req_bubble_detected %d",
-		bubble_state, req_isp->bubble_detected);
+	CAM_DBG(CAM_ISP,
+		"Enter with bubble_state %d, req_bubble_detected %d evt_param = %d",
+		bubble_state, req_isp->bubble_detected, done->evt_param);
 
 	done_next_req->num_handles = 0;
 	done_next_req->timestamp = done->timestamp;
@@ -956,18 +957,31 @@ static int __cam_isp_ctx_handle_buf_done_for_request(
 
 		if (!req_isp->bubble_detected) {
 			CAM_DBG(CAM_ISP,
-				"Sync with success: req %lld res 0x%x fd 0x%x, ctx %u",
+				"Sync with success: req %lld res 0x%x fd 0x%x, ctx %u, Bad_frame %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
 				req_isp->fence_map_out[j].sync_id,
-				ctx->ctx_id);
+				ctx->ctx_id, done->evt_param);
 
-			rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
-				CAM_SYNC_STATE_SIGNALED_SUCCESS,
-				CAM_SYNC_COMMON_EVENT_SUCCESS);
+			if (done->evt_param == 1) {
+
+				CAM_WARN(CAM_ISP,
+					"Bad frame Sync with success: req %lld res 0x%x fd 0x%x, ctx %u",
+					req->request_id,
+					req_isp->fence_map_out[j].resource_handle,
+					req_isp->fence_map_out[j].sync_id,
+					ctx->ctx_id);
+				rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
+					CAM_SYNC_STATE_SIGNALED_SUCCESS,
+					CAM_SYNC_ISP_EVENT_BAD_FRAME);
+			} else {
+				rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
+					CAM_SYNC_STATE_SIGNALED_SUCCESS,
+					CAM_SYNC_COMMON_EVENT_SUCCESS);
+			}
 			if (rc)
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
-					 rc);
+					rc);
 		} else if (!req_isp->bubble_report) {
 			CAM_DBG(CAM_ISP,
 				"Sync with failure: req %lld res 0x%x fd 0x%x, ctx %u",
@@ -1104,13 +1118,15 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 	struct cam_isp_ctx_req *req_isp;
 	struct cam_context *ctx = ctx_isp->base;
 	const char *handle_type;
+	uint32_t event_cause = CAM_SYNC_COMMON_EVENT_SUCCESS;
 
 	trace_cam_buf_done("ISP", ctx, req);
 
 	req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 
-	CAM_DBG(CAM_ISP, "Enter with bubble_state %d, req_bubble_detected %d",
-		bubble_state, req_isp->bubble_detected);
+	CAM_DBG(CAM_ISP,
+		"Enter with bubble_state %d, req_bubble_detected %d evt_param %d",
+		bubble_state, req_isp->bubble_detected, done->evt_param);
 
 	for (i = 0; i < done->num_handles; i++) {
 		for (j = 0; j < req_isp->num_fence_map_out; j++) {
@@ -1185,24 +1201,37 @@ static int __cam_isp_ctx_handle_buf_done_for_request_verify_addr(
 			continue;
 		} else if (!req_isp->bubble_detected) {
 			CAM_DBG(CAM_ISP,
-				"Sync with success: req %lld res 0x%x fd 0x%x, ctx %u",
+				"Sync with success: req %lld res 0x%x fd 0x%x, ctx %u isBadFrame %u",
 				req->request_id,
 				req_isp->fence_map_out[j].resource_handle,
 				req_isp->fence_map_out[j].sync_id,
-				ctx->ctx_id);
-
-			rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
-				CAM_SYNC_STATE_SIGNALED_SUCCESS,
-				CAM_SYNC_COMMON_EVENT_SUCCESS);
+				ctx->ctx_id, done->evt_param);
+			if (done->evt_param == 1) {
+				CAM_WARN(CAM_ISP,
+					"Bad Frame Sync with success: req %lld res 0x%x fd 0x%x, ctx %u",
+					req->request_id,
+					req_isp->fence_map_out[j].resource_handle,
+					req_isp->fence_map_out[j].sync_id,
+					ctx->ctx_id);
+				rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
+					CAM_SYNC_STATE_SIGNALED_SUCCESS,
+					CAM_SYNC_ISP_EVENT_BAD_FRAME);
+				event_cause = CAM_SYNC_ISP_EVENT_BAD_FRAME;
+			} else {
+				rc = cam_sync_signal(req_isp->fence_map_out[j].sync_id,
+					CAM_SYNC_STATE_SIGNALED_SUCCESS,
+					CAM_SYNC_COMMON_EVENT_SUCCESS);
+				event_cause = CAM_SYNC_COMMON_EVENT_SUCCESS;
+			}
 			if (rc) {
 				CAM_DBG(CAM_ISP, "Sync failed with rc = %d",
-					 rc);
+				 rc);
 			} else if (req_isp->num_deferred_acks) {
 				/* Process deferred buf_done acks */
 				__cam_isp_handle_deferred_buf_done(ctx_isp,
 					req, false,
 					CAM_SYNC_STATE_SIGNALED_SUCCESS,
-					CAM_SYNC_COMMON_EVENT_SUCCESS);
+					event_cause);
 			}
 		} else if (!req_isp->bubble_report) {
 			CAM_DBG(CAM_ISP,
