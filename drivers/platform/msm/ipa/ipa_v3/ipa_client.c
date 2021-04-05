@@ -1449,7 +1449,7 @@ int ipa3_start_stop_client_prod_gsi_chnl(enum ipa_client_type client,
 	client_lock_unlock_cb(client, false);
 	return result;
 }
-int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset,
+int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset, u32 tmr_val,
 		enum ipa_client_type client)
 {
 	int pipe_idx;
@@ -1461,7 +1461,7 @@ int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset,
 	memset(&ep_holb, 0, sizeof(ep_holb));
 
 	ep_suspend.ipa_ep_suspend = set_reset;
-	ep_holb.tmr_val = 0;
+	ep_holb.tmr_val = tmr_val;
 	ep_holb.en = set_reset;
 
 	if (IPA_CLIENT_IS_PROD(client)) {
