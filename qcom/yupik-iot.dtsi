@@ -24,3 +24,7 @@
 &gcc_pcie_1_gdsc {
 	status = "ok";
 };
+
+&gcc_usb30_sec_gdsc {
+	status = "ok";
+};
