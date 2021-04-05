@@ -1273,6 +1273,74 @@
 			};
 		};
 
+		pcie1 {
+			pcie1_perst_default: pcie1_perst_default {
+				mux {
+					pins = "gpio2";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio2";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+
+			pcie1_clkreq_default: pcie1_clkreq_default {
+				mux {
+					pins = "gpio79";
+					function = "pcie1_clkreqn";
+				};
+
+				config {
+					pins = "gpio79";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+
+			pcie1_wake_default: pcie1_wake_default {
+				mux {
+					pins = "gpio3";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio3";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+
+			pcie1_ep_default: pcie1_ep_default {
+				mux {
+					pins = "gpio19";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio19";
+					drive-strength = <16>;
+					output-high;
+					bias-disable;
+				};
+			};
+
+			pcie1_clkreq_sleep: pcie1_clkreq_sleep {
+				mux {
+					pins = "gpio79";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio79";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+		};
+
 		cam_sensor_mclk0_active: cam_sensor_mclk0_active {
 			/* MCLK0 */
 			mux {
