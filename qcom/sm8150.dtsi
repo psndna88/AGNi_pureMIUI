@@ -1475,6 +1475,14 @@
 		};
 	};
 
+	qcom,rmtfs_sharedmem@0 {
+		compatible = "qcom,sharedmem-uio";
+		reg = <0x0 0x200000>;
+		reg-names = "rmtfs";
+		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
+	};
+
 	qupv3_id_1: geniqup@ac0000 {
 		compatible = "qcom,geni-se-qup";
 		reg = <0x00ac0000 0x6000>;
