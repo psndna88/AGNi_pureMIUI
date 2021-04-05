@@ -2492,7 +2492,7 @@ int ipa3_start_stop_client_prod_gsi_chnl(enum ipa_client_type client,
 void ipa3_client_prod_post_shutdown_cleanup(void);
 
 
-int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset,
+int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset, u32 tmr_val,
 		enum ipa_client_type client);
 
 int ipa3_xdci_suspend(u32 ul_clnt_hdl, u32 dl_clnt_hdl,
