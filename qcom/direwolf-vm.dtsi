@@ -1,4 +1,5 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-direwolf.h>
 #include "quin-vm-common.dtsi"
 
 / {
@@ -233,3 +234,4 @@
 #include "direwolf-pinctrl.dtsi"
 #include "pm8540-vm.dtsi"
 #include "direwolf-vm-audio.dtsi"
+#include "direwolf-vm-usb.dtsi"
