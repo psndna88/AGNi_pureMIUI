@@ -371,7 +371,9 @@ void put_task_stack(struct task_struct *tsk)
 
 void free_task(struct task_struct *tsk)
 {
+#ifdef CONFIG_CPU_FREQ_TIMES
 	cpufreq_task_times_exit(tsk);
+#endif
 
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -1768,7 +1770,9 @@ static __latent_entropy struct task_struct *copy_process(
 	if (!p)
 		goto fork_out;
 
+#ifdef CONFIG_CPU_FREQ_TIMES
 	cpufreq_task_times_init(p);
+#endif
 
 	/*
 	 * This _must_ happen before we call free_task(), i.e. before we jump
@@ -2234,9 +2238,11 @@ long _do_fork(unsigned long clone_flags,
 	int trace = 0;
 	long nr;
 
+#ifdef CONFIG_DEVFREQ_BOOST
 	/* Boost DDR bus to the max for 50 ms when userspace launches an app */
 	if (task_is_zygote(current))
 		devfreq_boost_kick_max(DEVFREQ_CPU_LLCC_DDR_BW, 50);
+#endif
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
@@ -2267,7 +2273,9 @@ long _do_fork(unsigned long clone_flags,
 		struct completion vfork;
 		struct pid *pid;
 
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_task_times_alloc(p);
+#endif
 
 		trace_sched_process_fork(current, p);
 
