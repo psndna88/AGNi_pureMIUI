@@ -287,7 +287,7 @@
 
 		xbl_aop_mem: xbl_aop_mem@85e00000 {
 			no-map;
-			reg = <0x0 0x85e00000 0x0 0x140000>;
+			reg = <0x0 0x85e00000 0x0 0x120000>;
 		};
 
 		flex_sec_apps_mem: flex_sec_apps_regions@85ffd000 {
