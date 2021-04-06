@@ -508,6 +508,7 @@ enum {
  * @SDE_WB_INPUT_CTRL       Writeback supports from which pp block input pixel
  *                          data arrives.
  * @SDE_WB_HAS_CWB          Writeback block supports concurrent writeback
+ * @SDE_WB_CROP             CWB supports cropping
  * @SDE_WB_CWB_CTRL         Separate CWB control is available for configuring
  * @SDE_WB_MAX              maximum value
  */
@@ -529,6 +530,7 @@ enum {
 	SDE_WB_CDP,
 	SDE_WB_INPUT_CTRL,
 	SDE_WB_HAS_CWB,
+	SDE_WB_CROP,
 	SDE_WB_CWB_CTRL,
 	SDE_WB_MAX
 };
@@ -1399,6 +1401,7 @@ struct sde_perf_cfg {
  * @has_src_split      source split feature status
  * @has_cdp            Client driven prefetch feature status
  * @has_wb_ubwc        UBWC feature supported on WB
+ * @has_cwb_crop       CWB cropping is supported
  * @has_cwb_support    indicates if device supports primary capture through CWB
  * @cwb_blk_off        CWB offset address
  * @cwb_blk_stride     offset between each CWB blk
@@ -1479,6 +1482,7 @@ struct sde_mdss_cfg {
 	bool has_cdp;
 	bool has_dim_layer;
 	bool has_wb_ubwc;
+	bool has_cwb_crop;
 	bool has_cwb_support;
 	u32 cwb_blk_off;
 	u32 cwb_blk_stride;
