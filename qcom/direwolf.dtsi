@@ -30,6 +30,8 @@
 
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
+		serial0 = &qupv3_se17_2uart;
+		hsuart0 = &qupv3_se2_4uart;
 	};
 
 	cpus {
@@ -1629,6 +1631,7 @@
 #include "direwolf-gdsc.dtsi"
 #include "direwolf-ion.dtsi"
 #include "msm-arm-smmu-direwolf.dtsi"
+#include "direwolf-qupv3.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
@@ -1723,5 +1726,9 @@
 };
 
 &hlos1_vote_turing_mmu_tbu3_gdsc {
+	status = "ok";
+};
+
+&qupv3_se17_2uart {
 	status = "ok";
 };
