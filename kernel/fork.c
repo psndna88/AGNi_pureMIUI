@@ -231,7 +231,9 @@ static void account_kernel_stack(unsigned long *stack, int account)
 
 void free_task(struct task_struct *tsk)
 {
+#ifdef CONFIG_CPU_FREQ_TIMES
 	cpufreq_task_times_exit(tsk);
+#endif
 	account_kernel_stack(tsk->stack, -1);
 	arch_release_thread_stack(tsk->stack);
 	free_thread_stack(tsk->stack);
@@ -1375,7 +1377,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	if (!p)
 		goto fork_out;
 
+#ifdef CONFIG_CPU_FREQ_TIMES
 	cpufreq_task_times_init(p);
+#endif
 
 	/*
 	 * This _must_ happen before we call free_task(), i.e. before we jump
@@ -1823,7 +1827,9 @@ long _do_fork(unsigned long clone_flags,
 		struct completion vfork;
 		struct pid *pid;
 
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_task_times_alloc(p);
+#endif
 
 //		trace_sched_process_fork(current, p);
 

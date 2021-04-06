@@ -423,8 +423,10 @@ static ssize_t uid_remove_write(struct file *file,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_CPU_FREQ_TIMES
 	/* Also remove uids from /proc/uid_time_in_state */
 	cpufreq_task_times_remove_uids(uid_start, uid_end);
+#endif
 
 	rt_mutex_lock(&uid_lock);
 
