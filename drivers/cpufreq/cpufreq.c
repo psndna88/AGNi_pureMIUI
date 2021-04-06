@@ -343,7 +343,9 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 			 (unsigned long)freqs->new, (unsigned long)freqs->cpu);
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		cpufreq_stats_record_transition(policy, freqs->new);
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_record_transition(policy, freqs->new);
+#endif
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
 		if (likely(policy) && likely(policy->cpu == freqs->cpu))
@@ -1334,7 +1336,9 @@ static int cpufreq_online(unsigned int cpu)
 			goto out_exit_policy;
 
 		cpufreq_stats_create_table(policy);
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_create_policy(policy);
+#endif
 
 		write_lock_irqsave(&cpufreq_driver_lock, flags);
 		list_add(&policy->policy_list, &cpufreq_policy_list);
@@ -1903,7 +1907,9 @@ unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
 
         ret = cpufreq_driver->fast_switch(policy, target_freq);
 	if (ret) {
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_record_transition(policy, ret);
+#endif
 		cpufreq_stats_record_transition(policy, ret);
 	}
 
