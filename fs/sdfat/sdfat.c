@@ -4382,7 +4382,7 @@ static int __sdfat_show_options(struct seq_file *m, struct super_block *sb)
 		seq_puts(m, ",errors=panic");
 	else
 		seq_puts(m, ",errors=remount-ro");
-	if (opts->discard)
+//	if (opts->discard)
 		seq_puts(m, ",discard");
 
 	return 0;
