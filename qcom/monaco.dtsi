@@ -1332,6 +1332,7 @@
 #include "monaco-audio.dtsi"
 #include "monaco-usb.dtsi"
 #include "monaco-thermal.dtsi"
+#include "monaco-vidc.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
