@@ -7272,7 +7272,7 @@ static int msm_audio_ssr_compare(struct device *dev, void *data)
 {
 	struct device_node *node = data;
 
-	dev_dbg(dev, "%s: dev->of_node = 0x%p, node = 0x%p\n",
+	dev_dbg(dev, "%s: dev->of_node = 0x%pK, node = 0x%pK\n",
 		__func__, dev->of_node, node);
 	return (dev->of_node && dev->of_node == node);
 }
