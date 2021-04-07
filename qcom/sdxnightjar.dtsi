@@ -312,16 +312,21 @@
 			< 1286400 >;
 	};
 
+	ahb_bw_opp_table: ahb-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY(  19, 8); /*  144 MB/s */
+		BW_OPP_ENTRY(  50, 8); /*  381 MB/s */
+		BW_OPP_ENTRY(  100, 8); /* 762 MB/s */
+		BW_OPP_ENTRY(  133, 8); /* 1014 MB/s */
+	};
+
 	ahb_clk: qcom,ahb-clk-src {
 		compatible = "devfreq-simple-dev";
 		clocks = <&gcc APSS_AHB_CLK_SRC>;
 		clock-names = "devfreq_clk";
 		governor = "powersave";
-		freq-tbl-khz =
-			<  19200 >,
-			<  50000 >,
-			<  100000 >,
-			<  133330 >;
+		qcom,bus-width = <8>;
+		operating-points-v2 = <&ahb_bw_opp_table>;
 	};
 
 	cpubw: qcom,cpubw {
@@ -351,10 +356,10 @@
 		cpuahb-cpufreq {
 			target-dev = <&ahb_clk>;
 			cpu-to-dev-map =
-				<  200000  19200 >,
-				<  384000  50000 >,
-				<  787200  100000 >,
-				<  1286400 133330 >;
+				<  200000  144 >,
+				<  384000  381 >,
+				<  787200  762 >,
+				<  1286400 1014 >;
 		};
 	};
 
