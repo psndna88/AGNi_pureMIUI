@@ -10,3 +10,11 @@
 };
 
 #include "display/direwolf-vm-lv-display.dtsi"
+
+&usb0 {
+	status = "okay";
+};
+
+&usb2_phy0 {
+	status = "okay";
+};
