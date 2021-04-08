@@ -48,12 +48,13 @@ enum memcg_stat_item {
 	MEMCG_NR_STAT,
 };
 
-enum memcg_memory_event {
-	MEMCG_LOW,
+/* Cgroup-specific events, on top of universal VM events */
+enum memcg_event_item {
+	MEMCG_LOW = NR_VM_EVENT_ITEMS,
 	MEMCG_HIGH,
 	MEMCG_MAX,
 	MEMCG_OOM,
-	MEMCG_NR_MEMORY_EVENTS,
+	MEMCG_NR_EVENTS,
 };
 
 struct mem_cgroup_reclaim_cookie {
@@ -87,7 +88,7 @@ enum mem_cgroup_events_target {
 
 struct mem_cgroup_stat_cpu {
 	long count[MEMCG_NR_STAT];
-	unsigned long events[NR_VM_EVENT_ITEMS];
+	unsigned long events[MEMCG_NR_EVENTS];
 	unsigned long nr_page_events;
 	unsigned long targets[MEM_CGROUP_NTARGETS];
 };
@@ -201,8 +202,7 @@ struct mem_cgroup {
 	/* OOM-Killer disable */
 	int		oom_kill_disable;
 
-	/* memory.events */
-	atomic_long_t memory_events[MEMCG_NR_MEMORY_EVENTS];
+	/* handle for "memory.events" */
 	struct cgroup_file events_file;
 
 	/* protect arrays of thresholds */
@@ -231,10 +231,9 @@ struct mem_cgroup {
 	struct task_struct	*move_lock_task;
 	unsigned long		move_lock_flags;
 
-	/* memory.stat */
 	struct mem_cgroup_stat_cpu __percpu *stat_cpu;
 	atomic_long_t		stat[MEMCG_NR_STAT];
-	atomic_long_t		events[NR_VM_EVENT_ITEMS];
+	atomic_long_t		events[MEMCG_NR_EVENTS];
 
 	unsigned long		socket_pressure;
 
@@ -646,9 +645,9 @@ unsigned long mem_cgroup_soft_limit_reclaim(pg_data_t *pgdat, int order,
 						gfp_t gfp_mask,
 						unsigned long *total_scanned);
 
+/* idx can be of type enum memcg_event_item or vm_event_item */
 static inline void __count_memcg_events(struct mem_cgroup *memcg,
-					enum vm_event_item idx,
-					unsigned long count)
+					int idx, unsigned long count)
 {
 	unsigned long x;
 
@@ -664,8 +663,7 @@ static inline void __count_memcg_events(struct mem_cgroup *memcg,
 }
 
 static inline void count_memcg_events(struct mem_cgroup *memcg,
-				      enum vm_event_item idx,
-				      unsigned long count)
+				      int idx, unsigned long count)
 {
 	unsigned long flags;
 
@@ -674,8 +672,9 @@ static inline void count_memcg_events(struct mem_cgroup *memcg,
 	local_irq_restore(flags);
 }
 
+/* idx can be of type enum memcg_event_item or vm_event_item */
 static inline void count_memcg_page_event(struct page *page,
-					  enum vm_event_item idx)
+					  int idx)
 {
 	if (page->mem_cgroup)
 		count_memcg_events(page->mem_cgroup, idx, 1);
@@ -699,10 +698,10 @@ static inline void count_memcg_event_mm(struct mm_struct *mm,
 	rcu_read_unlock();
 }
 
-static inline void memcg_memory_event(struct mem_cgroup *memcg,
-				      enum memcg_memory_event event)
+static inline void mem_cgroup_event(struct mem_cgroup *memcg,
+				    enum memcg_event_item event)
 {
-	atomic_long_inc(&memcg->memory_events[event]);
+	count_memcg_events(memcg, event, 1);
 	cgroup_file_notify(&memcg->events_file);
 }
 
@@ -722,8 +721,8 @@ static inline bool mem_cgroup_disabled(void)
 	return true;
 }
 
-static inline void memcg_memory_event(struct mem_cgroup *memcg,
-				      enum memcg_memory_event event)
+static inline void mem_cgroup_event(struct mem_cgroup *memcg,
+				    enum memcg_event_item event)
 {
 }
 
