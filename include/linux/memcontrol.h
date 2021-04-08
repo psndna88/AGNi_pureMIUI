@@ -523,11 +523,9 @@ static inline void __mod_memcg_state(struct mem_cgroup *memcg,
 static inline void mod_memcg_state(struct mem_cgroup *memcg,
 				   int idx, int val)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
+	preempt_disable();
 	__mod_memcg_state(memcg, idx, val);
-	local_irq_restore(flags);
+	preempt_enable();
 }
 
 /**
@@ -608,11 +606,9 @@ static inline void __mod_lruvec_state(struct lruvec *lruvec,
 static inline void mod_lruvec_state(struct lruvec *lruvec,
 				    enum node_stat_item idx, int val)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
+	preempt_disable();
 	__mod_lruvec_state(lruvec, idx, val);
-	local_irq_restore(flags);
+	preempt_enable();
 }
 
 static inline void __mod_lruvec_page_state(struct page *page,
@@ -634,11 +630,9 @@ static inline void __mod_lruvec_page_state(struct page *page,
 static inline void mod_lruvec_page_state(struct page *page,
 					 enum node_stat_item idx, int val)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
+	preempt_disable();
 	__mod_lruvec_page_state(page, idx, val);
-	local_irq_restore(flags);
+	preempt_enable();
 }
 
 unsigned long mem_cgroup_soft_limit_reclaim(pg_data_t *pgdat, int order,
@@ -665,11 +659,9 @@ static inline void __count_memcg_events(struct mem_cgroup *memcg,
 static inline void count_memcg_events(struct mem_cgroup *memcg,
 				      int idx, unsigned long count)
 {
-	unsigned long flags;
-
-	local_irq_save(flags);
+	preempt_disable();
 	__count_memcg_events(memcg, idx, count);
-	local_irq_restore(flags);
+	preempt_enable();
 }
 
 /* idx can be of type enum memcg_event_item or vm_event_item */
