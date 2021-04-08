@@ -13,6 +13,8 @@
 	};
 };
 
+#include "display/sdmshrike-vm-lv-display.dtsi"
+
 &usb0 {
 	status = "ok";
 };
