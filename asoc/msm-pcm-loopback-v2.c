@@ -343,6 +343,8 @@ static int msm_pcm_open(struct snd_pcm_substream *substream)
 			mutex_unlock(&pcm->lock);
 			return -ENOMEM;
 		}
+
+		pcm->audio_client->fedai_id = rtd->dai_link->id;
 		pcm->session_id = pcm->audio_client->session;
 		pcm->audio_client->perf_mode = pdata->perf_mode;
 		ret = q6asm_open_loopback_v2(pcm->audio_client,
