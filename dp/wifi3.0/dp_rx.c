@@ -2710,6 +2710,13 @@ done:
 		vdev_id = QDF_NBUF_CB_RX_VDEV_ID(nbuf);
 		peer_id =  QDF_NBUF_CB_RX_PEER_ID(nbuf);
 
+		if (qdf_unlikely(hal_rx_attn_msdu_len_err_get(rx_tlv_hdr))) {
+			DP_STATS_INC(soc, rx.err.msdu_len_err, 1);
+			qdf_nbuf_free(nbuf);
+			nbuf = next;
+			continue;
+		}
+
 		if (dp_rx_is_list_ready(deliver_list_head, vdev, peer,
 					peer_id, vdev_id)) {
 			dp_rx_deliver_to_stack(soc, vdev, peer,
