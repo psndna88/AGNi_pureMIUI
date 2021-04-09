@@ -54,6 +54,7 @@
 
 &pm6150_qg {
 	qcom,tcss-enable;
+	qcom,bass-enable;
 	qcom,qg-iterm-ma = <350>;
 	qcom,vbatt-cutoff-mv = <3400>;
 	qcom,vbatt-low-mv = <3500>;

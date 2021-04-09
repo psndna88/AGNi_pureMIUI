@@ -61,8 +61,7 @@ static const char * const power_supply_charge_type_text[] = {
 static const char * const power_supply_health_text[] = {
 	"Unknown", "Good", "Overheat", "Dead", "Over voltage",
 	"Unspecified failure", "Cold", "Watchdog timer expire",
-	"Safety timer expire",
-	"Warm", "Cool", "Hot"
+	"Safety timer expire", "Over current", "Warm", "Cool", "Hot"
 };
 
 static const char * const power_supply_technology_text[] = {
@@ -292,6 +291,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(capacity_alert_min),
 	POWER_SUPPLY_ATTR(capacity_alert_max),
 	POWER_SUPPLY_ATTR(capacity_level),
+	POWER_SUPPLY_ATTR(soc_decimal),
+	POWER_SUPPLY_ATTR(soc_decimal_rate),
 	POWER_SUPPLY_ATTR(temp),
 	POWER_SUPPLY_ATTR(temp_max),
 	POWER_SUPPLY_ATTR(temp_min),
@@ -435,6 +436,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(comp_clamp_level),
 	POWER_SUPPLY_ATTR(adapter_cc_mode),
 	POWER_SUPPLY_ATTR(skin_health),
+	POWER_SUPPLY_ATTR(apsd_rerun),
+	POWER_SUPPLY_ATTR(apsd_timeout),
 	POWER_SUPPLY_ATTR(qc3p5_power_limit),
 	POWER_SUPPLY_ATTR(qc3p5_current_max),
 	/* Charge pump properties */

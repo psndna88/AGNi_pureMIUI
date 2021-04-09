@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -276,6 +276,7 @@ static int qg_store_soc_params(struct qpnp_qg *chip)
 	return rc;
 }
 
+#define MAX_FIFO_CNT_FOR_ESR			50
 static int qg_config_s2_state(struct qpnp_qg *chip,
 		enum s2_state requested_state, bool state_enable,
 		bool process_fifo)
@@ -332,6 +333,9 @@ static int qg_config_s2_state(struct qpnp_qg *chip,
 		pr_err("Invalid S2 state %d\n", state);
 		return -EINVAL;
 	}
+
+	if (fifo_length)
+		qg_esr_mod_count = MAX_FIFO_CNT_FOR_ESR / fifo_length;
 
 	rc = qg_master_hold(chip, true);
 	if (rc < 0) {
@@ -1722,6 +1726,85 @@ static int qg_get_battery_capacity_real(struct qpnp_qg *chip, int *soc)
 	return 0;
 }
 
+static int qg_get_prop_soc_decimal_rate(struct qpnp_qg *chip, int *val)
+{
+	int i, soc = 0, rc = 0;
+
+	rc = qg_get_battery_capacity(chip, &soc);
+	if (rc < 0) {
+		pr_err("Failed to get battery capacity, rc=%d\n", rc);
+		return 0;
+	}
+
+	if (chip->dt.dec_rate_len <= 0) {
+		*val = 10;
+		pr_err("Failed to get soc decimal rate, default val:%d\n", *val);
+		return soc;
+	}
+
+	for (i = 0; i < chip->dt.dec_rate_len; i += 2) {
+		if (soc < chip->dt.dec_rate_seq[i]) {
+			*val = chip->dt.dec_rate_seq[i - 1];
+			return soc;
+		}
+	}
+
+	*val = chip->dt.dec_rate_seq[chip->dt.dec_rate_len - 1];
+
+	return soc;
+}
+
+static int qg_get_prop_soc_decimal(struct qpnp_qg *chip, int *val)
+{
+	int dec_rate, soc_dec, soc, hal_soc, rc = 0;
+	static int last_val = 0;
+	static int last_soc_dec = 0;
+	static int last_hal_soc = 0;
+	union power_supply_propval pval = {0,};
+
+	rc = power_supply_get_property(chip->qg_psy,
+			POWER_SUPPLY_PROP_CAPACITY, &pval);
+	if (rc < 0) {
+		pr_err("Failed to get hal_soc, rc=%d\n", rc);
+	}
+	hal_soc = pval.intval;
+
+	soc_dec = chip->sys_soc % 100;
+	soc = qg_get_prop_soc_decimal_rate(chip, &dec_rate);
+	pr_debug("debug soc_dec=%d dec_rate=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+			soc_dec, dec_rate, last_val, last_soc_dec, last_hal_soc);
+
+	if (soc_dec >= 0 && soc_dec < (50 - dec_rate))
+		*val = soc_dec + 50;
+	else if (soc_dec >= (50 - dec_rate) && soc_dec < 50)
+		*val = soc_dec + 50 - dec_rate;
+	else
+		*val = soc_dec -50;
+
+	if (last_hal_soc == hal_soc) {
+		if ((last_val > *val && hal_soc != soc) || (last_soc_dec == soc_dec && hal_soc == soc)) {
+			if (last_val > 50)
+				*val = last_val + (100 - last_val - dec_rate) / 2;
+			else
+				*val = last_val + dec_rate / 4;
+		} else if (last_val > *val) {
+			*val = last_val;
+		}
+	}
+
+	if (last_val != *val)
+		last_val = *val;
+	if (last_soc_dec != soc_dec)
+		last_soc_dec = soc_dec;
+	if (last_hal_soc != hal_soc)
+		last_hal_soc = hal_soc;
+
+	pr_debug("debug val=%d soc_dec=%d sys_soc=%d dec_rate=%d soc=%d hal_soc=%d last_val=%d last_soc_dec=%d last_hal_soc=%d\n",
+			*val, soc_dec, chip->sys_soc, dec_rate, soc, hal_soc, last_val, last_soc_dec, last_hal_soc);
+
+	return 0;
+}
+
 static int qg_get_charge_counter(struct qpnp_qg *chip, int *charge_counter)
 {
 	int rc, cc_soc = 0;
@@ -1972,6 +2055,7 @@ done:
 static int qg_setprop_batt_age_level(struct qpnp_qg *chip, int batt_age_level)
 {
 	int rc = 0;
+	u16 data = 0;
 
 	if (!chip->dt.multi_profile_load)
 		return 0;
@@ -1996,6 +2080,12 @@ static int qg_setprop_batt_age_level(struct qpnp_qg *chip, int batt_age_level)
 		if (rc < 0)
 			pr_err("error in storing batt_age_level rc =%d\n", rc);
 	}
+
+	/* Clear the learned capacity on loading a new profile */
+	rc = qg_sdam_multibyte_write(QG_SDAM_LEARNED_CAPACITY_OFFSET,
+						(u8 *)&data, 2);
+	if (rc < 0)
+		pr_err("Failed to clear SDAM learnt capacity rc=%d\n", rc);
 
 	qg_dbg(chip, QG_DEBUG_PROFILE, "Profile with batt_age_level = %d loaded\n",
 							chip->batt_age_level);
@@ -2164,6 +2254,12 @@ static int qg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_REAL_CAPACITY:
 		rc = qg_get_battery_capacity_real(chip, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_SOC_DECIMAL:
+		rc = qg_get_prop_soc_decimal(chip, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_SOC_DECIMAL_RATE:
+		rc = qg_get_prop_soc_decimal_rate(chip, &pval->intval);
+		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		rc = qg_get_battery_voltage(chip, &pval->intval);
 		break;
@@ -2248,6 +2344,9 @@ static int qg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TIME_TO_FULL_AVG:
 		rc = ttf_get_time_to_full(chip->ttf, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_TIME_TO_FULL_NOW:
+		rc = ttf_get_time_to_full(chip->ttf, &pval->intval);
+		break;
 	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG:
 		rc = ttf_get_time_to_empty(chip->ttf, &pval->intval);
 		break;
@@ -2267,6 +2366,9 @@ static int qg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_AVG:
 		rc = qg_get_vbat_avg(chip, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_AVG:
+		rc = qg_get_ibat_avg(chip, &pval->intval);
 		break;
 	case POWER_SUPPLY_PROP_POWER_NOW:
 		rc = qg_get_power(chip, &pval->intval, false);
@@ -2320,6 +2422,8 @@ static enum power_supply_property qg_psy_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_RAW,
 	POWER_SUPPLY_PROP_REAL_CAPACITY,
+	POWER_SUPPLY_PROP_SOC_DECIMAL,
+	POWER_SUPPLY_PROP_SOC_DECIMAL_RATE,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_OCV,
@@ -2341,6 +2445,7 @@ static enum power_supply_property qg_psy_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_FULL,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_TIME_TO_FULL_AVG,
+	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
 	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
 	POWER_SUPPLY_PROP_ESR_ACTUAL,
 	POWER_SUPPLY_PROP_ESR_NOMINAL,
@@ -2348,6 +2453,7 @@ static enum power_supply_property qg_psy_props[] = {
 	POWER_SUPPLY_PROP_FG_RESET,
 	POWER_SUPPLY_PROP_CC_SOC,
 	POWER_SUPPLY_PROP_VOLTAGE_AVG,
+	POWER_SUPPLY_PROP_CURRENT_AVG,
 	POWER_SUPPLY_PROP_POWER_AVG,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_SCALE_MODE_EN,
@@ -2365,6 +2471,17 @@ static const struct power_supply_desc qg_psy_desc = {
 	.set_property = qg_psy_set_property,
 	.property_is_writeable = qg_property_is_writeable,
 };
+
+#define DEFAULT_CL_BEGIN_IBAT_UA	(-100000)
+static bool qg_cl_ok_to_begin(void *data)
+{
+	struct qpnp_qg *chip = data;
+
+	if (chip->last_fifo_i_ua < DEFAULT_CL_BEGIN_IBAT_UA)
+		return true;
+
+	return false;
+}
 
 #define DEFAULT_RECHARGE_SOC 99
 static int qg_charge_full_update(struct qpnp_qg *chip)
@@ -2419,7 +2536,7 @@ static int qg_charge_full_update(struct qpnp_qg *chip)
 				* force a recharge only if SOC <= recharge SOC and
 				* we have not started charging.
 				*/
-				if (usb_present && chip->charge_status != POWER_SUPPLY_STATUS_CHARGING) {
+				if (usb_present) {
 					/* Force recharge */
 					prop.intval = 0;
 					rc = power_supply_set_property(chip->batt_psy,
@@ -3337,12 +3454,23 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 		chip->bp.float_volt_uv = -EINVAL;
 	}
 
-	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
+/*	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
 				&chip->bp.fastchg_curr_ma);
 	if (rc < 0) {
 		pr_err("Failed to read battery fastcharge current rc:%d\n", rc);
 		chip->bp.fastchg_curr_ma = -EINVAL;
-	}
+	} */
+	if (board_get_33w_supported())
+		chip->bp.fastchg_curr_ma = 5200000;
+	else
+		chip->bp.fastchg_curr_ma = 3000000;
+
+	/*
+	 * Update the max fcc values based on QG subtype including
+	 * error margins.
+	 */
+	chip->bp.fastchg_curr_ma = min(chip->max_fcc_limit_ma,
+					chip->bp.fastchg_curr_ma);
 
 	rc = of_property_read_u32(profile_node, "qcom,nom-batt-capacity-mah",
 							&chip->bp.nom_cap_uah);
@@ -3746,6 +3874,8 @@ static int qg_sanitize_sdam(struct qpnp_qg *chip)
 }
 
 #define ADC_CONV_DLY_512MS		0xA
+#define IBAT_5A_FCC_MA			4800
+#define IBAT_10A_FCC_MA			9600
 static int qg_hw_init(struct qpnp_qg *chip)
 {
 	int rc, temp;
@@ -3758,6 +3888,11 @@ static int qg_hw_init(struct qpnp_qg *chip)
 		pr_err("Failed to read QG subtype rc=%d", rc);
 		return rc;
 	}
+
+	if (chip->qg_subtype == QG_ADC_IBAT_5A)
+		chip->max_fcc_limit_ma = IBAT_5A_FCC_MA;
+	else
+		chip->max_fcc_limit_ma = IBAT_10A_FCC_MA;
 
 	rc = qg_set_wa_flags(chip);
 	if (rc < 0) {
@@ -4162,6 +4297,7 @@ static int qg_alg_init(struct qpnp_qg *chip)
 	cl->get_cc_soc = qg_get_cc_soc;
 	cl->get_learned_capacity = qg_get_learned_capacity;
 	cl->store_learned_capacity = qg_store_learned_capacity;
+	cl->ok_to_begin = qg_cl_ok_to_begin;
 	cl->data = chip;
 
 	rc = cap_learning_init(cl);
@@ -4218,7 +4354,7 @@ static int qg_alg_init(struct qpnp_qg *chip)
 #define DEFAULT_TCSS_ENTRY_SOC		90
 static int qg_parse_dt(struct qpnp_qg *chip)
 {
-	int rc = 0;
+	int rc = 0, size;
 	struct device_node *revid_node, *child, *node = chip->dev->of_node;
 	u32 base, temp;
 	u8 type;
@@ -4534,6 +4670,8 @@ static int qg_parse_dt(struct qpnp_qg *chip)
 			chip->dt.tcss_entry_soc = temp;
 	}
 
+	chip->dt.bass_enable = of_property_read_bool(node, "qcom,bass-enable");
+
 	chip->dt.multi_profile_load = of_property_read_bool(node,
 					"qcom,multi-profile-load");
 
@@ -4607,6 +4745,28 @@ static int qg_parse_dt(struct qpnp_qg *chip)
 			chip->cl->dt.min_start_soc, chip->cl->dt.max_start_soc,
 			chip->cl->dt.min_temp, chip->cl->dt.max_temp);
 	}
+
+	size = 0;
+	of_get_property(node, "qcom,soc_decimal_rate", &size);
+	if (size) {
+		chip->dt.dec_rate_seq = devm_kzalloc(chip->dev,
+				size, GFP_KERNEL);
+		if (chip->dt.dec_rate_seq) {
+			chip->dt.dec_rate_len =
+				(size / sizeof(*chip->dt.dec_rate_seq));
+			if (chip->dt.dec_rate_len % 2) {
+				pr_err("invalid soc decimal rate seq\n");
+				return -EINVAL;
+			}
+			of_property_read_u32_array(node,
+					"qcom,soc_decimal_rate",
+					chip->dt.dec_rate_seq,
+					chip->dt.dec_rate_len);
+		} else {
+			pr_err("error allocating memory for dec_rate_seq\n");
+		}
+	}
+
 	qg_dbg(chip, QG_DEBUG_PON, "DT: vbatt_empty_mv=%dmV vbatt_low_mv=%dmV delta_soc=%d ext-sns=%d\n",
 			chip->dt.vbatt_empty_mv, chip->dt.vbatt_low_mv,
 			chip->dt.delta_soc, chip->dt.qg_ext_sense);
@@ -4862,7 +5022,6 @@ static int process_suspend(struct qpnp_qg *chip)
 		return 0;
 
 	cancel_delayed_work_sync(&chip->ttf->ttf_work);
-	cancel_delayed_work_sync(&chip->qg_sleep_exit_work);
 
 	chip->suspend_data = false;
 
@@ -5028,6 +5187,9 @@ static int qpnp_qg_suspend_noirq(struct device *dev)
 {
 	int rc;
 	struct qpnp_qg *chip = dev_get_drvdata(dev);
+
+	/* cancel any pending sleep_exit work */
+	cancel_delayed_work_sync(&chip->qg_sleep_exit_work);
 
 	mutex_lock(&chip->data_lock);
 

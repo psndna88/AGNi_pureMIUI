@@ -214,9 +214,8 @@ enum print_reason {
 #define NON_FFC_VFLOAT_VOTER		"NON_FFC_VFLOAT_VOTER"
 #define NON_FFC_VFLOAT_UV		4450000
 
-#define CP_COOL_THRESHOLD		150
-#define CP_WARM_THRESHOLD		450
-#define SOFT_JEITA_HYSTERESIS		5
+
+#define CHARGER_SOC_DECIMAL_MS		200
 
 /* lct thermal */
 static int LCT_THERM_CALL_LEVEL;
@@ -600,6 +599,7 @@ struct smb_charger {
 	struct delayed_work	reg_work;
 	struct delayed_work	pr_lock_clear_work;
 	struct delayed_work	six_pin_batt_step_chg_work;
+	struct delayed_work     charger_soc_decimal;
 
 	struct alarm		lpd_recheck_timer;
 	struct alarm		moisture_protection_alarm;
@@ -641,6 +641,7 @@ struct smb_charger {
 	int 		*thermal_fcc_qc3p5_cp;
 	int 		*thermal_fcc_pps_cp;
 	int			*thermal_mitigation;
+	int			*thermal_mitigation_cp;
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	int			fake_batt_status;
@@ -704,6 +705,7 @@ struct smb_charger {
 	int			charge_full_cc;
 	int			cc_soc_ref;
 	int			last_cc_soc;
+	int			term_vbat_uv;
 	int			dr_mode;
 	int			usbin_forced_max_uv;
 	int			init_thermal_ua;
@@ -715,6 +717,8 @@ struct smb_charger {
 	bool			hvdcp3_standalone_config;
 	int			wls_icl_ua;
 	bool			dpdm_enabled;
+	bool			apsd_ext_timeout;
+	bool			qc3p5_detected;
 
 	/* workaround flag */
 	u32			wa_flags;
@@ -952,6 +956,8 @@ int smblib_get_prop_charger_temp(struct smb_charger *chg,
 int smblib_get_prop_die_health(struct smb_charger *chg);
 int smblib_get_prop_smb_health(struct smb_charger *chg);
 int smblib_get_prop_connector_health(struct smb_charger *chg);
+int smblib_get_prop_input_current_max(struct smb_charger *chg,
+				  union power_supply_propval *val);
 int smblib_set_prop_thermal_overheat(struct smb_charger *chg,
 			       int therm_overheat);
 int smblib_get_skin_temp_status(struct smb_charger *chg);
