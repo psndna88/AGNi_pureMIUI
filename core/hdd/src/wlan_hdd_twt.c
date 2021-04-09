@@ -2769,11 +2769,12 @@ static int hdd_twt_clear_session_traffic_stats(struct hdd_adapter *adapter,
 	if (ucfg_mlme_twt_is_command_in_progress(adapter->hdd_ctx->psoc,
 						 &hdd_sta_ctx->conn_info.bssid,
 						 WLAN_ALL_SESSIONS_DIALOG_ID,
-						 WLAN_TWT_STATISTICS) ||
+						 WLAN_TWT_STATISTICS, NULL) ||
 	   ucfg_mlme_twt_is_command_in_progress(adapter->hdd_ctx->psoc,
 						&hdd_sta_ctx->conn_info.bssid,
 						WLAN_ALL_SESSIONS_DIALOG_ID,
-						WLAN_TWT_CLEAR_STATISTICS)) {
+						WLAN_TWT_CLEAR_STATISTICS,
+						NULL)) {
 		hdd_warn("Already TWT statistics or clear statistics exists");
 		return -EALREADY;
 	}
@@ -2884,11 +2885,12 @@ static int hdd_twt_get_session_traffic_stats(struct hdd_adapter *adapter,
 	if (ucfg_mlme_twt_is_command_in_progress(adapter->hdd_ctx->psoc,
 						 &hdd_sta_ctx->conn_info.bssid,
 						 WLAN_ALL_SESSIONS_DIALOG_ID,
-						 WLAN_TWT_STATISTICS) ||
+						 WLAN_TWT_STATISTICS, NULL) ||
 	    ucfg_mlme_twt_is_command_in_progress(adapter->hdd_ctx->psoc,
 						 &hdd_sta_ctx->conn_info.bssid,
 						 WLAN_ALL_SESSIONS_DIALOG_ID,
-						 WLAN_TWT_CLEAR_STATISTICS)) {
+						 WLAN_TWT_CLEAR_STATISTICS,
+						 NULL)) {
 		hdd_warn("Already TWT statistics or clear statistics exists");
 		return -EALREADY;
 	}
