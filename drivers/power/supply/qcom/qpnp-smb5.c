@@ -33,11 +33,11 @@
 #include <linux/notifier.h>
 #include <linux/msm_drm_notify.h>
 #include <linux/fb.h>
+#include <linux/board_id.h>
+#include "temps_info.h"
 
 union power_supply_propval lct_therm_lvl_reserved;
 union power_supply_propval lct_therm_level;
-union power_supply_propval lct_therm_call_level = {LCT_THERM_CALL_LEVEL,};
-union power_supply_propval lct_therm_lcdoff_level = {LCT_THERM_LCDOFF_LEVEL,};
 
 bool lct_backlight_off;
 int LctIsInCall = 0;
@@ -497,7 +497,8 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chg->pd_not_supported = chg->pd_not_supported ||
 			of_property_read_bool(node, "qcom,usb-pd-disable");
 
-	chg->lpd_disabled = of_property_read_bool(node, "qcom,lpd-disable");
+	chg->lpd_disabled = chg->lpd_disabled ||
+			of_property_read_bool(node, "qcom,lpd-disable");
 
 	chg->qc_class_ab = of_property_read_bool(node,
 						"qcom,distinguish-qc-class-ab");
@@ -530,11 +531,15 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chip->dt.no_battery = of_property_read_bool(node,
 						"qcom,batteryless-platform");
 
-	rc = of_property_read_u32(node,
+/*	rc = of_property_read_u32(node,
 			"qcom,fcc-max-ua", &chip->dt.batt_profile_fcc_ua);
 	if (rc < 0)
 		chip->dt.batt_profile_fcc_ua = -EINVAL;
-	printk("==test qcom,fcc-max-ua:%d\n", chip->dt.batt_profile_fcc_ua);
+	printk("==test qcom,fcc-max-ua:%d\n", chip->dt.batt_profile_fcc_ua); */
+	if (board_get_33w_supported())
+		chip->dt.batt_profile_fcc_ua = 5200000;
+	else
+		chip->dt.batt_profile_fcc_ua = 3000000;
 
 	rc = of_property_read_u32(node,
 				"qcom,fv-max-uv", &chip->dt.batt_profile_fv_uv);
@@ -567,7 +572,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 		rc = of_property_read_u32(node, "qcom,chg-term-base-current-ma",
 				&chip->dt.term_current_thresh_lo_ma);
 
-#ifdef CONFIG_J6B_CHARGE_THERMAL
+	if (board_get_33w_supported()) {
 	if (of_find_property(node, "qcom,thermal-mitigation-dcp", &byte_len)) {
 		chg->thermal_mitigation_dcp = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -738,7 +743,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 			return rc;
 		}
 	}
-#else
+	} else {
 	if (of_find_property(node, "qcom,thermal-mitigation-cp", &byte_len)) {
 		chg->thermal_mitigation_cp = devm_kzalloc(chg->dev, byte_len,
 			GFP_KERNEL);
@@ -775,17 +780,19 @@ static int smb5_parse_dt(struct smb5 *chip)
 			return rc;
 		}
 	}
-#endif
+	}
 
-	rc = of_property_read_u32(node, "qcom,charger-temp-max",
+/*	rc = of_property_read_u32(node, "qcom,charger-temp-max",
 			&chg->charger_temp_max);
 	if (rc < 0)
-		chg->charger_temp_max = -EINVAL;
+		chg->charger_temp_max = -EINVAL; */
+	chg->charger_temp_max = CHARGER_TEMP_MAX;
 
-	rc = of_property_read_u32(node, "qcom,smb-temp-max",
+/*	rc = of_property_read_u32(node, "qcom,smb-temp-max",
 			&chg->smb_temp_max);
 	if (rc < 0)
-		chg->smb_temp_max = -EINVAL;
+		chg->smb_temp_max = -EINVAL; */
+	chg->smb_temp_max = SMB_TEMP_MAX;
 
 	rc = of_property_read_u32(node, "qcom,float-option",
 						&chip->dt.float_option);
@@ -1032,6 +1039,8 @@ static enum power_supply_property smb5_usb_props[] = {
 	POWER_SUPPLY_PROP_THERM_ICL_LIMIT,
 	POWER_SUPPLY_PROP_TYPE_RECHECK,
 	POWER_SUPPLY_PROP_SKIN_HEALTH,
+	POWER_SUPPLY_PROP_APSD_RERUN,
+	POWER_SUPPLY_PROP_APSD_TIMEOUT,
 	POWER_SUPPLY_PROP_QC3P5_POWER_LIMIT,
 	POWER_SUPPLY_PROP_QC3P5_CURRENT_MAX,
 };
@@ -1245,6 +1254,12 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_SKIN_HEALTH:
 		val->intval = smblib_get_skin_temp_status(chg);
 		break;
+	case POWER_SUPPLY_PROP_APSD_RERUN:
+		val->intval = 0;
+		break;
+	case POWER_SUPPLY_PROP_APSD_TIMEOUT:
+		val->intval = chg->apsd_ext_timeout;
+		break;
 	case POWER_SUPPLY_PROP_QC3P5_POWER_LIMIT:
 		val->intval = chg->qc3p5_power_limit_w;
 		break;
@@ -1297,10 +1312,10 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 		if (chg->support_ffc) {
 			rc = smblib_set_fastcharge_mode(chg, val->intval);
 			power_supply_changed(chg->bms_psy);
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
+			if (board_get_33w_supported()) {
 			schedule_delayed_work(&chg->charger_soc_decimal,
 					msecs_to_jiffies(CHARGER_SOC_DECIMAL_MS));
-#endif
+			}
 		}
 		break;
 	case POWER_SUPPLY_PROP_PD_REMOVE_COMPENSATION:
@@ -1362,6 +1377,9 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_ADAPTER_CC_MODE:
 		chg->adapter_cc_mode = val->intval;
 		break;
+	case POWER_SUPPLY_PROP_APSD_RERUN:
+		chg->apsd_ext_timeout = false;
+		break;
 	case POWER_SUPPLY_PROP_QC3P5_CURRENT_MAX:
 		rc = vote(chg->usb_icl_votable, QC3P5_VOTER, true, val->intval);
 		break;
@@ -1383,6 +1401,7 @@ static int smb5_usb_prop_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_THERM_ICL_LIMIT:
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX_LIMIT:
 	case POWER_SUPPLY_PROP_ADAPTER_CC_MODE:
+	case POWER_SUPPLY_PROP_APSD_RERUN:
 	case POWER_SUPPLY_PROP_QC3P5_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_PD_AUTHENTICATION:
 	case POWER_SUPPLY_PROP_FASTCHARGE_MODE:
@@ -1581,7 +1600,9 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		val->intval = chg->flash_active;
 		break;
 	case POWER_SUPPLY_PROP_FLASH_TRIGGER:
-		rc = schgm_flash_get_vreg_ok(chg, &val->intval);
+		val->intval = 0;
+		if (chg->chg_param.smb_version == PMI632_SUBTYPE)
+			rc = schgm_flash_get_vreg_ok(chg, &val->intval);
 		break;
 	case POWER_SUPPLY_PROP_TOGGLE_STAT:
 		val->intval = 0;
@@ -1605,7 +1626,7 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		break;
 	/* Use this property to report SMB health */
 	case POWER_SUPPLY_PROP_HEALTH:
-		val->intval = smblib_get_prop_smb_health(chg);
+		rc = val->intval = smblib_get_prop_smb_health(chg);
 		break;
 	/* Use this property to report overheat status */
 	case POWER_SUPPLY_PROP_HOT_TEMP:
@@ -1616,12 +1637,10 @@ static int smb5_usb_main_get_prop(struct power_supply *psy,
 		rc = -EINVAL;
 		break;
 	}
-	if (rc < 0) {
+	if (rc < 0)
 		pr_debug("Couldn't get prop %d rc = %d\n", psp, rc);
-		return -ENODATA;
-	}
 
-	return 0;
+	return rc;
 }
 
 #define ILIM_ADJ_PC		10
@@ -1647,7 +1666,7 @@ static int smb5_usb_main_set_prop(struct power_supply *psy,
 		if (chg->six_pin_step_charge_enable) {
 			rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP, &pval);
 			/* if temp out of soft jeita normal zone, do not add fast charge current offset */
-			if (pval.intval >= CP_WARM_THRESHOLD - SOFT_JEITA_HYSTERESIS || pval.intval <= CP_COOL_THRESHOLD + SOFT_JEITA_HYSTERESIS
+			if (pval.intval >= cp_warm_threshold - soft_jeita_hysteresis || pval.intval <= CP_COOL_THRESHOLD + soft_jeita_hysteresis
 					|| chg->index_vfloat == MAX_STEP_ENTRIES - 1)
 
 				rc = smblib_set_charge_param(chg, &chg->param.fcc, val->intval);
@@ -2669,18 +2688,21 @@ static int smb5_configure_typec(struct smb_charger *chg)
 		}
 	}
 
-	/* Enable detection of unoriented debug accessory in source mode */
-	rc = smblib_masked_write(chg, DEBUG_ACCESS_SRC_CFG_REG,
-				 EN_UNORIENTED_DEBUG_ACCESS_SRC_BIT,
-				 EN_UNORIENTED_DEBUG_ACCESS_SRC_BIT);
-	if (rc < 0) {
-		dev_err(chg->dev,
-			"Couldn't configure TYPE_C_DEBUG_ACCESS_SRC_CFG_REG rc=%d\n",
-				rc);
-		return rc;
-	}
-
 	if (chg->chg_param.smb_version != PMI632_SUBTYPE) {
+		/*
+		 * Enable detection of unoriented debug
+		 * accessory in source mode
+		 */
+		rc = smblib_masked_write(chg, DEBUG_ACCESS_SRC_CFG_REG,
+					 EN_UNORIENTED_DEBUG_ACCESS_SRC_BIT,
+					 EN_UNORIENTED_DEBUG_ACCESS_SRC_BIT);
+		if (rc < 0) {
+			dev_err(chg->dev,
+				"Couldn't configure TYPE_C_DEBUG_ACCESS_SRC_CFG_REG rc=%d\n",
+					rc);
+			return rc;
+		}
+
 		rc = smblib_masked_write(chg, USBIN_LOAD_CFG_REG,
 				USBIN_IN_COLLAPSE_GF_SEL_MASK |
 				USBIN_AICL_STEP_TIMING_SEL_MASK,
@@ -3993,9 +4015,21 @@ static struct device_attribute attrs2[] = {
 
 static void thermal_fb_notifier_resume_work(struct work_struct *work)
 {
+
+    union power_supply_propval lct_therm_call_level = {LCT_THERM_CALL_LEVEL,};
+    union power_supply_propval lct_therm_lcdoff_level = {LCT_THERM_LCDOFF_LEVEL,};
 	struct smb_charger *chg = container_of(work, struct smb_charger, fb_notify_work);
 	LctThermal = 1;
 
+    if (board_get_33w_supported()) {
+        LCT_THERM_CALL_LEVEL = 14;
+        LCT_THERM_LCDOFF_LEVEL = 13;
+    } else {
+        LCT_THERM_CALL_LEVEL = 7;
+        LCT_THERM_LCDOFF_LEVEL = 4;
+    }
+
+    if (!board_get_33w_supported()) {
 	if ((lct_backlight_off) && (LctIsInCall == 0)) {
 		if (lct_therm_lvl_reserved.intval > LCT_THERM_LCDOFF_LEVEL)
 			smblib_set_prop_system_temp_level(chg,&lct_therm_lcdoff_level);
@@ -4005,6 +4039,7 @@ static void thermal_fb_notifier_resume_work(struct work_struct *work)
 		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
 	} else {
 		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-levle
+	}
 	}
 
 	LctThermal = 0;

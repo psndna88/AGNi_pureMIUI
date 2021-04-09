@@ -29,6 +29,7 @@
 #include <linux/pmic-voter.h>
 #include <linux/workqueue.h>
 #include "battery.h"
+#include "temps_info.h"
 
 #define DRV_MAJOR_VERSION	1
 #define DRV_MINOR_VERSION	0
@@ -108,6 +109,7 @@ struct pl_data {
 	int			taper_entry_fv;
 	int			main_fcc_max;
 	u32			float_voltage_uv;
+	enum power_supply_type	charger_type;
 	/* debugfs directory */
 	struct dentry		*dfs_root;
 
@@ -1240,7 +1242,7 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 			pr_err("Couldn't get battery status rc=%d\n", rc);
 		} else {
 			if (pval.intval == POWER_SUPPLY_STATUS_FULL) {
-				pr_info("re-triggering charging\n");
+				pr_debug("re-triggering charging\n");
 				pval.intval = 1;
 				rc = power_supply_set_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_FORCE_RECHARGE,
@@ -1259,7 +1261,6 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 
 #define ICL_STEP_UA	25000
 #define PL_DELAY_MS     3000
-#define PL_THRESHOLD_ICL_UA	900000
 static int usb_icl_vote_callback(struct votable *votable, void *data,
 			int icl_ua, const char *client)
 {
@@ -1282,7 +1283,7 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 	vote(chip->pl_disable_votable, ICL_CHANGE_VOTER, true, 0);
 
 	/*
-	 * if (ICL < PL_THRESHOLD_ICL_UA)
+	 * if (ICL < 1400)
 	 *	disable parallel charger using USBIN_I_VOTER
 	 * else
 	 *	instead of re-enabling here rely on status_changed_work
@@ -1290,7 +1291,7 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 	 *	unvote USBIN_I_VOTER) the status_changed_work enables
 	 *	USBIN_I_VOTER based on settled current.
 	 */
-	if (icl_ua <= PL_THRESHOLD_ICL_UA)
+	if (icl_ua <= 1400000)
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	else
 		schedule_delayed_work(&chip->status_change_work,
@@ -1348,9 +1349,6 @@ static void pl_disable_forever_work(struct work_struct *work)
 }
 
 #define CP_ILIM_COMP			1000000
-#define CP_COOL_THRESHOLD		150
-#define CP_WARM_THRESHOLD		450
-#define SOFT_JEITA_HYSTERESIS		5
 static int pl_disable_vote_callback(struct votable *votable,
 		void *data, int pl_disable, const char *client)
 {
@@ -1548,9 +1546,9 @@ static int pl_disable_vote_callback(struct votable *votable,
 					pr_err("Couldn't read batt temp, rc=%d\n", rc);
 				}
 				batt_temp = pval.intval;
-				/* if temp in cp soft jeita zone(15 to 45 degree), add comp */
-				if ((batt_temp < CP_WARM_THRESHOLD - SOFT_JEITA_HYSTERESIS)
-					&& (batt_temp > CP_COOL_THRESHOLD + SOFT_JEITA_HYSTERESIS))
+				/* if temp in cp soft jeita zone(15 to cp_warm_threshold degree), add comp */
+				if ((batt_temp < cp_warm_threshold - soft_jeita_hysteresis)
+					&& (batt_temp > CP_COOL_THRESHOLD + soft_jeita_hysteresis))
 					cp_ilim += CP_ILIM_COMP;
 			}
 
@@ -1769,10 +1767,10 @@ static void handle_settled_icl_change(struct pl_data *chip)
 	}
 	main_limited = pval.intval;
 
-	if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < PL_THRESHOLD_ICL_UA)
+	if ((main_limited && (main_settled_ua + chip->pl_settled_ua) < 1400000)
 			|| (main_settled_ua == 0)
 			|| ((total_current_ua >= 0) &&
-				(total_current_ua <= PL_THRESHOLD_ICL_UA)))
+				(total_current_ua <= 1400000)))
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	else
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, true, 0);
@@ -1865,6 +1863,12 @@ static void handle_usb_change(struct pl_data *chip)
 		chip->total_fcc_ua = 0;
 		chip->slave_fcc_ua = 0;
 		chip->main_fcc_ua = 0;
+		chip->charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	} else {
+		rc = power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_REAL_TYPE, &pval);
+		if (!rc)
+			chip->charger_type = pval.intval;
 	}
 }
 

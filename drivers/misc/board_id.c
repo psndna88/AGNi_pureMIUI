@@ -53,6 +53,7 @@ static int __init setup_board_id_hwname(char *str)
 	else if (!strcmp(str, "curtana"))
 		board_33w_supported = false;
 
+	charging_temps_thresholds();
 	pr_info("board_33w_supported : %s\n",
 			board_33w_supported ? "true" : "false");
 	return 1;

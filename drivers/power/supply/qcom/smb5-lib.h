@@ -201,7 +201,7 @@ enum print_reason {
 #define STEP_CHG_DELAYED_HIGH_MONITOR_MS	5000
 #define STEP_CHG_DELAYED_QUICK_MONITOR_MS	3000
 #define STEP_CHG_DELAYED_START_MS		100
-#define VBAT_FOR_STEP_MIN_UV			4450000
+#define VBAT_FOR_STEP_MIN_UV			4350000
 #define VBAT_FOR_STEP_HYS_UV			20000
 
 #define SIX_PIN_VFLOAT_VOTER		"SIX_PIN_VFLOAT_VOTER"
@@ -214,22 +214,12 @@ enum print_reason {
 #define NON_FFC_VFLOAT_VOTER		"NON_FFC_VFLOAT_VOTER"
 #define NON_FFC_VFLOAT_UV		4450000
 
-#define CP_COOL_THRESHOLD		150
-#define CP_WARM_THRESHOLD		450
-#define SOFT_JEITA_HYSTERESIS		5
 
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 #define CHARGER_SOC_DECIMAL_MS		200
-#endif
 
 /* lct thermal */
-#ifdef CONFIG_J6B_CHARGE_THERMAL
-#define LCT_THERM_CALL_LEVEL		14
-#define LCT_THERM_LCDOFF_LEVEL		13
-#else
-#define LCT_THERM_CALL_LEVEL		7
-#define LCT_THERM_LCDOFF_LEVEL		4
-#endif
+static int LCT_THERM_CALL_LEVEL;
+static int LCT_THERM_LCDOFF_LEVEL;
 
 enum hvdcp3_type {
 	HVDCP3_NONE = 0,
@@ -546,9 +536,7 @@ struct smb_charger {
 	struct power_supply		*usb_port_psy;
 	struct power_supply		*wls_psy;
 	struct power_supply		*cp_psy;
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	struct power_supply		*batt_verify_psy;
-#endif
 	enum power_supply_type		real_charger_type;
 
 	/* dual role class */
@@ -611,9 +599,7 @@ struct smb_charger {
 	struct delayed_work	reg_work;
 	struct delayed_work	pr_lock_clear_work;
 	struct delayed_work	six_pin_batt_step_chg_work;
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	struct delayed_work     charger_soc_decimal;
-#endif
 
 	struct alarm		lpd_recheck_timer;
 	struct alarm		moisture_protection_alarm;
@@ -645,7 +631,6 @@ struct smb_charger {
 	int			boost_threshold_ua;
 	int			system_temp_level;
 	int			thermal_levels;
-#ifdef CONFIG_J6B_CHARGE_THERMAL
 	int 		*thermal_mitigation_dcp;
 	int 		*thermal_mitigation_qc2;
 	int 		*thermal_mitigation_pd_base;
@@ -655,10 +640,8 @@ struct smb_charger {
 	int 		*thermal_fcc_qc3_classb_cp;
 	int 		*thermal_fcc_qc3p5_cp;
 	int 		*thermal_fcc_pps_cp;
-#else
 	int			*thermal_mitigation;
 	int			*thermal_mitigation_cp;
-#endif
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	int			fake_batt_status;
@@ -734,6 +717,8 @@ struct smb_charger {
 	bool			hvdcp3_standalone_config;
 	int			wls_icl_ua;
 	bool			dpdm_enabled;
+	bool			apsd_ext_timeout;
+	bool			qc3p5_detected;
 
 	/* workaround flag */
 	u32			wa_flags;
@@ -971,6 +956,8 @@ int smblib_get_prop_charger_temp(struct smb_charger *chg,
 int smblib_get_prop_die_health(struct smb_charger *chg);
 int smblib_get_prop_smb_health(struct smb_charger *chg);
 int smblib_get_prop_connector_health(struct smb_charger *chg);
+int smblib_get_prop_input_current_max(struct smb_charger *chg,
+				  union power_supply_propval *val);
 int smblib_set_prop_thermal_overheat(struct smb_charger *chg,
 			       int therm_overheat);
 int smblib_get_skin_temp_status(struct smb_charger *chg);

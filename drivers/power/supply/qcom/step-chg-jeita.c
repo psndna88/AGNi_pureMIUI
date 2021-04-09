@@ -21,6 +21,7 @@
 #include <linux/pmic-voter.h>
 #include "step-chg-jeita.h"
 #include "smb5-lib.h"
+#include "temps_info.h"
 
 #define STEP_CHG_VOTER		"STEP_CHG_VOTER"
 #define JEITA_VOTER		"JEITA_VOTER"
@@ -102,7 +103,6 @@ static struct step_chg_info *the_chip;
 
 #define STEP_CHG_HYSTERISIS_DELAY_US		5000000 /* 5 secs */
 
-#define BATT_HOT_DECIDEGREE_MAX			600
 #define GET_CONFIG_DELAY_MS		2000
 #define GET_CONFIG_RETRY_COUNT		50
 #define WAIT_BATT_ID_READY_MS		200
@@ -309,12 +309,16 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		}
 	}
 
-	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
+/*	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
 					&max_fcc_ma);
 	if (rc < 0) {
 		pr_err("max-fastchg-current-ma reading failed, rc=%d\n", rc);
 		return rc;
-	}
+	} */
+	if (board_get_33w_supported())
+		max_fcc_ma = 5200000;
+	else
+		max_fcc_ma = 3000000;
 
 	chip->taper_fcc = of_property_read_bool(profile_node, "qcom,taper-fcc");
 
@@ -364,7 +368,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 	rc = read_range_data_from_node(profile_node,
 			"qcom,jeita-fcc-ranges",
 			chip->jeita_fcc_config->fcc_cfg,
-			BATT_HOT_DECIDEGREE_MAX, max_fcc_ma * 1000);
+			batt_hot_decidegree_max, max_fcc_ma * 1000);
 	if (rc < 0) {
 		pr_debug("Read qcom,jeita-fcc-ranges failed from battery profile, rc=%d\n",
 					rc);
@@ -374,7 +378,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 	rc = read_range_data_from_node(profile_node,
 			"qcom,jeita-fv-ranges",
 			chip->jeita_fv_config->fv_cfg,
-			BATT_HOT_DECIDEGREE_MAX, max_fv_uv);
+			batt_hot_decidegree_max, max_fv_uv);
 	if (rc < 0) {
 		pr_debug("Read qcom,jeita-fv-ranges failed from battery profile, rc=%d\n",
 					rc);
@@ -385,7 +389,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 	rc = read_range_data_from_node(profile_node,
 			"qcom,dynamic-fv-ranges",
 			chip->dynamic_fv_config->fv_cfg,
-			BATT_HOT_DECIDEGREE_MAX, max_fv_uv);
+			batt_hot_decidegree_max, max_fv_uv);
 	if (rc < 0) {
 		pr_debug("Read qcom,dynamic-fv-ranges failed from battery profile, rc=%d\n",
 					rc);
@@ -812,10 +816,10 @@ static int handle_jeita(struct step_chg_info *chip)
 		if (!chip->cp_disable_votable)
 			goto update_time;
 
-		if (temp <= BATT_CP_COOL_THRESHOLD || temp >= BATT_CP_WARM_THRESHOLD)
+		if (temp <= BATT_CP_COOL_THRESHOLD || temp >= batt_cp_warm_threshold)
 			vote(chip->cp_disable_votable, JEITA_VOTER, true, 0);
 		else if ((temp > BATT_CP_COOL_THRESHOLD + chip->jeita_fv_config->param.hysteresis)
-				|| (temp < BATT_CP_WARM_THRESHOLD - chip->jeita_fv_config->param.hysteresis))
+				|| (temp < batt_cp_warm_threshold - chip->jeita_fv_config->param.hysteresis))
 			vote(chip->cp_disable_votable, JEITA_VOTER, false, 0);
 	}
 
@@ -888,7 +892,7 @@ static int handle_jeita(struct step_chg_info *chip)
 			}
 			fastcharge_mode = pval.intval;
 
-			if ((temp >= BATT_WARM_THRESHOLD || temp <= BATT_COOL_THRESHOLD)
+			if ((temp >= batt_warm_threshold || temp <= BATT_COOL_THRESHOLD)
 						&& fastcharge_mode) {
 				pr_err("temp:%d disable fastcharge mode\n", temp);
 				pval.intval = false;
@@ -898,7 +902,7 @@ static int handle_jeita(struct step_chg_info *chip)
 					pr_err("Set fastcharge mode failed, rc=%d\n", rc);
 					return rc;
 				}
-			} else if ((temp < BATT_WARM_THRESHOLD - chip->jeita_fv_config->param.hysteresis)
+			} else if ((temp < batt_warm_threshold - chip->jeita_fv_config->param.hysteresis)
 						&& (temp > BATT_COOL_THRESHOLD + chip->jeita_fv_config->param.hysteresis)
 							&& !fastcharge_mode) {
 				pr_err("temp:%d enable fastcharge mode\n", temp);
