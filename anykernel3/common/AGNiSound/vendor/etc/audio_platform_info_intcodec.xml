@@ -33,7 +33,6 @@
     <device name="SND_DEVICE_OUT_HEADPHONES_44_1" value="24"/>
     <device name="SND_DEVICE_OUT_GAME_SPEAKER" value="24"/>
     <device name="SND_DEVICE_OUT_GAME_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_BT_A2DP" value="24"/>
   </bit_width_configs>
   <interface_names>
     <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
@@ -83,7 +82,7 @@
     <param key="spkr_2_tz_name" value="wsatz.14"/>
     <param key="true_32_bit" value="true"/>
     <param key="hifi_filter" value="true"/>
-    <param key="native_audio_mode" value="src"/>
+    <param key="native_audio_mode" value="multiple_mix_dsp"/>
     <param key="hfp_pcm_dev_id" value="39"/>
     <param key="input_mic_max_count" value="4"/>
   </config_params>

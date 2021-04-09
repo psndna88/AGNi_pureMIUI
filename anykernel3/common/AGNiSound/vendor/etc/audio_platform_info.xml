@@ -76,7 +76,6 @@
     <device name="SND_DEVICE_OUT_HEADPHONES_44_1" value="24"/>
     <device name="SND_DEVICE_OUT_GAME_SPEAKER" value="24"/>
     <device name="SND_DEVICE_OUT_GAME_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_BT_A2DP" value="24"/>
   </bit_width_configs>
   <pcm_ids>
     <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
@@ -121,11 +120,12 @@
     <!-- In the below value string, first parameter indicates size -->
     <!-- followed by perf lock options                             -->
     <param key="perf_lock_opts" value="4, 0x40400000, 0x1, 0x40C00000, 0x1"/>
-    <param key="native_audio_mode" value="src"/>
+    <param key="native_audio_mode" value="multiple_mix_dsp"/>
     <param key="input_mic_max_count" value="3"/>
     <param key="true_32_bit" value="true"/>
     <!-- In the below value string, the value indicates sidetone gain in dB -->
     <param key="usb_sidetone_gain" value="35"/>
+    <param key="hfp_pcm_dev_id" value="39"/>
     <param key="hifi_filter" value="true"/>
   </config_params>
   <gain_db_to_level_mapping>

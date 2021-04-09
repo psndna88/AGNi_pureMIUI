@@ -282,7 +282,7 @@
   <ctl name="RX_MACRO RX0 MUX" value="ZERO"/>
   <ctl name="RX_MACRO RX1 MUX" value="ZERO"/>
   <ctl name="RX_CDC_DMA_RX_0 Channels" value="One"/>
-  <ctl name="RX INT0_1 MIX1 INP0" value="RX0"/>
+  <ctl name="RX INT0_1 MIX1 INP0" value="ZERO"/>
   <ctl name="RX INT0_1 MIX1 INP1" value="ZERO"/>
   <ctl name="RX INT0_1 MIX1 INP2" value="ZERO"/>
   <ctl name="RX INT1_1 MIX1 INP0" value="ZERO"/>
@@ -352,14 +352,14 @@
   <ctl name="HPHL Volume" value="20"/>
   <ctl name="HPHR Volume" value="20"/>
   <ctl name="EAR SPKR PA Gain" value="G_DEFAULT"/>
-  <ctl name="TX_DEC0 Volume" value="84"/>
-  <ctl name="TX_DEC1 Volume" value="84"/>
-  <ctl name="TX_DEC2 Volume" value="84"/>
-  <ctl name="TX_DEC3 Volume" value="84"/>
-  <ctl name="TX_DEC4 Volume" value="84"/>
-  <ctl name="TX_DEC5 Volume" value="84"/>
-  <ctl name="TX_DEC6 Volume" value="84"/>
-  <ctl name="TX_DEC7 Volume" value="84"/>
+  <ctl name="TX_DEC0 Volume" value="94"/>
+  <ctl name="TX_DEC1 Volume" value="94"/>
+  <ctl name="TX_DEC2 Volume" value="94"/>
+  <ctl name="TX_DEC3 Volume" value="94"/>
+  <ctl name="TX_DEC4 Volume" value="94"/>
+  <ctl name="TX_DEC5 Volume" value="94"/>
+  <ctl name="TX_DEC6 Volume" value="94"/>
+  <ctl name="TX_DEC7 Volume" value="94"/>
   <ctl name="ADC1 Volume" value="12"/>
   <ctl name="ADC2 Volume" value="12"/>
   <ctl name="ADC3 Volume" value="12"/>
@@ -402,7 +402,7 @@
   <ctl name="IIR0 Enable Band3" value="1"/>
   <ctl name="IIR0 Enable Band4" value="1"/>
   <ctl name="IIR0 Enable Band5" value="1"/>
-  <ctl name="IIR0 INP0 Volume" value="80"/>
+  <ctl name="IIR0 INP0 Volume" value="72"/>
   <ctl name="IIR0 INP0 MUX" value="ZERO"/>
   <ctl name="IIR0 INP1 MUX" value="ZERO"/>
   <ctl name="IIR0 INP2 MUX" value="ZERO"/>
@@ -475,11 +475,9 @@
   </path>
   <path name="deep-buffer-playback speaker-protected">
     <path name="deep-buffer-playback"/>
-    <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia1" value="1"/>
   </path>
   <path name="deep-buffer-playback speaker-safe">
     <path name="deep-buffer-playback"/>
-    <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia1" value="1"/>
   </path>
   <path name="deep-buffer-playback display-port">
     <ctl name="DISPLAY_PORT Mixer MultiMedia1" value="1"/>
@@ -521,6 +519,10 @@
   </path>
   <path name="deep-buffer-playback headphones">
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="1"/>
+    <ctl name="COMP0 RX1" value="0"/>
+    <ctl name="COMP0 RX2" value="0"/>
+    <ctl name="COMP1" value="0"/>
+    <ctl name="COMP2" value="0"/>
   </path>
   <path name="deep-buffer-playback headset">
     <path name="deep-buffer-playback headphones"/>
@@ -559,13 +561,16 @@
   </path>
   <path name="low-latency-playback">
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia5" value="1"/>
+    <ctl name="COMP0 RX1" value="0"/>
+    <ctl name="COMP0 RX2" value="0"/>
+    <ctl name="COMP1" value="0"/>
+    <ctl name="COMP2" value="0"/>
   </path>
   <path name="low-latency-playback handset">
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia5" value="1"/>
   </path>
   <path name="low-latency-playback speaker-protected">
     <path name="low-latency-playback"/>
-    <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia5" value="1"/>
   </path>
   <path name="low-latency-playback speaker-safe">
     <path name="low-latency-playback"/>
@@ -610,6 +615,10 @@
   </path>
   <path name="low-latency-playback headphones">
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia5" value="1"/>
+    <ctl name="COMP0 RX1" value="0"/>
+    <ctl name="COMP0 RX2" value="0"/>
+    <ctl name="COMP1" value="0"/>
+    <ctl name="COMP2" value="0"/>
   </path>
   <path name="low-latency-playback headset">
     <path name="low-latency-playback headphones"/>
@@ -654,11 +663,9 @@
   </path>
   <path name="audio-ull-playback speaker-protected">
     <path name="audio-ull-playback"/>
-    <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia8" value="1"/>
   </path>
   <path name="audio-ull-playback speaker-safe">
     <path name="audio-ull-playback"/>
-    <ctl name="QUAT_MI2S_RX Audio Mixer MultiMedia8" value="1"/>
   </path>
   <path name="audio-ull-playback headphones">
     <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia8" value="1"/>
@@ -1949,6 +1956,10 @@
   </path>
   <path name="bt-a2dp">
     <ctl name="SLIM7_RX ADM Channels" value="Two"/>
+    <ctl name="COMP0 RX1" value="0"/>
+    <ctl name="COMP0 RX2" value="0"/>
+    <ctl name="COMP1" value="0"/>
+    <ctl name="COMP2" value="0"/>
   </path>
   <path name="speaker-and-bt-a2dp">
     <path name="speaker"/>
@@ -2389,14 +2400,14 @@
   </path>
   <path name="sidetone-headphones">
     <path name="sidetone-iir"/>
-    <ctl name="IIR0 INP0 Volume" value="40"/>
+    <ctl name="IIR0 INP0 Volume" value="72"/>
     <ctl name="IIR0 INP0 MUX" value="DEC0"/>
     <ctl name="RX INT0 MIX2 INP" value="SRC0"/>
     <ctl name="RX INT1 MIX2 INP" value="SRC0"/>
   </path>
   <path name="sidetone-handset">
     <path name="sidetone-iir"/>
-    <ctl name="IIR0 INP0 Volume" value="54"/>
+    <ctl name="IIR0 INP0 Volume" value="72"/>
     <ctl name="IIR0 INP0 MUX" value="DEC0"/>
     <ctl name="RX INT0 MIX2 INP" value="SRC0"/>
   </path>
@@ -2771,6 +2782,10 @@
   <!-- Added for ADSP testfwk -->
   <path name="ADSP testfwk">
     <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="1"/>
+    <ctl name="COMP0 RX1" value="0"/>
+    <ctl name="COMP0 RX2" value="0"/>
+    <ctl name="COMP1" value="0"/>
+    <ctl name="COMP2" value="0"/>
   </path>
   <ctl name="EC Reference Bit Format" value="S16_LE"/>
   <ctl name="EC Reference SampleRate" value="48000"/>
@@ -2782,13 +2797,13 @@
   <ctl name="Compress Playback 30 Volume" value="0"/>
   <ctl name="Compress Playback 31 Volume" value="0"/>
   <ctl name="Compress Playback 32 Volume" value="0"/>
-  <ctl name="TAS2557 ClassD Edge" value="7"/>
-  <ctl name="TAS2557 Volume" value="30"/>
   <ctl name="ADC1_INP1 Switch" value="0"/>
-  <ctl name="Adsp Working Mode" value="full"/>
   <ctl name="TFA Profile" value="music"/>
-  <ctl name="A2DP_SLIM7_UL_HL Switch" value="1"/>
   <ctl name="PCM_RX_DL_HL Switch" value="1"/>
   <ctl name="HiFi Function" value="On"/>
   <ctl name="HiFi Filter" value="6"/>
+  <ctl name="TAS2557 ClassD Edge" value="7"/>
+  <ctl name="MultiMedia5_RX QOS Vote" value="Disable"/>
+  <ctl name="MultiMedia5_TX QOS Vote" value="Disable"/>
+  <ctl name="AFE Input Bit Format" value="S24_LE"/>
 </mixer>
