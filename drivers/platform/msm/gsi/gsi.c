@@ -598,8 +598,7 @@ static void gsi_process_evt_re(struct gsi_evt_ctx *ctx,
 	/* RMB before reading event ring shared b/w IPA h/w & driver
 	 * ordering between IPA h/w store and CPU load
 	 */
-	if (callback)
-		dma_rmb();
+	dma_rmb();
 	evt = (struct gsi_xfer_compl_evt *)(ctx->ring.base_va +
 			ctx->ring.rp_local - ctx->ring.base);
 	gsi_process_chan(evt, notify, callback);
