@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019,2021, The Linux Foundation. All rights reserved.
  */
 #ifndef _SDE_HW_COLOR_PROC_COMMON_V4_H_
 #define _SDE_HW_COLOR_PROC_COMMON_V4_H_
@@ -120,6 +120,8 @@ enum {
 
 #define SSPP 0
 #define DSPP 1
+
+#define LTM_CONFIG_MERGE_MODE_ONLY (BIT(16) | BIT(17))
 
 struct sde_ltm_phase_info {
 	u32 init_h[LTM_MAX];

@@ -1959,6 +1959,41 @@ static int sde_cp_crtc_set_pu_features(struct drm_crtc *crtc, bool *need_flush)
 	return 0;
 }
 
+static void _sde_clear_ltm_merge_mode(struct sde_crtc *sde_crtc)
+{
+	u32 num_mixers = 0, i = 0;
+	struct sde_hw_ctl *ctl = NULL;
+	struct sde_hw_dspp *hw_dspp = NULL;
+	unsigned long irq_flags;
+
+	num_mixers = sde_crtc->num_mixers;
+	if (!num_mixers) {
+		DRM_ERROR("no mixers for this crtc\n");
+		return;
+	}
+
+	spin_lock_irqsave(&sde_crtc->ltm_lock, irq_flags);
+	if (!sde_crtc->ltm_merge_clear_pending) {
+		spin_unlock_irqrestore(&sde_crtc->ltm_lock, irq_flags);
+		return;
+	}
+
+	sde_cp_dspp_flush_helper(sde_crtc, SDE_CP_CRTC_DSPP_LTM_HIST_CTL);
+	for (i = 0; i < num_mixers; i++) {
+		hw_dspp = sde_crtc->mixers[i].hw_dspp;
+		ctl = sde_crtc->mixers[i].hw_ctl;
+		if (!hw_dspp || !ctl || i >= DSPP_MAX)
+			continue;
+		if (hw_dspp->ops.clear_ltm_merge_mode)
+			hw_dspp->ops.clear_ltm_merge_mode(hw_dspp);
+		if (ctl->ops.update_bitmask_dspp)
+			ctl->ops.update_bitmask_dspp(ctl, hw_dspp->idx, 1);
+	}
+
+	sde_crtc->ltm_merge_clear_pending = false;
+	spin_unlock_irqrestore(&sde_crtc->ltm_lock, irq_flags);
+}
+
 void sde_cp_crtc_apply_properties(struct drm_crtc *crtc)
 {
 	struct sde_crtc *sde_crtc = NULL;
@@ -1988,6 +2023,7 @@ void sde_cp_crtc_apply_properties(struct drm_crtc *crtc)
 	}
 
 	mutex_lock(&sde_crtc->crtc_cp_lock);
+	_sde_clear_ltm_merge_mode(sde_crtc);
 
 	if (list_empty(&sde_crtc->dirty_list) &&
 			list_empty(&sde_crtc->ad_dirty) &&
@@ -2307,6 +2343,7 @@ void sde_cp_crtc_destroy_properties(struct drm_crtc *crtc)
 	}
 	sde_crtc->ltm_buffer_cnt = 0;
 	sde_crtc->ltm_hist_en = false;
+	sde_crtc->ltm_merge_clear_pending = false;
 	sde_crtc->hist_irq_idx = -1;
 
 	mutex_destroy(&sde_crtc->crtc_cp_lock);
@@ -2352,6 +2389,7 @@ void sde_cp_crtc_suspend(struct drm_crtc *crtc)
 
 	spin_lock_irqsave(&sde_crtc->ltm_lock, irq_flags);
 	sde_crtc->ltm_hist_en = false;
+	sde_crtc->ltm_merge_clear_pending = false;
 	spin_unlock_irqrestore(&sde_crtc->ltm_lock, irq_flags);
 
 	if (ad_suspend)
@@ -2402,6 +2440,7 @@ void sde_cp_crtc_clear(struct drm_crtc *crtc)
 	}
 	sde_crtc->ltm_buffer_cnt = 0;
 	sde_crtc->ltm_hist_en = false;
+	sde_crtc->ltm_merge_clear_pending = false;
 	sde_crtc->hist_irq_idx = -1;
 	INIT_LIST_HEAD(&sde_crtc->ltm_buf_free);
 	INIT_LIST_HEAD(&sde_crtc->ltm_buf_busy);
@@ -3791,6 +3830,7 @@ static void _sde_cp_crtc_disable_ltm_hist(struct sde_crtc *sde_crtc,
 
 	spin_lock_irqsave(&sde_crtc->ltm_lock, irq_flags);
 	sde_crtc->ltm_hist_en = false;
+	sde_crtc->ltm_merge_clear_pending = true;
 	INIT_LIST_HEAD(&sde_crtc->ltm_buf_free);
 	INIT_LIST_HEAD(&sde_crtc->ltm_buf_busy);
 	for (i = 0; i < sde_crtc->ltm_buffer_cnt; i++)
@@ -3862,7 +3902,7 @@ static void sde_cp_ltm_hist_interrupt_cb(void *arg, int irq_idx)
 			hw_dspp->ops.setup_ltm_hist_ctrl(hw_dspp, NULL, false,
 				0);
 		}
-
+		sde_crtc->ltm_merge_clear_pending = true;
 		spin_unlock_irqrestore(&sde_crtc->ltm_lock, irq_flags);
 		DRM_DEBUG_DRIVER("LTM histogram is disabled\n");
 		return;
