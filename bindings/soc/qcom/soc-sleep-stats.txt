@@ -13,7 +13,8 @@ Properties:
 - compatible:
 	Usage: required
 	Value type: <string>
-	Definition: Should be "qcom,rpmh-sleep-stats" or "qcom,rpm-sleep-stats".
+	Definition: Should be "qcom,rpmh-sleep-stats" or "qcom,rpm-sleep-stats"
+		    or "qcom,legacy-rpm-sleep-stats".
 
 - reg:
 	Usage: required
@@ -34,3 +35,11 @@ EXAMPLE 2:
 		compatible = "qcom,rpm-sleep-stats";
 		reg = <0 0x04690000 0 0x400>;
 	};
+
+EXAMPLE 3:
+
+	rpm_sleep_stats: soc-sleep-stats@29dba0 {
+		compatible = "qcom,legacy-rpm-sleep-stats";
+		reg = <0x2a1ba0 0x1000>;
+	};
+

@@ -8,7 +8,7 @@ dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
 	lahaina-atp-overlay.dtbo \
 	lahaina-hdk-overlay.dtbo \
 	lahaina-hhg-overlay.dtbo \
-	lahaina-hhg-hsp-pro-overlay.dtbo \
+	lahainap-hhg-hsp-pro-overlay.dtbo \
 	lahaina-qrd-hsp-overlay.dtbo \
 	lahaina-qrd-module-overlay.dtbo \
 	lahainap-mtp-overlay.dtbo \
@@ -29,7 +29,7 @@ lahaina-cdp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-atp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-hdk-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-hhg-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-hhg-hsp-pro-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
+lahainap-hhg-hsp-pro-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
 lahaina-qrd-hsp-overlay.dtbo-base := lahaina.dtb
 lahaina-qrd-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-qrd-module-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
@@ -79,7 +79,7 @@ dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-v2.1-atp.dtb \
 	lahaina-v2.1-hdk.dtb \
 	lahaina-v2.1-hhg.dtb \
-	lahaina-v2.1-hhg-hsp-pro.dtb \
+	lahainap-v2.1-hhg-hsp-pro.dtb \
 	lahaina-v2.1-qrd.dtb \
 	lahaina-v2.1-qrd-module.dtb \
 	lahainap-v2.1-mtp.dtb \
@@ -91,12 +91,6 @@ dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-v2.1-mtp-hsp-pro.dts \
 	lahaina-v2.1-cdp-hsp-pro.dts \
 	lahaina-v2.1-qrd-hsp-pro.dts
-endif
-
-ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-dtbo-$(CONFIG_ARCH_SCUBA) += scuba-iot-idp-overlay.dtbo
-
-scuba-iot-idp-overlay.dtbo-base := scuba-iot.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
@@ -123,6 +117,14 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 	holi-qrd.dtb \
 	holi-atp.dtb \
 	holi-mtp-usbc.dtb
+endif
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo
+
+blair-rumi-overlay.dtbo-base := blair.dtb
+else
+dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
@@ -226,16 +228,24 @@ dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-        dtbo-$(CONFIG_ARCH_SA8155) += \
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA8155) += \
+		sa8155-v2-adp-air-lxc-overlay.dtbo \
+		sa8155p-v2-adp-air-lxc-overlay.dtbo
+else
+	dtbo-$(CONFIG_ARCH_SA8155) += \
 		sa8155-adp-star-overlay.dtbo \
 		sa8155p-adp-star-overlay.dtbo \
 		sa8155-v2-adp-air-overlay.dtbo \
 		sa8155p-v2-adp-air-overlay.dtbo
+endif
 
 sa8155-adp-star-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
 sa8155p-adp-star-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
 sa8155-v2-adp-air-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
 sa8155p-v2-adp-air-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
+sa8155-v2-adp-air-lxc-overlay.dtbo-base := sa8155.dtb sa8155-v2.dtb
+sa8155p-v2-adp-air-lxc-overlay.dtbo-base := sa8155p.dtb sa8155p-v2.dtb
 else
 dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 	sa8155p-adp-star.dtb \
@@ -246,7 +256,11 @@ dtb-$(CONFIG_ARCH_SA8155)       += sa8155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-        dtbo-$(CONFIG_ARCH_SA6155) += \
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA6155) += \
+		sa6155p-v2-adp-air-lxc-overlay.dtbo
+else
+	dtbo-$(CONFIG_ARCH_SA6155) += \
 		sa6155-adp-star-overlay.dtbo \
 		sa6155p-adp-star-overlay.dtbo \
 		sa6155p-adp-star-lpass-overlay.dtbo \
@@ -255,6 +269,7 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		sa6155p-v2-adp-star-overlay.dtbo \
 		sa6155p-v2-adp-air-overlay.dtbo \
 		sa6155p-v2-adp-air-lpass-overlay.dtbo
+endif
 
 sa6155-adp-star-overlay.dtbo-base := sa6155.dtb
 sa6155p-adp-star-overlay.dtbo-base := sa6155p.dtb
@@ -264,6 +279,7 @@ sa6155-adp-air-overlay.dtbo-base := sa6155.dtb
 sa6155p-adp-air-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v2-adp-air-overlay.dtbo-base := sa6155p.dtb
 sa6155p-v2-adp-air-lpass-overlay.dtbo-base := sa6155p.dtb
+sa6155p-v2-adp-air-lxc-overlay.dtbo-base := sa6155p.dtb
 else
 dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
 	sa6155p-adp-star.dtb \
@@ -276,12 +292,18 @@ dtb-$(CONFIG_ARCH_SA6155)       += sa6155-adp-star.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
+	dtbo-$(CONFIG_ARCH_SA8195) += \
+		sa8195p-v2-adp-air-lxc-overlay.dtbo
+else
 	dtbo-$(CONFIG_ARCH_SA8195) += \
 		sa8195p-adp-star-overlay.dtbo \
 		sa8195p-v2-adp-air-overlay.dtbo
+endif
 
 sa8195p-adp-star-overlay.dtbo-base := sa8195p.dtb
 sa8195p-v2-adp-air-overlay.dtbo-base := sa8195p.dtb
+sa8195p-v2-adp-air-lxc-overlay.dtbo-base := sa8195p.dtb
 else
 dtb-$(CONFIG_ARCH_SA8195)	+= sa8195p-adp-star.dtb \
 	sa8195p-v2-adp-air.dtb
@@ -333,7 +355,9 @@ endif
 dtb-$(CONFIG_ARCH_SDXNIGHTJAR) += sdxnightjar-mtp.dtb \
 	sdxnightjar-cdp.dtb \
 	sdxnightjar-qrd.dtb \
-	sdxnightjar-dualwifi-mtp.dtb
+	sdxnightjar-dualwifi-mtp.dtb \
+	sdxnightjar-512mb-mtp.dtb \
+	sdxnightjar-dualwifi-512mb-mtp.dtb
 
 ifeq ($(CONFIG_ARCH_YUPIK), y)
 ifeq ($(CONFIG_ARCH_QTI_VM), y)
@@ -353,7 +377,9 @@ dtb-$(CONFIG_QTI_QUIN_GVM) += sa8155-vm-la.dtb \
 	sa8195-vm-la-mt.dtb \
 	sa8195-vm-lv-mt.dtb \
 	sa8195-vm-lv-lxc.dtb \
-	sa6155p-vm-la.dtb
+	sa6155p-vm-la.dtb \
+	direwolf-vm-lv.dtb \
+	direwolf-vm-la.dtb
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_DIREWOLF) += direwolf-ivi-rumi-overlay.dtbo \

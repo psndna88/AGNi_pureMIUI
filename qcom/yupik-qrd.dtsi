@@ -272,6 +272,24 @@
 		thermal-sensors = <&pmk8350_adc_tm PM7325_ADC7_AMUX_THM1_100K_PU>;
 
 		trips {
+			quiet_apc_trip: quiet-apc-trip {
+				temperature = <50000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			quiet_gpu_trip: quiet-gpu-trip {
+				temperature = <52000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			quiet_silver_trip: quiet-silver-trip {
+				temperature = <55000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
 			quiet_cx_trip: quiet-cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
@@ -280,7 +298,26 @@
 		};
 
 		cooling-maps {
-			gpu-cdev {
+			apc_cluster_cdev:apc-cluster-cdev {
+				trip = <&quiet_apc_trip>;
+				cooling-device = <&apc1_cluster THERMAL_NO_LIMIT 5>;
+			};
+
+			cpu_silver_cdev:cpu-silver-cdev {
+				trip = <&quiet_silver_trip>;
+				/* throttle to 1516800KHz */
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-6)>;
+			};
+
+			gpu-cdev_0 {
+				trip = <&quiet_gpu_trip>;
+				/* throttle to 555000000Hz */
+				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-2)>;
+			};
+
+			gpu-cdev_1 {
 				trip = <&quiet_cx_trip>;
 				/* throttle to 315000000Hz */
 				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
@@ -289,8 +326,7 @@
 
 			cdsp-cdev {
 				trip = <&quiet_cx_trip>;
-				cooling-device = <&cdsp_sw (THERMAL_MAX_LIMIT-2)
-							(THERMAL_MAX_LIMIT-2)>;
+				cooling-device = <&cdsp_sw 4 4>;
 			};
 
 			modem-pa-cdev {
@@ -605,6 +641,11 @@
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&ts_release>;
+		focaltech,trusted-touch-mode = "vm_mode";
+		focaltech,touch-environment = "pvm";
+		focaltech,trusted-touch-spi-irq = <601>;
+		focaltech,trusted-touch-io-bases = <0xf134000 0xf135000 0xf136000 0xf137000 0xf169000 0xf151000 0xa94000 0x00a10000>;
+		focaltech,trusted-touch-io-sizes = <0x1000 0x1000 0x1000 0x1000 0x1000 0x1000 0x1000 0x4000>;
 		panel = <&dsi_r66451_amoled_144hz_cmd_cphy &dsi_r66451_amoled_120hz_cmd_cphy
 			&dsi_r66451_amoled_90hz_cmd_cphy &dsi_r66451_amoled_60hz_cmd_cphy>;
 	};

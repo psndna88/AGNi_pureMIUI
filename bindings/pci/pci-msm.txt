@@ -399,6 +399,14 @@ interconnects:
 	Value type: <prop-encoded array>
 	Definition: PCIe PHY initialization sequence
 
+- qcom,msi_mask_disable:
+	Usage: optional
+	Definition: Disable masking MSI interrupts at EP side
+
+- qcom,filtered-bdfs:
+	Usage: optional
+	Value type: <u32 array of bdfs>
+	Definition: Skip enumeration for the list of 32-bit BDFs.
 
 ==============
 Root port node
@@ -557,6 +565,7 @@ Example
 		qcom,ep-latency = <20>;
 		qcom,num-parf-testbus-sel = <0xb9>;
 		qcom,switch-latency = <25>;
+		qcom,filtered-bdfs = <0x02080000>;
 
 		qcom,eq-pset-req-vec = <0>;
 		qcom,core-preset = <0x55555555> /* short channel */
@@ -579,3 +588,53 @@ Example
 			qcom,iommu-cfg = <0x3> /* SMMU PRESENT. SET S1 BYPASS */
 			qcom,iommu-range = <0x0 0x10000000 0x0 0x40000000>;
 		};
+
+==============
+i2c child node
+==============
+
+- compatible:
+	Usage: required
+	Value type: <stringlist>
+	Definition: Compatible list, contains
+		- "qcom,pcie0-i2c-ntn3" for NTN3 switch attached to Root port 0
+
+- reg:
+	Usage: required
+	Value type: <u16>
+	Definition: i2c slave id
+
+- gpio-config-reg:
+	Usage: optional
+	Value type: <u32>
+	Definition: Slave GPIO configuration register address
+
+- ep-reset-reg:
+	Usage: optional
+	Value type: <u32>
+	Definition: Slave endpoint reset register address
+
+- ep-reset-gpio-mask:
+	Usage: optional
+	Value type: <u32>
+	Definition: Slave GPIO number as 32-bit mask
+
+- dump-regs:
+	Usage: optional
+	Value Type: Array of <u32>
+	Definition: List of slave registers to dump by i2c read
+
+=======
+Example
+=======
+
+&i2c_3 {
+	pcie_i2c_ctrl: pcie_i2c_ctrl {
+		compatible = "qcom,pcie0-i2c-ntn3";
+		reg = <0x77>;
+		gpio-config-reg = <0x801208>;
+		ep-reset-reg = <0x801210>;
+		ep-reset-gpio-mask = <0xf>;
+		dump-regs = <0x801330 0x801350 0x801370>;
+	};
+};

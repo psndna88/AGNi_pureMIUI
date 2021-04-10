@@ -5,6 +5,7 @@
 #include <dt-bindings/clock/qcom,gpucc-monaco.h>
 #include <dt-bindings/interconnect/qcom,monaco.h>
 #include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
 
 
 / {
@@ -22,6 +23,8 @@
 		hsuart0 = &qupv3_se5_4uart;
 	};
 
+	firmware: firmware {};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -34,6 +37,7 @@
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -56,6 +60,7 @@
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
 
 			L1_I_1: l1-icache {
@@ -74,6 +79,7 @@
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
 
 			L1_I_2: l1-icache {
@@ -92,6 +98,7 @@
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
+			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
 
 			L1_I_3: l1-icache {
@@ -127,27 +134,8 @@
 
 	soc: soc { };
 
-	firmware: firmware {
-		android {
-			compatible = "android,firmware";
-			vbmeta {
-				compatible="android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
-			};
-
-			fstab {
-				compatible = "android,fstab";
-				vendor {
-					compatible = "android,vendor";
-					dev =
-			"/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
-					status = "ok";
-				};
-			};
-		};
+	chosen {
+		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
 	};
 
 	reserved-memory {
@@ -260,9 +248,33 @@
 			linux,cma-default;
 		};
 	};
+};
 
-	chosen {
-		bootargs = "rcupdate.rcu_expedited=1 rcu_nocbs=0-7";
+&firmware {
+	scm {
+		compatible = "qcom,scm";
+		qcom,dload-mode = <&tcsr 0x13000>;
+	};
+
+	android {
+		compatible = "android,firmware";
+		vbmeta {
+			compatible="android,vbmeta";
+			parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+		};
+
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				compatible = "android,vendor";
+				dev =
+		"/dev/block/platform/soc/4744000.sdhci/by-name/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,slotselect,avb";
+				status = "ok";
+			};
+		};
 	};
 };
 
@@ -406,10 +418,8 @@
 		};
 	};
 
-	restart@440b000 {
-		compatible = "qcom,pshold";
-		reg = <0x440b000 0x4>, <0x03d3000 0x4>;
-		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+	dload_mode {
+		compatible = "qcom,dload-mode";
 	};
 
 	qcom,mpm2-slepp-counter@4403000 {
@@ -442,6 +452,23 @@
 		qcom,pet-time = <9360>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
+	};
+
+	eud: qcom,msm-eud@1610000 {
+		compatible = "qcom,msm-eud";
+		interrupt-names = "eud_irq";
+		interrupts = <GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0x1610000 0x2000>,
+		      <0x1612000 0x1000>,
+		      <0x3E5018 0x4>;
+		reg-names = "eud_base", "eud_mode_mgr2",
+				"eud_tcsr_check_reg";
+		qcom,secure-eud-en;
+		qcom,eud-tcsr-check-enable;
+		qcom,eud-clock-vote-req;
+		clocks = <&gcc GCC_AHB2PHY_USB_CLK>;
+		clock-names = "eud_ahb2phy_clk";
+		status = "ok";
 	};
 
 	qcom,sps {
@@ -542,6 +569,98 @@
 		};
 	};
 
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+		interconnects = <&clk_virt MASTER_CRYPTO_CORE0 &bimc SLAVE_EBI_CH0>;
+	};
+
+	qcom,lpass@ab00000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0xab00000 0x00100>;
+
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		vdd_lpi_cx-supply = <&VDD_LPI_CX_LEVEL>;
+		qcom,vdd_lpi_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
+		vdd_lpi_mx-supply = <&VDD_LPI_MX_LEVEL>;
+		qcom,vdd_lpi_mx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
+		qcom,proxy-reg-names = "vdd_lpi_cx", "vdd_lpi_mx";
+
+		qcom,firmware-name = "adsp";
+		memory-region = <&pil_adsp_mem>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,sysmon-id = <1>;
+		qcom,minidump-id = <5>;
+		qcom,ssctl-instance-id = <0x14>;
+		qcom,pas-id = <1>;
+		qcom,smem-id = <423>;
+		qcom,complete-ramdump;
+		qcom,minidump-as-elf32;
+
+		/* Inputs from lpass */
+		interrupts-extended = <&intc 0 282 IRQ_TYPE_LEVEL_HIGH>,
+				<&adsp_smp2p_in 0 0>,
+				<&adsp_smp2p_in 2 0>,
+				<&adsp_smp2p_in 1 0>,
+				<&adsp_smp2p_in 3 0>;
+
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
+				"qcom,proxy-unvote",
+				"qcom,err-ready",
+				"qcom,stop-ack";
+
+		/* Outputs to lpass */
+		qcom,smem-states = <&adsp_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+	};
+
+	pil_modem: qcom,mss@6080000 {
+		compatible = "qcom,pil-tz-generic";
+		reg = <0x6080000 0x100>;
+
+		clocks =  <&rpmcc RPM_SMD_XO_CLK_SRC>;
+		clock-names = "xo";
+		qcom,proxy-clock-names = "xo";
+
+		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,proxy-reg-names = "vdd_cx";
+
+		qcom,firmware-name = "modem";
+		memory-region = <&pil_modem_mem>;
+		qcom,proxy-timeout-ms = <10000>;
+		qcom,sysmon-id = <0>;
+		qcom,ssctl-instance-id = <0x12>;
+		qcom,pas-id = <4>;
+		qcom,smem-id = <421>;
+		qcom,minidump-id = <3>;
+		qcom,aux-minidump-ids = <4>;
+		qcom,complete-ramdump;
+		qcom,sequential-fw-load;
+
+		/* Inputs from mss */
+		interrupts-extended = <&intc 0 307 1>,
+			<&modem_smp2p_in 0 0>,
+			<&modem_smp2p_in 2 0>,
+			<&modem_smp2p_in 1 0>,
+			<&modem_smp2p_in 3 0>,
+			<&modem_smp2p_in 7 0>;
+
+		interrupt-names = "qcom,wdog",
+			"qcom,err-fatal",
+			"qcom,proxy-unvote",
+			"qcom,err-ready",
+			"qcom,stop-ack",
+			"qcom,shutdown-ack";
+
+		/* Outputs to mss */
+		qcom,smem-states = <&modem_smp2p_out 0>;
+		qcom,smem-state-names = "qcom,force-stop";
+	};
+
 	clocks {
 		xo_board: xo-board {
 			compatible = "fixed-clock";
@@ -609,6 +728,24 @@
 		#reset-cells = <1>;
 	};
 
+	cpufreq_hw: qcom,cpufreq-hw {
+		compatible = "qcom,cpufreq-hw";
+		reg = <0xf521000 0x1400>;
+		reg-names = "freq-domain0";
+		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>, <&gcc GPLL0>;
+		clock-names = "xo", "alternate";
+		qcom,no-accumulative-counter;
+		qcom,max-lut-entries = <12>;
+		#freq-domain-cells = <2>;
+	};
+
+	qcom,cpufreq-hw-debug@f521000 {
+		compatible = "qcom,cpufreq-hw-debug";
+		reg = <0xf521000 0x1400>;
+		reg-names = "domain-top";
+		qcom,freq-hw-domain = <&cpufreq_hw 0>;
+	};
+
 	spmi_bus: qcom,spmi@1c40000 {
 		compatible = "qcom,spmi-pmic-arb";
 		reg = <0x1c40000 0x1100>,
@@ -652,6 +789,11 @@
 		compatible = "qcom,tcsr-mutex";
 		syscon = <&tcsr_mutex_block 0 0x1000>;
 		#hwlock-cells = <1>;
+	};
+
+	tcsr: syscon@03c0000 {
+		compatible = "syscon";
+		reg = <0x03c0000 0x30000>;
 	};
 
 	smem: qcom,smem {

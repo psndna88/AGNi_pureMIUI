@@ -84,6 +84,11 @@
 			alignment = <0x400000>;
 			size = <0x1400000>;
 		};
+
+		llcc_tcm_mem: llcc_tcm_region {
+			no-map;
+			reg = <0x15800000 0x800000>;
+		};
 	};
 
 	cpus {
@@ -244,6 +249,17 @@
 	pil_scm_pas {
 		compatible = "qcom,pil-tz-scm-pas";
 		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
+	};
+
+	qcom,msm-cpufreq {
+		compatible = "qcom,msm-cpufreq";
+		clocks = <&apsscc APCS_MUX_CLK>;
+		clock-names = "cpu0_clk";
+		qcom,cpufreq-table =
+			<  345600 >,
+			<  576000 >,
+			<  1094400 >,
+			<  1497600 >;
 	};
 
 	qcom,msm-rtb {
@@ -601,7 +617,7 @@
 			<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
 			<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
 			<  1497600000 RPMH_REGULATOR_LEVEL_TURBO>;
-		#reset-cells = <1>;
+		#clock-cells = <1>;
 	};
 
 	apps_rsc: rsc@17830000 {
@@ -701,6 +717,7 @@
 		cap-based-alloc-and-pwr-collapse;
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "aopcc_closks";
+		memory-region = <&llcc_tcm_mem>;
 	};
 
 	smem: qcom,smem {
@@ -1114,7 +1131,7 @@
 		compatible = "qcom,msm-mhi-dev";
 		reg = <0x1c03000 0x1000>,
 			<0x3E28000 0x4>,
-			<0x3E28800 0x4>;
+			<0x3E28848 0x4>;
 			reg-names = "mhi_mmio_base", "ipa_uc_mbox_crdb",
 				"ipa_uc_mbox_erdb";
 			qcom,mhi-ep-msi = <0>;
@@ -1224,6 +1241,7 @@
 			qcom,additional-mapping =
 				/* modem tables in IMEM */
 				<0x14688000 0x14688000 0x3000>;
+			qcom,iommu-geometry = <0x0 0xA0000000>;
 			qcom,iommu-dma = "fastmap";
 			qcom,ipa-q6-smem-size = <36864>;
 		};

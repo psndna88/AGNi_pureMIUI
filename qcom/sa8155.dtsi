@@ -62,6 +62,64 @@
 		read-only;
 		ranges;
 	};
+	mtl_rx_setup: rx-queues-config {
+		snps,rx-queues-to-use = <4>;
+		snps,rx-sched-sp;
+
+		queue0 {
+			snps,dcb-algorithm;
+			snps,map-to-dma-channel = <0x0>;
+			snps,route-up;
+			snps,priority = <0x1>;
+		};
+
+		queue1 {
+			snps,dcb-algorithm;
+			snps,map-to-dma-channel = <0x1>;
+			snps,route-ptp;
+		};
+
+		queue2 {
+			snps,avb-algorithm;
+			snps,map-to-dma-channel = <0x2>;
+			snps,route-avcp;
+		};
+
+		queue3 {
+			snps,avb-algorithm;
+			snps,map-to-dma-channel = <0x3>;
+			snps,priority = <0xC>;
+		};
+	};
+
+	mtl_tx_setup: tx-queues-config {
+		snps,tx-queues-to-use = <4>;
+		snps,tx-sched-sp;
+		queue0 {
+			snps,dcb-algorithm;
+		};
+
+		queue1 {
+			snps,dcb-algorithm;
+		};
+
+		queue2 {
+			snps,avb-algorithm;
+			snps,send_slope = <0x1000>;
+			snps,idle_slope = <0x1000>;
+			snps,high_credit = <0x3E800>;
+			snps,low_credit = <0xFFC18000>;
+		};
+
+		queue3 {
+			snps,avb-algorithm;
+			snps,send_slope = <0x1000>;
+			snps,idle_slope = <0x1000>;
+			snps,high_credit = <0x3E800>;
+			snps,low_credit = <0xFFC18000>;
+		};
+	};
+
 	ethqos_hw: qcom,ethernet@00020000 {
 		compatible = "qcom,stmmac-ethqos";
 		qcom,arm-smmu;
@@ -74,13 +132,18 @@
 			<&gcc GCC_EMAC_PTP_CLK>,
 			<&gcc GCC_EMAC_RGMII_CLK>;
 		clock-names = "stmmaceth", "pclk", "ptp_ref", "rgmii";
+		snps,ptp-ref-clk-rate = <250000000>;
+		snps,ptp-req-clk-rate = <96000000>;
 		interrupts-extended = <&intc 0 689 4>, <&intc 0 699 4>,
 			<&tlmm 124 2>;
 		interrupt-names = "macirq", "eth_lpi",
 			"phy-intr";
 		snps,tso;
-		rx-fifo-depth = <4096>;
-		tx-fifo-depth = <4096>;
+		snps,pbl = <32>;
+		rx-fifo-depth = <16384>;
+		tx-fifo-depth = <20480>;
+		snps,mtl-rx-config = <&mtl_rx_setup>;
+		snps,mtl-tx-config = <&mtl_tx_setup>;
 		snps,reset-gpios = <&tlmm 79 GPIO_ACTIVE_HIGH>;
 		qcom,phy-intr-redirect = <&tlmm 124 GPIO_ACTIVE_LOW>;
 		gdsc_emac-supply = <&emac_gdsc>;
@@ -130,6 +193,7 @@
 		ethqos_emb_smmu: ethqos_emb_smmu {
 			compatible = "qcom,emac-smmu-embedded";
 			iommus = <&apps_smmu 0x3C0 0x0>;
+			qcom,iommu-dma = "fastmap";
 			qcom,iommu-dma-addr-pool = <0x80000000 0x40000000>;
 		};
 	};
@@ -206,6 +270,148 @@
 	qcom,adsp-remoteheap-vmid = <3 5 6>;
 };
 
+&reserved_memory {
+	uefi_log: uefi_log@0x9241C000 {
+		reg = <0x0 0x9241C000 0x0 0x10000>;
+		label = "uefi_log";
+	};
+};
+
 #include "camera/sa8155-camera.dtsi"
 #include "camera/sa8155-camera-sensor.dtsi"
 #include "sa8155-audio.dtsi"
+
+&lmh_dcvs1 {
+	isens_vref_0p8-supply = <&pm8150_1_l5_ao>;
+	isens_vref_1p8-supply = <&pm8150_1_l12_ao>;
+};
+
+&thermal_zones {
+	gpuss-max-step {
+		trips {
+			gpu-trip0 {
+				temperature = <105000>;
+			};
+		};
+	};
+
+	pop-mem-step {
+		status = "disabled";
+	};
+
+	npu-step {
+		trips {
+			npu-trip0 {
+				temperature = <105000>;
+			};
+		};
+	};
+
+	cpu-0-0-step {
+		trips {
+			cpu00-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-1-step {
+		trips {
+			cpu01-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-2-step {
+		trips {
+			cpu02-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-0-3-step {
+		trips {
+			cpu03-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-0-step {
+		trips {
+			cpu10-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-1-step {
+		trips {
+			cpu11-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-2-step {
+		trips {
+			cpu12-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-3-step {
+		trips {
+			cpu13-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-4-step {
+		trips {
+			cpu14-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-5-step {
+		trips {
+			cpu15-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-6-step {
+		trips {
+			cpu16-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	cpu-1-7-step {
+		trips {
+			cpu17-config {
+				temperature = <115000>;
+			};
+		};
+	};
+
+	q6-hvx-step {
+		trips {
+			q6-hvx-step0 {
+				temperature = <105000>;
+			};
+
+			q6-hvx-step1 {
+				temperature = <115000>;
+			};
+		};
+	};
+};

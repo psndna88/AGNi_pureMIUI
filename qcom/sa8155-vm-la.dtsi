@@ -51,6 +51,10 @@
 };
 
 &soc {
+	pil_scm_pas {
+		compatible = "qcom,pil-tz-scm-pas";
+	};
+
 	qcom,msm_gsi {
 		compatible = "qcom,msm_gsi";
 	};

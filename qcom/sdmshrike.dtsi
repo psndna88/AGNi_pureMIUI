@@ -54,6 +54,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -79,7 +80,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_1>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -98,7 +99,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_2>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -117,7 +118,7 @@
 			cache-size = <0x8000>;
 			next-level-cache = <&L2_3>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x20000>;
@@ -136,6 +137,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_4>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -155,7 +157,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_5>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -174,7 +176,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -193,7 +195,7 @@
 			cache-size = <0x20000>;
 			next-level-cache = <&L2_7>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			#cooling-cells = <2>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -285,7 +287,7 @@
 
 		xbl_aop_mem: xbl_aop_mem@85e00000 {
 			no-map;
-			reg = <0x0 0x85e00000 0x0 0x140000>;
+			reg = <0x0 0x85e00000 0x0 0x120000>;
 		};
 
 		flex_sec_apps_mem: flex_sec_apps_regions@85ffd000 {
@@ -441,6 +443,11 @@
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
 			size = <0 0x2400000>;
+		};
+
+		uefi_log: uefi_log@0x8bc00000 {
+			reg = <0x0 0x8bc00000 0x0 0x10000>;
+			label = "uefi_log";
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -842,6 +849,7 @@
 		interconnects = <&compute_noc MASTER_NPU &mc_virt SLAVE_EBI1>;
 		operating-points-v2 = <&ddr_bw_opp_table>;
 		qcom,active-only;
+		status = "disabled";
 	};
 
 	npu_npu_ddr_bwmon: qcom,npu-npu-ddr-bwmon@9960300 {
@@ -853,12 +861,18 @@
 		qcom,hw-timer-hz = <19200000>;
 		qcom,target-dev = <&npu_npu_ddr_bw>;
 		qcom,count-unit = <0x10000>;
+		status = "disabled";
 	};
 
 	cpu_pmu: cpu-pmu {
 		compatible = "arm,armv8-pmuv3";
 		qcom,irq-is-percpu;
 		interrupts = <GIC_PPI 5 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	qcom,sps {
+		compatible = "qcom,msm-sps-4k";
+		qcom,pipe-attr-ee;
 	};
 
 	mem_dump {
@@ -993,6 +1007,106 @@
 		l1_dcache700 {
 			qcom,dump-size = <0x14000>;
 			qcom,dump-id = <0x87>;
+		};
+
+		l1_itlb400 {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x24>;
+		};
+
+		l1_itlb500 {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x25>;
+		};
+
+		l1_itlb600 {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x26>;
+		};
+
+		l1_itlb700 {
+			qcom,dump-size = <0x400>;
+			qcom,dump-id = <0x27>;
+		};
+
+		l1_dtlb400 {
+			qcom,dump-size = <0x580>;
+			qcom,dump-id = <0x44>;
+		};
+
+		l1_dtlb500 {
+			qcom,dump-size = <0x580>;
+			qcom,dump-id = <0x45>;
+		};
+
+		l1_dtlb600 {
+			qcom,dump-size = <0x580>;
+			qcom,dump-id = <0x46>;
+		};
+
+		l1_dtlb700 {
+			qcom,dump-size = <0x580>;
+			qcom,dump-id = <0x47>;
+		};
+
+		l2_cache400 {
+			qcom,dump-size = <0x48100>;
+			qcom,dump-id = <0xc4>;
+		};
+
+		l2_cache500 {
+			qcom,dump-size = <0x48100>;
+			qcom,dump-id = <0xc5>;
+		};
+
+		l2_cache600 {
+			qcom,dump-size = <0x48100>;
+			qcom,dump-id = <0xc6>;
+		};
+
+		l2_cache700 {
+			qcom,dump-size = <0x90100>;
+			qcom,dump-id = <0xc7>;
+		};
+
+		l2_tlb0 {
+			qcom,dump-size = <0x5B00>;
+			qcom,dump-id = <0x120>;
+		};
+
+		l2_tlb100 {
+			qcom,dump-size = <0x5B00>;
+			qcom,dump-id = <0x121>;
+		};
+
+		l2_tlb200 {
+			qcom,dump-size = <0x5B00>;
+			qcom,dump-id = <0x122>;
+		};
+
+		l2_tlb300 {
+			qcom,dump-size = <0x5B00>;
+			qcom,dump-id = <0x123>;
+		};
+
+		l2_tlb400 {
+			qcom,dump-size = <0x7900>;
+			qcom,dump-id = <0x124>;
+		};
+
+		l2_tlb500 {
+			qcom,dump-size = <0x7900>;
+			qcom,dump-id = <0x125>;
+		};
+
+		l2_tlb600 {
+			qcom,dump-size = <0x7900>;
+			qcom,dump-id = <0x126>;
+		};
+
+		l2_tlb700 {
+			qcom,dump-size = <0x7900>;
+			qcom,dump-id = <0x127>;
 		};
 	};
 
@@ -2300,6 +2414,12 @@
 		qcom,config-arr = <0x18040060 0x18050060
 					0x18060060 0x18070060>;
 	};
+
+	aop-set-ddr-freq {
+		compatible = "qcom,aop-set-ddr-freq";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 #include "sdmshrike-pinctrl.dtsi"
@@ -2317,6 +2437,7 @@
 #include "sa8195-vidc.dtsi"
 #include "sa8155-audio.dtsi"
 #include "sm8150-npu.dtsi"
+#include "sa8195-thermal.dtsi"
 
 #include "display/sdmshrike-sde-pll.dtsi"
 #include "display/sdmshrike-sde.dtsi"
