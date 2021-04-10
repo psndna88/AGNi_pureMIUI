@@ -916,8 +916,10 @@ int miracast_mdns_start_wfd_connection(struct sigma_dut *dut,
 			 rtsp_session_id);
 		sig_resp = cmd_response;
 	} else {
+		rtsp_session_id = 0;
 		extn_start_wfd_connection(NULL, NULL, -100,
-					  1 - dut->wfd_device_type, 0);
+					  1 - dut->wfd_device_type,
+					  &rtsp_session_id);
 		sig_resp = "result,NULL,GroupID,NULL,WFDSessionID,NULL";
 	}
 
