@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_INTERFACE_H
@@ -22,8 +22,7 @@ struct cam_req_mgr_apply_request;
 struct cam_req_mgr_flush_request;
 struct cam_req_mgr_link_evt_data;
 struct cam_req_mgr_dump_info;
-
-#define SKIP_NEXT_FRAME 0x100
+struct cam_req_mgr_request_change_state;
 
 /* Request Manager -- camera device driver interface */
 /**
@@ -35,8 +34,9 @@ struct cam_req_mgr_dump_info;
  *                              userspace
  * @cam_req_mgr_notify_timer  : start the timer
  */
-typedef int (*cam_req_mgr_notify_trigger)(struct cam_req_mgr_trigger_notify *);
-typedef int (*cam_req_mgr_notify_err)(struct cam_req_mgr_error_notify *);
+typedef int (*cam_req_mgr_notify_trigger)(
+	struct cam_req_mgr_trigger_notify *);
+typedef bool (*cam_req_mgr_notify_err)(struct cam_req_mgr_error_notify *);
 typedef int (*cam_req_mgr_add_req)(struct cam_req_mgr_add_request *);
 typedef int (*cam_req_mgr_notify_timer)(struct cam_req_mgr_timer_notify *);
 typedef int (*cam_req_mgr_notify_stop)(struct cam_req_mgr_notify_stop *);
@@ -50,8 +50,9 @@ typedef int (*cam_req_mgr_notify_stop)(struct cam_req_mgr_notify_stop *);
  * @cam_req_mgr_notify_frame_skip: CRM asks device to apply setting for
  *                                 frame skip
  * @cam_req_mgr_flush_req        : Flush or cancel request
- * cam_req_mgr_process_evt       : generic events
+ * @cam_req_mgr_process_evt      : generic events
  * @cam_req_mgr_dump_req         : dump request
+ * @cam_req_mgr_change_state     : CRM asks device to change its state
  */
 typedef int (*cam_req_mgr_get_dev_info) (struct cam_req_mgr_device_info *);
 typedef int (*cam_req_mgr_link_setup)(struct cam_req_mgr_core_dev_link_setup *);
@@ -61,6 +62,8 @@ typedef int (*cam_req_mgr_notify_frame_skip)(
 typedef int (*cam_req_mgr_flush_req)(struct cam_req_mgr_flush_request *);
 typedef int (*cam_req_mgr_process_evt)(struct cam_req_mgr_link_evt_data *);
 typedef int (*cam_req_mgr_dump_req)(struct cam_req_mgr_dump_info *);
+typedef int (*cam_req_mgr_change_state)(
+	struct cam_req_mgr_request_change_state *);
 
 /**
  * @brief          : cam_req_mgr_crm_cb - func table
@@ -89,15 +92,17 @@ struct cam_req_mgr_crm_cb {
  * @flush_req        : payload to flush request
  * @process_evt      : payload to generic event
  * @dump_req         : payload to dump request
+ * @change_state     : payload to change state
  */
 struct cam_req_mgr_kmd_ops {
-	cam_req_mgr_get_dev_info      get_dev_info;
-	cam_req_mgr_link_setup        link_setup;
-	cam_req_mgr_apply_req         apply_req;
+	cam_req_mgr_get_dev_info     get_dev_info;
+	cam_req_mgr_link_setup       link_setup;
+	cam_req_mgr_apply_req        apply_req;
 	cam_req_mgr_notify_frame_skip notify_frame_skip;
-	cam_req_mgr_flush_req         flush_req;
-	cam_req_mgr_process_evt       process_evt;
-	cam_req_mgr_dump_req          dump_req;
+	cam_req_mgr_flush_req        flush_req;
+	cam_req_mgr_process_evt      process_evt;
+	cam_req_mgr_dump_req         dump_req;
+	cam_req_mgr_change_state     change_state;
 };
 
 /**
@@ -119,9 +124,11 @@ enum cam_pipeline_delay {
 /**
  * @CAM_TRIGGER_POINT_SOF   : Trigger point for Start Of Frame
  * @CAM_TRIGGER_POINT_EOF   : Trigger point for End Of Frame
+ * @CAM_TRIGGER_MAX_POINTS  : Maximum number of trigger point
  */
 #define CAM_TRIGGER_POINT_SOF     (1 << 0)
 #define CAM_TRIGGER_POINT_EOF     (1 << 1)
+#define CAM_TRIGGER_MAX_POINTS    2
 
 /**
  * enum cam_req_status
@@ -216,6 +223,7 @@ enum cam_req_mgr_link_evt_type {
  * @trigger  : trigger point of this notification, CRM will send apply
  *             only to the devices which subscribe to this point.
  * @sof_timestamp_val: Captured time stamp value at sof hw event
+ * @sof_boottime : Captured boot time stamp value at sof hw event
  * @req_id   : req id which returned buf_done
  * @trigger_id: ID to differentiate between the trigger devices
  */
@@ -225,6 +233,7 @@ struct cam_req_mgr_trigger_notify {
 	int64_t  frame_id;
 	uint32_t trigger;
 	uint64_t sof_timestamp_val;
+	uint64_t sof_boottime;
 	uint64_t req_id;
 	int32_t  trigger_id;
 };
@@ -249,6 +258,8 @@ struct cam_req_mgr_timer_notify {
  * @frame_id : frame id for internal tracking
  * @trigger  : trigger point of this notification, CRM will send apply
  * @sof_timestamp_val : Captured time stamp value at sof hw event
+ * @sof_boottime_val  : Captured boottime stamp value at sof hw event
+ * @need_recovery     : flag to check if recovery is needed
  * @error    : what error device hit while processing this req
  */
 struct cam_req_mgr_error_notify {
@@ -258,6 +269,8 @@ struct cam_req_mgr_error_notify {
 	int64_t  frame_id;
 	uint32_t trigger;
 	uint64_t sof_timestamp_val;
+	uint64_t sof_boottime_val;
+	bool     need_recovery;
 	enum cam_req_mgr_device_error error;
 };
 
@@ -266,7 +279,9 @@ struct cam_req_mgr_error_notify {
  * @link_hdl             : link identifier
  * @dev_hdl              : device handle which has sent this req id
  * @req_id               : req id which device is ready to process
- * @skip_before_applying : before applying req mgr introduce bubble
+ * @skip_at_sof          : before applying req mgr introduce bubble
+ *                         by not sending request to devices. ex: IFE and Flash
+ * @skip_at_eof          : before applying req mgr introduce bubble
  *                         by not sending request to devices. ex: IFE and Flash
  * @trigger_eof          : to identify that one of the device at this slot needs
  *                         to be apply at EOF
@@ -275,7 +290,8 @@ struct cam_req_mgr_add_request {
 	int32_t  link_hdl;
 	int32_t  dev_hdl;
 	uint64_t req_id;
-	uint32_t skip_before_applying;
+	uint32_t skip_at_sof;
+	uint32_t skip_at_eof;
 	bool     trigger_eof;
 };
 
@@ -299,6 +315,7 @@ struct cam_req_mgr_notify_stop {
  * @p_delay : delay between time settings applied and take effect
  * @trigger : Trigger point for the client
  * @trigger_on : This device provides trigger
+ * @sof_ts_cb  : callback to real time drivers
  */
 struct cam_req_mgr_device_info {
 	int32_t                     dev_hdl;
@@ -307,6 +324,7 @@ struct cam_req_mgr_device_info {
 	enum cam_pipeline_delay     p_delay;
 	uint32_t                    trigger;
 	bool                        trigger_on;
+	int32_t                     (*sof_ts_cb)(int32_t dev_hdl, void *data);
 };
 
 /**
@@ -316,7 +334,6 @@ struct cam_req_mgr_device_info {
  * @dev_hdl         : device handle for reference
  * @max_delay       : max pipeline delay on this link
  * @crm_cb          : callback funcs to communicate with req mgr
- * @subscribe_event : the mask of trigger points this link subscribes
  * @trigger_id      : Unique ID provided to the triggering device
  */
 struct cam_req_mgr_core_dev_link_setup {
@@ -325,7 +342,6 @@ struct cam_req_mgr_core_dev_link_setup {
 	int32_t                    dev_hdl;
 	enum cam_pipeline_delay    max_delay;
 	struct cam_req_mgr_crm_cb *crm_cb;
-	uint32_t                   subscribe_event;
 	int32_t                    trigger_id;
 };
 
@@ -407,4 +423,37 @@ struct cam_req_mgr_dump_info {
 	int32_t     link_hdl;
 	int32_t     dev_hdl;
 };
+
+/**
+ * struct cam_req_mgr_dev_info
+ * @link_hdl    : link identifier
+ * @state       : Current substate for the activated state.
+ * @timestamp   : time stamp for the sof event
+ * @boot_time   : boot time stamp for the sof event
+ * @frame_id    : frame id
+ * @is_applied  : if ISP is in applied state
+ *
+ */
+struct cam_req_mgr_dev_info {
+	int32_t     link_hdl;
+	uint32_t    state;
+	uint64_t    timestamp;
+	uint64_t    boot_time;
+	uint64_t    frame_id;
+	bool        is_applied;
+};
+
+/**
+ * struct cam_req_mgr_request_change_state
+ * @link_hdl    : link identifier
+ * @dev_hdl     : device handle or identifier
+ * @req_id      : request id
+ *
+ */
+struct cam_req_mgr_request_change_state {
+	int32_t    link_hdl;
+	int32_t    dev_hdl;
+	uint64_t   req_id;
+};
+
 #endif

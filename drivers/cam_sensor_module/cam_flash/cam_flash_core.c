@@ -1263,18 +1263,19 @@ update_req_mgr:
 		CAM_PKT_NOP_OPCODE) ||
 		((csl_packet->header.op_code & 0xFFFFF) ==
 		CAM_FLASH_PACKET_OPCODE_SET_OPS)) {
+		memset(&add_req, 0, sizeof(add_req));
 		add_req.link_hdl = fctrl->bridge_intf.link_hdl;
 		add_req.req_id = csl_packet->header.request_id;
 		add_req.dev_hdl = fctrl->bridge_intf.device_hdl;
 
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
-			CAM_FLASH_PACKET_OPCODE_SET_OPS)
-			add_req.skip_before_applying = 1;
-		else
-			add_req.skip_before_applying = 0;
+			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
+			add_req.trigger_eof = true;
+			add_req.skip_at_sof = 1;
+		}
 
 		if (fctrl->bridge_intf.crm_cb &&
-			fctrl->bridge_intf.crm_cb->add_req)
+			fctrl->bridge_intf.crm_cb->add_req) {
 			rc = fctrl->bridge_intf.crm_cb->add_req(&add_req);
 			if  (rc) {
 				CAM_ERR(CAM_FLASH,
@@ -1282,7 +1283,10 @@ update_req_mgr:
 					csl_packet->header.request_id);
 				return rc;
 			}
-		CAM_DBG(CAM_FLASH, "add req to req_mgr= %lld", add_req.req_id);
+			CAM_DBG(CAM_FLASH,
+				"add req %lld to req_mgr, trigger_eof %d",
+				add_req.req_id, add_req.trigger_eof);
+		}
 	}
 	return rc;
 }
@@ -1507,7 +1511,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		switch (cmn_hdr->cmd_type) {
 		case CAMERA_SENSOR_FLASH_CMD_TYPE_FIRE: {
 			CAM_DBG(CAM_FLASH,
-				"CAMERA_SENSOR_FLASH_CMD_TYPE_FIRE cmd called");
+				"CAMERA_SENSOR_FLASH_CMD_TYPE_FIRE cmd called, req:%lld",
+				csl_packet->header.request_id);
 			if ((fctrl->flash_state == CAM_FLASH_STATE_INIT) ||
 				(fctrl->flash_state ==
 					CAM_FLASH_STATE_ACQUIRE)) {
@@ -1545,9 +1550,8 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				= flash_operation_info->led_current_ma[i];
 
 			CAM_DBG(CAM_FLASH,
-				"FLASH_CMD_TYPE op:%d", flash_data->opcode);
-			if (flash_data->opcode == CAMERA_SENSOR_FLASH_OP_OFF)
-				add_req.skip_before_applying |= SKIP_NEXT_FRAME;
+				"FLASH_CMD_TYPE op:%d, req:%lld",
+				flash_data->opcode, csl_packet->header.request_id);
 
 			if (flash_data->opcode ==
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION) {
@@ -1742,30 +1746,34 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		CAM_PKT_NOP_OPCODE) ||
 		((csl_packet->header.op_code & 0xFFFFF) ==
 		CAM_FLASH_PACKET_OPCODE_SET_OPS)) {
+		memset(&add_req, 0, sizeof(add_req));
 		add_req.link_hdl = fctrl->bridge_intf.link_hdl;
 		add_req.req_id = csl_packet->header.request_id;
 		add_req.dev_hdl = fctrl->bridge_intf.device_hdl;
 
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
 			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
-			if ((flash_data->opcode !=
-				CAMERA_SENSOR_FLASH_OP_FIREDURATION))
-				add_req.skip_before_applying |= 1;
-			else if (flash_data->opcode ==
-				CAMERA_SENSOR_FLASH_OP_FIREDURATION) {
-				CAM_DBG(CAM_FLASH, "Trigger eof is set for request ");
-				add_req.trigger_eof = true;
+			add_req.trigger_eof = true;
+			if (flash_data->opcode == CAMERA_SENSOR_FLASH_OP_OFF) {
+				add_req.skip_at_sof = 1;
+				add_req.skip_at_eof = 1;
 			} else
-				add_req.skip_before_applying = 0;
-		} else {
-			add_req.skip_before_applying = 0;
+				add_req.skip_at_sof = 1;
 		}
-		CAM_DBG(CAM_FLASH,
-			"add req to req_mgr= %lld:: trigger_eof: %d",
-			add_req.req_id, add_req.trigger_eof);
+
 		if (fctrl->bridge_intf.crm_cb &&
-			fctrl->bridge_intf.crm_cb->add_req)
-			fctrl->bridge_intf.crm_cb->add_req(&add_req);
+			fctrl->bridge_intf.crm_cb->add_req) {
+			rc = fctrl->bridge_intf.crm_cb->add_req(&add_req);
+			if  (rc) {
+				CAM_ERR(CAM_FLASH,
+					"Failed in adding request: %llu to request manager",
+					csl_packet->header.request_id);
+				return rc;
+			}
+			CAM_DBG(CAM_FLASH,
+				"add req %lld to req_mgr, trigger_eof %d",
+				add_req.req_id, add_req.trigger_eof);
+		}
 	}
 
 	return rc;
@@ -1777,6 +1785,8 @@ int cam_flash_publish_dev_info(struct cam_req_mgr_device_info *info)
 	strlcpy(info->name, CAM_FLASH_NAME, sizeof(info->name));
 	info->p_delay = CAM_FLASH_PIPELINE_DELAY;
 	info->trigger = CAM_TRIGGER_POINT_SOF;
+	info->sof_ts_cb = NULL;
+
 	return 0;
 }
 

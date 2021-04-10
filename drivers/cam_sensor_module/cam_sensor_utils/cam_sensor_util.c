@@ -64,6 +64,27 @@ int32_t cam_sensor_util_get_current_qtimer_ns(uint64_t *qtime_ns)
 	return rc;
 }
 
+int32_t cam_sensor_util_regulator_powerup(struct cam_hw_soc_info *soc_info)
+{
+	int32_t i, rc = 0;
+	/* Initialize regulators to default parameters */
+	for (i = 0; i < soc_info->num_rgltr; i++) {
+		soc_info->rgltr[i] = devm_regulator_get(soc_info->dev,
+					soc_info->rgltr_name[i]);
+		if (IS_ERR_OR_NULL(soc_info->rgltr[i])) {
+			rc = PTR_ERR(soc_info->rgltr[i]);
+			rc = rc ? rc : -EINVAL;
+			CAM_ERR(CAM_ACTUATOR, "get failed for regulator %s %d",
+				 soc_info->rgltr_name[i], rc);
+			return rc;
+		}
+		CAM_DBG(CAM_ACTUATOR, "get for regulator %s",
+			soc_info->rgltr_name[i]);
+	}
+
+	return rc;
+}
+
 int32_t delete_request(struct i2c_settings_array *i2c_array)
 {
 	struct i2c_settings_list *i2c_list = NULL, *i2c_next = NULL;
@@ -1974,10 +1995,6 @@ static int cam_config_mclk_reg(struct cam_sensor_power_ctrl_t *ctrl,
 
 				ps->data[0] =
 					soc_info->rgltr[j];
-
-				regulator_put(
-					soc_info->rgltr[j]);
-				soc_info->rgltr[j] = NULL;
 			}
 		}
 	}
@@ -2056,11 +2073,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 					"cam_clk")) {
 					CAM_DBG(CAM_SENSOR,
 						"Enable cam_clk: %d", j);
-
-					soc_info->rgltr[j] =
-					regulator_get(
-						soc_info->dev,
-						soc_info->rgltr_name[j]);
 
 					if (IS_ERR_OR_NULL(
 						soc_info->rgltr[j])) {
@@ -2156,9 +2168,6 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 				CAM_DBG(CAM_SENSOR, "Enable Regulator");
 				vreg_idx = power_setting->seq_val;
 
-				soc_info->rgltr[vreg_idx] =
-					regulator_get(soc_info->dev,
-						soc_info->rgltr_name[vreg_idx]);
 				if (IS_ERR_OR_NULL(
 					soc_info->rgltr[vreg_idx])) {
 					rc = PTR_ERR(soc_info->rgltr[vreg_idx]);
@@ -2281,8 +2290,6 @@ power_up_failed:
 				power_setting->data[0] =
 						soc_info->rgltr[vreg_idx];
 
-				regulator_put(soc_info->rgltr[vreg_idx]);
-				soc_info->rgltr[vreg_idx] = NULL;
 			} else {
 				CAM_ERR(CAM_SENSOR, "seq_val:%d > num_vreg: %d",
 					power_setting->seq_val, num_vreg);
@@ -2449,9 +2456,6 @@ int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 					}
 					ps->data[0] =
 						soc_info->rgltr[ps->seq_val];
-					regulator_put(
-						soc_info->rgltr[ps->seq_val]);
-					soc_info->rgltr[ps->seq_val] = NULL;
 				} else {
 					CAM_ERR(CAM_SENSOR,
 						"seq_val:%d > num_vreg: %d",

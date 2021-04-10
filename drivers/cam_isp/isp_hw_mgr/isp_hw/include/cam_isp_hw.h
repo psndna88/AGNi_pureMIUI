@@ -216,7 +216,7 @@ struct cam_isp_blanking_config {
  * @hw_idx:         IFE hw index
  * @err_type:       Error type if any
  * @reg_val:        Any critical register value captured during irq handling
- *
+ * @evt_param       Specific info about frame
  */
 struct cam_isp_hw_event_info {
 	enum cam_isp_resource_type     res_type;
@@ -224,6 +224,7 @@ struct cam_isp_hw_event_info {
 	uint32_t                       hw_idx;
 	uint32_t                       err_type;
 	uint32_t                       reg_val;
+	uint32_t                       evt_param;
 };
 
 /*

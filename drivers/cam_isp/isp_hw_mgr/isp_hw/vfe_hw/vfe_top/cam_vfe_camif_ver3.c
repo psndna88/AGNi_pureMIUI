@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -1323,9 +1323,17 @@ static int cam_vfe_camif_ver3_handle_irq_top_half(uint32_t evt_id,
 	struct cam_isp_resource_node          *camif_node;
 	struct cam_vfe_mux_camif_ver3_data    *camif_priv;
 	struct cam_vfe_top_irq_evt_payload    *evt_payload;
+	struct cam_hw_soc_info                *soc_info = NULL;
+	void __iomem                          *camnoc_mem_base = NULL;
+	struct cam_vfe_soc_private            *soc_private = NULL;
 
 	camif_node = th_payload->handler_priv;
 	camif_priv = camif_node->res_priv;
+
+	soc_info = camif_priv->soc_info;
+	camnoc_mem_base = CAM_SOC_GET_REG_MAP_START(soc_info, 1);
+	soc_private =
+		(struct cam_vfe_soc_private *)soc_info->soc_private;
 
 	CAM_DBG(CAM_ISP,
 		"VFE:%d CAMIF IRQ status_0: 0x%X status_1: 0x%X status_2: 0x%X",
@@ -1364,6 +1372,17 @@ static int cam_vfe_camif_ver3_handle_irq_top_half(uint32_t evt_id,
 		trace_cam_log_event("SOF", "TOP_HALF",
 		th_payload->evt_status_arr[CAM_IFE_IRQ_CAMIF_REG_STATUS1],
 		camif_node->hw_intf->hw_idx);
+
+		switch (soc_private->cpas_version) {
+		case CAM_CPAS_TITAN_570_V200:
+			/* Reset Fill levels */
+			cam_io_w_mb(0x1, camnoc_mem_base + 0x1A28);
+			cam_io_w_mb(0x1, camnoc_mem_base + 0xA28);
+			cam_io_w_mb(0x1, camnoc_mem_base + 0x1428);
+			break;
+		default:
+			break;
+		}
 	}
 
 	if (th_payload->evt_status_arr[CAM_IFE_IRQ_CAMIF_REG_STATUS1]

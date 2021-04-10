@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CONTEXT_H_
@@ -127,6 +127,7 @@ struct cam_ctx_ioctl_ops {
  * @flush_req:             Flush request to remove request ids
  * @process_evt:           Handle event notification from CRM.(optional)
  * @dump_req:              Dump information for the issue request
+ * @change_state:          Change sub-state of hw context layer to bubble
  *
  */
 struct cam_ctx_crm_ops {
@@ -146,6 +147,8 @@ struct cam_ctx_crm_ops {
 			struct cam_req_mgr_link_evt_data *evt_data);
 	int (*dump_req)(struct cam_context *ctx,
 			struct cam_req_mgr_dump_info *dump);
+	int (*change_state)(struct cam_context *ctx,
+			struct cam_req_mgr_request_change_state *change_state);
 };
 
 
@@ -309,6 +312,18 @@ int cam_context_handle_crm_unlink(struct cam_context *ctx,
  */
 int cam_context_handle_crm_apply_req(struct cam_context *ctx,
 		struct cam_req_mgr_apply_request *apply);
+
+/**
+ * cam_context_handle_crm_state_change()
+ *
+ * @brief:        Handle state change request
+ *
+ * @ctx:          Object pointer for cam_context
+ * @state_info:   State change request command payload
+ *
+ */
+int cam_context_handle_crm_state_change(struct cam_context *ctx,
+		struct cam_req_mgr_request_change_state *state_info);
 
 /**
  * cam_context_handle_crm_notify_frame_skip()

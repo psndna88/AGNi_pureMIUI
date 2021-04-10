@@ -74,6 +74,7 @@ static const struct of_device_id msm_cam_hw_cdm_dt_match[] = {
 		.compatible = CAM_HW_CDM_OPE_NAME_2_1,
 		.data = &cam_cdm_2_1_reg_offset,
 	},
+	{},
 };
 
 static enum cam_cdm_id cam_hw_cdm_get_id_by_name(char *name)

@@ -194,7 +194,7 @@ struct cam_isp_hw_epoch_event_data {
  * @resource_handle:       Resource handle array
  * @last_consumed_addr:    Last consumed addr
  * @timestamp:             Timestamp for the buf done event
- *
+ * @evt_param:             Specific info about the frame
  */
 struct cam_isp_hw_done_event_data {
 	uint32_t             num_handles;
@@ -202,7 +202,8 @@ struct cam_isp_hw_done_event_data {
 				CAM_NUM_OUT_PER_COMP_IRQ_MAX];
 	uint32_t             last_consumed_addr[
 				CAM_NUM_OUT_PER_COMP_IRQ_MAX];
-	uint64_t       timestamp;
+	uint64_t             timestamp;
+	uint32_t             evt_param;
 };
 
 /**
@@ -260,15 +261,17 @@ enum cam_isp_ctx_type {
  * @ctx_type:              RDI_ONLY, PIX and RDI, or FS2
  * @packet_op_code:        Packet opcode
  * @last_cdm_done:         Last cdm done request
+ * @cam_isp_hw_sof_event_data  sof event timestamp
  */
 struct cam_isp_hw_cmd_args {
 	uint32_t                          cmd_type;
 	void                             *cmd_data;
 	union {
-		uint32_t                      sof_irq_enable;
-		uint32_t                      ctx_type;
-		uint32_t                      packet_op_code;
-		uint64_t                      last_cdm_done;
+		uint32_t                          sof_irq_enable;
+		uint32_t                          ctx_type;
+		uint32_t                          packet_op_code;
+		uint64_t                          last_cdm_done;
+		struct cam_isp_hw_sof_event_data  sof_done_event_data;
 	} u;
 };
 

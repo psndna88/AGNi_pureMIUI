@@ -8022,6 +8022,7 @@ static int cam_ife_hw_mgr_handle_hw_buf_done(
 	buf_done_event_data.resource_handle[0] = event_info->res_id;
 	buf_done_event_data.last_consumed_addr[0] =
 		event_info->reg_val;
+	buf_done_event_data.evt_param = event_info->evt_param;
 
 	if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
 		return 0;
