@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -393,6 +393,12 @@ static const struct soc_enum tdm_config_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tdm_data_format), tdm_data_format),
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tdm_header_type), tdm_header_type),
 };
+
+static u16 afe_port_logging_port_id;
+
+static bool afe_port_logging_item[IDX_TDM_MAX];
+
+static int afe_port_loggging_control_added;
 
 static DEFINE_MUTEX(tdm_mutex);
 
@@ -9272,6 +9278,87 @@ static int msm_dai_q6_tdm_set_clk(
 	return rc;
 }
 
+static int msm_pcm_afe_port_logging_info(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info* ucontrol)
+{
+	ucontrol->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	/* two int values: port_id and enable/disable */
+	ucontrol->count = 2;
+	/* Valid range is all positive values to support above controls */
+	ucontrol->value.integer.min = 0;
+	ucontrol->value.integer.max = INT_MAX;
+	return 0;
+}
+
+static int msm_pcm_afe_port_logging_ctl_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int port_idx = afe_port_logging_port_id - AFE_PORT_ID_TDM_PORT_RANGE_START;
+
+	ucontrol->value.integer.value[0] = afe_port_logging_port_id;
+	ucontrol->value.integer.value[1] = afe_port_logging_item[port_idx];
+
+	return 0;
+}
+
+static int msm_pcm_afe_port_logging_ctl_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	u16 port_id;
+	struct afe_param_id_port_data_log_disable_t log_disable;
+	struct param_hdr_v3 param_hdr;
+	int ret = -EINVAL, port_idx;
+
+	pr_debug("%s: enter\n", __func__);
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	port_id = ucontrol->value.integer.value[0];
+	log_disable.disable_logging_flag = ucontrol->value.integer.value[1];
+
+	ret = afe_port_send_logging_cfg(port_id, &log_disable);
+	if (ret)
+		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, port_id, ret);
+
+	afe_port_logging_port_id = port_id;
+	port_idx = port_id - AFE_PORT_ID_TDM_PORT_RANGE_START;
+	afe_port_logging_item[port_idx] = ucontrol->value.integer.value[1];
+
+	return ret;
+}
+
+static int msm_pcm_add_afe_port_logging_control(struct snd_soc_dai *dai)
+{
+	const char* afe_port_logging_ctl_name = "AFE_port_logging_disable";
+	int rc = 0;
+	struct snd_kcontrol_new *knew = NULL;
+	struct snd_kcontrol* kctl = NULL;
+
+	/* Add AFE port logging controls */
+	knew = kzalloc(sizeof(struct snd_kcontrol_new), GFP_KERNEL);
+	if (!knew) {
+		return -ENOMEM;
+	}
+	knew->iface = SNDRV_CTL_ELEM_IFACE_MIXER;
+	knew->info = msm_pcm_afe_port_logging_info;
+	knew->get = msm_pcm_afe_port_logging_ctl_get;
+	knew->put = msm_pcm_afe_port_logging_ctl_put;
+	knew->name = afe_port_logging_ctl_name;
+	knew->private_value = dai->id;
+	kctl = snd_ctl_new1(knew, knew);
+	if (!kctl) {
+		kfree(knew);
+		return -ENOMEM;
+	}
+
+	rc = snd_ctl_add(dai->component->card->snd_card, kctl);
+	if (rc < 0)
+		pr_err("%s: err add AFE port logging disable control, DAI = %s\n",
+			__func__, dai->name);
+
+	return rc;
+}
+
 static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 {
 	int rc = 0;
@@ -9346,6 +9433,18 @@ static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 				__func__, dai->name);
 			goto rtn;
 		}
+	}
+
+	/* add AFE port logging controls */
+	if (!afe_port_loggging_control_added) {
+		rc = msm_pcm_add_afe_port_logging_control(dai);
+		if (rc < 0) {
+			dev_err(dai->dev, "%s: add AFE port logging control failed DAI: %s\n",
+				__func__, dai->name);
+			goto rtn;
+		}
+
+		afe_port_loggging_control_added = 1;
 	}
 
 	if (tdm_dai_data->is_island_dai)
@@ -11935,7 +12034,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -11956,7 +12055,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -11977,7 +12076,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -11998,7 +12097,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12019,7 +12118,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12040,7 +12139,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12061,7 +12160,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12082,7 +12181,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12103,7 +12202,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12124,7 +12223,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12145,7 +12244,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12166,7 +12265,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12187,7 +12286,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12208,7 +12307,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12229,7 +12328,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},
@@ -12250,7 +12349,7 @@ static struct snd_soc_dai_driver msm_dai_q6_tdm_dai[] = {
 				   SNDRV_PCM_FMTBIT_S24_LE |
 				   SNDRV_PCM_FMTBIT_S32_LE,
 			.channels_min = 1,
-			.channels_max = 8,
+			.channels_max = 16,
 			.rate_min = 8000,
 			.rate_max = 352800,
 		},

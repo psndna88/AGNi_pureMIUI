@@ -13414,4 +13414,44 @@ struct afe_param_id_tdm_lane_cfg {
 	 */
 };
 
+/** ID of the parameter used to set the AFE port data logging to enable or disable state.
+ * For non-group device use cases, #AFE_MODULE_AUDIO_DEV_INTERFACE uses this
+ * parameter to configure the flag used for data logging in afe_data_logging_t
+ * of the respective port to enabled or disabled state.
+ * The HLOS client can use this parameter to configure the data logging
+ * disable flag for it's respective port.
+ * The reason for this parameter addition is if a number of ports are
+ * configured and running, Upon enabling logging through 0x1586 tap point,
+ * we will get input/output logs for all the enabled ports.
+ * In order to disabled logging for a specific port for which data logging
+ * is not needed, the HLOS client can make use of AFE_PORT_DATA_LOGGING_DISABLE flag.
+ * This flag will set to AFE_PORT_DATA_LOGGING_ENABLE during port initialization and also
+ * during port stop. If port is restarted, the set param should be called again
+ * by the HLOS client if needed to disable data logging.
+ * @par
+ * If HLOS client doesn't set this paramter, by default the disable flag = AFE_PORT_DATA_LOGGING_ENABLE.
+ * If HLOS client sets the flag = AFE_PORT_DATA_LOGGING_DISABLE, the respective port will be disabled for data logging.
+ */
+#define AFE_PARAM_ID_PORT_DATA_LOGGING_DISABLE            0x000102E9
+
+ /** Enable flag for port data logging. */
+#define AFE_PORT_DATA_LOGGING_ENABLE    0
+
+/** Disable flag for port data logging. */
+#define AFE_PORT_DATA_LOGGING_DISABLE   1
+
+/*
+ * Payload of the AFE_PARAM_ID_PORT_DATA_LOGGING_DISABLE parameter used by
+ * AFE_MODULE_AUDIO_DEV_INTERFACE
+ */
+struct afe_param_id_port_data_log_disable_t
+{
+	uint32_t           disable_logging_flag;
+	/** Flag for enabling or disabling data logging.
+	 * @values
+	 * - AFE_PORT_DATA_LOGGING_ENABLE  - enable data logging.
+	 * - AFE_PORT_DATA_LOGGING_DISABLE - disable data logging.
+	 */
+} __packed;
+
 #endif /*_APR_AUDIO_V2_H_ */

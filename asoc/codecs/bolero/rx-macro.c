@@ -83,6 +83,8 @@ static const struct snd_kcontrol_new name##_mux = \
 #define RX_MACRO_MOD_GAIN (RX_MACRO_GAIN_VAL_UNITY + 6)
 
 #define COMP_MAX_COEFF 25
+#define IIR_MIX_CFG_MAX 4
+#define IIR_MIX_CFG_OFFSET 10
 
 struct wcd_imped_val {
 	u32 imped_val;
@@ -482,6 +484,7 @@ static const char * const rx_sidetone_mix_text[] = {
 
 static const char * const iir_inp_mux_text[] = {
 	"ZERO", "DEC0", "DEC1", "DEC2", "DEC3",
+	"DUMMY_1", "DUMMY_2", "DUMMY_3", "DUMMY_4", "DUMMY_5",
 	"RX0", "RX1", "RX2", "RX3", "RX4", "RX5"
 };
 
@@ -921,8 +924,9 @@ static int rx_macro_set_prim_interpolator_rate(struct snd_soc_dai *dai,
 					    u32 sample_rate)
 {
 	u8 int_1_mix1_inp = 0;
-	u32 j = 0, port = 0;
-	u16 int_mux_cfg0 = 0, int_mux_cfg1 = 0;
+	u32 j = 0, k = 0, port = 0;
+	u16 int_mux_cfg0 = 0, int_mux_cfg1 = 0, iir_mux_cfg = 0;
+	u32 iir_mux_cfg_val = 0;
 	u16 int_fs_reg = 0;
 	u8 int_mux_cfg0_val = 0, int_mux_cfg1_val = 0;
 	u8 inp0_sel = 0, inp1_sel = 0, inp2_sel = 0;
@@ -973,6 +977,58 @@ static int rx_macro_set_prim_interpolator_rate(struct snd_soc_dai *dai,
 				snd_soc_component_update_bits(component,
 						int_fs_reg,
 						0x0F, rate_reg_val);
+			} else if ((inp0_sel == INTn_1_INP_SEL_IIR0) ||
+				  (inp1_sel == INTn_1_INP_SEL_IIR0) ||
+				  (inp2_sel == INTn_1_INP_SEL_IIR0)) {
+				for (k = 0; k < IIR_MIX_CFG_MAX; k++) {
+					iir_mux_cfg =
+					BOLERO_CDC_RX_IIR_INP_MUX_IIR0_MIX_CFG0
+					+ 4 * k;
+					iir_mux_cfg_val =
+					snd_soc_component_read32(component,
+						iir_mux_cfg) & 0x1F;
+
+					if (iir_mux_cfg_val == int_1_mix1_inp
+					    + IIR_MIX_CFG_OFFSET){
+						int_fs_reg =
+						BOLERO_CDC_RX_RX0_RX_PATH_CTL +
+						0x80 * j;
+						pr_debug("%s: AIF_PB DAI(%d) connected to INT%u_1 via IIR0\n",
+							 __func__, dai->id, j);
+						pr_debug("%s: set INT%u_1 sample rate to %u\n",
+							 __func__, j, sample_rate);
+						/* sample_rate is in Hz */
+						snd_soc_component_update_bits(component,
+							int_fs_reg,
+							0x0F, rate_reg_val);
+					}
+				}
+			} else if ((inp0_sel == INTn_1_INP_SEL_IIR1) ||
+				  (inp1_sel == INTn_1_INP_SEL_IIR1) ||
+				   (inp2_sel == INTn_1_INP_SEL_IIR1)) {
+				for (k = 0; k < IIR_MIX_CFG_MAX; k++) {
+					iir_mux_cfg =
+					BOLERO_CDC_RX_IIR_INP_MUX_IIR1_MIX_CFG0
+					+ 4 * k;
+					iir_mux_cfg_val =
+					snd_soc_component_read32(
+					component, iir_mux_cfg) & 0x1F;
+
+					if (iir_mux_cfg_val == int_1_mix1_inp
+					    + IIR_MIX_CFG_OFFSET){
+						int_fs_reg =
+						BOLERO_CDC_RX_RX0_RX_PATH_CTL +
+						0x80 * j;
+						pr_debug("%s: AIF_PB DAI(%d) connected to INT%u_1 via IIR1\n",
+							 __func__, dai->id, j);
+						pr_debug("%s: set INT%u_1 sample rate to %u\n",
+							 __func__, j, sample_rate);
+						/* sample_rate is in Hz */
+						snd_soc_component_update_bits(
+							component, int_fs_reg,
+							0x0F, rate_reg_val);
+			    		}
+				}
 			}
 			int_mux_cfg0 += 8;
 		}

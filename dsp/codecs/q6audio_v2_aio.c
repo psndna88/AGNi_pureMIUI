@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -110,7 +110,8 @@ void audio_aio_cb(uint32_t opcode, uint32_t token,
 		pr_err("%s: Received opcode:0x%x\n", __func__, opcode);
 		audio->stopped = 1;
 		audio->reset_event = true;
-		wake_up(&audio->event_wait);
+		if (audio->wake_event_initialized)
+			wake_up(&audio->event_wait);
 		break;
 	default:
 		break;
