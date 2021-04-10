@@ -11,12 +11,6 @@
 			qcom,ion-heap-type = "MSM_SYSTEM";
 		};
 
-		audio_heap: qcom,ion-heap@8 { /* AUDIO HEAP */
-			reg = <ION_AUDIO_HEAP_ID>;
-			memory-region = <&audio_mem>;
-			qcom,ion-heap-type = "DMA";
-		};
-
 		qcom,ion-heap@27 { /* QSEECOM HEAP */
 			reg = <ION_QSECOM_HEAP_ID>;
 			memory-region = <&qseecom_mem>;

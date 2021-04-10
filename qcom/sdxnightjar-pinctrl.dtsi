@@ -9,6 +9,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		wakeup-parent = <&wakegic>;
 
 		uart1_console_active: uart1_console_active {
 			mux {

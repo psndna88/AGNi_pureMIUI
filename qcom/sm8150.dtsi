@@ -57,6 +57,8 @@
 			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
+			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -79,6 +81,7 @@
 			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_1>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -96,6 +99,7 @@
 			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_2>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -113,6 +117,7 @@
 			dynamic-power-coefficient = <100>;
 			next-level-cache = <&L2_3>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -130,6 +135,8 @@
 			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_4>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
+			#cooling-cells = <2>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -147,6 +154,7 @@
 			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_5>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -164,6 +172,7 @@
 			dynamic-power-coefficient = <374>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -181,6 +190,8 @@
 			dynamic-power-coefficient = <431>;
 			next-level-cache = <&L2_7>;
 			qcom,freq-domain = <&cpufreq_hw 2 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs1>;
+			#cooling-cells = <2>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -896,6 +907,7 @@
 		interconnects = <&compute_noc MASTER_NPU &mc_virt SLAVE_EBI1>;
 		operating-points-v2 = <&ddr_bw_opp_table>;
 		qcom,active-only;
+		status = "disabled";
 	};
 
 	npu_npu_ddr_bwmon: qcom,npu-npu-ddr-bwmon@9960300 {
@@ -907,6 +919,7 @@
 		qcom,hw-timer-hz = <19200000>;
 		qcom,target-dev = <&npu_npu_ddr_bw>;
 		qcom,count-unit = <0x10000>;
+		status = "disabled";
 	};
 
 	cpu_pmu: cpu-pmu {
@@ -1460,6 +1473,14 @@
 			mask = <0x0f>;
 			vote = <44>;
 		};
+	};
+
+	qcom,rmtfs_sharedmem@0 {
+		compatible = "qcom,sharedmem-uio";
+		reg = <0x0 0x200000>;
+		reg-names = "rmtfs";
+		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
 	};
 
 	qupv3_id_1: geniqup@ac0000 {
@@ -2444,182 +2465,182 @@
 		};
 
 		l1_icache0 {
-			qcom,dump-size = <0x8800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x60>;
 		};
 
 		l1_icache100 {
-			qcom,dump-size = <0x8800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x61>;
 		};
 
 		l1_icache200 {
-			qcom,dump-size = <0x8800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x62>;
 		};
 
 		l1_icache300 {
-			qcom,dump-size = <0x8800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x63>;
 		};
 
 		l1_icache400 {
-			qcom,dump-size = <0x11000>;
+			qcom,dump-size = <0x11100>;
 			qcom,dump-id = <0x64>;
 		};
 
 		l1_icache500 {
-			qcom,dump-size = <0x11000>;
+			qcom,dump-size = <0x11100>;
 			qcom,dump-id = <0x65>;
 		};
 
 		l1_icache600 {
-			qcom,dump-size = <0x11000>;
+			qcom,dump-size = <0x11100>;
 			qcom,dump-id = <0x66>;
 		};
 
 		l1_icache700 {
-			qcom,dump-size = <0x11000>;
+			qcom,dump-size = <0x11100>;
 			qcom,dump-id = <0x67>;
 		};
 
 		l1_dcache0 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x80>;
 		};
 
 		l1_dcache100 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x81>;
 		};
 
 		l1_dcache200 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x82>;
 		};
 
 		l1_dcache300 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x83>;
 		};
 
 		l1_dcache400 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x12100>;
 			qcom,dump-id = <0x84>;
 		};
 
 		l1_dcache500 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x12100>;
 			qcom,dump-id = <0x85>;
 		};
 
 		l1_dcache600 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x12100>;
 			qcom,dump-id = <0x86>;
 		};
 
 		l1_dcache700 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x12100>;
 			qcom,dump-id = <0x87>;
 		};
 
 		l1_itlb400 {
-			qcom,dump-size = <0x300>;
+			qcom,dump-size = <0x400>;
 			qcom,dump-id = <0x24>;
 		};
 
 		l1_itlb500 {
-			qcom,dump-size = <0x300>;
+			qcom,dump-size = <0x400>;
 			qcom,dump-id = <0x25>;
 		};
 
 		l1_itlb600 {
-			qcom,dump-size = <0x300>;
+			qcom,dump-size = <0x400>;
 			qcom,dump-id = <0x26>;
 		};
 
 		l1_itlb700 {
-			qcom,dump-size = <0x300>;
+			qcom,dump-size = <0x400>;
 			qcom,dump-id = <0x27>;
 		};
 
 		l1_dtlb400 {
-			qcom,dump-size = <0x480>;
+			qcom,dump-size = <0x580>;
 			qcom,dump-id = <0x44>;
 		};
 
 		l1_dtlb500 {
-			qcom,dump-size = <0x480>;
+			qcom,dump-size = <0x580>;
 			qcom,dump-id = <0x45>;
 		};
 
 		l1_dtlb600 {
-			qcom,dump-size = <0x480>;
+			qcom,dump-size = <0x580>;
 			qcom,dump-id = <0x46>;
 		};
 
 		l1_dtlb700 {
-			qcom,dump-size = <0x480>;
+			qcom,dump-size = <0x580>;
 			qcom,dump-id = <0x47>;
 		};
 
 		l2_cache400 {
-			qcom,dump-size = <0x88000>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc4>;
 		};
 
 		l2_cache500 {
-			qcom,dump-size = <0x88000>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc5>;
 		};
 
 		l2_cache600 {
-			qcom,dump-size = <0x88000>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc6>;
 		};
 
 		l2_cache700 {
-			qcom,dump-size = <0x110000>;
+			qcom,dump-size = <0x90100>;
 			qcom,dump-id = <0xc7>;
 		};
 
 		l2_tlb0 {
-			qcom,dump-size = <0x5000>;
+			qcom,dump-size = <0x5B00>;
 			qcom,dump-id = <0x120>;
 		};
 
 		l2_tlb100 {
-			qcom,dump-size = <0x5000>;
+			qcom,dump-size = <0x5B00>;
 			qcom,dump-id = <0x121>;
 		};
 
 		l2_tlb200 {
-			qcom,dump-size = <0x5000>;
+			qcom,dump-size = <0x5B00>;
 			qcom,dump-id = <0x122>;
 		};
 
 		l2_tlb300 {
-			qcom,dump-size = <0x5000>;
+			qcom,dump-size = <0x5B00>;
 			qcom,dump-id = <0x123>;
 		};
 
 		l2_tlb400 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x7900>;
 			qcom,dump-id = <0x124>;
 		};
 
 		l2_tlb500 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x7900>;
 			qcom,dump-id = <0x125>;
 		};
 
 		l2_tlb600 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x7900>;
 			qcom,dump-id = <0x126>;
 		};
 
 		l2_tlb700 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x7900>;
 			qcom,dump-id = <0x127>;
 		};
 	};
@@ -2875,3 +2896,4 @@
 #include "sm8150-usb.dtsi"
 #include "sm8150-gpu.dtsi"
 #include "sm8150-npu.dtsi"
+#include "sm8150-thermal.dtsi"

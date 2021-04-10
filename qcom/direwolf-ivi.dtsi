@@ -1,4 +1,5 @@
 #include "direwolf.dtsi"
+#include "direwolf-ivi-regulators.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. DirewolfAU IVI SoC";

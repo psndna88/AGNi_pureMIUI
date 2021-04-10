@@ -109,6 +109,11 @@
 
 &usb1 {
 	qcom,ignore-wakeup-src-in-hostmode;
+
+	dwc3@a800000 {
+		usb-phy = <&usb2_phy1>, <&usb_nop_phy>;
+		maximum-speed = "full-speed";
+	};
 };
 
 &thermal_zones {
