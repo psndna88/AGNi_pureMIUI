@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/debugfs.h>
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/bootmem.h>
 #include <linux/stacktrace.h>
@@ -363,8 +364,7 @@ print_page_owner(char __user *buf, size_t count, unsigned long pfn,
 		.skip = 0
 	};
 
-	count = count > PAGE_SIZE ? PAGE_SIZE : count;
-	kbuf = kvmalloc(count, GFP_KERNEL);
+	kbuf = kmalloc(count, GFP_KERNEL);
 	if (!kbuf)
 		return -ENOMEM;
 
@@ -411,11 +411,11 @@ print_page_owner(char __user *buf, size_t count, unsigned long pfn,
 	if (copy_to_user(buf, kbuf, ret))
 		ret = -EFAULT;
 
-	kvfree(kbuf);
+	kfree(kbuf);
 	return ret;
 
 err:
-	kvfree(kbuf);
+	kfree(kbuf);
 	return -ENOMEM;
 }
 
