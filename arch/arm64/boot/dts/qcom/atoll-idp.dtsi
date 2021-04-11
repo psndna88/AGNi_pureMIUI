@@ -235,7 +235,6 @@
 	qcom,en-qc3-with-cp;
 	qcom,disable-suspend-on-collapse;
 	qcom,smb-internal-pull-kohm = <0>;
-	qcom,reg-dump-enable;
 };
 
 &pm6150_gpios {
