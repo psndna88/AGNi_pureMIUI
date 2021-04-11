@@ -80,7 +80,6 @@
 	qcom,thermal-mitigation = <3000000 2500000 2000000 1500000 1000000 500000>;
 	qcom,en-qc3-with-cp;
 	qcom,disable-suspend-on-collapse;
-	qcom,reg-dump-enable;
 };
 
 &pm6150_gpios {
