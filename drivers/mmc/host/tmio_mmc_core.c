@@ -168,11 +168,11 @@ static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 
 	/* HW engineers overrode docs: no sleep needed on R-Car2+ */
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
-		usleep_range(10000, 11000);
+		msleep(10);
 
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
-		usleep_range(10000, 11000);
+		msleep(10);
 	}
 }
 
@@ -180,7 +180,7 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 {
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0000);
-		usleep_range(10000, 11000);
+		msleep(10);
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -188,7 +188,7 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 
 	/* HW engineers overrode docs: no sleep needed on R-Car2+ */
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
-		usleep_range(10000, 11000);
+		msleep(10);
 }
 
 static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
@@ -220,7 +220,7 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk & CLK_CTL_DIV_MASK);
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
-		usleep_range(10000, 11000);
+		msleep(10);
 
 	tmio_mmc_clk_start(host);
 }
@@ -231,11 +231,11 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host)
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0000);
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG)
 		sd_ctrl_write16(host, CTL_RESET_SDIO, 0x0000);
-	usleep_range(10000, 11000);
+	msleep(10);
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0001);
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG)
 		sd_ctrl_write16(host, CTL_RESET_SDIO, 0x0001);
-	usleep_range(10000, 11000);
+	msleep(10);
 
 	if (host->pdata->flags & TMIO_MMC_SDIO_IRQ) {
 		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
@@ -914,8 +914,9 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	if (mrq->cmd->error || (mrq->data && mrq->data->error))
 		tmio_mmc_abort_dma(host);
 
-	if (host->check_scc_error)
-		host->check_scc_error(host);
+	/* SCC error means retune, but executed command was still successful */
+	if (host->check_scc_error && host->check_scc_error(host))
+		mmc_retune_needed(host->mmc);
 
 	/* If SET_BLOCK_COUNT, continue with main command */
 	if (host->mrq && !mrq->cmd->error) {
@@ -1219,7 +1220,7 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 		_host->start_signal_voltage_switch;
 	mmc->ops = &tmio_mmc_ops;
 
-	mmc->caps |= MMC_CAP_4_BIT_DATA | pdata->capabilities;
+	mmc->caps |= MMC_CAP_ERASE | MMC_CAP_4_BIT_DATA | pdata->capabilities;
 	mmc->caps2 |= pdata->capabilities2;
 	mmc->max_segs = pdata->max_segs ? : 32;
 	mmc->max_blk_size = 512;
