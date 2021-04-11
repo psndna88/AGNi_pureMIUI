@@ -1399,6 +1399,22 @@ retry:
 		sdhci_msm_set_mmc_drv_type(host, opcode, 0);
 
 	if (tuned_phase_cnt) {
+		if (tuned_phase_cnt == ARRAY_SIZE(tuned_phases)) {
+			/*
+			 * All phases valid is _almost_ as bad as no phases
+			 * valid.  Probably all phases are not really reliable
+			 * but we didn't detect where the unreliable place is.
+			 * That means we'll essentially be guessing and hoping
+			 * we get a good phase.  Better to try a few times.
+			 */
+			dev_dbg(mmc_dev(mmc), "%s: All phases valid; try again\n",
+				mmc_hostname(mmc));
+			if (--tuning_seq_cnt) {
+				tuned_phase_cnt = 0;
+				goto retry;
+			}
+		}
+
 		rc = msm_find_most_appropriate_phase(host, tuned_phases,
 							tuned_phase_cnt);
 		if (rc < 0)
@@ -4707,47 +4723,7 @@ static bool sdhci_msm_is_bootdevice(struct device *dev)
 	 */
 	return true;
 }
-/* add sdcard slot info for factory mode
- *    begin
- *    */
-static struct kobject *card_slot_device = NULL;
-static struct sdhci_host *card_host =NULL;
-static ssize_t card_slot_status_show(struct device *dev,
-					       struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n", mmc_gpio_get_cd(card_host->mmc));
-}
 
-static DEVICE_ATTR(card_slot_status, S_IRUGO ,
-						card_slot_status_show, NULL);
-
-int32_t card_slot_init_device_name(void)
-{
-	int32_t error = 0;
-//	pr_err("lilin-2\n");
-	if(card_slot_device != NULL){
-		pr_err("card_slot already created\n");
-		return 0;
-	}
-	card_slot_device = kobject_create_and_add("card_slot", NULL);
-	if (card_slot_device == NULL) {
-		//pr_err("lilin-3,%d\n");
-		printk("%s: card_slot register failed\n", __func__);
-		error = -ENOMEM;
-		return error ;
-	}
-	error = sysfs_create_file(card_slot_device, &dev_attr_card_slot_status.attr);
-	if (error) {
-		//pr_err("lilin-4 %d\n",error);
-		printk("%s: card_slot card_slot_status_create_file failed\n", __func__);
-		kobject_del(card_slot_device);
-	}
-	// pr_err("lilin-5\n");	
-	return 0 ;
-}
-/* add sdcard slot info for factory mode
- *    end
- *    */
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	const struct sdhci_msm_offset *msm_host_offset;
@@ -5073,6 +5049,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	host->quirks |= SDHCI_QUIRK_SINGLE_POWER_WRITE;
 	host->quirks |= SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN;
 	host->quirks |= SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC;
+	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
 	host->quirks2 |= SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK;
 	host->quirks2 |= SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
@@ -5267,10 +5244,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		ret = device_create_file(&pdev->dev, &msm_host->polling);
 		if (ret)
 			goto remove_max_bus_bw_file;
-	}else{
-	//	pr_err("lilin-1\n");
-		card_host = dev_get_drvdata(&pdev->dev);
-		card_slot_init_device_name();
 	}
 
 	msm_host->auto_cmd21_attr.show = show_auto_cmd21;
@@ -5521,7 +5494,6 @@ static int sdhci_msm_suspend(struct device *dev)
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
-	struct mmc_host *mmc = host->mmc;
 	int ret = 0;
 	int sdio_cfg = 0;
 	ktime_t start = ktime_get();
@@ -5537,7 +5509,6 @@ static int sdhci_msm_suspend(struct device *dev)
 	}
 	ret = sdhci_msm_runtime_suspend(dev);
 out:
-	cancel_delayed_work_sync(&mmc->clk_gate_work);
 	sdhci_msm_disable_controller_clock(host);
 	if (host->mmc->card && mmc_card_sdio(host->mmc->card)) {
 		sdio_cfg = sdhci_msm_cfg_sdio_wakeup(host, true);
