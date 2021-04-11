@@ -43,7 +43,7 @@
 		vreg-1p8-supply = <&pmd9650_l5>;
 		vreg-0p9-supply = <&pmd9650_l4>;
 
-		qcom,vreg-0.9-voltage-level = <928000 928000 24000>;
+		qcom,vreg-0p9-voltage-level = <928000 928000 24000>;
 
 		interconnect-names = "icc_path";
 		interconnects = <&system_noc MASTER_PCIE &bimc SLAVE_EBI_CH0>;

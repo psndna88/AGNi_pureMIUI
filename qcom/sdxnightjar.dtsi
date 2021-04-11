@@ -49,8 +49,17 @@
 
 		mss_mem: mss_region@0x88000000 {
 			no-map;
-			reg = <0x88000000 0x7300000>;
+			reg = <0x88000000 0x6e00000>;
 			label = "mss_mem";
+		};
+
+		common_cma: linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x00000000 0xffffffff>;
+			reusable;
+			alignment = <0x400000>;
+			size = <0xc00000>;
+			linux,cma-default;
 		};
 
 		qseecom_mem: qseecom_region {
@@ -61,19 +70,6 @@
 			size = <0x400000>;
 		};
 
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			size = <0x400000>;
-		};
-
-		audio_mem: audio_region@0 {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			size = <0x400000>;
-		};
 	};
 
 	aliases { };
@@ -437,16 +433,11 @@
 
 	mem_dump {
 		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
+		memory-region = <&common_cma>;
 
 		c0_context {
 			qcom,dump-size = <0x800>;
 			qcom,dump-id = <0x0>;
-		};
-
-		cnss_wlan {
-			qcom,dump-size = <0x200000>;
-			qcom,dump-id = <0xe1>;
 		};
 
 		etr_reg {
@@ -614,11 +605,6 @@
 	qcom,rmnet-ipa {
 		compatible = "qcom,rmnet-ipa3";
 		qcom,rmnet-ipa-ssr;
-	};
-
-	pil_scm_pas {
-		compatible = "qcom,pil-tz-scm-pas";
-		interconnects = <&pc_noc MASTER_CRYPTO_CORE_0 &bimc SLAVE_EBI_CH0>;
 	};
 
 	blsp1_uart1: serial@78af000 {

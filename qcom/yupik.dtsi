@@ -1265,6 +1265,7 @@
 		qcom,iommu-dma = "fastmap";
 		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
 		qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
+		qcom,iommu-geometry = <0xa0000000 0x10010000>;
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
 		qcom,cmd_db_name = "smpb7";
 		cnss-daemon-support;

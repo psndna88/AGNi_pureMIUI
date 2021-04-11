@@ -145,7 +145,7 @@
 		gpio = <&tlmm 174 0>;
 	};
 
-	qcom,cnss-qca-converged {
+	cnss_pcie: qcom,cnss-qca-converged {
 		compatible = "qcom,cnss-qca-converged";
 
 		qcom,converged-dt;
@@ -735,6 +735,14 @@
 		qcom,bt-vdd-rfa2-config = <2040000 2040000 0 0>;
 		qcom,bt-vdd-rfa3-config = <1900000 1900000 450000 0>;
 	};
+
+	qcom_rng: qrng@793000 {
+		compatible = "qcom,msm-rng";
+		reg = <0x793000 0x1000>;
+		qcom,no-qrng-config;
+		clocks = <&gcc GCC_PRNG_AHB_CLK>;
+		clock-names = "km_clk_src";
+	};
 };
 
 &regulator {
@@ -744,6 +752,14 @@
 
 	usb30_sec_gdsc: usb30_sec_gdsc {
 		regulator-name = "usb30_sec_gdsc";
+	};
+
+	usb30_mp_gdsc: qcom,gdsc@1a6004 {
+		regulator-name = "usb30_mp_gdsc";
+	};
+
+	ufs_card_2_gdsc: ufs_card_2_gdsc {
+		regulator-name = "ufs_card_2_gdsc";
 	};
 
 	pcie_0_gdsc: pcie_0_gdsc {
@@ -760,6 +776,10 @@
 
 	pcie_3_gdsc: pcie_3_gdsc {
 		regulator-name = "pcie_3_gdsc";
+	};
+
+	ufs_card_2_gdsc: ufs_card_2_gdsc {
+		regulator-name = "ufs_card_2_gdsc";
 	};
 
 	L2A: pm8195_1_l2: regulator-pm8195-1-l2 {
@@ -798,6 +818,12 @@
 		regulator-min-microvolt = <800000>;
 		regulator-max-microvolt = <920000>;
 		regulator-allow-set-load;
+	};
+
+	L9E: pm8195_3_l9: regulator-pm8195-3-l9 {
+		regulator-name = "ldoe9";
+		regulator-min-microvolt = <830000>;
+		regulator-max-microvolt = <920000>;
 	};
 
 	L16E: pm8195_3_l16: regulator-pm8195-3-l16 {
@@ -867,19 +893,23 @@
 &qupv3_0 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+	qcom,iommu-dma = "atomic";
 };
 
 &qupv3_1 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+	qcom,iommu-dma = "atomic";
 };
 
 &qupv3_2 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+	qcom,iommu-dma = "atomic";
 };
 
 &qupv3_3 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+	qcom,iommu-dma = "atomic";
 };

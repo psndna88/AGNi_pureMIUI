@@ -45,6 +45,13 @@
 			alignment = <0 0x400000>;
 			size = <0 0x1000000>;
 		};
+
+		dump_mem: mem_dump_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			reusable;
+			size = <0 0x1000000>;
+		};
 	};
 
 	firmware: firmware {
@@ -79,8 +86,6 @@
 		};
 	};
 };
-
-#include "display/quin-vm-display.dtsi"
 
 &soc {
 	#address-cells = <1>;
@@ -298,4 +303,16 @@
 		compatible = "qcom,vm-restart";
 		status = "ok";
 	};
+
+	mem_dump {
+		compatible = "qcom,mem-dump";
+		memory-region = <&dump_mem>;
+
+		misc_data {
+			qcom,dump-size = <0x1000>;
+			qcom,dump-id = <0xe8>;
+		};
+	};
 };
+
+#include "display/quin-vm-display.dtsi"
