@@ -766,15 +766,13 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 
 		/*
 		 * Periodically drop the lock (if held) regardless of its
-		 * contention, to give chance to IRQs. Abort completely if
-		 * a fatal signal is pending.
+		 * contention, to give chance to IRQs. Abort async compaction
+		 * if contended.
 		 */
 		if (!(low_pfn % SWAP_CLUSTER_MAX)
 		    && compact_unlock_should_abort(zone_lru_lock(zone), flags,
-								&locked, cc)) {
-			low_pfn = 0;
-			goto fatal_pending;
-		}
+								&locked, cc))
+			break;
 
 		if (!pfn_valid_within(low_pfn))
 			goto isolate_fail;
@@ -967,7 +965,6 @@ isolate_fail:
 	trace_mm_compaction_isolate_migratepages(start_pfn, low_pfn,
 						nr_scanned, nr_isolated);
 
-fatal_pending:
 	cc->total_migrate_scanned += nr_scanned;
 	if (nr_isolated)
 		count_compact_events(COMPACTISOLATED, nr_isolated);
@@ -1232,7 +1229,7 @@ typedef enum {
  * Allow userspace to control policy on scanning the unevictable LRU for
  * compactable pages.
  */
-int sysctl_compact_unevictable_allowed __read_mostly = 1;
+int sysctl_compact_unevictable_allowed __read_mostly = 0;
 
 /*
  * Isolate all pages that can be migrated from the first suitable block,
@@ -1753,7 +1750,7 @@ static enum compact_result compact_zone_order(struct zone *zone, int order,
 	return ret;
 }
 
-int sysctl_extfrag_threshold = 500;
+int sysctl_extfrag_threshold = 750;
 
 /**
  * try_to_compact_pages - Direct compact to satisfy a high-order allocation
@@ -1929,7 +1926,7 @@ static void do_compaction(struct work_struct *work)
 	if (screen_on)
 		return;
 
-	pr_info("Scheduled memory compaction is starting");
+	pr_info("Scheduled memory compaction is starting\n");
 
 	/* Do full compaction */
 	compact_nodes();
@@ -1937,7 +1934,7 @@ static void do_compaction(struct work_struct *work)
 	/* Force compaction timeout */
 	compaction_forced_timeout = jiffies + msecs_to_jiffies(compaction_timeout_ms);
 
-	pr_info("Scheduled memory compaction is completed");
+	pr_info("Scheduled memory compaction is completed\n");
 }
 
 /* The written value is actually unused, all memory is compacted */
