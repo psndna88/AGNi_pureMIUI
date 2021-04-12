@@ -5354,6 +5354,31 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 		}
 	}
 
+	val = get_param(cmd, "MSCSSupport");
+	if (val) {
+		char buf[30];
+		int disable_mscs, len;
+
+		if (strcasecmp(val, "Enable") == 0) {
+			disable_mscs = 0;
+		} else if (strcasecmp(val, "Disable") == 0) {
+			disable_mscs = 1;
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid MSCSsupport parameter");
+			return INVALID_SEND_STATUS;
+		}
+
+		len = snprintf(buf, sizeof(buf), "SET disable_mscs_support %d",
+			       disable_mscs);
+		if (len < 0 || len >= sizeof(buf) ||
+		    wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to update MSCS support");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
 	return 1;
 }
 
@@ -8183,6 +8208,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	if (dut->program == PROGRAM_QM) {
 		wpa_command(intf, "SET interworking 1");
 		wpa_command(intf, "SET disable_scs_support 0");
+		wpa_command(intf, "SET disable_mscs_support 0");
 		snprintf(buf, sizeof(buf),
 			 "ip -6 route replace fe80::/64 dev %s table local",
 			 intf);
