@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -415,13 +415,17 @@ static int32_t cm_get_congestion_pct(struct scan_cache_entry *entry)
 		 */
 		congestion = CM_MAX_CHANNEL_UTILIZATION -
 					est_air_time_percentage;
-	} else if (entry->qbss_chan_load) {
+		if (!congestion)
+			congestion = 1;
+	} else if (util_scan_entry_qbssload(entry)) {
 		ap_load = (entry->qbss_chan_load * CM_MAX_PCT_SCORE);
 		/*
 		 * Calculate ap_load in % from qbss channel load from
 		 * 0-255 range
 		 */
 		congestion = qdf_do_div(ap_load, CM_MAX_AP_LOAD);
+		if (!congestion)
+			congestion = 1;
 	}
 
 	return congestion;

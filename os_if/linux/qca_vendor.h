@@ -8220,6 +8220,56 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_SA_QUERY_TIMEOUT = 43,
 
+	/* 8-bit unsigned value to configure the driver/firmware to start or
+	 * stop transmitting FILS discovery frames.
+	 * 0 - Stop transmitting FILS discovery frames
+	 * 1 - Start transmitting FILS discovery frames
+	 * This attribute is used to configure the testbed device.
+	 * This attribute can be configured only in AP mode and the
+	 * configuration is valid until AP restart.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FILS_DISCOVERY_FRAMES_TX = 44,
+
+	/* 8-bit unsigned value to configure the driver/firmware to enable or
+	 * disable full bandwidth UL MU-MIMO subfield in the HE PHY capabilities
+	 * information field.
+	 * 0 - Disable full bandwidth UL MU-MIMO subfield
+	 * 1 - Enable full bandwidth UL MU-MIMO subfield
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_FULL_BW_UL_MU_MIMO = 45,
+
+	/* 16-bit unsigned value to configure the driver with a specific BSS
+	 * max idle period to advertise in the BSS Max Idle Period element
+	 * (IEEE Std 802.11-2016, 9.4.2.79) in (Re)Association Request frames.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BSS_MAX_IDLE_PERIOD = 46,
+
+	/* 8-bit unsigned value to configure the driver to use only RU 242 tone
+	 * for data transmission.
+	 * 0 - Default behavior, 1 - Configure RU 242 tone for data Tx.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_RU_242_TONE_TX = 47,
+
+	/* 8-bit unsigned value to configure the driver to disable data and
+	 * management response frame transmission to test the BSS max idle
+	 * feature.
+	 * 0 - Default behavior, 1 - Disable data and management response Tx.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_DISABLE_DATA_MGMT_RSP_TX = 48,
+
+	/* 8-bit unsigned value to configure the driver/firmware to enable or
+	 * disable Punctured Preamble Rx subfield in the HE PHY capabilities
+	 * information field.
+	 * 0 - Disable Punctured Preamble Rx subfield
+	 * 1 - Enable Punctured Preamble Rx subfield
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_PUNCTURED_PREAMBLE_RX = 49,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_MAX =
@@ -8506,6 +8556,14 @@ enum qca_wlan_twt_setup_state {
  * TWT state for the given dialog id. The values for this are represented
  * by enum qca_wlan_twt_setup_state.
  * This is obtained through TWT GET operation.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA: Optional (u32)
+ * This attribute is used to configure wake interval mantissa.
+ * The unit is microseconds. This attribute, when specified, takes
+ * precedence over QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA.
+ * This parameter is used for
+ * 1. TWT SET Request and Response
+ * 2. TWT GET Response
  */
 enum qca_wlan_vendor_attr_twt_setup {
 	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_INVALID = 0,
@@ -8533,6 +8591,7 @@ enum qca_wlan_vendor_attr_twt_setup {
 	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MIN_WAKE_DURATION = 18,
 	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX_WAKE_DURATION = 19,
 	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_STATE = 20,
+	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA = 21,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_AFTER_LAST,
