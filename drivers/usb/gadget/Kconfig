@@ -95,9 +95,9 @@ config USB_GADGET_DEBUG_FS
 	   to conserve kernel memory, say "N".
 
 config USB_GADGET_VBUS_DRAW
-	int "Maximum VBUS Power usage (2-500 mA)"
-	range 2 500
-	default 2
+	int "Maximum VBUS Power usage (2-500 mA micro usb, 0-900mA type C)"
+	range 2 900
+	default 500
 	help
 	   Some devices need to draw power from USB when they are
 	   configured, perhaps to operate circuitry or to recharge
@@ -105,8 +105,9 @@ config USB_GADGET_VBUS_DRAW
 	   such as an AC adapter or batteries.
 
 	   Enter the maximum power your device draws through USB, in
-	   milliAmperes.  The permitted range of values is 2 - 500 mA;
-	   0 mA would be legal, but can make some hosts misbehave.
+	   milliAmperes.  The permitted range of values is 2 - 500 mA
+	   for micro usb, 0-900 mA for type-C devices. 0 mA would be legal,
+	   but can make some hosts misbehave.
 
 	   This value will be used except for system-specific gadget
 	   drivers that have more specific information.
