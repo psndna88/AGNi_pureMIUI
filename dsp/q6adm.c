@@ -551,16 +551,6 @@ int adm_programable_channel_mixer(int port_id, int copp_idx, int session_id,
 	}
 
 	/*
-	 * check if PSPD is already configured
-	 * if it is configured already, return 0 without applying PSPD.
-	 */
-	if (atomic_read(&this_adm.copp.cnt[port_idx][copp_idx]) > 1) {
-		pr_debug("%s: copp.cnt:%#x\n", __func__,
-			atomic_read(&this_adm.copp.cnt[port_idx][copp_idx]));
-		return 0;
-	}
-
-	/*
 	 * First 8 bytes are 4 bytes as rule number, 2 bytes as output
 	 * channel and 2 bytes as input channel.
 	 * 2 * ch_mixer->output_channel means output channel mapping.
