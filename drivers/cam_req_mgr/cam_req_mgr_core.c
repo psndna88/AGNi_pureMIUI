@@ -1498,7 +1498,7 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 			sync_frame_duration / 2)
 			link->sync_link_sof_skip = true;
 		return -EINVAL;
-	} else if (ready == false) {
+	} else if (!ready) {
 		CAM_DBG(CAM_CRM,
 			"Req: %lld not ready on link: %x",
 			req_id, link->link_hdl);
@@ -4447,11 +4447,6 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 			link->state = CAM_CRM_LINK_STATE_IDLE;
 			link->skip_init_frame = false;
 			crm_timer_exit(&link->watchdog);
-			if ((link->activate_seq >= 0) &&
-				(link->activate_seq < MAXIMUM_LINKS_PER_SESSION))
-				clear_bit(link->activate_seq, g_crm_core_dev->bitmap);
-
-			link->activate_seq = -1;
 			spin_unlock_bh(&link->link_state_spin_lock);
 			CAM_DBG(CAM_CRM,
 				"De-activate link: 0x%x", link->link_hdl);
