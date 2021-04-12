@@ -440,7 +440,7 @@ struct fg_wakeup_source {
 static void fg_stay_awake(struct fg_wakeup_source *source)
 {
 	if (!__test_and_set_bit(0, &source->enabled)) {
-		__pm_stay_awake(&source->source);
+		__pm_wakeup_event(&source->source, 500);
 		pr_debug("enabled source %s\n", source->source.name);
 	}
 }

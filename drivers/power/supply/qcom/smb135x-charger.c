@@ -490,7 +490,7 @@ static int smb135x_read(struct smb135x_chg *chip, int reg,
 		return 0;
 	}
 	mutex_lock(&chip->read_write_lock);
-	pm_stay_awake(chip->dev);
+	pm_wakeup_event(chip->dev, 500);
 	rc = __smb135x_read(chip, reg, val);
 	pm_relax(chip->dev);
 	mutex_unlock(&chip->read_write_lock);
@@ -507,7 +507,7 @@ static int smb135x_write(struct smb135x_chg *chip, int reg,
 		return 0;
 
 	mutex_lock(&chip->read_write_lock);
-	pm_stay_awake(chip->dev);
+	pm_wakeup_event(chip->dev, 500);
 	rc = __smb135x_write(chip, reg, val);
 	pm_relax(chip->dev);
 	mutex_unlock(&chip->read_write_lock);
@@ -2795,7 +2795,7 @@ static int handle_usb_insertion(struct smb135x_chg *chip)
 
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
 		pr_debug("schedule hvdcp detection worker\n");
-		pm_stay_awake(chip->dev);
+		pm_wakeup_event(chip->dev, 500);
 		schedule_delayed_work(&chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 	}
