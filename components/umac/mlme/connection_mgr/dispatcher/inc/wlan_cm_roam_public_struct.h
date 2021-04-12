@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -97,6 +97,19 @@
 #define DEFAULT_ROAM_SCAN_SCHEME_BITMAP 0
 #define ROAM_MAX_CFG_VALUE 0xffffffff
 
+/*
+ * Currently roam score delta value is sent for 2 triggers and min rssi
+ * values are sent for 3 triggers
+ */
+#define NUM_OF_ROAM_TRIGGERS 2
+#define IDLE_ROAM_TRIGGER 0
+#define BTM_ROAM_TRIGGER  1
+
+#define NUM_OF_ROAM_MIN_RSSI 3
+#define DEAUTH_MIN_RSSI 0
+#define BMISS_MIN_RSSI  1
+#define MIN_RSSI_2G_TO_5G_ROAM 2
+
 /**
  * enum roam_cfg_param  - Type values for roaming parameters used as index
  * for get/set of roaming config values(pNeighborRoamInfo in legacy)
@@ -155,26 +168,6 @@ struct wlan_cm_roam_vendor_btm_params {
 	uint32_t connected_rssi_threshold;
 	uint32_t candidate_rssi_threshold;
 	uint32_t user_roam_reason;
-};
-
-/**
- * struct wlan_roam_triggers - vendor configured roam triggers
- * @vdev_id: vdev id
- * @trigger_bitmap: vendor configured roam trigger bitmap as
- *		    defined @enum roam_control_trigger_reason
- * @roam_score_delta: Value of roam score delta
- * percentage to trigger roam
- * @roam_scan_scheme_bitmap: Bitmap of roam triggers as defined in
- * enum roam_trigger_reason, for which the roam scan scheme should
- * be partial scan
- * @control_param: roam trigger param
- */
-struct wlan_roam_triggers {
-	uint32_t vdev_id;
-	uint32_t trigger_bitmap;
-	uint32_t roam_score_delta;
-	uint32_t roam_scan_scheme_bitmap;
-	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
 };
 
 /**
@@ -281,19 +274,6 @@ struct scoring_param {
 	struct per_slot_score oce_wan_scoring;
 };
 
-/*
- * Currently roam score delta value is sent for 2 triggers and min rssi values
- * are sent for 3 triggers
- */
-#define NUM_OF_ROAM_TRIGGERS 2
-#define IDLE_ROAM_TRIGGER 0
-#define BTM_ROAM_TRIGGER  1
-
-#define NUM_OF_ROAM_MIN_RSSI 3
-#define DEAUTH_MIN_RSSI 0
-#define BMISS_MIN_RSSI  1
-#define MIN_RSSI_2G_TO_5G_ROAM 2
-
 /**
  * enum roam_trigger_reason - Reason for triggering roam
  * ROAM_TRIGGER_REASON_NONE: Roam trigger reason none
@@ -374,6 +354,30 @@ struct roam_trigger_score_delta {
 };
 
 /**
+ * struct wlan_roam_triggers - vendor configured roam triggers
+ * @vdev_id: vdev id
+ * @trigger_bitmap: vendor configured roam trigger bitmap as
+ *		    defined @enum roam_control_trigger_reason
+ * @roam_score_delta: Value of roam score delta
+ * percentage to trigger roam
+ * @roam_scan_scheme_bitmap: Bitmap of roam triggers as defined in
+ * enum roam_trigger_reason, for which the roam scan scheme should
+ * be partial scan
+ * @control_param: roam trigger param
+ * @min_rssi_params: Min RSSI values for different roam triggers
+ * @score_delta_params: Roam score delta values for different triggers
+ */
+struct wlan_roam_triggers {
+	uint32_t vdev_id;
+	uint32_t trigger_bitmap;
+	uint32_t roam_score_delta;
+	uint32_t roam_scan_scheme_bitmap;
+	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
+	struct roam_trigger_min_rssi min_rssi_params[NUM_OF_ROAM_MIN_RSSI];
+	struct roam_trigger_score_delta score_delta_param[NUM_OF_ROAM_TRIGGERS];
+};
+
+/**
  * struct ap_profile_params - ap profile params
  * @vdev_id: vdev id
  * @profile: ap profile to match candidate
@@ -407,7 +411,7 @@ struct wlan_roam_mawc_params {
 	uint8_t rssi_stationary_low_adjust;
 };
 
-#define MAX_SSID_ALLOWED_LIST    4
+#define MAX_SSID_ALLOWED_LIST    8
 #define MAX_BSSID_AVOID_LIST     16
 #define MAX_BSSID_FAVORED      16
 
@@ -648,7 +652,6 @@ struct wlan_per_roam_config_req {
 	struct wlan_per_roam_config per_config;
 };
 
-#ifdef ROAM_OFFLOAD_V1
 #define NOISE_FLOOR_DBM_DEFAULT          (-96)
 #define RSSI_MIN_VALUE                   (-128)
 #define RSSI_MAX_VALUE                   (127)
@@ -683,7 +686,6 @@ struct wlan_roam_fils_params {
 	uint8_t fils_ft[WLAN_FILS_FT_MAX_LEN];
 	uint8_t fils_ft_len;
 };
-#endif
 
 /**
  * struct wlan_roam_scan_params  - Roaming scan parameters
@@ -1082,7 +1084,6 @@ struct wlan_roam_rssi_change_params {
 	int32_t rssi_change_thresh;
 };
 
-#ifdef ROAM_OFFLOAD_V1
 /**
  * struct wlan_roam_start_config - structure containing parameters for
  * roam start config
@@ -1177,8 +1178,6 @@ struct wlan_roam_update_config {
 	struct wlan_roam_idle_params idle_params;
 	struct wlan_roam_triggers roam_triggers;
 };
-
-#endif
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
 /**
@@ -1306,7 +1305,6 @@ struct set_pcl_req {
 struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_vdev_set_pcl_cmd)(struct wlan_objmgr_vdev *vdev,
 					    struct set_pcl_req *req);
-#ifdef ROAM_OFFLOAD_V1
 	QDF_STATUS (*send_roam_offload_init_req)(
 			struct wlan_objmgr_vdev *vdev,
 			struct wlan_roam_offload_init_params *params);
@@ -1327,7 +1325,6 @@ struct wlan_cm_roam_tx_ops {
 					 struct wlan_roam_triggers *req);
 	QDF_STATUS (*send_roam_disable_config)(struct wlan_objmgr_vdev *vdev,
 				struct roam_disable_cfg *req);
-#endif
 };
 
 /**
@@ -1344,6 +1341,20 @@ enum roam_scan_freq_scheme {
 	ROAM_SCAN_FREQ_SCHEME_FULL_SCAN = 2,
 };
 
+/*
+ * roam_fail_params: different types of params to set or get roam fail states
+ * for the vdev
+ * @ROAM_TRIGGER_REASON: Roam trigger reason(enum WMI_ROAM_TRIGGER_REASON_ID)
+ * @ROAM_INVOKE_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for roam failure
+ * in case of forced roam
+ * @ROAM_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for roam failure
+ */
+enum roam_fail_params {
+	ROAM_TRIGGER_REASON,
+	ROAM_INVOKE_FAIL_REASON,
+	ROAM_FAIL_REASON,
+};
+
 /**
  * struct wlan_cm_rso_configs  - Roam scan offload related per vdev
  * configuration parameters.
@@ -1358,12 +1369,19 @@ enum roam_scan_freq_scheme {
  * Ex: roam_scan_scheme_bitmap - 0x00110 will enable partial scan for below
  * triggers:
  * ROAM_TRIGGER_REASON_PER, ROAM_TRIGGER_REASON_BMISS
+ * @roam_fail_reason: One of WMI_ROAM_FAIL_REASON_ID
+ * @roam_trigger_reason: Roam trigger reason(enum WMI_ROAM_TRIGGER_REASON_ID)
+ * @roam_invoke_fail_reason: One of reason id from enum
+ * wmi_roam_invoke_status_error in case of forced roam
  */
 struct wlan_cm_rso_configs {
 	uint8_t rescan_rssi_delta;
 	uint8_t beacon_rssi_weight;
 	uint32_t hi_rssi_scan_delay;
 	uint32_t roam_scan_scheme_bitmap;
+	uint32_t roam_fail_reason;
+	uint32_t roam_trigger_reason;
+	uint32_t roam_invoke_fail_reason;
 };
 
 /**

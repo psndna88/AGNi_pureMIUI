@@ -51,10 +51,12 @@ bool mlme_is_twt_setup_in_progress(struct wlan_objmgr_psoc *psoc,
 	}
 
 	for (i = 0; i < peer_priv->twt_ctx.num_twt_sessions; i++) {
+		bool setup_done = peer_priv->twt_ctx.session_info[i].setup_done;
 		existing_session_dialog_id =
 			peer_priv->twt_ctx.session_info[i].dialog_id;
 		if (existing_session_dialog_id == dialog_id &&
-		    existing_session_dialog_id != WLAN_ALL_SESSIONS_DIALOG_ID) {
+		    existing_session_dialog_id != WLAN_ALL_SESSIONS_DIALOG_ID &&
+		    !setup_done) {
 			wlan_objmgr_peer_release_ref(peer, WLAN_MLME_NB_ID);
 			return true;
 		}
@@ -435,17 +437,6 @@ bool mlme_is_flexible_twt_enabled(struct wlan_objmgr_psoc *psoc)
 	return mlme_obj->cfg.he_caps.dot11_he_cap.flex_twt_sched;
 }
 #endif
-
-bool mlme_get_twt_bcast_requestor_tgt_cap(struct wlan_objmgr_psoc *psoc)
-{
-	struct wlan_mlme_psoc_ext_obj *mlme_obj;
-
-	mlme_obj = mlme_get_psoc_ext_obj(psoc);
-	if (!mlme_obj)
-		return false;
-
-	return mlme_obj->cfg.twt_cfg.bcast_requestor_tgt_cap;
-}
 
 QDF_STATUS mlme_set_twt_command_in_progress(struct wlan_objmgr_psoc *psoc,
 					    struct qdf_mac_addr *peer_mac,

@@ -132,7 +132,6 @@ uint32_t cm_crypto_authmode_to_wmi_authmode(int32_t authmodeset, int32_t akm,
  */
 uint32_t cm_crypto_cipher_wmi_cipher(int32_t cipherset);
 
-#ifdef ROAM_OFFLOAD_V1
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(WLAN_FEATURE_FILS_SK)
 QDF_STATUS cm_roam_scan_offload_add_fils_params(
 		struct wlan_objmgr_psoc *psoc,
@@ -148,5 +147,4 @@ QDF_STATUS cm_roam_scan_offload_add_fils_params(
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* FEATURE_ROAM_OFFLOAD && WLAN_FEATURE_FILS_SK */
-#endif /* ROAM_OFFLOAD_V1 */
 #endif /* _WLAN_CM_ROAM_OFFLOAD_H_ */

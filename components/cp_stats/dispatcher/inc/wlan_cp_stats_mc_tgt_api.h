@@ -94,5 +94,31 @@ QDF_STATUS tgt_mc_cp_stats_inc_wake_lock_stats(struct wlan_objmgr_psoc *psoc,
 				uint32_t reason, struct wake_lock_stats *stats,
 				uint32_t *unspecified_wake_count);
 
+#ifdef WLAN_FEATURE_BIG_DATA_STATS
+/**
+ * tgt_mc_cp_stats_process_big_data_stats_event(): API to process big data
+ * stats event
+ * @psoc: pointer to psoc object
+ * @event: big data stats event parameters
+ *
+ * Return: status of operation
+ */
+QDF_STATUS
+tgt_mc_cp_stats_process_big_data_stats_event(
+			  struct wlan_objmgr_psoc *psoc,
+			  struct big_data_stats_event *event);
+
+/**
+ * tgt_send_cp_big_data_stats_req(): API to send big data stats request
+ * to lmac
+ * @psoc: pointer to psoc object
+ * @req: pointer to request info
+ *
+ * Return: status of operation
+ */
+QDF_STATUS tgt_send_cp_big_data_stats_req(struct wlan_objmgr_psoc *psoc,
+					  struct request_info *req);
+
+#endif
 #endif /* QCA_SUPPORT_CP_STATS */
 #endif /* __WLAN_CP_STATS_MC_TGT_API_H__ */

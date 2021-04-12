@@ -1829,6 +1829,7 @@ static void wma_state_info_dump(char **buf_ptr, uint16_t *size)
 			"\tipv6_mcast_na %u\n"
 			"\toem_response %u\n"
 			"\tuc_drop %u\n"
+			"\tfatal_event %u\n"
 			"dtimPeriod %d\n"
 			"chan_width %d\n"
 			"vdev_active %d\n"
@@ -1855,6 +1856,7 @@ static void wma_state_info_dump(char **buf_ptr, uint16_t *size)
 			stats.ipv6_mcast_na_stats,
 			stats.oem_response_wake_up_count,
 			stats.uc_drop_wake_up_count,
+			stats.fatal_event_wake_up_count,
 			iface->dtimPeriod,
 			iface->chan_width,
 			iface->vdev_active,
@@ -5394,7 +5396,12 @@ static void wma_update_mlme_related_tgt_caps(struct wlan_objmgr_psoc *psoc,
 		wmi_service_enabled(wmi_handle,
 				    wmi_service_dual_sta_roam_support);
 
-	wma_debug("beacon protection support %d", mlme_tgt_cfg.bigtk_support);
+	mlme_tgt_cfg.ocv_support =
+		wmi_service_enabled(wmi_handle,
+				    wmi_service_ocv_support);
+
+	wma_debug("beacon protection support %d, ocv support %d",
+		  mlme_tgt_cfg.bigtk_support, mlme_tgt_cfg.ocv_support);
 
 	/* Call this at last only after filling all the tgt caps */
 	wlan_mlme_update_cfg_with_tgt_caps(psoc, &mlme_tgt_cfg);
@@ -8565,12 +8572,7 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 				(tpSirRcvFltMcAddrList) msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
 		break;
-#ifndef ROAM_OFFLOAD_V1
-	/* this is temp will be removed once ROAM_OFFLOAD_V1 is enabled */
-	case WMA_ROAM_SCAN_OFFLOAD_REQ:
-		wma_process_roaming_config(wma_handle, msg->bodyptr);
-		break;
-#endif
+
 	case WMA_ROAM_PRE_AUTH_STATUS:
 		wma_send_roam_preauth_status(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
@@ -8737,13 +8739,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 #endif /* FEATURE_WLAN_EXTSCAN */
-#ifndef ROAM_OFFLOAD_V1
-	case WMA_SET_PER_ROAM_CONFIG_CMD:
-		wma_update_per_roam_config(wma_handle,
-			(struct wlan_per_roam_config_req *)msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-#endif
 	case WMA_SET_SCAN_MAC_OUI_REQ:
 		wma_scan_probe_setoui(wma_handle, msg->bodyptr);
 		qdf_mem_free(msg->bodyptr);
@@ -9048,21 +9043,6 @@ static QDF_STATUS wma_mc_process_msg(struct scheduler_msg *msg)
 		qdf_mem_free(msg->bodyptr);
 		break;
 #endif
-#ifndef ROAM_OFFLOAD_V1
-	/* This code will be removed once ROAM_OFFLOAD_V1 is enabled */
-	case WMA_SET_ROAM_TRIGGERS:
-		wma_set_roam_triggers(wma_handle, msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-	case WMA_ROAM_INIT_PARAM:
-		wma_update_roam_offload_flag(wma_handle, msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-	case WMA_ROAM_DISABLE_CFG:
-		wma_set_roam_disable_cfg(wma_handle, msg->bodyptr);
-		qdf_mem_free(msg->bodyptr);
-		break;
-#endif
 	case WMA_ROAM_SCAN_CH_REQ:
 		wma_get_roam_scan_ch(wma_handle->wmi_handle, msg->bodyval);
 		break;
@@ -9323,6 +9303,15 @@ QDF_STATUS wma_send_pdev_set_dual_mac_config(tp_wma_handle wma_handle,
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	req_msg = wma_fill_hold_req(wma_handle, 0,
+				    SIR_HAL_PDEV_DUAL_MAC_CFG_REQ,
+				    WMA_PDEV_MAC_CFG_RESP, NULL,
+				    WMA_VDEV_DUAL_MAC_CFG_TIMEOUT);
+	if (!req_msg) {
+		wma_err("Failed to allocate request for SIR_HAL_PDEV_DUAL_MAC_CFG_REQ");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	/*
 	 * aquire the wake lock here and release it in response handler function
 	 * In error condition, release the wake lock right away
@@ -9336,19 +9325,11 @@ QDF_STATUS wma_send_pdev_set_dual_mac_config(tp_wma_handle wma_handle,
 		wma_err("Failed to send WMI_PDEV_SET_DUAL_MAC_CONFIG_CMDID: %d",
 			status);
 		wma_release_wakelock(&wma_handle->wmi_cmd_rsp_wake_lock);
+		wma_remove_req(wma_handle, 0, WMA_PDEV_MAC_CFG_RESP);
 		goto fail;
 	}
 	policy_mgr_update_dbs_req_config(wma_handle->psoc,
 	msg->scan_config, msg->fw_mode_config);
-
-	req_msg = wma_fill_hold_req(wma_handle, 0,
-				SIR_HAL_PDEV_DUAL_MAC_CFG_REQ,
-				WMA_PDEV_MAC_CFG_RESP, NULL,
-				WMA_VDEV_DUAL_MAC_CFG_TIMEOUT);
-	if (!req_msg) {
-		wma_err("Failed to allocate request for SIR_HAL_PDEV_DUAL_MAC_CFG_REQ");
-		wma_remove_req(wma_handle, 0, WMA_PDEV_MAC_CFG_RESP);
-	}
 
 	return QDF_STATUS_SUCCESS;
 
@@ -9360,8 +9341,8 @@ fail:
 	resp->status = SET_HW_MODE_STATUS_ECANCELED;
 	wma_debug("Sending failure response to LIM");
 	wma_send_msg(wma_handle, SIR_HAL_PDEV_MAC_CFG_RESP, (void *) resp, 0);
-	return QDF_STATUS_E_FAILURE;
 
+	return QDF_STATUS_E_FAILURE;
 }
 
 /**

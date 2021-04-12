@@ -66,6 +66,7 @@ qca_wlan_vendor_twt_add_dialog_policy[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1] = 
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX_WAKE_DURATION] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MIN_WAKE_INTVL] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX_WAKE_INTVL] = {.type = NLA_U32 },
+	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA] = {.type = NLA_U32 },
 };
 
 static const struct nla_policy
@@ -138,7 +139,6 @@ int hdd_twt_get_add_dialog_values(struct nlattr **tb,
 	uint32_t wake_intvl_exp, result;
 	int cmd_id;
 	QDF_STATUS qdf_status;
-	uint32_t wake_intvl_mantis_tu;
 
 	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_ID;
 	if (tb[cmd_id]) {
@@ -231,9 +231,17 @@ int hdd_twt_get_add_dialog_values(struct nlattr **tb,
 		hdd_err_rl("SETUP_WAKE_INTVL_MANTISSA is must");
 		return -EINVAL;
 	}
-	wake_intvl_mantis_tu = nla_get_u32(tb[cmd_id]);
-	params->wake_intvl_mantis = wake_intvl_mantis_tu *
-				    TWT_WAKE_INTVL_MULTIPLICATION_FACTOR;
+	params->wake_intvl_mantis = nla_get_u32(tb[cmd_id]);
+
+	/*
+	 * If mantissa in microsecond is present then take precedence over
+	 * mantissa in TU. And send mantissa in microsecond to firmware.
+	 */
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA;
+	if (tb[cmd_id]) {
+		params->wake_intvl_mantis = nla_get_u32(tb[cmd_id]);
+	}
+
 	if (params->wake_intvl_mantis >
 	    TWT_SETUP_WAKE_INTVL_MANTISSA_MAX) {
 		hdd_err_rl("Invalid wake_intvl_mantis %u",
@@ -500,7 +508,7 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
 	enum qca_wlan_twt_setup_state converted_state;
 	uint64_t tsf_val;
 	uint32_t wake_duration;
-	uint32_t wake_intvl_mantis_tu;
+	uint32_t wake_intvl_mantis_us, wake_intvl_mantis_tu;
 	int i, attr;
 
 	config_attr = nla_nest_start(reply_skb,
@@ -568,7 +576,7 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
 			}
 		}
 
-		if (params[i].info_frame_disabled) {
+		if (!params[i].info_frame_disabled) {
 			attr = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_TWT_INFO_ENABLED;
 			if (nla_put_flag(reply_skb, attr)) {
 				hdd_err("TWT: get_params put Info Enable fail");
@@ -584,6 +592,12 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
 			return QDF_STATUS_E_INVAL;
 		}
 
+		wake_intvl_mantis_us = params[i].wake_intvl_us;
+		attr = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA;
+		if (nla_put_u32(reply_skb, attr, wake_intvl_mantis_us)) {
+			hdd_err("TWT: get_params failed to put Wake Interval in us");
+			return QDF_STATUS_E_INVAL;
+		}
 		wake_intvl_mantis_tu = params[i].wake_intvl_us /
 				       TWT_WAKE_INTVL_MULTIPLICATION_FACTOR;
 		attr = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA;
@@ -591,6 +605,9 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
 			hdd_err("TWT: get_params failed to put Wake Interval");
 			return QDF_STATUS_E_INVAL;
 		}
+
+		hdd_debug("TWT: Send mantissa_us:%d, mantissa_tu:%d to userspace",
+			   wake_intvl_mantis_us, wake_intvl_mantis_tu);
 
 		attr = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_EXP;
 		if (nla_put_u8(reply_skb, attr, 0)) {
@@ -765,7 +782,9 @@ static int hdd_twt_get_session_params(struct hdd_adapter *adapter,
 			  QDF_MAC_ADDR_REF(params[0].peer_mac));
 	}
 
-	if (!ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
+	if ((adapter->device_mode != QDF_SAP_MODE ||
+	     params[0].dialog_id != WLAN_ALL_SESSIONS_DIALOG_ID) &&
+	    !ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
 					 &hdd_sta_ctx->conn_info.bssid,
 					 params[0].dialog_id)) {
 		hdd_debug("vdev%d: TWT session %d setup incomplete",
@@ -1064,7 +1083,7 @@ hdd_twt_setup_pack_resp_nlmsg(struct sk_buff *reply_skb,
 	enum qca_wlan_vendor_twt_status vendor_status;
 	int response_type;
 	uint32_t wake_duration;
-	uint32_t wake_intvl_mantissa_tu;
+	uint32_t wake_intvl_mantis_us, wake_intvl_mantis_tu;
 
 	hdd_enter();
 
@@ -1129,15 +1148,24 @@ hdd_twt_setup_pack_resp_nlmsg(struct sk_buff *reply_skb,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	wake_intvl_mantissa_tu = (event->additional_params.wake_intvl_us /
+	wake_intvl_mantis_us = event->additional_params.wake_intvl_us;
+	if (nla_put_u32(reply_skb,
+			QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA,
+			wake_intvl_mantis_us)) {
+		hdd_err("TWT: Failed to put wake interval mantissa in us");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	wake_intvl_mantis_tu = (event->additional_params.wake_intvl_us /
 				 TWT_WAKE_INTVL_MULTIPLICATION_FACTOR);
 	if (nla_put_u32(reply_skb,
 			QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA,
-			wake_intvl_mantissa_tu)) {
-		hdd_err("TWT: Failed to put wake interval us");
+			wake_intvl_mantis_tu)) {
+		hdd_err("TWT: Failed to put wake interval mantissa in tu");
 		return QDF_STATUS_E_FAILURE;
 	}
-	hdd_debug("wake_intvl_mantissa in TU %d", wake_intvl_mantissa_tu);
+	hdd_debug("TWT: Send mantissa_us:%d, mantissa_tu:%d to userspace",
+		  wake_intvl_mantis_us, wake_intvl_mantis_tu);
 
 	if (nla_put_u8(reply_skb, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_EXP,
 		       0)) {
@@ -1309,6 +1337,15 @@ int hdd_send_twt_add_dialog_cmd(struct hdd_context *hdd_ctx,
  * Handles QCA_WLAN_TWT_SET
  *
  * Return: 0 for Success and negative value for failure
+ *
+ *    If the setup request is received:
+ *        before the host driver receiving the setup response event from
+ *        firmware for the previous setup request, then return -EINPROGRESS
+ *
+ *        after the host driver received the setup response event from
+ *        firmware for the previous setup request, then setup_done is
+ *        set to true and this new setup request is sent to firmware
+ *        for parameter re-negotiation.
  */
 static int hdd_twt_setup_session(struct hdd_adapter *adapter,
 				 struct nlattr *twt_param_attr)
@@ -1368,13 +1405,10 @@ static int hdd_twt_setup_session(struct hdd_adapter *adapter,
 
 	if (ucfg_mlme_is_twt_setup_in_progress(adapter->hdd_ctx->psoc,
 					       &hdd_sta_ctx->conn_info.bssid,
-					       params.dialog_id) ||
-	    ucfg_mlme_is_twt_setup_done(adapter->hdd_ctx->psoc,
-					&hdd_sta_ctx->conn_info.bssid,
 					params.dialog_id)) {
-		hdd_err_rl("TWT session exists for dialog:%d",
+		hdd_err_rl("TWT setup is in progress for dialog_id:%d",
 			   params.dialog_id);
-		return -EALREADY;
+		return -EINPROGRESS;
 	}
 
 	ret = hdd_send_twt_add_dialog_cmd(adapter->hdd_ctx, &params);
@@ -2070,6 +2104,10 @@ static int hdd_twt_nudge_session(struct hdd_adapter *adapter,
 		nla_memcpy(params.peer_macaddr, tb[id], QDF_MAC_ADDR_SIZE);
 		hdd_debug("peer mac_addr "QDF_MAC_ADDR_FMT,
 			  QDF_MAC_ADDR_REF(params.peer_macaddr));
+	} else {
+		qdf_mem_copy(params.peer_macaddr,
+			     hdd_sta_ctx->conn_info.bssid.bytes,
+			     QDF_MAC_ADDR_SIZE);
 	}
 
 	id = QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_FLOW_ID;
@@ -2268,7 +2306,6 @@ hdd_twt_pack_get_capabilities_resp(struct hdd_adapter *adapter)
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 	uint8_t peer_cap = 0, self_cap = 0;
 	bool twt_req = false, twt_bcast_req = false;
-	bool enable_bcast_twt = false, bcast_tgt_cap;
 
 	/*
 	 * Length of attribute QCA_WLAN_VENDOR_ATTR_TWT_CAPABILITIES_SELF &
@@ -2296,16 +2333,9 @@ hdd_twt_pack_get_capabilities_resp(struct hdd_adapter *adapter)
 	if (twt_req)
 		self_cap |= QCA_WLAN_TWT_CAPA_REQUESTOR;
 
-	ucfg_mlme_get_bcast_twt(hdd_ctx->psoc, &enable_bcast_twt);
-	bcast_tgt_cap = ucfg_mlme_get_twt_bcast_requestor_tgt_cap(
-						hdd_ctx->psoc);
 	ucfg_mlme_get_twt_bcast_requestor(hdd_ctx->psoc,
 					  &twt_bcast_req);
-	if (bcast_tgt_cap && enable_bcast_twt)
-		self_cap |= (twt_bcast_req ?
-			     QCA_WLAN_TWT_CAPA_BROADCAST : 0);
-	else if (twt_bcast_req)
-		self_cap |= QCA_WLAN_TWT_CAPA_BROADCAST;
+	self_cap |= (twt_bcast_req ? QCA_WLAN_TWT_CAPA_BROADCAST : 0);
 
 	if (ucfg_mlme_is_flexible_twt_enabled(hdd_ctx->psoc))
 		self_cap |= QCA_WLAN_TWT_CAPA_FLEXIBLE;
@@ -3030,10 +3060,7 @@ void hdd_update_tgt_twt_cap(struct hdd_context *hdd_ctx,
 	struct wma_tgt_services *services = &cfg->services;
 	bool twt_bcast_req;
 	bool twt_bcast_res;
-	bool enable_twt;
-	bool bcast_twt;
-	bool twt_req;
-	bool twt_res;
+	bool twt_req, twt_res, enable_twt;
 
 	enable_twt = ucfg_mlme_is_twt_enabled(hdd_ctx->psoc);
 
@@ -3047,43 +3074,57 @@ void hdd_update_tgt_twt_cap(struct hdd_context *hdd_ctx,
 	ucfg_mlme_get_twt_bcast_responder(hdd_ctx->psoc,
 					  &twt_bcast_res);
 
-	ucfg_mlme_get_bcast_twt(hdd_ctx->psoc, &bcast_twt);
-	if (bcast_twt)
-		ucfg_mlme_set_bcast_twt(hdd_ctx->psoc,
-					QDF_MIN(cfg->bcast_twt_support,
-						enable_twt));
-	else
-		hdd_debug("bcast twt is disable in ini, fw cap %d",
-			  cfg->bcast_twt_support);
-
 	hdd_debug("ini: enable_twt=%d, bcast_req=%d, bcast_res=%d",
 		  enable_twt, twt_bcast_req, twt_bcast_res);
 	hdd_debug("ini: twt_req=%d, twt_res=%d", twt_req, twt_res);
-	hdd_debug("svc:  req=%d, res=%d, bcast_req=%d, bcast_res=%d",
+	hdd_debug("svc:  req=%d, res=%d, bcast_req=%d, bcast_res=%d legacy_bcast_twt:%d",
 		  services->twt_requestor, services->twt_responder,
-		  cfg->twt_bcast_req_support, cfg->twt_bcast_res_support);
+		  cfg->twt_bcast_req_support, cfg->twt_bcast_res_support,
+		  cfg->legacy_bcast_twt_support);
 
+	/*
+	 * The HE cap IE in frame will have intersection of
+	 * "enable_twt" ini, twt requestor fw service cap and
+	 * "twt_requestor" ini requestor bit after this
+	 * set operation.
+	 */
 	ucfg_mlme_set_twt_requestor(hdd_ctx->psoc,
 				    QDF_MIN(services->twt_requestor,
 					    (enable_twt && twt_req)));
 
+	/*
+	 * The HE cap IE in frame will have intersection of
+	 * "enable_twt" ini, twt responder fw service cap and
+	 * "twt_responder" ini responder bit after this
+	 * set operation.
+	 */
 	ucfg_mlme_set_twt_responder(hdd_ctx->psoc,
 				    QDF_MIN(services->twt_responder,
 					    (enable_twt && twt_res)));
+	/*
+	 * The HE cap IE in frame will have intersection of
+	 * "enable_twt" ini, twt requestor fw service cap and
+	 * "twt_bcast_req_resp_config" ini requestor bit after this
+	 * set operation.
+	 */
+	ucfg_mlme_set_twt_bcast_requestor(
+			hdd_ctx->psoc,
+			QDF_MIN((cfg->twt_bcast_req_support ||
+				 cfg->legacy_bcast_twt_support),
+				(enable_twt && twt_bcast_req)));
 
-	twt_req = enable_twt && twt_bcast_req;
-	ucfg_mlme_set_twt_bcast_requestor_tgt_cap(hdd_ctx->psoc,
-						  cfg->twt_bcast_req_support);
-	ucfg_mlme_set_twt_bcast_requestor(hdd_ctx->psoc,
-					  QDF_MIN(cfg->twt_bcast_req_support,
-						  twt_req));
+	/*
+	 * The HE cap IE in frame will have intersection of
+	 * "enable_twt" ini, twt responder fw service cap and
+	 * "twt_bcast_req_resp_config" ini responder bit after this
+	 * set operation.
+	 */
+	ucfg_mlme_set_twt_bcast_responder(
+			hdd_ctx->psoc,
+			QDF_MIN((cfg->twt_bcast_res_support ||
+				 cfg->legacy_bcast_twt_support),
+				(enable_twt && twt_bcast_res)));
 
-	twt_res = enable_twt && twt_bcast_res;
-	ucfg_mlme_set_twt_bcast_responder_tgt_cap(hdd_ctx->psoc,
-						  cfg->twt_bcast_res_support);
-	ucfg_mlme_set_twt_bcast_responder(hdd_ctx->psoc,
-					  QDF_MIN(cfg->twt_bcast_res_support,
-						  twt_res));
 	ucfg_mlme_set_twt_nudge_tgt_cap(hdd_ctx->psoc, cfg->twt_nudge_enabled);
 	ucfg_mlme_set_twt_all_twt_tgt_cap(hdd_ctx->psoc,
 					  cfg->all_twt_enabled);
@@ -3095,19 +3136,22 @@ void hdd_send_twt_enable_cmd(struct hdd_context *hdd_ctx)
 {
 	uint8_t pdev_id = hdd_ctx->pdev->pdev_objmgr.wlan_pdev_id;
 	struct twt_enable_disable_conf twt_en_dis = {0};
-	bool is_requestor_en;
-	bool is_responder_en;
-	bool twt_bcast_en;
+	bool is_requestor_en, is_responder_en;
+	bool twt_bcast_requestor = false, twt_bcast_responder = false;
 
 	/* Get MLME TWT config */
 	ucfg_mlme_get_twt_requestor(hdd_ctx->psoc, &is_requestor_en);
 	ucfg_mlme_get_twt_responder(hdd_ctx->psoc, &is_responder_en);
-	ucfg_mlme_get_bcast_twt(hdd_ctx->psoc, &twt_en_dis.bcast_en);
+
+	ucfg_mlme_get_twt_bcast_responder(hdd_ctx->psoc, &twt_bcast_responder);
+	ucfg_mlme_get_twt_bcast_requestor(hdd_ctx->psoc, &twt_bcast_requestor);
+	twt_en_dis.bcast_en = (twt_bcast_requestor || twt_bcast_responder);
+
 	ucfg_mlme_get_twt_congestion_timeout(hdd_ctx->psoc,
 					     &twt_en_dis.congestion_timeout);
 	hdd_debug("TWT mlme cfg:req: %d, res:%d, bcast:%d, cong:%d, pdev:%d",
 		  is_requestor_en, is_responder_en, twt_en_dis.bcast_en,
-		   twt_en_dis.congestion_timeout, pdev_id);
+		  twt_en_dis.congestion_timeout, pdev_id);
 
 	/* The below code takes care of the following :
 	 * If user wants to separately enable requestor and responder roles,
@@ -3128,8 +3172,7 @@ void hdd_send_twt_enable_cmd(struct hdd_context *hdd_ctx)
 	if (is_requestor_en) {
 		twt_en_dis.role = WMI_TWT_ROLE_REQUESTOR;
 		twt_en_dis.ext_conf_present = true;
-		ucfg_mlme_get_twt_bcast_requestor(hdd_ctx->psoc, &twt_bcast_en);
-		if (twt_bcast_en)
+		if (twt_bcast_requestor)
 			twt_en_dis.oper = WMI_TWT_OPERATION_BROADCAST;
 		else
 			twt_en_dis.oper = WMI_TWT_OPERATION_INDIVIDUAL;
@@ -3141,8 +3184,7 @@ void hdd_send_twt_enable_cmd(struct hdd_context *hdd_ctx)
 	if (is_responder_en) {
 		twt_en_dis.role = WMI_TWT_ROLE_RESPONDER;
 		twt_en_dis.ext_conf_present = true;
-		ucfg_mlme_get_twt_bcast_responder(hdd_ctx->psoc, &twt_bcast_en);
-		if (twt_bcast_en)
+		if (twt_bcast_responder)
 			twt_en_dis.oper = WMI_TWT_OPERATION_BROADCAST;
 		else
 			twt_en_dis.oper = WMI_TWT_OPERATION_INDIVIDUAL;

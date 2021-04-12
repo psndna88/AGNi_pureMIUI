@@ -1525,6 +1525,9 @@ struct hdd_adapter {
 	enum hdd_work_status netdev_features_update_work_status;
 	/* Flag to indicate whether it is a pre cac adapter or not */
 	bool is_pre_cac_adapter;
+#ifdef WLAN_FEATURE_BIG_DATA_STATS
+	struct big_data_stats_event big_data_stats;
+#endif
 	bool delete_in_progress;
 	qdf_atomic_t net_dev_hold_ref_count[NET_DEV_HOLD_ID_MAX];
 };

@@ -344,26 +344,8 @@ wma_roam_scan_chan_list_event_handler(WMA_HANDLE handle, uint8_t *event,
 }
 #endif
 
-#ifndef ROAM_OFFLOAD_V1
-/**
- * wma_update_per_roam_config() -per roam config parameter updation to FW
- * @handle: wma handle
- * @req_buf: per roam config parameters
- *
- * Return: none
- */
-void wma_update_per_roam_config(WMA_HANDLE handle,
-				 struct wlan_per_roam_config_req *req_buf);
-#endif
 QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 				   tSirUpdateChanList *chan_list);
-
-#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && !defined(ROAM_OFFLOAD_V1)
-QDF_STATUS wma_roam_scan_fill_self_caps(tp_wma_handle wma_handle,
-					roam_offload_param *
-					roam_offload_params,
-					struct roam_offload_scan_req *roam_req);
-#endif
 
 A_UINT32 e_csr_auth_type_to_rsn_authmode(enum csr_akm_type authtype,
 					 eCsrEncryptionType encr);
@@ -984,6 +966,15 @@ enum tx_rate_info wma_get_ht_rate_flags(enum phy_ch_width ch_width);
  * Return: Rate flags corresponding to ch_width
  */
 enum tx_rate_info wma_get_he_rate_flags(enum phy_ch_width ch_width);
+
+/**
+ * wma_set_vht_txbf_cfg() - set VHT Tx beamforming capability to FW
+ * @mac: Global MAC context
+ * @vdev_id: VDEV id
+ *
+ * Return: None
+ */
+void wma_set_vht_txbf_cfg(struct mac_context *mac, uint8_t vdev_id);
 
 int32_t wmi_unified_send_txbf(tp_wma_handle wma, tpAddStaParams params);
 

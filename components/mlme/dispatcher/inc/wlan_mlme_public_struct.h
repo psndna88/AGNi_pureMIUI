@@ -1001,6 +1001,7 @@ struct wlan_mlme_chain_cfg {
  * supports stop all host scan request type.
  * @peer_create_conf_support: Peer create confirmation command support
  * @dual_sta_roam_fw_support: Firmware support for dual sta roaming feature
+ * @ocv_support: FW supports OCV
  *
  * Add all the mlme-tgt related capablities here, and the public API would fill
  * the related capability in the required mlme cfg structure.
@@ -1011,6 +1012,7 @@ struct mlme_tgt_caps {
 	bool stop_all_host_scan_support;
 	bool peer_create_conf_support;
 	bool dual_sta_roam_fw_support;
+	bool ocv_support;
 };
 
 /**
@@ -1227,6 +1229,7 @@ struct wlan_mlme_ratemask {
  * @sae_connect_retries: sae connect retry bitmask
  * @wls_6ghz_capable: wifi location service(WLS) is 6ghz capable
  * @monitor_mode_concurrency: Monitor mode concurrency supported
+ * @ocv_support: FW supports OCV or not
  */
 struct wlan_mlme_generic {
 	uint32_t band_capability;
@@ -1269,6 +1272,7 @@ struct wlan_mlme_generic {
 	uint32_t sae_connect_retries;
 	bool wls_6ghz_capable;
 	enum monitor_mode_concurrency monitor_mode_concurrency;
+	bool ocv_support;
 };
 
 /*
@@ -1348,6 +1352,8 @@ struct wlan_mlme_acs {
  * @is_bcast_requestor_enabled: bcast requestor enable/disable
  * @bcast_requestor_tgt_cap: Broadcast requestor target capability
  * @bcast_responder_tgt_cap: Broadcast responder target capability
+ * @bcast_legacy_tgt_cap: Broadcast Target capability. This is the legacy
+ * capability.
  * @is_twt_nudge_tgt_cap_enabled: support for nudge request enable/disable
  * @is_all_twt_tgt_cap_enabled: support for all twt enable/disable
  * @is_twt_statistics_tgt_cap_enabled: support for twt statistics
@@ -1359,6 +1365,7 @@ struct wlan_mlme_cfg_twt {
 	bool is_bcast_requestor_enabled;
 	bool bcast_requestor_tgt_cap;
 	bool bcast_responder_tgt_cap;
+	bool bcast_legacy_tgt_cap;
 	bool is_twt_nudge_tgt_cap_enabled;
 	bool is_all_twt_tgt_cap_enabled;
 	bool is_twt_statistics_tgt_cap_enabled;
