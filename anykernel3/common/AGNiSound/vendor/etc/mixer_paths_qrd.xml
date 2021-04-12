@@ -35,7 +35,7 @@
   <ctl name="Voice Rx Gain" id="0" value="0"/>
   <ctl name="Voice Rx Gain" id="1" value="-1"/>
   <ctl name="Voice Rx Gain" id="2" value="20"/>
-  <ctl name="Voice Sidetone Enable" value="0"/>
+  <ctl name="Voice Sidetone Enable" value="1"/>
   <ctl name="Voip Tx Mute" id="0" value="0"/>
   <ctl name="Voip Tx Mute" id="1" value="500"/>
   <ctl name="Voip Rx Gain" id="0" value="0"/>
@@ -146,14 +146,14 @@
   <ctl name="RX_CDC_DMA_RX_0 Format" value="UNPACKED"/>
   <ctl name="TX_CDC_DMA_TX_3 Format" value="UNPACKED"/>
   <!-- HFP start -->
-  <ctl name="HFP_SLIM7_UL_HL Switch" value="0"/>
+  <ctl name="HFP_SLIM7_UL_HL Switch" value="1"/>
   <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_7_TX" value="0"/>
   <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_7_TX" value="0"/>
   <!-- HFP end -->
   <!-- echo reference -->
   <ctl name="AUDIO_REF_EC_UL1 MUX" value="None"/>
   <ctl name="AUDIO_REF_EC_UL10 MUX" value="None"/>
-  <ctl name="EC Reference Channels" value="Zero"/>
+  <ctl name="EC Reference Channels" value="Two"/>
   <!-- usb headset -->
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="0"/>
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="0"/>
@@ -252,8 +252,8 @@
   <!-- audio record compress end-->
   <!-- split a2dp -->
   <ctl name="BT SampleRate" value="KHZ_8"/>
-  <ctl name="AFE Input Channels" value="Zero"/>
-  <ctl name="SLIM7_RX ADM Channels" value="Zero"/>
+  <ctl name="AFE Input Channels" value="Two"/>
+  <ctl name="SLIM7_RX ADM Channels" value="Two"/>
   <!-- split a2dp end-->
   <!-- ADSP testfwk -->
   <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="0"/>
@@ -290,21 +290,21 @@
   <ctl name="RX INT1_1 MIX1 INP2" value="ZERO"/>
   <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="0"/>
   <ctl name="RX INT0 DEM MUX" value="NORMAL_DSM_OUT"/>
-  <ctl name="RX INT1 DEM MUX" value="NORMAL_DSM_OUT"/>
+  <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT"/>
   <ctl name="RX_COMP1 Switch" value="0"/>
   <ctl name="RX_COMP2 Switch" value="0"/>
   <ctl name="HPHL_COMP Switch" value="0"/>
   <ctl name="HPHR_COMP Switch" value="0"/>
   <ctl name="EAR_RDAC Switch" value="0"/>
-  <ctl name="HPHL_RDAC Switch" value="0"/>
-  <ctl name="HPHR_RDAC Switch" value="0"/>
+  <ctl name="HPHL_RDAC Switch" value="1"/>
+  <ctl name="HPHR_RDAC Switch" value="1"/>
   <ctl name="AUX_RDAC Switch" value="0"/>
   <ctl name="RDAC3_MUX" value="ZERO"/>
   <ctl name="RX_EAR Mode" value="OFF"/>
   <!-- TX Controls -->
   <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
   <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0"/>
-  <ctl name="ADC1_MIXER Switch" value="1"/>
+  <ctl name="ADC1_MIXER Switch" value="0"/>
   <ctl name="ADC1 MUX" value="ZERO"/>
   <ctl name="ADC2_MIXER Switch" value="0"/>
   <ctl name="ADC2 MUX" value="ZERO"/>
@@ -372,37 +372,37 @@
   <ctl name="RX_HPH_PWR_MODE" value="HIFI"/>
   <ctl name="RX HPH Mode" value="CLS_H_HIFI"/>
   <!-- IIR/voice anc -->
-  <ctl name="IIR0 Band1" id="0" value="268833620"/>
-  <ctl name="IIR0 Band1" id="1" value="537398060"/>
-  <ctl name="IIR0 Band1" id="2" value="267510580"/>
-  <ctl name="IIR0 Band1" id="3" value="537398060"/>
-  <ctl name="IIR0 Band1" id="4" value="267908744"/>
-  <ctl name="IIR0 Band2" id="0" value="266468108"/>
-  <ctl name="IIR0 Band2" id="1" value="544862876"/>
-  <ctl name="IIR0 Band2" id="2" value="262421829"/>
-  <ctl name="IIR0 Band2" id="3" value="544862876"/>
-  <ctl name="IIR0 Band2" id="4" value="260454481"/>
-  <ctl name="IIR0 Band3" id="0" value="262913321"/>
-  <ctl name="IIR0 Band3" id="1" value="559557058"/>
-  <ctl name="IIR0 Band3" id="2" value="252311547"/>
-  <ctl name="IIR0 Band3" id="3" value="559557058"/>
-  <ctl name="IIR0 Band3" id="4" value="246789412"/>
-  <ctl name="IIR0 Band4" id="0" value="294517138"/>
-  <ctl name="IIR0 Band4" id="1" value="572289454"/>
-  <ctl name="IIR0 Band4" id="2" value="210943778"/>
-  <ctl name="IIR0 Band4" id="3" value="572289454"/>
-  <ctl name="IIR0 Band4" id="4" value="237025461"/>
-  <ctl name="IIR0 Band5" id="0" value="329006442"/>
-  <ctl name="IIR0 Band5" id="1" value="711929387"/>
-  <ctl name="IIR0 Band5" id="2" value="110068469"/>
-  <ctl name="IIR0 Band5" id="3" value="711929387"/>
-  <ctl name="IIR0 Band5" id="4" value="170639455"/>
-  <ctl name="IIR0 Enable Band1" value="1"/>
-  <ctl name="IIR0 Enable Band2" value="1"/>
-  <ctl name="IIR0 Enable Band3" value="1"/>
-  <ctl name="IIR0 Enable Band4" value="1"/>
-  <ctl name="IIR0 Enable Band5" value="1"/>
-  <ctl name="IIR0 INP0 Volume" value="72"/>
+  <ctl name="IIR0 Band1" id="0" value="268435456"/>
+  <ctl name="IIR0 Band1" id="1" value="0"/>
+  <ctl name="IIR0 Band1" id="2" value="0"/>
+  <ctl name="IIR0 Band1" id="3" value="0"/>
+  <ctl name="IIR0 Band1" id="4" value="0"/>
+  <ctl name="IIR0 Band2" id="0" value="268435456"/>
+  <ctl name="IIR0 Band2" id="1" value="0"/>
+  <ctl name="IIR0 Band2" id="2" value="0"/>
+  <ctl name="IIR0 Band2" id="3" value="0"/>
+  <ctl name="IIR0 Band2" id="4" value="0"/>
+  <ctl name="IIR0 Band3" id="0" value="268435456"/>
+  <ctl name="IIR0 Band3" id="1" value="0"/>
+  <ctl name="IIR0 Band3" id="2" value="0"/>
+  <ctl name="IIR0 Band3" id="3" value="0"/>
+  <ctl name="IIR0 Band3" id="4" value="0"/>
+  <ctl name="IIR0 Band4" id="0" value="268435456"/>
+  <ctl name="IIR0 Band4" id="1" value="0"/>
+  <ctl name="IIR0 Band4" id="2" value="0"/>
+  <ctl name="IIR0 Band4" id="3" value="0"/>
+  <ctl name="IIR0 Band4" id="4" value="0"/>
+  <ctl name="IIR0 Band5" id="0" value="268435456"/>
+  <ctl name="IIR0 Band5" id="1" value="0"/>
+  <ctl name="IIR0 Band5" id="2" value="0"/>
+  <ctl name="IIR0 Band5" id="3" value="0"/>
+  <ctl name="IIR0 Band5" id="4" value="0"/>
+  <ctl name="IIR0 Enable Band1" value="0"/>
+  <ctl name="IIR0 Enable Band2" value="0"/>
+  <ctl name="IIR0 Enable Band3" value="0"/>
+  <ctl name="IIR0 Enable Band4" value="0"/>
+  <ctl name="IIR0 Enable Band5" value="0"/>
+  <ctl name="IIR0 INP0 Volume" value="54"/>
   <ctl name="IIR0 INP0 MUX" value="ZERO"/>
   <ctl name="IIR0 INP1 MUX" value="ZERO"/>
   <ctl name="IIR0 INP2 MUX" value="ZERO"/>
@@ -2400,14 +2400,14 @@
   </path>
   <path name="sidetone-headphones">
     <path name="sidetone-iir"/>
-    <ctl name="IIR0 INP0 Volume" value="72"/>
+    <ctl name="IIR0 INP0 Volume" value="40"/>
     <ctl name="IIR0 INP0 MUX" value="DEC0"/>
     <ctl name="RX INT0 MIX2 INP" value="SRC0"/>
     <ctl name="RX INT1 MIX2 INP" value="SRC0"/>
   </path>
   <path name="sidetone-handset">
     <path name="sidetone-iir"/>
-    <ctl name="IIR0 INP0 Volume" value="72"/>
+    <ctl name="IIR0 INP0 Volume" value="54"/>
     <ctl name="IIR0 INP0 MUX" value="DEC0"/>
     <ctl name="RX INT0 MIX2 INP" value="SRC0"/>
   </path>
@@ -2482,7 +2482,6 @@
     <ctl name="COMP0 RX2" value="0"/>
     <ctl name="RX HPH Mode" value="CLS_H_HIFI"/>
     <ctl name="RX_HPH_PWR_MODE" value="HIFI"/>
-    <ctl name="SLIM_5_RX Format" value="S24_3LE"/>
   </path>
   <path name="headphones-hifi-filter">
     <path name="headphones"/>
@@ -2787,8 +2786,8 @@
     <ctl name="COMP1" value="0"/>
     <ctl name="COMP2" value="0"/>
   </path>
-  <ctl name="EC Reference Bit Format" value="S16_LE"/>
-  <ctl name="EC Reference SampleRate" value="48000"/>
+  <ctl name="EC Reference Bit Format" value="S24_LE"/>
+  <ctl name="EC Reference SampleRate" value="192000"/>
   <ctl name="COMP0 RX1" value="0"/>
   <ctl name="COMP0 RX2" value="0"/>
   <ctl name="Compress Playback 16 Volume" value="0"/>
@@ -2797,13 +2796,20 @@
   <ctl name="Compress Playback 30 Volume" value="0"/>
   <ctl name="Compress Playback 31 Volume" value="0"/>
   <ctl name="Compress Playback 32 Volume" value="0"/>
-  <ctl name="ADC1_INP1 Switch" value="0"/>
   <ctl name="TFA Profile" value="music"/>
   <ctl name="PCM_RX_DL_HL Switch" value="1"/>
   <ctl name="HiFi Function" value="On"/>
   <ctl name="HiFi Filter" value="6"/>
-  <ctl name="TAS2557 ClassD Edge" value="7"/>
-  <ctl name="MultiMedia5_RX QOS Vote" value="Disable"/>
-  <ctl name="MultiMedia5_TX QOS Vote" value="Disable"/>
-  <ctl name="AFE Input Bit Format" value="S24_LE"/>
+  <ctl name="USB_DL_HL Switch" value="1"/>
+  <ctl name="SLIM_7_RX Format" value="S24_LE"/>
+  <ctl name="SLIM_7_RX SampleRate" value="KHZ_192"/>
+  <ctl name="SLIM_7_RX Channels" value="Two"/>
+  <ctl name="SLIMBUS_7_RX Format" value="S24_LE"/>
+  <ctl name="SLIMBUS_7_RX SampleRate" value="KHZ_192"/>
+  <ctl name="SLIMBUS_7_RX Channels" value="Two"/>
+  <ctl name="SLIM7_RX_DL_HL Switch" value="1"/>
+  <ctl name="RX INT3 SEC MIX LO1 Switch" value="1"/>
+  <ctl name="RX INT4 SEC MIX LO2 Switch" value="1"/>
+  <ctl name="ASM Bit Width" value="24"/>
+  <ctl name="MSM ASphere Set Param" value="1"/>
 </mixer>

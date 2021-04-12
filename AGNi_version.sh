@@ -1,22 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 ## AGNi version info
 KERNELDIR=`readlink -f .`
 
-export AGNI_VERSION_PREFIX="beta9"
+export AGNI_VERSION_PREFIX="stable"
 export AGNI_VERSION="v8.9"
-sed -i 's/v8.9-beta8/v8.9-beta9/' $KERNELDIR/arch/arm64/configs/agni_*
+sed -i 's/v8.9-beta9/v8.9-stable/' $KERNELDIR/arch/arm64/configs/agni_*
 
 echo "	AGNi Version info loaded."
 
-# CCACHE SHIFTING
-if [ -d ~/.ccache ] && [ -d ~/.ccache_MIATOLL ]; then
-	mv ~/.ccache ~/.ccache_SDM660
-	mv ~/.ccache_MIATOLL ~/.ccache
-	echo "	   C-CACHE was shifted to MIATOLL !"
-elif [ -d ~/.ccache_SDM660 ] && [ -d ~/.ccache ]; then
-		echo "	   C-CACHE is already set to MIATOLL."
-else
-	mkdir ~/.ccache_MIATOLL
-	echo "	   New C-CACHE created for MIATOLL !"
-fi

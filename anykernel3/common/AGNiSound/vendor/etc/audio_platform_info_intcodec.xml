@@ -26,17 +26,10 @@
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <audio_platform_info>
     <bit_width_configs>
-    <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_REVERSE" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED" value="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES_44_1" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_SPEAKER" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_BT_A2DP" value="24"/>
-  </bit_width_configs>
-  <interface_names>
-    <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
+        <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
+    </bit_width_configs>
+    <interface_names>
+        <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
         <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
     </interface_names>
     <pcm_ids>
@@ -82,9 +75,9 @@
         <param key="spkr_1_tz_name" value="wsatz.13"/>
         <param key="spkr_2_tz_name" value="wsatz.14"/>
         <param key="true_32_bit" value="true"/>
-    <param key="hifi_filter" value="true"/>
-    <param key="native_audio_mode" value="src"/>
-    <param key="hfp_pcm_dev_id" value="39"/>
+        <param key="hifi_filter" value="false"/>
+        <param key="native_audio_mode" value="multiple_mix_dsp"/>
+        <param key="hfp_pcm_dev_id" value="39"/>
         <param key="input_mic_max_count" value="4"/>
     </config_params>
     <acdb_ids>
@@ -116,9 +109,8 @@
         <device name="SND_DEVICE_OUT_USB_HEADSET" acdb_id="10012"/>
         <device name="SND_DEVICE_OUT_USB_HEADPHONES" acdb_id="10012"/>
         <device name="SND_DEVICE_OUT_HEADPHONES_CE" acdb_id="10012"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES_NO_CE" acdb_id="10012"/>
-    <device name="SND_DEVICE_IN_HANDSET_STEREO_DMIC" value="1"/>
-  </acdb_ids>
+        <device name="SND_DEVICE_OUT_HEADPHONES_NO_CE" acdb_id="10012"/>
+    </acdb_ids>
     <backend_names>
         <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="RX_CDC_DMA_RX_0"/>
         <device name="SND_DEVICE_OUT_HEADPHONES_KARA" backend="headphones" interface="RX_CDC_DMA_RX_0"/>
@@ -180,13 +172,13 @@
         <device name="SND_DEVICE_OUT_VOICE_SPEAKER_2_WSA" interface="TERT_MI2S_RX"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC_FACTORY" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_SECONDARY_MIC_FACTORY" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_HANDSET_DMIC_VOICE" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_HANDSET_DMIC_MUSIC" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_HANDSET_DMIC_INTERVIEW" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_CAMCORDER_DMIC" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_HANDSET_MIC_EXTERNAL" interface="TX_CDC_DMA_TX_3"/>
-    <device name="SND_DEVICE_IN_HANDSET_MIC_AEC" interface="TX_CDC_DMA_TX_3"/>
+  <device name="SND_DEVICE_IN_SECONDARY_MIC_FACTORY" interface="TX_CDC_DMA_TX_3"/>        
+        <device name="SND_DEVICE_IN_HANDSET_DMIC_VOICE" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_HANDSET_DMIC_MUSIC" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_HANDSET_DMIC_INTERVIEW" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_CAMCORDER_DMIC" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC_EXTERNAL" interface="TX_CDC_DMA_TX_3"/>
+        <device name="SND_DEVICE_IN_HANDSET_MIC_AEC" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC_NS" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_MIC_AEC_NS" interface="TX_CDC_DMA_TX_3"/>
         <device name="SND_DEVICE_IN_HANDSET_DMIC" interface="TX_CDC_DMA_TX_3"/>

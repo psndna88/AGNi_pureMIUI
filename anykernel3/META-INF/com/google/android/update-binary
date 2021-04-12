@@ -563,6 +563,37 @@ $BB cp -rf $AKHOME/common/AGNiWIFI/* $AWLAN;
 $BB chmod 0644 $ASUP/*.prop;
 $BB chmod 0777 $ASUP/*.sh;
 $BB mv -f /data/adb/modules/disable $AWLAN;
+# AGNi Curtana Thermals
+if [ "$device" == "curtana" ]; then
+ui_print ">> Installing AGNi AGNi Curtana Thermals Module..";
+ACT=/data/adb/modules/AGNiCurtanaThermals;
+$BB mv -f $AWLAN/disable /data/adb/modules;
+$BB rm -rf $ACT;
+$BB mkdir -p $ACT;
+$BB cp -rf $AKHOME/common/AGNiCurtanaThermals/* $ACT;
+$BB chmod 0644 $ACT/*.prop;
+$BB chmod 0777 $ACT/*.sh;
+$BB mv -f /data/adb/modules/disable $ACT;
+else
+$BB rm -rf $ACT;
+fi;
+# AGNi AOSP Deep Sleep Helper
+ui_print ">> Installing AGNi AOSP Deep Sleep Helper Module..";
+ADSH=/data/adb/modules/AGNi_AOSP_DeepSleepHelper;
+$BB mv -f $ADSH/disable /data/adb/modules;
+$BB rm -rf $ADSH;
+$BB mkdir -p $ADSH;
+$BB cp -rf $AKHOME/common/AGNi_AOSP_DeepSleepHelper/* $ADSH;
+if [ -d $buildproploc/priv-app/MiuiCamera ]; then
+	$BB rm -rf $ADSH/system_ANX;
+	$BB mv $ADSH/system_NoANX mv $ADSH/system;
+else
+	$BB rm -rf $ADSH/system_NoANX;
+	$BB mv $ADSH/system_ANX mv $ADSH/system;
+fi;
+$BB chmod 0644 $ADSH/*.prop;
+$BB chmod 0777 $ADSH/*.sh;
+$BB mv -f /data/adb/modules/disable $ADSH;
 ## Auto Cleaner
 $BB mkdir -p /data/adb/post-fs-data.d;
 $BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d/atools.sh;

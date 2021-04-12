@@ -26,15 +26,8 @@
 <!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                          -->
 <audio_platform_info>
     <bit_width_configs>
-    <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_REVERSE" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED" value="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES_44_1" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_SPEAKER" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_BT_A2DP" value="24"/>
-  </bit_width_configs>
+        <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
+    </bit_width_configs>
     <interface_names>
         <device name="AUDIO_DEVICE_IN_BUILTIN_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
         <device name="AUDIO_DEVICE_IN_BACK_MIC" interface="TX_CDC_DMA_TX_3" codec_type="internal"/>
@@ -81,10 +74,10 @@
         <param key="mono_speaker" value="left"/>
         <param key="spkr_2_tz_name" value="wsatz.13"/>
         <param key="true_32_bit" value="true"/>
-    <param key="hifi_filter" value="true"/>
-    <param key="native_audio_mode" value="src"/>
-    <param key="hfp_pcm_dev_id" value="39"/>
-    <param key="input_mic_max_count" value="2"/>
+        <param key="hifi_filter" value="false"/>
+        <param key="native_audio_mode" value="multiple_mix_dsp"/>
+        <param key="hfp_pcm_dev_id" value="39"/>
+        <param key="input_mic_max_count" value="2"/>
     </config_params>
     <acdb_ids>
         <device name="SND_DEVICE_OUT_SPEAKER" acdb_id="15"/>
@@ -108,11 +101,10 @@
         <device name="SND_DEVICE_IN_UNPROCESSED_THREE_MIC" acdb_id="145"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_QUAD_MIC" acdb_id="146"/>
         <device name="SND_DEVICE_IN_UNPROCESSED_HEADSET_MIC" acdb_id="147"/>
-    <device name="SND_DEVICE_IN_HANDSET_GENERIC_QMIC" acdb_id="157"/>
-    <device name="SND_DEVICE_IN_HANDSET_STEREO_DMIC" value="1"/>
-  </acdb_ids>
-  <backend_names>
-    <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="RX_CDC_DMA_RX_0"/>
+        <device name="SND_DEVICE_IN_HANDSET_GENERIC_QMIC" acdb_id="157"/>
+    </acdb_ids>
+    <backend_names>
+        <device name="SND_DEVICE_OUT_HEADPHONES" backend="headphones" interface="RX_CDC_DMA_RX_0"/>
         <device name="SND_DEVICE_OUT_HEADPHONES_HIFI_FILTER" backend="headphones" interface="RX_CDC_DMA_RX_0"/>
         <device name="SND_DEVICE_OUT_HEADPHONES_44_1" backend="headphones-44.1" interface="RX_CDC_DMA_RX_0"/>
         <device name="SND_DEVICE_OUT_BT_SCO_WB" backend="bt-sco-wb" interface="SLIMBUS_7_RX"/>

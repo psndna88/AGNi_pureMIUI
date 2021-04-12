@@ -47,9 +47,8 @@
         <device name="SND_DEVICE_IN_UNPROCESSED_USB_HEADSET_HEX_MIC" acdb_id="162"/>
         <device name="SND_DEVICE_IN_VOCE_RECOG_USB_HEADSET_HEX_MIC" acdb_id="162"/>
         <device name="SND_DEVICE_IN_VOICE_SPEAKER_MIC" acdb_id="11"/>
-    <device name="SND_DEVICE_IN_VOICE_SPEAKER_DMIC_DUO" acdb_id="10013"/>
-    <device name="SND_DEVICE_IN_HANDSET_STEREO_DMIC" value="1"/>
-  </acdb_ids>
+        <device name="SND_DEVICE_IN_VOICE_SPEAKER_DMIC_DUO" acdb_id="10013"/>
+    </acdb_ids> 
 
     <module_ids>
         <aec>
@@ -72,14 +71,7 @@
 
     <bit_width_configs>
         <device name="SND_DEVICE_OUT_SPEAKER" bit_width="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_REVERSE" value="24"/>
-    <device name="SND_DEVICE_OUT_SPEAKER_PROTECTED" value="24"/>
-    <device name="SND_DEVICE_OUT_HEADPHONES_44_1" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_SPEAKER" value="24"/>
-    <device name="SND_DEVICE_OUT_GAME_HEADPHONES" value="24"/>
-    <device name="SND_DEVICE_OUT_BT_A2DP" value="24"/>
-  </bit_width_configs>
+    </bit_width_configs>
     <pcm_ids>
         <usecase name="USECASE_AUDIO_PLAYBACK_LOW_LATENCY" type="out" id="9"/>
         <usecase name="USECASE_AUDIO_PLAYBACK_OFFLOAD" type="out" id="7"/>
@@ -128,10 +120,9 @@
         <param key="true_32_bit" value="true"/>
         <!-- In the below value string, the value indicates sidetone gain in dB -->
         <param key="usb_sidetone_gain" value="35"/>
-    <param key="hifi_filter" value="true"/>
-  </config_params>
-  <gain_db_to_level_mapping>
-    <gain_level_map db="-59" level="5"/>
+    </config_params>
+    <gain_db_to_level_mapping>
+        <gain_level_map db="-59" level="5"/>
         <gain_level_map db="-17.4" level="4"/>
         <gain_level_map db="-13.8" level="3"/>
         <gain_level_map db="-10.2" level="2"/>
