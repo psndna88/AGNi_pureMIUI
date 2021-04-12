@@ -18,6 +18,8 @@
     <Decoders>
         <MediaCodec name="c2.android.mp3.decoder" type="audio/mpeg">
             <Alias name="OMX.google.mp3.decoder" />
+            <Limit name="complexity" range="0-8"  default="8"/>
+            <Feature name="bitrate-modes" value="CQ"/>
             <Limit name="channel-count" max="2" />
             <Limit name="sample-rate" ranges="8000,11025,12000,16000,22050,24000,32000,44100,48000" />
             <Limit name="bitrate" range="8000-320000" />
@@ -55,10 +57,6 @@
         <MediaCodec name="c2.android.vorbis.decoder" type="audio/vorbis">
             <Feature name="bitrate-modes" value="CQ"/>
             <Limit name="complexity" range="0-8"  default="8"/>
-            <Feature name="bitrate-modes" value="CQ"/>
-            <Limit name="complexity" range="0-8"  default="8"/>
-            <Feature name="bitrate-modes" value="CQ"/>
-            <Limit name="complexity" range="0-8"  default="8"/>
             <Alias name="OMX.google.vorbis.decoder" />
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="8000-96000" />
@@ -85,10 +83,6 @@
     </Decoders>
     <Encoders>
         <MediaCodec name="c2.android.aac.encoder" type="audio/mp4a-latm">
-            <Feature name="bitrate-modes" value="CQ"/>
-            <Limit name="complexity" range="0-8"  default="8"/>
-            <Feature name="bitrate-modes" value="CQ"/>
-            <Limit name="complexity" range="0-8"  default="8"/>
             <Feature name="bitrate-modes" value="CQ"/>
             <Limit name="complexity" range="0-8"  default="8"/>
             <Alias name="OMX.google.aac.encoder" />
