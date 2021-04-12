@@ -1356,7 +1356,7 @@ static int fg_awake_cb(struct votable *votable, void *data, int awake,
 	struct fg_chip *chip = data;
 
 	if (awake)
-		pm_stay_awake(chip->dev);
+		pm_wakeup_event(chip->dev, 500);
 	else
 		pm_relax(chip->dev);
 
@@ -2552,7 +2552,7 @@ static enum alarmtimer_restart fg_esr_filter_alarm_cb(struct alarm *alarm,
 	 * We cannot vote for awake votable here as that takes a mutex lock
 	 * and this is executed in an atomic context.
 	 */
-	pm_stay_awake(chip->dev);
+	pm_wakeup_event(chip->dev, 500);
 	schedule_work(&chip->esr_filter_work);
 
 	return ALARMTIMER_NORESTART;
@@ -4326,7 +4326,7 @@ static int fg_notifier_cb(struct notifier_block *nb,
 		 * We cannot vote for awake votable here as that takes
 		 * a mutex lock and this is executed in an atomic context.
 		 */
-		pm_stay_awake(chip->dev);
+		pm_wakeup_event(chip->dev, 500);
 		schedule_work(&chip->status_change_work);
 	}
 
@@ -5821,7 +5821,7 @@ static int fg_gen3_resume(struct device *dev)
 				msecs_to_jiffies(fg_sram_dump_period_ms));
 
 	if (!work_pending(&chip->status_change_work)) {
-		pm_stay_awake(chip->dev);
+		pm_wakeup_event(chip->dev, 500);
 		schedule_work(&chip->status_change_work);
 	}
 

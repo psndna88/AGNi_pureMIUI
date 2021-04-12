@@ -614,7 +614,7 @@ static void smbchg_stay_awake(struct smbchg_chip *chip, int reason)
 	if (reasons != 0 && chip->wake_reasons == 0) {
 		pr_smb(PR_PM, "staying awake: 0x%02x (bit %d)\n",
 				reasons, reason);
-		pm_stay_awake(chip->dev);
+		pm_wakeup_event(chg->dev, 500);
 	}
 	chip->wake_reasons = reasons;
 	mutex_unlock(&chip->pm_lock);
