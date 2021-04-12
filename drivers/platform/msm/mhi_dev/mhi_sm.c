@@ -496,13 +496,6 @@ static int mhi_sm_change_to_M0(void)
 			}
 		}
 
-		res = mhi_dev_resume(mhi_sm_ctx->mhi_dev);
-		if (res) {
-			MHI_SM_ERR("Failed resuming mhi core, returned %d",
-				res);
-			goto exit;
-		}
-
 		res = ipa_mhi_resume();
 		if (res) {
 			MHI_SM_ERR("Failed resuming ipa_mhi, returned %d",
@@ -517,6 +510,20 @@ static int mhi_sm_change_to_M0(void)
 		MHI_SM_ERR("Failed to send event %s to host, returned %d\n",
 			mhi_sm_dev_event_str(MHI_DEV_EVENT_M0_STATE), res);
 		goto exit;
+	}
+
+	/*
+	 * Defer mhi resume till M0 ack is notified to host.
+	 * This is to ensure no outstanding transfer completion events are send
+	 * to host before M0 ack.
+	 */
+	if (old_state == MHI_DEV_M3_STATE) {
+		res = mhi_dev_resume(mhi_sm_ctx->mhi_dev);
+		if (res) {
+			MHI_SM_ERR("Failed resuming mhi core, returned %d",
+				res);
+			goto exit;
+		}
 	}
 
 	if (old_state == MHI_DEV_READY_STATE) {
