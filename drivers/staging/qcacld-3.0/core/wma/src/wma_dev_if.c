@@ -989,6 +989,7 @@ static void wma_vdev_start_rsp(tp_wma_handle wma,
 		 BSS_OPERATIONAL_MODE_IBSS ? "IBSS" : "non-IBSS");
 #endif /* QCA_IBSS_SUPPORT */
 
+	add_bss->bssIdx = resp_event->vdev_id;
 	if (resp_event->status) {
 		add_bss->status = QDF_STATUS_E_FAILURE;
 		goto send_fail_resp;
@@ -1028,7 +1029,6 @@ static void wma_vdev_start_rsp(tp_wma_handle wma,
 
 	}
 	add_bss->status = QDF_STATUS_SUCCESS;
-	add_bss->bssIdx = resp_event->vdev_id;
 	add_bss->chainMask = resp_event->chain_mask;
 	if ((2 != resp_event->cfgd_rx_streams) ||
 		(2 != resp_event->cfgd_tx_streams)) {
@@ -3843,7 +3843,7 @@ void wma_vdev_resp_timer(void *data)
 		if (wma_send_vdev_stop_to_fw(wma, tgt_req->vdev_id))
 			WMA_LOGE("%s: Failed to send vdev stop to fw",
 				 __func__);
-
+		params->bssIdx = tgt_req->vdev_id;
 		wma_remove_peer_on_add_bss_failure(params);
 
 		wma_send_msg_high_priority(wma, WMA_ADD_BSS_RSP,
