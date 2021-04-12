@@ -56,7 +56,9 @@ struct sync_timeline *sync_timeline_create(const struct sync_timeline_ops *ops,
 	INIT_LIST_HEAD(&obj->active_list_head);
 	spin_lock_init(&obj->child_list_lock);
 
+#ifdef CONFIG_DEBUG_TIMELINE
 	sync_timeline_debug_add(obj);
+#endif
 
 	return obj;
 }
@@ -67,7 +69,9 @@ static void sync_timeline_free(struct kref *kref)
 	struct sync_timeline *obj =
 		container_of(kref, struct sync_timeline, kref);
 
+#ifdef CONFIG_DEBUG_TIMELINE
 	sync_timeline_debug_remove(obj);
+#endif
 
 	if (obj->ops->release_obj)
 		obj->ops->release_obj(obj);
@@ -165,7 +169,7 @@ static struct sync_fence *sync_fence_alloc(int size, const char *name)
 		goto err;
 
 	kref_init(&fence->kref);
-#ifdef CONFIG_SYNC_DEBUG
+#ifdef CONFIG_DEBUG_TIMELINE
 	strlcpy(fence->name, name, sizeof(fence->name));
 #endif
 
@@ -208,7 +212,9 @@ struct sync_fence *sync_fence_create(const char *name, struct sync_pt *pt)
 			       fence_check_cb_func))
 		atomic_dec(&fence->status);
 
+#ifdef CONFIG_DEBUG_TIMELINE
 	sync_fence_debug_add(fence);
+#endif
 
 	return fence;
 }
@@ -310,7 +316,9 @@ struct sync_fence *sync_fence_merge(const char *name,
 		atomic_sub(num_fences - i, &fence->status);
 	fence->num_fences = i;
 
+#ifdef CONFIG_DEBUG_TIMELINE
 	sync_fence_debug_add(fence);
+#endif
 	return fence;
 }
 EXPORT_SYMBOL(sync_fence_merge);
@@ -548,7 +556,9 @@ static int sync_fence_release(struct inode *inode, struct file *file)
 {
 	struct sync_fence *fence = file->private_data;
 
+#ifdef CONFIG_DEBUG_TIMELINE
 	sync_fence_debug_remove(fence);
+#endif
 
 	kref_put(&fence->kref, sync_fence_free);
 	return 0;
@@ -679,7 +689,7 @@ static long sync_fence_ioctl_fence_info(struct sync_fence *fence,
 	if (size > 4096)
 		size = 4096;
 
-#ifdef CONFIG_SYNC_DEBUG
+#ifdef CONFIG_DEBUG_TIMELINE
 	strlcpy(data->name, fence->name, sizeof(data->name));
 #endif
 	data->status = atomic_read(&fence->status);
