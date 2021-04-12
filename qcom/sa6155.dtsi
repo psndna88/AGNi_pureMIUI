@@ -13,6 +13,13 @@
 	};
 };
 
+&reserved_memory {
+	/* wlan_msa_mem is only used when iHelium is attached,
+	 * so remove the node for sa6155
+	 */
+	/delete-node/ wlan_msa_mem;
+};
+
 &soc {
 	qfprom: qfprom@780130 {
 		compatible = "qcom,qfprom";
