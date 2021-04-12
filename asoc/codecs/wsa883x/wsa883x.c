@@ -544,6 +544,12 @@ static const char * const wsa_dev_mode_text[] = {
 	"speaker", "receiver", "ultrasound"
 };
 
+enum {
+	SPEAKER,
+	RECEIVER,
+	ULTRASOUND,
+};
+
 static const struct soc_enum wsa_dev_mode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(wsa_dev_mode_text), wsa_dev_mode_text);
 
@@ -994,6 +1000,8 @@ static int wsa883x_enable_swr_dac_port(struct snd_soc_dapm_widget *w,
 				&port_id[num_port], &num_ch[num_port],
 				&ch_mask[num_port], &ch_rate[num_port],
 				&port_type[num_port]);
+		if (wsa883x->dev_mode == RECEIVER)
+			ch_rate[num_port] = SWR_CLK_RATE_4P8MHZ;
 		++num_port;
 
 		if (wsa883x->comp_enable) {
@@ -1067,13 +1075,46 @@ static int wsa883x_spkr_event(struct snd_soc_dapm_widget *w,
 	dev_dbg(component->dev, "%s: %s %d\n", __func__, w->name, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		if (wsa883x->dev_mode == RECEIVER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_CDC_PATH_MODE,
+						0x02, 0x02);
+			snd_soc_component_update_bits(component,
+						WSA883X_SPKR_PWM_CLK_CTL,
+						0x08, 0x08);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x04);
+		} else if (wsa883x->dev_mode == SPEAKER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_CDC_PATH_MODE,
+						0x02, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_SPKR_PWM_CLK_CTL,
+						0x08, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x90);
+			if (wsa883x->variant == WSA8830)
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x03);
+			else
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x02);
+		}
 		swr_slvdev_datapath_control(wsa883x->swr_slave,
 					    wsa883x->swr_slave->dev_num,
 					    true);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
-		snd_soc_component_update_bits(component, WSA883X_DRE_CTL_1,
-						0x01, 0x01);
+		snd_soc_component_update_bits(component,
+					WSA883X_DRE_CTL_1,
+					0x01, 0x01);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
 		wcd_enable_irq(&wsa883x->irq_info, WSA883X_IRQ_INT_PA_ON_ERR);
