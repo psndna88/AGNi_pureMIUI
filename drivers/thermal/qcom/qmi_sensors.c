@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -64,6 +64,27 @@ enum qmi_ts_sensor {
 	QMI_SYS_THERM1,
 	QMI_SYS_THERM2,
 	QMI_TS_TSENS_1,
+	QMI_TS_QTM_THERM,
+	QMI_TS_BCL_WARN,
+	QMI_TS_SDR0_PA0,
+	QMI_TS_SDR0_PA1,
+	QMI_TS_SDR0_PA2,
+	QMI_TS_SDR0_PA3,
+	QMI_TS_SDR0_PA4,
+	QMI_TS_SDR0_PA5,
+	QMI_TS_SDR0,
+	QMI_TS_SDR1_PA0,
+	QMI_TS_SDR1_PA1,
+	QMI_TS_SDR1_PA2,
+	QMI_TS_SDR1_PA3,
+	QMI_TS_SDR1_PA4,
+	QMI_TS_SDR1_PA5,
+	QMI_TS_SDR1,
+	QMI_TS_MMW0,
+	QMI_TS_MMW1,
+	QMI_TS_MMW2,
+	QMI_TS_MMW3,
+	QMI_TS_MMW_IFIC0,
 	QMI_TS_MAX_NR
 };
 
@@ -121,6 +142,27 @@ static char sensor_clients[QMI_TS_MAX_NR][QMI_CLIENT_NAME_LENGTH] = {
 	{"sys_therm1"},
 	{"sys_therm2"},
 	{"modem_tsens1"},
+	{"qtm_therm"},
+	{"modem_bcl_warn"},
+	{"sdr0_pa0"},
+	{"sdr0_pa1"},
+	{"sdr0_pa2"},
+	{"sdr0_pa3"},
+	{"sdr0_pa4"},
+	{"sdr0_pa5"},
+	{"sdr0"},
+	{"sdr1_pa0"},
+	{"sdr1_pa1"},
+	{"sdr1_pa2"},
+	{"sdr1_pa3"},
+	{"sdr1_pa4"},
+	{"sdr1_pa5"},
+	{"sdr1"},
+	{"mmw0"},
+	{"mmw1"},
+	{"mmw2"},
+	{"mmw3"},
+	{"mmw_ific0"},
 };
 
 static int32_t encode_qmi(int32_t val)

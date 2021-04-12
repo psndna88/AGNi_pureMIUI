@@ -119,6 +119,15 @@ extern unsigned int ebt_do_table(struct sk_buff *skb,
 				 const struct nf_hook_state *state,
 				 struct ebt_table *table);
 
+
+#define ebt_entry_foreach(pos, ehead, esize) \
+	for ((pos) = (struct ebt_entry *)(ehead); \
+	     (pos) < (struct ebt_entry *)((char *)(ehead) + (esize)); \
+	     (pos) = (struct ebt_entry *)((char *)(pos) + \
+		     ((pos)->bitmask == 0 ? sizeof(struct ebt_entries) : \
+		     (pos)->next_offset)))
+
+
 /* True if the hook mask denotes that the rule is in a base chain,
  * used in the check() functions */
 #define BASE_CHAIN (par->hook_mask & (1 << NF_BR_NUMHOOKS))

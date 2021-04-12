@@ -52,6 +52,9 @@
 #define DBM_TRB_DMA		0x20000000
 #define DBM_TRB_EP_NUM(ep)	(ep<<24)
 
+/* DBM GEN CFG */
+#define DBM_EN_USB3_MASK	(1 << 0)
+
 struct dbm;
 
 struct dbm *dwc3_init_dbm(struct device *dev, void __iomem *base);

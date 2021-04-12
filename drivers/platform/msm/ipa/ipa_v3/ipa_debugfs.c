@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1180,7 +1180,8 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		"lan_rx_empty=%u\n"
 		"lan_repl_rx_empty=%u\n"
 		"flow_enable=%u\n"
-		"flow_disable=%u\n",
+		"flow_disable=%u\n"
+		"rx_drop_pkts=%u\n",
 		ipa3_ctx->stats.tx_sw_pkts,
 		ipa3_ctx->stats.tx_hw_pkts,
 		ipa3_ctx->stats.tx_non_linear,
@@ -1196,7 +1197,8 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		ipa3_ctx->stats.lan_rx_empty,
 		ipa3_ctx->stats.lan_repl_rx_empty,
 		ipa3_ctx->stats.flow_enable,
-		ipa3_ctx->stats.flow_disable);
+		ipa3_ctx->stats.flow_disable,
+		ipa3_ctx->stats.rx_drop_pkts);
 	cnt += nbytes;
 
 	for (i = 0; i < IPAHAL_PKT_STATUS_EXCEPTION_MAX; i++) {

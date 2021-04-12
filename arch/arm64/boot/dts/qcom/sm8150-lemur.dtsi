@@ -12,6 +12,7 @@
 
 #include <dt-bindings/msm/msm-bus-ids.h>
 #include "sm8150-audio-overlay.dtsi"
+#include "sdxlemur-thermal-common.dtsi"
 
 &mdm3 {
 	compatible = "qcom,ext-lemur";

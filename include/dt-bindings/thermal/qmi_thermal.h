@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,6 +39,27 @@
 #define QMI_SYS_THERM_1		23
 #define QMI_SYS_THERM_2		24
 #define QMI_MODEM_TSENS_1	25
+#define QMI_QTM_THERM		26
+#define QMI_BCL_WARN		27
+#define QMI_SDR0_PA0		28
+#define QMI_SDR0_PA1		29
+#define QMI_SDR0_PA2		30
+#define QMI_SDR0_PA3		31
+#define QMI_SDR0_PA4		32
+#define QMI_SDR0_PA5		33
+#define QMI_SDR0		34
+#define QMI_SDR1_PA0		35
+#define QMI_SDR1_PA1		36
+#define QMI_SDR1_PA2		37
+#define QMI_SDR1_PA3		38
+#define QMI_SDR1_PA4		39
+#define QMI_SDR1_PA5		40
+#define QMI_SDR1		41
+#define QMI_MMW0		42
+#define QMI_MMW1		43
+#define QMI_MMW2		44
+#define QMI_MMW3		45
+#define QMI_MMW_IFIC0		46
 
 #define QMI_MODEM_INST_ID	0x0
 #define QMI_ADSP_INST_ID	0x1
