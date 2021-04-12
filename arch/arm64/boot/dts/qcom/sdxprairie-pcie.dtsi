@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,10 +23,11 @@
 			<0x40000000 0xf1d>,
 			<0x40000f20 0xa8>,
 			<0x40001000 0x1000>,
-			<0x40100000 0x100000>;
+			<0x40100000 0x100000>,
+			<0x1c03000 0x1000>;
 
 		reg-names = "parf", "phy", "dm_core", "elbi",
-				"iatu", "conf";
+				"iatu", "conf", "mhi";
 
 		#address-cells = <3>;
 		#size-cells = <2>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,12 +11,12 @@
  * GNU General Public License for more details.
  */
 
-#include "trinket.dtsi"
-#include "trinketp-iot-qcs.dtsi"
+&soc {
+	qcom,rmnet-ipa {
+		status = "disabled";
+	};
+};
 
-/ {
-	model = "Qualcomm Technologies, Inc. TRINKET";
-	compatible = "qcom,trinket-iot";
-	qcom,msm-id = <467 0x0>;
-	qcom,msm-name = "trinket";
+&ipa_hw {
+	status = "disabled";
 };
