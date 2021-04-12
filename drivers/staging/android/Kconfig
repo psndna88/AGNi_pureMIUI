@@ -61,6 +61,7 @@ config DEBUG_TIMELINE
 	bool "Synchronization framework debug"
 	default n
 	depends on SYNC
+	depends on DEBUG_FS
 	---help---
           This option enables debugging for the synchronizations framework.
 
