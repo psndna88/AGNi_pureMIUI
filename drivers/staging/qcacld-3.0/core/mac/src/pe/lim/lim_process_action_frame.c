@@ -1671,6 +1671,9 @@ static void lim_process_addba_req(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
 	uint8_t peer_id;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	void *peer, *pdev;
+	tpDphHashNode sta_ds;
+	uint16_t aid, buff_size;
+	bool he_cap = false;
 
 	pdev = cds_get_context(QDF_MODULE_ID_TXRX);
 	if (!pdev) {
@@ -1711,12 +1714,30 @@ static void lim_process_addba_req(tpAniSirGlobal mac_ctx, uint8_t *rx_pkt_info,
 		goto error;
 	}
 
+	sta_ds = dph_lookup_hash_entry(mac_ctx, mac_hdr->sa, &aid,
+				       &session->dph.dphHashTable);
+	if (sta_ds && lim_is_session_he_capable(session))
+		he_cap = lim_is_sta_he_capable(sta_ds);
+	if (sta_ds && sta_ds->staType == STA_ENTRY_NDI_PEER)
+		he_cap = lim_is_session_he_capable(session);
+
+	if (he_cap)
+		buff_size = MAX_BA_BUFF_SIZE;
+	else
+		buff_size = SIR_MAC_BA_DEFAULT_BUFF_SIZE;
+
+	if (mac_ctx->usr_cfg_ba_buff_size)
+		buff_size = mac_ctx->usr_cfg_ba_buff_size;
+
+	if (addba_req->addba_param_set.buff_size)
+		buff_size = QDF_MIN(buff_size,
+				    addba_req->addba_param_set.buff_size);
+
 	qdf_status = cdp_addba_requestprocess(soc, peer,
 			addba_req->DialogToken.token,
 			addba_req->addba_param_set.tid,
 			addba_req->ba_timeout.timeout,
-			addba_req->addba_param_set.buff_size,
-			addba_req->ba_start_seq_ctrl.ssn);
+			buff_size, addba_req->ba_start_seq_ctrl.ssn);
 
 	cdp_peer_release_ref(soc, peer, PEER_DEBUG_ID_WMA_ADDBA_REQ);
 
