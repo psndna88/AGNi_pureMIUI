@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1245,7 +1245,7 @@ static void smb1390_taper_work(struct work_struct *work)
 {
 	struct smb1390 *chip = container_of(work, struct smb1390, taper_work);
 	union power_supply_propval pval = {0, };
-	int rc, fcc_uA, delta_fcc_uA, main_fcc_ua = 0, fcc_cp_ua;
+	int rc, fcc_uA, delta_fcc_uA, main_fcc_ua = 0;
 
 	if (!is_psy_voter_available(chip))
 		goto out;
@@ -1295,21 +1295,7 @@ static void smb1390_taper_work(struct work_struct *work)
 				goto out;
 			}
 
-			/*
-			 * fcc and fcc_main are the same for VPH config, hence
-			 * reduce fcc_main from fcc only in VBAT (output config)
-			 * where fcc_main is a portion of full-fcc.
-			 */
-			fcc_cp_ua = fcc_uA;
-			if (chip->pl_output_mode == POWER_SUPPLY_PL_OUTPUT_VBAT)
-				fcc_cp_ua = fcc_uA - main_fcc_ua;
-
-			smb1390_dbg(chip, PR_INFO,
-				"Taper: fcc_ua=%d fcc_cp_ua=%d fcc_main_ua=%d min_ilim_ua(x2) = %u\n",
-				fcc_uA, fcc_cp_ua, main_fcc_ua,
-				(chip->min_ilim_ua*2));
-
-			if (fcc_cp_ua < (chip->min_ilim_ua * 2)) {
+			if ((fcc_uA - main_fcc_ua) < (chip->min_ilim_ua * 2)) {
 				vote(chip->disable_votable, TAPER_END_VOTER,
 								true, 0);
 				/*

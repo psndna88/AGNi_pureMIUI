@@ -1,4 +1,5 @@
-/* Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,6 +29,7 @@
 #include <linux/pmic-voter.h>
 #include <linux/workqueue.h>
 #include "battery.h"
+#include "temps_info.h"
 
 #define DRV_MAJOR_VERSION	1
 #define DRV_MINOR_VERSION	0
@@ -49,7 +51,7 @@
 #define FCC_STEPPER_VOTER		"FCC_STEPPER_VOTER"
 #define FCC_VOTER			"FCC_VOTER"
 #define MAIN_FCC_VOTER			"MAIN_FCC_VOTER"
-#define PD_VOTER			"PD_VOTER"
+#define CC_MODE_VOTER			"CC_MODE_VOTER"
 
 struct pl_data {
 	int			pl_mode;
@@ -199,58 +201,33 @@ static int cp_get_parallel_mode(struct pl_data *chip, int mode)
 	return pval.intval;
 }
 
-static int get_adapter_icl_based_ilim(struct pl_data *chip)
+static int get_hvdcp3_icl_limit(struct pl_data *chip)
 {
-	int main_icl = -EINVAL, adapter_icl = -EINVAL, final_icl = -EINVAL;
-	int rc = -EINVAL;
+	int rc, main_icl, target_icl = -EINVAL;
 	union power_supply_propval pval = {0, };
 
 	rc = power_supply_get_property(chip->usb_psy,
-			POWER_SUPPLY_PROP_PD_ACTIVE, &pval);
-	if (rc < 0)
-		pr_err("Failed to read PD_ACTIVE status rc=%d\n",
-				rc);
-	/* Check for QC 3, 3.5 and PPS adapters, return if its none of them */
-	if (chip->charger_type != POWER_SUPPLY_TYPE_USB_HVDCP_3 &&
-		chip->charger_type != POWER_SUPPLY_TYPE_USB_HVDCP_3P5 &&
-		pval.intval != POWER_SUPPLY_PD_PPS_ACTIVE)
-		return final_icl = get_effective_result_locked(chip->usb_icl_votable);
+				POWER_SUPPLY_PROP_REAL_TYPE, &pval);
+        if ((rc < 0) || ((pval.intval != POWER_SUPPLY_TYPE_USB_HVDCP_3)
+                          && (pval.intval != POWER_SUPPLY_TYPE_USB_HVDCP_3P5)))
+		return target_icl = get_effective_result_locked(chip->usb_icl_votable);
 
 	/*
-	 * For HVDCP3/HVDCP_3P5 adapters, limit max. ILIM as:
-	 * HVDCP3_ICL: Maximum ICL of HVDCP3 adapter(from DT
-	 * configuration).
-	 *
-	 * For PPS adapters, limit max. ILIM to
-	 * MIN(qc4_max_icl, PD_CURRENT_MAX)
-	 */
-	if (pval.intval == POWER_SUPPLY_PD_PPS_ACTIVE) {
-		adapter_icl = min_t(int, chip->chg_param->qc4_max_icl_ua,
-				get_client_vote_locked(chip->usb_icl_votable,
-				PD_VOTER));
-		if (adapter_icl <= 0)
-			adapter_icl = chip->chg_param->qc4_max_icl_ua;
-	} else {
-		adapter_icl = chip->chg_param->hvdcp3_max_icl_ua;
-	}
-
-	/*
+	 * For HVDCP3 adapters, limit max. ILIM as follows:
+	 * HVDCP3_ICL: Maximum ICL of HVDCP3 adapter(from DT configuration)
 	 * For Parallel input configurations:
-	 * VBUS: final_icl = adapter_icl - main_ICL
-	 * VMID: final_icl = adapter_icl
+	 * VBUS: target_icl = HVDCP3_ICL - main_ICL
+	 * VMID: target_icl = HVDCP3_ICL
 	 */
-	final_icl = adapter_icl;
+	target_icl = chip->chg_param->hvdcp3_max_icl_ua;
 	if (cp_get_parallel_mode(chip, PARALLEL_INPUT_MODE)
 					== POWER_SUPPLY_PL_USBIN_USBIN) {
 		main_icl = get_effective_result_locked(chip->usb_icl_votable);
-		if ((main_icl >= 0) && (main_icl < adapter_icl))
-			final_icl = adapter_icl - main_icl;
+		if ((main_icl >= 0) && (main_icl < target_icl))
+			target_icl -= main_icl;
 	}
 
-	pr_debug("charger_type=%d final_icl=%d adapter_icl=%d main_icl=%d\n",
-		chip->charger_type, final_icl, adapter_icl, main_icl);
-
-	return final_icl;
+	return target_icl;
 }
 
 /*
@@ -282,7 +259,7 @@ static void cp_configure_ilim(struct pl_data *chip, const char *voter, int ilim)
 					== POWER_SUPPLY_PL_OUTPUT_VPH)
 		return;
 
-	target_icl = get_adapter_icl_based_ilim(chip);
+	target_icl = get_hvdcp3_icl_limit(chip);
 	ilim = (target_icl > 0) ? min(ilim, target_icl) : ilim;
 
 	rc = power_supply_get_property(chip->cp_master_psy,
@@ -771,7 +748,7 @@ static void get_fcc_stepper_params(struct pl_data *chip, int main_fcc_ua,
 		if (!chip->cp_ilim_votable)
 			chip->cp_ilim_votable = find_votable("CP_ILIM");
 
-		target_icl = get_adapter_icl_based_ilim(chip) * 2;
+		target_icl = get_hvdcp3_icl_limit(chip) * 2;
 		total_fcc_ua -= chip->main_fcc_ua;
 
 		/*
@@ -1201,7 +1178,7 @@ stepper_exit:
 	cp_configure_ilim(chip, FCC_VOTER, chip->slave_fcc_ua / 2);
 
 	if (reschedule_ms) {
-		queue_delayed_work(system_power_efficient_wq, &chip->fcc_stepper_work,
+		schedule_delayed_work(&chip->fcc_stepper_work,
 				msecs_to_jiffies(reschedule_ms));
 		pr_debug("Rescheduling FCC_STEPPER work\n");
 		return;
@@ -1318,7 +1295,7 @@ static int usb_icl_vote_callback(struct votable *votable, void *data,
 	if (icl_ua <= 1400000)
 		vote(chip->pl_enable_votable_indirect, USBIN_I_VOTER, false, 0);
 	else
-		queue_delayed_work(system_power_efficient_wq, &chip->status_change_work,
+		schedule_delayed_work(&chip->status_change_work,
 						msecs_to_jiffies(PL_DELAY_MS));
 
 	/* rerun AICL */
@@ -1373,9 +1350,6 @@ static void pl_disable_forever_work(struct work_struct *work)
 }
 
 #define CP_ILIM_COMP			1000000
-#define CP_COOL_THRESHOLD		150
-#define CP_WARM_THRESHOLD		450
-#define SOFT_JEITA_HYSTERESIS		5
 static int pl_disable_vote_callback(struct votable *votable,
 		void *data, int pl_disable, const char *client)
 {
@@ -1459,7 +1433,7 @@ static int pl_disable_vote_callback(struct votable *votable,
 			if (chip->step_fcc) {
 				vote(chip->pl_awake_votable, FCC_STEPPER_VOTER,
 					true, 0);
-				queue_delayed_work(system_power_efficient_wq, &chip->fcc_stepper_work,
+				schedule_delayed_work(&chip->fcc_stepper_work,
 					0);
 			}
 		} else {
@@ -1573,9 +1547,9 @@ static int pl_disable_vote_callback(struct votable *votable,
 					pr_err("Couldn't read batt temp, rc=%d\n", rc);
 				}
 				batt_temp = pval.intval;
-				/* if temp in cp soft jeita zone(15 to 45 degree), add comp */
-				if ((batt_temp < CP_WARM_THRESHOLD - SOFT_JEITA_HYSTERESIS)
-					&& (batt_temp > CP_COOL_THRESHOLD + SOFT_JEITA_HYSTERESIS))
+				/* if temp in cp soft jeita zone(15 to cp_warm_threshold degree), add comp */
+				if ((batt_temp < cp_warm_threshold - soft_jeita_hysteresis)
+					&& (batt_temp > CP_COOL_THRESHOLD + soft_jeita_hysteresis))
 					cp_ilim += CP_ILIM_COMP;
 			}
 
@@ -1594,7 +1568,7 @@ static int pl_disable_vote_callback(struct votable *votable,
 			if (chip->step_fcc) {
 				vote(chip->pl_awake_votable, FCC_STEPPER_VOTER,
 					true, 0);
-				queue_delayed_work(system_power_efficient_wq, &chip->fcc_stepper_work,
+				schedule_delayed_work(&chip->fcc_stepper_work,
 					0);
 			}
 		}
@@ -1941,7 +1915,7 @@ static int pl_notifier_call(struct notifier_block *nb,
 	if ((strcmp(psy->desc->name, "parallel") == 0)
 	    || (strcmp(psy->desc->name, "battery") == 0)
 	    || (strcmp(psy->desc->name, "main") == 0))
-		queue_delayed_work(system_power_efficient_wq, &chip->status_change_work, 0);
+		schedule_delayed_work(&chip->status_change_work, 0);
 
 	return NOTIFY_OK;
 }
