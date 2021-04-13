@@ -372,6 +372,11 @@
 };
 
 &reserved_memory {
+	/* pil_wlan_fw_mem is only used when iHelium is attached,
+	 * so remove the node for sa8155
+	 */
+	/delete-node/ pil_wlan_fw_mem;
+
 	uefi_log: uefi_log@0x9241C000 {
 		reg = <0x0 0x9241C000 0x0 0x10000>;
 		label = "uefi_log";
