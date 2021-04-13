@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt) "CAM-REQ-MGR_UTIL %s:%d " fmt, __func__, __LINE__
@@ -14,6 +14,7 @@
 #include <media/cam_req_mgr.h>
 #include "cam_req_mgr_util.h"
 #include "cam_debug_util.h"
+#include "cam_context.h"
 
 static struct cam_req_mgr_util_hdl_tbl *hdl_tbl;
 static DEFINE_SPINLOCK(hdl_tbl_lock);
@@ -207,6 +208,36 @@ int32_t cam_create_device_hdl(struct cam_create_dev_hdl *hdl_data)
 
 	pr_debug("%s: handle = 0x%x idx = %d\n", __func__, handle, idx);
 	return handle;
+}
+
+int32_t cam_get_dev_handle_info(uint64_t handle,
+	struct cam_context **ctx, int32_t dev_index)
+{
+	int32_t idx;
+	struct v4l2_subdev *sd = (struct v4l2_subdev *)handle;
+
+	for (idx = dev_index + 1; idx < CAM_REQ_MGR_MAX_HANDLES_V2; idx++) {
+		if (hdl_tbl->hdl[idx].state == HDL_ACTIVE) {
+			*ctx = (struct cam_context *)cam_get_device_priv(
+					hdl_tbl->hdl[idx].hdl_value);
+			if ((*ctx) && !strcmp(sd->name, (*ctx)->dev_name))
+				return idx;
+		}
+	}
+	*ctx = NULL;
+	return CAM_REQ_MGR_MAX_HANDLES_V2;
+}
+
+uint64_t cam_get_dev_handle_status(void)
+{
+	int32_t idx;
+	uint64_t active_dev_hdls = 0;
+
+	for (idx = 0; idx < CAM_REQ_MGR_MAX_HANDLES_V2; idx++)
+		if (hdl_tbl->hdl[idx].state == HDL_ACTIVE)
+			active_dev_hdls |= hdl_tbl->hdl[idx].dev_id;
+
+	return active_dev_hdls;
 }
 
 void *cam_get_device_priv(int32_t dev_hdl)
