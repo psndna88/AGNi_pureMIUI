@@ -3209,6 +3209,7 @@ static inline void print_to_console(char *str_buffer)
 #define print_to_console(str)
 #endif
 
+#if 0
 #ifdef MULTI_IF_NAME
 static const char *qdf_trace_wlan_modname(void)
 {
@@ -3293,6 +3294,7 @@ void qdf_trace_msg_cmn(unsigned int idx,
 	}
 }
 qdf_export_symbol(qdf_trace_msg_cmn);
+#endif
 
 QDF_STATUS qdf_print_setup(void)
 {
@@ -3414,7 +3416,7 @@ qdf_export_symbol(qdf_shared_print_ctrl_cleanup);
  * Set this to invalid value to differentiate with user-provided
  * value.
  */
-int qdf_dbg_mask = QDF_TRACE_LEVEL_MAX;
+int qdf_dbg_mask = 0;
 qdf_export_symbol(qdf_dbg_mask);
 qdf_declare_param(qdf_dbg_mask, int);
 
@@ -3538,7 +3540,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_CRYPTO] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_DUMPPKTS] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_DEBUG] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_MLME] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_MLME] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_RRM] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_WNM] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_P2P_PROT] = QDF_TRACE_LEVEL_NONE,
@@ -3556,7 +3558,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_EXTIOCTL_CHANSWITCH] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_EXTIOCTL_CHANSSCAN] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_TLSHIM] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_WMI] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_WMI] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HTT] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_HDD] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SME] = QDF_TRACE_LEVEL_NONE,
@@ -3581,9 +3583,9 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_SOC] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OS_IF] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_TARGET_IF] = QDF_TRACE_LEVEL_INFO,
-		[QDF_MODULE_ID_SCHEDULER] = QDF_TRACE_LEVEL_FATAL,
+		[QDF_MODULE_ID_SCHEDULER] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_MGMT_TXRX] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_SERIALIZATION] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_SERIALIZATION] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_PMO] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_P2P] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_POLICY_MGR] = QDF_TRACE_LEVEL_NONE,
@@ -3593,7 +3595,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_NAN] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OFFCHAN_TXRX] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_SON] = QDF_TRACE_LEVEL_NONE,
-		[QDF_MODULE_ID_SPECTRAL] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_SPECTRAL] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_OBJ_MGR] = QDF_TRACE_LEVEL_FATAL,
 		[QDF_MODULE_ID_NSS] = QDF_TRACE_LEVEL_ERROR,
 		[QDF_MODULE_ID_ROAM_DEBUG] = QDF_TRACE_LEVEL_ERROR,
@@ -3621,7 +3623,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_DYNAMIC_MODE_CHG] = QDF_TRACE_LEVEL_INFO,
 		[QDF_MODULE_ID_COEX] = QDF_TRACE_LEVEL_ERROR,
 		[QDF_MODULE_ID_MON_FILTER] = QDF_TRACE_LEVEL_INFO,
-		[QDF_MODULE_ID_ANY] = QDF_TRACE_LEVEL_INFO,
+		[QDF_MODULE_ID_ANY] = QDF_TRACE_LEVEL_NONE,
 		[QDF_MODULE_ID_PKT_CAPTURE] = QDF_TRACE_LEVEL_NONE,
 	};
 
@@ -3740,6 +3742,7 @@ void qdf_log_dump_at_kernel_level(bool enable)
 
 qdf_export_symbol(qdf_log_dump_at_kernel_level);
 
+#if 0
 bool qdf_print_is_category_enabled(unsigned int idx, QDF_MODULE_ID category)
 {
 	QDF_TRACE_LEVEL verbose_mask;
@@ -3811,6 +3814,7 @@ bool qdf_print_is_verbose_enabled(unsigned int idx, QDF_MODULE_ID category,
 	return verbose_enabled;
 }
 qdf_export_symbol(qdf_print_is_verbose_enabled);
+#endif
 
 #ifdef DBG_LVL_MAC_FILTERING
 

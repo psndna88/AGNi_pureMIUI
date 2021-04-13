@@ -625,7 +625,7 @@ typedef  enum  {
         if (svc_id < WMI_MAX_SERVICE) { \
             WMI_SERVICE_DISABLE(pwmi_svc_bmap, svc_id); \
         } else if (svc_id < WMI_MAX_EXT_SERVICE) { \
-            WMI_SERVICE_DISABLE(pwmi_svc_bmap, pwmi_svc_ext_bmap, svc_id); \
+            WMI_SERVICE_EXT_DISABLE(pwmi_svc_bmap, pwmi_svc_ext_bmap, svc_id); \
         } else { \
             int word = ((svc_id) - WMI_MAX_EXT_SERVICE) / 32; \
             int bit = (svc_id) & 0x1f; /* svc_id mod 32 */ \
