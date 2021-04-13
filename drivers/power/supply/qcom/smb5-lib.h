@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,6 @@
 #include <linux/alarmtimer.h>
 #include <linux/ktime.h>
 #include <linux/types.h>
-#include <linux/timer.h>
 #include <linux/interrupt.h>
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
@@ -155,7 +154,7 @@ enum print_reason {
 #else
 #define CDP_CURRENT_UA			1500000
 #endif
-#define DCP_CURRENT_UA			1600000
+#define DCP_CURRENT_UA			2100000
 #define HVDCP_CURRENT_UA		3000000
 #define HVDCP_CLASS_B_CURRENT_UA		3100000
 #define HVDCP2_CURRENT_UA		1500000
@@ -202,7 +201,7 @@ enum print_reason {
 #define STEP_CHG_DELAYED_HIGH_MONITOR_MS	5000
 #define STEP_CHG_DELAYED_QUICK_MONITOR_MS	3000
 #define STEP_CHG_DELAYED_START_MS		100
-#define VBAT_FOR_STEP_MIN_UV			4450000
+#define VBAT_FOR_STEP_MIN_UV			4350000
 #define VBAT_FOR_STEP_HYS_UV			20000
 
 #define SIX_PIN_VFLOAT_VOTER		"SIX_PIN_VFLOAT_VOTER"
@@ -215,9 +214,6 @@ enum print_reason {
 #define NON_FFC_VFLOAT_VOTER		"NON_FFC_VFLOAT_VOTER"
 #define NON_FFC_VFLOAT_UV		4450000
 
-#define CP_COOL_THRESHOLD		150
-#define CP_WARM_THRESHOLD		450
-#define SOFT_JEITA_HYSTERESIS		5
 
 #define CHARGER_SOC_DECIMAL_MS		200
 
@@ -610,7 +606,6 @@ struct smb_charger {
 	struct alarm		chg_termination_alarm;
 	struct alarm		dcin_aicl_alarm;
 
-	struct timer_list	apsd_timer;
 
 	struct charger_param	chg_param;
 	/* secondary charger config */
@@ -631,7 +626,6 @@ struct smb_charger {
 	bool			ok_to_pd;
 	bool			typec_legacy;
 	bool			typec_irq_en;
-	bool			typec_role_swap_failed;
 
 	/* cached status */
 	bool			system_suspend_supported;
@@ -992,7 +986,6 @@ int smblib_set_prop_rechg_soc_thresh(struct smb_charger *chg,
 				const union power_supply_propval *val);
 void smblib_suspend_on_debug_battery(struct smb_charger *chg);
 int smblib_rerun_apsd_if_required(struct smb_charger *chg);
-void smblib_rerun_apsd(struct smb_charger *chg);
 int smblib_get_prop_fcc_delta(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_thermal_threshold(struct smb_charger *chg, u16 addr, int *val);

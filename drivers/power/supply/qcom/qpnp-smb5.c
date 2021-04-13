@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -34,12 +34,7 @@
 #include <linux/msm_drm_notify.h>
 #include <linux/fb.h>
 #include <linux/board_id.h>
-#ifdef CONFIG_DEBUG_USB
-#undef dev_dbg
-#undef pr_debug
-#define dev_dbg dev_err
-#define pr_debug pr_err
-#endif
+#include "temps_info.h"
 
 union power_supply_propval lct_therm_lvl_reserved;
 union power_supply_propval lct_therm_level;
@@ -252,7 +247,7 @@ struct smb5 {
 	struct smb_dt_props	dt;
 };
 
-static int __debug_mask = PR_MISC | PR_PARALLEL | PR_OTG | PR_WLS | PR_OEM;
+static int __debug_mask = 0;
 module_param_named(
 	debug_mask, __debug_mask, int, 0600
 );
@@ -463,7 +458,6 @@ static int smb5_charge_step_charge_init(struct smb_charger *chg,
 #define MICRO_P1A				100000
 #define MICRO_1PA				1000000
 #define MICRO_3PA				3000000
-#define MICRO_4PA				4000000
 #define MICRO_1P8A_FOR_DCP			1800000
 #define OTG_DEFAULT_DEGLITCH_TIME_MS		50
 #define DEFAULT_WD_BARK_TIME			64
@@ -537,11 +531,15 @@ static int smb5_parse_dt(struct smb5 *chip)
 	chip->dt.no_battery = of_property_read_bool(node,
 						"qcom,batteryless-platform");
 
-	rc = of_property_read_u32(node,
+/*	rc = of_property_read_u32(node,
 			"qcom,fcc-max-ua", &chip->dt.batt_profile_fcc_ua);
 	if (rc < 0)
 		chip->dt.batt_profile_fcc_ua = -EINVAL;
-	printk("==test qcom,fcc-max-ua:%d\n", chip->dt.batt_profile_fcc_ua);
+	printk("==test qcom,fcc-max-ua:%d\n", chip->dt.batt_profile_fcc_ua); */
+	if (board_get_33w_supported())
+		chip->dt.batt_profile_fcc_ua = 5200000;
+	else
+		chip->dt.batt_profile_fcc_ua = 3000000;
 
 	rc = of_property_read_u32(node,
 				"qcom,fv-max-uv", &chip->dt.batt_profile_fv_uv);
@@ -784,15 +782,17 @@ static int smb5_parse_dt(struct smb5 *chip)
 	}
 	}
 
-	rc = of_property_read_u32(node, "qcom,charger-temp-max",
+/*	rc = of_property_read_u32(node, "qcom,charger-temp-max",
 			&chg->charger_temp_max);
 	if (rc < 0)
-		chg->charger_temp_max = -EINVAL;
+		chg->charger_temp_max = -EINVAL; */
+	chg->charger_temp_max = CHARGER_TEMP_MAX;
 
-	rc = of_property_read_u32(node, "qcom,smb-temp-max",
+/*	rc = of_property_read_u32(node, "qcom,smb-temp-max",
 			&chg->smb_temp_max);
 	if (rc < 0)
-		chg->smb_temp_max = -EINVAL;
+		chg->smb_temp_max = -EINVAL; */
+	chg->smb_temp_max = SMB_TEMP_MAX;
 
 	rc = of_property_read_u32(node, "qcom,float-option",
 						&chip->dt.float_option);
@@ -958,12 +958,6 @@ static int smb5_parse_dt(struct smb5 *chip)
 	if (chg->chg_param.hvdcp3_max_icl_ua <= 0)
 		chg->chg_param.hvdcp3_max_icl_ua = MICRO_3PA;
 
-	/* Used only in Adapter CV mode of operation */
-	of_property_read_u32(node, "qcom,qc4-max-icl-ua",
-				&chg->chg_param.qc4_max_icl_ua);
-	if (chg->chg_param.qc4_max_icl_ua <= 0)
-		chg->chg_param.qc4_max_icl_ua = MICRO_4PA;
-
 	chg->wls_icl_ua = DCIN_ICL_MAX_UA;
 	rc = of_property_read_u32(node, "qcom,wls-current-max-ua",
 			&tmp);
@@ -1099,7 +1093,7 @@ static int smb5_usb_get_prop(struct power_supply *psy,
 		val->intval = get_client_vote(chg->usb_icl_votable, PD_VOTER);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		rc = smblib_get_prop_input_current_max(chg, val);
+		rc = smblib_get_prop_input_current_settled(chg, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
 		val->intval = POWER_SUPPLY_TYPE_USB_PD;
@@ -1318,10 +1312,8 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 		if (chg->support_ffc) {
 			rc = smblib_set_fastcharge_mode(chg, val->intval);
 			power_supply_changed(chg->bms_psy);
-			if (board_get_33w_supported()) {
 			schedule_delayed_work(&chg->charger_soc_decimal,
 					msecs_to_jiffies(CHARGER_SOC_DECIMAL_MS));
-			}
 		}
 		break;
 	case POWER_SUPPLY_PROP_PD_REMOVE_COMPENSATION:
@@ -1384,9 +1376,7 @@ static int smb5_usb_set_prop(struct power_supply *psy,
 		chg->adapter_cc_mode = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_APSD_RERUN:
-		del_timer_sync(&chg->apsd_timer);
 		chg->apsd_ext_timeout = false;
-		smblib_rerun_apsd(chg);
 		break;
 	case POWER_SUPPLY_PROP_QC3P5_CURRENT_MAX:
 		rc = vote(chg->usb_icl_votable, QC3P5_VOTER, true, val->intval);
@@ -1674,7 +1664,7 @@ static int smb5_usb_main_set_prop(struct power_supply *psy,
 		if (chg->six_pin_step_charge_enable) {
 			rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP, &pval);
 			/* if temp out of soft jeita normal zone, do not add fast charge current offset */
-			if (pval.intval >= CP_WARM_THRESHOLD - SOFT_JEITA_HYSTERESIS || pval.intval <= CP_COOL_THRESHOLD + SOFT_JEITA_HYSTERESIS
+			if (pval.intval >= cp_warm_threshold - soft_jeita_hysteresis || pval.intval <= CP_COOL_THRESHOLD + soft_jeita_hysteresis
 					|| chg->index_vfloat == MAX_STEP_ENTRIES - 1)
 
 				rc = smblib_set_charge_param(chg, &chg->param.fcc, val->intval);
@@ -4036,6 +4026,7 @@ static void thermal_fb_notifier_resume_work(struct work_struct *work)
         LCT_THERM_LCDOFF_LEVEL = 4;
     }
 
+    if (!board_get_33w_supported()) {
 	if ((lct_backlight_off) && (LctIsInCall == 0)) {
 		if (lct_therm_lvl_reserved.intval > LCT_THERM_LCDOFF_LEVEL)
 			smblib_set_prop_system_temp_level(chg,&lct_therm_lcdoff_level);
@@ -4045,6 +4036,7 @@ static void thermal_fb_notifier_resume_work(struct work_struct *work)
 		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
 	} else {
 		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-levle
+	}
 	}
 
 	LctThermal = 0;
@@ -4060,7 +4052,7 @@ static int thermal_notifier_callback(struct notifier_block *noti, unsigned long 
 	if (ev_data && ev_data->data && chg) {
 		blank = ev_data->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK && *blank == MSM_DRM_BLANK_UNBLANK) {
-			lct_backlight_off = false;
+			lct_backlight_off = true; // fake screen off
 			pr_info("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
 		}
