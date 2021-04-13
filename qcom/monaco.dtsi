@@ -677,25 +677,8 @@
 		};
 	};
 
-	bi_tcxo: bi_tcxo {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <2>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
-	bi_tcxo_ao: bi_tcxo_ao {
-		compatible = "fixed-factor-clock";
-		clock-mult = <1>;
-		clock-div = <2>;
-		clocks = <&xo_board>;
-		#clock-cells = <0>;
-	};
-
 	rpmcc: qcom,rpmcc {
-		compatible = "qcom,dummycc";
-		clock-output-names = "rpmcc_clocks";
+		compatible = "qcom,rpmcc-monaco";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
