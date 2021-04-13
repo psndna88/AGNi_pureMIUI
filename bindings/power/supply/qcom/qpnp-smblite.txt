@@ -196,6 +196,12 @@ Charger specific properties:
   Definition: Specifies the step size of each step of FCC stepper algorithm.
 		If left unspecified, the default value is 100mA.
 
+- qcom,concurrency-mode-enable
+ Usage:      optional
+ Value type: bool
+ Definition: Boolean flag to control charger concurrency mode. Its supported
+		only on PM5100, By default this feature is disabled.
+
 =================================================
 Second Level Nodes - SMBLITE Charger Peripherals
 =================================================
