@@ -42,7 +42,14 @@
 #include "nl80211_copy.h"
 #endif /* NL80211_SUPPORT */
 #ifdef ANDROID_WIFI_HAL
+/* avoid duplicate definitions from wifi_hal.h causing issues */
+#define u32 wifi_hal_u32
+#define u16 wifi_hal_u16
+#define u8 wifi_hal_u8
 #include "wifi_hal.h"
+#undef u32
+#undef u16
+#undef u8
 #endif /*ANDROID_WIFI_HAL*/
 
 #ifdef NL80211_SUPPORT
