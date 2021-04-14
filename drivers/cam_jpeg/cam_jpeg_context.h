@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2018, 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_JPEG_CONTEXT_H_
@@ -63,17 +63,5 @@ int cam_jpeg_context_init(struct cam_jpeg_context *ctx,
  *
  */
 int cam_jpeg_context_deinit(struct cam_jpeg_context *ctx);
-
-/**
- * cam_jpeg_subdev_close_internal()
- *
- * @brief: Close function for the jpeg dev
- *
- * @sd: Pointer to struct v4l2_subdev
- * @fh: Pointer to struct v4l2_subdev_fh
- *
- */
-int cam_jpeg_subdev_close_internal(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh);
 
 #endif  /* __CAM_JPEG_CONTEXT_H__ */

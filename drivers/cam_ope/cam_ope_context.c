@@ -195,12 +195,6 @@ static int __cam_ope_handle_buf_done_in_ready(void *ctx,
 	return cam_context_buf_done_from_hw(ctx, done, evt_id);
 }
 
-static int __cam_ope_shutdown_dev(
-	struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
-{
-	return cam_ope_subdev_close_internal(sd, fh);
-}
-
 static struct cam_ctx_ops
 	cam_ope_ctx_state_machine[CAM_CTX_STATE_MAX] = {
 	/* Uninit */
@@ -213,7 +207,6 @@ static struct cam_ctx_ops
 	{
 		.ioctl_ops = {
 			.acquire_dev = __cam_ope_acquire_dev_in_available,
-			.shutdown_dev = __cam_ope_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
@@ -226,7 +219,6 @@ static struct cam_ctx_ops
 			.config_dev = __cam_ope_config_dev_in_ready,
 			.flush_dev = __cam_ope_flush_dev_in_ready,
 			.dump_dev = __cam_ope_dump_dev_in_ready,
-			.shutdown_dev = __cam_ope_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_ope_handle_buf_done_in_ready,
@@ -240,23 +232,14 @@ static struct cam_ctx_ops
 			.config_dev = __cam_ope_config_dev_in_ready,
 			.flush_dev = __cam_ope_flush_dev_in_ready,
 			.dump_dev = __cam_ope_dump_dev_in_ready,
-			.shutdown_dev = __cam_ope_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_ope_handle_buf_done_in_ready,
 		.pagefault_ops = cam_ope_context_dump_active_request,
 	},
-	/* Flushed */
-	{
-		.ioctl_ops = {
-			.shutdown_dev = __cam_ope_shutdown_dev,
-		},
-	},
 	/* Activated */
 	{
-		.ioctl_ops = {
-			.shutdown_dev = __cam_ope_shutdown_dev,
-		},
+		.ioctl_ops = {},
 		.crm_ops = {},
 		.irq_ops = NULL,
 		.pagefault_ops = cam_ope_context_dump_active_request,

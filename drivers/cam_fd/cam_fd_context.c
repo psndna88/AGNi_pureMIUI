@@ -169,19 +169,6 @@ static int __cam_fd_ctx_handle_irq_in_activated(void *context,
 	return rc;
 }
 
-static int __cam_fd_shutdown_dev(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	int rc = -EINVAL;
-
-	if (!sd || !fh) {
-		CAM_ERR(CAM_FD, "Invalid input pointer");
-		return rc;
-	}
-
-	return cam_fd_dev_close_internal(sd, fh);
-}
-
 /* top state machine */
 static struct cam_ctx_ops
 	cam_fd_ctx_state_machine[CAM_CTX_STATE_MAX] = {
@@ -195,7 +182,6 @@ static struct cam_ctx_ops
 	{
 		.ioctl_ops = {
 			.acquire_dev = __cam_fd_ctx_acquire_dev_in_available,
-			.shutdown_dev = __cam_fd_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
@@ -206,25 +192,18 @@ static struct cam_ctx_ops
 			.release_dev = __cam_fd_ctx_release_dev_in_acquired,
 			.config_dev = __cam_fd_ctx_config_dev_in_acquired,
 			.start_dev = __cam_fd_ctx_start_dev_in_acquired,
-			.shutdown_dev = __cam_fd_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
 	},
 	/* Ready */
 	{
-		.ioctl_ops = {
-			.shutdown_dev = __cam_fd_shutdown_dev,
-		},
+		.ioctl_ops = { },
 		.crm_ops = {},
 		.irq_ops = NULL,
 	},
 	/* Flushed */
-	{
-		.ioctl_ops = {
-			.shutdown_dev = __cam_fd_shutdown_dev,
-		},
-	},
+	{},
 	/* Activated */
 	{
 		.ioctl_ops = {
@@ -233,7 +212,6 @@ static struct cam_ctx_ops
 			.config_dev = __cam_fd_ctx_config_dev_in_activated,
 			.flush_dev = __cam_fd_ctx_flush_dev_in_activated,
 			.dump_dev = __cam_fd_ctx_dump_dev_in_activated,
-			.shutdown_dev = __cam_fd_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_fd_ctx_handle_irq_in_activated,

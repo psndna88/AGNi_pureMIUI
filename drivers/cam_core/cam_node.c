@@ -297,27 +297,6 @@ static int __cam_node_handle_stop_dev(struct cam_node *node,
 	return rc;
 }
 
-int cam_node_handle_shutdown_dev(struct cam_node *node,
-	struct cam_control *cmd, struct v4l2_subdev_fh *fh)
-{
-	struct cam_context *ctx = NULL;
-	int32_t dev_index = -1;
-	int rc = 0, ret = 0;
-
-	while ((dev_index = cam_get_dev_handle_info(cmd->handle,
-		&ctx, dev_index)) < CAM_REQ_MGR_MAX_HANDLES_V2) {
-		ret = cam_context_handle_shutdown_dev(ctx, cmd, fh);
-		if (ret) {
-			rc = ret;
-			CAM_ERR(CAM_CORE, "Shutdown failure for node %s",
-					node->name);
-			continue;
-		}
-	}
-
-	return rc;
-}
-
 static int __cam_node_handle_config_dev(struct cam_node *node,
 	struct cam_config_dev_cmd *config)
 {

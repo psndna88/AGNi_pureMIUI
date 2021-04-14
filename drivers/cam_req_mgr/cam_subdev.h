@@ -21,13 +21,6 @@ enum cam_subdev_message_type_t {
 	CAM_SUBDEV_MESSAGE_CLOCK_UPDATE
 };
 
-/* Enum for close sequence priority */
-enum cam_subdev_close_seq_priority {
-	CAM_SD_CLOSE_HIGH_PRIORITY,
-	CAM_SD_CLOSE_MEDIUM_PRIORITY,
-	CAM_SD_CLOSE_LOW_PRIORITY
-};
-
 /**
  * struct cam_subdev - describes a camera sub-device
  *
@@ -46,8 +39,6 @@ enum cam_subdev_close_seq_priority {
  * @ent_function:          Media entity function type. Can be:
  *                             %CAM_IFE_DEVICE_TYPE - identifies as IFE device.
  *                             %CAM_ICP_DEVICE_TYPE - identifies as ICP device.
- * @list:                  list pointer
- * @close_seq_prior:         cam_subdev_close_seq_priority type
  *
  * Each instance of a subdev driver should create this struct, either
  * stand-alone or embedded in a larger struct. This structure should be
@@ -67,8 +58,6 @@ struct cam_subdev {
 					struct v4l2_subdev *sd,
 					enum cam_subdev_message_type_t msg_type,
 					uint32_t data);
-	struct list_head                       list;
-	enum cam_subdev_close_seq_priority     close_seq_prior;
 };
 
 /**
@@ -129,21 +118,5 @@ int cam_register_subdev(struct cam_subdev *sd);
  * @sd:                    Pointer to struct cam_subdev.
  */
 int cam_unregister_subdev(struct cam_subdev *sd);
-
-/**
- * cam_req_mgr_is_open()
- *
- * @brief:    This common utility function returns the crm active status
- *
- * @dev_id: device id type
- */
-bool  cam_req_mgr_is_open(uint64_t dev_id);
-
-/**
- * cam_req_mgr_is_shutdown()
- *
- * @brief:    This common utility function returns the shutdown state
- */
-bool cam_req_mgr_is_shutdown(void);
 
 #endif /* _CAM_SUBDEV_H_ */

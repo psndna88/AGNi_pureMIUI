@@ -236,37 +236,6 @@ static const struct of_device_id cam_flash_dt_match[] = {
 	{}
 };
 
-static int cam_flash_subdev_close_internal(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	struct cam_flash_ctrl *fctrl =
-		v4l2_get_subdevdata(sd);
-
-	if (!fctrl) {
-		CAM_ERR(CAM_FLASH, "Flash ctrl ptr is NULL");
-		return -EINVAL;
-	}
-
-	mutex_lock(&fctrl->flash_mutex);
-	cam_flash_shutdown(fctrl);
-	mutex_unlock(&fctrl->flash_mutex);
-
-	return 0;
-}
-
-static int cam_flash_subdev_close(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	bool crm_active = cam_req_mgr_is_open(CAM_FLASH);
-
-	if (crm_active) {
-		CAM_INFO(CAM_FLASH, "CRM is ACTIVE, close should be from CRM");
-		return 0;
-	}
-
-	return cam_flash_subdev_close_internal(sd, fh);
-}
-
 static long cam_flash_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
@@ -288,14 +257,6 @@ static long cam_flash_subdev_ioctl(struct v4l2_subdev *sd,
 				"Failed in driver cmd: %d", rc);
 		break;
 	}
-	case CAM_SD_SHUTDOWN:
-		if (!cam_req_mgr_is_shutdown()) {
-			CAM_ERR(CAM_CORE, "SD shouldn't come from user space");
-			return 0;
-		}
-
-		rc = cam_flash_subdev_close_internal(sd, NULL);
-		break;
 	default:
 		CAM_ERR(CAM_FLASH, "Invalid ioctl cmd type");
 		rc = -ENOIOCTLCMD;
@@ -367,6 +328,24 @@ static int32_t cam_flash_i2c_driver_remove(struct i2c_client *client)
 	return rc;
 }
 
+static int cam_flash_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	struct cam_flash_ctrl *fctrl =
+		v4l2_get_subdevdata(sd);
+
+	if (!fctrl) {
+		CAM_ERR(CAM_FLASH, "Flash ctrl ptr is NULL");
+		return -EINVAL;
+	}
+
+	mutex_lock(&fctrl->flash_mutex);
+	cam_flash_shutdown(fctrl);
+	mutex_unlock(&fctrl->flash_mutex);
+
+	return 0;
+}
+
 static struct v4l2_subdev_core_ops cam_flash_subdev_core_ops = {
 	.ioctl = cam_flash_subdev_ioctl,
 #ifdef CONFIG_COMPAT
@@ -396,7 +375,6 @@ static int cam_flash_init_subdev(struct cam_flash_ctrl *fctrl)
 		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 	fctrl->v4l2_dev_str.ent_function = CAM_FLASH_DEVICE_TYPE;
 	fctrl->v4l2_dev_str.token = fctrl;
-	fctrl->v4l2_dev_str.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	rc = cam_register_subdev(&(fctrl->v4l2_dev_str));
 	if (rc)

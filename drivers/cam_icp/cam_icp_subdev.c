@@ -98,7 +98,7 @@ end:
 	return rc;
 }
 
-int cam_icp_subdev_close_internal(struct v4l2_subdev *sd,
+static int cam_icp_subdev_close(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
@@ -107,8 +107,9 @@ int cam_icp_subdev_close_internal(struct v4l2_subdev *sd,
 
 	mutex_lock(&g_icp_dev.icp_lock);
 	if (g_icp_dev.open_cnt <= 0) {
-		CAM_WARN(CAM_ICP, "ICP subdev is already closed");
-		return 0;
+		CAM_DBG(CAM_ICP, "ICP subdev is already closed");
+		rc = -EINVAL;
+		goto end;
 	}
 	g_icp_dev.open_cnt--;
 	if (!node) {
@@ -132,20 +133,7 @@ int cam_icp_subdev_close_internal(struct v4l2_subdev *sd,
 
 end:
 	mutex_unlock(&g_icp_dev.icp_lock);
-	return rc;
-}
-
-static int cam_icp_subdev_close(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	bool crm_active = cam_req_mgr_is_open(CAM_ICP);
-
-	if (crm_active) {
-		CAM_DBG(CAM_ICP, "CRM is ACTIVE, close should be from CRM");
-		return 0;
-	}
-
-	return cam_icp_subdev_close_internal(sd, fh);
+	return 0;
 }
 
 const struct v4l2_subdev_internal_ops cam_icp_subdev_internal_ops = {
@@ -169,7 +157,6 @@ static int cam_icp_component_bind(struct device *dev,
 
 	g_icp_dev.sd.pdev = pdev;
 	g_icp_dev.sd.internal_ops = &cam_icp_subdev_internal_ops;
-	g_icp_dev.sd.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 	rc = cam_subdev_probe(&g_icp_dev.sd, pdev, CAM_ICP_DEV_NAME,
 		CAM_ICP_DEVICE_TYPE);
 	if (rc) {

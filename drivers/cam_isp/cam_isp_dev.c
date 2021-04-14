@@ -71,7 +71,7 @@ static int cam_isp_subdev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-int cam_isp_subdev_close_internal(struct v4l2_subdev *sd,
+static int cam_isp_subdev_close(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
@@ -99,18 +99,6 @@ end:
 	return rc;
 }
 
-static int cam_isp_subdev_close(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	bool crm_active = cam_req_mgr_is_open(CAM_ISP);
-
-	if (crm_active) {
-		CAM_DBG(CAM_ISP, "CRM is ACTIVE, close should be from CRM");
-		return 0;
-	}
-	return cam_isp_subdev_close_internal(sd, fh);
-}
-
 static const struct v4l2_subdev_internal_ops cam_isp_subdev_internal_ops = {
 	.close = cam_isp_subdev_close,
 	.open = cam_isp_subdev_open,
@@ -132,7 +120,6 @@ static int cam_isp_dev_component_bind(struct device *dev,
 		(const char **)&compat_str);
 
 	g_isp_dev.sd.internal_ops = &cam_isp_subdev_internal_ops;
-	g_isp_dev.sd.close_seq_prior = CAM_SD_CLOSE_HIGH_PRIORITY;
 	/* Initialize the v4l2 subdevice first. (create cam_node) */
 	if (strnstr(compat_str, "ife", strlen(compat_str))) {
 		rc = cam_subdev_probe(&g_isp_dev.sd, pdev, CAM_ISP_DEV_NAME,

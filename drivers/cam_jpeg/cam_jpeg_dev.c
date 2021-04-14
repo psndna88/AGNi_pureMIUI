@@ -56,11 +56,12 @@ static int cam_jpeg_subdev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-int cam_jpeg_subdev_close_internal(struct v4l2_subdev *sd,
+static int cam_jpeg_subdev_close(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
 	struct cam_node *node = v4l2_get_subdevdata(sd);
+
 
 	mutex_lock(&g_jpeg_dev.jpeg_mutex);
 	if (g_jpeg_dev.open_cnt <= 0) {
@@ -85,18 +86,6 @@ end:
 	return rc;
 }
 
-static int cam_jpeg_subdev_close(struct v4l2_subdev *sd,
-	struct v4l2_subdev_fh *fh)
-{
-	bool crm_active = cam_req_mgr_is_open(CAM_JPEG);
-
-	if (crm_active) {
-		CAM_DBG(CAM_JPEG, "CRM is ACTIVE, close should be from CRM");
-		return 0;
-	}
-	return cam_jpeg_subdev_close_internal(sd, fh);
-}
-
 static const struct v4l2_subdev_internal_ops cam_jpeg_subdev_internal_ops = {
 	.close = cam_jpeg_subdev_close,
 	.open = cam_jpeg_subdev_open,
@@ -113,7 +102,6 @@ static int cam_jpeg_dev_component_bind(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 
 	g_jpeg_dev.sd.internal_ops = &cam_jpeg_subdev_internal_ops;
-	g_jpeg_dev.sd.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 	rc = cam_subdev_probe(&g_jpeg_dev.sd, pdev, CAM_JPEG_DEV_NAME,
 		CAM_JPEG_DEVICE_TYPE);
 	if (rc) {
