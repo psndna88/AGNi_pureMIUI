@@ -2138,9 +2138,12 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		switch (payload[0]) {
 		case ASM_STREAM_CMD_SET_PP_PARAMS_V2:
 		case ASM_STREAM_CMD_SET_PP_PARAMS_V3:
-			if (rtac_make_asm_callback(ac->session, payload,
+			//cmd_state_pp : wait=-1 , non wait=0
+			if (atomic_read(&ac->cmd_state_pp) != -1) {
+				if (rtac_make_asm_callback(ac->session, payload,
 					data->payload_size))
-				break;
+					break;
+			}
 		case ASM_SESSION_CMD_PAUSE:
 		case ASM_SESSION_CMD_SUSPEND:
 		case ASM_DATA_CMD_EOS:
