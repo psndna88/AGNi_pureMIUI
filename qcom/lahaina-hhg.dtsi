@@ -133,7 +133,7 @@
 
 			fan_cpu16_config2: fan-cpu16-config2 {
 				temperature = <95000>;
-				hysteresis = <0>;
+				hysteresis = <5000>;
 				type = "passive";
 			};
 		};
@@ -172,7 +172,7 @@
 
 			fan_cpu17_config2: fan-cpu17-config2 {
 				temperature = <95000>;
-				hysteresis = <0>;
+				hysteresis = <5000>;
 				type = "passive";
 			};
 		};
@@ -269,6 +269,38 @@
 			fan_cdev_2 {
 				trip = <&fan_gpuss1_config2>;
 				cooling-device = <&fancontroller 3 3>;
+			};
+		};
+	};
+
+	video-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 6>;
+		trips {
+			fan_video_config0: fan-video-config0 {
+				temperature = <50000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			fan_video_config1: fan-video-config1 {
+				temperature = <60000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			fan_cdev_0 {
+				trip = <&fan_video_config0>;
+				cooling-device = <&fancontroller 1 1>;
+			};
+
+			fan_cdev_1 {
+				trip = <&fan_video_config1>;
+				cooling-device = <&fancontroller 2 2>;
 			};
 		};
 	};
