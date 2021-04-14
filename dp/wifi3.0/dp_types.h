@@ -998,6 +998,10 @@ struct dp_soc_stats {
 			uint32_t dup_refill_link_desc;
 			/* REO OOR eapol drop count */
 			uint32_t reo_err_oor_eapol_drop;
+			/* count of start sequence (ssn) updates */
+			uint32_t ssn_update_count;
+			/* count of bar handling fail */
+			uint32_t bar_handle_fail_count;
 		} err;
 
 		/* packet count per core - per ring */
