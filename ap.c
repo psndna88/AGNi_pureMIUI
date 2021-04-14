@@ -7793,6 +7793,12 @@ static void fwtest_set_he_params(struct sigma_dut *dut, const char *ifname)
 
 	if (dut->he_sounding == VALUE_ENABLED)
 		fwtest_cmd_wrapper(dut, "-m 0x47 -v 0 7 0", ifname);
+
+	if (dut->ap_bcc == VALUE_ENABLED) {
+		fwtest_cmd_wrapper(dut, "-t 1 -m 0x0 -v 0 0x1B 0x10000407",
+				   ifname);
+		fwtest_cmd_wrapper(dut, "-t 1 -m 0x0 -v 0 0x1D 0", ifname);
+	}
 }
 
 
