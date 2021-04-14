@@ -3286,6 +3286,10 @@ static int __wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 					sap_config);
 			ret = 0;
 			goto out;
+		} else if (!sap_config->acs_cfg.ch_list_count) {
+			hdd_err("channel list count 0");
+			ret = -EINVAL;
+			goto out;
 		}
 	}
 
