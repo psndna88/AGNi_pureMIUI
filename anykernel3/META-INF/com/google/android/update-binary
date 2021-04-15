@@ -577,6 +577,16 @@ $BB mv -f /data/adb/modules/disable $ACT;
 else
 $BB rm -rf $ACT;
 fi;
+# AGNi AOSP Deep Sleep Helper
+ui_print ">> Installing AGNi AOSP Deep Sleep Helper Module..";
+ADSH=/data/adb/modules/AGNi_AOSP_DeepSleepHelper;
+$BB mv -f $ADSH/disable /data/adb/modules;
+$BB rm -rf $ADSH;
+$BB mkdir -p $ADSH;
+$BB cp -rf $AKHOME/common/AGNi_AOSP_DeepSleepHelper/* $ADSH;
+$BB chmod 0644 $ADSH/*.prop;
+$BB chmod 0777 $ADSH/*.sh;
+$BB mv -f /data/adb/modules/disable $ADSH;
 ## Auto Cleaner
 $BB mkdir -p /data/adb/post-fs-data.d;
 $BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d/atools.sh;

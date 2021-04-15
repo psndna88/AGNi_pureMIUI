@@ -1,0 +1,6 @@
+id=AGNi_AOSP_DeepSleepHelper
+name=AGNi Kernel Deep Sleep Helper (AOSP)
+version=1.0
+versionCode=15042021
+author=psndna88
+description=This module fixes anxfeatures service run parameter to fix deep sleep problems.
