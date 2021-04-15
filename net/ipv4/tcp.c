@@ -1570,7 +1570,7 @@ static void tcp_cleanup_rbuf(struct sock *sk, int copied)
 		    (copied > 0 &&
 		     ((icsk->icsk_ack.pending & ICSK_ACK_PUSHED2) ||
 		      ((icsk->icsk_ack.pending & ICSK_ACK_PUSHED) &&
-		       !icsk->icsk_ack.pingpong)) &&
+		       !inet_csk_in_pingpong_mode(sk))) &&
 		      !atomic_read(&sk->sk_rmem_alloc)))
 			time_to_ack = true;
 	}
@@ -2374,6 +2374,7 @@ int tcp_disconnect(struct sock *sk, int flags)
 	tp->snd_cwnd_cnt = 0;
 	tp->window_clamp = 0;
 	tp->delivered = 0;
+	tp->delivered_ce = 0;
 	if (icsk->icsk_ca_ops->release)
 		icsk->icsk_ca_ops->release(sk);
 	memset(icsk->icsk_ca_priv, 0, sizeof(icsk->icsk_ca_priv));
@@ -2753,16 +2754,16 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 
 	case TCP_QUICKACK:
 		if (!val) {
-			icsk->icsk_ack.pingpong = 1;
+			inet_csk_enter_pingpong_mode(sk);
 		} else {
-			icsk->icsk_ack.pingpong = 0;
+			inet_csk_exit_pingpong_mode(sk);
 			if ((1 << sk->sk_state) &
 			    (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT) &&
 			    inet_csk_ack_scheduled(sk)) {
 				icsk->icsk_ack.pending |= ICSK_ACK_PUSHED;
 				tcp_cleanup_rbuf(sk, 1);
 				if (!(val & 1))
-					icsk->icsk_ack.pingpong = 1;
+					inet_csk_enter_pingpong_mode(sk);
 			}
 		}
 		break;
@@ -2875,10 +2876,10 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 {
 	const struct tcp_sock *tp = tcp_sk(sk); /* iff sk_type == SOCK_STREAM */
 	const struct inet_connection_sock *icsk = inet_csk(sk);
+	unsigned long rate;
 	u32 now;
 	u64 rate64;
 	bool slow;
-	u32 rate;
 
 	memset(info, 0, sizeof(*info));
 	if (sk->sk_type != SOCK_STREAM)
@@ -2888,11 +2889,11 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 
 	/* Report meaningful fields for all TCP states, including listeners */
 	rate = READ_ONCE(sk->sk_pacing_rate);
-	rate64 = rate != ~0U ? rate : ~0ULL;
+	rate64 = (rate != ~0UL) ? rate : ~0ULL;
 	info->tcpi_pacing_rate = rate64;
 
 	rate = READ_ONCE(sk->sk_max_pacing_rate);
-	rate64 = rate != ~0U ? rate : ~0ULL;
+	rate64 = (rate != ~0UL) ? rate : ~0ULL;
 	info->tcpi_max_pacing_rate = rate64;
 
 	info->tcpi_reordering = tp->reordering;
@@ -2986,8 +2987,8 @@ struct sk_buff *tcp_get_timestamping_opt_stats(const struct sock *sk)
 	const struct tcp_sock *tp = tcp_sk(sk);
 	struct sk_buff *stats;
 	struct tcp_info info;
+	unsigned long rate;
 	u64 rate64;
-	u32 rate;
 
 	stats = alloc_skb(7 * nla_total_size_64bit(sizeof(u64)) +
 			  3 * nla_total_size(sizeof(u32)) +
@@ -3008,7 +3009,7 @@ struct sk_buff *tcp_get_timestamping_opt_stats(const struct sock *sk)
 			  tp->total_retrans, TCP_NLA_PAD);
 
 	rate = READ_ONCE(sk->sk_pacing_rate);
-	rate64 = rate != ~0U ? rate : ~0ULL;
+	rate64 = (rate != ~0UL) ? rate : ~0ULL;
 	nla_put_u64_64bit(stats, TCP_NLA_PACING_RATE, rate64, TCP_NLA_PAD);
 
 	rate64 = tcp_compute_delivery_rate(tp);
@@ -3113,7 +3114,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 		return 0;
 	}
 	case TCP_QUICKACK:
-		val = !icsk->icsk_ack.pingpong;
+		val = !inet_csk_in_pingpong_mode(sk);
 		break;
 
 	case TCP_CONGESTION:

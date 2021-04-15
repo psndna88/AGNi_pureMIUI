@@ -2881,7 +2881,8 @@ static int cake_init(struct Qdisc *sch, struct nlattr *opt,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
-	err = tcf_block_get(&q->block, &q->filter_list);
+//	err = tcf_block_get(&q->block, &q->filter_list);
+	err = tcf_block_get(&q->block, &q->filter_list, sch);
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 16, 0)
 	err = tcf_block_get(&q->block, &q->filter_list, sch);
 #else

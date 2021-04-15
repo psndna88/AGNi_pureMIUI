@@ -424,8 +424,8 @@ struct sock {
 	struct timer_list	sk_timer;
 	__u32			sk_priority;
 	__u32			sk_mark;
-	u32			sk_pacing_rate; /* bytes per second */
-	u32			sk_max_pacing_rate;
+	unsigned long		sk_pacing_rate; /* bytes per second */
+	unsigned long		sk_max_pacing_rate;
 	struct page_frag	sk_frag;
 	netdev_features_t	sk_route_caps;
 	netdev_features_t	sk_route_nocaps;
@@ -2455,9 +2455,9 @@ extern __u32 sysctl_rmem_default;
  */
 static inline void sk_pacing_shift_update(struct sock *sk, int val)
 {
-	if (!sk || !sk_fullsock(sk) || sk->sk_pacing_shift == val)
+	if (!sk || !sk_fullsock(sk) || READ_ONCE(sk->sk_pacing_shift) == val)
 		return;
-	sk->sk_pacing_shift = val;
+	WRITE_ONCE(sk->sk_pacing_shift, val);
 }
 /* SOCKEV Notifier Events */
 #define SOCKEV_SOCKET   0x00
