@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -455,6 +455,12 @@ int ipa3_eth_rtk_connect(
 	} else {
 		ep->client_notify = pipe->info.notify;
 		ep->priv = pipe->info.priv;
+		/* xlat config in vlan mode */
+		if (vlan_mode) {
+			ep->cfg.hdr.hdr_ofst_metadata_valid = 1;
+			ep->cfg.hdr.hdr_ofst_metadata = ETH_HLEN;
+			ep->cfg.hdr.hdr_metadata_reg_valid = false;
+		}
 	}
 	if (ipa3_cfg_ep(ep_idx, &ep->cfg)) {
 		IPAERR("fail to setup rx pipe cfg\n");
