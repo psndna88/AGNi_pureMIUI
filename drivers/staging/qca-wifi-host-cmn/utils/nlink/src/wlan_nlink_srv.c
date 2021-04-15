@@ -341,14 +341,6 @@ int nl_srv_unregister(tWlanNlModTypes msg_type, nl_srv_msg_callback msg_handler)
 	return 0;
 }
 
-void *nl80211hdr_put(struct sk_buff *skb, uint32_t portid,
-		     uint32_t seq, int flags, uint8_t cmd)
-{
-	struct genl_family *cld80211_fam = cld80211_get_genl_family();
-
-	return genlmsg_put(skb, portid, seq, cld80211_fam, flags, cmd);
-}
-
 /**
  * cld80211_fill_data() - API to fill payload to nl message
  * @msg: Sk buffer
