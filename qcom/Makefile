@@ -321,6 +321,7 @@ endif
 endif
 
 dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
+	sdxlemur-atp.dtb \
 	sdxlemur-cdp.dtb \
 	sdxlemur-mtp.dtb \
 	sdxlemur-mtp-mbb.dtb \
