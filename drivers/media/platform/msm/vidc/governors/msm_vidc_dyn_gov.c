@@ -610,7 +610,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d,
 		collocated_bytes_per_lcu, tnbr_per_lcu, dpb_bpp,
 		original_color_format, vertical_tile_width, rotation;
 	bool work_mode_1, original_compression_enabled,
-		cropping_or_scaling,
+		low_power, cropping_or_scaling,
 		b_frames_enabled = false,
 		llc_ref_chroma_cache_enabled = false,
 		llc_top_line_buf_enabled = false,
@@ -682,6 +682,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d,
 	original_compression_enabled = __ubwc(original_color_format);
 
 	work_mode_1 = d->work_mode == VIDC_WORK_MODE_1;
+	low_power = d->power_mode == VIDC_POWER_LOW;
 	bins_to_bit_factor = FP_INT(4);
 
 	if (d->use_sys_cache) {
@@ -826,6 +827,7 @@ static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d,
 		{"input downscaling ratio", DUMP_FP_FMT, downscaling_ratio},
 		{"rotation", "%d", rotation},
 		{"cropping or scaling", "%d", cropping_or_scaling},
+		{"low power mode", "%d", low_power},
 		{"work Mode", "%d", work_mode_1},
 		{"B frame enabled", "%d", b_frames_enabled},
 		{"original frame format", "%#x", original_color_format},
@@ -929,6 +931,13 @@ static int __get_target_freq(struct devfreq *dev, unsigned long *freq)
 
 	if (!vidc_data || !vidc_data->data_count)
 		goto exit;
+
+	for (c = 0; c < vidc_data->data_count; ++c) {
+		if (vidc_data->data[c].power_mode == VIDC_POWER_TURBO) {
+			ab_kbps = INT_MAX;
+			goto exit;
+		}
+	}
 
 	for (c = 0; c < vidc_data->data_count; ++c)
 		ab_kbps += __calculate(&vidc_data->data[c], gov->mode);
