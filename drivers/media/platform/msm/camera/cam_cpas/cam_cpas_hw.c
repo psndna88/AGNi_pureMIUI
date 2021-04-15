@@ -1,5 +1,4 @@
 /* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1001,7 +1000,7 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 		CAM_ERR(CAM_CPAS, "client=[%d][%s][%d] is in start state",
 			client_indx, cpas_client->data.identifier,
 			cpas_client->data.cell_index);
-		rc = -EALREADY;
+		rc = -EPERM;
 		goto done;
 	}
 
