@@ -36,6 +36,10 @@
 static const unsigned int vmpressure_level_med = 60;
 static const unsigned int vmpressure_level_critical = 95;
 
+// AGNi marker sysfs node
+static bool agni_present = true;
+module_param(agni_present, bool, 0444);
+
 static unsigned long vmpressure_scale_max = 100;
 module_param_named(vmpressure_scale_max, vmpressure_scale_max,
 			ulong, S_IRUGO | S_IWUSR);
