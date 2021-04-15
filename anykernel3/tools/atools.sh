@@ -8,5 +8,6 @@ if ([ ! "` uname -r | grep AGNi`" ] || [ ! -f /sys/module/lpm_levels/parameters/
 	rm -rf /data/adb/modules/AGNiSupport;
 	rm -rf /data/adb/modules/AGNiWIFI;
 	rm -rf /data/adb/modules/AGNiCurtanaThermals;
+	rm -rf /data/adb/modules/AGNi_AOSP_DeepSleepHelper;
 fi;
 

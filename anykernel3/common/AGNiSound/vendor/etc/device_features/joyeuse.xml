@@ -40,6 +40,10 @@
 	<bool name="support_playback_device">true</bool>
 	
 	<bool name="support_boost_mode">true</bool>
+
+    <bool name="support_audio_share">true</bool>
+
+    <bool name="support_voip_record">true</bool>
 	
 <!-- STOCK PARAMETERS -->
     <!--whether the device is pad-->

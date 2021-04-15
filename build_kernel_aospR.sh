@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
 
@@ -13,6 +13,21 @@ WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
+
+# AGNi CCACHE SHIFTING TO SDM660
+export CCACHE_SDM660="0"
+export CCACHE_MIATOLL_Q="0"
+export CCACHE_MIATOLL_R="1"
+. ~/WORKING_DIRECTORY/ccache_shifter.sh
+
+exit_reset() {
+	export CCACHE_SDM660="0"
+	export CCACHE_MIATOLL_Q="0"
+	export CCACHE_MIATOLL_R="0"
+	. ~/WORKING_DIRECTORY/ccache_shifter.sh
+	sync
+	exit
+}
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
@@ -62,7 +77,7 @@ if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
-	exit;
+	exit_reset;
 fi
 
 mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
@@ -89,4 +104,10 @@ if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 else
 	echo " >>>>> AGNi $DEVICE BUILD ERROR <<<<<"
 fi
+
+# AGNi CCACHE RESET
+export CCACHE_SDM660="0"
+export CCACHE_MIATOLL_Q="0"
+export CCACHE_MIATOLL_R="0"
+. ~/WORKING_DIRECTORY/ccache_shifter.sh
 
