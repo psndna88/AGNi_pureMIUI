@@ -1,6 +1,6 @@
 id=AGNiSupport
-name=AGNi Kernel MIATOLL Support Module (AOSP)
-version=2.1
-versionCode=06022021
+name=AGNi Kernel MIATOLL Support Module (MIUI R)
+version=2.2
+versionCode=20032021
 author=psndna88
-description=This module disables Qualcomm SVI feature causing random reboots.
+description=This module disables Qualcomm SVI feature causing random reboots + other things.

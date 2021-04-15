@@ -10,3 +10,6 @@ if ([ ! "` uname -r | grep AGNi`" ] || [ ! -f /sys/module/lpm_levels/parameters/
 	rm -rf /data/adb/modules/AGNiSupport;
 fi;
 
+# Disable some crashing MIUI R services
+stop vendor.cnss_diag
+
