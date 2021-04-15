@@ -569,6 +569,13 @@ void ipa_eth_ep_init_ctx(struct ipa_eth_channel *ch, bool vlan_mode)
 					IPA_SRC_NAT : IPA_BYPASS_NAT;
 	ep_ctx->cfg.hdr.hdr_len = vlan_mode ? VLAN_ETH_HLEN : ETH_HLEN;
 	ep_ctx->cfg.mode.mode = IPA_BASIC;
+
+	/* xlat config in vlan mode */
+	if (IPA_CLIENT_IS_PROD(ep_ctx->client) && vlan_mode) {
+		ep_ctx->cfg.hdr.hdr_ofst_metadata_valid = 1;
+		ep_ctx->cfg.hdr.hdr_ofst_metadata = ETH_HLEN;
+		ep_ctx->cfg.hdr.hdr_metadata_reg_valid = false;
+	}
 }
 
 /**
