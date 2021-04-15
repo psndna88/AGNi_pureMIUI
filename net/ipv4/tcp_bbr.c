@@ -245,7 +245,7 @@ static u64 bbr_rate_bytes_per_sec(struct sock *sk, u64 rate, int gain)
 }
 
 /* Convert a BBR bw and gain factor to a pacing rate in bytes per second. */
-static u32 bbr_bw_to_pacing_rate(struct sock *sk, u32 bw, int gain)
+static unsigned long bbr_bw_to_pacing_rate(struct sock *sk, u32 bw, int gain)
 {
 	u64 rate = bw;
 
@@ -284,7 +284,7 @@ static void bbr_set_pacing_rate(struct sock *sk, u32 bw, int gain)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	struct bbr *bbr = inet_csk_ca(sk);
-	u32 rate = bbr_bw_to_pacing_rate(sk, bw, gain);
+	unsigned long rate = bbr_bw_to_pacing_rate(sk, bw, gain);
 
 	if (unlikely(!bbr->has_seen_rtt && tp->srtt_us))
 		bbr_init_pacing_rate_from_rtt(sk);
@@ -306,7 +306,8 @@ static u32 bbr_tso_segs_goal(struct sock *sk)
 	/* Sort of tcp_tso_autosize() but ignoring
 	 * driver provided sk_gso_max_size.
 	 */
-	bytes = min_t(u32, sk->sk_pacing_rate >> sk->sk_pacing_shift,
+	bytes = min_t(unsigned long,
+		      sk->sk_pacing_rate >> READ_ONCE(sk->sk_pacing_shift),
 		      GSO_MAX_SIZE - 1 - MAX_TCP_HEADER);
 	segs = max_t(u32, bytes / tp->mss_cache, bbr_min_tso_segs(sk));
 
@@ -386,7 +387,7 @@ static u32 bbr_bdp(struct sock *sk, u32 bw, int gain)
  * which allows 2 outstanding 2-packet sequences, to try to keep pipe
  * full even with ACK-every-other-packet delayed ACKs.
  */
-static u32 bbr_quantization_budget(struct sock *sk, u32 cwnd, int gain)
+static u32 bbr_quantization_budget(struct sock *sk, u32 cwnd)
 {
 	struct bbr *bbr = inet_csk_ca(sk);
 
@@ -397,7 +398,7 @@ static u32 bbr_quantization_budget(struct sock *sk, u32 cwnd, int gain)
 	cwnd = (cwnd + 1) & ~1U;
 
 	/* Ensure gain cycling gets inflight above BDP even for small BDPs. */
-	if (bbr->mode == BBR_PROBE_BW && gain > BBR_UNIT)
+	if (bbr->mode == BBR_PROBE_BW && bbr->cycle_idx == 0)
 		cwnd += 2;
 
 	return cwnd;
@@ -409,7 +410,7 @@ static u32 bbr_inflight(struct sock *sk, u32 bw, int gain)
 	u32 inflight;
 
 	inflight = bbr_bdp(sk, bw, gain);
-	inflight = bbr_quantization_budget(sk, inflight, gain);
+	inflight = bbr_quantization_budget(sk, inflight);
 
 	return inflight;
 }
@@ -496,7 +497,7 @@ static void bbr_set_cwnd(struct sock *sk, const struct rate_sample *rs,
 	 * due to aggregation (of data and/or ACKs) visible in the ACK stream.
 	 */
 	target_cwnd += bbr_ack_aggregation_cwnd(sk);
-	target_cwnd = bbr_quantization_budget(sk, target_cwnd, gain);
+	target_cwnd = bbr_quantization_budget(sk, target_cwnd);
 
 	/* If we're below target cwnd, slow start cwnd toward target cwnd. */
 	if (bbr_full_bw_reached(sk))  /* only cut cwnd if we filled the pipe */
@@ -909,7 +910,8 @@ static void bbr_update_min_rtt(struct sock *sk, const struct rate_sample *rs)
 	filter_expired = after(tcp_jiffies32,
 			       bbr->min_rtt_stamp + bbr_min_rtt_win_sec * HZ);
 	if (rs->rtt_us >= 0 &&
-	    (rs->rtt_us < bbr->min_rtt_us || filter_expired)) {
+	    (rs->rtt_us <= bbr->min_rtt_us ||
+	     (filter_expired && !rs->is_ack_delayed))) {
 		bbr->min_rtt_us = rs->rtt_us;
 		bbr->min_rtt_stamp = tcp_jiffies32;
 	}

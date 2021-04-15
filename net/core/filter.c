@@ -2281,6 +2281,13 @@ static int bpf_skb_net_shrink(struct sk_buff *skb, u32 len_diff)
 
 #define BPF_SKB_MAX_LEN SKB_MAX_ALLOC
 
+static u32 __bpf_skb_max_len(const struct sk_buff *skb)
+{
+	if (skb_at_tc_ingress(skb) || !skb->dev)
+		return SKB_MAX_ALLOC;
+	return skb->dev->mtu + skb->dev->hard_header_len;
+}
+
 static int bpf_skb_adjust_net(struct sk_buff *skb, s32 len_diff)
 {
 	bool trans_same = skb->transport_header == skb->network_header;
@@ -3087,8 +3094,8 @@ BPF_CALL_5(bpf_setsockopt, struct bpf_sock_ops_kern *, bpf_sock,
 			sk->sk_userlocks |= SOCK_SNDBUF_LOCK;
 			sk->sk_sndbuf = max_t(int, val * 2, SOCK_MIN_SNDBUF);
 			break;
-		case SO_MAX_PACING_RATE:
-			sk->sk_max_pacing_rate = val;
+		case SO_MAX_PACING_RATE: /* 32bit version */
+			sk->sk_max_pacing_rate = (val == ~0U) ? ~0UL : val;
 			sk->sk_pacing_rate = min(sk->sk_pacing_rate,
 						 sk->sk_max_pacing_rate);
 			break;
