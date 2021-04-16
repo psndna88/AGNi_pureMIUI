@@ -11,7 +11,7 @@
 
 	msm_gpu: qcom,kgsl-3d0@3d00000 {
 		compatible = "qcom,kgsl-3d0",
-			"qcom,adreno-gpu-a660-shima";
+			"qcom,adreno-gpu-a642";
 		status = "ok";
 
 		reg = <0x3d00000 0x40000>, <0x3d61000 0x800>,
