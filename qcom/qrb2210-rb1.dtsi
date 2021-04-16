@@ -1289,6 +1289,44 @@ dcc: dcc_v2@1be2000 {
 					  "qcom,smp2p-early-crash-ind";
 		};
 	};
+
+	clk_virt: interconnect {
+		compatible = "qcom,scuba-clk_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmnrt_virt: interconnect@0 {
+		compatible = "qcom,scuba-mmnrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmrt_virt: interconnect@1 {
+		compatible = "qcom,scuba-mmrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	system_noc: interconnect@1880000 {
+		reg = <0x01880000 0x60200>;
+		compatible = "qcom,scuba-system_noc";
+		#interconnect-cells = <1>;
+	};
+
+	config_noc: interconnect@1900000 {
+		reg = <0x01900000 0x8200>;
+		compatible = "qcom,scuba-config_noc";
+		#interconnect-cells = <1>;
+	};
+
+	bimc: interconnect@4480000 {
+		reg = <0x04480000 0x80000>;
+		compatible = "qcom,scuba-bimc";
+		#interconnect-cells = <1>;
+	};
+
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 };
 
 #include "pm2250.dtsi"
@@ -1583,4 +1621,8 @@ dcc: dcc_v2@1be2000 {
 			};
 		};
 	};
+};
+
+&qupv3_se4_2uart {
+	status = "ok";
 };
