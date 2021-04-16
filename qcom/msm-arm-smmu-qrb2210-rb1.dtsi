@@ -124,10 +124,10 @@
 					<GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
-				qcom,msm-bus,name = "apps_smmu";
-				qcom,msm-bus,num-cases = <2>;
-				qcom,msm-bus,active-only;
-				qcom,msm-bus,num-paths = <1>;
+
+				interconnects = <&bimc MASTER_AMPSS_M0
+						&system_noc SLAVE_TCU>;
+				qcom,active-only;
 
 				qcom,actlr =
 					/* For rt TBU +3 deep PF */
@@ -142,10 +142,11 @@
 					reg-names = "base", "status-reg";
 					qcom,stream-id-range = <0x0 0x400>;
 					interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
-					qcom,msm-bus,name = "apps_smmu";
-					qcom,msm-bus,num-cases = <2>;
-					qcom,msm-bus,active-only;
-					qcom,msm-bus,num-paths = <2>;
+					interconnects = <&bimc MASTER_AMPSS_M0
+							&config_noc SLAVE_IMEM_CFG>,
+							<&bimc MASTER_AMPSS_M0
+							&system_noc SLAVE_TCU>;
+					qcom,active-only;
 
 				};
 
@@ -155,14 +156,14 @@
 						<0xc782208 0x8>;
 					reg-names = "base", "status-reg";
 					qcom,stream-id-range = <0x400 0x400>;
-					interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
 					qcom,regulator-names = "vdd";
 					vdd-supply = <&hlos1_vote_mm_snoc_mmu_tbu_rt_gdsc>;
-					qcom,msm-bus,name = "apps_smmu";
-					qcom,msm-bus,num-cases = <2>;
-					qcom,msm-bus,active-only;
-					qcom,msm-bus,num-paths = <2>;
-
+					interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
+					interconnects = <&mmrt_virt MASTER_MDP_PORT0
+							&bimc SLAVE_EBI_CH0>,
+							<&bimc MASTER_AMPSS_M0
+							&system_noc SLAVE_TCU>;
+					qcom,active-only;
 				};
 
 				mm_nrt_tbu: mm_nrt_tbu@0xc78d000 {
@@ -171,14 +172,14 @@
 						<0xc782210 0x8>;
 					reg-names = "base", "status-reg";
 					qcom,stream-id-range = <0x800 0x400>;
-					interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
 					qcom,regulator-names = "vdd";
 					vdd-supply = <&hlos1_vote_mm_snoc_mmu_tbu_nrt_gdsc>;
-					qcom,msm-bus,name = "apps_smmu";
-					qcom,msm-bus,num-cases = <2>;
-					qcom,msm-bus,active-only;
-					qcom,msm-bus,num-paths = <2>;
-
+					interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
+					interconnects = <&mmnrt_virt MASTER_CAMNOC_SF
+							&bimc SLAVE_EBI_CH0>,
+							<&bimc MASTER_AMPSS_M0
+							&system_noc SLAVE_TCU>;
+					qcom,active-only;
 				};
 
 	};
