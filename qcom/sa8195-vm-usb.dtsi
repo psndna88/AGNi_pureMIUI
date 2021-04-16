@@ -1,6 +1,5 @@
-#include <dt-bindings/clock/qcom,gcc-scshrike.h>
 #include <dt-bindings/phy/qcom,sm8150-qmp-usb3.h>
-#include <dt-bindings/clock/qcom,rpmh.h>
+
 &soc {
 	/* Primary USB port related controller */
 	usb0: ssusb@a600000 {
