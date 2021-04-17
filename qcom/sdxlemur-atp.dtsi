@@ -9,6 +9,18 @@
 	};
 };
 
+&usb {
+	extcon = <&pm7250b_pdphy>, <&eud>;
+
+	#io-channel-cells = <1>;
+	io-channels= <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>;
+	io-channel-names = "chg_type";
+};
+
+&vbus_detect {
+	status = "disabled";
+};
+
 &pm7250b_clkdiv {
 	clocks = <&rpmhcc RPMH_CXO_CLK>;
 	clock-names = "xo";
