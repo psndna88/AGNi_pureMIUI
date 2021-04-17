@@ -70,6 +70,7 @@
 	besbev_codec: besbev-codec {
 		compatible = "qcom,besbev-codec";
 		qcom,split-codec = <1>;
+		qcom,pmic-spmi-node = <&pm5100_cdc>;
 		qcom,wcd-reset-reg = <0x0000FCDB>;
 		qcom,foundry-id-reg = <0x000001F2>;
 		qcom,swr_ch_map = <0 SPKR_L 0x1 0 LO>,
@@ -77,6 +78,7 @@
 
 		qcom,besbev-slave = <&besbev_rx_slave>;
 		qcom,speaker-present = <1>;
+		qcom,comp-support = <0>;
 
 		cdc-mic-bias-supply = <&L28A>;
 		qcom,cdc-mic-bias-voltage = <2904000 2904000>;
@@ -135,11 +137,13 @@
 		"VA DMIC2", "VA MIC BIAS1",
 		"VA DMIC3", "VA MIC BIAS1";
 
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
 	asoc-codec  = <&stub_codec>, <&bolero>,
 			<&besbev_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 				"besbev_codec";
-	qcom,msm_audio_ssr_devs = <&bolero>, <&lpi_tlmm>;
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&bolero>, <&lpi_tlmm>;
 };
 
 &soc {
