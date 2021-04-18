@@ -2749,8 +2749,8 @@ static int wcd937x_wakeup(void *handle, bool enable)
 
 static irqreturn_t wcd937x_wd_handle_irq(int irq, void *data)
 {
-	pr_err_ratelimited("%s: Watchdog interrupt for irq =%d triggered\n",
-			   __func__, irq);
+//	pr_err_ratelimited("%s: Watchdog interrupt for irq =%d triggered\n",
+//			   __func__, irq);
 	return IRQ_HANDLED;
 }
 
