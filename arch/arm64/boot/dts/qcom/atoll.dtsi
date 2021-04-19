@@ -1752,8 +1752,8 @@
 		qcom,firmware-name = "adsp";
 		memory-region = <&pil_adsp_mem>;
 		qcom,signal-aop;
-		qcom,complete-ramdump;
-		qcom,minidump-as-elf32;
+/*		qcom,complete-ramdump;
+		qcom,minidump-as-elf32; */
 
 		/* Inputs from lpass */
 		interrupts-extended = <&pdc GIC_SPI 162 IRQ_TYPE_EDGE_RISING>,
@@ -2234,6 +2234,7 @@
 
 			label = "adsp";
 			qcom,glink-label = "lpass";
+			cpu-affinity = <1 2>;
 
 			qcom,adsp_qrtr {
 				qcom,glink-channels = "IPCRTR";
