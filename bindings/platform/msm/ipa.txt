@@ -197,6 +197,9 @@ IPA SMMU sub nodes
 - qcom,additional-mapping: specifies any addtional mapping needed for this
 				context bank. The format is <iova pa size>
 
+- qcom,use-tput-estmation-pipe: Indicates if configuring modem throughput
+					estmation pipe or not.
+
 IPA SMP2P sub nodes
 
 -compatible: "qcom,smp2p-map-ipa-1-out" - represents the out smp2p from
