@@ -272,6 +272,42 @@
 		thermal-sensors = <&pmk8350_adc_tm PM7325_ADC7_AMUX_THM1_100K_PU>;
 
 		trips {
+			quiet_skin_trip0: quiet-skin-trip0 {
+				temperature = <43000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_batt_trip0: quiet-batt-trip0 {
+				temperature = <44000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_skin_trip1: quiet-skin-trip1 {
+				temperature = <45000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			quiet_batt_trip1: quiet-batt-trip1 {
+				temperature = <46000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_batt_trip2: quiet-batt-trip2 {
+				temperature = <48000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_batt_trip3: quiet-batt-trip3 {
+				temperature = <49000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+
 			quiet_apc_trip: quiet-apc-trip {
 				temperature = <50000>;
 				hysteresis = <0>;
@@ -329,9 +365,39 @@
 				cooling-device = <&cdsp_sw 4 4>;
 			};
 
-			modem-pa-cdev {
+			skin-cdev0 {
+				trip = <&quiet_skin_trip0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+
+			skin-cdev1 {
+				trip = <&quiet_skin_trip1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+
+			skin-cdev2 {
 				trip = <&quiet_cx_trip>;
-				cooling-device = <&modem_pa 3 3>;
+				cooling-device = <&modem_skin 3 3>;
+			};
+
+			batt-cdev0 {
+				trip = <&quiet_batt_trip0>;
+				cooling-device = <&battery_charger 4 4>;
+			};
+
+			batt-cdev1 {
+				trip = <&quiet_batt_trip1>;
+				cooling-device = <&battery_charger 8 8>;
+			};
+
+			batt-cdev2 {
+				trip = <&quiet_batt_trip2>;
+				cooling-device = <&battery_charger 12 12>;
+			};
+
+			batt-cdev3 {
+				trip = <&quiet_batt_trip3>;
+				cooling-device = <&battery_charger 16 16>;
 			};
 		};
 	};
