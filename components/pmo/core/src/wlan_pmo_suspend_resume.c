@@ -998,6 +998,7 @@ QDF_STATUS pmo_core_txrx_suspend(struct wlan_objmgr_psoc *psoc)
 		goto out;
 
 	cdp_drain_txrx(dp_soc);
+	pmo_ctx->wow.txrx_suspended = true;
 out:
 	pmo_psoc_put_ref(psoc);
 	return status;
@@ -1017,7 +1018,7 @@ QDF_STATUS pmo_core_txrx_resume(struct wlan_objmgr_psoc *psoc)
 	}
 
 	pmo_ctx = pmo_psoc_get_priv(psoc);
-	if (pmo_core_get_wow_state(pmo_ctx) != pmo_wow_state_unified_d3)
+	if (!pmo_ctx->wow.txrx_suspended)
 		goto out;
 
 	hif_ctx = pmo_core_psoc_get_hif_handle(psoc);
@@ -1031,7 +1032,10 @@ QDF_STATUS pmo_core_txrx_resume(struct wlan_objmgr_psoc *psoc)
 	if (ret && ret != -EOPNOTSUPP) {
 		pmo_err("Failed to enable grp irqs: %d", ret);
 		status = qdf_status_from_os_return(ret);
+		goto out;
 	}
+
+	pmo_ctx->wow.txrx_suspended = false;
 out:
 	pmo_psoc_put_ref(psoc);
 	return status;
@@ -1261,10 +1265,6 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
-	status = pmo_core_txrx_resume(psoc);
-	if (QDF_IS_STATUS_ERROR(status))
-		goto fail;
-
 	if (hif_runtime_resume(hif_ctx)) {
 		status = QDF_STATUS_E_FAILURE;
 		goto fail;
@@ -1272,6 +1272,10 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 
 	status = pmo_core_psoc_bus_resume_req(psoc, QDF_RUNTIME_SUSPEND);
 	if (status != QDF_STATUS_SUCCESS)
+		goto fail;
+
+	status = pmo_core_txrx_resume(psoc);
+	if (QDF_IS_STATUS_ERROR(status))
 		goto fail;
 
 	hif_pm_set_link_state(hif_ctx, HIF_PM_LINK_STATE_UP);
