@@ -238,6 +238,13 @@
 		status = "okay";
 	};
 
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-smd";
+		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+	};
+
 	qcom,msm-imem@8600000 {
 		compatible = "qcom,msm-imem";
 		reg = <0x08600000 0x1000>; /* Address and size of IMEM */
