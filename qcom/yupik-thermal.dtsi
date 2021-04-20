@@ -70,6 +70,7 @@
 			<&dispcc DISP_CC_MDSS_MDP_CLK_SRC>;
 		cam_cc_ipe-supply = <&cam_cc_ipe_0_gdsc>;
 		csr-id = <1 4>;
+		status = "disabled";
 	};
 
 	cx_sdpm@0x00634000 {
@@ -80,6 +81,7 @@
 			<&dispcc DISP_CC_MDSS_MDP_CLK_SRC>;
 		cam_cc_ipe-supply = <&cam_cc_ipe_0_gdsc>;
 		csr-id = <0 2>;
+		status = "disabled";
 	};
 
 	mx_pe: mx_rdpm_pe@0x00637000 {
@@ -87,6 +89,7 @@
 		#thermal-sensor-cells = <0>;
 		reg = <0x00637000 0x1000>;
 		interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
+		status = "disabled";
 	};
 
 	cx_pe: cx_rdpm_pe@0x00635000 {
@@ -94,6 +97,7 @@
 		#thermal-sensor-cells = <0>;
 		reg = <0x00635000 0x1000>;
 		interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
+		status = "disabled";
 	};
 };
 
@@ -1660,6 +1664,7 @@
 		polling-delay = <0>;
 		thermal-sensors = <&mx_pe>;
 		thermal-governor = "step_wise";
+		status = "disabled";
 		trips {
 			mx_pe_config1: mx-pe-config1 {
 				temperature = <1>;
@@ -1723,6 +1728,7 @@
 		polling-delay = <0>;
 		thermal-sensors = <&cx_pe>;
 		thermal-governor = "step_wise";
+		status = "disabled";
 		trips {
 			cx_pe_config1: cx-pe-config1 {
 				temperature = <1>;
