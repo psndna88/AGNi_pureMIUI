@@ -1339,6 +1339,7 @@ dcc: dcc_v2@1be2000 {
 #include "msm-arm-smmu-qrb2210-rb1.dtsi"
 #include "qrb2210-rb1-qupv3.dtsi"
 #include "qrb2210-rb1-gdsc.dtsi"
+#include "qrb2210-rb1-usb.dtsi"
 
 &qupv3_se1_i2c {
 	#address-cells = <1>;
