@@ -241,6 +241,12 @@
 	};
 };
 
+&firmware {
+	scm {
+			compatible = "qcom,scm";
+		};
+};
+
 #include "direwolf-pinctrl.dtsi"
 #include "direwolf-qupv3.dtsi"
 #include "pm8540-vm.dtsi"
