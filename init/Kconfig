@@ -1476,6 +1476,14 @@ config DYNAMIC_STUNE_BOOST
 
 	  If unsure, say N.
 
+config SCHED_TUNE_DUMMY
+	bool "Create dummy SCHEDTUNE nodes"
+	depends on SMP
+	depends on !SCHED_TUNE && !CGROUP_SCHEDTUNE
+	default y
+	help
+	  Create dummy SCHEDTUNE nodes.
+ 
 config DEFAULT_USE_ENERGY_AWARE
 	bool "Default to enabling the Energy Aware Scheduler feature"
 	default n
