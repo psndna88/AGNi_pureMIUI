@@ -41,6 +41,12 @@
 #include "dp_hist.h"
 #endif
 
+#ifdef REO_QDESC_HISTORY
+#define REO_QDESC_HISTORY_SIZE 512
+uint64_t reo_qdesc_history_idx;
+struct reo_qdesc_event reo_qdesc_history[REO_QDESC_HISTORY_SIZE];
+#endif
+
 #ifdef FEATURE_WDS
 static inline bool
 dp_peer_ast_free_in_unmap_supported(struct dp_soc *soc,
@@ -67,6 +73,42 @@ dp_peer_ast_free_in_unmap_supported(struct dp_soc *soc,
 {
 	return false;
 }
+#endif
+
+#ifdef REO_QDESC_HISTORY
+static inline void
+dp_rx_reo_qdesc_history_add(struct reo_desc_list_node *free_desc,
+			    enum reo_qdesc_event_type type)
+{
+	struct reo_qdesc_event *evt;
+	struct dp_rx_tid *rx_tid = &free_desc->rx_tid;
+	uint32_t idx;
+
+	reo_qdesc_history_idx++;
+	idx = (reo_qdesc_history_idx & (REO_QDESC_HISTORY_SIZE - 1));
+
+	evt = &reo_qdesc_history[idx];
+
+	qdf_mem_copy(evt->peer_mac, free_desc->peer_mac, QDF_MAC_ADDR_SIZE);
+	evt->qdesc_addr = rx_tid->hw_qdesc_paddr;
+	evt->ts = qdf_get_log_timestamp();
+	evt->type = type;
+}
+
+#define DP_RX_REO_QDESC_GET_MAC(freedesc, peer) \
+	qdf_mem_copy(freedesc->peer_mac, peer->mac_addr.raw, QDF_MAC_ADDR_SIZE)
+
+#define DP_RX_REO_QDESC_UPDATE_EVT(free_desc) \
+	dp_rx_reo_qdesc_history_add((free_desc), REO_QDESC_UPDATE_CB)
+
+#define DP_RX_REO_QDESC_FREE_EVT(free_desc) \
+	dp_rx_reo_qdesc_history_add((free_desc), REO_QDESC_FREE)
+#else
+#define DP_RX_REO_QDESC_GET_MAC(freedesc, peer)
+
+#define DP_RX_REO_QDESC_UPDATE_EVT(free_desc)
+
+#define DP_RX_REO_QDESC_FREE_EVT(free_desc)
 #endif
 
 static inline void
@@ -2307,6 +2349,9 @@ static void dp_reo_desc_free(struct dp_soc *soc, void *cb_ctxt,
 		  "%s:%lu hw_qdesc_paddr: %pK, tid:%d", __func__,
 		  curr_ts,
 		  (void *)(rx_tid->hw_qdesc_paddr), rx_tid->tid);
+
+	DP_RX_REO_QDESC_FREE_EVT(freedesc);
+
 	qdf_mem_unmap_nbytes_single(soc->osdev,
 		rx_tid->hw_qdesc_paddr,
 		QDF_DMA_BIDIRECTIONAL,
@@ -2651,6 +2696,8 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc, void *cb_ctxt,
 	struct hal_reo_cmd_params params;
 	bool flush_failure = false;
 
+	DP_RX_REO_QDESC_UPDATE_EVT(freedesc);
+
 	if (reo_status->rx_queue_status.header.status == HAL_REO_CMD_DRAIN) {
 		qdf_mem_zero(reo_status, sizeof(*reo_status));
 		reo_status->fl_cache_status.header.status = HAL_REO_CMD_DRAIN;
@@ -2803,6 +2850,8 @@ static int dp_rx_tid_delete_wifi3(struct dp_peer *peer, int tid)
 	freedesc->resend_update_reo_cmd = false;
 
 	qdf_mem_zero(&params, sizeof(params));
+
+	DP_RX_REO_QDESC_GET_MAC(freedesc, peer);
 
 	params.std.need_status = 1;
 	params.std.addr_lo = rx_tid->hw_qdesc_paddr & 0xffffffff;

@@ -30,6 +30,20 @@
 
 #define DP_FW_PEER_STATS_CMP_TIMEOUT_MSEC 5000
 
+#ifdef REO_QDESC_HISTORY
+enum reo_qdesc_event_type {
+	REO_QDESC_UPDATE_CB = 0,
+	REO_QDESC_FREE,
+};
+
+struct reo_qdesc_event {
+	qdf_dma_addr_t qdesc_addr;
+	uint64_t ts;
+	enum reo_qdesc_event_type type;
+	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+};
+#endif
+
 typedef void dp_peer_iter_func(struct dp_soc *soc, struct dp_peer *peer,
 			       void *arg);
 void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id id);
