@@ -1,6 +1,7 @@
 #include <dt-bindings/clock/qcom,gcc-scshrike.h>
 #include <dt-bindings/clock/qcom,scc-sm8150.h>
 #include "quin-vm-common.dtsi"
+#include "pm8195-vm.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA8195 Virtual Machine";
@@ -600,7 +601,7 @@
 		pinctrl-0 = <&sdc2_on>;
 		pinctrl-1 = <&sdc2_off>;
 
-		broken-cd;
+		cd-gpios = <&pm8195_1_gpios 4 GPIO_ACTIVE_LOW>;
 		status = "disabled";
 
 		qos0 {
@@ -859,7 +860,6 @@
 #include "sa8195-qupv3.dtsi"
 #include "sa8195-ssc-qupv3.dtsi"
 #include "sa8155-vm-audio.dtsi"
-#include "pm8195-vm.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;
