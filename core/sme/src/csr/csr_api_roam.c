@@ -81,6 +81,8 @@
 #include "wlan_if_mgr_ucfg_api.h"
 #endif
 #include "wlan_roam_debug.h"
+#include "wlan_cm_roam_public_struct.h"
+#include "wlan_mlme_twt_api.h"
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -14668,20 +14670,20 @@ static QDF_STATUS csr_iterate_triplets(tDot11fIECountry country_ie)
 {
 	u_int8_t i;
 
-	if (country_ie.first_triplet[0] >= OP_CLASS_ID_200) {
-		if (country_ie.more_triplets[0][0] < OP_CLASS_ID_200)
+	if (country_ie.first_triplet[0] > OP_CLASS_ID_200) {
+		if (country_ie.more_triplets[0][0] <= OP_CLASS_ID_200)
 			return QDF_STATUS_SUCCESS;
 	}
 
 	for (i = 0; i < country_ie.num_more_triplets; i++) {
-		if ((country_ie.more_triplets[i][0] >= OP_CLASS_ID_200) &&
+		if ((country_ie.more_triplets[i][0] > OP_CLASS_ID_200) &&
 		    (i < country_ie.num_more_triplets - 1)) {
-			if (country_ie.more_triplets[i + 1][0] <
+			if (country_ie.more_triplets[i + 1][0] <=
 			    OP_CLASS_ID_200)
 				return QDF_STATUS_SUCCESS;
 		}
 	}
-	sme_debug("No operating class triplet followed by channel range triplet");
+	sme_debug("No operating class triplet followed by sub-band triplet");
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -17316,42 +17318,16 @@ csr_roam_offload_scan(struct mac_context *mac_ctx, uint8_t session_id,
 }
 
 QDF_STATUS
-wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
-			 uint8_t command, uint8_t reason)
+cm_akm_roam_allowed(struct mac_context *mac_ctx, uint8_t vdev_id)
 {
-	uint8_t *state = NULL;
 	struct csr_roam_session *session;
-	struct mac_context *mac_ctx;
-	tpCsrNeighborRoamControlInfo roam_info;
 	enum csr_akm_type roam_profile_akm = eCSR_AUTH_TYPE_UNKNOWN;
 	uint32_t fw_akm_bitmap;
-	bool p2p_disable_sta_roaming = 0, nan_disable_sta_roaming = 0;
-
-	mac_ctx = sme_get_mac_context();
-	if (!mac_ctx) {
-		sme_err("mac_ctx is NULL");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	sme_debug("RSO Command %d, vdev %d, Reason %d",
-		  command, vdev_id, reason);
 
 	session = CSR_GET_SESSION(mac_ctx, vdev_id);
 	if (!session) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			  "session is null");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	roam_info = &mac_ctx->roam.neighborRoamInfo[vdev_id];
-
-	if (roam_info->neighborRoamState !=
-	    eCSR_NEIGHBOR_ROAM_STATE_CONNECTED &&
-	    (command == ROAM_SCAN_OFFLOAD_UPDATE_CFG ||
-	     command == ROAM_SCAN_OFFLOAD_START ||
-	     command == ROAM_SCAN_OFFLOAD_RESTART)) {
-		sme_debug("Session not in connected state, RSO not sent and state=%d ",
-			  roam_info->neighborRoamState);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -17418,6 +17394,44 @@ wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			return QDF_STATUS_E_NOSUPPORT;
 		}
 	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_cm_roam_cmd_allowed(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 uint8_t command, uint8_t reason)
+{
+	uint8_t *state = NULL;
+	struct mac_context *mac_ctx;
+	tpCsrNeighborRoamControlInfo roam_info;
+	bool p2p_disable_sta_roaming = 0, nan_disable_sta_roaming = 0;
+	QDF_STATUS status;
+
+	mac_ctx = sme_get_mac_context();
+	if (!mac_ctx) {
+		sme_err("mac_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	sme_debug("RSO Command %d, vdev %d, Reason %d",
+		  command, vdev_id, reason);
+
+	roam_info = &mac_ctx->roam.neighborRoamInfo[vdev_id];
+
+	if (roam_info->neighborRoamState !=
+	    eCSR_NEIGHBOR_ROAM_STATE_CONNECTED &&
+	    (command == ROAM_SCAN_OFFLOAD_UPDATE_CFG ||
+	     command == ROAM_SCAN_OFFLOAD_START ||
+	     command == ROAM_SCAN_OFFLOAD_RESTART)) {
+		sme_debug("Session not in connected state, RSO not sent and state=%d ",
+			  roam_info->neighborRoamState);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = cm_akm_roam_allowed(mac_ctx, vdev_id);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
 
 	p2p_disable_sta_roaming =
 		(cfg_p2p_is_roam_config_disabled(psoc) &&
@@ -19775,6 +19789,7 @@ void csr_process_ho_fail_ind(struct mac_context *mac_ctx, void *msg_buf)
 	struct handoff_failure_ind *pSmeHOFailInd = msg_buf;
 	struct mlme_roam_after_data_stall *vdev_roam_params;
 	struct wlan_objmgr_vdev *vdev;
+	struct reject_ap_info ap_info;
 	uint32_t sessionId;
 
 	if (!pSmeHOFailInd) {
@@ -19783,6 +19798,12 @@ void csr_process_ho_fail_ind(struct mac_context *mac_ctx, void *msg_buf)
 	}
 
 	sessionId = pSmeHOFailInd->vdev_id;
+	ap_info.bssid = pSmeHOFailInd->bssid;
+	ap_info.reject_ap_type = DRIVER_AVOID_TYPE;
+	ap_info.reject_reason = REASON_ROAM_HO_FAILURE;
+	ap_info.source = ADDED_BY_DRIVER;
+	wlan_blm_add_bssid_to_reject_list(mac_ctx->pdev, &ap_info);
+
 
 	/* Roaming is supported only on Infra STA Mode. */
 	if (!csr_roam_is_sta_mode(mac_ctx, sessionId)) {
@@ -20768,6 +20789,8 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		if (QDF_IS_STATUS_ERROR(status))
 			goto end;
 
+		mlme_init_twt_context(mac_ctx->psoc, &roam_synch_data->bssid,
+				      TWT_ALL_SESSIONS_DIALOG_ID);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				eCSR_ROAM_FT_START, eCSR_ROAM_RESULT_SUCCESS);
 		goto end;

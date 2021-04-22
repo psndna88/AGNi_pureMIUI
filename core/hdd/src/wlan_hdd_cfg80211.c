@@ -7092,6 +7092,8 @@ wlan_hdd_wifi_test_config_policy[
 			.type = NLA_U8},
 		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_CSA] = {
 			.type = NLA_U8},
+		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_6GHZ_SECURITY_TEST_MODE]
+			= {.type = NLA_U8},
 		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OCI_OVERRIDE] = {
 			.type = NLA_NESTED},
 		[QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_SA_QUERY_TIMEOUT] = {
@@ -7528,6 +7530,7 @@ static int hdd_config_access_policy(struct hdd_adapter *adapter,
 	return qdf_status_to_os_return(status);
 }
 
+#ifdef TX_AGGREGATION_SIZE_ENABLE
 static int hdd_config_mpdu_aggregation(struct hdd_adapter *adapter,
 				       struct nlattr *tb[])
 {
@@ -7605,6 +7608,63 @@ static int hdd_config_msdu_aggregation(struct hdd_adapter *adapter,
 
 	return qdf_status_to_os_return(status);
 }
+#else
+static int hdd_config_mpdu_aggregation(struct hdd_adapter *adapter,
+				       struct nlattr *tb[])
+{
+	struct nlattr *rx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION];
+	uint8_t rx_size;
+	QDF_STATUS status;
+
+	if (!rx_attr) {
+		hdd_err("Missing attribute for RX");
+		return -EINVAL;
+	}
+
+	rx_size = nla_get_u8(rx_attr);
+	if (!cfg_in_range(CFG_RX_AGGREGATION_SIZE, rx_size)) {
+		hdd_err("RX %d MPDU aggr size not in range",
+			rx_size);
+		return -EINVAL;
+	}
+
+	status = wma_set_tx_rx_aggr_size(adapter->vdev_id,
+					 0,
+					 rx_size,
+					 WMI_VDEV_CUSTOM_AGGR_TYPE_AMPDU);
+
+	return qdf_status_to_os_return(status);
+}
+
+static int hdd_config_msdu_aggregation(struct hdd_adapter *adapter,
+				       struct nlattr *tb[])
+{
+	struct nlattr *rx_attr =
+		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION];
+	uint8_t rx_size;
+	QDF_STATUS status;
+
+	if (!rx_attr) {
+		hdd_err("Missing attribute for RX");
+		return -EINVAL;
+	}
+
+	rx_size = nla_get_u8(rx_attr);
+	if (!cfg_in_range(CFG_RX_AGGREGATION_SIZE, rx_size)) {
+		hdd_err("RX %d MPDU aggr size not in range",
+			rx_size);
+		return -EINVAL;
+	}
+
+	status = wma_set_tx_rx_aggr_size(adapter->vdev_id,
+					 0,
+					 rx_size,
+					 WMI_VDEV_CUSTOM_AGGR_TYPE_AMSDU);
+
+	return qdf_status_to_os_return(status);
+}
+#endif
 
 static QDF_STATUS
 hdd_populate_vdev_chains(struct wlan_mlme_nss_chains *nss_chains_cfg,
@@ -9776,6 +9836,7 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 	uint8_t value = 0;
 	uint8_t wmm_mode = 0;
 	uint32_t cmd_id;
+	bool rf_test_mode = false;
 	struct set_wfatest_params wfa_param = {0};
 	struct hdd_station_ctx *hdd_sta_ctx =
 		WLAN_HDD_GET_STATION_CTX_PTR(adapter);
@@ -9846,7 +9907,8 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 							&wmm_mode);
 			if (!QDF_IS_STATUS_SUCCESS(status)) {
 				hdd_err("Get wmm_mode failed");
-				return QDF_STATUS_E_FAILURE;
+				ret_val = -EINVAL;
+				goto send_err;
 			}
 			sme_config->csr_config.WMMSupportMode =
 				hdd_to_csr_wmm_mode(wmm_mode);
@@ -10289,6 +10351,32 @@ __wlan_hdd_cfg80211_set_wifi_test_config(struct wiphy *wiphy,
 		ret_val = ucfg_send_wfatest_cmd(adapter->vdev, &wfa_param);
 	}
 
+	cmd_id = QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_6GHZ_SECURITY_TEST_MODE;
+	if (tb[cmd_id]) {
+		status = ucfg_mlme_is_rf_test_mode_enabled(hdd_ctx->psoc,
+							   &rf_test_mode);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			hdd_err("Get rf test mode failed");
+			ret_val = -EINVAL;
+			goto send_err;
+		}
+		if (rf_test_mode) {
+			hdd_err("rf test mode is enabled, ignore setting");
+			ret_val = 0;
+			goto send_err;
+		}
+		cfg_val = nla_get_u8(tb[cmd_id]);
+		hdd_debug("safe mode setting %d", cfg_val);
+		if (cfg_val) {
+			wlan_cm_set_check_6ghz_security(hdd_ctx->psoc, false);
+			wlan_cm_set_6ghz_key_mgmt_mask(hdd_ctx->psoc,
+						       DEFAULT_KEYMGMT_6G_MASK);
+		} else {
+			wlan_cm_set_check_6ghz_security(hdd_ctx->psoc, true);
+			wlan_cm_set_6ghz_key_mgmt_mask(hdd_ctx->psoc,
+						       ALLOWED_KEYMGMT_6G_MASK);
+		}
+	}
 	cmd_id = QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OCI_OVERRIDE;
 	if (tb[cmd_id]) {
 		struct nlattr *tb2[QCA_WLAN_VENDOR_ATTR_OCI_OVERRIDE_MAX + 1];
@@ -13419,6 +13507,7 @@ static int __wlan_hdd_cfg80211_set_fast_roaming(struct wiphy *wiphy,
 	struct hdd_station_ctx *hdd_sta_ctx =
 		WLAN_HDD_GET_STATION_CTX_PTR(adapter);
 	mac_handle_t mac_handle;
+	bool roaming_enabled;
 
 	hdd_enter_dev(dev);
 
@@ -13449,6 +13538,13 @@ static int __wlan_hdd_cfg80211_set_fast_roaming(struct wiphy *wiphy,
 				tb[QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY]);
 	hdd_debug("ROAM_CONFIG: isFastRoamEnabled %d", is_fast_roam_enabled);
 
+	/*
+	 * Get current roaming state and decide whether to wait for RSO_STOP
+	 * response or not.
+	 */
+	roaming_enabled = ucfg_is_roaming_enabled(hdd_ctx->pdev,
+						  adapter->vdev_id);
+
 	/* Update roaming */
 	mac_handle = hdd_ctx->mac_handle;
 	qdf_status = ucfg_user_space_enable_disable_rso(hdd_ctx->pdev,
@@ -13461,6 +13557,7 @@ static int __wlan_hdd_cfg80211_set_fast_roaming(struct wiphy *wiphy,
 	ret = qdf_status_to_os_return(qdf_status);
 
 	if (eConnectionState_Associated == hdd_sta_ctx->conn_info.conn_state &&
+	    roaming_enabled &&
 	    QDF_IS_STATUS_SUCCESS(qdf_status) && !is_fast_roam_enabled) {
 		INIT_COMPLETION(adapter->lfr_fw_status.disable_lfr_event);
 		/*
@@ -20782,6 +20879,8 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	else if (bssid_hint)
 		bssid = bssid_hint;
 
+	ucfg_blm_dump_black_list_ap(hdd_ctx->pdev);
+
 	if (bssid && hdd_get_adapter_by_macaddr(hdd_ctx, (uint8_t *)bssid)) {
 		hdd_err("adapter exist with same mac address " QDF_MAC_ADDR_FMT,
 			QDF_MAC_ADDR_REF(bssid));
@@ -21209,9 +21308,16 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
 	reset_mscs_params(adapter);
 	wlan_hdd_netif_queue_control(adapter,
 		WLAN_STOP_ALL_NETIF_QUEUE_N_CARRIER, WLAN_CONTROL_PATH);
+
+	/* Disable STA power-save mode */
+	if ((adapter->device_mode == QDF_STA_MODE) &&
+	    wlan_hdd_set_powersave(adapter, false, 0))
+		hdd_debug("Not disable PS for STA");
+
 	wlan_rec_conn_info(adapter->vdev_id, DEBUG_CONN_DISCONNECT,
 			   sta_ctx->conn_info.bssid.bytes,
 			   sta_ctx->conn_info.conn_state, mac_reason);
+
 	ret = wlan_hdd_wait_for_disconnect(mac_handle, adapter, reason,
 					   mac_reason);
 

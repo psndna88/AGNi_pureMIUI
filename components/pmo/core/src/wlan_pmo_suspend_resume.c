@@ -1284,6 +1284,8 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 	if (status != QDF_STATUS_SUCCESS)
 		goto fail;
 
+	hif_process_runtime_resume_success(hif_ctx);
+
 	if (htc_runtime_resume(htc_ctx)) {
 		status = QDF_STATUS_E_FAILURE;
 		goto fail;
@@ -1292,8 +1294,6 @@ QDF_STATUS pmo_core_psoc_bus_runtime_resume(struct wlan_objmgr_psoc *psoc,
 	status = cdp_runtime_resume(dp_soc, pdev_id);
 	if (status != QDF_STATUS_SUCCESS)
 		goto fail;
-
-	hif_process_runtime_resume_success(hif_ctx);
 
 fail:
 	if (status != QDF_STATUS_SUCCESS)
@@ -1691,6 +1691,45 @@ out:
 	return status;
 }
 
+#ifdef WLAN_FEATURE_IGMP_OFFLOAD
+QDF_STATUS
+pmo_core_enable_igmp_offload(struct wlan_objmgr_vdev *vdev,
+			     struct pmo_igmp_offload_req *pmo_igmp_req)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t vdev_id;
+	enum QDF_OPMODE op_mode;
+	struct pmo_vdev_priv_obj *vdev_ctx;
+	uint32_t version_support;
+
+	if (wlan_vdev_is_up(vdev) != QDF_STATUS_SUCCESS)
+		return QDF_STATUS_E_INVAL;
+
+	op_mode = pmo_get_vdev_opmode(vdev);
+	if (QDF_STA_MODE != op_mode) {
+		pmo_debug("igmp offload supported in STA mode");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev_ctx = pmo_vdev_get_priv(vdev);
+	qdf_spin_lock_bh(&vdev_ctx->pmo_vdev_lock);
+	if (!vdev_ctx->pmo_psoc_ctx->psoc_cfg.igmp_offload_enable) {
+		pmo_debug("igmp offload not supported");
+		qdf_spin_unlock_bh(&vdev_ctx->pmo_vdev_lock);
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+	version_support =
+		vdev_ctx->pmo_psoc_ctx->psoc_cfg.igmp_version_support;
+	qdf_spin_unlock_bh(&vdev_ctx->pmo_vdev_lock);
+	vdev_id = pmo_vdev_get_id(vdev);
+	pmo_igmp_req->vdev_id = vdev_id;
+	pmo_igmp_req->version_support = version_support;
+	status = pmo_tgt_send_igmp_offload_req(vdev, pmo_igmp_req);
+
+	return status;
+}
+#endif
+
 QDF_STATUS pmo_core_config_forced_dtim(struct wlan_objmgr_vdev *vdev,
 				       uint32_t dynamic_dtim)
 {
@@ -1810,3 +1849,28 @@ out:
 	pmo_exit();
 	return status;
 }
+
+#ifdef SYSTEM_PM_CHECK
+void pmo_core_system_resume(struct wlan_objmgr_psoc *psoc)
+{
+	struct pmo_psoc_priv_obj *psoc_ctx;
+	QDF_STATUS status;
+
+	if (!psoc) {
+		pmo_err("psoc is NULL");
+		return;
+	}
+
+	status = pmo_psoc_get_ref(psoc);
+	if (status != QDF_STATUS_SUCCESS) {
+		pmo_err("pmo cannot get the reference out of psoc");
+		return;
+	}
+
+	psoc_ctx = pmo_psoc_get_priv(psoc);
+
+	htc_system_resume(psoc_ctx->htc_hdl);
+
+	pmo_psoc_put_ref(psoc);
+}
+#endif

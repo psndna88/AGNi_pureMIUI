@@ -245,6 +245,8 @@ struct mscs_req_info {
  * @mscs_req_info: Information related to mscs request
  * @he_config: he config
  * @he_sta_obsspd: he_sta_obsspd
+ * @twt_wait_for_notify: TWT session teardown received, wait for
+ * notify event from firmware before next TWT setup is done.
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -272,6 +274,7 @@ struct mlme_legacy_priv {
 #endif
 	struct mlme_cfg_str opr_rate_set;
 	struct mlme_cfg_str ext_opr_rate_set;
+	bool twt_wait_for_notify;
 #ifdef WLAN_FEATURE_MSCS
 	struct mscs_req_info mscs_req_info;
 #endif
