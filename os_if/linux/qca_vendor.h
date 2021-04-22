@@ -783,6 +783,8 @@ enum qca_wlan_vendor_hang_reason {
 	QCA_WLAN_HANG_REG_WRITE_FAILURE = 24,
 	/* No credit left to send the wow_wakeup_from_sleep to firmware */
 	QCA_WLAN_HANG_SUSPEND_NO_CREDIT = 25,
+	/* tasklet/credit latency found */
+	QCA_WLAN_HANG_TASKLET_CREDIT_LATENCY_DETECT = 27,
 };
 
 /**
