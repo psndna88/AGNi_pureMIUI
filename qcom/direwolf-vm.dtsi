@@ -193,6 +193,19 @@
 		interrupt-parent = <&intc>;
 		interrupt-controller;
 	};
+
+	subsys_notif_virt: qcom,subsys_notif_virt@2D000000 {
+		compatible = "qcom,subsys-notif-virt";
+		reg = <0x2D000000 0x400>;
+		reg-names = "vdev_base";
+		cdsp0 {
+			subsys-name = "cdsp0";
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "state-irq";
+			type = "virtual";
+			offset = <768>;
+		};
+	};
 };
 
 &regulator {
