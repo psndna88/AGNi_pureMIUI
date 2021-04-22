@@ -1149,6 +1149,8 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_mlo_ready_cmd_fixed_param,
     WMITLV_TAG_STRUC_wmi_mlo_teardown_fixed_param,
     WMITLV_TAG_STRUC_wmi_mlo_teardown_complete_fixed_param,
+    WMITLV_TAG_STRUC_wmi_igmp_offload_fixed_param,
+    WMITLV_TAG_STRUC_wmi_pdev_extd_stats,
 } WMITLV_TAG_ID;
 
 /*
@@ -1610,6 +1612,7 @@ typedef enum {
     OP(WMI_MLO_SETUP_CMDID) \
     OP(WMI_MLO_READY_CMDID) \
     OP(WMI_MLO_TEARDOWN_CMDID) \
+    OP(WMI_VDEV_IGMP_OFFLOAD_CMDID) \
     /* add new CMD_LIST elements above this line */
 
 
@@ -4642,6 +4645,12 @@ WMITLV_CREATE_PARAM_STRUC(WMI_MLO_READY_CMDID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_mlo_teardown_fixed_param, wmi_mlo_teardown_fixed_param, fixed_param, WMITLV_SIZE_FIX)
 WMITLV_CREATE_PARAM_STRUC(WMI_MLO_TEARDOWN_CMDID);
 
+/* Mcast ipv4 address filter list cmd */
+#define WMITLV_TABLE_WMI_VDEV_IGMP_OFFLOAD_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id, op, buf, len, WMITLV_TAG_STRUC_wmi_igmp_offload_fixed_param, wmi_igmp_offload_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id, op, buf, len, WMITLV_TAG_ARRAY_FIXED_STRUC, WMI_IPV4_ADDR, mc_ipv4_list, WMITLV_SIZE_VAR)
+WMITLV_CREATE_PARAM_STRUC(WMI_VDEV_IGMP_OFFLOAD_CMDID);
+
 
 /************************** TLV definitions of WMI events *******************************/
 
@@ -5160,7 +5169,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_HOST_SWFDA_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_congestion_stats, congestion_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_peer_extd2_stats, peer_extd2_stats, WMITLV_SIZE_VAR) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pmf_bcn_protect_stats, pmf_bcn_protect_stats, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_extd_stats, vdev_extd_stats, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_vdev_extd_stats, vdev_extd_stats, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_pdev_extd_stats, pdev_extd_stats, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_UPDATE_STATS_EVENTID);
 
 /* Update PN response Event */
