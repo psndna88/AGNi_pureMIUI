@@ -215,3 +215,10 @@
 	qcom,vdd-3.3-ch1-config = <3000000 3312000>;
 	qcom,vdd-3.3-ch0-config = <3000000 3312000>;
 };
+
+&bluetooth {
+	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
+	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
+	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
+	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
