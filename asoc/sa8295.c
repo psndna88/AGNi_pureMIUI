@@ -55,9 +55,9 @@
 #include "msm_dailink.h"
 
 
-#define DRV_NAME "sa8155-asoc-snd"
+#define DRV_NAME "sa8295-asoc-snd"
 
-#define __CHIPSET__ "SA8155 "
+#define __CHIPSET__ "SA8295 "
 #define MSM_DAILINK_NAME(name) (__CHIPSET__#name)
 
 #define DEV_NAME_STR_LEN            32
@@ -176,14 +176,14 @@ struct tdm_conf {
 /* TDM default config */
 static struct dev_config tdm_rx_cfg[TDM_INTERFACE_MAX][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_0 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_1 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* RX_2 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* RX_3 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_4 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_5 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_6 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_7 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 6}, /* RX_0 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_1 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_2 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_3 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_4 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_5 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_6 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* RX_7 */
 	},
 	{ /* SEC TDM */
 		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* RX_0 */
@@ -230,14 +230,14 @@ static struct dev_config tdm_rx_cfg[TDM_INTERFACE_MAX][TDM_PORT_MAX] = {
 /* TDM default config */
 static struct dev_config tdm_tx_cfg[TDM_INTERFACE_MAX][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_0 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_1 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* TX_2 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* TX_3 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_4 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_5 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_6 */
-		{SAMPLING_RATE_8KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_7 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 4}, /* TX_0 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* TX_1 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2}, /* TX_2 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_3 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_4 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_5 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_6 */
+		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* TX_7 */
 	},
 	{ /* SEC TDM */
 		{SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 6}, /* TX_0 */
@@ -352,7 +352,7 @@ struct tdm_slot_cfg {
 
 static struct tdm_slot_cfg tdm_slot[TDM_INTERFACE_MAX] = {
 	/* PRI TDM */
-	{16, 16},
+	{32, 8},
 	/* SEC TDM */
 	{32, 8},
 	/* TERT TDM */
@@ -386,11 +386,11 @@ static struct tdm_slot_cfg tdm_slot_custom[TDM_INTERFACE_MAX] = {
 static unsigned int tdm_rx_slot_offset
 	[TDM_INTERFACE_MAX][TDM_PORT_MAX][TDM_SLOT_OFFSET_MAX] = {
 	{/* PRI TDM */
-		{0, 0xFFFF},
-		{2, 0xFFFF},
-		{4, 6, 0xFFFF},
-		{8, 10, 0xFFFF},
-		{12, 14, 0xFFFF},
+		{0, 4, 8, 12, 16, 20, 0xFFFF},
+		{24, 0xFFFF},
+		{28, 0xFFFF},
+		{0xFFFF}, /* not used */
+		{0xFFFF}, /* not used */
 		{0xFFFF}, /* not used */
 		{0xFFFF}, /* not used */
 		{0xFFFF}, /* not used */
@@ -441,14 +441,14 @@ static unsigned int tdm_rx_slot_offset
 static unsigned int tdm_tx_slot_offset
 	[TDM_INTERFACE_MAX][TDM_PORT_MAX][TDM_SLOT_OFFSET_MAX] = {
 	{/* PRI TDM */
-		{0, 0xFFFF},
-		{2, 0xFFFF},
-		{4, 6, 0xFFFF},
-		{8, 10, 0xFFFF},
-		{12, 14, 0xFFFF},
+		{0, 4, 8, 12, 0xFFFF},
+		{16, 20, 0xFFFF},
+		{24, 28, 0xFFFF},
 		{0xFFFF}, /* not used */
 		{0xFFFF}, /* not used */
 		{0xFFFF}, /* not used */
+		{0xFFFF}, /* not used */
+		{28, 0xFFFF},
 	},
 	{/* SEC TDM */
 		{0, 4, 8, 12, 16, 20, 0xFFFF},
@@ -4446,7 +4446,7 @@ static unsigned int tdm_param_set_slot_mask(int slots)
 	return slot_mask;
 }
 
-static int sa8155_tdm_snd_hw_params(struct snd_pcm_substream *substream,
+static int sa8295_tdm_snd_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -4800,7 +4800,7 @@ end:
 	return ret;
 }
 
-static int sa8155_tdm_snd_startup(struct snd_pcm_substream *substream)
+static int sa8295_tdm_snd_startup(struct snd_pcm_substream *substream)
 {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -4847,7 +4847,7 @@ err:
 	return ret;
 }
 
-static void sa8155_tdm_snd_shutdown(struct snd_pcm_substream *substream)
+static void sa8295_tdm_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
@@ -4883,10 +4883,10 @@ static void sa8155_tdm_snd_shutdown(struct snd_pcm_substream *substream)
 	mutex_unlock(&intf_conf->lock);
 }
 
-static struct snd_soc_ops sa8155_tdm_be_ops = {
-	.hw_params = sa8155_tdm_snd_hw_params,
-	.startup = sa8155_tdm_snd_startup,
-	.shutdown = sa8155_tdm_snd_shutdown
+static struct snd_soc_ops sa8295_tdm_be_ops = {
+	.hw_params = sa8295_tdm_snd_hw_params,
+	.startup = sa8295_tdm_snd_startup,
+	.shutdown = sa8295_tdm_snd_shutdown
 };
 
 static int msm_fe_qos_prepare(struct snd_pcm_substream *substream)
@@ -5798,13 +5798,6 @@ static struct snd_soc_dai_link msm_auto_fe_dai_links[] = {
 		SND_SOC_DAILINK_REG(multimedia25),
 	},
 	{
-		.name = "MSM AFE-PCM TX1",
-		.stream_name = "AFE-PROXY TX1",
-		.dpcm_capture = 1,
-		.ignore_suspend = 1,
-		SND_SOC_DAILINK_REG(afepcm_tx1),
-	},
-	{
 		.name = MSM_DAILINK_NAME(Media31),
 		.stream_name = "MultiMedia31",
 		.dynamic = 1,
@@ -5867,6 +5860,13 @@ static struct snd_soc_dai_link msm_auto_fe_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_MULTIMEDIA34,
 		SND_SOC_DAILINK_REG(multimedia34),
+	},
+	{
+		.name = "MSM AFE-PCM TX1",
+		.stream_name = "AFE-PROXY TX1",
+		.dpcm_capture = 1,
+		.ignore_suspend = 1,
+		SND_SOC_DAILINK_REG(afepcm_tx1),
 	},
 };
 
@@ -6141,7 +6141,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_RX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_0),
@@ -6153,7 +6153,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_TX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_tx_0),
 	},
@@ -6164,7 +6164,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_RX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_rx_0),
@@ -6176,7 +6176,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_TX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_tx_0),
 	},
@@ -6187,7 +6187,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_RX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_0),
@@ -6199,7 +6199,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_TX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_tx_0),
 	},
@@ -6210,7 +6210,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_RX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_rx_0),
@@ -6222,7 +6222,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_TX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_tx_0),
 	},
@@ -6233,7 +6233,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUIN_TDM_RX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(quin_tdm_rx_0),
@@ -6245,7 +6245,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUIN_TDM_TX_0,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quin_tdm_tx_0),
 	},
@@ -6260,7 +6260,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_RX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_1),
 	},
@@ -6271,7 +6271,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_RX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_2),
 	},
@@ -6282,7 +6282,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_RX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_3),
 	},
@@ -6293,7 +6293,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_TX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_tx_1),
 	},
@@ -6304,7 +6304,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_TX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_tx_2),
 	},
@@ -6315,7 +6315,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_PRI_TDM_TX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_tx_3),
 	},
@@ -6326,7 +6326,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_RX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_rx_1),
 	},
@@ -6337,7 +6337,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_RX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_rx_2),
 	},
@@ -6348,7 +6348,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_RX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_rx_3),
 	},
@@ -6359,7 +6359,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_RX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_rx_7),
 	},
@@ -6370,7 +6370,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_TX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_tx_1),
 	},
@@ -6381,7 +6381,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_TX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_tx_2),
 	},
@@ -6392,7 +6392,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_SEC_TDM_TX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(sec_tdm_tx_3),
 	},
@@ -6403,7 +6403,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_RX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_1),
 	},
@@ -6414,7 +6414,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_RX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_2),
 	},
@@ -6425,7 +6425,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_RX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_3),
 	},
@@ -6436,7 +6436,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_RX_4,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_rx_4),
 	},
@@ -6447,7 +6447,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_TX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_tx_1),
 	},
@@ -6458,7 +6458,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_TX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_tx_2),
 	},
@@ -6469,7 +6469,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_TX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_tx_3),
 	},
@@ -6480,7 +6480,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_TERT_TDM_TX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tert_tdm_tx_7),
 	},
@@ -6491,7 +6491,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_RX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_rx_1),
 	},
@@ -6502,7 +6502,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_RX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_rx_2),
 	},
@@ -6513,7 +6513,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_RX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_rx_3),
 	},
@@ -6524,7 +6524,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_RX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_rx_7),
 	},
@@ -6535,7 +6535,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_TX_1,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_tx_1),
 	},
@@ -6546,7 +6546,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_TX_2,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_tx_2),
 	},
@@ -6557,7 +6557,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_TX_3,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_tx_3),
 	},
@@ -6568,7 +6568,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUAT_TDM_TX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quat_tdm_tx_7),
 	},
@@ -6579,7 +6579,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_QUIN_TDM_RX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quin_tdm_rx_7),
 	},
@@ -6590,7 +6590,7 @@ static struct snd_soc_dai_link msm_auto_be_dai_links[] = {
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_QUIN_TDM_TX_7,
 		.be_hw_params_fixup = msm_tdm_be_hw_params_fixup,
-		.ops = &sa8155_tdm_be_ops,
+		.ops = &sa8295_tdm_be_ops,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(quin_tdm_tx_7),
 	},
@@ -6872,11 +6872,11 @@ static struct snd_soc_dai_link msm_auto_custom_dai_links[
 			 ARRAY_SIZE(msm_auxpcm_be_dai_links)];
 
 struct snd_soc_card snd_soc_card_auto_msm = {
-	.name = "sa8155-adp-star-snd-card",
+	.name = "sa8295-adp-star-snd-card",
 };
 
 struct snd_soc_card snd_soc_card_auto_custom_msm = {
-	.name = "sa8155-custom-snd-card",
+	.name = "sa8295-custom-snd-card",
 };
 
 static int msm_populate_dai_link_component_of_node(
@@ -6972,10 +6972,10 @@ err:
 	return ret;
 }
 
-static const struct of_device_id sa8155_asoc_machine_of_match[]  = {
-	{ .compatible = "qcom,sa8155-asoc-snd-adp-star",
+static const struct of_device_id sa8295_asoc_machine_of_match[]  = {
+	{ .compatible = "qcom,sa8295-asoc-snd-adp-star",
 	  .data = "adp_star_codec"},
-	{ .compatible = "qcom,sa8155-asoc-snd-custom",
+	{ .compatible = "qcom,sa8295-asoc-snd-custom",
 	  .data = "custom_codec"},
 	{},
 };
@@ -6988,7 +6988,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	int total_links;
 	const struct of_device_id *match;
 
-	match = of_match_node(sa8155_asoc_machine_of_match, dev->of_node);
+	match = of_match_node(sa8295_asoc_machine_of_match, dev->of_node);
 	if (!match) {
 		dev_err(dev, "%s: No DT match found for sound card\n",
 			__func__);
@@ -7106,7 +7106,7 @@ static int msm_tdm_init(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int count;
 
-	match = of_match_node(sa8155_asoc_machine_of_match, pdev->dev.of_node);
+	match = of_match_node(sa8295_asoc_machine_of_match, pdev->dev.of_node);
 	if (!match) {
 		dev_err(&pdev->dev, "%s: No DT match found for sound card\n",
 			__func__);
@@ -7189,7 +7189,7 @@ static void msm_i2s_auxpcm_deinit(struct platform_device *pdev)
 	}
 }
 
-static int sa8155_ssr_enable(struct device *dev, void *data)
+static int sa8295_ssr_enable(struct device *dev, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
@@ -7209,7 +7209,7 @@ err:
 	return ret;
 }
 
-static void sa8155_ssr_disable(struct device *dev, void *data)
+static void sa8295_ssr_disable(struct device *dev, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
@@ -7225,9 +7225,9 @@ static void sa8155_ssr_disable(struct device *dev, void *data)
 #endif /* CONFIG_AUDIO_QGKI */
 }
 
-static const struct snd_event_ops sa8155_ssr_ops = {
-	.enable = sa8155_ssr_enable,
-	.disable = sa8155_ssr_disable,
+static const struct snd_event_ops sa8295_ssr_ops = {
+	.enable = sa8295_ssr_enable,
+	.disable = sa8295_ssr_disable,
 };
 
 static int msm_audio_ssr_compare(struct device *dev, void *data)
@@ -7255,7 +7255,7 @@ static int msm_audio_ssr_register(struct device *dev)
 					msm_audio_ssr_compare, node);
 	}
 
-	ret = snd_event_master_register(dev, &sa8155_ssr_ops,
+	ret = snd_event_master_register(dev, &sa8295_ssr_ops,
 					ssr_clients, NULL);
 	if (!ret)
 		snd_event_notify(dev, SND_EVENT_UP);
@@ -7371,34 +7371,34 @@ static int msm_asoc_machine_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver sa8155_asoc_machine_driver = {
+static struct platform_driver sa8295_asoc_machine_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
-		.of_match_table = sa8155_asoc_machine_of_match,
+		.of_match_table = sa8295_asoc_machine_of_match,
 		.suppress_bind_attrs = true,
 	},
 	.probe = msm_asoc_machine_probe,
 	.remove = msm_asoc_machine_remove,
 };
 
-int __init sa8155_init(void)
+int __init sa8295_init(void)
 {
 	pr_debug("%s\n", __func__);
-	return platform_driver_register(&sa8155_asoc_machine_driver);
+	return platform_driver_register(&sa8295_asoc_machine_driver);
 }
 
-void sa8155_exit(void)
+void sa8295_exit(void)
 {
 	pr_debug("%s\n", __func__);
-	platform_driver_unregister(&sa8155_asoc_machine_driver);
+	platform_driver_unregister(&sa8295_asoc_machine_driver);
 }
 
-module_init(sa8155_init);
-module_exit(sa8155_exit);
+module_init(sa8295_init);
+module_exit(sa8295_exit);
 
 MODULE_DESCRIPTION("ALSA SoC msm");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:" DRV_NAME);
-MODULE_DEVICE_TABLE(of, sa8155_asoc_machine_of_match);
+MODULE_DEVICE_TABLE(of, sa8295_asoc_machine_of_match);

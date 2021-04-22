@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -367,6 +367,7 @@ static int msm_pcm_hw_params(struct snd_pcm_substream *substream,
 	config.bufsz = params_buffer_bytes(params) / params_periods(params);
 	config.bufcnt = params_periods(params);
 
+	prtd->audio_client->fedai_id = soc_prtd->dai_link->id;
 	ret = q6asm_open_shared_io(prtd->audio_client, &config, dir,
 				   use_default_chmap, chmap);
 	if (ret) {
