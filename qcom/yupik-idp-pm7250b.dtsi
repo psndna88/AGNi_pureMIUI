@@ -5,6 +5,7 @@
 #include "pm7250b.dtsi"
 #include "yupik-audio-overlay.dtsi"
 #include "yupik-pm7250b-thermal-overlay.dtsi"
+#include "display/yupik-sde-display-idp-pm7250b.dtsi"
 
 / {
 	qcom,pmic-id = <0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x2e>;
@@ -220,6 +221,10 @@
 	status = "ok";
 };
 
+&pm8350c_pwm_2 {
+	status = "ok";
+};
+
 &pm8350c_switch0 {
 	qcom,led-mask = <9>; /* Channels 1 & 4 */
 	qcom,symmetry-en;
@@ -302,6 +307,10 @@
 
 		novatek,reset-gpio = <&tlmm 105 0x00>;
 		novatek,irq-gpio = <&tlmm 81 0x2008>;
+
+		panel = <&dsi_nt36672e_fhd_plus_60_video
+			&dsi_nt36672e_fhd_plus_120_video
+			&dsi_nt36672e_fhd_plus_144_video>;
 
 		novatek,trusted-touch-mode = "vm_mode";
 		novatek,touch-environment = "pvm";
