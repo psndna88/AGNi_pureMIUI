@@ -243,8 +243,8 @@
 
 &firmware {
 	scm {
-			compatible = "qcom,scm";
-		};
+		compatible = "qcom,scm";
+	};
 };
 
 #include "direwolf-pinctrl.dtsi"
