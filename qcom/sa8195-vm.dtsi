@@ -864,6 +864,7 @@
 #include "sa8195-qupv3.dtsi"
 #include "sa8195-ssc-qupv3.dtsi"
 #include "sa8155-vm-audio.dtsi"
+#include "pm8195-vm.dtsi"
 
 &tlmm {
 	/delete-property/ wakeup-parent;
@@ -893,19 +894,19 @@
 &qupv3_0 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
-	qcom,iommu-dma = "atomic";
+	qcom,iommu-dma = "bypass";
 };
 
 &qupv3_1 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
-	qcom,iommu-dma = "atomic";
+	qcom,iommu-dma = "bypass";
 };
 
 &qupv3_2 {
 	/delete-property/ qcom,msm-bus,num-paths;
 	/delete-property/ qcom,msm-bus,vectors-bus-ids;
-	qcom,iommu-dma = "atomic";
+	qcom,iommu-dma = "bypass";
 };
 
 &qupv3_3 {

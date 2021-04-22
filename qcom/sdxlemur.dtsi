@@ -77,14 +77,6 @@
 			size = <0x400000>;
 		};
 
-		cnss_wlan_mem: cnss_wlan_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			alignment = <0x400000>;
-			size = <0x1400000>;
-		};
-
 		llcc_tcm_mem: llcc_tcm_region {
 			no-map;
 			reg = <0x15800000 0x800000>;
@@ -942,9 +934,11 @@
 		gdsc-vdd-supply = <&gcc_pcie_gdsc>;
 		vreg-1p8-supply = <&pmx65_l1>;
 		vreg-0p9-supply = <&pmx65_l4>;
+		vreg-mx-supply = <&VDD_MXA_LEVEL>;
 
 		qcom,vreg-1p8-voltage-level = <1200000 1200000 3000>;
 		qcom,vreg-0p9-voltage-level = <912000 912000 132000>;
+		qcom,vreg-mx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX RPMH_REGULATOR_LEVEL_NOM 0>;
 
 		clocks = <&gcc GCC_PCIE_PIPE_CLK>,
 			<&gcc GCC_PCIE_CFG_AHB_CLK>,
@@ -985,6 +979,7 @@
 			qcom,phy-status-reg2 = <0x1214>;
 			qcom,mhi-soc-reset-offset = <0xb01b8>;
 			qcom,aoss-rst-clr;
+			qcom,aux-clk = <0x11>;
 
 			qcom,phy-init = <0x1240 0x01 0x0
 				0x100c 0x02 0x0

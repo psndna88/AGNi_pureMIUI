@@ -4,3 +4,11 @@
 		label = "pmem_shared_mem";
 	};
 };
+
+&usb0 {
+	status = "okay";
+};
+
+&usb2_phy0 {
+	status = "okay";
+};
