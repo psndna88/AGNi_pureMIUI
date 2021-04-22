@@ -5,11 +5,9 @@ export SUBARCH=arm64
 KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
-CONFIG1="agni_atoll_aospQR_defconfig"
-export AGNI_BUILD_TYPE="AOSP-QR"
+CONFIG1="agni_atoll_aospQ_defconfig"
+export AGNI_BUILD_TYPE="AOSP-Q"
 SYNC_CONFIG=1
-WLAN_MODA11="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0"
-WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
@@ -60,8 +58,6 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE
 echo ""
 
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
-rm $WLAN_MODA11/*.ko 2>/dev/null
-rm $WLAN_MODQ/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
 make -j4 O=$COMPILEDIR_ATOLL
@@ -80,16 +76,11 @@ else
 	exit_reset;
 fi
 
-mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
-mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
-
 echo ""
 
 ###### ZIP Packing
 if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
-	mv $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
-	mv $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	cd $KERNELDIR/$DIR/
 	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
