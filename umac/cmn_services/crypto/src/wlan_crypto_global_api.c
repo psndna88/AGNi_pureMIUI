@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4347,11 +4347,11 @@ wlan_crypto_reset_prarams(struct wlan_crypto_params *params)
 	params->rsn_caps = 0;
 }
 
-uint8_t *
-wlan_crypto_parse_rsnxe_ie(uint8_t *rsnxe_ie, uint8_t *cap_len)
+const uint8_t *
+wlan_crypto_parse_rsnxe_ie(const uint8_t *rsnxe_ie, uint8_t *cap_len)
 {
 	uint8_t len;
-	uint8_t *ie;
+	const uint8_t *ie;
 
 	if (!rsnxe_ie)
 		return NULL;
