@@ -132,7 +132,7 @@
 		coresight-name = "coresight-rpm-etm0";
 
 		qcom,inst-id = <4>;
-
+		status = "disabled";
 		out-ports {
 			port {
 				rpm_etm0_out_funnel_in0: endpoint {

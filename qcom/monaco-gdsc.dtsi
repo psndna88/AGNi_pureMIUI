@@ -14,16 +14,16 @@
 		status = "disabled";
 	};
 
-	gcc_vcodec0_gdsc: qcom,gdsc@14580a8 {
+	gcc_vcodec0_gdsc: qcom,gdsc@14580ac {
 		compatible = "qcom,gdsc";
-		reg = <0x14580a8 0x4>;
+		reg = <0x14580ac 0x4>;
 		regulator-name = "gcc_vcodec0_gdsc";
 		status = "disabled";
 	};
 
-	gcc_venus_gdsc: qcom,gdsc@1458084 {
+	gcc_venus_gdsc: qcom,gdsc@1458088 {
 		compatible = "qcom,gdsc";
-		reg = <0x1458084 0x4>;
+		reg = <0x1458088 0x4>;
 		regulator-name = "gcc_venus_gdsc";
 		status = "disabled";
 	};

@@ -61,12 +61,33 @@ First Level Node - LCDB module
 	Usage:      optional
 	Value type: <u32>
 	Definition:  Controls the order of powering up BOOST, LDO AND NCP
-		     blocks. Appilcable for PM7325B. Possible values are: 0, 1, 2, 3, 4.
+		     blocks. Applicable for PM7325B. Possible values are: 0, 1, 2, 3, 4.
 		     0 - Boost, LDO, NCP
 		     1 - Boost, LDO
 		     2 - Boost, NCP
 		     3 - Boost only
 		     4 - Boost, NCP, LDO
+
+- qcom,high-p2-blank-time-ns
+	Usage:      optional
+	Value type: <u32>
+	Definition:  Controls the higher clamp threshold for p2 minimum on time.
+		     Applicable for PM7325B. Possible values are 40, 69, 99, 129, 159,
+		     189, 220, 250.
+
+- qcom,low-p2-blank-time-ns
+	Usage:      optional
+	Value type: <u32>
+	Definition:  Controls the lower clamp threshold for p2 minimum on time.
+		     Applicable for PM7325B. Possible values are 40, 69, 99, 129, 159,
+		     189, 220, 250.
+
+- qcom,mpc-current-thr-ma
+	Usage:      optional
+	Value type: <u32>
+	Definition:  Controls the mpc threshold for inductor current after start up
+		     is done. Applicable for PM7325B. Possible values are 160, 200, 240,
+		     280, 320, 360, 400, 440.
 
 Touch-to-wake (TTW) properties:
 

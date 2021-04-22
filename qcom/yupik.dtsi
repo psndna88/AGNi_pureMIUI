@@ -1162,6 +1162,9 @@
 				<GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dcvsh0_int", "dcvsh1_int", "dcvsh2_int";
 
+		qcom,sdpm-cx-mx-1 = <0x00636f08 0x4>;
+		qcom,sdpm-cx-mx-2 = <0x00636f0c 0x4>;
+
 		#freq-domain-cells = <2>;
 	};
 
@@ -2050,7 +2053,7 @@
 
 			qcom,core-dev-table =
 				<  940800  556800000 >,
-				< 12288000 768000000 >,
+				< 1228800  768000000 >,
 				< 1651200 1190400000 >,
 				< 1900800 1401600000 >,
 				< 2400000 1516800000 >;

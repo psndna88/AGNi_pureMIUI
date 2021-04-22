@@ -1,4 +1,5 @@
 #include <dt-bindings/arm/msm/msm_ion_ids.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 
 / {
 	#address-cells = <2>;

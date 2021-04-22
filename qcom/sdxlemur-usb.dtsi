@@ -259,3 +259,50 @@
 
 	};
 };
+
+/ {
+	qcom_gadget {
+		compatible = "qcom,usb-gadget";
+		qcom,vid = <0x05c6>;
+
+		composition1 {
+			qcom,pid = <0x9057>;
+			qcom,composition = "gsi.rndis|gsi.ecm";
+		};
+
+		composition2 {
+			qcom,pid = <0x905b>;
+			qcom,composition = "gsi.mbim";
+			qcom,bmAttributes = <0xa0>;
+		};
+
+		composition3 {
+			qcom,pid = <0x9063>;
+			qcom,composition = "gsi.rndis|gsi.ecm|gsi.mbim";
+			qcom,bmAttributes = <0xa0>;
+		};
+
+		composition4 {
+			qcom,pid = <0x9067>;
+			qcom,composition = "mass_storage.0,gsi.rmnet|mass_storage.1,gsi.mbim";
+			qcom,bmAttributes = <0xa0>;
+		};
+
+		composition5 {
+			qcom,pid = <0x90b1>;
+			qcom,composition = "gsi.ecm";
+			qcom,bmAttributes = <0xa0>;
+		};
+
+		composition6 {
+			qcom,pid = <0x90e2>;
+			qcom,composition = "gsi.mbim,gsi.gps";
+			qcom,bmAttributes = <0xa0>;
+		};
+
+		composition7 {
+			qcom,pid = <0xf000>;
+			qcom,composition = "mass_storage.0";
+		};
+	};
+};

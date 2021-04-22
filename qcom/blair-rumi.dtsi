@@ -26,6 +26,22 @@
 				     0x10060 0x3c
 				     0x0 0x4>;
 	};
+
+	bi_tcxo: bi_tcxo {
+		compatible = "fixed-factor-clock";
+		clock-mult = <1>;
+		clock-div = <2>;
+		clocks = <&xo_board>;
+		#clock-cells = <0>;
+	 };
+
+	bi_tcxo_ao: bi_tcxo_ao {
+		compatible = "fixed-factor-clock";
+		clock-mult = <1>;
+		clock-div = <2>;
+		clocks = <&xo_board>;
+		#clock-cells = <0>;
+	};
 };
 
 &tsens0 {
@@ -123,4 +139,20 @@
 
 &rpm_bus {
 	rpm-standalone;
+};
+
+&rpmcc {
+	compatible = "qcom,dummycc";
+	clock-output-names = "rpmhcc_clocks";
+};
+
+&gcc {
+	clocks = <&bi_tcxo>, <&bi_tcxo_ao>, <&sleep_clk>;
+};
+&usb0 {
+	dwc3@4e00000 {
+		usb-phy = <&usb_emu_phy_0>, <&usb_nop_phy>;
+		maximum-speed = "high-speed";
+		dr_mode = "peripheral";
+	};
 };
