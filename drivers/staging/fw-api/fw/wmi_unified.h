@@ -2434,7 +2434,15 @@ typedef struct _wmi_ppe_threshold {
         A_UINT32 ru_mask; /** RU index mask */
     };
     A_UINT32 ppet16_ppet8_ru3_ru0[WMI_MAX_NUM_SS]; /** ppet8 and ppet16 for max num ss */
+    /**************************************************
+     * As this struct is embedded inside other structs,
+     * it cannot be expanded without breaking backwards
+     * compatibility.  Do not add new fields here.
+     **************************************************/
 } wmi_ppe_threshold;
+
+#define WMI_MAX_EHTCAP_MAC_SIZE  2
+#define WMI_MAX_EHTCAP_PHY_SIZE  3
 
 /* WMI_SYS_CAPS_* refer to the capabilities that system support
  */
@@ -2967,6 +2975,21 @@ typedef struct {
      * Bits 31:2 - Reserved
      */
     A_UINT32 target_cap_flags;
+
+    /* EHT MAC Capabilities: total WMI_MAX_EHTCAP_MAC_SIZE*A_UINT32 bits
+     * those bits actually are max mac capabilities = cap_mac_2g | cap_mac_5g
+     * The actual cap mac info per mac (2g/5g) in the TLV -- WMI_MAC_PHY_CAPABILITIES_EXT
+     */
+    A_UINT32 eht_cap_mac_info[WMI_MAX_EHTCAP_MAC_SIZE];
+
+    /* Following this struct are the TLV's:
+     *     WMI_DMA_RING_CAPABILITIES;
+     *     wmi_spectral_bin_scaling_params;
+     *     WMI_MAC_PHY_CAPABILITIES_EXT;  <-- EHT mac capabilites and phy capabilites info
+     *     WMI_HAL_REG_CAPABILITIES_EXT2;
+     *     wmi_nan_capabilities;
+     *     WMI_SCAN_RADIO_CAPABILITIES_EXT2;
+     */
 } wmi_service_ready_ext2_event_fixed_param;
 
 typedef struct {
@@ -12193,6 +12216,10 @@ typedef enum {
      */
     WMI_VDEV_PARAM_WMM_TXOP_ENABLE,          /* 0xA7 */
 
+    /** Value of DTIM to be applied in Suspend mode
+     */
+    WMI_VDEV_PARAM_FORCE_DTIM_CNT,           /* 0xA8 */
+
 
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
@@ -14114,6 +14141,12 @@ typedef struct {
     A_UINT32 tx_mcs_set; /* Negotiated TX HE rates(i.e. rate this node can TX to peer) */
 } wmi_he_rate_set;
 
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_eht_rate_set */
+    A_UINT32 rx_mcs_set;
+    A_UINT32 tx_mcs_set;
+} wmi_eht_rate_set;
+
 /*
  * IMPORTANT: Make sure the bit definitions here are consistent
  * with the ni_flags definitions in wlan_peer.h
@@ -14142,6 +14175,10 @@ typedef struct {
 #define WMI_PEER_IS_P2P_CAPABLE 0x20000000  /* P2P capable peer */
 #define WMI_PEER_160MHZ         0x40000000  /* 160 MHz enabled */
 #define WMI_PEER_SAFEMODE_EN    0x80000000  /* Fips Mode Enabled */
+
+/** define for peer_flags_ext */
+#define WMI_PEER_EXT_EHT        0x00000001  /* EHT enabled */
+#define WMI_PEER_EXT_320MHZ     0x00000002  /* 320Mhz enabled */
 
 /**
  * Peer rate capabilities.
@@ -14203,7 +14240,7 @@ typedef struct {
     /** MLO flags */
     wmi_mlo_flags mlo_flags;
     /** MLD MAC address */
-    wmi_mac_addr vdev_macaddr;
+    wmi_mac_addr mld_macaddr;
 } wmi_peer_assoc_mlo_params;
 
 typedef struct {
@@ -14325,6 +14362,18 @@ typedef struct {
      */
     A_UINT32 auth_mode;
 
+    /* Refer to WMI_PEER_EXT_xxx defs */
+    A_UINT32 peer_flags_ext;
+
+    /* 802.11be capabilities and other params */
+    A_UINT32 puncture_20mhz_bitmap; /* each bit indicates one 20Mhz bw puntured */
+    /* EHT mac capabilites from BSS beacon EHT cap IE, total WMI_MAX_EHTCAP_MAC_SIZE*A_UINT32 bits */
+    A_UINT32 peer_eht_cap_mac[WMI_MAX_EHTCAP_MAC_SIZE];
+    /* EHT phy capabilites from BSS beacon EHT cap IE, total WMI_MAX_EHTCAP_PHY_SIZE*A_UINT32 bits */
+    A_UINT32 peer_eht_cap_phy[WMI_MAX_EHTCAP_PHY_SIZE];
+    A_UINT32 peer_eht_ops;
+    wmi_ppe_threshold peer_eht_ppet;
+
 /* Following this struct are the TLV's:
  *     A_UINT8 peer_legacy_rates[];
  *     A_UINT8 peer_ht_rates[];
@@ -14333,6 +14382,7 @@ typedef struct {
  *     wmi_peer_assoc_mlo_params  mlo_params[0,1]; <-- MLO parameters opt. TLV
  *         Only present for MLO peers.
  *         For non-MLO peers the array length should be 0.
+ *     wmi_eht_rate_set_peer_eht_rates; <-- EHT capabilities of the peer
  */
 } wmi_peer_assoc_complete_cmd_fixed_param;
 
@@ -14503,6 +14553,30 @@ typedef struct _wlan_dcs_im_tgt_stats {
     A_UINT32 my_bss_rx_cycle_count;
 } wlan_dcs_im_tgt_stats_t;
 
+typedef struct wlan_dcs_awgn_info {
+    /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_dcs_awgn_int_t */
+    A_UINT32 tlv_header;
+    /** Channel width (20, 40, 80, 80+80, 160, 320 ) enum wmi_channel_width */
+    A_UINT32 channel_width;
+    /** Primary channel frequency (MHz) */
+    A_UINT32 chan_freq;
+    /** center frequency (MHz) first segment */
+    A_UINT32 center_freq0;
+    /** center frequency (MHz) second segment */
+    A_UINT32 center_freq1;
+    /*
+     * Indicates which 20MHz segments contain interference
+     *  320 MHz: bits 0-15
+     *  160 MHz: bits 0-7
+     *   80 MHz: bits 0-3
+     * Bitmap - Each bit position will indicate 20MHz in which
+     * interference is seen. (Valid 16 bits out of 32 bit integer)
+     * Note: for 11be, the interference present 20MHz can be punctured
+     * for better channel utilization.
+     */
+    A_UINT32 chan_bw_interference_bitmap;
+} wmi_dcs_awgn_int_t;
+
 /**
  *  wmi_dcs_interference_event_t
  *
@@ -14515,9 +14589,12 @@ typedef struct _wlan_dcs_im_tgt_stats {
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_dcs_interference_event_fixed_param */
     /**
-     * Type of the event present, either the cw interference event, or the wlan_im stats
+     * Type of the event present, either the cw interference event, or the wlan_im stats, or AWGN int
+     *  ATH_CAP_DCS_CWIM   0x01
+     *  ATH_CAP_DCS_WLANIM 0x02
+     *  ATH_CAP_DCS_AGWNIM 0x04
      */
-    A_UINT32 interference_type; /* type of interference, wlan or cw */
+    A_UINT32 interference_type; /* type of interference, wlan, cw, or AWGN */
     /** pdev_id for identifying the MAC
      * See macros starting with WMI_PDEV_ID_ for values.
      */
@@ -14530,6 +14607,7 @@ typedef struct {
  *
  *       wlan_dcs_cw_int            cw_int[];   <-- cw_interference event
  *       wlan_dcs_im_tgt_stats_t   wlan_stat[]; <-- wlan im interfernce stats
+ *       wmi_dcs_awgn_int_t        awgn_int[];  <-- Additive white Gaussian noise (awgn) interference
  */
 } wmi_dcs_interference_event_fixed_param;
 
@@ -16509,6 +16587,7 @@ typedef enum wake_reason_e {
     WOW_REASON_GENERIC_WAKE, /* A generic reason that host should be woken up */
     WOW_REASON_ERR_PKT_TRIGGERED_WAKEUP,
     WOW_REASON_TWT,
+    WOW_REASON_FATAL_EVENT_WAKE,
 
     /* add new WOW_REASON_ defs before this line */
     WOW_REASON_MAX,
@@ -16545,6 +16624,11 @@ enum {
      * This flag/bit will be set if INI settings enable mod_dtim_on_sys_suspend.
      */
     WMI_WOW_FLAG_MOD_DTIM_ON_SYS_SUSPEND    = 0x00000040,
+    /*
+     * Forced dtim in suspend mode enable Flag.
+     * setDtimInSuspendMode
+     */
+    WMI_WOW_FLAG_FORCED_DTIM_ON_SYS_SUSPEND = 0x00000080,
 };
 
 typedef struct {
@@ -17480,6 +17564,7 @@ typedef struct wmi_nlo_config {
  * wmi_vendor_oui vendor_oui[num_vendor_oui];
  * connected_nlo_rssi_params cnlo_rssi_params;
  * connected_nlo_bss_band_rssi_pref cnlo_bss_band_rssi_pref[num_cnlo_band_pref];
+ * A_UINT32 preferred_chan_list[]; // in MHz
  */
 } wmi_nlo_config_cmd_fixed_param;
 
@@ -27131,6 +27216,26 @@ typedef struct {
     /* phy id. Starts with 0 */
     A_UINT32 phy_id;
     A_UINT32 wireless_modes_ext; /* REGDMN MODE EXT, see REGDMN_MODE_ enum */
+
+    /**************************************************************************
+     * following new params for 802.11be, but under development
+     **************************************************************************/
+    /* EHT capability mac info field of 802.11be */
+    A_UINT32 eht_cap_mac_info_2G[WMI_MAX_EHTCAP_MAC_SIZE];
+    A_UINT32 eht_cap_mac_info_5G[WMI_MAX_EHTCAP_MAC_SIZE];
+    A_UINT32 eht_supp_mcs_2G;
+    A_UINT32 eht_supp_mcs_5G;
+    /* EHT capability phy field of 802.11be, WMI_EHT_CAP defines */
+    A_UINT32 eht_cap_phy_info_2G[WMI_MAX_EHTCAP_PHY_SIZE];
+    A_UINT32 eht_cap_phy_info_5G[WMI_MAX_EHTCAP_PHY_SIZE];
+    wmi_ppe_threshold eht_ppet2G;
+    wmi_ppe_threshold eht_ppet5G;
+    A_UINT32 eht_cap_info_internal;
+    /**************************************************************************
+     * Currently pls do not add any new param after EHT
+     * as still under development.
+     * We can add new param before it.
+     **************************************************************************/
 } WMI_MAC_PHY_CAPABILITIES_EXT;
 
 typedef struct {
@@ -29358,6 +29463,7 @@ typedef enum _WMI_PAUSE_TWT_STATUS_T {
     WMI_PAUSE_TWT_STATUS_NO_ACK,              /* peer AP/STA did not ACK the request/response frame */
     WMI_PAUSE_TWT_STATUS_UNKNOWN_ERROR,       /* pausing TWT dialog failed with an unknown reason */
     WMI_PAUSE_TWT_STATUS_ALREADY_PAUSED,      /* The TWT dialog is already paused */
+    WMI_PAUSE_TWT_STATUS_TWT_INFO_FRM_NOT_SUPPORTED, /* TWT information frame is not supported by AP */
 } WMI_PAUSE_TWT_STATUS_T;
 
 typedef struct {
@@ -29387,6 +29493,7 @@ typedef enum _WMI_RESUME_TWT_STATUS_T {
     WMI_RESUME_TWT_STATUS_NO_RESOURCE,         /* FW resource exhausted */
     WMI_RESUME_TWT_STATUS_NO_ACK,              /* peer AP/STA did not ACK the request/response frame */
     WMI_RESUME_TWT_STATUS_UNKNOWN_ERROR,       /* resuming TWT dialog failed with an unknown reason */
+    WMI_RESUME_TWT_STATUS_TWT_INFO_FRM_NOT_SUPPORTED, /* TWT information frame is not supported by AP */
 } WMI_RESUME_TWT_STATUS_T;
 
 typedef struct {
@@ -29416,6 +29523,7 @@ typedef enum _WMI_TWT_NUDGE_STATUS_T {
     WMI_NUDGE_TWT_STATUS_NO_ACK,              /* peer AP/STA did not ACK the request/response frame */
     WMI_NUDGE_TWT_STATUS_UNKNOWN_ERROR,       /* nudging TWT dialog failed with an unknown reason */
     WMI_NUDGE_TWT_STATUS_ALREADY_PAUSED,      /* The TWT dialog is already paused */
+    WMI_NUDGE_TWT_STATUS_TWT_INFO_FRM_NOT_SUPPORTED, /* TWT information frame is not supported by AP */
 } WMI_TWT_NUDGE_STATUS_T;
 
 typedef struct {
