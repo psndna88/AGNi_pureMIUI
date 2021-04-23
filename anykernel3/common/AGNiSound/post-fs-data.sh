@@ -6,17 +6,10 @@ MODDIR=${0%/*}
 # This script will be executed in post-fs-data mode
 # More info in the main Magisk thread
 
-POST=$MODPATH/post-fs-data
-
-FORCING=$(find /sys/module -name high_perf_mode)
-
-EARGAIN=$(find /sys/kernel/sound_control -name earpiece_gain)
-
-chmod 0777 $POST
-
-echo "1" > $FORCING
-
-if ([ ! "` uname -r | grep AGNi`" ] || [ ! -f /sys/module/lpm_levels/parameters/agni_present ]); then
+if ([ "` uname -r | grep AGNi`" ] || [ -f /sys/module/lpm_levels/parameters/agni_present ]); then
+	FORCING=$(find /sys/module -name high_perf_mode)
+	echo "1" > $FORCING
+else
 	rm -rf /data/adb/modules/AGNiSound
 fi;
 
