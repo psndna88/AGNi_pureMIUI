@@ -101,6 +101,7 @@
 			reg = <0x0>;
 			enable-method = "psci";
 			cpu-idle-states = <&A7_SPC &A7_PC &CX_MIN>;
+			#cooling-cells = <2>;
 		};
 	};
 
