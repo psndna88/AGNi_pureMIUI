@@ -1,10 +1,15 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/qcom,gcc-direwolf.h>
 #include "quin-vm-common.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Direwolf Virtual Machine";
 	qcom,msm-name = "Direwolf V1";
 	qcom,msm-id = <460 0x10000>;
+
+	aliases {
+		hsuart0 = &qupv3_se2_4uart;
+	};
 
 	firmware:firmware {
 		android {
@@ -174,6 +179,13 @@
 				<GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	msm_gpu_hyp: qcom,hgsl {
+		compatible = "qcom,hgsl";
+
+		/* TBD, complete doorbell */
+		db-off = <1>;
+	};
+
 	pdc: interrupt-controller@b220000 {
 		compatible = "qcom,direwolf-pdc";
 		reg = <0xb220000 0x30000>;
@@ -231,5 +243,26 @@
 };
 
 #include "direwolf-pinctrl.dtsi"
+#include "direwolf-qupv3.dtsi"
 #include "pm8540-vm.dtsi"
 #include "direwolf-vm-audio.dtsi"
+#include "direwolf-vm-usb.dtsi"
+
+&qupv3_0 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_1 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_2 {
+	/delete-property/ qcom,msm-bus,num-paths;
+	/delete-property/ qcom,msm-bus,vectors-bus-ids;
+};
+
+&qupv3_se2_4uart {
+	status = "ok";
+};

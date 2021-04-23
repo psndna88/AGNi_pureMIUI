@@ -1,6 +1,6 @@
-#include <dt-bindings/clock/qcom,dispcc-holi.h>
-#include <dt-bindings/clock/qcom,gcc-holi.h>
-#include <dt-bindings/clock/qcom,gpucc-holi.h>
+#include <dt-bindings/clock/qcom,dispcc-blair.h>
+#include <dt-bindings/clock/qcom,gcc-blair.h>
+#include <dt-bindings/clock/qcom,gpucc-blair.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
 #include <dt-bindings/interconnect/qcom,cpucp-l3.h>
 #include <dt-bindings/interconnect/qcom,holi.h>
@@ -1192,7 +1192,7 @@
 	};
 
 	gcc: clock-controller@1400000 {
-		compatible = "qcom,holi-gcc", "syscon";
+		compatible = "qcom,blair-gcc", "syscon";
 		reg = <0x1400000 0x1f0000>;
 		reg_names = "cc_base";
 		vdd_cx-supply = <&VDD_CX_LEVEL>;
@@ -1215,6 +1215,7 @@
 		clock-names = "bi_tcxo", "gcc_disp_gpll0_clk";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
+		status = "disabled";
 	};
 
 	gpucc: clock-controller@5990000 {
@@ -1232,6 +1233,7 @@
 				"gcc_gpu_snoc_dvm_gfx_clk";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
+		status = "disabled";
 	};
 
 	cpucc: syscon@faa0018 {
@@ -1254,6 +1256,7 @@
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>;
 		clock-names = "xo_clk_src";
 		#clock-cells = <1>;
+		status = "disabled";
 	};
 
 	cpufreq_hw: qcom,cpufreq-hw {
@@ -1272,6 +1275,7 @@
 				<GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "dcvsh0_int", "dcvsh1_int";
 		#freq-domain-cells = <2>;
+		status = "disabled";
 	};
 
 	qcom,cpufreq-hw-debug@0fd91000 {
@@ -1279,6 +1283,7 @@
 		reg = <0x0fd91000 0x800>;
 		reg-names = "domain-top";
 		qcom,freq-hw-domain = <&cpufreq_hw 0>, <&cpufreq_hw 1>;
+		status = "disabled";
 	};
 
 	ddr_bw_opp_table: ddr-bw-opp-table {
@@ -3377,6 +3382,7 @@
 #include "holi-qupv3.dtsi"
 #include "display/holi-sde.dtsi"
 #include "holi-audio.dtsi"
+#include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
 
 &gcc_camss_top_gdsc {

@@ -13,6 +13,13 @@
 	};
 };
 
+&reserved_memory {
+	/* pil_wlan_fw_mem is only used when iHelium is attached,
+	 * so remove the node for sa8195p
+	 */
+	/delete-node/ pil_wlan_fw_mem;
+};
+
 &soc {
 	qfprom: qfprom@780130 {
 		compatible = "qcom,qfprom";

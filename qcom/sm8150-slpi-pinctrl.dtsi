@@ -38,7 +38,7 @@
 		qupv3_se21_i2c_pins: qupv3_se21_i2c_pins {
 			qupv3_se21_i2c_active: qupv3_se21_i2c_active {
 				mux {
-					pins = "gpi2", "gpio3";
+					pins = "gpio2", "gpio3";
 					function = "func1";
 				};
 

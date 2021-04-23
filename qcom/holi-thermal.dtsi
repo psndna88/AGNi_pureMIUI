@@ -121,6 +121,178 @@
 };
 
 &thermal_zones {
+	mdm-core0-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 6>;
+		trips {
+			mdmss0_trip0: mdmss0-trip0 {
+				temperature = <95000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss0_trip1: mdmss0-trip1 {
+				temperature = <105000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss0_trip2: mdmss0-trip2 {
+				temperature = <115000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mdmss0_cdev0 {
+				trip = <&mdmss0_trip0>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
+			mdmss0_cdev1 {
+				trip = <&mdmss0_trip1>;
+				cooling-device = <&modem_tj 2 2>;
+			};
+
+			mdmss0_cdev2 {
+				trip = <&mdmss0_trip2>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+		};
+	};
+
+	mdm-core1-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 7>;
+		trips {
+			mdmss1_trip0: mdmss1-trip0 {
+				temperature = <95000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss1_trip1: mdmss1-trip1 {
+				temperature = <105000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss1_trip2: mdmss1-trip2 {
+				temperature = <115000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mdmss1_cdev0 {
+				trip = <&mdmss1_trip0>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
+			mdmss1_cdev1 {
+				trip = <&mdmss1_trip1>;
+				cooling-device = <&modem_tj 2 2>;
+			};
+
+			mdmss1_cdev2 {
+				trip = <&mdmss1_trip2>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+		};
+	};
+
+	mdm-vec-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 8>;
+		trips {
+			mdmss2_trip0: mdmss2-trip0 {
+				temperature = <95000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss2_trip1: mdmss2-trip1 {
+				temperature = <105000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss2_trip2: mdmss2-trip2 {
+				temperature = <115000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mdmss2_cdev0 {
+				trip = <&mdmss2_trip0>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
+			mdmss2_cdev1 {
+				trip = <&mdmss2_trip1>;
+				cooling-device = <&modem_tj 2 2>;
+			};
+
+			mdmss2_cdev2 {
+				trip = <&mdmss2_trip2>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+		};
+	};
+
+	mdm-scl-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&tsens1 9>;
+		trips {
+			mdmss3_trip0: mdmss3-trip0 {
+				temperature = <95000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss3_trip1: mdmss3-trip1 {
+				temperature = <105000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+
+			mdmss3_trip2: mdmss3-trip2 {
+				temperature = <115000>;
+				hysteresis = <15000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mdmss3_cdev0 {
+				trip = <&mdmss3_trip0>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
+			mdmss3_cdev1 {
+				trip = <&mdmss3_trip1>;
+				cooling-device = <&modem_tj 2 2>;
+			};
+
+			mdmss3_cdev2 {
+				trip = <&mdmss3_trip2>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+		};
+	};
+
 	mapss-0-usr {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
