@@ -395,7 +395,7 @@ KBUILD_CFLAGS   := -w -W  -Wunused-variable -Wall -Wundef -Wstrict-prototypes -W
 		   -fno-strict-aliasing -fno-common \
 		   -Wimplicit-function-declaration \
 		   -Wno-format-security -Wno-unused-function \
-		   -std=gnu89 $(call cc-option,-fno-PIE)
+		   -std=gnu89 -fno-PIE -pipe -Og
 
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
