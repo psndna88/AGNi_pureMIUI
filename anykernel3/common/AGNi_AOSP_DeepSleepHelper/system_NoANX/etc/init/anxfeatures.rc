@@ -1,9 +1,0 @@
-on property:sys.boot_completed=1
-    stop anxfeatures
-
-service anxfeatures /system/bin/anxfeatures
-    class main
-    user root
-    group root
-    oneshot
-    disabled
