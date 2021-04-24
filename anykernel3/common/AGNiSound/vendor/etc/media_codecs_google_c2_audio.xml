@@ -38,6 +38,8 @@
         </MediaCodec>
         <MediaCodec name="c2.android.aac.decoder" type="audio/mp4a-latm">
             <Alias name="OMX.google.aac.decoder" />
+            <Feature name="bitrate-modes" value="CQ"/>
+            <Limit name="complexity" range="0-8"  default="8"/>
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="7350,8000,11025,12000,16000,22050,24000,32000,44100,48000" />
             <Limit name="bitrate" range="8000-960000" />
@@ -83,9 +85,9 @@
     </Decoders>
     <Encoders>
         <MediaCodec name="c2.android.aac.encoder" type="audio/mp4a-latm">
+            <Alias name="OMX.google.aac.encoder" />
             <Feature name="bitrate-modes" value="CQ"/>
             <Limit name="complexity" range="0-8"  default="8"/>
-            <Alias name="OMX.google.aac.encoder" />
             <Limit name="channel-count" max="6" />
             <Limit name="sample-rate" ranges="8000,11025,12000,16000,22050,24000,32000,44100,48000" />
             <!-- also may support 64000, 88200  and 96000 Hz -->
