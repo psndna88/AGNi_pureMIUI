@@ -35,7 +35,7 @@
   <ctl name="Voice Rx Gain" id="0" value="0"/>
   <ctl name="Voice Rx Gain" id="1" value="-1"/>
   <ctl name="Voice Rx Gain" id="2" value="20"/>
-  <ctl name="Voice Sidetone Enable" value="1"/>
+  <ctl name="Voice Sidetone Enable" value="0"/>
   <ctl name="Voip Tx Mute" id="0" value="0"/>
   <ctl name="Voip Tx Mute" id="1" value="500"/>
   <ctl name="Voip Rx Gain" id="0" value="0"/>
@@ -140,14 +140,14 @@
   <ctl name="RX_CDC_DMA_RX_0 Format" value="UNPACKED"/>
   <ctl name="TX_CDC_DMA_TX_3 Format" value="UNPACKED"/>
   <!-- HFP start -->
-  <ctl name="HFP_SLIM7_UL_HL Switch" value="1"/>
+  <ctl name="HFP_SLIM7_UL_HL Switch" value="0"/>
   <ctl name="WSA_CDC_DMA_RX_0 Port Mixer SLIM_7_TX" value="0"/>
   <ctl name="RX_CDC_DMA_RX_0 Port Mixer SLIM_7_TX" value="0"/>
   <!-- HFP end -->
   <!-- echo reference -->
   <ctl name="AUDIO_REF_EC_UL1 MUX" value="None"/>
   <ctl name="AUDIO_REF_EC_UL10 MUX" value="None"/>
-  <ctl name="EC Reference Channels" value="Two"/>
+  <ctl name="EC Reference Channels" value="Zero"/>
   <!-- usb headset -->
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="0"/>
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="0"/>
@@ -243,8 +243,8 @@
   <!-- audio record compress end-->
   <!-- split a2dp -->
   <ctl name="BT SampleRate" value="KHZ_8"/>
-  <ctl name="AFE Input Channels" value="Two"/>
-  <ctl name="SLIM7_RX ADM Channels" value="Two"/>
+  <ctl name="AFE Input Channels" value="Zero"/>
+  <ctl name="SLIM7_RX ADM Channels" value="Zero"/>
   <!-- split a2dp end-->
   <!-- ADSP testfwk -->
   <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="0"/>
@@ -282,14 +282,14 @@
   <ctl name="RX INT1_1 MIX1 INP2" value="ZERO"/>
   <ctl name="RX_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="0"/>
   <ctl name="RX INT0 DEM MUX" value="NORMAL_DSM_OUT"/>
-  <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT"/>
+  <ctl name="RX INT1 DEM MUX" value="NORMAL_DSM_OUT"/>
   <ctl name="RX_COMP1 Switch" value="0"/>
   <ctl name="RX_COMP2 Switch" value="0"/>
   <ctl name="HPHL_COMP Switch" value="0"/>
   <ctl name="HPHR_COMP Switch" value="0"/>
   <ctl name="EAR_RDAC Switch" value="0"/>
-  <ctl name="HPHL_RDAC Switch" value="1"/>
-  <ctl name="HPHR_RDAC Switch" value="1"/>
+  <ctl name="HPHL_RDAC Switch" value="0"/>
+  <ctl name="HPHR_RDAC Switch" value="0"/>
   <ctl name="RDAC3_MUX" value="ZERO"/>
   <ctl name="RX_EAR Mode" value="OFF"/>
   <!-- TX Controls -->
@@ -330,11 +330,11 @@
   <ctl name="TX DMIC MUX7" value="ZERO"/>
   <ctl name="TX SMIC MUX7" value="ZERO"/>
   <!-- Volume controls -->
-  <ctl name="WSA_RX0 Digital Volume" value="84"/>
-  <ctl name="WSA_RX1 Digital Volume" value="84"/>
-  <ctl name="RX_RX0 Digital Volume" value="84"/>
-  <ctl name="RX_RX1 Digital Volume" value="84"/>
-  <ctl name="RX_RX2 Digital Volume" value="84"/>
+    <ctl name="WSA_RX0 Digital Volume" value="100" />
+    <ctl name="WSA_RX1 Digital Volume" value="100" />
+    <ctl name="RX_RX0 Digital Volume" value="84" />
+    <ctl name="RX_RX1 Digital Volume" value="100" />
+    <ctl name="RX_RX2 Digital Volume" value="100" />
   <ctl name="HPHL Volume" value="20"/>
   <ctl name="HPHR Volume" value="20"/>
   <ctl name="EAR SPKR PA Gain" value="G_DEFAULT"/>
@@ -2481,8 +2481,8 @@
     <ctl name="COMP1" value="0"/>
     <ctl name="COMP2" value="0"/>
   </path>
-  <ctl name="EC Reference Bit Format" value="S24_LE"/>
-  <ctl name="EC Reference SampleRate" value="192000"/>
+  <ctl name="EC Reference Bit Format" value="S16_LE"/>
+  <ctl name="EC Reference SampleRate" value="48000"/>
   <ctl name="COMP0 RX1" value="0"/>
   <ctl name="COMP0 RX2" value="0"/>
   <ctl name="Compress Playback 16 Volume" value="0"/>
@@ -2495,16 +2495,14 @@
   <ctl name="PCM_RX_DL_HL Switch" value="1"/>
   <ctl name="HiFi Function" value="On"/>
   <ctl name="HiFi Filter" value="6"/>
-  <ctl name="USB_DL_HL Switch" value="1"/>
   <ctl name="SLIM_7_RX Format" value="S24_LE"/>
   <ctl name="SLIM_7_RX SampleRate" value="KHZ_192"/>
-  <ctl name="SLIM_7_RX Channels" value="Two"/>
   <ctl name="SLIMBUS_7_RX Format" value="S24_LE"/>
   <ctl name="SLIMBUS_7_RX SampleRate" value="KHZ_192"/>
-  <ctl name="SLIMBUS_7_RX Channels" value="Two"/>
-  <ctl name="SLIM7_RX_DL_HL Switch" value="1"/>
-  <ctl name="RX INT3 SEC MIX LO1 Switch" value="1"/>
-  <ctl name="RX INT4 SEC MIX LO2 Switch" value="1"/>
-  <ctl name="ASM Bit Width" value="24"/>
-  <ctl name="MSM ASphere Set Param" value="1"/>
+  <ctl name="RX1 HPF cut off" value="MIN_3DB_4Hz"/>
+  <ctl name="RX2 HPF cut off" value="MIN_3DB_4Hz"/>
+  <ctl name="RX3 HPF cut off" value="MIN_3DB_4Hz"/>
+  <ctl name="TX1 HPF cut off" value="MIN_3DB_4Hz"/>
+  <ctl name="TX2 HPF cut off" value="MIN_3DB_4Hz"/>
+  <ctl name="TX3 HPF cut off" value="MIN_3DB_4Hz"/>
 </mixer>

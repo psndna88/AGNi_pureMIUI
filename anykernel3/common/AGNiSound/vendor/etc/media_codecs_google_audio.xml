@@ -34,6 +34,8 @@
             <Limit name="bitrate" range="6600-23850" />
         </MediaCodec>
         <MediaCodec name="OMX.google.aac.decoder" type="audio/mp4a-latm">
+            <Feature name="bitrate-modes" value="CQ"/>
+            <Limit name="complexity" range="0-8"  default="8"/>
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="7350,8000,11025,12000,16000,22050,24000,32000,44100,48000" />
             <Limit name="bitrate" range="8000-960000" />
