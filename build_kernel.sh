@@ -36,7 +36,7 @@ if [ $choice -eq 1 ]; then
 	#### ALL Devices
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi whyred variant..."
-	./scripts/agni/build_kernel_whyred.sh || exit 1
+	./scripts/agni/build_kernel_whyred.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi whyred variant!!!"
 	echo $HORIZONTALLINE
@@ -44,34 +44,34 @@ if [ $choice -eq 1 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
-	./scripts/agni/build_kernel_whyred_ROG.sh || exit 1
+	./scripts/agni/build_kernel_whyred_ROG.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi tulip variant..."
-	./scripts/agni/build_kernel_tulip.sh || exit 1
+	./scripts/agni/build_kernel_tulip.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi tulip variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi lavender variant..."
-	./scripts/agni/build_kernel_lavender.sh || exit 1
+	./scripts/agni/build_kernel_lavender.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi lavender variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi wayne variant..."
-	./scripts/agni/build_kernel_wayne.sh || exit 1
+	./scripts/agni/build_kernel_wayne.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi wayne variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo "          BATCH MODE: Building AGNi jasmine variant..."
-	./scripts/agni/build_kernel_jasmine.sh || exit 1
+	./scripts/agni/build_kernel_jasmine.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi jasmine variant!!!"
 	echo $HORIZONTALLINE
@@ -80,7 +80,7 @@ elif [ $choice -eq 2 ]; then
 	#### WHYRED
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi whyred variant..."
-	./scripts/agni/build_kernel_whyred.sh || exit 1
+	./scripts/agni/build_kernel_whyred.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi whyred variant!!!"
 	echo $HORIZONTALLINE
@@ -89,7 +89,7 @@ elif [ $choice -eq 3 ];	then
 	#### TULIP
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi tulip variant..."
-	./scripts/agni/build_kernel_tulip.sh || exit 1
+	./scripts/agni/build_kernel_tulip.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi tulip variant!!!"
 	echo $HORIZONTALLINE
@@ -98,7 +98,7 @@ elif [ $choice -eq 4 ];	then
 	#### LAVENDER
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi lavender variant..."
-	./scripts/agni/build_kernel_lavender.sh || exit 1
+	./scripts/agni/build_kernel_lavender.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi lavender variant!!!"
 	echo $HORIZONTALLINE
@@ -107,7 +107,7 @@ elif [ $choice -eq 5 ];	then
 	#### WAYNE
 	echo $HORIZONTALLINE
 	echo "          BATCH MODE: Building AGNi wayne variant..."
-	./scripts/agni/build_kernel_wayne.sh || exit 1
+	./scripts/agni/build_kernel_wayne.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi wayne variant!!!"
 	echo $HORIZONTALLINE
@@ -117,7 +117,7 @@ elif [ $choice -eq 6 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 	echo "          BATCH MODE: Building AGNi jasmine variant..."
-	./scripts/agni/build_kernel_jasmine.sh || exit 1
+	./scripts/agni/build_kernel_jasmine.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi jasmine variant!!!"
 	echo $HORIZONTALLINE
@@ -127,7 +127,7 @@ elif [ $choice -eq 7 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
-	./scripts/agni/build_kernel_whyred_ROG.sh || exit 1
+	./scripts/agni/build_kernel_whyred_ROG.sh
 	echo " "
 	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
 	echo $HORIZONTALLINE
