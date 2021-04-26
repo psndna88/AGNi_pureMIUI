@@ -1863,7 +1863,6 @@ notify_only:
 			if ((!req_isp->bubble_detected) &&
 				(req->request_id > ctx_isp->reported_req_id)) {
 				request_id = req->request_id;
-				ctx_isp->reported_req_id = request_id;
 				__cam_isp_ctx_update_event_record(ctx_isp,
 					CAM_ISP_CTX_EVENT_EPOCH, req);
 				break;
@@ -1872,6 +1871,9 @@ notify_only:
 
 		if (ctx_isp->substate_activated == CAM_ISP_CTX_ACTIVATED_BUBBLE)
 			request_id = 0;
+
+		if (request_id != 0)
+			ctx_isp->reported_req_id = request_id;
 
 		__cam_isp_ctx_send_sof_timestamp(ctx_isp, request_id,
 			CAM_REQ_MGR_SOF_EVENT_SUCCESS);
