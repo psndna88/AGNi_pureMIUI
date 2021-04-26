@@ -514,6 +514,14 @@ if [ "`$BB grep selected.0=1 /tmp/aroma-data/led.prop`" ]; then
 else
 	$BB echo "1" > $AKHOME/LED_MODE;
 fi;
+# LOS rom detection for SDfat xattr
+if [ "`$BB grep "ineage" $buildprop`" ]; then
+	LOS_ROM="true";
+	$BB echo "1" > $AKHOME/SDFAT_XATTR_LOS;
+else
+	LOS_ROM="false";
+	$BB echo "0" > $AKHOME/SDFAT_XATTR_LOS;
+fi;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";
