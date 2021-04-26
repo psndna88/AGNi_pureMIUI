@@ -8,7 +8,7 @@
 		clock-frequency = <500000>;
 	};
 
-	wdog {
+	wdog: qcom,wdt@f410000  {
 		status = "disabled";
 	};
 
