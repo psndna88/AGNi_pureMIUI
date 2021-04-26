@@ -4386,7 +4386,7 @@ static int __sdfat_show_options(struct seq_file *m, struct super_block *sb)
 		seq_puts(m, ",errors=panic");
 	else
 		seq_puts(m, ",errors=remount-ro");
-	if (opts->discard)
+//	if (opts->discard)
 		seq_puts(m, ",discard");
 
 	return 0;
@@ -4639,7 +4639,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	opts->amap_opt.misaligned_sect = 0;
 	opts->symlink = 0;
 	opts->errors = SDFAT_ERRORS_RO;
-	opts->discard = 0;
+	opts->discard = 1;
 	*debug = 0;
 
 	if (!options)
@@ -4809,11 +4809,12 @@ out:
 	if (opts->discard) {
 		struct request_queue *q = bdev_get_queue(sb->s_bdev);
 
-		if (!blk_queue_discard(q))
+		if (!blk_queue_discard(q)) {
 			sdfat_msg(sb, KERN_WARNING,
 				"mounting with \"discard\" option, but "
 				"the device does not support discard");
-		opts->discard = 0;
+			opts->discard = 0;
+		}
 	}
 
 	return 0;
