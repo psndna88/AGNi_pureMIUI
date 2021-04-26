@@ -60,7 +60,7 @@ echo ""
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
 
 make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
-make -j4 O=$COMPILEDIR_ATOLL
+make -j2 O=$COMPILEDIR_ATOLL
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_ATOLL/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
