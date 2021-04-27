@@ -1426,7 +1426,7 @@ int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
 			pr_debug("%s: ch[%d][%d] weight = %d",
 				 __func__, i, j, cfg_data->channel_weight[i][j]);
 
-	if (fedai_id < 0 || fedai_id > MSM_FRONTEND_DAI_MAX) {
+	if (fedai_id < 0 || fedai_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: Received out of bounds fedai_id %d\n",
 			__func__, fedai_id);
 		ret = -EINVAL;
