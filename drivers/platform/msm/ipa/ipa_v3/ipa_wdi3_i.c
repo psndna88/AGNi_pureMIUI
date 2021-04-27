@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018 - 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018 - 2021, The Linux Foundation. All rights reserved.
  */
 
 #include "ipa_i.h"
@@ -849,8 +849,9 @@ int ipa3_enable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	IPA_ACTIVE_CLIENTS_INC_EP(ipa3_get_client_mapping(ipa_ep_idx_tx));
 
 	/* start uC event ring */
-	if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5 &&
-		ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) {
+	if ((ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5 &&
+		ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) ||
+		ipa3_ctx->is_bw_monitor_supported) {
 		if (ipa3_ctx->uc_ctx.uc_loaded &&
 			!ipa3_ctx->uc_ctx.uc_event_ring_valid) {
 			if (ipa3_uc_setup_event_ring())	{
