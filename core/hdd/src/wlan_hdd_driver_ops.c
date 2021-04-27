@@ -2069,6 +2069,10 @@ wlan_hdd_pld_uevent(struct device *dev, struct pld_uevent_data *event_data)
 	bus_type = pld_get_bus_type(dev);
 
 	switch (event_data->uevent) {
+	case PLD_SMMU_FAULT:
+		qdf_set_smmu_fault_state(true);
+		hdd_debug("Received smmu fault indication");
+		break;
 	case PLD_FW_DOWN:
 		hdd_debug("Received firmware down indication");
 
