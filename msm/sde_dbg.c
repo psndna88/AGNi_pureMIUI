@@ -1041,6 +1041,8 @@ static void _sde_dbg_dump_dsi_dbg_bus(struct sde_dbg_sde_debug_bus *bus)
 		SDE_DBG_LOG_DUMP_ADDR(ctl_entry->name, dump_addr, list_size / dsi_count, 0);
 
 		_sde_dbg_dump_bus_entry(bus, entries, bus_size, ctl_entry->base, dump_addr);
+		if (dump_addr)
+			dump_addr += list_size / (sizeof(u32) * dsi_count);
 	}
 	mutex_unlock(&sde_dbg_dsi_mutex);
 
