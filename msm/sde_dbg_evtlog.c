@@ -223,6 +223,10 @@ struct sde_dbg_evtlog *sde_evtlog_init(void)
 	if (!evtlog)
 		return ERR_PTR(-ENOMEM);
 
+	if (sde_mini_dump_add_region("evt_log", sizeof(*evtlog),
+			evtlog) < 0)
+		pr_err("minidump add region failed for evtlog\n");
+
 	spin_lock_init(&evtlog->spin_lock);
 	evtlog->enable = SDE_EVTLOG_DEFAULT_ENABLE;
 
@@ -240,6 +244,9 @@ struct sde_dbg_reglog *sde_reglog_init(void)
 		return ERR_PTR(-ENOMEM);
 
 	atomic64_set(&reglog->curr, 0);
+	if (sde_mini_dump_add_region("reg_log", sizeof(*reglog),
+			reglog) < 0)
+		pr_err("minidump add region failed for reglog\n");
 
 	return reglog;
 }
