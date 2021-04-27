@@ -1820,6 +1820,7 @@ int gsi_alloc_evt_ring(struct gsi_evt_ring_props *props, unsigned long dev_hdl,
 		((op << GSI_EE_n_EV_CH_CMD_OPCODE_SHFT) &
 			GSI_EE_n_EV_CH_CMD_OPCODE_BMSK));
 	ee = gsi_ctx->per.ee;
+	GSIDBG("Sending alloc evt command for %lu\n", evt_id);
 	gsi_writel(val, gsi_ctx->base +
 			GSI_EE_n_EV_CH_CMD_OFFS(ee));
 	res = wait_for_completion_timeout(&ctx->compl, GSI_CMD_TIMEOUT);
@@ -3035,7 +3036,14 @@ EXPORT_SYMBOL(gsi_query_channel_db_addr);
 
 int gsi_pending_irq_type(void)
 {
-	int ee = gsi_ctx->per.ee;
+	int ee;
+
+	if (!gsi_ctx->per_registered) {
+		GSIERR("no client registered\n");
+		return 0;
+	}
+
+	ee = gsi_ctx->per.ee;
 
 	return gsi_readl(gsi_ctx->base +
 		GSI_EE_n_CNTXT_TYPE_IRQ_OFFS(ee));

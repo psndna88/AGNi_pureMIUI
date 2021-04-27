@@ -3068,8 +3068,11 @@ static struct ipahal_reg_obj ipahal_reg_objs[IPA_HW_MAX][IPA_REG_MAX] = {
 		ipareg_construct_single_ndp_mode, ipareg_parse_single_ndp_mode,
 		-1, 0, 0, 0, 0},
 	[IPA_HW_v4_0][IPA_QSB_MAX_READS] = {
-		ipareg_construct_qsb_max_reads_v4_0, ipareg_parse_dummy,
+		ipareg_construct_qsb_max_reads_v4_0, ipareg_parse_qsb_max_reads,
 		0x00000078, 0, 0, 0, 0},
+	[IPA_HW_v4_0][IPA_QSB_MAX_WRITES] = {
+		ipareg_construct_qsb_max_writes, ipareg_parse_qsb_max_writes,
+		0x00000074, 0, 0, 0, 0},
 	[IPA_HW_v4_0][IPA_FILT_ROUT_HASH_FLUSH] = {
 		ipareg_construct_dummy, ipareg_parse_dummy,
 		0x0000014c, 0, 0, 0, 0},
@@ -3629,14 +3632,15 @@ void ipahal_print_all_regs(bool print_to_dmesg)
 	int i, j;
 	struct ipahal_reg_obj *reg;
 
-	IPAHAL_DBG("Printing all registers for ipa_hw_type %d\n",
-		ipahal_ctx->hw_type);
-
-	if ((ipahal_ctx->hw_type < IPA_HW_v4_0) ||
+	if (!ipahal_ctx || (ipahal_ctx->hw_type < IPA_HW_v4_0) ||
 		(ipahal_ctx->hw_type >= IPA_HW_MAX)) {
-		IPAHAL_ERR("invalid IPA HW type (%d)\n", ipahal_ctx->hw_type);
+		IPAHAL_ERR("invalid IPA HW type (%d)\n",
+			ipahal_ctx?ipahal_ctx->hw_type:-1);
 		return;
 	}
+
+	IPAHAL_DBG("Printing all registers for ipa_hw_type %d\n",
+		ipahal_ctx->hw_type);
 
 	for (i = 0; i < IPA_REG_MAX ; i++) {
 		reg = &(ipahal_reg_objs[ipahal_ctx->hw_type][i]);
@@ -3753,6 +3757,11 @@ u32 ipahal_read_reg_n(enum ipahal_reg_name reg, u32 n)
 {
 	u32 offset;
 
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return -EINVAL;
+	}
+
 	if (reg >= IPA_REG_MAX) {
 		IPAHAL_ERR("Invalid register reg=%u\n", reg);
 		WARN_ON(1);
@@ -3779,6 +3788,11 @@ u32 ipahal_read_reg_n(enum ipahal_reg_name reg, u32 n)
 u32 ipahal_read_reg_mn(enum ipahal_reg_name reg, u32 m, u32 n)
 {
 	u32 offset;
+
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return -EINVAL;
+	}
 
 	if (reg >= IPA_REG_MAX) {
 		IPAHAL_ERR("Invalid register reg=%u\n", reg);
@@ -3813,6 +3827,11 @@ void ipahal_write_reg_mn(enum ipahal_reg_name reg, u32 m, u32 n, u32 val)
 {
 	u32 offset;
 
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return;
+	}
+
 	if (reg >= IPA_REG_MAX) {
 		IPAHAL_ERR("Invalid register reg=%u\n", reg);
 		WARN_ON(1);
@@ -3846,6 +3865,11 @@ u32 ipahal_read_reg_n_fields(enum ipahal_reg_name reg, u32 n, void *fields)
 {
 	u32 val = 0;
 	u32 offset;
+
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return -EINVAL;
+	}
 
 	if (!fields) {
 		IPAHAL_ERR("Input error fields\n");
@@ -3884,6 +3908,11 @@ void ipahal_write_reg_n_fields(enum ipahal_reg_name reg, u32 n,
 	u32 val = 0;
 	u32 offset;
 
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return;
+	}
+
 	if (!fields) {
 		IPAHAL_ERR("Input error fields=%pK\n", fields);
 		WARN_ON(1);
@@ -3917,6 +3946,11 @@ void ipahal_write_reg_n_fields(enum ipahal_reg_name reg, u32 n,
 u32 ipahal_get_reg_mn_ofst(enum ipahal_reg_name reg, u32 m, u32 n)
 {
 	u32 offset;
+
+	if (!ipahal_ctx) {
+		IPAHAL_DBG("Invalid ipahal context\n");
+		return -EINVAL;
+	}
 
 	if (reg >= IPA_REG_MAX) {
 		IPAHAL_ERR("Invalid register reg=%u\n", reg);
@@ -3967,7 +4001,7 @@ void ipahal_get_aggr_force_close_valmask(int ep_idx,
 	u32 shft = 0;
 	u32 bmsk = 0;
 
-	if (!valmask) {
+	if (!ipahal_ctx || !valmask) {
 		IPAHAL_ERR("Input error\n");
 		return;
 	}
