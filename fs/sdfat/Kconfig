@@ -78,13 +78,6 @@ config SDFAT_VIRTUAL_XATTR
 	help
 	  To support virtual xattr.
 
-config SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
-	string "Default string for SELinux label"
-	default "u:object_r:sdcard_external:s0"
-	depends on SDFAT_FS && SDFAT_VIRTUAL_XATTR
-	help
-	  Set this to the default string for SELinux label.
-
 config SDFAT_SUPPORT_STLOG
 	bool "Enable storage log"
 	default y

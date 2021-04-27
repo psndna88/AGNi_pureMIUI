@@ -293,6 +293,25 @@ static int __init set_ledmode(char *val)
 	return 0;
 }
 __setup("ledmode=", set_ledmode);
+bool losrom = false;
+static int __init set_los_rom(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+	if (temp) {
+		losrom = true;
+		pr_err("Kernel: AGNi Lineage rom = true");
+	} else {
+		losrom = false;
+		pr_err("Kernel: AGNi Lineage rom = false");
+	}
+
+	return 0;
+}
+__setup("losxattr=", set_los_rom);
+EXPORT_SYMBOL_GPL(losrom);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.
