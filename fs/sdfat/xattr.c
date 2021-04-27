@@ -33,15 +33,18 @@
 #include <linux/dcache.h>
 #include "sdfat.h"
 
-#ifndef CONFIG_SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
-#define CONFIG_SDFAT_VIRTUAL_XATTR_SELINUX_LABEL	("undefined")
-#endif
+#define SDFAT_VIRTUAL_XATTR_SELINUX_LABEL		"u:object_r:exfat:s0"
+#define SDFAT_VIRTUAL_XATTR_SELINUX_LABEL_LOS	"u:object_r:vfat:s0"
+extern bool miuirom;
+extern bool losrom;
 
-static const char default_xattr[] = CONFIG_SDFAT_VIRTUAL_XATTR_SELINUX_LABEL;
+static char default_xattr;
 
 static int can_support(const char *name)
 {
 	if (!name || strcmp(name, "security.selinux"))
+		return -1;
+	if (miuirom)
 		return -1;
 	return 0;
 }
@@ -59,6 +62,8 @@ static int __sdfat_xattr_check_support(const char *name)
 {
 	if (can_support(name))
 		return -EOPNOTSUPP;
+	if (miuirom)
+		return -EOPNOTSUPP;
 
 	return 0;
 }
@@ -67,6 +72,12 @@ ssize_t __sdfat_getxattr(const char *name, void *value, size_t size)
 {
 	if (can_support(name))
 		return -EOPNOTSUPP;
+	if (miuirom)
+		return -EOPNOTSUPP;
+	if (losrom)
+		default_xattr = SDFAT_VIRTUAL_XATTR_SELINUX_LABEL_LOS;
+	else
+		default_xattr = SDFAT_VIRTUAL_XATTR_SELINUX_LABEL;
 
 	if ((size > strlen(default_xattr)+1) && value)
 		strcpy(value, default_xattr);
