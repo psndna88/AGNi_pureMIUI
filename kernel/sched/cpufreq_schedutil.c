@@ -390,7 +390,7 @@ static inline bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu) { return false; }
 #endif /* CONFIG_NO_HZ_COMMON */
 
 #define NL_RATIO 75
-#define DEFAULT_HISPEED_LOAD 90
+#define DEFAULT_HISPEED_LOAD 80
 #define DEFAULT_CPU0_RTG_BOOST_FREQ 1000000
 #define DEFAULT_CPU6_RTG_BOOST_FREQ 0
 static void sugov_walt_adjust(struct sugov_cpu *sg_cpu, unsigned long *util,
@@ -1078,7 +1078,8 @@ static int sugov_init(struct cpufreq_policy *policy)
 		break;
 	}
 
-	tunables->iowait_boost_enable = false;
+	tunables->iowait_boost_enable = true;
+	tunables->pl = true;
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
