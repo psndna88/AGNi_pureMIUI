@@ -1589,7 +1589,7 @@ static void sde_kms_prepare_fence(struct msm_kms *kms,
 {
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *old_crtc_state;
-	int i, rc;
+	int i;
 
 	if (!kms || !old_state || !old_state->dev || !old_state->acquire_ctx) {
 		SDE_ERROR("invalid argument(s)\n");
@@ -1597,15 +1597,6 @@ static void sde_kms_prepare_fence(struct msm_kms *kms,
 	}
 
 	SDE_ATRACE_BEGIN("sde_kms_prepare_fence");
-retry:
-	/* attempt to acquire ww mutex for connection */
-	rc = drm_modeset_lock(&old_state->dev->mode_config.connection_mutex,
-			       old_state->acquire_ctx);
-
-	if (rc == -EDEADLK) {
-		drm_modeset_backoff(old_state->acquire_ctx);
-		goto retry;
-	}
 
 	/* old_state actually contains updated crtc pointers */
 	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
