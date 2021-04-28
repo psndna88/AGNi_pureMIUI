@@ -486,7 +486,7 @@ static uint64_t lpm_cpuidle_predict(struct cpuidle_device *dev,
 		history->hinvalid = 0;
 		history->htmr_wkup = 1;
 		history->stime = 0;
-		return 1;
+		return 0;
 	}
 
 	/*
@@ -678,10 +678,9 @@ static int cpu_power_select(struct cpuidle_device *dev,
 			 * call prediction.
 			 */
 			if (next_wakeup_us > max_residency) {
-				predicted = (lpm_cpuidle_predict(dev, cpu,
-					&idx_restrict,
-					&idx_restrict_time, &ipi_predicted) == 1) ? 0 :
-						(max_residency >> 1);
+				predicted = lpm_cpuidle_predict(dev, cpu,
+					&idx_restrict, &idx_restrict_time,
+					&ipi_predicted);
 				if (predicted && (predicted < min_residency))
 					predicted = min_residency;
 			} else
@@ -1429,9 +1428,7 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 	if (need_resched())
 		goto exit;
 
-	cpuidle_set_idle_cpu(dev->cpu);
 	success = psci_enter_sleep(cpu, idx, true);
-	cpuidle_clear_idle_cpu(dev->cpu);
 
 exit:
 	end_time = ktime_to_ns(ktime_get());
