@@ -25,6 +25,8 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>
+#include <linux/spi/spi-geni-qcom.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -123,7 +125,7 @@ extern const uint16_t gesture_key_array[];
 /*2019.12.06 longcheer taocheng add for charger mode begin*/
 /*functions description*/
 //enable tp usb plugin feature
-#define NVT_USB_PLUGIN 1
+#define NVT_USB_PLUGIN 0
 
 #if NVT_USB_PLUGIN
 typedef struct touchscreen_usb_plugin_data {
@@ -218,6 +220,8 @@ struct nvt_ts_data {
 	bool palm_sensor_changed;
 	bool gamemode_enabled;
 #endif
+	struct pm_qos_request pm_spi_req;
+	struct pm_qos_request pm_touch_req;
 	struct mutex reg_lock;
 	struct device *nvt_touch_dev;
 	struct class *nvt_tp_class;
