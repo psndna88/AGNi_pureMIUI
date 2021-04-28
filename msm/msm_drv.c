@@ -1030,7 +1030,7 @@ static void msm_lastclose(struct drm_device *dev)
 	 * commit then ignore the last close call
 	 */
 	if (kms->funcs && kms->funcs->check_for_splash
-		&& kms->funcs->check_for_splash(kms))
+		&& kms->funcs->check_for_splash(kms, NULL))
 		return;
 
 	/*
