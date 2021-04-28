@@ -33,6 +33,8 @@ Required properties:
 Optional Properties:
   - qcom,<supply-name>-voltage-level: specifies voltage levels for supply.
     Should be specified in pairs (max, min, optimal), units uV.
+  - qcom,vreg-mx-voltage-level: Support PCIe Gen4 on sdxlemur by scaling MX to
+    appropriate voltage.
   - clock-names: list of names of clock inputs.
 		     Should be "pcie_pipe_clk",
 				"pcie_aux_clk", "pcie_cfg_ahb_clk",
