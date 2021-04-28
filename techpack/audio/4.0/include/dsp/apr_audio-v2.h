@@ -4133,6 +4133,20 @@ struct afe_id_aptx_adaptive_enc_init
 #define AFE_MODULE_ID_DEPACKETIZER_COP        0x00013233
 #define AFE_MODULE_ID_DEPACKETIZER_COP_V1     0x000132E9
 
+/* Macros for dynamic loading of modules by AVCS */
+
+#define AVS_MODULE_ID_PACKETIZER_COP        0x0001322A
+
+#define AVS_MODULE_ID_PACKETIZER_COP_V1     0x000132E8
+
+#define AVS_MODULE_ID_PACKETIZER_COP_V2     0x000132F9
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP      0x00013233
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP_V1   0x000132E9
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP_V2   0x000132FC
+
 /*
  * Depacketizer type parameter for the #AVS_MODULE_ID_DECODER module.
  * This parameter cannot be set runtime.
@@ -4362,6 +4376,11 @@ struct asm_aac_enc_cfg_t {
 
 /* FMT ID for apt-X Adaptive speech */
 #define ASM_MEDIA_FMT_APTX_AD_SPEECH 0x00013208
+
+/* FMT ID for lc3 codec */
+#define ASM_MEDIA_FMT_LC3 0x0001337E
+
+#define ENC_CODEC_TYPE_LC3 0x2B000000
 
 #define PCM_CHANNEL_L         1
 #define PCM_CHANNEL_R         2
