@@ -706,6 +706,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 
 	tunables->up_rate_limit_us = LATENCY_MULTIPLIER;
 	tunables->down_rate_limit_us = LATENCY_MULTIPLIER;
+	tunables->iowait_boost_enable = false;
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;
 	if (lat) {
 		tunables->up_rate_limit_us *= lat;
