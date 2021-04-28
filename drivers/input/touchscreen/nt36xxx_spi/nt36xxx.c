@@ -1960,7 +1960,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		ret = request_threaded_irq(client->irq, NULL, nvt_ts_work_func,
 				ts->int_trigger_type |
 				IRQF_ONESHOT | IRQF_NO_SUSPEND |
-				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts);
+				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts); //
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
@@ -2028,7 +2028,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 #if defined(CONFIG_FB)
-	ts->workqueue = alloc_workqueue("nvt_ts_workqueue", WQ_HIGHPRI, 0);
+	ts->workqueue = create_singlethread_workqueue("nvt_ts_workqueue");
 	if (!ts->workqueue) {
 		NVT_ERR("create nvt_ts_workqueue fail");
 		ret = -ENOMEM;
