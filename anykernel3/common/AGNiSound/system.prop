@@ -115,3 +115,6 @@ persist.vendor.audio.latency_compress_offload_speaker=-20
 persist.vendor.audio.latency_compress_offload_headset=-20
 persist.vendor.audio.latency_compress_offload_usb=-48
 persist.vendor.audio.latency_compress_offload_a2dp=220
+persist.audio.handset.mic=digital
+vendor.audio.feature.external_dsp.enable=true
+vendor.audio.game4D.switch=1
