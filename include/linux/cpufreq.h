@@ -18,7 +18,6 @@
 #include <linux/notifier.h>
 #include <linux/spinlock.h>
 #include <linux/sysfs.h>
-#include <linux/agni_meminfo.h>
 
 /*********************************************************************
  *                        CPUFREQ INTERFACE                          *
