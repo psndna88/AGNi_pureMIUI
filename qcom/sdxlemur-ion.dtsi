@@ -17,6 +17,16 @@
 			qcom,ion-heap-type = "DMA";
 		};
 
+		audio_co_heap: qcom,ion-heap@17 { /* AUDIO CARVEOUT HEAP */
+			reg = <ION_AUDIO_CARVEOUT_HEAP_ID>;
+			qcom,ion-heap-type = "MSM_CARVEOUT";
+			/*
+			 * memory-region must be specified when enabled here or
+			 * when the node is overridden to be enabled elsewhere.
+			 */
+			status = "disabled";
+		};
+
 		qcom,ion-heap@27 { /* QSEECOM HEAP */
 			reg = <ION_QSECOM_HEAP_ID>;
 			memory-region = <&qseecom_mem>;
