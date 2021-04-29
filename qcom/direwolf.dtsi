@@ -1632,6 +1632,7 @@
 #include "direwolf-ion.dtsi"
 #include "msm-arm-smmu-direwolf.dtsi"
 #include "direwolf-qupv3.dtsi"
+#include "direwolf-usb.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
