@@ -1238,26 +1238,13 @@ static struct i2c_driver tas2562_i2c_driver = {
 		.of_match_table = of_match_ptr(tas2562_of_match),
 #endif
 		.pm = &tas2562_pm_ops,
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe      = tas2562_i2c_probe,
 	.remove     = tas2562_i2c_remove,
 	.id_table   = tas2562_i2c_id,
 };
 
-static int __init tas2526_init(void)
-{
-       return i2c_add_driver(&tas2562_i2c_driver);
-}
-
-static void __exit tas2526_exit(void)
-{
-       i2c_del_driver(&tas2562_i2c_driver);
-       return;
-}
-late_initcall(tas2526_init);
-module_exit(tas2526_exit);
-
+module_i2c_driver(tas2562_i2c_driver);
 MODULE_AUTHOR("Texas Instruments Inc.");
 MODULE_DESCRIPTION("TAS2562 I2C Smart Amplifier driver");
 MODULE_LICENSE("GPL v2");
