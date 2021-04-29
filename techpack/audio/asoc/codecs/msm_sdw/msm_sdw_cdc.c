@@ -323,8 +323,7 @@ static int msm_sdw_ahb_write_device(struct msm_sdw_priv *msm_sdw,
 {
 	u32 temp = (u32)(*value) & 0x000000FF;
 
-	if (!msm_sdw->dev_up ||
-	    !q6core_is_adsp_ready()) {
+	if (!msm_sdw->dev_up) {
 		dev_err_ratelimited(msm_sdw->dev, "%s: q6 not ready\n",
 				    __func__);
 		return 0;
@@ -339,8 +338,7 @@ static int msm_sdw_ahb_read_device(struct msm_sdw_priv *msm_sdw,
 {
 	u32 temp;
 
-	if (!msm_sdw->dev_up ||
-	    !q6core_is_adsp_ready()) {
+	if (!msm_sdw->dev_up) {
 		dev_err_ratelimited(msm_sdw->dev, "%s: q6 not ready\n",
 				    __func__);
 		return 0;
@@ -1758,9 +1756,7 @@ static int msm_sdw_notifier_service_cb(struct notifier_block *nb,
 			initial_boot = false;
 			break;
 		}
-		mutex_lock(&msm_sdw->cdc_int_mclk1_mutex);
 		msm_sdw->int_mclk1_enabled = false;
-		mutex_unlock(&msm_sdw->cdc_int_mclk1_mutex);
 		msm_sdw->dev_up = false;
 		for (i = 0; i < msm_sdw->nr; i++)
 			swrm_wcd_notify(msm_sdw->sdw_ctrl_data[i].sdw_pdev,
