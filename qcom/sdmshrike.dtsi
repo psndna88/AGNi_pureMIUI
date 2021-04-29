@@ -849,7 +849,6 @@
 		interconnects = <&compute_noc MASTER_NPU &mc_virt SLAVE_EBI1>;
 		operating-points-v2 = <&ddr_bw_opp_table>;
 		qcom,active-only;
-		status = "disabled";
 	};
 
 	npu_npu_ddr_bwmon: qcom,npu-npu-ddr-bwmon@9960300 {
@@ -861,7 +860,6 @@
 		qcom,hw-timer-hz = <19200000>;
 		qcom,target-dev = <&npu_npu_ddr_bw>;
 		qcom,count-unit = <0x10000>;
-		status = "disabled";
 	};
 
 	cpu_pmu: cpu-pmu {
