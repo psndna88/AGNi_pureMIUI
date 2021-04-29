@@ -1583,9 +1583,32 @@ static enum sigma_cmd_result cmd_sta_set_ip_config(struct sigma_dut *dut,
 
 	val = get_param(cmd, "primary-dns");
 	if (val) {
+#ifdef ANDROID
 		/* TODO */
 		sigma_dut_print(dut, DUT_MSG_INFO, "Ignored primary-dns %s "
 				"setting", val);
+#else /* ANDROID */
+		char dns_cmd[200];
+		int len;
+
+		if (system("sed -i '/nameserver/d' /etc/resolv.conf") != 0) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to clear nameserver entries in /etc/resolv.conf");
+			return ERROR_SEND_STATUS;
+		}
+
+		len = snprintf(dns_cmd, sizeof(dns_cmd),
+			       "sed -i '1 i nameserver %s' /etc/resolv.conf", val);
+		if (len < 0 || len >= sizeof(dns_cmd))
+			return ERROR_SEND_STATUS;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG, "Running %s", dns_cmd);
+		if (system(dns_cmd) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set primary-dns");
+			return STATUS_SENT_ERROR;
+		}
+#endif /* ANDROID */
 	}
 
 	val = get_param(cmd, "secondary-dns");
