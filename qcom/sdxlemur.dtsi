@@ -897,6 +897,7 @@
 
 	ioss: qcom,ioss {
 		compatible = "qcom,ioss-v2";
+		qcom,max-ddr-bandwidth = <5000>;
 	};
 
 	pcie_ep: qcom,pcie@40002000 {
