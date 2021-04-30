@@ -57,6 +57,9 @@ ifneq (,$(filter $(CONFIG_IPA3_REGDUMP_IPA_4_5),y m))
 LINUXINCLUDE += -I$(DATAIPADRVTOP)/ipa/ipa_v3/dump/ipa4.5
 endif
 
+ifneq (,$(filter $(CONFIG_IPA3_REGDUMP_IPA_4_1),y m))
+LINUXINCLUDE += -I$(DATAIPADRVTOP)/ipa/ipa_v3/dump/ipa4.1
+endif
 
 obj-$(CONFIG_GSI) += gsi/
 obj-$(CONFIG_IPA3) += ipa/

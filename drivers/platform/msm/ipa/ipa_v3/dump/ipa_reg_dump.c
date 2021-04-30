@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  */
 #include "ipa_reg_dump.h"
 #include "ipa_access_control.h"
@@ -52,12 +52,18 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	GEN_SRC_DST_ADDR_MAP(IPA_STATE_DFETCHER,
 			     ipa.gen,
 			     ipa_state_dfetcher),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	GEN_SRC_DST_ADDR_MAP(IPA_STATE_FETCHER_MASK_0,
 			     ipa.gen,
 			     ipa_state_fetcher_mask_0),
 	GEN_SRC_DST_ADDR_MAP(IPA_STATE_FETCHER_MASK_1,
 			     ipa.gen,
 			     ipa_state_fetcher_mask_1),
+#else
+	GEN_SRC_DST_ADDR_MAP(IPA_STATE_FETCHER_MASK,
+			     ipa.gen,
+			     ipa_state_fetcher_mask),
+#endif
 	GEN_SRC_DST_ADDR_MAP(IPA_STATE_GSI_AOS,
 			     ipa.gen,
 			     ipa_state_gsi_aos),
@@ -115,9 +121,6 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	GEN_SRC_DST_ADDR_MAP(IPA_LOG_BUF_HW_CMD_RAM_PTR,
 			     ipa.gen,
 			     ipa_log_buf_hw_cmd_ram_ptr),
-	GEN_SRC_DST_ADDR_MAP(IPA_STATE_DPL_FIFO,
-			     ipa.gen,
-			     ipa_state_dpl_fifo),
 	GEN_SRC_DST_ADDR_MAP(IPA_COMP_HW_VERSION,
 			     ipa.gen,
 			     ipa_comp_hw_version),
@@ -172,12 +175,26 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	GEN_SRC_DST_ADDR_MAP(IPA_RSRC_GRP_CFG,
 			     ipa.gen,
 			     ipa_rsrc_grp_cfg),
-	GEN_SRC_DST_ADDR_MAP(IPA_PIPELINE_DISABLE,
-			     ipa.gen,
-			     ipa_pipeline_disable),
 	GEN_SRC_DST_ADDR_MAP(IPA_COMP_CFG,
 			     ipa.gen,
 			     ipa_comp_cfg),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_1)
+	GEN_SRC_DST_ADDR_MAP(IPA_GSI_CONF,
+			     ipa.gen,
+			     ipa_gsi_conf),
+	GEN_SRC_DST_ADDR_MAP(IPA_TAG_TIMER,
+			     ipa.gen,
+			     ipa_tag_timer),
+	GEN_SRC_DST_ADDR_MAP(IPA_BCR,
+			     ipa.gen,
+			     ipa_bcr),
+#else
+	GEN_SRC_DST_ADDR_MAP(IPA_STATE_DPL_FIFO,
+			     ipa.gen,
+			     ipa_state_dpl_fifo),
+	GEN_SRC_DST_ADDR_MAP(IPA_PIPELINE_DISABLE,
+			     ipa.gen,
+			     ipa_pipeline_disable),
 	GEN_SRC_DST_ADDR_MAP(IPA_STATE_NLO_AGGR,
 			     ipa.gen,
 			     ipa_state_nlo_aggr),
@@ -213,12 +230,13 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 			     ipa_nlo_vp_qbap_open),
 
 	/* Debug Registers */
-	GEN_SRC_DST_ADDR_MAP(IPA_DEBUG_DATA,
-			     ipa.dbg,
-			     ipa_debug_data),
 	GEN_SRC_DST_ADDR_MAP(IPA_STEP_MODE_BREAKPOINTS,
 			     ipa.dbg,
 			     ipa_step_mode_breakpoints),
+#endif
+	GEN_SRC_DST_ADDR_MAP(IPA_DEBUG_DATA,
+			     ipa.dbg,
+			     ipa_debug_data),
 	GEN_SRC_DST_ADDR_MAP(IPA_STEP_MODE_STATUS,
 			     ipa.dbg,
 			     ipa_step_mode_status),
@@ -352,33 +370,38 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 					    ipa_src_rsrc_grp_01_rsrc_type_n),
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_GRP(IPA_SRC_RSRC_GRP_23_RSRC_TYPE_n,
 					    ipa_src_rsrc_grp_23_rsrc_type_n),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_GRP(IPA_SRC_RSRC_GRP_45_RSRC_TYPE_n,
 					    ipa_src_rsrc_grp_45_rsrc_type_n),
+#endif
 
 	/* Destination Resource Group Config Registers */
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_01_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_01_rsrc_type_n),
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_23_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_23_rsrc_type_n),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_45_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_45_rsrc_type_n),
-
+#endif
 	/* Source Resource Group Count Registers */
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_CNT_GRP(
 		IPA_SRC_RSRC_GRP_0123_RSRC_TYPE_CNT_n,
 		ipa_src_rsrc_grp_0123_rsrc_type_cnt_n),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_CNT_GRP(
 		IPA_SRC_RSRC_GRP_4567_RSRC_TYPE_CNT_n,
 		ipa_src_rsrc_grp_4567_rsrc_type_cnt_n),
-
+#endif
 	/* Destination Resource Group Count Registers */
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_CNT_GRP(
 		IPA_DST_RSRC_GRP_0123_RSRC_TYPE_CNT_n,
 		ipa_dst_rsrc_grp_0123_rsrc_type_cnt_n),
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_CNT_GRP(
 		IPA_DST_RSRC_GRP_4567_RSRC_TYPE_CNT_n,
 		ipa_dst_rsrc_grp_4567_rsrc_type_cnt_n),
-
+#endif
 	/*
 	 * =====================================================================
 	 * GSI register definitions begin here...
@@ -968,6 +991,7 @@ void ipa_save_registers(void)
 		}
 	}
 
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	if (ipa3_ctx->do_ram_collection_on_crash) {
 		for (i = 0; i < IPA_IU_SIZE / sizeof(u32); i++) {
 			ipa_reg_save.ipa.ipa_iu_ptr[i] =
@@ -1000,7 +1024,7 @@ void ipa_save_registers(void)
 		IPALOG_VnP_ADDRS(ipa_reg_save.ipa.ipa_seq_ptr);
 		IPALOG_VnP_ADDRS(ipa_reg_save.ipa.ipa_gsi_ptr);
 	}
-
+#endif
 	ipa_reg_save_anomaly_check();
 
 	IPAERR("Completed\n");
@@ -1493,13 +1517,15 @@ int ipa_reg_save_init(u32 value)
 		 i++)
 		*(ipa_regs_to_save_array[num_regs + i].dst_addr) = 0x0;
 
+#if defined(CONFIG_IPA3_REGDUMP_IPA_4_1)
+	return 0;
+#else
 	ipa_reg_save.ipa.ipa_gsi_ptr  = NULL;
 	ipa_reg_save.ipa.ipa_seq_ptr  = NULL;
 	ipa_reg_save.ipa.ipa_hram_ptr = NULL;
 	ipa_reg_save.ipa.ipa_mbox_ptr = NULL;
 	ipa_reg_save.ipa.ipa_sram_ptr = NULL;
 	ipa_reg_save.ipa.ipa_iu_ptr   = NULL;
-
 	if (ipa3_ctx->do_ram_collection_on_crash) {
 		ipa_reg_save.ipa.ipa_iu_ptr =
 			alloc_and_init(IPA_IU_SIZE, value);
@@ -1543,7 +1569,6 @@ int ipa_reg_save_init(u32 value)
 			goto alloc_fail2;
 		}
 	}
-
 	return 0;
 
 alloc_fail2:
@@ -1553,6 +1578,7 @@ alloc_fail2:
 	kfree(ipa_reg_save.ipa.ipa_sram_ptr);
 	kfree(ipa_reg_save.ipa.ipa_iu_ptr);
 	iounmap(ipa3_ctx->reg_collection_base);
+#endif
 alloc_fail1:
 	return -ENOMEM;
 }
