@@ -3097,4 +3097,13 @@ mlme_is_twt_enabled(struct wlan_objmgr_psoc *psoc)
  */
 bool wlan_mlme_is_local_tpe_pref(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * wlan_mlme_skip_tpe() - Get preference to not consider TPE in 2G/5G case
+ *
+ * @psoc: pointer to psoc object
+ *
+ * Return: True if host should not consider TPE IE in TX power calculation when
+ * operating in 2G/5G bands, false if host should always consider TPE IE values
+ */
+bool wlan_mlme_skip_tpe(struct wlan_objmgr_psoc *psoc);
 #endif /* _WLAN_MLME_API_H_ */
