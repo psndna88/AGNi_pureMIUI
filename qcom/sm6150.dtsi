@@ -2440,6 +2440,11 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
 	};
+
+	cx_ipeak_lm: cx_ipeak@01fed000 {
+		compatible = "qcom,cx-ipeak-v1";
+		reg = <0x1fed000 0x28>;
+	};
 };
 
 &firmware {
@@ -2564,3 +2569,4 @@
 #include "sm6150-vidc.dtsi"
 #include "sm6150-ion.dtsi"
 #include "sm6150-thermal.dtsi"
+#include "camera/sm6150-camera.dtsi"
