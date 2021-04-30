@@ -34,7 +34,7 @@ static int cam_actuator_subdev_close(struct v4l2_subdev *sd,
 	bool crm_active = cam_req_mgr_is_open(CAM_ACTUATOR);
 
 	if (crm_active) {
-		CAM_INFO(CAM_ACTUATOR,
+		CAM_DBG(CAM_ACTUATOR,
 			"CRM is ACTIVE, close should be from CRM");
 		return 0;
 	}

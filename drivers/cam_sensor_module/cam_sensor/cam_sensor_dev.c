@@ -33,7 +33,7 @@ static int cam_sensor_subdev_close(struct v4l2_subdev *sd,
 	bool crm_active = cam_req_mgr_is_open(CAM_SENSOR);
 
 	if (crm_active) {
-		CAM_INFO(CAM_SENSOR, "CRM is ACTIVE, close should be from CRM");
+		CAM_DBG(CAM_SENSOR, "CRM is ACTIVE, close should be from CRM");
 		return 0;
 	}
 

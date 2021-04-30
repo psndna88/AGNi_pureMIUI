@@ -107,8 +107,8 @@ int cam_icp_subdev_close_internal(struct v4l2_subdev *sd,
 
 	mutex_lock(&g_icp_dev.icp_lock);
 	if (g_icp_dev.open_cnt <= 0) {
-		CAM_WARN(CAM_ICP, "ICP subdev is already closed");
-		return 0;
+		CAM_DBG(CAM_ICP, "ICP subdev is already closed");
+		goto end;
 	}
 	g_icp_dev.open_cnt--;
 	if (!node) {
