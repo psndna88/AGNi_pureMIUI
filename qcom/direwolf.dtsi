@@ -1082,6 +1082,16 @@
 		#mbox-cells = <1>;
 	};
 
+	cache-controller@9200000 {
+		compatible = "qcom,direwolf-llcc", "qcom,llcc-v2";
+		reg = <0x9200000 0x1d0000> , <0x9600000 0x50000>;
+		reg-names = "llcc_base", "llcc_broadcast_base";
+		cap-based-alloc-and-pwr-collapse;
+		interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "qdss_clk";
+	};
+
 	llcc_pmu: llcc-pmu@9095000 {
 		compatible = "qcom,llcc-pmu-ver2";
 		reg = <0x09095000 0x300>;
@@ -1482,6 +1492,7 @@
 #include "direwolf-regulators.dtsi"
 #include "direwolf-pm.dtsi"
 #include "direwolf-gdsc.dtsi"
+#include "direwolf-ion.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
