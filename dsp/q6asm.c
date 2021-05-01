@@ -2763,6 +2763,48 @@ exit:
 EXPORT_SYMBOL(q6asm_cpu_buf_release);
 
 /**
+ * q6asm_cpu_buf_release_nolock -
+ *       releases cpu buffer for ASM
+ *
+ * @dir: RX or TX direction
+ * @ac: Audio client handle
+ *
+ * Returns 0 on success or error on failure
+ **/
+
+int q6asm_cpu_buf_release_nolock(int dir, struct audio_client *ac)
+{
+	struct audio_port_data *port;
+	int ret = 0;
+	int idx;
+
+	if (!ac || ((dir != IN) && (dir != OUT))) {
+		pr_err("%s: ac %pK dir %d\n", __func__, ac, dir);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if (ac->io_mode & SYNC_IO_MODE) {
+		port = &ac->port[dir];
+		idx = port->cpu_buf;
+		if (port->cpu_buf == 0) {
+			port->cpu_buf = port->max_buf_cnt - 1;
+		} else if (port->cpu_buf < port->max_buf_cnt) {
+			port->cpu_buf = port->cpu_buf - 1;
+		} else {
+			pr_err("%s: buffer index(%d) out of range\n",
+				__func__, port->cpu_buf);
+			ret = -EINVAL;
+			goto exit;
+		}
+		port->buf[port->cpu_buf].used = dir ^ 1;
+	}
+exit:
+	return ret;
+}
+EXPORT_SYMBOL(q6asm_cpu_buf_release_nolock);
+
+/**
  * q6asm_is_cpu_buf_avail_nolock -
  *       retrieve next CPU buf avail without lock acquire
  *

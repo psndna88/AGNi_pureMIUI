@@ -205,6 +205,23 @@ static void event_handler(uint32_t opcode,
 		prtd->in_frame_info[buf_index].offset = payload[5];
 		/* assume data size = 0 during flushing */
 		if (prtd->in_frame_info[buf_index].size) {
+			if ((int)substream->runtime->control->appl_ptr == 0 && prtd->in_frame_info[buf_index].size < prtd->pcm_count) {
+				pr_debug("%s:skip first buffer until get full buffer size=%d: prtd->pcm_count=%d\n",
+						__func__, prtd->in_frame_info[buf_index].size, prtd->pcm_count);
+				memset(&prtd->in_frame_info[buf_index], 0,
+						sizeof(struct msm_audio_in_frame_info));
+				if (q6asm_is_cpu_buf_avail_nolock(OUT, prtd->audio_client,&size, &idx) &&
+						(substream->runtime->status->state == SNDRV_PCM_STATE_RUNNING)) {
+					ret = q6asm_read_nolock(prtd->audio_client);
+					if (ret < 0) {
+						pr_err("%s:q6asm read failed\n",__func__);
+						ret = -EFAULT;
+						q6asm_cpu_buf_release_nolock(OUT, prtd->audio_client);
+					}
+				}
+			return;
+			}
+
 			prtd->pcm_irq_pos +=
 				prtd->in_frame_info[buf_index].size;
 			pr_debug("pcm_irq_pos=%d\n", prtd->pcm_irq_pos);
