@@ -150,6 +150,7 @@ enum pld_uevent {
 	PLD_FW_CRASHED,
 	PLD_FW_RECOVERY_START,
 	PLD_FW_HANG_EVENT,
+	PLD_SMMU_FAULT,
 };
 
 /**
