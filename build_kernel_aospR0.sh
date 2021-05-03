@@ -42,9 +42,14 @@ if [ -d $COMPILEDIR_ATOLL/arch/arm64/boot ]; then
 	rm -rf $COMPILEDIR_ATOLL/arch/arm64/boot
 fi
 
-mkdir -p $KERNELDIR/READY_ZIP
-if [ -f $KERNELDIR/READY_ZIP/$FILENAME ]; then
-	rm $KERNELDIR/READY_ZIP/$FILENAME
+if [ -d $BUILT_EXPORT ]; then
+	READY_ZIP="$BUILT_EXPORT"
+else
+	READY_ZIP="$KERNELDIR/READY_ZIP"
+fi;
+mkdir -p $READY_ZIP 2>/dev/null;
+if [ -f $READY_ZIP/$FILENAME ]; then
+	rm $READY_ZIP/$FILENAME
 fi
 
 DIR="BUILT-$DEVICE"
@@ -60,7 +65,7 @@ echo ""
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
 
 make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
-make -j2 O=$COMPILEDIR_ATOLL
+make -j4 O=$COMPILEDIR_ATOLL
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_ATOLL/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
@@ -82,11 +87,11 @@ echo ""
 if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	cd $KERNELDIR/$DIR/
-	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
+	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
 		echo "  Zip Signing...."
-		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $KERNELDIR/READY_ZIP/$FILENAME $KERNELDIR/READY_ZIP/$FILENAME-signed 2>/dev/null
-		mv $KERNELDIR/READY_ZIP/$FILENAME-signed $KERNELDIR/READY_ZIP/$FILENAME
+		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $READY_ZIP/$FILENAME $READY_ZIP/$FILENAME-signed 2>/dev/null
+		mv $READY_ZIP/$FILENAME-signed $READY_ZIP/$FILENAME
 	fi
 	rm -rf $KERNELDIR/$DIR
 	echo " <<<<< AGNi has been built for $DEVICE !!! >>>>>>"
