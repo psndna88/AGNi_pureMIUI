@@ -2069,6 +2069,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	 */
 	sta_ctx->hdd_reassoc_scenario = false;
 
+	wlan_twt_concurrency_update(hdd_ctx);
+
 	vdev = hdd_objmgr_get_vdev(adapter);
 	if (vdev) {
 		ucfg_if_mgr_deliver_event(vdev,
@@ -3417,6 +3419,8 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						   WLAN_ALL_SESSIONS_DIALOG_ID);
 		}
 
+		wlan_twt_concurrency_update(hdd_ctx);
+
 		/*
 		 * Following code will be cleaned once the interface manager
 		 * module is enabled.
@@ -3668,6 +3672,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			qdf_mem_zero(connect_complete,
 				     sizeof(*connect_complete));
 
+			wlan_twt_concurrency_update(hdd_ctx);
 			connect_complete->status = QDF_STATUS_E_FAILURE;
 			ucfg_if_mgr_deliver_event(adapter->vdev,
 					WLAN_IF_MGR_EV_CONNECT_COMPLETE,

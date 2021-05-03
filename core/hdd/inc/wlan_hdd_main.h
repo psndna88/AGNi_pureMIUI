@@ -1850,6 +1850,7 @@ struct hdd_adapter_ops_history {
  * @multi_client_thermal_mitigation: Multi client thermal mitigation by fw
  * @disconnect_for_sta_mon_conc: disconnect if sta monitor intf concurrency
  * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
+ * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2198,6 +2199,9 @@ struct hdd_context {
 	qdf_event_t regulatory_update_event;
 	qdf_mutex_t regulatory_status_lock;
 	bool is_fw_dbg_log_levels_configured;
+#ifdef WLAN_SUPPORT_TWT
+	qdf_work_t twt_en_dis_work;
+#endif
 };
 
 /**
