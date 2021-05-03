@@ -73,6 +73,8 @@ module_param_named(lpm_ipi_prediction, lpm_ipi_prediction, bool, 0664);
 // AGNi marker sysfs node
 static bool agni_present = true;
 module_param(agni_present, bool, 0444);
+bool s2idle_enable = false;
+module_param(s2idle_enable, bool, 0755);
 
 struct lpm_history {
 	uint32_t resi[MAXSAMPLES];
