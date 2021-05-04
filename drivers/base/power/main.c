@@ -62,6 +62,7 @@ static DEFINE_MUTEX(dpm_list_mtx);
 static pm_message_t pm_transition;
 
 static int async_error;
+extern bool wired_hph_connected;
 
 static const char *pm_verb(int event)
 {
@@ -481,12 +482,16 @@ static int dpm_run_callback(pm_callback_t cb, struct device *dev,
 	pm_dev_dbg(dev, state, info);
 	trace_device_pm_callback_start(dev, info, state.event);
 	error = cb(dev);
+	if (wired_hph_connected) {
+		if (error == -16)
+			error = 0;
+	}
 	trace_device_pm_callback_end(dev, error);
 	suspend_report_result(cb, error);
 
 	initcall_debug_report(dev, calltime, error, state, info);
 
-	return 0;
+	return error;
 }
 
 #ifdef CONFIG_DPM_WATCHDOG
