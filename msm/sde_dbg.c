@@ -1352,6 +1352,11 @@ static void _sde_dump_array(struct sde_dbg_reg_base *blk_arr[],
 	dbg_base->reg_dump_addr = devm_kzalloc(sde_dbg_base.dev,
 			reg_dump_size, GFP_KERNEL);
 
+	if (dbg_base->reg_dump_addr &&
+			sde_mini_dump_add_region("reg_dump",
+			reg_dump_size, dbg_base->reg_dump_addr) < 0)
+		pr_err("minidump add regdump failed\n");
+
 	if (dump_all)
 		sde_evtlog_dump_all(sde_dbg_base.evtlog);
 
