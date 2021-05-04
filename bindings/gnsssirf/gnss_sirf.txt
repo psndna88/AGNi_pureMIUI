@@ -10,7 +10,7 @@ Required properties:
 
 Example:
 	ss5_pwr_ctrl0 {
-		compatible = "gnss_sirf";
+		compatible = "qcom,gnss_sirf";
 		pinctrl-0 = <&ss5_pwr_ctrl_rst_on>;
 		ssVreset-gpio = <&tlmm 87 1>;
 		ssVonoff-gpio = <&tlmm 18 1>;
