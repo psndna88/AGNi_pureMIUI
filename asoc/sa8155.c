@@ -311,6 +311,15 @@ static struct dev_config proxy_rx_cfg[] = {
 	}
 };
 
+
+static struct dev_config proxy_tx_cfg[] = {
+	{
+		.sample_rate = SAMPLING_RATE_48KHZ,
+		.bit_format = SNDRV_PCM_FORMAT_S16_LE,
+		.channels = 2,
+	},
+};
+
 /* Default configuration of MI2S channels */
 static struct dev_config mi2s_rx_cfg[] = {
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
@@ -654,6 +663,7 @@ static SOC_ENUM_SINGLE_EXT_DECL(usb_rx_chs, usb_ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(usb_tx_chs, usb_ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(ext_disp_rx_chs, ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(proxy_rx_chs, ch_text);
+static SOC_ENUM_SINGLE_EXT_DECL(proxy_tx_chs, ch_text);
 static SOC_ENUM_SINGLE_EXT_DECL(usb_rx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(usb_tx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(ext_disp_rx_format, ext_disp_bit_format_text);
@@ -1331,6 +1341,27 @@ static int proxy_rx_ch_put(struct snd_kcontrol *kcontrol,
 		pr_debug("%s: proxy_rx channels = %d\n",
 			 __func__, proxy_rx_cfg[0].channels);
 	}
+
+	return 1;
+}
+
+static int proxy_tx_ch_get(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = proxy_tx_cfg[0].channels - 2;
+	pr_debug("%s: proxy_tx channels = %d\n",
+		 __func__, proxy_tx_cfg[0].channels);
+
+	return 0;
+}
+
+
+static int proxy_tx_ch_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	proxy_tx_cfg[0].channels = ucontrol->value.integer.value[0] + 2;
+	pr_debug("%s: proxy_tx channels = %d\n",
+		 __func__, proxy_tx_cfg[0].channels);
 
 	return 1;
 }
@@ -2657,6 +2688,8 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			proxy_rx_ch_get, proxy_rx_ch_put),
 	SOC_ENUM_EXT("PROXY_RX1 Channels", proxy_rx_chs,
 			proxy_rx_ch_get, proxy_rx_ch_put),
+	SOC_ENUM_EXT("PROXY_TX Channels", proxy_tx_chs,
+			proxy_tx_ch_get, proxy_tx_ch_put),
 	SOC_ENUM_EXT("USB_AUDIO_RX Format", usb_rx_format,
 			usb_audio_rx_format_get, usb_audio_rx_format_put),
 	SOC_ENUM_EXT("USB_AUDIO_TX Format", usb_tx_format,
@@ -3400,6 +3433,11 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 
 	case MSM_BACKEND_DAI_AFE_PCM_RX1:
 		channels->min = channels->max = proxy_rx_cfg[1].channels;
+		rate->min = rate->max = SAMPLING_RATE_48KHZ;
+		break;
+
+	case MSM_BACKEND_DAI_AFE_PCM_TX:
+		channels->min = channels->max = proxy_tx_cfg[0].channels;
 		rate->min = rate->max = SAMPLING_RATE_48KHZ;
 		break;
 
