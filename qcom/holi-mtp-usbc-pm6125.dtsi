@@ -3,6 +3,7 @@
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include "camera/holi-camera-pm6125-overlay.dtsi"
 
 /* Dummy LDO reference */
 &wcd938x_codec {
@@ -287,6 +288,8 @@
 	qcom,bass-enable;
 	qcom,use-cp-iin-sns;
 };
+
+#include "camera/holi-camera-sensor-usbc-pm6125-mtp.dtsi"
 
 &pm7250b_charger {
 	dpdm-supply = <&qusb_phy0>;
