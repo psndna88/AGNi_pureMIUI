@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -132,6 +132,8 @@ static int wsa883x_get_temperature(struct snd_soc_component *component,
 enum {
 	WSA8830 = 0,
 	WSA8835,
+	WSA8832,
+	WSA8835_V2 = 5,
 };
 
 enum {
@@ -721,7 +723,11 @@ static ssize_t wsa883x_variant_read(struct snd_info_entry *entry,
 	case WSA8830:
 		len = snprintf(buffer, sizeof(buffer), "WSA8830\n");
 		break;
+	case WSA8832:
+		len = snprintf(buffer, sizeof(buffer), "WSA8832\n");
+		break;
 	case WSA8835:
+	case WSA8835_V2:
 		len = snprintf(buffer, sizeof(buffer), "WSA8835\n");
 		break;
 	default:
@@ -1098,7 +1104,8 @@ static int wsa883x_spkr_event(struct snd_soc_dapm_widget *w,
 			snd_soc_component_update_bits(component,
 						WSA883X_DRE_CTL_0,
 						0xF0, 0x90);
-			if (wsa883x->variant == WSA8830)
+			if (wsa883x->variant == WSA8830 ||
+				wsa883x->variant == WSA8832)
 				snd_soc_component_update_bits(component,
 						WSA883X_DRE_CTL_0,
 						0x07, 0x03);
@@ -1218,7 +1225,7 @@ static void wsa883x_codec_init(struct snd_soc_component *component)
 		snd_soc_component_update_bits(component, reg_init[i].reg,
 					reg_init[i].mask, reg_init[i].val);
 
-	if (wsa883x->variant == WSA8830)
+	if (wsa883x->variant == WSA8830 || wsa883x->variant == WSA8832)
 		snd_soc_component_update_bits(component, WSA883X_DRE_CTL_0,
 					0x07, 0x03);
 }
