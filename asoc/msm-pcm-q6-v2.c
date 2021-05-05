@@ -1887,6 +1887,8 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	struct msm_pcm_channel_map *chmap;
 	u64 fe_id = kcontrol->private_value & 0xFF;
 	int session_type = (kcontrol->private_value >> 8) & 0xFF;
+	bool reset_override_out_ch_map = false;
+	bool reset_override_in_ch_map = false;
 
 	pr_debug("%s: chmap ctl for fe_id: %d, session_type: %d\n",
 			__func__, fe_id, session_type);
@@ -1939,20 +1941,33 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 				(char)(ucontrol->value.integer.value[i]);
 
 		/* update chmixer_pspd chmap cached with routing driver as well */
-		if (rtd) {
-			if (component) {
-				fe_id = rtd->dai_link->id;
-				chmixer_pspd = pdata ?
-					pdata->chmixer_pspd[fe_id][SESSION_TYPE_RX] : NULL;
+		if (rtd && component) {
+			fe_id = rtd->dai_link->id;
+			chmixer_pspd = pdata ?
+				pdata->chmixer_pspd[fe_id][session_type] : NULL;
 
-				if (chmixer_pspd && chmixer_pspd->enable) {
+			if (chmixer_pspd && chmixer_pspd->enable) {
+				if (session_type == SESSION_TYPE_RX &&
+					!chmixer_pspd->override_in_ch_map) {
 					for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
 						chmixer_pspd->in_ch_map[i] = prtd->channel_map[i];
 					chmixer_pspd->override_in_ch_map = true;
-					msm_pcm_routing_set_channel_mixer_cfg(fe_id,
-							SESSION_TYPE_RX, chmixer_pspd);
+					reset_override_in_ch_map = true;
+				} else if (session_type == SESSION_TYPE_TX &&
+							!chmixer_pspd->override_out_ch_map) {
+					for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+						chmixer_pspd->out_ch_map[i] = prtd->channel_map[i];
+					chmixer_pspd->override_out_ch_map = true;
+					reset_override_out_ch_map = true;
 				}
+				msm_pcm_routing_set_channel_mixer_cfg(fe_id,
+						session_type, chmixer_pspd);
+				if (reset_override_out_ch_map)
+					chmixer_pspd->override_out_ch_map = false;
+				if (reset_override_in_ch_map)
+					chmixer_pspd->override_in_ch_map = false;
 			}
+
 		}
 	}
 	mutex_unlock(&pdata->lock);
@@ -2281,6 +2296,7 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	struct snd_pcm *pcm = NULL;
 	struct snd_pcm_substream *substream = NULL;
 	struct msm_pcm_channel_mixer *chmixer_pspd = NULL;
+	struct msm_pcm_channel_map *chmap = NULL;
 	u8 asm_ch_map[PCM_FORMAT_MAX_NUM_CHANNEL_V8] = {0};
 	bool reset_override_out_ch_map = false;
 	bool reset_override_in_ch_map = false;
@@ -2331,15 +2347,28 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		return -EINVAL;
 	}
 	prtd = substream->runtime ? substream->runtime->private_data : NULL;
-	if (chmixer_pspd->enable && prtd) {
+	chmap = msm_pcm_get_chmap(fe_id, session_type);
+	if (!chmap) {
+		pr_err("%s: invalid chmap handle\n", __func__);
+		mutex_unlock(&pdata->lock);
+		return -EINVAL;
+	}
+
+	if (chmixer_pspd->enable) {
 		if (session_type == SESSION_TYPE_RX &&
 			!chmixer_pspd->override_in_ch_map) {
-			if (prtd->set_channel_map) {
+			if (chmap->set_channel_map) {
 				for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
-					chmixer_pspd->in_ch_map[i] = prtd->channel_map[i];
+					chmixer_pspd->in_ch_map[i] = chmap->channel_map[i];
 			} else {
-				q6asm_map_channels(asm_ch_map,
-					chmixer_pspd->input_channel, false);
+				ret = q6asm_map_channels(asm_ch_map,
+						chmixer_pspd->input_channel, false);
+				if (ret) {
+					pr_err("%s: unsupported chnum %d\n", __func__,
+					chmixer_pspd->input_channel);
+					mutex_unlock(&pdata->lock);
+					return -EINVAL;
+				}
 				for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
 					chmixer_pspd->in_ch_map[i] = asm_ch_map[i];
 			}
@@ -2347,14 +2376,21 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 			reset_override_in_ch_map = true;
 		} else if (session_type == SESSION_TYPE_TX &&
 				!chmixer_pspd->override_out_ch_map) {
-			/*
-			 * Channel map set in prtd is for plyback only,
-			 * hence always use default for capture path.
-			 */
-			q6asm_map_channels(asm_ch_map,
-				chmixer_pspd->output_channel, false);
-			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
-				chmixer_pspd->out_ch_map[i] = asm_ch_map[i];
+			if (chmap->set_channel_map) {
+				for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+					chmixer_pspd->out_ch_map[i] = chmap->channel_map[i];
+			} else {
+				ret = q6asm_map_channels(asm_ch_map,
+						chmixer_pspd->output_channel, false);
+				if (ret) {
+					pr_err("%s: unsupported chnum %d\n", __func__,
+					chmixer_pspd->output_channel);
+					mutex_unlock(&pdata->lock);
+					return -EINVAL;
+				}
+				for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
+					chmixer_pspd->out_ch_map[i] = asm_ch_map[i];
+			}
 			chmixer_pspd->override_out_ch_map = true;
 			reset_override_out_ch_map = true;
 		}
