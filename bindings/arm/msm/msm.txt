@@ -107,6 +107,9 @@ SoCs:
 - MONACO
   compatible = "qcom,monaco"
 
+- MONACOP
+  compatible = "qcom,monacop"
+
 - SDXNIGHTJAR
   compatible = "qcom,sdxnightjar"
 
@@ -291,6 +294,8 @@ compatible = "qcom,holi-atp"
 compatible = "qcom,blair-rumi"
 compatible = "qcom,scuba-idp"
 compatible = "qcom,monaco-rumi"
+compatible = "qcom,monaco"
+compatible = "qcom,monacop"
 compatible = "qcom,sdxnightjar-mtp"
 compatible = "qcom,sdxnightjar-cdp"
 compatible = "qcom,sdxnightjar-qrd"

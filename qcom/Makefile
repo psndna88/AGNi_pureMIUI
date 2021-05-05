@@ -220,11 +220,31 @@ endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_MONACO) +=    \
-	monaco-rumi-overlay.dtbo
+	monaco-rumi-overlay.dtbo \
+	monaco-standalone-idp-v1-overlay.dtbo \
+	monaco-standalone-idp-v2-overlay.dtbo \
+	monaco-standalone-idp-v3-overlay.dtbo \
+	monaco-idp-v1-verlay.dtbo \
+	monaco-idp-v2-overlay.dtbo \
+	monaco-idp-v3-overlay.dtbo
 
 monaco-rumi-overlay.dtbo-base := monaco.dtb
+monaco-standalone-idp-v1-overlay.dtbo-base := monaco.dtb
+monaco-standalone-idp-v2-overlay.dtbo-base := monaco.dtb
+monaco-standalone-idp-v3-overlay.dtbo-base := monaco.dtb
+monaco-idp-v1-overlay.dtbo-base := monaco.dtb monacop.dtb
+monaco-idp-v2-overlay.dtbo-base := monaco.dtb
+monaco-idp-v3-overlay.dtbo-base := monaco.dtb
+
 else
-dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
+dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb \
+	monaco-standalone-idp-v1.dtb \
+	monaco-standalone-idp-v2.dtb \
+	monaco-standalone-idp-v3.dtb \
+	monaco-idp-v1.dtb \
+	monaco-idp-v2.dtb \
+	monaco-idp-v3.dtb \
+	monacop-idp-v1.dtb
 endif
 
 dtb-$(CONFIG_ARCH_SCUBA) += qrb2210-rb1.dtb
