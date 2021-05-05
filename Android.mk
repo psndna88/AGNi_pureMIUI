@@ -42,15 +42,15 @@ FRAMEWORK_GIT_VER := $(shell cd $(ANDROID_BUILD_TOP/)frameworks/base && git desc
 SIGMA_GIT_VER := $(shell cd $(LOCAL_PATH) && git describe --dirty=+)
 ifeq ($(SIGMA_GIT_VER),)
 ifeq ($(FRAMEWORK_GIT_VER),)
-SIGMA_VER = android-$(PLATFORM_VERSION)-$(TARGET_PRODUCT)-$(BUILD_ID)
+SIGMA_VER := android-$(PLATFORM_VERSION)-$(TARGET_PRODUCT)-$(BUILD_ID)
 else
-SIGMA_VER = framework-$(FRAMEWORK_VER)
+SIGMA_VER := framework-$(FRAMEWORK_VER)
 endif
 else
 ifeq ($(FRAMEWORK_GIT_VER),)
-SIGMA_VER = android-$(PLATFORM_VERSION)-$(TARGET_PRODUCT)-$(BUILD_ID)-sigma-$(SIGMA_GIT_VER)
+SIGMA_VER := android-$(PLATFORM_VERSION)-$(TARGET_PRODUCT)-$(BUILD_ID)-sigma-$(SIGMA_GIT_VER)
 else
-SIGMA_VER = framework-$(FRAMEWORK_GIT_VER)-sigma-$(SIGMA_GIT_VER)
+SIGMA_VER := framework-$(FRAMEWORK_GIT_VER)-sigma-$(SIGMA_GIT_VER)
 endif
 endif
 CFLAGS += -DSIGMA_DUT_VER=\"$(SIGMA_VER)\"
