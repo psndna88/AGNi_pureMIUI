@@ -3789,11 +3789,9 @@ KBUILD_CPPFLAGS += $(cppflags-y)
 # will override the kernel settings.
 ifeq ($(call cc-option-yn, -Wmaybe-uninitialized), y)
 ccflags-y += -Wmaybe-uninitialized
-ifneq (y,$(CONFIG_ARCH_MSM))
-ccflags-y += -Wframe-larger-than=4096
-endif
 endif
 ccflags-y += -Wmissing-prototypes
+ccflags-y += -Wframe-larger-than=4096
 
 ifeq ($(call cc-option-yn, -Wheader-guard), y)
 ccflags-y += -Wheader-guard
