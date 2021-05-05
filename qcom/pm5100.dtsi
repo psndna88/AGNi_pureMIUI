@@ -1,6 +1,8 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/qcom,qpnp-power-on.h>
 #include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pm5100.h>
 
 &spmi_bus {
 	#address-cells = <2>;
@@ -37,6 +39,100 @@
 			reg = <0xa00>;
 			interrupts = <0x0 0xa 0x0 IRQ_TYPE_EDGE_BOTH>;
 			#thermal-sensor-cells = <0>;
+		};
+
+		pm5100_adc: vadc@8000 {
+			compatible = "qcom,spmi-adc5-gen3";
+			reg = <0x8000>, <0x8300>;
+			reg-names = "adc5-gen3-base", "adc5-gen3-debug-base";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0x0 0x80 0x1 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "adc";
+			#io-channel-cells = <1>;
+			status = "disabled";
+
+			pm5100_ref_gnd {
+				reg = <PM5100_ADC5_GEN3_OFFSET_REF>;
+				label = "pm5100_ref_gnd";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_vref_1p25 {
+				reg = <PM5100_ADC5_GEN3_1P25VREF>;
+				label = "pm5100_vref_1p25";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_die_temp {
+				reg = <PM5100_ADC5_GEN3_DIE_TEMP>;
+				label = "pm5100_die_temp";
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_xo_therm {
+				reg = <PM5100_ADC5_GEN3_AMUX1_THM_100K_PU>;
+				label = "pm5100_xo_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <700>;
+				qcom,pre-scaling = <1 1>;
+			};
+
+			pm5100_usb_in_i_uv {
+				reg = <PM5100_ADC5_GEN3_USB_IN_I>;
+				label = "pm5100_usb_in_i_uv";
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_USB_IN_I>;
+			};
+
+			pm5100_chg_temp {
+				reg = <PM5100_ADC5_GEN3_CHG_TEMP>;
+				label = "pm5100_chg_temp";
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_CHG_TEMP>;
+			};
+
+			pm5100_usb_in_v {
+				reg = <PM5100_ADC5_GEN3_USB_SNS_V_16>;
+				label = "pm5100_usb_in_v";
+				qcom,pre-scaling = <1 16>;
+			};
+
+			pm5100_boost_out_v {
+				reg = <PM5100_ADC5_GEN3_VIN_DIV16_MUX>;
+				label = "pm5100_boost_out_v";
+				qcom,pre-scaling = <1 6>;
+			};
+
+			pm5100_bat_therm {
+				reg = <PM5100_ADC5_GEN3_BATT_THM_100K_PU>;
+				label = "pm5100_bat_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_BATT_THERM_100K>;
+			};
+
+			pm5100_bat_id {
+				reg = <PM5100_ADC5_GEN3_BAT_ID_100K_PU>;
+				label = "pm5100_bat_id";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+				qcom,scale-fn-type = <ADC_SCALE_HW_CALIB_PM5_GEN3_BATT_ID_100K>;
+			};
+
+			pm5100_vph_pwr {
+				reg = <PM5100_ADC5_GEN3_VPH_PWR>;
+				label = "pm5100_vph_pwr";
+				qcom,pre-scaling = <1 3>;
+			};
+
+			pm5100_vbat_sns {
+				reg = <PM5100_ADC5_GEN3_VBAT_SNS_QBG>;
+				label = "pm5100_vbat_sns";
+				qcom,pre-scaling = <1 3>;
+			};
 		};
 
 		pm5100_gpios: pinctrl@8800 {
