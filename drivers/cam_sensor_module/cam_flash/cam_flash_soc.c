@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -72,6 +72,12 @@ static int32_t cam_get_source_node_info(
 
 	soc_private->is_wled_flash =
 		of_property_read_bool(of_node, "wled-flash-support");
+
+	rc = of_property_read_u32(of_node, "flash-type", &soc_private->flash_type);
+	if (rc) {
+		CAM_ERR(CAM_FLASH,
+			"flash-type read failed rc=%d", rc);
+	}
 
 	switch_src_node = of_parse_phandle(of_node, "switch-source", 0);
 	if (!switch_src_node) {
