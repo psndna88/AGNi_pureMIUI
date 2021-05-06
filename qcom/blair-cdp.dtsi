@@ -1,2 +1,3 @@
+#include "holi-cdp-pm6125.dtsi"
 / {
 };

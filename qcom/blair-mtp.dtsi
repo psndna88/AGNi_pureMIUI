@@ -1,2 +1,3 @@
+#include "holi-mtp-pm6125.dtsi"
 / {
 };

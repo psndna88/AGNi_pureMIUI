@@ -482,7 +482,7 @@
 		qcom,bt-sw-ctrl-gpio = <&tlmm 69 GPIO_ACTIVE_HIGH>;
 		qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
 		qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
-		qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
+		/* qcom,bt-vdd-pa-supply = <&L10E>; */ /* CH0 */
 		qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
 
 		qcom,bt-vdd-io-config = <1700000 1900000 1 0>;
@@ -3363,9 +3363,9 @@
 
 #include "holi-gpu.dtsi"
 #include "blair-pinctrl.dtsi"
-#include "pm6350-rpm-regulator.dtsi"
-#include "pm6150l-rpm-regulator.dtsi"
-#include "holi-regulators-pm6350.dtsi"
+#include "pm6125-rpm-regulator.dtsi"
+#include "pmr735a-rpm-regulator.dtsi"
+#include "holi-regulators-pm6125.dtsi"
 #include "holi-gdsc.dtsi"
 #include "holi-ion.dtsi"
 #include "msm-arm-smmu-holi.dtsi"
@@ -3379,6 +3379,40 @@
 #include "holi-audio.dtsi"
 #include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
+
+&L2A {
+	regulator-min-microvolt = <1170000>;
+	regulator-max-microvolt = <1304000>;
+	qcom,init-voltage = <1170000>;
+};
+
+&L3A {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1300000>;
+	qcom,init-voltage = <1100000>;
+};
+
+&L7A {
+	regulator-min-microvolt = <720000>;
+};
+
+&L2E {
+	regulator-min-microvolt = <352000>;
+	regulator-max-microvolt = <796000>;
+};
+
+&L3E {
+	regulator-min-microvolt = <1000000>;
+};
+
+&L7E {
+	regulator-max-microvolt = <3544000>;
+};
+
+/* Dummy LDO handle*/
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&L2A>;
+};
 
 &gcc_camss_top_gdsc {
 	status = "ok";
