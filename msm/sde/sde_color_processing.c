@@ -1840,6 +1840,8 @@ int sde_cp_crtc_check_properties(struct drm_crtc *crtc,
 		if (ret) {
 			DRM_ERROR("failed check on prop_node %u\n",
 					prop_node->property_id);
+			/* remove invalid feature from dirty list */
+			list_del_init(&prop_node->dirty_list);
 			goto exit;
 		}
 	}
