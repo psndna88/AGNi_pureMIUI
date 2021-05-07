@@ -227,6 +227,8 @@ else
 dtb-$(CONFIG_ARCH_MONACO) += monaco-rumi.dtb
 endif
 
+dtb-$(CONFIG_ARCH_SCUBA) += qrb2210-rb1.dtb
+
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 ifeq ($(CONFIG_AUTO_LXC_OVERLAY), y)
 	dtbo-$(CONFIG_ARCH_SA8155) += \
@@ -321,6 +323,7 @@ endif
 endif
 
 dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
+	sdxlemur-atp.dtb \
 	sdxlemur-cdp.dtb \
 	sdxlemur-mtp.dtb \
 	sdxlemur-mtp-mbb.dtb \

@@ -667,7 +667,6 @@
 		dma-names = "tx", "rx";
 		spi-max-frequency = <50000000>;
 		qcom,wrapper-core = <&qupv3_1>;
-		qcom,la-vm;
 		status = "disabled";
 	};
 

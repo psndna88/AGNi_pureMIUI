@@ -43,6 +43,8 @@ Optional properties:
     cell 3: the requested peripheral interrupt (0-7)
     cell 4: interrupt flags indicating level-sense information, as defined in
             dt-bindings/interrupt-controller/irq.h
+- qcom,mid : SPMI master ID of this controller. Supported values
+	     are 0, 1, 2 and 3.
 
 Consumer node optional properties:
 - qcom,pmic-arb : phandle for an spmi-pmic-arb device.  This can be used by
@@ -63,6 +65,7 @@ Example:
 
 		qcom,ee = <0>;
 		qcom,channel = <0>;
+		qcom,mid = <0>;
 
 		#address-cells = <2>;
 		#size-cells = <0>;

@@ -25,6 +25,10 @@
 	status = "ok";
 };
 
+&ipa_eth_group1 {
+	qcom,iommu-dma = "bypass";
+};
+
 &ipa_hw {
 	qcom,use-ipa-in-mhi-mode;
 	ipa_smmu_ap {

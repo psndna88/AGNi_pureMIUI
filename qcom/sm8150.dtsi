@@ -40,6 +40,7 @@
 		pci-domain1 = &pcie1; /* PCIe1 domain */
 		serial0 = &qupv3_se12_2uart;
 		hsuart0 = &qupv3_se13_4uart;
+		hsuart1 = &qupv3_se4_2uart;
 		spi22 = &qupv3_se22_spi;
 	};
 
@@ -907,7 +908,6 @@
 		interconnects = <&compute_noc MASTER_NPU &mc_virt SLAVE_EBI1>;
 		operating-points-v2 = <&ddr_bw_opp_table>;
 		qcom,active-only;
-		status = "disabled";
 	};
 
 	npu_npu_ddr_bwmon: qcom,npu-npu-ddr-bwmon@9960300 {
@@ -919,7 +919,6 @@
 		qcom,hw-timer-hz = <19200000>;
 		qcom,target-dev = <&npu_npu_ddr_bw>;
 		qcom,count-unit = <0x10000>;
-		status = "disabled";
 	};
 
 	cpu_pmu: cpu-pmu {
@@ -1481,28 +1480,6 @@
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
 		qcom,guard-memory;
-	};
-
-	qupv3_id_1: geniqup@ac0000 {
-		compatible = "qcom,geni-se-qup";
-		reg = <0x00ac0000 0x6000>;
-		clock-names = "m-ahb", "s-ahb";
-		clocks = <&gcc GCC_QUPV3_WRAP_1_M_AHB_CLK>,
-			 <&gcc GCC_QUPV3_WRAP_1_S_AHB_CLK>;
-		ranges;
-		#address-cells = <2>;
-		#size-cells = <2>;
-		status = "ok";
-
-
-		uart2: serial@a90000 {
-			compatible = "qcom,geni-debug-uart";
-			reg = <0x0 0x00a90000 0x0 0x4000>;
-			clock-names = "se";
-			clocks = <&gcc GCC_QUPV3_WRAP1_S4_CLK>;
-			interrupts = <GIC_SPI 357 IRQ_TYPE_LEVEL_HIGH>;
-			status = "ok";
-		};
 	};
 
 	tcsr_mutex_block: syscon@1f40000 {

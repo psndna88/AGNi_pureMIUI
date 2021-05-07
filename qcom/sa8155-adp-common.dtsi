@@ -72,6 +72,10 @@
 	status = "ok";
 };
 
+&qupv3_se4_2uart {
+	status = "ok";
+};
+
 &qupv3_se12_2uart {
 	status = "ok";
 };
@@ -84,6 +88,14 @@
 	qcom,lpass@17300000 {
 		status = "ok";
 		qcom,pil-force-shutdown;
+	};
+
+	ss5_pwr_ctrl0 {
+		compatible = "qcom,gnss_sirf";
+		pinctrl-0 = <&ss5_pwr_ctrl_rst_on>;
+		ssVreset-gpio = <&tlmm 11 1>;
+		ssVonoff-gpio = <&tlmm 39 1>;
+		ssVboot-gpio = <&tlmm 40 1>;
 	};
 
 	qcom,turing@8300000 {
