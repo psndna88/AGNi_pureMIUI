@@ -27,3 +27,5 @@ static int __init tp_common_init(void)
 }
 
 core_initcall(tp_common_init);
+
+EXPORT_SYMBOL(tp_common_set_double_tap_ops);
