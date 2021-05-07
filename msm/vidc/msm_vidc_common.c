@@ -7805,7 +7805,7 @@ u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
 		count++;
 		avg_framerate += node->framerate;
 	}
-	avg_framerate = count ? (avg_framerate / count) : (1 << 16);
+	avg_framerate = count ? (div_u64(avg_framerate, count)) : (1 << 16);
 
 	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n", __func__, avg_framerate, count);
 	mutex_unlock(&inst->timestamps.lock);
@@ -7819,6 +7819,8 @@ int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 	int rc = 0;
 	bool invalidate_extra = false;
 	u32 input_tag = 0, input_tag2 = 0;
+	s32 factor = 1000000;
+	s32 remainder = 0;
 
 	if (!inst || !b) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
@@ -7854,8 +7856,8 @@ int msm_comm_fetch_ts_framerate(struct msm_vidc_inst *inst,
 		if (!(b->flags & V4L2_BUF_FLAG_END_OF_SUBFRAME))
 			node->is_valid = false;
 
-		b->timestamp.tv_sec = node->timestamp_us / 1000000;
-		b->timestamp.tv_usec = node->timestamp_us % 1000000;
+		b->timestamp.tv_sec = div_s64_rem(node->timestamp_us, factor, &remainder);
+		b->timestamp.tv_usec = remainder;
 		b->m.planes[0].reserved[MSM_VIDC_FRAMERATE] = node->framerate;
 		break;
 	}
