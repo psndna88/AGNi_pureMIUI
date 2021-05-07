@@ -1,5 +1,5 @@
 &soc {
-	tlmm: pinctrl@03000000 {
+	tlmm: pinctrl@3100000 {
 		compatible = "qcom,sm8150-pinctrl";
 		reg = <0x03100000 0x300000>,
 		      <0x03500000 0x300000>,
