@@ -2337,7 +2337,7 @@ static int hdd_enable_unit_test_commands(struct hdd_adapter *adapter,
 		}
 
 		if (hdd_ctx->target_type == TARGET_TYPE_QCA6490) {
-			arg[0] = 39;
+			arg[0] = 44;
 			arg[1] = 3000;
 
 			status = sme_send_unit_test_cmd(adapter->vdev_id,
@@ -2400,7 +2400,7 @@ static int hdd_disable_unit_test_commands(struct hdd_adapter *adapter,
 		if (status != QDF_STATUS_SUCCESS)
 			return qdf_status_to_os_return(status);
 
-		arg[0] = 39;
+		arg[0] = 44;
 		arg[1] = 0;
 
 		status = sme_send_unit_test_cmd(adapter->vdev_id,

@@ -1421,13 +1421,6 @@ int wlan_hdd_bus_resume(void)
 					  PLD_BUS_WIDTH_NONE);
 	}
 
-	qdf_status = ucfg_pmo_core_txrx_resume(hdd_ctx->psoc);
-	status = qdf_status_to_os_return(qdf_status);
-	if (status) {
-		hdd_err("Failed to resume TXRX");
-		goto out;
-	}
-
 	status = hif_bus_resume(hif_ctx);
 	if (status) {
 		hdd_err("Failed hif bus resume");
@@ -1441,6 +1434,13 @@ int wlan_hdd_bus_resume(void)
 	status = qdf_status_to_os_return(qdf_status);
 	if (status) {
 		hdd_err("Failed pmo bus resume");
+		goto out;
+	}
+
+	qdf_status = ucfg_pmo_core_txrx_resume(hdd_ctx->psoc);
+	status = qdf_status_to_os_return(qdf_status);
+	if (status) {
+		hdd_err("Failed to resume TXRX");
 		goto out;
 	}
 
