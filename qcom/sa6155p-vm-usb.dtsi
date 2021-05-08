@@ -1,5 +1,3 @@
-#include <dt-bindings/clock/qcom,gcc-sm6150.h>
-#include <dt-bindings/clock/qcom,rpmh.h>
 #include <dt-bindings/phy/qcom,sm8150-qmp-usb3.h>
 
 &soc {

@@ -3751,6 +3751,8 @@
 		qcom,smmu-fast-map;
 		qcom,use-64-bit-dma-mask;
 		qcom,ipa-endp-delay-wa-v2;
+		qcom,eth-bridging-not-supported;
+		qcom,bw-monitor-supported;
 		qcom,lan-rx-napi;
 		qcom,tx-napi;
 		qcom,wan-use-skb-page;

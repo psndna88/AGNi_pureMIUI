@@ -1,10 +1,5 @@
 #include <dt-bindings/clock/qcom,gcc-scshrike.h>
 #include <dt-bindings/clock/qcom,scc-sm8150.h>
-#include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
-#include <dt-bindings/regulator/qcom,rpmh-regulator-levels.h>
-#include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/interconnect/qcom,scshrike.h>
 #include "quin-vm-common.dtsi"
 
 / {

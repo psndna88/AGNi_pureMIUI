@@ -39,7 +39,7 @@
 		qcom,dir-rx;
 		qcom,rx-filter-ip;
 
-		qcom,ring-size = <1024>;
+		qcom,ring-size = <1023>; /* Cannot be a power of 2 */
 		qcom,buff-size = <2048>;
 
 		qcom,mod-count-min = <32>;

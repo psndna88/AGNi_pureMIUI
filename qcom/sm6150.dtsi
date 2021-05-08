@@ -37,6 +37,7 @@
 		sdhc0 = &sdhc_1;
 		sdhc1 = &sdhc_2;
 		spi10 = &qupv3_se10_spi;
+		hsuart0 = &qupv3_se7_4uart;
 	};
 
 	cpus {
@@ -444,8 +445,9 @@
 
 		dump_mem: mem_dump_region {
 			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			reusable;
-			size = <0 0x2400000>;
+			size = <0 0x2800000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -592,16 +594,16 @@
 
 	ddr_bw_opp_table: ddr-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY( 200, 4); /*  762 MB/s */
-		BW_OPP_ENTRY( 300, 4); /* 1144 MB/s */
-		BW_OPP_ENTRY( 451, 4); /* 1720 MB/s */
-		BW_OPP_ENTRY( 547, 4); /* 2086 MB/s */
-		BW_OPP_ENTRY( 681, 4); /* 2597 MB/s */
-		BW_OPP_ENTRY( 768, 4); /* 2929 MB/s */
-		BW_OPP_ENTRY(1017, 4); /* 3879 MB/s */
-		BW_OPP_ENTRY(1353, 4); /* 5161 MB/s */
-		BW_OPP_ENTRY(1555, 4); /* 5931 MB/s */
-		BW_OPP_ENTRY(1804, 4); /* 6881 MB/s */
+		BW_OPP_ENTRY_DDR( 200, 4, 0x80); /*  762 MB/s */
+		BW_OPP_ENTRY_DDR( 300, 4, 0x80); /* 1144 MB/s */
+		BW_OPP_ENTRY_DDR( 451, 4, 0x80); /* 1720 MB/s */
+		BW_OPP_ENTRY_DDR( 547, 4, 0x80); /* 2086 MB/s */
+		BW_OPP_ENTRY_DDR( 681, 4, 0x80); /* 2597 MB/s */
+		BW_OPP_ENTRY_DDR( 768, 4, 0x80); /* 2929 MB/s */
+		BW_OPP_ENTRY_DDR(1017, 4, 0x80); /* 3879 MB/s */
+		BW_OPP_ENTRY_DDR(1353, 4, 0x80); /* 5161 MB/s */
+		BW_OPP_ENTRY_DDR(1555, 4, 0x80); /* 5931 MB/s */
+		BW_OPP_ENTRY_DDR(1804, 4, 0x80); /* 6881 MB/s */
 	};
 
 	cpu_llcc_ddr_bw: qcom,cpu-llcc-ddr-bw {

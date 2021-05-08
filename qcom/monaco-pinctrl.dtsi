@@ -745,5 +745,87 @@
 				};
 			};
 		};
+
+		/* WSA speaker reset pin1 */
+		spkr_1_sd_n {
+			spkr_1_sd_n_sleep: spkr_1_sd_n_sleep {
+				mux {
+					pins = "gpio80";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio80";
+					drive-strength = <2>;   /* 2 mA */
+					bias-pull-down;
+					input-enable;
+				};
+			};
+
+			spkr_1_sd_n_active: spkr_1_sd_n_active {
+				mux {
+					pins = "gpio80";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio80";
+					drive-strength = <16>;   /* 16 mA */
+					bias-disable;
+					output-high;
+				};
+			};
+		};
 	};
+	/* SDC pin type */
+	sdc1_on: sdc1_on {
+		clk {
+			pins = "sdc1_clk";
+			bias-disable;
+			drive-strength = <16>;
+		};
+
+		cmd {
+			pins = "sdc1_cmd";
+			bias-pull-up;
+			drive-strength = <10>;
+		};
+
+		data {
+			pins = "sdc1_data";
+			bias-pull-up;
+			drive-strength = <10>;
+		};
+
+		rclk {
+			pins = "sdc1_rclk";
+			bias-pull-down;
+		};
+	};
+
+	sdc1_off: sdc1_off {
+		clk {
+			pins = "sdc1_clk";
+			bias-disable;
+			drive-strength = <2>;
+		};
+
+		cmd {
+			pins = "sdc1_cmd";
+			bias-pull-up;
+			drive-strength = <2>;
+		};
+
+		data {
+			pins = "sdc1_data";
+			bias-pull-up;
+			drive-strength = <2>;
+		};
+
+		rclk {
+			pins = "sdc1_rclk";
+			bias-pull-down;
+		};
+	};
+
 };
