@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "ipa_i.h"
@@ -98,6 +98,10 @@ enum ipa3_cpu_2_hw_commands {
 		FEATURE_ENUM_VAL(IPA_HW_FEATURE_COMMON, 19),
 	IPA_CPU_2_HW_CMD_DISABLE_HOLB_MONITOR       =
 		FEATURE_ENUM_VAL(IPA_HW_FEATURE_COMMON, 20),
+	IPA_CPU_2_HW_CMD_QUOTA_MONITORING_YUPIK       =
+		FEATURE_ENUM_VAL(IPA_HW_FEATURE_COMMON, 21),
+	IPA_CPU_2_HW_CMD_BW_MONITORING_YUPIK	=
+		FEATURE_ENUM_VAL(IPA_HW_FEATURE_COMMON, 22),
 };
 
 /**
@@ -1574,6 +1578,7 @@ int ipa3_uc_quota_monitor(uint64_t quota)
 	struct ipa_mem_buffer cmd;
 	struct IpaQuotaMonitoring_t *quota_info;
 
+	IPADBG("Enter\n");
 	cmd.size = sizeof(*quota_info);
 	cmd.base = dma_alloc_coherent(ipa3_ctx->uc_pdev, cmd.size,
 		&cmd.phys_base, GFP_KERNEL);
@@ -1608,11 +1613,17 @@ int ipa3_uc_quota_monitor(uint64_t quota)
 		IPA_UC_MON_INTERVAL;
 
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
-	res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
-		IPA_CPU_2_HW_CMD_QUOTA_MONITORING,
-		IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
-		false, 10 * HZ);
+	if (ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) {
+		res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
+				IPA_CPU_2_HW_CMD_QUOTA_MONITORING,
+				IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
+				false, 10 * HZ);
+	} else {
+		res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
+				IPA_CPU_2_HW_CMD_QUOTA_MONITORING_YUPIK, 0,
+				false, 10 * HZ);
 
+	}
 	if (res) {
 		IPAERR(" faile to set quota %d, number offset %d\n",
 			quota_info->params.WdiQM.Quota,
@@ -1630,6 +1641,7 @@ free_cmd:
 	dma_free_coherent(ipa3_ctx->uc_pdev, cmd.size, cmd.base, cmd.phys_base);
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 
+	IPADBG("Exit\n");
 	return res;
 }
 
@@ -1638,6 +1650,7 @@ int ipa3_uc_bw_monitor(struct ipa_wdi_bw_info *info)
 	int i, ind, res = 0;
 	struct ipa_mem_buffer cmd;
 	struct IpaBwMonitoring_t *bw_info;
+	IPADBG("Enter\n");
 
 	if (!info)
 		return -EINVAL;
@@ -1712,10 +1725,16 @@ int ipa3_uc_bw_monitor(struct ipa_wdi_bw_info *info)
 
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 
-	res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
-		IPA_CPU_2_HW_CMD_BW_MONITORING,
-			IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
-			false, 10 * HZ);
+	if (ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) {
+		res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
+				IPA_CPU_2_HW_CMD_BW_MONITORING,
+				IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
+				false, 10 * HZ);
+	} else {
+		res = ipa3_uc_send_cmd((u32)(cmd.phys_base),
+				IPA_CPU_2_HW_CMD_BW_MONITORING_YUPIK, 0,
+				false, 10 * HZ);
+	}
 
 	if (res) {
 		IPAERR(" faile to set bw %d level with %d coutners\n",
@@ -1728,6 +1747,7 @@ free_cmd:
 	dma_free_coherent(ipa3_ctx->uc_pdev, cmd.size, cmd.base, cmd.phys_base);
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 
+	IPADBG("Exit\n");
 	return res;
 }
 

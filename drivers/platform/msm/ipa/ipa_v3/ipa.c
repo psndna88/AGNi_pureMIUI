@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -154,6 +154,7 @@ static struct clk *ipa3_clk;
 
 struct ipa3_context *ipa3_ctx = NULL;
 
+void ipa3_plat_drv_shutdown(struct platform_device *pdev_p);
 int ipa3_plat_drv_probe(struct platform_device *pdev_p);
 int ipa3_pci_drv_probe(
 	struct pci_dev            *pci_dev,
@@ -443,6 +444,7 @@ static const struct dev_pm_ops ipa_pm_ops = {
 
 static struct platform_driver ipa_plat_drv = {
 	.probe = ipa3_plat_drv_probe,
+	.shutdown = ipa3_plat_drv_shutdown,
 	.driver = {
 		.name = DRV_NAME,
 		.pm = &ipa_pm_ops,
@@ -1866,6 +1868,7 @@ static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	size_t sz;
 	int pre_entry;
 	int hdl;
+	u32 hw_feature_support = 0;
 
 	IPADBG("cmd=%x nr=%d\n", cmd, _IOC_NR(cmd));
 
@@ -3080,7 +3083,24 @@ static long ipa3_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		retval = ipa3_app_clk_vote(
 			(enum ipa_app_clock_vote_type) arg);
 		break;
+	case IPA_IOC_GET_HW_FEATURE_SUPPORT:
+		pyld_sz = sizeof(u32);
+		/*Add new HW feature support to sent to userspace*/
+		hw_feature_support |= (ipa3_ctx->is_eth_bridging_supported <<
+					ETH_BRIDGING_SUPPORT);
 
+		param = kmemdup(&hw_feature_support, pyld_sz,
+					GFP_KERNEL);
+		if (!param) {
+			retval = -ENOMEM;
+			break;
+		}
+		if (copy_to_user((void __user *)arg, param, pyld_sz)) {
+			retval = -EFAULT;
+			break;
+		}
+
+		break;
 	default:
 		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 		return -ENOTTY;
@@ -6524,6 +6544,8 @@ fail_teth_bridge_driver_init:
 	ipa3_teardown_apps_pipes();
 fail_alloc_gsi_channel:
 fail_setup_apps_pipes:
+	ipahal_print_all_regs(false);
+	ipa_save_registers();
 	gsi_deregister_device(ipa3_ctx->gsi_dev_hdl, false);
 fail_register_device:
 	ipa3_destroy_flt_tbl_idrs();
@@ -7174,6 +7196,9 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	}
 	ipa3_ctx->ipa_endp_delay_wa = resource_p->ipa_endp_delay_wa;
 	ipa3_ctx->ipa_endp_delay_wa_v2 = resource_p->ipa_endp_delay_wa_v2;
+	ipa3_ctx->is_eth_bridging_supported =
+			resource_p->is_eth_bridging_supported;
+	ipa3_ctx->is_bw_monitor_supported = resource_p->is_bw_monitor_supported;
 
 	WARN(ipa3_ctx->ipa3_hw_mode != IPA_HW_MODE_NORMAL,
 		"Non NORMAL IPA HW mode, is this emulation platform ?");
@@ -7552,6 +7577,8 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 		}
 	}
 
+	ipa3_ctx->modem_load_ipa_fw = resource_p->modem_load_ipa_fw;
+
 	cdev = &ipa3_ctx->cdev.cdev;
 	cdev_init(cdev, &ipa3_drv_fops);
 	cdev->owner = THIS_MODULE;
@@ -7922,6 +7949,9 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->manual_fw_load = false;
 	ipa_drv_res->max_num_smmu_cb = IPA_SMMU_CB_MAX;
 	ipa_drv_res->ipa_endp_delay_wa_v2 = false;
+	ipa_drv_res->is_eth_bridging_supported = false;
+	ipa_drv_res->is_bw_monitor_supported = false;
+	ipa_drv_res->modem_load_ipa_fw = false;
 
 	/* Get IPA HW Version */
 	result = of_property_read_u32(pdev->dev.of_node, "qcom,ipa-hw-ver",
@@ -8021,6 +8051,23 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 			ipa_drv_res->ipa_endp_delay_wa_v2
 			? "True" : "False");
 
+	if (of_property_read_bool(pdev->dev.of_node,
+			"qcom,eth-bridging-not-supported"))
+		ipa_drv_res->is_eth_bridging_supported = false;
+	else
+		ipa_drv_res->is_eth_bridging_supported = true;
+
+	IPADBG(": ETH bridging supported = %s\n",
+			ipa_drv_res->is_eth_bridging_supported
+			? "True" : "False");
+
+	ipa_drv_res->is_bw_monitor_supported =
+		of_property_read_bool(pdev->dev.of_node,
+			"qcom,bw-monitor-supported");
+
+	IPADBG(": BW Monitor and QUOTA stats supported = %s\n",
+			ipa_drv_res->is_bw_monitor_supported
+			? "True" : "False");
 
 	ipa_drv_res->ipa_wdi3_over_gsi =
 			of_property_read_bool(pdev->dev.of_node,
@@ -8192,6 +8239,13 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 		IPADBG(": gsi wdi db polling = %s\n",
 				ipa_drv_res->gsi_wdi_db_polling
 				? "True" : "False");
+	ipa_drv_res->modem_load_ipa_fw =
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,modem-load-ipa-fw");
+	IPADBG(": Load IPA_FW by modem = %s\n",
+		ipa_drv_res->modem_load_ipa_fw
+		? "True" : "False");
+
 	result = of_property_read_string(pdev->dev.of_node,
 			"qcom,use-gsi-ipa-fw", &ipa_drv_res->gsi_fw_file_name);
 	if (!result)
@@ -8920,6 +8974,27 @@ static int ipa3_attach_to_smmu(void)
 	return 0;
 }
 
+static irqreturn_t ipa_smp2p_modem_fw_load_ready_isr(int irq, void *ctxt)
+{
+	int result;
+
+	if (!ipa3_ctx->smp2p_info.disabled) {
+		result = ipa3_attach_to_smmu();
+		if (result) {
+			IPAERR("IPA attach to smmu failed %d\n", result);
+			goto bail;
+		}
+		result = ipa3_post_init(&ipa3_res, ipa3_ctx->cdev.dev);
+		if (result) {
+			IPAERR("IPA post init failed %d\n", result);
+			goto bail;
+		}
+		ipa3_ctx->smp2p_info.disabled = true;
+	}
+
+bail:
+	return IRQ_HANDLED;
+}
 static irqreturn_t ipa3_smp2p_modem_clk_query_isr(int irq, void *ctxt)
 {
 	ipa3_freeze_clock_vote_and_notify_modem();
@@ -8972,6 +9047,23 @@ static int ipa3_smp2p_probe(struct device *dev)
 			IPAERR("fail to register smp2p irq=%d\n", irq);
 			return -ENODEV;
 		}
+
+		if (ipa3_ctx->modem_load_ipa_fw) {
+			res = irq = of_irq_get_byname(node, "ipa-fw-load-ready");
+			if (res < 0) {
+				IPADBG("of_irq_get_byname returned %d\n", irq);
+				return res;
+			}
+
+			res = devm_request_threaded_irq(dev, irq, NULL,
+				(irq_handler_t)ipa_smp2p_modem_fw_load_ready_isr,
+				IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+				"ipa_fw_load_ready", dev);
+			if (res) {
+				IPAERR("fail to register smp2p irq=%d\n", irq);
+				return -ENODEV;
+			}
+		}
 	}
 	return 0;
 }
@@ -8996,6 +9088,17 @@ static void ipa_smmu_update_fw_loader(void)
 	} else {
 		IPADBG("smmu is disabled\n");
 	}
+}
+
+void ipa3_plat_drv_shutdown(struct platform_device *pdev_p)
+{
+	pr_debug("ipa: driver shutdown invoked for %s\n",
+		pdev_p->dev.of_node->name);
+	if (ipa3_ctx && atomic_read(&ipa3_ctx->ipa_clk_vote)) {
+		ipahal_print_all_regs(false);
+		ipa_save_registers();
+	}
+	return;
 }
 
 int ipa3_plat_drv_probe(struct platform_device *pdev_p)

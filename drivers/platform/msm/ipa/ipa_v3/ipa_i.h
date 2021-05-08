@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _IPA3_I_H_
@@ -1704,6 +1704,7 @@ struct ipa3_smp2p_info {
 	u32 in_base_id;
 	bool ipa_clk_on;
 	bool res_sent;
+	bool disabled;
 	unsigned int smem_bit;
 	struct qcom_smem_state *smem_state;
 };
@@ -1951,6 +1952,8 @@ struct ipa3_app_clock_vote {
  * @manual_fw_load: bool,if fw load is done manually
  * @max_num_smmu_cb: number of smmu s1 cb supported
  * @ipa_config_is_auto: flag to indicate auto config 
+ * @is_eth_bridging_supported: Flag to check eth bridging supported or not
+ * @is_bw_monitor_supported: Flag to check BW monitor supported or not.
  */
 struct ipa3_context {
 	struct ipa3_char_device_context cdev;
@@ -2147,6 +2150,9 @@ struct ipa3_context {
 	u32 num_smmu_cb_probed;
 	u32 max_num_smmu_cb;
 	bool ipa_endp_delay_wa_v2;
+	bool is_eth_bridging_supported;
+	bool is_bw_monitor_supported;
+	bool modem_load_ipa_fw;
 };
 
 struct ipa3_plat_drv_res {
@@ -2216,6 +2222,9 @@ struct ipa3_plat_drv_res {
 	bool ipa_config_is_auto;
 	u32 max_num_smmu_cb;
 	bool ipa_endp_delay_wa_v2;
+	bool is_eth_bridging_supported;
+	bool is_bw_monitor_supported;
+	bool modem_load_ipa_fw;
 };
 
 /**
