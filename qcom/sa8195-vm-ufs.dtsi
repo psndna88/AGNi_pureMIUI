@@ -1,5 +1,3 @@
-#include <dt-bindings/clock/qcom,rpmh.h>
-
 &regulator {
 	L17A: pm8195_1_l17: regulator-pm8195-1-l17 {
 		regulator-name = "ldoa17";

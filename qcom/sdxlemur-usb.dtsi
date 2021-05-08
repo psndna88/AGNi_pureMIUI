@@ -8,7 +8,7 @@
 
 		iommus = <&apps_smmu 0x1a0 0x0>;
 		qcom,iommu-dma = "atomic";
-		qcom,iommu-dma-addr-pool = <0x40000000 0x60000000>;
+		qcom,iommu-dma-addr-pool = <0x40000000 0x5ffe0000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -54,6 +54,7 @@
 				<&system_noc MASTER_USB3 &system_noc SLAVE_IPA_CFG>,
 				<&mem_noc MASTER_APPSS_PROC &system_noc SLAVE_USB3>;
 
+		qcom,default-bus-vote = <2>; /* use svs bus voting */
 		dwc3@a600000 {
 			compatible = "snps,dwc3";
 			reg = <0x0a600000 0xcd00>;

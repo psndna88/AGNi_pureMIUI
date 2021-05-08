@@ -13,7 +13,7 @@
 
 		qcom,ion-heap@27 { /* QSEECOM HEAP */
 			reg = <ION_QSECOM_HEAP_ID>;
-			memory-region = <&qseecom_mem>;
+			memory-region = <&common_cma>;
 			qcom,ion-heap-type = "DMA";
 		};
 

@@ -1,7 +1,3 @@
-#include <dt-bindings/clock/qcom,gcc-sm8150.h>
-#include <dt-bindings/clock/qcom,rpmh.h>
-
-
 &soc {
 	pcie0: qcom,pcie@1c00000 {
 		compatible = "qcom,pci-msm";
