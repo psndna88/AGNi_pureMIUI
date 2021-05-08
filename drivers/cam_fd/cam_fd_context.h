@@ -27,4 +27,15 @@ int cam_fd_context_init(struct cam_fd_context *fd_ctx,
 	uint32_t ctx_id);
 int cam_fd_context_deinit(struct cam_fd_context *ctx);
 
+/**
+ * cam_fd_dev_close_internal()
+ *
+ * @brief:     Close function for the fd dev
+ *
+ * @sd:        Pointer to struct v4l2_subdev
+ * @fh:        Pointer to struct v4l2_subdev_fh
+ */
+int cam_fd_dev_close_internal(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh);
+
 #endif /* _CAM_FD_CONTEXT_H_ */

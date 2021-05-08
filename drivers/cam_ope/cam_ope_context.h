@@ -41,4 +41,12 @@ int cam_ope_context_init(struct cam_ope_context *ctx,
  */
 int cam_ope_context_deinit(struct cam_ope_context *ctx);
 
+/**
+ * cam_ope_subdev_close_internal() - Close function for the icp dev
+ * @sd: Pointer to struct v4l2_subdev
+ * @fh: Pointer to struct v4l2_subdev_fh
+ */
+int cam_ope_subdev_close_internal(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh);
+
 #endif /* _CAM_OPE_CONTEXT_H_ */
