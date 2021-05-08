@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <linux/debugfs.h>
 #include <linux/list.h>
+#include <soc/qcom/minidump.h>
 
 /* select an uncommon hex value for the limiter */
 #define SDE_EVTLOG_DATA_LIMITER	(0xC0DEBEEF)
@@ -156,11 +157,10 @@ struct sde_dbg_reglog {
 	u32 first;
 	u32 last;
 	u32 last_dump;
-	u32 curr;
+	atomic64_t curr;
 	u32 next;
 	u32 enable;
 	u32 enable_mask;
-	spinlock_t spin_lock;
 };
 
 extern struct sde_dbg_reglog *sde_dbg_base_reglog;
@@ -248,6 +248,8 @@ extern struct sde_dbg_reglog *sde_dbg_base_reglog;
  */
 #define SDE_DBG_CTRL(...) sde_dbg_ctrl(__func__, ##__VA_ARGS__, \
 		SDE_DBG_DUMP_DATA_LIMITER)
+
+u32 sde_mini_dump_add_region(const char *name, u32 size, void *virt_addr);
 
 /**
  * sde_evtlog_init - allocate a new event log object

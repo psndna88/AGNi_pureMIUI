@@ -103,27 +103,22 @@ exit:
 
 void sde_reglog_log(u8 blk_id, u32 val, u32 addr)
 {
-	unsigned long flags;
 	struct sde_dbg_reglog_log *log;
 	struct sde_dbg_reglog *reglog = sde_dbg_base_reglog;
+	int index;
 
 	if (!reglog)
 		return;
 
-	spin_lock_irqsave(&reglog->spin_lock, flags);
+	index = abs(atomic64_inc_return(&reglog->curr) % SDE_REGLOG_ENTRY);
 
-	log = &reglog->logs[reglog->curr];
-
+	log = &reglog->logs[index];
 	log->blk_id = blk_id;
 	log->val = val;
 	log->addr = addr;
 	log->time = local_clock();
 	log->pid = current->pid;
-
-	reglog->curr = (reglog->curr + 1) % SDE_REGLOG_ENTRY;
 	reglog->last++;
-
-	spin_unlock_irqrestore(&reglog->spin_lock, flags);
 }
 
 /* always dump the last entries which are not dumped yet */
@@ -228,6 +223,10 @@ struct sde_dbg_evtlog *sde_evtlog_init(void)
 	if (!evtlog)
 		return ERR_PTR(-ENOMEM);
 
+	if (sde_mini_dump_add_region("evt_log", sizeof(*evtlog),
+			evtlog) < 0)
+		pr_err("minidump add region failed for evtlog\n");
+
 	spin_lock_init(&evtlog->spin_lock);
 	evtlog->enable = SDE_EVTLOG_DEFAULT_ENABLE;
 
@@ -244,7 +243,10 @@ struct sde_dbg_reglog *sde_reglog_init(void)
 	if (!reglog)
 		return ERR_PTR(-ENOMEM);
 
-	spin_lock_init(&reglog->spin_lock);
+	atomic64_set(&reglog->curr, 0);
+	if (sde_mini_dump_add_region("reg_log", sizeof(*reglog),
+			reglog) < 0)
+		pr_err("minidump add region failed for reglog\n");
 
 	return reglog;
 }
