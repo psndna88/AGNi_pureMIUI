@@ -431,6 +431,8 @@ void *q6asm_is_cpu_buf_avail(int dir, struct audio_client *ac,
 
 int q6asm_cpu_buf_release(int dir, struct audio_client *ac);
 
+int q6asm_cpu_buf_release_nolock(int dir, struct audio_client *ac);
+
 void *q6asm_is_cpu_buf_avail_nolock(int dir, struct audio_client *ac,
 					uint32_t *size, uint32_t *idx);
 
