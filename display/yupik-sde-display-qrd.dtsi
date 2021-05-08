@@ -76,6 +76,12 @@
 	qcom,platform-reset-gpio = <&tlmm 44 0>;
 };
 
+&dsi_sim_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,platform-reset-gpio = <&tlmm 44 0>;
+};
+
 &sde_dsi {
 	vddio-supply = <&L12C>;
 	vdd-supply = <&L13C>;
