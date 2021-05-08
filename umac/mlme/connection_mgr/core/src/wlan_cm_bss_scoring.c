@@ -1296,27 +1296,6 @@ cm_calculate_etp_score(struct wlan_objmgr_psoc *psoc,
 				  entry->rssi_raw,
 				  phy_config);
 }
-
-#ifdef CONFIG_BAND_6GHZ
-static bool cm_check_h2e_support(const uint8_t *rsnxe, uint8_t sae_pwe)
-{
-	const uint8_t *rsnxe_cap;
-	uint8_t cap_len;
-
-	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnxe, &cap_len);
-	if (!rsnxe_cap) {
-		mlme_debug("RSNXE caps not present");
-		return false;
-	}
-
-	if (*rsnxe_cap & WLAN_CRYPTO_RSNX_CAP_SAE_H2E)
-		return true;
-
-	mlme_debug("RSNXE caps %x dont have H2E support", *rsnxe_cap);
-
-	return false;
-}
-#endif
 #else
 static bool
 cm_get_pcl_weight_of_channel(uint32_t chan_freq,
@@ -1375,19 +1354,6 @@ cm_calculate_etp_score(struct wlan_objmgr_psoc *psoc,
 {
 	return 0;
 }
-
-#ifdef CONFIG_BAND_6GHZ
-static bool cm_check_h2e_support(const uint8_t *rsnxe, uint8_t sae_pwe)
-{
-	/* limiting to H2E usage only */
-	if (sae_pwe == 1)
-		return true;
-
-	mlme_debug("sae_pwe %d is not H2E", sae_pwe);
-
-	return false;
-}
-#endif
 #endif
 
 /**
@@ -1823,6 +1789,25 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 }
 
 #ifdef CONFIG_BAND_6GHZ
+static bool cm_check_h2e_support(const uint8_t *rsnxe)
+{
+	const uint8_t *rsnxe_cap;
+	uint8_t cap_len;
+
+	rsnxe_cap = wlan_crypto_parse_rsnxe_ie(rsnxe, &cap_len);
+	if (!rsnxe_cap) {
+		mlme_debug("RSNXE caps not present");
+		return false;
+	}
+
+	if (*rsnxe_cap & WLAN_CRYPTO_RSNX_CAP_SAE_H2E)
+		return true;
+
+	mlme_debug("RSNXE caps %x dont have H2E support", *rsnxe_cap);
+
+	return false;
+}
+
 bool wlan_cm_6ghz_allowed_for_akm(struct wlan_objmgr_psoc *psoc,
 				  uint32_t key_mgmt, uint16_t rsn_caps,
 				  const uint8_t *rsnxe, uint8_t sae_pwe,
@@ -1863,15 +1848,17 @@ bool wlan_cm_6ghz_allowed_for_akm(struct wlan_objmgr_psoc *psoc,
 		return false;
 
 	/* if check_6ghz_security is set validate all checks for 6Ghz */
-	if (!(rsn_caps & WLAN_CRYPTO_RSN_CAP_MFP_ENABLED))
+	if (!(rsn_caps & WLAN_CRYPTO_RSN_CAP_MFP_ENABLED)) {
+		mlme_debug("PMF not enabled for 6GHz AP");
 		return false;
+	}
 
 	/* for SAE we need to check H2E support */
 	if (!(QDF_HAS_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_SAE) ||
 	      QDF_HAS_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE)))
 		return true;
 
-	return cm_check_h2e_support(rsnxe, sae_pwe);
+	return cm_check_h2e_support(rsnxe);
 }
 
 void wlan_cm_set_check_6ghz_security(struct wlan_objmgr_psoc *psoc,

@@ -396,6 +396,7 @@ const int dp_stats_mapping_table[][STATS_TYPE_MAX] = {
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_INTERRUPT_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_FSE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_HAL_REG_WRITE_STATS},
+	{TXRX_FW_STATS_INVALID, TXRX_SOC_REO_HW_DESC_DUMP},
 	{HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT, TXRX_HOST_STATS_INVALID}
 };
 
@@ -8243,6 +8244,10 @@ dp_print_host_stats(struct dp_vdev *vdev,
 		hal_dump_reg_write_stats(pdev->soc->hal_soc);
 		hal_dump_reg_write_srng_stats(pdev->soc->hal_soc);
 		break;
+	case TXRX_SOC_REO_HW_DESC_DUMP:
+		dp_get_rx_reo_queue_info((struct cdp_soc_t *)pdev->soc,
+					 vdev->vdev_id);
+		break;
 	default:
 		dp_info("Wrong Input For TxRx Host Stats");
 		dp_txrx_stats_help();
@@ -11041,6 +11046,7 @@ static void dp_drain_txrx(struct cdp_soc_t *soc_handle)
 	struct dp_soc *soc = (struct dp_soc *)soc_handle;
 	uint32_t cur_tx_limit, cur_rx_limit;
 	uint32_t budget = 0xffff;
+	uint32_t val;
 	int i;
 
 	cur_tx_limit = soc->wlan_cfg_ctx->tx_comp_loop_pkt_limit;
@@ -11058,6 +11064,12 @@ static void dp_drain_txrx(struct cdp_soc_t *soc_handle)
 		dp_service_srngs(&soc->intr_ctx[i], budget);
 
 	dp_update_soft_irq_limits(soc, cur_tx_limit, cur_rx_limit);
+
+	/* Do a dummy read at offset 0; this will ensure all
+	 * pendings writes(HP/TP) are flushed before read returns.
+	 */
+	val = HAL_REG_READ((struct hal_soc *)soc->hal_soc, 0);
+	dp_debug("Register value at offset 0: %u\n", val);
 }
 #endif
 

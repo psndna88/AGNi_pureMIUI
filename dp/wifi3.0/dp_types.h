@@ -383,6 +383,7 @@ enum dp_ctxt_type {
 	DP_RX_RING_HIST_TYPE,
 	DP_RX_ERR_RING_HIST_TYPE,
 	DP_RX_REINJECT_RING_HIST_TYPE,
+	DP_FISA_RX_FT_TYPE,
 };
 
 /**
@@ -696,6 +697,7 @@ struct dp_rx_tid {
 	uint8_t pn_size;
 	/* REO TID queue descriptors */
 	void *hw_qdesc_vaddr_unaligned;
+	void *hw_qdesc_vaddr_aligned;
 	qdf_dma_addr_t hw_qdesc_paddr_unaligned;
 	qdf_dma_addr_t hw_qdesc_paddr;
 	uint32_t hw_qdesc_alloc_size;
@@ -819,6 +821,9 @@ struct reo_desc_list_node {
 	struct dp_rx_tid rx_tid;
 	bool resend_update_reo_cmd;
 	uint32_t pending_ext_desc_size;
+#ifdef REO_QDESC_HISTORY
+	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+#endif
 };
 
 #ifdef WLAN_FEATURE_DP_EVENT_HISTORY
@@ -1593,6 +1598,8 @@ struct dp_soc {
 		void *ipa_wbm_ring_base_vaddr;
 		uint32_t ipa_wbm_ring_size;
 		qdf_dma_addr_t ipa_wbm_tp_paddr;
+		/* WBM2SW HP shadow paddr */
+		qdf_dma_addr_t ipa_wbm_hp_shadow_paddr;
 
 		/* TX buffers populated into the WBM ring */
 		void **tx_buf_pool_vaddr_unaligned;
