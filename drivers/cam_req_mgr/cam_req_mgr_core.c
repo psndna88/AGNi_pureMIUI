@@ -1339,7 +1339,8 @@ static int __cam_req_mgr_check_sync_for_mslave(
 static int __cam_req_mgr_check_sync_req_is_ready(
 	struct cam_req_mgr_core_link *link,
 	struct cam_req_mgr_core_link *sync_link,
-	struct cam_req_mgr_slot *slot)
+	struct cam_req_mgr_slot *slot,
+	uint32_t trigger)
 {
 	struct cam_req_mgr_slot *sync_rd_slot = NULL;
 	int64_t req_id = 0, sync_req_id = 0;
@@ -1513,7 +1514,8 @@ static int __cam_req_mgr_check_sync_req_is_ready(
 	 */
 	master_slave_diff = sync_frame_duration;
 	do_div(master_slave_diff, 5);
-	if ((sync_link->sof_timestamp > 0) &&
+	if ((trigger == CAM_TRIGGER_POINT_SOF) &&
+		(sync_link->sof_timestamp > 0) &&
 		(sof_timestamp_delta < master_slave_diff) &&
 		(sync_rd_slot->sync_mode == CAM_REQ_MGR_SYNC_MODE_SYNC)) {
 
@@ -1574,7 +1576,8 @@ static int __cam_req_mgr_check_multi_sync_link_ready(
 			}
 			if (link->max_delay == link->sync_link[i]->max_delay) {
 				rc = __cam_req_mgr_check_sync_req_is_ready(
-						link, link->sync_link[i], slot);
+						link, link->sync_link[i],
+						slot, trigger);
 				if (rc < 0) {
 					CAM_DBG(CAM_CRM, "link %x not ready",
 						link->link_hdl);

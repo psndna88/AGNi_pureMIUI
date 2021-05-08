@@ -1108,6 +1108,7 @@ static int cam_vfe_bus_ver3_acquire_wm(
 		case CAM_FORMAT_PLAIN128:
 		case CAM_FORMAT_PLAIN32_20:
 		case CAM_FORMAT_YUV422:
+		case CAM_FORMAT_YUV422_10:
 			rsrc_data->width = CAM_VFE_RDI_BUS_DEFAULT_WIDTH;
 			rsrc_data->height = 0;
 			rsrc_data->stride = CAM_VFE_RDI_BUS_DEFAULT_STRIDE;
