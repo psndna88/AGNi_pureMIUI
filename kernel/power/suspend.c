@@ -49,9 +49,8 @@ static const char * const mem_sleep_labels[] = {
 };
 const char *mem_sleep_states[PM_SUSPEND_MAX];
 
-extern bool s2idle_enable;
 suspend_state_t mem_sleep_current = PM_SUSPEND_TO_IDLE;
-suspend_state_t mem_sleep_default = PM_SUSPEND_MAX;
+suspend_state_t mem_sleep_default = PM_SUSPEND_TO_IDLE;
 suspend_state_t pm_suspend_target_state;
 EXPORT_SYMBOL_GPL(pm_suspend_target_state);
 
@@ -634,13 +633,6 @@ int pm_suspend(suspend_state_t state)
 		return -EINVAL;
 
 	pm_suspend_marker("entry");
-	if (s2idle_enable) {
-		state = PM_SUSPEND_TO_IDLE;
-		mem_sleep_default = PM_SUSPEND_TO_IDLE;
-	} else {
-		state = PM_SUSPEND_MAX;
-		mem_sleep_default = PM_SUSPEND_MAX;
-	}
 	pr_info("suspend entry (%s)\n", mem_sleep_labels[state]);
 	error = enter_state(state);
 	if (error) {
