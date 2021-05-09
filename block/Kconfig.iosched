@@ -137,7 +137,7 @@ config MQ_IOSCHED_KYBER
 	  synchronous writes, it will self-tune queue depths to achieve that
 	  goal.
 
-config IOSCHED_BFQ
+config MQ_IOSCHED_BFQ
 	tristate "BFQ I/O scheduler"
 	default n
 	---help---
@@ -150,7 +150,7 @@ config IOSCHED_BFQ
 
 config BFQ_GROUP_IOSCHED
        bool "BFQ hierarchical scheduling support"
-       depends on IOSCHED_BFQ && BLK_CGROUP
+       depends on MQ_IOSCHED_BFQ && BLK_CGROUP
        default n
        ---help---
 
