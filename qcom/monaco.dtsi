@@ -1198,6 +1198,7 @@
 };
 
 #include "monaco-pinctrl.dtsi"
+#include "monaco-coresight.dtsi"
 #include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
 #include "monaco-stub-regulator.dtsi"
