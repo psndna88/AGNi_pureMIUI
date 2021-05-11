@@ -23,6 +23,15 @@
 		regulator-max-microvolt = <RPM_SMD_REGULATOR_LEVEL_BINNING>;
 	};
 
+	cx_cdev: cx-cdev-lvl {
+		compatible = "qcom,regulator-cooling-device";
+		regulator-cdev-supply = <&VDD_CX_LEVEL_AO>;
+		regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
+				RPM_SMD_REGULATOR_LEVEL_NOM>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+
 	S3A:
 	pm5100_s3: regulator-pm5100-s3 {
 		compatible = "qcom,stub-regulator";
@@ -81,6 +90,15 @@
 		regulator-min-microvolt =
 			<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 		regulator-max-microvolt = <RPM_SMD_REGULATOR_LEVEL_BINNING>;
+	};
+
+	mx_cdev: mx-cdev-lvl {
+		compatible = "qcom,regulator-cooling-device";
+		regulator-cdev-supply = <&VDD_MXA_LEVEL>;
+		regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
+				RPM_SMD_REGULATOR_LEVEL_NOM>;
+		#cooling-cells = <2>;
+		status = "disabled";
 	};
 
 	VDD_LPI_CX_LEVEL:

@@ -43,6 +43,8 @@
 			i-cache-size = <0x8000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
+			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-size = <0x80000>;
@@ -68,6 +70,7 @@
 			i-cache-size = <0x8000>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 
 			L1_I_1: l1-icache {
 			      compatible = "arm,arch-cache";
@@ -88,6 +91,7 @@
 			i-cache-size = <0x8000>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 
 			L1_I_2: l1-icache {
 			      compatible = "arm,arch-cache";
@@ -108,6 +112,7 @@
 			i-cache-size = <0x8000>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
 			next-level-cache = <&L2_0>;
+			qcom,lmh-dcvs = <&lmh_dcvs0>;
 
 			L1_I_3: l1-icache {
 			      compatible = "arm,arch-cache";
@@ -1249,6 +1254,8 @@
 		};
 	};
 
+	thermal_zones: thermal-zones { };
+
 	system_pm_rpm {
 		compatible = "qcom,system-pm-rpm";
 	};
@@ -1282,6 +1289,7 @@
 #include "monaco-pm.dtsi"
 #include "monaco-audio.dtsi"
 #include "monaco-usb.dtsi"
+#include "monaco-thermal.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
