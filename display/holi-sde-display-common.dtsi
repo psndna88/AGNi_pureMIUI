@@ -138,6 +138,31 @@
 		};
 	};
 
+	dsi_panel_pwr_supply_avdd: dsi_panel_pwr_supply_avdd {
+		#size-cells = <0>;
+		#address-cells = <1>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "avdd";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <857000>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <0>;
+		};
+	};
+
 	sde_dsi: qcom,dsi-display-primary {
 		compatible = "qcom,dsi-display";
 		label = "primary";
