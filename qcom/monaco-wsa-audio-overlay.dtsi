@@ -156,13 +156,15 @@
 	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
 	qcom,cdc-dmic02-gpios = <&cdc_dmic02_gpios>;
 
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
 	asoc-codec  = <&stub_codec>, <&bolero>,
 			<&wsa883x_0221>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 				"wsa-codec1";
 	qcom,wsa-max-devs = <1>;
 	qcom,wsa-devs = <&wsa883x_0221>;
-	qcom,msm_audio_ssr_devs = <&bolero>, <&lpi_tlmm>;
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&bolero>, <&lpi_tlmm>;
 };
 
 &soc {
