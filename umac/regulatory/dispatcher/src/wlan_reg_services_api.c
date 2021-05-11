@@ -204,6 +204,15 @@ QDF_STATUS wlan_reg_get_current_chan_list(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_get_current_chan_list);
 
+#ifdef CONFIG_REG_CLIENT
+QDF_STATUS wlan_reg_get_secondary_current_chan_list(
+					struct wlan_objmgr_pdev *pdev,
+					struct regulatory_channel *chan_list)
+{
+	return reg_get_secondary_current_chan_list(pdev, chan_list);
+}
+#endif
+
 /**
  * wlan_reg_get_bw_value() - give bandwidth value
  * bw: bandwidth enum
@@ -840,6 +849,14 @@ bool wlan_reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 	return reg_is_freq_indoor(pdev, freq);
 }
 
+#ifdef CONFIG_REG_CLIENT
+bool wlan_reg_is_freq_indoor_in_secondary_list(struct wlan_objmgr_pdev *pdev,
+					       qdf_freq_t freq)
+{
+	return reg_is_freq_indoor_in_secondary_list(pdev, freq);
+}
+#endif
+
 #ifdef CONFIG_BAND_6GHZ
 bool wlan_reg_is_6ghz_chan_freq(uint16_t freq)
 {
@@ -1059,6 +1076,21 @@ bool wlan_reg_is_disable_for_freq(struct wlan_objmgr_pdev *pdev,
 	return reg_is_disable_for_freq(pdev, freq);
 }
 
+#ifdef CONFIG_REG_CLIENT
+bool wlan_reg_is_disable_in_secondary_list_for_freq(
+						struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq)
+{
+	return reg_is_disable_in_secondary_list_for_freq(pdev, freq);
+}
+
+bool wlan_reg_is_dfs_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq)
+{
+	return reg_is_dfs_in_secondary_list_for_freq(pdev, freq);
+}
+#endif
+
 bool wlan_reg_is_passive_for_freq(struct wlan_objmgr_pdev *pdev,
 				  qdf_freq_t freq)
 {
@@ -1120,6 +1152,15 @@ wlan_reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 {
 	return reg_get_channel_state_for_freq(pdev, freq);
 }
+
+#ifdef CONFIG_REG_CLIENT
+enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
+						struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq)
+{
+	return reg_get_channel_state_from_secondary_list_for_freq(pdev, freq);
+}
+#endif
 
 uint8_t wlan_reg_get_channel_reg_power_for_freq(struct wlan_objmgr_pdev *pdev,
 						qdf_freq_t freq)
