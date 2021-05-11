@@ -15441,7 +15441,7 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				if (wlan_reg_is_us(programmed_country)) {
 					sme_err("US VLP not in place yet, connection not allowed");
 					status = QDF_STATUS_E_NOSUPPORT;
-					return status;
+					break;
 				}
 				if (wlan_reg_is_etsi(programmed_country)) {
 					sme_debug("STA ctry:%c%c, doesn't match with AP ctry, switch to VLP",
