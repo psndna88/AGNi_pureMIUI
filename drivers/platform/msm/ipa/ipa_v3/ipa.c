@@ -1026,8 +1026,9 @@ static int ipa3_ioctl_add_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_add_rt_rule_v2 *)
-		header)->rule_add_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_add_rt_rule_v2 ) +
+					((struct ipa_ioc_add_rt_rule_v2 *)
+						header)->rule_add_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_rt_rule_add_i) * pre_entry;
 	uptr = ((struct ipa_ioc_add_rt_rule_v2 *)
@@ -1038,7 +1039,7 @@ static int ipa3_ioctl_add_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1070,7 +1071,7 @@ static int ipa3_ioctl_add_rt_rule_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_rt_rule_add_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_add_rt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_v2 *)
 			header)->rule_add_size,
 			((struct ipa_ioc_add_rt_rule_v2 *)
@@ -1085,13 +1086,13 @@ static int ipa3_ioctl_add_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_add_rt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_v2 *)
 			header)->rule_add_size,
 			kptr + i * sizeof(struct ipa_rt_rule_add_i),
 			((struct ipa_ioc_add_rt_rule_v2 *)
 			header)->rule_add_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1141,8 +1142,9 @@ static int ipa3_ioctl_add_rt_rule_ext_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_add_rt_rule_ext_v2 *)
-		header)->rule_add_ext_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_add_rt_rule_ext_v2 ) +
+					((struct ipa_ioc_add_rt_rule_ext_v2 *)
+						header)->rule_add_ext_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_rt_rule_add_ext_i)
 		* pre_entry;
@@ -1154,7 +1156,7 @@ static int ipa3_ioctl_add_rt_rule_ext_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1187,7 +1189,7 @@ static int ipa3_ioctl_add_rt_rule_ext_v2(unsigned long arg)
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i *
 			sizeof(struct ipa_rt_rule_add_ext_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_add_rt_rule_ext_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_ext_v2 *)
 			header)->rule_add_ext_size,
 			((struct ipa_ioc_add_rt_rule_ext_v2 *)
@@ -1202,14 +1204,14 @@ static int ipa3_ioctl_add_rt_rule_ext_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_add_rt_rule_ext_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_ext_v2 *)
 			header)->rule_add_ext_size,
 			kptr + i *
 			sizeof(struct ipa_rt_rule_add_ext_i),
 			((struct ipa_ioc_add_rt_rule_ext_v2 *)
 			header)->rule_add_ext_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1258,8 +1260,9 @@ static int ipa3_ioctl_add_rt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_add_rt_rule_after_v2 *)
-		header)->rule_add_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_add_rt_rule_after_v2) +
+			((struct ipa_ioc_add_rt_rule_after_v2 *)
+				header)->rule_add_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_rt_rule_add_i)
 		* pre_entry;
@@ -1271,7 +1274,7 @@ static int ipa3_ioctl_add_rt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1302,7 +1305,7 @@ static int ipa3_ioctl_add_rt_rule_after_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_rt_rule_add_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_add_rt_rule_after_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_after_v2 *)
 			header)->rule_add_size,
 			((struct ipa_ioc_add_rt_rule_after_v2 *)
@@ -1317,13 +1320,13 @@ static int ipa3_ioctl_add_rt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_add_rt_rule_after_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_rt_rule_after_v2 *)
 			header)->rule_add_size,
 			kptr + i * sizeof(struct ipa_rt_rule_add_i),
 			((struct ipa_ioc_add_rt_rule_after_v2 *)
 			header)->rule_add_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1372,8 +1375,9 @@ static int ipa3_ioctl_mdfy_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_mdfy_rt_rule_v2 *)
-		header)->rule_mdfy_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_mdfy_rt_rule_v2) +
+				((struct ipa_ioc_mdfy_rt_rule_v2 *)
+				header)->rule_mdfy_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_rt_rule_mdfy_i)
 		* pre_entry;
@@ -1385,7 +1389,7 @@ static int ipa3_ioctl_mdfy_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1416,7 +1420,7 @@ static int ipa3_ioctl_mdfy_rt_rule_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_rt_rule_mdfy_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_mdfy_rt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_mdfy_rt_rule_v2 *)
 			header)->rule_mdfy_size,
 			((struct ipa_ioc_mdfy_rt_rule_v2 *)
@@ -1431,13 +1435,13 @@ static int ipa3_ioctl_mdfy_rt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_mdfy_rt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_mdfy_rt_rule_v2 *)
 			header)->rule_mdfy_size,
 			kptr + i * sizeof(struct ipa_rt_rule_mdfy_i),
 			((struct ipa_ioc_mdfy_rt_rule_v2 *)
 			header)->rule_mdfy_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1485,8 +1489,9 @@ static int ipa3_ioctl_add_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_add_flt_rule_v2 *)
-		header)->flt_rule_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_add_flt_rule_v2) +
+				((struct ipa_ioc_add_flt_rule_v2 *)
+				header)->flt_rule_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_flt_rule_add_i)
 		* pre_entry;
@@ -1498,7 +1503,7 @@ static int ipa3_ioctl_add_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1529,7 +1534,7 @@ static int ipa3_ioctl_add_flt_rule_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_flt_rule_add_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_add_flt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_flt_rule_v2 *)
 			header)->flt_rule_size,
 			((struct ipa_ioc_add_flt_rule_v2 *)
@@ -1544,13 +1549,13 @@ static int ipa3_ioctl_add_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_add_flt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_flt_rule_v2 *)
 			header)->flt_rule_size,
 			kptr + i * sizeof(struct ipa_flt_rule_add_i),
 			((struct ipa_ioc_add_flt_rule_v2 *)
 			header)->flt_rule_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1598,8 +1603,9 @@ static int ipa3_ioctl_add_flt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_add_flt_rule_after_v2 *)
-		header)->flt_rule_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_add_flt_rule_after_v2) +
+				((struct ipa_ioc_add_flt_rule_after_v2 *)
+				header)->flt_rule_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_flt_rule_add_i)
 		* pre_entry;
@@ -1611,7 +1617,7 @@ static int ipa3_ioctl_add_flt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1642,7 +1648,7 @@ static int ipa3_ioctl_add_flt_rule_after_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_flt_rule_add_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_add_rt_rule_after_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_flt_rule_after_v2 *)
 			header)->flt_rule_size,
 			((struct ipa_ioc_add_flt_rule_after_v2 *)
@@ -1657,13 +1663,13 @@ static int ipa3_ioctl_add_flt_rule_after_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_add_rt_rule_after_v2 *)param)->rules) + i *
 			((struct ipa_ioc_add_flt_rule_after_v2 *)
 			header)->flt_rule_size,
 			kptr + i * sizeof(struct ipa_flt_rule_add_i),
 			((struct ipa_ioc_add_flt_rule_after_v2 *)
 			header)->flt_rule_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
@@ -1712,8 +1718,9 @@ static int ipa3_ioctl_mdfy_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* user payload size */
-	usr_pyld_sz = ((struct ipa_ioc_mdfy_flt_rule_v2 *)
-		header)->rule_mdfy_size * pre_entry;
+	usr_pyld_sz = sizeof(struct ipa_ioc_mdfy_flt_rule_v2) +
+				((struct ipa_ioc_mdfy_flt_rule_v2 *)
+				header)->rule_mdfy_size * pre_entry;
 	/* actual payload structure size in kernel */
 	pyld_sz = sizeof(struct ipa_flt_rule_mdfy_i)
 		* pre_entry;
@@ -1725,7 +1732,7 @@ static int ipa3_ioctl_mdfy_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	/* alloc param with same payload size as user payload */
-	param = memdup_user((const void __user *)uptr,
+	param = memdup_user((const void __user *)arg,
 		usr_pyld_sz);
 	if (IS_ERR(param)) {
 		retval = -EFAULT;
@@ -1756,7 +1763,7 @@ static int ipa3_ioctl_mdfy_flt_rule_v2(unsigned long arg)
 	}
 	for (i = 0; i < pre_entry; i++)
 		memcpy(kptr + i * sizeof(struct ipa_flt_rule_mdfy_i),
-			(void *)param + i *
+			(void *)(((struct ipa_ioc_mdfy_flt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_mdfy_flt_rule_v2 *)
 			header)->rule_mdfy_size,
 			((struct ipa_ioc_mdfy_flt_rule_v2 *)
@@ -1771,13 +1778,13 @@ static int ipa3_ioctl_mdfy_flt_rule_v2(unsigned long arg)
 		goto free_param_kptr;
 	}
 	for (i = 0; i < pre_entry; i++)
-		memcpy((void *)param + i *
+		memcpy((void *)(((struct ipa_ioc_mdfy_flt_rule_v2 *)param)->rules) + i *
 			((struct ipa_ioc_mdfy_flt_rule_v2 *)
 			header)->rule_mdfy_size,
 			kptr + i * sizeof(struct ipa_flt_rule_mdfy_i),
 			((struct ipa_ioc_mdfy_flt_rule_v2 *)
 			header)->rule_mdfy_size);
-	if (copy_to_user((void __user *)uptr, param,
+	if (copy_to_user((void __user *)arg, param,
 		usr_pyld_sz)) {
 		IPAERR_RL("copy_to_user fails\n");
 		retval = -EFAULT;
