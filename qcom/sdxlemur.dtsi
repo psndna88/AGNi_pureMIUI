@@ -1181,6 +1181,7 @@
 		qcom,platform-type = <0>; /* MDM platform */
 		qcom,ee = <0>;
 		qcom,use-ipa-tethering-bridge;
+		qcom,use-tput-estmation-pipe;
 		qcom,mhi-event-ring-id-limits = <9 15>; /* start and end */
 		qcom,modem-cfg-emb-pipe-flt;
 		qcom,use-xbl-boot;
