@@ -4653,6 +4653,7 @@
 		qcom,use-64-bit-dma-mask;
 		qcom,ipa-endp-delay-wa;
 		qcom,lan-rx-napi;
+		qcom,lan-rx-ring-size = <224>;
 		qcom,tx-napi;
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
@@ -4695,7 +4696,7 @@
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 			"TURBO";
 		qcom,throughput-threshold = <600 2500 5000>;
-		qcom,scaling-exceptions = <>;
+		qcom,scaling-exceptions = "wdi", "100", "600", "1200";
 
 		/* smp2p information */
 		qcom,smp2p_map_ipa_1_out {
