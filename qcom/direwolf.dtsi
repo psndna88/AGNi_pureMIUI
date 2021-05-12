@@ -1493,6 +1493,7 @@
 #include "direwolf-pm.dtsi"
 #include "direwolf-gdsc.dtsi"
 #include "direwolf-ion.dtsi"
+#include "msm-arm-smmu-direwolf.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
