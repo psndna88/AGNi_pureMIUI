@@ -766,6 +766,14 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		}
 	}
 
+	val = get_param(cmd, "ChnlFreq");
+	if (val) {
+		if (atoi(val) >= 5935 && atoi(val) <= 7115)
+			dut->ap_band_6g = 1;
+		else
+			dut->ap_band_6g = 0;
+	}
+
 	/* Overwrite the AP channel with DFS channel if configured */
 	val = get_param(cmd, "dfs_chan");
 	if (val) {
@@ -848,7 +856,9 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 		dut->use_5g = 1;
 		break;
 	case AP_11ax:
-		if (dut->ap_channel >= 1 && dut->ap_channel <= 14)
+		if (dut->ap_band_6g)
+			dut->use_5g = 1;
+		else if (dut->ap_channel >= 1 && dut->ap_channel <= 14)
 			dut->use_5g = 0;
 		else if (dut->ap_channel >= 36 && dut->ap_channel <= 171)
 			dut->use_5g = 1;
@@ -7465,16 +7475,30 @@ static void set_ebtables_forward_drop(struct sigma_dut *dut,
 }
 
 
-static int check_channel(int channel)
+static int check_channel(struct sigma_dut *dut, int channel)
 {
 	int channel_list[] = { 36, 40, 44, 48, 52, 60, 64, 100, 104, 108, 112,
 			       116, 120, 124, 128, 132, 140, 144, 149, 153, 157,
 			       161, 165 };
-	int num_chan = sizeof(channel_list) / sizeof(int);
+	int chan_list_6g[] = { 2, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45,
+			       49, 53, 57, 61, 65, 69, 73, 77, 81, 85, 89, 93,
+			       97, 101, 105, 109, 113, 117, 121, 125, 129, 133,
+			       137, 141, 145, 149, 153, 157, 161, 165, 169, 173,
+			       177, 181, 185, 189, 193, 197, 201, 205, 209, 213,
+			       217, 221, 225, 229, 233 };
+	int num_chan, *chan_list;
 	int i;
 
+	if (dut->ap_band_6g) {
+		num_chan = ARRAY_SIZE(chan_list_6g);
+		chan_list = chan_list_6g;
+	} else {
+		num_chan = ARRAY_SIZE(channel_list);
+		chan_list = channel_list;
+	}
+
 	for (i = 0; i < num_chan; i++) {
-		if (channel == channel_list[i])
+		if (channel == chan_list[i])
 			return i;
 	}
 
@@ -7482,13 +7506,57 @@ static int check_channel(int channel)
 }
 
 
-static int get_oper_centr_freq_seq_idx(int chwidth, int channel)
+static int get_oper_center_freq_6g(int chwidth, int channel)
+{
+	switch (chwidth) {
+	case 20:
+		return channel;
+	case 40:
+		if ((channel & 0x7) == 0x1)
+			return channel + 2;
+		return channel - 2;
+	case 80:
+		return (channel & 0xFF1) + 6;
+	case 160:
+		return (channel & 0xFE1) + 14;
+	default:
+		return -1;
+	}
+}
+
+
+static int get_6g_ch_op_class(int channel)
+{
+	if ((channel & 0x3) == 0x1)
+		return 131;
+
+	if ((channel & 0x7) == 0x3)
+		return 132;
+
+	if ((channel & 0xF) == 0x7)
+		return 133;
+
+	if ((channel & 0x1F) == 0xF)
+		return 134;
+
+	if (channel == 2)
+		return 136;
+
+	return 0;
+}
+
+
+static int get_oper_centr_freq_seq_idx(struct sigma_dut *dut, int chwidth,
+				       int channel)
 {
 	int ch_base;
 	int period;
 
-	if (check_channel(channel) < 0)
+	if (check_channel(dut, channel) < 0)
 		return -1;
+
+	if (dut->ap_band_6g)
+		return get_oper_center_freq_6g(chwidth, channel);
 
 	if (channel >= 36 && channel <= 64)
 		ch_base = 36;
@@ -8494,7 +8562,7 @@ skip_key_mgmt:
 	    (dut->program == PROGRAM_HE && dut->use_5g)) {
 		int vht_oper_centr_freq_idx;
 
-		if (check_channel(dut->ap_channel) < 0) {
+		if (check_channel(dut, dut->ap_channel) < 0) {
 			send_resp(dut, conn, SIGMA_INVALID,
 				  "errorCode,Invalid channel");
 			fclose(f);
@@ -8505,31 +8573,31 @@ skip_key_mgmt:
 		case AP_20:
 			dut->ap_vht_chwidth = AP_20_40_VHT_OPER_CHWIDTH;
 			vht_oper_centr_freq_idx =
-				get_oper_centr_freq_seq_idx(20,
+				get_oper_centr_freq_seq_idx(dut, 20,
 							    dut->ap_channel);
 			break;
 		case AP_40:
 			dut->ap_vht_chwidth = AP_20_40_VHT_OPER_CHWIDTH;
 			vht_oper_centr_freq_idx =
-				get_oper_centr_freq_seq_idx(40,
+				get_oper_centr_freq_seq_idx(dut, 40,
 							    dut->ap_channel);
 			break;
 		case AP_80:
 			dut->ap_vht_chwidth = AP_80_VHT_OPER_CHWIDTH;
 			vht_oper_centr_freq_idx =
-				get_oper_centr_freq_seq_idx(80,
+				get_oper_centr_freq_seq_idx(dut, 80,
 							    dut->ap_channel);
 			break;
 		case AP_160:
 			dut->ap_vht_chwidth = AP_160_VHT_OPER_CHWIDTH;
 			vht_oper_centr_freq_idx =
-				get_oper_centr_freq_seq_idx(160,
+				get_oper_centr_freq_seq_idx(dut, 160,
 							    dut->ap_channel);
 			break;
 		default:
 			dut->ap_vht_chwidth = VHT_DEFAULT_OPER_CHWIDTH;
 			vht_oper_centr_freq_idx =
-				get_oper_centr_freq_seq_idx(80,
+				get_oper_centr_freq_seq_idx(dut, 80,
 							    dut->ap_channel);
 			break;
 		}
@@ -8540,6 +8608,9 @@ skip_key_mgmt:
 			fprintf(f, "he_oper_chwidth=%d\n", dut->ap_vht_chwidth);
 			fprintf(f, "he_oper_centr_freq_seg0_idx=%d\n",
 				vht_oper_centr_freq_idx);
+			if (dut->ap_band_6g)
+				fprintf(f, "op_class=%d\n",
+					get_6g_ch_op_class(dut->ap_channel));
 		}
 
 		find_ap_ampdu_exp_and_max_mpdu_len(dut);
@@ -9363,6 +9434,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_chwidth = AP_AUTO;
 	dut->ap_ampdu_exp = 0;
 	dut->ap_max_mpdu_len = 0;
+	dut->ap_band_6g = 0;
 
 	dut->ap_rsn_preauth = 0;
 	dut->ap_wpsnfc = 0;
@@ -13169,7 +13241,7 @@ static int mac80211_vht_chnum_band(struct sigma_dut *dut, const char *ifname,
 	if (result)
 		chwidth = atoi(result);
 
-	center_freq_idx = get_oper_centr_freq_seq_idx(chwidth, channel);
+	center_freq_idx = get_oper_centr_freq_seq_idx(dut, chwidth, channel);
 	if (center_freq_idx < 0) {
 		free(token);
 		return -1;
@@ -13218,7 +13290,8 @@ mac80211_he_tx_bandwidth(struct sigma_dut *dut, struct sigma_conn *conn,
 	}
 
 	width = atoi(val);
-	center_freq_idx = get_oper_centr_freq_seq_idx(width, dut->ap_channel);
+	center_freq_idx = get_oper_centr_freq_seq_idx(dut, width,
+						      dut->ap_channel);
 	if (center_freq_idx < 0)
 		return ERROR_SEND_STATUS;
 

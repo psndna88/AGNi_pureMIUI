@@ -373,6 +373,7 @@ struct sigma_dut {
 	char *station_ifname_5g;
 	char *p2p_ifname_buf;
 	int use_5g;
+	int ap_band_6g;
 	int sta_2g_started;
 	int sta_5g_started;
 
