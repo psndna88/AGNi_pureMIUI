@@ -1085,6 +1085,120 @@
 			qcom,glinkpkt-ch-name = "DATA11";
 			qcom,glinkpkt-dev-name = "smd11";
 		};
+
+		qcom,glinkpkt-slate-ssc-hal {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_hal";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_hal";
+		};
+
+		qcom,glinkpkt-slate-sso-hal {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "sso_hal";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_sso_hal";
+		};
+
+		qcom,glinkpkt-slate-cam-hal {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "cam_hal";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_cam_hal";
+		};
+
+		qcom,glinkpkt-slate-ssc-usta {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_usta";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_usta";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-0 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_0";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_0";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-1 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_1";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_1";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-2 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_2";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_2";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-3 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_3";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_3";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-4 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_4";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_4";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-5 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_5";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_5";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-6 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_6";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_6";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-7 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_7";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_7";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-8 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_8";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_8";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-9 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_9";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_9";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-10 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_10";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_10";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-11 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_11";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_11";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-12 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_12";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_12";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-13 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_13";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_13";
+		};
+
+		qcom,glinkpkt-slate-ssc-test-14 {
+			qcom,glinkpkt-edge = "slate";
+			qcom,glinkpkt-ch-name = "ssc_test_14";
+			qcom,glinkpkt-dev-name = "glinkpkt_slate_ssc_test_14";
+		};
 	};
 
 	qcom,smp2p-modem {
