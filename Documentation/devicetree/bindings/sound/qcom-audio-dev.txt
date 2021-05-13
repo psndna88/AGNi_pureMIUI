@@ -2311,3 +2311,9 @@ snd_934x {
 »       compatible = "qcom,sm8150-asoc-snd-pcie";
 »       qcom,model = "sm8150-pcie-snd-card";
 };
+
+* msm-q6-vlsp
+
+Required properties:
+ - compatible : "qcom,msm-q6-vlsp"
+
