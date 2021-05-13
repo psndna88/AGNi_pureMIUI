@@ -188,3 +188,15 @@
 #include "holi-regulators-pm6350.dtsi"
 
 #include "holi-atp.dtsi"
+
+&qusb_phy0 {
+	vdd-supply = <&L18A>;
+	vdda18-supply = <&L2A>;
+	vdda33-supply = <&L3A>;
+	refgen-supply = <&L22A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L16A>;
+	core-supply = <&L22A>;
+};
