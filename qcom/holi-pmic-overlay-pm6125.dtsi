@@ -291,7 +291,7 @@
 		};
 	};
 
-	rfc-cam-pa3-usr {
+	rear-cam-therm-usr {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
@@ -346,7 +346,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
-		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM3_100K_PU>;
+		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM1_100K_PU>;
 		wake-capable-sensor;
 		trips {
 			active-config0 {
