@@ -178,6 +178,23 @@
 				<GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+	};
+
+	qcom_qseecom: qseecom@c1800000 {
+		compatible = "qcom,qseecom";
+		reg = <0xc1800000 0x3900000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+	};
+
 	msm_gpu_hyp: qcom,hgsl {
 		compatible = "qcom,hgsl";
 
