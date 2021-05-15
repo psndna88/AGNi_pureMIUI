@@ -114,7 +114,6 @@
 	besbev_codec: besbev-codec {
 		compatible = "qcom,besbev-codec";
 		qcom,split-codec = <1>;
-		qcom,pmic-spmi-node = <&pm5100_cdc>;
 		qcom,wcd-reset-reg = <0x0000FCDB>;
 		qcom,foundry-id-reg = <0x000001F2>;
 		qcom,swr_ch_map = <0 SPKR_L 0x1 0 LO>,
