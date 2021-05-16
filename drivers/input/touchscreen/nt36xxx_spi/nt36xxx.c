@@ -43,10 +43,8 @@
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
-#if WAKEUP_GESTURE
 #ifdef CONFIG_TOUCHSCREEN_COMMON
 #include <linux/input/tp_common.h>
-#endif
 #endif
 #ifdef CHECK_TOUCH_VENDOR
 extern char *saved_command_line;
@@ -1837,11 +1835,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		goto err_get_regulator;
 	}
 
-#ifdef CONFIG_TOUCHSCREEN_COMMON
-	ret = nvt_ts_enable_regulator(true);
-#else
 	ret = nvt_ts_enable_regulator(false);//default disable regulator
-#endif
 	if (ret < 0) {
 		NVT_ERR("Failed to enable regulator\n");
 		goto err_enable_regulator;
@@ -1960,7 +1954,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		ret = request_threaded_irq(client->irq, NULL, nvt_ts_work_func,
 				ts->int_trigger_type |
 				IRQF_ONESHOT | IRQF_NO_SUSPEND |
-				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts); //
+				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts);
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
