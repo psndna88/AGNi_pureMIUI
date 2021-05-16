@@ -1976,6 +1976,7 @@ Optional properties:
 - qcom,va-bolero-codec: Property to specify VA macro supported.
 - qcom,rxtx-bolero-codec: Property to specify RX-TX macros supported.
 - qcom,wsa-bolero-codec: Property to specify WSA macro supported.
+- qcom,visense-enable: Property to specify VISense need to enable or not.
 
 Example:
 	monaco_snd: sound {
