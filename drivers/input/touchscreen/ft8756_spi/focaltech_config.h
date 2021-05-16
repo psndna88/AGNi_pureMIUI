@@ -133,6 +133,12 @@
 /*********** 1 to enable, 0 to disable ***********/
 
 /*
+ * show debug log info
+ * enable it for debug, disable it for release
+ */
+#define FTS_DEBUG_EN                            0
+
+/*
  * Linux MultiTouch Protocol
  * 1: Protocol B(default), 0: Protocol A
  */
