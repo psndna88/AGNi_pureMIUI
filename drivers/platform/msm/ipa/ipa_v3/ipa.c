@@ -9098,9 +9098,22 @@ static void ipa_smmu_update_fw_loader(void)
 
 void ipa3_plat_drv_shutdown(struct platform_device *pdev_p)
 {
+	int res;
+	struct ipa_active_client_logging_info log_info;
+
 	pr_debug("ipa: driver shutdown invoked for %s\n",
 		pdev_p->dev.of_node->name);
-	if (ipa3_ctx && atomic_read(&ipa3_ctx->ipa_clk_vote)) {
+	if(unlikely(!ipa3_ctx))
+	{
+		IPAERR("IPA driver not initialized\n");
+		return;
+	}
+	/* Make sure IPA clock voted when collecting the reg dump */
+	IPA_ACTIVE_CLIENTS_PREP_SPECIAL(log_info, "SHUTDOWN_VOTE");
+	res = ipa3_inc_client_enable_clks_no_block(&log_info);
+	if (res) {
+		IPAERR("IPA clk off not saving the IPA registers\n");
+	} else {
 		ipahal_print_all_regs(false);
 		ipa_save_registers();
 	}
