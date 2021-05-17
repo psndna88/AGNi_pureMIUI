@@ -4434,6 +4434,33 @@ static void diag_init_transport(void)
 		poolsize_usb_apps + 1 + (NUM_PERIPHERALS * 6));
 }
 #endif
+
+static void diag_init_locks(void)
+{
+	int i = 0;
+
+	spin_lock_init(&driver->rsp_buf_busy_lock);
+
+	mutex_init(&driver->hdlc_disable_mutex);
+	mutex_init(&driver->diagchar_mutex);
+	mutex_init(&driver->diag_notifier_mutex);
+	mutex_init(&driver->diag_file_mutex);
+	mutex_init(&driver->delayed_rsp_mutex);
+	mutex_init(&apps_data_mutex);
+	mutex_init(&driver->msg_mask_lock);
+	mutex_init(&driver->hdlc_recovery_mutex);
+	mutex_init(&driver->diag_id_mutex);
+	mutex_init(&driver->diag_hdlc_mutex);
+	mutex_init(&driver->diag_cntl_mutex);
+	mutex_init(&driver->mode_lock);
+	mutex_init(&driver->cmd_reg_mutex);
+
+	for (i = 0; i < NUM_PERIPHERALS; i++) {
+		mutex_init(&driver->diagfwd_channel_mutex[i]);
+		mutex_init(&driver->rpmsginfo_mutex[i]);
+	}
+}
+
 static int __init diagchar_init(void)
 {
 	dev_t dev;
@@ -4447,6 +4474,7 @@ static int __init diagchar_init(void)
 	kmemleak_not_leak(driver);
 
 	timer_in_progress = 0;
+	diag_init_locks();
 	diag_init_transport();
 	DIAG_LOG(DIAG_DEBUG_MUX, "Transport type set to %d\n",
 		driver->transport_set);
@@ -4483,19 +4511,12 @@ static int __init diagchar_init(void)
 	non_hdlc_data.len = 0;
 	non_hdlc_data.allocated = 0;
 	non_hdlc_data.flushed = 0;
-	mutex_init(&driver->hdlc_disable_mutex);
-	mutex_init(&driver->diagchar_mutex);
-	mutex_init(&driver->diag_notifier_mutex);
-	mutex_init(&driver->diag_file_mutex);
-	mutex_init(&driver->delayed_rsp_mutex);
-	mutex_init(&apps_data_mutex);
-	mutex_init(&driver->msg_mask_lock);
-	mutex_init(&driver->hdlc_recovery_mutex);
-	for (i = 0; i < NUM_PERIPHERALS; i++) {
-		mutex_init(&driver->diagfwd_channel_mutex[i]);
-		mutex_init(&driver->rpmsginfo_mutex[i]);
+	for (i = 0; i < NUM_PERIPHERALS; i++)
 		driver->diag_id_sent[i] = 0;
-	}
+
+	INIT_LIST_HEAD(&driver->diag_id_list);
+	INIT_LIST_HEAD(&driver->cmd_reg_list);
+
 	init_waitqueue_head(&driver->wait_q);
 	INIT_WORK(&(driver->diag_drain_work), diag_drain_work_fn);
 	INIT_WORK(&(driver->update_user_clients),
@@ -4562,8 +4583,6 @@ static int __init diagchar_init(void)
 	ret = diagchar_setup_cdev(dev);
 	if (ret)
 		goto fail;
-	mutex_init(&driver->diag_id_mutex);
-	INIT_LIST_HEAD(&driver->diag_id_list);
 	diag_add_diag_id_to_list(DIAG_ID_APPS, "APPS", APPS_DATA, APPS_DATA);
 	pr_debug("diagchar initialized now");
 	if (IS_ENABLED(CONFIG_DIAGFWD_BRIDGE_CODE))
