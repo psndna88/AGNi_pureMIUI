@@ -31,7 +31,7 @@
 #include <dsp/q6audio-v2.h>
 #include <dsp/q6core.h>
 #include <dsp/q6asm-v2.h>
-#ifdef CONFIG_MSM_BOOT_TIME_MARKER
+#ifdef CONFIG_MSM_BOOT_STATS
 #include <soc/qcom/boot_stats.h>
 #endif
 
@@ -699,7 +699,7 @@ static int msm_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (first_time) {
-#ifdef CONFIG_MSM_BOOT_TIME_MARKER
+#ifdef CONFIG_MSM_BOOT_STATS
 			place_marker("K - Early chime");
 #endif
 			first_time = 0;
