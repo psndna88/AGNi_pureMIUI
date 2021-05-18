@@ -26,6 +26,9 @@
 
 #include "tick-internal.h"
 
+#undef trace_suspend_resume
+#define trace_suspend_resume(x, ...)
+
 /*
  * Tick devices
  */
