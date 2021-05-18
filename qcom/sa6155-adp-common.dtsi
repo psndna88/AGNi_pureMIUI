@@ -92,7 +92,7 @@
 		};
 	};
 
-	ethqos_hw: qcom,ethernet@00020000 {
+	ethqos_hw: qcom,ethernet@20000 {
 		compatible = "qcom,stmmac-ethqos";
 		qcom,arm-smmu;
 		emac-core-version = <0x20030001>;
