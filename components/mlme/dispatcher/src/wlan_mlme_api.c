@@ -3687,6 +3687,8 @@ char *mlme_get_roam_scan_type_str(uint32_t roam_scan_type)
 		return "FULL";
 	case 2:
 		return "NO SCAN";
+	case 3:
+		return "Higher Band";
 	default:
 		return "UNKNOWN";
 	}
