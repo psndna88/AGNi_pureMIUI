@@ -41,6 +41,9 @@
 
 #include "smpboot.h"
 
+#undef trace_suspend_resume
+#define trace_suspend_resume(x, ...)
+
 /**
  * cpuhp_cpu_state - Per cpu hotplug state storage
  * @state:	The current cpu state
