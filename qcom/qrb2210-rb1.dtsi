@@ -1,4 +1,6 @@
 #include <dt-bindings/sound/qcom,gpr.h>
+#include <dt-bindings/interconnect/qcom,icc.h>
+#include <dt-bindings/interconnect/qcom,scuba.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/spmi/spmi.h>
@@ -29,8 +31,10 @@
 	};
 
 	aliases {
-		swr0 = &swr0;
-		swr1 = &swr1;
+		serial0 = &qupv3_se4_2uart;
+		hsuart0 = &qupv3_se3_4uart;
+		sdhc1 = &sdhc_1; /*SDC1 eMMC slot*/
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
 	};
 
 	cpus {
@@ -486,6 +490,156 @@
 	};
 
 	thermal_zones: thermal-zones { };
+
+	sdhc_1: sdhci@4744000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x04744000 0x1000>, <0x04745000 0x1000>;
+		reg-names = "hc_mem", "cqhci_mem";
+
+		iommus = <&apps_smmu 0xC0 0x0>;
+		qcom,iommu-dma = "bypass";
+
+		interrupts = <GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 352 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC1_APPS_CLK>,
+			<&gcc GCC_SDCC1_AHB_CLK>,
+			<&gcc GCC_SDCC1_ICE_CORE_CLK>;
+		clock-names = "core", "iface", "ice_core";
+
+		qcom,ice-clk-rates = <300000000 100000000>;
+
+		interconnects = <&system_noc MASTER_SDCC_1 &bimc SLAVE_EBI_CH0>,
+			<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_SDCC_1>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+		qcom,msm-bus,name = "sdhc1";
+		qcom,msm-bus,num-cases = <9>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<78 512 0 0>, <1 606 0 0>,
+			/* 400 KB/s*/
+			<78 512 1046 1600>,
+			<1 606 1600 1600>,
+			/* 20 MB/s */
+			<78 512 20480 80000>,
+			<1 606 80000 80000>,
+			/* 25 MB/s */
+			<78 512 25600 250000>,
+			<1 606 50000 133320>,
+			/* 50 MB/s */
+			<78 512 51200 250000>,
+			<1 606 65000 133320>,
+			/* 100 MB/s */
+			<78 512 102400 250000>,
+			<1 606 65000 133320>,
+			/* 200 MB/s */
+			<78 512 204800 800000>,
+			<1 606 200000 300000>,
+			/* 400 MB/s */
+			<78 512 204800 800000>,
+			<1 606 200000 300000>,
+			/* Max. bandwidth */
+			<78 512 1338562 4096000>,
+			<1 606 1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000
+			100750000 200000000 400000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x00010800 0x80040868>;
+
+		mmc-ddr-1_8v;
+		mmc-hs200-1_8v;
+		mmc-hs400-1_8v;
+		mmc-hs400-enhanced-strobe;
+
+		bus-width = <8>;
+		non-removable;
+		supports-cqe;
+
+		no-sd;
+		no-sdio;
+		max-frequency = <192000000>;
+
+		qcom,devfreq,freq-table = <50000000 200000000>;
+		qcom,scaling-lower-bus-speed-mode = "DDR52";
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <43>;
+		};
+	};
+
+	sdhc_2: sdhci@4784000 {
+		compatible = "qcom,sdhci-msm-v5";
+		reg = <0x4784000 0x1000>;
+		reg-names = "hc_mem";
+
+		interrupts = <GIC_SPI 350 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 353 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "hc_irq", "pwr_irq";
+
+		clocks = <&gcc GCC_SDCC2_AHB_CLK>,
+			<&gcc GCC_SDCC2_APPS_CLK>;
+		clock-names = "core", "iface";
+
+		interconnects = <&system_noc MASTER_SDCC_2 &bimc SLAVE_EBI_CH0>,
+			<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_SDCC_2>;
+		interconnect-names = "sdhc-ddr","cpu-sdhc";
+		qcom,msm-bus,name = "sdhc2";
+		qcom,msm-bus,num-cases = <8>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			/* No vote */
+			<81 512 0 0>, <1 608 0 0>,
+			/* 400 KB/s*/
+			<81 512 1046 3200>,
+			<1 608 1600 1600>,
+			/* 20 MB/s */
+			<81 512 52286 250000>,
+			<1 608 80000 133320>,
+			/* 25 MB/s */
+			<81 512 65360 250000>,
+			<1 608 100000 133320>,
+			/* 50 MB/s */
+			<81 512 130718 250000>,
+			<1 608 133320 133320>,
+			/* 100 MB/s */
+			<81 512 261438 250000>,
+			<1 608 150000 133320>,
+			/* 200 MB/s */
+			<81 512 261438 800000>,
+			<1 608 300000 300000>,
+			/* Max. bandwidth */
+			<81 512 1338562 4096000>,
+			<1 608 1338562 4096000>;
+		qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000
+			100750000 200000000 4294967295>;
+
+		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x0 0x00010800 0x80040868>;
+
+		bus-width = <4>;
+
+		iommus = <&apps_smmu 0xA0 0x0>;
+		qcom,iommu-dma = "bypass";
+
+		no-mmc;
+		no-sdio;
+		max-frequency = <202000000>;
+
+		qcom,devfreq,freq-table = <50000000 202000000>;
+
+		status = "disabled";
+
+		qos0 {
+			mask = <0x0f>;
+			vote = <43>;
+		};
+	};
 
 	qfprom: qfprom@1b40000 {
 		compatible = "qcom,qfprom";
@@ -1137,6 +1291,44 @@ dcc: dcc_v2@1be2000 {
 					  "qcom,smp2p-early-crash-ind";
 		};
 	};
+
+	clk_virt: interconnect {
+		compatible = "qcom,scuba-clk_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmnrt_virt: interconnect@0 {
+		compatible = "qcom,scuba-mmnrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	mmrt_virt: interconnect@1 {
+		compatible = "qcom,scuba-mmrt_virt";
+		#interconnect-cells = <1>;
+	};
+
+	system_noc: interconnect@1880000 {
+		reg = <0x01880000 0x60200>;
+		compatible = "qcom,scuba-system_noc";
+		#interconnect-cells = <1>;
+	};
+
+	config_noc: interconnect@1900000 {
+		reg = <0x01900000 0x8200>;
+		compatible = "qcom,scuba-config_noc";
+		#interconnect-cells = <1>;
+	};
+
+	bimc: interconnect@4480000 {
+		reg = <0x04480000 0x80000>;
+		compatible = "qcom,scuba-bimc";
+		#interconnect-cells = <1>;
+	};
+
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 };
 
 #include "pm2250.dtsi"
@@ -1431,4 +1623,8 @@ dcc: dcc_v2@1be2000 {
 			};
 		};
 	};
+};
+
+&qupv3_se4_2uart {
+	status = "ok";
 };
