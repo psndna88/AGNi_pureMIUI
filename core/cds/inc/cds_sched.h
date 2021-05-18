@@ -177,8 +177,6 @@ struct cds_context {
 
 	uint32_t driver_state;
 
-	qdf_event_t wma_complete_event;
-
 	/* WMA Context */
 	void *wma_context;
 
