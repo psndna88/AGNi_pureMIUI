@@ -1264,6 +1264,10 @@
 		interrupt-parent = <&intc>;
 		#interrupt-cells = <2>;
 	};
+
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
 };
 
 #include "pm5100.dtsi"
