@@ -1575,7 +1575,8 @@ typedef enum {
     WMI_VDEV_BCN_LATENCY_EVENTID,
     /** Disconnect request from FW */
     WMI_VDEV_DISCONNECT_EVENTID,
-
+    /** Send Smart Monitor related params to host */
+    WMI_VDEV_SMART_MONITOR_EVENTID,
 
     /* peer specific events */
     /** FW reauet to kick out the station for reasons like inactivity,lack of response ..etc */
@@ -5671,10 +5672,12 @@ typedef struct {
     };
 } wmi_tx_send_params;
 
+#define WMI_MLO_MGMT_TID 0xFFFFFFFF
+
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag (WMITLV_TAG_STRUC_wmi_mlo_tx_send_params) and len */
     A_UINT32 hw_link_id; /** Unique link id across SOCs, provided by QMI handshake.
-                           * If 0xFFFF then the frame will be queued in the MLO queue
+                           * If WMI_MLO_MGMT_TID then the frame will be queued in the MLO queue
                            * If valid hw_link_id
                            */
 } wmi_mlo_tx_send_params;
@@ -11216,6 +11219,7 @@ typedef struct {
 
     /** vdevid of transmitting VAP (mbssid case). Ignored for non mbssid case */
     A_UINT32 vdevid_trans;
+    A_UINT32 eht_ops;
 
 /* The TLVs follows this structure:
  *     wmi_channel chan; <-- WMI channel
@@ -12303,6 +12307,13 @@ typedef enum {
      */
     WMI_VDEV_PARAM_FORCE_DTIM_CNT,           /* 0xA8 */
 
+    /* vdev param to configure the Smart Monitor features
+     *  Bit : 0     - enable/disable Trigger frames
+     *  Bit : 1     - enable/disable QOS frames
+     *  Bit : 2-31  - reserved
+     */
+    WMI_VDEV_PARAM_SMART_MONITOR_CONFIG,     /* 0xA9  */
+
 
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
@@ -12339,7 +12350,7 @@ typedef enum {
          * For a STA mode vdev this will enable/disable triggered access
          * and enable/disable Multi User mode of operation.
          * A value of 0 in a given bit disables corresponding mode.
-         * bit | hemu mode
+         * bit | EHT mu mode
          * ---------------
          *  0  | EHT SUBFEE
          *  1  | EHT SUBFER
@@ -12395,6 +12406,8 @@ typedef enum {
          *     punctured mode for 11be systems
          */
         WMI_VDEV_PARAM_FIXED_PUNCTURE_PATTERN,                /* 0x800B */
+
+        WMI_VDEV_PARAM_EHTOPS_0_31,                           /* 0x800C */
 
     /*=== END VDEV_PARAM_PROTOTYPE SECTION ===*/
 } WMI_VDEV_PARAM;
@@ -34096,6 +34109,16 @@ typedef struct {
  *     WMI_IPV4_ADDR  grp_ip_address[num_mcast_ipv4_addr];
  */
 } wmi_igmp_offload_fixed_param;
+
+typedef struct {
+    /** TLV tag and len; tag equals
+    * WMITLV_TAG_STRUC_wmi_vdev_smart_monitor_event_fixed_param */
+    A_UINT32 tlv_header;
+    /* VDEV identifier */
+    A_UINT32 vdev_id;
+    /** Average RSSI value of Data Frames */
+    A_INT32 avg_rssi_data_dbm;
+} wmi_vdev_smart_monitor_event_fixed_param;
 
 
 
