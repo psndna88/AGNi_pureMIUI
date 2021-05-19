@@ -2893,7 +2893,7 @@
 		};
 	};
 
-	qcom,lpass@a400000 {
+	pil_lpass: qcom,lpass@a400000 {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0xa400000 0x00100>;
 
@@ -2936,7 +2936,7 @@
 		qcom,smem-state-names = "qcom,force-stop";
 	};
 
-	qcom,turing@b000000 {
+	pil_turing: qcom,turing@b000000 {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0xb000000 0x100000>;
 
