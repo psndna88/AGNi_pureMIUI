@@ -259,6 +259,21 @@
 			size = <0 0x5c00000>;
 		};
 
+		cont_splash_memory: cont_splash_region@5c000000 {
+			reg = <0x0 0x5c000000 0x0 0x00f00000>;
+			label = "cont_splash_region";
+		};
+
+		dfps_data_memory: dfps_data_region@5cf00000 {
+			reg = <0x0 0x5cf00000 0x0 0x0100000>;
+			label = "dfps_data_region";
+		};
+
+		disp_rdump_memory: disp_rdump_region@5c000000 {
+			reg = <0x0 0x5c000000 0x0 0x00f00000>;
+			label = "disp_rdump_region";
+		};
+
 		adsp_mem: adsp_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
@@ -1490,6 +1505,8 @@
 #include "monaco-thermal.dtsi"
 #include "monaco-vidc.dtsi"
 #include "monaco-gpu.dtsi"
+#include "display/monaco-sde.dtsi"
+#include "display/monaco-sde-display.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
