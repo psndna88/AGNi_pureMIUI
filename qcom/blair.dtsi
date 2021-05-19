@@ -3354,7 +3354,7 @@
 #include "camera/holi-camera.dtsi"
 #include "holi-thermal.dtsi"
 #include "holi-qupv3.dtsi"
-#include "display/holi-sde.dtsi"
+#include "display/blair-sde.dtsi"
 #include "holi-audio.dtsi"
 #include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
@@ -3374,11 +3374,6 @@
 
 &L7E {
 	regulator-max-microvolt = <3544000>;
-};
-
-/* Dummy LDO handle*/
-&mdss_dsi_phy0 {
-	vdda-0p9-supply = <&L2A>;
 };
 
 &gcc_camss_top_gdsc {
