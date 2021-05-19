@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -293,6 +293,27 @@ static int __cam_node_handle_stop_dev(struct cam_node *node,
 	rc = cam_context_handle_stop_dev(ctx, stop);
 	if (rc)
 		CAM_ERR(CAM_CORE, "Stop failure for node %s", node->name);
+
+	return rc;
+}
+
+int cam_node_handle_shutdown_dev(struct cam_node *node,
+	struct cam_control *cmd, struct v4l2_subdev_fh *fh)
+{
+	struct cam_context *ctx = NULL;
+	int32_t dev_index = -1;
+	int rc = 0, ret = 0;
+
+	while ((dev_index = cam_get_dev_handle_info(cmd->handle,
+		&ctx, dev_index)) < CAM_REQ_MGR_MAX_HANDLES_V2) {
+		ret = cam_context_handle_shutdown_dev(ctx, cmd, fh);
+		if (ret) {
+			rc = ret;
+			CAM_ERR(CAM_CORE, "Shutdown failure for node %s",
+					node->name);
+			continue;
+		}
+	}
 
 	return rc;
 }

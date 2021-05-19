@@ -166,4 +166,11 @@ int32_t cam_req_mgr_util_deinit(void);
  */
 int32_t cam_req_mgr_util_free_hdls(void);
 
+/**
+ * cam_get_dev_handle_status() - get dev handles status
+ *
+ * Returns dev handle status
+ */
+uint64_t cam_get_dev_handle_status(void);
+
 #endif /* _CAM_REQ_MGR_UTIL_API_H_ */

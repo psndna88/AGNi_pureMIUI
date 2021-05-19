@@ -57,7 +57,7 @@ static int cam_fd_dev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int cam_fd_dev_close(struct v4l2_subdev *sd,
+static int cam_fd_dev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct cam_fd_dev *fd_dev = &g_fd_dev;
@@ -69,6 +69,11 @@ static int cam_fd_dev_close(struct v4l2_subdev *sd,
 	}
 
 	mutex_lock(&fd_dev->lock);
+	if (fd_dev->open_cnt == 0) {
+		CAM_WARN(CAM_FD, "device already closed");
+		mutex_unlock(&fd_dev->lock);
+		return 0;
+	}
 	fd_dev->open_cnt--;
 	CAM_DBG(CAM_FD, "FD Subdev open count %d", fd_dev->open_cnt);
 	mutex_unlock(&fd_dev->lock);
@@ -81,6 +86,19 @@ static int cam_fd_dev_close(struct v4l2_subdev *sd,
 	cam_node_shutdown(node);
 
 	return 0;
+}
+
+static int cam_fd_dev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_FD);
+
+	if (crm_active) {
+		CAM_DBG(CAM_FD, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_fd_dev_close_internal(sd, fh);
 }
 
 static const struct v4l2_subdev_internal_ops cam_fd_subdev_internal_ops = {
@@ -98,6 +116,7 @@ static int cam_fd_dev_component_bind(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 
 	g_fd_dev.sd.internal_ops = &cam_fd_subdev_internal_ops;
+	g_fd_dev.sd.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	/* Initialize the v4l2 subdevice first. (create cam_node) */
 	rc = cam_subdev_probe(&g_fd_dev.sd, pdev, CAM_FD_DEV_NAME,

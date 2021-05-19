@@ -100,4 +100,30 @@ int cam_node_init(struct cam_node *node, struct cam_hw_mgr_intf *hw_mgr_intf,
  */
 void cam_node_put_ctxt_to_free_list(struct kref *ref);
 
+/**
+ * cam_get_dev_handle_info()
+ *
+ * @brief:       provides the active dev index.
+ *
+ * @handle:      pointer to struct v4l2_dev
+ * @ctx:         pointer to struct cam_context
+ * @dev_index:   dev index
+ *
+ */
+int32_t cam_get_dev_handle_info(uint64_t handle,
+	struct cam_context **ctx, int32_t dev_index);
+
+/**
+ * cam_node_handle_shutdown_dev()
+ *
+ * @brief:       Shutdowns all the active devices.
+ *
+ * @node:        pointer to struct node
+ * @cmd:         pointer to struct cmd
+ * @fh:          pointer to struct v4l2_subdev_fh
+ *
+ */
+int cam_node_handle_shutdown_dev(struct cam_node *node,
+	struct cam_control *cmd, struct v4l2_subdev_fh *fh);
+
 #endif /* _CAM_NODE_H_ */
