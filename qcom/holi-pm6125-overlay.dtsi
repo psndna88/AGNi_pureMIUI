@@ -18,4 +18,12 @@
 		qcom,vdd-3.3-ch1-config = <3000000 3312000>;
 		qcom,vdd-3.3-ch0-config = <3000000 3312000>;
 	};
+
+	bluetooth: bt_wcn3990 {
+		qcom,bt-vdd-io-supply = <&L9A>;  /* IO */
+		qcom,bt-vdd-core-supply = <&L2A>; /* RFA */
+		qcom,bt-vdd-pa-supply = <&L23A>; /* CH0 */
+		qcom,bt-vdd-xtal-supply = <&L16A>; /* XO */
+	};
+
 };
