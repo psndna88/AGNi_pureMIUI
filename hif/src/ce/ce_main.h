@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -147,6 +147,7 @@ struct ce_tasklet_entry {
 	struct tasklet_struct intr_tq;
 	enum ce_id_type ce_id;
 	bool inited;
+	bool hi_tasklet_ce;
 	void *hif_ce_state;
 };
 
