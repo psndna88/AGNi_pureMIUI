@@ -65,7 +65,7 @@
 
 	cap-sd-highspeed;
 
-	vdd-supply = <&L9E>;
+	/* vdd-supply = <&L9E>; */
 	qcom,vdd-voltage-level = <2960000 2960000>;
 	qcom,vdd-current-level = <0 800000>;
 

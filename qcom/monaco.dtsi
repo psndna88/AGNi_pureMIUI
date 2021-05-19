@@ -1,3 +1,4 @@
+#include <dt-bindings/sound/qcom,gpr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
 #include <dt-bindings/clock/qcom,dispcc-monaco.h>
@@ -22,6 +23,8 @@
 		serial0 = &qupv3_se6_2uart;
 		hsuart0 = &qupv3_se5_4uart;
 		sdhc0 = &sdhc_1; /*SDC1 eMMC slot*/
+		swr0 = &swr0;
+		swr1 = &swr1;
 	};
 
 	firmware: firmware {};
@@ -34,6 +37,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -58,6 +62,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -77,6 +82,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x2>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -96,6 +102,7 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x3>;
+			cpu-idle-states = <&CORE_PC>;
 			enable-method = "psci";
 			d-cache-size = <0x8000>;
 			i-cache-size = <0x8000>;
@@ -213,6 +220,22 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0 0x800000>;
+		};
+
+		user_contig_mem: user_contig_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x1000000>;
+		};
+
+		qseecom_mem: qseecom_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x1400000>;
 		};
 
 		qseecom_ta_mem: qseecom_ta_region {
@@ -434,6 +457,15 @@
 		qcom,rtb-size = <0x100000>;
 	};
 
+	qcom,rmtfs_sharedmem@0 {
+		compatible = "qcom,sharedmem-uio";
+		reg = <0x0 0x280000>;
+		reg-names = "rmtfs";
+		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
+		qcom,vm-nav-path;
+	};
+
 	qcom,chd_silver {
 		compatible = "qcom,core-hang-detect";
 		label = "silver";
@@ -441,6 +473,45 @@
 				      0x0f1a80b0 0x0f1b80b0>;
 		qcom,config-arr = <0x0f1880b8 0x0f1980b8
 				   0x0f1a80b8 0x0f1b80b8>;
+	};
+
+	qcom_qseecom: qseecom@61800000 {
+		compatible = "qcom,qseecom";
+		reg = <0x61800000 0x2100000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,support-fde;
+		qcom,fde-key-size;
+		qcom,appsbl-qseecom-support;
+		qcom,commonlib64-loaded-by-uefi;
+		interconnect-names = "data_path";
+		interconnects = <&system_noc MASTER_CRYPTO_CORE0 &bimc SLAVE_EBI_CH0>;
+		clock-names =
+			"core_clk_src", "core_clk",
+			"iface_clk", "bus_clk";
+		clocks =
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>,
+			<&rpmcc RPM_SMD_CE1_CLK>;
+		qcom,ce-opp-freq = <192000000>;
+		qcom,qsee-reentrancy-support = <2>;
+	};
+
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+	};
+
+	qcom_tzlog: tz-log@c125720 {
+		compatible = "qcom,tz-log";
+		reg = <0xc125720 0x3000>;
+		qcom,hyplog-enabled;
+		hyplog-address-offset = <0x410>;
+		hyplog-size-offset = <0x414>;
 	};
 
 	wdog: qcom,wdt@f017000 {
@@ -484,6 +555,10 @@
 		#size-cells = <1>;
 		read-only;
 		ranges;
+		adsp_variant: adsp_variant@6011 {
+			reg = <0x6011 0x1>;
+			bits = <3 1>;
+		};
 	};
 
 	mem_dump {
@@ -896,6 +971,28 @@
 						0x4400 2>;
 			};
 
+			audio_gpr: qcom,gpr {
+				compatible = "qcom,gpr";
+				qcom,glink-channels = "adsp_apps";
+				qcom,intents = <0x200 20>;
+				reg = <GPR_DOMAIN_ADSP>;
+				spf_core {
+					compatible = "qcom,spf_core";
+					reg = <GPR_SVC_ADSP_CORE>;
+				};
+
+				audio-pkt {
+					compatible = "qcom,audio-pkt";
+					qcom,audiopkt-ch-name = "apr_audio_svc";
+					reg = <GPR_SVC_MAX>;
+				};
+
+				audio_prm: q6prm {
+					compatible = "qcom,audio_prm";
+					reg = <GPR_SVC_ASM>;
+				};
+			};
+
 			qcom,adsp_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_modem>;
@@ -1111,14 +1208,33 @@
 			vote = <43>;
 		};
 	};
+
+	system_pm_rpm {
+		compatible = "qcom,system-pm-rpm";
+	};
+
+	wakegic: wake-gic {
+		compatible = "qcom,mpm-gic-monaco", "qcom,mpm";
+		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x45f01b8 0x1000>,
+			<0xf111008 0x4>;
+		reg-names = "vmpm", "ipc";
+		qcom,num-mpm-irqs = <96>;
+		interrupt-controller;
+		interrupt-parent = <&intc>;
+		#interrupt-cells = <2>;
+	};
 };
 
 #include "monaco-pinctrl.dtsi"
+#include "monaco-coresight.dtsi"
 #include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
 #include "monaco-stub-regulator.dtsi"
 #include "monaco-gdsc.dtsi"
 #include "monaco-qupv3.dtsi"
+#include "monaco-pm.dtsi"
+#include "monaco-audio.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
