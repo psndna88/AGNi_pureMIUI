@@ -1,7 +1,12 @@
 #include "holi-cdp-pm6125.dtsi"
+#include "display/blair-sde-display-cdp.dtsi"
 / {
 };
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+};
+
+&pm6125_pwm {
+	status = "ok";
 };
