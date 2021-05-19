@@ -8624,14 +8624,19 @@ csr_clear_other_bss_sae_single_pmk_entry(struct mac_context *mac,
 					 uint8_t vdev_id)
 {
 	struct wlan_objmgr_vdev *vdev;
-
-	if (!bss_desc->is_single_pmk)
-		return;
+	uint32_t akm;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
 						    WLAN_LEGACY_SME_ID);
 	if (!vdev) {
 		sme_err("vdev is NULL");
+		return;
+	}
+
+	akm = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (!bss_desc->is_single_pmk ||
+	    !QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE)) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		return;
 	}
 
@@ -8648,14 +8653,19 @@ csr_delete_current_bss_sae_single_pmk_entry(struct mac_context *mac,
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_crypto_pmksa pmksa;
-
-	if (!bss_desc->is_single_pmk)
-		return;
+	uint32_t akm;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
 						    WLAN_LEGACY_SME_ID);
 	if (!vdev) {
 		sme_err("vdev is NULL");
+		return;
+	}
+
+	akm = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (!bss_desc->is_single_pmk ||
+	    !QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE)) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		return;
 	}
 
@@ -13767,17 +13777,22 @@ csr_store_sae_single_pmk_to_global_cache(struct mac_context *mac,
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_crypto_pmksa *pmksa;
 	struct mlme_pmk_info *pmk_info;
+	uint32_t akm;
 
 	if (!session->pConnectBssDesc)
-		return;
-
-	if (!session->pConnectBssDesc->is_single_pmk)
 		return;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc, vdev_id,
 						    WLAN_LEGACY_SME_ID);
 	if (!vdev) {
 		sme_err("vdev is NULL");
+		return;
+	}
+
+	akm = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	if (!session->pConnectBssDesc->is_single_pmk ||
+	    !QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_SAE)) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 		return;
 	}
 
@@ -15414,10 +15429,30 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				sme_debug("Channel is 6G but country IE not present");
 			wlan_reg_read_current_country(mac->psoc,
 						      programmed_country);
-			if (!qdf_mem_cmp(pIes->Country.country,
-					 programmed_country,
-					 REG_ALPHA2_LEN + 1))
-				sme_debug("Country IE does not match country stored in regulatory");
+			if (qdf_mem_cmp(pIes->Country.country,
+					programmed_country,
+					REG_ALPHA2_LEN)) {
+				sme_debug("Country IE:%c%c, STA country:%c%c",
+					  pIes->Country.country[0],
+					  pIes->Country.country[1],
+					  programmed_country[0],
+					  programmed_country[1]);
+				csr_join_req->same_ctry_code = false;
+				if (wlan_reg_is_us(programmed_country)) {
+					sme_err("US VLP not in place yet, connection not allowed");
+					status = QDF_STATUS_E_NOSUPPORT;
+					break;
+				}
+				if (wlan_reg_is_etsi(programmed_country)) {
+					sme_debug("STA ctry:%c%c, doesn't match with AP ctry, switch to VLP",
+						  programmed_country[0],
+						  programmed_country[1]);
+					csr_join_req->ap_power_type_6g =
+							REG_VERY_LOW_POWER_AP;
+				}
+			} else {
+				csr_join_req->same_ctry_code = true;
+			}
 			status = csr_iterate_triplets(pIes->Country);
 		}
 
@@ -20984,6 +21019,77 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 				     sizeof(session->psk_pmk));
 			qdf_mem_copy(session->psk_pmk, pmkid_cache->pmk,
 				     session->pmk_len);
+			/*
+			 * Consider two APs: AP1, AP2
+			 * Both APs configured with EAP 802.1x security mode
+			 * and OKC is enabled in both APs by default. Initially
+			 * DUT successfully associated with AP1, and generated
+			 * PMK1 by performing full EAP and added an entry for
+			 * AP1 in pmk table. At this stage, pmk table has only
+			 * one entry for PMK1 (1. AP1-->PMK1).
+			 * Now DUT try to roam to AP2 using PMK1 (as OKC is
+			 * enabled) but key timeout happens on AP2 just before
+			 * 4 way handshake completion in FW. At this point of
+			 * time DUT not in authenticated state. Due to this DUT
+			 * performs full EAP with AP2 and generates PMK2. As
+			 * there is no previous entry of AP2 (AP2-->PMK1) in
+			 * pmk table, When host gets pmk delete command for
+			 * BSSID of AP2, BSSID match fails. This results host
+			 * is unable to delete pmk entry for AP1. At this point
+			 * of time PMK table has two entry
+			 * 1. AP1-->PMK1 and 2. AP2 --> PMK2.
+			 * Now security profile for both APs changed to FT-RSN.
+			 * DUT first disassociate with AP2 and successfully
+			 * associated with AP2 by performing full EAP and
+			 * generates PMK2*. DUT first deletes PMK entry for AP2
+			 * and then add new entry for AP2. At this point of time
+			 * pmk table has two entry AP1-->PMK1 and PMK2-->PMK2*.
+			 * Now DUT roamed to AP1 using PMK2* but sends stale
+			 * entry of AP1 (PMK1) to fw via RSO command. This
+			 * results fw override PMK for both APs with PMK1 (as FW
+			 * maintains only one PMK for both APs in case of FT
+			 * roaming) and next time when FW try to roam to AP2
+			 * using PMK1, AP2 rejects PMK1 (As AP2 is expecting
+			 * PMK2*) and initiates full EAP with AP2, which is
+			 * wrong.
+			 * To address this issue update pmk table entry for
+			 * roamed AP with the pmk3 value comes to host via roam
+			 * sync data. By this host override stale entry (if any)
+			 * with latest valid pmk for that AP at a point of time.
+			 */
+			if (roam_synch_data->pmk_len) {
+				pmksa = qdf_mem_malloc(sizeof(*pmksa));
+				if (!pmksa) {
+					qdf_mem_zero(pmkid_cache,
+						     sizeof(pmkid_cache));
+					qdf_mem_free(pmkid_cache);
+					status = QDF_STATUS_E_NOMEM;
+					goto end;
+				}
+
+				/* Update the session PMK also */
+				session->pmk_len = roam_synch_data->pmk_len;
+				qdf_mem_zero(session->psk_pmk,
+					     sizeof(session->psk_pmk));
+				qdf_mem_copy(session->psk_pmk,
+					     roam_synch_data->pmk,
+					     session->pmk_len);
+
+				/* Update the crypto table */
+				qdf_copy_macaddr(&pmksa->bssid,
+						 &conn_profile->bssid);
+				qdf_mem_copy(pmksa->pmkid,
+					     roam_synch_data->pmkid, PMKID_LEN);
+				qdf_mem_copy(pmksa->pmk,
+					     roam_synch_data->pmk,
+					     roam_synch_data->pmk_len);
+				pmksa->pmk_len = roam_synch_data->pmk_len;
+				if (wlan_crypto_set_del_pmksa(vdev, pmksa, true)
+				    != QDF_STATUS_SUCCESS) {
+					qdf_mem_zero(pmksa, sizeof(*pmksa));
+					qdf_mem_free(pmksa);
+				}
+			}
 			sme_debug("pmkid found for " QDF_MAC_ADDR_FMT " len %d",
 				  QDF_MAC_ADDR_REF(pmkid_cache->BSSID.bytes),
 				  (uint32_t)session->pmk_len);
@@ -21003,6 +21109,9 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 			    roam_synch_data->pmk_len) {
 				pmksa = qdf_mem_malloc(sizeof(*pmksa));
 				if (!pmksa) {
+					qdf_mem_zero(pmkid_cache,
+						     sizeof(pmkid_cache));
+					qdf_mem_free(pmkid_cache);
 					status = QDF_STATUS_E_NOMEM;
 					goto end;
 				}

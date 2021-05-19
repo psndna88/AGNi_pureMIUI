@@ -1044,6 +1044,9 @@ struct join_req {
 	struct supported_channels supportedChannels;
 	bool enable_bcast_probe_rsp;
 	bool sae_pmk_cached;
+	bool same_ctry_code;  /* If AP Country IE has same country code as */
+	/* STA programmed country */
+	uint8_t ap_power_type_6g;  /* AP power type for 6G (LPI, SP, or VLP) */
 	/* Pls make this as last variable in struct */
 	bool force_24ghz_in_ht20;
 	bool force_rsne_override;
