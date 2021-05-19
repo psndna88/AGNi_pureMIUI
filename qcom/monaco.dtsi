@@ -1271,6 +1271,7 @@
 };
 
 #include "pm5100.dtsi"
+#include "monaco-pmic.dtsi"
 #include "monaco-pinctrl.dtsi"
 #include "monaco-coresight.dtsi"
 #include "msm-arm-smmu-monaco.dtsi"
