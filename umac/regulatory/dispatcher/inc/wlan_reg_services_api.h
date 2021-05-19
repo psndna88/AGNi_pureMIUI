@@ -167,6 +167,19 @@ bool wlan_reg_is_range_overlap_5g(qdf_freq_t low_freq, qdf_freq_t high_freq);
  */
 bool wlan_reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * wlan_reg_is_freq_indoor_in_secondary_list() - Check if the input frequency is
+ * an indoor frequency in the secondary list
+ * @pdev: Pointer to pdev.
+ * @freq: Channel frequency.
+ *
+ * Return: Return true if a frequency is indoor, else false.
+ */
+bool wlan_reg_is_freq_indoor_in_secondary_list(struct wlan_objmgr_pdev *pdev,
+					       qdf_freq_t freq);
+#endif
+
 #ifdef CONFIG_BAND_6GHZ
 /**
  * wlan_reg_is_6ghz_chan_freq() - Check if the given channel frequency is 6GHz
@@ -658,6 +671,20 @@ enum channel_state wlan_reg_get_bonded_channel_state(
 	enum phy_ch_width bw, uint8_t sec_ch);
 #endif /* CONFIG_CHAN_NUM_API */
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * wlan_reg_get_secondary_current_chan_list() - provide the pdev secondary
+ * current channel list
+ * @pdev: pdev pointer
+ * @chan_list: channel list pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_reg_get_secondary_current_chan_list(
+					struct wlan_objmgr_pdev *pdev,
+					struct regulatory_channel *chan_list);
+#endif
+
 /**
  * wlan_reg_get_bonded_channel_state_for_freq() - Get bonded channel freq state
  * @freq: channel frequency
@@ -953,6 +980,14 @@ qdf_freq_t wlan_reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
  * Return: true or false
  */
 bool wlan_reg_is_us(uint8_t *country);
+
+/**
+ * wlan_reg_is_etsi() - reg is a country in EU
+ * @country: The country information
+ *
+ * Return: true or false
+ */
+bool wlan_reg_is_etsi(uint8_t *country);
 
 #ifdef CONFIG_CHAN_NUM_API
 /**
@@ -1272,6 +1307,20 @@ enum channel_state
 wlan_reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 				    qdf_freq_t freq);
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * wlan_reg_get_channel_state_from_secondary_list_for_freq() - Get channel state
+ * from secondary regulatory current channel list
+ * @pdev: Pointer to pdev
+ * @freq: channel center frequency.
+ *
+ * Return: channel state
+ */
+enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
+						struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq);
+#endif
+
 /**
  * wlan_reg_set_channel_params_for_freq() - Sets channel parameteres for
  * given bandwidth
@@ -1347,6 +1396,31 @@ bool wlan_reg_is_passive_or_disable_for_freq(struct wlan_objmgr_pdev *pdev,
  */
 bool wlan_reg_is_disable_for_freq(struct wlan_objmgr_pdev *pdev,
 				  qdf_freq_t freq);
+
+#ifdef CONFIG_REG_CLIENT
+/**
+ * wlan_reg_is_disable_in_secondary_list_for_freq() - Checks in the secondary
+ * channel list to see if chan state is disabled
+ * @pdev: pdev ptr
+ * @freq: Channel center frequency
+ *
+ * Return: true or false
+ */
+bool wlan_reg_is_disable_in_secondary_list_for_freq(
+						struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq);
+
+/**
+ * wlan_reg_is_dfs_in_secondary_list_for_freq() - hecks the channel state for
+ * DFS from the secondary channel list
+ * @pdev: pdev ptr
+ * @freq: Channel center frequency
+ *
+ * Return: true or false
+ */
+bool wlan_reg_is_dfs_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq);
+#endif
 
 /**
  * wlan_reg_is_passive_for_freq() - Check the channel flags to see if the
@@ -1752,6 +1826,19 @@ wlan_reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
  */
 enum reg_6g_ap_type
 wlan_reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_reg_set_ap_pwr_and_update_chan_list() - Set the AP power mode and
+ * recompute the current channel list
+ *
+ * @pdev: pdev ptr
+ * @ap_pwr_type: the AP power type to update to
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
+					 enum reg_6g_ap_type ap_pwr_type);
 #else
 static inline QDF_STATUS
 wlan_reg_get_cur_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev,
@@ -1830,11 +1917,17 @@ wlan_reg_get_client_power_for_6ghz_ap(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
-static inline
-enum reg_6g_ap_type
+static inline enum reg_6g_ap_type
 wlan_reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev)
 {
 	return REG_INDOOR_AP;
+}
+
+static inline QDF_STATUS
+wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
+					 enum reg_6g_ap_type ap_pwr_type)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 

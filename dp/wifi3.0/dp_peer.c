@@ -1223,12 +1223,12 @@ void dp_peer_unlink_ast_entry(struct dp_soc *soc,
 			      struct dp_peer *peer)
 {
 	if (!peer) {
-		dp_err_rl("NULL peer");
+		dp_info_rl("NULL peer");
 		return;
 	}
 
 	if (ast_entry->peer_id == HTT_INVALID_PEER) {
-		dp_err_rl("Invalid peer id in AST entry mac addr:"QDF_MAC_ADDR_FMT" type:%d",
+		dp_info_rl("Invalid peer id in AST entry mac addr:"QDF_MAC_ADDR_FMT" type:%d",
 			  QDF_MAC_ADDR_REF(ast_entry->mac_addr.raw),
 			  ast_entry->type);
 		return;
@@ -1270,12 +1270,12 @@ void dp_peer_del_ast(struct dp_soc *soc, struct dp_ast_entry *ast_entry)
 	struct dp_peer *peer = NULL;
 
 	if (!ast_entry) {
-		dp_err_rl("NULL AST entry");
+		dp_info_rl("NULL AST entry");
 		return;
 	}
 
 	if (ast_entry->delete_in_progress) {
-		dp_err_rl("AST entry deletion in progress mac addr:"QDF_MAC_ADDR_FMT" type:%d",
+		dp_info_rl("AST entry deletion in progress mac addr:"QDF_MAC_ADDR_FMT" type:%d",
 			  QDF_MAC_ADDR_REF(ast_entry->mac_addr.raw),
 			  ast_entry->type);
 		return;
@@ -4503,3 +4503,30 @@ failed:
 		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_GENERIC_STATS);
 }
 #endif /* DUMP_REO_QUEUE_INFO_IN_DDR */
+
+void dp_peer_flush_frags(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			 uint8_t *peer_mac)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_peer *peer = dp_peer_find_hash_find(soc, peer_mac, 0,
+						      vdev_id, DP_MOD_ID_CDP);
+	struct dp_rx_tid *rx_tid;
+	uint8_t tid;
+
+	if (!peer)
+		return;
+
+	dp_info("Flushing fragments for peer " QDF_MAC_ADDR_FMT,
+		QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+
+	for (tid = 0; tid < DP_MAX_TIDS; tid++) {
+		rx_tid = &peer->rx_tid[tid];
+
+		qdf_spin_lock_bh(&rx_tid->tid_lock);
+		dp_rx_defrag_waitlist_remove(peer, tid);
+		dp_rx_reorder_flush_frag(peer, tid);
+		qdf_spin_unlock_bh(&rx_tid->tid_lock);
+	}
+
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+}

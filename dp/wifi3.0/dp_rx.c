@@ -190,6 +190,52 @@ dp_pdev_frag_alloc_and_map(struct dp_soc *dp_soc,
 }
 #endif /* DP_RX_MON_MEM_FRAG */
 
+#ifdef WLAN_FEATURE_DP_RX_RING_HISTORY
+/**
+ * dp_rx_refill_ring_record_entry() - Record an entry into refill_ring history
+ * @soc: Datapath soc structure
+ * @ring_num: Refill ring number
+ * @num_req: number of buffers requested for refill
+ * @num_refill: number of buffers refilled
+ *
+ * Returns: None
+ */
+static inline void
+dp_rx_refill_ring_record_entry(struct dp_soc *soc, uint8_t ring_num,
+			       hal_ring_handle_t hal_ring_hdl,
+			       uint32_t num_req, uint32_t num_refill)
+{
+	struct dp_refill_info_record *record;
+	uint32_t idx;
+	uint32_t tp;
+	uint32_t hp;
+
+	if (qdf_unlikely(ring_num >= MAX_PDEV_CNT ||
+			 !soc->rx_refill_ring_history[ring_num]))
+		return;
+
+	idx = dp_history_get_next_index(&soc->rx_refill_ring_history[ring_num]->index,
+					DP_RX_REFILL_HIST_MAX);
+
+	/* No NULL check needed for record since its an array */
+	record = &soc->rx_refill_ring_history[ring_num]->entry[idx];
+
+	hal_get_sw_hptp(soc->hal_soc, hal_ring_hdl, &tp, &hp);
+	record->timestamp = qdf_get_log_timestamp();
+	record->num_req = num_req;
+	record->num_refill = num_refill;
+	record->hp = hp;
+	record->tp = tp;
+}
+#else
+static inline void
+dp_rx_refill_ring_record_entry(struct dp_soc *soc, uint8_t ring_num,
+			       hal_ring_handle_t hal_ring_hdl,
+			       uint32_t num_req, uint32_t num_refill)
+{
+}
+#endif
+
 /**
  * dp_pdev_nbuf_alloc_and_map() - Allocate nbuf for desc buffer and map
  *
@@ -415,6 +461,9 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 	}
 
 	dp_rx_refill_buff_pool_unlock(dp_soc);
+
+	dp_rx_refill_ring_record_entry(dp_soc, dp_pdev->lmac_id, rxdma_srng,
+				       num_req_buffers, count);
 
 	hal_srng_access_end(dp_soc->hal_soc, rxdma_srng);
 
@@ -2238,6 +2287,45 @@ void dp_rx_deliver_to_pkt_capture_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf,
 
 #endif
 
+#ifdef DISABLE_EAPOL_INTRABSS_FWD
+/*
+ * dp_rx_intrabss_fwd_wrapper() - Wrapper API for intrabss fwd. For EAPOL
+ *  pkt with DA not equal to vdev mac addr, fwd is not allowed.
+ * @soc: core txrx main context
+ * @ta_peer: source peer entry
+ * @rx_tlv_hdr: start address of rx tlvs
+ * @nbuf: nbuf that has to be intrabss forwarded
+ * @msdu_metadata: msdu metadata
+ *
+ * Return: true if it is forwarded else false
+ */
+static inline
+bool dp_rx_intrabss_fwd_wrapper(struct dp_soc *soc, struct dp_peer *ta_peer,
+				uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
+				struct hal_rx_msdu_metadata msdu_metadata)
+{
+	if (qdf_unlikely(qdf_nbuf_is_ipv4_eapol_pkt(nbuf) &&
+			 qdf_mem_cmp(qdf_nbuf_data(nbuf) +
+				     QDF_NBUF_DEST_MAC_OFFSET,
+				     ta_peer->vdev->mac_addr.raw,
+				     QDF_MAC_ADDR_SIZE))) {
+		qdf_nbuf_free(nbuf);
+		DP_STATS_INC(soc, rx.err.intrabss_eapol_drop, 1);
+		return true;
+	}
+
+	return dp_rx_intrabss_fwd(soc, ta_peer, rx_tlv_hdr, nbuf,
+				  msdu_metadata);
+
+}
+#define DP_RX_INTRABSS_FWD(soc, peer, rx_tlv_hdr, nbuf, msdu_metadata) \
+		dp_rx_intrabss_fwd_wrapper(soc, peer, rx_tlv_hdr, nbuf, \
+					   msdu_metadata)
+#else
+#define DP_RX_INTRABSS_FWD(soc, peer, rx_tlv_hdr, nbuf, msdu_metadata) \
+		dp_rx_intrabss_fwd(soc, peer, rx_tlv_hdr, nbuf, msdu_metadata)
+#endif
+
 /**
  * dp_rx_process() - Brain of the Rx processing functionality
  *		     Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
@@ -2812,6 +2900,23 @@ done:
 			continue;
 		}
 
+		/*
+		 * Drop non-EAPOL frames from unauthorized peer.
+		 */
+		if (qdf_likely(peer) && qdf_unlikely(!peer->authorize)) {
+			bool is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf) ||
+					qdf_nbuf_is_ipv4_wapi_pkt(nbuf);
+
+			if (!is_eapol) {
+				DP_STATS_INC(soc,
+					     rx.err.peer_unauth_rx_pkt_drop,
+					     1);
+				qdf_nbuf_free(nbuf);
+				nbuf = next;
+				continue;
+			}
+		}
+
 		if (soc->process_rx_status)
 			dp_rx_cksum_offload(vdev->pdev, nbuf, rx_tlv_hdr);
 
@@ -2875,7 +2980,7 @@ done:
 
 			/* Intrabss-fwd */
 			if (dp_rx_check_ap_bridge(vdev))
-				if (dp_rx_intrabss_fwd(soc,
+				if (DP_RX_INTRABSS_FWD(soc,
 							peer,
 							rx_tlv_hdr,
 							nbuf,
@@ -3167,6 +3272,8 @@ dp_pdev_rx_buffers_attach(struct dp_soc *dp_soc, uint32_t mac_id,
 			desc_list = next;
 		}
 
+		dp_rx_refill_ring_record_entry(dp_soc, dp_pdev->lmac_id,
+					       rxdma_srng, nr_nbuf, nr_nbuf);
 		hal_srng_access_end(dp_soc->hal_soc, rxdma_srng);
 	}
 
