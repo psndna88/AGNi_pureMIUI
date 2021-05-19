@@ -201,21 +201,6 @@
 							THERMAL_MAX_LIMIT>;
 			};
 
-			pm7325_cpu1 {
-				trip = <&pm7325_trip0>;
-				cooling-device = <&cpu1_isolate 1 1>;
-			};
-
-			pm7325_cpu2 {
-				trip = <&pm7325_trip0>;
-				cooling-device = <&cpu2_isolate 1 1>;
-			};
-
-			pm7325_cpu3 {
-				trip = <&pm7325_trip0>;
-				cooling-device = <&cpu3_isolate 1 1>;
-			};
-
 			pm7325_cpu4 {
 				trip = <&pm7325_trip0>;
 				cooling-device = <&cpu4_isolate 1 1>;

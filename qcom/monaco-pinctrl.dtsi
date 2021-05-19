@@ -7,6 +7,7 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		wakeup-parent = <&wakegic>;
 
 		qupv3_se6_2uart_pins: qupv3_se6_2uart_pins {
 			qupv3_se6_2uart_active: qupv3_se6_2uart_active {
