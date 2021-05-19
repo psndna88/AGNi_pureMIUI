@@ -1377,6 +1377,7 @@
 #include "monaco-usb.dtsi"
 #include "monaco-thermal.dtsi"
 #include "monaco-vidc.dtsi"
+#include "monaco-gpu.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
