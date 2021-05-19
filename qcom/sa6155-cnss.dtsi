@@ -87,9 +87,9 @@
 			supported-ids = <0x1101>;
 			wlan_vregs = "vdd-wlan-rfa1", "vdd-wlan-rfa2",
 				   "vdd-wlan-rfa3";
-			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1904000 1904000 0 0 1>;
+			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 0>;
+			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-rfa3-config = <1904000 1904000 0 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
@@ -195,9 +195,9 @@
 			supported-ids = <0x1102>;
 			wlan_vregs = "vdd-wlan-rfa1", "vdd-wlan-rfa2",
 				   "vdd-wlan-rfa3";
-			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1904000 1904000 0 0 1>;
+			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 0>;
+			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-rfa3-config = <1904000 1904000 0 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
@@ -307,6 +307,8 @@
 };
 
 &pcie_rc0 {
+	#address-cells = <5>;
+	#size-cells = <0>;
 	cnss_pci: cnss_pci {
 		reg = <0 0 0 0 0>;
 		qcom,iommu-group = <&cnss_pci_iommu_group>;
