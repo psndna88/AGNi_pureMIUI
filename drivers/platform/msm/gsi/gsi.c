@@ -3652,6 +3652,7 @@ EXPORT_SYMBOL(gsi_query_channel_info);
 int gsi_is_channel_empty(unsigned long chan_hdl, bool *is_empty)
 {
 	struct gsi_chan_ctx *ctx;
+	struct gsi_evt_ctx *ev_ctx;
 	spinlock_t *slock;
 	unsigned long flags;
 	uint64_t rp;
@@ -3687,8 +3688,11 @@ int gsi_is_channel_empty(unsigned long chan_hdl, bool *is_empty)
 	spin_lock_irqsave(slock, flags);
 
 	if (ctx->props.dir == GSI_CHAN_DIR_FROM_GSI && ctx->evtr) {
-		rp = gsi_readl(gsi_ctx->base +
-			GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(ctx->evtr->id, ee));
+		ev_ctx = &gsi_ctx->evtr[ctx->evtr->id];
+		/* Read the event ring rp from DDR to avoid mismatch */
+		rp = ev_ctx->props.gsi_read_event_ring_rp(&ev_ctx->props,
+					ev_ctx->id, ee);
+
 		rp |= ctx->evtr->ring.rp & 0xFFFFFFFF00000000;
 		ctx->evtr->ring.rp = rp;
 
@@ -4490,6 +4494,45 @@ void gsi_get_inst_ram_offset_and_size(unsigned long *base_offset,
 }
 EXPORT_SYMBOL(gsi_get_inst_ram_offset_and_size);
 
+/*
+ * Dumping the Debug registers for halt issue debugging.
+ */
+static void gsi_dump_halt_debug_reg(unsigned int chan_idx, unsigned int ee)
+{
+	uint32_t val;
+	enum gsi_chan_state curr_state = GSI_CHAN_STATE_NOT_ALLOCATED;
+
+	GSIERR("DEBUG_PC_FOR_DEBUG = 0x%x\n", gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_DEBUG_PC_FOR_DEBUG_OFFS));
+
+	GSIERR("GSI_DEBUG_BUSY_REG 0x%x\n",
+		gsi_readl(gsi_ctx->base + GSI_EE_n_GSI_DEBUG_BUSY_REG_OFFS));
+
+	GSIERR("GSI_EE_n_CNTXT_GLOB_IRQ_EN_OFFS = 0x%x\n",
+		gsi_readl(gsi_ctx->base +
+			GSI_EE_n_CNTXT_GLOB_IRQ_EN_OFFS(gsi_ctx->per.ee)));
+
+	GSIERR("GSI_EE_n_CNTXT_GLOB_IRQ_STTS_OFFS IRQ type = 0x%x\n",
+		gsi_readl(gsi_ctx->base +
+			GSI_EE_n_CNTXT_GLOB_IRQ_STTS_OFFS(gsi_ctx->per.ee)));
+
+	GSIERR("GSI_EE_n_CNTXT_SCRATCH_0_OFFS = 0x%x\n",
+		gsi_readl(gsi_ctx->base +
+			GSI_EE_n_CNTXT_SCRATCH_0_OFFS(gsi_ctx->per.ee)));
+
+	if (gsi_ctx->per.ver >= GSI_VER_2_9)
+		GSIERR("GSI_EE_n_GSI_CH_k_SCRATCH_4_OFFS = 0x%x\n",
+			gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_SCRATCH_4_OFFS(chan_idx, ee)));
+
+	val = gsi_readl(gsi_ctx->base +
+			GSI_EE_n_GSI_CH_k_CNTXT_0_OFFS(chan_idx, ee));
+	curr_state = (val &
+			GSI_EE_n_GSI_CH_k_CNTXT_0_CHSTATE_BMSK) >>
+		GSI_EE_n_GSI_CH_k_CNTXT_0_CHSTATE_SHFT;
+	GSIERR("Q6 channel [%d] state =  %d\n", chan_idx, curr_state);
+}
+
 int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 {
 	enum gsi_generic_ee_cmd_opcode op = GSI_GEN_EE_CMD_HALT_CHANNEL;
@@ -4544,8 +4587,17 @@ int gsi_halt_channel_ee(unsigned int chan_idx, unsigned int ee, int *code)
 	}
 	if (gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code == 0) {
 		GSIERR("No response received\n");
-		res = -GSI_STATUS_ERROR;
-		goto free_lock;
+		gsi_dump_halt_debug_reg(chan_idx, ee);
+		usleep_range(GSI_RESET_WA_MIN_SLEEP, GSI_RESET_WA_MAX_SLEEP);
+		GSIERR("Reading after usleep scratch 0 reg\n");
+		gsi_ctx->scratch.word0.val = gsi_readl(gsi_ctx->base +
+				GSI_EE_n_CNTXT_SCRATCH_0_OFFS(gsi_ctx->per.ee));
+		if (gsi_ctx->scratch.word0.s.generic_ee_cmd_return_code == 0) {
+			GSIERR("No response received second attempt\n");
+			gsi_dump_halt_debug_reg(chan_idx, ee);
+			res = -GSI_STATUS_ERROR;
+			goto free_lock;
+		}
 	}
 
 	res = GSI_STATUS_SUCCESS;

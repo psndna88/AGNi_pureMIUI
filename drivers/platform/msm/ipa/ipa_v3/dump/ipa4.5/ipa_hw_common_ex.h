@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  */
 #if !defined(_IPA_HW_COMMON_EX_H_)
 #define _IPA_HW_COMMON_EX_H_
@@ -504,6 +504,107 @@ enum ipa_hw_irq_srcs_e {
 
 #define IPA_GSI_ADDR  0x00006000
 #define IPA_GSI_SIZE  round_up(5376, sizeof(u32))
+
+#define IPA_REG_SAVE_CFG_ENTRY_GSI_GENERAL_EE(reg_name, var_name) \
+       { GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE), \
+               (u32 *)&ipa_reg_save.gsi.gen_ee[IPA_HW_A7_EE].var_name }, \
+       { GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE), \
+               (u32 *)&ipa_reg_save.gsi.gen_ee[IPA_HW_Q6_EE].var_name }, \
+       { GEN_1xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE), \
+              (u32 *)&ipa_reg_save.gsi.gen_ee[IPA_REG_SAVE_HWP_GSI_EE].\
+                       var_name }
+
+/*
+ * Macro to define a particular register cfg entry for all GSI EE
+ * register
+ */
+#define IPA_REG_SAVE_CFG_ENTRY_GSI_CH_CNTXT(reg_name, var_name) \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 0), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[0].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 1), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[1].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 2), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[2].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 3), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[3].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 4), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[4].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 5), \
+              (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[5].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 6), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[6].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 7), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[7].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 8), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[8].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 9), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[9].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 10), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[10].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 11), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[11].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 12), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[12].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 13), \
+              (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[13].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 14), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[14].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 15), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[15].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 16), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[16].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 17), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[17].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 18), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[18].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 19), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.a7[19].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 1),  \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.uc[0].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 3), \
+               (u32 *)&ipa_reg_save.gsi.ch_cntxt.uc[1].var_name }
+
+#define IPA_REG_SAVE_CFG_ENTRY_GSI_EVT_CNTXT(reg_name, var_name) \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 0), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[0].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 1), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[1].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 2), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[2].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 3), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[3].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 4), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[4].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 5), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[5].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 6), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[6].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 7), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[7].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 8), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[8].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 9), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[9].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 10), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[10].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 11), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[11].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 12), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[12].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 13), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[13].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 14), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[14].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 15), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[15].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 16), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[16].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 17), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[17].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 18), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.a7[18].var_name }, \
+       { GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 1), \
+               (u32 *)&ipa_reg_save.gsi.evt_cntxt.uc[0].var_name }
 
 /*
  * Macro to define a particular register cfg entry for all pipe
