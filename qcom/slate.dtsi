@@ -9,4 +9,9 @@
 			qcom,irq-gpio = <&tlmm 95 1>;
 		};
 	};
+
+	qcom,glink-slatecom-xprt-slate {
+		compatible = "qcom,glink-slatecom-xprt";
+		label = "slate";
+	};
 };
