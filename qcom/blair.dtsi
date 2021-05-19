@@ -1219,8 +1219,8 @@
 		compatible = "qcom,blair-gcc", "syscon";
 		reg = <0x1400000 0x1f0000>;
 		reg_names = "cc_base";
-		vdd_cx-supply = <&VDD_CX_LEVEL>;
-		vdd_mx-supply = <&VDD_MX_LEVEL>;
+		vdd_cx-supply = <&S2E_LEVEL>;
+		vdd_mx-supply = <&S1E_LEVEL>;
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			 <&sleep_clk>;
@@ -1233,7 +1233,7 @@
 		compatible = "qcom,blair-dispcc", "syscon";
 		reg = <0x5f00000 0x20000>;
 		reg-names = "cc_base";
-		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_cx-supply = <&S2E_LEVEL>;
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&gcc GCC_DISP_GPLL0_DIV_CLK_SRC>;
 		clock-names = "bi_tcxo", "gcc_disp_gpll0_clk";
@@ -1245,9 +1245,9 @@
 		compatible = "qcom,blair-gpucc", "syscon";
 		reg = <0x5990000 0x9000>;
 		reg-names = "cc_base";
-		vdd_cx-supply = <&VDD_CX_LEVEL>;
-		vdd_mx-supply = <&VDD_MX_LEVEL>;
-		vdd_gx-supply = <&VDD_GFX_LEVEL>;
+		vdd_cx-supply = <&S2E_LEVEL>;
+		vdd_mx-supply = <&S1E_LEVEL>;
+		vdd_gx-supply = <&S8A_LEVEL>;
 		clocks = <&rpmcc RPM_SMD_XO_CLK_SRC>, <&gcc GCC_GPU_GPLL0_CLK_SRC>,
 			<&gcc GCC_GPU_GPLL0_DIV_CLK_SRC>,
 			<&gcc GCC_GPU_SNOC_DVM_GFX_CLK>;
@@ -2896,9 +2896,9 @@
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
-		vdd_lpi_cx-supply = <&VDD_LPI_CX_LEVEL>;
+		vdd_lpi_cx-supply = <&L1A_LEVEL>;
 		qcom,vdd_lpi_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
-		vdd_lpi_mx-supply = <&VDD_LPI_MX_LEVEL>;
+		vdd_lpi_mx-supply = <&L17A_LEVEL>;
 		qcom,vdd_lpi_mx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 0>;
 		qcom,proxy-reg-names = "vdd_lpi_cx", "vdd_lpi_mx";
 
@@ -2936,7 +2936,7 @@
 		compatible = "qcom,pil-tz-generic";
 		reg = <0xb000000 0x100000>;
 
-		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_cx-supply = <&S2E_LEVEL>;
 		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,proxy-reg-names = "vdd_cx";
 
@@ -2982,7 +2982,7 @@
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
-		vdd_cx-supply = <&VDD_CX_LEVEL>;
+		vdd_cx-supply = <&S2E_LEVEL>;
 		qcom,vdd_cx-uV-uA = <RPMH_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,proxy-reg-names = "vdd_cx";
 
@@ -3436,12 +3436,12 @@
 };
 
 &gpu_cx_gdsc {
-	parent-supply = <&VDD_CX_LEVEL>;
+	parent-supply = <&S2E_LEVEL>;
 	status = "ok";
 };
 
 &gpu_gx_gdsc {
-	parent-supply = <&VDD_GFX_LEVEL>;
+	parent-supply = <&S8A_LEVEL>;
 	status = "ok";
 };
 
