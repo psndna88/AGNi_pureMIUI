@@ -2464,6 +2464,9 @@ more_data:
 		if (QDF_IS_STATUS_ERROR(status)) {
 			if (qdf_unlikely(rx_desc && rx_desc->nbuf)) {
 				qdf_assert_always(rx_desc->unmapped);
+				dp_ipa_reo_ctx_buf_mapping_lock(
+							soc,
+							reo_ring_num);
 				dp_ipa_handle_rx_buf_smmu_mapping(
 							soc,
 							rx_desc->nbuf,
@@ -2475,6 +2478,9 @@ more_data:
 							QDF_DMA_FROM_DEVICE,
 							RX_DATA_BUFFER_SIZE);
 				rx_desc->unmapped = 1;
+				dp_ipa_reo_ctx_buf_mapping_unlock(
+								soc,
+								reo_ring_num);
 				dp_rx_buffer_pool_nbuf_free(soc, rx_desc->nbuf,
 							    rx_desc->pool_id);
 				dp_rx_add_to_free_desc_list(
@@ -2630,6 +2636,8 @@ more_data:
 		 * in case double skb unmap happened.
 		 */
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+		dp_ipa_reo_ctx_buf_mapping_lock(soc,
+						reo_ring_num);
 		dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf,
 						  rx_desc_pool->buf_size,
 						  false);
@@ -2637,6 +2645,7 @@ more_data:
 					     QDF_DMA_FROM_DEVICE,
 					     rx_desc_pool->buf_size);
 		rx_desc->unmapped = 1;
+		dp_ipa_reo_ctx_buf_mapping_unlock(soc, reo_ring_num);
 		DP_RX_PROCESS_NBUF(soc, nbuf_head, nbuf_tail, ebuf_head,
 				   ebuf_tail, rx_desc);
 		/*
