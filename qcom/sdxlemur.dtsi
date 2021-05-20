@@ -1139,6 +1139,7 @@
 			interrupt-names = "mhi-device-inta";
 			qcom,mhi-ifc-id = <0x030817cb>;
 			qcom,mhi-interrupt;
+			qcom,no-m0-timeout;
 		status = "disabled";
 	};
 
