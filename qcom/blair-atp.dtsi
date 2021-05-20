@@ -204,3 +204,21 @@
 	vdd-supply = <&L16A>;
 	core-supply = <&L22A>;
 };
+
+&icnss {
+	vdd-cx-mx-supply = <&L4A>;
+	vdd-1.8-xo-supply = <&L7A>;
+	vdd-1.3-rfa-supply = <&L2E>;
+	vdd-3.3-ch1-supply = <&L11E>;
+	vdd-3.3-ch0-supply = <&L10E>;
+	qcom,vdd-cx-mx-config = <640000 640000>;
+	qcom,vdd-3.3-ch1-config = <3000000 3312000>;
+	qcom,vdd-3.3-ch0-config = <3000000 3312000>;
+};
+
+&bluetooth {
+	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
+	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
+	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
+	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
