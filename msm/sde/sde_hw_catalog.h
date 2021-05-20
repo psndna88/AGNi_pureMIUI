@@ -46,6 +46,7 @@
 #define SDE_HW_VER_650	SDE_HW_VER(6, 5, 0) /* scuba */
 #define SDE_HW_VER_660	SDE_HW_VER(6, 6, 0) /* holi */
 #define SDE_HW_VER_670	SDE_HW_VER(6, 7, 0) /* shima */
+#define SDE_HW_VER_690	SDE_HW_VER(6, 9, 0) /* blair */
 #define SDE_HW_VER_700	SDE_HW_VER(7, 0, 0) /* lahaina */
 #define SDE_HW_VER_720	SDE_HW_VER(7, 2, 0) /* yupik */
 
@@ -71,6 +72,7 @@
 #define IS_SCUBA_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_650)
 #define IS_HOLI_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_660)
 #define IS_SHIMA_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_670)
+#define IS_BLAIR_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_690)
 #define IS_LAHAINA_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_700)
 #define IS_YUPIK_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_720)
 
