@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/slab.h>
@@ -16,7 +16,7 @@
 #define GET_NEXT(ptr, upper_limit, rc)                                  \
 ({                                                                      \
 	if (((ptr) + 1) > (upper_limit)) {                              \
-		pr_err_ratelimited("%s: param list out of boundary\n",  \
+		pr_debug_ratelimited("%s: param list out of boundary\n",  \
 				   __func__);				\
 		(rc) = -EINVAL;                                         \
 	}                                                               \
@@ -26,7 +26,7 @@
 #define CHECK_PARAM_LEN(len, max_len, tag, rc)                          \
 do {                                                                    \
 	if ((len) > (max_len)) {                                        \
-		pr_err_ratelimited("%s: params length overflows\n",	\
+		pr_debug_ratelimited("%s: params length overflows\n",	\
 				   (tag));				\
 		(rc) = -EINVAL;                                         \
 	}                                                               \
@@ -1409,7 +1409,7 @@ static int __msm_audio_effects_volume_handler(struct audio_client *ac,
 					"VOLUME/VOLUME2_GAIN_MASTER", rc);
 			break;
 		default:
-			pr_err_ratelimited("%s: Invalid command id: %d to set config\n",
+			pr_debug_ratelimited("%s: Invalid command id: %d to set config\n",
 				__func__, command_id);
 			continue;
 		}
