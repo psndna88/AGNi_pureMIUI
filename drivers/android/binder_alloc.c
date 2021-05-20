@@ -42,16 +42,12 @@ enum {
 	BINDER_DEBUG_BUFFER_ALLOC           = 1U << 2,
 	BINDER_DEBUG_BUFFER_ALLOC_ASYNC     = 1U << 3,
 };
-static uint32_t binder_alloc_debug_mask;
+static uint32_t binder_alloc_debug_mask = 0;
 
 module_param_named(debug_mask, binder_alloc_debug_mask,
 		   uint, 0644);
 
-#define binder_alloc_debug(mask, x...) \
-	do { \
-		if (binder_alloc_debug_mask & mask) \
-			pr_info(x); \
-	} while (0)
+#define binder_alloc_debug(mask, x...)
 
 static struct binder_buffer *binder_buffer_next(struct binder_buffer *buffer)
 {
