@@ -895,6 +895,8 @@
 		cell-index = <0>;
 	};
 
+	thermal_zones: thermal-zones {};
+
 	slim_aud: slim@a5c0000 {
 		cell-index = <1>;
 		compatible = "qcom,slim-ngd";
