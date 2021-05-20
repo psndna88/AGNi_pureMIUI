@@ -5,15 +5,31 @@
 #include "display/holi-sde-display-cdp-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
-/* Dummy LDO reference */
 &wcd938x_codec {
-	cdc-vdd-mic-bias-supply = <&L2A>;
+	/delete-property/ cdc-vdd-mic-bias-supply;
+	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
+	/delete-property/ qcom,cdc-vdd-mic-bias-current;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddio-supply = <&L9A>;
 };
 
 &wcd937x_codec {
-	cdc-vdd-mic-bias-supply = <&L2A>;
+	/delete-property/ cdc-vdd-mic-bias-supply;
+	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
+	/delete-property/ qcom,cdc-vdd-mic-bias-current;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddio-supply = <&L9A>;
 };
 
+&wsa881x_i2c_e {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
+&wsa881x_i2c_f {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
+/* Dummy LDO reference */
 &sdhc_1 {
 	status = "ok";
 
