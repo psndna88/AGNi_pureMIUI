@@ -2040,7 +2040,7 @@ static int _sde_rm_populate_requirements(
 	 * Set the requirement for LM which has CWB support if CWB is
 	 * found enabled.
 	 */
-	if (!RM_RQ_CWB(reqs) && sde_encoder_in_clone_mode(enc)) {
+	if (!RM_RQ_CWB(reqs) && sde_crtc_state_in_clone_mode(enc, crtc_state)) {
 		reqs->top_ctrl |= BIT(SDE_RM_TOPCTL_CWB);
 
 		/*
