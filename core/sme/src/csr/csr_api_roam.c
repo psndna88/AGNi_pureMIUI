@@ -4448,6 +4448,27 @@ static QDF_STATUS csr_set_qos_to_cfg(struct mac_context *mac, uint32_t sessionId
 	return status;
 }
 
+static bool is_ofdm_rates(uint16_t rate)
+{
+	uint16_t n = BITS_OFF(rate, CSR_DOT11_BASIC_RATE_MASK);
+
+	switch (n) {
+	case SIR_MAC_RATE_6:
+	case SIR_MAC_RATE_9:
+	case SIR_MAC_RATE_12:
+	case SIR_MAC_RATE_18:
+	case SIR_MAC_RATE_24:
+	case SIR_MAC_RATE_36:
+	case SIR_MAC_RATE_48:
+	case SIR_MAC_RATE_54:
+		return true;
+	default:
+		break;
+	}
+
+	return false;
+}
+
 static QDF_STATUS csr_get_rate_set(struct mac_context *mac,
 				   struct csr_roam_profile *pProfile,
 				   eCsrPhyMode phyMode,
@@ -4461,6 +4482,7 @@ static QDF_STATUS csr_get_rate_set(struct mac_context *mac,
 	enum csr_cfgdot11mode cfgDot11Mode;
 	uint8_t *pDstRate;
 	uint16_t rateBitmap = 0;
+	bool is_5ghz_freq;
 
 	qdf_mem_zero(pOpRateSet, sizeof(tSirMacRateSet));
 	qdf_mem_zero(pExRateSet, sizeof(tSirMacRateSet));
@@ -4473,6 +4495,7 @@ static QDF_STATUS csr_get_rate_set(struct mac_context *mac,
 
 	csr_is_phy_mode_match(mac, phyMode, bss_desc, pProfile,
 			      &cfgDot11Mode, pIes);
+	is_5ghz_freq = wlan_reg_is_5ghz_ch_freq(bss_desc->chan_freq);
 	/*
 	 * Originally, we thought that for 11a networks, the 11a rates
 	 * are always in the Operational Rate set & for 11b and 11g
@@ -4488,6 +4511,10 @@ static QDF_STATUS csr_get_rate_set(struct mac_context *mac,
 	pDstRate = pOpRateSet->rate;
 	if (pIes->SuppRates.present) {
 		for (i = 0; i < pIes->SuppRates.num_rates; i++) {
+			if (is_5ghz_freq &&
+			    !is_ofdm_rates(pIes->SuppRates.rates[i]))
+				continue;
+
 			if (csr_rates_is_dot11_rate_supported(mac,
 				pIes->SuppRates.rates[i]) &&
 				!csr_check_rate_bitmap(
