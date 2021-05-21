@@ -494,9 +494,8 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.reset_gpio)) {
 #ifdef CONFIG_TOUCHSCREEN_COMMON
-		if (lcd_reset_keep_high)
-			pr_warn("%s: lcd-reset-gpio keep high\n", __func__);
-		else {
+		if (lcd_reset_keep_high) {
+		} else {
 			gpio_set_value(panel->reset_config.reset_gpio, 0);
 			pr_err("%s: lcd-reset_gpio = 0\n", __func__);
 		}

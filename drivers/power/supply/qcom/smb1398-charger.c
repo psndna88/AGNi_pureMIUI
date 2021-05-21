@@ -388,8 +388,6 @@ static int smb1398_get_enable_status(struct smb1398_chip *chip)
 	switcher_en = !!(val & EN_SWITCHER);
 	chip->switcher_en = switcher_en && chip->switcher_en;
 
-	dev_dbg(chip->dev, "smb_en = %d, switcher_en = %d, slave_en = %d\n",
-			chip->smb_en, chip->switcher_en, chip->slave_en);
 	return rc;
 }
 
@@ -414,7 +412,6 @@ static int smb1398_get_iin_ma(struct smb1398_chip *chip, int *iin_ma)
 
 	*iin_ma = min(ilim, max);
 
-	dev_dbg(chip->dev, "get iin_ma = %dmA\n", *iin_ma);
 	return rc;
 }
 
@@ -435,7 +432,6 @@ static int smb1398_set_iin_ma(struct smb1398_chip *chip, int iin_ma)
 	if (rc < 0)
 		return rc;
 
-	dev_dbg(chip->dev, "set iin_ma = %dmA\n", iin_ma);
 	return rc;
 }
 
@@ -457,7 +453,6 @@ static int smb1398_set_ichg_ma(struct smb1398_chip *chip, int ichg_ma)
 	rc = smb1398_masked_write(chip, ICHG_SS_DAC_TARGET_REG,
 			ICHG_SS_DAC_VALUE_MASK, val);
 
-	dev_dbg(chip->dev, "set ichg %dmA\n", ichg_ma);
 	return rc;
 }
 
@@ -482,7 +477,6 @@ static int smb1398_get_ichg_ma(struct smb1398_chip *chip, int *ichg_ma)
 
 	*ichg_ma = min(ichg, max);
 
-	dev_dbg(chip->dev, "get ichg %dmA\n", *ichg_ma);
 	return 0;
 }
 
@@ -545,7 +539,6 @@ static int smb1398_get_die_temp(struct smb1398_chip *chip, int *temp)
 		dev_err(chip->dev, "Couldn't read die_temp_chan, rc=%d\n", rc);
 	} else {
 		*temp = die_temp_deciC / 100;
-		dev_dbg(chip->dev, "die temp %d\n", *temp);
 	}
 
 	return rc;
@@ -857,7 +850,6 @@ unlock:
 
 	if (rc >= 0) {
 		*isns_ua = calculate_div2_cp_isns_ua(temp);
-		dev_dbg(chip->dev, "slave isns = %duA\n", *isns_ua);
 	}
 
 	return rc;
@@ -1351,8 +1343,6 @@ static int smb1398_div2_cp_ilim_vote_cb(struct votable *votable,
 			if (rc < 0)
 				dev_err(chip->dev, "Couldn't set CP slave ilim, rc=%d\n",
 						rc);
-			dev_dbg(chip->dev, "set CP slave ilim to %duA\n",
-					ilim_ua);
 		}
 
 		rc = smb1398_set_iin_ma(chip, ilim_ua / 1000);
@@ -1371,7 +1361,6 @@ static int smb1398_div2_cp_ilim_vote_cb(struct votable *votable,
 			vote(chip->div2_cp_disable_votable, TAPER_VOTER, false, 0);
 		}
 
-		dev_dbg(chip->dev, "set CP master ilim to %duA\n", ilim_ua);
 		vote(chip->div2_cp_disable_votable, ILIM_VOTER, false, 0);
 	}
 

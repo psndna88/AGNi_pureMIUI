@@ -772,9 +772,6 @@ int smblib_set_charge_param(struct smb_charger *chg,
 			return -EINVAL;
 	} else {
 		if (val_u > param->max_u || val_u < param->min_u)
-			smblib_dbg(chg, PR_MISC,
-				"%s: %d is out of range [%d, %d]\n",
-				param->name, val_u, param->min_u, param->max_u);
 
 		if (val_u > param->max_u)
 			val_u = param->max_u;
@@ -790,9 +787,6 @@ int smblib_set_charge_param(struct smb_charger *chg,
 			param->name, val_raw, param->reg, rc);
 		return rc;
 	}
-
-	smblib_dbg(chg, PR_OEM, "%s = %d (0x%02x)\n",
-		   param->name, val_u, val_raw);
 
 	return rc;
 }
@@ -2770,21 +2764,7 @@ static void smblib_reg_work(struct work_struct *work)
 	}
 	usb_present = val.intval;
 
-	smblib_dbg(chg, PR_OEM, "Awake vote value is %d voted by %s\n",
-					get_effective_result(chg->awake_votable),
-					get_effective_client(chg->awake_votable));
-
 	if (usb_present) {
-		smblib_dbg(chg, PR_OEM, "ICL vote value is %d voted by %s\n",
-					get_effective_result(chg->usb_icl_votable),
-					get_effective_client(chg->usb_icl_votable));
-		smblib_dbg(chg, PR_OEM, "FCC vote value is %d voted by %s\n",
-					get_effective_result(chg->fcc_votable),
-					get_effective_client(chg->fcc_votable));
-		smblib_dbg(chg, PR_OEM, "FV vote value is %d voted by %s\n",
-					get_effective_result(chg->fv_votable),
-					get_effective_client(chg->fv_votable));
-
 		power_supply_get_property(chg->usb_psy,
 					POWER_SUPPLY_PROP_INPUT_CURRENT_NOW,
 					&val);
@@ -2821,11 +2801,6 @@ static void smblib_reg_work(struct work_struct *work)
 					&val);
 		resistance_now = val.intval;
 
-		smblib_dbg(chg, PR_OEM, "resistance_now[%d]\n", resistance_now);
-
-		smblib_dbg(chg, PR_OEM,
-					"ICL settle value[%d], usbin adc current[%d], vbusin adc vol[%d]\n",
-					icl_settle, usb_cur_in, usb_vol_in);
 		if (!chg->usb_main_psy) {
 			chg->usb_main_psy = power_supply_get_by_name("main");
 		}
@@ -2834,12 +2809,7 @@ static void smblib_reg_work(struct work_struct *work)
 					POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED,
 					&val);
 			icl_sts = val.intval;
-			smblib_dbg(chg, PR_OEM, "AICL_STS[%d]\n", icl_sts);
 		}
-
-		smblib_dbg(chg, PR_OEM,
-					"Type-C orientation[%d], Type-C mode[%d], Real Charger Type[%d]\n",
-					typec_orientation, typec_mode, charger_type);
 
 		schedule_delayed_work(&chg->reg_work,
 				CHARGING_PERIOD_S * HZ);
@@ -3054,13 +3024,6 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		pr_err("Couldn't get batt temp rc=%d\n", rc);
 		return -EINVAL;
 	}
-	smblib_dbg(chg, PR_OEM, "thermal level:%d, batt temp:%d, thermal_levels:%d"
-					 "chg->system_temp_level:%d, charger_type:%d\n",
-					 val->intval, batt_temp.intval, chg->thermal_levels,
-					 chg->system_temp_level, chg->real_charger_type);
-
-	pr_debug("%s val=%d, chg->system_temp_level=%d, LctThermal=%d, lct_backlight_off= %d, IsInCall=%d \n "
-		,__FUNCTION__,val->intval,chg->system_temp_level, LctThermal, lct_backlight_off, LctIsInCall);
 
 	if (LctThermal == 0) { //from therml-engine always store lvl_sel
 		lct_therm_lvl_reserved.intval = val->intval;
@@ -3068,12 +3031,10 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 
 	if (!board_get_33w_supported()) {
 	if ((lct_backlight_off) && (LctIsInCall == 0) && (val->intval > LCT_THERM_LCDOFF_LEVEL)) {
-		pr_debug("leve ignored:backlight_off:%d level:%d",lct_backlight_off,val->intval);
 		return 0;
 	}
 
 	if ((LctIsInCall == 1) && (val->intval != LCT_THERM_CALL_LEVEL)) {
-		pr_debug("leve ignored:LctIsInCall:%d level:%d",LctIsInCall,val->intval);
 		return 0;
 	}
 	}
@@ -3096,9 +3057,6 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 		return vote(chg->chg_disable_votable,
 			THERMAL_DAEMON_VOTER, true, 0);
 	}
-
-	pr_info("%s intval:%d system temp level:%d thermal_levels:%d",
-		__FUNCTION__,val->intval,chg->system_temp_level,chg->thermal_levels);
 
 	vote(chg->chg_disable_votable, THERMAL_DAEMON_VOTER, false, 0);
 
@@ -7078,8 +7036,6 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	determine_thermal_current(chg);
 	}
 
-	smblib_dbg(chg, PR_OEM, "IRQ: apsd-done rising; %s detected\n",
-		   apsd_result->name);
 }
 
 irqreturn_t usb_source_change_irq_handler(int irq, void *data)
@@ -7098,7 +7054,6 @@ irqreturn_t usb_source_change_irq_handler(int irq, void *data)
 		smblib_err(chg, "Couldn't read APSD_STATUS rc=%d\n", rc);
 		return IRQ_HANDLED;
 	}
-	smblib_dbg(chg, PR_OEM, "APSD_STATUS = 0x%02x\n", stat);
 
 	if ((chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 		&& (stat & APSD_DTC_STATUS_DONE_BIT)
@@ -7142,7 +7097,6 @@ irqreturn_t usb_source_change_irq_handler(int irq, void *data)
 		smblib_err(chg, "Couldn't read APSD_STATUS rc=%d\n", rc);
 		return IRQ_HANDLED;
 	}
-	smblib_dbg(chg, PR_OEM, "APSD_STATUS = 0x%02x\n", stat);
 
 	return IRQ_HANDLED;
 }
@@ -8073,8 +8027,6 @@ irqreturn_t wdog_snarl_irq_handler(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 
-	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
-
 	if (chg->wa_flags & SW_THERM_REGULATION_WA) {
 		cancel_delayed_work_sync(&chg->thermal_regulation_work);
 		vote(chg->awake_votable, SW_THERM_REGULATION_VOTER, true, 0);
@@ -8092,8 +8044,6 @@ irqreturn_t wdog_bark_irq_handler(int irq, void *data)
 	struct smb_irq_data *irq_data = data;
 	struct smb_charger *chg = irq_data->parent_data;
 	int rc;
-
-	smblib_dbg(chg, PR_OEM, "IRQ: %s\n", irq_data->name);
 
 	rc = smblib_write(chg, BARK_BITE_WDOG_PET_REG, BARK_BITE_WDOG_PET_BIT);
 	if (rc < 0)
@@ -8861,9 +8811,6 @@ static enum alarmtimer_restart chg_termination_alarm_cb(struct alarm *alarm,
 {
 	struct smb_charger *chg = container_of(alarm, struct smb_charger,
 							chg_termination_alarm);
-
-	smblib_dbg(chg, PR_MISC, "Charge termination WA alarm triggered %lld\n",
-			ktime_to_ms(now));
 
 	/* Atomic context, cannot use voter */
 	pm_stay_awake(chg->dev);

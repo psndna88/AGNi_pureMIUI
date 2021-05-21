@@ -3402,9 +3402,6 @@ static int rmnet_ipa3_set_data_quota_modem(
 	data->interface_name[IFNAMSIZ-1] = '\0';
 
 	index = find_vchannel_name_index(data->interface_name);
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	if (index == MAX_NUM_OF_MUX_CHANNEL) {
 		IPAWANERR("%s is an invalid iface name\n",
@@ -3432,9 +3429,6 @@ static int rmnet_ipa3_set_data_quota_wifi(struct wan_ioctl_set_data_quota *data)
 	memset(&wifi_quota, 0, sizeof(struct ipa_set_wifi_quota));
 	wifi_quota.set_quota = data->set_quota;
 	wifi_quota.quota_bytes = data->quota_mbytes;
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	rc = ipa3_set_wlan_quota(&wifi_quota);
 	/* check if wlan-fw takes this quota-set */
