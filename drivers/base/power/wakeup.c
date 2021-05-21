@@ -269,12 +269,10 @@ struct wakeup_source *wakeup_source_register(struct device *dev,
 
 	ws = wakeup_source_create(name);
 	if (ws) {
-		if (!dev || device_is_registered(dev)) {
-			ret = wakeup_source_sysfs_add(dev, ws);
-			if (ret) {
-				wakeup_source_free(ws);
-				return NULL;
-			}
+		ret = wakeup_source_sysfs_add(dev, ws);
+		if (ret) {
+			wakeup_source_free(ws);
+			return NULL;
 		}
 		wakeup_source_add(ws);
 	}
