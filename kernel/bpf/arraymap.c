@@ -270,7 +270,9 @@ static void *prog_fd_array_get_ptr(struct bpf_map *map, int fd)
 
 static void prog_fd_array_put_ptr(void *ptr)
 {
-	bpf_prog_put(ptr);
+	struct bpf_prog *prog = ptr;
+
+	bpf_prog_put_rcu(prog);
 }
 
 /* decrement refcnt of all bpf_progs that are stored in this map */
