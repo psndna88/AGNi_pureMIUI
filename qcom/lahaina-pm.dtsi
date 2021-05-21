@@ -139,6 +139,7 @@
 		compatible = "qcom,ddr-stats";
 		reg = <0xc300000 0x1000>, <0xc3f001c 0x4>;
 		reg-names = "phys_addr_base", "offset_addr";
+		mboxes = <&qmp_aop 0>;
 	};
 
 	sys-pm-vx@c320000 {
