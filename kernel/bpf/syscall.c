@@ -82,14 +82,6 @@ static void bpf_map_free_deferred(struct work_struct *work)
 	map->ops->map_free(map);
 }
 
-static void bpf_map_put_uref(struct bpf_map *map)
-{
-	if (atomic_dec_and_test(&map->usercnt)) {
-		if (map->map_type == BPF_MAP_TYPE_PROG_ARRAY)
-			bpf_fd_array_map_clear(map);
-	}
-}
-
 /* decrement map refcnt and schedule it for freeing via workqueue
  * (unrelying map implementation ops->map_free() might sleep)
  */
@@ -101,15 +93,17 @@ void bpf_map_put(struct bpf_map *map)
 	}
 }
 
-void bpf_map_put_with_uref(struct bpf_map *map)
-{
-	bpf_map_put_uref(map);
-	bpf_map_put(map);
-}
-
 static int bpf_map_release(struct inode *inode, struct file *filp)
 {
-	bpf_map_put_with_uref(filp->private_data);
+	struct bpf_map *map = filp->private_data;
+
+	if (map->map_type == BPF_MAP_TYPE_PROG_ARRAY)
+		/* prog_array stores refcnt-ed bpf_prog pointers
+		 * release them all when user space closes prog_array_fd
+		 */
+		bpf_fd_array_map_clear(map);
+
+	bpf_map_put(map);
 	return 0;
 }
 
@@ -148,7 +142,6 @@ static int map_create(union bpf_attr *attr)
 		return PTR_ERR(map);
 
 	atomic_set(&map->refcnt, 1);
-	atomic_set(&map->usercnt, 1);
 
 	err = bpf_map_charge_memlock(map);
 	if (err)
@@ -183,14 +176,7 @@ struct bpf_map *__bpf_map_get(struct fd f)
 	return f.file->private_data;
 }
 
-void bpf_map_inc(struct bpf_map *map, bool uref)
-{
-	atomic_inc(&map->refcnt);
-	if (uref)
-		atomic_inc(&map->usercnt);
-}
-
-struct bpf_map *bpf_map_get_with_uref(u32 ufd)
+struct bpf_map *bpf_map_get(u32 ufd)
 {
 	struct fd f = fdget(ufd);
 	struct bpf_map *map;
@@ -199,7 +185,7 @@ struct bpf_map *bpf_map_get_with_uref(u32 ufd)
 	if (IS_ERR(map))
 		return map;
 
-	bpf_map_inc(map, true);
+	atomic_inc(&map->refcnt);
 	fdput(f);
 
 	return map;
