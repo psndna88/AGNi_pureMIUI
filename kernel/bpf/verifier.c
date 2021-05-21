@@ -1844,8 +1844,7 @@ static int do_check(struct verifier_env *env)
 			if (err)
 				return err;
 
-			if (BPF_SIZE(insn->code) != BPF_W &&
-			    BPF_SIZE(insn->code) != BPF_DW) {
+			if (BPF_SIZE(insn->code) != BPF_W) {
 				insn_idx++;
 				continue;
 			}
@@ -2221,11 +2220,9 @@ static int convert_ctx_accesses(struct verifier_env *env)
 	for (i = 0; i < insn_cnt; i++, insn++) {
 		u32 cnt;
 
-		if (insn->code == (BPF_LDX | BPF_MEM | BPF_W) ||
-		    insn->code == (BPF_LDX | BPF_MEM | BPF_DW))
+		if (insn->code == (BPF_LDX | BPF_MEM | BPF_W))
 			type = BPF_READ;
-		else if (insn->code == (BPF_STX | BPF_MEM | BPF_W) ||
-			 insn->code == (BPF_STX | BPF_MEM | BPF_DW))
+		else if (insn->code == (BPF_STX | BPF_MEM | BPF_W))
 			type = BPF_WRITE;
 		else
 			continue;
