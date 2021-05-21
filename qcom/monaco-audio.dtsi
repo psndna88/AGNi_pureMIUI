@@ -13,6 +13,7 @@
 	monaco_snd: sound {
 		compatible = "qcom,monaco-asoc-snd";
 		qcom,mi2s-audio-intf = <1>;
+		qcom,cc-va-intf-enable = <1>;
 	};
 };
 
