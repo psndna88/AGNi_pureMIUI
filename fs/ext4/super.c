@@ -2175,25 +2175,6 @@ static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 	}
 	if (read_only)
 		goto done;
-	if (!(sbi->s_mount_state & EXT4_VALID_FS))
-		ext4_msg(sb, KERN_WARNING, "warning: mounting unchecked fs, "
-			 "running e2fsck is recommended");
-	else if (sbi->s_mount_state & EXT4_ERROR_FS)
-		ext4_msg(sb, KERN_WARNING,
-			 "warning: mounting fs with errors, "
-			 "running e2fsck is recommended");
-	else if ((__s16) le16_to_cpu(es->s_max_mnt_count) > 0 &&
-		 le16_to_cpu(es->s_mnt_count) >=
-		 (unsigned short) (__s16) le16_to_cpu(es->s_max_mnt_count))
-		ext4_msg(sb, KERN_WARNING,
-			 "warning: maximal mount count reached, "
-			 "running e2fsck is recommended");
-	else if (le32_to_cpu(es->s_checkinterval) &&
-		(le32_to_cpu(es->s_lastcheck) +
-			le32_to_cpu(es->s_checkinterval) <= get_seconds()))
-		ext4_msg(sb, KERN_WARNING,
-			 "warning: checktime reached, "
-			 "running e2fsck is recommended");
 	if (!sbi->s_journal)
 		es->s_state &= cpu_to_le16(~EXT4_VALID_FS);
 	if (!(__s16) le16_to_cpu(es->s_max_mnt_count))
@@ -2206,15 +2187,6 @@ static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 
 	ext4_commit_super(sb, 1);
 done:
-	if (test_opt(sb, DEBUG))
-		printk(KERN_INFO "[EXT4 FS bs=%lu, gc=%u, "
-				"bpg=%lu, ipg=%lu, mo=%04x, mo2=%04x]\n",
-			sb->s_blocksize,
-			sbi->s_groups_count,
-			EXT4_BLOCKS_PER_GROUP(sb),
-			EXT4_INODES_PER_GROUP(sb),
-			sbi->s_mount_opt, sbi->s_mount_opt2);
-
 	cleancache_init_fs(sb);
 	return res;
 }

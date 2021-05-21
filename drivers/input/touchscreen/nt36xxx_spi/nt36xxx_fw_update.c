@@ -67,14 +67,12 @@ static int32_t nvt_get_fw_need_write_size(const struct firmware *fw_entry)
 		/* check if there is end flag "NVT" at the end of this sector */
 		if (strncmp(&fw_entry->data[i * FLASH_SECTOR_SIZE - NVT_FLASH_END_FLAG_LEN], "NVT", NVT_FLASH_END_FLAG_LEN) == 0) {
 			fw_need_write_size = i * FLASH_SECTOR_SIZE;
-			NVT_LOG("fw_need_write_size = %zu(0x%zx), NVT end flag\n", fw_need_write_size, fw_need_write_size);
 			return 0;
 		}
 
 		/* check if there is end flag "MOD" at the end of this sector */
 		if (strncmp(&fw_entry->data[i * FLASH_SECTOR_SIZE - NVT_FLASH_END_FLAG_LEN], "MOD", NVT_FLASH_END_FLAG_LEN) == 0) {
 			fw_need_write_size = i * FLASH_SECTOR_SIZE;
-			NVT_LOG("fw_need_write_size = %zu(0x%zx), MOD end flag\n", fw_need_write_size, fw_need_write_size);
 			return 0;
 		}
 	}
@@ -173,8 +171,6 @@ static int32_t nvt_bin_header_parser(const u8 *fwdata, size_t fwsize)
 	 * ilm_dlm_num (ILM & DLM) + ovly_sec_num + info_sec_num
 	 */
 	partition = ilm_dlm_num + ovly_sec_num + info_sec_num;
-	NVT_LOG("ovly_info = %d, ilm_dlm_num = %d, ovly_sec_num = %d, info_sec_num = %d, partition = %d\n",
-			ovly_info, ilm_dlm_num, ovly_sec_num, info_sec_num, partition);
 
 	/* allocated memory for header info */
 	bin_map = (struct nvt_ts_bin_map *)kzalloc((partition+1) * sizeof(struct nvt_ts_bin_map), GFP_KERNEL);
@@ -313,8 +309,6 @@ static int32_t update_firmware_request(char *filename)
 	}
 
 	while (1) {
-		NVT_LOG("filename is %s\n", filename);
-
 		ret = request_firmware(&fw_entry, filename, &ts->client->dev);
 		if (ret) {
 			NVT_ERR("firmware load failed, ret=%d\n", ret);
@@ -906,9 +900,6 @@ int32_t nvt_update_firmware(char *firmware_name)
 		NVT_ERR("Download Firmware failed. (%d)\n", ret);
 		goto download_fail;
 	}
-
-	NVT_LOG("Update firmware success! <%ld us>\n",
-			(end.tv_sec - start.tv_sec)*1000000L + (end.tv_usec - start.tv_usec));
 
 	/* Get FW Info */
 	ret = nvt_get_fw_info();

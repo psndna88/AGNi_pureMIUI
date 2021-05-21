@@ -1925,8 +1925,6 @@ static void _sde_connector_report_panel_dead(struct sde_connector *conn,
 	sde_encoder_display_failure_notification(conn->encoder,
 		skip_pre_kickoff);
 	SDE_EVT32(SDE_EVTLOG_ERROR);
-	SDE_ERROR("esd check failed report PANEL_DEAD conn_id: %d enc_id: %d\n",
-			conn->base.base.id, conn->encoder->base.id);
 }
 
 int sde_connector_esd_status(struct drm_connector *conn)

@@ -170,14 +170,12 @@ static uint8_t bTouchIsAwake = 0;
 #define WAKEUP_ON 5
 int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int code, int value)
 {
-	NVT_LOG("Enter. type = %u, code = %u, value = %d\n", type, code, value);
 	if (type == EV_SYN && code == SYN_CONFIG) {
 		if (value == WAKEUP_OFF)
 			lct_nvt_tp_gesture_callback(false);
 		else if (value == WAKEUP_ON)
 			lct_nvt_tp_gesture_callback(true);
 	}
-	NVT_LOG("Exit\n");
 	return 0;
 }
 
@@ -226,9 +224,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 		return;
 	}
 
-	NVT_LOG("++\n");
 	mutex_lock(&ts->lock);
-	NVT_LOG("usb_plugged_in = %d\n", g_touchscreen_usb_pulgin.usb_plugged_in);
 
 	msleep(35);
 
@@ -253,7 +249,6 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 
 exit:
 	mutex_unlock(&ts->lock);
-	NVT_LOG("--\n");
 }
 #endif
 
@@ -281,7 +276,6 @@ static void nvt_irq_enable(bool enable)
 	}
 
 	desc = irq_to_desc(ts->client->irq);
-	NVT_LOG("enable=%d, desc->depth=%d\n", enable, desc->depth);
 }
 
 /*******************************************************
@@ -737,8 +731,6 @@ int32_t nvt_read_pid(void)
 	//---set xdata index to EVENT BUF ADDR---
 	nvt_set_page(ts->mmap->EVENT_BUF_ADDR);
 
-	NVT_LOG("PID=%04X\n", ts->nvt_pid);
-
 	return ret;
 }
 
@@ -795,8 +787,6 @@ info_retry:
 	} else {
 		ret = 0;
 	}
-
-	NVT_LOG("fw_ver = 0x%02X, fw_type = 0x%02X\n", ts->fw_ver, buf[14]);
 
 #ifdef CHECK_TOUCH_VENDOR
 	switch(ts->touch_vendor_id) {
@@ -1055,63 +1045,47 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 	if ((gesture_id == DATA_PROTOCOL) && (func_type == FUNCPAGE_GESTURE)) {
 		gesture_id = func_id;
 	} else if (gesture_id > DATA_PROTOCOL) {
-		NVT_ERR("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
 		return;
 	}
 
-	NVT_LOG("gesture_id = %d\n", gesture_id);
-
 	switch (gesture_id) {
 		case GESTURE_WORD_C:
-			NVT_LOG("Gesture : Word-C.\n");
 			keycode = gesture_key_array[0];
 			break;
 		case GESTURE_WORD_W:
-			NVT_LOG("Gesture : Word-W.\n");
 			keycode = gesture_key_array[1];
 			break;
 		case GESTURE_WORD_V:
-			NVT_LOG("Gesture : Word-V.\n");
 			keycode = gesture_key_array[2];
 			break;
 		case GESTURE_DOUBLE_CLICK:
-			NVT_LOG("Gesture : Double Click.\n");
 			keycode = gesture_key_array[3];
 			break;
 		case GESTURE_WORD_Z:
-			NVT_LOG("Gesture : Word-Z.\n");
 			keycode = gesture_key_array[4];
 			break;
 		case GESTURE_WORD_M:
-			NVT_LOG("Gesture : Word-M.\n");
 			keycode = gesture_key_array[5];
 			break;
 		case GESTURE_WORD_O:
-			NVT_LOG("Gesture : Word-O.\n");
 			keycode = gesture_key_array[6];
 			break;
 		case GESTURE_WORD_e:
-			NVT_LOG("Gesture : Word-e.\n");
 			keycode = gesture_key_array[7];
 			break;
 		case GESTURE_WORD_S:
-			NVT_LOG("Gesture : Word-S.\n");
 			keycode = gesture_key_array[8];
 			break;
 		case GESTURE_SLIDE_UP:
-			NVT_LOG("Gesture : Slide UP.\n");
 			keycode = gesture_key_array[9];
 			break;
 		case GESTURE_SLIDE_DOWN:
-			NVT_LOG("Gesture : Slide DOWN.\n");
 			keycode = gesture_key_array[10];
 			break;
 		case GESTURE_SLIDE_LEFT:
-			NVT_LOG("Gesture : Slide LEFT.\n");
 			keycode = gesture_key_array[11];
 			break;
 		case GESTURE_SLIDE_RIGHT:
-			NVT_LOG("Gesture : Slide RIGHT.\n");
 			keycode = gesture_key_array[12];
 			break;
 		default:
@@ -1148,10 +1122,8 @@ static int32_t nvt_parse_dt(struct device *dev)
 
 #if NVT_TOUCH_SUPPORT_HW_RST
 	ts->reset_gpio = of_get_named_gpio_flags(np, "novatek,reset-gpio", 0, &ts->reset_flags);
-	NVT_LOG("novatek,reset-gpio=%d\n", ts->reset_gpio);
 #endif
 	ts->irq_gpio = of_get_named_gpio_flags(np, "novatek,irq-gpio", 0, &ts->irq_flags);
-	NVT_LOG("novatek,irq-gpio=%d\n", ts->irq_gpio);
 
 	ret = of_property_read_u32(np, "novatek,swrst-n8-addr", &SWRST_N8_ADDR);
 	if (ret) {
@@ -1564,8 +1536,6 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		buf[5] = 0x00;
 		buf[6] = 0x00;
 		CTP_SPI_READ(ts->client, buf, 7);
-		NVT_LOG("buf[1]=0x%02X, buf[2]=0x%02X, buf[3]=0x%02X, buf[4]=0x%02X, buf[5]=0x%02X, buf[6]=0x%02X\n",
-			buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
 		// compare read chip id on supported list
 		for (list = 0; list < (sizeof(trim_id_table) / sizeof(struct nvt_ts_trim_id_table)); list++) {
@@ -2330,7 +2300,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 #endif
 
 	if (!bTouchIsAwake) {
-		NVT_LOG("Touch is already suspend\n");
 		return 0;
 	}
 
@@ -2355,8 +2324,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	mutex_lock(&ts->lock);
 
-	NVT_LOG("start\n");
-
 	bTouchIsAwake = 0;
 
 #if WAKEUP_GESTURE
@@ -2366,7 +2333,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 		buf[1] = 0x13;
 		CTP_SPI_WRITE(ts->client, buf, 2);
 		enable_irq_wake(ts->client->irq);
-		NVT_LOG("Enabled touch wakeup gesture\n");
 	} else {
 		//---write command to enter "deep sleep mode"---
 		buf[0] = EVENT_MAP_HOST_CMD;
@@ -2399,8 +2365,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	msleep(50);
 
-	NVT_LOG("end\n");
-
 	return 0;
 }
 
@@ -2414,23 +2378,22 @@ return:
 static int32_t nvt_ts_resume(struct device *dev)
 {
 	if (bTouchIsAwake) {
-		NVT_LOG("Touch is already resume\n");
 		return 0;
 	}
 
 	mutex_lock(&ts->lock);
 
-	NVT_LOG("start\n");
-
 	// please make sure display reset(RESX) sequence and mipi dsi cmds sent before this
 #if NVT_TOUCH_SUPPORT_HW_RST
 	gpio_set_value(ts->reset_gpio, 1);
 #endif
+#if BOOT_UPDATE_FIRMWARE
 	if (nvt_update_firmware(ts->boot_update_firmware_name)) {
 		NVT_ERR("download firmware failed, ignore check fw state\n");
 	} else {
 		nvt_check_fw_reset_state(RESET_STATE_REK);
 	}
+#endif
 
 #if WAKEUP_GESTURE
 	if (!ts->is_gesture_mode) {
@@ -2466,9 +2429,6 @@ static int32_t nvt_ts_resume(struct device *dev)
 	if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
 		g_touchscreen_usb_pulgin.event_callback();
 #endif
-
-	NVT_LOG("end\n");
-
 	return 0;
 }
 
@@ -2517,13 +2477,11 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 		blank = evdata->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
 			if (*blank == MSM_DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				cancel_work_sync(&ts->resume_work);
 				nvt_ts_suspend(&ts->client->dev);
 			}
 		} else if (event == MSM_DRM_EVENT_BLANK) {
 			if (*blank == MSM_DRM_BLANK_UNBLANK) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				//nvt_ts_resume(&ts->client->dev);
 				queue_work(ts->workqueue, &ts->resume_work);
 			}

@@ -4867,10 +4867,6 @@ static void qg_battery_soc_smooth_tracking(struct qpnp_qg *chip)
 
 	soc_changed = min(1, delta_time);
 
-	pr_debug("soc:%d, last_soc:%d, raw_soc:%d, soc_changed:%d, update_now:%d, charge_status:%d, batt_ma:%d\n",
-			chip->param.batt_soc, last_batt_soc, chip->param.batt_raw_soc, soc_changed, chip->param.update_now,
-			chip->charge_status, chip->param.batt_ma);
-
 	if (last_batt_soc >= 0) {
 		if (last_batt_soc != FULL_SOC && chip->param.batt_raw_soc >= FORCE_TO_FULL_SOC && chip->charge_status == POWER_SUPPLY_STATUS_FULL)
 			/* Unlikely status */
@@ -4942,10 +4938,6 @@ static void soc_monitor_work(struct work_struct *work)
 
 	if (chip->soc_reporting_ready)
 		qg_battery_soc_smooth_tracking(chip);
-
-	pr_debug("soc:%d, raw_soc:%d, c:%d, s:%d\n",
-			chip->param.batt_soc, chip->param.batt_raw_soc,
-			chip->param.batt_ma, chip->charge_status);
 
 	schedule_delayed_work(&chip->soc_monitor_work, msecs_to_jiffies(MONITOR_SOC_WAIT_PER_MS));
 }
