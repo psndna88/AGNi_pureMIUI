@@ -15,7 +15,7 @@
 			/delete-property/ boot_devices;
 			fstab {
 				vendor {
-					dev="/dev/block/platform/vdevs/1c160000.virtio_blk/vdc";
+					dev="/dev/block/platform/vdevs/1c160000.virtio_blk/vendor";
 					fsmgr_flags = "wait";
 				};
 			};
@@ -178,6 +178,23 @@
 				<GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	qtee_shmbridge {
+		compatible = "qcom,tee-shared-memory-bridge";
+	};
+
+	qcom_qseecom: qseecom@c1800000 {
+		compatible = "qcom,qseecom";
+		reg = <0xc1800000 0x3900000>;
+		reg-names = "secapp-region";
+		memory-region = <&qseecom_mem>;
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,no-clock-support;
+		qcom,qsee-reentrancy-support = <2>;
+	};
+
 	msm_gpu_hyp: qcom,hgsl {
 		compatible = "qcom,hgsl";
 
@@ -206,6 +223,51 @@
 			offset = <768>;
 		};
 	};
+
+	VDD_CX_LEVEL:
+	S1A0_LEVEL: pm8540_a0_s1_level: regulator-pm8540_a0-s1-level {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8540_a0_s1_level";
+		regulator-min-microvolt =
+			<RPMH_REGULATOR_LEVEL_RETENTION>;
+		regulator-max-microvolt =
+			<RPMH_REGULATOR_LEVEL_MAX>;
+	};
+
+	pcie_2a_pipe_clk: pcie_2a_pipe_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <1000>;
+		clock-output-names = "pcie_2a_pipe_clk";
+		#clock-cells = <0>;
+	};
+
+	pcie_2b_pipe_clk: pcie_2b_pipe_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <1000>;
+		clock-output-names = "pcie_2b_pipe_clk";
+		#clock-cells = <0>;
+	};
+
+	pcie_3a_pipe_clk: pcie_3a_pipe_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <1000>;
+		clock-output-names = "pcie_3a_pipe_clk";
+		#clock-cells = <0>;
+	};
+
+	pcie_3b_pipe_clk: pcie_3b_pipe_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <1000>;
+		clock-output-names = "pcie_3b_pipe_clk";
+		#clock-cells = <0>;
+	};
+
+	pcie_4_pipe_clk: pcie_4_pipe_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <1000>;
+		clock-output-names = "pcie_4_pipe_clk";
+		#clock-cells = <0>;
+	};
 };
 
 &regulator {
@@ -215,6 +277,32 @@
 
 	gcc_usb30_sec_gdsc: gcc_usb30_sec_gdsc {
 		regulator-name = "gcc_usb30_sec_gdsc";
+	};
+
+	gcc_pcie_2a_gdsc: gcc_pcie_2a_gdsc {
+		regulator-name = "gcc_pcie_2a_gdsc";
+	};
+
+	gcc_pcie_2b_gdsc: gcc_pcie_2b_gdsc {
+		regulator-name = "gcc_pcie_2b_gdsc";
+	};
+
+	gcc_pcie_3a_gdsc: gcc_pcie_3a_gdsc {
+		regulator-name = "gcc_pcie_3a_gdsc";
+	};
+
+	gcc_pcie_3b_gdsc: gcc_pcie_3b_gdsc {
+		regulator-name = "gcc_pcie_3b_gdsc";
+	};
+
+	gcc_pcie_4_gdsc: gcc_pcie_4_gdsc {
+		regulator-name = "gcc_pcie_4_gdsc";
+	};
+
+	L3A0: pm8540_a0_l3: regulator-pm8540_a0-l3 {
+		regulator-name = "ldoa3";
+		regulator-min-microvolt = <1140000>;
+		regulator-max-microvolt = <1260000>;
 	};
 
 	L5A0: pm8540_a0_l5: regulator-pm8540_a0-l5 {
@@ -227,6 +315,12 @@
 		regulator-name = "ldoa7";
 		regulator-min-microvolt = <1620000>;
 		regulator-max-microvolt = <1980000>;
+	};
+
+	L11A0: pm8540_a0_l11: regulator-pm8540_a0-l11 {
+		regulator-name = "ldoa11";
+		regulator-min-microvolt = <830000>;
+		regulator-max-microvolt = <920000>;
 	};
 
 	L13A0: pm8540_a0_l13: regulator-pm8540_a0-l13 {

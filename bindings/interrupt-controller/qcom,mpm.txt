@@ -26,6 +26,7 @@ Properties:
 		"qcom,mpm-gic-holi"
 		"qcom,mpm-gic-scuba"
 		"qcom,mpm-gic-sdxnightjar"
+		"qcom,mpm-gic-monaco"
 
 - interrupts:
 	Usage: required

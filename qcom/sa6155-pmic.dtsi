@@ -39,6 +39,33 @@
 	/delete-node/ rpmh-regulator-bobc1;
 };
 
+&cam_csiphy0 {
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
+};
+
+&cam_csiphy1 {
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
+};
+
+&cam_csiphy2 {
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
+};
+
 &soc {
 		qcom,lpass@62400000 {
 			vdd_cx-supply = <&VDD_CX_LEVEL>;

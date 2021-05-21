@@ -121,6 +121,7 @@
 
 		qcom,besbev-slave = <&besbev_rx_slave>;
 		qcom,speaker-present = <1>;
+		qcom,comp-support = <0>;
 
 		cdc-mic-bias-supply = <&L28A>;
 		qcom,cdc-mic-bias-voltage = <2904000 2904000>;
@@ -172,11 +173,13 @@
 	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
 	qcom,cdc-dmic02-gpios = <&cdc_dmic02_gpios>;
 
+	nvmem-cells = <&adsp_variant>;
+	nvmem-cell-names = "adsp_variant";
 	asoc-codec  = <&stub_codec>, <&bolero>,
 			<&besbev_codec>;
 	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
 				"besbev_codec";
-	qcom,msm_audio_ssr_devs = <&bolero>, <&lpi_tlmm>;
+	qcom,msm_audio_ssr_devs = <&audio_gpr>, <&bolero>, <&lpi_tlmm>;
 };
 
 &soc {

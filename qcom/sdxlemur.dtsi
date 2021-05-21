@@ -1118,6 +1118,7 @@
 				0x1584 0x28 0x0
 				0x1370 0x2e 0x0
 				0x155c 0x2e 0x0
+				0x1484 0x08 0x0
 				0x1200 0x00 0x0
 				0x1244 0x03 0x0>;
 
@@ -1180,6 +1181,7 @@
 		qcom,platform-type = <0>; /* MDM platform */
 		qcom,ee = <0>;
 		qcom,use-ipa-tethering-bridge;
+		qcom,use-tput-estmation-pipe;
 		qcom,mhi-event-ring-id-limits = <9 15>; /* start and end */
 		qcom,modem-cfg-emb-pipe-flt;
 		qcom,use-xbl-boot;
@@ -1198,37 +1200,36 @@
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
-		qcom,interconnect,num-paths = <4>;
+		qcom,interconnect,num-paths = <3>;
 		qcom,max_num_smmu_cb = <6>;
 		interconnects = <&system_noc MASTER_IPA &mem_noc SLAVE_LLCC>,
 		<&mc_virt MASTER_LLCC &mc_virt SLAVE_EBI1>,
-		<&system_noc MASTER_IPA &system_noc SLAVE_IMEM>,
 		<&mem_noc MASTER_APPSS_PROC &system_noc SLAVE_IPA_CFG>;
 
-		interconnect-names = "ipa_to_llcc", "llcc_to_ebi1", "ipa_to_imem", "appss_to_ipa";
+		interconnect-names = "ipa_to_llcc", "llcc_to_ebi1", "appss_to_ipa";
 		/* No vote */
 		qcom,no-vote =
-		<0 0 0 0 0 0 0 0>;
+		<0 0 0 0 0 0>;
 
 		/* SVS2 */
 		qcom,svs2 =
-		<150000 600000 150000 1804000 75000 300000 0 76800>;
+		<600000 0 600000 1900000 0 76800>;
 
 		/* SVS */
 		qcom,svs =
-		<625000 1200000 625000 3072000 312500 700000 0 150000>;
+		<1200000 0 1200000 2800000 0 150000>;
 
 		/* NOMINAL */
 		qcom,nominal =
-		<1250000 2400000 1250000 6220800 625000 1500000 0 400000>;
+		<2400000 0 2400000 5500000 0 400000>;
 
 		/* TURBO */
 		qcom,turbo =
-		<2000000 3500000 2000000 7219200 1000000 1920000 0 400000>;
+		<3600000 0 3600000 5500000 0 400000>;
 
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 		"TURBO";
-		qcom,throughput-threshold = <600 2500 5000>;
+		qcom,throughput-threshold = <2000 4000 8000>;
 		qcom,scaling-exceptions = <>;
 
 		ipa_smmu_ap: ipa_smmu_ap {
