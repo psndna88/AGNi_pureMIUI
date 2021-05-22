@@ -51,9 +51,14 @@ if [ -d $COMPILEDIR/arch/arm64/boot ]; then
 	rm -rf $COMPILEDIR/arch/arm64/boot
 fi
 
-mkdir -p $KERNELDIR/READY_ZIP
-if [ -f $KERNELDIR/READY_ZIP/$FILENAME ]; then
-	rm $KERNELDIR/READY_ZIP/$FILENAME
+if [ -d $BUILT_EXPORT ]; then
+	READY_ZIP="$BUILT_EXPORT"
+else
+	READY_ZIP="$KERNELDIR/READY_ZIP"
+fi;
+mkdir -p $READY_ZIP 2>/dev/null;
+if [ -f $READY_ZIP/$FILENAME ]; then
+	rm $READY_ZIP/$FILENAME
 fi
 
 DIR="BUILT-$DEVICE"
@@ -78,7 +83,7 @@ rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
-make -j8 O=$COMPILEDIR # COMPILE
+make -j4 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
@@ -119,7 +124,7 @@ rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG2
-make -j8 O=$COMPILEDIR # COMPILE
+make -j4 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG2
@@ -152,7 +157,7 @@ rm $WLAN_MODP/*.ko 2>/dev/null
 rm $WLAN_MODPO/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG3
-make -j8 O=$COMPILEDIR # COMPILE
+make -j4 O=$COMPILEDIR # COMPILE
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG3
@@ -194,11 +199,11 @@ if ([ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ] && [ -f $KERNELDIR/$DIR/Image.gz-dtb-
 	rm -rf $KERNELDIR/$DIR/tools/sdm636
 	cp -f $KERNELDIR/$DIR/tools/sdm660/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm660
 	cd $KERNELDIR/$DIR/
-	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
+	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
 		echo "  Zip Signing...."
-		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $KERNELDIR/READY_ZIP/$FILENAME $KERNELDIR/READY_ZIP/$FILENAME-signed 2>/dev/null
-		mv $KERNELDIR/READY_ZIP/$FILENAME-signed $KERNELDIR/READY_ZIP/$FILENAME
+		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $READY_ZIP/$FILENAME $READY_ZIP/$FILENAME-signed 2>/dev/null
+		mv $READY_ZIP/$FILENAME-signed $READY_ZIP/$FILENAME
 	fi
 	rm -rf $KERNELDIR/$DIR
 	echo " <<<<< AGNi has been built for $DEVICE !!! >>>>>>"
