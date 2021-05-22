@@ -759,6 +759,24 @@ static int __cam_req_mgr_check_next_req_slot(
 
 	CAM_DBG(CAM_CRM, "idx: %d: slot->status %d", idx, slot->status);
 
+	/*
+	 * Some slot can't be reset due to irq congestion and
+	 * performance issue, we need to reset it when we
+	 * want to move to this slot.
+	 */
+	if (slot->status == CRM_SLOT_STATUS_REQ_APPLIED) {
+		CAM_WARN(CAM_CRM,
+			"slot[%d] wasn't reset, reset it now",
+			idx);
+		if (in_q->last_applied_idx == idx) {
+			CAM_WARN(CAM_CRM,
+				"last_applied_idx: %d",
+				in_q->last_applied_idx);
+			in_q->last_applied_idx = -1;
+		}
+		__cam_req_mgr_reset_req_slot(link, idx);
+	}
+
 	/* Check if there is new req from CSL, if not complete req */
 	if (slot->status == CRM_SLOT_STATUS_NO_REQ) {
 		rc = __cam_req_mgr_check_for_lower_pd_devices(link);
