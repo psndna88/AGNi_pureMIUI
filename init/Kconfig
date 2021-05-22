@@ -88,7 +88,7 @@ config LOCALVERSION
 	  be a maximum of 64 characters.
 
 config ROG_SUPPORT
-	bool "Support MIUI Q ROG ROMS"
+	bool "Support MIUI ROG ROMS"
 	default n
 
 config LOCALVERSION_AUTO

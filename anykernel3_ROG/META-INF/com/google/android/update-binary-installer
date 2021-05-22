@@ -643,14 +643,12 @@ else
 	$BB mount /system;
 fi;
 
-# AGNi: WIFI HAL FOR MIUI 12 Q
-if [ "$ANDROID_VER" == "Q" ]; then
-	if [ "$MIUI_VER" == "12" ]; then
-		ui_print " " "AGNi now installing WIFI HAL..." " ";
-		$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
-		$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
-		/sbin/restorecon -v /vendor/lib64/libwifi-hal.so;
-	fi;
+# AGNi: WIFI HAL FOR ROG MIUI QR
+if ([ "$ANDROID_VER" == "Q" ] || [ "$ANDROID_VER" == "R" ]); then
+	ui_print " " "AGNi now installing WIFI HAL..." " ";
+	$BB cp -f $AKHOME/tools/libwifi-hal.so-miuiQ /vendor/lib64/libwifi-hal.so;
+	$BB chmod 0644 /vendor/lib64/libwifi-hal.so;
+	/sbin/restorecon -v /vendor/lib64/libwifi-hal.so;
 fi;
 
 # AGNi: Wired Earphone Analog Amplification boost

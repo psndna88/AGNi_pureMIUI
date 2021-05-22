@@ -5,7 +5,7 @@ export SUBARCH=arm64
 KERNELDIR=`readlink -f .`
 
 DEVICE="whyred"
-CONFIG1="agni_whyred_ROG_defconfig"
+CONFIG1="agni_whyred_ROG-R_defconfig"
 CONFIG2=""
 CONFIG3=""
 SYNC_CONFIG=1
@@ -19,7 +19,7 @@ RTL8723AU="$COMPILEDIR/drivers/staging/rtl8723au"
 RTL8192EU="$COMPILEDIR/drivers/staging/rtl8192eu"
 
 . $KERNELDIR/AGNi_version.sh
-FILENAME="AGNi_kernel_ROG_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
+FILENAME="AGNi_kernel_ROG-R_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 
 # AGNi CCACHE SHIFTING TO SDM660
 export CCACHE_SDM660="1"
@@ -51,9 +51,14 @@ if [ -d $COMPILEDIR/arch/arm64/boot ]; then
 	rm -rf $COMPILEDIR/arch/arm64/boot
 fi
 
-mkdir -p $KERNELDIR/READY_ZIP
-if [ -f $KERNELDIR/READY_ZIP/$FILENAME ]; then
-	rm $KERNELDIR/READY_ZIP/$FILENAME
+if [ -d $BUILT_EXPORT ]; then
+	READY_ZIP="$BUILT_EXPORT"
+else
+	READY_ZIP="$KERNELDIR/READY_ZIP"
+fi;
+mkdir -p $READY_ZIP 2>/dev/null;
+if [ -f $READY_ZIP/$FILENAME ]; then
+	rm $READY_ZIP/$FILENAME
 fi
 
 DIR="BUILT-$DEVICE"
@@ -78,7 +83,7 @@ rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
-make -j8 O=$COMPILEDIR
+make -j4 O=$COMPILEDIR
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
@@ -118,11 +123,11 @@ if [ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ]; then
 	mv -f $KERNELDIR/$DIR/8*.ko $KERNELDIR/$DIR/tools 2>/dev/null
 	cp -f $KERNELDIR/$DIR/tools/sdm636/* $KERNELDIR/$DIR/tools && rm -rf $KERNELDIR/$DIR/tools/sdm636
 	cd $KERNELDIR/$DIR/
-	zip -rq $KERNELDIR/READY_ZIP/$FILENAME *
+	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
 		echo "  Zip Signing...."
-		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $KERNELDIR/READY_ZIP/$FILENAME $KERNELDIR/READY_ZIP/$FILENAME-signed 2>/dev/null
-		mv $KERNELDIR/READY_ZIP/$FILENAME-signed $KERNELDIR/READY_ZIP/$FILENAME
+		java -jar ~/WORKING_DIRECTORY/zipsigner-3.0.jar $READY_ZIP/$FILENAME $READY_ZIP/$FILENAME-signed 2>/dev/null
+		mv $READY_ZIP/$FILENAME-signed $READY_ZIP/$FILENAME
 	fi
 	rm -rf $KERNELDIR/$DIR
 	echo " <<<<< AGNi has been built for $DEVICE !!! >>>>>>"

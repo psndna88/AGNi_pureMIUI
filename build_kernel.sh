@@ -25,7 +25,8 @@ echo " 4: Build lavender - Redmi Note 7"
 echo " 5: Build wayne    - MI 6X"
 echo " 6: Build jasmine  - MI A2"
 echo " "
-echo " 7: Build whyred ROG MIUI - Redmi Note 5 Pro"
+echo " 7: Build whyred ROG MIUI-Q - Redmi Note 5 Pro"
+echo " 8: Build whyred ROG MIUI-R - Redmi Note 5 Pro"
 echo " "
 echo " 0:  X  Exit Compilation  X"
 echo " "
@@ -43,10 +44,18 @@ if [ $choice -eq 1 ]; then
 	echo " "
 	echo $HORIZONTALLINE
 	echo " "
-	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
-	./scripts/agni/build_kernel_whyred_ROG.sh
+	echo "          BATCH MODE: Building AGNi whyred ROG Q variant..."
+	./scripts/agni/build_kernel_whyred_ROG-Q.sh
 	echo " "
-	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
+	echo "          BATCH MODE: Built AGNi whyred ROG Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+	echo $HORIZONTALLINE
+	echo " "
+	echo "          BATCH MODE: Building AGNi whyred ROG R variant..."
+	./scripts/agni/build_kernel_whyred_ROG-R.sh
+	echo " "
+	echo "          BATCH MODE: Built AGNi whyred ROG R variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 	echo $HORIZONTALLINE
@@ -123,13 +132,23 @@ elif [ $choice -eq 6 ]; then
 	echo $HORIZONTALLINE
 	echo " "
 elif [ $choice -eq 7 ]; then
-	#### whyred ROG
+	#### whyred ROG Q
 	echo $HORIZONTALLINE
 	echo " "
-	echo "          BATCH MODE: Building AGNi whyred ROG variant..."
-	./scripts/agni/build_kernel_whyred_ROG.sh
+	echo "          BATCH MODE: Building AGNi whyred ROG Q variant..."
+	./scripts/agni/build_kernel_whyred_ROG-Q.sh
 	echo " "
-	echo "          BATCH MODE: Built AGNi whyred ROG variant!!!"
+	echo "          BATCH MODE: Built AGNi whyred ROG Q variant!!!"
+	echo $HORIZONTALLINE
+	echo " "
+elif [ $choice -eq 8 ]; then
+	#### whyred ROG R
+	echo $HORIZONTALLINE
+	echo " "
+	echo "          BATCH MODE: Building AGNi whyred ROG R variant..."
+	./scripts/agni/build_kernel_whyred_ROG-R.sh
+	echo " "
+	echo "          BATCH MODE: Built AGNi whyred ROG R variant!!!"
 	echo $HORIZONTALLINE
 	echo " "
 elif [ $choice -eq 0 ]; then
