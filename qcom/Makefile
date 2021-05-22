@@ -256,7 +256,7 @@ dtbo-$(CONFIG_ARCH_MONACO) +=    \
 	monaco-standalone-idp-v1-overlay.dtbo \
 	monaco-standalone-idp-v2-overlay.dtbo \
 	monaco-standalone-idp-v3-overlay.dtbo \
-	monaco-idp-v1-verlay.dtbo \
+	monaco-idp-v1-overlay.dtbo \
 	monaco-idp-v2-overlay.dtbo \
 	monaco-idp-v3-overlay.dtbo
 
