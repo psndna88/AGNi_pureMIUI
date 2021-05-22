@@ -35,6 +35,11 @@ Optional Parameters:
 	Value type: <bool>
 	Definition: When this flag is defined, the BCL driver will account for
 			no bit shift in the threshold registers.
+- qcom,ibat-ccm-hw-support:
+	Value type: <bool>
+	Definition: Enable this flag when BCL Peripheral supports continuous
+			current monitoring(CCM) hardware for battery current
+			monitor.
 
 Example:
 		bcl@4200 {
@@ -45,4 +50,5 @@ Example:
 			interrupt-names = "bcl-lvl0",
 						"bcl-lvl1";
 			qcom,pmic7-threshold;
+			qcom,ibat-ccm-hw-support;
 		};
