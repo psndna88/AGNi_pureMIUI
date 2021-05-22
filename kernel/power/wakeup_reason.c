@@ -270,8 +270,8 @@ static void print_wakeup_sources(void)
 				n->irq_name);
 	else if (abnormal_wake)
 		pr_info("Resume caused by %s\n", non_irq_wake_reason);
-	else
-		pr_info("Resume cause unknown\n");
+//	else
+//		pr_info("Resume cause unknown\n");
 
 	spin_unlock_irqrestore(&wakeup_reason_lock, flags);
 }
