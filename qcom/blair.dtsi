@@ -3359,18 +3359,6 @@
 #include "blair-usb.dtsi"
 #include "ipcc-test-holi.dtsi"
 
-&L2A {
-	regulator-min-microvolt = <1170000>;
-	regulator-max-microvolt = <1304000>;
-	qcom,init-voltage = <1170000>;
-};
-
-&L3A {
-	regulator-min-microvolt = <1100000>;
-	regulator-max-microvolt = <1300000>;
-	qcom,init-voltage = <1100000>;
-};
-
 &L7A {
 	regulator-min-microvolt = <720000>;
 };
