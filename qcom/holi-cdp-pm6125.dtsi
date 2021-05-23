@@ -4,6 +4,7 @@
 #include "holi-pmic-overlay-pm6125.dtsi"
 #include "display/holi-sde-display-cdp-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include "camera/holi-camera-pm6125-overlay.dtsi"
 
 &wcd938x_codec {
 	/delete-property/ cdc-vdd-mic-bias-supply;
@@ -302,6 +303,8 @@
 		pinctrl-2 = <&pmx_ts_release>;
 	};
 };
+
+#include "camera/holi-camera-sensor-pm6125-cdp.dtsi"
 
 &pm7250b_charger {
 	dpdm-supply = <&qusb_phy0>;
