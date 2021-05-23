@@ -85,7 +85,6 @@
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_USB3 1 1>;
 
 		qcom,default-bus-vote = <2>; /* use svs bus voting */
-		qcom,pm-qos-latency = <67>; /* CPU6-WFI-LVL latency +1 */ 
 		dwc3@a600000 {
 			compatible = "snps,dwc3";
 			reg = <0x0a600000 0xcd00>;
