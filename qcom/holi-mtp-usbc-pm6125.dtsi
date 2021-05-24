@@ -165,33 +165,17 @@
 	};
 };
 
-&tlmm {
-	touch_avdd_default: touch_avdd_default {
-		mux {
-			pins = "gpio53";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio53";
-			drive-strength = <8>;
-			bias-disable = <0>;
-			output-high;
-		};
-	};
-};
-
 &soc {
-	touch_avdd: touch_avdd {
-		compatible = "regulator-fixed";
-		regulator-name = "touch_avdd";
-		regulator-min-microvolt = <2800000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-enable-ramp-delay = <233>;
-		gpio = <&tlmm 53 0>;
-		enable-active-high;
-		pinctrl-names = "default";
-		pinctrl-0 = <&touch_avdd_default>;
+	touch_avdd: touch_avdd_stub {
+		/*
+		 * Touch eLDO controlled by gpio#53 is always ON.
+		 * Using dummy regulator.
+		 */
+		compatible = "qcom,stub-regulator";
+		regulator-name = "touch_avdd_stub";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <2700000>;
+		regulator-max-microvolt = <3544000>;
 	};
 };
 
