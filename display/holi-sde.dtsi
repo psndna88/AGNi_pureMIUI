@@ -88,6 +88,9 @@
 };
 
 &mdss_mdp {
+	/* Enable thermal cooling device */
+	#cooling-cells = <2>;
+
 	clocks =
 		<&gcc GCC_DISP_AHB_CLK>,
 		<&gcc GCC_DISP_HF_AXI_CLK>,
