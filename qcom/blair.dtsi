@@ -3443,6 +3443,7 @@
 
 &msm_gpu {
 	qcom,chipid = <0x06010901>;
+	vdd-parent-supply = <&S8A_LEVEL>;
 
 	/delete-node/qcom,gpu-pwrlevel-bins;
 
