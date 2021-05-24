@@ -105,8 +105,8 @@ queue_ra_store(struct request_queue *q, const char *page, size_t count)
 
 	if (ret < 0)
 		return ret;
-	if (ra_kb < 512)
-		ra_kb = 512;
+	if (ra_kb < 2048)
+		ra_kb = 2048;
 
 	q->backing_dev_info->ra_pages = ra_kb >> (PAGE_SHIFT - 10);
 
