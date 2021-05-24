@@ -654,13 +654,15 @@ struct request_queue {
 #define QUEUE_FLAG_PREEMPT_ONLY 30	/* only process REQ_PREEMPT requests */
 
 
-#define QUEUE_FLAG_DEFAULT	((1 << QUEUE_FLAG_NONROT) |		\
-				 (1 << QUEUE_FLAG_STACKABLE)	|	\
+#define QUEUE_FLAG_DEFAULT	((1 << QUEUE_FLAG_STACKABLE)	|	\
+				 (1 << QUEUE_FLAG_SAME_COMP)	|	\
+				 (1 << QUEUE_FLAG_SAME_FORCE)	|	\
 				 (1 << QUEUE_FLAG_NOMERGES)		|	\
-				 (1 << QUEUE_FLAG_SAME_COMP))
+				 (1 << QUEUE_FLAG_NONROT))
 
 #define QUEUE_FLAG_MQ_DEFAULT	((1 << QUEUE_FLAG_STACKABLE)	|	\
 				 (1 << QUEUE_FLAG_SAME_COMP)	|	\
+				 (1 << QUEUE_FLAG_NONROT)		|	\
 				 (1 << QUEUE_FLAG_POLL))
 
 /*
