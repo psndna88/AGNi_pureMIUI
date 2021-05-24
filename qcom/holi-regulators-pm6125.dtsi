@@ -409,7 +409,6 @@
 		qcom,resource-name = "rwgx";
 		qcom,resource-id = <0>;
 		qcom,always-wait-for-ack;
-		VDD_GFX_LEVEL:
 		S8A_LEVEL: pm6125_s8_level: regulator-s8-level {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pm6125_s8_level";
@@ -423,7 +422,6 @@
 			qcom,use-voltage-level;
 		};
 
-		VDD_GFX_LEVEL_AO:
 		S8A_LEVEL_AO: pm6125_s8_level_ao: regulator-s8-level-ao {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pm6125_s8_level_ao";
@@ -447,7 +445,6 @@
 		status = "okay";
 		qcom,resource-name = "rwlc";
 		qcom,resource-id = <0>;
-		VDD_LPI_CX_LEVEL:
 		L1A_LEVEL: pm6125_l1_level: regulator-l1-level {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pm6125_l1_level";
@@ -621,7 +618,6 @@
 		status = "okay";
 		qcom,resource-name = "rwlm";
 		qcom,resource-id = <0>;
-		VDD_LPI_MX_LEVEL:
 		L17A_LEVEL: pm6125_l17_level: regulator-l17-level {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pm6125_l17_level";
@@ -710,7 +706,6 @@
 		qcom,resource-name = "rwmx";
 		qcom,resource-id = <0>;
 		proxy-supply = <&pmr735a_s1_level>;
-		VDD_MX_LEVEL:
 		S1E_LEVEL: pmr735a_s1_level: regulator-s1-level {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pmr735a_s1_level";
@@ -728,7 +723,6 @@
 			qcom,use-voltage-level;
 		};
 
-		VDD_MX_FLOOR_LEVEL:
 		S1E_FLOOR_LEVEL:
 		pmr735a_s1_floor_level: regulator-s1-floor-level {
 			compatible = "qcom,rpm-smd-regulator";
@@ -742,7 +736,6 @@
 			qcom,always-send-voltage;
 		};
 
-		VDD_MX_LEVEL_AO:
 		S1E_LEVEL_AO: pmr735a_s1_level_ao: regulator-s1-level-ao {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pmr735a_s1_level_ao";
@@ -767,7 +760,6 @@
 		qcom,resource-name = "rwcx";
 		qcom,resource-id = <0>;
 		proxy-supply = <&pmr735a_s2_level>;
-		VDD_CX_LEVEL:
 		S2E_LEVEL: pmr735a_s2_level: regulator-s2-level {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pmr735a_s2_level";
@@ -785,7 +777,6 @@
 			qcom,use-voltage-level;
 		};
 
-		VDD_CX_FLOOR_LEVEL:
 		S2E_FLOOR_LEVEL:
 		pmr735a_s2_floor_level: regulator-s2-floor-level {
 			compatible = "qcom,rpm-smd-regulator";
@@ -799,7 +790,6 @@
 			qcom,always-send-voltage;
 		};
 
-		VDD_CX_LEVEL_AO:
 		S2E_LEVEL_AO: pmr735a_s2_level_ao: regulator-s2-level-ao {
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "pmr735a_s2_level_ao";
