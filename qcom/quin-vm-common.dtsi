@@ -82,6 +82,10 @@
 		};
 	};
 
+	qcom-secure-buffer {
+		compatible = "qcom,secure-buffer";
+	};
+
 	vdevs {
 		compatible = "simple-bus";
 		virtio_input_keyboard@1c150000 {
@@ -151,6 +155,11 @@
 			reg = <ION_QSECOM_TA_HEAP_ID>;
 			memory-region = <&qseecom_ta_mem>;
 			qcom,ion-heap-type = "DMA";
+		};
+
+		qcom,ion-heap@9 {
+			reg = <ION_SECURE_HEAP_ID>;
+			qcom,ion-heap-type = "SYSTEM_SECURE";
 		};
 	};
 
