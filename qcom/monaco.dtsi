@@ -1428,8 +1428,6 @@
 		};
 	};
 
-	thermal_zones: thermal-zones { };
-
 	system_pm_rpm {
 		compatible = "qcom,system-pm-rpm";
 	};
