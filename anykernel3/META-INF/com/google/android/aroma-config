@@ -26,10 +26,10 @@
 
 # Initializing Rom Information
 ini_set("rom_name",		"AGNi EAS Kernel");
-ini_set("rom_version",	"v13.5_stable");
+ini_set("rom_version",	"v13.6 stable");
 ini_set("rom_author",	"psndna88@xda");
 ini_set("rom_device",	"SETDEVICETYPE");
-ini_set("rom_date",		"May, 22, 2021");
+ini_set("rom_date",		"May, 25, 2021");
 
 # Show Simple Splash
 splash(
@@ -187,6 +187,12 @@ selectbox(
     "Wired Earphone Volume Buttons Operation Mode","<@center><b>\nSome roms work differently so select mode</b>\n\n</@>","@install","wevol.prop",
     "Mode 1",	"Default: use for MIUI roms or some AOSP roms (Change if u face issues)", 1,				#-- selected.0 = 1
     "Mode 2",	"For NON-MIUI roms like Nusantara, LineageOS or maybe others (Change if u face issues)", 0 	#-- selected.0 = 2
+);
+
+selectbox(
+    "Selinux Enforcement Mode selection","<@center><b>\nSome A11+ or ported roms dont boot because they need this</b>\n\n</@>","@install","sel.prop",
+    "Real-Enforcing",	"Use for all official MIUI roms or most AOSP Pie/Q roms", 					0,	#-- selected.0 = 1
+    "Fake-Enforcing",	"Default: Needed for Android 11+ & Ported roms that have boot problems.",   1 	#-- selected.0 = 2
 );
 
 setvar("retstatus",

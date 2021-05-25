@@ -601,7 +601,7 @@ patch_fstab() {
 
 # patch_cmdline <cmdline entry name> <replacement string>
 patch_cmdline() {
-  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled sdfat_xattr_los;
+  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled sdfat_xattr_los selselection;
   if [ -f "$split_img/cmdline.txt" ]; then
     cmdfile=$split_img/cmdline.txt;
   else
@@ -671,6 +671,11 @@ patch_cmdline() {
   sdfat_xattr_los="`cat $home/SDFAT_XATTR_LOS`";
   if [ "$sdfat_xattr_los" == "1" ]; then
 	sed -i 's/losxattr=0/losxattr=1/' $cmdfile;
+  fi;
+  # Selinux mode
+  selselection="`cat $home/SEL_MODE_FAKE`";
+  if [ "$selselection" == "1" ]; then
+	sed -i 's/selfake=0/selfake=1/' $cmdfile;
   fi;
 
   if [ -f "$home/cmdtmp" ]; then
