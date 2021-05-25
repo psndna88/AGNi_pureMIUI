@@ -70,7 +70,7 @@ module_param_named(lpm_ipi_prediction, lpm_ipi_prediction, bool, 0664);
 static bool agni_present = true;
 module_param(agni_present, bool, 0444);
 
-static bool cluster_use_deepest_state = 1;
+static bool cluster_use_deepest_state = false;
 module_param(cluster_use_deepest_state, bool, 0664);
 
 struct lpm_history {
