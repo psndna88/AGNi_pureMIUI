@@ -22,6 +22,10 @@ ifeq ($(CONFIG_ARCH_HOLI), y)
 include $(srctree)/techpack/camera/config/holicamera.conf
 endif
 
+ifeq ($(CONFIG_ARCH_BLAIR), y)
+include $(srctree)/techpack/camera/config/blaircamera.conf
+endif
+
 ifeq ($(CONFIG_ARCH_SHIMA), y)
 include $(srctree)/techpack/camera/config/shimacamera.conf
 endif
@@ -53,6 +57,11 @@ endif
 ifeq ($(CONFIG_ARCH_HOLI), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/holicameraconf.h
+endif
+
+ifeq ($(CONFIG_ARCH_BLAIR), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/blaircameraconf.h
 endif
 
 ifeq ($(CONFIG_ARCH_SHIMA), y)
