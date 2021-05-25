@@ -44,6 +44,7 @@ patch_cmdline agnisoundmod agnisoundmod=0;
 patch_cmdline wiredbtnaltmode wiredbtnaltmode=0;
 patch_cmdline ledmode ledmode=0;
 patch_cmdline losxattr losxattr=0;
+patch_cmdline selfake selfake=0;
 write_boot;
 ## end install
 

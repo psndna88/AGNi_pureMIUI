@@ -522,6 +522,12 @@ else
 	LOS_ROM="false";
 	$BB echo "0" > $AKHOME/SDFAT_XATTR_LOS;
 fi;
+# Selinux Fake-Enforce mode
+if [ "`$BB grep selected.0=2 /tmp/aroma-data/sel.prop`" ]; then
+	$BB echo "1" > $AKHOME/SEL_MODE_FAKE;
+else
+	$BB echo "0" > $AKHOME/SEL_MODE_FAKE;
+fi;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";

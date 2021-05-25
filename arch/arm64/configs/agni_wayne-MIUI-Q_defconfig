@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.269 Kernel Configuration
+# Linux/arm64 4.4.270 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -55,7 +55,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 CONFIG_CROSS_COMPILE=""
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="_AGNi_MIUIQcam-v13.5_stable-EAS-wayne"
+CONFIG_LOCALVERSION="_AGNi_MIUIQcam-v13.6_stable-EAS-wayne"
 # CONFIG_ROG_SUPPORT is not set
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_DEFAULT_HOSTNAME="(none)"
