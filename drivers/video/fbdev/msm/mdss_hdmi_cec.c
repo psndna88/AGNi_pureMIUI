@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017,2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -469,8 +469,12 @@ static int hdmi_cec_enable(void *input, bool enable)
 	}
 
 	if (enable) {
-		/* 19.2Mhz * 0.00005 us = 950 = 0x3B6 */
-		DSS_REG_W(io, HDMI_CEC_REFTIMER, (0x3B6 & 0xFFF) | BIT(16));
+		/*
+		 * 19.2Mhz * 0.00005 us = 960 = 0x3C0
+		 * CEC Rd/Wr logic is properly working with
+		 * finetuned value of 0x3D4 = 51 us.
+		 */
+		DSS_REG_W(io, HDMI_CEC_REFTIMER, (0x3D4 & 0xFFF) | BIT(16));
 
 		hdmi_hw_version = DSS_REG_R(io, HDMI_VERSION);
 		if (hdmi_hw_version >= CEC_SUPPORTED_HW_VERSION) {
