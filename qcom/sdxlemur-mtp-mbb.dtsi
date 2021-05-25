@@ -4,7 +4,6 @@
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/spmi/spmi.h>
 #include "sdxlemur-cnss.dtsi"
-#include "sdxlemur-mtp-audio-overlay.dtsi"
 
 &pm7250b_clkdiv {
 	clocks = <&rpmhcc RPMH_CXO_CLK>;
