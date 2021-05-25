@@ -406,14 +406,14 @@
   <ctl name="HPHL Volume" value="30"/>
   <ctl name="HPHR Volume" value="30"/>
   <ctl name="EAR SPKR PA Gain" value="G_DEFAULT"/>
-  <ctl name="TX_DEC0 Volume" value="84"/>
-  <ctl name="TX_DEC1 Volume" value="84"/>
-  <ctl name="TX_DEC2 Volume" value="84"/>
-  <ctl name="TX_DEC3 Volume" value="84"/>
-  <ctl name="TX_DEC4 Volume" value="84"/>
-  <ctl name="TX_DEC5 Volume" value="84"/>
-  <ctl name="TX_DEC6 Volume" value="84"/>
-  <ctl name="TX_DEC7 Volume" value="84"/>
+  <ctl name="TX_DEC0 Volume" value="90"/>
+  <ctl name="TX_DEC1 Volume" value="90"/>
+  <ctl name="TX_DEC2 Volume" value="90"/>
+  <ctl name="TX_DEC3 Volume" value="90"/>
+  <ctl name="TX_DEC4 Volume" value="90"/>
+  <ctl name="TX_DEC5 Volume" value="90"/>
+  <ctl name="TX_DEC6 Volume" value="90"/>
+  <ctl name="TX_DEC7 Volume" value="90"/>
   <ctl name="ADC1 Volume" value="30"/>
   <ctl name="ADC2 Volume" value="30"/>
   <ctl name="ADC3 Volume" value="30"/>
@@ -3341,6 +3341,7 @@
   <ctl name="SLIM_7_RX SampleRate" value="KHZ_192"/>
   <ctl name="SLIMBUS_7_RX Format" value="S24_LE"/>
   <ctl name="SLIMBUS_7_RX SampleRate" value="KHZ_192"/>
+  <ctl name="RX0 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX1 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX2 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX3 HPF cut off" value="MIN_3DB_4Hz"/>
