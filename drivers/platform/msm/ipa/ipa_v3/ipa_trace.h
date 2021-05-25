@@ -230,19 +230,23 @@ TRACE_EVENT(
 TRACE_EVENT(
 	ipa3_napi_poll_exit,
 
-	TP_PROTO(unsigned long client),
+	TP_PROTO(unsigned long client, u32 cnt, u32 len),
 
-	TP_ARGS(client),
+	TP_ARGS(client, cnt, len),
 
 	TP_STRUCT__entry(
 		__field(unsigned long,	client)
+		__field(unsigned int,   cnt)
+		__field(unsigned int,   len)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
+		__entry->cnt = cnt;
+		__entry->len = len;
 	),
 
-	TP_printk("client=%lu", __entry->client)
+	TP_printk("client=%lu napi weight cnt = %d sys->len = %d", __entry->client, __entry->cnt,  __entry->len)
 );
 
 TRACE_EVENT(
@@ -297,6 +301,84 @@ TRACE_EVENT(
 	TP_printk("client=%lu", __entry->client)
 );
 
+TRACE_EVENT(
+	ipa3_lan_rx_pyld_hdlr_entry,
+
+	TP_PROTO(const struct sk_buff *skb, unsigned long client),
+
+	TP_ARGS(skb, client),
+
+	TP_STRUCT__entry(
+		__field(unsigned int,	len)
+		__field(unsigned int,	data_len)
+		__field(unsigned long,	client)
+	),
+
+	TP_fast_assign(
+		__entry->len = skb->len;
+		__entry->data_len = skb->data_len;
+		__entry->client = client;
+	),
+
+	TP_printk("len=%u data_len=%u client=%lu",
+		__entry->len,
+		__entry->data_len,
+		__entry->client)
+);
+
+TRACE_EVENT(
+	ipa3_lan_rx_pyld_hdlr_exit,
+
+	TP_PROTO(unsigned long client),
+
+	TP_ARGS(client),
+
+	TP_STRUCT__entry(
+		__field(unsigned long,	client)
+	),
+
+	TP_fast_assign(
+		__entry->client = client;
+	),
+
+	TP_printk("client=%lu", __entry->client)
+);
+
+TRACE_EVENT(
+	ipa3_lan_rx_cb_entry,
+
+	TP_PROTO(unsigned long client),
+
+	TP_ARGS(client),
+
+	TP_STRUCT__entry(
+		__field(unsigned long,	client)
+	),
+
+	TP_fast_assign(
+		__entry->client = client;
+	),
+
+	TP_printk("client=%lu", __entry->client)
+);
+
+TRACE_EVENT(
+	ipa3_lan_rx_cb_exit,
+
+	TP_PROTO(unsigned long client),
+
+	TP_ARGS(client),
+
+	TP_STRUCT__entry(
+		__field(unsigned long,	client)
+	),
+
+	TP_fast_assign(
+		__entry->client = client;
+	),
+
+	TP_printk("client=%lu", __entry->client)
+);
 #endif /* _IPA_TRACE_H */
 
 /* This part must be outside protection */
