@@ -1083,10 +1083,7 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 			break;
 			
 	}
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	if (!srgb_locked) {
-#endif
-	switch(first_srgb_state) {
+/*	switch(first_srgb_state) {
 		case 0x1:
 			if (ctrl->srgb_on_cmds.cmd_cnt){
 				mdss_dsi_panel_cmds_send(ctrl, &ctrl->srgb_on_cmds,CMD_REQ_COMMIT);
@@ -1101,11 +1098,7 @@ int mdss_first_set_feature(struct mdss_panel_data *pdata, int first_ce_state, in
 			pr_debug("unknow cmds: %d\n", first_srgb_state);
 			break;
 			
-	}
-#if defined(CONFIG_KERNEL_CUSTOM_E7S) || defined(CONFIG_KERNEL_CUSTOM_E7T)
-	}
-#endif
-
+	} */
 	switch(first_gamma_state) {
 		case 0x1:
             mdss_dsi_set_gamma(ctrl,1);
