@@ -128,6 +128,7 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 #define SEL_INO_MASK			0x00ffffff
 
 static int enforcing_status = 1;
+extern bool detected_android_r;
 #define TMPBUFLEN	12
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
@@ -135,7 +136,11 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_status);
+	if (detected_android_r)
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_status);
+	else
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
@@ -145,6 +150,7 @@ static int __init selinux_permissive_param(char *str)
 		return 0;
 
 	enforcing_status = 0;
+	selinux_enforcing = 0;
 	pr_info("selinux: ROM requested to be permissive, disabling spoofing\n");
 
 	return 1;
@@ -182,12 +188,25 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
 
+	if (detected_android_r) {
 	//new_value = 0;
 	if (new_value != enforcing_status) {
 		length = task_has_security(current, SECURITY__SETENFORCE);
 		if (length)
 			goto out;
 		enforcing_status = new_value;
+	}
+	} else {
+	if (new_value != selinux_enforcing) {
+		length = task_has_security(current, SECURITY__SETENFORCE);
+		if (length)
+			goto out;
+		selinux_enforcing = new_value;
+		if (selinux_enforcing)
+			avc_ss_reset(0);
+		selnl_notify_setenforce(selinux_enforcing);
+		selinux_status_update_setenforce(selinux_enforcing);
+	}
 	}
 	length = count;
 out:
