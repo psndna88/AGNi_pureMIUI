@@ -1635,6 +1635,8 @@
 #include "monaco-gpu.dtsi"
 #include "display/monaco-sde.dtsi"
 #include "display/monaco-sde-display.dtsi"
+#include "camera/monaco-camera.dtsi"
+#include "camera/monaco-camera-sensor-idp.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";
