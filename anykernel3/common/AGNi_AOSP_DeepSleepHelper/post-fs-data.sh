@@ -12,6 +12,7 @@ if ([ "` uname -r | grep AGNi`" ] || [ -f /sys/module/lpm_levels/parameters/agni
 		touch /data/media/0/.MiuiCamera/.check
 		mkdir -p /data/media/0/MIUI/debug_log
 		rm -rf /data/media/0/.ANXCamera
+#		stop anxfeatures
 	else
 	    rm -rf /data/media/0/.ANXCamera
 	    mkdir -p /data/media/0/.ANXCamera/cheatcodes
