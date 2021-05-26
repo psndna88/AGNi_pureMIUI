@@ -3,6 +3,109 @@
 #include <dt-bindings/sound/audio-codec-port-types.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
+&spf_core_platform {
+	rx_swr_gpios: rx_swr_clk_data_pinctrl {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&rx_swr_clk_active &rx_swr_data_active>;
+		pinctrl-1 = <&rx_swr_clk_sleep &rx_swr_data_sleep>;
+		qcom,lpi-gpios;
+	};
+
+	bolero: bolero-cdc {
+		compatible = "qcom,bolero-codec";
+		clock-names = "lpass_audio_hw_vote";
+		clocks = <&lpass_audio_hw_vote 0>;
+		bolero-clk-rsc-mngr {
+			compatible = "qcom,bolero-clk-rsc-mngr";
+		};
+
+		va_macro: va-macro@0a730000 {
+			swr0: va_swr_master {
+			};
+		};
+
+		rx_macro: rx-macro@0a600000 {
+			swr1: rx_swr_master {
+			};
+		};
+	};
+
+	monaco_snd: sound {
+		qcom,mi2s-audio-intf = <0>;
+		qcom,cc-va-intf-enable = <0>;
+		qcom,auxpcm-audio-intf = <0>;
+		qcom,tdm-audio-intf = <0>;
+		qcom,wcn-btfm = <0>;
+		qcom,afe-rxtx-lb = <0>;
+
+		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
+				<&loopback>, <&compress>, <&hostless>,
+				<&afe>, <&lsm>, <&routing>, <&compr>,
+				<&pcm_noirq>;
+		asoc-platform-names = "msm-pcm-dsp.0", "msm-pcm-dsp.1",
+				"msm-pcm-dsp.2", "msm-voip-dsp",
+				"msm-pcm-voice", "msm-pcm-loopback",
+				"msm-compress-dsp", "msm-pcm-hostless",
+				"msm-pcm-afe", "msm-lsm-client",
+				"msm-pcm-routing", "msm-compr-dsp",
+				"msm-pcm-dsp-noirq";
+		asoc-cpu = <&dai_mi2s0>, <&dai_mi2s1>,
+				<&dai_mi2s2>, <&dai_mi2s3>,
+				<&dai_pri_auxpcm>,
+				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
+				<&dai_quat_auxpcm>,
+				<&afe_pcm_rx>, <&afe_pcm_tx>, <&afe_proxy_rx>,
+				<&afe_proxy_tx>, <&incall_record_rx>,
+				<&incall_record_tx>, <&incall_music_rx>,
+				<&incall_music_2_rx>,
+				<&proxy_rx>, <&proxy_tx>,
+				<&usb_audio_rx>, <&usb_audio_tx>,
+				<&sb_7_rx>, <&sb_7_tx>, <&sb_8_tx>,
+				<&va_cdc_dma_0_tx>, <&va_cdc_dma_1_tx>,
+				<&va_cdc_dma_2_tx>,
+				<&rx_cdc_dma_0_rx>, <&tx_cdc_dma_0_tx>,
+				<&rx_cdc_dma_1_rx>, <&tx_cdc_dma_1_tx>,
+				<&rx_cdc_dma_2_rx>, <&tx_cdc_dma_2_tx>,
+				<&rx_cdc_dma_3_rx>, <&tx_cdc_dma_3_tx>,
+				<&rx_cdc_dma_4_rx>, <&tx_cdc_dma_4_tx>,
+				<&rx_cdc_dma_5_rx>, <&tx_cdc_dma_5_tx>,
+				<&rx_cdc_dma_6_rx>, <&rx_cdc_dma_7_rx>,
+				<&afe_loopback_tx>;
+		asoc-cpu-names = "msm-dai-q6-mi2s.0", "msm-dai-q6-mi2s.1",
+				"msm-dai-q6-mi2s.2", "msm-dai-q6-mi2s.3",
+				"msm-dai-q6-auxpcm.1",
+				"msm-dai-q6-auxpcm.2", "msm-dai-q6-auxpcm.3",
+				"msm-dai-q6-auxpcm.4", "msm-dai-q6-dev.224",
+				"msm-dai-q6-dev.225", "msm-dai-q6-dev.241",
+				"msm-dai-q6-dev.240", "msm-dai-q6-dev.32771",
+				"msm-dai-q6-dev.32772", "msm-dai-q6-dev.32773",
+				"msm-dai-q6-dev.32770",
+				"msm-dai-q6-dev.8194", "msm-dai-q6-dev.8195",
+				"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673",
+				"msm-dai-q6-dev.16398", "msm-dai-q6-dev.16399",
+				"msm-dai-q6-dev.16401",
+				"msm-dai-cdc-dma-dev.45089",
+				"msm-dai-cdc-dma-dev.45091",
+				"msm-dai-cdc-dma-dev.45093",
+				"msm-dai-cdc-dma-dev.45104",
+				"msm-dai-cdc-dma-dev.45105",
+				"msm-dai-cdc-dma-dev.45106",
+				"msm-dai-cdc-dma-dev.45107",
+				"msm-dai-cdc-dma-dev.45108",
+				"msm-dai-cdc-dma-dev.45109",
+				"msm-dai-cdc-dma-dev.45110",
+				"msm-dai-cdc-dma-dev.45111",
+				"msm-dai-cdc-dma-dev.45112",
+				"msm-dai-cdc-dma-dev.45113",
+				"msm-dai-cdc-dma-dev.45114",
+				"msm-dai-cdc-dma-dev.45115",
+				"msm-dai-cdc-dma-dev.45116",
+				"msm-dai-cdc-dma-dev.45118",
+				"msm-dai-q6-dev.24577";
+	};
+};
+
 &bolero {
 	qcom,num-macros = <3>;
 	qcom,bolero-version = <6>;
@@ -83,10 +186,15 @@
 		qcom,cdc-mic-bias-voltage = <2904000 2904000>;
 		qcom,cdc-mic-bias-current = <1180>;
 
+		cdc-vdd-spkr-supply = <&SPKR_BOOST>;
+		qcom,cdc-vdd-spkr-voltage = <4100000 5600000>;
+		qcom,cdc-vdd-spkr-current = <700000>;
+
 		qcom,cdc-micbias1-mv = <1800>;
 		qcom,cdc-micbias2-mv = <1800>;
 
 		qcom,cdc-static-supplies = "cdc-mic-bias";
+		qcom,cdc-on-demand-supplies = "cdc-vdd-spkr";
 	};
 };
 
@@ -95,6 +203,7 @@
 	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>;
 	qcom,wcn-btfm = <1>;
 	qcom,va-bolero-codec = <1>;
+	qcom,visense-enable = <0>;
 	qcom,audio-routing =
 		"AMIC1", "Analog Mic1",
 		"Analog Mic1","MIC BIAS1",
@@ -146,6 +255,10 @@
 };
 
 &soc {
+	audio_pkt_core_platform: qcom,audio-pkt-core-platform {
+		compatible = "qcom,audio-pkt-core-platform";
+	};
+
 	clock_audio_rx_1: rx_core_clk {
 		compatible = "qcom,audio-ref-clk";
 		qcom,codec-ext-clk-src = <AUDIO_LPASS_MCLK_4>;
