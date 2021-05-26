@@ -104,7 +104,7 @@ struct selinux_state selinux_state;
 static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
-int selinux_enforcing_boot = 0;
+int selinux_enforcing_boot;
 
 static int __init enforcing_setup(char *str)
 {

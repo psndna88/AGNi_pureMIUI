@@ -120,6 +120,11 @@ static void selinux_fs_info_free(struct super_block *sb)
 
 #define TMPBUFLEN	12
 static int enforcing_status = 1;
+#ifdef CONFIG_SECURITY_SELINUX_FAKE_ENFORCE
+bool selfakenforce = true;
+#else
+bool selfakenforce = false;
+#endif
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
 {
@@ -127,8 +132,12 @@ static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d",
-			   enforcing_status);
+	if (selfakenforce) {
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_status);
+	} else {
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_enabled(fsi->state));
+	}
+
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
 
@@ -138,6 +147,8 @@ static int __init selinux_permissive_param(char *str)
 		return 0;
 
 	enforcing_status = 0;
+	selinux_enforcing_boot = 0;
+	avc_strict = 0;
 	pr_info("selinux: ROM requested to be permissive, disabling spoofing\n");
 
 	return 1;
@@ -170,25 +181,46 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
 
-	new_value = !!new_value;
-
-	old_value = enforcing_status;
-	enforcing_status = new_value;
-	new_value = 0;
-	if (new_value != old_value) {
-		length = avc_has_perm(&selinux_state,
-				      current_sid(), SECINITSID_SECURITY,
-				      SECCLASS_SECURITY, SECURITY__SETENFORCE,
-				      NULL);
-		if (length)
-			goto out;
-		enforcing_set(state, new_value);
-		if (new_value)
-			avc_ss_reset(state->avc, 0);
-		selnl_notify_setenforce(new_value);
-		selinux_status_update_setenforce(state, new_value);
-		if (!new_value)
-			call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+	if (selfakenforce) {
+		avc_strict = 0;
+		new_value = !!new_value;
+		old_value = enforcing_status;
+		enforcing_status = new_value;
+		new_value = 0;
+		if (new_value != old_value) {
+			length = avc_has_perm(&selinux_state,
+					      current_sid(), SECINITSID_SECURITY,
+					      SECCLASS_SECURITY, SECURITY__SETENFORCE,
+					      NULL);
+			if (length)
+				goto out;
+			enforcing_set(state, new_value);
+			if (new_value)
+				avc_ss_reset(state->avc, 0);
+			selnl_notify_setenforce(new_value);
+			selinux_status_update_setenforce(state, new_value);
+			if (!new_value)
+				call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+		}
+	} else {
+		avc_strict = 1;
+		new_value = !!new_value;
+		old_value = enforcing_enabled(state);
+		if (new_value != old_value) {
+			length = avc_has_perm(&selinux_state,
+						current_sid(), SECINITSID_SECURITY,
+						SECCLASS_SECURITY, SECURITY__SETENFORCE,
+						NULL);
+			if (length)
+				goto out;
+			enforcing_set(state, new_value);
+			if (new_value)
+				avc_ss_reset(state->avc, 0);
+			selnl_notify_setenforce(new_value);
+			selinux_status_update_setenforce(state, new_value);
+			if (!new_value)
+				call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+		}
 	}
 	length = count;
 out:
