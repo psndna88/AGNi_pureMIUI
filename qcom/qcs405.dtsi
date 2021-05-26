@@ -457,6 +457,19 @@
 			#interrupt-cells = <2>;
 		};
 	};
+
+	wdog: qcom,wdt@b017000 {
+		compatible = "qcom,msm-watchdog";
+		reg = <0xb017000 0x1000>;
+		reg-names = "wdt-base";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,bark-time = <11000>;
+		qcom,pet-time = <9744>;
+		qcom,ipi-ping;
+		qcom,wakeup-enable;
+		status = "okay";
+	};
 };
 
 #include "qcs405-pinctrl.dtsi"
