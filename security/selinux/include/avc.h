@@ -144,7 +144,7 @@ static inline int avc_audit(struct selinux_state *state,
 #endif
 }
 
-#define AVC_STRICT 0
+extern int avc_strict;
 #define AVC_EXTENDED_PERMS 2	/* update extended permissions */
 extern int selinux_enforcing_boot;
 int avc_has_perm_noaudit(struct selinux_state *state,
