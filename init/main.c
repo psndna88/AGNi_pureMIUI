@@ -312,6 +312,32 @@ static int __init set_los_rom(char *val)
 }
 __setup("losxattr=", set_los_rom);
 EXPORT_SYMBOL_GPL(losrom);
+bool selfakenforce;
+extern int avc_strict;
+static int __init set_selenforce_fake(char *val)
+{
+	unsigned int temp;
+
+	get_option(&val, &temp);
+
+#ifdef CONFIG_ROG_SUPPORT
+	selfakenforce = true;
+	avc_strict = 0;
+#else
+	if (temp) {
+		selfakenforce = true;
+		avc_strict = 0;
+		pr_err("Kernel: AGNi fake enforce selinux mode enabled");
+	} else {
+		selfakenforce = false;
+		avc_strict = 1;
+		pr_err("Kernel: AGNi fake enforce selinux mode disabled");
+	}
+#endif
+
+	return 0;
+}
+__setup("selfake=", set_selenforce_fake);
 /*
  * Used to generate warnings if static_key manipulation functions are used
  * before jump_label_init is called.

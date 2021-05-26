@@ -2489,7 +2489,7 @@ out_unlock:
 		struct av_decision dummy_avd;
 		rc = avc_has_perm_noaudit(fromsid, mysids[i],
 					  SECCLASS_PROCESS, /* kernel value */
-					  PROCESS__TRANSITION, AVC_STRICT,
+					  PROCESS__TRANSITION, avc_strict,
 					  &dummy_avd);
 		if (!rc)
 			mysids2[j++] = mysids[i];
