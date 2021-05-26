@@ -2,6 +2,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay-pm6125.dtsi"
+#include "holi-thermal-overlay-pm6125.dtsi"
 #include "display/holi-sde-display-cdp-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 #include "camera/holi-camera-pm6125-overlay.dtsi"
