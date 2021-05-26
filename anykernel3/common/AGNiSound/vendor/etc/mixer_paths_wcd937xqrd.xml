@@ -2481,8 +2481,6 @@
     <ctl name="COMP1" value="0"/>
     <ctl name="COMP2" value="0"/>
   </path>
-  <ctl name="EC Reference Bit Format" value="S16_LE"/>
-  <ctl name="EC Reference SampleRate" value="48000"/>
   <ctl name="COMP0 RX1" value="0"/>
   <ctl name="COMP0 RX2" value="0"/>
   <ctl name="Compress Playback 16 Volume" value="0"/>
@@ -2499,7 +2497,6 @@
   <ctl name="SLIM_7_RX SampleRate" value="KHZ_192"/>
   <ctl name="SLIMBUS_7_RX Format" value="S24_LE"/>
   <ctl name="SLIMBUS_7_RX SampleRate" value="KHZ_192"/>
-  <ctl name="RX0 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX1 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX2 HPF cut off" value="MIN_3DB_4Hz"/>
   <ctl name="RX3 HPF cut off" value="MIN_3DB_4Hz"/>
