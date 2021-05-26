@@ -125,6 +125,9 @@ __setup("selinux=", selinux_enabled_setup);
 int selinux_enabled = 1;
 #endif
 
+static struct kmem_cache *sel_inode_cache;
+static struct kmem_cache *file_security_cache;
+
 /**
  * selinux_secmark_enabled - Check to see if SECMARK is currently enabled
  *
@@ -221,19 +224,30 @@ static inline u32 current_sid(void)
 
 static int inode_alloc_security(struct inode *inode)
 {
-	struct inode_security_struct *isec = inode->i_security;
+	struct inode_security_struct *isec;
 	u32 sid = current_sid();
 
-	*isec = (typeof(*isec)){
-		.lock = __MUTEX_INITIALIZER(isec->lock),
-		.list = LIST_HEAD_INIT(isec->list),
-		.inode = inode,
-		.sid = SECINITSID_UNLABELED,
-		.sclass = SECCLASS_FILE,
-		.task_sid = sid
-	};
+	isec = kmem_cache_zalloc(sel_inode_cache, GFP_NOFS);
+	if (!isec)
+		return -ENOMEM;
+
+	mutex_init(&isec->lock);
+	INIT_LIST_HEAD(&isec->list);
+	isec->inode = inode;
+	isec->sid = SECINITSID_UNLABELED;
+	isec->sclass = SECCLASS_FILE;
+	isec->task_sid = sid;
+	inode->i_security = isec;
 
 	return 0;
+}
+
+static void inode_free_rcu(struct rcu_head *head)
+{
+	struct inode_security_struct *isec;
+
+	isec = container_of(head, struct inode_security_struct, rcu);
+	kmem_cache_free(sel_inode_cache, isec);
 }
 
 static void inode_free_security(struct inode *inode)
@@ -256,19 +270,40 @@ static void inode_free_security(struct inode *inode)
 		list_del_init(&isec->list);
 		spin_unlock(&sbsec->isec_lock);
 	}
+
+	/*
+	 * The inode may still be referenced in a path walk and
+	 * a call to selinux_inode_permission() can be made
+	 * after inode_free_security() is called. Ideally, the VFS
+	 * wouldn't do this, but fixing that is a much harder
+	 * job. For now, simply free the i_security via RCU, and
+	 * leave the current inode->i_security pointer intact.
+	 * The inode will be freed after the RCU grace period too.
+	 */
+	call_rcu(&isec->rcu, inode_free_rcu);
 }
 
 static int file_alloc_security(struct file *file)
 {
-	struct file_security_struct *fsec = file->f_security;
+	struct file_security_struct *fsec;
 	u32 sid = current_sid();
 
-	*fsec = (typeof(*fsec)){
-		.sid = sid,
-		.fown_sid = sid
-	};
+	fsec = kmem_cache_zalloc(file_security_cache, GFP_KERNEL);
+	if (!fsec)
+		return -ENOMEM;
+
+	fsec->sid = sid;
+	fsec->fown_sid = sid;
+	file->f_security = fsec;
 
 	return 0;
+}
+
+static void file_free_security(struct file *file)
+{
+	struct file_security_struct *fsec = file->f_security;
+	file->f_security = NULL;
+	kmem_cache_free(file_security_cache, fsec);
 }
 
 static int superblock_alloc_security(struct super_block *sb)
@@ -3169,7 +3204,7 @@ static int selinux_inode_listsecurity(struct inode *inode, char *buffer, size_t 
 
 static void selinux_inode_getsecid(const struct inode *inode, u32 *secid)
 {
-	const struct inode_security_struct *isec = inode->i_security;
+	struct inode_security_struct *isec = inode->i_security;
 	*secid = isec->sid;
 }
 
@@ -3214,6 +3249,7 @@ static int selinux_file_alloc_security(struct file *file)
 
 static void selinux_file_free_security(struct file *file)
 {
+	file_free_security(file);
 }
 
 /*
@@ -6137,6 +6173,12 @@ static __init int selinux_init(void)
 
 	default_noexec = !(VM_DATA_DEFAULT_FLAGS & VM_EXEC);
 
+	sel_inode_cache = kmem_cache_create("selinux_inode_security",
+					    sizeof(struct inode_security_struct),
+					    0, SLAB_PANIC, NULL);
+	file_security_cache = kmem_cache_create("selinux_file_security",
+					    sizeof(struct file_security_struct),
+					    0, SLAB_PANIC, NULL);
 	avc_init();
 
 	security_add_hooks(selinux_hooks, ARRAY_SIZE(selinux_hooks));
