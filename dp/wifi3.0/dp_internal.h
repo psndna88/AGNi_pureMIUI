@@ -426,6 +426,7 @@ static inline void dp_wds_ext_peer_init(struct dp_peer *peer)
  * 2.4GHz band uses lmac_id = 1
  * 5GHz/6GHz band uses lmac_id=0
  */
+#define DP_INVALID_LMAC_ID	(-1)
 #define DP_MON_INVALID_LMAC_ID	(-1)
 #define DP_MON_2G_LMAC_ID	1
 #define DP_MON_5G_LMAC_ID	0
