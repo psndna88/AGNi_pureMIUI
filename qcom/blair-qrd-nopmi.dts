@@ -1,0 +1,11 @@
+/dts-v1/;
+
+#include "blair.dtsi"
+#include "blair-qrd-nopmi.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blair QRD NOPMI";
+	compatible = "qcom,blair-qrd", "qcom,blair", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+};
+
