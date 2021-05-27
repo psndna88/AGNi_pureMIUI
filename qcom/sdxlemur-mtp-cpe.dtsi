@@ -47,7 +47,9 @@
 	};
 };
 
+
 &pcie0 {
+	qcom,boot-option = <0x1>;
 	pcie-i2c-phandle = <&i2c_5>;
 
 	vreg-3p3-supply = <&aqr_vreg>;
@@ -79,6 +81,14 @@
 		/* BDF 2.2.0 */
 		pcie0_bus2_dev2_fn0: pcie0_bus2_dev2_fn0 {
 			reg = <0x1000 0x0 0x0 0x0 0x0>;
+			cnss_pci0: cnss_pci0 {
+				reg = <0 0 0 0 0>;
+				qcom,iommu-group = <&cnss_pci_iommu_group>;
+				memory-region = <&cnss_wlan_mem>;
+
+				#address-cells = <1>;
+				#size-cells = <1>;
+			};
 		};
 
 		/* BDF 2.3.0 */
@@ -87,3 +97,5 @@
 		};
 	};
 };
+
+#include "sdxlemur-cnss.dtsi"
