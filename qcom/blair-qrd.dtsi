@@ -1,2 +1,7 @@
 / {
 };
+
+&ufsphy_mem {
+	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+	vdda-phy-max-microamp = <85700>;
+};
