@@ -805,8 +805,8 @@ static void apr_vm_set_subsys_state(void)
 	spin_lock(&apr_priv->apr_lock);
 	if (apr_priv->is_initial_boot)
 		schedule_work(&apr_priv->add_chld_dev_work);
+	apr_priv->is_initial_boot = false;
 	spin_unlock(&apr_priv->apr_lock);
-	snd_event_notify(apr_priv->dev, SND_EVENT_UP);
 }
 
 /**
@@ -1452,6 +1452,8 @@ static int apr_probe(struct platform_device *pdev)
 		pr_err("%s: Registration with SND event fwk failed ret = %d\n",
 			__func__, ret);
 		ret = 0;
+	} else {
+		snd_event_notify(apr_priv->dev, SND_EVENT_UP);
 	}
 
 	return apr_debug_init();
