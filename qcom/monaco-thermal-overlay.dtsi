@@ -40,6 +40,12 @@
 				trip = <&bcl_lvl0>;
 				cooling-device = <&cpu3_isolate 1 1>;
 			};
+
+			gpu_cdev {
+				trip = <&bcl_lvl0>;
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-2)
+							(THERMAL_MAX_LIMIT-2)>;
+			};
 		};
 	};
 
@@ -55,6 +61,12 @@
 			cpu1_cdev {
 				trip = <&bcl_lvl1>;
 				cooling-device = <&cpu1_isolate 1 1>;
+			};
+
+			gpu_cdev {
+				trip = <&bcl_lvl1>;
+				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
 			};
 
 			modem_cdev {
@@ -95,6 +107,12 @@
 			soc_cpu3 {
 				trip = <&socd_trip>;
 				cooling-device = <&cpu3_isolate 1 1>;
+			};
+
+			gpu_cdev {
+				trip = <&socd_trip>;
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-2)
+							(THERMAL_MAX_LIMIT-2)>;
 			};
 		};
 	};
