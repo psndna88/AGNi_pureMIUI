@@ -194,6 +194,7 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	yupik-qrd-overlay.dtbo \
 	yupik-idps-digital-mics-overlay.dtbo \
 	yupik-idps-amoled-overlay.dtbo \
+	yupik-idp-pm7250b-overlay.dtbo \
 	yupikp-idp-overlay.dtbo \
 	yupikp-atp-overlay.dtbo \
 	yupikp-qrd-overlay.dtbo \
@@ -215,6 +216,7 @@ yupik-atp-overlay.dtbo-base := yupik.dtb
 yupik-qrd-overlay.dtbo-base := yupik.dtb
 yupik-idps-digital-mics-overlay.dtbo-base := yupik.dtb
 yupik-idps-amoled-overlay.dtbo-base := yupik.dtb
+yupik-idp-pm7250b-overlay.dtbo-base := yupik.dtb
 yupikp-idp-overlay.dtbo-base := yupikp.dtb
 yupikp-atp-overlay.dtbo-base := yupikp.dtb
 yupikp-qrd-overlay.dtbo-base := yupikp.dtb
@@ -235,6 +237,7 @@ dtb-$(CONFIG_ARCH_YUPIK) += yupik-rumi.dtb \
 	yupik-qrd.dtb \
 	yupik-idps-digital-mics.dtb \
 	yupik-idps-amoled.dtb \
+	yupik-idp-pm7250b.dtb \
 	yupikp-idp.dtb \
 	yupikp-atp.dtb \
 	yupikp-qrd.dtb \
