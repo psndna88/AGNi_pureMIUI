@@ -2418,6 +2418,12 @@
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";
 	};
+
+	aop-msg-client {
+		compatible = "qcom,debugfs-qmp-client";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 #include "sdmshrike-pinctrl.dtsi"
