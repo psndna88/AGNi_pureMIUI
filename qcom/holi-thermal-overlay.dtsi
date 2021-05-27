@@ -149,6 +149,11 @@
 
 	pm7250b-bcl-lvl0 {
 		cooling-maps {
+			lbat_modem0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+
 			lbat0_cpu6 {
 				trip = <&b_bcl_lvl0>;
 				cooling-device = <&cpu6_isolate 1 1>;
@@ -158,33 +163,45 @@
 				trip = <&b_bcl_lvl0>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
+
+			lbat_cdsp0 {
+				trip = <&b_bcl_lvl0>;
+				cooling-device = <&cdsp_sw 2 2>;
+			};
 		};
 	};
 
 	pm7250b-bcl-lvl1 {
 		cooling-maps {
-			lbat1_cpu6 {
+			lbat_gpu {
 				trip = <&b_bcl_lvl1>;
-				cooling-device = <&cpu6_isolate 1 1>;
+				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
 			};
 
-			lbat1_cpu7 {
+			lbat_cdsp1 {
 				trip = <&b_bcl_lvl1>;
-				cooling-device = <&cpu7_isolate 1 1>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			lbat0_cpu4 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&cpu4_isolate 1 1>;
+			};
+
+			lbat0_cpu5 {
+				trip = <&b_bcl_lvl1>;
+				cooling-device = <&cpu5_isolate 1 1>;
 			};
 		};
 	};
 
 	pm7250b-bcl-lvl2 {
 		cooling-maps {
-			lbat2_cpu6 {
+			lbat_cdsp2 {
 				trip = <&b_bcl_lvl2>;
-				cooling-device = <&cpu6_isolate 1 1>;
-			};
-
-			lbat2_cpu7 {
-				trip = <&b_bcl_lvl2>;
-				cooling-device = <&cpu7_isolate 1 1>;
+				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
 			};
 		};
 	};
@@ -192,6 +209,11 @@
 	pm6150l-bcl-lvl0 {
 		disable-thermal-zone;
 		cooling-maps {
+			vph_modem {
+				trip = <&l_bcl_lvl0>;
+				cooling-device = <&modem_tj 3 3>;
+			};
+
 			vph_cpu6 {
 				trip = <&l_bcl_lvl0>;
 				cooling-device = <&cpu6_isolate 1 1>;
@@ -201,20 +223,38 @@
 				trip = <&l_bcl_lvl0>;
 				cooling-device = <&cpu7_isolate 1 1>;
 			};
+
+			vph_cdsp0 {
+				trip = <&l_bcl_lvl0>;
+				cooling-device = <&cdsp_sw 2 2>;
+			};
+
+
 		};
 	};
 
 	pm6150l-bcl-lvl1 {
 		disable-thermal-zone;
 		cooling-maps {
-			vph_cpu6 {
+			vph_gpu {
 				trip = <&l_bcl_lvl1>;
-				cooling-device = <&cpu6_isolate 1 1>;
+				cooling-device = <&msm_gpu THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
 			};
 
-			vph_cpu7 {
+			vph_cdsp1 {
 				trip = <&l_bcl_lvl1>;
-				cooling-device = <&cpu7_isolate 1 1>;
+				cooling-device = <&cdsp_sw 4 4>;
+			};
+
+			lbat0_cpu4 {
+				trip = <&l_bcl_lvl1>;
+				cooling-device = <&cpu4_isolate 1 1>;
+			};
+
+			lbat0_cpu5 {
+				trip = <&l_bcl_lvl1>;
+				cooling-device = <&cpu5_isolate 1 1>;
 			};
 		};
 	};
@@ -222,14 +262,10 @@
 	pm6150l-bcl-lvl2 {
 		disable-thermal-zone;
 		cooling-maps {
-			vph_cpu6 {
+			vph_cdsp2 {
 				trip = <&l_bcl_lvl2>;
-				cooling-device = <&cpu6_isolate 1 1>;
-			};
-
-			vph_cpu7 {
-				trip = <&l_bcl_lvl2>;
-				cooling-device = <&cpu7_isolate 1 1>;
+				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
+							THERMAL_MAX_LIMIT>;
 			};
 		};
 	};
