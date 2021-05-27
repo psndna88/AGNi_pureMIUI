@@ -433,9 +433,13 @@
 			qcom,use-voltage-level;
 		};
 
-		/* Dummy node */
 		gfx_cdev: gfx-cdev {
-			status = "disabled";
+			status = "okay";
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&S8A_LEVEL_AO>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
+					RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>;
+			#cooling-cells = <2>;
 		};
 
 	};
@@ -747,9 +751,13 @@
 			qcom,use-voltage-level;
 		};
 
-		/* Dummy node */
 		mx_cdev: mx-cdev-lvl {
-			status = "disabled";
+			status = "okay";
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&S1E_LEVEL>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_RETENTION
+					RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>;
+			#cooling-cells = <2>;
 		};
 	};
 
@@ -801,9 +809,13 @@
 			qcom,use-voltage-level;
 		};
 
-		/* Dummy node */
 		cx_cdev: cx-cdev-lvl {
-			status = "disabled";
+			status = "okay";
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&S2E_FLOOR_LEVEL>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_RETENTION
+					RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>;
+			#cooling-cells = <2>;
 		};
 	};
 
