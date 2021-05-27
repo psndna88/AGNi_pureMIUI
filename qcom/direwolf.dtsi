@@ -32,6 +32,11 @@
 		ufshc1 = &ufshc_mem; /* Embedded UFS slot */
 		serial0 = &qupv3_se17_2uart;
 		hsuart0 = &qupv3_se2_4uart;
+		pci-domain0 = &pcie0; /* PCIe0 domain */
+		pci-domain1 = &pcie1; /* PCIe1 domain */
+		pci-domain2 = &pcie2; /* PCIe2 domain */
+		pci-domain3 = &pcie3; /* PCIe3 domain */
+		pci-domain4 = &pcie4; /* PCIe4 domain */
 	};
 
 	cpus {
@@ -1768,6 +1773,7 @@
 #include "direwolf-qupv3.dtsi"
 #include "direwolf-usb.dtsi"
 #include "direwolf-smp2p.dtsi"
+#include "direwolf-pcie.dtsi"
 
 &gcc_emac0_gdsc {
 	status = "ok";
