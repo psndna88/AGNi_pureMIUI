@@ -1,4 +1,5 @@
 #include "holi-mtp-pm6125.dtsi"
+#include "display/blair-sde-display-mtp.dtsi"
 / {
 };
 
