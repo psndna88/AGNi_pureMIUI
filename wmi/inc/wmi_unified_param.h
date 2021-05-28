@@ -5246,6 +5246,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_IGMP_OFFLOAD
 	wmi_service_igmp_offload_support,
 #endif
+	wmi_service_sae_eapol_offload_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5500,6 +5501,7 @@ typedef struct {
 	uint32_t max_ndi;
 	uint32_t is_sap_connected_d3wow_enabled;
 	uint32_t is_go_connected_d3wow_enabled;
+	bool sae_eapol_offload;
 } target_resource_config;
 
 /**
