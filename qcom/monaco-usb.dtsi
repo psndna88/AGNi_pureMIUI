@@ -33,6 +33,7 @@
 		reset-names = "core_reset";
 
 		USB3_GDSC-supply = <&gcc_usb20_prim_gdsc>;
+		dpdm-supply = <&usb2_phy0>;
 		qcom,usb-charger;
 
 		qcom,core-clk-rate = <60000000>;
