@@ -1,6 +1,6 @@
 /dts-v1/;
+/plugin/;
 
-#include "blair.dtsi"
 #include "blair-qrd.dtsi"
 
 / {
