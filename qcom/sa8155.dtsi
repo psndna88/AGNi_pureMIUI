@@ -304,6 +304,12 @@
 			pcm-lane-config = <1>;
 		};
 	};
+
+	aop-msg-client {
+		compatible = "qcom,debugfs-qmp-client";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 &usb2_phy0 {
