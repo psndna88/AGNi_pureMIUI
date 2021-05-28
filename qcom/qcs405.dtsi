@@ -483,3 +483,4 @@
 #include "qcs405-cpu.dtsi"
 #include "pms405-rpm-regulator.dtsi"
 #include "qcs405-regulator.dtsi"
+#include "qcs405-ion.dtsi"
