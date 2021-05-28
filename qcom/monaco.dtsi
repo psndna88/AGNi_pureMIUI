@@ -1491,12 +1491,14 @@
 };
 
 #include "pm5100.dtsi"
+#include "pm5100-rpm-regulator.dtsi"
+#include "pm8010-rpm-regulator.dtsi"
+#include "monaco-regulators.dtsi"
 #include "monaco-pmic.dtsi"
 #include "monaco-pinctrl.dtsi"
 #include "monaco-coresight.dtsi"
 #include "msm-arm-smmu-monaco.dtsi"
 #include "monaco-ion.dtsi"
-#include "monaco-stub-regulator.dtsi"
 #include "monaco-gdsc.dtsi"
 #include "monaco-qupv3.dtsi"
 #include "monaco-pm.dtsi"
