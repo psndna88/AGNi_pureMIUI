@@ -2790,7 +2790,7 @@
 			100000000 200000000 400000000 4294967295>;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
-		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x00010800 0x80040868>;
+		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x2C010800 0x80040868>;
 
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
@@ -2805,7 +2805,6 @@
 
 		no-sd;
 		no-sdio;
-		max-frequency = <192000000>;
 
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
@@ -2864,7 +2863,7 @@
 			100000000 200000000 4294967295>;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
-		qcom,dll-hsr-list = <0x0007642c 0x0 0x0 0x00010800 0x80040868>;
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
 
 		bus-width = <4>;
 
@@ -2873,7 +2872,6 @@
 
 		no-mmc;
 		no-sdio;
-		max-frequency = <202000000>;
 
 		qcom,devfreq,freq-table = <50000000 202000000>;
 
