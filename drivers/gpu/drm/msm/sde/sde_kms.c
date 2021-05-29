@@ -81,7 +81,6 @@ static const char * const iommu_ports[] = {
 #define SDE_KMS_MODESET_LOCK_TIMEOUT_US 500
 #define SDE_KMS_MODESET_LOCK_MAX_TRIALS 20
 
-#define SDE_KMS_PM_QOS_CPU_DMA_LATENCY 300
 /**
  * sdecustom - enable certain driver customizations for sde clients
  *	Enabling this modifies the standard DRM behavior slightly and assumes
@@ -107,7 +106,7 @@ bool sde_is_custom_client(void)
 	return sdecustom;
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 static int _sde_danger_signal_status(struct seq_file *s,
 		bool danger_status)
 {
@@ -2765,14 +2764,9 @@ retry:
 	}
 
 	crtc_state->active = true;
-	ret = drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
-	if (ret)
-		SDE_ERROR("error %d setting the crtc\n", ret);
+	drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
 
-	ret = drm_atomic_commit(state);
-	if (ret)
-		SDE_ERROR("Error %d doing the atomic commit\n", ret);
-
+	drm_atomic_commit(state);
 end:
 	if (state)
 		drm_atomic_state_put(state);
@@ -3173,17 +3167,6 @@ static void _sde_kms_set_lutdma_vbif_remap(struct sde_kms *sde_kms)
 	sde_vbif_set_qos_remap(sde_kms, &qos_params);
 }
 
-static void kms_update_pm_qos(struct pm_qos_request *pm_qos_irq_req, bool enable)
-{
-	if (!pm_qos_request_active(pm_qos_irq_req))
-		return;
-
-	if (enable)
-		pm_qos_update_request(pm_qos_irq_req, SDE_KMS_PM_QOS_CPU_DMA_LATENCY);
-	else
-		pm_qos_update_request(pm_qos_irq_req, PM_QOS_DEFAULT_VALUE);
-}
-
 static void sde_kms_handle_power_event(u32 event_type, void *usr)
 {
 	struct sde_kms *sde_kms = usr;
@@ -3202,9 +3185,7 @@ static void sde_kms_handle_power_event(u32 event_type, void *usr)
 		sde_kms_init_shared_hw(sde_kms);
 		_sde_kms_set_lutdma_vbif_remap(sde_kms);
 		sde_kms->first_kickoff = true;
-		kms_update_pm_qos(&sde_kms->pm_qos_irq_req, true);
 	} else if (event_type == SDE_POWER_EVENT_PRE_DISABLE) {
-		kms_update_pm_qos(&sde_kms->pm_qos_irq_req, false);
 		sde_irq_update(msm_kms, false);
 		sde_kms->first_kickoff = false;
 	}
@@ -3659,12 +3640,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		sde_power_resource_enable(&priv->phandle,
 						sde_kms->core_client, false);
 	}
-
-	sde_kms->pm_qos_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
-	sde_kms->pm_qos_irq_req.irq = platform_get_irq(to_platform_device(sde_kms->dev->dev), 0);
-	pm_qos_add_request(&sde_kms->pm_qos_irq_req, PM_QOS_CPU_DMA_LATENCY,
-					SDE_KMS_PM_QOS_CPU_DMA_LATENCY);
-
 	return 0;
 
 genpd_err:

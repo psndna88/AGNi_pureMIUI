@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -80,184 +80,6 @@ static const struct of_device_id msm_dsi_of_match[] = {
 	},
 	{}
 };
-
-static ssize_t debugfs_state_info_read(struct file *file,
-				       char __user *buff,
-				       size_t count,
-				       loff_t *ppos)
-{
-	struct dsi_ctrl *dsi_ctrl = file->private_data;
-	char *buf;
-	u32 len = 0;
-
-	if (!dsi_ctrl)
-		return -ENODEV;
-
-	if (*ppos)
-		return 0;
-
-	buf = kzalloc(SZ_4K, GFP_KERNEL);
-	if (!buf)
-		return -ENOMEM;
-
-	/* Dump current state */
-	len += snprintf((buf + len), (SZ_4K - len), "Current State:\n");
-	len += snprintf((buf + len), (SZ_4K - len),
-			"\tCTRL_ENGINE = %s\n",
-			TO_ON_OFF(dsi_ctrl->current_state.controller_state));
-	len += snprintf((buf + len), (SZ_4K - len),
-			"\tVIDEO_ENGINE = %s\n\tCOMMAND_ENGINE = %s\n",
-			TO_ON_OFF(dsi_ctrl->current_state.vid_engine_state),
-			TO_ON_OFF(dsi_ctrl->current_state.cmd_engine_state));
-
-	/* Dump clock information */
-	len += snprintf((buf + len), (SZ_4K - len), "\nClock Info:\n");
-	len += snprintf((buf + len), (SZ_4K - len),
-			"\tBYTE_CLK = %u, PIXEL_CLK = %u, ESC_CLK = %u\n",
-			dsi_ctrl->clk_freq.byte_clk_rate,
-			dsi_ctrl->clk_freq.pix_clk_rate,
-			dsi_ctrl->clk_freq.esc_clk_rate);
-
-	if (len > count)
-		len = count;
-
-	len = min_t(size_t, len, SZ_4K);
-	if (copy_to_user(buff, buf, len)) {
-		kfree(buf);
-		return -EFAULT;
-	}
-
-	*ppos += len;
-	kfree(buf);
-	return len;
-}
-
-static ssize_t debugfs_reg_dump_read(struct file *file,
-				     char __user *buff,
-				     size_t count,
-				     loff_t *ppos)
-{
-	struct dsi_ctrl *dsi_ctrl = file->private_data;
-	char *buf;
-	u32 len = 0;
-	struct dsi_clk_ctrl_info clk_info;
-	int rc = 0;
-
-	if (!dsi_ctrl)
-		return -ENODEV;
-
-	if (*ppos)
-		return 0;
-
-	buf = kzalloc(SZ_4K, GFP_KERNEL);
-	if (!buf)
-		return -ENOMEM;
-
-	clk_info.client = DSI_CLK_REQ_DSI_CLIENT;
-	clk_info.clk_type = DSI_CORE_CLK;
-	clk_info.clk_state = DSI_CLK_ON;
-
-	rc = dsi_ctrl->clk_cb.dsi_clk_cb(dsi_ctrl->clk_cb.priv, clk_info);
-	if (rc) {
-		pr_err("failed to enable DSI core clocks\n");
-		kfree(buf);
-		return rc;
-	}
-
-	if (dsi_ctrl->hw.ops.reg_dump_to_buffer)
-		len = dsi_ctrl->hw.ops.reg_dump_to_buffer(&dsi_ctrl->hw,
-				buf, SZ_4K);
-
-	clk_info.clk_state = DSI_CLK_OFF;
-	rc = dsi_ctrl->clk_cb.dsi_clk_cb(dsi_ctrl->clk_cb.priv, clk_info);
-	if (rc) {
-		pr_err("failed to disable DSI core clocks\n");
-		kfree(buf);
-		return rc;
-	}
-
-	if (len > count)
-		len = count;
-
-	len = min_t(size_t, len, SZ_4K);
-	if (copy_to_user(buff, buf, len)) {
-		kfree(buf);
-		return -EFAULT;
-	}
-
-	*ppos += len;
-	kfree(buf);
-	return len;
-}
-
-static const struct file_operations state_info_fops = {
-	.open = simple_open,
-	.read = debugfs_state_info_read,
-};
-
-static const struct file_operations reg_dump_fops = {
-	.open = simple_open,
-	.read = debugfs_reg_dump_read,
-};
-
-static int dsi_ctrl_debugfs_init(struct dsi_ctrl *dsi_ctrl,
-				 struct dentry *parent)
-{
-	int rc = 0;
-	struct dentry *dir, *state_file, *reg_dump;
-	char dbg_name[DSI_DEBUG_NAME_LEN];
-
-	dir = debugfs_create_dir(dsi_ctrl->name, parent);
-	if (IS_ERR_OR_NULL(dir)) {
-		rc = PTR_ERR(dir);
-		pr_err("[DSI_%d] debugfs create dir failed, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
-		goto error;
-	}
-
-	state_file = debugfs_create_file("state_info",
-					 0444,
-					 dir,
-					 dsi_ctrl,
-					 &state_info_fops);
-	if (IS_ERR_OR_NULL(state_file)) {
-		rc = PTR_ERR(state_file);
-		pr_err("[DSI_%d] state file failed, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
-		goto error_remove_dir;
-	}
-
-	reg_dump = debugfs_create_file("reg_dump",
-				       0444,
-				       dir,
-				       dsi_ctrl,
-				       &reg_dump_fops);
-	if (IS_ERR_OR_NULL(reg_dump)) {
-		rc = PTR_ERR(reg_dump);
-		pr_err("[DSI_%d] reg dump file failed, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
-		goto error_remove_dir;
-	}
-
-	dsi_ctrl->debugfs_root = dir;
-
-	snprintf(dbg_name, DSI_DEBUG_NAME_LEN, "dsi%d_ctrl",
-						dsi_ctrl->cell_index);
-	sde_dbg_reg_register_base(dbg_name, dsi_ctrl->hw.base,
-				msm_iomap_size(dsi_ctrl->pdev, "dsi_ctrl"));
-	sde_dbg_reg_register_dump_range(dbg_name, dbg_name, 0,
-				msm_iomap_size(dsi_ctrl->pdev, "dsi_ctrl"), 0);
-error_remove_dir:
-	debugfs_remove(dir);
-error:
-	return rc;
-}
-
-static int dsi_ctrl_debugfs_deinit(struct dsi_ctrl *dsi_ctrl)
-{
-	debugfs_remove(dsi_ctrl->debugfs_root);
-	return 0;
-}
 
 static inline struct msm_gem_address_space*
 dsi_ctrl_get_aspace(struct dsi_ctrl *dsi_ctrl,
@@ -2024,13 +1846,6 @@ int dsi_ctrl_drv_init(struct dsi_ctrl *dsi_ctrl, struct dentry *parent)
 		goto error;
 	}
 
-	rc = dsi_ctrl_debugfs_init(dsi_ctrl, parent);
-	if (rc) {
-		pr_err("[DSI_%d] failed to init debug fs, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
-		goto error;
-	}
-
 error:
 	mutex_unlock(&dsi_ctrl->ctrl_lock);
 	return rc;
@@ -2054,10 +1869,6 @@ int dsi_ctrl_drv_deinit(struct dsi_ctrl *dsi_ctrl)
 	}
 
 	mutex_lock(&dsi_ctrl->ctrl_lock);
-
-	rc = dsi_ctrl_debugfs_deinit(dsi_ctrl);
-	if (rc)
-		pr_err("failed to release debugfs root, rc=%d\n", rc);
 
 	rc = dsi_ctrl_buffer_deinit(dsi_ctrl);
 	if (rc)

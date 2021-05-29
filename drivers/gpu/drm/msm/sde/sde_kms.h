@@ -268,8 +268,6 @@ struct sde_kms {
 
 	bool first_kickoff;
 	bool qdss_enabled;
-
-	struct pm_qos_request pm_qos_irq_req;
 };
 
 struct vsync_info {
