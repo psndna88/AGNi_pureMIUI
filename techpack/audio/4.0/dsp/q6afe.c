@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  */
 #include <linux/slab.h>
@@ -679,7 +679,6 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 #ifdef CONFIG_TAS25XX_ALGO
 		{
 			u32 *payload32 = data->payload;
-			pr_info ("TI-SmartPA: payload1 = 0x%x, 0x%x", payload32[0], payload32[1]);
 			if ((payload32[1] == AFE_SMARTAMP_MODULE_RX) ||
 					(payload32[1] == AFE_SMARTAMP_MODULE_TX)) {
 				if (tas_smartamp_algo_callback(data->opcode, data->payload, data->payload_size))
@@ -716,8 +715,6 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 	} else if (data->opcode == ULTRASOUND_OPCODE) {
 		if (NULL != data->payload)
 			elliptic_process_apr_payload(data->payload);
-		else
-			pr_err("[EXPORT SYMBOLLUS]: payload ptr is Invalid");
 	} else if (data->payload_size) {
 		uint32_t *payload;
 		uint16_t port_id = 0;
@@ -820,7 +817,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 				wake_up(&this_afe.lpass_core_hw_wait);
 				break;
 			case AFE_SVC_CMD_EVENT_CFG:
-				atomic_set(&this_afe.state, 0);
+				atomic_set(&this_afe.state, payload[1]);
 				wake_up(&this_afe.wait_wakeup);
 				break;
 			default:
@@ -9022,6 +9019,7 @@ static int afe_get_cal_sp_th_vi_param(int32_t cal_type, size_t data_size,
 
 	if (cal_data == NULL ||
 	    data_size > sizeof(*cal_data) ||
+	    data_size < sizeof(cal_data->cal_hdr) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		return 0;
 
@@ -9048,7 +9046,8 @@ static int afe_get_cal_sp_ex_vi_ftm_param(int32_t cal_type, size_t data_size,
 	pr_debug("%s: cal_type = %d\n", __func__, cal_type);
 	if (this_afe.cal_data[AFE_FB_SPKR_PROT_EX_VI_CAL] == NULL ||
 	    cal_data == NULL ||
-	    data_size != sizeof(*cal_data))
+	    data_size > sizeof(*cal_data) ||
+	    data_size < sizeof(cal_data->cal_hdr))
 		goto done;
 
 	mutex_lock(&this_afe.cal_data[AFE_FB_SPKR_PROT_EX_VI_CAL]->lock);
