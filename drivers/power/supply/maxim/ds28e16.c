@@ -33,10 +33,10 @@
 #include <linux/random.h>
 #include <linux/sched.h>
 
-#define ds_info	pr_info
-#define ds_dbg	pr_debug
-#define ds_err	pr_err
-#define ds_log	pr_err
+#define ds_info
+#define ds_dbg
+#define ds_err
+#define ds_log
 
 struct ds28e16_data {
 	struct platform_device *pdev;
