@@ -1089,7 +1089,7 @@ static void ufshcd_print_pwr_info(struct ufs_hba *hba)
 		"INVALID MODE",
 	};
 
-	if (!(hba->ufshcd_dbg_print & UFSHCD_DBG_PRINT_PWR_EN))
+//	if (!(hba->ufshcd_dbg_print & UFSHCD_DBG_PRINT_PWR_EN))
 		return;
 
 	dev_err(hba->dev, "%s:[RX, TX]: gear=[%d, %d], lane[%d, %d], pwr[%s, %s], rate = %d\n",
@@ -8161,7 +8161,7 @@ static u32 ufshcd_get_max_icc_level(int sup_curr_uA, u32 start_scan, char *buff)
 	}
 	if (i < 0) {
 		i = 0;
-		pr_err("%s: Couldn't find valid icc_level = %d", __func__, i);
+//		pr_err("%s: Couldn't find valid icc_level = %d", __func__, i);
 	}
 
 	return (u32)i;
