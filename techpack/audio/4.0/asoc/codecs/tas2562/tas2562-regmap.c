@@ -679,9 +679,9 @@ static void irq_work_routine(struct work_struct *work)
 	TAS2562_LATCHEDINTERRUPTREG1_BROWNOUTFLAGSTICKY_INTERRUPT)) {
 		p_tas2562->mn_err_code |= ERROR_BROWNOUT;
 		dev_err(p_tas2562->dev, "brownout!\n");
-	} else
+	} else {
 		p_tas2562->mn_err_code &= ~ERROR_BROWNOUT;
-
+	}
 		goto reload;
 	} else {
 		n_counter = 2;
@@ -1244,7 +1244,19 @@ static struct i2c_driver tas2562_i2c_driver = {
 	.id_table   = tas2562_i2c_id,
 };
 
-module_i2c_driver(tas2562_i2c_driver);
+static int __init tas2526_init(void)
+{
+       return i2c_add_driver(&tas2562_i2c_driver);
+}
+
+static void __exit tas2526_exit(void)
+{
+       i2c_del_driver(&tas2562_i2c_driver);
+       return;
+}
+late_initcall(tas2526_init);
+module_exit(tas2526_exit);
+
 MODULE_AUTHOR("Texas Instruments Inc.");
 MODULE_DESCRIPTION("TAS2562 I2C Smart Amplifier driver");
 MODULE_LICENSE("GPL v2");
