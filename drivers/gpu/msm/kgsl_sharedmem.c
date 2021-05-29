@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -274,7 +274,7 @@ void kgsl_process_init_sysfs(struct kgsl_device *device,
 	/* Keep private valid until the sysfs enries are removed. */
 	kgsl_process_private_get(private);
 
-	snprintf(name, sizeof(name), "%d", pid_nr(private->pid));
+	snprintf(name, sizeof(name), "%d", private->pid);
 
 	if (kobject_init_and_add(&private->kobj, &ktype_mem_entry,
 		kgsl_driver.prockobj, name)) {
@@ -452,6 +452,8 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 		get_page(page);
 		vmf->page = page;
 
+		atomic_long_add(PAGE_SIZE, &memdesc->mapsize);
+
 		return 0;
 	}
 
@@ -620,6 +622,8 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 		return VM_FAULT_OOM;
 	else if (ret == -EFAULT)
 		return VM_FAULT_SIGBUS;
+
+	atomic_long_add(PAGE_SIZE, &memdesc->mapsize);
 
 	return VM_FAULT_NOPAGE;
 }
@@ -847,7 +851,6 @@ void kgsl_memdesc_init(struct kgsl_device *device,
 		(memdesc->flags & KGSL_MEMALIGN_MASK) >> KGSL_MEMALIGN_SHIFT,
 		ilog2(PAGE_SIZE));
 	kgsl_memdesc_set_align(memdesc, align);
-	spin_lock_init(&memdesc->lock);
 }
 
 int
@@ -1049,11 +1052,8 @@ void kgsl_sharedmem_free(struct kgsl_memdesc *memdesc)
 		kfree(memdesc->sgt);
 	}
 
-	memdesc->page_count = 0;
 	if (memdesc->pages)
 		kgsl_free(memdesc->pages);
-	memdesc->pages = NULL;
-
 }
 EXPORT_SYMBOL(kgsl_sharedmem_free);
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -165,9 +165,7 @@ struct kgsl_driver {
 	struct workqueue_struct *workqueue;
 	struct workqueue_struct *mem_workqueue;
 	struct kthread_worker worker;
-	struct kthread_worker low_prio_worker;
 	struct task_struct *worker_thread;
-	struct task_struct *low_prio_worker_thread;
 };
 
 extern struct kgsl_driver kgsl_driver;
@@ -211,9 +209,11 @@ struct kgsl_memdesc_ops {
  * @pagetable: Pointer to the pagetable that the object is mapped in
  * @hostptr: Kernel virtual address
  * @hostptr_count: Number of threads using hostptr
+ * @useraddr: User virtual address (if applicable)
  * @gpuaddr: GPU virtual address
  * @physaddr: Physical address of the memory object
  * @size: Size of the memory object
+ * @mapsize: Size of memory mapped in userspace
  * @pad_to: Size that we pad the memdesc to
  * @priv: Internal flags and settings
  * @sgt: Scatter gather table for allocated pages
@@ -229,9 +229,11 @@ struct kgsl_memdesc {
 	struct kgsl_pagetable *pagetable;
 	void *hostptr;
 	unsigned int hostptr_count;
+	unsigned long useraddr;
 	uint64_t gpuaddr;
 	phys_addr_t physaddr;
 	uint64_t size;
+	atomic_long_t mapsize;
 	uint64_t pad_to;
 	unsigned int priv;
 	struct sg_table *sgt;
@@ -242,11 +244,6 @@ struct kgsl_memdesc {
 	struct page **pages;
 	unsigned int page_count;
 	unsigned int cur_bindings;
-	/*
-	 * @lock: Spinlock to protect the gpuaddr from being accessed by
-	 * multiple entities trying to map the same SVM region at once
-	 */
-	spinlock_t lock;
 };
 
 /*
@@ -295,11 +292,6 @@ struct kgsl_mem_entry {
 	struct work_struct work;
 	spinlock_t bind_lock;
 	struct rb_root bind_tree;
-	/**
-	 * @map_count: Count how many vmas this object is mapped in - used for
-	 * debugfs accounting
-	 */
-	atomic_t map_count;
 };
 
 struct kgsl_device_private;
@@ -307,14 +299,6 @@ struct kgsl_event_group;
 
 typedef void (*kgsl_event_func)(struct kgsl_device *, struct kgsl_event_group *,
 		void *, int);
-
-enum kgsl_priority {
-	KGSL_EVENT_REGULAR_PRIORITY = 0,
-	KGSL_EVENT_LOW_PRIORITY,
-	KGSL_EVENT_NUM_PRIORITIES
-};
-
-const char *prio_to_string(enum kgsl_priority prio);
 
 /**
  * struct kgsl_event - KGSL GPU timestamp event
@@ -337,9 +321,8 @@ struct kgsl_event {
 	void *priv;
 	struct list_head node;
 	unsigned int created;
-	struct kthread_work work;
+	struct work_struct work;
 	int result;
-	enum kgsl_priority prio;
 	struct kgsl_event_group *group;
 };
 

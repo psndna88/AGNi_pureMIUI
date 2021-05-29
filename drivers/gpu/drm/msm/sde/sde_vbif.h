@@ -128,7 +128,7 @@ int sde_vbif_halt_plane_xin(struct sde_kms *sde_kms, u32 xin_id,
  */
 int sde_vbif_halt_xin_mask(struct sde_kms *sde_kms, u32 xin_id_mask, bool halt);
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 int sde_debugfs_vbif_init(struct sde_kms *sde_kms, struct dentry *debugfs_root);
 void sde_debugfs_vbif_destroy(struct sde_kms *sde_kms);
 #else

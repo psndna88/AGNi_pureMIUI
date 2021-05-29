@@ -1606,7 +1606,7 @@ static const struct file_operations conn_cmd_tx_fops = {
 	.write =	_sde_debugfs_conn_cmd_tx_write,
 };
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 /**
  * sde_connector_init_debugfs - initialize connector debugfs
  * @connector: Pointer to drm connector

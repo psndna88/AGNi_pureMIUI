@@ -124,7 +124,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 			}
 		}
 
-		if (!hlos_accessible_buffer(buffer) ||
+		if ((flags & ION_FLAG_SECURE) ||
 		    !ion_buffer_cached(buffer))
 			ion_pages_sync_for_device(dev, pages, size,
 						  DMA_BIDIRECTIONAL);

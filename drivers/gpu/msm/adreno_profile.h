@@ -62,7 +62,7 @@ struct adreno_profile {
 #define ADRENO_PROFILE_LOG_BUF_SIZE_DWORDS  (ADRENO_PROFILE_LOG_BUF_SIZE / \
 						sizeof(unsigned int))
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 void adreno_profile_init(struct adreno_device *adreno_dev);
 void adreno_profile_close(struct adreno_device *adreno_dev);
 int adreno_profile_process_results(struct  adreno_device *adreno_dev);

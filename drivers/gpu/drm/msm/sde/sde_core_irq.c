@@ -371,7 +371,7 @@ static void sde_disable_all_irqs(struct sde_kms *sde_kms)
 	sde_kms->hw_intr->ops.disable_all_irqs(sde_kms->hw_intr);
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 #define DEFINE_SDE_DEBUGFS_SEQ_FOPS(__prefix)				\
 static int __prefix ## _open(struct inode *inode, struct file *file)	\
 {									\

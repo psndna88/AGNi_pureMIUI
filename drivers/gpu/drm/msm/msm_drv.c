@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -782,21 +782,10 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->disp_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
-		/* Only pin actual display thread to big cluster */
-		if (i == 0) {
-			priv->disp_thread[i].thread =
-				kthread_run_perf_critical(kthread_worker_fn,
-					&priv->disp_thread[i].worker,
-					"crtc_commit:%d", priv->disp_thread[i].crtc_id);
-			pr_info("%i to big cluster", priv->disp_thread[i].crtc_id);
-		} else {
-			priv->disp_thread[i].thread =
-				kthread_run(kthread_worker_fn,
-					&priv->disp_thread[i].worker,
-					"crtc_commit:%d", priv->disp_thread[i].crtc_id);
-			pr_info("%i to little cluster", priv->disp_thread[i].crtc_id);
-		}
-
+		priv->disp_thread[i].thread =
+			kthread_run(kthread_worker_fn,
+				&priv->disp_thread[i].worker,
+				"crtc_commit:%d", priv->disp_thread[i].crtc_id);
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
 							SCHED_FIFO, &param);
 		if (ret)
@@ -812,20 +801,10 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->event_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->event_thread[i].worker);
 		priv->event_thread[i].dev = ddev;
-		/* Only pin first event thread to big cluster */
-		if (i == 0) {
-			priv->event_thread[i].thread =
-				kthread_run_perf_critical(kthread_worker_fn,
-					&priv->event_thread[i].worker,
-					"crtc_event:%d", priv->event_thread[i].crtc_id);
-			pr_info("%i to big cluster", priv->event_thread[i].crtc_id);
-		} else {
-			priv->event_thread[i].thread =
-				kthread_run(kthread_worker_fn,
-					&priv->event_thread[i].worker,
-					"crtc_event:%d", priv->event_thread[i].crtc_id);
-			pr_info("%i to little cluster", priv->event_thread[i].crtc_id);
-		}
+		priv->event_thread[i].thread =
+			kthread_run(kthread_worker_fn,
+				&priv->event_thread[i].worker,
+				"crtc_event:%d", priv->event_thread[i].crtc_id);
 		/**
 		 * event thread should also run at same priority as disp_thread
 		 * because it is handling frame_done events. A lower priority
@@ -1563,27 +1542,24 @@ static int msm_ioctl_register_event(struct drm_device *dev, void *data,
 	 * calls add to client list and return.
 	 */
 	count = msm_event_client_count(dev, req_event, false);
-	if (count) {
-		/* Add current client to list */
-		spin_lock_irqsave(&dev->event_lock, flag);
-		list_add_tail(&client->base.link, &priv->client_event_list);
-		spin_unlock_irqrestore(&dev->event_lock, flag);
+	/* Add current client to list */
+	spin_lock_irqsave(&dev->event_lock, flag);
+	list_add_tail(&client->base.link, &priv->client_event_list);
+	spin_unlock_irqrestore(&dev->event_lock, flag);
+
+	if (count)
 		return 0;
-	}
 
 	ret = msm_register_event(dev, req_event, file, true);
 	if (ret) {
 		DRM_ERROR("failed to enable event %x object %x object id %d\n",
 			req_event->event, req_event->object_type,
 			req_event->object_id);
-		kfree(client);
-	} else {
-		/* Add current client to list */
 		spin_lock_irqsave(&dev->event_lock, flag);
-		list_add_tail(&client->base.link, &priv->client_event_list);
+		list_del(&client->base.link);
 		spin_unlock_irqrestore(&dev->event_lock, flag);
+		kfree(client);
 	}
-
 	return ret;
 }
 
@@ -1900,7 +1876,7 @@ static struct drm_driver msm_driver = {
 	.gem_prime_vmap     = msm_gem_prime_vmap,
 	.gem_prime_vunmap   = msm_gem_prime_vunmap,
 	.gem_prime_mmap     = msm_gem_prime_mmap,
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 	.debugfs_init       = msm_debugfs_init,
 #endif
 	.ioctls             = msm_ioctls,
@@ -2289,10 +2265,7 @@ static int msm_pdev_remove(struct platform_device *pdev)
 static void msm_pdev_shutdown(struct platform_device *pdev)
 {
 	struct drm_device *ddev = platform_get_drvdata(pdev);
-	struct msm_drm_private *priv = ddev ? ddev->dev_private : NULL;
-
-	if (!priv || !priv->kms)
-		return;
+	struct msm_drm_private *priv = NULL;
 
 	if (!ddev) {
 		DRM_ERROR("invalid drm device node\n");

@@ -3315,7 +3315,7 @@ static void a5xx_gpmu_int_callback(struct adreno_device *adreno_dev, int bit)
  * @adreno_dev: Pointer to device
  * @bit: Interrupt bit
  */
-static void a5xx_gpc_err_int_callback(struct adreno_device *adreno_dev, int bit)
+void a5xx_gpc_err_int_callback(struct adreno_device *adreno_dev, int bit)
 {
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
