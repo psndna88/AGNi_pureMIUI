@@ -544,8 +544,8 @@ void __enable_irq(struct irq_desc *desc)
 	switch (desc->depth) {
 	case 0:
  err_out:
-		WARN(1, KERN_WARNING "Unbalanced enable for IRQ %d\n",
-		     irq_desc_get_irq(desc));
+//		WARN(1, KERN_WARNING "Unbalanced enable for IRQ %d\n",
+//		     irq_desc_get_irq(desc));
 		break;
 	case 1: {
 		if (desc->istate & IRQS_SUSPENDED)
