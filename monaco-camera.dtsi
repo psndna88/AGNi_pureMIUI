@@ -551,6 +551,7 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
+		ppi-enable;
 		status = "ok";
 	};
 
@@ -614,6 +615,7 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
+		ppi-enable;
 		status = "ok";
 	};
 
@@ -641,6 +643,36 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <5>;
+		status = "ok";
+	};
+
+	cam_ppi0: qcom,ppi0@5cb3000 {
+		cell-index = <0>;
+		compatible = "qcom,ppi100";
+		reg-names = "ppi0";
+		reg = <0x5cb3000 0x200>;
+		reg-cam-base = <0xb3000>;
+		interrupt-names = "ppi0";
+		interrupts = <GIC_SPI 157 IRQ_TYPE_EDGE_RISING>;
+		clocks = <&gcc GCC_CAMSS_CPHY_0_CLK>;
+		clock-names = "gcc_camss_cphy_0_clk";
+		clock-cntl-level = "svs";
+		clock-rates = <0>;
+		status = "ok";
+	};
+
+	cam_ppi1: qcom,ppi1@5cb3200 {
+		cell-index = <1>;
+		compatible = "qcom,ppi100";
+		reg-names = "ppi1";
+		reg = <0x5cb3200 0x200>;
+		reg-cam-base = <0xb3200>;
+		interrupt-names = "ppi1";
+		interrupts = <GIC_SPI 158 IRQ_TYPE_EDGE_RISING>;
+		clocks = <&gcc GCC_CAMSS_CPHY_1_CLK>;
+		clock-names = "gcc_camss_cphy_1_clk";
+		clock-cntl-level = "svs";
+		clock-rates = <0>;
 		status = "ok";
 	};
 
