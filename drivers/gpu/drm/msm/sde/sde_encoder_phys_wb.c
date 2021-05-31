@@ -1664,7 +1664,7 @@ static void sde_encoder_phys_wb_get_hw_resources(
 			hw_res->needs_cdm);
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 /**
  * sde_encoder_phys_wb_init_debugfs - initialize writeback encoder debugfs
  * @phys_enc:		Pointer to physical encoder

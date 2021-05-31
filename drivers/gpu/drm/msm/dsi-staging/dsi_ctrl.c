@@ -1930,6 +1930,7 @@ static struct platform_driver dsi_ctrl_driver = {
 };
 
 
+#if 0
 void dsi_ctrl_debug_dump(u32 *entries, u32 size)
 {
 	struct list_head *pos, *tmp;
@@ -1950,6 +1951,7 @@ void dsi_ctrl_debug_dump(u32 *entries, u32 size)
 	mutex_unlock(&dsi_ctrl_list_lock);
 }
 
+#endif
 /**
  * dsi_ctrl_get() - get a dsi_ctrl handle from an of_node
  * @of_node:    of_node of the DSI controller.
@@ -2041,13 +2043,6 @@ int dsi_ctrl_drv_init(struct dsi_ctrl *dsi_ctrl, struct dentry *parent)
 		goto error;
 	}
 
-	rc = dsi_ctrl_debugfs_init(dsi_ctrl, parent);
-	if (rc) {
-		pr_err("[DSI_%d] failed to init debug fs, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
-		goto error;
-	}
-
 error:
 	mutex_unlock(&dsi_ctrl->ctrl_lock);
 	return rc;
@@ -2071,10 +2066,6 @@ int dsi_ctrl_drv_deinit(struct dsi_ctrl *dsi_ctrl)
 	}
 
 	mutex_lock(&dsi_ctrl->ctrl_lock);
-
-	rc = dsi_ctrl_debugfs_deinit(dsi_ctrl);
-	if (rc)
-		pr_err("failed to release debugfs root, rc=%d\n", rc);
 
 	rc = dsi_ctrl_buffer_deinit(dsi_ctrl);
 	if (rc)

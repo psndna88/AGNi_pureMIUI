@@ -985,6 +985,9 @@ static int sde_hw_intr_enable_irq(struct sde_hw_intr *intr, int irq_idx)
 		/* Enabling interrupts with the new mask */
 		SDE_REG_WRITE(&intr->hw, reg->en_off, cache_irq_mask);
 
+		/* ensure register write goes through */
+		wmb();
+
 		intr->cache_irq_mask[reg_idx] = cache_irq_mask;
 	}
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
@@ -1250,6 +1253,9 @@ static u32 sde_hw_intr_get_interrupt_status(struct sde_hw_intr *intr,
 	if (intr_status && clear)
 		SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
 				intr_status);
+
+	/* ensure register writes go through */
+	wmb();
 
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 

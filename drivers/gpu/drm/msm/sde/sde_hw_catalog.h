@@ -36,38 +36,16 @@
 #define SDE_HW_STEP(rev)		((rev) & 0xFFFF)
 #define SDE_HW_MAJOR_MINOR(rev)		((rev) >> 16)
 
-#define IS_SDE_MAJOR_SAME(rev1, rev2)   \
-	(SDE_HW_MAJOR((rev1)) == SDE_HW_MAJOR((rev2)))
-
-#define IS_SDE_MAJOR_MINOR_SAME(rev1, rev2)   \
-	(SDE_HW_MAJOR_MINOR((rev1)) == SDE_HW_MAJOR_MINOR((rev2)))
-
-#define SDE_HW_VER_170	SDE_HW_VER(1, 7, 0) /* 8996 v1.0 */
-#define SDE_HW_VER_171	SDE_HW_VER(1, 7, 1) /* 8996 v2.0 */
-#define SDE_HW_VER_172	SDE_HW_VER(1, 7, 2) /* 8996 v3.0 */
-#define SDE_HW_VER_300	SDE_HW_VER(3, 0, 0) /* 8998 v1.0 */
-#define SDE_HW_VER_301	SDE_HW_VER(3, 0, 1) /* 8998 v1.1 */
-#define SDE_HW_VER_400	SDE_HW_VER(4, 0, 0) /* sdm845 v1.0 */
-#define SDE_HW_VER_401	SDE_HW_VER(4, 0, 1) /* sdm845 v2.0 */
-#define SDE_HW_VER_410	SDE_HW_VER(4, 1, 0) /* sdm670 v1.0 */
-#define SDE_HW_VER_500	SDE_HW_VER(5, 0, 0) /* sm8150 v1.0 */
-#define SDE_HW_VER_501	SDE_HW_VER(5, 0, 1) /* sm8150 v2.0 */
-#define SDE_HW_VER_510	SDE_HW_VER(5, 1, 0) /* sdmshrike v1.0 */
-#define SDE_HW_VER_520	SDE_HW_VER(5, 2, 0) /* sdmmagpie v1.0 */
-#define SDE_HW_VER_530	SDE_HW_VER(5, 3, 0) /* sm6150 v1.0 */
-#define SDE_HW_VER_540	SDE_HW_VER(5, 4, 0) /* sdmtrinket v1.0 */
-#define SDE_HW_VER_620	SDE_HW_VER(6, 2, 0) /* atoll*/
-
-#define IS_MSM8996_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_170)
-#define IS_MSM8998_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_300)
-#define IS_SDM845_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_400)
-#define IS_SDM670_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_410)
-#define IS_SM8150_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_500)
-#define IS_SDMSHRIKE_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_510)
-#define IS_SDMMAGPIE_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_520)
-#define IS_SM6150_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_530)
-#define IS_SDMTRINKET_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_540)
-#define IS_ATOLL_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_620)
+#define IS_MSM8996_TARGET(rev) false
+#define IS_MSM8998_TARGET(rev) false
+#define IS_SDM845_TARGET(rev) false
+#define IS_SDM670_TARGET(rev) false
+#define IS_SM8150_TARGET(rev) false
+#define IS_SDMSHRIKE_TARGET(rev) false
+#define IS_SDMMAGPIE_TARGET(rev) false
+#define IS_SM6150_TARGET(rev) false
+#define IS_SDMTRINKET_TARGET(rev) false
+#define IS_ATOLL_TARGET(rev) true
 
 #define SDE_HW_BLK_NAME_LEN	16
 
@@ -106,12 +84,10 @@ enum {
 	SDE_HW_UBWC_VER_20 = SDE_HW_UBWC_VER(0x200),
 	SDE_HW_UBWC_VER_30 = SDE_HW_UBWC_VER(0x300),
 };
-#define IS_UBWC_10_SUPPORTED(rev) \
-		IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_UBWC_VER_10)
-#define IS_UBWC_20_SUPPORTED(rev) \
-		IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_UBWC_VER_20)
-#define IS_UBWC_30_SUPPORTED(rev) \
-		IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_UBWC_VER_30)
+
+#define IS_UBWC_10_SUPPORTED(rev) false
+#define IS_UBWC_20_SUPPORTED(rev) false
+#define IS_UBWC_30_SUPPORTED(rev) true
 
 /**
  * SDE INTERRUPTS - maintains the possible hw irq's allowed by HW

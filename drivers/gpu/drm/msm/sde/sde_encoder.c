@@ -1887,8 +1887,6 @@ static int _sde_encoder_update_rsc_client(
 	int rc = 0;
 	int wait_refcount = 0;
 	u32 qsync_mode = 0;
-	struct msm_drm_private *priv;
-	struct sde_kms *sde_kms;
 
 	if (!drm_enc || !drm_enc->dev) {
 		SDE_ERROR("invalid encoder arguments\n");
@@ -1916,13 +1914,6 @@ static int _sde_encoder_update_rsc_client(
 		return 0;
 	}
 
-	priv = drm_enc->dev->dev_private;
-	if (!priv || !priv->kms) {
-		SDE_ERROR("Invalid kms\n");
-		return -EINVAL;
-	}
-
-	sde_kms = to_sde_kms(priv->kms);
 	/**
 	 * only primary command mode panel without Qsync can request CMD state.
 	 * all other panels/displays can request for VID state including
@@ -1933,34 +1924,21 @@ static int _sde_encoder_update_rsc_client(
 		qsync_mode = sde_connector_get_qsync_mode(
 				sde_enc->cur_master->connector);
 
-	if (IS_SDE_MAJOR_SAME(sde_kms->core_rev, SDE_HW_VER_620)) {
-		if (sde_encoder_in_clone_mode(drm_enc) ||
-			!disp_info->is_primary || (disp_info->is_primary &&
-				qsync_mode))
-			rsc_state = enable ? SDE_RSC_CLK_STATE :
-					SDE_RSC_IDLE_STATE;
-		else if (sde_encoder_check_curr_mode(drm_enc,
-				MSM_DISPLAY_CMD_MODE))
-			rsc_state = enable ? SDE_RSC_CMD_STATE :
-					SDE_RSC_IDLE_STATE;
-		else if (sde_encoder_check_curr_mode(drm_enc,
-				MSM_DISPLAY_VIDEO_MODE))
-			rsc_state = enable ? SDE_RSC_VID_STATE :
-					SDE_RSC_IDLE_STATE;
-	} else {
-		if (sde_encoder_in_clone_mode(drm_enc))
-			rsc_state = enable ? SDE_RSC_CLK_STATE :
-					SDE_RSC_IDLE_STATE;
-		else
-			rsc_state = enable ? ((disp_info->is_primary &&
-				(sde_encoder_check_curr_mode(drm_enc,
-				MSM_DISPLAY_CMD_MODE)) && !qsync_mode) ?
-				SDE_RSC_CMD_STATE : SDE_RSC_VID_STATE) :
+	if (sde_encoder_in_clone_mode(drm_enc) ||
+		!disp_info->is_primary || (disp_info->is_primary &&
+			qsync_mode))
+		rsc_state = enable ? SDE_RSC_CLK_STATE :
 				SDE_RSC_IDLE_STATE;
-	}
+	else if (sde_encoder_check_curr_mode(drm_enc,
+			MSM_DISPLAY_CMD_MODE))
+		rsc_state = enable ? SDE_RSC_CMD_STATE :
+				SDE_RSC_IDLE_STATE;
+	else if (sde_encoder_check_curr_mode(drm_enc,
+			MSM_DISPLAY_VIDEO_MODE))
+		rsc_state = enable ? SDE_RSC_VID_STATE :
+				SDE_RSC_IDLE_STATE;
 
-	if (IS_SDE_MAJOR_SAME(sde_kms->core_rev, SDE_HW_VER_620) &&
-			(rsc_state == SDE_RSC_VID_STATE))
+	if (rsc_state == SDE_RSC_VID_STATE)
 		rsc_state = SDE_RSC_CLK_STATE;
 
 	SDE_EVT32(rsc_state, qsync_mode);
@@ -4902,7 +4880,7 @@ void sde_encoder_prepare_commit(struct drm_encoder *drm_enc)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 static int _sde_encoder_status_show(struct seq_file *s, void *data)
 {
 	struct sde_encoder_virt *sde_enc;
