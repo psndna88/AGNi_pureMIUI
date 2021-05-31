@@ -1226,9 +1226,6 @@ static void _sde_sspp_setup_cursor(struct sde_mdss_cfg *sde_cfg,
 	struct sde_sspp_cfg *sspp, struct sde_sspp_sub_blks *sblk,
 	struct sde_prop_value *prop_value, u32 *cursor_count)
 {
-	SDE_ERROR("invalid sspp type %d, xin id %d\n",
-			sspp->type, sspp->xin_id);
-
 	set_bit(SDE_SSPP_CURSOR, &sspp->features);
 	sblk->maxupscale = SSPP_UNITY_SCALE;
 	sblk->maxdwnscale = SSPP_UNITY_SCALE;

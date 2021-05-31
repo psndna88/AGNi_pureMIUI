@@ -1591,7 +1591,8 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		/* update display cap to MST_MODE for DP MST encoders */
 		info.capabilities |= MSM_DISPLAY_CAP_MST_MODE;
 		sde_kms->dp_stream_count = dp_display_get_num_of_streams();
-		for (idx = 0; idx < sde_kms->dp_stream_count; idx++) {
+		for (idx = 0; idx < sde_kms->dp_stream_count &&
+			priv->num_encoders < max_encoders; idx++) {
 			info.h_tile_instance[0] = idx;
 			encoder = sde_encoder_init(dev, &info);
 			if (IS_ERR_OR_NULL(encoder)) {
@@ -2695,7 +2696,7 @@ static int sde_kms_get_mixer_count(const struct msm_kms *kms,
 			mode->hdisplay > max_mixer_width) {
 		*num_lm = 2;
 		if ((mode_clock_hz >> 1) > max_mdp_clock_hz) {
-			SDE_DEBUG("[%s] clock %d exceeds max_mdp_clk %d\n",
+			SDE_DEBUG("[%s] clock %lld exceeds max_mdp_clk %lld\n",
 					mode->name, mode_clock_hz,
 					max_mdp_clock_hz);
 			return -EINVAL;
@@ -2756,17 +2757,33 @@ retry:
 	}
 
 	crtc_state = drm_atomic_get_crtc_state(state, enc->crtc);
+	if (IS_ERR(crtc_state)) {
+		SDE_ERROR("error %ld getting crtc %d state\n",
+			  PTR_ERR(crtc_state), DRMID(conn));
+		goto end;
+	}
+
 	conn_state = drm_atomic_get_connector_state(state, conn);
 	if (IS_ERR(conn_state)) {
-		SDE_ERROR("error %d getting connector %d state\n",
-				ret, DRMID(conn));
+		SDE_ERROR("error %ld getting connector %d state\n",
+			  PTR_ERR(conn_state), DRMID(conn));
 		goto end;
 	}
 
 	crtc_state->active = true;
-	drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
+	ret = drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
+	if (ret) {
+		SDE_ERROR("error %d setting crtc for connector %d\n", ret,
+			  DRMID(conn));
+		goto end;
+	}
 
-	drm_atomic_commit(state);
+	ret = drm_atomic_commit(state);
+	if (ret) {
+		SDE_ERROR("error %d committing state for connector %d\n", ret,
+			  DRMID(conn));
+		goto end;
+	}
 end:
 	if (state)
 		drm_atomic_state_put(state);
@@ -3582,7 +3599,7 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	sde_kms->hw_sid = sde_hw_sid_init(sde_kms->sid,
 				sde_kms->sid_len, sde_kms->catalog);
 	if (IS_ERR(sde_kms->hw_sid)) {
-		SDE_ERROR("failed to init sid %d\n", PTR_ERR(sde_kms->hw_sid));
+		SDE_ERROR("failed to init sid %ld\n", PTR_ERR(sde_kms->hw_sid));
 		sde_kms->hw_sid = NULL;
 		goto power_error;
 	}

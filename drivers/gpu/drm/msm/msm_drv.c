@@ -494,6 +494,16 @@ static int msm_power_enable_wrapper(void *handle, void *client, bool enable)
 	return sde_power_resource_enable(handle, client, enable);
 }
 
+static void msm_drm_pm_unreq(struct work_struct *work)
+{
+	struct msm_drm_private *priv = container_of(to_delayed_work(work),
+						    typeof(*priv),
+						    pm_unreq_dwork);
+
+	pm_qos_update_request(&priv->pm_irq_req, PM_QOS_DEFAULT_VALUE);
+	atomic_set_release(&priv->pm_req_set, 0);
+}
+
 static ssize_t idle_encoder_mask_store(struct device *device,
 			       struct device_attribute *attr,
 			       const char *buf, size_t count)
@@ -682,6 +692,9 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 	INIT_LIST_HEAD(&priv->client_event_list);
 	INIT_LIST_HEAD(&priv->inactive_list);
 
+	priv->pm_req_set = (atomic_t)ATOMIC_INIT(0);
+	INIT_DELAYED_WORK(&priv->pm_unreq_dwork, msm_drm_pm_unreq);
+
 	ret = sde_power_resource_init(pdev, &priv->phandle);
 	if (ret) {
 		pr_err("sde power resource init failed\n");
@@ -782,10 +795,21 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->disp_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->disp_thread[i].worker);
 		priv->disp_thread[i].dev = ddev;
-		priv->disp_thread[i].thread =
-			kthread_run(kthread_worker_fn,
-				&priv->disp_thread[i].worker,
-				"crtc_commit:%d", priv->disp_thread[i].crtc_id);
+		/* Only pin actual display thread to big cluster */
+		if (i == 0) {
+			priv->disp_thread[i].thread =
+				kthread_run_perf_critical(kthread_worker_fn,
+					&priv->disp_thread[i].worker,
+					"crtc_commit:%d", priv->disp_thread[i].crtc_id);
+			pr_info("%i to big cluster", priv->disp_thread[i].crtc_id);
+		} else {
+			priv->disp_thread[i].thread =
+				kthread_run(kthread_worker_fn,
+					&priv->disp_thread[i].worker,
+					"crtc_commit:%d", priv->disp_thread[i].crtc_id);
+			pr_info("%i to little cluster", priv->disp_thread[i].crtc_id);
+		}
+
 		ret = sched_setscheduler(priv->disp_thread[i].thread,
 							SCHED_FIFO, &param);
 		if (ret)
@@ -801,10 +825,20 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 		priv->event_thread[i].crtc_id = priv->crtcs[i]->base.id;
 		kthread_init_worker(&priv->event_thread[i].worker);
 		priv->event_thread[i].dev = ddev;
-		priv->event_thread[i].thread =
-			kthread_run(kthread_worker_fn,
-				&priv->event_thread[i].worker,
-				"crtc_event:%d", priv->event_thread[i].crtc_id);
+		/* Only pin first event thread to big cluster */
+		if (i == 0) {
+			priv->event_thread[i].thread =
+				kthread_run_perf_critical(kthread_worker_fn,
+					&priv->event_thread[i].worker,
+					"crtc_event:%d", priv->event_thread[i].crtc_id);
+			pr_info("%i to big cluster", priv->event_thread[i].crtc_id);
+		} else {
+			priv->event_thread[i].thread =
+				kthread_run(kthread_worker_fn,
+					&priv->event_thread[i].worker,
+					"crtc_event:%d", priv->event_thread[i].crtc_id);
+			pr_info("%i to little cluster", priv->event_thread[i].crtc_id);
+		}
 		/**
 		 * event thread should also run at same priority as disp_thread
 		 * because it is handling frame_done events. A lower priority
@@ -879,6 +913,7 @@ static int msm_drm_init(struct device *dev, struct drm_driver *drv)
 			goto fail;
 		}
 	}
+	irq_set_perf_affinity(platform_get_irq(pdev, 0));
 
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
@@ -1199,9 +1234,14 @@ static void msm_irq_preinstall(struct drm_device *dev)
 {
 	struct msm_drm_private *priv = dev->dev_private;
 	struct msm_kms *kms = priv->kms;
+	struct sde_kms *sde_kms = to_sde_kms(kms);
 
 	BUG_ON(!kms);
 	kms->funcs->irq_preinstall(kms);
+	priv->pm_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	priv->pm_irq_req.irq = sde_kms->irq_num;
+	pm_qos_add_request(&priv->pm_irq_req, PM_QOS_CPU_DMA_LATENCY,
+			   PM_QOS_DEFAULT_VALUE);
 }
 
 static int msm_irq_postinstall(struct drm_device *dev)
@@ -1220,6 +1260,8 @@ static void msm_irq_uninstall(struct drm_device *dev)
 
 	BUG_ON(!kms);
 	kms->funcs->irq_uninstall(kms);
+	flush_delayed_work(&priv->pm_unreq_dwork);
+	pm_qos_remove_request(&priv->pm_irq_req);
 }
 
 static int msm_enable_vblank(struct drm_device *dev, unsigned int pipe)
@@ -1542,24 +1584,27 @@ static int msm_ioctl_register_event(struct drm_device *dev, void *data,
 	 * calls add to client list and return.
 	 */
 	count = msm_event_client_count(dev, req_event, false);
-	/* Add current client to list */
-	spin_lock_irqsave(&dev->event_lock, flag);
-	list_add_tail(&client->base.link, &priv->client_event_list);
-	spin_unlock_irqrestore(&dev->event_lock, flag);
-
-	if (count)
+	if (count) {
+		/* Add current client to list */
+		spin_lock_irqsave(&dev->event_lock, flag);
+		list_add_tail(&client->base.link, &priv->client_event_list);
+		spin_unlock_irqrestore(&dev->event_lock, flag);
 		return 0;
+	}
 
 	ret = msm_register_event(dev, req_event, file, true);
 	if (ret) {
 		DRM_ERROR("failed to enable event %x object %x object id %d\n",
 			req_event->event, req_event->object_type,
 			req_event->object_id);
-		spin_lock_irqsave(&dev->event_lock, flag);
-		list_del(&client->base.link);
-		spin_unlock_irqrestore(&dev->event_lock, flag);
 		kfree(client);
+	} else {
+		/* Add current client to list */
+		spin_lock_irqsave(&dev->event_lock, flag);
+		list_add_tail(&client->base.link, &priv->client_event_list);
+		spin_unlock_irqrestore(&dev->event_lock, flag);
 	}
+
 	return ret;
 }
 
