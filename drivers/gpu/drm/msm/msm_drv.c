@@ -276,7 +276,7 @@ static int vblank_ctrl_queue_work(struct msm_drm_private *priv,
 	cur_work->enable = enable;
 	cur_work->priv = priv;
 
-	kthread_queue_work(&priv->event_thread[crtc_id].worker, &cur_work->work);
+	kthread_queue_work(&priv->disp_thread[crtc_id].worker, &cur_work->work);
 
 	return 0;
 }
@@ -1762,7 +1762,7 @@ static struct drm_driver msm_driver = {
 	.gem_prime_vmap     = msm_gem_prime_vmap,
 	.gem_prime_vunmap   = msm_gem_prime_vunmap,
 	.gem_prime_mmap     = msm_gem_prime_mmap,
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 	.debugfs_init       = msm_debugfs_init,
 #endif
 	.ioctls             = msm_ioctls,

@@ -15,7 +15,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 #include "msm_drv.h"
 #include "msm_gpu.h"
 #include "msm_kms.h"

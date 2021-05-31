@@ -945,7 +945,7 @@ static inline int msm_dsi_modeset_init(struct msm_dsi *msm_dsi,
 void __init msm_mdp_register(void);
 void __exit msm_mdp_unregister(void);
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 void msm_gem_describe(struct drm_gem_object *obj, struct seq_file *m);
 void msm_gem_describe_objects(struct list_head *list, struct seq_file *m);
 void msm_framebuffer_describe(struct drm_framebuffer *fb, struct seq_file *m);
