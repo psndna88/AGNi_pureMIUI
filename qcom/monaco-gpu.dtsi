@@ -27,7 +27,7 @@
 		qcom,gpu-bimc-interface-clk-freq = <768000000>;
 
 		qcom,ubwc-mode = <2>;
-		qcom,min-access-length = <64>;
+		qcom,min-access-length = <32>;
 
 		/* base addr, size */
 		qcom,gpu-qdss-stm = <0xe1c0000 0x40000>;
