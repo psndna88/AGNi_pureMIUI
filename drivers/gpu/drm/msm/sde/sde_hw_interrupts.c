@@ -908,6 +908,9 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 				end_idx > ARRAY_SIZE(sde_irq_map))
 			continue;
 
+		irq_status = SDE_REG_READ(&intr->hw,
+				intr->sde_irq_tbl[reg_idx].status_off);
+
 		/*
 		 * Search through matching intr status from irq map.
 		 * start_idx and end_idx defined the search range in
@@ -1171,12 +1174,20 @@ static void sde_hw_intr_clear_interrupt_status(struct sde_hw_intr *intr,
 		int irq_idx)
 {
 	unsigned long irq_flags;
+	int reg_idx;
 
 	if (!intr)
 		return;
 
+	reg_idx = sde_irq_map[irq_idx].reg_idx;
+	if (reg_idx < 0 || reg_idx > intr->sde_irq_size) {
+		pr_err("invalid irq reg:%d irq:%d\n", reg_idx, irq_idx);
+		return;
+	}
+
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
-	sde_hw_intr_clear_intr_status_nolock(intr, irq_idx);
+	SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
+			sde_irq_map[irq_idx].irq_mask);
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 }
 
@@ -1522,7 +1533,7 @@ struct sde_hw_intr *sde_hw_intr_init(void __iomem *addr,
 	}
 
 	if (count <= 0 || count > MDSS_INTR_MAX) {
-		pr_err("wrong mapping of supported irqs 0x%x\n",
+		pr_err("wrong mapping of supported irqs 0x%lx\n",
 			m->mdss_irqs[0]);
 		ret = -EINVAL;
 		goto exit;
