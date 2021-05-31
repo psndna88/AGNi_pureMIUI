@@ -1,8 +1,26 @@
+#include "holi-audio-overlay.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay-pm6125.dtsi"
 #include "holi-thermal-overlay-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+
+&wcd938x_codec {
+	/delete-property/ cdc-vdd-mic-bias-supply;
+	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
+	/delete-property/ qcom,cdc-vdd-mic-bias-current;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddio-supply = <&L9A>;
+};
+
+&wcd937x_codec {
+	status = "ok";
+	/delete-property/ cdc-vdd-mic-bias-supply;
+	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
+	/delete-property/ qcom,cdc-vdd-mic-bias-current;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddio-supply = <&L9A>;
+};
 
 &sdhc_1 {
 	status = "ok";
@@ -67,6 +85,82 @@
 	qcom,vddp-ref-clk-max-microamp = <100>;
 
 	status = "ok";
+};
+
+&wsa881x_analog_reset_gpio {
+	compatible = "qcom,msm-cdc-pinctrl";
+	pinctrl-names = "aud_active", "aud_sleep";
+	pinctrl-0 = <&spkr_1_sd_n_active>;
+	pinctrl-1 = <&spkr_1_sd_n_sleep>;
+};
+
+&wsa881x_i2c_e {
+	status = "ok";
+	cdc-vdd-1p8-supply = <&L9A>;
+	compatible = "qcom,wsa881x-i2c-codec";
+	reg = <0x0e>;
+	clock-names = "wsa_mclk";
+	clocks = <&wsa881x_analog_clk 0>;
+	qcom,wsa-analog-clk-gpio = <&wsa881x_analog_clk_gpio>;
+	qcom,wsa-analog-reset-gpio = <&wsa881x_analog_reset_gpio>;
+};
+
+&holi_snd {
+	qcom,model = "holi-qrd-snd-card";
+	qcom,sku-model = "holi-qrdsku1-snd-card";
+	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>;
+	qcom,wcn-btfm = <1>;
+	qcom,audio-routing =
+		"AMIC1", "Analog Mic1",
+		"Analog Mic1", "MIC BIAS1",
+		"AMIC2", "Analog Mic2",
+		"Analog Mic2", "MIC BIAS2",
+		"AMIC3", "Analog Mic3",
+		"Analog Mic3", "MIC BIAS3",
+		"AMIC4", "Analog Mic4",
+		"Analog Mic4", "MIC BIAS3",
+		"TX DMIC0", "Digital Mic0",
+		"TX DMIC0", "MIC BIAS1",
+		"TX DMIC1", "Digital Mic1",
+		"TX DMIC1", "MIC BIAS1",
+		"TX DMIC2", "Digital Mic2",
+		"TX DMIC2", "MIC BIAS3",
+		"TX DMIC3", "Digital Mic3",
+		"TX DMIC3", "MIC BIAS3",
+		"IN1_HPHL", "HPHL_OUT",
+		"IN2_HPHR", "HPHR_OUT",
+		"IN3_AUX", "AUX_OUT",
+		"RX_TX DEC0_INP", "TX DEC0 MUX",
+		"RX_TX DEC1_INP", "TX DEC1 MUX",
+		"RX_TX DEC2_INP", "TX DEC2 MUX",
+		"RX_TX DEC3_INP", "TX DEC3 MUX",
+		"SpkrMono WSA_IN", "AUX",
+		"TX SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA SWR_INPUT", "VA_SWR_CLK",
+		"VA SWR_INPUT", "WCD_TX_OUTPUT",
+		"VA_AIF1 CAP", "VA_SWR_CLK",
+		"VA_AIF2 CAP", "VA_SWR_CLK",
+		"VA_AIF3 CAP", "VA_SWR_CLK",
+		"VA DMIC0", "Digital Mic0",
+		"VA DMIC1", "Digital Mic1",
+		"VA DMIC2", "Digital Mic2",
+		"VA DMIC3", "Digital Mic3",
+		"VA DMIC4", "Digital Mic4",
+		"VA DMIC5", "Digital Mic5",
+		"VA DMIC0", "VA MIC BIAS1",
+		"VA DMIC1", "VA MIC BIAS1",
+		"VA DMIC2", "VA MIC BIAS3",
+		"VA DMIC3", "VA MIC BIAS3";
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
+	qcom,cdc-dmic01-gpios = <&cdc_dmic01_gpios>;
+	qcom,cdc-dmic23-gpios = <&cdc_dmic23_gpios>;
+	asoc-codec  = <&stub_codec>, <&bolero>,
+		      <&wcd937x_codec>, <&wsa881x_i2c_e>;
+	asoc-codec-names = "msm-stub-codec.1", "bolero_codec",
+			   "wcd937x_codec", "wsa-codec0";
+	qcom,msm_audio_ssr_devs = <&audio_apr>, <&q6core>, <&lpi_tlmm>,
+				  <&bolero>;
 };
 
 &soc {
