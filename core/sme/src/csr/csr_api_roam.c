@@ -18124,6 +18124,17 @@ csr_cm_update_rso_ese_info(struct mac_context *mac,
 		 akm == eCSR_AUTH_TYPE_OPEN_SYSTEM)  ||
 		(csr_is_auth_type_ese(akm));
 	rso_config->rso_11r_info.is_11r_assoc = roam_info->is11rAssoc;
+	if (rso_config->rso_ese_info.is_ese_assoc) {
+		qdf_mem_copy(rso_config->rso_ese_info.krk,
+			     session->eseCckmInfo.krk, WMI_KRK_KEY_LEN);
+		qdf_mem_copy(rso_config->rso_ese_info.btk,
+			     session->eseCckmInfo.btk, WMI_BTK_KEY_LEN);
+		rso_config->rso_11i_info.fw_okc = false;
+		rso_config->rso_11i_info.fw_pmksa_cache = false;
+		rso_config->rso_11i_info.pmk_len = 0;
+		qdf_mem_zero(&rso_config->rso_11i_info.psk_pmk[0],
+			     sizeof(rso_config->rso_11i_info.psk_pmk));
+	}
 }
 #else
 static inline void
