@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -131,7 +131,7 @@ static bool sde_fence_signaled(struct dma_fence *fence)
 	struct sde_fence *f = to_sde_fence(fence);
 	bool status;
 
-	status = (int)((fence->seqno - f->ctx->done_count) <= 0);
+	status = ((int)(fence->seqno - f->ctx->done_count) <= 0);
 	SDE_DEBUG("status:%d fence seq:%d and timeline:%d\n",
 			status, fence->seqno, f->ctx->done_count);
 	return status;
