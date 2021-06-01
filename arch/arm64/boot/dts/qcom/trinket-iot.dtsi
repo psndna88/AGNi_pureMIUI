@@ -12,7 +12,6 @@
  */
 
 #include "trinket.dtsi"
-#include "trinketp-iot-qcs.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. TRINKET";
