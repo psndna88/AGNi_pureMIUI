@@ -24,39 +24,15 @@
 
 #define IPA_MHI_DRV_NAME "ipa_mhi_client"
 
-#define IPA_MHI_DBG(fmt, args...) \
-	do { \
-		pr_debug(IPA_MHI_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa_get_ipc_logbuf(), \
-			IPA_MHI_DRV_NAME " %s:%d " fmt, ## args); \
-		IPA_IPC_LOGGING(ipa_get_ipc_logbuf_low(), \
-			IPA_MHI_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
+#define IPA_MHI_DBG(fmt, args...)
 
-#define IPA_MHI_DBG_LOW(fmt, args...) \
-	do { \
-		pr_debug(IPA_MHI_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa_get_ipc_logbuf_low(), \
-			IPA_MHI_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
+#define IPA_MHI_DBG_LOW(fmt, args...)
 
 
-#define IPA_MHI_ERR(fmt, args...) \
-	do { \
-		pr_err(IPA_MHI_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa_get_ipc_logbuf(), \
-				IPA_MHI_DRV_NAME " %s:%d " fmt, ## args); \
-		IPA_IPC_LOGGING(ipa_get_ipc_logbuf_low(), \
-				IPA_MHI_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
+#define IPA_MHI_ERR(fmt, args...)
 
-#define IPA_MHI_FUNC_ENTRY() \
-	IPA_MHI_DBG("ENTRY\n")
-#define IPA_MHI_FUNC_EXIT() \
-	IPA_MHI_DBG("EXIT\n")
+#define IPA_MHI_FUNC_ENTRY()
+#define IPA_MHI_FUNC_EXIT()
 
 #define IPA_MHI_RM_TIMEOUT_MSEC 10000
 #define IPA_MHI_CH_EMPTY_TIMEOUT_MSEC 10
@@ -174,7 +150,6 @@ struct ipa_mhi_client_ctx {
 static struct ipa_mhi_client_ctx *ipa_mhi_client_ctx;
 static DEFINE_MUTEX(mhi_client_general_mutex);
 
-#ifdef CONFIG_DEBUG_FS
 #define IPA_MHI_MAX_MSG_LEN 512
 static char dbg_buff[IPA_MHI_MAX_MSG_LEN];
 static struct dentry *dent;
@@ -289,6 +264,7 @@ fail_dma_enable:
 	return res;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int ipa_mhi_print_channel_info(struct ipa_mhi_channel_ctx *channel,
 	char *buff, int len)
 {
@@ -517,6 +493,10 @@ fail:
 	debugfs_remove_recursive(dent);
 }
 
+static void ipa_mhi_debugfs_destroy(void)
+{
+	debugfs_remove_recursive(dent);
+}
 #else
 static void ipa_mhi_debugfs_init(void) {}
 static void ipa_mhi_debugfs_destroy(void) {}
@@ -2512,11 +2492,6 @@ int ipa_mhi_destroy_all_channels(void)
 
 	IPA_MHI_FUNC_EXIT();
 	return 0;
-}
-
-static void ipa_mhi_debugfs_destroy(void)
-{
-	debugfs_remove_recursive(dent);
 }
 
 static void ipa_mhi_delete_rm_resources(void)

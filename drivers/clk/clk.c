@@ -3118,7 +3118,6 @@ void clk_debug_print_hw(struct clk_core *clk, struct seq_file *f)
 
 	clk->ops->list_registers(f, clk->hw);
 }
-EXPORT_SYMBOL(clk_debug_print_hw);
 
 static int print_hw_show(struct seq_file *m, void *unused)
 {
@@ -3455,7 +3454,6 @@ void clock_debug_print_enabled(bool print_parent)
 	else
 		clock_debug_print_enabled_debug_suspend(NULL);
 }
-EXPORT_SYMBOL_GPL(clock_debug_print_enabled);
 
 /**
  * clk_debug_init - lazily populate the debugfs clk directory
@@ -3522,6 +3520,8 @@ static int __init clk_debug_init(void)
 }
 late_initcall(clk_debug_init);
 #else
+void clk_debug_print_hw(struct clk_core *clk, struct seq_file *f) {}
+void clock_debug_print_enabled(bool print_parent) {}
 static inline int clk_debug_register(struct clk_core *core) { return 0; }
 static inline void clk_debug_reparent(struct clk_core *core,
 				      struct clk_core *new_parent)
@@ -3531,6 +3531,8 @@ static inline void clk_debug_unregister(struct clk_core *core)
 {
 }
 #endif
+EXPORT_SYMBOL(clk_debug_print_hw);
+EXPORT_SYMBOL_GPL(clock_debug_print_enabled);
 
 /**
  * __clk_core_init - initialize the data structures in a struct clk_core

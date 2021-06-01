@@ -31,15 +31,7 @@ void clk_debug_print_hw(struct clk_core *clk, struct seq_file *f);
 		WARN(cond, "%s: " fmt, name, ##__VA_ARGS__);	\
 } while (0)
 
-#define clock_debug_output(m, c, fmt, ...)		\
-do {							\
-	if (m)						\
-		seq_printf(m, fmt, ##__VA_ARGS__);	\
-	else if (c)					\
-		pr_cont(fmt, ##__VA_ARGS__);		\
-	else						\
-		pr_info(fmt, ##__VA_ARGS__);		\
-} while (0)
+#define clock_debug_output(m, c, fmt, ...)
 
 #else
 /* All these casts to avoid ifdefs in clkdev... */
