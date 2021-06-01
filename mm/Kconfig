@@ -571,8 +571,9 @@ config MEM_SOFT_DIRTY
 config ZSWAP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
-	select CRYPTO_LZO
+	select CRYPTO_LZ4
 	select ZPOOL
+	select BTREE
 	default n
 	help
 	  A lightweight compressed cache for swap pages.  It takes
@@ -649,6 +650,31 @@ config ZSMALLOC_STAT
 	  statistics about whats happening in zsmalloc and exports that
 	  information to userspace via debugfs.
 	  If unsure, say N.
+
+config DIRECT_RECLAIM_FILE_PAGES_ONLY
+	bool "Reclaim file pages only on direct reclaim path"
+	depends on ZSWAP
+	default n
+
+config INCREASE_MAXIMUM_SWAPPINESS
+	bool "Allow swappiness to be set up to 200"
+	depends on ZSWAP
+	default n
+
+config FIX_INACTIVE_RATIO
+	bool "Fix active:inactive anon ratio to 1:1"
+	depends on ZSWAP
+	default n
+
+config SWAP_ENABLE_READAHEAD
+	bool "Enable readahead on page swap in"
+	depends on SWAP
+	default y
+	help
+	  When a page fault occurs, adjacent pages of SWAP_CLUSTER_MAX are
+	  also paged in expecting those pages will be used in near future.
+	  This behaviour is good at disk-based system, but not on in-memory
+	  compression (e.g. zram).
 
 config GENERIC_EARLY_IOREMAP
 	bool
