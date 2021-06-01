@@ -663,12 +663,12 @@
 		};
 
 		c102_scandump: c102_scandump {
-			qcom,dump-size = <0x25900>;
+			qcom,dump-size = <0x40000>;
 			qcom,dump-id = <0x136>;
 		};
 
 		c103_scandump: c103_scandump {
-			qcom,dump-size = <0x25900>;
+			qcom,dump-size = <0x40000>;
 			qcom,dump-id = <0x137>;
 		};
 
@@ -703,12 +703,12 @@
 		};
 
 		l1_icache102 {
-			qcom,dump-size = <0x21000>;
+			qcom,dump-size = <0x15100>;
 			qcom,dump-id = <0x66>;
 		};
 
 		l1_icache103 {
-			qcom,dump-size = <0x21000>;
+			qcom,dump-size = <0x15100>;
 			qcom,dump-id = <0x67>;
 		};
 
@@ -743,12 +743,12 @@
 		};
 
 		l1_dcache102 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x86>;
 		};
 
 		l1_dcache103 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x87>;
 		};
 
@@ -813,12 +813,12 @@
 		};
 
 		l2_tlb102 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x6100>;
 			qcom,dump-id = <0x126>;
 		};
 
 		l2_tlb103 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x6100>;
 			qcom,dump-id = <0x127>;
 		};
 
