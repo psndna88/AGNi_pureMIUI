@@ -10,8 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#ifdef CONFIG_DEBUG_FS
-
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
 #include <linux/stringify.h>
@@ -34,6 +32,7 @@
 #define IPA_READ_WRITE_MODE 0664
 #define IPA_WRITE_ONLY_MODE 0220
 
+#ifdef CONFIG_DEBUG_FS
 struct ipa3_debugfs_file {
 	const char *name;
 	umode_t mode;
@@ -233,73 +232,6 @@ static ssize_t ipa3_write_ep_reg(struct file *file, const char __user *buf,
 	ep_reg_idx = option;
 
 	return count;
-}
-
-/**
- * _ipa_read_ep_reg_v3_0() - Reads and prints endpoint configuration registers
- *
- * Returns the number of characters printed
- */
-int _ipa_read_ep_reg_v3_0(char *buf, int max_len, int pipe)
-{
-	return scnprintf(
-		dbg_buff, IPA_MAX_MSG_LEN,
-		"IPA_ENDP_INIT_NAT_%u=0x%x\n"
-		"IPA_ENDP_INIT_HDR_%u=0x%x\n"
-		"IPA_ENDP_INIT_HDR_EXT_%u=0x%x\n"
-		"IPA_ENDP_INIT_MODE_%u=0x%x\n"
-		"IPA_ENDP_INIT_AGGR_%u=0x%x\n"
-		"IPA_ENDP_INIT_ROUTE_%u=0x%x\n"
-		"IPA_ENDP_INIT_CTRL_%u=0x%x\n"
-		"IPA_ENDP_INIT_HOL_EN_%u=0x%x\n"
-		"IPA_ENDP_INIT_HOL_TIMER_%u=0x%x\n"
-		"IPA_ENDP_INIT_DEAGGR_%u=0x%x\n"
-		"IPA_ENDP_INIT_CFG_%u=0x%x\n",
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_NAT_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_EXT_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_MODE_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_AGGR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_ROUTE_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CTRL_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_EN_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_TIMER_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_DEAGGR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CFG_n, pipe));
-}
-
-/**
- * _ipa_read_ep_reg_v4_0() - Reads and prints endpoint configuration registers
- *
- * Returns the number of characters printed
- * Removed IPA_ENDP_INIT_ROUTE_n from v3
- */
-int _ipa_read_ep_reg_v4_0(char *buf, int max_len, int pipe)
-{
-	return scnprintf(
-		dbg_buff, IPA_MAX_MSG_LEN,
-		"IPA_ENDP_INIT_NAT_%u=0x%x\n"
-		"IPA_ENDP_INIT_CONN_TRACK_n%u=0x%x\n"
-		"IPA_ENDP_INIT_HDR_%u=0x%x\n"
-		"IPA_ENDP_INIT_HDR_EXT_%u=0x%x\n"
-		"IPA_ENDP_INIT_MODE_%u=0x%x\n"
-		"IPA_ENDP_INIT_AGGR_%u=0x%x\n"
-		"IPA_ENDP_INIT_CTRL_%u=0x%x\n"
-		"IPA_ENDP_INIT_HOL_EN_%u=0x%x\n"
-		"IPA_ENDP_INIT_HOL_TIMER_%u=0x%x\n"
-		"IPA_ENDP_INIT_DEAGGR_%u=0x%x\n"
-		"IPA_ENDP_INIT_CFG_%u=0x%x\n",
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_NAT_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CONN_TRACK_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_EXT_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_MODE_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_AGGR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CTRL_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_EN_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_TIMER_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_DEAGGR_n, pipe),
-		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CFG_n, pipe));
 }
 
 static ssize_t ipa3_read_ep_reg(struct file *file, char __user *ubuf,
@@ -3405,5 +3337,73 @@ void ipa3_debugfs_pre_init(void) {}
 void ipa3_debugfs_post_init(void) {}
 void ipa3_debugfs_remove(void) {}
 void ipa3_eth_debugfs_init(void) {}
-void ipa3_eth_debugfs_add(struct ipa_eth_client *client) {}
+void ipa3_eth_debugfs_add_node(struct ipa_eth_client *client) {}
 #endif
+
+static char dbg_buff[IPA_MAX_MSG_LEN + 1];
+/**
+ * _ipa_read_ep_reg_v3_0() - Reads and prints endpoint configuration registers
+ *
+ * Returns the number of characters printed
+ */
+int _ipa_read_ep_reg_v3_0(char *buf, int max_len, int pipe)
+{
+	return scnprintf(
+		dbg_buff, IPA_MAX_MSG_LEN,
+		"IPA_ENDP_INIT_NAT_%u=0x%x\n"
+		"IPA_ENDP_INIT_HDR_%u=0x%x\n"
+		"IPA_ENDP_INIT_HDR_EXT_%u=0x%x\n"
+		"IPA_ENDP_INIT_MODE_%u=0x%x\n"
+		"IPA_ENDP_INIT_AGGR_%u=0x%x\n"
+		"IPA_ENDP_INIT_ROUTE_%u=0x%x\n"
+		"IPA_ENDP_INIT_CTRL_%u=0x%x\n"
+		"IPA_ENDP_INIT_HOL_EN_%u=0x%x\n"
+		"IPA_ENDP_INIT_HOL_TIMER_%u=0x%x\n"
+		"IPA_ENDP_INIT_DEAGGR_%u=0x%x\n"
+		"IPA_ENDP_INIT_CFG_%u=0x%x\n",
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_NAT_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_EXT_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_MODE_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_AGGR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_ROUTE_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CTRL_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_EN_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_TIMER_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_DEAGGR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CFG_n, pipe));
+}
+
+/**
+ * _ipa_read_ep_reg_v4_0() - Reads and prints endpoint configuration registers
+ *
+ * Returns the number of characters printed
+ * Removed IPA_ENDP_INIT_ROUTE_n from v3
+ */
+int _ipa_read_ep_reg_v4_0(char *buf, int max_len, int pipe)
+{
+	return scnprintf(
+		dbg_buff, IPA_MAX_MSG_LEN,
+		"IPA_ENDP_INIT_NAT_%u=0x%x\n"
+		"IPA_ENDP_INIT_CONN_TRACK_n%u=0x%x\n"
+		"IPA_ENDP_INIT_HDR_%u=0x%x\n"
+		"IPA_ENDP_INIT_HDR_EXT_%u=0x%x\n"
+		"IPA_ENDP_INIT_MODE_%u=0x%x\n"
+		"IPA_ENDP_INIT_AGGR_%u=0x%x\n"
+		"IPA_ENDP_INIT_CTRL_%u=0x%x\n"
+		"IPA_ENDP_INIT_HOL_EN_%u=0x%x\n"
+		"IPA_ENDP_INIT_HOL_TIMER_%u=0x%x\n"
+		"IPA_ENDP_INIT_DEAGGR_%u=0x%x\n"
+		"IPA_ENDP_INIT_CFG_%u=0x%x\n",
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_NAT_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CONN_TRACK_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HDR_EXT_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_MODE_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_AGGR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CTRL_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_EN_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_HOL_BLOCK_TIMER_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_DEAGGR_n, pipe),
+		pipe, ipahal_read_reg_n(IPA_ENDP_INIT_CFG_n, pipe));
+}
