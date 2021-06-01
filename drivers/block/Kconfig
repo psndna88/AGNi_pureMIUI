@@ -113,6 +113,8 @@ source "drivers/block/mtip32xx/Kconfig"
 
 source "drivers/block/zram/Kconfig"
 
+source "drivers/block/vbswap/Kconfig"
+
 config BLK_DEV_DAC960
 	tristate "Mylex DAC960/DAC1100 PCI RAID Controller support"
 	depends on PCI
