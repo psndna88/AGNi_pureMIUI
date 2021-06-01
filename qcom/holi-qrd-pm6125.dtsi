@@ -7,11 +7,16 @@
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
 &wcd938x_codec {
-	/delete-property/ cdc-vdd-mic-bias-supply;
-	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
-	/delete-property/ qcom,cdc-vdd-mic-bias-current;
 	cdc-vdd-rxtx-supply = <&L9A>;
 	cdc-vddio-supply = <&L9A>;
+	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
+				   "cdc-vddio";
+	/*
+	 * Overriding cdc-vdd-mic-bias-supply to dummy value
+	 * to avoid compilation errors as BOB is not definied
+	 * for pm6125
+	 */
+	cdc-vdd-mic-bias-supply = <>;
 };
 
 &wcd937x_codec {
@@ -21,6 +26,14 @@
 	/delete-property/ qcom,cdc-vdd-mic-bias-current;
 	cdc-vdd-rxtx-supply = <&L9A>;
 	cdc-vddio-supply = <&L9A>;
+	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
+				   "cdc-vddpx";
+	/*
+	 * Overriding cdc-vdd-mic-bias-supply to dummy value
+	 * to avoid compilation errors as BOB is not definied
+	 * for pm6125
+	 */
+	cdc-vdd-mic-bias-supply = <>;
 };
 
 &sdhc_1 {
