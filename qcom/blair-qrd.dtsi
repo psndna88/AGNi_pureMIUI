@@ -729,3 +729,5 @@
 			 &dsi_r66451_amoled_cmd &dsi_r66451_amoled_video>;
 	};
 };
+
+#include "camera/blair-camera-sensor-qrd.dtsi"
