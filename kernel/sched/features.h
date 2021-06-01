@@ -4,7 +4,7 @@
  * them to run sooner, but does not allow tons of sleepers to
  * rip the spread apart.
  */
-SCHED_FEAT(GENTLE_FAIR_SLEEPERS, false)
+SCHED_FEAT(GENTLE_FAIR_SLEEPERS, true)
 
 /*
  * Place new tasks ahead so that they do not starve already running
@@ -17,7 +17,7 @@ SCHED_FEAT(START_DEBIT, true)
  * wakeup-preemption), since its likely going to consume data we
  * touched, increases cache locality.
  */
-SCHED_FEAT(NEXT_BUDDY, true)
+SCHED_FEAT(NEXT_BUDDY, false)
 
 /*
  * Prefer to schedule the task that ran last (when we did
@@ -84,7 +84,7 @@ SCHED_FEAT(WARN_DOUBLE_CLOCK, false)
 SCHED_FEAT(RT_PUSH_IPI, true)
 #endif
 
-SCHED_FEAT(RT_RUNTIME_SHARE, false)
+SCHED_FEAT(RT_RUNTIME_SHARE, true)
 SCHED_FEAT(LB_MIN, false)
 SCHED_FEAT(ATTACH_AGE_LOAD, true)
 
@@ -121,7 +121,7 @@ SCHED_FEAT(ENERGY_AWARE, false)
  *   ON: If the target CPU saves any energy, use that.
  *   OFF: Use whichever of target or backup saves most.
  */
-SCHED_FEAT(EAS_PREFER_IDLE, true)
+SCHED_FEAT(EAS_PREFER_IDLE, false)
 SCHED_FEAT(FIND_BEST_TARGET, true)
 SCHED_FEAT(FBT_STRICT_ORDER, false)
 
