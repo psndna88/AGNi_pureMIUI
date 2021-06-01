@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_cci_dev.h"
@@ -112,7 +112,7 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		(!rd_done_th_assert)) {
 		cci_dev->cci_master_info[MASTER_0].status = 0;
 		rd_done_th_assert = true;
-		if (cci_dev->is_burst_read)
+		if (cci_dev->is_burst_read[MASTER_0])
 			complete(
 			&cci_dev->cci_master_info[MASTER_0].th_complete);
 		complete(&cci_dev->cci_master_info[MASTER_0].rd_done);
@@ -168,7 +168,7 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 		(!rd_done_th_assert)) {
 		cci_dev->cci_master_info[MASTER_1].status = 0;
 		rd_done_th_assert = true;
-		if (cci_dev->is_burst_read)
+		if (cci_dev->is_burst_read[MASTER_1])
 			complete(
 			&cci_dev->cci_master_info[MASTER_1].th_complete);
 		complete(&cci_dev->cci_master_info[MASTER_1].rd_done);
