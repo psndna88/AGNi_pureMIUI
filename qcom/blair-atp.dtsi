@@ -622,7 +622,7 @@
 };
 
 &pm7250b_charger {
-	dpdm-supply = <&qusb_phy0>;
+	dpdm-supply = <&usb2_phy0>;
 
 	smb5_vbus: qcom,smb5-vbus {
 		regulator-name = "smb5-vbus";
@@ -677,7 +677,7 @@
 	io-channel-names = "chg_type";
 };
 
-&qusb_phy0 {
+&usb2_phy0 {
 	vdd-supply = <&L18A>;
 	vdda18-supply = <&L2A>;
 	vdda33-supply = <&L3A>;

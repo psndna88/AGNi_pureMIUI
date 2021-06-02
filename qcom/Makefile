@@ -106,7 +106,8 @@ dtbo-$(CONFIG_ARCH_HOLI) += holi-rumi-overlay.dtbo \
 	holi-cdp-lcd-pm6125-overlay.dtbo \
 	holi-mtp-usbc-pm6125-overlay.dtbo \
 	holi-mtp-pm6125-nopmi-overlay.dtbo \
-	holi-qrd-pm6125-overlay.dtbo
+	holi-qrd-pm6125-overlay.dtbo \
+	holi-qrd-pm6125-nopmi-overlay.dtbo
 
 holi-rumi-overlay.dtbo-base := holi.dtb
 holi-mtp-overlay.dtbo-base := holi.dtb
@@ -121,6 +122,7 @@ holi-cdp-lcd-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-usbc-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 holi-qrd-pm6125-overlay.dtbo-base := holi.dtb
+holi-qrd-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 
 else
 dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
@@ -135,7 +137,8 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 	holi-cdp-lcd-pm6125.dtb \
 	holi-mtp-usbc-pm6125.dtb \
 	holi-mtp-pm6125-nopmi.dtb \
-	holi-qrd-pm6125.dtb
+	holi-qrd-pm6125.dtb \
+	holi-qrd-pm6125-nopmi.dtb
 
 endif
 

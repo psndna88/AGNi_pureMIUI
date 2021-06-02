@@ -7,5 +7,7 @@
 	model = "Qualcomm Technologies, Inc. Blair MTP NOPMI";
 	compatible = "qcom,blair-mtp", "qcom,blair", "qcom,mtp";
 	qcom,board-id = <8 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x0 0x0>;
 };
 
