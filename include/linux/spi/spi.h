@@ -429,6 +429,8 @@ struct spi_master {
 
 	/* flag indicating this is an SPI slave controller */
 	bool			slave;
+	/* flag indicating this is a non-devres managed controller */
+	bool			devm_allocated;
 
 	/* lock and mutex for SPI bus locking */
 	spinlock_t		bus_lock_spinlock;
