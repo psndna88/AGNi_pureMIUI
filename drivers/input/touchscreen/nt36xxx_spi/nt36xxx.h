@@ -97,7 +97,7 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 #if WAKEUP_GESTURE
 extern const uint16_t gesture_key_array[];
 #endif
-#define LCT_TP_PALM_EN 0
+#define LCT_TP_PALM_EN 1
 #define BOOT_UPDATE_FIRMWARE 1
 #define FIRMWARE_NAME_LEN    256
 #define BOOT_UPDATE_FIRMWARE_NAME         "novatek_ts_fw.bin"
@@ -116,10 +116,10 @@ extern const uint16_t gesture_key_array[];
 #define CHECK_TOUCH_VENDOR
 
 //enable tp work feature
-#define LCT_TP_WORK_EN      0
+#define LCT_TP_WORK_EN      1
 
 //enable tp grip area feature
-#define LCT_TP_GRIP_AREA_EN 0
+#define LCT_TP_GRIP_AREA_EN 1
 
 /*2019.12.06 longcheer taocheng add for charger mode begin*/
 /*functions description*/

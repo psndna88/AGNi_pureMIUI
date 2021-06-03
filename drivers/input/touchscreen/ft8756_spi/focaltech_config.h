@@ -133,12 +133,6 @@
 /*********** 1 to enable, 0 to disable ***********/
 
 /*
- * show debug log info
- * enable it for debug, disable it for release
- */
-#define FTS_DEBUG_EN                            0
-
-/*
  * Linux MultiTouch Protocol
  * 1: Protocol B(default), 0: Protocol A
  */
@@ -184,22 +178,22 @@
 /*
  * enable/disable 'grip area' feature
  */
-#define LCT_TP_GRIP_AREA_EN                     0
+#define LCT_TP_GRIP_AREA_EN                     1
 
 /*
  * enable/disable touchpad
  */
-#define LCT_TP_WORK_EN                          0
+#define LCT_TP_WORK_EN                          1
 
 /*
  *enable tp usb plugin feature
  */
-#define LCT_TP_USB_PLUGIN                       0
+#define LCT_TP_USB_PLUGIN                       1
 
 /*
  * enable/disable palm feature
  */
-#define LCT_TP_PALM_EN                             0
+#define LCT_TP_PALM_EN                             1
 
 /****************************************************/
 
