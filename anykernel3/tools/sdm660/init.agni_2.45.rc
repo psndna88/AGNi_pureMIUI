@@ -126,4 +126,28 @@ on property:sys.boot_completed=1
     write /sys/block/dm-0/queue/discard_max_bytes 134217728
     # Set network hostname
     setprop net.hostname SDM660
+	# New Optimisations
+	write /proc/sys/kernel/printk_devkmsg off
+	write /sys/kernel/debug/tracing/options/trace_printk 0
+#	write /proc/sys/net/ipv4/tcp_timestamps 0
+	write /proc/sys/kernel/sched_autogroup_enabled 0
+	write /proc/sys/kernel/randomize_va_space 0
+	write /proc/sys/kernel/perf_cpu_time_max_percent 1
+	write /proc/sys/vm/compact_unevictable_allowed 0
+	write /proc/sys/vm/stat_interval 15
+	write /proc/sys/kernel/perf_event_max_contexts_per_stack 0
+	write /proc/sys/kernel/printk "0 0 0 0"
+	write /proc/sys/kernel/printk_devkmsg "off"
+	write /proc/sys/kernel/sched_conservative_pl 1
+	write /dev/stune/foreground/schedtune.prefer_idle 0
+	write /dev/stune/top-app/schedtune.prefer_idle 0
+	write /dev/stune/top-app/schedtune.boost 0
+	write /proc/sys/kernel/random/write_wakeup_threshold 128
+	write /proc/sys/kernel/random/read_wakeup_threshold 64
+	write /proc/sys/kernel/sched_boost 0
+	write /sys/kernel/profiling 0
+	write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us 4000
+	write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us 200
+	write /sys/module/rcutree/parameters/rcu_idle_gp_delay 12
+	write /sys/module/rcutree/parameters/rcu_idle_lazy_gp_delay 1800
 
