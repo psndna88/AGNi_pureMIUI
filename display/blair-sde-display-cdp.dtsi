@@ -51,6 +51,24 @@
 	pinctrl-2 = <&lcd_backlight_ctrl_default>;
 };
 
+&dsi_rm69299_visionox_amoled_video {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+							08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
+&dsi_rm69299_visionox_amoled_cmd {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
+							08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
 &dsi_nt36672e_fhd_plus_60_video {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
