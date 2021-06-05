@@ -94,6 +94,8 @@ struct cpu_gpu_lock {
 };
 
 #define A6XX_CP_CTXRECORD_MAGIC_REF     0xAE399D6EUL
+/* Size of each CP preemption record */
+#define A6XX_CP_CTXRECORD_SIZE_IN_BYTES     (2112 * 1024)
 /* Size of the preemption counter block (in bytes) */
 #define A6XX_CP_CTXRECORD_PREEMPTION_COUNTER_SIZE   (16 * 4)
 /* Size of the user context record block (in bytes) */
@@ -169,5 +171,7 @@ void a6xx_crashdump_init(struct adreno_device *adreno_dev);
 int a6xx_gmu_sptprac_enable(struct adreno_device *adreno_dev);
 void a6xx_gmu_sptprac_disable(struct adreno_device *adreno_dev);
 bool a6xx_gmu_sptprac_is_on(struct adreno_device *adreno_dev);
+size_t a6xx_snapshot_preemption(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv);
 u64 a6xx_gmu_read_ao_counter(struct kgsl_device *device);
 #endif

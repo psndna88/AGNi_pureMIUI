@@ -859,6 +859,7 @@ static void adreno_of_get_initial_pwrlevel(struct adreno_device *adreno_dev,
 		init_level = 1;
 
 	pwr->active_pwrlevel = init_level;
+	pwr->default_pwrlevel = init_level;
 }
 
 static int adreno_of_get_legacy_pwrlevels(struct adreno_device *adreno_dev,
@@ -1008,6 +1009,11 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 		&device->pwrctrl.pm_qos_active_latency))
 		device->pwrctrl.pm_qos_active_latency = 1000;
 
+	/* get pm-qos-cpu-mask-latency, set it to default if not found */
+	if (of_property_read_u32(node, "qcom,l2pc-cpu-mask-latency",
+		&device->pwrctrl.pm_qos_cpu_mask_latency))
+		device->pwrctrl.pm_qos_cpu_mask_latency = 1000;
+
 	/* get pm-qos-wakeup-latency, set it to default if not found */
 	if (of_property_read_u32(node, "qcom,pm-qos-wakeup-latency",
 		&device->pwrctrl.pm_qos_wakeup_latency))
@@ -1025,6 +1031,8 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
+
+	device->pwrctrl.input_disable = true;
 
 	return 0;
 }
@@ -1754,6 +1762,10 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	/* make sure ADRENO_DEVICE_STARTED is not set here */
 	WARN_ON(test_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv));
 
+	/* disallow l2pc during wake up to improve GPU wake up time */
+	kgsl_pwrctrl_update_l2pc(&adreno_dev->dev,
+			KGSL_L2PC_WAKEUP_TIMEOUT);
+
 	pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
 			pmqos_wakeup_vote);
 
@@ -2237,14 +2249,6 @@ int adreno_reset(struct kgsl_device *device, int fault)
 		}
 	}
 	if (ret) {
-		unsigned long flags = device->pwrctrl.ctrl_flags;
-
-		/*
-		 * Clear ctrl_flags to ensure clocks and regulators are
-		 * turned off
-		 */
-		device->pwrctrl.ctrl_flags = 0;
-
 		/* If soft reset failed/skipped, then pull the power */
 		kgsl_pwrctrl_change_state(device, KGSL_STATE_INIT);
 		/* since device is officially off now clear start bit */
@@ -2262,8 +2266,6 @@ int adreno_reset(struct kgsl_device *device, int fault)
 					break;
 			}
 		}
-
-		device->pwrctrl.ctrl_flags = flags;
 	}
 	if (ret)
 		return ret;
@@ -2636,32 +2638,6 @@ static int adreno_getproperty(struct kgsl_device *device,
 
 		if (copy_to_user(value, &gaming_bin,
 					sizeof(unsigned int))) {
-			status = -EFAULT;
-			break;
-		}
-		status = 0;
-	}
-	break;
-
-	case KGSL_PROP_MACROTILING_CHANNELS:
-	{
-		unsigned int channel;
-
-		if (sizebytes < sizeof(unsigned int)) {
-			status = -EINVAL;
-			break;
-		}
-
-		if (of_property_read_u32(device->pdev->dev.of_node,
-			"qcom,macrotiling-channels", &channel)) {
-			/* return error when not set in device tree
-			 * and let user decide.
-			 */
-			status = -EINVAL;
-			break;
-		}
-
-		if (copy_to_user(value, &channel, sizeof(channel))) {
 			status = -EFAULT;
 			break;
 		}
@@ -3341,11 +3317,7 @@ int adreno_gmu_fenced_write(struct adreno_device *adreno_dev,
 		if (!(status & fence_mask))
 			return 0;
 		/* Wait a small amount of time before trying again */
-		if (in_atomic())
-			udelay(GMU_CORE_WAKEUP_DELAY_US);
-		else
-			usleep_range(GMU_CORE_WAKEUP_DELAY_US,
-				     3 * GMU_CORE_WAKEUP_DELAY_US);
+		udelay(GMU_CORE_WAKEUP_DELAY_US);
 
 		/* Try to write the fenced register again */
 		adreno_writereg(adreno_dev, offset, val);
@@ -4004,19 +3976,6 @@ static int adreno_resume_device(struct kgsl_device *device,
 		adreno_dispatcher_unhalt(device);
 
 	return 0;
-}
-
-u32 adreno_get_ucode_version(const u32 *data)
-{
-	u32 version;
-
-	version = data[1];
-
-	if ((version & 0xf) != 0xa)
-		return version;
-
-	version &= ~0xfff;
-	return  version | ((data[3] & 0xfff000) >> 12);
 }
 
 static const struct kgsl_functable adreno_functable = {
