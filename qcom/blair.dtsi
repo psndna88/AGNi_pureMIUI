@@ -2910,7 +2910,6 @@
 		memory-region = <&pil_adsp_mem>;
 		qcom,complete-ramdump;
 		qcom,minidump-as-elf32;
-		qcom,signal-aop;
 
 		/* Inputs from lpass */
 		interrupts-extended = <&intc GIC_SPI 282 IRQ_TYPE_LEVEL_HIGH>,
@@ -2952,7 +2951,6 @@
 		memory-region = <&pil_cdsp_mem>;
 		qcom,complete-ramdump;
 		qcom,minidump-as-elf32;
-		qcom,signal-aop;
 
 		/* Inputs from turing */
 		interrupts-extended = <&intc GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>,
@@ -2994,7 +2992,6 @@
 		qcom,minidump-id = <3>;
 		qcom,aux-minidump-ids = <4>;
 		qcom,complete-ramdump;
-		qcom,signal-aop;
 		/* Inputs from mss */
 		interrupts-extended = <&intc GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
 			<&modem_smp2p_in 0 0>,
