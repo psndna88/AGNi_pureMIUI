@@ -4613,7 +4613,7 @@ static int __init fastrpc_device_init(void)
 	}
 	me->rpmsg_register = 1;
 
-	me->wake_source = wakeup_source_register(dev, "adsprpc-non_secure");
+	me->wake_source = wakeup_source_register("adsprpc-non_secure");
 	VERIFY(err, !IS_ERR_OR_NULL(me->wake_source));
 	if (err) {
 		pr_err("adsprpc: Error: %s: wakeup_source_register failed for %s with err %ld\n",
@@ -4621,8 +4621,7 @@ static int __init fastrpc_device_init(void)
 		goto device_create_bail;
 	}
 
-	me->wake_source_secure = wakeup_source_register(secure_dev,
-							"adsprpc-secure");
+	me->wake_source_secure = wakeup_source_register("adsprpc-secure");
 	VERIFY(err, !IS_ERR_OR_NULL(me->wake_source_secure));
 	if (err) {
 		pr_err("adsprpc: Error: %s: wakeup_source_register failed for %s with err %ld\n",
