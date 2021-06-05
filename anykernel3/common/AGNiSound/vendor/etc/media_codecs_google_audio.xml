@@ -17,8 +17,6 @@
 <Included>
     <Decoders>
         <MediaCodec name="OMX.google.mp3.decoder" type="audio/mpeg">
-            <Limit name="complexity" range="0-8"  default="8"/>
-            <Feature name="bitrate-modes" value="CQ"/>
             <Limit name="channel-count" max="2" />
             <Limit name="sample-rate" ranges="8000,11025,12000,16000,22050,24000,32000,44100,48000" />
             <Limit name="bitrate" range="8000-320000" />
