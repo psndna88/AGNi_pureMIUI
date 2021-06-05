@@ -4836,9 +4836,12 @@ int gsi_flow_control_ee(unsigned int chan_idx, unsigned int ee,
 		msecs_to_jiffies(GSI_CMD_TIMEOUT));
 	if (res == 0) {
 		GSIERR("chan_idx=%u ee=%u timed out\n", chan_idx, ee);
-		res = -GSI_STATUS_TIMED_OUT;
-		GSI_ASSERT();
-		goto free_lock;
+		GSIERR("GSI_EE_n_CNTXT_GLOB_IRQ_EN_OFFS = 0x%x\n",
+				gsi_readl(gsi_ctx->base +
+				GSI_EE_n_CNTXT_GLOB_IRQ_EN_OFFS(gsi_ctx->per.ee)));
+		GSIERR("GSI_EE_n_CNTXT_GLOB_IRQ_STTS_OFFS IRQ type = 0x%x\n",
+				gsi_readl(gsi_ctx->base +
+				GSI_EE_n_CNTXT_GLOB_IRQ_STTS_OFFS(gsi_ctx->per.ee)));
 	}
 
 	gsi_ctx->scratch.word0.val = gsi_readl(gsi_ctx->base +
