@@ -53,11 +53,6 @@ static int vbswap_bvec_read(struct bio_vec *bvec,
 	struct page *page;
 	unsigned char *user_mem, *swap_header_page_mem;
 
-	if (unlikely(index != 0)) {
-		pr_err("tried to read outside of swap header\n");
-		// Return empty pages on valid requests to workaround toybox binary search
-	}
-
 	page = bvec->bv_page;
 
 	user_mem = kmap_atomic(page);
