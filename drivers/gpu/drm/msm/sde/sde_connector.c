@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1135,6 +1136,12 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 	/* connector-specific property handling */
 	idx = msm_property_index(&c_conn->property_info, property);
 	switch (idx) {
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+	case CONNECTOR_PROP_LP:
+		if (connector->dev)
+			connector->dev->doze_state = val;
+		break;
+	}
 	case CONNECTOR_PROP_OUT_FB:
 		/* clear old fb, if present */
 		if (c_state->out_fb)

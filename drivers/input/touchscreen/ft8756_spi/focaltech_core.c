@@ -1538,6 +1538,12 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 		goto err_irq_req;
 	}
 
+	//longcheer touch procfs
+	ret = lct_create_procfs(ts_data);
+	if (ret < 0) {
+		FTS_ERROR("create procfs node fail");
+	}
+
 	ret = fts_create_sysfs(ts_data);
 	if (ret) {
 		FTS_ERROR("create sysfs node fail");
@@ -1648,6 +1654,9 @@ static int fts_ts_remove_entry(struct fts_ts_data *ts_data)
 #if FTS_POINT_REPORT_CHECK_EN
 	fts_point_report_check_exit(ts_data);
 #endif
+
+	//remove longcheer procfs
+	lct_remove_procfs(ts_data);
 
 	fts_remove_sysfs(ts_data);
 	fts_ex_mode_exit(ts_data);

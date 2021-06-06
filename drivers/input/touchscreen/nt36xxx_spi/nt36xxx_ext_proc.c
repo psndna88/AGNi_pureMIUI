@@ -28,6 +28,7 @@
 #define NVT_BASELINE "nvt_baseline"
 #define NVT_RAW "nvt_raw"
 #define NVT_DIFF "nvt_diff"
+#define NVT_XIAOMI_CONFIG_INFO "nvt_xiaomi_config_info"
 #define NVT_PF_SWITCH "nvt_pf_switch"
 #define NVT_SENSITIVITY_SWITCH "nvt_sensitivity_switch"
 #define NVT_ER_RANGE_SWITCH "nvt_er_range_switch"
@@ -52,6 +53,7 @@ static struct proc_dir_entry *NVT_proc_fw_version_entry;
 static struct proc_dir_entry *NVT_proc_baseline_entry;
 static struct proc_dir_entry *NVT_proc_raw_entry;
 static struct proc_dir_entry *NVT_proc_diff_entry;
+static struct proc_dir_entry *NVT_proc_xiaomi_config_info_entry;
 static struct proc_dir_entry *NVT_proc_pf_switch_entry;
 static struct proc_dir_entry *NVT_proc_sensitivity_switch_entry;
 static struct proc_dir_entry *NVT_proc_er_range_switch_entry;
@@ -60,6 +62,11 @@ static struct proc_dir_entry *NVT_proc_edge_reject_switch_entry;
 static struct proc_dir_entry *NVT_proc_pocket_palm_switch_entry;
 static struct proc_dir_entry *NVT_proc_charger_switch_entry;
 static int32_t diff_data[2048] = {0};
+
+// Xiaomi Config Info.
+static uint8_t nvt_xiaomi_conf_info_fw_ver = 0;
+static uint8_t nvt_xiaomi_conf_info_fae_id = 0;
+static uint64_t nvt_xiaomi_conf_info_reservation = 0;
 
 /*******************************************************
 Description:
@@ -525,6 +532,46 @@ static const struct file_operations nvt_diff_fops = {
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = seq_release,
+};
+
+static int nvt_xiaomi_config_info_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "FW version/Config version, Debug version: 0x%02X\n", nvt_xiaomi_conf_info_fw_ver);
+	seq_printf(m, "FAE ID: 0x%02X\n", nvt_xiaomi_conf_info_fae_id);
+	seq_printf(m, "Reservation byte: 0x%012llX\n", nvt_xiaomi_conf_info_reservation);
+
+	return 0;
+}
+
+static int32_t nvt_xiaomi_config_info_open(struct inode *inode, struct file *file)
+{
+	uint8_t buf[16] = {0};
+
+	if (mutex_lock_interruptible(&ts->lock)) {
+		return -ERESTARTSYS;
+	}
+
+	//---set xdata index to EVENT BUF ADDR---
+	nvt_set_page(ts->mmap->EVENT_BUF_ADDR | 0x9C);
+
+	buf[0] = 0x9C;
+	CTP_SPI_READ(ts->client, buf, 9);
+
+	nvt_xiaomi_conf_info_fw_ver = buf[1];
+	nvt_xiaomi_conf_info_fae_id = buf[2];
+	nvt_xiaomi_conf_info_reservation = (((uint64_t)buf[3] << 40) | ((uint64_t)buf[4] << 32) | ((uint64_t)buf[5] << 24) | ((uint64_t)buf[6] << 16) | ((uint64_t)buf[7] << 8) | (uint64_t)buf[8]);
+
+	mutex_unlock(&ts->lock);
+
+	return single_open(file, nvt_xiaomi_config_info_show, NULL);
+}
+
+static const struct file_operations nvt_xiaomi_config_info_fops = {
+	.owner = THIS_MODULE,
+	.open = nvt_xiaomi_config_info_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
 };
 
 /*******************************************************
@@ -1876,6 +1923,15 @@ int32_t nvt_extra_proc_init(void)
 	} else {
 		NVT_LOG("create proc/%s Succeeded!\n", NVT_DIFF);
 	}
+
+	NVT_proc_xiaomi_config_info_entry = proc_create(NVT_XIAOMI_CONFIG_INFO, 0444, NULL, &nvt_xiaomi_config_info_fops);
+	if (NVT_proc_xiaomi_config_info_entry == NULL) {
+		NVT_ERR("create proc/%s Failed!\n", NVT_XIAOMI_CONFIG_INFO);
+		return -ENOMEM;
+	} else {
+		NVT_LOG("create proc/%s Succeeded!\n", NVT_XIAOMI_CONFIG_INFO);
+	}
+/*2019.12.10 longcheer taocheng add for creating nodes begin*/
 /*function description*/
 	NVT_proc_pf_switch_entry = proc_create(NVT_PF_SWITCH, 0666, NULL,&nvt_pf_switch_fops);
 	if (NVT_proc_pf_switch_entry == NULL) {
@@ -1970,6 +2026,11 @@ void nvt_extra_proc_deinit(void)
 		NVT_LOG("Removed /proc/%s\n", NVT_DIFF);
 	}
 
+	if (NVT_proc_xiaomi_config_info_entry != NULL) {
+		remove_proc_entry(NVT_XIAOMI_CONFIG_INFO, NULL);
+		NVT_proc_xiaomi_config_info_entry = NULL;
+	}
+/*2019.12.10 longcheer taocheng add for charger extra proc begin*/
 /*function description*/
 	if (NVT_proc_pf_switch_entry != NULL) {
 		remove_proc_entry(NVT_PF_SWITCH, NULL);

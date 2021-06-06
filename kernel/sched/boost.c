@@ -23,6 +23,7 @@
  * boost is responsible for disabling it as well.
  */
 
+bool allow_sched_boost = false;
 unsigned int sysctl_sched_boost; /* To/from userspace */
 unsigned int sched_boost_type; /* currently activated sched boost */
 enum sched_boost_policy boost_policy;
@@ -255,7 +256,8 @@ int sched_set_boost(int type)
 {
 	int ret = 0;
 
-	return 0;
+	if (!allow_sched_boost)
+		return 0;
 
 	mutex_lock(&boost_mutex);
 	if (verify_boost_params(type))

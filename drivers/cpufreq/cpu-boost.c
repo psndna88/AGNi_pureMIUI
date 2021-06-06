@@ -41,7 +41,7 @@ static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
 static struct work_struct powerkey_input_boost_work;
-static bool input_boost_enabled = false;
+static bool input_boost_enabled;
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
@@ -49,14 +49,13 @@ module_param(input_boost_ms, uint, 0644);
 static unsigned int powerkey_input_boost_ms = 400;
 module_param(powerkey_input_boost_ms, uint, 0644);
 
-static unsigned int sched_boost_on_input = 0;
-static unsigned int sched_boost_on_input_fake;
-module_param(sched_boost_on_input_fake, uint, 0644);
+static unsigned int sched_boost_on_input;
+module_param(sched_boost_on_input, uint, 0644);
 
-static bool sched_boost_on_powerkey_input = false;
-static bool sched_boost_on_powerkey_input_fake = false;
-module_param(sched_boost_on_powerkey_input_fake, bool, 0644);
+static bool sched_boost_on_powerkey_input = true;
+module_param(sched_boost_on_powerkey_input, bool, 0644);
 
+extern bool allow_sched_boost;
 static bool sched_boost_active;
 
 static struct delayed_work input_boost_rem;
@@ -119,7 +118,7 @@ check_enable:
 			break;
 		}
 	}
-//	input_boost_enabled = enabled;
+	input_boost_enabled = enabled;
 
 	return 0;
 }
@@ -222,7 +221,9 @@ static void do_input_boost_rem(struct work_struct *work)
 	update_policy_online();
 
 	if (sched_boost_active) {
+		allow_sched_boost = true;
 		ret = sched_set_boost(0);
+		allow_sched_boost = false;
 		if (ret)
 			pr_err("cpu-boost: sched boost disable failed\n");
 		sched_boost_active = false;
@@ -236,7 +237,9 @@ static void do_input_boost(struct work_struct *work)
 
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
+		allow_sched_boost = true;
 		sched_set_boost(0);
+		allow_sched_boost = false;
 		sched_boost_active = false;
 	}
 
@@ -252,7 +255,9 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Enable scheduler boost to migrate tasks to big cluster */
 	if (sched_boost_on_input > 0) {
+		allow_sched_boost = true;
 		ret = sched_set_boost(sched_boost_on_input);
+		allow_sched_boost = false;
 		if (ret)
 			pr_err("cpu-boost: sched boost enable failed\n");
 		else
@@ -270,7 +275,9 @@ static void do_powerkey_input_boost(struct work_struct *work)
 	struct cpu_sync *i_sync_info;
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
+		allow_sched_boost = true;
 		sched_set_boost(0);
+		allow_sched_boost = false;
 		sched_boost_active = false;
 	}
 
@@ -286,7 +293,9 @@ static void do_powerkey_input_boost(struct work_struct *work)
 
 	/* Enable scheduler boost to migrate tasks to big cluster */
 	if (sched_boost_on_powerkey_input) {
+		allow_sched_boost = true;
 		ret = sched_set_boost(1);
+		allow_sched_boost = false;
 		if (ret)
 			pr_err("cpu-boost: HMP boost enable failed\n");
 		else
@@ -315,7 +324,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (type == EV_KEY && code == KEY_POWER) {
 		queue_work(cpu_boost_wq, &powerkey_input_boost_work);
 	} else {
-		queue_work(cpu_boost_wq, &input_boost_work);
+//		queue_work(cpu_boost_wq, &input_boost_work);
 	}
 	last_input_time = ktime_to_us(ktime_get());
 }

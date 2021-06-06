@@ -61,6 +61,9 @@
 #define MSM_VERSION_MINOR	2
 #define MSM_VERSION_PATCHLEVEL	0
 
+atomic_t resume_pending;
+wait_queue_head_t resume_wait_q;
+
 static void msm_fb_output_poll_changed(struct drm_device *dev)
 {
 	struct msm_drm_private *priv = NULL;
@@ -1045,6 +1048,7 @@ static void msm_preclose(struct drm_device *dev, struct drm_file *file)
 	if (kms && kms->funcs && kms->funcs->preclose)
 		kms->funcs->preclose(kms, file);
 }
+static void msm_preclose_dummy(struct drm_device *dev, struct drm_file *file) {}
 
 static void msm_postclose(struct drm_device *dev, struct drm_file *file)
 {
@@ -1742,6 +1746,13 @@ static int msm_release(struct inode *inode, struct file *filp)
 		kfree(node);
 	}
 
+	msm_preclose(dev, file_priv);
+
+       /**
+	* Handle preclose operation here for removing fb's whose
+	* refcount > 1. This operation is not triggered from upstream
+	* drm as msm_driver does not support DRIVER_LEGACY feature.
+	*/
 	return drm_release(inode, filp);
 }
 
@@ -1896,7 +1907,7 @@ static struct drm_driver msm_driver = {
 				DRIVER_ATOMIC |
 				DRIVER_MODESET,
 	.open               = msm_open,
-	.preclose           = msm_preclose,
+	.preclose           = msm_preclose_dummy,
 	.postclose          = msm_postclose,
 	.lastclose          = msm_lastclose,
 	.irq_handler        = msm_irq,
@@ -1936,6 +1947,19 @@ static struct drm_driver msm_driver = {
 };
 
 #ifdef CONFIG_PM_SLEEP
+static int msm_pm_prepare(struct device *dev)
+{
+	atomic_inc(&resume_pending);
+	return 0;
+}
+
+static void msm_pm_complete(struct device *dev)
+{
+	atomic_set(&resume_pending, 0);
+	wake_up_all(&resume_wait_q);
+	return;
+}
+
 static int msm_pm_suspend(struct device *dev)
 {
 	struct drm_device *ddev;
@@ -2016,6 +2040,8 @@ static int msm_runtime_resume(struct device *dev)
 #endif
 
 static const struct dev_pm_ops msm_pm_ops = {
+	.prepare = msm_pm_prepare,
+	.complete = msm_pm_complete,
 	SET_SYSTEM_SLEEP_PM_OPS(msm_pm_suspend, msm_pm_resume)
 	SET_RUNTIME_PM_OPS(msm_runtime_suspend, msm_runtime_resume, NULL)
 };

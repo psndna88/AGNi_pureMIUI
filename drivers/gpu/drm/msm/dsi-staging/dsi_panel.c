@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -46,6 +47,7 @@
 
 static bool lcd_esd_irq_handler = false;
 extern void lcd_esd_enable(bool en);
+char g_lcd_id[128];
 
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
@@ -3286,6 +3288,38 @@ end:
 	utils->node = panel->panel_of_node;
 }
 
+static ssize_t msm_fb_lcd_name(struct device *dev,
+		struct device_attribute *attr, char *buf)	
+{
+   ssize_t ret = 0;
+   sprintf(buf, "%s\n", g_lcd_id);
+   ret = strlen(buf) + 1;	
+   return ret;		
+}
+		
+static DEVICE_ATTR(lcd_name,0664,msm_fb_lcd_name,NULL);
+		
+static struct kobject *msm_lcd_name;
+	
+static int msm_lcd_name_create_sysfs(void){	
+   int ret;	
+   msm_lcd_name=kobject_create_and_add("android_lcd",NULL);
+	
+   if(msm_lcd_name==NULL){
+     pr_info("msm_lcd_name_create_sysfs_ failed\n");
+     ret=-ENOMEM;
+     return ret;		
+   }
+		
+   ret=sysfs_create_file(msm_lcd_name,&dev_attr_lcd_name.attr);
+
+   if(ret){	
+    pr_info("%s failed \n",__func__);	
+    kobject_del(msm_lcd_name);	
+   }
+   return 0;	
+}	
+
 struct dsi_panel *dsi_panel_get(struct device *parent,
 				struct device_node *of_node,
 				struct device_node *parser_node,
@@ -3318,6 +3352,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	else if ((strnstr(panel->name, "huaxing", strlen(panel->name))))
 		panel->special_panel = DSI_SPECIAL_PANEL_HUAXING;
 
+	strcpy(g_lcd_id,panel->name);
+	msm_lcd_name_create_sysfs();
 	/*
 	 * Set panel type to LCD as default.
 	 */
