@@ -1048,6 +1048,7 @@ static void msm_preclose(struct drm_device *dev, struct drm_file *file)
 	if (kms && kms->funcs && kms->funcs->preclose)
 		kms->funcs->preclose(kms, file);
 }
+static void msm_preclose_dummy(struct drm_device *dev, struct drm_file *file) {}
 
 static void msm_postclose(struct drm_device *dev, struct drm_file *file)
 {
@@ -1745,6 +1746,13 @@ static int msm_release(struct inode *inode, struct file *filp)
 		kfree(node);
 	}
 
+	msm_preclose(dev, file_priv);
+
+       /**
+	* Handle preclose operation here for removing fb's whose
+	* refcount > 1. This operation is not triggered from upstream
+	* drm as msm_driver does not support DRIVER_LEGACY feature.
+	*/
 	return drm_release(inode, filp);
 }
 
@@ -1899,7 +1907,7 @@ static struct drm_driver msm_driver = {
 				DRIVER_ATOMIC |
 				DRIVER_MODESET,
 	.open               = msm_open,
-	.preclose           = msm_preclose,
+	.preclose           = msm_preclose_dummy,
 	.postclose          = msm_postclose,
 	.lastclose          = msm_lastclose,
 	.irq_handler        = msm_irq,

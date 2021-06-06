@@ -688,8 +688,6 @@ static int dsi_display_read_reg(struct dsi_display_ctrl *ctrl, char cmd0,
 		pr_err("rx cmd transfer failed rc=%d\n", rc);
 		return rc;
 	}
-	pr_info("xinj: rbuf[0]= %x,rbuf[1]= %x, rbuf[2] = %x, rbuf[3] =%x,rbuf[4]=%x,rbuf[5]=%x,rbuf[6]=%x,rbuf[7]=%x\n",
-			rbuf[0] ,rbuf[1], rbuf[2],rbuf[3], rbuf[4],rbuf[5],rbuf[6],rbuf[7]);
 
 	return rc;
  }
