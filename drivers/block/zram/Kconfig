@@ -57,7 +57,7 @@ config ZRAM_MEMORY_TRACKING
 config ZRAM_DEFAULT_COMP_ALGORITHM
 	string "Default ZRAM algorithm"
     depends on ZRAM
-	default "lzo-rle" 
+	default "lz4" 
 
 config ZRAM_SIZE_OVERRIDE
 	int "zram size to set from kernel"
