@@ -85,7 +85,7 @@ static const struct kernel_param_ops zswap_enabled_param_ops = {
 module_param_cb(enabled, &zswap_enabled_param_ops, &zswap_enabled, 0644);
 
 /* Crypto compressor to use */
-#define ZSWAP_COMPRESSOR_DEFAULT "lzo-rle"
+#define ZSWAP_COMPRESSOR_DEFAULT CONFIG_ZSWAP_DEFAULT_COMP_ALGORITHM
 static char *zswap_compressor = ZSWAP_COMPRESSOR_DEFAULT;
 static int zswap_compressor_param_set(const char *,
 				      const struct kernel_param *);
