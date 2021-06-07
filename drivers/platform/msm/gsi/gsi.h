@@ -190,7 +190,7 @@ struct gsi_evt_ring_props {
 	enum gsi_evt_chtype intf;
 	enum gsi_intr_type intr;
 	enum gsi_evt_ring_elem_size re_size;
-	uint16_t ring_len;
+	uint32_t ring_len;
 	uint64_t ring_base_addr;
 	void *ring_base_vaddr;
 	uint16_t int_modt;
