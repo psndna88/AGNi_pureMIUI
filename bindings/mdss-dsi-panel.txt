@@ -612,6 +612,11 @@ Optional properties:
 					panels, at which command DMA needs to be triggered.
 - qcom,mdss-dsi-dma-schedule-window:	An integer value indicates the width of the DMA window during which a
 					DCS command will be triggered for command mode panels
+- qcom,mdss-dsi-mdp-idle-ctrl-en:	A boolean to enable LP11 insertion after transmission of every line.
+					This requires command mdp burst mode to be disabled.
+- qcom,mdss-dsi-mdp-idle-ctrl-len:	An u32 value indicating the number of dsi pclk cycles of idle time
+					to insert between command mode mdp packets. This time must be long
+					enough to cover the time link takes to switch between HS to LP11 mode.
 
 Required properties for sub-nodes:	None
 Optional properties:
