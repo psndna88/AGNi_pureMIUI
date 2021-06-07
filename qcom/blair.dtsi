@@ -1535,6 +1535,7 @@
 
 		cpu0_computemon: qcom,cpu0-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3 &CPU4 &CPU5>;
 			qcom,target-dev = <&cpu0_cpu_ddr_latfloor>;
 			qcom,core-dev-table =
 					<  691200 MHZ_TO_MBPS( 300, 4) >,
@@ -1578,6 +1579,7 @@
 
 		cpu6_computemon: qcom,cpu6-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU6 &CPU7>;
 			qcom,target-dev = <&cpu6_cpu_ddr_latfloor>;
 			qcom,core-dev-table =
 					< 1248800 MHZ_TO_MBPS( 547, 4) >,
