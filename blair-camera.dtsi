@@ -340,7 +340,6 @@
 		msm_cam_smmu_tfe {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x000>;
-			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cam-smmu-label = "tfe";
 			tfe_iova_mem_map: iova-mem-map {
@@ -359,7 +358,6 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xc20 0x000>,
 				<&apps_smmu 0xc40 0x000>;
-			qcom,iommu-faults = "non-fatal";
 			multiple-client-devices;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cam-smmu-label = "ope", "ope-cdm";
@@ -379,7 +377,6 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xc00 0x000>;
 			cam-smmu-label = "cpas-cdm";
-			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
@@ -449,7 +446,6 @@
 		interconnect-names = "cam_ahb";
 		interconnects =<&bimc MASTER_AMPSS_M0
 			&config_noc SLAVE_CAMERA_CFG>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		cam-ahb-num-cases = <7>;
 		cam-ahb-bw-KBps =
 			<0 0>, <0 133333>, <0 150000>, <0 150000>,
@@ -762,7 +758,6 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <4>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -827,7 +822,6 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <5>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -892,7 +886,6 @@
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <6>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -1057,7 +1050,6 @@
 		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		src-clock-name = "ope_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 };
