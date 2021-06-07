@@ -6,6 +6,5 @@
 / {
 	model = "Qualcomm Technologies, Inc. Yupik IDP + PM7250B";
 	compatible = "qcom,yupik-idp", "qcom,yupik", "qcom,idp";
-	/* Adding dummy Board subtype ID to bypass pmic protocol version check. */
-	qcom,board-id = <34 0xFF>;
+	qcom,board-id = <34 0>;
 };
