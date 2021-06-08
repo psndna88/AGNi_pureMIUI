@@ -10,29 +10,7 @@
 #include "cam_debug_util.h"
 #include "camera_main.h"
 
-static long cam_ois_subdev_ioctl(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
-{
-	int                       rc     = 0;
-	struct cam_ois_ctrl_t *o_ctrl = v4l2_get_subdevdata(sd);
-
-	switch (cmd) {
-	case VIDIOC_CAM_CONTROL:
-		rc = cam_ois_driver_cmd(o_ctrl, arg);
-		if (rc)
-			CAM_ERR(CAM_OIS,
-				"Failed with driver cmd: %d", rc);
-		break;
-	default:
-		CAM_ERR(CAM_OIS, "Wrong IOCTL cmd: %u", cmd);
-		rc = -ENOIOCTLCMD;
-		break;
-	}
-
-	return rc;
-}
-
-static int cam_ois_subdev_close(struct v4l2_subdev *sd,
+static int cam_ois_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct cam_ois_ctrl_t *o_ctrl =
@@ -48,6 +26,48 @@ static int cam_ois_subdev_close(struct v4l2_subdev *sd,
 	mutex_unlock(&(o_ctrl->ois_mutex));
 
 	return 0;
+}
+
+static int cam_ois_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_OIS);
+
+	if (crm_active) {
+		CAM_DBG(CAM_OIS, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_ois_subdev_close_internal(sd, fh);
+}
+
+static long cam_ois_subdev_ioctl(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	int                       rc     = 0;
+	struct cam_ois_ctrl_t *o_ctrl = v4l2_get_subdevdata(sd);
+
+	switch (cmd) {
+	case VIDIOC_CAM_CONTROL:
+		rc = cam_ois_driver_cmd(o_ctrl, arg);
+		if (rc)
+			CAM_ERR(CAM_OIS,
+				"Failed with driver cmd: %d", rc);
+		break;
+	case CAM_SD_SHUTDOWN:
+		if (!cam_req_mgr_is_shutdown()) {
+			CAM_ERR(CAM_CORE, "SD shouldn't come from user space");
+			return 0;
+		}
+		rc = cam_ois_subdev_close_internal(sd, NULL);
+		break;
+	default:
+		CAM_ERR(CAM_OIS, "Wrong IOCTL cmd: %u", cmd);
+		rc = -ENOIOCTLCMD;
+		break;
+	}
+
+	return rc;
 }
 
 static int32_t cam_ois_update_i2c_info(struct cam_ois_ctrl_t *o_ctrl,
@@ -144,6 +164,7 @@ static int cam_ois_init_subdev_param(struct cam_ois_ctrl_t *o_ctrl)
 		(V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS);
 	o_ctrl->v4l2_dev_str.ent_function = CAM_OIS_DEVICE_TYPE;
 	o_ctrl->v4l2_dev_str.token = o_ctrl;
+	 o_ctrl->v4l2_dev_str.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	rc = cam_register_subdev(&(o_ctrl->v4l2_dev_str));
 	if (rc)

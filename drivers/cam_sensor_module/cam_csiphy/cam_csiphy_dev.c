@@ -77,29 +77,7 @@ static void cam_csiphy_debug_unregister(void)
 	root_dentry = NULL;
 }
 
-static long cam_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
-{
-	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
-	int rc = 0;
-
-	switch (cmd) {
-	case VIDIOC_CAM_CONTROL:
-		rc = cam_csiphy_core_cfg(csiphy_dev, arg);
-		if (rc)
-			CAM_ERR(CAM_CSIPHY,
-				"Failed in configuring the device: %d", rc);
-		break;
-	default:
-		CAM_ERR(CAM_CSIPHY, "Wrong ioctl : %d", cmd);
-		rc = -ENOIOCTLCMD;
-		break;
-	}
-
-	return rc;
-}
-
-static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
+static int cam_csiphy_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct csiphy_device *csiphy_dev =
@@ -115,6 +93,49 @@ static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
 	mutex_unlock(&csiphy_dev->mutex);
 
 	return 0;
+}
+
+static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_CSIPHY);
+
+	if (crm_active) {
+		CAM_DBG(CAM_CSIPHY, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_csiphy_subdev_close_internal(sd, fh);
+}
+
+static long cam_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
+	int rc = 0;
+
+	switch (cmd) {
+	case VIDIOC_CAM_CONTROL:
+		rc = cam_csiphy_core_cfg(csiphy_dev, arg);
+		if (rc)
+			CAM_ERR(CAM_CSIPHY,
+				"Failed in configuring the device: %d", rc);
+		break;
+	case CAM_SD_SHUTDOWN:
+		if (!cam_req_mgr_is_shutdown()) {
+			CAM_ERR(CAM_CORE, "SD shouldn't come from user space");
+			return 0;
+		}
+
+		rc = cam_csiphy_subdev_close_internal(sd, NULL);
+		break;
+	default:
+		CAM_ERR(CAM_CSIPHY, "Wrong ioctl : %d", cmd);
+		rc = -ENOIOCTLCMD;
+		break;
+	}
+
+	return rc;
 }
 
 #ifdef CONFIG_COMPAT
@@ -236,6 +257,8 @@ static int cam_csiphy_component_bind(struct device *dev,
 		cam_csiphy_subdev_handle_message;
 	new_csiphy_dev->v4l2_dev_str.token =
 		new_csiphy_dev;
+	new_csiphy_dev->v4l2_dev_str.close_seq_prior =
+		CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	rc = cam_register_subdev(&(new_csiphy_dev->v4l2_dev_str));
 	if (rc < 0) {

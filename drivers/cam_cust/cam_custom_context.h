@@ -150,4 +150,16 @@ int cam_custom_dev_context_init(struct cam_custom_context *ctx,
  */
 int cam_custom_dev_context_deinit(struct cam_custom_context *ctx);
 
+/**
+ * cam_custom_subdev_close_internal()
+ *
+ * @brief:               Close function for the Custom context
+ *
+ * @sd:                  Pointer to struct v4l2_subdev
+ * @fh:                  Pointer to struct v4l2_subdev_fh
+ *
+ */
+int cam_custom_subdev_close_internal(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh);
+
 #endif  /* _CAM_CUSTOM_CONTEXT_H_ */

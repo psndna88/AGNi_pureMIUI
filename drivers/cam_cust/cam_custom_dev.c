@@ -58,7 +58,7 @@ static int cam_custom_subdev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int cam_custom_subdev_close(struct v4l2_subdev *sd,
+int cam_custom_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
@@ -86,6 +86,19 @@ end:
 	return rc;
 }
 
+static int cam_custom_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_CUSTOM);
+
+	if (crm_active) {
+		CAM_DBG(CAM_CUSTOM, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_custom_subdev_close_internal(sd, fh);
+}
+
 static const struct v4l2_subdev_internal_ops cam_custom_subdev_internal_ops = {
 	.close = cam_custom_subdev_close,
 	.open = cam_custom_subdev_open,
@@ -102,6 +115,7 @@ static int cam_custom_component_bind(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 
 	g_custom_dev.sd.internal_ops = &cam_custom_subdev_internal_ops;
+	g_custom_dev.sd.close_seq_prior = CAM_SD_CLOSE_HIGH_PRIORITY;
 
 	rc = cam_subdev_probe(&g_custom_dev.sd, pdev, CAM_CUSTOM_DEV_NAME,
 		CAM_CUSTOM_DEVICE_TYPE);

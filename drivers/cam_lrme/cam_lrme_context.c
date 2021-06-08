@@ -172,6 +172,12 @@ static int __cam_lrme_ctx_handle_irq_in_activated(void *context,
 	return rc;
 }
 
+static int __cam_lrme_shutdown_dev(
+	struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	return cam_lrme_dev_close_internal(sd, fh);
+}
+
 /* top state machine */
 static struct cam_ctx_ops
 	cam_lrme_ctx_state_machine[CAM_CTX_STATE_MAX] = {
@@ -185,6 +191,7 @@ static struct cam_ctx_ops
 	{
 		.ioctl_ops = {
 			.acquire_dev = __cam_lrme_ctx_acquire_dev_in_available,
+			.shutdown_dev = __cam_lrme_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
@@ -195,18 +202,25 @@ static struct cam_ctx_ops
 			.config_dev = __cam_lrme_ctx_config_dev_in_activated,
 			.release_dev = __cam_lrme_ctx_release_dev_in_acquired,
 			.start_dev = __cam_lrme_ctx_start_dev_in_acquired,
+			.shutdown_dev = __cam_lrme_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
 	},
 	/* Ready */
 	{
-		.ioctl_ops = {},
+		.ioctl_ops = {
+			.shutdown_dev = __cam_lrme_shutdown_dev,
+		},
 		.crm_ops = {},
 		.irq_ops = NULL,
 	},
 	/* Flushed */
-	{},
+	{
+		.ioctl_ops = {
+			.shutdown_dev = __cam_lrme_shutdown_dev,
+	},
+	},
 	/* Activate */
 	{
 		.ioctl_ops = {
@@ -215,6 +229,7 @@ static struct cam_ctx_ops
 			.stop_dev = __cam_lrme_ctx_stop_dev_in_activated,
 			.flush_dev = __cam_lrme_ctx_flush_dev_in_activated,
 			.dump_dev = __cam_lrme_ctx_dump_dev_in_activated,
+			.shutdown_dev = __cam_lrme_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_lrme_ctx_handle_irq_in_activated,

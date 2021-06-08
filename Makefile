@@ -14,12 +14,20 @@ ifeq ($(CONFIG_ARCH_BENGAL), y)
 include $(srctree)/techpack/camera/config/bengalcamera.conf
 endif
 
+ifeq ($(CONFIG_ARCH_MONACO), y)
+include $(srctree)/techpack/camera/config/monacocamera.conf
+endif
+
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
 include $(srctree)/techpack/camera/config/lahainacamera.conf
 endif
 
 ifeq ($(CONFIG_ARCH_HOLI), y)
 include $(srctree)/techpack/camera/config/holicamera.conf
+endif
+
+ifeq ($(CONFIG_ARCH_BLAIR), y)
+include $(srctree)/techpack/camera/config/blaircamera.conf
 endif
 
 ifeq ($(CONFIG_ARCH_SHIMA), y)
@@ -45,6 +53,11 @@ LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/bengalcameraconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_MONACO), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/monacocameraconf.h
+endif
+
 ifeq ($(CONFIG_ARCH_LAHAINA), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/lahainacameraconf.h
@@ -53,6 +66,11 @@ endif
 ifeq ($(CONFIG_ARCH_HOLI), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/holicameraconf.h
+endif
+
+ifeq ($(CONFIG_ARCH_BLAIR), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/blaircameraconf.h
 endif
 
 ifeq ($(CONFIG_ARCH_SHIMA), y)
