@@ -42,6 +42,8 @@
 
 /* How many pages do we try to swap or page in/out together? */
 int page_cluster = 0;
+char devicezramcompressor;
+int devicezramsizegb;
 
 static DEFINE_PER_CPU(struct pagevec, lru_add_pvec);
 static DEFINE_PER_CPU(struct pagevec, lru_rotate_pvecs);
@@ -1005,6 +1007,25 @@ unsigned pagevec_lookup_range_nr_tag(struct pagevec *pvec,
 	return pagevec_count(pvec);
 }
 EXPORT_SYMBOL(pagevec_lookup_range_nr_tag);
+
+int get_totalram_gb(void)
+{
+	unsigned long megs = totalram_pages >> (20 - PAGE_SHIFT);
+
+	if (megs > 6024)
+		return 8;
+	else if (megs > 4096 && megs <= 6024)
+		return 6;
+	else if (megs > 3072 && megs <= 4096)
+		return 4;
+	else if (megs > 2048 && megs <= 3072)
+		return 3;
+	else if (megs > 1024 && megs <= 2048)
+		return 2;
+	else
+		return 1;
+}
+
 /*
  * Perform any setup for the swap system
  */
@@ -1021,7 +1042,14 @@ void __init swap_setup(void)
 	 * Right now other parts of the system means that we
 	 * _really_ don't want to cluster much more
 	 */
-#if defined(CONFIG_ZRAM) || defined(CONFIG_ZSWAP)
+#if defined(CONFIG_ZRAM) || defined(CONFIG_ZSWAP) || defined(CONFIG_VBSWAP)
 	page_cluster = 0;
+	if (get_totalram_gb() <= 4) {
+		devicezramcompressor = "lzo-rle";
+		devicezramsizegb = 2;
+	} else {
+		devicezramcompressor = "lz4";
+		devicezramsizegb = 3;
+	}
 #endif
 }

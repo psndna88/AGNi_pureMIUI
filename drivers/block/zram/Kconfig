@@ -2,6 +2,7 @@
 config ZRAM
 	tristate "Compressed RAM block device support"
 	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
+	select CRYPTO_LZO
 	select CRYPTO_LZ4
 	default n
 	help
@@ -54,13 +55,3 @@ config ZRAM_MEMORY_TRACKING
 
 	  See Documentation/blockdev/zram.txt for more information.
 
-config ZRAM_DEFAULT_COMP_ALGORITHM
-	string "Default ZRAM algorithm"
-    depends on ZRAM
-	default "lz4" 
-
-config ZRAM_SIZE_OVERRIDE
-	int "zram size to set from kernel"
-	range 1 8
-    depends on ZRAM
-	default 2
