@@ -421,6 +421,20 @@ static void sde_connector_get_avail_res_info(struct drm_connector *conn,
 	avail_res->max_mixer_width = sde_kms->catalog->max_mixer_width;
 }
 
+int sde_connector_get_lm_cnt_from_topology(struct drm_connector *conn,
+		const struct drm_display_mode *drm_mode)
+{
+	struct sde_connector *c_conn;
+
+	c_conn = to_sde_connector(conn);
+
+	if (!c_conn || c_conn->connector_type != DRM_MODE_CONNECTOR_DSI ||
+		!c_conn->ops.get_num_lm_from_mode)
+		return -EINVAL;
+
+	return c_conn->ops.get_num_lm_from_mode(c_conn->display, drm_mode);
+}
+
 int sde_connector_get_mode_info(struct drm_connector *conn,
 		const struct drm_display_mode *drm_mode,
 		struct msm_mode_info *mode_info)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d]: " fmt, __func__, __LINE__
@@ -299,8 +299,8 @@ static int _sde_power_data_bus_set_quota(
 	for (i = 0; i < paths; i++) {
 		if (pdbus->data_bus_hdl[i]) {
 			rc = icc_set_bw(pdbus->data_bus_hdl[i],
-					Bps_to_icc(in_ab_quota),
-					Bps_to_icc(in_ib_quota));
+				kBps_to_icc(div_u64(in_ab_quota, 1000)),
+				kBps_to_icc(div_u64(in_ib_quota, 1000)));
 			if (rc)
 				goto err;
 		}
@@ -316,8 +316,8 @@ err:
 	for (; i >= 0; --i)
 		if (pdbus->data_bus_hdl[i])
 			icc_set_bw(pdbus->data_bus_hdl[i],
-				   Bps_to_icc(pdbus->curr_val.ab),
-				   Bps_to_icc(pdbus->curr_val.ib));
+				kBps_to_icc(div_u64(pdbus->curr_val.ab, 1000)),
+				kBps_to_icc(div_u64(pdbus->curr_val.ib, 1000)));
 
 	SDE_ATRACE_END("msm_bus_scale_req");
 	pr_err("failed to set data bus vote ab=%llu ib=%llu rc=%d\n",
@@ -530,8 +530,9 @@ static int sde_power_reg_bus_update(struct sde_power_reg_bus_handle *reg_bus,
 
 	if (reg_bus->reg_bus_hdl) {
 		SDE_ATRACE_BEGIN("msm_bus_scale_req");
-		rc = icc_set_bw(reg_bus->reg_bus_hdl, Bps_to_icc(ab_quota),
-				Bps_to_icc(ib_quota));
+		rc = icc_set_bw(reg_bus->reg_bus_hdl,
+				kBps_to_icc(div_u64(ab_quota, 1000)),
+				kBps_to_icc(div_u64(ib_quota, 1000)));
 		SDE_ATRACE_END("msm_bus_scale_req");
 	}
 

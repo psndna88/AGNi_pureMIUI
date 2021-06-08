@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __SDE_ROTATOR_BASE_H__
@@ -48,6 +48,7 @@
 #define SDE_MDP_HW_REV_600	SDE_MDP_REV(6, 0, 0)    /* msmnile+ v1.0 */
 #define SDE_MDP_HW_REV_630	SDE_MDP_REV(6, 3, 0)	/* bengal v1.0 */
 #define SDE_MDP_HW_REV_660	SDE_MDP_REV(6, 6, 0)	/* holi */
+#define SDE_MDP_HW_REV_690	SDE_MDP_REV(6, 9, 0)	/* blair */
 
 #define SDE_MDP_VBIF_4_LEVEL_REMAPPER	4
 #define SDE_MDP_VBIF_8_LEVEL_REMAPPER	8

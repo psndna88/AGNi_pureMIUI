@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _SDE_CONNECTOR_H_
@@ -382,6 +382,14 @@ struct sde_connector_ops {
 	 * Returns: Qsync min fps value on success
 	 */
 	int (*get_qsync_min_fps)(void *display, u32 mode_fps);
+
+	/**
+	 * get_num_lm_from_mode - Get LM count from topology for this drm mode
+	 * @display: Pointer to private display structure
+	 * @mode: Pointer to drm mode info structure
+	 */
+	int (*get_num_lm_from_mode)(void *display, const struct drm_display_mode *mode);
+
 };
 
 /**
@@ -980,6 +988,15 @@ int sde_connector_helper_reset_custom_properties(
  */
 int sde_connector_state_get_mode_info(struct drm_connector_state *conn_state,
 	struct msm_mode_info *mode_info);
+
+/**
+ * sde_connector_get_lm_cnt_from_topology - retrieves the topology info
+ *	from the panel mode and returns the lm count.
+ * conn: Pointer to DRM connector object
+ * drm_mode: Pointer to the drm mode structure
+ */
+int sde_connector_get_lm_cnt_from_topology(struct drm_connector *conn,
+	 const struct drm_display_mode *drm_mode);
 
 /**
  * sde_connector_state_get_topology - get topology from given connector state

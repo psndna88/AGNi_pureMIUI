@@ -2040,7 +2040,7 @@ static int _sde_rm_populate_requirements(
 	 * Set the requirement for LM which has CWB support if CWB is
 	 * found enabled.
 	 */
-	if (!RM_RQ_CWB(reqs) && sde_encoder_in_clone_mode(enc)) {
+	if (!RM_RQ_CWB(reqs) && sde_crtc_state_in_clone_mode(enc, crtc_state)) {
 		reqs->top_ctrl |= BIT(SDE_RM_TOPCTL_CWB);
 
 		/*
@@ -2054,7 +2054,7 @@ static int _sde_rm_populate_requirements(
 			&rm->topology_tbl[SDE_RM_TOPOLOGY_DUALPIPE_3DMERGE];
 
 		num_lm = sde_crtc_get_num_datapath(crtc_state->crtc,
-				conn_state->connector);
+				conn_state->connector, crtc_state);
 
 		if (num_lm == 1)
 			reqs->topology =

@@ -4770,7 +4770,7 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		sde_cfg->mdss_hw_block_size = 0x158;
 		sde_cfg->has_trusted_vm_support = true;
 		sde_cfg->syscache_supported = true;
-	} else if (IS_HOLI_TARGET(hw_rev)) {
+	} else if (IS_HOLI_TARGET(hw_rev) || IS_BLAIR_TARGET(hw_rev)) {
 		sde_cfg->has_cwb_support = false;
 		sde_cfg->has_qsync = true;
 		sde_cfg->perf.min_prefill_lines = 24;
