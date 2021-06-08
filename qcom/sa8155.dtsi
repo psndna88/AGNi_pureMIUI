@@ -120,7 +120,7 @@
 		};
 	};
 
-	ethqos_hw: qcom,ethernet@00020000 {
+	ethqos_hw: qcom,ethernet@20000 {
 		compatible = "qcom,stmmac-ethqos";
 		qcom,arm-smmu;
 		reg = <0x20000 0x10000>,
@@ -204,11 +204,11 @@
 		mbox-names = "aop";
 	};
 
-	hsi2s: qcom,hsi2s {
+	hsi2s: qcom,hsi2s@172c0000 {
 		compatible = "qcom,sa8155-hsi2s", "qcom,hsi2s";
 		number-of-interfaces = <3>;
-		reg = <0x172C0000 0x28000>,
-		      <0x17080000 0xE000>;
+		reg = <0x172c0000 0x28000>,
+		      <0x17080000 0xe000>;
 		reg-names = "lpa_if", "lpass_tcsr";
 		interrupts = <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
 		number-of-rate-detectors = <2>;
@@ -304,6 +304,12 @@
 			pcm-lane-config = <1>;
 		};
 	};
+
+	aop-msg-client {
+		compatible = "qcom,debugfs-qmp-client";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 &usb2_phy0 {
@@ -377,7 +383,7 @@
 	 */
 	/delete-node/ pil_wlan_fw_mem;
 
-	uefi_log: uefi_log@0x9241C000 {
+	uefi_log: uefi_log@9241C000 {
 		reg = <0x0 0x9241C000 0x0 0x10000>;
 		label = "uefi_log";
 	};

@@ -29,6 +29,12 @@
 		read-only;
 		ranges;
 	};
+
+	aop-msg-client {
+		compatible = "qcom,debugfs-qmp-client";
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "aop";
+	};
 };
 
 &qusb_phy0 {
@@ -203,7 +209,7 @@
 };
 
 &reserved_memory {
-	uefi_log: uefi_log@0x9241C000 {
+	uefi_log: uefi_log@9241C000 {
 		reg = <0x0 0x9241C000 0x0 0x10000>;
 		label = "uefi_log";
 	};

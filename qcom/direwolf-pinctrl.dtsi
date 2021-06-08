@@ -1847,4 +1847,43 @@
 			};
 		};
 	};
+
+	bt_en_active: bt_en_active {
+		mux {
+			pins = "gpio126";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio126";
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+
+	conn_power_1p8_active: conn_power_1p8_active {
+		mux {
+			pins = "gpio128";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio128";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	conn_power_pa_active: conn_power_pa_active {
+		mux {
+			pins = "gpio129";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio129";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
 };

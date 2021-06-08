@@ -19,6 +19,8 @@ Required properties :
 			"qcom,monaco-dispcc"
 			"qcom,blair-dispcc"
 			"qcom,scuba-dispcc"
+			"qcom,direwolf-dispcc0"
+			"qcom,direwolf-dispcc1"
 
 - reg : shall contain base register location and length.
 - #clock-cells : from common clock binding, shall contain 1.

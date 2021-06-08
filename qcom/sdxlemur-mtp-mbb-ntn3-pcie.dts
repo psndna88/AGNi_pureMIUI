@@ -3,6 +3,8 @@
 #include "sdxlemur.dtsi"
 #include "sdxlemur-mtp-mbb-ntn3-pcie.dtsi"
 #include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-audio.dtsi"
+#include "sdxlemur-mtp-audio-overlay.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB NTN3 PCIE";
