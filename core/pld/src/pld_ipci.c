@@ -335,6 +335,13 @@ static int pld_ipci_uevent(struct device *dev,
 		data.uevent = PLD_FW_HANG_EVENT;
 		pld_update_hang_evt_data(hang_data, &data);
 		break;
+	case ICNSS_UEVENT_SMMU_FAULT:
+		if (!uevent->data)
+			return -EINVAL;
+		uevent_data = (struct icnss_uevent_fw_down_data *)uevent->data;
+		data.uevent = PLD_SMMU_FAULT;
+		data.fw_down.crashed = uevent_data->crashed;
+		break;
 	default:
 		goto out;
 	}

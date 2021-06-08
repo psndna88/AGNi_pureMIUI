@@ -559,6 +559,16 @@ void mlme_set_discon_reason_n_from_ap(struct wlan_objmgr_psoc *psoc,
 				      uint32_t reason_code);
 
 /**
+ * wlan_get_opmode_from_vdev_id() - Get opmode from vdevid
+ * @psoc: PSOC pointer
+ * @vdev_id: vdev id
+ *
+ * Return: opmode
+ */
+enum QDF_OPMODE wlan_get_opmode_from_vdev_id(struct wlan_objmgr_pdev *pdev,
+					     uint8_t vdev_id);
+
+/**
  * mlme_get_discon_reason_n_from_ap() - Get disconnect reason and from ap flag
  * @psoc: PSOC pointer
  * @vdev_id: vdev id

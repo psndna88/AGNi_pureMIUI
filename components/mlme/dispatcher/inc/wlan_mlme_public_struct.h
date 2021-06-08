@@ -1365,6 +1365,8 @@ struct wlan_mlme_acs {
  * @twt_congestion_timeout: congestion timeout value
  * @enable_twt_24ghz: Enable/disable host TWT when STA is connected in
  * 2.4Ghz
+ * @req_flag: requestor flag enable/disable
+ * @res_flag: responder flag enable/disable
  */
 struct wlan_mlme_cfg_twt {
 	bool is_twt_enabled;
@@ -1378,6 +1380,8 @@ struct wlan_mlme_cfg_twt {
 	bool is_twt_statistics_tgt_cap_enabled;
 	uint32_t twt_congestion_timeout;
 	bool enable_twt_24ghz;
+	bool req_flag;
+	bool res_flag;
 };
 
 /**
@@ -2321,6 +2325,7 @@ enum mlme_reg_srd_master_modes {
  * @enable_pending_chan_list_req: enables/disables scan channel
  * list command to FW till the current scan is complete.
  * @retain_nol_across_regdmn_update: Retain the NOL list across the regdomain.
+ * @enable_nan_on_indoor_channels: Enable nan on Indoor channels
  */
 struct wlan_mlme_reg {
 	uint32_t self_gen_frm_pwr;
@@ -2340,6 +2345,7 @@ struct wlan_mlme_reg {
 	bool ignore_fw_reg_offload_ind;
 	bool enable_pending_chan_list_req;
 	bool retain_nol_across_regdmn_update;
+	bool enable_nan_on_indoor_channels;
 };
 
 /**
