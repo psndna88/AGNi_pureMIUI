@@ -16,6 +16,7 @@
 #include <linux/workqueue.h>
 #include <linux/nvmem-consumer.h>
 #include <linux/slab.h>
+#include <soc/qcom/boot_stats.h>
 #include <soc/qcom/subsystem_restart.h>
 
 #define Q6_PIL_GET_DELAY_MS 100
@@ -172,6 +173,7 @@ load_adsp:
 	{
 		adsp_state = apr_get_q6_state();
 		if (adsp_state == APR_SUBSYS_DOWN) {
+			place_marker("M - Start ADSP");
 			priv = platform_get_drvdata(pdev);
 			if (!priv) {
 				dev_err(&pdev->dev,

@@ -4697,7 +4697,7 @@ static struct snd_soc_dai_driver msm_dai_q6_afe_rx_dai[] = {
 			 .formats = SNDRV_PCM_FMTBIT_S16_LE |
 			 SNDRV_PCM_FMTBIT_S24_LE,
 			 .channels_min = 1,
-			 .channels_max = 2,
+			 .channels_max = 10,
 			 .rate_min =     8000,
 			 .rate_max =	48000,
 		},
