@@ -2885,7 +2885,7 @@ static int ipa3_lan_rx_pyld_hdlr(struct sk_buff *skb,
 	unsigned long ptr;
 
 	IPA_DUMP_BUFF(skb->data, 0, skb->len);
-
+	trace_ipa3_lan_rx_pyld_hdlr_entry(skb,sys->ep->client);
 	if (skb->len == 0) {
 		IPAERR("ZLT packet arrived to AP\n");
 		goto out;
@@ -3167,6 +3167,7 @@ begin:
 
 out:
 	ipa3_skb_recycle(skb);
+	trace_ipa3_lan_rx_pyld_hdlr_exit(sys->ep->client);
 	return 0;
 }
 
@@ -3433,6 +3434,7 @@ void ipa3_lan_rx_cb(void *priv, enum ipa_dp_evt_type evt, unsigned long data)
 	void *client_priv;
 
 	ipahal_pkt_status_parse_thin(rx_skb->data, &status);
+	trace_ipa3_lan_rx_cb_entry(status.endp_src_idx);
 	src_pipe = status.endp_src_idx;
 	metadata = status.metadata;
 	ucp = status.ucp;
@@ -3474,6 +3476,7 @@ void ipa3_lan_rx_cb(void *priv, enum ipa_dp_evt_type evt, unsigned long data)
 		dev_kfree_skb_any(rx_skb);
 	}
 
+	trace_ipa3_lan_rx_cb_exit(status.endp_src_idx);
 }
 
 static void ipa3_recycle_rx_wrapper(struct ipa3_rx_pkt_wrapper *rx_pkt)
@@ -5246,6 +5249,7 @@ int ipa3_lan_rx_poll(u32 clnt_hdl, int weight)
 		return cnt;
 	}
 	ep = &ipa3_ctx->ep[clnt_hdl];
+	trace_ipa3_napi_poll_entry(ep->client);
 
 start_poll:
 	/*
@@ -5285,6 +5289,7 @@ start_poll:
 		IPA_ACTIVE_CLIENTS_DEC_EP_NO_BLOCK(ep->client);
 	}
 
+	trace_ipa3_napi_poll_exit(ep->client, cnt, ep->sys->len);
 	return cnt;
 }
 
@@ -5387,7 +5392,7 @@ start_poll:
 		IPADBG_LOW("Client = %d not replenished free descripotrs\n",
 				ep->client);
 	}
-	trace_ipa3_napi_poll_exit(ep->client);
+	trace_ipa3_napi_poll_exit(ep->client, cnt, ep->sys->len);
 	return cnt;
 }
 

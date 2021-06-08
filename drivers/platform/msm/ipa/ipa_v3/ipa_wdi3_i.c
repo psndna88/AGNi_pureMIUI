@@ -484,7 +484,7 @@ static int ipa3_wdi_gsi_db(phys_addr_t* db_addr, struct ipa3_ep_context *ep_ctx)
 	/* write channel scratch */
 	memset(&gsi_ch_scratch, 0, sizeof(gsi_ch_scratch));
 	gsi_ch_scratch.wdi3.db_addr_wp_lsb = (u32)mem.phys_base;
-	gsi_ch_scratch.wdi3.db_addr_wp_msb = (u32)(mem.phys_base >> 32);
+	gsi_ch_scratch.wdi3.db_addr_wp_msb = (u32)((mem.phys_base & 0xFFFFFFFF00000000) >> 32);
 	IPADBG("gsi written lsb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_lsb);
 	IPADBG("gsi written msb value  0x%x\n", gsi_ch_scratch.wdi3.db_addr_wp_msb);
 
@@ -568,6 +568,22 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	else
 		IPADBG("wdi_notify is null\n");
 #endif
+
+	/* start uC event ring */
+	if ((ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5 &&
+		ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) ||
+		ipa3_ctx->is_bw_monitor_supported) {
+		if (ipa3_ctx->uc_ctx.uc_loaded &&
+			!ipa3_ctx->uc_ctx.uc_event_ring_valid) {
+			if (ipa3_uc_setup_event_ring())	{
+				IPAERR("failed to set uc_event ring\n");
+				return -EFAULT;
+			}
+		} else
+			IPAERR("uc-loaded %d, ring-valid %d\n",
+			ipa3_ctx->uc_ctx.uc_loaded,
+			ipa3_ctx->uc_ctx.uc_event_ring_valid);
+	}
 
 	/* setup rx ep cfg */
 	ep_rx->valid = 1;
@@ -847,22 +863,6 @@ int ipa3_enable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	ep_rx = &ipa3_ctx->ep[ipa_ep_idx_rx];
 
 	IPA_ACTIVE_CLIENTS_INC_EP(ipa3_get_client_mapping(ipa_ep_idx_tx));
-
-	/* start uC event ring */
-	if ((ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5 &&
-		ipa3_ctx->ipa_hw_type != IPA_HW_v4_11) ||
-		ipa3_ctx->is_bw_monitor_supported) {
-		if (ipa3_ctx->uc_ctx.uc_loaded &&
-			!ipa3_ctx->uc_ctx.uc_event_ring_valid) {
-			if (ipa3_uc_setup_event_ring())	{
-				IPAERR("failed to set uc_event ring\n");
-				return -EFAULT;
-			}
-		} else
-			IPAERR("uc-loaded %d, ring-valid %d\n",
-			ipa3_ctx->uc_ctx.uc_loaded,
-			ipa3_ctx->uc_ctx.uc_event_ring_valid);
-	}
 
 	/* enable data path */
 	result = ipa3_enable_data_path(ipa_ep_idx_rx);
