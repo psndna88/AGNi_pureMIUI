@@ -12134,9 +12134,9 @@ static int cmd_sta_set_rfeature_vht(const char *intf, struct sigma_dut *dut,
 }
 
 
-static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
+			struct sigma_conn *conn, struct sigma_cmd *cmd)
 {
 	const char *val;
 	char *token = NULL, *result;
@@ -12150,7 +12150,7 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 
 		token = strdup(val);
 		if (!token)
-			return -2;
+			return ERROR_SEND_STATUS;
 
 		result = strtok_r(token, ";", &saveptr);
 		if (!result) {
@@ -12246,19 +12246,19 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,GI value not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		if (system(buf) != 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set shortgi");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		snprintf(buf, sizeof(buf), "iwpriv %s shortgi %d",
 				intf, fix_rate_sgi);
 		if (system(buf) != 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Failed to set fix rate shortgi");
-			return STATUS_SENT;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -12274,12 +12274,12 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode, LTF value not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 #else /* NL80211_SUPPORT */
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"LTF cannot be set without NL80211_SUPPORT defined");
-		return -2;
+		return ERROR_SEND_STATUS;
 #endif /* NL80211_SUPPORT */
 	}
 
@@ -12295,7 +12295,7 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, set_val)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set Tx SU PPDU config");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -12321,13 +12321,13 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			if (sta_twt_request(dut, conn, cmd)) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,TWT setup failed");
-				return STATUS_SENT;
+				return STATUS_SENT_ERROR;
 			}
 		} else if (strcasecmp(val, "Teardown") == 0) {
 			if (sta_twt_teardown(dut, conn, cmd)) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,TWT teardown failed");
-				return STATUS_SENT;
+				return STATUS_SENT_ERROR;
 			}
 		}
 	}
@@ -12353,7 +12353,7 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 	if (val && sta_transmit_omi(dut, conn, cmd)) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,sta_transmit_omi failed");
-		return STATUS_SENT;
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "Powersave");
@@ -12368,10 +12368,10 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Unsupported Powersave value '%s'",
 					val);
-			return -1;
+			return INVALID_SEND_STATUS;
 		}
 		if (set_power_save_wcn(dut, intf, ps) < 0)
-			return 0;
+			return ERROR_SEND_STATUS;
 	}
 
 	val = get_param(cmd, "MU_EDCA");
@@ -12399,17 +12399,17 @@ static int wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 	if (val && mbo_set_cellular_data_capa(dut, conn, intf, atoi(val)) == 0)
 		return STATUS_SENT;
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 
 failed:
 	free(token);
-	return -2;
+	return ERROR_SEND_STATUS;
 }
 
 
-static int cmd_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
-				   struct sigma_conn *conn,
-				   struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
+			struct sigma_conn *conn, struct sigma_cmd *cmd)
 {
 	switch (get_driver_type(dut)) {
 	case DRIVER_WCN:
@@ -12417,7 +12417,7 @@ static int cmd_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 	default:
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Unsupported sta_set_rfeature(HE) with the current driver");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 }
 
