@@ -3,6 +3,7 @@
  *  linux/fs/proc/base.c
  *
  *  Copyright (C) 1991, 1992 Linus Torvalds
+ *  Copyright (C) 2020 XiaoMi, Inc.
  *
  *  proc base directory handling functions
  *
@@ -1050,6 +1051,7 @@ static ssize_t oom_adj_read(struct file *file, char __user *buf, size_t count,
 
 static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 {
+	static DEFINE_MUTEX(oom_adj_mutex);
 	struct mm_struct *mm = NULL;
 	struct task_struct *task;
 	int err = 0;

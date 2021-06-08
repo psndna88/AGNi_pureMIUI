@@ -78,7 +78,7 @@ static int SPIDEV_MAJOR;
 
 static DECLARE_BITMAP(minors, N_SPI_MINORS);
 static LIST_HEAD(device_list);
-static DEFINE_RT_MUTEX(device_list_lock);
+static DEFINE_MUTEX(device_list_lock);
 //static struct wake_lock fp_wakelock;
 static struct wakeup_source fp_ws;//for kernel 4.9
 static struct gf_dev gf;
@@ -355,7 +355,6 @@ static irqreturn_t gf_irq(int irq, void *handle)
 	msg[0] = GF_NET_EVENT_IRQ;
 	sendnlmsg(msg);
 	if (gf_dev->device_available == 1) {
-		pr_info("%s:shedule_work\n", __func__);
 		gf_dev->wait_finger_down = false;
 		schedule_work(&gf_dev->work);
 	}
@@ -396,9 +395,41 @@ static void irq_cleanup(struct gf_dev *gf_dev)
 	free_irq(gf_dev->irq, gf_dev);
 }
 
+static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
+{
+	uint32_t key_input = 0;
+
+	if (gf_key->key == GF_KEY_HOME) {
+		key_input = KEY_KPENTER;
+	} else if (gf_key->key == GF_KEY_POWER) {
+		key_input = KEY_KPENTER;
+	} else if (gf_key->key == GF_KEY_CAMERA) {
+		key_input = GF_KEY_INPUT_CAMERA;
+	} else {
+		/* add special key define */
+		key_input = gf_key->key;
+	}
+	pr_debug("%s: received key event[%d], key=%d, value=%d\n",
+			__func__, key_input, gf_key->key, gf_key->value);
+
+	if ((GF_KEY_POWER == gf_key->key || GF_KEY_CAMERA == gf_key->key)
+			&& (gf_key->value == 1)) {
+		input_report_key(gf_dev->input, key_input, 1);
+		input_sync(gf_dev->input);
+		input_report_key(gf_dev->input, key_input, 0);
+		input_sync(gf_dev->input);
+	}
+
+	if (gf_key->key == GF_KEY_HOME) {
+		input_report_key(gf_dev->input, key_input, gf_key->value);
+		input_sync(gf_dev->input);
+	}
+}
+
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gf_dev *gf_dev = &gf;
+	struct gf_key gf_key;
 #if defined(SUPPORT_NAV_EVENT)
 	gf_nav_event_t nav_event = GF_NAV_NONE;
 #endif
@@ -418,6 +449,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case GF_IOC_INIT:
+		pr_debug("%s GF_IOC_INIT\n", __func__);
 		if (copy_to_user((void __user *)arg, (void *)&netlink_route, sizeof(u8))) {
 			pr_err("GF_IOC_INIT failed\n");
 			retval = -EFAULT;
@@ -442,6 +474,16 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case GF_IOC_RESET:
 		pr_debug("%s GF_IOC_RESET\n", __func__);
 		gf_hw_reset(gf_dev, 3);
+		break;
+
+	case GF_IOC_INPUT_KEY_EVENT:
+		if (copy_from_user(&gf_key, (void __user *)arg, sizeof(struct gf_key))) {
+			pr_debug("failed to copy input key event from user to kernel\n");
+			retval = -EFAULT;
+			break;
+		}
+
+		gf_kernel_key_input(gf_dev, &gf_key);
 		break;
 
 #if defined(SUPPORT_NAV_EVENT)
@@ -546,7 +588,7 @@ static int gf_open(struct inode *inode, struct file *filp)
 	struct gf_dev *gf_dev = &gf;
 	int status = -ENXIO;
 
-	rt_mutex_lock(&device_list_lock);
+	mutex_lock(&device_list_lock);
 
 	list_for_each_entry(gf_dev, &device_list, device_entry) {
 		if (gf_dev->devt == inode->i_rdev) {
@@ -578,13 +620,13 @@ static int gf_open(struct inode *inode, struct file *filp)
 	} else {
 		pr_info("No device for minor %d\n", iminor(inode));
 	}
-	rt_mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 
 	return status;
 err_irq:
 	gf_cleanup(gf_dev);
 err_parse_dt:
-	rt_mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 	return status;
 }
 
@@ -618,7 +660,7 @@ static int gf_release(struct inode *inode, struct file *filp)
 	struct gf_dev *gf_dev = &gf;
 	int status = 0;
 
-	rt_mutex_lock(&device_list_lock);
+	mutex_lock(&device_list_lock);
 	gf_dev = filp->private_data;
 	filp->private_data = NULL;
 
@@ -634,7 +676,7 @@ static int gf_release(struct inode *inode, struct file *filp)
 		gf_dev->device_available = 0;
 		gf_power_off(gf_dev);
 	}
-	rt_mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 	return status;
 }
 
@@ -740,7 +782,7 @@ static int gf_probe(struct platform_device *pdev)
 	/* If we can allocate a minor number, hook up this device.
 	 * Reusing minors is fine so long as udev or mdev is working.
 	 */
-	rt_mutex_lock(&device_list_lock);
+	mutex_lock(&device_list_lock);
 	minor = find_first_zero_bit(minors, N_SPI_MINORS);
 	if (minor < N_SPI_MINORS) {
 		struct device *dev;
@@ -752,7 +794,7 @@ static int gf_probe(struct platform_device *pdev)
 	} else {
 		dev_dbg(&gf_dev->spi->dev, "no minor number available!\n");
 		status = -ENODEV;
-		rt_mutex_unlock(&device_list_lock);
+		mutex_unlock(&device_list_lock);
 		goto error_hw;
 	}
 
@@ -764,7 +806,7 @@ static int gf_probe(struct platform_device *pdev)
 		gf_dev->devt = 0;
 		goto error_hw;
 	}
-	rt_mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 
   
 	gf_dev->input = input_allocate_device();
@@ -826,11 +868,11 @@ error_input:
 error_dev:
 	if (gf_dev->devt != 0) {
 		pr_info("Err: status = %d\n", status);
-		rt_mutex_lock(&device_list_lock);
+		mutex_lock(&device_list_lock);
 		list_del(&gf_dev->device_entry);
 		device_destroy(gf_class, gf_dev->devt);
 		clear_bit(MINOR(gf_dev->devt), minors);
-		rt_mutex_unlock(&device_list_lock);
+		mutex_unlock(&device_list_lock);
 	}
 error_hw:
 	gf_dev->device_available = 0;
@@ -854,12 +896,12 @@ static int gf_remove(struct platform_device *pdev)
 	input_free_device(gf_dev->input);
 
 	/* prevent new opens */
-	rt_mutex_lock(&device_list_lock);
+	mutex_lock(&device_list_lock);
 	list_del(&gf_dev->device_entry);
 	device_destroy(gf_class, gf_dev->devt);
 	clear_bit(MINOR(gf_dev->devt), minors);
 	remove_proc_entry(PROC_NAME,NULL);
-	rt_mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 
 	return 0;
 }
