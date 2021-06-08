@@ -39,11 +39,9 @@
 static DEFINE_IDR(zram_index_idr);
 /* idr index must be protected */
 static DEFINE_MUTEX(zram_index_mutex);
-extern char devicezramcompressor;
-extern int devicezramsizegb;
 
 static int zram_major;
-static char *default_compressor;
+static const char *default_compressor = CONFIG_ZRAM_DEFAULT_COMP_ALGORITHM;
 
 /* Module params (documentation at end) */
 static unsigned int num_devices = 1;
@@ -1829,8 +1827,14 @@ static ssize_t disksize_store(struct device *dev,
 	struct zram *zram = dev_to_zram(dev);
 	int err;
 
-	disksize = (u64)SZ_1G * devicezramsizegb;
+#ifndef CONFIG_ZRAM_SIZE_OVERRIDE
+	disksize = memparse(buf, NULL);
+	if (!disksize)
+		return -EINVAL;
+#else
+	disksize = (u64)SZ_1G * CONFIG_ZRAM_SIZE_OVERRIDE;
 	pr_info("Overriding zram size to %li", disksize);
+#endif
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
@@ -2214,7 +2218,6 @@ static int __init zram_init(void)
 {
 	int ret;
 
-	*default_compressor = devicezramcompressor;
 	ret = cpuhp_setup_state_multi(CPUHP_ZCOMP_PREPARE, "block/zram:prepare",
 				      zcomp_cpu_up_prepare, zcomp_cpu_dead);
 	if (ret < 0)

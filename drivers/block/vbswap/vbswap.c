@@ -29,7 +29,6 @@ static int vbswap_major;
 static struct gendisk *vbswap_disk;
 static u64 vbswap_disksize;
 static struct page *swap_header_page;
-extern int devicezramsizegb;
 
 /*
  * Check if request is within bounds and aligned on vbswap logical blocks.
@@ -250,7 +249,7 @@ static struct attribute_group vbswap_disk_attr_group = {
 
 static void set_disksize(void)
 {
-	vbswap_disksize = PAGE_ALIGN((u64)SZ_1G * devicezramsizegb);
+	vbswap_disksize = PAGE_ALIGN((u64)SZ_1G * CONFIG_VBSWAP_DISKSIZE);
 	set_capacity(vbswap_disk, vbswap_disksize >> SECTOR_SHIFT);
 	pr_info("created vbswap device with size %llu\n", vbswap_disksize);
 }
