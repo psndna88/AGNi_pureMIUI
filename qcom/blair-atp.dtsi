@@ -40,155 +40,414 @@
 	/* Disable all PM6125 and PMR735a rpm-regulators */
 	rpm-regulator-smpa6 {
 		status = "disabled";
+		regulator-s6 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-smpa7 {
 		status = "disabled";
+		regulator-s7 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-smpa8 {
 		status = "disabled";
+		regulator-s8 {
+			status = "disabled";
+		};
+
+		S3A_LEVEL {
+			status = "disabled";
+		};
+
+		S3A_LEVEL_ao {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa1 {
 		status = "disabled";
+		regulator-l1 {
+			status = "disabled";
+		};
+
+		regulator-l1-level {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa2 {
 		status = "disabled";
+		regulator-l2 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa3 {
 		status = "disabled";
+		regulator-l3 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa4 {
 		status = "disabled";
+		regulator-l4 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa5 {
 		status = "disabled";
+		regulator-l5 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa6 {
 		status = "disabled";
+		regulator-l6 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa7 {
 		status = "disabled";
+		regulator-l7 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa8 {
 		status = "disabled";
+		regulator-l8 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa9 {
 		status = "disabled";
+		regulator-l9 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa10 {
 		status = "disabled";
+		regulator-l10 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa11 {
 		status = "disabled";
+		regulator-l11 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa12 {
 		status = "disabled";
+		regulator-l12 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa13 {
 		status = "disabled";
+		regulator-l13 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa14 {
 		status = "disabled";
+		regulator-l14 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa15 {
 		status = "disabled";
+		regulator-l15 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa16 {
 		status = "disabled";
+		regulator-l16 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa17 {
 		status = "disabled";
+		regulator-l17 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa18 {
 		status = "disabled";
+		regulator-l18 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa19 {
 		status = "disabled";
+		regulator-l19 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa20 {
 		status = "disabled";
+		regulator-l20 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa21 {
 		status = "disabled";
+		regulator-l21 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa22 {
 		status = "disabled";
+		regulator-l22 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa23 {
 		status = "disabled";
+		regulator-l23 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoa24 {
 		status = "disabled";
+		regulator-l24 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-smpe1 {
 		status = "disabled";
+		regulator-s1 {
+			status = "disabled";
+		};
+
+		mx_cdev {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-smpe2 {
 		status = "disabled";
+		regulator-s2 {
+			status = "disabled";
+		};
+
+		regulator-s2-level {
+			status = "disabled";
+		};
+
+		regulator-s2-floor-level {
+			status = "disabled";
+		};
+
+		regulator-s2-level-ao {
+			status = "disabled";
+		};
+
+		cx_cdev {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe1 {
 		status = "disabled";
+		regulator-l1 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe2 {
 		status = "disabled";
+		regulator-l2 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe3 {
 		status = "disabled";
+		regulator-l3 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe4 {
 		status = "disabled";
+		regulator-l4 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe5 {
 		status = "disabled";
+		regulator-l5 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe6 {
 		status = "disabled";
+		regulator-l6 {
+			status = "disabled";
+		};
 	};
 
 	rpm-regulator-ldoe7 {
 		status = "disabled";
+		regulator-l7 {
+			status = "disabled";
+		};
 	};
 };
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+	vdda-phy-max-microamp = <85700>;
 };
 
 #include "pm6350-rpm-regulator.dtsi"
 #include "pm6150l-rpm-regulator.dtsi"
 #include "holi-regulators-pm6350.dtsi"
 
+/* Enable explicitly disabled regulator resources nodes */
+&rpm_bus {
+	/* Enable gfx_cdev for PM6350 */
+	rpm-regulator-smpa3 {
+		regulator-s3-level {
+			status = "okay";
+		};
+
+		regulator-s3-level-ao {
+			status = "okay";
+		};
+
+		gfx-cdev {
+			status = "okay";
+		};
+	};
+
+	/* Enable mx_cdev for PM6350 */
+	rpm-regulator-smpa5 {
+		regulator-s5-level {
+			status = "okay";
+		};
+
+		regulator-s5-floor-level {
+			status = "okay";
+		};
+
+		regulator-s5-level-ao {
+			status = "okay";
+		};
+
+		mx-cdev-lvl {
+			status = "okay";
+		};
+	};
+
+	/* Enable mx_cdev for PM6150A */
+	rpm-regulator-smpe1 {
+		cx-cdev-lvl {
+			status = "okay";
+		};
+	};
+};
+
 #include "holi-atp.dtsi"
+
+&qusb_phy0 {
+	vdd-supply = <&L18A>;
+	vdda18-supply = <&L2A>;
+	vdda33-supply = <&L3A>;
+	refgen-supply = <&L22A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L16A>;
+	core-supply = <&L22A>;
+};
+
+&icnss {
+	vdd-cx-mx-supply = <&L4A>;
+	vdd-1.8-xo-supply = <&L7A>;
+	vdd-1.3-rfa-supply = <&L2E>;
+	vdd-3.3-ch1-supply = <&L11E>;
+	vdd-3.3-ch0-supply = <&L10E>;
+	qcom,vdd-cx-mx-config = <640000 640000>;
+	qcom,vdd-3.3-ch1-config = <3000000 3312000>;
+	qcom,vdd-3.3-ch0-config = <3000000 3312000>;
+};
+
+&bluetooth {
+	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
+	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
+	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
+	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
+
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&S5A_LEVEL>;
+};
+
+&dispcc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpucc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S5A_LEVEL>; /* VDD_MX_LEVEL */
+	vdd_gx-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gpu_cx_gdsc {
+	parent-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&gpu_gx_gdsc {
+	parent-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&gcc {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+	vdd_mx-supply = <&S5A_LEVEL>; /* VDD_MX_LEVEL */
+};
+
+&msm_gpu {
+	vdd-parent-supply = <&S3A_LEVEL>; /* VDD_GFX_LEVEL */
+};
+
+&pil_turing {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_modem {
+	vdd_cx-supply = <&S1E_LEVEL>; /* VDD_CX_LEVEL */
+};
+
+&pil_lpass {
+	vdd_lpi_cx-supply = <&L1A_LEVEL>;
+	vdd_lpi_mx-supply = <&L17A_LEVEL>;
+};

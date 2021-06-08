@@ -30,11 +30,11 @@
 		ranges;
 	};
 
-	hsi2s: qcom,hsi2s {
+	hsi2s: qcom,hsi2s@172c0000 {
 		compatible = "qcom,sa8195-hsi2s", "qcom,hsi2s";
 		number-of-interfaces = <3>;
-		reg = <0x172C0000 0x28000>,
-		      <0x17080000 0xE000>;
+		reg = <0x172c0000 0x28000>,
+		      <0x17080000 0xe000>;
 		reg-names = "lpa_if", "lpass_tcsr";
 		interrupts = <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
 		number-of-rate-detectors = <2>;

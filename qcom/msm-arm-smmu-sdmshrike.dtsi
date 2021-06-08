@@ -1,9 +1,9 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 &soc {
-	kgsl_smmu: kgsl-smmu@0x02CA0000 {
+	kgsl_smmu: kgsl-smmu@2ca0000 {
 		compatible = "qcom,qsmmu-v500";
-		reg = <0x02CA0000 0x10000>,
+		reg = <0x2ca0000 0x10000>,
 			<0x2CC2000 0x20>;
 		reg-names = "base", "tcu-base";
 		#iommu-cells = <2>;
@@ -35,40 +35,40 @@
 				<GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 687 IRQ_TYPE_LEVEL_HIGH>;
 
-		gfx_0_tbu: gfx_0_tbu@0x2CC5000 {
+		gfx_0_tbu: gfx_0_tbu@2cc5000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x2CC5000 0x1000>,
-				<0x2CC2200 0x8>;
+			reg = <0x2cc5000 0x1000>,
+				<0x2cc2200 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x0 0x400>;
 		};
 
-		gfx_1_tbu: gfx_1_tbu@0x2CC9000 {
+		gfx_1_tbu: gfx_1_tbu@2cc9000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x2CC9000 0x1000>,
-				<0x2CC2208 0x8>;
+			reg = <0x2cc9000 0x1000>,
+				<0x2cc2208 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x400 0x400>;
 		};
 
-		gfx_2_tbu: gfx_2_tbu@0x2CCD000 {
+		gfx_2_tbu: gfx_2_tbu@2ccd000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x2CCD000 0x1000>,
-				<0x2CC2210 0x8>;
+			reg = <0x2ccd000 0x1000>,
+				<0x2cc2210 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x800 0x400>;
 		};
 
-		gfx_3_tbu: gfx_3_tbu@0x2CD1000 {
+		gfx_3_tbu: gfx_3_tbu@2cd1000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x2CD1000 0x1000>,
-				<0x2CC2218 0x8>;
+			reg = <0x2cd1000 0x1000>,
+				<0x2cc2218 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0xC00 0x400>;
 		};
 	};
 
-	apps_smmu: apps-smmu@0x15000000 {
+	apps_smmu: apps-smmu@15000000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x15000000 0x100000>,
 			<0x15182000 0x20>;
@@ -213,7 +213,7 @@
 		interconnects = <&system_noc MASTER_GEM_NOC_SNOC
 				 &config_noc SLAVE_IMEM_CFG>;
 
-		anoc_1_tbu: anoc_1_tbu@0x15185000 {
+		anoc_1_tbu: anoc_1_tbu@15185000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15185000 0x1000>,
 				<0x15182200 0x8>;
@@ -226,7 +226,7 @@
 					 &config_noc SLAVE_IMEM_CFG>;
 		};
 
-		anoc_2_tbu: anoc_2_tbu@0x15189000 {
+		anoc_2_tbu: anoc_2_tbu@15189000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15189000 0x1000>,
 				<0x15182208 0x8>;
@@ -239,9 +239,9 @@
 					 &config_noc SLAVE_IMEM_CFG>;
 		};
 
-		mnoc_hf_0_tbu: mnoc_hf_0_tbu@0x1518D000 {
+		mnoc_hf_0_tbu: mnoc_hf_0_tbu@1518d000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x1518D000 0x1000>,
+			reg = <0x1518d000 0x1000>,
 				<0x15182210 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x800 0x400>;
@@ -252,7 +252,7 @@
 					 &mmss_noc SLAVE_MNOC_HF_MEM_NOC>;
 		};
 
-		mnoc_hf_1_tbu: mnoc_hf_1_tbu@0x15191000 {
+		mnoc_hf_1_tbu: mnoc_hf_1_tbu@15191000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15191000 0x1000>,
 				<0x15182218 0x8>;
@@ -265,7 +265,7 @@
 					 &mmss_noc SLAVE_MNOC_HF_MEM_NOC>;
 		};
 
-		compute_dsp_1_tbu: compute_dsp_1_tbu@0x15195000 {
+		compute_dsp_1_tbu: compute_dsp_1_tbu@15195000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15195000 0x1000>,
 				<0x15182220 0x8>;
@@ -276,7 +276,7 @@
 					 &compute_noc SLAVE_CDSP_MEM_NOC>;
 		};
 
-		compute_dsp_0_tbu: compute_dsp_0_tbu@0x15199000 {
+		compute_dsp_0_tbu: compute_dsp_0_tbu@15199000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15199000 0x1000>,
 				<0x15182228 0x8>;
@@ -287,9 +287,9 @@
 					 &compute_noc SLAVE_CDSP_MEM_NOC>;
 		};
 
-		adsp_tbu: adsp_tbu@0x1519D000 {
+		adsp_tbu: adsp_tbu@1519d000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x1519D000 0x1000>,
+			reg = <0x1519d000 0x1000>,
 				<0x15182230 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1800 0x400>;
@@ -300,9 +300,9 @@
 					 &config_noc SLAVE_IMEM_CFG>;
 		};
 
-		anoc_pcie: anoc_pcie@151A1000 {
+		anoc_pcie: anoc_pcie@151a1000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x151A1000 0x1000>,
+			reg = <0x151a1000 0x1000>,
 				<0x15182238 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x1c00 0x400>;
@@ -315,9 +315,9 @@
 					 &config_noc SLAVE_IMEM_CFG>;
 		};
 
-		mnoc_sf_0_tbu: mnoc_sf_0_tbu@0x151A5000 {
+		mnoc_sf_0_tbu: mnoc_sf_0_tbu@151a5000 {
 			compatible = "qcom,qsmmuv500-tbu";
-			reg = <0x151A5000 0x1000>,
+			reg = <0x151a5000 0x1000>,
 				<0x15182240 0x8>;
 			reg-names = "base", "status-reg";
 			qcom,stream-id-range = <0x2000 0x400>;

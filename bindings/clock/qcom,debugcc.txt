@@ -17,6 +17,7 @@ Required properties :
 			"qcom,direwolf-debugcc"
 			"qcom,blair-debugcc"
 			"qcom,scuba-debugcc"
+			"qcom,qcs404-debugcc"
 
 - qcom,gcc: phandle to the GCC device node.
 - qcom,videocc: phandle to the Video CC device node.

@@ -1,7 +1,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 &soc {
-	kgsl_smmu: kgsl-smmu@0x50a0000 {
+	kgsl_smmu: kgsl-smmu@50a0000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x50a0000 0x10000>,
 			<0x50c2000 0x20>;
@@ -35,7 +35,7 @@
 				<GIC_SPI 596 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 597 IRQ_TYPE_LEVEL_HIGH>;
 
-		gfx_0_tbu: gfx_0_tbu@0x50c5000 {
+		gfx_0_tbu: gfx_0_tbu@50c5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x50c5000 0x1000>,
 				<0x50c2200 0x8>;
@@ -43,7 +43,7 @@
 			qcom,stream-id-range = <0x0 0x400>;
 		};
 
-		gfx_1_tbu: gfx_1_tbu@0x50c9000 {
+		gfx_1_tbu: gfx_1_tbu@50c9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x50c9000 0x1000>,
 				<0x50c2208 0x8>;
@@ -52,7 +52,7 @@
 		};
 	};
 
-	apps_smmu: apps-smmu@0x15000000 {
+	apps_smmu: apps-smmu@15000000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x15000000 0x80000>,
 			<0x150c2000 0x20>;
@@ -135,7 +135,7 @@
 				&config_noc SLAVE_IMEM_CFG>;
 		qcom,active-only;
 
-		anoc_1_tbu: anoc_1_tbu@0x150c5000 {
+		anoc_1_tbu: anoc_1_tbu@150c5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150c5000 0x1000>,
 				<0x150c2200 0x8>;
@@ -148,7 +148,7 @@
 					&config_noc SLAVE_IMEM_CFG>;
 		};
 
-		anoc_2_tbu: anoc_2_tbu@0x150c9000 {
+		anoc_2_tbu: anoc_2_tbu@150c9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150c9000 0x1000>,
 				<0x150c2208 0x8>;
@@ -161,7 +161,7 @@
 					&config_noc SLAVE_IMEM_CFG>;
 		};
 
-		mnoc_hf_0_tbu: mnoc_hf_0_tbu@0x150cd000 {
+		mnoc_hf_0_tbu: mnoc_hf_0_tbu@150cd000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150cd000 0x1000>,
 				<0x150c2210 0x8>;
@@ -174,7 +174,7 @@
 					 &mmss_noc SLAVE_MNOC_HF_MEM_NOC>;
 		};
 
-		mnoc_sf_0_tbu: mnoc_sf_0_tbu@0x150d1000 {
+		mnoc_sf_0_tbu: mnoc_sf_0_tbu@150d1000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d1000 0x1000>,
 				<0x150c2218 0x8>;
@@ -187,7 +187,7 @@
 					&mmss_noc SLAVE_MNOC_SF_MEM_NOC>;
 		};
 
-		compute_dsp_tbu: compute_dsp_tbu@0x150d5000 {
+		compute_dsp_tbu: compute_dsp_tbu@150d5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d5000 0x1000>,
 				<0x150c2220 0x8>;
@@ -199,7 +199,7 @@
 					&config_noc SLAVE_IMEM_CFG>;
 		};
 
-		adsp_tbu: adsp_tbu@0x150d9000 {
+		adsp_tbu: adsp_tbu@150d9000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x150d9000 0x1000>,
 				<0x150c2228 0x8>;
