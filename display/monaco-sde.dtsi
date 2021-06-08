@@ -31,14 +31,13 @@
 			   "sde_imem_phys";
 
 		clocks =
-			<&gcc GCC_DISP_AHB_CLK>,
 			<&gcc GCC_DISP_HF_AXI_CLK>,
 			<&gcc GCC_DISP_THROTTLE_CORE_CLK>,
 			<&dispcc DISP_CC_MDSS_AHB_CLK>,
 			<&dispcc DISP_CC_MDSS_MDP_CLK>,
 			<&dispcc DISP_CC_MDSS_VSYNC_CLK>,
 			<&dispcc DISP_CC_MDSS_MDP_LUT_CLK>;
-		clock-names = "gcc_iface", "gcc_bus", "throttle_clk",
+		clock-names = "gcc_bus", "throttle_clk",
 				"iface_clk", "core_clk", "vsync_clk",
 				"lut_clk";
 		clock-rate = <0 0 0 0 0 256000000 19200000 192000000>;
