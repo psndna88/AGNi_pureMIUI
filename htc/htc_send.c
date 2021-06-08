@@ -1339,18 +1339,32 @@ static void get_htc_send_packets(HTC_TARGET *target,
 				}
 				break;
 			}
+			hif_pm_runtime_update_stats(
+					target->hif_dev, rtpm_dbgid,
+					HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS);
+		}
+
+		ret = hif_system_pm_state_check(target->hif_dev);
+		if (ret) {
+			if (do_pm_get) {
+				hif_pm_runtime_put(target->hif_dev, rtpm_dbgid);
+				hif_pm_runtime_update_stats(
+					target->hif_dev, rtpm_dbgid,
+					HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS);
+			}
+			break;
 		}
 
 		pPacket = htc_packet_dequeue(tx_queue);
 		if (!pPacket) {
-			if (do_pm_get)
+			if (do_pm_get) {
 				hif_pm_runtime_put(target->hif_dev, rtpm_dbgid);
+				hif_pm_runtime_update_stats(
+					target->hif_dev, rtpm_dbgid,
+					HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS);
+			}
 			break;
 		}
-
-		ret = hif_system_pm_state_check(target->hif_dev);
-		if (ret)
-			break;
 
 		AR_DEBUG_PRINTF(ATH_DEBUG_SEND,
 				(" Got packet:%pK , New Queue Depth: %d\n",
@@ -2570,6 +2584,10 @@ void htc_kick_queues(void *context)
 	if (hif_pm_runtime_get_sync(target->hif_dev, RTPM_ID_HTC))
 		return;
 
+	hif_pm_runtime_update_stats(
+			target->hif_dev, RTPM_ID_HTC,
+			HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES);
+
 	for (i = 0; i < ENDPOINT_MAX; i++) {
 		endpoint = &target->endpoint[i];
 
@@ -2585,7 +2603,12 @@ void htc_kick_queues(void *context)
 
 	hif_fastpath_resume(target->hif_dev);
 
-	hif_pm_runtime_put(target->hif_dev, RTPM_ID_HTC);
+	if (hif_pm_runtime_put(target->hif_dev, RTPM_ID_HTC))
+		return;
+
+	hif_pm_runtime_update_stats(
+			target->hif_dev, RTPM_ID_HTC,
+			HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES);
 }
 #endif
 

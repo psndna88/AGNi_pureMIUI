@@ -2624,6 +2624,7 @@ static void dp_soc_interrupt_detach(struct cdp_soc_t *txrx_soc)
 	if (soc->intr_mode == DP_INTR_POLL) {
 		qdf_timer_free(&soc->int_timer);
 	} else {
+		hif_deconfigure_ext_group_interrupts(soc->hif_handle);
 		hif_deregister_exec_group(soc->hif_handle, "dp_intr");
 	}
 
@@ -4775,6 +4776,59 @@ static inline void dp_reo_desc_freelist_destroy(struct dp_soc *soc)
 	qdf_spinlock_destroy(&soc->reo_desc_freelist_lock);
 }
 
+#ifdef WLAN_DP_FEATURE_DEFERRED_REO_QDESC_DESTROY
+/*
+ * dp_reo_desc_deferred_freelist_create() - Initialize the resources used
+ *                                          for deferred reo desc list
+ * @psoc: Datapath soc handle
+ *
+ * Return: void
+ */
+static void dp_reo_desc_deferred_freelist_create(struct dp_soc *soc)
+{
+	qdf_spinlock_create(&soc->reo_desc_deferred_freelist_lock);
+	qdf_list_create(&soc->reo_desc_deferred_freelist,
+			REO_DESC_DEFERRED_FREELIST_SIZE);
+	soc->reo_desc_deferred_freelist_init = true;
+}
+
+/*
+ * dp_reo_desc_deferred_freelist_destroy() - loop the deferred free list &
+ *                                           free the leftover REO QDESCs
+ * @psoc: Datapath soc handle
+ *
+ * Return: void
+ */
+static void dp_reo_desc_deferred_freelist_destroy(struct dp_soc *soc)
+{
+	struct reo_desc_deferred_freelist_node *desc;
+
+	qdf_spin_lock_bh(&soc->reo_desc_deferred_freelist_lock);
+	soc->reo_desc_deferred_freelist_init = false;
+	while (qdf_list_remove_front(&soc->reo_desc_deferred_freelist,
+	       (qdf_list_node_t **)&desc) == QDF_STATUS_SUCCESS) {
+		qdf_mem_unmap_nbytes_single(soc->osdev,
+					    desc->hw_qdesc_paddr,
+					    QDF_DMA_BIDIRECTIONAL,
+					    desc->hw_qdesc_alloc_size);
+		qdf_mem_free(desc->hw_qdesc_vaddr_unaligned);
+		qdf_mem_free(desc);
+	}
+	qdf_spin_unlock_bh(&soc->reo_desc_deferred_freelist_lock);
+
+	qdf_list_destroy(&soc->reo_desc_deferred_freelist);
+	qdf_spinlock_destroy(&soc->reo_desc_deferred_freelist_lock);
+}
+#else
+static inline void dp_reo_desc_deferred_freelist_create(struct dp_soc *soc)
+{
+}
+
+static inline void dp_reo_desc_deferred_freelist_destroy(struct dp_soc *soc)
+{
+}
+#endif /* !WLAN_DP_FEATURE_DEFERRED_REO_QDESC_DESTROY */
+
 /*
  * dp_soc_reset_txrx_ring_map() - reset tx ring map
  * @soc: DP SOC handle
@@ -4855,6 +4909,7 @@ static void dp_soc_deinit(void *txrx_soc)
 	dp_soc_reset_txrx_ring_map(soc);
 
 	dp_reo_desc_freelist_destroy(soc);
+	dp_reo_desc_deferred_freelist_destroy(soc);
 
 	DEINIT_RX_HW_STATS_LOCK(soc);
 
@@ -11413,47 +11468,6 @@ static struct cdp_mscs_ops dp_ops_mscs = {
 
 #ifdef FEATURE_RUNTIME_PM
 /**
- * dp_runtime_suspend() - ensure DP is ready to runtime suspend
- * @soc_hdl: Datapath soc handle
- * @pdev_id: id of data path pdev handle
- *
- * DP is ready to runtime suspend if there are no pending TX packets.
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS dp_runtime_suspend(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
-{
-	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
-	struct dp_pdev *pdev;
-
-	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
-	if (!pdev) {
-		dp_err("pdev is NULL");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	/* Abort if there are any pending TX packets */
-	if (dp_get_tx_pending(dp_pdev_to_cdp_pdev(pdev)) > 0) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-			  FL("Abort suspend due to pending TX packets"));
-		return QDF_STATUS_E_AGAIN;
-	}
-
-	if (dp_runtime_get_refcount(soc)) {
-		dp_info("refcount: %d", dp_runtime_get_refcount(soc));
-
-		return QDF_STATUS_E_AGAIN;
-	}
-
-	if (soc->intr_mode == DP_INTR_POLL)
-		qdf_timer_stop(&soc->int_timer);
-
-	dp_rx_fst_update_pm_suspend_status(soc, true);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
  * dp_flush_ring_hptp() - Update ring shadow
  *			  register HP/TP address when runtime
  *                        resume
@@ -11474,6 +11488,56 @@ void dp_flush_ring_hptp(struct dp_soc *soc, hal_ring_handle_t hal_srng)
 		hal_srng_set_flush_last_ts(hal_srng);
 		dp_debug("flushed");
 	}
+}
+
+/**
+ * dp_runtime_suspend() - ensure DP is ready to runtime suspend
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ *
+ * DP is ready to runtime suspend if there are no pending TX packets.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS dp_runtime_suspend(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev;
+	uint8_t i;
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (!pdev) {
+		dp_err("pdev is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/* Abort if there are any pending TX packets */
+	if (dp_get_tx_pending(dp_pdev_to_cdp_pdev(pdev)) > 0) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
+			  FL("Abort suspend due to pending TX packets"));
+
+		/* perform a force flush if tx is pending */
+		for (i = 0; i < soc->num_tcl_data_rings; i++) {
+			hal_srng_set_event(soc->tcl_data_ring[i].hal_srng,
+					   HAL_SRNG_FLUSH_EVENT);
+			dp_flush_ring_hptp(soc, soc->tcl_data_ring[i].hal_srng);
+		}
+
+		return QDF_STATUS_E_AGAIN;
+	}
+
+	if (dp_runtime_get_refcount(soc)) {
+		dp_info("refcount: %d", dp_runtime_get_refcount(soc));
+
+		return QDF_STATUS_E_AGAIN;
+	}
+
+	if (soc->intr_mode == DP_INTR_POLL)
+		qdf_timer_stop(&soc->int_timer);
+
+	dp_rx_fst_update_pm_suspend_status(soc, true);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 #define DP_FLUSH_WAIT_CNT 10
@@ -12448,6 +12512,8 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 	qdf_spinlock_create(&soc->htt_stats.lock);
 	/* initialize work queue for stats processing */
 	qdf_create_work(0, &soc->htt_stats.work, htt_t2h_stats_handler, soc);
+
+	dp_reo_desc_deferred_freelist_create(soc);
 
 	dp_info("Mem stats: DMA = %u HEAP = %u SKB = %u",
 		qdf_dma_mem_stats_read(),

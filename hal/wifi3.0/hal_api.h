@@ -1347,6 +1347,32 @@ void *hal_srng_dst_get_next_cached(void *hal_soc,
 	return (void *)desc;
 }
 
+static inline int hal_srng_lock(hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	if (qdf_unlikely(!hal_ring_hdl)) {
+		qdf_print("error: invalid hal_ring\n");
+		return -EINVAL;
+	}
+
+	SRNG_LOCK(&(srng->lock));
+	return 0;
+}
+
+static inline int hal_srng_unlock(hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	if (qdf_unlikely(!hal_ring_hdl)) {
+		qdf_print("error: invalid hal_ring\n");
+		return -EINVAL;
+	}
+
+	SRNG_UNLOCK(&(srng->lock));
+	return 0;
+}
+
 /**
  * hal_srng_dst_get_next_hp - Get next entry from a destination ring and move
  * cached head pointer
@@ -1701,6 +1727,9 @@ hal_srng_src_done_val(void *hal_soc, hal_ring_handle_t hal_ring_hdl)
  * hal_get_entrysize_from_srng() - Retrieve ring entry size
  * @hal_ring_hdl: Source ring pointer
  *
+ * srng->entry_size value is in 4 byte dwords so left shifting
+ * this by 2 to return the value of entry_size in bytes.
+ *
  * Return: uint8_t
  */
 static inline
@@ -1708,7 +1737,7 @@ uint8_t hal_get_entrysize_from_srng(hal_ring_handle_t hal_ring_hdl)
 {
 	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
 
-	return srng->entry_size;
+	return srng->entry_size << 2;
 }
 
 /**

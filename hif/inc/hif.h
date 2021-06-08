@@ -1075,10 +1075,12 @@ enum hif_ep_vote_type {
 /**
  * enum hif_ep_vote_access - hif ep vote access
  * HIF_EP_VOTE_ACCESS_ENABLE: Enable ep voting
+ * HIF_EP_VOTE_INTERMEDIATE_ACCESS: allow during transistion
  * HIF_EP_VOTE_ACCESS_DISABLE: disable ep voting
  */
 enum hif_ep_vote_access {
 	HIF_EP_VOTE_ACCESS_ENABLE,
+	HIF_EP_VOTE_INTERMEDIATE_ACCESS,
 	HIF_EP_VOTE_ACCESS_DISABLE
 };
 
@@ -1104,6 +1106,14 @@ enum hif_pm_link_state {
 					 with no response
  * HIF_PM_HTC_STATS_PUT_HTT_ERROR: PM stats for RTPM PUT for failed HTT packets
  * HIF_PM_HTC_STATS_PUT_HTC_CLEANUP: PM stats for RTPM PUT during HTC cleanup
+ * HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES: PM stats for RTPM GET done during
+ *                                       htc_kick_queues()
+ * HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES: PM stats for RTPM PUT done during
+ *                                       htc_kick_queues()
+ * HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS: PM stats for RTPM GET while fetching
+ *                                      HTT packets from endpoint TX queue
+ * HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS: PM stats for RTPM PUT while fetching
+ *                                      HTT packets from endpoint TX queue
  */
 enum hif_pm_htc_stats {
 	HIF_PM_HTC_STATS_GET_HTT_RESPONSE,
@@ -1112,6 +1122,10 @@ enum hif_pm_htc_stats {
 	HIF_PM_HTC_STATS_PUT_HTT_NO_RESPONSE,
 	HIF_PM_HTC_STATS_PUT_HTT_ERROR,
 	HIF_PM_HTC_STATS_PUT_HTC_CLEANUP,
+	HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES,
+	HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES,
+	HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS,
+	HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS,
 };
 
 #ifdef FEATURE_RUNTIME_PM
@@ -1475,6 +1489,14 @@ int32_t hif_get_int_ctx_irq_num(struct hif_opaque_softc *softc,
  * Return: QDF_STATUS
  */
 QDF_STATUS hif_configure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_deconfigure_ext_group_interrupts() - Deconfigure ext group intrrupts
+ * @hif_ctx: hif opaque context
+ *
+ * Return: None
+ */
+void hif_deconfigure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
 
 /**
  * hif_register_ext_group() - API to register external group

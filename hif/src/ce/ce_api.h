@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -437,6 +437,7 @@ void war_ce_src_ring_write_idx_set(struct hif_softc *scn,
 #define CE_ATTR_DISABLE_INTR         0x08 /* no interrupt on copy completion */
 #define CE_ATTR_ENABLE_POLL          0x10 /* poll for residue descriptors */
 #define CE_ATTR_DIAG                 0x20 /* Diag CE */
+#define CE_ATTR_HI_TASKLET           0x80 /* HI_TASKLET CE */
 
 /**
  * struct CE_attr - Attributes of an instance of a Copy Engine

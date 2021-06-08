@@ -225,7 +225,7 @@ static int hif_ce_srng_msi_free_irq(struct hif_softc *scn)
  *
  * Return: none
  */
-static void hif_ipci_deconfigure_grp_irq(struct hif_softc *scn)
+void hif_ipci_deconfigure_grp_irq(struct hif_softc *scn)
 {
 	int i, j, irq;
 	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
@@ -882,6 +882,9 @@ int hif_prevent_link_low_power_states(struct hif_opaque_softc *hif)
 	struct hif_ipci_softc *ipci_scn = HIF_GET_IPCI_SOFTC(scn);
 	uint32_t timeout = 0;
 
+	if (pld_is_pci_ep_awake(scn->qdf_dev->dev) == -ENOTSUPP)
+		return 0;
+
 	while (pld_is_pci_ep_awake(scn->qdf_dev->dev) &&
 	       timeout <= EP_WAKE_RESET_DELAY_TIMEOUT_US) {
 		qdf_sleep_us(EP_WAKE_RESET_DELAY_US);
@@ -931,10 +934,34 @@ void hif_allow_link_low_power_states(struct hif_opaque_softc *hif)
 
 int hif_ipci_enable_grp_irqs(struct hif_softc *scn)
 {
-	return hif_apps_grp_irqs_enable(GET_HIF_OPAQUE_HDL(scn));
+	struct hif_ipci_softc *ipci_scn = HIF_GET_IPCI_SOFTC(scn);
+	int status;
+
+	if (!ipci_scn->grp_irqs_disabled) {
+		hif_err("Unbalanced group IRQs Enable called");
+		qdf_assert_always(0);
+	}
+
+	status = hif_apps_grp_irqs_enable(GET_HIF_OPAQUE_HDL(scn));
+	if (!status)
+		ipci_scn->grp_irqs_disabled = false;
+
+	return status;
 }
 
 int hif_ipci_disable_grp_irqs(struct hif_softc *scn)
 {
-	return hif_apps_grp_irqs_disable(GET_HIF_OPAQUE_HDL(scn));
+	struct hif_ipci_softc *ipci_scn = HIF_GET_IPCI_SOFTC(scn);
+	int status;
+
+	if (ipci_scn->grp_irqs_disabled) {
+		hif_err("Unbalanced group IRQs disable called");
+		qdf_assert_always(0);
+	}
+
+	status = hif_apps_grp_irqs_disable(GET_HIF_OPAQUE_HDL(scn));
+	if (!status)
+		ipci_scn->grp_irqs_disabled = true;
+
+	return status;
 }
