@@ -49,7 +49,7 @@ static bool input_boost_enabled;
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
 
-static unsigned int powerkey_input_boost_ms = 400;
+static unsigned int powerkey_input_boost_ms = 2000;
 module_param(powerkey_input_boost_ms, uint, 0644);
 
 static unsigned int sched_boost_on_input;
