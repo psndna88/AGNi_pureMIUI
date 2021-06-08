@@ -667,7 +667,7 @@
 	};
 
 	chosen {
-		bootargs = "rcu_nocbs=0-5 nosoftlockup mce=ignore_ce noirqdebug kpti=off";
+		bootargs = "rcu_nocbs=0-7 nosoftlockup mce=ignore_ce noirqdebug kpti=off";
 	};
 
 	soc: soc { };
