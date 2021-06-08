@@ -1,0 +1,88 @@
+/* Should extend holi-sde-display-cdp-pm6125.dtsi */
+
+&tlmm {
+	pmx_sde_bias_en: pmx_sde_bias_en {
+		lcd_bias_en_active: lcd_bias_en_active {
+			mux {
+				pins = "gpio47";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio47";
+				drive-strength = <8>;   /* 8 mA */
+				bias-disable = <0>;   /* no pull */
+			};
+		};
+
+		lcd_bias_en_suspend: lcd_bias_en_suspend {
+			mux {
+				pins = "gpio47";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio47";
+				drive-strength = <2>;   /* 2 mA */
+				bias-pull-down;         /* PULL DOWN */
+			};
+		};
+	};
+};
+
+&pm6125_gpios {
+	lcd_backlight_ctrl {
+		lcd_backlight_ctrl_default: lcd_backlight_ctrl_default {
+			pins = "gpio8";
+			function = "func1";
+			input-disable;
+			output-low;
+			bias-disable;
+			power-source = <0>;
+			qcom,drive-strength = <3>;
+		};
+	};
+};
+
+&sde_dsi {
+	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
+	pinctrl-0 = <&sde_te_active &disp_pins_reset &lcd_bias_en_active>;
+	pinctrl-1 = <&sde_te_suspend &lcd_bias_en_suspend>;
+	pinctrl-2 = <&lcd_backlight_ctrl_default>;
+};
+
+&dsi_nt36672e_fhd_plus_60_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+};
+
+&dsi_nt36672e_fhd_plus_120_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+};
+
+&dsi_nt36672e_fhd_plus_144_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+};
