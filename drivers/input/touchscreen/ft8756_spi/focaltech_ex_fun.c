@@ -1133,3 +1133,56 @@ int fts_remove_sysfs(struct fts_ts_data *ts_data)
 	sysfs_remove_group(&ts_data->dev->kobj, &fts_attribute_group);
 	return 0;
 }
+
+int lct_fts_get_tpfwver(const char *cmd)
+{
+	struct fts_ts_data *ts_data = fts_data;
+	struct input_dev *input_dev = ts_data->input_dev;
+	ssize_t num_read_chars = 0;
+	char buf[64] = { 0 };
+	u8 fwver = 0;
+
+	if (ts_data->suspended) {
+		FTS_INFO("Touch is suspended, cannot read firmware version!");
+		return -EPERM;
+	}
+
+	mutex_lock(&input_dev->mutex);
+	fts_read_reg(FTS_REG_FW_VER, &fwver);
+	if ((fwver == 0xFF) || (fwver == 0x00))
+		num_read_chars = snprintf(buf, 64, "get tp fw version fail!\n");
+	else
+		num_read_chars = snprintf(buf, 64, "[Vendor]huaxing,[FW]0x%02x,[IC]ft8756\n", fwver);
+	mutex_unlock(&input_dev->mutex);
+	update_lct_tp_info(buf, NULL);
+	FTS_INFO("update tp_info:%s", buf);
+	return 0;
+}
+
+EXPORT_SYMBOL(lct_fts_get_tpfwver);
+
+int lct_create_procfs(struct fts_ts_data *ts_data)
+{
+	int ret = 0;
+
+	ret = init_lct_tp_info("[Vendor]huaxing,[FW]unknown,[IC]ft8756\n", NULL);
+	if (ret) {
+		FTS_ERROR("create /proc/tp_info & /proc/tp_lockdown_info fail");
+		goto err_init_lct_tp_info_fail;
+	} else {
+		set_lct_tp_info_callback(lct_fts_get_tpfwver);
+		FTS_INFO("create /proc/tp_info & /proc/tp_lockdown_info succeeded");
+	}
+
+	return ret;
+
+err_init_lct_tp_info_fail:
+	uninit_lct_tp_info();
+	return ret;
+}
+
+int lct_remove_procfs(struct fts_ts_data *ts_data)
+{
+	uninit_lct_tp_info();
+	return 0;
+}

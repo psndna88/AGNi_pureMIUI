@@ -792,10 +792,12 @@ info_retry:
 	switch(ts->touch_vendor_id) {
 	case TP_VENDOR_TIANMA:
 		sprintf(tp_info_buf, "[Vendor]tianma,[FW]0x%02x,[IC]nt36675\n", ts->fw_ver);
+		update_lct_tp_info(tp_info_buf, NULL);
 		break;
 	}
 #else
 	sprintf(tp_info_buf, "[Vendor]unknow,[FW]0x%02x,[IC]nt36675\n", ts->fw_ver);
+	update_lct_tp_info(tp_info_buf, NULL);
 #endif
 
 	//---Get Novatek PID---
@@ -1991,6 +1993,15 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 #endif
 
+	//create longcheer procfs node
+	ret = init_lct_tp_info("[Vendor]unkown,[FW]unkown,[IC]unkown\n", NULL);
+	if (ret < 0) {
+		NVT_ERR("init_lct_tp_info Failed!\n");
+		goto err_init_lct_tp_info_failed;
+	} else {
+		NVT_LOG("init_lct_tp_info Succeeded!\n");
+	}
+
 #if defined(CONFIG_FB)
 	ts->workqueue = create_singlethread_workqueue("nvt_ts_workqueue");
 	if (!ts->workqueue) {
@@ -2001,7 +2012,11 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	INIT_WORK(&ts->resume_work, nvt_ts_resume_work);
 #ifdef _MSM_DRM_NOTIFY_H_
 	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
-	ret = msm_drm_register_client(&ts->drm_notif);
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+		ret = drm_register_client(&ts->drm_notif);
+	}else{
+		ret = msm_drm_register_client(&ts->drm_notif);
+	}
 	if(ret) {
 		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
 		goto err_register_drm_notif_failed;
@@ -2071,8 +2086,13 @@ err_create_nvt_ts_workqueue_failed:
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	} else {
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
 err_register_drm_notif_failed:
 #else
 	if (fb_unregister_client(&ts->fb_notif))
@@ -2083,6 +2103,8 @@ err_register_fb_notif_failed:
 	unregister_early_suspend(&ts->early_suspend);
 err_register_early_suspend_failed:
 #endif
+err_init_lct_tp_info_failed:
+uninit_lct_tp_info();
 #if NVT_TOUCH_EXT_PROC
 nvt_extra_proc_deinit();
 err_extra_proc_init_failed:
@@ -2165,8 +2187,14 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	} else {
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
+
 #else
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -2174,6 +2202,8 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
+
+	uninit_lct_tp_info();
 
 #if NVT_TOUCH_EXT_PROC
 	nvt_extra_proc_deinit();
@@ -2246,8 +2276,13 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) {
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}else{
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
 #else
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -2256,6 +2291,7 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
 
+	uninit_lct_tp_info();
 #if NVT_TOUCH_EXT_PROC
 	nvt_extra_proc_deinit();
 #endif
@@ -2473,6 +2509,24 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 	if (!evdata || (evdata->id != 0))
 		return 0;
 
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) {
+	if (evdata->data && ts) {
+		blank = evdata->data;
+		if (event == DRM_EARLY_EVENT_BLANK) {
+			if (*blank == DRM_BLANK_POWERDOWN) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+				cancel_work_sync(&ts->resume_work);
+				nvt_ts_suspend(&ts->client->dev);
+			}
+		} else if (event == DRM_EVENT_BLANK) {
+			if (*blank == DRM_BLANK_UNBLANK) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+				//nvt_ts_resume(&ts->client->dev);
+				queue_work(ts->workqueue, &ts->resume_work);
+			}
+		}
+	}
+	} else {
 	if (evdata->data && ts) {
 		blank = evdata->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
@@ -2487,7 +2541,7 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 			}
 		}
 	}
-
+	}
 	return 0;
 }
 #else
@@ -2620,7 +2674,7 @@ static int32_t __init nvt_driver_init(void)
 		ret = -ENOMEM;
 		goto err_driver;
 	} else {
-		if (strstr(saved_command_line,"tianma") != NULL) {
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) {
 			touch_vendor_id = TP_VENDOR_TIANMA;
 			NVT_LOG("TP info: [Vendor]tianma [IC]nt36675\n");
 		} else {

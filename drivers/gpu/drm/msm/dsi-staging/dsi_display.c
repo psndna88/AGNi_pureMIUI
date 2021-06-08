@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/err.h>
+#include <linux/msm_drm_notify.h>
 
 #include "msm_drv.h"
 #include "sde_connector.h"
@@ -44,6 +46,9 @@
 
 #define DSI_CLOCK_BITRATE_RADIX 10
 #define MAX_TE_SOURCE_ID  2
+
+extern char g_lcd_id[128];
+extern char *saved_command_line;
 
 DEFINE_MUTEX(dsi_display_clk_mutex);
 
@@ -620,6 +625,95 @@ static void dsi_display_parse_te_data(struct dsi_display *display)
 	display->te_source = val;
 }
 
+
+static char dcs_cmd[2] = {0x00, 0x00}; /* DTYPE_DCS_READ */
+static struct dsi_cmd_desc dcs_read_cmd = {
+       {0, 6, MIPI_DSI_MSG_REQ_ACK, 0, 5, sizeof(dcs_cmd), dcs_cmd, 0, 0},
+       1,
+       5,
+};
+
+static int dsi_display_read_reg(struct dsi_display_ctrl *ctrl, char cmd0,
+		char cmd1, char *rbuf, int len)
+{
+	int rc = 0;
+	struct dsi_cmd_desc *cmds;
+	u32 flags = 0;
+
+	if (!ctrl || !ctrl->ctrl)
+		return -EINVAL;
+
+	/*
+	 * When DSI controller is not in initialized state, we do not want to
+	 * report a false failure and hence we defer until next read
+	 * happen.
+	 */
+	if (!dsi_ctrl_validate_host_state(ctrl->ctrl))
+		return 1;
+
+	dcs_cmd[0] = cmd0;
+	dcs_cmd[1] = cmd1;
+
+	cmds = &dcs_read_cmd;
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ );
+
+	memset(rbuf, 0x0, SZ_4K);
+	if (cmds->last_command) {
+		cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+		flags |= DSI_CTRL_CMD_LAST_COMMAND;
+	}
+	cmds->msg.rx_buf = rbuf;
+	cmds->msg.rx_len = len;
+	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds->msg, flags);
+	if (rc <= 0) {
+		pr_err("rx cmd transfer failed rc=%d\n", rc);
+		return rc;
+	}
+
+	return rc;
+ }
+
+static char dcs_cmd_page[2] = {0x00, 0x00}; /* DTYPE_DCS_READ */
+static struct dsi_cmd_desc dcs_read_cmd_page = {
+       {0, 0x15, MIPI_DSI_MSG_REQ_ACK, 0, 5, sizeof(dcs_cmd_page), dcs_cmd_page, 0, 0},
+       1,
+       5,
+};
+
+static int dsi_display_write_reg_page(struct dsi_display_ctrl *ctrl, char cmd0,
+		char cmd1, char *rbuf, int len)
+{
+	int rc = 0;
+	struct dsi_cmd_desc *cmds;
+	u32 flags = 0;
+
+	if (!ctrl || !ctrl->ctrl)
+		return -EINVAL;
+
+	if (!dsi_ctrl_validate_host_state(ctrl->ctrl))
+		return 1;
+
+	dcs_cmd_page[0] = cmd0;
+	dcs_cmd_page[1] = cmd1;
+	cmds = &dcs_read_cmd_page;
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY);
+
+	memset(rbuf, 0x0, SZ_4K);
+	if (cmds->last_command) {
+		cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+		flags |= DSI_CTRL_CMD_LAST_COMMAND;
+	}
+	cmds->msg.rx_buf = NULL;
+	cmds->msg.rx_len = 0;
+	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &cmds->msg, flags);
+	if (rc < 0) {
+		pr_err("rx cmd transfer failed rc=%d\n", rc);
+		return rc;
+	}
+
+	return rc;
+ }
+
 static int dsi_display_read_status(struct dsi_display_ctrl *ctrl,
 		struct dsi_panel *panel)
 {
@@ -1061,23 +1155,51 @@ int dsi_display_set_power(struct drm_connector *connector,
 {
 	struct dsi_display *display = disp;
 	int rc = 0;
+	struct drm_notify_data g_notify_data;
+	struct drm_device *dev = NULL;
+	int event = 0;
+
 
 	if (!display || !display->panel) {
 		pr_err("invalid display/panel\n");
 		return -EINVAL;
 	}
 
+	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
+	if (!connector || !connector->dev) {
+			pr_err("invalid connector/dev\n");
+			return -EINVAL;
+	} else {
+			dev = connector->dev;
+			event = dev->doze_state;
+	}
+
+	g_notify_data.data = &event;
+	}
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 		rc = dsi_panel_set_lp1(display->panel);
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 		break;
 	case SDE_MODE_DPMS_LP2:
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 		rc = dsi_panel_set_lp2(display->panel);
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 		break;
 	case SDE_MODE_DPMS_ON:
 		if (display->panel->power_mode == SDE_MODE_DPMS_LP1 ||
-			display->panel->power_mode == SDE_MODE_DPMS_LP2)
+			display->panel->power_mode == SDE_MODE_DPMS_LP2) {
+			if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+			drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 			rc = dsi_panel_set_nolp(display->panel);
+			if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL)
+			drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+		}
 		break;
 	case SDE_MODE_DPMS_OFF:
 	default:
@@ -5490,6 +5612,7 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 	display->pdev = pdev;
 	display->boot_disp = boot_disp;
 	display->dsi_type = dsi_type;
+	display->is_prim_display = true;
 
 	dsi_display_parse_cmdline_topology(display, index);
 

@@ -43,6 +43,9 @@
 #include <linux/platform_data/spi-mt65xx.h>
 #endif
 
+// include longcheer header
+#include "../lct_tp_info.h"
+
 #define NVT_DEBUG 0
 
 //---GPIO number---
