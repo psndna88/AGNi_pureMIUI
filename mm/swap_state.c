@@ -791,12 +791,9 @@ struct page *swap_vma_readahead(swp_entry_t fentry, gfp_t gfp_mask,
 	blk_finish_plug(&plug);
 	lru_add_drain();
 skip:
-	return read_swap_cache_async(fentry, gfp_mask, vma, vmf->address,
-				     ra_info.win == 1);
-#else
+#endif
 	return read_swap_cache_async(fentry, gfp_mask, vma, vmf->address,
 				     do_poll);
-#endif				     
 }
 
 /**
