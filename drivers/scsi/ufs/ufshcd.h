@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -58,6 +58,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/extcon.h>
+#include <linux/pm_qos.h>
 #include "unipro.h"
 
 #include <asm/irq.h>
@@ -259,6 +260,7 @@ struct ufs_desc_size {
 	int interc_desc;
 	int unit_desc;
 	int conf_desc;
+	int hlth_desc;
 };
 
 /**
@@ -393,14 +395,6 @@ struct ufs_hba_crypto_variant_ops {
 };
 
 /**
-* struct ufs_hba_pm_qos_variant_ops - variant specific PM QoS callbacks
-*/
-struct ufs_hba_pm_qos_variant_ops {
-	void		(*req_start)(struct ufs_hba *, struct request *);
-	void		(*req_end)(struct ufs_hba *, struct request *, bool);
-};
-
-/**
  * struct ufs_hba_variant - variant specific parameters
  * @name: variant name
  */
@@ -409,7 +403,6 @@ struct ufs_hba_variant {
 	const char				*name;
 	struct ufs_hba_variant_ops		*vops;
 	struct ufs_hba_crypto_variant_ops	*crypto_vops;
-	struct ufs_hba_pm_qos_variant_ops	*pm_qos_vops;
 };
 
 /* clock gating state  */
@@ -487,6 +480,7 @@ enum ufshcd_hibern8_on_idle_state {
  * @delay_attr: sysfs attribute to control delay_attr
  * @enable_attr: sysfs attribute to enable/disable hibern8 on idle
  * @is_enabled: Indicates the current status of hibern8
+ * @enable_mutex: protect sys node race from multithread access
  */
 struct ufs_hibern8_on_idle {
 	struct delayed_work enter_work;
@@ -498,6 +492,7 @@ struct ufs_hibern8_on_idle {
 	struct device_attribute delay_attr;
 	struct device_attribute enable_attr;
 	bool is_enabled;
+	struct mutex enable_mutex;
 };
 
 /**
@@ -732,6 +727,7 @@ enum ufshcd_card_state {
  * @ufs_version: UFS Version to which controller complies
  * @var: pointer to variant specific data
  * @priv: pointer to variant specific private data
+ * @sg_entry_size: size of struct ufshcd_sg_entry (may include variant fields)
  * @irq: Irq number of the controller
  * @active_uic_cmd: handle of active UIC command
  * @uic_cmd_mutex: mutex for uic command
@@ -751,6 +747,7 @@ enum ufshcd_card_state {
  * @uic_error: UFS interconnect layer error status
  * @saved_err: sticky error mask
  * @saved_uic_err: sticky UIC error mask
+ * @silence_err_logs: flag to silence error logs
  * @dev_cmd: ufs device management command information
  * @last_dme_cmd_tstamp: time stamp of the last completed DME command
  * @auto_bkops_enabled: to track whether bkops is enabled in device
@@ -815,6 +812,7 @@ struct ufs_hba {
 	u32 ufs_version;
 	struct ufs_hba_variant *var;
 	void *priv;
+	size_t sg_entry_size;
 	unsigned int irq;
 	bool is_irq_enabled;
 	bool crash_on_err;
@@ -925,6 +923,7 @@ struct ufs_hba {
 	struct work_struct eh_work;
 	struct work_struct eeh_work;
 	struct work_struct rls_work;
+	struct work_struct hibern8_on_idle_enable_work;
 
 	/* HBA Errors */
 	u32 errors;
@@ -958,6 +957,7 @@ struct ufs_hba {
 	/* Number of requests aborts */
 	int req_abort_count;
 
+	u32 security_in;
 	/* Number of lanes available (1 or 2) for Rx/Tx */
 	u32 lanes_per_direction;
 
@@ -1048,6 +1048,14 @@ struct ufs_hba {
 	bool force_g4;
 	/* distinguish between resume and restore */
 	bool restore;
+	struct {
+		struct pm_qos_request req;
+		struct work_struct get_work;
+		struct work_struct put_work;
+		struct mutex lock;
+		atomic_t count;
+		bool active;
+	} pm_qos;
 };
 
 static inline void ufshcd_mark_shutdown_ongoing(struct ufs_hba *hba)
@@ -1543,21 +1551,6 @@ static inline int ufshcd_vops_crypto_engine_get_status(struct ufs_hba *hba,
 		return hba->var->crypto_vops->crypto_engine_get_status(hba,
 			status);
 	return 0;
-}
-
-static inline void ufshcd_vops_pm_qos_req_start(struct ufs_hba *hba,
-		struct request *req)
-{
-	if (hba->var && hba->var->pm_qos_vops &&
-		hba->var->pm_qos_vops->req_start)
-		hba->var->pm_qos_vops->req_start(hba, req);
-}
-
-static inline void ufshcd_vops_pm_qos_req_end(struct ufs_hba *hba,
-		struct request *req, bool lock)
-{
-	if (hba->var && hba->var->pm_qos_vops && hba->var->pm_qos_vops->req_end)
-		hba->var->pm_qos_vops->req_end(hba, req, lock);
 }
 
 static inline int ufshcd_vops_crypto_engine_get_req_status(struct ufs_hba *hba)
