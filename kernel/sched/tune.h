@@ -10,7 +10,7 @@ struct target_nrg {
 	struct reciprocal_value rdiv;
 };
 
-int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
+extern int schedtune_task_boost_rcu_locked(struct task_struct *tsk);
 #ifdef CONFIG_SCHED_TUNE
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 

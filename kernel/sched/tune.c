@@ -205,14 +205,6 @@ root_schedtune = {
 	.slot_boost = {0},
 };
 
-/*  The same as schedtune_task_boost except assuming the caller has the rcu read
- *  lock.
- */
-int schedtune_task_boost_rcu_locked(struct task_struct *p)
-{
-	return 0;
-}
-
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 int
 schedtune_accept_deltas(int nrg_delta, int cap_delta,
