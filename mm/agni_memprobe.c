@@ -28,7 +28,7 @@
 #include <linux/mm.h>
 
 bool triggerswapping = false;
-int agni_swappiness = 30;
+int agni_swappiness = 60;
 long totalmemk,mem_avail_perc;
 int trigthreshold;
 bool ramchecked = false;
@@ -99,14 +99,6 @@ bool agni_memprober(void) {
 		vote = true;
 //	}
 
-	if (vote) {
-		if (ramgb >= 4)
-			agni_swappiness = 80;
-		else
-			agni_swappiness = 100;
-	} else {
-		agni_swappiness = 30;
-	}
 	return vote;
 }
 
