@@ -159,8 +159,10 @@ int generic_swapfile_activate(struct swap_info_struct *sis,
 		unsigned block_in_page;
 		sector_t first_block;
 
-		first_block = bmap(inode, probe_block);
-		if (first_block == 0)
+		cond_resched();
+		first_block = probe_block;
+		ret = bmap(inode, &first_block);
+		if (ret || !first_block)
 			goto bad_bmap;
 
 		/*
@@ -175,8 +177,9 @@ int generic_swapfile_activate(struct swap_info_struct *sis,
 					block_in_page++) {
 			sector_t block;
 
-			block = bmap(inode, probe_block + block_in_page);
-			if (block == 0)
+			block = probe_block + block_in_page;
+			ret = bmap(inode, &block);
+			if (ret || !block)
 				goto bad_bmap;
 			if (block != first_block + block_in_page) {
 				/* Discontiguity */
@@ -215,7 +218,7 @@ reprobe:
 out:
 	return ret;
 bad_bmap:
-	printk(KERN_ERR "swapon: swapfile has holes\n");
+	pr_err("swapon: swapfile has holes\n");
 	ret = -EINVAL;
 	goto out;
 }
