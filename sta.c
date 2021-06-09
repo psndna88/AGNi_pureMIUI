@@ -8645,9 +8645,9 @@ static int sta_transmit_omi(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
-static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
-				    struct sigma_conn *conn,
-				    struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_set_wireless_vht(struct sigma_dut *dut, struct sigma_conn *conn,
+			 struct sigma_cmd *cmd)
 {
 	const char *intf = get_param(cmd, "Interface");
 	const char *val;
@@ -8672,19 +8672,19 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			if (sta_set_tx_beamformee(dut, intf, 1)) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set TX beamformee enable");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
 			if (run_iwpriv(dut, intf, "vhtsubfee 1") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Setting vhtsubfee failed");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			if (run_iwpriv(dut, intf, "vhtsubfer 1") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Setting vhtsubfer failed");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		default:
@@ -8707,7 +8707,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			if (wcn_sta_set_sp_stream(dut, intf, "1SS") < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set RX/TXSP_STREAM");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		default:
@@ -8874,7 +8874,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"NSS not specified");
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,NSS not specified");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		nss = atoi(result);
 
@@ -8887,7 +8887,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"MCS not specified");
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,MCS not specified");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		result = strtok_r(result, "-", &saveptr);
 		result = strtok_r(NULL, "-", &saveptr);
@@ -8896,7 +8896,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					"MCS not specified");
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,MCS not specified");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 		mcs = atoi(result);
 
@@ -8917,7 +8917,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 						mcs);
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Invalid MCS");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 
 			ret = sta_set_he_mcs(dut, intf, mcs_config);
@@ -8927,7 +8927,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 						mcs_config, ret);
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "errorCode,Failed to set MCS");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 #else /* NL80211_SUPPORT */
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -9009,9 +9009,9 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		} else if ((tkip == 0 && wep != 1) || (wep == 0 && tkip != 1)) {
 			run_iwpriv(dut, intf, "htweptkip 0");
 		} else {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-					"ErrorCode,mixed mode of VHT TKIP/WEP not supported");
-			return 0;
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,mixed mode of VHT TKIP/WEP not supported");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9022,14 +9022,14 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 			if (wcn_sta_set_width(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set txBandwidth");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
 			if (ath_set_width(dut, conn, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set txBandwidth");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		default:
@@ -9044,13 +9044,13 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		if (sta_set_tx_beamformee(dut, intf, 1)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 					"ErrorCode,Failed to set TX beamformee enable");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 
 		if (sta_set_beamformee_sts(dut, intf, atoi(val))) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set BeamformeeSTS");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9073,7 +9073,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		if (sta_set_mac_padding_duration(dut, intf, set_val)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set MAC padding duration");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 #else /* NL80211_SUPPORT */
 		sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -9092,7 +9092,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Invalid TWT_ReqSupport");
-			return STATUS_SENT;
+			return STATUS_SENT_ERROR;
 		}
 
 		if (sta_set_twt_req_support(dut, intf, set_val)) {
@@ -9101,7 +9101,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 					set_val);
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set TWT_ReqSupport");
-			return STATUS_SENT;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9171,7 +9171,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		if (sta_set_mu_edca_override(dut, intf, 1)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set MU EDCA override");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9187,7 +9187,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		if (sta_set_om_ctrl_supp(dut, intf, set_val)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set OM ctrl supp");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9210,7 +9210,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		    sta_set_addba_buf_size(dut, intf, buf_size)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,set addbaresp_buff_size failed");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -9226,7 +9226,7 @@ static int cmd_sta_set_wireless_vht(struct sigma_dut *dut,
 		    sta_set_addba_buf_size(dut, intf, buf_size)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,set addbareq_buff_size failed");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
