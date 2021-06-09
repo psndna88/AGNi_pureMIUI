@@ -5630,9 +5630,9 @@ static int sta_set_rts(struct sigma_dut *dut, const char *intf, int val)
 }
 
 
-static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
-				       struct sigma_conn *conn,
-				       struct sigma_cmd *cmd)
+static enum sigma_cmd_result
+cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
+			    struct sigma_conn *conn, struct sigma_cmd *cmd)
 {
 	const char *val;
 	int ampdu = -1, addbareject = -1;
@@ -5645,7 +5645,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			/* TODO: iwpriv ht40intol through wpa_supplicant */
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,40_INTOLERANT not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -5666,7 +5666,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 	    sta_set_addba_reject(dut, intf, addbareject) < 0) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,set addba_reject failed");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "AMPDU");
@@ -5678,7 +5678,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 					  "ErrorCode,Mismatch in "
 					  "addba_reject/ampdu - "
 					  "not supported");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			ampdu = 1;
 		} else {
@@ -5688,7 +5688,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 					  "ErrorCode,Mismatch in "
 					  "addba_reject/ampdu - "
 					  "not supported");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			ampdu = 0;
 		}
@@ -5704,7 +5704,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		    iwpriv_sta_set_ampdu(dut, intf, ampdu) < 0) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,set aggr failed");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 
 		if (ampdu == 0) {
@@ -5731,7 +5731,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				/* Enable AMSDU Aggregation */
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,AMSDU aggregation not supported");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		}
@@ -5749,7 +5749,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		default:
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,STBC_RX not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -5760,12 +5760,12 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			if (wcn_sta_set_width(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set WIDTH");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
 			if (ath_set_width(dut, conn, intf, val) < 0)
-				return 0;
+				return STATUS_SENT_ERROR;
 			break;
 		default:
 			sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -5779,7 +5779,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		/* TODO: Dynamic/0, Static/1, No Limit/2 */
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "ErrorCode,SMPS not supported");
-		return 0;
+		return STATUS_SENT_ERROR;
 	}
 
 	val = get_param(cmd, "TXSP_STREAM");
@@ -5789,7 +5789,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			if (wcn_sta_set_sp_stream(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set TXSP_STREAM");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
@@ -5809,7 +5809,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			if (wcn_sta_set_sp_stream(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set RXSP_STREAM");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
@@ -5832,7 +5832,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				if (system(buf) != 0) {
 					sigma_dut_print(dut, DUT_MSG_ERROR,
 							"iwpriv cwmenable 1 failed");
-					return 0;
+					return ERROR_SEND_STATUS;
 				}
 			} else if (strcasecmp(val, "disable") == 0) {
 				snprintf(buf, sizeof(buf),
@@ -5840,7 +5840,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 				if (system(buf) != 0) {
 					sigma_dut_print(dut, DUT_MSG_ERROR,
 							"iwpriv cwmenable 0 failed");
-					return 0;
+					return ERROR_SEND_STATUS;
 				}
 			} else {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
@@ -5851,7 +5851,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			if (system(buf) != 0) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to set cts_cbw in DYN_BW_SGNL");
-				return 0;
+				return ERROR_SEND_STATUS;
 			}
 			break;
 		case DRIVER_ATHEROS:
@@ -5888,7 +5888,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,RTS_FORCE value not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -5899,7 +5899,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 			if (wcn_sta_set_cts_width(dut, intf, val) < 0) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,Failed to set CTS_WIDTH");
-				return 0;
+				return STATUS_SENT_ERROR;
 			}
 			break;
 		case DRIVER_ATHEROS:
@@ -5921,7 +5921,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,BW_SGNL value not supported");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -5932,7 +5932,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Unsupported Band");
-			return 0;
+			return STATUS_SENT_ERROR;
 		}
 	}
 
@@ -5947,7 +5947,7 @@ static int cmd_sta_set_wireless_common(const char *intf, struct sigma_dut *dut,
 		}
 	}
 
-	return 1;
+	return SUCCESS_SEND_STATUS;
 }
 
 
