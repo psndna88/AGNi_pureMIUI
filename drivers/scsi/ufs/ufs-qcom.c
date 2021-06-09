@@ -1513,6 +1513,7 @@ static void ufs_qcom_set_caps(struct ufs_hba *hba)
 	if (!host->disable_lpm) {
 		hba->caps |= UFSHCD_CAP_CLK_GATING;
 		hba->caps |= UFSHCD_CAP_HIBERN8_WITH_CLK_GATING;
+		hba->caps |= UFSHCD_CAP_CLK_SCALING;
 	}
 	hba->caps |= UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
 
@@ -2258,8 +2259,12 @@ int ufs_qcom_testbus_config(struct ufs_qcom_host *host)
 	/*
 	 * No need for a default case, since
 	 * ufs_qcom_testbus_cfg_is_ok() checks that the configuration
-	 * is legal
+	 * is legal; however, add it anyway to satisfy the compiler.
 	 */
+	default:
+		reg = 0;
+		offset = 0;
+		break;
 	}
 	mask <<= offset;
 	spin_unlock_irqrestore(hba->host->host_lock, flags);

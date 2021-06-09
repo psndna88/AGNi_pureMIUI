@@ -1329,20 +1329,6 @@ static inline int ufshcd_vops_set_bus_vote(struct ufs_hba *hba, bool on)
 	return 0;
 }
 
-#ifdef CONFIG_DEBUG_FS
-static inline void ufshcd_vops_add_debugfs(struct ufs_hba *hba,
-						struct dentry *root)
-{
-	if (hba->var && hba->var->vops && hba->var->vops->add_debugfs)
-		hba->var->vops->add_debugfs(hba, root);
-}
-
-static inline void ufshcd_vops_remove_debugfs(struct ufs_hba *hba)
-{
-	if (hba->var && hba->var->vops && hba->var->vops->remove_debugfs)
-		hba->var->vops->remove_debugfs(hba);
-}
-#else
 static inline void ufshcd_vops_add_debugfs(struct ufs_hba *hba, struct dentry *root)
 {
 }
@@ -1350,7 +1336,6 @@ static inline void ufshcd_vops_add_debugfs(struct ufs_hba *hba, struct dentry *r
 static inline void ufshcd_vops_remove_debugfs(struct ufs_hba *hba)
 {
 }
-#endif
 
 static inline int ufshcd_vops_crypto_req_setup(struct ufs_hba *hba,
 	struct ufshcd_lrb *lrbp, u8 *cc_index, bool *enable, u64 *dun)
