@@ -12,6 +12,7 @@
 #include <linux/completion.h>
 #include <linux/types.h>
 #include <linux/ktime.h>
+#include <linux/blkdev.h>
 
 struct mmc_data;
 struct mmc_request;

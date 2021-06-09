@@ -2,7 +2,7 @@
  * drivers/mmc/host/sdhci-msm.c - Qualcomm Technologies, Inc. MSM SDHCI Platform
  * driver source file
  *
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1227,6 +1227,12 @@ int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode)
 		(ios.timing == MMC_TIMING_MMC_HS200) ||
 		(ios.timing == MMC_TIMING_UHS_SDR104)))
 		return 0;
+
+	/*
+	 * Clear tuning_done flag before tuning to ensure proper
+	 * HS400 settings.
+	 */
+	msm_host->tuning_done = 0;
 
 	/*
 	 * Don't allow re-tuning for CRC errors observed for any commands
@@ -4731,7 +4737,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	struct sdhci_pltfm_host *pltfm_host;
 	struct sdhci_msm_host *msm_host;
 	struct resource *core_memres = NULL;
-	int ret = 0, dead = 0;
+	int ret = 0, dead = 0, tlmm_cfg = 0;
 	u16 host_version;
 	u32 irq_status, irq_ctl;
 	struct resource *tlmm_memres = NULL;
@@ -4971,7 +4977,14 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto vreg_deinit;
 		}
-		writel_relaxed(readl_relaxed(tlmm_mem) | 0x2, tlmm_mem);
+		ret = of_property_read_u32(pdev->dev.of_node,
+					   "tlmm_cfg",
+					   &tlmm_cfg);
+		if (ret)
+			writel_relaxed(readl_relaxed(tlmm_mem) | 0x2, tlmm_mem);
+		else
+			writel_relaxed(readl_relaxed(tlmm_mem) | tlmm_cfg,
+						 tlmm_mem);
 	}
 
 	/*
@@ -5049,7 +5062,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	host->quirks |= SDHCI_QUIRK_SINGLE_POWER_WRITE;
 	host->quirks |= SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN;
 	host->quirks |= SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC;
-	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
 	host->quirks2 |= SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK;
 	host->quirks2 |= SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
@@ -5577,11 +5589,38 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 	return ret;
 }
 
+static int sdhci_msm_freeze(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct mmc_host *mmc = host->mmc;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+
+	if (gpio_is_valid(msm_host->pdata->status_gpio) &&
+			(msm_host->mmc->slot.cd_irq >= 0))
+		mmc_gpiod_free_cd_irq(mmc);
+	return 0;
+}
+
+static int sdhci_msm_restore(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct mmc_host *mmc = host->mmc;
+
+	mmc_gpiod_restore_cd_irq(mmc);
+
+	return 0;
+}
+
 static const struct dev_pm_ops sdhci_msm_pmops = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(sdhci_msm_suspend, sdhci_msm_resume)
-	SET_RUNTIME_PM_OPS(sdhci_msm_runtime_suspend, sdhci_msm_runtime_resume,
-			   NULL)
-	.suspend_noirq = sdhci_msm_suspend_noirq,
+	.suspend_late		= sdhci_msm_suspend,
+	.resume_early		= sdhci_msm_resume,
+	.runtime_suspend	= sdhci_msm_runtime_suspend,
+	.runtime_resume		= sdhci_msm_runtime_resume,
+	.suspend_noirq		= sdhci_msm_suspend_noirq,
+	.freeze			= sdhci_msm_freeze,
+	.restore		= sdhci_msm_restore,
+	.thaw			= sdhci_msm_restore,
 };
 
 #define SDHCI_MSM_PMOPS (&sdhci_msm_pmops)
