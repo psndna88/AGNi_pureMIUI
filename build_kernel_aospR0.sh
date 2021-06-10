@@ -87,6 +87,7 @@ echo ""
 if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	cd $KERNELDIR/$DIR/
+	sed -i 's/supported.versions=10/supported.versions=11/' $KERNELDIR/$DIR/anykernel.sh
 	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
 		echo "  Zip Signing...."

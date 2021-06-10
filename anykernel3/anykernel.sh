@@ -22,7 +22,7 @@ device.name9=excalibur
 device.name10=joyeuse_eea
 device.name11=Joyeuse_EEA
 device.name12=durandal
-supported.versions=
+supported.versions=10
 supported.patchlevels=
 '; } # end properties
 
