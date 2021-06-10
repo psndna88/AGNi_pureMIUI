@@ -583,7 +583,7 @@ static void via_sdc_send_command(struct via_crdr_mmc_host *host,
 		cmdctrl |= VIA_CRDR_SDCTRL_RSP_R3;
 		break;
 	default:
-		pr_err("%s: cmd->flag is not valid\n", mmc_hostname(host->mmc));
+		pr_debug("%s: cmd->flag is not valid\n", mmc_hostname(host->mmc));
 		break;
 	}
 
@@ -838,7 +838,7 @@ static void via_sdc_cmd_isr(struct via_crdr_mmc_host *host, u16 intmask)
 	BUG_ON(intmask == 0);
 
 	if (!host->cmd) {
-		pr_err("%s: Got command interrupt 0x%x even "
+		pr_debug("%s: Got command interrupt 0x%x even "
 		       "though no command operation was in progress.\n",
 		       mmc_hostname(host->mmc), intmask);
 		return;
@@ -917,7 +917,7 @@ static irqreturn_t via_sdc_isr(int irq, void *dev_id)
 
 	sd_status &= ~(VIA_CRDR_SDSTS_CMD_MASK | VIA_CRDR_SDSTS_DATA_MASK);
 	if (sd_status) {
-		pr_err("%s: Unexpected interrupt 0x%x\n",
+		pr_debug("%s: Unexpected interrupt 0x%x\n",
 		       mmc_hostname(sdhost->mmc), sd_status);
 		writew(sd_status, addrbase + VIA_CRDR_SDSTATUS);
 	}
@@ -941,7 +941,7 @@ static void via_sdc_timeout(unsigned long ulongdata)
 	spin_lock_irqsave(&sdhost->lock, flags);
 
 	if (sdhost->mrq) {
-		pr_err("%s: Timeout waiting for hardware interrupt."
+		pr_debug("%s: Timeout waiting for hardware interrupt."
 		       "cmd:0x%x\n", mmc_hostname(sdhost->mmc),
 		       sdhost->mrq->cmd->opcode);
 
@@ -1005,7 +1005,7 @@ static void via_sdc_card_detect(struct work_struct *work)
 	status = readw(addrbase + VIA_CRDR_SDSTATUS);
 	if (!(status & VIA_CRDR_SDSTS_SLOTG)) {
 		if (host->mrq) {
-			pr_err("%s: Card removed during transfer!\n",
+			pr_debug("%s: Card removed during transfer!\n",
 			       mmc_hostname(host->mmc));
 			host->mrq->cmd->error = -ENOMEDIUM;
 			tasklet_schedule(&host->finish_tasklet);
@@ -1192,7 +1192,7 @@ static void via_sd_remove(struct pci_dev *pcidev)
 	mmiowb();
 
 	if (sdhost->mrq) {
-		pr_err("%s: Controller removed during "
+		pr_debug("%s: Controller removed during "
 			"transfer\n", mmc_hostname(sdhost->mmc));
 
 		/* make sure all DMA is stopped */

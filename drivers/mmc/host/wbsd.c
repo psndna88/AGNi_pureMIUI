@@ -194,7 +194,7 @@ static void wbsd_reset(struct wbsd_host *host)
 {
 	u8 setup;
 
-	pr_err("%s: Resetting chip\n", mmc_hostname(host->mmc));
+	pr_debug("%s: Resetting chip\n", mmc_hostname(host->mmc));
 
 	/*
 	 * Soft reset of chip (SD/MMC part).
@@ -721,7 +721,7 @@ static void wbsd_finish_data(struct wbsd_host *host, struct mmc_data *data)
 		 * Any leftover data?
 		 */
 		if (count) {
-			pr_err("%s: Incomplete DMA transfer. "
+			pr_debug("%s: Incomplete DMA transfer. "
 				"%d bytes left.\n",
 				mmc_hostname(host->mmc), count);
 
@@ -1028,7 +1028,7 @@ static void wbsd_tasklet_card(unsigned long param)
 		host->flags &= ~WBSD_FCARD_PRESENT;
 
 		if (host->mrq) {
-			pr_err("%s: Card removed during transfer!\n",
+			pr_debug("%s: Card removed during transfer!\n",
 				mmc_hostname(host->mmc));
 			wbsd_reset(host);
 

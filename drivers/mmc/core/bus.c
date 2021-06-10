@@ -394,7 +394,7 @@ int mmc_add_card(struct mmc_card *card)
 	if (mmc_card_sdio(card)) {
 		ret = device_init_wakeup(&card->dev, true);
 		if (ret)
-			pr_err("%s: %s: failed to init wakeup: %d\n",
+			pr_debug("%s: %s: failed to init wakeup: %d\n",
 			       mmc_hostname(card->host), __func__, ret);
 	}
 	ret = device_add(&card->dev);

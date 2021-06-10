@@ -166,7 +166,7 @@ static int ufs_test_add_test(struct ufs_test_data *utd,
 
 	tests_root = utd->test_iosched->debug.debug_tests_root;
 	if (!tests_root) {
-		pr_err("%s: Failed to create debugfs root.", __func__);
+		pr_debug("%s: Failed to create debugfs root.", __func__);
 		return -EINVAL;
 	}
 
@@ -174,7 +174,7 @@ static int ufs_test_add_test(struct ufs_test_data *utd,
 						S_IRUGO | S_IWUGO, tests_root,
 						utd, test_fops);
 	if (!utd->test_list[test_id]) {
-		pr_err("%s: Could not create the test %s", test_str,
+		pr_debug("%s: Could not create the test %s", test_str,
 				__func__);
 		ret = -ENOMEM;
 	}
@@ -333,7 +333,7 @@ static inline int ufs_test_pm_runtime_cfg_sync(struct test_iosched *tios,
 		ret = pm_runtime_get_sync(hba->dev);
 		/* Positive non-zero return values are not errors */
 		if (ret < 0) {
-			pr_err("%s: pm_runtime_get_sync failed, ret=%d\n",
+			pr_debug("%s: pm_runtime_get_sync failed, ret=%d\n",
 				__func__, ret);
 			return ret;
 		}
@@ -517,12 +517,12 @@ static int ufs_test_check_result(struct test_iosched *test_iosched)
 	struct ufs_test_data *utd = test_iosched->blk_dev_test_data;
 
 	if (utd->test_stage == UFS_TEST_ERROR) {
-		pr_err("%s: An error occurred during the test.", __func__);
+		pr_debug("%s: An error occurred during the test.", __func__);
 		return TEST_FAILED;
 	}
 
 	if (utd->fail_threads != 0) {
-		pr_err("%s: About %d threads failed during execution.",
+		pr_debug("%s: About %d threads failed during execution.",
 				__func__, utd->fail_threads);
 		return utd->fail_threads;
 	}
@@ -565,7 +565,7 @@ static int ufs_test_run_write_read_test(struct test_iosched *test_iosched)
 	ret = test_iosched_add_wr_rd_test_req(test_iosched, 0, WRITE, start_sec,
 		num_bios, TEST_PATTERN_5A, NULL);
 	if (ret) {
-		pr_err("%s: failed to add a write request", __func__);
+		pr_debug("%s: failed to add a write request", __func__);
 		return ret;
 	}
 
@@ -579,7 +579,7 @@ static int ufs_test_run_write_read_test(struct test_iosched *test_iosched)
 	ret = test_iosched_add_wr_rd_test_req(test_iosched, 0, READ, start_sec,
 			num_bios, TEST_PATTERN_5A, NULL);
 	if (ret) {
-		pr_err("%s: failed to add a read request", __func__);
+		pr_debug("%s: failed to add a read request", __func__);
 		return ret;
 	}
 
@@ -663,11 +663,11 @@ static void ufs_test_random_async_query(void *data, async_cookie_t cookie)
 				QUERY_FLAG_IDN_BKOPS_EN, NULL);
 		break;
 	default:
-		pr_err("%s: Random error unknown op %d", __func__, op);
+		pr_debug("%s: Random error unknown op %d", __func__, op);
 	}
 
 	if (ret)
-		pr_err("%s: Query thread with op %d, failed with err %d.",
+		pr_debug("%s: Query thread with op %d, failed with err %d.",
 			__func__, op, ret);
 
 	ufs_test_thread_complete(utd, ret);
@@ -690,7 +690,7 @@ static void scenario_free_end_io_fn(struct request *rq, int err)
 	spin_unlock_irqrestore(&test_iosched->lock, flags);
 
 	if (err)
-		pr_err("%s: request %d completed, err=%d", __func__,
+		pr_debug("%s: request %d completed, err=%d", __func__,
 			test_rq->req_id, err);
 
 	test_iosched_free_test_req_data_buffer(test_rq);
@@ -711,7 +711,7 @@ static bool long_rand_test_check_completion(struct test_iosched *test_iosched)
 	struct ufs_test_data *utd = test_iosched->blk_dev_test_data;
 
 	if (utd->completed_req_count > utd->long_test_num_reqs) {
-		pr_err("%s: Error: Completed more requests than total test requests.\nTerminating test."
+		pr_debug("%s: Error: Completed more requests than total test requests.\nTerminating test."
 		       , __func__);
 		return true;
 	}
@@ -723,9 +723,9 @@ static bool long_seq_test_check_completion(struct test_iosched *test_iosched)
 	struct ufs_test_data *utd = test_iosched->blk_dev_test_data;
 
 	if (utd->completed_req_count > utd->long_test_num_reqs) {
-		pr_err("%s: Error: Completed more requests than total test requests"
+		pr_debug("%s: Error: Completed more requests than total test requests"
 		       , __func__);
-		pr_err("%s: Terminating test.", __func__);
+		pr_debug("%s: Terminating test.", __func__);
 		return true;
 	}
 	return utd->completed_req_count == utd->long_test_num_reqs;
@@ -778,7 +778,7 @@ static void ufs_test_run_scenario(void *data, async_cookie_t cookie)
 			direction, start_sec, num_bios, TEST_PATTERN_5A,
 			scenario_free_end_io_fn);
 		if (ret) {
-			pr_err("%s: failed to create request" , __func__);
+			pr_debug("%s: failed to create request" , __func__);
 			break;
 		}
 
@@ -821,7 +821,7 @@ static int ufs_test_run_multi_query_test(struct test_iosched *test_iosched)
 
 	if (!wait_for_completion_timeout(&utd->outstanding_complete,
 			THREADS_COMPLETION_TIMOUT)) {
-		pr_err("%s: Multi-query test timed-out %d threads left",
+		pr_debug("%s: Multi-query test timed-out %d threads left",
 			__func__, atomic_read(&utd->outstanding_threads));
 	}
 	test_iosched_mark_test_completion(test_iosched);
@@ -857,7 +857,7 @@ static int ufs_test_run_parallel_read_and_write_test(
 
 	if (!wait_for_completion_timeout(&utd->outstanding_complete,
 				THREADS_COMPLETION_TIMOUT)) {
-		pr_err("%s: Multi-thread test timed-out %d threads left",
+		pr_debug("%s: Multi-thread test timed-out %d threads left",
 			__func__, atomic_read(&utd->outstanding_threads));
 	}
 	check_test_completion(test_iosched);
@@ -877,7 +877,7 @@ static void ufs_test_run_synchronous_scenario(struct test_scenario *read_data)
 	async_schedule(ufs_test_run_scenario, read_data);
 	if (!wait_for_completion_timeout(&utd->outstanding_complete,
 			THREADS_COMPLETION_TIMOUT)) {
-		pr_err("%s: Multi-thread test timed-out %d threads left",
+		pr_debug("%s: Multi-thread test timed-out %d threads left",
 			__func__, atomic_read(&utd->outstanding_threads));
 	}
 }
@@ -960,7 +960,7 @@ static void long_test_free_end_io_fn(struct request *rq, int err)
 	unsigned long flags;
 
 	if (!rq) {
-		pr_err("%s: error: NULL request", __func__);
+		pr_debug("%s: error: NULL request", __func__);
 		return;
 	}
 
@@ -978,14 +978,14 @@ static void long_test_free_end_io_fn(struct request *rq, int err)
 			rq_data_dir(rq) == READ &&
 			compare_buffer_to_pattern(test_rq)) {
 		/* if the pattern does not match */
-		pr_err("%s: read pattern not as expected", __func__);
+		pr_debug("%s: read pattern not as expected", __func__);
 		utd->test_stage = UFS_TEST_ERROR;
 		check_test_completion(test_iosched);
 		return;
 	}
 
 	if (err)
-		pr_err("%s: request %d completed, err=%d", __func__,
+		pr_debug("%s: request %d completed, err=%d", __func__,
 			test_rq->req_id, err);
 
 	test_iosched_free_test_req_data_buffer(test_rq);
@@ -1093,7 +1093,7 @@ static int run_long_test(struct test_iosched *test_iosched)
 			direction, sector, num_bios_per_request,
 			TEST_PATTERN_5A, long_test_free_end_io_fn);
 		if (ret) {
-			pr_err("%s: failed to create request" , __func__);
+			pr_debug("%s: failed to create request" , __func__);
 			break;
 		}
 		inserted_requests++;
@@ -1102,7 +1102,7 @@ static int run_long_test(struct test_iosched *test_iosched)
 				READ, sector, num_bios_per_request,
 				TEST_PATTERN_5A, long_test_free_end_io_fn);
 			if (ret) {
-				pr_err("%s: failed to create request" ,
+				pr_debug("%s: failed to create request" ,
 						__func__);
 				break;
 			}
@@ -1239,7 +1239,7 @@ static int ufs_test_run_data_integrity_test(struct test_iosched *test_iosched)
 				break;
 		}
 		if (!retries) {
-			pr_err("%s: too many unlucky start_sector draw retries",
+			pr_debug("%s: too many unlucky start_sector draw retries",
 			       __func__);
 			ret = -EINVAL;
 			return ret;
@@ -1250,7 +1250,7 @@ static int ufs_test_run_data_integrity_test(struct test_iosched *test_iosched)
 			start_sec, 1, i, long_test_free_end_io_fn);
 
 		if (ret) {
-			pr_err("%s: failed to add a write request", __func__);
+			pr_debug("%s: failed to add a write request", __func__);
 			return ret;
 		}
 	}
@@ -1268,7 +1268,7 @@ static int ufs_test_run_data_integrity_test(struct test_iosched *test_iosched)
 			sectors[i], 1, i, long_test_free_end_io_fn);
 
 		if (ret) {
-			pr_err("%s: failed to add a read request", __func__);
+			pr_debug("%s: failed to add a read request", __func__);
 			return ret;
 		}
 	}
@@ -1288,7 +1288,7 @@ static ssize_t ufs_test_write(struct file *file, const char __user *buf,
 
 	ret = kstrtoint_from_user(buf, count, 0, &number);
 	if (ret < 0) {
-		pr_err("%s: Error while reading test parameter value %d",
+		pr_debug("%s: Error while reading test parameter value %d",
 				__func__, ret);
 		return ret;
 	}
@@ -1356,7 +1356,7 @@ static ssize_t ufs_test_write(struct file *file, const char __user *buf,
 		utd->test_info.run_test_fn = ufs_test_run_lun_depth_test;
 		break;
 	default:
-		pr_err("%s: Unknown test-case: %d", __func__, test_case);
+		pr_debug("%s: Unknown test-case: %d", __func__, test_case);
 		WARN_ON(true);
 	}
 
@@ -1369,7 +1369,7 @@ static ssize_t ufs_test_write(struct file *file, const char __user *buf,
 		ret = test_iosched_start_test(utd->test_iosched,
 			&utd->test_info);
 		if (ret) {
-			pr_err("%s: Test failed, err=%d.", __func__, ret);
+			pr_debug("%s: Test failed, err=%d.", __func__, ret);
 			return ret;
 		}
 
@@ -1412,12 +1412,12 @@ static int ufs_test_debugfs_init(struct ufs_test_data *utd)
 	utd->test_list = kmalloc(sizeof(struct dentry *) * NUM_TESTS,
 			GFP_KERNEL);
 	if (!utd->test_list) {
-		pr_err("%s: failed to allocate tests dentrys", __func__);
+		pr_debug("%s: failed to allocate tests dentrys", __func__);
 		return -ENODEV;
 	}
 
 	if (!utils_root || !tests_root) {
-		pr_err("%s: Failed to create debugfs root.", __func__);
+		pr_debug("%s: Failed to create debugfs root.", __func__);
 		ret = -EINVAL;
 		goto exit_err;
 	}
@@ -1426,7 +1426,7 @@ static int ufs_test_debugfs_init(struct ufs_test_data *utd)
 			S_IRUGO | S_IWUGO, utils_root, &utd->random_test_seed);
 
 	if (!utd->random_test_seed_dentry) {
-		pr_err("%s: Could not create debugfs random_test_seed.",
+		pr_debug("%s: Could not create debugfs random_test_seed.",
 				__func__);
 		ret = -ENOMEM;
 		goto exit_err;
@@ -1478,7 +1478,7 @@ static int ufs_test_probe(struct test_iosched *test_iosched)
 
 	utd = kzalloc(sizeof(*utd), GFP_KERNEL);
 	if (!utd) {
-		pr_err("%s: failed to allocate ufs test data\n", __func__);
+		pr_debug("%s: failed to allocate ufs test data\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -1488,7 +1488,7 @@ static int ufs_test_probe(struct test_iosched *test_iosched)
 
 	ret = ufs_test_debugfs_init(utd);
 	if (ret) {
-		pr_err("%s: failed to init debug-fs entries, ret=%d\n",
+		pr_debug("%s: failed to init debug-fs entries, ret=%d\n",
 			__func__, ret);
 		kfree(utd);
 	}

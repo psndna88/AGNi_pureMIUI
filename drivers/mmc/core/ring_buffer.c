@@ -45,7 +45,7 @@ void mmc_trace_write(struct mmc_host *mmc,
 
 	/* Catch some unlikely machine specific wrap-around bug */
 	if (unlikely(idx > (MMC_TRACE_RBUF_NUM_EVENTS - 1))) {
-		pr_err("%s: %s: Invalid idx:%d for mmc trace, tracing stopped !\n",
+		pr_debug("%s: %s: Invalid idx:%d for mmc trace, tracing stopped !\n",
 			mmc_hostname(mmc), __func__, idx);
 		mmc_stop_tracing(mmc);
 		return;
@@ -71,7 +71,7 @@ void mmc_trace_init(struct mmc_host *mmc)
 				MMC_TRACE_RBUF_SZ_ORDER);
 
 	if (!mmc->trace_buf.data) {
-		pr_err("%s: %s: Unable to allocate trace for mmc\n",
+		pr_debug("%s: %s: Unable to allocate trace for mmc\n",
 			__func__, mmc_hostname(mmc));
 		return;
 	}
@@ -106,7 +106,7 @@ void mmc_dump_trace_buffer(struct mmc_host *mmc, struct seq_file *s)
 		if (s)
 			seq_printf(s, "%s", (char *)event);
 		else
-			pr_err("%s", (char *)event);
+			pr_debug("%s", (char *)event);
 		cur_idx = (cur_idx + 1) & N;
 		if (cur_idx == idx) {
 			event =
@@ -115,7 +115,7 @@ void mmc_dump_trace_buffer(struct mmc_host *mmc, struct seq_file *s)
 				seq_printf(s, "latest_event: %s",
 					(char *)event);
 			else
-				pr_err("latest_event: %s", (char *)event);
+				pr_debug("latest_event: %s", (char *)event);
 			break;
 		}
 	} while (1);

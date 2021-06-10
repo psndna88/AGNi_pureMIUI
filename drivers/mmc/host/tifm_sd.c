@@ -632,7 +632,7 @@ static void tifm_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	}
 
 	if (host->req) {
-		pr_err("%s : unfinished request detected\n",
+		pr_debug("%s : unfinished request detected\n",
 		       dev_name(&sock->dev));
 		mrq->cmd->error = -ETIMEDOUT;
 		goto err_out;
@@ -672,7 +672,7 @@ static void tifm_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 					    r_data->flags & MMC_DATA_WRITE
 					    ? PCI_DMA_TODEVICE
 					    : PCI_DMA_FROMDEVICE)) {
-				pr_err("%s : scatterlist map failed\n",
+				pr_debug("%s : scatterlist map failed\n",
 				       dev_name(&sock->dev));
 				mrq->cmd->error = -ENOMEM;
 				goto err_out;
@@ -684,7 +684,7 @@ static void tifm_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 						   ? PCI_DMA_TODEVICE
 						   : PCI_DMA_FROMDEVICE);
 			if (host->sg_len < 1) {
-				pr_err("%s : scatterlist map failed\n",
+				pr_debug("%s : scatterlist map failed\n",
 				       dev_name(&sock->dev));
 				tifm_unmap_sg(sock, &host->bounce_buf, 1,
 					      r_data->flags & MMC_DATA_WRITE
@@ -748,7 +748,7 @@ static void tifm_sd_end_cmd(unsigned long data)
 	host->req = NULL;
 
 	if (!mrq) {
-		pr_err(" %s : no request to complete?\n",
+		pr_debug(" %s : no request to complete?\n",
 		       dev_name(&sock->dev));
 		spin_unlock_irqrestore(&sock->lock, flags);
 		return;
@@ -787,7 +787,7 @@ static void tifm_sd_abort(unsigned long data)
 {
 	struct tifm_sd *host = (struct tifm_sd*)data;
 
-	pr_err("%s : card failed to respond for a long period of time "
+	pr_debug("%s : card failed to respond for a long period of time "
 	       "(%x, %x)\n",
 	       dev_name(&host->dev->dev), host->req->cmd->opcode, host->cmd_flags);
 
@@ -905,7 +905,7 @@ static int tifm_sd_initialize_host(struct tifm_sd *host)
 	}
 
 	if (rc) {
-		pr_err("%s : controller failed to reset\n",
+		pr_debug("%s : controller failed to reset\n",
 		       dev_name(&sock->dev));
 		return -ENODEV;
 	}
@@ -931,7 +931,7 @@ static int tifm_sd_initialize_host(struct tifm_sd *host)
 	}
 
 	if (rc) {
-		pr_err("%s : card not ready - probe failed on initialization\n",
+		pr_debug("%s : card not ready - probe failed on initialization\n",
 		       dev_name(&sock->dev));
 		return -ENODEV;
 	}

@@ -378,7 +378,7 @@ static inline int msm_dll_poll_ck_out_en(struct sdhci_host *host,
 
 	while (ck_out_en != poll) {
 		if (--wait_cnt == 0) {
-			pr_err("%s: %s: CK_OUT_EN bit is not %d\n",
+			pr_debug("%s: %s: CK_OUT_EN bit is not %d\n",
 				mmc_hostname(mmc), __func__, poll);
 			rc = -ETIMEDOUT;
 			goto out;
@@ -425,7 +425,7 @@ static int msm_enable_cdr_cm_sdc4_dll(struct sdhci_host *host)
 		goto err;
 	goto out;
 err:
-	pr_err("%s: %s: failed\n", mmc_hostname(host->mmc), __func__);
+	pr_debug("%s: %s: failed\n", mmc_hostname(host->mmc), __func__);
 out:
 	return rc;
 }
@@ -548,7 +548,7 @@ static int msm_config_cm_dll_phase(struct sdhci_host *host, u8 phase)
 	goto out;
 
 err_out:
-	pr_err("%s: %s: Failed to set DLL phase: %d\n",
+	pr_debug("%s: %s: Failed to set DLL phase: %d\n",
 		mmc_hostname(mmc), __func__, phase);
 out:
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -579,7 +579,7 @@ static int msm_find_most_appropriate_phase(struct sdhci_host *host,
 
 	pr_debug("%s: Enter %s\n", mmc_hostname(mmc), __func__);
 	if (!total_phases || (total_phases > MAX_PHASES)) {
-		pr_err("%s: %s: invalid argument: total_phases=%d\n",
+		pr_debug("%s: %s: invalid argument: total_phases=%d\n",
 			mmc_hostname(mmc), __func__, total_phases);
 		return -EINVAL;
 	}
@@ -662,7 +662,7 @@ static int msm_find_most_appropriate_phase(struct sdhci_host *host,
 
 	if (ret >= MAX_PHASES) {
 		ret = -EINVAL;
-		pr_err("%s: %s: invalid phase selected=%d\n",
+		pr_debug("%s: %s: invalid phase selected=%d\n",
 			mmc_hostname(mmc), __func__, ret);
 	}
 
@@ -815,7 +815,7 @@ static int msm_init_cm_dll(struct sdhci_host *host)
 			msm_host_offset->CORE_DLL_STATUS) & CORE_DLL_LOCK)) {
 			/* max. wait for 50us sec for LOCK bit to be set */
 			if (--wait_cnt == 0) {
-				pr_err("%s: %s: DLL failed to LOCK\n",
+				pr_debug("%s: %s: DLL failed to LOCK\n",
 					mmc_hostname(mmc), __func__);
 				rc = -ETIMEDOUT;
 				goto out;
@@ -932,7 +932,7 @@ static int sdhci_msm_cdclp533_calibration(struct sdhci_host *host)
 		 calib_done, (calib_done & CORE_CALIBRATION_DONE), 1, 50);
 
 	if (ret == -ETIMEDOUT) {
-		pr_err("%s: %s: CDC Calibration was not completed\n",
+		pr_debug("%s: %s: CDC Calibration was not completed\n",
 				mmc_hostname(host->mmc), __func__);
 		goto out;
 	}
@@ -941,7 +941,7 @@ static int sdhci_msm_cdclp533_calibration(struct sdhci_host *host)
 	cdc_err = readl_relaxed(host->ioaddr + CORE_CSR_CDC_STATUS0)
 			& CORE_CDC_ERROR_CODE_MASK;
 	if (cdc_err) {
-		pr_err("%s: %s: CDC Error Code %d\n",
+		pr_debug("%s: %s: CDC Error Code %d\n",
 			mmc_hostname(host->mmc), __func__, cdc_err);
 		ret = -EINVAL;
 		goto out;
@@ -1002,7 +1002,7 @@ static int sdhci_msm_cm_dll_sdc4_calibration(struct sdhci_host *host)
 		 dll_status, (dll_status & CORE_DDR_DLL_LOCK), 10, 1000);
 
 	if (ret == -ETIMEDOUT) {
-		pr_err("%s: %s: CM_DLL_SDC4 Calibration was not completed\n",
+		pr_debug("%s: %s: CM_DLL_SDC4 Calibration was not completed\n",
 				mmc_hostname(host->mmc), __func__);
 		goto out;
 	}
@@ -1290,7 +1290,7 @@ retry:
 				mmc_hostname(mmc), __func__, phase);
 
 			if (phase == 15 && tuned_phase_cnt) {
-				pr_err("%s: %s: Ping with known good phase\n",
+				pr_debug("%s: %s: Ping with known good phase\n",
 					mmc_hostname(mmc), __func__);
 				/* set the phase in delay line hw block */
 				rc = msm_config_cm_dll_phase(host,
@@ -1313,7 +1313,7 @@ retry:
 				mmc_wait_for_req(mmc, &mrq);
 
 				if ((cmd.error || data.error))
-					pr_err("%s: %s: Ping with known good phase failed\n",
+					pr_debug("%s: %s: Ping with known good phase failed\n",
 					mmc_hostname(mmc), __func__);
 			}
 		}
@@ -1376,7 +1376,7 @@ retry:
 		if (--tuning_seq_cnt)
 			goto retry;
 		/* tuning failed */
-		pr_err("%s: %s: no tuning point found\n",
+		pr_debug("%s: %s: no tuning point found\n",
 			mmc_hostname(mmc), __func__);
 		rc = -EIO;
 	}
@@ -1402,7 +1402,7 @@ static int sdhci_msm_setup_gpio(struct sdhci_msm_pltfm_data *pdata, bool enable)
 	for (i = 0; i < curr->size; i++) {
 		if (!gpio_is_valid(curr->gpio[i].no)) {
 			ret = -EINVAL;
-			pr_err("%s: Invalid gpio = %d\n", __func__,
+			pr_debug("%s: Invalid gpio = %d\n", __func__,
 					curr->gpio[i].no);
 			goto free_gpios;
 		}
@@ -1410,7 +1410,7 @@ static int sdhci_msm_setup_gpio(struct sdhci_msm_pltfm_data *pdata, bool enable)
 			ret = gpio_request(curr->gpio[i].no,
 						curr->gpio[i].name);
 			if (ret) {
-				pr_err("%s: gpio_request(%d, %s) failed %d\n",
+				pr_debug("%s: gpio_request(%d, %s) failed %d\n",
 					__func__, curr->gpio[i].no,
 					curr->gpio[i].name, ret);
 				goto free_gpios;
@@ -1444,7 +1444,7 @@ static int sdhci_msm_setup_pinctrl(struct sdhci_msm_pltfm_data *pdata,
 			pdata->pctrl_data->pins_sleep);
 
 	if (ret < 0)
-		pr_err("%s state for pinctrl failed with %d\n",
+		pr_debug("%s state for pinctrl failed with %d\n",
 			enable ? "Enabling" : "Disabling", ret);
 
 	return ret;
@@ -2085,7 +2085,7 @@ static inline int sdhci_msm_bus_set_vote(struct sdhci_msm_host *msm_host,
 				msm_host->msm_bus_vote.client_handle, vote);
 		spin_lock_irqsave(&host->lock, *flags);
 		if (rc) {
-			pr_err("%s: msm_bus_scale_client_update_request() failed: bus_client_handle=0x%x, vote=%d, err=%d\n",
+			pr_debug("%s: msm_bus_scale_client_update_request() failed: bus_client_handle=0x%x, vote=%d, err=%d\n",
 				mmc_hostname(host->mmc),
 				msm_host->msm_bus_vote.client_handle, vote, rc);
 			goto out;
@@ -2265,7 +2265,7 @@ static int sdhci_msm_vreg_init_reg(struct device *dev,
 	vreg->reg = devm_regulator_get(dev, vreg->name);
 	if (IS_ERR(vreg->reg)) {
 		ret = PTR_ERR(vreg->reg);
-		pr_err("%s: devm_regulator_get(%s) failed. ret=%d\n",
+		pr_debug("%s: devm_regulator_get(%s) failed. ret=%d\n",
 			__func__, vreg->name, ret);
 		goto out;
 	}
@@ -2274,7 +2274,7 @@ static int sdhci_msm_vreg_init_reg(struct device *dev,
 		vreg->set_voltage_sup = true;
 		/* sanity check */
 		if (!vreg->high_vol_level || !vreg->hpm_uA) {
-			pr_err("%s: %s invalid constraints specified\n",
+			pr_debug("%s: %s invalid constraints specified\n",
 			       __func__, vreg->name);
 			ret = -EINVAL;
 		}
@@ -2302,7 +2302,7 @@ static int sdhci_msm_vreg_set_optimum_mode(struct sdhci_msm_reg_data
 	if (vreg->set_voltage_sup) {
 		ret = regulator_set_load(vreg->reg, uA_load);
 		if (ret < 0)
-			pr_err("%s: regulator_set_load(reg=%s,uA_load=%d) failed. ret=%d\n",
+			pr_debug("%s: regulator_set_load(reg=%s,uA_load=%d) failed. ret=%d\n",
 			       __func__, vreg->name, uA_load, ret);
 		else
 			/*
@@ -2321,7 +2321,7 @@ static int sdhci_msm_vreg_set_voltage(struct sdhci_msm_reg_data *vreg,
 	if (vreg->set_voltage_sup) {
 		ret = regulator_set_voltage(vreg->reg, min_uV, max_uV);
 		if (ret) {
-			pr_err("%s: regulator_set_voltage(%s)failed. min_uV=%d,max_uV=%d,ret=%d\n",
+			pr_debug("%s: regulator_set_voltage(%s)failed. min_uV=%d,max_uV=%d,ret=%d\n",
 			       __func__, vreg->name, min_uV, max_uV, ret);
 		}
 	}
@@ -2347,7 +2347,7 @@ static int sdhci_msm_vreg_enable(struct sdhci_msm_reg_data *vreg)
 	}
 	ret = regulator_enable(vreg->reg);
 	if (ret) {
-		pr_err("%s: regulator_enable(%s) failed. ret=%d\n",
+		pr_debug("%s: regulator_enable(%s) failed. ret=%d\n",
 				__func__, vreg->name, ret);
 		return ret;
 	}
@@ -2363,7 +2363,7 @@ static int sdhci_msm_vreg_disable(struct sdhci_msm_reg_data *vreg)
 	if (vreg->is_enabled && !vreg->is_always_on) {
 		ret = regulator_disable(vreg->reg);
 		if (ret) {
-			pr_err("%s: regulator_disable(%s) failed. ret=%d\n",
+			pr_debug("%s: regulator_disable(%s) failed. ret=%d\n",
 				__func__, vreg->name, ret);
 			goto out;
 		}
@@ -2495,7 +2495,7 @@ static int sdhci_msm_set_vdd_io_vol(struct sdhci_msm_pltfm_data *pdata,
 			set_level = voltage_level;
 			break;
 		default:
-			pr_err("%s: invalid argument level = %d",
+			pr_debug("%s: invalid argument level = %d",
 					__func__, level);
 			ret = -EINVAL;
 			return ret;
@@ -2555,7 +2555,7 @@ void sdhci_msm_dump_pwr_ctrl_regs(struct sdhci_host *host)
 	if (pwr_irq_desc)
 		irq_flags = pwr_irq_desc->irq_data.common->state_use_accessors;
 
-	pr_err("%s: PWRCTL_STATUS: 0x%08x | PWRCTL_MASK: 0x%08x | PWRCTL_CTL: 0x%08x, pwr isr state=0x%x\n",
+	pr_debug("%s: PWRCTL_STATUS: 0x%08x | PWRCTL_MASK: 0x%08x | PWRCTL_CTL: 0x%08x, pwr isr state=0x%x\n",
 		mmc_hostname(host->mmc),
 		sdhci_msm_readl_relaxed(host,
 			msm_host_offset->CORE_PWRCTL_STATUS),
@@ -2616,7 +2616,7 @@ static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 	while (irq_status & sdhci_msm_readb_relaxed(host,
 		msm_host_offset->CORE_PWRCTL_STATUS)) {
 		if (retry == 0) {
-			pr_err("%s: Timedout clearing (0x%x) pwrctl status register\n",
+			pr_debug("%s: Timedout clearing (0x%x) pwrctl status register\n",
 				mmc_hostname(host->mmc), irq_status);
 			sdhci_msm_dump_pwr_ctrl_regs(host);
 			BUG_ON(1);
@@ -2941,7 +2941,7 @@ static int sdhci_msm_enable_controller_clock(struct sdhci_host *host)
 	if (!IS_ERR(msm_host->pclk)) {
 		rc = clk_prepare_enable(msm_host->pclk);
 		if (rc) {
-			pr_err("%s: %s: failed to enable the pclk with error %d\n",
+			pr_debug("%s: %s: failed to enable the pclk with error %d\n",
 			       mmc_hostname(host->mmc), __func__, rc);
 			goto remove_vote;
 		}
@@ -2949,7 +2949,7 @@ static int sdhci_msm_enable_controller_clock(struct sdhci_host *host)
 
 	rc = clk_prepare_enable(msm_host->clk);
 	if (rc) {
-		pr_err("%s: %s: failed to enable the host-clk with error %d\n",
+		pr_debug("%s: %s: failed to enable the host-clk with error %d\n",
 		       mmc_hostname(host->mmc), __func__, rc);
 		goto disable_pclk;
 	}
@@ -2957,7 +2957,7 @@ static int sdhci_msm_enable_controller_clock(struct sdhci_host *host)
 	if (!IS_ERR(msm_host->ice_clk)) {
 		rc = clk_prepare_enable(msm_host->ice_clk);
 		if (rc) {
-			pr_err("%s: %s: failed to enable the ice-clk with error %d\n",
+			pr_debug("%s: %s: failed to enable the ice-clk with error %d\n",
 				mmc_hostname(host->mmc), __func__, rc);
 			goto disable_host_clk;
 		}
@@ -3024,7 +3024,7 @@ static int sdhci_msm_prepare_clocks(struct sdhci_host *host, bool enable)
 		if (!IS_ERR_OR_NULL(msm_host->bus_clk)) {
 			rc = clk_prepare_enable(msm_host->bus_clk);
 			if (rc) {
-				pr_err("%s: %s: failed to enable the bus-clock with error %d\n",
+				pr_debug("%s: %s: failed to enable the bus-clock with error %d\n",
 					mmc_hostname(host->mmc), __func__, rc);
 				goto disable_controller_clk;
 			}
@@ -3032,7 +3032,7 @@ static int sdhci_msm_prepare_clocks(struct sdhci_host *host, bool enable)
 		if (!IS_ERR(msm_host->ff_clk)) {
 			rc = clk_prepare_enable(msm_host->ff_clk);
 			if (rc) {
-				pr_err("%s: %s: failed to enable the ff_clk with error %d\n",
+				pr_debug("%s: %s: failed to enable the ff_clk with error %d\n",
 					mmc_hostname(host->mmc), __func__, rc);
 				goto disable_bus_clk;
 			}
@@ -3040,7 +3040,7 @@ static int sdhci_msm_prepare_clocks(struct sdhci_host *host, bool enable)
 		if (!IS_ERR(msm_host->sleep_clk)) {
 			rc = clk_prepare_enable(msm_host->sleep_clk);
 			if (rc) {
-				pr_err("%s: %s: failed to enable the sleep_clk with error %d\n",
+				pr_debug("%s: %s: failed to enable the sleep_clk with error %d\n",
 					mmc_hostname(host->mmc), __func__, rc);
 				goto disable_ff_clk;
 			}
@@ -3217,7 +3217,7 @@ static void sdhci_msm_set_clock(struct sdhci_host *host, unsigned int clock)
 					dll_lock, (dll_lock & (CORE_DLL_LOCK |
 					CORE_DDR_DLL_LOCK)), 10, 1000);
 			if (rc == -ETIMEDOUT)
-				pr_err("%s: Unable to get DLL_LOCK/DDR_DLL_LOCK, dll_status: 0x%08x\n",
+				pr_debug("%s: Unable to get DLL_LOCK/DDR_DLL_LOCK, dll_status: 0x%08x\n",
 						mmc_hostname(host->mmc),
 						dll_lock);
 		}
@@ -3257,7 +3257,7 @@ static void sdhci_msm_set_clock(struct sdhci_host *host, unsigned int clock)
 				mmc_hostname(host->mmc), __func__, sup_clock);
 		rc = clk_set_rate(msm_host->clk, sup_clock);
 		if (rc) {
-			pr_err("%s: %s: Failed to set rate %u for host-clk : %d\n",
+			pr_debug("%s: %s: Failed to set rate %u for host-clk : %d\n",
 					mmc_hostname(host->mmc), __func__,
 					sup_clock, rc);
 			goto out;
@@ -3360,17 +3360,17 @@ static void sdhci_msm_cmdq_dump_debug_ram(struct sdhci_host *host)
 
 	if (cq_host->offset_changed)
 		offset += CQ_V5_VENDOR_CFG;
-	pr_err("---- Debug RAM dump ----\n");
-	pr_err(DRV_NAME ": Debug RAM wrap-around: 0x%08x | Debug RAM overlap: 0x%08x\n",
+	pr_debug("---- Debug RAM dump ----\n");
+	pr_debug(DRV_NAME ": Debug RAM wrap-around: 0x%08x | Debug RAM overlap: 0x%08x\n",
 	       cmdq_readl(cq_host, CQ_CMD_DBG_RAM_WA + offset),
 	       cmdq_readl(cq_host, CQ_CMD_DBG_RAM_OL + offset));
 
 	while (i < 16) {
-		pr_err(DRV_NAME ": Debug RAM dump [%d]: 0x%08x\n", i,
+		pr_debug(DRV_NAME ": Debug RAM dump [%d]: 0x%08x\n", i,
 		       cmdq_readl(cq_host, CQ_CMD_DBG_RAM + offset + (4 * i)));
 		i++;
 	}
-	pr_err("-------------------------\n");
+	pr_debug("-------------------------\n");
 }
 
 static void sdhci_msm_cache_debug_data(struct sdhci_host *host)
@@ -3557,7 +3557,7 @@ int sdhci_msm_notify_load(struct sdhci_host *host, enum mmc_load state)
 				mmc_hostname(host->mmc), clk_rate);
 		ret = clk_set_rate(msm_host->ice_clk, clk_rate);
 		if (ret) {
-			pr_err("%s: ICE_CLK rate set failed (%d) for %u\n",
+			pr_debug("%s: ICE_CLK rate set failed (%d) for %u\n",
 				mmc_hostname(host->mmc), ret, clk_rate);
 			return ret;
 		}
@@ -3586,7 +3586,7 @@ static void sdhci_msm_tsens_threshold_notify(
 		atomic_set(&msm_host->clk_scaling_disable, 1);
 		break;
 	default:
-		pr_err("%s: trip type %d not supported\n",
+		pr_debug("%s: trip type %d not supported\n",
 			mmc_hostname(msm_host->mmc),
 			tsens_cb_data->trip_triggered);
 		break;
@@ -3595,7 +3595,7 @@ static void sdhci_msm_tsens_threshold_notify(
 	ret = sensor_mgr_set_threshold(tsens_cb_data->sensor_id,
 						tsens_cb_data->threshold);
 	if (ret < 0)
-		pr_err("%s: failed to set threshold temp, ret==%d\n",
+		pr_debug("%s: failed to set threshold temp, ret==%d\n",
 					__func__, ret);
 }
 
@@ -3610,7 +3610,7 @@ static int sdhci_msm_check_tsens(struct sdhci_msm_host *msm_host)
 		tsens_dev.sensor_num = msm_host->tsens_id;
 		ret = tsens_get_temp(&tsens_dev, &temp);
 		if (ret < 0) {
-			pr_err("%s: failed to read tsens, ret = %d\n",
+			pr_debug("%s: failed to read tsens, ret = %d\n",
 				mmc_hostname(msm_host->mmc), ret);
 			return ret;
 		}
@@ -3629,7 +3629,7 @@ static int sdhci_msm_register_cb(struct sdhci_msm_host *msm_host)
 
 	ret = sdhci_msm_check_tsens(msm_host);
 	if (ret) {
-		pr_err("%s: unable to check tsens\n",
+		pr_debug("%s: unable to check tsens\n",
 				mmc_hostname(msm_host->mmc));
 		return ret;
 	}
@@ -3640,7 +3640,7 @@ static int sdhci_msm_register_cb(struct sdhci_msm_host *msm_host)
 				msm_host->disable_scaling_threshold_temp,/*low*/
 				sdhci_msm_tsens_threshold_notify);
 	if (ret) {
-		pr_err("%s: failed to register cb for tsens, ret = %d\n",
+		pr_debug("%s: failed to register cb for tsens, ret = %d\n",
 					mmc_hostname(msm_host->mmc), ret);
 		return ret;
 	}
@@ -3648,7 +3648,7 @@ static int sdhci_msm_register_cb(struct sdhci_msm_host *msm_host)
 	ret = sensor_mgr_convert_id_and_set_threshold(
 				&msm_host->tsens_threshold_config);
 	if (ret) {
-		pr_err("%s: failed to set tsens threshold, ret = %d\n",
+		pr_debug("%s: failed to set tsens threshold, ret = %d\n",
 					mmc_hostname(msm_host->mmc), ret);
 		return ret;
 	}
@@ -3696,7 +3696,7 @@ static int sdhci_msm_reg_temp_callback(struct sdhci_host *host)
 	if (msm_host->temp_control_scaling) {
 		ret = sdhci_msm_register_cb(msm_host);
 		if (ret)
-			pr_err("%s: failed register temp monitoring call back, ret = %d\n",
+			pr_debug("%s: failed register temp monitoring call back, ret = %d\n",
 				mmc_hostname(msm_host->mmc), ret);
 	}
 	return ret;
@@ -3937,7 +3937,7 @@ void sdhci_msm_pm_qos_irq_init(struct sdhci_host *host)
 	ret = device_create_file(&msm_host->pdev->dev,
 		&msm_host->pm_qos_irq.enable_attr);
 	if (ret)
-		pr_err("%s: fail to create pm_qos_irq_enable (%d)\n",
+		pr_debug("%s: fail to create pm_qos_irq_enable (%d)\n",
 			__func__, ret);
 
 	msm_host->pm_qos_irq.status_attr.show = sdhci_msm_pm_qos_irq_show;
@@ -3948,7 +3948,7 @@ void sdhci_msm_pm_qos_irq_init(struct sdhci_host *host)
 	ret = device_create_file(&msm_host->pdev->dev,
 			&msm_host->pm_qos_irq.status_attr);
 	if (ret)
-		pr_err("%s: fail to create pm_qos_irq_status (%d)\n",
+		pr_debug("%s: fail to create pm_qos_irq_status (%d)\n",
 			__func__, ret);
 }
 
@@ -4934,7 +4934,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->auto_cmd21_attr.attr.mode = S_IRUGO | S_IWUSR;
 	ret = device_create_file(&pdev->dev, &msm_host->auto_cmd21_attr);
 	if (ret) {
-		pr_err("%s: %s: failed creating auto-cmd21 attr: %d\n",
+		pr_debug("%s: %s: failed creating auto-cmd21 attr: %d\n",
 		       mmc_hostname(host->mmc), __func__, ret);
 		device_remove_file(&pdev->dev, &msm_host->auto_cmd21_attr);
 	}
@@ -5038,7 +5038,7 @@ static int sdhci_msm_cfg_sdio_wakeup(struct sdhci_host *host, bool enable)
 				sdhci_msm_cfg_sdiowakeup_gpio_irq(host, true);
 			goto out;
 		} else {
-			pr_err("%s: sdiowakeup_irq(%d) invalid\n",
+			pr_debug("%s: sdiowakeup_irq(%d) invalid\n",
 					mmc_hostname(host->mmc), enable);
 		}
 	} else {
@@ -5047,14 +5047,14 @@ static int sdhci_msm_cfg_sdio_wakeup(struct sdhci_host *host, bool enable)
 			sdhci_msm_cfg_sdiowakeup_gpio_irq(host, false);
 			msm_host->sdio_pending_processing = false;
 		} else {
-			pr_err("%s: sdiowakeup_irq(%d)invalid\n",
+			pr_debug("%s: sdiowakeup_irq(%d)invalid\n",
 					mmc_hostname(host->mmc), enable);
 
 		}
 	}
 out:
 	if (ret)
-		pr_err("%s: %s: %sable wakeup: failed: %d gpio: %d\n",
+		pr_debug("%s: %s: %sable wakeup: failed: %d gpio: %d\n",
 		       mmc_hostname(host->mmc), __func__, enable ? "en" : "dis",
 		       ret, msm_host->pdata->sdiowakeup_irq);
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -5091,7 +5091,7 @@ defer_disable_host_irq:
 	if (host->is_crypto_en) {
 		ret = sdhci_msm_ice_suspend(host);
 		if (ret < 0)
-			pr_err("%s: failed to suspend crypto engine %d\n",
+			pr_debug("%s: failed to suspend crypto engine %d\n",
 					mmc_hostname(host->mmc), ret);
 	}
 //	trace_sdhci_msm_runtime_suspend(mmc_hostname(host->mmc), 0,
@@ -5110,13 +5110,13 @@ static int sdhci_msm_runtime_resume(struct device *dev)
 	if (host->is_crypto_en) {
 		ret = sdhci_msm_enable_controller_clock(host);
 		if (ret) {
-			pr_err("%s: Failed to enable reqd clocks\n",
+			pr_debug("%s: Failed to enable reqd clocks\n",
 					mmc_hostname(host->mmc));
 			goto skip_ice_resume;
 		}
 		ret = sdhci_msm_ice_resume(host);
 		if (ret)
-			pr_err("%s: failed to resume crypto engine %d\n",
+			pr_debug("%s: failed to resume crypto engine %d\n",
 					mmc_hostname(host->mmc), ret);
 	}
 skip_ice_resume:

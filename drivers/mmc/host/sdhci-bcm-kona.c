@@ -72,7 +72,7 @@ static int sdhci_bcm_kona_sd_reset(struct sdhci_host *host)
 
 	while (!(sdhci_readl(host, KONA_SDHOST_CORECTRL) & KONA_SDHOST_RESET)) {
 		if (time_is_before_jiffies(timeout)) {
-			pr_err("Error: sd host is stuck in reset!!!\n");
+			pr_debug("Error: sd host is stuck in reset!!!\n");
 			return -EFAULT;
 		}
 	}

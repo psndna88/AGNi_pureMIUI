@@ -426,7 +426,7 @@ static void tmio_mmc_pio_irq(struct tmio_mmc_host *host)
 	unsigned long flags;
 
 	if ((host->chan_tx || host->chan_rx) && !host->force_pio) {
-		pr_err("PIO IRQ in DMA mode!\n");
+		pr_debug("PIO IRQ in DMA mode!\n");
 		return;
 	} else if (!data) {
 		pr_debug("Spurious PIO IRQ\n");
@@ -764,7 +764,7 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 		int blksz_2bytes = pdata->flags & TMIO_MMC_BLKSZ_2BYTES;
 
 		if (data->blksz < 2 || (data->blksz < 4 && !blksz_2bytes)) {
-			pr_err("%s: %d byte block unsupported in 4 bit mode\n",
+			pr_debug("%s: %d byte block unsupported in 4 bit mode\n",
 			       mmc_hostname(host->mmc), data->blksz);
 			return -EINVAL;
 		}

@@ -1218,7 +1218,7 @@ static int __init au1xmmc_init(void)
 		*/
 		memid = au1xxx_ddma_add_device(&au1xmmc_mem_dbdev);
 		if (!memid)
-			pr_err("au1xmmc: cannot add memory dbdma\n");
+			pr_debug("au1xmmc: cannot add memory dbdma\n");
 	}
 	return platform_driver_register(&au1xmmc_driver);
 }
