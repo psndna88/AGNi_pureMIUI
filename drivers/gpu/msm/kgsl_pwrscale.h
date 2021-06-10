@@ -55,6 +55,7 @@ struct kgsl_pwr_history {
 /**
  * struct kgsl_pwrscale - Power scaling settings for a KGSL device
  * @devfreqptr - Pointer to the devfreq device
+ * @bus_devfreq - Pointer to the bus devfreq device
  * @gpu_profile - GPU profile data for the devfreq device
  * @bus_profile - Bus specific data for the bus devfreq device
  * @freq_table - GPU frequencies for the DCVS algorithm
@@ -75,6 +76,7 @@ struct kgsl_pwr_history {
  */
 struct kgsl_pwrscale {
 	struct devfreq *devfreqptr;
+	struct devfreq *bus_devfreq;
 	struct msm_adreno_extended_profile gpu_profile;
 	struct msm_busmon_extended_profile bus_profile;
 	unsigned int freq_table[KGSL_MAX_PWRLEVELS];
