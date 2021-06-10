@@ -69,14 +69,6 @@
 			size = <0x400000>;
 		};
 
-
-		audio_mem: audio_region@0 {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			size = <0x400000>;
-		};
-
 		llcc_tcm_mem: llcc_tcm_region {
 			no-map;
 			reg = <0x15800000 0x800000>;

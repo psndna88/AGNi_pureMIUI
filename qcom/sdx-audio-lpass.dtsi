@@ -16,7 +16,7 @@
 	qcom,msm-audio-ion {
 		compatible = "qcom,msm-audio-ion-cma";
 		qcom,scm-mp-enabled;
-		memory-region = <&audio_mem>;
+		memory-region = <&audio_heap_mem>;
 	};
 
 	pcm0: qcom,msm-pcm {
