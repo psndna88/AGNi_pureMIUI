@@ -22,6 +22,7 @@
 
 #define PROC_AWAKE_ID 12 /* 12th bit */
 #define AWAKE_BIT BIT(PROC_AWAKE_ID)
+int slst_gpio_base_id;
 static struct qcom_smem_state *state;
 struct wakeup_source notify_ws;
 
