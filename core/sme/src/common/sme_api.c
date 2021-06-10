@@ -14447,6 +14447,10 @@ QDF_STATUS sme_roam_invoke_nud_fail(mac_handle_t mac_handle, uint8_t vdev_id)
 	} else {
 		vdev_roam_params->roam_invoke_in_progress = true;
 		vdev_roam_params->source = CONNECTION_MGR_INITIATED;
+		session->roam_invoke_timer_info.mac = mac_ctx;
+		session->roam_invoke_timer_info.vdev_id = vdev_id;
+		qdf_mc_timer_start(&session->roam_invoke_timer,
+				   QDF_ROAM_INVOKE_TIMEOUT);
 	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);

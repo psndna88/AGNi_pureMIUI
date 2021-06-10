@@ -12216,6 +12216,38 @@ rel:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 }
 
+static void csr_roam_invoke_timeout_handler(void *data)
+{
+	struct csr_timer_info *info = data;
+	struct wlan_objmgr_vdev *vdev;
+	struct mlme_roam_after_data_stall *vdev_roam_params;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(info->mac->psoc,
+						    info->vdev_id,
+						    WLAN_LEGACY_SME_ID);
+
+	vdev_roam_params = mlme_get_roam_invoke_params(vdev);
+	if (!vdev_roam_params) {
+		sme_err("Invalid vdev roam params, aborting timeout handler");
+		goto rel;
+	}
+
+	sme_debug("Roam invoke timer expired source %d nud behaviour %d",
+		  vdev_roam_params->source, info->mac->nud_fail_behaviour);
+
+	if (vdev_roam_params->source == USERSPACE_INITIATED ||
+	    info->mac->nud_fail_behaviour == DISCONNECT_AFTER_ROAM_FAIL) {
+		csr_roam_disconnect(info->mac, info->vdev_id,
+				    eCSR_DISCONNECT_REASON_DEAUTH,
+				    REASON_USER_TRIGGERED_ROAM_FAILURE);
+	}
+
+	vdev_roam_params->roam_invoke_in_progress = false;
+
+rel:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+}
+
 QDF_STATUS csr_roam_start_roaming_timer(struct mac_context *mac,
 					uint32_t vdev_id,
 					uint32_t interval)
@@ -12360,6 +12392,75 @@ void csr_roam_roaming_offload_timer_action(
 	if (action == ROAMING_OFFLOAD_TIMER_STOP)
 		qdf_mc_timer_stop(&csr_session->roaming_offload_timer);
 
+}
+
+static QDF_STATUS csr_roam_invoke_timer_init(
+					struct csr_roam_session *csr_session)
+{
+	QDF_STATUS status;
+
+	status = qdf_mc_timer_init(&csr_session->roam_invoke_timer,
+				   QDF_TIMER_TYPE_WAKE_APPS,
+				   csr_roam_invoke_timeout_handler,
+				   &csr_session->roam_invoke_timer_info);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		sme_err("timer init failed for roam invoke timer");
+
+	return status;
+}
+
+static QDF_STATUS csr_roam_invoke_timer_destroy(
+					struct csr_roam_session *csr_session)
+{
+	QDF_STATUS status;
+
+	status = qdf_mc_timer_destroy(&csr_session->roam_invoke_timer);
+
+	if (QDF_IS_STATUS_ERROR(status))
+		sme_err("timer deinit failed for roam invoke timer");
+
+	return status;
+}
+
+static QDF_STATUS csr_roam_invoke_timer_stop(struct mac_context *mac_ctx,
+					     uint8_t vdev_id)
+{
+	struct csr_roam_session *csr_session;
+
+	csr_session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	if (!csr_session) {
+		sme_err("LFR3: session %d not found", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (QDF_TIMER_STATE_RUNNING ==
+	    qdf_mc_timer_get_current_state(&csr_session->roam_invoke_timer)) {
+		sme_debug("Stop Roam invoke timer for session ID: %d", vdev_id);
+		qdf_mc_timer_stop(&csr_session->roam_invoke_timer);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+#else
+static inline QDF_STATUS csr_roam_invoke_timer_init(
+					struct csr_roam_session *csr_session)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS csr_roam_invoke_timer_destroy(
+					struct csr_roam_session *session)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS csr_roam_invoke_timer_stop(struct mac_context *mac_ctx,
+						    uint8_t vdev_id)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -16312,11 +16413,9 @@ QDF_STATUS csr_setup_vdev_session(struct vdev_mlme_obj *vdev_mlme)
 		sme_err("mem fail for roaming timer");
 		return status;
 	}
-
-	if (QDF_IS_STATUS_ERROR(status)) {
-		sme_err("timer init failed for join failure timer");
+	status = csr_roam_invoke_timer_init(session);
+	if (QDF_IS_STATUS_ERROR(status))
 		return status;
-	}
 
 	ht_cap_info = &mac_ctx->mlme_cfg->ht_caps.ht_cap_info;
 	session->ht_config.ht_rx_ldpc = ht_cap_info->adv_coding_cap;
@@ -16382,6 +16481,7 @@ void csr_cleanup_vdev_session(struct mac_context *mac, uint8_t vdev_id)
 		csr_roam_free_connected_info(mac, &pSession->connectedInfo);
 		csr_roam_free_connected_info(mac,
 					     &pSession->prev_assoc_ap_info);
+		csr_roam_invoke_timer_destroy(pSession);
 		qdf_mc_timer_destroy(&pSession->hTimerRoaming);
 		qdf_mc_timer_destroy(&pSession->roaming_offload_timer);
 		csr_init_session(mac, vdev_id);
@@ -19792,6 +19892,7 @@ void csr_process_ho_fail_ind(struct mac_context *mac_ctx, void *msg_buf)
 	ap_info.source = ADDED_BY_DRIVER;
 	wlan_blm_add_bssid_to_reject_list(mac_ctx->pdev, &ap_info);
 
+	csr_roam_invoke_timer_stop(mac_ctx, sessionId);
 
 	/* Roaming is supported only on Infra STA Mode. */
 	if (!csr_roam_is_sta_mode(mac_ctx, sessionId)) {
@@ -20549,6 +20650,10 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 	} else {
 		vdev_roam_params->roam_invoke_in_progress = true;
 		vdev_roam_params->source = USERSPACE_INITIATED;
+		session->roam_invoke_timer_info.mac = mac_ctx;
+		session->roam_invoke_timer_info.vdev_id = vdev_id;
+		qdf_mc_timer_start(&session->roam_invoke_timer,
+				   QDF_ROAM_INVOKE_TIMEOUT);
 	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
@@ -20763,7 +20868,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		 */
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
-
+		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		if (session->discon_in_progress) {
 			sme_err("LFR3: vdev:%d Disconnect is in progress roam_synch is not allowed",
 				session_id);
@@ -20834,6 +20939,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 					   REASON_ROAM_ABORT);
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
+		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				eCSR_ROAM_ABORT, eCSR_ROAM_RESULT_SUCCESS);
 		vdev_roam_params->roam_invoke_in_progress = false;
@@ -20845,6 +20951,11 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	case SIR_ROAMING_INVOKE_FAIL:
 		sme_debug("Roaming triggered failed source %d nud behaviour %d",
 			  vdev_roam_params->source, mac_ctx->nud_fail_behaviour);
+		status = csr_roam_invoke_timer_stop(mac_ctx, session_id);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			sme_debug("Ignoring roam invoke fail event as host didn't send roam invoke request");
+			goto end;
+		}
 
 		/* Userspace roam req fail, disconnect with AP */
 		if (vdev_roam_params->source == USERSPACE_INITIATED ||
@@ -20932,6 +21043,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	case SIR_ROAMING_DEAUTH:
 		csr_roam_roaming_offload_timer_action(
 			mac_ctx, 0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
+		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		goto end;
 	default:
 		status = QDF_STATUS_E_FAILURE;
