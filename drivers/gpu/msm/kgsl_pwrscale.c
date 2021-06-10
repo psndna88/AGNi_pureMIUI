@@ -454,51 +454,6 @@ int kgsl_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
 EXPORT_SYMBOL(kgsl_devfreq_get_cur_freq);
 
 /*
- * kgsl_devfreq_add_notifier - add a fine grained notifier.
- * @dev: The device
- * @nb: Notifier block that will recieve updates.
- *
- * Add a notifier to recieve ADRENO_DEVFREQ_NOTIFY_* events
- * from the device.
- */
-int kgsl_devfreq_add_notifier(struct device *dev,
-		struct notifier_block *nb)
-{
-	struct kgsl_device *device = dev_get_drvdata(dev);
-
-	if (device == NULL)
-		return -ENODEV;
-
-	if (nb == NULL)
-		return -EINVAL;
-
-	return srcu_notifier_chain_register(&device->pwrscale.nh, nb);
-}
-EXPORT_SYMBOL(kgsl_devfreq_add_notifier);
-
-/*
- * kgsl_devfreq_del_notifier - remove a fine grained notifier.
- * @dev: The device
- * @nb: The notifier block.
- *
- * Remove a notifier registered with kgsl_devfreq_add_notifier().
- */
-int kgsl_devfreq_del_notifier(struct device *dev, struct notifier_block *nb)
-{
-	struct kgsl_device *device = dev_get_drvdata(dev);
-
-	if (device == NULL)
-		return -ENODEV;
-
-	if (nb == NULL)
-		return -EINVAL;
-
-	return srcu_notifier_chain_unregister(&device->pwrscale.nh, nb);
-}
-EXPORT_SYMBOL(kgsl_devfreq_del_notifier);
-
-
-/*
  * kgsl_busmon_get_dev_status - devfreq_dev_profile.get_dev_status callback
  * @dev: see devfreq.h
  * @freq: see devfreq.h
@@ -647,8 +602,6 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 	pwr = &device->pwrctrl;
 	gpu_profile = &pwrscale->gpu_profile;
 	profile = &pwrscale->gpu_profile.profile;
-
-	srcu_init_notifier_head(&pwrscale->nh);
 
 	profile->initial_freq =
 		pwr->pwrlevels[pwr->num_pwrlevels - 1].gpu_freq;
@@ -813,7 +766,6 @@ void kgsl_pwrscale_close(struct kgsl_device *device)
 	kgsl_midframe = NULL;
 	device->pwrscale.bus_devfreq = NULL;
 	device->pwrscale.devfreqptr = NULL;
-	srcu_cleanup_notifier_head(&device->pwrscale.nh);
 	for (i = 0; i < KGSL_PWREVENT_MAX; i++)
 		kfree(pwrscale->history[i].events);
 }
