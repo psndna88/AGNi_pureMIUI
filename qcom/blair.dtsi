@@ -3768,6 +3768,10 @@
 		qcom,bt-vdd-pa-config = <3000000 3312000 1 0>;
 		qcom,bt-vdd-xtal-config = <1700000 1900000 1 0>;
 	};
+
+	cxip-cdev@3ed000 {
+		status = "ok";
+	};
 };
 
 #include "msm-rdbg.dtsi"
