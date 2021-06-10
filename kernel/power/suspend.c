@@ -33,9 +33,12 @@
 #include <linux/compiler.h>
 #include <linux/moduleparam.h>
 #include <linux/wakeup_reason.h>
+#include <linux/gpio.h>
 #include "power.h"
 #include <soc/qcom/boot_stats.h>
 
+extern int slst_gpio_base_id;
+#define PROC_AWAKE_ID 12 /* 12th bit */
 const char * const pm_labels[] = {
 	[PM_SUSPEND_TO_IDLE] = "freeze",
 	[PM_SUSPEND_STANDBY] = "standby",
@@ -634,7 +637,9 @@ int pm_suspend(suspend_state_t state)
 
 //	pm_suspend_marker("entry");
 //	pr_info("suspend entry (%s)\n", mem_sleep_labels[state]);
+	gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 0);
 	error = enter_state(state);
+	gpio_set_value(slst_gpio_base_id + PROC_AWAKE_ID, 1);
 	if (error) {
 		suspend_stats.fail++;
 		dpm_save_failed_errno(error);
