@@ -21,9 +21,6 @@
 
 &wcd937x_codec {
 	status = "ok";
-	/delete-property/ cdc-vdd-mic-bias-supply;
-	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
-	/delete-property/ qcom,cdc-vdd-mic-bias-current;
 	cdc-vdd-rxtx-supply = <&L9A>;
 	cdc-vddio-supply = <&L9A>;
 	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
@@ -35,6 +32,15 @@
 	 */
 	cdc-vdd-mic-bias-supply = <>;
 };
+
+&wsa881x_i2c_e {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
+&wsa881x_i2c_f {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
 
 &sdhc_1 {
 	status = "ok";
