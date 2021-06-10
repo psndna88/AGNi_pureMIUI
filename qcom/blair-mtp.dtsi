@@ -1,7 +1,9 @@
 #include "holi-mtp-pm6125.dtsi"
+#include "display/blair-sde-display-mtp.dtsi"
 / {
 };
 
 &ufsphy_mem {
 	compatible = "qcom,ufs-phy-qmp-v4-yupik";
+	vdda-phy-max-microamp = <85700>;
 };

@@ -604,10 +604,10 @@
 		};
 	};
 
-	kgsl_msm_iommu: qcom,kgsl-iommu@0x050a0000 {
+	kgsl_msm_iommu: qcom,kgsl-iommu@50a0000 {
 		compatible = "qcom,kgsl-smmu-v2";
 
-		reg = <0x050a0000 0x10000>;
+		reg = <0x50a0000 0x10000>;
 
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";

@@ -1,6 +1,7 @@
 #include <dt-bindings/clock/qcom,gcc-sm8150.h>
 #include <dt-bindings/clock/qcom,scc-sm8150.h>
 #include "quin-vm-common.dtsi"
+#include "pm8150-vm.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SA8155 Virtual Machine";
@@ -212,7 +213,7 @@
 			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
 				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
 			qcom,vdd-wlan-aon-config = <1055000 1055000 0 0 1>;
-			qcom,vdd-wlan-rfa1-config = <1350000 1350000 0 0 1>;
+			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
 			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
 			qcom,vdd-wlan-rfa3-config = <1900000 1900000 0 0 1>;
 
@@ -578,8 +579,7 @@
 		pinctrl-0 = <&sdc2_on>;
 		pinctrl-1 = <&sdc2_off>;
 
-		broken-cd;
-		qcom,nonhotplug;
+		cd-gpios = <&pm8150_gpios 4 GPIO_ACTIVE_LOW>;
 		status = "disabled";
 
 		qos0 {
@@ -715,7 +715,7 @@
 
 		/* <vol_min, vol_max, load_curr, is_retention_supp> */
 		qcom,bt-vdd-aon-config = <1055000 1055000 0 0>;
-		qcom,bt-vdd-rfa1-config = <1350000 1350000 0 0>;
+		qcom,bt-vdd-rfa1-config = <1370000 1370000 0 0>;
 		qcom,bt-vdd-rfa2-config = <2040000 2040000 0 0>;
 		qcom,bt-vdd-rfa3-config = <1900000 1900000 450000 0>;
 	};
@@ -827,7 +827,6 @@
 #include "sa8155-vm-pcie.dtsi"
 #include "sm8150-qupv3.dtsi"
 #include "sm8150-ssc-qupv3.dtsi"
-#include "pm8150-vm.dtsi"
 #include "sa8155-vm-audio.dtsi"
 
 &tlmm {

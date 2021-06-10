@@ -25,5 +25,16 @@
 	pinctrl-0 = <&sdc2_on &sdc2_wlan_gpio_active>;
 	pinctrl-1 = <&sdc2_off &sdc2_wlan_gpio_sleep>;
 
+	enable-sdio-wakeup;
+	#address-cells = <0>;
+	interrupt-parent = <&sdhc_1>;
+	interrupts = <0 1 2>;
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0xffffffff>;
+	interrupt-map = <0 &intc GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH
+			1 &intc GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH
+			2 &tlmm_pinmux 93 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "hc_irq", "pwr_irq", "sdiowakeup_irq";
+
 	status = "ok";
 };

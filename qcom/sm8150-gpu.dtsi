@@ -9,7 +9,7 @@
 		memory-region = <&pil_gpu_mem>;
 	};
 
-	msm_gpu: qcom,kgsl-3d0@2C00000 {
+	msm_gpu: qcom,kgsl-3d0@2c00000 {
 		label = "kgsl-3d0";
 		compatible = "qcom,kgsl-3d0", "qcom,kgsl-3d";
 		status = "ok";
@@ -219,10 +219,10 @@
 
 	};
 
-	kgsl_msm_iommu: qcom,kgsl-iommu@0x02CA0000 {
+	kgsl_msm_iommu: qcom,kgsl-iommu@2ca0000 {
 		compatible = "qcom,kgsl-smmu-v2";
 
-		reg = <0x02CA0000 0x10000>;
+		reg = <0x2ca0000 0x10000>;
 
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
@@ -239,7 +239,7 @@
 		};
 	};
 
-	gmu: qcom,gmu@0x2C6A000 {
+	gmu: qcom,gmu@2c6a000 {
 		compatible = "qcom,gpu-gmu";
 
 		reg = <0x2c6a000 0x30000>,
