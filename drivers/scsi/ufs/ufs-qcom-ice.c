@@ -48,11 +48,11 @@ void ufs_qcom_ice_print_regs(struct ufs_qcom_host *qcom_host)
 	ufs_qcom_ice_dump_regs(qcom_host, REG_UFS_QCOM_ICE_CFG, 1,
 			"REG_UFS_QCOM_ICE_CFG ");
 	for (i = 0; i < NUM_QCOM_ICE_CTRL_INFO_n_REGS; i++) {
-		pr_err("REG_UFS_QCOM_ICE_CTRL_INFO_1_%d = 0x%08X\n", i,
+		pr_debug("REG_UFS_QCOM_ICE_CTRL_INFO_1_%d = 0x%08X\n", i,
 			ufshcd_readl(qcom_host->hba,
 				(REG_UFS_QCOM_ICE_CTRL_INFO_1_n + 8 * i)));
 
-		pr_err("REG_UFS_QCOM_ICE_CTRL_INFO_2_%d = 0x%08X\n", i,
+		pr_debug("REG_UFS_QCOM_ICE_CTRL_INFO_2_%d = 0x%08X\n", i,
 			ufshcd_readl(qcom_host->hba,
 				(REG_UFS_QCOM_ICE_CTRL_INFO_2_n + 8 * i)));
 	}
@@ -134,7 +134,7 @@ int ufs_qcom_ice_get_dev(struct ufs_qcom_host *qcom_host)
 	int err = 0;
 
 	if (!qcom_host || !qcom_host->hba || !qcom_host->hba->dev) {
-		pr_err("%s: invalid qcom_host %p or qcom_host->hba or qcom_host->hba->dev\n",
+		pr_debug("%s: invalid qcom_host %p or qcom_host->hba or qcom_host->hba->dev\n",
 			__func__, qcom_host);
 		err = -EINVAL;
 		goto out;

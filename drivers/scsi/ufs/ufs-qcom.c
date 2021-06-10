@@ -1007,7 +1007,7 @@ static int ufs_qcom_get_pwr_dev_param(struct ufs_qcom_dev_params *qcom_param,
 	 * HS, thus device and qcom_param don't agree
 	 */
 	if (!is_dev_sup_hs && is_qcom_max_hs) {
-		pr_err("%s: failed to agree on power mode (device doesn't support HS but requested power is HS)\n",
+		pr_debug("%s: failed to agree on power mode (device doesn't support HS but requested power is HS)\n",
 			__func__);
 		return -ENOTSUPP;
 	} else if (is_dev_sup_hs && is_qcom_max_hs) {
@@ -1329,7 +1329,7 @@ static int ufs_qcom_pwr_change_notify(struct ufs_hba *hba,
 	int res = 0;
 
 	if (!dev_req_params) {
-		pr_err("%s: incoming dev_req_params is NULL\n", __func__);
+		pr_debug("%s: incoming dev_req_params is NULL\n", __func__);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1380,7 +1380,7 @@ static int ufs_qcom_pwr_change_notify(struct ufs_hba *hba,
 						 dev_max_params,
 						 dev_req_params);
 		if (ret) {
-			pr_err("%s: failed to determine capabilities\n",
+			pr_debug("%s: failed to determine capabilities\n",
 					__func__);
 			goto out;
 		}
@@ -2092,7 +2092,7 @@ void ufs_qcom_print_hw_debug_reg_all(struct ufs_hba *hba, void *priv,
 	struct ufs_qcom_host *host;
 
 	if (unlikely(!hba)) {
-		pr_err("%s: hba is NULL\n", __func__);
+		pr_debug("%s: hba is NULL\n", __func__);
 		return;
 	}
 	if (unlikely(!print_fn)) {

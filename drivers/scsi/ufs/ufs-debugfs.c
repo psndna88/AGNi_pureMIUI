@@ -810,7 +810,7 @@ void ufsdbg_pr_buf_to_std(struct ufs_hba *hba, int offset, int num_regs,
 	struct seq_file *file = priv;
 
 	if (!hba || !file) {
-		pr_err("%s called with NULL pointer\n", __func__);
+		pr_debug("%s called with NULL pointer\n", __func__);
 		return;
 	}
 
@@ -1028,7 +1028,7 @@ static bool ufsdbg_power_mode_validate(struct ufs_pa_layer_attr *pwr_mode)
 	    (pwr_mode->pwr_tx != FAST_MODE && pwr_mode->pwr_tx != SLOW_MODE &&
 	     pwr_mode->pwr_tx != FASTAUTO_MODE &&
 	     pwr_mode->pwr_tx != SLOWAUTO_MODE)) {
-		pr_err("%s: power parameters are not valid\n", __func__);
+		pr_debug("%s: power parameters are not valid\n", __func__);
 		return false;
 	}
 
@@ -1062,7 +1062,7 @@ static int ufsdbg_cfg_pwr_param(struct ufs_hba *hba,
 
 	/* device doesn't support HS but requested power is HS */
 	if (!is_dev_sup_hs && is_new_pwr_hs) {
-		pr_err("%s: device doesn't support HS. requested power is HS\n",
+		pr_debug("%s: device doesn't support HS. requested power is HS\n",
 			__func__);
 		return -ENOTSUPP;
 	} else if ((is_dev_sup_hs && is_new_pwr_hs) ||
@@ -1085,7 +1085,7 @@ static int ufsdbg_cfg_pwr_param(struct ufs_hba *hba,
 			       &dev_pwm_max_rx_gear);
 
 		if (!dev_pwm_max_rx_gear) {
-			pr_err("%s: couldn't get device max pwm rx gear\n",
+			pr_debug("%s: couldn't get device max pwm rx gear\n",
 				__func__);
 			ret = -EINVAL;
 			goto out;
@@ -1095,7 +1095,7 @@ static int ufsdbg_cfg_pwr_param(struct ufs_hba *hba,
 				    &dev_pwm_max_tx_gear);
 
 		if (!dev_pwm_max_tx_gear) {
-			pr_err("%s: couldn't get device max pwm tx gear\n",
+			pr_debug("%s: couldn't get device max pwm tx gear\n",
 				__func__);
 			ret = -EINVAL;
 			goto out;
@@ -1109,7 +1109,7 @@ static int ufsdbg_cfg_pwr_param(struct ufs_hba *hba,
 	    (new_pwr->gear_tx > final_pwr->gear_tx) ||
 	    (new_pwr->lane_rx > final_pwr->lane_rx) ||
 	    (new_pwr->lane_tx > final_pwr->lane_tx)) {
-		pr_err("%s: (RX,TX) GG,LL: in PWM/HS new pwr [%d%d,%d%d] exceeds device limitation [%d%d,%d%d]\n",
+		pr_debug("%s: (RX,TX) GG,LL: in PWM/HS new pwr [%d%d,%d%d] exceeds device limitation [%d%d,%d%d]\n",
 			__func__,
 			new_pwr->gear_rx, new_pwr->gear_tx,
 			new_pwr->lane_rx, new_pwr->lane_tx,
@@ -1483,7 +1483,7 @@ void ufsdbg_add_debugfs(struct ufs_hba *hba)
 	char root_name[sizeof("ufshcd00")];
 
 	if (!hba) {
-		pr_err("%s: NULL hba, exiting", __func__);
+		pr_debug("%s: NULL hba, exiting", __func__);
 		return;
 	}
 

@@ -179,21 +179,21 @@ static void cmdq_dump_task_history(struct cmdq_host *cq_host)
 		return;
 
 	if (!cq_host->thist) {
-		pr_err("%s: %s: CMDQ task history buffer not allocated\n",
+		pr_debug("%s: %s: CMDQ task history buffer not allocated\n",
 			mmc_hostname(cq_host->mmc), __func__);
 		return;
 	}
 
-	pr_err("---- Circular Task History ----\n");
-	pr_err(DRV_NAME ": Last entry index: %d", cq_host->thist_idx - 1);
+	pr_debug("---- Circular Task History ----\n");
+	pr_debug(DRV_NAME ": Last entry index: %d", cq_host->thist_idx - 1);
 
 	for (i = 0; i < cq_host->num_slots; i++) {
-		pr_err(DRV_NAME ": [%02d]%s Task: 0x%08x | Args: 0x%08x\n", i,
+		pr_debug(DRV_NAME ": [%02d]%s Task: 0x%08x | Args: 0x%08x\n", i,
 			(cq_host->thist[i].is_dcmd) ? "DCMD" : "DATA",
 			lower_32_bits(cq_host->thist[i].task),
 			upper_32_bits(cq_host->thist[i].task));
 	}
-	pr_err("-------------------------\n");
+	pr_debug("-------------------------\n");
 }
 
 static void cmdq_dump_adma_mem(struct cmdq_host *cq_host)
@@ -208,7 +208,7 @@ static void cmdq_dump_adma_mem(struct cmdq_host *cq_host)
 
 	for_each_set_bit(tag, &data_active_reqs, cq_host->num_slots) {
 		desc_dma = get_trans_desc_dma(cq_host, tag);
-		pr_err("%s: %s: tag = %d, trans_dma(phys) = %pad, trans_desc(virt) = 0x%p\n",
+		pr_debug("%s: %s: tag = %d, trans_dma(phys) = %pad, trans_desc(virt) = 0x%p\n",
 				mmc_hostname(mmc), __func__, tag,
 				&desc_dma, get_trans_desc(cq_host, tag));
 		print_hex_dump(KERN_ERR, "cmdq-adma:", DUMP_PREFIX_ADDRESS,
@@ -233,45 +233,45 @@ static void cmdq_dumpregs(struct cmdq_host *cq_host)
 	cmdq_readl(cq_host, CQDQS), cmdq_readl(cq_host, CQDPT),
 	cmdq_readl(cq_host, CQTERRI), cmdq_readl(cq_host, CQCRI),
 	cmdq_readl(cq_host, CQCRA), cmdq_readl(cq_host, CQCRDCT));
-	pr_err(DRV_NAME ": ========== REGISTER DUMP (%s)==========\n",
+	pr_debug(DRV_NAME ": ========== REGISTER DUMP (%s)==========\n",
 		mmc_hostname(mmc));
 
-	pr_err(DRV_NAME ": Caps: 0x%08x		  | Version:  0x%08x\n",
+	pr_debug(DRV_NAME ": Caps: 0x%08x		  | Version:  0x%08x\n",
 		cmdq_readl(cq_host, CQCAP),
 		cmdq_readl(cq_host, CQVER));
-	pr_err(DRV_NAME ": Queing config: 0x%08x  | Queue Ctrl:  0x%08x\n",
+	pr_debug(DRV_NAME ": Queing config: 0x%08x  | Queue Ctrl:  0x%08x\n",
 		cmdq_readl(cq_host, CQCFG),
 		cmdq_readl(cq_host, CQCTL));
-	pr_err(DRV_NAME ": Int stat: 0x%08x	  | Int enab:  0x%08x\n",
+	pr_debug(DRV_NAME ": Int stat: 0x%08x	  | Int enab:  0x%08x\n",
 		cmdq_readl(cq_host, CQIS),
 		cmdq_readl(cq_host, CQISTE));
-	pr_err(DRV_NAME ": Int sig: 0x%08x	  | Int Coal:  0x%08x\n",
+	pr_debug(DRV_NAME ": Int sig: 0x%08x	  | Int Coal:  0x%08x\n",
 		cmdq_readl(cq_host, CQISGE),
 		cmdq_readl(cq_host, CQIC));
-	pr_err(DRV_NAME ": TDL base: 0x%08x	  | TDL up32:  0x%08x\n",
+	pr_debug(DRV_NAME ": TDL base: 0x%08x	  | TDL up32:  0x%08x\n",
 		cmdq_readl(cq_host, CQTDLBA),
 		cmdq_readl(cq_host, CQTDLBAU));
-	pr_err(DRV_NAME ": Doorbell: 0x%08x	  | Comp Notif:  0x%08x\n",
+	pr_debug(DRV_NAME ": Doorbell: 0x%08x	  | Comp Notif:  0x%08x\n",
 		cmdq_readl(cq_host, CQTDBR),
 		cmdq_readl(cq_host, CQTCN));
-	pr_err(DRV_NAME ": Dev queue: 0x%08x	  | Dev Pend:  0x%08x\n",
+	pr_debug(DRV_NAME ": Dev queue: 0x%08x	  | Dev Pend:  0x%08x\n",
 		cmdq_readl(cq_host, CQDQS),
 		cmdq_readl(cq_host, CQDPT));
-	pr_err(DRV_NAME ": Task clr: 0x%08x	  | Send stat 1:  0x%08x\n",
+	pr_debug(DRV_NAME ": Task clr: 0x%08x	  | Send stat 1:  0x%08x\n",
 		cmdq_readl(cq_host, CQTCLR),
 		cmdq_readl(cq_host, CQSSC1));
-	pr_err(DRV_NAME ": Send stat 2: 0x%08x	  | DCMD resp:  0x%08x\n",
+	pr_debug(DRV_NAME ": Send stat 2: 0x%08x	  | DCMD resp:  0x%08x\n",
 		cmdq_readl(cq_host, CQSSC2),
 		cmdq_readl(cq_host, CQCRDCT));
-	pr_err(DRV_NAME ": Resp err mask: 0x%08x  | Task err:  0x%08x\n",
+	pr_debug(DRV_NAME ": Resp err mask: 0x%08x  | Task err:  0x%08x\n",
 		cmdq_readl(cq_host, CQRMEM),
 		cmdq_readl(cq_host, CQTERRI));
-	pr_err(DRV_NAME ": Resp idx 0x%08x	  | Resp arg:  0x%08x\n",
+	pr_debug(DRV_NAME ": Resp idx 0x%08x	  | Resp arg:  0x%08x\n",
 		cmdq_readl(cq_host, CQCRI),
 		cmdq_readl(cq_host, CQCRA));
-	pr_err(DRV_NAME": Vendor cfg 0x%08x\n",
+	pr_debug(DRV_NAME": Vendor cfg 0x%08x\n",
 	       cmdq_readl(cq_host, CQ_VENDOR_CFG + offset));
-	pr_err(DRV_NAME ": ===========================================\n");
+	pr_debug(DRV_NAME ": ===========================================\n");
 
 	cmdq_dump_task_history(cq_host);
 	if (cq_host->ops->dump_vendor_regs)
@@ -602,7 +602,7 @@ static int cmdq_dma_map(struct mmc_host *host, struct mmc_request *mrq)
 			      (data->flags & MMC_DATA_WRITE) ?
 			      DMA_TO_DEVICE : DMA_FROM_DEVICE);
 	if (!sg_count) {
-		pr_err("%s: sg-len: %d\n", __func__, data->sg_len);
+		pr_debug("%s: sg-len: %d\n", __func__, data->sg_len);
 		return -ENOMEM;
 	}
 
@@ -643,7 +643,7 @@ static int cmdq_prep_tran_desc(struct mmc_request *mrq,
 
 	sg_count = cmdq_dma_map(mrq->host, mrq);
 	if (sg_count < 0) {
-		pr_err("%s: %s: unable to map sg lists, %d\n",
+		pr_debug("%s: %s: unable to map sg lists, %d\n",
 				mmc_hostname(mrq->host), __func__, sg_count);
 		return sg_count;
 	}
@@ -674,7 +674,7 @@ static void cmdq_log_task_desc_history(struct cmdq_host *cq_host, u64 task,
 		return;
 
 	if (!cq_host->thist) {
-		pr_err("%s: %s: CMDQ task history buffer not allocated\n",
+		pr_debug("%s: %s: CMDQ task history buffer not allocated\n",
 			mmc_hostname(cq_host->mmc), __func__);
 		return;
 	}
@@ -784,7 +784,7 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	u64 ice_ctx = 0;
 
 	if (!cq_host->enabled) {
-		pr_err("%s: CMDQ host not enabled yet !!!\n",
+		pr_debug("%s: CMDQ host not enabled yet !!!\n",
 		       mmc_hostname(mmc));
 		err = -EINVAL;
 		goto out;
@@ -803,7 +803,7 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (cq_host->ops->crypto_cfg) {
 		err = cq_host->ops->crypto_cfg(mmc, mrq, tag, &ice_ctx);
 		if (err) {
-			pr_err("%s: failed to configure crypto: err %d tag %d\n",
+			pr_debug("%s: failed to configure crypto: err %d tag %d\n",
 					mmc_hostname(mmc), err, tag);
 			goto ice_err;
 		}
@@ -821,7 +821,7 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	err = cmdq_prep_tran_desc(mrq, cq_host, tag);
 	if (err) {
-		pr_err("%s: %s: failed to setup tx desc: %d\n",
+		pr_debug("%s: %s: failed to setup tx desc: %d\n",
 		       mmc_hostname(mmc), __func__, err);
 		goto desc_err;
 	}
@@ -849,7 +849,7 @@ desc_err:
 	if (cq_host->ops->crypto_cfg_end) {
 		err = cq_host->ops->crypto_cfg_end(mmc, mrq);
 		if (err) {
-			pr_err("%s: failed to end ice config: err %d tag %d\n",
+			pr_debug("%s: failed to end ice config: err %d tag %d\n",
 					mmc_hostname(mmc), err, tag);
 		}
 	}
@@ -886,7 +886,7 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 	if (cq_host->ops->crypto_cfg_end) {
 		err = cq_host->ops->crypto_cfg_end(mmc, mrq);
 		if (err) {
-			pr_err("%s: failed to end ice config: err %d tag %d\n",
+			pr_debug("%s: failed to end ice config: err %d tag %d\n",
 					mmc_hostname(mmc), err, tag);
 		}
 	}
@@ -919,7 +919,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 
 	if (err || stat_err) {
 		err_info = cmdq_readl(cq_host, CQTERRI);
-		pr_err("%s: err: %d status: 0x%08x task-err-info (0x%08lx)\n",
+		pr_debug("%s: err: %d status: 0x%08x task-err-info (0x%08lx)\n",
 		       mmc_hostname(mmc), err, status, err_info);
 
 		/*
@@ -931,7 +931,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 		 */
 		ret = cmdq_halt_poll(mmc, true);
 		if (ret)
-			pr_err("%s: %s: halt failed ret=%d\n",
+			pr_debug("%s: %s: halt failed ret=%d\n",
 					mmc_hostname(mmc), __func__, ret);
 
 		/*
@@ -959,7 +959,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 			 */
 			dbr_set = cmdq_readl(cq_host, CQTDBR);
 			if (!dbr_set) {
-				pr_err("%s: spurious/force error interrupt\n",
+				pr_debug("%s: spurious/force error interrupt\n",
 						mmc_hostname(mmc));
 				cmdq_halt_poll(mmc, false);
 				mmc_host_clr_halt(mmc);
@@ -967,7 +967,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 			}
 
 			tag = ffs(dbr_set) - 1;
-			pr_err("%s: error tag selected: tag = %lu\n",
+			pr_debug("%s: error tag selected: tag = %lu\n",
 					mmc_hostname(mmc), tag);
 			mrq = get_req_by_tag(cq_host, tag);
 			if (mrq->data)
@@ -985,7 +985,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 
 		if (err_info & CQ_RMEFV) {
 			tag = GET_CMD_ERR_TAG(err_info);
-			pr_err("%s: CMD err tag: %lu\n", __func__, tag);
+			pr_debug("%s: CMD err tag: %lu\n", __func__, tag);
 
 			mrq = get_req_by_tag(cq_host, tag);
 			/* CMD44/45/46/47 will not have a valid cmd */
@@ -995,7 +995,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 				mrq->data->error = err;
 		} else if (err_info & CQ_DTEFV) {
 			tag = GET_DAT_ERR_TAG(err_info);
-			pr_err("%s: Dat err  tag: %lu\n", __func__, tag);
+			pr_debug("%s: Dat err  tag: %lu\n", __func__, tag);
 			mrq = get_req_by_tag(cq_host, tag);
 			mrq->data->error = err;
 		}
@@ -1031,7 +1031,7 @@ skip_cqterri:
 				mmc->card->bkops.needs_check = true;
 
 			mrq->cmdq_req->resp_err = true;
-			pr_err("%s: Response error (0x%08x) from card !!!",
+			pr_debug("%s: Response error (0x%08x) from card !!!",
 				mmc_hostname(mmc), cmdq_readl(cq_host, CQCRA));
 
 		} else {
@@ -1046,7 +1046,7 @@ skip_cqterri:
 		if (stat_err & CQIS_GCE) {
 			if (mrq->data)
 				mrq->data->error = -EIO;
-			pr_err("%s: Crypto generic error while processing task %lu!",
+			pr_debug("%s: Crypto generic error while processing task %lu!",
 				mmc_hostname(mmc), tag);
 			MMC_TRACE(mmc, "%s: GCE error detected with tag %lu\n",
 					__func__, tag);
@@ -1070,7 +1070,7 @@ skip_cqterri:
 			if (dbr_set ^ dev_pend_set)
 				tag = ffs(dbr_set ^ dev_pend_set) - 1;
 			mrq = get_req_by_tag(cq_host, tag);
-			pr_err("%s: Crypto config error while processing task %lu!",
+			pr_debug("%s: Crypto config error while processing task %lu!",
 				mmc_hostname(mmc), tag);
 			MMC_TRACE(mmc, "%s: ICCE error with tag %lu\n",
 						__func__, tag);
@@ -1087,7 +1087,7 @@ skip_cqterri:
 			if (!ret && (dbr_set ^ dev_pend_set)) {
 				ret = cmdq_clear_task_poll(cq_host, tag);
 				if (ret) {
-					pr_err("%s: %s: task[%lu] clear failed ret=%d\n",
+					pr_debug("%s: %s: task[%lu] clear failed ret=%d\n",
 						mmc_hostname(mmc),
 						__func__, tag, ret);
 				} else if (!cmdq_halt_poll(mmc, false)) {

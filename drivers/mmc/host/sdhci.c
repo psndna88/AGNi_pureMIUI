@@ -253,7 +253,7 @@ retry_reset:
 	/* hw clears the bit when it's done */
 	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
 		if (timeout == 0) {
-			pr_err("%s: Reset 0x%x never completed.\n",
+			pr_debug("%s: Reset 0x%x never completed.\n",
 				mmc_hostname(host->mmc), (int)mask);
 			MMC_TRACE(host->mmc, "%s: Reset 0x%x never completed\n",
 					__func__, (int)mask);
@@ -269,7 +269,7 @@ retry_reset:
 					host->reset_wa_cnt++;
 					goto retry_reset;
 				} else {
-					pr_err("%s: Reset 0x%x failed with workaround\n",
+					pr_debug("%s: Reset 0x%x failed with workaround\n",
 						mmc_hostname(host->mmc),
 						(int)mask);
 					/* clear the workaround */
@@ -1178,7 +1178,7 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 
 	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
 		if (timeout == 0) {
-			pr_err("%s: Controller never released "
+			pr_debug("%s: Controller never released "
 				"inhibit bit(s).\n", mmc_hostname(host->mmc));
 			MMC_TRACE(host->mmc,
 			"%s :Controller never released inhibit bit(s)\n",
@@ -1209,7 +1209,7 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	sdhci_set_transfer_mode(host, cmd);
 
 	if ((cmd->flags & MMC_RSP_136) && (cmd->flags & MMC_RSP_BUSY)) {
-		pr_err("%s: Unsupported response type!\n",
+		pr_debug("%s: Unsupported response type!\n",
 			mmc_hostname(host->mmc));
 		cmd->error = -EINVAL;
 		tasklet_schedule(&host->finish_tasklet);
@@ -1437,7 +1437,7 @@ clock_set:
 	while (!((clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL))
 		& SDHCI_CLOCK_INT_STABLE)) {
 		if (timeout == 0) {
-			pr_err("%s: Internal clock never "
+			pr_debug("%s: Internal clock never "
 				"stabilised.\n", mmc_hostname(host->mmc));
 			MMC_TRACE(host->mmc,
 			"%s: Internal clock never stabilised.\n", __func__);
@@ -1691,7 +1691,7 @@ static int sdhci_crypto_cfg(struct sdhci_host *host, struct mmc_request *mrq,
 	if (host->crypto_reset_reqd && host->ops->crypto_engine_reset) {
 		err = host->ops->crypto_engine_reset(host);
 		if (err) {
-			pr_err("%s: crypto reset failed\n",
+			pr_debug("%s: crypto reset failed\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
@@ -1701,7 +1701,7 @@ static int sdhci_crypto_cfg(struct sdhci_host *host, struct mmc_request *mrq,
 	if (host->ops->crypto_engine_cfg) {
 		err = host->ops->crypto_engine_cfg(host, mrq, slot);
 		if (err) {
-			pr_err("%s: failed to configure crypto\n",
+			pr_debug("%s: failed to configure crypto\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
@@ -1718,7 +1718,7 @@ static int sdhci_crypto_cfg_end(struct sdhci_host *host,
 	if (host->ops->crypto_engine_cfg_end) {
 		err = host->ops->crypto_engine_cfg_end(host, mrq);
 		if (err) {
-			pr_err("%s: failed to configure crypto\n",
+			pr_debug("%s: failed to configure crypto\n",
 					mmc_hostname(host->mmc));
 			return err;
 		}
@@ -1737,7 +1737,7 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	sdhci_runtime_pm_get(host);
 	if (sdhci_check_state(host)) {
 		sdhci_dump_state(host);
-		pr_err("%s: sdhci in bad state\n",
+		pr_debug("%s: sdhci in bad state\n",
 			mmc_hostname(host->mmc));
 		mrq->cmd->error = -EIO;
 		if (mrq->data)
@@ -1945,7 +1945,7 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		if (host->ops->enable_controller_clock) {
 			ret = host->ops->enable_controller_clock(host);
 			if (ret) {
-				pr_err("%s: enabling controller clock: failed: %d\n",
+				pr_debug("%s: enabling controller clock: failed: %d\n",
 				       mmc_hostname(host->mmc), ret);
 			} else {
 				sdhci_set_power(host, ios->power_mode, ios->vdd);
@@ -2746,9 +2746,9 @@ static void sdhci_card_event(struct mmc_host *mmc)
 
 	/* Check host->mrq first in case we are runtime suspended */
 	if (host->mrq && !present) {
-		pr_err("%s: Card removed during transfer!\n",
+		pr_debug("%s: Card removed during transfer!\n",
 			mmc_hostname(host->mmc));
-		pr_err("%s: Resetting controller.\n",
+		pr_debug("%s: Resetting controller.\n",
 			mmc_hostname(host->mmc));
 
 		sdhci_do_reset(host, SDHCI_RESET_CMD);
@@ -2776,7 +2776,7 @@ static void sdhci_force_err_irq(struct mmc_host *mmc, u64 errmask)
 	struct sdhci_host *host = mmc_priv(mmc);
 	u16 mask = errmask & 0xFFFF;
 
-	pr_err("%s: Force raise error mask:0x%04x\n", __func__, mask);
+	pr_debug("%s: Force raise error mask:0x%04x\n", __func__, mask);
 	sdhci_runtime_pm_get(host);
 	sdhci_writew(host, mask, SDHCI_SET_INT_ERROR);
 	sdhci_runtime_pm_put(host);
@@ -2891,7 +2891,7 @@ static void sdhci_timeout_timer(unsigned long data)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->mrq) {
-		pr_err("%s: Timeout waiting for hardware "
+		pr_debug("%s: Timeout waiting for hardware "
 			"interrupt.\n", mmc_hostname(host->mmc));
 		MMC_TRACE(host->mmc, "Timeout waiting for h/w interrupt\n");
 		sdhci_dumpregs(host);
@@ -2930,7 +2930,7 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask, u32 *mask)
 	BUG_ON(intmask == 0);
 
 	if (!host->cmd) {
-		pr_err("%s: Got command interrupt 0x%08x even "
+		pr_debug("%s: Got command interrupt 0x%08x even "
 			"though no command operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask);
 		MMC_TRACE(host->mmc,
@@ -2951,7 +2951,7 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask, u32 *mask)
 
 	if (intmask & SDHCI_INT_AUTO_CMD_ERR) {
 		auto_cmd_status = host->auto_cmd_err_sts;
-		pr_err_ratelimited("%s: %s: AUTO CMD err sts 0x%08x\n",
+		pr_debug_ratelimited("%s: %s: AUTO CMD err sts 0x%08x\n",
 			mmc_hostname(host->mmc), __func__, auto_cmd_status);
 		if (auto_cmd_status & (SDHCI_AUTO_CMD12_NOT_EXEC |
 				       SDHCI_AUTO_CMD_INDEX_ERR |
@@ -3094,7 +3094,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			}
 			if (host->quirks2 &
 				SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD) {
-				pr_err_ratelimited("%s: %s: ignoring interrupt: 0x%08x due to DATATOUT_FOR_R1B quirk\n",
+				pr_debug_ratelimited("%s: %s: ignoring interrupt: 0x%08x due to DATATOUT_FOR_R1B quirk\n",
 						mmc_hostname(host->mmc),
 						__func__, intmask);
 				MMC_TRACE(host->mmc,
@@ -3109,7 +3109,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			}
 		}
 
-		pr_err("%s: Got data interrupt 0x%08x even "
+		pr_debug("%s: Got data interrupt 0x%08x even "
 			"though no data operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask);
 		MMC_TRACE(host->mmc,
@@ -3128,7 +3128,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		(command != MMC_BUS_TEST_R))
 		host->data->error = -EILSEQ;
 	else if (intmask & SDHCI_INT_ADMA_ERROR) {
-		pr_err("%s: ADMA error\n", mmc_hostname(host->mmc));
+		pr_debug("%s: ADMA error\n", mmc_hostname(host->mmc));
 		sdhci_adma_show_error(host);
 		host->data->error = -EIO;
 		if (host->ops->adma_workaround)
@@ -3146,7 +3146,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			pr_msg = true;
 		}
 		if (pr_msg && __ratelimit(&host->dbg_dump_rs)) {
-			pr_err("%s: data txfr (0x%08x) error: %d after %lld ms\n",
+			pr_debug("%s: data txfr (0x%08x) error: %d after %lld ms\n",
 			       mmc_hostname(host->mmc), intmask,
 			       host->data->error, ktime_to_ms(ktime_sub(
 			       ktime_get(), host->data_start_time)));
@@ -3253,7 +3253,7 @@ static irqreturn_t sdhci_cmdq_irq(struct sdhci_host *host, u32 intmask)
 #else
 static irqreturn_t sdhci_cmdq_irq(struct sdhci_host *host, u32 intmask)
 {
-	pr_err("%s: Received cmdq-irq when disabled !!!!\n",
+	pr_debug("%s: Received cmdq-irq when disabled !!!!\n",
 		mmc_hostname(host->mmc));
 	return IRQ_NONE;
 }
@@ -3375,7 +3375,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		}
 
 		if (intmask & SDHCI_INT_BUS_POWER)
-			pr_err("%s: Card is consuming too much power!\n",
+			pr_debug("%s: Card is consuming too much power!\n",
 				mmc_hostname(host->mmc));
 
 		if ((intmask & SDHCI_INT_CARD_INT) &&
@@ -3404,7 +3404,7 @@ out:
 	spin_unlock(&host->lock);
 
 	if (unexpected) {
-		pr_err("%s: Unexpected interrupt 0x%08x.\n",
+		pr_debug("%s: Unexpected interrupt 0x%08x.\n",
 			   mmc_hostname(host->mmc), unexpected);
 		MMC_TRACE(host->mmc, "Unexpected interrupt 0x%08x.\n",
 				unexpected);
@@ -3760,7 +3760,7 @@ static int sdhci_cmdq_crypto_cfg(struct mmc_host *mmc,
 	if (host->crypto_reset_reqd && host->ops->crypto_engine_reset) {
 		err = host->ops->crypto_engine_reset(host);
 		if (err) {
-			pr_err("%s: crypto reset failed\n",
+			pr_debug("%s: crypto reset failed\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
@@ -3771,7 +3771,7 @@ static int sdhci_cmdq_crypto_cfg(struct mmc_host *mmc,
 		err = host->ops->crypto_engine_cmdq_cfg(host, mrq,
 				slot, ice_ctx);
 		if (err) {
-			pr_err("%s: failed to configure crypto\n",
+			pr_debug("%s: failed to configure crypto\n",
 					mmc_hostname(host->mmc));
 			goto out;
 		}
@@ -3933,7 +3933,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	host->version = (host->version & SDHCI_SPEC_VER_MASK)
 				>> SDHCI_SPEC_VER_SHIFT;
 	if (host->version > SDHCI_SPEC_300) {
-		pr_err("%s: Unknown controller version (%d). "
+		pr_debug("%s: Unknown controller version (%d). "
 			"You may experience problems.\n", mmc_hostname(mmc),
 			host->version);
 	}
@@ -4061,7 +4061,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->max_clk == 0 || host->quirks &
 			SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN) {
 		if (!host->ops->get_max_clock) {
-			pr_err("%s: Hardware doesn't specify base clock "
+			pr_debug("%s: Hardware doesn't specify base clock "
 			       "frequency.\n", mmc_hostname(mmc));
 			return -ENODEV;
 		}
@@ -4113,7 +4113,7 @@ int sdhci_add_host(struct sdhci_host *host)
 				host->timeout_clk =
 					host->ops->get_timeout_clock(host);
 			} else {
-				pr_err("%s: Hardware doesn't specify timeout clock frequency.\n",
+				pr_debug("%s: Hardware doesn't specify timeout clock frequency.\n",
 					mmc_hostname(mmc));
 				return -ENODEV;
 			}
@@ -4334,7 +4334,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->ocr_avail_mmc &= host->ocr_avail_mmc;
 
 	if (mmc->ocr_avail == 0) {
-		pr_err("%s: Hardware doesn't report any "
+		pr_debug("%s: Hardware doesn't report any "
 			"support voltages.\n", mmc_hostname(mmc));
 		return -ENODEV;
 	}
@@ -4411,7 +4411,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	ret = request_threaded_irq(host->irq, sdhci_irq, sdhci_thread_irq,
 				   IRQF_SHARED,	mmc_hostname(mmc), host);
 	if (ret) {
-		pr_err("%s: Failed to request IRQ %d: %d\n",
+		pr_debug("%s: Failed to request IRQ %d: %d\n",
 		       mmc_hostname(mmc), host->irq, ret);
 		goto untasklet;
 	}
@@ -4431,7 +4431,7 @@ int sdhci_add_host(struct sdhci_host *host)
 
 		ret = led_classdev_register(mmc_dev(mmc), &host->led);
 		if (ret) {
-			pr_err("%s: Failed to register LED device: %d\n",
+			pr_debug("%s: Failed to register LED device: %d\n",
 			       mmc_hostname(mmc), ret);
 			goto reset;
 		}
@@ -4451,7 +4451,7 @@ int sdhci_add_host(struct sdhci_host *host)
 			true : false;
 		ret = sdhci_cmdq_init(host, mmc, dma64);
 		if (ret)
-			pr_err("%s: CMDQ init: failed (%d)\n",
+			pr_debug("%s: CMDQ init: failed (%d)\n",
 			       mmc_hostname(host->mmc), ret);
 		else
 			host->cq_host->ops = &sdhci_cmdq_ops;
@@ -4497,7 +4497,7 @@ void sdhci_remove_host(struct sdhci_host *host, int dead)
 		host->flags |= SDHCI_DEVICE_DEAD;
 
 		if (host->mrq) {
-			pr_err("%s: Controller removed during "
+			pr_debug("%s: Controller removed during "
 				" transfer!\n", mmc_hostname(mmc));
 
 			host->mrq->cmd->error = -ENOMEDIUM;

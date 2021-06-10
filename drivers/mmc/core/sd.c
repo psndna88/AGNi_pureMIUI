@@ -188,7 +188,7 @@ static int mmc_decode_csd(struct mmc_card *card)
 			mmc_card_set_readonly(card);
 		break;
 	default:
-		pr_err("%s: unrecognised CSD structure version %d\n",
+		pr_debug("%s: unrecognised CSD structure version %d\n",
 			mmc_hostname(card->host), csd_struct);
 		return -EINVAL;
 	}
@@ -212,7 +212,7 @@ static int mmc_decode_scr(struct mmc_card *card)
 
 	scr_struct = UNSTUFF_BITS(resp, 60, 4);
 	if (scr_struct != 0) {
-		pr_err("%s: unrecognised SCR structure version %d\n",
+		pr_debug("%s: unrecognised SCR structure version %d\n",
 			mmc_hostname(card->host), scr_struct);
 		return -EINVAL;
 	}
@@ -234,7 +234,7 @@ static int mmc_decode_scr(struct mmc_card *card)
 	/* SD Spec says: any SD Card shall set at least bits 0 and 2 */
 	if (!(scr->bus_widths & SD_SCR_BUS_WIDTH_1) ||
 	    !(scr->bus_widths & SD_SCR_BUS_WIDTH_4)) {
-		pr_err("%s: invalid bus width\n", mmc_hostname(card->host));
+		pr_debug("%s: invalid bus width\n", mmc_hostname(card->host));
 		return -EINVAL;
 	}
 
@@ -317,7 +317,7 @@ static int mmc_read_switch(struct mmc_card *card)
 
 	status = kmalloc(64, GFP_KERNEL);
 	if (!status) {
-		pr_err("%s: could not allocate a buffer for "
+		pr_debug("%s: could not allocate a buffer for "
 			"switch capabilities.\n",
 			mmc_hostname(card->host));
 		return -ENOMEM;
@@ -382,7 +382,7 @@ int mmc_sd_switch_hs(struct mmc_card *card)
 
 	status = kmalloc(64, GFP_KERNEL);
 	if (!status) {
-		pr_err("%s: could not allocate a buffer for "
+		pr_debug("%s: could not allocate a buffer for "
 			"switch capabilities.\n", mmc_hostname(card->host));
 		return -ENOMEM;
 	}
@@ -687,7 +687,7 @@ static int mmc_sd_init_uhs_card(struct mmc_card *card)
 
 	status = kmalloc(64, GFP_KERNEL);
 	if (!status) {
-		pr_err("%s: could not allocate a buffer for "
+		pr_debug("%s: could not allocate a buffer for "
 			"switch capabilities.\n", mmc_hostname(card->host));
 		return -ENOMEM;
 	}
@@ -1149,7 +1149,7 @@ static int mmc_sd_init_temp_control_clk_scaling(struct mmc_host *host)
 	if (host->ops->reg_temp_callback) {
 		ret = host->ops->reg_temp_callback(host);
 	} else {
-		pr_err("%s: %s: couldn't find init temp control clk scaling cb\n",
+		pr_debug("%s: %s: couldn't find init temp control clk scaling cb\n",
 			mmc_hostname(host), __func__);
 		ret = -ENOCALLBACK;
 	}
@@ -1163,7 +1163,7 @@ static int mmc_sd_dereg_temp_control_clk_scaling(struct mmc_host *host)
 	if (host->ops->dereg_temp_callback) {
 		ret = host->ops->dereg_temp_callback(host);
 	} else {
-		pr_err("%s: %s: couldn't find dereg temp control clk scaling cb\n",
+		pr_debug("%s: %s: couldn't find dereg temp control clk scaling cb\n",
 			mmc_hostname(host), __func__);
 		ret = -ENOCALLBACK;
 	}
@@ -1277,7 +1277,7 @@ static int _mmc_sd_suspend(struct mmc_host *host)
 
 	err = mmc_suspend_clk_scaling(host);
 	if (err) {
-		pr_err("%s: %s: fail to suspend clock scaling (%d)\n",
+		pr_debug("%s: %s: fail to suspend clock scaling (%d)\n",
 			mmc_hostname(host), __func__,  err);
 		return err;
 	}
@@ -1367,7 +1367,7 @@ static int _mmc_sd_resume(struct mmc_host *host)
 	err = mmc_sd_init_card(host, host->card->ocr, host->card);
 #endif
 	if (err) {
-		pr_err("%s: %s: mmc_sd_init_card_failed (%d)\n",
+		pr_debug("%s: %s: mmc_sd_init_card_failed (%d)\n",
 				mmc_hostname(host), __func__, err);
 		mmc_power_off(host);
 		goto out;
@@ -1378,7 +1378,7 @@ static int _mmc_sd_resume(struct mmc_host *host)
 		goto out;
 	err = mmc_resume_clk_scaling(host);
 	if (err) {
-		pr_err("%s: %s: fail to resume clock scaling (%d)\n",
+		pr_debug("%s: %s: fail to resume clock scaling (%d)\n",
 			mmc_hostname(host), __func__, err);
 		goto out;
 	}
@@ -1419,7 +1419,7 @@ static int mmc_sd_runtime_suspend(struct mmc_host *host)
 
 	err = _mmc_sd_suspend(host);
 	if (err)
-		pr_err("%s: error %d doing aggressive suspend\n",
+		pr_debug("%s: error %d doing aggressive suspend\n",
 			mmc_hostname(host), err);
 
 	return err;
@@ -1437,7 +1437,7 @@ static int mmc_sd_runtime_resume(struct mmc_host *host)
 
 	err = _mmc_sd_resume(host);
 	if (err)
-		pr_err("%s: error %d doing aggressive resume\n",
+		pr_debug("%s: error %d doing aggressive resume\n",
 			mmc_hostname(host), err);
 
 	return 0;
@@ -1514,7 +1514,7 @@ int mmc_attach_sd(struct mmc_host *host)
 	}
 
 	if (mmc_sd_init_temp_control_clk_scaling(host))
-		pr_err("%s: failed to init temp control clk scaling\n",
+		pr_debug("%s: failed to init temp control clk scaling\n",
 			mmc_hostname(host));
 	/*
 	 * Detect and init the card.
@@ -1567,7 +1567,7 @@ remove_card:
 err:
 	mmc_detach_bus(host);
 
-	pr_err("%s: error %d whilst initialising SD card\n",
+	pr_debug("%s: error %d whilst initialising SD card\n",
 		mmc_hostname(host), err);
 
 	return err;

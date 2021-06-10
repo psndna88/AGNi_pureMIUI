@@ -278,7 +278,7 @@ static int mmc_scale_set(void *data, u64 val)
 	if (err == -EAGAIN)
 		err = 0;
 	else if (err)
-		pr_err("%s: clock scale to %llu failed with error %d\n",
+		pr_debug("%s: clock scale to %llu failed with error %d\n",
 			mmc_hostname(host), val, err);
 	else
 		pr_debug("%s: clock change to %llu finished successfully (%s)\n",
@@ -471,7 +471,7 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 	if (mmc_card_cmdq(card)) {
 		ret = mmc_cmdq_halt_on_empty_queue(card->host);
 		if (ret) {
-			pr_err("%s: halt failed while doing %s err (%d)\n",
+			pr_debug("%s: halt failed while doing %s err (%d)\n",
 					mmc_hostname(card->host), __func__,
 					ret);
 			goto out;
@@ -484,7 +484,7 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 
 	if (mmc_card_cmdq(card)) {
 		if (mmc_cmdq_halt(card->host, false))
-			pr_err("%s: %s: cmdq unhalt failed\n",
+			pr_debug("%s: %s: cmdq unhalt failed\n",
 			       mmc_hostname(card->host), __func__);
 	}
 out:
@@ -513,7 +513,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 	if (mmc_card_cmdq(card)) {
 		err = mmc_cmdq_halt_on_empty_queue(card->host);
 		if (err) {
-			pr_err("%s: halt failed while doing %s err (%d)\n",
+			pr_debug("%s: halt failed while doing %s err (%d)\n",
 					mmc_hostname(card->host), __func__,
 					err);
 			mmc_put_card(card);
@@ -534,7 +534,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 
 	if (mmc_card_cmdq(card)) {
 		if (mmc_cmdq_halt(card->host, false))
-			pr_err("%s: %s: cmdq unhalt failed\n",
+			pr_debug("%s: %s: cmdq unhalt failed\n",
 			       mmc_hostname(card->host), __func__);
 	}
 
@@ -545,7 +545,7 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 out_free:
 	if (mmc_card_cmdq(card)) {
 		if (mmc_cmdq_halt(card->host, false))
-			pr_err("%s: %s: cmdq unhalt failed\n",
+			pr_debug("%s: %s: cmdq unhalt failed\n",
 			       mmc_hostname(card->host), __func__);
 	}
 	mmc_put_card(card);
@@ -731,7 +731,7 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 	else
 		ret = -EFAULT;
 	if (ret)
-		pr_err("%s: %s: Copy to userspace failed: %s\n",
+		pr_debug("%s: %s: Copy to userspace failed: %s\n",
 				mmc_hostname(card->host), __func__, ubuf);
 
 	spin_unlock(&pack_stats->lock);
@@ -840,7 +840,7 @@ static ssize_t mmc_bkops_stats_write(struct file *filp,
 
 	err = kstrtoint_from_user(ubuf, cnt, 0, &value);
 	if (err) {
-		pr_err("%s: %s: error parsing input from user (%d)\n",
+		pr_debug("%s: %s: error parsing input from user (%d)\n",
 				mmc_hostname(card->host), __func__, err);
 		return err;
 	}

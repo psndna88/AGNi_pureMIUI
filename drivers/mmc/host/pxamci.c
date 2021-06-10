@@ -577,7 +577,7 @@ static void pxamci_dma_irq(void *param)
 	if (likely(status == DMA_COMPLETE)) {
 		writel(BUF_PART_FULL, host->base + MMC_PRTBUF);
 	} else {
-		pr_err("%s: DMA error on %s channel\n", mmc_hostname(host->mmc),
+		pr_debug("%s: DMA error on %s channel\n", mmc_hostname(host->mmc),
 			host->data->flags & MMC_DATA_READ ? "rx" : "tx");
 		host->data->error = -EIO;
 		pxamci_data_done(host, 0);

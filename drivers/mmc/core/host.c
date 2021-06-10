@@ -316,7 +316,7 @@ static inline void mmc_host_clk_sysfs_init(struct mmc_host *host)
 	host->clkgate_delay_attr.attr.name = "clkgate_delay";
 	host->clkgate_delay_attr.attr.mode = S_IRUGO | S_IWUSR;
 	if (device_create_file(&host->class_dev, &host->clkgate_delay_attr))
-		pr_err("%s: Failed to create clkgate_delay sysfs entry\n",
+		pr_debug("%s: Failed to create clkgate_delay sysfs entry\n",
 				mmc_hostname(host));
 }
 #else
@@ -899,12 +899,12 @@ int mmc_add_host(struct mmc_host *host)
 
 	err = sysfs_create_group(&host->class_dev.kobj, &clk_scaling_attr_grp);
 	if (err)
-		pr_err("%s: failed to create clk scale sysfs group with err %d\n",
+		pr_debug("%s: failed to create clk scale sysfs group with err %d\n",
 				__func__, err);
 
 	err = sysfs_create_group(&host->class_dev.kobj, &dev_attr_grp);
 	if (err)
-		pr_err("%s: failed to create sysfs group with err %d\n",
+		pr_debug("%s: failed to create sysfs group with err %d\n",
 							 __func__, err);
 
 #ifdef CONFIG_BLOCK

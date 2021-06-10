@@ -247,7 +247,7 @@ void ufs_qcom_dbg_add_debugfs(struct ufs_hba *hba, struct dentry *root)
 	struct ufs_qcom_host *host;
 
 	if (!hba || !hba->priv) {
-		pr_err("%s: NULL host, exiting\n", __func__);
+		pr_debug("%s: NULL host, exiting\n", __func__);
 		return;
 	}
 

@@ -139,7 +139,7 @@ static int cis_tpl_parse(struct mmc_card *card, struct sdio_func *func,
 			ret = -EINVAL;
 		}
 		if (ret && ret != -EILSEQ && ret != -ENOENT) {
-			pr_err("%s: bad %s tuple 0x%02x (%u bytes)\n",
+			pr_debug("%s: bad %s tuple 0x%02x (%u bytes)\n",
 			       mmc_hostname(card->host), tpl_descr, code, size);
 		}
 	} else {
