@@ -141,6 +141,8 @@ memory allocation over a PCIe bridge
 					is supported or not in this target.
 
 - qcom,bw-monitor-supported: Boolean context flag to indicate BW monitor feature support.
+- qcom,fnr-stats-not-supported: Boolean context flag to indicate FnR stats query support
+				is present or not for the target.
 
 IPA pipe sub nodes (A2 static pipes configurations):
 
