@@ -86,7 +86,6 @@ struct kgsl_pwrscale {
 	ktime_t time;
 	s64 on_time;
 	s64 freq_change_time;
-	struct srcu_notifier_head nh;
 	struct workqueue_struct *devfreq_wq;
 	struct work_struct devfreq_suspend_ws;
 	struct work_struct devfreq_resume_ws;
