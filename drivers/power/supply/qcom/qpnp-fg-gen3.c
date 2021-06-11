@@ -846,8 +846,6 @@ static int fg_get_msoc_raw(struct fg_chip *chip, int *val)
 #define HIGH_CAPACITY	80
 #define LOW_CAPACITY	15
 #define FULL_SOC_RAW	255
-bool low_batt_swap_stall = false;
-bool batt_swap_push = false;
 
 static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 {
@@ -873,18 +871,6 @@ static int fg_get_msoc(struct fg_chip *chip, int *msoc)
 
 	if (*msoc >= FULL_CAPACITY)
 		*msoc = FULL_CAPACITY;
-
-	if (*msoc >= HIGH_CAPACITY)
-		batt_swap_push = true;
-	else
-		batt_swap_push = false;
-
-	if (*msoc <= LOW_CAPACITY)
-		low_batt_swap_stall = true;
-	else
-		low_batt_swap_stall = false;
-
-	agni_memprobe();
 
 	return 0;
 }

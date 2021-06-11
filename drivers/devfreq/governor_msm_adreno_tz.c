@@ -24,7 +24,6 @@
 #include <asm/cacheflush.h>
 #include <soc/qcom/scm.h>
 #include "governor.h"
-#include <linux/agni_meminfo.h>
 
 static DEFINE_SPINLOCK(tz_lock);
 static DEFINE_SPINLOCK(sample_lock);
@@ -67,8 +66,6 @@ static unsigned long acc_total, acc_relative_busy;
 
 /* Suspend state boolean */
 static bool suspended = false;
-
-unsigned long adreno_load_perc;
 
 /*
  * Returns GPU suspend time in millisecond.
@@ -189,14 +186,6 @@ void compute_work_load(struct devfreq_dev_status *stats,
 	busy = (u64)stats->busy_time * stats->current_frequency;
 	do_div(busy, devfreq->profile->freq_table[0]);
 	acc_relative_busy += busy;
-	if (!state_suspended) {
-		if (acc_total)
-			adreno_load_perc = ((acc_relative_busy * 100) / acc_total);
-	} else {
-		adreno_load_perc = 0;
-	}
-	if (adreno_load_perc > GPULOADTRIGGER) /* High GPU usage - typically while gaming */
-		agni_swappiness = 1;
 
 	spin_unlock(&sample_lock);
 }

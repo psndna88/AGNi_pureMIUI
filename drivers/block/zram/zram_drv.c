@@ -32,7 +32,6 @@
 #include <linux/idr.h>
 #include <linux/sysfs.h>
 #include <linux/debugfs.h>
-#include <linux/agni_meminfo.h>
 
 #include "zram_drv.h"
 
