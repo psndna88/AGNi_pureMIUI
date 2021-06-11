@@ -6,13 +6,6 @@
 	qcom,msm-id = <497 0x10000>;
 };
 
-&soc {
-	msm_vidc: qcom,vidc {
-		compatible = "qcom,msm-vidc", "qcom,qcm6490-vidc";
-		status = "ok";
-	};
-};
-
 &gcc {
 	clocks = <&rpmhcc RPMH_CXO_CLK>, <&sleep_clk>,
 		<&usb3_phy_wrapper_gcc_usb30_pipe_clk>,
