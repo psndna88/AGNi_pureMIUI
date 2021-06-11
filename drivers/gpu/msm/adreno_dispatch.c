@@ -2828,7 +2828,7 @@ int adreno_dispatcher_init(struct adreno_device *adreno_dev)
 
 	init_waitqueue_head(&dispatcher->cmd_waitq);
 	dispatcher->state = (atomic_t)ATOMIC_INIT(THREAD_IDLE);
-	dispatcher->thread = kthread_run_perf_critical(cpu_perf_mask, adreno_dispatcher_thread, adreno_dev,
+	dispatcher->thread = kthread_run(adreno_dispatcher_thread, adreno_dev,
 					 "adreno_dispatch");
 	if (IS_ERR(dispatcher->thread))
 		return PTR_ERR(dispatcher->thread);
