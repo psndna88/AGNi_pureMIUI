@@ -2000,6 +2000,8 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 	struct rq *rq = task_rq(p);
 	bool queued, running;
 
+	new_mask = get_adjusted_cpumask(p, new_mask);
+
 	lockdep_assert_held(&p->pi_lock);
 
 	queued = task_on_rq_queued(p);
