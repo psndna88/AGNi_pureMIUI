@@ -1957,7 +1957,9 @@ uint8_t lim_get_max_tx_power(struct mac_context *mac,
 
 void lim_calculate_tpc(struct mac_context *mac,
 		       struct pe_session *session,
-		       bool is_pwr_constraint_absolute)
+		       bool is_pwr_constraint_absolute,
+		       uint8_t ap_pwr_type,
+		       bool ctry_code_match)
 {
 	bool is_psd_power = false;
 	bool is_tpe_present = false, is_6ghz_freq = false;
@@ -1971,11 +1973,6 @@ void lim_calculate_tpc(struct mac_context *mac,
 	struct vdev_mlme_obj *mlme_obj;
 	uint8_t tpe_power;
 	bool skip_tpe = false;
-
-	if (LIM_IS_STA_ROLE(session) && !session->lim_join_req) {
-		pe_err("Join Request is NULL");
-		return;
-	}
 
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
 	if (!mlme_obj) {
@@ -2002,12 +1999,17 @@ void lim_calculate_tpc(struct mac_context *mac,
 	} else {
 		is_6ghz_freq = true;
 		is_psd_power = wlan_reg_is_6g_psd_power(mac->pdev);
+		/* Power mode calculation for 6G*/
+		ap_power_type_6g = session->ap_power_type;
 		if (LIM_IS_STA_ROLE(session)) {
-			if (session->lim_join_req->same_ctry_code)
-				ap_power_type_6g = session->ap_power_type;
-			else
-				ap_power_type_6g =
+			if (!session->lim_join_req) {
+				if (!ctry_code_match)
+					ap_power_type_6g = ap_pwr_type;
+			} else {
+				if (!session->lim_join_req->same_ctry_code)
+					ap_power_type_6g =
 					session->lim_join_req->ap_power_type_6g;
+			}
 		}
 	}
 
