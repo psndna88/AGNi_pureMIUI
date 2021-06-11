@@ -29,7 +29,6 @@
 #include "mdss_dba_utils.h"
 #include "mdss_debug.h"
 #include "mdss_livedisplay.h"
-#include <linux/agni_meminfo.h>
 
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
@@ -1265,8 +1264,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	}
 	
 	display_on = false;
-
-	agni_memprobe();
 
 #ifdef CONFIG_POWERSUSPEND
 	set_power_suspend_state_panel_hook(POWER_SUSPEND_ACTIVE);
