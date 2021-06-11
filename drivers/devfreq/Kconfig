@@ -67,6 +67,8 @@ config DEVFREQ_GOV_USERSPACE
 config DEVFREQ_GOV_QCOM_ADRENO_TZ
 	tristate "Qualcom  Adreno Trustzone"
 	depends on QCOM_KGSL && QCOM_SCM
+	select SIMPLE_GPU_ALGORITHM
+	select ADRENO_IDLER
 	help
 	  Trustzone based governor for the Adreno GPU.
 	  Sets the frequency using a "on-demand" algorithm.
