@@ -1,0 +1,61 @@
+/* Should extend holi-sde-display-qrd-pm6125.dtsi */
+
+&dsi_r66451_amoled_cmd {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
+				04 03 02 04 00 10 14];
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
+				06 06 02 04 00 15 15];
+		};
+
+		timing@2 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1C 08 07 23 22 07
+				07 08 02 04 00 1a 17];
+		};
+	};
+};
+
+&dsi_r66451_amoled_video {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1C 08 07 23 22 07
+				07 08 02 04 00 1a 17];
+		};
+	};
+};
+
+&dsi_r66451_amoled_90hz_cmd {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
+				04 03 02 04 00 10 14];
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
+				06 06 02 04 00 15 15];
+		};
+	};
+};
+
+&dsi_r66451_amoled_90hz_video {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
+				06 06 02 04 00 15 15];
+		};
+	};
+};
+
+&dsi_r66451_amoled_60hz_video {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
+				04 03 02 04 00 10 14];
+		};
+	};
+};
