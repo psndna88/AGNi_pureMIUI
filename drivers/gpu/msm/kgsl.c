@@ -551,6 +551,7 @@ void kgsl_context_dump(struct kgsl_context *context)
 {
 	struct kgsl_device *device;
 
+	return;
 	if (_kgsl_context_get(context) == 0)
 		return;
 
