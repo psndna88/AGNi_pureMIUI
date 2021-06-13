@@ -133,7 +133,8 @@ static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 		struct cam_flash_query_cap_info flash_cap = {0};
 
 		CAM_DBG(CAM_FLASH, "CAM_QUERY_CAP");
-		flash_cap.slot_info = fctrl->soc_info.index;
+		flash_cap.slot_info  = fctrl->soc_info.index;
+		flash_cap.flash_type = soc_private->flash_type;
 		for (i = 0; i < fctrl->flash_num_sources; i++) {
 			flash_cap.max_current_flash[i] =
 				soc_private->flash_max_current[i];
@@ -412,6 +413,7 @@ static int cam_flash_component_bind(struct device *dev,
 	struct cam_flash_ctrl *fctrl = NULL;
 	struct device_node *of_parent = NULL;
 	struct platform_device *pdev = to_platform_device(dev);
+	struct cam_hw_soc_info *soc_info = NULL;
 
 	CAM_DBG(CAM_FLASH, "Binding flash component");
 	if (!pdev->dev.of_node) {
@@ -466,6 +468,19 @@ static int cam_flash_component_bind(struct device *dev,
 
 		fctrl->io_master_info.cci_client->cci_device = fctrl->cci_num;
 		CAM_DBG(CAM_FLASH, "cci-index %d", fctrl->cci_num, rc);
+
+		soc_info = &fctrl->soc_info;
+		rc = cam_sensor_util_init_gpio_pin_tbl(soc_info,
+			&fctrl->power_info.gpio_num_info);
+		if ((rc < 0) || (!fctrl->power_info.gpio_num_info)) {
+			CAM_ERR(CAM_FLASH, "No/Error Flash GPIOs");
+			return -EINVAL;
+		}
+		rc = cam_sensor_util_regulator_powerup(soc_info);
+		if (rc < 0) {
+			CAM_ERR(CAM_FLASH, "regulator power up for flash failed %d",  rc);
+			return rc;
+		}
 
 		fctrl->i2c_data.per_frame =
 			kzalloc(sizeof(struct i2c_settings_array) *
