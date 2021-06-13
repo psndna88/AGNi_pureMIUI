@@ -224,7 +224,7 @@ struct cci_device {
 	uint32_t cpas_handle;
 	uint32_t irq_status1;
 	spinlock_t lock_status;
-	bool is_burst_read;
+	bool is_burst_read[MASTER_MAX];
 	uint32_t irqs_disabled;
 	struct mutex init_mutex;
 	uint64_t  dump_en;
