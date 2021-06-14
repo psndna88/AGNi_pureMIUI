@@ -532,14 +532,15 @@ config RCU_EXPERT
 	  Say N if you are unsure.
 
 config SRCU
-	bool
+	bool "sleepable RCU"
+	select WQ_POWER_EFFICIENT_DEFAULT
 	help
 	  This option selects the sleepable version of RCU. This version
 	  permits arbitrary sleeping or blocking within RCU read-side critical
 	  sections.
 
 config TASKS_RCU
-	bool
+	bool "task-based RCU implementation"
 	default n
 	select SRCU
 	help
