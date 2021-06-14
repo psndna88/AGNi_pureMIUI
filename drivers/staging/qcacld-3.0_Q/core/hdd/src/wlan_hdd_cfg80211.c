@@ -3007,7 +3007,7 @@ void wlan_hdd_cfg80211_acs_ch_select_evt(struct hdd_adapter *adapter)
 		INIT_DELAYED_WORK(&con_sap_adapter->acs_pending_work,
 				      wlan_hdd_cfg80211_start_pending_acs);
 		/* Lets give 1500ms for OBSS + START_BSS to complete */
-		schedule_delayed_work(&con_sap_adapter->acs_pending_work,
+		queue_delayed_work(system_power_efficient_wq, &con_sap_adapter->acs_pending_work,
 					msecs_to_jiffies(1500));
 	}
 }
