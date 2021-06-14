@@ -21292,7 +21292,9 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		}
 		qdf_mem_zero(pmkid_cache, sizeof(pmkid_cache));
 		qdf_mem_free(pmkid_cache);
-	} else {
+	}
+
+	if (roam_synch_data->authStatus != CSR_ROAM_AUTH_STATUS_AUTHENTICATED) {
 		roam_info->fAuthRequired = true;
 		csr_roam_substate_change(mac_ctx,
 				eCSR_ROAM_SUBSTATE_WAIT_FOR_KEY,
