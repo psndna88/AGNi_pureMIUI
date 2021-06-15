@@ -1434,6 +1434,7 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 	void *pdata = NULL;
 	struct hfi_device *hdev = NULL;
 	u32 hfi_perf_mode;
+	struct v4l2_ctrl *ctrl;
 
 	hdev = inst->core->device;
 	if (inst->session_type != MSM_VIDC_ENCODER) {
@@ -1443,6 +1444,9 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 		return 0;
 	}
 
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_COMPLEXITY);
+	if (!is_realtime_session(inst) && !ctrl->val)
+		enable = true;
 	prop_id = HFI_PROPERTY_CONFIG_VENC_PERF_MODE;
 	hfi_perf_mode = enable ? HFI_VENC_PERFMODE_POWER_SAVE :
 		HFI_VENC_PERFMODE_MAX_QUALITY;
