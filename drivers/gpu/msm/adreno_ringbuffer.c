@@ -905,7 +905,7 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	if (dwords <= ARRAY_SIZE(link_onstack)) {
 		link = link_onstack;
 	} else {
-		link = kmalloc(sizeof(unsigned int) * dwords, GFP_KERNEL);
+		link = kzalloc(sizeof(unsigned int) * dwords, GFP_KERNEL);
 		if (!link) {
 			ret = -ENOMEM;
 			goto done;

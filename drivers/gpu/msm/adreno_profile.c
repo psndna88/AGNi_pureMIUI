@@ -77,17 +77,9 @@
 #define SIZE_PIPE_ENTRY(cnt) (50 + (cnt) * 62)
 #define SIZE_LOG_ENTRY(cnt) (6 + (cnt) * 5)
 
-struct adreno_context_type ctxt_type_table[] = {KGSL_CONTEXT_TYPES};
+extern struct adreno_context_type ctxt_type_table;
 
-const char *get_api_type_str(unsigned int type)
-{
-	int i;
-	for (i = 0; i < ARRAY_SIZE(ctxt_type_table) - 1; i++) {
-		if (ctxt_type_table[i].type == type)
-			return ctxt_type_table[i].str;
-	}
-	return "UNKNOWN";
-}
+extern const char *get_api_type_str(unsigned int type);
 
 static inline uint _ib_start(struct adreno_device *adreno_dev,
 			 unsigned int *cmds)
