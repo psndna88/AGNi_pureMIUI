@@ -188,7 +188,6 @@ struct kgsl_iommu_pt {
 
 /* Macros to read/write IOMMU registers */
 extern const unsigned int kgsl_iommu_reg_list[KGSL_IOMMU_REG_MAX];
-extern const char *get_api_type_str(unsigned int type);
 
 static inline void __iomem *
 kgsl_iommu_reg(struct kgsl_iommu_context *ctx, enum kgsl_iommu_reg_map reg)

@@ -105,6 +105,18 @@ static int global_pt_count;
 static struct kgsl_memdesc gpu_qdss_desc;
 static struct kgsl_memdesc gpu_qtimer_desc;
 
+struct adreno_context_type ctxt_type_table[] = {KGSL_CONTEXT_TYPES};
+inline const char *get_api_type_str(unsigned int type)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ctxt_type_table); i++) {
+		if (ctxt_type_table[i].type == type)
+			return ctxt_type_table[i].str;
+	}
+	return "UNKNOWN";
+}
+
 void kgsl_print_global_pt_entries(struct seq_file *s)
 {
 	int i;
