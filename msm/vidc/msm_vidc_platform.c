@@ -2155,6 +2155,10 @@ static const struct of_device_id msm_vidc_dt_device[] = {
 		.compatible = "qcom,yupik-vidc",
 		.data = &yupik_data,
 	},
+	{
+		.compatible = "qcom,qcm6490-vidc",
+		.data = &yupik_data,
+	},
 	{},
 };
 
@@ -2304,6 +2308,19 @@ void *vidc_get_drv_data(struct device *dev)
 			driver_data->clock_data = yupik_clock_data_v1;
 			driver_data->clock_data_length =
 				ARRAY_SIZE(yupik_clock_data_v1);;
+			driver_data->common_data = yupik_common_data_v1;
+			driver_data->common_data_length =
+					ARRAY_SIZE(yupik_common_data_v1);
+			driver_data->codec_caps = yupik_capabilities_v1;
+			driver_data->codec_caps_count =
+					ARRAY_SIZE(yupik_capabilities_v1);
+		}
+		msm_vidc_ddr_ubwc_config(driver_data, 0xe);
+	} else if (!strcmp(match->compatible, "qcom,qcm6490-vidc")) {
+		if (driver_data->sku_version == SKU_VERSION_1) {
+			driver_data->clock_data = yupik_clock_data_v1;
+			driver_data->clock_data_length =
+				ARRAY_SIZE(yupik_clock_data_v1);
 			driver_data->common_data = yupik_common_data_v1;
 			driver_data->common_data_length =
 					ARRAY_SIZE(yupik_common_data_v1);
