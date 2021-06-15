@@ -4682,6 +4682,9 @@ typedef enum {
 	wmi_peer_create_conf_event_id,
 	wmi_pdev_cp_fwstats_eventid,
 	wmi_vdev_send_big_data_p2_eventid,
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	wmi_vdev_smart_monitor_event_id,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
