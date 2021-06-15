@@ -327,14 +327,15 @@ flash_boot() {
           $bin/magiskboot cpio ramdisk.cpio test;
           magisk_patched=$?;
         fi;
-        if [ $((magisk_patched & 3)) -eq 0 ]; then
+        if [ $((magisk_patched & 3)) -eq 1 ]; then
+          ui_print " " "Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
           comp=$($bin/magiskboot decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
           ($bin/magiskboot split $kernel || $bin/magiskboot decompress $kernel kernel) 2>/dev/null;
           if [ $? != 0 -a "$comp" ]; then
             echo "Attempting kernel unpack with busybox $comp..." >&2;
             $comp -dc $kernel > kernel;
           fi;
-          $bin/magiskboot hexpatch kernel 77616E745F696E697472616D667300 736B69705F696E697472616D667300;
+          $bin/magiskboot hexpatch kernel 736B69705F696E697472616D667300 77616E745F696E697472616D667300;
           if [ "$(file_getprop $home/anykernel.sh do.systemless)" == 1 ]; then
             strings kernel | grep -E 'Linux version.*#' > $home/vertmp;
           fi;
@@ -353,7 +354,6 @@ flash_boot() {
             [ -f $fdt ] && $bin/magiskboot dtb $fdt patch;
           done;
         else
-          ui_print " " "Magisk has been preserved.";
           case $kernel in
             *-dtb) rm -f kernel_dtb;;
           esac;

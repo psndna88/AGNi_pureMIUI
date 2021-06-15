@@ -148,4 +148,5 @@ on property:sys.boot_completed=1
 	write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us 200
 	write /sys/module/rcutree/parameters/rcu_idle_gp_delay 12
 	write /sys/module/rcutree/parameters/rcu_idle_lazy_gp_delay 1800
-
+	write /proc/sys/kernel/sched_child_runs_first 1
+	write /proc/sys/kernel/timer_migration 0
