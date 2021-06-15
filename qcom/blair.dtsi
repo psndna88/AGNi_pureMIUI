@@ -973,7 +973,7 @@
 	};
 
 	wakegic: wake-gic {
-		compatible = "qcom,mpm-gic-holi", "qcom,mpm";
+		compatible = "qcom,mpm-gic-blair", "qcom,mpm";
 		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
 		reg = <0x45f01b8 0x1000>,
 			<0x0f40000c 0x4>;  /* MSM_APCS_GCC_BASE 4K */
