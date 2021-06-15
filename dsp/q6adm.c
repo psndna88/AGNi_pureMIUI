@@ -3216,11 +3216,11 @@ int adm_open_v2(int port_id, int path, int rate, int channel_mode, int topology,
 	     struct msm_ec_ref_port_cfg *ec_ref_port_cfg,
 	    struct msm_pcm_channel_mixer *ec_ref_chmix_cfg)
 {
-	struct adm_cmd_device_open_v5	open;
-	struct adm_cmd_device_open_v6	open_v6;
-	struct adm_cmd_device_open_v8	open_v8;
-	struct adm_device_endpoint_payload ep1_payload;
-	struct adm_device_endpoint_payload ep2_payload;
+	struct adm_cmd_device_open_v5	open = {0};
+	struct adm_cmd_device_open_v6	open_v6 = {0};
+	struct adm_cmd_device_open_v8	open_v8 = {0};
+	struct adm_device_endpoint_payload ep1_payload = {0};
+	struct adm_device_endpoint_payload ep2_payload = {0};
 	int ep1_payload_size = 0;
 	int ep2_payload_size = 0;
 	int ret = 0;
