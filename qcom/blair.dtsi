@@ -775,12 +775,12 @@
 		};
 
 		l2_cache102 {
-			qcom,dump-size = <0x90100>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc6>;
 		};
 
 		l2_cache103 {
-			qcom,dump-size = <0x90100>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc7>;
 		};
 
