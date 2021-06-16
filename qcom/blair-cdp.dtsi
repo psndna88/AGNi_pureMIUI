@@ -235,6 +235,11 @@
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
 	qcom,cl-feedback-on;
+	qcom,vbatt-cutoff-mv = <3400>;
+	qcom,vbatt-empty-mv = <3200>;
+	qcom,vbatt-empty-cold-mv = <3100>;
+	qcom,vbatt-low-mv = <3500>;
+	qcom,fvss-vbatt-mv = <3500>;
 };
 
 &soc {
