@@ -22,7 +22,7 @@
 
 &wcd937x_codec {
 	cdc-vdd-rxtx-supply = <&L9A>;
-	cdc-vddio-supply = <&L9A>;
+	cdc-vddpx-supply = <&L9A>;
 	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
 				   "cdc-vddpx";
 	/*

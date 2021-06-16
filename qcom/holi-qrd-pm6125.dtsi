@@ -21,11 +21,8 @@
 
 &wcd937x_codec {
 	status = "ok";
-	/delete-property/ cdc-vdd-mic-bias-supply;
-	/delete-property/ qcom,cdc-vdd-mic-bias-voltage;
-	/delete-property/ qcom,cdc-vdd-mic-bias-current;
 	cdc-vdd-rxtx-supply = <&L9A>;
-	cdc-vddio-supply = <&L9A>;
+	cdc-vddpx-supply = <&L9A>;
 	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
 				   "cdc-vddpx";
 	/*
