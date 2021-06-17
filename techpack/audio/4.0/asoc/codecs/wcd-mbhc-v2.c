@@ -1168,7 +1168,9 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 	unsigned long msec_val;
 
 	pr_debug("%s: enter\n", __func__);
+	wired_hph_connected = false;
 	__pm_wakeup_event(&mbhc_ws, 500);
+	wired_hph_connected = true;
 	complete(&mbhc->btn_press_compl);
 	WCD_MBHC_RSC_LOCK(mbhc);
 	wcd_cancel_btn_work(mbhc);
@@ -1219,7 +1221,9 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	int ret;
 
 	pr_debug("%s: enter\n", __func__);
+	wired_hph_connected = false;
 	__pm_wakeup_event(&mbhc_ws, 500);
+	wired_hph_connected = true;
 	WCD_MBHC_RSC_LOCK(mbhc);
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low ", __func__);
