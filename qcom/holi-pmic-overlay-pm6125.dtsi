@@ -178,7 +178,7 @@
 };
 
 &spmi_bus {
-	qcom,pm6125@4 {
+	qcom,pm6125@0 {
 		pm6125_adc_tm_iio: adc_tm@3400 {
 			compatible = "qcom,adc-tm5-iio";
 			reg = <0x3400>;
