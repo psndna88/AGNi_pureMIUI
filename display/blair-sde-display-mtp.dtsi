@@ -1,5 +1,14 @@
 /* Should extend holi-sde-display-mtp-pm6125.dtsi */
 
+&dsi_sim_vid {
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 1b 1b 01
+							01 02 02 04 00 0a 11];
+		};
+	};
+};
+
 &dsi_rm69299_visionox_amoled_video {
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
