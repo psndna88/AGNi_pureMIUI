@@ -46,6 +46,10 @@
 #define DSI_CLOCK_BITRATE_RADIX 10
 #define MAX_TE_SOURCE_ID  2
 
+static int dsi_hbm = 0; //Default OFF
+static int dsi_cabc = 2;  //Default OFF
+static int dsi_cabc_still = 2;  //Default OFF
+static int dsi_cabc_movie = 2;  //Default OFF
 static struct dsi_display *whitep_display;
 extern char g_lcd_id[128];
 //Update /proc/tp_info & /proc/tp_lockdown_info node
@@ -5158,6 +5162,13 @@ static int dsi_display_whitepoint_create_sysfs(void){
         return ret;
 }
 #endif //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
+
+static ssize_t dsi_display_get_cabc(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return snprintf(buf, PAGE_SIZE, "cabc=%d\n", dsi_cabc);
+}
+
 static ssize_t dsi_display_set_cabc(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
 
@@ -5176,6 +5187,7 @@ static ssize_t dsi_display_set_cabc(struct device *dev,struct device_attribute *
                 pr_err("kstrtoint failed. rc=%d\n", rc);
                 return rc;
         }
+		dsi_cabc = param;
 
 	pr_info("xinj:_###_%s,set_cabc_cmd: %d\n",__func__, param);
         switch(param) {
@@ -5192,6 +5204,13 @@ static ssize_t dsi_display_set_cabc(struct device *dev,struct device_attribute *
 	pr_info("xinj:_##### cabc over ###\n");
         return len;
 }
+
+static ssize_t dsi_display_get_cabc_movie(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return snprintf(buf, PAGE_SIZE, "cabc_movie=%d\n", dsi_cabc_movie);
+}
+
 static ssize_t dsi_display_set_cabc_movie(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
 {
 
@@ -5210,6 +5229,7 @@ static ssize_t dsi_display_set_cabc_movie(struct device *dev,struct device_attri
                 pr_err("kstrtoint failed. rc=%d\n", rc);
                 return rc;
         }
+		dsi_cabc_movie = param;
 
 //        pr_info("xinj:_###_%s,set_cabc_movie_cmd: %d\n",__func__, param);
         switch(param) {
@@ -5225,6 +5245,12 @@ static ssize_t dsi_display_set_cabc_movie(struct device *dev,struct device_attri
         }
 		pr_info("xinj:_##### cabc_movie over ###\n");
         return len;
+}
+
+static ssize_t dsi_display_get_cabc_still(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return snprintf(buf, PAGE_SIZE, "cabc_still=%d\n", dsi_cabc_still);
 }
 
 static ssize_t dsi_display_set_cabc_still(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
@@ -5245,6 +5271,7 @@ static ssize_t dsi_display_set_cabc_still(struct device *dev,struct device_attri
                 pr_err("kstrtoint failed. rc=%d\n", rc);
                 return rc;
         }
+		dsi_cabc_still = param;
 
 //        pr_info("xinj:_###_%s,set_cabc_still_cmd: %d\n",__func__, param);
         switch(param) {
@@ -5260,6 +5287,12 @@ static ssize_t dsi_display_set_cabc_still(struct device *dev,struct device_attri
         }
 		pr_info("xinj:_##### cabc_still over ###\n");
         return len;
+}
+
+static ssize_t dsi_display_get_hbm(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return snprintf(buf, PAGE_SIZE, "hbm=%d\n", dsi_hbm);
 }
 
 static ssize_t dsi_display_set_hbm(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
@@ -5280,6 +5313,7 @@ static ssize_t dsi_display_set_hbm(struct device *dev,struct device_attribute *a
                 pr_err("kstrtoint failed. rc=%d\n", rc);
                 return rc;
         }
+		dsi_hbm = param;
 
         switch(param) {
             case 0x1: //hbm1 on
@@ -5301,10 +5335,10 @@ static ssize_t dsi_display_set_hbm(struct device *dev,struct device_attribute *a
         return len;
 }
 
-static DEVICE_ATTR(dsi_display_cabc, 0644, NULL, dsi_display_set_cabc);
-static DEVICE_ATTR(dsi_display_hbm, 0644, NULL, dsi_display_set_hbm);
-static DEVICE_ATTR(dsi_display_cabc_movie, 0644, NULL, dsi_display_set_cabc_movie);
-static DEVICE_ATTR(dsi_display_cabc_still, 0644, NULL, dsi_display_set_cabc_still);
+static DEVICE_ATTR(dsi_display_cabc, 0644, dsi_display_get_cabc, dsi_display_set_cabc);
+static DEVICE_ATTR(dsi_display_hbm, 0644, dsi_display_get_hbm, dsi_display_set_hbm);
+static DEVICE_ATTR(dsi_display_cabc_movie, 0644, dsi_display_get_cabc_movie, dsi_display_set_cabc_movie);
+static DEVICE_ATTR(dsi_display_cabc_still, 0644, dsi_display_get_cabc_still, dsi_display_set_cabc_still);
 
 static struct attribute *dsi_display_feature_attrs[] = {
 	&dev_attr_dsi_display_cabc.attr,
