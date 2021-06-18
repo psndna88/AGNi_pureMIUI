@@ -50,6 +50,7 @@
 
 static bool lcd_esd_irq_handler = false;
 extern void lcd_esd_enable(bool en);
+static bool backlight_val;
 char g_lcd_id[128];
 
 enum dsi_dsc_ratio_type {
@@ -732,6 +733,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		pr_err("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
 	}
+	if (bl_lvl > 0)
+		backlight_val = true;
+	else
+	    backlight_val = false;
 
 	return rc;
 }
@@ -1758,6 +1763,14 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pre-off-command",
 	"qcom,mdss-dsi-off-command",
 	"qcom,mdss-dsi-post-off-command",
+    "qcom,mdss-dsi-cabc-on-command",
+    "qcom,mdss-dsi-cabc-off-command",
+	"qcom,mdss-dsi-cabc_movie-on-command",
+	"qcom,mdss-dsi-cabc_still-on-command",
+	"qcom,mdss-dsi-hbm1-on-command",
+	"qcom,mdss-dsi-hbm2-on-command",
+	"qcom,mdss-dsi-hbm3-on-command",
+	"qcom,mdss-dsi-hbm-off-command",	
 	"qcom,mdss-dsi-pre-res-switch",
 	"qcom,mdss-dsi-res-switch",
 	"qcom,mdss-dsi-post-res-switch",
@@ -1784,6 +1797,14 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pre-off-command-state",
 	"qcom,mdss-dsi-off-command-state",
 	"qcom,mdss-dsi-post-off-command-state",
+    "qcom,mdss-dsi-cabc-on-command-state",
+    "qcom,mdss-dsi-cabc-off-command-state",
+	"qcom,mdss-dsi-cabc_movie-on-command-state",
+	"qcom,mdss-dsi-cabc_still-on-command-state",
+	"qcom,mdss-dsi-hbm1-on-command-state",
+	"qcom,mdss-dsi-hbm2-on-command-state",
+	"qcom,mdss-dsi-hbm3-on-command-state",
+	"qcom,mdss-dsi-hbm-off-command-state",	
 	"qcom,mdss-dsi-pre-res-switch-state",
 	"qcom,mdss-dsi-res-switch-state",
 	"qcom,mdss-dsi-post-res-switch-state",
@@ -4496,3 +4517,29 @@ error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
+
+int dsi_panel_set_feature(struct dsi_panel *panel,enum dsi_cmd_set_type type)
+{
+        int rc = 0;
+
+        if (!panel) {
+                pr_err("Invalid params\n");
+                return -EINVAL;
+        }
+	pr_info("xinj:%s panel_initialized=%d type=%d backlight_val = %d\n",
+			__func__,panel->panel_initialized,type,backlight_val);
+	if (!panel->panel_initialized || !backlight_val) {
+                pr_err("xinj: con't set cmds type=%d\n",type);
+                return -EINVAL;
+	}
+        mutex_lock(&panel->panel_lock);
+
+        rc = dsi_panel_tx_cmd_set(panel, type);
+        if (rc) {
+                pr_err("[%s] failed to send DSI_CMD_SET_FEATURE_ON/OFF cmds, rc=%d,type=%d\n",
+                      panel->name, rc,type);
+        }
+        mutex_unlock(&panel->panel_lock);
+        return rc;
+}
+
