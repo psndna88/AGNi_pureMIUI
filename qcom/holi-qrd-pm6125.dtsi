@@ -5,6 +5,7 @@
 #include "holi-thermal-overlay-pm6125.dtsi"
 #include "display/holi-sde-display-qrd-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include "camera/holi-camera-pm6125-overlay.dtsi"
 
 &wcd938x_codec {
 	cdc-vdd-rxtx-supply = <&L9A>;
@@ -229,6 +230,8 @@
 		status = "ok";
 	};
 };
+
+#include "camera/holi-camera-sensor-pm6125-mtp.dtsi"
 
 &pm7250b_charger {
 	status = "ok";
