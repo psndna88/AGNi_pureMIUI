@@ -33,7 +33,7 @@
 		reset-names = "core_reset";
 
 		USB3_GDSC-supply = <&gcc_usb30_prim_gdsc>;
-		dpdm-supply = <&qusb_phy0>;
+		dpdm-supply = <&usb2_phy0>;
 		qcom,usb-charger;
 
 		qcom,core-clk-rate = <133333333>;
@@ -54,7 +54,7 @@
 			reg = <0x4e00000 0xcd00>;
 			interrupt-parent = <&intc>;
 			interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
-			usb-phy = <&qusb_phy0>, <&usb_qmp_dp_phy>;
+			usb-phy = <&usb2_phy0>, <&usb_qmp_dp_phy>;
 			tx-fifo-resize;
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
@@ -69,7 +69,7 @@
 	};
 
 	/* Primary USB port related QUSB2 PHY */
-	qusb_phy0: qusb@162b000 {
+	usb2_phy0: hsphy@162b000 {
 		compatible = "qcom,usb-hsphy-snps-femto";
 		reg = <0x162B000 0x114>,
 			<0x0162A000 0x1000>;

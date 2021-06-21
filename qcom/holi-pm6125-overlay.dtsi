@@ -67,3 +67,15 @@
 	vdd_lpi_cx-supply = <&L1A_LEVEL>;
 	vdd_lpi_mx-supply = <&L17A_LEVEL>;
 };
+
+&qusb_phy0 {
+	vdd-supply = <&L7A>;
+	vdda18-supply = <&L10A>;
+	vdda33-supply = <&L7E>;
+	refgen-supply = <&L4A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L18A>;
+	core-supply = <&L4A>;
+};
