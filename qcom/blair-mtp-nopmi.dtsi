@@ -1,2 +1,2 @@
-/ {
-};
+#include "blair-mtp.dtsi"
+
