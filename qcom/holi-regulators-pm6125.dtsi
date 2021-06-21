@@ -374,6 +374,8 @@
 
 &rpm_bus {
 	rpm-regulator-smpa5 {
+		qcom,resource-name = "smpa";
+		qcom,resource-id = <5>;
 		status = "okay";
 		S5A: pm6125_s5: regulator-s5 {
 			regulator-min-microvolt = <382000>;
