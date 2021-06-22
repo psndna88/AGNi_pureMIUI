@@ -5,7 +5,7 @@
 
 #include <linux/interconnect.h>
 #include "cam_soc_bus.h"
-#include <asm/div64.h>
+#include <linux/math64.h>
 /**
  * struct cam_soc_bus_client_data : Bus client data
  *
@@ -37,8 +37,8 @@ int cam_soc_bus_client_update_request(void *client, unsigned int idx)
 	CAM_DBG(CAM_PERF, "Bus client=[%s] index[%d] ab[%llu] ib[%llu]",
 		bus_client->common_data->name, idx, ab, ib);
 
-	rc = icc_set_bw(bus_client_data->icc_data, do_div(ab, 1000),
-		do_div(ib, 1000));
+	rc = icc_set_bw(bus_client_data->icc_data, div_u64(ab, 1000),
+		div_u64(ib, 1000));
 	if (rc) {
 		CAM_ERR(CAM_UTIL,
 			"Update request failed, client[%s], idx: %d",
@@ -60,8 +60,8 @@ int cam_soc_bus_client_update_bw(void *client, uint64_t ab, uint64_t ib)
 
 	CAM_DBG(CAM_PERF, "Bus client=[%s] :ab[%llu] ib[%llu]",
 		bus_client->common_data->name, ab, ib);
-	rc = icc_set_bw(bus_client_data->icc_data, do_div(ab, 1000),
-		do_div(ib, 1000));
+	rc = icc_set_bw(bus_client_data->icc_data, div_u64(ab, 1000),
+		div_u64(ib, 1000));
 	if (rc) {
 		CAM_ERR(CAM_UTIL, "Update request failed, client[%s]",
 			bus_client->common_data->name);
