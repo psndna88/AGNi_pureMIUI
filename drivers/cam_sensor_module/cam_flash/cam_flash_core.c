@@ -10,7 +10,7 @@
 #include "cam_res_mgr_api.h"
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
-#include <asm/div64.h>
+#include <linux/math64.h>
 
 static uint default_on_timer = 2;
 module_param(default_on_timer, uint, 0644);
@@ -1559,7 +1559,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 				add_req.trigger_eof = true;
 				/* Active time for the preflash */
 				flash_data->flash_active_time_ms =
-				do_div(flash_operation_info->time_on_duration_ns, 1000000);
+				div_u64(flash_operation_info->time_on_duration_ns, 1000000);
 				CAM_DBG(CAM_FLASH,
 					"PRECISE FLASH: active_time: %llu",
 					flash_data->flash_active_time_ms);
