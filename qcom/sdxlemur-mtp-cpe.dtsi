@@ -94,6 +94,22 @@
 		/* BDF 2.3.0 */
 		pcie0_bus2_dev3_fn0: pcie0_bus2_dev3_fn0 {
 			reg = <0x1800 0x0 0x0 0x0 0x0>;
+			/* BDF 5.0.0 */
+			pcie0_bus5_dev0_fn0: pcie0_ntn3_eth0 {
+				reg = <0x0 0x0 0x0 0x0 0x0>;
+				qcom,iommu-group = <&eth0_pci_iommu_group>;
+				eth0_pci_iommu_group: eth0_pci_iommu_group {
+					qcom,iommu-dma = "atomic";
+				};
+			};
+			/* BDF 5.0.1 */
+			pcie0_bus5_dev0_fn1: pcie0_ntn3_eth1 {
+				reg = <0x100 0x0 0x0 0x0 0x0>;
+				qcom,iommu-group = <&eth1_pci_iommu_group>;
+				eth1_pci_iommu_group: eth1_pci_iommu_group {
+					qcom,iommu-dma = "atomic";
+				};
+			};
 		};
 	};
 };
