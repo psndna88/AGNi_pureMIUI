@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/clk.h>
@@ -888,14 +888,28 @@ static void *def_wcd_mbhc_cal(void);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
-	.detect_extn_cable = false,//2020.3.27 longcheer puqirui edit,default is true
+/*compatible with high impedance headphones begin */
+#if defined(CONFIG_AUDIO_HIGH_IMPEDANCE_HEADSET)
+	.detect_extn_cable = false,
+#else
+	.detect_extn_cable = true,
+#endif
+/*compatible with high impedance headphones end */
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = BTN_1,//2019.12.13 longcheer puqirui edit,default is KEY_VOICECOMMAND
-	.key_code[2] = BTN_2,//2019.12.13 longcheer puqirui edit,default is KEY_VOLUMEUP
-	.key_code[3] = 0,//2019.12.13 longcheer puqirui edit,default isKEY_VOLUMEDOWN
+/*import xiaomi headset patch begin */
+#if defined(CONFIG_XIAOMI_AUDIO_MBHC)
+	.key_code[1] = BTN_1,
+	.key_code[2] = BTN_2,
+	.key_code[3] = 0,
+#else
+	.key_code[1] = KEY_VOICECOMMAND,
+	.key_code[2] = KEY_VOLUMEUP,
+	.key_code[3] = KEY_VOLUMEDOWN,
+#endif
+/*import xiaomi headset patch end */
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -5479,8 +5493,15 @@ static void *def_wcd_mbhc_cal(void)
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
 	btn_high[0] = 75;
+/*import xiaomi headset patch begin */
+#if defined(CONFIG_XIAOMI_AUDIO_MBHC)
 	btn_high[1] = 225;
 	btn_high[2] = 450;
+#else
+	btn_high[1] = 150;
+	btn_high[2] = 237;
+#endif
+/*import xiaomi headset patch end */
 	btn_high[3] = 500;
 	btn_high[4] = 500;
 	btn_high[5] = 500;
