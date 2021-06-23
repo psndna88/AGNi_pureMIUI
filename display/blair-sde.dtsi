@@ -6,10 +6,10 @@
 
 &mdss_dsi_phy0 {
 	compatible = "qcom,dsi-phy-v4.1";
-	reg = <0xae94400 0x800>,
-	      <0xae94900 0x27c>,
-	      <0xaf03000 0x8>,
-	      <0xae94200 0x100>;
+	reg = <0x05e94400 0x800>,
+	      <0x05e94900 0x264>,
+	      <0x05f01004 0x8>,
+	      <0x05e94200 0x100>;
 	reg-names = "dsi_phy", "pll_base", "gdsc_base", "dyn_refresh_base";
 	pll-label = "dsi_pll_5nm";
 

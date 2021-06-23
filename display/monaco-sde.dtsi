@@ -31,20 +31,22 @@
 			   "sde_imem_phys";
 
 		clocks =
-			<&gcc GCC_DISP_AHB_CLK>,
 			<&gcc GCC_DISP_HF_AXI_CLK>,
 			<&gcc GCC_DISP_THROTTLE_CORE_CLK>,
 			<&dispcc DISP_CC_MDSS_AHB_CLK>,
 			<&dispcc DISP_CC_MDSS_MDP_CLK>,
 			<&dispcc DISP_CC_MDSS_VSYNC_CLK>,
 			<&dispcc DISP_CC_MDSS_MDP_LUT_CLK>;
-		clock-names = "gcc_iface", "gcc_bus", "throttle_clk",
+		clock-names = "gcc_bus", "throttle_clk",
 				"iface_clk", "core_clk", "vsync_clk",
 				"lut_clk";
 		clock-rate = <0 0 0 0 0 256000000 19200000 192000000>;
 		clock-max-rate = <0 0 0 0 0 384000000 19200000 384000000>;
 
 		sde-vdd-supply = <&mdss_core_gdsc>;
+
+		/* Enable thermal cooling device */
+		#cooling-cells = <2>;
 
 		/* data and reg bus scale settings */
 		interconnects = <&mmrt_virt MASTER_MDP_PORT0 &bimc SLAVE_EBI_CH0>,
@@ -287,17 +289,16 @@
 		pll-label = "dsi_pll_5nm";
 		memory-region = <&dfps_data_memory>;
 		vdda-0p9-supply = <&L12A>;
-		/*TODO: check these*/
 		qcom,platform-strength-ctrl = [ff 06
 						ff 06
 						ff 06
 						ff 06
 						ff 00];
-		qcom,platform-lane-config = [00 00 10 0f
-						00 00 10 0f
-						00 00 10 0f
-						00 00 10 0f
-						00 00 10 8f];
+		qcom,platform-lane-config = [00 00 0a 0a
+						00 00 0a 0a
+						00 00 0a 0a
+						00 00 0a 0a
+						00 00 8a 8a];
 		qcom,platform-regulator-settings = [1d 1d 1d 1d 1d];
 		qcom,panel-allow-phy-poweroff;
 		qcom,dsi-pll-ssc-en;
@@ -308,8 +309,8 @@
 			qcom,phy-supply-entry@0 {
 				reg = <0>;
 				qcom,supply-name = "vdda-0p9";
-				qcom,supply-min-voltage = <880000>;
-				qcom,supply-max-voltage = <880000>;
+				qcom,supply-min-voltage = <904000>;
+				qcom,supply-max-voltage = <904000>;
 				qcom,supply-enable-load = <37550>;
 				qcom,supply-disable-load = <0>;
 			};
