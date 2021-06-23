@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -88,7 +89,9 @@ struct gdsc {
 	int			reset_count;
 	int			root_clk_idx;
 	u32			gds_timeout;
+#ifndef CONFIG_TARGET_PROJECT_J6
 	bool			skip_disable_before_enable;
+#endif
 };
 
 enum gdscr_status {
@@ -167,8 +170,10 @@ static int gdsc_is_enabled(struct regulator_dev *rdev)
 	if (!sc->toggle_logic)
 		return !sc->resets_asserted;
 
+#ifndef CONFIG_TARGET_PROJECT_J6
 	if (sc->skip_disable_before_enable)
 		return false;
+#endif
 
 	if (sc->parent_regulator) {
 		/*
@@ -262,8 +267,10 @@ static int gdsc_enable(struct regulator_dev *rdev)
 	uint32_t regval, hw_ctrl_regval = 0x0;
 	int i, ret = 0;
 
+#ifndef CONFIG_TARGET_PROJECT_J6
 	if (sc->skip_disable_before_enable)
 		return 0;
+#endif
 
 	if (sc->parent_regulator) {
 		ret = regulator_set_voltage(sc->parent_regulator,
@@ -430,7 +437,9 @@ end:
 		sc->is_bus_enabled = false;
 	}
 
+#ifndef CONFIG_TARGET_PROJECT_J6
 	sc->skip_disable_before_enable = false;
+#endif
 
 	if (ret && sc->parent_regulator)
 		regulator_set_voltage(sc->parent_regulator, 0, INT_MAX);
@@ -1005,8 +1014,10 @@ static int gdsc_probe(struct platform_device *pdev)
 			clk_set_flags(sc->clocks[i], CLKFLAG_NORETAIN_PERIPH);
 	}
 
+#ifndef CONFIG_TARGET_PROJECT_J6
 	sc->skip_disable_before_enable = of_property_read_bool(
 		pdev->dev.of_node, "qcom,skip-disable-before-sw-enable");
+#endif
 
 	reg_config.dev = &pdev->dev;
 	reg_config.init_data = init_data;

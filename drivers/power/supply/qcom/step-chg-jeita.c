@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -337,7 +337,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		chip->step_chg_config->param.psy_prop =
 				POWER_SUPPLY_PROP_VOLTAGE_OCV;
 		chip->step_chg_config->param.prop_name = "OCV";
-		chip->step_chg_config->param.hysteresis = 10000;
+		chip->step_chg_config->param.hysteresis = 0;
 		chip->step_chg_config->param.use_bms = true;
 	}
 
@@ -1124,7 +1124,7 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->jeita_fcc_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fcc_config->param.prop_name = "BATT_TEMP";
-	chip->jeita_fcc_config->param.hysteresis = 5;
+	chip->jeita_fcc_config->param.hysteresis = 10;
 	chip->jeita_fv_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fv_config->param.prop_name = "BATT_TEMP";
 	chip->jeita_fv_config->param.hysteresis = 5;

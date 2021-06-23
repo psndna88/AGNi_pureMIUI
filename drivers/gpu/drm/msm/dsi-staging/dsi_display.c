@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,7 @@
 #include "dsi_phy.h"
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
+#define to_dsi_bridge(x)  container_of((x), struct dsi_bridge, base)
 #define INT_BASE_10 10
 #define NO_OVERRIDE -1
 
@@ -49,10 +50,6 @@
 
 static struct dsi_display *whitep_display;
 extern char g_lcd_id[128];
-static int dsi_hbm = 0; //Default OFF
-static int dsi_cabc = 2;  //Default OFF
-static int dsi_cabc_still = 2;  //Default OFF
-static int dsi_cabc_movie = 2;  //Default OFF
 //Update /proc/tp_info & /proc/tp_lockdown_info node
 extern void update_lct_tp_info(char *tp_info_buf, char *tp_lockdown_info_buf);
 //Set tp_lockdown_info node callback funcation
@@ -229,6 +226,10 @@ int dsi_display_set_backlight(struct drm_connector *connector,
 	bl_scale_ad = panel->bl_config.bl_scale_ad;
 	bl_temp = (u32)bl_temp * bl_scale_ad / MAX_AD_BL_SCALE_LEVEL;
 
+	if (strnstr(saved_command_line, "androidboot.mode=charger", strlen(saved_command_line)) != NULL) {
+		if (bl_temp == 2047)
+			bl_temp = 513;
+	}
 	pr_debug("bl_scale = %u, bl_scale_ad = %u, bl_lvl = %u\n",
 		bl_scale, bl_scale_ad, (u32)bl_temp);
 
@@ -257,7 +258,7 @@ error:
 	return rc;
 }
 
-static int dsi_display_cmd_engine_enable(struct dsi_display *display)
+int dsi_display_cmd_engine_enable(struct dsi_display *display)
 {
 	int rc = 0;
 	int i;
@@ -301,7 +302,7 @@ done:
 	return rc;
 }
 
-static int dsi_display_cmd_engine_disable(struct dsi_display *display)
+int dsi_display_cmd_engine_disable(struct dsi_display *display)
 {
 	int rc = 0;
 	int i;
@@ -504,7 +505,7 @@ static bool dsi_display_is_te_based_esd(struct dsi_display *display)
 }
 
 /* Allocate memory for cmd dma tx buffer */
-static int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
+int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
 {
 	int rc = 0, cnt = 0;
 	struct dsi_display_ctrl *display_ctrl;
@@ -978,6 +979,87 @@ release_panel_lock:
 	return rc;
 }
 
+int dsi_display_read_panel(struct dsi_panel *panel, struct dsi_read_config *read_config)
+{
+	struct mipi_dsi_host *host;
+	struct dsi_display *display;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_cmd_desc *cmds;
+	int i, rc = 0, count = 0;
+	u32 flags = 0;
+
+	if (panel == NULL || read_config == NULL)
+		return -EINVAL;
+
+	host = panel->host;
+	if (host) {
+		display = to_dsi_display(host);
+		if (display == NULL)
+			return -EINVAL;
+	} else
+		return -EINVAL;
+
+	if (!panel->panel_initialized) {
+		pr_info("Panel not initialized\n");
+		return -EINVAL;
+	}
+
+	if (!read_config->enabled) {
+		pr_info("read operation was not permitted\n");
+		return -EPERM;
+	}
+
+	dsi_display_clk_ctrl(display->dsi_clk_handle,
+		DSI_ALL_CLKS, DSI_CLK_ON);
+
+	ctrl = &display->ctrl[display->cmd_master_idx];
+
+	rc = dsi_display_cmd_engine_enable(display);
+	if (rc) {
+		pr_err("cmd engine enable failed\n");
+		rc = -EPERM;
+		goto exit_ctrl;
+	}
+
+	if (display->tx_cmd_buf == NULL) {
+		rc = dsi_host_alloc_cmd_tx_buffer(display);
+		if (rc) {
+			pr_err("failed to allocate cmd tx buffer memory\n");
+			goto exit;
+		}
+	}
+
+	count = read_config->read_cmd.count;
+	cmds = read_config->read_cmd.cmds;
+	if (cmds->last_command) {
+		cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+		flags |= DSI_CTRL_CMD_LAST_COMMAND;
+	}
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ);
+
+	memset(read_config->rbuf, 0x0, sizeof(read_config->rbuf));
+	cmds->msg.rx_buf = read_config->rbuf;
+	cmds->msg.rx_len = read_config->cmds_rlen;
+
+	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &(cmds->msg), flags);
+	if (rc <= 0) {
+		pr_err("rx cmd transfer failed rc=%d\n", rc);
+		goto exit;
+	}
+
+	for (i = 0; i < read_config->cmds_rlen; i++) //debug
+		pr_info("0x%x ", read_config->rbuf[i]);
+	pr_info("\n");
+
+exit:
+	dsi_display_cmd_engine_disable(display);
+exit_ctrl:
+	dsi_display_clk_ctrl(display->dsi_clk_handle,
+		DSI_ALL_CLKS, DSI_CLK_OFF);
+
+	return rc;
+}
+
 static int dsi_display_cmd_prepare(const char *cmd_buf, u32 cmd_buf_len,
 		struct dsi_cmd_desc *cmd, u8 *payload, u32 payload_len)
 {
@@ -1192,6 +1274,7 @@ int dsi_display_set_power(struct drm_connector *connector,
 		pr_err("invalid display/panel\n");
 		return -EINVAL;
 	}
+
 	if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL){
 	if (!connector || !connector->dev) {
 			pr_err("invalid connector/dev\n");
@@ -5206,208 +5289,6 @@ static int dsi_display_whitepoint_create_sysfs(void){
 }
 #endif //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
 
-static ssize_t dsi_display_get_cabc(struct device *dev, struct device_attribute *attr, char *buf)
-{
-
-	return snprintf(buf, PAGE_SIZE, "cabc=%d\n", dsi_cabc);
-}
-
-static ssize_t dsi_display_set_cabc(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
-{
-
-        int rc = 0;
-        int param = 0;
-        struct dsi_display *display;
-
-        display = dev_get_drvdata(dev);
-        if (!display) {
-                pr_err("Invalid display\n");
-                return -EINVAL;
-        }
-
-        rc = kstrtoint(buf, 10, &param);
-        if (rc) {
-                pr_err("kstrtoint failed. rc=%d\n", rc);
-                return rc;
-        }
-		dsi_cabc = param;
-
-	pr_info("xinj:_###_%s,set_cabc_cmd: %d\n",__func__, param);
-        switch(param) {
-                case 0x1: //cabc on
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_ON);
-                        break;
-                case 0x2: //cabc off
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_OFF);
-                        break;
-                default:
-                        pr_err("unknow cmds: %d\n", param);
-                        break;
-        }
-	pr_info("xinj:_##### cabc over ###\n");
-        return len;
-}
-
-static ssize_t dsi_display_get_cabc_movie(struct device *dev, struct device_attribute *attr, char *buf)
-{
-
-	return snprintf(buf, PAGE_SIZE, "cabc_movie=%d\n", dsi_cabc_movie);
-}
-
-static ssize_t dsi_display_set_cabc_movie(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
-{
-
-        int rc = 0;
-        int param = 0;
-        struct dsi_display *display;
-
-        display = dev_get_drvdata(dev);
-        if (!display) {
-                pr_err("Invalid display\n");
-                return -EINVAL;
-        }
-
-        rc = kstrtoint(buf, 10, &param);
-        if (rc) {
-                pr_err("kstrtoint failed. rc=%d\n", rc);
-                return rc;
-        }
-		dsi_cabc_movie = param;
-
-//        pr_info("xinj:_###_%s,set_cabc_movie_cmd: %d\n",__func__, param);
-        switch(param) {
-                case 0x1: //cabc_movie on
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_MOVIE_ON);
-                        break;
-                case 0x2: //cabc_movie off
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_OFF);
-                        break;
-                default:
-                        pr_err("unknow cmds: %d\n", param);
-                        break;
-        }
-		pr_info("xinj:_##### cabc_movie over ###\n");
-        return len;
-}
-
-static ssize_t dsi_display_get_cabc_still(struct device *dev, struct device_attribute *attr, char *buf)
-{
-
-	return snprintf(buf, PAGE_SIZE, "cabc_still=%d\n", dsi_cabc_still);
-}
-
-static ssize_t dsi_display_set_cabc_still(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
-{
-
-        int rc = 0;
-        int param = 0;
-        struct dsi_display *display;
-
-        display = dev_get_drvdata(dev);
-        if (!display) {
-                pr_err("Invalid display\n");
-                return -EINVAL;
-        }
-
-        rc = kstrtoint(buf, 10, &param);
-        if (rc) {
-                pr_err("kstrtoint failed. rc=%d\n", rc);
-                return rc;
-        }
-		dsi_cabc_still = param;
-
-//        pr_info("xinj:_###_%s,set_cabc_still_cmd: %d\n",__func__, param);
-        switch(param) {
-                case 0x1: //cabc_still on
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_STILL_ON);
-                        break;
-                case 0x2: //cabc_still off
-                        dsi_panel_set_feature(display->panel, DSI_CMD_SET_CABC_OFF);
-                        break;
-                default:
-                        pr_err("unknow cmds: %d\n", param);
-                        break;
-        }
-		pr_info("xinj:_##### cabc_still over ###\n");
-        return len;
-}
-
-static ssize_t dsi_display_get_hbm(struct device *dev, struct device_attribute *attr, char *buf)
-{
-
-	return snprintf(buf, PAGE_SIZE, "hbm=%d\n", dsi_hbm);
-}
-
-static ssize_t dsi_display_set_hbm(struct device *dev,struct device_attribute *attr,const char *buf,size_t len)
-{
-
-        int rc = 0;
-        int param = 0;
-        struct dsi_display *display;
-
-        display = dev_get_drvdata(dev);
-        if (!display) {
-                pr_err("Invalid display\n");
-                return -EINVAL;
-        }
-
-        rc = kstrtoint(buf, 10, &param);
-        if (rc) {
-                pr_err("kstrtoint failed. rc=%d\n", rc);
-                return rc;
-        }
-		dsi_hbm = param;
-
-        switch(param) {
-            case 0x1: //hbm1 on
-               dsi_panel_set_feature(display->panel, DSI_CMD_SET_HBM1_ON);    
-               break;
-            case 0x2: //hbm2 on
-               dsi_panel_set_feature(display->panel, DSI_CMD_SET_HBM2_ON);
-               break;
-	    case 0x03://hbm3 on
-	    	dsi_panel_set_feature(display->panel, DSI_CMD_SET_HBM3_ON);
-                break;
-	    case 0x0://hbm off
-	    	dsi_panel_set_feature(display->panel, DSI_CMD_SET_HBM_OFF);
-                break;
-             default:
-                pr_err("unknow cmds: %d\n", param);
-                break;
-        }
-        return len;
-}
-
-static DEVICE_ATTR(dsi_display_cabc, 0644, dsi_display_get_cabc, dsi_display_set_cabc);
-static DEVICE_ATTR(dsi_display_hbm, 0644, dsi_display_get_hbm, dsi_display_set_hbm);
-static DEVICE_ATTR(dsi_display_cabc_movie, 0644, dsi_display_get_cabc_movie, dsi_display_set_cabc_movie);
-static DEVICE_ATTR(dsi_display_cabc_still, 0644, dsi_display_get_cabc_still, dsi_display_set_cabc_still);
-
-static struct attribute *dsi_display_feature_attrs[] = {
-	&dev_attr_dsi_display_cabc.attr,
-	&dev_attr_dsi_display_hbm.attr,
-	&dev_attr_dsi_display_cabc_movie.attr,
-	&dev_attr_dsi_display_cabc_still.attr,
-	NULL,
-};
-static struct attribute_group dsi_display_feature_attrs_group = {
-	.attrs = dsi_display_feature_attrs,
-};
-
-static int dsi_display_feature_create_sysfs(struct dsi_display *display){
-        int ret =0;
-        struct device *dev = &display->pdev->dev;
-
-        ret = sysfs_create_group(&dev->kobj,
-			&dsi_display_feature_attrs_group);
-        if(ret){
-                pr_err("%s failed \n",__func__);
-                return -ENOMEM;
-        }
-	pr_info("xinj:%s success\n",__func__);
-        return ret;
-}
-
 static DEVICE_ATTR(dynamic_dsi_clock, 0644,
 			sysfs_dynamic_dsi_clk_read,
 			sysfs_dynamic_dsi_clk_write);
@@ -5768,11 +5649,11 @@ static int dsi_display_bind(struct device *dev,
 
 	/* register te irq handler */
 	dsi_display_register_te_irq(display);
-	dsi_display_feature_create_sysfs(display);
-	#ifndef CONFIG_KERNEL_CUSTOM_FACTORY //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
+#ifndef CONFIG_KERNEL_CUSTOM_FACTORY //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
 	dsi_display_whitepoint_create_sysfs();
-	#endif //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
+#endif //2019.11.28 longcheer xupengcheng add for factory version whitepoint no work
 	set_lct_tp_lockdown_info_callback(lct_tp_lockdown_info_callback);
+
 	goto error;
 
 error_host_deinit:
@@ -8354,6 +8235,48 @@ static void __exit dsi_display_unregister(void)
 	platform_driver_unregister(&dsi_display_driver);
 	dsi_ctrl_drv_unregister();
 	dsi_phy_drv_unregister();
+}
+
+ssize_t dsi_display_mipi_reg_write(struct drm_connector *connector,
+			char *buf, size_t count)
+{
+	struct dsi_display *display = NULL;
+	struct dsi_bridge *c_bridge = NULL;
+
+	if (!connector || !connector->encoder || !connector->encoder->bridge) {
+		pr_err("Invalid invalid connector/encoder/bridge ptr\n");
+		return -EINVAL;
+	}
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	display = c_bridge->display;
+	if (!display || !display->panel) {
+		pr_err("Invalid display/panel ptr\n");
+		return -EINVAL;
+	}
+
+	return dsi_panel_mipi_reg_write(display->panel, buf, count);
+}
+
+ssize_t dsi_display_mipi_reg_read(struct drm_connector *connector,
+			char *buf)
+{
+	struct dsi_display *display = NULL;
+	struct dsi_bridge *c_bridge = NULL;
+
+	if (!connector || !connector->encoder || !connector->encoder->bridge) {
+		pr_err("Invalid invalid connector/encoder/bridge ptr\n");
+		return -EINVAL;
+	}
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	display = c_bridge->display;
+	if (!display || !display->panel) {
+		pr_err("Invalid display/panel ptr\n");
+		return -EINVAL;
+	}
+
+	return dsi_panel_mipi_reg_read(display->panel, buf);
 }
 module_param_string(dsi_display0, dsi_display_primary, MAX_CMDLINE_PARAM_LEN,
 								0600);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020, Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,6 +20,7 @@
 #include "sdhci-msm.h"
 #include "cmdq_hci-crypto-qti.h"
 #include <linux/crypto-qti-common.h>
+#include <linux/pm_runtime.h>
 #include <linux/atomic.h>
 #if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE)
 #include <crypto/ice.h>
@@ -107,9 +109,12 @@ static int cmdq_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 	crypto_alg_id = cmdq_crypto_cap_find(host, key->crypto_mode,
 					       key->data_unit_size);
 
+	pm_runtime_get_sync(&host->mmc->card->dev);
+
 	if (!cmdq_is_crypto_enabled(host) ||
 	    !cmdq_keyslot_valid(host, slot) ||
 	    !ice_cap_idx_valid(host, crypto_alg_id)) {
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
@@ -117,6 +122,7 @@ static int cmdq_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 
 	if (!(data_unit_mask &
 	      host->crypto_cap_array[crypto_alg_id].sdus_mask)) {
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
@@ -128,6 +134,7 @@ static int cmdq_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 		pr_err("%s: failed with error %d\n", __func__, err);
 
 	mmc_host_clk_release(host->mmc);
+	pm_runtime_put_sync(&host->mmc->card->dev);
 
 	return err;
 }
@@ -140,8 +147,11 @@ static int cmdq_crypto_qti_keyslot_evict(struct keyslot_manager *ksm,
 	int val = 0;
 	struct cmdq_host *host = keyslot_manager_private(ksm);
 
+	pm_runtime_get_sync(&host->mmc->card->dev);
+
 	if (!cmdq_is_crypto_enabled(host) ||
 	    !cmdq_keyslot_valid(host, slot)) {
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
@@ -154,6 +164,7 @@ static int cmdq_crypto_qti_keyslot_evict(struct keyslot_manager *ksm,
 		return err;
 	}
 	mmc_host_clk_release(host->mmc);
+	pm_runtime_put_sync(&host->mmc->card->dev);
 
 	val = atomic_read(&keycache) & ~(1 << slot);
 	atomic_set(&keycache, val);
