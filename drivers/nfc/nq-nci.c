@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,6 +30,11 @@
 #include <linux/compat.h>
 #endif
 #include <linux/jiffies.h>
+
+#ifdef CONFIG_TARGET_PROJECT_J6
+#define SKIP_NFCC_HW_CHECK
+#define LC_NFC_CHECK
+#endif
 
 struct nqx_platform_data {
 	unsigned int irq_gpio;
@@ -922,7 +927,6 @@ err_nfcc_hw_info:
 	return ret;
 }
 
-#if 0
 /* Check for availability of NQ_ NFC controller hardware */
 static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 {
@@ -1114,7 +1118,6 @@ done:
 
 	return ret;
 }
-#endif
 
 /*
  * Routine to enable clock.
@@ -1226,6 +1229,10 @@ static int nqx_probe(struct i2c_client *client,
 	struct nqx_dev *nqx_dev;
 
 	dev_dbg(&client->dev, "%s: enter\n", __func__);
+	if (strnstr(saved_command_line, "androidboot.hwc=India", strlen(saved_command_line)) != NULL) {
+		dev_err(&client->dev, "%s:CHECK_NFC_NONE_NFC androidboot.hwc=India :not nqx_probe\n", __func__);
+		return -ENODEV;
+	}
 	if (client->dev.of_node) {
 		platform_data = devm_kzalloc(&client->dev,
 			sizeof(struct nqx_platform_data), GFP_KERNEL);
@@ -1441,8 +1448,9 @@ static int nqx_probe(struct i2c_client *client,
 	}
 	nqx_disable_irq(nqx_dev);
 
-	/* Do not perform nfcc_hw_check, make sure that nfcc is present */
-#if 0
+#ifdef SKIP_NFCC_HW_CHECK
+	goto skip_nfcc_hw_check;
+#endif
 	/*
 	 * To be efficient we need to test whether nfcc hardware is physically
 	 * present before attempting further hardware initialisation.
@@ -1455,6 +1463,8 @@ static int nqx_probe(struct i2c_client *client,
 		/* We don't think there is hardware switch NFC OFF */
 		goto err_request_hw_check_failed;
 	}
+#ifdef SKIP_NFCC_HW_CHECK
+skip_nfcc_hw_check:
 #endif
 
 	/* Register reboot notifier here */
@@ -1620,8 +1630,6 @@ static int nfcc_reboot(struct notifier_block *notifier, unsigned long val,
 	gpio_set_value(disable_ctrl, 1);
 	return NOTIFY_OK;
 }
-
-#define LC_NFC_CHECK
 
 #ifdef LC_NFC_CHECK
 

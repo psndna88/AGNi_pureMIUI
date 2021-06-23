@@ -1,5 +1,5 @@
 /* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,7 +33,7 @@
 #define VBAT_LOW_HYST_UV			50000
 #define FULL_SOC				100
 
-static int qg_delta_soc_interval_ms = 40000;
+static int qg_delta_soc_interval_ms = 20000;
 module_param_named(
 	soc_interval_ms, qg_delta_soc_interval_ms, int, 0600
 );
@@ -43,7 +43,7 @@ module_param_named(
 	fvss_soc_interval_ms, qg_fvss_delta_soc_interval_ms, int, 0600
 );
 
-static int qg_delta_soc_cold_interval_ms = 25000;
+static int qg_delta_soc_cold_interval_ms = 60000;
 module_param_named(
 	soc_cold_interval_ms, qg_delta_soc_cold_interval_ms, int, 0600
 );
@@ -306,9 +306,14 @@ int qg_adjust_sys_soc(struct qpnp_qg *chip)
 
 	if (chip->sys_soc == QG_MAX_SOC) {
 		soc = FULL_SOC;
+	} else if (chip->sys_soc >= (QG_MAX_SOC - 100)) {
+		/* Hold SOC to 100% if we are dropping from 100 to 99 */
+		if (chip->last_adj_ssoc == FULL_SOC)
+			soc = FULL_SOC;
+		else /* Hold SOC at 99% until we hit 100% */
+			soc = FULL_SOC - 1;
 	} else {
 		soc = DIV_ROUND_CLOSEST(chip->sys_soc, 100);
-		pr_err ("cc_soc = %d, batt_soc = %d, sys_soc = %d, soc = %d", chip->cc_soc, chip->batt_soc, chip->sys_soc, soc);
 	}
 
 	/* FVSS */

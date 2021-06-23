@@ -2,6 +2,7 @@
  * QTI Secure Execution Environment Communicator (QSEECOM) driver
  *
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2999,6 +3000,12 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 			ptr_app->ref_cnt++;
 			return ret;
 		}
+#ifdef CONFIG_TARGET_PROJECT_J6
+		if(ret){
+			ptr_app->ref_cnt++;
+			return ret;
+		}
+#endif
 		spin_lock_irqsave(&qseecom.registered_app_list_lock, flags);
 		list_del(&ptr_app->list);
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,7 @@
  */
 
 qcom,atl_5020mAh {
+    /* 4374729_LC_M522(India)_NVT_BKn10_5020mAH_PM6250_averaged_MasterSlave_Dec27th2019 */
 	qcom,max-voltage-uv = <4450000>;
 	qcom,ffc-max-voltage-uv = <4480000>;
 	qcom,fastchg-current-ma = <3000>;
@@ -20,7 +21,7 @@ qcom,atl_5020mAh {
 	qcom,battery-beta = <4250>;
 	qcom,battery-therm-kohm = <100>;
 	qcom,battery-type =
-		"4374729_NVT_BKn10_5020mAH_PM6250_averaged_MasterSlave_Dec27th2019";
+		"4374729_LC_M522(India)_NVT_BKn10_5020mAH_PM6250_averaged_MasterSlave_Dec27th2019";
 	qcom,qg-batt-profile-ver = <100>;
 	mi,qc3p5-ffc-battery;
 	mi,ffc-chg-term-current = <(-541)>;

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,7 @@
 #define MSM_DRM_EARLY_EVENT_BLANK		0x02
 #define		DRM_EARLY_EVENT_BLANK   0x01
 #define		DRM_EVENT_BLANK         0x02
+#define		DRM_R_EARLY_EVENT_BLANK 0x03
 
 enum {
 	/* panel: power on */
