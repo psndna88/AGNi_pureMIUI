@@ -1571,13 +1571,14 @@ static int handle3_ingress_format(struct net_device *dev,
 	}
 	IPAWANDBG("ingress WAN pipe setup successfully\n");
 
-	ret = ipa3_setup_apps_low_lat_cons_pipe();
-	if (ret)
-		goto low_lat_fail;
+	if (ipa3_ctx->rmnet_ctl_enable) {
+		ret = ipa3_setup_apps_low_lat_cons_pipe();
+		if (ret)
+			goto low_lat_fail;
 
-	ingress_eps_mask |= IPA_AP_INGRESS_EP_LOW_LAT;
-
-	IPAWANDBG("ingress low latency pipe setup successfully\n");
+		ingress_eps_mask |= IPA_AP_INGRESS_EP_LOW_LAT;
+		IPAWANDBG("ingress low latency pipe setup successfully\n");
+	}
 
 low_lat_fail:
 	mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
@@ -1698,13 +1699,15 @@ static int handle3_egress_format(struct net_device *dev,
 		return rc;
 	}
 	IPAWANDBG("engress WAN pipe setup successfully\n");
-	rc = ipa3_setup_apps_low_lat_prod_pipe();
-	if (rc) {
-		IPAWANERR("failed to setup egress low lat endpoint\n");
-		mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
-		goto low_lat_fail;
+	if (ipa3_ctx->rmnet_ctl_enable) {
+		rc = ipa3_setup_apps_low_lat_prod_pipe();
+		if (rc) {
+			IPAWANERR("failed to setup egress low lat endpoint\n");
+			mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
+			goto low_lat_fail;
+		}
+		IPAWANDBG("engress low lat pipe setup successfully\n");
 	}
-	IPAWANDBG("engress low lat pipe setup successfully\n");
 	mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
 
 low_lat_fail:
@@ -4278,6 +4281,10 @@ void ipa3_broadcast_quota_reach_ind(u32 mux_id,
 	/* check upstream_type*/
 	if (upstream_type == IPA_UPSTEAM_MAX) {
 		IPAWANERR(" Wrong upstreamIface type %d\n", upstream_type);
+		return;
+	} else if (upstream_type == IPA_UPSTEAM_WLAN) {
+		/* TODO: Fix this case when adding quota on WLAN Backhaul*/
+		IPAWANERR_RL("Quota indication is not supported for WLAN\n");
 		return;
 	} else if (upstream_type == IPA_UPSTEAM_MODEM) {
 		index = ipa3_find_mux_channel_index(mux_id);
