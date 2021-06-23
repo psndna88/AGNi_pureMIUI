@@ -2451,7 +2451,7 @@ static void send_adm_cal(int fedai_id, int port_id, int copp_idx, int path, int 
 				perf_mode, app_type, acdb_id, sample_rate);
 		/* send persistent cal only in case of record */
 		if (path == TX_DEVICE)
-			send_adm_cal_type(fedai_id, ADM_LSM_AUDPROC_PERSISTENT_CAL, path,
+			send_adm_cal_type(fedai_id, ADM_AUDPROC_PERSISTENT_CAL, path,
 				  port_id, copp_idx, perf_mode, app_type,
 				  acdb_id, sample_rate);
 	} else {
