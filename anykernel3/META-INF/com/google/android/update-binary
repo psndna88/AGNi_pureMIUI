@@ -600,20 +600,6 @@ $BB cp -rf $AKHOME/common/AGNiWIFI/* $AWLAN;
 $BB chmod 0644 $ASUP/*.prop;
 $BB chmod 0777 $ASUP/*.sh;
 $BB mv -f /data/adb/modules/disable $AWLAN;
-# AGNi Curtana Thermals
-if [ "$device" == "curtana" ]; then
-ui_print ">> Installing AGNi AGNi Curtana Thermals Module..";
-ACT=/data/adb/modules/AGNiCurtanaThermals;
-$BB mv -f $AWLAN/disable /data/adb/modules;
-$BB rm -rf $ACT;
-$BB mkdir -p $ACT;
-$BB cp -rf $AKHOME/common/AGNiCurtanaThermals/* $ACT;
-$BB chmod 0644 $ACT/*.prop;
-$BB chmod 0777 $ACT/*.sh;
-$BB mv -f /data/adb/modules/disable $ACT;
-else
-$BB rm -rf $ACT;
-fi;
 # AGNi AOSP Deep Sleep Helper
 ui_print ">> Installing AGNi AOSP Deep Sleep Helper Module..";
 ADSH=/data/adb/modules/AGNi_AOSP_DeepSleepHelper;

@@ -7,7 +7,6 @@ if ([ ! "` uname -r | grep AGNi`" ] || [ ! -f /sys/module/lpm_levels/parameters/
 	rm -rf /data/adb/modules/AGNiSound;
 	rm -rf /data/adb/modules/AGNiSupport;
 	rm -rf /data/adb/modules/AGNiWIFI;
-	rm -rf /data/adb/modules/AGNiCurtanaThermals;
 	rm -rf /data/adb/modules/AGNi_AOSP_DeepSleepHelper;
 else
 	## Optimisations
@@ -35,7 +34,7 @@ else
 	echo 0 > /proc/sys/kernel/sched_boost
 	#echo 0 > /proc/sys/net/ipv4/tcp_timestamps
 fi;
-rm -rf /data/adb/modules/AGNi_s2idle;
+rm -rf /data/adb/modules/AGNiCurtanaThermals;
 
 if ([ -f /data/adb/modules/AGNi_AOSP_DeepSleepHelper/disable ] || [ ! -d /data/adb/modules/AGNi_AOSP_DeepSleepHelper ]); then
 	if [ ! -f /data/media/0/.ANXCamera/.statusfixed ]; then
