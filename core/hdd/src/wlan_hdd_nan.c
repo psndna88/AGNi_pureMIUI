@@ -88,6 +88,11 @@ static int __wlan_hdd_cfg80211_nan_ext_request(struct wiphy *wiphy,
 		return -EPERM;
 	}
 
+	if (hdd_is_connection_in_progress(NULL, NULL)) {
+		hdd_err("Connection refused: conn in progress");
+		return -EAGAIN;
+	}
+
 	return os_if_process_nan_req(hdd_ctx->psoc, adapter->vdev_id,
 				     data, data_len);
 }
@@ -111,4 +116,18 @@ int wlan_hdd_cfg80211_nan_ext_request(struct wiphy *wiphy,
 	osif_psoc_sync_op_stop(psoc_sync);
 
 	return errno;
+}
+
+void hdd_nan_concurrency_update(void)
+{
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	int ret;
+
+	hdd_enter();
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return;
+
+	wlan_twt_concurrency_update(hdd_ctx);
+	hdd_exit();
 }

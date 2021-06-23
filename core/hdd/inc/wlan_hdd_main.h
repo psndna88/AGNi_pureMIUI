@@ -237,7 +237,6 @@ static inline bool in_compat_syscall(void) { return is_compat_task(); }
  * @DEVICE_IFACE_OPENED: Adapter has been "opened" via the kernel
  * @SOFTAP_INIT_DONE: Software Access Point (SAP) is initialized
  * @VENDOR_ACS_RESPONSE_PENDING: Waiting for event for vendor acs
- * @DOWN_DURING_SSR: Mark interface is down during SSR
  */
 enum hdd_adapter_flags {
 	NET_DEVICE_REGISTERED,
@@ -248,7 +247,16 @@ enum hdd_adapter_flags {
 	DEVICE_IFACE_OPENED,
 	SOFTAP_INIT_DONE,
 	VENDOR_ACS_RESPONSE_PENDING,
-	DOWN_DURING_SSR,
+};
+
+/**
+ * enum hdd_nb_cmd_id - North bound command IDs received during SSR
+ * @NO_COMMAND - No NB command received during SSR
+ * @INTERFACE_DOWN - Received interface down during SSR
+ */
+enum hdd_nb_cmd_id {
+	NO_COMMAND,
+	INTERFACE_DOWN
 };
 
 #define WLAN_WAIT_DISCONNECT_ALREADY_IN_PROGRESS  1000
@@ -1850,6 +1858,7 @@ struct hdd_adapter_ops_history {
  * @multi_client_thermal_mitigation: Multi client thermal mitigation by fw
  * @disconnect_for_sta_mon_conc: disconnect if sta monitor intf concurrency
  * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
+ * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2198,6 +2207,9 @@ struct hdd_context {
 	qdf_event_t regulatory_update_event;
 	qdf_mutex_t regulatory_status_lock;
 	bool is_fw_dbg_log_levels_configured;
+#ifdef WLAN_SUPPORT_TWT
+	qdf_work_t twt_en_dis_work;
+#endif
 };
 
 /**
@@ -4914,6 +4926,17 @@ bool hdd_is_runtime_pm_enabled(struct hdd_context *hdd_ctx);
  * Return: None
  */
 void hdd_netdev_update_features(struct hdd_adapter *adapter);
+
+/**
+ * hdd_stop_no_trans() - HDD stop function
+ * @dev:	Pointer to net_device structure
+ *
+ * This is called in response to ifconfig down. Vdev sync transaction
+ * should be started before calling this API.
+ *
+ * Return: 0 for success; non-zero for failure
+ */
+int hdd_stop_no_trans(struct net_device *dev);
 
 #if defined(CLD_PM_QOS)
 /**

@@ -2327,6 +2327,16 @@ void policy_mgr_hw_mode_transition_cb(uint32_t old_hw_mode_index,
 		struct wlan_objmgr_psoc *context);
 
 /**
+ * policy_mgr_current_concurrency_is_scc() - To check the current
+ * concurrency combination if it is doing SCC
+ * @psoc: PSOC object information
+ * This routine is called to check if it is doing SCC
+ *
+ * Return: True - SCC, False - Otherwise
+ */
+bool policy_mgr_current_concurrency_is_scc(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_current_concurrency_is_mcc() - To check the current
  * concurrency combination if it is doing MCC
  * @psoc: PSOC object information
@@ -3056,6 +3066,22 @@ QDF_STATUS policy_mgr_valid_sap_conc_channel_check(
 	struct wlan_objmgr_psoc *psoc, uint32_t *con_ch_freq,
 	uint32_t sap_ch_freq, uint8_t sap_vdev_id,
 	struct ch_params *ch_params);
+
+/**
+ * policy_mgr_sap_allowed_on_indoor_freq() - Check whether STA+SAP concurrency
+ * allowed on indoor channel or not
+ * @psoc: pointer to PSOC object information
+ * @pdev: pointer to PDEV object information
+ * @sap_ch_freq: initial channel frequency for SAP
+ *
+ * This function checks whether SAP is allowed to turn on in case of STA+SAP
+ * concurrency if STA is on indoor channel.
+ *
+ * Return: false if SAP not allowed to come up on a indoor channel
+ */
+bool policy_mgr_sap_allowed_on_indoor_freq(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_objmgr_pdev *pdev,
+					   uint32_t sap_ch_freq);
 
 /**
  * policy_mgr_get_alternate_channel_for_sap() - Get an alternate

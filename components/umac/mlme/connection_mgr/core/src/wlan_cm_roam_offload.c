@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -118,8 +118,7 @@ cm_roam_triggers(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		mlme_get_roam_trigger_bitmap(psoc, vdev_id);
 	params->roam_scan_scheme_bitmap =
 		wlan_cm_get_roam_scan_scheme_bitmap(psoc, vdev_id);
-	wlan_cm_roam_get_vendor_btm_params(psoc, vdev_id,
-					   &params->vendor_btm_param);
+	wlan_cm_roam_get_vendor_btm_params(psoc, &params->vendor_btm_param);
 	wlan_cm_roam_get_score_delta_params(psoc, params);
 	wlan_cm_roam_get_min_rssi_params(psoc, params);
 }
@@ -881,6 +880,7 @@ cm_roam_switch_to_deinit(struct wlan_objmgr_pdev *pdev,
 
 	mlme_set_roam_state(psoc, vdev_id, WLAN_ROAM_DEINIT);
 	mlme_clear_operations_bitmap(psoc, vdev_id);
+	wlan_cm_roam_activate_pcl_per_vdev(psoc, vdev_id, false);
 
 	if (reason != REASON_SUPPLICANT_INIT_ROAMING)
 		wlan_cm_enable_roaming_on_connected_sta(pdev, vdev_id);

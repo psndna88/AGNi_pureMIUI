@@ -899,13 +899,15 @@ void hdd_ndp_session_end_handler(struct hdd_adapter *adapter)
 
 /**
  * hdd_ndp_new_peer_handler() - NDP new peer indication handler
- * @adapter: pointer to adapter context
- * @ind_params: indication parameters
+ * @vdev_id: vdev id
+ * @sta_id: station id
+ * @peer_mac_addr: peer mac address
+ * @first_peer: first peer
  *
  * Return: none
  */
 int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
-			struct qdf_mac_addr *peer_mac_addr, bool fist_peer)
+			struct qdf_mac_addr *peer_mac_addr, bool first_peer)
 {
 	struct hdd_context *hdd_ctx;
 	struct hdd_adapter *adapter;
@@ -948,7 +950,7 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 	qdf_copy_macaddr(&roam_info->bssid, peer_mac_addr);
 
 	/* perform following steps for first new peer ind */
-	if (fist_peer) {
+	if (first_peer) {
 		hdd_debug("Set ctx connection state to connected");
 		/* Disable LRO/GRO for NDI Mode */
 		if (hdd_ctx->ol_enable &&
@@ -971,6 +973,8 @@ int hdd_ndp_new_peer_handler(uint8_t vdev_id, uint16_t sta_id,
 		 */
 		if (!NDI_CONCURRENCY_SUPPORTED(hdd_ctx->psoc))
 			hdd_indicate_active_ndp_cnt(hdd_ctx->psoc, vdev_id, 1);
+
+		wlan_twt_concurrency_update(hdd_ctx);
 	}
 	qdf_mem_free(roam_info);
 	return 0;
@@ -1051,5 +1055,7 @@ void hdd_ndp_peer_departed_handler(uint8_t vdev_id, uint16_t sta_id,
 		 */
 		if (!NDI_CONCURRENCY_SUPPORTED(hdd_ctx->psoc))
 			hdd_indicate_active_ndp_cnt(hdd_ctx->psoc, vdev_id, 0);
+
+		wlan_twt_concurrency_update(hdd_ctx);
 	}
 }

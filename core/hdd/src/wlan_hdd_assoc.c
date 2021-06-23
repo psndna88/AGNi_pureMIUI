@@ -82,6 +82,8 @@
 #include "wlan_if_mgr_public_struct.h"
 #include "wlan_roam_debug.h"
 
+#include "wlan_hdd_twt.h"
+
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
 #define HDD_RSN_OUI_SIZE 4
@@ -2069,6 +2071,8 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 	 */
 	sta_ctx->hdd_reassoc_scenario = false;
 
+	wlan_twt_concurrency_update(hdd_ctx);
+
 	vdev = hdd_objmgr_get_vdev(adapter);
 	if (vdev) {
 		ucfg_if_mgr_deliver_event(vdev,
@@ -3417,6 +3421,8 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 						   WLAN_ALL_SESSIONS_DIALOG_ID);
 		}
 
+		wlan_twt_concurrency_update(hdd_ctx);
+
 		/*
 		 * Following code will be cleaned once the interface manager
 		 * module is enabled.
@@ -3668,6 +3674,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			qdf_mem_zero(connect_complete,
 				     sizeof(*connect_complete));
 
+			wlan_twt_concurrency_update(hdd_ctx);
 			connect_complete->status = QDF_STATUS_E_FAILURE;
 			ucfg_if_mgr_deliver_event(adapter->vdev,
 					WLAN_IF_MGR_EV_CONNECT_COMPLETE,
@@ -4386,6 +4393,7 @@ static void hdd_roam_channel_switch_handler(struct hdd_adapter *adapter,
 		hdd_debug("set hw mode change not done");
 
 	policy_mgr_check_concurrent_intf_and_restart_sap(hdd_ctx->psoc);
+	wlan_twt_concurrency_update(hdd_ctx);
 }
 
 #ifdef WLAN_FEATURE_HOST_ROAM

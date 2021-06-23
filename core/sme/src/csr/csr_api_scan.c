@@ -2689,12 +2689,14 @@ void csr_init_occupied_channels_list(struct mac_context *mac_ctx,
 
 	dual_sta_roam_active =
 			wlan_mlme_get_dual_sta_roaming_enabled(mac_ctx->psoc);
+	dual_sta_roam_active = dual_sta_roam_active &&
+			       policy_mgr_mode_specific_connection_count
+				(mac_ctx->psoc, PM_STA_MODE, NULL) >= 2;
 
 	qdf_list_peek_front(list, &cur_lst);
 	while (cur_lst) {
 		cur_node = qdf_container_of(cur_lst, struct scan_cache_node,
 					    node);
-
 		if (csr_should_add_to_occupied_channels
 					(chan->ch_freq,
 					 cur_node->entry->channel.chan_freq,
