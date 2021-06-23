@@ -1131,6 +1131,7 @@ static int adc_freeze(struct device *dev)
 static const struct dev_pm_ops adc_pm_ops = {
 	.freeze = adc_freeze,
 	.restore = adc_restore,
+	.thaw = adc_restore,
 };
 
 static struct platform_driver adc_driver = {

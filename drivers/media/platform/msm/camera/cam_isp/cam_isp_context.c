@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1210,7 +1210,7 @@ end:
 static int __cam_isp_ctx_epoch_in_applied(struct cam_isp_context *ctx_isp,
 	void *evt_data)
 {
-	struct cam_ctx_request    *req;
+	struct cam_ctx_request    *req = NULL;
 	struct cam_isp_ctx_req    *req_isp = NULL;
 	struct cam_context        *ctx = ctx_isp->base;
 	uint64_t  request_id = 0;
@@ -2322,7 +2322,7 @@ static int __cam_isp_ctx_dump_in_top_state(struct cam_context *ctx,
 	struct timeval cur_time;
 	int rc = 0;
 	uintptr_t cpu_addr;
-	size_t buf_len;
+	size_t buf_len = 0;
 	struct cam_isp_context_dump_header *hdr;
 	uint64_t *addr, *start;
 	uint8_t *dst;
