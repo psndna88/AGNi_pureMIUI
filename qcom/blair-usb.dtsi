@@ -33,6 +33,8 @@
 		reset-names = "core_reset";
 
 		USB3_GDSC-supply = <&gcc_usb30_prim_gdsc>;
+		dpdm-supply = <&qusb_phy0>;
+		qcom,usb-charger;
 
 		qcom,core-clk-rate = <133333333>;
 		qcom,core-clk-rate-hs = <66666667>;
@@ -56,14 +58,13 @@
 			tx-fifo-resize;
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
+			snps,is-utmi-l1-suspend;
 			snps,dis_u2_susphy_quirk;
-			snps,dis_enblslpm_quirk;
 			snps,has-lpm-erratum;
 			snps,hird-threshold = /bits/ 8 <0x10>;
 			snps,usb3_lpm_capable;
-			usb-core-id = <0>;
 			maximum-speed = "super-speed";
-			dr_mode = "drd";
+			dr_mode = "otg";
 		};
 	};
 
