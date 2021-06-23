@@ -407,6 +407,7 @@ int afe_get_topology(int port_id)
 done:
 	return topology;
 }
+EXPORT_SYMBOL(afe_get_topology);
 
 /**
  * afe_set_aanc_info -
@@ -2174,6 +2175,7 @@ afe_ultrasound_state_t elus_afe = {
    .ptr_status = &this_afe.status,
    .ptr_state = &this_afe.state,
    .ptr_wait = this_afe.wait,
+   .ptr_afe_apr_lock = &this_afe.afe_apr_lock,
    .timeout_ms = TIMEOUT_MS,
 };
 EXPORT_SYMBOL(elus_afe);

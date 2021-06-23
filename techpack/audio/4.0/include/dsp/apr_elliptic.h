@@ -35,6 +35,7 @@ typedef struct afe_ultrasound_state {
 	atomic_t *ptr_status;
 	atomic_t *ptr_state;
 	wait_queue_head_t *ptr_wait;
+	struct mutex *ptr_afe_apr_lock;
 	int timeout_ms;
 } afe_ultrasound_state_t;
 

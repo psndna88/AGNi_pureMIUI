@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  */
 
 #include <linux/module.h>
@@ -1399,7 +1398,7 @@ int wcd937x_micbias_control(struct snd_soc_codec *codec,
 			snd_soc_update_bits(codec, WCD937X_MICB2_TEST_CTL_2, 0x01, 0x01);
 			snd_soc_update_bits(codec, WCD937X_MICB3_TEST_CTL_2, 0x01, 0x01);
 			snd_soc_update_bits(codec, micb_reg, 0xC0, 0x40);
-			if (post_on_event && wcd937x->mbhc)
+			if (post_on_event)
 				blocking_notifier_call_chain(
 					&wcd937x->mbhc->notifier, post_on_event,
 					&wcd937x->mbhc->wcd_mbhc);
@@ -1534,10 +1533,6 @@ static int wcd937x_event_notify(struct notifier_block *block,
 		wcd937x_init_reg(codec);
 		regcache_mark_dirty(wcd937x->regmap);
 		regcache_sync(wcd937x->regmap);
-		/* Enable surge protection */
-		snd_soc_update_bits(codec,
-				WCD937X_HPH_SURGE_HPHLR_SURGE_EN,
-				0xFF, 0xD9);
 		/* Initialize MBHC module */
 		mbhc = &wcd937x->mbhc->wcd_mbhc;
 		ret = wcd937x_mbhc_post_ssr_init(wcd937x->mbhc, codec);
