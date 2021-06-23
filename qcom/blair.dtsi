@@ -69,6 +69,7 @@
 			cpu-release-addr = <0x0 0x50000000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 6>;
+			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -176,6 +177,7 @@
 			cpu-release-addr = <0x0 0x50000000>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 2>;
+			#cooling-cells = <2>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -663,92 +665,92 @@
 		};
 
 		c102_scandump: c102_scandump {
-			qcom,dump-size = <0x25900>;
+			qcom,dump-size = <0x40000>;
 			qcom,dump-id = <0x136>;
 		};
 
 		c103_scandump: c103_scandump {
-			qcom,dump-size = <0x25900>;
+			qcom,dump-size = <0x40000>;
 			qcom,dump-id = <0x137>;
 		};
 
 		l1_icache0 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x60>;
 		};
 
 		l1_icache1 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x61>;
 		};
 
 		l1_icache2 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x62>;
 		};
 
 		l1_icache3 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x63>;
 		};
 
 		l1_icache100 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x64>;
 		};
 
 		l1_icache101 {
-			qcom,dump-size = <0x10800>;
+			qcom,dump-size = <0x10900>;
 			qcom,dump-id = <0x65>;
 		};
 
 		l1_icache102 {
-			qcom,dump-size = <0x21000>;
+			qcom,dump-size = <0x15100>;
 			qcom,dump-id = <0x66>;
 		};
 
 		l1_icache103 {
-			qcom,dump-size = <0x21000>;
+			qcom,dump-size = <0x15100>;
 			qcom,dump-id = <0x67>;
 		};
 
 		l1_dcache0 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x80>;
 		};
 
 		l1_dcache1 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x81>;
 		};
 
 		l1_dcache2 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x82>;
 		};
 
 		l1_dcache3 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x83>;
 		};
 
 		l1_dcache100 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x84>;
 		};
 
 		l1_dcache101 {
-			qcom,dump-size = <0x9000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x85>;
 		};
 
 		l1_dcache102 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x86>;
 		};
 
 		l1_dcache103 {
-			qcom,dump-size = <0x12000>;
+			qcom,dump-size = <0x9100>;
 			qcom,dump-id = <0x87>;
 		};
 
@@ -813,12 +815,12 @@
 		};
 
 		l2_tlb102 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x6100>;
 			qcom,dump-id = <0x126>;
 		};
 
 		l2_tlb103 {
-			qcom,dump-size = <0x7800>;
+			qcom,dump-size = <0x6100>;
 			qcom,dump-id = <0x127>;
 		};
 
@@ -1535,6 +1537,7 @@
 
 		cpu0_computemon: qcom,cpu0-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3 &CPU4 &CPU5>;
 			qcom,target-dev = <&cpu0_cpu_ddr_latfloor>;
 			qcom,core-dev-table =
 					<  691200 MHZ_TO_MBPS( 300, 4) >,
@@ -1578,6 +1581,7 @@
 
 		cpu6_computemon: qcom,cpu6-computemon {
 			compatible = "qcom,arm-compute-mon";
+			qcom,cpulist = <&CPU6 &CPU7>;
 			qcom,target-dev = <&cpu6_cpu_ddr_latfloor>;
 			qcom,core-dev-table =
 					< 1248800 MHZ_TO_MBPS( 547, 4) >,
@@ -2788,7 +2792,7 @@
 			100000000 200000000 400000000 4294967295>;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
-		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x00010800 0x80040868>;
+		qcom,dll-hsr-list = <0x000f642c 0x0 0x0 0x2C010800 0x80040868>;
 
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
@@ -2803,7 +2807,6 @@
 
 		no-sd;
 		no-sdio;
-		max-frequency = <192000000>;
 
 		qcom,devfreq,freq-table = <50000000 200000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
@@ -2862,7 +2865,7 @@
 			100000000 200000000 4294967295>;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
-		qcom,dll-hsr-list = <0x0007642c 0x0 0x0 0x00010800 0x80040868>;
+		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
 
 		bus-width = <4>;
 
@@ -2871,7 +2874,6 @@
 
 		no-mmc;
 		no-sdio;
-		max-frequency = <202000000>;
 
 		qcom,devfreq,freq-table = <50000000 202000000>;
 
@@ -2912,7 +2914,6 @@
 		memory-region = <&pil_adsp_mem>;
 		qcom,complete-ramdump;
 		qcom,minidump-as-elf32;
-		qcom,signal-aop;
 
 		/* Inputs from lpass */
 		interrupts-extended = <&intc GIC_SPI 282 IRQ_TYPE_LEVEL_HIGH>,
@@ -2954,7 +2955,6 @@
 		memory-region = <&pil_cdsp_mem>;
 		qcom,complete-ramdump;
 		qcom,minidump-as-elf32;
-		qcom,signal-aop;
 
 		/* Inputs from turing */
 		interrupts-extended = <&intc GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>,
@@ -2996,7 +2996,6 @@
 		qcom,minidump-id = <3>;
 		qcom,aux-minidump-ids = <4>;
 		qcom,complete-ramdump;
-		qcom,signal-aop;
 		/* Inputs from mss */
 		interrupts-extended = <&intc GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
 			<&modem_smp2p_in 0 0>,
@@ -3742,6 +3741,7 @@
 		vdd-1.3-rfa-supply = <&L2A>;
 		vdd-3.3-ch1-supply = <&L21A>;
 		vdd-3.3-ch0-supply = <&L23A>;
+		vdd-smps-supply = <&S5A>;
 		qcom,vdd-cx-mx-config = <640000 640000>;
 		qcom,vdd-3.3-ch1-config = <3000000 3312000>;
 		qcom,vdd-3.3-ch0-config = <3000000 3312000>;

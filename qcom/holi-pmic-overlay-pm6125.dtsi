@@ -66,6 +66,8 @@
 			&rfc_cam_therm_default
 			&rear_cam_flash_therm_default>;
 
+	/delete-node/ xo_therm;
+
 	pa_therm1 {
 		reg = <ADC5_AMUX_THM1_100K_PU>;
 		label = "pa_therm1";
@@ -178,7 +180,7 @@
 };
 
 &spmi_bus {
-	qcom,pm6125@4 {
+	qcom,pm6125@0 {
 		pm6125_adc_tm_iio: adc_tm@3400 {
 			compatible = "qcom,adc-tm5-iio";
 			reg = <0x3400>;
@@ -232,6 +234,14 @@
 	/delete-node/ pm8350b_die_temp;
 	/delete-node/ pm8350b_vph_pwr;
 	/delete-node/ pm8350b_vbat_sns;
+
+	/delete-node/ pmr735a_ref_gnd;
+	/delete-node/ pmr735a_vref_1p25;
+	/delete-node/ pmr735a_die_temp;
+
+	/delete-node/ pmr735b_ref_gnd;
+	/delete-node/ pmr735b_vref_1p25;
+	/delete-node/ pmr735b_die_temp;
 };
 
 &pmk8350_adc_tm {

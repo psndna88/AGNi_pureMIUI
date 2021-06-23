@@ -1267,6 +1267,17 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		smp2p_rdbg2_out: qcom,smp2p-rdbg2-out {
+			qcom,entry-name = "rdbg";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_rdbg2_in: qcom,smp2p-rdbg2-in {
+			qcom,entry-name = "rdbg";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
 	};
 
 	jtag_mm0: jtagmm@9040000 {
@@ -1637,6 +1648,7 @@
 #include "display/monaco-sde-display.dtsi"
 #include "camera/monaco-camera.dtsi"
 #include "camera/monaco-camera-sensor-idp.dtsi"
+#include "msm-rdbg-monaco.dtsi"
 
 &qupv3_se6_2uart {
 	status = "ok";

@@ -60,6 +60,7 @@
 			interconnects = <&mem_noc MASTER_APPSS_PROC
 					 &system_noc SLAVE_IMEM_CFG>;
 			qcom,active-only;
+			qcom,opt-out-tbu-halting;
 		};
 
 		ipa_tbu: ipa_tbu@15049000 {
