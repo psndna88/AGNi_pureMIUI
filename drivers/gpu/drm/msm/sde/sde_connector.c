@@ -31,7 +31,7 @@ static int tp_update_firmware = 0;
 extern void lcd_esd_handler(bool on);
 extern char *saved_command_line;
 
-//2019.12.11 longcheer zhaoxiangxiang add for esd check start
+//2019.12.11 longcheer zhaoxiangxiang add for esd check start //
 
 #define BL_NODE_NAME_SIZE 32
 

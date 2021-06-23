@@ -1,7 +1,7 @@
 /*
  *
  * Copyright (C) 2019 wanghan <wanghan@longcheer.com>
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  */
 
@@ -46,6 +46,7 @@ static int __init setup_board_id_hwname(char *str)
 {
 	strcpy(board_id_hwname, str);
 	pr_info("board_id_hwname : %s\n", board_id_hwname);
+
 	if (!strcmp(str, "excalibur")
 			|| !strcmp(str, "joyeuse")
 			|| !strcmp(str, "gram"))
@@ -56,6 +57,7 @@ static int __init setup_board_id_hwname(char *str)
 	charging_temps_thresholds();
 	pr_info("board_33w_supported : %s\n",
 			board_33w_supported ? "true" : "false");
+
 	return 1;
 }
 __setup("androidboot.hwname=", setup_board_id_hwname);
@@ -141,10 +143,13 @@ static int __init setup_board_id_hwversion(char *str)
 	strcpy(buf, str);
 	str_n = buf;
 	str_p = strsep(&str_n, ".");
-	board_id_hwversion_product_num = simple_strtoul(str_p, NULL, 10);
+	if (str_p)
+		board_id_hwversion_product_num = simple_strtoul(str_p, NULL, 10);
 	str_p = strsep(&str_n, ".");
-	board_id_hwversion_major_num = simple_strtoul(str_p, NULL, 10);
-	board_id_hwversion_minor_num = simple_strtoul(str_n, NULL, 10);
+	if (str_p)
+		board_id_hwversion_major_num = simple_strtoul(str_p, NULL, 10);
+	if (str_n)
+		board_id_hwversion_minor_num = simple_strtoul(str_n, NULL, 10);
 	pr_info("board_id_hwversion_product_num : %d\n", board_id_hwversion_product_num);
 	pr_info("board_id_hwversion_major_num : %d\n", board_id_hwversion_major_num);
 	pr_info("board_id_hwversion_minor_num : %d\n", board_id_hwversion_minor_num);

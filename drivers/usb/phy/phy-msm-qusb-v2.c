@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,10 +28,7 @@
 #include <linux/usb/phy.h>
 #include <linux/reset.h>
 #include <linux/debugfs.h>
-#undef dev_dbg
-#define dev_dbg dev_err
-#undef pr_debug
-#define pr_debug pr_info
+
 /* QUSB2PHY_PWR_CTRL1 register related bits */
 #define PWR_CTRL1_POWR_DOWN		BIT(0)
 
@@ -448,7 +445,7 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 	qusb_phy_write_seq(qphy->base, qphy->qusb_phy_host_init_seq,
 			qphy->host_init_seq_len, 0);
 
-	if (0) {
+	if (qphy->efuse_reg) {
 		if (!qphy->tune_val)
 			qusb_phy_get_tune1_param(qphy);
 	} else {
@@ -491,10 +488,6 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 	/* Require to get phy pll lock successfully */
 	usleep_range(150, 160);
 
-	reg = readb_relaxed(qphy->base + qphy->phy_reg[PORT_TUNE1]);
-	dev_dbg(phy->dev, "tune1= %x\n", reg);
-	reg = readb_relaxed(qphy->base + qphy->phy_reg[BIAS_CTRL_2]);
-	dev_dbg(phy->dev, "bias_ctrl2= %x\n", reg);
 	reg = readb_relaxed(qphy->base + qphy->phy_reg[PLL_COMMON_STATUS_ONE]);
 	dev_dbg(phy->dev, "QUSB2PHY_PLL_COMMON_STATUS_ONE:%x\n", reg);
 	if (!(reg & CORE_READY_STATUS)) {
