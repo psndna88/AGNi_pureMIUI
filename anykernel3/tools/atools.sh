@@ -3,11 +3,9 @@
 # This will make your scripts compatible even if Magisk change its mount point in the future
 
 if ([ ! "` uname -r | grep AGNi`" ] || [ ! -f /sys/module/lpm_levels/parameters/agni_present ]); then
-	rm -rf /data/adb/modules/AGNiEAS;
 	rm -rf /data/adb/modules/AGNiSound;
 	rm -rf /data/adb/modules/AGNiSupport;
 	rm -rf /data/adb/modules/AGNiWIFI;
-	rm -rf /data/adb/modules/AGNiCurtanaThermals;
 else
 	## Optimisations
 	echo 0 > /dev/stune/foreground/schedtune.prefer_idle
@@ -34,13 +32,4 @@ else
 	echo 0 > /proc/sys/kernel/sched_boost
 	#echo 0 > /proc/sys/net/ipv4/tcp_timestamps
 fi;
-rm -rf /data/adb/modules/AGNi_s2idle;
-
-if ([ -f /data/adb/modules/AGNi_AOSP_DeepSleepHelper/disable ] || [ ! -d /data/adb/modules/AGNi_AOSP_DeepSleepHelper ]); then
-	if [ ! -f /data/media/0/.ANXCamera/.statusfixed ]; then
-		rm -rf /data/media/0/.ANXCamera
-		mkdir -p /data/media/0/.ANXCamera
-		touch /data/media/0/.ANXCamera/.statusfixed
-	fi
-fi
-
+rm -rf /data/adb/modules/AGNiCurtanaThermals;
