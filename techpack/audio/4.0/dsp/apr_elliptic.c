@@ -108,7 +108,9 @@ static int afe_set_parameter(int port,
 		memcpy(&set_param_v3->param_data, packed_param_data,
 			       packed_data_size);
 
+		mutex_lock(elus_afe.ptr_afe_apr_lock);
 		atomic_set(elus_afe.ptr_state, 1);
+		atomic_set(elus_afe.ptr_status, 0);
 		ret = apr_send_pkt(*elus_afe.ptr_apr, (uint32_t *) set_param_v3);
 	} else {
 		set_param_v2_size += packed_data_size;
@@ -132,28 +134,35 @@ static int afe_set_parameter(int port,
 		memcpy(&set_param_v2->param_data, packed_param_data,
 			       packed_data_size);
 
+		mutex_lock(elus_afe.ptr_afe_apr_lock);
 		atomic_set(elus_afe.ptr_state, 1);
+		atomic_set(elus_afe.ptr_status, 0);
 		ret = apr_send_pkt(*elus_afe.ptr_apr, (uint32_t *) set_param_v2);
 	}
 	if (ret < 0) {
 		pr_err("%s: Setting param for port %d param[0x%x]failed\n",
 			   __func__, port, param_id);
-		goto fail_cmd;
+		//goto fail_cmd;
+		goto fail_cmd_lock;
 	}
 	ret = wait_event_timeout(elus_afe.ptr_wait[index],
 		(atomic_read(elus_afe.ptr_state) == 0),
-		msecs_to_jiffies(elus_afe.timeout_ms*10));
+		msecs_to_jiffies(elus_afe.timeout_ms));
 	if (!ret) {
 		pr_err("%s: wait_event timeout\n", __func__);
 		ret = -EINVAL;
-		goto fail_cmd;
+		//goto fail_cmd;
+		goto fail_cmd_lock;
 	}
 	if (atomic_read(elus_afe.ptr_status) != 0) {
 		pr_err("%s: set param cmd failed\n", __func__);
 		ret = -EINVAL;
-		goto fail_cmd;
+		//goto fail_cmd;
+		goto fail_cmd_lock;
 	}
 	ret = 0;
+	fail_cmd_lock:
+	mutex_unlock(elus_afe.ptr_afe_apr_lock);
 fail_cmd:
 	pr_debug("%s param_id %x status %d\n", __func__, param_id, ret);
 	kfree(set_param_v2);

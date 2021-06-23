@@ -1075,15 +1075,8 @@ bool cal_utils_is_cal_stale(struct cal_block_data *cal_block)
 	bool ret = false;
 
 	mutex_lock(&cal_lock);
-	if (!cal_block) {
-		pr_err("%s: cal_block is Null", __func__);
-		goto unlock;
-	}
-
-	if (cal_block->cal_stale)
+	if ((cal_block) && (cal_block->cal_stale))
 		ret = true;
-
-unlock:
 	mutex_unlock(&cal_lock);
 	return ret;
 }

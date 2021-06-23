@@ -1,6 +1,6 @@
 /**
 * Copyright Elliptic Labs 2015-2016
-* Copyright (C) 2020 XiaoMi, Inc.
+* Copyright (C) 2021 XiaoMi, Inc.
 *
 */
 
@@ -145,12 +145,12 @@ int elliptic_io_open_port(int portid);
 int elliptic_io_close_port(int portid);
 
 /* Create device node for userspace io driver*/
-int elliptic_userspace_io_driver_init(void);
-void elliptic_userspace_io_driver_exit(void);
+//int elliptic_userspace_io_driver_init(void);
+//void elliptic_userspace_io_driver_exit(void);
 
 /* Create device node for userspace io driver*/
-int elliptic_userspace_ctrl_driver_init(void);
-void elliptic_userspace_ctrl_driver_exit(void);
-int32_t elliptic_userspace_ctrl_write(uint32_t message_id,
-    const char *data, size_t data_size);
+//int elliptic_userspace_ctrl_driver_init(void);
+//void elliptic_userspace_ctrl_driver_exit(void);
+//int32_t elliptic_userspace_ctrl_write(uint32_t message_id,
+//    const char *data, size_t data_size);
 

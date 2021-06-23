@@ -26,9 +26,6 @@
 #include "wcd-mbhc-adc.h"
 #include <asoc/wcd-mbhc-v2-api.h>
 
-static struct wakeup_source mbhc_ws;
-bool wired_hph_connected = false;
-EXPORT_SYMBOL(wired_hph_connected);
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask)
 {
@@ -602,7 +599,6 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
 		mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
 		mbhc->force_linein = false;
-		wired_hph_connected = false;
 	} else {
 		/*
 		 * Report removal of current jack type.
@@ -639,7 +635,6 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					 __func__, mbhc->hph_status);
 				wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 					0, WCD_MBHC_JACK_MASK);
-				wired_hph_connected = false;
 			}
 			if (mbhc->hph_status == SND_JACK_LINEOUT) {
 
@@ -744,7 +739,6 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
-		wired_hph_connected = true;
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }
@@ -1168,9 +1162,6 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 	unsigned long msec_val;
 
 	pr_debug("%s: enter\n", __func__);
-	wired_hph_connected = false;
-	__pm_wakeup_event(&mbhc_ws, 500);
-	wired_hph_connected = true;
 	complete(&mbhc->btn_press_compl);
 	WCD_MBHC_RSC_LOCK(mbhc);
 	wcd_cancel_btn_work(mbhc);
@@ -1221,9 +1212,6 @@ static irqreturn_t wcd_mbhc_release_handler(int irq, void *data)
 	int ret;
 
 	pr_debug("%s: enter\n", __func__);
-	wired_hph_connected = false;
-	__pm_wakeup_event(&mbhc_ws, 500);
-	wired_hph_connected = true;
 	WCD_MBHC_RSC_LOCK(mbhc);
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low ", __func__);
@@ -1972,7 +1960,6 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 		       mbhc->intr_ids->hph_right_ocp);
 		goto err_hphr_ocp_irq;
 	}
- 	wakeup_source_init(&mbhc_ws, "mbhc_ws");
 
 	mbhc->deinit_in_progress = false;
 	pr_debug("%s: leave ret %d\n", __func__, ret);
@@ -1997,7 +1984,6 @@ err_mbhc_sw_irq:
 		mbhc->mbhc_cb->register_notifier(mbhc, &mbhc->nblock, false);
 	mutex_destroy(&mbhc->codec_resource_lock);
 err:
-	wakeup_source_trash(&mbhc_ws);
 	pr_debug("%s: leave ret %d\n", __func__, ret);
 	return ret;
 }
