@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_cci_dev.h"
@@ -76,6 +76,7 @@ static int cam_cci_init_master(struct cci_device *cci_dev,
 
 		cci_dev->cci_master_info[master].status = 0;
 		cci_dev->cci_master_info[master].is_initilized = true;
+		cci_dev->is_burst_read[master] = false;
 	}
 
 	return 0;

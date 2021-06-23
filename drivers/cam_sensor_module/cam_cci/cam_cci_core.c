@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -985,6 +985,7 @@ static int32_t cam_cci_burst_read(struct v4l2_subdev *sd,
 	}
 
 	mutex_lock(&cci_dev->cci_master_info[master].mutex_q[queue]);
+	cci_dev->is_burst_read[master] = true;
 	reinit_completion(&cci_dev->cci_master_info[master].report_q[queue]);
 
 	soc_info = &cci_dev->soc_info;
@@ -1256,6 +1257,7 @@ static int32_t cam_cci_read(struct v4l2_subdev *sd,
 	}
 
 	mutex_lock(&cci_dev->cci_master_info[master].mutex_q[queue]);
+	cci_dev->is_burst_read[master] = false;
 	reinit_completion(&cci_dev->cci_master_info[master].report_q[queue]);
 
 	soc_info = &cci_dev->soc_info;
@@ -1622,7 +1624,7 @@ static int32_t cam_cci_read_bytes_v_1_2(struct v4l2_subdev *sd,
 		else
 			read_cfg->num_byte = read_bytes;
 
-		cci_dev->is_burst_read = false;
+		cci_dev->is_burst_read[master] = false;
 		rc = cam_cci_read(sd, c_ctrl);
 		if (rc) {
 			CAM_ERR(CAM_CCI, "failed to read rc:%d", rc);
@@ -1639,7 +1641,6 @@ static int32_t cam_cci_read_bytes_v_1_2(struct v4l2_subdev *sd,
 	} while (read_bytes);
 
 ERROR:
-	cci_dev->is_burst_read = false;
 	return rc;
 }
 
@@ -1704,10 +1705,8 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 			read_cfg->num_byte = read_bytes;
 
 		if (read_cfg->num_byte >= CCI_READ_MAX) {
-			cci_dev->is_burst_read = true;
 			rc = cam_cci_burst_read(sd, c_ctrl);
 		} else {
-			cci_dev->is_burst_read = false;
 			rc = cam_cci_read(sd, c_ctrl);
 		}
 		if (rc) {
@@ -1726,7 +1725,6 @@ static int32_t cam_cci_read_bytes(struct v4l2_subdev *sd,
 	} while (read_bytes);
 
 ERROR:
-	cci_dev->is_burst_read = false;
 	return rc;
 }
 
