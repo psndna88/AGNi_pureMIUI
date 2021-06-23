@@ -2644,7 +2644,7 @@ CONFIG_SMB1398_CHARGER=y
 # Qualcomm Technologies, Inc. Charger and Fuel Gauge support
 #
 # CONFIG_PD_VERIFY is not set
-# CONFIG_J6B_CHARGE_THERMAL is not set
+CONFIG_J6B_CHARGE_THERMAL=y
 
 #
 # Qualcomm Technologies, Inc. Charger and Fuel Gauge support
@@ -2656,8 +2656,8 @@ CONFIG_SMB1398_CHARGER=y
 #
 # CONFIG_BQ2597X_CHARGE_PUMP is not set
 # CONFIG_BQ_PUMP_WIRELESS_CHARGE is not set
-# CONFIG_BATT_VERIFY_BY_DS28E16 is not set
-# CONFIG_ONEWIRE_GPIO is not set
+CONFIG_BATT_VERIFY_BY_DS28E16=y
+CONFIG_ONEWIRE_GPIO=y
 CONFIG_HWMON=y
 # CONFIG_HWMON_VID is not set
 # CONFIG_HWMON_DEBUG_CHIP is not set
