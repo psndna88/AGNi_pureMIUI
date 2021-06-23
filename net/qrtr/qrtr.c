@@ -20,7 +20,6 @@
 #include <linux/rwsem.h>
 #include <linux/ipc_logging.h>
 #include <linux/uidgid.h>
-#include <linux/pm_wakeup.h>
 
 #include <net/sock.h>
 #include <uapi/linux/sched/types.h>
@@ -159,7 +158,7 @@ static struct work_struct qrtr_backup_work;
  * @kworker: worker thread for recv work
  * @task: task to run the worker thread
  * @read_data: scheduled work for recv work
- * @ws: wakeupsource avoid system suspend
+ * @say_hello: scheduled work for initiating hello
  * @ilc: ipc logging context reference
  */
 struct qrtr_node {
@@ -181,8 +180,6 @@ struct qrtr_node {
 	struct task_struct *task;
 	struct kthread_work read_data;
 	struct kthread_work say_hello;
-
-	struct wakeup_source *ws;
 
 	void *ilc;
 };
@@ -373,7 +370,6 @@ static void __qrtr_node_release(struct kref *kref)
 	}
 	mutex_unlock(&node->qrtr_tx_lock);
 
-	wakeup_source_unregister(node->ws);
 	kthread_flush_worker(&node->kworker);
 	kthread_stop(node->task);
 
@@ -642,16 +638,10 @@ static void qrtr_node_assign(struct qrtr_node *node, unsigned int nid)
 		node->nid = nid;
 	up_write(&qrtr_node_lock);
 
-	snprintf(name, sizeof(name), "qrtr_%d", nid);
 	if (!node->ilc) {
+		snprintf(name, sizeof(name), "qrtr_%d", nid);
 		node->ilc = ipc_log_context_create(QRTR_LOG_PAGE_CNT, name, 0);
 	}
-	/* create wakeup source for only  NID = 0.
-	 * From other nodes sensor service stream samples
-	 * cause APPS suspend problems and power drain issue.
-	 */
-	if (!node->ws && nid == 0)
-		node->ws = wakeup_source_register(name);
 }
 
 /**
@@ -833,8 +823,6 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 	if (cb->dst_port != QRTR_PORT_CTRL && cb->type != QRTR_TYPE_DATA &&
 	    cb->type != QRTR_TYPE_RESUME_TX)
 		goto err;
-
-	__pm_wakeup_event(node->ws, 500);
 
 	skb->data_len = size;
 	skb->len = size;
