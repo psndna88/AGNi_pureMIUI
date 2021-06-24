@@ -451,6 +451,12 @@ struct nl_msg * nl80211_drv_msg(struct sigma_dut *dut, struct nl80211_ctx *ctx,
 }
 
 
+static int no_seq_check(struct nl_msg *msg, void *arg)
+{
+	return NL_OK;
+}
+
+
 static int ack_handler(struct nl_msg *msg, void *arg)
 {
 	int *err = arg;
@@ -534,9 +540,80 @@ int send_and_recv_msgs(struct sigma_dut *dut, struct nl80211_ctx *ctx,
 }
 
 
+struct family_data {
+	struct sigma_dut *dut;
+	const char *group;
+	int id;
+};
+
+static int family_handler(struct nl_msg *msg, void *arg)
+{
+	struct family_data *res = arg;
+	struct nlattr *tb[CTRL_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *mcgrp;
+	int i;
+	struct sigma_dut *dut = res->dut;
+
+	nla_parse(tb, CTRL_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb[CTRL_ATTR_MCAST_GROUPS]) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"mcast groups is not present");
+		return NL_SKIP;
+	}
+
+	nla_for_each_nested(mcgrp, tb[CTRL_ATTR_MCAST_GROUPS], i) {
+		struct nlattr *tb2[CTRL_ATTR_MCAST_GRP_MAX + 1];
+
+		nla_parse(tb2, CTRL_ATTR_MCAST_GRP_MAX, nla_data(mcgrp),
+			  nla_len(mcgrp), NULL);
+		if (!tb2[CTRL_ATTR_MCAST_GRP_NAME] ||
+		    !tb2[CTRL_ATTR_MCAST_GRP_ID] ||
+		    strncmp(nla_data(tb2[CTRL_ATTR_MCAST_GRP_NAME]),
+			    res->group,
+			    nla_len(tb2[CTRL_ATTR_MCAST_GRP_NAME])) != 0)
+			continue;
+		res->id = nla_get_u32(tb2[CTRL_ATTR_MCAST_GRP_ID]);
+		break;
+	};
+
+	return NL_SKIP;
+}
+
+
+static int nl_get_multicast_id(struct sigma_dut *dut, struct nl80211_ctx *ctx,
+			       const char *family, const char *group)
+{
+	struct nl_msg *msg;
+	int ret;
+	struct family_data res = { dut, group, -ENOENT };
+
+	res.dut = dut;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+	if (!genlmsg_put(msg, 0, 0, genl_ctrl_resolve(ctx->sock, "nlctrl"),
+			 0, 0, CTRL_CMD_GETFAMILY, 0) ||
+	    nla_put_string(msg, CTRL_ATTR_FAMILY_NAME, family)) {
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	ret = send_and_recv_msgs(dut, ctx, msg, family_handler, &res);
+	if (ret == 0)
+		ret = res.id;
+	return ret;
+}
+
+
 struct nl80211_ctx * nl80211_init(struct sigma_dut *dut)
 {
 	struct nl80211_ctx *ctx;
+	struct nl_cb *cb = NULL;
+	int ret;
 
 	ctx = calloc(1, sizeof(struct nl80211_ctx));
 	if (!ctx) {
@@ -581,11 +658,57 @@ struct nl80211_ctx * nl80211_init(struct sigma_dut *dut)
 		goto cleanup;
 	}
 
+	ctx->event_sock = nl_socket_alloc();
+	if (!ctx->event_sock) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create NL event socket, err: %s",
+				strerror(errno));
+		goto cleanup;
+	}
+
+	if (nl_connect(ctx->event_sock, NETLINK_GENERIC)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Could not connect event socket, err: %s",
+				strerror(errno));
+		goto cleanup;
+	}
+
+	if (nl_socket_set_buffer_size(ctx->event_sock, SOCK_BUF_SIZE, 0) < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Fail to set nl_socket RX buff size for event sock: %s",
+				strerror(errno));
+	}
+
+	cb = nl_socket_get_cb(ctx->event_sock);
+	if (!cb) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to get NL control block for event socket port");
+		goto cleanup;
+	}
+
+	ret = nl_get_multicast_id(dut, ctx, "nl80211", "vendor");
+	if (ret >= 0)
+		ret = nl_socket_add_membership(ctx->event_sock, ret);
+	if (ret < 0) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"nl80211: Could not add multicast "
+				"membership for vendor events: %d (%s)",
+			   ret, nl_geterror(ret));
+		/* Continue without vendor events */
+	}
+	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &ret);
+	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &ret);
+	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &ret);
+	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+	nl_cb_put(cb);
+
 	return ctx;
 
 cleanup:
 	if (ctx->sock)
 		nl_socket_free(ctx->sock);
+	if (ctx->event_sock)
+		nl_socket_free(ctx->event_sock);
 
 	free(ctx);
 	return NULL;
@@ -594,12 +717,15 @@ cleanup:
 
 void nl80211_deinit(struct sigma_dut *dut, struct nl80211_ctx *ctx)
 {
-	if (!ctx || !ctx->sock) {
-		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: ctx/sock is NULL",
+	if (!ctx) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s: ctx is NULL",
 				__func__);
 		return;
 	}
-	nl_socket_free(ctx->sock);
+	if (ctx->sock)
+		nl_socket_free(ctx->sock);
+	if (ctx->event_sock)
+		nl_socket_free(ctx->event_sock);
 	free(ctx);
 }
 

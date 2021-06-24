@@ -7361,6 +7361,114 @@ static int sta_set_om_ctrl_supp(struct sigma_dut *dut, const char *intf,
 }
 
 
+#ifdef NL80211_SUPPORT
+
+struct features_info {
+	unsigned char flags[8];
+	size_t flags_len;
+};
+
+static int features_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct features_info *info = arg;
+	struct nlattr *nl_vend, *attr;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	nl_vend = tb[NL80211_ATTR_VENDOR_DATA];
+	if (nl_vend) {
+		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
+
+		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
+			  nla_data(nl_vend), nla_len(nl_vend), NULL);
+
+		attr = tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS];
+		if (attr) {
+			int len = nla_len(attr);
+
+			if (info && info->flags && len >= 0) {
+				memcpy(info->flags, nla_data(attr), len);
+				info->flags_len = len;
+			}
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
+static int check_feature(enum qca_wlan_vendor_features feature,
+			 struct features_info *info)
+{
+	size_t idx = feature / 8;
+
+	if (!info || !info->flags)
+		return 0;
+
+	return (idx < info->flags_len) &&
+		(info->flags[idx] & BIT(feature % 8));
+}
+
+#endif /* NL80211_SUPPORT */
+
+
+static void sta_get_twt_feature_async_supp(struct sigma_dut *dut,
+					   const char *intf)
+{
+#ifdef NL80211_SUPPORT
+	struct nl_msg *msg;
+	struct features_info info = { 0 };
+	int ifindex, ret;
+
+	ifindex = if_nametoindex(intf);
+	if (ifindex == 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Index for interface %s failed",
+				__func__, intf);
+		return;
+	}
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in adding vendor_cmd and vendor_data",
+				__func__);
+		nlmsg_free(msg);
+		return;
+	}
+
+	ret = send_and_recv_msgs(dut, dut->nl_ctx, msg, features_info_handler,
+				 &info);
+	if (ret) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: err in send_and_recv_msgs, ret=%d",
+				__func__, ret);
+		return;
+	}
+
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_TWT_ASYNC_SUPPORT, &info))
+		dut->sta_async_twt_supp = 1;
+	else
+		dut->sta_async_twt_supp = 0;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"%s: sta_async_twt_supp %d",
+			__func__, dut->sta_async_twt_supp);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_INFO,
+			"TWT async supp get cannot be done without NL80211_SUPPORT defined");
+	dut->sta_async_twt_supp = 0;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_twt_req_support(struct sigma_dut *dut, const char *intf,
 				   int val)
 {
@@ -7455,6 +7563,9 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 		/* Configure ADDBA Req/Rsp buffer size to be 64 */
 		sta_set_addba_buf_size(dut, intf, 64);
+
+		if (dut->sta_async_twt_supp == -1)
+			sta_get_twt_feature_async_supp(dut, intf);
 
 #ifdef NL80211_SUPPORT
 		/* Reset the device HE capabilities to its default supported
@@ -8180,6 +8291,201 @@ static void cmd_set_max_he_mcs(struct sigma_dut *dut, const char *intf,
 }
 
 
+struct wait_event {
+	struct sigma_dut *dut;
+	int cmd;
+	unsigned int twt_op;
+};
+
+#ifdef NL80211_SUPPORT
+
+static int twt_event_handler(struct nl_msg *msg, void *arg)
+{
+	struct wait_event *wait = arg;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	uint32_t subcmd;
+	uint8_t *data = NULL;
+	size_t len = 0;
+	struct nlattr *twt_rsp[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX + 1];
+	struct nlattr *twt_status[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1];
+	int cmd_id;
+	unsigned char val;
+
+	if (!wait)
+		return NL_SKIP;
+
+	if (gnlh->cmd != NL80211_CMD_VENDOR) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"%s: NL cmd is not vendor %d", __func__,
+				gnlh->cmd);
+		return NL_SKIP;
+	}
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb[NL80211_ATTR_VENDOR_ID] || !tb[NL80211_ATTR_VENDOR_SUBCMD]) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"%s: vendor ID not found", __func__);
+		return NL_SKIP;
+	}
+	subcmd = nla_get_u32(tb[NL80211_ATTR_VENDOR_SUBCMD]);
+
+	if (subcmd != QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"%s: Not a TWT_cmd %d", __func__, subcmd);
+		return NL_SKIP;
+	}
+	if (tb[NL80211_ATTR_VENDOR_DATA]) {
+		data = nla_data(tb[NL80211_ATTR_VENDOR_DATA]);
+		len = nla_len(tb[NL80211_ATTR_VENDOR_DATA]);
+	} else {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"%s: vendor data not present", __func__);
+		return NL_SKIP;
+	}
+	if (!data || !len) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"Invalid vendor data or len");
+		return NL_SKIP;
+	}
+	sigma_dut_print(wait->dut, DUT_MSG_DEBUG,
+			"event data len %ld", len);
+	hex_dump(wait->dut, data, len);
+	if (nla_parse(twt_rsp, QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX,
+		      (struct nlattr *) data, len, NULL)) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"vendor data parse error");
+		return NL_SKIP;
+	}
+
+	val = nla_get_u8(twt_rsp[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_OPERATION]);
+	if (val != wait->twt_op) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"Invalid TWT operation, expected %d, rcvd %d",
+				wait->twt_op, val);
+		return NL_SKIP;
+	}
+	if (nla_parse_nested(twt_status, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX,
+			     twt_rsp[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS],
+			     NULL)) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"nla_parse failed for TWT event");
+		return NL_SKIP;
+	}
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_STATUS;
+	if (!twt_status[cmd_id]) {
+		sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+				"%s TWT resp status missing", __func__);
+		wait->cmd = -1;
+	} else {
+		val = nla_get_u8(twt_status[cmd_id]);
+		if (val != QCA_WLAN_VENDOR_TWT_STATUS_OK) {
+			sigma_dut_print(wait->dut, DUT_MSG_ERROR,
+					"%s TWT resp status %d", __func__, val);
+			wait->cmd = -1;
+		} else {
+			wait->cmd = 1;
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
+static int wait_on_nl_socket(struct nl_sock *sock, struct sigma_dut *dut,
+			     unsigned int timeout)
+{
+	fd_set read_fd_set;
+	int retval;
+	int sock_fd;
+	struct timeval time_out;
+
+	time_out.tv_sec = timeout;
+	time_out.tv_usec = 0;
+
+	FD_ZERO(&read_fd_set);
+
+	if (!sock)
+		return -1;
+
+	sock_fd = nl_socket_get_fd(sock);
+	FD_SET(sock_fd, &read_fd_set);
+
+	retval = select(sock_fd + 1, &read_fd_set, NULL, NULL, &time_out);
+
+	if (retval == 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: TWT event response timedout", __func__);
+
+	if (retval < 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR, "%s:no NL msgs, ret=%d",
+				__func__, retval);
+
+	return retval;
+}
+
+
+#define TWT_ASYNC_EVENT_WAIT_TIME_SEC   6
+
+static int twt_async_event_wait(struct sigma_dut *dut, unsigned int twt_op)
+{
+	struct nl_cb *cb;
+	int err_code = 0, select_retval = 0;
+	struct wait_event wait_info;
+
+	cb = nl_socket_get_cb(dut->nl_ctx->event_sock);
+	if (!cb) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"event callback not found");
+		return ERROR_SEND_STATUS;
+	}
+
+	wait_info.cmd = 0;
+	wait_info.dut = dut;
+	wait_info.twt_op = twt_op;
+
+	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, twt_event_handler, &wait_info);
+
+	while (!wait_info.cmd) {
+		select_retval = wait_on_nl_socket(
+			dut->nl_ctx->event_sock, dut,
+			TWT_ASYNC_EVENT_WAIT_TIME_SEC);
+
+		if (select_retval > 0) {
+			err_code = nl_recvmsgs(dut->nl_ctx->event_sock, cb);
+			if (err_code < 0) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"%s: nl rcv failed, err_code %d",
+						__func__, err_code);
+				break;
+			}
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"%s: wait on socket failed %d",
+					__func__, select_retval);
+			err_code = 1;
+			break;
+		}
+
+	}
+	nl_cb_put(cb);
+
+	if (wait_info.cmd < 0)
+		err_code = 1;
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"%s: rcvd cmd %d, err_code %d, s_ret %d",
+			__func__, wait_info.cmd, err_code, select_retval);
+
+	return err_code;
+}
+
+#endif /* NL80211_SUPPORT */
+
+
 static int sta_twt_send_suspend(struct sigma_dut *dut, struct sigma_conn *conn,
 				struct sigma_cmd *cmd)
 {
@@ -8225,7 +8531,10 @@ static int sta_twt_send_suspend(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__, ret);
 	}
 
-	return ret;
+	if (!dut->sta_async_twt_supp)
+		return ret;
+
+	return twt_async_event_wait(dut, QCA_WLAN_TWT_SUSPEND);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT suspend cannot be done without NL80211_SUPPORT defined");
@@ -8286,7 +8595,10 @@ static int sta_twt_send_nudge(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__, ret);
 	}
 
-	return ret;
+	if (!dut->sta_async_twt_supp)
+		return ret;
+
+	return twt_async_event_wait(dut, QCA_WLAN_TWT_NUDGE);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT suspend cannot be done without NL80211_SUPPORT defined");
@@ -8372,7 +8684,10 @@ static int sta_twt_resume(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__, ret);
 	}
 
-	return ret;
+	if (!dut->sta_async_twt_supp)
+		return ret;
+
+	return twt_async_event_wait(dut, QCA_WLAN_TWT_RESUME);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT resume cannot be done without NL80211_SUPPORT defined");
@@ -8551,7 +8866,10 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__, ret);
 	}
 
-	return ret;
+	if (!dut->sta_async_twt_supp)
+		return ret;
+
+	return twt_async_event_wait(dut, QCA_WLAN_TWT_SET);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT request cannot be done without NL80211_SUPPORT defined");
@@ -8621,7 +8939,10 @@ static int sta_twt_teardown(struct sigma_dut *dut, struct sigma_conn *conn,
 				__func__, ret);
 	}
 
-	return ret;
+	if (!dut->sta_async_twt_supp)
+		return ret;
+
+	return twt_async_event_wait(dut, QCA_WLAN_TWT_TERMINATE);
 #else /* NL80211_SUPPORT */
 	sigma_dut_print(dut, DUT_MSG_ERROR,
 			"TWT teardown cannot be done without NL80211_SUPPORT defined");

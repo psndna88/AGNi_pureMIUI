@@ -834,6 +834,7 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->sigma_tmpdir = SIGMA_TMPDIR;
 	dut->ap_ocvc = -1;
 	dut->ap_sae_commit_status = -1;
+	dut->sta_async_twt_supp = -1;
 }
 
 

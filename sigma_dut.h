@@ -334,6 +334,7 @@ struct nl80211_ctx {
 	int netlink_familyid;
 	int nlctrl_familyid;
 	size_t sock_buf_size;
+	struct nl_sock *event_sock;
 };
 #endif /* NL80211_SUPPORT */
 
@@ -960,6 +961,8 @@ struct sigma_dut {
 #endif /* NL80211_SUPPORT */
 
 	int sta_nss;
+
+	int sta_async_twt_supp; /* Asynchronous TWT response event support */
 
 #ifdef ANDROID
 	int nanservicediscoveryinprogress;
