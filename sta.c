@@ -8268,7 +8268,8 @@ static int sta_twt_send_nudge(struct sigma_dut *dut, struct sigma_conn *conn,
 	     nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_WAKE_TIME,
 			 suspend_duration)) ||
 	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_NEXT_TWT_SIZE,
-			next_twt_size)) {
+			next_twt_size) ||
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_FLOW_ID, 0)) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
@@ -8398,6 +8399,8 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		wake_interval_mantissa = 512;
 	int flow_type = 0, twt_trigger = 0, target_wake_time = 0,
 		protection = 0, cmd_type = QCA_WLAN_VENDOR_TWT_SETUP_SUGGEST;
+	int bcast_twt = 0;
+	int bcast_twt_id = 0, bcast_twt_recommdn = 0, bcast_twt_persis = 0;
 
 	ifindex = if_nametoindex(intf);
 	if (ifindex == 0) {
@@ -8470,6 +8473,30 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 	if (val)
 		nominal_min_wake_dur = atoi(val);
 
+	val = get_param(cmd, "BTWT_ID");
+	if (val) {
+		bcast_twt_id = atoi(val);
+		bcast_twt = 1;
+	}
+
+	val = get_param(cmd, "BTWT_Persistence");
+	if (val) {
+		bcast_twt_persis = atoi(val);
+		bcast_twt = 1;
+	}
+
+	val = get_param(cmd, "BTWT_Recommendation");
+	if (val) {
+		bcast_twt_recommdn = atoi(val);
+		bcast_twt = 1;
+	}
+
+	if (bcast_twt)
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"BCAST_TWT: ID %d, RECOMM %d, PERSIS %d",
+				bcast_twt_id, bcast_twt_recommdn,
+				bcast_twt_persis);
+
 	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
 				    NL80211_CMD_VENDOR)) ||
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
@@ -8490,6 +8517,18 @@ static int sta_twt_request(struct sigma_dut *dut, struct sigma_conn *conn,
 		       flow_type) ||
 	    (protection &&
 	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_PROTECTION)) ||
+	    (bcast_twt &&
+	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST)) ||
+	    (bcast_twt &&
+	     nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_ID,
+			bcast_twt_id)) ||
+	    (bcast_twt &&
+	     nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_PERSISTENCE,
+			bcast_twt_persis)) ||
+	    (bcast_twt &&
+	     nla_put_u8(msg,
+			QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_RECOMMENDATION,
+			bcast_twt_recommdn)) ||
 	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_TIME,
 			target_wake_time) ||
 	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_DURATION,
@@ -8530,6 +8569,9 @@ static int sta_twt_teardown(struct sigma_dut *dut, struct sigma_conn *conn,
 	int ifindex, ret;
 	struct nl_msg *msg;
 	const char *intf = get_param(cmd, "Interface");
+	int bcast_twt = 0;
+	int bcast_twt_id = 0;
+	const char *val;
 
 	ifindex = if_nametoindex(intf);
 	if (ifindex == 0) {
@@ -8537,6 +8579,12 @@ static int sta_twt_teardown(struct sigma_dut *dut, struct sigma_conn *conn,
 				"%s: Index for interface %s failed",
 				__func__, intf);
 		return -1;
+	}
+
+	val = get_param(cmd, "BTWT_ID");
+	if (val) {
+		bcast_twt_id = atoi(val);
+		bcast_twt = 1;
 	}
 
 	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
@@ -8551,7 +8599,12 @@ static int sta_twt_teardown(struct sigma_dut *dut, struct sigma_conn *conn,
 	    !(params = nla_nest_start(
 		      msg,
 		      QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE, 0)) {
+	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE, 0) ||
+	    (bcast_twt &&
+	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST)) ||
+	    (bcast_twt &&
+	     nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_ID,
+			bcast_twt_id))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
