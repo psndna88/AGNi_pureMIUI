@@ -7509,11 +7509,6 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 					"Failed to set OM ctrl supp");
 		}
 
-		if (sta_set_bss_max_idle_period(dut, intf, 0)) {
-			sigma_dut_print(dut, DUT_MSG_ERROR,
-				  "Failed to reset BSS max idle period");
-		}
-
 		if (sta_set_tx_su_ppdu_cfg(dut, intf, 1)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"Failed to set Tx SU PPDU enable");
@@ -7591,6 +7586,11 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 			if (sta_set_punctured_preamble_rx(dut, intf, 0)) {
 				sigma_dut_print(dut, DUT_MSG_ERROR,
 						"Failed to reset PreamblePunctRx support");
+			}
+
+			if (sta_set_bss_max_idle_period(dut, intf, 0)) {
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to reset BSS max idle period");
 			}
 
 			/* +HTC-HE support default off */
