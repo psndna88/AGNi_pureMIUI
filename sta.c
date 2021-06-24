@@ -7305,6 +7305,22 @@ static int sta_set_mgmt_data_tx_disable_cfg(struct sigma_dut *dut,
 }
 
 
+static int sta_set_keep_alive_data_cfg(struct sigma_dut *dut, const char *intf,
+				       int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_KEEP_ALIVE_FRAME_TYPE,
+		val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Keep alive data type cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 #ifdef NL80211_SUPPORT
 static int sta_set_he_om_ctrl_reset(struct sigma_dut *dut, const char *intf)
 {
@@ -12308,6 +12324,22 @@ wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 				"LTF cannot be set without NL80211_SUPPORT defined");
 		return ERROR_SEND_STATUS;
 #endif /* NL80211_SUPPORT */
+	}
+
+	val = get_param(cmd, "KeepAlive");
+	if (val) {
+		int set_val = QCA_WLAN_KEEP_ALIVE_DEFAULT;
+
+		if (strcasecmp(val, "Data") == 0)
+			set_val = QCA_WLAN_KEEP_ALIVE_DATA;
+		else if (strcasecmp(val, "Mgmt") == 0)
+			set_val = QCA_WLAN_KEEP_ALIVE_MGMT;
+
+		if (sta_set_keep_alive_data_cfg(dut, intf, set_val)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set keep alive type config");
+			return STATUS_SENT_ERROR;
+		}
 	}
 
 	val = get_param(cmd, "TxSUPPDU");
