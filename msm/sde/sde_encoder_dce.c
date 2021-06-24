@@ -243,7 +243,7 @@ static void _dce_dsc_pipe_cfg(struct sde_hw_dsc *hw_dsc,
 	if (mode_3d && disable_merge_3d && hw_pp->ops.reset_3d_mode) {
 		SDE_DEBUG("disabling 3d mux \n");
 		hw_pp->ops.reset_3d_mode(hw_pp);
-	} else if (mode_3d && disable_merge_3d && hw_pp->ops.setup_3d_mode) {
+	} else if (mode_3d && !disable_merge_3d && hw_pp->ops.setup_3d_mode) {
 		SDE_DEBUG("enabling 3d mux \n");
 		hw_pp->ops.setup_3d_mode(hw_pp, mode_3d);
 	}
@@ -313,7 +313,7 @@ static int _dce_dsc_setup_single(struct sde_encoder_virt *sde_enc,
 		struct msm_display_dsc_info *dsc,
 		unsigned long affected_displays, int index,
 		const struct sde_rect *roi, int dsc_common_mode,
-		bool merge_3d, bool disable_merge_3d, bool mode_3d,
+		bool merge_3d, bool disable_merge_3d, enum sde_3d_blend_mode mode_3d,
 		bool dsc_4hsmerge, bool half_panel_partial_update,
 		int ich_res)
 {
@@ -432,7 +432,7 @@ static int _dce_dsc_setup_helper(struct sde_encoder_virt *sde_enc,
 	dsc_merge = ((num_dsc > num_intf) && !dsc->half_panel_pu) ?
 			true : false;
 	disable_merge_3d = (merge_3d && dsc->half_panel_pu) ?
-			false : true;
+			true : false;
 	dsc_4hsmerge = (dsc_merge && num_dsc == 4 && num_intf == 1) ?
 			true : false;
 
