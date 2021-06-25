@@ -106,7 +106,8 @@ dtbo-$(CONFIG_ARCH_HOLI) += holi-rumi-overlay.dtbo \
 	holi-cdp-lcd-pm6125-overlay.dtbo \
 	holi-mtp-usbc-pm6125-overlay.dtbo \
 	holi-mtp-pm6125-nopmi-overlay.dtbo \
-	holi-qrd-pm6125-overlay.dtbo
+	holi-qrd-pm6125-overlay.dtbo \
+	holi-qrd-pm6125-nopmi-overlay.dtbo
 
 holi-rumi-overlay.dtbo-base := holi.dtb
 holi-mtp-overlay.dtbo-base := holi.dtb
@@ -121,6 +122,7 @@ holi-cdp-lcd-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-usbc-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 holi-qrd-pm6125-overlay.dtbo-base := holi.dtb
+holi-qrd-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 
 else
 dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
@@ -135,7 +137,8 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 	holi-cdp-lcd-pm6125.dtb \
 	holi-mtp-usbc-pm6125.dtb \
 	holi-mtp-pm6125-nopmi.dtb \
-	holi-qrd-pm6125.dtb
+	holi-qrd-pm6125.dtb \
+	holi-qrd-pm6125-nopmi.dtb
 
 endif
 
@@ -144,19 +147,28 @@ dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo \
 	blair-mtp-overlay.dtbo \
 	blair-cdp-overlay.dtbo \
 	blair-atp-overlay.dtbo \
-	blair-qrd-overlay.dtbo
+	blair-qrd-overlay.dtbo \
+	blair-mtp-usbc-overlay.dtbo \
+	blair-mtp-nopmi-overlay.dtbo \
+	blair-qrd-nopmi-overlay.dtbo
 
 blair-rumi-overlay.dtbo-base := blair.dtb
 blair-mtp-overlay.dtbo-base := blair.dtb
 blair-cdp-overlay.dtbo-base := blair.dtb
 blair-atp-overlay.dtbo-base := blair.dtb
 blair-qrd-overlay.dtbo-base := blair.dtb
+blair-mtp-usbc-overlay.dtbo-base := blair.dtb
+blair-mtp-nopmi-overlay.dtbo-base := blair.dtb
+blair-qrd-nopmi-overlay.dtbo-base := blair.dtb
 else
 dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb \
 	blair-mtp.dtb \
 	blair-cdp.dtb \
 	blair-atp.dtb \
-	blair-qrd.dtb
+	blair-qrd.dtb \
+	blair-mtp-usbc.dtb \
+	blair-mtp-nopmi.dtb \
+	blair-qrd-nopmi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)

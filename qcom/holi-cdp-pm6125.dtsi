@@ -1,6 +1,7 @@
 #include "holi-audio-overlay.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
+#include "holi-pm7250b.dtsi"
 #include "holi-pmic-overlay-pm6125.dtsi"
 #include "holi-thermal-overlay-pm6125.dtsi"
 #include "display/holi-sde-display-cdp-pm6125.dtsi"
@@ -22,7 +23,7 @@
 
 &wcd937x_codec {
 	cdc-vdd-rxtx-supply = <&L9A>;
-	cdc-vddio-supply = <&L9A>;
+	cdc-vddpx-supply = <&L9A>;
 	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
 				   "cdc-vddpx";
 	/*
@@ -148,6 +149,13 @@
 			linux,can-disable;
 		};
 	};
+
+	cx_ipeak_lm: cx_ipeak@3ed000 {
+		#size-cells = <1>;
+		compatible = "qcom,cx-ipeak-v2";
+		reg = <0x3ed000 0xe010>;
+		status = "ok";
+	};
 };
 
 &pm7250b_charger {
@@ -230,6 +238,11 @@
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
 	qcom,cl-feedback-on;
+	qcom,vbatt-cutoff-mv = <3400>;
+	qcom,vbatt-empty-mv = <3200>;
+	qcom,vbatt-empty-cold-mv = <3100>;
+	qcom,vbatt-low-mv = <3500>;
+	qcom,fvss-vbatt-mv = <3500>;
 };
 
 &soc {
