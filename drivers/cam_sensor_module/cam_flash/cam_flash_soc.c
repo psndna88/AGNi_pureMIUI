@@ -7,6 +7,7 @@
 #include <linux/of_gpio.h>
 #include "cam_flash_soc.h"
 #include "cam_res_mgr_api.h"
+#include <dt-bindings/msm/msm-camera.h>
 
 void cam_flash_put_source_node_data(struct cam_flash_ctrl *fctrl)
 {
@@ -77,6 +78,7 @@ static int32_t cam_get_source_node_info(
 	if (rc) {
 		CAM_ERR(CAM_FLASH,
 			"flash-type read failed rc=%d", rc);
+		soc_private->flash_type = CAM_FLASH_TYPE_PMIC; // default to PMIC flash
 	}
 
 	switch_src_node = of_parse_phandle(of_node, "switch-source", 0);
