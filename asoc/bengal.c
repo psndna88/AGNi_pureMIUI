@@ -3924,21 +3924,7 @@ err:
 
 static int msm_fe_qos_prepare(struct snd_pcm_substream *substream)
 {
-	cpumask_t mask;
-
-	if (pm_qos_request_active(&substream->latency_pm_qos_req))
-		pm_qos_remove_request(&substream->latency_pm_qos_req);
-
-	cpumask_clear(&mask);
-	cpumask_set_cpu(1, &mask); /* affine to core 1 */
-	cpumask_set_cpu(2, &mask); /* affine to core 2 */
-	cpumask_copy(&substream->latency_pm_qos_req.cpus_affine, &mask);
-
-	substream->latency_pm_qos_req.type = PM_QOS_REQ_AFFINE_CORES;
-
-	pm_qos_add_request(&substream->latency_pm_qos_req,
-			  PM_QOS_CPU_DMA_LATENCY,
-			  MSM_LL_QOS_VALUE);
+        pr_debug("%s: TODO: add new QOS implementation\n", __func__);
 	return 0;
 }
 
@@ -4217,6 +4203,23 @@ static int msm_wcn_init(struct snd_soc_pcm_runtime *rtd)
 					   tx_ch, ARRAY_SIZE(rx_ch), rx_ch);
 }
 
+static struct snd_info_entry *msm_snd_info_create_subdir(struct module *mod,
+				const char *name,
+				struct snd_info_entry *parent)
+{
+	struct snd_info_entry *entry;
+
+	entry = snd_info_create_module_entry(mod, name, parent);
+	if (!entry)
+		return NULL;
+	entry->mode = S_IFDIR | 0555;
+	if (snd_info_register(entry) < 0) {
+		snd_info_free_entry(entry);
+		return NULL;
+	}
+	return entry;
+}
+
 #ifndef CONFIG_TDM_DISABLE
 static void msm_add_tdm_snd_controls(struct snd_soc_component *component)
 {
@@ -4346,7 +4349,7 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	card = rtd->card->snd_card;
 	if (!pdata->codec_root) {
-		entry = snd_info_create_subdir(card->module, "codecs",
+		entry = msm_snd_info_create_subdir(card->module, "codecs",
 						 card->proc_root);
 		if (!entry) {
 			pr_debug("%s: Cannot create codecs module entry\n",
@@ -5536,19 +5539,18 @@ static int msm_populate_dai_link_component_of_node(
 	}
 
 	for (i = 0; i < card->num_links; i++) {
-		if (dai_link[i].platform_of_node && dai_link[i].cpu_of_node)
+		if (dai_link[i].platforms->of_node && dai_link[i].cpus->of_node)
 			continue;
 
-		/* populate platform_of_node for snd card dai links */
-		if (dai_link[i].platform_name &&
-		    !dai_link[i].platform_of_node) {
+		if (dai_link[i].platforms->name &&
+		    !dai_link[i].platforms->of_node) {
 			index = of_property_match_string(cdev->of_node,
 						"asoc-platform-names",
-						dai_link[i].platform_name);
+						dai_link[i].platforms->name);
 			if (index < 0) {
 				dev_err(cdev,
 				"%s: No match found for platform name: %s\n",
-				__func__, dai_link[i].platform_name);
+				__func__, dai_link[i].platforms->name);
 				ret = index;
 				goto err;
 			}
@@ -5557,20 +5559,20 @@ static int msm_populate_dai_link_component_of_node(
 			if (!np) {
 				dev_err(cdev,
 				"%s: retrieving phandle for platform %s, index %d failed\n",
-				__func__, dai_link[i].platform_name,
+				__func__, dai_link[i].platforms->name,
 				index);
 				ret = -ENODEV;
 				goto err;
 			}
-			dai_link[i].platform_of_node = np;
-			dai_link[i].platform_name = NULL;
+			dai_link[i].platforms->of_node = np;
+			dai_link[i].platforms->name = NULL;
 		}
 
 		/* populate cpu_of_node for snd card dai links */
-		if (dai_link[i].cpu_dai_name && !dai_link[i].cpu_of_node) {
+		if (dai_link[i].cpus->dai_name && !dai_link[i].cpus->of_node) {
 			index = of_property_match_string(cdev->of_node,
 						 "asoc-cpu-names",
-						 dai_link[i].cpu_dai_name);
+						 dai_link[i].cpus->dai_name);
 			if (index >= 0) {
 				np = of_parse_phandle(cdev->of_node, "asoc-cpu",
 						index);
@@ -5578,20 +5580,20 @@ static int msm_populate_dai_link_component_of_node(
 					dev_err(cdev,
 					"%s: retrieving phandle for cpu dai %s failed\n",
 					__func__,
-					dai_link[i].cpu_dai_name);
+					dai_link[i].cpus->dai_name);
 					ret = -ENODEV;
 					goto err;
 				}
-				dai_link[i].cpu_of_node = np;
-				dai_link[i].cpu_dai_name = NULL;
+				dai_link[i].cpus->of_node = np;
+				dai_link[i].cpus->dai_name = NULL;
 			}
 		}
 
 		/* populate codec_of_node for snd card dai links */
-		if (dai_link[i].codec_name && !dai_link[i].codec_of_node) {
+		if (dai_link[i].codecs->name && !dai_link[i].codecs->of_node) {
 			index = of_property_match_string(cdev->of_node,
 						 "asoc-codec-names",
-						 dai_link[i].codec_name);
+						 dai_link[i].codecs->name);
 			if (index < 0)
 				continue;
 			np = of_parse_phandle(cdev->of_node, "asoc-codec",
@@ -5599,12 +5601,12 @@ static int msm_populate_dai_link_component_of_node(
 			if (!np) {
 				dev_err(cdev,
 				"%s: retrieving phandle for codec %s failed\n",
-				__func__, dai_link[i].codec_name);
+				__func__, dai_link[i].codecs->name);
 				ret = -ENODEV;
 				goto err;
 			}
-			dai_link[i].codec_of_node = np;
-			dai_link[i].codec_name = NULL;
+			dai_link[i].codecs->of_node = np;
+			dai_link[i].codecs->name = NULL;
 		}
 	}
 
@@ -6314,7 +6316,9 @@ static int bengal_ssr_enable(struct device *dev, void *data)
 		dev_dbg(dev, "%s: TODO\n", __func__);
 	}
 
+#if IS_ENABLED(CONFIG_AUDIO_QGKI)
 	snd_soc_card_change_online_state(card, 1);
+#endif /* CONFIG_AUDIO_QGKI */
 	dev_dbg(dev, "%s: setting snd_card to ONLINE\n", __func__);
 
 err:
@@ -6332,7 +6336,9 @@ static void bengal_ssr_disable(struct device *dev, void *data)
 	}
 
 	dev_dbg(dev, "%s: setting snd_card to OFFLINE\n", __func__);
+#if IS_ENABLED(CONFIG_AUDIO_QGKI)
 	snd_soc_card_change_online_state(card, 0);
+#endif /* CONFIG_AUDIO_QGKI */
 
 	if (!strcmp(card->name, "bengal-stub-snd-card")) {
 		/* TODO */
