@@ -66,7 +66,7 @@ static int smblib_get_prop_typec_mode(struct smb_charger *chg);
 
 void charging_temps_thresholds(void)
 {
-	if (board_get_33w_supported()) {
+/*	if (board_get_33w_supported()) {
 		batt_hot_decidegree_max = 430;
 		batt_cp_warm_threshold = 400;
 		batt_warm_threshold = 400;
@@ -78,7 +78,7 @@ void charging_temps_thresholds(void)
 		batt_warm_threshold = 450;
 		cp_warm_threshold = 450;
 		soft_jeita_hysteresis = 5;
-	}
+	} */
 }
 
 int lct_check_hwversion(void)
