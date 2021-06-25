@@ -634,7 +634,7 @@
 };
 
 &pm7250b_pdphy {
-	vdd-pdphy-supply = <&L3A>;
+	vdd-pdphy-supply = <&L7E>;
 	vbus-supply = <&smb5_vbus>;
 	vconn-supply = <&smb5_vconn>;
 
