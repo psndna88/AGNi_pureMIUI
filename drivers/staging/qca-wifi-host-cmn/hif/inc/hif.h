@@ -933,8 +933,19 @@ static inline char *rtpm_string_from_dbgid(wlan_rtpm_dbgid id)
 	return (char *)strings[id];
 }
 
+/**
+ * enum hif_pm_link_state - hif link state
+ * HIF_PM_LINK_STATE_DOWN: hif link state is down
+ * HIF_PM_LINK_STATE_UP: hif link state is up
+ */
+enum hif_pm_link_state {
+	HIF_PM_LINK_STATE_DOWN,
+	HIF_PM_LINK_STATE_UP
+};
+
 #ifdef FEATURE_RUNTIME_PM
 struct hif_pm_runtime_lock;
+
 void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_get_sync(struct hif_opaque_softc *hif_ctx,
 			    wlan_rtpm_dbgid rtpm_dbgid);
@@ -967,6 +978,22 @@ void hif_pm_runtime_mark_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_is_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
 qdf_time_t hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx);
 int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_pm_set_link_state() - set link state during RTPM
+ * @hif_sc: HIF Context
+ *
+ * Return: None
+ */
+void hif_pm_set_link_state(struct hif_opaque_softc *hif_handle, uint8_t val);
+
+/**
+ * hif_is_link_state_up() - Is link state up
+ * @hif_sc: HIF Context
+ *
+ * Return: 1 link is up, 0 link is down
+ */
+uint8_t hif_pm_get_link_state(struct hif_opaque_softc *hif_handle);
 #else
 struct hif_pm_runtime_lock {
 	const char *name;
@@ -1035,6 +1062,10 @@ hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx)
 { return 0; }
 static inline int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx)
 { return 0; }
+static inline
+void hif_pm_set_link_state(struct hif_opaque_softc *hif_handle, uint8_t val)
+{}
+
 #endif
 
 void hif_enable_power_management(struct hif_opaque_softc *hif_ctx,
@@ -1207,6 +1238,7 @@ int32_t hif_get_int_ctx_irq_num(struct hif_opaque_softc *softc,
 				uint8_t id);
 
 uint32_t hif_configure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
+void hif_deconfigure_ext_group_interrupts(struct hif_opaque_softc *hif_ctx);
 uint32_t  hif_register_ext_group(struct hif_opaque_softc *hif_ctx,
 		uint32_t numirq, uint32_t irq[], ext_intr_handler handler,
 		void *cb_ctx, const char *context_name,
