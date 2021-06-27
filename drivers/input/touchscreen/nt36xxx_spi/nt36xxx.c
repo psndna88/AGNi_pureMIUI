@@ -43,6 +43,9 @@
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+#include <linux/input/tp_common.h>
+#endif
 #ifdef CHECK_TOUCH_VENDOR
 extern char *saved_command_line;
 
@@ -198,6 +201,33 @@ int nvt_ts_recovery_callback(void)
 }
 EXPORT_SYMBOL(nvt_ts_recovery_callback);
 
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+static ssize_t double_tap_show(struct kobject *kobj,
+                               struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", ts->is_gesture_mode);
+}
+
+static ssize_t double_tap_store(struct kobject *kobj,
+                                struct kobj_attribute *attr, const char *buf,
+                                size_t count)
+{
+    int rc, val;
+    
+    rc = kstrtoint(buf, 10, &val);
+    if (rc)
+    return -EINVAL;
+    
+    ts->is_gesture_mode = !!val;
+    set_lcd_reset_gpio_keep_high(!!val);
+    return count;
+}
+
+static struct tp_common_ops double_tap_ops = {
+    .show = double_tap_show,
+    .store = double_tap_store
+};
+#endif
 #endif
 /*2019.12.6 longcheer taocheng add charger mode begin*/
 /*function description*/
@@ -2345,6 +2375,13 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	for (retry = 0; retry < (sizeof(gesture_key_array) / sizeof(gesture_key_array[0])); retry++) {
 		input_set_capability(ts->input_dev, EV_KEY, gesture_key_array[retry]);
 	}
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+    ret = tp_common_set_double_tap_ops(&double_tap_ops);
+    if (ret < 0) {
+        NVT_ERR("%s: Failed to create double_tap node err=%d\n",
+                __func__, ret);
+    }
+#endif
 #endif
 
 	sprintf(ts->phys, "input/ts");
@@ -2367,7 +2404,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		ret = request_threaded_irq(client->irq, NULL, nvt_ts_work_func,
 				ts->int_trigger_type |
 				IRQF_ONESHOT | IRQF_NO_SUSPEND |
-				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts); //
+				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts);
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
