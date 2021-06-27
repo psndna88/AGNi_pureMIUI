@@ -336,8 +336,8 @@ static inline int strong_try_module_get(struct module *mod)
 static inline void add_taint_module(struct module *mod, unsigned flag,
 				    enum lockdep_ok lockdep_ok)
 {
-	add_taint(flag, lockdep_ok);
-	set_bit(flag, &mod->taints);
+//	add_taint(flag, lockdep_ok);
+//	set_bit(flag, &mod->taints);
 }
 
 /*
@@ -894,8 +894,8 @@ static void module_unload_free(struct module *mod)
 static inline int try_force_unload(unsigned int flags)
 {
 	int ret = (flags & O_TRUNC);
-	if (ret)
-		add_taint(TAINT_FORCED_RMMOD, LOCKDEP_NOW_UNRELIABLE);
+//	if (ret)
+//		add_taint(TAINT_FORCED_RMMOD, LOCKDEP_NOW_UNRELIABLE);
 	return ret;
 }
 #else
@@ -1263,9 +1263,9 @@ static const char vermagic[] = VERMAGIC_STRING;
 static int try_to_force_load(struct module *mod, const char *reason)
 {
 #ifdef CONFIG_MODULE_FORCE_LOAD
-	if (!test_taint(TAINT_FORCED_MODULE))
-		pr_warn("%s: %s: kernel tainted.\n", mod->name, reason);
-	add_taint_module(mod, TAINT_FORCED_MODULE, LOCKDEP_NOW_UNRELIABLE);
+//	if (!test_taint(TAINT_FORCED_MODULE))
+//		pr_warn("%s: %s: kernel tainted.\n", mod->name, reason);
+//	add_taint_module(mod, TAINT_FORCED_MODULE, LOCKDEP_NOW_UNRELIABLE);
 	return 0;
 #else
 	return -ENOEXEC;
@@ -2836,6 +2836,9 @@ static int module_sig_check(struct load_info *info, int flags)
 	const unsigned long markerlen = sizeof(MODULE_SIG_STRING) - 1;
 	const void *mod = info->hdr;
 
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	return 0;
+#endif
 	/*
 	 * Require flags == 0, as a module with version information
 	 * removed is no longer the module that was signed
@@ -3096,20 +3099,20 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 		return -ENOEXEC;
 	}
 
-	if (!get_modinfo(info, "intree")) {
-		if (!test_taint(TAINT_OOT_MODULE))
-			pr_warn("%s: loading out-of-tree module taints kernel.\n",
-				mod->name);
-		add_taint_module(mod, TAINT_OOT_MODULE, LOCKDEP_STILL_OK);
-	}
+//	if (!get_modinfo(info, "intree")) {
+//		if (!test_taint(TAINT_OOT_MODULE))
+//			pr_warn("%s: loading out-of-tree module taints kernel.\n",
+//				mod->name);
+//		add_taint_module(mod, TAINT_OOT_MODULE, LOCKDEP_STILL_OK);
+//	}
 
 	check_modinfo_retpoline(mod, info);
 
-	if (get_modinfo(info, "staging")) {
-		add_taint_module(mod, TAINT_CRAP, LOCKDEP_STILL_OK);
-		pr_warn("%s: module is from the staging directory, the quality "
-			"is unknown, you have been warned.\n", mod->name);
-	}
+//	if (get_modinfo(info, "staging")) {
+//		add_taint_module(mod, TAINT_CRAP, LOCKDEP_STILL_OK);
+//		pr_warn("%s: module is from the staging directory, the quality "
+//			"is unknown, you have been warned.\n", mod->name);
+//	}
 
 	err = check_modinfo_livepatch(mod, info);
 	if (err)
@@ -3739,6 +3742,10 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	long err;
 	char *after_dashes;
 
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	flags |= MODULE_INIT_IGNORE_MODVERSIONS;
+	flags |= MODULE_INIT_IGNORE_VERMAGIC;
+#endif
 	err = module_sig_check(info, flags);
 	if (err)
 		goto free_copy;
@@ -3763,12 +3770,12 @@ static int load_module(struct load_info *info, const char __user *uargs,
 
 #ifdef CONFIG_MODULE_SIG
 	mod->sig_ok = info->sig_ok;
-	if (!mod->sig_ok) {
-		pr_notice_once("%s: module verification failed: signature "
-			       "and/or required key missing - tainting "
-			       "kernel\n", mod->name);
-		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
-	}
+//	if (!mod->sig_ok) {
+//		pr_notice_once("%s: module verification failed: signature "
+//			       "and/or required key missing - tainting "
+//			       "kernel\n", mod->name);
+//		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
+//	}
 #endif
 
 	/* To avoid stressing percpu allocator, do this once we're unique. */
