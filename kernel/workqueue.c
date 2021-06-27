@@ -2925,6 +2925,31 @@ bool flush_delayed_work(struct delayed_work *dwork)
 }
 EXPORT_SYMBOL(flush_delayed_work);
 
+static bool __cancel_work(struct work_struct *work, bool is_dwork)
+{
+	unsigned long flags;
+	int ret;
+
+	do {
+		ret = try_to_grab_pending(work, is_dwork, &flags);
+	} while (unlikely(ret == -EAGAIN));
+
+	if (unlikely(ret < 0))
+		return false;
+
+	set_work_pool_and_clear_pending(work, get_work_pool_id(work));
+	local_irq_restore(flags);
+	return ret;
+}
+
+/*
+ * See cancel_delayed_work()
+ */
+bool cancel_work(struct work_struct *work)
+{
+	return __cancel_work(work, false);
+}
+
 /**
  * cancel_delayed_work - cancel a delayed work
  * @dwork: delayed_work to cancel
@@ -2943,20 +2968,7 @@ EXPORT_SYMBOL(flush_delayed_work);
  */
 bool cancel_delayed_work(struct delayed_work *dwork)
 {
-	unsigned long flags;
-	int ret;
-
-	do {
-		ret = try_to_grab_pending(&dwork->work, true, &flags);
-	} while (unlikely(ret == -EAGAIN));
-
-	if (unlikely(ret < 0))
-		return false;
-
-	set_work_pool_and_clear_pending(&dwork->work,
-					get_work_pool_id(&dwork->work));
-	local_irq_restore(flags);
-	return ret;
+	return __cancel_work(&dwork->work, true);
 }
 EXPORT_SYMBOL(cancel_delayed_work);
 
@@ -5493,7 +5505,7 @@ static int __init init_workqueues(void)
 	WARN_ON(__alignof__(struct pool_workqueue) < __alignof__(long long));
 
 	BUG_ON(!alloc_cpumask_var(&wq_unbound_cpumask, GFP_KERNEL));
-	cpumask_copy(wq_unbound_cpumask, cpu_lp_mask);
+	cpumask_copy(wq_unbound_cpumask, cpu_possible_mask);
 
 	pwq_cache = KMEM_CACHE(pool_workqueue, SLAB_PANIC);
 
