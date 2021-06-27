@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <linux/delay.h>
 
 enum actutor_type {
 	ACT_LRA,
