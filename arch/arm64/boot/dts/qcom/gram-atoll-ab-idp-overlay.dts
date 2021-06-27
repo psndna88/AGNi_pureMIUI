@@ -1,5 +1,5 @@
 /* Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,26 +15,32 @@
 /plugin/;
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-
-#include "cust-atoll.dtsi"
-#include "cust-pm6150.dtsi"
-#include "cust-pm6150l.dtsi"
 #include "atoll-idp.dtsi"
-#include "cust-msm-audio-lpass.dtsi"
-#include "cust-atoll-pinctrl-overlay.dtsi"
-#include "cust-atoll-regulator.dtsi"
-#include "cust-atoll-sde-display.dtsi"
-#include "cust-atoll-thermal.dtsi"
-#include "cust-atoll-usb.dtsi"
-#include "cust-atoll-idp.dtsi"
 #include "atoll-wcd937x-idp-audio-overlay.dtsi"
-#include "cust-atoll-audio-overlay.dtsi"
-#include "curtana-atoll-camera-sensor-idp.dtsi"
-#include "cust-high-charging.dtsi"
+#include "gram-atoll-camera-sensor-idp.dtsi"
+#include "j6b-charge-overlay.dtsi"
 
 / {
 	model = "wcd937x Audio Codec AB IDP GRAM";
-	compatible = "qcom,cust-atoll";
+	compatible = "qcom,atoll-ab-idp", "qcom,atoll-ab", "qcom,idp";
 	qcom,msm-id = <443 0x0>;
 	qcom,board-id = <0x60022 1>;
+};
+
+&dsi_ft8756_huaxing_video {
+	qcom,dsi-display-active;
+};
+
+&dsi_nt36675_tianma_video {
+	qcom,dsi-display-active;
+};
+
+&tx_swr_gpios {
+	qcom,chip-wakeup-reg = <0x01FFB000>;
+	qcom,chip-wakeup-maskbit = <0>;
+	qcom,chip-wakeup-default-val = <0x1>;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 69 0>;
 };

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -70,9 +70,9 @@
 		gpio = <&tlmm 42 0>;
 		vin-supply = <&pm6150_s5>;//48M pm6150_s5
 	};
-	wide_ldo_dvdd2_regulator: gpio-regulator@7 { //DVDD2 1.05V
+	wide_ldo_dvdd2_regulator: gpio-regulator@3 { //DVDD2 1.05V
 		compatible = "regulator-fixed";
-		reg = <0x07 0x00>;
+		reg = <0x03 0x00>;
 		regulator-name = "wide_ldo_dvdd2_regulator";
 		regulator-min-microvolt = <1050000>;
 		regulator-max-microvolt = <1050000>;
@@ -82,9 +82,9 @@
 		vin-supply = <&pm6150l_s8>;//64M pm6150l_s8
 	};
 
-	depth_ldo_avdd_regulator: gpio-regulator@3 { //depth AVDD 2.8V
+	depth_ldo_avdd_regulator: gpio-regulator@4 { //depth AVDD 2.8V
 		compatible = "regulator-fixed";
-		reg = <0x03 0x00>;
+		reg = <0x04 0x00>;
 		regulator-name = "depth_ldo_avdd_regulator";
 		regulator-min-microvolt = <2800000>;
 		regulator-max-microvolt = <2800000>;
@@ -94,9 +94,9 @@
 		vin-supply = <&pm6150l_bob>;
 	};
 
-	ultra_ldo_avdd_regulator: gpio-regulator@4 { //ultra AVDD 2.8V
+	ultra_ldo_avdd_regulator: gpio-regulator@5 { //ultra AVDD 2.8V
 		compatible = "regulator-fixed";
-		reg = <0x04 0x00>;
+		reg = <0x05 0x00>;
 		regulator-name = "ultra_ldo_avdd_regulator";
 		regulator-min-microvolt = <2800000>;
 		regulator-max-microvolt = <2800000>;
@@ -105,9 +105,9 @@
 		gpio = <&pm6150l_gpios 8 0>;//for p0 main band
 		vin-supply = <&pm6150l_bob>;
 	};
-	ultra_ldo_dvdd_regulator: gpio-regulator@5 { //ultra DVDD 2.8V
+	ultra_ldo_dvdd_regulator: gpio-regulator@6 { //ultra DVDD 2.8V
 		compatible = "regulator-fixed";
-		reg = <0x05 0x00>;
+		reg = <0x06 0x00>;
 		regulator-name = "ultra_ldo_dvdd_regulator";
 		regulator-min-microvolt = <1200000>;
 		regulator-max-microvolt = <1200000>;
@@ -117,9 +117,9 @@
 		vin-supply = <&pm6150_s5>;
 	};
 
-	wide_ldo_afvdd_regulator: gpio-regulator@6 { //AFVDD 2.8V
+	wide_ldo_afvdd_regulator: gpio-regulator@7 { //AFVDD 2.8V
 		compatible = "regulator-fixed";
-		reg = <0x06 0x00>;
+		reg = <0x07 0x00>;
 		regulator-name = "wide_ldo_afvdd_regulator";
 		regulator-min-microvolt = <2800000>;
 		regulator-max-microvolt = <2800000>;
@@ -133,8 +133,8 @@
 		compatible = "regulator-fixed";
 		reg = <0x08 0x00>;
 		regulator-name = "front_ldo_dvdd_regulator";
-		regulator-min-microvolt = <1200000>;
-		regulator-max-microvolt = <1200000>;
+		regulator-min-microvolt = <1050000>;
+		regulator-max-microvolt = <1050000>;
 		regulator-enable-ramp-delay = <100>;
 		enable-active-high;
 		gpio = <&tlmm 117 0>;
@@ -264,13 +264,14 @@
 		reg = <0x1>;
 		compatible = "qcom,eeprom";
 		cam_vio-supply = <&pm6150_l13>;
+		cam_v_custom1-supply = <&wide_ldo_avdd2_regulator>; // IOVDD NEW-BOM
 		cam_vana-supply = <&depth_ldo_avdd_regulator>;
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana","cam_clk";
+		regulator-names = "cam_vio","cam_v_custom1", "cam_vana","cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000  0>;
-		rgltr-max-voltage = <1800000 2800000  0>;
-		rgltr-load-current = <1000 80000  0>;
+		rgltr-min-voltage = <1800000 1800000 2800000  0>;
+		rgltr-max-voltage = <1800000 1800000 2800000  0>;
+		rgltr-load-current = <1000 1000 80000  0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
@@ -302,13 +303,14 @@
 		cam_vana-supply = <&ultra_ldo_avdd_regulator>;
 		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;//DVDD1 16M
 		cam_v_custom1-supply = <&front_ldo_dvdd_regulator>; //DVDD2 20 1.8V
+		cam_v_custom2-supply = <&wide_ldo_dvdd2_regulator>; //DVDD NEW-BOM 20M 1.8V
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig","cam_v_custom1",
-			"cam_clk";
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig","cam_v_custom1","cam_v_custom2",
+					"cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000 1200000 1200000 0>;
-		rgltr-max-voltage = <1800000 2800000 1200000 1200000 0>;
-		rgltr-load-current = <1000 80000 105000 105000 0>;
+		rgltr-min-voltage = <1800000 2800000 1200000 1050000 1050000 0>;
+		rgltr-max-voltage = <1800000 2800000 1200000 1050000 1050000 0>;
+		rgltr-load-current = <1000 80000 105000 105000 105000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
@@ -380,13 +382,14 @@
 		compatible = "qcom,eeprom";
 		cam_vio-supply = <&pm6150_l13>;
 		cam_vana-supply = <&depth_ldo_avdd_regulator>;
+		cam_v_custom1-supply = <&ultra_ldo_avdd_regulator>; //AVDD NEW-BOM
 		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		regulator-names = "cam_vio", "cam_vana","cam_v_custom1", "cam_vdig", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000 1200000 0>;
-		rgltr-max-voltage = <1800000 2800000 1200000 0>;
-		rgltr-load-current = <1000 80000 1000 0>;
+		rgltr-min-voltage = <1800000 2800000 2800000 1200000 0>;
+		rgltr-max-voltage = <1800000 2800000 2800000 1200000 0>;
+		rgltr-load-current = <1000 80000 80000 1000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active
@@ -421,12 +424,12 @@
 		led-flash-src = <&led_flash_rear>;
 		actuator-src = <&actuator_rear>;
 		eeprom-src = <&eeprom_rear>;
-		cam_vana-supply = <&wide_ldo_avdd1_regulator>; //AVDD1 2.9V
-		cam_vdig-supply = <&wide_ldo_dvdd_regulator>; //DVDD 48M
+		cam_vana-supply = <&wide_ldo_avdd1_regulator>; //AVDD OLD-BOM&NEW-BOM 48M&64M
+		cam_vdig-supply = <&wide_ldo_dvdd_regulator>; //DVDD OLD-BOM&NEW-BOM 48M
 		cam_vio-supply = <&pm6150_l13>;//IOVDD
 		cam_clk-supply = <&titan_top_gdsc>;
-		cam_v_custom1-supply = <&wide_ldo_avdd2_regulator>; //AVDD 1.8V
-		cam_v_custom2-supply = <&wide_ldo_dvdd2_regulator>; //DVDD 64M
+		cam_v_custom1-supply = <&wide_ldo_avdd2_regulator>; //AVDD2 OLD-BOM&NEW-BOM 48M
+		cam_v_custom2-supply = <&wide_ldo_dvdd2_regulator>; //DVDD OLD-BOM&NEW-BOM 64M
 		regulator-names = "cam_vana", "cam_vdig", "cam_vio",
 			"cam_clk", "cam_v_custom1", "cam_v_custom2";
 		rgltr-cntrl-support;
@@ -465,15 +468,16 @@
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
 		led-flash-src = <&led_flash_rear>;
-                eeprom-src = <&eeprom_rear_depth>;
-		cam_vio-supply = <&pm6150_l13>;
-		cam_vana-supply = <&depth_ldo_avdd_regulator>;
+		eeprom-src = <&eeprom_rear_depth>;
+		cam_vio-supply = <&pm6150_l13>;//IODVDD OLD-BOM	 (NEW-BOM JUST POWER UP L13)
+		cam_v_custom1-supply = <&wide_ldo_avdd2_regulator>; // IOVDD NEW-BOM
+		cam_vana-supply = <&depth_ldo_avdd_regulator>;//AVDD OLD-BOM&NEW-BOM
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana","cam_clk";
+		regulator-names = "cam_vio","cam_v_custom1", "cam_vana","cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000  0>;
-		rgltr-max-voltage = <1800000 2800000  0>;
-		rgltr-load-current = <1000 80000  0>;
+		rgltr-min-voltage = <1800000 1800000 2800000  0>;
+		rgltr-max-voltage = <1800000 1800000 2800000  0>;
+		rgltr-load-current = <1000 1000 80000  0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active
@@ -507,16 +511,17 @@
 		sensor-position-yaw = <0>;
 		eeprom-src = <&eeprom_front>;
 		cam_vio-supply = <&pm6150_l13>;
-		cam_vana-supply = <&ultra_ldo_avdd_regulator>;
-		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;//DVDD1 16M
-		cam_v_custom1-supply = <&front_ldo_dvdd_regulator>; //DVDD2 20 1.8V
+		cam_vana-supply = <&ultra_ldo_avdd_regulator>;//AVDD OLD-BOM&NEW-BOM 16M&20M
+		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;//DVDD OLD-BOM&NEW-BOM 16M
+		cam_v_custom1-supply = <&front_ldo_dvdd_regulator>; //DVDD OLD-BOM 20M 1.8V
+		cam_v_custom2-supply = <&wide_ldo_dvdd2_regulator>; //DVDD NEW-BOM 20M 1.8V
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig","cam_v_custom1",
-			"cam_clk";
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig","cam_v_custom1","cam_v_custom2",
+					"cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000 1200000 1200000 0>;
-		rgltr-max-voltage = <1800000 2800000 1200000 1200000 0>;
-		rgltr-load-current = <1000 80000 105000 105000 0>;
+		rgltr-min-voltage = <1800000 2800000 1200000 1050000 1050000 0>;
+		rgltr-max-voltage = <1800000 2800000 1200000 1050000 1050000 0>;
+		rgltr-load-current = <1000 80000 105000 105000 105000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
@@ -552,7 +557,7 @@
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
 		led-flash-src = <&led_flash_rear>;
-                eeprom-src = <&eeprom_rear_ultra>;
+		eeprom-src = <&eeprom_rear_ultra>;
 		cam_vio-supply = <&pm6150_l13>;
 		cam_vana-supply = <&ultra_ldo_avdd_regulator>;
 		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;
@@ -598,16 +603,17 @@
 		sensor-position-yaw = <180>;
 		led-flash-src = <&led_flash_rear>;
 		actuator-src = <&actuator_rear_macro>;
-                eeprom-src = <&eeprom_rear_macro>;
+		eeprom-src = <&eeprom_rear_macro>;
 		cam_vio-supply = <&pm6150_l13>;
-		cam_vana-supply = <&depth_ldo_avdd_regulator>;
+		cam_vana-supply = <&depth_ldo_avdd_regulator>;//AVDD OLD-BOM
+		cam_v_custom1-supply = <&ultra_ldo_avdd_regulator>; //AVDD NEW-BOM
 		cam_vdig-supply = <&ultra_ldo_dvdd_regulator>;
 		cam_clk-supply = <&titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		regulator-names = "cam_vio", "cam_vana","cam_v_custom1", "cam_vdig", "cam_clk";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 2800000 1200000 0>;
-		rgltr-max-voltage = <1800000 2800000 1200000 0>;
-		rgltr-load-current = <1000 80000 1000 0>;
+		rgltr-min-voltage = <1800000 2800000 2800000 1200000 0>;
+		rgltr-max-voltage = <1800000 2800000 2800000 1200000 0>;
+		rgltr-load-current = <1000 80000 80000 1000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active

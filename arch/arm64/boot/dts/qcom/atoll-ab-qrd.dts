@@ -21,3 +21,8 @@
 	qcom,board-id = <0x1000B 0>;
 };
 
+&tx_swr_gpios {
+	qcom,chip-wakeup-reg = <0x01FFB000>;
+	qcom,chip-wakeup-maskbit = <0>;
+	qcom,chip-wakeup-default-val = <0x1>;
+};

@@ -12,16 +12,28 @@
  */
 
 /dts-v1/;
+/plugin/;
 
-#include "atoll-ab.dtsi"
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include "atoll-idp.dtsi"
+#include "atoll-wcd937x-idp-audio-overlay.dtsi"
+#include "joyeuse-atoll-camera-sensor-idp.dtsi"
+#include "j6b-charge-overlay.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. ATOLL-AB SoC";
-	compatible = "qcom,atoll";
-	qcom,pmic-name = "PM6150";
-	qcom,board-id = <0 0>;
+	model = "wcd937x Audio Codec IDP JOYEUSE";
+	compatible = "qcom,atoll-idp", "qcom,atoll", "qcom,idp";
+	qcom,msm-id = <407 0x0>;
+	qcom,board-id = <0x50022 1>;
 };
-&ufshc_mem {
-	spm-level = <3>;
-	rpm-level = <3>;
+
+&dsi_ft8756_huaxing_video {
+	qcom,dsi-display-active;
+};
+&dsi_nt36675_tianma_video {
+	qcom,dsi-display-active;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 69 0>;
 };
