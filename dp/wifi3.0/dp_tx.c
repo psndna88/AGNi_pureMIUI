@@ -1562,6 +1562,36 @@ dp_tx_hw_desc_update_evt(uint8_t *hal_tx_desc_cached,
 }
 #endif
 
+#if defined(CLEAR_SW2TCL_CONSUMED_DESC)
+/**
+ * dp_tx_clear_consumed_hw_descs - Reset all the consumed Tx ring descs to 0
+ *
+ * @soc: DP soc handle
+ * @hal_ring_hdl: Source ring pointer
+ *
+ * Return: void
+ */
+static inline
+void dp_tx_clear_consumed_hw_descs(struct dp_soc *soc,
+				   hal_ring_handle_t hal_ring_hdl)
+{
+	void *desc = hal_srng_src_get_next_consumed(soc->hal_soc, hal_ring_hdl);
+
+	while (desc) {
+		hal_tx_desc_clear(desc);
+		desc = hal_srng_src_get_next_consumed(soc->hal_soc,
+						      hal_ring_hdl);
+	}
+}
+
+#else
+static inline
+void dp_tx_clear_consumed_hw_descs(struct dp_soc *soc,
+				   hal_ring_handle_t hal_ring_hdl)
+{
+}
+#endif /* CLEAR_SW2TCL_CONSUMED_DESC */
+
 /**
  * dp_tx_hw_enqueue() - Enqueue to TCL HW for transmit
  * @soc: DP Soc Handle
@@ -1696,6 +1726,8 @@ dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 		DP_STATS_INC(vdev, tx_i.dropped.enqueue_fail, 1);
 		return status;
 	}
+
+	dp_tx_clear_consumed_hw_descs(soc, hal_ring_hdl);
 
 	/* Sync cached descriptor with HW */
 

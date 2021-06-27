@@ -463,6 +463,19 @@ static inline void hal_tx_desc_set_hlos_tid(void *desc,
 	HAL_SET_FLD(desc, TCL_DATA_CMD_4, HLOS_TID_OVERWRITE) |=
 	   HAL_TX_SM(TCL_DATA_CMD_4, HLOS_TID_OVERWRITE, 1);
 }
+
+/**
+ * hal_tx_desc_clear - Clear the HW descriptor entry
+ * @hw_desc: Hardware descriptor to be cleared
+ *
+ * Return: void
+ */
+static inline void hal_tx_desc_clear(void *hw_desc)
+{
+	qdf_mem_set(hw_desc + sizeof(struct tlv_32_hdr),
+		    HAL_TX_DESC_LEN_BYTES, 0);
+}
+
 /**
  * hal_tx_desc_sync - Commit the descriptor to Hardware
  * @hal_tx_des_cached: Cached descriptor that software maintains
