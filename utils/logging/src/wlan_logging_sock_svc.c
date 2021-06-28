@@ -109,6 +109,8 @@ DEFINE_RATELIMIT_STATE(panic_wifilog_ratelimit,
 		       PANIC_WIFILOG_PRINT_RATE_LIMIT_PERIOD,
 		       PANIC_WIFILOG_PRINT_RATE_LIMIT_BURST_DEFAULT);
 
+#define FLUSH_LOG_COMPLETION_TIMEOUT 3000
+
 struct log_msg {
 	struct list_head node;
 	unsigned int radio;
@@ -192,6 +194,8 @@ struct wlan_logging {
 	bool is_flush_timer_initialized;
 	uint32_t flush_timer_period;
 	qdf_spinlock_t flush_timer_lock;
+
+	qdf_event_t flush_log_completion;
 };
 
 /* This global variable is intentionally not marked static because it
@@ -775,6 +779,20 @@ static void send_flush_completion_to_user(uint8_t ring_id)
 }
 #endif
 
+static void wlan_logging_set_flush_log_completion(void)
+{
+	qdf_event_set(&gwlan_logging.flush_log_completion);
+}
+
+QDF_STATUS wlan_logging_wait_for_flush_log_completion(void)
+{
+	qdf_event_reset(&gwlan_logging.flush_log_completion);
+
+	return qdf_wait_for_event_completion(
+					&gwlan_logging.flush_log_completion,
+					FLUSH_LOG_COMPLETION_TIMEOUT);
+}
+
 static void setup_flush_timer(void)
 {
 	qdf_spin_lock(&gwlan_logging.flush_timer_lock);
@@ -860,6 +878,7 @@ static int wlan_logging_thread(void *Arg)
 				send_flush_completion_to_user(
 						RING_ID_DRIVER_DEBUG);
 #endif
+				wlan_logging_set_flush_log_completion();
 			} else {
 				gwlan_logging.is_flush_complete = true;
 				/* Flush all current host logs*/
@@ -1064,6 +1083,7 @@ int wlan_logging_sock_init_svc(void)
 {
 	int i = 0, j, pkt_stats_size;
 	unsigned long irq_flag;
+	QDF_STATUS status;
 
 	flush_timer_init();
 	spin_lock_init(&gwlan_logging.spin_lock);
@@ -1146,6 +1166,12 @@ int wlan_logging_sock_init_svc(void)
 	gwlan_logging.is_active = true;
 	gwlan_logging.is_flush_complete = false;
 
+	status = qdf_event_create(&gwlan_logging.flush_log_completion);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		qdf_err("Flush log completion event init failed");
+		goto err3;
+	}
+
 	return 0;
 
 err3:
@@ -1185,6 +1211,8 @@ int wlan_logging_sock_deinit_svc(void)
 
 	if (!gwlan_logging.pcur_node)
 		return 0;
+
+	qdf_event_destroy(&gwlan_logging.flush_log_completion);
 
 	INIT_COMPLETION(gwlan_logging.shutdown_comp);
 	gwlan_logging.exit = true;
