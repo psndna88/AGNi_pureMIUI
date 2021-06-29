@@ -725,9 +725,9 @@ void csr_get_pmk_info(struct mac_context *mac_ctx, uint8_t session_id,
  *
  * Return QDF_STATUS - usually it succeed unless sessionId is not found
  */
-QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac, uint32_t sessionId,
-				uint8_t *psk_pmk, size_t pmk_len,
-				bool update_to_fw);
+QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac,
+				struct wlan_crypto_pmksa *pmksa,
+				uint8_t vdev_id, bool update_to_fw);
 
 /**
  * csr_set_pmk_cache_ft() - store MDID in PMK cache

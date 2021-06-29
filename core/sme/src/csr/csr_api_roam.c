@@ -13862,27 +13862,37 @@ void csr_get_pmk_info(struct mac_context *mac_ctx, uint8_t session_id,
 	pmk_cache->pmk_len = session->pmk_len;
 }
 
-QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac, uint32_t sessionId,
-				uint8_t *psk_pmk, size_t pmk_len,
-				bool update_to_fw)
+QDF_STATUS csr_roam_set_psk_pmk(struct mac_context *mac,
+				struct wlan_crypto_pmksa *pmksa,
+				uint8_t vdev_id, bool update_to_fw)
 {
-	struct csr_roam_session *pSession = CSR_GET_SESSION(mac, sessionId);
+	struct csr_roam_session *pSession = CSR_GET_SESSION(mac, vdev_id);
+	struct qdf_mac_addr connected_bssid = {0};
 
 	if (!pSession) {
-		sme_err("session %d not found", sessionId);
+		sme_err("session %d not found", vdev_id);
 		return QDF_STATUS_E_FAILURE;
 	}
-	qdf_mem_copy(pSession->psk_pmk, psk_pmk, sizeof(pSession->psk_pmk));
-	pSession->pmk_len = pmk_len;
 
-	if (csr_is_auth_type_ese(mac->roam.roamSession[sessionId].
+	qdf_copy_macaddr(&connected_bssid, &pSession->connectedProfile.bssid);
+	if (csr_is_conn_state_connected_infra(mac, vdev_id) &&
+	    !pmksa->ssid_len &&
+	    !qdf_is_macaddr_equal(&connected_bssid, &pmksa->bssid)) {
+		sme_debug("Set pmksa received for non-connected bss");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pSession->pmk_len = pmksa->pmk_len;
+	qdf_mem_copy(pSession->psk_pmk, pmksa->pmk, pSession->pmk_len);
+
+	if (csr_is_auth_type_ese(mac->roam.roamSession[vdev_id].
 				 connectedProfile.AuthType)) {
 		sme_debug("PMK update is not required for ESE");
 		return QDF_STATUS_SUCCESS;
 	}
 
 	if (update_to_fw)
-		csr_roam_update_cfg(mac, sessionId,
+		csr_roam_update_cfg(mac, vdev_id,
 				    REASON_ROAM_PSK_PMK_CHANGED);
 
 	return QDF_STATUS_SUCCESS;
