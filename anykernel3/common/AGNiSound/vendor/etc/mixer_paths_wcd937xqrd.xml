@@ -147,6 +147,7 @@
   <!-- echo reference -->
   <ctl name="AUDIO_REF_EC_UL1 MUX" value="None"/>
   <ctl name="AUDIO_REF_EC_UL10 MUX" value="None"/>
+  <ctl name="EC Reference Channels" value="Zero"/>
   <!-- usb headset -->
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia1" value="0"/>
   <ctl name="AFE_PCM_RX Audio Mixer MultiMedia2" value="0"/>
@@ -185,9 +186,6 @@
   <ctl name="VoiceMMode1_Tx Mixer USB_AUDIO_TX_MMode1" value="0"/>
   <!-- Multimode Voice1 Display-Port -->
   <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode1" value="0"/>
-  <!-- Multimode Voice1 proxy-Port -->
-  <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="0"/>
-  <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="0"/>
   <!-- Miltimode Voice1 end-->
   <!-- Multimode Voice2 -->
   <ctl name="WSA_CDC_DMA_RX_0_Voice Mixer VoiceMMode2" value="0"/>
@@ -203,9 +201,6 @@
   <ctl name="VoiceMMode2_Tx Mixer USB_AUDIO_TX_MMode2" value="0"/>
   <!-- Multimode Voice2 Display-Port -->
   <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="0"/>
-  <!-- Multimode Voice2 proxy-Port -->
-  <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="0"/>
-  <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="0"/>
   <!-- Multimode Voice2 end-->
   <!-- Voice external ec. reference -->
   <ctl name="VOC_EXT_EC MUX" value="NONE"/>
@@ -215,8 +210,8 @@
   <ctl name="RT_PROXY_1_TX SetCalMode" value="CAL_MODE_NONE"/>
   <!-- RT Proxy Cal end -->
   <!-- Incall Recording -->
-  <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="0"/>
-  <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="0"/>
+  <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="0"/>
+  <ctl name="MultiMedia1 Mixer VOC_REC_DL" value="0"/>
   <ctl name="MultiMedia8 Mixer VOC_REC_UL" value="0"/>
   <ctl name="MultiMedia8 Mixer VOC_REC_DL" value="0"/>
   <!-- Incall Recording End -->
@@ -416,30 +411,49 @@
   </path>
   <path name="echo-reference">
     <ctl name="AUDIO_REF_EC_UL1 MUX" value="WSA_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="One"/>
+  </path>
+  <path name="echo-reference handset">
+    <ctl name="AUDIO_REF_EC_UL1 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="One"/>
   </path>
   <path name="echo-reference headphones">
     <ctl name="AUDIO_REF_EC_UL1 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="Two"/>
+  </path>
+  <path name="echo-reference headset">
+    <path name="echo-reference headphones"/>
+  </path>
+  <path name="echo-reference headset">
+    <path name="echo-reference headphones"/>
   </path>
   <path name="echo-reference display-port">
     <ctl name="AUDIO_REF_EC_UL1 MUX" value="DISPLAY_PORT"/>
+    <ctl name="EC Reference Channels" value="Two"/>
   </path>
   <path name="echo-reference headphones-44.1">
     <ctl name="AUDIO_REF_EC_UL1 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="Two"/>
   </path>
   <path name="echo-reference-voip">
     <ctl name="AUDIO_REF_EC_UL10 MUX" value="WSA_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="One"/>
   </path>
   <path name="echo-reference-voip handset">
     <ctl name="AUDIO_REF_EC_UL10 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="One"/>
   </path>
   <path name="echo-reference-voip headphones">
     <ctl name="AUDIO_REF_EC_UL10 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="Two"/>
   </path>
   <path name="echo-reference-voip display-port">
     <ctl name="AUDIO_REF_EC_UL10 MUX" value="DISPLAY_PORT"/>
+    <ctl name="EC Reference Channels" value="Two"/>
   </path>
   <path name="echo-reference-voip headphones-44.1">
     <ctl name="AUDIO_REF_EC_UL10 MUX" value="RX_CDC_DMA_RX_0"/>
+    <ctl name="EC Reference Channels" value="Two"/>
   </path>
   <path name="deep-buffer-playback">
     <ctl name="WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia1" value="1"/>
@@ -1386,7 +1400,7 @@
     <ctl name="RX_CDC_DMA_RX_0_DL_HL Switch" value="1"/>
   </path>
   <path name="incall-rec-uplink">
-    <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1"/>
+    <ctl name="MultiMedia1 Mixer VOC_REC_UL" value="1"/>
   </path>
   <path name="incall-rec-uplink bt-sco">
     <path name="incall-rec-uplink"/>
@@ -1415,11 +1429,8 @@
   <path name="incall-rec-uplink-compress afe-proxy">
     <path name="incall-rec-uplink-compress"/>
   </path>
-  <path name="incall-rec-uplink call-proxy-in">
-    <path name="incall-rec-uplink"/>
-  </path>
   <path name="incall-rec-downlink">
-    <ctl name="MultiMedia9 Mixer VOC_REC_DL" value="1"/>
+    <ctl name="MultiMedia1 Mixer VOC_REC_DL" value="1"/>
   </path>
   <path name="incall-rec-downlink bt-sco">
     <path name="incall-rec-downlink"/>
@@ -1447,9 +1458,6 @@
   </path>
   <path name="incall-rec-downlink-compress afe-proxy">
     <path name="incall-rec-downlink-compress"/>
-  </path>
-  <path name="incall-rec-downlink call-proxy-in">
-    <path name="incall-rec-downlink"/>
   </path>
   <path name="incall-rec-uplink-and-downlink">
     <path name="incall-rec-uplink"/>
@@ -1482,9 +1490,6 @@
   </path>
   <path name="incall-rec-uplink-and-downlink-compress afe-proxy">
     <path name="incall-rec-uplink-and-downlink-compress"/>
-  </path>
-  <path name="incall-rec-uplink-and-downlink call-proxy-in">
-    <path name="incall-rec-uplink-and-downlink"/>
   </path>
   <path name="hfp-sco">
     </path>
@@ -1572,10 +1577,6 @@
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode1" value="1"/>
     <ctl name="VoiceMMode1_Tx Mixer TX_CDC_DMA_TX_3_MMode1" value="1"/>
   </path>
-  <path name="voicemmode1-call call-proxy">
-    <ctl name="PROXY_RX_Voice Mixer VoiceMMode1" value="1"/>
-    <ctl name="VoiceMMode1_Tx Mixer PROXY_TX_MMode1" value="1"/>
-  </path>
   <path name="voicemmode2-call">
     <ctl name="WSA_CDC_DMA_RX_0_Voice Mixer VoiceMMode2" value="1"/>
     <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1"/>
@@ -1615,10 +1616,6 @@
   <path name="voicemmode2-call display-port">
     <ctl name="DISPLAY_PORT_RX_Voice Mixer VoiceMMode2" value="1"/>
     <ctl name="VoiceMMode2_Tx Mixer TX_CDC_DMA_TX_3_MMode2" value="1"/>
-  </path>
-  <path name="voicemmode2-call call-proxy">
-    <ctl name="PROXY_RX_Voice Mixer VoiceMMode2" value="1"/>
-    <ctl name="VoiceMMode2_Tx Mixer PROXY_TX_MMode2" value="1"/>
   </path>
   <!-- VoIP Rx settings -->
   <path name="audio-playback-voip">
@@ -1987,69 +1984,6 @@
   <path name="incall_music_uplink afe-proxy">
     <path name="incall_music_uplink"/>
   </path>
-  <path name="incall_music_uplink call-proxy">
-    <path name="incall_music_uplink"/>
-  </path>
-  <path name="incall_music_uplink2">
-    <ctl name="Incall_Music_2 Audio Mixer MultiMedia9" value="1"/>
-  </path>
-  <path name="incall_music_uplink2 speaker">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 handset">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 handset-hac">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 display-port">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 bt-sco">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 bt-sco-wb">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 speaker-and-display-port">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 afe-proxy">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 usb-headphones">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 usb-headset">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 speaker-and-usb-headphones">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 headphones">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 speaker-and-headphones">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 speaker-and-bt-sco">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 voice-tty-hco-handset">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 speaker-and-bt-a2dp">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 bt-a2dp">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 afe-proxy">
-    <path name="incall_music_uplink2"/>
-  </path>
-  <path name="incall_music_uplink2 call-proxy">
-    <path name="incall_music_uplink2"/>
-  </path>
   <path name="spkr-rx-calib">
     <ctl name="WSA_CDC_DMA_RX_0_DL_HL Switch" value="1"/>
   </path>
@@ -2231,7 +2165,7 @@
     <ctl name="COMP0 RX2" value="0"/>
   </path>
   <path name="handset-mic">
-    <path name="dmic3"/>
+    <path name="dmic2"/>
   </path>
   <path name="headphones">
     <ctl name="RX_MACRO RX0 MUX" value="AIF1_PB"/>
@@ -2547,12 +2481,6 @@
     <ctl name="COMP1" value="0"/>
     <ctl name="COMP2" value="0"/>
   </path>
-  <path name="call-proxy">
-    </path>
-  <path name="call-proxy-in">
-    </path>
-  <ctl name="EC Reference Bit Format" value="S16_LE"/>
-  <ctl name="EC Reference SampleRate" value="48000"/>
   <ctl name="COMP0 RX1" value="0"/>
   <ctl name="COMP0 RX2" value="0"/>
   <ctl name="Compress Playback 16 Volume" value="0"/>
