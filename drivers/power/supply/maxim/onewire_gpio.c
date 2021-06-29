@@ -21,6 +21,7 @@
 #include <linux/list.h>
 #include <linux/device.h>
 #include <linux/spinlock.h>
+#include <linux/board_id.h>
 
 #define ow_info
 #define ow_dbg
@@ -555,6 +556,8 @@ static int __init onewire_gpio_init(void)
 	int retval;
 	onewire_gpio_detected = false;
 
+	if (!board_get_33w_supported())
+		return 0;
 	ow_log("onewire gpio init entry.");
 
 	onewire_class = class_create(THIS_MODULE, "onewire");
@@ -579,6 +582,8 @@ class_unreg:
 
 static void __exit onewire_gpio_exit(void)
 {
+	if (!board_get_33w_supported())
+		return;
 	ow_log("onewire gpio exit entry.");
 	platform_driver_unregister(&onewire_gpio_driver);
 
