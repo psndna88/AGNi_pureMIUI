@@ -22,6 +22,7 @@
 #include "ds28e16.h"
 #include "onewire_gpio.h"
 
+#include <linux/board_id.h>
 #include <linux/param.h>
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
@@ -1717,6 +1718,8 @@ static int ds28e16_probe(struct platform_device *pdev)
 	struct ds28e16_data *ds28e16_data;
 	union power_supply_propval b_val = {0,};
 
+	if (!board_get_33w_supported())
+		return 0;
 	get_random_number();
 	ds_log("%s entry.", __func__);
 	ds_dbg("platform_device is %s", pdev->name);
@@ -1787,6 +1790,8 @@ static int ds28e16_remove(struct platform_device *pdev)
 {
 	struct ds28e16_data *ds28e16_data = platform_get_drvdata(pdev);
 
+	if (!board_get_33w_supported())
+		return 0;
 	verify_psy_unregister(ds28e16_data);
 	kfree(ds28e16_data);
 	return 0;
