@@ -461,6 +461,7 @@
 		focaltech,irq-gpio = <&tlmm 22 0x2008>;
 		focaltech,max-touch-number = <5>;
 		focaltech,display-coords = <0 0 1080 2340>;
+		focaltech,power-always-on;
 
 		vcc_i2c-supply = <&L9A>;
 		vdd-supply = <&touch_avdd>;
