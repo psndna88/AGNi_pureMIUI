@@ -9,6 +9,7 @@ MODDIR=${0%/*}
 if ([ "` uname -r | grep AGNi`" ] || [ -f /sys/module/lpm_levels/parameters/agni_present ]); then
 	FORCING=$(find /sys/module -name high_perf_mode)
 	echo "1" > $FORCING
+	setprop mic.volume 7
 else
 	rm -rf /data/adb/modules/AGNiSound
 fi;
