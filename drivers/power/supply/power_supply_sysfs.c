@@ -16,6 +16,7 @@
 #include <linux/power_supply.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
+#include <linux/board_id.h>
 
 #include "power_supply.h"
 
@@ -46,10 +47,7 @@ static const char * const power_supply_type_text[] = {
 	"USB_PD", "USB_PD_DRP", "BrickID",
 	"USB_HVDCP", "USB_HVDCP_3", "USB_HVDCP", "Wireless", "USB_FLOAT",
 	"BMS", "Parallel", "Main", "Wipower", "USB_C_UFP", "USB_C_DFP",
-	"Charge_Pump",
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
-	"batt_verify",
-#endif
+	"Charge_Pump", "batt_verify",
 };
 
 static const char * const power_supply_status_text[] = {
@@ -163,8 +161,8 @@ static ssize_t power_supply_show_property(struct device *dev,
 			       power_supply_health_text[value.intval]);
 	else if (off >= POWER_SUPPLY_PROP_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
-	else if ((off == POWER_SUPPLY_PROP_ROMID) || (off == POWER_SUPPLY_PROP_DS_STATUS))
+	else if (board_get_33w_supported()) {
+	if ((off == POWER_SUPPLY_PROP_ROMID) || (off == POWER_SUPPLY_PROP_DS_STATUS))
 		return scnprintf(buf, PAGE_SIZE, "%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n",
 			value.arrayval[0], value.arrayval[1], value.arrayval[2], value.arrayval[3],
 			value.arrayval[4], value.arrayval[5], value.arrayval[6], value.arrayval[7]);
@@ -178,7 +176,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 			value.arrayval[12], value.arrayval[13], value.arrayval[14], value.arrayval[15]);
 	else if (off == POWER_SUPPLY_PROP_VERIFY_MODEL_NAME)
 		return sprintf(buf, "%s\n", value.strval);
-#endif
+	}
 
 	if (off == POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT)
 		return sprintf(buf, "%lld\n", value.int64val);
@@ -438,6 +436,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(comp_clamp_level),
 	POWER_SUPPLY_ATTR(adapter_cc_mode),
 	POWER_SUPPLY_ATTR(skin_health),
+	POWER_SUPPLY_ATTR(apsd_rerun),
+	POWER_SUPPLY_ATTR(apsd_timeout),
 	POWER_SUPPLY_ATTR(qc3p5_power_limit),
 	POWER_SUPPLY_ATTR(qc3p5_current_max),
 	/* Charge pump properties */
@@ -454,7 +454,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(irq_status),
 	POWER_SUPPLY_ATTR(parallel_output_mode),
 	POWER_SUPPLY_ATTR(ffc_chg_term_current),
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
 	/* battery verify properties */
 	POWER_SUPPLY_ATTR(romid),
 	POWER_SUPPLY_ATTR(ds_status),
@@ -469,7 +468,6 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(page0_data),
 	POWER_SUPPLY_ATTR(page1_data),
 	POWER_SUPPLY_ATTR(verify_model_name),
-#endif
 	POWER_SUPPLY_ATTR(chip_ok),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
@@ -532,29 +530,12 @@ void power_supply_init_attrs(struct device_type *dev_type)
 		__power_supply_attrs[i] = &power_supply_attrs[i].attr;
 }
 
-static char *kstruprdup(const char *str, gfp_t gfp)
-{
-	char *ret, *ustr;
-
-	ustr = ret = kmalloc(strlen(str) + 1, gfp);
-
-	if (!ret)
-		return NULL;
-
-	while (*str)
-		*ustr++ = toupper(*str++);
-
-	*ustr = 0;
-
-	return ret;
-}
-
 int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct power_supply *psy = dev_get_drvdata(dev);
 	int ret = 0, j;
 	char *prop_buf;
-	char *attrname;
+	char attrname[64];
 
 	if (!psy || !psy->desc) {
 		dev_dbg(dev, "No power supply yet\n");
@@ -571,7 +552,8 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 
 	for (j = 0; j < psy->desc->num_properties; j++) {
 		struct device_attribute *attr;
-		char *line;
+		const char *str;
+		char *line, *ustr;
 
 		attr = &power_supply_attrs[psy->desc->properties[j]];
 
@@ -590,14 +572,14 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 		if (line)
 			*line = 0;
 
-		attrname = kstruprdup(attr->attr.name, GFP_KERNEL);
-		if (!attrname) {
-			ret = -ENOMEM;
-			goto out;
-		}
+		str = attr->attr.name;
+		ustr = attrname;
+		while (*str)
+			*ustr++ = toupper(*str++);
+
+		*ustr = 0;
 
 		ret = add_uevent_var(env, "POWER_SUPPLY_%s=%s", attrname, prop_buf);
-		kfree(attrname);
 		if (ret)
 			goto out;
 	}
