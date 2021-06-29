@@ -900,7 +900,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	if (!chg->bms_psy)
 		return 0;
 
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
+	if (board_get_33w_supported()) {
 	rc = power_supply_get_property(chg->bms_psy,
 				POWER_SUPPLY_PROP_AUTHENTIC, &pval);
 	if (rc < 0) {
@@ -909,7 +909,7 @@ int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable)
 	}
 	if (!pval.intval)
 		enable = false;
-#endif
+	}
 
 	/*if soc > 90 do not set fastcharge flag*/
 	rc = power_supply_get_property(chg->bms_psy,
@@ -1273,6 +1273,9 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 	if (chg->pd_active) {
 		chg->real_charger_type = POWER_SUPPLY_TYPE_USB_PD;
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_PD;
+	} else if (chg->qc3p5_detected) {
+		chg->real_charger_type = POWER_SUPPLY_TYPE_USB_HVDCP_3P5;
+		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_HVDCP_3P5;
 	} else {
 		/*
 		 * Update real charger type only if its not FLOAT
@@ -1287,8 +1290,8 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 		}
 	}
 
-	smblib_dbg(chg, PR_MISC, "APSD=%s PD=%d\n",
-					apsd_result->name, chg->pd_active);
+	smblib_dbg(chg, PR_MISC, "APSD=%s PD=%d QC3P5=%d\n",
+			apsd_result->name, chg->pd_active, chg->qc3p5_detected);
 	return apsd_result;
 }
 
@@ -1433,6 +1436,8 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 	chg->uusb_apsd_rerun_done = false;
 	chg->chg_param.forced_main_fcc = 0;
 
+	chg->apsd_ext_timeout = false;
+
 	/* write back the default FLOAT charger configuration */
 	rc = smblib_masked_write(chg, USBIN_OPTIONS_2_CFG_REG,
 				(u8)FLOAT_OPTIONS_MASK, chg->float_cfg);
@@ -1462,16 +1467,19 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 		if (rc < 0)
 			smblib_err(chg, "Couldn't restore max pulses rc=%d\n",
 					rc);
-		if (!chg->disable_suspend_on_collapse) {
-			rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
-					SUSPEND_ON_COLLAPSE_USBIN_BIT,
-					SUSPEND_ON_COLLAPSE_USBIN_BIT);
-			if (rc < 0)
-				smblib_err(chg, "Couldn't turn on SUSPEND_ON_COLLAPSE_USBIN_BIT rc=%d\n",
-						rc);
-		}
+
+		rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
+				SUSPEND_ON_COLLAPSE_USBIN_BIT,
+				SUSPEND_ON_COLLAPSE_USBIN_BIT);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't turn on SUSPEND_ON_COLLAPSE_USBIN_BIT rc=%d\n",
+					rc);
+
 		chg->qc2_unsupported_voltage = QC2_COMPLIANT;
 	}
+
+	chg->qc3p5_detected = false;
+	smblib_update_usb_type(chg);
 }
 
 void smblib_suspend_on_debug_battery(struct smb_charger *chg)
@@ -2721,7 +2729,7 @@ static int smblib_therm_charging(struct smb_charger *chg)
 			thermal_fcc_ua =
 				chg->thermal_fcc_pps_cp[chg->system_temp_level];
 		} else {
-			if (chg->voltage_min_uv >= PD_MICRO_5V
+/*			if (chg->voltage_min_uv >= PD_MICRO_5V
 					&& chg->voltage_min_uv < PD_MICRO_5P9V)
 				thermal_icl_ua =
 						chg->thermal_mitigation_pd_base[chg->system_temp_level];
@@ -2744,7 +2752,7 @@ static int smblib_therm_charging(struct smb_charger *chg)
 				thermal_icl_ua =
 						chg->thermal_mitigation_pd_base[chg->system_temp_level]
 							* PD_9V_PERCENT / 100;
-			else
+			else */
 				thermal_icl_ua =
 						chg->thermal_mitigation_pd_base[chg->system_temp_level];
 		}
@@ -3297,6 +3305,10 @@ int smblib_dp_dm(struct smb_charger *chg, int val)
 
 		vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
 				HVDCP2_CURRENT_UA);
+		break;
+	case POWER_SUPPLY_DP_DM_CONFIRMED_HVDCP3P5:
+		chg->qc3p5_detected = true;
+		smblib_update_usb_type(chg);
 		break;
 	case POWER_SUPPLY_DP_DM_ICL_UP:
 	default:
@@ -7141,6 +7153,7 @@ static void typec_src_removal(struct smb_charger *chg)
 		dev_err(chg->dev,
 			"Couldn't disable secondary charger rc=%d\n", rc);
 
+	chg->qc3p5_detected = false;
 	typec_src_fault_condition_cfg(chg, false);
 	chg->snk_debug_acc_detected = false;
 	smblib_hvdcp_detect_enable(chg, false);
@@ -7287,14 +7300,14 @@ static void typec_src_removal(struct smb_charger *chg)
 		if (rc < 0)
 			smblib_err(chg, "Couldn't restore max pulses rc=%d\n",
 					rc);
-		if (!chg->disable_suspend_on_collapse) {
-			rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
-					SUSPEND_ON_COLLAPSE_USBIN_BIT,
-					SUSPEND_ON_COLLAPSE_USBIN_BIT);
-			if (rc < 0)
-				smblib_err(chg, "Couldn't turn on SUSPEND_ON_COLLAPSE_USBIN_BIT rc=%d\n",
-						rc);
-		}
+
+		rc = smblib_masked_write(chg, USBIN_AICL_OPTIONS_CFG_REG,
+				SUSPEND_ON_COLLAPSE_USBIN_BIT,
+				SUSPEND_ON_COLLAPSE_USBIN_BIT);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't turn on SUSPEND_ON_COLLAPSE_USBIN_BIT rc=%d\n",
+					rc);
+
 		chg->qc2_unsupported_voltage = QC2_COMPLIANT;
 	}
 
@@ -7325,6 +7338,8 @@ static void typec_src_removal(struct smb_charger *chg)
 			smblib_set_fastcharge_mode(chg, false);
 		}
 	}
+
+	chg->apsd_ext_timeout = false;
 }
 
 static void typec_mode_unattached(struct smb_charger *chg)
@@ -9393,9 +9408,9 @@ int smblib_init(struct smb_charger *chg)
 
 		chg->bms_psy = power_supply_get_by_name("bms");
 
-#ifdef CONFIG_BATT_VERIFY_BY_DS28E16
+		if (board_get_33w_supported()) {
 		chg->batt_verify_psy = power_supply_get_by_name("batt_verify");
-#endif
+		}
 
 		if (chg->sec_pl_present) {
 			chg->pl.psy = power_supply_get_by_name("parallel");

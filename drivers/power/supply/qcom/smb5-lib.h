@@ -727,6 +727,8 @@ struct smb_charger {
 	bool			hvdcp3_standalone_config;
 	int			wls_icl_ua;
 	bool			dpdm_enabled;
+	bool			apsd_ext_timeout;
+	bool			qc3p5_detected;
 
 	/* workaround flag */
 	u32			wa_flags;
@@ -781,8 +783,6 @@ struct smb_charger {
 	bool			cc_un_compliant_detected;
 	bool			snk_debug_acc_detected;
 
-	/* dump reg enable*/
-	bool			reg_dump_enable;
 	/* for 27W charge*/
 	bool			temp_27W_enable;
 
@@ -804,7 +804,6 @@ struct smb_charger {
 	int			chg_term_current_thresh_hi_from_dts;
 	bool			support_ffc;
 	bool			already_start_step_charge_work;
-	int   disable_suspend_on_collapse;
 };
 
 enum quick_charge_type {
