@@ -1,0 +1,152 @@
+
+## AGNI_WIFI
+on early-init
+	chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+	chmod 0664 /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+	chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+	chmod 0664 /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq
+	write /sys/module/msm_performance/parameters/cpu_oc Y
+	write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1843200
+	write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2208000
+	write /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq 633600
+	write /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq 1113600
+	write /sys/module/msm_performance/parameters/cpu_max_freq "0:1843200 1:1843200 2:1843200 3:1843200 4:2208000 5:2208000 6:2208000 7:2208000"
+	write /sys/module/msm_performance/parameters/cpu_min_freq "0:633600 1:633600 2:633600 3:633600 4:1113600 5:1113600 6:1113600 7:1113600"
+	write /sys/module/msm_performance/parameters/cpu_oc N
+
+on init
+    # Set Memory parameters
+    write /sys/module/process_reclaim/parameters/enable_process_reclaim 1
+    write /sys/module/process_reclaim/parameters/pressure_min 50
+    write /sys/module/process_reclaim/parameters/pressure_max 70
+    write /sys/module/process_reclaim/parameters/swap_opt_eff 30
+    write /sys/module/process_reclaim/parameters/per_swap_size 512
+    # Configure swap
+    write /sys/module/vmpressure/parameters/allocstall_threshold 0
+    write /proc/sys/vm/vfs_cache_pressure 100
+    write /proc/sys/vm/page-cluster 0
+    write /proc/sys/vm/min_free_kbytes 54688
+    write /proc/sys/vm/oom_kill_allocating_task 1
+    # AGNi Wifi Tweaks
+	write /proc/sys/net/ipv4/tcp_ecn 0
+	write /proc/sys/net/ipv4/tcp_notsent_lowat 16384
+	write /proc/sys/net/core/default_qdisc "fq_codel"
+	write /proc/sys/net/ipv4/tcp_congestion_control "veno"
+	write /proc/sys/net/ipv4/tcp_tw_reuse 0
+	write /proc/sys/net/ipv4/tcp_slow_start_after_idle 0
+	write /proc/sys/net/ipv4/tcp_mtu_probing 1
+	write /proc/sys/net/ipv4/tcp_sack 1
+	write /proc/sys/net/ipv4/tcp_timestamps 0
+	write /proc/sys/net/core/netdev_max_backlog 10000
+	write /proc/sys/net/core/rmem_max 16777216
+	write /proc/sys/net/core/wmem_max 8388608
+	write /proc/sys/net/ipv4/tcp_rmem "524288 1048576 5505024"
+	write /proc/sys/net/ipv4/tcp_wmem "262144 524288 4194304"
+	write /proc/sys/net/ipv4/tcp_no_metrics_save 1
+	write /proc/sys/net/ipv4/tcp_moderate_rcvbuf 0
+	write /proc/sys/net/ipv4/tcp_syncookies 1
+
+on boot
+	write /sys/module/module/parameters/lock_wlanmodule N
+    insmod /vendor/agni/8188eu.ko
+    insmod /vendor/agni/8712u.ko
+    insmod /vendor/agni/8723au.ko
+	write /sys/module/module/parameters/lock_wlanmodule Y
+    chown wifi wifi /sys/module/wlan/parameters/fwpath
+    # Set on boot cpusets
+    write /dev/cpuset/top-app/cpus 0-7
+    write /dev/cpuset/foreground/cpus 0-3,6-7
+    write /dev/cpuset/background/cpus 0-1
+    write /dev/cpuset/system-background/cpus 0-3
+    write /dev/cpuset/restricted/cpus 0-3
+    mkdir /dev/cpuset/camera-daemon
+    write /dev/cpuset/camera-daemon/cpus 0-7
+    write /dev/cpuset/camera-daemon/mems 0
+    chown system system /dev/cpuset/camera-daemon
+    chown system system /dev/cpuset/camera-daemon/tasks
+    chmod 0664 /dev/cpuset/camera-daemon/tasks
+	# Uclamp tuning
+	write /proc/sys/kernel/sched_util_clamp_min_rt_default 128
+	write /proc/sys/kernel/sched_util_clamp_min 250
+	write /dev/cpuset/top-app/uclamp.max "max"
+	write /dev/cpuset/top-app/uclamp.min 20
+	write /dev/cpuset/top-app/uclamp.boosted 1
+	write /dev/cpuset/top-app/uclamp.latency_sensitive 1
+	write /dev/cpuset/foreground/uclamp.max 50
+	write /dev/cpuset/foreground/uclamp.min 20
+	write /dev/cpuset/foreground/uclamp.boosted 0
+	write /dev/cpuset/foreground/uclamp.latency_sensitive 0
+	write /dev/cpuset/background/uclamp.max "max"
+	write /dev/cpuset/background/uclamp.min 20
+	write /dev/cpuset/background/uclamp.boosted 0
+	write /dev/cpuset/background/uclamp.latency_sensitive 0
+	write /dev/cpuset/system-background/uclamp.max 50
+	write /dev/cpuset/system-background/uclamp.min 10
+	write /dev/cpuset/system-background/uclamp.boosted 0
+	write /dev/cpuset/system-background/uclamp.latency_sensitive 0
+
+on post-fs
+    # Set RLIMIT_MEMLOCK to 64MB
+    setrlimit 8 67108864 67108864
+    chmod 0664 /sys/devices/virtual/graphics/fb0/idle_time
+    chown system graphics /sys/devices/virtual/graphics/fb0/idle_time
+    write /sys/devices/virtual/graphics/fb0/idle_time 100
+
+on property:sys.boot_completed=1
+	write /sys/devices/system/cpu/cpu0/core_ctl/enable 0
+	write /sys/module/lowmemorykiller/parameters/minfree "18432,23040,27648,32256,55296,80640"
+	write /sys/module/vmpressure/parameters/allocstall_threshold 0
+	write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor "schedutil"
+	write /sys/devices/system/cpu/cpufreq/policy4/scaling_governor "schedutil"
+	write /sys/block/mmcblk0/queue/scheduler "anxiety"
+	write /sys/block/mmcblk0/queue/iosched/batch_count 2
+	write /sys/block/mmcblk0/queue/iosched/sync_ratio 4
+	write /sys/block/mmcblk0/queue/nr_requests 64
+	write /sys/block/dm-0/queue/scheduler "anxiety"
+	write /sys/block/dm-0/queue/iosched/batch_count 2
+	write /sys/block/dm-0/queue/iosched/sync_ratio 4
+	write /sys/block/dm-0/queue/nr_requests 64
+	write /sys/block/mmcblk1/queue/scheduler "anxiety"
+	write /sys/block/mmcblk1/queue/iosched/batch_count 2
+	write /sys/block/mmcblk1/queue/iosched/sync_ratio 4
+	write /sys/block/mmcblk1/queue/nr_requests 64
+	write /proc/sys/fs/lease-break-time 10
+	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 0	#MIUI
+	write /sys/devices/platform/kcal_ctrl.0/kcal_enable 1	#AOSP
+	write /sys/kernel/sound_control/headphone_gain "2 2"	#SMOD
+    # Setup final blkio - value for group_idle is us
+    write /dev/blkio/blkio.weight 1000
+    write /dev/blkio/background/blkio.weight 10
+    write /dev/blkio/blkio.group_idle 2000
+    write /dev/blkio/background/blkio.group_idle 0
+    # Block layer tuning: discard chunk size up to 128MB. Otherwise, contiguous discards can be merged
+    write /sys/block/mmcblk0/queue/discard_max_bytes 134217728
+    write /sys/block/dm-0/queue/discard_max_bytes 134217728
+    # Set network hostname
+    setprop net.hostname SDM636
+	# New Optimisations
+	write /proc/sys/kernel/printk_devkmsg off
+	write /sys/kernel/debug/tracing/options/trace_printk 0
+#	write /proc/sys/net/ipv4/tcp_timestamps 0
+	write /proc/sys/kernel/sched_autogroup_enabled 0
+	write /proc/sys/kernel/randomize_va_space 0
+	write /proc/sys/kernel/perf_cpu_time_max_percent 1
+	write /proc/sys/vm/compact_unevictable_allowed 0
+	write /proc/sys/vm/stat_interval 15
+	write /proc/sys/kernel/perf_event_max_contexts_per_stack 0
+	write /proc/sys/kernel/printk "0 0 0 0"
+	write /proc/sys/kernel/printk_devkmsg "off"
+	write /proc/sys/kernel/sched_conservative_pl 1
+	write /dev/stune/foreground/schedtune.prefer_idle 0
+	write /dev/stune/top-app/schedtune.prefer_idle 0
+	write /dev/stune/top-app/schedtune.boost 0
+	write /proc/sys/kernel/random/write_wakeup_threshold 128
+	write /proc/sys/kernel/random/read_wakeup_threshold 64
+	write /proc/sys/kernel/sched_boost 0
+	write /sys/kernel/profiling 0
+	write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us 4000
+	write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us 200
+	write /sys/module/rcutree/parameters/rcu_idle_gp_delay 12
+	write /sys/module/rcutree/parameters/rcu_idle_lazy_gp_delay 1800
+	write /proc/sys/kernel/sched_child_runs_first 1
+	write /proc/sys/kernel/timer_migration 0
