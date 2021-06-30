@@ -522,6 +522,7 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.minimum = EXTRADATA_NONE,
 		.maximum = EXTRADATA_ADVANCED | EXTRADATA_ENC_INPUT_ROI |
 			EXTRADATA_ENC_INPUT_HDR10PLUS |
+			EXTRADATA_ENC_INPUT_CROP |
 			EXTRADATA_ENC_INPUT_CVP | EXTRADATA_ENC_FRAME_QP,
 		.default_value = EXTRADATA_NONE,
 		.menu_skip_mask = 0,
@@ -1787,7 +1788,8 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			inst->prop.extradata_ctrls |= ctrl->val;
 
 		if ((inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_ROI) ||
-		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_HDR10PLUS)) {
+		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_HDR10PLUS) ||
+		(inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CROP)) {
 			f = &inst->fmts[INPUT_PORT].v4l2_fmt;
 			f->fmt.pix_mp.num_planes = 2;
 			f->fmt.pix_mp.plane_fmt[1].sizeimage =
@@ -4647,6 +4649,12 @@ int msm_venc_set_extradata(struct msm_vidc_inst *inst)
 			HFI_PROPERTY_PARAM_VENC_HDR10PLUS_METADATA_EXTRADATA,
 			0x1);
 		}
+	}
+
+	if (inst->prop.extradata_ctrls & EXTRADATA_ENC_INPUT_CROP) {
+		// Enable Input Crop Extradata
+		msm_comm_set_index_extradata(inst, MSM_VIDC_EXTRADATA_INPUT_CROP, 0x1);
+		s_vpr_l(inst->sid, "%s: enable input crop encoding\n", __func__);
 	}
 
 	if(!msm_vidc_cvp_usage)
