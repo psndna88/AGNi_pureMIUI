@@ -1714,6 +1714,19 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		return -EINVAL;
 	}
 
+	/*
+	 * In case if the wq is scheduled while destroying session
+	 * the session mutex is already taken and will cause a
+	 * dead lock. To avoid further processing check link state
+	 * and exit.
+	 */
+	spin_lock_bh(&link->link_state_spin_lock);
+	if (link->state == CAM_CRM_LINK_STATE_IDLE) {
+		spin_unlock_bh(&link->link_state_spin_lock);
+		return -EPERM;
+	}
+	spin_unlock_bh(&link->link_state_spin_lock);
+
 	mutex_lock(&session->lock);
 	in_q = link->req.in_q;
 	/*
