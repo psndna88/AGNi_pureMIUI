@@ -140,12 +140,13 @@
 
 		/*Pending macrotile & macrotile-qseed has the same configs */
 
-		qcom,sde-danger-lut = <0x000000ff 0x00000000
+		qcom,sde-danger-lut = <0x000000ff 0x00000000 0x00000000
 			0x00000000 0x00000000 0x00000000>;
 
-		qcom,sde-safe-lut-linear = <0 0xfff0>;
+		qcom,sde-safe-lut = <0xfff0 0x0000 0x0000 0x0000
+			0x0000 0x0000>;
 
-		qcom,sde-qos-lut-linear = <0 0x00112222 0x22335777>;
+		qcom,sde-qos-lut-linear = <0x00112222 0x22335777>;
 
 		qcom,sde-cdp-setting = <1 0>;
 
