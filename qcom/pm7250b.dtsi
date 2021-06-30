@@ -22,6 +22,7 @@
 
 		pm7250b_charger: qcom,qpnp-smb5 {
 			compatible = "qcom,pm7250b-smb5";
+			depends-on-supply = <&pm7250b_vadc>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			#cooling-cells = <2>;
@@ -181,6 +182,7 @@
 
 		pm7250b_qg: qpnp,qg {
 			compatible = "qcom,pm7250b-qg";
+			depends-on-supply = <&pm7250b_vadc>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 
