@@ -26,6 +26,7 @@
  */
 
 #define CONFIG_FINGERPRINT_FP_VREG_CONTROL
+#define FPC_DRM_INTERFACE_WA
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/atomic.h>
