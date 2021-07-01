@@ -6026,6 +6026,8 @@ QDF_STATUS csr_roam_process_command(struct mac_context *mac, tSmeCmd *pCommand)
 			}
 			sme_release_global_lock(&mac->sme);
 		}
+		pCommand->u.roamCmd.connect_active_time =
+					qdf_mc_timer_get_system_time();
 		/*
 		 * At this point original uapsd_mask is saved in
 		 * pCurRoamProfile. uapsd_mask in the pCommand may change from
@@ -8716,6 +8718,42 @@ csr_delete_current_bss_sae_single_pmk_entry(struct mac_context *mac,
 {}
 #endif
 
+/*
+ * Do not allow last connect attempt after 20 sec, assuming a new attempt will
+ * take max 10 sec, total connect time will not be more than 30 sec
+ */
+#define CSR_CONNECT_MAX_ACTIVE_TIME 20000
+
+static bool
+csr_is_time_allowed_for_connect_attempt(tSmeCmd *cmd, uint8_t vdev_id)
+{
+	qdf_time_t time_since_connect_active;
+
+	if (!cmd)
+		return false;
+
+	if (cmd->command != eSmeCommandRoam ||
+	    cmd->u.roamCmd.roamReason != eCsrHddIssued) {
+		sme_err("vdev_id %d invalid command %d, reason %d", vdev_id,
+			cmd->command, cmd->command == eSmeCommandRoam ?
+			cmd->u.roamCmd.roamReason : 0);
+		return false;
+	}
+
+	time_since_connect_active = qdf_mc_timer_get_system_time() -
+					cmd->u.roamCmd.connect_active_time;
+	if (time_since_connect_active >= CSR_CONNECT_MAX_ACTIVE_TIME) {
+		sme_info("vdev_id %d Max time allocated (%d ms) for connect completed, cur time %lu, active time %lu and diff %lu",
+			 vdev_id, CSR_CONNECT_MAX_ACTIVE_TIME,
+			 qdf_mc_timer_get_system_time(),
+			 cmd->u.roamCmd.connect_active_time,
+			 time_since_connect_active);
+		return false;
+	}
+
+	return true;
+}
+
 static void csr_roam_join_rsp_processor(struct mac_context *mac,
 					struct join_rsp *pSmeJoinRsp)
 {
@@ -8733,6 +8771,7 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 	bool retry_same_bss = false;
 	bool attempt_next_bss = true;
 	enum csr_akm_type auth_type = eCSR_AUTH_TYPE_NONE;
+	bool is_time_allowed;
 
 	if (!pSmeJoinRsp) {
 		sme_err("Sme Join Response is NULL");
@@ -8830,13 +8869,18 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 		 reason_code);
 
 	is_dis_pending = is_disconnect_pending(mac, session_ptr->sessionId);
+	is_time_allowed =
+		csr_is_time_allowed_for_connect_attempt(pCommand,
+							session_ptr->vdev_id);
+
 	/*
-	 * if userspace has issued disconnection or we have reached mac tries,
-	 * driver should not continue for next connection.
+	 * if userspace has issued disconnection or we have reached mac tries or
+	 * max time, driver should not continue for next connection.
 	 */
-	if (is_dis_pending ||
+	if (is_dis_pending || !is_time_allowed ||
 	    session_ptr->join_bssid_count >= CSR_MAX_BSSID_COUNT)
 		attempt_next_bss = false;
+
 	/*
 	 * Delete the PMKID of the BSSID for which the assoc reject is
 	 * received from the AP due to invalid PMKID reason.
@@ -8948,6 +8992,9 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 
 	if (is_dis_pending)
 		sme_err("disconnect is pending, complete roam");
+
+	if (!is_time_allowed)
+		sme_err("time can exceed the active timeout for connection attempt");
 
 	if (session_ptr->bRefAssocStartCnt)
 		session_ptr->bRefAssocStartCnt--;
