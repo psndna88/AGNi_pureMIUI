@@ -12,7 +12,6 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/qpnp/qpnp-adc.h>
-#include <linux/charging_state.h>
 
 #define OF_READ_U32(node, prop, dst)						\
 ({										\
@@ -81,8 +80,7 @@ static void thermal_throttle_worker(struct work_struct *work)
 	new_zone = NULL;
 
 	/* video calling in progress -- limit cpu frequency to reduce heating */
-	/* limit cpu frequency when charging to reduce heating on heavy use */
-	if (charging_detected() || (camera_open && (LctIsInCall != 0 || LctIsInVideo != 0))) {
+	if ((camera_open && (LctIsInCall != 0 || LctIsInVideo != 0))) {
 		if (cpuoc_state > 0)
 			temp_deg = 67;
 	}
