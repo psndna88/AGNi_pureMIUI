@@ -81,6 +81,7 @@
 #include "wlan_roam_debug.h"
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_mlme_twt_api.h"
+#include "wlan_cmn_ieee80211.h"
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -11649,7 +11650,8 @@ csr_roam_chk_lnk_swt_ch_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 	struct switch_channel_ind *pSwitchChnInd;
 	struct csr_roam_info *roam_info;
 	tSirMacDsParamSetIE *ds_params_ie;
-	tDot11fIEHTInfo *ht_info_ie;
+	struct wlan_ie_htinfo *ht_info_ie;
+
 
 	/* in case of STA, the SWITCH_CHANNEL originates from its AP */
 	sme_debug("eWNI_SME_SWITCH_CHL_IND from SME");
@@ -11694,15 +11696,16 @@ csr_roam_chk_lnk_swt_ch_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 				wlan_reg_freq_to_chan(mac_ctx->pdev,
 						      pSwitchChnInd->freq);
 
-		ht_info_ie = (tDot11fIEHTInfo *)wlan_get_ie_ptr_from_eid(
-				DOT11F_EID_HTINFO,
-				(uint8_t *)session->pConnectBssDesc->ieFields,
-				ie_len);
+		ht_info_ie =
+			(struct wlan_ie_htinfo *)wlan_get_ie_ptr_from_eid
+				(DOT11F_EID_HTINFO,
+				 (uint8_t *)session->pConnectBssDesc->ieFields,
+				 ie_len);
 		if (ht_info_ie) {
-			ht_info_ie->primaryChannel =
+			ht_info_ie->hi_ie.hi_ctrlchannel =
 				wlan_reg_freq_to_chan(mac_ctx->pdev,
 						      pSwitchChnInd->freq);
-			ht_info_ie->secondaryChannelOffset =
+			ht_info_ie->hi_ie.hi_extchoff =
 				pSwitchChnInd->chan_params.sec_ch_offset;
 		}
 	}
