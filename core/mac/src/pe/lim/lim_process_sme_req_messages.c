@@ -1089,6 +1089,8 @@ static QDF_STATUS lim_send_join_req(struct pe_session *session,
 			session->vdev_id,
 			wlan_vdev_mlme_get_state(session->vdev),
 			wlan_vdev_mlme_get_substate(session->vdev));
+		qdf_trigger_self_recovery(session->mac_ctx->psoc,
+					  QDF_VDEV_SM_OUT_OF_SYNC);
 		return status;
 	}
 
@@ -1285,6 +1287,9 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 				session_id,
 				QDF_MAC_ADDR_REF(bss_desc->bssId),
 				session->limSmeState);
+
+			qdf_trigger_self_recovery(mac_ctx->psoc,
+						  QDF_VDEV_SM_OUT_OF_SYNC);
 
 			if (session->limSmeState == eLIM_SME_LINK_EST_STATE &&
 			    session->smeSessionId == sme_join_req->vdev_id) {
