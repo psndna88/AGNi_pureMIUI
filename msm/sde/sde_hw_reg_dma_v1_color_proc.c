@@ -529,7 +529,7 @@ void reg_dmav1_setup_dspp_vlutv18(struct sde_hw_dspp *ctx, void *cfg)
 		return;
 	}
 
-	data = kzalloc(VLUT_LEN, GFP_KERNEL);
+	data = kvzalloc(VLUT_LEN, GFP_KERNEL);
 	if (!data)
 		return;
 
@@ -577,7 +577,7 @@ void reg_dmav1_setup_dspp_vlutv18(struct sde_hw_dspp *ctx, void *cfg)
 	}
 
 exit:
-	kfree(data);
+	kvfree(data);
 	/* update flush bit */
 	if (!rc && ctl && ctl->ops.update_bitmask_dspp_pavlut) {
 		int dspp_idx;
@@ -1198,7 +1198,7 @@ int reg_dmav1_setup_rc_datav1(struct sde_hw_dspp *ctx, void *cfg)
 	}
 
 	DRM_DEBUG_DRIVER("allocating %u bytes of memory for dma\n", buf_sz);
-	data = kzalloc(buf_sz, GFP_KERNEL);
+	data = kvzalloc(buf_sz, GFP_KERNEL);
 	if (!data) {
 		DRM_ERROR("memory allocation failed ret %d\n", rc);
 		return -ENOMEM;
@@ -1235,7 +1235,7 @@ int reg_dmav1_setup_rc_datav1(struct sde_hw_dspp *ctx, void *cfg)
 	}
 
 exit:
-	kfree(data);
+	kvfree(data);
 	return rc;
 }
 
@@ -1339,7 +1339,7 @@ void reg_dmav1_setup_dspp_pcc_common(struct sde_hw_dspp *ctx, void *cfg)
 		return;
 	}
 
-	data = kzalloc(PCC_LEN, GFP_KERNEL);
+	data = kvzalloc(PCC_LEN, GFP_KERNEL);
 	if (!data)
 		return;
 
@@ -1410,7 +1410,7 @@ void reg_dmav1_setup_dspp_pcc_common(struct sde_hw_dspp *ctx, void *cfg)
 		DRM_ERROR("failed to kick off ret %d\n", rc);
 
 exit:
-	kfree(data);
+	kvfree(data);
 
 }
 
@@ -2424,7 +2424,7 @@ static int reg_dmav1_setup_vig_igc_common(struct sde_hw_reg_dma_ops *dma_ops,
 				hw_cfg->len, sizeof(struct drm_msm_igc_lut));
 	}
 
-	data = kzalloc(VIG_1D_LUT_IGC_LEN * sizeof(u32), GFP_KERNEL);
+	data = kvzalloc(VIG_1D_LUT_IGC_LEN * sizeof(u32), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -2486,7 +2486,7 @@ static int reg_dmav1_setup_vig_igc_common(struct sde_hw_reg_dma_ops *dma_ops,
 	if (rc)
 		DRM_ERROR("setting opcode failed ret %d\n", rc);
 exit:
-	kfree(data);
+	kvfree(data);
 	return rc;
 }
 
@@ -2693,7 +2693,7 @@ void reg_dmav1_setup_dma_igcv5(struct sde_hw_pipe *ctx, void *cfg,
 		return;
 	}
 
-	data = kzalloc(DMA_1D_LUT_IGC_LEN * sizeof(u32), GFP_KERNEL);
+	data = kvzalloc(DMA_1D_LUT_IGC_LEN * sizeof(u32), GFP_KERNEL);
 	if (!data) {
 		DRM_ERROR("failed to allocate memory for igc\n");
 		return;
@@ -2755,7 +2755,7 @@ void reg_dmav1_setup_dma_igcv5(struct sde_hw_pipe *ctx, void *cfg,
 	if (rc)
 		DRM_ERROR("failed to kick off ret %d\n", rc);
 igc_exit:
-	kfree(data);
+	kvfree(data);
 }
 
 static void dma_gcv5_off(struct sde_hw_pipe *ctx, void *cfg,
@@ -4118,7 +4118,7 @@ void reg_dmav2_setup_dspp_igcv4(struct sde_hw_dspp *ctx, void *cfg)
 	if (len % transfer_size_bytes)
 		len = len + (transfer_size_bytes - len % transfer_size_bytes);
 
-	data = kzalloc(len, GFP_KERNEL);
+	data = kvzalloc(len, GFP_KERNEL);
 	if (!data)
 		return;
 
@@ -4166,7 +4166,7 @@ void reg_dmav2_setup_dspp_igcv4(struct sde_hw_dspp *ctx, void *cfg)
 	_perform_sbdma_kickoff(ctx, hw_cfg, dma_ops, blk, IGC);
 
 exit:
-	kfree(data);
+	kvfree(data);
 }
 
 static void dspp_3d_gamutv43_off(struct sde_hw_dspp *ctx, void *cfg)
@@ -4286,7 +4286,7 @@ void reg_dmav2_setup_dspp_3d_gamutv43(struct sde_hw_dspp *ctx, void *cfg)
 	if (len % transfer_size_bytes)
 		len = len + (transfer_size_bytes - len % transfer_size_bytes);
 
-	data = kzalloc(len, GFP_KERNEL);
+	data = kvzalloc(len, GFP_KERNEL);
 	if (!data)
 		return;
 
@@ -4362,7 +4362,7 @@ void reg_dmav2_setup_dspp_3d_gamutv43(struct sde_hw_dspp *ctx, void *cfg)
 	_perform_sbdma_kickoff(ctx, hw_cfg, dma_ops, blk, GAMUT);
 
 exit:
-	kfree(data);
+	kvfree(data);
 }
 
 void reg_dmav2_setup_vig_gamutv61(struct sde_hw_pipe *ctx, void *cfg)
@@ -4440,7 +4440,7 @@ void reg_dmav2_setup_vig_gamutv61(struct sde_hw_pipe *ctx, void *cfg)
 	if (len % transfer_size_bytes)
 		len = len + (transfer_size_bytes - len % transfer_size_bytes);
 
-	data = kzalloc(len, GFP_KERNEL);
+	data = kvzalloc(len, GFP_KERNEL);
 	if (!data)
 		return;
 
@@ -4505,7 +4505,7 @@ void reg_dmav2_setup_vig_gamutv61(struct sde_hw_pipe *ctx, void *cfg)
 		DRM_ERROR("failed to kick off ret %d\n", rc);
 
 exit:
-	kfree(data);
+	kvfree(data);
 }
 
 int reg_dmav1_setup_spr_cfg3_params(struct sde_hw_dspp *ctx,
@@ -4957,7 +4957,7 @@ static int __reg_dmav1_setup_demurav1_cfg0(struct sde_hw_dspp *ctx,
 		return 0;
 	}
 
-	temp = kzalloc(sizeof(struct drm_msm_dem_cfg), GFP_KERNEL);
+	temp = kvzalloc(sizeof(struct drm_msm_dem_cfg), GFP_KERNEL);
 	if (!temp)
 		return -ENOMEM;
 
@@ -5093,7 +5093,7 @@ static int __reg_dmav1_setup_demurav1_cfg0(struct sde_hw_dspp *ctx,
 		goto quit;
 	}
 quit:
-	kfree(temp);
+	kvfree(temp);
 	return rc;
 }
 
@@ -5113,7 +5113,7 @@ static int __reg_dmav1_setup_demurav1_cfg1(struct sde_hw_dspp *ctx,
 		return 0;
 	}
 	len = ARRAY_SIZE(dcfg->cfg1_param0_c0);
-	cfg1_data = kcalloc(len, sizeof(u32), GFP_KERNEL);
+	cfg1_data = kvzalloc((len * sizeof(u32)), GFP_KERNEL);
 	if (!cfg1_data)
 		return -ENOMEM;
 
@@ -5191,7 +5191,7 @@ static int __reg_dmav1_setup_demurav1_cfg1(struct sde_hw_dspp *ctx,
 	}
 
 quit:
-	kfree(cfg1_data);
+	kvfree(cfg1_data);
 	return rc;
 }
 
