@@ -2153,6 +2153,7 @@ struct ipa3_context {
 	bool is_eth_bridging_supported;
 	bool is_bw_monitor_supported;
 	bool modem_load_ipa_fw;
+	bool fnr_stats_not_supported;
 };
 
 struct ipa3_plat_drv_res {
@@ -2225,6 +2226,7 @@ struct ipa3_plat_drv_res {
 	bool is_eth_bridging_supported;
 	bool is_bw_monitor_supported;
 	bool modem_load_ipa_fw;
+	bool fnr_stats_not_supported;
 };
 
 /**
