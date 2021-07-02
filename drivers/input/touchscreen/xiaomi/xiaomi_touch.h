@@ -168,6 +168,8 @@ struct xiaomi_touch_pdata{
 	bool palm_changed;
 	int prox_value;
 	bool prox_changed;
+	bool set_update;
+	bool bump_sample_rate;
 	const char *name;
 	int fod_press_status_value;
 	struct proc_dir_entry  *last_touch_events_proc;
