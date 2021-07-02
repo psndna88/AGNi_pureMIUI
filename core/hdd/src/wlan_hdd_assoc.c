@@ -2654,6 +2654,15 @@ static int hdd_change_sta_state_authenticated(struct hdd_adapter *adapter,
 
 	mac_addr = hddstactx->conn_info.bssid.bytes;
 
+	if (ucfg_ipa_is_enabled() && !hddstactx->conn_info.is_authenticated &&
+	    adapter->device_mode == QDF_STA_MODE &&
+	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_NONE &&
+	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_OPEN_SYSTEM &&
+	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_SHARED_KEY)
+		ucfg_ipa_wlan_evt(adapter->hdd_ctx->pdev, adapter->dev,
+				  adapter->device_mode, adapter->vdev_id,
+				  WLAN_IPA_STA_CONNECT, mac_addr);
+
 	hdd_debug("Changing Peer state to AUTHENTICATED for Sta = "
 		  QDF_MAC_ADDR_FMT, QDF_MAC_ADDR_REF(mac_addr));
 
@@ -2672,15 +2681,6 @@ static int hdd_change_sta_state_authenticated(struct hdd_adapter *adapter,
 					    adapter->vdev_id,
 					    timeout);
 	}
-
-	if (ucfg_ipa_is_enabled() && !hddstactx->conn_info.is_authenticated &&
-	    adapter->device_mode == QDF_STA_MODE &&
-	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_NONE &&
-	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_OPEN_SYSTEM &&
-	    hddstactx->conn_info.auth_type != eCSR_AUTH_TYPE_SHARED_KEY)
-		ucfg_ipa_wlan_evt(adapter->hdd_ctx->pdev, adapter->dev,
-				  adapter->device_mode, adapter->vdev_id,
-				  WLAN_IPA_STA_CONNECT, mac_addr);
 
 	return qdf_status_to_os_return(status);
 }
