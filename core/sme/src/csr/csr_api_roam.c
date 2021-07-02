@@ -15042,6 +15042,14 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 							WLAN_LEGACY_MAC_ID);
 		if (vdev) {
 			mlme_set_follow_ap_edca_flag(vdev, follow_ap_edca);
+			is_vendor_ap_present = wlan_get_vendor_ie_ptr_from_oui(
+					SIR_MAC_BA_2K_JUMP_AP_VENDOR_OUI,
+					SIR_MAC_BA_2K_JUMP_AP_VENDOR_OUI_LEN,
+					vendor_ap_search_attr.ie_data,
+					vendor_ap_search_attr.ie_length);
+			wlan_mlme_set_ba_2k_jump_iot_ap(vdev,
+							is_vendor_ap_present);
+
 			wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 		}
 
