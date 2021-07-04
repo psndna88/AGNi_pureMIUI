@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -358,37 +358,37 @@
   <ctl name="RX_HPH_PWR_MODE" value="HIFI"/>
   <ctl name="RX HPH Mode" value="CLS_H_HIFI"/>
   <!-- IIR/voice anc -->
-  <ctl name="IIR0 Band1" id="0" value="268435456"/>
-  <ctl name="IIR0 Band1" id="1" value="0"/>
-  <ctl name="IIR0 Band1" id="2" value="0"/>
-  <ctl name="IIR0 Band1" id="3" value="0"/>
-  <ctl name="IIR0 Band1" id="4" value="0"/>
-  <ctl name="IIR0 Band2" id="0" value="268435456"/>
-  <ctl name="IIR0 Band2" id="1" value="0"/>
-  <ctl name="IIR0 Band2" id="2" value="0"/>
-  <ctl name="IIR0 Band2" id="3" value="0"/>
-  <ctl name="IIR0 Band2" id="4" value="0"/>
-  <ctl name="IIR0 Band3" id="0" value="268435456"/>
-  <ctl name="IIR0 Band3" id="1" value="0"/>
-  <ctl name="IIR0 Band3" id="2" value="0"/>
-  <ctl name="IIR0 Band3" id="3" value="0"/>
-  <ctl name="IIR0 Band3" id="4" value="0"/>
-  <ctl name="IIR0 Band4" id="0" value="268435456"/>
-  <ctl name="IIR0 Band4" id="1" value="0"/>
-  <ctl name="IIR0 Band4" id="2" value="0"/>
-  <ctl name="IIR0 Band4" id="3" value="0"/>
-  <ctl name="IIR0 Band4" id="4" value="0"/>
-  <ctl name="IIR0 Band5" id="0" value="268435456"/>
-  <ctl name="IIR0 Band5" id="1" value="0"/>
-  <ctl name="IIR0 Band5" id="2" value="0"/>
-  <ctl name="IIR0 Band5" id="3" value="0"/>
-  <ctl name="IIR0 Band5" id="4" value="0"/>
-  <ctl name="IIR0 Enable Band1" value="0"/>
-  <ctl name="IIR0 Enable Band2" value="0"/>
-  <ctl name="IIR0 Enable Band3" value="0"/>
-  <ctl name="IIR0 Enable Band4" value="0"/>
-  <ctl name="IIR0 Enable Band5" value="0"/>
-  <ctl name="IIR0 INP0 Volume" value="54"/>
+  <ctl name="IIR0 Band1" id="0" value="268833620"/>
+  <ctl name="IIR0 Band1" id="1" value="537398060"/>
+  <ctl name="IIR0 Band1" id="2" value="267510580"/>
+  <ctl name="IIR0 Band1" id="3" value="537398060"/>
+  <ctl name="IIR0 Band1" id="4" value="267908744"/>
+  <ctl name="IIR0 Band2" id="0" value="266468108"/>
+  <ctl name="IIR0 Band2" id="1" value="544862876"/>
+  <ctl name="IIR0 Band2" id="2" value="262421829"/>
+  <ctl name="IIR0 Band2" id="3" value="544862876"/>
+  <ctl name="IIR0 Band2" id="4" value="260454481"/>
+  <ctl name="IIR0 Band3" id="0" value="262913321"/>
+  <ctl name="IIR0 Band3" id="1" value="559557058"/>
+  <ctl name="IIR0 Band3" id="2" value="252311547"/>
+  <ctl name="IIR0 Band3" id="3" value="559557058"/>
+  <ctl name="IIR0 Band3" id="4" value="246789412"/>
+  <ctl name="IIR0 Band4" id="0" value="294517138"/>
+  <ctl name="IIR0 Band4" id="1" value="572289454"/>
+  <ctl name="IIR0 Band4" id="2" value="210943778"/>
+  <ctl name="IIR0 Band4" id="3" value="572289454"/>
+  <ctl name="IIR0 Band4" id="4" value="237025461"/>
+  <ctl name="IIR0 Band5" id="0" value="329006442"/>
+  <ctl name="IIR0 Band5" id="1" value="711929387"/>
+  <ctl name="IIR0 Band5" id="2" value="110068469"/>
+  <ctl name="IIR0 Band5" id="3" value="711929387"/>
+  <ctl name="IIR0 Band5" id="4" value="170639455"/>
+  <ctl name="IIR0 Enable Band1" value="1"/>
+  <ctl name="IIR0 Enable Band2" value="1"/>
+  <ctl name="IIR0 Enable Band3" value="1"/>
+  <ctl name="IIR0 Enable Band4" value="1"/>
+  <ctl name="IIR0 Enable Band5" value="1"/>
+  <ctl name="IIR0 INP0 Volume" value="80"/>
   <ctl name="IIR0 INP0 MUX" value="ZERO"/>
   <ctl name="IIR0 INP1 MUX" value="ZERO"/>
   <ctl name="IIR0 INP2 MUX" value="ZERO"/>
@@ -2177,8 +2177,8 @@
     <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT"/>
     <ctl name="RX_COMP1 Switch" value="0"/>
     <ctl name="RX_COMP2 Switch" value="0"/>
-    <ctl name="HPHL_COMP Switch" value="1"/>
-    <ctl name="HPHR_COMP Switch" value="1"/>
+    <ctl name="HPHL_COMP Switch" value="0"/>
+    <ctl name="HPHR_COMP Switch" value="0"/>
     <ctl name="HPHL_RDAC Switch" value="1"/>
     <ctl name="HPHR_RDAC Switch" value="1"/>
     <ctl name="COMP0 RX1" value="0"/>
@@ -2413,8 +2413,8 @@
     <ctl name="RX INT0_1 MIX1 INP0" value="RX0"/>
     <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT"/>
     <ctl name="RX_COMP1 Switch" value="0"/>
-    <ctl name="HPHL_COMP Switch" value="1"/>
-    <ctl name="HPHL_RDAC Switch" value="1"/>
+    <ctl name="HPHL_COMP Switch" value="0"/>
+    <ctl name="HPHL_RDAC Switch" value="0"/>
     <ctl name="COMP0 RX1" value="0"/>
     <ctl name="COMP0 RX2" value="0"/>
   </path>

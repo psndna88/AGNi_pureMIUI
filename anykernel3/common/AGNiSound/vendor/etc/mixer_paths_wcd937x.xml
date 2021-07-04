@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -426,41 +426,42 @@
   <ctl name="RX_HPH_PWR_MODE" value="HIFI"/>
   <ctl name="RX HPH Mode" value="CLS_H_HIFI"/>
   <!-- IIR/voice anc -->
-  <ctl name="IIR0 Band1" id="0" value="268435456"/>
-  <ctl name="IIR0 Band1" id="1" value="0"/>
-  <ctl name="IIR0 Band1" id="2" value="0"/>
-  <ctl name="IIR0 Band1" id="3" value="0"/>
-  <ctl name="IIR0 Band1" id="4" value="0"/>
-  <ctl name="IIR0 Band2" id="0" value="268435456"/>
-  <ctl name="IIR0 Band2" id="1" value="0"/>
-  <ctl name="IIR0 Band2" id="2" value="0"/>
-  <ctl name="IIR0 Band2" id="3" value="0"/>
-  <ctl name="IIR0 Band2" id="4" value="0"/>
-  <ctl name="IIR0 Band3" id="0" value="268435456"/>
-  <ctl name="IIR0 Band3" id="1" value="0"/>
-  <ctl name="IIR0 Band3" id="2" value="0"/>
-  <ctl name="IIR0 Band3" id="3" value="0"/>
-  <ctl name="IIR0 Band3" id="4" value="0"/>
-  <ctl name="IIR0 Band4" id="0" value="268435456"/>
-  <ctl name="IIR0 Band4" id="1" value="0"/>
-  <ctl name="IIR0 Band4" id="2" value="0"/>
-  <ctl name="IIR0 Band4" id="3" value="0"/>
-  <ctl name="IIR0 Band4" id="4" value="0"/>
-  <ctl name="IIR0 Band5" id="0" value="268435456"/>
-  <ctl name="IIR0 Band5" id="1" value="0"/>
-  <ctl name="IIR0 Band5" id="2" value="0"/>
-  <ctl name="IIR0 Band5" id="3" value="0"/>
-  <ctl name="IIR0 Band5" id="4" value="0"/>
-  <ctl name="IIR0 Enable Band1" value="0"/>
-  <ctl name="IIR0 Enable Band2" value="0"/>
-  <ctl name="IIR0 Enable Band3" value="0"/>
-  <ctl name="IIR0 Enable Band4" value="0"/>
-  <ctl name="IIR0 Enable Band5" value="0"/>
-  <ctl name="IIR0 INP0 Volume" value="54"/>
-  <ctl name="IIR0 INP0 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP1 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP2 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP3 MUX" value="ZERO"/>
+  <ctl name="IIR0 Band1" id ="0" value="268435456" />
+  <ctl name="IIR0 Band1" id ="1" value="0" />
+  <ctl name="IIR0 Band1" id ="2" value="0" />
+  <ctl name="IIR0 Band1" id ="3" value="0" />
+  <ctl name="IIR0 Band1" id ="4" value="0" />
+  <ctl name="IIR0 Band2" id ="0" value="268435456" />
+  <ctl name="IIR0 Band2" id ="1" value="0" />
+  <ctl name="IIR0 Band2" id ="2" value="0" />
+  <ctl name="IIR0 Band2" id ="3" value="0" />
+  <ctl name="IIR0 Band2" id ="4" value="0" />
+  <ctl name="IIR0 Band3" id ="0" value="268435456" />
+  <ctl name="IIR0 Band3" id ="1" value="0" />
+  <ctl name="IIR0 Band3" id ="2" value="0" />
+  <ctl name="IIR0 Band3" id ="3" value="0" />
+  <ctl name="IIR0 Band3" id ="4" value="0" />
+  <ctl name="IIR0 Band4" id ="0" value="268435456" />
+  <ctl name="IIR0 Band4" id ="1" value="0" />
+  <ctl name="IIR0 Band4" id ="2" value="0" />
+  <ctl name="IIR0 Band4" id ="3" value="0" />
+  <ctl name="IIR0 Band4" id ="4" value="0" />
+  <ctl name="IIR0 Band5" id ="0" value="268435456" />
+  <ctl name="IIR0 Band5" id ="1" value="0" />
+  <ctl name="IIR0 Band5" id ="2" value="0" />
+  <ctl name="IIR0 Band5" id ="3" value="0" />
+  <ctl name="IIR0 Band5" id ="4" value="0" />
+  <ctl name="IIR0 Enable Band1" value="0" />
+  <ctl name="IIR0 Enable Band2" value="0" />
+  <ctl name="IIR0 Enable Band3" value="0" />
+  <ctl name="IIR0 Enable Band4" value="0" />
+  <ctl name="IIR0 Enable Band5" value="0" />
+  <ctl name="IIR0 INP0 Volume" value="54" />
+  <ctl name="IIR0 INP0 MUX" value="ZERO" />
+  <ctl name="IIR0 INP1 MUX" value="ZERO" />
+  <ctl name="IIR0 INP2 MUX" value="ZERO" />
+  <ctl name="IIR0 INP3 MUX" value="ZERO" />
+
   <!-- vbat related data -->
   <ctl name="GSM mode Enable" value="OFF"/>
   <ctl name="WSA_Softclip0 Enable" value="0"/>
@@ -2432,8 +2433,7 @@
   <!-- 2019.12.16 longcheer lixiaona add for HTH-74171 use dmic to recording during wechar short audio message end-->
   <path name="handset-mic-factory">
     <ctl name="TX_DEC0 Volume" value="84"/>
-    <path name="amic1"/>
-    <!-- modify for using amic1 to factory test-->
+    <path name="amic1"/> <!-- modify for using amic1 to factory test-->
   </path>
   <!--Add for add secondary-mic -->
   <path name="secondary-mic-factory">
@@ -2806,7 +2806,7 @@
     <ctl name="RX INT0_1 MIX1 INP0" value="RX0"/>
     <ctl name="RX INT0 DEM MUX" value="CLSH_DSM_OUT"/>
     <ctl name="RX_COMP1 Switch" value="0"/>
-    <ctl name="HPHL_COMP Switch" value="1"/>
+    <ctl name="HPHL_COMP Switch" value="0"/>
     <ctl name="HPHL_RDAC Switch" value="1"/>
     <ctl name="COMP0 RX1" value="0"/>
     <ctl name="COMP0 RX2" value="0"/>
@@ -3323,8 +3323,6 @@
   <path name="ultrasound-suspend">
     <ctl name="Ultrasound Suspend" value="1"/>
   </path>
-  <ctl name="EC Reference Bit Format" value="S16_LE"/>
-  <ctl name="EC Reference SampleRate" value="48000"/>
   <ctl name="COMP0 RX1" value="0"/>
   <ctl name="COMP0 RX2" value="0"/>
   <ctl name="Compress Playback 16 Volume" value="0"/>
