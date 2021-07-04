@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.    -->
+<!-- Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.    -->
 <!--                                                                        -->
 <!-- Redistribution and use in source and binary forms, with or without     -->
 <!-- modification, are permitted provided that the following conditions are -->
@@ -304,7 +304,7 @@
   <!-- TX Controls -->
   <ctl name="TX_CDC_DMA_TX_3 Channels" value="One"/>
   <ctl name="MultiMedia1 Mixer TX_CDC_DMA_TX_3" value="0"/>
-  <ctl name="ADC1_MIXER Switch" value="0"/>
+  <ctl name="ADC1_MIXER Switch" value="1"/>
   <ctl name="ADC1 MUX" value="ZERO"/>
   <ctl name="ADC2_MIXER Switch" value="0"/>
   <ctl name="ADC2 MUX" value="ZERO"/>
@@ -372,41 +372,42 @@
   <ctl name="RX_HPH_PWR_MODE" value="HIFI"/>
   <ctl name="RX HPH Mode" value="CLS_H_HIFI"/>
   <!-- IIR/voice anc -->
-  <ctl name="IIR0 Band1" id="0" value="268435456"/>
-  <ctl name="IIR0 Band1" id="1" value="0"/>
-  <ctl name="IIR0 Band1" id="2" value="0"/>
-  <ctl name="IIR0 Band1" id="3" value="0"/>
-  <ctl name="IIR0 Band1" id="4" value="0"/>
-  <ctl name="IIR0 Band2" id="0" value="268435456"/>
-  <ctl name="IIR0 Band2" id="1" value="0"/>
-  <ctl name="IIR0 Band2" id="2" value="0"/>
-  <ctl name="IIR0 Band2" id="3" value="0"/>
-  <ctl name="IIR0 Band2" id="4" value="0"/>
-  <ctl name="IIR0 Band3" id="0" value="268435456"/>
-  <ctl name="IIR0 Band3" id="1" value="0"/>
-  <ctl name="IIR0 Band3" id="2" value="0"/>
-  <ctl name="IIR0 Band3" id="3" value="0"/>
-  <ctl name="IIR0 Band3" id="4" value="0"/>
-  <ctl name="IIR0 Band4" id="0" value="268435456"/>
-  <ctl name="IIR0 Band4" id="1" value="0"/>
-  <ctl name="IIR0 Band4" id="2" value="0"/>
-  <ctl name="IIR0 Band4" id="3" value="0"/>
-  <ctl name="IIR0 Band4" id="4" value="0"/>
-  <ctl name="IIR0 Band5" id="0" value="268435456"/>
-  <ctl name="IIR0 Band5" id="1" value="0"/>
-  <ctl name="IIR0 Band5" id="2" value="0"/>
-  <ctl name="IIR0 Band5" id="3" value="0"/>
-  <ctl name="IIR0 Band5" id="4" value="0"/>
-  <ctl name="IIR0 Enable Band1" value="0"/>
-  <ctl name="IIR0 Enable Band2" value="0"/>
-  <ctl name="IIR0 Enable Band3" value="0"/>
-  <ctl name="IIR0 Enable Band4" value="0"/>
-  <ctl name="IIR0 Enable Band5" value="0"/>
-  <ctl name="IIR0 INP0 Volume" value="54"/>
-  <ctl name="IIR0 INP0 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP1 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP2 MUX" value="ZERO"/>
-  <ctl name="IIR0 INP3 MUX" value="ZERO"/>
+  <ctl name="IIR0 Band1" id ="0" value="268435456" />
+  <ctl name="IIR0 Band1" id ="1" value="0" />
+  <ctl name="IIR0 Band1" id ="2" value="0" />
+  <ctl name="IIR0 Band1" id ="3" value="0" />
+  <ctl name="IIR0 Band1" id ="4" value="0" />
+  <ctl name="IIR0 Band2" id ="0" value="268435456" />
+  <ctl name="IIR0 Band2" id ="1" value="0" />
+  <ctl name="IIR0 Band2" id ="2" value="0" />
+  <ctl name="IIR0 Band2" id ="3" value="0" />
+  <ctl name="IIR0 Band2" id ="4" value="0" />
+  <ctl name="IIR0 Band3" id ="0" value="268435456" />
+  <ctl name="IIR0 Band3" id ="1" value="0" />
+  <ctl name="IIR0 Band3" id ="2" value="0" />
+  <ctl name="IIR0 Band3" id ="3" value="0" />
+  <ctl name="IIR0 Band3" id ="4" value="0" />
+  <ctl name="IIR0 Band4" id ="0" value="268435456" />
+  <ctl name="IIR0 Band4" id ="1" value="0" />
+  <ctl name="IIR0 Band4" id ="2" value="0" />
+  <ctl name="IIR0 Band4" id ="3" value="0" />
+  <ctl name="IIR0 Band4" id ="4" value="0" />
+  <ctl name="IIR0 Band5" id ="0" value="268435456" />
+  <ctl name="IIR0 Band5" id ="1" value="0" />
+  <ctl name="IIR0 Band5" id ="2" value="0" />
+  <ctl name="IIR0 Band5" id ="3" value="0" />
+  <ctl name="IIR0 Band5" id ="4" value="0" />
+  <ctl name="IIR0 Enable Band1" value="0" />
+  <ctl name="IIR0 Enable Band2" value="0" />
+  <ctl name="IIR0 Enable Band3" value="0" />
+  <ctl name="IIR0 Enable Band4" value="0" />
+  <ctl name="IIR0 Enable Band5" value="0" />
+  <ctl name="IIR0 INP0 Volume" value="54" />
+  <ctl name="IIR0 INP0 MUX" value="ZERO" />
+  <ctl name="IIR0 INP1 MUX" value="ZERO" />
+  <ctl name="IIR0 INP2 MUX" value="ZERO" />
+  <ctl name="IIR0 INP3 MUX" value="ZERO" />
+
   <!-- vbat related data -->
   <ctl name="GSM mode Enable" value="OFF"/>
   <ctl name="WSA_Softclip0 Enable" value="0"/>
@@ -2467,8 +2468,8 @@
     <ctl name="RX INT1 DEM MUX" value="CLSH_DSM_OUT"/>
     <ctl name="RX_COMP1 Switch" value="0"/>
     <ctl name="RX_COMP2 Switch" value="0"/>
-    <ctl name="HPHL_COMP Switch" value="1"/>
-    <ctl name="HPHR_COMP Switch" value="1"/>
+    <ctl name="HPHL_COMP Switch" value="0"/>
+    <ctl name="HPHR_COMP Switch" value="0"/>
     <ctl name="HPHL_RDAC Switch" value="1"/>
     <ctl name="HPHR_RDAC Switch" value="1"/>
     <ctl name="COMP0 RX1" value="0"/>

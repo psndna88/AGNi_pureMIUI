@@ -86,6 +86,8 @@ echo ""
 ###### ZIP Packing
 if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
+	rm -rf $KERNELDIR/$DIR/common/AGNiSound
+	mv $KERNELDIR/$DIR/common/AGNiSound_R0 $KERNELDIR/$DIR/common/AGNiSound
 	cd $KERNELDIR/$DIR/
 	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
