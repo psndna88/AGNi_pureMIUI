@@ -20,6 +20,7 @@
 		#interrupt-cells = <1>;
 
 		#power-domain-cells = <0>;
+		#list-cells = <1>;
 
 		/* hw blocks */
 		qcom,sde-off = <0x1000>;
