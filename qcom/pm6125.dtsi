@@ -132,7 +132,7 @@
 	qcom,pm6125@1 {
 		compatible ="qcom,spmi-pmic";
 		reg = <0x1 0x0>;
-		#address-cells = <2>;
+		#address-cells = <1>;
 		#size-cells = <0>;
 
 		pm6125_pwm: qcom,pwms@b300 {
