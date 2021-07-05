@@ -412,6 +412,7 @@
 		interrupt-names = "eud_irq";
 		interrupt-parent = <&pdc>;
 		interrupts = <15 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-mask = <0x30>;
 		reg = <0xff0000 0x2000>,
 			<0xff2000 0x1000>;
 		reg-names = "eud_base", "eud_mode_mgr2";
