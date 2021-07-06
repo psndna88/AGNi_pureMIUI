@@ -663,6 +663,7 @@ static struct platform_driver gpu_cc_lahaina_driver = {
 		.name = "gpu_cc-lahaina",
 		.of_match_table = gpu_cc_lahaina_match_table,
 		.sync_state = gpu_cc_lahaina_sync_state,
+		.probe_type = PROBE_FORCE_SYNCHRONOUS,
 	},
 };
 
