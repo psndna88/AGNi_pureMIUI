@@ -1025,6 +1025,7 @@ int dsi_display_cmd_transfer(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	SDE_EVT32(dsi_display->tx_cmd_buf_ndx, cmd_buf_len);
 	DSI_DEBUG("[DSI] Display command transfer\n");
 
 	if ((cmd_buf[1]) || (cmd_buf[3] & MIPI_DSI_MSG_LASTCOMMAND))
@@ -1148,6 +1149,8 @@ int dsi_display_cmd_receive(void *display, const char *cmd_buf,
 		DSI_ERR("[DSI] invalid params\n");
 		return -EINVAL;
 	}
+
+	SDE_EVT32(cmd_buf_len, recv_buf_len);
 
 	rc = dsi_display_cmd_prepare(cmd_buf, cmd_buf_len,
 			&cmd, cmd_payload, MAX_CMD_PAYLOAD_SIZE);
