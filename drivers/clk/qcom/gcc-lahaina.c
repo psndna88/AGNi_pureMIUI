@@ -4407,6 +4407,7 @@ static struct platform_driver gcc_lahaina_driver = {
 		.name = "lahaina-gcc",
 		.of_match_table = gcc_lahaina_match_table,
 		.sync_state = gcc_lahaina_sync_state,
+		.probe_type = PROBE_FORCE_SYNCHRONOUS,
 	},
 };
 
