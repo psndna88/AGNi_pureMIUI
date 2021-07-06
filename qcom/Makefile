@@ -418,6 +418,7 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-mtp-mbb-pcie-ep-ipq.dtb \
 	sdxlemur-mtp-mbb-pcie-rc-ep.dtb \
 	sdxlemur-mtp-mbb-m2-ep.dtb \
+	sdxlemur-mtp-mbb-m2-ep-usb.dtb \
 	sdxlemur-mtp-mbb.dtb \
 	sdxlemur-rcm-pcie-ep.dtb \
 	sdxlemur-rcm-rc.dtb \
