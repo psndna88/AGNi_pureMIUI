@@ -148,7 +148,7 @@
 };
 
 &holi_snd {
-	qcom,model = "holi-qrd-snd-card";
+	qcom,model = "holi-qrdsku1-snd-card";
 	qcom,sku-model = "holi-qrdsku1-snd-card";
 	qcom,msm-mi2s-master = <1>, <1>, <1>, <1>;
 	qcom,wcn-btfm = <1>;
