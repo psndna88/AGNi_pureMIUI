@@ -1589,12 +1589,13 @@ static int cam_ife_csid_disable_hw(struct cam_ife_csid_hw *csid_hw)
 	cam_io_w_mb(0, soc_info->reg_map[0].mem_base +
 		csid_reg->cmn_reg->csid_top_irq_mask_addr);
 
+	cam_tasklet_stop(csid_hw->tasklet);
+
 	rc = cam_ife_csid_disable_soc_resources(soc_info);
 	if (rc)
 		CAM_ERR(CAM_ISP, "CSID:%d Disable CSID SOC failed",
 			csid_hw->hw_intf->hw_idx);
 
-	cam_tasklet_stop(csid_hw->tasklet);
 	spin_lock_irqsave(&csid_hw->lock_state, flags);
 	csid_hw->device_enabled = 0;
 	spin_unlock_irqrestore(&csid_hw->lock_state, flags);
