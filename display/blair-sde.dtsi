@@ -20,5 +20,21 @@
 				     00 00 8a 8a];
 
 	vdda-0p9-supply = <&S1E_LEVEL>;
+	qcom,phy-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,phy-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vdda-0p9";
+			qcom,supply-min-voltage =
+				<RPMH_REGULATOR_LEVEL_SVS_L1>;
+			qcom,supply-max-voltage =
+				<RPMH_REGULATOR_LEVEL_TURBO_L1>;
+			qcom,supply-off-min-voltage =
+				<RPMH_REGULATOR_LEVEL_RETENTION>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+		};
+	};
 };
 
