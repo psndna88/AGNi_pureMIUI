@@ -656,7 +656,7 @@
 		qcom,supported-modes =
 			<RPMH_REGULATOR_MODE_LPM
 			RPMH_REGULATOR_MODE_HPM>;
-		qcom,mode-threshold-currents = <0 30000>;
+		qcom,mode-threshold-currents = <0 10000>;
 		L6C:
 		pm8350c_l6: regulator-pm8350c-l6 {
 			regulator-name = "pm8350c_l6";
