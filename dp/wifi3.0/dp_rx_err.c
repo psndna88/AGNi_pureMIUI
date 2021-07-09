@@ -819,7 +819,8 @@ void dp_rx_err_handle_bar(struct dp_soc *soc,
 
 	status = dp_rx_tid_update_wifi3(peer, tid,
 					peer->rx_tid[tid].ba_win_size,
-					start_seq_num);
+					start_seq_num,
+					true);
 	if (status != QDF_STATUS_SUCCESS) {
 		dp_err_rl("failed to handle bar frame update rx tid");
 		DP_STATS_INC(soc, rx.err.bar_handle_fail_count, 1);
@@ -949,8 +950,7 @@ dp_2k_jump_handle(struct dp_soc *soc,
 
 	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX_ERR);
 	if (!peer) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			  "peer not found");
+		dp_info_rl("%pK: peer not found", soc);
 		goto free_nbuf;
 	}
 

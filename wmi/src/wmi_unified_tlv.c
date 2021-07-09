@@ -13901,6 +13901,28 @@ static QDF_STATUS extract_ani_level_tlv(uint8_t *evt_buf,
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
+ * convert_wtc_scan_mode() - Function to convert TLV specific
+ * ROAM_TRIGGER_SCAN_MODE scan mode to unified Roam trigger scan mode enum
+ * @scan_mode: scan freq scheme coming from firmware
+ *
+ * Return: ROAM_TRIGGER_SCAN_MODE
+ */
+static enum roam_scan_freq_scheme
+convert_wtc_scan_mode(WMI_ROAM_TRIGGER_SCAN_MODE scan_mode)
+{
+	switch (scan_mode) {
+	case ROAM_TRIGGER_SCAN_MODE_NO_SCAN_DISCONNECTION:
+		return ROAM_SCAN_FREQ_SCHEME_NO_SCAN;
+	case ROAM_TRIGGER_SCAN_MODE_PARTIAL:
+		return ROAM_SCAN_FREQ_SCHEME_PARTIAL_SCAN;
+	case ROAM_TRIGGER_SCAN_MODE_FULL:
+		return ROAM_SCAN_FREQ_SCHEME_FULL_SCAN;
+	default:
+		return ROAM_SCAN_FREQ_SCHEME_NONE;
+	}
+}
+
+/**
  * extract_roam_trigger_stats_tlv() - Extract the Roam trigger stats
  * from the WMI_ROAM_STATS_EVENTID
  * @wmi_handle: wmi handle
@@ -13980,11 +14002,19 @@ extract_roam_trigger_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		trig->wtc_btm_trig_data.wtc_mode =
 					src_data->vendor_specific1[3];
 		trig->wtc_btm_trig_data.wtc_scan_mode =
-					src_data->vendor_specific1[4];
+			convert_wtc_scan_mode(src_data->vendor_specific1[4]);
 		trig->wtc_btm_trig_data.wtc_rssi_th =
 					src_data->vendor_specific1[5];
 		trig->wtc_btm_trig_data.wtc_candi_rssi_th =
 					src_data->vendor_specific1[6];
+
+		trig->wtc_btm_trig_data.wtc_candi_rssi_ext_present =
+					src_data->vendor_specific2[0];
+		trig->wtc_btm_trig_data.wtc_candi_rssi_th_5g =
+					src_data->vendor_specific2[1];
+		trig->wtc_btm_trig_data.wtc_candi_rssi_th_6g =
+					src_data->vendor_specific2[2];
+
 		return QDF_STATUS_SUCCESS;
 	default:
 		return QDF_STATUS_SUCCESS;
@@ -14264,6 +14294,36 @@ extract_vdev_mgmt_offload_event_tlv(void *handle, void *evt_buf,
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_PKT_CAPTURE */
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+static QDF_STATUS
+extract_smart_monitor_event_tlv(void *handle, void *evt_buf,
+				struct smu_event_params *params)
+{
+	WMI_VDEV_SMART_MONITOR_EVENTID_param_tlvs *param_buf = NULL;
+	wmi_vdev_smart_monitor_event_fixed_param *smu_event = NULL;
+
+	param_buf = (WMI_VDEV_SMART_MONITOR_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		wmi_err("Invalid smart monitor event");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	smu_event = param_buf->fixed_param;
+	if (!smu_event) {
+		wmi_err("smart monitor event fixed param is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	params->vdev_id = smu_event->vdev_id;
+	if (params->vdev_id >= WLAN_UMAC_PDEV_MAX_VDEVS)
+		return QDF_STATUS_E_INVAL;
+
+	params->rx_avg_rssi = smu_event->avg_rssi_data_dbm;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_FEATURE_PKT_CAPTURE_V2 */
 
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 /**
@@ -14857,6 +14917,9 @@ struct wmi_ops tlv_ops =  {
 #ifdef WLAN_FEATURE_PKT_CAPTURE
 	.extract_vdev_mgmt_offload_event = extract_vdev_mgmt_offload_event_tlv,
 #endif
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	.extract_smart_monitor_event = extract_smart_monitor_event_tlv,
+#endif
 
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	.send_wlan_time_sync_ftm_trigger_cmd = send_wlan_ts_ftm_trigger_cmd_tlv,
@@ -15279,6 +15342,10 @@ event_ids[wmi_roam_scan_chan_list_id] =
 			WMI_CTRL_PATH_STATS_EVENTID;
 	event_ids[wmi_vdev_send_big_data_p2_eventid] =
 			WMI_VDEV_SEND_BIG_DATA_P2_EVENTID;
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	event_ids[wmi_vdev_smart_monitor_event_id] =
+			WMI_VDEV_SMART_MONITOR_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -15669,6 +15736,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_disable_upper_6g_edge_ch_supp] =
 			WMI_SERVICE_DISABLE_UPPER_6G_EDGE_CH_SUPP;
 #endif
+	wmi_service[wmi_service_ampdu_tx_buf_size_256_support] =
+			WMI_SERVICE_AMPDU_TX_BUF_SIZE_256_SUPPORT;
 }
 
 /**

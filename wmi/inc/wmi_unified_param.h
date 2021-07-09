@@ -4682,6 +4682,9 @@ typedef enum {
 	wmi_peer_create_conf_event_id,
 	wmi_pdev_cp_fwstats_eventid,
 	wmi_vdev_send_big_data_p2_eventid,
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	wmi_vdev_smart_monitor_event_id,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5247,6 +5250,8 @@ typedef enum {
 	wmi_service_igmp_offload_support,
 #endif
 	wmi_service_sae_eapol_offload_support,
+	wmi_service_ampdu_tx_buf_size_256_support,
+
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -7791,6 +7796,10 @@ struct wmi_roam_deauth_trigger_data {
  * @wtc_scan_mode: WTC scan mode
  * @wtc_rssi_th: Connected AP threshold
  * @wtc_candi_rssi_th: Candidate AP threshold
+ * @wtc_candi_rssi_ext_present: Flag to notify that whether fw sends rssi
+ * threshold for 5g & 6g AP to host or not
+ * @wtc_candi_rssi_th_5g: 5g candidate AP rssi threshold
+ * @wtc_candi_rssi_th_6g: 6g candidate AP rssi threshold
  */
 struct wmi_roam_wtc_btm_trigger_data {
 	uint32_t roaming_mode;
@@ -7800,6 +7809,9 @@ struct wmi_roam_wtc_btm_trigger_data {
 	uint32_t wtc_scan_mode;
 	uint32_t wtc_rssi_th;
 	uint32_t wtc_candi_rssi_th;
+	uint32_t wtc_candi_rssi_ext_present;
+	uint32_t wtc_candi_rssi_th_5g;
+	uint32_t wtc_candi_rssi_th_6g;
 };
 
 /**

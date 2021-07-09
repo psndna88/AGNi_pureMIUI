@@ -436,6 +436,7 @@ enum element_ie {
  * @WLAN_EXTN_ELEMID_HECAP:  HE capabilities IE
  * @WLAN_EXTN_ELEMID_HEOP:   HE Operation IE
  * @WLAN_EXTN_ELEMID_MUEDCA: MU-EDCA IE
+ * @WLAN_EXTN_ELEMID_NONINHERITANCE: Non inheritance IE
  * @WLAN_EXTN_ELEMID_HE_6G_CAP: HE 6GHz Band Capabilities IE
  * @WLAN_EXTN_ELEMID_SRP:    spatial reuse parameter IE
  */
@@ -445,6 +446,7 @@ enum extn_element_ie {
 	WLAN_EXTN_ELEMID_HEOP        = 36,
 	WLAN_EXTN_ELEMID_MUEDCA      = 38,
 	WLAN_EXTN_ELEMID_SRP         = 39,
+	WLAN_EXTN_ELEMID_NONINHERITANCE = 56,
 	WLAN_EXTN_ELEMID_HE_6G_CAP   = 59,
 	WLAN_EXTN_ELEMID_ESP         = 11,
 };
