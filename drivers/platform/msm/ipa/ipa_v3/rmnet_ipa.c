@@ -1204,6 +1204,11 @@ static netdev_tx_t ipa3_wwan_xmit(struct sk_buff *skb, struct net_device *dev)
 		return NETDEV_TX_OK;
 	}
 
+	if (unlikely(skb == NULL)) {
+		IPAWANERR_RL("unexpected NULL data\n");
+		return NETDEV_TX_BUSY;
+	}
+
 	if (skb->protocol != htons(ETH_P_MAP)) {
 		IPAWANDBG_LOW
 		("SW filtering out none QMAP packet received from %s",
@@ -4169,7 +4174,8 @@ int rmnet_ipa3_query_tethering_stats_all(
 	} else if (upstream_type == IPA_UPSTEAM_WLAN) {
 		IPAWANDBG_LOW(" query wifi-backhaul stats\n");
 		if (ipa3_ctx_get_type(IPA_HW_TYPE) < IPA_HW_v4_5 ||
-			!ipa3_ctx_get_flag(IPA_HW_STATS_EN)) {
+			!ipa3_ctx_get_flag(IPA_HW_STATS_EN) ||
+			ipa3_ctx->fnr_stats_not_supported) {
 			IPAWANDBG("hw version %d,hw_stats.enabled %d\n",
 				ipa3_ctx_get_type(IPA_HW_TYPE),
 				ipa3_ctx_get_flag(IPA_HW_STATS_EN));
