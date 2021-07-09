@@ -866,7 +866,6 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 		req_isp->cdm_reset_before_apply = false;
 		req_isp->num_acked = 0;
 		req_isp->num_deferred_acks = 0;
-		req_isp->bubble_detected = false;
 		/*
 		 * Only update the process_bubble and bubble_frame_cnt
 		 * when bubble is detected on this req, in case the other
@@ -875,6 +874,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 		if (req_isp->bubble_detected) {
 			atomic_set(&ctx_isp->process_bubble, 0);
 			ctx_isp->bubble_frame_cnt = 0;
+			req_isp->bubble_detected = false;
 		}
 
 		CAM_DBG(CAM_REQ,
