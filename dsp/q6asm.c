@@ -5428,7 +5428,6 @@ static int q6asm_enc_cfg_blk_pcm_v5(struct audio_client *ac,
 fail_cmd:
 	return rc;
 }
-EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_v5);
 
 /*
  * q6asm_enc_cfg_blk_pcm_v4 - sends encoder configuration parameters
@@ -8884,7 +8883,6 @@ fail_cmd:
 	mmap_region_cmd = NULL;
 	return rc;
 }
-EXPORT_SYMBOL(q6asm_memory_map_regions);
 
 /**
  * q6asm_memory_unmap_regions -
@@ -8983,7 +8981,6 @@ fail_cmd:
 	}
 	return rc;
 }
-EXPORT_SYMBOL(q6asm_memory_unmap_regions);
 
 int q6asm_set_lrgain(struct audio_client *ac, int left_gain, int right_gain)
 {
