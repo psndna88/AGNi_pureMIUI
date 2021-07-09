@@ -3749,4 +3749,9 @@
 	};
 };
 
+&msm_vidc {
+	qcom,cx-ipeak-data = <&cx_ipeak_lm 6>;
+	qcom,clock-freq-threshold = <300000000>;
+};
+
 #include "msm-rdbg.dtsi"
