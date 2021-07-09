@@ -212,7 +212,7 @@
 	qcom,cam-tpg0 {
 		cell-index = <4>;
 		compatible = "qcom,cam-sensor";
-		csiphy-sd-index = <4>;
+		csiphy-sd-index = <0>;
 		sensor-position-roll = <270>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
@@ -235,7 +235,7 @@
 	qcom,cam-tpg1 {
 		cell-index = <5>;
 		compatible = "qcom,cam-sensor";
-		csiphy-sd-index = <5>;
+		csiphy-sd-index = <1>;
 		sensor-position-roll = <270>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
@@ -258,7 +258,7 @@
 	qcom,cam-tpg2 {
 		cell-index = <6>;
 		compatible = "qcom,cam-sensor";
-		csiphy-sd-index = <6>;
+		csiphy-sd-index = <2>;
 		sensor-position-roll = <270>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
