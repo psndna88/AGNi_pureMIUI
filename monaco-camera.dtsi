@@ -6,6 +6,11 @@
 		status = "ok";
 	};
 
+	qcom,cam-sync {
+		compatible = "qcom,cam-sync";
+		status = "ok";
+	};
+
 	cam_csiphy0: qcom,csiphy0 {
 		cell-index = <0>;
 		compatible = "qcom,csiphy-v1.2.3", "qcom,csiphy";
@@ -20,9 +25,9 @@
 		mipi-csi-vdd1-supply = <&L12A>;
 		mipi-csi-vdd2-supply = <&L9A>;
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0 0 900000 1200000>;
-		rgltr-max-voltage = <0 0 900000 1200000>;
-		rgltr-load-current = <0 0 126000 74000>;
+		rgltr-min-voltage = <0 904000 1232000>;
+		rgltr-max-voltage = <0 904000 1232000>;
+		rgltr-load-current = <0 126000 74000>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_0_CLK>,
 			<&gcc GCC_CAMSS_CSI0PHYTIMER_CLK_SRC>,
@@ -34,7 +39,7 @@
 		src-clock-name = "csi0phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs", "turbo";
 		clock-rates =
-			<19200000  0 19200000 0>,
+			<19200000 0 19200000 0>,
 			<256000000 0 300000000 0>,
 			<384000000 0 300000000 0>;
 		status = "ok";
@@ -54,9 +59,9 @@
 		mipi-csi-vdd1-supply = <&L12A>;
 		mipi-csi-vdd2-supply = <&L9A>;
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <0 0 900000 1200000>;
-		rgltr-max-voltage = <0 0 900000 1200000>;
-		rgltr-load-current = <0 0 126000 74000>;
+		rgltr-min-voltage = <0 904000 1232000>;
+		rgltr-max-voltage = <0 904000 1232000>;
+		rgltr-load-current = <0 126000 74000>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_1_CLK>,
 			<&gcc GCC_CAMSS_CSI1PHYTIMER_CLK_SRC>,
@@ -68,7 +73,7 @@
 		src-clock-name = "csi1phytimer_clk_src";
 		clock-cntl-level = "lowsvs", "svs", "turbo";
 		clock-rates =
-			<19200000  0 19200000 0>,
+			<19200000 0 19200000 0>,
 			<256000000 0 300000000 0>,
 			<384000000 0 300000000 0>;
 		status = "ok";
@@ -253,7 +258,6 @@
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&gcc_camss_top_gdsc>;
 		clock-names =
-			"gcc_camss_ahb_clk",
 			"gcc_camss_top_ahb_clk",
 			"gcc_camss_top_ahb_clk_src",
 			"gcc_camss_axi_clk",
@@ -261,7 +265,6 @@
 			"gcc_camss_nrt_axi_clk",
 			"gcc_camss_rt_axi_clk";
 		clocks =
-			<&gcc GCC_CAMERA_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK_SRC>,
 			<&gcc GCC_CAMSS_AXI_CLK>,
@@ -270,15 +273,12 @@
 			<&gcc GCC_CAMSS_RT_AXI_CLK>;
 		src-clock-name = "gcc_camss_axi_clk_src";
 		clock-rates =
-			<0 0        0 0         0 0 0>,
-			<0 0 80000000 0  19200000 0 0>,
-			<0 0 80000000 0 150000000 0 0>,
-			<0 0 80000000 0 200000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>;
-		clock-cntl-level = "suspend", "minsvs", "lowsvs", "svs",
-			"svs_l1", "nominal", "turbo";
+			<0 0 0 0 0 0>,
+			<0 19200000 0 19200000 0 0>,
+			<0 80000000 0 150000000 0 0>,
+			<0 80000000 0 300000000 0 0>,
+			<0 80000000 0 300000000 0 0>;
+		clock-cntl-level = "suspend", "lowsvs", "svs", "nominal", "turbo";
 		qcom,cx-ipeak-gpu-limit = <921600000>;
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;
@@ -503,9 +503,8 @@
 			<&gcc GCC_CAMSS_OPE_CLK>;
 		clock-rates = <0 0 0>,
 			<0 0 0>,
-			<0 0 0>,
 			<0 0 0>;
-		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "turbo";
 		cdm-client-names = "ope";
 		config-fifo;
 		fifo-depths = <64 64 64 64>;
@@ -545,10 +544,11 @@
 			<&gcc GCC_CAMSS_TFE_0_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_0_CLK>;
 		clock-rates =
-			<240000000 0 0 0 256000000 0>,
-			<384000000 0 0 0 460800000 0>,
-			<426400000 0 0 0 576000000 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+			<19200000 0 19200000 0 19200000 0>,
+			<256000000 0 256000000 0 288000000 0>,
+			<384000000 0 384000000 0 576000000 0>,
+			<426400000 0 384000000 0 576000000 0>;
+		clock-cntl-level = "lowsvs", "svs", "nominal", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
 		ppi-enable;
@@ -572,10 +572,10 @@
 			<&gcc GCC_CAMSS_TFE_0_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_0_CLK>;
 		clock-rates =
-			<256000000 0>,
-			<460800000 0>,
+			<19200000 0>,
+			<288000000 0>,
 			<576000000 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <4>;
@@ -609,10 +609,11 @@
 			<&gcc GCC_CAMSS_TFE_1_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_1_CLK>;
 		clock-rates =
-			<240000000 0 240000000 0 256000000 0>,
-			<384000000 0 341333333 0 460800000 0>,
-			<426400000 0 384000000 0 576000000 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+			<19200000 0 19200000 0 19200000 0>,
+			<256000000 0 256000000 0 288000000 0>,
+			<384000000 0 384000000 0 576000000 0>,
+			<426000000 0 384000000 0 576000000 0>;
+		clock-cntl-level = "lowsvs", "svs", "nominal", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
 		ppi-enable;
@@ -636,10 +637,10 @@
 			<&gcc GCC_CAMSS_TFE_1_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_1_CLK>;
 		clock-rates =
-			<256000000 0>,
-			<460800000 0>,
+			<19200000 0>,
+			<288000000 0>,
 			<576000000 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
 		cam_hw_pid = <5>;
@@ -694,10 +695,10 @@
 			<&gcc GCC_CAMSS_TFE_0_CPHY_RX_CLK>,
 			<&gcc GCC_CAMSS_CPHY_0_CLK>;
 		clock-rates =
-			<240000000 0 0>,
-			<341333333 0 0>,
+			<19200000 0 0>,
+			<256000000 0 0>,
 			<384000000 0 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "turbo";
 		src-clock-name = "cphy_rx_clk_src";
 		clock-control-debugfs = "false";
 		status = "ok";
@@ -721,10 +722,10 @@
 			<&gcc GCC_CAMSS_TFE_1_CPHY_RX_CLK>,
 			<&gcc GCC_CAMSS_CPHY_1_CLK>;
 		clock-rates =
-			<240000000 0 0>,
-			<341333333 0 0>,
+			<19200000 0 0>,
+			<256000000 0 0>,
 			<384000000 0 0>;
-		clock-cntl-level = "svs", "svs_l1", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "turbo";
 		src-clock-name = "cphy_rx_clk_src";
 		clock-control-debugfs = "false";
 		status = "ok";
@@ -770,11 +771,11 @@
 			<&gcc GCC_CAMSS_OPE_CLK_SRC>,
 			<&gcc GCC_CAMSS_OPE_CLK>;
 		clock-rates =
+			<19200000 0 19200000 0>,
 			<171428571 0 200000000 0>,
-			<171428571 0 266600000 0>,
 			<240000000 0 465000000 0>,
 			<240000000 0 580000000 0>;
-		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
+		clock-cntl-level = "lowsvs", "svs", "nominal", "turbo";
 		src-clock-name = "ope_clk_src";
 		status = "ok";
 	};
