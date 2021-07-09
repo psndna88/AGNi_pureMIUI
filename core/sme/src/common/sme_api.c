@@ -623,6 +623,11 @@ QDF_STATUS sme_ser_cmd_callback(struct wlan_serialization_command *cmd,
 		csr_release_command_buffer(mac_ctx, sme_cmd);
 		break;
 	case WLAN_SER_CB_ACTIVE_CMD_TIMEOUT:
+		sme_cmd = cmd->umac_cmd;
+		if (sme_cmd && (sme_cmd->command == eSmeCommandRoam ||
+		    sme_cmd->command == eSmeCommandWmStatusChange))
+			qdf_trigger_self_recovery(mac_ctx->psoc,
+						  QDF_ACTIVE_LIST_TIMEOUT);
 		break;
 	default:
 		sme_debug("unknown reason code");
@@ -16846,6 +16851,21 @@ QDF_STATUS sme_register_bcn_recv_pause_ind_cb(mac_handle_t mac_handle,
 	return status;
 }
 #endif
+
+QDF_STATUS sme_set_vdev_sw_retry(uint8_t vdev_id, uint8_t sw_retry_count,
+				 wmi_vdev_custom_sw_retry_type_t sw_retry_type)
+{
+	QDF_STATUS status;
+
+	status = wma_set_vdev_sw_retry_th(vdev_id, sw_retry_count,
+					  sw_retry_type);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		sme_err("Failed to set retry count for vdev: %d", vdev_id);
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 
 QDF_STATUS sme_set_disconnect_ies(mac_handle_t mac_handle, uint8_t vdev_id,
 				  uint8_t *ie_data, uint16_t ie_len)

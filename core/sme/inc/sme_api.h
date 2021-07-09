@@ -4161,6 +4161,19 @@ void sme_chan_to_freq_list(
 			uint32_t chan_list_len);
 
 /**
+ * sme_set_vdev_sw_retry() - set sw retry threshold per vdev
+ * @vdev_id: vdev id
+ * @sw_retry_count: sw retry number
+ * @retry_type: SW vdev retry type
+ *
+ * This function calls WMA api to send the sw retry threshold per vdev.
+ *
+ * Return: QDF_STATUS.
+ */
+QDF_STATUS sme_set_vdev_sw_retry(uint8_t vdev_id, uint8_t sw_retry_count,
+				 wmi_vdev_custom_sw_retry_type_t sw_retry_type);
+
+/**
  * sme_set_roam_config_enable() - Cache roam config status in SME
  * @mac_handle: Opaque handle to the MAC context
  * @vdev_id: vdev id

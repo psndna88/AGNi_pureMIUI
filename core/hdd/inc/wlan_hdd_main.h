@@ -1859,6 +1859,7 @@ struct hdd_adapter_ops_history {
  * @disconnect_for_sta_mon_conc: disconnect if sta monitor intf concurrency
  * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
  * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
+ * @dump_in_progress: Stores value of dump in progress
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2210,6 +2211,7 @@ struct hdd_context {
 #ifdef WLAN_SUPPORT_TWT
 	qdf_work_t twt_en_dis_work;
 #endif
+	bool dump_in_progress;
 };
 
 /**
@@ -2878,8 +2880,7 @@ hdd_add_latency_critical_client(struct hdd_adapter *adapter,
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
 	case QCA_WLAN_802_11_MODE_11G:
-		if (adapter->device_mode == QDF_STA_MODE)
-			qdf_atomic_inc(&hdd_ctx->num_latency_critical_clients);
+		qdf_atomic_inc(&hdd_ctx->num_latency_critical_clients);
 
 		hdd_debug("Adding latency critical connection for vdev %d",
 			  adapter->vdev_id);
@@ -2912,8 +2913,7 @@ hdd_del_latency_critical_client(struct hdd_adapter *adapter,
 	switch (phymode) {
 	case QCA_WLAN_802_11_MODE_11A:
 	case QCA_WLAN_802_11_MODE_11G:
-		if (adapter->device_mode == QDF_STA_MODE)
-			qdf_atomic_dec(&hdd_ctx->num_latency_critical_clients);
+		qdf_atomic_dec(&hdd_ctx->num_latency_critical_clients);
 
 		hdd_info("Removing latency critical connection for vdev %d",
 			 adapter->vdev_id);

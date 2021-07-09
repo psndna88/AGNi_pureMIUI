@@ -426,6 +426,21 @@ static void hdd_init_6ghz(struct hdd_context *hdd_ctx)
 	struct ieee80211_channel *chlist = hdd_channels_6_ghz;
 	uint32_t num = ARRAY_SIZE(hdd_channels_6_ghz);
 	uint16_t base_freq;
+	QDF_STATUS status;
+	uint32_t band_capability;
+
+	hdd_enter();
+
+	status = ucfg_mlme_get_band_capability(hdd_ctx->psoc, &band_capability);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("Failed to get MLME Band Capability");
+		return;
+	}
+
+	if (!(band_capability & (BIT(REG_BAND_6G)))) {
+		hdd_debug("6ghz band not enabled");
+		return;
+	}
 
 	qdf_mem_zero(chlist, sizeof(*chlist) * num);
 	base_freq = wlan_reg_min_6ghz_chan_freq();
@@ -439,6 +454,8 @@ static void hdd_init_6ghz(struct hdd_context *hdd_ctx)
 	wiphy->bands[HDD_NL80211_BAND_6GHZ] = &wlan_hdd_band_6_ghz;
 	wiphy->bands[HDD_NL80211_BAND_6GHZ]->channels = chlist;
 	wiphy->bands[HDD_NL80211_BAND_6GHZ]->n_channels = num;
+
+	hdd_exit();
 }
 #else
 static void hdd_init_6ghz(struct hdd_context *hdd_ctx)
@@ -4815,6 +4832,11 @@ hdd_send_roam_triggers_to_sme(struct hdd_context *hdd_ctx,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	triggers.vdev_id = vdev_id;
+	triggers.trigger_bitmap =
+	    wlan_hdd_convert_control_roam_trigger_bitmap(roam_trigger_bitmap);
+	hdd_debug("trigger bitmap: 0x%x converted trigger_bitmap: 0x%x",
+		  roam_trigger_bitmap, triggers.trigger_bitmap);
 	/*
 	 * In standalone STA, if this vendor command is received between
 	 * ROAM_START and roam synch indication, it is better to reject
@@ -4827,15 +4849,12 @@ hdd_send_roam_triggers_to_sme(struct hdd_context *hdd_ctx,
 	 * vdev.
 	 */
 	if (hdd_is_roaming_in_progress(hdd_ctx)) {
+		mlme_set_roam_trigger_bitmap(hdd_ctx->psoc, adapter->vdev_id,
+					     triggers.trigger_bitmap);
 		hdd_err("Reject set roam trigger as roaming is in progress");
-		return QDF_STATUS_E_FAILURE;
-	}
 
-	triggers.vdev_id = vdev_id;
-	triggers.trigger_bitmap =
-	    wlan_hdd_convert_control_roam_trigger_bitmap(roam_trigger_bitmap);
-	hdd_debug("trigger bitmap: 0x%x converted trigger_bitmap: 0x%x",
-		  roam_trigger_bitmap, triggers.trigger_bitmap);
+		return QDF_STATUS_E_BUSY;
+	}
 
 	/*
 	 * roam trigger bitmap is > 0 - Roam triggers are set.
@@ -6726,6 +6745,7 @@ void hdd_cfr_data_send_nl_event(uint8_t vdev_id, uint32_t pid,
 		return;
 	}
 
+	hdd_debug("vdev id %d pid %d data len %d", vdev_id, pid, data_len);
 	len = nla_total_size(data_len) + NLMSG_HDRLEN;
 	vendor_event = cfg80211_vendor_event_alloc(
 			hdd_ctx->wiphy, &adapter->wdev, len,
@@ -6755,8 +6775,7 @@ void hdd_cfr_data_send_nl_event(uint8_t vdev_id, uint32_t pid,
 			hdd_err_rl("nlhdr is null");
 	}
 
-	hdd_debug("vdev id %d pid %d", vdev_id, pid);
-	cfg80211_vendor_event(vendor_event, GFP_KERNEL);
+	cfg80211_vendor_event(vendor_event, GFP_ATOMIC);
 }
 #endif
 
@@ -7650,7 +7669,6 @@ static int hdd_config_access_policy(struct hdd_adapter *adapter,
 	return qdf_status_to_os_return(status);
 }
 
-#ifdef TX_AGGREGATION_SIZE_ENABLE
 static int hdd_config_mpdu_aggregation(struct hdd_adapter *adapter,
 				       struct nlattr *tb[])
 {
@@ -7728,59 +7746,6 @@ static int hdd_config_msdu_aggregation(struct hdd_adapter *adapter,
 
 	return qdf_status_to_os_return(status);
 }
-#else
-static int hdd_config_mpdu_aggregation(struct hdd_adapter *adapter,
-				       struct nlattr *tb[])
-{
-	struct nlattr *rx_attr =
-		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MPDU_AGGREGATION];
-	uint8_t rx_size;
-	QDF_STATUS status;
-
-	if (!rx_attr)
-		return 0;
-
-	rx_size = nla_get_u8(rx_attr);
-	if (!cfg_in_range(CFG_RX_AGGREGATION_SIZE, rx_size)) {
-		hdd_err("RX %d MPDU aggr size not in range",
-			rx_size);
-		return -EINVAL;
-	}
-
-	status = wma_set_tx_rx_aggr_size(adapter->vdev_id,
-					 0,
-					 rx_size,
-					 WMI_VDEV_CUSTOM_AGGR_TYPE_AMPDU);
-
-	return qdf_status_to_os_return(status);
-}
-
-static int hdd_config_msdu_aggregation(struct hdd_adapter *adapter,
-				       struct nlattr *tb[])
-{
-	struct nlattr *rx_attr =
-		tb[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION];
-	uint8_t rx_size;
-	QDF_STATUS status;
-
-	if (!rx_attr)
-		return 0;
-
-	rx_size = nla_get_u8(rx_attr);
-	if (!cfg_in_range(CFG_RX_AGGREGATION_SIZE, rx_size)) {
-		hdd_err("RX %d MPDU aggr size not in range",
-			rx_size);
-		return -EINVAL;
-	}
-
-	status = wma_set_tx_rx_aggr_size(adapter->vdev_id,
-					 0,
-					 rx_size,
-					 WMI_VDEV_CUSTOM_AGGR_TYPE_AMSDU);
-
-	return qdf_status_to_os_return(status);
-}
-#endif
 
 static QDF_STATUS
 hdd_populate_vdev_chains(struct wlan_mlme_nss_chains *nss_chains_cfg,
@@ -8149,34 +8114,34 @@ static int hdd_config_non_agg_retry(struct hdd_adapter *adapter,
 				    const struct nlattr *attr)
 {
 	uint8_t retry;
-	int param_id;
 
 	retry = nla_get_u8(attr);
-	retry = retry > CFG_NON_AGG_RETRY_MAX ?
-		CFG_NON_AGG_RETRY_MAX : retry;
-	param_id = WMI_PDEV_PARAM_NON_AGG_SW_RETRY_TH;
 
-	return wma_cli_set_command(adapter->vdev_id, param_id,
-				   retry, PDEV_CMD);
+	/* Value less than CFG_AGG_RETRY_MIN has side effect to t-put */
+	retry = (retry > CFG_NON_AGG_RETRY_MAX) ? CFG_NON_AGG_RETRY_MAX :
+		((retry < CFG_NON_AGG_RETRY_MIN) ? CFG_NON_AGG_RETRY_MIN :
+		  retry);
+	hdd_debug("sending Non-Agg Retry Th: %d", retry);
+
+	return sme_set_vdev_sw_retry(adapter->vdev_id, retry,
+				     WMI_VDEV_CUSTOM_SW_RETRY_TYPE_NONAGGR);
 }
 
 static int hdd_config_agg_retry(struct hdd_adapter *adapter,
 				const struct nlattr *attr)
 {
 	uint8_t retry;
-	int param_id;
 
 	retry = nla_get_u8(attr);
-	retry = retry > CFG_AGG_RETRY_MAX ?
-		CFG_AGG_RETRY_MAX : retry;
 
 	/* Value less than CFG_AGG_RETRY_MIN has side effect to t-put */
-	retry = ((retry > 0) && (retry < CFG_AGG_RETRY_MIN)) ?
-		CFG_AGG_RETRY_MIN : retry;
-	param_id = WMI_PDEV_PARAM_AGG_SW_RETRY_TH;
+	retry = (retry > CFG_AGG_RETRY_MAX) ? CFG_AGG_RETRY_MAX :
+		((retry < CFG_AGG_RETRY_MIN) ? CFG_AGG_RETRY_MIN :
+		  retry);
+	hdd_debug("sending Agg Retry Th: %d", retry);
 
-	return wma_cli_set_command(adapter->vdev_id, param_id,
-				   retry, PDEV_CMD);
+	return sme_set_vdev_sw_retry(adapter->vdev_id, retry,
+				     WMI_VDEV_CUSTOM_SW_RETRY_TYPE_AGGR);
 }
 
 static int hdd_config_mgmt_retry(struct hdd_adapter *adapter,

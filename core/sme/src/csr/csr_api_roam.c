@@ -81,6 +81,7 @@
 #include "wlan_roam_debug.h"
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_mlme_twt_api.h"
+#include "wlan_cmn_ieee80211.h"
 
 #define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
@@ -6026,6 +6027,8 @@ QDF_STATUS csr_roam_process_command(struct mac_context *mac, tSmeCmd *pCommand)
 			}
 			sme_release_global_lock(&mac->sme);
 		}
+		pCommand->u.roamCmd.connect_active_time =
+					qdf_mc_timer_get_system_time();
 		/*
 		 * At this point original uapsd_mask is saved in
 		 * pCurRoamProfile. uapsd_mask in the pCommand may change from
@@ -8716,6 +8719,42 @@ csr_delete_current_bss_sae_single_pmk_entry(struct mac_context *mac,
 {}
 #endif
 
+/*
+ * Do not allow last connect attempt after 20 sec, assuming a new attempt will
+ * take max 10 sec, total connect time will not be more than 30 sec
+ */
+#define CSR_CONNECT_MAX_ACTIVE_TIME 20000
+
+static bool
+csr_is_time_allowed_for_connect_attempt(tSmeCmd *cmd, uint8_t vdev_id)
+{
+	qdf_time_t time_since_connect_active;
+
+	if (!cmd)
+		return false;
+
+	if (cmd->command != eSmeCommandRoam ||
+	    cmd->u.roamCmd.roamReason != eCsrHddIssued) {
+		sme_err("vdev_id %d invalid command %d, reason %d", vdev_id,
+			cmd->command, cmd->command == eSmeCommandRoam ?
+			cmd->u.roamCmd.roamReason : 0);
+		return false;
+	}
+
+	time_since_connect_active = qdf_mc_timer_get_system_time() -
+					cmd->u.roamCmd.connect_active_time;
+	if (time_since_connect_active >= CSR_CONNECT_MAX_ACTIVE_TIME) {
+		sme_info("vdev_id %d Max time allocated (%d ms) for connect completed, cur time %lu, active time %lu and diff %lu",
+			 vdev_id, CSR_CONNECT_MAX_ACTIVE_TIME,
+			 qdf_mc_timer_get_system_time(),
+			 cmd->u.roamCmd.connect_active_time,
+			 time_since_connect_active);
+		return false;
+	}
+
+	return true;
+}
+
 static void csr_roam_join_rsp_processor(struct mac_context *mac,
 					struct join_rsp *pSmeJoinRsp)
 {
@@ -8733,6 +8772,7 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 	bool retry_same_bss = false;
 	bool attempt_next_bss = true;
 	enum csr_akm_type auth_type = eCSR_AUTH_TYPE_NONE;
+	bool is_time_allowed;
 
 	if (!pSmeJoinRsp) {
 		sme_err("Sme Join Response is NULL");
@@ -8830,13 +8870,18 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 		 reason_code);
 
 	is_dis_pending = is_disconnect_pending(mac, session_ptr->sessionId);
+	is_time_allowed =
+		csr_is_time_allowed_for_connect_attempt(pCommand,
+							session_ptr->vdev_id);
+
 	/*
-	 * if userspace has issued disconnection or we have reached mac tries,
-	 * driver should not continue for next connection.
+	 * if userspace has issued disconnection or we have reached mac tries or
+	 * max time, driver should not continue for next connection.
 	 */
-	if (is_dis_pending ||
+	if (is_dis_pending || !is_time_allowed ||
 	    session_ptr->join_bssid_count >= CSR_MAX_BSSID_COUNT)
 		attempt_next_bss = false;
+
 	/*
 	 * Delete the PMKID of the BSSID for which the assoc reject is
 	 * received from the AP due to invalid PMKID reason.
@@ -8948,6 +8993,9 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 
 	if (is_dis_pending)
 		sme_err("disconnect is pending, complete roam");
+
+	if (!is_time_allowed)
+		sme_err("time can exceed the active timeout for connection attempt");
 
 	if (session_ptr->bRefAssocStartCnt)
 		session_ptr->bRefAssocStartCnt--;
@@ -11260,7 +11308,7 @@ csr_roam_chk_lnk_assoc_ind_upper_layer(
 			&session_id);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		sme_debug("Couldn't find session_id for given BSSID");
-		return;
+		goto free_mem;
 	}
 	csr_send_assoc_ind_to_upper_layer_cnf_msg(
 					mac_ctx, assoc_ind, status, session_id);
@@ -11271,6 +11319,7 @@ csr_roam_chk_lnk_assoc_ind_upper_layer(
 	 *in the csr_send_assoc_ind_to_upper_layer_cnf_msg and
 	 *then free the memroy here.
 	 */
+free_mem:
 	if (assoc_ind->assocReqLength != 0 && assoc_ind->assocReqPtr)
 		qdf_mem_free(assoc_ind->assocReqPtr);
 }
@@ -11601,7 +11650,8 @@ csr_roam_chk_lnk_swt_ch_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 	struct switch_channel_ind *pSwitchChnInd;
 	struct csr_roam_info *roam_info;
 	tSirMacDsParamSetIE *ds_params_ie;
-	tDot11fIEHTInfo *ht_info_ie;
+	struct wlan_ie_htinfo *ht_info_ie;
+
 
 	/* in case of STA, the SWITCH_CHANNEL originates from its AP */
 	sme_debug("eWNI_SME_SWITCH_CHL_IND from SME");
@@ -11646,15 +11696,16 @@ csr_roam_chk_lnk_swt_ch_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 				wlan_reg_freq_to_chan(mac_ctx->pdev,
 						      pSwitchChnInd->freq);
 
-		ht_info_ie = (tDot11fIEHTInfo *)wlan_get_ie_ptr_from_eid(
-				DOT11F_EID_HTINFO,
-				(uint8_t *)session->pConnectBssDesc->ieFields,
-				ie_len);
+		ht_info_ie =
+			(struct wlan_ie_htinfo *)wlan_get_ie_ptr_from_eid
+				(DOT11F_EID_HTINFO,
+				 (uint8_t *)session->pConnectBssDesc->ieFields,
+				 ie_len);
 		if (ht_info_ie) {
-			ht_info_ie->primaryChannel =
+			ht_info_ie->hi_ie.hi_ctrlchannel =
 				wlan_reg_freq_to_chan(mac_ctx->pdev,
 						      pSwitchChnInd->freq);
-			ht_info_ie->secondaryChannelOffset =
+			ht_info_ie->hi_ie.hi_extchoff =
 				pSwitchChnInd->chan_params.sec_ch_offset;
 		}
 	}
@@ -14791,6 +14842,8 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 	bool follow_ap_edca;
 	bool reconn_after_assoc_timeout = false;
 	uint8_t programmed_country[REG_ALPHA2_LEN + 1];
+	enum reg_6g_ap_type power_type_6g;
+	bool ctry_code_match;
 
 	if (!pSession) {
 		sme_err("session %d not found", sessionId);
@@ -15557,30 +15610,15 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				sme_debug("Channel is 6G but country IE not present");
 			wlan_reg_read_current_country(mac->psoc,
 						      programmed_country);
-			if (qdf_mem_cmp(pIes->Country.country,
-					programmed_country,
-					REG_ALPHA2_LEN)) {
-				sme_debug("Country IE:%c%c, STA country:%c%c",
-					  pIes->Country.country[0],
-					  pIes->Country.country[1],
-					  programmed_country[0],
-					  programmed_country[1]);
-				csr_join_req->same_ctry_code = false;
-				if (wlan_reg_is_us(programmed_country)) {
-					sme_err("US VLP not in place yet, connection not allowed");
-					status = QDF_STATUS_E_NOSUPPORT;
-					break;
-				}
-				if (wlan_reg_is_etsi(programmed_country)) {
-					sme_debug("STA ctry:%c%c, doesn't match with AP ctry, switch to VLP",
-						  programmed_country[0],
-						  programmed_country[1]);
-					csr_join_req->ap_power_type_6g =
-							REG_VERY_LOW_POWER_AP;
-				}
-			} else {
-				csr_join_req->same_ctry_code = true;
-			}
+			status = wlan_reg_get_6g_power_type_for_ctry(
+					pIes->Country.country,
+					programmed_country, &power_type_6g,
+					&ctry_code_match);
+			if (QDF_IS_STATUS_ERROR(status))
+				break;
+			csr_join_req->ap_power_type_6g = power_type_6g;
+			csr_join_req->same_ctry_code = ctry_code_match;
+
 			status = csr_iterate_triplets(pIes->Country);
 		}
 
@@ -21291,7 +21329,9 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		}
 		qdf_mem_zero(pmkid_cache, sizeof(pmkid_cache));
 		qdf_mem_free(pmkid_cache);
-	} else {
+	}
+
+	if (roam_synch_data->authStatus != CSR_ROAM_AUTH_STATUS_AUTHENTICATED) {
 		roam_info->fAuthRequired = true;
 		csr_roam_substate_change(mac_ctx,
 				eCSR_ROAM_SUBSTATE_WAIT_FOR_KEY,

@@ -481,6 +481,12 @@ static uint32_t hdd_twt_get_params_resp_len(void)
 	/* QCA_WLAN_VENDOR_ATTR_TWT_SETUP_STATE */
 	len += nla_total_size(sizeof(u32));
 
+	/* QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_TYPE */
+	len += nla_total_size(sizeof(u8));
+
+	/* QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA */
+	len += nla_total_size(sizeof(u32));
+
 	return len;
 }
 
@@ -511,13 +517,16 @@ hdd_get_converted_twt_state(enum wlan_twt_session_state state)
  * @psoc: Pointer to Global psoc
  * @reply_skb: pointer to response skb buffer
  * @params: Ponter to twt peer session parameters
+ * @num_twt_session: total number of valid twt session
  *
  * Return: QDF_STATUS_SUCCESS on success, else other qdf error values
  */
 static QDF_STATUS
-hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
-				   struct sk_buff *reply_skb,
-				   struct wmi_host_twt_session_stats_info *params)
+hdd_twt_pack_get_params_resp_nlmsg(
+				struct wlan_objmgr_psoc *psoc,
+				struct sk_buff *reply_skb,
+				struct wmi_host_twt_session_stats_info *params,
+				int num_twt_session)
 {
 	struct nlattr *config_attr, *nla_params;
 	enum wlan_twt_session_state state;
@@ -534,7 +543,7 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	for (i = 0; i < TWT_PSOC_MAX_SESSIONS; i++) {
+	for (i = 0; i < num_twt_session; i++) {
 		if (params[i].event_type != HOST_TWT_SESSION_SETUP &&
 		    params[i].event_type != HOST_TWT_SESSION_UPDATE)
 			continue;
@@ -665,12 +674,14 @@ hdd_twt_pack_get_params_resp_nlmsg(struct wlan_objmgr_psoc *psoc,
  * and sends response to the user space via nl layer
  * @hdd_ctx: hdd context
  * @params: Pointer to store twt peer session parameters
+ * @num_twt_session: number of twt session
  *
  * Return: QDF_STATUS_SUCCESS on success, else other qdf error values
  */
 static QDF_STATUS
 hdd_twt_pack_get_params_resp(struct hdd_context *hdd_ctx,
-			     struct wmi_host_twt_session_stats_info *params)
+			     struct wmi_host_twt_session_stats_info *params,
+			     int num_twt_session)
 {
 	struct sk_buff *reply_skb;
 	uint32_t skb_len = NLMSG_HDRLEN, i;
@@ -680,7 +691,7 @@ hdd_twt_pack_get_params_resp(struct hdd_context *hdd_ctx,
 	skb_len += NLA_HDRLEN;
 
 	/* Length of twt session parameters */
-	for (i = 0; i < TWT_PSOC_MAX_SESSIONS; i++) {
+	for (i = 0; i < num_twt_session; i++) {
 		if (params[i].event_type == HOST_TWT_SESSION_SETUP ||
 		    params[i].event_type == HOST_TWT_SESSION_UPDATE)
 			skb_len += hdd_twt_get_params_resp_len();
@@ -694,7 +705,8 @@ hdd_twt_pack_get_params_resp(struct hdd_context *hdd_ctx,
 	}
 
 	qdf_status = hdd_twt_pack_get_params_resp_nlmsg(hdd_ctx->psoc,
-							reply_skb, params);
+							reply_skb, params,
+							num_twt_session);
 	if (QDF_IS_STATUS_ERROR(qdf_status))
 		goto fail;
 
@@ -749,7 +761,7 @@ hdd_send_inactive_session_reply(struct hdd_adapter *adapter,
 	QDF_STATUS qdf_status;
 
 	params[0].event_type = HOST_TWT_SESSION_UPDATE;
-	qdf_status = hdd_twt_pack_get_params_resp(adapter->hdd_ctx, params);
+	qdf_status = hdd_twt_pack_get_params_resp(adapter->hdd_ctx, params, 0);
 
 	return qdf_status;
 }
@@ -766,14 +778,17 @@ static QDF_STATUS
 hdd_twt_get_peer_session_params(struct hdd_context *hdd_ctx,
 				struct wmi_host_twt_session_stats_info *params)
 {
+	int num_twt_session = 0;
 	QDF_STATUS qdf_status = QDF_STATUS_E_INVAL;
 
 	if (!hdd_ctx || !params)
 		return qdf_status;
 
-	qdf_status = ucfg_twt_get_peer_session_params(hdd_ctx->psoc, params);
-	if (QDF_IS_STATUS_SUCCESS(qdf_status))
-		qdf_status = hdd_twt_pack_get_params_resp(hdd_ctx, params);
+	num_twt_session = ucfg_twt_get_peer_session_params(hdd_ctx->psoc,
+							   params);
+	if (num_twt_session)
+		qdf_status = hdd_twt_pack_get_params_resp(hdd_ctx, params,
+							  num_twt_session);
 
 	return qdf_status;
 }
@@ -789,11 +804,12 @@ hdd_twt_get_peer_session_params(struct hdd_context *hdd_ctx,
 static int hdd_sap_twt_get_session_params(struct hdd_adapter *adapter,
 					  struct nlattr *twt_param_attr)
 {
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1];
-	struct wmi_host_twt_session_stats_info
-				params[TWT_PSOC_MAX_SESSIONS] = { {0} };
+	int max_num_peer;
+	struct wmi_host_twt_session_stats_info *params;
 	int ret, id, id1;
-	QDF_STATUS qdf_status;
+	QDF_STATUS qdf_status = QDF_STATUS_E_INVAL;
 	struct qdf_mac_addr mac_addr;
 	bool is_associated;
 
@@ -804,6 +820,11 @@ static int hdd_sap_twt_get_session_params(struct hdd_adapter *adapter,
 	if (ret)
 		return ret;
 
+	max_num_peer = hdd_ctx->wiphy->max_ap_assoc_sta;
+	params = qdf_mem_malloc(TWT_PEER_MAX_SESSIONS * max_num_peer *
+				sizeof(*params));
+
+	params[0].vdev_id = adapter->vdev_id;
 	id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_ID;
 	id1 = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAC_ADDR;
 
@@ -812,13 +833,13 @@ static int hdd_sap_twt_get_session_params(struct hdd_adapter *adapter,
 		nla_memcpy(params[0].peer_mac, tb[id1], QDF_MAC_ADDR_SIZE);
 	} else {
 		hdd_err_rl("TWT: get_params dialog_id or mac_addr is missing");
-		return -EINVAL;
+		goto done;
 	}
 
 	if (QDF_IS_ADDR_BROADCAST(params[0].peer_mac) &&
 	    params[0].dialog_id != TWT_ALL_SESSIONS_DIALOG_ID) {
 		hdd_err_rl("TWT: get_params dialog_is is invalid");
-		return -EINVAL;
+		goto done;
 	}
 
 	if (!params[0].dialog_id)
@@ -832,7 +853,7 @@ static int hdd_sap_twt_get_session_params(struct hdd_adapter *adapter,
 			hdd_err("TWT: Association doesn't exist for STA: "
 				   QDF_MAC_ADDR_FMT,
 				   QDF_MAC_ADDR_REF(&mac_addr));
-			return -EINVAL;
+			goto done;
 		}
 	}
 
@@ -841,7 +862,8 @@ static int hdd_sap_twt_get_session_params(struct hdd_adapter *adapter,
 
 	qdf_status = hdd_twt_get_peer_session_params(adapter->hdd_ctx,
 						     &params[0]);
-
+done:
+	qdf_mem_free(params);
 	return qdf_status_to_os_return(qdf_status);
 }
 
@@ -872,6 +894,7 @@ static int hdd_sta_twt_get_session_params(struct hdd_adapter *adapter,
 	if (ret)
 		return ret;
 
+	params[0].vdev_id = adapter->vdev_id;
 	/*
 	 * Currently twt_get_params nl cmd is sending only dialog_id(STA), fill
 	 * mac_addr of STA in params and call hdd_twt_get_peer_session_params.
@@ -2897,8 +2920,8 @@ static uint32_t get_session_wake_duration(struct hdd_context *hdd_ctx,
 					  uint32_t dialog_id,
 					  struct qdf_mac_addr *peer_macaddr)
 {
-	QDF_STATUS qdf_status;
 	struct wmi_host_twt_session_stats_info params = {0};
+	int num_twt_session = 0;
 
 	params.dialog_id = dialog_id;
 	qdf_mem_copy(params.peer_mac,
@@ -2907,8 +2930,9 @@ static uint32_t get_session_wake_duration(struct hdd_context *hdd_ctx,
 	hdd_debug("Get_params peer mac_addr " QDF_MAC_ADDR_FMT,
 		  QDF_MAC_ADDR_REF(params.peer_mac));
 
-	qdf_status = ucfg_twt_get_peer_session_params(hdd_ctx->psoc, &params);
-	if (QDF_IS_STATUS_SUCCESS(qdf_status))
+	num_twt_session = ucfg_twt_get_peer_session_params(hdd_ctx->psoc,
+							   &params);
+	if (num_twt_session)
 		return params.wake_dura_us;
 
 	return 0;

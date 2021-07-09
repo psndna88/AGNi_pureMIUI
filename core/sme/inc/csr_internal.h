@@ -288,6 +288,7 @@ struct roam_cmd {
 	tSirMacAddr peerMac;
 	enum wlan_reason_code reason;
 	enum wlan_reason_code disconnect_reason;
+	qdf_time_t connect_active_time;
 };
 
 struct setkey_cmd {
