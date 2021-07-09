@@ -15,7 +15,7 @@ Required properties:
 	- "qcom,sm6150-vidc" : Invokes driver specific data for SA6155.
 	- "qcom,scuba-vidc" : Invokes driver specific data for SCUBA.
 	- "qcom,monaco-vidc" : Invokes driver specific data for MONACO.
-	- "qcom,qcm6490-vidc" : Invokes driver specific data for YUPIK-IOT.
+
 Optional properties:
 - vidc,firmware-name : Video Firmware ELF image name to be loaded by PIL
 - reg : offset and length of the register set for the device.

@@ -28,6 +28,7 @@ Properties:
 		"qcom,mpm-gic-sdxnightjar"
 		"qcom,mpm-gic-monaco"
 		"qcom,mpm-gic-qcs405"
+		"qcom,mpm-gic-blair"
 
 - interrupts:
 	Usage: required

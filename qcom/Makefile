@@ -106,7 +106,8 @@ dtbo-$(CONFIG_ARCH_HOLI) += holi-rumi-overlay.dtbo \
 	holi-cdp-lcd-pm6125-overlay.dtbo \
 	holi-mtp-usbc-pm6125-overlay.dtbo \
 	holi-mtp-pm6125-nopmi-overlay.dtbo \
-	holi-qrd-pm6125-overlay.dtbo
+	holi-qrd-pm6125-overlay.dtbo \
+	holi-qrd-pm6125-nopmi-overlay.dtbo
 
 holi-rumi-overlay.dtbo-base := holi.dtb
 holi-mtp-overlay.dtbo-base := holi.dtb
@@ -121,6 +122,7 @@ holi-cdp-lcd-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-usbc-pm6125-overlay.dtbo-base := holi.dtb
 holi-mtp-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 holi-qrd-pm6125-overlay.dtbo-base := holi.dtb
+holi-qrd-pm6125-nopmi-overlay.dtbo-base := holi.dtb
 
 else
 dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
@@ -135,7 +137,8 @@ dtb-$(CONFIG_ARCH_HOLI) += holi-rumi.dtb \
 	holi-cdp-lcd-pm6125.dtb \
 	holi-mtp-usbc-pm6125.dtb \
 	holi-mtp-pm6125-nopmi.dtb \
-	holi-qrd-pm6125.dtb
+	holi-qrd-pm6125.dtb \
+	holi-qrd-pm6125-nopmi.dtb
 
 endif
 
@@ -406,14 +409,19 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-mtp.dtb \
 	sdxlemur-mtp-mbb.dtb \
 	sdxlemur-mtp-cpe.dtb \
+	sdxlemur-mtp-cpe-pine1x.dtb \
+	sdxlemur-mtp-cpe-pine2x.dtb \
 	sdxlemur-mtp-mbb-emmc.dtb \
 	sdxlemur-mtp-mbb-emmc-512mb.dtb \
 	sdxlemur-mtp-mbb-ntn3-pcie.dtb \
 	sdxlemur-mtp-mbb-pcie-ep.dtb \
 	sdxlemur-mtp-mbb-pcie-rc-ep.dtb \
+	sdxlemur-mtp-mbb-m2-ep.dtb \
 	sdxlemur-mtp-mbb.dtb \
 	sdxlemur-rcm-pcie-ep.dtb \
 	sdxlemur-rcm-rc.dtb \
+	sdxlemur-rcm-rc-pine1x.dtb \
+	sdxlemur-rcm-rc-pine2x.dtb \
 	sdxlemur-v2-cdp.dtb \
 	sdxlemur-v2-mtp-mbb.dtb \
 	sdxlemur-v2-mtp-cpe.dtb \
