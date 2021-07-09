@@ -775,12 +775,12 @@
 		};
 
 		l2_cache102 {
-			qcom,dump-size = <0x90100>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc6>;
 		};
 
 		l2_cache103 {
-			qcom,dump-size = <0x90100>;
+			qcom,dump-size = <0x48100>;
 			qcom,dump-id = <0xc7>;
 		};
 
@@ -973,7 +973,7 @@
 	};
 
 	wakegic: wake-gic {
-		compatible = "qcom,mpm-gic-holi", "qcom,mpm";
+		compatible = "qcom,mpm-gic-blair", "qcom,mpm";
 		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
 		reg = <0x45f01b8 0x1000>,
 			<0x0f40000c 0x4>;  /* MSM_APCS_GCC_BASE 4K */
@@ -3350,7 +3350,7 @@
 #include "holi-coresight.dtsi"
 #include "holi-pm.dtsi"
 #include "holi-vidc.dtsi"
-#include "camera/holi-camera.dtsi"
+#include "camera/blair-camera.dtsi"
 #include "holi-thermal.dtsi"
 #include "holi-qupv3.dtsi"
 #include "display/blair-sde.dtsi"
@@ -3438,6 +3438,7 @@
 &msm_gpu {
 	qcom,chipid = <0x06010901>;
 	vdd-parent-supply = <&S8A_LEVEL>;
+	qcom,no-nap;
 
 	/delete-node/qcom,gpu-pwrlevel-bins;
 
@@ -3756,15 +3757,21 @@
 	bluetooth: bt_wcn3990 {
 		compatible = "qcom,wcn3990";
 		qcom,bt-sw-ctrl-gpio = <&tlmm 69 GPIO_ACTIVE_HIGH>;
+		qcom,bt-vdd-smps-supply = <&S5A>;  /* SMPS */
 		qcom,bt-vdd-io-supply = <&L9A>;  /* IO */
 		qcom,bt-vdd-core-supply = <&L2A>; /* RFA */
 		qcom,bt-vdd-pa-supply = <&L23A>; /* CH0 */
 		qcom,bt-vdd-xtal-supply = <&L16A>; /* XO */
 
+		qcom,bt-vdd-smps-config = <984000 984000 1 0>;
 		qcom,bt-vdd-io-config = <1700000 1900000 1 0>;
 		qcom,bt-vdd-core-config = <1304000 1304000 1 0>;
 		qcom,bt-vdd-pa-config = <3000000 3312000 1 0>;
 		qcom,bt-vdd-xtal-config = <1700000 1900000 1 0>;
+	};
+
+	cxip-cdev@3ed000 {
+		status = "ok";
 	};
 };
 

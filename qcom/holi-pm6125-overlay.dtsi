@@ -19,10 +19,13 @@
 };
 
 &bluetooth {
+	qcom,bt-vdd-smps-supply = <&S5A>;  /* SMPS */
 	qcom,bt-vdd-io-supply = <&L9A>;  /* IO */
 	qcom,bt-vdd-core-supply = <&L2A>; /* RFA */
 	qcom,bt-vdd-pa-supply = <&L23A>; /* CH0 */
 	qcom,bt-vdd-xtal-supply = <&L16A>; /* XO */
+
+	qcom,bt-vdd-smps-config = <984000 984000 1 0>;
 };
 
 &dispcc {
@@ -63,4 +66,16 @@
 &pil_lpass {
 	vdd_lpi_cx-supply = <&L1A_LEVEL>;
 	vdd_lpi_mx-supply = <&L17A_LEVEL>;
+};
+
+&qusb_phy0 {
+	vdd-supply = <&L7A>;
+	vdda18-supply = <&L10A>;
+	vdda33-supply = <&L7E>;
+	refgen-supply = <&L4A>;
+};
+
+&usb_qmp_dp_phy {
+	vdd-supply = <&L18A>;
+	core-supply = <&L4A>;
 };

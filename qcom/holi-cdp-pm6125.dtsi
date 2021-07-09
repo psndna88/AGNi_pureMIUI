@@ -1,6 +1,7 @@
 #include "holi-audio-overlay.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
+#include "holi-pm7250b.dtsi"
 #include "holi-pmic-overlay-pm6125.dtsi"
 #include "holi-thermal-overlay-pm6125.dtsi"
 #include "display/holi-sde-display-cdp-pm6125.dtsi"
@@ -22,7 +23,7 @@
 
 &wcd937x_codec {
 	cdc-vdd-rxtx-supply = <&L9A>;
-	cdc-vddio-supply = <&L9A>;
+	cdc-vddpx-supply = <&L9A>;
 	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
 				   "cdc-vddpx";
 	/*
@@ -326,7 +327,7 @@
 };
 
 &pm7250b_pdphy {
-	vdd-pdphy-supply = <&L3A>;
+	vdd-pdphy-supply = <&L7E>;
 	vbus-supply = <&smb5_vbus>;
 	vconn-supply = <&smb5_vconn>;
 
