@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -492,6 +492,12 @@ static int msm_vidc_probe_vidc_device(struct platform_device *pdev)
 
 	core->id = MSM_VIDC_CORE_VENUS;
 
+	vidc_driver->ctxt = kcalloc(core->platform_data->max_inst_count,
+		sizeof(*vidc_driver->ctxt), GFP_KERNEL);
+	if (!vidc_driver->ctxt)
+		goto err_vidc_context;
+	vidc_driver->num_ctxt = core->platform_data->max_inst_count;
+
 	rc = v4l2_device_register(&pdev->dev, &core->v4l2_dev);
 	if (rc) {
 		d_vpr_e("Failed to register v4l2 device\n");
@@ -588,6 +594,8 @@ err_enc:
 err_dec:
 	v4l2_device_unregister(&core->v4l2_dev);
 err_v4l2_register:
+	kfree(vidc_driver->ctxt);
+err_vidc_context:
 	sysfs_remove_group(&pdev->dev.kobj, &msm_vidc_core_attr_group);
 err_core_init:
 	dev_set_drvdata(&pdev->dev, NULL);
@@ -660,6 +668,7 @@ static int msm_vidc_remove(struct platform_device *pdev)
 	mutex_destroy(&core->resources.cb_lock);
 	mutex_destroy(&core->lock);
 	kfree(core);
+	kfree(vidc_driver->ctxt);
 	return rc;
 }
 
