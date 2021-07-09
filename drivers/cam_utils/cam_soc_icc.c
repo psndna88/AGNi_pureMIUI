@@ -103,7 +103,7 @@ int cam_soc_bus_client_register(struct platform_device *pdev,
 	bus_client_data->icc_data = icc_get(&pdev->dev,
 		bus_client->common_data->src_id,
 		bus_client->common_data->dst_id);
-	if (!bus_client_data->icc_data) {
+	if (IS_ERR_OR_NULL(bus_client_data->icc_data)) {
 		CAM_ERR(CAM_UTIL, "failed in register bus client");
 		rc = -EINVAL;
 		goto error;
