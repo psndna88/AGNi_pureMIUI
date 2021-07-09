@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of_device.h>
@@ -1565,7 +1565,7 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 
 	dsi_ctrl_validate_msg_flags(dsi_ctrl, msg, flags);
 
-	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY, flags);
+	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY, *flags, dsi_ctrl->cmd_len);
 
 	if (dsi_ctrl->dma_wait_queued)
 		dsi_ctrl_flush_cmd_dma_queue(dsi_ctrl);
@@ -2959,7 +2959,10 @@ void dsi_ctrl_enable_status_interrupt(struct dsi_ctrl *dsi_ctrl,
 			intr_idx >= DSI_STATUS_INTERRUPT_COUNT)
 		return;
 
-	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY, intr_idx);
+	SDE_EVT32(dsi_ctrl->cell_index, intr_idx,
+		dsi_ctrl->irq_info.irq_num, dsi_ctrl->irq_info.irq_stat_mask,
+		dsi_ctrl->irq_info.irq_stat_refcount[intr_idx]);
+
 	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
 
 	if (dsi_ctrl->irq_info.irq_stat_refcount[intr_idx] == 0) {
@@ -2992,7 +2995,10 @@ void dsi_ctrl_disable_status_interrupt(struct dsi_ctrl *dsi_ctrl,
 	if (!dsi_ctrl || intr_idx >= DSI_STATUS_INTERRUPT_COUNT)
 		return;
 
-	SDE_EVT32_IRQ(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY, intr_idx);
+	SDE_EVT32_IRQ(dsi_ctrl->cell_index, intr_idx,
+		dsi_ctrl->irq_info.irq_num, dsi_ctrl->irq_info.irq_stat_mask,
+		dsi_ctrl->irq_info.irq_stat_refcount[intr_idx]);
+
 	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
 
 	if (dsi_ctrl->irq_info.irq_stat_refcount[intr_idx])
