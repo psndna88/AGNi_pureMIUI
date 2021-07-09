@@ -57,6 +57,12 @@
 	qcom,dsi-default-panel = <&dsi_rm69299_visionox_amoled_video>;
 };
 
+&dsi_sim_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+};
+
 &dsi_rm69299_visionox_amoled_video {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_avdd>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
