@@ -68,6 +68,18 @@
 					15 01 00 00 00 00 02 4F 01];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-lp2-command = [
+					15 01 00 00 46 00 02 FE 00
+					05 01 00 00 00 00 01 39
+				];
+				qcom,mdss-dsi-lp2-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-nolp-command = [
+					05 01 00 00 1f 00 01 38 /* Idle-Mode Off  */
+					15 01 00 00 00 00 02 FE 00
+					29 01 00 00 00 00 05 2A 00 10 01 7F
+					29 01 00 00 00 00 05 2B 00 00 01 BF
+					05 01 00 00 00 00 02 12 00
+				];
 			};
 		};
 	};
