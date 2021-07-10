@@ -40,7 +40,23 @@
 
 		qcom,core-clk-rate = <133333333>;
 		qcom,core-clk-rate-hs = <66666667>;
+
+		interconnect-names = "usb-ddr", "usb-ipa", "ddr-usb";
+		interconnects = <&system_noc MASTER_USB3_0 &bimc SLAVE_EBI>,
+				<&system_noc MASTER_USB3_0 &config_noc SLAVE_IPA_CFG>,
+				<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_USB3>;
+
+		qcom,interconnect-values-nom = /* NOMINAL Votes */
+						<1000000 1550000>,
+						<0 2400>,
+						<0 40000>;
+		qcom,interconnect-values-svs = /* SVS Votes */
+						<240000 700000>,
+						<0 2400>,
+						<0 40000>;
+
 		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,pm-qos-latency = <61>;
 		qcom,gsi-reg-offset =
 			<0x0fc /* GSI_GENERAL_CFG */
 			 0x110 /* GSI_DBL_ADDR_L */
@@ -89,9 +105,9 @@
 		resets = <&gcc GCC_QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
 		qcom,param-override-seq =
-			<0xe6 0x6c	/* override_x0 */
-			 0x0b 0x70	/* override_x1 */
-			 0x17 0x74>;	/* override x2 */
+			<0x61 0x6c	/* override_x0 */
+			 0x43 0x70	/* override_x1 */
+			 0x2e 0x74>;	/* override x2 */
 	};
 
 	/* Primary USB port related QMP USB DP Combo PHY */

@@ -37,6 +37,7 @@
 
 		perst-gpio = <&tlmm 87 0>;
 		wake-gpio = <&tlmm 89 0>;
+		qcom,clkreq-gpio = <88>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&pcie0_perst_default
 				&pcie0_clkreq_default
@@ -311,6 +312,7 @@
 
 		perst-gpio = <&tlmm 2 0>;
 		wake-gpio = <&tlmm 3 0>;
+		qcom,clkreq-gpio = <79>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pcie1_perst_default
 				&pcie1_clkreq_default

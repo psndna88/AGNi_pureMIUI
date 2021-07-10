@@ -3438,6 +3438,7 @@
 &msm_gpu {
 	qcom,chipid = <0x06010901>;
 	vdd-parent-supply = <&S8A_LEVEL>;
+	qcom,no-nap;
 
 	/delete-node/qcom,gpu-pwrlevel-bins;
 
@@ -3767,6 +3768,10 @@
 		qcom,bt-vdd-core-config = <1304000 1304000 1 0>;
 		qcom,bt-vdd-pa-config = <3000000 3312000 1 0>;
 		qcom,bt-vdd-xtal-config = <1700000 1900000 1 0>;
+	};
+
+	cxip-cdev@3ed000 {
+		status = "ok";
 	};
 };
 

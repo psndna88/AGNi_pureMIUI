@@ -4,6 +4,10 @@
 	#cooling-cells = <2>;
 };
 
+&cxip_cdev {
+	status = "ok";
+};
+
 &thermal_zones {
 	pm6125_tz {
 		cooling-maps {
