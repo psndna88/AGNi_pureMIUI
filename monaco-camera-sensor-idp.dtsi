@@ -14,8 +14,8 @@
 		cam_vaf-supply = <&L7C>;
 		regulator-names = "cam_vaf";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <2800000>;
-		rgltr-max-voltage = <2800000>;
+		rgltr-min-voltage = <3000000>;
+		rgltr-max-voltage = <3000000>;
 		rgltr-load-current = <100000>;
 		status = "ok";
 	};
@@ -26,15 +26,14 @@
 		cam_vio-supply = <&L3C>;
 		cam_vana-supply = <&L5C>;
 		cam_vdig-supply = <&L1C>;
-		cam_vaf-supply = <&L7C>;
 		cam_clk-supply = <&gcc_camss_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vana", "cam_vdig",
-			"cam_clk", "cam_vaf";
+			"cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1800000 2800000 1200000 0 2800000>;
-		rgltr-max-voltage = <1800000 2800000 1200000 0 2800000>;
-		rgltr-load-current = <2500 50000 180000 0 125000>;
+		rgltr-min-voltage = <1800000 2800000 1200000 0>;
+		rgltr-max-voltage = <1800000 2800000 1200000 0>;
+		rgltr-load-current = <2500 50000 180000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
@@ -98,7 +97,7 @@
 		cell-index = <0>;
 		compatible = "qcom,cam-sensor";
 		csiphy-sd-index = <0>;
-		sensor-position-roll = <270>;
+		sensor-position-roll = <90>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
 		actuator-src = <&actuator_rear>;
@@ -113,7 +112,7 @@
 		pwm-switch;
 		rgltr-min-voltage = <1800000 2800000 1200000 0>;
 		rgltr-max-voltage = <1800000 2800000 1200000 0>;
-		rgltr-load-current = <2500 50000 180000 0 125000>;
+		rgltr-load-current = <2500 50000 180000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active
@@ -153,8 +152,8 @@
 			"cam_clk";
 		rgltr-cntrl-support;
 		pwm-switch;
-		rgltr-min-voltage = <1800000 2800000 1056000 0>;
-		rgltr-max-voltage = <1800000 2800000 1056000 0>;
+		rgltr-min-voltage = <1800000 2800000 1200000 0>;
+		rgltr-max-voltage = <1800000 2800000 1200000 0>;
 		rgltr-load-current = <3000 35000 80000 0>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
