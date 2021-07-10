@@ -63,7 +63,7 @@
     <!--whether the device supports media feedback-->
     <bool name="support_media_feedback">false</bool>
     <!--whether the device supports phone call noise suppression-->
-    <bool name="support_phone_call_noise_suppression">true</bool>
+    <bool name="support_phone_call_noise_suppression">false</bool>
     <!--whether the device supports touch sensitive-->
     <bool name="support_touch_sensitive">false</bool>
     <!--whether the device supports broadcom wapi-->
