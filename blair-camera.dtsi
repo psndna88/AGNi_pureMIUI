@@ -724,7 +724,7 @@
 			<&gcc GCC_CAMSS_TFE_0_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_0_CLK>;
 		clock-rates =
-			<266570000 0 0 0 300000000 0>,
+			<266571429 0 0 0 300000000 0>,
 			<426400000 0 0 0 460800000 0>,
 			<466500000 0 0 0 576000000 0>;
 		clock-cntl-level = "svs", "svs_l1", "turbo";
@@ -788,7 +788,7 @@
 			<&gcc GCC_CAMSS_TFE_1_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_1_CLK>;
 		clock-rates =
-			<266570000 0 0 0 300000000 0>,
+			<266571429 0 0 0 300000000 0>,
 			<426400000 0 0 0 460800000 0>,
 			<466500000 0 0 0 576000000 0>;
 		clock-cntl-level = "svs", "svs_l1", "turbo";
@@ -852,7 +852,7 @@
 			<&gcc GCC_CAMSS_TFE_2_CLK_SRC>,
 			<&gcc GCC_CAMSS_TFE_2_CLK>;
 		clock-rates =
-			<266570000 0 0 0 300000000 0>,
+			<266571429 0 0 0 300000000 0>,
 			<426400000 0 0 0 460800000 0>,
 			<466500000 0 0 0 576000000 0>;
 		clock-cntl-level = "svs", "svs_l1", "turbo";
