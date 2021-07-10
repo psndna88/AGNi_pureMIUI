@@ -2140,6 +2140,10 @@
         <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
     </path>
 
+    <path name="incall-rec-uplink headste-mic">
+        <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
+    </path>
+
     <path name="incall-rec-uplink headset-mic">
         <ctl name="MultiMedia9 Mixer VOC_REC_UL" value="1" />
     </path>

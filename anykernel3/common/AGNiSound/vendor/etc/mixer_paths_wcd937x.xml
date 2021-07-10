@@ -2225,7 +2225,7 @@
     </path>
 
     <path name="incall_music_uplink2">
-        <ctl name="Incall_Music_2 Audio Mixer MultiMedia2" value="1"/>
+        <path name="Incall_Music_2 Audio Mixer MultiMedia2" value="1"/>
     </path>
 
     <path name="incall_music_uplink2 speaker">
