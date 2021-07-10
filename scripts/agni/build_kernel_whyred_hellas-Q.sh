@@ -5,7 +5,7 @@ export SUBARCH=arm64
 KERNELDIR=`readlink -f .`
 
 DEVICE="whyred"
-CONFIG1="agni_whyred_hellas-R_defconfig"
+CONFIG1="agni_whyred_hellas-Q_defconfig"
 CONFIG2=""
 CONFIG3=""
 SYNC_CONFIG=1
@@ -19,7 +19,7 @@ RTL8723AU="$COMPILEDIR/drivers/staging/rtl8723au"
 RTL8192EU="$COMPILEDIR/drivers/staging/rtl8192eu"
 
 . $KERNELDIR/AGNi_version.sh
-FILENAME="AGNi_kernel_Hellas-R_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
+FILENAME="AGNi_kernel_Hellas-Q_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 
 # AGNi CCACHE SHIFTING TO SDM660
 export CCACHE_SDM660="1"
@@ -91,7 +91,7 @@ fi
 rm $COMPILEDIR/.config $COMPILEDIR/.config.old
 
 if [ -f $COMPILEDIR/arch/arm64/boot/Image.gz-dtb ]; then
-	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-oc
+	mv $COMPILEDIR/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb-nc
 else
 	echo "         ERROR: Cross-compiling AGNi kernel Hellas $DEVICE."
 	rm -rf $KERNELDIR/$DIR
@@ -110,8 +110,8 @@ fi
 echo ""
 
 ###### ZIP Packing
-if [ -f $KERNELDIR/$DIR/Image.gz-dtb-oc ]; then
-	cp -r $KERNELDIR/anykernel3_hellasR/* $KERNELDIR/$DIR/
+if [ -f $KERNELDIR/$DIR/Image.gz-dtb-nc ]; then
+	cp -r $KERNELDIR/anykernel3_hellasQ/* $KERNELDIR/$DIR/
 	sed -i 's/device.name1=/device.name1=whyred/' $KERNELDIR/$DIR/anykernel.sh
 	sed -i '/#SDM660/d' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config
 	sed -i 's/SETDEVICETYPE/SDM636_whyred (Redmi Note 5 Pro)/' $KERNELDIR/$DIR/META-INF/com/google/android/aroma-config

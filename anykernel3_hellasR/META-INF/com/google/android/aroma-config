@@ -1,0 +1,114 @@
+﻿### LICENSE:
+#
+# Copyright (C) 2011 Ahmad Amarullah ( http://amarullz.com/ )
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or #implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+### FILE INFO:
+#
+# AROMA Installer 2.70 - AROMA Installer Test Script Configuration
+#       (c) 2011-2012 by Ahmad Amarullah
+#           amarullz - xda-developers
+#           http://www.amarullz.com/
+#
+#       Binary Version  : 2.70B
+#       Binary Codename : Flamboyan
+
+# Initializing Rom Information
+ini_set("rom_name",		"AGNi EAS Kernel Hellas Edition");
+ini_set("rom_version",	"v14.1 stable");
+ini_set("rom_author",	"psndna88@xda");
+ini_set("rom_device",	"SETDEVICETYPE");
+ini_set("rom_date",		"July, 01, 2021");
+
+# Show Simple Splash
+splash(
+    1000,
+    "agni"
+);
+
+theme("ics");
+loadlang("langs/en.lang");
+fontresload( "0", "ttf/Roboto-Regular.ttf", "12" );
+fontresload( "1", "ttf/Roboto-Regular.ttf", "14" );
+
+viewbox(
+    "<~welcome.title>",
+  
+    "<~welcome.text1> <b>"+
+	  ini_get("rom_name")+
+	"</b> <~common.for> <b>"+ini_get("rom_device")+"</b>.\n\n"+
+	
+      "  <~welcome.version>\t\t: <b><#selectbg_g>"+ini_get("rom_version")+"</#></b>\n\n\n"+
+      "  DEVELOPER \t\t: <b><#selectbg_g>"+ini_get("rom_author")+"</#></b>\n\n\n"+
+      "  <~welcome.updated>\t\t: <b><#selectbg_g>"+ini_get("rom_date")+"</#></b>\n\n\n"+
+
+    "<~welcome.next>",
+  
+    "@welcome"
+);
+
+agreebox(
+  #-- Title
+    "AGNi™ Kernel Note",
+  
+  #-- Subtitle / Description
+    "Read Carefully",
+  
+  #-- Icon:
+    "@license",
+  
+  #-- Text Content 
+    resread("AGNi_info.txt"),
+  
+  #-- Checkbox Text
+    "OK Lets Go...",
+  
+  #-- Unchecked Alert Message
+    "Tick to proceed !"
+);
+
+#selectbox(
+#    "Wired Earphone Sound Enhancement","<@center><b>\nWant AGNi Wired Sound Enhancement ?</b>\n\n</@>","@install","sound.prop",  
+#    "YESSSS!",	"DEFAULT. AGNi's Wired Earphone Sound Enhancement doesnt consume extra battery unlike other sound mods like Dolby or V4A", 1,   #-- selected.0 = 1
+#    "No...",	"Select if you really don't want or want to use only other Sound mods like DOLBY", 0  #-- selected.0 = 2
+#);
+
+#selectbox(																											#SDM636
+#    "sRGB display colour","<@center><b>\nDo you require sRGB support?</b>\n\n</@>","@install","srgb.prop", 			#SDM636 
+#    "YES",	"Use for Official MIUI roms made for your device", 0,								#-- selected.0 = 1	#SDM636
+#    "NO",	"I use NON-MIUI/AOSP rom or Ported-MIUI rom", 1 									#-- selected.0 = 2	#SDM636
+#);																													#SDM636
+
+setvar("retstatus",
+  install(
+	#-- Title
+      "Installing",
+	
+	#-- Installation Process message
+	  "<b>"+ini_get("rom_name")+"</b> is being installed.\n\n"+
+      "Please wait while installation wizard installs <b>"+ini_get("rom_name")+
+	  "</b>. This may take just a minute...",
+	
+	#-- Installation Icon
+      "@install",
+	
+	#-- Installation Finish Message
+      "The installation wizard has successfully installed <b>"+ini_get("rom_name")+
+	  "</b>. Press Next to continue."
+  )
+);
+
+ini_set("text_next", "Finish");
+ini_set("icon_next", "@finish");
+
