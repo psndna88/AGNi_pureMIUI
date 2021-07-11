@@ -38,7 +38,6 @@ struct list_lru binder_alloc_lru;
 static DEFINE_MUTEX(binder_alloc_mmap_lock);
 
 enum {
-	BINDER_DEBUG_USER_ERROR             = 1U << 0,
 	BINDER_DEBUG_OPEN_CLOSE             = 1U << 1,
 	BINDER_DEBUG_BUFFER_ALLOC           = 1U << 2,
 	BINDER_DEBUG_BUFFER_ALLOC_ASYNC     = 1U << 3,
@@ -279,7 +278,8 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 	return 0;
 
 free_range:
-	for (page_addr = end - PAGE_SIZE; 1; page_addr -= PAGE_SIZE) {
+	for (page_addr = end - PAGE_SIZE; page_addr >= start;
+	     page_addr -= PAGE_SIZE) {
 		bool ret;
 		size_t index;
 
@@ -292,8 +292,6 @@ free_range:
 		WARN_ON(!ret);
 
 		trace_binder_free_lru_end(alloc, index);
-		if (page_addr == start)
-			break;
 		continue;
 
 err_vm_insert_page_failed:
@@ -301,8 +299,7 @@ err_vm_insert_page_failed:
 		page->page_ptr = NULL;
 err_alloc_page_failed:
 err_page_ptr_cleared:
-		if (page_addr == start)
-			break;
+		;
 	}
 err_no_vma:
 	if (mm) {
@@ -340,50 +337,12 @@ static inline struct vm_area_struct *binder_alloc_get_vma(
 	return vma;
 }
 
-static void debug_low_async_space_locked(struct binder_alloc *alloc, int pid)
-{
-	/*
-	 * Find the amount and size of buffers allocated by the current caller;
-	 * The idea is that once we cross the threshold, whoever is responsible
-	 * for the low async space is likely to try to send another async txn,
-	 * and at some point we'll catch them in the act. This is more efficient
-	 * than keeping a map per pid.
-	 */
-	struct rb_node *n = alloc->free_buffers.rb_node;
-	struct binder_buffer *buffer;
-	size_t total_alloc_size = 0;
-	size_t num_buffers = 0;
-
-	for (n = rb_first(&alloc->allocated_buffers); n != NULL;
-		 n = rb_next(n)) {
-		buffer = rb_entry(n, struct binder_buffer, rb_node);
-		if (buffer->pid != pid)
-			continue;
-		if (!buffer->async_transaction)
-			continue;
-		total_alloc_size += binder_alloc_buffer_size(alloc, buffer)
-			+ sizeof(struct binder_buffer);
-		num_buffers++;
-	}
-
-	/*
-	 * Warn if this pid has more than 50 transactions, or more than 50% of
-	 * async space (which is 25% of total buffer size).
-	 */
-	if (num_buffers > 50 || total_alloc_size > alloc->buffer_size / 4) {
-		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
-			     "%d: pid %d spamming oneway? %zd buffers allocated for a total size of %zd\n",
-			      alloc->pid, pid, num_buffers, total_alloc_size);
-	}
-}
-
 static struct binder_buffer *binder_alloc_new_buf_locked(
 				struct binder_alloc *alloc,
 				size_t data_size,
 				size_t offsets_size,
 				size_t extra_buffers_size,
-				int is_async,
-				int pid)
+				int is_async)
 {
 	struct rb_node *n = alloc->free_buffers.rb_node;
 	struct binder_buffer *buffer;
@@ -522,20 +481,11 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	buffer->offsets_size = offsets_size;
 	buffer->async_transaction = is_async;
 	buffer->extra_buffers_size = extra_buffers_size;
-	buffer->pid = pid;
 	if (is_async) {
 		alloc->free_async_space -= size + sizeof(struct binder_buffer);
 		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC_ASYNC,
 			     "%d: binder_alloc_buf size %zd async free %zd\n",
 			      alloc->pid, size, alloc->free_async_space);
-		if (alloc->free_async_space < alloc->buffer_size / 10) {
-			/*
-			 * Start detecting spammers once we have less than 20%
-			 * of async space left (which is less than 10% of total
-			 * buffer size).
-			 */
-			debug_low_async_space_locked(alloc, pid);
-		}
 	}
 	return buffer;
 
@@ -553,7 +503,6 @@ err_alloc_buf_struct_failed:
  * @offsets_size:       user specified buffer offset
  * @extra_buffers_size: size of extra space for meta-data (eg, security context)
  * @is_async:           buffer for async transaction
- * @pid:				pid to attribute allocation to (used for debugging)
  *
  * Allocate a new buffer given the requested sizes. Returns
  * the kernel version of the buffer pointer. The size allocated
@@ -566,14 +515,13 @@ struct binder_buffer *binder_alloc_new_buf(struct binder_alloc *alloc,
 					   size_t data_size,
 					   size_t offsets_size,
 					   size_t extra_buffers_size,
-					   int is_async,
-					   int pid)
+					   int is_async)
 {
 	struct binder_buffer *buffer;
 
 	mutex_lock(&alloc->mutex);
 	buffer = binder_alloc_new_buf_locked(alloc, data_size, offsets_size,
-					     extra_buffers_size, is_async, pid);
+					     extra_buffers_size, is_async);
 	mutex_unlock(&alloc->mutex);
 	return buffer;
 }
@@ -693,8 +641,6 @@ static void binder_free_buf_locked(struct binder_alloc *alloc,
 	binder_insert_free_buffer(alloc, buffer);
 }
 
-static void binder_alloc_clear_buf(struct binder_alloc *alloc,
-				   struct binder_buffer *buffer);
 /**
  * binder_alloc_free_buf() - free a binder buffer
  * @alloc:	binder_alloc for this proc
@@ -705,18 +651,6 @@ static void binder_alloc_clear_buf(struct binder_alloc *alloc,
 void binder_alloc_free_buf(struct binder_alloc *alloc,
 			    struct binder_buffer *buffer)
 {
-	/*
-	 * We could eliminate the call to binder_alloc_clear_buf()
-	 * from binder_alloc_deferred_release() by moving this to
-	 * binder_alloc_free_buf_locked(). However, that could
-	 * increase contention for the alloc mutex if clear_on_free
-	 * is used frequently for large buffers. The mutex is not
-	 * needed for correctness here.
-	 */
-	if (buffer->clear_on_free) {
-		binder_alloc_clear_buf(alloc, buffer);
-		buffer->clear_on_free = false;
-	}
 	mutex_lock(&alloc->mutex);
 	binder_free_buf_locked(alloc, buffer);
 	mutex_unlock(&alloc->mutex);
@@ -809,10 +743,6 @@ void binder_alloc_deferred_release(struct binder_alloc *alloc)
 		/* Transaction should already have been freed */
 		BUG_ON(buffer->transaction);
 
-		if (buffer->clear_on_free) {
-			binder_alloc_clear_buf(alloc, buffer);
-			buffer->clear_on_free = false;
-		}
 		binder_free_buf_locked(alloc, buffer);
 		buffers++;
 	}
@@ -986,8 +916,8 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 	mm = alloc->vma_vm_mm;
 	if (!mmget_not_zero(mm))
 		goto err_mmget;
-	if (!down_read_trylock(&mm->mmap_sem))
-		goto err_down_read_mmap_sem_failed;
+	if (!down_write_trylock(&mm->mmap_sem))
+		goto err_down_write_mmap_sem_failed;
 	vma = binder_alloc_get_vma(alloc);
 
 	list_lru_isolate(lru, item);
@@ -1000,8 +930,8 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 
 		trace_binder_unmap_user_end(alloc, index);
 	}
-	up_read(&mm->mmap_sem);
-	mmput_async(mm);
+	up_write(&mm->mmap_sem);
+	mmput(mm);
 
 	trace_binder_unmap_kernel_start(alloc, index);
 
@@ -1014,7 +944,7 @@ enum lru_status binder_alloc_free_page(struct list_head *item,
 	mutex_unlock(&alloc->mutex);
 	return LRU_REMOVED_RETRY;
 
-err_down_read_mmap_sem_failed:
+err_down_write_mmap_sem_failed:
 	mmput_async(mm);
 err_mmget:
 err_page_already_freed:
@@ -1137,36 +1067,6 @@ static struct page *binder_alloc_get_page(struct binder_alloc *alloc,
 	lru_page = &alloc->pages[index];
 	*pgoffp = pgoff;
 	return lru_page->page_ptr;
-}
-
-/**
- * binder_alloc_clear_buf() - zero out buffer
- * @alloc: binder_alloc for this proc
- * @buffer: binder buffer to be cleared
- *
- * memset the given buffer to 0
- */
-static void binder_alloc_clear_buf(struct binder_alloc *alloc,
-				   struct binder_buffer *buffer)
-{
-	size_t bytes = binder_alloc_buffer_size(alloc, buffer);
-	binder_size_t buffer_offset = 0;
-
-	while (bytes) {
-		unsigned long size;
-		struct page *page;
-		pgoff_t pgoff;
-		void *kptr;
-
-		page = binder_alloc_get_page(alloc, buffer,
-					     buffer_offset, &pgoff);
-		size = min_t(size_t, bytes, PAGE_SIZE - pgoff);
-		kptr = kmap(page) + pgoff;
-		memset(kptr, 0, size);
-		kunmap(page);
-		bytes -= size;
-		buffer_offset += size;
-	}
 }
 
 /**
