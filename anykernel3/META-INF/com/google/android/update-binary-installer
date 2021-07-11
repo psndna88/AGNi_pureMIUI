@@ -769,12 +769,18 @@ if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
 fi;
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/wifi.prop`" ]; then # Automatic
 	if [ "$ANDROID_VER" == "R" ]; then
-		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
+#		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
+#		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
+#		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
+#		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+#		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
+#		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
+		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support..(A11 rom)" " ";
 		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
 		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;
-		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_A11.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
-		$BB cp -f /vendor/agni/wlan_A11.ko /vendor/agni/wlan.ko;
-		ui_print " " "AGNi enabled latest A11-sourced Wifi driver..." " ";
+		$BB cp -f $AKHOME/tools/wlan/WCNSS_qcom_cfg_Q.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini;
+		$BB cp -f /vendor/agni/wlan_Q.ko /vendor/agni/wlan.ko;
+		ui_print " " "AGNi enabled latest Q-sourced Wifi driver...(A11 rom)" " ";
 	elif [ "$ANDROID_VER" == "Q" ]; then
 		ui_print " " "AGNi now modifying firmware for latest Q Wifi driver support.." " ";
 		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
