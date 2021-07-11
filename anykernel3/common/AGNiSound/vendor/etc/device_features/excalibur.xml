@@ -141,7 +141,7 @@
 <bool name="support_ota_validate">false</bool>
 <bool name="support_page_layout">false</bool>
 <bool name="support_papermode_animation">true</bool>
-<bool name="support_phone_call_noise_suppression">true</bool>
+<bool name="support_phone_call_noise_suppression">false</bool>
 <bool name="support_picture_watermark">true</bool>
 <bool name="support_power_mode">false</bool>
 <bool name="support_pre_installed_application">false</bool>
