@@ -1228,7 +1228,7 @@
 
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 		"TURBO";
-		qcom,throughput-threshold = <2000 4000 8000>;
+		qcom,throughput-threshold = <3000 5000 10000>;
 		qcom,scaling-exceptions = <>;
 
 		ipa_smmu_ap: ipa_smmu_ap {
