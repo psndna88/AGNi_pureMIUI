@@ -3596,6 +3596,7 @@ int mhi_dev_write_channel(struct mhi_req *wreq)
 		mhi_log(MHI_MSG_VERBOSE, "Channel %d not started by host\n",
 			ch->ch_id);
 		mutex_unlock(&ch->ch_lock);
+		mutex_unlock(&mhi_ctx->mhi_write_test);
 		return -ENODEV;
 	}
 
