@@ -373,15 +373,17 @@ size_t strlcat(char *dst, const char *str, size_t size)
 	size_t dstlen, srclen, copy;
 
 	srclen = strlen(str);
-	for (pos = dst; pos - dst < size && *dst; pos++)
-		;
-	dstlen = pos - dst;
-	if (*dst)
+	dstlen = strlen(dst);
+	pos = dst + dstlen;
+
+	if (dstlen >= size)
 		return dstlen + srclen;
-	if (dstlen + srclen + 1 > size)
+
+	if (dstlen + srclen >= size)
 		copy = size - dstlen - 1;
 	else
 		copy = srclen;
+
 	memcpy(pos, str, copy);
 	pos[copy] = '\0';
 	return dstlen + srclen;
