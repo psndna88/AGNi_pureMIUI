@@ -88,6 +88,20 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 24 09 0a 26 25 09
+				0a 09 02 04 00 1f 19];
+		};
+	};
 };
 
 &dsi_nt36672e_fhd_plus_120_video {
@@ -100,6 +114,20 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1e 08 08 24 22 08
+				08 08 02 04 00 1b 18];
+		};
+	};
 };
 
 &dsi_nt36672e_fhd_plus_144_video {
@@ -112,4 +140,18 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08
+				08 08 02 04 00 1c 18];
+		};
+	};
 };
