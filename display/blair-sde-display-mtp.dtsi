@@ -1,4 +1,23 @@
 /* Should extend holi-sde-display-mtp-pm6125.dtsi */
+#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"cphy_byte_clk0", "cphy_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0",
+		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
+};
 
 &dsi_sim_vid {
 	qcom,mdss-dsi-display-timings {
