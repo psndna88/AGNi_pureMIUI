@@ -3313,6 +3313,7 @@ cppflags-y += -DPCI_LINK_STATUS_SANITY
 cppflags-y += -DDP_MON_RSSI_IN_DBM
 cppflags-y += -DSYSTEM_PM_CHECK
 cppflags-y += -DDISABLE_EAPOL_INTRABSS_FWD
+cppflags-y += -DDISABLE_MON_RING_MSI_CFG
 endif
 
 # Enable Low latency optimisation mode
