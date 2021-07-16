@@ -2245,7 +2245,11 @@ static int drv2624_i2c_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failed to allocate input device_node\n");
 		goto destroy_mutex;
 	}
+#ifndef CONFIG_ARCH_QCOM
 	pDRV2624->input_dev->name = "drv2624:haptics";
+#else
+	pDRV2624->input_dev->name = "qcom-hv-haptics";
+#endif
 	pDRV2624->input_dev->close = drv2624_close;
 	input_set_drvdata(pDRV2624->input_dev, pDRV2624);
 	input_set_capability(pDRV2624->input_dev, EV_FF, FF_RUMBLE);
