@@ -1324,3 +1324,13 @@ SND_SOC_DAILINK_DEFS(lpass_be_auxpcm_tx_dummy,
     DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
     DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
     DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(primary_tdm_rx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-rx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(primary_tdm_tx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));

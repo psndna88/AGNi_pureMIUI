@@ -260,8 +260,56 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
   },
 };
 
-struct snd_soc_card snd_soc_card_auto_dummy_msm = {
-	.name = "gvm-auto-adp-star-spf-snd-card",
+static struct snd_soc_dai_link msm_talos_dai_links[] = {
+	/* BackEnd DAI Links */
+  {
+    .name = "PRIMARY_TDM_RX_0_DUMMY",
+    .stream_name = "TDM-LPAIF_WSA-RX-PRIMARY",
+    .dpcm_playback = 1,
+    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(primary_tdm_rx_0_dummy),
+  },
+  {
+    .name = "PRIMARY_TDM_TX_0_DUMMY",
+    .stream_name = "TDM-LPAIF_WSA-TX-PRIMARY",
+    .dpcm_capture = 1,
+    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(primary_tdm_tx_0_dummy),
+  },
+  {
+    .name = "LPASS_BE_AUXPCM_RX_DUMMY",
+    .stream_name = "AUXPCM-LPAIF-RX-PRIMARY",
+    .dpcm_playback = 1,
+    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(lpass_be_auxpcm_rx_dummy),
+  },
+  {
+    .name = "LPASS_BE_AUXPCM_TX_DUMMY",
+    .stream_name = "AUXPCM-LPAIF-TX-PRIMARY",
+    .dpcm_capture = 1,
+    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(lpass_be_auxpcm_tx_dummy),
+  },
+};
+
+struct snd_soc_card snd_soc_card_auto_hana_dummy_msm = {
+	.name = "gvmauto-8155-snd-card",
+};
+
+struct snd_soc_card snd_soc_card_auto_talos_dummy_msm = {
+	.name = "gvmauto-6155-snd-card",
 };
 
 static int msm_populate_dai_link_component_of_node(
@@ -307,7 +355,6 @@ static int msm_populate_dai_link_component_of_node(
 			dai_link[i].platforms->name = NULL;
 		}
 		}
-
 
 		/* populate cpu_of_node for snd card dai links */
 		if (dai_link[i].cpus->dai_name && !dai_link[i].cpus->of_node) {
@@ -364,12 +411,17 @@ err:
 }
 
 static const struct of_device_id gvm_asoc_machine_of_match[]  = {
-	{ .compatible = "qcom,gvm-auto-spf-asoc-snd-adp-star",
-	  .data = "adp_star_codec"},
-	{},
+	{ .compatible = "qcom,8155-spf-asoc-snd-adp-star",
+      .data = "adp_star_codec"},
+	{ .compatible = "qcom,6155-spf-asoc-snd-adp-star",
+      .data = "adp_star_codec"},
+    {},
 };
 static struct snd_soc_dai_link msm_auto_dai_links[
 			 ARRAY_SIZE(msm_common_dai_links)];
+
+static struct snd_soc_dai_link msm_auto_talos_dai_links[
+			 ARRAY_SIZE(msm_talos_dai_links)];
 
 static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 {
@@ -385,15 +437,24 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		return NULL;
 	}
 
-	if (!strcmp(match->data, "adp_star_codec")) {
-		card = &snd_soc_card_auto_dummy_msm;
+	if (!strcmp(match->compatible, "qcom,8155-spf-asoc-snd-adp-star")) {
+		card = &snd_soc_card_auto_hana_dummy_msm;
 		total_links = ARRAY_SIZE(msm_common_dai_links);
 		memcpy(msm_auto_dai_links,
 			msm_common_dai_links,
 			sizeof(msm_common_dai_links));
 
 		dailink = msm_auto_dai_links;
+	} else if (!strcmp(match->compatible, "qcom,6155-spf-asoc-snd-adp-star")) {
+		card = &snd_soc_card_auto_talos_dummy_msm;
+		total_links = ARRAY_SIZE(msm_talos_dai_links);
+		memcpy(msm_auto_talos_dai_links,
+			msm_talos_dai_links,
+			sizeof(msm_talos_dai_links));
+
+		dailink = msm_auto_talos_dai_links;
 	}
+
 	if (card) {
 		card->dai_link = dailink;
 		card->num_links = total_links;
