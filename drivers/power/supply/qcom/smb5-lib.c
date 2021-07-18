@@ -32,14 +32,14 @@
 #include "temps_info.h"
 /*part of charger mode function*/
 
-typedef struct touchscreen_usb_piugin_data{
+typedef struct touchscreen_usb_plugin_data{
 	bool valid;
 	bool usb_plugged_in;
 	void (*event_callback)(void);
-} touchscreen_usb_piugin_data_t;
+} touchscreen_usb_plugin_data_t;
 
-touchscreen_usb_piugin_data_t g_touchscreen_usb_pulgin = {0};
-EXPORT_SYMBOL(g_touchscreen_usb_pulgin);
+touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin = {0};
+EXPORT_SYMBOL(g_touchscreen_usb_plugin);
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
@@ -6216,9 +6216,9 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 	smblib_dbg(chg, PR_OEM, "IRQ: usbin-plugin %s\n",
 					vbus_rising ? "attached" : "detached");
 /*part of charger mode function*/
-	g_touchscreen_usb_pulgin.usb_plugged_in = vbus_rising;
-	if (g_touchscreen_usb_pulgin.valid){
-		g_touchscreen_usb_pulgin.event_callback();
+	g_touchscreen_usb_plugin.usb_plugged_in = vbus_rising;
+	if (g_touchscreen_usb_plugin.valid){
+		g_touchscreen_usb_plugin.event_callback();
 	}
 
 

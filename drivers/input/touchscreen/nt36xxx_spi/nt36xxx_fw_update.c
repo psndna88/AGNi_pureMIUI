@@ -36,7 +36,7 @@
 #define NVT_DUMP_PARTITION_PATH "/data/local/tmp"
 
 #if NVT_USB_PLUGIN
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
+extern touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin;
 #endif
 
 struct timeval start, end;
@@ -933,10 +933,10 @@ void Boot_Update_Firmware(struct work_struct *work)
 	nvt_update_firmware(ts->boot_update_firmware_name);
 	mutex_unlock(&ts->lock);
 #if NVT_USB_PLUGIN
-	if (!IS_ERR_OR_NULL(g_touchscreen_usb_pulgin.event_callback))
-		g_touchscreen_usb_pulgin.valid = true;
-	if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
-		g_touchscreen_usb_pulgin.event_callback();
+	if (!IS_ERR_OR_NULL(g_touchscreen_usb_plugin.event_callback))
+		g_touchscreen_usb_plugin.valid = true;
+	if (g_touchscreen_usb_plugin.valid && g_touchscreen_usb_plugin.usb_plugged_in)
+		g_touchscreen_usb_plugin.event_callback();
 #endif
 }
 #endif /* BOOT_UPDATE_FIRMWARE */

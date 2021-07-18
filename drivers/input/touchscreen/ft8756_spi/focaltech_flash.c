@@ -51,7 +51,7 @@
 *****************************************************************************/
 
 #if LCT_TP_USB_PLUGIN
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
+extern touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin;
 #endif
 /*****************************************************************************
 * Global variable or extern global variabls/functions
@@ -956,10 +956,10 @@ int fts_fw_recovery(void)
 	ret = fts_read_reg(FTS_REG_CHIP_ID, &chip_id);
 	FTS_INFO("read chip id:0x%02x", chip_id);
 #if LCT_TP_USB_PLUGIN
-	if (!IS_ERR_OR_NULL(g_touchscreen_usb_pulgin.event_callback))
-		g_touchscreen_usb_pulgin.valid = true;
-	if (g_touchscreen_usb_pulgin.valid)
-		g_touchscreen_usb_pulgin.event_callback();
+	if (!IS_ERR_OR_NULL(g_touchscreen_usb_plugin.event_callback))
+		g_touchscreen_usb_plugin.valid = true;
+	if (g_touchscreen_usb_plugin.valid)
+		g_touchscreen_usb_plugin.event_callback();
 #endif
 
 	fts_tp_state_recovery(upg->ts_data);
@@ -1136,10 +1136,10 @@ static void fts_fwupg_work(struct work_struct *work)
 		lct_fts_get_tpfwver(NULL);
 
 #if LCT_TP_USB_PLUGIN
-		if (!IS_ERR_OR_NULL(g_touchscreen_usb_pulgin.event_callback))
-			g_touchscreen_usb_pulgin.valid = true;
-		if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
-			g_touchscreen_usb_pulgin.event_callback();
+		if (!IS_ERR_OR_NULL(g_touchscreen_usb_plugin.event_callback))
+			g_touchscreen_usb_plugin.valid = true;
+		if (g_touchscreen_usb_plugin.valid && g_touchscreen_usb_plugin.usb_plugged_in)
+			g_touchscreen_usb_plugin.event_callback();
 #endif
 
 	}
