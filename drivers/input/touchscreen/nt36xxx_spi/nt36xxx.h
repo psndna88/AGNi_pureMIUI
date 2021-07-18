@@ -124,7 +124,7 @@ extern const uint16_t gesture_key_array[];
 /*2019.12.06 longcheer taocheng add for charger mode begin*/
 /*functions description*/
 //enable tp usb plugin feature
-#define NVT_USB_PLUGIN 0
+#define NVT_USB_PLUGIN 1
 
 #if NVT_USB_PLUGIN
 typedef struct touchscreen_usb_plugin_data {

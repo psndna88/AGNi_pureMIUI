@@ -71,7 +71,7 @@ extern void nvt_extra_proc_deinit(void);
 #if NVT_USB_PLUGIN
 static void nvt_ts_usb_plugin_work_func(struct work_struct *work);
 DECLARE_WORK(nvt_usb_plugin_work, nvt_ts_usb_plugin_work_func);
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
+extern touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin;
 #endif
 /*2019.12.06 longcheer taocheng add charger mode end*/
 
@@ -259,7 +259,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 	}
 
 	buf[0] = EVENT_MAP_HOST_CMD;
-	if (g_touchscreen_usb_pulgin.usb_plugged_in)
+	if (g_touchscreen_usb_plugin.usb_plugged_in)
 		buf[1] = 0x53;// power plug ac on
 	else
 		buf[1] = 0x51;// power plug off
@@ -2598,7 +2598,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 
 //2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
-	g_touchscreen_usb_pulgin.event_callback = nvt_ts_usb_event_callback;
+	g_touchscreen_usb_plugin.event_callback = nvt_ts_usb_event_callback;
 #endif
 
 	set_touchpanel_recovery_callback(nvt_ts_recovery_callback);
@@ -3046,8 +3046,8 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 //2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
-	if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
-		g_touchscreen_usb_pulgin.event_callback();
+	if (g_touchscreen_usb_plugin.valid && g_touchscreen_usb_plugin.usb_plugged_in)
+		g_touchscreen_usb_plugin.event_callback();
 #endif
 	return 0;
 }
