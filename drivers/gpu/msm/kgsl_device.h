@@ -174,8 +174,6 @@ struct kgsl_functable {
 	void (*suspend_device)(struct kgsl_device *device,
 		pm_message_t pm_state);
 	void (*resume_device)(struct kgsl_device *device);
-	void (*dispatcher_halt)(struct kgsl_device *device);
-	void (*dispatcher_unhalt)(struct kgsl_device *device);
 };
 
 struct kgsl_ioctl {
