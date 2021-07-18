@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -744,12 +744,12 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 	/* get pm-qos-active-latency, set it to default if not found */
 	if (of_property_read_u32(node, "qcom,pm-qos-active-latency",
 		&device->pwrctrl.pm_qos_active_latency))
-		device->pwrctrl.pm_qos_active_latency = 501;
+		device->pwrctrl.pm_qos_active_latency = 1000;
 
 	/* get pm-qos-cpu-mask-latency, set it to default if not found */
 	if (of_property_read_u32(node, "qcom,l2pc-cpu-mask-latency",
 		&device->pwrctrl.pm_qos_cpu_mask_latency))
-		device->pwrctrl.pm_qos_cpu_mask_latency = 501;
+		device->pwrctrl.pm_qos_cpu_mask_latency = 1000;
 
 	/* get pm-qos-wakeup-latency, set it to default if not found */
 	if (of_property_read_u32(node, "qcom,pm-qos-wakeup-latency",
@@ -1160,16 +1160,15 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	/* make sure ADRENO_DEVICE_STARTED is not set here */
 	BUG_ON(test_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv));
 
-	/* disallow l2pc during wake up to improve GPU wake up time */
-	kgsl_pwrctrl_update_l2pc(&adreno_dev->dev,
-			KGSL_L2PC_WAKEUP_TIMEOUT);
-
 	pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
 			pmqos_wakeup_vote);
 
 	kgsl_cffdump_open(device);
 
 	regulator_left_on = regulators_left_on(device);
+
+	/* Clear any GPU faults that might have been left over */
+	adreno_clear_gpu_fault(adreno_dev);
 
 	/* Put the GPU in a responsive state */
 	status = kgsl_pwrctrl_change_state(device, KGSL_STATE_AWARE);
@@ -1182,14 +1181,6 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	/* Soft reset the GPU if a regulator is stuck on*/
 	if (regulator_left_on)
 		_soft_reset(adreno_dev);
-
-	/*
-	 * Observed race between timeout fault (long IB detection) and
-	 * MISC hang (hard fault). MISC hang can be set while in recovery from
-	 * timeout fault. If fault flag is set in start path CP init fails.
-	 * Clear gpu fault to avoid such race.
-	 */
-	adreno_clear_gpu_fault(adreno_dev);
 
 	adreno_ringbuffer_set_global(adreno_dev, 0);
 
@@ -2658,6 +2649,19 @@ static void adreno_resume_device(struct kgsl_device *device)
 	adreno_dispatcher_unhalt(device);
 }
 
+u32 adreno_get_ucode_version(const u32 *data)
+{
+	u32 version;
+
+	version = data[1];
+
+	if ((version & 0xf) != 0xa)
+		return version;
+
+	version &= ~0xfff;
+	return  version | ((data[3] & 0xfff000) >> 12);
+}
+
 static const struct kgsl_functable adreno_functable = {
 	/* Mandatory functions */
 	.regread = adreno_regread,
@@ -2698,8 +2702,6 @@ static const struct kgsl_functable adreno_functable = {
 	.stop_fault_timer = adreno_dispatcher_stop_fault_timer,
 	.suspend_device = adreno_suspend_device,
 	.resume_device = adreno_resume_device,
-	.dispatcher_halt = adreno_dispatcher_halt,
-	.dispatcher_unhalt = adreno_dispatcher_unhalt,
 };
 
 static struct platform_driver adreno_platform_driver = {
