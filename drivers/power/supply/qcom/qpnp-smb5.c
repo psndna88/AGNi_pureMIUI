@@ -247,6 +247,8 @@ struct smb5 {
 	struct smb_dt_props	dt;
 };
 
+static struct smb_charger *__smbchg;
+
 static int __debug_mask = 0;
 module_param_named(
 	debug_mask, __debug_mask, int, 0600
@@ -4141,6 +4143,13 @@ static int smb5_show_charger_status(struct smb5 *chip)
 	return rc;
 }
 
+struct usbpd *smb_get_usbpd(void)
+{
+	return __smbchg->pd;
+}
+EXPORT_SYMBOL(smb_get_usbpd);
+extern struct usbpd *smb_get_g_pd(void);
+
 static int smb5_probe(struct platform_device *pdev)
 {
 	struct smb5 *chip;
@@ -4151,6 +4160,8 @@ static int smb5_probe(struct platform_device *pdev)
 	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;
+	__smbchg = &chip->chg;
+	__smbchg->pd = smb_get_g_pd();
 
 	chg = &chip->chg;
 	chg->dev = &pdev->dev;

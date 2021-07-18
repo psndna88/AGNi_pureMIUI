@@ -782,6 +782,7 @@ struct smb_charger {
 	/* workarounds */
 	bool			cc_un_compliant_detected;
 	bool			snk_debug_acc_detected;
+	struct usbpd		*pd;
 
 	/* for 27W charge*/
 	bool			temp_27W_enable;
@@ -1039,6 +1040,7 @@ int smblib_get_prop_battery_charging_limited(struct smb_charger *chg,
 int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable);
 int smblib_get_fastcharge_mode(struct smb_charger *chg);
 
+struct usbpd *smb_get_usbpd(void);
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
 int smblib_get_prop_battery_charging_enabled(struct smb_charger *chg,
