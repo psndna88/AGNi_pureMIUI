@@ -4325,6 +4325,7 @@ FRAME TDLSSetupReq
     OPTIE  AID;
     OPTIE  VHTCaps;
     OPTIE  he_cap;
+    OPTIE  he_6ghz_band_cap;
 }
 
 FRAME TDLSSetupRsp
@@ -4353,6 +4354,7 @@ FRAME TDLSSetupRsp
     OPTIE  VHTCaps;
     OPTIE  OperatingMode;
     OPTIE  he_cap;
+    OPTIE  he_6ghz_band_cap;
 }
 
 FRAME TDLSSetupCnf
