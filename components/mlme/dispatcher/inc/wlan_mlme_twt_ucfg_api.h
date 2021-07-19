@@ -218,6 +218,25 @@ QDF_STATUS ucfg_mlme_set_twt_requestor_flag(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS ucfg_mlme_set_twt_responder_flag(struct wlan_objmgr_psoc *psoc,
 					    bool val);
+/**
+ * ucfg_mlme_set_twt_res_service_cap() - Set twt responder service capability
+ * @psoc: pointer to psoc object
+ * @val: Value to be set to config
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_set_twt_res_service_cap(struct wlan_objmgr_psoc *psoc, bool val);
+
+/**
+ * ucfg_mlme_get_twt_res_service_cap() - Get twt responder service capability
+ * @psoc: pointer to psoc object
+ * @val: Value to be set to config
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+ucfg_mlme_get_twt_res_service_cap(struct wlan_objmgr_psoc *psoc, bool *val);
 
 /**
  * ucfg_mlme_reset_twt_active_cmd() - Reset twt active cmd if ack fail
@@ -732,6 +751,19 @@ ucfg_mlme_reset_twt_active_cmd(struct wlan_objmgr_psoc *psoc,
 			       struct qdf_mac_addr *peer_mac,
 			       uint8_t dialog_id)
 {
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_set_twt_res_service_cap(struct wlan_objmgr_psoc *psoc, bool val)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_get_twt_res_service_cap(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	*val = false;
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
