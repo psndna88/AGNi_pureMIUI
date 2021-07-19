@@ -244,6 +244,13 @@ error:
 }
 
 #ifdef WLAN_FEATURE_11AX
+static void tdls_pe_update_peer_6ghz_capa(struct tdls_add_sta_req *addstareq,
+				struct tdls_update_peer_params *update_peer)
+{
+	qdf_mem_copy(&addstareq->he_6ghz_cap, &update_peer->he_6ghz_cap,
+		     sizeof(update_peer->he_6ghz_cap));
+}
+
 static void tdls_pe_update_peer_he_capa(struct tdls_add_sta_req *addstareq,
 				struct tdls_update_peer_params *update_peer)
 {
@@ -251,6 +258,8 @@ static void tdls_pe_update_peer_he_capa(struct tdls_add_sta_req *addstareq,
 	qdf_mem_copy(&addstareq->he_cap,
 		     &update_peer->he_cap,
 		     sizeof(update_peer->he_cap));
+
+	tdls_pe_update_peer_6ghz_capa(addstareq, update_peer);
 }
 #else
 static void tdls_pe_update_peer_he_capa(struct tdls_add_sta_req *addstareq,
