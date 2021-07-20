@@ -5498,7 +5498,7 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 }
 
 static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,
-	const struct drm_crtc_state *state, uint64_t *val)
+	struct drm_crtc_state *state, uint64_t *val)
 {
 	struct sde_crtc *sde_crtc;
 	struct sde_crtc_state *cstate;
@@ -5511,7 +5511,7 @@ static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,
 
 	drm_for_each_encoder_mask(encoder, crtc->dev, state->encoder_mask) {
 		if (sde_encoder_check_curr_mode(encoder,
-						MSM_DISPLAY_VIDEO_MODE))
+			MSM_DISPLAY_VIDEO_MODE) && !sde_crtc_state_in_clone_mode(encoder, state))
 			is_vid = true;
 		if (is_vid)
 			break;
