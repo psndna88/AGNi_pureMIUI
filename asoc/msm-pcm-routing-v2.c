@@ -42783,7 +42783,7 @@ static struct afe_clk_set internal_mclk = {
 	Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
-	1,
+	0,
 };
 
 static int msm_internal_mclk_ctl_get(struct snd_kcontrol *kcontrol,
