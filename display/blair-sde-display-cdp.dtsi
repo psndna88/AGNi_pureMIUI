@@ -70,6 +70,9 @@
 };
 
 &dsi_sim_vid {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 1b 1b 01
@@ -79,6 +82,9 @@
 };
 
 &dsi_rm69299_visionox_amoled_video {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
@@ -88,6 +94,9 @@
 };
 
 &dsi_rm69299_visionox_amoled_cmd {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
@@ -113,6 +122,9 @@
 	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
 	qcom,mdss-dsi-panel-status-value = <0x9c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -140,6 +152,9 @@
 	qcom,mdss-dsi-panel-status-value = <0x9c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
 
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 1e 08 08 24 22 08
@@ -165,6 +180,9 @@
 	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
 	qcom,mdss-dsi-panel-status-value = <0x9c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -194,6 +212,9 @@
 
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
 				"cphy_byte_clk0", "cphy_pixel_clk0";
+
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
