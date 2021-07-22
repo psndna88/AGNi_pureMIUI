@@ -405,6 +405,12 @@ static int cam_vfe_hw_dump(
 		return -ENOSPC;
 	}
 	dump_data = top_priv->common_data.dump_data;
+
+	if (!dump_data) {
+		CAM_ERR(CAM_ISP, "Dump data not available");
+		return -EINVAL;
+	}
+
 	soc_info = top_priv->common_data.soc_info;
 
 	/*Dump registers */
