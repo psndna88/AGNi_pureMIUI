@@ -220,19 +220,18 @@ QDF_STATUS ucfg_mlme_set_twt_responder_flag(struct wlan_objmgr_psoc *psoc,
 					    bool val);
 
 /**
- * ucfg_mlme_reset_twt_init_context() - Reset twt init if ack fail
- * This is to handle back to back command. If ack failed for previous
- * command and again new commad comes then init context should reset to
- * allow new command.
+ * ucfg_mlme_reset_twt_active_cmd() - Reset twt active cmd if ack fail
+ * This is to handle back to back command. If ack failed for active
+ * command then reset this command to allow new twt command.
  * @psoc: pointer to psoc object
  * @peer_mac: peer mac address
  * @dialog_id: dialog id
  *
  * Return: QDF Status
  */
-QDF_STATUS ucfg_mlme_reset_twt_init_context(struct wlan_objmgr_psoc *psoc,
-					    struct qdf_mac_addr *peer_mac,
-					    uint8_t dialog_id);
+QDF_STATUS ucfg_mlme_reset_twt_active_cmd(struct wlan_objmgr_psoc *psoc,
+					  struct qdf_mac_addr *peer_mac,
+					  uint8_t dialog_id);
 
 /**
  * ucfg_mlme_is_twt_setup_in_progress() - Get TWT setup in progress for
@@ -640,9 +639,9 @@ ucfg_mlme_set_twt_responder_flag(struct wlan_objmgr_psoc *psoc,
 }
 
 static inline QDF_STATUS
-ucfg_mlme_reset_twt_init_context(struct wlan_objmgr_psoc *psoc,
-				 struct qdf_mac_addr *peer_mac,
-				 uint8_t dialog_id)
+ucfg_mlme_reset_twt_reset_cmd(struct wlan_objmgr_psoc *psoc,
+			      struct qdf_mac_addr *peer_mac,
+			      uint8_t dialog_id)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
@@ -726,6 +725,14 @@ ucfg_mlme_get_twt_session_state(struct wlan_objmgr_psoc *psoc,
 				uint8_t dialog_id)
 {
 	return WLAN_TWT_SETUP_STATE_NOT_ESTABLISHED;
+}
+
+static inline QDF_STATUS
+ucfg_mlme_reset_twt_active_cmd(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *peer_mac,
+			       uint8_t dialog_id)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 
 #endif /* defined(WLAN_SUPPORT_TWT) && defined(WLAN_FEATURE_11AX) */
