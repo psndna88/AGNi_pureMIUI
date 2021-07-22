@@ -250,14 +250,14 @@ static struct cam_camnoc_specific
 		.port_type = CAM_CAMNOC_OPE,
 		.enable = true,
 		.priority_lut_low = {
-			.enable = false,
+			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x430, /* OPE_PRIORITYLUT_LOW */
 			.value = 0x33333333,
 		},
 		.priority_lut_high = {
-			.enable = false,
+			.enable = true,
 			.access_type = CAM_REG_TYPE_READ_WRITE,
 			.masked_value = 0,
 			.offset = 0x434, /* OPE_PRIORITYLUT_HIGH */
