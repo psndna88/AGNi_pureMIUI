@@ -220,4 +220,3 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	msm_debugfs.o
 
 obj-$(CONFIG_DRM_MSM)	+= msm_drm.o
-obj-$(CONFIG_KLAPSE) += klapse.o
