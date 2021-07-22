@@ -13,14 +13,6 @@
 #include "sde_hw_color_proc_common_v4.h"
 #include "sde_hw_color_proc_v4.h"
 
-#ifdef CONFIG_KLAPSE
-#include <linux/klapse.h>
-
-unsigned short kcal_red = 256;
-unsigned short kcal_green = 256;
-unsigned short kcal_blue = 256;
-#endif
-
 static int sde_write_3d_gamut(struct sde_hw_blk_reg_map *hw,
 		struct drm_msm_3d_gamut *payload, u32 base,
 		u32 *opcode, u32 pipe, u32 scale_tbl_a_len,
@@ -215,7 +207,6 @@ void sde_setup_dspp_pccv4(struct sde_hw_dspp *ctx, void *cfg)
 	struct drm_msm_pcc *pcc_cfg;
 	struct drm_msm_pcc_coeff *coeffs = NULL;
 	int i = 0;
-	int kcal_min = 0;
 	u32 base = 0;
 
 	if (!ctx || !cfg) {
