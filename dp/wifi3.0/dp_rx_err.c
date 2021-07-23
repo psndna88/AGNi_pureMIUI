@@ -981,7 +981,8 @@ dp_2k_jump_handle(struct dp_soc *soc,
 					peer->vdev->vdev_id,
 					peer->mac_addr.raw,
 					tid,
-					rx_tid->delba_rcode);
+					rx_tid->delba_rcode,
+					CDP_DELBA_2K_JUMP);
 		}
 	} else {
 		qdf_spin_unlock_bh(&rx_tid->tid_lock);
@@ -1693,7 +1694,7 @@ static int dp_rx_err_handle_msdu_buf(struct dp_soc *soc,
 
 	/* After this point the rx_desc and nbuf are valid */
 	dp_ipa_rx_buf_smmu_mapping_lock(soc);
-	qdf_assert_always(rx_desc->unmapped);
+	qdf_assert_always(!rx_desc->unmapped);
 	dp_ipa_handle_rx_buf_smmu_mapping(soc,
 					  rx_desc->nbuf,
 					  RX_DATA_BUFFER_SIZE,

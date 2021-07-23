@@ -5253,6 +5253,11 @@ typedef enum {
 	wmi_service_ampdu_tx_buf_size_256_support,
 
 	wmi_services_max,
+#ifdef WLAN_FEATURE_11AX
+#ifdef FEATURE_WLAN_TDLS
+	wmi_service_tdls_ax_support,
+#endif
+#endif
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
 
