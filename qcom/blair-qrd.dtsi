@@ -231,6 +231,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM2_100K_PU>;
+		disable-thermal-zone;
 		trips {
 			battery_trip0: battery-trip0 {
 				temperature = <42000>;
@@ -349,6 +350,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM1_100K_PU>;
+		disable-thermal-zone;
 		trips {
 			modem_trip0: modem-trip0 {
 				temperature = <46000>;
@@ -392,6 +394,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pmk8350_adc_tm PMK8350_ADC7_AMUX_THM1_100K_PU>;
+		disable-thermal-zone;
 		trips {
 			modem_pa_fr1_trip0: modem-pa-fr1-trip0 {
 				temperature = <45000>;
