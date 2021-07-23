@@ -9469,8 +9469,8 @@ static int ufshcd_extcon_unregister(struct ufs_hba *hba)
 static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 {
 	struct ufs_hba *hba = (struct ufs_hba *)data;
-	int ret, retry = 3;
-
+	struct device *dev = hba->dev;
+	struct device_node *np = dev->of_node;
 	/*
 	 * Don't allow clock gating and hibern8 enter for faster device
 	 * detection.
@@ -9485,6 +9485,9 @@ static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 	}
 	ufshcd_release_all(hba);
 	pm_runtime_put_sync(hba->dev);
+
+	if (!of_property_read_bool(np, "secondary-storage"))
+		hba->primary_boot_device_probed = true;
 
 	ufshcd_extcon_register(hba);
 }
