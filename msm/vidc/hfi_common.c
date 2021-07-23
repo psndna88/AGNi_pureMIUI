@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "hfi_common.h"
@@ -1105,7 +1105,20 @@ static int __set_clk_rate(struct venus_hfi_device *device,
 		struct clock_info *cl, u64 rate, u32 sid)
 {
 	int rc = 0;
+	u64 threshold_freq = device->res->clk_freq_threshold;
+	struct cx_ipeak_client *ipeak = device->res->cx_ipeak_context;
 	struct clk *clk = cl->clk;
+
+	if (ipeak && device->clk_freq < threshold_freq && rate >= threshold_freq) {
+		rc = cx_ipeak_update(ipeak, true);
+		if (rc) {
+			s_vpr_e(sid, "%s: cx_ipeak_update failed!\n", __func__);
+			return rc;
+		}
+		s_vpr_p(sid,
+			"cx_ipeak_update: up, clk freq = %lu rate = %lu threshold_freq = %lu\n",
+			device->clk_freq, rate, threshold_freq);
+	}
 
 	rc = clk_set_rate(clk, rate);
 	if (rc) {
@@ -1113,6 +1126,19 @@ static int __set_clk_rate(struct venus_hfi_device *device,
 			"%s: Failed to set clock rate %llu %s: %d\n",
 			__func__, rate, cl->name, rc);
 		return rc;
+	}
+
+	if (ipeak && device->clk_freq >= threshold_freq && rate < threshold_freq) {
+		rc = cx_ipeak_update(ipeak, false);
+		if (rc) {
+			s_vpr_e(sid,
+				"cx_ipeak_update failed! ipeak %pK\n", ipeak);
+			device->clk_freq = rate;
+			return rc;
+		}
+		s_vpr_p(sid,
+			"cx_ipeak_update: up, clk freq = %lu rate = %lu threshold_freq = %lu\n",
+			device->clk_freq, rate, threshold_freq);
 	}
 
 	device->clk_freq = rate;

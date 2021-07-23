@@ -2150,6 +2150,7 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 	int count = 0;
 	int rc = 0;
 	struct v4l2_ctrl *superframe_ctrl = NULL;
+	struct v4l2_ctrl *ctrl = NULL;
 
 	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid parameters\n", __func__);
@@ -2158,6 +2159,12 @@ int msm_venc_store_timestamp(struct msm_vidc_inst *inst, u64 timestamp_us)
 
 	if (!inst->core->resources.enc_auto_dynamic_fps ||
 		is_image_session(inst))
+		return rc;
+
+	/* set auto-framerate only for VBR CFR native recorder */
+	ctrl = get_ctrl(inst, V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER);
+	if ((ctrl && ctrl->val == V4L2_MPEG_MSM_VIDC_DISABLE) ||
+		(inst->rc_type != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR))
 		return rc;
 
 	mutex_lock(&inst->timestamps.lock);
