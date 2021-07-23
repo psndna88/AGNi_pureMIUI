@@ -68,6 +68,11 @@
 	vdd_lpi_mx-supply = <&L17A_LEVEL>;
 };
 
+&msm_vidc {
+	qcom,cx-ipeak-data = <&cx_ipeak_lm 6>;
+	qcom,clock-freq-threshold = <300000000>;
+};
+
 &qusb_phy0 {
 	vdd-supply = <&L7A>;
 	vdda18-supply = <&L10A>;
@@ -78,4 +83,13 @@
 &usb_qmp_dp_phy {
 	vdd-supply = <&L18A>;
 	core-supply = <&L4A>;
+};
+
+&soc {
+	cx_ipeak_lm: cx_ipeak@3ed000 {
+		#size-cells = <1>;
+		compatible = "qcom,cx-ipeak-v2";
+		reg = <0x3ed000 0xe010>;
+		status = "ok";
+	};
 };

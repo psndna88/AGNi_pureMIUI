@@ -3304,6 +3304,13 @@
 				   "gpu_gaming_bin",
 				   "feat_conf9";
 	};
+
+	cx_ipeak_lm: cx_ipeak@3ed000 {
+		#size-cells = <1>;
+		compatible = "qcom,cx-ipeak-v2";
+		reg = <0x3ed000 0xe010>;
+		status = "ok";
+	};
 };
 
 #include "holi-gpu.dtsi"
@@ -3740,6 +3747,11 @@
 	cxip-cdev@3ed000 {
 		status = "ok";
 	};
+};
+
+&msm_vidc {
+	qcom,cx-ipeak-data = <&cx_ipeak_lm 6>;
+	qcom,clock-freq-threshold = <300000000>;
 };
 
 #include "msm-rdbg.dtsi"
