@@ -3254,6 +3254,7 @@
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
 		qcom,ipa-endp-delay-wa;
+		qcom,fnr-stats-not-supported;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		clock-names = "core_clk";
 		clocks = <&rpmcc RPM_SMD_IPA_CLK>;

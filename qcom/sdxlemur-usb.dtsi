@@ -287,7 +287,6 @@
 			qcom,pid = <0x9067>;
 			qcom,composition = "mass_storage.0,gsi.rmnet|mass_storage.1,gsi.mbim";
 			qcom,bmAttributes = <0xa0>;
-			qcom,rmnet_in_use_tcm_mem;
 		};
 
 		composition5 {

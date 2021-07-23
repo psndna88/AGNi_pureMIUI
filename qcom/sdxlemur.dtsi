@@ -412,6 +412,7 @@
 		interrupt-names = "eud_irq";
 		interrupt-parent = <&pdc>;
 		interrupts = <15 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-mask = <0x30>;
 		reg = <0xff0000 0x2000>,
 			<0xff2000 0x1000>;
 		reg-names = "eud_base", "eud_mode_mgr2";
@@ -1195,6 +1196,7 @@
 		qcom,ipa-holb-monitor-poll-period = <5>;
 		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
 		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
+		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -1227,7 +1229,7 @@
 
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 		"TURBO";
-		qcom,throughput-threshold = <2000 4000 8000>;
+		qcom,throughput-threshold = <3000 5000 10000>;
 		qcom,scaling-exceptions = <>;
 
 		ipa_smmu_ap: ipa_smmu_ap {
