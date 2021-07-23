@@ -2154,6 +2154,7 @@ struct ipa3_context {
 	bool is_bw_monitor_supported;
 	bool modem_load_ipa_fw;
 	bool fnr_stats_not_supported;
+	bool is_device_crashed;
 };
 
 struct ipa3_plat_drv_res {
