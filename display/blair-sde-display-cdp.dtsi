@@ -1,4 +1,6 @@
 /* Should extend holi-sde-display-cdp-pm6125.dtsi */
+#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include "dsi-panel-nt36672e-fhd-plus-144hz-video-cphy.dtsi"
 
 &tlmm {
 	pmx_sde_bias_en: pmx_sde_bias_en {
@@ -45,6 +47,22 @@
 };
 
 &sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"cphy_byte_clk0", "cphy_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0",
+		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
+
 	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
 	pinctrl-0 = <&sde_te_active &disp_pins_reset &lcd_bias_en_active>;
 	pinctrl-1 = <&sde_te_suspend &lcd_bias_en_suspend>;
@@ -88,6 +106,20 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 24 09 0a 26 25 09
+				0a 09 02 04 00 1f 19];
+		};
+	};
 };
 
 &dsi_nt36672e_fhd_plus_120_video {
@@ -100,6 +132,20 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1e 08 08 24 22 08
+				08 08 02 04 00 1b 18];
+		};
+	};
 };
 
 &dsi_nt36672e_fhd_plus_144_video {
@@ -112,4 +158,49 @@
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 	qcom,platform-en-gpio = <&tlmm 47 0>;
 	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 24 23 08
+				08 08 02 04 00 1c 18];
+		};
+	};
+};
+
+&dsi_nt36672e_fhd_plus_144hz_video_cphy {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	pwms = <&pm6125_pwm 0 0>;
+	qcom,bl-pmic-pwm-period-usecs = <100>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
+	qcom,platform-en-gpio = <&tlmm 47 0>;
+	qcom,platform-bklight-en-gpio = <&pmr735a_gpios 3 0>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"cphy_byte_clk0", "cphy_pixel_clk0";
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 00 00 00 22 1F 06
+				19 07 02 04 00 00 00];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
 };
