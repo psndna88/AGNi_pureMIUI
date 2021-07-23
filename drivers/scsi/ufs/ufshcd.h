@@ -1062,6 +1062,7 @@ struct ufs_hba {
 		bool active;
 	} pm_qos;
 	bool wb_enabled;
+	bool primary_boot_device_probed;
 };
 
 static inline void ufshcd_mark_shutdown_ongoing(struct ufs_hba *hba)
