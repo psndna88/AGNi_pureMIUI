@@ -2994,6 +2994,9 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 	_sde_connector_lm_preference(c_conn, sde_kms,
 			display_info.display_type);
 
+	sde_hw_ctl_set_preference(sde_kms->catalog,
+			  display_info.display_type);
+
 	SDE_DEBUG("connector %d attach encoder %d\n",
 			c_conn->base.base.id, encoder->base.id);
 

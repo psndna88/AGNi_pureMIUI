@@ -1919,6 +1919,8 @@ static int sde_ctl_parse_dt(struct device_node *np,
 				ctl_prop[HW_DISP].prop_name, i, &disp_pref);
 		if (disp_pref && !strcmp(disp_pref, "primary"))
 			set_bit(SDE_CTL_PRIMARY_PREF, &ctl->features);
+		if (disp_pref && !strcmp(disp_pref, "secondary"))
+			set_bit(SDE_CTL_SECONDARY_PREF, &ctl->features);
 		if ((i < MAX_SPLIT_DISPLAY_CTL) &&
 			!(IS_SDE_CTL_REV_100(sde_cfg->ctl_rev)))
 			set_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
@@ -1935,6 +1937,43 @@ static int sde_ctl_parse_dt(struct device_node *np,
 
 	sde_put_dt_props(props);
 	return 0;
+}
+
+void sde_hw_ctl_set_preference(struct sde_mdss_cfg *sde_cfg,
+			uint32_t disp_type)
+{
+	u32 i;
+
+	if (!IS_SDE_CTL_REV_100(sde_cfg->ctl_rev))
+		return;
+
+	if (disp_type == SDE_CONNECTOR_PRIMARY) {
+		for (i = 0; i < sde_cfg->ctl_count; i++) {
+			/* Exit if already set in dt file*/
+			if (sde_cfg->ctl[i].features & BIT(SDE_CTL_PRIMARY_PREF))
+				return;
+		}
+		for (i = 0; i < sde_cfg->ctl_count; i++) {
+			/* Set preference here*/
+			if (!(sde_cfg->ctl[i].features & BIT(SDE_CTL_SECONDARY_PREF))) {
+				set_bit(SDE_CTL_PRIMARY_PREF, &sde_cfg->ctl[i].features);
+				return;
+			}
+		}
+	} else if (disp_type == SDE_CONNECTOR_SECONDARY) {
+		for (i = 0; i < sde_cfg->ctl_count; i++) {
+			/* Exit if already set in dt file*/
+			if (sde_cfg->ctl[i].features & BIT(SDE_CTL_SECONDARY_PREF))
+				return;
+		}
+		for (i = 0; i < sde_cfg->ctl_count; i++) {
+			/* Set preference here*/
+			if (!(sde_cfg->ctl[i].features & BIT(SDE_CTL_PRIMARY_PREF))) {
+				set_bit(SDE_CTL_SECONDARY_PREF, &sde_cfg->ctl[i].features);
+				return;
+			}
+		}
+	}
 }
 
 void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,

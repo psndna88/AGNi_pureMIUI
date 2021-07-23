@@ -467,6 +467,7 @@ enum {
 	SDE_CTL_SPLIT_DISPLAY = 0x1,
 	SDE_CTL_PINGPONG_SPLIT,
 	SDE_CTL_PRIMARY_PREF,
+	SDE_CTL_SECONDARY_PREF,
 	SDE_CTL_ACTIVE_CFG,
 	SDE_CTL_UIDLE,
 	SDE_CTL_UNIFIED_DSPP_FLUSH,
@@ -1659,6 +1660,13 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev);
  */
 void sde_hw_catalog_deinit(struct sde_mdss_cfg *sde_cfg);
 
+/**
+ * sde_hw_ctl_set_preference - set CTL preference for display
+ * @sde_cfg:	pointer to mdss cfg
+ * @disp_type:	type of display primary/secondary
+ */
+void sde_hw_ctl_set_preference(struct sde_mdss_cfg *sde_cfg,
+			uint32_t disp_type);
 /**
  * sde_hw_catalog_irq_offset_list_delete - delete the irq_offset_list
  *                                         maintained by the catalog
