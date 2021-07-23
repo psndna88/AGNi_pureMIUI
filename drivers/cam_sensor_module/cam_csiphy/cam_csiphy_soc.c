@@ -205,7 +205,7 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 	rc = cam_soc_util_set_src_clk_rate(soc_info,
 		soc_info->clk_rate[0][soc_info->src_clk_idx]);
 	clk_rate = cam_soc_util_get_clk_rate_applied(soc_info,
-		soc_info->src_clk_idx, true, vote_level);
+		csiphy_dev->rx_clk_src_idx, true, vote_level);
 	cam_subdev_notify_message(CAM_TFE_DEVICE_TYPE,
 		CAM_SUBDEV_MESSAGE_CLOCK_UPDATE,
 		clk_rate);
