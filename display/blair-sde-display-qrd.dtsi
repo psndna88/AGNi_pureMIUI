@@ -5,18 +5,18 @@
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
-				04 03 02 04 00 10 14];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
 		};
 
 		timing@1 {
-			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
-				06 06 02 04 00 15 15];
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0b];
 		};
 
 		timing@2 {
-			qcom,mdss-dsi-panel-phy-timings = [00 1C 08 07 23 22 07
-				07 08 02 04 00 1a 17];
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
 		};
 	};
 };
@@ -26,8 +26,8 @@
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 1C 08 07 23 22 07
-				07 08 02 04 00 1a 17];
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
 		};
 	};
 };
@@ -37,13 +37,13 @@
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
-				04 03 02 04 00 10 14];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
 		};
 
 		timing@1 {
-			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
-				06 06 02 04 00 15 15];
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0b];
 		};
 	};
 };
@@ -53,8 +53,8 @@
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 20 1F 06
-				06 06 02 04 00 15 15];
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0b];
 		};
 	};
 };
@@ -64,8 +64,8 @@
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 1E 1E 04
-				04 03 02 04 00 10 14];
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
 		};
 	};
 };
