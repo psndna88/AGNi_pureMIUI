@@ -247,6 +247,9 @@ struct mscs_req_info {
  * @he_sta_obsspd: he_sta_obsspd
  * @twt_wait_for_notify: TWT session teardown received, wait for
  * notify event from firmware before next TWT setup is done.
+ * @last_delba_sent_time: Last delba sent time to handle back to back delba
+ *			  requests from some IOT APs
+ * @ba_2k_jump_iot_ap: This is set to true if connected to the ba 2k jump IOT AP
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -282,6 +285,8 @@ struct mlme_legacy_priv {
 	tDot11fIEhe_cap he_config;
 	uint32_t he_sta_obsspd;
 #endif
+	qdf_time_t last_delba_sent_time;
+	bool ba_2k_jump_iot_ap;
 };
 
 

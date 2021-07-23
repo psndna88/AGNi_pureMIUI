@@ -35,6 +35,8 @@
 
 #define POLICY_MGR_MAX_CON_STRING_LEN   100
 
+static const uint16_t sap_mand_5g_freq_list[] = {5745, 5765, 5785, 5805};
+
 struct policy_mgr_conc_connection_info
 	pm_conc_connection_list[MAX_NUMBER_OF_CONC_CONNECTIONS];
 
@@ -629,6 +631,9 @@ void policy_mgr_update_conc_list(struct wlan_objmgr_psoc *psoc,
 		if (pm_ctx->dp_cbacks.hdd_ipa_set_mcc_mode_cb)
 			pm_ctx->dp_cbacks.hdd_ipa_set_mcc_mode_cb(mcc_mode);
 	}
+
+	if (pm_ctx->conc_cbacks.connection_info_update)
+		pm_ctx->conc_cbacks.connection_info_update();
 }
 
 /**
@@ -3612,8 +3617,9 @@ policy_mgr_init_sap_mandatory_chan_by_band(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 	if (band_bitmap & BIT(REG_BAND_5G))
-		policy_mgr_add_sap_mandatory_chan(psoc,
-						  SAP_MANDATORY_5G_CH_FREQ);
+		for (i = 0; i < ARRAY_SIZE(sap_mand_5g_freq_list); i++)
+			policy_mgr_add_sap_mandatory_chan(
+				psoc, sap_mand_5g_freq_list[i]);
 	if (band_bitmap & BIT(REG_BAND_6G))
 		policy_mgr_add_sap_mandatory_6ghz_chan(psoc);
 }

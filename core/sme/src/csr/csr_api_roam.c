@@ -15042,6 +15042,14 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 							WLAN_LEGACY_MAC_ID);
 		if (vdev) {
 			mlme_set_follow_ap_edca_flag(vdev, follow_ap_edca);
+			is_vendor_ap_present = wlan_get_vendor_ie_ptr_from_oui(
+					SIR_MAC_BA_2K_JUMP_AP_VENDOR_OUI,
+					SIR_MAC_BA_2K_JUMP_AP_VENDOR_OUI_LEN,
+					vendor_ap_search_attr.ie_data,
+					vendor_ap_search_attr.ie_length);
+			wlan_mlme_set_ba_2k_jump_iot_ap(vdev,
+							is_vendor_ap_present);
+
 			wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 		}
 
@@ -20546,12 +20554,20 @@ static void csr_copy_fils_join_rsp_roam_info(struct csr_roam_info *roam_info,
  * Return: NONE
  */
 static
-void csr_update_fils_erp_seq_num(struct csr_roam_profile *roam_profile,
+void csr_update_fils_erp_seq_num(struct wlan_objmgr_psoc *psoc,
+				 uint8_t vdev_id,
+				 struct csr_roam_profile *roam_profile,
 				 uint16_t erp_next_seq_num)
 {
+	struct wlan_fils_connection_info *fils_info;
+
 	if (roam_profile->fils_con_info)
 		roam_profile->fils_con_info->erp_sequence_number =
 				erp_next_seq_num;
+
+	fils_info = wlan_cm_get_fils_connection_info(psoc, vdev_id);
+	if (fils_info)
+		fils_info->erp_sequence_number = erp_next_seq_num;
 }
 #else
 static inline
@@ -20560,7 +20576,9 @@ void csr_copy_fils_join_rsp_roam_info(struct csr_roam_info *roam_info,
 {}
 
 static inline
-void csr_update_fils_erp_seq_num(struct csr_roam_profile *roam_profile,
+void csr_update_fils_erp_seq_num(struct wlan_objmgr_psoc *psoc,
+				 uint8_t vdev_id,
+				 struct csr_roam_profile *roam_profile,
 				 uint16_t erp_next_seq_num)
 {}
 #endif
@@ -21488,7 +21506,8 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	roam_info->update_erp_next_seq_num =
 			roam_synch_data->update_erp_next_seq_num;
 	roam_info->next_erp_seq_num = roam_synch_data->next_erp_seq_num;
-	csr_update_fils_erp_seq_num(session->pCurRoamProfile,
+	csr_update_fils_erp_seq_num(mac_ctx->psoc, session_id,
+				    session->pCurRoamProfile,
 				    roam_info->next_erp_seq_num);
 	sme_debug("Update ERP Seq Num : %d, Next ERP Seq Num : %d",
 			roam_info->update_erp_next_seq_num,

@@ -616,8 +616,7 @@ int hdd_reassoc(struct hdd_adapter *adapter, const uint8_t *bssid,
 		ch_freq = sta_ctx->conn_info.chan_freq;
 	}
 
-	if (QDF_STATUS_SUCCESS !=
-	    wlan_hdd_validate_operation_channel(adapter, ch_freq)) {
+	if (!sme_is_channel_valid(hdd_ctx->mac_handle, ch_freq)) {
 		hdd_err("Invalid Ch freq: %d", ch_freq);
 		ret = -EINVAL;
 		goto exit;
@@ -4595,8 +4594,7 @@ static int drv_cmd_fast_reassoc(struct hdd_adapter *adapter,
 	}
 
 	/* Check freq number is a valid freq number */
-	if (freq && QDF_STATUS_SUCCESS !=
-		wlan_hdd_validate_operation_channel(adapter, freq)) {
+	if (freq && !sme_is_channel_valid(mac_handle, freq)) {
 		hdd_err("Invalid freq [%d]", freq);
 		return -EINVAL;
 	}

@@ -683,7 +683,6 @@ struct wma_invalid_peer_params {
  * @roam_synch_in_progress: flag is in progress or not
  * @plink_status_req: link status request
  * @psnr_req: snr request
- * @delay_before_vdev_stop: delay
  * @tx_streams: number of tx streams can be used by the vdev
  * @mac_id: the mac on which vdev is on
  * @arp_offload_req: cached arp offload request
@@ -728,7 +727,6 @@ struct wma_txrx_node {
 	uint32_t peer_count;
 	void *plink_status_req;
 	void *psnr_req;
-	uint8_t delay_before_vdev_stop;
 #ifdef FEATURE_WLAN_EXTSCAN
 	bool extscan_in_progress;
 #endif
@@ -2333,13 +2331,15 @@ uint8_t wma_rx_invalid_peer_ind(uint8_t vdev_id, void *wh);
  * @peer_macaddr: peer mac address
  * @tid: tid of rx
  * @reason_code: reason code
+ * @cdp_rcode: CDP reason code for sending DELBA
  *
  * Return: 0 for success or non-zero on failure
  */
 int wma_dp_send_delba_ind(uint8_t vdev_id,
 			  uint8_t *peer_macaddr,
 			  uint8_t tid,
-			  uint8_t reason_code);
+			  uint8_t reason_code,
+			  enum cdp_delba_rcode cdp_rcode);
 
 /**
  * is_roam_inprogress() - Is vdev in progress

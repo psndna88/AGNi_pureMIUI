@@ -2935,7 +2935,6 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 	bool val = 0;
 	void *cds_context;
 	target_resource_config *wlan_res_cfg;
-	uint8_t delay_before_vdev_stop;
 	uint32_t self_gen_frm_pwr = 0;
 
 	wma_debug("Enter");
@@ -3111,13 +3110,9 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 		goto err_scn_context;
 	}
 
-	for (i = 0; i < wma_handle->max_bssid; ++i) {
+	for (i = 0; i < wma_handle->max_bssid; ++i)
 		wma_vdev_init(&wma_handle->interfaces[i]);
-		ucfg_mlme_get_delay_before_vdev_stop(wma_handle->psoc,
-						     &delay_before_vdev_stop);
-		wma_handle->interfaces[i].delay_before_vdev_stop =
-							delay_before_vdev_stop;
-	}
+
 	/* Register the debug print event handler */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 					wmi_debug_print_event_id,
@@ -4630,6 +4625,36 @@ wma_get_igmp_offload_enable(struct wmi_unified *wmi_handle,
 {}
 #endif
 
+#ifdef WLAN_FEATURE_11AX
+#ifdef FEATURE_WLAN_TDLS
+/**
+ * wma_get_tdls_ax_support() - update tgt service with service tdls ax support
+ * @wmi_handle: Unified wmi handle
+ * @cfg: target services
+ *
+ * Return: none
+ */
+static inline void
+wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{
+	cfg->en_tdls_11ax_support = wmi_service_enabled(
+						wmi_handle,
+						wmi_service_tdls_ax_support);
+}
+#else
+static inline void
+wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{}
+#endif
+#else
+static inline void
+wma_get_tdls_ax_support(struct wmi_unified *wmi_handle,
+			struct wma_tgt_services *cfg)
+{}
+#endif
+
 /**
  * wma_update_target_services() - update target services from wma handle
  * @wmi_handle: Unified wmi handle
@@ -4767,6 +4792,7 @@ static inline void wma_update_target_services(struct wmi_unified *wmi_handle,
 	wma_get_service_cap_club_get_sta_in_ll_stats_req(wmi_handle, cfg);
 
 	wma_get_igmp_offload_enable(wmi_handle, cfg);
+	wma_get_tdls_ax_support(wmi_handle, cfg);
 }
 
 /**
