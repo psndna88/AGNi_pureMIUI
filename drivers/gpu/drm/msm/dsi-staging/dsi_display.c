@@ -5087,8 +5087,7 @@ static int dsi_display_link_clk_force_update_ctrl(void *handle)
 	return rc;
 }
 
-int dsi_display_clk_ctrl(void *handle,
-	enum dsi_clk_type clk_type, enum dsi_clk_state clk_state)
+int dsi_display_clk_ctrl(void *handle, u32 clk_type, u32 clk_state)
 {
 	int rc = 0;
 
