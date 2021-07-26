@@ -14104,24 +14104,26 @@ void csr_update_pmk_cache_ft(struct mac_context *mac, uint32_t vdev_id,
 		pmksa.mdid.mdie_present = 1;
 		pmksa.mdid.mobility_domain =
 				session->connectedProfile.mdid.mobility_domain;
-		sme_debug("copied the MDID from session to PMKSA");
+		sme_debug("Session MDID:0x%x copied to PMKSA",
+			  pmksa.mdid.mobility_domain);
 		qdf_copy_macaddr(&pmksa.bssid,
 				 &session->connectedProfile.bssid);
 
 		status = wlan_crypto_update_pmk_cache_ft(vdev, &pmksa);
-		if (status == QDF_STATUS_SUCCESS)
-			sme_debug("Updated the crypto cache table");
+		if (QDF_IS_STATUS_ERROR(status))
+			sme_debug("Failed to update the crypto table");
 	} else if (scan_res && scan_res->BssDescriptor.mdiePresent) {
 		pmksa.mdid.mdie_present = 1;
 		pmksa.mdid.mobility_domain =
 			(scan_res->BssDescriptor.mdie[0] |
 			 (scan_res->BssDescriptor.mdie[1] << 8));
-		sme_debug("copied the MDID from scan_res to PMKSA");
+		sme_debug("Scan_res MDID:0x%x copied to PMKSA",
+			  pmksa.mdid.mobility_domain);
 		qdf_copy_macaddr(&pmksa.bssid, &pmk_cache->BSSID);
 
 		status = wlan_crypto_update_pmk_cache_ft(vdev, &pmksa);
-		if (status == QDF_STATUS_SUCCESS)
-			sme_debug("Updated the crypto cache table");
+		if (QDF_IS_STATUS_ERROR(status))
+			sme_debug("Failed to update the crypto table");
 	}
 
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
