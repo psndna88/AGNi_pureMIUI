@@ -1427,6 +1427,13 @@
 	qtee_shmbridge {
 		compatible = "qcom,tee-shared-memory-bridge";
 	};
+
+	sdx_ext_ipc: qcom,sdx_ext_ipc {
+		compatible = "qcom,sdx-ext-ipc";
+		qcom,status-in-gpio = <&tlmm 65 0x00>;
+		qcom,status-out-gpio = <&tlmm 44 0x00>;
+		qcom,status-out2-gpio = <&tlmm 45 0x00>;
+	};
 };
 
 #include "sdxlemur-pinctrl.dtsi"
