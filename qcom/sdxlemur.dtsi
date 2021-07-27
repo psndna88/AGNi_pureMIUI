@@ -236,7 +236,7 @@
 		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
 	};
 
-	qcom,msm-cpufreq {
+	cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
 		clocks = <&apsscc APCS_MUX_CLK>;
 		clock-names = "cpu0_clk";
