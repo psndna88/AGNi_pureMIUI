@@ -27,7 +27,7 @@ static int boost_slot;
  * boost is responsible for disabling it as well.
  */
 
-bool allow_sched_boost = false;
+bool allow_sched_boost = true;
 unsigned int sysctl_sched_boost; /* To/from userspace */
 unsigned int sched_boost_type; /* currently activated sched boost */
 enum sched_boost_policy boost_policy;
