@@ -18342,6 +18342,7 @@ bool hdd_is_roaming_in_progress(struct hdd_context *hdd_ctx)
 					   dbgid) {
 		vdev_id = adapter->vdev_id;
 		if (adapter->device_mode == QDF_STA_MODE &&
+		    test_bit(SME_SESSION_OPENED, &adapter->event_flags) &&
 		    (MLME_IS_ROAM_SYNCH_IN_PROGRESS(hdd_ctx->psoc, vdev_id) ||
 		     MLME_IS_ROAMING_IN_PROG(hdd_ctx->psoc, vdev_id) ||
 		     mlme_is_roam_invoke_in_progress(hdd_ctx->psoc,
@@ -18402,6 +18403,13 @@ static QDF_STATUS hdd_is_connection_in_progress_iterator(
 	}
 
 	mac_handle = hdd_ctx->mac_handle;
+	if (!test_bit(SME_SESSION_OPENED, &adapter->event_flags) &&
+	    (adapter->device_mode == QDF_STA_MODE ||
+	     adapter->device_mode == QDF_P2P_CLIENT_MODE ||
+	     adapter->device_mode == QDF_P2P_DEVICE_MODE ||
+	     adapter->device_mode == QDF_P2P_GO_MODE ||
+	     adapter->device_mode == QDF_SAP_MODE))
+		return QDF_STATUS_SUCCESS;
 
 	if (((QDF_STA_MODE == adapter->device_mode)
 		|| (QDF_P2P_CLIENT_MODE == adapter->device_mode)
