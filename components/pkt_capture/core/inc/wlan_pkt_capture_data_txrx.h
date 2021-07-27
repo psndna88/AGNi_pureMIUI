@@ -29,6 +29,7 @@
 
 #include "cdp_txrx_cmn_struct.h"
 #include <qdf_nbuf.h>
+#include <qdf_list.h>
 #ifndef WLAN_FEATURE_PKT_CAPTURE_V2
 #include <htt_internal.h>
 #endif
@@ -186,6 +187,17 @@ struct pkt_capture_tx_hdr_elem_t {
 	uint8_t tx_retry_cnt;
 	uint16_t framectrl;
 	uint16_t seqno;
+};
+
+/**
+ * pkt_capture_ppdu_stats_q_node - node structure to be enqueued
+ * in ppdu_stats_q
+ * @node: list node
+ * @buf: buffer data received from ppdu_stats
+ */
+struct pkt_capture_ppdu_stats_q_node {
+	qdf_list_node_t node;
+	uint32_t buf[];
 };
 
 /**
