@@ -470,7 +470,7 @@ static int step_chg_notifier_call(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	if ((strcmp(psy->desc->name, "battery") == 0)) {
-		__pm_wakeup_event(chip->step_chg_ws, 500);
+		__pm_stay_awake(chip->step_chg_ws);
 		schedule_delayed_work(&chip->status_change_work, 0);
 	}
 
