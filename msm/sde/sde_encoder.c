@@ -809,6 +809,8 @@ void sde_encoder_set_clone_mode(struct drm_encoder *drm_enc,
 			SDE_DEBUG("enc:%d phys state:%d\n", DRMID(drm_enc), phys->enable_state);
 		}
 	}
+
+	sde_crtc_state->cwb_enc_mask = 0;
 }
 
 static int _sde_encoder_atomic_check_phys_enc(struct sde_encoder_virt *sde_enc,
