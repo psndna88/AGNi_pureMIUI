@@ -23,7 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/usb/otg.h>
 
-#define TEMPORARY_HOLD_TIME	1000
+#define TEMPORARY_HOLD_TIME	2000
 
 static bool enabled = true;
 static struct usb_phy *otgwl_xceiv;
