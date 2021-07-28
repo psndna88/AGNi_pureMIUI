@@ -9408,7 +9408,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	free(dut->ap_sae_pk_keypair_sig);
 	dut->ap_sae_pk_keypair_sig = NULL;
 
-	dut->ap_ocvc = -1;
+	dut->ap_ocvc = dut->user_config_ap_ocvc;
 
 	if (dut->program == PROGRAM_HS2 || dut->program == PROGRAM_HS2_R2 ||
 	    dut->program == PROGRAM_HS2_R3 ||
@@ -9707,7 +9707,7 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 	dut->ap_group_mgmt_cipher = AP_NO_GROUP_MGMT_CIPHER_SET;
 	dut->ap_passphrase[0] = '\0';
 	dut->ap_psk[0] = '\0';
-	dut->ap_beacon_prot = 0;
+	dut->ap_beacon_prot = dut->user_config_ap_beacon_prot;
 	dut->ap_transition_disable = 0;
 
 	dut->dpp_conf_id = -1;

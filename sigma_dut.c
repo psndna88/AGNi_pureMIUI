@@ -833,6 +833,7 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->priv_cmd = "iwpriv";
 	dut->sigma_tmpdir = SIGMA_TMPDIR;
 	dut->ap_ocvc = -1;
+	dut->user_config_ap_ocvc = -1;
 	dut->ap_sae_commit_status = -1;
 	dut->sta_async_twt_supp = -1;
 }
@@ -1002,7 +1003,8 @@ static void usage(void)
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
 	       "       [-Z <Override default tmp dir path>] \\\n"
 	       "       [-5 <WFD timeout override>] \\\n"
-	       "       [-r <HT40 or 2.4_HT40>]\n");
+	       "       [-r <HT40 or 2.4_HT40>] \\\n"
+	       "       [-6 <ocv or bp or ocv_bp>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
 
@@ -1025,7 +1027,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:6:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1242,6 +1244,19 @@ int main(int argc, char *argv[])
 			sigma_dut.user_config_timeout = timeout;
 			break;
 		}
+		case '6':
+			if (strcmp(optarg, "ocv") == 0) {
+				sigma_dut.user_config_ap_ocvc = 1;
+			} else if (strcmp(optarg, "bp") == 0) {
+				sigma_dut.user_config_ap_beacon_prot = 1;
+			} else if (strcmp(optarg, "ocv_bp") == 0) {
+				sigma_dut.user_config_ap_beacon_prot = 1;
+				sigma_dut.user_config_ap_ocvc = 1;
+			} else {
+				printf("Unsupported -6 value\n");
+				exit(1);
+			}
+			break;
 		case 'h':
 		default:
 			usage();
