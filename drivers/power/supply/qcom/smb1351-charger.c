@@ -568,7 +568,7 @@ static int smb1351_read_reg(struct smb1351_charger *chip, int reg, u8 *val)
 {
 	s32 ret;
 
-	pm_wakeup_event(chip->dev, 500);
+	pm_stay_awake(chip->dev);
 	ret = i2c_smbus_read_byte_data(chip->client, reg);
 	if (ret < 0) {
 		pr_err("i2c read fail: can't read from %02x: %d\n", reg, ret);
@@ -586,7 +586,7 @@ static int smb1351_write_reg(struct smb1351_charger *chip, int reg, u8 val)
 {
 	s32 ret;
 
-	pm_wakeup_event(chip->dev, 500);
+	pm_stay_awake(chip->dev);
 	ret = i2c_smbus_write_byte_data(chip->client, reg, val);
 	if (ret < 0) {
 		pr_err("i2c write fail: can't write %02x to %02x: %d\n",
@@ -2101,7 +2101,7 @@ static int smb1351_apsd_complete_handler(struct smb1351_charger *chip,
 			type = POWER_SUPPLY_TYPE_USB_HVDCP;
 		} else if (type == POWER_SUPPLY_TYPE_USB_DCP) {
 			pr_debug("schedule hvdcp detection worker\n");
-			pm_wakeup_event(chip->dev, 500);
+			pm_stay_awake(chip->dev);
 			schedule_delayed_work(&chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
 		}
@@ -2225,7 +2225,7 @@ static int smb1351_usbin_uv_handler(struct smb1351_charger *chip, u8 status)
 		pr_debug("schedule charger remove worker\n");
 		schedule_delayed_work(&chip->chg_remove_work,
 					msecs_to_jiffies(FIRST_CHECK_DELAY));
-		pm_wakeup_event(chip->dev, 500);
+		pm_stay_awake(chip->dev);
 	}
 
 	pr_debug("chip->chg_present = %d\n", chip->chg_present);
