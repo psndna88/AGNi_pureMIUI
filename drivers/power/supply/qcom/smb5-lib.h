@@ -16,6 +16,7 @@
 #include <linux/alarmtimer.h>
 #include <linux/ktime.h>
 #include <linux/types.h>
+#include <linux/timer.h>
 #include <linux/interrupt.h>
 #include <linux/irqreturn.h>
 #include <linux/regulator/driver.h>
@@ -612,6 +613,7 @@ struct smb_charger {
 	struct alarm		chg_termination_alarm;
 	struct alarm		dcin_aicl_alarm;
 
+	struct timer_list	apsd_timer;
 
 	struct charger_param	chg_param;
 	/* secondary charger config */
@@ -632,6 +634,7 @@ struct smb_charger {
 	bool			ok_to_pd;
 	bool			typec_legacy;
 	bool			typec_irq_en;
+	bool			typec_role_swap_failed;
 
 	/* cached status */
 	bool			system_suspend_supported;
@@ -805,6 +808,8 @@ struct smb_charger {
 	int			chg_term_current_thresh_hi_from_dts;
 	bool			support_ffc;
 	bool			already_start_step_charge_work;
+	bool			hvdcp_recheck_status;
+	bool   is_float_recheck;
 };
 
 enum quick_charge_type {
@@ -994,6 +999,7 @@ int smblib_set_prop_rechg_soc_thresh(struct smb_charger *chg,
 				const union power_supply_propval *val);
 void smblib_suspend_on_debug_battery(struct smb_charger *chg);
 int smblib_rerun_apsd_if_required(struct smb_charger *chg);
+void smblib_rerun_apsd(struct smb_charger *chg);
 int smblib_get_prop_fcc_delta(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_thermal_threshold(struct smb_charger *chg, u16 addr, int *val);

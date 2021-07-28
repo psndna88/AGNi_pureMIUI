@@ -95,6 +95,7 @@
 				      4440000  4800000
 				      4480000  3800000>;
 	mi,six-pin-step-chg;
+	qcom,usbpd-phandle = <&pm6150_pdphy>;
 	mi,support-ffc;
 	qcom,temp-27W-enable;
 };
