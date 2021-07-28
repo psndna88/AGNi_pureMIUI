@@ -6,10 +6,8 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
 CONFIG1="agni_atoll_miuiQ_defconfig"
-AGNI_BUILD_TYPE="MIUI-Q"
+export AGNI_BUILD_TYPE="MIUI-Q"
 SYNC_CONFIG=1
-WLAN_MODA11="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0"
-WLAN_MODQ="$COMPILEDIR_ATOLL/drivers/staging/qcacld-3.0_Q"
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
@@ -65,8 +63,6 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE
 echo ""
 
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
-rm $WLAN_MODA11/*.ko 2>/dev/null
-rm $WLAN_MODQ/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
 make -j4 O=$COMPILEDIR_ATOLL
@@ -76,8 +72,8 @@ if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
-if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
@@ -85,16 +81,11 @@ else
 	exit_reset;
 fi
 
-mv -f $WLAN_MODA11/wlan.ko $KERNELDIR/$DIR/wlan_A11.ko 2>/dev/null
-mv -f $WLAN_MODQ/wlan.ko $KERNELDIR/$DIR/wlan_Q.ko 2>/dev/null
-
 echo ""
 
 ###### ZIP Packing
-if [ -f $KERNELDIR/$DIR/Image.gz ]; then
+if [ -f $KERNELDIR/$DIR/Image.gz-dtb ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
-	mv $KERNELDIR/$DIR/wlan_Q.ko $KERNELDIR/$DIR/tools/wlan_Q.ko 2>/dev/null
-	mv $KERNELDIR/$DIR/wlan_A11.ko $KERNELDIR/$DIR/tools/wlan_A11.ko 2>/dev/null
 	cd $KERNELDIR/$DIR/
 	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
