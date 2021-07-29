@@ -213,28 +213,28 @@ dtb-$(CONFIG_ARCH_SM6150)	+= sm6150-rumi.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-	dtbo-$(CONFIG_ARCH_SDMMAGPIE) += \
-		sdmmagpie-idp-overlay.dtbo \
-		sdmmagpie-atp-overlay.dtbo \
-		sdmmagpie-rumi-overlay.dtbo \
-		sdmmagpie-qrd-overlay.dtbo \
-		sdmmagpiep-idp-overlay.dtbo \
-		sdmmagpiep-atp-overlay.dtbo \
-		sdmmagpiep-qrd-overlay.dtbo \
-		sdmmagpie-external-codec-idp-overlay.dtbo \
-		sdmmagpie-usbc-idp-overlay.dtbo \
-		sdmmagpie-dual-display-idp-overlay.dtbo
+#	dtbo-$(CONFIG_ARCH_SDMMAGPIE) += \
+#		sdmmagpie-idp-overlay.dtbo \
+#		sdmmagpie-atp-overlay.dtbo \
+#		sdmmagpie-rumi-overlay.dtbo \
+#		sdmmagpie-qrd-overlay.dtbo \
+#		sdmmagpiep-idp-overlay.dtbo \
+#		sdmmagpiep-atp-overlay.dtbo \
+#		sdmmagpiep-qrd-overlay.dtbo \
+#		sdmmagpie-external-codec-idp-overlay.dtbo \
+#		sdmmagpie-usbc-idp-overlay.dtbo \
+#		sdmmagpie-dual-display-idp-overlay.dtbo
 
-sdmmagpie-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-atp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-rumi-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-qrd-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpiep-idp-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpiep-atp-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpiep-qrd-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpie-external-codec-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-usbc-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-dual-display-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-atp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-rumi-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-qrd-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpiep-idp-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpiep-atp-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpiep-qrd-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpie-external-codec-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-usbc-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-dual-display-idp-overlay.dtbo-base := sdmmagpie.dtb
 else
 dtb-$(CONFIG_ARCH_SDMMAGPIE)	+= sdmmagpie-rumi.dtb \
 	sdmmagpie-idp.dtb \
@@ -308,23 +308,19 @@ endif
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_ATOLL) += \
 		curtana-atoll-idp-overlay.dtbo\
-		durandal-atoll-idp-overlay.dtbo\
 		excalibur-atoll-idp-overlay.dtbo\
 		joyeuse-atoll-idp-overlay.dtbo\
 		gram-atoll-idp-overlay.dtbo\
 		curtana-atoll-ab-idp-overlay.dtbo\
-		durandal-atoll-ab-idp-overlay.dtbo\
 		excalibur-atoll-ab-idp-overlay.dtbo\
 		joyeuse-atoll-ab-idp-overlay.dtbo\
 		gram-atoll-ab-idp-overlay.dtbo\
 
 curtana-atoll-idp-overlay.dtbo-base := atoll.dtb
-durandal-atoll-idp-overlay.dtbo-base := atoll.dtb
 excalibur-atoll-idp-overlay.dtbo-base := atoll.dtb
 joyeuse-atoll-idp-overlay.dtbo-base := atoll.dtb
 gram-atoll-idp-overlay.dtbo-base := atoll.dtb
 curtana-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
-durandal-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 excalibur-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 joyeuse-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 gram-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
