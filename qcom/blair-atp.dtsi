@@ -3,6 +3,7 @@
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay.dtsi"
 #include "display/holi-sde-display-atp.dtsi"
+#include "display/blair-sde-display-atp.dtsi"
 #include "holi-thermal-overlay.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
@@ -705,6 +706,10 @@
 	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
 	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
 	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L22A>;
 };
 
 &mdss_dsi_phy0 {
