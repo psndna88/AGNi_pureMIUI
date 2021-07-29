@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-2.0
-dtb-$(CONFIG_ARCH_QCOM)	+= apq8016-sbc.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= apq8096-db820c.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= ipq8074-hk01.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-mtp.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= msm8992-bullhead-rev-101.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= msm8994-angler-rev-101.dtb
-dtb-$(CONFIG_ARCH_QCOM)	+= msm8996-mtp.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= apq8016-sbc.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= apq8096-db820c.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= ipq8074-hk01.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-mtp.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= msm8992-bullhead-rev-101.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= msm8994-angler-rev-101.dtb
+#dtb-$(CONFIG_ARCH_QCOM)	+= msm8996-mtp.dtb
 dtb-$(CONFIG_ARCH_QCS403) += qcs403-iot-sku1.dtb \
 		qcs403-iot-sku3.dtb \
 		qcs403-iot-sku5.dtb \
@@ -225,28 +225,28 @@ dtb-$(CONFIG_ARCH_SM6150)	+= sm6150-rumi.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-	dtbo-$(CONFIG_ARCH_SDMMAGPIE) += \
-		sdmmagpie-idp-overlay.dtbo \
-		sdmmagpie-atp-overlay.dtbo \
-		sdmmagpie-rumi-overlay.dtbo \
-		sdmmagpie-qrd-overlay.dtbo \
-		sdmmagpiep-idp-overlay.dtbo \
-		sdmmagpiep-atp-overlay.dtbo \
-		sdmmagpiep-qrd-overlay.dtbo \
-		sdmmagpie-external-codec-idp-overlay.dtbo \
-		sdmmagpie-usbc-idp-overlay.dtbo \
-		sdmmagpie-dual-display-idp-overlay.dtbo
+#	dtbo-$(CONFIG_ARCH_SDMMAGPIE) += \
+#		sdmmagpie-idp-overlay.dtbo \
+#		sdmmagpie-atp-overlay.dtbo \
+#		sdmmagpie-rumi-overlay.dtbo \
+#		sdmmagpie-qrd-overlay.dtbo \
+#		sdmmagpiep-idp-overlay.dtbo \
+#		sdmmagpiep-atp-overlay.dtbo \
+#		sdmmagpiep-qrd-overlay.dtbo \
+#		sdmmagpie-external-codec-idp-overlay.dtbo \
+#		sdmmagpie-usbc-idp-overlay.dtbo \
+#		sdmmagpie-dual-display-idp-overlay.dtbo
 
-sdmmagpie-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-atp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-rumi-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-qrd-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpiep-idp-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpiep-atp-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpiep-qrd-overlay.dtbo-base := sdmmagpiep.dtb
-sdmmagpie-external-codec-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-usbc-idp-overlay.dtbo-base := sdmmagpie.dtb
-sdmmagpie-dual-display-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-atp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-rumi-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-qrd-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpiep-idp-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpiep-atp-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpiep-qrd-overlay.dtbo-base := sdmmagpiep.dtb
+#sdmmagpie-external-codec-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-usbc-idp-overlay.dtbo-base := sdmmagpie.dtb
+#sdmmagpie-dual-display-idp-overlay.dtbo-base := sdmmagpie.dtb
 else
 dtb-$(CONFIG_ARCH_SDMMAGPIE)	+= sdmmagpie-rumi.dtb \
 	sdmmagpie-idp.dtb \
@@ -323,43 +323,19 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 		excalibur-atoll-idp-overlay.dtbo\
 		joyeuse-atoll-idp-overlay.dtbo\
 		gram-atoll-idp-overlay.dtbo\
-		atoll-idp-overlay.dtbo\
-		atoll-atp-overlay.dtbo\
-		atoll-qrd-overlay.dtbo\
-		atoll-wcd937x-idp-overlay.dtbo\
-		atoll-usbc-idp-overlay.dtbo\
-		atoll-rumi-overlay.dtbo\
-		atollp-idp-overlay.dtbo\
-		atollp-atp-overlay.dtbo\
-		atollp-qrd-overlay.dtbo\
 		curtana-atoll-ab-idp-overlay.dtbo\
 		excalibur-atoll-ab-idp-overlay.dtbo\
 		joyeuse-atoll-ab-idp-overlay.dtbo\
 		gram-atoll-ab-idp-overlay.dtbo\
-		atoll-ab-idp-overlay.dtbo\
-		atoll-ab-atp-overlay.dtbo\
-		atoll-ab-qrd-overlay.dtbo
 
 curtana-atoll-idp-overlay.dtbo-base := atoll.dtb
 excalibur-atoll-idp-overlay.dtbo-base := atoll.dtb
 joyeuse-atoll-idp-overlay.dtbo-base := atoll.dtb
 gram-atoll-idp-overlay.dtbo-base := atoll.dtb
-atoll-idp-overlay.dtbo-base := atoll.dtb
-atoll-atp-overlay.dtbo-base := atoll.dtb
-atoll-qrd-overlay.dtbo-base := atoll.dtb
-atoll-rumi-overlay.dtbo-base := atoll.dtb
-atoll-wcd937x-idp-overlay.dtbo-base := atoll.dtb
-atoll-usbc-idp-overlay.dtbo-base := atoll.dtb
-atollp-idp-overlay.dtbo-base := atollp.dtb
-atollp-atp-overlay.dtbo-base := atollp.dtb
-atollp-qrd-overlay.dtbo-base := atollp.dtb
 curtana-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 excalibur-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 joyeuse-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
 gram-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
-atoll-ab-idp-overlay.dtbo-base := atoll-ab.dtb
-atoll-ab-atp-overlay.dtbo-base := atoll-ab.dtb
-atoll-ab-qrd-overlay.dtbo-base := atoll-ab.dtb
 else
 dtb-$(CONFIG_ARCH_ATOLL)	+= atoll-idp.dtb\
 	atoll-atp.dtb\
