@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/device.h>
@@ -110,6 +110,10 @@ int cam_cpas_util_reg_update(struct cam_hw_info *cpas_hw,
 	int reg_base_index;
 
 	if (reg_info->enable == false)
+		return 0;
+
+	if (reg_info->is_fuse_based &&
+		!cam_cpas_is_feature_supported(CAM_CPAS_RT_OT_FUSE, 0xFF, 0))
 		return 0;
 
 	reg_base_index = cpas_core->regbase_index[reg_base];
