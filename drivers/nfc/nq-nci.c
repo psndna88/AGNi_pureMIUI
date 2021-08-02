@@ -566,6 +566,7 @@ int nfc_ioctl_power_states(struct file *filp, unsigned long arg)
 	int r = 0;
 	struct nqx_dev *nqx_dev = filp->private_data;
 
+	/*NFC MW send command MODE_NFC_ENABLED&MODE_NFC_DISABLED failed caused force download nfc fw.*/
 	if (arg == 0 || arg == 8) {
 		/*
 		 * We are attempting a hardware reset so let us disable
@@ -1631,9 +1632,9 @@ static int nfcc_reboot(struct notifier_block *notifier, unsigned long val,
 
 #include <linux/board_id.h>
 
-static int lct_check_hwversion(void)
+static bool lct_check_hwversion(void)
 {
-	int ret = 0;
+	bool ret = false;
 	int project_number = 0;
 	int major_number = 0;
 
@@ -1644,22 +1645,22 @@ static int lct_check_hwversion(void)
 	//check project
 	switch(project_number) {
 	case 1: //curtana
-		if (major_number%10 == 3) // if (CN version)
-			ret = 0;
+		if (major_number == 13) // if (CN version)
+			ret = true;
 		else
-			ret = -1;
+			ret = false;
 		break;
 	case 2: //excalibur
-		ret = -1;
-		break;
-	case 3: //durandal
-		ret = 0;
+		ret = false;
 		break;
 	case 4: //joyeuse
-		ret = 0;
+		ret = true;
+		break;
+	case 6: //gram
+		ret = false;
 		break;
 	default:
-		ret = -1;
+		ret = false;
 		break;
 	}
 
@@ -1673,13 +1674,16 @@ static int lct_check_hwversion(void)
 static int __init nqx_dev_init(void)
 {
 #ifdef LC_NFC_CHECK
-	if (lct_check_hwversion()) {
+	if (!lct_check_hwversion()) {
 		pr_err("[nq-nci] NFC not supported on the board!\n");
 		return -ENODEV;
+	} else {
+		pr_info("[nq-nci] the board supports NFC\n");
+		return i2c_add_driver(&nqx);
 	}
-	pr_info("[nq-nci] the board supports NFC\n");
-#endif //LC_NFC_CHECK
+#else
 	return i2c_add_driver(&nqx);
+#endif //LC_NFC_CHECK
 }
 module_init(nqx_dev_init);
 
