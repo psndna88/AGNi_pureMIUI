@@ -30,7 +30,7 @@
 #ifndef __PARSE_H__
 #define __PARSE_H__
 
-#include <stdarg.h>
+#include <linux/stdarg.h>
 #include "sir_mac_prop_exts.h"
 #include "dot11f.h"
 #include "lim_ft_defs.h"

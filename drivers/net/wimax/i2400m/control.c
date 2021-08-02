@@ -73,7 +73,7 @@
  *                              command, get or set
  */
 
-#include <stdarg.h>
+#include <linux/stdarg.h>
 #include "i2400m.h"
 #include <linux/kernel.h>
 #include <linux/slab.h>

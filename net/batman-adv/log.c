@@ -26,7 +26,7 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/wait.h>
-#include <stdarg.h>
+#include <linux/stdarg.h>
 
 #include "debugfs.h"
 #include "trace.h"

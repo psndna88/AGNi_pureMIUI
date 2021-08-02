@@ -67,7 +67,7 @@
 
 #ifdef TXRX_PRINT_ENABLE
 
-#include <stdarg.h>             /* va_list */
+#include <linux/stdarg.h>             /* va_list */
 #include <qdf_types.h>          /* qdf_vprint */
 
 #define ol_txrx_alert(params...) \

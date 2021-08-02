@@ -19,7 +19,7 @@
 #ifndef __UTILSAPI_H
 #define __UTILSAPI_H
 
-#include <stdarg.h>
+#include <linux/stdarg.h>
 #include <sir_common.h>
 #include "ani_global.h"
 #include "sys_wrapper.h"
