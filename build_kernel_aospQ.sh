@@ -72,8 +72,9 @@ if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
-if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
@@ -84,7 +85,7 @@ fi
 echo ""
 
 ###### ZIP Packing
-if [ -f $KERNELDIR/$DIR/Image.gz-dtb ]; then
+if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	rm -rf $KERNELDIR/$DIR/common/AGNiSound_R0
 	cd $KERNELDIR/$DIR/
