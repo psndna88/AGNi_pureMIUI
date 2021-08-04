@@ -1,6 +1,6 @@
 id=AGNiWIFI
 name=AGNi Kernel MIATOLL WIFI Tuning
-version=1.3
-versionCode=16052021
+version=1.4
+versionCode=03082021
 author=psndna88
 description=This module changes TCP/IP stack configuration for faster wifi speeds.

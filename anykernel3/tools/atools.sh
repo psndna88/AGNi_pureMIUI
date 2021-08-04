@@ -35,9 +35,7 @@ else
 	#echo 0 > /proc/sys/net/ipv4/tcp_timestamps
 	# Stune
 	echo 1 > /dev/stune/top-app/schedtune.sched_boost
-	echo 10 > /dev/stune/top-app/schedtune.boost
-	echo 40 > /sys/module/cpu_boost/parameters/dynamic_stune_boost
-	echo 1000 > /sys/module/cpu_boost/parameters/dynamic_stune_boost_ms
+	echo 40 > /dev/stune/top-app/schedtune.boost
 fi;
 rm -rf /data/adb/modules/AGNiCurtanaThermals;
 
