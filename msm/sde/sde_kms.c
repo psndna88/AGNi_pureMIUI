@@ -2750,7 +2750,6 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 				!vm_ops->vm_acquire)
 		return -EINVAL;
 
-	sde_vm_lock(sde_kms);
 
 	for_each_oldnew_crtc_in_state(state, crtc, old_cstate, new_cstate, i) {
 		struct sde_crtc_state *old_state = NULL, *new_state = NULL;
@@ -2771,6 +2770,9 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 		 * VM_REQ_NONE to VM_REQ_NONE
 		 */
 		if (old_vm_req || new_vm_req) {
+			if (!vm_req_active)
+				sde_vm_lock(sde_kms);
+
 			rc = vm_ops->vm_request_valid(sde_kms,
 					old_vm_req, new_vm_req);
 			if (rc) {
@@ -2778,11 +2780,15 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 				"VM transition check failed; o_state:%d, n_state:%d, hw_owner:%d, rc:%d\n",
 					old_vm_req, new_vm_req,
 					vm_ops->vm_owns_hw(sde_kms), rc);
+				if (!vm_req_active)
+					sde_vm_unlock(sde_kms);
 				goto end;
 			} else if (old_vm_req == VM_REQ_ACQUIRE &&
 					new_vm_req == VM_REQ_NONE) {
 				SDE_DEBUG(
 				"VM transition valid; ignore further checks\n");
+				if (!vm_req_active)
+					sde_vm_unlock(sde_kms);
 			} else {
 				vm_req_active = true;
 			}
@@ -2880,7 +2886,8 @@ static int sde_kms_check_vm_request(struct msm_kms *kms,
 	}
 
 end:
-	sde_vm_unlock(sde_kms);
+	if (vm_req_active)
+		sde_vm_unlock(sde_kms);
 
 	return rc;
 }
