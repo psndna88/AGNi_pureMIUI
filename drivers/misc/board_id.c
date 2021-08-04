@@ -105,11 +105,13 @@ __setup("androidboot.hwlevel=", setup_board_id_hwlevel);
  *     xx.xx.xx < product_number . major_number . minor_number >
  * Example :
  *     androidboot.hwversion=xx.xx.xx // product  , major, minor
- *     androidboot.hwversion=1.13.0   // curtana  , 13   , 0
+ *     androidboot.hwversion=1.13.0   // curtana  , 13   , 0 (CN)
+ *     androidboot.hwversion=1.90.0   // curtana  , 90   , 0 (IN)
  *     androidboot.hwversion=1.0.0    // curtana  , 0    , 0
- *     androidboot.hwversion=2.10.0   // excalibur, 10   , 0
+ *     androidboot.hwversion=2.90.0   // excalibur, 90   , 0 (IN)
  *     androidboot.hwversion=3.20.0   // durandal , 20   , 0
  *     androidboot.hwversion=4.90.0   // joyeuse  , 90   , 0
+ *     androidboot.hwversion=6.90.0   // gram     , 90   , 0 (IN)
  *******************************************************************
  */
 
