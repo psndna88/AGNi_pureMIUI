@@ -15103,6 +15103,26 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 			wlan_mlme_set_ba_2k_jump_iot_ap(vdev,
 							is_vendor_ap_present);
 
+			is_vendor_ap_present = wlan_get_vendor_ie_ptr_from_oui
+					(SIR_MAC_BAD_HTC_HE_VENDOR_OUI1,
+					 SIR_MAC_BAD_HTC_HE_VENDOR_OUI_LEN,
+					 vendor_ap_search_attr.ie_data,
+					 vendor_ap_search_attr.ie_length);
+
+			is_vendor_ap_present =
+					is_vendor_ap_present &&
+					wlan_get_vendor_ie_ptr_from_oui
+					(SIR_MAC_BAD_HTC_HE_VENDOR_OUI2,
+					 SIR_MAC_BAD_HTC_HE_VENDOR_OUI_LEN,
+					 vendor_ap_search_attr.ie_data,
+					 vendor_ap_search_attr.ie_length);
+			/*
+			 * For SAP with special OUI, if DUT STA connect with
+			 * htc he enabled, SAP can't decode data pkt from DUT.
+			 */
+			wlan_mlme_set_bad_htc_he_iot_ap(vdev,
+							is_vendor_ap_present);
+
 			wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
 		}
 

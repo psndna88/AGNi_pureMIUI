@@ -7061,6 +7061,11 @@ void lim_intersect_ap_he_caps(struct pe_session *session, struct bss_params *add
 
 	lim_intersect_he_caps(rcvd_he, peer_he, session);
 	add_bss->staContext.he_capable = true;
+
+	if (wlan_mlme_is_bad_htc_he_iot_ap(session->vdev)) {
+		peer_he->htc_he = 0;
+		pe_debug("disable ht control in he cap for iot ap");
+	}
 }
 
 void lim_add_bss_he_cap(struct bss_params *add_bss, tpSirAssocRsp assoc_rsp)
