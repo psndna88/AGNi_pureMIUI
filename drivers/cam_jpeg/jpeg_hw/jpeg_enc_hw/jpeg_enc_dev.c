@@ -19,6 +19,8 @@
 #include "cam_cpas_api.h"
 #include "cam_debug_util.h"
 #include "cam_jpeg_enc_hw_info_ver_4_2_0.h"
+#include "cam_jpeg_enc_165_hw_info_ver_4_2_0.h"
+#include "cam_jpeg_enc_580_hw_info_ver_4_2_0.h"
 #include "camera_main.h"
 
 static int cam_jpeg_enc_register_cpas(struct cam_hw_soc_info *soc_info,
@@ -238,6 +240,14 @@ static const struct of_device_id cam_jpeg_enc_dt_match[] = {
 	{
 		.compatible = "qcom,cam_jpeg_enc",
 		.data = &cam_jpeg_enc_hw_info,
+	},
+	{
+		.compatible = "qcom,cam_jpeg_enc_165",
+		.data = &cam_jpeg_enc_165_hw_info,
+	},
+	{
+		.compatible = "qcom,cam_jpeg_enc_580",
+		.data = &cam_jpeg_enc_580_hw_info,
 	},
 	{}
 };
