@@ -62,6 +62,10 @@
 #define IPA_MHI_MAX_UL_CHANNELS 2
 #define IPA_MHI_MAX_DL_CHANNELS 3
 
+#define IPA_CLIENT_IS_MHI_LOW_LAT(client) \
+	((client) == IPA_CLIENT_MHI_LOW_LAT_PROD || \
+	(client) == IPA_CLIENT_MHI_LOW_LAT_CONS)
+
 /* bit #40 in address should be asserted for MHI transfers over pcie */
 #define IPA_MHI_HOST_ADDR_COND(addr) \
 		((params->assert_bit40)?(IPA_MHI_HOST_ADDR(addr)):(addr))
@@ -431,8 +435,10 @@ static int ipa_mhi_start_gsi_channel(enum ipa_client_type client,
 	}
 
 	if (IPA_CLIENT_IS_PROD(ep->client) && ep->skip_ep_cfg &&
-		ipa3_ctx->ipa_endp_delay_wa &&
-		!ipa3_is_mhip_offload_enabled()) {
+			ipa3_ctx->ipa_endp_delay_wa &&
+			!ipa3_is_mhip_offload_enabled() &&
+			!(IPA_CLIENT_IS_MHI_LOW_LAT(ep->client) &&
+			ipa3_is_modem_up())) {
 		res = gsi_enable_flow_control_ee(ep->gsi_chan_hdl, 0, &code);
 		if (res == GSI_STATUS_SUCCESS) {
 			IPA_MHI_DBG("flow ctrl sussess gsi ch %d code %d\n",

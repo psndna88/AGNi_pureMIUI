@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -234,13 +234,6 @@ static int ipa_eth_stop_device(struct ipa_eth_device *eth_dev)
 		ipa_eth_dev_err(eth_dev,
 			"Failed to stop uC stats monitor, continuing.");
 
-	rc = ipa_eth_ep_unregister_interface(eth_dev);
-	if (rc) {
-		ipa_eth_dev_err(eth_dev, "Failed to unregister IPA interface");
-		eth_dev->of_state = IPA_ETH_OF_ST_ERROR;
-		return rc;
-	}
-
 	rc = ipa_eth_bus_enable_pc(eth_dev);
 	if (rc) {
 		ipa_eth_dev_err(eth_dev,
@@ -249,9 +242,19 @@ static int ipa_eth_stop_device(struct ipa_eth_device *eth_dev)
 		return rc;
 	}
 
+	/* Stop the offload in order to clear any HOLB in the data path, prior
+	 * to unregistering interfaces.
+	 */
 	rc = ipa_eth_offload_stop(eth_dev);
 	if (rc) {
 		ipa_eth_dev_err(eth_dev, "Failed to stop offload");
+		eth_dev->of_state = IPA_ETH_OF_ST_ERROR;
+		return rc;
+	}
+
+	rc = ipa_eth_ep_unregister_interface(eth_dev);
+	if (rc) {
+		ipa_eth_dev_err(eth_dev, "Failed to unregister IPA interface");
 		eth_dev->of_state = IPA_ETH_OF_ST_ERROR;
 		return rc;
 	}
@@ -321,12 +324,6 @@ static void ipa_eth_device_refresh(struct ipa_eth_device *eth_dev)
 	} else {
 		ipa_eth_dev_log(eth_dev, "Start is disallowed for the device");
 
-		if (ipa_eth_net_unregister_upper(eth_dev)) {
-			ipa_eth_dev_err(eth_dev,
-				"Failed to unregister upper interfaces");
-			eth_dev->of_state = IPA_ETH_OF_ST_ERROR;
-		}
-
 		if (eth_dev->of_state == IPA_ETH_OF_ST_STARTED) {
 			IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 			ipa_eth_stop_device(eth_dev);
@@ -337,6 +334,12 @@ static void ipa_eth_device_refresh(struct ipa_eth_device *eth_dev)
 						"Failed to stop device");
 				return;
 			}
+		}
+
+		if (ipa_eth_net_unregister_upper(eth_dev)) {
+			ipa_eth_dev_err(eth_dev,
+				"Failed to unregister upper interfaces");
+			eth_dev->of_state = IPA_ETH_OF_ST_ERROR;
 		}
 	}
 

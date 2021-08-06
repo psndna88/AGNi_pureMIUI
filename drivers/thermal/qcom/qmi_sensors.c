@@ -85,6 +85,17 @@ enum qmi_ts_sensor {
 	QMI_TS_MMW2,
 	QMI_TS_MMW3,
 	QMI_TS_MMW_IFIC0,
+	QMI_TS_RET_PA_0_FR1,
+	QMI_TS_WTR_PA_0_FR1,
+	QMI_TS_WTR_PA_1_FR1,
+	QMI_TS_WTR_PA_2_FR1,
+	QMI_TS_WTR_PA_3_FR1,
+	QMI_TS_WTR_PA_4,
+	QMI_TS_WTR_PA_5,
+	QMI_TS_WTR_PA_6,
+	QMI_TS_WTR_PA_4_FR1,
+	QMI_TS_WTR_PA_5_FR1,
+	QMI_TS_WTR_PA_6_FR1,
 	QMI_TS_MAX_NR
 };
 
@@ -163,6 +174,17 @@ static char sensor_clients[QMI_TS_MAX_NR][QMI_CLIENT_NAME_LENGTH] = {
 	{"mmw2"},
 	{"mmw3"},
 	{"mmw_ific0"},
+	{"qfe_ret_pa0_fr1"},
+	{"qfe_wtr_pa0_fr1"},
+	{"qfe_wtr_pa1_fr1"},
+	{"qfe_wtr_pa2_fr1"},
+	{"qfe_wtr_pa3_fr1"},
+	{"qfe_wtr_pa4"},
+	{"qfe_wtr_pa5"},
+	{"qfe_wtr_pa6"},
+	{"qfe_wtr_pa4_fr1"},
+	{"qfe_wtr_pa5_fr1"},
+	{"qfe_wtr_pa6_fr1"},
 };
 
 static int32_t encode_qmi(int32_t val)

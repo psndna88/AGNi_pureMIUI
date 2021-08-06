@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -6988,6 +6988,8 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 		ipa3_proxy_clk_unvote();
 
 	mutex_init(&ipa3_ctx->app_clock_vote.mutex);
+
+	ipa3_ctx->is_modem_up = false;
 
 	return 0;
 

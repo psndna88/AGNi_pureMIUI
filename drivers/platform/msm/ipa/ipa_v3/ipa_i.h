@@ -2019,6 +2019,7 @@ struct ipa3_context {
 	bool is_wdi3_tx1_needed;
 	struct ipa3_eth_info
 		eth_info[IPA_ETH_CLIENT_MAX][IPA_ETH_INST_ID_MAX];
+	bool is_modem_up;
 };
 
 struct ipa3_plat_drv_res {
@@ -3239,4 +3240,8 @@ static inline void *alloc_and_init(u32 size, u32 init_val)
 bool ipa3_is_apq(void);
 /* check if odl is connected */
 bool ipa3_is_odl_connected(void);
+/* check if modem is up */
+bool ipa3_is_modem_up(void);
+/* set modem is up */
+void ipa3_set_modem_up(bool is_up);
 #endif /* _IPA3_I_H_ */

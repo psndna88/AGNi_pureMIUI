@@ -9204,3 +9204,20 @@ void ipa3_eth_get_status(u32 client, int scratch_id,
 	stats->err = gsi_get_drop_stats(ipa_ep_idx, scratch_id);
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 }
+
+bool ipa3_is_modem_up(void)
+{
+	bool is_up;
+
+	mutex_lock(&ipa3_ctx->lock);
+	is_up = ipa3_ctx->is_modem_up;
+	mutex_unlock(&ipa3_ctx->lock);
+	return is_up;
+}
+
+void ipa3_set_modem_up(bool is_up)
+{
+	mutex_lock(&ipa3_ctx->lock);
+	ipa3_ctx->is_modem_up = is_up;
+	mutex_unlock(&ipa3_ctx->lock);
+}
