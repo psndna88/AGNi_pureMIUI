@@ -60,6 +60,18 @@
 #define QMI_MMW2		44
 #define QMI_MMW3		45
 #define QMI_MMW_IFIC0		46
+#define QMI_QFE_RET_PA_0_FR1	47
+#define QMI_QFE_WTR_PA_0_FR1	48
+#define QMI_QFE_WTR_PA_1_FR1	49
+#define QMI_QFE_WTR_PA_2_FR1	50
+#define QMI_QFE_WTR_PA_3_FR1	51
+#define QMI_QFE_WTR_PA_4	52
+#define QMI_QFE_WTR_PA_5	53
+#define QMI_QFE_WTR_PA_6	54
+#define QMI_QFE_WTR_PA_4_FR1	55
+#define QMI_QFE_WTR_PA_5_FR1	56
+#define QMI_QFE_WTR_PA_6_FR1	57
+
 
 #define QMI_MODEM_INST_ID	0x0
 #define QMI_ADSP_INST_ID	0x1

@@ -331,6 +331,7 @@ struct uci_client {
 	struct mhi_uci_ctxt_t *uci_ctxt;
 	struct mutex in_chan_lock;
 	struct mutex out_chan_lock;
+	struct mutex client_lock;
 	spinlock_t req_lock;
 	unsigned int f_flags;
 	/* Pointer to dynamically allocated mhi_req structs */
@@ -742,6 +743,8 @@ static unsigned int mhi_uci_client_poll(struct file *file, poll_table *wait)
 	if (!uci_handle)
 		return -ENODEV;
 
+	mutex_lock(&uci_handle->client_lock);
+
 	poll_wait(file, &uci_handle->read_wq, wait);
 	poll_wait(file, &uci_handle->write_wq, wait);
 	/*
@@ -749,8 +752,10 @@ static unsigned int mhi_uci_client_poll(struct file *file, poll_table *wait)
 	 * to poll are in connected state and return with the
 	 * appropriate mask if channels are disconnected.
 	 */
-	if (!mhi_uci_are_channels_connected(uci_handle)) {
+	if (!atomic_read(&uci_handle->mhi_chans_open) ||
+		!mhi_uci_are_channels_connected(uci_handle)) {
 		mask = POLLHUP;
+		mutex_unlock(&uci_handle->client_lock);
 		return mask;
 	}
 	mask = uci_handle->at_ctrl_mask;
@@ -770,6 +775,8 @@ static unsigned int mhi_uci_client_poll(struct file *file, poll_table *wait)
 	uci_log(UCI_DBG_VERBOSE,
 		"Client attempted to poll chan %d, returning mask 0x%x\n",
 		uci_handle->in_chan, mask);
+	mutex_unlock(&uci_handle->client_lock);
+
 	return mask;
 }
 
@@ -1020,12 +1027,15 @@ static int mhi_uci_client_open(struct inode *mhi_inode,
 		return -EINVAL;
 	}
 
+	mutex_lock(&uci_handle->client_lock);
+
 	uci_log(UCI_DBG_DBG,
 		"Client opened struct device node 0x%x, ref count 0x%x\n",
 		iminor(mhi_inode), atomic_read(&uci_handle->ref_count));
 	if (atomic_add_return(1, &uci_handle->ref_count) == 1) {
 		if (!uci_handle) {
 			atomic_dec(&uci_handle->ref_count);
+			mutex_unlock(&uci_handle->client_lock);
 			return -ENOMEM;
 		}
 		uci_handle->uci_ctxt = &uci_ctxt;
@@ -1043,11 +1053,13 @@ static int mhi_uci_client_open(struct inode *mhi_inode,
 					uci_log(UCI_DBG_INFO,
 						"Closing failed channel\n");
 				}
+				mutex_unlock(&uci_handle->client_lock);
 				return rc;
 			}
 		}
 	}
 	file_handle->private_data = uci_handle;
+	mutex_unlock(&uci_handle->client_lock);
 
 	return 0;
 
@@ -1064,10 +1076,12 @@ static int mhi_uci_client_release(struct inode *mhi_inode,
 	if (!uci_handle)
 		return -EINVAL;
 
+	mutex_lock(&uci_handle->client_lock);
 	in_chan_attr = uci_handle->in_chan_attr;
 	if (!in_chan_attr) {
 		uci_log(UCI_DBG_ERROR, "Null channel attributes for chan %d\n",
 				uci_handle->in_chan);
+		mutex_unlock(&uci_handle->client_lock);
 		return -EINVAL;
 	}
 
@@ -1075,6 +1089,7 @@ static int mhi_uci_client_release(struct inode *mhi_inode,
 		uci_log(UCI_DBG_DBG, "Client close chan %d, ref count 0x%x\n",
 			iminor(mhi_inode),
 			atomic_read(&uci_handle->ref_count));
+		mutex_unlock(&uci_handle->client_lock);
 		return 0;
 	}
 
@@ -1138,6 +1153,7 @@ static int mhi_uci_client_release(struct inode *mhi_inode,
 	atomic_set(&uci_handle->read_data_ready, 0);
 	atomic_set(&uci_handle->write_data_ready, 0);
 	file_handle->private_data = NULL;
+	mutex_unlock(&uci_handle->client_lock);
 
 	return 0;
 }
@@ -1561,6 +1577,7 @@ static int mhi_register_client(struct uci_client *mhi_client, int index)
 
 	mutex_init(&mhi_client->in_chan_lock);
 	mutex_init(&mhi_client->out_chan_lock);
+	mutex_init(&mhi_client->client_lock);
 	spin_lock_init(&mhi_client->req_lock);
 	/* Init the completion event for AT ctrl read */
 	init_completion(&mhi_client->at_ctrl_read_done);

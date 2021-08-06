@@ -78,6 +78,18 @@ Subsystem properties:
 		45. mmw2
 		46. mmw3
 		47. mmw_ific0
+		48. qfe_ret_pa0_fr1
+		49. qfe_wtr_pa0_fr1
+		50. qfe_wtr_pa1_fr1
+		51. qfe_wtr_pa2_fr1
+		52. qfe_wtr_pa3_fr1
+		53. qfe_wtr_pa4
+		54. qfe_wtr_pa5
+		55. qfe_wtr_pa6
+		56. qfe_wtr_pa4_fr1
+		57. qfe_wtr_pa5_fr1
+		58. qfe_wtr_pa6_fr1
+
 
 Example:
 
