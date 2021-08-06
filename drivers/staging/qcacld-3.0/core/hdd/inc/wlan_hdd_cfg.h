@@ -13897,6 +13897,51 @@ enum hdd_external_acs_policy {
 #define CFG_IS_SAP_SAE_ENABLED_MAX     (1)
 
 /*
+ * <ini>
+ * sae_connect_retries - Bit mask to retry Auth and full connection on assoc
+ * timeout to same AP and auth retries during roaming
+ * @Min: 0x0
+ * @Max: 0x53
+ * @Default: 0x52
+ *
+ * This ini is used to set max auth retry in auth phase of roaming and initial
+ * connection and max connection retry in case of assoc timeout. MAX Auth
+ * retries are capped to 3, connection retries are capped to 2 and roam Auth
+ * retry is capped to 1.
+ * Default is 0x52 i.e. 1 roam auth retry, 2 auth retry and 2 full connection
+ * retry.
+ *
+ * Bits       Retry Type
+ * BIT[0:2]   AUTH retries
+ * BIT[3:5]   Connection reties
+ * BIT[6:8]   ROAM AUTH retries
+ *
+ * Some Possible values are as below
+ * 0          - NO auth/roam Auth retry and NO full connection retry after
+ *              assoc timeout
+ * 0x49       - 1 auth/roam auth retry and 1 full connection retry
+ * 0x52       - 1 roam auth retry, 2 auth retry and 2 full connection retry
+ * 0x1 /0x2   - 0 roam auth retry, 1 or 2 auth retry respectively and NO full
+ *              connection retry
+ * 0x8 /0x10  - 0 roam auth retry,NO auth retry and 1 or 2 full connection retry
+ *              respectively.
+ * 0x4A       - 1 roam auth retry,2 auth retry and 1 full connection retry
+ * 0x51       - 1 auth/roam auth retry and 2 full connection retry
+ *
+ * Related: None
+ *
+ * Supported Feature: STA SAE
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAE_CONNECION_RETRIES		"sae_connect_retries"
+#define CFG_SAE_CONNECION_RETRIES_MIN		(0x0)
+#define CFG_SAE_CONNECION_RETRIES_MAX		(0x53)
+#define CFG_SAE_CONNECION_RETRIES_DEFAULT	(0x52)
+
+/*
  * Type declarations
  */
 #define CFG_CHAN_BAND_WEIGHTAGE_NAME    "chan_band_weightage"
@@ -17668,15 +17713,21 @@ enum hdd_external_acs_policy {
 					 CFG_PKT_CAPTURE_MODE_DATA_PKT)
 #define CFG_PKT_CAPTURE_MODE_DEFAULT	0
 
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_ALL_AKM	BIT(0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE	BIT(1)
+
 /*
  * <ini>
  * disable_4way_hs_offload - Enable/Disable 4 way handshake offload to firmware
  * @Min: 0
- * @Max: 1
+ * @Max: 2
  * @Default: 0
  *
  * 0  4-way HS to be handled in firmware
  * 1  4-way HS to be handled in supplicant
+ * 2  4-way HS to be handled in supplicant for WPA3-SAE Roam
+ *
+ * Based on the requirement the Max value can be increased per AKM.
  *
  * Related: None
  *
@@ -17686,10 +17737,10 @@ enum hdd_external_acs_policy {
  *
  * </ini>
  */
-#define CFG_DISABLE_4WAY_HS_OFFLOAD           "disable_4way_hs_offload"
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN       (0)
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX       (1)
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT   (0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD         "disable_4way_hs_offload"
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN     0
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX     CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT 0
 
 /*
  * <ini>
@@ -18811,6 +18862,7 @@ struct hdd_config {
 #ifdef WLAN_FEATURE_SAE
 	bool is_sae_enabled;
 	bool sap_sae_enabled;
+	uint32_t sae_connect_retries;
 #endif
 	uint32_t btm_solicited_timeout;
 	uint32_t btm_max_attempt_cnt;
@@ -18943,7 +18995,7 @@ struct hdd_config {
 	uint32_t mws_coex_scc_channel_avoid_delay;
 	uint32_t mws_coex_pcc_channel_avoid_delay;
 
-	bool disable_4way_hs_offload;
+	uint32_t disable_4way_hs_offload;
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	bool time_sync_ftm_enable;
 	bool time_sync_ftm_mode;

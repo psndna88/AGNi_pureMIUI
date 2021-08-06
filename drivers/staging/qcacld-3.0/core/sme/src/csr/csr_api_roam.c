@@ -2921,6 +2921,19 @@ csr_update_sae_single_pmk_cfg_param(tpAniSirGlobal mac, tCsrConfigParam *param)
 }
 #endif
 
+#ifdef WLAN_FEATURE_SAE
+static void
+csr_update_sae_connect_retries(tpAniSirGlobal mac, tCsrConfigParam *param)
+{
+	mac->sae_connect_retries = param->sae_connect_retries;
+}
+#else
+static void
+csr_update_sae_connect_retries(tpAniSirGlobal mac, tCsrConfigParam *param)
+{
+}
+#endif
+
 QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 					   tCsrConfigParam *pParam)
 {
@@ -3494,6 +3507,7 @@ QDF_STATUS csr_change_default_config_param(tpAniSirGlobal pMac,
 					pParam->enable_pending_list_req;
 		pMac->roam.configParam.sta_disable_roam =
 					pParam->sta_disable_roam;
+		csr_update_sae_connect_retries(pMac, pParam);
 	}
 	return status;
 }
@@ -3553,6 +3567,17 @@ csr_get_sae_single_pmk_config(tpAniSirGlobal mac, tCsrConfigParam *param)
 #else
 static inline void
 csr_get_sae_single_pmk_config(tpAniSirGlobal mac, tCsrConfigParam *param)
+{
+}
+#endif
+
+#ifdef WLAN_FEATURE_SAE
+static void csr_get_sae_reties_count(tpAniSirGlobal mac, tCsrConfigParam *param)
+{
+	param->sae_connect_retries = mac->sae_connect_retries;
+}
+#else
+static void csr_get_sae_reties_count(tpAniSirGlobal mac, tCsrConfigParam *param)
 {
 }
 #endif
@@ -3900,6 +3925,7 @@ QDF_STATUS csr_get_config_param(tpAniSirGlobal pMac, tCsrConfigParam *pParam)
 	csr_get_adaptive_11r_config(pMac, pParam);
 	csr_get_sae_single_pmk_config(pMac, pParam);
 	csr_get_he_config_param(pParam, pMac);
+	csr_get_sae_reties_count(pMac, pParam);
 
 	csr_get_11k_offload_config_param(&pMac->roam.configParam, pParam);
 
@@ -10146,6 +10172,16 @@ bool is_disconnect_pending(tpAniSirGlobal pmac,
 	return disconnect_cmd_exist;
 }
 
+static void
+csr_get_sae_assoc_retry_count(tpAniSirGlobal pMac, uint8_t *retry_count)
+{
+	*retry_count =
+		WLAN_GET_BITS(pMac->sae_connect_retries,
+			      ASSOC_INDEX * NUM_RETRY_BITS, NUM_RETRY_BITS);
+
+	*retry_count = QDF_MIN(MAX_RETRIES, *retry_count);
+}
+
 static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 					tSirSmeJoinRsp *pSmeJoinRsp)
 {
@@ -10155,10 +10191,15 @@ static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 	struct csr_roam_session *session_ptr;
 	struct csr_roam_connectedinfo *prev_connect_info;
 	tPmkidCacheInfo pmksa_entry;
+	struct csr_roam_profile *profile = NULL;
+	bool attempt_next_bss = true;
 	uint32_t len = 0, roamId = 0, reason_code = 0;
 	bool is_dis_pending;
 	bool use_same_bss = false;
 	bool retry_same_bss = false;
+	uint8_t max_retry_count = 1;
+	eCsrAuthType auth_type = eCSR_AUTH_TYPE_NONE;
+	tPmkidCacheInfo pmk_cache;
 
 	if (!pSmeJoinRsp) {
 		sme_err("Sme Join Response is NULL");
@@ -10224,14 +10265,28 @@ static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 	/* The head of the active list is the request we sent
 	 * Try to get back the same profile and roam again
 	 */
-	if (pCommand)
+	if (pCommand) {
 		roamId = pCommand->u.roamCmd.roamId;
+		profile = &pCommand->u.roamCmd.roamProfile;
+		auth_type = profile->AuthType.authType[0];
+	}
+
 	reason_code = pSmeJoinRsp->protStatusCode;
 	session_ptr->joinFailStatusCode.reasonCode = reason_code;
 	session_ptr->joinFailStatusCode.statusCode = pSmeJoinRsp->statusCode;
 	sme_warn("SmeJoinReq failed with status_code= 0x%08X [%d] reason:%d",
 		 pSmeJoinRsp->statusCode, pSmeJoinRsp->statusCode,
 		 reason_code);
+
+	is_dis_pending = is_disconnect_pending(pMac, session_ptr->sessionId);
+	/*
+	 * if userspace has issued disconnection or we have reached mac tries,
+	 * driver should not continue for next connection.
+	 */
+	if (is_dis_pending ||
+	    session_ptr->join_bssid_count >= CSR_MAX_BSSID_COUNT)
+		attempt_next_bss = false;
+
 	/*
 	 * Delete the PMKID of the BSSID for which the assoc reject is
 	 * received from the AP due to invalid PMKID reason.
@@ -10250,25 +10305,49 @@ static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 					      &pmksa_entry, false);
 		retry_same_bss = true;
 	}
+
 	if (pSmeJoinRsp->messageType == eWNI_SME_JOIN_RSP &&
 	    pSmeJoinRsp->statusCode == eSIR_SME_ASSOC_TIMEOUT_RESULT_CODE &&
-	    mlme_get_reconn_after_assoc_timeout_flag(pMac->psoc,
-						     pSmeJoinRsp->sessionId))
+	    (mlme_get_reconn_after_assoc_timeout_flag(pMac->psoc,
+						     pSmeJoinRsp->sessionId) ||
+	    (auth_type == eCSR_AUTH_TYPE_SAE ||
+	    auth_type == eCSR_AUTH_TYPE_FT_SAE))) {
 		retry_same_bss = true;
-	if (retry_same_bss && pCommand && pCommand->u.roamCmd.pRoamBssEntry) {
+		if (auth_type == eCSR_AUTH_TYPE_SAE ||
+		    auth_type == eCSR_AUTH_TYPE_FT_SAE)
+			csr_get_sae_assoc_retry_count(pMac,
+						      &max_retry_count);
+	}
+
+	if (attempt_next_bss && retry_same_bss &&
+	    pCommand && pCommand->u.roamCmd.pRoamBssEntry) {
 		struct tag_csrscan_result *scan_result;
 
 		scan_result =
 			GET_BASE_ADDR(pCommand->u.roamCmd.pRoamBssEntry,
 				      struct tag_csrscan_result, Link);
 		/* Retry with same BSSID without PMKID */
-		if (!scan_result->retry_count) {
-			sme_info("Retry once with same BSSID, status %d reason %d",
-				 pSmeJoinRsp->statusCode, reason_code);
-			scan_result->retry_count = 1;
+		if (scan_result->retry_count < max_retry_count) {
+			sme_info("Retry once with same BSSID, status %d reason %d, auth_type %d retry count %d max count %d",
+				 pSmeJoinRsp->statusCode, reason_code,
+				 auth_type, scan_result->retry_count,
+				 max_retry_count);
+			scan_result->retry_count++;
 			use_same_bss = true;
 		}
 	}
+
+	/*
+	 * If connection fails with Single PMK bssid, clear this pmk
+	 * entry, Flush in case if we are not trying again with same AP
+	 */
+	qdf_mem_copy(&pmk_cache.BSSID.bytes,
+		     &pCommand->u.roamCmd.pLastRoamBss->bssId,
+		     sizeof(pmk_cache.BSSID.bytes));
+	if (!use_same_bss && pCommand && pCommand->u.roamCmd.pLastRoamBss)
+		csr_clear_sae_single_pmk(pMac, pSmeJoinRsp->sessionId,
+					 &pmk_cache);
+
 	/* If Join fails while Handoff is in progress, indicate
 	 * disassociated event to supplicant to reconnect
 	 */
@@ -10283,13 +10362,7 @@ static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 						   QDF_STATUS_E_FAILURE);
 	}
 
-	/*
-	 * if userspace has issued disconnection, driver should not continue
-	 * connecting
-	 */
-	is_dis_pending = is_disconnect_pending(pMac, session_ptr->sessionId);
-	if (pCommand && !is_dis_pending &&
-	    session_ptr->join_bssid_count < CSR_MAX_BSSID_COUNT) {
+	if (pCommand && attempt_next_bss) {
 		csr_roam(pMac, pCommand, use_same_bss);
 		return;
 	}
@@ -15890,6 +15963,8 @@ static void csr_update_pmk_cache(struct csr_roam_session *session,
 	}
 
 	session->NumPmkidCache++;
+	sme_debug("PMKSA entry added at index = %d, cache count = %d",
+		  cache_idx, session->NumPmkidCache);
 	if (session->NumPmkidCache > CSR_MAX_PMKID_ALLOWED) {
 		sme_debug("setting num pmkid cache to %d",
 			CSR_MAX_PMKID_ALLOWED);
@@ -15904,7 +15979,8 @@ csr_roam_set_pmkid_cache(tpAniSirGlobal pMac, uint32_t sessionId,
 {
 	struct csr_roam_session *pSession = CSR_GET_SESSION(pMac, sessionId);
 	uint32_t i = 0;
-	tPmkidCacheInfo *pmksa;
+	uint32_t pmkid_index;
+	tPmkidCacheInfo *pmksa, *pmkid_cache;
 	eCsrAuthType akm_type;
 
 	if (!pSession) {
@@ -15931,12 +16007,35 @@ csr_roam_set_pmkid_cache(tpAniSirGlobal pMac, uint32_t sessionId,
 		return QDF_STATUS_SUCCESS;
 	}
 
+	pmkid_cache = qdf_mem_malloc(sizeof(*pmkid_cache));
+	if (!pmkid_cache)
+		return QDF_STATUS_E_NOMEM;
+
 	for (i = 0; i < numItems; i++) {
 		pmksa = &pPMKIDCache[i];
 
+		if (!pmksa->pmk_len || pmksa->pmk_len > CSR_RSN_MAX_PMK_LEN) {
+			sme_err("Invalid PMK length");
+			qdf_mem_zero(pmkid_cache, sizeof(*pmkid_cache));
+			qdf_mem_free(pmkid_cache);
+			return QDF_STATUS_E_FAILURE;
+		}
+		qdf_copy_macaddr(&pmkid_cache->BSSID, &pmksa->BSSID);
+		sme_debug("Trying to find PMKID for " QDF_MAC_ADDR_STR,
+			  QDF_MAC_ADDR_ARRAY(pmkid_cache->BSSID.bytes));
+		if (csr_lookup_pmkid_using_bssid(pMac, pSession, pmkid_cache,
+						 &pmkid_index) &&
+		    (!qdf_mem_cmp(pmkid_cache->pmk,
+				  pmksa->pmk, pmksa->pmk_len))) {
+			sme_debug("PMKSA entry found with same PMK at index %d",
+				  pmkid_index);
+			qdf_mem_zero(pmkid_cache, sizeof(*pmkid_cache));
+			qdf_mem_free(pmkid_cache);
+			return QDF_STATUS_E_EXISTS;
+		}
+
 		/* Delete the entry if present */
-		csr_roam_del_pmkid_from_cache(pMac, sessionId,
-				pmksa, false);
+		csr_roam_del_pmkid_from_cache(pMac, sessionId, pmksa, false);
 		/* Update new entry */
 		csr_update_pmk_cache(pSession, pmksa);
 
@@ -15952,6 +16051,8 @@ csr_roam_set_pmkid_cache(tpAniSirGlobal pMac, uint32_t sessionId,
 						sessionId, pmksa->cache_id);
 		}
 	}
+	qdf_mem_zero(pmkid_cache, sizeof(*pmkid_cache));
+	qdf_mem_free(pmkid_cache);
 	return QDF_STATUS_SUCCESS;
 }
 

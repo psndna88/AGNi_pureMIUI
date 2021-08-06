@@ -112,6 +112,9 @@
 #define MAX_NUM_HW_MODE    0xff
 #define MAX_NUM_PHY        0xff
 
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_ALL_AKM	BIT(0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE	BIT(1)
+
 /**
  * struct index_data_rate_type - non vht data rate type
  * @mcs_index: mcs rate index

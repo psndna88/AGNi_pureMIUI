@@ -4661,6 +4661,7 @@ static void wma_set_roam_offload_flag(tp_wma_handle wma, uint8_t vdev_id,
 {
 	QDF_STATUS status;
 	uint32_t flag = 0;
+	uint32_t disable_4way_hs_offload;
 	tpAniSirGlobal mac_ctx;
 
 	if (is_set) {
@@ -4680,9 +4681,20 @@ static void wma_set_roam_offload_flag(tp_wma_handle wma, uint8_t vdev_id,
 		 * 4way HS and firmware will still do LFR3.0 till reassoc phase.
 		 */
 		mac_ctx = (tpAniSirGlobal)cds_get_context(QDF_MODULE_ID_PE);
-		if (mac_ctx &&
-		    mac_ctx->roam.configParam.disable_4way_hs_offload)
-			flag |= WMI_VDEV_PARAM_SKIP_ROAM_EAPOL_4WAY_HANDSHAKE;
+		if (mac_ctx) {
+			disable_4way_hs_offload =
+			mac_ctx->roam.configParam.disable_4way_hs_offload;
+			if (disable_4way_hs_offload &
+			    CFG_DISABLE_4WAY_HS_OFFLOAD_ALL_AKM)
+				flag |=
+				WMI_VDEV_PARAM_SKIP_ROAM_EAPOL_4WAY_HANDSHAKE;
+			if ((disable_4way_hs_offload &
+			    CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE) &&
+			    (wmi_service_enabled(wma->wmi_handle,
+			     wmi_service_sae_eapol_offload_support)))
+				flag |=
+				WMI_VDEV_PARAM_SKIP_SAE_ROAM_4WAY_HANDSHAKE;
+		}
 	}
 
 	wma_debug("vdev_id:%d, is_set:%d, flag:%d", vdev_id, is_set, flag);

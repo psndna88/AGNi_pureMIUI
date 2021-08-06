@@ -233,6 +233,41 @@ restart_timer:
 	}
 }
 
+#ifdef WLAN_FEATURE_11W
+/**
+ * pe_init_pmf_comeback_timer: init PMF comeback timer
+ * @mac_ctx: pointer to global adapter context
+ * @session: pe session
+ *
+ * Return: void
+ */
+static void
+pe_init_pmf_comeback_timer(tpAniSirGlobal mac_ctx, struct sPESession *session)
+{
+	QDF_STATUS status;
+
+	if (session->pePersona != QDF_STA_MODE)
+		return;
+
+	pe_debug("init pmf comeback timer for vdev %d", session->smeSessionId);
+	session->pmf_retry_timer_info.pMac = mac_ctx;
+	session->pmf_retry_timer_info.sessionID = session->smeSessionId;
+	session->pmf_retry_timer_info.retried = false;
+	status = qdf_mc_timer_init(
+			&session->pmf_retry_timer, QDF_TIMER_TYPE_SW,
+			lim_pmf_comeback_timer_callback,
+			(void *)&session->pmf_retry_timer_info);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		pe_err("cannot init pmf comeback timer");
+}
+#else
+static inline void
+pe_init_pmf_comeback_timer(tpAniSirGlobal mac_ctx, struct sPESession *session,
+			   uint8_t vdev_id)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_FILS_SK
 /**
  * pe_delete_fils_info: API to delete fils session info
@@ -652,6 +687,7 @@ pe_create_session(tpAniSirGlobal pMac, uint8_t *bssid, uint8_t *sessionId,
 		qdf_runtime_lock_init(&session_ptr->ap_ecsa_runtime_lock);
 	}
 	pe_init_fils_info(session_ptr);
+	pe_init_pmf_comeback_timer(pMac, session_ptr);
 	session_ptr->ht_client_cnt = 0;
 	/* following is invalid value since seq number is 12 bit */
 	session_ptr->prev_auth_seq_num = 0xFFFF;
@@ -783,6 +819,25 @@ pe_find_session_by_sta_id(tpAniSirGlobal mac_ctx,
 	return NULL;
 }
 
+#ifdef WLAN_FEATURE_11W
+static void lim_clear_pmfcomeback_timer(struct sPESession *session)
+{
+	if (session->pePersona != QDF_STA_MODE)
+		return;
+
+	pe_debug("deinit pmf comeback timer for vdev %d", session->smeSessionId);
+	if (QDF_TIMER_STATE_RUNNING ==
+	    qdf_mc_timer_get_current_state(&session->pmf_retry_timer))
+		qdf_mc_timer_stop(&session->pmf_retry_timer);
+	qdf_mc_timer_destroy(&session->pmf_retry_timer);
+	session->pmf_retry_timer_info.retried = false;
+}
+#else
+static void lim_clear_pmfcomeback_timer(struct sPESession *session)
+{
+}
+#endif
+
 /**
  * pe_delete_session() - deletes the PE session given the session ID.
  * @mac_ctx: pointer to global adapter context
@@ -810,6 +865,7 @@ void pe_delete_session(tpAniSirGlobal mac_ctx, tpPESession session)
 		 QDF_MAC_ADDR_ARRAY(session->bssId));
 
 	lim_reset_bcn_probe_filter(mac_ctx, session);
+	lim_sae_auth_cleanup_retry(mac_ctx, session->smeSessionId);
 
 	/* Restore default failure timeout */
 	if (session->defaultAuthFailureTimeout) {
@@ -961,6 +1017,7 @@ void pe_delete_session(tpAniSirGlobal mac_ctx, tpPESession session)
 		session->addIeParams.probeRespBCNDataLen = 0;
 	}
 	pe_delete_fils_info(session);
+	lim_clear_pmfcomeback_timer(session);
 	session->valid = false;
 
 	qdf_mem_zero(session->WEPKeyMaterial,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, 2021 The Linux Foundation. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -157,15 +157,27 @@ QDF_STATUS reg_set_band(struct wlan_objmgr_pdev *pdev, enum band_info band);
  */
 QDF_STATUS reg_get_band(struct wlan_objmgr_pdev *pdev, enum band_info *band);
 
+#ifdef DISABLE_CHANNEL_LIST
 /**
- * reg_restore_cached_channels() - Cache the current state of the channles
+ * reg_disable_cached_channels() - Disable cached channels
  * @pdev: The physical dev to cache the channels for
  */
-#ifdef DISABLE_CHANNEL_LIST
+QDF_STATUS reg_disable_cached_channels(struct wlan_objmgr_pdev *pdev);
+
+/**
+ *  reg_restore_cached_channels() - Restore disabled cached channels
+ * @pdev: The physical dev to cache the channels for
+ */
 QDF_STATUS reg_restore_cached_channels(struct wlan_objmgr_pdev *pdev);
 #else
 static inline
 QDF_STATUS reg_restore_cached_channels(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS reg_disable_cached_channels(struct wlan_objmgr_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
 }

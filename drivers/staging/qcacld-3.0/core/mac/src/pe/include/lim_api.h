@@ -119,6 +119,20 @@ QDF_STATUS pe_start(tpAniSirGlobal pMac);
 void pe_stop(tpAniSirGlobal pMac);
 QDF_STATUS peProcessMsg(tpAniSirGlobal pMac, struct scheduler_msg *limMsg);
 
+#ifdef WLAN_FEATURE_11W
+/**
+ * lim_stop_pmfcomeback_timer() - stop pmf comeback timer
+ * @session: Pointer to PE session
+ *
+ * Return: None
+ */
+void lim_stop_pmfcomeback_timer(tpPESession session);
+#else
+static inline void lim_stop_pmfcomeback_timer(tpPESession session)
+{
+}
+#endif
+
 /**
  * pe_register_mgmt_rx_frm_callback() - registers callback for receiving
  *                                      mgmt rx frames
