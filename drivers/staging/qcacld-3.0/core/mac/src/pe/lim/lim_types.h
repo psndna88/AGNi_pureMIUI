@@ -473,6 +473,16 @@ QDF_STATUS lim_process_auth_frame_no_session(tpAniSirGlobal mac,
 					     uint8_t *bd, void *body);
 
 
+/**
+ * lim_sae_auth_cleanup_retry() - API to cleanup sae auth frmae stored
+ * and deactivate the timer
+ * @mac_ctx: Pointer to mac context
+ * @vdev_id: vdev id
+ *
+ * Return: none
+ */
+void lim_sae_auth_cleanup_retry(tpAniSirGlobal mac_ctx, uint8_t vdev_id);
+
 void lim_process_assoc_req_frame(tpAniSirGlobal, uint8_t *, uint8_t, tpPESession);
 
 /**
@@ -1145,6 +1155,18 @@ void lim_process_auth_failure_timeout(tpAniSirGlobal mac_ctx);
  */
 void lim_process_assoc_failure_timeout(tpAniSirGlobal mac_ctx,
 				       uint32_t msg_type);
+
+/**
+ * lim_send_frame() - API to send frame
+ * @mac_ctx Pointer to Global MAC structure
+ * @vdev_id: vdev id
+ * @buf: Pointer to SAE auth retry frame
+ * @buf_len: length of frame
+ *
+ * Return: None
+ */
+void lim_send_frame(tpAniSirGlobal mac_ctx, uint8_t vdev_id, uint8_t *buf,
+		    uint16_t buf_len);
 
 /**
  * lim_send_mgmt_frame_tx() - Sends mgmt frame

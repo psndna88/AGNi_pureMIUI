@@ -16906,6 +16906,12 @@ static QDF_STATUS init_cmd_send_tlv(wmi_unified_t wmi_handle,
 			WMITLV_GET_STRUCT_TLVLEN(wmi_init_cmd_fixed_param));
 
 	wmi_copy_resource_config(resource_cfg, param->res_cfg);
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_sae_eapol_offload_support)) {
+		WMI_RSRC_CFG_HOST_SERVICE_FLAG_SAE_EAPOL_OFFLOAD_SUPPORT_SET(
+			resource_cfg->host_service_flags, 1);
+	}
+
 	WMITLV_SET_HDR(&resource_cfg->tlv_header,
 			WMITLV_TAG_STRUC_wmi_resource_config,
 			WMITLV_GET_STRUCT_TLVLEN(wmi_resource_config));
@@ -25402,6 +25408,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_WPA3_SUITEB_ROAM_SUPPORT;
 	wmi_service[wmi_service_ll_stats_per_chan_rx_tx_time] =
 			WMI_SERVICE_LL_STATS_PER_CHAN_RX_TX_TIME_SUPPORT;
+	wmi_service[wmi_service_sae_eapol_offload_support] =
+			WMI_SERVICE_SAE_EAPOL_OFFLOAD_SUPPORT;
 }
 
 #ifndef CONFIG_MCL

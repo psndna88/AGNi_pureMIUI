@@ -1153,6 +1153,27 @@ end:
 			     (uint32_t *) &mlm_auth_cnf);
 }
 
+#ifdef WLAN_FEATURE_11W
+static void lim_store_pmfcomeback_timerinfo(struct sPESession *session_entry)
+{
+	if (session_entry->pePersona != QDF_STA_MODE ||
+	    !session_entry->limRmfEnabled)
+		return;
+	/*
+	 * Store current MLM state in case ASSOC response returns with
+	 * TRY_AGAIN_LATER return code.
+	 */
+	session_entry->pmf_retry_timer_info.limPrevMlmState =
+		session_entry->limPrevMlmState;
+	session_entry->pmf_retry_timer_info.limMlmState =
+		session_entry->limMlmState;
+}
+#else
+static void lim_store_pmfcomeback_timerinfo(struct sPESession *session_entry)
+{
+}
+#endif /* WLAN_FEATURE_11W */
+
 /**
  * lim_process_mlm_assoc_req() - This function is called to process
  * MLM_ASSOC_REQ message from SME
@@ -1213,6 +1234,7 @@ static void lim_process_mlm_assoc_req(tpAniSirGlobal mac_ctx, uint32_t *msg_buf)
 	/* map the session entry pointer to the AssocFailureTimer */
 	mac_ctx->lim.limTimers.gLimAssocFailureTimer.sessionId =
 		mlm_assoc_req->sessionId;
+	lim_store_pmfcomeback_timerinfo(session_entry);
 	session_entry->limPrevMlmState = session_entry->limMlmState;
 	session_entry->limMlmState = eLIM_MLM_WT_ASSOC_RSP_STATE;
 	MTRACE(mac_trace(mac_ctx, TRACE_CODE_MLM_STATE,
@@ -2165,6 +2187,49 @@ static void lim_process_periodic_join_probe_req_timer(tpAniSirGlobal mac_ctx)
 	}
 }
 
+static void lim_handle_sae_auth_timeout(tpAniSirGlobal mac_ctx,
+					tpPESession session_entry)
+{
+	struct sae_auth_retry *sae_retry;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
+			session_entry->smeSessionId,
+			WLAN_LEGACY_MAC_ID);
+	if (!vdev) {
+		pe_err("vdev is NULL for vdev id %d",
+		       session_entry->smeSessionId);
+		return;
+	}
+
+	sae_retry = mlme_get_sae_auth_retry(vdev);
+	if (!(sae_retry && sae_retry->sae_auth.ptr)) {
+		pe_debug("sae auth frame is not buffered vdev id %d",
+			 session_entry->smeSessionId);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+		return;
+	}
+
+	pe_debug("retry sae auth for seq num %d vdev id %d",
+		 mac_ctx->mgmtSeqNum, session_entry->smeSessionId);
+	lim_send_frame(mac_ctx, session_entry->smeSessionId,
+		       sae_retry->sae_auth.ptr, sae_retry->sae_auth.len);
+
+	sae_retry->sae_auth_max_retry--;
+	/* Activate Auth Retry timer if max_retries are not done */
+	if (!sae_retry->sae_auth_max_retry || (tx_timer_activate(
+	    &mac_ctx->lim.limTimers.g_lim_periodic_auth_retry_timer) !=
+				TX_SUCCESS))
+		goto free_and_deactivate_timer;
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+	return;
+
+free_and_deactivate_timer:
+	lim_sae_auth_cleanup_retry(mac_ctx, session_entry->smeSessionId);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_MAC_ID);
+}
+
 /**
  * lim_process_auth_retry_timer()- function to Retry Auth when auth timeout
  * occurs
@@ -2186,7 +2251,10 @@ static void lim_process_auth_retry_timer(tpAniSirGlobal mac_ctx)
 		pe_err("session does not exist for vdev_id: %d", vdev_id);
 		return;
 	}
-
+	/*
+	 * For WPA3 SAE gLimAuthFailureTimer is not running hence
+	 *  we don't enter in below "if" block in case of wpa3 sae
+	 */
 	if (tx_timer_running(&mac_ctx->lim.limTimers.gLimAuthFailureTimer) &&
 	    (session_entry->limMlmState == eLIM_MLM_WT_AUTH_FRAME2_STATE) &&
 	    (LIM_AUTH_ACK_RCD_SUCCESS != mac_ctx->auth_ack_status)) {
@@ -2226,8 +2294,12 @@ static void lim_process_auth_retry_timer(tpAniSirGlobal mac_ctx)
 			pe_err("could not activate Auth Retry failure timer");
 			return;
 		}
+
+		return;
 	}
-	return;
+
+	/* Auth retry time out for wpa3 sae */
+	lim_handle_sae_auth_timeout(mac_ctx, session_entry);
 } /*** lim_process_auth_retry_timer() ***/
 
 void lim_process_auth_failure_timeout(tpAniSirGlobal mac_ctx)
@@ -2430,6 +2502,7 @@ void lim_process_assoc_failure_timeout(tpAniSirGlobal mac_ctx,
 			session->peSessionId, session->limMlmState));
 		/* Change timer for future activations */
 		lim_deactivate_and_change_timer(mac_ctx, eLIM_ASSOC_FAIL_TIMER);
+		lim_stop_pmfcomeback_timer(session);
 		/*
 		 * Free up buffer allocated for JoinReq held by
 		 * MLM state machine

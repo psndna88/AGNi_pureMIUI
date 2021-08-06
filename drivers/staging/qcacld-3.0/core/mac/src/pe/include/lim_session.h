@@ -45,6 +45,7 @@ typedef struct sPowersaveoffloadInfo {
 typedef struct tagComebackTimerInfo {
 	tpAniSirGlobal pMac;
 	uint8_t sessionID;
+	uint8_t retried;
 	tLimMlmStates limPrevMlmState;  /* Previous MLM State */
 	tLimMlmStates limMlmState;      /* MLM State */
 } tComebackTimerInfo;
@@ -481,6 +482,10 @@ typedef struct sPESession       /* Added to Support BT-AMP */
 	/* Fast Transition (FT) */
 	tftPEContext ftPEContext;
 	bool isNonRoamReassoc;
+#ifdef WLAN_FEATURE_11W
+	qdf_mc_timer_t pmf_retry_timer;
+	tComebackTimerInfo pmf_retry_timer_info;
+#endif /* WLAN_FEATURE_11W */
 	uint8_t  is_key_installed;
 	/* timer for resetting protection fileds at regular intervals */
 	qdf_mc_timer_t protection_fields_reset_timer;

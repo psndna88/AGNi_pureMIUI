@@ -6187,6 +6187,7 @@ typedef enum {
 	wmi_service_host_scan_stop_vdev_all,
 	wmi_service_suiteb_roam_support,
 	wmi_service_ll_stats_per_chan_rx_tx_time,
+	wmi_service_sae_eapol_offload_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

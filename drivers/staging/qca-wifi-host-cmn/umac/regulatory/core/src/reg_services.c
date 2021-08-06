@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3883,7 +3883,6 @@ QDF_STATUS reg_get_band(struct wlan_objmgr_pdev *pdev,
 #ifdef DISABLE_CHANNEL_LIST
 QDF_STATUS reg_restore_cached_channels(struct wlan_objmgr_pdev *pdev)
 {
-	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	struct wlan_objmgr_psoc *psoc;
 	QDF_STATUS status;
@@ -3900,15 +3899,34 @@ QDF_STATUS reg_restore_cached_channels(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	psoc_priv_obj = reg_get_psoc_obj(psoc);
-	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
-		reg_err("psoc reg component is NULL");
-		return QDF_STATUS_E_INVAL;
-	}
-
 	pdev_priv_obj->disable_cached_channels = false;
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 	status = reg_send_scheduler_msg_sb(psoc, pdev);
+	return status;
+}
+
+QDF_STATUS reg_disable_cached_channels(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct wlan_objmgr_psoc *psoc;
+	QDF_STATUS status;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		reg_err("psoc is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pdev_priv_obj->disable_cached_channels = true;
+	reg_compute_pdev_current_chan_list(pdev_priv_obj);
+	status = reg_send_scheduler_msg_sb(psoc, pdev);
+
 	return status;
 }
 
@@ -3966,17 +3984,6 @@ QDF_STATUS reg_cache_channel_state(struct wlan_objmgr_pdev *pdev,
 
 	return QDF_STATUS_SUCCESS;
 }
-
-static void set_disable_channel_state(
-			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
-{
-	pdev_priv_obj->disable_cached_channels = pdev_priv_obj->sap_state;
-}
-#else
-static void set_disable_channel_state(
-			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
-{
-}
 #endif
 
 QDF_STATUS reg_notify_sap_event(struct wlan_objmgr_pdev *pdev,
@@ -4012,7 +4019,6 @@ QDF_STATUS reg_notify_sap_event(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_SUCCESS;
 
 	pdev_priv_obj->sap_state = sap_state;
-	set_disable_channel_state(pdev_priv_obj);
 
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 	status = reg_send_scheduler_msg_sb(psoc, pdev);
