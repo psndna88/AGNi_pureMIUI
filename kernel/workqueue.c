@@ -292,7 +292,7 @@ module_param_named(disable_numa, wq_disable_numa, bool, 0444);
 
 /* see the comment above the definition of WQ_POWER_EFFICIENT */
 static bool wq_power_efficient = IS_ENABLED(CONFIG_WQ_POWER_EFFICIENT_DEFAULT);
-module_param_named(power_efficient, wq_power_efficient, bool, 0644);
+module_param_named(power_efficient, wq_power_efficient, bool, 0444);
 
 static bool wq_online;			/* can kworkers be created yet? */
 
@@ -3211,7 +3211,6 @@ void free_workqueue_attrs(struct workqueue_attrs *attrs)
 struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
 {
 	struct workqueue_attrs *attrs;
-	const unsigned long allowed_cpus = 0x3f;
 
 	attrs = kzalloc(sizeof(*attrs), gfp_mask);
 	if (!attrs)
@@ -3219,7 +3218,7 @@ struct workqueue_attrs *alloc_workqueue_attrs(gfp_t gfp_mask)
 	if (!alloc_cpumask_var(&attrs->cpumask, gfp_mask))
 		goto fail;
 
-	cpumask_copy(attrs->cpumask, to_cpumask(&allowed_cpus));
+	cpumask_copy(attrs->cpumask, cpu_possible_mask);
 	return attrs;
 fail:
 	free_workqueue_attrs(attrs);
@@ -4325,7 +4324,7 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
 	rcu_read_lock_sched();
 
 	if (cpu == WORK_CPU_UNBOUND)
-		cpu = 0;
+		cpu = smp_processor_id();
 
 	if (!(wq->flags & WQ_UNBOUND))
 		pwq = per_cpu_ptr(wq->cpu_pwqs, cpu);
