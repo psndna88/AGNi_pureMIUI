@@ -1106,12 +1106,63 @@ config SCHED_TUNE
 
 	  If unsure, say N.
 
-config DYNAMIC_STUNE_BOOST
-	bool "Dynamic SchedTune boosting support"
-	depends on SCHED_TUNE
+config CPUSET_ASSIST
+	bool "Cpuset configuration helper"
+	depends on CPUSETS
+	depends on ANDROID
+	default y
 	help
-	  This option extends the SchedTune framework and provides APIs to
-	  activate and reset SchedTune boosting from anywhere in the kernel.
+	  This option enables in-kernel overrides for cpuset values.
+
+	  If unsure, say N.
+
+if CPUSET_ASSIST
+
+config CPUSET_BG
+	string "Value for 'background' cpuset"
+	default "0-3"
+	help
+	  The CPU mask to use for the background cpuset.
+
+config CPUSET_CAMERA
+	string "Value for 'camera-daemon' cpuset"
+	default "4-7"
+	help
+	  The CPU mask to use for the camera-daemon cpuset.
+
+config CPUSET_FG
+	string "Value for 'foreground' cpuset"
+	default "0-7"
+	help
+	  The CPU mask to use for the foreground cpuset.
+
+config CPUSET_RESTRICTED
+	string "Value for 'restricted' cpuset"
+	default "0-7"
+	help
+	  The CPU mask to use for the restricted cpuset.
+
+config CPUSET_SYSTEM_BG
+	string "Value for 'system-background' cpuset"
+	default "0-3"
+	help
+	  The CPU mask to use for the system-background cpuset.
+
+config CPUSET_TOP_APP
+	string "Value for 'top-app' cpuset"
+	default "0-7"
+	help
+	  The CPU mask to use for the top-app cpuset.
+
+endif
+
+config STUNE_ASSIST
+	bool "SchedTune configuration helper"
+	depends on SCHED_TUNE
+	depends on ANDROID
+	default y
+	help
+	  This option enables in-kernel overrides for SchedTune values.
 
 	  If unsure, say N.
 
@@ -1253,8 +1304,6 @@ config BPF
 
 menuconfig EXPERT
 	bool "Configure standard kernel features (expert users)"
-	# Unhide debug options, to make the on-by-default options visible
-	select DEBUG_KERNEL
 	help
 	  This option allows certain base kernel options and settings
           to be disabled or tweaked. This is for specialized
