@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/init.h>
@@ -872,11 +872,6 @@ correct_plug_type:
 			wrk_complete = false;
 		}
 	}
-	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
-	    plug_type == MBHC_PLUG_TYPE_HEADPHONE))
-		if (mbhc->mbhc_cb->bcs_enable)
-			mbhc->mbhc_cb->bcs_enable(mbhc, true);
-
 	if (!wrk_complete) {
 		/*
 		 * If plug_tye is headset, we might have already reported either
@@ -909,6 +904,11 @@ report:
 		pr_debug("%s: Switch level is low\n", __func__);
 		goto exit;
 	}
+
+	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
+	    plug_type == MBHC_PLUG_TYPE_HEADPHONE))
+		if (mbhc->mbhc_cb->bcs_enable)
+			mbhc->mbhc_cb->bcs_enable(mbhc, true);
 
 	pr_debug("%s: Valid plug found, plug type %d wrk_cmpt %d btn_intr %d\n",
 			__func__, plug_type, wrk_complete,
