@@ -8627,8 +8627,7 @@ static int sta_twt_send_suspend(struct sigma_dut *dut, struct sigma_conn *conn,
 	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_OPERATION,
 		       QCA_WLAN_TWT_SUSPEND) ||
 	    !(attr1 = nla_nest_start(msg,
-				     QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS)) ||
-	    nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_FLOW_ID, 0)) {
+				     QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_PARAMS))) {
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: err in adding vendor_cmd and vendor_data",
 				__func__);
