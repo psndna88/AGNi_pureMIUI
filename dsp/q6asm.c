@@ -751,7 +751,7 @@ static int q6asm_map_cal_memory(int32_t cal_type,
 		goto done;
 	}
 
-	/* Use second asm buf to map memory */
+	/* Use first asm buf to map memory */
 	if (common_client.port[IN].buf == NULL) {
 		pr_err("%s: common buf is NULL\n",
 			__func__);
@@ -841,6 +841,8 @@ static int q6asm_unmap_cal_memory(int32_t cal_type,
 			goto done;
 		}
 	}
+
+	common_client.port[IN].buf->phys = cal_block->cal_data.paddr;
 
 	result2 = q6asm_memory_unmap_regions(&common_client, IN);
 	if (result2 < 0) {
