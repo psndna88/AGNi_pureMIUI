@@ -292,6 +292,11 @@
 			qcom,dump-id = <0x102>;
 		};
 
+		tzpu_ctx0 {
+			qcom,dump-size = <0x800>;
+			qcom,dump-id = <0x00>;
+		};
+
 		misc_data {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0xe8>;
