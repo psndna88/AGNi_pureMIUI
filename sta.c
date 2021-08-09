@@ -7394,6 +7394,36 @@ static int sta_set_mu_edca_override(struct sigma_dut *dut, const char *intf,
 }
 
 
+static int sta_set_er_su_ppdu_type_tx(struct sigma_dut *dut, const char *intf,
+				      int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ER_SU_PPDU_TYPE, val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"ER-SU PPDU type cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int sta_set_ru_242_tone_tx(struct sigma_dut *dut, const char *intf,
+				  int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_RU_242_TONE_TX, val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"RU 242 tone cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_om_ctrl_supp(struct sigma_dut *dut, const char *intf,
 				int val)
 {
@@ -7695,6 +7725,16 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 		if (sta_set_mu_edca_override(dut, intf, 0)) {
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"ErrorCode,Failed to set MU EDCA override disable");
+		}
+
+		if (sta_set_ru_242_tone_tx(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				  "Failed to set RU 242 tone Tx");
+		}
+
+		if (sta_set_er_su_ppdu_type_tx(dut, intf, 0)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+				  "Failed to set ER-SU PPDU type Tx");
 		}
 
 		if (sta_set_om_ctrl_supp(dut, intf, 1)) {
@@ -9693,6 +9733,24 @@ cmd_sta_set_wireless_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (sta_set_mu_edca_override(dut, intf, 1)) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,Failed to set MU EDCA override");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "PPDUTxType");
+	if (val && strcasecmp(val, "ER-SU") == 0) {
+		if (sta_set_er_su_ppdu_type_tx(dut, intf, 1)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set ER-SU PPDU type Tx");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "RUAllocTone");
+	if (val && strcasecmp(val, "242") == 0) {
+		if (sta_set_ru_242_tone_tx(dut, intf, 1)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set RU 242 tone Tx");
 			return STATUS_SENT_ERROR;
 		}
 	}
@@ -12968,6 +13026,24 @@ wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 					  "errorCode,MU EDCA override disable failed");
 				return STATUS_SENT;
 			}
+		}
+	}
+
+	val = get_param(cmd, "RUAllocTone");
+	if (val && strcasecmp(val, "242") == 0) {
+		if (sta_set_ru_242_tone_tx(dut, intf, 1)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set RU 242 tone Tx");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "PPDUTxType");
+	if (val && strcasecmp(val, "ER-SU") == 0) {
+		if (sta_set_er_su_ppdu_type_tx(dut, intf, 1)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to set ER-SU PPDU type Tx");
+			return STATUS_SENT_ERROR;
 		}
 	}
 
