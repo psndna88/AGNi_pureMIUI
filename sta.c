@@ -7247,6 +7247,38 @@ static int sta_set_scan_unicast_probe(struct sigma_dut *dut,
 }
 
 
+static int sta_set_rx_ctrl_multi_bss(struct sigma_dut *dut, const char *intf,
+				     int enable)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_RX_CTRL_FRAME_TO_MBSS,
+		enable);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Rx ctrl frame to Multi-BSS cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
+static int sta_set_bcast_twt_support(struct sigma_dut *dut, const char *intf,
+				     int enable)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BCAST_TWT_SUPPORT,
+		enable);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"BCAST TWT cannot be changed without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_tx_beamformee(struct sigma_dut *dut, const char *intf,
 				 int enable)
 {
@@ -9428,6 +9460,64 @@ cmd_sta_set_wireless_vht(struct sigma_dut *dut, struct sigma_conn *conn,
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "ErrorCode,mixed mode of VHT TKIP/WEP not supported");
 			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "TWTSchedSTASupport");
+	if (val) {
+		int set_val;
+
+		switch (get_driver_type(dut)) {
+		case DRIVER_WCN:
+			if (strcasecmp(val, "Enable") == 0) {
+				set_val = 1;
+			} else if (strcasecmp(val, "Disable") == 0) {
+				set_val = 0;
+			} else {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Invalid TWTSchedSTASupport");
+				return STATUS_SENT_ERROR;
+			}
+
+			if (sta_set_bcast_twt_support(dut, intf, set_val)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to set TWTSchedSTASupport");
+				return STATUS_SENT_ERROR;
+			}
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Setting TWTSchedSTASupport not supported");
+			break;
+		}
+	}
+
+	val = get_param(cmd, "MBSSID_RxCtrl");
+	if (val) {
+		int set_val;
+
+		switch (get_driver_type(dut)) {
+		case DRIVER_WCN:
+			if (strcasecmp(val, "Enable") == 0) {
+				set_val = 1;
+			} else if (strcasecmp(val, "Disable") == 0) {
+				set_val = 0;
+			} else {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Invalid MBSSID_RxCtrl");
+				return STATUS_SENT_ERROR;
+			}
+
+			if (sta_set_rx_ctrl_multi_bss(dut, intf, set_val)) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to set MBSSID_RxCtrl");
+				return STATUS_SENT_ERROR;
+			}
+			break;
+		default:
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Setting MBSSID_RxCtrl not supported");
+			break;
 		}
 	}
 
