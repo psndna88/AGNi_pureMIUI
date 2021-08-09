@@ -1410,13 +1410,6 @@ int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
 		ret = -EINVAL;
 		goto done;
 	}
-	if (cfg_data->input_channel != msm_ec_ref_ch) {
-		pr_err("%s: mismatched input ch %d with port config ch %d\n",
-				__func__, cfg_data->input_channel,
-				 msm_ec_ref_ch);
-		ret = -EINVAL;
-		goto done;
-	}
 
 	pr_debug("%s: fedai_id %d, input_channel %d output_channel %d\n",
 		__func__, fedai_id,
