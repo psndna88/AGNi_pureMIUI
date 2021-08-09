@@ -39,6 +39,7 @@ static enum sigma_cmd_result cmd_traffic_send_ping(struct sigma_dut *dut,
 	int type = 1;
 	int dscp = 0, use_dscp = 0;
 	char extra[100], int_arg[100], intf_arg[100], ip_dst[100], ping[100];
+	struct in6_addr ip6_addr;
 
 	val = get_param(cmd, "Type");
 	if (!val)
@@ -58,6 +59,18 @@ static enum sigma_cmd_result cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (dut->ndp_enable && type == 2) {
 		snprintf(ip_dst, sizeof(ip_dst), "%s%%nan0", dst);
 		dst = ip_dst;
+	} else if (type == 2) {
+		if (inet_pton(AF_INET6, dst, &ip6_addr) <= 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Unsupported address type");
+			return STATUS_SENT;
+		}
+
+		if (IN6_IS_ADDR_LINKLOCAL(&ip6_addr)) {
+			snprintf(ip_dst, sizeof(ip_dst), "%s%%%s", dst,
+				 get_station_ifname(dut));
+			dst = ip_dst;
+		}
 	}
 
 	val = get_param(cmd, "frameSize");
