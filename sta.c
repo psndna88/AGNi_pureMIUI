@@ -7231,6 +7231,22 @@ int sta_set_addba_buf_size(struct sigma_dut *dut,
 }
 
 
+static int sta_set_scan_unicast_probe(struct sigma_dut *dut,
+				      const char *intf, int val)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_USE_BSSID_IN_PROBE_REQ_RA,
+		val);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Unicast RA in Probe Request frame cannot be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static int sta_set_tx_beamformee(struct sigma_dut *dut, const char *intf,
 				 int enable)
 {
@@ -7566,6 +7582,8 @@ static void sta_reset_default_wcn(struct sigma_dut *dut, const char *intf,
 
 		if (dut->sta_async_twt_supp == -1)
 			sta_get_twt_feature_async_supp(dut, intf);
+
+		sta_set_scan_unicast_probe(dut, intf, 0);
 
 #ifdef NL80211_SUPPORT
 		/* Reset the device HE capabilities to its default supported
@@ -14135,8 +14153,13 @@ static enum sigma_cmd_result cmd_sta_scan(struct sigma_dut *dut,
 		wpa_command(intf, buf);
 	}
 
+	if (get_param(cmd, "RxMac"))
+		sta_set_scan_unicast_probe(dut, intf, 1);
+
 	bssid = get_param(cmd, "Bssid");
 	ssid = get_param(cmd, "Ssid");
+	if (!bssid)
+		bssid = get_param(cmd, "RxMac");
 
 	if (ssid && strcasecmp(ssid, "ZeroLength") == 0 &&
 	    dut->device_type == STA_testbed) {
