@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2010-2021, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/module.h>
@@ -1339,7 +1340,7 @@ int pil_boot(struct pil_desc *desc)
 		place_marker("M - Modem out of reset");
 #endif
 
-	pil_info(desc, "Brought out of reset\n");
+	pil_err(desc, "Brought out of reset\n");
 	desc->modem_ssr = false;
 err_auth_and_reset:
 	if (ret && desc->subsys_vmid > 0) {
