@@ -3470,9 +3470,9 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 		chip->bp.fastchg_curr_ma = -EINVAL;
 	} */
 	if (board_get_33w_supported())
-		chip->bp.fastchg_curr_ma = 5200000;
+		chip->bp.fastchg_curr_ma = 5200;
 	else
-		chip->bp.fastchg_curr_ma = 3000000;
+		chip->bp.fastchg_curr_ma = 3000;
 
 	/*
 	 * Update the max fcc values based on QG subtype including
