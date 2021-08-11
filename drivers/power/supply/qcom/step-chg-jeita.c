@@ -316,9 +316,9 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		return rc;
 	} */
 	if (board_get_33w_supported())
-		max_fcc_ma = 5200000;
+		max_fcc_ma = 5200;
 	else
-		max_fcc_ma = 3000000;
+		max_fcc_ma = 3000;
 
 	chip->taper_fcc = of_property_read_bool(profile_node, "qcom,taper-fcc");
 
