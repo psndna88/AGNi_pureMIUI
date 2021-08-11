@@ -543,6 +543,28 @@ static void dp_pktlogmod_exit(struct dp_pdev *pdev)
 	pktlogmod_exit(scn);
 	pdev->pkt_log_init = false;
 }
+
+/**
+ * dp_pkt_log_exit() - Wrapper API to cleanup pktlog info
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ *
+ * Return: none
+ */
+static void dp_pkt_log_exit(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+
+	if (!pdev) {
+		dp_err("pdev handle is NULL");
+		return;
+	}
+
+	dp_pktlogmod_exit(pdev);
+}
+
 #else
 static void dp_pkt_log_con_service(struct cdp_soc_t *soc_hdl,
 				   uint8_t pdev_id, void *scn)
@@ -550,6 +572,10 @@ static void dp_pkt_log_con_service(struct cdp_soc_t *soc_hdl,
 }
 
 static void dp_pktlogmod_exit(struct dp_pdev *handle) { }
+
+static void dp_pkt_log_exit(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+{
+}
 #endif
 /**
  * dp_get_num_rx_contexts() - get number of RX contexts
@@ -11945,6 +11971,7 @@ static struct cdp_misc_ops dp_ops_misc = {
 #endif /* FEATURE_RUNTIME_PM */
 	.pkt_log_init = dp_pkt_log_init,
 	.pkt_log_con_service = dp_pkt_log_con_service,
+	.pkt_log_exit = dp_pkt_log_exit,
 	.get_num_rx_contexts = dp_get_num_rx_contexts,
 	.get_tx_ack_stats = dp_tx_get_success_ack_stats,
 #ifdef WLAN_SUPPORT_DATA_STALL
