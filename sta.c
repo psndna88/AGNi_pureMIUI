@@ -7810,6 +7810,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	const char *program = get_param(cmd, "program");
 	const char *dev_role = get_param(cmd, "DevRole");
 	char resp[20];
+	char buf[100];
 	int ret;
 
 	if (dut->station_ifname_2g &&
@@ -8048,8 +8049,15 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 #endif /* ANDROID */
 	}
 
-	if (dut->program == PROGRAM_QM)
+	if (dut->program == PROGRAM_QM) {
 		wpa_command(intf, "SET interworking 1");
+		snprintf(buf, sizeof(buf),
+			 "ip -6 route replace fe80::/64 dev %s table local",
+			 intf);
+		if (system(buf) != 0)
+			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to run: %s",
+					buf);
+	}
 
 	dut->akm_values = 0;
 	dut->sta_ft_ds = 0;
