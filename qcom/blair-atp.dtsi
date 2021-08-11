@@ -737,6 +737,7 @@
 };
 
 &bluetooth {
+	qcom,bt-vdd-smps-supply = <>;  /* SMPS */
 	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
 	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
 	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
