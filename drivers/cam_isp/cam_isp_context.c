@@ -6098,7 +6098,7 @@ static int cam_isp_context_dump_requests(void *data,
 static int cam_isp_context_handle_message(void *context,
 	uint32_t msg_type, uint32_t *data)
 {
-	int                            rc = 0;
+	int                            rc = -EINVAL;
 	struct cam_hw_cmd_args         hw_cmd_args;
 	struct cam_isp_hw_cmd_args     isp_hw_cmd_args;
 	struct cam_context            *ctx = (struct cam_context *)context;
