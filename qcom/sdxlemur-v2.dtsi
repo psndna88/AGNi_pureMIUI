@@ -173,3 +173,8 @@
 &pil_modem {
 	qcom,vdd_mss-uV-uA = <RPMH_REGULATOR_LEVEL_NOM_L1 100000>;
 };
+
+
+&dload_mode {
+	qcom,boot-config-shift = <1 4>;
+};
