@@ -4631,6 +4631,7 @@ typedef enum {
 	wmi_twt_nudge_dialog_complete_event_id,
 	wmi_twt_session_stats_event_id,
 	wmi_twt_notify_event_id,
+	wmi_twt_ack_complete_event_id,
 #endif
 	wmi_apf_get_vdev_work_memory_resp_event_id,
 	wmi_roam_scan_stats_event_id,
@@ -5252,12 +5253,12 @@ typedef enum {
 	wmi_service_sae_eapol_offload_support,
 	wmi_service_ampdu_tx_buf_size_256_support,
 
-	wmi_services_max,
 #ifdef WLAN_FEATURE_11AX
 #ifdef FEATURE_WLAN_TDLS
 	wmi_service_tdls_ax_support,
 #endif
 #endif
+	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
 
@@ -5512,6 +5513,7 @@ typedef struct {
 	uint32_t is_sap_connected_d3wow_enabled;
 	uint32_t is_go_connected_d3wow_enabled;
 	bool sae_eapol_offload;
+	bool twt_ack_support_cap;
 } target_resource_config;
 
 /**

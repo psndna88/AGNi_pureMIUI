@@ -228,8 +228,12 @@ target_if_reg_is_reg_cc_ext_event_host_supported(struct wlan_objmgr_psoc *psoc)
 		return reg_ext_cc_supp;
 	}
 
-	if (reg_tx_ops->register_master_ext_handler)
+	if (reg_tx_ops->register_master_ext_handler) {
 		reg_ext_cc_supp = true;
+		wlan_psoc_nif_fw_ext_cap_set(psoc,
+					     WLAN_SOC_EXT_EVENT_SUPPORTED);
+	}
+
 
 	return reg_ext_cc_supp;
 }

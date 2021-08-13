@@ -1941,6 +1941,13 @@ QDF_STATUS (*extract_sar_cap_service_ready_ext)(
 		uint8_t *evt_buf,
 		struct wlan_psoc_host_service_ext_param *ext_param);
 
+#ifdef WLAN_SUPPORT_TWT
+QDF_STATUS (*extract_twt_cap_service_ready_ext2)(
+		wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct wmi_twt_cap_bitmap_params *var);
+#endif
+
 #ifdef WMI_DBR_SUPPORT
 QDF_STATUS (*send_dbr_cfg_cmd)(wmi_unified_t wmi_handle,
 				   struct direct_buf_rx_cfg_req *cfg);
@@ -2264,6 +2271,9 @@ QDF_STATUS (*extract_twt_resume_dialog_comp_event)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_twt_notify_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
 		struct wmi_twt_notify_event_param *params);
+QDF_STATUS (*extract_twt_ack_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct wmi_twt_ack_complete_event_param *params);
 #ifdef WLAN_SUPPORT_BCAST_TWT
 QDF_STATUS (*extract_twt_btwt_invite_sta_comp_event)(wmi_unified_t wmi_handle,
 		uint8_t *evt_buf,
