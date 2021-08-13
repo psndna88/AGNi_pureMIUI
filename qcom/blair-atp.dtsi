@@ -790,3 +790,9 @@
 	vdd_lpi_cx-supply = <&L1A_LEVEL>;
 	vdd_lpi_mx-supply = <&L17A_LEVEL>;
 };
+
+&refgen {
+	compatible = "qcom,refgen-kona-regulator";
+	reg = <0x162F000 0x84>;
+};
+
