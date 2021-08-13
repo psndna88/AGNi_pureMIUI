@@ -188,6 +188,7 @@ typedef struct sDphHashNode {
 #ifdef WLAN_FEATURE_11AX
 	tDot11fIEhe_cap he_config;
 	uint16_t he_mcs_12_13_map;
+	tDot11fIEhe_6ghz_band_cap he_6g_band_cap;
 #endif
 	/* Peer operation class, extracted from ASSOC request frame*/
 	tDot11fIESuppOperatingClasses supp_operating_classes;
