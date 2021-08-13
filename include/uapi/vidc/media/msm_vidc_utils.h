@@ -117,6 +117,7 @@ enum v4l2_mpeg_vidc_extradata {
 	EXTRADATA_ENC_INPUT_HDR10PLUS = 8,
 	EXTRADATA_ENC_INPUT_CVP = 16,
 	EXTRADATA_ENC_FRAME_QP = 32,
+	EXTRADATA_ENC_INPUT_CROP = 64,
 };
 #define V4L2_CID_MPEG_VIDC_VIDEO_VUI_TIMING_INFO \
 		(V4L2_CID_MPEG_MSM_VIDC_BASE + 19)
@@ -328,6 +329,17 @@ struct msm_vidc_aspect_ratio_payload {
 	__u32 aspect_height;
 };
 
+#define MSM_VIDC_EXTRADATA_INPUT_CROP 0x0700000E
+struct msm_vidc_input_crop_payload {
+	__u32 size;
+	__u32 version;
+	__u32 port_index;
+	__u32 left;
+	__u32 top;
+	__u32 width;
+	__u32 height;
+};
+
 struct msm_vidc_misr_info {
 	__u32 misr_set;
 	__u32 misr_dpb_luma[8];
@@ -356,6 +368,7 @@ struct msm_vidc_output_crop_payload {
 struct msm_vidc_extradata_index {
 	__u32 type;
 	union {
+		struct msm_vidc_input_crop_payload input_crop;
 		struct msm_vidc_aspect_ratio_payload aspect_ratio;
 	};
 };
