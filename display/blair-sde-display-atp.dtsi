@@ -1,4 +1,4 @@
-/* Should extend holi-sde-display-mtp-pm6125.dtsi */
+/* Should extend holi-sde-display-atp.dtsi */
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 
 &sde_dsi {
@@ -26,7 +26,7 @@
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 1b 1b 01
-							01 02 02 04 00 0a 11];
+				01 02 02 04 00 0a 11];
 		};
 	};
 };
@@ -34,11 +34,12 @@
 &dsi_rm69299_visionox_amoled_video {
 	/delete-property/ qcom,mdss-dsi-t-clk-post;
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	/delete-property/ qcom,esd-check-enabled;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
-							08 08 02 04 00 1b 0d];
+				08 08 02 04 00 1b 0d];
 		};
 	};
 };
@@ -46,11 +47,13 @@
 &dsi_rm69299_visionox_amoled_cmd {
 	/delete-property/ qcom,mdss-dsi-t-clk-post;
 	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	/delete-property/ qcom,esd-check-enabled;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
-							08 08 02 04 00 1b 0d];
+				08 08 02 04 00 1b 0d];
 		};
 	};
 };
+
