@@ -236,7 +236,7 @@
 		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
 	};
 
-	qcom,msm-cpufreq {
+	cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
 		clocks = <&apsscc APCS_MUX_CLK>;
 		clock-names = "cpu0_clk";
@@ -1192,10 +1192,6 @@
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
-		qcom,ipa-uc-holb-monitor;
-		qcom,ipa-holb-monitor-poll-period = <5>;
-		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
-		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
 		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;

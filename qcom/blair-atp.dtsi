@@ -3,6 +3,7 @@
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay.dtsi"
 #include "display/holi-sde-display-atp.dtsi"
+#include "display/blair-sde-display-atp.dtsi"
 #include "holi-thermal-overlay.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
 
@@ -354,6 +355,7 @@
 
 	/* Enable mx_cdev for PM6350 */
 	rpm-regulator-smpa5 {
+		proxy-supply = <&S5A_LEVEL>;
 		regulator-s5-level {
 			status = "okay";
 		};
@@ -373,7 +375,41 @@
 
 	/* Enable mx_cdev for PM6150A */
 	rpm-regulator-smpe1 {
+		regulator-s1-level {
+			status = "okay";
+		};
+
+		regulator-s1-floor-level {
+			status = "okay";
+		};
+
+		regulator-s1-level-ao {
+			status = "okay";
+		};
+
 		cx-cdev-lvl {
+			status = "okay";
+		};
+	};
+
+	/* VDD_LPI_CX supply */
+	rpm-regulator-ldoa1 {
+		regulator-l1-level {
+			status = "okay";
+		};
+	};
+
+	rpm-regulator-ldoa3 {
+		proxy-supply = <&pm6350_l3>;
+	};
+
+	rpm-regulator-ldoa8 {
+		proxy-supply = <&pm6350_l8>;
+	};
+
+	/* VDD_LPI_MX supply */
+	rpm-regulator-ldoa17 {
+		regulator-l17-level {
 			status = "okay";
 		};
 	};
@@ -705,6 +741,10 @@
 	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
 	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
 	qcom,bt-vdd-xtal-supply = <&L7A>; /* XO */
+};
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L22A>;
 };
 
 &mdss_dsi_phy0 {
