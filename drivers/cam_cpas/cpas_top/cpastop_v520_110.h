@@ -3,12 +3,12 @@
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
  */
 
-#ifndef _CPASTOP_V545_110_H_
-#define _CPASTOP_V545_110_H_
+#ifndef _CPASTOP_V520_110_H_
+#define _CPASTOP_V520_110_H_
 
 #define TEST_IRQ_ENABLE 0
 
-static struct cam_camnoc_irq_sbm cam_cpas_v545_110_irq_sbm = {
+static struct cam_camnoc_irq_sbm cam_cpas_v520_110_irq_sbm = {
 	.sbm_enable = {
 		.access_type = CAM_REG_TYPE_READ_WRITE,
 		.enable = true,
@@ -32,7 +32,7 @@ static struct cam_camnoc_irq_sbm cam_cpas_v545_110_irq_sbm = {
 };
 
 static struct cam_camnoc_irq_err
-	cam_cpas_v545_110_irq_err[] = {
+	cam_cpas_v520_110_irq_err[] = {
 	{
 		.irq_type = CAM_CAMNOC_HW_IRQ_SLAVE_ERROR,
 		.enable = true,
@@ -78,7 +78,7 @@ static struct cam_camnoc_irq_err
 
 
 static struct cam_camnoc_specific
-	cam_cpas_v545_110_camnoc_specific[] = {
+	cam_cpas_v520_110_camnoc_specific[] = {
 	{
 		.port_type = CAM_CAMNOC_CDM,
 		.enable = true,
@@ -130,7 +130,7 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			/* TFE_PRIORITYLUT_LOW */
 			.offset = 0x30,
-			.value = 0x55554433,
+			.value = 0x44443333,
 		},
 		.priority_lut_high = {
 			.enable = true,
@@ -138,7 +138,7 @@ static struct cam_camnoc_specific
 			.masked_value = 0,
 			/* TFE_PRIORITYLUT_HIGH */
 			.offset = 0x34,
-			.value = 0x66666655,
+			.value = 0x66665555,
 		},
 		.urgency = {
 			.enable = true,
@@ -166,84 +166,6 @@ static struct cam_camnoc_specific
 			 * register settings.
 			 */
 			.enable = false,
-		},
-	},
-	{
-		.port_type = CAM_CAMNOC_TFE_1,
-		.enable = true,
-		.priority_lut_low = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			/* TFE_PRIORITYLUT_LOW */
-			.offset = 0x4030,
-			.value = 0x55554433,
-		},
-		.priority_lut_high = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			/* TFE_PRIORITYLUT_HIGH */
-			.offset = 0x4034,
-			.value = 0x66666655,
-		},
-		.urgency = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			.offset = 0x4038, /* TFE_URGENCY_LOW */
-			.value = 0x00001030,
-		},
-		.danger_lut = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.offset = 0x4040, /* TFE_DANGERLUT_LOW */
-			.value = 0xffff0000,
-		},
-		.safe_lut = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.offset = 0x4048, /* TFE_SAFELUT_LOW */
-			.value = 0x00000003,
-		},
-	},
-	{
-		.port_type = CAM_CAMNOC_TFE_2,
-		.enable = true,
-		.priority_lut_low = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			/* TFE_PRIORITYLUT_LOW */
-			.offset = 0x5030,
-			.value = 0x55554433,
-		},
-		.priority_lut_high = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			/* TFE_PRIORITYLUT_HIGH */
-			.offset = 0x5034,
-			.value = 0x66666655,
-		},
-		.urgency = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.masked_value = 0,
-			.offset = 0x5038, /* TFE_URGENCY_LOW */
-			.value = 0x00001030,
-		},
-		.danger_lut = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.offset = 0x5040, /* TFE_DANGERLUT_LOW */
-			.value = 0xffff0000,
-		},
-		.safe_lut = {
-			.enable = true,
-			.access_type = CAM_REG_TYPE_READ_WRITE,
-			.offset = 0x5048, /* TFE_SAFELUT_LOW */
-			.value = 0x00000003,
 		},
 	},
 	{
@@ -292,7 +214,7 @@ static struct cam_camnoc_specific
 	},
 };
 
-static struct cam_camnoc_err_logger_info cam545_cpas110_err_logger_offsets = {
+static struct cam_camnoc_err_logger_info cam520_cpas110_err_logger_offsets = {
 	.mainctrl     =  0xD08, /* ERRLOGGER_MAINCTL_LOW */
 	.errvld       =  0xD10, /* ERRLOGGER_ERRVLD_LOW */
 	.errlog0_low  =  0xD20, /* ERRLOGGER_ERRLOG0_LOW */
@@ -305,18 +227,18 @@ static struct cam_camnoc_err_logger_info cam545_cpas110_err_logger_offsets = {
 	.errlog3_high =  0xD3C, /* ERRLOGGER_ERRLOG3_HIGH */
 };
 
-static struct cam_camnoc_info cam545_cpas110_camnoc_info = {
-	.specific = &cam_cpas_v545_110_camnoc_specific[0],
-	.specific_size =  ARRAY_SIZE(cam_cpas_v545_110_camnoc_specific),
-	.irq_sbm = &cam_cpas_v545_110_irq_sbm,
-	.irq_err = &cam_cpas_v545_110_irq_err[0],
-	.irq_err_size = ARRAY_SIZE(cam_cpas_v545_110_irq_err),
-	.err_logger = &cam545_cpas110_err_logger_offsets,
+static struct cam_camnoc_info cam520_cpas110_camnoc_info = {
+	.specific = &cam_cpas_v520_110_camnoc_specific[0],
+	.specific_size =  ARRAY_SIZE(cam_cpas_v520_110_camnoc_specific),
+	.irq_sbm = &cam_cpas_v520_110_irq_sbm,
+	.irq_err = &cam_cpas_v520_110_irq_err[0],
+	.irq_err_size = ARRAY_SIZE(cam_cpas_v520_110_irq_err),
+	.err_logger = &cam520_cpas110_err_logger_offsets,
 	.errata_wa_list = NULL,
 };
 
-static struct cam_cpas_camnoc_qchannel cam545_cpas110_qchannel_info = {
+static struct cam_cpas_camnoc_qchannel cam520_cpas110_qchannel_info = {
 	.qchannel_ctrl   = 0x14,
 	.qchannel_status = 0x18,
 };
-#endif /* _CPASTOP_V545_110_H_ */
+#endif /* _CPASTOP_V520_110_H_ */
