@@ -1533,6 +1533,9 @@ int ipa_drop_stats_init(void)
 	/* Always enable drop stats for USB DPL Pipe. */
 	pipe_bitmask |= IPA_CLIENT_BIT_32(IPA_CLIENT_USB_DPL_CONS);
 
+	/* Always enable drop stats for ODL DPL Pipe. */
+	pipe_bitmask |= IPA_CLIENT_BIT_32(IPA_CLIENT_ODL_DPL_CONS);
+
 	/* Currently we have option to enable drop stats using debugfs.
 	 * To enable drop stats for a different pipe, first user needs
 	 * to query drop stats to get the current stats and enable.
