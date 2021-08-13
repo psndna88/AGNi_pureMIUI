@@ -23,6 +23,7 @@
 		rgltr-min-voltage = <0 880000 1200000>;
 		rgltr-max-voltage = <0 1050000 1300000>;
 		rgltr-load-current = <0 16200 9000>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_0_CLK>,
 			<&gcc GCC_CAMSS_CSI0PHYTIMER_CLK_SRC>,
@@ -58,6 +59,7 @@
 		rgltr-min-voltage = <0 880000 1200000>;
 		rgltr-max-voltage = <0 1050000 1300000>;
 		rgltr-load-current = <0 16200 9000>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_1_CLK>,
 			<&gcc GCC_CAMSS_CSI1PHYTIMER_CLK_SRC>,
@@ -93,6 +95,7 @@
 		rgltr-min-voltage = <0 880000 1200000>;
 		rgltr-max-voltage = <0 1050000 1300000>;
 		rgltr-load-current = <0 16200 9000>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_2_CLK>,
 			<&gcc GCC_CAMSS_CSI2PHYTIMER_CLK_SRC>,
@@ -128,6 +131,7 @@
 		rgltr-min-voltage = <0 880000 1200000>;
 		rgltr-max-voltage = <0 1050000 1300000>;
 		rgltr-load-current = <0 16200 9000>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clocks = <&gcc GCC_CAMSS_TFE_CPHY_RX_CLK_SRC>,
 			<&gcc GCC_CAMSS_CPHY_3_CLK>,
 			<&gcc GCC_CAMSS_CSI3PHYTIMER_CLK_SRC>,
@@ -413,6 +417,7 @@
 		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"gcc_camss_ahb_clk",
 			"gcc_camss_top_ahb_clk",
@@ -709,6 +714,7 @@
 		interrupts = <GIC_SPI 210 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_csid_clk_src",
 			"tfe_csid_clk",
@@ -744,6 +750,7 @@
 		interrupts = <GIC_SPI 211 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_clk_src",
 			"tfe_clk";
@@ -773,6 +780,7 @@
 		interrupts = <GIC_SPI 212 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_csid_clk_src",
 			"tfe_csid_clk",
@@ -808,6 +816,7 @@
 		interrupts = <GIC_SPI 213 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_clk_src",
 			"tfe_clk";
@@ -837,6 +846,7 @@
 		interrupts = <GIC_SPI 77 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_csid_clk_src",
 			"tfe_csid_clk",
@@ -872,6 +882,7 @@
 		interrupts = <GIC_SPI 78 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"tfe_clk_src",
 			"tfe_clk";
@@ -1032,6 +1043,7 @@
 		interrupt-names = "ope";
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
+		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		clock-names =
 			"ope_ahb_clk_src",
 			"ope_ahb_clk",
