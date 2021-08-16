@@ -1192,8 +1192,8 @@
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
 		qcom,ipa-wdi3-over-gsi;
-		qcom,ipa-wdi3-holb-2g = <8>;
-		qcom,ipa-wdi3-holb-5g = <15>;
+		qcom,ipa-wdi3-holb-2g = <15>;
+		qcom,ipa-wdi3-holb-5g = <31>;
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
