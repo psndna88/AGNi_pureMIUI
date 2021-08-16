@@ -7120,16 +7120,13 @@ int ipa3_alloc_counter_id(struct ipa_ioc_flt_rt_counter_alloc *header)
 {
 	int i, unused_cnt, unused_max, unused_start_id;
 	struct ipa_ioc_flt_rt_counter_alloc *counter;
-
-	idr_preload(GFP_KERNEL);
-	spin_lock(&ipa3_ctx->flt_rt_counters.hdl_lock);
-
 	counter = kmem_cache_zalloc(ipa3_ctx->fnr_stats_cache, GFP_KERNEL);
 	if (!counter) {
 		IPAERR_RL("failed to alloc fnr stats counter object\n");
-		spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 		return -ENOMEM;
 	}
+	idr_preload(GFP_KERNEL);
+	spin_lock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 	memcpy(counter, header, sizeof(struct ipa_ioc_flt_rt_counter_alloc));
 	/* allocate hw counters */
 	counter->hw_counter.start_id = 0;
