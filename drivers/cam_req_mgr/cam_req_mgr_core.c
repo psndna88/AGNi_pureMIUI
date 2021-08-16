@@ -2985,6 +2985,8 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 	struct cam_req_mgr_core_link        *link = NULL;
 	struct cam_req_mgr_req_queue        *in_q = NULL;
 	struct crm_task_payload             *task_data = NULL;
+	int                                  reset_step = 0;
+	int                                  i = 0;
 
 	if (!data || !priv) {
 		CAM_ERR(CAM_CRM, "input args NULL %pK %pK", data, priv);
@@ -3013,6 +3015,22 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 				in_q->last_applied_idx = -1;
 			if (idx == in_q->rd_idx)
 				__cam_req_mgr_dec_idx(&idx, 1, in_q->num_slots);
+
+			reset_step = link->max_delay;
+			for (i = 0; i < link->num_sync_links; i++) {
+				if (link->sync_link[i]) {
+					if ((link->in_msync_mode) &&
+						(link->sync_link[i]->max_delay >
+							reset_step))
+						reset_step =
+						link->sync_link[i]->max_delay;
+				}
+			}
+
+			__cam_req_mgr_dec_idx(
+				&idx, reset_step + 1,
+				in_q->num_slots);
+
 			__cam_req_mgr_reset_req_slot(link, idx);
 		}
 	}
