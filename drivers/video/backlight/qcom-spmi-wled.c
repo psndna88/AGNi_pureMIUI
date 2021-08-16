@@ -634,6 +634,8 @@ static int wled5_cabc_config(struct wled *wled, bool enable)
 	if (wled->cabc_disabled)
 		return 0;
 
+	pr_info("%s: %sabling cabc", __func__, enable ? "en" : "dis");
+
 	reg = enable ? wled->cfg.cabc_sel : 0;
 	offset = wled5_src_sel_reg[wled->cfg.mod_sel];
 	rc = regmap_update_bits(wled->regmap, wled->sink_addr + offset,
@@ -671,6 +673,17 @@ static int wled4_cabc_config(struct wled *wled, bool enable)
 
 	return 0;
 }
+
+int wled_cabc_config(struct backlight_device *bl, bool enable)
+{
+	struct wled *wled = bl_get_data(bl);
+
+	if (is_wled4(wled))
+	    return wled4_cabc_config(wled, enable);
+	else
+	    return wled5_cabc_config(wled, enable);
+}
+EXPORT_SYMBOL(wled_cabc_config);
 
 static int wled_get_ovp_fault_status(struct wled *wled, bool *fault_set)
 {
@@ -1157,10 +1170,6 @@ static int wled5_setup(struct wled *wled)
 		}
 	}
 
-	rc = wled5_cabc_config(wled, wled->cfg.cabc_sel ? true : false);
-	if (rc < 0)
-		return rc;
-
 	/* Enable one of the modulators A or B based on mod_sel */
 	addr = wled->sink_addr + WLED5_SINK_MOD_A_EN_REG;
 	val = (wled->cfg.mod_sel == MOD_A) ? WLED5_SINK_MOD_EN : 0;
@@ -1297,10 +1306,6 @@ static int wled4_setup(struct wled *wled)
 			sink_en |= 1 << temp;
 		}
 	}
-
-	rc = wled4_cabc_config(wled, wled->cfg.en_cabc);
-	if (rc < 0)
-		return rc;
 
 	rc = regmap_update_bits(wled->regmap,
 			wled->sink_addr + WLED_SINK_CURR_SINK_EN,

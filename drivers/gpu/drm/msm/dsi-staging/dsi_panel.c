@@ -5290,6 +5290,10 @@ int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 	return rc;
 }
 
+#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+int wled_cabc_config(struct backlight_device *bl, bool enable);
+#endif
+
 int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 {
 	static const enum dsi_cmd_set_type type_map[] = {
@@ -5299,18 +5303,29 @@ int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 		DSI_CMD_SET_DISP_CABCMOVIEON
 	};
 
+	struct dsi_backlight_config *bl = &panel->bl_config;
 	enum dsi_cmd_set_type type;
 	int rc;
+	bool enable;
 
 	if (panel->cabc_mode >= 0 &&
-		panel->cabc_mode < ARRAY_SIZE(type_map))
+		panel->cabc_mode < ARRAY_SIZE(type_map)) {
 		type = type_map[panel->cabc_mode];
-	else
+		enable = panel->cabc_mode > 0 ? true : false;
+	} else {
 		type = type_map[0];
+		enable = false;
+	}
+
+#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+	rc = wled_cabc_config(bl->raw_bd, enable);
+	pr_info("%s: wled_cabc_config returned %i", __func__, rc);
+#endif
 
 	mutex_lock(&panel->panel_lock);
-	rc = dsi_panel_tx_cmd_set(panel, type);
+	rc |= dsi_panel_tx_cmd_set(panel, type);
 	mutex_unlock(&panel->panel_lock);
 
+	pr_info("%s: returning %i", __func__, rc);
 	return rc;
 }
