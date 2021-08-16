@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt) "bw-hwmon: " fmt
@@ -79,6 +79,8 @@ static DEFINE_MUTEX(list_lock);
 
 static int use_cnt;
 static DEFINE_MUTEX(state_lock);
+
+static DEFINE_MUTEX(event_handle_lock);
 
 #define show_attr(name) \
 static ssize_t name##_show(struct device *dev,				\
@@ -865,7 +867,7 @@ static int devfreq_bw_hwmon_ev_handler(struct devfreq *df,
 	struct hwmon_node *node;
 	struct bw_hwmon *hw;
 
-	mutex_lock(&state_lock);
+	mutex_lock(&event_handle_lock);
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
@@ -939,7 +941,7 @@ static int devfreq_bw_hwmon_ev_handler(struct devfreq *df,
 	}
 
 out:
-	mutex_unlock(&state_lock);
+	mutex_unlock(&event_handle_lock);
 
 	return ret;
 }
