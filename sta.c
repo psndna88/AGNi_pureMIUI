@@ -7389,7 +7389,7 @@ static int features_info_handler(struct nl_msg *msg, void *arg)
 		if (attr) {
 			int len = nla_len(attr);
 
-			if (info && info->flags && len >= 0) {
+			if (info && info->flags && len <= sizeof(info->flags)) {
 				memcpy(info->flags, nla_data(attr), len);
 				info->flags_len = len;
 			}
