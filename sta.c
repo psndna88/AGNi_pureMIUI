@@ -7389,7 +7389,7 @@ static int features_info_handler(struct nl_msg *msg, void *arg)
 		if (attr) {
 			int len = nla_len(attr);
 
-			if (info && info->flags && len <= sizeof(info->flags)) {
+			if (info && len <= sizeof(info->flags)) {
 				memcpy(info->flags, nla_data(attr), len);
 				info->flags_len = len;
 			}
@@ -7405,7 +7405,7 @@ static int check_feature(enum qca_wlan_vendor_features feature,
 {
 	size_t idx = feature / 8;
 
-	if (!info || !info->flags)
+	if (!info)
 		return 0;
 
 	return (idx < info->flags_len) &&
