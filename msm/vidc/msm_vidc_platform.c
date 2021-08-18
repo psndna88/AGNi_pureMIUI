@@ -181,6 +181,9 @@ static struct msm_vidc_codec_capability bengal_capabilities_v0[] = {
 	{CAP_SECURE_MBS_PER_FRAME, DOMAINS_ALL, CODECS_ALL, 64, 8160, 1, 8160},
 	{CAP_SECURE_BITRATE, DOMAINS_ALL, CODECS_ALL, 1, 35000000, 1, 20000000},
 
+	/* All intra encoding usecase specific */
+	{CAP_ALLINTRA_MAX_FPS, ENC, H264|HEVC, 1, 60, 1, 30},
+
 	/* Image specific */
 	{CAP_HEVC_IMAGE_FRAME_WIDTH, ENC, HEVC, 128, 512, 2, 512},
 	{CAP_HEVC_IMAGE_FRAME_HEIGHT, ENC, HEVC, 128, 512, 2, 512},
@@ -244,6 +247,9 @@ static struct msm_vidc_codec_capability bengal_capabilities_v1[] = {
 	/* (1920 * 1088) / 256 */
 	{CAP_SECURE_MBS_PER_FRAME, DOMAINS_ALL, CODECS_ALL, 64, 8160, 1, 8160},
 	{CAP_SECURE_BITRATE, DOMAINS_ALL, CODECS_ALL, 1, 35000000, 1, 20000000},
+
+	/* All intra encoding usecase specific */
+	{CAP_ALLINTRA_MAX_FPS, ENC, H264|HEVC, 1, 60, 1, 30},
 
 	/* Image specific */
 	{CAP_HEVC_IMAGE_FRAME_WIDTH, ENC, HEVC, 128, 512, 2, 512},
@@ -1539,6 +1545,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 		.value = 262144, /* ((8192x8192)/256)@1fps */
 	},
 	{
+		.key = "qcom,max-mbpf",
+		.value = 65280,/* ((3840x2176)/256) x 2 */
+	},
+	{
 		.key = "qcom,max-hq-mbs-per-frame",
 		.value = 8160,
 	},
@@ -1573,6 +1583,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 	{
 		.key = "qcom,vpp_delay_supported",
 		.value = 0,
+	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
 	},
 };
 
@@ -1606,6 +1620,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 		.value = 262144, /* ((8192x8192)/256)@1fps */
 	},
 	{
+		.key = "qcom,max-mbpf",
+		.value = 65280,/* ((3840x2176)/256) x 2 */
+	},
+	{
 		.key = "qcom,max-hq-mbs-per-frame",
 		.value = 8160,
 	},
@@ -1640,6 +1658,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 	{
 		.key = "qcom,vpp_delay_supported",
 		.value = 0,
+	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
 	},
 };
 
