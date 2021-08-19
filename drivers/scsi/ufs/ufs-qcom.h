@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -327,6 +327,7 @@ struct ufs_qcom_host {
 	struct ufs_vreg *vddp_ref_clk;
 	struct ufs_vreg *vccq_parent;
 	bool work_pending;
+	bool disable_wb_support;
 };
 
 static inline u32

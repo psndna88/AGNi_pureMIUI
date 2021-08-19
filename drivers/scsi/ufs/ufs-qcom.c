@@ -1691,6 +1691,19 @@ static void ufs_qcom_parse_lpm(struct ufs_qcom_host *host)
 		pr_info("%s: will disable all LPM modes\n", __func__);
 }
 
+/*
+ * ufs_qcom_parse_wb - read from DTS whether WB support should be enabled.
+ */
+static void ufs_qcom_parse_wb(struct ufs_qcom_host *host)
+{
+	struct device_node *node = host->hba->dev->of_node;
+
+	host->disable_wb_support = of_property_read_bool(node,
+			"qcom,disable-wb-support");
+	if (host->disable_wb_support)
+		pr_info("%s: WB support disabled\n", __func__);
+}
+
 static int ufs_qcom_parse_reg_info(struct ufs_qcom_host *host, char *name,
 				   struct ufs_vreg **out_vreg)
 {
@@ -1947,6 +1960,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	ufs_qcom_parse_lpm(host);
 	if (host->disable_lpm)
 		pm_runtime_forbid(host->hba->dev);
+	ufs_qcom_parse_wb(host);
 	ufs_qcom_set_caps(hba);
 	ufs_qcom_advertise_quirks(hba);
 

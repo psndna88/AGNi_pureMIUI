@@ -7002,10 +7002,13 @@ out:
 
 static bool ufshcd_wb_sup(struct ufs_hba *hba)
 {
+	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+
 	return ((hba->dev_info.d_ext_ufs_feature_sup &
 		   UFS_DEV_WRITE_BOOSTER_SUP) &&
 		  (hba->dev_info.b_wb_buffer_type
-		   || hba->dev_info.wb_config_lun));
+		   || hba->dev_info.wb_config_lun) &&
+			!host->disable_wb_support);
 }
 
 static int ufshcd_wb_ctrl(struct ufs_hba *hba, bool enable)
