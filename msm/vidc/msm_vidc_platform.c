@@ -2326,6 +2326,7 @@ static struct msm_vidc_platform_data scuba_data = {
 	.codec_caps_count = ARRAY_SIZE(scuba_capabilities),
 	.vpss_caps = NULL,
 	.vpss_caps_count = 0,
+	.max_inst_count = MAX_SUPPORTED_INSTANCES,
 };
 
 static const struct of_device_id msm_vidc_dt_device[] = {
