@@ -1,7 +1,6 @@
 # Disable QCOM SVI
 ro.vendor.display.svi=0
 
-# Disable some crashing MIUI R services
-sys.init.updatable_crashing=0
-
+# disable logging
+persist.vendor.sys.cnss.diag_txt=false
 
