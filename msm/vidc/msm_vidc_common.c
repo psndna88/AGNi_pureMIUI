@@ -1269,8 +1269,20 @@ static int wait_for_sess_signal_receipt(struct msm_vidc_inst *inst,
 		msecs_to_jiffies(
 			inst->core->resources.msm_vidc_hw_rsp_timeout));
 	if (!rc) {
-		s_vpr_e(inst->sid, "Wait interrupted or timed out: %d\n",
+		s_vpr_e(inst->sid, "Wait interrupted or timed out(sending ping cmd): %d\n",
 				SESSION_MSG_INDEX(cmd));
+		rc = call_hfi_op(hdev, core_ping, hdev->hfi_device_data, inst->sid);
+		rc = wait_for_completion_timeout(
+				&inst->core->completions[SYS_MSG_INDEX(HAL_SYS_PING_ACK)],
+				msecs_to_jiffies(
+				inst->core->resources.msm_vidc_hw_rsp_timeout));
+		if (rc) {
+			if (try_wait_for_completion(&inst->completions[SESSION_MSG_INDEX(cmd)])) {
+				s_vpr_e(inst->sid, "Received %d response. Continue session\n",
+								SESSION_MSG_INDEX(cmd));
+				return 0;
+			}
+		}
 		msm_comm_kill_session(inst);
 		rc = -EIO;
 	} else {
@@ -1897,6 +1909,28 @@ static void handle_stop_done(enum hal_command_response cmd, void *data)
 
 	s_vpr_l(inst->sid, "handled: SESSION_STOP_DONE\n");
 	signal_session_msg_receipt(cmd, inst);
+	put_inst(inst);
+}
+
+static void handle_ping_done(enum hal_command_response cmd, void *data)
+{
+	struct msm_vidc_cb_cmd_done *response = data;
+	struct msm_vidc_inst *inst;
+
+	if (!response) {
+		d_vpr_e("Failed to get valid response for stop\n");
+		return;
+	}
+
+	inst = get_inst(get_vidc_core(response->device_id),
+			response->inst_id);
+	if (!inst) {
+		d_vpr_e("Got a response for an inactive session\n");
+		return;
+	}
+
+	s_vpr_l(inst->sid, "handled: SYS_PING_DONE\n");
+	complete(&inst->core->completions[SYS_MSG_INDEX(HAL_SYS_PING_ACK)]);
 	put_inst(inst);
 }
 
@@ -2727,6 +2761,9 @@ void handle_cmd_response(enum hal_command_response cmd, void *data)
 	case HAL_SESSION_END_DONE:
 	case HAL_SESSION_ABORT_DONE:
 		handle_session_close(cmd, data);
+		break;
+	case HAL_SYS_PING_ACK:
+		handle_ping_done(cmd, data);
 		break;
 	case HAL_SESSION_EVENT_CHANGE:
 		handle_event_change(cmd, data);

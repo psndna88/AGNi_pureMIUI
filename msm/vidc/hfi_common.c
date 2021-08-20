@@ -1807,6 +1807,34 @@ static int venus_hfi_core_release(void *dev)
 	return rc;
 }
 
+static int venus_hfi_core_ping(void *device, u32 sid)
+{
+	struct hfi_cmd_sys_ping_packet pkt;
+	int rc = 0;
+	struct venus_hfi_device *dev;
+
+	if (!device) {
+		d_vpr_e("invalid device\n");
+		return -ENODEV;
+	}
+
+	dev = device;
+	mutex_lock(&dev->lock);
+
+	rc = call_hfi_pkt_op(dev, sys_ping, &pkt, sid);
+	if (rc) {
+		d_vpr_e("core_ping: failed to create packet\n");
+		goto err_create_pkt;
+	}
+
+	if (__iface_cmdq_write(dev, &pkt, sid))
+		rc = -ENOTEMPTY;
+
+err_create_pkt:
+	mutex_unlock(&dev->lock);
+	return rc;
+}
+
 static int venus_hfi_core_trigger_ssr(void *device,
 	enum hal_ssr_trigger_type ssr_type, u32 sub_client_id,
 	u32 test_addr)
@@ -2790,6 +2818,7 @@ static int __response_handler(struct venus_hfi_device *device)
 		case HAL_SESSION_RELEASE_BUFFER_DONE:
 		case HAL_SESSION_RELEASE_RESOURCE_DONE:
 		case HAL_SESSION_PROPERTY_INFO:
+		case HAL_SYS_PING_ACK:
 			inst_id = &info->response.cmd.inst_id;
 			break;
 		case HAL_SESSION_ERROR:
@@ -4284,6 +4313,7 @@ void venus_hfi_delete_device(void *device)
 static void venus_init_hfi_callbacks(struct hfi_device *hdev)
 {
 	hdev->core_init = venus_hfi_core_init;
+	hdev->core_ping = venus_hfi_core_ping;
 	hdev->core_release = venus_hfi_core_release;
 	hdev->core_trigger_ssr = venus_hfi_core_trigger_ssr;
 	hdev->session_init = venus_hfi_session_init;
