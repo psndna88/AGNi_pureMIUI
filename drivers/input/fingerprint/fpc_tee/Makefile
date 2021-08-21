@@ -1,1 +1,1 @@
-obj-m += fpc1020_tee.o
+obj-y += fpc1020_tee.o

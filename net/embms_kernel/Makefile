@@ -5,7 +5,7 @@
 
 KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
 
-obj-m += embms_kernel.o
+obj-y += embms_kernel.o
 
 ccflags-y += -D__CHECK_ENDIAN__
 

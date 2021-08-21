@@ -93,4 +93,4 @@ libnvdimm-y += dimm_devs.o
 libnvdimm-y += libnvdimm_test.o
 libnvdimm-y += config_check.o
 
-obj-m += test/
+obj-y += test/

@@ -20,8 +20,8 @@ ieee80211_crypt_tkip-rsl-objs := ieee80211_crypt_tkip.o
 ieee80211_crypt_ccmp-rsl-objs := ieee80211_crypt_ccmp.o
 ieee80211_crypt_wep-rsl-objs := ieee80211_crypt_wep.o
 
-obj-m +=ieee80211-rsl.o
-obj-m +=ieee80211_crypt-rsl.o
-obj-m +=ieee80211_crypt_wep-rsl.o
-obj-m +=ieee80211_crypt_tkip-rsl.o
-obj-m +=ieee80211_crypt_ccmp-rsl.o
+obj-y +=ieee80211-rsl.o
+obj-y +=ieee80211_crypt-rsl.o
+obj-y +=ieee80211_crypt_wep-rsl.o
+obj-y +=ieee80211_crypt_tkip-rsl.o
+obj-y +=ieee80211_crypt_ccmp-rsl.o
