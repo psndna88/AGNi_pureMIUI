@@ -25,7 +25,7 @@
 #include "boeffla_wl_blocker.h"
 
 char list_wl_search[LENGTH_LIST_WL_SEARCH] = {0};
-bool wl_blocker_active = true;
+bool wl_blocker_active = false;
 bool wl_blocker_debug = false;
 
 static void wakeup_source_deactivate(struct wakeup_source *ws);
@@ -79,8 +79,6 @@ static struct wakeup_source deleted_ws = {
 	.name = "deleted",
 	.lock =  __SPIN_LOCK_UNLOCKED(deleted_ws.lock),
 };
-
-static ktime_t last_read_time;
 
 /**
  * wakeup_source_prepare - Prepare a new wakeup source for initialization.
@@ -1015,14 +1013,9 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
 	unsigned int cnt, inpr;
-	unsigned long flags;
 
 	if (block) {
 		DEFINE_WAIT(wait);
-
-		spin_lock_irqsave(&events_lock, flags);
-		last_read_time = ktime_get();
-		spin_unlock_irqrestore(&events_lock, flags);
 
 		for (;;) {
 			prepare_to_wait(&wakeup_count_wait_queue, &wait,
