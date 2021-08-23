@@ -292,6 +292,11 @@
 			qcom,dump-id = <0x102>;
 		};
 
+		tzpu_ctx0 {
+			qcom,dump-size = <0x800>;
+			qcom,dump-id = <0x00>;
+		};
+
 		misc_data {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0xe8>;
@@ -1187,8 +1192,8 @@
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
 		qcom,ipa-wdi3-over-gsi;
-		qcom,ipa-wdi3-holb-2g = <8>;
-		qcom,ipa-wdi3-holb-5g = <15>;
+		qcom,ipa-wdi3-holb-2g = <15>;
+		qcom,ipa-wdi3-holb-5g = <31>;
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;

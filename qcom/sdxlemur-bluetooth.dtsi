@@ -25,9 +25,7 @@
 		clock-names = "ref3_clk";
 
 		qcom,bt-vdd-aon-supply = <&S7B>;
-		qcom,bt-vdd-aon-config = <1012000 1012000 0 0>;
-		qcom,bt-vdd-io-supply = <&L6B>;
-		qcom,bt-vdd-io-config = <1800000 1800000 0 0>;
+		qcom,bt-vdd-aon-config = <1012000 1012000 0 1>;
 	};
 };
 

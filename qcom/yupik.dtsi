@@ -4248,6 +4248,7 @@
 		qcom,smem-id = <626>;
 		qcom,signal-aop;
 		qcom,complete-ramdump;
+		qcom,ignore-ssr-failure;
 
 		/* Inputs from wpss */
 		interrupts-extended = <&intc GIC_SPI 587 IRQ_TYPE_LEVEL_HIGH>,
