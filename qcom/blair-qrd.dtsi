@@ -231,7 +231,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM2_100K_PU>;
-		disable-thermal-zone;
+
 		trips {
 			battery_trip0: battery-trip0 {
 				temperature = <42000>;
@@ -246,7 +246,7 @@
 			};
 
 			gold_trip: gold-trip {
-				temperature = <43000>;
+				temperature = <46000>;
 				hysteresis = <0>;
 				type = "passive";
 			};
@@ -260,12 +260,6 @@
 			modem_skin_trip1: modem-skin-trip1 {
 				temperature = <44000>;
 				hysteresis = <4000>;
-				type = "passive";
-			};
-
-			silver_trip: silver-trip {
-				temperature = <45000>;
-				hysteresis = <0>;
 				type = "passive";
 			};
 
@@ -287,6 +281,18 @@
 				type = "passive";
 			};
 
+			gpu_trip: gpu-trip {
+				temperature = <48000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
+			silver_trip: silver-trip {
+				temperature = <50000>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+
 			cx_trip: cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
@@ -301,46 +307,46 @@
 			};
 
 			gpu-cdev0 {
-				trip = <&modem_skin_trip1>;
+				trip = <&gpu_trip>;
 				/* throttle to 650000000Hz */
-				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-4)
-							(THERMAL_MAX_LIMIT-4)>;
+				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-3)>;
 			};
 
 			gpu-cdev1 {
 				trip = <&cx_trip>;
-				/* throttle to 565000000Hz */
-				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-3)
-							(THERMAL_MAX_LIMIT-3)>;
+				/* throttle to 390000000Hz */
+				cooling-device = <&msm_gpu (THERMAL_MAX_LIMIT-1)
+							(THERMAL_MAX_LIMIT-1)>;
 			};
 
 			silver-cdev {
 				trip = <&silver_trip>;
-				/* throttle to 1478400KHz */
-				cooling-device = <&CPU0 (THERMAL_MAX_LIMIT-6)
+				/* throttle to 1516800KHz */
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
 							(THERMAL_MAX_LIMIT-6)>;
 			};
 
 			gold-cdev {
 				trip = <&gold_trip>;
-				/* throttle to 1536000KHz */
-				cooling-device = <&CPU6 (THERMAL_MAX_LIMIT-5)
-							(THERMAL_MAX_LIMIT-5)>;
+				/* throttle to 1516800KHz */
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
 			};
 
 			modem-skin-cdev0 {
 				trip = <&modem_skin_trip0>;
-				cooling-device = <&modem_skin 1 1>;
+				cooling-device = <&modem_pa 1 1>;
 			};
 
 			modem-skin-cdev1 {
 				trip = <&modem_skin_trip1>;
-				cooling-device = <&modem_skin 2 2>;
+				cooling-device = <&modem_pa 2 2>;
 			};
 
 			modem-skin-cdev2 {
 				trip = <&cx_trip>;
-				cooling-device = <&modem_skin 3 3>;
+				cooling-device = <&modem_pa 3 3>;
 			};
 		};
 	};
@@ -350,7 +356,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pm6125_adc_tm ADC5_AMUX_THM1_100K_PU>;
-		disable-thermal-zone;
+
 		trips {
 			modem_trip0: modem-trip0 {
 				temperature = <46000>;
@@ -394,7 +400,7 @@
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
 		thermal-sensors = <&pmk8350_adc_tm PMK8350_ADC7_AMUX_THM1_100K_PU>;
-		disable-thermal-zone;
+
 		trips {
 			modem_pa_fr1_trip0: modem-pa-fr1-trip0 {
 				temperature = <45000>;
