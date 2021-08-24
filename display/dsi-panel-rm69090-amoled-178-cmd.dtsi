@@ -69,6 +69,8 @@
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-lp2-command = [
+					15 01 00 00 00 00 02 FE 01
+					15 01 00 00 00 00 02 2A 03
 					15 01 00 00 46 00 02 FE 00
 					05 01 00 00 00 00 01 39
 				];
