@@ -1106,22 +1106,21 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 				   &tx_priv->tx_mute_dwork[decimator].dwork,
 				   msecs_to_jiffies(unmute_delay));
 		if (tx_priv->tx_hpf_work[decimator].hpf_cut_off_freq !=
-							CF_MIN_3DB_150HZ) {
+							CF_MIN_3DB_150HZ)
 			queue_delayed_work(system_freezable_wq,
 				&tx_priv->tx_hpf_work[decimator].dwork,
 				msecs_to_jiffies(hpf_delay));
+		snd_soc_component_update_bits(component,
+				hpf_gate_reg, 0x03, 0x02);
+		if (!is_smic_enabled(component, decimator))
 			snd_soc_component_update_bits(component,
-					hpf_gate_reg, 0x03, 0x02);
-			if (!is_smic_enabled(component, decimator))
-				snd_soc_component_update_bits(component,
-					hpf_gate_reg, 0x03, 0x00);
-			snd_soc_component_update_bits(component,
-					hpf_gate_reg, 0x03, 0x01);
-			/*
-			 * 6ms delay is required as per HW spec
-			 */
-			usleep_range(6000, 6010);
-		}
+				hpf_gate_reg, 0x03, 0x00);
+		snd_soc_component_update_bits(component,
+				hpf_gate_reg, 0x03, 0x01);
+		/*
+		 * 6ms delay is required as per HW spec
+		 */
+		usleep_range(6000, 6010);
 		/* apply gain after decimator is enabled */
 		snd_soc_component_write(component, tx_gain_ctl_reg,
 			      snd_soc_component_read32(component,
