@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,6 +30,7 @@
 #include "wlan_objmgr_pdev_obj.h"
 #include "wlan_objmgr_vdev_obj.h"
 #include "nan_ucfg_api.h"
+#include <wlan_reg_services_api.h>
 
 static QDF_STATUS nan_psoc_obj_created_notification(
 		struct wlan_objmgr_psoc *psoc, void *arg_list)
@@ -301,4 +302,25 @@ QDF_STATUS nan_psoc_disable(struct wlan_objmgr_psoc *psoc)
 		nan_err("target_if_nan_deregister_events failed");
 
 	return QDF_STATUS_SUCCESS;
+}
+
+bool wlan_is_nan_allowed_on_chan(struct wlan_objmgr_pdev *pdev, uint8_t chan)
+{
+	bool nan_allowed = true;
+
+	/* Check for SRD channels */
+	if (wlan_reg_is_etsi13_srd_chan(pdev, chan))
+		nan_allowed =
+			wlan_reg_is_etsi13_srd_chan_allowed_master_mode(
+							pdev,
+							QDF_NAN_DISC_MODE);
+
+	/* Check for Indoor channels */
+	if (wlan_reg_is_indoor_chan(pdev, chan))
+		nan_allowed = wlan_reg_is_nan_allowed_on_indoor(pdev);
+	/* Check for dfs only if channel is not indoor */
+	else if (wlan_reg_is_dfs_ch(pdev, chan))
+		nan_allowed = false;
+
+	return nan_allowed;
 }

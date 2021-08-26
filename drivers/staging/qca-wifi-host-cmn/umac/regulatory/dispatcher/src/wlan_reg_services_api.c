@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2021 The Linux Foundation. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -445,6 +445,11 @@ bool wlan_reg_is_dfs_ch(struct wlan_objmgr_pdev *pdev,
 	return reg_is_dfs_ch(pdev, chan);
 }
 
+bool wlan_reg_is_indoor_chan(struct wlan_objmgr_pdev *pdev, uint32_t chan)
+{
+	return reg_is_indoor_chan(pdev, chan);
+}
+
 bool wlan_reg_is_passive_or_disable_ch(struct wlan_objmgr_pdev *pdev,
 				       uint32_t chan)
 {
@@ -548,6 +553,11 @@ wlan_reg_is_etsi13_srd_chan_allowed_master_mode(struct wlan_objmgr_pdev *pdev,
 						enum QDF_OPMODE vdev_opmode)
 {
 	return reg_is_etsi13_srd_chan_allowed_master_mode(pdev, vdev_opmode);
+}
+
+bool wlan_reg_is_nan_allowed_on_indoor(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_is_nan_allowed_on_indoor(pdev);
 }
 
 bool wlan_reg_get_fcc_constraint(struct wlan_objmgr_pdev *pdev, uint32_t freq)

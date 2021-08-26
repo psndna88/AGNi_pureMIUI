@@ -6390,6 +6390,7 @@ typedef struct {
 	bool three_way_coex_config_legacy_en;
 	bool time_sync_ftm;
 	bool nan_separate_iface_support;
+	bool sae_eapol_offload;
 } target_resource_config;
 
 /**

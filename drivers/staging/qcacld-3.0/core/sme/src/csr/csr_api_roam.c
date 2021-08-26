@@ -10341,12 +10341,14 @@ static void csr_roam_join_rsp_processor(tpAniSirGlobal pMac,
 	 * If connection fails with Single PMK bssid, clear this pmk
 	 * entry, Flush in case if we are not trying again with same AP
 	 */
-	qdf_mem_copy(&pmk_cache.BSSID.bytes,
-		     &pCommand->u.roamCmd.pLastRoamBss->bssId,
-		     sizeof(pmk_cache.BSSID.bytes));
-	if (!use_same_bss && pCommand && pCommand->u.roamCmd.pLastRoamBss)
-		csr_clear_sae_single_pmk(pMac, pSmeJoinRsp->sessionId,
-					 &pmk_cache);
+	if (pCommand) {
+		qdf_mem_copy(&pmk_cache.BSSID.bytes,
+			     &pCommand->u.roamCmd.pLastRoamBss->bssId,
+			     sizeof(pmk_cache.BSSID.bytes));
+		if (!use_same_bss && pCommand->u.roamCmd.pLastRoamBss)
+		    csr_clear_sae_single_pmk(pMac, pSmeJoinRsp->sessionId,
+					     &pmk_cache);
+	}
 
 	/* If Join fails while Handoff is in progress, indicate
 	 * disassociated event to supplicant to reconnect

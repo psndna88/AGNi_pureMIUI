@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -489,10 +489,5 @@ int ucfg_nan_register_lim_callbacks(struct wlan_objmgr_psoc *psoc,
 
 bool ucfg_is_nan_allowed_on_chan(struct wlan_objmgr_pdev *pdev, uint32_t chan)
 {
-	/* Check for SRD channels only */
-	if (!wlan_reg_is_etsi13_srd_chan(pdev, chan))
-		return true;
-
-	return wlan_reg_is_etsi13_srd_chan_allowed_master_mode(pdev,
-							QDF_NAN_DISC_MODE);
+	return wlan_is_nan_allowed_on_chan(pdev, chan);
 }

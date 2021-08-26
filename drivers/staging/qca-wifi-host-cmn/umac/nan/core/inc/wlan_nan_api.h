@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017, 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -65,5 +65,16 @@ QDF_STATUS nan_psoc_enable(struct wlan_objmgr_psoc *psoc);
  * Return: status of operation
  */
 QDF_STATUS nan_psoc_disable(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_is_nan_allowed_on_chan() - Check if NAN is allowed on given channel
+ * @pdev: pdev context
+ * @chan: channel to be checked
+ *
+ * Check if NAN/NDP can be enabled on given frequency.
+ *
+ * Return: True if NAN is allowed on the given frequency
+ */
+bool wlan_is_nan_allowed_on_chan(struct wlan_objmgr_pdev *pdev, uint8_t chan);
 
 #endif

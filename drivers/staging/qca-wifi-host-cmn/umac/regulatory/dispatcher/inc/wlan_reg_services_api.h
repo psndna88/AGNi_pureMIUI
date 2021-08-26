@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -366,6 +366,15 @@ void wlan_reg_update_nol_ch(struct wlan_objmgr_pdev *pdev,
 bool wlan_reg_is_dfs_ch(struct wlan_objmgr_pdev *pdev, uint32_t chan);
 
 /**
+ * wlan_reg_is_indoor_chan () - Checks the channel indoor
+ * @pdev: pdev ptr
+ * @chan: channel
+ *
+ * Return: true or false
+ */
+bool wlan_reg_is_indoor_chan(struct wlan_objmgr_pdev *pdev, uint32_t chan);
+
+/**
  * wlan_reg_is_dsrc_chan () - Checks if the channel is dsrc channel or not
  * @pdev: pdev ptr
  * @chan_num: channel
@@ -405,6 +414,15 @@ bool wlan_reg_is_etsi13_regdmn(struct wlan_objmgr_pdev *pdev);
 bool
 wlan_reg_is_etsi13_srd_chan_allowed_master_mode(struct wlan_objmgr_pdev *pdev,
 					        enum QDF_OPMODE vdev_opmode);
+
+/**
+ * reg_is_nan_allowed_on_indoor() - Check if nan is allowed on indoor channels
+ *
+ * @pdev: Pointer to pdev
+ *
+ * Return: true or false
+ */
+bool wlan_reg_is_nan_allowed_on_indoor(struct wlan_objmgr_pdev *pdev);
 
 /**
  * wlan_reg_is_passive_or_disable_ch () - Checks chan state for passive

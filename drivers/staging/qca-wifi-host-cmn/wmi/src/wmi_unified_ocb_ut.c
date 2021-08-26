@@ -277,13 +277,12 @@ static QDF_STATUS fake_ocb_set_config_cmd_tlv(wmi_unified_t wmi_handle,
 	struct wlan_ocb_rx_ops *ocb_rx_ops;
 	ol_scn_t scn = (ol_scn_t) wmi_handle->scn_handle;
 
-	WMI_LOGP("%s : called", __func__);
-	WMI_LOGI("%s: vdev_id=%d, channel_count=%d, schedule_size=%d, flag=%x",
+	WMI_LOGD("%s: vdev_id=%d, channel_count=%d, schedule_size=%d, flag=%x",
 		 __func__, config->vdev_id, config->channel_count,
 		 config->schedule_size, config->flags);
 
 	for (i = 0; i < config->channel_count; i++) {
-		WMI_LOGI("%s: channel info for channel %d"
+		WMI_LOGD("%s: channel info for channel %d"
 			" chan_freq=%d, bandwidth=%d, " QDF_MAC_ADDRESS_STR
 			" max_pwr=%d, min_pwr=%d, reg_pwr=%d, antenna_max=%d, "
 			"flags=%d", __func__, i, config->channels[i].chan_freq,
@@ -298,7 +297,7 @@ static QDF_STATUS fake_ocb_set_config_cmd_tlv(wmi_unified_t wmi_handle,
 	}
 
 	for (i = 0; i < config->schedule_size; i++) {
-		WMI_LOGI("%s: schedule info for channel %d: "
+		WMI_LOGD("%s: schedule info for channel %d: "
 			"chan_fre=%d, total_duration=%d, guard_intreval=%d",
 			__func__, i, config->schedule[i].chan_freq,
 			config->schedule[i].total_duration,
@@ -398,8 +397,7 @@ static QDF_STATUS fake_vdev_start_cmd_tlv(wmi_unified_t wmi_handle,
 			  struct vdev_start_params *req)
 {
 	tp_wma_handle wma = (tp_wma_handle) wmi_handle->scn_handle;
-	WMI_LOGP("%s : called", __func__);
-	WMI_LOGI("%s: vdev_id %d freq %d chanmode %d ch_info is_dfs %d "
+	WMI_LOGD("%s: vdev_id %d freq %d chanmode %d ch_info is_dfs %d "
 		"beacon interval %d dtim %d center_chan %d center_freq2 %d "
 		"max_txpow: 0x%x "
 		"Tx SS %d, Rx SS %d, ldpc_rx: %d, cac %d, regd %d, HE ops: %d",
