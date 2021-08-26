@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1652,9 +1652,6 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	if (!substream)
 		return -ENODEV;
 
-	if (!substream->runtime)
-		return 0;
-
 	soc_prtd = substream->private_data;
 	if (!soc_prtd) {
 		pr_err("%s: soc_prtd is NULL\n", __func__);
@@ -1669,7 +1666,7 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	}
 
 	mutex_lock(&pdata->lock);
-	prtd = substream->runtime->private_data;
+	prtd = substream->runtime ? substream->runtime->private_data : NULL;
 	if (prtd) {
 		prtd->set_channel_map = true;
 			for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
@@ -1698,8 +1695,6 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 
 	memset(ucontrol->value.integer.value, 0,
 		sizeof(ucontrol->value.integer.value));
-	if (!substream->runtime)
-		return 0; /* no channels set */
 
 	soc_prtd = substream->private_data;
 	if (!soc_prtd) {
@@ -1718,7 +1713,7 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 		sizeof(ucontrol->value.integer.value));
 
 	mutex_lock(&pdata->lock);
-	prtd = substream->runtime->private_data;
+	prtd = substream->runtime ? substream->runtime->private_data : NULL;
 
 	if (prtd && prtd->set_channel_map == true) {
 		for (i = 0; i < PCM_FORMAT_MAX_NUM_CHANNEL_V8; i++)
