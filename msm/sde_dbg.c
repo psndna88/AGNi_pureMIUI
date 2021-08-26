@@ -504,6 +504,9 @@ static void _sde_dump_reg(const char *dump_name, u32 reg_dump_flag,
 	pr_debug("%s: reg_dump_flag=%d in_log=%d in_mem=%d\n",
 		dump_name, reg_dump_flag, in_log, in_mem);
 
+	if (!dbg_base->reg_dump_addr)
+		in_mem = 0;
+
 	if (!in_log && !in_mem)
 		return;
 
@@ -711,12 +714,15 @@ static void _sde_dump_reg_by_ranges(struct sde_dbg_reg_base *dbg,
 				addr, range_node->offset.start,
 				range_node->offset.end);
 
-			scnprintf(dbg_base->reg_dump_addr, REG_BASE_NAME_LEN,
-					dbg->name);
-			dbg_base->reg_dump_addr += REG_BASE_NAME_LEN;
-			scnprintf(dbg_base->reg_dump_addr, RANGE_NAME_LEN,
-					range_node->range_name);
-			dbg_base->reg_dump_addr += RANGE_NAME_LEN;
+			if (dbg_base->reg_dump_addr) {
+				scnprintf(dbg_base->reg_dump_addr, REG_BASE_NAME_LEN,
+						dbg->name);
+				dbg_base->reg_dump_addr += REG_BASE_NAME_LEN;
+				scnprintf(dbg_base->reg_dump_addr, RANGE_NAME_LEN,
+						range_node->range_name);
+				dbg_base->reg_dump_addr += RANGE_NAME_LEN;
+			}
+
 			_sde_dump_reg(range_node->range_name, reg_dump_flag,
 					dbg->base, addr, len,
 					&range_node->reg_dump);
@@ -729,10 +735,13 @@ static void _sde_dump_reg_by_ranges(struct sde_dbg_reg_base *dbg,
 				dbg->max_offset);
 		addr = dbg->base;
 		len = dbg->max_offset;
-		scnprintf(dbg_base->reg_dump_addr, REG_BASE_NAME_LEN,
-				dbg->name);
-		dbg_base->reg_dump_addr += REG_BASE_NAME_LEN;
-		dbg_base->reg_dump_addr += RANGE_NAME_LEN;
+		if (dbg_base->reg_dump_addr) {
+			scnprintf(dbg_base->reg_dump_addr, REG_BASE_NAME_LEN,
+					dbg->name);
+			dbg_base->reg_dump_addr += REG_BASE_NAME_LEN;
+			dbg_base->reg_dump_addr += RANGE_NAME_LEN;
+		}
+
 		_sde_dump_reg(dbg->name, reg_dump_flag, dbg->base, addr, len,
 				&dbg->reg_dump);
 	}
@@ -1351,6 +1360,10 @@ static void _sde_dump_array(struct sde_dbg_reg_base *blk_arr[],
 	reg_dump_size =  _sde_dbg_get_reg_dump_size();
 	dbg_base->reg_dump_addr = devm_kzalloc(sde_dbg_base.dev,
 			reg_dump_size, GFP_KERNEL);
+
+	if (!dbg_base->reg_dump_addr)
+		pr_err("Failed to allocate memory for reg_dump_addr size:%d\n",
+				reg_dump_size);
 
 	if (dbg_base->reg_dump_addr &&
 			sde_mini_dump_add_region("reg_dump",
