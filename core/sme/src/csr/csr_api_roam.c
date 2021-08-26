@@ -14125,7 +14125,8 @@ void csr_update_pmk_cache_ft(struct mac_context *mac, uint32_t vdev_id,
 			 (scan_res->BssDescriptor.mdie[1] << 8));
 		sme_debug("Scan_res MDID:0x%x copied to PMKSA",
 			  pmksa.mdid.mobility_domain);
-		qdf_copy_macaddr(&pmksa.bssid, &pmk_cache->BSSID);
+		if (pmk_cache)
+			qdf_copy_macaddr(&pmksa.bssid, &pmk_cache->BSSID);
 
 		status = wlan_crypto_update_pmk_cache_ft(vdev, &pmksa);
 		if (QDF_IS_STATUS_ERROR(status))
