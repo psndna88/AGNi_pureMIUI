@@ -1377,6 +1377,7 @@ dp_rx_process(struct dp_intr *int_ctx, void *hal_ring, uint32_t quota)
 		qdf_assert(rx_desc);
 		rx_bufs_reaped[rx_desc->pool_id]++;
 
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf, false);
 		/* TODO */
 		/*
 		 * Need a separate API for unmapping based on

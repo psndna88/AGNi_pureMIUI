@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -875,6 +875,7 @@ enum restart_beaconing_on_ch_avoid_rule {
  * away from active LTE channels
  * @enable_srd_chan_in_master_mode: SRD channel support in master mode
  * @enable_11d_in_world_mode: enable 11d in world mode
+ * @enable_nan_on_indoor_channels: Enable nan on Indoor channels
  */
 struct reg_config_vars {
 	uint32_t enable_11d_support;
@@ -887,6 +888,7 @@ struct reg_config_vars {
 	enum restart_beaconing_on_ch_avoid_rule restart_beaconing;
 	uint8_t enable_srd_chan_in_master_mode;
 	bool enable_11d_in_world_mode;
+	bool enable_nan_on_indoor_channels;
 };
 
 /**

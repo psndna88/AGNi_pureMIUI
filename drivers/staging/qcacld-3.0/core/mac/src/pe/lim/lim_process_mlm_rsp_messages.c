@@ -1410,6 +1410,10 @@ error:
 
 	lim_send_sme_join_reassoc_rsp(mac_ctx, eWNI_SME_JOIN_RSP, result_code,
 		prot_status_code, session_entry, sme_session_id, sme_trans_id);
+
+	/* delete pe session if peer create failed */
+	if (result_code == eSIR_SME_PEER_CREATE_FAILED)
+		pe_delete_session(mac_ctx, session_entry);
 }
 
 /**

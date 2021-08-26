@@ -9736,6 +9736,29 @@ enum dot11p_mode {
 
 /*
  * <ini>
+ * enable_nan_indoor_channel - Enable Indoor channels for NAN
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to support to indoor channels for NAN interface
+ * Customer can config this item to enable/disable NAN in indoor channel
+ *
+ * Related: None
+ *
+ * Supported Feature: NAN
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN    "enable_nan_indoor_channel"
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_DEF (0)
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MIN (0)
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MAX (1)
+
+/*
+ * <ini>
  * num_tx_chains_2g - Config Param to change number of tx
  * chains per vdev for 2.4ghz frequency connections
  * @Min: 0x01249249
@@ -17713,19 +17736,18 @@ enum hdd_external_acs_policy {
 					 CFG_PKT_CAPTURE_MODE_DATA_PKT)
 #define CFG_PKT_CAPTURE_MODE_DEFAULT	0
 
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_ALL_AKM	BIT(0)
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE	BIT(1)
-
 /*
  * <ini>
  * disable_4way_hs_offload - Enable/Disable 4 way handshake offload to firmware
  * @Min: 0
- * @Max: 2
- * @Default: 0
+ * @Max: 0x2
+ * @Default: 0x2
  *
- * 0  4-way HS to be handled in firmware
- * 1  4-way HS to be handled in supplicant
- * 2  4-way HS to be handled in supplicant for WPA3-SAE Roam
+ * 0x0 - 4-way HS to be handled in firmware for the AKMs except for SAE and
+ * OWE roaming the 4way HS is handled in supplicant by default
+ * 0x1 - 4-way HS to be handled in supplicant
+ * 0x2 - 4-way HS to be handled in firmware for the AKMs including the SAE
+ * Roam except for OWE roaming the 4way HS is handled in supplicant
  *
  * Based on the requirement the Max value can be increased per AKM.
  *
@@ -17738,9 +17760,9 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 #define CFG_DISABLE_4WAY_HS_OFFLOAD         "disable_4way_hs_offload"
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN     0
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX     CFG_DISABLE_4WAY_HS_OFFLOAD_WPA3_SAE
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT 0
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN     (0x0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX     (0x2)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT (0x2)
 
 /*
  * <ini>
@@ -19010,6 +19032,8 @@ struct hdd_config {
 	uint32_t periodic_stats_timer_duration;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 	uint8_t dfs_chan_ageout_time;
+
+	bool enable_nan_indoor_channel;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

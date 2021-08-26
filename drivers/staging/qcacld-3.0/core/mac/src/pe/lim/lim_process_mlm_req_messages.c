@@ -735,7 +735,7 @@ lim_process_mlm_post_join_suspend_link(tpAniSirGlobal mac_ctx,
 
 	return;
 error:
-	mlm_join_cnf.resultCode = eSIR_SME_RESOURCES_UNAVAILABLE;
+	mlm_join_cnf.resultCode = eSIR_SME_PEER_CREATE_FAILED;
 	mlm_join_cnf.sessionId = session->peSessionId;
 	mlm_join_cnf.protStatusCode = eSIR_MAC_UNSPEC_FAILURE_STATUS;
 	lim_post_sme_message(mac_ctx, LIM_MLM_JOIN_CNF,
