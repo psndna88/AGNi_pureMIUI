@@ -21077,7 +21077,6 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				eCSR_ROAM_ABORT, eCSR_ROAM_RESULT_SUCCESS);
-		vdev_roam_params->roam_invoke_in_progress = false;
 		goto end;
 	case SIR_ROAM_SYNCH_NAPI_OFF:
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
