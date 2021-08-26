@@ -14,6 +14,11 @@
 	non-removable;
 	supports-cqe;
 
+	iommus = <&apps_smmu 0x80 0x0>;
+	qcom,iommu-dma = "fastmap";
+	qcom,iommu-dma-addr-pool = <0x40000000 0x8000000>;
+	qcom,iommu-geometry = <0x40000000 0x8000000>;
+
 	vdd-supply = <&vreg_sd_vdd>;
 	qcom,vdd-voltage-level = <2950000 2950000>;
 	qcom,vdd-current-level = <0 570000>;
