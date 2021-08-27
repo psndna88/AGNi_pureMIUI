@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -275,6 +275,8 @@ vm_fault_t msm_gem_fault(struct vm_fault *vmf)
 		return VM_FAULT_SIGBUS;
 	}
 
+	msm_obj->aspace = msm_gem_smmu_address_space_get(obj->dev,
+		MSM_SMMU_DOMAIN_UNSECURE);
 	/* make sure we have pages attached now */
 	pages = get_pages(obj);
 	if (IS_ERR(pages)) {
