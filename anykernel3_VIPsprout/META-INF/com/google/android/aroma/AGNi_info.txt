@@ -1,0 +1,23 @@
+<@center><b><#selectbg_g>AGNi Kernel</#></b>
+
+<b><#selectbg_g>Message from developer</#></b></@>
+
+<@fill><q>Throughly tested efficient multipurpose kernel thanks to my testers.
+Aim for good battery backup as well as good performance when required.
+Safe Fast charging functionality with precise temperature control.
+Optimised for gaming with high performance & less temperatures.
+Always updated with latest kernel commits.
+Strive for the best performing all in one kernel.
+
+<b>DO NOT INSTALL MAGICAL MAGISK MODULES LIKE FDE.AI, MAGNETAR, NFS etc. & those
+claiming to "BOOST RAM MANAGEMENT".
+Take this as a warning before I start blocking their running in harsh way.</b>
+
+<b>NOTE:
+1: You will not be able to change cpu max frequencies manually when NON-OC option selected in this installer.
+2: You do not need EAS or Pixel perf hal files(magisk modules) to be installed anymore.</b>
+
+												Thankyou. </q></@>
+
+
+<@center><b><#selectbg_g>HAVE FUN !</#></b></@>
