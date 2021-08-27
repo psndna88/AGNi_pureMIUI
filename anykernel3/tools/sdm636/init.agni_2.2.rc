@@ -28,22 +28,17 @@ on init
     write /proc/sys/vm/min_free_kbytes 54688
     write /proc/sys/vm/oom_kill_allocating_task 1
     # AGNi Wifi Tweaks
-	write /proc/sys/net/ipv4/tcp_ecn 0
+	write /proc/sys/net/ipv4/tcp_ecn 2
 	write /proc/sys/net/ipv4/tcp_notsent_lowat 16384
 	write /proc/sys/net/core/default_qdisc "fq_codel"
 	write /proc/sys/net/ipv4/tcp_congestion_control "veno"
-	write /proc/sys/net/ipv4/tcp_tw_reuse 0
+	write /proc/sys/net/ipv4/tcp_tw_reuse 1
 	write /proc/sys/net/ipv4/tcp_slow_start_after_idle 0
-	write /proc/sys/net/ipv4/tcp_mtu_probing 1
+	write /proc/sys/net/ipv4/tcp_mtu_probing 2
 	write /proc/sys/net/ipv4/tcp_sack 1
-	write /proc/sys/net/ipv4/tcp_timestamps 0
-	write /proc/sys/net/core/netdev_max_backlog 10000
-	write /proc/sys/net/core/rmem_max 16777216
-	write /proc/sys/net/core/wmem_max 8388608
-	write /proc/sys/net/ipv4/tcp_rmem "524288 1048576 5505024"
-	write /proc/sys/net/ipv4/tcp_wmem "262144 524288 4194304"
+	write /proc/sys/net/ipv4/tcp_timestamps 1
 	write /proc/sys/net/ipv4/tcp_no_metrics_save 1
-	write /proc/sys/net/ipv4/tcp_moderate_rcvbuf 0
+	write /proc/sys/net/ipv4/tcp_moderate_rcvbuf 1
 	write /proc/sys/net/ipv4/tcp_syncookies 1
 
 on boot
@@ -129,7 +124,6 @@ on property:sys.boot_completed=1
 	# New Optimisations
 	write /proc/sys/kernel/printk_devkmsg off
 	write /sys/kernel/debug/tracing/options/trace_printk 0
-#	write /proc/sys/net/ipv4/tcp_timestamps 0
 	write /proc/sys/kernel/sched_autogroup_enabled 0
 	write /proc/sys/kernel/randomize_va_space 0
 	write /proc/sys/kernel/perf_cpu_time_max_percent 1
@@ -152,4 +146,3 @@ on property:sys.boot_completed=1
 	write /sys/module/rcutree/parameters/rcu_idle_lazy_gp_delay 1800
 	write /proc/sys/kernel/sched_child_runs_first 1
 	write /proc/sys/kernel/timer_migration 0
-
