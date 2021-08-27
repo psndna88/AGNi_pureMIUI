@@ -1965,6 +1965,12 @@ int cam_tfe_cshiphy_callback(
 		&ctx->res_list_tfe_csid, list) {
 			rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
 				phy_clock_rate, &updated_csid_clk);
+			if (rc) {
+				CAM_ERR(CAM_ISP,
+					"csid clock update failed: %d, csid:%lld tfe:%lld",
+					rc, csid_clock_rate, tfe_clock_rate);
+				goto end;
+			}
 		}
 
 		if (updated_csid_clk > tfe_clock_rate) {
@@ -1972,9 +1978,15 @@ int cam_tfe_cshiphy_callback(
 			&ctx->res_list_tfe_in, list) {
 				rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
 					&updated_csid_clk, &updated_tfe_clk);
+				if (rc) {
+					CAM_ERR(CAM_ISP,
+						"tfe clock update failed: %d, csid:%lld tfe:%lld",
+						rc, updated_csid_clk, tfe_clock_rate);
+					goto end;
+				}
 			}
 		}
-		goto end;
+		goto skip_tfe_update;
 	}
 
 	if (csid_clock_rate > tfe_clock_rate) {
@@ -1982,9 +1994,16 @@ int cam_tfe_cshiphy_callback(
 		&ctx->res_list_tfe_in, list) {
 			rc = cam_tfe_hw_mgr_update_clock_rate(hw_mgr_res,
 				&csid_clock_rate, &updated_tfe_clk);
+			if (rc) {
+				CAM_ERR(CAM_ISP,
+					"tfe clock update failed: %d, csid:%lld tfe:%lld",
+					rc, csid_clock_rate, tfe_clock_rate);
+				goto end;
+			}
 		}
 	}
 
+skip_tfe_update:
 	if (!updated_csid_clk)
 		updated_csid_clk = csid_clock_rate;
 
