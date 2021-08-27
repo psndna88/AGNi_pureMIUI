@@ -1,7 +1,7 @@
 &mdss_mdp {
-	dsi_rm69090_amoled_cmd: qcom,mdss_dsi_rm69090_amoled_178_cmd {
+	dsi_rm6d030_amoled_cmd: qcom,mdss_dsi_rm6d030_amoled_141_cmd {
 		qcom,mdss-dsi-panel-name =
-			"RM69090 1.78 amoled cmd mode";
+			"RM6D030 1.41 amoled cmd mode";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-physical-type = "oled";
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -36,8 +36,8 @@
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-panel-framerate = <60>;
-				qcom,mdss-dsi-panel-width = <368>;
-				qcom,mdss-dsi-panel-height = <448>;
+				qcom,mdss-dsi-panel-width = <320>;
+				qcom,mdss-dsi-panel-height = <360>;
 				qcom,mdss-dsi-h-front-porch = <40>;
 				qcom,mdss-dsi-h-back-porch = <20>;
 				qcom,mdss-dsi-h-pulse-width = <4>;
@@ -51,17 +51,17 @@
 				qcom,mdss-dsi-v-bottom-border = <0>;
 
 				qcom,mdss-dsi-on-command = [
-					15 01 00 00 00 00 02 FE 01
-					15 01 00 00 00 00 02 6A 03
 					15 01 00 00 00 00 02 FE 00
+					15 01 00 00 00 00 02 C4 80
+					39 01 00 00 00 00 05 2A 00 06 01 61
+					39 01 00 00 00 00 05 2B 00 00 01 B9
+					39 01 00 00 00 00 05 30 00 01 01 B8
+					39 01 00 00 00 00 05 31 00 07 01 60
 					15 01 00 00 00 00 02 35 00
 					15 01 00 00 00 00 02 51 FF
-					39 01 00 00 00 00 05 2A 00 10 01 7F
-					39 01 00 00 00 00 05 2B 00 00 01 BF
-					05 01 00 00 78 00 02 11 00
-					05 01 00 00 40 00 02 29 00
+					05 01 00 00 60 00 02 11 00
+					05 01 00 00 00 00 02 29 00
 				];
-
 				qcom,mdss-dsi-off-command = [
 					05 01 00 00 14 00 02 28 00
 					05 01 00 00 78 00 02 10 00
@@ -69,15 +69,15 @@
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-lp2-command = [
-					15 01 00 00 46 00 02 FE 00
+					15 01 00 00 00 00 02 FE 00
 					05 01 00 00 00 00 01 39
 				];
 				qcom,mdss-dsi-lp2-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-nolp-command = [
 					05 01 00 00 1f 00 01 38 /* Idle-Mode Off  */
 					15 01 00 00 00 00 02 FE 00
-					29 01 00 00 00 00 05 2A 00 10 01 7F
-					29 01 00 00 00 00 05 2B 00 00 01 BF
+					39 01 00 00 00 00 05 2A 00 06 01 61
+					39 01 00 00 00 00 05 2B 00 00 01 B9
 					05 01 00 00 00 00 02 12 00
 				];
 			};
