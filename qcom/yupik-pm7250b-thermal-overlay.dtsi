@@ -8,6 +8,11 @@
 	#cooling-cells = <2>;
 };
 
+&pm7250b_bcl {
+	nvmem-cells = <&adc_scaling>;
+	nvmem-cell-names = "adc_scaling";
+};
+
 &thermal_zones {
 	socd {
 		cooling-maps {
