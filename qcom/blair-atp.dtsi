@@ -737,6 +737,7 @@
 };
 
 &bluetooth {
+	qcom,bt-vdd-smps-supply = <>;  /* SMPS */
 	qcom,bt-vdd-io-supply = <&L11A>;  /* IO */
 	qcom,bt-vdd-core-supply = <&L2E>; /* RFA */
 	qcom,bt-vdd-pa-supply = <&L10E>; /* CH0 */
@@ -790,3 +791,9 @@
 	vdd_lpi_cx-supply = <&L1A_LEVEL>;
 	vdd_lpi_mx-supply = <&L17A_LEVEL>;
 };
+
+&refgen {
+	compatible = "qcom,refgen-kona-regulator";
+	reg = <0x162F000 0x84>;
+};
+

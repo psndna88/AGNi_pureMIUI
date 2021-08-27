@@ -14,6 +14,7 @@
 	reg = <0x08804000 0x1000>, <0x08805000 0x1000>;
 	reg-names = "hc_mem", "cqhci_mem";
 
+	qcom,restore-after-cx-collapse;
 	mmc-ddr-1_8v;
 	mmc-hs200-1_8v;
 
