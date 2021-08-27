@@ -1055,6 +1055,8 @@ patternProperties:
     description: ZTE Corp.
   "^zyxel,.*":
     description: ZyXEL Communications Corp.
+  "^awinic,.*":
+    description: Shanghai Awinic Electronic Technology Co., LTD.
 
   # Normal property name match without a comma
   # These should catch all node/property names without a prefix
