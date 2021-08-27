@@ -71,6 +71,10 @@ qca_wlan_vendor_twt_add_dialog_policy[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1] = 
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX_WAKE_INTVL] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAC_ADDR] = VENDOR_NLA_POLICY_MAC_ADDR,
+	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_ID] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_RECOMMENDATION] = {
+							.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_PERSISTENCE] = {.type = NLA_U8 },
 };
 
 static const struct nla_policy
@@ -175,6 +179,26 @@ int hdd_twt_get_add_dialog_values(struct nlattr **tb,
 
 	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST;
 	params->flag_bcast = nla_get_flag(tb[cmd_id]);
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_ID;
+	if (tb[cmd_id]) {
+		params->dialog_id = nla_get_u8(tb[cmd_id]);
+		hdd_debug("TWT_SETUP_BCAST_ID %d", params->dialog_id);
+	}
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_RECOMMENDATION;
+	if (tb[cmd_id]) {
+		params->b_twt_recommendation = nla_get_u8(tb[cmd_id]);
+		hdd_debug("TWT_SETUP_BCAST_RECOMM %d",
+			  params->b_twt_recommendation);
+	}
+
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_PERSISTENCE;
+	if (tb[cmd_id]) {
+		params->b_twt_persistence = nla_get_u8(tb[cmd_id]);
+		hdd_debug("TWT_SETUP_BCAST_PERSIS %d",
+			  params->b_twt_persistence);
+	}
 
 	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_REQ_TYPE;
 	if (!tb[cmd_id]) {
@@ -1690,7 +1714,11 @@ int hdd_send_twt_add_dialog_cmd(struct hdd_context *hdd_ctx,
 	ack_priv = osif_request_priv(request);
 	if (ack_priv->status) {
 		hdd_err("Received TWT ack error. Reset twt command");
-		ucfg_mlme_reset_twt_init_context(
+		ucfg_mlme_reset_twt_active_cmd(
+				hdd_ctx->psoc,
+				(struct qdf_mac_addr *)twt_params->peer_macaddr,
+				twt_params->dialog_id);
+		 ucfg_mlme_init_twt_context(
 				hdd_ctx->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
 				twt_params->dialog_id);
@@ -2078,7 +2106,7 @@ int hdd_send_twt_del_dialog_cmd(struct hdd_context *hdd_ctx,
 	ack_priv = osif_request_priv(request);
 	if (ack_priv->status) {
 		hdd_err("Received TWT ack error. Reset twt command");
-		ucfg_mlme_reset_twt_init_context(
+		ucfg_mlme_reset_twt_active_cmd(
 				hdd_ctx->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
 				twt_params->dialog_id);
@@ -2271,6 +2299,12 @@ static int hdd_sta_twt_terminate_session(struct hdd_adapter *adapter,
 	} else {
 		params.dialog_id = 0;
 		hdd_debug("TWT_TERMINATE_FLOW_ID not specified. set to zero");
+	}
+
+	id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_BCAST_ID;
+	if (tb[id]) {
+		params.dialog_id = nla_get_u8(tb[id]);
+		hdd_debug("TWT_SETUP_BCAST_ID %d", params.dialog_id);
 	}
 
 	status = hdd_twt_check_all_twt_support(adapter->hdd_ctx->psoc,
@@ -2617,7 +2651,7 @@ int hdd_send_twt_pause_dialog_cmd(struct hdd_context *hdd_ctx,
 	ack_priv = osif_request_priv(request);
 	if (ack_priv->status) {
 		hdd_err("Received TWT ack error. Reset twt command");
-		ucfg_mlme_reset_twt_init_context(
+		ucfg_mlme_reset_twt_active_cmd(
 				hdd_ctx->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
 				twt_params->dialog_id);
@@ -2686,15 +2720,15 @@ static int hdd_twt_pause_session(struct hdd_adapter *adapter,
 	params.vdev_id = adapter->vdev_id;
 
 	ret = wlan_cfg80211_nla_parse_nested(tb,
-				      QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_MAX,
-				      twt_param_attr,
-				      qca_wlan_vendor_twt_nudge_dialog_policy);
+					QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX,
+					twt_param_attr,
+					qca_wlan_vendor_twt_add_dialog_policy);
 	if (ret) {
 		hdd_debug("command parsing failed");
 		return ret;
 	}
 
-	id = QCA_WLAN_VENDOR_ATTR_TWT_NUDGE_FLOW_ID;
+	id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_ID;
 	if (tb[id]) {
 		params.dialog_id = nla_get_u8(tb[id]);
 	} else {
@@ -2776,7 +2810,7 @@ int hdd_send_twt_nudge_dialog_cmd(struct hdd_context *hdd_ctx,
 	ack_priv = osif_request_priv(request);
 	if (ack_priv->status) {
 		hdd_err("Received TWT ack error. Reset twt command");
-		ucfg_mlme_reset_twt_init_context(
+		ucfg_mlme_reset_twt_active_cmd(
 				hdd_ctx->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
 				twt_params->dialog_id);
@@ -3078,7 +3112,7 @@ hdd_send_twt_resume_dialog_cmd(struct hdd_context *hdd_ctx,
 	ack_priv = osif_request_priv(request);
 	if (ack_priv->status) {
 		hdd_err("Received TWT ack error. Reset twt command");
-		ucfg_mlme_reset_twt_init_context(
+		ucfg_mlme_reset_twt_active_cmd(
 				hdd_ctx->psoc,
 				(struct qdf_mac_addr *)twt_params->peer_macaddr,
 				twt_params->dialog_id);

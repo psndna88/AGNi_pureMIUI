@@ -4816,6 +4816,36 @@ bool wlan_mlme_is_ba_2k_jump_iot_ap(struct wlan_objmgr_vdev *vdev)
 }
 
 QDF_STATUS
+wlan_mlme_set_bad_htc_he_iot_ap(struct wlan_objmgr_vdev *vdev, bool found)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mlme_priv->bad_htc_he_iot_ap = found;
+	mlme_legacy_debug("set bad htc he iot ap: %d", found);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool wlan_mlme_is_bad_htc_he_iot_ap(struct wlan_objmgr_vdev *vdev)
+{
+	struct mlme_legacy_priv *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		mlme_legacy_err("vdev legacy private object is NULL");
+		return false;
+	}
+
+	return mlme_priv->bad_htc_he_iot_ap;
+}
+
+QDF_STATUS
 wlan_mlme_set_last_delba_sent_time(struct wlan_objmgr_vdev *vdev,
 				   qdf_time_t delba_sent_time)
 {

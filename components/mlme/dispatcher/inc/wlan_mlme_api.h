@@ -3138,6 +3138,25 @@ bool
 wlan_mlme_is_ba_2k_jump_iot_ap(struct wlan_objmgr_vdev *vdev);
 
 /**
+ * wlan_mlme_set_bad_htc_he_iot_ap() - Set a flag if bad htc he IOT AP is found
+ * @vdev: vdev pointer
+ * @found: Carries the value true if bad htc he AP is found
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_set_bad_htc_he_iot_ap(struct wlan_objmgr_vdev *vdev, bool found);
+
+/**
+ * wlan_mlme_is_bad_htc_he_iot_ap() - Check if bad htc he IOT AP is found
+ * @vdev: vdev pointer
+ *
+ * Return: true if bad htc he IOT AP is found
+ */
+bool
+wlan_mlme_is_bad_htc_he_iot_ap(struct wlan_objmgr_vdev *vdev);
+
+/**
  * wlan_mlme_set_last_delba_sent_time() - Cache the last delba sent ts
  * @vdev: vdev pointer
  * @delba_sent_time: Last delba sent timestamp

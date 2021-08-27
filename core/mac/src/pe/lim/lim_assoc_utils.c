@@ -2090,6 +2090,14 @@ static void lim_add_tdls_sta_he_config(tpAddStaParams add_sta_params,
 		     sizeof(add_sta_params->he_config));
 }
 
+static void lim_add_tdls_sta_6ghz_he_cap(struct mac_context *mac_ctx,
+					 tpAddStaParams add_sta_params,
+					 tpDphHashNode sta_ds)
+{
+	lim_update_he_6ghz_band_caps(mac_ctx, &sta_ds->he_6g_band_cap,
+				     add_sta_params);
+}
+
 #else
 static void lim_update_he_stbc_capable(tpAddStaParams add_sta_params)
 {}
@@ -2100,6 +2108,12 @@ static void lim_update_he_mcs_12_13(tpAddStaParams add_sta_params,
 
 static void lim_add_tdls_sta_he_config(tpAddStaParams add_sta_params,
 				       tpDphHashNode sta_ds)
+{
+}
+
+static void lim_add_tdls_sta_6ghz_he_cap(struct mac_context *mac_ctx,
+					 tpAddStaParams add_sta_params,
+					 tpDphHashNode sta_ds)
 {
 }
 #endif
@@ -2381,6 +2395,10 @@ lim_add_sta(struct mac_context *mac_ctx,
 			  add_sta_params->ht_caps,
 			  add_sta_params->vht_caps);
 		lim_add_tdls_sta_he_config(add_sta_params, sta_ds);
+
+		if (lim_is_he_6ghz_band(session_entry))
+			lim_add_tdls_sta_6ghz_he_cap(mac_ctx, add_sta_params,
+						     sta_ds);
 	}
 #endif
 
