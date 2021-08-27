@@ -106,12 +106,12 @@ all:
 	$(shell cd $(KERNEL_BINARY_DIR) && $(KERNEL_SRC)/scripts/headers_install.sh $(AUDIO_ROOT)/include/uapi/audio/sound/msmcal-hwdep.h $(UAPI_OUT)/sound/msmcal-hwdep.h)
 	$(shell cd $(KERNEL_BINARY_DIR) && $(KERNEL_SRC)/scripts/headers_install.sh $(AUDIO_ROOT)/include/uapi/audio/sound/voice_params.h $(UAPI_OUT)/sound/voice_params.h)
 	$(shell cd $(KERNEL_BINARY_DIR) && $(KERNEL_SRC)/scripts/headers_install.sh $(AUDIO_ROOT)/include/uapi/audio/sound/wcd-dsp-glink.h $(UAPI_OUT)/sound/wcd-dsp-glink.h)
-	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/sound)
-	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/linux/mfd)
-	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/linux/mfd/wcd9xxx)
-	$(shell cp $(UAPI_OUT)/linux/*.h $(KERNEL_BINARY_DIR)/usr/include/linux/)
-	$(shell cp $(UAPI_OUT)/linux/mfd/wcd9xxx/*.h $(KERNEL_BINARY_DIR)/usr/include/linux/mfd/wcd9xxx/)
-	$(shell cp $(UAPI_OUT)/sound/*.h $(KERNEL_BINARY_DIR)/usr/include/sound/)
+	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/audio/sound)
+	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd)
+	$(shell mkdir -p $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd/wcd9xxx)
+	$(shell cp $(UAPI_OUT)/linux/*.h $(KERNEL_BINARY_DIR)/usr/include/audio/linux/)
+	$(shell cp $(UAPI_OUT)/linux/mfd/wcd9xxx/*.h $(KERNEL_BINARY_DIR)/usr/include/audio/linux/mfd/wcd9xxx/)
+	$(shell cp $(UAPI_OUT)/sound/*.h $(KERNEL_BINARY_DIR)/usr/include/audio/sound/)
 	$(MAKE) -C $(KERNEL_SRC) M=$(shell pwd) modules $(KBUILD_OPTIONS)
 
 modules_install:
