@@ -1164,6 +1164,8 @@ static int msm_geni_ir_sysfs_create(struct platform_device *pdev)
 		pr_err("%s: failed %d", __func__, rc);
 		return rc;
 	}
+
+	return 0;
 }
 
 static void msm_geni_ir_sysfs_remove(struct platform_device *pdev)
