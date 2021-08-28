@@ -81,7 +81,6 @@ struct ini_data {
 	"RawDataTest_Min", "RawDataTest_Max", \
 	"RawDataTest_VKey_Check", "RawDataTest_Min_VKey", "RawDataTest_Max_VKey", \
 	"LCD_NoiseTest_Frame", "LCD_NoiseTest_Coefficient", "LCD_NoiseTest_Coefficient_key", \
-	"OpenTest_DifferMin", \
 }
 
 

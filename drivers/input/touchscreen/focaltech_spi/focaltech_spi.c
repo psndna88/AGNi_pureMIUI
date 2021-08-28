@@ -101,35 +101,6 @@ int fts_spi_transfer(u8 *tx_buf, u8 *rx_buf, u32 len)
 	return ret;
 }
 
-static void fts_spi_buf_show(u8 *data, int datalen)
-{
-	int i = 0;
-	int count = 0;
-	int size = 0;
-	char *tmpbuf = NULL;
-
-	if (!data || (datalen <= 0)) {
-		FTS_ERROR("data/datalen is invalid");
-		return;
-	}
-
-	size = (datalen > 256) ? 256 : datalen;
-	tmpbuf = kzalloc(1024, GFP_KERNEL);
-	if (!tmpbuf) {
-		FTS_ERROR("tmpbuf zalloc fail");
-		return;
-	}
-
-	for (i = 0; i < size; i++)
-		count += snprintf(tmpbuf + count, 1024 - count, "%02X ", data[i]);
-
-	FTS_DEBUG("%s", tmpbuf);
-	if (tmpbuf) {
-		kfree(tmpbuf);
-		tmpbuf = NULL;
-	}
-}
-
 static void crckermit(u8 *data, u32 len, u16 *crc_out)
 {
 	u32 i = 0;
@@ -157,7 +128,6 @@ int rdata_check(u8 *rdata, u32 rlen)
 	crckermit(rdata, rlen - 2, &crc_calc);
 	crc_read = (u16)(rdata[rlen - 1] << 8) + rdata[rlen - 2];
 	if (crc_calc != crc_read) {
-		fts_spi_buf_show(rdata, rlen);
 		return -EIO;
 	}
 
@@ -354,73 +324,6 @@ err_read:
 int fts_read_reg(u8 addr, u8 *value)
 {
 	return fts_read(&addr, 1, value, 1);
-}
-
-
-int fts_spi_transfer_direct(u8 *writebuf, u32 writelen, u8 *readbuf, u32 readlen)
-{
-	int ret = 0;
-	struct fts_ts_data *ts_data = fts_data;
-	u8 *txbuf = NULL;
-	u8 *rxbuf = NULL;
-	bool read_cmd = (readbuf && readlen) ? 1 : 0;
-	u32 txlen = (read_cmd) ? (writelen + readlen) : writelen;
-
-	if (!writebuf || !writelen) {
-		FTS_ERROR("writebuf/len is invalid");
-		return -EINVAL;
-	}
-
-	mutex_lock(&ts_data->bus_lock);
-	if (txlen > SPI_BUF_LENGTH) {
-		txbuf = kzalloc(txlen, GFP_KERNEL);
-		if (NULL == txbuf) {
-			FTS_ERROR("txbuf malloc fail");
-			ret = -ENOMEM;
-			goto err_spi_dir;
-		}
-
-		rxbuf = kzalloc(txlen, GFP_KERNEL);
-		if (NULL == rxbuf) {
-			FTS_ERROR("rxbuf malloc fail");
-			ret = -ENOMEM;
-			goto err_spi_dir;
-		}
-	} else {
-		txbuf = ts_data->bus_tx_buf;
-		rxbuf = ts_data->bus_rx_buf;
-		memset(txbuf, 0x0, SPI_BUF_LENGTH);
-		memset(rxbuf, 0x0, SPI_BUF_LENGTH);
-	}
-
-	memcpy(txbuf, writebuf, writelen);
-	ret = fts_spi_transfer(txbuf, rxbuf, txlen);
-	if (ret < 0) {
-		FTS_ERROR("data read(addr:%x) fail,status:%x,ret:%d", txbuf[0], rxbuf[3], ret);
-		goto err_spi_dir;
-	}
-
-	if (read_cmd) {
-		memcpy(readbuf, rxbuf, txlen);
-	}
-
-	ret = 0;
-err_spi_dir:
-	if (txlen > SPI_BUF_LENGTH) {
-		if (txbuf) {
-			kfree(txbuf);
-			txbuf = NULL;
-		}
-
-		if (rxbuf) {
-			kfree(rxbuf);
-			rxbuf = NULL;
-		}
-	}
-
-	udelay(CS_HIGH_DELAY);
-	mutex_unlock(&ts_data->bus_lock);
-	return ret;
 }
 
 int fts_bus_init(struct fts_ts_data *ts_data)

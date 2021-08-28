@@ -805,21 +805,10 @@ static int ft5652_scap_cb_test(struct fts_test *tdata, bool *test_result)
 	}
 
 restore_reg:
-	ret = fts_test_write_reg(FACTORY_REG_WC_SEL, wc_sel);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("restore water_channel_sel fail,ret=%d\n", ret);
-	}
-
 	ret = fts_test_write_reg(FACTORY_REG_MC_SC_MODE, sc_mode);/* set the origin value */
 	if (ret) {
-		FTS_TEST_SAVE_ERR("restore sc mode fail,ret=%d\n", ret);
+		FTS_TEST_SAVE_ERR("write sc mode fail,ret=%d\n", ret);
 	}
-
-	ret = fts_test_write_reg(FACTORY_REG_HC_SEL, hc_sel);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("restore high_channel_sel fail,ret=%d\n", ret);
-	}
-
 test_err:
 	if (tmp_result && tmp2_result && tmp3_result && tmp4_result) {
 		*test_result = true;
@@ -854,7 +843,6 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 	u8 wc_sel = 0;
 	u8 hc_sel = 0;
 	u8 hov_high = 0;
-	u8 data_type = 0;
 	struct mc_sc_threshold *thr = &tdata->ic.mc_sc.thr;
 
 	FTS_TEST_FUNC_ENTER();
@@ -905,39 +893,21 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 		goto test_err;
 	}
 
-	ret = fts_test_read_reg(FACTORY_REG_DATA_TYPE, &data_type);
-	if (ret) {
-		FTS_TEST_SAVE_ERR("read 0x5B fail,ret=%d\n", ret);
-		goto test_err;
-	}
-
-	ret = fts_test_write_reg(FACTORY_REG_DATA_TYPE, 0x01);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("set raw type fail,ret=%d\n", ret);
-		goto restore_reg;
-	}
-
-    /* scan rawdata */
+	/* scan rawdata */
 	ret = start_scan();
 	if (ret < 0) {
 		FTS_TEST_SAVE_ERR("scan scap rawdata fail\n");
-		goto restore_reg;
+		goto test_err;
 	}
 
-	ret = start_scan();
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("scan scap rawdata(2) fail\n");
-		goto restore_reg;
-	}
-
-    /* water proof on check */
+	/* water proof on check */
 	fw_wp_check = get_fw_wp(wc_sel, WATER_PROOF_ON);
 	if (thr->basic.scap_rawdata_wp_on_check && fw_wp_check) {
 		srawdata_tmp = scap_rawdata + srawdata_cnt;
 		ret = get_rawdata_mc_sc(WATER_PROOF_ON, srawdata_tmp);
 		if (ret < 0) {
 			FTS_TEST_SAVE_ERR("get scap(WP_ON) rawdata fail\n");
-			goto restore_reg;
+			goto test_err;
 		}
 
 		FTS_TEST_SAVE_INFO("scap_rawdata in waterproof on mode:\n");
@@ -955,14 +925,14 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 		tmp_result = true;
 	}
 
-    /* water proof off check */
+	/* water proof off check */
 	fw_wp_check = get_fw_wp(wc_sel, WATER_PROOF_OFF);
 	if (thr->basic.scap_rawdata_wp_off_check && fw_wp_check) {
 		srawdata_tmp = scap_rawdata + srawdata_cnt;
 		ret = get_rawdata_mc_sc(WATER_PROOF_OFF, srawdata_tmp);
 		if (ret < 0) {
 			FTS_TEST_SAVE_ERR("get scap(WP_OFF) rawdata fail\n");
-			goto restore_reg;
+			goto test_err;
 		}
 
 		FTS_TEST_SAVE_INFO("scap_rawdata in waterproof off mode:\n");
@@ -980,14 +950,14 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 		tmp2_result = true;
 	}
 
-    /*high mode*/
+	/*high mode*/
 	hov_high = (hc_sel & 0x03);
 	if (thr->basic.scap_rawdata_hi_check && hov_high) {
 		srawdata_tmp = scap_rawdata + srawdata_cnt;
 		ret = get_rawdata_mc_sc(HIGH_SENSITIVITY, srawdata_tmp);
 		if (ret < 0) {
 			FTS_TEST_SAVE_ERR("get scap(HS) rawdata fail\n");
-			goto restore_reg;
+			goto test_err;
 		}
 
 		FTS_TEST_SAVE_INFO("scap_rawdata in hs mode:\n");
@@ -1012,7 +982,7 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 		ret = get_rawdata_mc_sc(HOV, srawdata_tmp);
 		if (ret < 0) {
 			FTS_TEST_SAVE_ERR("get scap(HOV) rawdata fail\n");
-			goto restore_reg;
+			goto test_err;
 		}
 
 		FTS_TEST_SAVE_INFO("scap_rawdata in hov mode:\n");
@@ -1034,22 +1004,6 @@ static int ft5652_scap_rawdata_test(struct fts_test *tdata, bool *test_result)
 		srawdata_cnt += tdata->sc_node.node_num;
 	} else {
 		tmp4_result = true;
-	}
-
-restore_reg:
-	ret = fts_test_write_reg(FACTORY_REG_WC_SEL, wc_sel);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("restore water_channel_sel fail,ret=%d\n", ret);
-	}
-
-	ret = fts_test_write_reg(FACTORY_REG_HC_SEL, hc_sel);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("restore high_channel_sel fail,ret=%d\n", ret);
-	}
-
-	ret = fts_test_write_reg(FACTORY_REG_DATA_TYPE, data_type);
-	if (ret < 0) {
-		FTS_TEST_SAVE_ERR("set raw type fail,ret=%d\n", ret);
 	}
 
 test_err:
@@ -1491,10 +1445,9 @@ static int ft3658_open_test(void)
 	int *rawdata = NULL;
 	int i = 0;
 	struct fts_test *tdata = fts_ftest;
-	int open_min = tdata->ts_data->pdata->open_min;
 
 	FTS_TEST_FUNC_ENTER();
-	FTS_TEST_INFO("start open test, open_min:%d", open_min);
+	FTS_TEST_INFO("start open test, open_min:%d", tdata->open_min);
 	rawdata = (int *)vmalloc(PAGE_SIZE);
 	if (!rawdata)
 		return -ENOMEM;
@@ -1509,10 +1462,10 @@ static int ft3658_open_test(void)
 	}
 
 	for (i = 0; i < tdata->node.tx_num * tdata->node.rx_num; i++) {
-		if (rawdata[i] < open_min) {
+		if (rawdata[i] < tdata->open_min) {
 			FTS_TEST_ERROR(
 				"rawdata[%d]:%d is lower than open_min(%d), open test fail!",
-							i, rawdata[i], open_min);
+							i, rawdata[i], tdata->open_min);
 			ret = SELFTEST_FAIL;
 			goto out;
 		}

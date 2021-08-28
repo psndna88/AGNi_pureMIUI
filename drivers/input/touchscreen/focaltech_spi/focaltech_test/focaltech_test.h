@@ -105,7 +105,6 @@ Test Status
 #define FACTORY_REG_LCD_NOISE_TTHR              0x14
 #define FACTORY_REG_OPEN_START                  0x15
 #define FACTORY_REG_OPEN_STATE                  0x16
-#define FACTORY_REG_OPEN_ADDR                   0xCF
 #define FACTORY_REG_OPEN_IDLE                   0x03
 #define FACTORY_REG_OPEN_BUSY                   0x01
 #define FACTORY_REG_CB_ADDR_H                   0x18
@@ -238,14 +237,12 @@ struct incell_threshold_b {
 	int lcdnoise_frame;
 	int lcdnoise_coefficient;
 	int lcdnoise_coefficient_vkey;
-	int open_diff_min;
 	int open_nmos;
 	int keyshort_k1;
 	int keyshort_cb_max;
 	int rawdata2_min;
 	int rawdata2_max;
 	int mux_open_cb_min;
-	int open_delta_V;
 };
 
 struct incell_threshold {
@@ -462,11 +459,14 @@ struct fts_test {
 	struct fts_test_data testdata;
 	char *testresult;
 	int testresult_len;
+	char *csv_data_buffer;
+	int csv_data_len;
 	int result;
 #if defined(TEST_SAVE_FAIL_RESULT) && TEST_SAVE_FAIL_RESULT
 	struct timeval tv;
 #endif
 	struct ini_data ini;
+	int open_min;
 };
 
 struct test_funcs {

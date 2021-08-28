@@ -1177,52 +1177,6 @@ void show_data_mc_sc(int *data)
 }
 /* mc_sc end*/
 
-#if CSV_SUPPORT || TXT_SUPPORT
-static int fts_test_save_test_data(char *file_name, char *data_buf, int len)
-{
-	struct file *pfile = NULL;
-	char filepath[FILE_NAME_LENGTH] = { 0 };
-	loff_t pos;
-	mm_segment_t old_fs;
-
-	FTS_TEST_FUNC_ENTER();
-	memset(filepath, 0, sizeof(filepath));
-	snprintf(filepath, FILE_NAME_LENGTH, "%s%s", FTS_INI_FILE_PATH, file_name);
-	FTS_INFO("save test data to %s", filepath);
-	if (NULL == pfile) {
-		pfile = filp_open(filepath, O_TRUNC | O_CREAT | O_RDWR, 0);
-	}
-	if (IS_ERR(pfile)) {
-		FTS_TEST_ERROR("error occured while opening file %s.",  filepath);
-		return -EIO;
-	}
-
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	pos = 0;
-	vfs_write(pfile, data_buf, len, &pos);
-	filp_close(pfile, NULL);
-	set_fs(old_fs);
-
-	FTS_TEST_FUNC_EXIT();
-	return 0;
-}
-
-#if defined(TEST_SAVE_FAIL_RESULT) && TEST_SAVE_FAIL_RESULT
-void fts_test_save_fail_result(
-		struct fts_test *tdata, char *prefix, char *suffix, char *buf, int len)
-{
-	char file_name[128];
-
-	if (false == tdata->result) {
-		snprintf(file_name, 128, "%s_%ld_%ld%s", prefix,
-				 (long)tdata->tv.tv_sec, (long)tdata->tv.tv_usec, suffix);
-		fts_test_save_test_data(file_name, buf, len);
-	}
-}
-#endif
-#endif
-
 static int fts_test_malloc_free_data_txt(struct fts_test *tdata, bool allocate)
 {
 #if TXT_SUPPORT
@@ -1287,7 +1241,7 @@ static int fts_test_get_item_count_scap_csv(int index)
 }
 #endif
 
-static void fts_test_save_data_csv(struct fts_test *tdata)
+static void fts_test_merge_data(struct fts_test *tdata)
 {
 #if CSV_SUPPORT
 	int i = 0;
@@ -1308,12 +1262,13 @@ static void fts_test_save_data_csv(struct fts_test *tdata)
 	struct fts_test_data *td = &tdata->testdata;
 	struct item_info *info = NULL;
 
-	FTS_TEST_INFO("save data in csv format");
 	csv_buffer = vmalloc(CSV_BUFFER_LEN);
 	if (!csv_buffer) {
 		FTS_TEST_ERROR("csv_buffer malloc fail\n");
 		return ;
 	}
+
+	tdata->csv_data_buffer = csv_buffer;
 
 	line2_buffer = vmalloc(CSV_LINE2_BUFFER_LEN);
 	if (!line2_buffer) {
@@ -1435,44 +1390,14 @@ static void fts_test_save_data_csv(struct fts_test *tdata)
 			}
 		}
 	}
-	FTS_TEST_INFO("csv length:%d", csv_length);
-	fts_test_save_test_data(FTS_CSV_FILE_NAME, csv_buffer, csv_length);
-
-#if defined(TEST_SAVE_FAIL_RESULT) && TEST_SAVE_FAIL_RESULT
-	fts_test_save_fail_result(tdata, "testdata_fail", ".csv",
-							  csv_buffer, csv_length);
-#endif
+	tdata->csv_data_len = csv_length;
+	/* fts_test_save_test_data(FTS_CSV_FILE_NAME, csv_buffer, csv_length); */
 
 csv_save_err:
 	if (line2_buffer) {
 		vfree(line2_buffer);
 		line2_buffer = NULL;
 	}
-
-	if (csv_buffer) {
-		vfree(csv_buffer);
-		csv_buffer = NULL;
-	}
-#endif
-}
-
-static void fts_test_save_result_txt(struct fts_test *tdata)
-{
-#if TXT_SUPPORT
-	if (!tdata || !tdata->testresult) {
-		FTS_TEST_ERROR("test result is null");
-		return;
-	}
-
-	FTS_TEST_INFO("test result length in txt:%d", tdata->testresult_len);
-	fts_test_save_test_data(FTS_TXT_FILE_NAME, tdata->testresult,
-							tdata->testresult_len);
-
-#if defined(TEST_SAVE_FAIL_RESULT) && TEST_SAVE_FAIL_RESULT
-	fts_test_save_fail_result(tdata, "testresult_fail", ".txt",
-							  tdata->testresult, tdata->testresult_len);
-#endif
-
 #endif
 }
 
@@ -1939,6 +1864,7 @@ static int fts_test_main_init(void)
 	struct fts_test *tdata = fts_ftest;
 
 	FTS_TEST_FUNC_ENTER();
+	fts_ftest->result = false;
 	/* Init fts_test_data to 0 before test,  */
 	memset(&tdata->testdata, 0, sizeof(struct fts_test_data));
 
@@ -1985,9 +1911,19 @@ static int fts_test_main_exit(void)
 	struct fts_test *tdata = fts_ftest;
 
 	FTS_TEST_FUNC_ENTER();
-	fts_test_save_data_csv(tdata);
-	fts_test_save_result_txt(tdata);
+	fts_test_merge_data(tdata);
 
+	FTS_TEST_INFO("data len: %d, result len: %d",
+			tdata->csv_data_len, tdata->testresult_len);
+
+	FTS_TEST_FUNC_EXIT();
+	return 0;
+}
+
+static void fts_free_test_memory(void)
+{
+	struct fts_test *tdata = fts_ftest;
+	FTS_TEST_FUNC_ENTER();
 	/* free memory */
 	fts_test_malloc_free_data_txt(tdata, false);
 	fts_test_malloc_free_thr(tdata, false);
@@ -1995,11 +1931,13 @@ static int fts_test_main_exit(void)
 	/* free test data */
 	fts_test_free_data(tdata);
 
-	/*free test data buffer*/
+	/* free test data buffer */
 	fts_free(tdata->buffer);
 
+	vfree(tdata->csv_data_buffer);
+	tdata->csv_data_buffer = NULL;
+
 	FTS_TEST_FUNC_EXIT();
-	return 0;
 }
 
 /*
@@ -2147,6 +2085,104 @@ static struct attribute_group fts_test_attribute_group = {
 	.attrs = fts_test_attributes
 };
 
+static void *data_start(struct seq_file *m, loff_t *pos)
+{
+	if (*pos)
+		return NULL;
+
+	if (!fts_ftest->csv_data_buffer) {
+		FTS_TEST_ERROR("test data is error!");
+		return NULL;
+	}
+	return fts_ftest->csv_data_buffer;
+}
+
+static void *data_next(struct seq_file *m, void *v, loff_t *pos)
+{
+	return NULL;
+}
+
+static int32_t data_show(struct seq_file *m, void *v)
+{
+	seq_puts(m, (char *)v);
+	return 0;
+}
+
+static void data_stop(struct seq_file *m, void *v)
+{
+	return;
+}
+
+static const struct seq_operations data_fops = {
+	.start = data_start,
+	.next = data_next,
+	.stop = data_stop,
+	.show = data_show,
+};
+
+static int32_t tp_test_data_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &data_fops);
+}
+
+static const struct file_operations tp_test_data_fops = {
+	.owner = THIS_MODULE,
+	.open = tp_test_data_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
+static void *result_start(struct seq_file *m, loff_t *pos)
+{
+	if (*pos) {
+		fts_free_test_memory();
+		return NULL;
+	}
+
+	if (!fts_ftest->testresult) {
+		FTS_TEST_ERROR("test result is error!");
+		return NULL;
+	}
+	return fts_ftest->testresult;
+}
+
+static void *result_next(struct seq_file *m, void *v, loff_t *pos)
+{
+	return NULL;
+}
+
+static int32_t result_show(struct seq_file *m, void *v)
+{
+	seq_puts(m, (char *)v);
+	return 0;
+}
+
+static void result_stop(struct seq_file *m, void *v)
+{
+	return;
+}
+
+static const struct seq_operations result_fops = {
+	.start = result_start,
+	.next = result_next,
+	.stop = result_stop,
+	.show = result_show,
+};
+
+static int32_t tp_test_result_open(struct inode *inode, struct file *file)
+{
+	return seq_open(file, &result_fops);
+}
+
+static const struct file_operations tp_test_result_fops = {
+	.owner = THIS_MODULE,
+	.open = tp_test_result_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release,
+};
+
 int tp_selftest_result;
 
 static int fts_spi_test(void)
@@ -2237,6 +2273,7 @@ ssize_t tp_selftest_write(struct file *file, const char __user *buf, size_t coun
 	ret = tp_selftest_result;
 
 	fts_test_main_exit();
+	fts_free_test_memory();
 	enter_work_mode();
 test_err:
 	fts_irq_enable();
@@ -2426,7 +2463,7 @@ static int fts_test_func_init(struct fts_ts_data *ts_data)
 		FTS_TEST_ERROR("no test function match, can't test");
 		return -ENODATA;
 	}
-
+	fts_ftest->open_min = ts_data->pdata->open_min;
 	fts_ftest->ts_data = fts_data;
 	return 0;
 }
@@ -2452,6 +2489,14 @@ int fts_test_init(struct fts_ts_data *ts_data)
 		FTS_TEST_DBG("sysfs(test) create successfully");
 	}
 
+	proc->tp_test_data_proc = proc_create("tp_test_data", 0444, NULL, &tp_test_data_fops);
+	if (proc->tp_test_data_proc == NULL)
+		FTS_TEST_ERROR("tp_test_data proc create failed.");
+
+	proc->tp_test_result_proc = proc_create("tp_test_result", 0444, NULL, &tp_test_result_fops);
+	if (proc->tp_test_result_proc == NULL)
+		FTS_TEST_ERROR("tp_test_result proc create failed.");
+
 	proc->tp_selftest_proc = proc_create("tp_selftest", 0644, NULL, &tp_selftest_fops);
 	if (proc->tp_selftest_proc == NULL)
 		FTS_TEST_ERROR("tp_selftest proc create failed.");
@@ -2472,10 +2517,16 @@ int fts_test_exit(struct fts_ts_data *ts_data)
 	FTS_TEST_FUNC_ENTER();
 
 	sysfs_remove_group(&ts_data->dev->kobj, &fts_test_attribute_group);
+	if (proc->tp_test_data_proc)
+		proc_remove(proc->tp_test_data_proc);
+	if (proc->tp_test_result_proc)
+		proc_remove(proc->tp_test_result_proc);
 	if (proc->tp_selftest_proc)
 		proc_remove(proc->tp_selftest_proc);
 	if (proc->tp_data_dump_proc)
 		proc_remove(proc->tp_data_dump_proc);
+	proc->tp_test_data_proc = NULL;
+	proc->tp_test_result_proc = NULL;
 	proc->tp_selftest_proc = NULL;
 	proc->tp_data_dump_proc = NULL;
 	fts_free(fts_ftest);

@@ -106,7 +106,7 @@ static int fts_fwupg_get_boot_state(
 	cmd[1] = 0x50;
 	ret = fts_write(cmd, 2);
 	if (ret < 0) {
-		FTS_ERROR("write 0x50 to F1 fail");
+		FTS_ERROR("Write 0x50 to F1 fail");
 		return ret;
 	}
 
@@ -1140,55 +1140,6 @@ read_flash_err:
 	return ret;
 }
 
-int fts_read_file(char *file_name, u8 **file_buf)
-{
-	int ret = 0;
-	char file_path[FILE_NAME_LENGTH] = { 0 };
-	struct file *filp = NULL;
-	struct inode *inode;
-	mm_segment_t old_fs;
-	loff_t pos;
-	loff_t file_len = 0;
-
-	if ((NULL == file_name) || (NULL == file_buf)) {
-		FTS_ERROR("filename/filebuf is NULL");
-		return -EINVAL;
-	}
-
-	snprintf(file_path, FILE_NAME_LENGTH, "%s%s", FTS_FW_BIN_FILEPATH, file_name);
-	filp = filp_open(file_path, O_RDONLY, 0);
-	if (IS_ERR(filp)) {
-		FTS_ERROR("open %s file fail", file_path);
-		return -ENOENT;
-	}
-
-#if 1
-	inode = filp->f_inode;
-#else
-    /* reserved for linux earlier verion */
-	inode = filp->f_dentry->d_inode;
-#endif
-
-	file_len = inode->i_size;
-	*file_buf = (u8 *)vmalloc(file_len);
-	if (NULL == *file_buf) {
-		FTS_ERROR("file buf malloc fail");
-		filp_close(filp, NULL);
-		return -ENOMEM;
-	}
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	pos = 0;
-	ret = vfs_read(filp, *file_buf, file_len , &pos);
-	if (ret < 0)
-		FTS_ERROR("read file fail");
-	FTS_INFO("file len:%d read len:%d pos:%d", (u32)file_len, ret, (u32)pos);
-	filp_close(filp, NULL);
-	set_fs(old_fs);
-
-	return ret;
-}
-
 int fts_upgrade_bin(char *fw_name, bool force)
 {
 	int ret = 0;
@@ -2126,12 +2077,14 @@ static int fts_get_lockdown_info(struct fts_ts_data *ts_data)
 
 	memset(ts_data->lockdown_info, 0x00, FTS_LOCKDOWN_INFO_SIZE);
 
+	fts_irq_disable();
 	ret = fts_flash_read(FTS_LOCKDOWN_INFO_ADDR, ts_data->lockdown_info, FTS_LOCKDOWN_INFO_SIZE);
+	fts_irq_enable();
 	if (ret < 0) {
 		FTS_ERROR("fail to get lockdown info");
 		return ret;
 	}
-	snprintf(buf, 128, "0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
+	snprintf(buf, PAGE_SIZE, "0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",
 			(int)ts_data->lockdown_info[0], (int)ts_data->lockdown_info[1],
 			(int)ts_data->lockdown_info[2], (int)ts_data->lockdown_info[3],
 			(int)ts_data->lockdown_info[4], (int)ts_data->lockdown_info[5],

@@ -15,6 +15,6 @@ config TOUCHSCREEN_FOCALTECH
 
 config TOUCHSCREEN_FTS_DIRECTORY
     string "Focaltech ts directory name"
-    default "focaltech_spi"
+    default "focaltech_touch"
     depends on TOUCHSCREEN_FTS
 

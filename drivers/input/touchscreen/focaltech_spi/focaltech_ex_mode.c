@@ -97,11 +97,6 @@ static int fts_ex_mode_switch(enum _ex_mode mode, u8 value)
 	return ret;
 }
 
-int fts_charger_mode_set(u8 value)
-{
-	return fts_ex_mode_switch(MODE_CHARGER, value);
-}
-
 static ssize_t fts_glove_mode_show(
 	struct device *dev, struct device_attribute *attr, char *buf)
 {

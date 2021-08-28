@@ -154,8 +154,6 @@ struct ini_ic_type ic_types[] = {
 	{"FT5946",  0x590D0087},
 
 	{"FT3658U", 0x5A010088},
-
-	{"FT2388",  0x9D00001E},
 };
 
 /*****************************************************************************
@@ -186,7 +184,7 @@ static int fts_strncmp(const char *cs, const char *ct, int count)
 	return 0;
 }
 
-static int fts_isspace(int x)
+static int is_space(int x)
 {
 	if (x == ' ' || x == '\t' || x == '\n' || x == '\f' || x == '\b' || x == '\r')
 		return 1;
@@ -194,7 +192,7 @@ static int fts_isspace(int x)
 		return 0;
 }
 
-static int fts_isdigit(int x)
+static int is_digit(int x)
 {
 	if (x <= '9' && x >= '0')
 		return 1;
@@ -207,15 +205,15 @@ static long fts_atol(char *nptr)
 	int c; /* current char */
 	long total; /* current total */
 	int sign; /* if ''-'', then negative, otherwise positive */
-    /* skip whitespace */
-	while ( fts_isspace((int)(unsigned char)*nptr) )
+	/* skip whitespace */
+	while ( is_space((int)(unsigned char)*nptr) )
 		++nptr;
 	c = (int)(unsigned char) * nptr++;
 	sign = c; /* save sign indication */
 	if (c == '-' || c == '+')
 		c = (int)(unsigned char) * nptr++; /* skip sign */
 	total = 0;
-	while (fts_isdigit(c)) {
+	while (is_digit(c)) {
 		total = 10 * total + (c - '0'); /* accumulate digit */
 		c = (int)(unsigned char) * nptr++; /* get next char */
 	}
@@ -228,108 +226,6 @@ static long fts_atol(char *nptr)
 static int fts_atoi(char *nptr)
 {
 	return (int)fts_atol(nptr);
-}
-
-static int fts_test_get_ini_size(char *config_name)
-{
-	struct file *pfile = NULL;
-	struct inode *inode = NULL;
-	off_t fsize = 0;
-	char filepath[FILE_NAME_LENGTH] = { 0 };
-
-	FTS_TEST_FUNC_ENTER();
-
-	memset(filepath, 0, sizeof(filepath));
-	snprintf(filepath, FILE_NAME_LENGTH, "%s%s",FTS_INI_FILE_PATH, config_name);
-
-	if (NULL == pfile)
-		pfile = filp_open(filepath, O_RDONLY, 0);
-	if (IS_ERR(pfile)) {
-		FTS_TEST_ERROR("error occured while opening file %s.",  filepath);
-		return -EIO;
-	}
-
-#if 1
-	inode = pfile->f_inode;
-#else
-    /* reserved for linux earlier verion */
-	inode = pfile->f_dentry->d_inode;
-#endif
-	fsize = inode->i_size;
-	filp_close(pfile, NULL);
-
-	FTS_TEST_FUNC_ENTER();
-
-	return fsize;
-}
-
-static int fts_test_read_ini_data(char *config_name, char *config_buf)
-{
-	struct file *pfile = NULL;
-	struct inode *inode = NULL;
-	off_t fsize = 0;
-	char filepath[FILE_NAME_LENGTH] = { 0 };
-	loff_t pos = 0;
-	mm_segment_t old_fs;
-
-	FTS_TEST_FUNC_ENTER();
-
-	memset(filepath, 0, sizeof(filepath));
-	snprintf(filepath, FILE_NAME_LENGTH, "%s%s",FTS_INI_FILE_PATH, config_name);
-	if (NULL == pfile) {
-		pfile = filp_open(filepath, O_RDONLY, 0);
-	}
-	if (IS_ERR(pfile)) {
-		FTS_TEST_ERROR("error occured while opening file %s.",  filepath);
-		return -EIO;
-	}
-
-#if 1
-	inode = pfile->f_inode;
-#else
-    /* reserved for linux earlier verion */
-	inode = pfile->f_dentry->d_inode;
-#endif
-	fsize = inode->i_size;
-	old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	pos = 0;
-	vfs_read(pfile, config_buf, fsize, &pos);
-	filp_close(pfile, NULL);
-	set_fs(old_fs);
-
-	FTS_TEST_FUNC_EXIT();
-	return 0;
-}
-
-static int fts_test_get_ini_default(struct ini_data *ini, char *fwname)
-{
-	int ret = 0;
-	int inisize = 0;
-
-	inisize = fts_test_get_ini_size(fwname);
-	FTS_TEST_DBG("ini file size:%d", inisize);
-	if (inisize <= 0) {
-		FTS_TEST_ERROR("get ini file size fail");
-		return -ENODATA;
-	}
-
-	ini->data = vmalloc(inisize + 1);
-	if (NULL == ini->data) {
-		FTS_TEST_ERROR("malloc memory for ini data fail");
-		return -ENOMEM;
-	}
-	memset(ini->data, 0, inisize + 1);
-	ini->length = inisize + 1;
-
-	ret = fts_test_read_ini_data(fwname, ini->data);
-	if (ret) {
-		FTS_TEST_ERROR("read ini file fail");
-		return -ENODATA;
-	}
-	ini->data[inisize] = '\n';  /* last line is null line */
-
-	return 0;
 }
 
 static int fts_test_get_ini_via_request_firmware(struct ini_data *ini, char *fwname)
@@ -918,15 +814,13 @@ static void print_thr_incell(void)
 	FTS_TEST_DBG("lcdnoise_frame:%d", thr->basic.lcdnoise_frame);
 	FTS_TEST_DBG("lcdnoise_coefficient:%d", thr->basic.lcdnoise_coefficient);
 	FTS_TEST_DBG("lcdnoise_coefficient_vkey:%d", thr->basic.lcdnoise_coefficient_vkey);
-	FTS_TEST_DBG("open_diff_min:%d", thr->basic.open_diff_min);
 
 	FTS_TEST_DBG("open_nmos:%d", thr->basic.open_nmos);
 	FTS_TEST_DBG("keyshort_k1:%d", thr->basic.keyshort_k1);
 	FTS_TEST_DBG("keyshort_cb_max:%d", thr->basic.keyshort_cb_max);
 	FTS_TEST_DBG("rawdata2_min:%d", thr->basic.rawdata2_min);
 	FTS_TEST_DBG("rawdata2_max:%d", thr->basic.rawdata2_max);
-	FTS_TEST_DBG("mux_open_cb_min:%d", thr->basic.mux_open_cb_min);
-	FTS_TEST_DBG("open_delta_V:%d", thr->basic.open_delta_V);
+
 
 	print_buffer(thr->rawdata_min, tdata->node.node_num, tdata->node.rx_num);
 	print_buffer(thr->rawdata_max, tdata->node.node_num, tdata->node.rx_num);
@@ -1360,11 +1254,8 @@ int fts_test_get_testparam_from_ini(char *config_name)
 
 	ret = fts_test_get_ini_via_request_firmware(ini, config_name);
 	if (ret != 0) {
-		ret = fts_test_get_ini_default(ini, config_name);
-		if (ret < 0) {
-			FTS_TEST_ERROR("get ini(default) fail");
-			goto get_ini_err;
-		}
+		FTS_TEST_ERROR("get ini(default) fail");
+		goto get_ini_err;
 	}
 
 	ini->keyword_num_total = 0;
