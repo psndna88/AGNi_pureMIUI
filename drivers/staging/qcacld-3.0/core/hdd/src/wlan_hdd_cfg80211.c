@@ -163,6 +163,11 @@
 #include "wlan_if_mgr_public_struct.h"
 #include "wlan_wfa_ucfg_api.h"
 #include "wlan_roam_debug.h"
+
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+#include "wlan_hdd_dynamic_nss.h"
+#endif
+
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
 
@@ -7122,6 +7127,8 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GTX] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ELNA_BYPASS] = {.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_NSS_SWITCH] = {.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_BT_ACTIVE] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST] = {
 		.type = NLA_BINARY,
@@ -8885,6 +8892,27 @@ static int hdd_set_nss(struct hdd_adapter *adapter,
 	return ret;
 }
 
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+static int hdd_config_enable_dynamic_nss(struct hdd_adapter *adapter,
+			       const struct nlattr *attr)
+{
+	bool enable = nla_get_u8(attr);
+	wlan_hdd_config_enable_dynamic_nss(enable);
+
+	return 0;
+}
+
+static int hdd_config_set_bt_active(struct hdd_adapter *adapter,
+			       const struct nlattr *attr)
+{
+	bool active = nla_get_u8(attr);
+	wlan_hdd_config_set_bt_active(active);
+
+	return 0;
+}
+#endif
+
+
 /**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
@@ -8995,6 +9023,12 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_power},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_UDP_QOS_UPGRADE,
 	 hdd_config_udp_qos_upgrade_threshold},
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_NSS_SWITCH,
+	 hdd_config_enable_dynamic_nss},
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_BT_ACTIVE,
+	 hdd_config_set_bt_active},
+#endif
 };
 
 #ifdef WLAN_FEATURE_ELNA
@@ -21763,6 +21797,10 @@ int wlan_hdd_disconnect(struct hdd_adapter *adapter, u16 reason,
 	 */
 	wlan_hdd_cfg80211_indicate_disconnect(adapter, true,
 					      mac_reason, NULL, 0);
+#endif
+
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+	wlan_hdd_stop_dynamic_nss(adapter);
 #endif
 
 	return ret;

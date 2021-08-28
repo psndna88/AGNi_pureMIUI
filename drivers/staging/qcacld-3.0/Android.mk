@@ -103,6 +103,9 @@ endif
 
 endif
 
+# MIUI ADD: always use same target path and only write in factory
+TARGET_MAC_BIN_PATH := /mnt/vendor/persist/wlan
+
 # DLKM_DIR was moved for JELLY_BEAN (PLATFORM_SDK 16)
 ifeq ($(call is-platform-sdk-version-at-least,16),true)
 	DLKM_DIR := $(TOP)/device/qcom/common/dlkm
