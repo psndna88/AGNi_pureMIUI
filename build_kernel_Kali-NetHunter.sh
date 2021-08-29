@@ -6,7 +6,7 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
 CONFIG1="agni_atoll_aospR_defconfig"
-export AGNI_BUILD_TYPE="AOSP-R"
+export AGNI_BUILD_TYPE="Kali_NetHunter"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
@@ -72,9 +72,9 @@ if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
-if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
+#	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
@@ -85,7 +85,7 @@ fi
 echo ""
 
 ###### ZIP Packing
-if [ -f $KERNELDIR/$DIR/Image.gz ]; then
+if [ -f $KERNELDIR/$DIR/Image.gz-dtb ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	cd $KERNELDIR/$DIR/
 	zip -rq $READY_ZIP/$FILENAME *
