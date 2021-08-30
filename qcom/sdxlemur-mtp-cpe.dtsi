@@ -139,6 +139,9 @@
 			qps615_eth0,qps615_eth0@pcie0_rp {
 				reg = <0x0 0x0 0x0 0x0 0x0>;
 
+				pinctrl-names = "default";
+				pinctrl-0 = <&aqr_intn_wol_sig>;
+
 				compatible = "qcom,ioss-v2-device";
 				qcom,ioss = <&ioss>;
 				qcom,ioss_interfaces = <&ioss_qps615_eth0>;
@@ -160,6 +163,9 @@
 
 			qps615_eth1,qps615_eth1@pcie0_rp {
 				reg = <0x100 0x0 0x0 0x0 0x0>;
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&napa_intn_wol_sig>;
 
 				compatible = "qcom,ioss-v2-device";
 				qcom,ioss = <&ioss>;
