@@ -61,7 +61,6 @@ static int tsens_mtc_reset_history_counter(unsigned int zone)
 
 	return 0;
 }
-EXPORT_SYMBOL(tsens_mtc_reset_history_counter);
 
 int tsens_set_mtc_zone_sw_mask(unsigned int zone, unsigned int th1_enable,
 				unsigned int th2_enable)
