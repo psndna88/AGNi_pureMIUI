@@ -1699,5 +1699,33 @@
 				};
 			};
 		};
+
+		qps615_intn_wol {
+			aqr_intn_wol_sig: aqr_intn_wol_sig {
+				mux {
+					pins = "gpio103";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio103";
+					input-enable;
+					bias-disable;
+				};
+			};
+
+			napa_intn_wol_sig: napa_intn_wol_sig {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					input-enable;
+					bias-disable;
+				};
+			};
+		};
 	};
 };
