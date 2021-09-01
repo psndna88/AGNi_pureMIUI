@@ -279,7 +279,7 @@ static int sde_rsc_mode2_entry_trigger(struct sde_rsc_priv *rsc)
 			rc = 0;
 			break;
 		}
-		usleep_range(50, 100);
+		usleep_range(100, 200);
 	}
 
 	return rc;
