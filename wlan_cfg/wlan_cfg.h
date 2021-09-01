@@ -197,6 +197,7 @@ struct wlan_srng_cfg {
  * @wow_check_rx_pending_enable: Enable RX frame pending check in WoW
  * @ipa_tx_ring_size: IPA tx ring size
  * @ipa_tx_comp_ring_size: IPA tx completion ring size
+ * @pkt_capture_mode: Packet capture mode config
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -315,6 +316,9 @@ struct wlan_cfg_dp_soc_ctxt {
 #ifdef IPA_OFFLOAD
 	uint32_t ipa_tx_ring_size;
 	uint32_t ipa_tx_comp_ring_size;
+#endif
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	uint32_t pkt_capture_mode;
 #endif
 };
 
@@ -1566,4 +1570,20 @@ uint32_t wlan_cfg_ipa_tx_comp_ring_size(struct wlan_cfg_dp_soc_ctxt *cfg)
 void
 wlan_cfg_get_prealloc_cfg(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 			  struct wlan_dp_prealloc_cfg *cfg);
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+/**
+ * wlan_cfg_get_pkt_capture_mode() - Get packet capture mode config
+ * @cfg: config context
+ *
+ * Return: value of packet capture mode
+ */
+uint32_t wlan_cfg_get_pkt_capture_mode(struct wlan_cfg_dp_soc_ctxt *cfg);
+#else
+static inline
+uint32_t wlan_cfg_get_pkt_capture_mode(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return 0;
+}
+#endif
 #endif
