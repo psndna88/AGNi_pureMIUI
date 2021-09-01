@@ -49,6 +49,13 @@ struct g_csiphy_data {
 static struct g_csiphy_data g_phy_data[MAX_CSIPHY] = {{0, 0}};
 static int active_csiphy_hw_cnt;
 
+static int csiphy_override_cnt  = 6;
+static int csiphy_override[100] = {0x9B4,0x8,0xAB4,0x8,0xBB4,0x8};
+module_param_array(csiphy_override, int, &csiphy_override_cnt, 0644);
+
+static int csiphy_hack_rate_mb = 3500;
+module_param(csiphy_hack_rate_mb, int, 0644);
+
 int32_t cam_csiphy_get_instance_offset(
 	struct csiphy_device *csiphy_dev,
 	int32_t dev_handle)
@@ -918,6 +925,16 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev,
 				"Date rate specific configuration failed rc: %d",
 				rc);
 			return rc;
+		}
+
+		//csiphy_3phase only
+		if ((csiphy_dev->csiphy_info[index].data_rate/1000000) > csiphy_hack_rate_mb)
+		{
+			for (i = 0; i < csiphy_override_cnt; i += 2)
+			{
+				   cam_io_w_mb(csiphy_override[i+1],  csiphybase + csiphy_override[i]);
+				   CAM_DBG(CAM_CSIPHY, "csiphy_cfg_override [0x%x, 0x%x]", csiphy_override[i], csiphy_override[i+1]);
+			}
 		}
 	}
 
