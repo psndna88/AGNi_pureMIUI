@@ -9,6 +9,8 @@
 #include <linux/of_gpio.h>
 #include <linux/err.h>
 
+#include <drm/mi_disp_notifier.h>
+
 #include "msm_drv.h"
 #include "sde_connector.h"
 #include "msm_mmu.h"
@@ -21,6 +23,7 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 #include "dsi_parser.h"
+#include "mi_dsi_display.h"
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
@@ -1240,6 +1243,8 @@ int dsi_display_set_power(struct drm_connector *connector,
 		int power_mode, void *disp)
 {
 	struct dsi_display *display = disp;
+	struct mi_disp_notifier notify_data;
+	int disp_id = 0;
 	int rc = 0;
 
 	if (!display || !display->panel) {
@@ -1247,18 +1252,27 @@ int dsi_display_set_power(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	disp_id = mi_get_disp_id(display);
+
+	notify_data.data = &power_mode;
+	notify_data.disp_id = disp_id;
+
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
+		mi_disp_notifier_call_chain(MI_DISP_DPMS_EARLY_EVENT, &notify_data);
 		if (display->panel->power_mode == SDE_MODE_DPMS_LP2) {
 			if (dsi_display_set_ulp_load(display, false) < 0)
 				DSI_WARN("failed to set load for lp1 state\n");
 		}
 		rc = dsi_panel_set_lp1(display->panel);
+		mi_disp_notifier_call_chain(MI_DISP_DPMS_EVENT, &notify_data);
 		break;
 	case SDE_MODE_DPMS_LP2:
+		mi_disp_notifier_call_chain(MI_DISP_DPMS_EARLY_EVENT, &notify_data);
 		rc = dsi_panel_set_lp2(display->panel);
 		if (dsi_display_set_ulp_load(display, true) < 0)
 			DSI_WARN("failed to set load for lp2 state\n");
+		mi_disp_notifier_call_chain(MI_DISP_DPMS_EVENT, &notify_data);
 		break;
 	case SDE_MODE_DPMS_ON:
 		if (display->panel->power_mode == SDE_MODE_DPMS_LP2) {
@@ -1266,8 +1280,11 @@ int dsi_display_set_power(struct drm_connector *connector,
 				DSI_WARN("failed to set load for on state\n");
 		}
 		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
-			(display->panel->power_mode == SDE_MODE_DPMS_LP2))
+			(display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
+			mi_disp_notifier_call_chain(MI_DISP_DPMS_EARLY_EVENT, &notify_data);
 			rc = dsi_panel_set_nolp(display->panel);
+			mi_disp_notifier_call_chain(MI_DISP_DPMS_EVENT, &notify_data);
+		}
 		break;
 	case SDE_MODE_DPMS_OFF:
 	default:
