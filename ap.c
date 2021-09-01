@@ -4363,14 +4363,15 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		owrt_ap_set_list_vap(dut, vap_count, "sae_groups", buf);
 	}
 
-	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
+	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default ||
+	    dut->ap_band_6g) {
 		const char *sae_pwe = NULL;
 
 		if (dut->sae_pwe == SAE_PWE_LOOP && sae_pw_id_used(dut))
 			sae_pwe = "3";
 		else if (dut->sae_pwe == SAE_PWE_LOOP)
 			sae_pwe = "0";
-		else if (dut->sae_pwe == SAE_PWE_H2E)
+		else if (dut->sae_pwe == SAE_PWE_H2E || dut->ap_band_6g)
 			sae_pwe = "1";
 		else if (dut->sae_h2e_default)
 			sae_pwe = "2";
@@ -8343,14 +8344,15 @@ skip_key_mgmt:
 	if (dut->ap_sae_groups)
 		fprintf(f, "sae_groups=%s\n", dut->ap_sae_groups);
 
-	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default) {
+	if (dut->sae_pwe != SAE_PWE_DEFAULT || dut->sae_h2e_default ||
+	    dut->ap_band_6g) {
 		const char *sae_pwe = NULL;
 
 		if (dut->sae_pwe == SAE_PWE_LOOP && sae_pw_id_used(dut))
 			sae_pwe = "3";
 		else if (dut->sae_pwe == SAE_PWE_LOOP)
 			sae_pwe = "0";
-		else if (dut->sae_pwe == SAE_PWE_H2E)
+		else if (dut->sae_pwe == SAE_PWE_H2E || dut->ap_band_6g)
 			sae_pwe = "1";
 		else if (dut->sae_h2e_default)
 			sae_pwe = "2";
