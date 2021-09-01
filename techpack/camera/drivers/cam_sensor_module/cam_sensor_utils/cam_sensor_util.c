@@ -4,6 +4,9 @@
  */
 
 #include <linux/kernel.h>
+#if IS_ENABLED(CONFIG_ISPV2_AL6021)
+#include <linux/ispv2_ioparam.h>
+#endif
 #include <clocksource/arm_arch_timer.h>
 #include "cam_sensor_util.h"
 #include "cam_mem_mgr.h"
@@ -2137,6 +2140,12 @@ int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 				gpio_num_info->gpio_num
 				[power_setting->seq_type]);
 
+#if IS_ENABLED(CONFIG_ISPV2_AL6021)
+			if ((power_setting->config_val & POWER_CFG_VAL_TYPE_MASK)
+					== POWER_CFG_VAL_TYPE_EX)
+				continue;
+#endif
+
 			rc = msm_cam_sensor_handle_reg_gpio(
 				power_setting->seq_type,
 				gpio_num_info,
@@ -2326,6 +2335,123 @@ power_up_failed:
 
 	return rc;
 }
+
+#if IS_ENABLED(CONFIG_ISPV2_AL6021)
+int cam_sensor_core_power_up_extra(struct cam_sensor_power_ctrl_t *ctrl,
+		struct cam_hw_soc_info *soc_info)
+{
+	int rc = 0, index = 0, no_gpio = 0;
+	int config_val = 0;
+	struct cam_sensor_power_setting *power_setting = NULL;
+	struct msm_camera_gpio_num_info *gpio_num_info = NULL;
+
+	CAM_DBG(CAM_SENSOR, "Enter");
+	if (!ctrl) {
+		CAM_ERR(CAM_SENSOR, "Invalid ctrl handle");
+		return -EINVAL;
+	}
+
+	gpio_num_info = ctrl->gpio_num_info;
+
+	CAM_DBG(CAM_SENSOR, "power setting size: %d", ctrl->power_setting_size);
+
+	for (index = 0; index < ctrl->power_setting_size; index++) {
+		CAM_DBG(CAM_SENSOR, "index: %d", index);
+		power_setting = &ctrl->power_setting[index];
+		if (!power_setting) {
+			CAM_ERR(CAM_SENSOR,
+				"Invalid power up settings for index %d",
+				index);
+			return -EINVAL;
+		}
+
+		if ((power_setting->config_val & POWER_CFG_VAL_TYPE_MASK)
+				!= POWER_CFG_VAL_TYPE_EX)
+			continue;
+
+		config_val = (int) power_setting->config_val & POWER_CFG_VAL_MASK;
+
+		CAM_DBG(CAM_SENSOR,
+				"seq_type %d, power_setting.config_val %x, config_val %x",
+				power_setting->seq_type, power_setting->config_val, config_val);
+
+		switch (power_setting->seq_type) {
+		case SENSOR_CUSTOM_GPIO1:
+		case SENSOR_CUSTOM_GPIO2:
+			if (no_gpio) {
+				CAM_ERR(CAM_SENSOR, "request gpio failed");
+				goto power_up_ex_failed;
+			}
+			if (!gpio_num_info) {
+				CAM_ERR(CAM_SENSOR, "Invalid gpio_num_info");
+				goto power_up_ex_failed;
+			}
+			//CAM_DBG(CAM_SENSOR, "gpio set val %d",
+			CAM_WARN(CAM_SENSOR, "gpio set val %d, configval %d",
+				gpio_num_info->gpio_num[power_setting->seq_type],
+                config_val);
+
+			rc = msm_cam_sensor_handle_reg_gpio(
+				power_setting->seq_type,
+				gpio_num_info,
+				config_val);
+			if (rc < 0) {
+				CAM_ERR(CAM_SENSOR,
+					"Error in handling VREG GPIO");
+				goto power_up_ex_failed;
+			}
+			break;
+		default:
+			CAM_ERR(CAM_SENSOR, "error power seq type %d",
+				power_setting->seq_type);
+			break;
+		}
+
+		if (power_setting->delay > 20) {
+			msleep(power_setting->delay);
+		} else if (power_setting->delay) {
+			usleep_range(power_setting->delay * 1000,
+				(power_setting->delay * 1000) + 1000);
+		}
+	}
+
+	return 0;
+
+power_up_ex_failed:
+	CAM_ERR(CAM_SENSOR, "failed");
+	for (index--; index >= 0; index--) {
+		CAM_DBG(CAM_SENSOR, "index %d",  index);
+		power_setting = &ctrl->power_setting[index];
+		CAM_DBG(CAM_SENSOR, "type %d",
+			power_setting->seq_type);
+		switch (power_setting->seq_type) {
+        case SENSOR_CUSTOM_GPIO1:
+        case SENSOR_CUSTOM_GPIO2:
+			if (!gpio_num_info)
+				continue;
+			if (!gpio_num_info->valid
+					[power_setting->seq_type])
+				continue;
+			cam_res_mgr_gpio_set_value(
+					gpio_num_info->gpio_num
+					[power_setting->seq_type], GPIOF_OUT_INIT_LOW);
+			break;
+		default:
+			CAM_ERR(CAM_SENSOR, "error power seq type %d",
+				power_setting->seq_type);
+			break;
+		}
+		if (power_setting->delay > 20) {
+			msleep(power_setting->delay);
+		} else if (power_setting->delay) {
+			usleep_range(power_setting->delay * 1000,
+				(power_setting->delay * 1000) + 1000);
+		}
+	}
+
+	return rc;
+}
+#endif
 
 static struct cam_sensor_power_setting*
 msm_camera_get_power_settings(struct cam_sensor_power_ctrl_t *ctrl,

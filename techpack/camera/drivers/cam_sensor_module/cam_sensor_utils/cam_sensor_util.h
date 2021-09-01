@@ -69,6 +69,11 @@ int cam_sensor_util_init_gpio_pin_tbl(
 int cam_sensor_core_power_up(struct cam_sensor_power_ctrl_t *ctrl,
 		struct cam_hw_soc_info *soc_info);
 
+#if IS_ENABLED(CONFIG_ISPV2_AL6021)
+int cam_sensor_core_power_up_extra(struct cam_sensor_power_ctrl_t *ctrl,
+		struct cam_hw_soc_info *soc_info);
+#endif
+
 int cam_sensor_util_power_down(struct cam_sensor_power_ctrl_t *ctrl,
 		struct cam_hw_soc_info *soc_info);
 
