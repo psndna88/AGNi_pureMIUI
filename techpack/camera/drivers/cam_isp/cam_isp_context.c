@@ -734,6 +734,12 @@ static void __cam_isp_ctx_send_sof_timestamp(
 	if ((ctx_isp->use_frame_header_ts) || (request_id == 0))
 		goto end;
 
+	if (ctx_isp->offline_context) {
+		CAM_DBG(CAM_ISP,
+			"Don't sent sof timestamp for offline context");
+		return;
+	}
+
 	req_msg.session_hdl = ctx_isp->base->session_hdl;
 	req_msg.u.frame_msg.frame_id = ctx_isp->frame_id;
 	req_msg.u.frame_msg.request_id = request_id;
