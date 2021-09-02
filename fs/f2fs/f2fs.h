@@ -189,7 +189,6 @@ enum {
 #define DEF_MID_DISCARD_ISSUE_TIME	500	/* 500 ms, if device busy */
 #define DEF_MAX_DISCARD_ISSUE_TIME	60000	/* 60 s, if no candidates */
 #define DEF_DISCARD_URGENT_UTIL		80	/* do more discard over 80% */
-#define DEF_MAX_DISCARD_URGENT_ISSUE_TIME	10000	/* 10 s, if no candidates on high utilization */
 #define DEF_CP_INTERVAL			60	/* 60 secs */
 #define DEF_IDLE_INTERVAL		5	/* 5 secs */
 #define DEF_DISABLE_INTERVAL		5	/* 5 secs */
@@ -1369,17 +1368,6 @@ static inline bool time_to_inject(struct f2fs_sb_info *sbi, int type)
 }
 #endif
 
-/*
- * Test if the mounted volume is a multi-device volume.
- *   - For a single regular disk volume, sbi->s_ndevs is 0.
- *   - For a single zoned disk volume, sbi->s_ndevs is 1.
- *   - For a multi-device volume, sbi->s_ndevs is always 2 or more.
- */
-static inline bool f2fs_is_multi_device(struct f2fs_sb_info *sbi)
-{
-	return sbi->s_ndevs > 1;
-}
-
 /* For write statistics. Suppose sector size is 512 bytes,
  * and the return value is in kbytes. s is of struct f2fs_sb_info.
  */
@@ -1792,7 +1780,6 @@ enospc:
 	return -ENOSPC;
 }
 
-void f2fs_msg(struct super_block *sb, const char *level, const char *fmt, ...);
 static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 						struct inode *inode,
 						block_t count)
@@ -1801,21 +1788,13 @@ static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 
 	spin_lock(&sbi->stat_lock);
 	f2fs_bug_on(sbi, sbi->total_valid_block_count < (block_t) count);
+	f2fs_bug_on(sbi, inode->i_blocks < sectors);
 	sbi->total_valid_block_count -= (block_t)count;
 	if (sbi->reserved_blocks &&
 		sbi->current_reserved_blocks < sbi->reserved_blocks)
 		sbi->current_reserved_blocks = min(sbi->reserved_blocks,
 					sbi->current_reserved_blocks + count);
 	spin_unlock(&sbi->stat_lock);
-	if (unlikely(inode->i_blocks < sectors)) {
-		f2fs_msg(sbi->sb, KERN_WARNING,
-			"Inconsistent i_blocks, ino:%lu, iblocks:%llu, sectors:%llu",
-			inode->i_ino,
-			(unsigned long long)inode->i_blocks,
-			(unsigned long long)sectors);
-		set_sbi_flag(sbi, SBI_NEED_FSCK);
-		return;
-	}
 	f2fs_i_blocks_write(inode, count, false, true);
 }
 
@@ -2829,6 +2808,7 @@ static inline void f2fs_update_iostat(struct f2fs_sb_info *sbi,
 
 bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
 					block_t blkaddr, int type);
+void f2fs_msg(struct super_block *sb, const char *level, const char *fmt, ...);
 static inline void verify_blkaddr(struct f2fs_sb_info *sbi,
 					block_t blkaddr, int type)
 {
@@ -3681,7 +3661,3 @@ static inline bool is_journalled_quota(struct f2fs_sb_info *sbi)
 }
 
 #endif
-
-#define EFSBADCRC	EBADMSG		/* Bad CRC detected */
-#define EFSCORRUPTED	EUCLEAN		/* Filesystem is corrupted */
-
