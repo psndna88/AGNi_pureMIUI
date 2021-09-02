@@ -1207,9 +1207,6 @@ static void f2fs_put_super(struct super_block *sb)
 	int i;
 	bool dropped;
 
-	/* unregister procfs/sysfs entries in advance to avoid race case */
-	f2fs_unregister_sysfs(sbi);
-
 	f2fs_quota_off_umount(sb);
 
 	/* prevent remaining shrinker jobs */
@@ -1274,6 +1271,8 @@ static void f2fs_put_super(struct super_block *sb)
 	f2fs_destroy_post_read_wq(sbi);
 
 	kvfree(sbi->ckpt);
+
+	f2fs_unregister_sysfs(sbi);
 
 	sb->s_fs_info = NULL;
 	if (sbi->s_chksum_driver)
@@ -1752,9 +1751,6 @@ restore_flag:
 
 static void f2fs_enable_checkpoint(struct f2fs_sb_info *sbi)
 {
-	/* we should flush all the data to keep data consistency */
-	sync_inodes_sb(sbi->sb);
-
 	down_write(&sbi->gc_lock);
 	f2fs_dirty_to_prefree(sbi);
 
@@ -2192,16 +2188,8 @@ int f2fs_quota_sync(struct super_block *sb, int type)
 	 *  f2fs_dquot_commit
 	 *                            block_operation
 	 *                            down_read(quota_sem)
-	 *
-	 * However, we cannot use the cp_rwsem to prevent this
-	 * deadlock, as the cp_rwsem is taken for read inside the
-	 * f2fs_dquot_commit code, and rwsem is not recursive.
-	 *
-	 * We therefore use a special lock to synchronize
-	 * f2fs_quota_sync with block_operations, as this is the only
-	 * place where such recursion occurs.
 	 */
-	down_read(&sbi->cp_quota_rwsem);
+	f2fs_lock_op(sbi);
 
 	down_read(&sbi->quota_sem);
 	ret = dquot_writeback_dquots(sb, type);
@@ -2242,7 +2230,7 @@ out:
 	if (ret)
 		set_sbi_flag(F2FS_SB(sb), SBI_QUOTA_NEED_REPAIR);
 	up_read(&sbi->quota_sem);
-	up_read(&sbi->cp_quota_rwsem);
+	f2fs_unlock_op(sbi);
 	return ret;
 }
 
@@ -3588,7 +3576,6 @@ try_onemore:
 
 	init_rwsem(&sbi->cp_rwsem);
 	init_rwsem(&sbi->quota_sem);
-	init_rwsem(&sbi->cp_quota_rwsem);
 	init_waitqueue_head(&sbi->cp_wait);
 	init_sb_info(sbi);
 
@@ -4072,5 +4059,4 @@ module_exit(exit_f2fs_fs)
 MODULE_AUTHOR("Samsung Electronics's Praesto Team");
 MODULE_DESCRIPTION("Flash Friendly File System");
 MODULE_LICENSE("GPL");
-MODULE_SOFTDEP("pre: crc32");
 
