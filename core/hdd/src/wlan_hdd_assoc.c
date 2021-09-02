@@ -84,6 +84,7 @@
 
 #include "wlan_hdd_twt.h"
 #include "wma_api.h"
+#include "wlan_hdd_cfr.h"
 
 /* These are needed to recognize WPA and RSN suite types */
 #define HDD_WPA_OUI_SIZE 4
@@ -2059,7 +2060,7 @@ static QDF_STATUS hdd_dis_connect_handler(struct hdd_adapter *adapter,
 
 	/* update P2P connection status */
 	ucfg_p2p_status_disconnect(adapter->vdev);
-
+	hdd_cfr_disconnect(adapter->vdev);
 	if (adapter->device_mode == QDF_STA_MODE) {
 		/* Inform BLM about the disconnection with the AP */
 		ucfg_blm_update_bssid_connect_params(hdd_ctx->pdev,
