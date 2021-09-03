@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[sde_rsc:%s:%d]: " fmt, __func__, __LINE__
@@ -310,7 +310,7 @@ static u32 sde_rsc_timer_calculate(struct sde_rsc_priv *rsc,
 
 	default_prefill_lines = (rsc->cmd_config.fps *
 		DEFAULT_PANEL_MIN_V_PREFILL) / DEFAULT_PANEL_FPS;
-	if ((state == SDE_RSC_CMD_STATE) || !rsc->cmd_config.prefill_lines)
+	if ((state != SDE_RSC_VID_STATE) || !rsc->cmd_config.prefill_lines)
 		rsc->cmd_config.prefill_lines = default_prefill_lines;
 
 	pr_debug("frame fps:%d jitter_numer:%d jitter_denom:%d vtotal:%d prefill lines:%d\n",
