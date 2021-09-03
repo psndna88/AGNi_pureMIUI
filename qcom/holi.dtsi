@@ -1013,6 +1013,7 @@
 	clk_virt: interconnect {
 		compatible = "qcom,holi-clk_virt";
 		#interconnect-cells = <1>;
+		qcom,keepalive;
 		clock-names = "bus", "bus_a";
 		clocks = <&rpmcc RPM_SMD_QUP_CLK>,
 			<&rpmcc RPM_SMD_QUP_A_CLK>;
