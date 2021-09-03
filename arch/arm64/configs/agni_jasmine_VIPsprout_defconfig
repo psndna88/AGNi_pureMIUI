@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.282 Kernel Configuration
+# Linux/arm64 4.4.283 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -4890,8 +4890,14 @@ CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"
 # CONFIG_ANDROID_SIMPLE_LMK is not set
 # CONFIG_LIBNVDIMM is not set
 # CONFIG_NVMEM is not set
+
+#
+# HW tracing support
+#
 # CONFIG_STM is not set
 # CONFIG_INTEL_TH is not set
+CONFIG_CORESIGHT_PLACEHOLDER=y
+CONFIG_CORESIGHT_AMBA_PLACEHOLDER=y
 
 #
 # FPGA Configuration Support

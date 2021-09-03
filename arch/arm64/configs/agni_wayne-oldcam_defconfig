@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.282 Kernel Configuration
+# Linux/arm64 4.4.283 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -55,7 +55,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 CONFIG_CROSS_COMPILE=""
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="_AGNi_OldCam-v14.7_stable-EAS-wayne"
+CONFIG_LOCALVERSION="_AGNi_OldCam-v14.8_stable-EAS-wayne"
 # CONFIG_ROG_SUPPORT is not set
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_DEFAULT_HOSTNAME="(none)"
@@ -4885,8 +4885,14 @@ CONFIG_ANDROID_BINDER_DEVICES="binder,hwbinder,vndbinder"
 # CONFIG_ANDROID_SIMPLE_LMK is not set
 # CONFIG_LIBNVDIMM is not set
 # CONFIG_NVMEM is not set
+
+#
+# HW tracing support
+#
 # CONFIG_STM is not set
 # CONFIG_INTEL_TH is not set
+CONFIG_CORESIGHT_PLACEHOLDER=y
+CONFIG_CORESIGHT_AMBA_PLACEHOLDER=y
 
 #
 # FPGA Configuration Support
