@@ -426,15 +426,50 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 			    enum mgmt_frame_type frm_type)
 {
 	struct mon_rx_status txrx_status = {0};
+	struct pkt_capture_vdev_priv *vdev_priv;
 	struct ieee80211_frame *wh;
 	tpSirMacFrameCtl pfc;
 	qdf_nbuf_t nbuf;
 	int buf_len;
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_pdev *pdev;
 
-	if (!(pkt_capture_get_pktcap_mode(psoc) & PKT_CAPTURE_MODE_MGMT_ONLY)) {
+	vdev = pkt_capture_get_vdev();
+	if (!vdev) {
+		pkt_capture_err("vdev is NULL");
 		qdf_nbuf_free(wbuf);
 		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_priv = pkt_capture_vdev_get_priv(vdev);
+	if (!vdev_priv) {
+		pkt_capture_err("packet capture vdev priv is NULL");
+		qdf_nbuf_free(wbuf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(wbuf));
+
+	if (pfc->type == SIR_MAC_CTRL_FRAME  &&
+	    !vdev_priv->frame_filter.ctrl_rx_frame_filter)
+		goto exit;
+
+	if (pfc->type == SIR_MAC_MGMT_FRAME  &&
+	    !vdev_priv->frame_filter.mgmt_rx_frame_filter)
+		goto exit;
+
+	if (pfc->type == SIR_MAC_MGMT_FRAME) {
+		if (pfc->subType == SIR_MAC_MGMT_BEACON) {
+			if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+			    PKT_CAPTURE_MGMT_CONNECT_NO_BEACON)
+				goto exit;
+		} else {
+			if (!((vdev_priv->frame_filter.mgmt_rx_frame_filter &
+			    PKT_CAPTURE_MGMT_FRAME_TYPE_ALL) ||
+			    (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+			    PKT_CAPTURE_MGMT_CONNECT_NO_BEACON)))
+				goto exit;
+		}
 	}
 
 	buf_len = qdf_nbuf_len(wbuf);
@@ -454,14 +489,12 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
 	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
 
+	pdev = wlan_vdev_get_pdev(vdev);
+
 	if ((pfc->type == IEEE80211_FC0_TYPE_MGT) &&
 	    (pfc->subType == SIR_MAC_MGMT_DISASSOC ||
 	     pfc->subType == SIR_MAC_MGMT_DEAUTH ||
 	     pfc->subType == SIR_MAC_MGMT_ACTION)) {
-		struct wlan_objmgr_pdev *pdev;
-
-		vdev = pkt_capture_get_vdev();
-		pdev = wlan_vdev_get_pdev(vdev);
 		if (pkt_capture_is_rmf_enabled(pdev, psoc, wh->i_addr1)) {
 			QDF_STATUS status;
 
@@ -500,6 +533,9 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 		pkt_capture_mgmtpkt_process(psoc, &txrx_status, nbuf, 0))
 		qdf_nbuf_free(nbuf);
 
+	return QDF_STATUS_SUCCESS;
+exit:
+	qdf_nbuf_free(wbuf);
 	return QDF_STATUS_SUCCESS;
 }
 
