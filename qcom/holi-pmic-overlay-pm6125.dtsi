@@ -389,6 +389,7 @@
 	#size-cells = <0>;
 	status = "ok";
 
+	qcom,leica-used-i2c;
 	pm8008_8: qcom,pm8008@8 {
 		compatible = "qcom,i2c-pmic";
 		reg = <0x8>;
