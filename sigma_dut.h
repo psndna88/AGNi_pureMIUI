@@ -88,10 +88,6 @@
 #define ETH_P_ARP 0x0806
 #endif
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(x) (sizeof((x)) / (sizeof(((x)[0]))))
-#endif
-
 #define IPV6_ADDR_LEN 16
 
 struct sigma_dut;
