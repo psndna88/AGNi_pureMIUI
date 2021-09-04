@@ -3746,6 +3746,9 @@ static int load_module(struct load_info *info, const char __user *uargs,
 	flags |= MODULE_INIT_IGNORE_MODVERSIONS;
 	flags |= MODULE_INIT_IGNORE_VERMAGIC;
 #endif
+#ifdef CONFIG_MODULE_FAKE_LOAD
+	return 0;
+#endif
 	err = module_sig_check(info, flags);
 	if (err)
 		goto free_copy;
