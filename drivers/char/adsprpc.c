@@ -3104,8 +3104,10 @@ static int fastrpc_device_release(struct inode *inode, struct file *file)
 	if (fl) {
 		if (fl->qos_request && pm_qos_request_active(&fl->pm_qos_req))
 			pm_qos_remove_request(&fl->pm_qos_req);
+#ifdef CONFIG_DEBUG_FS
 		if (fl->debugfs_file != NULL)
 			debugfs_remove(fl->debugfs_file);
+#endif
 		fastrpc_file_free(fl);
 		file->private_data = NULL;
 	}
@@ -4073,8 +4075,10 @@ static int fastrpc_cb_probe(struct device *dev)
 	}
 
 	chan->sesscount++;
+#ifdef CONFIG_DEBUG_FS
 	debugfs_global_file = debugfs_create_file("global", 0644, debugfs_root,
 							NULL, &debugfs_fops);
+#endif
 bail:
 	return err;
 }
@@ -4425,7 +4429,9 @@ static int __init fastrpc_device_init(void)
 	struct device *secure_dev = NULL;
 	int err = 0, i;
 
+#ifdef CONFIG_DEBUG_FS
 	debugfs_root = debugfs_create_dir("adsprpc", NULL);
+#endif
 	memset(me, 0, sizeof(*me));
 	fastrpc_init(me);
 	me->dev = NULL;
@@ -4548,7 +4554,9 @@ static void __exit fastrpc_device_exit(void)
 		unregister_rpmsg_driver(&fastrpc_rpmsg_client);
 	if (me->wake_source)
 		wakeup_source_unregister(me->wake_source);
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(debugfs_root);
+#endif
 }
 
 late_initcall(fastrpc_device_init);
