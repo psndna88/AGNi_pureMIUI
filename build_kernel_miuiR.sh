@@ -87,8 +87,6 @@ echo ""
 ###### ZIP Packing
 if [ -f $KERNELDIR/$DIR/Image.gz ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
-	echo "`mkdir -p $KERNELDIR/$DIR/common/AGNiSound/system/vendor/lib/modules`" > /dev/null
-	echo "`mv -f $COMPILEDIR_ATOLL/drivers/misc/fake_miui_modules/*.ko $KERNELDIR/$DIR/common/AGNiSound/system/vendor/lib/modules`" > /dev/null
 	cd $KERNELDIR/$DIR/
 	zip -rq $READY_ZIP/$FILENAME *
 	if [ -f ~/WORKING_DIRECTORY/zipsigner-3.0.jar ]; then
