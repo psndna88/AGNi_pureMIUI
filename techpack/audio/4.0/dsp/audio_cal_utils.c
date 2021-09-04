@@ -1074,14 +1074,10 @@ bool cal_utils_is_cal_stale(struct cal_block_data *cal_block)
 {
 	bool ret = false;
 
-	if ((cal_block) && (cal_block->cal_stale))
-		return true;
-
 	mutex_lock(&cal_lock);
 	if ((cal_block) && (cal_block->cal_stale))
 		ret = true;
 	mutex_unlock(&cal_lock);
-
 	return ret;
 }
 EXPORT_SYMBOL(cal_utils_is_cal_stale);

@@ -1145,7 +1145,7 @@ static void apr_cleanup(void)
 #endif
 }
 
-static int apr_probe(struct platform_device *pdev)
+static int __init apr_probe(struct platform_device *pdev)
 {
 	int i, j, k, ret = 0;
 
@@ -1230,7 +1230,7 @@ static const struct of_device_id apr_machine_of_match[]  = {
 	{},
 };
 
-static struct platform_driver apr_driver = {
+static struct platform_driver __refdata apr_driver = {
 	.probe = apr_probe,
 	.remove = apr_remove,
 	.driver = {
