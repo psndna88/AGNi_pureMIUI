@@ -27,6 +27,8 @@
 	wifi0: qcom,cnss-qcn9000@a0000000 {
 		status = "disabled";
 		compatible = "qcom,cnss-qcn9000";
+		reg = <0xc0000000 0x10000>;
+		reg-names = "smmu_iova_ipa";
 		memory-region = <&qcn9000_0_mem>;
 		qcom,wlan-ramdump-dynamic = <0x400000>;
 		qrtr_node_id = <0x0>;
@@ -149,6 +151,8 @@
 	wifi1: qcom,cnss-qcn9000@b0000000 {
 		status = "disabled";
 		compatible = "qcom,cnss-qcn9000";
+		reg = <0xd0000000 0x10000>;
+		reg-names = "smmu_iova_ipa";
 		memory-region = <&qcn9000_1_mem>;
 		qcom,wlan-ramdump-dynamic = <0x400000>;
 		qrtr_node_id = <0x0>;
