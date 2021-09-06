@@ -2118,7 +2118,7 @@ static int mdss_dp_notify_clients(struct mdss_dp_drv_pdata *dp,
 {
 	int ret = 0;
 	bool notify = false;
-	bool connect;
+	bool connect = true;
 
 	pr_debug("beginning notification\n");
 	if (status == dp->hpd_notification_status) {
