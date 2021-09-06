@@ -256,7 +256,7 @@ int __ovl_xattr_get(struct dentry *dentry, struct inode *inode,
 
 	old_cred = ovl_override_creds(dentry->d_sb);
 	res = __vfs_getxattr(realdentry, d_inode(realdentry), name, value,
-			     size);
+			     size, XATTR_NOSECURITY);
 	ovl_revert_creds(old_cred);
 	return res;
 }
