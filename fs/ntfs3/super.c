@@ -1440,7 +1440,7 @@ static struct file_system_type ntfs_fs_type = {
 	.name		= "ntfs3",
 	.mount		= ntfs_mount,
 	.kill_sb	= kill_block_super,
-	.fs_flags	= FS_REQUIRES_DEV | FS_ALLOW_IDMAP,
+	.fs_flags	= FS_REQUIRES_DEV,
 };
 // clang-format on
 
