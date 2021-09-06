@@ -1208,7 +1208,7 @@ int ntfs_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
 	int err;
 	struct ntfs_inode *ni = ntfs_i(inode);
 
-	err = fiemap_prep(inode, fieinfo, start, &len, ~FIEMAP_FLAG_XATTR);
+	err = fiemap_check_flags(fieinfo, ~FIEMAP_FLAG_XATTR);
 	if (err)
 		return err;
 
