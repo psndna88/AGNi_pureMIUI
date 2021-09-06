@@ -2893,7 +2893,7 @@ bool ni_remove_name_undo(struct ntfs_inode *dir_ni, struct ntfs_inode *ni,
 				      1)) {
 			return false;
 		}
-		fallthrough;
+		/* fall through */
 
 	case 2:
 		de_key_size = le16_to_cpu(de->key_size);

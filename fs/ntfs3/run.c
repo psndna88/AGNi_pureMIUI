@@ -613,25 +613,25 @@ static inline void run_pack_s64(u8 *run_buf, u8 size, s64 v)
 	switch (size) {
 	case 8:
 		run_buf[7] = p[0];
-		fallthrough;
+		/* fall through */
 	case 7:
 		run_buf[6] = p[1];
-		fallthrough;
+		/* fall through */
 	case 6:
 		run_buf[5] = p[2];
-		fallthrough;
+		/* fall through */
 	case 5:
 		run_buf[4] = p[3];
-		fallthrough;
+		/* fall through */
 	case 4:
 		run_buf[3] = p[4];
-		fallthrough;
+		/* fall through */
 	case 3:
 		run_buf[2] = p[5];
-		fallthrough;
+		/* fall through */
 	case 2:
 		run_buf[1] = p[6];
-		fallthrough;
+		/* fall through */
 	case 1:
 		run_buf[0] = p[7];
 	}
@@ -645,25 +645,25 @@ static inline s64 run_unpack_s64(const u8 *run_buf, u8 size, s64 v)
 	switch (size) {
 	case 8:
 		p[0] = run_buf[7];
-		fallthrough;
+		/* fall through */
 	case 7:
 		p[1] = run_buf[6];
-		fallthrough;
+		/* fall through */
 	case 6:
 		p[2] = run_buf[5];
-		fallthrough;
+		/* fall through */
 	case 5:
 		p[3] = run_buf[4];
-		fallthrough;
+		/* fall through */
 	case 4:
 		p[4] = run_buf[3];
-		fallthrough;
+		/* fall through */
 	case 3:
 		p[5] = run_buf[2];
-		fallthrough;
+		/* fall through */
 	case 2:
 		p[6] = run_buf[1];
-		fallthrough;
+		/* fall through */
 	case 1:
 		p[7] = run_buf[0];
 	}
@@ -709,25 +709,25 @@ static inline void run_pack_s64(u8 *run_buf, u8 size, s64 v)
 	switch (size) {
 	case 8:
 		run_buf[7] = p[7];
-		fallthrough;
+		/* fall through */
 	case 7:
 		run_buf[6] = p[6];
-		fallthrough;
+		/* fall through */
 	case 6:
 		run_buf[5] = p[5];
-		fallthrough;
+		/* fall through */
 	case 5:
 		run_buf[4] = p[4];
-		fallthrough;
+		/* fall through */
 	case 4:
 		run_buf[3] = p[3];
-		fallthrough;
+		/* fall through */
 	case 3:
 		run_buf[2] = p[2];
-		fallthrough;
+		/* fall through */
 	case 2:
 		run_buf[1] = p[1];
-		fallthrough;
+		/* fall through */
 	case 1:
 		run_buf[0] = p[0];
 	}
@@ -742,25 +742,25 @@ static inline s64 run_unpack_s64(const u8 *run_buf, u8 size, s64 v)
 	switch (size) {
 	case 8:
 		p[7] = run_buf[7];
-		fallthrough;
+		/* fall through */
 	case 7:
 		p[6] = run_buf[6];
-		fallthrough;
+		/* fall through */
 	case 6:
 		p[5] = run_buf[5];
-		fallthrough;
+		/* fall through */
 	case 5:
 		p[4] = run_buf[4];
-		fallthrough;
+		/* fall through */
 	case 4:
 		p[3] = run_buf[3];
-		fallthrough;
+		/* fall through */
 	case 3:
 		p[2] = run_buf[2];
-		fallthrough;
+		/* fall through */
 	case 2:
 		p[1] = run_buf[1];
-		fallthrough;
+		/* fall through */
 	case 1:
 		p[0] = run_buf[0];
 	}
