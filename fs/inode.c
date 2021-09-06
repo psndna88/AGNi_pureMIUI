@@ -19,6 +19,7 @@
 #include <linux/buffer_head.h> /* for inode_has_buffers */
 #include <linux/ratelimit.h>
 #include <linux/list_lru.h>
+#include <linux/iversion.h>
 #include <trace/events/writeback.h>
 #include "internal.h"
 
