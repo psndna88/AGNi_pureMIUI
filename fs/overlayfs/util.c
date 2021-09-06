@@ -55,7 +55,7 @@ void ovl_revert_creds(const struct cred *old_cred)
 ssize_t ovl_vfs_getxattr(struct dentry *dentry, const char *name, void *buf,
 			 size_t size)
 {
-	return __vfs_getxattr(dentry, d_inode(dentry), name, buf, size);
+	return __vfs_getxattr(dentry, d_inode(dentry), name, buf, size, XATTR_NOSECURITY);
 }
 
 struct super_block *ovl_same_sb(struct super_block *sb)
