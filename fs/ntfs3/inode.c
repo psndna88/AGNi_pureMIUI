@@ -712,6 +712,7 @@ static int ntfs_readpage(struct file *file, struct page *page)
 	return mpage_readpage(page, ntfs_get_block);
 }
 
+#if 0
 static void ntfs_readahead(struct readahead_control *rac)
 {
 	struct address_space *mapping = rac->mapping;
@@ -741,6 +742,7 @@ static void ntfs_readahead(struct readahead_control *rac)
 
 	mpage_readahead(rac, ntfs_get_block);
 }
+#endif
 
 static int ntfs_get_block_direct_IO_R(struct inode *inode, sector_t iblock,
 				      struct buffer_head *bh_result, int create)
@@ -1940,7 +1942,9 @@ const struct inode_operations ntfs_link_inode_operations = {
 
 const struct address_space_operations ntfs_aops = {
 	.readpage	= ntfs_readpage,
+#if 0
 	.readahead	= ntfs_readahead,
+#endif
 	.writepage	= ntfs_writepage,
 	.writepages	= ntfs_writepages,
 	.write_begin	= ntfs_write_begin,
@@ -1952,6 +1956,8 @@ const struct address_space_operations ntfs_aops = {
 
 const struct address_space_operations ntfs_aops_cmpr = {
 	.readpage	= ntfs_readpage,
+#if 0
 	.readahead	= ntfs_readahead,
+#endif
 };
 // clang-format on
