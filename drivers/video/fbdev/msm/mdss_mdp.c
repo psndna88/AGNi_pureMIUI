@@ -1169,10 +1169,6 @@ irqreturn_t mdss_mdp_isr(int irq, void *ptr)
 	}
 
 	mdss_mdp_video_isr(mdata->video_intf, mdata->nintf);
-
-	if (cmpxchg(&mdata->pm_irq_set, true, false))
-		schedule_work(&mdata->pm_unset_work);
-
 	return IRQ_HANDLED;
 }
 
@@ -1844,14 +1840,6 @@ static int mdss_mdp_gdsc_notifier_call(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-static void mdss_pm_unset(struct work_struct *work)
-{
-	struct mdss_data_type *mdata = container_of(work, typeof(*mdata),
-						    pm_unset_work);
-
-	pm_qos_update_request(&mdata->pm_irq_req, PM_QOS_DEFAULT_VALUE);
-}
-
 static int mdss_mdp_irq_clk_setup(struct mdss_data_type *mdata)
 {
 	int ret;
@@ -1866,18 +1854,12 @@ static int mdss_mdp_irq_clk_setup(struct mdss_data_type *mdata)
 	pr_debug("max mdp clk rate=%d\n", mdata->max_mdp_clk_rate);
 
 	ret = devm_request_irq(&mdata->pdev->dev, mdss_mdp_hw.irq_info->irq,
-				mdss_irq_handler, 0x0, "MDSS", mdata);
+				mdss_irq_handler, IRQF_PERF_CRITICAL, "MDSS", mdata);
 	if (ret) {
 		pr_err("mdp request_irq() failed!\n");
 		return ret;
 	}
 	disable_irq(mdss_mdp_hw.irq_info->irq);
-
-	INIT_WORK(&mdata->pm_unset_work, mdss_pm_unset);
-	mdata->pm_irq_req.type = PM_QOS_REQ_AFFINE_IRQ;
-	mdata->pm_irq_req.irq = mdss_mdp_hw.irq_info->irq;
-	pm_qos_add_request(&mdata->pm_irq_req, PM_QOS_CPU_DMA_LATENCY,
-			   PM_QOS_DEFAULT_VALUE);
 
 	mdata->fs = devm_regulator_get(&mdata->pdev->dev, "vdd");
 	if (IS_ERR_OR_NULL(mdata->fs)) {
@@ -2404,7 +2386,6 @@ static u32 mdss_mdp_scaler_init(struct mdss_data_type *mdata,
 			return -EINVAL;
 		}
 		mdata->scaler_off->ndest_scalers = len/sizeof(u32);
-		BUG_ON(mdata->scaler_off->ndest_scalers > 2);
 
 		mdata->scaler_off->dest_scaler_off =
 			devm_kzalloc(dev, sizeof(u32) *

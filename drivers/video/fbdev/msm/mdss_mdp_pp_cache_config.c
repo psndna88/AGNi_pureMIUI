@@ -1200,7 +1200,7 @@ static int pp_pa_cache_params_v1_7(struct mdp_pa_v2_cfg_data *config,
 	if (copy_from_user(&pa_usr_config, config->cfg_payload,
 			   sizeof(pa_usr_config))) {
 #ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
-		pr_err("%s Failed to copy v1_7 PA - copying in kernel \n",__func__);
+		pr_debug("%s Failed to copy v1_7 PA - copying in kernel \n",__func__);
 		memcpy(&pa_usr_config, config->cfg_payload, sizeof(pa_usr_config));
 		ret = 0;
 #else
@@ -1759,7 +1759,7 @@ static int pp_igc_lut_cache_params_pipe_v3(
 		u32 copy_from_kernel)
 {
 	struct mdp_igc_lut_data_config *v3_cache_data = NULL;
-	struct mdp_igc_lut_data_payload v3_usr_config;
+	struct mdp_igc_lut_data_payload v3_usr_config = {0};
 	u32 *c0_c1_data, *c2_data, len;
 	int ret = 0, fix_up = 0, i = 0;
 	u32 table_fmt = mdp_igc_rec_max, strength = 0;

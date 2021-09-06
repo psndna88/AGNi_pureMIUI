@@ -48,7 +48,7 @@ static inline const char *mdss_mdp_pipetype2str(u32 ptype)
 
 static inline const char *mdss_mdp_format2str(u32 format)
 {
-	static const char *strings[] = {
+	static const char const *strings[] = {
 #define FORMAT_NAME(f) [MDP_ ## f] = __stringify(f)
 		FORMAT_NAME(RGB_565),
 		FORMAT_NAME(BGR_565),
@@ -84,7 +84,7 @@ void mdss_mdp_dump(struct mdss_data_type *mdata);
 void mdss_mdp_hw_rev_debug_caps_init(struct mdss_data_type *mdata);
 
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 int mdss_mdp_debugfs_init(struct mdss_data_type *mdata);
 #else
 static inline int mdss_mdp_debugfs_init(struct mdss_data_type *mdata)

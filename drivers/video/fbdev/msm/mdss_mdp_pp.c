@@ -2802,7 +2802,7 @@ int mdss_mdp_pp_setup_locked(struct mdss_mdp_ctl *ctl,
 	struct mdss_data_type *mdata;
 	int ret = 0, i;
 	u32 flags, pa_v2_flags;
-	u32 max_bw_needed;
+	u32 max_bw_needed = 0;
 	u32 mixer_cnt;
 	u32 mixer_id[MDSS_MDP_INTF_MAX_LAYERMIXER];
 	u32 disp_num;
@@ -3416,7 +3416,8 @@ static int pp_ad_calc_bl(struct msm_fb_data_type *mfd, int bl_in, int *bl_out,
 		return -EPERM;
 	}
 
-	if (!ad->bl_mfd || !ad->bl_mfd->panel_info) {
+	if (!ad->bl_mfd || !ad->bl_mfd->panel_info ||
+		ad->bl_att_lut == NULL) {
 		pr_err("Invalid ad info: bl_mfd = 0x%pK, ad->bl_mfd->panel_info = 0x%pK, bl_att_lut = 0x%pK\n",
 			ad->bl_mfd,
 			(!ad->bl_mfd) ? NULL : ad->bl_mfd->panel_info,

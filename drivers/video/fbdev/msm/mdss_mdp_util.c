@@ -159,8 +159,8 @@ struct mdss_mdp_format_params *mdss_mdp_get_format_params(u32 format)
 	int i;
 	bool fmt_found = false;
 
-	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_ubwc_map); i++) {
-		fmt = &mdss_mdp_format_ubwc_map[i].mdp_format;
+	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_map); i++) {
+		fmt = &mdss_mdp_format_map[i];
 		if (format == fmt->format) {
 			fmt_found = true;
 			break;
@@ -168,8 +168,8 @@ struct mdss_mdp_format_params *mdss_mdp_get_format_params(u32 format)
 	}
 
 	if (!fmt_found) {
-		for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_map); i++) {
-			fmt = &mdss_mdp_format_map[i];
+		for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_ubwc_map); i++) {
+			fmt = &mdss_mdp_format_ubwc_map[i].mdp_format;
 			if (format == fmt->format)
 				break;
 		}
@@ -447,7 +447,7 @@ static int mdss_mdp_get_ubwc_plane_size(struct mdss_mdp_format_params *fmt,
 			uv_bpp_numer = 2;
 			y_bpp_denom = 1;
 			uv_bpp_denom = 1;
-		} else if (fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) {
+		} else { // fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC
 			y_stride_alignment = 192;
 			uv_stride_alignment = 96;
 			y_height_alignment = 16;
