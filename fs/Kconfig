@@ -131,6 +131,7 @@ source "fs/fat/Kconfig"
 source "fs/exfat/Kconfig"
 source "fs/sdfat/Kconfig"
 source "fs/ntfs/Kconfig"
+source "fs/ntfs3/Kconfig"
 
 endmenu
 endif # BLOCK
