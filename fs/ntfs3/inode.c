@@ -1625,7 +1625,7 @@ out4:
 	clear_rec_inuse(rec);
 	clear_nlink(inode);
 	ni->mi.dirty = false;
-	discard_new_inode(inode);
+	iput(inode);
 out3:
 	ntfs_mark_rec_free(sbi, ino);
 
