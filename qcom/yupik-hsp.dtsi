@@ -24,3 +24,7 @@
 &gcc_usb30_sec_gdsc {
 	status = "ok";
 };
+
+&bluetooth {
+	compatible = "qcom,qca6490";
+};
