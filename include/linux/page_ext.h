@@ -22,7 +22,7 @@ enum page_ext_flags {
 #ifdef CONFIG_PAGE_EXTENSION_PAGE_FREE
 	PAGE_EXT_PG_FREE,
 #endif
-#if defined(CONFIG_IDLE_PAGE_TRACKING) && !defined(CONFIG_64BIT)
+#if defined(CONFIG_PAGE_IDLE_FLAG) && !defined(CONFIG_64BIT)
 	PAGE_EXT_YOUNG,
 	PAGE_EXT_IDLE,
 #endif
