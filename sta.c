@@ -3556,6 +3556,587 @@ fail:
 }
 
 
+void free_dscp_policy_table(struct sigma_dut *dut)
+{
+	struct dscp_policy_data *dscp_policy;
+
+	while (dut->dscp_policy_table) {
+		dscp_policy = dut->dscp_policy_table;
+		dut->dscp_policy_table = dscp_policy->next;
+		free(dscp_policy);
+	}
+}
+
+
+static int delete_nft_table(struct sigma_dut *dut, const char *table,
+			   const char *ip_type)
+{
+	int res;
+	char cmd[200];
+
+	res = snprintf(cmd, sizeof(cmd), "nft delete table %s %s_%s", ip_type,
+		      table, ip_type);
+	if (snprintf_error(sizeof(cmd), res)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create delete table command");
+		return -1;
+	}
+
+	if (system(cmd) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to run %s", cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int remove_nft_rule(struct sigma_dut *dut, int policy_id,
+			   enum ip_version ip_ver)
+{
+	int res;
+	char table[50];
+
+	res = snprintf(table, sizeof(table), "wifi_%s_dscp_policy_%d",
+		       dut->station_ifname, policy_id);
+	if (snprintf_error(sizeof(table), res)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to create table name for policy %d",
+				policy_id);
+		return -1;
+	}
+
+
+	if (ip_ver == IPV6)
+		return delete_nft_table(dut, table, "ip6");
+	else
+		return delete_nft_table(dut, table, "ip");
+}
+
+
+static int create_nft_table(struct sigma_dut *dut, int policy_id,
+			    const char *table_name, enum ip_version ip_ver)
+{
+	char cmd[200];
+	int res;
+
+	res = snprintf(cmd, sizeof(cmd), "nft add table %s %s",
+		       ip_ver == IPV6 ? "ip6" : "ip", table_name);
+	if (snprintf_error(sizeof(cmd), res)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to add rule to create table for policy id %d",
+				policy_id);
+		return -1;
+	}
+
+	if (system(cmd) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to run %s", cmd);
+		return -1;
+	}
+
+	res = snprintf(cmd, sizeof(cmd),
+		       "nft add chain %s %s OUTPUT { type filter hook output priority 0 \\; }",
+		       ip_ver == IPV6 ? "ip6" : "ip", table_name);
+	if (snprintf_error(sizeof(cmd), res)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to add rule to create chain for table = %s",
+				table_name);
+		return -1;
+	}
+
+	if (system(cmd) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to run %s", cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static char * protocol_to_str(int proto)
+{
+	switch (proto) {
+	case 6:
+		return "tcp";
+	case 17:
+		return "udp";
+	case 50:
+		return "esp";
+	default:
+		return "unknown";
+	}
+}
+
+
+static int remove_dscp_policy(struct sigma_dut *dut, u8 policy_id)
+{
+	struct dscp_policy_data *dscp_policy = dut->dscp_policy_table;
+	struct dscp_policy_data *prev = NULL;
+
+	while (dscp_policy) {
+		if (dscp_policy->policy_id == policy_id)
+			break;
+
+		prev = dscp_policy;
+		dscp_policy = dscp_policy->next;
+	}
+
+	/*
+	 * Consider remove request for a policy id which does not exist as
+	 * success.
+	 */
+	if (!dscp_policy)
+		return 0;
+
+	if (strlen(dscp_policy->domain_name) == 0 &&
+	    remove_nft_rule(dut, policy_id, dscp_policy->ip_version))
+		return -1;
+
+	if (prev)
+		prev->next = dscp_policy->next;
+	else
+		dut->dscp_policy_table = dscp_policy->next;
+
+	free(dscp_policy);
+	return 0;
+}
+
+
+static int add_nft_rule(struct sigma_dut *dut,
+			struct dscp_policy_data *dscp_policy)
+{
+	char nft_cmd[1000], ip[4], table_name[100];
+	char *pos;
+	int ret, len, policy_id = dscp_policy->policy_id;
+	enum ip_version ip_ver = dscp_policy->ip_version;
+
+	if (ip_ver == IPV6)
+		strlcpy(ip, "ip6", sizeof(ip));
+	else
+		strlcpy(ip, "ip", sizeof(ip));
+
+	ret = snprintf(table_name, sizeof(table_name),
+		       "wifi_%s_dscp_policy_%d_%s",
+		       dut->station_ifname, policy_id, ip);
+	if (snprintf_error(sizeof(table_name), ret))
+		return -1;
+
+	if (create_nft_table(dut, policy_id, table_name, ip_ver)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to create nft table");
+		return -1;
+	}
+
+	pos = nft_cmd;
+	len = sizeof(nft_cmd);
+
+	ret = snprintf(pos, len,
+		       "nft add rule %s %s OUTPUT oifname \"%s\"",
+		       ip, table_name, dut->station_ifname);
+	if (snprintf_error(len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to create nft cmd %s", nft_cmd);
+		return -1;
+	}
+
+	pos += ret;
+	len -= ret;
+
+	if (strlen(dscp_policy->src_ip)) {
+		ret = snprintf(pos, len, " %s saddr %s", ip,
+			       dscp_policy->src_ip);
+		if (snprintf_error(len, ret))
+			return -1;
+
+		pos += ret;
+		len -= ret;
+	}
+
+	if (strlen(dscp_policy->dst_ip)) {
+		ret = snprintf(pos, len, " %s daddr %s", ip,
+			       dscp_policy->dst_ip);
+		if (snprintf_error(len, ret))
+			return -1;
+
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->src_port) {
+		ret = snprintf(pos, len, " %s sport %d",
+			       protocol_to_str(dscp_policy->protocol),
+			       dscp_policy->src_port);
+		if (snprintf_error(len, ret))
+			return -1;
+
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->dst_port) {
+		ret = snprintf(pos, len, " %s dport %d",
+			       protocol_to_str(dscp_policy->protocol),
+			       dscp_policy->dst_port);
+		if (snprintf_error(len, ret))
+			return -1;
+
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->start_port && dscp_policy->end_port) {
+		ret = snprintf(pos, len, " %s dport %d-%d",
+			       protocol_to_str(dscp_policy->protocol),
+			       dscp_policy->start_port,
+			       dscp_policy->end_port);
+		if (snprintf_error(len, ret))
+			return -1;
+
+		pos += ret;
+		len -= ret;
+	}
+
+	ret = snprintf(pos, len, " counter %s dscp set 0x%0x", ip,
+		       dscp_policy->dscp);
+	if (snprintf_error(len, ret))
+		return -1;
+
+	ret = system(nft_cmd);
+	sigma_dut_print(dut, DUT_MSG_INFO, "nft rule: %s err: %d",
+			nft_cmd, ret);
+
+	return ret;
+}
+
+
+static void clear_all_dscp_policies(struct sigma_dut *dut)
+{
+	free_dscp_policy_table(dut);
+
+	if (system("nft flush ruleset") != 0)
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to flush DSCP policy");
+}
+
+
+static int send_dscp_response(struct sigma_dut *dut,
+			      struct dscp_policy_status *status_list,
+			      int num_status)
+{
+	int rem_len, ret;
+	char buf[200] = "", *pos, cmd[256];
+
+	pos = buf;
+	rem_len = sizeof(buf);
+
+	ret = snprintf(pos, rem_len, " solicited");
+	if (snprintf_error(rem_len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to write DSCP policy response command");
+		return -1;
+	}
+	pos += ret;
+	rem_len -= ret;
+
+	for (int i = 0; i < num_status; i++) {
+		ret = snprintf(pos, rem_len, " policy_id=%d status=%d",
+			       status_list[i].id, status_list[i].status);
+		if (snprintf_error(rem_len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to wite DSCP policy response");
+			return -1;
+		}
+
+		pos += ret;
+		rem_len -= ret;
+	}
+
+	ret = snprintf(cmd, sizeof(cmd), "DSCP_RESP%s", buf);
+	if (snprintf_error(sizeof(cmd), ret)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create DSCP Policy Response frame");
+		return -1;
+	}
+
+	if (wpa_command(dut->station_ifname, cmd) != 0) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to send DSCP Policy Response frame");
+		return -1;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"DSCP Policy Response frame sent: %s", cmd);
+	return 0;
+}
+
+
+#ifdef ANDROID
+static void thread_cancel_handler(int sig)
+{
+	if (sig == SIGUSR1)
+		pthread_exit(0);
+}
+#endif /* ANDROID */
+
+
+static void * mon_dscp_policies(void *ptr)
+{
+	struct sigma_dut *dut = ptr;
+	int ret, policy_id;
+	struct wpa_ctrl *ctrl;
+	char buf[4096], *pos, *end;
+	struct dscp_policy_data *policy = NULL, *policy_table;
+	struct dscp_policy_status status_list[10];
+	int num_status = 0;
+	const char *events[] = {
+		"CTRL-EVENT-DISCONNECTED",
+		"CTRL-EVENT-DSCP-POLICY",
+		NULL
+	};
+#ifdef ANDROID
+	struct sigaction actions;
+#endif /* ANDROID */
+
+	ctrl = open_wpa_mon(get_station_ifname(dut));
+	if (!ctrl) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to open wpa_supplicant monitor connection");
+		return NULL;
+	}
+
+#ifdef ANDROID
+	memset(&actions, 0, sizeof(actions));
+	sigemptyset(&actions.sa_mask);
+	actions.sa_flags = 0;
+	actions.sa_handler = thread_cancel_handler;
+	if (sigaction(SIGUSR1, &actions, NULL) == -1) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to register exit handler for %s",
+				__func__);
+		wpa_ctrl_detach(ctrl);
+		wpa_ctrl_close(ctrl);
+		return NULL;
+	}
+#endif /* ANDROID */
+
+	while (1) {
+		ret = get_wpa_cli_events_timeout(dut, ctrl, events,
+						 buf, sizeof(buf), 0);
+
+		if (ret || strlen(buf) == 0) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Did not receive any event");
+			continue;
+		}
+
+		if (strstr(buf, "CTRL-EVENT-DISCONNECTED")) {
+			clear_all_dscp_policies(dut);
+			break;
+		}
+
+		if (strstr(buf, "request_start")) {
+			num_status = 0;
+			if (strstr(buf, "clear_all"))
+				clear_all_dscp_policies(dut);
+			continue;
+		}
+
+		if (strstr(buf, "request_end")) {
+			send_dscp_response(dut, status_list, num_status);
+			continue;
+		}
+
+		if (!strstr(buf, "add") && !strstr(buf, "remove") &&
+		    !strstr(buf, "reject")) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG, "Ignore event: %s",
+					buf);
+			continue;
+		}
+
+		pos = strstr(buf, "policy_id=");
+		if (!pos) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Policy id not present");
+			continue;
+		}
+		policy_id = atoi(pos + 10);
+
+		if (num_status >= ARRAY_SIZE(status_list)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Max policies allowed per DSCP request reached. Drop policy id %d request",
+					policy_id);
+			continue;
+		}
+		status_list[num_status].id = policy_id;
+
+		if (strstr(buf, "reject"))
+			goto reject;
+
+		/*
+		 * In case of "add" also if policy with same policy id exist it
+		 * shall be removed. So always call remove_dscp_policy().
+		 */
+		if (remove_dscp_policy(dut, policy_id))
+			goto reject;
+
+		if (strstr(buf, "remove"))
+			goto success;
+
+		policy = malloc(sizeof(*policy));
+		if (!policy)
+			goto reject;
+
+		memset(policy, 0, sizeof(*policy));
+
+		policy->policy_id = policy_id;
+
+		pos = strstr(buf, "dscp=");
+		if (!pos) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"DSCP info not present");
+			goto reject;
+		}
+		policy->dscp = atoi(pos + 5);
+
+		pos = strstr(buf, "ip_version=");
+		if (!pos) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"IP version info not present");
+			goto reject;
+		}
+		policy->ip_version = atoi(pos + 11);
+
+		pos = strstr(buf, "domain_name=");
+		if (pos) {
+			pos += 12;
+			end = strchr(pos, ' ');
+			if (!end)
+				end = pos + strlen(pos);
+
+			if (end - pos >= (int) sizeof(policy->domain_name))
+				goto reject;
+
+			memcpy(policy->domain_name, pos, end - pos);
+			policy->domain_name[end - pos] = '\0';
+		}
+
+		pos = strstr(buf, "start_port=");
+		if (pos) {
+			pos += 11;
+			policy->start_port = atoi(pos);
+		}
+
+		pos = strstr(buf, "end_port=");
+		if (pos) {
+			pos += 9;
+			policy->end_port = atoi(pos);
+		}
+
+		pos = strstr(buf, "src_ip=");
+		if (pos) {
+			pos += 7;
+			end = strchr(pos, ' ');
+			if (!end)
+				end = pos + strlen(pos);
+
+			if (end - pos >= (int) sizeof(policy->src_ip))
+				goto reject;
+
+			memcpy(policy->src_ip, pos, end - pos);
+			policy->src_ip[end - pos] = '\0';
+		}
+
+		pos = strstr(buf, "dst_ip=");
+		if (pos) {
+			pos += 7;
+			end = strchr(pos, ' ');
+			if (!end)
+				end = pos + strlen(pos);
+
+			if (end - pos >= (int) sizeof(policy->dst_ip))
+				goto reject;
+
+			memcpy(policy->dst_ip, pos, end - pos);
+			policy->dst_ip[end - pos] = '\0';
+		}
+
+		pos = strstr(buf, "src_port=");
+		if (pos) {
+			pos += 9;
+			policy->src_port = atoi(pos);
+		}
+
+		pos = strstr(buf, "dst_port=");
+		if (pos) {
+			pos += 9;
+			policy->dst_port = atoi(pos);
+		}
+
+		pos = strstr(buf, "protocol=");
+		if (pos) {
+			pos += 9;
+			policy->protocol = atoi(pos);
+		}
+
+		/*
+		 * Skip adding nft rules for doman name policies.
+		 * Domain name rules are applied in sigma_dut itself.
+		 */
+		if (!strlen(policy->domain_name) && add_nft_rule(dut, policy))
+			goto reject;
+
+		if (dut->dscp_policy_table) {
+			policy_table = dut->dscp_policy_table;
+			while (policy_table->next != NULL)
+				policy_table = policy_table->next;
+
+			policy_table->next = policy;
+		} else
+			dut->dscp_policy_table = policy;
+
+success:
+		status_list[num_status].status = DSCP_POLICY_SUCCESS;
+		num_status++;
+		policy = NULL;
+		continue;
+reject:
+		status_list[num_status].status = DSCP_POLICY_REJECT;
+		num_status++;
+		free(policy);
+		policy = NULL;
+	}
+
+	free_dscp_policy_table(dut);
+	wpa_ctrl_detach(ctrl);
+	wpa_ctrl_close(ctrl);
+
+	pthread_exit(0);
+	return NULL;
+}
+
+
+static void start_dscp_policy_mon_thread(struct sigma_dut *dut)
+{
+	/* Create event thread */
+	pthread_create(&dut->dscp_policy_mon_thread, NULL, &mon_dscp_policies,
+		       (void *) dut);
+}
+
+
+void stop_dscp_policy_mon_thread(struct sigma_dut *dut)
+{
+	if (dut->dscp_policy_mon_thread) {
+#ifdef ANDROID
+		/* pthread_cancel not supported in Android */
+		pthread_kill(dut->dscp_policy_mon_thread, SIGUSR1);
+#else /* ANDROID */
+		pthread_cancel(dut->dscp_policy_mon_thread);
+#endif /* ANDROID */
+		dut->dscp_policy_mon_thread = 0;
+	}
+}
+
+
 static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 					       struct sigma_conn *conn,
 					       struct sigma_cmd *cmd)
@@ -3798,6 +4379,7 @@ static enum sigma_cmd_result cmd_sta_associate(struct sigma_dut *dut,
 					ret = ERROR_SEND_STATUS;
 					break;
 				}
+				start_dscp_policy_mon_thread(dut);
 			}
 			break;
 		}
@@ -8274,6 +8856,9 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		if (system(buf) != 0)
 			sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to run: %s",
 					buf);
+
+		stop_dscp_policy_mon_thread(dut);
+		clear_all_dscp_policies(dut);
 	}
 
 	dut->akm_values = 0;

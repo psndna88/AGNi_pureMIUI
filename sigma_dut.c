@@ -898,6 +898,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->station_ifname_2g = NULL;
 	free(dut->station_ifname_5g);
 	dut->station_ifname_5g = NULL;
+	stop_dscp_policy_mon_thread(dut);
+	free_dscp_policy_table(dut);
 }
 
 

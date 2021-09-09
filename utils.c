@@ -1033,3 +1033,9 @@ int set_ipv6_addr(struct sigma_dut *dut, const char *ip, const char *mask,
 
 	return 0;
 }
+
+
+int snprintf_error(size_t size, int res)
+{
+	return res < 0 || (unsigned int) res >= size;
+}

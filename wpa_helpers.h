@@ -41,6 +41,9 @@ int get_wpa_cli_event2(struct sigma_dut *dut, struct wpa_ctrl *mon,
 		       char *buf, size_t buf_size);
 int get_wpa_cli_events(struct sigma_dut *dut, struct wpa_ctrl *mon,
 		       const char **events, char *buf, size_t buf_size);
+int get_wpa_cli_events_timeout(struct sigma_dut *dut, struct wpa_ctrl *mon,
+			       const char **events, char *buf, size_t buf_size,
+			       unsigned int timeout);
 
 int add_network(const char *ifname);
 int set_network(const char *ifname, int id, const char *field,

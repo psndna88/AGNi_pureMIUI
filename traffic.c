@@ -304,17 +304,109 @@ static int get_ip_addr(const char *ifname, int ipv6, char *buf, size_t len)
 }
 
 
+static int get_dscp_from_policy_table(struct sigma_dut *dut, int ip_version,
+				      const char *domain_name,
+				      const char *src_ip, int dst_port,
+				      int src_port)
+{
+	struct dscp_policy_data *policy;
+	char *suffix;
+	int dscp = -1, max_score = 0, max_suffix_length = 0;
+	int score, suffix_length;
+
+	for (policy = dut->dscp_policy_table; policy; policy = policy->next) {
+		if (strlen(policy->domain_name) == 0)
+			continue;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Found policy with domain name %s, ipver %d start_port %d, end_port %d, dst_port %d src_port %d, src_ip %s, dscp %d",
+				policy->domain_name, policy->ip_version,
+				policy->start_port, policy->end_port,
+				policy->dst_port, policy->src_port,
+				policy->src_ip, policy->dscp);
+		/*
+		 * Discard if suffix is not found or suffix is not in the end of
+		 * the complete domain name.
+		 */
+		suffix = strstr(domain_name, policy->domain_name);
+		if (!suffix)
+			continue;
+
+		suffix_length = strlen(suffix);
+		if (suffix_length != strlen(policy->domain_name))
+			continue;
+
+		/* Calculate granularity score */
+		score = 0;
+		if (policy->ip_version) {
+			if (ip_version == policy->ip_version)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->start_port && policy->end_port) {
+			if (dst_port >= policy->start_port &&
+			    dst_port <= policy->end_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->dst_port) {
+			if (dst_port == policy->dst_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->src_port) {
+			if (src_port == policy->src_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (strlen(policy->src_ip)) {
+			if (!strcmp(src_ip, policy->src_ip))
+				score++;
+			else
+				continue;
+		}
+
+		if (score > max_score) {
+			max_score = score;
+			max_suffix_length = suffix_length;
+			dscp = policy->dscp;
+		} else if (score == max_score &&
+			   suffix_length > max_suffix_length) {
+			max_suffix_length = suffix_length;
+			dscp = policy->dscp;
+		}
+	}
+
+	if (dscp == -1)
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Policy not found for %s", domain_name);
+	else
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"DSCP for %s is %d", domain_name, dscp);
+
+	return dscp;
+}
+
+
 static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 						     struct sigma_conn *conn,
 						     struct sigma_cmd *cmd)
 {
-	const char *val, *dst;
+	const char *val, *dst, *domain_name = NULL;
 	const char *iptype;
-	int port, duration;
+	int duration, dst_port = 0, src_port = 0;
 	const char *proto;
 	char buf[256];
 	const char *ifname;
-	char port_str[20], iperf[100];
+	char port_str[20], iperf[100], src_ip[100];
 	FILE *f;
 	int server, ipv6 = 0;
 	char *pos;
@@ -347,8 +439,8 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	port_str[0] = '\0';
 	val = get_param(cmd, "port");
 	if (val) {
-		port = atoi(val);
-		snprintf(port_str, sizeof(port_str), "-p %d", port);
+		dst_port = atoi(val);
+		snprintf(port_str, sizeof(port_str), "-p %d", dst_port);
 	}
 
 	proto = "";
@@ -376,6 +468,7 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	}
 
 	if (dst && !ipv6 && !is_ip_addr(dst)) {
+		domain_name = dst;
 		host_addr = gethostbyname2(dst, AF_INET);
 		if (!host_addr) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -385,6 +478,7 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		dst = inet_ntop(AF_INET, host_addr->h_addr_list[0], ip_addr,
 				sizeof(ip_addr));
 	} else if (dst && ipv6 && !is_ipv6_addr(dst)) {
+		domain_name = dst;
 		host_addr = gethostbyname2(dst, AF_INET6);
 		if (!host_addr) {
 			send_resp(dut, conn, SIGMA_ERROR,
@@ -408,25 +502,25 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		duration = 0;
 
 	client_port_str[0] = '\0';
+	src_ip[0] = '\0';
 	val = get_param(cmd, "clientport");
 	if (val) {
-		char ipaddr[100];
 		int res;
 
-		port = atoi(val);
-		if (get_ip_addr(ifname, ipv6, ipaddr, sizeof(ipaddr))) {
+		src_port = atoi(val);
+		if (get_ip_addr(ifname, ipv6, src_ip, sizeof(src_ip))) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				"errorCode,Cannot get own IP address");
 			return STATUS_SENT;
 		}
 
 		if (ipv6)
-			snprintf(buf, sizeof(buf), "%s%%%s", ipaddr, ifname);
+			snprintf(buf, sizeof(buf), "%s%%%s", src_ip, ifname);
 		else
-			snprintf(buf, sizeof(buf), "%s", ipaddr);
+			snprintf(buf, sizeof(buf), "%s", src_ip);
 
 		res = snprintf(client_port_str, sizeof(client_port_str),
-			       " -B %s --cport %d", buf, port);
+			       " -B %s --cport %d", buf, src_port);
 		if (res < 0 || res >= sizeof(client_port_str))
 			return ERROR_SEND_STATUS;
 	}
@@ -445,6 +539,13 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 		snprintf(tos, sizeof(tos), " -S 0x%02x", dscp << 2);
+	}
+	if (domain_name) {
+		dscp = get_dscp_from_policy_table(dut, ipv6 ? IPV6 : IPV4,
+						  domain_name, src_ip, dst_port,
+						  src_port);
+		if (dscp != -1)
+			snprintf(tos, sizeof(tos), " -S 0x%02x", dscp << 2);
 	}
 
 	unlink(concat_sigma_tmpdir(dut, "/sigma_dut-iperf", iperf,
