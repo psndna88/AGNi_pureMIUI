@@ -829,6 +829,78 @@ struct sde_connector_dyn_hdr_metadata *sde_connector_get_dyn_hdr_meta(
 	return &c_state->dyn_hdr_meta;
 }
 
+void sde_connector_fod_pre_kickoff(struct drm_connector *connector)
+{
+	struct sde_connector *c_conn;
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+
+	if (!connector)
+		return;
+
+	c_conn = to_sde_connector(connector);
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return;
+
+	display = (struct dsi_display *) c_conn->display;
+	if (!display)
+		return;
+
+	if (display->display_selection_type != DSI_PRIMARY)
+		return;
+
+	panel = display->panel;
+	if (!panel)
+		return;
+
+	if (dsi_panel_is_fod_hbm_applied(panel))
+		return;
+
+	dsi_panel_apply_requested_fod_hbm(panel);
+
+	if (!dsi_panel_get_fod_hbm(panel))
+		dsi_panel_set_fod_ui(panel, 0);		
+}
+
+void sde_connector_fod_post_kickoff(struct drm_connector *connector)
+{
+	static bool old_fod_hbm_enabled = false;
+	struct sde_connector *c_conn;
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	bool fod_hbm_enabled;
+
+	if (!connector)
+		return;
+
+	c_conn = to_sde_connector(connector);
+	if (c_conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return;
+
+	display = (struct dsi_display *) c_conn->display;
+	if (!display)
+		return;
+
+	if (display->display_selection_type != DSI_PRIMARY)
+		return;
+
+	panel = display->panel;
+	if (!panel)
+		return;
+
+	if (!dsi_panel_is_fod_hbm_applied(panel))
+		return;
+
+	fod_hbm_enabled = dsi_panel_get_fod_hbm(panel);
+	if (fod_hbm_enabled && fod_hbm_enabled != old_fod_hbm_enabled) {
+		sde_encoder_wait_for_event(c_conn->encoder, MSM_ENC_TX_COMPLETE);
+		sde_encoder_wait_for_event(c_conn->encoder, MSM_ENC_VBLANK);
+		dsi_panel_set_fod_ui(panel, 1);		
+	}
+
+	old_fod_hbm_enabled = fod_hbm_enabled;
+}
+
 int sde_connector_pre_kickoff(struct drm_connector *connector)
 {
 	struct sde_connector *c_conn;
@@ -873,6 +945,8 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	params.hdr_meta = &c_state->hdr_meta;
 
 	SDE_EVT32_VERBOSE(connector->base.id);
+
+	sde_connector_fod_pre_kickoff(connector);
 
 	rc = c_conn->ops.pre_kickoff(connector, c_conn->display, &params);
 

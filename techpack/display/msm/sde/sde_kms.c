@@ -1506,6 +1506,8 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 			pr_err("Connector Post kickoff failed rc=%d\n",
 					 rc);
 		}
+
+		sde_connector_fod_post_kickoff(connector);
 	}
 
 	vm_ops = sde_vm_get_ops(sde_kms);

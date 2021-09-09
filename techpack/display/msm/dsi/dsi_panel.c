@@ -12,6 +12,7 @@
 #include <video/mipi_display.h>
 
 #include "dsi_panel.h"
+#include "dsi_display.h"
 #include "dsi_ctrl_hw.h"
 #include "dsi_parser.h"
 #include "sde_dbg.h"
@@ -647,6 +648,126 @@ int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status) {
 	panel->doze_enabled = status;
 
 	return dsi_panel_update_doze(panel);
+}
+
+static int dsi_panel_update_cmd_reg51(struct dsi_panel *panel, enum dsi_cmd_set_type type,
+				      int bl_lvl)
+{
+	struct dsi_display_mode_priv_info *priv_info;
+	struct dsi_cmd_desc *cmds = NULL;
+	u32 count;
+	u32 index;
+	u8 *tx_buf;
+
+	if (!panel || !panel->cur_mode || !panel->cur_mode->priv_info) {
+		DSI_ERR("invalid params\n");
+		return -EINVAL;
+	}
+
+	priv_info = panel->cur_mode->priv_info;
+
+	switch (type) {
+	case DSI_CMD_SET_MI_LOCAL_HBM_NORMAL_WHITE_1000NIT:
+		index = panel->local_hbm_on_1000nit_51_index;
+		break;
+	default:
+		DSI_ERR("wrong cmd type!\n");
+		return -EINVAL;
+	}
+
+	if (index == -1) {
+		DSI_ERR("cmd %d does not have an index for register 0x51\n", type);
+		return -EINVAL;
+	}
+
+	cmds = priv_info->cmd_sets[type].cmds;
+	count = priv_info->cmd_sets[type].count;
+	if (!cmds || count <= index) {
+		DSI_ERR("cmd %d does not contain index %d\n", type, index);
+		return -EINVAL;
+	}
+
+	tx_buf = (u8 *)cmds[index].msg.tx_buf;
+	if (!tx_buf) {
+		DSI_ERR("cmd %d tx_buf is null\n", type);
+		return -EINVAL;
+	}
+
+	if (tx_buf[0] != 0x51) {
+		DSI_ERR("cmd %d tx_buf[0] is not for register 0x51\n", type, tx_buf[0]);
+		return -EINVAL;
+	}
+
+	tx_buf[1] = (bl_lvl >> 8) & 0x07;
+	tx_buf[2] = bl_lvl & 0xff;
+
+	return 0;
+}
+
+static int dsi_panel_set_fod_hbm(struct dsi_panel *panel, bool status)
+{
+	int rc = 0;
+
+	if (status == panel->fod_hbm_enabled)
+		return 0;
+
+	panel->fod_hbm_enabled = status;
+
+	if (status) {
+		if (panel->doze_enabled) {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_LOCAL_HBM_HLPM_WHITE_1000NIT);
+			if (rc)
+				DSI_ERR("[%s] failed to send doze local hbm on cmd, rc=%d\n",
+						panel->name, rc);
+		} else {
+			rc = dsi_panel_update_cmd_reg51(panel,
+							DSI_CMD_SET_MI_LOCAL_HBM_NORMAL_WHITE_1000NIT,
+							panel->bl_config.real_bl_level);
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_LOCAL_HBM_NORMAL_WHITE_1000NIT);
+			if (rc)
+				DSI_ERR("[%s] failed to send local hbm on cmd, rc=%d\n",
+						panel->name, rc);
+		}
+	} else {
+		if (panel->doze_enabled) {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_LOCAL_HBM_OFF_TO_HLPM);
+			if (rc)
+				DSI_ERR("[%s] failed to send doze local hbm off cmd, rc=%d\n",
+						panel->name, rc);
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_LOCAL_HBM_OFF_TO_NORMAL);
+			if (rc)
+				DSI_ERR("[%s] failed to send local hbm off cmd, rc=%d\n",
+						panel->name, rc);
+		}
+	}
+
+	return rc;
+}
+
+int dsi_panel_is_fod_hbm_applied(struct dsi_panel *panel)
+{
+	bool value;
+	mutex_lock(&panel->panel_lock);
+	value = panel->fod_hbm_requested == panel->fod_hbm_enabled;
+	mutex_unlock(&panel->panel_lock);
+	return value;
+}
+
+int dsi_panel_get_fod_hbm(struct dsi_panel *panel)
+{
+	bool value;
+	mutex_lock(&panel->panel_lock);
+	value = panel->fod_hbm_enabled;
+	mutex_unlock(&panel->panel_lock);
+	return value;
+}
+
+void dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel)
+{
+	mutex_lock(&panel->panel_lock);
+	dsi_panel_set_fod_hbm(panel, panel->fod_hbm_requested);
+	mutex_unlock(&panel->panel_lock);
 }
 
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
@@ -1800,6 +1921,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-off-commands",
 	"mi,mdss-dsi-doze-hbm-command",
 	"mi,mdss-dsi-doze-hbm-nolp-command",
+	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command",
+	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command",
+	"mi,mdss-dsi-local-hbm-off-to-normal-command",
+	"mi,mdss-dsi-local-hbm-off-to-hlpm-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1828,6 +1953,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-off-commands-state",
 	"mi,mdss-dsi-doze-hbm-command-state",
 	"mi,mdss-dsi-doze-hbm-nolp-command-state",
+	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command-state",
+	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command-state",
+	"mi,mdss-dsi-local-hbm-off-to-normal-command-state",
+	"mi,mdss-dsi-local-hbm-off-to-hlpm-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -3470,6 +3599,20 @@ error:
 	return rc;
 }
 
+static int dsi_panel_parse_fod(struct dsi_panel *panel)
+{
+	struct dsi_parser_utils *utils = &panel->utils;
+	int rc;
+
+	panel->local_hbm_on_1000nit_51_index = -1;
+	rc = utils->read_u32(utils->data, "mi,local-hbm-on-1000nit-51-index",
+			     &panel->local_hbm_on_1000nit_51_index);
+	if (rc)
+		DSI_INFO("mi,local-hbm-on-1000nit-51-index not specified\n");
+
+	return 0;
+}
+
 static void dsi_panel_update_util(struct dsi_panel *panel,
 				  struct device_node *parser_node)
 {
@@ -3516,6 +3659,99 @@ static void dsi_panel_setup_vm_ops(struct dsi_panel *panel, bool trusted_vm_env)
 		panel->panel_ops.parse_gpios = dsi_panel_parse_gpios;
 		panel->panel_ops.parse_power_cfg = dsi_panel_parse_power_cfg;
 	}
+}
+
+static ssize_t sysfs_fod_hbm_write(struct device *dev, struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	bool status;
+	int rc = 0;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		DSI_ERR("Invalid display\n");
+		return -EINVAL;
+	}
+
+	rc = kstrtobool(buf, &status);
+	if (rc) {
+		DSI_ERR("%s: kstrtobool failed. rc=%d\n", __func__, rc);
+		return rc;
+	}
+
+	panel = display->panel;
+
+	mutex_lock(&panel->panel_lock);
+	if (!panel->panel_initialized)
+		goto exit;
+
+	panel->fod_hbm_requested = status;
+
+exit:
+	mutex_unlock(&panel->panel_lock);
+
+	return count;
+}
+
+static ssize_t sysfs_fod_ui_read(struct device *dev, struct device_attribute *attr,
+				 char *buf)
+{
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	bool status;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		pr_err("Invalid display\n");
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+
+	mutex_lock(&panel->panel_lock);
+	status = panel->fod_ui;
+	mutex_unlock(&panel->panel_lock);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", status);
+}
+
+static DEVICE_ATTR(fod_hbm, 0200, NULL, sysfs_fod_hbm_write);
+static DEVICE_ATTR(fod_ui, 0400, sysfs_fod_ui_read, NULL);
+
+static struct attribute *panel_attrs[] = {
+	&dev_attr_fod_hbm.attr,
+	&dev_attr_fod_ui.attr,
+	NULL,
+};
+static struct attribute_group panel_attrs_group = {
+	.attrs = panel_attrs,
+};
+
+void dsi_panel_set_fod_ui(struct dsi_panel *panel, bool status)
+{
+	mutex_lock(&panel->panel_lock);
+	panel->fod_ui = status;
+	mutex_unlock(&panel->panel_lock);
+
+	sysfs_notify(&panel->parent->kobj, NULL, "fod_ui");
+}
+
+static int dsi_panel_sysfs_init(struct dsi_panel *panel)
+{
+	int rc = 0;
+
+	rc = sysfs_create_group(&panel->parent->kobj, &panel_attrs_group);
+	if (rc)
+		DSI_ERR("failed to create panel sysfs attributes\n");
+
+	return rc;
+}
+
+static void dsi_panel_sysfs_deinit(struct dsi_panel *panel)
+{
+	sysfs_remove_group(&panel->parent->kobj, &panel_attrs_group);
 }
 
 struct dsi_panel *dsi_panel_get(struct device *parent,
@@ -3634,6 +3870,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (rc)
 		DSI_DEBUG("failed to parse esd config, rc=%d\n", rc);
 
+	rc = dsi_panel_parse_fod(panel);
+	if (rc)
+		DSI_DEBUG("failed to parse fod, rc=%d\n", rc);
+
 	rc = dsi_panel_vreg_get(panel);
 	if (rc) {
 		DSI_ERR("[%s] failed to get panel regulators, rc=%d\n",
@@ -3646,10 +3886,17 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	panel->drm_panel.dev = &panel->mipi_device.dev;
 	panel->mipi_device.dev.of_node = of_node;
 	panel->doze_enabled = false;
+	panel->fod_ui = false;
+	panel->fod_hbm_enabled = false;
+	panel->fod_hbm_requested = false;
 
 	rc = drm_panel_add(&panel->drm_panel);
 	if (rc)
 		goto error_vreg_put;
+
+	rc = dsi_panel_sysfs_init(panel);
+	if (rc)
+		goto error;
 
 	mutex_init(&panel->panel_lock);
 
@@ -3667,6 +3914,8 @@ void dsi_panel_put(struct dsi_panel *panel)
 
 	/* free resources allocated for ESD check */
 	dsi_panel_esd_config_deinit(&panel->esd_config);
+
+	dsi_panel_sysfs_deinit(panel);
 
 	kfree(panel);
 }
