@@ -334,6 +334,7 @@ struct fts_ts_info {
 	struct work_struct resume_work;
 	struct work_struct cmd_update_work;
 	struct work_struct sleep_work;
+	struct work_struct mode_handler_work;
 	struct workqueue_struct *event_wq;
 	struct workqueue_struct *irq_wq;
 	struct workqueue_struct *touch_feature_wq;
