@@ -265,6 +265,8 @@ struct dsi_panel {
 	u32 tlmm_gpio_count;
 
 	struct dsi_panel_ops panel_ops;
+
+	bool doze_enabled;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
