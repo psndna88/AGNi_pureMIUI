@@ -626,6 +626,11 @@ error:
 int dsi_panel_update_doze(struct dsi_panel *panel) {
 	int rc = 0;
 
+	if (panel->fod_hbm_enabled) {
+		DSI_INFO("[%s] fod hbm enabled, skipping doze set\n");
+		return 0;
+	}
+
 	if (panel->doze_enabled) {
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DOZE_HBM);
 		if (rc)
