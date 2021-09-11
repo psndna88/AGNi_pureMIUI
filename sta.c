@@ -8267,6 +8267,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET interworking 1");
 		wpa_command(intf, "SET disable_scs_support 0");
 		wpa_command(intf, "SET disable_mscs_support 0");
+		dut->qm_domain_name[0] = '\0';
 		snprintf(buf, sizeof(buf),
 			 "ip -6 route replace fe80::/64 dev %s table local",
 			 intf);
@@ -12590,6 +12591,55 @@ fail:
 
 
 static enum sigma_cmd_result
+cmd_sta_send_frame_dscp_query(struct sigma_dut *dut, struct sigma_conn *conn,
+			      const char *intf, struct sigma_cmd *cmd)
+{
+	char buf[150], *pos;
+	const char *val;
+	int len, rem_len;
+
+	rem_len = sizeof(buf);
+	pos = buf;
+
+	len = snprintf(pos, rem_len, "DSCP_QUERY");
+	if (len < 0 || len >= rem_len)
+		goto fail;
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "Wildcard");
+	if (val && strcasecmp(val, "Yes") == 0) {
+		len = snprintf(pos, rem_len, " wildcard");
+		if (len < 0 || len >= rem_len)
+			goto fail;
+	} else if (strlen(dut->qm_domain_name)) {
+		len = snprintf(pos, rem_len, " domain_name=%s",
+			       dut->qm_domain_name);
+		if (len < 0 || len >= rem_len)
+			goto fail;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Invalid DSCP Query configuration");
+		return INVALID_SEND_STATUS;
+	}
+
+	if (wpa_command(intf, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send DSCP policy query frame");
+		return STATUS_SENT_ERROR;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"DSCP policy query frame sent: %s", buf);
+	return SUCCESS_SEND_STATUS;
+fail:
+	sigma_dut_print(dut, DUT_MSG_ERROR, "Failed to send DSCP query");
+	return ERROR_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result
 cmd_sta_send_frame_qm(struct sigma_dut *dut, struct sigma_conn *conn,
 		      const char *intf, struct sigma_cmd *cmd)
 {
@@ -12601,6 +12651,9 @@ cmd_sta_send_frame_qm(struct sigma_dut *dut, struct sigma_conn *conn,
 			return cmd_sta_send_frame_mscs(dut, conn, intf, cmd);
 		if (strcasecmp(val, "SCSReq") == 0)
 			return cmd_sta_send_frame_scs(dut, conn, intf, cmd);
+		if (strcasecmp(val, "DSCPPolicyQuery") == 0)
+			return cmd_sta_send_frame_dscp_query(dut, conn, intf,
+							     cmd);
 
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: frame name - %s is invalid",
@@ -14044,6 +14097,27 @@ cmd_sta_set_rfeature_wpa3(const char *intf, struct sigma_dut *dut,
 }
 
 
+static enum sigma_cmd_result
+cmd_sta_set_rfeature_qm(const char *intf, struct sigma_dut *dut,
+			struct sigma_conn *conn, struct sigma_cmd *cmd)
+{
+	const char *val;
+
+	val = get_param(cmd, "DomainName_Domain");
+	if (val) {
+		if (strlen(val) >= sizeof(dut->qm_domain_name))
+			return ERROR_SEND_STATUS;
+
+		strlcpy(dut->qm_domain_name, val, sizeof(dut->qm_domain_name));
+		return SUCCESS_SEND_STATUS;
+	}
+
+	send_resp(dut, conn, SIGMA_ERROR,
+		  "errorCode,Unsupported QM rfeature");
+	return STATUS_SENT_ERROR;
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 						  struct sigma_conn *conn,
 						  struct sigma_cmd *cmd)
@@ -14051,6 +14125,9 @@ static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 	const char *intf = get_param(cmd, "Interface");
 	const char *prog = get_param(cmd, "Prog");
 	const char *val;
+
+	if (!prog)
+		prog = get_param(cmd, "Program");
 
 	if (intf == NULL || prog == NULL)
 		return -1;
@@ -14087,6 +14164,8 @@ static enum sigma_cmd_result cmd_sta_set_rfeature(struct sigma_dut *dut,
 
 	if (strcasecmp(prog, "WPA3") == 0)
 		return cmd_sta_set_rfeature_wpa3(intf, dut, conn, cmd);
+	if (strcasecmp(prog, "QM") == 0)
+		return cmd_sta_set_rfeature_qm(intf, dut, conn, cmd);
 
 	send_resp(dut, conn, SIGMA_ERROR, "errorCode,Unsupported Prog");
 	return 0;

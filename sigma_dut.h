@@ -990,6 +990,7 @@ struct sigma_dut {
 	char device_driver[32];
 	int user_config_ap_ocvc;
 	int user_config_ap_beacon_prot;
+	char qm_domain_name[250];
 };
 
 
