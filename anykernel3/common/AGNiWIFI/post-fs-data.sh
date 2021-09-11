@@ -9,8 +9,10 @@ MODDIR=${0%/*}
 # AGNi Wifi Tweaks
 if ([ "` uname -r | grep AGNi`" ] || [ -f /sys/module/lpm_levels/parameters/agni_present ]); then
 	echo 2 > /proc/sys/net/ipv4/tcp_ecn
-	echo "fq_codel" > /proc/sys/net/core/default_qdisc
-	echo "veno" > /proc/sys/net/ipv4/tcp_congestion_control
+	#echo "fq_codel" > /proc/sys/net/core/default_qdisc
+	#echo "veno" > /proc/sys/net/ipv4/tcp_congestion_control
+	echo "fq" > /proc/sys/net/core/default_qdisc
+	echo "bbr" > /proc/sys/net/ipv4/tcp_congestion_control
 	echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse 
 	echo 0 > /proc/sys/net/ipv4/tcp_slow_start_after_idle
 	echo 2 > /proc/sys/net/ipv4/tcp_mtu_probing
