@@ -1164,9 +1164,15 @@
 	};
 
 	ipa_eth_group1: ipa_eth_group1 {
-		qcom,iommu-dma-addr-pool = <0x80000000 0x0fe20000>;
+		qcom,iommu-dma-addr-pool = <0x80000000 0x07f00000>;
 		qcom,iommu-dma = "atomic";
 	};
+
+	ipa_eth_group2: ipa_eth_group2 {
+		qcom,iommu-dma-addr-pool = <0x87f10000 0x07f00000>;
+		qcom,iommu-dma = "atomic";
+	};
+
 
 	ipa_hw: qcom,ipa@03e00000 {
 		compatible = "qcom,ipa";
@@ -1268,7 +1274,8 @@
 		ipa_smmu_eth1: ipa_smmu_eth1 {
 			compatible = "qcom,ipa-smmu-eth1-cb";
 			iommus = <&apps_smmu 0x5E4 0x0>;
-			qcom,iommu-dma = "atomic";
+			qcom,shared-cb;
+			qcom,iommu-group = <&ipa_eth_group2>;
 		};
 
 		ipa_smmu_wlan1: ipa_smmu_wlan1 {
