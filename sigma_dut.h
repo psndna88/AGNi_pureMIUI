@@ -1031,6 +1031,8 @@ struct sigma_dut {
 	pthread_t dscp_policy_mon_thread;
 	int reject_dscp_policies;
 	int dscp_reject_resp_code;
+	struct dscp_policy_status dscp_status[5];
+	unsigned int num_dscp_status;
 };
 
 

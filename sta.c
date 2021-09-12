@@ -8913,6 +8913,7 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET enable_dscp_policy_capa 1");
 		dut->qm_domain_name[0] = '\0';
 		dut->reject_dscp_policies = 0;
+		dut->num_dscp_status = 0;
 		snprintf(buf, sizeof(buf),
 			 "ip -6 route replace fe80::/64 dev %s table local",
 			 intf);
@@ -13294,6 +13295,86 @@ fail:
 
 
 static enum sigma_cmd_result
+cmd_sta_send_frame_dscp_response(struct sigma_dut *dut, struct sigma_conn *conn,
+				 const char *intf, struct sigma_cmd *cmd)
+{
+	char buf[256], *pos, *item, *list, *saveptr;
+	const char *val;
+	int len, rem_len;
+
+	pos = buf;
+	rem_len = sizeof(buf);
+
+	len = snprintf(pos, rem_len, "DSCP_RESP");
+	if (snprintf_error(rem_len, len)) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"Failed to create DSCP Policy Response command");
+		return ERROR_SEND_STATUS;
+	}
+
+	pos += len;
+	rem_len -= len;
+
+	val = get_param(cmd, "PolicyID_List");
+	if (!val) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"DSCP policy ID list missing");
+		return INVALID_SEND_STATUS;
+	}
+
+	list = strdup(val);
+	if (!list)
+		return ERROR_SEND_STATUS;
+
+	item = strtok_r(list, "_", &saveptr);
+	while (item) {
+		unsigned int i;
+		int policy_id = atoi(item);
+
+		for (i = 0; i < dut->num_dscp_status; i++)
+			if (dut->dscp_status[i].id == policy_id)
+				break;
+
+		if (i == dut->num_dscp_status) {
+			free(list);
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,DSCP policy id not found in status list");
+			return STATUS_SENT_ERROR;
+		}
+
+		len = snprintf(pos, rem_len, " policy_id=%d status=%d",
+			       policy_id, dut->dscp_status[i].status);
+		if (snprintf_error(rem_len, len)) {
+			free(list);
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Failed to write DSCP policy list");
+			return ERROR_SEND_STATUS;
+		}
+
+		pos += len;
+		rem_len -= len;
+
+		if (dut->dscp_status[i].status)
+			remove_dscp_policy(dut, policy_id);
+
+		item = strtok_r(NULL, "_", &saveptr);
+	}
+
+	free(list);
+
+	if (wpa_command(intf, buf) != 0) {
+		send_resp(dut, conn, SIGMA_ERROR,
+			  "ErrorCode,Failed to send DSCP Policy Response frame");
+		return STATUS_SENT_ERROR;
+	}
+
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"DSCP Policy Response frame sent: %s", buf);
+	return SUCCESS_SEND_STATUS;
+}
+
+
+static enum sigma_cmd_result
 cmd_sta_send_frame_qm(struct sigma_dut *dut, struct sigma_conn *conn,
 		      const char *intf, struct sigma_cmd *cmd)
 {
@@ -13308,6 +13389,9 @@ cmd_sta_send_frame_qm(struct sigma_dut *dut, struct sigma_conn *conn,
 		if (strcasecmp(val, "DSCPPolicyQuery") == 0)
 			return cmd_sta_send_frame_dscp_query(dut, conn, intf,
 							     cmd);
+		if (strcasecmp(val, "DSCPPolicyResponse") == 0)
+			return cmd_sta_send_frame_dscp_response(dut, conn, intf,
+								cmd);
 
 		sigma_dut_print(dut, DUT_MSG_ERROR,
 				"%s: frame name - %s is invalid",
@@ -14763,6 +14847,38 @@ cmd_sta_set_rfeature_qm(const char *intf, struct sigma_dut *dut,
 			return ERROR_SEND_STATUS;
 
 		strlcpy(dut->qm_domain_name, val, sizeof(dut->qm_domain_name));
+		return SUCCESS_SEND_STATUS;
+	}
+
+	val = get_param(cmd, "DSCPPolicy_PolicyID");
+	if (val) {
+		unsigned int i;
+		int policy_id = atoi(val);
+
+		val = get_param(cmd, "DSCPPolicy_RequestType");
+
+		if (!policy_id || !val)
+			return INVALID_SEND_STATUS;
+
+		if (dut->num_dscp_status >= ARRAY_SIZE(dut->dscp_status)) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,DSCP status list full");
+			return STATUS_SENT_ERROR;
+		}
+
+		for (i = 0; i < dut->num_dscp_status; i++)
+			if (dut->dscp_status[i].id == policy_id)
+				break;
+
+		/* New policy configured */
+		if (i == dut->num_dscp_status) {
+			dut->dscp_status[i].id = policy_id;
+			dut->num_dscp_status++;
+		}
+
+		dut->dscp_status[i].status = strcasecmp(val, "Remove") ?
+			DSCP_POLICY_SUCCESS : DSCP_POLICY_REJECT;
+
 		return SUCCESS_SEND_STATUS;
 	}
 
