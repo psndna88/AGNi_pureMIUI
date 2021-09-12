@@ -3969,6 +3969,13 @@ static void * mon_dscp_policies(void *ptr)
 		}
 		status_list[num_status].id = policy_id;
 
+		if (dut->reject_dscp_policies) {
+			status_list[num_status].status =
+				dut->dscp_reject_resp_code;
+			num_status++;
+			continue;
+		}
+
 		if (strstr(buf, "reject"))
 			goto reject;
 
@@ -5991,6 +5998,45 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			return STATUS_SENT_ERROR;
 		}
 	}
+
+	val = get_param(cmd, "DSCPPolicyCapability");
+	if (val) {
+		char buf[35];
+		int len;
+
+		if (strcasecmp(val, "Enable") == 0) {
+			len = snprintf(buf, sizeof(buf),
+				       "SET enable_dscp_policy_capa 1");
+		} else if (strcasecmp(val, "Disable") == 0) {
+			len = snprintf(buf, sizeof(buf),
+				       "SET enable_dscp_policy_capa 0");
+		} else {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Invalid DSCP policy parameter");
+			return INVALID_SEND_STATUS;
+		}
+
+		if (len < 0 || len >= sizeof(buf) ||
+		    wpa_command(intf, buf) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Failed to update DSCP policy capability");
+			return STATUS_SENT_ERROR;
+		}
+	}
+
+	val = get_param(cmd, "DSCPPolicyRespParams");
+	if (val) {
+		if (strcasecmp(val, "RejectAll") == 0) {
+			dut->reject_dscp_policies = 1;
+			dut->dscp_reject_resp_code = DSCP_POLICY_REJECT;
+		} else if (strcasecmp(val, "AcceptAll") == 0) {
+			dut->reject_dscp_policies = 0;
+		}
+	}
+
+	val = get_param(cmd, "DSCPPolicyResp_StatusCode");
+	if (val)
+		dut->dscp_reject_resp_code = atoi(val);
 
 	return 1;
 }
@@ -8849,7 +8895,9 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		wpa_command(intf, "SET interworking 1");
 		wpa_command(intf, "SET disable_scs_support 0");
 		wpa_command(intf, "SET disable_mscs_support 0");
+		wpa_command(intf, "SET enable_dscp_policy_capa 1");
 		dut->qm_domain_name[0] = '\0';
+		dut->reject_dscp_policies = 0;
 		snprintf(buf, sizeof(buf),
 			 "ip -6 route replace fe80::/64 dev %s table local",
 			 intf);

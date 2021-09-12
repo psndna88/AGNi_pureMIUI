@@ -1029,6 +1029,8 @@ struct sigma_dut {
 	char qm_domain_name[250];
 	struct dscp_policy_data *dscp_policy_table;
 	pthread_t dscp_policy_mon_thread;
+	int reject_dscp_policies;
+	int dscp_reject_resp_code;
 };
 
 
