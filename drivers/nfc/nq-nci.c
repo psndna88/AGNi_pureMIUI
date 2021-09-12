@@ -1,5 +1,5 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,9 +30,7 @@
 #include <linux/compat.h>
 #endif
 #include <linux/jiffies.h>
-
-#define SKIP_NFCC_HW_CHECK
-#define LC_NFC_CHECK
+#include <linux/board_id.h>
 
 struct nqx_platform_data {
 	unsigned int irq_gpio;
@@ -797,6 +795,7 @@ static const struct file_operations nfc_dev_fops = {
 #endif
 };
 
+#if 0
 /*
  * function: get_nfcc_hw_info()
  *
@@ -1117,6 +1116,7 @@ done:
 
 	return ret;
 }
+#endif
 
 /*
  * Routine to enable clock.
@@ -1436,16 +1436,15 @@ static int nqx_probe(struct i2c_client *client,
 	/* NFC_INT IRQ */
 	nqx_dev->irq_enabled = true;
 	r = request_irq(client->irq, nqx_dev_irq_handler,
-			  IRQF_TRIGGER_HIGH, client->name, nqx_dev);
+			  IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND, client->name, nqx_dev);
 	if (r) {
 		dev_err(&client->dev, "%s: request_irq failed\n", __func__);
 		goto err_request_irq_failed;
 	}
 	nqx_disable_irq(nqx_dev);
 
-#ifdef SKIP_NFCC_HW_CHECK
-	goto skip_nfcc_hw_check;
-#endif
+	/* Do not perform nfcc_hw_check, make sure that nfcc is present */
+#if 0
 	/*
 	 * To be efficient we need to test whether nfcc hardware is physically
 	 * present before attempting further hardware initialisation.
@@ -1458,8 +1457,6 @@ static int nqx_probe(struct i2c_client *client,
 		/* We don't think there is hardware switch NFC OFF */
 		goto err_request_hw_check_failed;
 	}
-#ifdef SKIP_NFCC_HW_CHECK
-skip_nfcc_hw_check:
 #endif
 
 	/* Register reboot notifier here */
@@ -1626,62 +1623,18 @@ static int nfcc_reboot(struct notifier_block *notifier, unsigned long val,
 	return NOTIFY_OK;
 }
 
-#ifdef LC_NFC_CHECK
-
-#include <linux/board_id.h>
-
-static bool lct_check_hwversion(void)
-{
-	bool ret = false;
-	int project_number = 0;
-	int major_number = 0;
-
-	//get hwversion number
-	project_number = board_id_get_hwversion_product_num();
-	major_number = board_id_get_hwversion_major_num();
-
-	//check project
-	switch(project_number) {
-	case 1: //curtana
-		if (major_number == 13) // if (CN version)
-			ret = true;
-		else
-			ret = false;
-		break;
-	case 2: //excalibur
-		ret = false;
-		break;
-	case 4: //joyeuse
-		ret = true;
-		break;
-	case 6: //gram
-		ret = false;
-		break;
-	default:
-		ret = false;
-		break;
-	}
-
-	return ret;
-}
-#endif //LC_NFC_CHECK
-
 /*
  * module load/unload record keeping
  */
 static int __init nqx_dev_init(void)
 {
-#ifdef LC_NFC_CHECK
-	if (!lct_check_hwversion()) {
+	if (!board_get_nfc_supported()) {
 		pr_err("[nq-nci] NFC not supported on the board!\n");
 		return -ENODEV;
 	} else {
 		pr_info("[nq-nci] the board supports NFC\n");
 		return i2c_add_driver(&nqx);
 	}
-#else
-	return i2c_add_driver(&nqx);
-#endif //LC_NFC_CHECK
 }
 module_init(nqx_dev_init);
 
