@@ -28,10 +28,16 @@
 
 static char board_id_hwname[32] = {0};
 static bool board_33w_supported = false;
+static bool board_nfc_supported = false;
 
 bool board_get_33w_supported(void)
 {
 	return board_33w_supported;
+}
+
+bool board_get_nfc_supported(void)
+{
+	return board_nfc_supported;
 }
 
 void board_id_get_hwname(char *str)
@@ -53,6 +59,9 @@ static int __init setup_board_id_hwname(char *str)
 		board_33w_supported = true;
 	else if (!strcmp(str, "curtana"))
 		board_33w_supported = false;
+
+	if (!strcmp(str, "joyeuse"))
+		board_nfc_supported = true;
 
 	charging_temps_thresholds();
 	pr_info("board_33w_supported : %s\n",
@@ -155,6 +164,11 @@ static int __init setup_board_id_hwversion(char *str)
 	pr_info("board_id_hwversion_product_num : %d\n", board_id_hwversion_product_num);
 	pr_info("board_id_hwversion_major_num : %d\n", board_id_hwversion_major_num);
 	pr_info("board_id_hwversion_minor_num : %d\n", board_id_hwversion_minor_num);
+	if ((board_id_hwversion_product_num == 1) && (board_id_hwversion_major_num == 13))
+		board_nfc_supported = true;
+	else if (board_id_hwversion_product_num == 4)
+		board_nfc_supported = true;
+
 	return 1;
 }
 __setup("androidboot.hwversion=", setup_board_id_hwversion);
