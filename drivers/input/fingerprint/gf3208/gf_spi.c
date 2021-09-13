@@ -188,7 +188,7 @@ static void spi_clock_set(struct gf_dev *gf_dev, int speed)
 
 	rate = spi_clk_max_rate(gf_dev->core_clk, speed);
 	if (rate < 0) {
-		pr_info("%s: no match found for requested clock frequency:%d",
+		pr_debug("%s: no match found for requested clock frequency:%d",
 				__func__, speed);
 		return;
 	}
@@ -395,42 +395,9 @@ static void irq_cleanup(struct gf_dev *gf_dev)
 	free_irq(gf_dev->irq, gf_dev);
 }
 
-static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
-{
-	uint32_t key_input = 0;
-	return; //AOSP
-
-	if (gf_key->key == GF_KEY_HOME) {
-		key_input = KEY_KPENTER;
-	} else if (gf_key->key == GF_KEY_POWER) {
-		key_input = KEY_KPENTER;
-	} else if (gf_key->key == GF_KEY_CAMERA) {
-		key_input = GF_KEY_INPUT_CAMERA;
-	} else {
-		/* add special key define */
-		key_input = gf_key->key;
-	}
-	pr_debug("%s: received key event[%d], key=%d, value=%d\n",
-			__func__, key_input, gf_key->key, gf_key->value);
-
-	if ((GF_KEY_POWER == gf_key->key || GF_KEY_CAMERA == gf_key->key)
-			&& (gf_key->value == 1)) {
-		input_report_key(gf_dev->input, key_input, 1);
-		input_sync(gf_dev->input);
-		input_report_key(gf_dev->input, key_input, 0);
-		input_sync(gf_dev->input);
-	}
-
-	if (gf_key->key == GF_KEY_HOME) {
-		input_report_key(gf_dev->input, key_input, gf_key->value);
-		input_sync(gf_dev->input);
-	}
-}
-
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gf_dev *gf_dev = &gf;
-	struct gf_key gf_key;
 #if defined(SUPPORT_NAV_EVENT)
 	gf_nav_event_t nav_event = GF_NAV_NONE;
 #endif
@@ -475,16 +442,6 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case GF_IOC_RESET:
 		pr_debug("%s GF_IOC_RESET\n", __func__);
 		gf_hw_reset(gf_dev, 3);
-		break;
-
-	case GF_IOC_INPUT_KEY_EVENT:
-		if (copy_from_user(&gf_key, (void __user *)arg, sizeof(struct gf_key))) {
-			pr_debug("failed to copy input key event from user to kernel\n");
-			retval = -EFAULT;
-			break;
-		}
-
-		gf_kernel_key_input(gf_dev, &gf_key);
 		break;
 
 #if defined(SUPPORT_NAV_EVENT)
@@ -548,9 +505,9 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			retval = -EFAULT;
 			break;
 		}
-		pr_info("vendor_id : 0x%x\n", info.vendor_id);
-		pr_info("mode : 0x%x\n", info.mode);
-		pr_info("operation: 0x%x\n", info.operation);
+		pr_debug("vendor_id : 0x%x\n", info.vendor_id);
+		pr_debug("mode : 0x%x\n", info.mode);
+		pr_debug("operation: 0x%x\n", info.operation);
 		break;
 
 	case GF_IOC_AUTHENTICATE_START:
@@ -593,7 +550,7 @@ static int gf_open(struct inode *inode, struct file *filp)
 
 	list_for_each_entry(gf_dev, &device_list, device_entry) {
 		if (gf_dev->devt == inode->i_rdev) {
-			pr_info("Found\n");
+			pr_debug("Found\n");
 			status = 0;
 			break;
 		}
@@ -604,7 +561,7 @@ static int gf_open(struct inode *inode, struct file *filp)
 			gf_dev->users++;
 			filp->private_data = gf_dev;
 			nonseekable_open(inode, filp);
-			pr_info("Succeed to open device. irq = %d\n",
+			pr_debug("Succeed to open device. irq = %d\n",
 					gf_dev->irq);
 			if (gf_dev->users == 1) {
 				status = gf_parse_dts(gf_dev);
@@ -619,7 +576,7 @@ static int gf_open(struct inode *inode, struct file *filp)
 			gf_disable_irq(gf_dev);
 		}
 	} else {
-		pr_info("No device for minor %d\n", iminor(inode));
+		pr_debug("No device for minor %d\n", iminor(inode));
 	}
 	mutex_unlock(&device_list_lock);
 
@@ -639,7 +596,7 @@ static int proc_show_ver(struct seq_file *file,void *v)
 
 static int proc_open(struct inode *inode,struct file *file)
 {
-	pr_info("gf3258 proc_open\n");
+	pr_debug("gf3258 proc_open\n");
 	single_open(file,proc_show_ver,NULL);
 	return 0;
 }
@@ -651,7 +608,7 @@ static int gf_fasync(int fd, struct file *filp, int mode)
 	int ret;
 
 	ret = fasync_helper(fd, filp, mode, &gf_dev->async);
-	pr_info("ret = %d\n", ret);
+	pr_debug("ret = %d\n", ret);
 	return ret;
 }
 #endif
@@ -669,7 +626,7 @@ static int gf_release(struct inode *inode, struct file *filp)
 	gf_dev->users--;
 	if (!gf_dev->users) {
 
-		pr_info("disble_irq. irq = %d\n", gf_dev->irq);
+		pr_debug("disble_irq. irq = %d\n", gf_dev->irq);
 		//gf_disable_irq(gf_dev);
 		irq_cleanup(gf_dev);
 		gf_cleanup(gf_dev);
@@ -764,7 +721,7 @@ static int gf_probe(struct platform_device *pdev)
 	int status = -EINVAL;
 	unsigned long minor;
 	int i;
-	pr_info("Macle11 gf probe\n");
+	pr_debug("Macle11 gf probe\n");
 	/* Initialize the driver data */
 	INIT_LIST_HEAD(&gf_dev->device_entry);
 #if defined(USE_SPI_BUS)
@@ -828,7 +785,7 @@ static int gf_probe(struct platform_device *pdev)
 
 
 #ifdef AP_CONTROL_CLK
-	pr_info("Get the clk resource.\n");
+	pr_debug("Get the clk resource.\n");
 	/* Enable spi clock */
 	if (gfspi_ioctl_clk_init(gf_dev))
 		goto gfspi_probe_clk_init_failed;
@@ -853,7 +810,7 @@ static int gf_probe(struct platform_device *pdev)
 		pr_err("gf3258 Create proc entry success!");
 	}
 
-	pr_info("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
+	pr_debug("version V%d.%d.%02d\n", VER_MAJOR, VER_MINOR, PATCH_LEVEL);
 
 	return status;
 
@@ -868,7 +825,7 @@ error_input:
 		input_free_device(gf_dev->input);
 error_dev:
 	if (gf_dev->devt != 0) {
-		pr_info("Err: status = %d\n", status);
+		pr_debug("Err: status = %d\n", status);
 		mutex_lock(&device_list_lock);
 		list_del(&gf_dev->device_entry);
 		device_destroy(gf_class, gf_dev->devt);
@@ -966,7 +923,7 @@ static int __init gf_init(void)
 #ifdef GF_NETLINK_ENABLE
 	netlink_init();
 #endif
-	pr_info("status = 0x%x\n", status);
+	pr_debug("status = 0x%x\n", status);
 	return 0;
 }
 module_init(gf_init);
