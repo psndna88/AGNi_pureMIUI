@@ -238,7 +238,6 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	struct sde_encoder_phys_cmd *cmd_enc;
 	u32 scheduler_status = INVALID_CTL_STATUS;
 	struct sde_hw_ctl *ctl;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 	struct sde_encoder_phys_cmd_te_timestamp *te_timestamp;
 	unsigned long lock_flags;
 	struct drm_display_mode *mode;
@@ -263,19 +262,6 @@ static void sde_encoder_phys_cmd_te_rd_ptr_irq(void *arg, int irq_idx)
 	}
 	spin_unlock_irqrestore(phys_enc->enc_spinlock, lock_flags);
 
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		info[0].pp_idx, info[0].intf_idx,
-		info[0].wr_ptr_line_count, info[0].intf_frame_count,
-		info[1].pp_idx, info[1].intf_idx,
-		info[1].wr_ptr_line_count, info[1].intf_frame_count,
-		scheduler_status);
-
-	mode = &phys_enc->cached_mode;
-	if (!mode || info[0].wr_ptr_line_count == mode->vdisplay ||
-			!info[0].wr_ptr_line_count)
-		atomic_add_unless(&cmd_enc->frame_trigger_count, -1, 0);
-
 	if (phys_enc->parent_ops.handle_vblank_virt)
 		phys_enc->parent_ops.handle_vblank_virt(phys_enc->parent,
 			phys_enc);
@@ -290,7 +276,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 	struct sde_encoder_phys *phys_enc = arg;
 	struct sde_hw_ctl *ctl;
 	u32 event = 0;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
 	struct sde_encoder_phys_cmd *cmd_enc;
 
 	if (!phys_enc || !phys_enc->hw_ctl)
@@ -311,12 +296,6 @@ static void sde_encoder_phys_cmd_wr_ptr_irq(void *arg, int irq_idx)
 			spin_unlock(phys_enc->enc_spinlock);
 		}
 	}
-
-	sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-	SDE_EVT32_IRQ(DRMID(phys_enc->parent),
-		ctl->idx - CTL_0, event,
-		info[0].pp_idx, info[0].intf_idx, info[0].wr_ptr_line_count,
-		info[1].pp_idx, info[1].intf_idx, info[1].wr_ptr_line_count);
 
 	/* Signal any waiting wr_ptr start interrupt */
 	wake_up_all(&phys_enc->pending_kickoff_wq);
@@ -1929,33 +1908,9 @@ static void sde_encoder_phys_cmd_trigger_start(
 	struct sde_encoder_phys_cmd *cmd_enc =
 			to_sde_encoder_phys_cmd(phys_enc);
 	u32 frame_cnt;
-	struct drm_connector *conn;
-	int threshold_lines, curr_rd_ptr_line_count;
-	struct sde_hw_pp_vsync_info info[MAX_CHANNELS_PER_ENC] = {{0}};
-	struct drm_display_mode *mode;
 
 	if (!phys_enc)
 		return;
-
-	conn = phys_enc->connector;
-	mode = &phys_enc->cached_mode;
-	if (mode && sde_connector_get_qsync_mode(conn)) {
-		threshold_lines = _get_tearcheck_threshold(phys_enc);
-		sde_encoder_helper_get_pp_line_count(phys_enc->parent, info);
-		curr_rd_ptr_line_count = info[0].rd_ptr_line_count;
-
-		/*
-		 * Vsync wait is required only if both the below conditions satisfy
-		 * - current rd_ptr linecount is within the start threshold window
-		 * - frame trigger already happened in this TE interval
-		 */
-		if ((curr_rd_ptr_line_count < mode->vdisplay + threshold_lines) &&
-			atomic_read(&cmd_enc->frame_trigger_count)) {
-			SDE_EVT32(curr_rd_ptr_line_count, mode->vdisplay + threshold_lines,
-				atomic_read(&cmd_enc->frame_trigger_count), 0xebad);
-			sde_encoder_phys_cmd_wait_for_vblank(phys_enc);
-		}
-	}
 
 	/* we don't issue CTL_START when using autorefresh */
 	frame_cnt = _sde_encoder_phys_cmd_get_autorefresh_property(phys_enc);
