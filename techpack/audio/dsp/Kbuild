@@ -383,6 +383,3 @@ q6_notifier_dlkm-y := $(QDSP6_NOTIFIER_OBJS)
 
 obj-$(CONFIG_MMHARDWARE_DETECTION) += mmhardware_sysfs_dlkm.o
 mmhardware_sysfs_dlkm-y := $(MMHARDWARE_SYSFS)
-
-# inject some build related information
-DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"
