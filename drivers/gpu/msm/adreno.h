@@ -360,10 +360,6 @@ struct adreno_power_ops {
 	int (*pm_suspend)(struct adreno_device *adreno_dev);
 	/** @pm_resume: Target specific function to resume the driver */
 	void (*pm_resume)(struct adreno_device *adreno_dev);
-	/**
-	 * @touch_wakeup: Target specific function to start gpu on touch event
-	 */
-	void (*touch_wakeup)(struct adreno_device *adreno_dev);
 	/** @gpu_clock_set: Target specific function to set gpu frequency */
 	int (*gpu_clock_set)(struct adreno_device *adreno_dev, u32 pwrlevel);
 	/** @gpu_bus_set: Target specific function to set gpu bandwidth */
@@ -437,7 +433,6 @@ struct adreno_gpu_core {
  * @dispatcher: Container for adreno GPU dispatcher
  * @pwron_fixup: Command buffer to run a post-power collapse shader workaround
  * @pwron_fixup_dwords: Number of dwords in the command buffer
- * @input_work: Work struct for turning on the GPU after a touch event
  * @busy_data: Struct holding GPU VBIF busy stats
  * @ram_cycles_lo: Number of DDR clock cycles for the monitor session (Only
  * DDR channel 0 read cycles in case of GBIF)
@@ -511,7 +506,6 @@ struct adreno_device {
 	struct adreno_dispatcher dispatcher;
 	struct kgsl_memdesc *pwron_fixup;
 	unsigned int pwron_fixup_dwords;
-	struct work_struct input_work;
 	struct adreno_busy_data busy_data;
 	unsigned int ram_cycles_lo;
 	unsigned int ram_cycles_lo_ch1_read;

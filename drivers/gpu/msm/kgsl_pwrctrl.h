@@ -101,7 +101,6 @@ struct kgsl_pwrlevel {
  * @interval_timeout - timeout to be idle before a power event
  * @clock_times - Each GPU frequency's accumulated active time in us
  * @clk_stats - structure of clock statistics
- * @input_disable - To disable GPU wakeup on touch input event
  * @bus_control - true if the bus calculation is independent
  * @bus_mod - modifier from the current power level for the bus vote
  * @bus_percent_ab - current percent of total possible bus usage
@@ -147,7 +146,6 @@ struct kgsl_pwrctrl {
 	unsigned long interval_timeout;
 	u64 clock_times[KGSL_MAX_PWRLEVELS];
 	struct kgsl_clk_stats clk_stats;
-	bool input_disable;
 	bool bus_control;
 	int bus_mod;
 	unsigned int bus_percent_ab;
