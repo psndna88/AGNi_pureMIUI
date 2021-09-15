@@ -1271,7 +1271,8 @@ FWOL_OS_IF_SRC := os_if/fw_offload/src
 FWOL_INC := -I$(WLAN_ROOT)/$(FWOL_CORE_INC) \
 	    -I$(WLAN_ROOT)/$(FWOL_DISPATCHER_INC) \
 	    -I$(WLAN_ROOT)/$(FWOL_TARGET_IF_INC) \
-	    -I$(WLAN_ROOT)/$(FWOL_OS_IF_INC)
+	    -I$(WLAN_ROOT)/$(FWOL_OS_IF_INC) \
+	    -I$(WLAN_COMMON_INC)/umac/thermal/dispatcher/inc
 
 ifeq ($(CONFIG_WLAN_FW_OFFLOAD), y)
 FWOL_OBJS :=	$(FWOL_CORE_SRC)/wlan_fw_offload_main.o \
