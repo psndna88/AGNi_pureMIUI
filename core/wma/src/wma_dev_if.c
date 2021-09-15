@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2992,8 +2992,8 @@ int wma_peer_create_confirm_handler(void *handle, uint8_t *evt_param_info,
 	req_msg = wma_find_remove_req_msgtype(wma, peer_create_rsp->vdev_id,
 					      WMA_PEER_CREATE_REQ);
 	if (!req_msg) {
-		wma_err("vdev:%d Failed to lookup peer create request message",
-			peer_create_rsp->vdev_id);
+		wma_debug("vdev:%d Failed to lookup peer create request msg",
+			  peer_create_rsp->vdev_id);
 		return -EINVAL;
 	}
 
