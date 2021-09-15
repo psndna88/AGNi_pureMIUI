@@ -3140,13 +3140,42 @@
 
 		status = "disabled";
 		qos0 {
-			mask = <0xf0>;
+			mask = <0x1>;
 			vote = <44>;
 		};
 
-
 		qos1 {
-			mask = <0x0f>;
+			mask = <0x2>;
+			vote = <44>;
+		};
+
+		qos2 {
+			mask = <0x4>;
+			vote = <44>;
+		};
+
+		qos3 {
+			mask = <0x8>;
+			vote = <44>;
+		};
+
+		qos4 {
+			mask = <0x10>;
+			vote = <44>;
+		};
+
+		qos5 {
+			mask = <0x20>;
+			vote = <44>;
+		};
+
+		qos6 {
+			mask = <0x40>;
+			vote = <44>;
+		};
+
+		qos7 {
+			mask = <0x80>;
 			vote = <44>;
 		};
 	};
