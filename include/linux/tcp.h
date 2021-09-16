@@ -368,6 +368,41 @@ struct tcp_sock {
 	 * socket. Used to retransmit SYNACKs etc.
 	 */
 	struct request_sock *fastopen_rsk;
+
+	/* DeepCC Params*/
+	u8	deepcc_enable;		/*1 => Only enable periodic reports and setting cwnd. */
+							/*2 => (above) + enable deepcc pacing rate calculation*/
+	struct {
+		u32 min_urtt;
+		u32 avg_urtt;
+		u32 cnt;
+		u64	avg_thr;		/* average throughput */
+		u32	thr_cnt;		/* Number of sampled throughput for averaging it*/
+		u32 pre_lost;		/* Total Number of Previously lost packets*/
+	} deepcc_api;
+
+	/* Orca: min. cwnd*/
+	u32  cwnd_min;
+
+	/* C2TCP Parameters */
+	u32 first_above_time;
+	u32 next_time;
+	u32 cnt_rtt;
+	u16 rec_inv_sqrt;
+	u32 c2tcp_min_urtt;
+	u32 c2tcp_avg_urtt;
+	u32 c2tcp_cnt;
+	u64	c2tcp_avg_thr;		/* average throughput */
+	u32	c2tcp_thr_cnt;		/* Number of sampled throughput for averaging it*/
+	/**
+	 * Accessible settings (to Applications):
+	 */
+	u8  c2tcp_enable;
+	u32 c2tcp_alpha;
+//	u32 c2tcp_setpoint;
+//	u32 c2tcp_interval;
+	/*END of C2TCP*/
+
 	u32	*saved_syn;
 };
 
