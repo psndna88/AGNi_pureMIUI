@@ -3466,6 +3466,9 @@ enum qca_sta_helper_config_params {
 
 	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION */
 	STA_SET_RX_MSDU,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_WIDTH */
+	STA_SET_CHAN_WIDTH,
 };
 
 
@@ -3522,6 +3525,11 @@ static int sta_config_params(struct sigma_dut *dut, const char *intf,
 	case STA_SET_RX_MSDU:
 		if (nla_put_u8(msg,
 			       QCA_WLAN_VENDOR_ATTR_CONFIG_RX_MSDU_AGGREGATION,
+			       value))
+			goto fail;
+		break;
+	case STA_SET_CHAN_WIDTH:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_WIDTH,
 			       value))
 			goto fail;
 		break;
@@ -5562,6 +5570,33 @@ static int wcn_sta_set_width(struct sigma_dut *dut, const char *intf,
 			     const char *val)
 {
 	char buf[60];
+
+#ifdef NL80211_SUPPORT
+	enum nl80211_chan_width qca_channel_width;
+
+	if (strcmp(val, "20") == 0) {
+		qca_channel_width = NL80211_CHAN_WIDTH_20;
+		dut->chwidth = 0;
+	} else if (strcmp(val, "40") == 0) {
+		qca_channel_width = NL80211_CHAN_WIDTH_40;
+		dut->chwidth = 1;
+	} else if (strcmp(val, "80") == 0) {
+		qca_channel_width = NL80211_CHAN_WIDTH_80;
+		dut->chwidth = 2;
+	} else if (strcmp(val, "160") == 0) {
+		qca_channel_width = NL80211_CHAN_WIDTH_160;
+		dut->chwidth = 3;
+	} else if (strcasecmp(val, "Auto") == 0) {
+		return 0;
+	} else {
+		sigma_dut_print(dut, DUT_MSG_ERROR, "WIDTH %s not supported",
+				val);
+		return -1;
+	}
+	if (sta_config_params(dut, intf, STA_SET_CHAN_WIDTH,
+			      qca_channel_width) == 0)
+		return 0;
+#endif /* NL80211_SUPPORT */
 
 	if (strcmp(val, "20") == 0) {
 		snprintf(buf, sizeof(buf), "iwpriv %s chwidth 0", intf);
