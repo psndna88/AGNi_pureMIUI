@@ -188,6 +188,7 @@ And public attribution of xiaomi platforms(like venus and so and)
 &mdss_mdp {
 	connectors = <&smmu_sde_unsec &smmu_sde_sec &sde_wb &sde_dsi
 		&sde_rscc>;
+	qcom,sde-wakeup-with-touch;
 };
 
 &qupv3_se8_i2c {
