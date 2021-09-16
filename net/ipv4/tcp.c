@@ -443,6 +443,10 @@ void tcp_init_sock(struct sock *sk)
 	tp->snd_cwnd_clamp = ~0;
 	tp->mss_cache = TCP_MSS_DEFAULT;
 
+	/*
+	 * Orca Cwnd_coef init. to 1
+	 */
+	tp->cwnd_min = 1;
 	tp->reordering = sock_net(sk)->ipv4.sysctl_tcp_reordering;
 	tcp_assign_congestion_control(sk);
 
