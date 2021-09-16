@@ -702,6 +702,17 @@ config TCP_CONG_BBR2
 	using either TCP internal pacing or the fq ("Fair Queue") pacing packet
 	scheduler.
 
+config TCP_CONG_AGILESD
+    tristate "Agile-SD Congestion control"
+    default y
+    ---help---
+  
+    This is version 1.0 of Agile-SD TCP. It is a sender-side only. 
+    It contributes the Agility Factor (AF) to shorten the epoch time 
+    and to make TCP independent from RTT. AF reduces the sensitivity 
+    to packet losses, which in turn Agile-SD to achieve better throughput 
+    over high-speed networks.
+
 choice
 	prompt "Default TCP congestion control"
 	default DEFAULT_CUBIC
@@ -745,6 +756,9 @@ choice
 	config DEFAULT_BBR2
 		bool "BBR2" if TCP_CONG_BBR2=y
 
+	config DEFAULT_AGILESD
+		bool "AGILESD" if TCP_CONG_AGILESD=y
+
 	config DEFAULT_RENO
 		bool "Reno"
 endchoice
@@ -771,6 +785,7 @@ config DEFAULT_TCP_CONG
 	default "cdg" if DEFAULT_CDG
 	default "bbr" if DEFAULT_BBR
 	default "bbr2" if DEFAULT_BBR2
+	default "agilesd" if DEFAULT_AGILESD
 	default "cubic"
 
 config TCP_MD5SIG
