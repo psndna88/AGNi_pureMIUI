@@ -18,7 +18,7 @@
 #ifndef _TCP_H
 #define _TCP_H
 
-#define FASTRETRANS_DEBUG 1
+#define FASTRETRANS_DEBUG 0
 
 #include <linux/list.h>
 #include <linux/tcp.h>
@@ -1062,6 +1062,12 @@ struct tcp_congestion_ops {
 	/* get info for inet_diag (optional) */
 	size_t (*get_info)(struct sock *sk, u32 ext, int *attr,
 			   union tcp_cc_info *info);
+	/*NATCP*/
+	void (*update_by_app)(struct sock *sk);
+	/*C2TCP*/
+	void (*enable_c2tcp)(struct sock *sk, int enable);
+	/*RL-C2TCP*/
+	void (*get_rate_sample)(struct sock *sk, const struct rate_sample *rs);
 
 	char 		name[TCP_CA_NAME_MAX];
 	struct module 	*owner;
@@ -1130,6 +1136,13 @@ static inline void tcp_ca_event(struct sock *sk, const enum tcp_ca_event event)
 	if (icsk->icsk_ca_ops->cwnd_event)
 		icsk->icsk_ca_ops->cwnd_event(sk, event);
 }
+
+/* From tcp_deepcc.c */
+void deepcc_init(struct sock * sk);
+size_t deepcc_get_info(struct sock *sk, u32 ext, int *attr,union tcp_cc_info *info);
+void deepcc_get_rate_sample(struct sock *sk, const struct rate_sample *rs);
+void deepcc_update_cwnd(struct sock *sk);
+void deepcc_pkts_acked(struct sock *sk, const struct ack_sample *sample);
 
 /* From tcp_rate.c */
 void tcp_set_tx_in_flight(struct sock *sk, struct sk_buff *skb);
