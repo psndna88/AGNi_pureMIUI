@@ -151,6 +151,8 @@ enum {
 	INET_DIAG_BBRINFO,	/* request as INET_DIAG_VEGASINFO */
 	INET_DIAG_CLASS_ID,	/* request as INET_DIAG_TCLASS */
 	INET_DIAG_MD5SIG,
+	INET_DIAG_C2TCPINFO,
+	INET_DIAG_DEEPCCINFO,
 	__INET_DIAG_MAX,
 };
 
@@ -193,11 +195,43 @@ struct tcp_bbr_info {
 	__u32	bbr_min_rtt;		/* min-filtered RTT in uSec */
 	__u32	bbr_pacing_gain;	/* pacing gain shifted left 8 bits */
 	__u32	bbr_cwnd_gain;		/* cwnd gain shifted left 8 bits */
+	__u32	bbr_inflight;
+};
+
+/* INET_DIAG_C2TCPINFO */
+
+struct tcp_c2tcp_info {
+	__u32	c2tcp_min_rtt;		/* min-filtered RTT in uSec */
+	__u32	c2tcp_avg_urtt;		/* averaged RTT in uSec from the previous info request till now*/
+	__u32	c2tcp_cnt;		/* number of RTT samples used for averaging */
+	__u64	c2tcp_avg_thr;		/* average throughput Bytes per Sec*/
+	__u32	c2tcp_thr_cnt;		/* Number of sampled throughput for averaging it*/
+};
+
+/* INET_DIAG_DEEPCCINFO */
+
+struct tcp_deepcc_info {
+	__u32	min_rtt;		/* min-filtered RTT in uSec */
+	__u32	avg_urtt;		/* averaged RTT in uSec from the previous info request till now*/
+	__u32	cnt;		/* number of RTT samples used for averaging */
+	__u64	avg_thr;		/* average throughput Bytes per Sec*/
+	__u32	thr_cnt;		/* Number of sampled throughput for averaging it*/
+	__u32	cwnd;
+	__u32	pacing_rate;
+	__u32	lost_bytes;			/* Number of lost Bytes (from the last monitored phase to now!)*/
+	__u32	srtt_us;	/* smoothed round trip time << 3 in usecs */
+	__u32	snd_ssthresh;	/* Slow start size threshold		*/
+	__u32	packets_out;	/* Packets which are "in flight"	*/
+	__u32	retrans_out;	/* Retransmitted packets out		*/
+	__u32	max_packets_out;  /* max packets_out in last window */
+	__u32 	mss_cache;
 };
 
 union tcp_cc_info {
 	struct tcpvegas_info	vegas;
 	struct tcp_dctcp_info	dctcp;
-	struct tcp_bbr_info	bbr;
+	struct tcp_bbr_info		bbr;
+	struct tcp_c2tcp_info	c2tcp;
+	struct tcp_deepcc_info	deepcc;
 };
 #endif /* _UAPI_INET_DIAG_H_ */
