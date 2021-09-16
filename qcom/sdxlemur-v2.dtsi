@@ -155,3 +155,7 @@
 		<  1440000  MHZ_TO_MBPS(1555, 4) >,
 		<  1708800  MHZ_TO_MBPS(2092, 4) >;
 };
+
+&pil_modem {
+	qcom,vdd_mss-uV-uA = <RPMH_REGULATOR_LEVEL_NOM_L1 100000>;
+};
