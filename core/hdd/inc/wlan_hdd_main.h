@@ -2213,6 +2213,9 @@ struct hdd_context {
 	qdf_work_t twt_en_dis_work;
 #endif
 	bool dump_in_progress;
+#ifdef THERMAL_STATS_SUPPORT
+	bool is_therm_stats_in_progress;
+#endif
 };
 
 /**
