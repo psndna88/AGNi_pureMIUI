@@ -313,6 +313,8 @@ struct hfi_uncompressed_plane_actual_constraints_info {
 #define HFI_CMD_SYS_OX_START		\
 (HFI_DOMAIN_BASE_COMMON + HFI_ARCH_OX_OFFSET + HFI_CMD_START_OFFSET + 0x0000)
 #define HFI_CMD_SYS_SESSION_ABORT	(HFI_CMD_SYS_OX_START + 0x001)
+#define HFI_CMD_SYS_PING		(HFI_CMD_SYS_OX_START + 0x002)
+
 
 #define HFI_CMD_SESSION_OX_START	\
 (HFI_DOMAIN_BASE_COMMON + HFI_ARCH_OX_OFFSET + HFI_CMD_START_OFFSET + 0x1000)
@@ -336,6 +338,7 @@ struct hfi_uncompressed_plane_actual_constraints_info {
 
 #define HFI_MSG_SYS_OX_START			\
 (HFI_DOMAIN_BASE_COMMON + HFI_ARCH_OX_OFFSET + HFI_MSG_START_OFFSET + 0x0000)
+#define HFI_MSG_SYS_PING_ACK	(HFI_MSG_SYS_OX_START + 0x2)
 #define HFI_MSG_SYS_SESSION_ABORT_DONE	(HFI_MSG_SYS_OX_START + 0x4)
 
 #define HFI_MSG_SESSION_OX_START		\
@@ -363,6 +366,12 @@ struct hfi_uncompressed_plane_actual_constraints_info {
 
 
 struct hfi_cmd_sys_session_abort_packet {
+	u32 size;
+	u32 packet_type;
+	u32 sid;
+};
+
+struct hfi_cmd_sys_ping_packet {
 	u32 size;
 	u32 packet_type;
 	u32 sid;
@@ -505,6 +514,12 @@ struct hfi_msg_sys_session_abort_done_packet {
 	u32 packet_type;
 	u32 sid;
 	u32 error_type;
+};
+
+struct hfi_msg_sys_ping_ack_pkt {
+	u32 size;
+	u32 packet_type;
+	u32 sid;
 };
 
 struct hfi_msg_sys_property_info_packet {
