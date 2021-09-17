@@ -48,6 +48,7 @@ Required Node Structure
 =======================
 Encoder/DMA Nodes provide interface for JPEG driver about
 the device register map, interrupt map, clocks and regulators.
+Compatible string definition should be based on target.
 
 - cell-index
   Usage: required
@@ -58,6 +59,11 @@ the device register map, interrupt map, clocks and regulators.
   Usage: required
   Value type: <string>
   Definition: Should be "qcom,cam_jpeg_enc".
+  Definition: Should be "qcom,cam_jpeg_enc_165".
+  Definition: Should be "qcom,cam_jpeg_enc_580".
+  Definition: Should be "qcom,cam_jpeg_dma".
+  Definition: Should be "qcom,cam_jpeg_dma_165".
+  Definition: Should be "qcom,cam_jpeg_dma_580".
 
 - reg-names
   Usage: optional
