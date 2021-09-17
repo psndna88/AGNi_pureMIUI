@@ -28,6 +28,10 @@
 	qcom,iommu-dma = "bypass";
 };
 
+&ipa_eth_group2 {
+	qcom,iommu-dma = "bypass";
+};
+
 &ipa_hw {
 	qcom,use-ipa-in-mhi-mode;
 	ipa_smmu_ap {
@@ -62,4 +66,8 @@
 
 &usb {
 	qcom,iommu-dma = "bypass";
+};
+
+&sdx_ext_ipc {
+	ipq807x_attach = <1>;
 };

@@ -2,6 +2,7 @@
 /plugin/;
 
 #include "blair-mtp-usbc.dtsi"
+#include "holi-mtp-pm7250b.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. Blair MTP USBC audio";
@@ -24,6 +25,10 @@
 
 &wcd937x_codec {
 	status = "disabled";
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
 };
 
 &wcd938x_tx_slave {

@@ -580,6 +580,7 @@
 		clock-names = "core", "iface";
 
 		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
@@ -1164,9 +1165,15 @@
 	};
 
 	ipa_eth_group1: ipa_eth_group1 {
-		qcom,iommu-dma-addr-pool = <0x80000000 0x0fe20000>;
+		qcom,iommu-dma-addr-pool = <0x80000000 0x07f00000>;
 		qcom,iommu-dma = "atomic";
 	};
+
+	ipa_eth_group2: ipa_eth_group2 {
+		qcom,iommu-dma-addr-pool = <0x87f10000 0x07f00000>;
+		qcom,iommu-dma = "atomic";
+	};
+
 
 	ipa_hw: qcom,ipa@03e00000 {
 		compatible = "qcom,ipa";
@@ -1184,6 +1191,7 @@
 		qcom,ipa-hw-mode = <0>;
 		qcom,platform-type = <0>; /* MDM platform */
 		qcom,ee = <0>;
+		qcom,entire-ipa-block-size = <0x200000>;
 		qcom,use-ipa-tethering-bridge;
 		qcom,use-tput-estmation-pipe;
 		qcom,mhi-event-ring-id-limits = <9 15>; /* start and end */
@@ -1197,6 +1205,9 @@
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
+		qcom,register-collection-on-crash;
+		qcom,testbus-collection-on-crash;
+		qcom,non-tn-collection-on-crash;
 		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
@@ -1268,7 +1279,8 @@
 		ipa_smmu_eth1: ipa_smmu_eth1 {
 			compatible = "qcom,ipa-smmu-eth1-cb";
 			iommus = <&apps_smmu 0x5E4 0x0>;
-			qcom,iommu-dma = "atomic";
+			qcom,shared-cb;
+			qcom,iommu-group = <&ipa_eth_group2>;
 		};
 
 		ipa_smmu_wlan1: ipa_smmu_wlan1 {
@@ -1426,6 +1438,13 @@
 
 	qtee_shmbridge {
 		compatible = "qcom,tee-shared-memory-bridge";
+	};
+
+	sdx_ext_ipc: qcom,sdx_ext_ipc {
+		compatible = "qcom,sdx-ext-ipc";
+		qcom,status-in-gpio = <&tlmm 65 0x00>;
+		qcom,status-out-gpio = <&tlmm 44 0x00>;
+		qcom,status-out2-gpio = <&tlmm 45 0x00>;
 	};
 };
 

@@ -2,6 +2,7 @@
 
 #include "sdxlemur.dtsi"
 #include "sdxlemur-mtp-cpe.dtsi"
+#include "sdxlemur-mtp-cpe-hsp.dtsi"
 #include "sdxlemur-1024mb-cpe.dtsi"
 #include "sdxlemur-audio.dtsi"
 #include "sdxlemur-mtp-audio-overlay.dtsi"

@@ -1,10 +1,11 @@
 /dts-v1/;
 /plugin/;
 
-#include "yupik-idps-digital-mics.dtsi"
+#include <dt-bindings/interconnect/qcom,yupik.h>
+#include "yupik-idp-hsp.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. Yupik IDPS + DIGITAL MICS";
+	model = "Qualcomm Technologies, Inc. Yupik IDP + HSP";
 	compatible = "qcom,yupik-idp", "qcom,yupik", "qcom,idp";
 	qcom,msm-id = <475 0x10000>, <515 0x10000>;
 	qcom,board-id = <34 1>;
