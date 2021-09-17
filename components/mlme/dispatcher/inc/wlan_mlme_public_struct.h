@@ -935,7 +935,6 @@ struct wlan_mlme_vht_caps {
  * @sap_max_inactivity_override: Override updating ap_sta_inactivity from
  * hostapd.conf
  * @sap_uapsd_enabled: Flag to enable/disable UAPSD for SAP
- * @reject_addba_req: Flag to decline ADDBA Req from SAP
  */
 struct wlan_mlme_qos {
 	uint32_t tx_aggregation_size;
@@ -956,7 +955,6 @@ struct wlan_mlme_qos {
 	uint32_t tx_non_aggr_sw_retry_threshold;
 	bool sap_max_inactivity_override;
 	bool sap_uapsd_enabled;
-	bool reject_addba_req;
 };
 
 #ifdef WLAN_FEATURE_11AX
@@ -1367,6 +1365,7 @@ struct wlan_mlme_acs {
  * 2.4Ghz
  * @req_flag: requestor flag enable/disable
  * @res_flag: responder flag enable/disable
+ * @twt_res_svc_cap: responder service capability
  */
 struct wlan_mlme_cfg_twt {
 	bool is_twt_enabled;
@@ -1382,6 +1381,7 @@ struct wlan_mlme_cfg_twt {
 	bool enable_twt_24ghz;
 	bool req_flag;
 	bool res_flag;
+	bool twt_res_svc_cap;
 };
 
 /**
@@ -2254,12 +2254,14 @@ struct wlan_mlme_btm {
 /**
  * struct wlan_mlme_fe_wlm - WLM related configs
  * @latency_enable: Flag to check if latency is enabled
+ * @latency_reset: Flag to check if latency reset is enabled
  * @latency_level: WLM latency level
  * @latency_flags: WLM latency flags setting
  * @latency_host_flags: WLM latency host flags setting
  */
 struct wlan_mlme_fe_wlm {
 	bool latency_enable;
+	bool latency_reset;
 	uint8_t latency_level;
 	uint32_t latency_flags[MLME_NUM_WLM_LATENCY_LEVEL];
 	uint32_t latency_host_flags[MLME_NUM_WLM_LATENCY_LEVEL];

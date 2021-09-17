@@ -789,7 +789,7 @@ struct mac_context {
 	uint32_t rx_mc_bc_cnt;
 	/* 11k Offload Support */
 	bool is_11k_offload_supported;
-	bool usr_cfg_ps_enable;
+	uint8_t reject_addba_req;
 	uint16_t usr_cfg_ba_buff_size;
 	bool is_usr_cfg_amsdu_enabled;
 	uint8_t no_ack_policy_cfg[QCA_WLAN_AC_ALL];
