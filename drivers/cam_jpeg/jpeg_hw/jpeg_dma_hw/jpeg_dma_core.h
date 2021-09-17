@@ -22,6 +22,9 @@ struct cam_jpeg_dma_reg_offsets {
 	uint32_t hw_cmd;
 	uint32_t reset_cmd;
 	uint32_t encode_size;
+	uint32_t core_cfg;
+	uint32_t misr_cfg0;
+	uint32_t misr_cfg1;
 };
 
 struct cam_jpeg_dma_regval {
@@ -31,6 +34,7 @@ struct cam_jpeg_dma_regval {
 	uint32_t hw_cmd_start;
 	uint32_t reset_cmd;
 	uint32_t hw_cmd_stop;
+	uint32_t misr_cfg0;
 };
 
 struct cam_jpeg_dma_int_status {
@@ -38,12 +42,45 @@ struct cam_jpeg_dma_int_status {
 	uint32_t resetdone;
 	uint32_t iserror;
 	uint32_t stopdone;
+	uint32_t scale_enable;
+	uint32_t scale_enable_shift;
+};
+
+struct cam_jpeg_dma_camnoc_misr_reg_offset {
+	uint32_t main_ctl;
+	uint32_t id_mask_low;
+	uint32_t id_value_low;
+	uint32_t misc_ctl;
+	uint32_t sigdata0;
+};
+
+struct cam_jpeg_dma_camnoc_misr_reg_val {
+	uint32_t main_ctl;
+	uint32_t id_mask_low;
+	uint32_t id_value_low_rd;
+	uint32_t id_value_low_wr;
+	uint32_t misc_ctl_start;
+	uint32_t misc_ctl_stop;
 };
 
 struct cam_jpeg_dma_device_hw_info {
 	struct cam_jpeg_dma_reg_offsets reg_offset;
 	struct cam_jpeg_dma_regval reg_val;
 	struct cam_jpeg_dma_int_status int_status;
+	struct cam_jpeg_dma_camnoc_misr_reg_offset camnoc_misr_reg_offset;
+	struct cam_jpeg_dma_camnoc_misr_reg_val camnoc_misr_reg_val;
+	uint32_t max_misr;
+	uint32_t max_misr_rd;
+	uint32_t max_misr_wr;
+	uint32_t camnoc_misr_sigdata;
+	uint32_t master_we_sel;
+	uint32_t misr_rd_word_sel;
+	int32_t prev_dma_wr_misr_val[CAM_JPEG_CAMNOC_MISR_VAL_ROW][
+		CAM_JPEG_CAMNOC_MISR_VAL_COL];
+	int32_t prev_dma_rd_misr_val[CAM_JPEG_CAMNOC_MISR_VAL_ROW][
+		CAM_JPEG_CAMNOC_MISR_VAL_COL];
+	int32_t prev_camnoc_misr_val[CAM_JPEG_CAMNOC_MISR_VAL_ROW][
+		CAM_JPEG_CAMNOC_MISR_VAL_COL];
 };
 
 enum cam_jpeg_dma_core_state {

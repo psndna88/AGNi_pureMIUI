@@ -493,13 +493,201 @@ int cam_jpeg_enc_hw_dump(
 	return 0;
 }
 
+int cam_jpeg_enc_dump_camnoc_misr_val(struct cam_jpeg_enc_device_hw_info *hw_info,
+	struct cam_hw_soc_info *soc_info, void *cmd_args)
+{
+	void __iomem                         *enc_mem_base = NULL;
+	void __iomem                         *camnoc_mem_base = NULL;
+	struct cam_jpeg_misr_dump_args       *pmisr_args;
+	int32_t val;
+	uint32_t index = 0;
+	int i;
+	bool mismatch = false;
+	int32_t camnoc_misr_val[CAM_JPEG_CAMNOC_MISR_VAL_ROW][
+		CAM_JPEG_CAMNOC_MISR_VAL_COL] = {{0}};
+
+	enc_mem_base = soc_info->reg_map[0].mem_base;
+	camnoc_mem_base = soc_info->reg_map[1].mem_base;
+	if (!camnoc_mem_base) {
+		CAM_ERR(CAM_JPEG, "Invalid camnoc base address");
+		return -EINVAL;
+	}
+	pmisr_args = (struct cam_jpeg_misr_dump_args *)cmd_args;
+	if (!pmisr_args) {
+		CAM_ERR(CAM_JPEG, "Invalid command argument");
+		return -EINVAL;
+	}
+
+	val = cam_io_r_mb(enc_mem_base + hw_info->reg_offset.core_cfg);
+	index = (val >> hw_info->int_status.scale_enable_shift) &
+		hw_info->int_status.scale_enable;
+	CAM_DBG(CAM_JPEG, "index %d", index);
+
+	for (i = 0; i < hw_info->camnoc_misr_sigdata; i++) {
+		camnoc_misr_val[index][i] = cam_io_r_mb(camnoc_mem_base +
+			hw_info->camnoc_misr_reg_offset.sigdata0 + (i * 8));
+		if (hw_info->prev_camnoc_misr_val[index][i] != camnoc_misr_val[index][i])
+			mismatch = true;
+	}
+	if (mismatch && (pmisr_args->req_id != 1)) {
+		CAM_ERR(CAM_JPEG,
+			"CAMNOC ENC_MISR MISMATCH [req:%d][i:%d][index:%d]\n"
+			"curr SigData:0x%x %x %x %x prev SigData:0x%x %x %x %x isbug:%d",
+			pmisr_args->req_id, i, index,
+			camnoc_misr_val[index][3], camnoc_misr_val[index][2],
+			camnoc_misr_val[index][1], camnoc_misr_val[index][0],
+			hw_info->prev_camnoc_misr_val[index][3],
+			hw_info->prev_camnoc_misr_val[index][2],
+			hw_info->prev_camnoc_misr_val[index][1],
+			hw_info->prev_camnoc_misr_val[index][0], pmisr_args->enable_bug);
+		if (pmisr_args->enable_bug)
+			BUG_ON(1);
+	}
+	CAM_DBG(CAM_JPEG,
+		"CAMNOC ENC MISR req:%d SigData:0x%x %x %x %x",
+		pmisr_args->req_id,
+		camnoc_misr_val[index][3], camnoc_misr_val[index][2],
+		camnoc_misr_val[index][1], camnoc_misr_val[index][0]);
+	mismatch = false;
+	for (i = 0; i < hw_info->camnoc_misr_sigdata; i++)
+		hw_info->prev_camnoc_misr_val[index][i] = camnoc_misr_val[index][i];
+	/* stop misr : cam_noc_cam_noc_0_req_link_misrprb_MiscCtl_Low */
+	cam_io_w_mb(hw_info->camnoc_misr_reg_val.misc_ctl_stop,
+		camnoc_mem_base + hw_info->camnoc_misr_reg_offset.misc_ctl);
+	return 0;
+}
+
+int cam_jpeg_enc_dump_hw_misr_val(struct cam_jpeg_enc_device_hw_info *hw_info,
+	struct cam_hw_soc_info *soc_info, void *cmd_args)
+{
+	void __iomem                         *enc_mem_base = NULL;
+	void __iomem                         *camnoc_mem_base = NULL;
+	struct cam_jpeg_misr_dump_args       *pmisr_args;
+	int32_t val;
+	uint32_t index = 0;
+	int offset, i, j;
+	bool mismatch = false;
+	int32_t enc_misr_val[CAM_JPEG_ENC_MISR_VAL_NUM][CAM_JPEG_CAMNOC_MISR_VAL_ROW][
+		CAM_JPEG_CAMNOC_MISR_VAL_COL] = {{{0}}};
+
+	enc_mem_base = soc_info->reg_map[0].mem_base;
+	camnoc_mem_base = soc_info->reg_map[1].mem_base;
+	if (!camnoc_mem_base) {
+		CAM_ERR(CAM_JPEG, "Invalid camnoc base address");
+		return -EINVAL;
+	}
+	pmisr_args = (struct cam_jpeg_misr_dump_args *)cmd_args;
+	if (!pmisr_args) {
+		CAM_ERR(CAM_JPEG, "Invalid command argument");
+		return -EINVAL;
+	}
+
+	val = cam_io_r_mb(enc_mem_base + hw_info->reg_offset.core_cfg);
+	index = (val >> hw_info->int_status.scale_enable_shift) &
+		hw_info->int_status.scale_enable;
+	CAM_DBG(CAM_JPEG, "index %d", index);
+
+	for (i = 0; i < hw_info->max_misr; i++) {
+		offset = hw_info->reg_offset.misr_rd0 + (i * 0x10);
+		for (j = 0; j < hw_info->max_misr_rd; j++) {
+			enc_misr_val[i][index][j] = cam_io_r_mb(enc_mem_base +
+				offset + (j * 4));
+			if (hw_info->prev_enc_misr_val[i][index][j] !=
+				enc_misr_val[i][index][j])
+				mismatch = true;
+		}
+		if (mismatch && (pmisr_args->req_id != 1)) {
+			CAM_ERR(CAM_JPEG,
+				"ENC_MISR RD MISMATCH [req:%d][i:%d][index:%d][j:%d]\n"
+				"curr:0x%x %x %x %x prev:0x%x %x %x %x isbug:%d",
+				pmisr_args->req_id, i, index, j, enc_misr_val[i][index][3],
+				enc_misr_val[i][index][2], enc_misr_val[i][index][1],
+				enc_misr_val[i][index][0], hw_info->prev_enc_misr_val[i][index][3],
+				hw_info->prev_enc_misr_val[i][index][2],
+				hw_info->prev_enc_misr_val[i][index][1],
+				hw_info->prev_enc_misr_val[i][index][0], pmisr_args->enable_bug);
+			if (pmisr_args->enable_bug)
+				BUG_ON(1);
+		}
+		CAM_DBG(CAM_JPEG, "ENC_MISR RD [req:%d][%d]: 0x%x %x %x %x",
+			pmisr_args->req_id, i,
+			enc_misr_val[i][index][3], enc_misr_val[i][index][2],
+			enc_misr_val[i][index][1], enc_misr_val[i][index][0]);
+		mismatch = false;
+
+		for (j = 0; j < hw_info->max_misr_rd; j++)
+			hw_info->prev_enc_misr_val[i][index][j] = enc_misr_val[i][index][j];
+	}
+
+	return 0;
+}
+
+int cam_jpeg_enc_config_cmanoc_hw_misr(struct cam_jpeg_enc_device_hw_info *hw_info,
+	struct cam_hw_soc_info *soc_info, void *cmd_args)
+{
+	void __iomem                         *enc_mem_base = NULL;
+	void __iomem                         *camnoc_mem_base = NULL;
+	uint32_t                             *camnoc_misr_test = NULL;
+	int val = 0;
+
+	enc_mem_base = soc_info->reg_map[0].mem_base;
+	camnoc_mem_base = soc_info->reg_map[1].mem_base;
+	if (!camnoc_mem_base) {
+		CAM_ERR(CAM_JPEG, "Invalid camnoc base address");
+		return -EINVAL;
+	}
+	camnoc_misr_test = (uint32_t *)cmd_args;
+	if (!camnoc_misr_test) {
+		CAM_ERR(CAM_JPEG, "Invalid command argument");
+		return -EINVAL;
+	}
+
+	/* enable all MISRs */
+	cam_io_w_mb(hw_info->reg_val.misr_cfg, enc_mem_base +
+		hw_info->reg_offset.misr_cfg);
+
+	/* cam_noc_cam_noc_0_req_link_misrprb_MainCtl_Low
+	 * enable CRC generation on both RD, WR and transaction payload
+	 */
+	cam_io_w_mb(hw_info->camnoc_misr_reg_val.main_ctl, camnoc_mem_base +
+		hw_info->camnoc_misr_reg_offset.main_ctl);
+
+	/* cam_noc_cam_noc_0_req_link_misrprb_IdMask_Low */
+	cam_io_w_mb(hw_info->camnoc_misr_reg_val.main_ctl, camnoc_mem_base +
+		hw_info->camnoc_misr_reg_offset.id_mask_low);
+
+	/* cam_noc_cam_noc_0_req_link_misrprb_IdValue_Low */
+	switch (*camnoc_misr_test) {
+	case CAM_JPEG_MISR_ID_LOW_RD:
+		val = hw_info->camnoc_misr_reg_val.id_value_low_rd;
+		break;
+	case CAM_JPEG_MISR_ID_LOW_WR:
+		val = hw_info->camnoc_misr_reg_val.id_value_low_wr;
+		break;
+	default:
+		val = hw_info->camnoc_misr_reg_val.id_value_low_rd;
+		break;
+	}
+	cam_io_w_mb(val, camnoc_mem_base +
+		hw_info->camnoc_misr_reg_offset.id_value_low);
+
+	/* start/reset misr : cam_noc_cam_noc_0_req_link_misrprb_MiscCtl_Low */
+	cam_io_w_mb(hw_info->camnoc_misr_reg_val.misc_ctl_start,
+		camnoc_mem_base + hw_info->camnoc_misr_reg_offset.misc_ctl);
+	CAM_DBG(CAM_JPEG, "ENC CAMNOC MISR configured");
+
+	return 0;
+}
+
 int cam_jpeg_enc_process_cmd(void *device_priv, uint32_t cmd_type,
 	void *cmd_args, uint32_t arg_size)
 {
 	struct cam_hw_info *jpeg_enc_dev = device_priv;
 	struct cam_jpeg_enc_device_core_info *core_info = NULL;
+	struct cam_jpeg_enc_device_hw_info   *hw_info = NULL;
 	struct cam_jpeg_match_pid_args       *match_pid_mid = NULL;
 	uint32_t    *num_pid = NULL;
+	struct cam_hw_soc_info               *soc_info = NULL;
 	int i, rc = 0;
 
 	if (!device_priv) {
@@ -514,6 +702,9 @@ int cam_jpeg_enc_process_cmd(void *device_priv, uint32_t cmd_type,
 
 	core_info = (struct cam_jpeg_enc_device_core_info *)
 		jpeg_enc_dev->core_info;
+
+	hw_info = core_info->jpeg_enc_hw_info;
+	soc_info = &jpeg_enc_dev->soc_info;
 
 	switch (cmd_type) {
 	case CAM_JPEG_CMD_SET_IRQ_CB:
@@ -582,6 +773,19 @@ int cam_jpeg_enc_process_cmd(void *device_priv, uint32_t cmd_type,
 		}
 
 		break;
+	case CAM_JPEG_CMD_CONFIG_HW_MISR:
+	{
+		rc = cam_jpeg_enc_config_cmanoc_hw_misr(hw_info, soc_info, cmd_args);
+		break;
+	}
+	case CAM_JPEG_CMD_DUMP_HW_MISR_VAL:
+	{
+		rc = cam_jpeg_enc_dump_hw_misr_val(hw_info, soc_info, cmd_args);
+		if (rc)
+			break;
+		rc = cam_jpeg_enc_dump_camnoc_misr_val(hw_info, soc_info, cmd_args);
+		break;
+	}
 	default:
 		rc = -EINVAL;
 		break;

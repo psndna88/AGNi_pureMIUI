@@ -4112,13 +4112,13 @@ static void cam_ope_mgr_dump_pf_data(
 	packet      = hw_cmd_args->u.pf_args.pf_data.packet;
 	ope_request = hw_cmd_args->u.pf_args.pf_data.req;
 
-	if (ctx_data->pf_mid_found)
-		goto stripedump;
-
 	ope_pid_mid_args.fault_mid = hw_cmd_args->u.pf_args.mid;
 	ope_pid_mid_args.fault_pid = hw_cmd_args->u.pf_args.pid;
 	ctx_found = hw_cmd_args->u.pf_args.ctx_found;
 	resource_type = hw_cmd_args->u.pf_args.resource_type;
+
+	if (ctx_data->pf_mid_found)
+		goto stripedump;
 
 	if (*ctx_found && *resource_type) {
 		hw_pid_support = false;
@@ -4162,13 +4162,13 @@ static void cam_ope_mgr_dump_pf_data(
 			return;
 	}
 
-	io_cfg = (struct cam_buf_io_cfg *)((uint32_t *)&packet->payload +
-			packet->io_configs_offset / 4);
-
 	*resource_type = ope_pid_mid_args.match_res;
 	CAM_INFO(CAM_OPE, "Fault port %d", *resource_type);
 
 stripedump:
+	io_cfg = (struct cam_buf_io_cfg *)((uint32_t *)&packet->payload +
+			packet->io_configs_offset / 4);
+
 	if (!ope_request)
 		goto iodump;
 
@@ -4232,6 +4232,11 @@ iodump:
 				io_cfg[i].mem_handle[j]);
 
 			if (io_buf_found) {
+				if (j >= OPE_MAX_PLANES) {
+					CAM_ERR(CAM_OPE, "Invalid plane idx: %d", j);
+					break;
+				}
+
 				for (stripe_num = 0; stripe_num < io_buf->num_stripes[j];
 						stripe_num++) {
 					CAM_INFO(CAM_OPE,
