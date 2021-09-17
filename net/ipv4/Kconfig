@@ -487,6 +487,14 @@ config TCP_CONG_CUBIC
 	among other techniques.
 	See http://www.csc.ncsu.edu/faculty/rhee/export/bitcp/cubic-paper.pdf
 
+config TCP_CONG_C2TCP
+	tristate "CELLULAR CUBIC TCP (C2TCP)"
+	default y
+	---help---
+	Home Page: https://wp.nyu.edu/c2tcp/
+	This implementation is only a proof-of-concept. A more general version working with different TCP schemes will be released, when I get time! :)
+	Here, C2TCP's functionality is implemented on top of TCP Cubic.
+
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
 	default m
@@ -661,6 +669,9 @@ choice
 	config DEFAULT_CUBIC
 		bool "Cubic" if TCP_CONG_CUBIC=y
 
+	config DEFAULT_C2TCP
+		bool "C2TCP" if TCP_CONG_C2TCP=y
+
 	config DEFAULT_HTCP
 		bool "Htcp" if TCP_CONG_HTCP=y
 
@@ -700,6 +711,7 @@ config DEFAULT_TCP_CONG
 	string
 	default "bic" if DEFAULT_BIC
 	default "cubic" if DEFAULT_CUBIC
+	default "c2tcp" if DEFAULT_C2TCP
 	default "htcp" if DEFAULT_HTCP
 	default "hybla" if DEFAULT_HYBLA
 	default "vegas" if DEFAULT_VEGAS
