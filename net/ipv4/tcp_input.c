@@ -3086,6 +3086,8 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 	u32 last_in_flight = 0;
 	bool rtt_update;
 	int flag = 0;
+	struct ack_sample sample = { .pkts_acked = pkts_acked,
+			     .rtt_us = sack->rate->rtt_us };
 
 	first_ackt = 0;
 
@@ -3230,6 +3232,9 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 		tcp_rearm_rto(sk);
 	}
 
+	//DeepCC sampling: Some schemes such as BBR does not have ->pkt_acked function!
+	// So let's don't use next if{} ;)
+	deepcc_pkts_acked(sk,&sample);
 	if (icsk->icsk_ca_ops->pkts_acked) {
 		struct ack_sample sample = { .pkts_acked = pkts_acked,
 					     .rtt_us = ca_rtt_us,
@@ -3317,6 +3322,13 @@ static void tcp_cong_control(struct sock *sk, u32 ack, u32 acked_sacked,
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
+	/*DeepCC: Update Throughput samples*/
+	deepcc_get_rate_sample(sk,rs);
+	//C2TCP:
+	if (icsk->icsk_ca_ops->get_rate_sample) {
+		icsk->icsk_ca_ops->get_rate_sample(sk,rs);
+	}
+
 	if (icsk->icsk_ca_ops->cong_control) {
 		icsk->icsk_ca_ops->cong_control(sk, rs);
 		return;
@@ -3329,7 +3341,11 @@ static void tcp_cong_control(struct sock *sk, u32 ack, u32 acked_sacked,
 		/* Advance cwnd if state allows */
 		tcp_cong_avoid(sk, ack, acked_sacked);
 	}
-	tcp_update_pacing_rate(sk);
+
+	/*Time to apply the DRL-Agent's action*/
+	deepcc_update_cwnd(sk);
+
+	//tcp_update_pacing_rate(sk);
 }
 
 /* Check that window update is acceptable.
@@ -5614,6 +5630,8 @@ void tcp_finish_connect(struct sock *sk, struct sk_buff *skb)
 	icsk->icsk_af_ops->rebuild_header(sk);
 
 	tcp_init_metrics(sk);
+	/*DeepCC Initialization*/
+	deepcc_init(sk);
 
 	tcp_init_congestion_control(sk);
 
@@ -6028,6 +6046,9 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 		} else {
 			/* Make sure socket is routed, for correct metrics. */
 			icsk->icsk_af_ops->rebuild_header(sk);
+			/*DeepCC Initialization*/
+			deepcc_init(sk);
+
 			tcp_init_congestion_control(sk);
 
 			tcp_mtup_init(sk);
@@ -6066,7 +6087,8 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 			tcp_init_metrics(sk);
 
 		if (!inet_csk(sk)->icsk_ca_ops->cong_control)
-			tcp_update_pacing_rate(sk);
+			deepcc_update_cwnd(sk);
+			//tcp_update_pacing_rate(sk);
 
 		/* Prevent spurious tcp_cwnd_restart() on first data packet */
 		tp->lsndtime = tcp_jiffies32;

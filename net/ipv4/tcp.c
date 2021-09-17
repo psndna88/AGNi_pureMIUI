@@ -415,6 +415,10 @@ void tcp_init_sock(struct sock *sk)
 	tp->mss_cache = TCP_MSS_DEFAULT;
 	u64_stats_init(&tp->syncp);
 
+	/*
+	 * Orca Cwnd_coef init. to 1
+	 */
+	tp->cwnd_min = 1;
 	tp->reordering = sysctl_tcp_reordering;
 	tcp_assign_congestion_control(sk);
 
