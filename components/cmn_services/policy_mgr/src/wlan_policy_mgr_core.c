@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3630,9 +3631,8 @@ void  policy_mgr_init_sap_mandatory_chan(struct wlan_objmgr_psoc *psoc,
 	if (WLAN_REG_IS_5GHZ_CH_FREQ(org_ch_freq)) {
 		policy_mgr_debug("channel %hu, sap mandatory chan list enabled",
 				 org_ch_freq);
-		if (!policy_mgr_get_sap_mandatory_chan_list_len(psoc))
-			policy_mgr_init_sap_mandatory_chan_by_band(
-				psoc, BIT(REG_BAND_2G));
+		policy_mgr_init_sap_mandatory_chan_by_band(
+			psoc, BIT(REG_BAND_2G) | BIT(REG_BAND_5G));
 		policy_mgr_add_sap_mandatory_chan(
 			psoc, org_ch_freq);
 	} else if (WLAN_REG_IS_6GHZ_CHAN_FREQ(org_ch_freq)) {
