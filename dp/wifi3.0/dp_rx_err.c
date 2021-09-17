@@ -779,6 +779,16 @@ dp_rx_chain_msdus(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	return mpdu_done;
 }
 
+#ifdef WLAN_SKIP_BAR_UPDATE
+static
+void dp_rx_err_handle_bar(struct dp_soc *soc,
+			  struct dp_peer *peer,
+			  qdf_nbuf_t nbuf)
+{
+	dp_info_rl("BAR update to H.W is skipped");
+	DP_STATS_INC(soc, rx.err.bar_handle_fail_count, 1);
+}
+#else
 static
 void dp_rx_err_handle_bar(struct dp_soc *soc,
 			  struct dp_peer *peer,
@@ -828,6 +838,7 @@ void dp_rx_err_handle_bar(struct dp_soc *soc,
 		DP_STATS_INC(soc, rx.err.ssn_update_count, 1);
 	}
 }
+#endif
 
 /**
  * dp_rx_bar_frame_handle() - Function to handle err BAR frames
@@ -1281,6 +1292,23 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 		if (!peer->rx_tid[tid].hw_qdesc_vaddr_unaligned)
 			dp_rx_tid_setup_wifi3(peer, tid, 1, IEEE80211_SEQ_MAX);
 			/* IEEE80211_SEQ_MAX indicates invalid start_seq */
+	}
+
+	/*
+	 * Drop packets in this path if cce_match is found. Packets will come
+	 * in following path depending on whether tidQ is setup.
+	 * 1. If tidQ is setup: WIFILI_HAL_RX_WBM_REO_PSH_RSN_ROUTE and
+	 * cce_match = 1
+	 *    Packets with WIFILI_HAL_RX_WBM_REO_PSH_RSN_ROUTE are already
+	 *    dropped.
+	 * 2. If tidQ is not setup: WIFILI_HAL_RX_WBM_REO_PSH_RSN_ERROR and
+	 * cce_match = 1
+	 *    These packets need to be dropped and should not get delivered
+	 *    to stack.
+	 */
+	if (qdf_unlikely(dp_rx_err_cce_drop(soc, vdev, nbuf, rx_tlv_hdr))) {
+		qdf_nbuf_free(nbuf);
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (qdf_unlikely(vdev->rx_decap_type == htt_cmn_pkt_type_raw)) {

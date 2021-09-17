@@ -2148,18 +2148,6 @@ util_handle_nontx_prof(uint8_t *mbssid_elem, uint8_t *subelement,
 
 	prof_len = subelement[TAG_LEN_POS];
 	/*
-	 * if prof_residue is true, that means we are
-	 * in the continuation of the fragmented profile part,
-	 * present in the next MBSSD IE else this profile
-	 * is a non fragmented non tx BSSID profile.
-	 */
-
-	if (mbssid_info->prof_residue)
-		mbssid_info->split_prof_continue = true;
-	else
-		mbssid_info->split_prof_continue = false;
-
-	/*
 	 * If we are executing the split portion of the nontx
 	 * profile present in the subsequent MBSSID, then there
 	 * is no need of any sanity check for valid BSS profile
@@ -2221,6 +2209,12 @@ util_handle_nontx_prof(uint8_t *mbssid_elem, uint8_t *subelement,
 				   mbssid_index_ie[BSS_INDEX_POS],
 				   new_bssid);
 	}
+	/* In single MBSS IE, there could be subelement holding
+	 * remaining vendor IEs of non tx profile from last MBSS IE
+	 * [split profile] and new non tx profile, hence reset
+	 * skip_bssid_copy flag after each subelement processing
+	 */
+	mbssid_info->skip_bssid_copy = false;
 	return VALID_NONTX_PROF;
 }
 
@@ -2331,13 +2325,30 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 		mbssid_info.split_profile =
 			util_scan_is_split_prof_found(next_elem, ie, ielen);
 
-		mbssid_info.skip_bssid_copy = false;
 		for (subelement = mbssid_elem + SUBELEMENT_START_POS;
 		     subelement < (next_elem - 1);
 		     subelement += MIN_IE_LEN + subelement[TAG_LEN_POS]) {
 			subie_len = subelement[TAG_LEN_POS];
 
+			/*
+			 * if prof_residue is true, that means we are
+			 * in the continuation of the fragmented profile part,
+			 * present in the next MBSSD IE else this profile
+			 * is a non fragmented non tx BSSID profile.
+			 */
+
+			if (mbssid_info.prof_residue)
+				mbssid_info.split_prof_continue = true;
+			else
+				mbssid_info.split_prof_continue = false;
+
 			if (subie_len > MAX_SUBELEM_LEN) {
+				scm_err_rl("Corrupt frame with subie_len: %d\n"
+					   "split_prof_continue: %d\n"
+					   "prof_residue: %d\n",
+					   subie_len,
+					   mbssid_info.split_prof_continue,
+					   mbssid_info.prof_residue);
 				if (mbssid_info.split_prof_continue)
 					qdf_mem_free(split_prof_start);
 
@@ -2356,6 +2367,10 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 							bssid, new_bssid);
 
 			if (retval == INVALID_SPLIT_PROF) {
+				scm_err_rl("Corrupt frame with ID_POS: %d\n"
+					   "TAG_LEN_POS: %d\n",
+					   subelement[ID_POS],
+					   subelement[TAG_LEN_POS]);
 				qdf_mem_free(split_prof_start);
 				qdf_mem_free(new_ie);
 				return QDF_STATUS_E_INVAL;
@@ -2390,6 +2405,7 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 					split_prof_start =
 						qdf_mem_malloc(ielen);
 					if (!split_prof_start) {
+						scm_err_rl("Malloc failed");
 						qdf_mem_free(new_ie);
 						return QDF_STATUS_E_NOMEM;
 					}
@@ -2487,6 +2503,9 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 				if (mbssid_info.split_prof_continue)
 					qdf_mem_free(split_prof_start);
 				qdf_mem_free(new_ie);
+				scm_err_rl("Malloc for new_frame failed");
+				scm_err_rl("split_prof_continue: %d",
+					   mbssid_info.split_prof_continue);
 				return QDF_STATUS_E_NOMEM;
 			}
 
@@ -2527,6 +2546,8 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 				}
 				qdf_mem_free(new_frame);
 				scm_err_rl("failed to generate a scan entry");
+				scm_err_rl("split_prof_continue: %d",
+					   mbssid_info.split_prof_continue);
 				break;
 			}
 			/* scan entry makes its own copy so free the frame*/
