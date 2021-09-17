@@ -6124,6 +6124,18 @@ static int get_ec_ref_port_id(int value, int *index)
 		*index = 44;
 		port_id = RT_PROXY_PORT_001_TX;
 		break;
+	case 45:
+		*index = 45;
+		port_id = AFE_PORT_ID_PRIMARY_TDM_RX_2;
+		break;
+	case 46:
+		*index = 46;
+		port_id = AFE_PORT_ID_TERTIARY_TDM_RX;
+		break;
+	case 47:
+		*index = 47;
+		port_id = AFE_PORT_ID_SECONDARY_TDM_TX_1;
+		break;
 	default:
 		*index = 0; /* NONE */
 		pr_err("%s: Invalid value %d\n", __func__, value);
@@ -6183,6 +6195,7 @@ static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "I2S_RX",
 	"RX_CDC_DMA_RX_3", "TX_CDC_DMA_TX_0", "TERT_TDM_RX_2", "SEC_TDM_TX_0",
 	"DISPLAY_PORT1", "SEN_MI2S_RX", "QUIN_TDM_TX_0", "SENARY_MI2S_TX",
 	"PRI_TDM_RX_0", "PRI_TDM_TX_0", "QUIN_MI2S_RX", "AFE_PCM_TX",
+	"PRI_TDM_RX_2", "TERT_TDM_RX_0", "SEC_TDM_TX_1",
 };
 
 static const struct soc_enum msm_route_ec_ref_rx_enum[] = {

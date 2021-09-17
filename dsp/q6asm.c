@@ -3747,7 +3747,7 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
-	if (ac->perf_mode != LEGACY_PCM_MODE)
+	if ((ac->perf_mode != LEGACY_PCM_MODE) && (ac->perf_mode != LOW_LATENCY_PCM_MODE))
 		open.postprocopo_id = ASM_STREAM_POSTPROCOPO_ID_NONE;
 
 	pr_debug("%s: perf_mode %d asm_topology 0x%x bps %d\n", __func__,
