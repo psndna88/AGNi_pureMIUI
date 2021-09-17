@@ -86,12 +86,20 @@
 		ep-reset-reg = <0x801210>;
 		ep-reset-gpio-mask = <0xf>;
 		dump-regs = <0x801330 0x801350 0x801370>;
+		reg_update = <0x82c030 0x1
+					0x828000 0x3
+					0x82bd00 0x8
+					0x82c030 0x2
+					0x828000 0x3
+					0x82bd00 0x8
+					0x82c030 0x8
+					0x828000 0x1
+					0x82bd00 0x8>;
 	};
 };
 
 
 &pcie0 {
-	qcom,boot-option = <0x1>;
 	pcie-i2c-phandle = <&i2c_5>;
 
 	vreg-3p3-supply = <&aqr_vreg>;
@@ -123,14 +131,6 @@
 		/* BDF 2.2.0 */
 		pcie0_bus2_dev2_fn0: pcie0_bus2_dev2_fn0 {
 			reg = <0x1000 0x0 0x0 0x0 0x0>;
-			cnss_pci0: cnss_pci0 {
-				reg = <0 0 0 0 0>;
-				qcom,iommu-group = <&cnss_pci_iommu_group>;
-				memory-region = <&cnss_wlan_mem>;
-
-				#address-cells = <1>;
-				#size-cells = <1>;
-			};
 		};
 
 		/* BDF 2.3.0 */
@@ -138,6 +138,9 @@
 			reg = <0x1800 0x0 0x0 0x0 0x0>;
 			qps615_eth0,qps615_eth0@pcie0_rp {
 				reg = <0x0 0x0 0x0 0x0 0x0>;
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&aqr_intn_wol_sig>;
 
 				compatible = "qcom,ioss-v2-device";
 				qcom,ioss = <&ioss>;
@@ -161,6 +164,9 @@
 			qps615_eth1,qps615_eth1@pcie0_rp {
 				reg = <0x100 0x0 0x0 0x0 0x0>;
 
+				pinctrl-names = "default";
+				pinctrl-0 = <&napa_intn_wol_sig>;
+
 				compatible = "qcom,ioss-v2-device";
 				qcom,ioss = <&ioss>;
 				qcom,ioss_interfaces = <&ioss_qps615_eth1>;
@@ -179,33 +185,6 @@
 					qcom,iommu-dma = "atomic";
 				};
 			};
-		};
-	};
-};
-
-#include "sdxlemur-cnss.dtsi"
-
-&wlan {
-	mhi_events {
-		mhi_event@0 {
-			mhi,num-elements = <32>;
-			mhi,intmod = <0>;
-			mhi,msi = <1>;
-			mhi,priority = <0>;
-			mhi,brstmode = <2>;
-			mhi,data-type = <1>;
-		};
-
-		mhi_event@1 {
-			mhi,num-elements = <256>;
-			mhi,intmod = <0>;
-			mhi,msi = <2>;
-			mhi,priority = <1>;
-			mhi,brstmode = <2>;
-		};
-
-		mhi_event@2 {
-			status = "disabled";
 		};
 	};
 };

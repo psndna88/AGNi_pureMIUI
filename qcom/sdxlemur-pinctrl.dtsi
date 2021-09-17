@@ -289,6 +289,11 @@
 			pcie_ep_perst_default: pcie_ep_perst_default {
 				mux {
 					pins = "gpio57";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio57";
 					drive-strength = <2>;
 					bias-pull-down;
 				};
@@ -1696,6 +1701,34 @@
 					pins = "gpio17";
 					drive-strength = <8>;	/* 8 mA */
 					bias-disable;		/* NO PULL */
+				};
+			};
+		};
+
+		qps615_intn_wol {
+			aqr_intn_wol_sig: aqr_intn_wol_sig {
+				mux {
+					pins = "gpio103";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio103";
+					input-enable;
+					bias-disable;
+				};
+			};
+
+			napa_intn_wol_sig: napa_intn_wol_sig {
+				mux {
+					pins = "gpio81";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio81";
+					input-enable;
+					bias-disable;
 				};
 			};
 		};

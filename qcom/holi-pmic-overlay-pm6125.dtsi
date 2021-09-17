@@ -389,6 +389,7 @@
 	#size-cells = <0>;
 	status = "ok";
 
+	qcom,leica-used-i2c;
 	pm8008_8: qcom,pm8008@8 {
 		compatible = "qcom,i2c-pmic";
 		reg = <0x8>;
@@ -433,7 +434,7 @@
 				regulator-min-microvolt = <1100000>;
 				regulator-max-microvolt = <1300000>;
 				qcom,min-dropout-voltage = <56000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L2P: qcom,pm8008-l2@4100 {
@@ -442,7 +443,7 @@
 				regulator-min-microvolt = <950000>;
 				regulator-max-microvolt = <1150000>;
 				qcom,min-dropout-voltage = <96000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L3P: qcom,pm8008-l3@4200 {
@@ -451,7 +452,7 @@
 				regulator-min-microvolt = <2700000>;
 				regulator-max-microvolt = <2900000>;
 				qcom,min-dropout-voltage = <168000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L4P: qcom,pm8008-l4@4300 {
@@ -460,7 +461,7 @@
 				regulator-min-microvolt = <2700000>;
 				regulator-max-microvolt = <2900000>;
 				qcom,min-dropout-voltage = <136000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L5P: qcom,pm8008-l5@4400 {
@@ -469,7 +470,7 @@
 				regulator-min-microvolt = <2700000>;
 				regulator-max-microvolt = <2900000>;
 				qcom,min-dropout-voltage = <240000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L6P: qcom,pm8008-l6@4400 {
@@ -478,7 +479,7 @@
 				regulator-min-microvolt = <1500000>;
 				regulator-max-microvolt = <1900000>;
 				qcom,min-dropout-voltage = <48000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L7P: qcom,pm8008-l7@4400 {
@@ -487,7 +488,7 @@
 				regulator-min-microvolt = <2700000>;
 				regulator-max-microvolt = <2900000>;
 				qcom,min-dropout-voltage = <96000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 		};
 	};
