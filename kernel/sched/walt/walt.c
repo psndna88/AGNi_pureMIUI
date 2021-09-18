@@ -2256,13 +2256,9 @@ void walt_task_dead(struct task_struct *p)
 void reset_task_stats(struct task_struct *p)
 {
 	int i = 0;
-	u32 *curr_window_ptr;
-	u32 *prev_window_ptr;
 
-	curr_window_ptr =  p->wts.curr_window_cpu;
-	prev_window_ptr = p->wts.prev_window_cpu;
-	memset(curr_window_ptr, 0, sizeof(u32) * nr_cpu_ids);
-	memset(prev_window_ptr, 0, sizeof(u32) * nr_cpu_ids);
+	memset(p->wts.curr_window_cpu, 0, sizeof(u32) * nr_cpu_ids);
+	memset(p->wts.prev_window_cpu, 0, sizeof(u32) * nr_cpu_ids);
 
 	p->wts.mark_start = 0;
 	p->wts.sum = 0;
@@ -2278,9 +2274,6 @@ void reset_task_stats(struct task_struct *p)
 	p->wts.demand_scaled = 0;
 	p->wts.pred_demand_scaled = 0;
 	p->wts.active_time = 0;
-
-	p->wts.curr_window_cpu = curr_window_ptr;
-	p->wts.prev_window_cpu = prev_window_ptr;
 }
 
 void mark_task_starting(struct task_struct *p)
