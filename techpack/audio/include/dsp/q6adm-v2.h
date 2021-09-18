@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef __Q6_ADM_V2_H__
 #define __Q6_ADM_V2_H__
@@ -228,5 +229,12 @@ int adm_programable_channel_mixer(int port_id, int copp_idx, int session_id,
 void msm_dts_srs_acquire_lock(void);
 void msm_dts_srs_release_lock(void);
 void adm_set_native_mode(int mode);
+int crus_adm_set_params(int port_id, int copp_idx, uint32_t module_id,
+			 uint32_t param_id, char *params,
+			 uint32_t params_length);
+int crus_adm_get_params(int port_id, int copp_idx, uint32_t module_id,
+			uint32_t param_id, char *params, uint32_t params_length,
+			uint32_t client_id);
 int adm_set_ffecns_freeze_event(bool ffecns_freeze_event);
+int adm_set_device_model(int device_model);
 #endif /* __Q6_ADM_V2_H__ */

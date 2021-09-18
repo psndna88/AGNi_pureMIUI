@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2020, Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #include <linux/fs.h>
 #include <linux/mutex.h>
@@ -1252,7 +1253,7 @@ int get_lsm_port(void)
  */
 int q6lsm_set_afe_data_format(uint64_t fe_id, uint16_t afe_data_format)
 {
-	int n = 0;
+	int n = 0, free_session = LSM_INVALID_SESSION_ID;
 
 	if (0 != afe_data_format && 1 != afe_data_format)
 		goto done;
@@ -1261,14 +1262,31 @@ int q6lsm_set_afe_data_format(uint64_t fe_id, uint16_t afe_data_format)
 		 afe_data_format ? "unprocessed" : "processed");
 
 	for (n = LSM_MIN_SESSION_ID; n <= LSM_MAX_SESSION_ID; n++) {
-		if (0 == lsm_client_afe_data[n].fe_id) {
-			lsm_client_afe_data[n].fe_id = fe_id;
+		/* Save ID of the first available free session */
+		if (LSM_INVALID_SESSION_ID == free_session &&
+			0 == lsm_client_afe_data[n].fe_id)
+			free_session = n;
+
+			/* Find the matching session with fe_id */
+		if (fe_id == lsm_client_afe_data[n].fe_id) {
 			lsm_client_afe_data[n].unprocessed_data =
 							afe_data_format;
 			pr_debug("%s: session ID is %d, fe_id is %d\n",
 				 __func__, n, fe_id);
 			return 0;
 		}
+	}
+	/*
+	* When no matching session is found, allocate
+	* a new one if a free session is available.
+	*/
+	if (free_session != LSM_INVALID_SESSION_ID) {
+		lsm_client_afe_data[free_session].fe_id = fe_id;
+		lsm_client_afe_data[free_session].unprocessed_data =
+						afe_data_format;
+		pr_debug("%s: session ID is %d, fe_id is %d\n",
+			 __func__, free_session, fe_id);
+		return 0;
 	}
 
 	pr_err("%s: all lsm sessions are taken\n", __func__);
@@ -1735,21 +1753,24 @@ int q6lsm_deregister_sound_model(struct lsm_client *client)
 				break;
 		}
 	} else {
-		memset(&cmd, 0, sizeof(cmd));
-		q6lsm_add_hdr(client, &cmd.hdr, sizeof(cmd.hdr), false);
-		cmd.hdr.opcode = LSM_SESSION_CMD_DEREGISTER_SOUND_MODEL;
-
-		rc = q6lsm_apr_send_pkt(client, client->apr, &cmd.hdr, true, NULL);
-		if (rc) {
-			pr_err("%s: Failed cmd opcode 0x%x, rc %d\n", __func__,
-			       cmd.hdr.opcode, rc);
-		} else {
-			pr_debug("%s: Deregister sound model succeeded\n", __func__);
-		}
-
-		p_info.param_type = LSM_DEREG_SND_MODEL;
 		sm = &client->stage_cfg[p_info.stage_idx].sound_model;
-		q6lsm_snd_model_buf_free(client, &p_info, sm);
+
+		if (sm && sm->data) {
+			memset(&cmd, 0, sizeof(cmd));
+			q6lsm_add_hdr(client, &cmd.hdr, sizeof(cmd.hdr), false);
+			cmd.hdr.opcode = LSM_SESSION_CMD_DEREGISTER_SOUND_MODEL;
+			p_info.param_type = LSM_DEREG_SND_MODEL;
+
+			rc = q6lsm_apr_send_pkt(client, client->apr, &cmd.hdr, true, NULL);
+			if (rc) {
+				pr_err("%s: Failed cmd opcode 0x%x, rc %d\n", __func__,
+				       cmd.hdr.opcode, rc);
+			} else {
+				pr_debug("%s: Deregister sound model succeeded\n", __func__);
+			}
+
+			q6lsm_snd_model_buf_free(client, &p_info, sm);
+		}
 	}
 
 	return rc;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -806,7 +807,7 @@ int send_asm_custom_topology(struct audio_client *ac)
 	set_custom_topology = 0;
 
 	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_CUSTOM_TOP_CAL]);
-	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block, cal_data[ASM_CUSTOM_TOP_CAL]))
+	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
 		goto unlock;
 
 	if (cal_block->cal_data.size == 0) {
@@ -2213,7 +2214,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			}
 			if ( data->payload_size >= 2 * sizeof(uint32_t) &&
 				(lower_32_bits(port->buf[buf_index].phys) !=
-				payload[0] || 
+				payload[0] ||
 				msm_audio_populate_upper_32_bits(
 					port->buf[buf_index].phys) != payload[1])) {
 				pr_debug("%s: Expected addr %pK\n",
@@ -11010,19 +11011,25 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
 
 	mutex_lock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
 	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_TOPOLOGY_CAL]);
-	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block, cal_data[ASM_CUSTOM_TOP_CAL]))
+	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
 		goto unlock;
 	cal_info->topology_id = ((struct audio_cal_info_asm_top *)
 		cal_block->cal_info)->topology;
 	cal_info->app_type = ((struct audio_cal_info_asm_top *)
 		cal_block->cal_info)->app_type;
 
+	if (0 == cal_info->topology_id) {
+		cal_info->topology_id = 0x10c68;;
+		pr_err("%s: Correct using topology %d app_type %d\n", __func__,
+			cal_info->topology_id, cal_info->app_type);
+	}
+
 	cal_utils_mark_cal_used(cal_block);
 
 unlock:
 	mutex_unlock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
 done:
-	pr_debug("%s: Using topology %d app_type %d\n", __func__,
+	pr_err("%s: Using topology %d app_type %d\n", __func__,
 			cal_info->topology_id, cal_info->app_type);
 
 	return 0;
@@ -11070,7 +11077,7 @@ int q6asm_send_cal(struct audio_client *ac)
 		goto unlock;
 	}
 
-	if (cal_utils_is_cal_stale(cal_block, cal_data[ASM_AUDSTRM_CAL])) {
+	if (cal_utils_is_cal_stale(cal_block)) {
 		rc = 0; /* not error case */
 		pr_debug("%s: cal_block is stale\n",
 			__func__);

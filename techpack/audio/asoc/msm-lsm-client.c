@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #include <linux/init.h>
 #include <linux/err.h>
@@ -3117,21 +3118,21 @@ static int msm_lsm_close(struct snd_pcm_substream *substream)
 				"%s: LSM client session stopped %d\n",
 				 __func__, ret);
 
-		/*
-		 * Go Ahead and try de-register sound model,
-		 * even if stop failed
-		 */
 		prtd->lsm_client->started = false;
-
-		ret = q6lsm_deregister_sound_model(prtd->lsm_client);
-		if (ret)
-			dev_err(rtd->dev,
-				"%s: dereg_snd_model failed, err = %d\n",
-				__func__, ret);
-		else
-			dev_dbg(rtd->dev, "%s: dereg_snd_model successful\n",
-				 __func__);
 	}
+
+	/*
+	 * De-register existing sound models
+	 * to free SM and CAL buffer, even if
+	 * lsm client is not started.
+	 */
+	ret = q6lsm_deregister_sound_model(prtd->lsm_client);
+	if (ret)
+		dev_err(rtd->dev, "%s: dereg_snd_model failed, err = %d\n",
+			__func__, ret);
+	else
+		dev_dbg(rtd->dev, "%s: dereg_snd_model successful\n",
+			__func__);
 
 	msm_pcm_routing_dereg_phy_stream(rtd->dai_link->id,
 					SNDRV_PCM_STREAM_CAPTURE);

@@ -24,71 +24,76 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
 	endif
-else
-ifeq ($(KERNEL_BUILD), 0)
-	ifeq ($(CONFIG_ARCH_SM8150), y)
-		ifdef CONFIG_SND_SOC_SA8155
-			include $(AUDIO_ROOT)/config/sa8155auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
-		else
-			include $(AUDIO_ROOT)/config/sm8150auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
-		endif
-	endif
-	ifeq ($(CONFIG_ARCH_SM6150), y)
-		ifdef CONFIG_SND_SOC_SA6155
-			include $(AUDIO_ROOT)/config/sa6155auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
-		else
-			include $(AUDIO_ROOT)/config/sm6150auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
-		endif
-	endif
-	ifeq ($(CONFIG_ARCH_TRINKET), y)
-		include $(AUDIO_ROOT)/config/sm6150auto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
-	endif
-	ifeq ($(CONFIG_ARCH_KONA), y)
-		include $(AUDIO_ROOT)/config/konaauto.conf
-		INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
-	endif
-	ifeq ($(CONFIG_ARCH_LITO), y)
-		include $(AUDIO_ROOT)/config/litoauto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/litoautoconf.h
-	endif
-	ifeq ($(CONFIG_ARCH_BENGAL), y)
-		include $(AUDIO_ROOT)/config/bengalauto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/bengalautoconf.h
-	endif
-	ifeq ($(CONFIG_ARCH_SDMSHRIKE), y)
-		ifdef CONFIG_SND_SOC_SA8155
-			include $(AUDIO_ROOT)/config/sa8155auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
-		else
-			include $(AUDIO_ROOT)/config/sm8150auto.conf
-			export
-			INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
-		endif
-	endif
-	ifeq ($(CONFIG_ARCH_QCS405), y)
-		include $(AUDIO_ROOT)/config/qcs405auto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/qcs405autoconf.h
-	endif
-	ifeq ($(CONFIG_QTI_QUIN_GVM), y)
+	ifdef CONFIG_SND_SOC_GVM
 		include $(AUDIO_ROOT)/config/gvmauto.conf
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
-endif
+else
+	ifeq ($(KERNEL_BUILD), 0)
+		ifeq ($(CONFIG_ARCH_SM8150), y)
+			ifdef CONFIG_SND_SOC_SA8155
+				include $(AUDIO_ROOT)/config/sa8155auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
+			else
+				include $(AUDIO_ROOT)/config/sm8150auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
+			endif
+		endif
+		ifeq ($(CONFIG_ARCH_SM6150), y)
+			ifdef CONFIG_SND_SOC_SA6155
+				include $(AUDIO_ROOT)/config/sa6155auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
+			else
+				include $(AUDIO_ROOT)/config/sm6150auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
+			endif
+		endif
+		ifeq ($(CONFIG_ARCH_TRINKET), y)
+			include $(AUDIO_ROOT)/config/sm6150auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
+		endif
+		ifeq ($(CONFIG_ARCH_KONA), y)
+			include $(AUDIO_ROOT)/config/konaauto.conf
+			INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
+		endif
+		ifeq ($(CONFIG_ARCH_LITO), y)
+			include $(AUDIO_ROOT)/config/litoauto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/litoautoconf.h
+		endif
+		ifeq ($(CONFIG_ARCH_BENGAL), y)
+			include $(AUDIO_ROOT)/config/bengalauto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/bengalautoconf.h
+		endif
+		ifeq ($(CONFIG_ARCH_SDMSHRIKE), y)
+			ifdef CONFIG_SND_SOC_SA8155
+				include $(AUDIO_ROOT)/config/sa8155auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
+			else
+				include $(AUDIO_ROOT)/config/sm8150auto.conf
+				export
+				INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
+			endif
+		endif
+		ifeq ($(CONFIG_ARCH_QCS405), y)
+			include $(AUDIO_ROOT)/config/qcs405auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/qcs405autoconf.h
+		endif
+		ifeq ($(CONFIG_QTI_QUIN_GVM), y)
+			include $(AUDIO_ROOT)/config/gvmauto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
+		endif
+	endif
 endif
 
 # As per target team, build is done as follows:
@@ -147,6 +152,10 @@ endif
 # for LAHAINA sound card driver
 ifdef CONFIG_SND_SOC_LAHAINA
 	MACHINE_OBJS += lahaina.o
+endif
+
+ifdef CONFIG_SND_SOC_MDM9650
+	MACHINE_OBJS += sdx-target.o
 endif
 
 # for HOLI sound card driver
@@ -226,6 +235,39 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-Werror\
 		-D__linux__
 
+
+ifneq (,$(filter $(TARGET_PRODUCT),cetus))
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CS35L45_4X
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CETUS
+endif
+
+ifeq ($(TARGET_PRODUCT), venus)
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CS35L41_TDM
+	CDEFINES += -DCONFIG_AUDIO_UART_DEBUG
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_VENUS
+endif
+
+ifeq ($(TARGET_PRODUCT), star)
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CS35L41_TDM
+	CDEFINES += -DCONFIG_AUDIO_UART_DEBUG
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_STAR
+endif
+
+ifeq ($(TARGET_PRODUCT), renoir)
+	CDEFINES += -DCONFIG_AUDIO_UART_DEBUG
+	CDEFINES += -DCONFIG_SND_SOC_TFA9874
+	CDEFINES += -DCONFIG_SND_SOC_TFA9874_FOR_DAVI
+	CDEFINES += -DTFA_NON_DSP_SOLUTION
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_RENOIR
+	CDEFINES += -DQCOM_HAPTIC_BOB
+endif
+
+ifeq ($(TARGET_PRODUCT), haydn)
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_CS35L41_TDM
+	CDEFINES += -DCONFIG_AUDIO_UART_DEBUG
+	CDEFINES += -DCONFIG_TARGET_PRODUCT_HAYDN
+endif
+
 KBUILD_CPPFLAGS += $(CDEFINES)
 
 # Currently, for versions of gcc which support it, the kernel Makefile
@@ -249,6 +291,7 @@ KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/codec
 endif
 ifeq ($(KERNEL_BUILD), 1)
 	obj-y += codecs/
+	obj-y += iio/
 endif
 # Module information used by KBuild framework
 obj-$(CONFIG_SND_SOC_QDSP6V2) += platform_dlkm.o
@@ -270,6 +313,9 @@ obj-$(CONFIG_SND_SOC_KONA) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_LAHAINA) += machine_dlkm.o
+machine_dlkm-y := $(MACHINE_OBJS)
+
+obj-$(CONFIG_SND_SOC_MDM9650) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_HOLI) += machine_dlkm.o

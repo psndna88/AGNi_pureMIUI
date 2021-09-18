@@ -51,6 +51,7 @@ enum {
 	SWR_MSTR_UP,
 	SWR_MSTR_DOWN,
 	SWR_MSTR_SSR,
+	SWR_MSTR_SSR_RESET,
 };
 
 enum swrm_pm_state {
@@ -193,7 +194,9 @@ struct swr_mstr_ctrl {
 	u32 rd_fifo_depth;
 	u32 wr_fifo_depth;
 	bool enable_slave_irq;
-	u64 logical_dev[SWRM_NUM_AUTO_ENUM_SLAVES];
+	u64 logical_dev[SWRM_NUM_AUTO_ENUM_SLAVES + 1];
+	u64 phy_dev[SWRM_NUM_AUTO_ENUM_SLAVES + 1];
+	bool use_custom_phy_addr;
 	u32 is_always_on;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs_swrm_dent;

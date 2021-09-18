@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 
@@ -1307,6 +1308,16 @@ struct adm_cmd_connect_afe_port_v5 {
  */
 } __packed;
 
+/* Allows a client to notify adsp the device model */
+
+#define ADM_CMD_SET_DEVICE_MODEL	0x00011112
+
+/*  Payload of the #ADM_CMD_SET_DEVICE_MODEL command.*/
+struct adm_cmd_set_device_model {
+	struct apr_hdr     hdr;
+	u8                 model;
+/* ID of the device model */
+} __packed;
 
 /* adsp_adm_api.h */
 
@@ -1358,6 +1369,7 @@ struct adm_cmd_connect_afe_port_v5 {
 #define INT_FM_TX 0x3005
 #define RT_PROXY_PORT_001_RX	0x2000
 #define RT_PROXY_PORT_001_TX	0x2001
+#define RT_PROXY_PORT_002_RX	0x2002
 #define AFE_LOOPBACK_TX	0x6001
 #define HDMI_RX_MS			0x6002
 #define DISPLAY_PORT_RX	0x6020
@@ -1521,6 +1533,7 @@ struct adm_cmd_connect_afe_port_v5 {
 
 #define  AFE_PORT_ID_RT_PROXY_PORT_001_RX   0x2000
 #define  AFE_PORT_ID_RT_PROXY_PORT_001_TX   0x2001
+#define  AFE_PORT_ID_RT_PROXY_PORT_002_RX   0x2002
 #define AFE_PORT_ID_INTERNAL_BT_SCO_RX      0x3000
 #define AFE_PORT_ID_INTERNAL_BT_SCO_TX      0x3001
 #define AFE_PORT_ID_INTERNAL_BT_A2DP_RX     0x3002
@@ -2457,6 +2470,7 @@ struct afe_event_rt_proxy_port_status {
 } __packed;
 
 #define AFE_PORT_DATA_CMD_RT_PROXY_PORT_WRITE_V2 0x000100ED
+#define AFE_PORT_SEND_DATA_CMD   0x00011111
 
 struct afe_port_data_cmd_rt_proxy_port_write_v2 {
 	struct apr_hdr hdr;
@@ -4659,6 +4673,56 @@ struct asm_ldac_enc_cfg_t {
 	struct afe_abr_enc_cfg_t abr_config;
 } __packed;
 
+#define ASM_MEDIA_FMT_LHDC 0x1000B400
+#define ENC_CODEC_TYPE_LHDC 0x28000000
+struct asm_lhdc_specific_enc_cfg_t {
+	uint32_t                     version;
+	uint32_t                     ll_enabled;
+	uint32_t                     max_bitrate;
+	/*
+	 * @Range(in bits per second)
+	 * 256000
+	 * 300000
+	 * 400000
+	 * 500000
+	 * 900000
+	 */
+	uint32_t                     bit_rate;
+	/*
+	 * bit0 channel split compress disable
+	 * bit1 channel split compress (for forwarding type TWS used)
+	 * bit2 channel split compress. pre-split left/right frame at encode side
+	 */
+	uint32_t                     channel_split_mode;
+	/*
+	 * The channel setting information for LHDC specification
+	 * of Bluetooth A2DP which is determined by SRC and SNK
+	 * devices in Bluetooth transmission.
+	 * @Range:
+	 * 0 for native mode
+	 * 4 for mono
+	 * 2 for dual channel
+	 * 1 for stereo
+	 */
+	uint16_t                     channel_mode;
+	/*
+	 * Maximum Transmission Unit (MTU).
+	 * The minimum MTU that a L2CAP implementation for LHDC shall
+	 * support is 679 bytes, because LHDC is optimized with 2-DH5
+	 * packet as its target.
+	 * @Range : 679
+	 * @Default: 679 for LHDCBT_MTU_2DH5
+	 */
+	uint16_t                     mtu;
+} __packed;
+
+struct asm_lhdc_enc_cfg_t {
+	struct asm_custom_enc_cfg_t  custom_config;
+	struct asm_lhdc_specific_enc_cfg_t  lhdc_specific_config;
+	struct afe_abr_enc_cfg_t abr_config;
+} __packed;
+
+
 struct afe_enc_fmt_id_param_t {
 	/*
 	 * Supported values:
@@ -4853,6 +4917,7 @@ union afe_enc_config_data {
 	struct asm_celt_enc_cfg_t  celt_config;
 	struct asm_aptx_enc_cfg_t  aptx_config;
 	struct asm_ldac_enc_cfg_t  ldac_config;
+	struct asm_lhdc_enc_cfg_t  lhdc_config;
 	struct asm_aptx_ad_enc_cfg_t  aptx_ad_config;
 	struct asm_aptx_ad_speech_enc_cfg_t aptx_ad_speech_config;
 	struct asm_enc_lc3_cfg_t lc3_enc_config;
