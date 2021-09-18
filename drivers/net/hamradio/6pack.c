@@ -665,10 +665,10 @@ static void sixpack_close(struct tty_struct *tty)
 {
 	struct sixpack *sp;
 
-	write_lock_bh(&disc_data_lock);
+	write_lock_irq(&disc_data_lock);
 	sp = tty->disc_data;
 	tty->disc_data = NULL;
-	write_unlock_bh(&disc_data_lock);
+	write_unlock_irq(&disc_data_lock);
 	if (!sp)
 		return;
 
@@ -867,6 +867,12 @@ static void decode_data(struct sixpack *sp, unsigned char inbyte)
 	if (sp->rx_count != 3) {
 		sp->raw_buf[sp->rx_count++] = inbyte;
 
+		return;
+	}
+
+	if (sp->rx_count_cooked + 2 >= sizeof(sp->cooked_buf)) {
+		pr_err("6pack: cooked buffer overrun, data loss\n");
+		sp->rx_count = 0;
 		return;
 	}
 

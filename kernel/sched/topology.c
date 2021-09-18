@@ -533,8 +533,8 @@ static int __init isolated_cpu_setup(char *str)
 
 	alloc_bootmem_cpumask_var(&cpu_isolated_map);
 	ret = cpulist_parse(str, cpu_isolated_map);
-	if (ret) {
-		pr_err("sched: Error, all isolcpus= values must be between 0 and %u\n", nr_cpu_ids);
+	if (ret || cpumask_last(cpu_isolated_map) >= nr_cpu_ids) {
+		pr_err("sched: Error, all isolcpus= values must be between 0 and %u - ignoring them.\n", nr_cpu_ids-1);
 		return 0;
 	}
 	return 1;
@@ -1269,7 +1269,7 @@ sd_init(struct sched_domain_topology_level *tl,
 		sd_flags = (*tl->sd_flags)();
 	if (WARN_ONCE(sd_flags & ~TOPOLOGY_SD_FLAGS,
 			"wrong sd_flags in topology description\n"))
-		sd_flags &= ~TOPOLOGY_SD_FLAGS;
+		sd_flags &= TOPOLOGY_SD_FLAGS;
 
 	*sd = (struct sched_domain){
 		.min_interval		= sd_weight,
@@ -1520,7 +1520,7 @@ void sched_init_numa(void)
 	int level = 0;
 	int i, j, k;
 
-	sched_domains_numa_distance = kzalloc(sizeof(int) * nr_node_ids, GFP_KERNEL);
+	sched_domains_numa_distance = kzalloc(sizeof(int) * (nr_node_ids + 1), GFP_KERNEL);
 	if (!sched_domains_numa_distance)
 		return;
 

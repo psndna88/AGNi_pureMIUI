@@ -21,6 +21,7 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/suspend.h>
 #include <linux/tick.h>
 #include <trace/events/power.h>
@@ -135,6 +136,32 @@ void cpuidle_use_deepest_state(bool enable)
 	preempt_enable();
 }
 
+static void set_uds_callback(void *info)
+{
+	bool enable = *(bool *)info;
+
+	cpuidle_use_deepest_state(enable);
+}
+
+/**
+ * cpuidle_use_deepest_state_mask - Set use_deepest_state on specific CPUs.
+ * @target: cpumask of CPUs to update use_deepest_state on.
+ * @enable: whether to enforce the deepest idle state on those CPUs.
+ */
+int cpuidle_use_deepest_state_mask(const struct cpumask *target, bool enable)
+{
+	bool *info = kmalloc(sizeof(bool), GFP_KERNEL);
+
+	if (!info)
+		return -ENOMEM;
+
+	*info = enable;
+	on_each_cpu_mask(target, set_uds_callback, info, 1);
+	kfree(info);
+
+	return 0;
+}
+
 /**
  * cpuidle_find_deepest_state - Find the deepest available idle state.
  * @drv: cpuidle driver for the given CPU.
@@ -163,7 +190,8 @@ static void enter_s2idle_proper(struct cpuidle_driver *drv,
 	 */
 	stop_critical_timings();
 	drv->states[index].enter_s2idle(dev, drv, index);
-	WARN_ON(!irqs_disabled());
+	if (WARN_ON_ONCE(!irqs_disabled()))
+		local_irq_disable();
 	/*
 	 * timekeeping_resume() that will be called by tick_unfreeze() for the
 	 * first CPU executing it calls functions containing RCU read-side

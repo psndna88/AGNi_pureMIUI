@@ -232,6 +232,12 @@ int drm_dropmaster_ioctl(struct drm_device *dev, void *data,
 	if (!dev->master)
 		goto out_unlock;
 
+	if (file_priv->master->lessor != NULL) {
+		DRM_DEBUG_LEASE("Attempt to drop lessee %d as master\n", file_priv->master->lessee_id);
+		ret = -EINVAL;
+		goto out_unlock;
+	}
+
 	ret = 0;
 	drm_drop_master(dev, file_priv);
 out_unlock:
@@ -259,9 +265,10 @@ int drm_master_open(struct drm_file *file_priv)
 void drm_master_release(struct drm_file *file_priv)
 {
 	struct drm_device *dev = file_priv->minor->dev;
-	struct drm_master *master = file_priv->master;
+	struct drm_master *master;
 
 	mutex_lock(&dev->master_mutex);
+	master = file_priv->master;
 	if (file_priv->magic)
 		idr_remove(&file_priv->master->magic_map, file_priv->magic);
 

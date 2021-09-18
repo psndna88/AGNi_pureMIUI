@@ -76,6 +76,7 @@ struct cnss_pci_data {
 	dma_addr_t smmu_iova_start;
 	size_t smmu_iova_len;
 	dma_addr_t smmu_iova_ipa_start;
+	dma_addr_t smmu_iova_ipa_current;
 	size_t smmu_iova_ipa_len;
 	void __iomem *bar;
 	struct cnss_msi_config *msi_config;
@@ -170,8 +171,5 @@ void cnss_pci_pm_runtime_put_noidle(struct cnss_pci_data *pci_priv);
 void cnss_pci_pm_runtime_mark_last_busy(struct cnss_pci_data *pci_priv);
 int cnss_pci_update_status(struct cnss_pci_data *pci_priv,
 			   enum cnss_driver_status status);
-int cnss_pci_get_iova(struct cnss_pci_data *pci_priv, u64 *addr, u64 *size);
-int cnss_pci_get_iova_ipa(struct cnss_pci_data *pci_priv, u64 *addr,
-			  u64 *size);
 
 #endif /* _CNSS_PCI_H */

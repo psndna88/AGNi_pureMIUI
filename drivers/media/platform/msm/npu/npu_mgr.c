@@ -436,7 +436,8 @@ static void npu_destroy_wq(struct npu_host_ctx *host_ctx)
 static struct workqueue_struct *npu_create_wq(struct npu_host_ctx *host_ctx,
 	const char *name)
 {
-	struct workqueue_struct *wq = create_workqueue(name);
+	struct workqueue_struct *wq =
+		alloc_workqueue(name, WQ_HIGHPRI | WQ_UNBOUND, 0);
 
 	INIT_WORK(&host_ctx->irq_work, host_irq_wq);
 	INIT_DELAYED_WORK(&host_ctx->fw_deinit_work, fw_deinit_wq);
@@ -729,6 +730,7 @@ static void app_msg_proc(struct npu_host_ctx *host_ctx, uint32_t *msg)
 	struct npu_kevent kevt;
 	struct npu_device *npu_dev = host_ctx->npu_dev;
 
+	memset(&kevt, 0, sizeof(kevt));
 	msg_id = msg[1];
 	switch (msg_id) {
 	case NPU_IPC_MSG_EXECUTE_DONE:
@@ -809,7 +811,7 @@ static void app_msg_proc(struct npu_host_ctx *host_ctx, uint32_t *msg)
 			break;
 		}
 
-		pr_debug("network id : %d\n", network->id);
+		pr_debug("network id : %llu\n", network->id);
 		stats_size = exe_rsp_pkt->header.size - sizeof(*exe_rsp_pkt);
 		pr_debug("stats_size %d:%d\n", exe_rsp_pkt->header.size,
 			stats_size);
@@ -1142,7 +1144,7 @@ static int npu_send_network_cmd(struct npu_device *npu_dev,
 		pr_err("Another cmd is pending\n");
 		ret = -EBUSY;
 	} else {
-		pr_debug("Send cmd %d network id %d\n",
+		pr_debug("Send cmd %d network id %lld\n",
 			((struct ipc_cmd_header_pkt *)cmd_ptr)->cmd_type,
 			network->id);
 		network->cmd_async = async;
@@ -1233,8 +1235,9 @@ static uint32_t find_networks_perf_mode(struct npu_host_ctx *host_ctx)
 		max_perf_mode = 1;
 	} else {
 		/* find the max level among all the networks */
-		for (i = 0; i < host_ctx->network_num; i++) {
-			if ((network->cur_perf_mode != 0) &&
+		for (i = 0; i < MAX_LOADED_NETWORK; i++) {
+			if ((network->id != 0) &&
+				(network->cur_perf_mode != 0) &&
 				(network->cur_perf_mode > max_perf_mode))
 				max_perf_mode = network->cur_perf_mode;
 			network++;
@@ -1656,7 +1659,7 @@ err_deinit_fw:
 int32_t npu_host_unload_network(struct npu_client *client,
 			struct msm_npu_unload_network_ioctl *unload)
 {
-	int ret = 0;
+	int ret = 0, retry_cnt = 1;
 	struct npu_device *npu_dev = client->npu_dev;
 	struct ipc_cmd_unload_pkt unload_packet;
 	struct npu_network *network;
@@ -1683,7 +1686,7 @@ int32_t npu_host_unload_network(struct npu_client *client,
 		goto free_network;
 	}
 
-	pr_debug("Unload network %d\n", network->id);
+	pr_debug("Unload network %lld\n", network->id);
 	/* prepare IPC packet for UNLOAD */
 	unload_packet.header.cmd_type = NPU_IPC_CMD_UNLOAD;
 	unload_packet.header.size = sizeof(struct ipc_cmd_unload_pkt);
@@ -1692,6 +1695,7 @@ int32_t npu_host_unload_network(struct npu_client *client,
 	unload_packet.header.flags = 0;
 	unload_packet.network_hdl = (uint32_t)network->network_hdl;
 
+retry:
 	/* NPU_IPC_CMD_UNLOAD will go onto IPC_QUEUE_APPS_EXEC */
 	reinit_completion(&network->cmd_done);
 	ret = npu_send_network_cmd(npu_dev, network, &unload_packet, false);
@@ -1700,13 +1704,15 @@ int32_t npu_host_unload_network(struct npu_client *client,
 		pr_err("NPU_IPC_CMD_UNLOAD sent failed: %d\n", ret);
 		/*
 		 * If another command is running on this network,
-		 * don't free_network now.
+		 * retry after 500ms.
 		 */
-		if (ret == -EBUSY) {
+		if ((ret == -EBUSY) && (retry_cnt > 0)) {
 			pr_err("Network is running, retry later\n");
-			network_put(network);
 			mutex_unlock(&host_ctx->lock);
-			return ret;
+			retry_cnt--;
+			msleep(500);
+			mutex_lock(&host_ctx->lock);
+			goto retry;
 		}
 		goto free_network;
 	}
@@ -1799,7 +1805,7 @@ int32_t npu_host_exec_network(struct npu_client *client,
 		goto exec_done;
 	}
 
-	pr_debug("execute network %d\n", network->id);
+	pr_debug("execute network %lld\n", network->id);
 	memset(&exec_packet, 0, sizeof(exec_packet));
 	if (exec_ioctl->patching_required) {
 		if ((exec_ioctl->input_layer_num != 1) ||
@@ -1934,7 +1940,7 @@ int32_t npu_host_exec_network_v2(struct npu_client *client,
 		goto exec_v2_done;
 	}
 
-	pr_debug("execute_v2 network %d\n", network->id);
+	pr_debug("execute_v2 network %lld\n", network->id);
 	num_patch_params = exec_ioctl->patch_buf_info_num;
 	pkt_size = num_patch_params * sizeof(struct npu_patch_params_v2) +
 		sizeof(*exec_packet);

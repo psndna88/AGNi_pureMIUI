@@ -960,12 +960,25 @@ static int icnss_driver_event_server_arrive(void *data)
 	int ret = 0;
 	bool ignore_assert = false;
 
-	if (!penv)
+	if (!penv) {
+		kfree(data);
 		return -ENODEV;
+	}
+
+	if (test_bit(ICNSS_MODEM_SHUTDOWN, &penv->state)) {
+		icnss_pr_dbg("WLFW server arrive: Modem is down");
+		kfree(data);
+		return -EINVAL;
+	}
 
 	set_bit(ICNSS_WLFW_EXISTS, &penv->state);
 	clear_bit(ICNSS_FW_DOWN, &penv->state);
 	icnss_ignore_fw_timeout(false);
+
+	if (test_bit(ICNSS_WLFW_CONNECTED, &penv->state)) {
+		icnss_pr_err("QMI Server already in Connected State\n");
+		ICNSS_ASSERT(0);
+	}
 
 	ret = icnss_connect_to_fw_server(penv, data);
 	if (ret)
@@ -1130,7 +1143,7 @@ out:
 
 static int icnss_pd_restart_complete(struct icnss_priv *priv)
 {
-	int ret;
+	int ret = 0;
 
 	icnss_pm_relax(priv);
 
@@ -1171,7 +1184,6 @@ static int icnss_pd_restart_complete(struct icnss_priv *priv)
 		goto out_power_off;
 	}
 
-out:
 	icnss_block_shutdown(false);
 	clear_bit(ICNSS_SHUTDOWN_DONE, &penv->state);
 	return 0;
@@ -1182,6 +1194,7 @@ call_probe:
 out_power_off:
 	icnss_hw_power_off(priv);
 
+out:
 	return ret;
 }
 
@@ -1579,13 +1592,19 @@ static int icnss_modem_notifier_nb(struct notifier_block *nb,
 			icnss_pr_err("Not able to Collect msa0 segment dump, Apps permissions not assigned %d\n",
 				     ret);
 		}
+		clear_bit(ICNSS_MODEM_SHUTDOWN, &priv->state);
 		return NOTIFY_OK;
 	}
+
+	if (code == SUBSYS_AFTER_SHUTDOWN)
+		clear_bit(ICNSS_MODEM_SHUTDOWN, &priv->state);
 
 	if (code != SUBSYS_BEFORE_SHUTDOWN)
 		return NOTIFY_OK;
 
 	priv->is_ssr = true;
+
+	set_bit(ICNSS_MODEM_SHUTDOWN, &priv->state);
 
 	if (notif->crashed)
 		set_bit(ICNSS_MODEM_CRASHED, &priv->state);
@@ -2128,8 +2147,8 @@ int icnss_unregister_driver(struct icnss_driver_ops *ops)
 
 	icnss_pr_dbg("Unregistering driver, state: 0x%lx\n", penv->state);
 
-	if (!penv->ops) {
-		icnss_pr_err("Driver not registered\n");
+	if (!penv->ops || (!test_bit(ICNSS_DRIVER_PROBED, &penv->state))) {
+		icnss_pr_err("Driver not registered/probed\n");
 		ret = -ENOENT;
 		goto out;
 	}
@@ -3153,6 +3172,9 @@ static int icnss_stats_show_state(struct seq_file *s, struct icnss_priv *priv)
 			continue;
 		case ICNSS_MODEM_CRASHED:
 			seq_puts(s, "MODEM CRASHED");
+			continue;
+		case ICNSS_MODEM_SHUTDOWN:
+			seq_puts(s, "MODEM SHUTDOWN");
 		}
 
 		seq_printf(s, "UNKNOWN-%d", i);
@@ -3836,6 +3858,8 @@ static int icnss_probe(struct platform_device *pdev)
 		if (ret)
 			goto out_unregister_ext_modem;
 	}
+
+	device_enable_async_suspend(dev);
 
 	spin_lock_init(&priv->event_lock);
 	spin_lock_init(&priv->on_off_lock);

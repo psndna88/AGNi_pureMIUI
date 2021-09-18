@@ -219,6 +219,7 @@
 #define KEY_SETUP		141
 #define KEY_SLEEP		142	/* SC System Sleep */
 #define KEY_WAKEUP		143	/* System Wake Up */
+#define KEY_DOUBLE_TAP	750 /* DT2W */
 #define KEY_FILE		144	/* AL Local Machine Browser */
 #define KEY_SENDFILE		145
 #define KEY_DELETEFILE		146
@@ -336,6 +337,11 @@
 #define KEY_RFKILL		247	/* Key that controls all radios */
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+
+#define KEY_ANT_CONNECT         0x292	/* key for sar ant check */
+#define KEY_ANT_UNCONNECT       0x293	/* key for sar ant check */
+#define DIV_ANT_CONNECT         0X294 	/* key for sar ant div check*/
+#define DIV_ANT_UNCONNECT       0X295 	/* key for sar ant div check*/
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
@@ -805,6 +811,7 @@
 #define SW_HPHR_OVERCURRENT	0x11  /* set = over current on right hph */
 #define SW_MICROPHONE2_INSERT	0x12  /* set = inserted */
 #define SW_UNSUPPORT_INSERT	0x13  /* set = unsupported device inserted */
+#define SW_MACHINE_COVER	0x14  /* set = cover closed */
 #define SW_MAX			0x20
 #define SW_CNT			(SW_MAX+1)
 

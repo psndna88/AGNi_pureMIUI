@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -439,13 +439,13 @@ struct kgsl_context {
 #define pr_context(_d, _c, fmt, args...) \
 		dev_err((_d)->dev, "%s[%d]: " fmt, \
 		_context_comm((_c)), \
-		(_c)->proc_priv->pid, ##args)
+		pid_nr((_c)->proc_priv->pid), ##args)
 
 /**
  * struct kgsl_process_private -  Private structure for a KGSL process (across
  * all devices)
  * @priv: Internal flags, use KGSL_PROCESS_* values
- * @pid: ID for the task owner of the process
+ * @pid: Identification structure for the task owner of the process
  * @comm: task name of the process
  * @mem_lock: Spinlock to protect the process memory lists
  * @refcount: kref object for reference counting the process
@@ -463,7 +463,7 @@ struct kgsl_context {
  */
 struct kgsl_process_private {
 	unsigned long priv;
-	pid_t pid;
+	struct pid *pid;
 	char comm[TASK_COMM_LEN];
 	spinlock_t mem_lock;
 	struct kref refcount;
@@ -473,10 +473,10 @@ struct kgsl_process_private {
 	struct kobject kobj;
 	struct dentry *debug_root;
 	struct {
-		uint64_t cur;
-		uint64_t max;
+		atomic64_t cur;
+		atomic64_t max;
 	} stats[KGSL_MEM_ENTRY_MAX];
-	uint64_t gpumem_mapped;
+	atomic64_t gpumem_mapped;
 	struct idr syncsource_idr;
 	spinlock_t syncsource_lock;
 	int fd_count;
@@ -570,9 +570,10 @@ struct kgsl_device *kgsl_get_device(int dev_idx);
 static inline void kgsl_process_add_stats(struct kgsl_process_private *priv,
 	unsigned int type, uint64_t size)
 {
-	priv->stats[type].cur += size;
-	if (priv->stats[type].max < priv->stats[type].cur)
-		priv->stats[type].max = priv->stats[type].cur;
+	u64 ret = atomic64_add_return(size, &priv->stats[type].cur);
+
+	if (ret > atomic64_read(&priv->stats[type].max))
+		atomic64_set(&priv->stats[type].max, ret);
 	add_mm_counter(current->mm, MM_UNRECLAIMABLE, (size >> PAGE_SHIFT));
 }
 
@@ -583,8 +584,8 @@ static inline void kgsl_process_sub_stats(struct kgsl_process_private *priv,
 	struct task_struct *task;
 	struct mm_struct *mm;
 
-	priv->stats[type].cur -= size;
-	pid_struct = find_get_pid(priv->pid);
+	atomic64_sub(size, &priv->stats[type].cur);
+	pid_struct = find_get_pid(pid_nr(priv->pid));
 	if (pid_struct) {
 		task = get_pid_task(pid_struct, PIDTYPE_PID);
 		if (task) {
@@ -729,10 +730,13 @@ void kgsl_device_platform_remove(struct kgsl_device *device);
 
 const char *kgsl_pwrstate_to_str(unsigned int state);
 
-int kgsl_device_snapshot_init(struct kgsl_device *device);
-void kgsl_device_snapshot(struct kgsl_device *device,
-			struct kgsl_context *context, bool gmu_fault);
-void kgsl_device_snapshot_close(struct kgsl_device *device);
+static inline int kgsl_device_snapshot_init(struct kgsl_device *device)
+{
+	return 0;
+}
+static inline void kgsl_device_snapshot(struct kgsl_device *device,
+			struct kgsl_context *context, bool gmu_fault) {}
+static inline void kgsl_device_snapshot_close(struct kgsl_device *device) {}
 
 void kgsl_events_init(void);
 void kgsl_events_exit(void);

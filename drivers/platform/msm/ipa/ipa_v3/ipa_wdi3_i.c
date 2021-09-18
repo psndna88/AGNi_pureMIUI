@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -446,10 +446,10 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	int result = 0;
 	u32 gsi_db_addr_low, gsi_db_addr_high;
 	void __iomem *db_addr;
-	u32 evt_ring_db_addr_low, evt_ring_db_addr_high;
+	u32 evt_ring_db_addr_low, evt_ring_db_addr_high, db_val = 0;
 
 	/* wdi3 only support over gsi */
-	if (!ipa3_ctx->ipa_wdi3_over_gsi) {
+	if (ipa3_get_wdi_version() != IPA_WDI_3) {
 		IPAERR("wdi3 over uc offload not supported");
 		WARN_ON(1);
 		return -EFAULT;
@@ -527,8 +527,6 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 		goto fail;
 	}
 
-	IPADBG("ipa3_ctx->ipa_wdi3_over_gsi %d\n",
-		   ipa3_ctx->ipa_wdi3_over_gsi);
 	/* setup RX gsi channel */
 	if (ipa3_setup_wdi3_gsi_channel(in->is_smmu_enabled,
 		&in->u_rx.rx, &in->u_rx.rx_smmu, IPA_WDI3_RX_DIR,
@@ -614,11 +612,18 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	 * initialization of the event, with a value that is
 	 * outside of the ring range. Eg: ring base = 0x1000,
 	 * ring size = 0x100 => AP can write value > 0x1100
-	 * into the doorbell address. Eg: 0x 1110
+	 * into the doorbell address. Eg: 0x 1110.
+	 * Use event ring base addr + event ring size + 1 element size.
 	 */
-	iowrite32(in->u_rx.rx.event_ring_size / 4 + 10, db_addr);
+	db_val = (u32)ep_rx->gsi_mem_info.evt_ring_base_addr;
+	db_val += ((in->is_smmu_enabled) ? in->u_rx.rx_smmu.event_ring_size :
+		in->u_rx.rx.event_ring_size);
+	db_val += GSI_EVT_RING_RE_SIZE_8B;
+	iowrite32(db_val, db_addr);
 	gsi_query_evt_ring_db_addr(ep_tx->gsi_evt_ring_hdl,
 		&evt_ring_db_addr_low, &evt_ring_db_addr_high);
+	IPADBG("RX base_addr 0x%x evt wp val: 0x%x\n",
+		ep_rx->gsi_mem_info.evt_ring_base_addr, db_val);
 
 	/* only 32 bit lsb is used */
 	db_addr = ioremap((phys_addr_t)(evt_ring_db_addr_low), 4);
@@ -628,9 +633,16 @@ int ipa3_conn_wdi3_pipes(struct ipa_wdi_conn_in_params *in,
 	 * outside of the ring range. Eg: ring base = 0x1000,
 	 * ring size = 0x100 => AP can write value > 0x1100
 	 * into the doorbell address. Eg: 0x 1110
+	 * Use event ring base addr + event ring size + 1 element size.
 	 */
-	iowrite32(in->u_tx.tx.event_ring_size / 4 + 10, db_addr);
-
+	db_val = (u32)ep_tx->gsi_mem_info.evt_ring_base_addr;
+	db_val += ((in->is_smmu_enabled) ? in->u_tx.tx_smmu.event_ring_size :
+		in->u_tx.tx.event_ring_size);
+	db_val += GSI_EVT_RING_RE_SIZE_16B;
+	iowrite32(db_val, db_addr);
+	IPADBG("db_addr %u  TX base_addr 0x%x evt wp val: 0x%x\n",
+		evt_ring_db_addr_low,
+		ep_tx->gsi_mem_info.evt_ring_base_addr, db_val);
 fail:
 	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 	return result;
@@ -642,7 +654,7 @@ int ipa3_disconn_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	int result = 0;
 
 	/* wdi3 only support over gsi */
-	if (!ipa3_ctx->ipa_wdi3_over_gsi) {
+	if (ipa3_get_wdi_version() != IPA_WDI_3) {
 		IPAERR("wdi3 over uc offload not supported");
 		WARN_ON(1);
 		return -EFAULT;
@@ -719,7 +731,7 @@ int ipa3_enable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	int result = 0;
 
 	/* wdi3 only support over gsi */
-	if (!ipa3_ctx->ipa_wdi3_over_gsi) {
+	if (ipa3_get_wdi_version() != IPA_WDI_3) {
 		IPAERR("wdi3 over uc offload not supported");
 		WARN_ON(1);
 		return -EFAULT;
@@ -798,7 +810,7 @@ int ipa3_disable_wdi3_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 	struct ipahal_ep_cfg_ctrl_scnd ep_ctrl_scnd = { 0 };
 
 	/* wdi3 only support over gsi */
-	if (!ipa3_ctx->ipa_wdi3_over_gsi) {
+	if (ipa3_get_wdi_version() != IPA_WDI_3) {
 		IPAERR("wdi3 over uc offload not supported");
 		WARN_ON(1);
 		return -EFAULT;

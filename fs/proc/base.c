@@ -3,6 +3,7 @@
  *  linux/fs/proc/base.c
  *
  *  Copyright (C) 1991, 1992 Linus Torvalds
+ *  Copyright (C) 2020 XiaoMi, Inc.
  *
  *  proc base directory handling functions
  *
@@ -101,6 +102,10 @@
 #include <trace/events/oom.h>
 #include "internal.h"
 #include "fd.h"
+
+#ifdef CONFIG_TASK_DELAY_ACCT
+#include <linux/delayacct.h>
+#endif
 
 #include "../../lib/kstrtox.h"
 
@@ -736,6 +741,51 @@ static const struct file_operations proc_single_file_operations = {
 	.release	= single_release,
 };
 
+#ifdef CONFIG_TASK_DELAY_ACCT
+struct delay_struct {
+	u64 version;
+	u64 blkio_delay;      /* wait for sync block io completion */
+	u64 swapin_delay;     /* wait for swapin block io completion */
+	u64 freepages_delay;  /* wait for memory reclaim */
+	u64 cpu_runtime;
+	u64 cpu_run_delay;
+};
+
+static ssize_t delay_read(struct file *file, char __user *buf,
+			  size_t count, loff_t *ppos)
+{
+	struct task_struct *task = get_proc_task(file_inode(file));
+	struct delay_struct d = {};
+	unsigned long flags;
+	u64 blkio_delay, swapin_delay, freepages_delay;
+	loff_t dummy_pos = 0;
+	if (!task)
+		return -ESRCH;
+
+	raw_spin_lock_irqsave(&task->delays->lock, flags);
+	blkio_delay = task->delays->blkio_delay;
+	swapin_delay = task->delays->swapin_delay;
+	freepages_delay = task->delays->freepages_delay;
+	raw_spin_unlock_irqrestore(&task->delays->lock, flags);
+
+	d.version = 1;
+	d.blkio_delay = blkio_delay >> 20;
+	d.swapin_delay = swapin_delay >> 20;
+	d.freepages_delay = freepages_delay >> 20;
+
+	if (likely(sched_info_on())) {
+		d.cpu_runtime = task->se.sum_exec_runtime >> 20;
+		d.cpu_run_delay = task->sched_info.run_delay >> 20;
+	}
+
+	put_task_struct(task);
+	return simple_read_from_buffer(buf, count, &dummy_pos, &d, sizeof(struct delay_struct));
+}
+
+static const struct file_operations proc_delay_file_operations = {
+	.read = delay_read,
+};
+#endif
 
 struct mm_struct *proc_mem_open(struct inode *inode, unsigned int mode)
 {
@@ -801,7 +851,7 @@ static ssize_t mem_rw(struct file *file, char __user *buf,
 	flags = FOLL_FORCE | (write ? FOLL_WRITE : 0);
 
 	while (count > 0) {
-		int this_len = min_t(int, count, PAGE_SIZE);
+		size_t this_len = min_t(size_t, count, PAGE_SIZE);
 
 		if (write && copy_from_user(page, buf, this_len)) {
 			copied = -EFAULT;
@@ -1041,7 +1091,7 @@ static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 		struct task_struct *p = find_lock_task_mm(task);
 
 		if (p) {
-			if (atomic_read(&p->mm->mm_users) > 1) {
+			if (test_bit(MMF_MULTIPROCESS, &p->mm->flags)) {
 				mm = p->mm;
 				mmgrab(mm);
 			}
@@ -2687,6 +2737,13 @@ out:
 }
 
 #ifdef CONFIG_SECURITY
+static int proc_pid_attr_open(struct inode *inode, struct file *file)
+{
+	file->private_data = NULL;
+	__mem_open(inode, file, PTRACE_MODE_READ_FSCREDS);
+	return 0;
+}
+
 static ssize_t proc_pid_attr_read(struct file * file, char __user * buf,
 				  size_t count, loff_t *ppos)
 {
@@ -2715,6 +2772,10 @@ static ssize_t proc_pid_attr_write(struct file * file, const char __user * buf,
 	void *page;
 	ssize_t length;
 	struct task_struct *task = get_proc_task(inode);
+
+	/* A task may only write when it was the opener. */
+	if (file->private_data != current->mm)
+		return -EPERM;
 
 	length = -ESRCH;
 	if (!task)
@@ -2756,9 +2817,11 @@ out_no_task:
 }
 
 static const struct file_operations proc_pid_attr_operations = {
+	.open		= proc_pid_attr_open,
 	.read		= proc_pid_attr_read,
 	.write		= proc_pid_attr_write,
 	.llseek		= generic_file_llseek,
+	.release	= mem_release,
 };
 
 static const struct pid_entry attr_dir_stuff[] = {
@@ -3053,6 +3116,9 @@ static ssize_t proc_sched_task_boost_period_write(struct file *file,
 	char buffer[PROC_NUMBUF];
 	unsigned int sched_boost_period;
 	int err;
+
+	if (!task)
+		return -ESRCH;
 
 	memset(buffer, 0, sizeof(buffer));
 	if (count > sizeof(buffer) - 1)
@@ -3378,6 +3444,15 @@ static const struct file_operations proc_tgid_base_operations = {
 	.iterate_shared	= proc_tgid_base_readdir,
 	.llseek		= generic_file_llseek,
 };
+
+struct pid *tgid_pidfd_to_pid(const struct file *file)
+{
+	if (!d_is_dir(file->f_path.dentry) ||
+	    (file->f_op != &proc_tgid_base_operations))
+		return ERR_PTR(-EBADF);
+
+	return proc_pid(file_inode(file));
+}
 
 static struct dentry *proc_tgid_base_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 {
@@ -3716,6 +3791,9 @@ static const struct pid_entry tid_base_stuff[] = {
 #endif
 #ifdef CONFIG_SCHED_INFO
 	ONE("schedstat", S_IRUGO, proc_pid_schedstat),
+#endif
+#ifdef CONFIG_TASK_DELAY_ACCT
+	REG("delay",      S_IRUGO, proc_delay_file_operations),
 #endif
 #ifdef CONFIG_LATENCYTOP
 	REG("latency",  S_IRUGO, proc_lstats_operations),

@@ -18,6 +18,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/sched/mm.h>
 #include "delayed-inode.h"
 #include "disk-io.h"
 #include "transaction.h"
@@ -833,11 +834,14 @@ static int btrfs_insert_delayed_item(struct btrfs_trans_handle *trans,
 {
 	struct btrfs_fs_info *fs_info = root->fs_info;
 	struct extent_buffer *leaf;
+	unsigned int nofs_flag;
 	char *ptr;
 	int ret;
 
+	nofs_flag = memalloc_nofs_save();
 	ret = btrfs_insert_empty_item(trans, root, path, &delayed_item->key,
 				      delayed_item->data_len);
+	memalloc_nofs_restore(nofs_flag);
 	if (ret < 0 && ret != -EEXIST)
 		return ret;
 
@@ -966,6 +970,7 @@ static int btrfs_delete_delayed_items(struct btrfs_trans_handle *trans,
 				      struct btrfs_delayed_node *node)
 {
 	struct btrfs_delayed_item *curr, *prev;
+	unsigned int nofs_flag;
 	int ret = 0;
 
 do_again:
@@ -974,7 +979,9 @@ do_again:
 	if (!curr)
 		goto delete_fail;
 
+	nofs_flag = memalloc_nofs_save();
 	ret = btrfs_search_slot(trans, root, &curr->key, path, -1, 1);
+	memalloc_nofs_restore(nofs_flag);
 	if (ret < 0)
 		goto delete_fail;
 	else if (ret > 0) {
@@ -1041,6 +1048,7 @@ static int __btrfs_update_delayed_inode(struct btrfs_trans_handle *trans,
 	struct btrfs_key key;
 	struct btrfs_inode_item *inode_item;
 	struct extent_buffer *leaf;
+	unsigned int nofs_flag;
 	int mod;
 	int ret;
 
@@ -1053,13 +1061,13 @@ static int __btrfs_update_delayed_inode(struct btrfs_trans_handle *trans,
 	else
 		mod = 1;
 
+	nofs_flag = memalloc_nofs_save();
 	ret = btrfs_lookup_inode(trans, root, path, &key, mod);
-	if (ret > 0) {
-		btrfs_release_path(path);
-		return -ENOENT;
-	} else if (ret < 0) {
-		return ret;
-	}
+	memalloc_nofs_restore(nofs_flag);
+	if (ret > 0)
+		ret = -ENOENT;
+	if (ret < 0)
+		goto out;
 
 	leaf = path->nodes[0];
 	inode_item = btrfs_item_ptr(leaf, path->slots[0],
@@ -1097,6 +1105,14 @@ err_out:
 	btrfs_delayed_inode_release_metadata(fs_info, node);
 	btrfs_release_delayed_inode(node);
 
+	/*
+	 * If we fail to update the delayed inode we need to abort the
+	 * transaction, because we could leave the inode with the improper
+	 * counts behind.
+	 */
+	if (ret && ret != -ENOENT)
+		btrfs_abort_transaction(trans, ret);
+
 	return ret;
 
 search:
@@ -1104,7 +1120,10 @@ search:
 
 	key.type = BTRFS_INODE_EXTREF_KEY;
 	key.offset = -1;
+
+	nofs_flag = memalloc_nofs_save();
 	ret = btrfs_search_slot(trans, root, &key, path, -1, 1);
+	memalloc_nofs_restore(nofs_flag);
 	if (ret < 0)
 		goto err_out;
 	ASSERT(ret);
@@ -1975,12 +1994,19 @@ void btrfs_kill_all_delayed_nodes(struct btrfs_root *root)
 		}
 
 		inode_id = delayed_nodes[n - 1]->inode_id + 1;
-
-		for (i = 0; i < n; i++)
-			refcount_inc(&delayed_nodes[i]->refs);
+		for (i = 0; i < n; i++) {
+			/*
+			 * Don't increase refs in case the node is dead and
+			 * about to be removed from the tree in the loop below
+			 */
+			if (!refcount_inc_not_zero(&delayed_nodes[i]->refs))
+				delayed_nodes[i] = NULL;
+		}
 		spin_unlock(&root->inode_lock);
 
 		for (i = 0; i < n; i++) {
+			if (!delayed_nodes[i])
+				continue;
 			__btrfs_kill_delayed_node(delayed_nodes[i]);
 			btrfs_release_delayed_node(delayed_nodes[i]);
 		}

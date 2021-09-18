@@ -12,13 +12,13 @@
 
 #define pr_fmt(fmt) "cnss_utils: " fmt
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/slab.h>
+#include <linux/debugfs.h>
 #include <linux/etherdevice.h>
 #include <linux/bitops.h>
 #include <linux/io.h>
-#include <linux/debugfs.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/slab.h>
 #include <net/cnss_utils.h>
 
 #ifdef CONFIG_CNSS_TIMESYNC
@@ -31,7 +31,7 @@
 #define LPASS_PMU_INT_EN0 0xC060084
 #define LPASS_PMU_INT_CLR 0xC060034
 #endif
-#define CNSS_MAX_CH_NUM 45
+#define CNSS_MAX_CH_NUM 157
 struct cnss_unsafe_channel_list {
 	u16 unsafe_ch_count;
 	u16 unsafe_ch_list[CNSS_MAX_CH_NUM];
@@ -107,13 +107,13 @@ static void cnss_utils_stop_avtimer(void)
 		pr_err("AV Timer is not supported\n");
 }
 #else
-static void cnss_utils_start_avtimer(void)
+static void __maybe_unused cnss_utils_start_avtimer(void)
 {
 	pr_err("AV Timer is not supported\n");
 }
 EXPORT_SYMBOL(cnss_utils_start_avtimer);
 
-static void cnss_utils_stop_avtimer(void)
+static void __maybe_unused cnss_utils_stop_avtimer(void)
 {
 	pr_err("AV Timer is not supported\n");
 }

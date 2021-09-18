@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,6 +23,7 @@
 
 #include "sde_dbg.h"
 #include "sde/sde_hw_catalog.h"
+#include "msm_drv.h"
 
 #define SDE_DBG_BASE_MAX		10
 
@@ -4165,7 +4166,7 @@ void sde_dbg_ctrl(const char *name, ...)
 	va_end(args);
 }
 
-
+#ifdef CONFIG_DEBUG_FS
 /*
  * sde_dbg_debugfs_open - debugfs open handler for evtlog dump
  * @inode: debugfs inode
@@ -5046,14 +5047,37 @@ static const struct file_operations sde_reg_fops = {
 	.write = sde_dbg_reg_base_reg_write,
 };
 
-int sde_dbg_debugfs_register(struct dentry *debugfs_root)
+int sde_dbg_debugfs_register(struct device *dev)
 {
 	static struct sde_dbg_base *dbg = &sde_dbg_base;
 	struct sde_dbg_reg_base *blk_base;
 	char debug_name[80] = "";
+	struct dentry *debugfs_root = NULL;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct drm_device *ddev = platform_get_drvdata(pdev);
+	struct msm_drm_private *priv = NULL;
 
-	if (!debugfs_root)
+	if (!ddev) {
+		pr_err("Invalid drm device node\n");
 		return -EINVAL;
+	}
+
+	priv = ddev->dev_private;
+	if (!priv) {
+		pr_err("Invalid msm drm private node\n");
+		return -EINVAL;
+	}
+
+	debugfs_root = debugfs_create_dir("debug",
+				ddev->primary->debugfs_root);
+	if (IS_ERR_OR_NULL(debugfs_root)) {
+		pr_err("debugfs_root create_dir fail, error %ld\n",
+			PTR_ERR(debugfs_root));
+		priv->debug_root = NULL;
+		return -EINVAL;
+	}
+
+	priv->debug_root = debugfs_root;
 
 	debugfs_create_file("dbg_ctrl", 0600, debugfs_root, NULL,
 			&sde_dbg_ctrl_fops);
@@ -5076,19 +5100,15 @@ int sde_dbg_debugfs_register(struct dentry *debugfs_root)
 			&sde_recovery_vbif_dbgbus_fops);
 
 	if (dbg->dbgbus_sde.entries) {
-		dbg->dbgbus_sde.cmn.name = DBGBUS_NAME_SDE;
 		snprintf(debug_name, sizeof(debug_name), "%s_dbgbus",
 				dbg->dbgbus_sde.cmn.name);
-		dbg->dbgbus_sde.cmn.enable_mask = DEFAULT_DBGBUS_SDE;
 		debugfs_create_u32(debug_name, 0600, debugfs_root,
 				&dbg->dbgbus_sde.cmn.enable_mask);
 	}
 
 	if (dbg->dbgbus_vbif_rt.entries) {
-		dbg->dbgbus_vbif_rt.cmn.name = DBGBUS_NAME_VBIF_RT;
 		snprintf(debug_name, sizeof(debug_name), "%s_dbgbus",
 				dbg->dbgbus_vbif_rt.cmn.name);
-		dbg->dbgbus_vbif_rt.cmn.enable_mask = DEFAULT_DBGBUS_VBIFRT;
 		debugfs_create_u32(debug_name, 0600, debugfs_root,
 				&dbg->dbgbus_vbif_rt.cmn.enable_mask);
 	}
@@ -5108,6 +5128,15 @@ int sde_dbg_debugfs_register(struct dentry *debugfs_root)
 	return 0;
 }
 
+#else
+
+int sde_dbg_debugfs_register(struct device *dev)
+{
+	return 0;
+}
+
+#endif
+
 static void _sde_dbg_debugfs_destroy(void)
 {
 }
@@ -5123,10 +5152,14 @@ void sde_dbg_init_dbg_buses(u32 hwversion)
 		dbg->dbgbus_sde.entries = dbg_bus_sde_8998;
 		dbg->dbgbus_sde.cmn.entries_size = ARRAY_SIZE(dbg_bus_sde_8998);
 		dbg->dbgbus_sde.cmn.flags = DBGBUS_FLAGS_DSPP;
+		dbg->dbgbus_sde.cmn.name = DBGBUS_NAME_SDE;
+		dbg->dbgbus_sde.cmn.enable_mask = DEFAULT_DBGBUS_SDE;
 
 		dbg->dbgbus_vbif_rt.entries = vbif_dbg_bus_msm8998;
 		dbg->dbgbus_vbif_rt.cmn.entries_size =
 				ARRAY_SIZE(vbif_dbg_bus_msm8998);
+		dbg->dbgbus_vbif_rt.cmn.name = DBGBUS_NAME_VBIF_RT;
+		dbg->dbgbus_vbif_rt.cmn.enable_mask = DEFAULT_DBGBUS_VBIFRT;
 		dbg->dbgbus_dsi.entries = NULL;
 		dbg->dbgbus_dsi.size = 0;
 	} else if (IS_SDM845_TARGET(hwversion) || IS_SDM670_TARGET(hwversion)) {
@@ -5134,11 +5167,15 @@ void sde_dbg_init_dbg_buses(u32 hwversion)
 		dbg->dbgbus_sde.cmn.entries_size =
 				ARRAY_SIZE(dbg_bus_sde_sdm845);
 		dbg->dbgbus_sde.cmn.flags = DBGBUS_FLAGS_DSPP;
+		dbg->dbgbus_sde.cmn.name = DBGBUS_NAME_SDE;
+		dbg->dbgbus_sde.cmn.enable_mask = DEFAULT_DBGBUS_SDE;
 
 		/* vbif is unchanged vs 8998 */
 		dbg->dbgbus_vbif_rt.entries = vbif_dbg_bus_msm8998;
 		dbg->dbgbus_vbif_rt.cmn.entries_size =
 				ARRAY_SIZE(vbif_dbg_bus_msm8998);
+		dbg->dbgbus_vbif_rt.cmn.name = DBGBUS_NAME_VBIF_RT;
+		dbg->dbgbus_vbif_rt.cmn.enable_mask = DEFAULT_DBGBUS_VBIFRT;
 		dbg->dbgbus_dsi.entries = dsi_dbg_bus_sdm845;
 		dbg->dbgbus_dsi.size = ARRAY_SIZE(dsi_dbg_bus_sdm845);
 	} else if (IS_SM8150_TARGET(hwversion) || IS_SM6150_TARGET(hwversion) ||
@@ -5149,12 +5186,16 @@ void sde_dbg_init_dbg_buses(u32 hwversion)
 		dbg->dbgbus_sde.cmn.entries_size =
 				ARRAY_SIZE(dbg_bus_sde_sm8150);
 		dbg->dbgbus_sde.cmn.flags = DBGBUS_FLAGS_DSPP;
+		dbg->dbgbus_sde.cmn.name = DBGBUS_NAME_SDE;
+		dbg->dbgbus_sde.cmn.enable_mask = DEFAULT_DBGBUS_SDE;
 
 		dbg->dbgbus_vbif_rt.entries = vbif_dbg_bus_msm8998;
 		dbg->dbgbus_vbif_rt.cmn.entries_size =
 				ARRAY_SIZE(vbif_dbg_bus_msm8998);
 		dbg->dbgbus_dsi.entries = dsi_dbg_bus_sdm845;
 		dbg->dbgbus_dsi.size = ARRAY_SIZE(dsi_dbg_bus_sdm845);
+		dbg->dbgbus_vbif_rt.cmn.name = DBGBUS_NAME_VBIF_RT;
+		dbg->dbgbus_vbif_rt.cmn.enable_mask = DEFAULT_DBGBUS_VBIFRT;
 	} else {
 		pr_err("unsupported chipset id %X\n", hwversion);
 	}

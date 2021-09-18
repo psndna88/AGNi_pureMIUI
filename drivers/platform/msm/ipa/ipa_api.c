@@ -216,10 +216,16 @@ const char *ipa_clients_strings[IPA_CLIENT_MAX] = {
 	__stringify(IPA_CLIENT_MHI_PRIME_TETH_CONS),
 	__stringify(IPA_CLIENT_MHI_PRIME_DPL_PROD),
 	__stringify(RESERVERD_CONS_103),
+	__stringify(IPA_CLIENT_MHI2_PROD),
+	__stringify(IPA_CLIENT_MHI2_CONS),
+	__stringify(IPA_CLIENT_Q6_CV2X_PROD),
+	__stringify(IPA_CLIENT_Q6_CV2X_CONS),
 	__stringify(IPA_CLIENT_MHI_LOW_LAT_PROD),
 	__stringify(IPA_CLIENT_MHI_LOW_LAT_CONS),
 	__stringify(IPA_CLIENT_QDSS_PROD),
 	__stringify(IPA_CLIENT_MHI_QDSS_CONS),
+	__stringify(IPA_CLIENT_ETHERNET2_PROD),
+	__stringify(IPA_CLIENT_ETHERNET2_CONS),
 };
 
 /**
@@ -346,7 +352,7 @@ u8 *ipa_pad_to_32(u8 *dest)
 		return dest;
 	}
 
-	i = (long)dest & 0x7;
+	i = (long)dest & 0x3;
 
 	if (i)
 		for (j = 0; j < (4 - i); j++)
@@ -359,6 +365,8 @@ int ipa_smmu_store_sgt(struct sg_table **out_ch_ptr,
 	struct sg_table *in_sgt_ptr)
 {
 	unsigned int nents;
+	int i;
+	struct scatterlist *in_sg, *out_sg;
 
 	if (in_sgt_ptr != NULL) {
 		*out_ch_ptr = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
@@ -376,8 +384,12 @@ int ipa_smmu_store_sgt(struct sg_table **out_ch_ptr,
 			return -ENOMEM;
 		}
 
-		memcpy((*out_ch_ptr)->sgl, in_sgt_ptr->sgl,
-			nents*sizeof((*out_ch_ptr)->sgl));
+		out_sg = (*out_ch_ptr)->sgl;
+		for_each_sg(in_sgt_ptr->sgl, in_sg, in_sgt_ptr->nents, i) {
+			memcpy(out_sg, in_sg, sizeof(struct scatterlist));
+			out_sg++;
+		}
+
 		(*out_ch_ptr)->nents = nents;
 		(*out_ch_ptr)->orig_nents = in_sgt_ptr->orig_nents;
 	}
@@ -394,6 +406,55 @@ int ipa_smmu_free_sgt(struct sg_table **out_sgt_ptr)
 	}
 	return 0;
 }
+
+/**
+ * ipa_connect() - low-level IPA client connect
+ * @in: [in] input parameters from client
+ * @sps:	[out] sps output from IPA needed by client for sps_connect
+ * @clnt_hdl:   [out] opaque client handle assigned by IPA to client
+ *
+ * Should be called by the driver of the peripheral that wants to connect to
+ * IPA in BAM-BAM mode. these peripherals are USB and HSIC. this api
+ * expects caller to take responsibility to add any needed headers, routing
+ * and filtering tables and rules as needed.
+ *
+ * Returns:     0 on success, negative on failure
+ *
+ * Note:	Should not be called from atomic context
+ */
+int ipa_connect(const struct ipa_connect_params *in, struct ipa_sps_params *sps,
+	u32 *clnt_hdl)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_connect, in, sps, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_connect);
+
+/**
+ * ipa_disconnect() - low-level IPA client disconnect
+ * @clnt_hdl:   [in] opaque client handle assigned by IPA to client
+ *
+ * Should be called by the driver of the peripheral that wants to disconnect
+ * from IPA in BAM-BAM mode. this api expects caller to take responsibility to
+ * free any needed headers, routing and filtering tables and rules as needed.
+ *
+ * Returns:     0 on success, negative on failure
+ *
+ * Note:	Should not be called from atomic context
+ */
+int ipa_disconnect(u32 clnt_hdl)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_disconnect, clnt_hdl);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_disconnect);
+
 
 /**
  * ipa_clear_endpoint_delay() - Clear ep_delay.
@@ -2566,13 +2627,14 @@ bool ipa_has_open_aggr_frame(enum ipa_client_type client)
 
 int ipa_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union gsi_channel_scratch ch_scratch, u8 index)
+		union gsi_channel_scratch ch_scratch, u8 index,
+		bool is_switch_to_dbmode)
 {
 	int ret;
 
 	IPA_API_DISPATCH_RETURN(ipa_mhi_resume_channels_internal, client,
 			LPTransitionRejected, brstmode_enabled, ch_scratch,
-			index);
+			index, is_switch_to_dbmode);
 
 	return ret;
 }
@@ -3160,6 +3222,10 @@ static int ipa_generic_plat_drv_probe(struct platform_device *pdev_p)
 
 	/* call probe based on IPA HW version */
 	switch (ipa_api_hw_type) {
+	case IPA_HW_v2_6L:
+		result = ipa_plat_drv_probe(pdev_p, ipa_api_ctrl,
+			ipa_plat_drv_match);
+		break;
 	case IPA_HW_v3_0:
 	case IPA_HW_v3_1:
 	case IPA_HW_v3_5:
@@ -3534,6 +3600,39 @@ int ipa_disable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 
 	return ret;
 }
+
+
+/**
+ * ipa_add_socksv5_conn()- Add socksv5 entry in IPA
+ *
+ * Return value: 0 on success, negative otherwise
+ */
+int ipa_add_socksv5_conn(struct ipa_socksv5_info *info)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_add_socksv5_conn, info);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_add_socksv5_conn);
+
+
+/**
+ * ipa_del_socksv5_conn()- Del socksv5 entry in IPA
+ *
+ * Return value: 0 on success, negative otherwise
+ */
+int ipa_del_socksv5_conn(uint32_t handle)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_del_socksv5_conn, handle);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_del_socksv5_conn);
+
 
 /**
  * ipa_get_lan_rx_napi() - returns if NAPI is enabled in LAN RX

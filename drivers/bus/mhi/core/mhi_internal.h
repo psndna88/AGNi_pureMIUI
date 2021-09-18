@@ -252,6 +252,9 @@ extern struct bus_type mhi_bus_type;
 #define REMOTE_TICKS_TO_US(x) (div_u64((x) * 100ULL, \
 			       div_u64(mhi_cntrl->remote_timer_freq, 10000ULL)))
 
+/* Wait time to allow runtime framework to resume MHI in milliseconds */
+#define MHI_RESUME_TIME	(30000)
+
 struct mhi_event_ctxt {
 	u32 reserved : 8;
 	u32 intmodc : 8;
@@ -532,15 +535,15 @@ enum MHI_XFER_TYPE {
 #define MHI_DEV_WAKE_DB (127)
 #define MHI_MAX_MTU (0xffff)
 
-#define MHI_TIMESYNC_DB_SETUP(er_index) ((MHI_TIMESYNC_CHAN_DB << \
-	TIMESYNC_CFG_CHAN_DB_ID_SHIFT) & TIMESYNC_CFG_CHAN_DB_ID_MASK | \
-	(1 << TIMESYNC_CFG_ENABLED_SHIFT) & TIMESYNC_CFG_ENABLED_MASK | \
-	((er_index) << TIMESYNC_CFG_ER_ID_SHIFT) & TIMESYNC_CFG_ER_ID_MASK)
+#define MHI_TIMESYNC_DB_SETUP(er_index) (((MHI_TIMESYNC_CHAN_DB << \
+	TIMESYNC_CFG_CHAN_DB_ID_SHIFT) & TIMESYNC_CFG_CHAN_DB_ID_MASK) | \
+	((1 << TIMESYNC_CFG_ENABLED_SHIFT) & TIMESYNC_CFG_ENABLED_MASK) | \
+	(((er_index) << TIMESYNC_CFG_ER_ID_SHIFT) & TIMESYNC_CFG_ER_ID_MASK))
 
-#define MHI_BW_SCALE_SETUP(er_index) ((MHI_BW_SCALE_CHAN_DB << \
-	BW_SCALE_CFG_CHAN_DB_ID_SHIFT) & BW_SCALE_CFG_CHAN_DB_ID_MASK | \
-	(1 << BW_SCALE_CFG_ENABLED_SHIFT) & BW_SCALE_CFG_ENABLED_MASK | \
-	((er_index) << BW_SCALE_CFG_ER_ID_SHIFT) & BW_SCALE_CFG_ER_ID_MASK)
+#define MHI_BW_SCALE_SETUP(er_index) (((MHI_BW_SCALE_CHAN_DB << \
+	BW_SCALE_CFG_CHAN_DB_ID_SHIFT) & BW_SCALE_CFG_CHAN_DB_ID_MASK) | \
+	((1 << BW_SCALE_CFG_ENABLED_SHIFT) & BW_SCALE_CFG_ENABLED_MASK) | \
+	(((er_index) << BW_SCALE_CFG_ER_ID_SHIFT) & BW_SCALE_CFG_ER_ID_MASK))
 
 #define MHI_BW_SCALE_RESULT(status, seq) ((status & 0xF) << 8 | (seq & 0xFF))
 #define MHI_BW_SCALE_NACK 0xF
@@ -845,7 +848,7 @@ int mhi_get_capability_offset(struct mhi_controller *mhi_cntrl, u32 capability,
 			      u32 *offset);
 void *mhi_to_virtual(struct mhi_ring *ring, dma_addr_t addr);
 int mhi_init_sfr(struct mhi_controller *mhi_cntrl);
-void mhi_create_sysfs(struct mhi_controller *mhi_cntrl);
+int mhi_create_sysfs(struct mhi_controller *mhi_cntrl);
 void mhi_destroy_sysfs(struct mhi_controller *mhi_cntrl);
 int mhi_early_notify_device(struct device *dev, void *data);
 void mhi_write_reg_offload(struct mhi_controller *mhi_cntrl,

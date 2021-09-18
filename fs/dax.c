@@ -565,7 +565,7 @@ static void *dax_insert_mapping_entry(struct address_space *mapping,
 		ret = __radix_tree_lookup(page_tree, index, &node, &slot);
 		WARN_ON_ONCE(ret != entry);
 		__radix_tree_replace(page_tree, node, slot,
-				     new_entry, NULL, NULL);
+				     new_entry, NULL);
 		entry = new_entry;
 	}
 
@@ -1056,6 +1056,9 @@ dax_iomap_rw(struct kiocb *iocb, struct iov_iter *iter,
 	} else {
 		lockdep_assert_held(&inode->i_rwsem);
 	}
+
+	if (iocb->ki_flags & IOCB_NOWAIT)
+		flags |= IOMAP_NOWAIT;
 
 	while (iov_iter_count(iter)) {
 		ret = iomap_apply(inode, pos, iov_iter_count(iter), flags, ops,

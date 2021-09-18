@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -45,10 +45,12 @@ enum sde_rot_dbg_evtlog_flag {
 void sde_rot_evtlog(const char *name, int line, int flag, ...);
 void sde_rot_evtlog_tout_handler(bool queue, const char *name, ...);
 #else
-static inline void sde_rot_evtlog(const char *name, int line, int flag, ...)
+static inline
+void sde_rot_evtlog(const char *name, int line, int flag, ...)
 {
 }
-static inline void sde_rot_evtlog_tout_handler(bool queue, const char *name, ...)
+static inline
+void sde_rot_evtlog_tout_handler(bool queue, const char *name, ...)
 {
 }
 #endif

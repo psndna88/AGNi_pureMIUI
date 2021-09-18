@@ -23,7 +23,6 @@
 #include <linux/iommu.h>
 #include <linux/iopoll.h>
 #include <linux/of.h>
-#include <linux/pm_qos.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -77,6 +76,11 @@ enum tzbsp_video_state {
 struct tzbsp_video_set_state_req {
 	u32 state; /* should be tzbsp_video_state enum value */
 	u32 spare; /* reserved for future, should be zero */
+};
+
+const struct msm_vidc_gov_data DEFAULT_BUS_VOTE = {
+	.data = NULL,
+	.data_count = 0,
 };
 
 const int max_packets = 1000;
@@ -1083,6 +1087,8 @@ static int __unvote_buses(struct venus_hfi_device *device)
 	int rc = 0;
 	struct bus_info *bus = NULL;
 
+	kfree(device->bus_vote.data);
+	device->bus_vote.data = NULL;
 	device->bus_vote.data_count = 0;
 
 	venus_hfi_for_each_bus(device, bus) {
@@ -1109,6 +1115,7 @@ static int __vote_buses(struct venus_hfi_device *device,
 {
 	int rc = 0;
 	struct bus_info *bus = NULL;
+	struct vidc_bus_vote_data *new_data = NULL;
 
 	if (!num_data) {
 		dprintk(VIDC_DBG, "No vote data available\n");
@@ -1118,9 +1125,16 @@ static int __vote_buses(struct venus_hfi_device *device,
 		return -EINVAL;
 	}
 
-	memcpy(device->bus_vote.data, data, num_data * sizeof(*data));
+	new_data = kmemdup(data, num_data * sizeof(*new_data), GFP_KERNEL);
+	if (!new_data) {
+		dprintk(VIDC_ERR, "Can't alloc memory to cache bus votes\n");
+		rc = -ENOMEM;
+		goto err_no_mem;
+	}
 
 no_data_count:
+	kfree(device->bus_vote.data);
+	device->bus_vote.data = new_data;
 	device->bus_vote.data_count = num_data;
 
 	venus_hfi_for_each_bus(device, bus) {
@@ -2144,6 +2158,14 @@ static int venus_hfi_core_init(void *device)
 
 	mutex_lock(&dev->lock);
 
+	dev->bus_vote.data =
+		kzalloc(sizeof(struct vidc_bus_vote_data), GFP_KERNEL);
+	if (!dev->bus_vote.data) {
+		dprintk(VIDC_ERR, "Bus vote data memory is not allocated\n");
+		rc = -ENOMEM;
+		goto err_no_mem;
+	}
+
 	dev->bus_vote.data_count = 1;
 	dev->bus_vote.data->power_mode = VIDC_POWER_TURBO;
 
@@ -2201,14 +2223,6 @@ static int venus_hfi_core_init(void *device)
 	__set_subcaches(device);
 	__dsp_send_hfi_queue(device);
 
-	if (dev->res->pm_qos_latency_us) {
-#ifdef CONFIG_SMP
-		dev->qos.type = PM_QOS_REQ_AFFINE_IRQ;
-		dev->qos.irq = dev->hal_data->irq;
-#endif
-		pm_qos_add_request(&dev->qos, PM_QOS_CPU_DMA_LATENCY,
-				dev->res->pm_qos_latency_us);
-	}
 	dprintk(VIDC_DBG, "Core inited successfully\n");
 	mutex_unlock(&dev->lock);
 	return rc;
@@ -2216,6 +2230,7 @@ err_core_init:
 	__set_state(dev, VENUS_STATE_DEINIT);
 	__unload_fw(dev);
 err_load_fw:
+err_no_mem:
 	dprintk(VIDC_ERR, "Core init failed\n");
 	mutex_unlock(&dev->lock);
 	return rc;
@@ -2234,10 +2249,6 @@ static int venus_hfi_core_release(void *dev)
 
 	mutex_lock(&device->lock);
 	dprintk(VIDC_DBG, "Core releasing\n");
-	if (device->res->pm_qos_latency_us &&
-		pm_qos_request_active(&device->qos))
-		pm_qos_remove_request(&device->qos);
-
 	__resume(device);
 	__set_state(device, VENUS_STATE_DEINIT);
 	__dsp_shutdown(device, 0);
@@ -3357,6 +3368,11 @@ static void print_sfr_message(struct venus_hfi_device *device)
 
 	vsfr = (struct hfi_sfr_struct *)device->sfr.align_virtual_addr;
 	if (vsfr) {
+		if (vsfr->bufSize != device->sfr.mem_size) {
+			dprintk(VIDC_ERR, "Invalid SFR buf size %d actual %d\n",
+					vsfr->bufSize, device->sfr.mem_size);
+			return;
+		}
 		vsfr_size = vsfr->bufSize - sizeof(u32);
 		p = memchr(vsfr->rg_data, '\0', vsfr_size);
 		/* SFR isn't guaranteed to be NULL terminated */
@@ -4055,7 +4071,8 @@ static void __deinit_bus(struct venus_hfi_device *device)
 	if (!device)
 		return;
 
-	device->bus_vote.data_count = 0;
+	kfree(device->bus_vote.data);
+	device->bus_vote = DEFAULT_BUS_VOTE;
 
 	venus_hfi_for_each_bus_reverse(device, bus) {
 		devfreq_remove_device(bus->devfreq);
@@ -4771,10 +4788,6 @@ static inline int __suspend(struct venus_hfi_device *device)
 
 	dprintk(VIDC_PROF, "Entering suspend\n");
 
-	if (device->res->pm_qos_latency_us &&
-		pm_qos_request_active(&device->qos))
-		pm_qos_remove_request(&device->qos);
-
 	rc = __tzbsp_set_video_state(TZBSP_VIDEO_STATE_SUSPEND);
 	if (rc) {
 		dprintk(VIDC_WARN, "Failed to suspend video core %d\n", rc);
@@ -4833,15 +4846,6 @@ static inline int __resume(struct venus_hfi_device *device)
 	 * firmware is out reset
 	 */
 	__set_threshold_registers(device);
-
-	if (device->res->pm_qos_latency_us) {
-#ifdef CONFIG_SMP
-		device->qos.type = PM_QOS_REQ_AFFINE_IRQ;
-		device->qos.irq = device->hal_data->irq;
-#endif
-		pm_qos_add_request(&device->qos, PM_QOS_CPU_DMA_LATENCY,
-				device->res->pm_qos_latency_us);
-	}
 
 	__sys_set_debug(device, msm_vidc_fw_debug);
 

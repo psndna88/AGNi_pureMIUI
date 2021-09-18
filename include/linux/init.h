@@ -133,6 +133,10 @@ extern unsigned int reset_devices;
 /* used by init/main.c */
 void setup_arch(char **);
 void prepare_namespace(void);
+void launch_early_services(void);
+#ifdef CONFIG_EARLY_SERVICES
+int get_early_services_status(void);
+#endif
 void __init load_default_modules(void);
 int __init init_rootfs(void);
 
@@ -297,8 +301,6 @@ void __init parse_early_options(char *cmdline);
 
 /* Data marked not to be saved by software suspend */
 #define __nosavedata __section(.data..nosave)
-
-#define __rticdata  __attribute__((section(".bss.rtic")))
 
 #ifdef MODULE
 #define __exit_p(x) x

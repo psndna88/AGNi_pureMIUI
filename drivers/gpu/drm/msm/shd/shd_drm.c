@@ -170,6 +170,7 @@ static int shd_display_init_base_crtc(struct drm_device *dev,
 {
 	struct drm_crtc *crtc = NULL;
 	struct msm_drm_private *priv;
+	struct drm_plane *primary;
 	int crtc_idx;
 	int i;
 
@@ -192,6 +193,23 @@ static int shd_display_init_base_crtc(struct drm_device *dev,
 		if (!crtc)
 			return -ENOENT;
 	}
+
+	if (priv->num_planes >= MAX_PLANES)
+		return -ENOENT;
+
+	/* create dummy primary plane for base crtc */
+	primary = sde_plane_init(dev, SSPP_DMA0, true, 0, 0);
+	if (IS_ERR(primary))
+		return -ENOMEM;
+	priv->planes[priv->num_planes++] = primary;
+	if (primary->funcs->reset)
+		primary->funcs->reset(primary);
+
+	SDE_DEBUG("create dummay plane%d free plane%d\n",
+			DRMID(primary), DRMID(crtc->primary));
+
+	crtc->primary = primary;
+	primary->crtc = crtc;
 
 	/* disable crtc from other encoders */
 	for (i = 0; i < priv->num_encoders; i++) {
@@ -513,29 +531,77 @@ enum drm_connector_status shd_connector_detect(struct drm_connector *conn,
 {
 	struct shd_display *disp = display;
 	struct sde_connector *sde_conn;
+	struct drm_connector *b_conn;
 	enum drm_connector_status status = connector_status_disconnected;
 
 	if (!conn || !display || !disp->base) {
 		SDE_ERROR("invalid params\n");
 		goto end;
 	}
-
-	if (disp->base->connector) {
-		sde_conn = to_sde_connector(disp->base->connector);
-		status = disp->base->ops.detect(disp->base->connector,
+	b_conn =  disp->base->connector;
+	if (b_conn) {
+		sde_conn = to_sde_connector(b_conn);
+		status = disp->base->ops.detect(b_conn,
 						force, sde_conn->display);
+		conn->display_info.width_mm = b_conn->display_info.width_mm;
+		conn->display_info.height_mm = b_conn->display_info.height_mm;
 	}
 
 end:
 	return status;
 }
+static int shd_drm_update_edid_name(struct edid *edid, const char *name)
+{
+	u8 *dtd = (u8 *)&edid->detailed_timings[3];
+	u8 standard_header[] = {0x00, 0x00, 0x00, 0xFE, 0x00};
+	u32 dtd_size = 18;
+	u32 header_size = sizeof(standard_header);
+
+	if (!name)
+		return -EINVAL;
+
+	/* Fill standard header */
+	memcpy(dtd, standard_header, header_size);
+
+	dtd_size -= header_size;
+	dtd_size = min_t(u32, dtd_size, strlen(name));
+
+	memcpy(dtd + header_size, name, dtd_size);
+
+	return 0;
+}
+
+static void shd_drm_update_checksum(struct edid *edid)
+{
+	u8 *data = (u8 *)edid;
+	u32 i, sum = 0;
+
+	for (i = 0; i < EDID_LENGTH - 1; i++)
+		sum += data[i];
+
+	edid->checksum = 0x100 - (sum & 0xFF);
+}
 
 static int shd_connector_get_modes(struct drm_connector *connector,
-		void *display)
+		void *data)
 {
 	struct drm_display_mode drm_mode;
-	struct shd_display *disp = display;
+	struct shd_display *disp = data;
 	struct drm_display_mode *m;
+	u32 count = 0;
+	int rc;
+	u32 edid_size;
+	struct edid edid;
+	const u8 edid_buf[EDID_LENGTH] = {
+		0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x44, 0x6D,
+		0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1B, 0x10, 0x01, 0x03,
+		0x80, 0x50, 0x2D, 0x78, 0x0A, 0x0D, 0xC9, 0xA0, 0x57, 0x47,
+		0x98, 0x27, 0x12, 0x48, 0x4C, 0x00, 0x00, 0x00, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01,
+	};
+	edid_size = min_t(u32, sizeof(edid), EDID_LENGTH);
+	memcpy(&edid, edid_buf, edid_size);
 
 	memcpy(&drm_mode, &disp->base->mode, sizeof(drm_mode));
 
@@ -550,9 +616,19 @@ static int shd_connector_get_modes(struct drm_connector *connector,
 	drm_mode.vtotal = drm_mode.vsync_end;
 
 	m = drm_mode_duplicate(disp->drm_dev, &drm_mode);
+	if (!m)
+		return 0;
 	drm_mode_set_name(m);
 	drm_mode_probed_add(connector, m);
-
+	rc = shd_drm_update_edid_name(&edid, disp->name);
+	if (rc) {
+		count = 0;
+		return count;
+	}
+	shd_drm_update_checksum(&edid);
+	rc = drm_mode_connector_update_edid_property(connector, &edid);
+	if (rc)
+		count = 0;
 	return 1;
 }
 
@@ -576,6 +652,9 @@ static int shd_conn_set_info_blob(struct drm_connector *connector,
 
 	sde_kms_info_add_keyint(info, "max_blendstages",
 				shd_display->stage_range.size);
+
+	sde_kms_info_add_keystr(info, "display type",
+				shd_display->display_type);
 
 	sde_kms_info_add_keystr(info, "display type",
 				shd_display->display_type);
@@ -718,6 +797,7 @@ static int shd_drm_obj_init(struct shd_display *display)
 	struct msm_drm_private *priv;
 	struct drm_device *dev;
 	struct drm_crtc *crtc;
+	struct drm_plane *primary;
 	struct drm_encoder *encoder;
 	struct drm_connector *connector;
 	struct sde_crtc *sde_crtc;
@@ -748,6 +828,35 @@ static int shd_drm_obj_init(struct shd_display *display)
 		rc = -ENOENT;
 		goto end;
 	}
+
+	/* search plane that doesn't belong to any crtc */
+	primary = NULL;
+	for (i = 0; i < priv->num_planes; i++) {
+		bool found = false;
+
+		drm_for_each_crtc(crtc, dev) {
+			if (crtc->primary == priv->planes[i]) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			primary = priv->planes[i];
+			if (primary->type == DRM_PLANE_TYPE_OVERLAY)
+				dev->mode_config.num_overlay_plane--;
+			primary->type = DRM_PLANE_TYPE_PRIMARY;
+			break;
+		}
+	}
+
+	if (!primary) {
+		SDE_ERROR("failed to find primary plane\n");
+		rc = -ENOENT;
+		goto end;
+	}
+
+	SDE_DEBUG("find primary plane %d\n", DRMID(primary));
 
 	memset(&info, 0x0, sizeof(info));
 	rc = shd_connector_get_info(NULL, &info, display);
@@ -792,7 +901,7 @@ static int shd_drm_obj_init(struct shd_display *display)
 
 	SDE_DEBUG("create connector %d\n", DRMID(connector));
 
-	crtc = sde_crtc_init(dev, priv->planes[0]);
+	crtc = sde_crtc_init(dev, primary);
 	if (IS_ERR(crtc)) {
 		rc = PTR_ERR(crtc);
 		goto end;
@@ -926,7 +1035,6 @@ static int shd_parse_display(struct shd_display *display)
 	u32 range[2];
 	int rc;
 
-	display->name = of_node->full_name;
 
 	display->base_of = of_parse_phandle(of_node,
 		"qcom,shared-display-base", 0);
@@ -996,6 +1104,11 @@ static int shd_parse_display(struct shd_display *display)
 		range, 2);
 	if (rc)
 		SDE_ERROR("Failed to parse blend stage range\n");
+
+	display->name = of_get_property(of_node,
+		"qcom,shared-display-name", NULL);
+	if (!display->name)
+		display->name = of_node->full_name;
 
 	display->src.w = src_w;
 	display->src.h = src_h;

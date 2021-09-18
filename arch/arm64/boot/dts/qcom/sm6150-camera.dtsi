@@ -139,21 +139,19 @@
 		status = "ok";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
-		clocks = <&clock_camcc CAM_CC_CAMNOC_AXI_CLK>,
-			<&clock_camcc CAM_CC_SOC_AHB_CLK>,
+		clocks =<&clock_camcc CAM_CC_SOC_AHB_CLK>,
 			<&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>,
 			<&clock_camcc CAM_CC_CCI_CLK>,
 			<&clock_camcc CAM_CC_CCI_CLK_SRC>;
-		clock-names = "camnoc_axi_clk",
-			"soc_ahb_clk",
+		clock-names ="soc_ahb_clk",
 			"slow_ahb_src_clk",
 			"cpas_ahb_clk",
 			"cci_clk",
 			"cci_clk_src";
 		src-clock-name = "cci_clk_src";
 		clock-cntl-level = "lowsvs";
-		clock-rates = <0 0 0 0 0 37500000>;
+		clock-rates = <0 0 0 0 37500000>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cci0_active &cci1_active>;
 		pinctrl-1 = <&cci0_suspend &cci1_suspend>;
@@ -229,15 +227,15 @@
 		};
 	};
 
-	qcom,cam_smmu {
+	cam_smmu: qcom,cam_smmu {
 		compatible = "qcom,msm-cam-smmu";
 		status = "ok";
 
 		msm_cam_smmu_ife {
 			compatible = "qcom,msm-cam-smmu-cb";
-			iommus = <&apps_smmu 0x820 0x0>,
+			iommus = <&apps_smmu 0x820 0x40>,
 				<&apps_smmu 0x840 0x0>,
-				<&apps_smmu 0x860 0x0>;
+				<&apps_smmu 0x860 0x40>;
 			label = "ife";
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
@@ -585,7 +583,7 @@
 		status = "ok";
 	};
 
-	qcom,cam-isp {
+	cam_isp_mgr: qcom,cam-isp {
 		compatible = "qcom,cam-isp";
 		arch-compat = "ife";
 		status = "ok";
@@ -961,7 +959,7 @@
 		status = "ok";
 	};
 
-	qcom,cam-jpeg {
+	cam_jpeg_mgr: qcom,cam-jpeg {
 		compatible = "qcom,cam-jpeg";
 		compat-hw-name = "qcom,jpegenc",
 			"qcom,jpegdma";
@@ -1032,7 +1030,7 @@
 		status = "ok";
 	};
 
-	qcom,cam-lrme {
+	cam_lrme_mgr: qcom,cam-lrme {
 		compatible = "qcom,cam-lrme";
 		arch-compat = "lrme";
 		status = "ok";

@@ -1,7 +1,7 @@
 /*
  *
- * Copyright (C) 2019 Ltd
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2019 wanghan <wanghan@longcheer.com>
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  */
 
@@ -19,19 +19,25 @@
  * Format :
  *     'androidboot.hwname=<string>'
  * Example :
- *     androidboot.hwname=custa
- *     androidboot.hwname=custe
- *     androidboot.hwname=custd
- *     androidboot.hwname=custj
+ *     androidboot.hwname=curtana
+ *     androidboot.hwname=excalibur
+ *     androidboot.hwname=durandal
+ *     androidboot.hwname=joyeuse
  *******************************************************************
  */
 
 static char board_id_hwname[32] = {0};
 static bool board_33w_supported = false;
+static bool board_nfc_supported = false;
 
 bool board_get_33w_supported(void)
 {
 	return board_33w_supported;
+}
+
+bool board_get_nfc_supported(void)
+{
+	return board_nfc_supported;
 }
 
 void board_id_get_hwname(char *str)
@@ -53,6 +59,9 @@ static int __init setup_board_id_hwname(char *str)
 		board_33w_supported = true;
 	else if (!strcmp(str, "curtana"))
 		board_33w_supported = false;
+
+	if (!strcmp(str, "joyeuse"))
+		board_nfc_supported = true;
 
 	pr_info("board_33w_supported : %s\n",
 			board_33w_supported ? "true" : "false");
@@ -104,11 +113,13 @@ __setup("androidboot.hwlevel=", setup_board_id_hwlevel);
  *     xx.xx.xx < product_number . major_number . minor_number >
  * Example :
  *     androidboot.hwversion=xx.xx.xx // product  , major, minor
- *     androidboot.hwversion=1.13.0   // custa  , 13   , 0
- *     androidboot.hwversion=1.0.0    // custa  , 0    , 0
- *     androidboot.hwversion=2.10.0   // custe, 10   , 0
- *     androidboot.hwversion=3.20.0   // custd , 20   , 0
- *     androidboot.hwversion=4.90.0   // custj  , 90   , 0
+ *     androidboot.hwversion=1.13.0   // curtana  , 13   , 0 (CN)
+ *     androidboot.hwversion=1.90.0   // curtana  , 90   , 0 (IN)
+ *     androidboot.hwversion=1.0.0    // curtana  , 0    , 0
+ *     androidboot.hwversion=2.90.0   // excalibur, 90   , 0 (IN)
+ *     androidboot.hwversion=3.20.0   // durandal , 20   , 0
+ *     androidboot.hwversion=4.90.0   // joyeuse  , 90   , 0
+ *     androidboot.hwversion=6.90.0   // gram     , 90   , 0 (IN)
  *******************************************************************
  */
 
@@ -142,13 +153,21 @@ static int __init setup_board_id_hwversion(char *str)
 	strcpy(buf, str);
 	str_n = buf;
 	str_p = strsep(&str_n, ".");
-	board_id_hwversion_product_num = simple_strtoul(str_p, NULL, 10);
+	if (str_p)
+		board_id_hwversion_product_num = simple_strtoul(str_p, NULL, 10);
 	str_p = strsep(&str_n, ".");
-	board_id_hwversion_major_num = simple_strtoul(str_p, NULL, 10);
-	board_id_hwversion_minor_num = simple_strtoul(str_n, NULL, 10);
+	if (str_p)
+		board_id_hwversion_major_num = simple_strtoul(str_p, NULL, 10);
+	if (str_n)
+		board_id_hwversion_minor_num = simple_strtoul(str_n, NULL, 10);
 	pr_info("board_id_hwversion_product_num : %d\n", board_id_hwversion_product_num);
 	pr_info("board_id_hwversion_major_num : %d\n", board_id_hwversion_major_num);
 	pr_info("board_id_hwversion_minor_num : %d\n", board_id_hwversion_minor_num);
+	if ((board_id_hwversion_product_num == 1) && (board_id_hwversion_major_num == 13))
+		board_nfc_supported = true;
+	else if (board_id_hwversion_product_num == 4)
+		board_nfc_supported = true;
+
 	return 1;
 }
 __setup("androidboot.hwversion=", setup_board_id_hwversion);

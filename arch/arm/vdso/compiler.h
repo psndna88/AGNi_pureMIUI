@@ -56,7 +56,7 @@ static notrace long name##_fallback(type_arg1 _##name_arg1,		  \
 	return ret;							  \
 }
 
-#define arch_vdso_read_counter() arch_counter_get_cntvct()
+#define arch_vdso_read_counter() read_sysreg(CNTVCT)
 
 /* Avoid unresolved references emitted by GCC */
 

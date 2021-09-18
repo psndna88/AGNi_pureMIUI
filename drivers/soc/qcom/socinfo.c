@@ -67,6 +67,7 @@ enum {
 	HW_PLATFORM_STP = 23,
 	HW_PLATFORM_SBC = 24,
 	HW_PLATFORM_ADP = 25,
+	HW_PLATFORM_TTP = 30,
 	HW_PLATFORM_HDK = 31,
 	HW_PLATFORM_IOT = 32,
 	HW_PLATFORM_IDP = 34,
@@ -91,6 +92,7 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_STP] = "STP",
 	[HW_PLATFORM_SBC] = "SBC",
 	[HW_PLATFORM_ADP] = "ADP",
+	[HW_PLATFORM_TTP] = "TTP",
 	[HW_PLATFORM_HDK] = "HDK",
 	[HW_PLATFORM_IOT] = "IOT",
 	[HW_PLATFORM_IDP] = "IDP"
@@ -354,6 +356,14 @@ static struct msm_soc_info cpu_of_id[] = {
 	[305] = {MSM_CPU_8996, "MSM8996pro"},
 	[312] = {MSM_CPU_8996, "APQ8096pro"},
 
+	/* 9607 IDs */
+	[290] = {MSM_CPU_9607, "MDM9607"},
+	[296] = {MSM_CPU_9607, "MDM8207"},
+	[297] = {MSM_CPU_9607, "MDM9207"},
+	[298] = {MSM_CPU_9607, "MDM9307"},
+	[299] = {MSM_CPU_9607, "MDM9628"},
+	[322] = {MSM_CPU_9607, "MDM9206"},
+
 	/* sm8150 ID */
 	[339] = {MSM_CPU_SM8150, "SM8150"},
 
@@ -380,6 +390,8 @@ static struct msm_soc_info cpu_of_id[] = {
 
 	/* qcs405 ID */
 	[352] = {MSM_CPU_QCS405, "QCS405"},
+	[451] = {MSM_CPU_QCS405, "SA2145P"},
+	[452] = {MSM_CPU_QCS405, "SA2150P"},
 
 	/* qcs404 ID */
 	[410] = {MSM_CPU_QCS404, "QCS404"},
@@ -431,9 +443,19 @@ static struct msm_soc_info cpu_of_id[] = {
 	/* atollab ID */
 	[443] = {MSM_CPU_ATOLL_AB, "ATOLL-AB"},
 
-	/* QCM6125 IDs*/
-	[467] = {MSM_CPU_QCM6125, "QCM6125"},
-	[468] = {MSM_CPU_QCS6125, "QCS6125"},
+	/* SDM660 ID */
+	[317] = {MSM_CPU_SDM660, "SDM660"},
+	[324] = {MSM_CPU_SDA660, "SDA660"},
+
+	/* SDM429W IDs*/
+	[416] = {MSM_CPU_SDM429W, "SDM429W"},
+	[437] = {MSM_CPU_SDA429W, "SDA429W"},
+
+	/* TRINKET-IOT IDs*/
+	[467] = {MSM_CPU_TRINKET_IOT, "TRINKET-IOT"},
+
+	/* TRINKETP-IOT IDs*/
+	[468] = {MSM_CPU_TRINKETP_IOT, "TRINKETP-IOT"},
 
 	/* Uninitialized IDs are not known to run Linux.
 	 * MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
@@ -1395,6 +1417,10 @@ static void * __init setup_dummy_socinfo(void)
 		dummy_socinfo.id = 357;
 		strlcpy(dummy_socinfo.build_id, "sdxprairie - ",
 		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_mdm9607()) {
+		dummy_socinfo.id = 290;
+		strlcpy(dummy_socinfo.build_id, "mdm9607 - ",
+		sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_sdmmagpie()) {
 		dummy_socinfo.id = 365;
 		strlcpy(dummy_socinfo.build_id, "sdmmagpie - ",
@@ -1439,13 +1465,29 @@ static void * __init setup_dummy_socinfo(void)
 		dummy_socinfo.id = 443;
 		strlcpy(dummy_socinfo.build_id, "atoll-ab - ",
 		sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_qcm6125()) {
-		dummy_socinfo.id = 467;
-		strlcpy(dummy_socinfo.build_id, "qcm6125 - ",
+	} else if (early_machine_is_sdm660()) {
+		dummy_socinfo.id = 317;
+		strlcpy(dummy_socinfo.build_id, "sdm660 - ",
 		sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_qcs6125()) {
+	} else if (early_machine_is_sda660()) {
+		dummy_socinfo.id = 324;
+		strlcpy(dummy_socinfo.build_id, "sda660 - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sdm429w()) {
+		dummy_socinfo.id = 416;
+		strlcpy(dummy_socinfo.build_id, "sdm429w - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sda429w()) {
+		dummy_socinfo.id = 437;
+		strlcpy(dummy_socinfo.build_id, "sda429w - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_trinket_iot()) {
+		dummy_socinfo.id = 467;
+		strlcpy(dummy_socinfo.build_id, "trinket-iot - ",
+		sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_trinketp_iot()) {
 		dummy_socinfo.id = 468;
-		strlcpy(dummy_socinfo.build_id, "qcm6125 - ",
+		strlcpy(dummy_socinfo.build_id, "trinketp-iot - ",
 		sizeof(dummy_socinfo.build_id));
 	} else
 		strlcat(dummy_socinfo.build_id, "Dummy socinfo",
@@ -1764,7 +1806,7 @@ static void socinfo_print(void)
 	}
 }
 
-static void socinfo_select_format(void)
+static void __init socinfo_select_format(void)
 {
 	uint32_t f_maj = SOCINFO_VERSION_MAJOR(socinfo->v0_1.format);
 	uint32_t f_min = SOCINFO_VERSION_MINOR(socinfo->v0_1.format);

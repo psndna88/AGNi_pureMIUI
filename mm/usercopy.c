@@ -15,6 +15,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/mm.h>
+#include <linux/highmem.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/sched/task.h>
@@ -208,7 +209,12 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
 	if (!virt_addr_valid(ptr))
 		return NULL;
 
-	page = virt_to_head_page(ptr);
+	/*
+	 * When CONFIG_HIGHMEM=y, kmap_to_page() will give either the
+	 * highmem page or fallback to virt_to_page(). The following
+	 * is effectively a highmem-aware virt_to_head_page().
+	 */
+	page = compound_head(kmap_to_page((void *)ptr));
 
 	/* Check slab allocator for flags and size. */
 	if (PageSlab(page))
@@ -227,6 +233,9 @@ static inline const char *check_heap_object(const void *ptr, unsigned long n,
 void __check_object_size(const void *ptr, unsigned long n, bool to_user)
 {
 	const char *err;
+
+	/* Kill the hardened usercopy overhead but keep existing for miui modules */
+	return;
 
 	/* Skip all tests if size is zero. */
 	if (!n)

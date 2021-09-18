@@ -36,6 +36,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/of_gpio.h>
 #include <linux/timer.h>
+#include <linux/notifier.h>
 #include <linux/fb.h>
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
@@ -45,6 +46,8 @@
 #include "gf_spi.h"
 #include <linux/unistd.h>
 #include <linux/delay.h>
+#include <drm/drm_bridge.h>
+#include <linux/msm_drm_notify.h>
 
 #if defined(USE_SPI_BUS)
 #include <linux/spi/spi.h>
@@ -346,10 +349,15 @@ static irqreturn_t gf_irq(int irq, void *handle)
 {
 #if defined(GF_NETLINK_ENABLE)
 	char msg[2] =  { 0x0 };
+	struct gf_dev *gf_dev = &gf;
 	//wake_lock_timeout(&fp_wakelock, msecs_to_jiffies(WAKELOCK_HOLD_TIME));
 	__pm_wakeup_event(&fp_ws, WAKELOCK_HOLD_TIME);//for kernel 4.9
 	msg[0] = GF_NET_EVENT_IRQ;
 	sendnlmsg(msg);
+	if (gf_dev->device_available == 1) {
+		gf_dev->wait_finger_down = false;
+		schedule_work(&gf_dev->work);
+	}
 #elif defined(GF_FASYNC)
 	struct gf_dev *gf_dev = &gf;
 
@@ -390,6 +398,7 @@ static void irq_cleanup(struct gf_dev *gf_dev)
 static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 {
 	uint32_t key_input = 0;
+	return; //AOSP
 
 	if (gf_key->key == GF_KEY_HOME) {
 		key_input = KEY_KPENTER;
@@ -401,7 +410,7 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 		/* add special key define */
 		key_input = gf_key->key;
 	}
-	pr_info("%s: received key event[%d], key=%d, value=%d\n",
+	pr_debug("%s: received key event[%d], key=%d, value=%d\n",
 			__func__, key_input, gf_key->key, gf_key->value);
 
 	if ((GF_KEY_POWER == gf_key->key || GF_KEY_CAMERA == gf_key->key)
@@ -470,7 +479,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case GF_IOC_INPUT_KEY_EVENT:
 		if (copy_from_user(&gf_key, (void __user *)arg, sizeof(struct gf_key))) {
-			pr_err("failed to copy input key event from user to kernel\n");
+			pr_debug("failed to copy input key event from user to kernel\n");
 			retval = -EFAULT;
 			break;
 		}
@@ -546,10 +555,12 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case GF_IOC_AUTHENTICATE_START:
 		pr_debug("%s GF_IOC_AUTHENTICATE_START\n", __func__);
+		gf_dev->device_available = 1;
 		break;
 
 	case GF_IOC_AUTHENTICATE_END:
 		pr_debug("%s GF_IOC_AUTHENTICATE_END\n", __func__);
+		gf_dev->device_available = 0;
 		break;
 
 	default:
@@ -566,6 +577,12 @@ static long gf_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long a
 	return gf_ioctl(filp, cmd, (unsigned long)compat_ptr(arg));
 }
 #endif /*CONFIG_COMPAT*/
+
+ static void notification_work(struct work_struct *work)
+{
+	pr_debug("%s unblank\n", __func__);
+	dsi_bridge_interface_enable(FP_UNLOCK_REJECTION_TIMEOUT);
+}
 
 static int gf_open(struct inode *inode, struct file *filp)
 {
@@ -657,6 +674,7 @@ static int gf_release(struct inode *inode, struct file *filp)
 		irq_cleanup(gf_dev);
 		gf_cleanup(gf_dev);
 		/*power off the sensor*/
+		gf_dev->device_available = 0;
 		gf_power_off(gf_dev);
 	}
 	mutex_unlock(&device_list_lock);
@@ -687,6 +705,54 @@ static const struct file_operations proc_file_ops = {
 	.release = single_release,
 };
 
+static int goodix_fb_state_chg_callback(struct notifier_block *nb,
+		unsigned long val, void *data)
+{
+	struct gf_dev *gf_dev;
+	struct fb_event *evdata = data;
+	int *blank;
+	char msg[2] = { 0x0 };
+
+	if (val != MSM_DRM_EVENT_BLANK && val != MSM_DRM_EARLY_EVENT_BLANK)
+		return 0;
+	pr_info("[info] %s go to the goodix_fb_state_chg_callback value = %d\n",
+			__func__, (int)val);
+	gf_dev = container_of(nb, struct gf_dev, notifier);
+	if (evdata && evdata->data && val == MSM_DRM_EVENT_BLANK && gf_dev) {
+		blank = evdata->data;
+		if (gf_dev->device_available == 1 && *blank == MSM_DRM_BLANK_UNBLANK) {
+				gf_dev->fb_black = 0;
+#if defined(GF_NETLINK_ENABLE)
+				msg[0] = GF_NET_EVENT_FB_UNBLACK;
+				sendnlmsg(msg);
+#elif defined(GF_FASYNC)
+				if (gf_dev->async)
+					kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
+#endif
+			}
+
+	}else if(evdata && evdata->data && val == MSM_DRM_EARLY_EVENT_BLANK && gf_dev){
+		blank = evdata->data;
+			if (gf_dev->device_available == 1 && *blank == MSM_DRM_BLANK_POWERDOWN) {
+				gf_dev->fb_black = 1;
+				gf_dev->wait_finger_down = true;
+#if defined(GF_NETLINK_ENABLE)
+				msg[0] = GF_NET_EVENT_FB_BLACK;
+				sendnlmsg(msg);
+#elif defined(GF_FASYNC)
+				if (gf_dev->async)
+					kill_fasync(&gf_dev->async, SIGIO, POLL_IN);
+#endif
+			}
+
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block goodix_noti_block = {
+	.notifier_call = goodix_fb_state_chg_callback,
+};
+
 static struct class *gf_class;
 #if defined(USE_SPI_BUS)
 static int gf_probe(struct spi_device *spi)
@@ -709,6 +775,10 @@ static int gf_probe(struct platform_device *pdev)
 	gf_dev->irq_gpio = -EINVAL;
 	gf_dev->reset_gpio = -EINVAL;
 	gf_dev->pwr_gpio = -EINVAL;
+	gf_dev->device_available = 0;
+	gf_dev->fb_black = 0;
+	gf_dev->wait_finger_down = false;
+	INIT_WORK(&gf_dev->work, notification_work);
 
 	/* If we can allocate a minor number, hook up this device.
 	 * Reusing minors is fine so long as udev or mdev is working.
@@ -769,6 +839,9 @@ static int gf_probe(struct platform_device *pdev)
 	spi_clock_set(gf_dev, 1000000);
 #endif
 
+	gf_dev->notifier = goodix_noti_block;
+	msm_drm_register_client(&gf_dev->notifier);
+
 	//wake_lock_init(&fp_wakelock, WAKE_LOCK_SUSPEND, "fp_wakelock");
 	wakeup_source_init(&fp_ws, "fp_ws");//for kernel 4.9
 
@@ -803,6 +876,7 @@ error_dev:
 		mutex_unlock(&device_list_lock);
 	}
 error_hw:
+	gf_dev->device_available = 0;
 
 	return status;
 }
@@ -817,6 +891,7 @@ static int gf_remove(struct platform_device *pdev)
 
 	//wake_lock_destroy(&fp_wakelock);
 	wakeup_source_trash(&fp_ws);//for kernel 4.9
+	msm_drm_unregister_client(&gf_dev->notifier);
 	if (gf_dev->input)
 		input_unregister_device(gf_dev->input);
 	input_free_device(gf_dev->input);

@@ -27,6 +27,7 @@
 #include <linux/posix-timers.h>
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
+#include <linux/delay.h>
 #include <linux/compat.h>
 #include <linux/module.h>
 
@@ -102,9 +103,9 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 				struct class_interface *class_intf)
 {
 	unsigned long flags;
-	int err = 0;
 	struct rtc_device *rtc = to_rtc_device(dev);
 	struct wakeup_source *__ws;
+	int ret = 0;
 
 	if (rtcdev)
 		return -EBUSY;
@@ -117,13 +118,13 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 	spin_lock_irqsave(&rtcdev_lock, flags);
 	if (!rtcdev) {
 		if (!try_module_get(rtc->owner)) {
-			spin_unlock_irqrestore(&rtcdev_lock, flags);
-			return -1;
+			ret = -1;
+			goto unlock;
 		}
 
-		err = rtc_irq_register(rtc, &alarmtimer_rtc_task);
-		if (err)
-			goto rtc_irq_reg_err;
+		ret = rtc_irq_register(rtc, &alarmtimer_rtc_task);
+		if (ret)
+			goto unlock;
 
 		rtcdev = rtc;
 		/* hold a reference so it doesn't go away */
@@ -132,11 +133,11 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 		__ws = NULL;
 	}
 
-rtc_irq_reg_err:
+unlock:
 	spin_unlock_irqrestore(&rtcdev_lock, flags);
 
 	wakeup_source_unregister(__ws);
-	return err;
+	return ret;
 }
 
 static void alarmtimer_rtc_remove_device(struct device *dev,
@@ -311,10 +312,8 @@ static int alarmtimer_suspend(struct device *dev)
 	if (min == 0)
 		return 0;
 
-	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
-		__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
-		return -EBUSY;
-	}
+	if (ktime_to_ns(min) < NSEC_PER_SEC / 2)
+		__pm_wakeup_event(ws, MSEC_PER_SEC / 2);
 
 	trace_alarmtimer_suspend(expires, type);
 
@@ -464,6 +463,7 @@ int alarm_cancel(struct alarm *alarm)
 		if (ret >= 0)
 			return ret;
 		cpu_relax();
+		ndelay(TIMER_LOCK_TIGHT_LOOP_DELAY_NS);
 	}
 }
 EXPORT_SYMBOL_GPL(alarm_cancel);
@@ -703,7 +703,7 @@ static int alarm_timer_create(struct k_itimer *new_timer)
 	enum  alarmtimer_type type;
 
 	if (!alarmtimer_get_rtcdev())
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	if (!capable(CAP_WAKE_ALARM))
 		return -EPERM;
@@ -821,7 +821,7 @@ static int alarm_timer_nsleep(const clockid_t which_clock, int flags,
 	int ret = 0;
 
 	if (!alarmtimer_get_rtcdev())
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	if (flags & ~TIMER_ABSTIME)
 		return -EINVAL;
@@ -847,9 +847,9 @@ static int alarm_timer_nsleep(const clockid_t which_clock, int flags,
 	if (flags == TIMER_ABSTIME)
 		return -ERESTARTNOHAND;
 
-	restart->fn = alarm_timer_nsleep_restart;
 	restart->nanosleep.clockid = type;
 	restart->nanosleep.expires = exp;
+	set_restart_fn(restart, alarm_timer_nsleep_restart);
 	return ret;
 }
 

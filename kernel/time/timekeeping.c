@@ -754,7 +754,7 @@ ktime_t ktime_get(void)
 	ktime_t base;
 	u64 nsecs;
 
-	WARN_ON(timekeeping_suspended);
+	//WARN_ON(timekeeping_suspended);
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
@@ -773,7 +773,7 @@ u32 ktime_get_resolution_ns(void)
 	unsigned int seq;
 	u32 nsecs;
 
-	WARN_ON(timekeeping_suspended);
+	//WARN_ON(timekeeping_suspended);
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
@@ -797,7 +797,7 @@ ktime_t ktime_get_with_offset(enum tk_offsets offs)
 	ktime_t base, *offset = offsets[offs];
 	u64 nsecs;
 
-	WARN_ON(timekeeping_suspended);
+	//WARN_ON(timekeeping_suspended);
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
@@ -867,7 +867,7 @@ void ktime_get_ts64(struct timespec64 *ts)
 	unsigned int seq;
 	u64 nsec;
 
-	WARN_ON(timekeeping_suspended);
+	//WARN_ON(timekeeping_suspended);
 
 	do {
 		seq = read_seqcount_begin(&tk_core.seq);
@@ -896,7 +896,7 @@ time64_t ktime_get_seconds(void)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
 
-	WARN_ON(timekeeping_suspended);
+	//WARN_ON(timekeeping_suspended);
 	return tk->ktime_sec;
 }
 EXPORT_SYMBOL_GPL(ktime_get_seconds);
@@ -988,9 +988,8 @@ static int scale64_check_overflow(u64 mult, u64 div, u64 *base)
 	    ((int)sizeof(u64)*8 - fls64(mult) < fls64(rem)))
 		return -EOVERFLOW;
 	tmp *= mult;
-	rem *= mult;
 
-	do_div(rem, div);
+	rem = div64_u64(rem * mult, div);
 	*base = tmp + rem;
 	return 0;
 }

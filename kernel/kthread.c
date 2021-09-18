@@ -281,18 +281,15 @@ struct task_struct *__kthread_create_on_node(int (*threadfn)(void *data),
 {
 	DECLARE_COMPLETION_ONSTACK(done);
 	struct task_struct *task;
-	struct kthread_create_info *create = kmalloc(sizeof(*create),
-						     GFP_KERNEL);
+	struct kthread_create_info create;
 
-	if (!create)
-		return ERR_PTR(-ENOMEM);
-	create->threadfn = threadfn;
-	create->data = data;
-	create->node = node;
-	create->done = &done;
+	create.threadfn = threadfn;
+	create.data = data;
+	create.node = node;
+	create.done = &done;
 
 	spin_lock(&kthread_create_lock);
-	list_add_tail(&create->list, &kthread_create_list);
+	list_add_tail(&create.list, &kthread_create_list);
 	spin_unlock(&kthread_create_lock);
 
 	wake_up_process(kthreadd_task);
@@ -307,7 +304,7 @@ struct task_struct *__kthread_create_on_node(int (*threadfn)(void *data),
 		 * calls complete(), leave the cleanup of this structure to
 		 * that thread.
 		 */
-		if (xchg(&create->done, NULL))
+		if (xchg(&create.done, NULL))
 			return ERR_PTR(-EINTR);
 		/*
 		 * kthreadd (or new kernel thread) will call complete()
@@ -315,7 +312,7 @@ struct task_struct *__kthread_create_on_node(int (*threadfn)(void *data),
 		 */
 		wait_for_completion(&done);
 	}
-	task = create->result;
+	task = create.result;
 	if (!IS_ERR(task)) {
 		static const struct sched_param param = { .sched_priority = 0 };
 		char name[TASK_COMM_LEN];
@@ -333,7 +330,6 @@ struct task_struct *__kthread_create_on_node(int (*threadfn)(void *data),
 		sched_setscheduler_nocheck(task, SCHED_NORMAL, &param);
 		set_cpus_allowed_ptr(task, cpu_all_mask);
 	}
-	kfree(create);
 	return task;
 }
 
@@ -440,9 +436,34 @@ struct task_struct *kthread_create_on_cpu(int (*threadfn)(void *data),
 		return p;
 	kthread_bind(p, cpu);
 	/* CPU hotplug need to bind once again when unparking the thread. */
-	set_bit(KTHREAD_IS_PER_CPU, &to_kthread(p)->flags);
 	to_kthread(p)->cpu = cpu;
 	return p;
+}
+
+void kthread_set_per_cpu(struct task_struct *k, int cpu)
+{
+	struct kthread *kthread = to_kthread(k);
+	if (!kthread)
+		return;
+
+	WARN_ON_ONCE(!(k->flags & PF_NO_SETAFFINITY));
+
+	if (cpu < 0) {
+		clear_bit(KTHREAD_IS_PER_CPU, &kthread->flags);
+		return;
+	}
+
+	kthread->cpu = cpu;
+	set_bit(KTHREAD_IS_PER_CPU, &kthread->flags);
+}
+
+bool kthread_is_per_cpu(struct task_struct *k)
+{
+	struct kthread *kthread = to_kthread(k);
+	if (!kthread)
+		return false;
+
+	return test_bit(KTHREAD_IS_PER_CPU, &kthread->flags);
 }
 
 /**
@@ -750,19 +771,6 @@ kthread_create_worker_on_cpu(int cpu, unsigned int flags,
 }
 EXPORT_SYMBOL(kthread_create_worker_on_cpu);
 
-/*
- * Returns true when the work could not be queued at the moment.
- * It happens when it is already pending in a worker list
- * or when it is being cancelled.
- */
-static inline bool queuing_blocked(struct kthread_worker *worker,
-				   struct kthread_work *work)
-{
-	lockdep_assert_held(&worker->lock);
-
-	return !list_empty(&work->node) || work->canceling;
-}
-
 static void kthread_insert_work_sanity_check(struct kthread_worker *worker,
 					     struct kthread_work *work)
 {
@@ -842,7 +850,8 @@ void kthread_delayed_work_timer_fn(unsigned long __data)
 	/* Move the work from worker->delayed_work_list. */
 	WARN_ON_ONCE(list_empty(&work->node));
 	list_del_init(&work->node);
-	kthread_insert_work(worker, work, &worker->work_list);
+	if (!work->canceling)
+		kthread_insert_work(worker, work, &worker->work_list);
 
 	spin_unlock(&worker->lock);
 }
@@ -964,8 +973,38 @@ void kthread_flush_work(struct kthread_work *work)
 EXPORT_SYMBOL_GPL(kthread_flush_work);
 
 /*
- * This function removes the work from the worker queue. Also it makes sure
- * that it won't get queued later via the delayed work's timer.
+ * Make sure that the timer is neither set nor running and could
+ * not manipulate the work list_head any longer.
+ *
+ * The function is called under worker->lock. The lock is temporary
+ * released but the timer can't be set again in the meantime.
+ */
+static void kthread_cancel_delayed_work_timer(struct kthread_work *work,
+					      unsigned long *flags)
+{
+	struct kthread_delayed_work *dwork =
+		container_of(work, struct kthread_delayed_work, work);
+	struct kthread_worker *worker = work->worker;
+
+	/*
+	 * del_timer_sync() must be called to make sure that the timer
+	 * callback is not running. The lock must be temporary released
+	 * to avoid a deadlock with the callback. In the meantime,
+	 * any queuing is blocked by setting the canceling counter.
+	 */
+	work->canceling++;
+	spin_unlock_irqrestore(&worker->lock, *flags);
+	del_timer_sync(&dwork->timer);
+	spin_lock_irqsave(&worker->lock, *flags);
+	work->canceling--;
+}
+
+/*
+ * This function removes the work from the worker queue.
+ *
+ * It is called under worker->lock. The caller must make sure that
+ * the timer used by delayed work is not running, e.g. by calling
+ * kthread_cancel_delayed_work_timer().
  *
  * The work might still be in use when this function finishes. See the
  * current_work proceed by the worker.
@@ -973,28 +1012,8 @@ EXPORT_SYMBOL_GPL(kthread_flush_work);
  * Return: %true if @work was pending and successfully canceled,
  *	%false if @work was not pending
  */
-static bool __kthread_cancel_work(struct kthread_work *work, bool is_dwork,
-				  unsigned long *flags)
+static bool __kthread_cancel_work(struct kthread_work *work)
 {
-	/* Try to cancel the timer if exists. */
-	if (is_dwork) {
-		struct kthread_delayed_work *dwork =
-			container_of(work, struct kthread_delayed_work, work);
-		struct kthread_worker *worker = work->worker;
-
-		/*
-		 * del_timer_sync() must be called to make sure that the timer
-		 * callback is not running. The lock must be temporary released
-		 * to avoid a deadlock with the callback. In the meantime,
-		 * any queuing is blocked by setting the canceling counter.
-		 */
-		work->canceling++;
-		spin_unlock_irqrestore(&worker->lock, *flags);
-		del_timer_sync(&dwork->timer);
-		spin_lock_irqsave(&worker->lock, *flags);
-		work->canceling--;
-	}
-
 	/*
 	 * Try to remove the work from a worker list. It might either
 	 * be from worker->work_list or from worker->delayed_work_list.
@@ -1047,11 +1066,23 @@ bool kthread_mod_delayed_work(struct kthread_worker *worker,
 	/* Work must not be used with >1 worker, see kthread_queue_work() */
 	WARN_ON_ONCE(work->worker != worker);
 
-	/* Do not fight with another command that is canceling this work. */
+	/*
+	 * Temporary cancel the work but do not fight with another command
+	 * that is canceling the work as well.
+	 *
+	 * It is a bit tricky because of possible races with another
+	 * mod_delayed_work() and cancel_delayed_work() callers.
+	 *
+	 * The timer must be canceled first because worker->lock is released
+	 * when doing so. But the work can be removed from the queue (list)
+	 * only when it can be queued again so that the return value can
+	 * be used for reference counting.
+	 */
+	kthread_cancel_delayed_work_timer(work, &flags);
 	if (work->canceling)
 		goto out;
+	ret = __kthread_cancel_work(work);
 
-	ret = __kthread_cancel_work(work, true, &flags);
 fast_queue:
 	__kthread_queue_delayed_work(worker, dwork, delay);
 out:
@@ -1073,7 +1104,10 @@ static bool __kthread_cancel_work_sync(struct kthread_work *work, bool is_dwork)
 	/* Work must not be used with >1 worker, see kthread_queue_work(). */
 	WARN_ON_ONCE(work->worker != worker);
 
-	ret = __kthread_cancel_work(work, is_dwork, &flags);
+	if (is_dwork)
+		kthread_cancel_delayed_work_timer(work, &flags);
+
+	ret = __kthread_cancel_work(work);
 
 	if (worker->current_work != work)
 		goto out_fast;

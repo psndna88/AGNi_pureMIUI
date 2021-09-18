@@ -113,7 +113,7 @@ struct msm_kms_funcs {
 	struct msm_gem_address_space *(*get_address_space)(
 			struct msm_kms *kms,
 			unsigned int domain);
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 	/* debugfs: */
 	int (*debugfs_init)(struct msm_kms *kms, struct drm_minor *minor);
 #endif

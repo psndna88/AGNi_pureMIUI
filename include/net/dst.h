@@ -110,7 +110,7 @@ struct dst_entry {
 struct dst_metrics {
 	u32		metrics[RTAX_MAX];
 	refcount_t	refcnt;
-};
+} __aligned(4);		/* Low pointer bits contain DST_METRICS_FLAGS */
 extern const struct dst_metrics dst_default_metrics;
 
 u32 *dst_cow_metrics_generic(struct dst_entry *dst, unsigned long old);
@@ -329,8 +329,9 @@ static inline bool dst_hold_safe(struct dst_entry *dst)
  * @skb: buffer
  *
  * If dst is not yet refcounted and not destroyed, grab a ref on it.
+ * Returns true if dst is refcounted.
  */
-static inline void skb_dst_force(struct sk_buff *skb)
+static inline bool skb_dst_force(struct sk_buff *skb)
 {
 	if (skb_dst_is_noref(skb)) {
 		struct dst_entry *dst = skb_dst(skb);
@@ -341,6 +342,8 @@ static inline void skb_dst_force(struct sk_buff *skb)
 
 		skb->_skb_refdst = (unsigned long)dst;
 	}
+
+	return skb->_skb_refdst != 0UL;
 }
 
 
@@ -424,7 +427,15 @@ static inline struct neighbour *dst_neigh_lookup(const struct dst_entry *dst, co
 static inline struct neighbour *dst_neigh_lookup_skb(const struct dst_entry *dst,
 						     struct sk_buff *skb)
 {
-	struct neighbour *n =  dst->ops->neigh_lookup(dst, skb, NULL);
+	struct neighbour *n = NULL;
+
+	/* The packets from tunnel devices (eg bareudp) may have only
+	 * metadata in the dst pointer of skb. Hence a pointer check of
+	 * neigh_lookup is needed.
+	 */
+	if (dst->ops->neigh_lookup)
+		n = dst->ops->neigh_lookup(dst, skb, NULL);
+
 	return IS_ERR(n) ? NULL : n;
 }
 
@@ -539,7 +550,16 @@ static inline void skb_dst_update_pmtu(struct sk_buff *skb, u32 mtu)
 	struct dst_entry *dst = skb_dst(skb);
 
 	if (dst && dst->ops->update_pmtu)
-		dst->ops->update_pmtu(dst, NULL, skb, mtu);
+		dst->ops->update_pmtu(dst, NULL, skb, mtu, true);
+}
+
+/* update dst pmtu but not do neighbor confirm */
+static inline void skb_dst_update_pmtu_no_confirm(struct sk_buff *skb, u32 mtu)
+{
+	struct dst_entry *dst = skb_dst(skb);
+
+	if (dst && dst->ops->update_pmtu)
+		dst->ops->update_pmtu(dst, NULL, skb, mtu, false);
 }
 
 #endif /* _NET_DST_H */

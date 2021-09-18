@@ -26,9 +26,8 @@
 #include <linux/in.h>
 #include <linux/spinlock.h>
 #include <net/net_namespace.h>
-//#include "flask.h"
-//#include "avc.h"
-#include "security.h"
+#include "flask.h"
+#include "avc.h"
 
 struct task_security_struct {
 	u32 osid;		/* SID prior to last execve */
@@ -65,8 +64,6 @@ struct inode_security_struct {
 	u32 sid;		/* SID of this object */
 	u16 sclass;		/* security class of this object */
 	unsigned char initialized;	/* initialization flag */
-	u32 tag;		/* Per-File-Encryption tag */
-	void *pfk_data;		/* Per-File-Key data from ecryptfs */
 	spinlock_t lock;
 };
 
@@ -119,22 +116,6 @@ struct netport_security_struct {
 	u8 protocol;			/* transport protocol */
 };
 
-struct sk_security_struct {
-#ifdef CONFIG_NETLABEL
-	enum {				/* NetLabel state */
-		NLBL_UNSET = 0,
-		NLBL_REQUIRE,
-		NLBL_LABELED,
-		NLBL_REQSKB,
-		NLBL_CONNLABELED,
-	} nlbl_state;
-	struct netlbl_lsm_secattr *nlbl_secattr; /* NetLabel sec attributes */
-#endif
-	u32 sid;			/* SID of this object */
-	u32 peer_sid;			/* SID of peer */
-	u16 sclass;			/* sock security class */
-};
-
 struct tun_security_struct {
 	u32 sid;			/* SID for the tun device sockets */
 };
@@ -154,9 +135,11 @@ struct pkey_security_struct {
 };
 
 struct bpf_security_struct {
-	u32 sid;  /*SID of bpf obj creater*/
+	u32 sid;  /* SID of bpf obj creator */
 };
 
-extern unsigned int selinux_checkreqprot;
+struct perf_event_security_struct {
+	u32 sid;  /* SID of perf_event obj creator */
+};
 
 #endif /* _SELINUX_OBJSEC_H_ */

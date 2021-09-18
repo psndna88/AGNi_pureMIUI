@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,13 +21,10 @@
 #include <linux/pwm.h>
 #include <video/mipi_display.h>
 
+#include "dsi_display.h"
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
 #include "dsi_parser.h"
-
-#ifdef CONFIG_KLAPSE
-#include <linux/klapse.h>
-#endif
 
 /**
  * topology is currently defined by a set of following 3 values:
@@ -48,8 +46,14 @@
 #define DEFAULT_PANEL_PREFILL_LINES	25
 #define TICKS_IN_MICRO_SECOND		1000000
 
+#define to_dsi_display(x) container_of(x, struct dsi_display, host)
+static struct dsi_read_config g_dsi_read_cfg;
+static int r_brightness;
 static bool lcd_esd_irq_handler = false;
 extern void lcd_esd_enable(bool en);
+char g_lcd_id[128];
+static int panel_disp_param_send_lock(struct dsi_panel *panel, int param);
+int dsi_display_read_panel(struct dsi_panel *panel, struct dsi_read_config *read_config);
 
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
@@ -494,7 +498,6 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.reset_gpio)) {
 		if (lcd_reset_keep_high) {
-			pr_warn("%s: lcd-reset-gpio keep high\n", __func__);
 		} else {
 			pr_err("%s: lcd-reset_gpio disable\n", __func__);
 			gpio_set_value(panel->reset_config.reset_gpio, 0);
@@ -642,10 +645,9 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
-	
-#ifdef CONFIG_KLAPSE
-	set_rgb_slider(bl_lvl);
-#endif
+
+	if (panel->bl_config.bl_inverted_dbv)
+		bl_lvl = (((bl_lvl & 0xff) << 8) | (bl_lvl >> 8));
 
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
@@ -679,8 +681,8 @@ static int dsi_panel_update_pwm_backlight(struct dsi_panel *panel,
 
 	rc = pwm_config(bl->pwm_bl, duty, period_ns);
 	if (rc) {
-		pr_err("[%s] failed to change pwm config, rc=\n", panel->name,
-			rc);
+		pr_err("[%s] failed to change pwm config, rc=%i\n",
+		       panel->name, rc);
 		goto error;
 	}
 
@@ -693,8 +695,8 @@ static int dsi_panel_update_pwm_backlight(struct dsi_panel *panel,
 	if (!bl->pwm_enabled) {
 		rc = pwm_enable(bl->pwm_bl);
 		if (rc) {
-			pr_err("[%s] failed to enable pwm, rc=\n", panel->name,
-				rc);
+			pr_err("[%s] failed to enable pwm, rc=%i\n",
+			       panel->name, rc);
 			goto error;
 		}
 
@@ -713,6 +715,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (panel->host_config.ext_bridge_num)
 		return 0;
 
+	r_brightness = bl_lvl;
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
@@ -1226,6 +1229,9 @@ static int dsi_panel_parse_misc_host_config(struct dsi_host_common_cfg *host,
 		host->t_clk_pre = val;
 		pr_debug("[%s] t_clk_pre = %d\n", name, val);
 	}
+
+	host->t_clk_pre_extend = utils->read_bool(utils->data,
+						"qcom,mdss-dsi-t-clk-pre-extend");
 
 	host->ignore_rx_eot = utils->read_bool(utils->data,
 						"qcom,mdss-dsi-rx-eot-ignore");
@@ -1764,12 +1770,63 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-lp1-command",
 	"qcom,mdss-dsi-lp2-command",
 	"qcom,mdss-dsi-nolp-command",
+	"qcom,mdss-dsi-doze-hbm-command",
+	"qcom,mdss-dsi-doze-lbm-command",
 	"PPS not parsed from DTSI, generated dynamically",
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command",
 	"qcom,mdss-dsi-post-mode-switch-on-command",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command",
+	"qcom,mdss-dsi-dispparam-warm-command",
+	"qcom,mdss-dsi-dispparam-default-command",
+	"qcom,mdss-dsi-dispparam-cold-command",
+	"qcom,mdss-dsi-dispparam-papermode-command",
+	"qcom,mdss-dsi-dispparam-papermode1-command",
+	"qcom,mdss-dsi-dispparam-papermode2-command",
+	"qcom,mdss-dsi-dispparam-papermode3-command",
+	"qcom,mdss-dsi-dispparam-papermode4-command",
+	"qcom,mdss-dsi-dispparam-papermode5-command",
+	"qcom,mdss-dsi-dispparam-papermode6-command",
+	"qcom,mdss-dsi-dispparam-papermode7-command",
+	"qcom,mdss-dsi-dispparam-normal1-command",
+	"qcom,mdss-dsi-dispparam-normal2-command",
+	"qcom,mdss-dsi-dispparam-srgb-command",
+	"qcom,mdss-dsi-dispparam-ceon-command",
+	"qcom,mdss-dsi-dispparam-ceoff-command",
+	"qcom,mdss-dsi-dispparam-cabcuion-command",
+	"qcom,mdss-dsi-dispparam-cabcstillon-command",
+	"qcom,mdss-dsi-dispparam-cabcmovieon-command",
+	"qcom,mdss-dsi-dispparam-cabcoff-command",
+	"qcom,mdss-dsi-dispparam-skince-cabcuion-command",
+	"qcom,mdss-dsi-dispparam-skince-cabcstillon-command",
+	"qcom,mdss-dsi-dispparam-skince-cabcmovieon-command",
+	"qcom,mdss-dsi-dispparam-skince-cabcoff-command",
+	"qcom,mdss-dsi-dispparam-dimmingon-command",
+	"qcom,mdss-dsi-dispparam-dimmingoff-command",
+	"qcom,mdss-dsi-dispparam-acl-off-command",
+	"qcom,mdss-dsi-dispparam-acl-l1-command",
+	"qcom,mdss-dsi-dispparam-acl-l2-command",
+	"qcom,mdss-dsi-dispparam-acl-l3-command",
+	"qcom,mdss-dsi-dispparam-hbm-on-command",
+	"qcom,mdss-dsi-dispparam-hbm-off-command",
+	"qcom,mdss-dsi-hbm1-on-command",
+	"qcom,mdss-dsi-hbm2-on-command",
+	"qcom,mdss-dsi-dispparam-hbm-fod-on-command",
+	"qcom,mdss-dsi-dispparam-hbm-fod-off-command",
+	"qcom,mdss-dsi-dispparam-hbm-fod2norm-command",
+	"qcom,mdss-dsi-displayoff-command",
+	"qcom,mdss-dsi-displayon-command",
+	"qcom,mdss-dsi-dispparam-xy-coordinate-command",
+	"qcom,mdss-dsi-read-brightness-command",
+	"qcom,mdss-dsi-flat-on-command",
+	"qcom,mdss-dsi-flat-off-command",
+	"qcom,mdss-dsi-dispparam-max-luminance-command",
+	"qcom,mdss-dsi-dispparam-max-luminance-valid-command",
 	"qcom,mdss-dsi-qsync-on-commands",
 	"qcom,mdss-dsi-qsync-off-commands",
+	"qcom,mdss-dsi-dispparam-crc-dcip3-on-command",
+	"qcom,mdss-dsi-dispparam-crc-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1790,15 +1847,66 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-lp1-command-state",
 	"qcom,mdss-dsi-lp2-command-state",
 	"qcom,mdss-dsi-nolp-command-state",
+	"qcom,mdss-dsi-doze-hbm-command-state",
+	"qcom,mdss-dsi-doze-lbm-command-state"
 	"PPS not parsed from DTSI, generated dynamically",
 	"ROI not parsed from DTSI, generated dynamically",
 	"qcom,mdss-dsi-timing-switch-command-state",
 	"qcom,mdss-dsi-post-mode-switch-on-command-state",
-	"qcom,mdss-dsi-qsync-on-commands-state",
-	"qcom,mdss-dsi-qsync-off-commands-state",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command-state",
+	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command-state",
+	"qcom,mdss-dsi-dispparam-warm-command-state",
+	"qcom,mdss-dsi-dispparam-default-command-state",
+	"qcom,mdss-dsi-dispparam-cold-command-state",
+	"qcom,mdss-dsi-dispparam-papermode-command-state",
+	"qcom,mdss-dsi-dispparam-papermode1-command-state",
+	"qcom,mdss-dsi-dispparam-papermode2-command-state",
+	"qcom,mdss-dsi-dispparam-papermode3-command-state",
+	"qcom,mdss-dsi-dispparam-papermode4-command-state",
+	"qcom,mdss-dsi-dispparam-papermode5-command-state",
+	"qcom,mdss-dsi-dispparam-papermode6-command-state",
+	"qcom,mdss-dsi-dispparam-papermode7-command-state",
+	"qcom,mdss-dsi-dispparam-normal1-command-state",
+	"qcom,mdss-dsi-dispparam-normal2-command-state",
+	"qcom,mdss-dsi-dispparam-srgb-command-state",
+	"qcom,mdss-dsi-dispparam-ceon-command-state",
+	"qcom,mdss-dsi-dispparam-ceoff-command-state",
+	"qcom,mdss-dsi-dispparam-cabcuion-command-state",
+	"qcom,mdss-dsi-dispparam-cabcstillon-command-state",
+	"qcom,mdss-dsi-dispparam-cabcmovieon-command-state",
+	"qcom,mdss-dsi-dispparam-cabcoff-command-state",
+	"qcom,mdss-dsi-dispparam-skince-cabcuion-command-state",
+	"qcom,mdss-dsi-dispparam-skince-cabcstillon-command-state",
+	"qcom,mdss-dsi-dispparam-skince-cabcmovieon-command-state",
+	"qcom,mdss-dsi-dispparam-skince-cabcoff-command-state",
+	"qcom,mdss-dsi-dispparam-dimmingon-command-state",
+	"qcom,mdss-dsi-dispparam-dimmingoff-command-state",
+	"qcom,mdss-dsi-dispparam-acl-off-command-state",
+	"qcom,mdss-dsi-dispparam-acl-l1-command-state",
+	"qcom,mdss-dsi-dispparam-acl-l2-command-state",
+	"qcom,mdss-dsi-dispparam-acl-l3-command-state",
+	"qcom,mdss-dsi-dispparam-hbm-on-command-state",
+	"qcom,mdss-dsi-dispparam-hbm-off-command-state",
+	"qcom,mdss-dsi-hbm1-on-command-state",
+	"qcom,mdss-dsi-hbm2-on-command-state",
+	"qcom,mdss-dsi-dispparam-hbm-fod-on-command-state",
+	"qcom,mdss-dsi-dispparam-hbm-fod-off-command-state",
+	"qcom,mdss-dsi-dispparam-hbm-fod2norm-command-state",
+	"qcom,mdss-dsi-displayoff-command-state",
+	"qcom,mdss-dsi-displayon-command-state",
+	"qcom,mdss-dsi-dispparam-xy-coordinate-command-state",
+	"qcom,mdss-dsi-read-brightness-command-state",
+	"qcom,mdss-dsi-flat-on-command-state",
+	"qcom,mdss-dsi-flat-off-command-state",
+	"qcom,mdss-dsi-dispparam-max-luminance-command-state",
+	"qcom,mdss-dsi-dispparam-max-luminance-valid-command-state",
+ 	"qcom,mdss-dsi-qsync-on-commands-state",
+ 	"qcom,mdss-dsi-qsync-off-commands-state",
+	"qcom,mdss-dsi-dispparam-crc-dcip3-on-command-state",
+	"qcom,mdss-dsi-dispparam-crc-off-command-state",
 };
 
-static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
+int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
 {
 	const u32 cmd_set_min_size = 7;
 	u32 count = 0;
@@ -1822,7 +1930,7 @@ static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
 	return 0;
 }
 
-static int dsi_panel_create_cmd_packets(const char *data,
+int dsi_panel_create_cmd_packets(const char *data,
 					u32 length,
 					u32 count,
 					struct dsi_cmd_desc *cmd)
@@ -1867,7 +1975,7 @@ error_free_payloads:
 	return rc;
 }
 
-static void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
+void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
 {
 	u32 i = 0;
 	struct dsi_cmd_desc *cmd;
@@ -1878,12 +1986,12 @@ static void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
 	}
 }
 
-static void dsi_panel_dealloc_cmd_packets(struct dsi_panel_cmd_set *set)
+void dsi_panel_dealloc_cmd_packets(struct dsi_panel_cmd_set *set)
 {
 	kfree(set->cmds);
 }
 
-static int dsi_panel_alloc_cmd_packets(struct dsi_panel_cmd_set *cmd,
+int dsi_panel_alloc_cmd_packets(struct dsi_panel_cmd_set *cmd,
 					u32 packet_count)
 {
 	u32 size;
@@ -2344,6 +2452,9 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 	} else {
 		panel->bl_config.brightness_default_level = val;
 	}
+
+	panel->bl_config.bl_inverted_dbv = utils->read_bool(utils->data,
+		"qcom,mdss-dsi-bl-inverted-dbv");
 
 	if (panel->bl_config.type == DSI_BACKLIGHT_PWM) {
 		rc = dsi_panel_parse_bl_pwm_config(panel);
@@ -3295,6 +3406,40 @@ end:
 	utils->node = panel->panel_of_node;
 }
 
+static ssize_t msm_fb_lcd_name(struct device *dev,
+		struct device_attribute *attr, char *buf)	
+{
+   ssize_t ret = 0;
+   sprintf(buf, "%s\n", g_lcd_id);
+   ret = strlen(buf) + 1;	
+   return ret;		
+}
+		
+static DEVICE_ATTR(lcd_name,0664,msm_fb_lcd_name,NULL);
+		
+static struct kobject *msm_lcd_name;
+	
+static int msm_lcd_name_create_sysfs(void){	
+   int ret;	
+   msm_lcd_name=kobject_create_and_add("android_lcd",NULL);
+	
+   if(msm_lcd_name==NULL){
+     pr_info("msm_lcd_name_create_sysfs_ failed\n");
+     ret=-ENOMEM;
+     return ret;		
+   }
+		
+   ret=sysfs_create_file(msm_lcd_name,&dev_attr_lcd_name.attr);
+
+   if(ret){	
+    pr_info("%s failed \n",__func__);	
+    kobject_del(msm_lcd_name);	
+   }
+   return 0;	
+}	
+
+#define XY_COORDINATE_NUM    2
+u32 xy_read_buf[2] = {0x0};
 struct dsi_panel *dsi_panel_get(struct device *parent,
 				struct device_node *of_node,
 				struct device_node *parser_node,
@@ -3305,6 +3450,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	struct dsi_parser_utils *utils;
 	const char *panel_physical_type;
 	int rc = 0;
+	bool dispparam_enabled = false;
 
 	panel = kzalloc(sizeof(*panel), GFP_KERNEL);
 	if (!panel)
@@ -3327,6 +3473,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	else if ((strnstr(panel->name, "huaxing", strlen(panel->name))))
 		panel->special_panel = DSI_SPECIAL_PANEL_HUAXING;
 
+	strcpy(g_lcd_id,panel->name);
+	msm_lcd_name_create_sysfs();
 	/*
 	 * Set panel type to LCD as default.
 	 */
@@ -3336,6 +3484,22 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (panel_physical_type && !strcmp(panel_physical_type, "oled"))
 		panel->panel_type = DSI_DISPLAY_PANEL_TYPE_OLED;
 
+	dispparam_enabled = utils->read_bool(utils->data, "qcom,dispparam-enabled");
+	if (dispparam_enabled) {
+		pr_info("[LCD]%s:%d Dispparam enabled.\n", __func__, __LINE__);
+		panel->dispparam_enabled = true;
+	} else {
+		pr_info("[LCD]%s:%d Dispparam disabled.\n", __func__, __LINE__);
+		panel->dispparam_enabled = false;
+	}
+	if ((strnstr(panel->name,"nt36675 video mode dsi tianma",30) != NULL)) {
+		panel->xy_coordinate_cmds.cmds_rlen = 0x1;
+		panel->xy_coordinate_cmds.valid_bits = 0x1;
+	} else {
+		panel->xy_coordinate_cmds.cmds_rlen = 0x3;
+		panel->xy_coordinate_cmds.valid_bits = 0x3;
+	}
+	panel->xy_coordinate_cmds.enabled = true;
 	rc = dsi_panel_parse_host_config(panel);
 	if (rc) {
 		pr_err("failed to parse host configuration, rc=%d\n", rc);
@@ -3354,7 +3518,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 
 	rc = dsi_panel_parse_qsync_caps(panel, of_node);
 	if (rc)
-		pr_err("failed to parse qsync features, rc=%d\n", rc);
+		pr_debug("failed to parse qsync features, rc=%d\n", rc);
 
 	/* allow qsync support only if DFPS is with VFP approach */
 	if ((panel->dfps_caps.dfps_support) &&
@@ -3427,6 +3591,54 @@ void dsi_panel_put(struct dsi_panel *panel)
 
 	kfree(panel);
 }
+
+static int dsi_display_write_panel(struct dsi_panel *panel,
+				struct dsi_panel_cmd_set *cmd_sets)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	u32 count;
+	enum dsi_cmd_set_state state;
+	struct dsi_display_mode *mode;
+	const struct mipi_dsi_host_ops *ops = panel->host->ops;
+
+	if (!panel || !panel->cur_mode)
+		return -EINVAL;
+
+	mode = panel->cur_mode;
+
+	cmds = cmd_sets->cmds;
+	count = cmd_sets->count;
+	state = cmd_sets->state;
+
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for state\n",
+			 panel->name);
+		goto error;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->last_command)
+			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+
+		len = ops->transfer(panel->host, &cmds->msg);//dsi_host_transfer,
+		if (len < 0) {
+			rc = len;
+			pr_err("failed to set cmds, rc=%d\n", rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	return rc;
+ }
 
 int dsi_panel_drv_init(struct dsi_panel *panel,
 		       struct mipi_dsi_host *host)
@@ -3546,7 +3758,6 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	int num_dfps_rates, num_bit_clks;
 	int num_video_modes = 0, num_cmd_modes = 0;
 	int count, rc = 0;
-	void *utils_data = NULL;
 
 	if (!panel) {
 		pr_err("invalid params\n");
@@ -3583,10 +3794,9 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 
 	panel->num_timing_nodes = count;
 	dsi_for_each_child_node(timings_np, child_np) {
-		utils_data = child_np;
-		if (utils->read_bool(utils->data, "qcom,mdss-dsi-video-mode"))
+		if (utils->read_bool(child_np, "qcom,mdss-dsi-video-mode"))
 			num_video_modes++;
-		else if (utils->read_bool(utils->data,
+		else if (utils->read_bool(child_np,
 					"qcom,mdss-dsi-cmd-mode"))
 			num_cmd_modes++;
 		else if (panel->panel_mode == DSI_OP_VIDEO_MODE)
@@ -3601,9 +3811,21 @@ int dsi_panel_get_mode_count(struct dsi_panel *panel)
 	num_bit_clks = !panel->dyn_clk_caps.dyn_clk_support ? 1 :
 					panel->dyn_clk_caps.bit_clk_list_len;
 
-	/* Inflate num_of_modes by fps and bit clks in dfps */
-	panel->num_display_modes = (num_cmd_modes * num_bit_clks) +
-			(num_video_modes * num_bit_clks * num_dfps_rates);
+	/*
+	 * Inflate num_of_modes by fps and bit clks in dfps
+	 * Single command mode for video mode panels supporting
+	 * panel operating mode switch.
+	 */
+
+	num_video_modes = num_video_modes * num_bit_clks * num_dfps_rates;
+
+	if ((panel->panel_mode == DSI_OP_VIDEO_MODE) &&
+			(panel->panel_mode_switch_enabled))
+		num_cmd_modes  = 1;
+	else
+		num_cmd_modes = num_cmd_modes * num_bit_clks;
+
+	panel->num_display_modes = num_video_modes + num_cmd_modes;
 
 error:
 	return rc;
@@ -3708,9 +3930,6 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			goto parse_fail;
 		}
 
-		if (panel->panel_mode == DSI_OP_VIDEO_MODE)
-			mode->priv_info->mdp_transfer_time_us = 0;
-
 		rc = dsi_panel_parse_dsc_params(mode, utils);
 		if (rc) {
 			pr_err("failed to parse dsc params, rc=%d\n", rc);
@@ -3763,6 +3982,9 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 		} else {
 			mode->panel_mode = panel->panel_mode;
 		}
+
+		if (mode->panel_mode == DSI_OP_VIDEO_MODE)
+			mode->priv_info->mdp_transfer_time_us = 0;
 	}
 	goto done;
 
@@ -4233,6 +4455,297 @@ int dsi_panel_mode_switch_to_vid(struct dsi_panel *panel)
 	return rc;
 }
 
+static void handle_dsi_read_data(struct dsi_panel *panel, struct dsi_read_config *read_config)
+{
+	int i = 0;
+	int param_nb = 0, write_len = 0;
+	u32 read_cnt = 0, bit_valide = 0;
+
+	u8 *pRead_data = panel->panel_read_data;
+	read_cnt = read_config->cmds_rlen;
+	bit_valide = read_config->valid_bits;
+	
+	if((strnstr(panel->name,"nt36675 video mode dsi tianma",30) != NULL)){
+		snprintf(pRead_data,17,"p0=%d p1=%d",xy_read_buf[0],xy_read_buf[1]);
+	}else{	
+		for (i = 0; i < read_cnt; i++) {
+			if ((bit_valide & 0x1) && ((pRead_data + 8) < (panel->panel_read_data + BUF_LEN_MAX))) {
+				write_len = scnprintf(pRead_data, 8, "p%d=%d", param_nb, read_config->rbuf[i]);
+				pRead_data += write_len;
+				param_nb ++;
+			}
+			bit_valide = bit_valide >> 1;
+		}
+	}
+	pr_info("read %s from panel\n", panel->panel_read_data);
+
+	return;
+}
+
+static int panel_disp_param_send_lock(struct dsi_panel *panel, int param)
+{
+	int rc = 0;
+	uint32_t temp = 0;
+	struct dsi_panel_cmd_set cmd_sets = {0};
+	mutex_lock(&panel->panel_lock);
+
+	if (!panel->panel_initialized) {
+		pr_err("[LCD] panel not ready!\n");
+		mutex_unlock(&panel->panel_lock);
+		return rc;
+	}
+
+	pr_debug("[LCD] param_type=%d\n", param);
+
+	temp = param & 0x0000000F;
+	switch (temp) {
+	case 0x1:
+		pr_info("warm\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_WARM);
+		break;
+	case 0x2:		/*normal*/
+		pr_info("normal\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_DEFAULT);
+		break;
+	case 0x3:		/*cold*/
+		pr_info("cold\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_COLD);
+		break;
+	case 0x5:
+		pr_info("paper mode\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_COLD);
+		break;
+	case 0x6:
+		pr_info("paper mode 1\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER1);
+		break;
+	case 0x7:
+		pr_info("paper mode 2\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER2);
+		break;
+	case 0x8:
+		pr_info("paper mode 3\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER3);
+		break;
+	case 0x9:
+		pr_info("paper mode 4\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER4);
+		break;
+	case 0xa:
+		pr_info("paper mode 5\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER5);
+		break;
+	case 0xb:
+		pr_info("paper mode 6\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER6);
+		break;
+	case 0xc:
+		pr_info("paper mode 7\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_PAPER7);
+		break;
+	case 0xe:
+		pr_info("read xy coordinate\n");
+		cmd_sets.cmds = panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_READ_XY_COORDINATE].cmds;
+		if (panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_READ_XY_COORDINATE].count)
+			cmd_sets.count = 1;
+		cmd_sets.state = panel->cur_mode->priv_info->cmd_sets[DSI_CMD_SET_READ_XY_COORDINATE].state;
+		rc = dsi_display_write_panel(panel, &cmd_sets);
+		if (rc) {
+			pr_err("[%s][%s] failed to send cmds, rc=%d\n", __func__, panel->name, rc);
+		} else {
+			if((strnstr(panel->name,"nt36675 video mode dsi tianma",30) != NULL)){
+				panel->xy_coordinate_cmds.read_cmd = cmd_sets;
+				panel->xy_coordinate_cmds.read_cmd.cmds = &cmd_sets.cmds[1];
+				rc = dsi_display_read_panel(panel, &panel->xy_coordinate_cmds);
+				xy_read_buf[0] = panel->xy_coordinate_cmds.rbuf[0];
+			
+				panel->xy_coordinate_cmds.read_cmd.cmds = &cmd_sets.cmds[2];
+				rc = dsi_display_read_panel(panel, &panel->xy_coordinate_cmds);	
+				xy_read_buf[1] = panel->xy_coordinate_cmds.rbuf[0];
+			}else{
+				panel->xy_coordinate_cmds.read_cmd = cmd_sets;
+				panel->xy_coordinate_cmds.read_cmd.cmds = &cmd_sets.cmds[1];
+				rc = dsi_display_read_panel(panel, &panel->xy_coordinate_cmds);
+			}
+			if (rc > 0)
+				handle_dsi_read_data(panel, &panel->xy_coordinate_cmds);
+		}
+		break;		
+	default:
+		break;
+	}
+
+	temp = param & 0x000000F0;
+	switch (temp) {
+	case 0x10:		/*ce on default*/
+		pr_info("ceon\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CEON);
+		break;
+	case 0xF0:		/*ce off*/
+		pr_info("ceoff\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CEOFF);
+		break;
+	default:
+		break;
+	}
+
+	temp = param & 0x00000F00;
+	switch (temp) {
+	case 0x100:
+		pr_info("cabcuion\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CABCUION);
+		break;
+	case 0x200:
+		pr_info("cabcstillon\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CABCSTILLON);
+		break;
+	case 0x300:
+		pr_info("cabcmovieon\n");
+		dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CABCMOVIEON);
+		break;
+	case 0x400:
+		pr_info("cabcoff\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_CABCOFF);
+		break;
+	case 0x500:
+		pr_info("skince cabcuion\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_SKINCE_CABCUION);
+		break;
+	case 0x600:
+		pr_info("skince cabcstillon\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_SKINCE_CABCSTILLON);
+		break;
+	case 0x700:
+		pr_info("skince cabcmovieon\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_SKINCE_CABCMOVIEON);
+		break;
+	case 0x800:
+		pr_info("skince cabcoff\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_SKINCE_CABCOFF);
+		break;
+	default:
+		break;
+	}
+
+	temp = param & 0x0000F000;
+	switch (temp) {
+	case 0x1000:
+		pr_info("acl level 1\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_ACL_L1);
+		break;
+	case 0x2000:
+		pr_info("acl level 2\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_ACL_L2);
+		break;
+	case 0x3000:
+		pr_info("acl level 3\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_ACL_L3);
+		break;
+	case 0xF000:
+		pr_info("acl off\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_ACL_OFF);
+		break;
+	default:
+		break;
+	}
+
+	temp = param & 0x000F0000;
+	switch (temp) {
+	case 0x10000:
+		pr_info("hbm on\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_ON);
+		break;
+	case 0xA0000:
+		pr_info("lcd hbm off\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_HBM_OFF);
+		break;
+	case 0xB0000:
+		pr_info("lcd hbm l1 mode\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM1_ON);
+		break;
+	case 0xC0000:
+		pr_info("lcd hbm l2 mode\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM2_ON);
+		break;
+	default:
+		break;
+	}
+
+	temp = param & 0x00F00000;
+	switch (temp) {
+	case 0x100000:
+		pr_info("normal mode1\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_NORMAL1);
+		break;
+	case 0x300000:
+		pr_info("sRGB\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_SRGB);
+		break;
+	case 0x500000:
+		pr_info("doze hbm On\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DOZE_HBM);
+		break;
+	case 0x600000:
+		pr_info("doze lbm On\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DOZE_LBM);
+		break;
+	case 0x700000:
+		pr_info("doze Off\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_NOLP);
+		break;
+
+	default:
+		break;
+	}
+
+	temp = param & 0x0F000000;
+	switch (temp) {
+	case 0x5000000:
+		if (r_brightness < 20) {
+			pr_info("panel r_brightness:%d\n", r_brightness);
+			break;
+		}
+		pr_info("flatmode on\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_FLAT_ON);
+		break;
+	case 0x6000000:
+		if (r_brightness < 20) {
+			pr_info("panel r_brightness:%d\n", r_brightness);
+			break;
+		}
+		pr_info("flatmode off\n");
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_FLAT_OFF);
+		break;
+
+	default:
+		break;
+	}
+
+	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+int panel_disp_param_send(struct dsi_display *display, int param_type)
+{
+	int rc = 0;
+	struct dsi_panel *panel = NULL;
+	struct drm_device *drm_dev = NULL;
+
+	if (!display || !display->panel || !display->drm_dev) {
+		pr_err("invalid display/panel/drm_dev\n");
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+	drm_dev = display->drm_dev;
+
+	if (!panel->dispparam_enabled)
+		return rc;
+
+	rc = panel_disp_param_send_lock(panel, param_type);
+	return rc;
+}
+
 int dsi_panel_switch(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -4444,3 +4957,306 @@ error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
+
+int dsi_panel_write_cmd_set(struct dsi_panel *panel,
+				struct dsi_panel_cmd_set *cmd_sets)
+{
+	int rc = 0, i = 0;
+	ssize_t len;
+	struct dsi_cmd_desc *cmds;
+	u32 count;
+	enum dsi_cmd_set_state state;
+	struct dsi_display_mode *mode;
+	const struct mipi_dsi_host_ops *ops = panel->host->ops;
+
+	if (!panel || !panel->cur_mode)
+		return -EINVAL;
+
+	mode = panel->cur_mode;
+
+	cmds = cmd_sets->cmds;
+	count = cmd_sets->count;
+	state = cmd_sets->state;
+
+	if (count == 0) {
+		pr_debug("[%s] No commands to be sent for state\n", panel->name);
+		goto error;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (state == DSI_CMD_SET_STATE_LP)
+			cmds->msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+		if (cmds->last_command)
+			cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+
+		len = ops->transfer(panel->host, &cmds->msg);
+		if (len < 0) {
+			rc = len;
+			pr_err("failed to set cmds, rc=%d\n", rc);
+			goto error;
+		}
+		if (cmds->post_wait_ms)
+			usleep_range(cmds->post_wait_ms*1000,
+					((cmds->post_wait_ms*1000)+10));
+		cmds++;
+	}
+error:
+	return rc;
+}
+
+int dsi_panel_read_cmd_set(struct dsi_panel *panel,
+				struct dsi_read_config *read_config)
+{
+	struct mipi_dsi_host *host;
+	struct dsi_display *display;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_cmd_desc *cmds;
+	int i, rc = 0, count = 0;
+	u32 flags = 0;
+
+	if (panel == NULL || read_config == NULL)
+		return -EINVAL;
+
+	host = panel->host;
+	if (host) {
+		display = to_dsi_display(host);
+		if (display == NULL)
+			return -EINVAL;
+	} else
+		return -EINVAL;
+
+	if (!panel->panel_initialized) {
+		pr_info("Panel not initialized\n");
+		return -EINVAL;
+	}
+
+	if (!read_config->enabled) {
+		pr_info("read operation was not permitted\n");
+		return -EPERM;
+	}
+
+	dsi_display_clk_ctrl(display->dsi_clk_handle,
+		DSI_ALL_CLKS, DSI_CLK_ON);
+
+	ctrl = &display->ctrl[display->cmd_master_idx];
+
+	rc = dsi_display_cmd_engine_enable(display);
+	if (rc) {
+		pr_err("cmd engine enable failed\n");
+		rc = -EPERM;
+		goto exit_ctrl;
+	}
+
+	if (display->tx_cmd_buf == NULL) {
+		rc = dsi_host_alloc_cmd_tx_buffer(display);
+		if (rc) {
+			pr_err("failed to allocate cmd tx buffer memory\n");
+			goto exit;
+		}
+	}
+
+	count = read_config->read_cmd.count;
+	cmds = read_config->read_cmd.cmds;
+	if (cmds->last_command) {
+		cmds->msg.flags |= MIPI_DSI_MSG_LASTCOMMAND;
+		flags |= DSI_CTRL_CMD_LAST_COMMAND;
+	}
+	flags |= (DSI_CTRL_CMD_FETCH_MEMORY | DSI_CTRL_CMD_READ |
+		  DSI_CTRL_CMD_CUSTOM_DMA_SCHED);
+
+	memset(read_config->rbuf, 0x0, sizeof(read_config->rbuf));
+	cmds->msg.rx_buf = read_config->rbuf;
+	cmds->msg.rx_len = read_config->cmds_rlen;
+
+	rc = dsi_ctrl_cmd_transfer(ctrl->ctrl, &(cmds->msg), flags);
+	if (rc <= 0) {
+		pr_err("rx cmd transfer failed rc=%d\n", rc);
+		goto exit;
+	}
+
+	for (i = 0; i < read_config->cmds_rlen; i++) //debug
+		pr_info("0x%x ", read_config->rbuf[i]);
+	pr_info("\n");
+
+exit:
+	dsi_display_cmd_engine_disable(display);
+exit_ctrl:
+	dsi_display_clk_ctrl(display->dsi_clk_handle,
+		DSI_ALL_CLKS, DSI_CLK_OFF);
+
+	return rc;
+}
+
+ssize_t dsi_panel_mipi_reg_write(struct dsi_panel *panel,
+				char *buf, size_t count)
+{
+	struct dsi_panel_cmd_set cmd_sets = {0};
+	int retval = 0, dlen = 0;
+	u32 packet_count = 0;
+	char *token, *input_copy, *input_dup = NULL;
+	const char *delim = " ";
+	char *buffer = NULL;
+	u32 buf_size = 0;
+	u32 tmp_data = 0;
+
+	mutex_lock(&panel->panel_lock);
+
+	if (!panel || !panel->panel_initialized) {
+		pr_err("[LCD] panel not ready!\n");
+		retval = -EAGAIN;
+		goto exit_unlock;
+	}
+
+	pr_debug("input buffer:{%s}\n", buf);
+
+	input_copy = kstrdup(buf, GFP_KERNEL);
+	if (!input_copy) {
+		retval = -ENOMEM;
+		goto exit_unlock;
+	}
+
+	input_dup = input_copy;
+	/* removes leading and trailing whitespace from input_copy */
+	input_copy = strim(input_copy);
+
+	/* Split a string into token */
+	token = strsep(&input_copy, delim);
+	if (token) {
+		retval = kstrtoint(token, 10, &tmp_data);
+		if (retval) {
+			pr_err("input buffer conversion failed\n");
+			goto exit_free0;
+		}
+		g_dsi_read_cfg.enabled= !!tmp_data;
+	}
+
+	/* Removes leading whitespace from input_copy */
+	if (input_copy)
+		input_copy = skip_spaces(input_copy);
+	else
+		goto exit_free0;
+
+	token = strsep(&input_copy, delim);
+	if (token) {
+		retval = kstrtoint(token, 10, &tmp_data);
+		if (retval) {
+			pr_err("input buffer conversion failed\n");
+			goto exit_free0;
+		}
+		if (tmp_data > sizeof(g_dsi_read_cfg.rbuf)) {
+			pr_err("read size exceeding the limit %d\n",
+					sizeof(g_dsi_read_cfg.rbuf));
+			goto exit_free0;
+		}
+		g_dsi_read_cfg.cmds_rlen = tmp_data;
+	}
+
+	/* Removes leading whitespace from input_copy */
+	if (input_copy)
+		input_copy = skip_spaces(input_copy);
+	else
+		goto exit_free0;
+
+	buffer = kzalloc(strlen(input_copy), GFP_KERNEL);
+	if (!buffer) {
+		retval = -ENOMEM;
+		goto exit_free0;
+	}
+
+	token = strsep(&input_copy, delim);
+	while (token) {
+		retval = kstrtoint(token, 16, &tmp_data);
+		if (retval) {
+			pr_err("input buffer conversion failed\n");
+			goto exit_free1;
+		}
+		pr_debug("[lzl-test]buffer[%d] = 0x%02x\n", buf_size, tmp_data);
+		buffer[buf_size++] = (tmp_data & 0xff);
+		/* Removes leading whitespace from input_copy */
+		if (input_copy) {
+			input_copy = skip_spaces(input_copy);
+			token = strsep(&input_copy, delim);
+		} else {
+			token = NULL;
+		}
+	}
+
+	retval = dsi_panel_get_cmd_pkt_count(buffer, buf_size, &packet_count);
+	if (!packet_count) {
+		pr_err("get pkt count failed!\n");
+		goto exit_free1;
+	}
+
+	retval = dsi_panel_alloc_cmd_packets(&cmd_sets, packet_count);
+	if (retval) {
+		pr_err("failed to allocate cmd packets, ret=%d\n", retval);
+		goto exit_free1;
+	}
+
+	retval = dsi_panel_create_cmd_packets(buffer, dlen, packet_count,
+						  cmd_sets.cmds);
+	if (retval) {
+		pr_err("failed to create cmd packets, ret=%d\n", retval);
+		goto exit_free2;
+	}
+
+	if (g_dsi_read_cfg.enabled) {
+		g_dsi_read_cfg.read_cmd = cmd_sets;
+		retval = dsi_panel_read_cmd_set(panel, &g_dsi_read_cfg);
+		if (retval <= 0) {
+			pr_err("[%s]failed to read cmds, rc=%d\n", panel->name, retval);
+			goto exit_free3;
+		}
+	} else {
+		g_dsi_read_cfg.read_cmd = cmd_sets;
+		retval = dsi_panel_write_cmd_set(panel, &cmd_sets);
+		if (retval) {
+			pr_err("[%s] failed to send cmds, rc=%d\n", panel->name, retval);
+			goto exit_free3;
+		}
+	}
+
+	pr_debug("[%s]: done!\n", panel->name);
+	retval = count;
+
+exit_free3:
+	dsi_panel_destroy_cmd_packets(&cmd_sets);
+exit_free2:
+	dsi_panel_dealloc_cmd_packets(&cmd_sets);
+exit_free1:
+	kfree(buffer);
+exit_free0:
+	kfree(input_dup);
+exit_unlock:
+	mutex_unlock(&panel->panel_lock);
+	return retval;
+}
+
+ssize_t dsi_panel_mipi_reg_read(struct dsi_panel *panel, char *buf)
+{
+	int i = 0;
+	ssize_t count = 0;
+
+	mutex_lock(&panel->panel_lock);
+	if (!panel) {
+		mutex_unlock(&panel->panel_lock);
+		return -EAGAIN;
+	}
+
+	if (g_dsi_read_cfg.enabled) {
+		for (i = 0; i < g_dsi_read_cfg.cmds_rlen; i++) {
+			if (i == g_dsi_read_cfg.cmds_rlen - 1) {
+				count += snprintf(buf + count, PAGE_SIZE - count, "0x%02x\n",
+				     g_dsi_read_cfg.rbuf[i]);
+			} else {
+				count += snprintf(buf + count, PAGE_SIZE - count, "0x%02x ",
+				     g_dsi_read_cfg.rbuf[i]);
+			}
+		}
+	}
+	mutex_unlock(&panel->panel_lock);
+
+	return count;
+}
+

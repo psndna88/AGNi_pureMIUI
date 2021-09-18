@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2387,7 +2388,7 @@ static int send_afe_cal_type(int cal_index, int port_id)
 				this_afe.cal_data[cal_index]);
 
 	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block)) {
-		pr_err("%s cal_block not found!!\n", __func__);
+		pr_err_ratelimited("%s cal_block not found!!\n", __func__);
 		ret = -EINVAL;
 		goto unlock;
 	}
@@ -7987,6 +7988,9 @@ static int afe_set_cal_sp_th_vi_cfg(int32_t cal_type, size_t data_size,
 
 	if (cal_data == NULL ||
 	    data_size > sizeof(*cal_data) ||
+	    (data_size < sizeof(cal_data->cal_hdr) +
+		sizeof(cal_data->cal_data) +
+		sizeof(cal_data->cal_info.mode)) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		goto done;
 
@@ -8131,6 +8135,9 @@ static int afe_get_cal_sp_th_vi_param(int32_t cal_type, size_t data_size,
 
 	if (cal_data == NULL ||
 	    data_size > sizeof(*cal_data) ||
+	    (data_size < sizeof(cal_data->cal_hdr) +
+		sizeof(cal_data->cal_data) +
+		sizeof(cal_data->cal_info.mode)) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		return 0;
 

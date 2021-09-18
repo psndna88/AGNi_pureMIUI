@@ -259,6 +259,7 @@
 
 /* 60-FB reserved */
 
+#define SDHCI_PRESET_FOR_HIGH_SPEED	0x64
 #define SDHCI_PRESET_FOR_SDR12 0x66
 #define SDHCI_PRESET_FOR_SDR25 0x68
 #define SDHCI_PRESET_FOR_SDR50 0x6A
@@ -653,7 +654,6 @@ struct sdhci_host {
 	enum sdhci_power_policy power_policy;
 
 	bool sdio_irq_async_status;
-	bool is_crypto_en;
 
 	u32 auto_cmd_err_sts;
 	struct ratelimit_state dbg_dump_rs;
@@ -695,14 +695,6 @@ struct sdhci_ops {
 	unsigned int    (*get_ro)(struct sdhci_host *host);
 	void		(*reset)(struct sdhci_host *host, u8 mask);
 	int	(*platform_execute_tuning)(struct sdhci_host *host, u32 opcode);
-	int	(*crypto_engine_cfg)(struct sdhci_host *host,
-			struct mmc_request *mrq, u32 slot);
-	int	(*crypto_engine_cmdq_cfg)(struct sdhci_host *host,
-			struct mmc_request *mrq, u32 slot, u64 *ice_ctx);
-	int	(*crypto_engine_cfg_end)(struct sdhci_host *host,
-			struct mmc_request *mrq);
-	int	(*crypto_engine_reset)(struct sdhci_host *host);
-	void	(*crypto_cfg_reset)(struct sdhci_host *host, unsigned int slot);
 	void	(*set_uhs_signaling)(struct sdhci_host *host, unsigned int uhs);
 	void	(*hw_reset)(struct sdhci_host *host);
 	void    (*adma_workaround)(struct sdhci_host *host, u32 intmask);

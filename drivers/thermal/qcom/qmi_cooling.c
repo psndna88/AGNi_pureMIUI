@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -134,6 +134,10 @@ static struct qmi_dev_info device_clients[] = {
 		.type = QMI_CDEV_MAX_LIMIT_TYPE,
 	},
 	{
+		.dev_name = "modem_v2x",
+		.type = QMI_CDEV_MAX_LIMIT_TYPE,
+	},
+	{
 		.dev_name = "cdsp_sw",
 		.type = QMI_CDEV_MAX_LIMIT_TYPE,
 	},
@@ -230,6 +234,7 @@ static int qmi_tmd_send_state_request(struct qmi_cooling_device *qmi_cdev,
 			state, qmi_cdev->cdev_name, ret);
 		goto qmi_send_exit;
 	}
+	ret = 0;
 	pr_debug("Requested qmi state:%d for %s\n", state, qmi_cdev->cdev_name);
 
 qmi_send_exit:

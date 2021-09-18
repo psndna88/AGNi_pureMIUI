@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -81,6 +81,7 @@ static const struct of_device_id msm_dsi_of_match[] = {
 	{}
 };
 
+#ifdef CONFIG_DEBUG_FS
 static ssize_t debugfs_state_info_read(struct file *file,
 				       char __user *buff,
 				       size_t count,
@@ -117,6 +118,9 @@ static ssize_t debugfs_state_info_read(struct file *file,
 			dsi_ctrl->clk_freq.byte_clk_rate,
 			dsi_ctrl->clk_freq.pix_clk_rate,
 			dsi_ctrl->clk_freq.esc_clk_rate);
+
+	if (len > count)
+		len = count;
 
 	len = min_t(size_t, len, SZ_4K);
 	if (copy_to_user(buff, buf, len)) {
@@ -173,6 +177,9 @@ static ssize_t debugfs_reg_dump_read(struct file *file,
 		return rc;
 	}
 
+	if (len > count)
+		len = count;
+
 	len = min_t(size_t, len, SZ_4K);
 	if (copy_to_user(buff, buf, len)) {
 		kfree(buf);
@@ -200,6 +207,11 @@ static int dsi_ctrl_debugfs_init(struct dsi_ctrl *dsi_ctrl,
 	int rc = 0;
 	struct dentry *dir, *state_file, *reg_dump;
 	char dbg_name[DSI_DEBUG_NAME_LEN];
+
+	if (!dsi_ctrl || !parent) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
 
 	dir = debugfs_create_dir(dsi_ctrl->name, parent);
 	if (IS_ERR_OR_NULL(dir)) {
@@ -252,6 +264,17 @@ static int dsi_ctrl_debugfs_deinit(struct dsi_ctrl *dsi_ctrl)
 	debugfs_remove(dsi_ctrl->debugfs_root);
 	return 0;
 }
+#else
+static int dsi_ctrl_debugfs_init(struct dsi_ctrl *dsi_ctrl,
+					struct dentry *parent)
+{
+	return 0;
+}
+static int dsi_ctrl_debugfs_deinit(struct dsi_ctrl *dsi_ctrl)
+{
+	return 0;
+}
+#endif /* CONFIG_DEBUG_FS */
 
 static inline struct msm_gem_address_space*
 dsi_ctrl_get_aspace(struct dsi_ctrl *dsi_ctrl,
@@ -957,35 +980,24 @@ error:
 	return rc;
 }
 
-static int dsi_ctrl_copy_and_pad_cmd(struct dsi_ctrl *dsi_ctrl,
-				     const struct mipi_dsi_packet *packet,
-				     u8 **buffer,
-				     u32 *size)
+static int dsi_ctrl_copy_and_pad_cmd(const struct mipi_dsi_packet *packet,
+				     u8 *buf, size_t len)
 {
 	int rc = 0;
-	u8 *buf = NULL;
-	u32 len, i;
 	u8 cmd_type = 0;
 
-	len = packet->size;
-	len += 0x3; len &= ~0x03; /* Align to 32 bits */
+	if (unlikely(len < packet->size))
+		return -EINVAL;
 
-	buf = devm_kzalloc(&dsi_ctrl->pdev->dev, len * sizeof(u8), GFP_KERNEL);
-	if (!buf)
-		return -ENOMEM;
-
-	for (i = 0; i < len; i++) {
-		if (i >= packet->size)
-			buf[i] = 0xFF;
-		else if (i < sizeof(packet->header))
-			buf[i] = packet->header[i];
-		else
-			buf[i] = packet->payload[i - sizeof(packet->header)];
-	}
+	memcpy(buf, packet->header, sizeof(packet->header));
+	if (packet->payload_length)
+		memcpy(buf + sizeof(packet->header), packet->payload,
+		       packet->payload_length);
+	if (packet->size < len)
+		memset(buf + packet->size, 0xFF, len - packet->size);
 
 	if (packet->payload_length > 0)
 		buf[3] |= BIT(6);
-
 
 	/* send embedded BTA for read commands */
 	cmd_type = buf[2] & 0x3f;
@@ -994,9 +1006,6 @@ static int dsi_ctrl_copy_and_pad_cmd(struct dsi_ctrl *dsi_ctrl,
 	    (cmd_type == MIPI_DSI_GENERIC_READ_REQUEST_1_PARAM) ||
 	    (cmd_type == MIPI_DSI_GENERIC_READ_REQUEST_2_PARAM))
 		buf[3] |= BIT(5);
-
-	*buffer = buf;
-	*size = len;
 
 	return rc;
 }
@@ -1118,11 +1127,13 @@ int dsi_message_validate_tx_mode(struct dsi_ctrl *dsi_ctrl,
 			pr_err("Cannot transfer,size is greater than 4096\n");
 			return -ENOTSUPP;
 		}
-	}
+	} else if (*flags & DSI_CTRL_CMD_FETCH_MEMORY) {
+		const size_t transfer_size = dsi_ctrl->cmd_len + cmd_len + 4;
 
-	if (*flags & DSI_CTRL_CMD_FETCH_MEMORY) {
-		if ((dsi_ctrl->cmd_len + cmd_len + 4) > SZ_4K) {
-			pr_err("Cannot transfer,size is greater than 4096\n");
+		if (transfer_size > DSI_EMBEDDED_MODE_DMA_MAX_SIZE_BYTES) {
+			pr_err("Cannot transfer, size: %zu is greater than %d\n",
+			       transfer_size,
+			       DSI_EMBEDDED_MODE_DMA_MAX_SIZE_BYTES);
 			return -ENOTSUPP;
 		}
 	}
@@ -1139,9 +1150,9 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 	struct dsi_ctrl_cmd_dma_fifo_info cmd;
 	struct dsi_ctrl_cmd_dma_info cmd_mem;
 	u32 hw_flags = 0;
-	u32 length = 0;
+	u32 length;
 	u8 *buffer = NULL;
-	u32 cnt = 0, line_no = 0x1;
+	u32 line_no = 0x1;
 	u8 *cmdbuf;
 	struct dsi_mode_info *timing;
 	struct dsi_ctrl_hw_ops dsi_hw_ops = dsi_ctrl->hw.ops;
@@ -1156,6 +1167,10 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 		rc = -ENOTSUPP;
 		goto error;
 	}
+
+	pr_debug("cmd tx type=%02x cmd=%02x len=%d last=%d\n", msg->type,
+		 msg->tx_len ? *((u8 *)msg->tx_buf) : 0, msg->tx_len,
+		 (msg->flags & MIPI_DSI_MSG_LASTCOMMAND) != 0);
 
 	if (flags & DSI_CTRL_CMD_NON_EMBEDDED_MODE) {
 		cmd_mem.offset = dsi_ctrl->cmd_buffer_iova;
@@ -1182,20 +1197,22 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 		goto error;
 	}
 
-	rc = dsi_ctrl_copy_and_pad_cmd(dsi_ctrl,
-			&packet,
-			&buffer,
-			&length);
-	if (rc) {
-		pr_err("[%s] failed to copy message, rc=%d\n",
-				dsi_ctrl->name, rc);
-		goto error;
-	}
+	length = ALIGN(packet.size, 4);
 
 	if ((msg->flags & MIPI_DSI_MSG_LASTCOMMAND))
-		buffer[3] |= BIT(7);//set the last cmd bit in header.
+		packet.header[3] |= BIT(7);//set the last cmd bit in header.
 
 	if (flags & DSI_CTRL_CMD_FETCH_MEMORY) {
+		msm_gem_sync(dsi_ctrl->tx_cmd_buf);
+		cmdbuf = dsi_ctrl->vaddr + dsi_ctrl->cmd_len;
+
+		rc = dsi_ctrl_copy_and_pad_cmd(&packet, cmdbuf, length);
+		if (rc) {
+			pr_err("[%s] failed to copy message, rc=%d\n",
+					dsi_ctrl->name, rc);
+			goto error;
+		}
+
 		/* Embedded mode config is selected */
 		cmd_mem.offset = dsi_ctrl->cmd_buffer_iova;
 		cmd_mem.en_broadcast = (flags & DSI_CTRL_CMD_BROADCAST) ?
@@ -1204,12 +1221,6 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 			true : false;
 		cmd_mem.use_lpm = (msg->flags & MIPI_DSI_MSG_USE_LPM) ?
 			true : false;
-
-		cmdbuf = (u8 *)(dsi_ctrl->vaddr);
-
-		msm_gem_sync(dsi_ctrl->tx_cmd_buf);
-		for (cnt = 0; cnt < length; cnt++)
-			cmdbuf[dsi_ctrl->cmd_len + cnt] = buffer[cnt];
 
 		dsi_ctrl->cmd_len += length;
 
@@ -1221,6 +1232,20 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 		}
 
 	} else if (flags & DSI_CTRL_CMD_FIFO_STORE) {
+		buffer = devm_kzalloc(&dsi_ctrl->pdev->dev, length,
+					   GFP_KERNEL);
+		if (!buffer) {
+			rc = -ENOMEM;
+			goto error;
+		}
+
+		rc = dsi_ctrl_copy_and_pad_cmd(&packet, buffer, length);
+		if (rc) {
+			pr_err("[%s] failed to copy message, rc=%d\n",
+					dsi_ctrl->name, rc);
+			goto error;
+		}
+
 		cmd.command =  (u32 *)buffer;
 		cmd.size = length;
 		cmd.en_broadcast = (flags & DSI_CTRL_CMD_BROADCAST) ?
@@ -1904,8 +1929,8 @@ static struct platform_driver dsi_ctrl_driver = {
 	},
 };
 
-#if 0
 
+#if 0
 void dsi_ctrl_debug_dump(u32 *entries, u32 size)
 {
 	struct list_head *pos, *tmp;
@@ -2006,7 +2031,7 @@ int dsi_ctrl_drv_init(struct dsi_ctrl *dsi_ctrl, struct dentry *parent)
 {
 	int rc = 0;
 
-	if (!dsi_ctrl || !parent) {
+	if (!dsi_ctrl) {
 		pr_err("Invalid params\n");
 		return -EINVAL;
 	}
@@ -2015,13 +2040,6 @@ int dsi_ctrl_drv_init(struct dsi_ctrl *dsi_ctrl, struct dentry *parent)
 	rc = dsi_ctrl_drv_state_init(dsi_ctrl);
 	if (rc) {
 		pr_err("Failed to initialize driver state, rc=%d\n", rc);
-		goto error;
-	}
-
-	rc = dsi_ctrl_debugfs_init(dsi_ctrl, parent);
-	if (rc) {
-		pr_err("[DSI_%d] failed to init debug fs, rc=%d\n",
-		       dsi_ctrl->cell_index, rc);
 		goto error;
 	}
 
@@ -2048,10 +2066,6 @@ int dsi_ctrl_drv_deinit(struct dsi_ctrl *dsi_ctrl)
 	}
 
 	mutex_lock(&dsi_ctrl->ctrl_lock);
-
-	rc = dsi_ctrl_debugfs_deinit(dsi_ctrl);
-	if (rc)
-		pr_err("failed to release debugfs root, rc=%d\n", rc);
 
 	rc = dsi_ctrl_buffer_deinit(dsi_ctrl);
 	if (rc)
@@ -2557,9 +2571,6 @@ static int _dsi_ctrl_setup_isr(struct dsi_ctrl *dsi_ctrl)
 		} else {
 			dsi_ctrl->irq_info.irq_num = irq_num;
 			disable_irq_nosync(irq_num);
-
-			pr_info("[DSI_%d] IRQ %d registered\n",
-					dsi_ctrl->cell_index, irq_num);
 		}
 	}
 	return rc;
@@ -2615,8 +2626,7 @@ void dsi_ctrl_disable_status_interrupt(struct dsi_ctrl *dsi_ctrl,
 {
 	unsigned long flags;
 
-	if (!dsi_ctrl || dsi_ctrl->irq_info.irq_num == -1 ||
-			intr_idx >= DSI_STATUS_INTERRUPT_COUNT)
+	if (!dsi_ctrl || intr_idx >= DSI_STATUS_INTERRUPT_COUNT)
 		return;
 
 	spin_lock_irqsave(&dsi_ctrl->irq_info.irq_lock, flags);
@@ -2628,7 +2638,8 @@ void dsi_ctrl_disable_status_interrupt(struct dsi_ctrl *dsi_ctrl,
 					dsi_ctrl->irq_info.irq_stat_mask);
 
 			/* don't need irq if no lines are enabled */
-			if (dsi_ctrl->irq_info.irq_stat_mask == 0)
+			if (dsi_ctrl->irq_info.irq_stat_mask == 0 &&
+				dsi_ctrl->irq_info.irq_num != -1)
 				disable_irq_nosync(dsi_ctrl->irq_info.irq_num);
 		}
 

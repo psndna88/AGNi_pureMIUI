@@ -26,6 +26,7 @@
 #define QCA6390_DEVICE_ID		0x1101
 #define QCN7605_VENDOR_ID               0x17CB
 #define QCN7605_DEVICE_ID               0x1102
+#define QCA6490_DEVICE_ID		0x1103
 
 #define QCN7605_USB_VENDOR_ID             0x05C6
 #define QCN7605_STANDALONE_PRODUCT_ID    0x9900
@@ -67,7 +68,4 @@ int cnss_get_msi_assignment(struct cnss_plat_data *plat_priv,
 			    int *num_vectors,
 			    u32 *user_base_data,
 			    u32 *base_vector);
-int cnss_bus_get_iova(struct cnss_plat_data *plat_priv, u64 *addr, u64 *size);
-int cnss_bus_get_iova_ipa(struct cnss_plat_data *plat_priv, u64 *addr,
-			  u64 *size);
 #endif /* _CNSS_BUS_H */

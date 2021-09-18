@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -302,12 +303,63 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_LP1,
 	DSI_CMD_SET_LP2,
 	DSI_CMD_SET_NOLP,
+	DSI_CMD_SET_DOZE_HBM,
+	DSI_CMD_SET_DOZE_LBM,
 	DSI_CMD_SET_PPS,
 	DSI_CMD_SET_ROI,
 	DSI_CMD_SET_TIMING_SWITCH,
 	DSI_CMD_SET_POST_TIMING_SWITCH,
+	DSI_CMD_SET_ELVSS_DIMMING_OFFSET,
+	DSI_CMD_SET_ELVSS_DIMMING_READ,
+	DSI_CMD_SET_DISP_WARM,
+	DSI_CMD_SET_DISP_DEFAULT,
+	DSI_CMD_SET_DISP_COLD,
+	DSI_CMD_SET_DISP_PAPER,
+	DSI_CMD_SET_DISP_PAPER1,
+	DSI_CMD_SET_DISP_PAPER2,
+	DSI_CMD_SET_DISP_PAPER3,
+	DSI_CMD_SET_DISP_PAPER4,
+	DSI_CMD_SET_DISP_PAPER5,
+	DSI_CMD_SET_DISP_PAPER6,
+	DSI_CMD_SET_DISP_PAPER7,
+	DSI_CMD_SET_DISP_NORMAL1,
+	DSI_CMD_SET_DISP_NORMAL2,
+	DSI_CMD_SET_DISP_SRGB,
+	DSI_CMD_SET_DISP_CEON,
+	DSI_CMD_SET_DISP_CEOFF,
+	DSI_CMD_SET_DISP_CABCUION,
+	DSI_CMD_SET_DISP_CABCSTILLON,
+	DSI_CMD_SET_DISP_CABCMOVIEON,
+	DSI_CMD_SET_DISP_CABCOFF,
+	DSI_CMD_SET_DISP_SKINCE_CABCUION,
+	DSI_CMD_SET_DISP_SKINCE_CABCSTILLON,
+	DSI_CMD_SET_DISP_SKINCE_CABCMOVIEON,
+	DSI_CMD_SET_DISP_SKINCE_CABCOFF,
+	DSI_CMD_SET_DISP_DIMMINGON,
+	DSI_CMD_SET_DISP_DIMMINGOFF,
+	DSI_CMD_SET_DISP_ACL_OFF,
+	DSI_CMD_SET_DISP_ACL_L1,
+	DSI_CMD_SET_DISP_ACL_L2,
+	DSI_CMD_SET_DISP_ACL_L3,
+	DSI_CMD_SET_DISP_HBM_ON,
+	DSI_CMD_SET_DISP_HBM_OFF,
+	DSI_CMD_SET_HBM1_ON,
+	DSI_CMD_SET_HBM2_ON,
+	DSI_CMD_SET_DISP_HBM_FOD_ON,
+	DSI_CMD_SET_DISP_HBM_FOD_OFF,
+	DSI_CMD_SET_DISP_HBM_FOD2NORM,
+	DSI_CMD_SET_DISP_OFF_MODE,
+	DSI_CMD_SET_DISP_ON_MODE,
+	DSI_CMD_SET_READ_XY_COORDINATE,
+	DSI_CMD_SET_READ_BRIGHTNESS,
+	DSI_CMD_SET_DISP_FLAT_ON,
+	DSI_CMD_SET_DISP_FLAT_OFF,
+	DSI_CMD_SET_READ_MAX_LUMINANCE,
+	DSI_CMD_SET_MAX_LUMINANCE_VALID,
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
+	DSI_CMD_SET_DISP_CRC_DCIP3,
+	DSI_CMD_SET_DISP_CRC_OFF,
 	DSI_CMD_SET_MAX
 };
 
@@ -472,6 +524,8 @@ struct dsi_split_link_config {
  * @t_clk_pre:           Number of byte clock cycles that the high spped clock
  *                       shall be driven prior to data lane transitions from LP
  *                       to HS mode.
+ * @t_clk_pre_extend:    Increment t_clk_pre counter by 2 byteclk if set to
+ *                       true, otherwise increment by 1 byteclk.
  * @ignore_rx_eot:       Ignore Rx EOT packets if set to true.
  * @append_tx_eot:       Append EOT packets for forward transmissions if set to
  *                       true.
@@ -497,6 +551,7 @@ struct dsi_host_common_cfg {
 	bool bit_swap_blue;
 	u32 t_clk_post;
 	u32 t_clk_pre;
+	bool t_clk_pre_extend;
 	bool ignore_rx_eot;
 	bool append_tx_eot;
 	u32 ext_bridge_num;
@@ -559,7 +614,7 @@ struct dsi_cmd_engine_cfg {
  * @common_config:         Host configuration common to both Video and Cmd mode.
  * @video_engine:          Video engine configuration if panel is in video mode.
  * @cmd_engine:            Cmd engine configuration if panel is in cmd mode.
- * @esc_clk_rate_khz:      Esc clock frequency in Hz.
+ * @esc_clk_rate_hz:      Esc clock frequency in Hz.
  * @bit_clk_rate_hz:       Bit clock frequency in Hz.
  * @bit_clk_rate_hz_override: DSI bit clk rate override from dt/sysfs.
  * @video_timing:          Video timing information of a frame.

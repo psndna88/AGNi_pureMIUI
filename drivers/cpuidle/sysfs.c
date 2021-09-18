@@ -115,23 +115,53 @@ static ssize_t store_current_governor(struct device *dev,
 		return count;
 }
 
+static ssize_t show_use_deepest_state(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct cpuidle_device *idle_dev = cpuidle_get_device();
+
+	return sprintf(buf, "%u\n", idle_dev->use_deepest_state);
+}
+
+static ssize_t store_use_deepest_state(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
+{
+	unsigned int enable = 0;
+	int ret;
+
+	ret = sscanf(buf, "%u", &enable);
+	if (ret != 1 || enable > 1)
+		return -EINVAL;
+
+	cpuidle_use_deepest_state_mask(cpu_online_mask, enable);
+
+	return count;
+}
+
 static DEVICE_ATTR(current_driver, 0444, show_current_driver, NULL);
 static DEVICE_ATTR(current_governor_ro, 0444, show_current_governor, NULL);
+static DEVICE_ATTR(use_deepest_state_ro, 0444, show_use_deepest_state, NULL);
 
 static struct attribute *cpuidle_default_attrs[] = {
 	&dev_attr_current_driver.attr,
 	&dev_attr_current_governor_ro.attr,
+	&dev_attr_use_deepest_state_ro.attr,
 	NULL
 };
 
 static DEVICE_ATTR(available_governors, 0444, show_available_governors, NULL);
 static DEVICE_ATTR(current_governor, 0644, show_current_governor,
 		   store_current_governor);
+static DEVICE_ATTR(use_deepest_state, 0644, show_use_deepest_state,
+		   store_use_deepest_state);
 
 static struct attribute *cpuidle_switch_attrs[] = {
 	&dev_attr_available_governors.attr,
 	&dev_attr_current_driver.attr,
 	&dev_attr_current_governor.attr,
+	&dev_attr_use_deepest_state.attr,
 	NULL
 };
 
@@ -414,7 +444,7 @@ static int cpuidle_add_state_sysfs(struct cpuidle_device *device)
 		ret = kobject_init_and_add(&kobj->kobj, &ktype_state_cpuidle,
 					   &kdev->kobj, "state%d", i);
 		if (ret) {
-			kfree(kobj);
+			kobject_put(&kobj->kobj);
 			goto error_state;
 		}
 		kobject_uevent(&kobj->kobj, KOBJ_ADD);
@@ -544,7 +574,7 @@ static int cpuidle_add_driver_sysfs(struct cpuidle_device *dev)
 	ret = kobject_init_and_add(&kdrv->kobj, &ktype_driver_cpuidle,
 				   &kdev->kobj, "driver");
 	if (ret) {
-		kfree(kdrv);
+		kobject_put(&kdrv->kobj);
 		return ret;
 	}
 
@@ -638,7 +668,7 @@ int cpuidle_add_sysfs(struct cpuidle_device *dev)
 	error = kobject_init_and_add(&kdev->kobj, &ktype_cpuidle, &cpu_dev->kobj,
 				   "cpuidle");
 	if (error) {
-		kfree(kdev);
+		kobject_put(&kdev->kobj);
 		return error;
 	}
 

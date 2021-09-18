@@ -171,6 +171,7 @@ struct rmnet_ipa3_context {
 	atomic_t ap_suspend;
 	bool ipa_config_is_apq;
 	bool ipa_mhi_aggr_formet_set;
+	bool no_qmap_config;
 };
 
 static struct rmnet_ipa3_context *rmnet_ipa3_ctx;
@@ -1248,7 +1249,8 @@ static int ipa3_wwan_xmit(struct sk_buff *skb, struct net_device *dev)
 		return NETDEV_TX_OK;
 	}
 
-	if (skb->protocol != htons(ETH_P_MAP)) {
+	if (skb->protocol != htons(ETH_P_MAP) &&
+		(!rmnet_ipa3_ctx->no_qmap_config)) {
 		IPAWANDBG_LOW
 		("SW filtering out none QMAP packet received from %s",
 		current->comm);
@@ -1269,17 +1271,22 @@ static int ipa3_wwan_xmit(struct sk_buff *skb, struct net_device *dev)
 		return NETDEV_TX_BUSY;
 	}
 	if (netif_queue_stopped(dev)) {
-		if (qmap_check &&
-			atomic_read(&wwan_ptr->outstanding_pkts) <
-					outstanding_high_ctl) {
-			IPAWANERR("[%s]Queue stop, send ctrl pkts\n",
-							dev->name);
-			goto send;
-		} else {
-			IPAWANERR("[%s]fatal: %s stopped\n", dev->name,
-							__func__);
+		if (rmnet_ipa3_ctx->no_qmap_config) {
 			spin_unlock_irqrestore(&wwan_ptr->lock, flags);
 			return NETDEV_TX_BUSY;
+		} else {
+			if (qmap_check &&
+				atomic_read(&wwan_ptr->outstanding_pkts) <
+					outstanding_high_ctl) {
+				IPAWANERR("[%s]Queue stop, send ctrl pkts\n",
+						dev->name);
+				goto send;
+			} else {
+				IPAWANERR("[%s]fatal: %s stopped\n", dev->name,
+							__func__);
+				spin_unlock_irqrestore(&wwan_ptr->lock, flags);
+				return NETDEV_TX_BUSY;
+			}
 		}
 	}
 
@@ -1450,7 +1457,8 @@ static void apps_ipa_packet_receive_notify(void *priv,
 
 		IPAWANDBG_LOW("Rx packet was received");
 		skb->dev = IPA_NETDEV();
-		skb->protocol = htons(ETH_P_MAP);
+		if (!rmnet_ipa3_ctx->no_qmap_config)
+			skb->protocol = htons(ETH_P_MAP);
 
 		if (ipa3_rmnet_res.ipa_napi_enable) {
 			trace_rmnet_ipa_netif_rcv_skb3(dev->stats.rx_packets);
@@ -1487,6 +1495,10 @@ static int ipa_send_mhi_endp_ind_to_modem(void)
 		ipa3_get_ep_mapping(IPA_CLIENT_MHI_LOW_LAT_PROD);
 	int ipa_mhi_cons_ep_idx =
 		ipa3_get_ep_mapping(IPA_CLIENT_MHI_LOW_LAT_CONS);
+
+	if (ipa_mhi_prod_ep_idx == IPA_EP_NOT_ALLOCATED ||
+		ipa_mhi_cons_ep_idx == IPA_EP_NOT_ALLOCATED)
+		return -EINVAL;
 
 	memset(&req, 0, sizeof(struct ipa_endp_desc_indication_msg_v01));
 	req.ep_info_len = 2;
@@ -1551,6 +1563,12 @@ static int handle3_ingress_format(struct net_device *dev,
 		IPAWANDBG("DL chksum set\n");
 	}
 
+
+	if ((in->u.data) & RMNET_IOCTL_INGRESS_FORMAT_IP_ROUTE) {
+		rmnet_ipa3_ctx->no_qmap_config = true;
+		ipa_wan_ep_cfg->bypass_agg = true;
+	}
+
 	if ((in->u.data) & RMNET_IOCTL_INGRESS_FORMAT_AGG_DATA) {
 		IPAWANDBG("get AGG size %d count %d\n",
 				  in->u.ingress_format.agg_size,
@@ -1573,8 +1591,11 @@ static int handle3_ingress_format(struct net_device *dev,
 		ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 8;
 		rmnet_ipa3_ctx->dl_csum_offload_enabled = true;
 	} else {
-		ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 4;
 		rmnet_ipa3_ctx->dl_csum_offload_enabled = false;
+		if (rmnet_ipa3_ctx->no_qmap_config)
+			ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 0;
+		else
+			ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 4;
 	}
 
 	ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_ofst_metadata_valid = 1;
@@ -1679,6 +1700,9 @@ static int handle3_egress_format(struct net_device *dev,
 		return -EFAULT;
 	}
 
+	if ((e->u.data) & RMNET_IOCTL_EGRESS_FORMAT_IP_ROUTE)
+		rmnet_ipa3_ctx->no_qmap_config = true;
+
 	ipa_wan_ep_cfg = &rmnet_ipa3_ctx->apps_to_ipa_ep_cfg;
 	if ((e->u.data) & RMNET_IOCTL_EGRESS_FORMAT_CHECKSUM) {
 		IPAWANDBG("UL chksum set\n");
@@ -1687,7 +1711,10 @@ static int handle3_egress_format(struct net_device *dev,
 			IPA_ENABLE_CS_OFFLOAD_UL;
 		ipa_wan_ep_cfg->ipa_ep_cfg.cfg.cs_metadata_hdr_offset = 1;
 	} else {
-		ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 4;
+		if (rmnet_ipa3_ctx->no_qmap_config)
+			ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 0;
+		else
+			ipa_wan_ep_cfg->ipa_ep_cfg.hdr.hdr_len = 4;
 	}
 
 	if ((e->u.data) & RMNET_IOCTL_EGRESS_FORMAT_AGGREGATION) {
@@ -3275,7 +3302,8 @@ static void tethering_stats_poll_queue(struct work_struct *work)
 
 	/* Schedule again only if there's an active polling interval */
 	if (ipa3_rmnet_ctx.polling_interval != 0)
-		schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work,
+		queue_delayed_work(system_power_efficient_wq, 
+			&ipa_tether_stats_poll_wakequeue_work,
 			msecs_to_jiffies(ipa3_rmnet_ctx.polling_interval*1000));
 }
 
@@ -3367,7 +3395,8 @@ int rmnet_ipa3_poll_tethering_stats(struct wan_ioctl_poll_tethering_stats *data)
 		return 0;
 	}
 
-	schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work, 0);
+	queue_delayed_work(system_power_efficient_wq, 
+						&ipa_tether_stats_poll_wakequeue_work, 0);
 	return 0;
 }
 
@@ -3399,9 +3428,6 @@ static int rmnet_ipa3_set_data_quota_modem(
 	data->interface_name[IFNAMSIZ-1] = '\0';
 
 	index = find_vchannel_name_index(data->interface_name);
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	if (index == MAX_NUM_OF_MUX_CHANNEL) {
 		IPAWANERR("%s is an invalid iface name\n",
@@ -3429,9 +3455,6 @@ static int rmnet_ipa3_set_data_quota_wifi(struct wan_ioctl_set_data_quota *data)
 	memset(&wifi_quota, 0, sizeof(struct ipa_set_wifi_quota));
 	wifi_quota.set_quota = data->set_quota;
 	wifi_quota.quota_bytes = data->quota_mbytes;
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	rc = ipa3_set_wlan_quota(&wifi_quota);
 	/* check if wlan-fw takes this quota-set */
@@ -4142,7 +4165,12 @@ void ipa3_q6_handshake_complete(bool ssr_bootup)
 	if (ipa3_ctx->ipa_mhi_proxy)
 		imp_handle_modem_ready();
 
-	if (ipa3_ctx->ipa_config_is_mhi)
+	/*
+	 * currently the endp_desc indication only send
+	 * on non-auto mode for low latency pipes
+	 */
+	if (ipa3_ctx->ipa_config_is_mhi &&
+		!ipa3_ctx->ipa_config_is_auto)
 		ipa_send_mhi_endp_ind_to_modem();
 }
 
@@ -4855,7 +4883,7 @@ int rmnet_ipa3_query_per_client_stats_v2(
 				lan_client[i].mac,
 				IPA_MAC_ADDR_SIZE);
 
-		IPAWANDBG("Client ipv4_tx_bytes = %lu, ipv4_rx_bytes = %lu\n",
+		IPAWANDBG("Client ipv4_tx_bytes = %llu, ipv4_rx_bytes = %llu\n",
 				data->client_info[i].ipv4_tx_bytes,
 				data->client_info[i].ipv4_rx_bytes);
 

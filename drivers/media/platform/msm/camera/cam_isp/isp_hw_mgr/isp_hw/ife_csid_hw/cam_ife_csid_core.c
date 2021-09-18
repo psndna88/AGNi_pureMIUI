@@ -1,4 +1,5 @@
 /* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,7 +35,7 @@
 
 /* Timeout values in usec */
 #define CAM_IFE_CSID_TIMEOUT_SLEEP_US                  1000
-#define CAM_IFE_CSID_TIMEOUT_ALL_US                    100000
+#define CAM_IFE_CSID_TIMEOUT_ALL_US                    500000
 
 /*
  * Constant Factors needed to change QTimer ticks to nanoseconds
@@ -2812,7 +2813,8 @@ static int cam_ife_csid_release(void *hw_priv,
 			csid_hw->ipp_path_config.measure_enabled = 0;
 		else if (res->res_id == CAM_IFE_PIX_PATH_RES_PPP)
 			csid_hw->ppp_path_config.measure_enabled = 0;
-		else
+		else if (res->res_id >= CAM_IFE_PIX_PATH_RES_RDI_0 &&
+			res->res_id <= CAM_IFE_PIX_PATH_RES_RDI_3)
 			csid_hw->rdi_path_config[res->res_id].measure_enabled
 				= 0;
 		break;

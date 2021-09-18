@@ -406,6 +406,15 @@ struct diag_cmd_time_sync_switch_rsp_t {
 	uint8_t persist_time_status;
 };
 
+struct diag_query_transport_req_t {
+	struct diag_pkt_header_t header;
+};
+
+struct diag_query_transport_rsp_t {
+	struct diag_pkt_header_t header;
+	uint8_t transport;
+};
+
 struct diag_cmd_reg_entry_t {
 	uint16_t cmd_code;
 	uint16_t subsys_id;

@@ -122,6 +122,7 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 {
 	struct rwsem_waiter *waiter, *tmp;
 	long oldcount, woken = 0, adjustment = 0;
+	struct list_head wlist;
 
 	/*
 	 * Take a peek at the queue head waiter such that we can determine
@@ -180,18 +181,42 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 	 * of the queue. We know that woken will be at least 1 as we accounted
 	 * for above. Note we increment the 'active part' of the count by the
 	 * number of readers before waking any processes up.
+	 *
+	 * We have to do wakeup in 2 passes to prevent the possibility that
+	 * the reader count may be decremented before it is incremented. It
+	 * is because the to-be-woken waiter may not have slept yet. So it
+	 * may see waiter->task got cleared, finish its critical section and
+	 * do an unlock before the reader count increment.
+	 *
+	 * 1) Collect the read-waiters in a separate list, count them and
+	 *    fully increment the reader count in rwsem.
+	 * 2) For each waiters in the new list, clear waiter->task and
+	 *    put them into wake_q to be woken up later.
 	 */
-	list_for_each_entry_safe(waiter, tmp, &sem->wait_list, list) {
-		struct task_struct *tsk;
-
+	list_for_each_entry(waiter, &sem->wait_list, list) {
 		if (waiter->type == RWSEM_WAITING_FOR_WRITE)
 			break;
 
 		woken++;
-		tsk = waiter->task;
+	}
+	list_cut_before(&wlist, &sem->wait_list, &waiter->list);
 
+	adjustment = woken * RWSEM_ACTIVE_READ_BIAS - adjustment;
+	if (list_empty(&sem->wait_list)) {
+		/* hit end of list above */
+		adjustment -= RWSEM_WAITING_BIAS;
+	}
+
+	if (adjustment)
+		atomic_long_add(adjustment, &sem->count);
+
+	/* 2nd pass */
+	list_for_each_entry_safe(waiter, tmp, &wlist, list) {
+		struct task_struct *tsk;
+
+		tsk = waiter->task;
 		get_task_struct(tsk);
-		list_del(&waiter->list);
+
 		/*
 		 * Ensure calling get_task_struct() before setting the reader
 		 * waiter to nil such that rwsem_down_read_failed() cannot
@@ -207,15 +232,6 @@ static void __rwsem_mark_wake(struct rw_semaphore *sem,
 		/* wake_q_add() already take the task ref */
 		put_task_struct(tsk);
 	}
-
-	adjustment = woken * RWSEM_ACTIVE_READ_BIAS - adjustment;
-	if (list_empty(&sem->wait_list)) {
-		/* hit end of list above */
-		adjustment -= RWSEM_WAITING_BIAS;
-	}
-
-	if (adjustment)
-		atomic_long_add(adjustment, &sem->count);
 }
 
 /*
@@ -384,32 +400,36 @@ static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
 {
 	struct task_struct *owner = READ_ONCE(sem->owner);
 
-	if (!is_rwsem_owner_spinnable(owner))
+	if (!owner || !is_rwsem_owner_spinnable(owner))
 		return false;
 
-	rcu_read_lock();
-	while (owner && (READ_ONCE(sem->owner) == owner)) {
+	while (true) {
+		bool on_cpu, same_owner;
+
 		/*
-		 * Ensure we emit the owner->on_cpu, dereference _after_
-		 * checking sem->owner still matches owner, if that fails,
+		 * Ensure sem->owner still matches owner. If that fails,
 		 * owner might point to free()d memory, if it still matches,
 		 * the rcu_read_lock() ensures the memory stays valid.
 		 */
-		barrier();
+		rcu_read_lock();
+		same_owner = sem->owner == owner;
+		if (same_owner)
+			on_cpu = owner->on_cpu &&
+				 !vcpu_is_preempted(task_cpu(owner));
+		rcu_read_unlock();
+
+		if (!same_owner)
+			break;
 
 		/*
 		 * abort spinning when need_resched or owner is not running or
 		 * owner's cpu is preempted.
 		 */
-		if (!owner->on_cpu || need_resched() ||
-				vcpu_is_preempted(task_cpu(owner))) {
-			rcu_read_unlock();
+		if (!on_cpu || need_resched())
 			return false;
-		}
 
 		cpu_relax();
 	}
-	rcu_read_unlock();
 
 	/*
 	 * If there is a new owner or the owner is not set, we continue

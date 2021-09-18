@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,7 @@
 #include <soc/qcom/subsystem_restart.h>
 #include <linux/ipa.h>
 #include <linux/vmalloc.h>
+#include <soc/qcom/boot_stats.h>
 
 #include "ipa_qmi_service.h"
 #include "ipa_mhi_proxy.h"
@@ -486,6 +487,7 @@ static int ipa3_qmi_send_req_wait(struct qmi_handle *client_handle,
 		return ret;
 	}
 
+	mutex_lock(&ipa3_qmi_lock);
 	ret = qmi_send_request(client_handle,
 		&ipa3_qmi_ctx->server_sq,
 		&txn,
@@ -493,6 +495,13 @@ static int ipa3_qmi_send_req_wait(struct qmi_handle *client_handle,
 		req_desc->max_msg_len,
 		req_desc->ei_array,
 		req);
+
+	if (unlikely(!ipa_q6_clnt)) {
+		mutex_unlock(&ipa3_qmi_lock);
+		return -EINVAL;
+	}
+
+	mutex_unlock(&ipa3_qmi_lock);
 
 	if (ret < 0) {
 		qmi_txn_cancel(&txn);
@@ -683,6 +692,9 @@ static int ipa3_qmi_init_modem_send_sync_msg(void)
 	}
 
 	pr_info("QMI_IPA_INIT_MODEM_DRIVER_REQ_V01 response received\n");
+
+	place_marker("M - QMI ready for commands");
+
 	return ipa3_check_qmi_response(rc,
 		QMI_IPA_INIT_MODEM_DRIVER_REQ_V01, resp.resp.result,
 		resp.resp.error, "ipa_init_modem_driver_resp_msg_v01");
@@ -936,7 +948,10 @@ int ipa3_qmi_add_offload_request_send(
 	}
 
 	/* check if the filter rules from IPACM is valid */
-	if (req->filter_spec_ex2_list_len == 0) {
+	if (req->filter_spec_ex2_list_len < 0) {
+		IPAWANERR("IPACM pass invalid num of rules\n");
+		return -EINVAL;
+	} else if (req->filter_spec_ex2_list_len == 0) {
 		IPAWANDBG("IPACM pass zero rules to Q6\n");
 	} else {
 		IPAWANDBG("IPACM pass %u rules to Q6\n",
@@ -944,9 +959,10 @@ int ipa3_qmi_add_offload_request_send(
 	}
 
 	/* currently set total max to 64 */
-	if (req->filter_spec_ex2_list_len +
-		ipa3_qmi_ctx->num_ipa_offload_connection
-		>= QMI_IPA_MAX_FILTERS_V01) {
+	if ((ipa3_qmi_ctx->num_ipa_offload_connection < 0) ||
+		(req->filter_spec_ex2_list_len >=
+		(QMI_IPA_MAX_FILTERS_V01 -
+			ipa3_qmi_ctx->num_ipa_offload_connection))) {
 		IPAWANDBG(
 		"cur(%d), req(%d), exceed limit (%d)\n",
 			ipa3_qmi_ctx->num_ipa_offload_connection,
@@ -1583,12 +1599,19 @@ static void ipa3_q6_clnt_svc_arrive(struct work_struct *work)
 	/* Initialize modem IPA-driver */
 	IPAWANDBG("send ipa3_qmi_init_modem_send_sync_msg to modem\n");
 	rc = ipa3_qmi_init_modem_send_sync_msg();
-	if ((rc == -ENETRESET) || (rc == -ENODEV)) {
+	if ((rc == -ENETRESET) || (rc == -ENODEV) || (rc == -ECONNRESET)) {
 		IPAWANERR(
 		"ipa3_qmi_init_modem_send_sync_msg failed due to SSR!\n");
+
 		/* Cleanup when ipa3_wwan_remove is called */
-		vfree(ipa_q6_clnt);
-		ipa_q6_clnt = NULL;
+		mutex_lock(&ipa3_qmi_lock);
+		if (ipa_q6_clnt != NULL) {
+			qmi_handle_release(ipa_q6_clnt);
+			vfree(ipa_q6_clnt);
+			ipa_q6_clnt = NULL;
+		}
+		mutex_unlock(&ipa3_qmi_lock);
+		IPAWANERR("Exit from service arrive fun\n");
 		return;
 	}
 
@@ -1730,14 +1753,6 @@ static struct qmi_msg_handler server_handlers[] = {
 		.ei = ipa3_config_req_msg_data_v01_ei,
 		.decoded_size = sizeof(struct ipa_config_req_msg_v01),
 		.fn = handle_ipa_config_req,
-	},
-	{
-		.type = QMI_REQUEST,
-		.msg_id = QMI_IPA_INIT_MODEM_DRIVER_CMPLT_REQ_V01,
-		.ei = ipa3_init_modem_driver_cmplt_req_msg_data_v01_ei,
-		.decoded_size = sizeof(
-			struct ipa_init_modem_driver_cmplt_req_msg_v01),
-		.fn = ipa3_handle_modem_init_cmplt_req,
 	},
 	{
 		.type = QMI_REQUEST,
@@ -1938,6 +1953,7 @@ void ipa3_qmi_service_exit(void)
 
 	/* qmi-client */
 
+	mutex_lock(&ipa3_qmi_lock);
 	/* Release client handle */
 	if (ipa_q6_clnt != NULL) {
 		qmi_handle_release(ipa_q6_clnt);
@@ -1950,7 +1966,6 @@ void ipa3_qmi_service_exit(void)
 	}
 
 	/* clean the QMI msg cache */
-	mutex_lock(&ipa3_qmi_lock);
 	if (ipa3_qmi_ctx != NULL) {
 		vfree(ipa3_qmi_ctx);
 		ipa3_qmi_ctx = NULL;
@@ -2271,6 +2286,8 @@ int ipa3_qmi_enable_per_client_stats(
 
 	IPAWANDBG("Sending QMI_IPA_ENABLE_PER_CLIENT_STATS_REQ_V01\n");
 
+	if (unlikely(!ipa_q6_clnt))
+		return -ETIMEDOUT;
 	rc = ipa3_qmi_send_req_wait(ipa_q6_clnt,
 		&req_desc, req,
 		&resp_desc, resp,
@@ -2307,6 +2324,9 @@ int ipa3_qmi_get_per_client_packet_stats(
 	resp_desc.ei_array = ipa3_get_stats_per_client_resp_msg_data_v01_ei;
 
 	IPAWANDBG("Sending QMI_IPA_GET_STATS_PER_CLIENT_REQ_V01\n");
+
+	if (unlikely(!ipa_q6_clnt))
+		return -ETIMEDOUT;
 
 	rc = ipa3_qmi_send_req_wait(ipa_q6_clnt,
 		&req_desc, req,
@@ -2364,6 +2384,9 @@ int ipa3_qmi_send_mhi_cleanup_request(struct ipa_mhi_cleanup_req_msg_v01 *req)
 	resp_desc.max_msg_len = IPA_MHI_CLK_VOTE_RESP_MSG_V01_MAX_MSG_LEN;
 	resp_desc.msg_id = QMI_IPA_MHI_CLEANUP_RESP_V01;
 	resp_desc.ei_array = ipa_mhi_cleanup_resp_msg_v01_ei;
+
+	if (unlikely(!ipa_q6_clnt))
+		return -ETIMEDOUT;
 
 	rc = ipa3_qmi_send_req_wait(ipa_q6_clnt,
 		&req_desc, req,

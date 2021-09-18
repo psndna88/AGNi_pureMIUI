@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -91,15 +91,30 @@
 };
 
 &cam_csiphy0 {
-	/delete-property/ mipi-csi-vdd-supply;
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
 };
 
 &cam_csiphy1 {
-	/delete-property/ mipi-csi-vdd-supply;
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
 };
 
 &cam_csiphy2 {
-	/delete-property/ mipi-csi-vdd-supply;
+	mipi-csi-vdd-supply = <&pm6155_1_l11>;
+	regulator-names = "gdscr", "mipi-csi-vdd";
+	rgltr-cntrl-support;
+	rgltr-min-voltage = <0 1232000>;
+	rgltr-max-voltage = <0 1232000>;
+	rgltr-load-current = <0 21800>;
 };
 
 &bluetooth {
@@ -170,9 +185,7 @@
 	/delete-node/ display-lowf;
 	/delete-node/ wlan-lowf;
 	/delete-node/ camera-lowf;
-	soc {
-		/delete-property/ thermal-sensors;
-	};
+	/delete-node/ soc;
 };
 
 #include "sa6155-regulator.dtsi"
@@ -319,6 +332,75 @@
 				temperature = <125000>;
 				hysteresis = <1000>;
 				type = "passive";
+			};
+		};
+	};
+
+	pm6155-1-tz {
+		cooling-maps {
+			/*
+			 * trip0 cooling map is dummy node to enable
+			 * passive polling on trip0 violation.
+			 */
+			trip0_cpu0 {
+				trip = <&pm6155_trip0>;
+				cooling-device = <&CPU0 0 0>;
+			};
+
+			trip1_cpu0 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU0 (THERMAL_MAX_LIMIT-1)
+						(THERMAL_MAX_LIMIT-1)>;
+			};
+
+			trip1_cpu1 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU1 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu2 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU2 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu3 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU3 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu4 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU4 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu5 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU5 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu6 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU6 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+
+			trip1_cpu7 {
+				trip = <&pm6155_trip1>;
+				cooling-device =
+					<&CPU7 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
 			};
 		};
 	};

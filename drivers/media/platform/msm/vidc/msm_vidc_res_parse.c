@@ -806,9 +806,6 @@ int read_platform_resources_from_drv_data(
 	res->debug_timeout = find_key_value(platform_data,
 			"qcom,debug-timeout");
 
-	res->pm_qos_latency_us = find_key_value(platform_data,
-			"qcom,pm-qos-latency-us");
-
 	res->max_secure_inst_count = find_key_value(platform_data,
 			"qcom,max-secure-instances");
 
@@ -958,6 +955,12 @@ int read_platform_resources_from_dt(
 		dprintk(VIDC_ERR,
 			"Failed to load allowed clocks table: %d\n", rc);
 		goto err_load_allowed_clocks_table;
+	}
+
+	if (of_device_is_compatible(pdev->dev.of_node,
+		"qcom,sa6155p-vidc")) {
+		res->max_load = 2073600;
+		dprintk(VIDC_INFO, "msm_vidc: Use higher max_load on Auto\n");
 	}
 
 	rc = msm_vidc_load_reset_table(res);

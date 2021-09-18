@@ -441,32 +441,6 @@ static struct qmi_elem_info wlfw_fw_version_info_s_v01_ei[] = {
 	},
 };
 
-static struct qmi_elem_info wlfw_host_ddr_range_s_v01_ei[] = {
-	{
-		.data_type      = QMI_UNSIGNED_8_BYTE,
-		.elem_len       = 1,
-		.elem_size      = sizeof(u64),
-		.is_array       = NO_ARRAY,
-		.tlv_type       = 0,
-		.offset         = offsetof(struct wlfw_host_ddr_range_s_v01,
-					   start),
-	},
-	{
-		.data_type      = QMI_UNSIGNED_8_BYTE,
-		.elem_len       = 1,
-		.elem_size      = sizeof(u64),
-		.is_array       = NO_ARRAY,
-		.tlv_type       = 0,
-		.offset         = offsetof(struct wlfw_host_ddr_range_s_v01,
-					   size),
-	},
-	{
-		.data_type      = QMI_EOTI,
-		.is_array       = NO_ARRAY,
-		.tlv_type       = QMI_COMMON_TLV_TYPE,
-	},
-};
-
 struct qmi_elem_info wlfw_ind_register_req_msg_v01_ei[] = {
 	{
 		.data_type      = QMI_OPT_FLAG,
@@ -2560,43 +2534,6 @@ struct qmi_elem_info wlfw_host_cap_req_msg_v01_ei[] = {
 					   cal_duration),
 	},
 	{
-		.data_type	= QMI_OPT_FLAG,
-		.elem_len	= 1,
-		.elem_size	= sizeof(u8),
-		.is_array	= NO_ARRAY,
-		.tlv_type	= 0x1E,
-		.offset		= offsetof(struct wlfw_host_cap_req_msg_v01,
-					   platform_name_valid),
-	},
-	{
-		.data_type	= QMI_OPT_FLAG,
-		.elem_len	= QMI_WLFW_MAX_PLATFORM_NAME_LEN_V01 + 1,
-		.elem_size	= sizeof(u8),
-		.is_array	= NO_ARRAY,
-		.tlv_type	= 0x1E,
-		.offset		= offsetof(struct wlfw_host_cap_req_msg_v01,
-					   platform_name),
-	},
-	{
-		.data_type      = QMI_OPT_FLAG,
-		.elem_len	= 1,
-		.elem_size	= sizeof(u8),
-		.is_array       = NO_ARRAY,
-		.tlv_type       = 0x1F,
-		.offset		= offsetof(struct wlfw_host_cap_req_msg_v01,
-					   ddr_range_valid),
-	},
-	{
-		.data_type      = QMI_STRUCT,
-		.elem_len       = QMI_WLFW_MAX_HOST_DDR_RANGE_SIZE_V01,
-		.elem_size      = sizeof(struct wlfw_host_ddr_range_s_v01),
-		.is_array       = STATIC_ARRAY,
-		.tlv_type       = 0x1F,
-		.offset         = offsetof(struct wlfw_host_cap_req_msg_v01,
-					   ddr_range),
-		.ei_array      = wlfw_host_ddr_range_s_v01_ei,
-	},
-	{
 		.data_type      = QMI_EOTI,
 		.is_array       = NO_ARRAY,
 		.tlv_type       = QMI_COMMON_TLV_TYPE,
@@ -3512,6 +3449,43 @@ struct qmi_elem_info wlfw_shutdown_resp_msg_v01_ei[] = {
 		.is_array       = NO_ARRAY,
 		.tlv_type       = 0x02,
 		.offset         = offsetof(struct wlfw_shutdown_resp_msg_v01,
+					   resp),
+		.ei_array      = qmi_response_type_v01_ei,
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.is_array       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+
+struct qmi_elem_info wlfw_pcie_gen_switch_req_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_SIGNED_4_BYTE_ENUM,
+		.elem_len       = 1,
+		.elem_size      = sizeof(enum wlfw_pcie_gen_speed_v01),
+		.is_array       = NO_ARRAY,
+		.tlv_type       = 0x01,
+		.offset         = offsetof(struct
+					   wlfw_pcie_gen_switch_req_msg_v01,
+					   pcie_speed),
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.is_array       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+
+struct qmi_elem_info wlfw_pcie_gen_switch_resp_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_STRUCT,
+		.elem_len       = 1,
+		.elem_size      = sizeof(struct qmi_response_type_v01),
+		.is_array       = NO_ARRAY,
+		.tlv_type       = 0x02,
+		.offset         = offsetof(struct
+					   wlfw_pcie_gen_switch_resp_msg_v01,
 					   resp),
 		.ei_array      = qmi_response_type_v01_ei,
 	},

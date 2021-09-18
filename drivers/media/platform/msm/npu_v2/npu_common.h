@@ -13,8 +13,9 @@
 #ifndef _NPU_COMMON_H
 #define _NPU_COMMON_H
 
-/*
+/* -------------------------------------------------------------------------
  * Includes
+ * -------------------------------------------------------------------------
  */
 #include <asm/dma-iommu.h>
 #include <linux/cdev.h>
@@ -34,8 +35,9 @@
 
 #include "npu_mgr.h"
 
-/*
+/* -------------------------------------------------------------------------
  * Defines
+ * -------------------------------------------------------------------------
  */
 #define NPU_MAX_MBOX_NUM	    4
 #define NPU_MBOX_LOW_PRI	    0
@@ -67,17 +69,14 @@ enum npu_power_level {
 	NPU_PWRLEVEL_OFF = 0xFFFFFFFF,
 };
 
-#define NPU_ERR(fmt, args...)                            \
-	pr_err("NPU_ERR: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_WARN(fmt, args...)                           \
-	pr_warn("NPU_WARN: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_INFO(fmt, args...)                           \
-	pr_info("NPU_INFO: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_DBG(fmt, args...)                           \
-	pr_debug("NPU_DBG: %s: %d " fmt, __func__,  __LINE__, ##args)
+#define NPU_ERR(fmt, args...)
+#define NPU_WARN(fmt, args...)
+#define NPU_INFO(fmt, args...)
+#define NPU_DBG(fmt, args...)
 
-/*
+/* -------------------------------------------------------------------------
  * Data Structures
+ * -------------------------------------------------------------------------
  */
 struct npu_smmu_ctx {
 	int domain;
@@ -138,7 +137,7 @@ struct npu_mbox {
 };
 
 /*
- * struct npul_pwrlevel - Struct holding different pwrlevel info obtained from
+ * struct npu_pwrlevel - Struct holding different pwrlevel info obtained
  * from dtsi file
  * @pwr_level:           NPU power level
  * @freq[]:              NPU frequency vote in Hz
@@ -249,6 +248,7 @@ struct mbox_bridge_data {
 
 struct npu_device {
 	struct mutex dev_lock;
+	spinlock_t ipc_lock;
 
 	struct platform_device *pdev;
 
@@ -291,6 +291,7 @@ struct npu_device {
 	struct llcc_slice_desc *sys_cache;
 	uint32_t execute_v2_flag;
 	bool cxlimit_registered;
+	bool npu_dsp_sid_mapped;
 
 	uint32_t hw_version;
 };
@@ -318,8 +319,9 @@ struct ipcc_mbox_chan {
 	struct npu_device *npu_dev;
 };
 
-/*
+/* -------------------------------------------------------------------------
  * Function Prototypes
+ * -------------------------------------------------------------------------
  */
 int npu_debugfs_init(struct npu_device *npu_dev);
 void npu_debugfs_deinit(struct npu_device *npu_dev);

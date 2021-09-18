@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -534,6 +534,8 @@ static int msm_vidc_probe_vidc_device(struct platform_device *pdev)
 	struct device *dev;
 	int nr = BASE_DEVICE_NUMBER;
 
+	place_marker("M - DRIVER Video Start");
+
 	if (!vidc_driver) {
 		dprintk(VIDC_ERR, "Invalid vidc driver\n");
 		return -EINVAL;
@@ -783,7 +785,7 @@ static int msm_vidc_pm_suspend(struct device *dev)
 
 static int msm_vidc_pm_resume(struct device *dev)
 {
-	place_marker("vidc resumed");
+	update_marker("vidc resumed");
 	dprintk(VIDC_INFO, "%s\n", __func__);
 	return 0;
 }
@@ -884,9 +886,12 @@ static struct platform_driver msm_vidc_driver = {
 	},
 };
 
+extern void __init init_vidc_kmem_buf_pool(void);
 static int __init msm_vidc_init(void)
 {
 	int rc = 0;
+
+	init_vidc_kmem_buf_pool();
 
 	vidc_driver = kzalloc(sizeof(*vidc_driver),
 						GFP_KERNEL);
@@ -898,16 +903,20 @@ static int __init msm_vidc_init(void)
 
 	INIT_LIST_HEAD(&vidc_driver->cores);
 	mutex_init(&vidc_driver->lock);
+#ifdef CONFIG_DEBUG_FS
 	vidc_driver->debugfs_root = msm_vidc_debugfs_init_drv();
 	if (!vidc_driver->debugfs_root)
 		dprintk(VIDC_ERR,
 			"Failed to create debugfs for msm_vidc\n");
+#endif
 
 	rc = platform_driver_register(&msm_vidc_driver);
 	if (rc) {
 		dprintk(VIDC_ERR,
 			"Failed to register platform driver\n");
+#ifdef CONFIG_DEBUG_FS
 		debugfs_remove_recursive(vidc_driver->debugfs_root);
+#endif
 		kfree(vidc_driver);
 		vidc_driver = NULL;
 	}

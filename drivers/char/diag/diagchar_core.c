@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1968,7 +1968,7 @@ static int diag_switch_logging(struct diag_logging_mode_param_t *param)
 				DIAG_LOG(DIAG_DEBUG_USERSPACE,
 					 "not switching modes c: %d n: %d\n",
 					curr_mode, new_mode);
-				return 0;
+				continue;
 			}
 
 			diag_ws_reset(DIAG_WS_MUX);
@@ -1996,13 +1996,15 @@ static int diag_switch_logging(struct diag_logging_mode_param_t *param)
 				driver->pcie_switch_pid = current->tgid;
 			}
 			if (new_mode == DIAG_PCIE_MODE) {
-				driver->transport_set = DIAG_ROUTE_TO_PCIE;
+				driver->transport_set =
+					DIAG_ROUTE_TO_PCIE;
 				diagmem_setsize(POOL_TYPE_MUX_APPS,
 					itemsize_pcie_apps,
 					(poolsize_pcie_apps + 1 +
 						(NUM_PERIPHERALS * 6)));
 			} else if (new_mode == DIAG_USB_MODE) {
-				driver->transport_set = DIAG_ROUTE_TO_USB;
+				driver->transport_set =
+					DIAG_ROUTE_TO_USB;
 				diagmem_setsize(POOL_TYPE_MUX_APPS,
 					itemsize_usb_apps,
 					(poolsize_usb_apps + 1 +
@@ -3757,13 +3759,13 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 		mutex_lock(&driver->md_session_lock);
 		session_info = diag_md_session_get_peripheral(DIAG_LOCAL_PROC,
 								APPS_DATA);
-		if (!session_info)
-			mutex_unlock(&driver->md_session_lock);
 		COPY_USER_SPACE_OR_ERR(buf, data_type, sizeof(int));
 		if (ret == -EFAULT) {
 			mutex_unlock(&driver->md_session_lock);
-			goto exit;
+			goto end;
 		}
+		if (!session_info)
+			mutex_unlock(&driver->md_session_lock);
 		write_len = diag_copy_to_user_msg_mask(buf + ret, count,
 						       session_info);
 		if (session_info)
@@ -3786,7 +3788,7 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 		COPY_USER_SPACE_OR_ERR(buf, data_type, 4);
 		if (ret == -EFAULT) {
 			mutex_unlock(&driver->md_session_lock);
-			goto exit;
+			goto end;
 		}
 		if (session_info && session_info->event_mask &&
 		    session_info->event_mask->ptr) {
@@ -3795,7 +3797,7 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 					session_info->event_mask->mask_len);
 			if (ret == -EFAULT) {
 				mutex_unlock(&driver->md_session_lock);
-				goto exit;
+				goto end;
 			}
 		} else {
 			COPY_USER_SPACE_OR_ERR(buf + sizeof(int),
@@ -3803,7 +3805,7 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 						event_mask.mask_len);
 			if (ret == -EFAULT) {
 				mutex_unlock(&driver->md_session_lock);
-				goto exit;
+				goto end;
 			}
 		}
 		mutex_unlock(&driver->md_session_lock);
@@ -3820,15 +3822,13 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 		mutex_lock(&driver->md_session_lock);
 		session_info = diag_md_session_get_peripheral(DIAG_LOCAL_PROC,
 								APPS_DATA);
-		if (!session_info)
-			mutex_unlock(&driver->md_session_lock);
 		COPY_USER_SPACE_OR_ERR(buf, data_type, sizeof(int));
 		if (ret == -EFAULT) {
-			if ((session_info))
-				mutex_unlock(&driver->md_session_lock);
-			goto exit;
+			mutex_unlock(&driver->md_session_lock);
+			goto end;
 		}
-
+		if (!session_info)
+			mutex_unlock(&driver->md_session_lock);
 		write_len = diag_copy_to_user_log_mask(buf + ret, count,
 						       session_info);
 		if (session_info)
@@ -4292,7 +4292,7 @@ static void diag_debug_init(void)
 	 * to be logged to IPC
 	 */
 	diag_debug_mask = DIAG_DEBUG_PERIPHERALS | DIAG_DEBUG_DCI |
-				DIAG_DEBUG_USERSPACE | DIAG_DEBUG_BRIDGE;
+		DIAG_DEBUG_MHI | DIAG_DEBUG_USERSPACE | DIAG_DEBUG_BRIDGE;
 }
 #else
 static void diag_debug_init(void)
@@ -4401,7 +4401,7 @@ static void diag_init_transport(void)
 	 * The number of buffers encompasses Diag data generated on
 	 * the Apss processor + 1 for the responses generated
 	 * exclusively on the Apps processor + data from data channels
-	 *(4 channels periperipheral) + data from command channels (2)
+	 *(4 channels per peripheral) + data from command channels (2)
 	 */
 	diagmem_setsize(POOL_TYPE_MUX_APPS, itemsize_pcie_apps,
 		poolsize_pcie_apps + 1 + (NUM_PERIPHERALS * 6));
@@ -4420,7 +4420,7 @@ static void diag_init_transport(void)
 	 * The number of buffers encompasses Diag data generated on
 	 * the Apss processor + 1 for the responses generated
 	 * exclusively on the Apps processor + data from data channels
-	 *(4 channels periperipheral) + data from command channels (2)
+	 *(4 channels per peripheral) + data from command channels (2)
 	 */
 	diagmem_setsize(POOL_TYPE_MUX_APPS, itemsize_usb_apps,
 		poolsize_usb_apps + 1 + (NUM_PERIPHERALS * 6));

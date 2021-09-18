@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018,2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -40,7 +40,7 @@ typedef void (*sync_callback)(int32_t sync_obj, int status, void *data);
  * -ENOMEM will be returned if the kernel can't allocate space for
  * sync object.
  */
-int cam_sync_create(int32_t *sync_obj, const char *name);
+int cam_sync_create(int32_t *sync_obj, const char *name, uint32_t client_id);
 
 /**
  * @brief: Registers a callback with a sync object

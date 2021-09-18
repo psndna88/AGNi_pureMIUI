@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,8 +13,9 @@
  */
 
 qcom,unknown_5020mAh {
+    /* 4278534_LC_M522_Sunwoda_5020mAH_PM6250_averaged_MasterSlave_Nov7th2019 */
 	qcom,max-voltage-uv = <4450000>;
-	qcom,fastchg-current-ma = <3600>;
+	qcom,fastchg-current-ma = <3000>;
 	qcom,batt-id-kohm = <330>;
 	qcom,battery-beta = <4250>;
 	qcom,battery-therm-kohm = <100>;
@@ -36,9 +37,9 @@ qcom,unknown_5020mAh {
 				151 450  4480000
 				451 600  4100000>;
 
-	qcom,step-chg-ranges = <3001000  4250000  3600000
-				4250001  4430000  3300000
-				4430001  4450000  3000000>;
+	qcom,step-chg-ranges = <3001000  4250000  3000000
+				4250001  4430000  2800000
+				4430001  4450000  2460000>;
 
 	qcom,dynamic-fv-ranges = <0   100  4480000
 				 101  200  4460000

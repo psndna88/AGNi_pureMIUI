@@ -89,6 +89,10 @@ int memblock_clear_hotplug(phys_addr_t base, phys_addr_t size);
 int memblock_mark_mirror(phys_addr_t base, phys_addr_t size);
 int memblock_mark_nomap(phys_addr_t base, phys_addr_t size);
 int memblock_clear_nomap(phys_addr_t base, phys_addr_t size);
+#ifdef CONFIG_MEMORY_HOTPLUG
+int memblock_dump_aligned_blocks_addr(char *buf);
+int memblock_dump_aligned_blocks_num(char *buf);
+#endif
 ulong choose_memblock_flags(void);
 
 /* Low level functions */
@@ -298,6 +302,7 @@ static inline bool memblock_bottom_up(void)
 /* Flags for memblock_alloc_base() amd __memblock_alloc_base() */
 #define MEMBLOCK_ALLOC_ANYWHERE	(~(phys_addr_t)0)
 #define MEMBLOCK_ALLOC_ACCESSIBLE	0
+#define MEMBLOCK_ALLOC_KASAN		1
 
 phys_addr_t __init memblock_alloc_range(phys_addr_t size, phys_addr_t align,
 					phys_addr_t start, phys_addr_t end,

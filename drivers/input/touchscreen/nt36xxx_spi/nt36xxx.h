@@ -25,6 +25,8 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>
+#include <linux/spi/spi-geni-qcom.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -40,6 +42,9 @@
 #ifdef CONFIG_SPI_MT65XX
 #include <linux/platform_data/spi-mt65xx.h>
 #endif
+
+// include longcheer header
+#include "../lct_tp_info.h"
 
 #define NVT_DEBUG 0
 
@@ -97,7 +102,7 @@ extern const uint16_t gesture_key_array[];
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
-#define NVT_TOUCH_WDT_RECOVERY 1
+#define NVT_TOUCH_WDT_RECOVERY 0
 
 //enable 'check touch vendor' feature
 #define CHECK_TOUCH_VENDOR
@@ -189,6 +194,9 @@ struct nvt_ts_data {
 #ifdef CONFIG_SPI_MT65XX
     struct mtk_chip_config spi_ctrl;
 #endif
+
+	struct pm_qos_request pm_spi_req;
+	struct pm_qos_request pm_touch_req;
 
 	struct mutex reg_lock;
 	struct device *nvt_touch_dev;

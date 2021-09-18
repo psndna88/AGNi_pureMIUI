@@ -172,11 +172,7 @@ struct qcom_smp2p {
 
 static void *ilc;
 #define SMP2P_LOG_PAGE_CNT 2
-#define SMP2P_INFO(x, ...)	\
-do {	\
-	if (ilc) \
-		ipc_log_string(ilc, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
+#define SMP2P_INFO(x, ...)
 
 static void qcom_smp2p_kick(struct qcom_smp2p *smp2p)
 {
@@ -435,15 +431,16 @@ static int qcom_smp2p_inbound_entry(struct qcom_smp2p *smp2p,
 static int smp2p_update_bits(void *data, u32 mask, u32 value)
 {
 	struct smp2p_entry *entry = data;
+	unsigned long flags;
 	u32 orig;
 	u32 val;
 
-	spin_lock(&entry->lock);
+	spin_lock_irqsave(&entry->lock, flags);
 	val = orig = readl(entry->value);
 	val &= ~mask;
 	val |= value;
 	writel(val, entry->value);
-	spin_unlock(&entry->lock);
+        spin_unlock_irqrestore(&entry->lock, flags);
 	SMP2P_INFO("%d: %s: orig:0x%0x new:0x%0x\n",
 		   entry->smp2p->remote_pid, entry->name, orig, val);
 
@@ -604,31 +601,6 @@ static int qcom_smp2p_alloc_item(struct platform_device *pdev,
 	return ret;
 }
 
-static void qcom_smp2p_release_item(struct device *dev,
-					struct qcom_smp2p *smp2p)
-{
-	struct smp2p_entry *entry;
-	struct smp2p_entry *next_entry;
-
-	/* Walk through the out bound list and release state and entry */
-	list_for_each_entry_safe(entry, next_entry, &smp2p->outbound, node) {
-		qcom_smem_state_unregister(entry->state);
-		list_del(&entry->node);
-		devm_kfree(smp2p->dev, entry);
-	}
-	INIT_LIST_HEAD(&smp2p->outbound);
-
-	/* Walk through the inbound list and release domain and entry */
-	list_for_each_entry_safe(entry, next_entry, &smp2p->inbound, node) {
-		irq_domain_remove(entry->domain);
-		list_del(&entry->node);
-		devm_kfree(smp2p->dev, entry);
-	}
-	INIT_LIST_HEAD(&smp2p->inbound);
-	/* remove wakeup source */
-	wakeup_source_trash(&smp2p->ws);
-}
-
 static int qcom_smp2p_probe(struct platform_device *pdev)
 {
 	struct smp2p_entry *entry;
@@ -745,31 +717,86 @@ static int qcom_smp2p_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int qcom_smp2p_resume(struct device *dev)
+static int qcom_smp2p_restore(struct device *dev)
 {
 	int ret = 0;
 	struct qcom_smp2p *smp2p = dev_get_drvdata(dev);
+	struct smp2p_entry *entry;
+	struct device_node *node;
 	struct platform_device *pdev = container_of(dev, struct
 						platform_device, dev);
 
-	ret = qcom_smp2p_alloc_item(pdev, smp2p);
+	ret = qcom_smp2p_alloc_outbound_item(smp2p);
+	if (ret < 0)
+		goto print_err;
+
+	for_each_available_child_of_node(pdev->dev.of_node, node) {
+		entry = devm_kzalloc(&pdev->dev, sizeof(*entry), GFP_KERNEL);
+		if (!entry) {
+			ret = -ENOMEM;
+			goto print_err;
+		}
+
+		entry->smp2p = smp2p;
+		spin_lock_init(&entry->lock);
+		ret = of_property_read_string(node, "qcom,entry-name",
+								&entry->name);
+		if (ret < 0)
+			goto print_err;
+
+		if (!of_property_read_bool(node, "interrupt-controller")) {
+			ret = qcom_smp2p_outbound_entry(smp2p, entry, node);
+			if (ret < 0)
+				goto print_err;
+
+			list_add(&entry->node, &smp2p->outbound);
+		}
+	}
+	wakeup_source_init(&smp2p->ws, "smp2p");
+
+	enable_irq_wake(smp2p->irq);
+	/* Kick the outgoing edge after allocating entries */
+	qcom_smp2p_kick(smp2p);
+
+print_err:
 	if (ret < 0 && ret != -EEXIST)
 		dev_err(dev, "failed to alloc items ret = %d\n", ret);
 
 	return ret;
 }
 
-static int qcom_smp2p_suspend(struct device *dev)
+static int qcom_smp2p_freeze(struct device *dev)
 {
 	struct qcom_smp2p *smp2p = dev_get_drvdata(dev);
+	struct smp2p_entry *entry;
+	struct smp2p_entry *next_entry;
 
-	qcom_smp2p_release_item(dev, smp2p);
+	disable_irq_wake(smp2p->irq);
+	/* Walk through the out bound list and release state and entry */
+	list_for_each_entry_safe(entry, next_entry, &smp2p->outbound, node) {
+		qcom_smem_state_unregister(entry->state);
+		list_del(&entry->node);
+		devm_kfree(smp2p->dev, entry);
+	}
+	INIT_LIST_HEAD(&smp2p->outbound);
+
+
+	/* Walk through the in bound list and reset last value */
+	list_for_each_entry_safe(entry, next_entry, &smp2p->inbound, node) {
+		entry->last_value = 0;
+	}
+	/* make null to point it to valid smem item during first interrupt */
+	smp2p->in = NULL;
+	smp2p->valid_entries = 0;
+	/* remove wakeup source */
+	wakeup_source_trash(&smp2p->ws);
 	return 0;
 }
 
 static const struct dev_pm_ops qcom_smp2p_pm_ops = {
-	.freeze = qcom_smp2p_suspend,
-	.restore = qcom_smp2p_resume,
+	.freeze = qcom_smp2p_freeze,
+	.restore = qcom_smp2p_restore,
+	.thaw = qcom_smp2p_restore,
 };
 
 static const struct of_device_id qcom_smp2p_of_match[] = {

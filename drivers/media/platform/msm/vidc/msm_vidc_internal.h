@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -50,6 +50,8 @@
 #define MIN_NUM_CAPTURE_BUFFERS 1
 #define MAX_NUM_OUTPUT_BUFFERS VIDEO_MAX_FRAME // same as VB2_MAX_FRAME
 #define MAX_NUM_CAPTURE_BUFFERS VIDEO_MAX_FRAME // same as VB2_MAX_FRAME
+
+#define MAX_SUPPORTED_INSTANCES 16
 
 /* Maintains the number of FTB's between each FBD over a window */
 #define DCVS_FTB_WINDOW 16
@@ -440,7 +442,7 @@ struct msm_vidc_core {
 
 struct msm_vidc_inst {
 	struct list_head list;
-	struct mutex sync_lock, lock, flush_lock;
+	struct mutex sync_lock, lock;
 	struct msm_vidc_core *core;
 	enum session_type session_type;
 	void *session;

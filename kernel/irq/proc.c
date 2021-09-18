@@ -117,15 +117,41 @@ static int irq_affinity_list_proc_show(struct seq_file *m, void *v)
 	return show_irq_affinity(AFFINITY_LIST, m);
 }
 
+#ifndef CONFIG_AUTO_IRQ_AFFINITY
+static inline int irq_select_affinity_usr(unsigned int irq)
+{
+	/*
+	 * If the interrupt is started up already then this fails. The
+	 * interrupt is assigned to an online CPU already. There is no
+	 * point to move it around randomly. Tell user space that the
+	 * selected mask is bogus.
+	 *
+	 * If not then any change to the affinity is pointless because the
+	 * startup code invokes irq_setup_affinity() which will select
+	 * a online CPU anyway.
+	 */
+	return -EINVAL;
+}
+#else
+/* ALPHA magic affinity auto selector. Keep it for historical reasons. */
+static inline int irq_select_affinity_usr(unsigned int irq)
+{
+	return irq_select_affinity(irq);
+}
+#endif
 
 static ssize_t write_irq_affinity(int type, struct file *file,
 		const char __user *buffer, size_t count, loff_t *pos)
 {
 	unsigned int irq = (int)(long)PDE_DATA(file_inode(file));
+	struct irq_desc *desc = irq_to_desc(irq);
 	cpumask_var_t new_value;
 	int err;
 
 	if (!irq_can_set_affinity_usr(irq) || no_irq_affinity)
+		return -EIO;
+
+	if (!irqd_has_set(&desc->irq_data, IRQF_PERF_CRITICAL))
 		return -EIO;
 
 	if (!alloc_cpumask_var(&new_value, GFP_KERNEL))

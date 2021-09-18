@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -666,6 +666,7 @@ static void _sde_crtc_deinit_events(struct sde_crtc *sde_crtc)
 		return;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int _sde_debugfs_fps_status_show(struct seq_file *s, void *data)
 {
 	struct sde_crtc *sde_crtc;
@@ -712,6 +713,7 @@ static int _sde_debugfs_fps_status(struct inode *inode, struct file *file)
 	return single_open(file, _sde_debugfs_fps_status_show,
 			inode->i_private);
 }
+#endif
 
 static ssize_t set_fps_periodicity(struct device *device,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -857,7 +859,7 @@ static ssize_t measured_fps_show(struct device *device,
 	fps_int = (uint64_t) sde_crtc->fps_info.measured_fps;
 	fps_decimal = do_div(fps_int, 10);
 	return scnprintf(buf, PAGE_SIZE,
-	"fps: %d.%d duration:%d frame_count:%llu\n", fps_int, fps_decimal,
+	"fps: %llu.%llu duration:%d frame_count:%llu\n", fps_int, fps_decimal,
 			sde_crtc->fps_info.fps_periodic_duration, frame_count);
 }
 
@@ -2006,7 +2008,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	struct drm_plane_state *state;
 	struct sde_crtc_state *cstate;
 	struct sde_plane_state *pstate = NULL;
-	struct plane_state *pstates = NULL;
+	struct plane_state pstates[SDE_PSTATES_MAX];
 	struct sde_format *format;
 	struct sde_hw_ctl *ctl;
 	struct sde_hw_mixer *lm;
@@ -2032,11 +2034,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	sde_crtc->sbuf_rot_id_old = sde_crtc->sbuf_rot_id;
 	sde_crtc->sbuf_rot_id = 0x0;
 	sde_crtc->sbuf_rot_id_delta = 0x0;
-
-	pstates = kcalloc(SDE_PSTATES_MAX,
-			sizeof(struct plane_state), GFP_KERNEL);
-	if (!pstates)
-		return;
 
 	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		state = plane->state;
@@ -2077,7 +2074,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		format = to_sde_format(msm_framebuffer_format(pstate->base.fb));
 		if (!format) {
 			SDE_ERROR("invalid format\n");
-			goto end;
+			return;
 		}
 
 		if (pstate->stage == SDE_STAGE_BASE && format->alpha_enable)
@@ -2139,9 +2136,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	}
 
 	_sde_crtc_program_lm_output_roi(crtc);
-
-end:
-	kfree(pstates);
 }
 
 static void _sde_crtc_swap_mixers_for_right_partial_update(
@@ -3081,16 +3075,15 @@ static void _sde_crtc_set_input_fence_timeout(struct sde_crtc_state *cstate)
 	cstate->input_fence_timeout_ns *= NSEC_PER_MSEC;
 }
 
-/**
- * _sde_crtc_clear_dim_layers_v1 - clear all dim layer settings
- * @cstate:      Pointer to sde crtc state
- */
-static void _sde_crtc_clear_dim_layers_v1(struct sde_crtc_state *cstate)
+void _sde_crtc_clear_dim_layers_v1(struct drm_crtc_state *state)
 {
 	u32 i;
+	struct sde_crtc_state *cstate;
 
-	if (!cstate)
+	if (!state)
 		return;
+
+	cstate = to_sde_crtc_state(state);
 
 	for (i = 0; i < cstate->num_dim_layers; i++)
 		memset(&cstate->dim_layer[i], 0, sizeof(cstate->dim_layer[i]));
@@ -3127,7 +3120,7 @@ static void _sde_crtc_set_dim_layer_v1(struct drm_crtc *crtc,
 
 	if (!usr_ptr) {
 		/* usr_ptr is null when setting the default property value */
-		_sde_crtc_clear_dim_layers_v1(cstate);
+		_sde_crtc_clear_dim_layers_v1(&cstate->base);
 		SDE_DEBUG("dim_layer data removed\n");
 		return;
 	}
@@ -3752,6 +3745,10 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 		sde_encoder_trigger_kickoff_pending(encoder);
 	}
 
+	 /* update performance setting */
+		sde_core_perf_crtc_update(crtc, 1, false);
+		_sde_crtc_wait_for_fences(crtc);
+
 	/*
 	 * If no mixers have been allocated in sde_crtc_atomic_check(),
 	 * it means we are trying to flush a CRTC whose state is disabled:
@@ -3876,7 +3873,7 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 		sde_plane_restore(plane);
 
 	/* wait for acquire fences before anything else is done */
-	_sde_crtc_wait_for_fences(crtc);
+	//_sde_crtc_wait_for_fences(crtc);
 
 	/* schedule the idle notify delayed work */
 	if (sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
@@ -3897,9 +3894,6 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 		}
 		cstate->rsc_update = true;
 	}
-
-	/* update performance setting before crtc kickoff */
-	sde_core_perf_crtc_update(crtc, 1, false);
 
 	/*
 	 * Final plane updates: Give each plane a chance to complete all
@@ -4393,8 +4387,6 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	if (cstate->sbuf_cfg.rot_op_mode != SDE_CTL_ROT_OP_MODE_INLINE_ASYNC)
 		if (_sde_crtc_commit_kickoff_rot(crtc, cstate))
 			is_error = true;
-
-	sde_vbif_clear_errors(sde_kms);
 
 	if (is_error) {
 		_sde_crtc_remove_pipe_flush(crtc);
@@ -5255,7 +5247,7 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 {
 	struct drm_device *dev;
 	struct sde_crtc *sde_crtc;
-	struct plane_state *pstates = NULL;
+	struct plane_state pstates[SDE_PSTATES_MAX];
 	struct sde_crtc_state *cstate;
 	struct sde_kms *kms;
 
@@ -5265,7 +5257,7 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 
 	int cnt = 0, rc = 0, mixer_width, i, z_pos, mixer_height;
 
-	struct sde_multirect_plane_states *multirect_plane = NULL;
+	struct sde_multirect_plane_states multirect_plane[SDE_MULTIRECT_PLANE_MAX];
 	int multirect_count = 0;
 	const struct drm_plane_state *pipe_staged[SSPP_MAX];
 	int left_zpos_cnt = 0, right_zpos_cnt = 0;
@@ -5296,17 +5288,9 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 		goto end;
 	}
 
-	pstates = kcalloc(SDE_PSTATES_MAX,
-			sizeof(struct plane_state), GFP_KERNEL);
-
-	multirect_plane = kcalloc(SDE_MULTIRECT_PLANE_MAX,
-			sizeof(struct sde_multirect_plane_states),
-			GFP_KERNEL);
-
-	if (!pstates || !multirect_plane) {
-		rc = -ENOMEM;
-		goto end;
-	}
+	memset(pstates, 0, SDE_PSTATES_MAX * sizeof(struct plane_state));
+	memset(multirect_plane, 0,
+		   SDE_MULTIRECT_PLANE_MAX * sizeof(struct sde_multirect_plane_states));
 
 	mode = &state->adjusted_mode;
 	SDE_DEBUG("%s: check", sde_crtc->name);
@@ -5546,8 +5530,6 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	}
 
 end:
-	kfree(pstates);
-	kfree(multirect_plane);
 	_sde_crtc_rp_free_unused(&cstate->rp);
 	return rc;
 }
@@ -5997,7 +5979,7 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	int idx, ret;
 	uint64_t fence_fd;
 
-	if (!crtc || !state || !property) {
+	if (unlikely(!crtc || !state || !property)) {
 		SDE_ERROR("invalid argument(s)\n");
 		return -EINVAL;
 	}
@@ -6008,13 +5990,13 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	SDE_ATRACE_BEGIN("sde_crtc_atomic_set_property");
 	/* check with cp property system first */
 	ret = sde_cp_crtc_set_property(crtc, property, val);
-	if (ret != -ENOENT)
+	if (unlikely(ret != -ENOENT))
 		goto exit;
 
 	/* if not handled by cp, check msm_property system */
 	ret = msm_property_atomic_set(&sde_crtc->property_info,
 			&cstate->property_state, property, val);
-	if (ret)
+	if (unlikely(ret))
 		goto exit;
 
 	idx = msm_property_index(&sde_crtc->property_info, property);
@@ -6052,18 +6034,18 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 		cstate->bw_split_vote = true;
 		break;
 	case CRTC_PROP_OUTPUT_FENCE:
-		if (!val)
+		if (unlikely(!val))
 			goto exit;
 
 		ret = _sde_crtc_get_output_fence(crtc, state, &fence_fd);
-		if (ret) {
+		if (unlikely(ret)) {
 			SDE_ERROR("fence create failed rc:%d\n", ret);
 			goto exit;
 		}
 
 		ret = copy_to_user((uint64_t __user *)(uintptr_t)val, &fence_fd,
 				sizeof(uint64_t));
-		if (ret) {
+		if (unlikely(ret)) {
 			SDE_ERROR("copy to user failed rc:%d\n", ret);
 			put_unused_fd(fence_fd);
 			ret = -EFAULT;
@@ -6213,7 +6195,7 @@ void sde_crtc_misr_setup(struct drm_crtc *crtc, bool enable, u32 frame_count)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 static int _sde_debugfs_status_show(struct seq_file *s, void *data)
 {
 	struct sde_crtc *sde_crtc;
@@ -6681,7 +6663,7 @@ static int _sde_crtc_init_debugfs(struct drm_crtc *crtc)
 static void _sde_crtc_destroy_debugfs(struct drm_crtc *crtc)
 {
 }
-#endif /* CONFIG_DEBUG_FS_ */
+#endif /* CONFIG_DEBUG_FS */
 
 static int sde_crtc_late_register(struct drm_crtc *crtc)
 {
@@ -6999,6 +6981,7 @@ static int _sde_crtc_event_enable(struct sde_kms *kms,
 			if (!node)
 				return -ENOMEM;
 			INIT_LIST_HEAD(&node->list);
+			INIT_LIST_HEAD(&node->irq.list);
 			node->func = custom_events[i].func;
 			node->event = event;
 			node->state = IRQ_NOINIT;
@@ -7023,8 +7006,6 @@ static int _sde_crtc_event_enable(struct sde_kms *kms,
 			kfree(node);
 			return ret;
 		}
-
-		INIT_LIST_HEAD(&node->irq.list);
 
 		mutex_lock(&crtc->crtc_lock);
 		ret = node->func(crtc_drm, true, &node->irq);

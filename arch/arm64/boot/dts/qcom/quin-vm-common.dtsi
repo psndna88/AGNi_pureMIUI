@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,7 +29,7 @@
 		ranges;
 
 		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
+		linux_cma: linux,cma {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
@@ -58,31 +58,49 @@
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
+			boot_devices = "vdevs/1c140000.virtio_blk,vdevs/1c0b0000.virtio_blk,vdevs/1c0f0000.virtio_blk";
+
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,la_system,la_vendor";
 			};
+
 			fstab {
 				compatible = "android,fstab";
+
 				vendor {
 					compatible = "android,vendor";
-					dev="/dev/block/platform/vdevs/1c0f0000.virtio_blk/vdc";
+					dev="/dev/block/platform/vdevs/1c0f0000.virtio_blk/la_vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait";
+					fsmgr_flags = "wait,avb";
 					status = "ok";
 				};
 			};
 		};
+	};
+
+	rename_blk: rename_blk {
+		compatible = "qcom,blkdev-rename";
+		actual-dev = "vda", "vdb", "vdc",
+				"vdd", "vde", "vdf",
+				"vdg", "vdh";
+		rename-dev = "la_system", "la_userdata", "la_vendor",
+				"la_persist", "modem", "bluetooth",
+				"la_misc", "vbmeta";
 	};
 };
 
 &soc {
 	#address-cells = <1>;
 	#size-cells = <1>;
-	virtual-interrupt-parent = "gic";
+	interrupt-parent = <&intc>;
 	ranges = <0 0 0 0xffffffff>;
 	compatible = "simple-bus";
+
+	intc: vgic@0 {
+		qvm,vdev = "gic";
+	};
 
 	clock_gcc: qcom,gcc {
 		compatible = "qcom,dummycc";
@@ -95,7 +113,7 @@
 		#clock-cells = <1>;
 	};
 
-	qcom,ion {
+	msm_ion: qcom,ion {
 		compatible = "qcom,msm-ion";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -115,6 +133,11 @@
 			reg = <19>;
 			memory-region = <&qseecom_ta_mem>;
 			qcom,ion-heap-type = "DMA";
+		};
+
+		qcom,ion-heap@9 {
+			reg = <9>;
+			qcom,ion-heap-type = "SYSTEM_SECURE";
 		};
 	};
 
@@ -178,6 +201,18 @@
 
 		mmidgrp1000: mmidgrp1000 {
 			grp-start-id = <1000>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp1100: mmidgrp1100 {
+			grp-start-id = <1100>;
+			role = "fe";
+			remote-vmids = <0>;
+		};
+
+		mmidgrp1200: mmidgrp1200 {
+			grp-start-id = <1200>;
 			role = "fe";
 			remote-vmids = <0>;
 		};
@@ -249,25 +284,27 @@
 		status = "ok";
 	};
 
-	spmi_bus: qcom,spmi {
-		compatible = "qcom,viospmi-pmic-arb";
-		interrupt-names = "periph_irq";
-		interrupts = <GIC_SPI 481 IRQ_TYPE_NONE>;
-		qcom,ee = <0>;
-		qcom,channel = <0>;
-		#address-cells = <2>;
-		#size-cells = <0>;
-		interrupt-controller;
-		#interrupt-cells = <4>;
-		cell-index = <0>;
-	};
-
-	viospmi: virtio-spmi@1c800000 {
+	spmi_bus: virtio-spmi@1c800000 {
 		compatible = "virtio,mmio";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0x1c800000 0x1100>;
-		interrupts = <GIC_SPI 43 IRQ_TYPE_NONE>;
+		interrupt-names = "periph_irq";
+		interrupts = <GIC_SPI 45 IRQ_TYPE_NONE>;
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		cell-index = <0>;
 		status = "okay";
+	};
+
+	qcom,mpm2-sleep-counter@0xc221000 {
+		compatible = "qcom,mpm2-sleep-counter";
+		reg = <0xc221000 0x1000>;
+		clock-frequency = <32768>;
+	};
+
+	virtio_input_keyboard {
+		compatible = "virtio,mmio";
+		virtio,wakeup = <1>;
 	};
 };

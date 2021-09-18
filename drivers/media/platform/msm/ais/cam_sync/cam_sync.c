@@ -43,7 +43,7 @@ void cam_sync_print_fence_table(void)
 	}
 }
 
-int cam_sync_create(int32_t *sync_obj, const char *name)
+int cam_sync_create(int32_t *sync_obj, const char *name, uint32_t client_id)
 {
 	int rc;
 	long idx;
@@ -66,7 +66,7 @@ int cam_sync_create(int32_t *sync_obj, const char *name)
 
 	spin_lock_bh(&sync_dev->row_spinlocks[idx]);
 	rc = cam_sync_init_row(sync_dev->sync_table, idx, name,
-		CAM_SYNC_TYPE_INDV);
+		CAM_SYNC_TYPE_INDV, client_id);
 	if (rc) {
 		CAM_ERR(CAM_SYNC, "Error: Unable to init row at idx = %ld",
 			idx);
@@ -192,8 +192,9 @@ int cam_sync_signal(int32_t sync_obj, uint32_t status)
 	int rc = 0;
 
 	if (sync_obj >= CAM_SYNC_MAX_OBJS || sync_obj <= 0) {
-		CAM_ERR(CAM_SYNC, "Error: Out of range sync obj (0 <= %d < %d)",
-			sync_obj, CAM_SYNC_MAX_OBJS);
+		CAM_ERR(CAM_SYNC,
+		"Error: Out of range sync obj (0 <= %d < %d) [%d]",
+		sync_obj, CAM_SYNC_MAX_OBJS, status);
 		return -EINVAL;
 	}
 	row = sync_dev->sync_table + sync_obj;
@@ -314,7 +315,6 @@ int cam_sync_merge(int32_t *sync_obj, uint32_t num_objs, int32_t *merged_obj)
 			return rc;
 		}
 	}
-
 	do {
 		idx = find_first_zero_bit(sync_dev->bitmap, CAM_SYNC_MAX_OBJS);
 		if (idx >= CAM_SYNC_MAX_OBJS)
@@ -457,6 +457,43 @@ int cam_sync_wait(int32_t sync_obj, uint64_t timeout_ms)
 	return rc;
 }
 
+static int cam_sync_reset(int32_t sync_obj)
+{
+	int rc = 0;
+	struct sync_table_row *row = NULL;
+
+	if (sync_obj >= CAM_SYNC_MAX_OBJS || sync_obj <= 0)
+		return -EINVAL;
+
+	row = sync_dev->sync_table + sync_obj;
+
+	spin_lock_bh(&sync_dev->row_spinlocks[sync_obj]);
+
+	if (row->state == CAM_SYNC_STATE_INVALID) {
+		CAM_ERR(CAM_SYNC,
+			"Error: accessing an uninitialized sync obj = %d",
+			sync_obj);
+		spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
+		return -EINVAL;
+	}
+
+	row->state = CAM_SYNC_STATE_ACTIVE;
+
+	row->remaining = 0;
+	atomic_set(&row->ref_cnt, 0);
+
+	reinit_completion(&row->signaled);
+
+	INIT_LIST_HEAD(&row->callback_list);
+	INIT_LIST_HEAD(&row->parents_list);
+	INIT_LIST_HEAD(&row->children_list);
+	INIT_LIST_HEAD(&row->user_payload_list);
+
+	spin_unlock_bh(&sync_dev->row_spinlocks[sync_obj]);
+
+	return rc;
+}
+
 static int cam_sync_handle_create(struct cam_private_ioctl_arg *k_ioctl)
 {
 	struct cam_sync_info sync_create;
@@ -475,7 +512,37 @@ static int cam_sync_handle_create(struct cam_private_ioctl_arg *k_ioctl)
 
 	mutex_lock(&sync_dev->table_lock);
 	result = cam_sync_create(&sync_create.sync_obj,
-		sync_create.name);
+		sync_create.name, 0);
+	mutex_unlock(&sync_dev->table_lock);
+	if (!result)
+		if (copy_to_user(
+			u64_to_user_ptr(k_ioctl->ioctl_ptr),
+			&sync_create,
+			k_ioctl->size))
+			return -EFAULT;
+
+	return result;
+}
+
+static int cam_sync_handle_create2(struct cam_private_ioctl_arg *k_ioctl)
+{
+	struct cam_sync_create2 sync_create;
+	int result;
+
+	if (k_ioctl->size != sizeof(struct cam_sync_create2))
+		return -EINVAL;
+
+	if (!k_ioctl->ioctl_ptr)
+		return -EINVAL;
+
+	if (copy_from_user(&sync_create,
+		u64_to_user_ptr(k_ioctl->ioctl_ptr),
+		k_ioctl->size))
+		return -EFAULT;
+
+	mutex_lock(&sync_dev->table_lock);
+	result = cam_sync_create(&sync_create.sync_obj,
+		sync_create.name, sync_create.client_id);
 	mutex_unlock(&sync_dev->table_lock);
 	if (!result)
 		if (copy_to_user(
@@ -665,6 +732,7 @@ static int cam_sync_handle_register_user_payload(
 
 		cam_sync_util_send_v4l2_event(CAM_SYNC_V4L_EVENT_ID_CB_TRIG,
 			sync_obj,
+			row->client_id,
 			row->state,
 			user_payload_kernel->payload_data,
 			CAM_SYNC_USER_PAYLOAD_SIZE * sizeof(__u64));
@@ -747,6 +815,30 @@ static int cam_sync_handle_deregister_user_payload(
 	return 0;
 }
 
+static int cam_sync_handle_reset(struct cam_private_ioctl_arg *k_ioctl)
+{
+	struct cam_sync_userpayload_info sync_reset;
+	int rc;
+
+	if (k_ioctl->size != sizeof(struct cam_sync_userpayload_info))
+		return -EINVAL;
+
+	if (!k_ioctl->ioctl_ptr)
+		return -EINVAL;
+
+	if (copy_from_user(&sync_reset,
+		u64_to_user_ptr(k_ioctl->ioctl_ptr),
+		k_ioctl->size))
+		return -EFAULT;
+
+	rc = cam_sync_reset(sync_reset.sync_obj);
+
+	if (!rc)
+		rc = cam_sync_handle_register_user_payload(k_ioctl);
+
+	return rc;
+}
+
 static long cam_sync_dev_ioctl(struct file *filep, void *fh,
 		bool valid_prio, unsigned int cmd, void *arg)
 {
@@ -792,6 +884,12 @@ static long cam_sync_dev_ioctl(struct file *filep, void *fh,
 		rc = cam_sync_handle_wait(&k_ioctl);
 		((struct cam_private_ioctl_arg *)arg)->result =
 			k_ioctl.result;
+		break;
+	case CAM_SYNC_CREATE2:
+		rc = cam_sync_handle_create2(&k_ioctl);
+		break;
+	case CAM_SYNC_RESET:
+		rc = cam_sync_handle_reset(&k_ioctl);
 		break;
 	default:
 		rc = -ENOIOCTLCMD;
@@ -840,7 +938,7 @@ static int cam_sync_open(struct file *filep)
 
 	/* return if already initialized before */
 	if (sync_dev->open_cnt > 1) {
-		CAM_ERR(CAM_SYNC, "Already opened", rc);
+		CAM_WARN(CAM_SYNC, "Already opened", rc);
 		goto end;
 	}
 

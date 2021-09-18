@@ -216,7 +216,9 @@ int ovl_xattr_set(struct dentry *dentry, struct inode *inode, const char *name,
 		goto out;
 
 	if (!value && !upperdentry) {
+		old_cred = ovl_override_creds(dentry->d_sb);
 		err = vfs_getxattr(realdentry, name, NULL, 0);
+		revert_creds(old_cred);
 		if (err < 0)
 			goto out_drop_write;
 	}
@@ -280,7 +282,8 @@ static bool ovl_can_list(const char *s)
 		return true;
 
 	/* Never list trusted.overlay, list other trusted for superuser only */
-	return !ovl_is_private_xattr(s) && capable(CAP_SYS_ADMIN);
+	return !ovl_is_private_xattr(s) &&
+	       ns_capable_noaudit(&init_user_ns, CAP_SYS_ADMIN);
 }
 
 ssize_t ovl_listxattr(struct dentry *dentry, char *list, size_t size)
@@ -538,12 +541,13 @@ unsigned int ovl_get_nlink(struct dentry *lowerdentry,
 	int nlink_diff;
 	int nlink;
 	char buf[13];
-	int err;
+	ssize_t err;
 
 	if (!lowerdentry || !upperdentry || d_inode(lowerdentry)->i_nlink == 1)
 		return fallback;
 
-	err = vfs_getxattr(upperdentry, OVL_XATTR_NLINK, &buf, sizeof(buf) - 1);
+	err = ovl_vfs_getxattr(upperdentry, OVL_XATTR_NLINK,
+			       &buf, sizeof(buf) - 1);
 	if (err < 0)
 		goto fail;
 
@@ -565,7 +569,7 @@ unsigned int ovl_get_nlink(struct dentry *lowerdentry,
 	return nlink;
 
 fail:
-	pr_warn_ratelimited("overlayfs: failed to get index nlink (%pd2, err=%i)\n",
+	pr_warn_ratelimited("overlayfs: failed to get index nlink (%pd2, err=%zi)\n",
 			    upperdentry, err);
 	return fallback;
 }

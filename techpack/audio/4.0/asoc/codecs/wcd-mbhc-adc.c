@@ -23,7 +23,14 @@
 #include <asoc/wcd-mbhc-v2.h>
 #include <asoc/pdata.h>
 
+/*compatible with high impedance headphones begin */
+#if defined(CONFIG_AUDIO_HIGH_IMPEDANCE_HEADSET)
 #define WCD_MBHC_ADC_HS_THRESHOLD_MV    1733
+#else
+#define WCD_MBHC_ADC_HS_THRESHOLD_MV    1700
+#endif
+/*compatible with high impedance headphones end */
+
 #define WCD_MBHC_ADC_HPH_THRESHOLD_MV   75
 #define WCD_MBHC_ADC_MICBIAS_MV         1800
 #define WCD_MBHC_FAKE_INS_RETRY         4

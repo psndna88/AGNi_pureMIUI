@@ -121,14 +121,12 @@ static struct irq_chip partition_irq_chip = {
 	.irq_print_chip		= partition_irq_print_chip,
 };
 
-static bool partition_handle_irq(struct irq_desc *desc)
+static void partition_handle_irq(struct irq_desc *desc)
 {
 	struct partition_desc *part = irq_desc_get_handler_data(desc);
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	int cpu = smp_processor_id();
 	int hwirq;
-	bool handled = false;
-	int res = 0;
 
 	chained_irq_enter(chip, desc);
 
@@ -138,16 +136,14 @@ static bool partition_handle_irq(struct irq_desc *desc)
 	}
 
 	if (unlikely(hwirq == part->nr_parts)) {
-		handled = handle_bad_irq(desc);
+		handle_bad_irq(desc);
 	} else {
 		unsigned int irq;
 		irq = irq_find_mapping(part->domain, hwirq);
-		res = generic_handle_irq(irq);
+		generic_handle_irq(irq);
 	}
 
 	chained_irq_exit(chip, desc);
-
-	return handled || res == 1;
 }
 
 static int partition_domain_alloc(struct irq_domain *domain, unsigned int virq,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -50,14 +50,12 @@ struct ssc_qup_nb {
 
 /**
  * struct ssc_qup_ssr	GENI Serial Engine SSC qup SSR Structure.
- * @probe_completed	To ignore up notification during probe.
  * @is_ssr_down	To check SE status.
  * @subsys_name	Subsystem name for ssr registration.
  * @active_list_head	List Head of all client in SSC QUPv3.
  */
 struct ssc_qup_ssr {
 	struct ssc_qup_nb ssc_qup_nb;
-	bool probe_completed;
 	bool is_ssr_down;
 	const char *subsys_name;
 	struct list_head active_list_head;
@@ -68,13 +66,11 @@ struct ssc_qup_ssr {
  * @active_list	List of SSC qup SE clients.
  * @force_suspend	Function pointer for Subsystem shutdown case.
  * @force_resume	Function pointer for Subsystem restart case.
- * @ssr_enable		To check SSC Qup SSR enable status.
  */
 struct se_rsc_ssr {
 	struct list_head active_list;
-	int (*force_suspend)(struct device *ctrl_dev);
-	int (*force_resume)(struct device *ctrl_dev);
-	bool ssr_enable;
+	void (*force_suspend)(struct device *ctrl_dev);
+	void (*force_resume)(struct device *ctrl_dev);
 };
 
 /**
@@ -181,8 +177,8 @@ struct se_geni_rsc {
 
 /* GENI_OUTPUT_CTRL fields */
 #define DEFAULT_IO_OUTPUT_CTRL_MSK	(GENMASK(6, 0))
-#define GENI_IO_MUX_0_EN			BIT(1)
-#define GENI_IO_MUX_1_EN			BIT(2)
+#define GENI_IO_MUX_0_EN			BIT(0)
+#define GENI_IO_MUX_1_EN			BIT(1)
 
 /* GENI_CFG_REG80 fields */
 #define IO1_SEL_TX			BIT(2)
@@ -386,6 +382,7 @@ struct se_geni_rsc {
 #define TX_EOT			(BIT(1))
 #define TX_SBE			(BIT(2))
 #define TX_RESET_DONE		(BIT(3))
+#define TX_GENI_CANCEL_IRQ	(BIT(14))
 
 /* SE_DMA_RX_IRQ_STAT Register fields */
 #define RX_DMA_DONE		(BIT(0))
@@ -394,8 +391,19 @@ struct se_geni_rsc {
 #define RX_RESET_DONE		(BIT(3))
 #define RX_FLUSH_DONE		(BIT(4))
 #define RX_GENI_GP_IRQ		(GENMASK(10, 5))
-#define RX_GENI_CANCEL_IRQ	(BIT(11))
+/*
+ * QUPs which have HW version <=1.2 11th bit of
+ * DMA_RX_IRQ_STAT register denotes RX_GENI_CANCEL_IRQ bit.
+ */
+#define RX_GENI_CANCEL_IRQ(n)	(((n.hw_major_ver <= 1) &&\
+				(n.hw_minor_ver <= 2)) ? BIT(11) : BIT(14))
 #define RX_GENI_GP_IRQ_EXT	(GENMASK(13, 12))
+
+/* DMA DEBUG Register fields */
+#define DMA_TX_ACTIVE		(BIT(0))
+#define DMA_RX_ACTIVE		(BIT(1))
+#define DMA_TX_STATE		(GENMASK(7, 4))
+#define DMA_RX_STATE		(GENMASK(11, 8))
 
 #define DEFAULT_BUS_WIDTH	(4)
 #define DEFAULT_SE_CLK		(19200000)
@@ -741,16 +749,6 @@ int geni_se_tx_dma_prep(struct device *wrapper_dev, void __iomem *base,
 void geni_se_rx_dma_start(void __iomem *base, int rx_len, dma_addr_t *rx_dma);
 
 /**
- * geni_get_iommu_dev()	- Returns IOMMU device attached to QUP wrapper.
- * @wrapper_dev		Pointer to QUP wrapper device.
- *
- * This functions returns IOMMU device attached to QUP wrapper node.
- *
- * Return		Pointer to IOMMU dev.
- */
-struct device *geni_get_iommu_dev(struct device *wrapper_dev);
-
-/**
  * geni_se_rx_dma_prep() - Prepare the Serial Engine for RX DMA transfer
  * @wrapper_dev:	QUPv3 Wrapper Device to which the TX buffer is mapped.
  * @base:		Base address of the SE register block.
@@ -1067,10 +1065,6 @@ static void geni_se_dump_dbg_regs(struct se_geni_rsc *rsc, void __iomem *base,
 
 static void geni_se_rx_dma_start(void __iomem *base, int rx_len,
 						dma_addr_t *rx_dma)
-{
-}
-
-struct device *geni_get_iommu_dev(struct device *wrapper_dev)
 {
 }
 

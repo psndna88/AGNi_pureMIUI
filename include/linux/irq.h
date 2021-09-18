@@ -212,6 +212,8 @@ struct irq_data {
  *				  mask. Applies only to affinity managed irqs.
  * IRQD_SINGLE_TARGET		- IRQ allows only a single affinity target
  * IRQD_DEFAULT_TRIGGER_SET	- Expected trigger already been set
+ * IRQD_AFFINITY_ON_ACTIVATE	- Affinity is set on activation. Don't call
+ *				  irq_chip::irq_set_affinity() when deactivated.
  */
 enum {
 	IRQD_TRIGGER_MASK		= 0xf,
@@ -233,6 +235,7 @@ enum {
 	IRQD_MANAGED_SHUTDOWN		= (1 << 23),
 	IRQD_SINGLE_TARGET		= (1 << 24),
 	IRQD_DEFAULT_TRIGGER_SET	= (1 << 25),
+	IRQD_AFFINITY_ON_ACTIVATE	= (1 << 29),
 };
 
 #define __irqd_to_state(d) ACCESS_PRIVATE((d)->common, state_use_accessors)
@@ -377,6 +380,15 @@ static inline bool irqd_is_managed_and_shutdown(struct irq_data *d)
 	return __irqd_to_state(d) & IRQD_MANAGED_SHUTDOWN;
 }
 
+static inline void irqd_set_affinity_on_activate(struct irq_data *d)
+{
+	__irqd_to_state(d) |= IRQD_AFFINITY_ON_ACTIVATE;
+}
+
+static inline bool irqd_affinity_on_activate(struct irq_data *d)
+{
+	return __irqd_to_state(d) & IRQD_AFFINITY_ON_ACTIVATE;
+}
 #undef __irqd_to_state
 
 static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
@@ -563,16 +575,16 @@ static inline int irq_set_parent(int irq, int parent_irq)
  * Built-in IRQ handlers for various IRQ types,
  * callable via desc->handle_irq()
  */
-extern bool handle_level_irq(struct irq_desc *desc);
-extern bool handle_fasteoi_irq(struct irq_desc *desc);
-extern bool handle_edge_irq(struct irq_desc *desc);
-extern bool handle_edge_eoi_irq(struct irq_desc *desc);
-extern bool handle_simple_irq(struct irq_desc *desc);
-extern bool handle_untracked_irq(struct irq_desc *desc);
-extern bool handle_percpu_irq(struct irq_desc *desc);
-extern bool handle_percpu_devid_irq(struct irq_desc *desc);
-extern bool handle_bad_irq(struct irq_desc *desc);
-extern bool handle_nested_irq(unsigned int irq);
+extern void handle_level_irq(struct irq_desc *desc);
+extern void handle_fasteoi_irq(struct irq_desc *desc);
+extern void handle_edge_irq(struct irq_desc *desc);
+extern void handle_edge_eoi_irq(struct irq_desc *desc);
+extern void handle_simple_irq(struct irq_desc *desc);
+extern void handle_untracked_irq(struct irq_desc *desc);
+extern void handle_percpu_irq(struct irq_desc *desc);
+extern void handle_percpu_devid_irq(struct irq_desc *desc);
+extern void handle_bad_irq(struct irq_desc *desc);
+extern void handle_nested_irq(unsigned int irq);
 
 extern int irq_chip_compose_msi_msg(struct irq_data *data, struct msi_msg *msg);
 extern int irq_chip_pm_get(struct irq_data *data);

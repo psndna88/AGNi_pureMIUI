@@ -122,7 +122,7 @@ static void mhi_reg_write_enqueue(struct mhi_controller *mhi_cntrl,
 
 	q_index = q_index & (REG_WRITE_QUEUE_LEN - 1);
 
-	MHI_ASSERT(mhi_cntrl->reg_write_q[q_index].valid, "queue full idx %d");
+	MHI_ASSERT(mhi_cntrl->reg_write_q[q_index].valid, "queue full");
 
 	mhi_cntrl->reg_write_q[q_index].reg_addr =  reg_addr;
 	mhi_cntrl->reg_write_q[q_index].val = val;
@@ -1685,20 +1685,21 @@ irqreturn_t mhi_intvec_handlr(int irq_number, void *dev)
 {
 
 	struct mhi_controller *mhi_cntrl = dev;
-	u32 in_reset = -1;
 
 	/* wake up any events waiting for state change */
 	MHI_VERB("Enter\n");
 	if (unlikely(mhi_cntrl->initiate_mhi_reset)) {
-		mhi_read_reg_field(mhi_cntrl, mhi_cntrl->regs, MHICTRL,
-			MHICTRL_RESET_MASK, MHICTRL_RESET_SHIFT, &in_reset);
-		mhi_cntrl->initiate_mhi_reset = !!in_reset;
+		u32 in_reset;
+
+		if (!mhi_read_reg_field(mhi_cntrl, mhi_cntrl->regs, MHICTRL,
+			MHICTRL_RESET_MASK, MHICTRL_RESET_SHIFT, &in_reset))
+			mhi_cntrl->initiate_mhi_reset = !!in_reset;
 	}
 	wake_up_all(&mhi_cntrl->state_event);
 	MHI_VERB("Exit\n");
 
 	if (MHI_IN_MISSION_MODE(mhi_cntrl->ee))
-		queue_work(mhi_cntrl->special_wq, &mhi_cntrl->special_work);
+		queue_work(mhi_cntrl->wq, &mhi_cntrl->special_work);
 
 	return IRQ_WAKE_THREAD;
 }
@@ -1710,8 +1711,9 @@ int mhi_send_cmd(struct mhi_controller *mhi_cntrl,
 	struct mhi_tre *cmd_tre = NULL;
 	struct mhi_cmd *mhi_cmd = &mhi_cntrl->mhi_cmd[PRIMARY_CMD_RING];
 	struct mhi_ring *ring = &mhi_cmd->ring;
+	int chan = 0, ret = 0;
+	bool cmd_db_not_set = false;
 	struct mhi_sfr_info *sfr_info;
-	int chan = 0;
 
 	MHI_VERB("Entered, MHI pm_state:%s dev_state:%s ee:%s\n",
 		 to_mhi_pm_state_str(mhi_cntrl->pm_state),
@@ -1763,10 +1765,32 @@ int mhi_send_cmd(struct mhi_controller *mhi_cntrl,
 	/* queue to hardware */
 	mhi_add_ring_element(mhi_cntrl, ring);
 	read_lock_bh(&mhi_cntrl->pm_lock);
+	/*
+	 * If elements are queued to the command ring and MHI state is
+	 * not M0 since MHI is in suspend or its in transition to M0, the DB
+	 * will not be rung. Under such condition give it enough time from
+	 * the apps to have the opportunity to resume so it can write the DB.
+	 */
 	if (likely(MHI_DB_ACCESS_VALID(mhi_cntrl)))
 		mhi_ring_cmd_db(mhi_cntrl, mhi_cmd);
+	else
+		cmd_db_not_set = true;
 	read_unlock_bh(&mhi_cntrl->pm_lock);
 	spin_unlock_bh(&mhi_cmd->lock);
+
+	if (cmd_db_not_set) {
+		ret = wait_event_timeout(mhi_cntrl->state_event,
+			MHI_DB_ACCESS_VALID(mhi_cntrl) ||
+			MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state),
+			msecs_to_jiffies(MHI_RESUME_TIME));
+		if (!ret || MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
+			MHI_ERR(
+				"Did not enter M0, cur_state:%s pm_state:%s\n",
+				TO_MHI_STATE_STR(mhi_cntrl->dev_state),
+				to_mhi_pm_state_str(mhi_cntrl->pm_state));
+			return -EIO;
+		}
+	}
 
 	return 0;
 }
@@ -1889,7 +1913,8 @@ int mhi_prepare_channel(struct mhi_controller *mhi_cntrl,
 	return 0;
 
 error_dec_pendpkt:
-	atomic_dec(&mhi_cntrl->pending_pkts);
+	if (in_mission_mode)
+		atomic_dec(&mhi_cntrl->pending_pkts);
 error_pm_state:
 	if (!mhi_chan->offload_ch)
 		mhi_deinit_chan_ctxt(mhi_cntrl, mhi_chan);
@@ -2571,7 +2596,7 @@ int mhi_get_remote_time_sync(struct mhi_device *mhi_dev,
 	/* bring to M0 state */
 	ret = __mhi_device_get_sync(mhi_cntrl);
 	if (ret)
-		goto error_unlock;
+		goto err_unlock;
 
 	read_lock_bh(&mhi_cntrl->pm_lock);
 	if (unlikely(MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state))) {
@@ -2584,10 +2609,8 @@ int mhi_get_remote_time_sync(struct mhi_device *mhi_dev,
 
 	/* disable link level low power modes */
 	ret = mhi_cntrl->lpm_disable(mhi_cntrl, mhi_cntrl->priv_data);
-	if (ret) {
-		read_lock_bh(&mhi_cntrl->pm_lock);
+	if (ret)
 		goto error_invalid_state;
-	}
 
 	/*
 	 * time critical code to fetch device times,
@@ -2609,7 +2632,7 @@ int mhi_get_remote_time_sync(struct mhi_device *mhi_dev,
 error_invalid_state:
 	mhi_cntrl->wake_put(mhi_cntrl, false);
 	read_unlock_bh(&mhi_cntrl->pm_lock);
-error_unlock:
+err_unlock:
 	mutex_unlock(&mhi_cntrl->tsync_mutex);
 	return ret;
 }
@@ -2676,8 +2699,11 @@ int mhi_get_remote_time(struct mhi_device *mhi_dev,
 	tsync_node->cb_func = cb_func;
 	tsync_node->mhi_dev = mhi_dev;
 
-	if (mhi_tsync->db_response_pending)
+	if (mhi_tsync->db_response_pending) {
+		mhi_device_put(mhi_cntrl->mhi_dev,
+			       MHI_VOTE_DEVICE | MHI_VOTE_BUS);
 		goto skip_tsync_db;
+	}
 
 	mhi_tsync->int_sequence++;
 	if (mhi_tsync->int_sequence == 0xFFFFFFFF)

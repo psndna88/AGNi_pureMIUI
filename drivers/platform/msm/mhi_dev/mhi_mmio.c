@@ -1,4 +1,4 @@
-/* Copyright (c) 2015,2017-2018,2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -582,18 +582,6 @@ int mhi_dev_mmio_set_env(struct mhi_dev *dev, uint32_t value)
 	return 0;
 }
 EXPORT_SYMBOL(mhi_dev_mmio_set_env);
-
-int mhi_dev_mmio_clear_reset(struct mhi_dev *dev)
-{
-	if (WARN_ON(!dev))
-		return -EINVAL;
-
-	mhi_dev_mmio_masked_write(dev, MHICTRL,
-		MHICTRL_RESET_MASK, MHICTRL_RESET_SHIFT, 0);
-
-	return 0;
-}
-EXPORT_SYMBOL(mhi_dev_mmio_clear_reset);
 
 int mhi_dev_mmio_reset(struct mhi_dev *dev)
 {

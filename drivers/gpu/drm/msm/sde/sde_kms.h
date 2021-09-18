@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -46,31 +46,19 @@
  * SDE_DEBUG - macro for kms/plane/crtc/encoder/connector logs
  * @fmt: Pointer to format string
  */
-#define SDE_DEBUG(fmt, ...)                                                \
-	do {                                                               \
-		no_printk(fmt, ##__VA_ARGS__);                             \
-	} while (0)
+#define SDE_DEBUG(fmt, ...)
 
 /**
  * SDE_INFO - macro for kms/plane/crtc/encoder/connector logs
  * @fmt: Pointer to format string
  */
-#define SDE_INFO(fmt, ...)                                                \
-	do {                                                               \
-		if (unlikely(drm_debug & DRM_UT_KMS))                      \
-			DRM_INFO(fmt, ##__VA_ARGS__); \
-		else                                                       \
-			pr_info(fmt, ##__VA_ARGS__);                      \
-	} while (0)
+#define SDE_INFO(fmt, ...)
 
 /**
  * SDE_DEBUG_DRIVER - macro for hardware driver logging
  * @fmt: Pointer to format string
  */
-#define SDE_DEBUG_DRIVER(fmt, ...)                                         \
-	do {                                                               \
-		no_printk(fmt, ##__VA_ARGS__);                             \
-	} while (0)
+#define SDE_DEBUG_DRIVER(fmt, ...)
 
 #define SDE_ERROR(fmt, ...) pr_err("[sde error]" fmt, ##__VA_ARGS__)
 
@@ -202,6 +190,7 @@ struct sde_irq {
 	u32 total_irqs;
 	struct list_head *irq_cb_tbl;
 	atomic_t *enable_counts;
+	atomic_t *irq_counts;
 	spinlock_t cb_lock;
 	struct dentry *debugfs_file;
 };

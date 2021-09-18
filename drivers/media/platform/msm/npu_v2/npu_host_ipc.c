@@ -10,8 +10,9 @@
  * GNU General Public License for more details.
  */
 
-/*
+/* -------------------------------------------------------------------------
  * Includes
+ * -------------------------------------------------------------------------
  */
 #include "npu_hw_access.h"
 #include "npu_mgr.h"
@@ -19,8 +20,9 @@
 #include "npu_hw.h"
 #include "npu_host_ipc.h"
 
-/*
+/* -------------------------------------------------------------------------
  * Defines
+ * -------------------------------------------------------------------------
  */
 /* HFI IPC interface */
 #define TX_HDR_TYPE 0x01000000
@@ -29,8 +31,9 @@
 
 #define QUEUE_TBL_VERSION 0x87654321
 
-/*
+/* -------------------------------------------------------------------------
  * Data Structures
+ * -------------------------------------------------------------------------
  */
 struct npu_queue_tuple {
 	uint32_t size;
@@ -46,8 +49,9 @@ static const struct npu_queue_tuple npu_q_setup[6] = {
 	{ 1024, IPC_QUEUE_LOG               | TX_HDR_TYPE | RX_HDR_TYPE },
 };
 
-/*
+/* -------------------------------------------------------------------------
  * File Scope Function Prototypes
+ * -------------------------------------------------------------------------
  */
 static int npu_host_ipc_init_hfi(struct npu_device *npu_dev);
 static int npu_host_ipc_send_cmd_hfi(struct npu_device *npu_dev,
@@ -59,8 +63,9 @@ static int ipc_queue_read(struct npu_device *npu_dev, uint32_t target_que,
 static int ipc_queue_write(struct npu_device *npu_dev, uint32_t target_que,
 				uint8_t *packet, uint8_t *is_rx_req_set);
 
-/*
+/* -------------------------------------------------------------------------
  * Function Definitions
+ * -------------------------------------------------------------------------
  */
 static int npu_host_ipc_init_hfi(struct npu_device *npu_dev)
 {
@@ -75,6 +80,8 @@ static int npu_host_ipc_init_hfi(struct npu_device *npu_dev)
 		(NPU_HFI_NUMBER_OF_QS * sizeof(struct hfi_queue_header));
 	uint32_t q_size = 0;
 	uint32_t cur_start_offset = 0;
+
+	spin_lock_init(&npu_dev->ipc_lock);
 
 	reg_val = REGR(npu_dev, REG_NPU_FW_CTRL_STATUS);
 
@@ -142,6 +149,7 @@ static int npu_host_ipc_init_hfi(struct npu_device *npu_dev)
 	reg_val = REGR(npu_dev, (uint32_t)REG_NPU_HOST_CTRL_STATUS);
 	REGW(npu_dev, (uint32_t)REG_NPU_HOST_CTRL_STATUS, reg_val |
 		HOST_CTRL_STATUS_IPC_ADDRESS_READY_VAL);
+
 	return status;
 }
 
@@ -151,13 +159,17 @@ static int npu_host_ipc_send_cmd_hfi(struct npu_device *npu_dev,
 	int status = 0;
 	uint8_t is_rx_req_set = 0;
 	uint32_t retry_cnt = 5;
+	unsigned long flags;
 
+	spin_lock_irqsave(&npu_dev->ipc_lock, flags);
 	status = ipc_queue_write(npu_dev, q_idx, (uint8_t *)cmd_ptr,
 		&is_rx_req_set);
 
 	if (status == -ENOSPC) {
 		do {
+			spin_unlock_irqrestore(&npu_dev->ipc_lock, flags);
 			msleep(20);
+			spin_lock_irqsave(&npu_dev->ipc_lock, flags);
 			status = ipc_queue_write(npu_dev, q_idx,
 				(uint8_t *)cmd_ptr, &is_rx_req_set);
 		} while ((status == -ENOSPC) && (--retry_cnt > 0));
@@ -167,6 +179,7 @@ static int npu_host_ipc_send_cmd_hfi(struct npu_device *npu_dev,
 		if (is_rx_req_set == 1)
 			status = INTERRUPT_RAISE_NPU(npu_dev);
 	}
+	spin_unlock_irqrestore(&npu_dev->ipc_lock, flags);
 
 	if (status)
 		NPU_ERR("Cmd Msg put on Command Queue - FAILURE\n");
@@ -389,8 +402,9 @@ exit:
 	return status;
 }
 
-/*
+/* -------------------------------------------------------------------------
  * IPC Interface functions
+ * -------------------------------------------------------------------------
  */
 int npu_host_ipc_send_cmd(struct npu_device *npu_dev, uint32_t q_idx,
 		void *cmd_ptr)

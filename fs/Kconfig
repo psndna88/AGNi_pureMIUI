@@ -97,6 +97,8 @@ config MANDATORY_FILE_LOCKING
 
 source "fs/crypto/Kconfig"
 
+source "fs/verity/Kconfig"
+
 source "fs/notify/Kconfig"
 
 source "fs/quota/Kconfig"
@@ -104,6 +106,7 @@ source "fs/quota/Kconfig"
 source "fs/autofs4/Kconfig"
 source "fs/fuse/Kconfig"
 source "fs/overlayfs/Kconfig"
+source "fs/incfs/Kconfig"
 
 menu "Caches"
 
@@ -122,9 +125,10 @@ endmenu
 endif # BLOCK
 
 if BLOCK
-menu "DOS/FAT/NT Filesystems"
+menu "DOS/FAT/EXFAT/NT Filesystems"
 
 source "fs/fat/Kconfig"
+source "fs/exfat/Kconfig"
 source "fs/sdfat/Kconfig"
 source "fs/ntfs/Kconfig"
 
@@ -309,6 +313,13 @@ endif # NETWORK_FILESYSTEMS
 
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
+source "fs/unicode/Kconfig"
+
+config REBOOT_AUTO_FSYNC
+	bool "automatic file sync on reboot/panic"
+	default y
+	help
+	  Force automatic file sync on power off, reboot, panic/freeze
 
 config FILE_TABLE_DEBUG
 	bool "Enable FILE_TABLE_DEBUG"
@@ -316,3 +327,8 @@ config FILE_TABLE_DEBUG
 	  This option enables debug of the open files using a global filetable
 
 endmenu
+
+config BLOCK_UNWANTED_FILES
+	bool "Allow blocking files from executing from kernel"
+	help
+	  This option allows you to make files from certain folders un-openable.

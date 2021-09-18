@@ -1,7 +1,7 @@
 /*
  * Author: Chad Froebel <chadfroebel@gmail.com>
  *
- * Port to guacamole: engstk <eng.stk@sapo.pt>
+ * Port to sunfish: engstk <eng.stk@sapo.pt>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

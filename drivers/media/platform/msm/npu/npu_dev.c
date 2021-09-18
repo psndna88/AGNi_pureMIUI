@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -632,17 +632,18 @@ int npu_enable_core_power(struct npu_device *npu_dev)
 	if (!pwr->pwr_vote_num) {
 		ret = npu_enable_regulators(npu_dev);
 		if (ret)
-			return ret;
+			goto fail;
 
 		ret = npu_enable_core_clocks(npu_dev);
 		if (ret) {
 			npu_disable_regulators(npu_dev);
 			pwr->pwr_vote_num = 0;
-			return ret;
+			goto fail;
 		}
 		npu_resume_devbw(npu_dev);
 	}
 	pwr->pwr_vote_num++;
+fail:
 	mutex_unlock(&npu_dev->dev_lock);
 
 	return ret;
@@ -1179,10 +1180,14 @@ int npu_enable_sys_cache(struct npu_device *npu_dev)
 
 		pr_debug("prior to activate sys cache\n");
 		rc = llcc_slice_activate(npu_dev->sys_cache);
-		if (rc)
-			pr_err("failed to activate sys cache\n");
-		else
-			pr_debug("sys cache activated\n");
+		if (rc) {
+			pr_warn("failed to activate sys cache\n");
+			llcc_slice_putd(npu_dev->sys_cache);
+			npu_dev->sys_cache = NULL;
+			return 0;
+		}
+
+		pr_debug("sys cache activated\n");
 	}
 
 	return rc;
@@ -1572,7 +1577,7 @@ static int npu_process_kevent(struct npu_kevent *kevt)
 	switch (kevt->evt.type) {
 	case MSM_NPU_EVENT_TYPE_EXEC_V2_DONE:
 		ret = copy_to_user((void __user *)kevt->reserved[1],
-			(void *)&kevt->reserved[0],
+			(void *)kevt->reserved[0],
 			kevt->evt.u.exec_v2_done.stats_buf_size);
 		if (ret) {
 			pr_err("fail to copy to user\n");
@@ -2151,6 +2156,7 @@ static int npu_probe(struct platform_device *pdev)
 		return -EFAULT;
 
 	npu_dev->pdev = pdev;
+	mutex_init(&npu_dev->dev_lock);
 
 	platform_set_drvdata(pdev, npu_dev);
 	res = platform_get_resource_byname(pdev,
@@ -2223,6 +2229,8 @@ static int npu_probe(struct platform_device *pdev)
 		pr_debug("qfprom_physical phy address=0x%llx virt=%pK\n",
 			res->start, npu_dev->qfprom_io.base);
 	}
+
+	mutex_init(&npu_dev->dev_lock);
 
 	rc = npu_parse_dt_regulator(npu_dev);
 	if (rc)
@@ -2308,9 +2316,7 @@ static int npu_probe(struct platform_device *pdev)
 	if (rc)
 		goto error_driver_init;
 
-	rc = npu_debugfs_init(npu_dev);
-	if (rc)
-		goto error_driver_init;
+	npu_debugfs_init(npu_dev);
 
 	npu_dev->smmu_ctx.attach_cnt = 0;
 	npu_dev->smmu_ctx.mmu_mapping = arm_iommu_create_mapping(
@@ -2328,8 +2334,6 @@ static int npu_probe(struct platform_device *pdev)
 		pr_err("arm_iommu_attach_device failed\n");
 		goto error_driver_init;
 	}
-
-	mutex_init(&npu_dev->dev_lock);
 
 	rc = npu_host_init(npu_dev);
 	if (rc) {

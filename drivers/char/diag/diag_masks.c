@@ -28,6 +28,7 @@
 #define DIAG_SET_FEATURE_MASK(x) (feature_bytes[(x)/8] |= (1 << (x & 0x7)))
 
 #define MAX_USERSPACE_BUF_SIZ	100000
+
 struct diag_mask_info msg_mask;
 struct diag_mask_info msg_bt_mask;
 struct diag_mask_info log_mask;

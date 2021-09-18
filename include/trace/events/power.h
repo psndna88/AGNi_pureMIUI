@@ -325,6 +325,7 @@ DEFINE_EVENT(wakeup_source, wakeup_source_deactivate,
  * The clock events are used for clock enable/disable and for
  *  clock rate change
  */
+#if defined(CONFIG_COMMON_CLK_MSM)
 DECLARE_EVENT_CLASS(clock,
 
 	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
@@ -368,6 +369,13 @@ DEFINE_EVENT(clock, clock_set_rate,
 	TP_ARGS(name, state, cpu_id)
 );
 
+DEFINE_EVENT(clock, clock_set_rate_complete,
+
+	TP_PROTO(const char *name, unsigned int state, unsigned int cpu_id),
+
+	TP_ARGS(name, state, cpu_id)
+);
+
 TRACE_EVENT(clock_set_parent,
 
 	TP_PROTO(const char *name, const char *parent_name),
@@ -386,6 +394,32 @@ TRACE_EVENT(clock_set_parent,
 
 	TP_printk("%s parent=%s", __get_str(name), __get_str(parent_name))
 );
+
+TRACE_EVENT(clock_state,
+
+	TP_PROTO(const char *name, unsigned long prepare_count,
+		unsigned long count, unsigned long rate),
+
+	TP_ARGS(name, prepare_count, count, rate),
+
+	TP_STRUCT__entry(
+		__string(name,			name)
+		__field(unsigned long,		prepare_count)
+		__field(unsigned long,		count)
+		__field(unsigned long,		rate)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->prepare_count = prepare_count;
+		__entry->count = count;
+		__entry->rate = rate;
+	),
+	TP_printk("%s\t[%lu:%lu]\t%lu", __get_str(name), __entry->prepare_count,
+					 __entry->count, __entry->rate)
+
+);
+#endif /* CONFIG_COMMON_CLK_MSM */
 
 /*
  * The power domain events are used for power domains transitions
@@ -595,8 +629,8 @@ TRACE_EVENT(sugov_util_update,
 	    TP_PROTO(int cpu,
 		     unsigned long util, unsigned long avg_cap,
 		     unsigned long max_cap, unsigned long nl, unsigned long pl,
-		     unsigned int flags),
-	    TP_ARGS(cpu, util, avg_cap, max_cap, nl, pl, flags),
+		     unsigned int rtgb, unsigned int flags),
+	    TP_ARGS(cpu, util, avg_cap, max_cap, nl, pl, rtgb, flags),
 	    TP_STRUCT__entry(
 		    __field(	int,		cpu)
 		    __field(	unsigned long,	util)
@@ -604,6 +638,7 @@ TRACE_EVENT(sugov_util_update,
 		    __field(	unsigned long,	max_cap)
 		    __field(	unsigned long,	nl)
 		    __field(	unsigned long,	pl)
+		    __field(	unsigned int,	rtgb)
 		    __field(	unsigned int,	flags)
 	    ),
 	    TP_fast_assign(
@@ -613,12 +648,13 @@ TRACE_EVENT(sugov_util_update,
 		    __entry->max_cap = max_cap;
 		    __entry->nl = nl;
 		    __entry->pl = pl;
+		    __entry->rtgb = rtgb;
 		    __entry->flags = flags;
 	    ),
-	    TP_printk("cpu=%d util=%lu avg_cap=%lu max_cap=%lu nl=%lu pl=%lu flags=0x%x",
+	    TP_printk("cpu=%d util=%lu avg_cap=%lu max_cap=%lu nl=%lu pl=%lu rtgb=%u flags=0x%x",
 		      __entry->cpu, __entry->util, __entry->avg_cap,
 		      __entry->max_cap, __entry->nl,
-		      __entry->pl, __entry->flags)
+		      __entry->pl, __entry->rtgb, __entry->flags)
 );
 
 TRACE_EVENT(sugov_next_freq,

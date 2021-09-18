@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/mhi.h>
+#include <linux/memblock.h>
 #include "mhi_internal.h"
 
 const char * const mhi_log_level_str[MHI_MSG_LVL_MAX] = {
@@ -98,9 +99,12 @@ struct mhi_controller *find_mhi_controller_by_name(const char *name)
 
 const char *to_mhi_pm_state_str(enum MHI_PM_STATE state)
 {
-	int index = find_last_bit((unsigned long *)&state, 32);
+	int index;
 
-	if (index >= ARRAY_SIZE(mhi_pm_state_str))
+	if (state)
+		index = __fls(state);
+
+	if (!state || index >= ARRAY_SIZE(mhi_pm_state_str))
 		return "Invalid State";
 
 	return mhi_pm_state_str[index];
@@ -111,7 +115,7 @@ static void mhi_time_async_cb(struct mhi_device *mhi_dev, u32 sequence,
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	MHI_LOG("Time response: seq:%llx local: %llu remote: %llu (ticks)\n",
+	MHI_LOG("Time response: seq:%x local: %llu remote: %llu (ticks)\n",
 		sequence, local_time, remote_time);
 }
 
@@ -120,7 +124,7 @@ static void mhi_time_us_async_cb(struct mhi_device *mhi_dev, u32 sequence,
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	MHI_LOG("Time response: seq:%llx local: %llu remote: %llu (us)\n",
+	MHI_LOG("Time response: seq:%x local: %llu remote: %llu (us)\n",
 		sequence, LOCAL_TICKS_TO_US(local_time),
 		REMOTE_TICKS_TO_US(remote_time));
 }
@@ -182,13 +186,13 @@ static ssize_t time_async_show(struct device *dev,
 
 	ret = mhi_get_remote_time(mhi_dev, seq, &mhi_time_async_cb);
 	if (ret) {
-		MHI_ERR("Failed to request time, seq:%llx, ret:%d\n", seq, ret);
+		MHI_ERR("Failed to request time, seq:%x, ret:%d\n", seq, ret);
 		return scnprintf(buf, PAGE_SIZE,
 				 "Request failed or feature unsupported\n");
 	}
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "Requested time asynchronously with seq:%llx\n", seq);
+			 "Requested time asynchronously with seq:%x\n", seq);
 }
 static DEVICE_ATTR_RO(time_async);
 
@@ -206,13 +210,13 @@ static ssize_t time_us_async_show(struct device *dev,
 
 	ret = mhi_get_remote_time(mhi_dev, seq, &mhi_time_us_async_cb);
 	if (ret) {
-		MHI_ERR("Failed to request time, seq:%llx, ret:%d\n", seq, ret);
+		MHI_ERR("Failed to request time, seq:%x, ret:%d\n", seq, ret);
 		return scnprintf(buf, PAGE_SIZE,
 				 "Request failed or feature unsupported\n");
 	}
 
 	return scnprintf(buf, PAGE_SIZE,
-			 "Requested time asynchronously with seq:%llx\n", seq);
+			 "Requested time asynchronously with seq:%x\n", seq);
 }
 static DEVICE_ATTR_RO(time_us_async);
 
@@ -329,12 +333,24 @@ static const struct attribute_group mhi_sysfs_group = {
 	.attrs = mhi_sysfs_attrs,
 };
 
-void mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
+int mhi_create_sysfs(struct mhi_controller *mhi_cntrl)
 {
-	sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj, &mhi_sysfs_group);
-	if (mhi_cntrl->mhi_tsync)
-		sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
-				   &mhi_tsync_group);
+	int ret;
+
+	ret = sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
+				 &mhi_sysfs_group);
+	if (ret)
+		return ret;
+
+	if (mhi_cntrl->mhi_tsync) {
+		ret = sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj,
+					 &mhi_tsync_group);
+		if (ret)
+			sysfs_remove_group(&mhi_cntrl->mhi_dev->dev.kobj,
+					   &mhi_sysfs_group);
+	}
+
+	return ret;
 }
 
 void mhi_destroy_sysfs(struct mhi_controller *mhi_cntrl)
@@ -1514,6 +1530,11 @@ int of_register_mhi_controller(struct mhi_controller *mhi_cntrl)
 	if (!mhi_cntrl->status_cb || !mhi_cntrl->link_status)
 		return -EINVAL;
 
+	if (!mhi_cntrl->iova_stop) {
+		mhi_cntrl->iova_start = memblock_start_of_DRAM();
+		mhi_cntrl->iova_stop = memblock_end_of_DRAM();
+	}
+
 	ret = of_parse_dt(mhi_cntrl, mhi_cntrl->of_node);
 	if (ret)
 		return -EINVAL;
@@ -1534,9 +1555,9 @@ int of_register_mhi_controller(struct mhi_controller *mhi_cntrl)
 	INIT_WORK(&mhi_cntrl->st_worker, mhi_pm_st_worker);
 	init_waitqueue_head(&mhi_cntrl->state_event);
 
-	mhi_cntrl->special_wq = alloc_ordered_workqueue("mhi_special_w",
+	mhi_cntrl->wq = alloc_ordered_workqueue("mhi_w",
 						WQ_MEM_RECLAIM | WQ_HIGHPRI);
-	if (!mhi_cntrl->special_wq)
+	if (!mhi_cntrl->wq)
 		goto error_alloc_cmd;
 
 	INIT_WORK(&mhi_cntrl->special_work, mhi_special_purpose_work);
@@ -1662,7 +1683,7 @@ error_add_dev:
 
 error_alloc_dev:
 	kfree(mhi_cntrl->mhi_cmd);
-	destroy_workqueue(mhi_cntrl->special_wq);
+	destroy_workqueue(mhi_cntrl->wq);
 
 error_alloc_cmd:
 	vfree(mhi_cntrl->mhi_chan);
@@ -1753,9 +1774,6 @@ int mhi_prepare_for_power_up(struct mhi_controller *mhi_cntrl)
 
 			mhi_cntrl->bhie = mhi_cntrl->regs + bhie_off;
 		}
-
-		memset_io(mhi_cntrl->bhie + BHIE_RXVECADDR_LOW_OFFS, 0,
-			  BHIE_RXVECSTATUS_OFFS - BHIE_RXVECADDR_LOW_OFFS + 4);
 
 		if (mhi_cntrl->rddm_image)
 			mhi_rddm_prepare(mhi_cntrl, mhi_cntrl->rddm_image);

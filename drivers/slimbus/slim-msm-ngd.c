@@ -1813,6 +1813,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	slim_set_ctrldata(&dev->ctrl, dev);
 
+#ifdef CONFIG_IPC_LOGGING
 	/* Create IPC log context */
 	dev->ipc_slimbus_log = ipc_log_context_create(IPC_SLIMBUS_LOG_PAGES,
 						dev_name(dev->dev), 0);
@@ -1839,6 +1840,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	else
 		SLIM_INFO(dev, "start error logging for slim dev %s\n",
 							ipc_err_log_name);
+#endif
 
 	ret = sysfs_create_file(&dev->dev->kobj, &dev_attr_debug_mask.attr);
 	if (ret) {

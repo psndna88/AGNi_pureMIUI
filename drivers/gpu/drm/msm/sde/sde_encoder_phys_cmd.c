@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -663,9 +663,9 @@ static int _sde_encoder_phys_cmd_poll_write_pointer_started(
 	}
 
 	if (phys_enc->has_intf_te)
-		ret = hw_intf->ops.get_vsync_info(hw_intf, &info);
+		ret = hw_intf->ops.get_vsync_info(hw_intf, &info, false);
 	else
-		ret = hw_pp->ops.get_vsync_info(hw_pp, &info);
+		ret = hw_pp->ops.get_vsync_info(hw_pp, &info, false);
 
 	if (ret)
 		return ret;
@@ -714,13 +714,13 @@ static bool _sde_encoder_phys_cmd_is_ongoing_pptx(
 		if (!hw_intf || !hw_intf->ops.get_vsync_info)
 			return false;
 
-		hw_intf->ops.get_vsync_info(hw_intf, &info);
+		hw_intf->ops.get_vsync_info(hw_intf, &info, true);
 	} else {
 		hw_pp = phys_enc->hw_pp;
 		if (!hw_pp || !hw_pp->ops.get_vsync_info)
 			return false;
 
-		hw_pp->ops.get_vsync_info(hw_pp, &info);
+		hw_pp->ops.get_vsync_info(hw_pp, &info, true);
 	}
 
 	SDE_EVT32(DRMID(phys_enc->parent),
@@ -1173,12 +1173,20 @@ static void sde_encoder_phys_cmd_enable(struct sde_encoder_phys *phys_enc)
 static bool sde_encoder_phys_cmd_is_autorefresh_enabled(
 		struct sde_encoder_phys *phys_enc)
 {
+	struct sde_encoder_phys_cmd *cmd_enc;
 	struct sde_hw_pingpong *hw_pp;
 	struct sde_hw_intf *hw_intf;
 	struct sde_hw_autorefresh cfg;
 	int ret;
 
-	if (!phys_enc || !phys_enc->hw_pp || !phys_enc->hw_intf)
+	if (!phys_enc)
+		return 0;
+
+	cmd_enc = to_sde_encoder_phys_cmd(phys_enc);
+	if (!cmd_enc->autorefresh.cfg.enable)
+		return 0;
+
+	if (!phys_enc->hw_pp || !phys_enc->hw_intf)
 		return 0;
 
 	if (!sde_encoder_phys_cmd_is_master(phys_enc))
@@ -1271,14 +1279,14 @@ static int sde_encoder_phys_cmd_get_write_line_count(
 		if (!hw_intf->ops.get_vsync_info)
 			return -EINVAL;
 
-		if (hw_intf->ops.get_vsync_info(hw_intf, &info))
+		if (hw_intf->ops.get_vsync_info(hw_intf, &info, true))
 			return -EINVAL;
 	} else {
 		hw_pp = phys_enc->hw_pp;
 		if (!hw_pp->ops.get_vsync_info)
 			return -EINVAL;
 
-		if (hw_pp->ops.get_vsync_info(hw_pp, &info))
+		if (hw_pp->ops.get_vsync_info(hw_pp, &info, true))
 			return -EINVAL;
 	}
 

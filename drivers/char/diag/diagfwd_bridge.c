@@ -24,8 +24,12 @@
 #include "diagfwd_mhi.h"
 #include "diag_dci.h"
 #include "diag_ipc_logging.h"
+#include <linux/of.h>
 
 #define BRIDGE_TO_MUX(x)	(x + DIAG_MUX_BRIDGE_BASE)
+
+/* variable to identify which interface is selected to bridging with mdm */
+static bool hsic_interface_active;
 
 struct diagfwd_bridge_info bridge_info[NUM_REMOTE_DEV] = {
 	{
@@ -83,7 +87,7 @@ static int diagfwd_bridge_mux_write_done(unsigned char *buf, int len,
 		return -EINVAL;
 	ch = &bridge_info[buf_ctx];
 	if (ch->dev_ops && ch->dev_ops->fwd_complete) {
-		DIAG_LOG(DIAG_DEBUG_MHI,
+		DIAG_LOG(DIAG_DEBUG_BRIDGE,
 		"Write done completion received for buf %pK len:%d\n",
 			buf, len);
 		ch->dev_ops->fwd_complete(ch->ctxt, buf, len, 0);
@@ -164,10 +168,12 @@ int diag_remote_dev_open(int id)
 	if (id < 0 || id >= NUM_REMOTE_DEV)
 		return -EINVAL;
 	bridge_info[id].inited = 1;
-	if (bridge_info[id].type == DIAG_DATA_TYPE)
+	if (bridge_info[id].type == DIAG_DATA_TYPE) {
+		diag_notify_md_client(BRIDGE_TO_MUX(id), 0, DIAG_STATUS_OPEN);
 		return diag_mux_queue_read(BRIDGE_TO_MUX(id));
-	else if (bridge_info[id].type == DIAG_DCI_TYPE)
+	} else if (bridge_info[id].type == DIAG_DCI_TYPE) {
 		return diag_dci_send_handshake_pkt(bridge_info[id].id);
+	}
 
 	return 0;
 }
@@ -179,6 +185,9 @@ void diag_remote_dev_close(int id)
 		return;
 
 	diag_mux_close_device(BRIDGE_TO_MUX(id));
+
+	if (bridge_info[id].type == DIAG_DATA_TYPE)
+		diag_notify_md_client(BRIDGE_TO_MUX(id), 0, DIAG_STATUS_CLOSED);
 
 }
 
@@ -276,15 +285,30 @@ uint16_t diag_get_remote_device_mask(void)
 
 void diag_register_with_bridge(void)
 {
-	if (IS_ENABLED(CONFIG_USB_QCOM_DIAG_BRIDGE))
+	struct device_node *dev_node;
+
+	if (IS_ENABLED(CONFIG_USB_QTI_DIAG_BRIDGE) &&
+	    IS_ENABLED(CONFIG_MHI_BUS)) {
+		dev_node = of_find_node_by_name(NULL, "qcom,diag");
+		if (dev_node) {
+			hsic_interface_active = of_property_read_bool(dev_node,
+				"qcom,usb-enabled");
+			if (hsic_interface_active) {
+				diag_register_with_hsic();
+				return;
+			}
+		}
+		diag_register_with_mhi();
+	} else if (IS_ENABLED(CONFIG_USB_QTI_DIAG_BRIDGE)) {
+		hsic_interface_active = true;
 		diag_register_with_hsic();
-	else if (IS_ENABLED(CONFIG_MHI_BUS))
+	} else if (IS_ENABLED(CONFIG_MHI_BUS))
 		diag_register_with_mhi();
 }
 
 void diag_unregister_bridge(void)
 {
-	if (IS_ENABLED(CONFIG_USB_QCOM_DIAG_BRIDGE))
+	if (hsic_interface_active)
 		diag_unregister_hsic();
 	else if (IS_ENABLED(CONFIG_MHI_BUS))
 		diag_unregister_mhi();

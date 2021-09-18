@@ -176,8 +176,8 @@ static int sps_rm_assign(struct sps_pipe *pipe,
 			 struct sps_connection *map)
 {
 	struct sps_connect *cfg = &pipe->connect;
-	unsigned long desc_iova;
-	unsigned long data_iova;
+	unsigned long desc_iova = 0;
+	unsigned long data_iova = 0;
 
 	/* Check ownership and BAM */
 	if ((cfg->mode == SPS_MODE_SRC && map->client_src != NULL) ||
@@ -402,7 +402,7 @@ static struct sps_connection *sps_rm_create(struct sps_pipe *pipe)
 					(void *)(&map->src.dev));
 			goto exit_err;
 		}
-		map->src.pipe_index = SPS_BAM_PIPE_INVALID;
+	map->src.pipe_index = SPS_BAM_PIPE_INVALID;
 	}
 
 	if (!(pipe->connect.options & SPS_O_DUMMY_PEER)) {
@@ -414,7 +414,7 @@ static struct sps_connection *sps_rm_create(struct sps_pipe *pipe)
 				(void *)(&map->dest.dev));
 				goto exit_err;
 			}
-			map->dest.pipe_index = SPS_BAM_PIPE_INVALID;
+		map->dest.pipe_index = SPS_BAM_PIPE_INVALID;
 		}
 	}
 

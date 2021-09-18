@@ -68,7 +68,6 @@
 
 		/* <HZ/12> */
 		qcom,idle-timeout = <64>;
-		qcom,no-nap;
 
 		qcom,highest-bank-bit = <14>;
 
@@ -590,6 +589,15 @@
 				};
 			};
 		};
+		qcom,cpu-to-ahb-path {
+			qcom,msm-bus,name = "ahbpath";
+			qcom,msm-bus,num-cases = <3>;
+			qcom,msm-bus,num-paths = <1>;
+			qcom,msm-bus,vectors-KBps =
+				<1 598 0 0>,            // off
+				<1 598 0 100>,          // min freq
+				<1 598 0 9999999>;      // max freq
+		};
 	};
 
 	kgsl_msm_iommu: qcom,kgsl-iommu@5040000 {
@@ -607,6 +615,7 @@
 
 		qcom,secure_align_mask = <0xfff>;
 		qcom,retention;
+        qcom,unmap_fast;
 		qcom,hyp_secure_alloc;
 
 		gfx3d_user: gfx3d_user {

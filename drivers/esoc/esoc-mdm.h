@@ -32,7 +32,7 @@
 #define SDX50M_LABEL			"SDX50M"
 #define SDX50M_PCIE			"PCIe"
 #define SDXPRAIRIE_LABEL		"SDXPRAIRIE"
-#define MARMOT_LABEL			"SDXMARMOT"
+#define MARMOT_LABEL			"MARMOT"
 #define MDM2AP_STATUS_TIMEOUT_MS	120000L
 #define MDM_MODEM_TIMEOUT		3000
 #define DEF_RAMDUMP_TIMEOUT		120000
@@ -155,4 +155,5 @@ static inline int mdm_pon_setup(struct mdm_ctrl *mdm)
 
 extern struct mdm_pon_ops mdm9x55_pon_ops;
 extern struct mdm_pon_ops sdx50m_pon_ops;
+extern struct mdm_pon_ops sdxmarmot_pon_ops;
 #endif

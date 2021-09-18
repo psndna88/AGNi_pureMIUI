@@ -2,6 +2,7 @@
  * ALSA SoC Texas Instruments TAS2562 High Performance 4W Smart Amplifier
  *
  * Copyright (C) 2016 Texas Instruments, Inc.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * Author: saiprasad
  *
@@ -42,8 +43,8 @@
 #ifdef CONFIG_TAS25XX_ALGO
 #include <dsp/tas_smart_amp_v2.h>
 #endif /*CONFIG_TAS25XX_ALGO*/
-
-static char p_icn[] = {0x00, 0x00, 0x2f, 0x2c};
+extern int tas2562iv_enable;
+extern char p_icn[];
 
 static int tas2562_regmap_write(struct tas2562_priv *p_tas2562,
 	unsigned int reg, unsigned int value)
@@ -678,9 +679,9 @@ static void irq_work_routine(struct work_struct *work)
 	TAS2562_LATCHEDINTERRUPTREG1_BROWNOUTFLAGSTICKY_INTERRUPT)) {
 		p_tas2562->mn_err_code |= ERROR_BROWNOUT;
 		dev_err(p_tas2562->dev, "brownout!\n");
-	} else
+	} else {
 		p_tas2562->mn_err_code &= ~ERROR_BROWNOUT;
-
+	}
 		goto reload;
 	} else {
 		n_counter = 2;
@@ -866,12 +867,58 @@ void tas2562_software_reset(void *prv_data)
 
 static void dc_work_routine(struct work_struct *work)
 {
-	(void)work;
+	int ret = 0;
+	struct tas2562_priv *p_tas2562 =
+		container_of(work, struct tas2562_priv, dc_work.work);
+	
 	pr_err("[TI-SmartPA:%s]\n", __func__);
-	tas2562_enable_irq(g_p_tas2562, false);
-	g_p_tas2562->write(g_p_tas2562, channel_both, TAS2562_SOFTWARERESET,
+#ifdef CONFIG_TAS2562_CODEC
+	mutex_lock(&p_tas2562->codec_lock);
+#endif
+	tas2562_enable_irq(p_tas2562, false);
+	g_p_tas2562->write(p_tas2562, channel_both, TAS2562_SOFTWARERESET,
 		TAS2562_SOFTWARERESET_SOFTWARERESET_RESET);
 	msleep(20);
+
+	ret = tas2562_iv_slot_config(p_tas2562);
+	if(ret < 0) {
+		goto end;
+	}
+
+	tas2562_load_init(p_tas2562);
+	tas2562_iv_enable(p_tas2562, tas2562iv_enable);
+
+	ret = tas2562_set_slot(p_tas2562, p_tas2562->mn_slot_width);
+	if (ret < 0)
+		goto end;
+
+	ret = tas2562_set_fmt(p_tas2562, p_tas2562->mn_asi_format);
+	if (ret < 0)
+		goto end;
+
+	ret = tas2562_set_bitwidth(p_tas2562, p_tas2562->mn_pcm_format);
+	if (ret < 0)
+		goto end;
+
+	ret = tas2562_set_samplerate(p_tas2562, p_tas2562->mn_sampling_rate);
+	if (ret < 0)
+		goto end;
+
+	ret = tas2562_set_power_state(p_tas2562, channel_both,
+			p_tas2562->mn_power_state);
+	if (ret < 0)
+		goto end;
+
+end:
+/* power up failed, restart later */
+	if (ret < 0)
+		schedule_delayed_work(&p_tas2562->irq_work,
+				msecs_to_jiffies(1000));
+	tas2562_enable_irq(p_tas2562, true);
+#ifdef CONFIG_TAS2562_CODEC
+	mutex_unlock(&p_tas2562->codec_lock);
+#endif
+
 }
 #endif /*CONFIG_TAS25XX_ALGO*/
 
@@ -978,7 +1025,7 @@ static int tas2562_i2c_probe(struct i2c_client *p_client,
 					n_result);
 		goto err;
 	} else {
-		dev_err(&p_client->dev, "Failed to allocate register p_tas2562->regmap: %x\n",p_tas2562->regmap);
+		dev_err(&p_client->dev, "Allocate register p_tas2562->regmap: %x successully\n",p_tas2562->regmap);
 	}
 
 	if (p_client->dev.of_node) {
@@ -993,7 +1040,7 @@ static int tas2562_i2c_probe(struct i2c_client *p_client,
 			dev_err(p_tas2562->dev, "%s: Failed to request gpio %d\n",
 				__func__, p_tas2562->mn_reset_gpio);
 			n_result = -EINVAL;
-			goto err_gpio;
+			goto err_gpio;//2019.11.27 longcheer chenqiang edit for (old board) se9_i2c request gpio error
 		}
 		//gpio_export(p_tas2562->mn_reset_gpio,1);
 		tas2562_hw_reset(p_tas2562);
@@ -1035,7 +1082,7 @@ static int tas2562_i2c_probe(struct i2c_client *p_client,
 			TAS2562_SOFTWARERESET, 0x01);
 	if (n_result < 0) {
 		dev_err(&p_client->dev, "I2c fail, %d\n", n_result);
-		goto err_i2c;
+		goto err_i2c;//2019.11.27 longcheer chenqiang add for (new board) se4_i2c i2c fail
 	}
 	dev_info(&p_client->dev, "After SW reset\n");
 
@@ -1124,13 +1171,13 @@ err:
 	return n_result;
 
 err_i2c:
-	gpio_free(p_tas2562->mn_reset_gpio);
+	gpio_free(p_tas2562->mn_reset_gpio);//2019.11.27 longcheer chenqiang add for (new board) se4_i2c i2c fail
 	devm_kfree(&p_client->dev, p_tas2562);
 	p_tas2562 = NULL;
 	return n_result;
     
 err_gpio:
-	devm_kfree(&p_client->dev, p_tas2562);
+	devm_kfree(&p_client->dev, p_tas2562);//2019.11.27 longcheer chenqiang add for (old board) se9_i2c request gpio error
 	p_tas2562 = NULL;
 	return n_result;
 }
@@ -1197,7 +1244,19 @@ static struct i2c_driver tas2562_i2c_driver = {
 	.id_table   = tas2562_i2c_id,
 };
 
-module_i2c_driver(tas2562_i2c_driver);
+static int __init tas2526_init(void)
+{
+       return i2c_add_driver(&tas2562_i2c_driver);
+}
+
+static void __exit tas2526_exit(void)
+{
+       i2c_del_driver(&tas2562_i2c_driver);
+       return;
+}
+late_initcall(tas2526_init);
+module_exit(tas2526_exit);
+
 MODULE_AUTHOR("Texas Instruments Inc.");
 MODULE_DESCRIPTION("TAS2562 I2C Smart Amplifier driver");
 MODULE_LICENSE("GPL v2");

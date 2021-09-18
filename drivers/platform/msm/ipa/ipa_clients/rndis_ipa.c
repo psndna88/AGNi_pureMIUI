@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2018,2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,7 +55,7 @@
 			(ETH_FRAME_LEN + sizeof(struct rndis_pkt_hdr)))
 #define BAM_DMA_DESC_FIFO_SIZE \
 		(BAM_DMA_MAX_PKT_NUMBER * (sizeof(struct sps_iovec)))
-#define TX_TIMEOUT (5 * HZ)
+#define TX_TIMEOUT msecs_to_jiffies(5000)
 #define MIN_TX_ERROR_SLEEP_PERIOD 500
 #define DEFAULT_AGGR_TIME_LIMIT 1000 /* 1ms */
 #define DEFAULT_AGGR_PKT_LIMIT 0
@@ -603,7 +603,8 @@ int rndis_ipa_init(struct ipa_usb_init_params *params)
 	}
 	RNDIS_IPA_DEBUG("Device Ethernet address set %pM\n", net->dev_addr);
 
-	if (ipa_is_vlan_mode(IPA_VLAN_IF_RNDIS,
+	if ((ipa_get_hw_type() >= IPA_HW_v3_0) &&
+		ipa_is_vlan_mode(IPA_VLAN_IF_RNDIS,
 		&rndis_ipa_ctx->is_vlan_mode)) {
 		RNDIS_IPA_ERROR("couldn't acquire vlan mode, is ipa ready?\n");
 		goto fail_get_vlan_mode;
@@ -1178,12 +1179,6 @@ static void rndis_ipa_packet_receive_notify(
 		("packet Rx, len=%d\n",
 		skb->len);
 
-	if (unlikely(rndis_ipa_ctx == NULL)) {
-		RNDIS_IPA_DEBUG("Private context is NULL. Drop SKB.\n");
-		dev_kfree_skb_any(skb);
-		return;
-	}
-
 	if (unlikely(rndis_ipa_ctx->rx_dump_enable))
 		rndis_ipa_dump_skb(skb);
 
@@ -1191,15 +1186,11 @@ static void rndis_ipa_packet_receive_notify(
 		RNDIS_IPA_DEBUG("use connect()/up() before receive()\n");
 		RNDIS_IPA_DEBUG("packet dropped (length=%d)\n",
 				skb->len);
-		rndis_ipa_ctx->rx_dropped++;
-		dev_kfree_skb_any(skb);
 		return;
 	}
 
 	if (evt != IPA_RECEIVE)	{
 		RNDIS_IPA_ERROR("a none IPA_RECEIVE event in driver RX\n");
-		rndis_ipa_ctx->rx_dropped++;
-		dev_kfree_skb_any(skb);
 		return;
 	}
 
@@ -1502,7 +1493,7 @@ static void rndis_ipa_xmit_error(struct sk_buff *skb)
 	delay_jiffies = msecs_to_jiffies(
 		rndis_ipa_ctx->error_msec_sleep_time + rand_dealy_msec);
 
-	retval = schedule_delayed_work(
+	retval = queue_delayed_work(system_power_efficient_wq, 
 		&rndis_ipa_ctx->xmit_error_delayed_work, delay_jiffies);
 	if (!retval) {
 		RNDIS_IPA_ERROR("fail to schedule delayed work\n");
