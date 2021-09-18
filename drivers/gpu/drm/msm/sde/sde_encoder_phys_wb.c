@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -136,7 +136,7 @@ static void sde_encoder_phys_wb_set_qos_remap(
 	qos_params.client_type = phys_enc->in_clone_mode ?
 					VBIF_CWB_CLIENT : VBIF_NRT_CLIENT;
 
-	SDE_DEBUG("[qos_remap] wb:%d vbif:%d xin:%d rt:%d clone:%d\n",
+	SDE_DEBUG("[qos_remap] wb:%d vbif:%d xin:%d clone:%d\n",
 			qos_params.num,
 			qos_params.vbif_idx,
 			qos_params.xin_id, qos_params.client_type);
@@ -1664,7 +1664,7 @@ static void sde_encoder_phys_wb_get_hw_resources(
 			hw_res->needs_cdm);
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 /**
  * sde_encoder_phys_wb_init_debugfs - initialize writeback encoder debugfs
  * @phys_enc:		Pointer to physical encoder

@@ -1,5 +1,5 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,7 @@
 #include "atoll-sde-display.dtsi"
 #include "sdmmagpie-thermal-overlay.dtsi"
 #include "touchscreen.dtsi"
+#include "atoll-common-overlay.dtsi"
 
 &qupv3_se10_spi {
 	status = "ok";
@@ -158,16 +159,17 @@
 };
 
 &pm6150l_lcdb {
-        status = "ok";
+       status = "ok";
 };
 &pm6150l_wled {
        qcom,string-cfg=<7>;
-         status = "ok";
+	status = "ok";
 };
 
 &pm6150_qg {
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,tcss-enable;
+	qcom,bass-enable;
 	qcom,qg-iterm-ma = <350>;
 	qcom,vbatt-cutoff-mv = <3400>;
 	qcom,vbatt-low-mv = <3500>;
@@ -234,7 +236,6 @@
 	qcom,en-qc3-with-cp;
 	qcom,disable-suspend-on-collapse;
 	qcom,smb-internal-pull-kohm = <0>;
-	qcom,reg-dump-enable;
 };
 
 &pm6150_gpios {
@@ -330,7 +331,7 @@
 		pinctrl-1 = <&msm_gpio_91_output_high>;
 		pinctrl-2 = <&msm_gpio_90>;
 	};
-
+	
 	ant_check {
 		compatible = "ant_check";
 		ant_check_gpio = <&tlmm 5 0x0>;
@@ -366,25 +367,25 @@
 };
 
 &dsi_ft8756_huaxing_video {
-      qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-        qcom,mdss-dsi-bl-min-level = <1>;
+       qcom,mdss-dsi-bl-min-level = <1>;
        qcom,mdss-dsi-bl-max-level = <4095>;
        qcom,mdss-brightness-max-level = <4095>;
        qcom,mdss-dsi-bl-default-level = <1072>;
-        qcom,platform-te-gpio = <&tlmm 10 0>;
-        qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
+       qcom,platform-te-gpio = <&tlmm 10 0>;
+       qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
 };
 
 &dsi_nt36675_tianma_video {
-      qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-        qcom,mdss-dsi-bl-min-level = <1>;
+       qcom,mdss-dsi-bl-min-level = <1>;
        qcom,mdss-dsi-bl-max-level = <4095>;
        qcom,mdss-brightness-max-level = <4095>;
        qcom,mdss-dsi-bl-default-level = <1072>;
-        qcom,platform-te-gpio = <&tlmm 10 0>;
-        qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
+       qcom,platform-te-gpio = <&tlmm 10 0>;
+       qcom,platform-reset-gpio = <&pm6150l_gpios 3 0>;
 };
 
 &qupv3_se9_i2c {

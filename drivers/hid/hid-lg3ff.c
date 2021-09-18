@@ -2,7 +2,6 @@
  *  Force feedback support for Logitech Flight System G940
  *
  *  Copyright (c) 2009 Gary Stein <LordCnidarian@gmail.com>
- *  Copyright (C) 2020 XiaoMi, Inc.
  */
 
 /*

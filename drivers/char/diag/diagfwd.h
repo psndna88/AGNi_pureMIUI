@@ -25,6 +25,9 @@
 #define GET_BUF_NUM(n)		((n & 0x0000FF))
 #define GET_PD_CTXT(u)		((u & 0xFF000000) >> 24)
 
+#define SET_HDLC_CTXT(u)	((u & 0xFF) << 24)
+#define GET_HDLC_CTXT(u)	((u & 0xFF000000) >> 24)
+
 #define CHK_OVERFLOW(bufStart, start, end, length) \
 	((((bufStart) <= (start)) && ((end) - (start) >= (length))) ? 1 : 0)
 
@@ -40,6 +43,8 @@ int diag_cmd_log_on_demand(unsigned char *src_buf, int src_len,
 			   unsigned char *dest_buf, int dest_len);
 int diag_cmd_get_mobile_id(unsigned char *src_buf, int src_len,
 			   unsigned char *dest_buf, int dest_len);
+int diag_process_diag_transport_query_cmd(unsigned char *src_buf, int src_len,
+				      unsigned char *dest_buf, int dest_len);
 int diag_check_common_cmd(struct diag_pkt_header_t *header);
 void diag_update_userspace_clients(unsigned int type);
 void diag_update_sleeping_process(int process_id, int data_type);

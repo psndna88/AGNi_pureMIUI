@@ -66,7 +66,6 @@
 #define VIDC_MAX_DECODE_SESSIONS        16
 #define VIDC_MAX_ENCODE_SESSIONS        16
 
-#define MAX_SUPPORTED_INSTANCES 16
 
 enum vidc_status {
 	VIDC_ERR_NONE = 0x0,
@@ -156,7 +155,6 @@ enum hal_property {
 	HAL_CONFIG_VENC_IDR_PERIOD,
 	HAL_PARAM_VENC_ADAPTIVE_B,
 	HAL_PARAM_VPE_ROTATION,
-	HAL_CONFIG_VPE_FLIP,
 	HAL_PARAM_VENC_INTRA_REFRESH,
 	HAL_PARAM_VENC_MULTI_SLICE_CONTROL,
 	HAL_SYS_DEBUG_CONFIG,
@@ -997,10 +995,9 @@ struct hal_fw_info {
 };
 
 enum hal_flush {
-	HAL_FLUSH_INPUT,
-	HAL_FLUSH_OUTPUT,
-	HAL_FLUSH_ALL,
-	HAL_UNUSED_FLUSH = 0x10000000,
+	HAL_FLUSH_INPUT = BIT(0),
+	HAL_FLUSH_OUTPUT = BIT(1),
+	HAL_FLUSH_ALL = HAL_FLUSH_INPUT | HAL_FLUSH_OUTPUT,
 };
 
 enum hal_event_type {
@@ -1401,6 +1398,11 @@ static inline enum vidc_vote_data_session VIDC_VOTE_DATA_SESSION_VAL(
 	return (1 << ilog2(c) * 2) | ((d - 1) << (ilog2(c) * 2 + 1));
 }
 
+struct msm_vidc_gov_data {
+	struct vidc_bus_vote_data *data;
+	u32 data_count;
+};
+
 enum msm_vidc_power_mode {
 	VIDC_POWER_NORMAL = 0,
 	VIDC_POWER_LOW,
@@ -1426,11 +1428,6 @@ struct vidc_bus_vote_data {
 	enum hal_work_mode work_mode;
 	bool use_sys_cache;
 	bool b_frames_enabled;
-};
-
-struct msm_vidc_gov_data {
-	struct vidc_bus_vote_data data[MAX_SUPPORTED_INSTANCES];
-	u32 data_count;
 };
 
 struct vidc_clk_scale_data {

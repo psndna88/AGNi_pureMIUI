@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,15 +13,17 @@
 #ifndef _NPU_MGR_H
 #define _NPU_MGR_H
 
-/*
+/* -------------------------------------------------------------------------
  * Includes
+ * -------------------------------------------------------------------------
  */
 #include <linux/spinlock.h>
 #include "npu_hw_access.h"
 #include "npu_common.h"
 
-/*
+/* -------------------------------------------------------------------------
  * Defines
+ * -------------------------------------------------------------------------
  */
 #define NW_RSC_TIMEOUT_MS (1000 * 5) /* set for 5 seconds */
 #define NW_RSC_TIMEOUT msecs_to_jiffies(NW_RSC_TIMEOUT_MS)
@@ -33,6 +35,9 @@
 #define NW_DEBUG_TIMEOUT msecs_to_jiffies(NW_DEBUG_TIMEOUT_MS)
 #define NPU_MBOX_IDLE_TIMEOUT_MS 500 /* set for 500ms */
 #define NPU_MBOX_IDLE_TIMEOUT msecs_to_jiffies(NPU_MBOX_IDLE_TIMEOUT_MS)
+#define NPU_FW_TIMEOUT_POLL_INTERVAL_MS 10
+#define NPU_FW_ACK_TIMEOUT_MS 5000
+#define NPU_FW_BRINGUP_TIMEOUT_MS (1000 * 60) /* set for 60 seconds */
 #define FIRMWARE_VERSION 0x00001000
 #define MAX_LOADED_NETWORK 32
 #define NPU_IPC_BUF_LENGTH 4096
@@ -41,8 +46,9 @@
 #define FW_DBG_MODE_INC_TIMEOUT  (1 << 1)
 #define FW_DBG_DISABLE_WDOG      (1 << 2)
 
-/*
+/* -------------------------------------------------------------------------
  * Data Structures
+ * -------------------------------------------------------------------------
  */
 
 struct npu_network_cmd {
@@ -133,18 +139,25 @@ struct npu_host_ctx {
 	uint32_t wdg_irq_sts;
 	bool fw_error;
 	bool cancel_work;
+	bool app_crashed;
 	struct notifier_block nb;
+	struct notifier_block panic_nb;
 	void *notif_hdle;
 	spinlock_t bridge_mbox_lock;
 	bool bridge_mbox_pwr_on;
 	void *ipc_msg_buf;
 	struct list_head misc_cmd_list;
+
+	struct msm_npu_property fw_caps;
+	bool fw_caps_valid;
+	uint32_t fw_caps_err_code;
 };
 
 struct npu_device;
 
-/*
+/* -------------------------------------------------------------------------
  * Function Prototypes
+ * -------------------------------------------------------------------------
  */
 int npu_host_init(struct npu_device *npu_dev);
 void npu_host_deinit(struct npu_device *npu_dev);

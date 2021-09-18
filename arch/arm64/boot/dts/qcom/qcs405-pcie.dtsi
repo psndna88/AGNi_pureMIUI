@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -82,9 +82,12 @@
 		qcom,phy-status-bit = <0>;
 		qcom,phy-power-down-offset = <0x98>;
 		qcom,core-preset = <0x77777777>;
-		qcom,boot-option = <0x1>;
+		qcom,boot-option = <0x0>;
 		qcom,keep-powerdown-phy;
 		qcom,no-l0s-supported;
+		qcom,no-l1-supported;
+		qcom,no-l1ss-supported;
+		qcom,no-aux-clk-sync;
 
 		linux,pci-domain = <0>;
 
@@ -113,8 +116,14 @@
 						<0>, <0>, <0>, <0>;
 
 		clock-output-names = "pcie_0_pipe_clk";
-		resets = <&clock_gcc GCC_PCIEPHY_0_PHY_BCR>;
-		reset-names = "pcie_0_phy_reset";
+
+		resets = <&clock_gcc GCC_PCIEPHY_0_PHY_BCR>,
+			<&clock_gcc GCC_PCIE_0_BCR>,
+			<&clock_gcc GCC_PCIE_0_PHY_BCR>;
+
+		reset-names = "pcie_0_phy_reset",
+				"pcie_0_core_reset",
+				"pcie_phy_reset";
 
 		pcie_rc0: pcie_rc0 {
 			#address-cells = <5>;

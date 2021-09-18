@@ -21,14 +21,10 @@
 #include <linux/msm-bus-board.h>
 #include <linux/msm-bus.h>
 
-#define MSM_BUS_DBG(msg, ...) \
-	pr_debug(msg, ## __VA_ARGS__)
-#define MSM_BUS_ERR(msg, ...) \
-	pr_err(msg, ## __VA_ARGS__)
-#define MSM_BUS_WARN(msg, ...) \
-	pr_warn(msg, ## __VA_ARGS__)
-#define MSM_FAB_ERR(msg, ...) \
-	dev_err(&fabric->fabdev.dev, msg, ## __VA_ARGS__)
+#define MSM_BUS_DBG(msg, ...)
+#define MSM_BUS_ERR(msg, ...)
+#define MSM_BUS_WARN(msg, ...)
+#define MSM_FAB_ERR(msg, ...)
 
 #define IS_MASTER_VALID(mas) \
 	(((mas >= MSM_BUS_MASTER_FIRST) && (mas <= MSM_BUS_MASTER_LAST)) \
@@ -337,6 +333,8 @@ int msm_bus_dbg_add_client(const struct msm_bus_client_handle *pdata);
 int msm_bus_dbg_rec_transaction(const struct msm_bus_client_handle *pdata,
 						u64 ab, u64 ib);
 void msm_bus_dbg_remove_client(const struct msm_bus_client_handle *pdata);
+int msm_bus_dbg_add_bcm(struct msm_bus_node_device_type *cur_bcm);
+void msm_bus_dbg_remove_bcm(struct msm_bus_node_device_type *cur_bcm);
 
 #else
 static inline void msm_bus_dbg_client_data(struct msm_bus_scale_pdata *pdata,
@@ -364,6 +362,17 @@ static inline int
 msm_bus_dbg_add_client(const struct msm_bus_client_handle *pdata)
 {
 	return 0;
+}
+
+static inline int
+msm_bus_dbg_add_bcm(struct msm_bus_node_device_type *cur_bcm)
+{
+	return 0;
+}
+
+static inline void
+msm_bus_dbg_remove_bcm(struct msm_bus_node_device_type *cur_bcm)
+{
 }
 #endif
 

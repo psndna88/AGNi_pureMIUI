@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -75,6 +75,7 @@ QDF_STATUS hif_initialize_pci_ops(struct hif_softc *hif_sc)
 	bus_ops->hif_disable_power_management =
 		&hif_pci_disable_power_management;
 	bus_ops->hif_grp_irq_configure = &hif_pci_configure_grp_irq;
+	bus_ops->hif_grp_irq_deconfigure = &hif_pci_deconfigure_grp_irq;
 	bus_ops->hif_display_stats =
 		&hif_pci_display_stats;
 	bus_ops->hif_clear_stats =
@@ -84,6 +85,10 @@ QDF_STATUS hif_initialize_pci_ops(struct hif_softc *hif_sc)
 	/* default to legacy mapping handler; override as needed */
 	bus_ops->hif_map_ce_to_irq = &hif_pci_legacy_map_ce_to_irq;
 	bus_ops->hif_needs_bmi = &hif_pci_needs_bmi;
+
+	bus_ops->hif_config_irq_affinity =
+		&hif_pci_config_irq_affinity;
+	bus_ops->hif_log_bus_info = &hif_log_pcie_info;
 
 	return QDF_STATUS_SUCCESS;
 }

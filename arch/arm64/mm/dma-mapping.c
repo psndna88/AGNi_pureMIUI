@@ -2095,10 +2095,8 @@ static int arm_iommu_init_mapping(struct device *dev,
 	int s1_bypass = 0, is_fast = 0, is_bitmap = 0;
 	dma_addr_t iova_end;
 
-	if (mapping->init) {
-		kref_get(&mapping->kref);
+	if (mapping->init)
 		return 0;
-	}
 
 	iova_end = mapping->base + (mapping->bits << PAGE_SHIFT) - 1;
 	if (iova_end > dma_get_mask(dev)) {
@@ -2208,8 +2206,7 @@ void arm_iommu_detach_device(struct device *dev)
 	 * ION defers dma_unmap calls. Ensure they have all completed prior to
 	 * setting dma_ops to NULL.
 	 */
-	if (msm_dma_unmap_all_for_dev(dev))
-		dev_warn(dev, "IOMMU detach with outstanding mappings\n");
+	msm_dma_unmap_all_for_dev(dev);
 
 	iommu_detach_group(mapping->domain, dev->iommu_group);
 	dev->archdata.mapping = NULL;

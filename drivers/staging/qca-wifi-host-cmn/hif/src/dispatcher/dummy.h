@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -44,6 +44,7 @@ void hif_dummy_grp_irq_enable(struct hif_softc *hif_sc, uint32_t grp_id);
 void hif_dummy_grp_irq_disable(struct hif_softc *hif_sc, uint32_t grp_id);
 int hif_dummy_grp_irq_configure(struct hif_softc *hif_sc,
 				struct hif_exec_context *exec);
+void hif_dummy_grp_irq_deconfigure(struct hif_softc *hif_sc);
 int hif_dummy_dump_registers(struct hif_softc *hif_sc);
 void hif_dummy_dump_target_memory(struct hif_softc *hif_sc, void *ramdump_base,
 				  uint32_t address, uint32_t size);
@@ -59,3 +60,6 @@ void hif_dummy_set_bundle_mode(struct hif_softc *hif_ctx,
 int hif_dummy_bus_reset_resume(struct hif_softc *hif_ctx);
 int hif_dummy_map_ce_to_irq(struct hif_softc *scn, int ce_id);
 int hif_dummy_addr_in_boundary(struct hif_softc *scn, uint32_t offset);
+void hif_dummy_config_irq_affinity(struct hif_softc *scn);
+bool hif_dummy_log_bus_info(struct hif_softc *scn, uint8_t *data,
+			    unsigned int *offset);

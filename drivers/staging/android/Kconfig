@@ -34,7 +34,6 @@ config ANDROID_LOW_MEMORY_KILLER
 	  scripts (/init.rc), and it defines priority values with minimum free memory size
 	  for each priority.
 
-
 config ANDROID_TIMED_OUTPUT
 	bool "Timed output class driver"
 	default y
@@ -49,8 +48,6 @@ config ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 	  to oom_score_adj values.
 
 source "drivers/staging/android/ion/Kconfig"
-
-source "drivers/staging/android/fiq_debugger/Kconfig"
 
 endif # if ANDROID
 

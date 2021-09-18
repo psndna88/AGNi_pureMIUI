@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,6 +11,12 @@
  * GNU General Public License for more details.
  */
 #include "sm6150-lpi.dtsi"
+
+/ {
+	aliases {
+		i2c7 = &qupv3_se8_i2c;
+	};
+};
 
 &soc {
 	tdm_pri_rx: qcom,msm-dai-tdm-pri-rx {
@@ -269,7 +275,7 @@
 		qcom,msm-cpudai-tdm-group-num-ports = <5>;
 		qcom,msm-cpudai-tdm-group-port-id = <36912 36914 36916
 							36918 36926>;
-		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <3>;
+		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <10>;
 		qcom,msm-cpudai-tdm-clk-rate = <24576000>;
 		qcom,msm-cpudai-tdm-clk-internal = <1>;
 		qcom,msm-cpudai-tdm-sync-mode = <1>;
@@ -279,9 +285,11 @@
 		qcom,msm-cpudai-tdm-data-delay = <0>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&quat_tdm_sclk_active &quat_tdm_ws_active
-				&quat_tdm_data0_active &quat_tdm_data1_active>;
+				&quat_tdm_data0_active &quat_tdm_data1_active
+				&quat_tdm_data2_active &quat_tdm_data3_active>;
 		pinctrl-1 = <&quat_tdm_sclk_sleep &quat_tdm_ws_sleep
-				&quat_tdm_data0_sleep &quat_tdm_data1_sleep>;
+				&quat_tdm_data0_sleep &quat_tdm_data1_sleep
+				&quat_tdm_data2_sleep &quat_tdm_data3_sleep>;
 		dai_quat_tdm_rx_0: qcom,msm-dai-q6-tdm-quat-rx-0 {
 			compatible = "qcom,msm-dai-q6-tdm";
 			qcom,msm-cpudai-tdm-dev-id = <36912>;
@@ -318,7 +326,7 @@
 		qcom,msm-cpudai-tdm-group-num-ports = <5>;
 		qcom,msm-cpudai-tdm-group-port-id = <36913 36915 36917
 							36919 36927>;
-		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <12>;
+		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <5>;
 		qcom,msm-cpudai-tdm-clk-rate = <24576000>;
 		qcom,msm-cpudai-tdm-clk-internal = <1>;
 		qcom,msm-cpudai-tdm-sync-mode = <1>;
@@ -455,6 +463,20 @@
 		pinctrl-1 = <&pri_aux_pcm_sck_sleep &pri_aux_pcm_ws_sleep
 			&pri_aux_pcm_data0_sleep &pri_aux_pcm_data1_sleep>;
 	};
+
+qcom,msm-dai-q6 {
+		compatible = "qcom,msm-dai-q6";
+
+		afe_pcm_rx_1: qcom,msm-dai-q6-be-afe-pcm-rx-1 {
+			compatible = "qcom,msm-dai-q6-dev";
+			qcom,msm-dai-q6-dev-id = <226>;
+		};
+
+		afe_proxy_tx_1: qcom,msm-dai-q6-afe-proxy-tx-1 {
+			compatible = "qcom,msm-dai-q6-dev";
+			qcom,msm-dai-q6-dev-id = <242>;
+		};
+	};
 };
 
 &audio_apr {
@@ -501,10 +523,11 @@
 				<&dai_mi2s4>, <&dai_pri_auxpcm>,
 				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
 				<&dai_quat_auxpcm>, <&dai_quin_auxpcm>,
-				<&afe_pcm_rx>, <&afe_pcm_tx>, <&afe_proxy_rx>,
-				<&afe_proxy_tx>, <&incall_record_rx>,
-				<&incall_record_tx>, <&incall_music_rx>,
-				<&incall_music_2_rx>,
+				<&afe_pcm_rx>, <&afe_pcm_tx>,
+				<&afe_proxy_rx>, <&afe_proxy_tx>,
+				<&afe_pcm_rx_1>, <&afe_proxy_tx_1>,
+				<&incall_record_rx>, <&incall_record_tx>,
+				<&incall_music_rx>, <&incall_music_2_rx>,
 				<&usb_audio_rx>, <&usb_audio_tx>,
 				<&dai_pri_tdm_rx_0>, <&dai_pri_tdm_rx_1>,
 				<&dai_pri_tdm_rx_2>, <&dai_pri_tdm_rx_3>,
@@ -538,6 +561,7 @@
 				"msm-dai-q6-auxpcm.4", "msm-dai-q6-auxpcm.5",
 				"msm-dai-q6-dev.224", "msm-dai-q6-dev.225",
 				"msm-dai-q6-dev.241", "msm-dai-q6-dev.240",
+				"msm-dai-q6-dev.226", "msm-dai-q6-dev.242",
 				"msm-dai-q6-dev.32771", "msm-dai-q6-dev.32772",
 				"msm-dai-q6-dev.32773", "msm-dai-q6-dev.32770",
 				"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673",
@@ -595,3 +619,6 @@
 	};
 };
 
+&qupv3_se8_i2c {
+	status = "ok";
+};

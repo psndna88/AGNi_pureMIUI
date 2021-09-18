@@ -15,6 +15,7 @@ obj-$(CONFIG_UV_MMTIMER)	+= uv_mmtimer.o
 obj-$(CONFIG_IBM_BSR)		+= bsr.o
 obj-$(CONFIG_SGI_MBCS)		+= mbcs.o
 obj-$(CONFIG_BFIN_OTP)		+= bfin-otp.o
+obj-$(CONFIG_MSM_SMD_PKT)       += msm_smd_pkt.o
 
 obj-$(CONFIG_PRINTER)		+= lp.o
 
@@ -64,6 +65,10 @@ obj-$(CONFIG_DIAG_CHAR)		+= diag/
 obj-$(CONFIG_MSM_ADSPRPC)	+= adsprpc.o
 ifdef CONFIG_COMPAT
   obj-$(CONFIG_MSM_ADSPRPC)	+= adsprpc_compat.o
+endif
+obj-$(CONFIG_VIRTIO_FASTRPC)	+= virtio_fastrpc.o
+ifdef CONFIG_COMPAT
+  obj-$(CONFIG_VIRTIO_FASTRPC)	+= adsprpc_compat.o
 endif
 obj-$(CONFIG_MSM_FASTCVPD)	+= fastcvpd.o
 obj-$(CONFIG_MSM_RDBG)		+= rdbg.o

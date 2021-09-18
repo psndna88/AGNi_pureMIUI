@@ -1273,7 +1273,7 @@ static int tty_reopen(struct tty_struct *tty)
 	if (ld) {
 		tty_ldisc_deref(ld);
 	} else {
-		retval = tty_ldisc_lock(tty, 5 * HZ);
+		retval = tty_ldisc_lock(tty, msecs_to_jiffies(5000));
 		if (retval)
 			return retval;
 
@@ -1346,7 +1346,7 @@ struct tty_struct *tty_init_dev(struct tty_driver *driver, int idx)
 			"%s: %s driver does not set tty->port. This will crash the kernel later. Fix the driver!\n",
 			__func__, tty->driver->name);
 
-	retval = tty_ldisc_lock(tty, 5 * HZ);
+	retval = tty_ldisc_lock(tty, msecs_to_jiffies(5000));
 	if (retval)
 		goto err_release_lock;
 	tty->port->itty = tty;
@@ -1716,7 +1716,7 @@ int tty_release(struct inode *inode, struct file *filp)
 			tty_warn(tty, "read/write wait queue active!\n");
 		}
 		schedule_timeout_killable(timeout);
-		if (timeout < 120 * HZ)
+		if (timeout < 120 * msecs_to_jiffies(120000))
 			timeout = 2 * timeout + 1;
 		else
 			timeout = MAX_SCHEDULE_TIMEOUT;
@@ -2424,14 +2424,14 @@ out:
  *	@p: pointer to result
  *
  *	Obtain the modem status bits from the tty driver if the feature
- *	is supported. Return -EINVAL if it is not available.
+ *	is supported. Return -ENOTTY if it is not available.
  *
  *	Locking: none (up to the driver)
  */
 
 static int tty_tiocmget(struct tty_struct *tty, int __user *p)
 {
-	int retval = -EINVAL;
+	int retval = -ENOTTY;
 
 	if (tty->ops->tiocmget) {
 		retval = tty->ops->tiocmget(tty);
@@ -2449,7 +2449,7 @@ static int tty_tiocmget(struct tty_struct *tty, int __user *p)
  *	@p: pointer to desired bits
  *
  *	Set the modem status bits from the tty driver if the feature
- *	is supported. Return -EINVAL if it is not available.
+ *	is supported. Return -ENOTTY if it is not available.
  *
  *	Locking: none (up to the driver)
  */
@@ -2461,7 +2461,7 @@ static int tty_tiocmset(struct tty_struct *tty, unsigned int cmd,
 	unsigned int set, clear, val;
 
 	if (tty->ops->tiocmset == NULL)
-		return -EINVAL;
+		return -ENOTTY;
 
 	retval = get_user(val, p);
 	if (retval)
@@ -2739,10 +2739,14 @@ void __do_SAK(struct tty_struct *tty)
 	struct task_struct *g, *p;
 	struct pid *session;
 	int		i;
+	unsigned long flags;
 
 	if (!tty)
 		return;
-	session = tty->session;
+
+	spin_lock_irqsave(&tty->ctrl_lock, flags);
+	session = get_pid(tty->session);
+	spin_unlock_irqrestore(&tty->ctrl_lock, flags);
 
 	tty_ldisc_flush(tty);
 
@@ -2774,6 +2778,7 @@ void __do_SAK(struct tty_struct *tty)
 		task_unlock(p);
 	} while_each_thread(g, p);
 	read_unlock(&tasklist_lock);
+	put_pid(session);
 #endif
 }
 

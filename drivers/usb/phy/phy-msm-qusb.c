@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1114,15 +1113,14 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		ret = of_property_read_u32(dev->of_node, "qcom,usb-hs-ac-value",
 						&qphy->usb_hs_ac_value);
 		if (ret) {
-			dev_err(dev, "usb_hs_ac_value not passed\n", __func__);
+			dev_err(dev, "usb_hs_ac_value not passed\n");
 			return ret;
 		}
 
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"tcsr_conn_box_spare_0");
 		if (!res) {
-			dev_err(dev, "tcsr_conn_box_spare_0 not passed\n",
-								__func__);
+			dev_err(dev, "tcsr_conn_box_spare_0 not passed\n");
 			return -ENOENT;
 		}
 

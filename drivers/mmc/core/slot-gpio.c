@@ -2,7 +2,6 @@
  * Generic GPIO card-detect helper
  *
  * Copyright (C) 2011, Guennadi Liakhovetski <g.liakhovetski@gmx.de>
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -38,7 +37,7 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 	struct mmc_host *host = dev_id;
 	int present = host->ops->get_cd(host);
 
-	pr_info("%s: cd gpio irq, gpio state %d (CARD_%s)\n",
+	pr_debug("%s: cd gpio irq, gpio state %d (CARD_%s)\n",
 		mmc_hostname(host), present, present?"INSERT":"REMOVAL");
 
 	host->trigger_card_event = true;
@@ -132,6 +131,27 @@ int mmc_gpio_request_ro(struct mmc_host *host, unsigned int gpio)
 	return 0;
 }
 EXPORT_SYMBOL(mmc_gpio_request_ro);
+
+void mmc_gpiod_free_cd_irq(struct mmc_host *host)
+{
+	devm_free_irq(host->parent, host->slot.cd_irq, host);
+}
+EXPORT_SYMBOL(mmc_gpiod_free_cd_irq);
+
+void mmc_gpiod_restore_cd_irq(struct mmc_host *host)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+	int irq = host->slot.cd_irq;
+
+	if (irq >= 0) {
+		devm_request_threaded_irq(host->parent, irq,
+			NULL, ctx->cd_gpio_isr,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+			IRQF_ONESHOT,
+			ctx->cd_label, host);
+	}
+}
+EXPORT_SYMBOL(mmc_gpiod_restore_cd_irq);
 
 void mmc_gpiod_request_cd_irq(struct mmc_host *host)
 {

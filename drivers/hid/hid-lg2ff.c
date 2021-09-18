@@ -2,7 +2,6 @@
  *  Force feedback support for Logitech RumblePad and Rumblepad 2
  *
  *  Copyright (c) 2008 Anssi Hannula <anssi.hannula@gmail.com>
- *  Copyright (C) 2020 XiaoMi, Inc.
  */
 
 /*

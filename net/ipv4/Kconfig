@@ -297,6 +297,7 @@ config SYN_COOKIES
 
 config NET_IPVTI
 	tristate "Virtual (secure) IP: tunneling"
+	depends on IPV6 || IPV6=n
 	select INET_TUNNEL
 	select NET_IP_TUNNEL
 	depends on INET_XFRM_MODE_TUNNEL
@@ -478,7 +479,7 @@ if TCP_CONG_ADVANCED
 
 config TCP_CONG_BIC
 	tristate "Binary Increase Congestion (BIC) control"
-	default m
+	default n
 	---help---
 	BIC-TCP is a sender-side only change that ensures a linear RTT
 	fairness under large windows while offering both scalability and
@@ -498,9 +499,17 @@ config TCP_CONG_CUBIC
 	among other techniques.
 	See http://www.csc.ncsu.edu/faculty/rhee/export/bitcp/cubic-paper.pdf
 
+config TCP_CONG_C2TCP
+	tristate "CELLULAR CUBIC TCP (C2TCP)"
+	default y
+	---help---
+	Home Page: https://wp.nyu.edu/c2tcp/
+	This implementation is only a proof-of-concept. A more general version working with different TCP schemes will be released, when I get time! :)
+	Here, C2TCP's functionality is implemented on top of TCP Cubic.
+
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
-	default m
+	default n
 	---help---
 	TCP Westwood+ is a sender-side only modification of the TCP Reno
 	protocol stack that optimizes the performance of TCP congestion
@@ -514,7 +523,7 @@ config TCP_CONG_WESTWOOD
 
 config TCP_CONG_HTCP
         tristate "H-TCP"
-        default m
+        default n
 	---help---
 	H-TCP is a send-side only modifications of the TCP Reno
 	protocol stack that optimizes the performance of TCP
@@ -675,6 +684,35 @@ config TCP_CONG_BBR
 	bufferbloat, policers, or AQM schemes that do not provide a delay
 	signal. It requires the fq ("Fair Queue") pacing packet scheduler.
 
+config TCP_CONG_BBR2
+	tristate "BBR2 TCP"
+	default n
+	---help---
+
+	BBR2 TCP congestion control is a model-based congestion control
+	algorithm that aims to maximize network utilization, keep queues and
+	retransmit rates low, and to be able to coexist with Reno/CUBIC in
+	common scenarios. It builds an explicit model of the network path.  It
+	tolerates a targeted degree of random packet loss and delay that are
+	unrelated to congestion. It can operate over LAN, WAN, cellular, wifi,
+	or cable modem links, and can use DCTCP-L4S-style ECN signals.  It can
+	coexist with flows that use loss-based congestion control, and can
+	operate with shallow buffers, deep buffers, bufferbloat, policers, or
+	AQM schemes that do not provide a delay signal. It requires pacing,
+	using either TCP internal pacing or the fq ("Fair Queue") pacing packet
+	scheduler.
+
+config TCP_CONG_AGILESD
+    tristate "Agile-SD Congestion control"
+    default y
+    ---help---
+  
+    This is version 1.0 of Agile-SD TCP. It is a sender-side only. 
+    It contributes the Agility Factor (AF) to shorten the epoch time 
+    and to make TCP independent from RTT. AF reduces the sensitivity 
+    to packet losses, which in turn Agile-SD to achieve better throughput 
+    over high-speed networks.
+
 choice
 	prompt "Default TCP congestion control"
 	default DEFAULT_CUBIC
@@ -687,6 +725,9 @@ choice
 
 	config DEFAULT_CUBIC
 		bool "Cubic" if TCP_CONG_CUBIC=y
+
+	config DEFAULT_C2TCP
+		bool "C2TCP" if TCP_CONG_C2TCP=y
 
 	config DEFAULT_HTCP
 		bool "Htcp" if TCP_CONG_HTCP=y
@@ -712,6 +753,12 @@ choice
 	config DEFAULT_BBR
 		bool "BBR" if TCP_CONG_BBR=y
 
+	config DEFAULT_BBR2
+		bool "BBR2" if TCP_CONG_BBR2=y
+
+	config DEFAULT_AGILESD
+		bool "AGILESD" if TCP_CONG_AGILESD=y
+
 	config DEFAULT_RENO
 		bool "Reno"
 endchoice
@@ -727,6 +774,7 @@ config DEFAULT_TCP_CONG
 	string
 	default "bic" if DEFAULT_BIC
 	default "cubic" if DEFAULT_CUBIC
+	default "c2tcp" if DEFAULT_C2TCP
 	default "htcp" if DEFAULT_HTCP
 	default "hybla" if DEFAULT_HYBLA
 	default "vegas" if DEFAULT_VEGAS
@@ -736,6 +784,8 @@ config DEFAULT_TCP_CONG
 	default "dctcp" if DEFAULT_DCTCP
 	default "cdg" if DEFAULT_CDG
 	default "bbr" if DEFAULT_BBR
+	default "bbr2" if DEFAULT_BBR2
+	default "agilesd" if DEFAULT_AGILESD
 	default "cubic"
 
 config TCP_MD5SIG

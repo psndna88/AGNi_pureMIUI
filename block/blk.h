@@ -7,15 +7,15 @@
 #include "blk-mq.h"
 
 /* Amount of time in which a process may batch requests */
-#define BLK_BATCH_TIME	(HZ/50UL)
+#define BLK_BATCH_TIME	(msecs_to_jiffies(1000)/50UL)
 
 /* Number of requests a "batching" process may submit */
 #define BLK_BATCH_REQ	32
 
 /* Max future timer expiry for timeouts */
-#define BLK_MAX_TIMEOUT		(5 * HZ)
+#define BLK_MAX_TIMEOUT		(msecs_to_jiffies(5000))
 
-#ifdef CONFIG_DEBUG_FS
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_BLK_DEV_IO_TRACE)
 extern struct dentry *blk_debugfs_root;
 #endif
 
@@ -66,7 +66,7 @@ void blk_rq_bio_prep(struct request_queue *q, struct request *rq,
 void blk_queue_bypass_start(struct request_queue *q);
 void blk_queue_bypass_end(struct request_queue *q);
 void __blk_queue_free_tags(struct request_queue *q);
-void blk_freeze_queue(struct request_queue *q);
+bool blk_freeze_queue(struct request_queue *q);
 
 static inline void blk_queue_enter_live(struct request_queue *q)
 {

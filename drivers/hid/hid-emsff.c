@@ -2,7 +2,6 @@
  *  Force feedback support for EMS Trio Linker Plus II
  *
  *  Copyright (c) 2010 Ignaz Forster <ignaz.forster@gmx.de>
- *  Copyright (C) 2020 XiaoMi, Inc.
  */
 
 /*

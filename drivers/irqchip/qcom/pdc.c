@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -48,7 +48,6 @@ struct pdc_type_info {
 	bool set;
 };
 static struct pdc_type_info pdc_type_config[MAX_IRQS];
-static u32 pdc_enabled[MAX_ENABLE_REGS];
 static u32 max_enable_regs;
 static DEFINE_SPINLOCK(pdc_lock);
 static void __iomem *pdc_base;
@@ -239,11 +238,11 @@ static struct irq_chip qcom_pdc_gic_chip = {
 	.irq_enable		= qcom_pdc_gic_enable,
 	.irq_unmask		= qcom_pdc_gic_unmask,
 	.irq_disable		= qcom_pdc_gic_disable,
+	.irq_set_wake		= irq_chip_set_wake_parent,
 	.irq_retrigger		= irq_chip_retrigger_hierarchy,
 	.irq_set_type		= qcom_pdc_gic_set_type,
 	.flags			= IRQCHIP_MASK_ON_SUSPEND |
-					IRQCHIP_SET_TYPE_MASKED |
-					IRQCHIP_SKIP_SET_WAKE,
+					IRQCHIP_SET_TYPE_MASKED,
 	.irq_set_vcpu_affinity	= irq_chip_set_vcpu_affinity_parent,
 #ifdef CONFIG_SMP
 	.irq_set_affinity	= irq_chip_set_affinity_parent,
@@ -288,6 +287,9 @@ static const struct irq_domain_ops qcom_pdc_ops = {
 	.alloc		= qcom_pdc_alloc,
 	.free		= irq_domain_free_irqs_common,
 };
+
+#ifdef CONFIG_QTI_PDC_SAVE_RESTORE
+static u32 pdc_enabled[MAX_ENABLE_REGS];
 
 static int pdc_suspend(void)
 {
@@ -336,6 +338,7 @@ static int __init pdc_init_syscore(void)
 	return 0;
 }
 arch_initcall(pdc_init_syscore);
+#endif
 
 int qcom_pdc_init(struct device_node *node,
 		struct device_node *parent, void *data)
@@ -373,8 +376,10 @@ int qcom_pdc_init(struct device_node *node,
 	if (pin_count % IRQS_PER_REG)
 		max_enable_regs++;
 
-	pdc_domain->name = "qcom,pdc";
-
+	if (pdc_domain->flags & IRQ_DOMAIN_NAME_ALLOCATED) {
+		pdc_domain->flags &= ~IRQ_DOMAIN_NAME_ALLOCATED;
+		kfree(pdc_domain->name);
+	}
 	return 0;
 
 failure:

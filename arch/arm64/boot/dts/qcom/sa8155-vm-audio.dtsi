@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,6 +12,10 @@
  */
 
 #include "msm-audio-lpass.dtsi"
+
+&msm_audio_ion {
+	/delete-property/ iommus;
+};
 
 &soc {
 	qcom,msm-dai-tdm-pri-rx {
@@ -272,7 +276,7 @@
 		qcom,msm-cpudai-tdm-data-out = <0>;
 		qcom,msm-cpudai-tdm-invert-sync = <0>;
 		qcom,msm-cpudai-tdm-data-delay = <0>;
-		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <3>;
+		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <10>;
 		dai_quat_tdm_rx_0: qcom,msm-dai-q6-tdm-quat-rx-0 {
 			compatible = "qcom,msm-dai-q6-tdm";
 			qcom,msm-cpudai-tdm-dev-id = <36912>;
@@ -316,7 +320,7 @@
 		qcom,msm-cpudai-tdm-data-out = <0>;
 		qcom,msm-cpudai-tdm-invert-sync = <0>;
 		qcom,msm-cpudai-tdm-data-delay = <0>;
-		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <12>;
+		qcom,msm-cpudai-tdm-lane-mask = /bits/ 16 <5>;
 		dai_quat_tdm_tx_0: qcom,msm-dai-q6-tdm-quat-tx-0 {
 			compatible = "qcom,msm-dai-q6-tdm";
 			qcom,msm-cpudai-tdm-dev-id = <36913>;
@@ -348,7 +352,7 @@
 		};
 	};
 
-	qcom,msm-dai-tdm-quin-rx {
+	tdm_quin_rx: qcom,msm-dai-tdm-quin-rx {
 		compatible = "qcom,msm-dai-tdm";
 		qcom,msm-cpudai-tdm-group-id = <37184>;
 		qcom,msm-cpudai-tdm-group-num-ports = <5>;
@@ -392,7 +396,7 @@
 		};
 	};
 
-	qcom,msm-dai-tdm-quin-tx {
+	tdm_quin_tx: qcom,msm-dai-tdm-quin-tx {
 		compatible = "qcom,msm-dai-tdm";
 		qcom,msm-cpudai-tdm-group-id = <37185>;
 		qcom,msm-cpudai-tdm-group-num-ports = <5>;
@@ -436,6 +440,20 @@
 		};
 	};
 
+	qcom,msm-dai-q6 {
+		compatible = "qcom,msm-dai-q6";
+
+		afe_pcm_rx_1: qcom,msm-dai-q6-be-afe-pcm-rx-1 {
+			compatible = "qcom,msm-dai-q6-dev";
+			qcom,msm-dai-q6-dev-id = <226>;
+		};
+
+		afe_proxy_tx_1: qcom,msm-dai-q6-afe-proxy-tx-1 {
+			compatible = "qcom,msm-dai-q6-dev";
+			qcom,msm-dai-q6-dev-id = <242>;
+		};
+	};
+
 	qcom,avtimer@170f7000 {
 		compatible = "qcom,avtimer";
 		reg = <0x170f700c 0x4>,
@@ -453,7 +471,7 @@
 };
 
 &q6core {
-	sound-adp-star {
+	snd_x155: sound-adp-star {
 		compatible = "qcom,sa8155-asoc-snd-adp-star";
 		qcom,model = "sa8155-adp-star-snd-card";
 		qcom,mi2s-audio-intf;
@@ -478,10 +496,11 @@
 				<&dai_mi2s4>, <&dai_pri_auxpcm>,
 				<&dai_sec_auxpcm>, <&dai_tert_auxpcm>,
 				<&dai_quat_auxpcm>, <&dai_quin_auxpcm>,
-				<&afe_pcm_rx>, <&afe_pcm_tx>, <&afe_proxy_rx>,
-				<&afe_proxy_tx>, <&incall_record_rx>,
-				<&incall_record_tx>, <&incall_music_rx>,
-				<&incall_music_2_rx>,
+				<&afe_pcm_rx>, <&afe_pcm_tx>,
+				<&afe_proxy_rx>, <&afe_proxy_tx>,
+				<&afe_pcm_rx_1>, <&afe_proxy_tx_1>,
+				<&incall_record_rx>, <&incall_record_tx>,
+				<&incall_music_rx>, <&incall_music_2_rx>,
 				<&usb_audio_rx>, <&usb_audio_tx>,
 				<&dai_pri_tdm_rx_0>, <&dai_pri_tdm_rx_1>,
 				<&dai_pri_tdm_rx_2>, <&dai_pri_tdm_rx_3>,
@@ -515,6 +534,7 @@
 				"msm-dai-q6-auxpcm.4", "msm-dai-q6-auxpcm.5",
 				"msm-dai-q6-dev.224", "msm-dai-q6-dev.225",
 				"msm-dai-q6-dev.241", "msm-dai-q6-dev.240",
+				"msm-dai-q6-dev.226", "msm-dai-q6-dev.242",
 				"msm-dai-q6-dev.32771", "msm-dai-q6-dev.32772",
 				"msm-dai-q6-dev.32773", "msm-dai-q6-dev.32770",
 				"msm-dai-q6-dev.28672", "msm-dai-q6-dev.28673",

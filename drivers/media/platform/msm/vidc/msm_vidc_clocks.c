@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -198,7 +198,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 	int rc = 0, vote_data_count = 0, i = 0;
 	struct hfi_device *hdev;
 	struct msm_vidc_inst *inst = NULL;
-	struct vidc_bus_vote_data vote_data[MAX_SUPPORTED_INSTANCES];
+	struct vidc_bus_vote_data *vote_data = NULL;
 	bool is_turbo = false;
 
 	if (!core || !core->device) {
@@ -206,6 +206,20 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 		return -EINVAL;
 	}
 	hdev = core->device;
+
+	vote_data = kzalloc(sizeof(struct vidc_bus_vote_data) *
+			MAX_SUPPORTED_INSTANCES, GFP_ATOMIC);
+	if (!vote_data) {
+		dprintk(VIDC_DBG,
+			"vote_data allocation with GFP_ATOMIC failed\n");
+		vote_data = kzalloc(sizeof(struct vidc_bus_vote_data) *
+			MAX_SUPPORTED_INSTANCES, GFP_KERNEL);
+		if (!vote_data) {
+			dprintk(VIDC_DBG,
+				"vote_data allocation failed\n");
+			return -EINVAL;
+		}
+	}
 
 	mutex_lock(&core->lock);
 	list_for_each_entry(inst, &core->instances, list) {
@@ -336,6 +350,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 		rc = call_hfi_op(hdev, vote_bus, hdev->hfi_device_data,
 			vote_data, vote_data_count);
 
+	kfree(vote_data);
 	return rc;
 }
 
@@ -1000,15 +1015,17 @@ int msm_comm_scale_clocks_and_bus(struct msm_vidc_inst *inst)
 
 int msm_dcvs_try_enable(struct msm_vidc_inst *inst)
 {
-	if (!inst) {
+	if (!inst || !inst->core) {
 		dprintk(VIDC_ERR, "%s: Invalid args: %p\n", __func__, inst);
 		return -EINVAL;
 	}
 
 	if (msm_vidc_clock_voting ||
+			!inst->core->resources.dcvs ||
 			inst->flags & VIDC_THUMBNAIL ||
 			inst->clk_data.low_latency_mode ||
-			inst->batch.enable) {
+			inst->batch.enable ||
+			inst->grid_enable) {
 		dprintk(VIDC_PROF, "DCVS disabled: %pK\n", inst);
 		inst->clk_data.dcvs_mode = false;
 		return false;
@@ -1189,7 +1206,7 @@ int msm_vidc_get_extra_buff_count(struct msm_vidc_inst *inst,
 	 * batch size count of extra buffers added on output port
 	 */
 	if (is_output_buffer(inst, buffer_type)) {
-		if (inst->decode_batching && is_decode_session(inst) &&
+		if (is_batching_allowed(inst) &&
 			count < inst->batch.size)
 			count = inst->batch.size;
 	}
@@ -1437,7 +1454,12 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 	struct hfi_device *hdev = NULL;
 	enum hal_perf_mode venc_mode;
 	u32 rc_mode = 0;
+	u32 hq_mbs_per_sec = 0;
+	struct msm_vidc_core *core;
+	struct msm_vidc_inst *instance = NULL;
+	int complexity;
 
+	core = inst->core;
 	hdev = inst->core->device;
 	if (inst->session_type != MSM_VIDC_ENCODER) {
 		dprintk(VIDC_DBG,
@@ -1452,12 +1474,29 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 		mbs_per_sec > inst->core->resources.max_hq_mbs_per_sec) {
 		enable = true;
 	}
+	if (!enable) {
+		mutex_lock(&core->lock);
+		list_for_each_entry(instance, &core->instances, list) {
+			if (instance->clk_data.core_id &&
+				!(instance->flags & VIDC_LOW_POWER))
+				hq_mbs_per_sec +=
+					msm_comm_get_inst_load_per_core(
+					instance, LOAD_CALC_NO_QUIRKS);
+		}
+		mutex_unlock(&core->lock);
+		if (hq_mbs_per_sec > inst->core->resources.max_hq_mbs_per_sec)
+			enable = true;
+	}
 	/* Power saving always disabled for CQ RC mode. */
 	rc_mode = msm_comm_g_ctrl_for_id(inst,
 		V4L2_CID_MPEG_VIDEO_BITRATE_MODE);
 	if (rc_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
 		enable = false;
 
+	complexity = msm_comm_g_ctrl_for_id(inst,
+		V4L2_CID_MPEG_VIDC_VENC_COMPLEXITY);
+	if (!is_realtime_session(inst) && !complexity)
+		enable = true;
 	prop_id = HAL_CONFIG_VENC_PERF_MODE;
 	venc_mode = enable ? HAL_PERF_MODE_POWER_SAVE :
 		HAL_PERF_MODE_POWER_MAX_QUALITY;

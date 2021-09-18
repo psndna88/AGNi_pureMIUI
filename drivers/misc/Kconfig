@@ -490,6 +490,14 @@ config QSEECOM
           Manager (SCM) interface. It exposes APIs for both userspace and
           kernel clients.
 
+config PROFILER
+       tristate "Qualcomm Technologies, Inc. trustzone Communicator driver"
+       help
+         Provides a communication interface between userspace and
+         trustzone using Secure Channel Manager (SCM) interface.
+         It exposes APIs for userspace to get system profiling
+         information.
+
 config VEXPRESS_SYSCFG
 	bool "Versatile Express System Configuration driver"
 	depends on VEXPRESS_CONFIG
@@ -592,6 +600,20 @@ config FORCE_FAST_CHARGE
 	default n
 	help
 	  This allows users to override default charge rate for USB
+
+config BATTERY_SAVER
+	bool "Battery saver mode for kernelspace"
+	default y
+	help
+	  This driver creates a sysfs toggle that can be enabled when
+	  battery saver mode is activated in userspace, and provides
+	  functions to check the status of battery saver and to activate
+	  it from anywhere in the kernel.
+
+	  The former can be used to disable features that may otherwise
+	  drain battery faster, such as CPU and DDR boosting.
+
+	  If in doubt, say Y.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/aw8624_haptic/Kconfig"

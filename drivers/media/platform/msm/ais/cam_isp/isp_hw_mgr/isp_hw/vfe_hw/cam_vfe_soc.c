@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -106,7 +106,8 @@ int cam_vfe_init_soc_resources(struct cam_hw_soc_info *soc_info,
 		CAM_VFE_DSP_CLK_NAME, &soc_private->dsp_clk,
 		&soc_private->dsp_clk_index, &soc_private->dsp_clk_rate);
 	if (rc)
-		CAM_WARN(CAM_ISP, "Option clk get failed with rc %d", rc);
+		/* failure expected as dsp clk is not used for now */
+		CAM_INFO(CAM_ISP, "Option clk get failed with rc %d", rc);
 
 	rc = cam_vfe_request_platform_resource(soc_info, vfe_irq_handler,
 		irq_data);
@@ -231,6 +232,13 @@ int cam_vfe_enable_soc_resources(struct cam_hw_soc_info *soc_info)
 	}
 	soc_private = soc_info->soc_private;
 
+	rc = cam_soc_util_enable_platform_resource(soc_info, true,
+		CAM_TURBO_VOTE, true);
+	if (rc) {
+		CAM_ERR(CAM_ISP, "Error! enable platform failed rc=%d", rc);
+		goto end;
+	}
+
 	ahb_vote.type       = CAM_VOTE_ABSOLUTE;
 	ahb_vote.vote.level = CAM_SVS_VOTE;
 
@@ -242,7 +250,7 @@ int cam_vfe_enable_soc_resources(struct cam_hw_soc_info *soc_info)
 	if (rc) {
 		CAM_ERR(CAM_ISP, "Error! CPAS0 start failed rc=%d", rc);
 		rc = -EFAULT;
-		goto end;
+		goto disable_platform_resource;
 	}
 
 	if (!rc && soc_private->cpas_version == CAM_CPAS_TITAN_175_V120)
@@ -251,22 +259,15 @@ int cam_vfe_enable_soc_resources(struct cam_hw_soc_info *soc_info)
 		if (rc) {
 			CAM_ERR(CAM_ISP, "Error! CPAS1 start failed rc=%d", rc);
 			rc = -EFAULT;
-			goto end;
+			goto disable_platform_resource;
 		}
 
-	rc = cam_soc_util_enable_platform_resource(soc_info, true,
-		CAM_TURBO_VOTE, true);
-	if (rc) {
-		CAM_ERR(CAM_ISP, "Error! enable platform failed rc=%d", rc);
-		goto stop_cpas;
-	}
+	goto end;
 
-	return rc;
+disable_platform_resource:
+	if (cam_soc_util_disable_platform_resource(soc_info, true, true))
+		CAM_ERR(CAM_ISP, "Disable platform resource failed");
 
-stop_cpas:
-	cam_cpas_stop(soc_private->cpas_handle[0]);
-	if (soc_private->cpas_version == CAM_CPAS_TITAN_175_V120)
-		cam_cpas_stop(soc_private->cpas_handle[1]);
 end:
 	return rc;
 }

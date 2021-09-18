@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -61,6 +61,8 @@
 		.mux_bit = 2,			\
 		.pull_bit = 0,			\
 		.drv_bit = 6,			\
+		.egpio_enable = 12,		\
+		.egpio_present = 11,		\
 		.oe_bit = 9,			\
 		.in_bit = 0,			\
 		.out_bit = 1,			\
@@ -319,6 +321,7 @@ static const struct pinctrl_pin_desc sdmshrike_pins[] = {
 	PINCTRL_PIN(191, "SDC2_CMD"),
 	PINCTRL_PIN(192, "SDC2_DATA"),
 	PINCTRL_PIN(193, "UFS_RESET"),
+	PINCTRL_PIN(194, "UFS0_RESET"),
 };
 
 #define DECLARE_MSM_GPIO_PINS(pin) \
@@ -518,6 +521,7 @@ static const unsigned int sdc2_clk_pins[] = { 190 };
 static const unsigned int sdc2_cmd_pins[] = { 191 };
 static const unsigned int sdc2_data_pins[] = { 192 };
 static const unsigned int ufs_reset_pins[] = { 193 };
+static const unsigned int ufs0_reset_pins[] = { 194 };
 
 enum sdmshrike_functions {
 	msm_mux_GRFC2,
@@ -2242,6 +2246,7 @@ static const struct msm_pingroup sdmshrike_groups[] = {
 	[191] = SDC_QDSD_PINGROUP(sdc2_cmd, 0x9b2000, 11, 3),
 	[192] = SDC_QDSD_PINGROUP(sdc2_data, 0x9b2000, 9, 0),
 	[193] = UFS_RESET(ufs_reset, 0xdb6004),
+	[194] = UFS_RESET(ufs0_reset, 0xdc7004),
 };
 
 static struct msm_dir_conn sdmshrike_dir_conn[] = {
@@ -2255,7 +2260,7 @@ static struct msm_dir_conn sdmshrike_dir_conn[] = {
 	{-1, 209},
 };
 
-static const struct msm_pinctrl_soc_data sdmshrike_pinctrl = {
+static struct msm_pinctrl_soc_data sdmshrike_pinctrl = {
 	.pins = sdmshrike_pins,
 	.npins = ARRAY_SIZE(sdmshrike_pins),
 	.functions = sdmshrike_functions,
@@ -2268,8 +2273,64 @@ static const struct msm_pinctrl_soc_data sdmshrike_pinctrl = {
 	.dir_conn_irq_base = 216,
 };
 
+static int sdmshrike_pinctrl_parse_dt(struct platform_device *pdev)
+{
+	const __be32 *prop;
+	struct msm_dir_conn *dir_conn_list;
+	uint32_t dir_conn_length, iterator = 0;
+	int i, length, *dir_conn_entries, num_dir_conns;
+
+	prop = of_get_property(pdev->dev.of_node, "dirconn-list",
+			&length);
+
+	dir_conn_length = length / sizeof(u32);
+
+	dir_conn_entries = devm_kcalloc(&pdev->dev,
+				dir_conn_length, sizeof(uint32_t), GFP_KERNEL);
+	if (!dir_conn_entries)
+		return -ENOMEM;
+
+	for (i = 0; i < dir_conn_length; i++)
+		dir_conn_entries[i] = be32_to_cpu(prop[i]);
+
+	if (dir_conn_length % 3) {
+		dev_err(&pdev->dev,
+			"Can't parse an entry with fewer than three values\n");
+		return -EINVAL;
+	};
+
+	num_dir_conns = (dir_conn_length / 3);
+
+	dir_conn_list = devm_kcalloc(&pdev->dev,
+			num_dir_conns, sizeof(*dir_conn_list), GFP_KERNEL);
+	if (!dir_conn_list)
+		return -ENOMEM;
+
+	for (i = 0; i < num_dir_conns; i++) {
+		dir_conn_list[i].gpio = dir_conn_entries[iterator++];
+		dir_conn_list[i].hwirq = dir_conn_entries[iterator++];
+		dir_conn_list[i].tlmm_dc = dir_conn_entries[iterator++];
+	}
+
+	sdmshrike_pinctrl.dir_conn = dir_conn_list;
+	sdmshrike_pinctrl.n_dir_conns = num_dir_conns;
+
+	return 0;
+}
+
 static int sdmshrike_pinctrl_probe(struct platform_device *pdev)
 {
+	int len, ret;
+
+	if (of_find_property(pdev->dev.of_node, "dirconn-list", &len)) {
+		ret = sdmshrike_pinctrl_parse_dt(pdev);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Unable to parse TLMM direct connects\n");
+			return ret;
+		}
+	}
+
 	return msm_pinctrl_probe(pdev, &sdmshrike_pinctrl);
 }
 

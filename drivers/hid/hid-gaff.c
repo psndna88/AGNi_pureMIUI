@@ -9,7 +9,6 @@
  *   - tested with MANTA Warior MM816 and SpeedLink Strike2 SL-6635.
  *
  *  Copyright (c) 2008 Lukasz Lubojanski <lukasz@lubojanski.info>
- *  Copyright (C) 2020 XiaoMi, Inc.
  */
 
 /*

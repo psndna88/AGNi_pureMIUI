@@ -153,13 +153,20 @@ static int virt_sensor_read_temp(void *data, int *val)
 	for (idx = 0; idx < sens->num_sensors; idx++) {
 		int sens_temp = 0;
 
-		ret = thermal_zone_get_temp(sens->tz[idx], &sens_temp);
+		ret = thermal_zone_get_temp_nolock(sens->tz[idx], &sens_temp);
 		if (ret) {
 			pr_err("virt zone: sensor[%s] read error:%d\n",
 				sens->tz[idx]->type, ret);
 			return ret;
 		}
 		switch (sens->logic) {
+		case VIRT_COUNT_THRESHOLD:
+			if ((sens->coefficients[idx] < 0 &&
+			     sens_temp < -sens->coefficients[idx]) ||
+			    (sens->coefficients[idx] > 0 &&
+			     sens_temp >= sens->coefficients[idx]))
+				temp += 1;
+			break;
 		case VIRT_WEIGHTED_AVG:
 			temp += sens_temp * sens->coefficients[idx];
 			if (idx == (sens->num_sensors - 1))
@@ -217,13 +224,15 @@ static int of_thermal_set_trips(struct thermal_zone_device *tz,
 		return -EINVAL;
 
 	mutex_lock(&data->senps->lock);
+	if (data->mode == THERMAL_DEVICE_DISABLED)
+		goto set_trips_exit;
 	of_thermal_aggregate_trip_types(tz, GENMASK(THERMAL_TRIP_CRITICAL, 0),
 					&low, &high);
 	data->senps->trip_low = low;
 	data->senps->trip_high = high;
 	ret = data->senps->ops->set_trips(data->senps->sensor_data,
 					  low, high);
-
+set_trips_exit:
 	mutex_unlock(&data->senps->lock);
 	return ret;
 }
@@ -653,6 +662,7 @@ static void handle_thermal_trip(struct thermal_zone_device *tz,
 	struct thermal_zone_device *zone;
 	struct __thermal_zone *data = tz->devdata;
 	struct list_head *head;
+	bool notify = false;
 
 	head = &data->senps->first_tz;
 	list_for_each_entry(data, head, list) {
@@ -665,10 +675,19 @@ static void handle_thermal_trip(struct thermal_zone_device *tz,
 		} else {
 			if (!of_thermal_is_trips_triggered(zone, trip_temp))
 				continue;
+			notify = true;
 			thermal_zone_device_update_temp(zone,
 				THERMAL_EVENT_UNSPECIFIED, trip_temp);
 		}
 	}
+
+	/*
+	 * It is better to notify at least one thermal zone if trip is violated
+	 * for none.
+	 */
+	if (temp_valid && !notify)
+		thermal_zone_device_update_temp(tz, THERMAL_EVENT_UNSPECIFIED,
+				trip_temp);
 }
 
 /*
@@ -1001,7 +1020,8 @@ struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
 	sens->virt_tz = tzd;
 	sens->logic = sensor_data->logic;
 	sens->num_sensors = sensor_data->num_sensors;
-	if (sens->logic == VIRT_WEIGHTED_AVG) {
+	if ((sens->logic == VIRT_WEIGHTED_AVG) ||
+	    (sens->logic == VIRT_COUNT_THRESHOLD)) {
 		int coeff_ct = sensor_data->coefficient_ct;
 
 		/*
@@ -1009,7 +1029,7 @@ struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
 		 * n+2 coefficients.
 		 */
 		if (coeff_ct != sens->num_sensors) {
-			dev_err(dev, "sens:%s Invalid coefficient\n",
+			dev_err(dev, "sens:%s invalid coefficient\n",
 					sensor_data->virt_zone_name);
 			return ERR_PTR(-EINVAL);
 		}

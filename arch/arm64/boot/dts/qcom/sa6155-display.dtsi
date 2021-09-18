@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,6 +11,7 @@
  */
 
 #include <dt-bindings/clock/mdss-14nm-pll-clk.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
 #include "dsi-panel-ext-bridge-1080p.dtsi"
 
 &tlmm {
@@ -43,15 +44,15 @@
 &sde_dp {
 	qcom,ext-disp = <&ext_disp>;
 	qcom,dp-hpd-gpio = <&ioexp 8 0>;
-
-	pinctrl-names = "mdss_dp_active", "mdss_dp_sleep";
-	pinctrl-0 = <&dp_hpd_cfg_pins>;
-	pinctrl-1 = <&dp_hpd_cfg_pins>;
+	qcom,mst-fixed-topology-ports = <1 2>;
 
 	vdda-1p2-supply = <&pm6155_1_l11>;
 	vdda-0p9-supply = <&pm6155_1_l5>;
-	/delete-property/ qcom,dp-aux-switch;
+	qcom,dp-aux-switch = <0>;
+	pinctrl-names = <0>;
 	qcom,mst-enable;
+	qcom,dp-aux-bridge-sim = <&sde_dp_mst_sim>;
+	qcom,widebus-enable;
 
 	qcom,core-supply-entries {
 		#address-cells = <1>;
@@ -213,16 +214,34 @@
 			compatible = "qcom,msm-ext-disp-audio-codec-rx";
 		};
 	};
+
+	sde_dp_mst_sim: qcom,dp-mst-sim {
+		compatible = "qcom,dp-mst-sim";
+	};
+
 	qcom,rmnet-ipa {
 		status="disabled";
 	};
 };
 
-&mdss_dsi_phy0 {
-	qcom,panel-force-clock-lane-hs;
+&mdss_mdp {
+	sde-vdd-supply = <&mdss_core_gdsc>;
+	qcom,platform-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,platform-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "sde-vdd";
+			qcom,supply-min-voltage = <0>;
+			qcom,supply-max-voltage = <0>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+		};
+	};
 };
 
-&mdss_mdp {
-	connectors = <&sde_rscc &dsi_dp1 &sde_wb &sde_dp>;
+&sde_rscc {
+	status="disabled";
 };
 

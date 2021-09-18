@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2051,7 +2051,7 @@ i2c_msm_qup_choose_mode(struct i2c_msm_ctrl *ctrl)
 		(tx_cnt_sum < fifo->output_fifo_sz)))
 		return I2C_MSM_XFER_MODE_FIFO;
 
-	if (ctrl->rsrcs.disable_dma)
+	if (ctrl->rsrcs.disable_dma || (rx_cnt_sum < 96 && tx_cnt_sum < 96))
 		return I2C_MSM_XFER_MODE_BLOCK;
 
 	return I2C_MSM_XFER_MODE_DMA;
@@ -3037,7 +3037,7 @@ static int i2c_msm_init(void)
 {
 	return platform_driver_register(&i2c_msm_driver);
 }
-subsys_initcall(i2c_msm_init);
+module_init(i2c_msm_init);
 
 static void i2c_msm_exit(void)
 {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,46 +35,10 @@
 #define gsi_readl(c)	(readl(c))
 #define gsi_writel(v, c)	({ __iowmb(); writel_relaxed((v), (c)); })
 
-#define GSI_IPC_LOGGING(buf, fmt, args...) \
-	do { \
-		if (buf) \
-			ipc_log_string((buf), fmt, __func__, __LINE__, \
-				## args); \
-	} while (0)
-
-#define GSIDBG(fmt, args...) \
-	do { \
-		dev_dbg(gsi_ctx->dev, "%s:%d " fmt, __func__, __LINE__, \
-		## args);\
-		if (gsi_ctx) { \
-			GSI_IPC_LOGGING(gsi_ctx->ipc_logbuf, \
-				"%s:%d " fmt, ## args); \
-			GSI_IPC_LOGGING(gsi_ctx->ipc_logbuf_low, \
-				"%s:%d " fmt, ## args); \
-		} \
-	} while (0)
-
-#define GSIDBG_LOW(fmt, args...) \
-	do { \
-		dev_dbg(gsi_ctx->dev, "%s:%d " fmt, __func__, __LINE__, \
-		## args);\
-		if (gsi_ctx) { \
-			GSI_IPC_LOGGING(gsi_ctx->ipc_logbuf_low, \
-				"%s:%d " fmt, ## args); \
-		} \
-	} while (0)
-
-#define GSIERR(fmt, args...) \
-	do { \
-		dev_err(gsi_ctx->dev, "%s:%d " fmt, __func__, __LINE__, \
-		## args);\
-		if (gsi_ctx) { \
-			GSI_IPC_LOGGING(gsi_ctx->ipc_logbuf, \
-				"%s:%d " fmt, ## args); \
-			GSI_IPC_LOGGING(gsi_ctx->ipc_logbuf_low, \
-				"%s:%d " fmt, ## args); \
-		} \
-	} while (0)
+#define GSI_IPC_LOGGING(buf, fmt, args...)
+#define GSIDBG(fmt, args...)
+#define GSIDBG_LOW(fmt, args...)
+#define GSIERR(fmt, args...)
 
 #define GSI_IPC_LOG_PAGES 50
 
@@ -201,6 +165,7 @@ struct ch_debug_stats {
 
 struct gsi_generic_ee_cmd_debug_stats {
 	unsigned long halt_channel;
+	unsigned long flow_ctrl_channel;
 };
 
 struct gsi_ctx {
@@ -233,6 +198,8 @@ struct gsi_ctx {
 	u32 intcntrlr_mem_size;
 	irq_handler_t intcntrlr_gsi_isr;
 	irq_handler_t intcntrlr_client_isr;
+
+	atomic_t num_unclock_irq;
 };
 
 enum gsi_re_type {
@@ -329,6 +296,8 @@ enum gsi_evt_ch_cmd_opcode {
 enum gsi_generic_ee_cmd_opcode {
 	GSI_GEN_EE_CMD_HALT_CHANNEL = 0x1,
 	GSI_GEN_EE_CMD_ALLOC_CHANNEL = 0x2,
+	GSI_GEN_EE_CMD_ENABLE_FLOW_CHANNEL = 0x3,
+	GSI_GEN_EE_CMD_DISABLE_FLOW_CHANNEL = 0x4,
 };
 
 enum gsi_generic_ee_cmd_return_code {
@@ -342,7 +311,9 @@ enum gsi_generic_ee_cmd_return_code {
 };
 
 extern struct gsi_ctx *gsi_ctx;
+#ifdef CONFIG_GSI_DEBUG
 void gsi_debugfs_init(void);
+#endif
 uint16_t gsi_find_idx_from_addr(struct gsi_ring_ctx *ctx, uint64_t addr);
 void gsi_update_ch_dp_stats(struct gsi_chan_ctx *ctx, uint16_t used);
 

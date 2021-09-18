@@ -159,7 +159,7 @@ static ssize_t config_imod_store(struct device *pdev,
 	u32 imod;
 	unsigned long flags;
 
-	if (kstrtouint(buff, 10, &imod) != 1)
+	if (kstrtouint(buff, 10, &imod) < 0)
 		return 0;
 
 	imod &= ER_IRQ_INTERVAL_MASK;
@@ -336,7 +336,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		xhci->quirks |= XHCI_BROKEN_PORT_PED;
 
 	if (!device_property_read_bool(&pdev->dev,
-					"host-poweroff-in-pm-suspend")) {
+					"ignore-wakeup-src-in-hostmode")) {
 		hcd_to_bus(hcd)->skip_resume = true;
 		hcd_to_bus(xhci->shared_hcd)->skip_resume = true;
 	}
@@ -430,6 +430,7 @@ static int xhci_plat_remove(struct platform_device *dev)
 	struct clk *clk = xhci->clk;
 	struct usb_hcd *shared_hcd = xhci->shared_hcd;
 
+	pm_runtime_get_sync(&dev->dev);
 	xhci->xhc_state |= XHCI_STATE_REMOVING;
 
 	device_remove_file(&dev->dev, &dev_attr_config_imod);
@@ -444,8 +445,9 @@ static int xhci_plat_remove(struct platform_device *dev)
 		clk_disable_unprepare(clk);
 	usb_put_hcd(hcd);
 
-	pm_runtime_set_suspended(&dev->dev);
 	pm_runtime_disable(&dev->dev);
+	pm_runtime_put_noidle(&dev->dev);
+	pm_runtime_set_suspended(&dev->dev);
 
 	return 0;
 }
@@ -480,6 +482,30 @@ static int xhci_plat_resume(struct device *dev)
 		return 0;
 
 	dev_dbg(dev, "xhci-plat PM resume\n");
+
+	ret = xhci_priv_resume_quirk(hcd);
+	if (ret)
+		return ret;
+
+	ret = xhci_resume(xhci, false);
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
+	return ret;
+}
+
+static int xhci_plat_restore(struct device *dev)
+{
+	struct usb_hcd  *hcd = dev_get_drvdata(dev);
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	int ret;
+
+	/* xhci PM ops not required if 'skip_resume' is true */
+	if (!xhci || hcd_to_bus(hcd)->skip_resume)
+		return 0;
+
+	dev_dbg(dev, "xhci-plat PM restore\n");
 
 	ret = xhci_priv_resume_quirk(hcd);
 	if (ret)
@@ -547,8 +573,12 @@ static int __maybe_unused xhci_plat_runtime_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops xhci_plat_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(xhci_plat_suspend, xhci_plat_resume)
-
+	.suspend	= xhci_plat_suspend,
+	.resume		= xhci_plat_resume,
+	.freeze		= xhci_plat_suspend,
+	.thaw		= xhci_plat_restore,
+	.poweroff	= xhci_plat_suspend,
+	.restore	= xhci_plat_restore,
 	SET_RUNTIME_PM_OPS(xhci_plat_runtime_suspend,
 			   xhci_plat_runtime_resume,
 			   xhci_plat_runtime_idle)
@@ -564,6 +594,7 @@ MODULE_DEVICE_TABLE(acpi, usb_xhci_acpi_match);
 static struct platform_driver usb_xhci_driver = {
 	.probe	= xhci_plat_probe,
 	.remove	= xhci_plat_remove,
+	.shutdown = usb_hcd_platform_shutdown,
 	.driver	= {
 		.name = "xhci-hcd",
 		.pm = &xhci_plat_pm_ops,

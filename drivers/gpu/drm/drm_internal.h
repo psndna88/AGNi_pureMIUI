@@ -1,5 +1,6 @@
 /*
  * Copyright © 2014 Intel Corporation
+ * Copyright (C) 2021 XiaoMi, Inc.
  *   Daniel Vetter <daniel.vetter@ffwll.ch>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -108,7 +109,7 @@ void drm_gem_open(struct drm_device *dev, struct drm_file *file_private);
 void drm_gem_release(struct drm_device *dev, struct drm_file *file_private);
 
 /* drm_debugfs.c drm_debugfs_crc.c */
-#if defined(CONFIG_DEBUG_FS_)
+#if defined(CONFIG_DEBUG_FS)
 int drm_debugfs_init(struct drm_minor *minor, int minor_id,
 		     struct dentry *root);
 int drm_debugfs_cleanup(struct drm_minor *minor);
@@ -173,3 +174,13 @@ int drm_syncobj_reset_ioctl(struct drm_device *dev, void *data,
 			    struct drm_file *file_private);
 int drm_syncobj_signal_ioctl(struct drm_device *dev, void *data,
 			     struct drm_file *file_private);
+
+int dsi_display_disp_param_get(struct drm_connector *connector,
+								 u32 *param_type);
+int dsi_display_disp_param_set(struct drm_connector *connector,
+								 u32 param_type);
+
+ssize_t dsi_display_mipi_reg_write(struct drm_connector *connector,
+								 char *buf, size_t count);
+ssize_t dsi_display_mipi_reg_read(struct drm_connector *connector,
+								 char *buf);

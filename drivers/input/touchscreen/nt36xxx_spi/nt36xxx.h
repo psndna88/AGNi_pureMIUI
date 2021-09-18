@@ -25,6 +25,8 @@
 #include <linux/spi/spi.h>
 #include <linux/uaccess.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_qos.h>
+#include <linux/spi/spi-geni-qcom.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -90,7 +92,6 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 //---Customerized func.---
 #define NVT_TOUCH_PROC 1
 #define NVT_TOUCH_EXT_PROC 1
-#define NVT_TOUCH_MP 0
 #define MT_PROTOCOL_B 1
 #define WAKEUP_GESTURE 1
 #if WAKEUP_GESTURE
@@ -109,7 +110,7 @@ extern const uint16_t gesture_key_array[];
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 0
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
-#define NVT_TOUCH_WDT_RECOVERY 1
+#define NVT_TOUCH_WDT_RECOVERY 0
 
 //enable 'check touch vendor' feature
 #define CHECK_TOUCH_VENDOR
@@ -211,6 +212,9 @@ struct nvt_ts_data {
 #ifdef CONFIG_SPI_MT65XX
     struct mtk_chip_config spi_ctrl;
 #endif
+
+	struct pm_qos_request pm_spi_req;
+	struct pm_qos_request pm_touch_req;
 
 /*2019.12.16 longcheer taocheng add (xiaomi game mode) start*/
 #ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE

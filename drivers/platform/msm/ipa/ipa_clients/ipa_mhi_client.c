@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2017-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2017-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,7 @@
 #include <linux/ipa_mhi.h>
 #include "../ipa_common_i.h"
 #include "../ipa_v3/ipa_pm.h"
+#include "../ipa_v3/ipa_i.h"
 
 #define IPA_MHI_DRV_NAME "ipa_mhi_client"
 
@@ -63,12 +64,21 @@
 #define IPA_MHI_SUSPEND_SLEEP_MIN 900
 #define IPA_MHI_SUSPEND_SLEEP_MAX 1100
 
-#define IPA_MHI_MAX_UL_CHANNELS 1
-#define IPA_MHI_MAX_DL_CHANNELS 2
+#define IPA_MHI_MAX_UL_CHANNELS 3
+#define IPA_MHI_MAX_DL_CHANNELS 5
 
 /* bit #40 in address should be asserted for MHI transfers over pcie */
 #define IPA_MHI_CLIENT_HOST_ADDR_COND(addr) \
 	((ipa_mhi_client_ctx->assert_bit40)?(IPA_MHI_HOST_ADDR(addr)):(addr))
+
+#define IPA_MHI_CLIENT_IP_HW_0_OUT 100
+#define IPA_MHI_CLIENT_IP_HW_0_IN 101
+#define IPA_MHI_CLIENT_ADPL_IN 102
+#define IPA_MHI_CLIENT_IP_HW_QDSS 103
+#define IPA_MHI_CLIENT_IP_HW_1_OUT 105
+#define IPA_MHI_CLIENT_IP_HW_1_IN 106
+#define IPA_MHI_CLIENT_QMAP_FLOW_CTRL_OUT 109
+#define IPA_MHI_CLIENT_QMAP_FLOW_CTRL_IN 110
 
 enum ipa_mhi_rm_state {
 	IPA_MHI_RM_STATE_RELEASED,
@@ -159,15 +169,12 @@ struct ipa_mhi_client_ctx {
 	bool test_mode;
 	u32 pm_hdl;
 	u32 modem_pm_hdl;
+	enum ipa_mhi_mstate mhi_mstate;
 };
 
 static struct ipa_mhi_client_ctx *ipa_mhi_client_ctx;
 static DEFINE_MUTEX(mhi_client_general_mutex);
 
-#ifdef CONFIG_DEBUG_FS
-#define IPA_MHI_MAX_MSG_LEN 512
-static char dbg_buff[IPA_MHI_MAX_MSG_LEN];
-static struct dentry *dent;
 
 static char *ipa_mhi_channel_state_str[] = {
 	__stringify(IPA_HW_MHI_CHANNEL_STATE_DISABLE),
@@ -278,6 +285,11 @@ fail_dma_enable:
 	dma_free_coherent(pdev, mem.size, mem.base, mem.phys_base);
 	return res;
 }
+
+#ifdef CONFIG_DEBUG_FS
+#define IPA_MHI_MAX_MSG_LEN 512
+static char dbg_buff[IPA_MHI_MAX_MSG_LEN];
+static struct dentry *dent;
 
 static int ipa_mhi_print_channel_info(struct ipa_mhi_channel_ctx *channel,
 	char *buff, int len)
@@ -1507,6 +1519,53 @@ static int ipa_mhi_reset_channel(struct ipa_mhi_channel_ctx *channel,
 	return 0;
 }
 
+static enum ipa_client_type ipa3_mhi_get_client_by_chid(u32 chid)
+{
+	enum ipa_client_type client;
+
+	switch (chid) {
+	case IPA_MHI_CLIENT_ADPL_IN:
+		client = IPA_CLIENT_MHI_DPL_CONS;
+		break;
+	case IPA_MHI_CLIENT_IP_HW_QDSS:
+		client = IPA_CLIENT_MHI_QDSS_CONS;
+		break;
+	case IPA_MHI_CLIENT_IP_HW_0_OUT:
+		client = IPA_CLIENT_MHI_PROD;
+		break;
+	case IPA_MHI_CLIENT_IP_HW_0_IN:
+		client = IPA_CLIENT_MHI_CONS;
+		break;
+	case IPA_MHI_CLIENT_IP_HW_1_OUT:
+	/* IPA4.5 non-auto, use mhi ch104 for qmap flow control */
+		if (!ipa3_ctx->ipa_config_is_auto &&
+			ipa3_ctx->ipa_hw_type == IPA_HW_v4_5)
+			client = IPA_CLIENT_MHI_LOW_LAT_PROD;
+		else
+			client = IPA_CLIENT_MHI2_PROD;
+		break;
+	case IPA_MHI_CLIENT_IP_HW_1_IN:
+	/* IPA4.5 non-auto, use mhi ch105 for qmap flow control */
+		if (!ipa3_ctx->ipa_config_is_auto &&
+			ipa3_ctx->ipa_hw_type == IPA_HW_v4_5)
+			client = IPA_CLIENT_MHI_LOW_LAT_CONS;
+		else
+			client = IPA_CLIENT_MHI2_CONS;
+		break;
+	case IPA_MHI_CLIENT_QMAP_FLOW_CTRL_OUT:
+		client = IPA_CLIENT_MHI_LOW_LAT_PROD;
+		break;
+	case IPA_MHI_CLIENT_QMAP_FLOW_CTRL_IN:
+		client = IPA_CLIENT_MHI_LOW_LAT_CONS;
+		break;
+	default:
+		IPA_MHI_ERR("Invalid channel = 0x%X\n", chid);
+		client = IPA_CLIENT_MAX;
+	}
+
+	return client;
+}
+
 /**
  * ipa_mhi_connect_pipe() - Connect pipe to IPA and start corresponding
  * MHI channel
@@ -1532,6 +1591,9 @@ int ipa_mhi_connect_pipe(struct ipa_mhi_connect_params *in, u32 *clnt_hdl)
 		return -EINVAL;
 	}
 
+	IPA_MHI_DBG("channel=%d\n", in->channel_id);
+	in->sys.client = ipa3_mhi_get_client_by_chid(in->channel_id);
+
 	if (in->sys.client >= IPA_CLIENT_MAX) {
 		IPA_MHI_ERR("bad param client:%d\n", in->sys.client);
 		return -EINVAL;
@@ -1542,8 +1604,6 @@ int ipa_mhi_connect_pipe(struct ipa_mhi_connect_params *in, u32 *clnt_hdl)
 			"Invalid MHI client, client: %d\n", in->sys.client);
 		return -EINVAL;
 	}
-
-	IPA_MHI_DBG("channel=%d\n", in->channel_id);
 
 	spin_lock_irqsave(&ipa_mhi_client_ctx->state_lock, flags);
 	if (!ipa_mhi_client_ctx ||
@@ -1609,7 +1669,8 @@ int ipa_mhi_connect_pipe(struct ipa_mhi_connect_params *in, u32 *clnt_hdl)
 		internal.start.gsi.mhi = &channel->ch_scratch.mhi;
 		internal.start.gsi.cached_gsi_evt_ring_hdl =
 				&channel->cached_gsi_evt_ring_hdl;
-		internal.start.gsi.evchid = channel->index;
+		internal.start.gsi.evchid = channel->ch_ctx_host.erindex -
+				ipa_mhi_client_ctx->first_er_idx;
 
 		res = ipa_connect_mhi_pipe(&internal, clnt_hdl);
 		if (res) {
@@ -1865,10 +1926,12 @@ static int ipa_mhi_resume_channels(bool LPTransitionRejected,
 		struct ipa_mhi_channel_ctx *channels, int max_channels)
 {
 	int i;
-	int res;
 	struct ipa_mhi_channel_ctx *channel;
+	bool is_switch_to_dbmode;
+	int res = 0;
 
 	IPA_MHI_FUNC_ENTRY();
+
 	for (i = 0; i < max_channels; i++) {
 		if (!channels[i].valid)
 			continue;
@@ -1876,11 +1939,41 @@ static int ipa_mhi_resume_channels(bool LPTransitionRejected,
 		    IPA_HW_MHI_CHANNEL_STATE_SUSPEND)
 			continue;
 		channel = &channels[i];
-		IPA_MHI_DBG("resuming channel %d\n", channel->id);
+		mutex_lock(&mhi_client_general_mutex);
+		IPA_MHI_DBG("resuming channel %d, mstate = %d\n",
+			channel->id, ipa_mhi_client_ctx->mhi_mstate);
+		switch (ipa_mhi_client_ctx->mhi_mstate) {
+		case IPA_MHI_STATE_M3:
+			is_switch_to_dbmode = true;
+			break;
+		case IPA_MHI_STATE_M2:
+		case IPA_MHI_STATE_M1:
+			is_switch_to_dbmode = false;
+			break;
+		case IPA_MHI_STATE_M0:
+			IPA_MHI_ERR("Resume in M0 - not expected\n");
+			res = -EINVAL;
+			break;
+		case IPA_MHI_STATE_M_MAX:
+			IPA_MHI_ERR("No knowledge of M state\n");
+			res = -EINVAL;
+			break;
+		default:
+			IPA_MHI_ERR("Unknown Mstart %d\n",
+				ipa_mhi_client_ctx->mhi_mstate);
+			res = -EINVAL;
+			break;
+		}
+		mutex_unlock(&mhi_client_general_mutex);
 
+		if (res)
+			return res;
+
+		IPA_MHI_DBG("is DB mode? %d\n", is_switch_to_dbmode);
 		res = ipa_mhi_resume_channels_internal(channel->client,
 			LPTransitionRejected, channel->brstmode_enabled,
-			channel->ch_scratch, channel->index);
+			channel->ch_scratch, channel->index,
+			is_switch_to_dbmode);
 
 		if (res) {
 			IPA_MHI_ERR("failed to resume channel %d error %d\n",
@@ -1893,6 +1986,7 @@ static int ipa_mhi_resume_channels(bool LPTransitionRejected,
 	}
 
 	IPA_MHI_FUNC_EXIT();
+
 	return 0;
 }
 
@@ -2138,6 +2232,42 @@ fail_stop_event_update_dl_channel:
 fail_suspend_dl_channel:
 		return res;
 }
+
+/**
+ * ipa_mhi_update_mstate() - Provides M state info
+ * @mstate_info:
+ *	state_m0:  in case of resume happening because of mhi going
+ *		into M0 state.
+ *	state_m2:  in case of suspend/resume happening because of mhi going
+ *		into M2 state.
+ *	state_m3:  in case of suspend/resume happening because of mhi going
+ *		into M3 state.
+ *
+ * This function is called by MHI client driver before MHI suspend/ resume.
+ * This function is called before MHI suspend or after MHI resume.
+ * When this function returns device can move to M1/M2/M3/D3cold state.
+ *
+ * Return codes: 0	  : success
+ *		 negative : error
+ */
+int ipa_mhi_update_mstate(enum ipa_mhi_mstate mstate_info)
+{
+	IPA_MHI_FUNC_ENTRY();
+
+	if (!ipa_mhi_client_ctx) {
+		IPA_MHI_ERR("ipa_mhi_client_ctx not created yet %d mstate\n",
+			mstate_info);
+		return -EPERM;
+	}
+
+	IPA_MHI_DBG("Req update mstate to %d\n", mstate_info);
+	mutex_lock(&mhi_client_general_mutex);
+	ipa_mhi_client_ctx->mhi_mstate = mstate_info;
+	mutex_unlock(&mhi_client_general_mutex);
+	IPA_MHI_FUNC_EXIT();
+	return 0;
+}
+
 
 /**
  * ipa_mhi_suspend() - Suspend MHI accelerated channels
@@ -2452,10 +2582,12 @@ int ipa_mhi_destroy_all_channels(void)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void ipa_mhi_debugfs_destroy(void)
 {
 	debugfs_remove_recursive(dent);
 }
+#endif
 
 static void ipa_mhi_delete_rm_resources(void)
 {
@@ -2783,6 +2915,7 @@ int ipa_mhi_init(struct ipa_mhi_init_params *params)
 	ipa_mhi_client_ctx->use_ipadma = true;
 	ipa_mhi_client_ctx->assert_bit40 = !!params->assert_bit40;
 	ipa_mhi_client_ctx->test_mode = params->test_mode;
+	ipa_mhi_client_ctx->mhi_mstate = IPA_MHI_STATE_M0;
 
 	ipa_mhi_client_ctx->wq = create_singlethread_workqueue("ipa_mhi_wq");
 	if (!ipa_mhi_client_ctx->wq) {

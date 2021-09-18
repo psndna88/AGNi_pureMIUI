@@ -769,6 +769,30 @@ int diag_process_diag_id_query_cmd(unsigned char *src_buf, int src_len,
 	memcpy(dest_buf, &rsp, rsp_len);
 	return  write_len;
 }
+
+int diag_process_diag_transport_query_cmd(unsigned char *src_buf, int src_len,
+				      unsigned char *dest_buf, int dest_len)
+{
+	struct diag_query_transport_req_t *req;
+	struct diag_query_transport_rsp_t rsp;
+
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+		src_len < sizeof(struct diag_query_transport_req_t) ||
+		sizeof(rsp) > dest_len) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d",
+			__func__, src_buf, src_len, dest_buf, dest_len);
+		return -EINVAL;
+	}
+
+	req = (struct diag_query_transport_req_t *)src_buf;
+	rsp.header.cmd_code = req->header.cmd_code;
+	rsp.header.subsys_id = req->header.subsys_id;
+	rsp.header.subsys_cmd_code = req->header.subsys_cmd_code;
+	rsp.transport = driver->transport_set;
+	memcpy(dest_buf, &rsp, sizeof(rsp));
+	return sizeof(rsp);
+}
+
 int diag_process_time_sync_switch_cmd(unsigned char *src_buf, int src_len,
 				      unsigned char *dest_buf, int dest_len)
 {
@@ -1152,6 +1176,18 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 		(*(buf+1) == DIAG_SS_DIAG) &&
 		(*(uint16_t *)(buf+2) == DIAG_GET_DIAG_ID)) {
 		write_len = diag_process_diag_id_query_cmd(buf, len,
+							driver->apps_rsp_buf,
+							DIAG_MAX_RSP_SIZE);
+		if (write_len > 0)
+			diag_send_rsp(driver->apps_rsp_buf, write_len, pid);
+		return 0;
+	}
+	/* Check for transport command*/
+	else if ((len >= ((2 * sizeof(uint8_t)) + sizeof(uint16_t))) &&
+		(*buf == DIAG_CMD_DIAG_SUBSYS) &&
+		(*(buf+1) == DIAG_SS_DIAG) &&
+		(*(uint16_t *)(buf+2) == DIAG_QUERY_TRANSPORT)) {
+		write_len = diag_process_diag_transport_query_cmd(buf, len,
 							driver->apps_rsp_buf,
 							DIAG_MAX_RSP_SIZE);
 		if (write_len > 0)
@@ -1841,9 +1877,8 @@ static int diagfwd_mux_write_done(unsigned char *buf, int len, int buf_ctxt,
 				  int ctxt)
 {
 	unsigned long flags;
-	int peripheral = -1;
-	int type = -1;
-	int num = -1;
+	int peripheral = -1, type = -1;
+	int num = -1, hdlc_ctxt = -1;
 	struct diag_apps_data_t *temp = NULL;
 
 	if (!buf || len < 0)
@@ -1863,16 +1898,19 @@ static int diagfwd_mux_write_done(unsigned char *buf, int len, int buf_ctxt,
 			diag_ws_on_copy(DIAG_WS_MUX);
 		} else if (peripheral == APPS_DATA) {
 			spin_lock_irqsave(&driver->diagmem_lock, flags);
-			if (hdlc_data.allocated)
+			hdlc_ctxt = GET_HDLC_CTXT(buf_ctxt);
+			if ((hdlc_ctxt == HDLC_CTXT) && hdlc_data.allocated)
 				temp = &hdlc_data;
-			else if (non_hdlc_data.allocated)
+			else if ((hdlc_ctxt == NON_HDLC_CTXT) &&
+				non_hdlc_data.allocated)
 				temp = &non_hdlc_data;
 			else
 				DIAG_LOG(DIAG_DEBUG_PERIPHERALS,
 				"No apps data buffer is allocated to be freed\n");
 			if (temp) {
 				DIAG_LOG(DIAG_DEBUG_PERIPHERALS,
-				"Freeing Apps data buffer after write done hdlc.allocated: %d, non_hdlc.allocated: %d\n",
+				"Freeing Apps data buffer after write done hdlc_ctxt: %d, hdlc.allocated: %d, non_hdlc.allocated: %d\n",
+				hdlc_ctxt,
 				hdlc_data.allocated, non_hdlc_data.allocated);
 				diagmem_free(driver, temp->buf, POOL_TYPE_HDLC);
 				temp->buf = NULL;

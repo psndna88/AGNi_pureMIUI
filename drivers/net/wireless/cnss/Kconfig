@@ -10,6 +10,7 @@ config CNSS
 	 This driver also adds support to integrate WLAN module to subsystem
 	 restart framework.
 
+if CNSS
 config CNSS_SDIO
 	bool "Enable/disable cnss sdio platform driver for wifi module"
 	depends on CNSS
@@ -127,3 +128,4 @@ config WLAN_FEATURE_RX_WAKELOCK
 	help
 	Enable WLAN_FEATURE_HOLD_RX_WAKELOCK which is required to take rx
 	wakelock when driver receives packets from fw.
+endif

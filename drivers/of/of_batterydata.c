@@ -1,5 +1,4 @@
 /* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -327,7 +326,6 @@ struct device_node *of_batterydata_get_best_profile(
 		i = 0, rc = 0, limit = 0;
 	bool in_range = false;
 
-	pr_info(" sunxing get best profile enter\n");
 	/* read battery id range percentage for best profile */
 	rc = of_property_read_u32(batterydata_container_node,
 			"qcom,batt-id-range-pct", &id_range_pct);
@@ -341,12 +339,10 @@ struct device_node *of_batterydata_get_best_profile(
 		}
 	}
 
-	pr_err("sunxing test batt_id_kohm %d\n",batt_id_kohm);
 	/*
 	 * Find the battery data with a battery id resistor closest to this one
 	 */
 	for_each_child_of_node(batterydata_container_node, node) {
-
 		if (batt_type != NULL) {
 			rc = of_property_read_string(node, "qcom,battery-type",
 							&battery_type);
@@ -362,7 +358,6 @@ struct device_node *of_batterydata_get_best_profile(
 			if (rc)
 				continue;
 			for (i = 0; i < batt_ids.num; i++) {
-				pr_info("sunxing find battery data enter %d\n",i);
 				delta = abs(batt_ids.kohm[i] - batt_id_kohm);
 				limit = (batt_ids.kohm[i] * id_range_pct) / 100;
 				in_range = (delta <= limit);
@@ -382,16 +377,19 @@ struct device_node *of_batterydata_get_best_profile(
 	}
 
 	if (best_node == NULL) {
-		pr_info("sunxing detect No battery data configed,add default\n");
 		for_each_child_of_node(batterydata_container_node, node) {
 			rc = of_property_read_string(node, "qcom,battery-type", &battery_type);
 			if (!rc && strcmp(battery_type,"unknown-default") == 0) {
-			best_node = node;
-			break;
+				best_node = node;
+				break;
 			}
 		}
-		if(best_node)
-		pr_info("use unknown battery data\n");
+		
+		if (best_node == NULL)
+			pr_err("No battery data found\n");
+		else
+			pr_err("No battery data found, using unknown\n");
+
 		return best_node;
 	}
 

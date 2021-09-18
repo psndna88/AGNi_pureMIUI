@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,47 +22,20 @@
 	qcom,force-warm-reboot;
 };
 
-/* delete pm8150b nodes */
-&thermal_zones {
-	/delete-node/ pm8150b-wp-therm;
-	/delete-node/ pm8150b_tz;
-	/delete-node/ pm8150b-ibat-lvl0;
-	/delete-node/ pm8150b-ibat-lvl1;
-	/delete-node/ pm8150b-vbat-lvl0;
-	/delete-node/ pm8150b-vbat-lvl1;
-	/delete-node/ pm8150b-vbat-lvl2;
-	/delete-node/ pm8150b-bcl-lvl0;
-	/delete-node/ pm8150b-bcl-lvl1;
-	/delete-node/ pm8150b-bcl-lvl2;
-	/delete-node/ soc;
-};
-
-&usb {
-	extcon = <&vbus_detect>;
-	qcom,smmu-s1-bypass;
-};
-
-&spmi_bus {
-	/delete-node/ qpnp,fg;
-	/delete-node/ bcl@1d00;
-	/delete-node/ qcom,usb-pdphy@1700;
-	/delete-node/ qcom,qpnp-smb5;
-	/delete-node/ adc_tm@3500;
-	/delete-node/ vadc@3100;
-	/delete-node/ qcom,pm8150b@2;
-	/delete-node/ qcom,pm8150b@3;
-};
-
-&qnand_1 {
+&sdx_ext_ipc {
 	status = "ok";
 };
 
-&blsp1_uart2b_hs {
-	status = "ok";
+&i2c_3 {
+	tavil_codec {
+		status = "disabled";
+	};
 };
 
-&vbus_detect {
-	status = "ok";
+&soc {
+	sound-tavil {
+		status = "disabled";
+	};
 };
 
 &cnss_qca6390 {
@@ -86,9 +59,5 @@
 };
 
 &mhi_net_device {
-	status = "ok";
-};
-
-&sdx_ext_ipc {
 	status = "ok";
 };

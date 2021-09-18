@@ -1,5 +1,5 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -151,7 +151,7 @@
 
 		qcom,dsi-panel = <&dsi_sim_dsc_375_cmd>;
 	};
-	
+
 	dsi_ft8756_huaxing_vid_display: qcom,dsi-display@5 {
 		label = "dsi_ft8756_huaxing_vid_display";
 		qcom,display-type = "primary";
@@ -163,11 +163,12 @@
 			"shadow_byte_clk0", "shadow_pixel_clk0";
 
 		qcom,dsi-panel = <&dsi_ft8756_huaxing_video>;
-	};
-	
-	dsi_nt36675_tianma_vid_display: qcom,dsi-display@6 {
+       };
+
+	dsi_nt36675_tianma_vid_display: qcom,dsi-display@7 {
 		label = "dsi_nt36675_tianma_vid_display";
 		qcom,display-type = "primary";
+
 		qcom,dsi-ctrl-num = <0>;
 		qcom,dsi-phy-num = <0>;
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
@@ -175,7 +176,7 @@
 			"shadow_byte_clk0", "shadow_pixel_clk0";
 
 		qcom,dsi-panel = <&dsi_nt36675_tianma_video>;
-	};
+       };
 
 	sde_dsi: qcom,dsi-display {
 		compatible = "qcom,dsi-display";
@@ -190,11 +191,14 @@
 			<&mdss_dsi0_pll CPHY_BYTECLK_SRC_0_CLK>,
 			<&mdss_dsi0_pll CPHY_PCLK_SRC_0_CLK>,
 			 <&mdss_dsi0_pll SHADOW_BYTECLK_SRC_0_CLK>,
-			 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>;
+			 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>,
+			<&mdss_dsi0_pll SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+			<&mdss_dsi0_pll SHADOW_CPHY_PCLK_SRC_0_CLK>;
 		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 				"src_byte_clk0", "src_pixel_clk0",
 				"cphy_byte_clk0", "cphy_pixel_clk0",
-				"shadow_byte_clk0", "shadow_pixel_clk0";
+				"shadow_byte_clk0", "shadow_pixel_clk0",
+				"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend";
 		pinctrl-0 = <&sde_te_active &disp_pins_default>;
@@ -296,7 +300,7 @@
 };
 
 &dsi_ft8756_huaxing_video {
-        qcom,esd-err-int-gpio = <&tlmm 4 0>;
+	qcom,esd-err-int-gpio = <&tlmm 4 0>;
 	qcom,mdss-dsi-t-clk-post = <0x02>;
 	qcom,mdss-dsi-t-clk-pre = <0x2f>;
 	qcom,mdss-dsi-display-timings {
@@ -312,7 +316,7 @@
 };
 
 &dsi_nt36675_tianma_video {
-        qcom,esd-err-int-gpio = <&tlmm 4 0>;
+	qcom,esd-err-int-gpio = <&tlmm 4 0>;
 	qcom,mdss-dsi-t-clk-post = <0x02>;
 	qcom,mdss-dsi-t-clk-pre = <0x2f>;
 	qcom,mdss-dsi-display-timings {
@@ -336,6 +340,12 @@
 				07 05 02 04 00];
 			qcom,display-topology = <1 0 1>,
 						<2 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+		timing@1{
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 07 07 23 21 07
+				07 05 02 04 00];
+			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};

@@ -1,5 +1,5 @@
 /* Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -545,7 +545,20 @@
 				output-high;
 			};        
 		};
-               /*awinic add for aw8624 start*/
+
+		msm_gpio_90:msm_gpio_90{
+			mux {
+				pins = "gpio90";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio90";
+				drive-strength=<2>;
+				bias-pull-down;
+			};
+		};
+
+	/*awinic add for aw8624 start*/
 		msm_gpio_52:msm_gpio_52 {
 			mux {
 				pins="gpio52";
@@ -569,9 +582,9 @@
 				drive-strength = <2>;
 				bias-disable;
 				output-high;
-			};        
+			};
 		};
-		/*aw8624 interrupt set*/
+	/*aw8624 interrupt set*/
 		msm_gpio_26:msm_gpio_26 {
 			mux {
 				pins = "gpio26";
@@ -582,21 +595,10 @@
 				drive-strength = <2>;
 				bias-pull-up;
 				input-enable;
-			};        
-		};
-		/*awinic add for aw8624 end*/
-		msm_gpio_90:msm_gpio_90{
-			mux {
-				pins = "gpio90";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio90";
-				drive-strength=<2>;
-				bias-pull-down;
 			};
 		};
-		
+	/*awinic add for aw8624 end*/
+
 		qupv3_se1_i2c_pins: qupv3_se1_i2c_pins {
 			qupv3_se1_i2c_active: qupv3_se1_i2c_active {
 				mux {
@@ -1315,6 +1317,7 @@
                                 };
                         };
                 };
+
 		qupv3_se8_2uart_pins: qupv3_se8_2uart_pins {
 			qupv3_se8_2uart_active: qupv3_se8_2uart_active {
 				mux {
@@ -1569,6 +1572,7 @@
 				output-low;
 			};
 		};
+
 		cam_sensor_rear4_active: cam_sensor_rear4_active {
 			/* RESET */
 			mux {
@@ -1770,34 +1774,6 @@
 			};
 		};
 
-		pmx_sde_te {
-			sde_te_active: sde_te_active {
-				mux {
-					pins = "gpio10";
-					function = "mdp_vsync";
-				};
-
-				config {
-					pins = "gpio10";
-					drive-strength = <2>;   /* 2 mA */
-					bias-pull-down;         /* PULL DOWN */
-				};
-			};
-
-			sde_te_suspend: sde_te_suspend {
-				mux {
-					pins = "gpio10";
-					function = "mdp_vsync";
-				};
-
-				config {
-					pins = "gpio10";
-					drive-strength = <2>;   /* 2 mA */
-					bias-pull-down;         /* PULL DOWN */
-				};
-			};
-		};
-
 		pmx_ts_active {
 			ts_active: ts_active {
 				mux {
@@ -1854,6 +1830,34 @@
 					pins = "gpio9", "gpio8";
 					drive-strength = <2>;
 					bias-disable;
+				};
+			};
+		};
+
+		pmx_sde_te {
+			sde_te_active: sde_te_active {
+				mux {
+					pins = "gpio10";
+					function = "mdp_vsync";
+				};
+
+				config {
+					pins = "gpio10";
+					drive-strength = <2>;   /* 2 mA */
+					bias-pull-down;         /* PULL DOWN */
+				};
+			};
+
+			sde_te_suspend: sde_te_suspend {
+				mux {
+					pins = "gpio10";
+					function = "mdp_vsync";
+				};
+
+				config {
+					pins = "gpio10";
+					drive-strength = <2>;   /* 2 mA */
+					bias-pull-down;         /* PULL DOWN */
 				};
 			};
 		};

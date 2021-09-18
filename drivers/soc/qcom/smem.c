@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2015, Sony Mobile Communications AB.
- * Copyright (c) 2012-2013, 2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -92,7 +92,7 @@
 #define SMEM_GLOBAL_HOST	0xfffe
 
 /* Max number of processors/hosts in a system */
-#define SMEM_HOST_COUNT		11
+#define SMEM_HOST_COUNT		13
 
 /**
   * struct smem_proc_comm - proc_comm communication struct (legacy)
@@ -279,6 +279,9 @@ struct qcom_smem {
 
 /* Pointer to the one and only smem handle */
 static struct qcom_smem *__smem;
+
+/* default smem host id for apps is SMEM_HOST_APPS */
+static u32 smem_host_id = SMEM_HOST_APPS;
 
 /* Timeout (ms) for the trylock of remote spinlocks */
 #define HWSPINLOCK_TIMEOUT	1000
@@ -986,6 +989,7 @@ static int qcom_smem_probe(struct platform_device *pdev)
 	int hwlock_id;
 	u32 version;
 	int ret;
+	u32 host_id;
 
 	num_regions = 1;
 	if (of_find_property(pdev->dev.of_node, "qcom,rpm-msg-ram", NULL))
@@ -1006,6 +1010,10 @@ static int qcom_smem_probe(struct platform_device *pdev)
 	if (num_regions > 1 && (ret = qcom_smem_map_memory(smem, &pdev->dev,
 					"qcom,rpm-msg-ram", 1)))
 		return ret;
+
+	ret = of_property_read_u32(pdev->dev.of_node, "smem-host-id", &host_id);
+	if (!ret)
+		smem_host_id = host_id;
 
 	header = smem->regions[0].virt_base;
 	if (le32_to_cpu(header->initialized) != 1 ||
@@ -1030,7 +1038,7 @@ static int qcom_smem_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = qcom_smem_enumerate_partitions(smem, SMEM_HOST_APPS);
+	ret = qcom_smem_enumerate_partitions(smem, smem_host_id);
 	if (ret < 0)
 		return ret;
 
@@ -1053,6 +1061,12 @@ static int qcom_smem_probe(struct platform_device *pdev)
 static int qcom_smem_remove(struct platform_device *pdev)
 {
 	hwspin_lock_free(__smem->hwlock);
+	/* In case of Hibernation Restore __smem object is still valid
+	 * and we call probe again so same object get allocated again
+	 * that result into possible memory leak, hence explicitly freeing
+	 * it here.
+	 */
+	devm_kfree(&pdev->dev, __smem);
 	__smem = NULL;
 
 	return 0;
@@ -1088,8 +1102,9 @@ static int qcom_smem_restore(struct device *dev)
 }
 
 static const struct dev_pm_ops qcom_smem_pm_ops = {
-	.freeze = qcom_smem_freeze,
-	.restore = qcom_smem_restore,
+	.freeze_late = qcom_smem_freeze,
+	.restore_early = qcom_smem_restore,
+	.thaw_early = qcom_smem_restore,
 };
 
 static const struct of_device_id qcom_smem_of_match[] = {

@@ -195,12 +195,20 @@ int mdp3_ppp_verify_res(struct mdp_blit_req *req)
 
 	if (((req->src_rect.x + req->src_rect.w) > req->src.width) ||
 	    ((req->src_rect.y + req->src_rect.h) > req->src.height)) {
+		pr_err("%s: src roi (x=%d,y=%d,w=%d, h=%d) WxH(%dx%d)\n",
+			__func__, req->src_rect.x, req->src_rect.y,
+			 req->src_rect.w, req->src_rect.h, req->src.width,
+			 req->src.height);
 		pr_err("%s: src roi larger than boundary\n", __func__);
 		return -EINVAL;
 	}
 
 	if (((req->dst_rect.x + req->dst_rect.w) > req->dst.width) ||
 	    ((req->dst_rect.y + req->dst_rect.h) > req->dst.height)) {
+		pr_err("%s: dst roi (x=%d,y=%d,w=%d, h=%d) WxH(%dx%d)\n",
+			__func__, req->dst_rect.x, req->dst_rect.y,
+			req->dst_rect.w, req->dst_rect.h, req->dst.width,
+			req->dst.height);
 		pr_err("%s: dst roi larger than boundary\n", __func__);
 		return -EINVAL;
 	}
@@ -1589,7 +1597,7 @@ int mdp3_ppp_parse_req(void __user *p,
 		ppp_stat->wait_for_pop = true;
 		mutex_unlock(&ppp_stat->req_mutex);
 		rc = wait_for_completion_timeout(
-		   &ppp_stat->pop_q_comp, 5 * HZ);
+		   &ppp_stat->pop_q_comp, msecs_to_jiffies(5000));
 		if (rc == 0) {
 			/* This will only occur if there is serious problem */
 			pr_err("%s: timeout exiting queuing request\n",

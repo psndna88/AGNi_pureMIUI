@@ -1,10 +1,12 @@
-/*
- * aQuantia Corporation Network Driver
- * Copyright (C) 2018 aQuantia Corporation. All rights reserved
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* Atlantic Network Driver
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
+ * Copyright (C) 2018 aQuantia Corporation
+ * Copyright (C) 2019-2020 Marvell International Ltd.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
  */
 
 #ifndef _ATL_FWD_H_
@@ -13,7 +15,7 @@
 #include "atl_common.h"
 
 /* Each incompatible API change bumps the API version */
-#define ATL_FWD_API_VERSION 2
+#define ATL_FWD_API_VERSION 3
 
 struct atl_fwd_event;
 
@@ -362,6 +364,17 @@ int atl_fwd_receive_skb(struct net_device *ndev, struct sk_buff *skb);
 int atl_fwd_transmit_skb(struct net_device *ndev, struct sk_buff *skb);
 
 /**
+ * atl_fwd_napi_receive_skb() - post skb to the network stack
+ *
+ * 	@ndev:		network device
+ * 	@skb:		buffer to post
+ *
+ * This function may only be called from softirq context and interrupts
+ * should be enabled.
+ */
+int atl_fwd_napi_receive_skb(struct net_device *ndev, struct sk_buff *skb);
+
+/**
  * atl_fwd_register_notifier() - Register notifier for reset of device
  *
  * 	@ndev:		network device
@@ -383,6 +396,8 @@ enum atl_fwd_notify {
 				  /* disable rings */
     ATL_FWD_NOTIFY_RESET_COMPLETE, /* receiver shall refill descriptors and  */
 				   /* enable rings */
+    ATL_FWD_NOTIFY_MACSEC_ON,
+    ATL_FWD_NOTIFY_MACSEC_OFF,
 };
 
 enum atl_fwd_ring_state {

@@ -1226,9 +1226,6 @@ static void _sde_sspp_setup_cursor(struct sde_mdss_cfg *sde_cfg,
 	struct sde_sspp_cfg *sspp, struct sde_sspp_sub_blks *sblk,
 	struct sde_prop_value *prop_value, u32 *cursor_count)
 {
-	if (!IS_SDE_MAJOR_MINOR_SAME(sde_cfg->hwversion, SDE_HW_VER_300))
-		SDE_ERROR("invalid sspp type %d, xin id %d\n",
-				sspp->type, sspp->xin_id);
 	set_bit(SDE_SSPP_CURSOR, &sspp->features);
 	sblk->maxupscale = SSPP_UNITY_SCALE;
 	sblk->maxdwnscale = SSPP_UNITY_SCALE;
@@ -1529,6 +1526,7 @@ static int sde_sspp_parse_dt(struct device_node *np,
 			sde_cfg->mdp[j].clk_ctrls[sspp->clk_ctrl].bit_off =
 				PROP_BITVALUE_ACCESS(prop_value,
 						SSPP_CLK_CTRL, i, 1);
+			sde_cfg->mdp[j].clk_ctrls[sspp->clk_ctrl].val = -1;
 		}
 
 		SDE_DEBUG(
@@ -1861,10 +1859,7 @@ static int sde_intf_parse_dt(struct device_node *np,
 		if (IS_SDE_CTL_REV_100(sde_cfg->ctl_rev))
 			set_bit(SDE_INTF_INPUT_CTRL, &intf->features);
 
-		if (IS_SDE_MAJOR_SAME((sde_cfg->hwversion), SDE_HW_VER_500) ||
-			(IS_SDE_MAJOR_MINOR_SAME((sde_cfg->hwversion),
-					SDE_HW_VER_620)))
-			set_bit(SDE_INTF_TE, &intf->features);
+		set_bit(SDE_INTF_TE, &intf->features);
 	}
 
 end:
@@ -1931,12 +1926,7 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 			goto end;
 		}
 
-		if (IS_SDE_MAJOR_MINOR_SAME((sde_cfg->hwversion),
-				SDE_HW_VER_170))
-			wb->vbif_idx = VBIF_NRT;
-		else
-			wb->vbif_idx = VBIF_RT;
-
+		wb->vbif_idx = VBIF_RT;
 		wb->len = PROP_VALUE_ACCESS(prop_value, WB_LEN, 0);
 		if (!prop_exists[WB_LEN])
 			wb->len = DEFAULT_SDE_HW_BLOCK_LEN;
@@ -1977,6 +1967,7 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 			sde_cfg->mdp[j].clk_ctrls[wb->clk_ctrl].bit_off =
 				PROP_BITVALUE_ACCESS(prop_value,
 						WB_CLK_CTRL, i, 1);
+			sde_cfg->mdp[j].clk_ctrls[wb->clk_ctrl].val = -1;
 		}
 
 		wb->format_list = sde_cfg->wb_formats;
@@ -2163,6 +2154,7 @@ static void _sde_inline_rot_parse_dt(struct device_node *np,
 			sde_cfg->mdp[j].clk_ctrls[index].bit_off =
 				PROP_BITVALUE_ACCESS(prop_value,
 						INLINE_ROT_CLK_CTRL, i, 1);
+			sde_cfg->mdp[j].clk_ctrls[index].val = -1;
 		}
 
 		SDE_DEBUG("rot- xin:%d, num:%d, rd:%d, clk:%d:0x%x/%d\n",
@@ -2906,8 +2898,6 @@ static int sde_pp_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 				pp->id - PINGPONG_0);
 
 		major_version = SDE_HW_MAJOR(sde_cfg->hwversion);
-		if (major_version < SDE_HW_MAJOR(SDE_HW_VER_500))
-			set_bit(SDE_PINGPONG_TE, &pp->features);
 
 		sblk->te2.base = PROP_VALUE_ACCESS(prop_value, TE2_OFF, i);
 		if (sblk->te2.base) {
@@ -3203,8 +3193,6 @@ static int sde_parse_dt(struct device_node *np, struct sde_mdss_cfg *cfg)
 		PROP_VALUE_ACCESS(prop_value, SMART_PANEL_ALIGN_MODE, 0);
 
 	major_version = SDE_HW_MAJOR(cfg->hwversion);
-	if (major_version < SDE_HW_MAJOR(SDE_HW_VER_500))
-		set_bit(SDE_MDP_VSYNC_SEL, &cfg->mdp[0].features);
 
 	if (prop_exists[SEC_SID_MASK]) {
 		cfg->sec_sid_mask_count = prop_count[SEC_SID_MASK];
@@ -3747,19 +3735,6 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 	uint32_t cursor_list_size = 0;
 	uint32_t index = 0;
 
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_300)) {
-		cursor_list_size = ARRAY_SIZE(cursor_formats);
-		sde_cfg->cursor_formats = kcalloc(cursor_list_size,
-			sizeof(struct sde_format_extended), GFP_KERNEL);
-		if (!sde_cfg->cursor_formats) {
-			rc = -ENOMEM;
-			goto end;
-		}
-		index = sde_copy_formats(sde_cfg->cursor_formats,
-			cursor_list_size, 0, cursor_formats,
-			ARRAY_SIZE(cursor_formats));
-	}
-
 	dma_list_size = ARRAY_SIZE(plane_formats);
 	vig_list_size = ARRAY_SIZE(plane_formats_yuv);
 	virt_vig_list_size = ARRAY_SIZE(plane_formats);
@@ -3770,11 +3745,7 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 		+ ARRAY_SIZE(tp10_ubwc_formats)
 		+ ARRAY_SIZE(p010_formats);
 	virt_vig_list_size += ARRAY_SIZE(rgb_10bit_formats);
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_400) ||
-		(IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_410)) ||
-		(IS_SDE_MAJOR_SAME((hw_rev), SDE_HW_VER_500)) ||
-		(IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_620)))
-		vig_list_size += ARRAY_SIZE(p010_ubwc_formats);
+	vig_list_size += ARRAY_SIZE(p010_ubwc_formats);
 
 	wb2_list_size += ARRAY_SIZE(rgb_10bit_formats)
 		+ ARRAY_SIZE(tp10_ubwc_formats);
@@ -3808,17 +3779,7 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 		goto end;
 	}
 
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_300) ||
-	    IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_400) ||
-	    IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_410) ||
-	    IS_SDE_MAJOR_SAME((hw_rev), SDE_HW_VER_500) ||
-		IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_620))
-		sde_cfg->has_hdr = true;
-
-	/* Disable HDR for SM6150 target only */
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_530)
-			|| IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_540))
-		sde_cfg->has_hdr = false;
+	sde_cfg->has_hdr = true;
 
 	index = sde_copy_formats(sde_cfg->dma_formats, dma_list_size,
 		0, plane_formats, ARRAY_SIZE(plane_formats));
@@ -3833,13 +3794,9 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 		ARRAY_SIZE(rgb_10bit_formats));
 	index += sde_copy_formats(sde_cfg->vig_formats, vig_list_size,
 		index, p010_formats, ARRAY_SIZE(p010_formats));
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_400) ||
-		(IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_410)) ||
-		(IS_SDE_MAJOR_SAME((hw_rev), SDE_HW_VER_500)) ||
-		(IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_620)))
-		index += sde_copy_formats(sde_cfg->vig_formats,
-			vig_list_size, index, p010_ubwc_formats,
-			ARRAY_SIZE(p010_ubwc_formats));
+	index += sde_copy_formats(sde_cfg->vig_formats,
+		vig_list_size, index, p010_ubwc_formats,
+		ARRAY_SIZE(p010_ubwc_formats));
 	index += sde_copy_formats(sde_cfg->vig_formats, vig_list_size,
 		index, tp10_ubwc_formats,
 		ARRAY_SIZE(tp10_ubwc_formats));

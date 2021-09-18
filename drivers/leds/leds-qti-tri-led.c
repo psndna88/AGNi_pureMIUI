@@ -291,6 +291,8 @@ static int qpnp_tri_led_set_brightness(struct led_classdev *led_cdev,
 		return 0;
 	}
 
+	if (brightness != 0)
+		brightness = LED_FULL;
 	led->led_setting.brightness = brightness;
 	if (!!brightness)
 		led->led_setting.off_ms = 0;
@@ -338,7 +340,7 @@ static int qpnp_tri_led_set_blink(struct led_classdev *led_cdev,
 	} else if (*off_ms == 0) {
 		led->led_setting.blink = false;
 		led->led_setting.breath = false;
-		led->led_setting.brightness = led->cdev.brightness;
+		led->led_setting.brightness = LED_FULL;
 	} else {
 		led->led_setting.on_ms = *on_ms;
 		led->led_setting.off_ms = *off_ms;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -287,6 +287,7 @@ static const char *const gpi_cb_event_str[MSM_GPI_QUP_MAX_EVENT] = {
 	[MSM_GPI_QUP_NOTIFY] = "NOTIFY",
 	[MSM_GPI_QUP_ERROR] = "GLOBAL ERROR",
 	[MSM_GPI_QUP_CH_ERROR] = "CHAN ERROR",
+	[MSM_GPI_QUP_FW_ERROR] = "UNHANDLED ERROR",
 	[MSM_GPI_QUP_PENDING_EVENT] = "PENDING EVENT",
 	[MSM_GPI_QUP_EOT_DESC_MISMATCH] = "EOT/DESC MISMATCH",
 	[MSM_GPI_QUP_SW_ERROR] = "SW ERROR",
@@ -1310,6 +1311,7 @@ static void gpi_process_glob_err_irq(struct gpii *gpii)
 	msm_gpi_cb.error_log.routine = log_entry->routine;
 	msm_gpi_cb.error_log.type = log_entry->type;
 	msm_gpi_cb.error_log.error_code = log_entry->code;
+	msm_gpi_cb.status = 0;
 	GPII_INFO(gpii, gpii_chan->chid, "sending CB event:%s\n",
 		  TO_GPI_CB_EVENT_STR(msm_gpi_cb.cb_event));
 	GPII_ERR(gpii, gpii_chan->chid,
@@ -2190,6 +2192,10 @@ int gpi_terminate_all(struct dma_chan *chan)
 		if (ret) {
 			GPII_ERR(gpii, gpii_chan->chid,
 				 "Error resetting channel ret:%d\n", ret);
+			if (!gpii->reg_table_dump) {
+				gpi_dump_debug_reg(gpii);
+				gpii->reg_table_dump = true;
+			}
 			goto terminate_exit;
 		}
 

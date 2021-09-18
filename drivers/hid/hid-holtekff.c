@@ -5,7 +5,6 @@
  *  which uses vendor ID 0x1241 and identifies as "HOLTEK On Line Grip".
  *
  *  Copyright (c) 2011 Anssi Hannula <anssi.hannula@iki.fi>
- *  Copyright (C) 2020 XiaoMi, Inc.
  */
 
 /*

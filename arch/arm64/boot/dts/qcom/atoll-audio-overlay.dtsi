@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,7 +18,7 @@
 #include <dt-bindings/sound/qcom,bolero-clk-rsc.h>
 
 &bolero {
-        qcom,num-macros = <3>;
+	qcom,num-macros = <3>;
 	bolero-clk-rsc-mngr {
 		compatible = "qcom,bolero-clk-rsc-mngr";
 		qcom,fs-gen-sequence = <0x3000 0x1>, <0x3004 0x1>, <0x3080 0x2>;
@@ -123,7 +123,7 @@
 	};
 
 	wsa_macro: wsa-macro@62640000 {
-                status = "disabled";
+        status = "disabled";
 		compatible = "qcom,wsa-macro";
 		reg = <0x62640000 0x0>;
 		clock-names = "wsa_core_clk", "wsa_npl_clk";
@@ -315,8 +315,9 @@
 		"IN2_HPHR", "HPHR_OUT",
 		"IN3_AUX", "AUX_OUT",
 		"TX SWR_ADC0", "ADC1_OUTPUT",
-		"TX SWR_ADC2", "ADC2_OUTPUT",
-		"TX SWR_ADC3", "ADC3_OUTPUT",
+		"TX SWR_ADC1", "ADC2_OUTPUT",
+		"TX SWR_ADC2", "ADC3_OUTPUT",
+		"TX SWR_ADC3", "ADC4_OUTPUT",
 		"TX SWR_DMIC0", "DMIC1_OUTPUT",
 		"TX SWR_DMIC1", "DMIC2_OUTPUT",
 		"TX SWR_DMIC2", "DMIC3_OUTPUT",
@@ -417,7 +418,7 @@
 	};
 
 	wsa_swr_gpios: wsa_swr_clk_data_pinctrl {
-                status = "disabled";
+        status = "disabled";
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wsa_swr_clk_active &wsa_swr_data_active>;
@@ -437,7 +438,7 @@
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&tx_swr_clk_active &tx_swr_data0_active
-			     &tx_swr_data1_active &tx_swr_data2_active>;
+			    &tx_swr_data1_active &tx_swr_data2_active>;
 		pinctrl-1 = <&tx_swr_clk_sleep &tx_swr_data0_sleep
 			    &tx_swr_data1_sleep &tx_swr_data2_sleep>;
 		qcom,lpi-gpios;
@@ -540,7 +541,7 @@
 		qcom,codec-lpass-clk-id = <0x310>;
 		#clock-cells = <1>;
 	};
-         cdc_tert_mi2s_gpios: msm_cdc_pinctrl_pri {
+    cdc_tert_mi2s_gpios: msm_cdc_pinctrl_pri {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&tert_i2s_sck_active &tert_i2s_ws_active

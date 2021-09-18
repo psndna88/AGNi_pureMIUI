@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2017, 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2017, 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -875,13 +875,15 @@ int sps_bam_pipe_connect(struct sps_pipe *bam_pipe,
 	}
 
 	/* Determine operational mode */
-	if (other_pipe->bam != NULL) {
+	if ((bam_pipe->connect.options & SPS_O_DUMMY_PEER) ||
+						other_pipe->bam != NULL) {
 		unsigned long iova;
-		struct sps_bam *peer_bam = (struct sps_bam *)(other_pipe->bam);
+		struct sps_bam *peer_bam;
 		/* BAM-to-BAM mode */
 		bam_pipe->state |= BAM_STATE_BAM2BAM;
 		hw_params.mode = BAM_PIPE_MODE_BAM2BAM;
-
+		if (!(bam_pipe->connect.options & SPS_O_DUMMY_PEER))
+			peer_bam = (struct sps_bam *)(other_pipe->bam);
 		if (dev->props.options & SPS_BAM_SMMU_EN) {
 			if (bam_pipe->mode == SPS_MODE_SRC)
 				iova = bam_pipe->connect.dest_iova;
@@ -892,11 +894,19 @@ int sps_bam_pipe_connect(struct sps_pipe *bam_pipe,
 				 BAM_ID(dev), pipe_index, (void *)iova);
 			hw_params.peer_phys_addr = (u32)iova;
 		} else {
-			hw_params.peer_phys_addr = peer_bam->props.phys_addr;
+			if (!(bam_pipe->connect.options & SPS_O_DUMMY_PEER))
+				hw_params.peer_phys_addr =
+					peer_bam->props.phys_addr;
 		}
-
-		hw_params.peer_pipe = other_pipe->pipe_index;
-
+		if (!(bam_pipe->connect.options & SPS_O_DUMMY_PEER)) {
+			hw_params.peer_pipe = other_pipe->pipe_index;
+		} else {
+			hw_params.peer_phys_addr =
+					bam_pipe->connect.destination;
+			hw_params.peer_pipe =
+					bam_pipe->connect.dest_pipe_index;
+			hw_params.dummy_peer = true;
+		}
 		/* Verify FIFO buffers are allocated for BAM-to-BAM pipes */
 		if (map->desc.phys_base == SPS_ADDR_INVALID ||
 		    map->data.phys_base == SPS_ADDR_INVALID ||
@@ -1538,11 +1548,13 @@ int sps_bam_pipe_transfer_one(struct sps_bam *dev,
 					       next_write);
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	if (dev->ipc_loglevel == 0)
 		SPS_DBG(dev,
 			"sps:%s: BAM phy addr:%pa; pipe %d; write pointer to tell HW: 0x%x; write pointer read from HW: 0x%x\n",
 			__func__, BAM_ID(dev), pipe_index, next_write,
 			bam_pipe_get_desc_write_offset(&dev->base, pipe_index));
+#endif
 
 	return 0;
 }
@@ -1838,12 +1850,14 @@ static void pipe_handler_eot(struct sps_bam *dev, struct sps_pipe *pipe)
 	/* Get offset of last descriptor completed by the pipe */
 	end_offset = bam_pipe_get_desc_read_offset(&dev->base, pipe_index);
 
+#ifdef CONFIG_IPC_LOGGING
 	if (dev->ipc_loglevel == 0)
 		SPS_DBG(dev,
 			"sps:%s; pipe index:%d; read pointer:0x%x; write pointer:0x%x; sys.acked_offset:0x%x.\n",
 			__func__, pipe->pipe_index, end_offset,
 			bam_pipe_get_desc_write_offset(&dev->base, pipe_index),
 			pipe->sys.acked_offset);
+#endif
 
 	if (producer && pipe->late_eot) {
 		struct sps_iovec *desc_end;

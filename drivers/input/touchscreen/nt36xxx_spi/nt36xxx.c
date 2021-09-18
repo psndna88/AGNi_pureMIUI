@@ -43,6 +43,9 @@
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+#include <linux/input/tp_common.h>
+#endif
 #ifdef CHECK_TOUCH_VENDOR
 extern char *saved_command_line;
 
@@ -63,17 +66,12 @@ extern int32_t nvt_extra_proc_init(void);
 extern void nvt_extra_proc_deinit(void);
 #endif
 
-#if NVT_TOUCH_MP
-extern int32_t nvt_mp_proc_init(void);
-extern void nvt_mp_proc_deinit(void);
-#endif
-
 /*2019.12.06 longcheer taocheng add charger mode begin*/
 /*function description*/
 #if NVT_USB_PLUGIN
 static void nvt_ts_usb_plugin_work_func(struct work_struct *work);
 DECLARE_WORK(nvt_usb_plugin_work, nvt_ts_usb_plugin_work_func);
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
+extern touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin;
 #endif
 /*2019.12.06 longcheer taocheng add charger mode end*/
 
@@ -171,14 +169,12 @@ static uint8_t bTouchIsAwake = 0;
 #define WAKEUP_ON 5
 int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int code, int value)
 {
-	NVT_LOG("Enter. type = %u, code = %u, value = %d\n", type, code, value);
 	if (type == EV_SYN && code == SYN_CONFIG) {
 		if (value == WAKEUP_OFF)
 			lct_nvt_tp_gesture_callback(false);
 		else if (value == WAKEUP_ON)
 			lct_nvt_tp_gesture_callback(true);
 	}
-	NVT_LOG("Exit\n");
 	return 0;
 }
 
@@ -205,6 +201,33 @@ int nvt_ts_recovery_callback(void)
 }
 EXPORT_SYMBOL(nvt_ts_recovery_callback);
 
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+static ssize_t double_tap_show(struct kobject *kobj,
+                               struct kobj_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", ts->is_gesture_mode);
+}
+
+static ssize_t double_tap_store(struct kobject *kobj,
+                                struct kobj_attribute *attr, const char *buf,
+                                size_t count)
+{
+    int rc, val;
+    
+    rc = kstrtoint(buf, 10, &val);
+    if (rc)
+    return -EINVAL;
+    
+    ts->is_gesture_mode = !!val;
+    set_lcd_reset_gpio_keep_high(!!val);
+    return count;
+}
+
+static struct tp_common_ops double_tap_ops = {
+    .show = double_tap_show,
+    .store = double_tap_store
+};
+#endif
 #endif
 /*2019.12.6 longcheer taocheng add charger mode begin*/
 /*function description*/
@@ -224,9 +247,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 		return;
 	}
 
-	NVT_LOG("++\n");
 	mutex_lock(&ts->lock);
-	NVT_LOG("usb_plugged_in = %d\n", g_touchscreen_usb_pulgin.usb_plugged_in);
 
 	msleep(35);
 
@@ -238,7 +259,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 	}
 
 	buf[0] = EVENT_MAP_HOST_CMD;
-	if (g_touchscreen_usb_pulgin.usb_plugged_in)
+	if (g_touchscreen_usb_plugin.usb_plugged_in)
 		buf[1] = 0x53;// power plug ac on
 	else
 		buf[1] = 0x51;// power plug off
@@ -251,7 +272,6 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 
 exit:
 	mutex_unlock(&ts->lock);
-	NVT_LOG("--\n");
 }
 #endif
 /*2019.12.6 longcheer taocheng add charger mode end*/
@@ -280,7 +300,6 @@ static void nvt_irq_enable(bool enable)
 	}
 
 	desc = irq_to_desc(ts->client->irq);
-	NVT_LOG("enable=%d, desc->depth=%d\n", enable, desc->depth);
 }
 
 /*******************************************************
@@ -314,6 +333,21 @@ static inline int32_t spi_read_write(struct spi_device *client, uint8_t *buf, si
 	spi_message_init(&m);
 	spi_message_add_tail(&t, &m);
 	return spi_sync(client, &m);
+}
+
+static void nvt_pm_qos(bool enable)
+{
+	if (unlikely(!pm_qos_request_active(&ts->pm_touch_req)) || 
+		unlikely(!pm_qos_request_active(&ts->pm_spi_req)))
+		return;
+
+	if (enable) {
+		pm_qos_update_request(&ts->pm_touch_req, 100);
+		pm_qos_update_request(&ts->pm_spi_req, 100);
+	} else {
+		pm_qos_update_request(&ts->pm_touch_req, PM_QOS_DEFAULT_VALUE);
+		pm_qos_update_request(&ts->pm_spi_req, PM_QOS_DEFAULT_VALUE);
+	}
 }
 
 /*******************************************************
@@ -721,8 +755,6 @@ int32_t nvt_read_pid(void)
 	//---set xdata index to EVENT BUF ADDR---
 	nvt_set_page(ts->mmap->EVENT_BUF_ADDR);
 
-	NVT_LOG("PID=%04X\n", ts->nvt_pid);
-
 	return ret;
 }
 
@@ -779,8 +811,6 @@ info_retry:
 	} else {
 		ret = 0;
 	}
-
-	NVT_LOG("fw_ver = 0x%02X, fw_type = 0x%02X\n", ts->fw_ver, buf[14]);
 
 #ifdef CHECK_TOUCH_VENDOR
 	switch(ts->touch_vendor_id) {
@@ -1041,63 +1071,47 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 	if ((gesture_id == DATA_PROTOCOL) && (func_type == FUNCPAGE_GESTURE)) {
 		gesture_id = func_id;
 	} else if (gesture_id > DATA_PROTOCOL) {
-		NVT_ERR("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
 		return;
 	}
 
-	NVT_LOG("gesture_id = %d\n", gesture_id);
-
 	switch (gesture_id) {
 		case GESTURE_WORD_C:
-			NVT_LOG("Gesture : Word-C.\n");
 			keycode = gesture_key_array[0];
 			break;
 		case GESTURE_WORD_W:
-			NVT_LOG("Gesture : Word-W.\n");
 			keycode = gesture_key_array[1];
 			break;
 		case GESTURE_WORD_V:
-			NVT_LOG("Gesture : Word-V.\n");
 			keycode = gesture_key_array[2];
 			break;
 		case GESTURE_DOUBLE_CLICK:
-			NVT_LOG("Gesture : Double Click.\n");
 			keycode = gesture_key_array[3];
 			break;
 		case GESTURE_WORD_Z:
-			NVT_LOG("Gesture : Word-Z.\n");
 			keycode = gesture_key_array[4];
 			break;
 		case GESTURE_WORD_M:
-			NVT_LOG("Gesture : Word-M.\n");
 			keycode = gesture_key_array[5];
 			break;
 		case GESTURE_WORD_O:
-			NVT_LOG("Gesture : Word-O.\n");
 			keycode = gesture_key_array[6];
 			break;
 		case GESTURE_WORD_e:
-			NVT_LOG("Gesture : Word-e.\n");
 			keycode = gesture_key_array[7];
 			break;
 		case GESTURE_WORD_S:
-			NVT_LOG("Gesture : Word-S.\n");
 			keycode = gesture_key_array[8];
 			break;
 		case GESTURE_SLIDE_UP:
-			NVT_LOG("Gesture : Slide UP.\n");
 			keycode = gesture_key_array[9];
 			break;
 		case GESTURE_SLIDE_DOWN:
-			NVT_LOG("Gesture : Slide DOWN.\n");
 			keycode = gesture_key_array[10];
 			break;
 		case GESTURE_SLIDE_LEFT:
-			NVT_LOG("Gesture : Slide LEFT.\n");
 			keycode = gesture_key_array[11];
 			break;
 		case GESTURE_SLIDE_RIGHT:
-			NVT_LOG("Gesture : Slide RIGHT.\n");
 			keycode = gesture_key_array[12];
 			break;
 		default:
@@ -1128,10 +1142,8 @@ static int32_t nvt_parse_dt(struct device *dev)
 
 #if NVT_TOUCH_SUPPORT_HW_RST
 	ts->reset_gpio = of_get_named_gpio_flags(np, "novatek,reset-gpio", 0, &ts->reset_flags);
-	NVT_LOG("novatek,reset-gpio=%d\n", ts->reset_gpio);
 #endif
 	ts->irq_gpio = of_get_named_gpio_flags(np, "novatek,irq-gpio", 0, &ts->irq_flags);
-	NVT_LOG("novatek,irq-gpio=%d\n", ts->irq_gpio);
 
 	ret = of_property_read_u32(np, "novatek,swrst-n8-addr", &SWRST_N8_ADDR);
 	if (ret) {
@@ -1370,6 +1382,7 @@ static irqreturn_t nvt_ts_work_func(int irq, void *data)
 #endif
 #endif
 
+	nvt_pm_qos(true);
 	mutex_lock(&ts->lock);
 
 	ret = CTP_SPI_READ(ts->client, point_data, POINT_DATA_LEN + 1);
@@ -1410,11 +1423,10 @@ static irqreturn_t nvt_ts_work_func(int irq, void *data)
 		goto XFER_ERROR;
 	}
 #if WAKEUP_GESTURE
-	if (bTouchIsAwake == 0) {
+	if (unlikely(!bTouchIsAwake)) {
 		//input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
-		mutex_unlock(&ts->lock);
-		return IRQ_HANDLED;
+		goto XFER_ERROR;
 	}
 #endif
 	finger_cnt = 0;
@@ -1515,8 +1527,8 @@ static irqreturn_t nvt_ts_work_func(int irq, void *data)
 	input_sync(ts->input_dev);
 
 XFER_ERROR:
-
 	mutex_unlock(&ts->lock);
+	nvt_pm_qos(false);
 
 	return IRQ_HANDLED;
 }
@@ -1554,8 +1566,6 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		buf[5] = 0x00;
 		buf[6] = 0x00;
 		CTP_SPI_READ(ts->client, buf, 7);
-		NVT_LOG("buf[1]=0x%02X, buf[2]=0x%02X, buf[3]=0x%02X, buf[4]=0x%02X, buf[5]=0x%02X, buf[6]=0x%02X\n",
-			buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
 		// compare read chip id on supported list
 		for (list = 0; list < (sizeof(trim_id_table) / sizeof(struct nvt_ts_trim_id_table)); list++) {
@@ -2365,6 +2375,13 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	for (retry = 0; retry < (sizeof(gesture_key_array) / sizeof(gesture_key_array[0])); retry++) {
 		input_set_capability(ts->input_dev, EV_KEY, gesture_key_array[retry]);
 	}
+#ifdef CONFIG_TOUCHSCREEN_COMMON_DT2W
+    ret = tp_common_set_double_tap_ops(&double_tap_ops);
+    if (ret < 0) {
+        NVT_ERR("%s: Failed to create double_tap node err=%d\n",
+                __func__, ret);
+    }
+#endif
 #endif
 
 	sprintf(ts->phys, "input/ts");
@@ -2385,7 +2402,9 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 		NVT_LOG("int_trigger_type=%d\n", ts->int_trigger_type);
 		ts->irq_enabled = true;
 		ret = request_threaded_irq(client->irq, NULL, nvt_ts_work_func,
-				ts->int_trigger_type | IRQF_ONESHOT, NVT_SPI_NAME, ts);
+				ts->int_trigger_type |
+				IRQF_ONESHOT | IRQF_NO_SUSPEND |
+				IRQF_PERF_CRITICAL, NVT_SPI_NAME, ts);
 		if (ret != 0) {
 			NVT_ERR("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
@@ -2394,6 +2413,17 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 			NVT_LOG("request irq %d succeed\n", client->irq);
 		}
 	}
+
+	ts->pm_spi_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	ts->pm_spi_req.irq = geni_spi_get_master_irq(client);
+	irq_set_perf_affinity(ts->pm_spi_req.irq);
+	pm_qos_add_request(&ts->pm_spi_req, PM_QOS_CPU_DMA_LATENCY,
+		PM_QOS_DEFAULT_VALUE);
+
+	ts->pm_touch_req.type = PM_QOS_REQ_AFFINE_IRQ;
+	ts->pm_touch_req.irq = client->irq;
+	pm_qos_add_request(&ts->pm_touch_req, PM_QOS_CPU_DMA_LATENCY,
+		PM_QOS_DEFAULT_VALUE);
 
 #if WAKEUP_GESTURE
 	device_init_wakeup(&ts->input_dev->dev, 1);
@@ -2438,14 +2468,6 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	if (ret != 0) {
 		NVT_ERR("nvt extra proc init failed. ret=%d\n", ret);
 		goto err_extra_proc_init_failed;
-	}
-#endif
-
-#if NVT_TOUCH_MP
-	ret = nvt_mp_proc_init();
-	if (ret != 0) {
-		NVT_ERR("nvt mp proc init failed. ret=%d\n", ret);
-		goto err_mp_proc_init_failed;
 	}
 #endif
 
@@ -2499,7 +2521,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 #if defined(CONFIG_FB)
-	ts->workqueue = alloc_workqueue("nvt_ts_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	ts->workqueue = create_singlethread_workqueue("nvt_ts_workqueue");
 	if (!ts->workqueue) {
 		NVT_ERR("create nvt_ts_workqueue fail");
 		ret = -ENOMEM;
@@ -2576,7 +2598,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 
 //2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
-	g_touchscreen_usb_pulgin.event_callback = nvt_ts_usb_event_callback;
+	g_touchscreen_usb_plugin.event_callback = nvt_ts_usb_event_callback;
 #endif
 
 	set_touchpanel_recovery_callback(nvt_ts_recovery_callback);
@@ -2637,10 +2659,6 @@ uninit_lct_tp_gesture();
 #endif
 err_init_lct_tp_info_failed:
 uninit_lct_tp_info();
-#if NVT_TOUCH_MP
-nvt_mp_proc_deinit();
-err_mp_proc_init_failed:
-#endif
 #if NVT_TOUCH_EXT_PROC
 nvt_extra_proc_deinit();
 err_extra_proc_init_failed:
@@ -2717,6 +2735,8 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 {
 	NVT_LOG("Removing driver...\n");
 
+	pm_qos_remove_request(&ts->pm_touch_req);
+	pm_qos_remove_request(&ts->pm_spi_req);
 #if defined(CONFIG_FB)
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
@@ -2754,9 +2774,6 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 #endif
 	uninit_lct_tp_info();
 
-#if NVT_TOUCH_MP
-	nvt_mp_proc_deinit();
-#endif
 #if NVT_TOUCH_EXT_PROC
 	nvt_extra_proc_deinit();
 #endif
@@ -2852,9 +2869,6 @@ static void nvt_ts_shutdown(struct spi_device *client)
 #endif
 	uninit_lct_tp_info();
 
-#if NVT_TOUCH_MP
-	nvt_mp_proc_deinit();
-#endif
 #if NVT_TOUCH_EXT_PROC
 	nvt_extra_proc_deinit();
 #endif
@@ -2899,7 +2913,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 #endif
 
 	if (!bTouchIsAwake) {
-		NVT_LOG("Touch is already suspend\n");
 		return 0;
 	}
 
@@ -2924,8 +2937,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	mutex_lock(&ts->lock);
 
-	NVT_LOG("start\n");
-
 	bTouchIsAwake = 0;
 
 #if WAKEUP_GESTURE
@@ -2935,7 +2946,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 		buf[1] = 0x13;
 		CTP_SPI_WRITE(ts->client, buf, 2);
 		enable_irq_wake(ts->client->irq);
-		NVT_LOG("Enabled touch wakeup gesture\n");
 	} else {
 		//---write command to enter "deep sleep mode"---
 		//buf[0] = EVENT_MAP_HOST_CMD;
@@ -2969,8 +2979,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	msleep(50);
 
-	NVT_LOG("end\n");
-
 	return 0;
 }
 
@@ -2984,23 +2992,22 @@ return:
 static int32_t nvt_ts_resume(struct device *dev)
 {
 	if (bTouchIsAwake) {
-		NVT_LOG("Touch is already resume\n");
 		return 0;
 	}
 
 	mutex_lock(&ts->lock);
 
-	NVT_LOG("start\n");
-
 	// please make sure display reset(RESX) sequence and mipi dsi cmds sent before this
 #if NVT_TOUCH_SUPPORT_HW_RST
 	gpio_set_value(ts->reset_gpio, 1);
 #endif
+#if BOOT_UPDATE_FIRMWARE
 	if (nvt_update_firmware(ts->boot_update_firmware_name)) {
 		NVT_ERR("download firmware failed, ignore check fw state\n");
 	} else {
 		nvt_check_fw_reset_state(RESET_STATE_REK);
 	}
+#endif
 
 #if WAKEUP_GESTURE
 	if (!ts->is_gesture_mode) {
@@ -3039,12 +3046,9 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 //2019.12.06 longcheer taocheng add for charger mode
 #if NVT_USB_PLUGIN
-	if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
-		g_touchscreen_usb_pulgin.event_callback();
+	if (g_touchscreen_usb_plugin.valid && g_touchscreen_usb_plugin.usb_plugged_in)
+		g_touchscreen_usb_plugin.event_callback();
 #endif
-
-	NVT_LOG("end\n");
-
 	return 0;
 }
 
@@ -3111,13 +3115,11 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 		blank = evdata->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
 			if (*blank == MSM_DRM_BLANK_POWERDOWN) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				cancel_work_sync(&ts->resume_work);
 				nvt_ts_suspend(&ts->client->dev);
 			}
 		} else if (event == MSM_DRM_EVENT_BLANK) {
 			if (*blank == MSM_DRM_BLANK_UNBLANK) {
-				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				//nvt_ts_resume(&ts->client->dev);
 				queue_work(ts->workqueue, &ts->resume_work);
 			}

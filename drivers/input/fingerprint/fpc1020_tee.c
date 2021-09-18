@@ -524,7 +524,6 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	if (fpc1020->wait_finger_down && fpc1020->fb_black) {
-		pr_info("fpc schedule_work enter\n");
 		fpc1020->wait_finger_down = false;
 		schedule_work(&fpc1020->work);
 	}  

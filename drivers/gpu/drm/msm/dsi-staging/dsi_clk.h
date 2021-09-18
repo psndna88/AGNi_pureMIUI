@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -116,10 +116,10 @@ struct dsi_link_lp_clk_info {
 
 /**
  * struct link_clk_freq - Clock frequency information for Link clocks
- * @byte_clk_rate:   Frequency of DSI byte_clk in KHz.
- * @byte_intf_clk_rate:   Frequency of DSI byte_intf_clk in KHz.
- * @pixel_clk_rate:  Frequency of DSI pixel_clk in KHz.
- * @esc_clk_rate:    Frequency of DSI escape clock in KHz.
+ * @byte_clk_rate:   Frequency of DSI byte_clk in Hz.
+ * @byte_intf_clk_rate:   Frequency of DSI byte_intf_clk in Hz.
+ * @pixel_clk_rate:  Frequency of DSI pixel_clk in Hz.
+ * @esc_clk_rate:    Frequency of DSI escape clock in Hz.
  */
 struct link_clk_freq {
 	u32 byte_clk_rate;

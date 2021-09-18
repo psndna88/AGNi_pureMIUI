@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -217,45 +217,6 @@ pmo_core_psoc_get_power_save_mode(struct wlan_objmgr_psoc *psoc)
 }
 
 /**
- * pmo_core_psoc_get_qpower_config() - get qpower configuration
- * @psoc: objmgr psoc handle
- *
- * Power Save Offload configuration:
- * 0 -> Power save offload is disabled
- * 1 -> Legacy Power save enabled + Deep sleep Disabled
- * 2 -> QPower enabled + Deep sleep Disabled
- * 3 -> Legacy Power save enabled + Deep sleep Enabled
- * 4 -> QPower enabled + Deep sleep Enabled
- * 5 -> Duty cycling QPower enabled
- *
- * Return: enum powersave_qpower_mode with below values
- * QPOWER_DISABLED if QPOWER is disabled
- * QPOWER_ENABLED if QPOWER is enabled
- * QPOWER_DUTY_CYCLING if DUTY CYCLING QPOWER is enabled
- */
-static inline
-enum pmo_power_save_qpower_mode pmo_core_psoc_get_qpower_config(
-		struct wlan_objmgr_psoc *psoc)
-{
-	uint8_t ps_mode = pmo_core_psoc_get_power_save_mode(psoc);
-
-	switch (ps_mode) {
-	case pmo_ps_qpower_no_deep_sleep:
-	case pmo_ps_qpower_deep_sleep:
-		pmo_debug("QPOWER is enabled in power save mode %d", ps_mode);
-		return pmo_qpower_enabled;
-	case pmo_ps_duty_cycling_qpower:
-		pmo_debug("DUTY cycling QPOWER is enabled in power save mode %d",
-			ps_mode);
-		return pmo_qpower_duty_cycling;
-	default:
-		pmo_debug("QPOWER is disabled in power save mode %d",
-			ps_mode);
-		return pmo_qpower_disabled;
-	}
-}
-
-/**
  * pmo_core_vdev_get_pause_bitmap() - Get vdev pause bitmap
  * @psoc_ctx: psoc priv ctx
  * @vdev_id: vdev id
@@ -393,6 +354,20 @@ QDF_STATUS pmo_core_config_listen_interval(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS pmo_core_config_modulated_dtim(struct wlan_objmgr_vdev *vdev,
 					  uint32_t mod_dtim);
+
+#ifdef SYSTEM_PM_CHECK
+/**
+ * pmo_core_system_resume() - function to handle system resume notification
+ * @psoc: objmgr psoc handle
+ *
+ * Return: None
+ */
+void pmo_core_system_resume(struct wlan_objmgr_psoc *psoc);
+#else
+static inline void pmo_core_system_resume(struct wlan_objmgr_psoc *psoc)
+{
+}
+#endif
 #endif /* WLAN_POWER_MANAGEMENT_OFFLOAD */
 
 #endif /* end  of _WLAN_PMO_SUSPEND_RESUME_H_ */

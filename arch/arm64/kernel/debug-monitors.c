@@ -62,7 +62,7 @@ NOKPROBE_SYMBOL(mdscr_read);
  * Allow root to disable self-hosted debug from userspace.
  * This is useful if you want to connect an external JTAG debugger.
  */
-static bool debug_enabled = true;
+static bool debug_enabled;
 
 static int create_debug_debugfs_entry(void)
 {
@@ -133,6 +133,7 @@ NOKPROBE_SYMBOL(disable_debug_monitors);
  */
 static int clear_os_lock(unsigned int cpu)
 {
+	write_sysreg(0, osdlr_el1);
 	write_sysreg(0, oslar_el1);
 	isb();
 	return 0;
@@ -149,35 +150,59 @@ postcore_initcall(debug_monitors_init);
 /*
  * Single step API and exception handling.
  */
-static void set_regs_spsr_ss(struct pt_regs *regs)
+static void set_user_regs_spsr_ss(struct user_pt_regs *regs)
 {
 	regs->pstate |= DBG_SPSR_SS;
 }
-NOKPROBE_SYMBOL(set_regs_spsr_ss);
+NOKPROBE_SYMBOL(set_user_regs_spsr_ss);
 
-static void clear_regs_spsr_ss(struct pt_regs *regs)
+static void clear_user_regs_spsr_ss(struct user_pt_regs *regs)
 {
 	regs->pstate &= ~DBG_SPSR_SS;
 }
-NOKPROBE_SYMBOL(clear_regs_spsr_ss);
+NOKPROBE_SYMBOL(clear_user_regs_spsr_ss);
 
-/* EL1 Single Step Handler hooks */
-static LIST_HEAD(step_hook);
-static DEFINE_SPINLOCK(step_hook_lock);
+#define set_regs_spsr_ss(r)	set_user_regs_spsr_ss(&(r)->user_regs)
+#define clear_regs_spsr_ss(r)	clear_user_regs_spsr_ss(&(r)->user_regs)
 
-void register_step_hook(struct step_hook *hook)
+static DEFINE_SPINLOCK(debug_hook_lock);
+static LIST_HEAD(user_step_hook);
+static LIST_HEAD(kernel_step_hook);
+
+static void register_debug_hook(struct list_head *node, struct list_head *list)
 {
-	spin_lock(&step_hook_lock);
-	list_add_rcu(&hook->node, &step_hook);
-	spin_unlock(&step_hook_lock);
+	spin_lock(&debug_hook_lock);
+	list_add_rcu(node, list);
+	spin_unlock(&debug_hook_lock);
+
 }
 
-void unregister_step_hook(struct step_hook *hook)
+static void unregister_debug_hook(struct list_head *node)
 {
-	spin_lock(&step_hook_lock);
-	list_del_rcu(&hook->node);
-	spin_unlock(&step_hook_lock);
+	spin_lock(&debug_hook_lock);
+	list_del_rcu(node);
+	spin_unlock(&debug_hook_lock);
 	synchronize_rcu();
+}
+
+void register_user_step_hook(struct step_hook *hook)
+{
+	register_debug_hook(&hook->node, &user_step_hook);
+}
+
+void unregister_user_step_hook(struct step_hook *hook)
+{
+	unregister_debug_hook(&hook->node);
+}
+
+void register_kernel_step_hook(struct step_hook *hook)
+{
+	register_debug_hook(&hook->node, &kernel_step_hook);
+}
+
+void unregister_kernel_step_hook(struct step_hook *hook)
+{
+	unregister_debug_hook(&hook->node);
 }
 
 /*
@@ -189,11 +214,14 @@ void unregister_step_hook(struct step_hook *hook)
 static int call_step_hook(struct pt_regs *regs, unsigned int esr)
 {
 	struct step_hook *hook;
+	struct list_head *list;
 	int retval = DBG_HOOK_ERROR;
+
+	list = user_mode(regs) ? &user_step_hook : &kernel_step_hook;
 
 	rcu_read_lock();
 
-	list_for_each_entry_rcu(hook, &step_hook, node)	{
+	list_for_each_entry_rcu(hook, list, node)	{
 		retval = hook->fn(regs, esr);
 		if (retval == DBG_HOOK_HANDLED)
 			break;
@@ -271,33 +299,44 @@ NOKPROBE_SYMBOL(single_step_handler);
  * hit within breakpoint handler, especically in kprobes.
  * Use reader/writer locks instead of plain spinlock.
  */
-static LIST_HEAD(break_hook);
-static DEFINE_SPINLOCK(break_hook_lock);
+static LIST_HEAD(user_break_hook);
+static LIST_HEAD(kernel_break_hook);
 
-void register_break_hook(struct break_hook *hook)
+void register_user_break_hook(struct break_hook *hook)
 {
-	spin_lock(&break_hook_lock);
-	list_add_rcu(&hook->node, &break_hook);
-	spin_unlock(&break_hook_lock);
+	register_debug_hook(&hook->node, &user_break_hook);
 }
 
-void unregister_break_hook(struct break_hook *hook)
+void unregister_user_break_hook(struct break_hook *hook)
 {
-	spin_lock(&break_hook_lock);
-	list_del_rcu(&hook->node);
-	spin_unlock(&break_hook_lock);
-	synchronize_rcu();
+	unregister_debug_hook(&hook->node);
+}
+
+void register_kernel_break_hook(struct break_hook *hook)
+{
+	register_debug_hook(&hook->node, &kernel_break_hook);
+}
+
+void unregister_kernel_break_hook(struct break_hook *hook)
+{
+	unregister_debug_hook(&hook->node);
 }
 
 static int call_break_hook(struct pt_regs *regs, unsigned int esr)
 {
 	struct break_hook *hook;
+	struct list_head *list;
 	int (*fn)(struct pt_regs *regs, unsigned int esr) = NULL;
 
+	list = user_mode(regs) ? &user_break_hook : &kernel_break_hook;
+
 	rcu_read_lock();
-	list_for_each_entry_rcu(hook, &break_hook, node)
-		if ((esr & hook->esr_mask) == hook->esr_val)
+	list_for_each_entry_rcu(hook, list, node) {
+		unsigned int comment = esr & BRK64_ESR_MASK;
+
+		if ((comment & ~hook->mask) == hook->imm)
 			fn = hook->fn;
+	}
 	rcu_read_unlock();
 
 	return fn ? fn(regs, esr) : DBG_HOOK_ERROR;
@@ -385,15 +424,24 @@ void user_rewind_single_step(struct task_struct *task)
 	 * If single step is active for this thread, then set SPSR.SS
 	 * to 1 to avoid returning to the active-pending state.
 	 */
-	if (test_ti_thread_flag(task_thread_info(task), TIF_SINGLESTEP))
+	if (test_tsk_thread_flag(task, TIF_SINGLESTEP))
 		set_regs_spsr_ss(task_pt_regs(task));
 }
 NOKPROBE_SYMBOL(user_rewind_single_step);
 
 void user_fastforward_single_step(struct task_struct *task)
 {
-	if (test_ti_thread_flag(task_thread_info(task), TIF_SINGLESTEP))
+	if (test_tsk_thread_flag(task, TIF_SINGLESTEP))
 		clear_regs_spsr_ss(task_pt_regs(task));
+}
+
+void user_regs_reset_single_step(struct user_pt_regs *regs,
+				 struct task_struct *task)
+{
+	if (test_tsk_thread_flag(task, TIF_SINGLESTEP))
+		set_user_regs_spsr_ss(regs);
+	else
+		clear_user_regs_spsr_ss(regs);
 }
 
 /* Kernel API */

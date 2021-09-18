@@ -342,7 +342,7 @@ int fts_esdcheck_switch(bool enable)
 	return 0;
 }
 
-void fts_esdcheck_suspend(void)
+int fts_esdcheck_suspend(void)
 {
 	FTS_FUNC_ENTER();
 	fts_esdcheck_switch(DISABLE);
@@ -350,10 +350,10 @@ void fts_esdcheck_suspend(void)
 	fts_esdcheck_data.intr = 0;
 	fts_esdcheck_data.intr_cnt = 0;
 	FTS_FUNC_EXIT();
-	return;
+	return 0;
 }
 
-void fts_esdcheck_resume(void)
+int fts_esdcheck_resume(void)
 {
 	FTS_FUNC_ENTER();
 	fts_esdcheck_switch(ENABLE);
@@ -361,7 +361,7 @@ void fts_esdcheck_resume(void)
 	fts_esdcheck_data.intr = 0;
 	fts_esdcheck_data.intr_cnt = 0;
 	FTS_FUNC_EXIT();
-	return;
+	return 0;
 }
 
 static ssize_t fts_esdcheck_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)

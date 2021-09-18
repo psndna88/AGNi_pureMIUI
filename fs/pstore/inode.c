@@ -40,6 +40,7 @@
 #ifdef CONFIG_PSTORE_LAST_KMSG
 #include <linux/proc_fs.h>
 #endif
+
 #include "internal.h"
 
 #define	PSTORE_NAMELEN	64

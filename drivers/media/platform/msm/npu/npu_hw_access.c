@@ -29,43 +29,76 @@
  * Functions - Register
  * -------------------------------------------------------------------------
  */
+static uint32_t npu_reg_read(void __iomem *base, size_t size, uint32_t off)
+{
+	if (!base) {
+		pr_err("NULL base address\n");
+		return 0;
+	}
+
+	if ((off % 4) != 0) {
+		pr_err("offset %x is not aligned\n", off);
+		return 0;
+	}
+
+	if (off >= size) {
+		pr_err("offset exceeds io region %x:%lx\n", off, size);
+		return 0;
+	}
+
+	return readl_relaxed(base + off);
+}
+
+static void npu_reg_write(void __iomem *base, size_t size, uint32_t off,
+	uint32_t val)
+{
+	if (!base) {
+		pr_err("NULL base address\n");
+		return;
+	}
+
+	if ((off % 4) != 0) {
+		pr_err("offset %x is not aligned\n", off);
+		return;
+	}
+
+	if (off >= size) {
+		pr_err("offset exceeds io region %x:%lx\n", off, size);
+		return;
+	}
+
+	writel_relaxed(val, base + off);
+	__iowmb();
+}
+
 uint32_t npu_core_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	uint32_t ret = 0;
-
-	ret = readl(npu_dev->core_io.base + off);
-	return ret;
+	return npu_reg_read(npu_dev->core_io.base, npu_dev->core_io.size, off);
 }
 
 void npu_core_reg_write(struct npu_device *npu_dev, uint32_t off, uint32_t val)
 {
-	writel_relaxed(val, npu_dev->core_io.base + off);
-	__iowmb();
+	npu_reg_write(npu_dev->core_io.base, npu_dev->core_io.size,
+		off, val);
 }
 
 uint32_t npu_bwmon_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	uint32_t ret = 0;
-
-	ret = readl(npu_dev->bwmon_io.base + off);
-	return ret;
+	return npu_reg_read(npu_dev->bwmon_io.base, npu_dev->bwmon_io.size,
+		off);
 }
 
 void npu_bwmon_reg_write(struct npu_device *npu_dev, uint32_t off,
 	uint32_t val)
 {
-	writel_relaxed(val, npu_dev->bwmon_io.base + off);
-	__iowmb();
+	npu_reg_write(npu_dev->bwmon_io.base, npu_dev->bwmon_io.size,
+		off, val);
 }
 
 uint32_t npu_qfprom_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	uint32_t ret = 0;
-
-	if (npu_dev->qfprom_io.base)
-		ret = readl(npu_dev->qfprom_io.base + off);
-
-	return ret;
+	return npu_reg_read(npu_dev->qfprom_io.base,
+		npu_dev->qfprom_io.size, off);
 }
 
 /* -------------------------------------------------------------------------
@@ -73,13 +106,20 @@ uint32_t npu_qfprom_reg_read(struct npu_device *npu_dev, uint32_t off)
  * -------------------------------------------------------------------------
  */
 void npu_mem_write(struct npu_device *npu_dev, void *dst, void *src,
-	uint32_t size)
+	size_t size)
 {
 	size_t dst_off = (size_t)dst;
 	uint32_t *src_ptr32 = (uint32_t *)src;
 	uint8_t *src_ptr8 = 0;
 	uint32_t i = 0;
 	uint32_t num = 0;
+
+	if (dst_off >= npu_dev->tcm_io.size ||
+		(npu_dev->tcm_io.size - dst_off) < size) {
+		pr_err("memory write exceeds io region %lx:%lx:%lx\n",
+			dst_off, size, npu_dev->tcm_io.size);
+		return;
+	}
 
 	num = size/4;
 	for (i = 0; i < num; i++) {
@@ -96,16 +136,25 @@ void npu_mem_write(struct npu_device *npu_dev, void *dst, void *src,
 			dst_off += 1;
 		}
 	}
+
+	__iowmb();
 }
 
 int32_t npu_mem_read(struct npu_device *npu_dev, void *src, void *dst,
-	uint32_t size)
+	size_t size)
 {
 	size_t src_off = (size_t)src;
 	uint32_t *out32 = (uint32_t *)dst;
 	uint8_t *out8 = 0;
 	uint32_t i = 0;
 	uint32_t num = 0;
+
+	if (src_off >= npu_dev->tcm_io.size ||
+		(npu_dev->tcm_io.size - src_off) < size) {
+		pr_err("memory read exceeds io region %lx:%lx:%lx\n",
+			src_off, size, npu_dev->tcm_io.size);
+		return 0;
+	}
 
 	num = size/4;
 	for (i = 0; i < num; i++) {

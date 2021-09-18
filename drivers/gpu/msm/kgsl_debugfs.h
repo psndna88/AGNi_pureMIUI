@@ -18,7 +18,7 @@
 struct kgsl_device;
 struct kgsl_process_private;
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 void kgsl_core_debugfs_init(void);
 void kgsl_core_debugfs_close(void);
 

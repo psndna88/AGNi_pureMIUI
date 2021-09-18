@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -150,6 +150,7 @@ struct kgsl_mmu_pt_ops {
  * @defaultpagetable: Default pagetable object for the MMU
  * @securepagetable: Default secure pagetable object for the MMU
  * @mmu_ops: Function pointers for the MMU sub-type
+ * @globalpt_mapped: True if global pagetable entries mapped
  * @secured: True if the MMU needs to be secured
  * @feature: Static list of MMU features
  * @secure_aligned_mask: Mask that secure buffers need to be aligned to
@@ -163,15 +164,21 @@ struct kgsl_mmu {
 	struct kgsl_pagetable *defaultpagetable;
 	struct kgsl_pagetable *securepagetable;
 	const struct kgsl_mmu_ops *mmu_ops;
+	bool globalpt_mapped;
 	bool secured;
 	unsigned long features;
 	unsigned int secure_align_mask;
 	uint64_t va_padding;
 	unsigned int svm_base32;
+	unsigned int secure_base;
+	unsigned int secure_size;
 	union {
 		struct kgsl_iommu iommu;
 	} priv;
 };
+
+/* KGSL MMU FLAGS */
+#define KGSL_MMU_STARTED BIT(0)
 
 #define KGSL_IOMMU_PRIV(_device) (&((_device)->mmu.priv.iommu))
 
