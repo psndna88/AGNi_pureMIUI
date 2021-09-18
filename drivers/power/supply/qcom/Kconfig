@@ -141,7 +141,7 @@ config PD_VERIFY
 
 config J6B_CHARGE_THERMAL
 	bool "j6b charge thermal"
-	default n
+	default y
 	help
 	  Say Y to include support for j6b charge thermal.
 

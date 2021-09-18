@@ -2,7 +2,7 @@
  * drivers/mmc/host/sdhci-msm.c - Qualcomm Technologies, Inc. MSM SDHCI Platform
  * driver source file
  *
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1203,7 +1203,7 @@ static void sdhci_msm_set_mmc_drv_type(struct sdhci_host *host, u32 opcode,
 int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode)
 {
 	unsigned long flags;
-	int tuning_seq_cnt = 3;
+	int tuning_seq_cnt = 10;
 	u8 phase, *data_buf, tuned_phases[NUM_TUNING_PHASES], tuned_phase_cnt;
 	const u32 *tuning_block_pattern = tuning_block_64;
 	int size = sizeof(tuning_block_64); /* Tuning pattern size in bytes */
@@ -1227,6 +1227,12 @@ int sdhci_msm_execute_tuning(struct sdhci_host *host, u32 opcode)
 		(ios.timing == MMC_TIMING_MMC_HS200) ||
 		(ios.timing == MMC_TIMING_UHS_SDR104)))
 		return 0;
+
+	/*
+	 * Clear tuning_done flag before tuning to ensure proper
+	 * HS400 settings.
+	 */
+	msm_host->tuning_done = 0;
 
 	/*
 	 * Don't allow re-tuning for CRC errors observed for any commands
@@ -1399,6 +1405,22 @@ retry:
 		sdhci_msm_set_mmc_drv_type(host, opcode, 0);
 
 	if (tuned_phase_cnt) {
+		if (tuned_phase_cnt == ARRAY_SIZE(tuned_phases)) {
+			/*
+			 * All phases valid is _almost_ as bad as no phases
+			 * valid.  Probably all phases are not really reliable
+			 * but we didn't detect where the unreliable place is.
+			 * That means we'll essentially be guessing and hoping
+			 * we get a good phase.  Better to try a few times.
+			 */
+			dev_dbg(mmc_dev(mmc), "%s: All phases valid; try again\n",
+				mmc_hostname(mmc));
+			if (--tuning_seq_cnt) {
+				tuned_phase_cnt = 0;
+				goto retry;
+			}
+		}
+
 		rc = msm_find_most_appropriate_phase(host, tuned_phases,
 							tuned_phase_cnt);
 		if (rc < 0)
@@ -4707,9 +4729,8 @@ static bool sdhci_msm_is_bootdevice(struct device *dev)
 	 */
 	return true;
 }
-/* add sdcard slot info for factory mode
- *    begin
- *    */
+
+/* 2020.07.13 longcheer xugui add sdcard slot info for factory mode begin */
 static struct kobject *card_slot_device = NULL;
 static struct sdhci_host *card_host =NULL;
 static ssize_t card_slot_status_show(struct device *dev,
@@ -4724,30 +4745,29 @@ static DEVICE_ATTR(card_slot_status, S_IRUGO ,
 int32_t card_slot_init_device_name(void)
 {
 	int32_t error = 0;
-//	pr_err("lilin-2\n");
+	//pr_err("xg-2\n");
 	if(card_slot_device != NULL){
 		pr_err("card_slot already created\n");
 		return 0;
 	}
 	card_slot_device = kobject_create_and_add("card_slot", NULL);
 	if (card_slot_device == NULL) {
-		//pr_err("lilin-3,%d\n");
+		//pr_err("xg-3,%d\n");
 		printk("%s: card_slot register failed\n", __func__);
 		error = -ENOMEM;
 		return error ;
 	}
 	error = sysfs_create_file(card_slot_device, &dev_attr_card_slot_status.attr);
 	if (error) {
-		//pr_err("lilin-4 %d\n",error);
+		//pr_err("xg-4 %d\n",error);
 		printk("%s: card_slot card_slot_status_create_file failed\n", __func__);
 		kobject_del(card_slot_device);
 	}
-	// pr_err("lilin-5\n");	
+	// pr_err("xg-5\n");
 	return 0 ;
 }
-/* add sdcard slot info for factory mode
- *    end
- *    */
+/* 2020.07.13 longcheer xugui add sdcard slot info for factory mode end */
+
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	const struct sdhci_msm_offset *msm_host_offset;
@@ -4755,7 +4775,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	struct sdhci_pltfm_host *pltfm_host;
 	struct sdhci_msm_host *msm_host;
 	struct resource *core_memres = NULL;
-	int ret = 0, dead = 0;
+	int ret = 0, dead = 0, tlmm_cfg = 0;
 	u16 host_version;
 	u32 irq_status, irq_ctl;
 	struct resource *tlmm_memres = NULL;
@@ -4995,7 +5015,14 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto vreg_deinit;
 		}
-		writel_relaxed(readl_relaxed(tlmm_mem) | 0x2, tlmm_mem);
+		ret = of_property_read_u32(pdev->dev.of_node,
+					   "tlmm_cfg",
+					   &tlmm_cfg);
+		if (ret)
+			writel_relaxed(readl_relaxed(tlmm_mem) | 0x2, tlmm_mem);
+		else
+			writel_relaxed(readl_relaxed(tlmm_mem) | tlmm_cfg,
+						 tlmm_mem);
 	}
 
 	/*
@@ -5267,10 +5294,12 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		ret = device_create_file(&pdev->dev, &msm_host->polling);
 		if (ret)
 			goto remove_max_bus_bw_file;
-	}else{
-	//	pr_err("lilin-1\n");
+	/* 2020.07.13 longcheer xugui add sdcard slot info for factory mode begin */
+	} else {
+		//pr_err("xg-1\n");
 		card_host = dev_get_drvdata(&pdev->dev);
 		card_slot_init_device_name();
+	/* 2020.07.13 longcheer xugui add sdcard slot info for factory mode end */
 	}
 
 	msm_host->auto_cmd21_attr.show = show_auto_cmd21;
@@ -5604,11 +5633,38 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 	return ret;
 }
 
+static int sdhci_msm_freeze(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct mmc_host *mmc = host->mmc;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+
+	if (gpio_is_valid(msm_host->pdata->status_gpio) &&
+			(msm_host->mmc->slot.cd_irq >= 0))
+		mmc_gpiod_free_cd_irq(mmc);
+	return 0;
+}
+
+static int sdhci_msm_restore(struct device *dev)
+{
+	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct mmc_host *mmc = host->mmc;
+
+	mmc_gpiod_restore_cd_irq(mmc);
+
+	return 0;
+}
+
 static const struct dev_pm_ops sdhci_msm_pmops = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(sdhci_msm_suspend, sdhci_msm_resume)
-	SET_RUNTIME_PM_OPS(sdhci_msm_runtime_suspend, sdhci_msm_runtime_resume,
-			   NULL)
-	.suspend_noirq = sdhci_msm_suspend_noirq,
+	.suspend_late		= sdhci_msm_suspend,
+	.resume_early		= sdhci_msm_resume,
+	.runtime_suspend	= sdhci_msm_runtime_suspend,
+	.runtime_resume		= sdhci_msm_runtime_resume,
+	.suspend_noirq		= sdhci_msm_suspend_noirq,
+	.freeze			= sdhci_msm_freeze,
+	.restore		= sdhci_msm_restore,
+	.thaw			= sdhci_msm_restore,
 };
 
 #define SDHCI_MSM_PMOPS (&sdhci_msm_pmops)

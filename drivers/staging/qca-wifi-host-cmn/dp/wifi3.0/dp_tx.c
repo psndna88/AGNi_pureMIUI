@@ -1400,31 +1400,6 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 		}
 
 		/*
-		 * Enqueue the Tx MSDU descriptor to HW for transmit
-		 */
-		status = dp_tx_hw_enqueue(soc, vdev, tx_desc, msdu_info->tid,
-			htt_tcl_metadata, tx_q->ring_id, NULL);
-
-		if (status != QDF_STATUS_SUCCESS) {
-			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-				  "%s Tx_hw_enqueue Fail tx_desc %pK queue %d\n",
-				  __func__, tx_desc, tx_q->ring_id);
-
-			if (tx_desc->flags & DP_TX_DESC_FLAG_ME)
-				dp_tx_me_free_buf(pdev, tx_desc->me_buffer);
-
-			dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
-			goto done;
-		}
-
-		/*
-		 * TODO
-		 * if tso_info structure can be modified to have curr_seg
-		 * as first element, following 2 blocks of code (for TSO and SG)
-		 * can be combined into 1
-		 */
-
-		/*
 		 * For frames with multiple segments (TSO, ME), jump to next
 		 * segment.
 		 */
@@ -1445,6 +1420,42 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				/* nbuf = msdu_info->u.tso_info.curr_seg->nbuf; */
 			}
 		}
+
+		/*
+		 * Enqueue the Tx MSDU descriptor to HW for transmit
+		 */
+		status = dp_tx_hw_enqueue(soc, vdev, tx_desc, msdu_info->tid,
+			htt_tcl_metadata, tx_q->ring_id, NULL);
+
+		if (status != QDF_STATUS_SUCCESS) {
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				  "%s Tx_hw_enqueue Fail tx_desc %pK queue %d\n",
+				  __func__, tx_desc, tx_q->ring_id);
+
+			if (tx_desc->flags & DP_TX_DESC_FLAG_ME)
+				dp_tx_me_free_buf(pdev, tx_desc->me_buffer);
+
+			dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
+
+			/*
+			 * For TSO frames, the nbuf users increment done for
+			 * the current segment has to be reverted, since the
+			 * hw enqueue for this segment failed
+			 */
+			if (msdu_info->frm_type == dp_tx_frm_tso &&
+			    msdu_info->u.tso_info.curr_seg) {
+				qdf_nbuf_free(nbuf);
+			}
+
+			goto done;
+		}
+
+		/*
+		 * TODO
+		 * if tso_info structure can be modified to have curr_seg
+		 * as first element, following 2 blocks of code (for TSO and SG)
+		 * can be combined into 1
+		 */
 
 		/*
 		 * For Multicast-Unicast converted packets,

@@ -153,13 +153,20 @@ static int virt_sensor_read_temp(void *data, int *val)
 	for (idx = 0; idx < sens->num_sensors; idx++) {
 		int sens_temp = 0;
 
-		ret = thermal_zone_get_temp(sens->tz[idx], &sens_temp);
+		ret = thermal_zone_get_temp_nolock(sens->tz[idx], &sens_temp);
 		if (ret) {
 			pr_err("virt zone: sensor[%s] read error:%d\n",
 				sens->tz[idx]->type, ret);
 			return ret;
 		}
 		switch (sens->logic) {
+		case VIRT_COUNT_THRESHOLD:
+			if ((sens->coefficients[idx] < 0 &&
+			     sens_temp < -sens->coefficients[idx]) ||
+			    (sens->coefficients[idx] > 0 &&
+			     sens_temp >= sens->coefficients[idx]))
+				temp += 1;
+			break;
 		case VIRT_WEIGHTED_AVG:
 			temp += sens_temp * sens->coefficients[idx];
 			if (idx == (sens->num_sensors - 1))
@@ -1001,7 +1008,8 @@ struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
 	sens->virt_tz = tzd;
 	sens->logic = sensor_data->logic;
 	sens->num_sensors = sensor_data->num_sensors;
-	if (sens->logic == VIRT_WEIGHTED_AVG) {
+	if ((sens->logic == VIRT_WEIGHTED_AVG) ||
+	    (sens->logic == VIRT_COUNT_THRESHOLD)) {
 		int coeff_ct = sensor_data->coefficient_ct;
 
 		/*
@@ -1009,7 +1017,7 @@ struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
 		 * n+2 coefficients.
 		 */
 		if (coeff_ct != sens->num_sensors) {
-			dev_err(dev, "sens:%s Invalid coefficient\n",
+			dev_err(dev, "sens:%s invalid coefficient\n",
 					sensor_data->virt_zone_name);
 			return ERR_PTR(-EINVAL);
 		}

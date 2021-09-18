@@ -44,7 +44,7 @@ edit [linux]/fs/Kconfig
   source "fs/ntfs/Kconfig"
   endmenu
 ```
-  
+
 
 edit [linux]/fs/Makefile
 ```

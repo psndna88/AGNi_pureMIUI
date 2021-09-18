@@ -209,6 +209,8 @@ struct tcp_sock {
 		u8 reord;    /* reordering detected */
 	} rack;
 	u16	advmss;		/* Advertised MSS			*/
+	u8	tlp_retrans:1,	/* TLP is a retransmission */
+		unused_1:7;
 	u32	chrono_start;	/* Start time in jiffies of a TCP chrono */
 	u32	chrono_stat[3];	/* Time in jiffies for chrono_stat stats */
 	u8	chrono_type:2,	/* current chronograph type */
@@ -229,7 +231,10 @@ struct tcp_sock {
 		syn_data_acked:1,/* data in SYN is acked by SYN-ACK */
 		save_syn:1,	/* Save headers of SYN packet */
 		is_cwnd_limited:1;/* forward progress limited by snd_cwnd? */
-	u32	tlp_high_seq;	/* snd_nxt at the time of TLP retransmit. */
+	u32	tlp_high_seq;	/* snd_nxt at the time of TLP */
+
+	u64	tcp_wstamp_ns;	/* departure time for next sent data packet */
+	u64	tcp_clock_cache; /* cache last tcp_clock_ns() (see tcp_mstamp_refresh()) */
 
 /* RTT measurement */
 	u64	tcp_mstamp;	/* most recent packet received/sent */
@@ -270,6 +275,7 @@ struct tcp_sock {
 				 * receiver in Recovery. */
 	u32	prr_out;	/* Total number of pkts sent during Recovery. */
 	u32	delivered;	/* Total data packets delivered incl. rexmits */
+	u32	delivered_ce;	/* Like the above but only ECE marked packets */
 	u32	lost;		/* Total data packets lost incl. rexmits */
 	u32	app_limited;	/* limited until "delivered" reaches this val */
 	u64	first_tx_mstamp;  /* start of window send phase */
@@ -362,6 +368,41 @@ struct tcp_sock {
 	 * socket. Used to retransmit SYNACKs etc.
 	 */
 	struct request_sock *fastopen_rsk;
+
+	/* DeepCC Params*/
+	u8	deepcc_enable;		/*1 => Only enable periodic reports and setting cwnd. */
+							/*2 => (above) + enable deepcc pacing rate calculation*/
+	struct {
+		u32 min_urtt;
+		u32 avg_urtt;
+		u32 cnt;
+		u64	avg_thr;		/* average throughput */
+		u32	thr_cnt;		/* Number of sampled throughput for averaging it*/
+		u32 pre_lost;		/* Total Number of Previously lost packets*/
+	} deepcc_api;
+
+	/* Orca: min. cwnd*/
+	u32  cwnd_min;
+
+	/* C2TCP Parameters */
+	u32 first_above_time;
+	u32 next_time;
+	u32 cnt_rtt;
+	u16 rec_inv_sqrt;
+	u32 c2tcp_min_urtt;
+	u32 c2tcp_avg_urtt;
+	u32 c2tcp_cnt;
+	u64	c2tcp_avg_thr;		/* average throughput */
+	u32	c2tcp_thr_cnt;		/* Number of sampled throughput for averaging it*/
+	/**
+	 * Accessible settings (to Applications):
+	 */
+	u8  c2tcp_enable;
+	u32 c2tcp_alpha;
+//	u32 c2tcp_setpoint;
+//	u32 c2tcp_interval;
+	/*END of C2TCP*/
+
 	u32	*saved_syn;
 };
 
@@ -450,4 +491,8 @@ static inline u16 tcp_mss_clamp(const struct tcp_sock *tp, u16 mss)
 
 	return (user_mss && user_mss < mss) ? user_mss : mss;
 }
+
+int tcp_skb_shift(struct sk_buff *to, struct sk_buff *from, int pcount,
+		  int shiftlen);
+
 #endif	/* _LINUX_TCP_H */

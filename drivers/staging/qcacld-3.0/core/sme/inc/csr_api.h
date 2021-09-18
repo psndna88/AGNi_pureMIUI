@@ -772,6 +772,7 @@ typedef struct tagPmkidCacheInfo {
 	uint8_t ssid_len;
 	uint8_t ssid[SIR_MAC_MAX_SSID_LENGTH];
 	uint8_t cache_id[CACHE_ID_LEN];
+	tCsrMobilityDomainInfo MDID;
 } tPmkidCacheInfo;
 
 #ifdef FEATURE_WLAN_WAPI
@@ -1260,6 +1261,9 @@ typedef struct tagCsrConfigParam {
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
 	uint32_t roam_bg_scan_client_bitmap;
+	uint32_t roam_data_rssi_threshold_triggers;
+	int32_t roam_data_rssi_threshold;
+	uint32_t rx_data_inactivity_time;
 	uint32_t obss_width_interval;
 	uint32_t obss_active_dwelltime;
 	uint32_t obss_passive_dwelltime;
@@ -1353,8 +1357,11 @@ typedef struct tagCsrConfigParam {
 	bool sae_single_pmk_feature_enabled;
 #endif
 	bool enable_pending_list_req;
-	bool disable_4way_hs_offload;
+	uint32_t disable_4way_hs_offload;
 	uint32_t sta_disable_roam;
+#ifdef WLAN_FEATURE_SAE
+	uint32_t sae_connect_retries;
+#endif
 } tCsrConfigParam;
 
 /* Tush */

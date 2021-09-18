@@ -4124,6 +4124,7 @@ uint8_t csr_construct_rsn_ie(tpAniSirGlobal pMac, uint32_t sessionId,
 						   pProfile->pRSNReqIE + 2,
 				  pProfile->nRSNReqIELength -2, &rsn_ie, false);
 			if (!DOT11F_FAILED(ret)) {
+				session->rsn_caps = *(struct rsn_caps *)rsn_ie.RSN_Cap;
 				pIesLocal->RSN.RSN_Cap[0] =
 						pIesLocal->RSN.RSN_Cap[0] &
 						rsn_ie.RSN_Cap[0];
@@ -4218,7 +4219,6 @@ uint8_t csr_construct_rsn_ie(tpAniSirGlobal pMac, uint32_t sessionId,
 		} else {
 			pPMK->cPMKIDs = 0;
 		}
-		session->rsn_caps = RSNCapabilities;
 
 		qdf_mem_zero(&pmkid_cache, sizeof(pmkid_cache));
 

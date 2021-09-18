@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -642,6 +642,7 @@ int32_t cam_context_flush_ctx_to_hw(struct cam_context *ctx)
 			ctx->dev_name, ctx->ctx_id);
 
 	flush_args.num_req_pending = 0;
+	flush_args.last_flush_req = ctx->last_flush_req;
 	while (true) {
 		spin_lock(&ctx->lock);
 		if (list_empty(&temp_list)) {
@@ -1033,7 +1034,7 @@ int32_t cam_context_dump_pf_info_to_hw(struct cam_context *ctx,
 		cmd_args.ctxt_to_hw_map = ctx->ctxt_to_hw_map;
 		cmd_args.cmd_type = CAM_HW_MGR_CMD_DUMP_PF_INFO;
 		cmd_args.u.pf_args.pf_data.packet = packet;
-		cmd_args.u.pf_args.pf_data.ctx_id = ctx->ctx_id;
+		cmd_args.u.pf_args.pf_data.ctx = ctx;
 		cmd_args.u.pf_args.iova = iova;
 		cmd_args.u.pf_args.buf_info = buf_info;
 		cmd_args.u.pf_args.mem_found = mem_found;

@@ -140,6 +140,7 @@
 #include "wlan_hdd_twt.h"
 #include "wlan_mlme_ucfg_api.h"
 #include <wlan_hdd_debugfs_coex.h>
+#include "qdf_func_tracker.h"
 
 #ifdef CNSS_GENL
 #include <net/cnss_nl.h>
@@ -1252,6 +1253,8 @@ static void hdd_update_tgt_services(struct hdd_context *hdd_ctx,
 	hdd_update_tdls_config(hdd_ctx);
 	sme_update_tgt_services(hdd_ctx->mac_handle, cfg);
 	hdd_ctx->roam_ch_from_fw_supported = cfg->is_roam_scan_ch_to_host;
+	hdd_ctx->ll_stats_per_chan_rx_tx_time =
+					cfg->ll_stats_per_chan_rx_tx_time;
 }
 
 /**
@@ -6100,6 +6103,36 @@ hdd_peer_cleanup(struct hdd_context *hdd_ctx, struct hdd_adapter *adapter)
 		hdd_debug("peer_cleanup_done wait fail");
 }
 
+#ifdef FUNC_CALL_MAP
+
+/**
+ * hdd_dump_func_call_map() - Dump the function call map
+ *
+ * Return: None
+ */
+
+static void hdd_dump_func_call_map(void)
+{
+	char *cc_buf;
+
+	cc_buf = qdf_mem_malloc(QDF_FUNCTION_CALL_MAP_BUF_LEN);
+	/*
+	 * These logs are required as these indicates the start and end of the
+	 * dump for the auto script to parse
+	 */
+	hdd_info("Function call map dump start");
+	qdf_get_func_call_map(cc_buf);
+	qdf_trace_hex_dump(QDF_MODULE_ID_HDD,
+		QDF_TRACE_LEVEL_DEBUG, cc_buf, QDF_FUNCTION_CALL_MAP_BUF_LEN);
+	hdd_info("Function call map dump end");
+	qdf_mem_free(cc_buf);
+}
+#else
+static inline void hdd_dump_func_call_map(void)
+{
+}
+#endif
+
 QDF_STATUS hdd_stop_adapter(struct hdd_context *hdd_ctx,
 			    struct hdd_adapter *adapter)
 {
@@ -6296,6 +6329,7 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 			clear_bit(ACS_PENDING, &adapter->event_flags);
 		}
 		wlan_hdd_scan_abort(adapter);
+		hdd_abort_ongoing_sta_connection(hdd_ctx);
 		/* Diassociate with all the peers before stop ap post */
 		if (test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags))
 			wlan_hdd_del_station(adapter);
@@ -6330,28 +6364,14 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 		}
 
 		wlan_hdd_undo_acs(adapter);
-		if (adapter->device_mode == QDF_P2P_GO_MODE)
+		if (adapter->device_mode == QDF_P2P_GO_MODE) {
 			wlan_hdd_cleanup_remain_on_channel_ctx(adapter);
+			hdd_abort_ongoing_sta_connection(hdd_ctx);
+		}
 
 		hdd_deregister_tx_flow_control(adapter);
 
 		hdd_destroy_acs_timer(adapter);
-		/**
-		 * During vdev destroy, If any STA is in connecting state the
-		 * roam command will be in active queue and thus vdev destroy is
-		 * queued in pending queue. In case STA is tries to connected to
-		 * multiple BSSID and fails to connect, due to auth/assoc
-		 * timeouts it may take more than vdev destroy time to get
-		 * completes. If vdev destroy timeout vdev is moved to logically
-		 * deleted state. Once connection is completed, vdev destroy is
-		 * activated and to release the self-peer ref count it try to
-		 * get the ref of the vdev, which fails as vdev is logically
-		 * deleted and this leads to peer ref leak. So before vdev
-		 * destroy is queued abort any STA ongoing connection to avoid
-		 * vdev destroy timeout.
-		 */
-		if (test_bit(SME_SESSION_OPENED, &adapter->event_flags))
-			hdd_abort_ongoing_sta_connection(hdd_ctx);
 
 		mutex_lock(&hdd_ctx->sap_lock);
 		if (test_bit(SOFTAP_BSS_STARTED, &adapter->event_flags)) {
@@ -6460,6 +6480,8 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 		adapter->scan_info.default_scan_ies = NULL;
 	}
 
+	/* This function should be invoked at the end of this api*/
+	hdd_dump_func_call_map();
 	hdd_exit();
 	return QDF_STATUS_SUCCESS;
 }
@@ -7367,7 +7389,8 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 	hdd_enter();
 
 	hdd_for_each_adapter(hdd_ctx, adapter) {
-		if (!hdd_is_interface_up(adapter))
+		if (!hdd_is_interface_up(adapter) &&
+		    adapter->device_mode != QDF_NDI_MODE)
 			continue;
 
 		hdd_debug("[SSR] start adapter with device mode %s(%d)",
@@ -7423,6 +7446,14 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 						   GFP_KERNEL, false, 0);
 			}
 
+			if (cds_is_driver_recovering() &&
+			    (adapter->device_mode == QDF_NAN_DISC_MODE ||
+			     (adapter->device_mode == QDF_STA_MODE &&
+			      wlan_hdd_nan_is_supported(hdd_ctx) &&
+			      !(hdd_ctx->nan_seperate_vdev_supported &&
+			      wlan_hdd_nan_separate_iface_supported(hdd_ctx)))))
+				hdd_nan_disable_ind_to_userspace(hdd_ctx);
+
 			hdd_register_tx_flow_control(adapter,
 					hdd_tx_resume_timer_expired_handler,
 					hdd_tx_resume_cb,
@@ -7467,6 +7498,9 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 				wlan_hdd_set_mon_chan(
 						adapter, adapter->mon_chan,
 						adapter->mon_bandwidth);
+			break;
+		case QDF_NDI_MODE:
+			hdd_ndi_start(adapter->dev->name, 0);
 			break;
 		default:
 			break;
@@ -7655,7 +7689,7 @@ QDF_STATUS hdd_adapter_iterate(hdd_adapter_iterate_cb cb, void *context)
 	}
 	qdf_spin_unlock_bh(&hdd_ctx->hdd_adapter_lock);
 
-	for (i = 0; i < n_cache - 1; i++) {
+	for (i = 0; i < n_cache; i++) {
 		adapter = hdd_adapter_get_by_reference(hdd_ctx, cache[i]);
 		if (!adapter) {
 			/*
@@ -8152,32 +8186,6 @@ out:
 }
 
 /**
- * hdd_rx_wake_lock_destroy() - Destroy RX wakelock
- * @hdd_ctx:	HDD context.
- *
- * Destroy RX wakelock.
- *
- * Return: None.
- */
-static void hdd_rx_wake_lock_destroy(struct hdd_context *hdd_ctx)
-{
-	qdf_wake_lock_destroy(&hdd_ctx->rx_wake_lock);
-}
-
-/**
- * hdd_rx_wake_lock_create() - Create RX wakelock
- * @hdd_ctx:	HDD context.
- *
- * Create RX wakelock.
- *
- * Return: None.
- */
-static void hdd_rx_wake_lock_create(struct hdd_context *hdd_ctx)
-{
-	qdf_wake_lock_create(&hdd_ctx->rx_wake_lock, "qcom_rx_wakelock");
-}
-
-/**
  * hdd_context_deinit() - Deinitialize HDD context
  * @hdd_ctx:    HDD context.
  *
@@ -8194,8 +8202,6 @@ static int hdd_context_deinit(struct hdd_context *hdd_ctx)
 	wlan_hdd_cfg80211_deinit(hdd_ctx->wiphy);
 
 	hdd_sap_context_destroy(hdd_ctx);
-
-	hdd_rx_wake_lock_destroy(hdd_ctx);
 
 	hdd_scan_context_destroy(hdd_ctx);
 
@@ -8376,6 +8382,9 @@ static void hdd_wlan_exit(struct hdd_context *hdd_ctx)
 	driver_status = hdd_objmgr_release_and_destroy_psoc(hdd_ctx);
 	if (driver_status)
 		hdd_err("Psoc delete failed");
+
+	/* This function should be invoked at the end of this api*/
+	hdd_dump_func_call_map();
 }
 
 void __hdd_wlan_exit(void)
@@ -10315,8 +10324,6 @@ static int hdd_context_init(struct hdd_context *hdd_ctx)
 	if (ret)
 		goto list_destroy;
 
-	hdd_rx_wake_lock_create(hdd_ctx);
-
 	ret = hdd_sap_context_init(hdd_ctx);
 	if (ret)
 		goto scan_destroy;
@@ -10340,7 +10347,6 @@ sap_destroy:
 
 scan_destroy:
 	hdd_scan_context_destroy(hdd_ctx);
-	hdd_rx_wake_lock_destroy(hdd_ctx);
 list_destroy:
 	qdf_list_destroy(&hdd_ctx->hdd_adapters);
 
@@ -12615,6 +12621,7 @@ int hdd_wlan_stop_modules(struct hdd_context *hdd_ctx, bool ftm_mode)
 		}
 	}
 
+	hdd_bus_bw_compute_timer_stop(hdd_ctx);
 	hdd_deregister_policy_manager_callback(hdd_ctx->psoc);
 
 	/* free user wowl patterns */
@@ -13260,8 +13267,6 @@ int hdd_register_cb(struct hdd_context *hdd_ctx)
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("Register tx queue callback failed");
 
-	sme_set_oem_data_event_handler_cb(mac_handle, hdd_oem_event_handler_cb);
-
 	sme_set_roam_scan_ch_event_cb(mac_handle, hdd_get_roam_scan_ch_cb);
 
 	status = sme_set_beacon_latency_event_cb(mac_handle,
@@ -13296,8 +13301,6 @@ void hdd_deregister_cb(struct hdd_context *hdd_ctx)
 	}
 
 	mac_handle = hdd_ctx->mac_handle;
-
-	sme_reset_oem_data_event_handler_cb(mac_handle);
 
 	sme_deregister_tx_queue_cb(mac_handle);
 

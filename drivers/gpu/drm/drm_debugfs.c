@@ -36,7 +36,7 @@
 #include "drm_internal.h"
 #include "drm_crtc_internal.h"
 
-#if defined(CONFIG_DEBUG_FS_)
+#if defined(CONFIG_DEBUG_FS)
 
 /***************************************************
  * Initialization, etc.
@@ -250,13 +250,13 @@ static ssize_t connector_write(struct file *file, const char __user *ubuf,
 
 	buf[len] = '\0';
 
-	if (!strcmp(buf, "on"))
+	if (sysfs_streq(buf, "on"))
 		connector->force = DRM_FORCE_ON;
-	else if (!strcmp(buf, "digital"))
+	else if (sysfs_streq(buf, "digital"))
 		connector->force = DRM_FORCE_ON_DIGITAL;
-	else if (!strcmp(buf, "off"))
+	else if (sysfs_streq(buf, "off"))
 		connector->force = DRM_FORCE_OFF;
-	else if (!strcmp(buf, "unspecified"))
+	else if (sysfs_streq(buf, "unspecified"))
 		connector->force = DRM_FORCE_UNSPECIFIED;
 	else
 		return -EINVAL;
@@ -411,4 +411,4 @@ void drm_debugfs_crtc_remove(struct drm_crtc *crtc)
 	crtc->debugfs_entry = NULL;
 }
 
-#endif /* CONFIG_DEBUG_FS_ */
+#endif /* CONFIG_DEBUG_FS */

@@ -67,7 +67,7 @@
 #if LCT_TP_USB_PLUGIN
 static void fts_ts_usb_plugin_work_func(struct work_struct *work);
 DECLARE_WORK(fts_usb_plugin_work, fts_ts_usb_plugin_work_func);
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
+extern touchscreen_usb_plugin_data_t g_touchscreen_usb_plugin;
 #endif
 
 /*****************************************************************************
@@ -121,7 +121,7 @@ static void fts_ts_usb_plugin_work_func(struct work_struct *work)
 		FTS_ERROR("tp is suspended,can not to set\n");
 		return;
 	}
-	lct_fts_set_charger_mode(g_touchscreen_usb_pulgin.usb_plugged_in);
+	lct_fts_set_charger_mode(g_touchscreen_usb_plugin.usb_plugged_in);
 	return;
 
 }
@@ -816,7 +816,7 @@ static int fts_irq_registration(struct fts_ts_data *ts_data)
 	struct fts_ts_platform_data *pdata = ts_data->pdata;
 
 	ts_data->irq = gpio_to_irq(pdata->irq_gpio);
-	pdata->irq_gpio_flags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
+	pdata->irq_gpio_flags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_PERF_CRITICAL;
 	FTS_INFO("irq:%d, flag:%x", ts_data->irq, pdata->irq_gpio_flags);
 	ret = request_threaded_irq(ts_data->irq, NULL, fts_irq_handler, pdata->irq_gpio_flags, FTS_DRIVER_NAME, ts_data);
 
@@ -1535,7 +1535,7 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 		}
 	}
 
-	ts_data->ts_workqueue = alloc_workqueue("fts_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	ts_data->ts_workqueue = create_singlethread_workqueue("fts_wq");
 	if (!ts_data->ts_workqueue) {
 		FTS_ERROR("create fts workqueue fail");
 	}
@@ -1669,7 +1669,7 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 #endif
 
 #if LCT_TP_USB_PLUGIN
-	g_touchscreen_usb_pulgin.event_callback = fts_ts_usb_event_callback;
+	g_touchscreen_usb_plugin.event_callback = fts_ts_usb_event_callback;
 #endif
 	//2019.12.11 longcheer zhaoxiangxiang add for esd check
 	lcd_esd_enable(1);
@@ -1904,8 +1904,8 @@ static int fts_ts_resume(struct device *dev)
 #endif
 
 #if LCT_TP_USB_PLUGIN
-	if (g_touchscreen_usb_pulgin.valid)
-		g_touchscreen_usb_pulgin.event_callback();
+	if (g_touchscreen_usb_plugin.valid)
+		g_touchscreen_usb_plugin.event_callback();
 #endif
 	//2019.12.11 longcheer zhaoxiangxiang add for esd check
 	lcd_esd_enable(1);
@@ -2274,7 +2274,7 @@ static int __init fts_ts_init(void)
 		FTS_ERROR("saved_command_line ERROR!");
 		return -ENOMEM;
 	} else {
-		if (strnstr(saved_command_line, "huaxing", 2048) != NULL) {
+		if (strnstr(saved_command_line, "huaxing", strlen(saved_command_line)) != NULL) {
 			FTS_INFO("TP info: [Vendor]huaxing [IC]ft8756");
 		} else {
 			FTS_ERROR("Unknown Touch");
@@ -2283,7 +2283,7 @@ static int __init fts_ts_init(void)
 	}
 
 	//Check android mode
-	if (strnstr(saved_command_line, "androidboot.mode=charger", 2048) != NULL) {
+	if (strnstr(saved_command_line, "androidboot.mode=charger", strlen(saved_command_line)) != NULL) {
 		FTS_INFO("androidboot.mode=charger, doesn't support touch in the charging mode!");
 		return -ENODEV;
 	}

@@ -33,7 +33,10 @@ struct msm_commit {
 	uint32_t crtc_mask;
 	uint32_t plane_mask;
 	bool nonblock;
-	struct kthread_work commit_work;
+	union {
+		struct kthread_work commit_work;
+		struct work_struct clean_work;
+	};
 };
 
 static BLOCKING_NOTIFIER_HEAD(msm_drm_notifier_list);
@@ -73,11 +76,22 @@ EXPORT_SYMBOL(msm_drm_unregister_client);
  * @v: notifier data, inculde display id and display blank
  *     event(unblank or power down).
  */
+static bool notifier_enabled __read_mostly = true;
 static int msm_drm_notifier_call_chain(unsigned long val, void *v)
 {
+	if (unlikely(!notifier_enabled))
+		return 0;
+
 	return blocking_notifier_call_chain(&msm_drm_notifier_list, val,
 					    v);
 }
+
+void msm_drm_notifier_enable(bool val)
+{
+	notifier_enabled = val;
+	mb();
+}
+EXPORT_SYMBOL(msm_drm_notifier_enable);
 
 /* block until specified crtcs are no longer pending update, and
  * atomically mark them as pending update
@@ -116,7 +130,6 @@ static void end_atomic(struct msm_drm_private *priv, uint32_t crtc_mask,
 
 static void commit_destroy(struct msm_commit *c)
 {
-	end_atomic(c->dev->dev_private, c->crtc_mask, c->plane_mask);
 	if (c->nonblock)
 		kfree(c);
 }
@@ -131,6 +144,7 @@ static inline bool _msm_seamless_for_crtc(struct drm_atomic_state *state,
 
 	if (msm_is_mode_seamless(&crtc_state->mode) ||
 		msm_is_mode_seamless_vrr(&crtc_state->adjusted_mode) ||
+		msm_is_mode_seamless_poms(&crtc_state->adjusted_mode) ||
 		msm_is_mode_seamless_dyn_clk(&crtc_state->adjusted_mode))
 		return true;
 
@@ -563,6 +577,16 @@ static void msm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 	SDE_ATRACE_END("msm_enable");
 }
 
+static void complete_commit_cleanup(struct work_struct *work)
+{
+	struct msm_commit *c = container_of(work, typeof(*c), clean_work);
+	struct drm_atomic_state *state = c->state;
+
+	drm_atomic_state_put(state);
+
+	commit_destroy(c);
+}
+
 /* The (potentially) asynchronous part of the commit.  At this point
  * nothing can fail short of armageddon.
  */
@@ -602,25 +626,24 @@ static void complete_commit(struct msm_commit *c)
 
 	kms->funcs->complete_commit(kms, state);
 
-	drm_atomic_state_put(state);
-
-	commit_destroy(c);
+	end_atomic(priv, c->crtc_mask, c->plane_mask);
 }
 
 static void _msm_drm_commit_work_cb(struct kthread_work *work)
 {
-	struct msm_commit *commit =  NULL;
-
-	if (!work) {
-		DRM_ERROR("%s: Invalid commit work data!\n", __func__);
-		return;
-	}
-
-	commit = container_of(work, struct msm_commit, commit_work);
+	struct msm_commit *c = container_of(work, typeof(*c), commit_work);
 
 	SDE_ATRACE_BEGIN("complete_commit");
-	complete_commit(commit);
+	complete_commit(c);
 	SDE_ATRACE_END("complete_commit");
+
+	if (c->nonblock) {
+		/* Offload the cleanup onto little CPUs (an unbound wq) */
+		INIT_WORK(&c->clean_work, complete_commit_cleanup);
+		queue_work(system_unbound_wq, &c->clean_work);
+	} else {
+		complete_commit_cleanup(&c->clean_work);
+	}
 }
 
 static struct msm_commit *commit_init(struct drm_atomic_state *state,
@@ -691,6 +714,7 @@ static void msm_atomic_commit_dispatch(struct drm_device *dev,
 		 */
 		DRM_ERROR("failed to dispatch commit to any CRTC\n");
 		complete_commit(commit);
+		complete_commit_cleanup(&commit->clean_work);
 	} else if (!nonblock) {
 		kthread_flush_work(&commit->commit_work);
 	}
@@ -770,6 +794,10 @@ int msm_atomic_commit(struct drm_device *dev,
 		goto err_free;
 
 	BUG_ON(drm_atomic_helper_swap_state(state, false) < 0);
+
+	if (!atomic_cmpxchg_acquire(&priv->pm_req_set, 1, 0))
+		pm_qos_update_request(&priv->pm_irq_req, 100);
+	mod_delayed_work(system_unbound_wq, &priv->pm_unreq_dwork, HZ / 10);
 
 	/*
 	 * This is the point of no return - everything below never fails except

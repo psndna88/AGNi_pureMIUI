@@ -63,9 +63,6 @@
 #define SECRET_PAGE						0x03
 #define MAX_PAGENUM						0x04
 
-#define DS28EL16_MAX_PAGE			3
-#define DS28EL16_MAX_USABLE_PAGE		1
-
 #define ANONYMOUS						1
 
 //retry times config
@@ -85,8 +82,6 @@
 #define CUSTOM_ID_LSB					0xF0
 
 extern unsigned char last_result_byte;
-
-#define CURRENT_DS28E16_TASK			0
 
 // Command functions
 // 1-Wire ROMID commands

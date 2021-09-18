@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -204,6 +204,7 @@ extern int cnss_get_platform_cap(struct device *dev,
 extern struct dma_iommu_mapping *cnss_smmu_get_mapping(struct device *dev);
 extern int cnss_smmu_map(struct device *dev,
 			 phys_addr_t paddr, uint32_t *iova_addr, size_t size);
+extern int cnss_smmu_unmap(struct device *dev, uint32_t iova_addr, size_t size);
 extern int cnss_get_soc_info(struct device *dev, struct cnss_soc_info *info);
 extern int cnss_request_bus_bandwidth(struct device *dev, int bandwidth);
 extern int cnss_power_up(struct device *dev);
@@ -221,6 +222,7 @@ extern int cnss_wlan_pm_control(struct device *dev, bool vote);
 extern int cnss_auto_suspend(struct device *dev);
 extern int cnss_auto_resume(struct device *dev);
 extern int cnss_pci_is_drv_connected(struct device *dev);
+extern int cnss_pci_force_wake_request_sync(struct device *dev, int timeout);
 extern int cnss_pci_force_wake_request(struct device *dev);
 extern int cnss_pci_is_device_awake(struct device *dev);
 extern int cnss_pci_force_wake_release(struct device *dev);

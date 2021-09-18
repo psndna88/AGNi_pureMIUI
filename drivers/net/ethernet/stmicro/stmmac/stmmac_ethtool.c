@@ -376,6 +376,7 @@ stmmac_ethtool_set_link_ksettings(struct net_device *dev,
 	struct stmmac_priv *priv = netdev_priv(dev);
 	struct phy_device *phy = dev->phydev;
 	int rc;
+	u32 cmd_speed = cmd->base.speed;
 
 	if (priv->hw->pcs & STMMAC_PCS_RGMII ||
 	    priv->hw->pcs & STMMAC_PCS_SGMII) {
@@ -403,7 +404,12 @@ stmmac_ethtool_set_link_ksettings(struct net_device *dev,
 		return 0;
 	}
 
-	rc = phy_ethtool_ksettings_set(phy, cmd);
+	/* Half duplex is not supported */
+	if (cmd->base.duplex != DUPLEX_FULL ||
+	    (cmd_speed == SPEED_1000 && cmd->base.autoneg == AUTONEG_DISABLE))
+		rc = -EINVAL;
+	else
+		rc = phy_ethtool_ksettings_set(phy, cmd);
 
 	return rc;
 }
@@ -677,23 +683,16 @@ static int stmmac_ethtool_op_set_eee(struct net_device *dev,
 	struct stmmac_priv *priv = netdev_priv(dev);
 	int ret;
 
-	if (!edata->eee_enabled) {
+	if (!priv->dma_cap.eee)
+		return -EOPNOTSUPP;
+
+	if (!edata->eee_enabled)
 		stmmac_disable_eee_mode(priv);
-	} else {
-		/* We are asking for enabling the EEE but it is safe
-		 * to verify all by invoking the eee_init function.
-		 * In case of failure it will return an error.
-		 */
-		edata->eee_enabled = stmmac_eee_init(priv);
-		if (!edata->eee_enabled)
-			return -EOPNOTSUPP;
-	}
 
 	ret = phy_ethtool_set_eee(dev->phydev, edata);
 	if (ret)
 		return ret;
 
-	priv->eee_enabled = edata->eee_enabled;
 	priv->tx_lpi_timer = edata->tx_lpi_timer;
 	return 0;
 }

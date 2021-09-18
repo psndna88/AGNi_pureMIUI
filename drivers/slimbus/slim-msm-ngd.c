@@ -1813,6 +1813,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	slim_set_ctrldata(&dev->ctrl, dev);
 
+#ifdef CONFIG_IPC_LOGGING
 	/* Create IPC log context */
 	dev->ipc_slimbus_log = ipc_log_context_create(IPC_SLIMBUS_LOG_PAGES,
 						dev_name(dev->dev), 0);
@@ -1839,6 +1840,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	else
 		SLIM_INFO(dev, "start error logging for slim dev %s\n",
 							ipc_err_log_name);
+#endif
 
 	ret = sysfs_create_file(&dev->dev->kobj, &dev_attr_debug_mask.attr);
 	if (ret) {
@@ -1881,6 +1883,9 @@ static int ngd_slim_probe(struct platform_device *pdev)
 		dev->iommu_desc.s1_bypass = of_property_read_bool(
 							pdev->dev.of_node,
 							"qcom,iommu-s1-bypass");
+		dev->iommu_desc.atomic_ctx = of_property_read_bool(
+							pdev->dev.of_node,
+							"qcom,iommu-atomic-ctx");
 		ret = of_platform_populate(pdev->dev.of_node, ngd_slim_dt_match,
 					   NULL, &pdev->dev);
 		if (ret) {

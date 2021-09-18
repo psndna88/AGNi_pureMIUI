@@ -355,7 +355,6 @@ static irqreturn_t gf_irq(int irq, void *handle)
 	msg[0] = GF_NET_EVENT_IRQ;
 	sendnlmsg(msg);
 	if (gf_dev->device_available == 1) {
-		pr_info("%s:shedule_work\n", __func__);
 		gf_dev->wait_finger_down = false;
 		schedule_work(&gf_dev->work);
 	}
@@ -375,7 +374,7 @@ static int irq_setup(struct gf_dev *gf_dev)
 
 	gf_dev->irq = gf_irq_num(gf_dev);
 	status = request_threaded_irq(gf_dev->irq, NULL, gf_irq,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_CRITICAL,
 			"gf", gf_dev);
 
 	if (status) {
@@ -410,8 +409,6 @@ static void gf_kernel_key_input(struct gf_dev *gf_dev, struct gf_key *gf_key)
 		/* add special key define */
 		key_input = gf_key->key;
 	}
-	pr_info("%s: received key event[%d], key=%d, value=%d\n",
-			__func__, key_input, gf_key->key, gf_key->value);
 
 	if ((GF_KEY_POWER == gf_key->key || GF_KEY_CAMERA == gf_key->key)
 			&& (gf_key->value == 1)) {
@@ -450,7 +447,6 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case GF_IOC_INIT:
-		pr_debug("%s GF_IOC_INIT\n", __func__);
 		if (copy_to_user((void __user *)arg, (void *)&netlink_route, sizeof(u8))) {
 			pr_err("GF_IOC_INIT failed\n");
 			retval = -EFAULT;
@@ -479,7 +475,7 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case GF_IOC_INPUT_KEY_EVENT:
 		if (copy_from_user(&gf_key, (void __user *)arg, sizeof(struct gf_key))) {
-			pr_err("failed to copy input key event from user to kernel\n");
+			pr_debug("failed to copy input key event from user to kernel\n");
 			retval = -EFAULT;
 			break;
 		}

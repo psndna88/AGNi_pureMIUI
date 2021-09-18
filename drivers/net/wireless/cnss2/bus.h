@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,6 +24,8 @@
 #define QCA6290_DEVICE_ID		0x1100
 #define QCA6390_VENDOR_ID		0x17CB
 #define QCA6390_DEVICE_ID		0x1101
+#define QCA6490_VENDOR_ID		0x17CB
+#define QCA6490_DEVICE_ID		0x1103
 #define QCN7605_VENDOR_ID               0x17CB
 #define QCN7605_DEVICE_ID               0x1102
 
@@ -67,4 +69,8 @@ int cnss_get_msi_assignment(struct cnss_plat_data *plat_priv,
 			    int *num_vectors,
 			    u32 *user_base_data,
 			    u32 *base_vector);
+int cnss_bus_get_iova(struct cnss_plat_data *plat_priv, u64 *addr, u64 *size);
+int cnss_bus_get_iova_ipa(struct cnss_plat_data *plat_priv, u64 *addr,
+			  u64 *size);
+bool cnss_bus_is_smmu_s1_enabled(struct cnss_plat_data *plat_priv);
 #endif /* _CNSS_BUS_H */

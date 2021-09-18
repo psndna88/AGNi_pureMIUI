@@ -26,19 +26,8 @@
 static void *glink_ilc;
 static DEFINE_MUTEX(ssr_lock);
 
-#define GLINK_INFO(x, ...)						       \
-do {									       \
-	if (glink_ilc)							       \
-		ipc_log_string(glink_ilc, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
-
-#define GLINK_ERR(dev, x, ...)						       \
-do {									       \
-	dev_err(dev, "[%s]: "x, __func__, ##__VA_ARGS__);		       \
-	if (glink_ilc)							       \
-		ipc_log_string(glink_ilc, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
-
+#define GLINK_INFO(x, ...)
+#define GLINK_ERR(dev, x, ...)
 
 #define GLINK_SSR_DO_CLEANUP	0
 #define GLINK_SSR_CLEANUP_DONE	1

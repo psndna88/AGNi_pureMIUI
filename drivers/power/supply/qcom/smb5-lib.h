@@ -1,5 +1,5 @@
-/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -154,7 +154,7 @@ enum print_reason {
 #else
 #define CDP_CURRENT_UA			1500000
 #endif
-#define DCP_CURRENT_UA			1600000
+#define DCP_CURRENT_UA			2100000
 #define HVDCP_CURRENT_UA		3000000
 #define HVDCP_CLASS_B_CURRENT_UA		3100000
 #define HVDCP2_CURRENT_UA		1500000
@@ -201,7 +201,7 @@ enum print_reason {
 #define STEP_CHG_DELAYED_HIGH_MONITOR_MS	5000
 #define STEP_CHG_DELAYED_QUICK_MONITOR_MS	3000
 #define STEP_CHG_DELAYED_START_MS		100
-#define VBAT_FOR_STEP_MIN_UV			4450000
+#define VBAT_FOR_STEP_MIN_UV			4350000
 #define VBAT_FOR_STEP_HYS_UV			20000
 
 #define SIX_PIN_VFLOAT_VOTER		"SIX_PIN_VFLOAT_VOTER"
@@ -219,17 +219,12 @@ enum print_reason {
 #define SOFT_JEITA_HYSTERESIS		5
 
 #ifdef CONFIG_BATT_VERIFY_BY_DS28E16
-	#define CHARGER_SOC_DECIMAL_MS		200
+#define CHARGER_SOC_DECIMAL_MS		200
 #endif
 
 /* lct thermal */
-#ifdef CONFIG_J6B_CHARGE_THERMAL
-#define LCT_THERM_CALL_LEVEL		14
-#define LCT_THERM_LCDOFF_LEVEL		13
-#else
-#define LCT_THERM_CALL_LEVEL		7
-#define LCT_THERM_LCDOFF_LEVEL		4
-#endif
+static int LCT_THERM_CALL_LEVEL;
+static int LCT_THERM_LCDOFF_LEVEL;
 
 enum hvdcp3_type {
 	HVDCP3_NONE = 0,
@@ -734,6 +729,8 @@ struct smb_charger {
 	bool			hvdcp3_standalone_config;
 	int			wls_icl_ua;
 	bool			dpdm_enabled;
+	bool			apsd_ext_timeout;
+	bool			qc3p5_detected;
 
 	/* workaround flag */
 	u32			wa_flags;
@@ -788,8 +785,6 @@ struct smb_charger {
 	bool			cc_un_compliant_detected;
 	bool			snk_debug_acc_detected;
 
-	/* dump reg enable*/
-	bool			reg_dump_enable;
 	/* for 27W charge*/
 	bool			temp_27W_enable;
 
@@ -971,6 +966,8 @@ int smblib_get_prop_charger_temp(struct smb_charger *chg,
 int smblib_get_prop_die_health(struct smb_charger *chg);
 int smblib_get_prop_smb_health(struct smb_charger *chg);
 int smblib_get_prop_connector_health(struct smb_charger *chg);
+int smblib_get_prop_input_current_max(struct smb_charger *chg,
+				  union power_supply_propval *val);
 int smblib_set_prop_thermal_overheat(struct smb_charger *chg,
 			       int therm_overheat);
 int smblib_get_skin_temp_status(struct smb_charger *chg);
@@ -1037,6 +1034,10 @@ int smblib_get_irq_status(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_qc3_main_icl_offset(struct smb_charger *chg, int *offset_ua);
 
+int smblib_get_prop_battery_charging_enabled(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_battery_charging_limited(struct smb_charger *chg,
+					union power_supply_propval *val);
 int smblib_set_fastcharge_mode(struct smb_charger *chg, bool enable);
 int smblib_get_fastcharge_mode(struct smb_charger *chg);
 

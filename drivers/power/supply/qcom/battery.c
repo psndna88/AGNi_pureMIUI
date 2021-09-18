@@ -108,6 +108,7 @@ struct pl_data {
 	int			taper_entry_fv;
 	int			main_fcc_max;
 	u32			float_voltage_uv;
+	enum power_supply_type	charger_type;
 	/* debugfs directory */
 	struct dentry		*dfs_root;
 
@@ -1240,7 +1241,7 @@ static int pl_fv_vote_callback(struct votable *votable, void *data,
 			pr_err("Couldn't get battery status rc=%d\n", rc);
 		} else {
 			if (pval.intval == POWER_SUPPLY_STATUS_FULL) {
-				pr_info("re-triggering charging\n");
+				pr_debug("re-triggering charging\n");
 				pval.intval = 1;
 				rc = power_supply_set_property(chip->batt_psy,
 					POWER_SUPPLY_PROP_FORCE_RECHARGE,
@@ -1864,6 +1865,12 @@ static void handle_usb_change(struct pl_data *chip)
 		chip->total_fcc_ua = 0;
 		chip->slave_fcc_ua = 0;
 		chip->main_fcc_ua = 0;
+		chip->charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	} else {
+		rc = power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_REAL_TYPE, &pval);
+		if (!rc)
+			chip->charger_type = pval.intval;
 	}
 }
 

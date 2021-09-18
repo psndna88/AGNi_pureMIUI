@@ -119,6 +119,7 @@
 #define MDSS_MDP_HW_REV_117	MDSS_MDP_REV(1, 17, 0) /* qcs405 */
 #define MDSS_MDP_HW_REV_300	MDSS_MDP_REV(3, 0, 0)  /* msmcobalt */
 #define MDSS_MDP_HW_REV_301	MDSS_MDP_REV(3, 0, 1)  /* msmcobalt v1.0 */
+#define MDSS_MDP_HW_REV_320	MDSS_MDP_REV(3, 2, 0)  /* sdm660 */
 
 enum {
 	NOTIFY_UPDATE_INIT,
@@ -1117,7 +1118,7 @@ enum {
 #define MDSS_PP_SPLIT_RIGHT_ONLY	0x20000000
 #define MDSS_PP_SPLIT_MASK		0x30000000
 
-#define MDSS_MAX_BL_BRIGHTNESS 255
+#define MDSS_MAX_BL_BRIGHTNESS 4095
 #define AD_BL_LIN_LEN 256
 #define AD_BL_ATT_LUT_LEN 33
 

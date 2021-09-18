@@ -2,7 +2,7 @@
  * drivers/base/power/wakeup.c - System wakeup events framework
  *
  * Copyright (c) 2010 Rafael J. Wysocki <rjw@sisk.pl>, Novell Inc.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This file is released under the GPLv2.
  */
@@ -21,8 +21,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/irqdesc.h>
-//2019.12.12 add longcheer xiaoxiongfeng "recording wakeup reason"
-#include <linux/wakeup_reason.h>
+
 #include "power.h"
 
 
@@ -30,7 +29,7 @@
 #include "boeffla_wl_blocker.h"
 
 char list_wl_search[LENGTH_LIST_WL_SEARCH] = {0};
-bool wl_blocker_active = false;
+bool wl_blocker_active = true;
 bool wl_blocker_debug = false;
 
 static void wakeup_source_deactivate(struct wakeup_source *ws);
@@ -990,7 +989,7 @@ EXPORT_SYMBOL_GPL(pm_system_wakeup);
 
 void pm_system_cancel_wakeup(void)
 {
-	atomic_dec(&pm_abort_suspend);
+	atomic_dec_if_positive(&pm_abort_suspend);
 }
 
 void pm_wakeup_clear(bool reset)
@@ -1015,8 +1014,7 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 
 			pr_warn("%s: %d triggered %s\n", __func__,
 					irq_number, name);
-//2019.12.12 add longcheer xiaoxiongfeng "recording wakeup reason"
-			log_wakeup_reason(irq_number);
+
 		}
 		pm_wakeup_irq = irq_number;
 		pm_system_wakeup();
@@ -1164,8 +1162,7 @@ static int print_wakeup_source_stats(struct seq_file *m,
 	return 0;
 }
 
-static void *wakeup_sources_stats_seq_start(struct seq_file *m,
-					loff_t *pos)
+static void *wakeup_sources_stats_seq_start(struct seq_file *m, loff_t *pos)
 {
 	struct wakeup_source *ws;
 	loff_t n = *pos;

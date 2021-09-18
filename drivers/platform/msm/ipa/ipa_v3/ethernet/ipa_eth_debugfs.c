@@ -1,4 +1,4 @@
-/* Copyright (c) 2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -222,16 +222,12 @@ static ssize_t eth_dev_ready_read(struct file *file, char __user *user_buf,
 		test_bit(IPA_ETH_ST_READY, &ipa_eth_state) ?
 			"Ready" : "Not Ready");
 
-	n += scnprintf(&buf[n], size - n, "uC: %s\n",
-		test_bit(IPA_ETH_ST_UC_READY, &ipa_eth_state) ?
-			"Ready" : "Not Ready");
-
-	n += scnprintf(&buf[n], size - n, "IPA: %s\n",
-		test_bit(IPA_ETH_ST_IPA_READY, &ipa_eth_state) ?
+	n += scnprintf(&buf[n], size - n, "IPA API: %s\n",
+		test_bit(IPA_ETH_ST_API_READY, &ipa_eth_state) ?
 			"Ready" : "Not Ready");
 
 	n += scnprintf(&buf[n], size - n, "ALL: %s\n",
-		ipa_eth_ready() ? "Ready" : "Not Ready");
+		ipa_eth_all_ready() ? "Ready" : "Not Ready");
 
 	n = simple_read_from_buffer(user_buf, count, ppos, buf, n);
 

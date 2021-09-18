@@ -47,7 +47,32 @@ static inline void set_max_mapnr(unsigned long limit)
 static inline void set_max_mapnr(unsigned long limit) { }
 #endif
 
-extern unsigned long totalram_pages;
+extern atomic_long_t _totalram_pages;
+static inline unsigned long totalram_pages(void)
+{
+	return (unsigned long)atomic_long_read(&_totalram_pages);
+}
+
+static inline void totalram_pages_inc(void)
+{
+	atomic_long_inc(&_totalram_pages);
+}
+
+static inline void totalram_pages_dec(void)
+{
+	atomic_long_dec(&_totalram_pages);
+}
+
+static inline void totalram_pages_add(long count)
+{
+	atomic_long_add(count, &_totalram_pages);
+}
+
+static inline void totalram_pages_set(long val)
+{
+	atomic_long_set(&_totalram_pages, val);
+}
+
 extern void * high_memory;
 extern int page_cluster;
 
@@ -519,16 +544,16 @@ unsigned long vmalloc_to_pfn(const void *addr);
  * On nommu, vmalloc/vfree wrap through kmalloc/kfree directly, so there
  * is no special casing required.
  */
-static inline bool is_vmalloc_addr(const void *x)
-{
-#ifdef CONFIG_MMU
-	unsigned long addr = (unsigned long)x;
 
-	return addr >= VMALLOC_START && addr < VMALLOC_END;
+#ifdef CONFIG_MMU
+extern int is_vmalloc_addr(const void *x);
 #else
-	return false;
-#endif
+static inline int is_vmalloc_addr(const void *x)
+{
+	return 0;
 }
+#endif
+
 #ifdef CONFIG_MMU
 extern int is_vmalloc_or_module_addr(const void *x);
 #else
@@ -561,12 +586,13 @@ static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
 }
 
 extern void kvfree(const void *addr);
+extern void kvfree_sensitive(const void *addr, size_t len);
 
-static inline atomic_t *compound_mapcount_ptr(struct page *page)
-{
-	return &page[1].compound_mapcount;
-}
-
+/*
+ * Mapcount of compound page as a whole, does not include mapped sub-pages.
+ *
+ * Must be called only for compound pages or any their tail sub-pages.
+ */
 static inline int compound_mapcount(struct page *page)
 {
 	VM_BUG_ON_PAGE(!PageCompound(page), page);
@@ -586,10 +612,16 @@ static inline void page_mapcount_reset(struct page *page)
 
 int __page_mapcount(struct page *page);
 
+/*
+ * Mapcount of 0-order page; when compound sub-page, includes
+ * compound_mapcount().
+ *
+ * Result is undefined for pages which cannot be mapped into userspace.
+ * For example SLAB or special types of pages. See function page_has_type().
+ * They use this place in struct page differently.
+ */
 static inline int page_mapcount(struct page *page)
 {
-	VM_BUG_ON_PAGE(PageSlab(page), page);
-
 	if (unlikely(PageCompound(page)))
 		return __page_mapcount(page);
 	return atomic_read(&page->_mapcount) + 1;
@@ -2543,6 +2575,15 @@ static inline int vm_fault_to_errno(int vm_fault, int foll_flags)
 		return -EFAULT;
 	return 0;
 }
+
+#ifndef io_remap_pfn_range
+static inline int io_remap_pfn_range(struct vm_area_struct *vma,
+				     unsigned long addr, unsigned long pfn,
+				     unsigned long size, pgprot_t prot)
+{
+	return remap_pfn_range(vma, addr, pfn, size, pgprot_decrypted(prot));
+}
+#endif
 
 typedef int (*pte_fn_t)(pte_t *pte, pgtable_t token, unsigned long addr,
 			void *data);

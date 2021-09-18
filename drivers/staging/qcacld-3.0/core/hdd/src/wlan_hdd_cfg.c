@@ -3652,6 +3652,13 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_MIN,
 		     CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_MAX),
 
+	REG_VARIABLE(CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN, WLAN_PARAM_Integer,
+		     struct hdd_config, enable_nan_indoor_channel,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_DEF,
+		     CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MIN,
+		     CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MAX),
+
 	REG_VARIABLE(CFG_NUM_TX_CHAINS_2G, WLAN_PARAM_Integer,
 		     struct hdd_config, num_tx_chains_2g,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -4097,6 +4104,30 @@ struct reg_table_entry g_registry_table[] = {
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_DEFAULT,
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MIN,
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_MAX),
+
+	REG_VARIABLE(CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_NAME,
+		WLAN_PARAM_HexInteger, struct hdd_config,
+		roam_data_rssi_threshold_triggers,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_DEFAULT,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_MIN,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_MAX),
+
+	REG_VARIABLE(CFG_ROAM_DATA_RSSI_THRESHOLD_NAME,
+		WLAN_PARAM_SignedInteger, struct hdd_config,
+		roam_data_rssi_threshold,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_DEFAULT,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_MIN,
+		CFG_ROAM_DATA_RSSI_THRESHOLD_MAX),
+
+	REG_VARIABLE(CFG_RX_DATA_INACTIVITY_TIME_NAME,
+		WLAN_PARAM_Integer, struct hdd_config,
+		rx_data_inactivity_time,
+		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		CFG_RX_DATA_INACTIVITY_TIME_DEFAULT,
+		CFG_RX_DATA_INACTIVITY_TIME_MIN,
+		CFG_RX_DATA_INACTIVITY_TIME_MAX),
 
 	REG_VARIABLE(CFG_ROAM_HO_DELAY_FOR_RX_NAME,
 		WLAN_PARAM_Integer, struct hdd_config,
@@ -4657,12 +4688,6 @@ struct reg_table_entry g_registry_table[] = {
 		CFG_CRASH_FW_TIMEOUT_DEFAULT,
 		CFG_CRASH_FW_TIMEOUT_DISABLE,
 		CFG_CRASH_FW_TIMEOUT_ENABLE),
-	REG_VARIABLE(CFG_RX_WAKELOCK_TIMEOUT_NAME, WLAN_PARAM_Integer,
-		struct hdd_config, rx_wakelock_timeout,
-		VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
-		CFG_RX_WAKELOCK_TIMEOUT_DEFAULT,
-		CFG_RX_WAKELOCK_TIMEOUT_MIN,
-		CFG_RX_WAKELOCK_TIMEOUT_MAX),
 	REG_VARIABLE(CFG_SAP_CH_SWITCH_BEACON_CNT, WLAN_PARAM_Integer,
 		     struct hdd_config, sap_chanswitch_beacon_cnt,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
@@ -5701,6 +5726,13 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_IS_SAP_SAE_ENABLED_DEFAULT,
 		     CFG_IS_SAP_SAE_ENABLED_MIN,
 		     CFG_IS_SAP_SAE_ENABLED_MAX),
+
+	REG_VARIABLE(CFG_SAE_CONNECION_RETRIES, WLAN_PARAM_Integer,
+		     struct hdd_config, sae_connect_retries,
+		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+		     CFG_SAE_CONNECION_RETRIES_DEFAULT,
+		     CFG_SAE_CONNECION_RETRIES_MIN,
+		     CFG_SAE_CONNECION_RETRIES_MAX),
 #endif
 
 	REG_VARIABLE(CFG_BTM_SOLICITED_TIMEOUT, WLAN_PARAM_Integer,
@@ -6360,7 +6392,7 @@ struct reg_table_entry g_registry_table[] = {
 		     CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MIN,
 		     CFG_MWS_COEX_SCC_CHANNEL_AVOID_DELAY_MAX),
 
-	REG_VARIABLE(CFG_DISABLE_4WAY_HS_OFFLOAD, WLAN_PARAM_Integer,
+	REG_VARIABLE(CFG_DISABLE_4WAY_HS_OFFLOAD, WLAN_PARAM_HexInteger,
 		     struct hdd_config, disable_4way_hs_offload,
 		     VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
 		     CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT,
@@ -7332,6 +7364,9 @@ static void hdd_cfg_print_sae(struct hdd_context *hdd_ctx)
 	hdd_debug("Name = [%s] value = [%u]",
 		  CFG_IS_SAP_SAE_ENABLED_NAME,
 		  hdd_ctx->config->sap_sae_enabled);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_SAE_CONNECION_RETRIES,
+		  hdd_ctx->config->sae_connect_retries);
 }
 #else
 static void hdd_cfg_print_sae(struct hdd_context *hdd_ctx)
@@ -8079,6 +8114,15 @@ void hdd_cfg_print(struct hdd_context *hdd_ctx)
 	hdd_debug("Name = [%s] Value = [%u]",
 		CFG_ROAM_BG_SCAN_BAD_RSSI_OFFSET_2G_NAME,
 		hdd_ctx->config->roam_bad_rssi_thresh_offset_2g);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_NAME,
+		  hdd_ctx->config->roam_data_rssi_threshold_triggers);
+	hdd_debug("Name = [%s] Value = [%d]",
+		  CFG_ROAM_DATA_RSSI_THRESHOLD_NAME,
+		  hdd_ctx->config->roam_data_rssi_threshold);
+	hdd_debug("Name = [%s] Value = [%u]",
+		  CFG_RX_DATA_INACTIVITY_TIME_NAME,
+		  hdd_ctx->config->rx_data_inactivity_time);
 	hdd_debug("Name = [%s] Value = [%u]",
 		CFG_ROAM_HO_DELAY_FOR_RX_NAME,
 		hdd_ctx->config->ho_delay_for_rx);
@@ -9192,6 +9236,16 @@ static bool hdd_update_vht_cap_in_cfg(struct hdd_context *hdd_ctx)
 				status = false;
 				hdd_err("set SU_BEAMFORMER_CAP to CFG failed");
 			}
+		}
+
+		/* Get Merged SU Bformer capability */
+		if (sme_cfg_get_int(mac_handle, WNI_CFG_VHT_SU_BEAMFORMER_CAP, &val) ==
+							QDF_STATUS_E_FAILURE) {
+			status = false;
+			hdd_err("Could not get WNI_CFG_VHT_SU_BEAMFORMER_CAP");
+		}
+		/*set num of sounding dimensions according to merged flag*/
+		if (val) {
 			if (sme_cfg_set_int(mac_handle,
 					WNI_CFG_VHT_NUM_SOUNDING_DIMENSIONS,
 					NUM_OF_SOUNDING_DIMENSIONS) ==
@@ -9914,6 +9968,19 @@ sme_update_sae_single_pmk_cfg(tSmeConfigParams *sme_config,
 }
 #endif
 
+#ifdef WLAN_FEATURE_SAE
+static void sme_update_sae_connect_retries(tSmeConfigParams *smeConfig,
+					   struct hdd_config *pConfig)
+{
+	smeConfig->csrConfig.sae_connect_retries = pConfig->sae_connect_retries;
+}
+#else
+static void sme_update_sae_connect_retries(tSmeConfigParams *smeConfig,
+					   struct hdd_config *pConfig)
+{
+}
+#endif
+
 /**
  * hdd_set_sme_config() -initializes the sme configuration parameters
  *
@@ -10256,6 +10323,12 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 		hdd_ctx->config->roam_bg_scan_client_bitmap;
 	smeConfig->csrConfig.roam_bad_rssi_thresh_offset_2g =
 		hdd_ctx->config->roam_bad_rssi_thresh_offset_2g;
+	smeConfig->csrConfig.roam_data_rssi_threshold_triggers =
+		hdd_ctx->config->roam_data_rssi_threshold_triggers;
+	smeConfig->csrConfig.roam_data_rssi_threshold =
+		hdd_ctx->config->roam_data_rssi_threshold;
+	smeConfig->csrConfig.rx_data_inactivity_time =
+		hdd_ctx->config->rx_data_inactivity_time;
 	smeConfig->csrConfig.ho_delay_for_rx =
 		hdd_ctx->config->ho_delay_for_rx;
 
@@ -10487,6 +10560,7 @@ QDF_STATUS hdd_set_sme_config(struct hdd_context *hdd_ctx)
 
 	sme_update_beacon_stats(mac_handle,
 				hdd_ctx->config->enable_beacon_reception_stats);
+	sme_update_sae_connect_retries(smeConfig, pConfig);
 	status = sme_update_config(mac_handle, smeConfig);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		hdd_err("sme_update_config() failure: %d", status);

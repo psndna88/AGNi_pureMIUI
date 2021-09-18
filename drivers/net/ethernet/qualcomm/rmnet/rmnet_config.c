@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -178,6 +178,11 @@ static int rmnet_newlink(struct net *src_net, struct net_device *dev,
 	int err = 0;
 	u16 mux_id;
 
+	if (!tb[IFLA_LINK]) {
+		NL_SET_ERR_MSG_MOD(extack, "link not specified");
+		return -EINVAL;
+	}
+
 	real_dev = __dev_get_by_index(src_net, nla_get_u32(tb[IFLA_LINK]));
 	if (!real_dev || !dev)
 		return -ENODEV;
@@ -356,7 +361,7 @@ static int rmnet_rtnl_validate(struct nlattr *tb[], struct nlattr *data[],
 
 		if (data[IFLA_RMNET_UL_AGG_PARAMS]) {
 			agg_params = nla_data(data[IFLA_RMNET_UL_AGG_PARAMS]);
-			if (agg_params->agg_time < 3000000)
+			if (agg_params->agg_time < 1000000)
 				return -EINVAL;
 		}
 	}

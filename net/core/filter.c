@@ -2279,8 +2279,12 @@ static int bpf_skb_net_shrink(struct sk_buff *skb, u32 len_diff)
 	return 0;
 }
 
+#define BPF_SKB_MAX_LEN SKB_MAX_ALLOC
+
 static u32 __bpf_skb_max_len(const struct sk_buff *skb)
 {
+	if (skb_at_tc_ingress(skb) || !skb->dev)
+		return SKB_MAX_ALLOC;
 	return skb->dev->mtu + skb->dev->hard_header_len;
 }
 
@@ -2289,7 +2293,7 @@ static int bpf_skb_adjust_net(struct sk_buff *skb, s32 len_diff)
 	bool trans_same = skb->transport_header == skb->network_header;
 	u32 len_cur, len_diff_abs = abs(len_diff);
 	u32 len_min = bpf_skb_net_base_len(skb);
-	u32 len_max = __bpf_skb_max_len(skb);
+	u32 len_max = BPF_SKB_MAX_LEN;
 	__be16 proto = skb->protocol;
 	bool shrink = len_diff < 0;
 	int ret;
@@ -2368,7 +2372,7 @@ static int bpf_skb_trim_rcsum(struct sk_buff *skb, unsigned int new_len)
 BPF_CALL_3(bpf_skb_change_tail, struct sk_buff *, skb, u32, new_len,
 	   u64, flags)
 {
-	u32 max_len = __bpf_skb_max_len(skb);
+	u32 max_len = BPF_SKB_MAX_LEN;
 	u32 min_len = __bpf_skb_min_len(skb);
 	int ret;
 
@@ -2419,7 +2423,7 @@ static const struct bpf_func_proto bpf_skb_change_tail_proto = {
 BPF_CALL_3(bpf_skb_change_head, struct sk_buff *, skb, u32, head_room,
 	   u64, flags)
 {
-	u32 max_len = __bpf_skb_max_len(skb);
+	u32 max_len = BPF_SKB_MAX_LEN;
 	u32 new_len = skb->len + head_room;
 	int ret;
 
@@ -2441,6 +2445,7 @@ BPF_CALL_3(bpf_skb_change_head, struct sk_buff *, skb, u32, head_room,
 		__skb_push(skb, head_room);
 		memset(skb->data, 0, head_room);
 		skb_reset_mac_header(skb);
+		skb_reset_mac_len(skb);
 	}
 
 	bpf_compute_data_end(skb);
@@ -3090,8 +3095,8 @@ BPF_CALL_5(bpf_setsockopt, struct bpf_sock_ops_kern *, bpf_sock,
 			sk->sk_userlocks |= SOCK_SNDBUF_LOCK;
 			sk->sk_sndbuf = max_t(int, val * 2, SOCK_MIN_SNDBUF);
 			break;
-		case SO_MAX_PACING_RATE:
-			sk->sk_max_pacing_rate = val;
+		case SO_MAX_PACING_RATE: /* 32bit version */
+			sk->sk_max_pacing_rate = (val == ~0U) ? ~0UL : val;
 			sk->sk_pacing_rate = min(sk->sk_pacing_rate,
 						 sk->sk_max_pacing_rate);
 			break;
@@ -3122,7 +3127,8 @@ BPF_CALL_5(bpf_setsockopt, struct bpf_sock_ops_kern *, bpf_sock,
 			strncpy(name, optval, min_t(long, optlen,
 						    TCP_CA_NAME_MAX-1));
 			name[TCP_CA_NAME_MAX-1] = 0;
-			ret = tcp_set_congestion_control(sk, name, false, reinit);
+			ret = tcp_set_congestion_control(sk, name, false,
+							 reinit, true);
 		} else {
 			struct tcp_sock *tp = tcp_sk(sk);
 
@@ -3188,6 +3194,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_tail_call_proto;
 	case BPF_FUNC_ktime_get_ns:
 		return &bpf_ktime_get_ns_proto;
+	case BPF_FUNC_ktime_get_boot_ns:
+		return &bpf_ktime_get_boot_ns_proto;
 	case BPF_FUNC_trace_printk:
 		if (capable(CAP_SYS_ADMIN))
 			return bpf_get_trace_printk_proto();

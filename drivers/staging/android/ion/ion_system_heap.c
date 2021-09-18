@@ -289,7 +289,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	int vmid = get_secure_vmid(buffer->flags);
 	struct page_info info_onstack[SZ_4K / sizeof(struct page_info)];
 
-	if (size / PAGE_SIZE > totalram_pages / 2)
+	if (size / PAGE_SIZE > totalram_pages() / 2)
 		return -ENOMEM;
 
 	if (ion_heap_is_system_heap_type(buffer->heap->type) &&

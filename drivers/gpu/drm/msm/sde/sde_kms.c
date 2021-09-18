@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -19,6 +19,7 @@
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
 
 #include <drm/drm_crtc.h>
+#include <drm/drm_fixed.h>
 #include <linux/debugfs.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
@@ -105,7 +106,7 @@ bool sde_is_custom_client(void)
 	return sdecustom;
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 static int _sde_danger_signal_status(struct seq_file *s,
 		bool danger_status)
 {
@@ -1590,7 +1591,8 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		/* update display cap to MST_MODE for DP MST encoders */
 		info.capabilities |= MSM_DISPLAY_CAP_MST_MODE;
 		sde_kms->dp_stream_count = dp_display_get_num_of_streams();
-		for (idx = 0; idx < sde_kms->dp_stream_count; idx++) {
+		for (idx = 0; idx < sde_kms->dp_stream_count &&
+			priv->num_encoders < max_encoders; idx++) {
 			info.h_tile_instance[0] = idx;
 			encoder = sde_encoder_init(dev, &info);
 			if (IS_ERR_OR_NULL(encoder)) {
@@ -2653,6 +2655,60 @@ static bool sde_kms_check_for_splash(struct msm_kms *kms)
 	return sde_kms->splash_data.num_splash_displays;
 }
 
+static int sde_kms_get_mixer_count(const struct msm_kms *kms,
+		const struct drm_display_mode *mode,
+		u32 max_mixer_width, u32 *num_lm)
+{
+	struct sde_kms *sde_kms;
+	s64 mode_clock_hz = 0;
+	s64 max_mdp_clock_hz = 0;
+	s64 mdp_fudge_factor = 0;
+	s64 temp = 0;
+	s64 htotal_fp = 0;
+	s64 vtotal_fp = 0;
+	s64 vrefresh_fp = 0;
+
+	if (!num_lm) {
+		SDE_ERROR("invalid num_lm pointer\n");
+		return -EINVAL;
+	}
+	*num_lm = 1;
+
+	if (!kms || !mode || !max_mixer_width) {
+		SDE_ERROR("invlaid input args");
+		return -EINVAL;
+	}
+
+	sde_kms = to_sde_kms(kms);
+
+	max_mdp_clock_hz = drm_fixp_from_fraction(
+			sde_kms->perf.max_core_clk_rate, 1);
+	mdp_fudge_factor = drm_fixp_from_fraction(105, 100);
+	htotal_fp = drm_fixp_from_fraction(mode->htotal, 1);
+	vtotal_fp =  drm_fixp_from_fraction(mode->vtotal, 1);
+	vrefresh_fp =  drm_fixp_from_fraction(mode->vrefresh, 1);
+
+	temp = drm_fixp_mul(htotal_fp, vtotal_fp);
+	temp = drm_fixp_mul(temp, vrefresh_fp);
+	mode_clock_hz = drm_fixp_mul(temp, mdp_fudge_factor);
+
+	if (mode_clock_hz > max_mdp_clock_hz ||
+			mode->hdisplay > max_mixer_width) {
+		*num_lm = 2;
+		if ((mode_clock_hz >> 1) > max_mdp_clock_hz) {
+			SDE_DEBUG("[%s] clock %lld exceeds max_mdp_clk %lld\n",
+					mode->name, mode_clock_hz,
+					max_mdp_clock_hz);
+			return -EINVAL;
+		}
+	}
+
+	SDE_DEBUG("[%s] h=%d, v=%d, fps%d, max_mdp_pclk_hz=%llu, num_lm=%d\n",
+			mode->name, mode->htotal, mode->vtotal, mode->vrefresh,
+			sde_kms->perf.max_core_clk_rate, *num_lm);
+	return 0;
+}
+
 static void _sde_kms_null_commit(struct drm_device *dev,
 		struct drm_encoder *enc)
 {
@@ -2701,17 +2757,33 @@ retry:
 	}
 
 	crtc_state = drm_atomic_get_crtc_state(state, enc->crtc);
+	if (IS_ERR(crtc_state)) {
+		SDE_ERROR("error %ld getting crtc %d state\n",
+			  PTR_ERR(crtc_state), DRMID(conn));
+		goto end;
+	}
+
 	conn_state = drm_atomic_get_connector_state(state, conn);
 	if (IS_ERR(conn_state)) {
-		SDE_ERROR("error %d getting connector %d state\n",
-				ret, DRMID(conn));
+		SDE_ERROR("error %ld getting connector %d state\n",
+			  PTR_ERR(conn_state), DRMID(conn));
 		goto end;
 	}
 
 	crtc_state->active = true;
-	drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
+	ret = drm_atomic_set_crtc_for_connector(conn_state, enc->crtc);
+	if (ret) {
+		SDE_ERROR("error %d setting crtc for connector %d\n", ret,
+			  DRMID(conn));
+		goto end;
+	}
 
-	drm_atomic_commit(state);
+	ret = drm_atomic_commit(state);
+	if (ret) {
+		SDE_ERROR("error %d committing state for connector %d\n", ret,
+			  DRMID(conn));
+		goto end;
+	}
 end:
 	if (state)
 		drm_atomic_state_put(state);
@@ -2961,6 +3033,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.get_address_space = _sde_kms_get_address_space,
 	.postopen = _sde_kms_post_open,
 	.check_for_splash = sde_kms_check_for_splash,
+	.get_mixer_count = sde_kms_get_mixer_count,
 };
 
 /* the caller api needs to turn on clock before calling it */
@@ -3526,7 +3599,7 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	sde_kms->hw_sid = sde_hw_sid_init(sde_kms->sid,
 				sde_kms->sid_len, sde_kms->catalog);
 	if (IS_ERR(sde_kms->hw_sid)) {
-		SDE_ERROR("failed to init sid %d\n", PTR_ERR(sde_kms->hw_sid));
+		SDE_ERROR("failed to init sid %ld\n", PTR_ERR(sde_kms->hw_sid));
 		sde_kms->hw_sid = NULL;
 		goto power_error;
 	}

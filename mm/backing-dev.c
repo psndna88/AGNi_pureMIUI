@@ -19,6 +19,7 @@ struct backing_dev_info noop_backing_dev_info = {
 EXPORT_SYMBOL_GPL(noop_backing_dev_info);
 
 static struct class *bdi_class;
+const char *bdi_unknown_name = "(unknown)";
 
 /*
  * bdi_lock protects updates to bdi_list. bdi_list has RCU reader side
@@ -149,6 +150,8 @@ static ssize_t read_ahead_kb_store(struct device *dev,
 	ret = kstrtoul(buf, 10, &read_ahead_kb);
 	if (ret < 0)
 		return ret;
+	if (read_ahead_kb < 2048)
+		read_ahead_kb = 2048;
 
 	bdi->ra_pages = read_ahead_kb >> (PAGE_SHIFT - 10);
 
@@ -246,8 +249,8 @@ static int __init default_bdi_init(void)
 {
 	int err;
 
-	bdi_wq = alloc_workqueue("writeback", WQ_MEM_RECLAIM | WQ_FREEZABLE |
-					      WQ_UNBOUND | WQ_SYSFS, 0);
+	bdi_wq = alloc_workqueue("writeback", WQ_MEM_RECLAIM | WQ_UNBOUND |
+				 WQ_SYSFS, 0);
 	if (!bdi_wq)
 		return -ENOMEM;
 

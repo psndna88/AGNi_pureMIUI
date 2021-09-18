@@ -462,6 +462,9 @@ kmem_cache_create(const char *name, size_t size, size_t align,
 	 */
 	flags &= CACHE_CREATE_MASK;
 
+	/* Embrace davem */
+	flags |= SLAB_HWCACHE_ALIGN;
+
 	s = __kmem_cache_alias(name, size, align, flags, ctor);
 	if (s)
 		goto out_unlock;
@@ -1125,8 +1128,8 @@ void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
 	flags |= __GFP_COMP;
 	page = alloc_pages(flags, order);
 	ret = page ? page_address(page) : NULL;
-	kmemleak_alloc(ret, size, 1, flags);
 	kasan_kmalloc_large(ret, size, flags);
+	kmemleak_alloc(ret, size, 1, flags);
 	return ret;
 }
 EXPORT_SYMBOL(kmalloc_order);
@@ -1138,8 +1141,8 @@ void *kmalloc_order_trace(size_t size, gfp_t flags, unsigned int order)
 	trace_kmalloc(_RET_IP_, ret, size, PAGE_SIZE << order, flags);
 	return ret;
 }
-#endif
 EXPORT_SYMBOL(kmalloc_order_trace);
+#endif
 
 #ifdef CONFIG_SLAB_FREELIST_RANDOM
 /* Randomize a generic freelist */
@@ -1449,7 +1452,7 @@ void kzfree(const void *p)
 	if (unlikely(ZERO_OR_NULL_PTR(mem)))
 		return;
 	ks = ksize(mem);
-	memset(mem, 0, ks);
+	memzero_explicit(mem, ks);
 	kfree(mem);
 }
 EXPORT_SYMBOL(kzfree);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1478,8 +1478,35 @@ static void apps_ipa_packet_receive_notify(void *priv,
 	}
 }
 
-/* Send RSC endpoint info to modem using QMI indication message */
+/* Send MHI endpoint info to modem using QMI indication message */
+static int ipa_send_mhi_endp_ind_to_modem(void)
+{
+	struct ipa_endp_desc_indication_msg_v01 req;
+	struct ipa_ep_id_type_v01 *ep_info;
+	int ipa_mhi_prod_ep_idx =
+		ipa3_get_ep_mapping(IPA_CLIENT_MHI_LOW_LAT_PROD);
+	int ipa_mhi_cons_ep_idx =
+		ipa3_get_ep_mapping(IPA_CLIENT_MHI_LOW_LAT_CONS);
 
+	memset(&req, 0, sizeof(struct ipa_endp_desc_indication_msg_v01));
+	req.ep_info_len = 2;
+	req.ep_info_valid = true;
+	req.num_eps_valid = true;
+	req.num_eps = 2;
+	ep_info = &req.ep_info[0];
+	ep_info->ep_id = ipa_mhi_cons_ep_idx;
+	ep_info->ic_type = DATA_IC_TYPE_MHI_V01;
+	ep_info->ep_type = DATA_EP_DESC_TYPE_EMB_FLOW_CTL_PROD_V01;
+	ep_info->ep_status = DATA_EP_STATUS_CONNECTED_V01;
+	ep_info = &req.ep_info[1];
+	ep_info->ep_id = ipa_mhi_prod_ep_idx;
+	ep_info->ic_type = DATA_IC_TYPE_MHI_V01;
+	ep_info->ep_type = DATA_EP_DESC_TYPE_EMB_FLOW_CTL_CONS_V01;
+	ep_info->ep_status = DATA_EP_STATUS_CONNECTED_V01;
+	return ipa3_qmi_send_endp_desc_indication(&req);
+}
+
+/* Send RSC endpoint info to modem using QMI indication message */
 static int ipa_send_rsc_pipe_ind_to_modem(void)
 {
 	struct ipa_endp_desc_indication_msg_v01 req;
@@ -1495,7 +1522,7 @@ static int ipa_send_rsc_pipe_ind_to_modem(void)
 	ep_info->ic_type = DATA_IC_TYPE_AP_V01;
 	ep_info->ep_type = DATA_EP_DESC_TYPE_RSC_PROD_V01;
 	ep_info->ep_status = DATA_EP_STATUS_CONNECTED_V01;
-	return ipa3_qmi_send_rsc_pipe_indication(&req);
+	return ipa3_qmi_send_endp_desc_indication(&req);
 }
 
 static int handle3_ingress_format(struct net_device *dev,
@@ -2872,8 +2899,9 @@ static int ipa3_wwan_remove(struct platform_device *pdev)
 	if (ipa3_rmnet_res.ipa_napi_enable)
 		netif_napi_del(&(rmnet_ipa3_ctx->wwan_priv->napi));
 	mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
-	IPAWANINFO("rmnet_ipa unregister_netdev\n");
+	IPAWANDBG("rmnet_ipa unregister_netdev started\n");
 	unregister_netdev(IPA_NETDEV());
+	IPAWANDBG("rmnet_ipa unregister_netdev completed\n");
 	if (ipa3_ctx->use_ipa_pm)
 		ipa3_wwan_deregister_netdev_pm_client();
 	else
@@ -3094,13 +3122,13 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		break;
 	case SUBSYS_AFTER_SHUTDOWN:
 		IPAWANINFO("IPA Received MPSS AFTER_SHUTDOWN\n");
+		ipa3_set_modem_up(false);
 		if (atomic_read(&rmnet_ipa3_ctx->is_ssr) &&
 			ipa3_ctx->ipa_hw_type < IPA_HW_v4_0)
 			ipa3_q6_post_shutdown_cleanup();
 
 		if (ipa3_ctx->ipa_endp_delay_wa)
 			ipa3_client_prod_post_shutdown_cleanup();
-
 		IPAWANINFO("IPA AFTER_SHUTDOWN handling is complete\n");
 		break;
 	case SUBSYS_BEFORE_POWERUP:
@@ -3112,11 +3140,15 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		}
 		/* hold a proxy vote for the modem. */
 		ipa3_proxy_clk_vote();
+		if (ipa3_ctx->ipa_config_is_mhi)
+			ipa3_set_reset_client_cons_pipe_sus_holb(false,
+					IPA_CLIENT_MHI_CONS);
 		ipa3_reset_freeze_vote();
 		IPAWANINFO("IPA BEFORE_POWERUP handling is complete\n");
 		break;
 	case SUBSYS_AFTER_POWERUP:
 		IPAWANINFO("IPA received MPSS AFTER_POWERUP\n");
+		ipa3_set_modem_up(true);
 		if (!atomic_read(&rmnet_ipa3_ctx->is_initialized) &&
 		       atomic_read(&rmnet_ipa3_ctx->is_ssr))
 			platform_driver_register(&rmnet_ipa_driver);
@@ -3248,7 +3280,8 @@ static void tethering_stats_poll_queue(struct work_struct *work)
 
 	/* Schedule again only if there's an active polling interval */
 	if (ipa3_rmnet_ctx.polling_interval != 0)
-		schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work,
+		queue_delayed_work(system_power_efficient_wq, 
+			&ipa_tether_stats_poll_wakequeue_work,
 			msecs_to_jiffies(ipa3_rmnet_ctx.polling_interval*1000));
 }
 
@@ -3340,7 +3373,8 @@ int rmnet_ipa3_poll_tethering_stats(struct wan_ioctl_poll_tethering_stats *data)
 		return 0;
 	}
 
-	schedule_delayed_work(&ipa_tether_stats_poll_wakequeue_work, 0);
+	queue_delayed_work(system_power_efficient_wq, 
+						&ipa_tether_stats_poll_wakequeue_work, 0);
 	return 0;
 }
 
@@ -3372,9 +3406,6 @@ static int rmnet_ipa3_set_data_quota_modem(
 	data->interface_name[IFNAMSIZ-1] = '\0';
 
 	index = find_vchannel_name_index(data->interface_name);
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	if (index == MAX_NUM_OF_MUX_CHANNEL) {
 		IPAWANERR("%s is an invalid iface name\n",
@@ -3402,9 +3433,6 @@ static int rmnet_ipa3_set_data_quota_wifi(struct wan_ioctl_set_data_quota *data)
 	memset(&wifi_quota, 0, sizeof(struct ipa_set_wifi_quota));
 	wifi_quota.set_quota = data->set_quota;
 	wifi_quota.quota_bytes = data->quota_mbytes;
-	IPAWANERR("iface name %s, quota %lu\n",
-		  data->interface_name,
-		  (unsigned long int) data->quota_mbytes);
 
 	rc = ipa3_set_wlan_quota(&wifi_quota);
 	/* check if wlan-fw takes this quota-set */
@@ -4114,6 +4142,9 @@ void ipa3_q6_handshake_complete(bool ssr_bootup)
 	}
 	if (ipa3_ctx->ipa_mhi_proxy)
 		imp_handle_modem_ready();
+
+	if (ipa3_ctx->ipa_config_is_mhi)
+		ipa_send_mhi_endp_ind_to_modem();
 }
 
 static inline bool rmnet_ipa3_check_any_client_inited

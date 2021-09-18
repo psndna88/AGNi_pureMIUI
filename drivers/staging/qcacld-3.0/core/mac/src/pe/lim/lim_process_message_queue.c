@@ -87,6 +87,7 @@ static void lim_process_sae_msg_sta(tpAniSirGlobal mac,
 		if (tx_timer_running(&mac->lim.limTimers.sae_auth_timer))
 			lim_deactivate_and_change_timer(mac,
 							eLIM_AUTH_SAE_TIMER);
+		lim_sae_auth_cleanup_retry(mac, session->smeSessionId);
 		/* success */
 		if (sae_msg->sae_status == IEEE80211_STATUS_SUCCESS)
 			lim_restore_from_auth_state(mac,

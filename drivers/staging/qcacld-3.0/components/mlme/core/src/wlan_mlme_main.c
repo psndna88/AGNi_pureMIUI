@@ -59,6 +59,36 @@ struct mlme_nss_chains *mlme_get_dynamic_vdev_config(
 	return &vdev_mlme->dynamic_cfg;
 }
 
+struct sae_auth_retry *mlme_get_sae_auth_retry(struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_priv_obj *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_priv_obj(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		return NULL;
+	}
+
+	return &mlme_priv->sae_retry;
+}
+
+void mlme_free_sae_auth_retry(struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_priv_obj *mlme_priv;
+
+	mlme_priv = wlan_vdev_mlme_get_priv_obj(vdev);
+	if (!mlme_priv) {
+		mlme_err("vdev legacy private object is NULL");
+		return;
+	}
+
+	mlme_priv->sae_retry.sae_auth_max_retry = 0;
+	if (mlme_priv->sae_retry.sae_auth.ptr)
+		qdf_mem_free(mlme_priv->sae_retry.sae_auth.ptr);
+	mlme_priv->sae_retry.sae_auth.ptr = NULL;
+	mlme_priv->sae_retry.sae_auth.len = 0;
+}
+
 /**
  * wlan_mlme_send_oce_flags_fw() - Send the oce flags to FW
  * @pdev: pointer to pdev object
@@ -209,6 +239,7 @@ mlme_vdev_object_destroyed_notification(struct wlan_objmgr_vdev *vdev,
 
 	mlme_free_self_disconnect_ies(vdev);
 	mlme_free_peer_disconnect_ies(vdev);
+	mlme_free_sae_auth_retry(vdev);
 	status = wlan_objmgr_vdev_component_obj_detach(vdev,
 						       WLAN_UMAC_COMP_MLME,
 						       vdev_mlme);

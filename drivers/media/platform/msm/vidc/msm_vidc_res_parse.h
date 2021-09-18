@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,5 +35,7 @@ int read_mem_cdsp_resources_from_dt(struct platform_device *pdev);
 int msm_vidc_load_u32_table(struct platform_device *pdev,
 		struct device_node *of_node, char *table_name, int struct_size,
 		u32 **table, u32 *num_elements);
+
+int msm_vidc_enable_cma(struct msm_vidc_platform_resources *res, bool enable);
 
 #endif

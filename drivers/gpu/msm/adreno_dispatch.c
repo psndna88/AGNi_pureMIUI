@@ -300,12 +300,13 @@ static void _retire_timestamp(struct kgsl_drawobj *drawobj)
 	 * rptr scratch out address. At this point GPU clocks turned off.
 	 * So avoid reading GPU register directly for A3xx.
 	 */
-	if (adreno_is_a3xx(ADRENO_DEVICE(device)))
+	if (adreno_is_a3xx(ADRENO_DEVICE(device))) {
 		trace_adreno_cmdbatch_retired(drawobj, -1, 0, 0, drawctxt->rb,
 				0, 0);
-	else
+	} else {
 		trace_adreno_cmdbatch_retired(drawobj, -1, 0, 0, drawctxt->rb,
 			adreno_get_rptr(drawctxt->rb), 0);
+	}
 	kgsl_drawobj_destroy(drawobj);
 }
 
@@ -536,12 +537,8 @@ static int sendcmd(struct adreno_device *adreno_dev,
 	struct kgsl_drawobj *drawobj = DRAWOBJ(cmdobj);
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	struct adreno_dispatcher *dispatcher = &adreno_dev->dispatcher;
-	struct adreno_context *drawctxt = ADRENO_CONTEXT(drawobj->context);
 	struct adreno_dispatcher_drawqueue *dispatch_q =
 				ADRENO_DRAWOBJ_DISPATCH_DRAWQUEUE(drawobj);
-	struct adreno_submit_time time;
-	uint64_t secs = 0;
-	unsigned long nsecs = 0;
 	int ret;
 
 	mutex_lock(&device->mutex);
@@ -549,8 +546,6 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		mutex_unlock(&device->mutex);
 		return -EBUSY;
 	}
-
-	memset(&time, 0x0, sizeof(time));
 
 	dispatcher->inflight++;
 	dispatch_q->inflight++;
@@ -577,7 +572,7 @@ static int sendcmd(struct adreno_device *adreno_dev,
 			ADRENO_DRAWOBJ_PROFILE_COUNT;
 	}
 
-	ret = adreno_ringbuffer_submitcmd(adreno_dev, cmdobj, &time);
+	ret = adreno_ringbuffer_submitcmd(adreno_dev, cmdobj, NULL);
 
 	/*
 	 * On the first command, if the submission was successful, then read the
@@ -637,9 +632,6 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		return ret;
 	}
 
-	secs = time.ktime;
-	nsecs = do_div(secs, 1000000000);
-
 	/*
 	 * For the first submission in any given command queue update the
 	 * expected expire time - this won't actually be used / updated until
@@ -651,13 +643,7 @@ static int sendcmd(struct adreno_device *adreno_dev,
 		dispatch_q->expires = jiffies +
 			msecs_to_jiffies(adreno_drawobj_timeout);
 
-	trace_adreno_cmdbatch_submitted(drawobj, (int) dispatcher->inflight,
-		time.ticks, (unsigned long) secs, nsecs / 1000, drawctxt->rb,
-		adreno_get_rptr(drawctxt->rb));
-
 	mutex_unlock(&device->mutex);
-
-	cmdobj->submit_ticks = time.ticks;
 
 	dispatch_q->cmd_q[dispatch_q->tail] = cmdobj;
 	dispatch_q->tail = (dispatch_q->tail + 1) %
@@ -1460,10 +1446,6 @@ int adreno_dispatcher_queue_cmds(struct kgsl_device_private *dev_priv,
 	_track_context(adreno_dev, dispatch_q, drawctxt);
 
 	spin_unlock(&drawctxt->lock);
-
-	if (device->pwrctrl.l2pc_update_queue)
-		kgsl_pwrctrl_update_l2pc(&adreno_dev->dev,
-				KGSL_L2PC_QUEUE_TIMEOUT);
 
 	/* Add the context to the dispatcher pending list */
 	dispatcher_queue_context(adreno_dev, drawctxt);
@@ -2345,21 +2327,16 @@ static void retire_cmdobj(struct adreno_device *adreno_dev,
 	 * rptr scratch out address. At this point GPU clocks turned off.
 	 * So avoid reading GPU register directly for A3xx.
 	 */
-	if (adreno_is_a3xx(adreno_dev))
+	if (adreno_is_a3xx(adreno_dev)) {
 		trace_adreno_cmdbatch_retired(drawobj,
 			(int) dispatcher->inflight, start, end,
 			ADRENO_DRAWOBJ_RB(drawobj), 0, cmdobj->fault_recovery);
-	else
+	} else {
 		trace_adreno_cmdbatch_retired(drawobj,
 			(int) dispatcher->inflight, start, end,
 			ADRENO_DRAWOBJ_RB(drawobj),
 			adreno_get_rptr(drawctxt->rb), cmdobj->fault_recovery);
-
-	drawctxt->submit_retire_ticks[drawctxt->ticks_index] =
-		end - cmdobj->submit_ticks;
-
-	drawctxt->ticks_index = (drawctxt->ticks_index + 1) %
-		SUBMIT_RETIRE_TICKS_SIZE;
+	}
 
 	kgsl_drawobj_destroy(drawobj);
 }

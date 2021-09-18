@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -215,6 +215,15 @@ const char *ipa_clients_strings[IPA_CLIENT_MAX] = {
 	__stringify(IPA_CLIENT_MHI_PRIME_TETH_PROD),
 	__stringify(IPA_CLIENT_MHI_PRIME_TETH_CONS),
 	__stringify(IPA_CLIENT_MHI_PRIME_DPL_PROD),
+	__stringify(RESERVERD_CONS_103),
+	__stringify(IPA_CLIENT_MHI_LOW_LAT_PROD),
+	__stringify(IPA_CLIENT_MHI_LOW_LAT_CONS),
+	__stringify(IPA_CLIENT_QDSS_PROD),
+	__stringify(IPA_CLIENT_MHI_QDSS_CONS),
+	__stringify(RESERVERD_PROD_108),
+	__stringify(IPA_CLIENT_WLAN2_CONS1),
+	__stringify(IPA_CLIENT_RTK_ETHERNET_PROD),
+	__stringify(IPA_CLIENT_RTK_ETHERNET_CONS),
 };
 
 /**
@@ -354,6 +363,8 @@ int ipa_smmu_store_sgt(struct sg_table **out_ch_ptr,
 	struct sg_table *in_sgt_ptr)
 {
 	unsigned int nents;
+	int i;
+	struct scatterlist *in_sg, *out_sg;
 
 	if (in_sgt_ptr != NULL) {
 		*out_ch_ptr = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
@@ -371,8 +382,12 @@ int ipa_smmu_store_sgt(struct sg_table **out_ch_ptr,
 			return -ENOMEM;
 		}
 
-		memcpy((*out_ch_ptr)->sgl, in_sgt_ptr->sgl,
-			nents*sizeof((*out_ch_ptr)->sgl));
+		out_sg = (*out_ch_ptr)->sgl;
+		for_each_sg(in_sgt_ptr->sgl, in_sg, in_sgt_ptr->nents, i) {
+			memcpy(out_sg, in_sg, sizeof(struct scatterlist));
+			out_sg++;
+		}
+
 		(*out_ch_ptr)->nents = nents;
 		(*out_ch_ptr)->orig_nents = in_sgt_ptr->orig_nents;
 	}
@@ -3494,12 +3509,13 @@ int ipa_conn_wdi_pipes(struct ipa_wdi_conn_in_params *in,
 /**
  * ipa_disconn_wdi_pipes() - disconnect wdi pipes
  */
-int ipa_disconn_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
+int ipa_disconn_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1)
 {
 	int ret;
 
 	IPA_API_DISPATCH_RETURN(ipa_disconn_wdi_pipes, ipa_ep_idx_tx,
-		ipa_ep_idx_rx);
+		ipa_ep_idx_rx, ipa_ep_idx_tx1);
 
 	return ret;
 }
@@ -3507,12 +3523,13 @@ int ipa_disconn_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 /**
  * ipa_enable_wdi_pipes() - enable wdi pipes
  */
-int ipa_enable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
+int ipa_enable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1)
 {
 	int ret;
 
 	IPA_API_DISPATCH_RETURN(ipa_enable_wdi_pipes, ipa_ep_idx_tx,
-		ipa_ep_idx_rx);
+		ipa_ep_idx_rx, ipa_ep_idx_tx1);
 
 	return ret;
 }
@@ -3520,15 +3537,49 @@ int ipa_enable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
 /**
  * ipa_disable_wdi_pipes() - disable wdi pipes
  */
-int ipa_disable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx)
+int ipa_disable_wdi_pipes(int ipa_ep_idx_tx, int ipa_ep_idx_rx,
+	int ipa_ep_idx_tx1)
 {
 	int ret;
 
 	IPA_API_DISPATCH_RETURN(ipa_disable_wdi_pipes, ipa_ep_idx_tx,
-		ipa_ep_idx_rx);
+		ipa_ep_idx_rx, ipa_ep_idx_tx1);
 
 	return ret;
 }
+
+
+/**
+ * ipa_add_socksv5_conn()- Add socksv5 entry in IPA
+ *
+ * Return value: 0 on success, negative otherwise
+ */
+int ipa_add_socksv5_conn(struct ipa_socksv5_info *info)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_add_socksv5_conn, info);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_add_socksv5_conn);
+
+
+/**
+ * ipa_del_socksv5_conn()- Del socksv5 entry in IPA
+ *
+ * Return value: 0 on success, negative otherwise
+ */
+int ipa_del_socksv5_conn(uint32_t handle)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_del_socksv5_conn, handle);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_del_socksv5_conn);
+
 
 /**
  * ipa_get_lan_rx_napi() - returns if NAPI is enabled in LAN RX
@@ -3713,6 +3764,33 @@ bool ipa_pm_is_used(void)
 	return ret;
 }
 
+/**
+ * ipa_conn_qdss_pipes() - connect qdss pipes
+ */
+int ipa_qdss_conn_pipes(struct ipa_qdss_conn_in_params *in,
+	struct ipa_qdss_conn_out_params *out)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_conn_qdss_pipes, in, out);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_qdss_conn_pipes);
+
+/**
+ * ipa_disconn_qdss_pipes() - disconnect qdss pipes
+ */
+int ipa_qdss_disconn_pipes(void)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_disconn_qdss_pipes);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_qdss_disconn_pipes);
+
 static const struct dev_pm_ops ipa_pm_ops = {
 	.suspend_noirq = ipa_ap_suspend,
 	.resume_noirq = ipa_ap_resume,
@@ -3799,6 +3877,104 @@ static pci_ers_result_t ipa_pci_io_slot_reset(struct pci_dev *pci_dev)
 static void ipa_pci_io_resume(struct pci_dev *pci_dev)
 {
 }
+
+int ipa_eth_rtk_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_rtk_connect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_rtk_connect);
+
+int ipa_eth_aqc_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_aqc_connect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_aqc_connect);
+
+int ipa_eth_emac_connect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_emac_connect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_emac_connect);
+
+int ipa_eth_rtk_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_rtk_disconnect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_rtk_disconnect);
+
+int ipa_eth_aqc_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_aqc_disconnect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_aqc_disconnect);
+
+int ipa_eth_emac_disconnect(
+	struct ipa_eth_client_pipe_info *pipe,
+	enum ipa_client_type client_type)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_emac_disconnect, pipe,
+		client_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_emac_disconnect);
+
+int ipa_eth_client_conn_evt(struct ipa_ecm_msg *msg)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_client_conn_evt, msg);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_client_conn_evt);
+
+int ipa_eth_client_disconn_evt(struct ipa_ecm_msg *msg)
+{
+	int ret;
+
+	IPA_API_DISPATCH_RETURN(ipa_eth_client_disconn_evt, msg);
+
+	return ret;
+}
+EXPORT_SYMBOL(ipa_eth_client_disconn_evt);
 
 static int __init ipa_module_init(void)
 {

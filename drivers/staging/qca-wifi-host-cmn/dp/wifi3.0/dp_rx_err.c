@@ -29,6 +29,7 @@
 #include <linux/ieee80211.h>
 #endif
 #include "dp_rx_defrag.h"
+#include "dp_ipa.h"
 #include <enet.h>	/* LLC_SNAP_HDR_LEN */
 
 #ifdef RX_DESC_DEBUG_CHECK
@@ -1087,6 +1088,7 @@ dp_rx_wbm_err_process(struct dp_soc *soc, void *hal_ring, uint32_t quota)
 		}
 
 		nbuf = rx_desc->nbuf;
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, nbuf, false);
 		qdf_nbuf_unmap_single(soc->osdev, nbuf,	QDF_DMA_BIDIRECTIONAL);
 
 		/*
@@ -1303,6 +1305,7 @@ dp_rx_err_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 					qdf_assert(rx_desc);
 					msdu = rx_desc->nbuf;
 
+					dp_ipa_handle_rx_buf_smmu_mapping(soc, msdu, false);
 					qdf_nbuf_unmap_single(soc->osdev, msdu,
 						QDF_DMA_FROM_DEVICE);
 

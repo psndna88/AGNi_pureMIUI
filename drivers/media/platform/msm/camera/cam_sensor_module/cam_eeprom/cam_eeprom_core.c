@@ -1,5 +1,5 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -135,7 +135,7 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 					    emap[j].mem.addr, &gc_read,
 					    emap[j].mem.addr_type,
 					    emap[j].mem.data_type);
-                                    if (rc) {
+                                    if (rc < 0) {
 						CAM_ERR(CAM_EEPROM, "read failed rc %d", rc);
 						return rc;
 				     }

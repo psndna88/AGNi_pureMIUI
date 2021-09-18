@@ -787,19 +787,6 @@ QDF_STATUS csr_roam_get_wpa_rsn_req_ie(tpAniSirGlobal pMac, uint32_t sessionId,
 				       uint32_t *pLen, uint8_t *pBuf);
 
 /*
- * csr_roam_get_wpa_rsn_rsp_ie() -
- * Return the WPA or RSN IE from the beacon or probe rsp if connected
- *
- * pLen - caller allocated memory that has the length of pBuf as input.
- * Upon returned, *pLen has the needed or IE length in pBuf.
- * pBuf - Caller allocated memory that contain the IE field, if any, upon return
- * Return QDF_STATUS - when fail, it usually means the buffer allocated is not
- * big enough
- */
-QDF_STATUS csr_roam_get_wpa_rsn_rsp_ie(tpAniSirGlobal pMac, uint32_t sessionId,
-				       uint32_t *pLen, uint8_t *pBuf);
-
-/*
  * csr_roam_get_num_pmkid_cache() -
  * Return number of PMKID cache entries
  *
@@ -1023,6 +1010,18 @@ csr_clear_sae_single_pmk(tpAniSirGlobal pMac, uint8_t vdev_id,
 {
 }
 #endif
+
+/**
+ * csr_update_pmk_cache_ft - API to update MDID in PMKSA cache entry
+ * @mac_ctx: Mac context
+ * @vdev_id: session ID
+ * @BSSID: Connecting AP MAC address
+ * @mdid: Connecting AP Mobility Domain ID
+ *
+ * Return: None
+ */
+void csr_update_pmk_cache_ft(tpAniSirGlobal mac_ctx,
+			     uint32_t vdev_id, uint8_t *cache_id);
 
 bool csr_elected_country_info(tpAniSirGlobal pMac);
 void csr_add_vote_for_country_info(tpAniSirGlobal pMac, uint8_t *pCountryCode);

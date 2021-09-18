@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2013-2017 ARM Limited, All Rights Reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  * Author: Marc Zyngier <marc.zyngier@arm.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,8 +43,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/suspend.h>
 #include <linux/notifier.h>
-//2019.12.12 add longcheer xiaoxiongfeng "recording wakeup reason"
-#include <linux/wakeup_reason.h>
+
 #include "irq-gic-common.h"
 
 struct redist_region {
@@ -466,8 +464,6 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 			name = desc->action->name;
 
 		pr_warn("%s: %d triggered %s\n", __func__, irq, name);
-//2019.12.12 add longcheer xiaoxiongfeng "recording wakeup reason"
-		log_wakeup_reason(irq);
 	}
 }
 
@@ -693,7 +689,7 @@ static int __gic_populate_rdist(struct redist_region *region, void __iomem *ptr)
 		gic_data_rdist_rd_base() = ptr;
 		gic_data_rdist()->phys_base = region->phys_base + offset;
 
-		pr_info("CPU%d: found redistributor %lx region %d:%pa\n",
+		pr_debug("CPU%d: found redistributor %lx region %d:%pa\n",
 			smp_processor_id(), mpidr,
 			(int)(region - gic_data.redist_regions),
 			&gic_data_rdist()->phys_base);
@@ -885,7 +881,7 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	isb();
 }
 
-static void gic_smp_init(void)
+static void __init gic_smp_init(void)
 {
 	set_smp_cross_call(gic_raise_softirq);
 	cpuhp_setup_state_nocalls(CPUHP_AP_IRQ_GIC_STARTING,

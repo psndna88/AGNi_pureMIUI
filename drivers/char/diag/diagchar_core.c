@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,7 @@
 #include <linux/sched.h>
 #include <linux/ratelimit.h>
 #include <linux/timer.h>
+#include <linux/jiffies.h>
 #include <linux/sched/task.h>
 #ifdef CONFIG_DIAG_OVER_USB
 #include <linux/usb/usbdiag.h>
@@ -148,6 +149,8 @@ module_param(max_clients, uint, 0000);
 static struct timer_list drain_timer;
 static int timer_in_progress;
 
+static struct timer_list wake_timer;
+
 /*
  * Diag Mask clear variable
  * Used for clearing masks upon
@@ -209,6 +212,11 @@ do {								\
 static void drain_timer_func(unsigned long data)
 {
 	queue_work(driver->diag_wq, &(driver->diag_drain_work));
+}
+
+static void wake_timer_func(unsigned long data)
+{
+	pm_relax(driver->diag_dev);
 }
 
 static void diag_drain_apps_data(struct diag_apps_data_t *data)
@@ -331,6 +339,14 @@ static int diagchar_open(struct inode *inode, struct file *file)
 	if (driver) {
 		mutex_lock(&driver->diagchar_mutex);
 
+		for (i = 0; i < driver->num_clients; i++) {
+			if (driver->client_map[i].pid == current->tgid) {
+				pr_err_ratelimited("diag: Client already present current->tgid: %d\n",
+					current->tgid);
+				mutex_unlock(&driver->diagchar_mutex);
+				return -EEXIST;
+			}
+		}
 		for (i = 0; i < driver->num_clients; i++)
 			if (driver->client_map[i].pid == 0)
 				break;
@@ -568,6 +584,7 @@ static int diag_remove_client_entry(struct file *file)
 		return -EINVAL;
 	}
 
+	mutex_lock(&driver->diagchar_mutex);
 	diagpriv_data = file->private_data;
 	for (i = 0; i < driver->num_clients; i++)
 		if (diagpriv_data && diagpriv_data->pid ==
@@ -577,11 +594,13 @@ static int diag_remove_client_entry(struct file *file)
 		DIAG_LOG(DIAG_DEBUG_USERSPACE,
 			"pid %d, not present in client map\n",
 			diagpriv_data->pid);
+		mutex_unlock(&driver->diagchar_mutex);
 		mutex_unlock(&driver->diag_file_mutex);
 		return -EINVAL;
 	}
 	DIAG_LOG(DIAG_DEBUG_USERSPACE, "diag: %s process exit with pid = %d\n",
 		driver->client_map[i].name, diagpriv_data->pid);
+	mutex_unlock(&driver->diagchar_mutex);
 	/*
 	 * clean up any DCI registrations, if this is a DCI client
 	 * This will specially help in case of ungraceful exit of any DCI client
@@ -3063,7 +3082,7 @@ long diagchar_ioctl(struct file *filp,
 static int diag_process_apps_data_hdlc(unsigned char *buf, int len,
 				       int pkt_type)
 {
-	int err = 0;
+	int err = 0, wait_err = 0;
 	int ret = PKT_DROP;
 	struct diag_apps_data_t *data = &hdlc_data;
 	struct diag_send_desc_type send = { NULL, NULL, DIAG_STATE_START, 0 };
@@ -3094,8 +3113,15 @@ static int diag_process_apps_data_hdlc(unsigned char *buf, int len,
 	send.terminate = 1;
 
 wait_for_buffer:
-	wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+	wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+			(data->flushed == 0),
+			msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+	if (wait_err <= 0) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag: Timeout while waiting for hdlc buffer to be flushed, err: %d\n",
+		wait_err);
+		return PKT_DROP;
+	}
 	spin_lock_irqsave(&driver->diagmem_lock, flags);
 	if (data->flushed) {
 		spin_unlock_irqrestore(&driver->diagmem_lock, flags);
@@ -3146,8 +3172,16 @@ wait_for_buffer:
 			goto fail_free_buf;
 		}
 wait_for_agg_buff:
-		wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+		wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+				(data->flushed == 0),
+				msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+		if (wait_err <= 0) {
+			DIAG_LOG(DIAG_DEBUG_USERSPACE,
+			"diag: Timeout while waiting for hdlc aggregation buffer to be flushed, err: %d\n",
+			wait_err);
+			return PKT_DROP;
+		}
+
 		spin_lock_irqsave(&driver->diagmem_lock, flags);
 		if (data->flushed) {
 			spin_unlock_irqrestore(&driver->diagmem_lock, flags);
@@ -3205,7 +3239,7 @@ fail_ret:
 static int diag_process_apps_data_non_hdlc(unsigned char *buf, int len,
 					   int pkt_type)
 {
-	int err = 0;
+	int err = 0, wait_err = 0;
 	int ret = PKT_DROP;
 	struct diag_pkt_frame_t header;
 	struct diag_apps_data_t *data = &non_hdlc_data;
@@ -3223,8 +3257,16 @@ static int diag_process_apps_data_non_hdlc(unsigned char *buf, int len,
 		return -EIO;
 	}
 wait_for_buffer:
-	wait_event_interruptible(driver->hdlc_wait_q,
-			(data->flushed == 0));
+	wait_err = wait_event_interruptible_timeout(driver->hdlc_wait_q,
+					(data->flushed == 0),
+					msecs_to_jiffies(PKT_PROCESS_TIMEOUT));
+	if (wait_err <= 0) {
+		DIAG_LOG(DIAG_DEBUG_USERSPACE,
+		"diag: Timeout while waiting for non-hdlc buffer to be flushed, err: %d\n",
+		wait_err);
+		return PKT_DROP;
+	}
+
 	spin_lock_irqsave(&driver->diagmem_lock, flags);
 	if (data->flushed) {
 		spin_unlock_irqrestore(&driver->diagmem_lock, flags);
@@ -3623,9 +3665,12 @@ static ssize_t diagchar_read(struct file *file, char __user *buf, size_t count,
 	int proc = 0;
 
 	mutex_lock(&driver->diagchar_mutex);
-	for (i = 0; i < driver->num_clients; i++)
-		if (driver->client_map[i].pid == current->tgid)
+	for (i = 0; i < driver->num_clients; i++) {
+		if (driver->client_map[i].pid == current->tgid) {
 			index = i;
+			break;
+		}
+	}
 	mutex_unlock(&driver->diagchar_mutex);
 
 	if (index == -1) {
@@ -4101,6 +4146,8 @@ void diag_ws_on_notify(void)
 	 * interrupts.
 	 */
 	pm_stay_awake(driver->diag_dev);
+
+	mod_timer(&wake_timer, jiffies + msecs_to_jiffies(5000));
 }
 
 void diag_ws_on_read(int type, int pkt_len)
@@ -4253,8 +4300,7 @@ static void diag_debug_init(void)
 	 * Set the bit mask here as per diag_ipc_logging.h to enable debug logs
 	 * to be logged to IPC
 	 */
-	diag_debug_mask = DIAG_DEBUG_PERIPHERALS | DIAG_DEBUG_DCI |
-				DIAG_DEBUG_USERSPACE | DIAG_DEBUG_BRIDGE;
+	diag_debug_mask = 0;
 }
 #else
 static void diag_debug_init(void)
@@ -4388,6 +4434,33 @@ static void diag_init_transport(void)
 		poolsize_usb_apps + 1 + (NUM_PERIPHERALS * 6));
 }
 #endif
+
+static void diag_init_locks(void)
+{
+	int i = 0;
+
+	spin_lock_init(&driver->rsp_buf_busy_lock);
+
+	mutex_init(&driver->hdlc_disable_mutex);
+	mutex_init(&driver->diagchar_mutex);
+	mutex_init(&driver->diag_notifier_mutex);
+	mutex_init(&driver->diag_file_mutex);
+	mutex_init(&driver->delayed_rsp_mutex);
+	mutex_init(&apps_data_mutex);
+	mutex_init(&driver->msg_mask_lock);
+	mutex_init(&driver->hdlc_recovery_mutex);
+	mutex_init(&driver->diag_id_mutex);
+	mutex_init(&driver->diag_hdlc_mutex);
+	mutex_init(&driver->diag_cntl_mutex);
+	mutex_init(&driver->mode_lock);
+	mutex_init(&driver->cmd_reg_mutex);
+
+	for (i = 0; i < NUM_PERIPHERALS; i++) {
+		mutex_init(&driver->diagfwd_channel_mutex[i]);
+		mutex_init(&driver->rpmsginfo_mutex[i]);
+	}
+}
+
 static int __init diagchar_init(void)
 {
 	dev_t dev;
@@ -4401,6 +4474,7 @@ static int __init diagchar_init(void)
 	kmemleak_not_leak(driver);
 
 	timer_in_progress = 0;
+	diag_init_locks();
 	diag_init_transport();
 	DIAG_LOG(DIAG_DEBUG_MUX, "Transport type set to %d\n",
 		driver->transport_set);
@@ -4408,6 +4482,7 @@ static int __init diagchar_init(void)
 	driver->hdlc_disabled = 0;
 	driver->dci_state = DIAG_DCI_NO_ERROR;
 	setup_timer(&drain_timer, drain_timer_func, 1234);
+	setup_timer(&wake_timer, wake_timer_func, 0);
 	driver->supports_sockets = 1;
 	driver->time_sync_enabled = 0;
 	driver->uses_time_api = 0;
@@ -4427,26 +4502,21 @@ static int __init diagchar_init(void)
 	driver->pcie_switch_pid = 0;
 	driver->rsp_buf_ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_CMD, TYPE_CMD);
 	hdlc_data.ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_DATA, 1);
+	hdlc_data.ctxt |= SET_HDLC_CTXT(HDLC_CTXT);
 	hdlc_data.len = 0;
 	hdlc_data.allocated = 0;
 	hdlc_data.flushed = 0;
 	non_hdlc_data.ctxt = SET_BUF_CTXT(APPS_DATA, TYPE_DATA, 1);
+	non_hdlc_data.ctxt |= SET_HDLC_CTXT(NON_HDLC_CTXT);
 	non_hdlc_data.len = 0;
 	non_hdlc_data.allocated = 0;
 	non_hdlc_data.flushed = 0;
-	mutex_init(&driver->hdlc_disable_mutex);
-	mutex_init(&driver->diagchar_mutex);
-	mutex_init(&driver->diag_notifier_mutex);
-	mutex_init(&driver->diag_file_mutex);
-	mutex_init(&driver->delayed_rsp_mutex);
-	mutex_init(&apps_data_mutex);
-	mutex_init(&driver->msg_mask_lock);
-	mutex_init(&driver->hdlc_recovery_mutex);
-	for (i = 0; i < NUM_PERIPHERALS; i++) {
-		mutex_init(&driver->diagfwd_channel_mutex[i]);
-		mutex_init(&driver->rpmsginfo_mutex[i]);
+	for (i = 0; i < NUM_PERIPHERALS; i++)
 		driver->diag_id_sent[i] = 0;
-	}
+
+	INIT_LIST_HEAD(&driver->diag_id_list);
+	INIT_LIST_HEAD(&driver->cmd_reg_list);
+
 	init_waitqueue_head(&driver->wait_q);
 	INIT_WORK(&(driver->diag_drain_work), diag_drain_work_fn);
 	INIT_WORK(&(driver->update_user_clients),
@@ -4513,8 +4583,6 @@ static int __init diagchar_init(void)
 	ret = diagchar_setup_cdev(dev);
 	if (ret)
 		goto fail;
-	mutex_init(&driver->diag_id_mutex);
-	INIT_LIST_HEAD(&driver->diag_id_list);
 	diag_add_diag_id_to_list(DIAG_ID_APPS, "APPS", APPS_DATA, APPS_DATA);
 	pr_debug("diagchar initialized now");
 	if (IS_ENABLED(CONFIG_DIAGFWD_BRIDGE_CODE))

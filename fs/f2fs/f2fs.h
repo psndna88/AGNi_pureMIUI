@@ -3118,7 +3118,7 @@ int f2fs_get_valid_checkpoint(struct f2fs_sb_info *sbi);
 void f2fs_update_dirty_page(struct inode *inode, struct page *page);
 void f2fs_remove_dirty_inode(struct inode *inode);
 int f2fs_sync_dirty_inodes(struct f2fs_sb_info *sbi, enum inode_type type);
-void f2fs_wait_on_all_pages_writeback(struct f2fs_sb_info *sbi);
+void f2fs_wait_on_all_pages(struct f2fs_sb_info *sbi, int type);
 int f2fs_write_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc);
 void f2fs_init_ino_entry_info(struct f2fs_sb_info *sbi);
 int __init f2fs_create_checkpoint_caches(void);
@@ -3638,16 +3638,6 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
 		return true;
 
 	return false;
-}
-
-static inline bool f2fs_may_encrypt_bio(struct inode *inode,
-		struct f2fs_io_info *fio)
-{
-	if (fio && (fio->type != DATA || fio->encrypted_page))
-		return false;
-
-	return (f2fs_encrypted_file(inode) &&
-			fscrypt_using_hardware_encryption(inode));
 }
 
 #ifdef CONFIG_F2FS_FAULT_INJECTION

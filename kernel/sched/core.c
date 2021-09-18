@@ -48,18 +48,21 @@
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
+#if defined(CONFIG_SCHED_DEBUG) && defined(HAVE_JUMP_LABEL)
 /*
  * Debugging: various feature bits
+ *
+ * If SCHED_DEBUG is disabled, each compilation unit has its own copy of
+ * sysctl_sched_features, defined in sched.h, to allow constants propagation
+ * at compile time and compiler optimization based on features default.
  */
-
 #define SCHED_FEAT(name, enabled)	\
 	(1UL << __SCHED_FEAT_##name) * enabled |
-
 const_debug unsigned int sysctl_sched_features =
 #include "features.h"
 	0;
-
 #undef SCHED_FEAT
+#endif
 
 /*
  * Number of tasks to iterate in a single balance run.
@@ -438,10 +441,11 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
 	 * its already queued (either by us or someone else) and will get the
 	 * wakeup due to that.
 	 *
-	 * This cmpxchg() implies a full barrier, which pairs with the write
-	 * barrier implied by the wakeup in wake_up_q().
+	 * In order to ensure that a pending wakeup will observe our pending
+	 * state, even in the failed case, an explicit smp_mb() must be used.
 	 */
-	if (cmpxchg(&node->next, NULL, WAKE_Q_TAIL))
+	smp_mb__before_atomic();
+	if (cmpxchg_relaxed(&node->next, NULL, WAKE_Q_TAIL))
 		return;
 
 	head->count++;
@@ -973,9 +977,14 @@ static struct rq *move_queued_task(struct rq *rq, struct rq_flags *rf,
 
 	p->on_rq = TASK_ON_RQ_MIGRATING;
 	dequeue_task(rq, p, DEQUEUE_NOCLOCK);
+#ifdef CONFIG_SCHED_WALT
 	double_lock_balance(rq, cpu_rq(new_cpu));
 	set_task_cpu(p, new_cpu);
 	double_rq_unlock(cpu_rq(new_cpu), rq);
+#else
+	set_task_cpu(p, new_cpu);
+	rq_unlock(rq, rf);
+#endif
 
 	rq = cpu_rq(new_cpu);
 
@@ -1069,6 +1078,17 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
 
+static const struct cpumask *
+adjust_cpumask(const struct task_struct *p,
+		     const struct cpumask *orig_mask)
+{
+	/* Force all performance-critical kthreads onto the big cluster */
+	if (p->flags & PF_PERF_CRITICAL)
+		return cpu_perf_mask;
+
+	return orig_mask;
+}
+
 void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
 	struct rq *rq = task_rq(p);
@@ -1116,6 +1136,8 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	struct rq *rq;
 	int ret = 0;
 	cpumask_t allowed_mask;
+
+	new_mask = adjust_cpumask(p, new_mask);
 
 	rq = task_rq_lock(p, &rf);
 	update_rq_clock(rq);
@@ -1596,7 +1618,7 @@ out:
 		 * leave kernel.
 		 */
 		if (p->mm && printk_ratelimit()) {
-			printk_deferred("process %d (%s) no longer affine to cpu%d\n",
+			pr_debug("process %d (%s) no longer affine to cpu%d\n",
 					task_pid_nr(p), p->comm, cpu);
 		}
 	}
@@ -3925,7 +3947,8 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
 	 */
 	if (dl_prio(prio)) {
 		if (!dl_prio(p->normal_prio) ||
-		    (pi_task && dl_entity_preempt(&pi_task->dl, &p->dl))) {
+		    (pi_task && dl_prio(pi_task->prio) &&
+		     dl_entity_preempt(&pi_task->dl, &p->dl))) {
 			p->dl.dl_boosted = 1;
 			queue_flag |= ENQUEUE_REPLENISH;
 		} else
@@ -4145,7 +4168,8 @@ static void __setscheduler_params(struct task_struct *p,
 	if (policy == SETPARAM_POLICY)
 		policy = p->policy;
 
-	p->policy = policy;
+	/* Replace SCHED_FIFO with SCHED_RR to reduce latency */
+	p->policy = policy == SCHED_FIFO ? SCHED_RR : policy;
 
 	if (dl_policy(policy))
 		__setparam_dl(p, attr);
@@ -4911,60 +4935,6 @@ out_put_task:
 	return retval;
 }
 
-char sched_lib_name[LIB_PATH_LENGTH];
-unsigned int sched_lib_mask_force;
-bool is_sched_lib_based_app(pid_t pid)
-{
-	const char *name = NULL;
-	struct vm_area_struct *vma;
-	char path_buf[LIB_PATH_LENGTH];
-	bool found = false;
-	struct task_struct *p;
-	struct mm_struct *mm;
-
-	if (strnlen(sched_lib_name, LIB_PATH_LENGTH) == 0)
-		return false;
-
-	rcu_read_lock();
-
-	p = find_process_by_pid(pid);
-	if (!p) {
-		rcu_read_unlock();
-		return false;
-	}
-
-	/* Prevent p going away */
-	get_task_struct(p);
-	rcu_read_unlock();
-
-	mm = get_task_mm(p);
-	if (!mm)
-		goto put_task_struct;
-
-	down_read(&mm->mmap_sem);
-	for (vma = mm->mmap; vma ; vma = vma->vm_next) {
-		if (vma->vm_file && vma->vm_flags & VM_EXEC) {
-			name = d_path(&vma->vm_file->f_path,
-					path_buf, LIB_PATH_LENGTH);
-			if (IS_ERR(name))
-				goto release_sem;
-
-			if (strnstr(name, sched_lib_name,
-					strnlen(name, LIB_PATH_LENGTH))) {
-				found = true;
-				break;
-			}
-		}
-	}
-
-release_sem:
-	up_read(&mm->mmap_sem);
-	mmput(mm);
-put_task_struct:
-	put_task_struct(p);
-	return found;
-}
-
 static int get_user_cpu_mask(unsigned long __user *user_mask_ptr, unsigned len,
 			     struct cpumask *new_mask)
 {
@@ -5090,12 +5060,8 @@ SYSCALL_DEFINE0(sched_yield)
 	schedstat_inc(rq->yld_count);
 	current->sched_class->yield_task(rq);
 
-	/*
-	 * Since we are going to call schedule() anyway, there's
-	 * no need to preempt or enable interrupts:
-	 */
 	preempt_disable();
-	rq_unlock(rq, &rf);
+	rq_unlock_irq(rq, &rf);
 	sched_preempt_enable_no_resched();
 
 	schedule();
@@ -5292,7 +5258,7 @@ long __sched io_schedule_timeout(long timeout)
 }
 EXPORT_SYMBOL(io_schedule_timeout);
 
-void io_schedule(void)
+void __sched io_schedule(void)
 {
 	int token;
 
@@ -6865,9 +6831,15 @@ static int find_capacity_margin_levels(void)
 }
 
 static void sched_update_up_migrate_values(int cap_margin_levels,
-				const struct cpumask *cluster_cpus[])
+			const struct cpumask *cluster_cpus[], bool boosted)
 {
 	int i, cpu;
+	unsigned int *sched_capacity_margin_up_array = boosted ?
+			sched_capacity_margin_up_boosted :
+			sched_capacity_margin_up,
+		     *sysctl_sched_capacity_margin_up_array = boosted ?
+			sysctl_sched_capacity_margin_up_boosted :
+			sysctl_sched_capacity_margin_up;
 
 	if (cap_margin_levels > 1) {
 		/*
@@ -6877,19 +6849,25 @@ static void sched_update_up_migrate_values(int cap_margin_levels,
 		for (i = 0; i < cap_margin_levels; i++)
 			if (cluster_cpus[i])
 				for_each_cpu(cpu, cluster_cpus[i])
-					sched_capacity_margin_up[cpu] =
-					sysctl_sched_capacity_margin_up[i];
+				    sched_capacity_margin_up_array[cpu] =
+				    sysctl_sched_capacity_margin_up_array[i];
 	} else {
 		for_each_possible_cpu(cpu)
-			sched_capacity_margin_up[cpu] =
-				sysctl_sched_capacity_margin_up[0];
+			sched_capacity_margin_up_array[cpu] =
+				sysctl_sched_capacity_margin_up_array[0];
 	}
 }
 
 static void sched_update_down_migrate_values(int cap_margin_levels,
-				const struct cpumask *cluster_cpus[])
+			const struct cpumask *cluster_cpus[], bool boosted)
 {
 	int i, cpu;
+	unsigned int *sched_capacity_margin_down_array = boosted ?
+			sched_capacity_margin_down_boosted :
+			sched_capacity_margin_down,
+		      *sysctl_sched_capacity_margin_down_array = boosted ?
+			sysctl_sched_capacity_margin_down_boosted :
+			sysctl_sched_capacity_margin_down;
 
 	if (cap_margin_levels > 1) {
 		/*
@@ -6898,20 +6876,23 @@ static void sched_update_down_migrate_values(int cap_margin_levels,
 		for (i = 0; i < cap_margin_levels; i++)
 			if (cluster_cpus[i+1])
 				for_each_cpu(cpu, cluster_cpus[i+1])
-					sched_capacity_margin_down[cpu] =
-					sysctl_sched_capacity_margin_down[i];
+				    sched_capacity_margin_down_array[cpu] =
+				    sysctl_sched_capacity_margin_down_array[i];
 	} else {
 		for_each_possible_cpu(cpu)
-			sched_capacity_margin_down[cpu] =
-				sysctl_sched_capacity_margin_down[0];
+			sched_capacity_margin_down_array[cpu] =
+				sysctl_sched_capacity_margin_down_array[0];
 	}
 }
 
 static void sched_update_updown_migrate_values(unsigned int *data,
-					      int cap_margin_levels)
+					    int cap_margin_levels, bool boosted)
 {
 	int i, cpu;
 	static const struct cpumask *cluster_cpus[MAX_CLUSTERS];
+	unsigned int *sysctl_sched_capacity_margin_up_array = boosted ?
+			sysctl_sched_capacity_margin_up_boosted :
+			sysctl_sched_capacity_margin_up;
 
 	for (i = cpu = 0; (!cluster_cpus[i]) &&
 				cpu < num_possible_cpus(); i++) {
@@ -6919,22 +6900,29 @@ static void sched_update_updown_migrate_values(unsigned int *data,
 		cpu += cpumask_weight(topology_core_cpumask(cpu));
 	}
 
-	if (data == &sysctl_sched_capacity_margin_up[0])
-		sched_update_up_migrate_values(cap_margin_levels, cluster_cpus);
+	if (data == &sysctl_sched_capacity_margin_up_array[0])
+		sched_update_up_migrate_values(cap_margin_levels,
+					       cluster_cpus, boosted);
 	else
 		sched_update_down_migrate_values(cap_margin_levels,
-						 cluster_cpus);
+						 cluster_cpus, boosted);
 }
 
-int sched_updown_migrate_handler(struct ctl_table *table, int write,
+static int __sched_updown_migrate_handler(struct ctl_table *table, int write,
 				 void __user *buffer, size_t *lenp,
-				 loff_t *ppos)
+				 loff_t *ppos, bool boosted)
 {
 	int ret, i;
 	unsigned int *data = (unsigned int *)table->data;
 	unsigned int *old_val;
 	static DEFINE_MUTEX(mutex);
 	static int cap_margin_levels = -1;
+	unsigned int *sysctl_sched_capacity_margin_up_array = boosted ?
+			sysctl_sched_capacity_margin_up_boosted :
+			sysctl_sched_capacity_margin_up,
+		     *sysctl_sched_capacity_margin_down_array = boosted ?
+			sysctl_sched_capacity_margin_down_boosted :
+			sysctl_sched_capacity_margin_down;
 
 	mutex_lock(&mutex);
 
@@ -6975,15 +6963,15 @@ int sched_updown_migrate_handler(struct ctl_table *table, int write,
 	}
 
 	for (i = 0; i < cap_margin_levels; i++) {
-		if (sysctl_sched_capacity_margin_up[i] >
-				sysctl_sched_capacity_margin_down[i]) {
+		if (sysctl_sched_capacity_margin_up_array[i] >
+				sysctl_sched_capacity_margin_down_array[i]) {
 			memcpy(data, old_val, table->maxlen);
 			ret = -EINVAL;
 			goto free_old_val;
 		}
 	}
 
-	sched_update_updown_migrate_values(data, cap_margin_levels);
+	sched_update_updown_migrate_values(data, cap_margin_levels, boosted);
 
 free_old_val:
 	kfree(old_val);
@@ -6991,6 +6979,22 @@ unlock_mutex:
 	mutex_unlock(&mutex);
 
 	return ret;
+}
+
+int sched_updown_migrate_handler(struct ctl_table *table, int write,
+				 void __user *buffer, size_t *lenp,
+				 loff_t *ppos)
+{
+	return __sched_updown_migrate_handler(table, write, buffer,
+					      lenp, ppos, false);
+}
+
+int sched_updown_migrate_handler_boosted(struct ctl_table *table, int write,
+				 void __user *buffer, size_t *lenp,
+				 loff_t *ppos)
+{
+	return __sched_updown_migrate_handler(table, write, buffer,
+					      lenp, ppos, true);
 }
 #endif
 
@@ -7072,10 +7076,6 @@ static int cpu_cgroup_can_attach(struct cgroup_taskset *tset)
 #ifdef CONFIG_RT_GROUP_SCHED
 		if (!sched_rt_can_attach(css_tg(css), task))
 			return -EINVAL;
-#else
-		/* We don't support RT-tasks being in separate groups */
-		if (task->sched_class != &fair_sched_class)
-			return -EINVAL;
 #endif
 		/*
 		 * Serialize against wake_up_new_task() such that if its
@@ -7110,6 +7110,8 @@ static void cpu_cgroup_attach(struct cgroup_taskset *tset)
 static int cpu_shares_write_u64(struct cgroup_subsys_state *css,
 				struct cftype *cftype, u64 shareval)
 {
+	if (shareval > scale_load_down(ULONG_MAX))
+		shareval = MAX_SHARES;
 	return sched_group_set_shares(css_tg(css), scale_load(shareval));
 }
 
@@ -7212,8 +7214,10 @@ int tg_set_cfs_quota(struct task_group *tg, long cfs_quota_us)
 	period = ktime_to_ns(tg->cfs_bandwidth.period);
 	if (cfs_quota_us < 0)
 		quota = RUNTIME_INF;
-	else
+	else if ((u64)cfs_quota_us <= U64_MAX / NSEC_PER_USEC)
 		quota = (u64)cfs_quota_us * NSEC_PER_USEC;
+	else
+		return -EINVAL;
 
 	return tg_set_cfs_bandwidth(tg, period, quota);
 }
@@ -7234,6 +7238,9 @@ long tg_get_cfs_quota(struct task_group *tg)
 int tg_set_cfs_period(struct task_group *tg, long cfs_period_us)
 {
 	u64 quota, period;
+
+	if ((u64)cfs_period_us > U64_MAX / NSEC_PER_USEC)
+		return -EINVAL;
 
 	period = (u64)cfs_period_us * NSEC_PER_USEC;
 	quota = tg->cfs_bandwidth.quota;

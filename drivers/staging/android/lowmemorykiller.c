@@ -69,7 +69,7 @@
 static int enable_lmk = 1;
 module_param_named(enable_lmk, enable_lmk, int, 0644);
 
-static u32 lowmem_debug_level = 0;
+static u32 lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
 	1,
@@ -79,12 +79,10 @@ static short lowmem_adj[6] = {
 
 static int lowmem_adj_size = 4;
 static int lowmem_minfree[6] = {
-	18432,
-	23040,
-	27648,
-	32256,
-	55296,
-	80640,
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
 };
 
 static int lowmem_minfree_size = 4;
@@ -119,7 +117,7 @@ enum {
 
 /* User knob to enable/disable adaptive lmk feature */
 static int enable_adaptive_lmk = ADAPTIVE_LMK_DISABLED;
-module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
+//module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
 
 /*
  * This parameter controls the behaviour of LMK when vmpressure is in
@@ -188,6 +186,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	if (pressure >= 95) {
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 		other_free = global_zone_page_state(NR_FREE_PAGES);
 
@@ -201,6 +200,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 
 		other_free = global_zone_page_state(NR_FREE_PAGES);
@@ -213,6 +213,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	} else if (atomic_read(&shift_adj)) {
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 
 		other_free = global_zone_page_state(NR_FREE_PAGES);
@@ -445,11 +446,13 @@ static int get_minfree_scalefactor(gfp_t gfp_mask)
 	struct zoneref *z;
 	struct zone *zone;
 	unsigned long nr_usable = 0;
+	int totalrampages;
 
 	for_each_zone_zonelist(zone, z, zonelist, gfp_zone(gfp_mask))
 		nr_usable += zone->managed_pages;
+	totalrampages = totalram_pages();
 
-	return max_t(int, 1, mult_frac(100, nr_usable, totalram_pages));
+	return max_t(int, 1, mult_frac(100, nr_usable, totalrampages));
 }
 
 static void mark_lmk_victim(struct task_struct *tsk)

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +9,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+
+#include <linux/msm-bus.h>
 
 #include "kgsl.h"
 #include "kgsl_sharedmem.h"
@@ -862,12 +864,22 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 
 	snapshot_frozen_objsize = 0;
 
+	/*
+	 * We read lots of registers during GPU snapshot. Keep
+	 * high bus vote to reduce AHB latency.
+	 */
+	if (device->pwrctrl.ahbpath_pcl)
+		msm_bus_scale_client_update_request(device->pwrctrl.ahbpath_pcl,
+			KGSL_AHB_PATH_HIGH);
+
 	/* Add GPU specific sections - registers mainly, but other stuff too */
 	if (gpudev->snapshot)
 		gpudev->snapshot(adreno_dev, snapshot);
 
-	if (GMU_DEV_OP_VALID(gmu_dev_ops, gx_is_on))
-		gx_on = gmu_dev_ops->gx_is_on(adreno_dev);
+	/* Dumping these buffers is useless if the GX is not on */
+	if (GMU_DEV_OP_VALID(gmu_dev_ops, gx_is_on) &&
+			!gmu_dev_ops->gx_is_on(adreno_dev))
+		goto out;
 
 	setup_fault_process(device, snapshot,
 			context ? context->proc_priv : NULL);
@@ -923,17 +935,34 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 	 * The problem is that IB size from the register is the unprocessed size
 	 * of the buffer not the original size, so if we didn't catch this
 	 * buffer being directly used in the RB, then we might not be able to
-	 * dump the whole thing. Print a warning message so we can try to
+	 * dump the whole thing. Try to dump the maximum possible size from the
+	 * IB1 base address till the end of memdesc size so that we dont miss
+	 * what we are interested in. Print a warning message so we can try to
 	 * figure how often this really happens.
 	 */
 
 	if (-ENOENT == find_object(snapshot->ib1base, snapshot->process) &&
 			snapshot->ib1size) {
-		kgsl_snapshot_push_object(snapshot->process, snapshot->ib1base,
-				snapshot->ib1size);
-		KGSL_CORE_ERR(
-		"CP_IB1_BASE not found in the ringbuffer.Dumping %x dwords of the buffer.\n",
-		snapshot->ib1size);
+		struct kgsl_mem_entry *entry;
+		u64 ibsize;
+
+		entry = kgsl_sharedmem_find(snapshot->process,
+				snapshot->ib1base);
+		if (entry == NULL) {
+			KGSL_CORE_ERR(
+				"Can't find a memory entry containing IB1BASE %16llx\n",
+				snapshot->ib1base);
+		} else {
+			ibsize = entry->memdesc.size -
+				(snapshot->ib1base - entry->memdesc.gpuaddr);
+			kgsl_mem_entry_put(entry);
+
+			kgsl_snapshot_push_object(snapshot->process,
+				snapshot->ib1base, ibsize >> 2);
+			KGSL_CORE_ERR(
+				"CP_IB1_BASE is not found in the ringbuffer. Dumping %llx dwords of the buffer\n",
+				ibsize >> 2);
+		}
 	}
 
 	/*
@@ -970,6 +999,10 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 		KGSL_CORE_ERR("GPU snapshot froze %zdKb of GPU buffers\n",
 			snapshot_frozen_objsize / 1024);
 
+out:
+	if (device->pwrctrl.ahbpath_pcl)
+		msm_bus_scale_client_update_request(device->pwrctrl.ahbpath_pcl,
+			KGSL_AHB_PATH_LOW);
 }
 
 /*

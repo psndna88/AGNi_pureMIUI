@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016  xiaomi Inc.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 #define pr_fmt(fmt)	"[Onewire] %s: " fmt, __func__
 
@@ -21,11 +21,12 @@
 #include <linux/list.h>
 #include <linux/device.h>
 #include <linux/spinlock.h>
+#include <linux/board_id.h>
 
-#define ow_info	pr_info
-#define ow_dbg	pr_debug
-#define ow_err	pr_debug
-#define ow_log	pr_err
+#define ow_info
+#define ow_dbg
+#define ow_err
+#define ow_log
 
 #define DRV_STRENGTH_16MA		(0x7 << 6)
 #define DRV_STRENGTH_12MA		(0x5 << 6)
@@ -538,7 +539,6 @@ static const struct file_operations onewire_dev_fops = {
 
 static const struct of_device_id onewire_gpio_dt_match[] = {
 	{.compatible = "xiaomi,onewire_gpio"},
-	{},
 };
 
 static struct platform_driver onewire_gpio_driver = {
@@ -556,6 +556,8 @@ static int __init onewire_gpio_init(void)
 	int retval;
 	onewire_gpio_detected = false;
 
+	if (!board_get_33w_supported())
+		return 0;
 	ow_log("onewire gpio init entry.");
 
 	onewire_class = class_create(THIS_MODULE, "onewire");
@@ -580,6 +582,8 @@ class_unreg:
 
 static void __exit onewire_gpio_exit(void)
 {
+	if (!board_get_33w_supported())
+		return;
 	ow_log("onewire gpio exit entry.");
 	platform_driver_unregister(&onewire_gpio_driver);
 

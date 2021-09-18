@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,14 +13,33 @@
 #ifndef _IPA_H_
 #define _IPA_H_
 
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <linux/ipv6.h>
 #include <linux/msm_ipa.h>
+#include "linux/msm_gsi.h"
 #include <linux/skbuff.h>
 #include <linux/types.h>
-#include <linux/if_ether.h>
-#include "linux/msm_gsi.h"
 
 #define IPA_APPS_MAX_BW_IN_MBPS 700
 #define IPA_MAX_CH_STATS_SUPPORTED 5
+
+/**
+ * the attributes of the socksv5 options
+ */
+#define IPA_SOCKSv5_ENTRY_VALID	(1ul << 0)
+#define IPA_SOCKSv5_IPV4	(1ul << 1)
+#define IPA_SOCKSv5_IPV6	(1ul << 2)
+#define IPA_SOCKSv5_OPT_TS	(1ul << 3)
+#define IPA_SOCKSv5_OPT_SACK	(1ul << 4)
+#define IPA_SOCKSv5_OPT_WS_STC	(1ul << 5)
+#define IPA_SOCKSv5_OPT_WS_DMC	(1ul << 6)
+
+#define IPA_SOCKsv5_ADD_COM_ID		15
+#define IPA_SOCKsv5_ADD_V6_V4_COM_PM	1
+#define IPA_SOCKsv5_ADD_V4_V6_COM_PM	2
+#define IPA_SOCKsv5_ADD_V6_V6_COM_PM	3
+
 /**
  * enum ipa_transport_type
  * transport type: either GSI or SPS
@@ -355,18 +374,28 @@ struct ipa_ep_cfg_holb {
  * struct ipa_ep_cfg_deaggr - deaggregation configuration in IPA end-point
  * @deaggr_hdr_len: Deaggregation Header length in bytes. Valid only for Input
  *	Pipes, which are configured for 'Generic' deaggregation.
+ * @syspipe_err_detection - If set to 1, enables error detection for
+ *	de-aggregration. Valid only for Input Pipes, which are configured
+ *	for 'Generic' deaggregation.
+ *	Note: if this bit is set, de-aggregated frames must be contiguous
+ *	in memory.
  * @packet_offset_valid: - 0: PACKET_OFFSET is not used, 1: PACKET_OFFSET is
  *	used.
  * @packet_offset_location: Location of packet offset field, which specifies
  *	the offset to the packet from the start of the packet offset field.
+ * @ignore_min_pkt_err - Ignore packets smaller than header. This is intended
+ *	for use in RNDIS de-aggregated pipes, to silently ignore a redundant
+ *	1-byte trailer in MSFT implementation.
  * @max_packet_len: DEAGGR Max Packet Length in Bytes. A Packet with higher
  *	size wil be treated as an error. 0 - Packet Length is not Bound,
  *	IPA should not check for a Max Packet Length.
  */
 struct ipa_ep_cfg_deaggr {
 	u32 deaggr_hdr_len;
+	bool syspipe_err_detection;
 	bool packet_offset_valid;
 	u32 packet_offset_location;
+	bool ignore_min_pkt_err;
 	u32 max_packet_len;
 };
 
@@ -948,13 +977,34 @@ struct IpaHwRingStats_t {
 } __packed;
 
 /**
+* struct ipa_uc_dbg_rtk_ring_stats - uC dbg stats info for RTK
+* offloading protocol
+* @commStats: common stats
+* @trCount: transfer ring count
+* @erCount: event ring count
+* @totalAosCount: total AoS completion count
+* @busyTime: total busy time
+*/
+struct ipa_uc_dbg_rtk_ring_stats {
+	struct IpaHwRingStats_t commStats;
+	u32 trCount;
+	u32 erCount;
+	u32 totalAosCount;
+	u64 busyTime;
+} __packed;
+
+/**
  * struct ipa_uc_dbg_ring_stats - uC dbg stats info for each
  * offloading protocol
  * @ring: ring stats for each channel
  * @ch_num: number of ch supported for given protocol
  */
 struct ipa_uc_dbg_ring_stats {
-	struct IpaHwRingStats_t ring[IPA_MAX_CH_STATS_SUPPORTED];
+	union {
+		struct IpaHwRingStats_t ring[IPA_MAX_CH_STATS_SUPPORTED];
+		struct ipa_uc_dbg_rtk_ring_stats
+			rtk[IPA_MAX_CH_STATS_SUPPORTED];
+	} u;
 	u8 num_ch;
 };
 
@@ -1253,6 +1303,104 @@ struct ipa_smmu_in_params {
 struct ipa_smmu_out_params {
 	bool smmu_enable;
 };
+
+struct iphdr_rsv {
+	struct iphdr ipv4_temp;  /* 20 bytes */
+	uint32_t rsv1;
+	uint32_t rsv2;
+	uint32_t rsv3;
+	uint32_t rsv4;
+	uint32_t rsv5;
+} __packed;
+
+union ip_hdr_temp {
+	struct iphdr_rsv ipv4_rsv;	/* 40 bytes */
+	struct ipv6hdr ipv6_temp;	/* 40 bytes */
+} __packed;
+
+struct ipa_socksv5_uc_tmpl {
+	uint16_t cmd_id;
+	uint16_t rsv;
+	uint32_t cmd_param;
+	uint16_t pkt_count;
+	uint16_t rsv2;
+	uint32_t byte_count;
+	union ip_hdr_temp ip_hdr;
+	/* 2B src/dst port */
+	uint16_t src_port;
+	uint16_t dst_port;
+
+	/* attribute mask */
+	uint32_t ipa_sockv5_mask;
+
+	/* reqquired update 4B/4B Seq/Ack/SACK */
+	uint32_t out_irs;
+	uint32_t out_iss;
+	uint32_t in_irs;
+	uint32_t in_iss;
+
+	/* option 10B: time-stamp */
+	uint32_t out_ircv_tsval;
+	uint32_t in_ircv_tsecr;
+	uint32_t out_ircv_tsecr;
+	uint32_t in_ircv_tsval;
+
+	/* option 2B: window-scaling/dynamic */
+	uint16_t in_isnd_wscale:4;
+	uint16_t out_isnd_wscale:4;
+	uint16_t in_ircv_wscale:4;
+	uint16_t out_ircv_wscale:4;
+	uint16_t MAX_WINDOW_SIZE;
+	/* 11*4 + 40 bytes = 84 bytes */
+	uint32_t rsv3;
+	uint32_t rsv4;
+	uint32_t rsv5;
+	uint32_t rsv6;
+	uint32_t rsv7;
+	uint32_t rsv8;
+	uint32_t rsv9;
+} __packed;
+/*reserve 16 bytes : 16 bytes+ 40 bytes + 44 bytes = 100 bytes (28 bytes left)*/
+
+struct ipa_socksv5_info {
+	/* ipa-uc info */
+	struct ipa_socksv5_uc_tmpl ul_out;
+	struct ipa_socksv5_uc_tmpl dl_out;
+
+	/* ipacm info */
+	struct ipacm_socksv5_info ul_in;
+	struct ipacm_socksv5_info dl_in;
+
+	/* output: handle (index) */
+	uint16_t handle;
+};
+
+struct ipa_ipv6_nat_uc_tmpl {
+	uint16_t cmd_id;
+	uint16_t rsv;
+	uint32_t cmd_param;
+	uint16_t pkt_count;
+	uint16_t rsv2;
+	uint32_t byte_count;
+	uint64_t private_address_lsb;
+	uint64_t private_address_msb;
+	uint64_t public_address_lsb;
+	uint64_t public_address_msb;
+	uint16_t private_port;
+	uint16_t public_port;
+	uint32_t rsv3;
+	uint64_t rsv4;
+	uint64_t rsv5;
+	uint64_t rsv6;
+	uint64_t rsv7;
+	uint64_t rsv8;
+	uint64_t rsv9;
+	uint64_t rsv10;
+	uint64_t rsv11;
+	uint64_t rsv12;
+} __packed;
+
+
 
 #if defined CONFIG_IPA || defined CONFIG_IPA3
 
@@ -1680,6 +1828,17 @@ int ipa_is_vlan_mode(enum ipa_vlan_ifaces iface, bool *res);
  * ipa_get_lan_rx_napi - returns true if NAPI is enabled in the LAN RX dp
  */
 bool ipa_get_lan_rx_napi(void);
+
+/*
+ * ipa_add_socksv5_conn - add socksv5 info to ipa driver
+ */
+int ipa_add_socksv5_conn(struct ipa_socksv5_info *info);
+
+/*
+ * ipa_del_socksv5_conn - del socksv5 info to ipa driver
+ */
+int ipa_del_socksv5_conn(uint32_t handle);
+
 #else /* (CONFIG_IPA || CONFIG_IPA3) */
 
 /*
@@ -2548,6 +2707,16 @@ static inline int ipa_get_prot_id(enum ipa_client_type client)
 static inline bool ipa_get_lan_rx_napi(void)
 {
 	return false;
+}
+
+static inline int ipa_add_socksv5_conn(struct ipa_socksv5_info *info)
+{
+	return -EPERM;
+}
+
+static inline int ipa_del_socksv5_conn(uint32_t handle)
+{
+	return -EPERM;
 }
 #endif /* (CONFIG_IPA || CONFIG_IPA3) */
 

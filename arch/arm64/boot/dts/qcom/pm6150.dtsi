@@ -567,6 +567,23 @@
 		};
 	};
 
+	pm6150-ibat-lvl0 {
+		/delete-property/ thermal-sensors;
+	};
+
+	pm6150-ibat-lvl1 {
+		/delete-property/ thermal-sensors;
+
+	};
+
+	pm6150-tz {
+		/delete-property/ thermal-sensors;
+	};
+
+	pm6150l-tz {
+		/delete-property/ thermal-sensors;
+	};
+
 	pm6150-vbat-lvl0 {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
@@ -666,4 +683,20 @@
 		};
 	};
 
+	soc {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "low_limits_cap";
+		thermal-sensors = <&bcl_soc>;
+		wake-capable-sensor;
+		tracks-low;
+
+		trips {
+			soc_trip:soc-trip {
+				temperature = <10>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+	};
 };

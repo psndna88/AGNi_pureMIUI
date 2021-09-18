@@ -570,7 +570,7 @@ _Search3:
 			*op++ = (BYTE) lastRun;
 		} else
 			*op++ = (BYTE)(lastRun<<ML_BITS);
-		memcpy(op, anchor, iend - anchor);
+		LZ4_memcpy(op, anchor, iend - anchor);
 		op += iend - anchor;
 	}
 
@@ -616,13 +616,13 @@ EXPORT_SYMBOL(LZ4_compress_HC);
 /**************************************
  *	Streaming Functions
  **************************************/
-void LZ4_resetStreamHC(LZ4_streamHC_t *LZ4_streamHCPtr, int compressionLevel)
+static void LZ4_resetStreamHC(LZ4_streamHC_t *LZ4_streamHCPtr, int compressionLevel)
 {
 	LZ4_streamHCPtr->internal_donotuse.base = NULL;
 	LZ4_streamHCPtr->internal_donotuse.compressionLevel = (unsigned int)compressionLevel;
 }
 
-int LZ4_loadDictHC(LZ4_streamHC_t *LZ4_streamHCPtr,
+static int LZ4_loadDictHC(LZ4_streamHC_t *LZ4_streamHCPtr,
 	const char *dictionary,
 	int dictSize)
 {
@@ -638,7 +638,6 @@ int LZ4_loadDictHC(LZ4_streamHC_t *LZ4_streamHCPtr,
 	ctxPtr->end = (const BYTE *)dictionary + dictSize;
 	return dictSize;
 }
-EXPORT_SYMBOL(LZ4_loadDictHC);
 
 /* compression */
 
@@ -663,7 +662,6 @@ static void LZ4HC_setExternalDict(
 	/* match referencing will resume from there */
 	ctxPtr->nextToUpdate = ctxPtr->dictLimit;
 }
-EXPORT_SYMBOL(LZ4HC_setExternalDict);
 
 static int LZ4_compressHC_continue_generic(
 	LZ4_streamHC_t *LZ4_streamHCPtr,
@@ -714,7 +712,7 @@ static int LZ4_compressHC_continue_generic(
 		inputSize, maxOutputSize, ctxPtr->compressionLevel, limit);
 }
 
-int LZ4_compress_HC_continue(
+static int LZ4_compress_HC_continue(
 	LZ4_streamHC_t *LZ4_streamHCPtr,
 	const char *source,
 	char *dest,
@@ -728,11 +726,10 @@ int LZ4_compress_HC_continue(
 		return LZ4_compressHC_continue_generic(LZ4_streamHCPtr,
 			source, dest, inputSize, maxOutputSize, noLimit);
 }
-EXPORT_SYMBOL(LZ4_compress_HC_continue);
 
 /* dictionary saving */
 
-int LZ4_saveDictHC(
+static int LZ4_saveDictHC(
 	LZ4_streamHC_t *LZ4_streamHCPtr,
 	char *safeBuffer,
 	int dictSize)
@@ -763,7 +760,6 @@ int LZ4_saveDictHC(
 	}
 	return dictSize;
 }
-EXPORT_SYMBOL(LZ4_saveDictHC);
 
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_DESCRIPTION("LZ4 HC compressor");

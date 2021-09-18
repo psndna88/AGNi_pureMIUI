@@ -1050,6 +1050,8 @@ const char * const vmstat_text[] = {
 #if IS_ENABLED(CONFIG_ZSMALLOC)
 	"nr_zspages",
 #endif
+	"nr_ion_heap",
+	"nr_gpu_heap",
 	"nr_free_cma",
 
 	/* enum numa_stat_item counters */
@@ -1319,6 +1321,9 @@ static void pagetypeinfo_showfree_print(struct seq_file *m,
 			list_for_each(curr, &area->free_list[mtype])
 				freecount++;
 			seq_printf(m, "%6lu ", freecount);
+			spin_unlock_irq(&zone->lock);
+			cond_resched();
+			spin_lock_irq(&zone->lock);
 		}
 		seq_putc(m, '\n');
 	}
@@ -1712,7 +1717,7 @@ static const struct file_operations vmstat_file_operations = {
 
 #ifdef CONFIG_SMP
 static DEFINE_PER_CPU(struct delayed_work, vmstat_work);
-int sysctl_stat_interval __read_mostly = HZ;
+int sysctl_stat_interval __read_mostly = 60 * HZ;
 
 #ifdef CONFIG_PROC_FS
 static void refresh_vm_stats(struct work_struct *work)
@@ -1807,12 +1812,13 @@ static bool need_update(int cpu)
 
 		/*
 		 * The fast way of checking if there are any vmstat diffs.
-		 * This works because the diffs are byte sized items.
 		 */
-		if (memchr_inv(p->vm_stat_diff, 0, NR_VM_ZONE_STAT_ITEMS))
+		if (memchr_inv(p->vm_stat_diff, 0, NR_VM_ZONE_STAT_ITEMS *
+			       sizeof(p->vm_stat_diff[0])))
 			return true;
 #ifdef CONFIG_NUMA
-		if (memchr_inv(p->vm_numa_stat_diff, 0, NR_VM_NUMA_STAT_ITEMS))
+		if (memchr_inv(p->vm_numa_stat_diff, 0, NR_VM_NUMA_STAT_ITEMS *
+			       sizeof(p->vm_numa_stat_diff[0])))
 			return true;
 #endif
 	}
@@ -1954,7 +1960,7 @@ void __init init_mm_internals(void)
 #endif
 #ifdef CONFIG_PROC_FS
 	proc_create("buddyinfo", 0444, NULL, &buddyinfo_file_operations);
-	proc_create("pagetypeinfo", 0444, NULL, &pagetypeinfo_file_operations);
+	proc_create("pagetypeinfo", 0400, NULL, &pagetypeinfo_file_operations);
 	proc_create("vmstat", 0444, NULL, &vmstat_file_operations);
 	proc_create("zoneinfo", 0444, NULL, &zoneinfo_file_operations);
 #endif

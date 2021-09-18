@@ -205,9 +205,7 @@ source "drivers/dax/Kconfig"
 
 source "drivers/nvmem/Kconfig"
 
-source "drivers/hwtracing/stm/Kconfig"
-
-source "drivers/hwtracing/intel_th/Kconfig"
+source "drivers/hwtracing/Kconfig"
 
 source "drivers/fpga/Kconfig"
 
@@ -220,5 +218,9 @@ source "drivers/mux/Kconfig"
 source "drivers/sensors/Kconfig"
 
 source "drivers/esoc/Kconfig"
+
+config TARGET_PROJECT_J6
+	bool "Target Projet J6"
+	default y
 
 endmenu

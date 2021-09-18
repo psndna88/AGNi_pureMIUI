@@ -235,6 +235,10 @@ QDF_STATUS wma_update_channel_list(WMA_HANDLE handle,
 			WMI_SET_CHANNEL_FLAG(tchan_info,
 				WMI_CHAN_FLAG_QUARTER_RATE);
 
+		if (chan_list->chanParam[i].nan_disabled)
+			WMI_SET_CHANNEL_FLAG(tchan_info,
+					     WMI_CHAN_FLAG_NAN_DISABLED);
+
 		WMI_SET_CHANNEL_MAX_TX_POWER(tchan_info,
 					     chan_list->chanParam[i].pwr);
 
@@ -542,6 +546,12 @@ QDF_STATUS wma_roam_scan_offload_rssi_thresh(tp_wma_handle wma_handle,
 				roam_params->roam_bad_rssi_thresh_offset_2g;
 	if (params.roam_bad_rssi_thresh_offset_2g)
 		params.flags |= WMI_ROAM_BG_SCAN_FLAGS_2G_TO_5G_ONLY;
+	params.roam_data_rssi_threshold_triggers =
+		roam_params->roam_data_rssi_threshold_triggers;
+	params.roam_data_rssi_threshold =
+		roam_params->roam_data_rssi_threshold -
+		WMA_NOISE_FLOOR_DBM_DEFAULT;
+	params.rx_data_inactivity_time = roam_params->rx_data_inactivity_time;
 
 	/*
 	 * The current Noise floor in firmware is -96dBm. Penalty/Boost
@@ -3179,6 +3189,7 @@ int wma_roam_auth_offload_event_handler(WMA_HANDLE handle, uint8_t *event,
 	wma_debug("Received Roam auth offload event for bss:%pM vdev_id:%d",
 		  ap_bssid.bytes, vdev_id);
 
+	lim_sae_auth_cleanup_retry(mac_ctx, vdev_id);
 	status = wma->csr_roam_auth_event_handle_cb(mac_ctx, vdev_id, ap_bssid);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wma_err_rl("Trigger pre-auth failed");
@@ -3318,16 +3329,22 @@ static char *wma_get_sub_reason_str(uint32_t sub_reason)
 	switch (sub_reason) {
 	case WMI_ROAM_TRIGGER_SUB_REASON_PERIODIC_TIMER:
 		return "PERIODIC TIMER";
-	case WMI_ROAM_TRIGGER_SUB_REASON_INACTIVITY_TIMER:
-		return "INACTIVITY TIMER";
+	case WMI_ROAM_TRIGGER_SUB_REASON_LOW_RSSI_PERIODIC:
+		return "LOW RSSI PERIODIC TIMER1";
 	case WMI_ROAM_TRIGGER_SUB_REASON_BTM_DI_TIMER:
-		return "BTM DISASSOC TIMER";
+		return "BTM DISASSOC IMMINENT TIMER";
 	case WMI_ROAM_TRIGGER_SUB_REASON_FULL_SCAN:
 		return "FULL SCAN";
-	case WMI_ROAM_TRIGGER_SUB_REASON_LOW_RSSI_PERIODIC:
-		return "LOW RSSI PERIODIC SCAN";
 	case WMI_ROAM_TRIGGER_SUB_REASON_CU_PERIODIC:
-		return "CU PERIODIC SCAN";
+		return "CU PERIODIC Timer1";
+	case WMI_ROAM_TRIGGER_SUB_REASON_INACTIVITY_TIMER_LOW_RSSI:
+		return "LOW RSSI INACTIVE TIMER";
+	case WMI_ROAM_TRIGGER_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_CU:
+		return "CU PERIODIC TIMER2";
+	case WMI_ROAM_TRIGGER_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_LOW_RSSI:
+		return "LOW RSSI PERIODIC TIMER2";
+	case WMI_ROAM_TRIGGER_SUB_REASON_INACTIVITY_TIMER_CU:
+		return "CU INACTIVITY TIMER";
 	default:
 		return "NONE";
 	}
@@ -6379,6 +6396,7 @@ static void wma_invalid_roam_reason_handler(tp_wma_handle wma_handle,
 	} else if (notif == WMI_ROAM_NOTIF_ROAM_ABORT) {
 		wma_handle->interfaces[vdev_id].roaming_in_progress = false;
 		op_code = SIR_ROAMING_ABORT;
+		lim_sae_auth_cleanup_retry(wma_handle->mac_context, vdev_id);
 	} else {
 		WMA_LOGD(FL("Invalid notif %d"), notif);
 		return;
@@ -6488,6 +6506,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		wma_roam_ho_fail_handler(wma_handle, wmi_event->vdev_id);
 		wma_handle->interfaces[wmi_event->vdev_id].
 			roaming_in_progress = false;
+		lim_sae_auth_cleanup_retry(wma_handle->mac_context,
+					   wmi_event->vdev_id);
 		break;
 #endif
 	case WMI_ROAM_REASON_INVALID:
@@ -6503,6 +6523,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 			WMA_LOGE("Memory unavailable for roam synch data");
 			return -ENOMEM;
 		}
+		lim_sae_auth_cleanup_retry(wma_handle->mac_context,
+					   wmi_event->vdev_id);
 		roam_synch_data->roamedVdevId = wmi_event->vdev_id;
 		wma_handle->csr_roam_synch_cb(wma_handle->mac_context,
 					      roam_synch_data, NULL,

@@ -500,7 +500,7 @@ void dbm_set_speed(struct dbm *dbm, bool speed)
 		return;
 	}
 
-	msm_dbm_write_reg(dbm, DBM_GEN_CFG, speed);
+	msm_dbm_write_reg_field(dbm, DBM_GEN_CFG, DBM_EN_USB3_MASK, speed);
 }
 
 void dbm_enable(struct dbm *dbm)

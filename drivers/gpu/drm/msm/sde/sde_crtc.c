@@ -1263,9 +1263,6 @@ static int _sde_crtc_set_crtc_roi(struct drm_crtc *crtc,
 			return -EINVAL;
 		}
 
-		if (!mode_info.roi_caps.enabled)
-			continue;
-
 		sde_conn = to_sde_connector(conn_state->connector);
 		sde_conn_state = to_sde_connector_state(conn_state);
 
@@ -1274,6 +1271,9 @@ static int _sde_crtc_set_crtc_roi(struct drm_crtc *crtc,
 						&sde_conn->property_info,
 						&sde_conn_state->property_state,
 						CONNECTOR_PROP_ROI_V1);
+
+		if (!mode_info.roi_caps.enabled)
+			continue;
 
 		/*
 		 * current driver only supports same connector and crtc size,
@@ -2006,7 +2006,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	struct drm_plane_state *state;
 	struct sde_crtc_state *cstate;
 	struct sde_plane_state *pstate = NULL;
-	struct plane_state *pstates = NULL;
+	struct plane_state pstates[SDE_PSTATES_MAX];
 	struct sde_format *format;
 	struct sde_hw_ctl *ctl;
 	struct sde_hw_mixer *lm;
@@ -2032,11 +2032,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	sde_crtc->sbuf_rot_id_old = sde_crtc->sbuf_rot_id;
 	sde_crtc->sbuf_rot_id = 0x0;
 	sde_crtc->sbuf_rot_id_delta = 0x0;
-
-	pstates = kcalloc(SDE_PSTATES_MAX,
-			sizeof(struct plane_state), GFP_KERNEL);
-	if (!pstates)
-		return;
 
 	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		state = plane->state;
@@ -2077,7 +2072,7 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		format = to_sde_format(msm_framebuffer_format(pstate->base.fb));
 		if (!format) {
 			SDE_ERROR("invalid format\n");
-			goto end;
+			return;
 		}
 
 		if (pstate->stage == SDE_STAGE_BASE && format->alpha_enable)
@@ -2139,9 +2134,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 	}
 
 	_sde_crtc_program_lm_output_roi(crtc);
-
-end:
-	kfree(pstates);
 }
 
 static void _sde_crtc_swap_mixers_for_right_partial_update(
@@ -2433,8 +2425,8 @@ int sde_crtc_get_secure_transition_ops(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
-		post_commit |= sde_encoder_check_mode(encoder,
-						MSM_DISPLAY_CAP_VID_MODE);
+		post_commit |= sde_encoder_check_curr_mode(encoder,
+						MSM_DISPLAY_VIDEO_MODE);
 	}
 
 	SDE_DEBUG("crtc%d: secure_level %d old_valid_fb %d post_commit %d\n",
@@ -3770,8 +3762,8 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	_sde_crtc_dest_scaler_setup(crtc);
 
 	/* cancel the idle notify delayed work */
-	if (sde_encoder_check_mode(sde_crtc->mixers[0].encoder,
-					MSM_DISPLAY_CAP_VID_MODE) &&
+	if (sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
+					MSM_DISPLAY_VIDEO_MODE) &&
 		kthread_cancel_delayed_work_sync(&sde_crtc->idle_notify_work))
 		SDE_DEBUG("idle notify work cancelled\n");
 
@@ -3879,8 +3871,8 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	//_sde_crtc_wait_for_fences(crtc);
 
 	/* schedule the idle notify delayed work */
-	if (idle_time && sde_encoder_check_mode(sde_crtc->mixers[0].encoder,
-						MSM_DISPLAY_CAP_VID_MODE)) {
+	if (sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
+				MSM_DISPLAY_VIDEO_MODE) && idle_time) {
 		kthread_queue_delayed_work(&event_thread->worker,
 					&sde_crtc->idle_notify_work,
 					msecs_to_jiffies(idle_time));
@@ -4395,8 +4387,6 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	if (cstate->sbuf_cfg.rot_op_mode != SDE_CTL_ROT_OP_MODE_INLINE_ASYNC)
 		if (_sde_crtc_commit_kickoff_rot(crtc, cstate))
 			is_error = true;
-
-	sde_vbif_clear_errors(sde_kms);
 
 	if (is_error) {
 		_sde_crtc_remove_pipe_flush(crtc);
@@ -5216,8 +5206,8 @@ static int _sde_crtc_check_secure_state(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
-		is_video_mode |= sde_encoder_check_mode(encoder,
-						MSM_DISPLAY_CAP_VID_MODE);
+		is_video_mode |= sde_encoder_check_curr_mode(encoder,
+						MSM_DISPLAY_VIDEO_MODE);
 	}
 
 	sde_crtc = to_sde_crtc(crtc);
@@ -5429,7 +5419,7 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 			SDE_ERROR("plane w/h:%x*%x > mixer w/h:%x*%x\n",
 				pstate->crtc_w, pstate->crtc_h,
 				mixer_width, mixer_height);
-			return -E2BIG;
+			rc = -E2BIG;
 			goto end;
 		}
 	}
@@ -5926,8 +5916,6 @@ static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,
 	uint32_t offset, i;
 	struct drm_connector_state *old_conn_state, *new_conn_state;
 	struct drm_connector *conn;
-	struct sde_connector *sde_conn = NULL;
-	struct msm_display_info disp_info;
 	bool is_vid = false;
 	struct drm_encoder *encoder;
 
@@ -5935,8 +5923,9 @@ static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,
 	cstate = to_sde_crtc_state(state);
 
 	drm_for_each_encoder_mask(encoder, crtc->dev, state->encoder_mask) {
-		is_vid |= sde_encoder_check_mode(encoder,
-						MSM_DISPLAY_CAP_VID_MODE);
+		if (sde_encoder_check_curr_mode(encoder,
+			MSM_DISPLAY_VIDEO_MODE))
+			is_vid = true;
 		if (is_vid)
 			break;
 	}
@@ -5952,15 +5941,11 @@ static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,
 			if (!new_conn_state || new_conn_state->crtc != crtc)
 				continue;
 
-			sde_conn = to_sde_connector(new_conn_state->connector);
-			if (sde_conn->display && sde_conn->ops.get_info) {
-				sde_conn->ops.get_info(conn, &disp_info,
-							sde_conn->display);
-				is_vid |= disp_info.capabilities &
-						MSM_DISPLAY_CAP_VID_MODE;
-				if (is_vid)
-					break;
-			}
+			if (sde_encoder_check_curr_mode(encoder,
+				MSM_DISPLAY_VIDEO_MODE))
+				is_vid = true;
+			if (is_vid)
+				break;
 		}
 	}
 
@@ -6004,7 +5989,7 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	int idx, ret;
 	uint64_t fence_fd;
 
-	if (!crtc || !state || !property) {
+	if (unlikely(!crtc || !state || !property)) {
 		SDE_ERROR("invalid argument(s)\n");
 		return -EINVAL;
 	}
@@ -6015,13 +6000,13 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 	SDE_ATRACE_BEGIN("sde_crtc_atomic_set_property");
 	/* check with cp property system first */
 	ret = sde_cp_crtc_set_property(crtc, property, val);
-	if (ret != -ENOENT)
+	if (unlikely(ret != -ENOENT))
 		goto exit;
 
 	/* if not handled by cp, check msm_property system */
 	ret = msm_property_atomic_set(&sde_crtc->property_info,
 			&cstate->property_state, property, val);
-	if (ret)
+	if (unlikely(ret))
 		goto exit;
 
 	idx = msm_property_index(&sde_crtc->property_info, property);
@@ -6059,18 +6044,18 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 		cstate->bw_split_vote = true;
 		break;
 	case CRTC_PROP_OUTPUT_FENCE:
-		if (!val)
+		if (unlikely(!val))
 			goto exit;
 
 		ret = _sde_crtc_get_output_fence(crtc, state, &fence_fd);
-		if (ret) {
+		if (unlikely(ret)) {
 			SDE_ERROR("fence create failed rc:%d\n", ret);
 			goto exit;
 		}
 
 		ret = copy_to_user((uint64_t __user *)(uintptr_t)val, &fence_fd,
 				sizeof(uint64_t));
-		if (ret) {
+		if (unlikely(ret)) {
 			SDE_ERROR("copy to user failed rc:%d\n", ret);
 			put_unused_fd(fence_fd);
 			ret = -EFAULT;
@@ -6220,7 +6205,7 @@ void sde_crtc_misr_setup(struct drm_crtc *crtc, bool enable, u32 frame_count)
 	}
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 static int _sde_debugfs_status_show(struct seq_file *s, void *data)
 {
 	struct sde_crtc *sde_crtc;
@@ -6688,7 +6673,7 @@ static int _sde_crtc_init_debugfs(struct drm_crtc *crtc)
 static void _sde_crtc_destroy_debugfs(struct drm_crtc *crtc)
 {
 }
-#endif /* CONFIG_DEBUG_FS_ */
+#endif /* CONFIG_DEBUG_FS */
 
 static int sde_crtc_late_register(struct drm_crtc *crtc)
 {

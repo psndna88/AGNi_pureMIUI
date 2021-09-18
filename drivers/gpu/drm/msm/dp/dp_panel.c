@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,6 +16,7 @@
 
 #include "dp_panel.h"
 #include <drm/drm_fixed.h>
+#include <drm/drm_edid.h>
 
 #define DP_KHZ_TO_HZ 1000
 #define DP_PANEL_DEFAULT_BPP 24
@@ -1707,8 +1708,24 @@ static int dp_panel_set_default_link_params(struct dp_panel *dp_panel)
 
 	return 0;
 }
+static int dp_panel_validate_edid(struct edid *edid, size_t edid_size)
+{
+	if (!edid || (edid_size < EDID_LENGTH))
+		return false;
 
-static int dp_panel_set_edid(struct dp_panel *dp_panel, u8 *edid)
+	if (EDID_LENGTH * (edid->extensions + 1) > edid_size) {
+		pr_err("edid size does not match allocated.\n");
+		return false;
+	}
+	if (!drm_edid_is_valid(edid)) {
+		pr_err("invalid edid.\n");
+		return false;
+	}
+	return true;
+}
+
+static int dp_panel_set_edid(struct dp_panel *dp_panel, u8 *edid,
+		size_t edid_size)
 {
 	struct dp_panel_private *panel;
 
@@ -1719,7 +1736,7 @@ static int dp_panel_set_edid(struct dp_panel *dp_panel, u8 *edid)
 
 	panel = container_of(dp_panel, struct dp_panel_private, dp_panel);
 
-	if (edid) {
+	if (edid && dp_panel_validate_edid((struct edid *)edid, edid_size)) {
 		dp_panel->edid_ctrl->edid = (struct edid *)edid;
 		panel->custom_edid = true;
 	} else {
@@ -1813,7 +1830,6 @@ static void dp_panel_decode_dsc_dpcd(struct dp_panel *dp_panel)
 	}
 
 	dp_panel->fec_en = dp_panel->dsc_en;
-	dp_panel->widebus_en = dp_panel->dsc_en;
 
 	/* fec_overhead = 1.00 / 0.97582 */
 	if (dp_panel->fec_en)
@@ -1911,12 +1927,17 @@ static int dp_panel_read_sink_caps(struct dp_panel *dp_panel,
 		}
 	}
 
+	/* There is no need to read EDID from MST branch */
+	if (panel->parser->has_mst && dp_panel->read_mst_cap(dp_panel))
+		goto skip_edid;
+
 	rc = dp_panel_read_edid(dp_panel, connector);
 	if (rc) {
 		pr_err("panel edid read failed, set failsafe mode\n");
 		return rc;
 	}
 
+skip_edid:
 	dp_panel->widebus_en = panel->parser->has_widebus;
 	dp_panel->dsc_feature_enable = panel->parser->dsc_feature_enable;
 	dp_panel->fec_feature_enable = panel->parser->fec_feature_enable;

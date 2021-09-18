@@ -270,7 +270,7 @@ static int _ipa_rm_add_dependency_sync(enum ipa_rm_resource_name resource_name,
 		time = wait_for_completion_timeout(
 				&((struct ipa_rm_resource_cons *)consumer)->
 				request_consumer_in_progress,
-				HZ * 5);
+				msecs_to_jiffies(5000));
 		result = 0;
 		if (!time) {
 			IPA_RM_ERR("TIMEOUT waiting for %s GRANT event.",
@@ -512,7 +512,7 @@ int ipa_rm_request_resource_with_timer(enum ipa_rm_resource_name resource_name)
 	release_work->needed_bw = 0;
 	release_work->dec_usage_count = false;
 	INIT_DELAYED_WORK(&release_work->work, delayed_release_work_func);
-	schedule_delayed_work(&release_work->work,
+	queue_delayed_work(system_power_efficient_wq, &release_work->work,
 			msecs_to_jiffies(IPA_RM_RELEASE_DELAY_IN_MSEC));
 	result = 0;
 bail:

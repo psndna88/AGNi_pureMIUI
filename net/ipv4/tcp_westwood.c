@@ -285,7 +285,7 @@ static struct tcp_congestion_ops tcp_westwood __read_mostly = {
 	.pkts_acked	= tcp_westwood_pkts_acked,
 
 	.owner		= THIS_MODULE,
-	.name		= "westwood"
+	.name		= "westwood+"
 };
 
 static int __init tcp_westwood_register(void)

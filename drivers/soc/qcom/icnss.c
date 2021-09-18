@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2128,8 +2128,8 @@ int icnss_unregister_driver(struct icnss_driver_ops *ops)
 
 	icnss_pr_dbg("Unregistering driver, state: 0x%lx\n", penv->state);
 
-	if (!penv->ops) {
-		icnss_pr_err("Driver not registered\n");
+	if (!penv->ops || (!test_bit(ICNSS_DRIVER_PROBED, &penv->state))) {
+		icnss_pr_err("Driver not registered/probed\n");
 		ret = -ENOENT;
 		goto out;
 	}
@@ -2632,6 +2632,7 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 	int s1_bypass = 1;
 	int fast = 1;
 	int stall_disable = 1;
+	int non_fatal_faults = 1;
 	int ret = 0;
 
 	icnss_pr_dbg("Initializing SMMU\n");
@@ -2685,6 +2686,16 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 			goto set_attr_fail;
 		}
 		icnss_pr_dbg("SMMU STALL DISABLE map set\n");
+
+		ret = iommu_domain_set_attr(mapping->domain,
+					    DOMAIN_ATTR_NON_FATAL_FAULTS,
+					    &non_fatal_faults);
+		if (ret) {
+			icnss_pr_err("Failed to set SMMU non_fatal_faults attribute, err = %d\n",
+				    ret);
+			goto set_attr_fail;
+		}
+		icnss_pr_dbg("SMMU NON FATAL map set\n");
 	}
 
 	ret = arm_iommu_attach_device(&priv->pdev->dev, mapping);
@@ -3825,6 +3836,8 @@ static int icnss_probe(struct platform_device *pdev)
 		if (ret)
 			goto out_unregister_ext_modem;
 	}
+
+	device_enable_async_suspend(dev);
 
 	spin_lock_init(&priv->event_lock);
 	spin_lock_init(&priv->on_off_lock);

@@ -333,11 +333,21 @@ config HAVE_PERF_USER_STACK_DUMP
 config HAVE_ARCH_JUMP_LABEL
 	bool
 
+config HAVE_ARCH_JUMP_LABEL_RELATIVE
+	bool
+
 config HAVE_RCU_TABLE_FREE
 	bool
 
 config HAVE_RCU_TABLE_INVALIDATE
 	bool
+
+config ARCH_WANT_IRQS_OFF_ACTIVATE_MM
+	bool
+	help
+	  Temporary select until all architectures can be converted to have
+	  irqs disabled over activate_mm. Architectures that do IPI based TLB
+	  shootdowns should enable this.
 
 config ARCH_HAVE_NMI_SAFE_CMPXCHG
 	bool
@@ -735,6 +745,11 @@ config HAVE_IRQ_TIME_ACCOUNTING
 	  Archs need to ensure they use a high enough resolution clock to
 	  support irq time accounting and then call enable_sched_clock_irqtime().
 
+config HAVE_MOVE_PMD
+	bool
+	help
+	  Archs that select this are able to move page tables at the PMD level.
+
 config HAVE_ARCH_TRANSPARENT_HUGEPAGE
 	bool
 
@@ -1024,6 +1039,16 @@ config STRICT_MODULE_RWX
 	  and non-text memory will be made non-executable. This provides
 	  protection against certain security exploits (e.g. writing to text)
 
+config ARCH_HAS_REFCOUNT_FULL
+	bool
+	select ARCH_HAS_REFCOUNT
+	help
+	  An architecture selects this when the optimized refcount_t
+	  implementation it provides covers all the cases that
+	  CONFIG_REFCOUNT_FULL covers as well, in which case it makes no
+	  sense to even offer CONFIG_REFCOUNT_FULL as a user selectable
+	  option.
+
 config ARCH_HAS_REFCOUNT
 	bool
 	help
@@ -1037,7 +1062,7 @@ config ARCH_HAS_REFCOUNT
 	  against bugs in reference counts.
 
 config REFCOUNT_FULL
-	bool "Perform full reference count validation at the expense of speed"
+	bool "Perform full reference count validation at the expense of speed" if !ARCH_HAS_REFCOUNT_FULL
 	help
 	  Enabling this switches the refcounting infrastructure from a fast
 	  unchecked atomic_t implementation to a fully state checked

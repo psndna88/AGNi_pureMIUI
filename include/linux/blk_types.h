@@ -252,6 +252,11 @@ enum req_flag_bits {
 				 * level)
 				 */
 
+	/*
+	 * set for "ide_preempt" requests and also for requests for which the
+	 * SCSI "quiesce" state must be ignored.
+	 */
+	__REQ_PREEMPT,
 	__REQ_NR_BITS,		/* stops here */
 };
 
@@ -273,6 +278,7 @@ enum req_flag_bits {
 
 #define REQ_NOUNMAP		(1ULL << __REQ_NOUNMAP)
 #define REQ_NOWAIT		(1ULL << __REQ_NOWAIT)
+#define REQ_PREEMPT		(1ULL << __REQ_PREEMPT)
 
 #define REQ_FAILFAST_MASK \
 	(REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT | REQ_FAILFAST_DRIVER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, 2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -288,9 +288,9 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 		}
 		conn_index++;
 	}
-	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 	if (!found) {
 		/* err msg */
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 		policy_mgr_err("can't find vdev_id %d in pm_conc_connection_list",
 			vdev_id);
 		return status;
@@ -299,11 +299,13 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 		status = pm_ctx->wma_cbacks.wma_get_connection_info(
 				vdev_id, &conn_table_entry);
 		if (QDF_STATUS_SUCCESS != status) {
+			qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 			policy_mgr_err("can't find vdev_id %d in connection table",
 			vdev_id);
 			return status;
 		}
 	} else {
+		qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 		policy_mgr_err("wma_get_connection_info is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -333,6 +335,8 @@ QDF_STATUS policy_mgr_update_connection_info(struct wlan_objmgr_psoc *psoc,
 			conn_table_entry.mac_id,
 			chain_mask,
 			nss, vdev_id, true, true);
+
+	qdf_mutex_release(&pm_ctx->qdf_conc_list_lock);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1046,7 +1050,8 @@ QDF_STATUS policy_mgr_valid_sap_conc_channel_check(
 		    wlan_reg_is_passive_or_disable_ch(pm_ctx->pdev, channel) ||
 		    !(policy_mgr_sta_sap_scc_on_lte_coex_chan(psoc) ||
 		    policy_mgr_is_safe_channel(psoc, channel)) ||
-		    (!reg_is_etsi13_srd_chan_allowed_master_mode(pm_ctx->pdev)
+		    (!reg_is_etsi13_srd_chan_allowed_master_mode(pm_ctx->pdev,
+		      QDF_SAP_MODE)
 		    && reg_is_etsi13_srd_chan(pm_ctx->pdev, channel))) {
 			if (wlan_reg_is_dfs_ch(pm_ctx->pdev, channel) &&
 			    sta_sap_scc_on_dfs_chan) {

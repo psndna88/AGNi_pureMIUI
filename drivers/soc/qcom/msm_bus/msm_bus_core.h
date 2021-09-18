@@ -21,14 +21,10 @@
 #include <linux/msm-bus-board.h>
 #include <linux/msm-bus.h>
 
-#define MSM_BUS_DBG(msg, ...) \
-	pr_debug(msg, ## __VA_ARGS__)
-#define MSM_BUS_ERR(msg, ...) \
-	pr_err(msg, ## __VA_ARGS__)
-#define MSM_BUS_WARN(msg, ...) \
-	pr_warn(msg, ## __VA_ARGS__)
-#define MSM_FAB_ERR(msg, ...) \
-	dev_err(&fabric->fabdev.dev, msg, ## __VA_ARGS__)
+#define MSM_BUS_DBG(msg, ...)
+#define MSM_BUS_ERR(msg, ...)
+#define MSM_BUS_WARN(msg, ...)
+#define MSM_FAB_ERR(msg, ...)
 
 #define IS_MASTER_VALID(mas) \
 	(((mas >= MSM_BUS_MASTER_FIRST) && (mas <= MSM_BUS_MASTER_LAST)) \
@@ -328,7 +324,7 @@ int msm_bus_noc_hw_init(struct msm_bus_fabric_registration *pdata,
 	struct msm_bus_hw_algorithm *hw_algo);
 int msm_bus_bimc_hw_init(struct msm_bus_fabric_registration *pdata,
 	struct msm_bus_hw_algorithm *hw_algo);
-#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_QCOM_BUS_SCALING)
+#if 0
 void msm_bus_dbg_client_data(struct msm_bus_scale_pdata *pdata, int index,
 	uint32_t cl);
 void msm_bus_dbg_commit_data(const char *fabname, void *cdata,

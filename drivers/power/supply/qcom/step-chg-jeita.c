@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -309,12 +309,16 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		}
 	}
 
-	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
+/*	rc = of_property_read_u32(profile_node, "qcom,fastchg-current-ma",
 					&max_fcc_ma);
 	if (rc < 0) {
 		pr_err("max-fastchg-current-ma reading failed, rc=%d\n", rc);
 		return rc;
-	}
+	} */
+	if (board_get_33w_supported())
+		max_fcc_ma = 5200;
+	else
+		max_fcc_ma = 3000;
 
 	chip->taper_fcc = of_property_read_bool(profile_node, "qcom,taper-fcc");
 
@@ -333,7 +337,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		chip->step_chg_config->param.psy_prop =
 				POWER_SUPPLY_PROP_VOLTAGE_OCV;
 		chip->step_chg_config->param.prop_name = "OCV";
-		chip->step_chg_config->param.hysteresis = 10000;
+		chip->step_chg_config->param.hysteresis = 0;
 		chip->step_chg_config->param.use_bms = true;
 	}
 
@@ -766,7 +770,6 @@ static int handle_jeita(struct step_chg_info *chip)
 	int temp, fastcharge_mode = 0, pd_authen_result = 0;
 	enum power_supply_type real_type = POWER_SUPPLY_TYPE_UNKNOWN;
 
-	pr_err("handle_jeita enter\n");
 	rc = power_supply_get_property(chip->batt_psy,
 		POWER_SUPPLY_PROP_SW_JEITA_ENABLED, &pval);
 	if (rc < 0)
@@ -825,8 +828,6 @@ static int handle_jeita(struct step_chg_info *chip)
 			pval.intval,
 			&chip->jeita_fcc_index,
 			&fcc_ua);
-	pr_err("temp:%d, new JEITA index:%d, New JEITA FCC:%d \n",
-				pval.intval, chip->jeita_fcc_index, fcc_ua);
 	if (rc < 0)
 		fcc_ua = 0;
 
@@ -856,9 +857,6 @@ static int handle_jeita(struct step_chg_info *chip)
 
 	if (!chip->usb_icl_votable)
 		goto set_jeita_fv;
-
-	pr_err("%s = %d FCC = %duA FV = %duV\n",
-			chip->jeita_fcc_config->param.prop_name, pval.intval, fcc_ua, fv_uv);
 
 	/* set and clear fast charge mode when soft jeita trigger and clear */
 	if (chip->six_pin_battery || chip->qc3p5_ffc_batt) {
@@ -901,7 +899,6 @@ static int handle_jeita(struct step_chg_info *chip)
 			} else if ((temp < BATT_WARM_THRESHOLD - chip->jeita_fv_config->param.hysteresis)
 						&& (temp > BATT_COOL_THRESHOLD + chip->jeita_fv_config->param.hysteresis)
 							&& !fastcharge_mode) {
-				pr_err("temp:%d enable fastcharge mode\n", temp);
 				pval.intval = true;
 				rc = power_supply_set_property(chip->usb_psy,
 						POWER_SUPPLY_PROP_FASTCHARGE_MODE, &pval);
@@ -949,11 +946,9 @@ static int handle_jeita(struct step_chg_info *chip)
 
 		if (curr_vbat_uv > fv_uv + ( chip->qc3p5_ffc_batt ? JEITA_SIX_PIN_BATT_HYST_UV: 20000)) {
 			if (pval.intval == POWER_SUPPLY_CHARGE_TYPE_TAPER && fv_uv == WARM_VFLOAT_UV) {
-				pr_err("curr_vbat_uv = %d, fv_uv = %d, set usb_icl=0\n", curr_vbat_uv, fv_uv);
 				vote(chip->usb_icl_votable, JEITA_VOTER, true, 0);
 			}
 		} else if (curr_vbat_uv < (fv_uv - JEITA_SUSPEND_HYST_UV)) {
-			pr_err("curr_vbat_uv = %d, fv_uv = %d, remove usb_icl=0\n", curr_vbat_uv, fv_uv);
 			vote(chip->usb_icl_votable, JEITA_VOTER, false, 0);
 		}
 	}
@@ -1129,7 +1124,7 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->jeita_fcc_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fcc_config->param.prop_name = "BATT_TEMP";
-	chip->jeita_fcc_config->param.hysteresis = 5;
+	chip->jeita_fcc_config->param.hysteresis = 10;
 	chip->jeita_fv_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fv_config->param.prop_name = "BATT_TEMP";
 	chip->jeita_fv_config->param.hysteresis = 5;

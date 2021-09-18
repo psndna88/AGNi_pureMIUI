@@ -579,25 +579,6 @@ sme_set_roam_scan_ch_event_cb(mac_handle_t mac_handle,
 QDF_STATUS sme_roam_get_wpa_rsn_req_ie(tHalHandle hal, uint8_t session_id,
 				       uint32_t *len, uint8_t *buf);
 
-/**
- * sme_roam_get_wpa_rsn_rsp_ie() - Retrieve WPA/RSN Response IE
- * @hal: HAL handle
- * @session_id: ID of the specific session
- * @len: Caller allocated memory that has the length of @buf as input.
- *	Upon returned, @len has the length of the IE store in @buf
- * @buf: Caller allocated memory that contain the IE field, if any,
- *	upon return
- *
- * A wrapper function to request CSR to return the WPA or RSN IE CSR
- * passes to PE to JOIN request or START_BSS request
- * This is a synchronous call.
- *
- * Return: QDF_STATUS - when fail, it usually means the buffer allocated is not
- *			 big enough
- */
-QDF_STATUS sme_roam_get_wpa_rsn_rsp_ie(tHalHandle hal, uint8_t session_id,
-				       uint32_t *len, uint8_t *buf);
-
 uint32_t sme_roam_get_num_pmkid_cache(tHalHandle hHal, uint8_t sessionId);
 QDF_STATUS sme_roam_get_pmkid_cache(tHalHandle hHal, uint8_t sessionId,
 		uint32_t *pNum,
@@ -741,12 +722,18 @@ QDF_STATUS sme_get_wcnss_hardware_version(tHalHandle hHal,
 /**
  * sme_oem_data_cmd() - the wrapper to send oem data cmd to wma
  * @mac_handle: Opaque handle to the global MAC context.
+ * @@oem_data_event_handler_cb: callback to be registered
  * @oem_data: the pointer of oem data
+ * @vdev id: vdev id to fetch adapter
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS sme_oem_data_cmd(mac_handle_t mac_handle,
-			    struct oem_data *oem_data);
+			    void (*oem_data_event_handler_cb)
+			    (const struct oem_data *oem_event_data,
+			     uint8_t vdev_id),
+			     struct oem_data *oem_data,
+			     uint8_t vdev_id);
 #endif
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
@@ -3183,44 +3170,6 @@ QDF_STATUS sme_get_ani_level(mac_handle_t mac_handle, uint32_t *freqs,
 			     struct wmi_host_ani_level_event *ani, uint8_t num,
 			     void *context), void *context);
 #endif /* FEATURE_ANI_LEVEL_REQUEST */
-
-#ifdef FEATURE_OEM_DATA
-/**
- * sme_set_oem_data_event_handler_cb() - Register oem data event handler
- * callback
- * @mac_handle: Opaque handle to the MAC context
- * @oem_data_event_handler_cb: callback to be registered
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS sme_set_oem_data_event_handler_cb(
-			mac_handle_t mac_handle,
-			void (*oem_data_event_handler_cb)
-				(const struct oem_data *oem_event_data));
-
-/**
- * sme_reset_oem_data_event_handler_cb() - De-register oem data event handler
- * @mac_handle: Handler return by mac_open
- *
- * This function De-registers the OEM data event handler callback to SME
- *
- * Return: None
- */
-void sme_reset_oem_data_event_handler_cb(mac_handle_t  mac_handle);
-#else
-static inline QDF_STATUS sme_set_oem_data_event_handler_cb(
-			mac_handle_t mac_handle,
-			void (*oem_data_event_handler_cb)
-				(void *oem_event_data))
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline void sme_reset_oem_data_event_handler_cb(mac_handle_t  mac_handle)
-{
-}
-
-#endif
 
 /**
  * sme_get_prev_connected_bss_ies() - Get the previous connected AP IEs

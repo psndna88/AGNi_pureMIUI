@@ -134,6 +134,8 @@ static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 		dsi_mode->dsi_mode_flags |= DSI_MODE_FLAG_DMS;
 	if (msm_is_mode_seamless_vrr(drm_mode))
 		dsi_mode->dsi_mode_flags |= DSI_MODE_FLAG_VRR;
+	if (msm_is_mode_seamless_poms(drm_mode))
+		dsi_mode->dsi_mode_flags |= DSI_MODE_FLAG_POMS;
 	if (msm_is_mode_seamless_dyn_clk(drm_mode))
 		dsi_mode->dsi_mode_flags |= DSI_MODE_FLAG_DYN_CLK;
 
@@ -141,6 +143,11 @@ static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 			!!(drm_mode->flags & DRM_MODE_FLAG_PHSYNC);
 	dsi_mode->timing.v_sync_polarity =
 			!!(drm_mode->flags & DRM_MODE_FLAG_PVSYNC);
+
+	if (drm_mode->flags & DRM_MODE_FLAG_VID_MODE_PANEL)
+		dsi_mode->panel_mode = DSI_OP_VIDEO_MODE;
+	if (drm_mode->flags & DRM_MODE_FLAG_CMD_MODE_PANEL)
+		dsi_mode->panel_mode = DSI_OP_CMD_MODE;
 }
 
 void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
@@ -178,6 +185,8 @@ void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 		drm_mode->private_flags |= MSM_MODE_FLAG_SEAMLESS_DMS;
 	if (dsi_mode->dsi_mode_flags & DSI_MODE_FLAG_VRR)
 		drm_mode->private_flags |= MSM_MODE_FLAG_SEAMLESS_VRR;
+	if (dsi_mode->dsi_mode_flags & DSI_MODE_FLAG_POMS)
+		drm_mode->private_flags |= MSM_MODE_FLAG_SEAMLESS_POMS;
 	if (dsi_mode->dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK)
 		drm_mode->private_flags |= MSM_MODE_FLAG_SEAMLESS_DYN_CLK;
 
@@ -185,6 +194,11 @@ void dsi_convert_to_drm_mode(const struct dsi_display_mode *dsi_mode,
 		drm_mode->flags |= DRM_MODE_FLAG_PHSYNC;
 	if (dsi_mode->timing.v_sync_polarity)
 		drm_mode->flags |= DRM_MODE_FLAG_PVSYNC;
+
+	if (dsi_mode->panel_mode == DSI_OP_VIDEO_MODE)
+		drm_mode->flags |= DRM_MODE_FLAG_VID_MODE_PANEL;
+	if (dsi_mode->panel_mode == DSI_OP_CMD_MODE)
+		drm_mode->flags |= DRM_MODE_FLAG_CMD_MODE_PANEL;
 
 	/* set mode name */
 	snprintf(drm_mode->name, DRM_DISPLAY_MODE_LEN, "%dx%dx%dx%d",
@@ -303,12 +317,10 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 int dsi_bridge_interface_enable(int timeout)
 {
 	int ret = 0;
-	pr_info("%s start\n", __func__);
 	ret = wait_event_timeout(resume_wait_q,
 		!atomic_read(&resume_pending),
 		msecs_to_jiffies(WAIT_RESUME_TIMEOUT));
 	if (!ret) {
-		pr_info("Primary fb resume timeout\n");
 		return -ETIMEDOUT;
 	}
 
@@ -356,8 +368,12 @@ static void dsi_bridge_enable(struct drm_bridge *bridge)
 		pr_err("[%d] DSI display post enabled failed, rc=%d\n",
 		       c_bridge->id, rc);
 
-	if (display && display->drm_conn)
+	if (display && display->drm_conn) {
 		sde_connector_helper_bridge_enable(display->drm_conn);
+		if (c_bridge->dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_POMS)
+			sde_connector_schedule_status_work(display->drm_conn,
+				true);
+	}
 }
 
 static void dsi_bridge_disable(struct drm_bridge *bridge)
@@ -372,8 +388,18 @@ static void dsi_bridge_disable(struct drm_bridge *bridge)
 	}
 	display = c_bridge->display;
 
-	if (display && display->drm_conn)
-		sde_connector_helper_bridge_disable(display->drm_conn);
+	if (display && display->drm_conn) {
+		if (bridge->encoder->crtc->state->adjusted_mode.private_flags &
+			MSM_MODE_FLAG_SEAMLESS_POMS) {
+			display->poms_pending = true;
+			/* Disable ESD thread, during panel mode switch */
+			sde_connector_schedule_status_work(display->drm_conn,
+				false);
+		} else {
+			display->poms_pending = false;
+			sde_connector_helper_bridge_disable(display->drm_conn);
+		}
+	}
 
 	rc = dsi_display_pre_disable(c_bridge->display);
 	if (rc) {
@@ -433,7 +459,7 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 		atomic_set(&prim_panel_is_on, false);
 }
 
-#if CONFIG_TOUCHSCREEN_COMMON
+#ifdef CONFIG_TOUCHSCREEN_COMMON
 typedef int(*touchpanel_recovery_cb_p_t)(void);
 static touchpanel_recovery_cb_p_t touchpanel_recovery_cb_p;
 int set_touchpanel_recovery_callback(touchpanel_recovery_cb_p_t cb)
@@ -450,7 +476,7 @@ static void prim_panel_off_delayed_work(struct work_struct *work)
 {
 	mutex_lock(&gbridge->base.lock);
 	if (atomic_read(&prim_panel_is_on)) {
-#if CONFIG_TOUCHSCREEN_COMMON
+#ifdef CONFIG_TOUCHSCREEN_COMMON
 		if (!IS_ERR_OR_NULL(touchpanel_recovery_cb_p))
 			touchpanel_recovery_cb_p();
 #endif
@@ -569,9 +595,17 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 
 		cur_mode = crtc_state->crtc->mode;
 
+		/* No panel mode switch when drm pipeline is changing */
+		if ((dsi_mode.panel_mode != cur_dsi_mode.panel_mode) &&
+			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR)) &&
+			(crtc_state->enable ==
+				crtc_state->crtc->state->enable))
+			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_POMS;
+
 		/* No DMS/VRR when drm pipeline is changing */
 		if (!drm_mode_equal(&cur_mode, adjusted_mode) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR)) &&
+			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_POMS)) &&
 			(!(dsi_mode.dsi_mode_flags & DSI_MODE_FLAG_DYN_CLK)) &&
 			(!crtc_state->active_changed ||
 			 display->is_cont_splash_enabled))

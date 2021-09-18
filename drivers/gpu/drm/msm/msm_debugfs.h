@@ -18,7 +18,7 @@
 #ifndef __MSM_DEBUGFS_H__
 #define __MSM_DEBUGFS_H__
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 int msm_debugfs_init(struct drm_minor *minor);
 #endif
 

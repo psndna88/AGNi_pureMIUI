@@ -433,11 +433,19 @@ static int _iommu_unmap_sync_pc(struct kgsl_pagetable *pt,
 		uint64_t addr, uint64_t size)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
+	struct kgsl_iommu *iommu = _IOMMU_PRIV(pt->mmu);
 	size_t unmapped = 0;
 
 	_iommu_sync_mmu_pc(true);
 
-	unmapped = iommu_unmap(iommu_pt->domain, addr, size);
+	/*
+	 * Take iommu unmap fast path if CX GDSC is in OFF state.
+	 */
+	if (iommu->vddcx_regulator &&
+			(!regulator_is_enabled(iommu->vddcx_regulator)))
+		unmapped = iommu_unmap_fast(iommu_pt->domain, addr, size);
+	else
+		unmapped = iommu_unmap(iommu_pt->domain, addr, size);
 
 	_iommu_sync_mmu_pc(false);
 
@@ -2077,19 +2085,35 @@ static void kgsl_iommu_pagefault_resume(struct kgsl_mmu *mmu)
 {
 	struct kgsl_iommu *iommu = _IOMMU_PRIV(mmu);
 	struct kgsl_iommu_context *ctx = &iommu->ctx[KGSL_IOMMU_CONTEXT_USER];
+	unsigned int fsr_val;
 
 	if (ctx->default_pt != NULL && ctx->fault) {
-		/*
-		 * Write 1 to RESUME.TnR to terminate the
-		 * stalled transaction.
-		 */
-		KGSL_IOMMU_SET_CTX_REG(ctx, RESUME, 1);
-		/*
-		 * Make sure the above register writes
-		 * are not reordered across the barrier
-		 * as we use writel_relaxed to write them
-		 */
-		wmb();
+		while (1) {
+			KGSL_IOMMU_SET_CTX_REG(ctx, FSR, 0xffffffff);
+			/*
+			 * Make sure the above register write
+			 * is not reordered across the barrier
+			 * as we use writel_relaxed to write it.
+			 */
+			wmb();
+
+			/*
+			 * Write 1 to RESUME.TnR to terminate the
+			 * stalled transaction.
+			 */
+			KGSL_IOMMU_SET_CTX_REG(ctx, RESUME, 1);
+			/*
+			 * Make sure the above register writes
+			 * are not reordered across the barrier
+			 * as we use writel_relaxed to write them
+			 */
+			wmb();
+
+			udelay(5);
+			fsr_val = KGSL_IOMMU_GET_CTX_REG(ctx, FSR);
+			if (!(fsr_val & (1 << KGSL_IOMMU_FSR_SS_SHIFT)))
+				break;
+		}
 		ctx->fault = 0;
 	}
 }
@@ -2688,6 +2712,7 @@ static int _kgsl_iommu_probe(struct kgsl_device *device,
 	u32 reg_val[2];
 	int i = 0;
 	struct kgsl_iommu *iommu = KGSL_IOMMU_PRIV(device);
+	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct device_node *child;
 	struct platform_device *pdev = of_find_device_by_node(node);
 
@@ -2732,6 +2757,19 @@ static int _kgsl_iommu_probe(struct kgsl_device *device,
 	for (i = 0; i < ARRAY_SIZE(kgsl_iommu_features); i++) {
 		if (of_property_read_bool(node, kgsl_iommu_features[i].feature))
 			device->mmu.features |= kgsl_iommu_features[i].bit;
+	}
+
+	/*
+	 * Try to preserve the SMMU regulator if HW can support
+	 * unmap fast path.
+	 */
+	if (of_property_read_bool(node, "qcom,unmap_fast")) {
+		for (i = 0; i < KGSL_MAX_REGULATORS; i++) {
+			if (!strcmp(pwr->regulators[i].name, "vddcx")) {
+				iommu->vddcx_regulator =
+					pwr->regulators[i].reg;
+			}
+		}
 	}
 
 	if (of_property_read_u32(node, "qcom,micro-mmu-control",

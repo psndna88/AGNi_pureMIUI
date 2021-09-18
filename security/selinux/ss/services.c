@@ -103,7 +103,7 @@ static u32 latest_granting;
 
 /* Forward declaration. */
 static int context_struct_to_string(struct context *context, char **scontext,
-				    u32 *scontext_len);
+				    u32 *scontext_len, bool alloc);
 
 static void context_struct_compute_av(struct context *scontext,
 					struct context *tcontext,
@@ -456,6 +456,7 @@ mls_ops:
 	return s[0];
 }
 
+#ifdef CONFIG_AUDIT
 /*
  * security_dump_masked_av - dumps masked permissions during
  * security_compute_av due to RBAC, MLS/Constraint and Type bounds.
@@ -545,6 +546,7 @@ out:
 
 	return;
 }
+#endif
 
 /*
  * security_boundary_permission - drops violated permissions
@@ -598,9 +600,11 @@ static void type_attribute_bounds_av(struct context *scontext,
 	/* mask violated permissions */
 	avd->allowed &= ~masked;
 
+#ifdef CONFIG_AUDIT
 	/* audit masked permissions */
 	security_dump_masked_av(scontext, tcontext,
 				tclass, masked, "bounds");
+#endif
 }
 
 /*
@@ -737,11 +741,12 @@ static void context_struct_compute_av(struct context *scontext,
 				 tclass, avd);
 }
 
-static int security_validtrans_handle_fail(struct context *ocontext,
+static inline int security_validtrans_handle_fail(struct context *ocontext,
 					   struct context *ncontext,
 					   struct context *tcontext,
 					   u16 tclass)
 {
+#ifdef CONFIG_AUDIT
 	char *o = NULL, *n = NULL, *t = NULL;
 	u32 olen, nlen, tlen;
 
@@ -759,6 +764,7 @@ out:
 	kfree(o);
 	kfree(n);
 	kfree(t);
+#endif
 
 	if (!selinux_enforcing)
 		return 0;
@@ -912,6 +918,7 @@ int security_bounded_transition(u32 old_sid, u32 new_sid)
 		index = type->bounds;
 	}
 
+#ifdef CONFIG_AUDIT
 	if (rc) {
 		char *old_name = NULL;
 		char *new_name = NULL;
@@ -931,6 +938,7 @@ int security_bounded_transition(u32 old_sid, u32 new_sid)
 		kfree(new_name);
 		kfree(old_name);
 	}
+#endif
 out:
 	read_unlock(&policy_rwlock);
 
@@ -1192,20 +1200,24 @@ allow:
  * to point to this string and set `*scontext_len' to
  * the length of the string.
  */
-static int context_struct_to_string(struct context *context, char **scontext, u32 *scontext_len)
+static int context_struct_to_string(struct context *context, char **scontext, u32 *scontext_len, bool alloc)
 {
 	char *scontextp;
 
-	if (scontext)
+	if (alloc && scontext)
 		*scontext = NULL;
 	*scontext_len = 0;
 
 	if (context->len) {
 		*scontext_len = context->len;
-		if (scontext) {
-			*scontext = kstrdup(context->str, GFP_ATOMIC);
-			if (!(*scontext))
-				return -ENOMEM;
+		if (alloc) {
+			if (scontext) {
+				*scontext = kstrdup(context->str, GFP_ATOMIC);
+				if (!(*scontext))
+					return -ENOMEM;
+			}
+		} else {
+			strcpy(*scontext, context->str);
 		}
 		return 0;
 	}
@@ -1219,11 +1231,15 @@ static int context_struct_to_string(struct context *context, char **scontext, u3
 	if (!scontext)
 		return 0;
 
-	/* Allocate space for the context; caller must free this space. */
-	scontextp = kmalloc(*scontext_len, GFP_ATOMIC);
-	if (!scontextp)
-		return -ENOMEM;
-	*scontext = scontextp;
+	if (alloc) {
+		/* Allocate space for the context; caller must free this space. */
+		scontextp = kmalloc(*scontext_len, GFP_ATOMIC);
+		if (!scontextp)
+			return -ENOMEM;
+		*scontext = scontextp;
+	} else {
+		scontextp = *scontext;
+	}
 
 	/*
 	 * Copy the user name, role name and type name into the context.
@@ -1250,12 +1266,12 @@ const char *security_get_initial_sid_context(u32 sid)
 }
 
 static int security_sid_to_context_core(u32 sid, char **scontext,
-					u32 *scontext_len, int force)
+					u32 *scontext_len, int force, bool alloc)
 {
 	struct context *context;
 	int rc = 0;
 
-	if (scontext)
+	if (alloc && scontext)
 		*scontext = NULL;
 	*scontext_len  = 0;
 
@@ -1264,15 +1280,20 @@ static int security_sid_to_context_core(u32 sid, char **scontext,
 			char *scontextp;
 
 			*scontext_len = strlen(initial_sid_to_string[sid]) + 1;
-			if (!scontext)
-				goto out;
-			scontextp = kmemdup(initial_sid_to_string[sid],
-					    *scontext_len, GFP_ATOMIC);
-			if (!scontextp) {
-				rc = -ENOMEM;
-				goto out;
+			if (alloc) {
+				if (!scontext)
+					goto out;
+				scontextp = kmemdup(initial_sid_to_string[sid],
+						    *scontext_len, GFP_ATOMIC);
+				if (!scontextp) {
+					rc = -ENOMEM;
+					goto out;
+				}
+				*scontext = scontextp;
+			} else {
+				strncpy(*scontext, initial_sid_to_string[sid],
+					*scontext_len);
 			}
-			*scontext = scontextp;
 			goto out;
 		}
 		printk(KERN_ERR "SELinux: %s:  called before initial "
@@ -1291,7 +1312,7 @@ static int security_sid_to_context_core(u32 sid, char **scontext,
 		rc = -EINVAL;
 		goto out_unlock;
 	}
-	rc = context_struct_to_string(context, scontext, scontext_len);
+	rc = context_struct_to_string(context, scontext, scontext_len, alloc);
 out_unlock:
 	read_unlock(&policy_rwlock);
 out:
@@ -1311,12 +1332,22 @@ out:
  */
 int security_sid_to_context(u32 sid, char **scontext, u32 *scontext_len)
 {
-	return security_sid_to_context_core(sid, scontext, scontext_len, 0);
+	return security_sid_to_context_core(sid, scontext, scontext_len, 0, true);
 }
 
 int security_sid_to_context_force(u32 sid, char **scontext, u32 *scontext_len)
 {
-	return security_sid_to_context_core(sid, scontext, scontext_len, 1);
+	return security_sid_to_context_core(sid, scontext, scontext_len, 1, true);
+}
+
+int security_sid_to_context_stack(u32 sid, char **scontext, u32 *scontext_len)
+{
+	return security_sid_to_context_core(sid, scontext, scontext_len, 0, false);
+}
+
+int security_sid_to_context_force_stack(u32 sid, char **scontext, u32 *scontext_len)
+{
+	return security_sid_to_context_core(sid, scontext, scontext_len, 1, false);
 }
 
 /*
@@ -1518,12 +1549,13 @@ int security_context_to_sid_force(const char *scontext, u32 scontext_len,
 					    sid, SECSID_NULL, GFP_KERNEL, 1);
 }
 
-static int compute_sid_handle_invalid_context(
+static inline int compute_sid_handle_invalid_context(
 	struct context *scontext,
 	struct context *tcontext,
 	u16 tclass,
 	struct context *newcontext)
 {
+#ifdef CONFIG_AUDIT
 	char *s = NULL, *t = NULL, *n = NULL;
 	u32 slen, tlen, nlen;
 
@@ -1543,6 +1575,8 @@ out:
 	kfree(s);
 	kfree(t);
 	kfree(n);
+#endif
+
 	if (!selinux_enforcing)
 		return 0;
 	return -EACCES;
@@ -1831,16 +1865,20 @@ static int clone_sid(u32 sid,
 
 static inline int convert_context_handle_invalid_context(struct context *context)
 {
+#ifdef CONFIG_AUDIT
 	char *s;
 	u32 len;
+#endif
 
 	if (selinux_enforcing)
 		return -EINVAL;
 
+#ifdef CONFIG_AUDIT
 	if (!context_struct_to_string(context, &s, &len)) {
 		printk(KERN_WARNING "SELinux:  Context %s would be invalid if enforcing\n", s);
 		kfree(s);
 	}
+#endif
 	return 0;
 }
 
@@ -1868,8 +1906,10 @@ static int convert_context(u32 key,
 	struct type_datum *typdatum;
 	struct user_datum *usrdatum;
 	char *s;
-	u32 len;
 	int rc = 0;
+#ifdef CONFIG_AUDIT
+	u32 len;
+#endif
 
 	if (key <= SECINITSID_NUM)
 		goto out;
@@ -1982,6 +2022,7 @@ static int convert_context(u32 key,
 out:
 	return rc;
 bad:
+#ifdef CONFIG_AUDIT
 	/* Map old representation to string and save it. */
 	rc = context_struct_to_string(&oldc, &s, &len);
 	if (rc)
@@ -1994,6 +2035,9 @@ bad:
 	       c->str);
 	rc = 0;
 	goto out;
+#else
+	return 0;
+#endif
 }
 
 static void security_load_policycaps(void)
@@ -2552,7 +2596,7 @@ out_unlock:
 		struct av_decision dummy_avd;
 		rc = avc_has_perm_noaudit(fromsid, mysids[i],
 					  SECCLASS_PROCESS, /* kernel value */
-					  PROCESS__TRANSITION, AVC_STRICT,
+					  PROCESS__TRANSITION, avc_strict,
 					  &dummy_avd);
 		if (!rc)
 			mysids2[j++] = mysids[i];
@@ -2736,8 +2780,12 @@ err:
 	if (*names) {
 		for (i = 0; i < *len; i++)
 			kfree((*names)[i]);
+		kfree(*names);
 	}
 	kfree(*values);
+	*len = 0;
+	*names = NULL;
+	*values = NULL;
 	goto out;
 }
 
@@ -2849,9 +2897,11 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 	struct context *context1;
 	struct context *context2;
 	struct context newcon;
+	int rc;
+#ifdef CONFIG_AUDIT
 	char *s;
 	u32 len;
-	int rc;
+#endif
 
 	rc = 0;
 	if (!ss_initialized || !policydb.mls_enabled) {
@@ -2890,6 +2940,7 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 	if (!policydb_context_isvalid(&policydb, &newcon)) {
 		rc = convert_context_handle_invalid_context(&newcon);
 		if (rc) {
+#ifdef CONFIG_AUDIT
 			if (!context_struct_to_string(&newcon, &s, &len)) {
 				audit_log(current->audit_context,
 					  GFP_ATOMIC, AUDIT_SELINUX_ERR,
@@ -2897,6 +2948,7 @@ int security_sid_mls_copy(u32 sid, u32 mls_sid, u32 *new_sid)
 					  "invalid_context=%s", s);
 				kfree(s);
 			}
+#endif
 			goto out_unlock;
 		}
 	}

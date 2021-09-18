@@ -11,4 +11,5 @@ qcauart-objs := qca_uart.o
 
 obj-y += emac/
 
+obj-$(CONFIG_RMNET) += emac-dwc-eqos/
 obj-$(CONFIG_RMNET) += rmnet/

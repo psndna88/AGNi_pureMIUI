@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,7 @@ struct uci_chan {
 	struct list_head pending; /* user space waiting to read */
 	struct uci_buf *cur_buf; /* current buffer user space reading */
 	size_t rx_size;
+	struct mutex chan_lock;
 };
 
 struct uci_buf {
@@ -59,6 +60,7 @@ struct uci_dev {
 	bool enabled;
 	u32 tiocm;
 	void *ipc_log;
+	enum MHI_DEBUG_LEVEL *ipc_log_lvl;
 };
 
 struct mhi_uci_drv {
@@ -73,36 +75,33 @@ enum MHI_DEBUG_LEVEL msg_lvl = MHI_MSG_LVL_ERROR;
 
 #ifdef CONFIG_MHI_DEBUG
 
-#define IPC_LOG_LVL (MHI_MSG_LVL_VERBOSE)
 #define MHI_UCI_IPC_LOG_PAGES (25)
-
-#else
-
-#define IPC_LOG_LVL (MHI_MSG_LVL_ERROR)
-#define MHI_UCI_IPC_LOG_PAGES (1)
-
-#endif
-
-#ifdef CONFIG_MHI_DEBUG
-
 #define MSG_VERB(fmt, ...) do { \
 		if (msg_lvl <= MHI_MSG_LVL_VERBOSE) \
 			pr_err("[D][%s] " fmt, __func__, ##__VA_ARGS__); \
-		if (uci_dev->ipc_log && (IPC_LOG_LVL <= MHI_MSG_LVL_VERBOSE)) \
-			ipc_log_string(uci_dev->ipc_log, "[D][%s] " fmt, \
-				       __func__, ##__VA_ARGS__); \
+		if (uci_dev->ipc_log && uci_dev->ipc_log_lvl && \
+		    (*uci_dev->ipc_log_lvl <= MHI_MSG_LVL_VERBOSE)) \
+			ipc_log_string(uci_dev->ipc_log, \
+				"[D][%s] " fmt, __func__, ##__VA_ARGS__); \
 	} while (0)
 
 #else
 
-#define MSG_VERB(fmt, ...)
+#define MHI_UCI_IPC_LOG_PAGES (1)
+#define MSG_VERB(fmt, ...) do { \
+		if (uci_dev->ipc_log && uci_dev->ipc_log_lvl && \
+		    (*uci_dev->ipc_log_lvl <= MHI_MSG_LVL_VERBOSE)) \
+			ipc_log_string(uci_dev->ipc_log, \
+				"[D][%s] " fmt, __func__, ##__VA_ARGS__); \
+	} while (0)
 
 #endif
 
 #define MSG_LOG(fmt, ...) do { \
 		if (msg_lvl <= MHI_MSG_LVL_INFO) \
 			pr_err("[I][%s] " fmt, __func__, ##__VA_ARGS__); \
-		if (uci_dev->ipc_log && (IPC_LOG_LVL <= MHI_MSG_LVL_INFO)) \
+		if (uci_dev->ipc_log && uci_dev->ipc_log_lvl && \
+		    (*uci_dev->ipc_log_lvl <= MHI_MSG_LVL_INFO)) \
 			ipc_log_string(uci_dev->ipc_log, "[I][%s] " fmt, \
 				       __func__, ##__VA_ARGS__); \
 	} while (0)
@@ -110,7 +109,8 @@ enum MHI_DEBUG_LEVEL msg_lvl = MHI_MSG_LVL_ERROR;
 #define MSG_ERR(fmt, ...) do { \
 		if (msg_lvl <= MHI_MSG_LVL_ERROR) \
 			pr_err("[E][%s] " fmt, __func__, ##__VA_ARGS__); \
-		if (uci_dev->ipc_log && (IPC_LOG_LVL <= MHI_MSG_LVL_ERROR)) \
+		if (uci_dev->ipc_log && uci_dev->ipc_log_lvl && \
+		    (*uci_dev->ipc_log_lvl <= MHI_MSG_LVL_ERROR)) \
 			ipc_log_string(uci_dev->ipc_log, "[E][%s] " fmt, \
 				       __func__, ##__VA_ARGS__); \
 	} while (0)
@@ -212,6 +212,8 @@ static int mhi_uci_release(struct inode *inode, struct file *file)
 			MSG_LOG("Node is deleted, freeing dev node\n");
 			mutex_unlock(&uci_dev->mutex);
 			mutex_destroy(&uci_dev->mutex);
+			mutex_destroy(&uci_dev->dl_chan.chan_lock);
+			mutex_destroy(&uci_dev->ul_chan.chan_lock);
 			clear_bit(MINOR(uci_dev->devt), uci_minors);
 			kfree(uci_dev);
 			return 0;
@@ -281,11 +283,14 @@ static ssize_t mhi_uci_write(struct file *file,
 	if (!buf || !count)
 		return -EINVAL;
 
+	mutex_lock(&uci_chan->chan_lock);
+
 	/* confirm channel is active */
 	spin_lock_bh(&uci_chan->lock);
 	if (!uci_dev->enabled) {
 		spin_unlock_bh(&uci_chan->lock);
-		return -ERESTARTSYS;
+		ret = -ERESTARTSYS;
+		goto err_mtx_unlock;
 	}
 
 	MSG_VERB("Enter: to xfer:%lu bytes\n", count);
@@ -305,20 +310,22 @@ static ssize_t mhi_uci_write(struct file *file,
 
 		if (ret == -ERESTARTSYS || !uci_dev->enabled) {
 			MSG_LOG("Exit signal caught for node or not enabled\n");
-			return -ERESTARTSYS;
+			ret = -ERESTARTSYS;
+			goto err_mtx_unlock;
 		}
 
 		xfer_size = min_t(size_t, count, uci_dev->mtu);
 		kbuf = kmalloc(xfer_size, GFP_KERNEL);
 		if (!kbuf) {
 			MSG_ERR("Failed to allocate memory %lu\n", xfer_size);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err_mtx_unlock;
 		}
 
 		ret = copy_from_user(kbuf, buf, xfer_size);
 		if (unlikely(ret)) {
 			kfree(kbuf);
-			return ret;
+			goto err_mtx_unlock;
 		}
 
 		spin_lock_bh(&uci_chan->lock);
@@ -346,12 +353,15 @@ static ssize_t mhi_uci_write(struct file *file,
 	}
 
 	spin_unlock_bh(&uci_chan->lock);
+	mutex_unlock(&uci_chan->chan_lock);
 	MSG_VERB("Exit: Number of bytes xferred:%lu\n", bytes_xfered);
 
 	return bytes_xfered;
 
 sys_interrupt:
 	spin_unlock_bh(&uci_chan->lock);
+err_mtx_unlock:
+	mutex_unlock(&uci_chan->chan_lock);
 
 	return ret;
 }
@@ -374,11 +384,14 @@ static ssize_t mhi_uci_read(struct file *file,
 
 	MSG_VERB("Client provided buf len:%lu\n", count);
 
+	mutex_lock(&uci_chan->chan_lock);
+
 	/* confirm channel is active */
 	spin_lock_bh(&uci_chan->lock);
 	if (!uci_dev->enabled) {
 		spin_unlock_bh(&uci_chan->lock);
-		return -ERESTARTSYS;
+		ret = -ERESTARTSYS;
+		goto err_mtx_unlock;
 	}
 
 	/* No data available to read, wait */
@@ -391,7 +404,8 @@ static ssize_t mhi_uci_read(struct file *file,
 				 !list_empty(&uci_chan->pending)));
 		if (ret == -ERESTARTSYS) {
 			MSG_LOG("Exit signal caught for node\n");
-			return -ERESTARTSYS;
+			ret = -ERESTARTSYS;
+			goto err_mtx_unlock;
 		}
 
 		spin_lock_bh(&uci_chan->lock);
@@ -418,21 +432,29 @@ static ssize_t mhi_uci_read(struct file *file,
 	}
 
 	uci_buf = uci_chan->cur_buf;
-	spin_unlock_bh(&uci_chan->lock);
 
 	/* Copy the buffer to user space */
 	to_copy = min_t(size_t, count, uci_chan->rx_size);
 	ptr = uci_buf->data + (uci_buf->len - uci_chan->rx_size);
+	spin_unlock_bh(&uci_chan->lock);
+
 	ret = copy_to_user(buf, ptr, to_copy);
 	if (ret)
-		return ret;
+		goto err_mtx_unlock;
+
+	spin_lock_bh(&uci_chan->lock);
+	/* Buffer already queued from diff thread while we dropped lock ? */
+	if (to_copy && !uci_chan->rx_size) {
+		MSG_VERB("Bailout as buffer already queued (%lu %lu)\n",
+			 to_copy, uci_chan->rx_size);
+		goto read_error;
+	}
 
 	MSG_VERB("Copied %lu of %lu bytes\n", to_copy, uci_chan->rx_size);
 	uci_chan->rx_size -= to_copy;
 
 	/* we finished with this buffer, queue it back to hardware */
 	if (!uci_chan->rx_size) {
-		spin_lock_bh(&uci_chan->lock);
 		uci_chan->cur_buf = NULL;
 
 		if (uci_dev->enabled)
@@ -447,17 +469,18 @@ static ssize_t mhi_uci_read(struct file *file,
 			kfree(uci_buf->data);
 			goto read_error;
 		}
-
-		spin_unlock_bh(&uci_chan->lock);
 	}
+	spin_unlock_bh(&uci_chan->lock);
 
 	MSG_VERB("Returning %lu bytes\n", to_copy);
+	mutex_unlock(&uci_chan->chan_lock);
 
 	return to_copy;
 
 read_error:
 	spin_unlock_bh(&uci_chan->lock);
-
+err_mtx_unlock:
+	mutex_unlock(&uci_chan->chan_lock);
 	return ret;
 }
 
@@ -564,6 +587,8 @@ static void mhi_uci_remove(struct mhi_device *mhi_dev)
 	if (!uci_dev->ref_count) {
 		mutex_unlock(&uci_dev->mutex);
 		mutex_destroy(&uci_dev->mutex);
+		mutex_destroy(&uci_dev->dl_chan.chan_lock);
+		mutex_destroy(&uci_dev->ul_chan.chan_lock);
 		clear_bit(MINOR(uci_dev->devt), uci_minors);
 		kfree(uci_dev);
 		mutex_unlock(&mhi_uci_drv.lock);
@@ -580,6 +605,7 @@ static int mhi_uci_probe(struct mhi_device *mhi_dev,
 			 const struct mhi_device_id *id)
 {
 	struct uci_dev *uci_dev;
+	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 	int minor;
 	char node_name[32];
 	int dir;
@@ -615,11 +641,13 @@ static int mhi_uci_probe(struct mhi_device *mhi_dev,
 		 mhi_dev->ul_chan_id);
 	uci_dev->ipc_log = ipc_log_context_create(MHI_UCI_IPC_LOG_PAGES,
 						  node_name, 0);
+	uci_dev->ipc_log_lvl = &mhi_cntrl->log_lvl;
 
 	for (dir = 0; dir < 2; dir++) {
 		struct uci_chan *uci_chan = (dir) ?
 			&uci_dev->ul_chan : &uci_dev->dl_chan;
 		spin_lock_init(&uci_chan->lock);
+		mutex_init(&uci_chan->chan_lock);
 		init_waitqueue_head(&uci_chan->wq);
 		INIT_LIST_HEAD(&uci_chan->pending);
 	};

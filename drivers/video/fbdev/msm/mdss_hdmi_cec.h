@@ -1,4 +1,5 @@
-/* Copyright (c) 2010-2013, 2015-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, 2015-2016, 2018, 2021,
+ * The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,7 +15,6 @@
 #define __MDSS_HDMI_CEC_H__
 
 #include "mdss_hdmi_util.h"
-#include "mdss_cec_core.h"
 
 #define RETRANSMIT_MAX_NUM	5
 
@@ -34,6 +34,7 @@ struct hdmi_cec_init_data {
 	struct mdss_panel_info *pinfo;
 	struct cec_cbs *cbs;
 	struct cec_ops *ops;
+	struct device *dev;
 };
 
 /**

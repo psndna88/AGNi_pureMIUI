@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -67,14 +67,10 @@ enum npu_power_level {
 	NPU_PWRLEVEL_OFF = 0xFFFFFFFF,
 };
 
-#define NPU_ERR(fmt, args...)                            \
-	pr_err("NPU_ERR: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_WARN(fmt, args...)                           \
-	pr_warn("NPU_WARN: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_INFO(fmt, args...)                           \
-	pr_info("NPU_INFO: %s: %d " fmt, __func__,  __LINE__, ##args)
-#define NPU_DBG(fmt, args...)                           \
-	pr_debug("NPU_DBG: %s: %d " fmt, __func__,  __LINE__, ##args)
+#define NPU_ERR(fmt, args...)
+#define NPU_WARN(fmt, args...)
+#define NPU_INFO(fmt, args...)
+#define NPU_DBG(fmt, args...)
 
 /*
  * Data Structures
@@ -138,7 +134,7 @@ struct npu_mbox {
 };
 
 /*
- * struct npul_pwrlevel - Struct holding different pwrlevel info obtained from
+ * struct npu_pwrlevel - Struct holding different pwrlevel info obtained
  * from dtsi file
  * @pwr_level:           NPU power level
  * @freq[]:              NPU frequency vote in Hz
@@ -180,6 +176,7 @@ struct npu_reg {
  */
 struct npu_pwrctrl {
 	int32_t pwr_vote_num;
+	int32_t pwr_vote_num_sysfs;
 
 	struct npu_pwrlevel pwrlevels[NPU_MAX_PWRLEVELS];
 	uint32_t active_pwrlevel;
@@ -249,6 +246,7 @@ struct mbox_bridge_data {
 
 struct npu_device {
 	struct mutex dev_lock;
+	spinlock_t ipc_lock;
 
 	struct platform_device *pdev;
 
@@ -291,6 +289,7 @@ struct npu_device {
 	struct llcc_slice_desc *sys_cache;
 	uint32_t execute_v2_flag;
 	bool cxlimit_registered;
+	bool npu_dsp_sid_mapped;
 
 	uint32_t hw_version;
 };
@@ -344,4 +343,6 @@ int load_fw(struct npu_device *npu_dev);
 int unload_fw(struct npu_device *npu_dev);
 int npu_set_bw(struct npu_device *npu_dev, int new_ib, int new_ab);
 int npu_process_kevent(struct npu_client *client, struct npu_kevent *kevt);
+int npu_bridge_mbox_send_data(struct npu_host_ctx *host_ctx,
+	struct npu_mbox *mbox, void *data);
 #endif /* _NPU_COMMON_H */

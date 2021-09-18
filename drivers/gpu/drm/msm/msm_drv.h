@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -26,6 +26,7 @@
 #include <linux/component.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/pm_qos.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/list.h>
@@ -250,6 +251,18 @@ enum msm_display_caps {
 	MSM_DISPLAY_ESD_ENABLED		= BIT(4),
 	MSM_DISPLAY_CAP_MST_MODE	= BIT(5),
 	MSM_DISPLAY_SPLIT_LINK		= BIT(6),
+};
+
+/**
+ * enum panel_mode - panel operation mode
+ * @MSM_DISPLAY_VIDEO_MODE: video mode panel
+ * @MSM_DISPLAY_CMD_MODE:   Command mode panel
+ * @MODE_MAX:
+ */
+enum panel_op_mode {
+	MSM_DISPLAY_VIDEO_MODE = 0,
+	MSM_DISPLAY_CMD_MODE,
+	MSM_DISPLAY_MODE_MAX,
 };
 
 /**
@@ -492,6 +505,7 @@ struct msm_mode_info {
 struct msm_display_info {
 	int intf_type;
 	uint32_t capabilities;
+	enum panel_op_mode curr_panel_mode;
 
 	uint32_t num_of_h_tiles;
 	uint32_t h_tile_instance[MAX_H_TILES_PER_DISPLAY];
@@ -688,6 +702,9 @@ struct msm_drm_private {
 	bool shutdown_in_progress;
 
 	struct msm_idle idle;
+	struct pm_qos_request pm_irq_req;
+	struct delayed_work pm_unreq_dwork;
+	atomic_t pm_req_set;
 };
 
 /* get struct msm_kms * from drm_device * */
@@ -939,7 +956,7 @@ void __init msm_mdp_register(void);
 void __exit msm_mdp_unregister(void);
 
 void msm_idle_set_state(struct drm_encoder *encoder, bool active);
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 void msm_gem_describe(struct drm_gem_object *obj, struct seq_file *m);
 void msm_gem_describe_objects(struct list_head *list, struct seq_file *m);
 void msm_framebuffer_describe(struct drm_framebuffer *fb, struct seq_file *m);
@@ -1001,4 +1018,7 @@ static inline unsigned long timeout_to_jiffies(const ktime_t *timeout)
 	return remaining_jiffies;
 }
 
+int msm_get_mixer_count(struct msm_drm_private *priv,
+		const struct drm_display_mode *mode,
+		u32 max_mixer_width, u32 *num_lm);
 #endif /* __MSM_DRV_H__ */

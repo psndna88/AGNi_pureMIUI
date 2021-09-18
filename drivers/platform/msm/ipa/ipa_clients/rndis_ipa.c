@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,7 +55,7 @@
 			(ETH_FRAME_LEN + sizeof(struct rndis_pkt_hdr)))
 #define BAM_DMA_DESC_FIFO_SIZE \
 		(BAM_DMA_MAX_PKT_NUMBER * (sizeof(struct sps_iovec)))
-#define TX_TIMEOUT (5 * HZ)
+#define TX_TIMEOUT msecs_to_jiffies(5000)
 #define MIN_TX_ERROR_SLEEP_PERIOD 500
 #define DEFAULT_AGGR_TIME_LIMIT 1000 /* 1ms */
 #define DEFAULT_AGGR_PKT_LIMIT 0
@@ -452,8 +452,10 @@ static struct ipa_ep_cfg usb_to_ipa_ep_cfg_deaggr_en = {
 	},
 	.deaggr = {
 		.deaggr_hdr_len = sizeof(struct rndis_pkt_hdr),
+		.syspipe_err_detection = true,
 		.packet_offset_valid = true,
 		.packet_offset_location = 8,
+		.ignore_min_pkt_err = true,
 		.max_packet_len = 8192, /* Will be overridden*/
 	},
 	.route = {
@@ -996,7 +998,8 @@ static netdev_tx_t rndis_ipa_start_xmit(struct sk_buff *skb,
 fail_tx_packet:
 	rndis_ipa_xmit_error(skb);
 out:
-	resource_release(rndis_ipa_ctx);
+	if (atomic_read(&rndis_ipa_ctx->outstanding_pkts) == 0)
+		resource_release(rndis_ipa_ctx);
 resource_busy:
 	RNDIS_IPA_DEBUG
 		("packet Tx done - %s\n",
@@ -1068,6 +1071,10 @@ static void rndis_ipa_tx_complete_notify(
 		netif_wake_queue(rndis_ipa_ctx->net);
 		RNDIS_IPA_DEBUG("send queue was awaken\n");
 	}
+
+	/*Release resource only when outstanding packets are zero*/
+	if (atomic_read(&rndis_ipa_ctx->outstanding_pkts) == 0)
+		resource_release(rndis_ipa_ctx);
 
 out:
 	dev_kfree_skb_any(skb);
@@ -1448,8 +1455,9 @@ void rndis_ipa_cleanup(void *private)
 	rndis_ipa_debugfs_destroy(rndis_ipa_ctx);
 	RNDIS_IPA_DEBUG("debugfs remove was done\n");
 
+	RNDIS_IPA_DEBUG("RNDIS_IPA netdev unregister started\n");
 	unregister_netdev(rndis_ipa_ctx->net);
-	RNDIS_IPA_DEBUG("netdev unregistered\n");
+	RNDIS_IPA_DEBUG("RNDIS_IPA netdev unregister completed\n");
 
 	spin_lock_irqsave(&rndis_ipa_ctx->state_lock, flags);
 	next_state = rndis_ipa_next_state(rndis_ipa_ctx->state,
@@ -1502,7 +1510,7 @@ static void rndis_ipa_xmit_error(struct sk_buff *skb)
 	delay_jiffies = msecs_to_jiffies(
 		rndis_ipa_ctx->error_msec_sleep_time + rand_dealy_msec);
 
-	retval = schedule_delayed_work(
+	retval = queue_delayed_work(system_power_efficient_wq, 
 		&rndis_ipa_ctx->xmit_error_delayed_work, delay_jiffies);
 	if (!retval) {
 		RNDIS_IPA_ERROR("fail to schedule delayed work\n");
@@ -2254,6 +2262,14 @@ static int rndis_ipa_ep_registers_cfg(
 
 	/* enable hdr_metadata_reg_valid */
 	usb_to_ipa_ep_cfg->hdr.hdr_metadata_reg_valid = true;
+
+	/*xlat config in vlan mode */
+	if (is_vlan_mode) {
+		usb_to_ipa_ep_cfg->hdr.hdr_ofst_metadata_valid = 1;
+		usb_to_ipa_ep_cfg->hdr.hdr_ofst_metadata =
+			sizeof(struct rndis_pkt_hdr) + ETH_HLEN;
+		usb_to_ipa_ep_cfg->hdr.hdr_metadata_reg_valid = false;
+	}
 
 	result = ipa_cfg_ep(ipa_to_usb_hdl, &ipa_to_usb_ep_cfg);
 	if (result) {

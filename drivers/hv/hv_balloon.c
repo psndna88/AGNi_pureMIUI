@@ -1050,6 +1050,8 @@ static void process_info(struct hv_dynmem_device *dm, struct dm_info_msg *msg)
 static unsigned long compute_balloon_floor(void)
 {
 	unsigned long min_pages;
+	unsigned long nr_pages = totalram_pages();
+
 #define MB2PAGES(mb) ((mb) << (20 - PAGE_SHIFT))
 	/* Simple continuous piecewiese linear function:
 	 *  max MiB -> min MiB  gradient
@@ -1062,16 +1064,16 @@ static unsigned long compute_balloon_floor(void)
 	 *    8192       744    (1/16)
 	 *   32768      1512	(1/32)
 	 */
-	if (totalram_pages < MB2PAGES(128))
-		min_pages = MB2PAGES(8) + (totalram_pages >> 1);
-	else if (totalram_pages < MB2PAGES(512))
-		min_pages = MB2PAGES(40) + (totalram_pages >> 2);
-	else if (totalram_pages < MB2PAGES(2048))
-		min_pages = MB2PAGES(104) + (totalram_pages >> 3);
-	else if (totalram_pages < MB2PAGES(8192))
-		min_pages = MB2PAGES(232) + (totalram_pages >> 4);
+	if (nr_pages < MB2PAGES(128))
+		min_pages = MB2PAGES(8) + (nr_pages >> 1);
+	else if (nr_pages < MB2PAGES(512))
+		min_pages = MB2PAGES(40) + (nr_pages >> 2);
+	else if (nr_pages < MB2PAGES(2048))
+		min_pages = MB2PAGES(104) + (nr_pages >> 3);
+	else if (nr_pages < MB2PAGES(8192))
+		min_pages = MB2PAGES(232) + (nr_pages >> 4);
 	else
-		min_pages = MB2PAGES(488) + (totalram_pages >> 5);
+		min_pages = MB2PAGES(488) + (nr_pages >> 5);
 #undef MB2PAGES
 	return min_pages;
 }
@@ -1170,10 +1172,7 @@ static unsigned int alloc_balloon_pages(struct hv_dynmem_device *dm,
 	unsigned int i = 0;
 	struct page *pg;
 
-	if (num_pages < alloc_unit)
-		return 0;
-
-	for (i = 0; (i * alloc_unit) < num_pages; i++) {
+	for (i = 0; i < num_pages / alloc_unit; i++) {
 		if (bl_resp->hdr.size + sizeof(union dm_mem_page_range) >
 			PAGE_SIZE)
 			return i * alloc_unit;
@@ -1207,7 +1206,7 @@ static unsigned int alloc_balloon_pages(struct hv_dynmem_device *dm,
 
 	}
 
-	return num_pages;
+	return i * alloc_unit;
 }
 
 static void balloon_up(struct work_struct *dummy)
@@ -1222,9 +1221,6 @@ static void balloon_up(struct work_struct *dummy)
 	long avail_pages;
 	unsigned long floor;
 
-	/* The host balloons pages in 2M granularity. */
-	WARN_ON_ONCE(num_pages % PAGES_IN_2M != 0);
-
 	/*
 	 * We will attempt 2M allocations. However, if we fail to
 	 * allocate 2M chunks, we will go back to 4k allocations.
@@ -1234,14 +1230,13 @@ static void balloon_up(struct work_struct *dummy)
 	avail_pages = si_mem_available();
 	floor = compute_balloon_floor();
 
-	/* Refuse to balloon below the floor, keep the 2M granularity. */
+	/* Refuse to balloon below the floor. */
 	if (avail_pages < num_pages || avail_pages - num_pages < floor) {
-		pr_warn("Balloon request will be partially fulfilled. %s\n",
+		pr_info("Balloon request will be partially fulfilled. %s\n",
 			avail_pages < num_pages ? "Not enough memory." :
 			"Balloon floor reached.");
 
 		num_pages = avail_pages > floor ? (avail_pages - floor) : 0;
-		num_pages -= num_pages % PAGES_IN_2M;
 	}
 
 	while (!done) {

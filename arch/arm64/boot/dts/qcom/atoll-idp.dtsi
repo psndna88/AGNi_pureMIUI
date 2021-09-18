@@ -168,6 +168,7 @@
 &pm6150_qg {
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,tcss-enable;
+	qcom,bass-enable;
 	qcom,qg-iterm-ma = <350>;
 	qcom,vbatt-cutoff-mv = <3400>;
 	qcom,vbatt-low-mv = <3500>;
@@ -234,7 +235,6 @@
 	qcom,en-qc3-with-cp;
 	qcom,disable-suspend-on-collapse;
 	qcom,smb-internal-pull-kohm = <0>;
-	qcom,reg-dump-enable;
 };
 
 &pm6150_gpios {

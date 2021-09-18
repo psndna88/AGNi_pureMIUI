@@ -1,5 +1,4 @@
 /* Copyright (c) 2011, 2014-2016 The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,8 +14,8 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
-//2019.12.12 edit longcheer xiaoxiongfeng "the value 0 to 1"
-int msm_show_resume_irq_mask=1;
+
+int msm_show_resume_irq_mask;
 
 module_param_named(
 	debug_mask, msm_show_resume_irq_mask, int, 0664);

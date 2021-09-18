@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -263,6 +263,7 @@ struct mhi_config {
 	uint32_t	mhi_reg_len;
 	uint32_t	version;
 	uint32_t	event_rings;
+	uint32_t	hw_event_rings;
 	uint32_t	channels;
 	uint32_t	chdb_offset;
 	uint32_t	erdb_offset;
@@ -270,16 +271,20 @@ struct mhi_config {
 
 #define NUM_CHANNELS			128
 #define HW_CHANNEL_BASE			100
-#define HW_CHANNEL_END			107
+#define NUM_HW_CHANNELS			15
+#define HW_CHANNEL_END			110
 #define MHI_ENV_VALUE			2
 #define MHI_MASK_ROWS_CH_EV_DB		4
 #define TRB_MAX_DATA_SIZE		8192
 #define MHI_CTRL_STATE			100
 
-/*maximum trasnfer completion events buffer*/
-#define MAX_TR_EVENTS			50
-/*maximum event requests */
-#define MHI_MAX_EVT_REQ			50
+/* maximum transfer completion events buffer */
+#define NUM_TR_EVENTS_DEFAULT			128
+#define NUM_CMD_EVENTS_DEFAULT			20
+
+
+/* Set flush threshold to 80% of event buf size */
+#define MHI_CMPL_EVT_FLUSH_THRSHLD(n) ((n * 8) / 10)
 
 /* Possible ring element types */
 union mhi_dev_ring_element_type {
@@ -360,6 +365,8 @@ enum mhi_dev_ch_operation {
 enum mhi_dev_tr_compl_evt_type {
 	SEND_EVENT_BUFFER,
 	SEND_EVENT_RD_OFFSET,
+	SEND_MSI,
+	SEND_CMD_CMP,
 };
 
 enum mhi_dev_transfer_type {
@@ -380,18 +387,30 @@ struct mhi_dev_ring {
 
 	enum mhi_dev_ring_type			type;
 	enum mhi_dev_ring_state			state;
-
+	/*
+	 * Lock to prevent race in updating event ring
+	 * which is shared by multiple channels
+	 */
+	struct mutex	event_lock;
 	/* device virtual address location of the cached host ring ctx data */
 	union mhi_dev_ring_element_type		*ring_cache;
 	/* Physical address of the cached ring copy on the device side */
 	dma_addr_t				ring_cache_dma_handle;
+	/* Device VA of read pointer array (used only for event rings) */
+	uint64_t			*evt_rp_cache;
+	/* PA of the read pointer array (used only for event rings) */
+	dma_addr_t				evt_rp_cache_dma_handle;
+	/* Device VA of msi buffer (used only for event rings)  */
+	uint32_t			*msi_buf;
+	/* PA of msi buf (used only for event rings) */
+	dma_addr_t				msi_buf_dma_handle;
 	/* Physical address of the host where we will write/read to/from */
 	struct mhi_addr				ring_shadow;
 	/* Ring type - cmd, event, transfer ring and its rp/wp... */
 	union mhi_dev_ring_ctx			*ring_ctx;
 	/* ring_ctx_shadow -> tracking ring_ctx in the host */
 	union mhi_dev_ring_ctx			*ring_ctx_shadow;
-	void (*ring_cb)(struct mhi_dev *dev,
+	int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el,
 			void *ctx);
 };
@@ -408,7 +427,8 @@ static inline void mhi_dev_ring_inc_index(struct mhi_dev_ring *ring,
 #define TRACE_DATA_MAX				128
 #define MHI_DEV_DATA_MAX			512
 
-#define MHI_DEV_MMIO_RANGE			0xc80
+#define MHI_DEV_MMIO_RANGE			0xb80
+#define MHI_DEV_MMIO_OFFSET			0x100
 
 struct ring_cache_req {
 	struct completion	*done;
@@ -417,6 +437,11 @@ struct ring_cache_req {
 
 struct event_req {
 	union mhi_dev_ring_element_type *tr_events;
+	/*
+	 * Start index of the completion event buffer segment
+	 * to be flushed to host
+	 */
+	u32			start;
 	u32			num_events;
 	dma_addr_t		dma;
 	u32			dma_len;
@@ -425,7 +450,22 @@ struct event_req {
 	enum mhi_dev_tr_compl_evt_type event_type;
 	u32			event_ring;
 	void			(*client_cb)(void *req);
+	void			(*rd_offset_cb)(void *req);
+	void			(*msi_cb)(void *req);
 	struct list_head	list;
+	u32			flush_num;
+	bool		is_cmd_cpl;
+};
+
+struct mhi_cmd_cmpl_ctx {
+	/* Indices for completion event buffer */
+	uint32_t			cmd_buf_rp;
+	uint32_t			cmd_buf_wp;
+	uint32_t			cmd_buf_size;
+	bool				mem_allocated;
+	struct list_head	cmd_req_buffers;
+	struct event_req		*ereqs;
+	union mhi_dev_ring_element_type *cmd_events;
 };
 
 struct mhi_dev_channel {
@@ -442,16 +482,24 @@ struct mhi_dev_channel {
 	struct mutex			ch_lock;
 	/* client which the current inbound/outbound message is for */
 	struct mhi_dev_client		*active_client;
+	/* Pointer to completion event buffer */
+	union mhi_dev_ring_element_type *tr_events;
+	/* Indices for completion event buffer */
+	uint32_t			evt_buf_rp;
+	uint32_t			evt_buf_wp;
+	uint32_t			evt_buf_size;
 	/*
-	 * Pointer to event request structs used to temporarily store
-	 * completion events and meta data before sending them to host
+	 * Pointer to a block of event request structs used to temporarily
+	 * store completion events and meta data before sending them to host
 	 */
 	struct event_req		*ereqs;
-	/* Pointer to completion event buffers */
-	union mhi_dev_ring_element_type *tr_events;
+	/* Linked list head for event request structs */
 	struct list_head		event_req_buffers;
+	uint32_t				evt_req_size;
+	/* Linked list head for event request structs to be flushed */
+	struct list_head		flush_event_req_buffers;
+	/* Pointer to the currently used event request struct */
 	struct event_req		*curr_ereq;
-
 	/* current TRE being processed */
 	uint64_t			tre_loc;
 	/* current TRE size */
@@ -461,7 +509,11 @@ struct mhi_dev_channel {
 	/* td size being read/written from/to so far */
 	uint32_t			td_size;
 	uint32_t			pend_wr_count;
+	uint32_t			msi_cnt;
+	uint32_t			flush_req_cnt;
 	bool				skip_td;
+	bool				db_pending;
+	bool				reset_pending;
 };
 
 /* Structure device for mhi dev */
@@ -496,6 +548,7 @@ struct mhi_dev {
 	struct mhi_dev_ring		*ring;
 	int				mhi_irq;
 	struct mhi_dev_channel		*ch;
+	struct mhi_cmd_cmpl_ctx			*cmd_ctx;
 
 	int				ctrl_int;
 	int				cmd_int;
@@ -521,7 +574,7 @@ struct mhi_dev {
 	size_t			ch_ring_start;
 
 	/* IPA Handles */
-	u32				ipa_clnt_hndl[4];
+	u32				ipa_clnt_hndl[NUM_HW_CHANNELS];
 	struct workqueue_struct		*ring_init_wq;
 	struct work_struct		ring_init_cb_work;
 	struct work_struct		re_init;
@@ -532,7 +585,6 @@ struct mhi_dev {
 	u32                             ifc_id;
 	struct ep_pcie_hw               *phandle;
 	struct work_struct		pcie_event;
-	struct ep_pcie_msi_config	msi_cfg;
 
 	atomic_t			write_active;
 	atomic_t			is_suspended;
@@ -576,6 +628,13 @@ struct mhi_dev {
 	/*Register for interrupt*/
 	bool				mhi_int;
 	bool				mhi_int_en;
+
+	/* Enable M2 autonomous mode from MHI */
+	bool				enable_m2;
+
+	/* Dont timeout waiting for M0 */
+	bool				no_m0_timeout;
+
 	/* Registered client callback list */
 	struct list_head		client_cb_list;
 	/* Tx, Rx DMA channels */
@@ -716,7 +775,7 @@ int mhi_dev_add_element(struct mhi_dev_ring *ring,
  * @ring_cb:	callback function.
  */
 void mhi_ring_set_cb(struct mhi_dev_ring *ring,
-			void (*ring_cb)(struct mhi_dev *dev,
+			int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el, void *ctx));
 
 /**
@@ -945,6 +1004,12 @@ int mhi_dev_mmio_get_cmd_db(struct mhi_dev_ring *ring, uint64_t *wr_offset);
 int mhi_dev_mmio_set_env(struct mhi_dev *dev, uint32_t value);
 
 /**
+ * mhi_dev_mmio_clear_reset() - Clear the reset bit
+ * @dev:	MHI device structure.
+ */
+int mhi_dev_mmio_clear_reset(struct mhi_dev *dev);
+
+/**
  * mhi_dev_mmio_reset() - Reset the MMIO done as part of initialization.
  * @dev:	MHI device structure.
  */
@@ -1086,4 +1151,5 @@ void mhi_uci_chan_state_notify_all(struct mhi_dev *mhi,
 void mhi_uci_chan_state_notify(struct mhi_dev *mhi,
 		enum mhi_client_channel ch_id, enum mhi_ctrl_info ch_state);
 
+void mhi_dev_pm_relax(void);
 #endif /* _MHI_H */
