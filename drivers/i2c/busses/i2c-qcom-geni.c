@@ -372,7 +372,7 @@ static void gi2c_ev_cb(struct dma_chan *ch, struct msm_gpi_cb const *cb_str,
 		break;
 	}
 	if (cb_str->cb_event != MSM_GPI_QUP_NOTIFY)
-		GENI_SE_ERR(gi2c->ipcl, true, gi2c->dev,
+		GENI_SE_DBG(gi2c->ipcl, true, gi2c->dev,
 				"GSI QN err:0x%x, status:0x%x, err:%d\n",
 				cb_str->error_log.error_code,
 				m_stat, cb_str->cb_event);
@@ -766,7 +766,7 @@ static int geni_i2c_xfer(struct i2c_adapter *adap,
 		}
 		ret = gi2c->err;
 		if (gi2c->err) {
-			dev_err(gi2c->dev, "i2c error :%d\n", gi2c->err);
+			dev_dbg(gi2c->dev, "i2c error :%d\n", gi2c->err);
 			break;
 		}
 	}

@@ -33,7 +33,7 @@ struct firmware_info {
 };
 
 static const struct firmware_info firmware_table[] = {
-	{.dev_id = 0x308, .fw_image = "sdx65m/sbl1.mbn",
+	{.dev_id = 0x308, .fw_image = "sdx65m/xbl.elf",
 	 .edl_image = "sdx65m/edl.mbn"},
 	{.dev_id = 0x307, .fw_image = "sdx60m/sbl1.mbn",
 	 .edl_image = "sdx60m/edl.mbn"},
@@ -82,6 +82,36 @@ int mhi_debugfs_trigger_m3(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(debugfs_trigger_m3_fops, NULL,
 			mhi_debugfs_trigger_m3, "%llu\n");
+
+static int mhi_debugfs_disable_pci_lpm_get(void *data, u64 *val)
+{
+	struct mhi_controller *mhi_cntrl = data;
+	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
+
+	*val = mhi_dev->disable_pci_lpm;
+
+	MHI_CNTRL_LOG("PCIe low power modes (D3 hot/cold) are %s\n",
+		      mhi_dev->disable_pci_lpm ? "Disabled" : "Enabled");
+
+	return 0;
+}
+
+static int mhi_debugfs_disable_pci_lpm_set(void *data, u64 val)
+{
+	struct mhi_controller *mhi_cntrl = data;
+	struct mhi_dev *mhi_dev = mhi_controller_get_devdata(mhi_cntrl);
+
+	mutex_lock(&mhi_cntrl->pm_mutex);
+	mhi_dev->disable_pci_lpm = val ? true : false;
+	mutex_unlock(&mhi_cntrl->pm_mutex);
+
+	MHI_CNTRL_LOG("%s PCIe low power modes (D3 hot/cold)\n",
+		      val ? "Disabled" : "Enabled");
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(debugfs_pci_lpm_fops, mhi_debugfs_disable_pci_lpm_get,
+			mhi_debugfs_disable_pci_lpm_set, "%llu\n");
 
 void mhi_deinit_pci_dev(struct mhi_controller *mhi_cntrl)
 {
@@ -394,11 +424,6 @@ static int mhi_force_suspend(struct mhi_controller *mhi_cntrl)
 
 	MHI_CNTRL_LOG("Entered\n");
 
-	if (debug_mode == MHI_DEBUG_NO_D3 || debug_mode == MHI_FWIMAGE_NO_D3) {
-		MHI_CNTRL_LOG("Exited due to debug mode:%d\n", debug_mode);
-		return ret;
-	}
-
 	mutex_lock(&mhi_cntrl->pm_mutex);
 
 	for (; itr; itr--) {
@@ -515,6 +540,8 @@ static int mhi_qcom_power_up(struct mhi_controller *mhi_cntrl)
 				    &debugfs_trigger_m0_fops);
 		debugfs_create_file("m3", 0444, mhi_cntrl->dentry, mhi_cntrl,
 				    &debugfs_trigger_m3_fops);
+		debugfs_create_file("disable_pci_lpm", 0644, mhi_cntrl->dentry,
+				    mhi_cntrl, &debugfs_pci_lpm_fops);
 	}
 
 	return ret;
@@ -567,18 +594,28 @@ static void mhi_status_cb(struct mhi_controller *mhi_cntrl,
 		pm_request_autosuspend(dev);
 		break;
 	case MHI_CB_EE_MISSION_MODE:
+		if (debug_mode == MHI_DEBUG_NO_D3 ||
+		    debug_mode == MHI_FWIMAGE_NO_D3) {
+			mhi_arch_mission_mode_enter(mhi_cntrl);
+			MHI_CNTRL_LOG("Exited due to debug mode:%d\n",
+				      debug_mode);
+			break;
+		}
 		/*
 		 * we need to force a suspend so device can switch to
 		 * mission mode pcie phy settings.
 		 */
-		pm_runtime_get(dev);
-		ret = mhi_force_suspend(mhi_cntrl);
-		if (!ret) {
-			MHI_CNTRL_LOG("Attempt resume after forced suspend\n");
-			mhi_runtime_resume(dev);
+		if (!mhi_dev->skip_forced_suspend) {
+			pm_runtime_get(dev);
+			ret = mhi_force_suspend(mhi_cntrl);
+			if (!ret) {
+				MHI_CNTRL_LOG("Resume after forced suspend\n");
+				mhi_runtime_resume(dev);
+			}
+			pm_runtime_put(dev);
 		}
-		pm_runtime_put(dev);
 		mhi_arch_mission_mode_enter(mhi_cntrl);
+		pm_runtime_allow(&mhi_dev->pci_dev->dev);
 		break;
 	case MHI_CB_FATAL_ERROR:
 		MHI_CNTRL_ERR("Perform power cycle due to SYS ERROR in PBL\n");
@@ -717,7 +754,21 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 		goto error_register;
 
 	use_bb = of_property_read_bool(of_node, "mhi,use-bb");
+
+	/*
+	 * Certain devices would send M1 events to MHI as they may not have
+	 * autonomous M2 support. MHI host can skip registering for link
+	 * inactivity timeouts in that case.
+	 */
 	mhi_dev->allow_m1 = of_property_read_bool(of_node, "mhi,allow-m1");
+
+	/*
+	 * Certain devices do not require a forced suspend/resume cycle at
+	 * mission mode entry after boot as they do not need to switch to
+	 * separate phy settings in order to enable low power modes
+	 */
+	mhi_dev->skip_forced_suspend = of_property_read_bool(of_node,
+						"mhi,skip-forced-suspend");
 
 	/*
 	 * if s1 translation enabled or using bounce buffer pull iova addr
@@ -823,9 +874,6 @@ static struct mhi_controller *mhi_register_controller(struct pci_dev *pci_dev)
 	atomic_set(&mhi_cntrl->write_idx, -1);
 
 skip_offload:
-	if (sysfs_create_group(&mhi_cntrl->mhi_dev->dev.kobj, &mhi_qcom_group))
-		MHI_CNTRL_ERR("Error while creating the sysfs group\n");
-
 	return mhi_cntrl;
 
 error_free_wq:

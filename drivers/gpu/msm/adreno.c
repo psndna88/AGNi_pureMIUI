@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <soc/qcom/scm.h>
+#include <soc/qcom/boot_stats.h>
 
 #include <linux/msm-bus-board.h>
 #include <linux/msm-bus.h>
@@ -58,7 +59,7 @@ MODULE_PARM_DESC(swfdetect, "Enable soft fault detection");
 #define DRIVER_VERSION_MAJOR   3
 #define DRIVER_VERSION_MINOR   1
 
-#define KGSL_LOG_LEVEL_DEFAULT 3
+#define KGSL_LOG_LEVEL_DEFAULT 0
 
 static void adreno_pwr_on_work(struct work_struct *work);
 static unsigned int counter_delta(struct kgsl_device *device,
@@ -557,8 +558,6 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 		tmp &= ~BIT(i);
 	}
 
-	gpudev->irq_trace(adreno_dev, status);
-
 	/*
 	 * Clear ADRENO_INT_RBBM_AHB_ERROR bit after this interrupt has been
 	 * cleared in its respective handler
@@ -1008,15 +1007,15 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 		&device->pwrctrl.pm_qos_active_latency))
 		device->pwrctrl.pm_qos_active_latency = 1000;
 
-	/* get pm-qos-cpu-mask-latency, set it to default if not found */
-	if (of_property_read_u32(node, "qcom,l2pc-cpu-mask-latency",
-		&device->pwrctrl.pm_qos_cpu_mask_latency))
-		device->pwrctrl.pm_qos_cpu_mask_latency = 1000;
-
 	/* get pm-qos-wakeup-latency, set it to default if not found */
 	if (of_property_read_u32(node, "qcom,pm-qos-wakeup-latency",
 		&device->pwrctrl.pm_qos_wakeup_latency))
 		device->pwrctrl.pm_qos_wakeup_latency = 100;
+
+	/* override these */
+	device->pwrctrl.pm_qos_active_latency = 1000;
+	device->pwrctrl.pm_qos_cpu_mask_latency = 1000;
+	device->pwrctrl.pm_qos_wakeup_latency = 100;
 
 	if (of_property_read_u32(node, "qcom,idle-timeout", &timeout))
 		timeout = 64;
@@ -1026,8 +1025,7 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
 
-	device->pwrctrl.input_disable = of_property_read_bool(node,
-		"qcom,disable-wake-on-touch");
+	device->pwrctrl.input_disable = true;
 
 	return 0;
 }
@@ -1196,6 +1194,8 @@ static int adreno_probe(struct platform_device *pdev)
 	struct adreno_device *adreno_dev;
 	int status;
 
+	place_marker("M - DRIVER GPU Init");
+
 	adreno_dev = adreno_get_dev(pdev);
 
 	if (adreno_dev == NULL) {
@@ -1307,9 +1307,6 @@ static int adreno_probe(struct platform_device *pdev)
 
 	kgsl_pwrscale_init(&pdev->dev, CONFIG_QCOM_ADRENO_DEFAULT_GOVERNOR);
 
-	/* Initialize coresight for the target */
-	adreno_coresight_init(adreno_dev);
-
 	/* Get the system cache slice descriptor for GPU */
 	adreno_dev->gpu_llc_slice = adreno_llc_getd(&pdev->dev, "gpu");
 	if (IS_ERR(adreno_dev->gpu_llc_slice) &&
@@ -1326,6 +1323,7 @@ static int adreno_probe(struct platform_device *pdev)
 			"Failed to get gpuhtw LLC slice descriptor %ld\n",
 			PTR_ERR(adreno_dev->gpuhtw_llc_slice));
 
+	place_marker("M - DRIVER GPU Ready");
 out:
 	if (status) {
 		adreno_ringbuffer_close(adreno_dev);
@@ -1379,7 +1377,6 @@ static int adreno_remove(struct platform_device *pdev)
 
 	adreno_sysfs_close(adreno_dev);
 
-	adreno_coresight_remove(adreno_dev);
 	adreno_profile_close(adreno_dev);
 
 	/* Release the system cache slice descriptor */
@@ -1535,6 +1532,8 @@ static int adreno_init(struct kgsl_device *device)
 	if (test_bit(ADRENO_DEVICE_INITIALIZED, &adreno_dev->priv))
 		return 0;
 
+	place_marker("M - DRIVER ADRENO Init");
+
 	/*
 	 * Either the microcode read failed because the usermodehelper isn't
 	 * available or the microcode was corrupted. Fail the init and force
@@ -1607,6 +1606,8 @@ static int adreno_init(struct kgsl_device *device)
 		}
 
 	}
+
+	place_marker("M - DRIVER ADRENO Ready");
 
 	return 0;
 }
@@ -1687,13 +1688,6 @@ int adreno_set_unsecured_mode(struct adreno_device *adreno_dev,
 	if (!adreno_is_a5xx(adreno_dev) && !adreno_is_a6xx(adreno_dev))
 		return -EINVAL;
 
-	if (ADRENO_QUIRK(adreno_dev, ADRENO_QUIRK_CRITICAL_PACKETS) &&
-			adreno_is_a5xx(adreno_dev)) {
-		ret = a5xx_critical_packet_submit(adreno_dev, rb);
-		if (ret)
-			return ret;
-	}
-
 	/* GPU comes up in secured mode, make it unsecured by default */
 	if (adreno_dev->zap_handle_ptr)
 		ret = adreno_switch_to_unsecure_mode(adreno_dev, rb);
@@ -1761,17 +1755,10 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	/* make sure ADRENO_DEVICE_STARTED is not set here */
 	WARN_ON(test_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv));
 
-	/* disallow l2pc during wake up to improve GPU wake up time */
-	kgsl_pwrctrl_update_l2pc(&adreno_dev->dev,
-			KGSL_L2PC_WAKEUP_TIMEOUT);
-
 	pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
 			pmqos_wakeup_vote);
 
 	regulator_left_on = regulators_left_on(device);
-
-	/* Clear any GPU faults that might have been left over */
-	adreno_clear_gpu_fault(adreno_dev);
 
 	/*
 	 * Keep high bus vote to reduce AHB latency
@@ -1807,6 +1794,14 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	 * halted GPU transactions.
 	 */
 	adreno_deassert_gbif_halt(adreno_dev);
+
+	/*
+	 * Observed race between timeout fault (long IB detection) and
+	 * MISC hang (hard fault). MISC hang can be set while in recovery from
+	 * timeout fault. If fault flag is set in start path CP init fails.
+	 * Clear gpu fault to avoid such race.
+	 */
+	adreno_clear_gpu_fault(adreno_dev);
 
 	if (adreno_is_a640v1(adreno_dev)) {
 		ret = adreno_program_smmu_aperture(device);
@@ -2000,9 +1995,6 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	 */
 	adreno_llc_setup(device);
 
-	/* Re-initialize the coresight registers if applicable */
-	adreno_coresight_start(adreno_dev);
-
 	adreno_irqctrl(adreno_dev, 1);
 
 	adreno_perfcounter_start(adreno_dev);
@@ -2142,9 +2134,6 @@ static int adreno_stop(struct kgsl_device *device)
 
 	adreno_llc_deactivate_slice(adreno_dev->gpu_llc_slice);
 	adreno_llc_deactivate_slice(adreno_dev->gpuhtw_llc_slice);
-
-	/* Save active coresight registers if applicable */
-	adreno_coresight_stop(adreno_dev);
 
 	/* Save physical performance counter values before GPU power down*/
 	adreno_perfcounter_save(adreno_dev);
@@ -2959,9 +2948,6 @@ int adreno_soft_reset(struct kgsl_device *device)
 	/* Reinitialize the GPU */
 	gpudev->start(adreno_dev);
 
-	/* Re-initialize the coresight registers if applicable */
-	adreno_coresight_start(adreno_dev);
-
 	/* Enable IRQ */
 	adreno_irqctrl(adreno_dev, 1);
 
@@ -3034,6 +3020,7 @@ void adreno_spin_idle_debug(struct adreno_device *adreno_dev,
 	unsigned int status, status3, intstatus;
 	unsigned int hwfault;
 
+	return;
 	dev_err(device->dev, str);
 
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR, &rptr);
@@ -3325,7 +3312,11 @@ int adreno_gmu_fenced_write(struct adreno_device *adreno_dev,
 		if (!(status & fence_mask))
 			return 0;
 		/* Wait a small amount of time before trying again */
-		udelay(GMU_CORE_WAKEUP_DELAY_US);
+		if (in_atomic())
+			udelay(GMU_CORE_WAKEUP_DELAY_US);
+		else
+			usleep_range(GMU_CORE_WAKEUP_DELAY_US,
+				     3 * GMU_CORE_WAKEUP_DELAY_US);
 
 		/* Try to write the fenced register again */
 		adreno_writereg(adreno_dev, offset, val);

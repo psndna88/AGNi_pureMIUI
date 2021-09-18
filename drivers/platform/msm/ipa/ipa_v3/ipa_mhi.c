@@ -62,6 +62,10 @@
 #define IPA_MHI_MAX_UL_CHANNELS 2
 #define IPA_MHI_MAX_DL_CHANNELS 3
 
+#define IPA_CLIENT_IS_MHI_LOW_LAT(client) \
+	((client) == IPA_CLIENT_MHI_LOW_LAT_PROD || \
+	(client) == IPA_CLIENT_MHI_LOW_LAT_CONS)
+
 /* bit #40 in address should be asserted for MHI transfers over pcie */
 #define IPA_MHI_HOST_ADDR_COND(addr) \
 		((params->assert_bit40)?(IPA_MHI_HOST_ADDR(addr)):(addr))
@@ -258,11 +262,12 @@ static int ipa_mhi_start_gsi_channel(enum ipa_client_type client,
 		ep->gsi_evt_ring_hdl = *params->cached_gsi_evt_ring_hdl;
 	}
 
-	if (params->ev_ctx_host->wp == params->ev_ctx_host->rbase) {
-		IPA_MHI_ERR("event ring wp is not updated. base=wp=0x%llx\n",
-			params->ev_ctx_host->wp);
-		goto fail_alloc_ch;
-	}
+	/**
+	 * compare host evt ring wp with base ptr condition was added to check
+	 * whether MHI driver ring db or not, but in wrap around case wp and
+	 * base ptr can be same so removing it.
+	 * if evt-ring has no credit, gsi will crash.
+	 */
 
 	IPA_MHI_DBG("Ring event db: evt_ring_hdl=%lu host_wp=0x%llx\n",
 		ep->gsi_evt_ring_hdl, params->ev_ctx_host->wp);
@@ -430,8 +435,10 @@ static int ipa_mhi_start_gsi_channel(enum ipa_client_type client,
 	}
 
 	if (IPA_CLIENT_IS_PROD(ep->client) && ep->skip_ep_cfg &&
-		ipa3_ctx->ipa_endp_delay_wa &&
-		!ipa3_is_mhip_offload_enabled()) {
+			ipa3_ctx->ipa_endp_delay_wa &&
+			!ipa3_is_mhip_offload_enabled() &&
+			!(IPA_CLIENT_IS_MHI_LOW_LAT(ep->client) &&
+			ipa3_is_modem_up())) {
 		res = gsi_enable_flow_control_ee(ep->gsi_chan_hdl, 0, &code);
 		if (res == GSI_STATUS_SUCCESS) {
 			IPA_MHI_DBG("flow ctrl sussess gsi ch %d code %d\n",

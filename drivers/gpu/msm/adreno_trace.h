@@ -11,6 +11,31 @@
  *
  */
 
+#define trace_adreno_cmdbatch_fault(...) {}
+#define trace_adreno_cmdbatch_queued(...) {}
+#define trace_adreno_cmdbatch_recovery(...) {}
+#define trace_adreno_cmdbatch_retired(...) {}
+#define trace_adreno_cmdbatch_submitted(...) {}
+#define trace_adreno_cmdbatch_sync(...) {}
+#define trace_adreno_drawctxt_invalidate(...) {}
+#define trace_adreno_drawctxt_sleep(...) {}
+#define trace_adreno_drawctxt_switch(...) {}
+#define trace_adreno_drawctxt_wait_done(...) {}
+#define trace_adreno_drawctxt_wait_start(...) {}
+#define trace_adreno_drawctxt_wake(...) {}
+#define trace_adreno_gpu_fault(...) {}
+#define trace_adreno_hw_preempt_comp_to_clear(...) {}
+#define trace_adreno_hw_preempt_token_submit(...) {}
+#define trace_adreno_ifpc_count(...) {}
+#define trace_adreno_preempt_done(...) {}
+#define trace_adreno_preempt_trigger(...) {}
+#define trace_adreno_sp_tp(...) {}
+#define trace_dispatch_queue_context(...) {}
+#define trace_kgsl_a3xx_irq_status(...) {}
+#define trace_kgsl_a4xx_irq_status(...) {}
+#define trace_kgsl_a5xx_irq_status(...) {}
+
+#if 0
 #if !defined(_ADRENO_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _ADRENO_TRACE_H
 
@@ -49,51 +74,6 @@ TRACE_EVENT(adreno_cmdbatch_queued,
 			__entry->timestamp, __entry->queued,
 			__entry->flags ? __print_flags(__entry->flags, "|",
 						KGSL_DRAWOBJ_FLAGS) : "none"
-	)
-);
-
-TRACE_EVENT(adreno_cmdbatch_submitted,
-	TP_PROTO(struct kgsl_drawobj *drawobj, int inflight, uint64_t ticks,
-		unsigned long secs, unsigned long usecs,
-		struct adreno_ringbuffer *rb, unsigned int rptr),
-	TP_ARGS(drawobj, inflight, ticks, secs, usecs, rb, rptr),
-	TP_STRUCT__entry(
-		__field(unsigned int, id)
-		__field(unsigned int, timestamp)
-		__field(int, inflight)
-		__field(unsigned int, flags)
-		__field(uint64_t, ticks)
-		__field(unsigned long, secs)
-		__field(unsigned long, usecs)
-		__field(int, prio)
-		__field(int, rb_id)
-		__field(unsigned int, rptr)
-		__field(unsigned int, wptr)
-		__field(int, q_inflight)
-	),
-	TP_fast_assign(
-		__entry->id = drawobj->context->id;
-		__entry->timestamp = drawobj->timestamp;
-		__entry->inflight = inflight;
-		__entry->flags = drawobj->flags;
-		__entry->ticks = ticks;
-		__entry->secs = secs;
-		__entry->usecs = usecs;
-		__entry->prio = drawobj->context->priority;
-		__entry->rb_id = rb->id;
-		__entry->rptr = rptr;
-		__entry->wptr = rb->wptr;
-		__entry->q_inflight = rb->dispatch_q.inflight;
-	),
-	TP_printk(
-		"ctx=%u ctx_prio=%d ts=%u inflight=%d flags=%s ticks=%lld time=%lu.%0lu rb_id=%d r/w=%x/%x, q_inflight=%d",
-			__entry->id, __entry->prio, __entry->timestamp,
-			__entry->inflight,
-			__entry->flags ? __print_flags(__entry->flags, "|",
-				KGSL_DRAWOBJ_FLAGS) : "none",
-			__entry->ticks, __entry->secs, __entry->usecs,
-			__entry->rb_id, __entry->rptr, __entry->wptr,
-			__entry->q_inflight
 	)
 );
 
@@ -626,3 +606,4 @@ TRACE_EVENT(adreno_ifpc_count,
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
+#endif

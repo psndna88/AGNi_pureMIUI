@@ -578,7 +578,6 @@ static inline void dma_free_attrs(struct device *dev, size_t size,
 	const struct dma_map_ops *ops = get_dma_ops(dev);
 
 	BUG_ON(!ops);
-	WARN_ON(irqs_disabled());
 
 	if (dma_release_from_dev_coherent(dev, get_order(size), cpu_addr))
 		return;
@@ -741,8 +740,7 @@ static inline unsigned int dma_get_max_seg_size(struct device *dev)
 	return SZ_64K;
 }
 
-static inline unsigned int dma_set_max_seg_size(struct device *dev,
-						unsigned int size)
+static inline int dma_set_max_seg_size(struct device *dev, unsigned int size)
 {
 	if (dev->dma_parms) {
 		dev->dma_parms->max_segment_size = size;

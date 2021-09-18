@@ -1612,6 +1612,8 @@ uint32_t dp_rx_frag_handle(struct dp_soc *soc, void *ring_desc,
 
 		msdu = rx_desc->nbuf;
 
+		dp_ipa_handle_rx_buf_smmu_mapping(soc, msdu, false);
+
 		qdf_nbuf_unmap_single(soc->osdev, msdu,
 				QDF_DMA_BIDIRECTIONAL);
 

@@ -49,16 +49,9 @@ enum vcpu_state {
 
 struct pv_node {
 	struct mcs_spinlock	mcs;
-	struct mcs_spinlock	__res[3];
-
 	int			cpu;
 	u8			state;
 };
-
-/*
- * Include queued spinlock statistics code
- */
-#include "qspinlock_stat.h"
 
 /*
  * By replacing the regular queued_spin_trylock() with the function below,
@@ -247,7 +240,7 @@ pv_wait_early(struct pv_node *prev, int loop)
 	if ((loop & PV_PREV_CHECK_MASK) != 0)
 		return false;
 
-	return READ_ONCE(prev->state) != vcpu_running || vcpu_is_preempted(prev->cpu);
+	return READ_ONCE(prev->state) != vcpu_running;
 }
 
 /*
@@ -257,7 +250,7 @@ static void pv_init_node(struct mcs_spinlock *node)
 {
 	struct pv_node *pn = (struct pv_node *)node;
 
-	BUILD_BUG_ON(sizeof(struct pv_node) > 5*sizeof(struct mcs_spinlock));
+	BUILD_BUG_ON(sizeof(struct pv_node) > sizeof(struct qnode));
 
 	pn->cpu = smp_processor_id();
 	pn->state = vcpu_running;
@@ -394,7 +387,7 @@ pv_wait_head_or_lock(struct qspinlock *lock, struct mcs_spinlock *node)
 	/*
 	 * Tracking # of slowpath locking operations
 	 */
-	qstat_inc(qstat_pv_lock_slowpath, true);
+	qstat_inc(qstat_lock_slowpath, true);
 
 	for (;; waitcnt++) {
 		/*

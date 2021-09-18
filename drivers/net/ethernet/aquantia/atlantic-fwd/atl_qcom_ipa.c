@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/of.h>
 #include <linux/pci.h>
 
 #include <linux/gfp.h>
@@ -20,16 +21,46 @@
 
 #include "atl_fwd.h"
 #include "atl_qcom_ipa.h"
+#include <linux/etherdevice.h>
+#include <net/ip.h>
+#include <uapi/linux/ip.h>
+
+#define IPA_ETH_RX_SOFTIRQ_THRESH	16
 
 #if ATL_FWD_API_VERSION >= 2 && IPA_ETH_API_VER >= 4
 #define ATL_IPA_SUPPORT_NOTIFY
 #endif
 
+#define ATL_IPA_TX_DATA_OT_MIN 1
+#define ATL_IPA_TX_DATA_OT_MAX 16
+
+#define ATL_IPA_TX_DESC_OT_MIN 1
+#define ATL_IPA_TX_DESC_OT_MAX 8
+
+#define ATL_IPA_TX_DMA_CTRL2 0x7B04
+
 struct atl_ipa_device {
 	struct atl_nic *atl_nic;
 	struct ipa_eth_device *eth_dev;
 	struct notifier_block fwd_notify_nb;
+
+	u32 tx_ot_data;
+	u32 tx_ot_desc;
 };
+
+/* Initialize custom hardware settings */
+static void atl_ipa_init_hw(struct atl_ipa_device *ai_dev)
+{
+	struct atl_hw *hw = &ai_dev->atl_nic->hw;
+
+	if (ai_dev->tx_ot_desc)
+		atl_write_bits(hw,
+			       ATL_IPA_TX_DMA_CTRL2, 0, 8, ai_dev->tx_ot_desc);
+
+	if (ai_dev->tx_ot_data)
+		atl_write_bits(hw,
+			       ATL_IPA_TX_DMA_CTRL2, 8, 8, ai_dev->tx_ot_data);
+}
 
 static inline struct atl_fwd_ring *CH_RING(struct ipa_eth_channel *ch)
 {
@@ -116,6 +147,7 @@ static int atl_ipa_fwd_notification(struct notifier_block *nb,
 				      IPA_ETH_DEV_RESET_PREPARE, NULL);
 		break;
 	case ATL_FWD_NOTIFY_RESET_COMPLETE:
+		atl_ipa_init_hw(ai_dev);
 		ipa_eth_device_notify(ai_dev->eth_dev,
 				      IPA_ETH_DEV_RESET_COMPLETE, NULL);
 		break;
@@ -139,6 +171,7 @@ static int atl_ipa_open_device(struct ipa_eth_device *eth_dev)
 {
 	struct atl_ipa_device *ai_dev;
 	struct atl_nic *nic = (struct atl_nic *)dev_get_drvdata(eth_dev->dev);
+	struct device_node *np = dev_of_node(eth_dev->dev);
 
 	if (!nic || !nic->ndev) {
 		dev_err(eth_dev->dev, "Invalid atl_nic\n");
@@ -170,6 +203,22 @@ static int atl_ipa_open_device(struct ipa_eth_device *eth_dev)
 		return -EFAULT;
 	}
 #endif
+
+	if (!of_property_read_u32(np, "qcom,tx-ot-data", &ai_dev->tx_ot_data)) {
+		ai_dev->tx_ot_data = clamp_val(ai_dev->tx_ot_data,
+					       ATL_IPA_TX_DATA_OT_MIN,
+					       ATL_IPA_TX_DATA_OT_MAX);
+		dev_dbg(eth_dev->dev, "Tx DATA OT is %u\n", ai_dev->tx_ot_data);
+	}
+
+	if (!of_property_read_u32(np, "qcom,tx-ot-desc", &ai_dev->tx_ot_desc)) {
+		ai_dev->tx_ot_desc = clamp_val(ai_dev->tx_ot_desc,
+					       ATL_IPA_TX_DESC_OT_MIN,
+					       ATL_IPA_TX_DESC_OT_MAX);
+		dev_dbg(eth_dev->dev, "Tx DESC OT is %u\n", ai_dev->tx_ot_desc);
+	}
+
+	atl_ipa_init_hw(ai_dev);
 
 	return 0;
 }
@@ -452,21 +501,38 @@ int atl_ipa_moderate_event(struct ipa_eth_channel *ch, unsigned long event,
 	return atl_fwd_set_ring_intr_mod(CH_RING(ch), min_usecs, max_usecs);
 }
 
-#if IPA_ETH_API_VER >= 7
+static int atl_ipa_fwd_receive_skb(struct net_device *ndev, struct sk_buff *skb)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+	struct iphdr *ip;
+
+	ip = (struct iphdr *)&skb->data[ETH_HLEN];
+
+	/* Submit packet to network stack */
+	/* If its a ping packet submit it via rx_ni else use rx */
+	if (ip->protocol == IPPROTO_ICMP) {
+		nic->stats.rx_fwd.packets++;
+		nic->stats.rx_fwd.bytes += skb->len;
+		skb->protocol = eth_type_trans(skb, ndev);
+		return netif_rx_ni(skb);
+	} else if ((nic->stats.rx_fwd.packets %
+		IPA_ETH_RX_SOFTIRQ_THRESH) == 0) {
+		nic->stats.rx_fwd.packets++;
+		nic->stats.rx_fwd.bytes += skb->len;
+		skb->protocol = eth_type_trans(skb, ndev);
+		return netif_rx_ni(skb);
+	} else {
+		return atl_fwd_receive_skb(ndev, skb);
+	}
+}
+
 static int atl_ipa_receive_skb(struct ipa_eth_device *eth_dev,
 			       struct sk_buff *skb, bool in_napi)
 {
 	return in_napi ?
 		atl_fwd_napi_receive_skb(eth_dev->net_dev, skb) :
-		atl_fwd_receive_skb(eth_dev->net_dev, skb);
+		atl_ipa_fwd_receive_skb(eth_dev->net_dev, skb);
 }
-#else
-static int atl_ipa_receive_skb(struct ipa_eth_device *eth_dev,
-			       struct sk_buff *skb)
-{
-	return atl_fwd_receive_skb(eth_dev->net_dev, skb);
-}
-#endif
 
 static int atl_ipa_transmit_skb(struct ipa_eth_device *eth_dev,
 				struct sk_buff *skb)

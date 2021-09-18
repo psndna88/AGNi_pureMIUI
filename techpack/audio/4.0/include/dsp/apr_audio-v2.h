@@ -4133,6 +4133,20 @@ struct afe_id_aptx_adaptive_enc_init
 #define AFE_MODULE_ID_DEPACKETIZER_COP        0x00013233
 #define AFE_MODULE_ID_DEPACKETIZER_COP_V1     0x000132E9
 
+/* Macros for dynamic loading of modules by AVCS */
+
+#define AVS_MODULE_ID_PACKETIZER_COP        0x0001322A
+
+#define AVS_MODULE_ID_PACKETIZER_COP_V1     0x000132E8
+
+#define AVS_MODULE_ID_PACKETIZER_COP_V2     0x000132F9
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP      0x00013233
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP_V1   0x000132E9
+
+#define AVS_MODULE_ID_DEPACKETIZER_COP_V2   0x000132FC
+
 /*
  * Depacketizer type parameter for the #AVS_MODULE_ID_DECODER module.
  * This parameter cannot be set runtime.
@@ -4362,6 +4376,11 @@ struct asm_aac_enc_cfg_t {
 
 /* FMT ID for apt-X Adaptive speech */
 #define ASM_MEDIA_FMT_APTX_AD_SPEECH 0x00013208
+
+/* FMT ID for lc3 codec */
+#define ASM_MEDIA_FMT_LC3 0x0001337E
+
+#define ENC_CODEC_TYPE_LC3 0x2B000000
 
 #define PCM_CHANNEL_L         1
 #define PCM_CHANNEL_R         2
@@ -5373,12 +5392,14 @@ struct afe_param_id_lpass_core_shared_clk_cfg {
 #define COMPRESSED_PASSTHROUGH_NONE_TOPOLOGY            0x00010774
 #define VPM_TX_SM_ECNS_V2_COPP_TOPOLOGY			0x00010F89
 #define VPM_TX_VOICE_SMECNS_V2_COPP_TOPOLOGY		0x10000003
+#define VPM_TX_VOICE_FLUENCE_SM_COPP_TOPOLOGY           0x10000004
 #define VPM_TX_DM_FLUENCE_COPP_TOPOLOGY			0x00010F72
 #define VPM_TX_QMIC_FLUENCE_COPP_TOPOLOGY		0x00010F75
 #define VPM_TX_DM_RFECNS_COPP_TOPOLOGY			0x00010F86
 #define ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX		0x10015002
 #define ADM_CMD_COPP_OPEN_TOPOLOGY_ID_AUDIOSPHERE	0x10028000
 #define VPM_TX_DM_FLUENCE_EF_COPP_TOPOLOGY		0x10000005
+#define ODM_TMISOUND_HEADPHONE_FX			0x1000A101
 
 /* Memory map regions command payload used by the
  * #ASM_CMD_SHARED_MEM_MAP_REGIONS ,#ADM_CMD_SHARED_MEM_MAP_REGIONS
@@ -11698,7 +11719,7 @@ struct afe_clk_set {
 	 * for enable and disable clock.
 	 *	"clk_freq_in_hz", "clk_attri", and "clk_root"
 	 *	are ignored in disable clock case.
-	 *	@values 
+	 *	@valuesï¿½
 	 *	- 0 -- Disabled
 	 *	- 1 -- Enabled  @tablebulletend
 	 */

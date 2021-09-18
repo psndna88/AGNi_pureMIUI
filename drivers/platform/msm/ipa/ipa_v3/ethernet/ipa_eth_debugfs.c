@@ -222,12 +222,8 @@ static ssize_t eth_dev_ready_read(struct file *file, char __user *user_buf,
 		test_bit(IPA_ETH_ST_READY, &ipa_eth_state) ?
 			"Ready" : "Not Ready");
 
-	n += scnprintf(&buf[n], size - n, "uC: %s\n",
-		test_bit(IPA_ETH_ST_UC_READY, &ipa_eth_state) ?
-			"Ready" : "Not Ready");
-
-	n += scnprintf(&buf[n], size - n, "IPA: %s\n",
-		test_bit(IPA_ETH_ST_IPA_READY, &ipa_eth_state) ?
+	n += scnprintf(&buf[n], size - n, "IPA API: %s\n",
+		test_bit(IPA_ETH_ST_API_READY, &ipa_eth_state) ?
 			"Ready" : "Not Ready");
 
 	n += scnprintf(&buf[n], size - n, "ALL: %s\n",

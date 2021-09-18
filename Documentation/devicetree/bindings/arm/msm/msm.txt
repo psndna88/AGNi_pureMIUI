@@ -86,12 +86,6 @@ SoCs:
 - QCS410
   compatible = "qcom,qcs410"
 
-- QCM6125
-  compatible = "qcom,qcm6125"
-
-- QCS6125
-  compatible = "qcom,qcs6125"
-
 Generic board variants:
 
 - CDP device:
@@ -139,6 +133,11 @@ Generic board variants:
 - IOT device:
   compatible = "qcom,iot"
 
+- TRINKET-IOT
+  compatible = "qcom,trinket-iot"
+
+- TRINKETP-IOT
+  compatible = "qcom,trinketp-iot"
 
 Boards (SoC type + board variant):
 
@@ -249,7 +248,10 @@ compatible = "qcom,atoll-ab-atp"
 compatible = "qcom,atoll-ab-qrd"
 compatible = "qcom,qcs610-iot"
 compatible = "qcom,qcs410-iot"
+compatible = "qcom,trinket-iot-idp"
+compatible = "qcom,trinketp-iot-idp"
 compatible = "qcom,qcm6125"
 compatible = "qcom,qcs6125"
 compatible = "qcom,qcm6125-idp"
 compatible = "qcom,qcs6125-idp"
+compatible = "qcom,qcs610-idp"

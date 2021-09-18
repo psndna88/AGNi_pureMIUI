@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, 2018, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,6 +25,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/regulator/driver.h>
 
 #include <media/rc-core.h>
 #include <linux/uaccess.h>
@@ -331,6 +332,18 @@ static struct geni_image nec_geni_rx_cfg_ram_image[] = {
 	{ 156, 0x00000000 }, { 157, 0x00000000 }, { 158, 0x00000000 },
 	{ 159, 0x00000000 }, { 160, 0x00000000 },
 };
+
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+#define GENI_REG_IMAGE_MAX_LEN      32
+#define GENI_RAM_IMAGE_MAX_LEN      256
+
+static struct geni_image other_geni_rx_cfg_reg_image[GENI_REG_IMAGE_MAX_LEN];
+static struct geni_image other_geni_rx_cfg_ram_image[GENI_RAM_IMAGE_MAX_LEN];
+static int other_geni_rx_cfg_reg_image_len;
+static int other_geni_rx_cfg_ram_image_len;
+#endif
+
+
 /* IR controller modes */
 enum geni_ir_mode {
 	GENI_IR_NORMAL_MODE	= 0,
@@ -360,7 +373,7 @@ struct msm_geni_ir {
 	void __iomem		*base;
 
 	unsigned int             gpio_rx;
-
+	struct regulator       *vdda33;
 	struct clk              *ahb_clk;
 	struct clk		*serial_clk;
 	struct reset_control    *reset_core;
@@ -380,6 +393,12 @@ struct msm_geni_ir {
 	u32                      rx_data;
 	u32                      wakeup_codes[GENI_IR_MAX_WAKEUP_CODES];
 	u8                       num_wakeup_codes;
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	struct rc_dev            *rcdev_sec;
+#endif
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+	int                      low_active;
+#endif
 };
 
 static struct msm_geni_fw_data rc5_geni_image = {
@@ -417,6 +436,16 @@ static struct msm_geni_fw_data nec_geni_image = {
 	.rx_ram_data    = nec_geni_rx_cfg_ram_image,
 	.rx_ram_len     = ARRAY_SIZE(nec_geni_rx_cfg_ram_image),
 };
+
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+static struct msm_geni_fw_data other_geni_image = {
+	.rx_revision    = 0x0280,
+	.rx_cfg_data    = other_geni_rx_cfg_reg_image,
+	.rx_cfg_len     = 0,
+	.rx_ram_data    = other_geni_rx_cfg_ram_image,
+	.rx_ram_len     = 0,
+};
+#endif
 
 /* loads the GENI ir firmware */
 static void msm_geni_ir_load_firmware(struct msm_geni_ir *ir)
@@ -476,7 +505,13 @@ static void msm_geni_ir_load_firmware(struct msm_geni_ir *ir)
 	writel_relaxed(0x961, ir->base + IR_GENI_SER_CLK_CFG);
 
 	/* set rx polarization to active low */
-	writel_relaxed(RX_POL_LOW, ir->base + IR_GENI_GP_OUTPUT_REG);
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+	if (ir->low_active)
+		writel_relaxed(0, ir->base + IR_GENI_GP_OUTPUT_REG);
+	else
+#endif
+		writel_relaxed(RX_POL_LOW, ir->base + IR_GENI_GP_OUTPUT_REG);
+
 	/*write memory barrier*/
 	wmb();
 
@@ -493,28 +528,6 @@ static void msm_geni_ir_load_firmware(struct msm_geni_ir *ir)
 	pr_debug("Load Firmware done\n");
 }
 EXPORT_SYMBOL(msm_geni_ir_load_firmware);
-
-/* sets the RX filter table with wakeup commands */
-static void msm_geni_ir_set_rx_filter(struct msm_geni_ir *ir)
-{
-	u32 i, irq_enable = 0;
-
-	/* set the IRQ enable bit for non-zero RX wakeup commands */
-	for (i = 0; i < ir->num_wakeup_codes; i++) {
-		irq_enable |= ((ir->wakeup_codes[i]) ? (1 << i) : 0);
-
-		writel_relaxed(ir->wakeup_codes[i],
-			       ir->base + GENI_IR_RX_FILTER_TABLE(i));
-	}
-
-	/* set the filter mask */
-	writel_relaxed(ir->wakeup_mask, ir->base + IR_RX_FILTER_VAL_MASK);
-
-	/* set the IRQ enable bits */
-	writel_relaxed(irq_enable, ir->base + GENI_IR_IRQ_ENABLE);
-	/*write memory barrier*/
-	wmb();
-}
 
 /* stop GENI IR */
 static void msm_geni_ir_stop(struct msm_geni_ir *ir)
@@ -543,76 +556,6 @@ static void msm_geni_ir_stop(struct msm_geni_ir *ir)
 		readl_relaxed(ir->base + IR_GENI_RX_FIFO(i));
 }
 
-/* configures geni IR to low power mode */
-static void msm_geni_ir_low_power_mode(struct msm_geni_ir *ir)
-{
-	u32 clk_cfg;
-
-	/* set the RX filter table for wakeup */
-	msm_geni_ir_set_rx_filter(ir);
-
-	/* disable interrupts */
-	writel_relaxed(0, ir->base + IR_GENI_IRQ_ENABLE);
-	synchronize_irq(ir->irq);
-
-	/* stop GENI IR */
-	msm_geni_ir_stop(ir);
-
-	/* disable TX path, enable RX path */
-	clk_cfg = RX_CLK_DIV_VALUE(RX_CLK_DIV_LP) | RX_SER_CLK_EN;
-	writel_relaxed(clk_cfg, ir->base + IR_GENI_SER_CLK_CFG);
-
-	/* switch clock mux output from hclk to sclk */
-	writel_relaxed(0x1, ir->base + GENI_IR_CLK_MUX);
-
-	/* read back clk_mux register to ensure output clk is active */
-	readl_relaxed(ir->base + GENI_IR_CLK_MUX);
-
-	/* select low power mode */
-	writel_relaxed(GENI_IR_LOW_POWER_MODE, ir->base + GENI_IR_AHB_MUX_SEL);
-
-	/* enable the RX filter */
-	writel_relaxed(0x1, ir->base + GENI_IR_RX_FILTER_EN);
-	/*write memory barrier*/
-	wmb();
-}
-
-/* configures geni IR to normal mode */
-static void msm_geni_ir_normal_mode(struct msm_geni_ir *ir)
-{
-	u32 clk_cfg;
-
-	/* ensure RX filter is disabled */
-	writel_relaxed(0x0, ir->base + GENI_IR_RX_FILTER_EN);
-
-	/* switch clock mux output from sclk to hclk */
-	writel_relaxed(0x0, ir->base + GENI_IR_CLK_MUX);
-
-	/* read back clk_mux register to ensure output clk is active */
-	readl_relaxed(ir->base + GENI_IR_CLK_MUX);
-
-	/* select normal mode */
-	writel_relaxed(GENI_IR_NORMAL_MODE, ir->base + GENI_IR_AHB_MUX_SEL);
-
-	/* stop GENI IR */
-	msm_geni_ir_stop(ir);
-
-	/* configure serial clock */
-	clk_cfg = RX_CLK_DIV_VALUE(RX_CLK_DIV) | RX_SER_CLK_EN;
-	writel_relaxed(clk_cfg, ir->base + IR_GENI_SER_CLK_CFG);
-
-	/* set rx polarization to active low */
-	writel_relaxed(RX_POL_LOW, ir->base + IR_GENI_GP_OUTPUT_REG);
-
-	/* enable interrupts */
-	writel_relaxed(GENI_IR_DEF_IRQ_EN, ir->base + IR_GENI_IRQ_ENABLE);
-
-	/* enable RX */
-	writel_relaxed(0, ir->base + IR_GENI_S_CMD0);
-	/*write memory barrier*/
-	wmb();
-}
-
 /* sets the core for the specified protocol */
 static int msm_geni_ir_change_protocol(struct rc_dev *dev, u64 *rc_type)
 {
@@ -625,19 +568,32 @@ static int msm_geni_ir_change_protocol(struct rc_dev *dev, u64 *rc_type)
 	if (*rc_type & RC_PROTO_BIT_RC6_0) {
 		pr_debug("Loading RC6\n");
 		image = &rc6_geni_image;
-		*rc_type = RC_PROTO_RC6_0;
+		*rc_type = RC_PROTO_BIT_RC6_0;
 	} else if (*rc_type & RC_PROTO_BIT_RC5) {
 		pr_debug("Loading RC5\n");
 		image = &rc5_geni_image;
-		*rc_type = RC_PROTO_RC5;
+		*rc_type = RC_PROTO_BIT_RC5;
 	} else if (*rc_type & RC_PROTO_BIT_NEC) {
 		pr_debug("Loading NEC\n");
 		image = &nec_geni_image;
-		*rc_type = RC_PROTO_NEC;
+		*rc_type = RC_PROTO_BIT_NEC;
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+	} else if (*rc_type & RC_PROTO_BIT_OTHER) {
+		pr_debug("Loading OTHER\n");
+
+		image = &other_geni_image;
+		if (image->rx_cfg_len != other_geni_rx_cfg_reg_image_len ||
+			image->rx_ram_len != other_geni_rx_cfg_ram_image_len) {
+			pr_err("%s: protocol not configured\n", __func__);
+			return -EINVAL;
+		}
+
+		*rc_type = RC_PROTO_BIT_OTHER;
+#endif
 	} else if (*rc_type & RC_PROTO_BIT_UNKNOWN) {
 		pr_debug("Unknown proto\n");
 		image = NULL;
-		*rc_type = RC_PROTO_UNKNOWN;
+		*rc_type = RC_PROTO_BIT_UNKNOWN;
 	} else {
 		pr_debug("Invalid proto\n");
 		return -EINVAL;
@@ -665,7 +621,7 @@ static int msm_geni_ir_change_protocol(struct rc_dev *dev, u64 *rc_type)
 				pr_err("serial clk enable failed %d\n", rc);
 				mutex_unlock(&ir->lock);
 				return rc;
-		}
+			}
 		} else {
 			pr_debug("Disable interrupts\n");
 			/* disable interrupts */
@@ -697,6 +653,20 @@ EXPORT_SYMBOL(msm_geni_ir_change_protocol);
 static irqreturn_t geni_ir_wakeup_handler(int irq, void *data)
 {
 	pr_debug("%s:Received wake up Interrupt\n", __func__);
+
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	do {
+		struct msm_geni_ir *ir = data;
+		int val = gpio_get_value(ir->gpio_rx);
+
+		if (val < 0)
+			break;
+
+		val = !val;
+
+		ir_raw_event_store_edge(ir->rcdev_sec, val);
+	} while (0);
+#endif
 	return IRQ_HANDLED;
 }
 
@@ -734,6 +704,11 @@ static irqreturn_t geni_ir_interrupt(int irq, void *data)
 			scancode = (ir->rx_data & 0x00FFFF);
 			toggle   = (ir->rx_data & 0x010000) ? 1 : 0;
 			rc_keydown(ir->rcdev, RC_PROTO_RC6_0, scancode, toggle);
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+		} else if (ir->image_loaded == &other_geni_image) {
+			scancode = ir->rx_data;
+			rc_keydown(ir->rcdev, RC_PROTO_OTHER, scancode, 0);
+#endif
 		} else {
 			/*NEC*/
 			scancode = (ir->rx_data & 0x0000FF);
@@ -864,6 +839,9 @@ static int msm_geni_ir_get_res(struct platform_device *pdev,
 		return rc;
 	}
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	ir->gpio_rx = rc;
+#endif
 	ir->wakeup_irq = gpio_to_irq(rc);
 	rc = platform_get_irq_byname(pdev, "geni-ir-core-irq");
 	if (rc < 0) {
@@ -883,6 +861,13 @@ static int msm_geni_ir_get_res(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 	pr_debug("ir->base: 0x%lx\n", (unsigned long int)ir->base);
+
+	ir->vdda33 = devm_regulator_get(&pdev->dev, "vdda33");
+	if (IS_ERR(ir->vdda33)) {
+		pr_err("unable to get vdda33 supply\n");
+		return rc;
+	}
+
 	ir->ahb_clk = clk_get(&pdev->dev, "iface_clk");
 	ir->serial_clk = clk_get(&pdev->dev, "serial_clk");
 	if (IS_ERR(ir->ahb_clk)) {
@@ -904,6 +889,290 @@ static void msm_geni_ir_rel_res(struct platform_device *pdev,
 	if (ir->base)
 		iounmap(ir->base);
 }
+
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+int msm_geni_ir_sec_dev_probe(struct platform_device *pdev,
+			      struct msm_geni_ir *ir)
+{
+	struct gpio_rc_dev *gpio_dev;
+	struct rc_dev *rcdev;
+	int rc;
+
+	do {
+		rcdev = rc_allocate_device(RC_DRIVER_IR_RAW);
+		if (!rcdev) {
+			pr_err("failed to allocate rc device\n");
+			rc = -ENOMEM;
+			break;
+		}
+
+		rcdev->priv = ir;
+		rcdev->driver_name = MSM_GENI_IR_DRIVER_NAME;
+		rcdev->device_name = MSM_GENI_IR_RX_DEVICE_NAME;
+		rcdev->input_id.bustype = BUS_HOST;
+		rcdev->allowed_protocols = RC_PROTO_BIT_ALL_IR_DECODER;
+		rcdev->timeout = IR_DEFAULT_TIMEOUT;
+		rcdev->min_timeout = 1;
+		rcdev->max_timeout = IR_DEFAULT_TIMEOUT * 10;
+		rcdev->map_name = RC_MAP_EMPTY;
+		rcdev->dev.parent = &pdev->dev;
+
+		ir->rcdev_sec = rcdev;
+
+		rc = rc_register_device(rcdev);
+		if (rc) {
+			pr_err("failed to register secondary rc device\n");
+			break;
+		}
+
+		return 0;
+	} while (0);
+
+	if (rcdev)
+		rc_free_device(rcdev);
+
+	return rc;
+}
+#endif
+
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+static int msm_geni_ir_extract_u32(char *token, const char *keyword, u32 *out)
+{
+	int ret = 1;
+
+	if (!memcmp(keyword, token, strlen(keyword))) {
+		token += strlen(keyword);
+		if ((strlen(token) > 1) && (token[0] == '0' && token[1] == 'x'))
+			ret = kstrtouint(token, 16, out);
+		else
+			ret = kstrtouint(token, 10, out);
+
+		if (ret)
+			pr_err("%s : kstrtouint failed - %d\n", __func__, ret);
+	}
+
+	return ret;
+}
+
+static int msm_geni_ir_extract_fwinfo(const char *buf, ssize_t len,
+		u32 *index, u32 *reg, u32 *val)
+{
+	const char tok_index[] = "index=";
+	const char tok_reg[] = "reg=";
+	const char tok_val[] = "val=";
+	char *token;
+	char *cursor;
+	int ret;
+
+	cursor = (char *)buf;
+	while ((token = strsep(&cursor, ",\x20")) != NULL) {
+		ret = msm_geni_ir_extract_u32(token, tok_index, index);
+		if (!ret)
+			continue;
+		else if (ret < 0)
+			return -EINVAL;
+
+		ret = msm_geni_ir_extract_u32(token, tok_reg, reg);
+		if (!ret)
+			continue;
+		else if (ret < 0)
+			return -EINVAL;
+
+		ret = msm_geni_ir_extract_u32(token, tok_val, val);
+		if (!ret)
+			continue;
+		else if (ret < 0)
+			return -EINVAL;
+
+		pr_err("%s - error: unknown parameter: %s\n", __func__, token);
+		return -EINVAL;
+	}
+
+	pr_debug("%s: index: %d:%08x, reg: %d:%08x, val: %08x\n", __func__,
+		*index, *index, *reg, *reg, *val);
+
+	return 0;
+}
+
+static ssize_t msm_geni_ir_sysfs_wta_reg_image(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	u32 index, reg, val;
+
+	if (msm_geni_ir_extract_fwinfo(buf, count, &index, &reg, &val) < 0) {
+		pr_err("%s: fail to obtain firmware data from the token\n",
+		       __func__);
+		return -EINVAL;
+	}
+
+	if (index >= GENI_REG_IMAGE_MAX_LEN) {
+		pr_err("%s: invalid index: %d\n", __func__, index);
+		return -EINVAL;
+	}
+
+	other_geni_rx_cfg_reg_image[index].reg = reg;
+	other_geni_rx_cfg_reg_image[index].val = val;
+
+	++other_geni_rx_cfg_reg_image_len;
+
+	return count;
+}
+
+static ssize_t msm_geni_ir_sysfs_wta_ram_image(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	u32 index, reg, val;
+
+	if (msm_geni_ir_extract_fwinfo(buf, count, &index, &reg, &val) < 0) {
+		pr_err("%s: fail to obtain firmware data from the token\n",
+		       __func__);
+		return -EINVAL;
+	}
+
+	if (index >= GENI_RAM_IMAGE_MAX_LEN) {
+		pr_err("%s: invalid index: %d\n", __func__, index);
+		return -EINVAL;
+	}
+
+	other_geni_rx_cfg_ram_image[index].reg = reg;
+	other_geni_rx_cfg_ram_image[index].val = val;
+
+	++other_geni_rx_cfg_ram_image_len;
+
+	return count;
+}
+
+static ssize_t msm_geni_ir_sysfs_rda_firmware_config(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t ret;
+	struct msm_geni_ir *ir = dev_get_drvdata(dev);
+	const char *fmt =
+	      "revision=%04x,reg_image_len=%d,ram_image_len=%d,low_active=%d\n";
+
+	ret = snprintf(buf, PAGE_SIZE, fmt,
+		       other_geni_image.rx_revision,
+		       other_geni_image.rx_cfg_len,
+		       other_geni_image.rx_ram_len,
+		       ir->low_active);
+
+	return ret;
+}
+
+static ssize_t msm_geni_ir_sysfs_wta_firmware_config(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	const char tok_revision[] = "revision=";
+	const char tok_reg_image_len[] = "reg_image_len=";
+	const char tok_ram_image_len[] = "ram_image_len=";
+	const char tok_low_active[] = "low_active=";
+	u32 val;
+	int rc;
+	char *token;
+	char *mem, *cursor;
+	struct msm_geni_ir *ir = dev_get_drvdata(dev);
+
+	mem = kzalloc(count, GFP_KERNEL);
+	if (!mem)
+		return -ENOMEM;
+
+	memcpy(mem, buf, count);
+	cursor = mem;
+
+	while ((token = strsep(&cursor, ",\x20")) != NULL) {
+		if (!memcmp(tok_revision, token, strlen(tok_revision))) {
+			token += strlen(tok_revision);
+			if (token[0] == '0' && token[1] == 'x')
+				rc = kstrtouint(token, 16, &val);
+			else
+				rc = kstrtouint(token, 10, &val);
+			if (rc) {
+				pr_err("%s : kstrtouint failed - %d\n",
+				       __func__, rc);
+				break;
+			}
+			other_geni_image.rx_revision = val;
+
+		} else if (!memcmp(tok_reg_image_len, token,
+				    strlen(tok_reg_image_len))) {
+			token += strlen(tok_reg_image_len);
+			rc = kstrtouint(token, 10, &val);
+			if (rc) {
+				pr_err("%s : kstrtouint failed - %d\n",
+				       __func__, rc);
+				break;
+			}
+			other_geni_image.rx_cfg_len = val;
+			other_geni_rx_cfg_reg_image_len = 0;
+
+		} else if (!memcmp(tok_ram_image_len, token,
+				    strlen(tok_ram_image_len))) {
+			token += strlen(tok_ram_image_len);
+			rc = kstrtouint(token, 10, &val);
+			if (rc) {
+				pr_err("%s : kstrtouint failed - %d\n",
+				       __func__, rc);
+				break;
+			}
+			other_geni_image.rx_ram_len = val;
+			other_geni_rx_cfg_ram_image_len = 0;
+
+		} else if (!memcmp(tok_low_active, token,
+				    strlen(tok_low_active))) {
+			token += strlen(tok_low_active);
+			rc = kstrtoint(token, 10, &val);
+			if (rc) {
+				pr_err("%s : kstrtoint failed - %d\n",
+				       __func__, rc);
+				break;
+			}
+
+			ir->low_active = val;
+		} else {
+			pr_err("%s : parameter not supported - %s\n",
+			       __func__, token);
+		}
+	}
+
+	kfree(mem);
+
+	return count;
+}
+
+static DEVICE_ATTR(reg_image, 0200, NULL, msm_geni_ir_sysfs_wta_reg_image);
+static DEVICE_ATTR(ram_image, 0200, NULL, msm_geni_ir_sysfs_wta_ram_image);
+static DEVICE_ATTR(firmware_config, 0644, msm_geni_ir_sysfs_rda_firmware_config,
+				   msm_geni_ir_sysfs_wta_firmware_config);
+
+static struct attribute *msm_geni_ir_attrs[] = {
+	&dev_attr_reg_image.attr,
+	&dev_attr_ram_image.attr,
+	&dev_attr_firmware_config.attr,
+	NULL,
+};
+
+static struct attribute_group msm_geni_ir_attrs_group = {
+	.attrs = msm_geni_ir_attrs,
+};
+
+static int msm_geni_ir_sysfs_create(struct platform_device *pdev)
+{
+	int rc;
+
+	rc = sysfs_create_group(&pdev->dev.kobj, &msm_geni_ir_attrs_group);
+	if (rc < 0) {
+		pr_err("%s: failed %d", __func__, rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+static void msm_geni_ir_sysfs_remove(struct platform_device *pdev)
+{
+	sysfs_remove_group(&pdev->dev.kobj, &msm_geni_ir_attrs_group);
+}
+#endif
 
 int msm_geni_ir_probe(struct platform_device *pdev)
 {
@@ -932,6 +1201,12 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 		pr_err("rx gpio request failed %d\n", rc);
 		goto gpio_err;
 	}
+	rc = gpio_direction_input(ir->gpio_rx);
+	if (rc) {
+		pr_err("failed to set direction gpio %d\n", rc);
+		goto gpio_err;
+	}
+
 	rc = request_irq(ir->irq, geni_ir_interrupt,
 			 IRQ_TYPE_LEVEL_HIGH, "geni-ir-core-irq", ir);
 	if (rc) {
@@ -955,9 +1230,8 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 	}
 
 	rcdev->priv = ir;
-	rcdev->driver_type = RC_DRIVER_SCANCODE;
-	rcdev->allowed_protocols = RC_PROTO_RC5 | RC_PROTO_RC6_0 | RC_PROTO_NEC;
-	rcdev->enabled_protocols = RC_PROTO_RC5 | RC_PROTO_RC6_0 | RC_PROTO_NEC;
+	rcdev->allowed_protocols = RC_PROTO_BIT_RC5 | RC_PROTO_BIT_RC6_0 |
+							   RC_PROTO_BIT_NEC;
 	rcdev->driver_name = MSM_GENI_IR_DRIVER_NAME;
 	rcdev->device_name = MSM_GENI_IR_RX_DEVICE_NAME;
 	rcdev->change_protocol = msm_geni_ir_change_protocol;
@@ -974,6 +1248,13 @@ int msm_geni_ir_probe(struct platform_device *pdev)
 		goto rc_register_err;
 	}
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	msm_geni_ir_sec_dev_probe(pdev, ir);
+#endif
+
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+	msm_geni_ir_sysfs_create(pdev);
+#endif
 
 #ifdef CONFIG_IR_MSM_GENI_TX
 	ir->misc.minor = MISC_DYNAMIC_MINOR;
@@ -1003,9 +1284,28 @@ resource_err:
 }
 EXPORT_SYMBOL(msm_geni_ir_probe);
 
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+static void msm_geni_ir_sec_dev_remove(struct platform_device *pdev)
+{
+	struct msm_geni_ir *ir = platform_get_drvdata(pdev);
+
+	if (ir->rcdev_sec) {
+		rc_unregister_device(ir->rcdev_sec);
+		rc_free_device(ir->rcdev_sec);
+	}
+}
+#endif
+
 static int msm_geni_ir_remove(struct platform_device *pdev)
 {
 	struct msm_geni_ir *ir = platform_get_drvdata(pdev);
+
+#ifdef CONFIG_IR_MSM_GENI_SECONDARY_BITBANG
+	msm_geni_ir_sec_dev_remove(pdev);
+#endif
+#ifdef CONFIG_IR_MSM_GENI_FW_INJECT
+	msm_geni_ir_sysfs_remove(pdev);
+#endif
 
 	rc_unregister_device(ir->rcdev);
 	rc_free_device(ir->rcdev);
@@ -1032,11 +1332,6 @@ static int msm_geni_ir_suspend(struct device *dev)
 {
 	struct msm_geni_ir *ir = platform_get_drvdata(to_platform_device(dev));
 
-	if (ir->image_loaded != NULL) {
-		/* configure low power mode */
-		msm_geni_ir_low_power_mode(ir);
-		clk_disable_unprepare(ir->ahb_clk);
-	}
 	enable_irq_wake(ir->wakeup_irq);
 
 	return 0;
@@ -1046,26 +1341,16 @@ static int msm_geni_ir_resume(struct device *dev)
 {
 	struct msm_geni_ir *ir = platform_get_drvdata(to_platform_device(dev));
 	u32 status;
-	int rc;
 
 	disable_irq_wake(ir->wakeup_irq);
 	if (ir->image_loaded == NULL)
 		return 0;
-
-	rc = clk_prepare_enable(ir->ahb_clk);
-	if (rc) {
-		pr_err("ahb clk enable failed %d\n", rc);
-		return rc;
-	}
 
 	/* clear wakeup irq */
 	status = readl_relaxed(ir->base + GENI_IR_IRQ_STATUS);
 	writel_relaxed(status, ir->base + GENI_IR_IRQ_CLEAR);
 	/*write memory barrier*/
 	wmb();
-
-	/* configure normal mode */
-	msm_geni_ir_normal_mode(ir);
 
 	return 0;
 }

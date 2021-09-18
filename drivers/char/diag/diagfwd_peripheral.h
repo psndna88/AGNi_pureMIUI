@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, 2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,7 +15,7 @@
 
 #define PERIPHERAL_BUF_SZ		16384
 #define MAX_PERIPHERAL_BUF_SZ		32768
-#define MAX_PERIPHERAL_HDLC_BUF_SZ	65539
+#define MAX_PERIPHERAL_HDLC_BUF_SZ	65536
 
 #define TRANSPORT_UNKNOWN		-1
 #define TRANSPORT_SOCKET		0

@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -316,6 +316,7 @@ static int enable_fw_nolock(struct npu_device *npu_dev)
 {
 	struct npu_host_ctx *host_ctx = &npu_dev->host_ctx;
 	int ret = 0;
+	uint32_t reg_val;
 
 	if (host_ctx->fw_state == FW_UNLOADED) {
 		ret = load_fw_nolock(npu_dev,
@@ -352,6 +353,26 @@ static int enable_fw_nolock(struct npu_device *npu_dev)
 		NPU_ERR("Enable sys cache failed\n");
 		goto enable_sys_cache_fail;
 	}
+
+	/* Clear control/status registers */
+	REGW(npu_dev, REG_NPU_FW_CTRL_STATUS, 0x0);
+	REGW(npu_dev, REG_NPU_HOST_CTRL_VALUE, 0x0);
+	REGW(npu_dev, REG_FW_TO_HOST_EVENT, 0x0);
+
+	NPU_DBG("fw_dbg_mode %x\n", host_ctx->fw_dbg_mode);
+	reg_val = 0;
+	if (host_ctx->fw_dbg_mode & FW_DBG_MODE_PAUSE)
+		reg_val |= HOST_CTRL_STATUS_FW_PAUSE_VAL;
+
+	if (host_ctx->fw_dbg_mode & FW_DBG_DISABLE_WDOG)
+		reg_val |= HOST_CTRL_STATUS_DISABLE_WDOG_VAL;
+
+	if (!npu_hw_clk_gating_enabled())
+		reg_val |= HOST_CTRL_STATUS_BOOT_DISABLE_CLK_GATE_VAL;
+
+	REGW(npu_dev, REG_NPU_HOST_CTRL_STATUS, reg_val);
+	/* Read back to flush all registers for fw to read */
+	REGR(npu_dev, REG_NPU_HOST_CTRL_STATUS);
 
 	/* Initialize the host side IPC before fw boots up */
 	npu_host_ipc_pre_init(npu_dev);
@@ -629,8 +650,8 @@ static int npu_notifier_cb(struct notifier_block *this, unsigned long code,
 		if (host_ctx->fw_dbg_mode & FW_DBG_DISABLE_WDOG)
 			reg_val |= HOST_CTRL_STATUS_DISABLE_WDOG_VAL;
 
-		if (npu_hw_clk_gating_enabled())
-			reg_val |= HOST_CTRL_STATUS_BOOT_ENABLE_CLK_GATE_VAL;
+		if (!npu_hw_clk_gating_enabled())
+			reg_val |= HOST_CTRL_STATUS_BOOT_DISABLE_CLK_GATE_VAL;
 
 		REGW(npu_dev, REG_NPU_HOST_CTRL_STATUS, reg_val);
 		/* Read back to flush all registers for fw to read */
@@ -1635,6 +1656,7 @@ static int app_msg_proc(struct npu_host_ctx *host_ctx, uint32_t *msg)
 	struct npu_misc_cmd *misc_cmd = NULL;
 	int need_ctx_switch = 0;
 
+	memset(&kevt, 0, sizeof(kevt));
 	msg_id = msg[1];
 	switch (msg_id) {
 	case NPU_IPC_MSG_EXECUTE_DONE:

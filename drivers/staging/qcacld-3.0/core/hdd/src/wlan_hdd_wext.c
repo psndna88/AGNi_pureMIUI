@@ -6470,9 +6470,8 @@ static int __iw_get_char_setnone(struct net_device *dev,
 		}
 		len = scnprintf(buf, WE_MAX_STR_LEN, "%u ",
 				channel_list.num_channels);
-		if (QDF_STATUS_SUCCESS == sme_get_country_code(mac_handle,
-							       ubuf,
-							       &ubuf_len)) {
+		if (SOURCE_UNKNOWN != ucfg_reg_get_cc_and_src(hdd_ctx->psoc,
+							      ubuf)) {
 			/* Printing Country code in getChannelList */
 			for (i = 0; i < (ubuf_len - 1); i++)
 				len += scnprintf(buf + len,

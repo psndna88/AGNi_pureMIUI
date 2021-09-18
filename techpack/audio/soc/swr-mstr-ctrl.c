@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1320,12 +1320,20 @@ static void swrm_new_slave_config(struct swr_mstr_ctrl *swrm)
 {
 	int i;
 
+	swrm->slave_status  = swr_master_read(swrm, SWRM_MCP_SLV_STATUS);
+	if (!swrm->slave_status) {
+		dev_dbg_ratelimited(swrm->dev, "%s: slaves status is 0x%x\n",
+				__func__, swrm->slave_status);
+		return;
+	}
+        dev_dbg(swrm->dev, "%s: slave status: 0x%x\n", __func__, swrm->slave_status);
 	for (i = 0; i < (swrm->master.num_dev + 1); i++) {
 		if ((swrm->slave_status & SWRM_MCP_SLV_STATUS_MASK)
 			== SWR_ATTACHED_OK) {
 			/* enable host irq on slave device*/
-			swrm_cmd_fifo_wr_cmd(swrm, 0x4, i, 0x0,
-				SWRS_SCP_INT_STATUS_MASK_1);
+			if (i != 0)
+				swrm_cmd_fifo_wr_cmd(swrm, 0x4, i, 0x0,
+							SWRS_SCP_INT_STATUS_MASK_1);
 		}
 		swrm->slave_status >>= 2;
 	}
@@ -1879,6 +1887,8 @@ static int swrm_probe(struct platform_device *pdev)
 				__func__, swrm->num_dev, SWR_MAX_SLAVE_DEVICES);
 			ret = -EINVAL;
 			goto err_pdata_fail;
+		} else {
+			swrm->master.num_dev = swrm->num_dev;
 		}
 	}
 

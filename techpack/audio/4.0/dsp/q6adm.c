@@ -3065,8 +3065,15 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 				this_adm.ffecns_port_id);
 	}
 
-	if (topology == VPM_TX_VOICE_SMECNS_V2_COPP_TOPOLOGY)
+	if (topology == VPM_TX_VOICE_SMECNS_V2_COPP_TOPOLOGY ||
+	    topology == VPM_TX_VOICE_FLUENCE_SM_COPP_TOPOLOGY)
 		channel_mode = 1;
+
+	if (topology == ODM_TMISOUND_HEADPHONE_FX && channel_mode == 4) {
+		pr_info("%s: misound topo %x don't support 4 channels\n",
+				__func__, ODM_TMISOUND_HEADPHONE_FX);
+		channel_mode = 2;
+	}
 
 	/*
 	 * Routing driver reuses the same adm for streams with the same

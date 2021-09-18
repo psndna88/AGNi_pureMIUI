@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -33,6 +33,7 @@
 
 #define ADSP_STATE_READY_TIMEOUT_MS 3000
 
+#define ADSP_MODULES_READY_AVS_STATE 5
 #define APR_ENOTREADY 10
 #define MEMPOOL_ID_MASK 0xFF
 #define MDF_MAP_TOKEN 0xF000
@@ -61,9 +62,11 @@ struct q6core_str {
 	wait_queue_head_t cmd_req_wait;
 	wait_queue_head_t avcs_fwk_ver_req_wait;
 	wait_queue_head_t lpass_npa_rsc_wait;
+	wait_queue_head_t avcs_module_load_unload_wait;
 	u32 lpass_npa_rsc_rsp_rcvd;
 	u32 bus_bw_resp_received;
 	u32 mdf_map_resp_received;
+	u32 avcs_module_resp_received;
 	enum cmd_flags {
 		FLAG_NONE,
 		FLAG_CMDRSP_LICENSE_RESULT
@@ -86,6 +89,9 @@ struct q6core_str {
 };
 
 static struct q6core_str q6core_lcl;
+
+/* Global payload used for AVCS_CMD_RSP_MODULES command */
+static struct avcs_load_unload_modules_payload *rsp_payload;
 
 struct generic_get_data_ {
 	int valid;
@@ -343,6 +349,28 @@ static int32_t aprv2_core_fn_q(struct apr_client_data *data, void *priv)
 			q6core_lcl.lpass_npa_rsc_rsp_rcvd = 1;
 			wake_up(&q6core_lcl.lpass_npa_rsc_wait);
 			break;
+		case AVCS_CMD_LOAD_MODULES:
+			pr_err("%s: Cmd = %s failed status[%s]\n",
+					__func__, "AVCS_CMD_LOAD_MODULES",
+					adsp_err_get_err_str(payload1[1]));
+			q6core_lcl.avcs_module_resp_received = 1;
+			q6core_lcl.adsp_status = -payload1[1];
+			wake_up(&q6core_lcl.avcs_module_load_unload_wait);
+			break;
+		case AVCS_CMD_UNLOAD_MODULES:
+			if (payload1[1] == ADSP_EOK) {
+				pr_debug("%s: Cmd = %s success status[%s]\n",
+					__func__, "AVCS_CMD_UNLOAD_MODULES",
+						"ADSP_EOK");
+			} else {
+				pr_err("%s: Cmd = %s failed status[%s]\n",
+					__func__, "AVCS_CMD_UNLOAD_MODULES",
+						adsp_err_get_err_str(payload1[1]));
+				q6core_lcl.adsp_status = -payload1[1];
+			}
+			q6core_lcl.avcs_module_resp_received = 1;
+			wake_up(&q6core_lcl.avcs_module_load_unload_wait);
+			break;
 		default:
 			pr_err("%s: Invalid cmd rsp[0x%x][0x%x] opcode %d\n",
 					__func__,
@@ -440,6 +468,13 @@ static int32_t aprv2_core_fn_q(struct apr_client_data *data, void *priv)
 		}
 		q6core_lcl.avcs_fwk_ver_resp_received = 1;
 		wake_up(&q6core_lcl.avcs_fwk_ver_req_wait);
+		break;
+	case AVCS_CMD_RSP_LOAD_MODULES:
+		pr_debug("%s: Received AVCS_CMD_RSP_LOAD_MODULES\n",
+				__func__);
+		memcpy(rsp_payload, data->payload, data->payload_size);
+		q6core_lcl.avcs_module_resp_received = 1;
+		wake_up(&q6core_lcl.avcs_module_load_unload_wait);
 		break;
 	default:
 		pr_err("%s: Message id from adsp core svc: 0x%x\n",
@@ -894,6 +929,132 @@ uint32_t core_set_dolby_manufacturer_id(int manufacturer_id)
 }
 EXPORT_SYMBOL(core_set_dolby_manufacturer_id);
 
+int32_t q6core_avcs_load_unload_modules(struct avcs_load_unload_modules_payload
+		*payload, uint32_t preload_type)
+{
+	int ret = 0;
+	size_t packet_size = 0,  payload_size = 0;
+	struct avcs_cmd_dynamic_modules *mod = NULL;
+	int num_modules;
+	unsigned long timeout;
+
+	if (payload == NULL) {
+		pr_err("%s: payload is null\n", __func__);
+		return -EINVAL;
+	}
+
+	if ((q6core_lcl.avs_state != ADSP_MODULES_READY_AVS_STATE)
+			&& (preload_type == AVCS_LOAD_MODULES)) {
+		timeout = jiffies +
+			msecs_to_jiffies(ADSP_STATE_READY_TIMEOUT_MS);
+
+		do {
+			q6core_is_adsp_ready();
+			if (q6core_lcl.param == ADSP_MODULES_READY_AVS_STATE) {
+				pr_debug("%s: ADSP state up with all modules loaded\n",
+						__func__);
+				q6core_lcl.avs_state = ADSP_MODULES_READY_AVS_STATE;
+				break;
+			}
+
+			/*
+			 * ADSP will be coming up after boot up and AVS might
+			 * not be fully up with all modules when the control
+			 * reaches here. So, wait for 50msec before checking
+			 * ADSP state again.
+			 */
+			msleep(50);
+		} while (time_after(timeout, jiffies));
+
+		if (q6core_lcl.param != ADSP_MODULES_READY_AVS_STATE)
+			pr_err("%s: all modules might be not loaded yet on ADSP\n",
+					__func__);
+	}
+	mutex_lock(&(q6core_lcl.cmd_lock));
+	num_modules = payload->num_modules;
+	ocm_core_open();
+
+	if (q6core_lcl.core_handle_q == NULL) {
+		pr_err("%s: apr registration for CORE failed\n", __func__);
+		mutex_unlock(&(q6core_lcl.cmd_lock));
+		return -ENODEV;
+	}
+
+	payload_size = (sizeof(struct avcs_load_unload_modules_sec_payload)
+			* num_modules) + sizeof(uint32_t);
+	packet_size = sizeof(struct avcs_cmd_dynamic_modules) +
+		payload_size - sizeof(uint32_t);
+	mod = kzalloc(packet_size, GFP_KERNEL);
+
+	if (!mod) {
+		mutex_unlock(&(q6core_lcl.cmd_lock));
+		return -ENOMEM;
+	}
+	rsp_payload = kzalloc(payload_size, GFP_KERNEL);
+	if (!rsp_payload) {
+		kfree(mod);
+		mutex_unlock(&(q6core_lcl.cmd_lock));
+		return -ENOMEM;
+	}
+
+	memcpy((uint8_t *)mod + sizeof(struct apr_hdr) +
+			sizeof(struct avcs_load_unload_modules_meminfo),
+			payload, payload_size);
+
+	mod->hdr.hdr_field =
+		APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	mod->hdr.pkt_size = packet_size;
+	mod->hdr.src_port = 0;
+	mod->hdr.dest_port = 0;
+	mod->hdr.token = 0;
+	mod->meminfo.data_payload_addr_lsw = 0;
+	mod->meminfo.data_payload_addr_msw = 0;
+	mod->meminfo.mem_map_handle = 0;
+	mod->meminfo.buffer_size = payload_size;
+
+	if (preload_type == AVCS_LOAD_MODULES)
+		mod->hdr.opcode =  AVCS_CMD_LOAD_MODULES;
+	else
+		mod->hdr.opcode =  AVCS_CMD_UNLOAD_MODULES;
+
+	q6core_lcl.adsp_status = 0;
+	q6core_lcl.avcs_module_resp_received = 0;
+	ret = apr_send_pkt(q6core_lcl.core_handle_q,
+			(uint32_t *)mod);
+
+	if (ret < 0) {
+		pr_err("%s: modules load/unload failed ret = %d\n",
+				__func__, ret);
+		goto done;
+	}
+
+	ret = wait_event_timeout(q6core_lcl.avcs_module_load_unload_wait,
+			(q6core_lcl.avcs_module_resp_received == 1),
+			msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s wait event timeout for avcs load/unload module\n",
+				__func__);
+		ret = -ETIMEDOUT;
+		goto done;
+	}
+
+	if (q6core_lcl.adsp_status < 0) {
+		pr_err("%s: modules load/unload failed %d\n", __func__,
+				q6core_lcl.adsp_status);
+		ret = q6core_lcl.adsp_status;
+		goto done;
+	} else {
+		if (mod->hdr.opcode == AVCS_CMD_LOAD_MODULES)
+			memcpy(payload, rsp_payload, payload_size);
+	}
+done:
+	kfree(mod);
+	kfree(rsp_payload);
+	mutex_unlock(&(q6core_lcl.cmd_lock));
+	return ret;
+}
+EXPORT_SYMBOL(q6core_avcs_load_unload_modules);
 int32_t q6core_load_unload_topo_modules(uint32_t topo_id,
 			bool preload_type)
 {
@@ -1926,6 +2087,7 @@ int __init core_init(void)
 	init_waitqueue_head(&q6core_lcl.avcs_fwk_ver_req_wait);
 	init_waitqueue_head(&q6core_lcl.mdf_map_resp_wait);
 	init_waitqueue_head(&q6core_lcl.lpass_npa_rsc_wait);
+	init_waitqueue_head(&q6core_lcl.avcs_module_load_unload_wait);
 	q6core_lcl.cmd_resp_received_flag = FLAG_NONE;
 	mutex_init(&q6core_lcl.cmd_lock);
 	mutex_init(&q6core_lcl.ver_lock);

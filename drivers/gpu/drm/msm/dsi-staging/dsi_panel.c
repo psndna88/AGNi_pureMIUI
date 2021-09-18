@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,10 +25,6 @@
 #include "dsi_ctrl_hw.h"
 #include "dsi_parser.h"
 
-#ifdef CONFIG_KLAPSE
-#include <linux/klapse.h>
-#endif
-
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -50,6 +47,8 @@
 
 static bool lcd_esd_irq_handler = false;
 extern void lcd_esd_enable(bool en);
+static bool backlight_val;
+char g_lcd_id[128];
 
 enum dsi_dsc_ratio_type {
 	DSC_8BPC_8BPP,
@@ -494,7 +493,6 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 
 	if (gpio_is_valid(panel->reset_config.reset_gpio)) {
 		if (lcd_reset_keep_high) {
-			pr_warn("%s: lcd-reset-gpio keep high\n", __func__);
 		} else {
 			pr_err("%s: lcd-reset_gpio disable\n", __func__);
 			gpio_set_value(panel->reset_config.reset_gpio, 0);
@@ -642,10 +640,6 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	}
 
 	dsi = &panel->mipi_device;
-	
-#ifdef CONFIG_KLAPSE
-	set_rgb_slider(bl_lvl);
-#endif
 
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
@@ -730,6 +724,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		pr_err("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
 	}
+	if (bl_lvl > 0)
+		backlight_val = true;
+	else
+	    backlight_val = false;
 
 	return rc;
 }
@@ -1753,6 +1751,14 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pre-off-command",
 	"qcom,mdss-dsi-off-command",
 	"qcom,mdss-dsi-post-off-command",
+    "qcom,mdss-dsi-cabc-on-command",
+    "qcom,mdss-dsi-cabc-off-command",
+	"qcom,mdss-dsi-cabc_movie-on-command",
+	"qcom,mdss-dsi-cabc_still-on-command",
+	"qcom,mdss-dsi-hbm1-on-command",
+	"qcom,mdss-dsi-hbm2-on-command",
+	"qcom,mdss-dsi-hbm3-on-command",
+	"qcom,mdss-dsi-hbm-off-command",	
 	"qcom,mdss-dsi-pre-res-switch",
 	"qcom,mdss-dsi-res-switch",
 	"qcom,mdss-dsi-post-res-switch",
@@ -1779,6 +1785,14 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-pre-off-command-state",
 	"qcom,mdss-dsi-off-command-state",
 	"qcom,mdss-dsi-post-off-command-state",
+    "qcom,mdss-dsi-cabc-on-command-state",
+    "qcom,mdss-dsi-cabc-off-command-state",
+	"qcom,mdss-dsi-cabc_movie-on-command-state",
+	"qcom,mdss-dsi-cabc_still-on-command-state",
+	"qcom,mdss-dsi-hbm1-on-command-state",
+	"qcom,mdss-dsi-hbm2-on-command-state",
+	"qcom,mdss-dsi-hbm3-on-command-state",
+	"qcom,mdss-dsi-hbm-off-command-state",	
 	"qcom,mdss-dsi-pre-res-switch-state",
 	"qcom,mdss-dsi-res-switch-state",
 	"qcom,mdss-dsi-post-res-switch-state",
@@ -3295,6 +3309,38 @@ end:
 	utils->node = panel->panel_of_node;
 }
 
+static ssize_t msm_fb_lcd_name(struct device *dev,
+		struct device_attribute *attr, char *buf)	
+{
+   ssize_t ret = 0;
+   sprintf(buf, "%s\n", g_lcd_id);
+   ret = strlen(buf) + 1;	
+   return ret;		
+}
+		
+static DEVICE_ATTR(lcd_name,0664,msm_fb_lcd_name,NULL);
+		
+static struct kobject *msm_lcd_name;
+	
+static int msm_lcd_name_create_sysfs(void){	
+   int ret;	
+   msm_lcd_name=kobject_create_and_add("android_lcd",NULL);
+	
+   if(msm_lcd_name==NULL){
+     pr_info("msm_lcd_name_create_sysfs_ failed\n");
+     ret=-ENOMEM;
+     return ret;		
+   }
+		
+   ret=sysfs_create_file(msm_lcd_name,&dev_attr_lcd_name.attr);
+
+   if(ret){	
+    pr_info("%s failed \n",__func__);	
+    kobject_del(msm_lcd_name);	
+   }
+   return 0;	
+}	
+
 struct dsi_panel *dsi_panel_get(struct device *parent,
 				struct device_node *of_node,
 				struct device_node *parser_node,
@@ -3327,6 +3373,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	else if ((strnstr(panel->name, "huaxing", strlen(panel->name))))
 		panel->special_panel = DSI_SPECIAL_PANEL_HUAXING;
 
+	strcpy(g_lcd_id,panel->name);
+	msm_lcd_name_create_sysfs();
 	/*
 	 * Set panel type to LCD as default.
 	 */
@@ -4444,3 +4492,29 @@ error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
+
+int dsi_panel_set_feature(struct dsi_panel *panel,enum dsi_cmd_set_type type)
+{
+        int rc = 0;
+
+        if (!panel) {
+                pr_err("Invalid params\n");
+                return -EINVAL;
+        }
+	pr_info("xinj:%s panel_initialized=%d type=%d backlight_val = %d\n",
+			__func__,panel->panel_initialized,type,backlight_val);
+	if (!panel->panel_initialized || !backlight_val) {
+                pr_err("xinj: con't set cmds type=%d\n",type);
+                return -EINVAL;
+	}
+        mutex_lock(&panel->panel_lock);
+
+        rc = dsi_panel_tx_cmd_set(panel, type);
+        if (rc) {
+                pr_err("[%s] failed to send DSI_CMD_SET_FEATURE_ON/OFF cmds, rc=%d,type=%d\n",
+                      panel->name, rc,type);
+        }
+        mutex_unlock(&panel->panel_lock);
+        return rc;
+}
+

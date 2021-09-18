@@ -31,26 +31,15 @@
 #define GLINK_PKT_IPC_LOG_PAGE_CNT 2
 static void *glink_pkt_ilctxt;
 
-static int glink_pkt_debug_mask;
+static int glink_pkt_debug_mask = 0;
 module_param_named(debug_mask, glink_pkt_debug_mask, int, 0664);
 
 enum {
 	GLINK_PKT_INFO = 1U << 0,
 };
 
-#define GLINK_PKT_INFO(x, ...)						\
-do {									\
-	if (glink_pkt_debug_mask & GLINK_PKT_INFO) {			\
-		ipc_log_string(glink_pkt_ilctxt,			\
-			"[%s]: "x, __func__, ##__VA_ARGS__);		\
-	}								\
-} while (0)
-
-#define GLINK_PKT_ERR(x, ...)						      \
-do {									      \
-	pr_err_ratelimited("[%s]: "x, __func__, ##__VA_ARGS__);		      \
-	ipc_log_string(glink_pkt_ilctxt, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
+#define GLINK_PKT_INFO(x, ...)
+#define GLINK_PKT_ERR(x, ...)
 
 #define SMD_DTR_SIG BIT(31)
 #define SMD_CTS_SIG BIT(30)

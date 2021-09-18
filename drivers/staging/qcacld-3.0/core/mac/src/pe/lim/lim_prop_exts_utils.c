@@ -232,6 +232,7 @@ lim_extract_ap_capability(tpAniSirGlobal mac_ctx, uint8_t *p_ie,
 	uint8_t vht_ch_wd;
 	uint8_t center_freq_diff;
 	struct s_ext_cap *ext_cap;
+	struct ch_params ch_params = {0};
 
 	beacon_struct = qdf_mem_malloc(sizeof(tSirProbeRespBeacon));
 	if (NULL == beacon_struct) {
@@ -376,7 +377,14 @@ lim_extract_ap_capability(tpAniSirGlobal mac_ctx, uint8_t *p_ie,
 						beacon_struct->channelNumber);
 			session->ch_center_freq_seg1 = 0;
 		}
-		session->ch_width = vht_ch_wd + 1;
+		ch_params.ch_width = vht_ch_wd + 1;
+		wlan_reg_set_channel_params(mac_ctx->pdev,
+					    session->currentOperChannel,
+					    0, &ch_params);
+		session->ch_width = ch_params.ch_width;
+		session->ch_center_freq_seg0 = ch_params.center_freq_seg0;
+		session->ch_center_freq_seg1 = ch_params.center_freq_seg1;
+
 		if (CH_WIDTH_80MHZ < session->ch_width) {
 			session->vht_config.su_beam_former = 0;
 			session->nss = 1;

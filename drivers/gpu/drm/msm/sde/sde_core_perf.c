@@ -635,7 +635,7 @@ void sde_core_perf_crtc_update(struct drm_crtc *crtc,
 
 }
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 
 static ssize_t _sde_core_perf_mode_write(struct file *file,
 		    const char __user *user_buf, size_t count, loff_t *ppos)

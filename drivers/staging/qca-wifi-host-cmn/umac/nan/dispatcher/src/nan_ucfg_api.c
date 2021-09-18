@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +29,7 @@
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_nan_api.h"
 #include "wlan_osif_request_manager.h"
+#include "wlan_reg_services_api.h"
 
 struct wlan_objmgr_psoc;
 struct wlan_objmgr_vdev;
@@ -484,4 +485,9 @@ int ucfg_nan_register_lim_callbacks(struct wlan_objmgr_psoc *psoc,
 	psoc_obj->cb_obj.delete_peers_by_addr = cb_obj->delete_peers_by_addr;
 
 	return 0;
+}
+
+bool ucfg_is_nan_allowed_on_chan(struct wlan_objmgr_pdev *pdev, uint32_t chan)
+{
+	return wlan_is_nan_allowed_on_chan(pdev, chan);
 }

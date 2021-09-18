@@ -115,12 +115,6 @@ static void vote_min(struct votable *votable, int client_id,
 		}
 	}
 
-	if (strcmp(votable->name, "QG_WS") != 0) {
-		if(votable->votes[i].enabled)
-			pr_info("%s: val: %d\n", votable->client_strs[i],
-					votable->votes[i].value);
-	}
-
 	if (*eff_id == -EINVAL)
 		*eff_res = -EINVAL;
 }
@@ -465,15 +459,9 @@ int vote(struct votable *votable, const char *client_str, bool enabled, int val)
 	votable->votes[client_id].value = val;
 
 	if (similar_vote && votable->voted_on) {
-		pr_debug("%s: %s,%d Ignoring similar vote %s of val=%d\n",
-			votable->name,
-			client_str, client_id, enabled ? "on" : "off", val);
 		goto out;
 	}
 
-	pr_info("%s: %s,%d voting %s of val=%d\n",
-		votable->name,
-		client_str, client_id, enabled ? "on" : "off", val);
 	switch (votable->type) {
 	case VOTE_MIN:
 		vote_min(votable, client_id, &effective_result, &effective_id);
@@ -495,12 +483,6 @@ int vote(struct votable *votable, const char *client_str, bool enabled, int val)
 	 */
 	if (!votable->voted_on
 			|| (effective_result != votable->effective_result)) {
-		if (strcmp(votable->name, "QG_WS") != 0) {
-			pr_info("%s: current vote is now %d voted by %s,%d, previous voted %d\n",
-				votable->name, effective_result,
-				get_client_str(votable, effective_id),
-				effective_id, votable->effective_result);
-		}
 		votable->effective_client_id = effective_id;
 		votable->effective_result = effective_result;
 		if (votable->callback && !votable->force_active
@@ -550,11 +532,6 @@ int vote_override(struct votable *votable, const char *override_client,
 		votable->override_result = enabled ? val : -EINVAL;
 		goto out;
 	}
-        pr_debug("%s: %s, vote_override %s val=%d\n",
-                          votable->name,
-                          override_client,
-                          enabled ? "on" : "off",
-                          val);
 
 	if (enabled) {
 		rc = votable->callback(votable, votable->data,

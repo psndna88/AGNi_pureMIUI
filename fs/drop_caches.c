@@ -35,15 +35,27 @@ static void drop_pagecache_sb(struct super_block *sb, void *unused)
 		spin_unlock(&inode->i_lock);
 		spin_unlock(&sb->s_inode_list_lock);
 
-		cond_resched();
 		invalidate_mapping_pages(inode->i_mapping, 0, -1);
 		iput(toput_inode);
 		toput_inode = inode;
 
+		cond_resched();
 		spin_lock(&sb->s_inode_list_lock);
 	}
 	spin_unlock(&sb->s_inode_list_lock);
 	iput(toput_inode);
+}
+
+void mm_drop_caches(int val)
+{
+	if (val & 1) {
+		iterate_supers(drop_pagecache_sb, NULL);
+		count_vm_event(DROP_PAGECACHE);
+	}
+	if (val & 2) {
+		drop_slab();
+		count_vm_event(DROP_SLAB);
+	}
 }
 
 int drop_caches_sysctl_handler(struct ctl_table *table, int write,

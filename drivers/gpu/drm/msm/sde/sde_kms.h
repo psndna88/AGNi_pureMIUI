@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -202,6 +202,7 @@ struct sde_irq {
 	u32 total_irqs;
 	struct list_head *irq_cb_tbl;
 	atomic_t *enable_counts;
+	atomic_t *irq_counts;
 	spinlock_t cb_lock;
 	struct dentry *debugfs_file;
 };

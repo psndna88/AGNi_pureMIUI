@@ -131,8 +131,8 @@ struct imp_dev_info {
 	bool smmu_enabled;
 	struct imp_iova_addr ctrl;
 	struct imp_iova_addr data;
-	u32 chdb_base;
-	u32 erdb_base;
+	phys_addr_t chdb_base;
+	phys_addr_t erdb_base;
 };
 
 struct imp_event_props {
@@ -767,6 +767,22 @@ static int imp_mhi_probe_cb(struct mhi_device *mhi_dev,
 		return -EPERM;
 	}
 
+	ret = mhi_get_channel_db_base(mhi_dev, &imp_ctx->dev_info.chdb_base);
+	if (ret) {
+		IMP_ERR("Could not populate channel db base address\n");
+		return -EINVAL;
+	}
+
+	IMP_DBG("chdb-base=0x%x\n", imp_ctx->dev_info.chdb_base);
+
+	ret = mhi_get_event_ring_db_base(mhi_dev, &imp_ctx->dev_info.erdb_base);
+	if (ret) {
+		IMP_ERR("Could not populate event ring db base address\n");
+		return -EINVAL;
+	}
+
+	IMP_DBG("erdb-base=0x%x\n", imp_ctx->dev_info.erdb_base);
+
 	/* vote for IPA clock. IPA clock will be devoted when MHI enters LPM */
 	IPA_ACTIVE_CLIENTS_INC_SPECIAL("IMP");
 
@@ -943,20 +959,6 @@ static int imp_probe(struct platform_device *pdev)
 		imp_ctx->dev_info.smmu_enabled = false;
 
 	IMP_DBG("smmu_enabled=%d\n", imp_ctx->dev_info.smmu_enabled);
-
-	if (of_property_read_u32(pdev->dev.of_node, "qcom,mhi-chdb-base",
-		&imp_ctx->dev_info.chdb_base)) {
-		IMP_ERR("failed to read of_node %s\n", "qcom,mhi-chdb-base");
-		return -EINVAL;
-	}
-	IMP_DBG("chdb-base=0x%x\n", imp_ctx->dev_info.chdb_base);
-
-	if (of_property_read_u32(pdev->dev.of_node, "qcom,mhi-erdb-base",
-		&imp_ctx->dev_info.erdb_base)) {
-		IMP_ERR("failed to read of_node %s\n", "qcom,mhi-erdb-base");
-		return -EINVAL;
-	}
-	IMP_DBG("erdb-base=0x%x\n", imp_ctx->dev_info.erdb_base);
 
 	imp_ctx->state = IMP_PROBED;
 	ret = mhi_driver_register(&mhi_driver);

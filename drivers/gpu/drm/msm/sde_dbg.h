@@ -473,7 +473,7 @@ static inline void dsi_ctrl_debug_dump(u32 entries, u32 size)
 {
 }
 
-#endif /* defined(CONFIG_DEBUG_FS_) */
+#endif /* defined(CONFIG_DEBUG_FS) */
 
 
 #endif /* SDE_DBG_H_ */

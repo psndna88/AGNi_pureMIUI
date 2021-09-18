@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -605,6 +605,9 @@ static int cnss_show_quirks_state(struct seq_file *s,
 			continue;
 		case IGNORE_PCI_LINK_FAILURE:
 			seq_puts(s, "IGNORE_PCI_LINK_FAILURE");
+			continue;
+		case IGNORE_PROBE_FAIL_SHUTDOWN:
+			seq_puts(s, "IGNORE_PROBE_FAIL_SHUTDOWN");
 			continue;
 		}
 

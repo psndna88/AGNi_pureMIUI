@@ -273,6 +273,7 @@ struct tcf_chain {
 
 struct tcf_block {
 	struct list_head chain_list;
+	struct Qdisc *q;
 };
 
 static inline void qdisc_cb_private_validate(const struct sk_buff *skb, int sz)
@@ -303,6 +304,11 @@ static inline struct Qdisc *qdisc_root(const struct Qdisc *qdisc)
 	struct Qdisc *q = rcu_dereference_rtnl(qdisc->dev_queue->qdisc);
 
 	return q;
+}
+
+static inline struct Qdisc *qdisc_root_bh(const struct Qdisc *qdisc)
+{
+	return rcu_dereference_bh(qdisc->dev_queue->qdisc);
 }
 
 static inline struct Qdisc *qdisc_root_sleeping(const struct Qdisc *qdisc)

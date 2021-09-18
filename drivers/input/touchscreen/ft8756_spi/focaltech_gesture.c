@@ -255,6 +255,12 @@ static void fts_gesture_report(struct input_dev *input_dev, int gesture_id)
 		break;
 	case GESTURE_DOUBLECLICK:
 		gesture = KEY_GESTURE_U;
+#ifdef CONFIG_TOUCHSCREEN_COMMON
+        input_report_key(input_dev, KEY_DOUBLE_TAP, 1);
+        input_sync(input_dev);
+        input_report_key(input_dev, KEY_DOUBLE_TAP, 0);
+        input_sync(input_dev);
+#endif
 		break;
 	case GESTURE_O:
 		gesture = KEY_GESTURE_O;

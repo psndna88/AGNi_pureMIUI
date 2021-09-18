@@ -1378,8 +1378,10 @@ static int wcd_spi_component_bind(struct device *dev,
 		goto done;
 	}
 
+#ifdef CONFIG_DEBUG_FS
 	if (wcd_spi_debugfs_init(spi))
 		dev_err(&spi->dev, "%s: Failed debugfs init\n", __func__);
+#endif
 
 	spi_message_init(&wcd_spi->msg1);
 	spi_message_add_tail(&wcd_spi->xfer1, &wcd_spi->msg1);

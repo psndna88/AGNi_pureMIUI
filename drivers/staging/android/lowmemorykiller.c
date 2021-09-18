@@ -18,6 +18,7 @@
  * and processes may not get killed until the normal oom killer is triggered.
  *
  * Copyright (C) 2007-2008 Google, Inc.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -89,11 +90,7 @@ static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
 
-#define lowmem_print(level, x...)			\
-	do {						\
-		if (lowmem_debug_level >= (level))	\
-			pr_info(x);			\
-	} while (0)
+#define lowmem_print(level, x...)
 
 static unsigned long lowmem_count(struct shrinker *s,
 				  struct shrink_control *sc)
@@ -120,7 +117,7 @@ enum {
 
 /* User knob to enable/disable adaptive lmk feature */
 static int enable_adaptive_lmk = ADAPTIVE_LMK_DISABLED;
-module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
+//module_param_named(enable_adaptive_lmk, enable_adaptive_lmk, int, 0644);
 
 /*
  * This parameter controls the behaviour of LMK when vmpressure is in
@@ -189,6 +186,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	if (pressure >= 95) {
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 		other_free = global_zone_page_state(NR_FREE_PAGES);
 
@@ -202,6 +200,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 
 		other_free = global_zone_page_state(NR_FREE_PAGES);
@@ -214,6 +213,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	} else if (atomic_read(&shift_adj)) {
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
+			global_node_page_state(NR_UNEVICTABLE) -
 			total_swapcache_pages();
 
 		other_free = global_zone_page_state(NR_FREE_PAGES);
@@ -446,11 +446,13 @@ static int get_minfree_scalefactor(gfp_t gfp_mask)
 	struct zoneref *z;
 	struct zone *zone;
 	unsigned long nr_usable = 0;
+	int totalrampages;
 
 	for_each_zone_zonelist(zone, z, zonelist, gfp_zone(gfp_mask))
 		nr_usable += zone->managed_pages;
+	totalrampages = totalram_pages();
 
-	return max_t(int, 1, mult_frac(100, nr_usable, totalram_pages));
+	return max_t(int, 1, mult_frac(100, nr_usable, totalrampages));
 }
 
 static void mark_lmk_victim(struct task_struct *tsk)
@@ -521,13 +523,13 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		     __func__, sc->nr_to_scan, sc->gfp_mask, other_free,
 		     other_file, min_score_adj);
 
-	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
+	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1 || (ret == VMPRESSURE_ADJUST_ENCROACH)) {
 		trace_almk_shrink(0, ret, other_free, other_file, 0);
 		lowmem_print(5, "%s %lu, %x, return 0\n",
 			     __func__, sc->nr_to_scan, sc->gfp_mask);
 		if (lock_required)
 			mutex_unlock(&scan_mutex);
-		return 0;
+		return SHRINK_STOP;
 	}
 
 	selected_oom_score_adj = min_score_adj;
@@ -682,7 +684,10 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		     __func__, sc->nr_to_scan, sc->gfp_mask, rem);
 	if (lock_required)
 		mutex_unlock(&scan_mutex);
-	return rem;
+	if (rem == 0)
+		return SHRINK_STOP;
+	else
+		return rem;
 }
 
 static int lmk_hotplug_callback(struct notifier_block *self,

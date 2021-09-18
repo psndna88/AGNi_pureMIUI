@@ -47,6 +47,20 @@ Main node properties:
   Definition: Set to true if MHI device supports sending subsystem failure
 	reason upon assert in case PCIe link is functional.
 
+- mhi,allow-m1
+  Usage: optional
+  Value type: <bool>
+  Definition: Set to true if MHI device does not support autonomous low
+	power modes entry.
+
+- mhi,skip-forced-suspend
+  Usage: optional
+  Value type: <bool>
+  Definition: Set to true if MHI device does not require support for a forced
+	suspend/resume cycle at bootup since it has no requirement to switch
+	to a separate set of mission mode PCIe phy settings to enable low power
+	modes.
+
 ============================
 mhi channel node properties:
 ============================

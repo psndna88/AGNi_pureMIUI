@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -447,15 +447,16 @@ int mhi_pm_m3_transition(struct mhi_controller *mhi_cntrl)
 	enum MHI_PM_STATE state;
 
 	write_lock_irq(&mhi_cntrl->pm_lock);
-	mhi_cntrl->dev_state = MHI_STATE_M3;
 	state = mhi_tryset_pm_state(mhi_cntrl, MHI_PM_M3);
-	write_unlock_irq(&mhi_cntrl->pm_lock);
 	if (state != MHI_PM_M3) {
+		write_unlock_irq(&mhi_cntrl->pm_lock);
 		MHI_ERR("Failed to transition to state %s from %s\n",
 			to_mhi_pm_state_str(MHI_PM_M3),
 			to_mhi_pm_state_str(mhi_cntrl->pm_state));
 		return -EIO;
 	}
+	mhi_cntrl->dev_state = MHI_STATE_M3;
+	write_unlock_irq(&mhi_cntrl->pm_lock);
 	wake_up_all(&mhi_cntrl->state_event);
 	mhi_cntrl->M3++;
 
@@ -784,7 +785,7 @@ static int mhi_queue_disable_transition(struct mhi_controller *mhi_cntrl,
 	list_add_tail(&item->node, &mhi_cntrl->transition_list);
 	spin_unlock_irqrestore(&mhi_cntrl->transition_lock, flags);
 
-	schedule_work(&mhi_cntrl->st_worker);
+	queue_work(mhi_cntrl->wq, &mhi_cntrl->st_worker);
 
 	return 0;
 }
@@ -804,7 +805,7 @@ int mhi_queue_state_transition(struct mhi_controller *mhi_cntrl,
 	list_add_tail(&item->node, &mhi_cntrl->transition_list);
 	spin_unlock_irqrestore(&mhi_cntrl->transition_lock, flags);
 
-	schedule_work(&mhi_cntrl->st_worker);
+	queue_work(mhi_cntrl->wq, &mhi_cntrl->st_worker);
 
 	return 0;
 }
@@ -820,8 +821,7 @@ static void mhi_special_events_pending(struct mhi_controller *mhi_cntrl)
 
 		spin_lock_bh(&mhi_event->lock);
 		if (ev_ring->rp != mhi_to_virtual(ev_ring, er_ctxt->rp)) {
-			queue_work(mhi_cntrl->special_wq,
-				   &mhi_cntrl->special_work);
+			queue_work(mhi_cntrl->wq, &mhi_cntrl->special_work);
 			spin_unlock_bh(&mhi_event->lock);
 			break;
 		}
@@ -1216,6 +1216,16 @@ int mhi_pm_suspend(struct mhi_controller *mhi_cntrl)
 		MHI_ERR("Did not enter M3 state, cur_state:%s pm_state:%s\n",
 			TO_MHI_STATE_STR(mhi_cntrl->dev_state),
 			to_mhi_pm_state_str(mhi_cntrl->pm_state));
+
+		if (!MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
+			write_lock_irq(&mhi_cntrl->pm_lock);
+			new_state = mhi_tryset_pm_state(mhi_cntrl,
+							MHI_PM_SYS_ERR_DETECT);
+			write_unlock_irq(&mhi_cntrl->pm_lock);
+			if (new_state != MHI_PM_SYS_ERR_DETECT)
+				MHI_ERR("Error moving to error state from %s\n",
+				to_mhi_pm_state_str(mhi_cntrl->pm_state));
+		}
 		return -EIO;
 	}
 

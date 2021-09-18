@@ -126,6 +126,8 @@
 #define IPA_IOCTL_APP_CLOCK_VOTE                78
 #define IPA_IOCTL_PDN_CONFIG                    80
 #define IPA_IOCTL_SET_MAC_FLT                   81
+#define IPA_IOCTL_ADD_UC_ACT_ENTRY              82
+#define IPA_IOCTL_DEL_UC_ACT_ENTRY              83
 
 /**
  * max size of the header to be inserted
@@ -171,7 +173,7 @@
 /**
  * Max number of clients supported for mac based exception
  */
-#define IPA_MAX_NUM_MAC_FLT 5
+#define IPA_MAX_NUM_MAC_FLT 32
 
 /**
  * MAX number of the FLT_RT stats counter supported.
@@ -393,9 +395,15 @@ enum ipa_client_type {
 	IPA_CLIENT_MHI_LOW_LAT_CONS = 105,
 	IPA_CLIENT_QDSS_PROD			= 106,
 	IPA_CLIENT_MHI_QDSS_CONS	= 107,
+
+	/* RESERVERD PROD			= 108, */
+	IPA_CLIENT_WLAN2_CONS1			= 109,
+
+	IPA_CLIENT_RTK_ETHERNET_PROD = 110,
+	IPA_CLIENT_RTK_ETHERNET_CONS = 111,
 };
 
-#define IPA_CLIENT_MAX (IPA_CLIENT_MHI_QDSS_CONS + 1)
+#define IPA_CLIENT_MAX (IPA_CLIENT_RTK_ETHERNET_CONS + 1)
 
 #define IPA_CLIENT_WLAN2_PROD IPA_CLIENT_A5_WLAN_AMPDU_PROD
 #define IPA_CLIENT_Q6_DL_NLO_DATA_PROD IPA_CLIENT_Q6_DL_NLO_DATA_PROD
@@ -418,6 +426,7 @@ enum ipa_client_type {
 #define IPA_CLIENT_MHI_PRIME_DPL_PROD IPA_CLIENT_MHI_PRIME_DPL_PROD
 #define IPA_CLIENT_MHI_QDSS_CONS IPA_CLIENT_MHI_QDSS_CONS
 
+
 #define IPA_CLIENT_IS_APPS_CONS(client) \
 	((client) == IPA_CLIENT_APPS_LAN_CONS || \
 	(client) == IPA_CLIENT_APPS_WAN_CONS || \
@@ -438,6 +447,7 @@ enum ipa_client_type {
 	((client) == IPA_CLIENT_WLAN1_CONS || \
 	(client) == IPA_CLIENT_WLAN2_CONS || \
 	(client) == IPA_CLIENT_WLAN3_CONS || \
+	(client) == IPA_CLIENT_WLAN2_CONS1 || \
 	(client) == IPA_CLIENT_WLAN4_CONS)
 
 #define IPA_CLIENT_IS_ODU_CONS(client) \
@@ -712,8 +722,15 @@ enum ipa_peripheral_event {
 #define WIGIG_FST_SWITCH (WIGIG_CLIENT_CONNECT + 1)
 #define WIGIG_EVENT_MAX (WIGIG_FST_SWITCH + 1)
 
+enum ipa_sockv5_event {
+	IPA_SOCKV5_ADD = WIGIG_EVENT_MAX,
+	IPA_SOCKV5_DEL,
+	IPA_SOCKV5_EVENT_MAX
+#define IPA_SOCKV5_EVENT_MAX IPA_SOCKV5_EVENT_MAX
+};
+
 enum ipa_pdn_config_event {
-	IPA_PDN_DEFAULT_MODE_CONFIG = WIGIG_EVENT_MAX, /* Default mode. */
+	IPA_PDN_DEFAULT_MODE_CONFIG = IPA_SOCKV5_EVENT_MAX, /* Default mode. */
 	IPA_PDN_IP_COLLISION_MODE_CONFIG, /* IP Collision detected. */
 	IPA_PDN_IP_PASSTHROUGH_MODE_CONFIG, /* IP Passthrough mode. */
 	IPA_PDN_CONFIG_EVENT_MAX
@@ -2238,7 +2255,7 @@ struct ipa_ioc_nat_pdn_entry {
  */
 struct ipa_ioc_vlan_iface_info {
 	char name[IPA_RESOURCE_NAME_MAX];
-	uint8_t vlan_id;
+	uint16_t vlan_id;
 };
 
 /**
@@ -2395,6 +2412,158 @@ struct ipa_wan_msg {
 	uint32_t ipv4_addr_gw;
 	uint32_t ipv6_addr_gw[IPA_WAN_MSG_IPv6_ADDR_GW_LEN];
 };
+
+/* uc activation command Ids */
+#define IPA_SOCKSV5_ADD_COM_ID		15
+#define IPA_IPv6_NAT_COM_ID		16
+
+/**
+ * ipa_kernel_tests_socksv5_uc_tmpl - uc activation entry info
+ * @cmd_id: uc command id
+ * @cmd_param: uC command param
+ * @ipa_kernel_tests_ip_hdr_temp: ip header
+ * @src_port: source port
+ * @dst_port: destination port
+ * @ipa_sockv5_mask: uc attribute mask for options/etc
+ * @out_irs: 4B/4B Seq/Ack/SACK
+ * @out_iss
+ * @in_irs
+ * @in_iss
+ * @out_ircv_tsval: timestamp attributes
+ * @in_ircv_tsecr
+ * @out_ircv_tsecr
+ * @in_ircv_tsval
+ * @in_isnd_wscale: window scale attributes
+ * @out_isnd_wscale
+ * @in_ircv_wscale
+ * @out_ircv_wscale
+ * @direction: 1 for UL 0 for DL
+ * @handle: uc activation table index
+ */
+struct ipa_kernel_tests_socksv5_uc_tmpl {
+	uint16_t cmd_id;
+	uint32_t cmd_param;
+	__be32 ip_src_addr;
+	__be32 ip_dst_addr;
+	__be32 ipv6_src_addr[4];
+	__be32 ipv6_dst_addr[4];
+
+	/* 2B src/dst port */
+	uint16_t src_port;
+	uint16_t dst_port;
+
+	/* attribute mask */
+	uint32_t ipa_sockv5_mask;
+
+	/* required update 4B/4B Seq/Ack/SACK */
+	uint32_t out_irs;
+	uint32_t out_iss;
+	uint32_t in_irs;
+	uint32_t in_iss;
+
+	/* option 10B: time-stamp */
+	uint32_t out_ircv_tsval;
+	uint32_t in_ircv_tsecr;
+	uint32_t out_ircv_tsecr;
+	uint32_t in_ircv_tsval;
+
+	/* option 2B: window-scaling/dynamic */
+	uint16_t in_isnd_wscale : 4;
+	uint16_t out_isnd_wscale : 4;
+	uint16_t in_ircv_wscale : 4;
+	uint16_t out_ircv_wscale : 4;
+
+	/* direction 1 = UL, 0 = DL */
+	uint8_t direction;
+
+	/* output: handle (index) */
+	uint16_t handle;
+};
+
+/**
+ * struct ipacm_socksv5_info - To hold information about socksv5 connections
+ * @ip_type: ip type
+ * @ipv4_src: ipv4 src address
+ * @ipv4_dst: ipv4 dst address
+ * @ipv6_src: ipv6 src address
+ * @ipv6_dst: ipv6 dst address
+ * @src_port: src port number
+ * @dst_port: dst port number
+ * @index: the uc activation tbl index
+ */
+
+struct ipacm_socksv5_info {
+	/* ip-type */
+	enum ipa_ip_type ip_type;
+
+	/* ipv4 */
+	uint32_t ipv4_src;
+	uint32_t ipv4_dst;
+
+	/* ipv6 */
+	uint32_t ipv6_src[4];
+	uint32_t ipv6_dst[4];
+
+	/* 2B src/dst port */
+	uint16_t src_port;
+	uint16_t dst_port;
+
+	/* uc-tbl index */
+	uint16_t index;
+};
+
+/**
+ * struct ipa_socksv5_msg - To hold information about socksv5 client
+ * @ul_in: uplink connection info
+ * @dl_in: downlink connection info
+ * @handle: used for ipacm to distinguish connections
+ *
+ * CnE need to pass the name of default wan iface when connected/disconnected.
+ * CNE need to pass the gw info in wlan AP+STA mode.
+ * netmgr need to pass the name of wan eMBMS iface when connected.
+ */
+struct ipa_socksv5_msg {
+	struct ipacm_socksv5_info ul_in;
+	struct ipacm_socksv5_info dl_in;
+
+	/* handle (index) */
+	uint16_t handle;
+};
+
+/**
+ * struct ipa_ioc_ipv6_nat_uc_act_entry - To hold information about IPv6 NAT
+ *	uC entry
+ * @cmd_id[in]: IPv6 NAT uC CMD ID - used for identifying uc activation type
+ * @private_address_lsb[in]: client private address lsb
+ * @private_address_msb[in]: client private address msb
+ * @public_address_lsb[in]: client public address lsb
+ * @public_address_msb[in]: client public address msb
+ * @private_port[in]: client private port
+ * @public_port[in]: client public port
+ * @index[out]: uC activation entry index
+ */
+struct ipa_ioc_ipv6_nat_uc_act_entry {
+	uint16_t cmd_id;
+	uint64_t private_address_lsb;
+	uint64_t private_address_msb;
+	uint64_t public_address_lsb;
+	uint64_t public_address_msb;
+	uint32_t private_port;
+	uint32_t public_port;
+	uint16_t index;
+};
+
+/**
+ * union ipa_ioc_uc_activation_entry - To hold information about uC activation
+ *	entry
+ * @socks[in]: fill here if entry is Socksv5 entry
+ * @ipv6_nat[in]: fill here if entry is IPv6 NAT entry
+ */
+union ipa_ioc_uc_activation_entry {
+	struct ipa_kernel_tests_socksv5_uc_tmpl socks;
+	struct ipa_ioc_ipv6_nat_uc_act_entry ipv6_nat;
+};
+
 
 /**
  * struct ipa_ioc_rm_dependency - parameters for add/delete dependency
@@ -2612,6 +2781,7 @@ struct ipa_odl_modem_config {
  * @u.passthrough_cfg.client_mac_addr: client mac for which passthough
  *	is enabled.
  * @u.passthrough_cfg.skip_nat: skip NAT processing.
+ * @default_pdn: bool to indicate the config is for default pdn.
  */
 struct ipa_ioc_pdn_config {
 	char dev_name[IPA_RESOURCE_NAME_MAX];
@@ -2631,6 +2801,7 @@ struct ipa_ioc_pdn_config {
 			uint8_t skip_nat;
 		} passthrough_cfg;
 	} u;
+	uint8_t default_pdn;
 };
 
 /**
@@ -2910,6 +3081,14 @@ struct ipa_ioc_mac_client_list_type {
 #define IPA_IOC_SET_MAC_FLT _IOWR(IPA_IOC_MAGIC, \
 				IPA_IOCTL_SET_MAC_FLT, \
 				struct ipa_ioc_mac_client_list_type)
+
+#define IPA_IOC_ADD_UC_ACT_ENTRY _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_ADD_UC_ACT_ENTRY, \
+				union ipa_ioc_uc_activation_entry)
+
+#define IPA_IOC_DEL_UC_ACT_ENTRY _IOWR(IPA_IOC_MAGIC, \
+				IPA_IOCTL_DEL_UC_ACT_ENTRY, \
+				uint16_t)
 
 /*
  * unique magic number of the Tethering bridge ioctls

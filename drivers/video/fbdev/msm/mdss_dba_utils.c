@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -734,8 +734,7 @@ void *mdss_dba_utils_init(struct mdss_dba_utils_init_data *uid)
 	struct hdmi_edid_init_data edid_init_data;
 	struct mdss_dba_utils_data *udata = NULL;
 	struct msm_dba_reg_info info;
-	struct cec_abstract_init_data cec_abst_init_data;
-	void *cec_abst_data;
+
 	int ret = 0;
 
 	if (!uid) {
@@ -816,18 +815,6 @@ void *mdss_dba_utils_init(struct mdss_dba_utils_init_data *uid)
 	udata->cops.enable   = mdss_dba_utils_cec_enable;
 	udata->cops.data     = udata;
 
-	/* initialize cec abstraction module */
-	cec_abst_init_data.kobj = uid->kobj;
-	cec_abst_init_data.ops  = &udata->cops;
-	cec_abst_init_data.cbs  = &udata->ccbs;
-
-	udata->cec_abst_data = cec_abstract_init(&cec_abst_init_data);
-	if (IS_ERR_OR_NULL(udata->cec_abst_data)) {
-		pr_err("error initializing cec abstract module\n");
-		ret = PTR_ERR(cec_abst_data);
-		goto error;
-	}
-
 	/* get the timing data for the adv chip */
 	if (udata->ops.get_supp_timing_info)
 		udata->timing_data = udata->ops.get_supp_timing_info();
@@ -883,9 +870,6 @@ void mdss_dba_utils_deinit(void *data)
 		pr_err("invalid input\n");
 		return;
 	}
-
-	if (!IS_ERR_OR_NULL(udata->cec_abst_data))
-		cec_abstract_deinit(udata->cec_abst_data);
 
 	if (udata->edid_data)
 		hdmi_edid_deinit(udata->edid_data);

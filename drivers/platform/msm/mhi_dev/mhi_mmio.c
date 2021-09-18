@@ -1,4 +1,4 @@
-/* Copyright (c) 2015,2017-2018,2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2017-2018, 2020-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -610,27 +610,51 @@ EXPORT_SYMBOL(mhi_dev_mmio_reset);
 
 int mhi_dev_restore_mmio(struct mhi_dev *dev)
 {
+	int rc = 0;
 	uint32_t i, reg_cntl_value;
 	void *reg_cntl_addr;
 
 	if (WARN_ON(!dev))
 		return -EINVAL;
 
-	mhi_dev_mmio_mask_interrupts(dev);
+	mhi_dev_mmio_disable_ctrl_interrupt(dev);
+
+	mhi_dev_mmio_disable_cmdb_interrupt(dev);
+
+	mhi_dev_mmio_mask_erdb_interrupts(dev);
 
 	for (i = 0; i < (MHI_DEV_MMIO_RANGE/4); i++) {
-		reg_cntl_addr = dev->mmio_base_addr + (i * 4);
+		reg_cntl_addr = dev->mmio_base_addr +
+				MHI_DEV_MMIO_OFFSET + (i * 4);
 		reg_cntl_value = dev->mmio_backup[i];
 		writel_relaxed(reg_cntl_value, reg_cntl_addr);
 	}
 
 	mhi_dev_mmio_clear_interrupts(dev);
-	mhi_dev_mmio_enable_ctrl_interrupt(dev);
 
-	/*Enable chdb interrupt*/
-	mhi_dev_mmio_enable_chdb_interrupts(dev);
+	for (i = 0; i < MHI_MASK_ROWS_CH_EV_DB; i++) {
+		/* Enable channel interrupt whose mask is enabled */
+		if (dev->chdb[i].mask) {
+			mhi_log(MHI_MSG_VERBOSE,
+				"Enabling id: %d, chdb mask  0x%x\n",
+							i, dev->chdb[i].mask);
+
+			rc = mhi_dev_mmio_write(dev, MHI_CHDB_INT_MASK_A7_n(i),
+							dev->chdb[i].mask);
+			if (rc) {
+				mhi_log(MHI_MSG_VERBOSE,
+					"Error writing enable for A7\n");
+				return rc;
+			}
+		}
+	}
 
 	/* Mask and enable control interrupt */
+	mhi_dev_mmio_enable_ctrl_interrupt(dev);
+
+	/*Enable cmdb interrupt*/
+	mhi_dev_mmio_enable_cmdb_interrupt(dev);
+
 	mb();
 
 	return 0;
@@ -640,13 +664,16 @@ EXPORT_SYMBOL(mhi_dev_restore_mmio);
 int mhi_dev_backup_mmio(struct mhi_dev *dev)
 {
 	uint32_t i = 0;
+	void __iomem *reg_cntl_addr;
 
 	if (WARN_ON(!dev))
 		return -EINVAL;
 
-	for (i = 0; i < MHI_DEV_MMIO_RANGE/4; i++)
-		dev->mmio_backup[i] =
-				readl_relaxed(dev->mmio_base_addr + (i * 4));
+	for (i = 0; i < MHI_DEV_MMIO_RANGE/4; i++) {
+		reg_cntl_addr = (void __iomem *) (dev->mmio_base_addr +
+				MHI_DEV_MMIO_OFFSET + (i * 4));
+		dev->mmio_backup[i] = readl_relaxed(reg_cntl_addr);
+	}
 
 	return 0;
 }

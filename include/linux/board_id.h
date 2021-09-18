@@ -3,6 +3,7 @@
 
 extern void board_id_get_hwname(char *str);
 extern bool board_get_33w_supported(void);
+extern bool board_get_nfc_supported(void);
 extern int board_id_get_hwlevel(void);
 extern int board_id_get_hwversion_product_num(void);
 extern int board_id_get_hwversion_major_num(void);

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export KERNELDIR=`readlink -f .`
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ];
 	then

@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,9 +18,11 @@
 #include "cam_ir_led_core.h"
 
 static struct cam_ir_led_table cam_pmic_ir_led_table;
+static struct cam_ir_led_table cam_gpio_ir_led_table;
 
 static struct cam_ir_led_table *ir_led_table[] = {
 	&cam_pmic_ir_led_table,
+	&cam_gpio_ir_led_table,
 };
 
 static int32_t cam_pmic_ir_led_init(
@@ -131,9 +133,11 @@ static int32_t cam_ir_led_handle_init(
 		return -EINVAL;
 	}
 
-	rc = ictrl->func_tbl->camera_ir_led_init(ictrl);
-	if (rc < 0)
-		CAM_ERR(CAM_IR_LED, "camera_ir_led_init failed (%d)", rc);
+	if (ictrl->func_tbl->camera_ir_led_init != NULL) {
+		rc = ictrl->func_tbl->camera_ir_led_init(ictrl);
+		if (rc < 0)
+			CAM_ERR(CAM_IR_LED, "ir_led init failed (%d)", rc);
+	}
 
 	return rc;
 }
@@ -199,13 +203,16 @@ static int32_t cam_ir_led_config(struct cam_ir_led_ctrl *ictrl,
 
 	switch (csl_packet->header.op_code & 0xFFFFFF) {
 	case CAM_IR_LED_PACKET_OPCODE_ON:
-		rc = ictrl->func_tbl->camera_ir_led_on(
-				ictrl, cam_ir_led_info);
-		if (rc < 0) {
-			CAM_ERR(CAM_IR_LED, "Fail to turn irled ON rc=%d", rc);
-			return rc;
+		if (ictrl->func_tbl->camera_ir_led_on != NULL) {
+			rc = ictrl->func_tbl->camera_ir_led_on(
+					ictrl, cam_ir_led_info);
+			if (rc < 0) {
+				CAM_ERR(CAM_IR_LED,
+					"Fail to turn irled ON rc=%d", rc);
+				return rc;
+			}
+			ictrl->ir_led_state = CAM_IR_LED_STATE_ON;
 		}
-		ictrl->ir_led_state = CAM_IR_LED_STATE_ON;
 		break;
 	case CAM_IR_LED_PACKET_OPCODE_OFF:
 		if (ictrl->ir_led_state != CAM_IR_LED_STATE_ON) {
@@ -214,12 +221,15 @@ static int32_t cam_ir_led_config(struct cam_ir_led_ctrl *ictrl,
 				ictrl->ir_led_state);
 			return 0;
 		}
-		rc = ictrl->func_tbl->camera_ir_led_off(ictrl);
-		if (rc < 0) {
-			CAM_ERR(CAM_IR_LED, "Fail to turn irled OFF rc=%d", rc);
-			return rc;
+		if (ictrl->func_tbl->camera_ir_led_off != NULL) {
+			rc = ictrl->func_tbl->camera_ir_led_off(ictrl);
+			if (rc < 0) {
+				CAM_ERR(CAM_IR_LED,
+					"Fail to turn irled OFF rc=%d", rc);
+				return rc;
+			}
+			ictrl->ir_led_state = CAM_IR_LED_STATE_OFF;
 		}
-		ictrl->ir_led_state = CAM_IR_LED_STATE_OFF;
 		break;
 	case CAM_PKT_NOP_OPCODE:
 		CAM_DBG(CAM_IR_LED, "CAM_PKT_NOP_OPCODE");
@@ -561,6 +571,16 @@ static struct cam_ir_led_table cam_pmic_ir_led_table = {
 		.camera_ir_led_release = &cam_pmic_ir_led_release,
 		.camera_ir_led_off = &cam_pmic_ir_led_off,
 		.camera_ir_led_on = &cam_pmic_ir_led_on,
+	},
+};
+
+static struct cam_ir_led_table cam_gpio_ir_led_table = {
+	.ir_led_driver_type = IR_LED_DRIVER_GPIO,
+	.func_tbl = {
+		.camera_ir_led_init = NULL,
+		.camera_ir_led_release = NULL,
+		.camera_ir_led_off = NULL,
+		.camera_ir_led_on = NULL,
 	},
 };
 

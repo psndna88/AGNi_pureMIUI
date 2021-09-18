@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -184,6 +184,7 @@
 		arm,primecell-periphid = <0x0003b968>;
 		reg = <0x6c47000 0x1000>;
 		reg-names = "tpdm-base";
+		status = "disabled";
 
 		coresight-name = "coresight-tpdm-npu";
 
@@ -203,6 +204,7 @@
 		reg = <0x6c40000 0x1000>;
 		reg-names = "tpdm-base";
 
+		status = "disabled";
 		coresight-name = "coresight-tpdm-npu-llm";
 
 		clocks = <&clock_aop QDSS_CLK>,
@@ -244,6 +246,7 @@
 
 		coresight-name = "coresight-tpdm-npu-dpm";
 
+		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "apb_pclk";
 		port {
@@ -776,6 +779,7 @@
 
 		coresight-name = "coresight-funnel-npu";
 
+		status = "disabled";
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "apb_pclk";
 		ports {
@@ -2012,7 +2016,7 @@
 		reg = <0x6045000 0x1000>;
 		reg-names = "funnel-base";
 
-		coresight-name = "coresight-funnel-merge";
+		coresight-name = "coresight-funnel-merg";
 
 		clocks = <&clock_aop QDSS_CLK>;
 		clock-names = "apb_pclk";

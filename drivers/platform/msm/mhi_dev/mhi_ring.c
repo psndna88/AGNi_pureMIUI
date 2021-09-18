@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -96,10 +96,10 @@ int mhi_dev_cache_ring(struct mhi_dev_ring *ring, size_t wr_offset)
 
 	if (ring->wr_offset == wr_offset) {
 		mhi_log(MHI_MSG_VERBOSE,
-			"nothing to cache for ring %d, local wr_ofst %d\n",
+			"nothing to cache for ring %d, local wr_ofst %lu\n",
 			ring->id, ring->wr_offset);
 		mhi_log(MHI_MSG_VERBOSE,
-			"new wr_offset %d\n", wr_offset);
+			"new wr_offset %lu\n", wr_offset);
 		return 0;
 	}
 
@@ -118,12 +118,12 @@ int mhi_dev_cache_ring(struct mhi_dev_ring *ring, size_t wr_offset)
 		return 0;
 	}
 
-	mhi_log(MHI_MSG_VERBOSE, "caching ring %d, start %d, end %d\n",
+	mhi_log(MHI_MSG_VERBOSE, "caching ring %d, start %lu, end %lu\n",
 			ring->id, old_offset, wr_offset);
 
 	if (mhi_dev_fetch_ring_elements(ring, old_offset, wr_offset)) {
 		mhi_log(MHI_MSG_ERROR,
-		"failed to fetch elements for ring %d, start %d, end %d\n",
+		"failed to fetch elements for ring %d, start %lu, end %lu\n",
 		ring->id, old_offset, wr_offset);
 		return -EINVAL;
 	}
@@ -149,7 +149,7 @@ int mhi_dev_update_wr_offset(struct mhi_dev_ring *ring)
 			return rc;
 		}
 		mhi_log(MHI_MSG_VERBOSE,
-			"ring %d wr_offset from db 0x%x\n",
+			"ring %d wr_offset from db 0x%lx\n",
 			ring->id, (size_t) wr_offset);
 		break;
 	case RING_TYPE_ER:
@@ -166,7 +166,7 @@ int mhi_dev_update_wr_offset(struct mhi_dev_ring *ring)
 			return rc;
 		}
 		mhi_log(MHI_MSG_VERBOSE,
-			"ring %d wr_offset from db 0x%x\n",
+			"ring %d wr_offset from db 0x%lx\n",
 			ring->id, (size_t) wr_offset);
 		break;
 	default:
@@ -195,11 +195,11 @@ int mhi_dev_process_ring_element(struct mhi_dev_ring *ring, size_t offset)
 	el = &ring->ring_cache[offset];
 
 	mhi_log(MHI_MSG_VERBOSE, "evnt ptr : 0x%llx\n", el->tre.data_buf_ptr);
-	mhi_log(MHI_MSG_VERBOSE, "evnt len : 0x%x, offset:%d\n",
+	mhi_log(MHI_MSG_VERBOSE, "evnt len : 0x%x, offset:%lu\n",
 						el->tre.len, offset);
 
 	if (ring->ring_cb)
-		ring->ring_cb(ring->mhi_dev, el, (void *)ring);
+		return ring->ring_cb(ring->mhi_dev, el, (void *)ring);
 	else
 		mhi_log(MHI_MSG_ERROR, "No callback registered for ring %d\n",
 				ring->id);
@@ -217,7 +217,7 @@ int mhi_dev_process_ring(struct mhi_dev_ring *ring)
 		return -EINVAL;
 
 	mhi_log(MHI_MSG_VERBOSE,
-			"Before wr update ring_id (%d) element (%d) with wr:%d\n",
+			"Before wr update ring_id (%d) element (%lu) with wr:%lu\n",
 			ring->id, ring->rd_offset, ring->wr_offset);
 
 	rc = mhi_dev_update_wr_offset(ring);
@@ -232,7 +232,7 @@ int mhi_dev_process_ring(struct mhi_dev_ring *ring)
 	el = &ring->ring_cache[ring->wr_offset];
 
 	mhi_log(MHI_MSG_VERBOSE, "evnt ptr : 0x%llx\n", el->tre.data_buf_ptr);
-	mhi_log(MHI_MSG_VERBOSE, "evnt len : 0x%x, wr_offset:%d\n",
+	mhi_log(MHI_MSG_VERBOSE, "evnt len : 0x%x, wr_offset:%lu\n",
 						el->tre.len, ring->wr_offset);
 
 	if (ring->type == RING_TYPE_CH) {
@@ -243,20 +243,20 @@ int mhi_dev_process_ring(struct mhi_dev_ring *ring)
 		return rc;
 	}
 	mhi_log(MHI_MSG_VERBOSE,
-			"After ring update ring_id (%d) element (%d) with wr:%d\n",
+			"After ring update ring_id (%d) element (%lu) with wr:%lu\n",
 			ring->id, ring->rd_offset, ring->wr_offset);
 
 	while (ring->rd_offset != ring->wr_offset) {
 		rc = mhi_dev_process_ring_element(ring, ring->rd_offset);
 		if (rc) {
 			mhi_log(MHI_MSG_ERROR,
-				"Error processing ring (%d) element (%d)\n",
+				"Error processing ring (%d) element (%lu)\n",
 				ring->id, ring->rd_offset);
 			return rc;
 		}
 
 		mhi_log(MHI_MSG_VERBOSE,
-			"Processing ring (%d) rd_offset:%d, wr_offset:%d\n",
+			"Processing ring (%d) rd_offset:%lu, wr_offset:%lu\n",
 			ring->id, ring->rd_offset, ring->wr_offset);
 
 		mhi_dev_ring_inc_index(ring, ring->rd_offset);
@@ -339,7 +339,7 @@ int mhi_dev_add_element(struct mhi_dev_ring *ring,
 
 		mhi_log(MHI_MSG_VERBOSE, "adding element to ring (%d)\n",
 					ring->id);
-		mhi_log(MHI_MSG_VERBOSE, "rd_ofset %d\n", ring->rd_offset);
+		mhi_log(MHI_MSG_VERBOSE, "rd_ofset %lu\n", ring->rd_offset);
 		mhi_log(MHI_MSG_VERBOSE, "type %d\n", element->generic.type);
 
 		mhi_ctx->write_to_host(ring->mhi_dev, &host_addr,
@@ -416,33 +416,43 @@ int mhi_ring_start(struct mhi_dev_ring *ring, union mhi_dev_ring_ctx *ctx,
 	wr_offset = mhi_dev_ring_addr2ofst(ring,
 					ring->ring_ctx->generic.wp);
 
-	ring->ring_cache = dma_alloc_coherent(mhi->dev,
-			ring->ring_size *
-			sizeof(union mhi_dev_ring_element_type),
-			&ring->ring_cache_dma_handle,
-			GFP_KERNEL);
-	if (!ring->ring_cache)
-		return -ENOMEM;
+	if (!ring->ring_cache) {
+		ring->ring_cache = dma_alloc_coherent(mhi->dev,
+				ring->ring_size *
+				sizeof(union mhi_dev_ring_element_type),
+				&ring->ring_cache_dma_handle,
+				GFP_KERNEL);
+		if (!ring->ring_cache) {
+			mhi_log(MHI_MSG_ERROR,
+				"Failed to allocate ring cache\n");
+			return -ENOMEM;
+		}
+	}
 
 	if (ring->type == RING_TYPE_ER) {
-		ring->evt_rp_cache = dma_alloc_coherent(mhi->dev,
-			sizeof(uint64_t) * ring->ring_size,
-			&ring->evt_rp_cache_dma_handle,
-			GFP_KERNEL);
 		if (!ring->evt_rp_cache) {
-			mhi_log(MHI_MSG_ERROR,
-				"Failed to allocate evt rp cache\n");
-			rc = -ENOMEM;
-			goto cleanup;
+			ring->evt_rp_cache = dma_alloc_coherent(mhi->dev,
+				sizeof(uint64_t) * ring->ring_size,
+				&ring->evt_rp_cache_dma_handle,
+				GFP_KERNEL);
+			if (!ring->evt_rp_cache) {
+				mhi_log(MHI_MSG_ERROR,
+					"Failed to allocate evt rp cache\n");
+				rc = -ENOMEM;
+				goto cleanup;
+			}
 		}
-		ring->msi_buf = dma_alloc_coherent(mhi->dev,
-			sizeof(uint32_t),
-			&ring->msi_buf_dma_handle,
-			GFP_KERNEL);
 		if (!ring->msi_buf) {
-			mhi_log(MHI_MSG_ERROR, "Failed to allocate msi buf\n");
-			rc = -ENOMEM;
-			goto cleanup;
+			ring->msi_buf = dma_alloc_coherent(mhi->dev,
+				sizeof(uint32_t),
+				&ring->msi_buf_dma_handle,
+				GFP_KERNEL);
+			if (!ring->msi_buf) {
+				mhi_log(MHI_MSG_ERROR,
+					"Failed to allocate msi buf\n");
+				rc = -ENOMEM;
+				goto cleanup;
+			}
 		}
 	}
 
@@ -474,7 +484,7 @@ int mhi_ring_start(struct mhi_dev_ring *ring, union mhi_dev_ring_ctx *ctx,
 			return rc;
 	}
 
-	mhi_log(MHI_MSG_VERBOSE, "ctx ring_base:0x%x, rp:0x%x, wp:0x%x\n",
+	mhi_log(MHI_MSG_VERBOSE, "ctx ring_base:0x%lx, rp:0x%lx, wp:0x%lx\n",
 			(size_t)ring->ring_ctx->generic.rbase,
 			(size_t)ring->ring_ctx->generic.rp,
 			(size_t)ring->ring_ctx->generic.wp);
@@ -488,11 +498,13 @@ cleanup:
 		sizeof(union mhi_dev_ring_element_type),
 		ring->ring_cache,
 		ring->ring_cache_dma_handle);
+	ring->ring_cache = NULL;
 	if (ring->evt_rp_cache) {
 		dma_free_coherent(mhi->dev,
 			sizeof(uint64_t) * ring->ring_size,
 			ring->evt_rp_cache,
 			ring->evt_rp_cache_dma_handle);
+		ring->evt_rp_cache = NULL;
 	}
 	return rc;
 }
@@ -513,7 +525,7 @@ void mhi_ring_init(struct mhi_dev_ring *ring, enum mhi_dev_ring_type type,
 EXPORT_SYMBOL(mhi_ring_init);
 
 void mhi_ring_set_cb(struct mhi_dev_ring *ring,
-			void (*ring_cb)(struct mhi_dev *dev,
+			int (*ring_cb)(struct mhi_dev *dev,
 			union mhi_dev_ring_element_type *el, void *ctx))
 {
 	if (WARN_ON(!ring || !ring_cb))

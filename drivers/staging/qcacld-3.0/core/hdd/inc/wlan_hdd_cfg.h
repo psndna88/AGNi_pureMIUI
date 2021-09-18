@@ -952,7 +952,7 @@ enum hdd_dot11_mode {
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH      "drop_bcn_on_chan_mismatch"
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MIN       (0)
 #define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_MAX       (1)
-#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (1)
+#define CFG_DROP_BCN_ON_CHANNEL_MISMATCH_DEFAULT   (0)
 
 /*
  * <ini>
@@ -2317,6 +2317,34 @@ enum hdd_dot11_mode {
 
 /*
  * <ini>
+ * roam_data_rssi_threshold_triggers - Triggers of data rssi threshold for roam
+ * @Min: 0
+ * @Max: 0xffff
+ * @Default: 0
+ *
+ * If the DUT is connected to an AP with weak signal, during latest
+ * rx_data_inactivity_time, if there is no activity or avg of data_rssi is
+ * better than roam_data_rssi_threshold(-70dbM), then suppress roaming
+ * triggered by roam_data_rssi_threshold_triggers: low RSSI or bg scan.
+ * Triggers bitmap definition:
+ * ROAM_DATA_RSSI_FLAG_LOW_RSSI   1<<0
+ * ROAM_DATA_RSSI_FLAG_BACKGROUND 1<<1
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_NAME  "roam_data_rssi_threshold_triggers"
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_MIN     (0)
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_MAX     (0xffff)
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_TRIGGERS_DEFAULT (0x3)
+
+/*
+ * <ini>
  * roam_bg_scan_client_bitmap - Bitmap used to identify the scan clients
  * @Min: 0
  * @Max: 0x3FF
@@ -2349,6 +2377,56 @@ enum hdd_dot11_mode {
 #define CFG_ROAM_BG_SCAN_CLIENT_BITMAP_MIN      (0)
 #define CFG_ROAM_BG_SCAN_CLIENT_BITMAP_MAX      (0x7FF)
 #define CFG_ROAM_BG_SCAN_CLIENT_BITMAP_DEFAULT  (0x424)
+
+/*
+ * <ini>
+ * roam_bg_scan_bad_rssi_thresh - Data RSSI threshold for background roam
+ * @Min: -96
+ * @Max: 0
+ * @Default: -70
+ *
+ * If the DUT is connected to an AP with weak signal, during latest
+ * rx_data_inactivity_time, if there is no activity or avg of data_rssi is
+ * better than roam_data_rssi_threshold(-70dbM), then suppress roaming
+ * triggered by roam_data_rssi_threshold_triggers: low RSSI or bg scan.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_NAME  "roam_data_rssi_threshold"
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_MIN     (-96)
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_MAX     (0)
+#define CFG_ROAM_DATA_RSSI_THRESHOLD_DEFAULT (-70)
+
+/*
+ * <ini>
+ * rx_data_inactivity_time - Duration to check rx data rssi
+ * @Min: 0
+ * @Max: 100000 ms
+ * @Default: 0
+ *
+ * If the DUT is connected to an AP with weak signal, during latest
+ * rx_data_inactivity_time, if there is no activity or avg of data_rssi is
+ * better than roam_data_rssi_threshold(-70dbM), then suppress roaming
+ * triggered by roam_data_rssi_threshold_triggers: low RSSI or bg scan.
+ *
+ * Related: None
+ *
+ * Supported Feature: Roaming
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_RX_DATA_INACTIVITY_TIME_NAME  "rx_data_inactivity_time"
+#define CFG_RX_DATA_INACTIVITY_TIME_MIN     (0)
+#define CFG_RX_DATA_INACTIVITY_TIME_MAX     (100000)
+#define CFG_RX_DATA_INACTIVITY_TIME_DEFAULT (2000)
 
 /*
  * <ini>
@@ -4934,10 +5012,10 @@ enum station_keepalive_method {
  *
  * </ini>
  */
-#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterMode"
+#define CFG_HW_FILTER_MODE_BITMAP_NAME	"gHwFilterModeBLOCK"
 #define CFG_HW_FILTER_MODE_BITMAP_MIN		(0)
 #define CFG_HW_FILTER_MODE_BITMAP_MAX		(3)
-#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(1)
+#define CFG_HW_FILTER_MODE_BITMAP_DEFAULT	(3)
 
 /*
  * <ini>
@@ -5500,10 +5578,10 @@ enum hdd_link_speed_rpt_type {
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_MAX        (1)
 #define CFG_ENABLE_DFS_PHYERR_FILTEROFFLOAD_DEFAULT    (0)
 
-#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeed"
+#define CFG_REPORT_MAX_LINK_SPEED                  "gReportMaxLinkSpeedBLOCK"
 #define CFG_REPORT_MAX_LINK_SPEED_MIN              (eHDD_LINK_SPEED_REPORT_ACTUAL)
 #define CFG_REPORT_MAX_LINK_SPEED_MAX              (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
-#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_ACTUAL)
+#define CFG_REPORT_MAX_LINK_SPEED_DEFAULT          (eHDD_LINK_SPEED_REPORT_MAX_SCALED)
 
 /*
  * <ini>
@@ -8978,10 +9056,10 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_TSO_ENABLED_NAME           "TSOEnable"
+#define CFG_TSO_ENABLED_NAME           "TSOEnableBLOCK"
 #define CFG_TSO_ENABLED_MIN            (0)
 #define CFG_TSO_ENABLED_MAX            (1)
-#define CFG_TSO_ENABLED_DEFAULT        (0)
+#define CFG_TSO_ENABLED_DEFAULT        (1)
 
 /*
  * <ini>
@@ -8999,7 +9077,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_LRO_ENABLED_NAME           "LROEnable"
+#define CFG_LRO_ENABLED_NAME           "LROEnableBLOCK"
 #define CFG_LRO_ENABLED_MIN            (0)
 #define CFG_LRO_ENABLED_MAX            (1)
 #define CFG_LRO_ENABLED_DEFAULT        (0)
@@ -9020,7 +9098,7 @@ enum hdd_link_speed_rpt_type {
  *
  * </ini>
  */
-#define CFG_GRO_ENABLED_NAME           "GROEnable"
+#define CFG_GRO_ENABLED_NAME           "GROEnableBLOCK"
 #define CFG_GRO_ENABLED_MIN            (0)
 #define CFG_GRO_ENABLED_MAX            (1)
 #define CFG_GRO_ENABLED_DEFAULT        (0)
@@ -9630,11 +9708,17 @@ enum dot11p_mode {
  * etsi13_srd_chan_in_master_mode - Enable/disable ETSI SRD channels in
  * master mode PCL and ACS functionality
  * @Min: 0
- * @Max: 1
- * @Default: 0
+ * @Max: 0xFF
+ * @Default: 6
  *
- * etsi13_srd_chan_in_master_mode is to enable/disable ETSI SRD channels in
+ * etsi_srd_chan_in_master_mode is to enable/disable ETSI SRD channels in
  * master mode PCL and ACS functionality
+ * Bit map for enabling the SRD mode in various modes are as follows:-
+ * BIT 0:- Enable/Disable SRD channels for SAP.
+ * BIT 1:- Enable/Disable SRD channels for P2P-GO.
+ * BIT 2:- Enable/Disable SRD channels for NAN.
+ * Rest of the bits are currently reserved for future SRD channel support for
+ * other vdevs.
  *
  * Related: None
  *
@@ -9644,10 +9728,34 @@ enum dot11p_mode {
  *
  * </ini>
  */
+
 #define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE    "etsi13_srd_chan_in_master_mode"
-#define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_DEF (0)
+#define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_DEF (6)
 #define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_MIN (0)
-#define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_MAX (1)
+#define CFG_ETSI13_SRD_CHAN_IN_MASTER_MODE_MAX (0xFF)
+
+/*
+ * <ini>
+ * enable_nan_indoor_channel - Enable Indoor channels for NAN
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to support to indoor channels for NAN interface
+ * Customer can config this item to enable/disable NAN in indoor channel
+ *
+ * Related: None
+ *
+ * Supported Feature: NAN
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN    "enable_nan_indoor_channel"
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_DEF (0)
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MIN (0)
+#define CFG_INDOOR_CHANNEL_SUPPORT_FOR_NAN_MAX (1)
 
 /*
  * <ini>
@@ -11430,30 +11538,6 @@ enum dot11p_mode {
 #define CFG_CRASH_FW_TIMEOUT_DISABLE    (0)
 #define CFG_CRASH_FW_TIMEOUT_ENABLE     (1)
 #define CFG_CRASH_FW_TIMEOUT_DEFAULT    (1)
-
-/*
- * <ini>
- * rx_wakelock_timeout - Amount of time to hold wakelock for RX unicast packets
- * @Min: 0
- * @Max: 100
- * @Default: 50
- *
- * This ini item configures the amount of time, in milliseconds, that the driver
- * should prevent system power collapse after receiving an RX unicast packet.
- * A conigured value of 0 disables the RX Wakelock feature completely.
- *
- * Related: None.
- *
- * Supported Feature: RX Wakelock
- *
- * Usage: Internal/External
- *
- * </ini>
- */
-#define CFG_RX_WAKELOCK_TIMEOUT_NAME     "rx_wakelock_timeout"
-#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (0)
-#define CFG_RX_WAKELOCK_TIMEOUT_MIN      (0)
-#define CFG_RX_WAKELOCK_TIMEOUT_MAX      (100)
 
 /*
  * <ini>
@@ -13806,7 +13890,7 @@ enum hdd_external_acs_policy {
  * </ini>
  */
 
-#define CFG_IS_SAE_ENABLED_NAME    "sae_enabled"
+#define CFG_IS_SAE_ENABLED_NAME    "sae_enabledBLOCK"
 #define CFG_IS_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAE_ENABLED_MAX     (1)
@@ -13834,6 +13918,51 @@ enum hdd_external_acs_policy {
 #define CFG_IS_SAP_SAE_ENABLED_DEFAULT (1)
 #define CFG_IS_SAP_SAE_ENABLED_MIN     (0)
 #define CFG_IS_SAP_SAE_ENABLED_MAX     (1)
+
+/*
+ * <ini>
+ * sae_connect_retries - Bit mask to retry Auth and full connection on assoc
+ * timeout to same AP and auth retries during roaming
+ * @Min: 0x0
+ * @Max: 0x53
+ * @Default: 0x52
+ *
+ * This ini is used to set max auth retry in auth phase of roaming and initial
+ * connection and max connection retry in case of assoc timeout. MAX Auth
+ * retries are capped to 3, connection retries are capped to 2 and roam Auth
+ * retry is capped to 1.
+ * Default is 0x52 i.e. 1 roam auth retry, 2 auth retry and 2 full connection
+ * retry.
+ *
+ * Bits       Retry Type
+ * BIT[0:2]   AUTH retries
+ * BIT[3:5]   Connection reties
+ * BIT[6:8]   ROAM AUTH retries
+ *
+ * Some Possible values are as below
+ * 0          - NO auth/roam Auth retry and NO full connection retry after
+ *              assoc timeout
+ * 0x49       - 1 auth/roam auth retry and 1 full connection retry
+ * 0x52       - 1 roam auth retry, 2 auth retry and 2 full connection retry
+ * 0x1 /0x2   - 0 roam auth retry, 1 or 2 auth retry respectively and NO full
+ *              connection retry
+ * 0x8 /0x10  - 0 roam auth retry,NO auth retry and 1 or 2 full connection retry
+ *              respectively.
+ * 0x4A       - 1 roam auth retry,2 auth retry and 1 full connection retry
+ * 0x51       - 1 auth/roam auth retry and 2 full connection retry
+ *
+ * Related: None
+ *
+ * Supported Feature: STA SAE
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_SAE_CONNECION_RETRIES		"sae_connect_retries"
+#define CFG_SAE_CONNECION_RETRIES_MIN		(0x0)
+#define CFG_SAE_CONNECION_RETRIES_MAX		(0x53)
+#define CFG_SAE_CONNECION_RETRIES_DEFAULT	(0x52)
 
 /*
  * Type declarations
@@ -17611,11 +17740,16 @@ enum hdd_external_acs_policy {
  * <ini>
  * disable_4way_hs_offload - Enable/Disable 4 way handshake offload to firmware
  * @Min: 0
- * @Max: 1
- * @Default: 0
+ * @Max: 0x2
+ * @Default: 0x2
  *
- * 0  4-way HS to be handled in firmware
- * 1  4-way HS to be handled in supplicant
+ * 0x0 - 4-way HS to be handled in firmware for the AKMs except for SAE and
+ * OWE roaming the 4way HS is handled in supplicant by default
+ * 0x1 - 4-way HS to be handled in supplicant
+ * 0x2 - 4-way HS to be handled in firmware for the AKMs including the SAE
+ * Roam except for OWE roaming the 4way HS is handled in supplicant
+ *
+ * Based on the requirement the Max value can be increased per AKM.
  *
  * Related: None
  *
@@ -17625,10 +17759,10 @@ enum hdd_external_acs_policy {
  *
  * </ini>
  */
-#define CFG_DISABLE_4WAY_HS_OFFLOAD           "disable_4way_hs_offload"
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN       (0)
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX       (1)
-#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT   (0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD         "disable_4way_hs_offload"
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MIN     (0x0)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_MAX     (0x2)
+#define CFG_DISABLE_4WAY_HS_OFFLOAD_DEFAULT (0x2)
 
 /*
  * <ini>
@@ -18440,7 +18574,7 @@ struct hdd_config {
 	bool fastpath_enable;
 #endif
 	uint8_t dot11p_mode;
-	bool etsi13_srd_chan_in_master_mode;
+	uint8_t etsi13_srd_chan_in_master_mode;
 	uint8_t rx_mode;
 	uint32_t ce_service_max_yield_time;
 	uint8_t ce_service_max_rx_ind_flush;
@@ -18499,6 +18633,9 @@ struct hdd_config {
 	uint32_t roam_dense_min_aps;
 	int8_t roam_bg_scan_bad_rssi_thresh;
 	uint8_t roam_bad_rssi_thresh_offset_2g;
+	uint32_t roam_data_rssi_threshold_triggers;
+	int32_t roam_data_rssi_threshold;
+	uint32_t rx_data_inactivity_time;
 	uint32_t ho_delay_for_rx;
 	uint32_t min_delay_btw_roam_scans;
 	uint32_t roam_trigger_reason_bitmask;
@@ -18587,7 +18724,6 @@ struct hdd_config {
 	/* beacon count before channel switch */
 	uint8_t sap_chanswitch_beacon_cnt;
 	uint8_t sap_chanswitch_mode;
-	uint32_t rx_wakelock_timeout;
 	uint32_t max_sched_scan_plan_interval;
 	uint32_t max_sched_scan_plan_iterations;
 #ifdef WLAN_FEATURE_WOW_PULSE
@@ -18748,6 +18884,7 @@ struct hdd_config {
 #ifdef WLAN_FEATURE_SAE
 	bool is_sae_enabled;
 	bool sap_sae_enabled;
+	uint32_t sae_connect_retries;
 #endif
 	uint32_t btm_solicited_timeout;
 	uint32_t btm_max_attempt_cnt;
@@ -18880,7 +19017,7 @@ struct hdd_config {
 	uint32_t mws_coex_scc_channel_avoid_delay;
 	uint32_t mws_coex_pcc_channel_avoid_delay;
 
-	bool disable_4way_hs_offload;
+	uint32_t disable_4way_hs_offload;
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	bool time_sync_ftm_enable;
 	bool time_sync_ftm_mode;
@@ -18895,6 +19032,8 @@ struct hdd_config {
 	uint32_t periodic_stats_timer_duration;
 #endif /* WLAN_FEATURE_PERIODIC_STA_STATS */
 	uint8_t dfs_chan_ageout_time;
+
+	bool enable_nan_indoor_channel;
 };
 
 #define VAR_OFFSET(_Struct, _Var) (offsetof(_Struct, _Var))

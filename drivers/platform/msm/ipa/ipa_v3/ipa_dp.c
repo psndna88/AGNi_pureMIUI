@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2795,8 +2795,8 @@ begin:
 							status.endp_src_idx,
 							status.endp_dest_idx,
 							status.pkt_len);
-						/* Unexpected HW status */
-						BUG();
+						sys->drop_packet = true;
+						dev_kfree_skb_any(skb2);
 					} else {
 						skb2->truesize = skb2->len +
 						sizeof(struct sk_buff) +
@@ -2825,6 +2825,8 @@ begin:
 			/* TX comp */
 			ipa3_wq_write_done_status(src_pipe, tx_pkt);
 			IPADBG_LOW("tx comp imp for %d\n", src_pipe);
+			if (sys->drop_packet)
+				IPA_STATS_INC_CNT(ipa3_ctx->stats.rx_drop_pkts);
 		} else {
 			/* TX comp */
 			ipa3_wq_write_done_status(status.endp_src_idx, tx_pkt);
@@ -3754,8 +3756,9 @@ static int ipa3_assign_policy(struct ipa_sys_connect_params *in,
 			 * Dont enable ipa_status for APQ, since MDM IPA
 			 * has IPA >= 4.5 with DPLv3.
 			 */
-			if (ipa3_ctx->platform_type == IPA_PLAT_TYPE_APQ &&
-				ipa3_is_mhip_offload_enabled())
+			if ((ipa3_ctx->platform_type == IPA_PLAT_TYPE_APQ &&
+				ipa3_is_mhip_offload_enabled()) ||
+				(ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5))
 				sys->ep->status.status_en = false;
 			else
 				sys->ep->status.status_en = true;

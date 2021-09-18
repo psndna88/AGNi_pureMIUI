@@ -31,7 +31,6 @@
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
 #include <linux/sched/topology.h>
-#include <linux/sched/sysctl.h>
 
 #include <trace/events/power.h>
 
@@ -343,7 +342,9 @@ static void __cpufreq_notify_transition(struct cpufreq_policy *policy,
 			 (unsigned long)freqs->new, (unsigned long)freqs->cpu);
 		trace_cpu_frequency(freqs->new, freqs->cpu);
 		cpufreq_stats_record_transition(policy, freqs->new);
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_record_transition(policy, freqs->new);
+#endif
 		srcu_notifier_call_chain(&cpufreq_transition_notifier_list,
 				CPUFREQ_POSTCHANGE, freqs);
 		if (likely(policy) && likely(policy->cpu == freqs->cpu))
@@ -658,39 +659,10 @@ static ssize_t show_##file_name				\
 }
 
 show_one(cpuinfo_min_freq, cpuinfo.min_freq);
+show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
 show_one(scaling_max_freq, max);
-
-unsigned int cpuinfo_max_freq_cached;
-
-static bool should_use_cached_freq(int cpu)
-{
-	/* This is a safe check. may not be needed */
-	if (!cpuinfo_max_freq_cached)
-		return false;
-
-	/*
-	 * perfd already configure sched_lib_mask_force to
-	 * 0xf0 from user space. so re-using it.
-	 */
-	if (!(BIT(cpu) & sched_lib_mask_force))
-		return false;
-
-	return is_sched_lib_based_app(current->pid);
-}
-
-static ssize_t show_cpuinfo_max_freq(struct cpufreq_policy *policy, char *buf)
-{
-	unsigned int freq = policy->cpuinfo.max_freq;
-
-	if (should_use_cached_freq(policy->cpu))
-		freq = cpuinfo_max_freq_cached << 1;
-	else
-		freq = policy->cpuinfo.max_freq;
-
-	return scnprintf(buf, PAGE_SIZE, "%u\n", freq);
-}
 
 __weak unsigned int arch_freq_get_on_cpu(int cpu)
 {
@@ -1139,6 +1111,7 @@ static struct cpufreq_policy *cpufreq_policy_alloc(unsigned int cpu)
 				   cpufreq_global_kobject, "policy%u", cpu);
 	if (ret) {
 		pr_err("%s: failed to init policy->kobj: %d\n", __func__, ret);
+		kobject_put(&policy->kobj);
 		goto err_free_real_cpus;
 	}
 
@@ -1327,12 +1300,17 @@ static int cpufreq_online(unsigned int cpu)
 			goto out_exit_policy;
 
 		cpufreq_stats_create_table(policy);
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_create_policy(policy);
+#endif
 
 		write_lock_irqsave(&cpufreq_driver_lock, flags);
 		list_add(&policy->policy_list, &cpufreq_policy_list);
 		write_unlock_irqrestore(&cpufreq_driver_lock, flags);
 	}
+
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+				     CPUFREQ_START, policy);
 
 	ret = cpufreq_init_policy(policy);
 	if (ret) {
@@ -1452,6 +1430,9 @@ static int cpufreq_offline(unsigned int cpu)
 		cpufreq_driver->exit(policy);
 		policy->freq_table = NULL;
 	}
+
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+			CPUFREQ_STOP, policy);
 
 unlock:
 	up_write(&policy->rwsem);
@@ -1896,7 +1877,9 @@ unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
 
         ret = cpufreq_driver->fast_switch(policy, target_freq);
 	if (ret) {
+#ifdef CONFIG_CPU_FREQ_TIMES
 		cpufreq_times_record_transition(policy, ret);
+#endif
 		cpufreq_stats_record_transition(policy, ret);
 	}
 
@@ -2530,6 +2513,13 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	if (cpufreq_disabled())
 		return -ENODEV;
 
+	/*
+	 * The cpufreq core depends heavily on the availability of device
+	 * structure, make sure they are available before proceeding further.
+	 */
+	if (!get_cpu_device(0))
+		return -EPROBE_DEFER;
+
 	if (!driver_data || !driver_data->verify || !driver_data->init ||
 	    !(driver_data->setpolicy || driver_data->target_index ||
 		    driver_data->target) ||
@@ -2634,14 +2624,6 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 }
 EXPORT_SYMBOL_GPL(cpufreq_unregister_driver);
 
-/*
- * Stop cpufreq at shutdown to make sure it isn't holding any locks
- * or mutexes when secondary CPUs are halted.
- */
-static struct syscore_ops cpufreq_syscore_ops = {
-	.shutdown = cpufreq_suspend,
-};
-
 struct kobject *cpufreq_global_kobject;
 EXPORT_SYMBOL(cpufreq_global_kobject);
 
@@ -2652,8 +2634,6 @@ static int __init cpufreq_core_init(void)
 
 	cpufreq_global_kobject = kobject_create_and_add("cpufreq", &cpu_subsys.dev_root->kobj);
 	BUG_ON(!cpufreq_global_kobject);
-
-	register_syscore_ops(&cpufreq_syscore_ops);
 
 	return 0;
 }

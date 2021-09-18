@@ -124,36 +124,6 @@ struct dma_fence *sync_file_get_fence(int fd)
 }
 EXPORT_SYMBOL(sync_file_get_fence);
 
-/**
- * sync_file_get_name - get the name of the sync_file
- * @sync_file:		sync_file to get the fence from
- * @buf:		destination buffer to copy sync_file name into
- * @len:		available size of destination buffer.
- *
- * Each sync_file may have a name assigned either by the user (when merging
- * sync_files together) or created from the fence it contains. In the latter
- * case construction of the name is deferred until use, and so requires
- * sync_file_get_name().
- *
- * Returns: a string representing the name.
- */
-char *sync_file_get_name(struct sync_file *sync_file, char *buf, int len)
-{
-	if (sync_file->user_name[0]) {
-		strlcpy(buf, sync_file->user_name, len);
-	} else {
-		struct dma_fence *fence = sync_file->fence;
-
-		snprintf(buf, len, "%s-%s%llu-%d",
-			 fence->ops->get_driver_name(fence),
-			 fence->ops->get_timeline_name(fence),
-			 fence->context,
-			 fence->seqno);
-	}
-
-	return buf;
-}
-
 static int sync_file_set_fence(struct sync_file *sync_file,
 			       struct dma_fence **fences, int num_fences)
 {
@@ -216,12 +186,12 @@ static void add_fence(struct dma_fence **fences,
  * @a and @b.  @a and @b remain valid, independent sync_file. Returns the
  * new merged sync_file or NULL in case of error.
  */
-static struct sync_file *sync_file_merge(const char *name, struct sync_file *a,
+static struct sync_file *sync_file_merge(struct sync_file *a,
 					 struct sync_file *b)
 {
 	struct sync_file *sync_file;
-	struct dma_fence **fences, **nfences, **a_fences, **b_fences;
-	int i, i_a, i_b, num_fences, a_num_fences, b_num_fences;
+	struct dma_fence **fences = NULL, **nfences, **a_fences, **b_fences;
+	int i = 0, i_a, i_b, num_fences, a_num_fences, b_num_fences;
 
 	sync_file = sync_file_alloc();
 	if (!sync_file)
@@ -230,7 +200,7 @@ static struct sync_file *sync_file_merge(const char *name, struct sync_file *a,
 	a_fences = get_fences(a, &a_num_fences);
 	b_fences = get_fences(b, &b_num_fences);
 	if (a_num_fences > INT_MAX - b_num_fences)
-		return NULL;
+		goto err;
 
 	num_fences = a_num_fences + b_num_fences;
 
@@ -245,7 +215,7 @@ static struct sync_file *sync_file_merge(const char *name, struct sync_file *a,
 	 * If a sync_file can only be created with sync_file_merge
 	 * and sync_file_create, this is a reasonable assumption.
 	 */
-	for (i = i_a = i_b = 0; i_a < a_num_fences && i_b < b_num_fences; ) {
+	for (i_a = i_b = 0; i_a < a_num_fences && i_b < b_num_fences; ) {
 		struct dma_fence *pt_a = a_fences[i_a];
 		struct dma_fence *pt_b = b_fences[i_b];
 
@@ -286,15 +256,15 @@ static struct sync_file *sync_file_merge(const char *name, struct sync_file *a,
 		fences = nfences;
 	}
 
-	if (sync_file_set_fence(sync_file, fences, i) < 0) {
-		kfree(fences);
+	if (sync_file_set_fence(sync_file, fences, i) < 0)
 		goto err;
-	}
 
-	strlcpy(sync_file->user_name, name, sizeof(sync_file->user_name));
 	return sync_file;
 
 err:
+	while (i)
+		dma_fence_put(fences[--i]);
+	kfree(fences);
 	fput(sync_file->file);
 	return NULL;
 
@@ -335,11 +305,14 @@ static long sync_file_ioctl_merge(struct sync_file *sync_file,
 	int err;
 	struct sync_file *fence2, *fence3;
 	struct sync_merge_data data;
+	size_t len;
 
 	if (fd < 0)
 		return fd;
 
-	if (copy_from_user(&data, (void __user *)arg, sizeof(data))) {
+	arg += offsetof(typeof(data), fd2);
+	len = sizeof(data) - offsetof(typeof(data), fd2);
+	if (copy_from_user(&data.fd2, (void __user *)arg, len)) {
 		err = -EFAULT;
 		goto err_put_fd;
 	}
@@ -355,15 +328,14 @@ static long sync_file_ioctl_merge(struct sync_file *sync_file,
 		goto err_put_fd;
 	}
 
-	data.name[sizeof(data.name) - 1] = '\0';
-	fence3 = sync_file_merge(data.name, sync_file, fence2);
+	fence3 = sync_file_merge(sync_file, fence2);
 	if (!fence3) {
 		err = -ENOMEM;
 		goto err_put_fence2;
 	}
 
 	data.fence = fd;
-	if (copy_to_user((void __user *)arg, &data, sizeof(data))) {
+	if (copy_to_user((void __user *)arg, &data.fd2, len)) {
 		err = -EFAULT;
 		goto err_put_fence3;
 	}
@@ -386,11 +358,6 @@ err_put_fd:
 static int sync_fill_fence_info(struct dma_fence *fence,
 				 struct sync_fence_info *info)
 {
-	strlcpy(info->obj_name, fence->ops->get_timeline_name(fence),
-		sizeof(info->obj_name));
-	strlcpy(info->driver_name, fence->ops->get_driver_name(fence),
-		sizeof(info->driver_name));
-
 	info->status = dma_fence_get_status(fence);
 	while (test_bit(DMA_FENCE_FLAG_SIGNALED_BIT, &fence->flags) &&
 	       !test_bit(DMA_FENCE_FLAG_TIMESTAMP_BIT, &fence->flags))
@@ -407,11 +374,13 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 				       unsigned long arg)
 {
 	struct sync_file_info info;
-	struct sync_fence_info fence_info;
 	struct dma_fence **fences;
+	size_t len, offset;
 	int num_fences, i;
 
-	if (copy_from_user(&info, (void __user *)arg, sizeof(info)))
+	arg += offsetof(typeof(info), status);
+	len = sizeof(info) - offsetof(typeof(info), status);
+	if (copy_from_user(&info.status, (void __user *)arg, len))
 		return -EFAULT;
 
 	if (info.flags || info.pad)
@@ -435,23 +404,29 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 	if (info.num_fences < num_fences)
 		return -EINVAL;
 
-	memset(&fence_info, 0, sizeof(fence_info));
-
+	offset = offsetof(struct sync_fence_info, status);
 	for (i = 0; i < num_fences; i++) {
-		int status = sync_fill_fence_info(fences[i], &fence_info);
-		info.status = info.status <= 0 ? info.status : status;
+		struct {
+			__s32	status;
+			__u32	flags;
+			__u64	timestamp_ns;
+		} fence_info;
+		struct sync_fence_info *finfo = (void *)&fence_info - offset;
+		int status = sync_fill_fence_info(fences[i], finfo);
+		u64 dest;
 
-		if (copy_to_user(u64_to_user_ptr(info.sync_fence_info +
-				i * sizeof(fence_info)), &fence_info,
-				sizeof(fence_info)))
+		/* Don't leak kernel memory to userspace via finfo->flags */
+		finfo->flags = 0;
+		info.status = info.status <= 0 ? info.status : status;
+		dest = info.sync_fence_info + i * sizeof(*finfo) + offset;
+		if (copy_to_user(u64_to_user_ptr(dest), &fence_info,
+				 sizeof(fence_info)))
 			return -EFAULT;
 	}
 
 no_fences:
-	sync_file_get_name(sync_file, info.name, sizeof(info.name));
 	info.num_fences = num_fences;
-
-	if (copy_to_user((void __user *)arg, &info, sizeof(info)))
+	if (copy_to_user((void __user *)arg, &info.status, len))
 		return -EFAULT;
 
 	return 0;

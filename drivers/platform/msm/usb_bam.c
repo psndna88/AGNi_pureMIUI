@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,36 +28,15 @@
 #define TIME_BUF_LEN  17
 #define DBG_EVENT_LEN  143
 
-#define ENABLE_EVENT_LOG 1
+#define ENABLE_EVENT_LOG 0
 static unsigned int enable_event_log = ENABLE_EVENT_LOG;
 module_param(enable_event_log, uint, 0644);
 MODULE_PARM_DESC(enable_event_log, "enable event logging in debug buffer");
 
-#define LOGLEVEL_NONE 8
-#define LOGLEVEL_DEBUG 7
-#define LOGLEVEL_ERR 3
-
-#define log_event(log_level, x...)					\
-do {									\
-	unsigned long flags;						\
-	char *buf;							\
-	if (log_level == LOGLEVEL_DEBUG)				\
-		pr_debug(x);						\
-	else if (log_level == LOGLEVEL_ERR)				\
-		pr_err(x);						\
-	if (enable_event_log) {						\
-		write_lock_irqsave(&usb_bam_dbg.lck, flags);		\
-		buf = usb_bam_dbg.buf[usb_bam_dbg.idx];			\
-		put_timestamp(buf);					\
-		snprintf(&buf[TIME_BUF_LEN - 1], DBG_EVENT_LEN, x);	\
-		usb_bam_dbg.idx = (usb_bam_dbg.idx + 1) % DBG_MAX_MSG;	\
-		write_unlock_irqrestore(&usb_bam_dbg.lck, flags);	\
-	}								\
-} while (0)
-
-#define log_event_none(x, ...) log_event(LOGLEVEL_NONE, x, ##__VA_ARGS__)
-#define log_event_dbg(x, ...) log_event(LOGLEVEL_DEBUG, x, ##__VA_ARGS__)
-#define log_event_err(x, ...) log_event(LOGLEVEL_ERR, x, ##__VA_ARGS__)
+#define log_event(log_level, x...)
+#define log_event_none(x, ...)
+#define log_event_dbg(x, ...)
+#define log_event_err(x, ...)
 
 enum usb_bam_event_type {
 	USB_BAM_EVENT_WAKEUP_PIPE = 0,	/* Wake a pipe */
@@ -388,6 +367,7 @@ static int usb_bam_alloc_buffer(struct usb_bam_pipe_connect *pipe_connect)
 			break;
 		}
 
+		data_fifo_size = data_buf->size = pipe_connect->data_fifo_size;
 		/* BAM would use system memory, allocate FIFOs */
 		data_buf->base = dma_alloc_attrs(dev, data_fifo_size,
 						&data_iova, GFP_KERNEL,

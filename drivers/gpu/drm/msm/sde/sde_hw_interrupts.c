@@ -880,18 +880,12 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 		return;
 
 	/*
+	 * The dispatcher will save the IRQ status before calling here.
 	 * Now need to go through each IRQ status and find matching
 	 * irq lookup index.
 	 */
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
 	for (reg_idx = 0; reg_idx < intr->sde_irq_size; reg_idx++) {
-		/* Read interrupt status */
-		irq_status = SDE_REG_READ(&intr->hw,
-				intr->sde_irq_tbl[reg_idx].status_off);
-
-		if (!irq_status)
-			continue;
-
 		/* get the global offset in 'sde_irq_map' */
 		sde_irq_idx = intr->sde_irq_tbl[reg_idx].sde_irq_idx;
 		if (sde_irq_idx < 0)
@@ -908,6 +902,9 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 				end_idx > ARRAY_SIZE(sde_irq_map))
 			continue;
 
+		irq_status = SDE_REG_READ(&intr->hw,
+				intr->sde_irq_tbl[reg_idx].status_off);
+
 		/*
 		 * Search through matching intr status from irq map.
 		 * start_idx and end_idx defined the search range in
@@ -916,13 +913,21 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 		for (irq_idx = start_idx;
 				(irq_idx < end_idx) && irq_status;
 				irq_idx++)
-			if (irq_status & sde_irq_map[irq_idx].irq_mask) {
+			if ((irq_status & sde_irq_map[irq_idx].irq_mask) &&
+				(sde_irq_map[irq_idx].reg_idx == reg_idx)) {
 				/*
 				 * Once a match on irq mask, perform a callback
-				 * to the given cbfunc.
+				 * to the given cbfunc. cbfunc will take care
+				 * the interrupt status clearing. If cbfunc is
+				 * not provided, then the interrupt clearing
+				 * is here.
 				 */
 				if (cbfunc)
 					cbfunc(arg, irq_idx);
+				else
+					SDE_REG_WRITE(&intr->hw,
+						intr->sde_irq_tbl[reg_idx].clr_off,
+						sde_irq_map[irq_idx].irq_mask);
 
 				/*
 				 * When callback finish, clear the irq_status
@@ -931,15 +936,7 @@ static void sde_hw_intr_dispatch_irq(struct sde_hw_intr *intr,
 				 */
 				irq_status &= ~sde_irq_map[irq_idx].irq_mask;
 			}
-
-		/* Clear the interrupt */
-		SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
-				0xffffffff);
 	}
-
-	/* ensure register writes go through */
-	wmb();
-
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 }
 
@@ -981,9 +978,6 @@ static int sde_hw_intr_enable_irq(struct sde_hw_intr *intr, int irq_idx)
 		SDE_REG_WRITE(&intr->hw, reg->clr_off, irq->irq_mask);
 		/* Enabling interrupts with the new mask */
 		SDE_REG_WRITE(&intr->hw, reg->en_off, cache_irq_mask);
-
-		/* ensure register write goes through */
-		wmb();
 
 		intr->cache_irq_mask[reg_idx] = cache_irq_mask;
 	}
@@ -1171,12 +1165,20 @@ static void sde_hw_intr_clear_interrupt_status(struct sde_hw_intr *intr,
 		int irq_idx)
 {
 	unsigned long irq_flags;
+	int reg_idx;
 
 	if (!intr)
 		return;
 
+	reg_idx = sde_irq_map[irq_idx].reg_idx;
+	if (reg_idx < 0 || reg_idx > intr->sde_irq_size) {
+		pr_err("invalid irq reg:%d irq:%d\n", reg_idx, irq_idx);
+		return;
+	}
+
 	spin_lock_irqsave(&intr->irq_lock, irq_flags);
-	sde_hw_intr_clear_intr_status_nolock(intr, irq_idx);
+	SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
+			sde_irq_map[irq_idx].irq_mask);
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 }
 
@@ -1242,9 +1244,6 @@ static u32 sde_hw_intr_get_interrupt_status(struct sde_hw_intr *intr,
 	if (intr_status && clear)
 		SDE_REG_WRITE(&intr->hw, intr->sde_irq_tbl[reg_idx].clr_off,
 				intr_status);
-
-	/* ensure register writes go through */
-	wmb();
 
 	spin_unlock_irqrestore(&intr->irq_lock, irq_flags);
 
@@ -1522,7 +1521,7 @@ struct sde_hw_intr *sde_hw_intr_init(void __iomem *addr,
 	}
 
 	if (count <= 0 || count > MDSS_INTR_MAX) {
-		pr_err("wrong mapping of supported irqs 0x%x\n",
+		pr_err("wrong mapping of supported irqs 0x%lx\n",
 			m->mdss_irqs[0]);
 		ret = -EINVAL;
 		goto exit;

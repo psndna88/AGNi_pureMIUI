@@ -25,6 +25,9 @@
 #include <linux/cpuset.h>
 #include <linux/wakeup_reason.h>
 
+#undef trace_suspend_resume
+#define trace_suspend_resume(x, ...)
+
 /*
  * Timeout for stopping processes
  */
@@ -96,12 +99,12 @@ static int try_to_freeze_tasks(bool user_only)
 	elapsed_msecs = ktime_to_ms(elapsed);
 
 	if (wakeup) {
-		pr_cont("\n");
-		pr_err("Freezing of tasks aborted after %d.%03d seconds",
+		pr_debug("\n");
+		pr_debug("Freezing of tasks aborted after %d.%03d seconds",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000);
 	} else if (todo) {
-		pr_cont("\n");
-		pr_err("Freezing of tasks failed after %d.%03d seconds"
+		pr_debug("\n");
+		pr_debug("Freezing of tasks failed after %d.%03d seconds"
 		       " (%d tasks refusing to freeze, wq_busy=%d):\n",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000,
 		       todo - wq_busy, wq_busy);
@@ -116,9 +119,6 @@ static int try_to_freeze_tasks(bool user_only)
 				sched_show_task(p);
 		}
 		read_unlock(&tasklist_lock);
-	} else {
-		pr_cont("(elapsed %d.%03d seconds) ", elapsed_msecs / 1000,
-			elapsed_msecs % 1000);
 	}
 
 	return todo ? -EBUSY : 0;
@@ -146,16 +146,14 @@ int freeze_processes(void)
 		atomic_inc(&system_freezing_cnt);
 
 	pm_wakeup_clear(true);
-	pr_info("Freezing user space processes ... ");
 	pm_freezing = true;
 	error = try_to_freeze_tasks(true);
 	if (!error) {
 		__usermodehelper_set_disable_depth(UMH_DISABLED);
-		pr_cont("done.");
 	}
-	pr_cont("\n");
 	BUG_ON(in_atomic());
 
+#ifndef CONFIG_ANDROID
 	/*
 	 * Now that the whole userspace is frozen we need to disbale
 	 * the OOM killer to disallow any further interference with
@@ -164,6 +162,7 @@ int freeze_processes(void)
 	 */
 	if (!error && !oom_killer_disable(msecs_to_jiffies(freeze_timeout_msecs)))
 		error = -EBUSY;
+#endif
 
 	if (error)
 		thaw_processes();
@@ -182,14 +181,10 @@ int freeze_kernel_threads(void)
 {
 	int error;
 
-	pr_info("Freezing remaining freezable tasks ... ");
 
 	pm_nosig_freezing = true;
 	error = try_to_freeze_tasks(false);
-	if (!error)
-		pr_cont("done.");
 
-	pr_cont("\n");
 	BUG_ON(in_atomic());
 
 	if (error)
@@ -208,9 +203,9 @@ void thaw_processes(void)
 	pm_freezing = false;
 	pm_nosig_freezing = false;
 
+#ifndef CONFIG_ANDROID
 	oom_killer_enable();
-
-	pr_info("Restarting tasks ... ");
+#endif
 
 	__usermodehelper_set_disable_depth(UMH_FREEZING);
 	thaw_workqueues();
@@ -231,7 +226,6 @@ void thaw_processes(void)
 	usermodehelper_enable();
 
 	schedule();
-	pr_cont("done.\n");
 	trace_suspend_resume(TPS("thaw_processes"), 0, false);
 }
 
@@ -240,7 +234,6 @@ void thaw_kernel_threads(void)
 	struct task_struct *g, *p;
 
 	pm_nosig_freezing = false;
-	pr_info("Restarting kernel threads ... ");
 
 	thaw_workqueues();
 
@@ -252,5 +245,4 @@ void thaw_kernel_threads(void)
 	read_unlock(&tasklist_lock);
 
 	schedule();
-	pr_cont("done.\n");
 }

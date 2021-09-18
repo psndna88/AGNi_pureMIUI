@@ -39,7 +39,7 @@ config SDFAT_DELAYED_META_DIRTY
 
 config SDFAT_SUPPORT_DIR_SYNC
 	bool "Enable supporting dir sync"
-	default n
+	default y
 	depends on SDFAT_FS
 	help
 	  If you enable this feature, the modification for directory operation
@@ -64,20 +64,23 @@ config SDFAT_DEFAULT_IOCHARSET
 
 config SDFAT_CHECK_RO_ATTR
 	bool "Check read-only attribute"
-	default n
+	default y
 	depends on SDFAT_FS
 
 config SDFAT_ALIGNED_MPAGE_WRITE
 	bool "Enable supporting aligned mpage_write"
-	default y
+	default y if SDFAT_FS=y
+	default n if SDFAT_FS=m
 	depends on SDFAT_FS
 
 config SDFAT_VIRTUAL_XATTR
 	bool "Virtual xattr support for sdFAT"
-	default y
+	default n
 	depends on SDFAT_FS
 	help
-	  To support virtual xattr.
+	  If you enable this feature, it supports virtual xattr.
+	  This feature will be deprecated because it might be the same with
+	  "context" mount option.
 
 config SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
 	string "Default string for SELinux label"
@@ -94,7 +97,7 @@ config SDFAT_SUPPORT_STLOG
 config SDFAT_DEBUG
 	bool "Enable debug features"
 	depends on SDFAT_FS
-	default y
+	default n
 
 config SDFAT_DBG_IOCTL
 	bool "Enable debug-ioctl features"
@@ -104,7 +107,7 @@ config SDFAT_DBG_IOCTL
 config SDFAT_DBG_MSG
 	bool "Enable debug messages"
 	depends on SDFAT_FS && SDFAT_DEBUG
-	default y
+	default n
 
 config SDFAT_DBG_BUGON
 	bool "Enable strict BUG_ON() for debugging"

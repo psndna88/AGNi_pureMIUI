@@ -46,6 +46,7 @@
 		};
 
 		mhi_chan@100 {
+			mhi,db-mode-switch;
 			status = "disabled";
 		};
 
@@ -54,6 +55,8 @@
 		};
 
 		mhi_chan@102 {
+			mhi,offload-chan;
+			mhi,lpm-notify;
 			status = "disabled";
 		};
 
@@ -65,11 +68,19 @@
 			mhi,offload-chan;
 		};
 
+		mhi_chan@105 {
+			mhi,offload-chan;
+			mhi,lpm-notify;
+		};
+
 		mhi_chan@107 {
+			mhi,offload-chan;
 			status = "disabled";
 		};
 
 		mhi_chan@108 {
+			mhi,offload-chan;
+			mhi,lpm-notify;
 			status = "disabled";
 		};
 
@@ -313,8 +324,6 @@
 
 	imp: qcom,ipa-mhi-proxy {
 		compatible = "qcom,ipa-mhi-proxy";
-		qcom,mhi-chdb-base = <0x40300300>;
-		qcom,mhi-erdb-base = <0x40300700>;
 	};
 
 	qmi-tmd-devices {

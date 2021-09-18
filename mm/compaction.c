@@ -23,6 +23,10 @@
 #include <linux/freezer.h>
 #include <linux/page_owner.h>
 #include <linux/psi.h>
+#include <linux/msm_drm_notify.h>
+#include <linux/moduleparam.h>
+#include <linux/time.h>
+#include <linux/workqueue.h>
 #include "internal.h"
 
 #ifdef CONFIG_COMPACTION
@@ -720,7 +724,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		if (cc->mode == MIGRATE_ASYNC)
 			return 0;
 
-		congestion_wait(BLK_RW_ASYNC, HZ/10);
+		congestion_wait(BLK_RW_ASYNC, msecs_to_jiffies(100));
 
 		if (fatal_signal_pending(current))
 			return 0;
@@ -761,13 +765,15 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 
 		/*
 		 * Periodically drop the lock (if held) regardless of its
-		 * contention, to give chance to IRQs. Abort async compaction
-		 * if contended.
+		 * contention, to give chance to IRQs. Abort completely if
+		 * a fatal signal is pending.
 		 */
 		if (!(low_pfn % SWAP_CLUSTER_MAX)
 		    && compact_unlock_should_abort(zone_lru_lock(zone), flags,
-								&locked, cc))
-			break;
+								&locked, cc)) {
+			low_pfn = 0;
+			goto fatal_pending;
+		}
 
 		if (!pfn_valid_within(low_pfn))
 			goto isolate_fail;
@@ -960,6 +966,7 @@ isolate_fail:
 	trace_mm_compaction_isolate_migratepages(start_pfn, low_pfn,
 						nr_scanned, nr_isolated);
 
+fatal_pending:
 	cc->total_migrate_scanned += nr_scanned;
 	if (nr_isolated)
 		count_compact_events(COMPACTISOLATED, nr_isolated);
@@ -1224,7 +1231,7 @@ typedef enum {
  * Allow userspace to control policy on scanning the unevictable LRU for
  * compactable pages.
  */
-int sysctl_compact_unevictable_allowed __read_mostly = 1;
+int sysctl_compact_unevictable_allowed __read_mostly = 0;
 
 /*
  * Isolate all pages that can be migrated from the first suitable block,
@@ -1550,6 +1557,17 @@ static enum compact_result compact_zone(struct zone *zone, struct compact_contro
 	unsigned long end_pfn = zone_end_pfn(zone);
 	const bool sync = cc->mode != MIGRATE_ASYNC;
 
+	/*
+	 * These counters track activities during zone compaction.  Initialize
+	 * them before compacting a new zone.
+	 */
+	cc->total_migrate_scanned = 0;
+	cc->total_free_scanned = 0;
+	cc->nr_migratepages = 0;
+	cc->nr_freepages = 0;
+	INIT_LIST_HEAD(&cc->freepages);
+	INIT_LIST_HEAD(&cc->migratepages);
+
 	cc->migratetype = gfpflags_to_migratetype(cc->gfp_mask);
 	ret = compaction_suitable(zone, cc->order, cc->alloc_flags,
 							cc->classzone_idx);
@@ -1713,10 +1731,6 @@ static enum compact_result compact_zone_order(struct zone *zone, int order,
 {
 	enum compact_result ret;
 	struct compact_control cc = {
-		.nr_freepages = 0,
-		.nr_migratepages = 0,
-		.total_migrate_scanned = 0,
-		.total_free_scanned = 0,
 		.order = order,
 		.gfp_mask = gfp_mask,
 		.zone = zone,
@@ -1729,8 +1743,6 @@ static enum compact_result compact_zone_order(struct zone *zone, int order,
 		.ignore_skip_hint = (prio == MIN_COMPACT_PRIORITY),
 		.ignore_block_suitable = (prio == MIN_COMPACT_PRIORITY)
 	};
-	INIT_LIST_HEAD(&cc.freepages);
-	INIT_LIST_HEAD(&cc.migratepages);
 
 	ret = compact_zone(zone, &cc);
 
@@ -1740,7 +1752,7 @@ static enum compact_result compact_zone_order(struct zone *zone, int order,
 	return ret;
 }
 
-int sysctl_extfrag_threshold = 500;
+int sysctl_extfrag_threshold = 750;
 
 /**
  * try_to_compact_pages - Direct compact to satisfy a high-order allocation
@@ -1820,6 +1832,53 @@ enum compact_result try_to_compact_pages(gfp_t gfp_mask, unsigned int order,
 	return rc;
 }
 
+static struct workqueue_struct *compaction_wq;
+static struct delayed_work compaction_work;
+static bool screen_on = true;
+static int compaction_timeout_ms = 900000;
+module_param_named(compaction_forced_timeout_ms, compaction_timeout_ms, int,
+			0644);
+static int compaction_soff_delay_ms = 3000;
+module_param_named(compaction_screen_off_delay_ms, compaction_soff_delay_ms, int,
+			0644);
+static unsigned long compaction_forced_timeout;
+
+
+static int msm_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct msm_drm_notifier *evdata = data;
+	int *blank;
+
+	if (event != MSM_DRM_EVENT_BLANK)
+		return 0;
+
+	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY)
+		return 0;
+
+	if (evdata && evdata->data) {
+		blank = evdata->data;
+
+		switch (*blank) {
+		case MSM_DRM_BLANK_POWERDOWN:
+			screen_on = false;
+			if (time_after(jiffies, compaction_forced_timeout) && !delayed_work_busy(&compaction_work)) {
+				compaction_forced_timeout = jiffies + msecs_to_jiffies(compaction_timeout_ms);
+				queue_delayed_work(compaction_wq, &compaction_work,
+					msecs_to_jiffies(compaction_soff_delay_ms));
+			}
+		break;
+		case MSM_DRM_BLANK_UNBLANK:
+			screen_on = true;
+		break;
+		}
+	}
+
+	return 0;
+}
+
+static struct notifier_block compaction_notifier_block = {
+	.notifier_call = msm_drm_notifier_callback,
+};
 
 /* Compact all zones within a node */
 static void compact_node(int nid)
@@ -1829,8 +1888,6 @@ static void compact_node(int nid)
 	struct zone *zone;
 	struct compact_control cc = {
 		.order = -1,
-		.total_migrate_scanned = 0,
-		.total_free_scanned = 0,
 		.mode = MIGRATE_SYNC,
 		.ignore_skip_hint = true,
 		.whole_zone = true,
@@ -1844,11 +1901,7 @@ static void compact_node(int nid)
 		if (!populated_zone(zone))
 			continue;
 
-		cc.nr_freepages = 0;
-		cc.nr_migratepages = 0;
 		cc.zone = zone;
-		INIT_LIST_HEAD(&cc.freepages);
-		INIT_LIST_HEAD(&cc.migratepages);
 
 		compact_zone(zone, &cc);
 
@@ -1857,6 +1910,11 @@ static void compact_node(int nid)
 	}
 }
 
+#ifdef CONFIG_ZSWAP
+extern void zswap_compact(void);
+#else
+static inline void zswap_compact(void) {}
+#endif
 /* Compact all nodes in the system */
 static void compact_nodes(void)
 {
@@ -1867,6 +1925,25 @@ static void compact_nodes(void)
 
 	for_each_online_node(nid)
 		compact_node(nid);
+
+	zswap_compact();
+}
+
+static void do_compaction(struct work_struct *work)
+{
+	/* Return early if the screen is on */
+	if (screen_on)
+		return;
+
+	pr_info("Scheduled memory compaction is starting\n");
+
+	/* Do full compaction */
+	compact_nodes();
+
+	/* Force compaction timeout */
+	compaction_forced_timeout = jiffies + msecs_to_jiffies(compaction_timeout_ms);
+
+	pr_info("Scheduled memory compaction is completed\n");
 }
 
 /* The written value is actually unused, all memory is compacted */
@@ -1957,8 +2034,6 @@ static void kcompactd_do_work(pg_data_t *pgdat)
 	struct zone *zone;
 	struct compact_control cc = {
 		.order = pgdat->kcompactd_max_order,
-		.total_migrate_scanned = 0,
-		.total_free_scanned = 0,
 		.classzone_idx = pgdat->kcompactd_classzone_idx,
 		.mode = MIGRATE_SYNC_LIGHT,
 		.ignore_skip_hint = true,
@@ -1983,16 +2058,10 @@ static void kcompactd_do_work(pg_data_t *pgdat)
 							COMPACT_CONTINUE)
 			continue;
 
-		cc.nr_freepages = 0;
-		cc.nr_migratepages = 0;
-		cc.total_migrate_scanned = 0;
-		cc.total_free_scanned = 0;
-		cc.zone = zone;
-		INIT_LIST_HEAD(&cc.freepages);
-		INIT_LIST_HEAD(&cc.migratepages);
-
 		if (kthread_should_stop())
 			return;
+
+		cc.zone = zone;
 		status = compact_zone(zone, &cc);
 
 		if (status == COMPACT_SUCCESS) {
@@ -2161,5 +2230,20 @@ static int __init kcompactd_init(void)
 	return 0;
 }
 subsys_initcall(kcompactd_init)
+
+static int  __init scheduled_compaction_init(void)
+{
+	compaction_wq = create_freezable_workqueue("compaction_wq");
+
+	if (!compaction_wq)
+		return -EFAULT;
+
+	INIT_DELAYED_WORK(&compaction_work, do_compaction);
+
+	msm_drm_register_client(&compaction_notifier_block);
+
+	return 0;
+}
+late_initcall(scheduled_compaction_init);
 
 #endif /* CONFIG_COMPACTION */

@@ -23,7 +23,7 @@
  * and any gpu specific performance counters that are supported.
  */
 
-#ifdef CONFIG_DEBUG_FS_
+#ifdef CONFIG_DEBUG_FS
 
 #include <linux/debugfs.h>
 

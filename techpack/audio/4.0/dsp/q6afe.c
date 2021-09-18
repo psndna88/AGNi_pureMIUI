@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  */
 #include <linux/slab.h>
 #include <linux/debugfs.h>
@@ -18,6 +19,7 @@
 #include <dsp/q6common.h>
 #include <dsp/q6core.h>
 #include <dsp/msm-audio-event-notify.h>
+#include <dsp/apr_elliptic.h>
 #include <ipc/apr_tal.h>
 #include "adsp_err.h"
 #include "q6afecal-hwdep.h"
@@ -29,6 +31,20 @@ static int32_t tas_smartamp_algo_callback(uint32_t opcode, uint32_t *payload,
 
 #define WAKELOCK_TIMEOUT	5000
 #define AFE_CLK_TOKEN	1024
+
+struct afe_avcs_payload_port_mapping {
+	u16 port_id;
+	struct avcs_load_unload_modules_payload *payload;
+} __packed;
+
+enum {
+	ENCODER_CASE,
+	DECODER_CASE,
+	/* Add new use case here */
+	MAX_ALLOWED_USE_CASES
+};
+
+static struct afe_avcs_payload_port_mapping *pm[MAX_ALLOWED_USE_CASES];
 enum {
 	AFE_COMMON_RX_CAL = 0,
 	AFE_COMMON_TX_CAL,
@@ -197,6 +213,136 @@ bool afe_close_done[2] = {true, true};
 #define SIZEOF_CFG_CMD(y) \
 		(sizeof(struct apr_hdr) + sizeof(u16) + (sizeof(struct y)))
 
+static void q6afe_unload_avcs_modules(u16 port_id, int index)
+{
+	int ret = 0;
+
+	ret = q6core_avcs_load_unload_modules(pm[index]->payload,
+			AVCS_UNLOAD_MODULES);
+
+	if (ret < 0)
+		pr_err("%s: avcs module unload failed %d\n", __func__, ret);
+
+	kfree(pm[index]->payload);
+	pm[index]->payload = NULL;
+	kfree(pm[index]);
+	pm[index] = NULL;
+}
+
+static int q6afe_load_avcs_modules(int num_modules, u16 port_id,
+		uint32_t use_case, u32 format_id)
+{
+	int i = 0;
+	int32_t ret = 0;
+	size_t payload_size = 0, port_struct_size = 0;
+	struct afe_avcs_payload_port_mapping payload_map;
+	struct avcs_load_unload_modules_sec_payload sec_payload;
+
+	if (num_modules <= 0) {
+		pr_err("%s: Invalid number of modules to load\n", __func__);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < MAX_ALLOWED_USE_CASES; i++) {
+		if (pm[i] == NULL) {
+			port_struct_size = sizeof(payload_map);
+			pm[i] = kzalloc(port_struct_size, GFP_KERNEL);
+			if (!pm[i])
+				return -ENOMEM;
+
+			pm[i]->port_id = port_id;
+			payload_size = sizeof(uint32_t) + (sizeof(sec_payload)
+					* num_modules);
+			pm[i]->payload = kzalloc(payload_size, GFP_KERNEL);
+			if (!pm[i]->payload) {
+				kfree(pm[i]);
+				pm[i] = NULL;
+				return -ENOMEM;
+			}
+
+			/*
+			 * index 0 : packetizer/de-packetizer
+			 * index 1 : encoder/decoder
+			 */
+
+			pm[i]->payload->num_modules = num_modules;
+
+			/*
+			 * Remaining fields of payload
+			 * are initialized to zero
+			 */
+
+			if (use_case == ENCODER_CASE) {
+				pm[i]->payload->load_unload_info[0].module_type =
+					AMDB_MODULE_TYPE_PACKETIZER;
+				pm[i]->payload->load_unload_info[0].id1 =
+					AVS_MODULE_ID_PACKETIZER_COP;
+				if (format_id == ASM_MEDIA_FMT_LC3)
+					pm[i]->payload->load_unload_info[0].id1 =
+						AVS_MODULE_ID_PACKETIZER_COP_V2;
+				pm[i]->payload->load_unload_info[1].module_type =
+					AMDB_MODULE_TYPE_ENCODER;
+				pm[i]->payload->load_unload_info[1].id1 =
+					format_id;
+			} else if (use_case == DECODER_CASE) {
+				pm[i]->payload->load_unload_info[0].module_type =
+					AMDB_MODULE_TYPE_DEPACKETIZER;
+				pm[i]->payload->load_unload_info[0].id1 =
+					AVS_MODULE_ID_DEPACKETIZER_COP_V1;
+
+				if (format_id == ENC_CODEC_TYPE_LDAC) {
+					pm[i]->payload->load_unload_info[0].id1 =
+						AVS_MODULE_ID_DEPACKETIZER_COP;
+					goto load_unload;
+				}
+				if (format_id == ASM_MEDIA_FMT_LC3) {
+					pm[i]->payload->load_unload_info[0].id1 =
+						AVS_MODULE_ID_DEPACKETIZER_COP_V2;
+					goto load_unload;
+				}
+
+				pm[i]->payload->load_unload_info[1].module_type =
+					AMDB_MODULE_TYPE_DECODER;
+				pm[i]->payload->load_unload_info[1].id1 =
+					format_id;
+
+			} else {
+				pr_err("%s:load usecase %d not supported\n",
+						__func__, use_case);
+				ret = -EINVAL;
+				goto fail;
+			}
+
+load_unload:
+			ret = q6core_avcs_load_unload_modules(pm[i]->payload,
+					AVCS_LOAD_MODULES);
+
+			if (ret < 0) {
+				pr_err("%s: load failed %d\n", __func__, ret);
+				goto fail;
+			}
+			return 0;
+		}
+
+	}
+
+	ret = -EINVAL;
+	if (i == MAX_ALLOWED_USE_CASES) {
+		pr_err("%s: Not enough ports available\n", __func__);
+		return ret;
+	}
+	if (i == MAX_ALLOWED_USE_CASES) {
+		pr_err("%s: Not enough ports available\n", __func__);
+		return ret;
+	}
+fail:
+	kfree(pm[i]->payload);
+	pm[i]->payload = NULL;
+	kfree(pm[i]);
+	pm[i] = NULL;
+	return ret;
+}
+
 static int afe_get_cal_hw_delay(int32_t path,
 				struct audio_cal_hw_delay_entry *entry);
 static int remap_cal_data(struct cal_block_data *cal_block, int cal_index);
@@ -261,6 +407,7 @@ int afe_get_topology(int port_id)
 done:
 	return topology;
 }
+EXPORT_SYMBOL(afe_get_topology);
 
 /**
  * afe_set_aanc_info -
@@ -710,6 +857,9 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		atomic_set(&this_afe.clk_state, 0);
 		atomic_set(&this_afe.clk_status, 0);
 		wake_up(&this_afe.lpass_core_hw_wait);
+	} else if (data->opcode == ULTRASOUND_OPCODE) {
+		if (NULL != data->payload)
+			elliptic_process_apr_payload(data->payload);
 	} else if (data->payload_size) {
 		uint32_t *payload;
 		uint16_t port_id = 0;
@@ -2020,6 +2170,15 @@ fail_idx:
 	return ret;
 }
 
+afe_ultrasound_state_t elus_afe = {
+   .ptr_apr = &this_afe.apr,
+   .ptr_status = &this_afe.status,
+   .ptr_state = &this_afe.state,
+   .ptr_wait = this_afe.wait,
+   .ptr_afe_apr_lock = &this_afe.afe_apr_lock,
+   .timeout_ms = TIMEOUT_MS,
+};
+EXPORT_SYMBOL(elus_afe);
 static void afe_send_cal_spkr_prot_tx(int port_id)
 {
 	union afe_spkr_prot_config afe_spk_config;
@@ -5001,6 +5160,18 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		if (enc_cfg != NULL) {
 			pr_debug("%s: Found AFE encoder support for SLIMBUS format = %d\n",
 						__func__, codec_format);
+			if ((q6core_get_avcs_api_version_per_service(
+					APRV2_IDS_SERVICE_ID_ADSP_CORE_V) >=
+						AVCS_API_VERSION_V5)) {
+				ret = q6afe_load_avcs_modules(2, port_id,
+						ENCODER_CASE, codec_format);
+				if (ret < 0) {
+					pr_err("%s:encoder load for port 0x%x failed %d\n",
+							__func__, port_id, ret);
+					goto fail_cmd;
+				}
+			}
+
 			ret = q6afe_send_enc_config(port_id, enc_cfg,
 						    codec_format, *afe_config,
 						    afe_in_channels,
@@ -5015,6 +5186,29 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		if (dec_cfg != NULL) {
 			pr_debug("%s: Found AFE decoder support for SLIMBUS format = %d\n",
 				  __func__, codec_format);
+			if ((q6core_get_avcs_api_version_per_service(
+					APRV2_IDS_SERVICE_ID_ADSP_CORE_V) >=
+						AVCS_API_VERSION_V5)) {
+			/*
+			 * LDAC and APTX_ADAPTIVE don't require
+			 * loading decoder module, Only loading
+			 * de-packetizer module.
+			 */
+			if (codec_format == ENC_CODEC_TYPE_LDAC ||
+				codec_format == ASM_MEDIA_FMT_APTX_ADAPTIVE ||
+				codec_format == ASM_MEDIA_FMT_LC3)
+				ret = q6afe_load_avcs_modules(1, port_id,
+						DECODER_CASE, codec_format);
+			else
+				ret = q6afe_load_avcs_modules(2, port_id,
+						DECODER_CASE, codec_format);
+				if (ret < 0) {
+					pr_err("%s:decoder load for port 0x%x failed %d\n",
+							__func__, port_id, ret);
+					goto fail_cmd;
+				}
+			}
+
 			ret = q6afe_send_dec_config(port_id, *afe_config,
 						    dec_cfg, codec_format,
 						    afe_in_channels,
@@ -7767,6 +7961,7 @@ int afe_close(int port_id)
 	struct afe_port_cmd_device_stop stop;
 	enum afe_mad_type mad_type;
 	int ret = 0;
+	u16 i;
 	int index = 0;
 	uint16_t port_index;
 
@@ -7883,6 +8078,15 @@ int afe_close(int port_id)
 		pr_err("%s: AFE close failed %d\n", __func__, ret);
 
 fail_cmd:
+	if ((q6core_get_avcs_api_version_per_service(
+		APRV2_IDS_SERVICE_ID_ADSP_CORE_V) >= AVCS_API_VERSION_V5)) {
+		for (i = 0; i < MAX_ALLOWED_USE_CASES; i++) {
+			if (pm[i] && pm[i]->port_id == port_id) {
+				q6afe_unload_avcs_modules(port_id, i);
+				break;
+			}
+		}
+	}
 	mutex_unlock(&this_afe.afe_cmd_lock);
 	return ret;
 }
@@ -8862,6 +9066,9 @@ static int afe_set_cal_sp_th_vi_cfg(int32_t cal_type, size_t data_size,
 
 	if (cal_data == NULL ||
 	    data_size > sizeof(*cal_data) ||
+	    (data_size < sizeof(cal_data->cal_hdr) +
+		sizeof(cal_data->cal_data) +
+		sizeof(cal_data->cal_info.mode)) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		goto done;
 
@@ -9006,6 +9213,9 @@ static int afe_get_cal_sp_th_vi_param(int32_t cal_type, size_t data_size,
 
 	if (cal_data == NULL ||
 	    data_size > sizeof(*cal_data) ||
+	    (data_size < sizeof(cal_data->cal_hdr) +
+		sizeof(cal_data->cal_data) +
+		sizeof(cal_data->cal_info.mode)) ||
 	    this_afe.cal_data[AFE_FB_SPKR_PROT_TH_VI_CAL] == NULL)
 		return 0;
 

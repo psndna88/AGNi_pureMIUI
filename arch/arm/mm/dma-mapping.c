@@ -2536,6 +2536,7 @@ static int __arm_iommu_attach_device(struct device *dev,
 static void __arm_iommu_detach_device(struct device *dev)
 {
 	struct dma_iommu_mapping *mapping;
+	struct iommu_group *group;
 
 	mapping = to_dma_iommu_mapping(dev);
 	if (!mapping) {
@@ -2543,10 +2544,16 @@ static void __arm_iommu_detach_device(struct device *dev)
 		return;
 	}
 
+	group = iommu_group_get(dev);
+	if (!group) {
+		dev_warn(dev, "No iommu_group\n");
+		return;
+	}
+
 	if (msm_dma_unmap_all_for_dev(dev))
 		dev_warn(dev, "IOMMU detach with outstanding mappings\n");
 
-	iommu_detach_device(mapping->domain, dev);
+	iommu_detach_group(mapping->domain, group);
 	to_dma_iommu_mapping(dev) = NULL;
 
 	pr_debug("Detached IOMMU controller from %s device.\n", dev_name(dev));

@@ -424,6 +424,38 @@ static void lim_send_mlm_assoc_req(tpAniSirGlobal mac_ctx,
 		(uint32_t *) assoc_req);
 }
 
+#ifdef WLAN_FEATURE_11W
+/**
+ * lim_pmf_comeback_timer_callback() -PMF callback handler
+ * @context: Timer context
+ *
+ * This function is called to processes the PMF comeback
+ * callback
+ *
+ * Return: None
+ */
+void lim_pmf_comeback_timer_callback(void *context)
+{
+	tComebackTimerInfo *info =
+			(tComebackTimerInfo *)context;
+	tpAniSirGlobal mac_ctx = info->pMac;
+	struct sPESession *session;
+
+	session = pe_find_session_by_sme_session_id(mac_ctx, info->sessionID);
+	if (!session) {
+		pe_err("no session found for vdev %d", info->sessionID);
+		return;
+	}
+
+	pe_info("comeback later timer expired. sending MLM ASSOC req for vdev %d",
+		info->sessionID);
+	/* set MLM state such that ASSOC REQ packet will be sent out */
+	session->limPrevMlmState = info->limPrevMlmState;
+	session->limMlmState = info->limMlmState;
+	lim_send_mlm_assoc_req(mac_ctx, session);
+}
+#endif /* WLAN_FEATURE_11W */
+
 /**
  * lim_process_mlm_auth_cnf()-Process Auth confirmation
  * @mac_ctx:  Pointer to Global MAC structure
@@ -1378,6 +1410,10 @@ error:
 
 	lim_send_sme_join_reassoc_rsp(mac_ctx, eWNI_SME_JOIN_RSP, result_code,
 		prot_status_code, session_entry, sme_session_id, sme_trans_id);
+
+	/* delete pe session if peer create failed */
+	if (result_code == eSIR_SME_PEER_CREATE_FAILED)
+		pe_delete_session(mac_ctx, session_entry);
 }
 
 /**
@@ -1993,7 +2029,15 @@ void lim_process_ap_mlm_add_sta_rsp(tpAniSirGlobal pMac,
 	 * 2) PE receives eWNI_SME_ASSOC_CNF from SME
 	 * 3) BTAMP-AP sends Re/Association Response to BTAMP-STA
 	 */
-	lim_send_mlm_assoc_ind(pMac, pStaDs, psessionEntry);
+	if (lim_send_mlm_assoc_ind(pMac, pStaDs, psessionEntry) !=
+							QDF_STATUS_SUCCESS) {
+		lim_reject_association(pMac, pStaDs->staAddr,
+				       pStaDs->mlmStaContext.subType,
+				       true, pStaDs->mlmStaContext.authType,
+				       pStaDs->assocId, true,
+				       eSIR_MAC_UNSPEC_FAILURE_STATUS,
+				       psessionEntry);
+	}
 	/* fall though to reclaim the original Add STA Response message */
 end:
 	if (0 != limMsgQ->bodyptr) {

@@ -272,8 +272,12 @@ static void dfc_qmap_set_end_marker(struct dfc_qmi_data *dfc, u8 mux_id,
 	spin_lock_bh(&qos->qos_lock);
 
 	bearer = qmi_rmnet_get_bearer_map(qos, bearer_id);
+	if (!bearer) {
+		spin_unlock_bh(&qos->qos_lock);
+		return;
+	}
 
-	if (bearer && bearer->last_seq == seq_num && bearer->grant_size) {
+	if (bearer->last_seq == seq_num && bearer->grant_size) {
 		bearer->ack_req = 1;
 		bearer->ack_txid = tx_id;
 	} else {
