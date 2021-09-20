@@ -4112,7 +4112,7 @@
 			qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 			qcom,target-dev = <&cpu4_cpu_llcc_latfloor>;
 			qcom,core-dev-table =
-				< 1804800 MHZ_TO_MBPS( 150, 16) >,
+				< 1804800 MHZ_TO_MBPS( 300, 16) >,
 				< 2400000 MHZ_TO_MBPS( 600, 16) >;
 		};
 
