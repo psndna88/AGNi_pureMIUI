@@ -68,10 +68,7 @@ static u32 sde_hw_util_log_mask = SDE_DBG_MASK_NONE;
 typedef void (*scaler_lut_type)(struct sde_hw_blk_reg_map *,
 		struct sde_hw_scaler3_cfg *, u32);
 
-void sde_reg_write(struct sde_hw_blk_reg_map *c,
-		u32 reg_off,
-		u32 val,
-		const char *name)
+void sde_reg_write(struct sde_hw_blk_reg_map *c, u32 reg_off, u32 val)
 {
 	SDE_EVT32_REGWRITE(c->blk_off + reg_off, val, GET_REG_BLK_ID(c));
 	writel_relaxed(val, c->base_off + c->blk_off + reg_off);
