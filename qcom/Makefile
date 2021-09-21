@@ -445,7 +445,16 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-v2-mtp-mbb-pcie-ep-ipq.dtb \
 	sdxlemur-v2-mtp-mbb-pcie-rc-ep.dtb \
 	sdxlemur-v2-rcm-pcie-ep.dtb \
-	sdxlemur-v2-rcm-rc.dtb
+	sdxlemur-v2-rcm-rc.dtb \
+	sdxlemur-v2-atp.dtb \
+	sdxlemur-v2-mtp-cpe-pine1x.dtb \
+	sdxlemur-v2-mtp-cpe-pine2x.dtb \
+	sdxlemur-v2-mtp-mbb-emmc-512mb.dtb \
+	sdxlemur-v2-mtp-mbb-m2-ep-usb.dtb \
+	sdxlemur-v2-mtp-mbb-m2-ep.dtb \
+	sdxlemur-v2-rcm-rc-pine1x.dtb \
+	sdxlemur-v2-rcm-rc-pine2x.dtb
+
 
 
 ifeq ($(CONFIG_ARCH_SHIMA), y)
