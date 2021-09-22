@@ -628,7 +628,7 @@ int dsi_pre_clkon_cb(void *priv, enum dsi_clk_type clk_type,
  * Return: error code.
  */
 int dsi_display_unprepare(struct dsi_display *display);
-
+int dsi_display_set_ulp_load(struct dsi_display *display, bool enable);
 int dsi_display_set_tpg_state(struct dsi_display *display, bool enable);
 
 int dsi_display_clock_gate(struct dsi_display *display, bool enable);
