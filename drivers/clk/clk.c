@@ -51,11 +51,6 @@ static struct hlist_head *all_lists[] = {
         NULL,
 };
 
-static struct hlist_head *orphan_list[] = {
-	&clk_orphan_list,
-	NULL,
-};
-
 struct clk_handoff_vdd {
 	struct list_head list;
 	struct clk_vdd_class *vdd_class;
@@ -2752,6 +2747,11 @@ static const struct file_operations clk_state_fops = {
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
+};
+
+static struct hlist_head *orphan_list[] = {
+	&clk_orphan_list,
+	NULL,
 };
 
 static void clk_summary_show_one(struct seq_file *s, struct clk_core *c,
