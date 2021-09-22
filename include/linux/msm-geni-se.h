@@ -383,14 +383,6 @@ if (print) { \
 } while (0)
 
 #define GENI_SE_DBG(log_ctx, print, dev, x...) do { \
-if (log_ctx) \
-	ipc_log_string(log_ctx, x); \
-if (print) { \
-	if (dev) \
-		dev_dbg((dev), x); \
-	else \
-		pr_debug(x); \
-} \
 } while (0)
 
 /* In KHz */
