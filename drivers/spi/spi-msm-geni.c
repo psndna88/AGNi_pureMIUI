@@ -1213,6 +1213,8 @@ static int spi_geni_mas_setup(struct spi_master *spi)
 	mas->oversampling = 1;
 	/* Transmit an entire FIFO worth of data per IRQ */
 	mas->tx_wm = 1;
+	mas->tx = NULL;
+	mas->rx = NULL;
 
 	mas->gsi_mode =
 		(geni_read_reg(mas->base, GENI_IF_FIFO_DISABLE_RO) &
@@ -1223,6 +1225,7 @@ static int spi_geni_mas_setup(struct spi_master *spi)
 		if (IS_ERR_OR_NULL(mas->tx)) {
 			dev_info(mas->dev, "Failed to get tx DMA ch %ld\n",
 						PTR_ERR(mas->tx));
+			mas->tx = NULL;
 			goto setup_ipc;
 		}
 		mas->rx = dma_request_slave_channel(mas->dev, "rx");
@@ -1230,6 +1233,8 @@ static int spi_geni_mas_setup(struct spi_master *spi)
 			dev_info(mas->dev, "Failed to get rx DMA ch %ld\n",
 						PTR_ERR(mas->rx));
 			dma_release_channel(mas->tx);
+			mas->tx = NULL;
+			mas->rx = NULL;
 			goto setup_ipc;
 		}
 		mas->gsi = devm_kzalloc(mas->dev,
@@ -1283,6 +1288,9 @@ static int spi_geni_mas_setup(struct spi_master *spi)
 			goto setup_ipc;
 		}
 	}
+
+	WARN_ON(mas->gsi_mode && (mas->tx == NULL || mas->rx == NULL));
+
 setup_ipc:
 	mas->ipc = ipc_log_context_create(4, dev_name(mas->dev), 0);
 	dev_info(mas->dev, "tx_fifo %d rx_fifo %d tx_width %d\n",
