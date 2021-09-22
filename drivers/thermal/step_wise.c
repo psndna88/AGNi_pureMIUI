@@ -96,8 +96,7 @@ static unsigned long get_target_state(struct thermal_instance *instance,
 		break;
 	case THERMAL_TREND_DROPPING:
 	case THERMAL_TREND_STABLE:
-		if (cur_state <= instance->lower ||
-			instance->target <= instance->lower) {
+		if (cur_state <= instance->lower) {
 			if (!throttle)
 				next_target = THERMAL_NO_TARGET;
 		} else {
