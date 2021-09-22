@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -88,17 +88,11 @@
 #define PCIE20_PARF_L1SUB_AHB_CLK_MAX_TIMER (0x180)
 #define PCIE20_PARF_DEBUG_INT_EN (0x190)
 
-#define PCIE20_PARF_DEBUG_CNT_IN_L0S (0xc10)
-#define PCIE20_PARF_DEBUG_CNT_IN_L1 (0xc0c)
-#define PCIE20_PARF_DEBUG_CNT_IN_L1SUB_L1 (0xc84)
-#define PCIE20_PARF_DEBUG_CNT_IN_L1SUB_L2 (0xc88)
-
 #define PCIE20_ELBI_VERSION		0x00
 #define PCIE20_ELBI_SYS_CTRL	     0x04
 #define PCIE20_ELBI_SYS_STTS		 0x08
 
 #define PCIE20_CAP			   0x70
-#define PCIE20_CAP_DEVCAP		(PCIE20_CAP + 0x04)
 #define PCIE20_CAP_DEVCTRLSTATUS	(PCIE20_CAP + 0x08)
 #define PCIE20_CAP_LINKCTRLSTATUS	(PCIE20_CAP + 0x10)
 
@@ -207,7 +201,7 @@
 #define MSM_PCIE_MAX_VREG 4
 #define MSM_PCIE_MAX_CLK 13
 #define MSM_PCIE_MAX_PIPE_CLK 1
-#define MAX_RC_NUM 3
+#define MAX_RC_NUM 4
 #define MAX_DEVICE_NUM 20
 #define MAX_SHORT_BDF_NUM 16
 #define PCIE_TLP_RD_SIZE 0x5
@@ -315,7 +309,6 @@ enum msm_pcie_res {
 	MSM_PCIE_RES_ELBI,
 	MSM_PCIE_RES_IATU,
 	MSM_PCIE_RES_CONF,
-	MSM_PCIE_RES_MHI,
 	MSM_PCIE_RES_TCSR,
 	MSM_PCIE_MAX_RES,
 };
@@ -605,6 +598,12 @@ struct msm_pcie_phy_info_t {
 	u32	delay;
 };
 
+/* tcsr info structure */
+struct msm_pcie_tcsr_info_t {
+	u32 offset;
+	u32 val;
+};
+
 /* sid info structure */
 struct msm_pcie_sid_info_t {
 	u16	bdf;
@@ -650,7 +649,6 @@ struct msm_pcie_dev_t {
 	void __iomem		     *iatu;
 	void __iomem		     *dm_core;
 	void __iomem		     *conf;
-	void __iomem		     *mhi;
 	void __iomem		     *tcsr;
 
 	uint32_t			    axi_bar_start;
@@ -745,6 +743,8 @@ struct msm_pcie_dev_t {
 	bool				pending_ep_reg;
 	u32				phy_len;
 	struct msm_pcie_phy_info_t	*phy_sequence;
+	u32				tcsr_len;
+	struct msm_pcie_tcsr_info_t	*tcsr_config;
 	u32				sid_info_len;
 	struct msm_pcie_sid_info_t	*sid_info;
 	u32		ep_shadow[MAX_DEVICE_NUM][PCIE_CONF_SPACE_DW];
@@ -886,6 +886,13 @@ msm_pcie_reset_info[MAX_RC_NUM][MSM_PCIE_MAX_RESET] = {
 		{NULL, "pcie_phy_com_reset", false},
 		{NULL, "pcie_phy_nocsr_com_phy_reset", false},
 		{NULL, "pcie_2_phy_reset", false}
+	},
+	{
+		{NULL, "pcie_3_core_reset", false},
+		{NULL, "pcie_phy_reset", false},
+		{NULL, "pcie_phy_com_reset", false},
+		{NULL, "pcie_phy_nocsr_com_phy_reset", false},
+		{NULL, "pcie_3_phy_reset", false}
 	}
 };
 
@@ -900,6 +907,9 @@ msm_pcie_pipe_reset_info[MAX_RC_NUM][MSM_PCIE_MAX_PIPE_RESET] = {
 	},
 	{
 		{NULL, "pcie_2_phy_pipe_reset", false}
+	},
+	{
+		{NULL, "pcie_3_phy_pipe_reset", false}
 	}
 };
 
@@ -942,10 +952,25 @@ static struct msm_pcie_clk_info_t
 	{NULL, "pcie_2_cfg_ahb_clk", 0, false, true},
 	{NULL, "pcie_2_mstr_axi_clk", 0, true, true},
 	{NULL, "pcie_2_slv_axi_clk", 0, true, true},
-	{NULL, "pcie_2_ldo", 0, false, true},
+	{NULL, "pcie_2_ldo", 0, false, false},
 	{NULL, "pcie_2_smmu_clk", 0, false, false},
 	{NULL, "pcie_2_slv_q2a_axi_clk", 0, false, false},
 	{NULL, "pcie_2_sleep_clk", 0, false, false},
+	{NULL, "pcie_phy_refgen_clk", 0, false, false},
+	{NULL, "pcie_tbu_clk", 0, false, false},
+	{NULL, "pcie_phy_cfg_ahb_clk", 0, false, false},
+	{NULL, "pcie_phy_aux_clk", 0, false, false}
+	},
+	{
+	{NULL, "pcie_3_ref_clk_src", 0, false, false},
+	{NULL, "pcie_3_aux_clk", 1010000, false, true},
+	{NULL, "pcie_3_cfg_ahb_clk", 0, false, true},
+	{NULL, "pcie_3_mstr_axi_clk", 0, true, true},
+	{NULL, "pcie_3_slv_axi_clk", 0, true, true},
+	{NULL, "pcie_3_ldo", 0, false, false},
+	{NULL, "pcie_3_smmu_clk", 0, false, false},
+	{NULL, "pcie_3_slv_q2a_axi_clk", 0, false, false},
+	{NULL, "pcie_3_sleep_clk", 0, false, false},
 	{NULL, "pcie_phy_refgen_clk", 0, false, false},
 	{NULL, "pcie_tbu_clk", 0, false, false},
 	{NULL, "pcie_phy_cfg_ahb_clk", 0, false, false},
@@ -964,6 +989,9 @@ static struct msm_pcie_clk_info_t
 	},
 	{
 	{NULL, "pcie_2_pipe_clk", 125000000, true, true},
+	},
+	{
+	{NULL, "pcie_3_pipe_clk", 125000000, true, true},
 	}
 };
 
@@ -975,7 +1003,6 @@ static const struct msm_pcie_res_info_t msm_pcie_res_info[MSM_PCIE_MAX_RES] = {
 	{"elbi",	NULL, NULL},
 	{"iatu",	NULL, NULL},
 	{"conf",	NULL, NULL},
-	{"mhi",		NULL, NULL},
 	{"tcsr",	NULL, NULL}
 };
 
@@ -1087,6 +1114,21 @@ static void pcie_phy_dump(struct msm_pcie_dev_t *dev)
 	}
 }
 
+static void pcie_tcsr_init(struct msm_pcie_dev_t *dev)
+{
+	int i;
+	struct msm_pcie_tcsr_info_t *tcsr_cfg;
+
+	i = dev->tcsr_len;
+	tcsr_cfg = dev->tcsr_config;
+	while (i--) {
+		msm_pcie_write_reg(dev->tcsr,
+			tcsr_cfg->offset,
+			tcsr_cfg->val);
+		tcsr_cfg++;
+	}
+}
+
 static void pcie_phy_init(struct msm_pcie_dev_t *dev)
 {
 	int i;
@@ -1192,11 +1234,6 @@ static void msm_pcie_cfg_recover(struct msm_pcie_dev_t *dev, bool rc)
 			cfg = dev->dm_core;
 			shadow = dev->rc_shadow;
 		} else {
-			/* do not restore for endpoints (Type 0) */
-			if (dev->pcidev_table[i].dev->hdr_type ==
-			    PCI_HEADER_TYPE_NORMAL)
-				continue;
-
 			if (!msm_pcie_confirm_linkup(dev, false, true,
 				dev->pcidev_table[i].conf_base))
 				continue;
@@ -1667,11 +1704,6 @@ static void msm_pcie_sel_debug_testcase(struct msm_pcie_dev_t *dev,
 
 		break;
 	case MSM_PCIE_DUMP_PCIE_REGISTER_SPACE:
-		if (!base_sel) {
-			PCIE_DBG_FS(dev, "Invalid base_sel: 0x%x\n", base_sel);
-			break;
-		}
-
 		if (((base_sel - 1) >= MSM_PCIE_MAX_RES) ||
 					(!dev->res[base_sel - 1].resource)) {
 			PCIE_DBG_FS(dev, "PCIe: RC%d Resource does not exist\n",
@@ -1679,7 +1711,10 @@ static void msm_pcie_sel_debug_testcase(struct msm_pcie_dev_t *dev,
 			break;
 		}
 
-		if (base_sel - 1 == MSM_PCIE_RES_PARF) {
+		if (!base_sel) {
+			PCIE_DBG_FS(dev, "Invalid base_sel: 0x%x\n", base_sel);
+			break;
+		} else if (base_sel - 1 == MSM_PCIE_RES_PARF) {
 			pcie_parf_dump(dev);
 			break;
 		} else if (base_sel - 1 == MSM_PCIE_RES_PHY) {
@@ -2160,36 +2195,6 @@ static ssize_t msm_pcie_enumerate_store(struct device *dev,
 
 static DEVICE_ATTR(enumerate, 0200, NULL, msm_pcie_enumerate_store);
 
-static ssize_t aspm_stat_show(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
-{
-	struct msm_pcie_dev_t *pcie_dev = dev_get_drvdata(dev);
-
-	if (!pcie_dev->mhi)
-		return scnprintf(buf, PAGE_SIZE,
-				 "PCIe: RC%d: MHI register space is not defined\n",
-				 pcie_dev->rc_idx);
-
-	if (pcie_dev->link_status != MSM_PCIE_LINK_ENABLED)
-		return scnprintf(buf, PAGE_SIZE,
-				 "PCIe: RC%d: registers are not accessible\n",
-				 pcie_dev->rc_idx);
-
-	return scnprintf(buf, PAGE_SIZE,
-			 "PCIe: RC%d: L0s: %u L1: %u L1.1: %u L1.2: %u\n",
-			 pcie_dev->rc_idx,
-			 readl_relaxed(pcie_dev->mhi +
-				       PCIE20_PARF_DEBUG_CNT_IN_L0S),
-			 readl_relaxed(pcie_dev->mhi +
-				       PCIE20_PARF_DEBUG_CNT_IN_L1),
-			 readl_relaxed(pcie_dev->mhi +
-				       PCIE20_PARF_DEBUG_CNT_IN_L1SUB_L1),
-			 readl_relaxed(pcie_dev->mhi +
-				       PCIE20_PARF_DEBUG_CNT_IN_L1SUB_L2));
-}
-static DEVICE_ATTR_RO(aspm_stat);
-
 static ssize_t l23_rdy_poll_timeout_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -2223,7 +2228,6 @@ static DEVICE_ATTR_RW(l23_rdy_poll_timeout);
 
 static struct attribute *msm_pcie_debug_attrs[] = {
 	&dev_attr_enumerate.attr,
-	&dev_attr_aspm_stat.attr,
 	&dev_attr_l23_rdy_poll_timeout.attr,
 	NULL,
 };
@@ -3524,8 +3528,6 @@ static void msm_pcie_iatu_config_all_ep(struct msm_pcie_dev_t *dev)
 
 static void msm_pcie_config_controller(struct msm_pcie_dev_t *dev)
 {
-	u32 val;
-
 	PCIE_DBG(dev, "RC%d\n", dev->rc_idx);
 
 	/*
@@ -3570,13 +3572,6 @@ static void msm_pcie_config_controller(struct msm_pcie_dev_t *dev)
 		msm_pcie_write_reg_field(dev->dm_core,
 					PCIE20_DEVICE_CONTROL2_STATUS2,
 					0xf, dev->cpl_timeout);
-
-	/* update RC Max Payload Size based on Max Payload Size Supported */
-	val = readl_relaxed(dev->dm_core + PCIE20_CAP_DEVCAP) &
-	      PCI_EXP_DEVCAP_PAYLOAD;
-	msm_pcie_write_reg_field(dev->dm_core,
-				 PCIE20_CAP_DEVCTRLSTATUS,
-				 PCI_EXP_DEVCTL_PAYLOAD, val);
 
 	/* Enable AER on RC */
 	if (dev->aer_enable) {
@@ -3780,6 +3775,29 @@ static int msm_pcie_get_resources(struct msm_pcie_dev_t *dev,
 		dev->bw_gen_max = size / sizeof(*dev->bw_scale);
 	} else {
 		PCIE_DBG(dev, "RC%d: bandwidth scaling is not supported\n",
+			dev->rc_idx);
+	}
+
+	size = 0;
+	of_get_property(pdev->dev.of_node, "qcom,tcsr", &size);
+	if (size) {
+		dev->tcsr_config = (struct msm_pcie_tcsr_info_t *)
+			devm_kzalloc(&pdev->dev, size, GFP_KERNEL);
+
+		if (dev->tcsr_config) {
+			dev->tcsr_len =
+				size / sizeof(*dev->tcsr_config);
+
+			of_property_read_u32_array(pdev->dev.of_node,
+				"qcom,tcsr",
+				(unsigned int *)dev->tcsr_config,
+				size / sizeof(dev->tcsr_config->offset));
+		} else {
+			ret = -ENOMEM;
+			goto out;
+		}
+	} else {
+		PCIE_DBG(dev, "RC%d: tcsr is not present in DT\n",
 			dev->rc_idx);
 	}
 
@@ -4027,7 +4045,6 @@ static int msm_pcie_get_resources(struct msm_pcie_dev_t *dev,
 	dev->iatu = dev->res[MSM_PCIE_RES_IATU].base;
 	dev->dm_core = dev->res[MSM_PCIE_RES_DM_CORE].base;
 	dev->conf = dev->res[MSM_PCIE_RES_CONF].base;
-	dev->mhi = dev->res[MSM_PCIE_RES_MHI].base;
 	dev->tcsr = dev->res[MSM_PCIE_RES_TCSR].base;
 
 out:
@@ -4045,7 +4062,6 @@ static void msm_pcie_release_resources(struct msm_pcie_dev_t *dev)
 	dev->iatu = NULL;
 	dev->dm_core = NULL;
 	dev->conf = NULL;
-	dev->mhi = NULL;
 	dev->tcsr = NULL;
 }
 
@@ -4186,6 +4202,10 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 		readl_relaxed(dev->parf + PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT);
 	msm_pcie_write_reg(dev->parf, PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT,
 				BIT(31) | val);
+
+	/* init tcsr */
+	if (dev->tcsr_config)
+		pcie_tcsr_init(dev);
 
 	/* init PCIe PHY */
 	pcie_phy_init(dev);
@@ -4704,7 +4724,7 @@ int msm_pcie_enumerate(u32 rc_idx)
 			struct pci_dev *pcidev = NULL;
 			struct pci_host_bridge *bridge;
 			bool found = false;
-			struct pci_bus *bus, *child;
+			struct pci_bus *bus;
 			resource_size_t iobase = 0;
 			u32 ids = readl_relaxed(msm_pcie_dev[rc_idx].dm_core);
 			u32 vendor_id = ids & 0xffff;
@@ -4765,9 +4785,6 @@ int msm_pcie_enumerate(u32 rc_idx)
 			bus = bridge->bus;
 
 			pci_assign_unassigned_bus_resources(bus);
-			list_for_each_entry(child, &bus->children, node)
-				pcie_bus_configure_settings(child);
-
 			pci_bus_add_devices(bus);
 
 			dev->enumerated = true;
@@ -6685,7 +6702,7 @@ static int msm_pci_iommu_init(struct msm_root_dev_t *root_dev)
 	ret = arm_iommu_attach_device(&pci_dev->dev, mapping);
 	if (ret) {
 		PCIE_ERR(pcie_dev,
-			"failed to iommu attach device (%d)\n",
+			"PCIe: RC%d: failed to iommu attach device (%d)\n",
 			pcie_dev->rc_idx, ret);
 		goto release_mapping;
 	}
@@ -6735,6 +6752,7 @@ int msm_pci_probe(struct pci_dev *pci_dev,
 
 static struct pci_device_id msm_pci_device_id[] = {
 	{PCI_DEVICE(0x17cb, 0x0108)},
+	{PCI_DEVICE(0x17cb, 0x0109)},
 	{PCI_DEVICE(0x17cb, 0x1000)},
 	{0},
 };
