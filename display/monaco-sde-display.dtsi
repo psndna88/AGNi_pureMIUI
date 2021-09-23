@@ -76,6 +76,38 @@
 		};
 	};
 
+	dsi_panel_pwr_supply_nolab_amoled: dsi_panel_pwr_supply_nolab_amoled {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <2000000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+	};
+
+	display_panel_ibb: display_panel_ibb_stub {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "display_panel_ibb";
+		regulator-min-microvolt = <4600000>;
+		regulator-max-microvolt = <6000000>;
+	};
+
 	sde_dsi: qcom,dsi-display-primary {
 		compatible = "qcom,dsi-display";
 		label = "primary";
@@ -105,6 +137,7 @@
 		qcom,platform-te-gpio = <&tlmm 73 0>;
 		qcom,panel-te-source = <0>;
 		vddio-supply = <&L21A>;
+		ibb-supply = <&display_panel_ibb>;
 		qcom,mdp = <&mdss_mdp>;
 
 		qcom,dsi-default-panel =
