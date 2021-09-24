@@ -3666,6 +3666,18 @@ static void dsi_panel_setup_vm_ops(struct dsi_panel *panel, bool trusted_vm_env)
 	}
 }
 
+void dsi_panel_request_fod_hbm(struct dsi_panel *panel, bool status)
+{
+	mutex_lock(&panel->panel_lock);
+	if (!panel->panel_initialized)
+		goto exit;
+
+	panel->fod_hbm_requested = status;
+
+exit:
+	mutex_unlock(&panel->panel_lock);
+}
+
 static ssize_t sysfs_fod_hbm_write(struct device *dev, struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
@@ -3688,14 +3700,7 @@ static ssize_t sysfs_fod_hbm_write(struct device *dev, struct device_attribute *
 
 	panel = display->panel;
 
-	mutex_lock(&panel->panel_lock);
-	if (!panel->panel_initialized)
-		goto exit;
-
-	panel->fod_hbm_requested = status;
-
-exit:
-	mutex_unlock(&panel->panel_lock);
+	dsi_panel_request_fod_hbm(panel, status);
 
 	return count;
 }

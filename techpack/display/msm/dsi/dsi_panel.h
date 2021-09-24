@@ -415,5 +415,6 @@ int dsi_panel_is_fod_hbm_applied(struct dsi_panel *panel);
 int dsi_panel_get_fod_hbm(struct dsi_panel *panel);
 void dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel);
 void dsi_panel_set_fod_ui(struct dsi_panel *panel, bool status);
+void dsi_panel_request_fod_hbm(struct dsi_panel *panel, bool status);
 
 #endif /* _DSI_PANEL_H_ */
