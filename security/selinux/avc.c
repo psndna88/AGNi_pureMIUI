@@ -38,7 +38,6 @@
 #define AVC_DEF_CACHE_THRESHOLD		512
 #define AVC_CACHE_RECLAIM		16
 
-int avc_strict = 0;
 #ifdef CONFIG_SECURITY_SELINUX_AVC_STATS
 #define avc_cache_stats_incr(field)	this_cpu_inc(avc_cache_stats.field)
 #else
@@ -1028,14 +1027,12 @@ static noinline int avc_denied(struct selinux_state *state,
 			       u8 driver, u8 xperm, unsigned int flags,
 			       struct av_decision *avd)
 {
-	if (selinux_enforcing_boot) {
-	if (flags & avc_strict)
+	if (flags & AVC_STRICT)
 		return -EACCES;
 
 	if (enforcing_enabled(state) &&
 	    !(avd->flags & AVD_FLAGS_PERMISSIVE))
 		return -EACCES;
-	}
 
 	avc_update_node(state->avc, AVC_CALLBACK_GRANT, requested, driver,
 			xperm, ssid, tsid, tclass, avd->seqno, NULL, flags);
