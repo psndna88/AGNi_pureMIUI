@@ -33,11 +33,11 @@
 		regulator-enable-ramp-delay = <2400>;
 	};
 
-	ioss_qps615_rx: qps615_rx@eth {
+	ioss_aqr_rx: qps615_rx@eth0 {
 		qcom,dir-rx;
 		qcom,rx-filter-ip;
 
-		qcom,ring-size = <128>;
+		qcom,ring-size = <1023>;
 		qcom,buff-size = <2048>;
 
 		qcom,mod-count-min = <64>;
@@ -46,9 +46,33 @@
 		qcom,mod-usecs-max = <60>;
 	};
 
-	ioss_qps615_tx: qps615_tx@eth {
+	ioss_aqr_tx: qps615_tx@eth0 {
 		qcom,dir-tx;
-		qcom,ring-size = <512>;
+		qcom,ring-size = <1023>;
+		qcom,buff-size = <2048>;
+
+		qcom,mod-count-min = <64>;
+		qcom,mod-count-max = <64>;
+		qcom,mod-usecs-min = <30>;
+		qcom,mod-usecs-max = <60>;
+	};
+
+	ioss_napa_rx: qps615_rx@eth1 {
+		qcom,dir-rx;
+		qcom,rx-filter-ip;
+
+		qcom,ring-size = <127>;
+		qcom,buff-size = <2048>;
+
+		qcom,mod-count-min = <64>;
+		qcom,mod-count-max = <64>;
+		qcom,mod-usecs-min = <30>;
+		qcom,mod-usecs-max = <60>;
+	};
+
+	ioss_napa_tx: qps615_tx@eth1 {
+		qcom,dir-tx;
+		qcom,ring-size = <511>;
 		qcom,buff-size = <2048>;
 
 		qcom,mod-count-min = <64>;
@@ -62,8 +86,8 @@
 		qcom,ioss_instance = <0>;
 
 		qcom,ioss_channels =
-			<&ioss_qps615_rx>,
-			<&ioss_qps615_tx>;
+			<&ioss_aqr_rx>,
+			<&ioss_aqr_tx>;
 	};
 
 	ioss_qps615_eth1: qps615@eth1 {
@@ -71,8 +95,8 @@
 		qcom,ioss_instance = <1>;
 
 		qcom,ioss_channels =
-			<&ioss_qps615_rx>,
-			<&ioss_qps615_tx>;
+			<&ioss_napa_rx>,
+			<&ioss_napa_tx>;
 	};
 };
 
