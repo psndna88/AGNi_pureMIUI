@@ -889,7 +889,9 @@ static int pdphy_probe(struct platform_device *pdev)
 		return PTR_ERR(pdphy->usbpd);
 	}
 
+#ifdef CONFIG_DEBUG_FS
 	pdphy_create_debugfs_entries(pdphy);
+#endif
 
 	return 0;
 }
@@ -898,7 +900,9 @@ static int pdphy_remove(struct platform_device *pdev)
 {
 	struct usb_pdphy *pdphy = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(pdphy->debug_root);
+#endif
 	usbpd_destroy(pdphy->usbpd);
 
 	if (pdphy->is_opened)
