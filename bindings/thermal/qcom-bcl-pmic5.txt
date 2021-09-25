@@ -41,6 +41,20 @@ Optional Parameters:
 			current monitoring(CCM) hardware for battery current
 			monitor.
 
+- nvmem-cells:
+	Value type: <phandle>
+	Definition: phandle pointing to a nvmem-cells node representing the
+			sdam registers that has information of ibat scaling range
+			factor.When defined, the bcl driver will use it to
+			scale ibat current greater than default supported range.
+
+- nvmem-cell-names:
+	Value type: <string>
+	Definition: Specifies the given nvmem cell name as defined in
+			sdam node.
+			Documentation/devicetree/bindings/nvmem/nvmem.txt and also
+			example below.
+
 Example:
 		bcl@4200 {
 			compatible = "qcom,bcl-v5";
@@ -51,4 +65,6 @@ Example:
 						"bcl-lvl1";
 			qcom,pmic7-threshold;
 			qcom,ibat-ccm-hw-support;
+			nvmem-cells = <&adc_scaling>;
+			nvmem-cell-names = "adc_scaling";
 		};
