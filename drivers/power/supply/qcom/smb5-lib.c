@@ -1664,7 +1664,7 @@ int smblib_set_icl_current(struct smb_charger *chg, int icl_ua)
 		 * current limit is 500mA or below for better accuracy; in case
 		 * of error, proceed to use USB high-current mode.
 		 */
-		if (icl_ua <= USBIN_500MA) {
+		if (icl_ua <= USBIN_100MA) {
 			rc = set_sdp_current(chg, icl_ua);
 			if (rc >= 0)
 				goto unsuspend;
@@ -6457,8 +6457,11 @@ static int qc3p5_authenticate(struct smb_charger *chg)
 	smblib_dbg(chg, PR_MISC, "QC3P5 AUTH: Power Limit = %d\n",
 			chg->qc3p5_power_limit_w);
 
-	if (chg->support_ffc && (!smblib_get_fastcharge_mode(chg)))
+	if (chg->support_ffc && (!smblib_get_fastcharge_mode(chg))) {
 		smblib_set_fastcharge_mode(chg, true);
+		schedule_delayed_work(&chg->charger_soc_decimal,
+					msecs_to_jiffies(CHARGER_SOC_DECIMAL_MS));
+	}
 
 	if( (lct_check_hwversion() == GLOBAL_HWVERSION) || (lct_check_hwversion() == INDIA_HWVERSION) )
 	{
@@ -6636,13 +6639,13 @@ int smblib_get_quick_charge_type(struct smb_charger *chg)
 		return 0;
 
 	/* J6A do not need to report this type */
-	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD)
-				&& chg->pd_verifed && chg->qc_class_ab) {
+	if (((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) && chg->pd_verifed) ||
+		(chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5)) {
 		return QUICK_CHARGE_TURBE;
 	}
 
-	if ((chg->is_qc_class_b) || (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5) ||
-		((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) && !chg->pd_verifed))
+	if ((chg->is_qc_class_b) || ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) && !chg->pd_verifed) ||
+		(chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))
 		return QUICK_CHARGE_FLASH;
 
 	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) && chg->hvdcp_recheck_status)
