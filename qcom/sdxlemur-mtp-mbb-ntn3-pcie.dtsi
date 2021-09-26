@@ -118,6 +118,9 @@
 				interrupts-extended = <&tlmm 103 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";
 
+				pinctrl-names = "default";
+				pinctrl-0 = <&aqr_intn_wol_sig>;
+
 				#address-cells = <1>;
 				#size-cells = <1>;
 			};
