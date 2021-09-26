@@ -768,11 +768,22 @@ int dsi_panel_get_fod_hbm(struct dsi_panel *panel)
 	return value;
 }
 
-void dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel)
+int dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel)
 {
+	int rc = 0;
+
 	mutex_lock(&panel->panel_lock);
+	if (!panel->bl_config.allow_bl_update) {
+		rc = -EINVAL;
+		goto done;
+	}
+
 	dsi_panel_set_fod_hbm(panel, panel->fod_hbm_requested);
+
+done:
 	mutex_unlock(&panel->panel_lock);
+
+	return rc;
 }
 
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
