@@ -96,6 +96,7 @@
 	mi,six-pin-step-chg;
 	mi,support-ffc;
 	qcom,temp-27W-enable;
+	qcom,usbpd-phandle = <&pm6150_pdphy>;
 };
 
 &smb1396_div2_cp_master {
