@@ -118,6 +118,7 @@
 };
 
 &dsi_rm69090_amoled_cmd {
+	qcom,ulps-enabled;
 	qcom,mdss-dsi-t-clk-post = <0x08>;
 	qcom,mdss-dsi-t-clk-pre = <0x0B>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0", /*TODO: check these*/
@@ -135,6 +136,7 @@
 };
 
 &dsi_rm69090_amoled_vid {
+	qcom,ulps-enabled;
 	qcom,mdss-dsi-t-clk-post = <0x07>;
 	qcom,mdss-dsi-t-clk-pre = <0x09>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
@@ -151,6 +153,7 @@
 };
 
 &dsi_rm6d030_amoled_cmd {
+	qcom,ulps-enabled;
 	qcom,mdss-dsi-t-clk-post = <0x07>;
 	qcom,mdss-dsi-t-clk-pre = <0x0A>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
