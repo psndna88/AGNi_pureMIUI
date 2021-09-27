@@ -1142,6 +1142,15 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	struct wlan_channel *bss_chan;
 	struct vdev_mlme_obj *vdev_mlme;
 	uint8_t channel;
+	struct wlan_objmgr_pdev *pdev;
+	qdf_freq_t sec_ch_2g_freq = 0;
+	struct ch_params ch_params = {0};
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(iface->vdev);
+	if (!vdev_mlme)
+		return;
+
+	pdev = wlan_vdev_get_pdev(vdev_mlme->vdev);
 
 	channel = wlan_freq_to_chan(iface->ch_freq);
 	if (chan)
@@ -1151,7 +1160,6 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 		wma_get_phy_mode_cb(iface->ch_freq,
 				    iface->chan_width, &bss_phymode);
 
-	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(iface->vdev);
 	/* Update vdev mlme channel info after roaming */
 	des_chan = wlan_vdev_mlme_get_des_chan(iface->vdev);
 	bss_chan = wlan_vdev_mlme_get_bss_chan(iface->vdev);
@@ -1159,15 +1167,35 @@ static void wma_update_phymode_on_roam(tp_wma_handle wma, uint8_t *bssid,
 	des_chan->ch_width = iface->chan_width;
 	if (chan) {
 		des_chan->ch_freq = chan->mhz;
-		des_chan->ch_cfreq1 = chan->band_center_freq1;
-		des_chan->ch_cfreq2 = chan->band_center_freq2;
+		ch_params.ch_width = des_chan->ch_width;
+		if (wlan_reg_is_24ghz_ch_freq(des_chan->ch_freq) &&
+		    des_chan->ch_width == CH_WIDTH_40MHZ &&
+		    chan->band_center_freq1) {
+			if (des_chan->ch_freq < chan->band_center_freq1)
+				sec_ch_2g_freq = des_chan->ch_freq + 20;
+			else
+				sec_ch_2g_freq = des_chan->ch_freq - 20;
+		}
+		wlan_reg_set_channel_params_for_freq(pdev, des_chan->ch_freq,
+						     sec_ch_2g_freq,
+						     &ch_params);
+		if (ch_params.ch_width != des_chan->ch_width ||
+		    ch_params.mhz_freq_seg0 != chan->band_center_freq1 ||
+		    ch_params.mhz_freq_seg1 != chan->band_center_freq2)
+			wma_err("ch mismatch host & fw bw (%d %d) seg0 (%d, %d) seg1 (%d, %d)",
+				ch_params.ch_width, des_chan->ch_width,
+				ch_params.mhz_freq_seg0,
+				chan->band_center_freq1,
+				ch_params.mhz_freq_seg1,
+				chan->band_center_freq2);
+		des_chan->ch_cfreq1 = ch_params.mhz_freq_seg0;
+		des_chan->ch_cfreq2 = ch_params.mhz_freq_seg1;
+		des_chan->ch_width = ch_params.ch_width;
 	} else {
 		wma_err("LFR3: invalid chan");
 	}
 	qdf_mem_copy(bss_chan, des_chan, sizeof(struct wlan_channel));
 
-	if (!vdev_mlme)
-		return;
 	/* Till conversion is not done in WMI we need to fill fw phy mode */
 	vdev_mlme->mgmt.generic.phy_mode = wma_host_to_fw_phymode(bss_phymode);
 
