@@ -147,7 +147,6 @@ static inline void __compat_fake_destructor(struct sk_buff *skb)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0) && IS_ENABLED(CONFIG_IPV6) && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0)
 #include <linux/if.h>
 #include <net/udp_tunnel.h>
-#define udp_tunnel6_xmit_skb(a, b, c, d, e, f, g, h, i, j, k, l) udp_tunnel6_xmit_skb(a, b, c, d, e, f, g, h, j, k, l)
 #endif
 
 #endif
