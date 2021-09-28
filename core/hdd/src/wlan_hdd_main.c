@@ -4434,7 +4434,9 @@ static int __hdd_open(struct net_device *dev)
 	hdd_populate_wifi_pos_cfg(hdd_ctx);
 	hdd_lpass_notify_start(hdd_ctx, adapter);
 
-	hdd_map_monitor_interface_vdev(adapter);
+	if (ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
+				      PACKET_CAPTURE_MODE_DISABLE)
+		hdd_map_monitor_interface_vdev(adapter);
 
 	return 0;
 }
@@ -8533,7 +8535,6 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter, *next_adapter = NULL;
 	bool value;
-	struct wlan_objmgr_vdev *vdev;
 	wlan_net_dev_ref_dbgid dbgid = NET_DEV_HOLD_START_ALL_ADAPTERS;
 
 	hdd_enter();
@@ -8599,19 +8600,19 @@ QDF_STATUS hdd_start_all_adapters(struct hdd_context *hdd_ctx)
 			break;
 		case QDF_MONITOR_MODE:
 			if (wlan_hdd_is_session_type_monitor(
-			    QDF_MONITOR_MODE) &&
+			    adapter->device_mode) &&
 			    ucfg_pkt_capture_get_mode(hdd_ctx->psoc) !=
 						PACKET_CAPTURE_MODE_DISABLE) {
-				vdev = hdd_objmgr_get_vdev(adapter);
-				if (vdev) {
-					ucfg_pkt_capture_register_callbacks(
-						vdev,
-						hdd_mon_rx_packet_cbk,
-						adapter);
-					hdd_objmgr_put_vdev(vdev);
-				} else {
-					hdd_err("vdev is null");
+				struct hdd_adapter *sta_adapter;
+
+				sta_adapter = hdd_get_adapter(hdd_ctx,
+							      QDF_STA_MODE);
+				if (!sta_adapter) {
+					hdd_err("No station interface found");
+					return -EINVAL;
 				}
+
+				hdd_map_monitor_interface_vdev(sta_adapter);
 				break;
 			}
 			hdd_start_station_adapter(adapter);
