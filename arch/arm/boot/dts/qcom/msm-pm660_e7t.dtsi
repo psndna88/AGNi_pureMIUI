@@ -672,7 +672,32 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		pm660_haptics: qcom,haptic@c000 {
+		pm660_haptics: qcom,haptic@c001 {
+			compatible = "qcom,qpnp-haptic";
+			reg = <0xc000 0x100>;
+			interrupts = <0x1 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
+				     <0x1 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "sc-irq", "play-irq";
+			qcom,pmic-revid = <&pm660_revid>;
+			qcom,pmic-misc = <&pm660_misc>;
+			qcom,misc-clk-trim-error-reg = <0xf3>;
+			qcom,actuator-type = "erm";
+			qcom,play-mode = "direct";
+			qcom,vmax-mv = <3000>;
+			qcom,ilim-ma = <800>;
+			qcom,wave-shape = "square";
+			qcom,wave-play-rate-us = <6667>;
+			qcom,int-pwm-freq-khz = <505>;
+			qcom,sc-deb-cycles = <8>;
+			qcom,en-brake;
+			qcom,brake-pattern = [03 03 00 00];
+			qcom,lra-high-z = "opt0";
+			qcom,lra-auto-res-mode = "qwd";
+			qcom,lra-calibrate-at-eop = <0>;
+			qcom,correct-lra-drive-freq;
+		};
+
+		pm660_haptics_qti: qcom,haptic@c002 {
 			compatible = "qcom,pm660-haptics";
 			reg = <0xc000 0x100>;
 			interrupts = <0x1 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
