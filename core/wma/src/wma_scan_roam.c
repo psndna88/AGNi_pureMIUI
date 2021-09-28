@@ -1358,14 +1358,21 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	if (QDF_IS_STATUS_ERROR(wma->pe_roam_synch_cb(wma->mac_context,
 			roam_synch_ind_ptr, bss_desc_ptr,
 			SIR_ROAM_SYNCH_PROPAGATION))) {
-		wma_err("LFR3: PE roam synch cb failed");
+		wma_err("LFR3: PE roam synch propagation failed");
 		status = -EBUSY;
 		goto cleanup_label;
 	}
 
 	wma_roam_update_vdev(wma, roam_synch_ind_ptr);
-	wma->csr_roam_synch_cb(wma->mac_context, roam_synch_ind_ptr,
-			       bss_desc_ptr, SIR_ROAM_SYNCH_PROPAGATION);
+
+	if (QDF_IS_STATUS_ERROR(wma->csr_roam_synch_cb(wma->mac_context,
+				roam_synch_ind_ptr,
+				bss_desc_ptr, SIR_ROAM_SYNCH_PROPAGATION))) {
+		wma_err("CSR roam synch propagation failed, abort roam");
+		status = -EINVAL;
+		goto cleanup_label;
+	}
+
 	wma_process_roam_synch_complete(wma, synch_event->vdev_id);
 
 	/* update freq and channel width */

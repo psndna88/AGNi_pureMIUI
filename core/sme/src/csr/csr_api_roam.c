@@ -11490,7 +11490,6 @@ csr_roam_chk_lnk_disassoc_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 {
 	struct csr_roam_session *session;
 	uint32_t sessionId = WLAN_UMAC_VDEV_ID_MAX;
-	QDF_STATUS status;
 	struct disassoc_ind *pDisassocInd;
 	tSmeCmd *cmd;
 
@@ -11504,11 +11503,11 @@ csr_roam_chk_lnk_disassoc_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 	 * the WmStatusChange requests is pushed and processed
 	 */
 	pDisassocInd = (struct disassoc_ind *)msg_ptr;
-	status = csr_roam_get_session_id_from_bssid(mac_ctx,
-				&pDisassocInd->bssid, &sessionId);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		sme_err("Session Id not found for BSSID "QDF_MAC_ADDR_FMT,
-			QDF_MAC_ADDR_REF(pDisassocInd->bssid.bytes));
+
+	sessionId = pDisassocInd->vdev_id;
+	if (!CSR_IS_SESSION_VALID(mac_ctx, sessionId)) {
+		sme_err("Invalid session. Session Id: %d BSSID: " QDF_MAC_ADDR_FMT,
+			sessionId, QDF_MAC_ADDR_REF(pDisassocInd->bssid.bytes));
 		qdf_mem_free(cmd);
 		return;
 	}
@@ -11589,7 +11588,6 @@ csr_roam_chk_lnk_deauth_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 {
 	struct csr_roam_session *session;
 	uint32_t sessionId = WLAN_UMAC_VDEV_ID_MAX;
-	QDF_STATUS status;
 	struct deauth_ind *pDeauthInd;
 
 	pDeauthInd = (struct deauth_ind *)msg_ptr;
@@ -11597,10 +11595,8 @@ csr_roam_chk_lnk_deauth_ind(struct mac_context *mac_ctx, tSirSmeRsp *msg_ptr)
 		  pDeauthInd->vdev_id,
 		  QDF_MAC_ADDR_REF(pDeauthInd->bssid.bytes));
 
-	status = csr_roam_get_session_id_from_bssid(mac_ctx,
-						   &pDeauthInd->bssid,
-						   &sessionId);
-	if (!QDF_IS_STATUS_SUCCESS(status))
+	sessionId = pDeauthInd->vdev_id;
+	if (!CSR_IS_SESSION_VALID(mac_ctx, sessionId))
 		return;
 
 	if (csr_is_deauth_disassoc_already_active(mac_ctx, sessionId,
@@ -21211,7 +21207,14 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 	status = csr_get_parsed_bss_description_ies(
 			mac_ctx, bss_desc, &ies_local);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		sme_err("LFR3: fail to parse IEs");
+		sme_err("LFR3: fail to parse IEs. Len Bcn : %d, Reassoc req : %d Reassoc rsp : %d",
+			roam_synch_data->beaconProbeRespLength,
+			roam_synch_data->reassoc_req_length,
+			roam_synch_data->reassocRespLength);
+		qdf_trace_hex_dump(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
+				   (uint8_t *)roam_synch_data +
+				   roam_synch_data->beaconProbeRespOffset,
+				   roam_synch_data->beaconProbeRespLength);
 		goto end;
 	}
 

@@ -2491,13 +2491,14 @@ static void __lim_process_sme_disassoc_req(struct mac_context *mac,
 		disassocTrigger = eLIM_HOST_DISASSOC;
 		goto sendDisassoc;
 	}
-	pe_debug("vdev %d (session %d) Systemrole %d Reason: %u SmeState: %d limMlmState %d ho fail %d  send OTA %d from: "
-		 QDF_MAC_ADDR_FMT, pe_session->vdev_id, pe_session->peSessionId,
+	pe_debug("vdev %d (session %d) Systemrole %d Reason: %u SmeState: %d limMlmState %d ho fail %d  send OTA %d from: " QDF_MAC_ADDR_FMT " bssid :" QDF_MAC_ADDR_FMT,
+		 pe_session->vdev_id, pe_session->peSessionId,
 		 GET_LIM_SYSTEM_ROLE(pe_session), smeDisassocReq.reasonCode,
 		 pe_session->limSmeState, pe_session->limMlmState,
 		 smeDisassocReq.process_ho_fail,
 		 smeDisassocReq.doNotSendOverTheAir,
-		 QDF_MAC_ADDR_REF(smeDisassocReq.peer_macaddr.bytes));
+		 QDF_MAC_ADDR_REF(smeDisassocReq.peer_macaddr.bytes),
+		 QDF_MAC_ADDR_REF(smeDisassocReq.bssid.bytes));
 
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(mac, WLAN_PE_DIAG_DISASSOC_REQ_EVENT, pe_session,
@@ -2833,11 +2834,12 @@ static void __lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 		deauth_trigger = eLIM_HOST_DEAUTH;
 		goto send_deauth;
 	}
-	pe_debug("vdev %d (session %d) Systemrole %d reasoncode %u limSmestate %d limMlmState %d from "
-		 QDF_MAC_ADDR_FMT, vdev_id, session_entry->peSessionId,
+	pe_debug("vdev %d (session %d) Systemrole %d reasoncode %u limSmestate %d limMlmState %d from " QDF_MAC_ADDR_FMT " bssid : " QDF_MAC_ADDR_FMT,
+		 vdev_id, session_entry->peSessionId,
 		 GET_LIM_SYSTEM_ROLE(session_entry), sme_deauth_req.reasonCode,
 		 session_entry->limSmeState, session_entry->limMlmState,
-		 QDF_MAC_ADDR_REF(sme_deauth_req.peer_macaddr.bytes));
+		 QDF_MAC_ADDR_REF(sme_deauth_req.peer_macaddr.bytes),
+		 QDF_MAC_ADDR_REF(sme_deauth_req.bssid.bytes));
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_LIM    /* FEATURE_WLAN_DIAG_SUPPORT */
 	lim_diag_event_report(mac_ctx, WLAN_PE_DIAG_DEAUTH_REQ_EVENT,
 			session_entry, 0, sme_deauth_req.reasonCode);
@@ -4822,23 +4824,53 @@ static void lim_process_disconnect_sta(struct pe_session *session,
 					      sizeof(*msg), msg);
 }
 
+static
+struct pe_session *lim_get_disconnect_session(struct mac_context *mac_ctx,
+					      uint8_t *bssid,
+					      uint8_t vdev_id)
+{
+	struct pe_session *session;
+	uint8_t session_id;
+
+	/* Try to find pe session with bssid */
+	session = pe_find_session_by_bssid(mac_ctx, bssid,
+					   &session_id);
+
+	/*
+	 * If bssid search fail try to find by vdev id, this can happen if
+	 * Roaming change the BSSID during disconnect was getting processed.
+	 */
+	if (!session) {
+		session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
+		if (session)
+			pe_info("Session found for vdev_id : %d session id : %d Requested bssid : " QDF_MAC_ADDR_FMT " Actual bssid : " QDF_MAC_ADDR_FMT " sme state %d mlm state %d",
+				vdev_id, session->peSessionId,
+				QDF_MAC_ADDR_REF(bssid),
+				QDF_MAC_ADDR_REF(session->bssId),
+				session->limSmeState,
+				session->limMlmState);
+	}
+
+	return session;
+}
+
 static void lim_process_sme_disassoc_cnf(struct mac_context *mac_ctx,
 					 struct scheduler_msg *msg)
 {
 	struct disassoc_cnf sme_disassoc_cnf;
 	struct pe_session *session;
-	uint8_t session_id;
 	uint32_t *err_msg = NULL;
 	QDF_STATUS status;
 
 	qdf_mem_copy(&sme_disassoc_cnf, msg->bodyptr, sizeof(sme_disassoc_cnf));
 
-	session = pe_find_session_by_bssid(mac_ctx,
-					   sme_disassoc_cnf.bssid.bytes,
-					   &session_id);
+	session = lim_get_disconnect_session(mac_ctx,
+					     sme_disassoc_cnf.bssid.bytes,
+					     sme_disassoc_cnf.vdev_id);
 	if (!session) {
-		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(sme_disassoc_cnf.bssid.bytes));
+		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT "vdev id: %d",
+		       QDF_MAC_ADDR_REF(sme_disassoc_cnf.bssid.bytes),
+		       sme_disassoc_cnf.vdev_id);
 		status = lim_prepare_disconnect_done_ind
 						(mac_ctx, &err_msg,
 						sme_disassoc_cnf.vdev_id,
@@ -4852,11 +4884,24 @@ static void lim_process_sme_disassoc_cnf(struct mac_context *mac_ctx,
 		return;
 	}
 
-	if (LIM_IS_STA_ROLE(session))
+	/* In LFR3, if Roam synch indication processing might fail
+	 * in CSR, then CSR and LIM peer will be out-of-sync.
+	 * To recover from this, during HO failure delete the LIM
+	 * session corresponding to the vdev id, irrespective of the
+	 * BSSID. Copy the BSSID present in LIM session into the
+	 * disassoc cnf msg sent to LIM and SME.
+	 */
+	if (LIM_IS_STA_ROLE(session)) {
+		struct disassoc_cnf *sta_disassoc_cnf = msg->bodyptr;
+		qdf_mem_copy(sta_disassoc_cnf->bssid.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(sta_disassoc_cnf->peer_macaddr.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
 		lim_process_disconnect_sta(session, msg);
-	else
+	} else {
 		__lim_process_sme_disassoc_cnf(mac_ctx,
 					       (uint32_t *)msg->bodyptr);
+	}
 }
 
 static void lim_process_sme_disassoc_req(struct mac_context *mac_ctx,
@@ -4864,16 +4909,16 @@ static void lim_process_sme_disassoc_req(struct mac_context *mac_ctx,
 {
 	struct disassoc_req disassoc_req;
 	struct pe_session *session;
-	uint8_t session_id;
 
 	qdf_mem_copy(&disassoc_req, msg->bodyptr, sizeof(struct disassoc_req));
 
-	session = pe_find_session_by_bssid(mac_ctx,
-					   disassoc_req.bssid.bytes,
-					   &session_id);
+	session = lim_get_disconnect_session(mac_ctx,
+					     disassoc_req.bssid.bytes,
+					     disassoc_req.sessionId);
 	if (!session) {
-		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(disassoc_req.bssid.bytes));
+		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT "vdev id: %d",
+		       QDF_MAC_ADDR_REF(disassoc_req.bssid.bytes),
+		       disassoc_req.sessionId);
 		lim_send_sme_disassoc_ntf(mac_ctx,
 					  disassoc_req.peer_macaddr.bytes,
 					  eSIR_SME_INVALID_PARAMETERS,
@@ -4900,11 +4945,24 @@ static void lim_process_sme_disassoc_req(struct mac_context *mac_ctx,
 		return;
 	}
 
-	if (LIM_IS_STA_ROLE(session))
+	/* In LFR3, if Roam synch indication processing might fail
+	 * in CSR, then CSR and LIM peer will be out-of-sync.
+	 * To recover from this, during HO failure delete the LIM
+	 * session corresponding to the vdev id, irrespective of the
+	 * BSSID. Copy the BSSID present in LIM session into the
+	 * disassoc cnf msg sent to LIM and SME.
+	 */
+	if (LIM_IS_STA_ROLE(session)) {
+		struct disassoc_req *sta_disassoc_req = msg->bodyptr;
+		qdf_mem_copy(sta_disassoc_req->bssid.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(sta_disassoc_req->peer_macaddr.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
 		lim_process_disconnect_sta(session, msg);
-	else
+	} else {
 		__lim_process_sme_disassoc_req(mac_ctx,
 					       (uint32_t *)msg->bodyptr);
+	}
 }
 
 static void lim_process_sme_deauth_req(struct mac_context *mac_ctx,
@@ -4912,16 +4970,17 @@ static void lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 {
 	struct deauth_req sme_deauth_req;
 	struct pe_session *session;
-	uint8_t session_id;
 
 	qdf_mem_copy(&sme_deauth_req, msg->bodyptr, sizeof(sme_deauth_req));
 
-	session = pe_find_session_by_bssid(mac_ctx,
-					   sme_deauth_req.bssid.bytes,
-					   &session_id);
+	session = lim_get_disconnect_session(mac_ctx,
+					     sme_deauth_req.bssid.bytes,
+					     sme_deauth_req.vdev_id);
+
 	if (!session) {
-		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT,
-		       QDF_MAC_ADDR_REF(sme_deauth_req.bssid.bytes));
+		pe_err("session not found for bssid:"QDF_MAC_ADDR_FMT "vdev id: %d",
+		       QDF_MAC_ADDR_REF(sme_deauth_req.bssid.bytes),
+		       sme_deauth_req.vdev_id);
 		lim_send_sme_deauth_ntf(mac_ctx,
 					sme_deauth_req.peer_macaddr.bytes,
 					eSIR_SME_INVALID_PARAMETERS,
@@ -4942,11 +5001,24 @@ static void lim_process_sme_deauth_req(struct mac_context *mac_ctx,
 		return;
 	}
 
-	if (LIM_IS_STA_ROLE(session))
+	/* In LFR3, if Roam synch indication processing might fail
+	 * in CSR, then CSR and LIM peer will be out-of-sync.
+	 * To recover from this, during HO failure delete the LIM
+	 * session corresponding to the vdev id, irrespective of the
+	 * BSSID. Copy the BSSID present in LIM session into the
+	 * disassoc cnf msg sent to LIM and SME.
+	 */
+	if (LIM_IS_STA_ROLE(session)) {
+		struct deauth_req *sta_deauth_req = msg->bodyptr;
+		qdf_mem_copy(sta_deauth_req->bssid.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(sta_deauth_req->peer_macaddr.bytes,
+			     session->bssId, QDF_MAC_ADDR_SIZE);
 		lim_process_disconnect_sta(session, msg);
-	else
+	} else {
 		__lim_process_sme_deauth_req(mac_ctx,
 					     (uint32_t *)msg->bodyptr);
+	}
 }
 
 /**
