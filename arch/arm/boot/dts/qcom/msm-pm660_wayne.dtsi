@@ -668,7 +668,37 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		pm660_haptics: qcom,haptic@c000 {
+		pm660_haptics: qcom,haptic@c001 {
+			compatible = "qcom,qpnp-haptic";
+			reg = <0xc000 0x100>;
+			interrupts = <0x1 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
+				     <0x1 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "sc-irq", "play-irq";
+			qcom,pmic-revid = <&pm660_revid>;
+			qcom,pmic-misc = <&pm660_misc>;
+			qcom,misc-clk-trim-error-reg = <0xf3>;
+			qcom,actuator-type = "lra";
+			qcom,play-mode = "buffer";
+			qcom,vmax-mv = <2204>;
+			qcom,ilim-ma = <800>;
+			qcom,wave-shape = "sine";
+			qcom,wave-play-rate-us = <4878>;
+			qcom,int-pwm-freq-khz = <253>;
+			qcom,sc-deb-cycles = <8>;
+			qcom,en-brake;
+			qcom,brake-pattern = [02 02 01 00];
+			qcom,wave-samples = [3e 3e 3e 00 00 00 00 00];
+			qcom,wave-samples-two = [3e 3e 3e 3e 00 00 00 00];
+			qcom,wave-samples-three = [3e 3e 3e 3e 3e 00 00 00];
+			qcom,wave-rep-cnt = <1>;
+			qcom,wave-samp-rep-cnt = <1>;
+			qcom,lra-high-z = "opt1";
+			qcom,lra-auto-res-mode = "none";
+			qcom,lra-calibrate-at-eop = <0>;
+			qcom,lra-hw-auto-resonance;
+		};
+
+		pm660_haptics_qti: qcom,haptic@c002 {
 			compatible = "qcom,pm660-haptics";
 			reg = <0xc000 0x100>;
 			interrupts = <0x1 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
