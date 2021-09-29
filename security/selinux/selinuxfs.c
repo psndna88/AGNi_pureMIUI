@@ -31,6 +31,7 @@
 #include <linux/uaccess.h>
 #include <linux/kobject.h>
 #include <linux/ctype.h>
+#include <linux/moduleparam.h>
 
 /* selinuxfs pseudo filesystem for exporting the security policy API.
    Based on the proc code and the fs/nfsd/nfsctl.c code. */
@@ -125,6 +126,8 @@ bool selfakenforce = true;
 #else
 bool selfakenforce = false;
 #endif
+static int selinux_enforcing_rom = 1;
+module_param(selinux_enforcing_rom, int, 0444);
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
 {
@@ -149,6 +152,7 @@ static int __init selinux_permissive_param(char *str)
 	enforcing_status = 0;
 	selinux_enforcing_boot = 0;
 	avc_strict = 0;
+	selinux_enforcing_rom = 0;
 	pr_info("selinux: ROM requested to be permissive, disabling spoofing\n");
 
 	return 1;
