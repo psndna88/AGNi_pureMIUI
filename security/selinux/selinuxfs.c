@@ -102,16 +102,40 @@ static unsigned long sel_last_ino = SEL_INO_NEXT - 1;
 #define SEL_INO_MASK			0x00ffffff
 
 #define TMPBUFLEN	12
+static int enforcing_status = 1;
+#ifdef CONFIG_SECURITY_SELINUX_FAKE_ENFORCE
+bool selfakenforce = true;
+#else
+bool selfakenforce = false;
+#endif
 static ssize_t sel_read_enforce(struct file *filp, char __user *buf,
 				size_t count, loff_t *ppos)
 {
 	char tmpbuf[TMPBUFLEN];
 	ssize_t length;
 
-	length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+	if (selfakenforce) {
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", enforcing_status);
+	} else {
+		length = scnprintf(tmpbuf, TMPBUFLEN, "%d", selinux_enforcing);
+	}
 
 	return simple_read_from_buffer(buf, count, ppos, tmpbuf, length);
 }
+
+static int __init selinux_permissive_param(char *str)
+{
+	if (*str)
+		return 0;
+
+	enforcing_status = 0;
+	selinux_enforcing = 0;
+	avc_strict = 0;
+	pr_info("selinux: ROM requested to be permissive, disabling spoofing\n");
+
+	return 1;
+}
+__setup("androidboot.selinux=permissive", selinux_permissive_param);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
 static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
@@ -137,26 +161,33 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
 
-	new_value = !!new_value;
-
-	if (new_value != selinux_enforcing) {
-		length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
-				      SECCLASS_SECURITY, SECURITY__SETENFORCE,
-				      NULL);
-		if (length)
-			goto out;
-		audit_log(current->audit_context, GFP_KERNEL, AUDIT_MAC_STATUS,
-			"enforcing=%d old_enforcing=%d auid=%u ses=%u",
-			new_value, selinux_enforcing,
-			from_kuid(&init_user_ns, audit_get_loginuid(current)),
-			audit_get_sessionid(current));
-		selinux_enforcing = new_value;
-		if (selinux_enforcing)
-			avc_ss_reset(0);
-		selnl_notify_setenforce(selinux_enforcing);
-		selinux_status_update_setenforce(selinux_enforcing);
-		if (!selinux_enforcing)
-			call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+	if (selfakenforce) {
+		avc_strict = 0;
+		if (new_value != enforcing_status) {
+			length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
+					      SECCLASS_SECURITY, SECURITY__SETENFORCE,
+					      NULL);
+			if (length)
+				goto out;
+			enforcing_status = new_value;
+		}
+	} else {
+		avc_strict = 1;
+		new_value = !!new_value;
+		if (new_value != selinux_enforcing) {
+			length = avc_has_perm(current_sid(), SECINITSID_SECURITY,
+					      SECCLASS_SECURITY, SECURITY__SETENFORCE,
+					      NULL);
+			if (length)
+				goto out;
+			selinux_enforcing = new_value;
+			if (selinux_enforcing)
+				avc_ss_reset(0);
+			selnl_notify_setenforce(selinux_enforcing);
+			selinux_status_update_setenforce(selinux_enforcing);
+			if (!selinux_enforcing)
+				call_lsm_notifier(LSM_POLICY_CHANGE, NULL);
+		}
 	}
 	length = count;
 out:
