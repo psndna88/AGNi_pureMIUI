@@ -3469,6 +3469,9 @@ enum qca_sta_helper_config_params {
 
 	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_WIDTH */
 	STA_SET_CHAN_WIDTH,
+
+	/* For the attribute QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS */
+	STA_SET_FT_DS,
 };
 
 
@@ -3530,6 +3533,11 @@ static int sta_config_params(struct sigma_dut *dut, const char *intf,
 		break;
 	case STA_SET_CHAN_WIDTH:
 		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_CHANNEL_WIDTH,
+			       value))
+			goto fail;
+		break;
+	case STA_SET_FT_DS:
+		if (nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS,
 			       value))
 			goto fail;
 		break;
@@ -5593,6 +5601,13 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 				  "errorCode,Unsupported value for FT_DS");
 			return STATUS_SENT_ERROR;
 		}
+		if (get_driver_type(dut) == DRIVER_WCN &&
+		    sta_config_params(dut, intf, STA_SET_FT_DS,
+				      dut->sta_ft_ds) != 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Failed to enable/disable FT_DS");
+			return STATUS_SENT_ERROR;
+		}
 	}
 
 	val = get_param(cmd, "Program");
@@ -7229,7 +7244,7 @@ static enum sigma_cmd_result cmd_sta_reassoc(struct sigma_dut *dut,
 		}
 	}
 
-	if (ft_ds) {
+	if (ft_ds && get_driver_type(dut) != DRIVER_WCN) {
 		if (chan || freq) {
 			if (!freq)
 				freq = channel_to_freq(dut, chan);
@@ -8910,6 +8925,12 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	}
 
 	dut->akm_values = 0;
+
+#ifdef NL80211_SUPPORT
+	if (get_driver_type(dut) == DRIVER_WCN)
+		sta_config_params(dut, intf, STA_SET_FT_DS, 0);
+#endif /* NL80211_SUPPORT */
+
 	dut->sta_ft_ds = 0;
 
 #ifdef NL80211_SUPPORT
