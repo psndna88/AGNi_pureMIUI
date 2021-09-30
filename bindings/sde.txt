@@ -514,6 +514,9 @@ Optional properties:
 				for CWB. Possible values:
 				"cwb" - preferred for cwb
 				"none" - no preference on display
+-qcom,sde-mixer-cwb-mask:	A u32 array of bitmask for each mixer which has CWB preference set.
+				The bitmask indicates the mux connections existed in HW from all
+				the mixers to the cwb mixer id in the list.
 - qcom,sde-ctl-display-pref:    A string array indicating the preferred display type
                                 for the ctl block. Possible values:
 				"primary" - preferred for primary display
@@ -621,6 +624,7 @@ Example:
 	                "none", "none";
     qcom,sde-mixer-cwb-pref = "none", "none",
 	                "cwb", "none";
+    qcom,sde-mixer-cwb-mask = <0x0 0x0 0x5 0xa 0x11 0x22>;
     qcom,sde-dspp-top-off = <0x1300>;
     qcom,sde-dspp-off = <0x00055000 0x00057000>;
     qcom,sde-dspp-ad-off = <0x24000 0x22800>;
