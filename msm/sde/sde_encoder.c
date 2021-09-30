@@ -267,13 +267,11 @@ static int _sde_encoder_wait_timeout(int32_t drm_id, int32_t hw_id,
 	return rc;
 }
 
-bool sde_encoder_is_primary_display(struct drm_encoder *drm_enc)
+u32 sde_encoder_get_display_type(struct drm_encoder *drm_enc)
 {
 	struct sde_encoder_virt *sde_enc = to_sde_encoder_virt(drm_enc);
 
-	return sde_enc &&
-		(sde_enc->disp_info.display_type ==
-		SDE_CONNECTOR_PRIMARY);
+	return sde_enc ? sde_enc->disp_info.display_type : 0;
 }
 
 bool sde_encoder_is_dsi_display(struct drm_encoder *drm_enc)
