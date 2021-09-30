@@ -8471,6 +8471,11 @@ QDF_STATUS csr_roam_disconnect(struct mac_context *mac_ctx, uint32_t session_id,
 	    || CSR_IS_CONN_NDI(&session->connectedProfile)) {
 		status = csr_roam_issue_disassociate_cmd(mac_ctx, session_id,
 							 reason, mac_reason);
+	} else if (csr_is_deauth_disassoc_already_active(mac_ctx, session_id,
+					session->connectedProfile.bssid)) {
+		/* Return success if Disconnect is already in progress */
+		sme_debug("Disconnect already in queue return success");
+		status = QDF_STATUS_SUCCESS;
 	} else if (session->scan_info.profile) {
 		mac_ctx->roam.roamSession[session_id].connectState =
 			eCSR_ASSOC_STATE_TYPE_INFRA_DISCONNECTING;
@@ -8670,6 +8675,37 @@ bool is_disconnect_pending(struct mac_context *pmac, uint8_t vdev_id)
 	return disconnect_cmd_exist;
 }
 
+bool is_disconnect_pending_on_other_vdev(struct mac_context *pmac,
+					 uint8_t vdev_id)
+{
+	tListElem *entry = NULL;
+	tListElem *next_entry = NULL;
+	tSmeCmd *command = NULL;
+	bool disconnect_cmd_exist = false;
+
+	entry = csr_nonscan_pending_ll_peek_head(pmac, LL_ACCESS_NOLOCK);
+	while (entry) {
+		next_entry = csr_nonscan_pending_ll_next(pmac, entry,
+							 LL_ACCESS_NOLOCK);
+		command = GET_BASE_ADDR(entry, tSmeCmd, Link);
+		/*
+		 * check if any other vdev NB disconnect or SB disconnect
+		 * (eSmeCommandWmStatusChange) is pending
+		 */
+		if (command && (CSR_IS_DISCONNECT_COMMAND(command) ||
+		    command->command == eSmeCommandWmStatusChange) &&
+		    command->vdev_id != vdev_id) {
+			sme_debug("disconnect is pending on vdev:%d, cmd:%d",
+				  command->vdev_id, command->command);
+			disconnect_cmd_exist = true;
+			break;
+		}
+		entry = next_entry;
+	}
+
+	return disconnect_cmd_exist;
+}
+
 #if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
 static void
 csr_clear_other_bss_sae_single_pmk_entry(struct mac_context *mac,
@@ -8789,7 +8825,7 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 	struct csr_roam_connectedinfo *prev_connect_info;
 	struct wlan_crypto_pmksa *pmksa;
 	uint32_t len = 0, roamId = 0, reason_code = 0;
-	bool is_dis_pending;
+	bool is_dis_pending, is_dis_pending_on_other_vdev;
 	bool use_same_bss = false;
 	uint8_t max_retry_count = 1;
 	bool retry_same_bss = false;
@@ -8893,6 +8929,9 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 		 reason_code);
 
 	is_dis_pending = is_disconnect_pending(mac, session_ptr->sessionId);
+	is_dis_pending_on_other_vdev =
+		is_disconnect_pending_on_other_vdev(mac,
+						    session_ptr->sessionId);
 	is_time_allowed =
 		csr_is_time_allowed_for_connect_attempt(pCommand,
 							session_ptr->vdev_id);
@@ -8901,7 +8940,7 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 	 * if userspace has issued disconnection or we have reached mac tries or
 	 * max time, driver should not continue for next connection.
 	 */
-	if (is_dis_pending || !is_time_allowed ||
+	if (is_dis_pending || is_dis_pending_on_other_vdev || !is_time_allowed ||
 	    session_ptr->join_bssid_count >= CSR_MAX_BSSID_COUNT)
 		attempt_next_bss = false;
 
@@ -9016,6 +9055,9 @@ static void csr_roam_join_rsp_processor(struct mac_context *mac,
 
 	if (is_dis_pending)
 		sme_err("disconnect is pending, complete roam");
+
+	if (is_dis_pending_on_other_vdev)
+		sme_err("disconnect is pending on other vdev, complete roam");
 
 	if (!is_time_allowed)
 		sme_err("time can exceed the active timeout for connection attempt");

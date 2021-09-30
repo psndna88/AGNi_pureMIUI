@@ -974,6 +974,17 @@ csr_get_bssdescr_from_scan_handle(tScanResultHandle result_handle,
 bool is_disconnect_pending(struct mac_context *mac_ctx,
 				   uint8_t sessionid);
 
+/**
+ * is_disconnect_pending_on_other_vdev() - To check whether a disconnect req
+ * is pending on any other vdev or not
+ * @mac_tx: mac context
+ * @sessionid: session id
+ *
+ * Return true if disconnect is pending on any other vdev
+ */
+bool is_disconnect_pending_on_other_vdev(struct mac_context *mac_ctx,
+					 uint8_t sessionid);
+
 QDF_STATUS
 csr_roam_prepare_bss_config_from_profile(struct mac_context *mac_ctx,
 					 struct csr_roam_profile *profile,
