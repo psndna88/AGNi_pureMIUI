@@ -1208,7 +1208,6 @@
 		qcom,register-collection-on-crash;
 		qcom,testbus-collection-on-crash;
 		qcom,non-tn-collection-on-crash;
-		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
