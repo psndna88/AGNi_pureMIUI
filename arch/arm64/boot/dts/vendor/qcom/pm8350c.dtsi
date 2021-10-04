@@ -223,6 +223,17 @@
 				qcom,led-name = "led:switch_2";
 				qcom,default-led-trigger = "switch2_trigger";
 			};
+
+			pm8350c_flashlight: qcom,flashlight {
+				label = "flash";
+				qcom,led-name = "flashlight";
+				qcom,max-current-ma = <1500>;
+				qcom,default-led-trigger = "flashlight_trigger";
+				qcom,id = <4>;
+				qcom,flashlight-current-ma = <300>;		//each torch current
+				qcom,duration-ms = <1280>;
+				qcom,ires-ua = <12500>;
+			};
 		};
 	};
 };
