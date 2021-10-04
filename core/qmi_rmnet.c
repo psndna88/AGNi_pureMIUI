@@ -1,5 +1,6 @@
 /*
-* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -401,12 +402,15 @@ static void __qmi_rmnet_update_mq(struct net_device *dev,
 			bearer->mq_idx = itm->mq_idx;
 		}
 
-		qmi_rmnet_flow_control(dev, itm->mq_idx,
-				       bearer->grant_size > 0 ? 1 : 0);
-
+		/* Always enable flow for the newly associated bearer */
+		if (!bearer->grant_size) {
+			bearer->grant_size = DEFAULT_GRANT;
+			bearer->grant_thresh =
+				qmi_rmnet_grant_per(DEFAULT_GRANT);
+		}
+		qmi_rmnet_flow_control(dev, itm->mq_idx, 1);
 		if (dfc_mode == DFC_MODE_SA)
-			qmi_rmnet_flow_control(dev, bearer->ack_mq_idx,
-					bearer->grant_size > 0 ? 1 : 0);
+			qmi_rmnet_flow_control(dev, bearer->ack_mq_idx, 1);
 	}
 }
 
