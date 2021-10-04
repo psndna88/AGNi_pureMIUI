@@ -32,9 +32,7 @@
 #endif /* __QNXNTO__ */
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#ifdef CONFIG_TRAFFIC_AGENT
 #include <pthread.h>
-#endif /* CONFIG_TRAFFIC_AGENT */
 #ifdef NL80211_SUPPORT
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
