@@ -2,6 +2,7 @@ ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
 	lahaina-mtp-overlay.dtbo \
+	venus-sm8350-overlay.dtbo \
 	lahaina-mtp-hsp-overlay.dtbo \
 	lahaina-cdp-overlay.dtbo \
 	lahaina-qrd-overlay.dtbo \
@@ -24,6 +25,7 @@ dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
 
 lahaina-rumi-overlay.dtbo-base := lahaina.dtb
 lahaina-mtp-hsp-overlay.dtbo-base := lahaina.dtb
+venus-sm8350-overlay.dtbo-base := lahaina.dtb
 lahaina-mtp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-cdp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
 lahaina-atp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
