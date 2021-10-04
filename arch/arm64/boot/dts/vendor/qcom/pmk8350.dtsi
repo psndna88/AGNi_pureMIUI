@@ -32,8 +32,9 @@
 			reg = <0x1300>, <0x800>;
 			reg-names = "pon_hlos", "pon_pbs";
 			interrupts = <0x0 0x13 0x7 IRQ_TYPE_EDGE_BOTH>,
-				     <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>;
-			interrupt-names = "kpdpwr", "resin";
+				     <0x0 0x13 0x6 IRQ_TYPE_EDGE_BOTH>,
+				     <0x0 0x13 0x2 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "kpdpwr", "resin", "kpdpwr-resin-bark";
 			qcom,kpdpwr-sw-debounce;
 
 			qcom,pon_1 {
@@ -44,6 +45,15 @@
 			qcom,pon_2 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_RESIN>;
 				linux,code = <KEY_VOLUMEDOWN>;
+			};
+
+			qcom,pon_3 {
+				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR_RESIN>;
+				qcom,support-reset = <1>;
+				qcom,s1-timer = <1352>;
+				qcom,s2-timer = <2000>;
+				qcom,s2-type = <PON_POWER_OFF_TYPE_WARM_RESET>;
+				qcom,use-bark;
 			};
 		};
 
