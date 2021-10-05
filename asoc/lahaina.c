@@ -2874,7 +2874,8 @@ static int msm_mi2s_set_sclk(struct snd_pcm_substream *substream, bool enable)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int port_id = 0;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 
 	port_id = msm_get_port_id(rtd->dai_link->id);
 	if (port_id < 0) {
@@ -5323,7 +5324,8 @@ void mi2s_disable_audio_vote(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int sample_rate = 0;
@@ -5359,7 +5361,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 	unsigned int fmt = SND_SOC_DAIFMT_CBS_CFS;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
@@ -5418,12 +5421,6 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			mi2s_intf_conf[index].audio_core_vote = true;
 		}
 
-		/* Check if msm needs to provide the clock to the interface */
-		if (!mi2s_intf_conf[index].msm_is_mi2s_master) {
-			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
-			fmt = SND_SOC_DAIFMT_CBM_CFM;
-		}
-
 		mi2s_clk[index].clk_freq_in_hz = (sample_rate *
 					MI2S_NUM_CHANNELS * bit_per_sample);
 		dev_dbg(rtd->card->dev, "%s: clock rate %ul\n", __func__,
@@ -5437,12 +5434,6 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			goto clean_up;
 		}
 
-		ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
-		if (ret < 0) {
-			pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
-				__func__, index, ret);
-			goto clk_off;
-		}
 		if (pdata->mi2s_gpio_p[index]) {
 			if (atomic_read(&(pdata->mi2s_gpio_ref_count[index]))
 									== 0) {
@@ -5457,6 +5448,18 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			atomic_inc(&(pdata->mi2s_gpio_ref_count[index]));
 		}
 	}
+	/* Check if msm needs to provide the clock to the interface */
+	if (!mi2s_intf_conf[index].msm_is_mi2s_master) {
+		mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
+		fmt = SND_SOC_DAIFMT_CBM_CFM;
+	}
+	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
+	if (ret < 0) {
+		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
+			__func__, index, ret);
+		goto clk_off;
+	}
+
 clk_off:
 	if (ret < 0)
 		msm_mi2s_set_sclk(substream, false);
@@ -5475,7 +5478,8 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	int index = rtd->cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (rtd->cpu_dai->id) / 2;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
