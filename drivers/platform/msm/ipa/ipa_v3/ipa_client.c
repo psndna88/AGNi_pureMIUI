@@ -67,6 +67,7 @@ int ipa3_enable_data_path(u32 clnt_hdl)
 			holb_cfg.en = IPA_HOLB_TMR_EN;
 		} else if (ipa3_ctx->ipa_hw_type == IPA_HW_v4_11 &&
 				(ep->client == IPA_CLIENT_WLAN1_CONS ||
+				ep->client == IPA_CLIENT_WLAN2_CONS ||
 				 ep->client == IPA_CLIENT_USB_CONS)) {
 			holb_cfg.en = IPA_HOLB_TMR_EN;
 			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL_4_5;
