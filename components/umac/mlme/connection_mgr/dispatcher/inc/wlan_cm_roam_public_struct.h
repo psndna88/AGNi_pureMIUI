@@ -1096,6 +1096,27 @@ struct wlan_roam_rssi_change_params {
 };
 
 /**
+ * struct wlan_cm_roam_rt_stats - Roam events stats update
+ * @roam_stats_enabled: set 1 if roam stats feature is enabled from userspace
+ * @roam_stats_wow_sent: set 1 if roam stats wow event is sent to FW
+ */
+struct wlan_cm_roam_rt_stats {
+	uint8_t roam_stats_enabled;
+	uint8_t roam_stats_wow_sent;
+};
+
+/**
+ * enum roam_rt_stats_params: different types of params to set or get roam
+ * events stats for the vdev
+ * @ROAM_RT_STATS_ENABLE:              Roam stats feature if enable/not
+ * @ROAM_RT_STATS_SUSPEND_MODE_ENABLE: Roam stats wow event if sent to FW/not
+ */
+enum roam_rt_stats_params {
+	ROAM_RT_STATS_ENABLE,
+	ROAM_RT_STATS_SUSPEND_MODE_ENABLE,
+};
+
+/**
  * struct wlan_roam_start_config - structure containing parameters for
  * roam start config
  * @rssi_params: roam scan rssi threshold parameters
@@ -1113,6 +1134,7 @@ struct wlan_roam_rssi_change_params {
  * @bss_load_config: bss load config
  * @disconnect_params: disconnect params
  * @idle_params: idle params
+ * @wlan_roam_rt_stats_config: roam events stats config
  */
 struct wlan_roam_start_config {
 	struct wlan_roam_offload_scan_rssi_params rssi_params;
@@ -1131,6 +1153,7 @@ struct wlan_roam_start_config {
 	struct wlan_roam_bss_load_config bss_load_config;
 	struct wlan_roam_disconnect_params disconnect_params;
 	struct wlan_roam_idle_params idle_params;
+	uint8_t wlan_roam_rt_stats_config;
 	/* other wmi cmd structures */
 };
 
@@ -1175,6 +1198,7 @@ struct wlan_roam_stop_config {
  * @disconnect_params: disconnect params
  * @idle_params: idle params
  * @roam_triggers: roam triggers parameters
+ * @wlan_roam_rt_stats_config: roam events stats config
  */
 struct wlan_roam_update_config {
 	struct wlan_roam_beacon_miss_cnt beacon_miss_cnt;
@@ -1188,6 +1212,7 @@ struct wlan_roam_update_config {
 	struct wlan_roam_disconnect_params disconnect_params;
 	struct wlan_roam_idle_params idle_params;
 	struct wlan_roam_triggers roam_triggers;
+	uint8_t wlan_roam_rt_stats_config;
 };
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)
@@ -1312,6 +1337,7 @@ struct set_pcl_req {
  * commands
  * @send_roam_abort: send roam abort
  * @send_roam_disable_config: send roam disable config
+ * @send_roam_rt_stats_config: Send roam events vendor command param value to FW
  */
 struct wlan_cm_roam_tx_ops {
 	QDF_STATUS (*send_vdev_set_pcl_cmd)(struct wlan_objmgr_vdev *vdev,
@@ -1336,6 +1362,10 @@ struct wlan_cm_roam_tx_ops {
 					 struct wlan_roam_triggers *req);
 	QDF_STATUS (*send_roam_disable_config)(struct wlan_objmgr_vdev *vdev,
 				struct roam_disable_cfg *req);
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	QDF_STATUS (*send_roam_rt_stats_config)(struct wlan_objmgr_vdev *vdev,
+						uint8_t vdev_id, uint8_t value);
+#endif
 };
 
 /**

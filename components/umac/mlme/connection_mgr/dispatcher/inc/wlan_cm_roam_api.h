@@ -599,6 +599,28 @@ uint32_t
 wlan_cm_get_roam_states(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 			enum roam_fail_params states);
 
+/**
+ * wlan_cm_update_roam_rt_stats() - Store roam event stats command params
+ * @psoc: PSOC pointer
+ * @value: Value to update
+ * @stats: type of value to update
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_cm_update_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			     uint8_t value, enum roam_rt_stats_params stats);
+
+/**
+ * wlan_cm_get_roam_rt_stats() - Get roam event stats value
+ * @psoc: PSOC pointer
+ * @stats: Get roam event command param for specific attribute
+ *
+ * Return: Roam events stats param value
+ */
+uint8_t
+wlan_cm_get_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			  enum roam_rt_stats_params stats);
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -702,5 +724,18 @@ wlan_cm_get_roam_states(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	return 0;
 }
 
+static inline QDF_STATUS
+wlan_cm_update_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			     uint8_t value, enum roam_rt_stats_params stats)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint8_t
+wlan_cm_get_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			  enum roam_rt_stats_params stats)
+{
+	return 0;
+}
 #endif  /* FEATURE_ROAM_OFFLOAD */
 #endif  /* WLAN_CM_ROAM_API_H__ */
