@@ -141,16 +141,6 @@ struct cs_target {
 };
 #endif
 
-#ifdef CONFIG_UCLAMP_ASSIST
-struct uc_target {
-	const char *name;
-	char *uclamp_min;
-	char *uclamp_max;
-	u64 uclamp_latency_sensitive;
-	u64 uclamp_boosted;
-};
-#endif
-
 static inline struct cpuset *css_cs(struct cgroup_subsys_state *css)
 {
 	return css ? container_of(css, struct cpuset, css) : NULL;
@@ -840,6 +830,7 @@ static void rebuild_sched_domains_unlocked(void)
 
 	cpu_hotplug_mutex_held();
 	lockdep_assert_held(&cpuset_mutex);
+	get_online_cpus();
 
 	/*
 	 * We have raced with CPU hotplug. Don't do anything to avoid
@@ -847,13 +838,15 @@ static void rebuild_sched_domains_unlocked(void)
 	 * Anyways, hotplug work item will rebuild sched domains.
 	 */
 	if (!cpumask_equal(top_cpuset.effective_cpus, cpu_active_mask))
-		return;
+		goto out;
 
 	/* Generate domain masks and attrs */
 	ndoms = generate_sched_domains(&doms, &attr);
 
 	/* Have scheduler rebuild the domains */
 	partition_sched_domains(ndoms, doms, attr);
+out:
+	put_online_cpus();
 }
 #else /* !CONFIG_SMP */
 static void rebuild_sched_domains_unlocked(void)
@@ -913,6 +906,7 @@ static void update_tasks_cpumask(struct cpuset *cs)
  *
  * On legacy hierachy, effective_cpus will be the same with cpu_allowed.
  *
+ * Called with cpuset_mutex held
  */
 static void update_cpumasks_hier(struct cpuset *cs, struct cpumask *new_cpus)
 {
@@ -1348,6 +1342,7 @@ static void update_tasks_flags(struct cpuset *cs)
  * cs:		the cpuset to update
  * turning_on: 	whether the flag is being set or cleared
  *
+ * Call with cpuset_mutex held.
  */
 
 static int update_flag(cpuset_flagbits_t bit, struct cpuset *cs,
@@ -1621,67 +1616,6 @@ static void cpuset_attach(struct cgroup_taskset *tset)
 	mutex_unlock(&cpuset_mutex);
 }
 
-#ifdef CONFIG_UCLAMP_TASK_GROUP
-int cpu_uclamp_min_show(struct seq_file *sf, void *v);
-int cpu_uclamp_max_show(struct seq_file *sf, void *v);
-
-ssize_t cpu_uclamp_min_write(struct kernfs_open_file *of,
-				    char *buf, size_t nbytes,
-				    loff_t off);
-ssize_t cpu_uclamp_max_write(struct kernfs_open_file *of,
-				    char *buf, size_t nbytes,
-				    loff_t off);
-
-int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
-				   struct cftype *cftype, u64 ls);
-u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
-				  struct cftype *cft);
-
-int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
-				   struct cftype *cftype, u64 boost);
-u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
-				  struct cftype *cft);
-
-#if !defined(CONFIG_SCHED_TUNE)
-static u64 st_boost_read(struct cgroup_subsys_state *css,
-			     struct cftype *cft)
-{
-	if (!strlen(css->cgroup->kn->name))
-		return -EINVAL;
-
-	return cpu_uclamp_boost_read_u64(css, cft);
-}
-
-static int st_boost_write(struct cgroup_subsys_state *css,
-		             struct cftype *cft, u64 boost)
-{
-	if (!strlen(css->cgroup->kn->name))
-		return -EINVAL;
-
-	return cpu_uclamp_boost_write_u64(css, cft, boost);
-}
-
-static u64 st_prefer_idle_read(struct cgroup_subsys_state *css,
-			     struct cftype *cft)
-{
-	if (!strlen(css->cgroup->kn->name))
-		return -EINVAL;
-
-	return cpu_uclamp_ls_read_u64(css, cft);
-}
-
-static int st_prefer_idle_write(struct cgroup_subsys_state *css,
-			     struct cftype *cft, u64 prefer_idle)
-{
-	if (!strlen(css->cgroup->kn->name))
-		return -EINVAL;
-
-	return cpu_uclamp_ls_write_u64(css, cft, prefer_idle);
-}
-#endif
-
-#endif
-
 /* The various types of files and directories in a cpuset file system */
 
 typedef enum {
@@ -1866,46 +1800,16 @@ static ssize_t cpuset_write_resmask_wrapper(struct kernfs_open_file *of,
 		{ "top-app",		"0-7" },
 		{ "foreground",		"0-2,4-7" },
 	};
-#ifdef CONFIG_UCLAMP_ASSIST
-	static struct uc_target uc_targets[] = {
-		{ "top-app",		"20", "max",	1, 1 },
-		{ "foreground",		"20", "50",	0, 0 },
-		{ "restricted",		"10", "40",	0, 0 },
-		{ "background",		"20", "max",	0, 0 },
-		{ "system-background",	"10", "50",	0, 0 },
-	};
-#endif
 	struct cpuset *cs = css_cs(of_css(of));
 	const char *cpuset_cgroup_name = cs->css.cgroup->kn->name;
 	int i;
-#ifdef CONFIG_UCLAMP_ASSIST
-	int j;
-	char _uclamp_value;
-#endif
 
 	if (task_is_booster(current)) {
 		for (i = 0; i < ARRAY_SIZE(cs_targets); i++) {
 			struct cs_target cs_tgt = cs_targets[i];
 
-			if (!strcmp(cpuset_cgroup_name, cs_tgt.name)) {
-#ifdef CONFIG_UCLAMP_ASSIST
-				for (j = 0; j < ARRAY_SIZE(uc_targets); j++) {
-					struct uc_target uc_tgt = uc_targets[j];
-					if (!strcmp(cpuset_cgroup_name, uc_tgt.name)) {
-						cpu_uclamp_min_write(
-							of, strcpy(&_uclamp_value, uc_tgt.uclamp_min), nbytes, off);
-						cpu_uclamp_max_write(
-							of, strcpy(&_uclamp_value, uc_tgt.uclamp_max), nbytes, off);
-						cpu_uclamp_ls_write_u64(
-							&cs->css, NULL, uc_tgt.uclamp_latency_sensitive);
-						cpu_uclamp_boost_write_u64(
-							&cs->css, NULL, uc_tgt.uclamp_boosted);
-						break;
-					}
-				}
-#endif
+			if (!strcmp(cpuset_cgroup_name, cs_tgt.name))
 				return cpuset_write_resmask_assist(of, cs_tgt, nbytes, off);
-			}
 		}
 	}
 #endif
@@ -1997,6 +1901,28 @@ static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 	/* Unrechable but makes gcc happy */
 	return 0;
 }
+
+#ifdef CONFIG_UCLAMP_TASK_GROUP
+int cpu_uclamp_min_show_wrapper(struct seq_file *sf, void *v);
+int cpu_uclamp_max_show_wrapper(struct seq_file *sf, void *v);
+
+ssize_t cpu_uclamp_min_write_wrapper(struct kernfs_open_file *of,
+				    char *buf, size_t nbytes,
+				    loff_t off);
+ssize_t cpu_uclamp_max_write_wrapper(struct kernfs_open_file *of,
+				    char *buf, size_t nbytes,
+				    loff_t off);
+
+int cpu_uclamp_ls_write_u64_wrapper(struct cgroup_subsys_state *css,
+				   struct cftype *cftype, u64 ls);
+u64 cpu_uclamp_ls_read_u64_wrapper(struct cgroup_subsys_state *css,
+				  struct cftype *cft);
+
+int cpu_uclamp_boost_write_u64_wrapper(struct cgroup_subsys_state *css,
+				   struct cftype *cftype, u64 boost);
+u64 cpu_uclamp_boost_read_u64_wrapper(struct cgroup_subsys_state *css,
+				  struct cftype *cft);
+#endif
 
 /*
  * for the common functions, 'private' gives the type of file
@@ -2104,41 +2030,27 @@ static struct cftype files[] = {
 	{
 		.name = "uclamp.min",
 		.flags = CFTYPE_NOT_ON_ROOT,
-		.seq_show = cpu_uclamp_min_show,
-		.write = cpu_uclamp_min_write,
+		.seq_show = cpu_uclamp_min_show_wrapper,
+		.write = cpu_uclamp_min_write_wrapper,
 	},
 	{
 		.name = "uclamp.max",
 		.flags = CFTYPE_NOT_ON_ROOT,
-		.seq_show = cpu_uclamp_max_show,
-		.write = cpu_uclamp_max_write,
+		.seq_show = cpu_uclamp_max_show_wrapper,
+		.write = cpu_uclamp_max_write_wrapper,
 	},
 	{
 		.name = "uclamp.latency_sensitive",
 		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_u64 = cpu_uclamp_ls_read_u64,
-		.write_u64 = cpu_uclamp_ls_write_u64,
+		.read_u64 = cpu_uclamp_ls_read_u64_wrapper,
+		.write_u64 = cpu_uclamp_ls_write_u64_wrapper,
 	},
 	{
 		.name = "uclamp.boosted",
 		.flags = CFTYPE_NOT_ON_ROOT,
-		.read_u64 = cpu_uclamp_boost_read_u64,
-		.write_u64 = cpu_uclamp_boost_write_u64,
+		.read_u64 = cpu_uclamp_boost_read_u64_wrapper,
+		.write_u64 = cpu_uclamp_boost_write_u64_wrapper,
 	},
-
-#if !defined(CONFIG_SCHED_TUNE)
-	{
-		.name = "schedtune.boost",
-		.read_u64 = st_boost_read,
-		.write_u64 = st_boost_write,
-	},
-	{
-		.name = "schedtune.prefer_idle",
-		.read_u64 = st_prefer_idle_read,
-		.write_u64 = st_prefer_idle_write,
-	},
-#endif
-
 #endif
 	{ }	/* terminate */
 };

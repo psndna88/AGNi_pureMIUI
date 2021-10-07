@@ -28,10 +28,8 @@ unsigned long boosted_cpu_util(int cpu);
 #define cpufreq_driver_fast_switch(x, y) 0
 #define cpufreq_enable_fast_switch(x)
 #define cpufreq_disable_fast_switch(x)
-#define LATENCY_MULTIPLIER	    (2000)
+#define LATENCY_MULTIPLIER	    (1000)
 #define SUGOV_KTHREAD_PRIORITY	50
-#define UP_RATE_LIMIT_US 1000
-#define DOWN_RATE_LIMIT_US 20000
 
 struct sugov_tunables {
 	struct gov_attr_set attr_set;
@@ -226,10 +224,6 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 		*util = min((*util + rt), max_cap);
 
 	*max = max_cap;
-#ifdef CONFIG_UCLAMP_TASK
-	*util = uclamp_util_with(rq, *util, NULL);
-	*util = min(*max, *util);
-#endif
 }
 
 static void sugov_set_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
@@ -704,9 +698,9 @@ static int sugov_init(struct cpufreq_policy *policy)
 		goto stop_kthread;
 	}
 
-	tunables->up_rate_limit_us = LATENCY_MULTIPLIER;
-	tunables->down_rate_limit_us = LATENCY_MULTIPLIER;
-	tunables->iowait_boost_enable = false;
+	tunables->up_rate_limit_us = LATENCY_MULTIPLIER / 1;
+	tunables->down_rate_limit_us = LATENCY_MULTIPLIER * 4;
+	tunables->iowait_boost_enable = true;
 	lat = policy->cpuinfo.transition_latency / NSEC_PER_USEC;
 	if (lat) {
 		tunables->up_rate_limit_us *= lat;
