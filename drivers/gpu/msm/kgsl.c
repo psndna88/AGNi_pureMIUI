@@ -30,6 +30,7 @@
 #include <linux/security.h>
 #include <linux/compat.h>
 #include <linux/ctype.h>
+#include <linux/ion.h>
 #include <linux/adrenokgsl_state.h>
 
 #include "kgsl.h"
@@ -73,10 +74,23 @@ MODULE_PARM_DESC(kgsl_mmu_type, "Type of MMU to be used for graphics");
 DEFINE_MUTEX(kgsl_mmu_sync);
 EXPORT_SYMBOL(kgsl_mmu_sync);
 
+/* List of dmabufs mapped */
+static LIST_HEAD(kgsl_dmabuf_list);
+static DEFINE_SPINLOCK(kgsl_dmabuf_lock);
+
+struct dmabuf_list_entry {
+	struct page *firstpage;
+	struct list_head node;
+	struct list_head dmabuf_list;
+};
+
 struct kgsl_dma_buf_meta {
+	struct kgsl_mem_entry *entry;
 	struct dma_buf_attachment *attach;
 	struct dma_buf *dmabuf;
 	struct sg_table *table;
+	struct dmabuf_list_entry *dle;
+	struct list_head node;
 };
 
 bool adrenokgsl_on = false;
@@ -278,10 +292,65 @@ kgsl_mem_entry_create(void)
 
 	return entry;
 }
+
+static void add_dmabuf_list(struct kgsl_dma_buf_meta *meta)
+{
+	struct dmabuf_list_entry *dle;
+	struct page *page;
+
+	/*
+	 * Get the first page. We will use it to identify the imported
+	 * buffer, since the same buffer can be mapped as different
+	 * mem entries.
+	 */
+	page = sg_page(meta->table->sgl);
+
+	spin_lock(&kgsl_dmabuf_lock);
+
+	/* Go through the list to see if we imported this buffer before */
+	list_for_each_entry(dle, &kgsl_dmabuf_list, node) {
+		if (dle->firstpage == page) {
+			/* Add the dmabuf meta to the list for this dle */
+			meta->dle = dle;
+			list_add(&meta->node, &dle->dmabuf_list);
+			spin_unlock(&kgsl_dmabuf_lock);
+			return;
+		}
+	}
+
+	/* This is a new buffer. Add a new entry for it */
+	dle = kzalloc(sizeof(*dle), GFP_ATOMIC);
+	if (dle) {
+		dle->firstpage = page;
+		INIT_LIST_HEAD(&dle->dmabuf_list);
+		list_add(&dle->node, &kgsl_dmabuf_list);
+		meta->dle = dle;
+		list_add(&meta->node, &dle->dmabuf_list);
+	}
+	spin_unlock(&kgsl_dmabuf_lock);
+}
+
+static void remove_dmabuf_list(struct kgsl_dma_buf_meta *meta)
+{
+	struct dmabuf_list_entry *dle = meta->dle;
+
+	if (!dle)
+		return;
+
+	spin_lock(&kgsl_dmabuf_lock);
+	list_del(&meta->node);
+	if (list_empty(&dle->dmabuf_list)) {
+		list_del(&dle->node);
+		kfree(dle);
+	}
+	spin_unlock(&kgsl_dmabuf_lock);
+}
+
 #ifdef CONFIG_DMA_SHARED_BUFFER
 static void kgsl_destroy_ion(struct kgsl_dma_buf_meta *meta)
 {
 	if (meta != NULL) {
+		remove_dmabuf_list(meta);
 		dma_buf_unmap_attachment(meta->attach, meta->table,
 			DMA_FROM_DEVICE);
 		dma_buf_detach(meta->dmabuf, meta->attach);
@@ -1132,7 +1201,8 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 	/* Close down the process wide resources for the file */
 	kgsl_process_private_close(dev_priv, dev_priv->process_priv);
 
-	kfree(dev_priv);
+	/* Destroy the device-specific structure */
+	device->ftbl->device_private_destroy(dev_priv);
 
 	result = kgsl_close_device(device);
 	pm_runtime_put(&device->pdev->dev);
@@ -1200,7 +1270,7 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 	}
 	result = 0;
 
-	dev_priv = kzalloc(sizeof(struct kgsl_device_private), GFP_KERNEL);
+	dev_priv = device->ftbl->device_private_create();
 	if (dev_priv == NULL) {
 		result = -ENOMEM;
 		goto err;
@@ -1864,18 +1934,15 @@ long kgsl_ioctl_drawctxt_destroy(struct kgsl_device_private *dev_priv,
 
 static long gpumem_free_entry(struct kgsl_mem_entry *entry)
 {
-	pid_t ptname = 0;
-
 	if (!kgsl_mem_entry_set_pend(entry))
 		return -EBUSY;
 
 //	trace_kgsl_mem_free(entry);
 
-	if (entry->memdesc.pagetable != NULL)
-		ptname = entry->memdesc.pagetable->name;
-
-	kgsl_memfree_add(pid_nr(entry->priv->pid), ptname,
-			entry->memdesc.gpuaddr,	entry->memdesc.size,
+	kgsl_memfree_add(entry->priv->pid,
+			entry->memdesc.pagetable ?
+				entry->memdesc.pagetable->name : 0,
+			entry->memdesc.gpuaddr, entry->memdesc.size,
 			entry->memdesc.flags);
 
 	kgsl_mem_entry_put(entry);
@@ -1895,6 +1962,12 @@ static void gpumem_free_func(struct kgsl_device *device,
 	/* Free the memory for all event types */
 //	trace_kgsl_mem_timestamp_free(device, entry, KGSL_CONTEXT_ID(context),
 //		timestamp, 0);
+	kgsl_memfree_add(entry->priv->pid,
+			entry->memdesc.pagetable ?
+				entry->memdesc.pagetable->name : 0,
+			entry->memdesc.gpuaddr, entry->memdesc.size,
+			entry->memdesc.flags);
+
 	kgsl_mem_entry_put(entry);
 }
 
@@ -1911,7 +1984,7 @@ static long gpumem_free_entry_on_timestamp(struct kgsl_device *device,
 	kgsl_readtimestamp(device, context, KGSL_TIMESTAMP_RETIRED, &temp);
 //	trace_kgsl_mem_timestamp_queue(device, entry, context->id, temp,
 //		timestamp);
-	ret = kgsl_add_event(device, &context->events,
+	ret = kgsl_add_low_prio_event(device, &context->events,
 		timestamp, gpumem_free_func, entry);
 
 	if (ret)
@@ -1988,6 +2061,13 @@ static void gpuobj_free_fence_func(void *priv)
 {
 	struct kgsl_mem_entry *entry = priv;
 
+	trace_kgsl_mem_free(entry);
+	kgsl_memfree_add(entry->priv->pid,
+			entry->memdesc.pagetable ?
+				entry->memdesc.pagetable->name : 0,
+			entry->memdesc.gpuaddr, entry->memdesc.size,
+			entry->memdesc.flags);
+
 	INIT_WORK(&entry->work, _deferred_put);
 	queue_work(kgsl_driver.mem_workqueue, &entry->work);
 }
@@ -2019,14 +2099,14 @@ static long gpuobj_free_on_fence(struct kgsl_device_private *dev_priv,
 	handle = kgsl_sync_fence_async_wait(event.fd,
 		gpuobj_free_fence_func, entry);
 
-	/* if handle is NULL the fence has already signaled */
-	if (handle == NULL)
-		return gpumem_free_entry(entry);
-
 	if (IS_ERR(handle)) {
 		kgsl_mem_entry_unset_pend(entry);
 		return PTR_ERR(handle);
 	}
+
+	/* if handle is NULL the fence has already signaled */
+	if (handle == NULL)
+		gpuobj_free_fence_func(entry);
 
 	return 0;
 }
@@ -2371,6 +2451,7 @@ static long _gpuobj_map_dma_buf(struct kgsl_device *device,
 {
 	struct kgsl_gpuobj_import_dma_buf buf;
 	struct dma_buf *dmabuf;
+	unsigned long flags = 0;
 	int ret;
 
 	/*
@@ -2400,6 +2481,16 @@ static long _gpuobj_map_dma_buf(struct kgsl_device *device,
 
 	if (IS_ERR_OR_NULL(dmabuf))
 		return (dmabuf == NULL) ? -EINVAL : PTR_ERR(dmabuf);
+
+	/*
+	 * ION cache ops are routed through kgsl, so record if the dmabuf is
+	 * cached or not in the memdesc. Assume uncached if dma_buf_get_flags
+	 * fails.
+	 */
+	dma_buf_get_flags(dmabuf, &flags);
+	if (flags & ION_FLAG_CACHED)
+		entry->memdesc.flags |=
+			KGSL_CACHEMODE_WRITEBACK << KGSL_CACHEMODE_SHIFT;
 
 	ret = kgsl_setup_dma_buf(device, pagetable, entry, dmabuf);
 	if (ret)
@@ -2563,7 +2654,7 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 				struct kgsl_mem_entry *entry,
 				struct dma_buf *dmabuf)
 {
-	int ret = 0;
+	int i, ret = 0;
 	struct scatterlist *s;
 	struct sg_table *sg_table;
 	struct dma_buf_attachment *attach = NULL;
@@ -2581,6 +2672,7 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 
 	meta->dmabuf = dmabuf;
 	meta->attach = attach;
+	meta->entry = entry;
 
 	attach->priv = entry;
 
@@ -2603,7 +2695,7 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 	entry->memdesc.sgt = sg_table;
 
 	/* Calculate the size of the memdesc from the sglist */
-	for (s = entry->memdesc.sgt->sgl; s != NULL; s = sg_next(s)) {
+	for_each_sg(sg_table->sgl, s, sg_table->nents, i) {
 		int priv = (entry->memdesc.priv & KGSL_MEMDESC_SECURE) ? 1 : 0;
 
 		/*
@@ -2619,6 +2711,12 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 		entry->memdesc.size += (uint64_t) s->length;
 	}
 
+	if (!entry->memdesc.size) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	add_dmabuf_list(meta);
 	entry->memdesc.size = PAGE_ALIGN(entry->memdesc.size);
 
 out:
@@ -2639,21 +2737,16 @@ void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
 		int *egl_surface_count, int *egl_image_count)
 {
 	struct kgsl_dma_buf_meta *meta = entry->priv_data;
-	struct dma_buf *dmabuf = meta->dmabuf;
-	struct dma_buf_attachment *mem_entry_buf_attachment = meta->attach;
-	struct device *buf_attachment_dev = mem_entry_buf_attachment->dev;
-	struct dma_buf_attachment *attachment = NULL;
+	struct dmabuf_list_entry *dle = meta->dle;
+	struct kgsl_dma_buf_meta *scan_meta;
+	struct kgsl_mem_entry *scan_mem_entry;
 
-	mutex_lock(&dmabuf->lock);
-	list_for_each_entry(attachment, &dmabuf->attachments, node) {
-		struct kgsl_mem_entry *scan_mem_entry = NULL;
+	if (!dle)
+		return;
 
-		if (attachment->dev != buf_attachment_dev)
-			continue;
-
-		scan_mem_entry = attachment->priv;
-		if (!scan_mem_entry)
-			continue;
+	spin_lock(&kgsl_dmabuf_lock);
+	list_for_each_entry(scan_meta, &dle->dmabuf_list, node) {
+		scan_mem_entry = scan_meta->entry;
 
 		switch (kgsl_memdesc_get_memtype(&scan_mem_entry->memdesc)) {
 		case KGSL_MEMTYPE_EGL_SURFACE:
@@ -2664,7 +2757,7 @@ void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
 			break;
 		}
 	}
-	mutex_unlock(&dmabuf->lock);
+	spin_unlock(&kgsl_dmabuf_lock);
 }
 #else
 void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
@@ -4878,7 +4971,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 		device->id, device->reg_phys, device->reg_len);
 
 	rwlock_init(&device->context_lock);
-	spin_lock_init(&device->submit_lock);
 
 	setup_timer(&device->idle_timer, kgsl_timer, (unsigned long) device);
 
@@ -5011,6 +5103,18 @@ static void kgsl_core_exit(void)
 	unregister_chrdev_region(kgsl_driver.major, KGSL_DEVICE_MAX);
 }
 
+static long kgsl_run_one_worker(struct kthread_worker *worker,
+		struct task_struct **thread, const char *name)
+{
+	init_kthread_worker(worker);
+	*thread = kthread_run(kthread_worker_fn, worker, name);
+	if (IS_ERR(*thread)) {
+		pr_err("unable to start %s\n", name);
+		return PTR_ERR(thread);
+	}
+	return 0;
+}
+
 static int __init kgsl_core_init(void)
 {
 	int result = 0;
@@ -5076,20 +5180,18 @@ static int __init kgsl_core_init(void)
 	INIT_LIST_HEAD(&kgsl_driver.pagetable_list);
 
 	kgsl_driver.workqueue = alloc_workqueue("kgsl-workqueue",
-		WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS, 0);
+		WQ_HIGHPRI | WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_SYSFS, 0);
 
 	kgsl_driver.mem_workqueue = alloc_workqueue("kgsl-mementry",
-		WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
+		WQ_HIGHPRI | WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
 
-	init_kthread_worker(&kgsl_driver.worker);
-
-	kgsl_driver.worker_thread = kthread_run_perf_critical(kthread_worker_fn,
-		&kgsl_driver.worker, "kgsl_worker_thread");
-
-	if (IS_ERR(kgsl_driver.worker_thread)) {
-		pr_err("unable to start kgsl thread\n");
+	if (IS_ERR_VALUE(kgsl_run_one_worker(&kgsl_driver.worker,
+			&kgsl_driver.worker_thread,
+			"kgsl_worker_thread")) ||
+		IS_ERR_VALUE(kgsl_run_one_worker(&kgsl_driver.low_prio_worker,
+			&kgsl_driver.low_prio_worker_thread,
+			"kgsl_low_prio_worker_thread")))
 		goto err;
-	}
 
 	sched_setscheduler(kgsl_driver.worker_thread, SCHED_RR, &param);
 

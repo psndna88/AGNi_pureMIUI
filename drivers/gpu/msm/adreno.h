@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2018,2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -144,6 +144,9 @@
 #define KGSL_END_OF_PROFILE_IDENTIFIER	0x2DEFADE2
 #define KGSL_PWRON_FIXUP_IDENTIFIER	0x2AFAFAFA
 
+/* Number of times to try loading of zap shader */
+#define ZAP_RETRY_MAX	5
+
 /* One cannot wait forever for the core to idle, so set an upper limit to the
  * amount of time to wait for the core to go idle
  */
@@ -251,6 +254,29 @@ struct adreno_busy_data {
 	unsigned int vbif_ram_cycles;
 	unsigned int vbif_starved_ram;
 	unsigned int throttle_cycles[ADRENO_GPMU_THROTTLE_COUNTERS];
+};
+
+/**
+ * struct adreno_perfcounter_list_node - struct to store perfcounters
+ * allocated by a process on a kgsl fd.
+ * @groupid: groupid of the allocated perfcounter
+ * @countable: countable assigned to the allocated perfcounter
+ * @node: list node for perfcounter_list of a process
+ */
+struct adreno_perfcounter_list_node {
+	unsigned int groupid;
+	unsigned int countable;
+	struct list_head node;
+};
+
+/**
+ * struct adreno_device_private - Adreno private structure per fd
+ * @dev_priv: the kgsl device private structure
+ * @perfcounter_list: list of perfcounters used by the process
+ */
+struct adreno_device_private {
+	struct kgsl_device_private dev_priv;
+	struct list_head perfcounter_list;
 };
 
 /**
@@ -374,6 +400,7 @@ struct adreno_gpu_core {
  * @irq_storm_work: Worker to handle possible interrupt storms
  * @active_list: List to track active contexts
  * @active_list_lock: Lock to protect active_list
+ * @zap_loaded: Used to track if zap was successfully loaded or not
  */
 struct adreno_device {
 	struct kgsl_device dev;    /* Must be first field in this struct */
@@ -433,11 +460,13 @@ struct adreno_device {
 	unsigned int speed_bin;
 	unsigned int quirks;
 
+	struct coresight_device *csdev;
 	uint32_t gpmu_throttle_counters[ADRENO_GPMU_THROTTLE_COUNTERS];
 	struct work_struct irq_storm_work;
 
 	struct list_head active_list;
 	spinlock_t active_list_lock;
+	unsigned int zap_loaded;
 };
 
 /**
@@ -754,11 +783,16 @@ struct adreno_gpudev {
 	struct adreno_perfcounters *perfcounters;
 	const struct adreno_invalid_countables
 			*invalid_countables;
+	struct adreno_snapshot_data *snapshot_data;
+
+	struct adreno_coresight *coresight;
 
 	struct adreno_irq *irq;
 	int num_prio_levels;
 	unsigned int vbif_xin_halt_ctrl0_mask;
 	/* GPU specific function hooks */
+//	void (*irq_trace)(struct adreno_device *, unsigned int status);
+	void (*snapshot)(struct adreno_device *, struct kgsl_snapshot *);
 	void (*platform_setup)(struct adreno_device *);
 	void (*init)(struct adreno_device *);
 	void (*remove)(struct adreno_device *);
@@ -880,6 +914,11 @@ long adreno_ioctl_helper(struct kgsl_device_private *dev_priv,
 		unsigned int cmd, unsigned long arg,
 		const struct kgsl_ioctl *cmds, int len);
 
+int a5xx_critical_packet_submit(struct adreno_device *adreno_dev,
+		struct adreno_ringbuffer *rb);
+int adreno_set_unsecured_mode(struct adreno_device *adreno_dev,
+		struct adreno_ringbuffer *rb);
+void adreno_spin_idle_debug(struct adreno_device *adreno_dev, const char *str);
 int adreno_spin_idle(struct adreno_device *device, unsigned int timeout);
 int adreno_idle(struct kgsl_device *device);
 bool adreno_isidle(struct kgsl_device *device);
@@ -892,9 +931,9 @@ void adreno_shadermem_regread(struct kgsl_device *device,
 						unsigned int offsetwords,
 						unsigned int *value);
 
-static inline void adreno_snapshot(struct kgsl_device *device,
+void adreno_snapshot(struct kgsl_device *device,
 		struct kgsl_snapshot *snapshot,
-		struct kgsl_context *context) {}
+		struct kgsl_context *context);
 
 int adreno_reset(struct kgsl_device *device, int fault);
 
@@ -932,8 +971,6 @@ int adreno_efuse_map(struct adreno_device *adreno_dev);
 int adreno_efuse_read_u32(struct adreno_device *adreno_dev, unsigned int offset,
 		unsigned int *val);
 void adreno_efuse_unmap(struct adreno_device *adreno_dev);
-
-u32 adreno_get_ucode_version(const u32 *data);
 
 #define ADRENO_TARGET(_name, _id) \
 static inline int adreno_is_##_name(struct adreno_device *adreno_dev) \
@@ -1522,7 +1559,7 @@ static inline bool is_power_counter_overflow(struct adreno_device *adreno_dev,
 		return ret;
 	}
 	adreno_readreg(adreno_dev, ADRENO_REG_RBBM_PERFCTR_RBBM_0_HI, &val);
-	if (val != *perfctr_pwr_hi) {
+	if (val > *perfctr_pwr_hi) {
 		*perfctr_pwr_hi = val;
 		ret = true;
 	}
@@ -1537,14 +1574,17 @@ static inline unsigned int counter_delta(struct kgsl_device *device,
 	unsigned int ret = 0;
 	bool overflow = true;
 	static unsigned int perfctr_pwr_hi;
+	unsigned int prev_perfctr_pwr_hi = 0;
 
 	/* Read the value */
 	kgsl_regread(device, reg, &val);
 
 	if (adreno_is_a5xx(adreno_dev) && reg == adreno_getreg
-		(adreno_dev, ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO))
+		(adreno_dev, ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO)) {
+		prev_perfctr_pwr_hi = perfctr_pwr_hi;
 		overflow = is_power_counter_overflow(adreno_dev, reg,
 				*counter, &perfctr_pwr_hi);
+	}
 
 	/* Return 0 for the first read */
 	if (*counter != 0) {
@@ -1557,9 +1597,12 @@ static inline unsigned int counter_delta(struct kgsl_device *device,
 			 * Since KGSL got abnormal value from the counter,
 			 * We will drop the value from being accumulated.
 			 */
-			pr_warn_once("KGSL: Abnormal value :0x%x (0x%x) from perf counter : 0x%x\n",
-					val, *counter, reg);
-			return 0;
+			KGSL_DRV_ERR_RATELIMIT(device,
+				"Abnormal value:0x%llx (0x%llx) from perf counter : 0x%x\n",
+				val | ((uint64_t)perfctr_pwr_hi << 32),
+				*counter |
+					((uint64_t)prev_perfctr_pwr_hi << 32),
+				reg);
 		}
 	}
 
