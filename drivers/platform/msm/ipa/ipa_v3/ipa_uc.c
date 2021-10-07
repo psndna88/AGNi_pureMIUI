@@ -1439,7 +1439,7 @@ int ipa3_uc_debug_stats_alloc(
 	result = ipa3_uc_send_cmd((u32)(cmd.phys_base),
 		command,
 		IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
-		false, 10 * HZ);
+		false, 20 * HZ);
 	if (result) {
 		IPAERR("fail to alloc offload stats\n");
 		goto cleanup;
