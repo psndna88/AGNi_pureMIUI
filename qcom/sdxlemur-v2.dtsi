@@ -150,6 +150,14 @@
 	qcom,iommu-dma = "fastmap";
 };
 
+&apsscc {
+	qcom,speed0-bin-v0 =
+		<   345600000 RPMH_REGULATOR_LEVEL_LOW_SVS>,
+		<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
+		<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
+		<  1804800000 RPMH_REGULATOR_LEVEL_TURBO>;
+};
+
 &cpufreq {
 	qcom,cpufreq-table =
 		<  345600 >,
