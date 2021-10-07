@@ -905,11 +905,20 @@ config PANIC_TIMEOUT
 config SCHED_DEBUG
 	bool "Collect scheduler debugging info"
 	depends on PROC_FS
+	select SCHED_SYSCTL
 	default y
 	help
 	  If you say Y here, the /proc/sched_debug file will be provided
 	  that can help debug the scheduler. The runtime overhead of this
 	  option is minimal.
+
+config SCHED_SYSCTL
+	bool "Expose scheduler tunables to userspace"
+	depends on PROC_FS
+	default y
+	help
+	  If you say Y here, the scheduler's tunables will be exposed to
+	  userspace via the sysctl interface.
 
 config SCHED_INFO
 	bool

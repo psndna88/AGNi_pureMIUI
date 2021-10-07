@@ -15,6 +15,12 @@
 #include "cpudeadline.h"
 #include "cpuacct.h"
 
+#ifdef CONFIG_SCHED_DEBUG
+#define SCHED_WARN_ON(x)	WARN_ONCE(x, #x)
+#else
+#define SCHED_WARN_ON(x)	((void)(x))
+#endif
+
 struct rq;
 struct cpuidle_state;
 
@@ -1124,9 +1130,9 @@ static inline void __set_task_cpu(struct task_struct *p, unsigned int cpu)
 }
 
 /*
- * Tunables that become constants when CONFIG_SCHED_DEBUG is off:
+ * Tunables that become constants when CONFIG_SCHED_SYSCTL is off:
  */
-#ifdef CONFIG_SCHED_DEBUG
+#ifdef CONFIG_SCHED_SYSCTL
 # include <linux/static_key.h>
 # define const_debug __read_mostly
 #else
@@ -1159,7 +1165,7 @@ static __always_inline bool static_branch_##name(struct static_key *key) \
 extern struct static_key sched_feat_keys[__SCHED_FEAT_NR];
 #define sched_feat(x) (static_branch_##x(&sched_feat_keys[__SCHED_FEAT_##x]))
 #else /* !(SCHED_DEBUG && HAVE_JUMP_LABEL) */
-#define sched_feat(x) (sysctl_sched_features & (1UL << __SCHED_FEAT_##x))
+#define sched_feat(x) !!(sysctl_sched_features & (1UL << __SCHED_FEAT_##x))
 #endif /* SCHED_DEBUG && HAVE_JUMP_LABEL */
 
 extern struct static_key_false sched_numa_balancing;
@@ -1461,7 +1467,7 @@ static inline void idle_set_state(struct rq *rq,
 
 static inline struct cpuidle_state *idle_get_state(struct rq *rq)
 {
-	WARN_ON(!rcu_read_lock_held());
+	SCHED_WARN_ON(!rcu_read_lock_held());
 	return rq->idle_state;
 }
 
@@ -1735,20 +1741,26 @@ extern bool walt_disabled;
  */
 static inline unsigned long __cpu_util(int cpu, int delta)
 {
-	unsigned long util = cpu_rq(cpu)->cfs.avg.util_avg;
-	unsigned long capacity = capacity_orig_of(cpu);
+	struct cfs_rq *cfs_rq;
+	unsigned long util;
 
 #ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
-		util = div64_u64(cpu_rq(cpu)->cumulative_runnable_avg,
+	if (!walt_disabled && sysctl_sched_use_walt_cpu_util) {
+		util = div64_u64(cpu_rq(cpu)->cfs->cumulative_runnable_avg,
 				 walt_ravg_window >> SCHED_LOAD_SHIFT);
+
+		return min_t(unsigned long, util, capacity_orig_of(cpu));
+	}
 #endif
 
-	delta += util;
-	if (delta < 0)
-		return 0;
+	cfs_rq = &cpu_rq(cpu)->cfs;
+	util = READ_ONCE(cfs_rq->avg.util_avg);
 
-	return (delta >= capacity) ? capacity : delta;
+	if (sched_feat(UTIL_EST))
+		util = max_t(unsigned long, util,
+			READ_ONCE(cfs_rq->avg.util_est.enqueued));
+
+	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }
 
 static inline unsigned long cpu_util(int cpu)
@@ -1807,8 +1819,8 @@ task_rq_unlock(struct rq *rq, struct task_struct *p, struct rq_flags *rf)
 	raw_spin_unlock_irqrestore(&p->pi_lock, rf->flags);
 }
 
-extern struct rq *lock_rq_of(struct task_struct *p, struct rq_flags *flags);
-extern void unlock_rq_of(struct rq *rq, struct task_struct *p, struct rq_flags *flags);
+extern struct rq *lock_rq_of(struct task_struct *p, struct rq_flags *rf);
+extern void unlock_rq_of(struct rq *rq, struct task_struct *p, struct rq_flags *rf);
 
 #ifdef CONFIG_SMP
 #ifdef CONFIG_PREEMPT

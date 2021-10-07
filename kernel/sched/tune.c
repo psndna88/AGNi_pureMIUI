@@ -168,7 +168,7 @@ static inline struct schedtune *css_st(struct cgroup_subsys_state *css)
 
 static inline struct schedtune *task_schedtune(struct task_struct *tsk)
 {
-	return NULL;
+	return css_st(task_css(tsk, schedtune_cgrp_id));
 }
 
 static inline struct schedtune *parent_st(struct schedtune *st)
@@ -1095,9 +1095,7 @@ int get_sched_boost(void)
 	return st_ta->sched_boost;
 }
 
-#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
-
-#endif /* CONFIG_CGROUP_SCHEDTUNE */
+#else
 
 int reset_stune_boost(int slot)
 {
@@ -1108,6 +1106,9 @@ int do_stune_boost(int boost, int *slot)
 {
 	return 0;
 }
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
+
+#endif /* CONFIG_CGROUP_SCHEDTUNE */
 
 int
 sysctl_sched_cfs_boost_handler(struct ctl_table *table, int write,

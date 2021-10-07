@@ -957,6 +957,10 @@ config PELT_HALFLIFE_8
 
 endchoice
 
+endmenu # Scheduler features"
+
+menu "Scheduler UCLAMP features"
+
 config UCLAMP_TASK
 	bool "Enable utilization clamping for RT/FAIR tasks"
 	depends on CPU_FREQ_GOV_SCHEDUTIL
@@ -1007,7 +1011,28 @@ config UCLAMP_BUCKETS_COUNT
 
 	  If in doubt, use the default value.
 
-endmenu # Scheduler features"
+config UCLAMP_DEFAULT_MIN_RT
+	int "default uclamp util rt"
+	depends on UCLAMP_TASK
+	default 0
+	help
+	 This sets the UCLAMP_RT_DEFAULT value.
+
+config UCLAMP_DEFAULT_MAX
+	int "default uclam max"
+	depends on UCLAMP_TASK
+	default 0
+	help
+	 This sets the UCLAMP_MAX value.
+
+config UCLAMP_DEFAULT_MIN
+	int "default uclam min"
+	depends on UCLAMP_TASK
+	default 0
+	help
+	 This sets the UCLAMP_MIN value.
+
+endmenu
 
 #
 # For architectures that want to enable the support for NUMA-affine scheduler
@@ -1174,6 +1199,23 @@ config CGROUP_SCHEDTUNE
 
 config PAGE_COUNTER
        bool
+
+config CGROUP_SCHEDTUNE
+	bool "CFS tasks boosting cgroup subsystem (EXPERIMENTAL)"
+	depends on SCHED_TUNE
+	help
+	  This option provides the "schedtune" controller which improves the
+	  flexibility of the task boosting mechanism by introducing the support
+	  to define "per task" boost values.
+
+	  This new controller:
+	  1. allows only a two layers hierarchy, where the root defines the
+	     system-wide boost value and its direct childrens define each one a
+	     different "class of tasks" to be boosted with a different value
+	  2. supports up to 16 different task classes, each one which could be
+	     configured with a different boost value
+
+	  Say N if unsure.
 
 config MEMCG
 	bool "Memory Resource Controller for Control Groups"
@@ -1456,21 +1498,10 @@ config CPUSETS_ASSIST
 
 	  If unsure, say N.
 
-config UCLAMP_ASSIST
-	bool "Uclamp configuration helper"
-	depends on CPUSETS
-	depends on ANDROID
-	depends on UCLAMP_TASK_GROUP
-	depends on CPUSETS_ASSIST
-	default y
-	help
-	  This option enables in-kernel overrides for uclamp values.
-
-	  If unsure, say N.
-
 config DYNAMIC_STUNE_BOOST
 	bool "Dynamic SchedTune boosting support"
 	depends on SCHED_TUNE && CGROUP_SCHEDTUNE
+	default y
 	help
 	  This option extends the SchedTune framework and provides APIs to
 	  activate and reset SchedTune boosting from anywhere in the kernel.

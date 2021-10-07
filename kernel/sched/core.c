@@ -298,7 +298,7 @@ late_initcall(sched_init_debug);
  * Number of tasks to iterate in a single balance run.
  * Limited because this is done with IRQs disabled.
  */
-const_debug unsigned int sysctl_sched_nr_migrate = 32;
+const_debug unsigned int sysctl_sched_nr_migrate = 128;
 
 /*
  * period over which we average the RT time consumption, measured
@@ -318,23 +318,23 @@ __read_mostly int scheduler_running;
 
 /*
  * part of the period that we allow rt tasks to run in us.
- * default: 0.95s
+ * XanMod default: 0.98s
  */
-int sysctl_sched_rt_runtime = 950000;
+int sysctl_sched_rt_runtime = 980000;
 
 /* cpus with isolated domains */
 cpumask_var_t cpu_isolated_map;
 
 struct rq *
-lock_rq_of(struct task_struct *p, struct rq_flags *flags)
+lock_rq_of(struct task_struct *p, struct rq_flags *rf)
 {
-	return task_rq_lock(p, flags);
+	return task_rq_lock(p, rf);
 }
 
 void
-unlock_rq_of(struct rq *rq, struct task_struct *p, struct rq_flags *flags)
+unlock_rq_of(struct rq *rq, struct task_struct *p, struct rq_flags *rf)
 {
-	task_rq_unlock(rq, p, flags);
+	task_rq_unlock(rq, p, rf);
 }
 
 /*
@@ -965,10 +965,10 @@ static void set_load_weight(struct task_struct *p)
 static DEFINE_MUTEX(uclamp_mutex);
 
 /* Max allowed minimum utilization */
-unsigned int sysctl_sched_uclamp_util_min = 128;
+unsigned int sysctl_sched_uclamp_util_min = CONFIG_UCLAMP_DEFAULT_MIN;
 
 /* Max allowed maximum utilization */
-unsigned int sysctl_sched_uclamp_util_max = SCHED_CAPACITY_SCALE;
+unsigned int sysctl_sched_uclamp_util_max = CONFIG_UCLAMP_DEFAULT_MAX;
 
 /*
  * By default RT tasks run at the maximum performance point/capacity of the
@@ -985,7 +985,7 @@ unsigned int sysctl_sched_uclamp_util_max = SCHED_CAPACITY_SCALE;
  * This knob will not override the system default sched_util_clamp_min defined
  * above.
  */
-unsigned int sysctl_sched_uclamp_util_min_rt_default = 96;
+unsigned int sysctl_sched_uclamp_util_min_rt_default = CONFIG_UCLAMP_DEFAULT_MIN_RT;
 
 /* All clamps are required to be less or equal than these values */
 static struct uclamp_se uclamp_default[UCLAMP_CNT];
@@ -1454,8 +1454,8 @@ int sysctl_sched_uclamp_handler(struct ctl_table *table, int write,
 		goto done;
 
 	if (sysctl_sched_uclamp_util_min > sysctl_sched_uclamp_util_max ||
-	    sysctl_sched_uclamp_util_max > SCHED_CAPACITY_SCALE	||
-	    sysctl_sched_uclamp_util_min_rt_default > SCHED_CAPACITY_SCALE) {
+	    sysctl_sched_uclamp_util_max > CONFIG_UCLAMP_DEFAULT_MAX	||
+	    sysctl_sched_uclamp_util_min_rt_default > CONFIG_UCLAMP_DEFAULT_MIN_RT) {
 
 		result = -EINVAL;
 		goto undo;
@@ -9833,14 +9833,14 @@ static ssize_t cpu_uclamp_write(struct kernfs_open_file *of, char *buf,
 	return nbytes;
 }
 
-ssize_t cpu_uclamp_min_write(struct kernfs_open_file *of,
+static ssize_t cpu_uclamp_min_write(struct kernfs_open_file *of,
 				    char *buf, size_t nbytes,
 				    loff_t off)
 {
 	return cpu_uclamp_write(of, buf, nbytes, off, UCLAMP_MIN);
 }
 
-ssize_t cpu_uclamp_max_write(struct kernfs_open_file *of,
+static ssize_t cpu_uclamp_max_write(struct kernfs_open_file *of,
 				    char *buf, size_t nbytes,
 				    loff_t off)
 {
@@ -9870,19 +9870,19 @@ static inline void cpu_uclamp_print(struct seq_file *sf,
 	seq_printf(sf, "%llu.%0*u\n", percent, UCLAMP_PERCENT_SHIFT, rem);
 }
 
-int cpu_uclamp_min_show(struct seq_file *sf, void *v)
+static int cpu_uclamp_min_show(struct seq_file *sf, void *v)
 {
 	cpu_uclamp_print(sf, UCLAMP_MIN);
 	return 0;
 }
 
-int cpu_uclamp_max_show(struct seq_file *sf, void *v)
+static int cpu_uclamp_max_show(struct seq_file *sf, void *v)
 {
 	cpu_uclamp_print(sf, UCLAMP_MAX);
 	return 0;
 }
 
-int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
+static int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
 				   struct cftype *cftype, u64 ls)
 {
 	struct task_group *tg;
@@ -9895,7 +9895,7 @@ int cpu_uclamp_ls_write_u64(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
+static u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
 				  struct cftype *cft)
 {
 	struct task_group *tg = css_tg(css);
@@ -9903,7 +9903,7 @@ u64 cpu_uclamp_ls_read_u64(struct cgroup_subsys_state *css,
 	return (u64) tg->latency_sensitive;
 }
 
-int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
+static int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
 				   struct cftype *cftype, u64 boosted)
 {
 	struct task_group *tg;
@@ -9916,7 +9916,7 @@ int cpu_uclamp_boost_write_u64(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
+static u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
 				  struct cftype *cft)
 {
 	struct task_group *tg = css_tg(css);
@@ -9924,6 +9924,50 @@ u64 cpu_uclamp_boost_read_u64(struct cgroup_subsys_state *css,
 	return (u64) tg->boosted;
 }
 
+/* Wrappers for the above {read, write, show} functions */
+int cpu_uclamp_min_show_wrapper(struct seq_file *sf, void *v)
+{
+	return cpu_uclamp_min_show(sf, v);
+}
+int cpu_uclamp_max_show_wrapper(struct seq_file *sf, void *v)
+{
+	return cpu_uclamp_max_show(sf, v);
+}
+
+ssize_t cpu_uclamp_min_write_wrapper(struct kernfs_open_file *of,
+                               char *buf, size_t nbytes,
+                               loff_t off)
+{
+	return cpu_uclamp_min_write(of, buf, nbytes, off);
+}
+ssize_t cpu_uclamp_max_write_wrapper(struct kernfs_open_file *of,
+                               char *buf, size_t nbytes,
+                               loff_t off)
+{
+	return cpu_uclamp_max_write(of, buf, nbytes, off);
+}
+
+int cpu_uclamp_ls_write_u64_wrapper(struct cgroup_subsys_state *css,
+                              struct cftype *cftype, u64 ls)
+{
+	return cpu_uclamp_ls_write_u64(css, cftype, ls);
+}
+u64 cpu_uclamp_ls_read_u64_wrapper(struct cgroup_subsys_state *css,
+                             struct cftype *cft)
+{
+	return cpu_uclamp_ls_read_u64(css, cft);
+}
+
+int cpu_uclamp_boost_write_u64_wrapper(struct cgroup_subsys_state *css,
+                              struct cftype *cftype, u64 boost)
+{
+	return cpu_uclamp_boost_write_u64(css, cftype, boost);
+}
+u64 cpu_uclamp_boost_read_u64_wrapper(struct cgroup_subsys_state *css,
+                             struct cftype *cft)
+{
+	return cpu_uclamp_boost_read_u64(css, cft);
+}
 #endif /* CONFIG_UCLAMP_TASK_GROUP */
 
 #ifdef CONFIG_FAIR_GROUP_SCHED

@@ -339,7 +339,10 @@ void irq_init_desc(unsigned int irq)
 /**
  * generic_handle_irq - Invoke the handler for a particular irq
  * @irq:	The irq number to handle
- *
+ * returns:
+ * 	negative on error
+ *	0 when the interrupt handler was not called
+ *	1 when the interrupt handler was called
  */
 int generic_handle_irq(unsigned int irq)
 {
@@ -347,8 +350,8 @@ int generic_handle_irq(unsigned int irq)
 
 	if (!desc)
 		return -EINVAL;
-	generic_handle_irq_desc(desc);
-	return 0;
+	else
+		return generic_handle_irq_desc(desc);
 }
 EXPORT_SYMBOL_GPL(generic_handle_irq);
 
