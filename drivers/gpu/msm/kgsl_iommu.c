@@ -105,18 +105,6 @@ static int global_pt_count;
 static struct kgsl_memdesc gpu_qdss_desc;
 static struct kgsl_memdesc gpu_qtimer_desc;
 
-struct adreno_context_type ctxt_type_table[] = {KGSL_CONTEXT_TYPES};
-inline const char *get_api_type_str(unsigned int type)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(ctxt_type_table); i++) {
-		if (ctxt_type_table[i].type == type)
-			return ctxt_type_table[i].str;
-	}
-	return "UNKNOWN";
-}
-
 void kgsl_print_global_pt_entries(struct seq_file *s)
 {
 	int i;
@@ -395,57 +383,18 @@ static int _attach_pt(struct kgsl_iommu_pt *iommu_pt,
 	return ret;
 }
 
-static int _lock_if_secure_mmu(struct kgsl_memdesc *memdesc,
-		struct kgsl_mmu *mmu)
-{
-	struct kgsl_device *device = KGSL_MMU_DEVICE(mmu);
-
-	if (!kgsl_memdesc_is_secured(memdesc))
-		return 0;
-
-	if (!kgsl_mmu_is_secured(mmu))
-		return -EINVAL;
-
-	mutex_lock(&device->mutex);
-	if (kgsl_active_count_get(device)) {
-		mutex_unlock(&device->mutex);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static void _unlock_if_secure_mmu(struct kgsl_memdesc *memdesc,
-		struct kgsl_mmu *mmu)
-{
-	struct kgsl_device *device = KGSL_MMU_DEVICE(mmu);
-
-	if (!kgsl_memdesc_is_secured(memdesc) || !kgsl_mmu_is_secured(mmu))
-		return;
-
-	kgsl_active_count_put(device);
-	mutex_unlock(&device->mutex);
-}
-
 static int _iommu_map_sync_pc(struct kgsl_pagetable *pt,
-		struct kgsl_memdesc *memdesc,
 		uint64_t gpuaddr, phys_addr_t physaddr,
 		uint64_t size, unsigned int flags)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
 	int ret;
 
-	ret = _lock_if_secure_mmu(memdesc, pt->mmu);
-	if (ret)
-		return ret;
-
 	_iommu_sync_mmu_pc(true);
 
 	ret = iommu_map(iommu_pt->domain, gpuaddr, physaddr, size, flags);
 
 	_iommu_sync_mmu_pc(false);
-
-	_unlock_if_secure_mmu(memdesc, pt->mmu);
 
 	if (ret) {
 		KGSL_CORE_ERR("map err: 0x%016llX, 0x%llx, 0x%x, %d\n",
@@ -457,23 +406,16 @@ static int _iommu_map_sync_pc(struct kgsl_pagetable *pt,
 }
 
 static int _iommu_unmap_sync_pc(struct kgsl_pagetable *pt,
-		struct kgsl_memdesc *memdesc, uint64_t addr, uint64_t size)
+		uint64_t addr, uint64_t size)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
 	size_t unmapped = 0;
-	int ret;
-
-	ret = _lock_if_secure_mmu(memdesc, pt->mmu);
-	if (ret)
-		return ret;
 
 	_iommu_sync_mmu_pc(true);
 
 	unmapped = iommu_unmap(iommu_pt->domain, addr, size);
 
 	_iommu_sync_mmu_pc(false);
-
-	_unlock_if_secure_mmu(memdesc, pt->mmu);
 
 	if (unmapped != size) {
 		KGSL_CORE_ERR("unmap err: 0x%016llx, 0x%llx, %zd\n",
@@ -485,8 +427,7 @@ static int _iommu_unmap_sync_pc(struct kgsl_pagetable *pt,
 }
 
 static int _iommu_map_sg_offset_sync_pc(struct kgsl_pagetable *pt,
-		uint64_t addr, struct kgsl_memdesc *memdesc,
-		struct scatterlist *sg, int nents,
+		uint64_t addr, struct scatterlist *sg, int nents,
 		uint64_t offset, uint64_t size, unsigned int flags)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
@@ -497,10 +438,6 @@ static int _iommu_map_sg_offset_sync_pc(struct kgsl_pagetable *pt,
 	struct scatterlist *s;
 	phys_addr_t physaddr;
 	int ret;
-
-	ret = _lock_if_secure_mmu(memdesc, pt->mmu);
-	if (ret)
-		return ret;
 
 	_iommu_sync_mmu_pc(true);
 
@@ -541,11 +478,9 @@ static int _iommu_map_sg_offset_sync_pc(struct kgsl_pagetable *pt,
 
 	_iommu_sync_mmu_pc(false);
 
-	_unlock_if_secure_mmu(memdesc, pt->mmu);
-
 	if (size != 0) {
 		/* Cleanup on error */
-		_iommu_unmap_sync_pc(pt, memdesc, addr, mapped);
+		_iommu_unmap_sync_pc(pt, addr, mapped);
 		KGSL_CORE_ERR(
 			"map sg offset err: 0x%016llX, %d, %x, %zd\n",
 			addr, nents, flags, mapped);
@@ -556,25 +491,17 @@ static int _iommu_map_sg_offset_sync_pc(struct kgsl_pagetable *pt,
 }
 
 static int _iommu_map_sg_sync_pc(struct kgsl_pagetable *pt,
-		uint64_t addr, struct kgsl_memdesc *memdesc,
-		struct scatterlist *sg, int nents,
+		uint64_t addr, struct scatterlist *sg, int nents,
 		unsigned int flags)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt->priv;
 	size_t mapped;
-	int ret;
-
-	ret = _lock_if_secure_mmu(memdesc, pt->mmu);
-	if (ret)
-		return ret;
 
 	_iommu_sync_mmu_pc(true);
 
 	mapped = iommu_map_sg(iommu_pt->domain, addr, sg, nents, flags);
 
 	_iommu_sync_mmu_pc(false);
-
-	_unlock_if_secure_mmu(memdesc, pt->mmu);
 
 	if (mapped == 0) {
 		KGSL_CORE_ERR("map sg err: 0x%016llX, %d, %x, %zd\n",
@@ -827,7 +754,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	struct kgsl_iommu_context *ctx;
 	u64 ptbase;
 	u32 contextidr;
-	pid_t tid = 0;
+	pid_t pid = 0;
 	pid_t ptname;
 	struct _mem_entry prev, next;
 	int write;
@@ -880,7 +807,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	if (context != NULL) {
 		/* save pagefault timestamp for GFT */
 		set_bit(KGSL_CONTEXT_PRIV_PAGEFAULT, &context->priv);
-		tid = context->tid;
+		pid = context->proc_priv->pid;
 	}
 
 	ctx->fault = 1;
@@ -901,7 +828,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	contextidr = KGSL_IOMMU_GET_CTX_REG(ctx, CONTEXTIDR);
 
 	ptname = MMU_FEATURE(mmu, KGSL_MMU_GLOBAL_PAGETABLE) ?
-		KGSL_MMU_GLOBAL_PT : tid;
+		KGSL_MMU_GLOBAL_PT : pid;
 	/*
 	 * Trace needs to be logged before searching the faulting
 	 * address in free list as it takes quite long time in
@@ -1733,7 +1660,7 @@ kgsl_iommu_unmap_offset(struct kgsl_pagetable *pt,
 	if (addr == 0)
 		return -EINVAL;
 
-	return _iommu_unmap_sync_pc(pt, memdesc, addr + offset, size);
+	return _iommu_unmap_sync_pc(pt, addr + offset, size);
 }
 
 static int
@@ -1798,7 +1725,7 @@ static int _iommu_map_guard_page(struct kgsl_pagetable *pt,
 		physaddr = page_to_phys(kgsl_guard_page);
 	}
 
-	return _iommu_map_sync_pc(pt, memdesc, gpuaddr, physaddr,
+	return _iommu_map_sync_pc(pt, gpuaddr, physaddr,
 			kgsl_memdesc_guard_page_size(memdesc),
 			protflags & ~IOMMU_WRITE);
 }
@@ -1839,14 +1766,13 @@ kgsl_iommu_map(struct kgsl_pagetable *pt,
 	if (IS_ERR(sgt))
 		return PTR_ERR(sgt);
 
-	ret = _iommu_map_sg_sync_pc(pt, addr, memdesc, sgt->sgl,
-				sgt->nents, flags);
+	ret = _iommu_map_sg_sync_pc(pt, addr, sgt->sgl, sgt->nents, flags);
 	if (ret)
 		goto done;
 
 	ret = _iommu_map_guard_page(pt, memdesc, addr + size, flags);
 	if (ret)
-		_iommu_unmap_sync_pc(pt, memdesc, addr, size);
+		_iommu_unmap_sync_pc(pt, addr, size);
 
 done:
 	if (memdesc->pages != NULL)
@@ -1885,8 +1811,7 @@ static int kgsl_iommu_sparse_dummy_map(struct kgsl_pagetable *pt,
 			0, size, GFP_KERNEL);
 	if (ret == 0) {
 		ret = _iommu_map_sg_sync_pc(pt, memdesc->gpuaddr + offset,
-				memdesc, sgt.sgl, sgt.nents,
-				IOMMU_READ | IOMMU_NOEXEC);
+				sgt.sgl, sgt.nents, IOMMU_READ | IOMMU_NOEXEC);
 		sg_free_table(&sgt);
 	}
 
@@ -1939,7 +1864,7 @@ static int _map_to_one_page(struct kgsl_pagetable *pt, uint64_t addr,
 	ret = sg_alloc_table_from_pages(&sgt, pages, count,
 			0, size, GFP_KERNEL);
 	if (ret == 0) {
-		ret = _iommu_map_sg_sync_pc(pt, addr, memdesc, sgt.sgl,
+		ret = _iommu_map_sg_sync_pc(pt, addr, sgt.sgl,
 				sgt.nents, map_flags);
 		sg_free_table(&sgt);
 	}
@@ -1988,7 +1913,7 @@ static int kgsl_iommu_map_offset(struct kgsl_pagetable *pt,
 				memdesc, physoffset, size, protflags);
 	else
 		ret = _iommu_map_sg_offset_sync_pc(pt, virtaddr + virtoffset,
-				memdesc, sgt->sgl, sgt->nents,
+				sgt->sgl, sgt->nents,
 				physoffset, size, protflags);
 
 	if (memdesc->pages != NULL)
@@ -2065,6 +1990,8 @@ kgsl_iommu_get_current_ttbr0(struct kgsl_mmu *mmu)
 {
 	u64 val;
 	struct kgsl_iommu *iommu = _IOMMU_PRIV(mmu);
+	struct kgsl_iommu_context *ctx = &iommu->ctx[KGSL_IOMMU_CONTEXT_USER];
+
 	/*
 	 * We cannot enable or disable the clocks in interrupt context, this
 	 * function is called from interrupt context if there is an axi error
@@ -2072,9 +1999,11 @@ kgsl_iommu_get_current_ttbr0(struct kgsl_mmu *mmu)
 	if (in_interrupt())
 		return 0;
 
+	if (ctx->regbase == NULL)
+		return 0;
+
 	kgsl_iommu_enable_clk(mmu);
-	val = KGSL_IOMMU_GET_CTX_REG_Q(&iommu->ctx[KGSL_IOMMU_CONTEXT_USER],
-					TTBR0);
+	val = KGSL_IOMMU_GET_CTX_REG_Q(ctx, TTBR0);
 	kgsl_iommu_disable_clk(mmu);
 	return val;
 }
@@ -2652,7 +2581,7 @@ static int _kgsl_iommu_probe(struct kgsl_device *device,
 		return -EINVAL;
 	}
 	iommu->protect.base = reg_val[0] / sizeof(u32);
-	iommu->protect.range = ilog2(reg_val[1] / sizeof(u32));
+	iommu->protect.range = reg_val[1] / sizeof(u32);
 
 	of_property_for_each_string(node, "clock-names", prop, cname) {
 		struct clk *c = devm_clk_get(&pdev->dev, cname);

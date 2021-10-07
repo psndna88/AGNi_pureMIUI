@@ -159,7 +159,7 @@ void kgsl_pwrscale_update(struct kgsl_device *device)
 	device->pwrscale.next_governor_call = ktime_add_us(t,
 			KGSL_GOVERNOR_CALL_INTERVAL);
 
-	/* to call update_devfreq() from a kernel thread */
+	/* to call srcu_notifier_call_chain() from a kernel thread */
 	if (device->state != KGSL_STATE_SLUMBER)
 		queue_work(device->pwrscale.devfreq_wq,
 			&device->pwrscale.devfreq_notify_ws);
@@ -454,6 +454,51 @@ int kgsl_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
 EXPORT_SYMBOL(kgsl_devfreq_get_cur_freq);
 
 /*
+ * kgsl_devfreq_add_notifier - add a fine grained notifier.
+ * @dev: The device
+ * @nb: Notifier block that will recieve updates.
+ *
+ * Add a notifier to recieve ADRENO_DEVFREQ_NOTIFY_* events
+ * from the device.
+ */
+int kgsl_devfreq_add_notifier(struct device *dev,
+		struct notifier_block *nb)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	if (device == NULL)
+		return -ENODEV;
+
+	if (nb == NULL)
+		return -EINVAL;
+
+	return srcu_notifier_chain_register(&device->pwrscale.nh, nb);
+}
+EXPORT_SYMBOL(kgsl_devfreq_add_notifier);
+
+/*
+ * kgsl_devfreq_del_notifier - remove a fine grained notifier.
+ * @dev: The device
+ * @nb: The notifier block.
+ *
+ * Remove a notifier registered with kgsl_devfreq_add_notifier().
+ */
+int kgsl_devfreq_del_notifier(struct device *dev, struct notifier_block *nb)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	if (device == NULL)
+		return -ENODEV;
+
+	if (nb == NULL)
+		return -EINVAL;
+
+	return srcu_notifier_chain_unregister(&device->pwrscale.nh, nb);
+}
+EXPORT_SYMBOL(kgsl_devfreq_del_notifier);
+
+
+/*
  * kgsl_busmon_get_dev_status - devfreq_dev_profile.get_dev_status callback
  * @dev: see devfreq.h
  * @freq: see devfreq.h
@@ -551,12 +596,16 @@ int kgsl_busmon_target(struct device *dev, unsigned long *freq, u32 flags)
 	}
 
 	b = pwr->bus_mod;
-	if (_check_fast_hint(bus_flag) &&
-		((pwr_level->bus_freq + pwr->bus_mod) < pwr_level->bus_max))
-			pwr->bus_mod++;
-	else if (_check_slow_hint(bus_flag) &&
-		((pwr_level->bus_freq + pwr->bus_mod) > pwr_level->bus_min))
-			pwr->bus_mod--;
+	if (_check_fast_hint(bus_flag))
+		pwr->bus_mod++;
+	else if (_check_slow_hint(bus_flag))
+		pwr->bus_mod--;
+
+	/* trim calculated change to fit range */
+	if (pwr_level->bus_freq + pwr->bus_mod < pwr_level->bus_min)
+		pwr->bus_mod = -(pwr_level->bus_freq - pwr_level->bus_min);
+	else if (pwr_level->bus_freq + pwr->bus_mod > pwr_level->bus_max)
+		pwr->bus_mod = pwr_level->bus_max - pwr_level->bus_freq;
 
 	/* Update bus vote if AB or IB is modified */
 	if ((pwr->bus_mod != b) || (pwr->bus_ab_mbytes != ab_mbytes)) {
@@ -588,6 +637,7 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 	struct kgsl_pwrscale *pwrscale;
 	struct kgsl_pwrctrl *pwr;
 	struct devfreq *devfreq;
+	struct devfreq *bus_devfreq;
 	struct msm_adreno_extended_profile *gpu_profile;
 	struct devfreq_dev_profile *profile;
 	struct devfreq_msm_adreno_tz_data *data;
@@ -602,6 +652,8 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 	pwr = &device->pwrctrl;
 	gpu_profile = &pwrscale->gpu_profile;
 	profile = &pwrscale->gpu_profile.profile;
+
+	srcu_init_notifier_head(&pwrscale->nh);
 
 	profile->initial_freq =
 		pwr->pwrlevels[pwr->num_pwrlevels - 1].gpu_freq;
@@ -694,16 +746,17 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 
 	pwrscale->devfreqptr = devfreq;
 
+	pwrscale->gpu_profile.bus_devfreq = NULL;
 	if (data->bus.num) {
 		pwrscale->bus_profile.profile.max_state
 					= pwr->num_pwrlevels - 1;
 		pwrscale->bus_profile.profile.freq_table
 					= pwrscale->freq_table;
 
-		pwrscale->bus_devfreq = devfreq_add_device(device->busmondev,
+		bus_devfreq = devfreq_add_device(device->busmondev,
 			&pwrscale->bus_profile.profile, "gpubw_mon", NULL);
-		if (IS_ERR(pwrscale->bus_devfreq))
-			pwrscale->bus_devfreq = NULL;
+		if (!IS_ERR(bus_devfreq))
+			pwrscale->gpu_profile.bus_devfreq = bus_devfreq;
 	}
 
 	ret = sysfs_create_link(&device->dev->kobj,
@@ -761,11 +814,10 @@ void kgsl_pwrscale_close(struct kgsl_device *device)
 	flush_workqueue(pwrscale->devfreq_wq);
 	destroy_workqueue(pwrscale->devfreq_wq);
 	devfreq_remove_device(device->pwrscale.devfreqptr);
-	devfreq_remove_device(pwrscale->bus_devfreq);
 	kfree(kgsl_midframe);
 	kgsl_midframe = NULL;
-	device->pwrscale.bus_devfreq = NULL;
 	device->pwrscale.devfreqptr = NULL;
+	srcu_cleanup_notifier_head(&device->pwrscale.nh);
 	for (i = 0; i < KGSL_PWREVENT_MAX; i++)
 		kfree(pwrscale->history[i].events);
 }
@@ -775,18 +827,18 @@ static void do_devfreq_suspend(struct work_struct *work)
 {
 	struct kgsl_pwrscale *pwrscale = container_of(work,
 			struct kgsl_pwrscale, devfreq_suspend_ws);
+	struct devfreq *devfreq = pwrscale->devfreqptr;
 
-	devfreq_suspend_device(pwrscale->devfreqptr);
-	devfreq_suspend_device(pwrscale->bus_devfreq);
+	devfreq_suspend_device(devfreq);
 }
 
 static void do_devfreq_resume(struct work_struct *work)
 {
 	struct kgsl_pwrscale *pwrscale = container_of(work,
 			struct kgsl_pwrscale, devfreq_resume_ws);
+	struct devfreq *devfreq = pwrscale->devfreqptr;
 
-	devfreq_resume_device(pwrscale->devfreqptr);
-	devfreq_resume_device(pwrscale->bus_devfreq);
+	devfreq_resume_device(devfreq);
 }
 
 static void do_devfreq_notify(struct work_struct *work)
@@ -794,15 +846,7 @@ static void do_devfreq_notify(struct work_struct *work)
 	struct kgsl_pwrscale *pwrscale = container_of(work,
 			struct kgsl_pwrscale, devfreq_notify_ws);
 	struct devfreq *devfreq = pwrscale->devfreqptr;
-	struct devfreq *bus_devfreq = pwrscale->bus_devfreq;
-
-	mutex_lock(&devfreq->lock);
-	update_devfreq(devfreq);
-	mutex_unlock(&devfreq->lock);
-
-	if (bus_devfreq) {
-		mutex_lock(&bus_devfreq->lock);
-		update_devfreq(bus_devfreq);
-		mutex_unlock(&bus_devfreq->lock);
-	}
+	srcu_notifier_call_chain(&pwrscale->nh,
+				 ADRENO_DEVFREQ_NOTIFY_RETIRE,
+				 devfreq);
 }

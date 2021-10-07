@@ -140,6 +140,8 @@ struct kgsl_functable {
 		struct kgsl_snapshot *snapshot, struct kgsl_context *context);
 	irqreturn_t (*irq_handler)(struct kgsl_device *device);
 	int (*drain)(struct kgsl_device *device);
+	struct kgsl_device_private * (*device_private_create)(void);
+	void (*device_private_destroy)(struct kgsl_device_private *dev_priv);
 	/* Optional functions - these functions are not mandatory.  The
 	   driver will check that the function pointer is not NULL before
 	   calling the hook */
@@ -616,10 +618,10 @@ void kgsl_device_platform_remove(struct kgsl_device *device);
 
 const char *kgsl_pwrstate_to_str(unsigned int state);
 
-static inline int kgsl_device_snapshot_init(struct kgsl_device *device) { return 0; }
-static inline void kgsl_device_snapshot(struct kgsl_device *device,
-			struct kgsl_context *context) {}
-static inline void kgsl_device_snapshot_close(struct kgsl_device *device) {}
+int kgsl_device_snapshot_init(struct kgsl_device *device);
+void kgsl_device_snapshot(struct kgsl_device *device,
+			struct kgsl_context *context);
+void kgsl_device_snapshot_close(struct kgsl_device *device);
 void kgsl_snapshot_save_frozen_objs(struct work_struct *work);
 
 void kgsl_events_init(void);
@@ -643,6 +645,9 @@ bool kgsl_event_pending(struct kgsl_device *device,
 		kgsl_event_func func, void *priv);
 int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 		unsigned int timestamp, kgsl_event_func func, void *priv);
+int kgsl_add_low_prio_event(struct kgsl_device *device,
+		struct kgsl_event_group *group, unsigned int timestamp,
+		kgsl_event_func func, void *priv);
 void kgsl_process_event_group(struct kgsl_device *device,
 	struct kgsl_event_group *group);
 void kgsl_flush_event_group(struct kgsl_device *device,
