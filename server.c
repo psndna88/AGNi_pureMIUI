@@ -1105,6 +1105,12 @@ static enum sigma_cmd_result cmd_server_set_parameter(struct sigma_dut *dut,
 			if (system("cp " CERT_DIR "/IDY-cert-RootCA.pem "
 				   CERT_DIR "/cacert.pem") < 0)
 				return ERROR_SEND_STATUS;
+		} else if (strcasecmp(root_ca, "ID-K.1") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU trust root: Not-trusted");
+			if (system("cp " CERT_DIR "/IDK1-ca.pem "
+				   CERT_DIR "/cacert.pem") < 0)
+				return ERROR_SEND_STATUS;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported TrustRootCACert value");
@@ -1135,6 +1141,12 @@ static enum sigma_cmd_result cmd_server_set_parameter(struct sigma_dut *dut,
 			if (system("cat " CERT_DIR "/IDZ8-cert-InterCA.pem >> "
 				   CERT_DIR "/cacert.pem") < 0)
 				return ERROR_SEND_STATUS;
+		} else if (strcasecmp(inter_ca, "ID-K.1") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU intermediate CA: Not-trusted");
+			if (system("cat " CERT_DIR "/IDK1-IntCA.pem >> "
+				   CERT_DIR "/cacert.pem") < 0)
+				return ERROR_SEND_STATUS;
 		} else {
 			send_resp(dut, conn, SIGMA_ERROR,
 				  "errorCode,Unsupported InterCACert value");
@@ -1162,6 +1174,16 @@ static enum sigma_cmd_result cmd_server_set_parameter(struct sigma_dut *dut,
 				 col, srv);
 			snprintf(buf2, sizeof(buf2),
 				 "cp " CERT_DIR "/IDW-key-%s.pem "
+				 CERT_DIR "/server.key", srv);
+		} else if (strcasecmp(osu_cert, "ID-K.1") == 0) {
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"OSU server cert: Not-trusted");
+			snprintf(buf, sizeof(buf),
+				 "cp " CERT_DIR "/IDK1-cert-%s.pem "
+				 CERT_DIR "/server.pem",
+				 srv);
+			snprintf(buf2, sizeof(buf2),
+				 "cp " CERT_DIR "/IDK1-key-%s.pem "
 				 CERT_DIR "/server.key", srv);
 		} else if (strcasecmp(osu_cert, "ID-R.2") == 0) {
 			sigma_dut_print(dut, DUT_MSG_DEBUG,
