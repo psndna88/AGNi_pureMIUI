@@ -23,6 +23,9 @@
 #include <linux/uaccess.h>
 #include <asm/arch_timer.h>
 #include <soc/qcom/boot_stats.h>
+
+static void __iomem *reg_base;
+
 #define RPM_STATS_NUM_REC	2
 #define MSM_ARCH_TIMER_FREQ	19200000
 
@@ -323,6 +326,8 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 		pdata->num_records = RPM_STATS_NUM_REC;
 
 	msm_rpmstats_create_sysfs(pdev, pdata);
+	reg_base = ioremap_nocache(pdata->phys_addr_base,
+					pdata->phys_size);
 	gpdata = pdata;
 
 	return 0;
