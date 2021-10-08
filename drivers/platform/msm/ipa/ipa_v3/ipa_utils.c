@@ -1981,6 +1981,12 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			IPA_DPS_HPS_REP_SEQ_TYPE_2PKT_PROC_PASS_NO_DEC_UCP_DMAP,
 			QMB_MASTER_SELECT_DDR,
 			{ 6, 2, 8, 16, IPA_EE_UC } },
+	[IPA_4_1_APQ][IPA_CLIENT_WLAN2_PROD]          = {
+			true, IPA_v4_0_GROUP_UL_DL,
+			true,
+			IPA_DPS_HPS_REP_SEQ_TYPE_2PKT_PROC_PASS_NO_DEC_UCP_DMAP,
+			QMB_MASTER_SELECT_DDR,
+			{ 6, 11, 8, 16, IPA_EE_AP } },
 	[IPA_4_1_APQ][IPA_CLIENT_USB_PROD]            = {
 			true, IPA_v4_0_GROUP_UL_DL,
 			true,
@@ -2005,12 +2011,6 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			IPA_DPS_HPS_REP_SEQ_TYPE_2PKT_PROC_PASS_NO_DEC_UCP_DMAP,
 			QMB_MASTER_SELECT_DDR,
 			{ 9, 0, 8, 16, IPA_EE_UC } },
-	[IPA_4_1_APQ][IPA_CLIENT_WLAN2_PROD] = {
-			true, IPA_v4_0_GROUP_UL_DL,
-			true,
-			IPA_DPS_HPS_REP_SEQ_TYPE_2PKT_PROC_PASS_NO_DEC_UCP_DMAP,
-			QMB_MASTER_SELECT_DDR,
-			{ 7, 9, 8, 16, IPA_EE_AP } },
 	/* Only for test purpose */
 	[IPA_4_1_APQ][IPA_CLIENT_TEST_PROD]           = {
 			true, IPA_v4_0_GROUP_UL_DL,
@@ -2037,6 +2037,12 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			IPA_DPS_HPS_SEQ_TYPE_INVALID,
 			QMB_MASTER_SELECT_DDR,
 			{ 18, 3, 9, 9, IPA_EE_UC } },
+	[IPA_4_1_APQ][IPA_CLIENT_WLAN2_CONS]          = {
+			true, IPA_v4_0_GROUP_UL_DL,
+			false,
+			IPA_DPS_HPS_SEQ_TYPE_INVALID,
+			QMB_MASTER_SELECT_DDR,
+			{ 18, 15, 8, 13, IPA_EE_AP } },
 	[IPA_4_1_APQ][IPA_CLIENT_USB_CONS]            = {
 			true, IPA_v4_0_GROUP_UL_DL,
 			false,
@@ -2067,12 +2073,6 @@ static const struct ipa_ep_configuration ipa3_ep_mapping
 			IPA_DPS_HPS_SEQ_TYPE_INVALID,
 			QMB_MASTER_SELECT_DDR,
 			{ 22, 1, 9, 9, IPA_EE_UC } },
-	[IPA_4_1_APQ][IPA_CLIENT_WLAN2_CONS] = {
-			true, IPA_v4_0_GROUP_UL_DL,
-			false,
-			IPA_DPS_HPS_SEQ_TYPE_INVALID,
-			QMB_MASTER_SELECT_DDR,
-			{ 17, 1, 8, 13, IPA_EE_AP } },
 	/* Only for test purpose */
 	/* MBIM aggregation test pipes should have the same QMB as USB_CONS */
 	[IPA_4_1_APQ][IPA_CLIENT_TEST_CONS]           = {
@@ -6363,13 +6363,21 @@ static int __ipa3_alloc_counter_hdl
 	return id;
 }
 
-int ipa3_alloc_counter_id(struct ipa_ioc_flt_rt_counter_alloc *counter)
+int ipa3_alloc_counter_id(struct ipa_ioc_flt_rt_counter_alloc *header)
 {
 	int i, unused_cnt, unused_max, unused_start_id;
+	struct ipa_ioc_flt_rt_counter_alloc *counter;
 
 	idr_preload(GFP_KERNEL);
 	spin_lock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 
+	counter = kmem_cache_zalloc(ipa3_ctx->fnr_stats_cache, GFP_KERNEL);
+	if (!counter) {
+		IPAERR_RL("failed to alloc fnr stats counter object\n");
+		spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
+		return -ENOMEM;
+	}
+	memcpy(counter, header, sizeof(struct ipa_ioc_flt_rt_counter_alloc));
 	/* allocate hw counters */
 	counter->hw_counter.start_id = 0;
 	counter->hw_counter.end_id = 0;
@@ -6469,7 +6477,7 @@ mark_hw_cnt:
 	unused_start_id = counter->hw_counter.start_id;
 	if (unused_start_id < 1 ||
 		unused_start_id > IPA_FLT_RT_HW_COUNTER) {
-		IPAERR("unexpected hw_counter start id %d\n",
+		IPAERR_RL("unexpected hw_counter start id %d\n",
 			   unused_start_id);
 		goto err;
 	}
@@ -6484,7 +6492,7 @@ mark_sw_cnt:
 		- IPA_FLT_RT_HW_COUNTER;
 	if (unused_start_id < 1 ||
 		unused_start_id > IPA_FLT_RT_SW_COUNTER) {
-		IPAERR("unexpected sw_counter start id %d\n",
+		IPAERR_RL("unexpected sw_counter start id %d\n",
 			   unused_start_id);
 		goto err;
 	}
@@ -6494,12 +6502,14 @@ mark_sw_cnt:
 done:
 	/* get a handle from idr for dealloc */
 	counter->hdl = __ipa3_alloc_counter_hdl(counter);
+	memcpy(header, counter, sizeof(struct ipa_ioc_flt_rt_counter_alloc));
 	spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 	idr_preload_end();
 	return 0;
 
 err:
 	counter->hdl = -1;
+	kmem_cache_free(ipa3_ctx->fnr_stats_cache, counter);
 	spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 	idr_preload_end();
 	return -ENOMEM;
@@ -6513,7 +6523,7 @@ void ipa3_counter_remove_hdl(int hdl)
 	spin_lock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 	counter = idr_find(&ipa3_ctx->flt_rt_counters.hdl, hdl);
 	if (counter == NULL) {
-		IPAERR("unexpected hdl %d\n", hdl);
+		IPAERR_RL("unexpected hdl %d\n", hdl);
 		goto err;
 	}
 	/* remove counters belong to this hdl, set used back to 0 */
@@ -6523,7 +6533,7 @@ void ipa3_counter_remove_hdl(int hdl)
 		memset(&ipa3_ctx->flt_rt_counters.used_hw + offset,
 			   0, counter->hw_counter.num_counters * sizeof(bool));
 	} else {
-		IPAERR("unexpected hdl %d\n", hdl);
+		IPAERR_RL("unexpected hdl %d\n", hdl);
 		goto err;
 	}
 	offset = counter->sw_counter.start_id - 1 - IPA_FLT_RT_HW_COUNTER;
@@ -6532,11 +6542,12 @@ void ipa3_counter_remove_hdl(int hdl)
 		memset(&ipa3_ctx->flt_rt_counters.used_sw + offset,
 		   0, counter->sw_counter.num_counters * sizeof(bool));
 	} else {
-		IPAERR("unexpected hdl %d\n", hdl);
+		IPAERR_RL("unexpected hdl %d\n", hdl);
 		goto err;
 	}
 	/* remove the handle */
 	idr_remove(&ipa3_ctx->flt_rt_counters.hdl, hdl);
+	kmem_cache_free(ipa3_ctx->fnr_stats_cache, counter);
 err:
 	spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 }
@@ -6553,8 +6564,10 @@ void ipa3_counter_id_remove_all(void)
 	memset(&ipa3_ctx->flt_rt_counters.used_sw, 0,
 		   sizeof(ipa3_ctx->flt_rt_counters.used_sw));
 	/* remove all handles */
-	idr_for_each_entry(&ipa3_ctx->flt_rt_counters.hdl, counter, hdl)
+	idr_for_each_entry(&ipa3_ctx->flt_rt_counters.hdl, counter, hdl) {
 		idr_remove(&ipa3_ctx->flt_rt_counters.hdl, hdl);
+		kmem_cache_free(ipa3_ctx->fnr_stats_cache, counter);
+	}
 	spin_unlock(&ipa3_ctx->flt_rt_counters.hdl_lock);
 }
 
@@ -7079,7 +7092,7 @@ u32 ipa3_get_num_pipes(void)
 
 /**
  * ipa3_disable_apps_wan_cons_deaggr()-
- * set ipa_ctx->ipa_client_apps_wan_cons_agg_gro
+ * set ipa3_ctx->ipa_client_apps_wan_cons_agg_gro
  *
  * Return value: 0 or negative in case of failure
  */
