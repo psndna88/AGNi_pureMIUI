@@ -424,7 +424,7 @@ int pstore_mkfile(struct dentry *root, struct pstore_record *record)
 
 #ifdef CONFIG_PSTORE_LAST_KMSG
 	if (record->type == PSTORE_TYPE_CONSOLE) {
-		console_buffer = record->buf;
+		console_buffer = private->record->buf;
 		console_bufsize = size;
 	}
 #endif
@@ -533,6 +533,7 @@ static int __init init_pstore_fs(void)
 				NULL, &last_kmsg_fops, NULL);
 	if (!last_kmsg_entry) {
 		pr_err("Failed to create last_kmsg\n");
+		goto out;
 	}
 #endif
 

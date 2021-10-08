@@ -72,6 +72,7 @@
 #include <linux/pid_namespace.h>
 #include <linux/security.h>
 #include <linux/spinlock.h>
+#include <linux/delayacct.h>
 
 #include <uapi/linux/android/binder.h>
 #include <uapi/linux/sched/types.h>
@@ -1224,7 +1225,11 @@ static void binder_transaction_priority(struct task_struct *task,
 	t->saved_priority.prio = task->normal_prio;
 
 	if (!inherit_rt && is_rt_policy(desired_prio.sched_policy)) {
-		desired_prio.prio = NICE_TO_PRIO(0);
+		// MIUI MOD:
+		// We boost some app process to FIFO, but binder out thread
+		// from fifo has low priority, so we modify priority higher.
+		// desired_prio.prio = NICE_TO_PRIO(0);
+		desired_prio.prio = NICE_TO_PRIO(-10);
 		desired_prio.sched_policy = SCHED_NORMAL;
 	}
 
@@ -5082,7 +5087,9 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case BINDER_WRITE_READ:
+		delayacct_binder_start();
 		ret = binder_ioctl_write_read(filp, cmd, arg, thread);
+		delayacct_binder_end();
 		if (ret)
 			goto err;
 		break;

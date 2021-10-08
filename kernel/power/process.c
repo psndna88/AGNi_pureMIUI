@@ -93,7 +93,8 @@ static int try_to_freeze_tasks(bool user_only)
 		pr_debug("\n");
 		pr_debug("Freezing of tasks aborted after %d.%03d seconds",
 		       elapsed_msecs / 1000, elapsed_msecs % 1000);
-	} else if (todo) {
+	}
+	if (todo) {
 		pr_debug("\n");
 		pr_debug("Freezing of tasks failed after %d.%03d seconds"
 		       " (%d tasks refusing to freeze, wq_busy=%d):\n",
