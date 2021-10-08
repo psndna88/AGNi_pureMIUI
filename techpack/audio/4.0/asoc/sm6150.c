@@ -654,9 +654,14 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = KEY_VOICECOMMAND,
-	.key_code[2] = KEY_VOLUMEUP,
-	.key_code[3] = KEY_VOLUMEDOWN,
+#if 0
+	.key_code[1] = KEY_VOLUMEUP,//KEY_VOICECOMMAND /*HMI_M6300_A10-262 modify by qijin 201801025 */
+	.key_code[2] = KEY_VOLUMEDOWN,//KEY_VOLUMEUP /*HMI_M6300_A10-262 modify by qijin 201801025 */
+#else
+	.key_code[1] = BTN_1,//KEY_VOICECOMMAND /*HMI_M6300_A10-262 modify by dzy for xiaomi headset patch  201801107 */
+	.key_code[2] = BTN_2,//KEY_VOLUMEUP /*HMI_M6300_A10-262 modify by dzy for xiaomi headset patch  201801107 */
+#endif
+	.key_code[3] = 0,//KEY_VOLUMEDOWN /*HMI_M6300_A10-262 modify by qijin 201801025 */
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
