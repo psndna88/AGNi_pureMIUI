@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -80,6 +80,14 @@ int cam_sync_init_group_object(struct sync_table_row *table,
 	 */
 	for (i = 0; i < num_objs; i++) {
 		child_row = table + sync_objs[i];
+
+		if (idx == sync_objs[i] || (sync_objs[i] >= CAM_SYNC_MAX_OBJS)) {
+			CAM_ERR(CAM_SYNC, "invalid fence:%d should be released",
+				sync_objs[i]);
+			rc = -EINVAL;
+			goto clean_children_info;
+		}
+
 		spin_lock_bh(&sync_dev->row_spinlocks[sync_objs[i]]);
 
 		/* validate child */
@@ -368,7 +376,7 @@ void cam_sync_util_send_v4l2_event(uint32_t id,
 	void *payload,
 	int len)
 {
-	struct v4l2_event event = {0};
+	struct v4l2_event event;
 	__u64 *payload_data = NULL;
 	struct cam_sync_ev_header *ev_header = NULL;
 

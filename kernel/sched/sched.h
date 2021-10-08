@@ -2096,6 +2096,10 @@ u64 freq_policy_load(struct rq *rq);
 
 extern u64 walt_load_reported_window;
 
+#if defined(CONFIG_XIAOMI_SOLUTION) && IS_ENABLED(CONFIG_SCHED_USF)
+extern DEFINE_PER_CPU(int, sched_load_usf);
+#endif
+
 static inline unsigned long
 cpu_util_freq_walt(int cpu, struct sched_walt_cpu_load *walt_load)
 {
@@ -2108,6 +2112,9 @@ cpu_util_freq_walt(int cpu, struct sched_walt_cpu_load *walt_load)
 		return cpu_util(cpu);
 
 	boost = per_cpu(sched_load_boost, cpu);
+#if defined(CONFIG_XIAOMI_SOLUTION) && IS_ENABLED(CONFIG_SCHED_USF)
+	boost += per_cpu(sched_load_usf, cpu);
+#endif
 	util_unboosted = util = freq_policy_load(rq);
 	util = div64_u64(util * (100 + boost),
 			walt_cpu_util_freq_divisor);

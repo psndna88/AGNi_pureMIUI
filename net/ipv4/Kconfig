@@ -479,7 +479,7 @@ if TCP_CONG_ADVANCED
 
 config TCP_CONG_BIC
 	tristate "Binary Increase Congestion (BIC) control"
-	default m
+	default n
 	---help---
 	BIC-TCP is a sender-side only change that ensures a linear RTT
 	fairness under large windows while offering both scalability and
@@ -501,7 +501,7 @@ config TCP_CONG_CUBIC
 
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
-	default m
+	default y
 	---help---
 	TCP Westwood+ is a sender-side only modification of the TCP Reno
 	protocol stack that optimizes the performance of TCP congestion
@@ -515,7 +515,7 @@ config TCP_CONG_WESTWOOD
 
 config TCP_CONG_HTCP
         tristate "H-TCP"
-        default m
+        default n
 	---help---
 	H-TCP is a send-side only modifications of the TCP Reno
 	protocol stack that optimizes the performance of TCP
@@ -589,7 +589,7 @@ config TCP_CONG_LP
 
 config TCP_CONG_VENO
 	tristate "TCP Veno"
-	default n
+	default y
 	---help---
 	TCP Veno is a sender-side only enhancement of TCP to obtain better
 	throughput over wireless networks. TCP Veno makes use of state
@@ -647,7 +647,7 @@ config TCP_CONG_DCTCP
 
 config TCP_CONG_CDG
 	tristate "CAIA Delay-Gradient (CDG)"
-	default n
+	default y
 	---help---
 	CAIA Delay-Gradient (CDG) is a TCP congestion control that modifies
 	the TCP sender in order to:
@@ -663,7 +663,7 @@ config TCP_CONG_CDG
 
 config TCP_CONG_BBR
 	tristate "BBR TCP"
-	default n
+	default y
 	---help---
 
 	BBR (Bottleneck Bandwidth and RTT) TCP congestion control aims to
