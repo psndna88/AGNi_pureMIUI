@@ -17,6 +17,9 @@
 #include <linux/lzo.h>
 #include "lzodefs.h"
 
+#define OVERFLOW_ADD_CHECK(a, b)  \
+		(((a) + (b)) < (a))
+
 static noinline size_t
 lzo1x_1_do_compress(const unsigned char *in, size_t in_len,
 		    unsigned char *out, size_t *out_len,
@@ -41,6 +44,8 @@ lzo1x_1_do_compress(const unsigned char *in, size_t in_len,
 		u32 dv;
 		u32 run_length = 0;
 literal:
+		if (unlikely(OVERFLOW_ADD_CHECK(ip, 1 + ((ip - ii) >> 5))))
+			break;
 		ip += 1 + ((ip - ii) >> 5);
 next:
 		if (unlikely(ip >= ip_end))
@@ -169,7 +174,8 @@ next:
 				m_len += 8;
 				v = get_unaligned((const u64 *) (ip + m_len)) ^
 				    get_unaligned((const u64 *) (m_pos + m_len));
-				if (unlikely(ip + m_len >= ip_end))
+				if (unlikely(OVERFLOW_ADD_CHECK(ip, m_len)
+						|| (ip + m_len >= ip_end)))
 					goto m_len_done;
 			} while (v == 0);
 		}
@@ -194,7 +200,8 @@ next:
 				m_len += 4;
 				v = get_unaligned((const u32 *) (ip + m_len)) ^
 				    get_unaligned((const u32 *) (m_pos + m_len));
-				if (unlikely(ip + m_len >= ip_end))
+				if (unlikely(OVERFLOW_ADD_CHECK(ip, m_len)
+						|| (ip + m_len >= ip_end)))
 					goto m_len_done;
 			} while (v == 0);
 		}
@@ -230,7 +237,8 @@ next:
 				if (ip[m_len] != m_pos[m_len])
 					break;
 				m_len += 1;
-				if (unlikely(ip + m_len >= ip_end))
+				if (unlikely(OVERFLOW_ADD_CHECK(ip, m_len)
+						|| (ip + m_len >= ip_end)))
 					goto m_len_done;
 			} while (ip[m_len] == m_pos[m_len]);
 		}
