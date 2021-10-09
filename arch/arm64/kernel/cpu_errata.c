@@ -285,7 +285,7 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 	},
 #endif
 	{
-	}
+	},
 };
 
 void check_local_cpu_errata(void)
