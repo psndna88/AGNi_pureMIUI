@@ -47,6 +47,7 @@
 #include <asm/edac.h>
 
 #include <trace/events/exception.h>
+#include <linux/workqueue.h>
 
 static const char *handler[]= {
 	"Synchronous Abort",
@@ -328,6 +329,26 @@ static void oops_end(unsigned long flags, struct pt_regs *regs, int notify)
 		do_exit(SIGSEGV);
 }
 
+#define FS_SYNC_TIMEOUT_MS 2000
+static struct work_struct fs_sync_work;
+static DECLARE_COMPLETION(sync_compl);
+static void fs_sync_work_func(struct work_struct *work)
+{
+	pr_emerg("sys_sync:syncing fs\n");
+	sys_sync();
+	complete(&sync_compl);
+}
+
+void exec_fs_sync_work(void)
+{
+	INIT_WORK(&fs_sync_work, fs_sync_work_func);
+	reinit_completion(&sync_compl);
+	schedule_work(&fs_sync_work);
+	if (wait_for_completion_timeout(&sync_compl, msecs_to_jiffies(FS_SYNC_TIMEOUT_MS)) == 0)
+		pr_emerg("sys_sync:wait complete timeout\n");
+}
+EXPORT_SYMBOL(exec_fs_sync_work);
+
 /*
  * This function is protected against re-entrancy.
  */
@@ -337,6 +358,11 @@ void die(const char *str, struct pt_regs *regs, int err)
 	unsigned long flags = oops_begin();
 	int ret;
 
+	if (!in_atomic())
+	{
+		pr_emerg("sys_sync:try sys sync in die\n");
+		exec_fs_sync_work();
+	}
 	if (!user_mode(regs))
 		bug_type = report_bug(regs->pc, regs);
 	if (bug_type != BUG_TRAP_TYPE_NONE)

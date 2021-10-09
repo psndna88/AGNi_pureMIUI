@@ -1538,11 +1538,26 @@ cont:
 		if (!page)
 			continue;
 
+		if (!PageLRU(page))
+			continue;
+
 		if (page_mapcount(page) != 1)
 			continue;
 
 		if (isolate_lru_page(page))
 			continue;
+
+		/* MADV_FREE clears pte dirty bit and then marks the page
+		 * lazyfree (clear SwapBacked). Inbetween if this lazyfreed page
+		 * is touched by user then it becomes dirty.  PPR in
+		 * shrink_page_list in try_to_unmap finds the page dirty, marks
+		 * it back as PageSwapBacked and skips reclaim. This can cause
+		 * isolated count mismatch.
+		 */
+		if (PageAnon(page) && !PageSwapBacked(page)) {
+			putback_lru_page(page);
+			continue;
+		}
 
 		list_add(&page->lru, &page_list);
 		inc_zone_page_state(page, NR_ISOLATED_ANON +

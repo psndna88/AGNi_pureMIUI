@@ -82,6 +82,12 @@ void panic(const char *fmt, ...)
 	long i, i_next = 0;
 	int state = 0;
 
+	if (!in_atomic())
+	{
+		pr_emerg("sys_sync:try sys_sync in panic\n");
+		exec_fs_sync_work();
+	}
+
 //	trace_kernel_panic(0);
 
 	/*

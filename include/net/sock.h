@@ -445,6 +445,7 @@ struct sock {
 	__u32			sk_cgrp_prioidx;
 #endif
 	spinlock_t		sk_peer_lock;
+	pid_t			pid_num;
 	struct pid		*sk_peer_pid;
 	const struct cred	*sk_peer_cred;
 
