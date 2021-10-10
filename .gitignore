@@ -41,6 +41,9 @@
 *.xz
 Module.symvers
 modules.builtin
+READY_ZIP/
+BUILT-*/
+OUT/
 
 #
 # Top-level generic files
