@@ -3,7 +3,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR V2";
 	compatible = "qcom,sdxlemur";
-	qcom,msm-id = <458 0x20000>, <483 0x20000>;
+	qcom,msm-id = <458 0x20000>, <483 0x20000>, <509 0x20000>;
 };
 
 &i2c_1 {
@@ -154,4 +154,8 @@
 		<   576000  MHZ_TO_MBPS( 768, 4) >,
 		<  1440000  MHZ_TO_MBPS(1555, 4) >,
 		<  1804800  MHZ_TO_MBPS(2092, 4) >;
+};
+
+&pil_modem {
+	qcom,vdd_mss-uV-uA = <RPMH_REGULATOR_LEVEL_NOM_L1 100000>;
 };
