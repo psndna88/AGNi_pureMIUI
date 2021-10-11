@@ -311,14 +311,14 @@ ENTRY(idmap_kpti_install_ng_mappings)
 	/* We're the boot CPU. Wait for the others to catch up */
 	sevl
 1:	wfe
-	ldaxr	w17, [flag_ptr]
-	eor	w17, w17, num_cpus
-	cbnz	w17, 1b
+	ldaxr	w18, [flag_ptr]
+	eor	w18, w18, num_cpus
+	cbnz	w18, 1b
 
 	/* We need to walk swapper, so turn off the MMU. */
-	mrs	x17, sctlr_el1
-	bic	x17, x17, #SCTLR_ELx_M
-	msr	sctlr_el1, x17
+	mrs	x18, sctlr_el1
+	bic	x18, x18, #SCTLR_ELx_M
+	msr	sctlr_el1, x18
 	isb
 
 	/* Everybody is enjoying the idmap, so we can rewrite swapper. */
@@ -341,9 +341,9 @@ skip_pgd:
 	isb
 
 	/* We're done: fire up the MMU again */
-	mrs	x17, sctlr_el1
-	orr	x17, x17, #SCTLR_ELx_M
-	msr	sctlr_el1, x17
+	mrs	x18, sctlr_el1
+	orr	x18, x18, #SCTLR_ELx_M
+	msr	sctlr_el1, x18
 	isb
 
 	/*
@@ -515,20 +515,21 @@ ENTRY(__cpu_setup)
 	bfi	x10, x9, #32, #3
 #ifdef CONFIG_ARM64_HW_AFDBM
 	/*
-	 * Enable hardware update of the Access Flags bit.
-	 * Hardware dirty bit management is enabled later,
-	 * via capabilities.
+	 * Hardware update of the Access and Dirty bits.
 	 */
 	mrs	x9, ID_AA64MMFR1_EL1
 	and	x9, x9, #0xf
-	cbz	x9, 1f
-	orr	x10, x10, #TCR_HA		// hardware Access flag update
+	cbz	x9, 2f
+	cmp	x9, #2
+	b.lt	1f
 #ifdef CONFIG_ARM64_ERRATUM_1024718
 	/* Disable hardware DBM on Cortex-A55 all versions */
 	cpu_midr_match MIDR_CORTEX_A55, MIDR_CPU_VAR_REV(0, 0), MIDR_CPU_VAR_REV(0xf, 0xf), x1, x2, x3, x4
 	cbnz	x1, 1f
 #endif
-1:
+	orr	x10, x10, #TCR_HD		// hardware Dirty flag update
+1:	orr	x10, x10, #TCR_HA		// hardware Access flag update
+2:
 #endif	/* CONFIG_ARM64_HW_AFDBM */
 	msr	tcr_el1, x10
 	ret					// return to head.S
