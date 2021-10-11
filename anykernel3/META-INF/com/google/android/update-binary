@@ -462,24 +462,18 @@ fi;
 ui_print " " "AGNi Kernel by psndna88 @ xda-developers" " ";
 ui_print " " "AnyKernel3 by osm0sis @ xda-developers" " " " ";
 
-### AGNi: MIATOLL device detection
-if [ "`$BB cat /proc/cmdline | $BB grep curtana`" ]; then
-	device="curtana";
-	ui_print " " "AGNi detected device MIATOLL curtana - Redmi Note 9S/Pro India" " ";
-elif [ "`$BB cat /proc/cmdline | $BB grep excalibur`" ]; then
-	device="excalibur";
-	ui_print " " "AGNi detected device MIATOLL excalibur - Redmi Note 9 Pro Max India" " ";
-elif [ "`$BB cat /proc/cmdline | $BB grep gram`" ]; then
-	device="gram";
-	ui_print " " "AGNi detected device MIATOLL gram - Poco M2 Pro" " ";
-elif [ "`$BB cat /proc/cmdline | $BB grep joyeuse`" ]; then
-	device="joyeuse";
-	ui_print " " "AGNi detected device MIATOLL joyeuse - Redmi Note 9 Pro Global" " ";
-else
-	device="unidentified";
-	ui_print " " "AGNi doesn't think this is a MIATOLL device. Exiting installer.." " ";
-	exit;
-fi;
+### AGNi: POCO X3 Pro device detection
+#if [ "`$BB cat /proc/cmdline | $BB grep bhima`" ]; then
+#	device="bhima";
+#	ui_print " " "AGNi detected device POCO X3 Pro India" " ";
+#elif [ "`$BB cat /proc/cmdline | $BB grep gram`" ]; then
+#	device="vayu";
+#	ui_print " " "AGNi detected device POCO X3 Pro Global" " ";
+#else
+#	device="unidentified";
+#	ui_print " " "AGNi doesn't think this is a POCO X3 Pro device. Exiting installer.." " ";
+#	exit;
+#fi;
 ### AGNi: ROM type detection
 umount_all;
 # $BB mount -o rw /vendor;

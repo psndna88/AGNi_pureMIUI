@@ -74,6 +74,7 @@ rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
 
 if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ]); then
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
+#	./scripts/dtc/libfdt/mkdtboimg.py create $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $COMPILEDIR_ATOLL/arch/arm64/boot/dts/qcom/*.dtb
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
