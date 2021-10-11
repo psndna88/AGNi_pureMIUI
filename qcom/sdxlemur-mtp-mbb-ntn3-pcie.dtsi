@@ -19,7 +19,7 @@
 		regulator-min-microvolt = <1000000>;
 		regulator-max-microvolt = <1000000>;
 		enable-active-high;
-		regulator-enable-ramp-delay = <2400>;
+		regulator-enable-ramp-delay = <10000>;
 	};
 
 	ioss_qps615_rx: qps615_rx@eth {
