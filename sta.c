@@ -2131,6 +2131,21 @@ static int set_wpa_common(struct sigma_dut *dut, struct sigma_conn *conn,
 }
 
 
+static int wcn_set_ignore_h2e_rsnxe(struct sigma_dut *dut, const char *intf,
+				    uint8_t cfg)
+{
+#ifdef NL80211_SUPPORT
+	return wcn_wifi_test_config_set_u8(
+		dut, intf,
+		QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_IGNORE_H2E_RSNXE, cfg);
+#else /* NL80211_SUPPORT */
+	sigma_dut_print(dut, DUT_MSG_ERROR,
+			"Ignore SAE H2E requirement mismatch can't be set without NL80211_SUPPORT defined");
+	return -1;
+#endif /* NL80211_SUPPORT */
+}
+
+
 static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 					     struct sigma_conn *conn,
 					     struct sigma_cmd *cmd)
@@ -2265,6 +2280,9 @@ static enum sigma_cmd_result cmd_sta_set_psk(struct sigma_dut *dut,
 		snprintf(buf, sizeof(buf), "SET ignore_sae_h2e_only %d",
 			 get_enable_disable(val));
 		wpa_command(intf, buf);
+		if (get_driver_type(dut) == DRIVER_WCN)
+			wcn_set_ignore_h2e_rsnxe(dut, intf,
+						 get_enable_disable(val));
 	}
 
 	val = get_param(cmd, "ECGroupID_RGE");
@@ -8971,6 +8989,9 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 		/* sta_reset_default command is not really supposed to fail,
 		 * so allow this to continue. */
 	}
+
+	if (get_driver_type(dut) == DRIVER_WCN)
+		wcn_set_ignore_h2e_rsnxe(dut, intf, 0);
 
 	dut->saquery_oci_freq = 0;
 	dut->prev_disable_scs_support = 0;
