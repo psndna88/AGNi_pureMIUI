@@ -6,6 +6,9 @@ else
 	KERNEL_BUILD := n
 endif
 
+# Force user build
+TARGET_BUILD_VARIANT := user
+
 ifeq ($(KERNEL_BUILD), y)
 	# These are provided in external module based builds
 	# Need to explicitly define for Kernel-based builds
@@ -33,7 +36,7 @@ ifneq ($(ANDROID_BUILD_TOP),)
 endif
 endif
 
-include $(WLAN_ROOT)/configs/$(CONFIG_QCA_CLD_WLAN_PROFILE)_defconfig
+include $(WLAN_ROOT)/configs/$(patsubst "%",%,$(CONFIG_QCA_CLD_WLAN_PROFILE))_defconfig
 
 # add configurations in WLAN_CFG_OVERRIDE
 ifneq ($(WLAN_CFG_OVERRIDE),)
