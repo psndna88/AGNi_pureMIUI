@@ -930,8 +930,6 @@ static int usb_audio_tx_format_get(struct snd_kcontrol *kcontrol,
 static int usb_audio_tx_format_put(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
 {
-	int rc = 0;
-
 	switch (ucontrol->value.integer.value[0]) {
 	case 3:
 		usb_tx_cfg.bit_format = SNDRV_PCM_FORMAT_S32_LE;
@@ -951,7 +949,7 @@ static int usb_audio_tx_format_put(struct snd_kcontrol *kcontrol,
 		 __func__, usb_tx_cfg.bit_format,
 		 ucontrol->value.integer.value[0]);
 
-	return rc;
+	return 0;
 }
 
 static int usb_audio_rx_ch_get(struct snd_kcontrol *kcontrol,
