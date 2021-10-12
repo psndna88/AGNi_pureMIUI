@@ -622,7 +622,9 @@ void audio_cal_exit(void)
 			kfree(client_info_node);
 			client_info_node = NULL;
 		}
+		mutex_destroy(&audio_cal.cal_mutex[i]);
 	}
+	mutex_destroy(&audio_cal.common_lock);
 	misc_deregister(&audio_cal_misc);
 }
 
