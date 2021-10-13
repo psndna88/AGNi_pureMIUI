@@ -2199,8 +2199,14 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 	const char *security;
 
 	val = get_param(cmd, "WLAN_TAG");
-	if (val)
+	if (val) {
 		wlan_tag = atoi(val);
+		if (wlan_tag > MAX_WLAN_TAGS) {
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"Unsupported WLAN_TAG value");
+			return -1;
+		}
+	}
 
 	security = get_param(cmd, "Security");
 
