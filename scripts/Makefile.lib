@@ -317,6 +317,11 @@ $(obj)/%.dt.yaml: $(src)/%.dts $(DTC) $(DT_TMP_SCHEMA) FORCE
 
 dtc-tmp = $(subst $(comma),_,$(dot-target).dts.tmp)
 
+# mkdtimg
+#----------------------------------------------------------------------------
+quiet_cmd_mkdtimg = DTBOIMG $@
+cmd_mkdtimg = python2 $(srctree)/scripts/dtc/libfdt/mkdtboimg.py create $@ --page_size=4096 $(filter-out FORCE,$^)
+
 # Concatentate multiple files together
 quiet_cmd_cat = CAT $@
 cmd_cat = (cat $(filter-out FORCE,$^) > $@) || (rm -f $@; false)
