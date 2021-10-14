@@ -2061,6 +2061,20 @@ config MODULE_FORCE_LOAD
 	  --force).  Forced module loading sets the 'F' (forced) taint flag and
 	  is usually a really bad idea.
 
+config MODULE_TURNOFF_FORCED_LOAD_TAINT
+	bool "Disable taint on module forced loading"
+	depends on MODULE_FORCE_LOAD
+	default y
+	help
+	 Do not taint on forced module loading
+
+config MODULE_TURNOFF_SIG_CHECKS
+	bool "Return a successful signature check always"
+	depends on MODULE_FORCE_LOAD
+	default y
+	help
+	  Return a successful signature check always when module loading
+
 config MODULE_UNLOAD
 	bool "Module unloading"
 	help
