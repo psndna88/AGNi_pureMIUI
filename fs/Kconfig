@@ -324,4 +324,10 @@ source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 source "fs/unicode/Kconfig"
 
+config REBOOT_AUTO_FSYNC
+	bool "automatic file sync on reboot/panic"
+	default y
+	help
+	  Force automatic file sync on power off, reboot, panic/freeze
+
 endmenu
