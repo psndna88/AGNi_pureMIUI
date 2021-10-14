@@ -57,6 +57,13 @@ config SECURITY_SELINUX_DEVELOP
 	  can interactively toggle the kernel between enforcing mode and
 	  permissive mode (if permitted by the policy) via /selinux/enforce.
 
+config SECURITY_SELINUX_DISABLE_ALL_LOGS
+	bool "NSA SELinux disable logging"
+	depends on SECURITY_SELINUX_DEVELOP
+	default y
+	help
+	  This option will make selinux not report any permissive log or denial in kmsg
+
 config SECURITY_SELINUX_AVC_STATS
 	bool "NSA SELinux AVC Statistics"
 	depends on SECURITY_SELINUX
