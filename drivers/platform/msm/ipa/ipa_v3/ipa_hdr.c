@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "ipa_i.h"
@@ -90,6 +90,12 @@ static int ipa3_hdr_proc_ctx_to_hw_format(struct ipa_mem_buffer *mem,
 					0 : 1;
 			}
 		}
+		/* Check the pointer and header length to avoid dangerous overflow in HW */
+		if (unlikely(!entry->hdr || !entry->hdr->offset_entry ||
+				!entry->offset_entry ||
+				entry->hdr->hdr_len == 0 ||
+				entry->hdr->hdr_len > ipa_hdr_bin_sz[IPA_HDR_BIN_MAX - 1]))
+			return -EINVAL;
 
 		ret = ipahal_cp_proc_ctx_to_hw_buff(entry->type, mem->base,
 				entry->offset_entry->offset,
@@ -747,7 +753,7 @@ int __ipa3_del_hdr(u32 hdr_hdl, bool by_user)
 		return 0;
 	}
 
-	if (entry->is_hdr_proc_ctx) {
+	if (entry->is_hdr_proc_ctx || entry->proc_ctx) {
 		dma_unmap_single(ipa3_ctx->pdev,
 			entry->phys_base,
 			entry->hdr_len,
