@@ -6,6 +6,7 @@
 #include "sdxlemur-1024mb-cpe.dtsi"
 #include "sdxlemur-audio.dtsi"
 #include "sdxlemur-mtp-audio-overlay.dtsi"
+#include "sdxlemur-bluetooth.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP CPE";
