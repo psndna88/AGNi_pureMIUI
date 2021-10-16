@@ -1080,9 +1080,7 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 	/* Set default bus control to true on all targets */
 	device->pwrctrl.bus_control = true;
 
-	device->pwrctrl.input_disable =
-		of_property_read_bool(pdev->dev.of_node,
-			"qcom,disable-wake-on-touch");
+	device->pwrctrl.input_disable = true;
 
 	return 0;
 }
