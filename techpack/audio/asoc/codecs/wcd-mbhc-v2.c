@@ -1914,7 +1914,8 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_component *component,
 	mbhc->is_btn_press = false;
 	mbhc->component = component;
 	mbhc->intr_ids = mbhc_cdc_intr_ids;
-	mbhc->impedance_detect = impedance_det_en;
+//	mbhc->impedance_detect = impedance_det_en;
+	mbhc->impedance_detect = true;
 	mbhc->hphl_swh = hph_swh;
 	mbhc->gnd_swh = gnd_swh;
 	mbhc->micbias_enable = false;
