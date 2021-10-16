@@ -244,7 +244,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 {
 	u64 now;
 
-	if (!input_boost_enabled)
+//	if (!input_boost_enabled)
 		return;
 
 	now = ktime_to_us(ktime_get());
