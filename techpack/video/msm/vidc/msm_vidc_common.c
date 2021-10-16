@@ -15,6 +15,12 @@
 	(__p >= __d)\
 )
 
+static struct kmem_cache *kmem_buf_pool;
+void __init init_vidc_kmem_buf_pool(void)
+{
+	kmem_buf_pool = KMEM_CACHE(msm_vidc_buffer, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+}
+
 #define V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT \
 		V4L2_EVENT_MSM_VIDC_PORT_SETTINGS_CHANGED_INSUFFICIENT
 #define V4L2_EVENT_RELEASE_BUFFER_REFERENCE \
@@ -6936,7 +6942,7 @@ struct msm_vidc_buffer *msm_comm_get_vidc_buffer(struct msm_vidc_inst *inst,
 
 	if (!found) {
 		/* this is new vb2_buffer */
-		mbuf = kzalloc(sizeof(struct msm_vidc_buffer), GFP_KERNEL);
+		mbuf = kmem_cache_zalloc(kmem_buf_pool, GFP_KERNEL);
 		if (!mbuf) {
 			s_vpr_e(inst->sid, "%s: alloc msm_vidc_buffer failed\n",
 				__func__);
@@ -7227,7 +7233,7 @@ static void kref_free_mbuf(struct kref *kref)
 	struct msm_vidc_buffer *mbuf = container_of(kref,
 			struct msm_vidc_buffer, kref);
 
-	kfree(mbuf);
+	kmem_cache_free(kmem_buf_pool, mbuf);
 }
 
 void kref_put_mbuf(struct msm_vidc_buffer *mbuf)
