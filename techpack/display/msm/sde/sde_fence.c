@@ -12,6 +12,8 @@
 
 #define TIMELINE_VAL_LENGTH		128
 
+static struct kmem_cache *kmem_fence_pool;
+
 void *sde_sync_get(uint64_t fd)
 {
 	/* force signed compare, fdget accepts an int argument */
@@ -144,7 +146,7 @@ static void sde_fence_release(struct dma_fence *fence)
 	if (fence) {
 		f = to_sde_fence(fence);
 		kref_put(&f->ctx->kref, sde_fence_destroy);
-		kfree(f);
+		kmem_cache_free(kmem_fence_pool, f);
 	}
 }
 
@@ -197,7 +199,7 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 		goto exit;
 	}
 
-	sde_fence = kzalloc(sizeof(*sde_fence), GFP_KERNEL);
+	sde_fence = kmem_cache_zalloc(kmem_fence_pool, GFP_KERNEL);
 	if (!sde_fence)
 		return -ENOMEM;
 
@@ -478,3 +480,11 @@ void sde_debugfs_timeline_dump(struct sde_fence_context *ctx,
 	}
 	spin_unlock(&ctx->list_lock);
 }
+
+static int __init sde_kmem_pool_init(void)
+{
+	kmem_fence_pool = KMEM_CACHE(sde_fence, SLAB_HWCACHE_ALIGN | SLAB_PANIC);
+	return 0;
+}
+
+module_init(sde_kmem_pool_init);
