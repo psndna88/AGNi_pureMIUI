@@ -540,7 +540,7 @@ int ipa3_send_msg(struct ipa_msg_meta *meta, void *buff,
 	mutex_unlock(&ipa3_ctx->msg_lock);
 	IPA_STATS_INC_CNT(ipa3_ctx->stats.msg_w[meta->msg_type]);
 
-	wake_up(&ipa3_ctx->msg_waitq);
+	wake_up_interruptible(&ipa3_ctx->msg_waitq);
 	if (buff)
 		callback(buff, meta->msg_len, meta->msg_type);
 
@@ -597,7 +597,7 @@ int ipa3_resend_wlan_msg(void)
 		mutex_lock(&ipa3_ctx->msg_lock);
 		list_add_tail(&msg->link, &ipa3_ctx->msg_list);
 		mutex_unlock(&ipa3_ctx->msg_lock);
-		wake_up(&ipa3_ctx->msg_waitq);
+		wake_up_interruptible(&ipa3_ctx->msg_waitq);
 
 		total++;
 	}
