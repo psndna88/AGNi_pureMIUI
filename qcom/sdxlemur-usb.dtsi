@@ -72,7 +72,7 @@
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
-			snps,xhci-imod-value = <4000>;
+			imod-interval-ns = <1000000>;
 		};
 
 		qcom,usbbam@a704000 {
