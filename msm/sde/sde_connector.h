@@ -511,6 +511,7 @@ struct sde_connector {
 	int dpms_mode;
 	int lp_mode;
 	int last_panel_power_mode;
+	struct device *sysfs_dev;
 
 	struct msm_property_info property_info;
 	struct msm_property_data property_data[CONNECTOR_PROP_COUNT];
@@ -752,6 +753,15 @@ static inline uint64_t sde_connector_get_lp(
 int sde_connector_set_property_for_commit(struct drm_connector *connector,
 		struct drm_atomic_state *atomic_state,
 		uint32_t property_idx, uint64_t value);
+
+/**
+ * sde_connector_post_init - update connector object with post initialization.
+ * It can update the debugfs, sysfs, entries
+ * @dev: Pointer to drm device struct
+ * @conn: Pointer to drm connector
+ * Returns: Zero on success
+ */
+int sde_connector_post_init(struct drm_device *dev, struct drm_connector *conn);
 
 /**
  * sde_connector_init - create drm connector object for a given display

@@ -1026,6 +1026,9 @@ void sde_connector_destroy(struct drm_connector *connector)
 
 	c_conn = to_sde_connector(connector);
 
+	if (c_conn->sysfs_dev)
+		device_unregister(c_conn->sysfs_dev);
+
 	/* cancel if any pending esd work */
 	sde_connector_schedule_status_work(connector, false);
 
@@ -2843,6 +2846,65 @@ static int _sde_connector_install_properties(struct drm_device *dev,
 			CONNECTOR_PROP_LP);
 
 	return 0;
+}
+
+static ssize_t panel_power_state_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *conn;
+	struct sde_connector *sde_conn;
+
+	conn = dev_get_drvdata(device);
+	sde_conn = to_sde_connector(conn);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", sde_conn->last_panel_power_mode);
+}
+
+static DEVICE_ATTR_RO(panel_power_state);
+
+static struct attribute *sde_connector_dev_attrs[] = {
+	&dev_attr_panel_power_state.attr,
+	NULL
+};
+
+static const struct attribute_group sde_connector_attr_group = {
+	.attrs = sde_connector_dev_attrs,
+};
+static const struct attribute_group *sde_connector_attr_groups[] = {
+	&sde_connector_attr_group,
+	NULL,
+};
+
+int sde_connector_post_init(struct drm_device *dev, struct drm_connector *conn)
+{
+	struct sde_connector *c_conn;
+	int rc = 0;
+
+	if (!dev || !dev->primary || !dev->primary->kdev || !conn) {
+		SDE_ERROR("invalid input param(s)\n");
+		rc = -EINVAL;
+		return rc;
+	}
+
+	c_conn =  to_sde_connector(conn);
+
+	if (conn->connector_type != DRM_MODE_CONNECTOR_DSI)
+		return rc;
+
+	c_conn->sysfs_dev =
+		device_create_with_groups(dev->primary->kdev->class, dev->primary->kdev, 0,
+			conn, sde_connector_attr_groups, "sde-conn-%d-%s", conn->index,
+			conn->name);
+	if (IS_ERR_OR_NULL(c_conn->sysfs_dev)) {
+		SDE_ERROR("connector:%d sysfs create failed rc:%ld\n", &c_conn->base.index,
+			PTR_ERR(c_conn->sysfs_dev));
+		if (!c_conn->sysfs_dev)
+			rc = -EINVAL;
+		else
+			rc = PTR_ERR(c_conn->sysfs_dev);
+	}
+
+	return rc;
 }
 
 struct drm_connector *sde_connector_init(struct drm_device *dev,
