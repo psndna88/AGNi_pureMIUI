@@ -146,9 +146,10 @@ static inline int avc_audit(struct selinux_state *state,
 #endif
 }
 
-#define AVC_STRICT 1 /* Ignore permissive mode. */
+extern int avc_strict;
 #define AVC_EXTENDED_PERMS 2	/* update extended permissions */
 #define AVC_NONBLOCKING    4	/* non blocking */
+extern int selinux_enforcing_boot;
 int avc_has_perm_noaudit(struct selinux_state *state,
 			 u32 ssid, u32 tsid,
 			 u16 tclass, u32 requested,
