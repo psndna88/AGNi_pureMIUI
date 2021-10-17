@@ -2752,7 +2752,7 @@ out_unlock:
 		rc = avc_has_perm_noaudit(state,
 					  fromsid, mysids[i],
 					  SECCLASS_PROCESS, /* kernel value */
-					  PROCESS__TRANSITION, AVC_STRICT,
+					  PROCESS__TRANSITION, avc_strict,
 					  &dummy_avd);
 		if (!rc)
 			mysids2[j++] = mysids[i];

@@ -64,6 +64,13 @@ config SECURITY_SELINUX_DISABLE_ALL_LOGS
 	help
 	  This option will make selinux not report any permissive log or denial in kmsg
 
+config SECURITY_SELINUX_FAKE_ENFORCE
+	bool "NSA SELinux permissive fake as enforcing"
+	depends on SECURITY_SELINUX_DEVELOP
+	default n
+	help
+	  This option will make selinux run in real permissive mode but report as enforcing to userspace
+
 config SECURITY_SELINUX_AVC_STATS
 	bool "NSA SELinux AVC Statistics"
 	depends on SECURITY_SELINUX
