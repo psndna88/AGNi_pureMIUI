@@ -651,8 +651,8 @@ static int check_update_ftr_reg(u32 sys_id, int cpu, u64 val, u64 boot)
 	update_cpu_ftr_reg(regp, val);
 	if ((boot & regp->strict_mask) == (val & regp->strict_mask))
 		return 0;
-	pr_warn("SANITY CHECK: Unexpected variation in %s. Boot CPU: %#016llx, CPU%d: %#016llx\n",
-			regp->name, boot, cpu, val);
+//	pr_warn("SANITY CHECK: Unexpected variation in %s. Boot CPU: %#016llx, CPU%d: %#016llx\n",
+//			regp->name, boot, cpu, val);
 	return 1;
 }
 
@@ -788,8 +788,8 @@ void update_cpu_features(int cpu,
 	 * pretend to support them.
 	 */
 	if (taint) {
-		pr_warn_once("Unsupported CPU feature variation detected.\n");
-		add_taint(TAINT_CPU_OUT_OF_SPEC, LOCKDEP_STILL_OK);
+//		pr_warn_once("Unsupported CPU feature variation detected.\n");
+//		add_taint(TAINT_CPU_OUT_OF_SPEC, LOCKDEP_STILL_OK);
 	}
 }
 
