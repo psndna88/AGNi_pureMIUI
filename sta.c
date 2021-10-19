@@ -5979,13 +5979,17 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			return INVALID_SEND_STATUS;
 		}
 
-		len = snprintf(buf, sizeof(buf), "SET disable_scs_support %d",
-			       disable_scs);
-		if (len < 0 || len >= sizeof(buf) ||
-		    wpa_command(intf, buf) != 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "ErrorCode,Failed to update SCS support");
-			return STATUS_SENT_ERROR;
+		if (disable_scs || dut->prev_disable_scs_support) {
+			len = snprintf(buf, sizeof(buf),
+				       "SET disable_scs_support %d",
+				       disable_scs);
+			if (len < 0 || len >= sizeof(buf) ||
+			    wpa_command(intf, buf) != 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to update SCS support");
+				return STATUS_SENT_ERROR;
+			}
+			dut->prev_disable_scs_support = disable_scs;
 		}
 	}
 
@@ -6004,13 +6008,17 @@ cmd_sta_preset_testparameters(struct sigma_dut *dut, struct sigma_conn *conn,
 			return INVALID_SEND_STATUS;
 		}
 
-		len = snprintf(buf, sizeof(buf), "SET disable_mscs_support %d",
-			       disable_mscs);
-		if (len < 0 || len >= sizeof(buf) ||
-		    wpa_command(intf, buf) != 0) {
-			send_resp(dut, conn, SIGMA_ERROR,
-				  "ErrorCode,Failed to update MSCS support");
-			return STATUS_SENT_ERROR;
+		if (disable_mscs || dut->prev_disable_mscs_support) {
+			len = snprintf(buf, sizeof(buf),
+				       "SET disable_mscs_support %d",
+				       disable_mscs);
+			if (len < 0 || len >= sizeof(buf) ||
+			    wpa_command(intf, buf) != 0) {
+				send_resp(dut, conn, SIGMA_ERROR,
+					  "ErrorCode,Failed to update MSCS support");
+				return STATUS_SENT_ERROR;
+			}
+			dut->prev_disable_mscs_support = disable_mscs;
 		}
 	}
 
@@ -8908,8 +8916,6 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 
 	if (dut->program == PROGRAM_QM) {
 		wpa_command(intf, "SET interworking 1");
-		wpa_command(intf, "SET disable_scs_support 0");
-		wpa_command(intf, "SET disable_mscs_support 0");
 		wpa_command(intf, "SET enable_dscp_policy_capa 1");
 		dut->qm_domain_name[0] = '\0';
 		dut->reject_dscp_policies = 0;
@@ -8967,6 +8973,8 @@ static enum sigma_cmd_result cmd_sta_reset_default(struct sigma_dut *dut,
 	}
 
 	dut->saquery_oci_freq = 0;
+	dut->prev_disable_scs_support = 0;
+	dut->prev_disable_mscs_support = 0;
 
 	if (dut->program != PROGRAM_VHT)
 		return cmd_sta_p2p_reset(dut, conn, cmd);
