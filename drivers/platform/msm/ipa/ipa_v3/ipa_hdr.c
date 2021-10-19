@@ -1084,6 +1084,7 @@ int ipa3_reset_hdr(bool user_only)
 
 		if (ipa3_id_find(entry->id) == NULL) {
 			mutex_unlock(&ipa3_ctx->lock);
+			IPAERR_RL("Invalid header ID\n");
 			WARN_ON_RATELIMIT_IPA(1);
 			return -EFAULT;
 		}
@@ -1094,6 +1095,7 @@ int ipa3_reset_hdr(bool user_only)
 					entry->phys_base,
 					entry->hdr_len,
 					DMA_TO_DEVICE);
+				entry->proc_ctx->hdr = NULL;
 				entry->proc_ctx = NULL;
 			} else {
 				/* move the offset entry to free list */
@@ -1151,6 +1153,7 @@ int ipa3_reset_hdr(bool user_only)
 
 		if (ipa3_id_find(ctx_entry->id) == NULL) {
 			mutex_unlock(&ipa3_ctx->lock);
+			IPAERR_RL("Invalid proc header ID\n");
 			WARN_ON_RATELIMIT_IPA(1);
 			return -EFAULT;
 		}
