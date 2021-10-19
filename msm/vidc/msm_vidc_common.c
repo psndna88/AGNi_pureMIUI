@@ -3054,6 +3054,7 @@ static int msm_comm_init_core(struct msm_vidc_inst *inst)
 	core->state = VIDC_CORE_INIT;
 	core->smmu_fault_handled = false;
 	core->trigger_ssr = false;
+	core->pm_suspended = false;
 	core->resources.max_secure_inst_count =
 		core->resources.max_secure_inst_count ?
 		core->resources.max_secure_inst_count :
@@ -4540,10 +4541,11 @@ void msm_vidc_batch_handler(struct work_struct *work)
 {
 	int rc = 0;
 	struct msm_vidc_inst *inst;
+	struct msm_vidc_core *core;
 
 	inst = container_of(work, struct msm_vidc_inst, batch_work.work);
 	inst = get_inst(get_vidc_core(MSM_VIDC_CORE_VENUS), inst);
-	if (!inst) {
+	if (!inst || !inst->core) {
 		d_vpr_e("%s: invalid params\n", __func__);
 		return;
 	}
@@ -4553,9 +4555,14 @@ void msm_vidc_batch_handler(struct work_struct *work)
 		goto exit;
 	}
 
+	core = inst->core;
+	if (core->pm_suspended) {
+		s_vpr_h(inst->sid, "%s: device in pm suspend state\n", __func__);
+		goto exit;
+	}
+
 	s_vpr_h(inst->sid, "%s: queue pending batch buffers\n",
 		__func__);
-
 	rc = msm_comm_qbufs_batch(inst, NULL);
 	if (rc) {
 		s_vpr_e(inst->sid, "%s: batch qbufs failed\n", __func__);
