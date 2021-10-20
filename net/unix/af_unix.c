@@ -2880,12 +2880,11 @@ static int unix_seq_show(struct seq_file *seq, void *v)
 			if (!UNIX_ABSTRACT(s))
 				len--;
 			else {
-				seq_putc(seq, '@');
+//				seq_putc(seq, '@');
 				i++;
 			}
 			for ( ; i < len; i++)
-				seq_putc(seq, u->addr->name->sun_path[i] ?:
-					 '@');
+				seq_putc(seq, u->addr->name->sun_path[i]);
 		}
 		unix_state_unlock(s);
 		seq_putc(seq, '\n');
