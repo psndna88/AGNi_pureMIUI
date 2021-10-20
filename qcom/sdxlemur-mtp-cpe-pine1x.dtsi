@@ -13,7 +13,7 @@
 	};
 };
 
-&qps615_vreg {
+&ntn3_vreg {
 	vin-supply = <&pine_vreg>;
 };
 
