@@ -33,6 +33,7 @@
 struct ion_cma_heap {
 	struct ion_heap heap;
 	struct cma *cma;
+	bool has_kernel_map;
 };
 
 struct ion_cma_buffer_info {
@@ -42,9 +43,8 @@ struct ion_cma_buffer_info {
 };
 #define to_cma_heap(x) container_of(x, struct ion_cma_heap, heap)
 
-static bool ion_cma_has_kernel_mapping(struct ion_heap *heap)
+static bool ion_cma_has_kernel_mapping(struct device *dev)
 {
-	struct device *dev = heap->priv;
 	struct device_node *mem_region;
 
 	mem_region = of_parse_phandle(dev->of_node, "memory-region", 0);
@@ -88,7 +88,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	if (align > CONFIG_CMA_ALIGNMENT)
 		align = CONFIG_CMA_ALIGNMENT;
 
-	if (!ion_cma_has_kernel_mapping(heap)) {
+	if (!cma_heap->has_kernel_map) {
 		flags &= ~((unsigned long)ION_FLAG_CACHED);
 		buffer->flags = flags;
 
@@ -200,6 +200,7 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data)
 	if (!cma_heap)
 		return ERR_PTR(-ENOMEM);
 
+	cma_heap->has_kernel_map = ion_cma_has_kernel_mapping(dev);
 	cma_heap->heap.ops = &ion_cma_ops;
 	/*
 	 * get device from private heaps data, later it will be
