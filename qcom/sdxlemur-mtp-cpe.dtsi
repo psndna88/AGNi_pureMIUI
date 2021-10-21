@@ -177,6 +177,11 @@
 				qcom,ioss = <&ioss>;
 				qcom,ioss_interfaces = <&ioss_qps615_eth0>;
 
+				qcom,ioss_instance = <0>;
+				qcom,ioss_channels =
+					<&ioss_aqr_rx>,
+					<&ioss_aqr_tx>;
+
 				interrupts-extended = <&tlmm 103 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";
 
@@ -206,6 +211,11 @@
 				qcom,phy-rst-gpio = <1>;
 				qcom,ioss = <&ioss>;
 				qcom,ioss_interfaces = <&ioss_qps615_eth1>;
+
+				qcom,ioss_instance = <1>;
+				qcom,ioss_channels =
+					<&ioss_napa_rx>,
+					<&ioss_napa_tx>;
 
 				interrupts-extended = <&tlmm 81 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";

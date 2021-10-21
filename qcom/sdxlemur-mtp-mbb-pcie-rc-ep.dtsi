@@ -82,6 +82,11 @@
 		qcom,ioss_interfaces =
 			<&ioss_aqc_eth0>;
 
+		qcom,ioss_instance = <0>;
+		qcom,ioss_channels =
+			<&ioss_aqc_eth0_rx>,
+			<&ioss_aqc_eth0_tx>;
+
 		#address-cells = <1>;
 		#size-cells = <1>;
 
@@ -118,6 +123,11 @@
 		compatible = "qcom,ioss-v2-device";
 		qcom,ioss = <&ioss>;
 		qcom,ioss_interfaces = <&ioss_r8125_eth0>;
+
+		qcom,ioss_instance = <0>;
+		qcom,ioss_channels =
+			<&ioss_r8125_eth0_rx>,
+			<&ioss_r8125_eth0_tx>;
 
 		/* ipa shares this group with rtl */
 		qcom,iommu-group = <&ipa_eth_group1>;
