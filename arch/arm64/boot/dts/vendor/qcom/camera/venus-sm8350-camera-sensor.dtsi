@@ -198,7 +198,7 @@
 
 	qcom,cam-res-mgr {
 		compatible = "qcom,cam-res-mgr";
-		shared-pinctrl-gpios = <410>;
+		gpios-shared-pinctrl = <410>;
 		shared-pctrl-gpio-names = "mclk2";
 		pinctrl-names = "mclk2_active", "mclk2_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active>;
