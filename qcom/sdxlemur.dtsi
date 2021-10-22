@@ -1445,6 +1445,7 @@
 		qcom,status-in-gpio = <&tlmm 65 0x00>;
 		qcom,status-out-gpio = <&tlmm 44 0x00>;
 		qcom,status-out2-gpio = <&tlmm 45 0x00>;
+		status = "disabled";
 	};
 };
 
