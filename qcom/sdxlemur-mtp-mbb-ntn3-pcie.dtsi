@@ -45,15 +45,6 @@
 		qcom,mod-usecs-min = <30>;
 		qcom,mod-usecs-max = <60>;
 	};
-
-	ioss_qps615_eth0: qps615@eth0 {
-		qcom,name = "eth0";
-		qcom,ioss_instance = <0>;
-
-		qcom,ioss_channels =
-			<&ioss_qps615_rx>,
-			<&ioss_qps615_tx>;
-	};
 };
 
 &i2c_3 {
@@ -109,8 +100,6 @@
 
 				compatible = "qcom,ioss-v2-device";
 				qcom,ioss = <&ioss>;
-				qcom,ioss_interfaces = <&ioss_qps615_eth0>;
-
 				qcom,ioss_instance = <0>;
 				qcom,ioss_channels =
 					<&ioss_qps615_rx>,
