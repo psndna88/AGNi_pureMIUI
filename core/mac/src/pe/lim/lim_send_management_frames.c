@@ -5271,8 +5271,10 @@ QDF_STATUS lim_send_sa_query_response_frame(struct mac_context *mac,
 			nStatus);
 	}
 
-	pe_debug("Sending a SA Query Response to");
-	lim_print_mac_addr(mac, peer, LOGD);
+	pe_debug("Sending SA Query Response to "QDF_MAC_ADDR_FMT" op_class %d prim_ch_num %d freq_seg_1_ch_num %d oci_present %d",
+		 QDF_MAC_ADDR_REF(peer), frm.oci.op_class,
+		 frm.oci.prim_ch_num, frm.oci.freq_seg_1_ch_num,
+		 frm.oci.present);
 
 	if (!wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq) ||
 	    pe_session->opmode == QDF_P2P_CLIENT_MODE ||
@@ -5677,8 +5679,6 @@ error_delba:
 	return qdf_status;
 }
 
-#define WLAN_SAE_AUTH_TIMEOUT 1000
-
 /**
  * lim_tx_mgmt_frame() - Transmits Auth mgmt frame
  * @mac_ctx Pointer to Global MAC structure
@@ -5738,6 +5738,7 @@ lim_handle_sae_auth_retry(struct mac_context *mac_ctx, uint8_t vdev_id,
 	struct pe_session *session;
 	struct sae_auth_retry *sae_retry;
 	uint8_t retry_count = 0;
+	uint32_t val = 0;
 
 	session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
 	if (!session) {
@@ -5774,16 +5775,18 @@ lim_handle_sae_auth_retry(struct mac_context *mac_ctx, uint8_t vdev_id,
 		return;
 
 	pe_debug("SAE auth frame queued vdev_id %d seq_num %d",
-		 vdev_id, mac_ctx->mgmtSeqNum);
+		 vdev_id, mac_ctx->mgmtSeqNum + 1);
 	qdf_mem_copy(sae_retry->sae_auth.data, frame, frame_len);
 	mac_ctx->lim.lim_timers.g_lim_periodic_auth_retry_timer.sessionId =
 					session->peSessionId;
 	sae_retry->sae_auth.len = frame_len;
 	sae_retry->sae_auth_max_retry = retry_count;
 
+	val = mac_ctx->mlme_cfg->timeouts.sae_auth_failure_timeout;
+
 	tx_timer_change(
 		&mac_ctx->lim.lim_timers.g_lim_periodic_auth_retry_timer,
-		SYS_MS_TO_TICKS(WLAN_SAE_AUTH_TIMEOUT), 0);
+		SYS_MS_TO_TICKS(val), 0);
 	/* Activate Auth Retry timer */
 	if (tx_timer_activate(
 	    &mac_ctx->lim.lim_timers.g_lim_periodic_auth_retry_timer) !=
