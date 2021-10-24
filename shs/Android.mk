@@ -7,6 +7,10 @@ ifeq ($(call is-board-platform-in-list, $(RMNET_SHS_DLKM_PLATFORMS_LIST)),true)
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
+ifeq ($(BOARD_COMMON_DIR),)
+    BOARD_COMMON_DIR := device/qcom/common
+endif
+
 LOCAL_CFLAGS := -Wno-macro-redefined -Wno-unused-function -Wall -Werror
 LOCAL_CLANG :=true
 
@@ -25,7 +29,7 @@ LOCAL_SRC_FILES := \
 
 #path from build top to the core directory
 RMNET_CORE_PATH := vendor/qcom/opensource/datarmnet/core
-DLKM_DIR := $(TOP)/device/qcom/common/dlkm
+DLKM_DIR := $(TOP)/$(BOARD_COMMON_DIR)/dlkm
 #absolute path to the build directory. Can't use $(TOP) here since
 #that resolves to ., and we pass this to Kbuild, where . is different
 RMNET_CORE_INC_DIR := $(shell pwd)/$(RMNET_CORE_PATH)
