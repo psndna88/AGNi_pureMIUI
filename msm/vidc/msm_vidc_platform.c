@@ -181,6 +181,9 @@ static struct msm_vidc_codec_capability bengal_capabilities_v0[] = {
 	{CAP_SECURE_MBS_PER_FRAME, DOMAINS_ALL, CODECS_ALL, 64, 8160, 1, 8160},
 	{CAP_SECURE_BITRATE, DOMAINS_ALL, CODECS_ALL, 1, 35000000, 1, 20000000},
 
+	/* All intra encoding usecase specific */
+	{CAP_ALLINTRA_MAX_FPS, ENC, H264|HEVC, 1, 60, 1, 30},
+
 	/* Image specific */
 	{CAP_HEVC_IMAGE_FRAME_WIDTH, ENC, HEVC, 128, 512, 2, 512},
 	{CAP_HEVC_IMAGE_FRAME_HEIGHT, ENC, HEVC, 128, 512, 2, 512},
@@ -200,13 +203,16 @@ static struct msm_vidc_codec_capability bengal_capabilities_v0[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_1},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
 };
 
 static struct msm_vidc_codec_capability bengal_capabilities_v1[] = {
@@ -245,6 +251,9 @@ static struct msm_vidc_codec_capability bengal_capabilities_v1[] = {
 	{CAP_SECURE_MBS_PER_FRAME, DOMAINS_ALL, CODECS_ALL, 64, 8160, 1, 8160},
 	{CAP_SECURE_BITRATE, DOMAINS_ALL, CODECS_ALL, 1, 35000000, 1, 20000000},
 
+	/* All intra encoding usecase specific */
+	{CAP_ALLINTRA_MAX_FPS, ENC, H264|HEVC, 1, 60, 1, 30},
+
 	/* Image specific */
 	{CAP_HEVC_IMAGE_FRAME_WIDTH, ENC, HEVC, 128, 512, 2, 512},
 	{CAP_HEVC_IMAGE_FRAME_HEIGHT, ENC, HEVC, 128, 512, 2, 512},
@@ -264,13 +273,16 @@ static struct msm_vidc_codec_capability bengal_capabilities_v1[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_1},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
 };
 
 static struct msm_vidc_codec_capability holi_capabilities[] = {
@@ -333,13 +345,16 @@ static struct msm_vidc_codec_capability holi_capabilities[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_1},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
 };
 
 static struct msm_vidc_codec_capability scuba_capabilities[] = {
@@ -402,13 +417,16 @@ static struct msm_vidc_codec_capability scuba_capabilities[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_0, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_1},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
 };
 
 static struct msm_vidc_codec_capability lahaina_capabilities[] = {
@@ -512,13 +530,16 @@ static struct msm_vidc_codec_capability lahaina_capabilities[] = {
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_6, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_6},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_6_1, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51, 1,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
 };
 
 static struct msm_vidc_codec_capability yupik_capabilities_v0[] = {
@@ -627,13 +648,16 @@ static struct msm_vidc_codec_capability yupik_capabilities_v0[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
 };
 
 static struct msm_vidc_codec_capability yupik_capabilities_v1[] = {
@@ -735,13 +759,16 @@ static struct msm_vidc_codec_capability yupik_capabilities_v1[] = {
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 				V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 				V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 				V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5, 1,
+				V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
 };
 
 static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
@@ -848,13 +875,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v0[] = {
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_6_0, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_6, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51, 1,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
 };
 
 static struct msm_vidc_codec_capability shima_capabilities_v1[] = {
@@ -955,13 +985,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v1[] = {
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_2, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51, 1,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
 };
 
 static struct msm_vidc_codec_capability shima_capabilities_v2[] = {
@@ -1061,13 +1094,16 @@ static struct msm_vidc_codec_capability shima_capabilities_v2[] = {
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
 
-	/* Level for AVC and HEVC decoder specific */
+	/* Level for AVC, HEVC and VP9 decoder specific */
 	{CAP_H264_LEVEL, DEC, H264, V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 1,
 	                            V4L2_MPEG_VIDEO_H264_LEVEL_4_0},
 	{CAP_HEVC_LEVEL, DEC, HEVC, V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_5, 1,
 	                            V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+	{CAP_VP9_LEVEL, DEC, VP9, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51, 1,
+                                V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
 };
 
 /* Generally Iris2 VPSS only support 8 multiple encoding if
@@ -1539,6 +1575,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 		.value = 262144, /* ((8192x8192)/256)@1fps */
 	},
 	{
+		.key = "qcom,max-mbpf",
+		.value = 65280,/* ((3840x2176)/256) x 2 */
+	},
+	{
 		.key = "qcom,max-hq-mbs-per-frame",
 		.value = 8160,
 	},
@@ -1573,6 +1613,10 @@ static struct msm_vidc_common_data bengal_common_data_v0[] = {
 	{
 		.key = "qcom,vpp_delay_supported",
 		.value = 0,
+	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
 	},
 };
 
@@ -1606,6 +1650,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 		.value = 262144, /* ((8192x8192)/256)@1fps */
 	},
 	{
+		.key = "qcom,max-mbpf",
+		.value = 65280,/* ((3840x2176)/256) x 2 */
+	},
+	{
 		.key = "qcom,max-hq-mbs-per-frame",
 		.value = 8160,
 	},
@@ -1640,6 +1688,10 @@ static struct msm_vidc_common_data bengal_common_data_v1[] = {
 	{
 		.key = "qcom,vpp_delay_supported",
 		.value = 0,
+	},
+	{
+		.key = "qcom,no-cvp",
+		.value = 1,
 	},
 };
 
@@ -2304,6 +2356,7 @@ static struct msm_vidc_platform_data scuba_data = {
 	.codec_caps_count = ARRAY_SIZE(scuba_capabilities),
 	.vpss_caps = NULL,
 	.vpss_caps_count = 0,
+	.max_inst_count = MAX_SUPPORTED_INSTANCES,
 };
 
 static const struct of_device_id msm_vidc_dt_device[] = {
