@@ -959,6 +959,9 @@ static void _sde_dbg_dump_sde_dbg_bus(struct sde_dbg_sde_debug_bus *bus)
 	u32 bus_size;
 	char name[20];
 
+	if (!bus || !bus->cmn.entries_size)
+		return;
+
 	reg_base = _sde_dump_get_blk_addr(bus->cmn.name);
 	if (!reg_base || !reg_base->base) {
 		pr_err("unable to find mem_base for %s\n", bus->cmn.name);

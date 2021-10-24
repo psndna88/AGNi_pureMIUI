@@ -76,7 +76,7 @@ static struct qpic_panel_config ili_qvga_panel = {
 	.bpp = 16,
 };
 
-int get_ili_qvga_panel_config(struct qpic_display_data *qpic_display)
+void get_ili_qvga_panel_config(struct qpic_display_data *qpic_display)
 {
 	qpic_display->panel_config = &ili_qvga_panel;
 	qpic_display->panel_on = ili9341_on;
