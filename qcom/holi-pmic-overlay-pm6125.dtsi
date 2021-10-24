@@ -494,3 +494,6 @@
 	};
 };
 
+&pm6125_pon {
+	qcom,log-kpd-event;
+};

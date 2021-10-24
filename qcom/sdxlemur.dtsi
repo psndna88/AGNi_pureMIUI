@@ -978,7 +978,7 @@
 			qcom,pcie-vendor-id = /bits/ 16 <0x17cb>;
 			qcom,pcie-device-id = /bits/ 16 <0x0308>;
 			qcom,pcie-link-speed = <4>;
-			qcom,pcie-phy-ver = <6>;
+			qcom,pcie-phy-ver = <8>;
 			qcom,pcie-active-config;
 			qcom,pcie-aggregated-irq;
 			qcom,pcie-mhi-a7-irq;
@@ -1018,7 +1018,7 @@
 				0x1168 0x0a 0x0
 				0x116c 0x04 0x0
 				0x119c 0x88 0x0
-				0x1174 0x20 0x0
+				0x1174 0x60 0x0
 				0x11a0 0x14 0x0
 				0x11a8 0x0f 0x0
 				0x0220 0x16 0x0
@@ -1123,6 +1123,7 @@
 				0x1370 0x2e 0x0
 				0x155c 0x2e 0x0
 				0x1484 0x08 0x0
+				0x1388 0xaa 0x0
 				0x1200 0x00 0x0
 				0x1244 0x03 0x0>;
 
@@ -1208,7 +1209,6 @@
 		qcom,register-collection-on-crash;
 		qcom,testbus-collection-on-crash;
 		qcom,non-tn-collection-on-crash;
-		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
