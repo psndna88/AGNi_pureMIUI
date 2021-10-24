@@ -1,8 +1,8 @@
 &mdss_mdp {
-	dsi_rm6d030_amoled_cmd: qcom,mdss_dsi_rm6d030_amoled_141_cmd {
+	dsi_rm69090_amoled_vid: qcom,mdss_dsi_rm69090_amoled_178_vid {
 		qcom,mdss-dsi-panel-name =
-			"RM6D030 1.41 amoled cmd mode";
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+			"RM69090 1.78 amoled vid mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-physical-type = "oled";
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
@@ -19,6 +19,7 @@
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
 		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
@@ -36,8 +37,8 @@
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-panel-framerate = <60>;
-				qcom,mdss-dsi-panel-width = <320>;
-				qcom,mdss-dsi-panel-height = <360>;
+				qcom,mdss-dsi-panel-width = <368>;
+				qcom,mdss-dsi-panel-height = <448>;
 				qcom,mdss-dsi-h-front-porch = <40>;
 				qcom,mdss-dsi-h-back-porch = <20>;
 				qcom,mdss-dsi-h-pulse-width = <4>;
@@ -51,41 +52,25 @@
 				qcom,mdss-dsi-v-bottom-border = <0>;
 
 				qcom,mdss-dsi-on-command = [
-					15 01 00 00 00 00 02 FE 20
-					15 01 00 00 00 00 02 5A 0E
-					15 01 00 00 00 00 02 58 07
+					15 01 00 00 00 00 02 FE 01
+					15 01 00 00 00 00 02 0D 01
+					15 01 00 00 00 00 02 6A 03
 					15 01 00 00 00 00 02 FE 00
-					39 01 00 00 00 00 05 2A 00 00 01 3F
-					39 01 00 00 00 00 05 2B 00 00 01 67
-					39 01 00 00 00 00 05 30 00 00 01 67
-					39 01 00 00 00 00 05 31 00 00 01 3F
-					15 01 00 00 00 00 02 35 02
-					15 01 00 00 00 00 02 53 20
+					15 01 00 00 00 00 02 35 00
 					15 01 00 00 00 00 02 51 FF
-					15 01 00 00 00 00 02 63 FF
-					05 01 00 00 00 00 02 12 00
-					05 01 00 00 32 00 02 11 00
-					05 01 00 00 00 00 02 29 00
+					39 01 00 00 00 00 05 2A 00 10 01 7F
+					39 01 00 00 00 00 05 2B 00 00 01 BF
+					05 01 00 00 78 00 02 11 00
+					05 01 00 00 40 00 02 29 00
 				];
+
+
 				qcom,mdss-dsi-off-command = [
-					05 01 00 00 00 00 02 28 00
-					05 01 00 00 53 00 02 10 00
-					15 01 00 00 00 00 02 4F 01
-				];
+					05 01 00 00 14 00 02 28 00
+					05 01 00 00 78 00 02 10 00
+					15 01 00 00 00 00 02 4F 01];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
-				qcom,mdss-dsi-lp2-command = [
-					15 01 00 00 00 00 02 FE 00
-					05 01 00 00 00 00 01 39
-				];
-				qcom,mdss-dsi-lp2-command-state = "dsi_hs_mode";
-				qcom,mdss-dsi-nolp-command = [
-					05 01 00 00 1f 00 01 38 /* Idle-Mode Off  */
-					15 01 00 00 00 00 02 FE 00
-					39 01 00 00 00 00 05 2A 00 00 01 3F
-					39 01 00 00 00 00 05 2B 00 00 01 67
-					05 01 00 00 00 00 02 12 00
-				];
 			};
 		};
 	};
