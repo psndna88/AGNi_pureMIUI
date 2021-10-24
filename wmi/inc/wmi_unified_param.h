@@ -5258,6 +5258,9 @@ typedef enum {
 	wmi_service_tdls_ax_support,
 #endif
 #endif
+#ifdef THERMAL_STATS_SUPPORT
+	wmi_service_thermal_stats_temp_range_supported,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
