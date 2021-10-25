@@ -390,13 +390,6 @@ static void dsi_ctrl_dma_cmd_wait_for_done(struct work_struct *work)
 	dsi_hw_ops = dsi_ctrl->hw.ops;
 	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_ENTRY);
 
-	/*
-	 * This atomic state will be set if ISR has been triggered,
-	 * so the wait is not needed.
-	 */
-	if (atomic_read(&dsi_ctrl->dma_irq_trig))
-		goto done;
-
 	ret = wait_for_completion_timeout(
 			&dsi_ctrl->irq_info.cmd_dma_done,
 			msecs_to_jiffies(DSI_CTRL_TX_TO_MS));
@@ -416,8 +409,8 @@ static void dsi_ctrl_dma_cmd_wait_for_done(struct work_struct *work)
 					DSI_SINT_CMD_MODE_DMA_DONE);
 	}
 
-done:
 	dsi_ctrl->dma_wait_queued = false;
+	SDE_EVT32(dsi_ctrl->cell_index, SDE_EVTLOG_FUNC_EXIT);
 }
 
 static int dsi_ctrl_check_state(struct dsi_ctrl *dsi_ctrl,
