@@ -516,8 +516,8 @@ static int haptics_read(struct haptics_chip *chip,
 	u16 addr = base + offset;
 
 	rc = regmap_bulk_read(chip->regmap, addr, val, length);
-	if (rc < 0)
-		dev_err(chip->dev, "read addr %d failed, rc=%d\n", addr, rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "read addr %d failed, rc=%d\n", addr, rc);
 
 	return rc;
 }
@@ -529,8 +529,8 @@ static int haptics_write(struct haptics_chip *chip,
 	u16 addr = base + offset;
 
 	rc = regmap_bulk_write(chip->regmap, addr, val, length);
-	if (rc < 0)
-		dev_err(chip->dev, "write addr %d failed, rc=%d\n", addr, rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "write addr %d failed, rc=%d\n", addr, rc);
 
 	return rc;
 }
@@ -542,8 +542,8 @@ static int haptics_masked_write(struct haptics_chip *chip,
 	u16 addr = base + offset;
 
 	regmap_update_bits(chip->regmap, addr, mask, val);
-	if (rc < 0)
-		dev_err(chip->dev, "update addr %d failed, rc=%d\n", addr, rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "update addr %d failed, rc=%d\n", addr, rc);
 
 	return rc;
 }
@@ -899,15 +899,15 @@ static int haptics_get_closeloop_lra_period_v2(
 	/* read auto resonance calibration result */
 	if (in_boot) {
 		if (chip->hap_cfg_nvmem == NULL) {
-			dev_info(chip->dev, "nvmem device for hap_cfg is not defined\n");
+//			dev_dbg(chip->dev, "nvmem device for hap_cfg is not defined\n");
 			return -EINVAL;
 		}
 
 		rc = nvmem_device_read(chip->hap_cfg_nvmem,
 				HAP_STATUS_DATA_MSB_SDAM_OFFSET, 2, val);
 		if (rc < 0) {
-			dev_err(chip->dev, "read SDAM %#x failed, rc=%d\n",
-					HAP_STATUS_DATA_MSB_SDAM_OFFSET, rc);
+			//dev_err(chip->dev, "read SDAM %#x failed, rc=%d\n",
+//					HAP_STATUS_DATA_MSB_SDAM_OFFSET, rc);
 			return rc;
 		}
 	} else {
@@ -942,13 +942,13 @@ static int haptics_get_closeloop_lra_period_v2(
 	tlra_cl_err_sts =
 		((val[0] & TLRA_CL_ERR_MSB_MASK) << 8) | val[1];
 
-	dev_info(chip->dev, "rc_clk_cal = %u, auto_res_done = %d\n",
-			rc_clk_cal, auto_res_done);
+//	dev_dbg(chip->dev, "rc_clk_cal = %u, auto_res_done = %d\n",
+//			rc_clk_cal, auto_res_done);
 
 	if (rc_clk_cal == CAL_RC_CLK_DISABLED_VAL && !auto_res_done) {
 		/* TLRA_CL_ERR(us) = TLRA_CL_ERR_STS * 1.667 us */
 		tmp = tlra_cl_err_sts * TLRA_AUTO_RES_ERR_NO_CAL_STEP_PSEC;
-		dev_info(chip->dev, "tlra_cl_err_sts = %#x\n", tlra_cl_err_sts);
+//		dev_dbg(chip->dev, "tlra_cl_err_sts = %#x\n", tlra_cl_err_sts);
 		config->cl_t_lra_us = div_u64(tmp, 1000000);
 	} else if (rc_clk_cal == CAL_RC_CLK_DISABLED_VAL && auto_res_done) {
 		/*
@@ -956,7 +956,7 @@ static int haptics_get_closeloop_lra_period_v2(
 		 * TLRA_AUTO_RES(us) = CAL_TLRA_CL_STS_NO_CAL * 3.333 us
 		 */
 		tmp = cal_tlra_cl_sts * TLRA_AUTO_RES_NO_CAL_STEP_PSEC;
-		dev_info(chip->dev, "cal_tlra_cl_sts = %#x\n", cal_tlra_cl_sts);
+//		dev_dbg(chip->dev, "cal_tlra_cl_sts = %#x\n", cal_tlra_cl_sts);
 		config->cl_t_lra_us = div_u64(tmp, 1000000);
 	} else if (rc_clk_cal == CAL_RC_CLK_AUTO_VAL && !auto_res_done) {
 		/*
@@ -972,8 +972,8 @@ static int haptics_get_closeloop_lra_period_v2(
 			return rc;
 
 		tlra_ol = (val[0] & TLRA_OL_MSB_MASK) << 8 | val[1];
-		dev_info(chip->dev, "tlra_ol = %#x, tlra_cl_err_sts = %#x, cal_tlra_cl_sts = %#x\n",
-				tlra_ol, tlra_cl_err_sts, cal_tlra_cl_sts);
+//		dev_dbg(chip->dev, "tlra_ol = %#x, tlra_cl_err_sts = %#x, cal_tlra_cl_sts = %#x\n",
+//				tlra_ol, tlra_cl_err_sts, cal_tlra_cl_sts);
 
 		tmp = tlra_cl_err_sts * tlra_ol;
 		tmp *= TLRA_AUTO_RES_ERR_AUTO_CAL_STEP_PSEC;
@@ -1020,8 +1020,8 @@ static int haptics_get_closeloop_lra_period_v2(
 		last_good_tlra_cl_sts =
 			((val[0] & LAST_GOOD_TLRA_CL_MSB_MASK) << 8) | val[1];
 
-		dev_info(chip->dev, "last_good_tlra_cl_sts = %#x, cal_tlra_cl_sts = %#x\n",
-				last_good_tlra_cl_sts, cal_tlra_cl_sts);
+//		dev_dbg(chip->dev, "last_good_tlra_cl_sts = %#x, cal_tlra_cl_sts = %#x\n",
+//				last_good_tlra_cl_sts, cal_tlra_cl_sts);
 
 		tmp = last_good_tlra_cl_sts * last_good_tlra_cl_sts;
 		tmp *= TLRA_AUTO_RES_AUTO_CAL_STEP_PSEC;
@@ -1046,38 +1046,38 @@ static int haptics_get_closeloop_lra_period_v2(
 		//protect low rate of xbl f0 abnormal for k9 only
 		if(in_boot){
 			u32  xbl_f0 = USEC_PER_SEC / config->cl_t_lra_us;
-			dev_err(chip->dev, "xbl f0  =%d \n", xbl_f0);
+			//dev_err(chip->dev, "xbl f0  =%d \n", xbl_f0);
 			rc1 = of_property_read_u32(node, "qcom,lra-f0-min", &f0_mix);
 			if (rc1 < 0) {
-				dev_err(chip->dev, "lra-f0-min failed, rc=%d\n", rc);
+				//dev_err(chip->dev, "lra-f0-min failed, rc=%d\n", rc);
 			}
 			rc2 = of_property_read_u32(node, "qcom,lra-f0-max", &f0_max);
 			if (rc2 < 0) {
-				dev_err(chip->dev, "lra-f0-max failed, rc=%d\n", rc);
+				//dev_err(chip->dev, "lra-f0-max failed, rc=%d\n", rc);
 			}
 			rc3 = of_property_read_u32(node, "qcom,lra-f0-default", &f0_default);
 			if (rc3 < 0) {
-				dev_err(chip->dev, "lra-f0-default failed, rc=%d\n", rc);
+				//dev_err(chip->dev, "lra-f0-default failed, rc=%d\n", rc);
 			}
 			rc4 = of_property_read_u32(node, "qcom,lra-f0-cal-count", &f0_cnt);
 			if (rc4 < 0) {
-				dev_err(chip->dev, "lra-f0-cal-count failed, rc=%d\n", rc);
+				//dev_err(chip->dev, "lra-f0-cal-count failed, rc=%d\n", rc);
 			}
 			if (rc1 >= 0 && rc2 >= 0 && rc3 >= 0 && rc4 >= 0) {
 				if (xbl_f0 > f0_max || xbl_f0 < f0_mix) {
-					dev_err(chip->dev, "xbl f0 abnormal: %d ~ 0x%x use default: %d ~ 0x%x f0:%d - %d after boot\n",
-							xbl_f0, config->rc_clk_cal_count, f0_default, f0_cnt, f0_mix, f0_max);
+					//dev_err(chip->dev, "xbl f0 abnormal: %d ~ 0x%x use default: %d ~ 0x%x f0:%d - %d after boot\n",
+//							xbl_f0, config->rc_clk_cal_count, f0_default, f0_cnt, f0_mix, f0_max);
 					config->cl_t_lra_us = USEC_PER_SEC /f0_default;
 					config->rc_clk_cal_count = f0_cnt;
 				}
 			} else {
-				dev_err(chip->dev, "lra-f0: default min max count must set together in dtsi\n");
+				//dev_err(chip->dev, "lra-f0: default min max count must set together in dtsi\n");
 			}
 		}
 #endif
 	} else {
-		dev_err(chip->dev, "Can't get close-loop LRA period in rc_clk_cal mode %u\n",
-				rc_clk_cal);
+		//dev_err(chip->dev, "Can't get close-loop LRA period in rc_clk_cal mode %u\n",
+//				rc_clk_cal);
 		return -EINVAL;
 	}
 
@@ -1095,14 +1095,14 @@ static int haptics_get_closeloop_lra_period(struct haptics_chip *chip,
 		rc = haptics_get_closeloop_lra_period_v2(chip, in_boot);
 
 	if (rc < 0) {
-		dev_err(chip->dev, "get close loop T LRA failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "get close loop T LRA failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
-	dev_info(chip->dev, "OL_TLRA %u us, CL_TLRA %u us, RC_CLK_CAL_COUNT %#x\n",
-		chip->config.t_lra_us, chip->config.cl_t_lra_us,
-		chip->config.rc_clk_cal_count);
+//	dev_dbg(chip->dev, "OL_TLRA %u us, CL_TLRA %u us, RC_CLK_CAL_COUNT %#x\n",
+//		chip->config.t_lra_us, chip->config.cl_t_lra_us,
+//		chip->config.rc_clk_cal_count);
 	return 0;
 }
 
@@ -1112,8 +1112,8 @@ static int haptics_set_vmax_mv(struct haptics_chip *chip, u32 vmax_mv)
 	u8 val;
 
 	if (vmax_mv > MAX_VMAX_MV) {
-		dev_err(chip->dev, "vmax (%d) exceed the max value: %d\n",
-					vmax_mv, MAX_VMAX_MV);
+//		dev_err(chip->dev, "vmax (%d) exceed the max value: %d\n",
+//					vmax_mv, MAX_VMAX_MV);
 		return -EINVAL;
 	}
 
@@ -1123,10 +1123,10 @@ static int haptics_set_vmax_mv(struct haptics_chip *chip, u32 vmax_mv)
 	val = vmax_mv / VMAX_STEP_MV;
 	rc = haptics_write(chip, chip->cfg_addr_base,
 			HAP_CFG_VMAX_REG, &val, 1);
-	if (rc < 0)
-		dev_err(chip->dev, "config VMAX failed, rc=%d\n", rc);
-	else
-		dev_info(chip->dev, "Set Vmax to %u mV\n", vmax_mv);
+//	if (rc < 0)
+//		dev_err(chip->dev, "config VMAX failed, rc=%d\n", rc);
+//	else
+//		dev_dbg(chip->dev, "Set Vmax to %u mV\n", vmax_mv);
 
 	return rc;
 }
@@ -1137,16 +1137,16 @@ static int haptics_set_vmax_headroom_mv(struct haptics_chip *chip, u32 hdrm_mv)
 	u8 val;
 
 	if (hdrm_mv > VMAX_HDRM_MAX_MV) {
-		dev_err(chip->dev, "headroom (%d) exceed the max value: %d\n",
-					hdrm_mv, VMAX_HDRM_MAX_MV);
+		//dev_err(chip->dev, "headroom (%d) exceed the max value: %d\n",
+//					hdrm_mv, VMAX_HDRM_MAX_MV);
 		return -EINVAL;
 	}
 
 	val = hdrm_mv / VMAX_HDRM_STEP_MV;
 	rc = haptics_write(chip, chip->cfg_addr_base,
 			HAP_CFG_VMAX_HDRM_REG, &val, 1);
-	if (rc < 0)
-		dev_err(chip->dev, "config VMAX_HDRM failed, rc=%d\n", rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "config VMAX_HDRM failed, rc=%d\n", rc);
 
 	return rc;
 }
@@ -1159,8 +1159,8 @@ static int haptics_get_vmax_headroom_mv(struct haptics_chip *chip, u32 *hdrm_mv)
 	rc = haptics_read(chip, chip->cfg_addr_base,
 			HAP_CFG_VMAX_HDRM_REG, &val, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "Get Vmax HDRM failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "Get Vmax HDRM failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -1175,9 +1175,9 @@ static int haptics_enable_autores(struct haptics_chip *chip, bool en)
 	rc = haptics_masked_write(chip, chip->cfg_addr_base,
 			HAP_CFG_AUTORES_CFG_REG, AUTORES_EN_BIT,
 			en ? AUTORES_EN_BIT : 0);
-	if (rc < 0)
-		dev_err(chip->dev, "%s auto resonance failed, rc=%d\n",
-				en ? "enable" : "disable", rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "%s auto resonance failed, rc=%d\n",
+//				en ? "enable" : "disable", rc);
 
 	return rc;
 }
@@ -1188,8 +1188,8 @@ static int haptics_set_direct_play(struct haptics_chip *chip, u8 amplitude)
 
 	rc = haptics_write(chip, chip->ptn_addr_base,
 			HAP_PTN_DIRECT_PLAY_REG, &amplitude, 1);
-	if (rc < 0)
-		dev_err(chip->dev, "config DIRECT_PLAY failed, rc=%d\n", rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "config DIRECT_PLAY failed, rc=%d\n", rc);
 
 	return rc;
 }
@@ -1205,7 +1205,7 @@ static int haptics_boost_vreg_enable(struct haptics_chip *chip, bool en)
 	u8 val;
 
 	if (chip->hap_cfg_nvmem == NULL) {
-		dev_info(chip->dev, "nvmem device for hap_cfg is not defined\n");
+//		dev_dbg(chip->dev, "nvmem device for hap_cfg is not defined\n");
 		return 0;
 	}
 
@@ -1213,17 +1213,17 @@ static int haptics_boost_vreg_enable(struct haptics_chip *chip, bool en)
 	rc = nvmem_device_write(chip->hap_cfg_nvmem,
 			PBS_ARG_REG, 1, &val);
 	if (rc < 0) {
-		dev_err(chip->dev, "write SDAM %#x failed, rc=%d\n",
-				PBS_ARG_REG, rc);
+		//dev_err(chip->dev, "write SDAM %#x failed, rc=%d\n",
+//				PBS_ARG_REG, rc);
 		return rc;
 	}
 
 	val = PBS_TRIG_SET_VAL;
 	rc = nvmem_device_write(chip->hap_cfg_nvmem,
 			PBS_TRIG_SET_REG, 1, &val);
-	if (rc < 0)
-		dev_err(chip->dev, "Write SDAM %#x failed, rc=%d\n",
-				PBS_TRIG_SET_REG, rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "Write SDAM %#x failed, rc=%d\n",
+//				PBS_TRIG_SET_REG, rc);
 
 	return rc;
 }
@@ -1254,7 +1254,7 @@ static bool is_boost_vreg_enabled_in_open_loop(struct haptics_chip *chip)
 		rc = haptics_read(chip, chip->hbst_addr_base,
 				HAP_BOOST_VREG_EN_REG, &val, 1);
 		if (!rc && (val & VREG_EN_BIT)) {
-			dev_info(chip->dev, "HBoost is enabled in open loop condition\n");
+//			dev_dbg(chip->dev, "HBoost is enabled in open loop condition\n");
 			return true;
 		}
 	}
@@ -1308,7 +1308,7 @@ static int haptics_wait_hboost_ready(struct haptics_chip *chip)
 	}
 
 	if (i == HBOOST_WAIT_READY_COUNT) {
-		dev_err(chip->dev, "hboost is not ready for haptics play\n");
+		//dev_err(chip->dev, "hboost is not ready for haptics play\n");
 		return -EBUSY;
 	}
 
@@ -1326,35 +1326,35 @@ static int haptics_enable_hpwr_vreg(struct haptics_chip *chip, bool en)
 		rc = regulator_set_voltage(chip->hpwr_vreg,
 				chip->hpwr_voltage_mv * 1000, INT_MAX);
 		if (rc < 0) {
-			dev_err(chip->dev, "Set hpwr voltage failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Set hpwr voltage failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 
 		rc = regulator_enable(chip->hpwr_vreg);
 		if (rc < 0) {
-			dev_err(chip->dev, "Enable hpwr failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Enable hpwr failed, rc=%d\n",
+//					rc);
 			regulator_set_voltage(chip->hpwr_vreg, 0, INT_MAX);
 			return rc;
 		}
 	} else {
 		rc = regulator_disable(chip->hpwr_vreg);
 		if (rc < 0) {
-			dev_err(chip->dev, "Disable hpwr failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Disable hpwr failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 
 		rc = regulator_set_voltage(chip->hpwr_vreg, 0, INT_MAX);
 		if (rc < 0) {
-			dev_err(chip->dev, "Set hpwr voltage failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Set hpwr voltage failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 	}
 
-	dev_info(chip->dev, "%s hpwr vreg\n", en ? "enabled" : "disabled");
+//	dev_dbg(chip->dev, "%s hpwr vreg\n", en ? "enabled" : "disabled");
 	chip->hpwr_vreg_enabled = en;
 	return 0;
 }
@@ -1396,7 +1396,7 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 			if (rc < 0)
 				return rc;
 
-			dev_info(chip->dev, "Toggle CAL_EN in open-loop-VREG playing\n");
+//			dev_dbg(chip->dev, "Toggle CAL_EN in open-loop-VREG playing\n");
 		}
 	} else if (chip->hpwr_vreg == NULL) {
 #if !defined(QCOM_HAPTIC_BOB)
@@ -1436,15 +1436,15 @@ static int haptics_enable_play(struct haptics_chip *chip, bool en)
 	rc = haptics_write(chip, chip->cfg_addr_base,
 			HAP_CFG_SPMI_PLAY_REG, &val, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "Write SPMI_PLAY failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Write SPMI_PLAY failed, rc=%d\n", rc);
 		return rc;
 	}
 
 	if (play->pattern_src == FIFO) {
 		rc = haptics_boost_vreg_enable(chip, en);
-		if (rc < 0)
-			dev_err(chip->dev, "Notify vreg %s failed, rc=%d\n",
-					en ? "enabling" : "disabling", rc);
+//		if (rc < 0)
+			//dev_err(chip->dev, "Notify vreg %s failed, rc=%d\n",
+//					en ? "enabling" : "disabling", rc);
 	}
 
 	return rc;
@@ -1464,7 +1464,7 @@ static int haptics_set_brake(struct haptics_chip *chip, struct brake_cfg *brake)
 			HAP_CFG_BRAKE_MODE_CFG_REG,
 			BRAKE_MODE_MASK | BRAKE_SINE_GAIN_MASK, val);
 	if (rc < 0) {
-		dev_err(chip->dev, "set brake CFG failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "set brake CFG failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -1472,7 +1472,7 @@ static int haptics_set_brake(struct haptics_chip *chip, struct brake_cfg *brake)
 			(brake->mode == OL_BRAKE || brake->mode == CL_BRAKE) ?
 			brake->samples : zero_samples, BRAKE_SAMPLE_COUNT);
 	if (rc < 0) {
-		dev_err(chip->dev, "set brake pattern failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "set brake pattern failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -1490,7 +1490,7 @@ static int haptics_set_pattern(struct haptics_chip *chip,
 	u32 play_rate_us;
 
 	if (src != PATTERN1 && src != PATTERN2) {
-		dev_err(chip->dev, "no pattern src specified!\n");
+		//dev_err(chip->dev, "no pattern src specified!\n");
 		return -EINVAL;
 	}
 
@@ -1514,7 +1514,7 @@ static int haptics_set_pattern(struct haptics_chip *chip,
 	rc = haptics_write(chip, chip->ptn_addr_base, ptn_tlra_addr,
 			values, 2);
 	if (rc < 0) {
-		dev_err(chip->dev, "update pattern TLRA failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "update pattern TLRA failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -1531,7 +1531,7 @@ static int haptics_set_pattern(struct haptics_chip *chip,
 	rc = haptics_write(chip, chip->ptn_addr_base, ptn_cfg_addr,
 			values, SAMPLES_PER_PATTERN * 3);
 	if (rc < 0) {
-		dev_err(chip->dev, "write pattern data failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "write pattern data failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -1555,8 +1555,8 @@ static int haptics_update_fifo_sample_v1(struct haptics_chip *chip, u8 sample)
 	rc = haptics_write(chip, chip->ptn_addr_base,
 			HAP_PTN_V1_FIFO_DIN_LSB_REG, &val, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "write FIFO LSB failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "write FIFO LSB failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -1564,8 +1564,8 @@ static int haptics_update_fifo_sample_v1(struct haptics_chip *chip, u8 sample)
 	rc = haptics_write(chip, chip->ptn_addr_base,
 			HAP_PTN_V1_FIFO_DIN_MSB_REG, &val, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "write FIFO MSB failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "write FIFO MSB failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -1584,8 +1584,8 @@ static int haptics_update_fifo_sample_v2(struct haptics_chip *chip,
 		rc = haptics_write(chip, chip->ptn_addr_base,
 				HAP_PTN_V2_FIFO_DIN_0_REG, samples, num);
 		if (rc < 0) {
-			dev_err(chip->dev, "bulk write FIFO_DIN failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "bulk write FIFO_DIN failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 	} else if (num < HAP_PTN_V2_FIFO_DIN_NUM) {
@@ -1594,8 +1594,8 @@ static int haptics_update_fifo_sample_v2(struct haptics_chip *chip,
 					HAP_PTN_V2_FIFO_DIN_1B_REG,
 					(samples + i), 1);
 			if (rc < 0) {
-				dev_err(chip->dev, "write FIFO_DIN_1B failed, rc=%d\n",
-						rc);
+				//dev_err(chip->dev, "write FIFO_DIN_1B failed, rc=%d\n",
+//						rc);
 				return rc;
 			}
 		}
@@ -1661,11 +1661,11 @@ static int haptics_get_available_fifo_memory(struct haptics_chip *chip)
 		return rc;
 
 	if (fill > MAX_FIFO_SAMPLES(chip)) {
-		dev_err(chip->dev, "Filled FIFO number %d exceed the max %d\n",
-				fill, MAX_FIFO_SAMPLES(chip));
+//		dev_err(chip->dev, "Filled FIFO number %d exceed the max %d\n",
+//				fill, MAX_FIFO_SAMPLES(chip));
 		return -EINVAL;
 	} else if (fill == MAX_FIFO_SAMPLES(chip)) {
-		dev_err(chip->dev, "no FIFO space available\n");
+//		dev_err(chip->dev, "no FIFO space available\n");
 		return -EBUSY;
 	}
 
@@ -1680,7 +1680,7 @@ static int haptics_set_manual_rc_clk_cal(struct haptics_chip *chip)
 	u8 val[2];
 
 	if (cal_count == 0) {
-		dev_info(chip->dev, "Ignore setting RC_CLK_CAL_COUNT\n");
+//		dev_dbg(chip->dev, "Ignore setting RC_CLK_CAL_COUNT\n");
 		return 0;
 	}
 
@@ -1703,7 +1703,7 @@ static int haptics_update_fifo_samples(struct haptics_chip *chip,
 	int rc, count, i;
 
 	if (samples == NULL) {
-		dev_err(chip->dev, "no FIFO samples available\n");
+		//dev_err(chip->dev, "no FIFO samples available\n");
 		return -EINVAL;
 	}
 
@@ -1746,8 +1746,8 @@ static int haptics_set_fifo_playrate(struct haptics_chip *chip,
 		HAP_PTN_V1_FIFO_PLAY_RATE_REG : HAP_PTN_V2_FIFO_PLAY_RATE_REG;
 	rc = haptics_masked_write(chip, chip->ptn_addr_base,
 			reg, FIFO_PLAY_RATE_MASK, period_per_s);
-	if (rc < 0)
-		dev_err(chip->dev, "Set FIFO play rate failed, rc=%d\n", rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "Set FIFO play rate failed, rc=%d\n", rc);
 
 	return rc;
 }
@@ -1764,9 +1764,9 @@ static int haptics_set_fifo_empty_threshold(struct haptics_chip *chip,
 		HAP_PTN_V1_FIFO_THRESH_LSB : HAP_PTN_V2_FIFO_THRESH_LSB;
 	rc = haptics_masked_write(chip, chip->ptn_addr_base,
 			reg, EMPTY_THRESH_MASK, thresh / thresh_per_bit);
-	if (rc < 0)
-		dev_err(chip->dev, "Set FIFO empty threshold failed, rc=%d\n",
-				rc);
+//	if (rc < 0)
+//		dev_err(chip->dev, "Set FIFO empty threshold failed, rc=%d\n",
+//				rc);
 
 	return rc;
 }
@@ -1817,14 +1817,14 @@ static int haptics_set_fifo(struct haptics_chip *chip, struct fifo_cfg *fifo)
 	int rc, available;
 
 	if (atomic_read(&status->is_busy) == 1) {
-		dev_err(chip->dev, "FIFO is busy\n");
+		//dev_err(chip->dev, "FIFO is busy\n");
 		return -EBUSY;
 	}
 
 	if (chip->ptn_revision == HAP_PTN_V1 &&
 			fifo->period_per_s > F_8KHZ &&
 			fifo->num_s > MAX_FIFO_SAMPLES(chip)) {
-		dev_err(chip->dev, "PM8350B v1 doesn't support playing long FIFO pattern higher than 8 KHz play rate\n");
+//		dev_err(chip->dev, "PM8350B v1 doesn't support playing long FIFO pattern higher than 8 KHz play rate\n");
 		return -EINVAL;
 	}
 
@@ -1857,7 +1857,7 @@ static int haptics_set_fifo(struct haptics_chip *chip, struct fifo_cfg *fifo)
 	num = min_t(u32, available, num);
 	rc = haptics_update_fifo_samples(chip, fifo->samples, num);
 	if (rc < 0) {
-		dev_err(chip->dev, "write FIFO samples failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "write FIFO samples failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -1893,7 +1893,7 @@ static int haptics_load_constant_effect(struct haptics_chip *chip, u8 amplitude)
 
 	mutex_lock(&chip->play.lock);
 	if (chip->play.in_calibration) {
-		dev_err(chip->dev, "calibration in progress, ignore playing constant effect\n");
+		//dev_err(chip->dev, "calibration in progress, ignore playing constant effect\n");
 		rc = -EBUSY;
 		goto unlock;
 	}
@@ -1968,8 +1968,8 @@ static int haptics_load_predefined_effect(struct haptics_chip *chip,
 	if (play->pattern_src != PATTERN1 &&
 			play->pattern_src != PATTERN2 &&
 			play->pattern_src != FIFO) {
-		dev_err(chip->dev, "pattern src %d can't be used for predefined effect\n",
-				play->pattern_src);
+		//dev_err(chip->dev, "pattern src %d can't be used for predefined effect\n",
+//				play->pattern_src);
 		return -EINVAL;
 	}
 
@@ -1983,8 +1983,8 @@ static int haptics_load_predefined_effect(struct haptics_chip *chip,
 
 	if (play->pattern_src == PATTERN1 || play->pattern_src == PATTERN2) {
 		if (play->effect->pattern->preload) {
-			dev_info(chip->dev, "Ignore preloaded effect: %d\n",
-					play->effect->id);
+//			dev_dbg(chip->dev, "Ignore preloaded effect: %d\n",
+//					play->effect->id);
 			return 0;
 		}
 
@@ -2096,12 +2096,12 @@ static int haptics_load_custom_effect(struct haptics_chip *chip,
 	if (copy_from_user(&custom_data, data, sizeof(custom_data)))
 		return -EFAULT;
 
-	dev_info(chip->dev, "custom data length %d with play-rate %d Hz\n",
-			custom_data.length, custom_data.play_rate_hz);
+//	dev_dbg(chip->dev, "custom data length %d with play-rate %d Hz\n",
+//			custom_data.length, custom_data.play_rate_hz);
 	rc = haptics_convert_sample_period(chip, custom_data.play_rate_hz);
 	if (rc < 0) {
-		dev_err(chip->dev, "Can't support play rate: %d Hz\n",
-				custom_data.play_rate_hz);
+		//dev_err(chip->dev, "Can't support play rate: %d Hz\n",
+//				custom_data.play_rate_hz);
 		return rc;
 	}
 
@@ -2125,13 +2125,13 @@ static int haptics_load_custom_effect(struct haptics_chip *chip,
 		goto cleanup;
 	}
 
-	dev_info(chip->dev, "Copy custom FIFO samples successfully\n");
+//	dev_dbg(chip->dev, "Copy custom FIFO samples successfully\n");
 	fifo->num_s = custom_data.length;
 	fifo->play_length_us = get_fifo_play_length_us(fifo,
 			chip->custom_effect->t_lra_us);
 
 	if (chip->play.in_calibration) {
-		dev_err(chip->dev, "calibration in progress, ignore playing custom effect\n");
+		//dev_err(chip->dev, "calibration in progress, ignore playing custom effect\n");
 		rc = -EBUSY;
 		goto cleanup;
 	}
@@ -2207,17 +2207,17 @@ static int haptics_load_periodic_effect(struct haptics_chip *chip,
 			break;
 
 	if (i == chip->effects_count) {
-		dev_err(chip->dev, "effect%d is not supported!\n",
-				custom_data[CUSTOM_DATA_EFFECT_IDX]);
+		//dev_err(chip->dev, "effect%d is not supported!\n",
+//				custom_data[CUSTOM_DATA_EFFECT_IDX]);
 		return -EINVAL;
 	}
 
 	mutex_lock(&chip->play.lock);
-	dev_info(chip->dev, "upload effect %d, vmax_mv=%d\n",
-			chip->effects[i].id, play->vmax_mv);
+//	dev_dbg(chip->dev, "upload effect %d, vmax_mv=%d\n",
+//			chip->effects[i].id, play->vmax_mv);
 
 	if (chip->play.in_calibration) {
-		dev_err(chip->dev, "calibration in progress, ignore playing predefined effect\n");
+		//dev_err(chip->dev, "calibration in progress, ignore playing predefined effect\n");
 		rc = -EBUSY;
 		goto unlock;
 	}
@@ -2225,8 +2225,8 @@ static int haptics_load_periodic_effect(struct haptics_chip *chip,
 	play->vmax_mv = (magnitude * chip->effects[i].vmax_mv) / 0x7fff;
 	rc = haptics_load_predefined_effect(chip, &chip->effects[i]);
 	if (rc < 0) {
-		dev_err(chip->dev, "Play predefined effect%d failed, rc=%d\n",
-				chip->effects[i].id, rc);
+		//dev_err(chip->dev, "Play predefined effect%d failed, rc=%d\n",
+//				chip->effects[i].id, rc);
 		goto unlock;
 	}
 	mutex_unlock(&chip->play.lock);
@@ -2262,7 +2262,7 @@ static u8 get_direct_play_max_amplitude(struct haptics_chip *chip)
 			amplitude = DIRECT_PLAY_MAX_AMPLITUDE;
 	}
 
-	dev_info(chip->dev, "max amplitude for direct play: %#x\n", amplitude);
+//	dev_dbg(chip->dev, "max amplitude for direct play: %#x\n", amplitude);
 	return (u8)amplitude;
 }
 
@@ -2282,19 +2282,19 @@ static int haptics_upload_effect(struct input_dev *dev,
 		tmp = get_direct_play_max_amplitude(chip);
 		tmp *= level;
 		amplitude = tmp / 0x7fff;
-		dev_info(chip->dev, "upload constant effect, length = %dus, amplitude = %#x\n",
-				length_us, amplitude);
+//		dev_dbg(chip->dev, "upload constant effect, length = %dus, amplitude = %#x\n",
+//				length_us, amplitude);
 		haptics_load_constant_effect(chip, amplitude);
 		if (rc < 0) {
-			dev_err(chip->dev, "set direct play failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "set direct play failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 
 		break;
 	case FF_PERIODIC:
 		if (effect->u.periodic.waveform != FF_CUSTOM) {
-			dev_err(chip->dev, "Only support custom waveforms\n");
+			//dev_err(chip->dev, "Only support custom waveforms\n");
 			return -EINVAL;
 		}
 
@@ -2305,8 +2305,8 @@ static int haptics_upload_effect(struct input_dev *dev,
 					effect->u.periodic.custom_len,
 					effect->u.periodic.magnitude);
 			if (rc < 0) {
-				dev_err(chip->dev, "Upload custom FIFO data failed\n",
-						rc);
+				//dev_err(chip->dev, "Upload custom FIFO data failed\n",
+//						rc);
 				return rc;
 			}
 		} else if (effect->u.periodic.custom_len ==
@@ -2316,22 +2316,22 @@ static int haptics_upload_effect(struct input_dev *dev,
 					effect->u.periodic.custom_len,
 					effect->u.periodic.magnitude);
 			if (rc < 0) {
-				dev_err(chip->dev, "Upload periodic effect failed\n",
-						rc);
+				//dev_err(chip->dev, "Upload periodic effect failed\n",
+//						rc);
 				return rc;
 			}
 		}
 
 		break;
 	default:
-		dev_err(chip->dev, "%d effect is not supported\n",
-				effect->type);
+		//dev_err(chip->dev, "%d effect is not supported\n",
+//				effect->type);
 		return -EINVAL;
 	}
 
 	rc = haptics_enable_hpwr_vreg(chip, true);
 	if (rc < 0) {
-		dev_err(chip->dev, "enable hpwr_vreg failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "enable hpwr_vreg failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -2344,7 +2344,7 @@ static int haptics_stop_fifo_play(struct haptics_chip *chip)
 	u8 val;
 
 	if (atomic_read(&chip->play.fifo_status.is_busy) == 0) {
-		dev_info(chip->dev, "FIFO playing is not in progress\n");
+//		dev_dbg(chip->dev, "FIFO playing is not in progress\n");
 		return 0;
 	}
 
@@ -2374,7 +2374,7 @@ static int haptics_stop_fifo_play(struct haptics_chip *chip)
 	if (rc < 0)
 		return rc;
 
-	dev_info(chip->dev, "stopped FIFO playing successfully\n");
+//	dev_dbg(chip->dev, "stopped FIFO playing successfully\n");
 	return 0;
 }
 
@@ -2384,7 +2384,7 @@ static int haptics_playback(struct input_dev *dev, int effect_id, int val)
 	struct haptics_play_info *play = &chip->play;
 	int rc;
 
-	dev_info(chip->dev, "playback val = %d\n", val);
+//	dev_dbg(chip->dev, "playback val = %d\n", val);
 	if (!!val) {
 		rc = haptics_enable_play(chip, true);
 		if (rc < 0)
@@ -2392,7 +2392,7 @@ static int haptics_playback(struct input_dev *dev, int effect_id, int val)
 	} else {
 		if (play->pattern_src == FIFO &&
 				atomic_read(&play->fifo_status.is_busy)) {
-			dev_info(chip->dev, "FIFO playing is not done yet, defer stopping in erase\n");
+//			dev_dbg(chip->dev, "FIFO playing is not done yet, defer stopping in erase\n");
 			return 0;
 		}
 
@@ -2412,14 +2412,14 @@ static int haptics_erase(struct input_dev *dev, int effect_id)
 	if ((play->pattern_src == FIFO) &&
 			atomic_read(&play->fifo_status.is_busy)) {
 		if (atomic_read(&play->fifo_status.written_done) == 0) {
-			dev_info(chip->dev, "cancelling FIFO playing\n");
+//			dev_dbg(chip->dev, "cancelling FIFO playing\n");
 			atomic_set(&play->fifo_status.cancelled, 1);
 		}
 
 		rc = haptics_stop_fifo_play(chip);
 		if (rc < 0) {
-			dev_err(chip->dev, "stop FIFO playing failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "stop FIFO playing failed, rc=%d\n",
+//					rc);
 			mutex_unlock(&play->lock);
 			return rc;
 		}
@@ -2429,8 +2429,8 @@ static int haptics_erase(struct input_dev *dev, int effect_id)
 	mutex_unlock(&play->lock);
 
 	rc = haptics_enable_hpwr_vreg(chip, false);
-	if (rc < 0)
-		dev_err(chip->dev, "disable hpwr_vreg failed, rc=%d\n");
+//	if (rc < 0)
+		//dev_err(chip->dev, "disable hpwr_vreg failed, rc=%d\n");
 
 	return rc;
 }
@@ -2448,7 +2448,7 @@ static void haptics_set_gain(struct input_dev *dev, u16 gain)
 	if (gain > 0x7fff)
 		gain = 0x7fff;
 
-	dev_info(chip->dev, "Set gain: %#x\n", gain);
+//	dev_dbg(chip->dev, "Set gain: %#x\n", gain);
 
 	/* scale amplitude when playing in DIRECT_PLAY mode */
 	if (chip->play.pattern_src == DIRECT_PLAY) {
@@ -2456,7 +2456,7 @@ static void haptics_set_gain(struct input_dev *dev, u16 gain)
 		amplitude *= gain;
 		amplitude /= 0x7fff;
 
-		dev_info(chip->dev, "Set amplitude: %#x\n", amplitude);
+//		dev_dbg(chip->dev, "Set amplitude: %#x\n", amplitude);
 		haptics_set_direct_play(chip, (u8)amplitude);
 		return;
 	}
@@ -2493,8 +2493,8 @@ static int haptics_store_cl_brake_settings(struct haptics_chip *chip)
 		return rc;
 
 	rc = nvmem_cell_write(chip->cl_brake_nvmem, &val, sizeof(val));
-	if (rc < 0)
-		dev_err(chip->dev, "store RNAT/RCAL to SDAM failed, rc=%d\n");
+//	if (rc < 0)
+		//dev_err(chip->dev, "store RNAT/RCAL to SDAM failed, rc=%d\n");
 
 	return rc;
 }
@@ -2606,8 +2606,8 @@ static int haptics_hw_init(struct haptics_chip *chip)
 				break;
 
 		if (i == chip->effects_count) {
-			dev_err(chip->dev, "preload effect %d is not found\n",
-					config->preload_effect);
+			//dev_err(chip->dev, "preload effect %d is not found\n",
+//					config->preload_effect);
 			return -EINVAL;
 		}
 
@@ -2615,8 +2615,8 @@ static int haptics_hw_init(struct haptics_chip *chip)
 
 		rc = haptics_set_pattern(chip, effect->pattern, effect->src);
 		if (rc < 0) {
-			dev_err(chip->dev, "Preload effect failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Preload effect failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 	}
@@ -2652,8 +2652,8 @@ static irqreturn_t fifo_empty_irq_handler(int irq, void *data)
 		 */
 		num = haptics_get_available_fifo_memory(chip);
 		if (num != MAX_FIFO_SAMPLES(chip)) {
-			dev_info(chip->dev, "%d FIFO samples still in playing\n",
-					MAX_FIFO_SAMPLES(chip) - num);
+//			dev_info(chip->dev, "%d FIFO samples still in playing\n",
+//					MAX_FIFO_SAMPLES(chip) - num);
 			goto unlock;
 		}
 
@@ -2661,10 +2661,10 @@ static irqreturn_t fifo_empty_irq_handler(int irq, void *data)
 		if (rc < 0)
 			goto unlock;
 
-		dev_info(chip->dev, "FIFO playing is done\n");
+//		dev_dbg(chip->dev, "FIFO playing is done\n");
 	} else {
 		if (atomic_read(&status->cancelled) == 1) {
-			dev_info(chip->dev, "FIFO programming got cancelled\n");
+//			dev_dbg(chip->dev, "FIFO programming got cancelled\n");
 			goto unlock;
 		}
 
@@ -2673,7 +2673,7 @@ static irqreturn_t fifo_empty_irq_handler(int irq, void *data)
 
 		fifo = chip->play.effect->fifo;
 		if (!fifo || !fifo->samples) {
-			dev_err(chip->dev, "no FIFO samples available\n");
+			//dev_err(chip->dev, "no FIFO samples available\n");
 			goto unlock;
 		}
 
@@ -2701,14 +2701,14 @@ static irqreturn_t fifo_empty_irq_handler(int irq, void *data)
 		/* Write more pattern data into FIFO memory. */
 		rc = haptics_update_fifo_samples(chip, samples, num);
 		if (rc < 0) {
-			dev_err(chip->dev, "Update FIFO samples failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Update FIFO samples failed, rc=%d\n",
+//					rc);
 			goto unlock;
 		}
 
 		status->samples_written += num;
 		if (status->samples_written == fifo->num_s) {
-			dev_info(chip->dev, "FIFO programming is done\n");
+//			dev_dbg(chip->dev, "FIFO programming is done\n");
 			atomic_set(&chip->play.fifo_status.written_done, 1);
 			haptics_set_fifo_empty_threshold(chip, 0);
 		}
@@ -3346,8 +3346,8 @@ static int haptics_create_debugfs(struct haptics_chip *chip)
 	hap_dir = debugfs_create_dir("haptics", NULL);
 	if (IS_ERR(hap_dir)) {
 		rc = PTR_ERR(hap_dir);
-		dev_err(chip->dev, "create haptics debugfs directory failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "create haptics debugfs directory failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -3357,15 +3357,15 @@ static int haptics_create_debugfs(struct haptics_chip *chip)
 		effect_dir = debugfs_create_dir(str, hap_dir);
 		if (IS_ERR(effect_dir)) {
 			rc = PTR_ERR(effect_dir);
-			dev_err(chip->dev, "create %s debugfs directory failed, rc=%d\n",
-					str, rc);
+			//dev_err(chip->dev, "create %s debugfs directory failed, rc=%d\n",
+//					str, rc);
 			goto exit;
 		}
 
 		rc = haptics_add_effects_debugfs(&chip->effects[i], effect_dir);
 		if (rc < 0) {
-			dev_err(chip->dev, "create debugfs nodes for %s failed, rc=%d\n",
-					str, rc);
+			//dev_err(chip->dev, "create debugfs nodes for %s failed, rc=%d\n",
+//					str, rc);
 			goto exit;
 		}
 	}
@@ -3374,8 +3374,8 @@ static int haptics_create_debugfs(struct haptics_chip *chip)
 			chip, &preload_effect_idx_dbgfs_ops);
 	if (IS_ERR(file)) {
 		rc = PTR_ERR(file);
-		dev_err(chip->dev, "create preload_effect_idx debugfs failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "create preload_effect_idx debugfs failed, rc=%d\n",
+//				rc);
 		goto exit;
 	}
 
@@ -3383,8 +3383,8 @@ static int haptics_create_debugfs(struct haptics_chip *chip)
 			&chip->config.fifo_empty_thresh);
 	if (IS_ERR(file)) {
 		rc = PTR_ERR(file);
-		dev_err(chip->dev, "create fifo_empty_thresh debugfs failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "create fifo_empty_thresh debugfs failed, rc=%d\n",
+//				rc);
 		goto exit;
 	}
 
@@ -3409,22 +3409,22 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 
 	rc = of_property_read_u32(node, "qcom,effect-id", &effect->id);
 	if (rc < 0) {
-		dev_err(chip->dev, "Read qcom,effect-id failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "Read qcom,effect-id failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
 	effect->vmax_mv = config->vmax_mv;
 	rc = of_property_read_u32(node, "qcom,wf-vmax-mv", &tmp);
-	if (rc < 0)
-		dev_info(chip->dev, "Read qcom,wf-vmax-mv failed, rc=%d\n",
-				rc);
-	else
+	if (rc < 0) {
+//		dev_dbg(chip->dev, "Read qcom,wf-vmax-mv failed, rc=%d\n",
+//				rc);
+	} else
 		effect->vmax_mv = tmp;
 
 	if (effect->vmax_mv > MAX_VMAX_MV) {
-		dev_err(chip->dev, "qcom,wf-vmax-mv (%d) exceed the max value: %d\n",
-				effect->vmax_mv, MAX_VMAX_MV);
+		//dev_err(chip->dev, "qcom,wf-vmax-mv (%d) exceed the max value: %d\n",
+//				effect->vmax_mv, MAX_VMAX_MV);
 		return -EINVAL;
 	}
 
@@ -3432,7 +3432,7 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 	tmp = of_property_count_elems_of_size(node,
 			"qcom,wf-pattern-data", sizeof(u32));
 	if (tmp > SAMPLES_PER_PATTERN * 3) {
-		dev_err(chip->dev, "Pattern src can only play 8 samples at max\n");
+		//dev_err(chip->dev, "Pattern src can only play 8 samples at max\n");
 		return -EINVAL;
 	}
 
@@ -3445,15 +3445,15 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		rc = of_property_read_u32_array(node,
 				"qcom,wf-pattern-data", data, tmp);
 		if (rc < 0) {
-			dev_err(chip->dev, "Read wf-pattern-data failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Read wf-pattern-data failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 
 		for (i = 0; i < tmp / 3; i++) {
 			if (data[3 * i] > 0x1ff || data[3 * i + 1] > T_LRA_X_8
 					|| data[3 * i + 2] > 1) {
-				dev_err(chip->dev, "allowed tuples: [amplitude(<= 0x1ff) period(<=6(T_LRA_X_8)) f_lra_x2(0,1)]\n");
+				//dev_err(chip->dev, "allowed tuples: [amplitude(<= 0x1ff) period(<=6(T_LRA_X_8)) f_lra_x2(0,1)]\n");
 				return -EINVAL;
 			}
 
@@ -3475,8 +3475,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		effect->src = PATTERN1;
 		if (effect->pattern->preload) {
 			if (config->preload_effect != -EINVAL) {
-				dev_err(chip->dev, "effect %d has been defined as preloaded\n",
-						config->preload_effect);
+				//dev_err(chip->dev, "effect %d has been defined as preloaded\n",
+//						config->preload_effect);
 				effect->pattern->preload = false;
 			} else {
 				config->preload_effect = effect->id;
@@ -3500,8 +3500,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		rc = of_property_read_u8_array(node, "qcom,wf-fifo-data",
 				effect->fifo->samples, tmp);
 		if (rc < 0) {
-			dev_err(chip->dev, "Read wf-fifo-data failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Read wf-fifo-data failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 
@@ -3509,8 +3509,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 	}
 
 	if (!effect->pattern && !effect->fifo) {
-		dev_err(chip->dev, "no pattern specified for effect %d\n",
-				effect->id);
+		//dev_err(chip->dev, "no pattern specified for effect %d\n",
+//				effect->id);
 		return -EINVAL;
 	}
 
@@ -3523,35 +3523,35 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 
 		rc = of_property_read_u32(node, "qcom,wf-pattern-period-us",
 					&tmp);
-		if (rc < 0)
-			dev_info(chip->dev, "Read qcom,wf-pattern-period-us failed, rc=%d\n",
-					rc);
-		else
+		if (rc < 0) {
+//			dev_dbg(chip->dev, "Read qcom,wf-pattern-period-us failed, rc=%d\n",
+//					rc);
+		} else
 			effect->pattern->play_rate_us = tmp;
 
 		if (effect->pattern->play_rate_us > TLRA_MAX_US) {
-			dev_err(chip->dev, "qcom,wf-pattern-period-us (%d) exceed the max value: %d\n",
-					effect->pattern->play_rate_us,
-					TLRA_MAX_US);
+			//dev_err(chip->dev, "qcom,wf-pattern-period-us (%d) exceed the max value: %d\n",
+//					effect->pattern->play_rate_us,
+//					TLRA_MAX_US);
 			return -EINVAL;
 		}
 
 		effect->pattern->play_length_us =
 			get_pattern_play_length_us(effect->pattern);
 		if (effect->pattern->play_length_us == -EINVAL) {
-			dev_err(chip->dev, "get pattern play length failed\n");
+			//dev_err(chip->dev, "get pattern play length failed\n");
 			return -EINVAL;
 		}
 
-		if (effect->fifo)
-			dev_info(chip->dev, "Ignore FIFO data if pattern is specified!\n");
+//		if (effect->fifo)
+//			dev_dbg(chip->dev, "Ignore FIFO data if pattern is specified!\n");
 
 	} else if (effect->fifo) {
 		effect->fifo->period_per_s = T_LRA;
 		rc = of_property_read_u32(node, "qcom,wf-fifo-period", &tmp);
 		if (tmp > F_48KHZ) {
-			dev_err(chip->dev, "FIFO playing period %d is not supported\n",
-					tmp);
+			//dev_err(chip->dev, "FIFO playing period %d is not supported\n",
+//					tmp);
 			return -EINVAL;
 		} else if (!rc) {
 			effect->fifo->period_per_s = tmp;
@@ -3560,7 +3560,7 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		effect->fifo->play_length_us =
 			get_fifo_play_length_us(effect->fifo, config->t_lra_us);
 		if (effect->fifo->play_length_us == -EINVAL) {
-			dev_err(chip->dev, "get fifo play length failed\n");
+			//dev_err(chip->dev, "get fifo play length failed\n");
 			return -EINVAL;
 		}
 
@@ -3576,8 +3576,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 
 	of_property_read_u32(node, "qcom,wf-brake-mode", &effect->brake->mode);
 	if (effect->brake->mode > AUTO_BRAKE) {
-		dev_err(chip->dev, "can't support brake mode: %d\n",
-				effect->brake->mode);
+		//dev_err(chip->dev, "can't support brake mode: %d\n",
+//				effect->brake->mode);
 		return -EINVAL;
 	}
 
@@ -3585,8 +3585,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		of_property_read_u32(node, "qcom,wf-brake-sine-gain",
 				&effect->brake->sine_gain);
 		if (effect->brake->sine_gain > BRAKE_SINE_GAIN_X8) {
-			dev_err(chip->dev, "can't support brake sine gain: %d\n",
-					effect->brake->sine_gain);
+			//dev_err(chip->dev, "can't support brake sine gain: %d\n",
+//					effect->brake->sine_gain);
 			return -EINVAL;
 		}
 	}
@@ -3595,8 +3595,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		of_property_read_bool(node, "qcom,wf-brake-disable");
 	tmp = of_property_count_u8_elems(node, "qcom,wf-brake-pattern");
 	if (tmp > BRAKE_SAMPLE_COUNT) {
-		dev_err(chip->dev, "more than %d brake samples\n",
-				BRAKE_SAMPLE_COUNT);
+		//dev_err(chip->dev, "more than %d brake samples\n",
+//				BRAKE_SAMPLE_COUNT);
 		return -EINVAL;
 	}
 
@@ -3606,8 +3606,8 @@ static int haptics_parse_per_effect_dt(struct haptics_chip *chip,
 		rc = of_property_read_u8_array(node, "qcom,wf-brake-pattern",
 				effect->brake->samples, tmp);
 		if (rc < 0) {
-			dev_err(chip->dev, "Read wf-brake-pattern failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Read wf-brake-pattern failed, rc=%d\n",
+//					rc);
 			return rc;
 		}
 		verify_brake_samples(effect->brake);
@@ -3655,8 +3655,8 @@ static int haptics_parse_effects_dt(struct haptics_chip *chip)
 		rc = haptics_parse_per_effect_dt(chip, child,
 					&chip->effects[i]);
 		if (rc < 0) {
-			dev_err(chip->dev, "parse effect %d failed, rc=%d\n",
-					i);
+			//dev_err(chip->dev, "parse effect %d failed, rc=%d\n",
+//					i);
 			of_node_put(child);
 			return rc;
 		}
@@ -3664,7 +3664,7 @@ static int haptics_parse_effects_dt(struct haptics_chip *chip)
 	}
 
 	chip->effects_count = i;
-	__dump_effects(chip);
+//	__dump_effects(chip);
 
 	return 0;
 }
@@ -3678,21 +3678,21 @@ static int haptics_parse_lra_dt(struct haptics_chip *chip)
 	rc = of_property_read_u32(node, "qcom,lra-period-us",
 					&config->t_lra_us);
 	if (rc < 0) {
-		dev_err(chip->dev, "Read T-LRA failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Read T-LRA failed, rc=%d\n", rc);
 		return rc;
 	}
 
 	if (config->t_lra_us > TLRA_MAX_US) {
-		dev_err(chip->dev, "qcom,lra-period-us (%d) exceed the max value: %d\n",
-				config->t_lra_us, TLRA_MAX_US);
+		//dev_err(chip->dev, "qcom,lra-period-us (%d) exceed the max value: %d\n",
+//				config->t_lra_us, TLRA_MAX_US);
 		return -EINVAL;
 	}
 
 	config->drv_wf = WF_SINE;
 	of_property_read_u32(node, "qcom,drv-sig-shape", &config->drv_wf);
 	if (config->drv_wf >= WF_RESERVED) {
-		dev_err(chip->dev, "Can't support drive shape: %d\n",
-				config->drv_wf);
+		//dev_err(chip->dev, "Can't support drive shape: %d\n",
+//				config->drv_wf);
 		return -EINVAL;
 	}
 
@@ -3700,8 +3700,8 @@ static int haptics_parse_lra_dt(struct haptics_chip *chip)
 	of_property_read_u32(node, "qcom,brake-sig-shape",
 			&config->brake.brake_wf);
 	if (config->brake.brake_wf >= WF_RESERVED) {
-		dev_err(chip->dev, "Can't support brake shape: %d\n",
-				config->brake.brake_wf);
+		//dev_err(chip->dev, "Can't support brake shape: %d\n",
+//				config->brake.brake_wf);
 		return -EINVAL;
 	}
 
@@ -3710,8 +3710,8 @@ static int haptics_parse_lra_dt(struct haptics_chip *chip)
 		of_property_read_u32(node, "qcom,brake-sine-gain",
 				&config->brake.sine_gain);
 		if (config->brake.sine_gain > BRAKE_SINE_GAIN_X8) {
-			dev_err(chip->dev, "Can't support brake sine gain: %d\n",
-					config->brake.sine_gain);
+			//dev_err(chip->dev, "Can't support brake sine gain: %d\n",
+//					config->brake.sine_gain);
 			return -EINVAL;
 		}
 	}
@@ -3742,8 +3742,8 @@ static int haptics_get_revision(struct haptics_chip *chip)
 		return rc;
 
 	chip->hbst_revision = (val[1] << 8) | val[0];
-	dev_info(chip->dev, "haptics revision: HAP_CFG %#x, HAP_PTN %#x, HAP_HBST %#x\n",
-		chip->cfg_revision, chip->ptn_revision, chip->hbst_revision);
+//	dev_dbg(chip->dev, "haptics revision: HAP_CFG %#x, HAP_PTN %#x, HAP_HBST %#x\n",
+//		chip->cfg_revision, chip->ptn_revision, chip->hbst_revision);
 	return 0;
 }
 
@@ -3759,16 +3759,16 @@ static int haptics_parse_hpwr_vreg_dt(struct haptics_chip *chip)
 	if (IS_ERR(chip->hpwr_vreg)) {
 		rc = PTR_ERR(chip->hpwr_vreg);
 		if (rc != -EPROBE_DEFER)
-			dev_err(chip->dev, "Failed to get qcom,hpwr-supply, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Failed to get qcom,hpwr-supply, rc=%d\n",
+//					rc);
 		return rc;
 	}
 
 	rc = of_property_read_u32(node, "qcom,hpwr-voltage-mv",
 			&chip->hpwr_voltage_mv);
 	if (rc < 0) {
-		dev_err(chip->dev, "Failed to read qcom,hpwr-voltage-mv, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "Failed to read qcom,hpwr-voltage-mv, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -3796,9 +3796,9 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 						"hap_cl_brake");
 		if (IS_ERR(chip->cl_brake_nvmem)) {
 			rc = PTR_ERR(chip->cl_brake_nvmem);
-			if (rc != -EPROBE_DEFER)
-				dev_err(chip->dev, "Failed to get nvmem-cells, rc=%d\n",
-							rc);
+//			if (rc != -EPROBE_DEFER)
+				//dev_err(chip->dev, "Failed to get nvmem-cells, rc=%d\n",
+//							rc);
 
 			return rc;
 		}
@@ -3809,9 +3809,9 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 			devm_nvmem_device_get(chip->dev, "hap_cfg_sdam");
 		if (IS_ERR(chip->hap_cfg_nvmem)) {
 			rc = PTR_ERR(chip->hap_cfg_nvmem);
-			if (rc != -EPROBE_DEFER)
-				dev_err(chip->dev, "Failed to get hap_cfg nvmem device, rc=%d\n",
-						rc);
+//			if (rc != -EPROBE_DEFER)
+				//dev_err(chip->dev, "Failed to get hap_cfg nvmem device, rc=%d\n",
+//						rc);
 			return rc;
 		}
 	}
@@ -3819,14 +3819,14 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	if (of_find_property(node, "qcom,pbs-client", NULL)) {
 		chip->pbs_node = of_parse_phandle(node, "qcom,pbs-client", 0);
 		if (!chip->pbs_node) {
-			dev_err(chip->dev, "Failed to get PBS client\n");
+			//dev_err(chip->dev, "Failed to get PBS client\n");
 			return -ENODEV;
 		}
 	}
 
 	addr = of_get_address(node, 0, NULL, NULL);
 	if (!addr) {
-		dev_err(chip->dev, "Read HAPTICS_CFG address failed\n");
+		//dev_err(chip->dev, "Read HAPTICS_CFG address failed\n");
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3834,7 +3834,7 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	chip->cfg_addr_base = be32_to_cpu(*addr);
 	addr = of_get_address(node, 1, NULL, NULL);
 	if (!addr) {
-		dev_err(chip->dev, "Read HAPTICS_PATTERN address failed\n");
+		//dev_err(chip->dev, "Read HAPTICS_PATTERN address failed\n");
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3842,7 +3842,7 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	chip->ptn_addr_base = be32_to_cpu(*addr);
 	addr = of_get_address(node, 2, NULL, NULL);
 	if (!addr) {
-		dev_err(chip->dev, "Read HAPTICS_HBOOST address failed\n");
+//		dev_err(chip->dev, "Read HAPTICS_HBOOST address failed\n");
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3850,13 +3850,13 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	chip->hbst_addr_base = be32_to_cpu(*addr);
 	rc = haptics_get_revision(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Get revision failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Get revision failed, rc=%d\n", rc);
 		goto free_pbs;
 	}
 
 	chip->fifo_empty_irq = platform_get_irq_byname(pdev, "fifo-empty");
 	if (!chip->fifo_empty_irq) {
-		dev_err(chip->dev, "Get fifo-empty IRQ failed\n");
+		//dev_err(chip->dev, "Get fifo-empty IRQ failed\n");
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3864,8 +3864,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	config->vmax_mv = DEFAULT_VMAX_MV;
 	of_property_read_u32(node, "qcom,vmax-mv", &config->vmax_mv);
 	if (config->vmax_mv >= MAX_VMAX_MV) {
-		dev_err(chip->dev, "qcom,vmax-mv (%d) exceed the max value: %d\n",
-				config->vmax_mv, MAX_VMAX_MV);
+		//dev_err(chip->dev, "qcom,vmax-mv (%d) exceed the max value: %d\n",
+//				config->vmax_mv, MAX_VMAX_MV);
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3878,8 +3878,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	of_property_read_u32(node, "qcom,fifo-empty-threshold",
 			&config->fifo_empty_thresh);
 	if (config->fifo_empty_thresh >= MAX_FIFO_SAMPLES(chip)) {
-		dev_err(chip->dev, "FIFO empty threshold (%d) should be less than %d\n",
-			config->fifo_empty_thresh, MAX_FIFO_SAMPLES(chip));
+//		dev_err(chip->dev, "FIFO empty threshold (%d) should be less than %d\n",
+//			config->fifo_empty_thresh, MAX_FIFO_SAMPLES(chip));
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3887,8 +3887,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	config->brake.mode = AUTO_BRAKE;
 	of_property_read_u32(node, "qcom,brake-mode", &config->brake.mode);
 	if (config->brake.mode > AUTO_BRAKE) {
-		dev_err(chip->dev, "Can't support brake mode: %d\n",
-				config->brake.mode);
+		//dev_err(chip->dev, "Can't support brake mode: %d\n",
+//				config->brake.mode);
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3897,8 +3897,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 		of_property_read_bool(node, "qcom,brake-disable");
 	tmp = of_property_count_u8_elems(node, "qcom,brake-pattern");
 	if (tmp > BRAKE_SAMPLE_COUNT) {
-		dev_err(chip->dev, "more than %d brake samples\n",
-				BRAKE_SAMPLE_COUNT);
+		//dev_err(chip->dev, "more than %d brake samples\n",
+//				BRAKE_SAMPLE_COUNT);
 		rc = -EINVAL;
 		goto free_pbs;
 	}
@@ -3907,8 +3907,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 		rc = of_property_read_u8_array(node, "qcom,brake-pattern",
 				config->brake.samples, tmp);
 		if (rc < 0) {
-			dev_err(chip->dev, "Read brake-pattern failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Read brake-pattern failed, rc=%d\n",
+//					rc);
 			goto free_pbs;
 		}
 		verify_brake_samples(&config->brake);
@@ -3925,8 +3925,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	} else {
 		rc = haptics_parse_lra_dt(chip);
 		if (rc < 0) {
-			dev_err(chip->dev, "Parse device-tree for LRA failed, rc=%d\n",
-					rc);
+			//dev_err(chip->dev, "Parse device-tree for LRA failed, rc=%d\n",
+//					rc);
 			goto free_pbs;
 		}
 	}
@@ -3934,8 +3934,8 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 	config->preload_effect = -EINVAL;
 	rc = haptics_parse_effects_dt(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Parse device-tree for effects failed, rc=%d\n",
-				 rc);
+		//dev_err(chip->dev, "Parse device-tree for effects failed, rc=%d\n",
+//				 rc);
 		goto free_pbs;
 	}
 
@@ -3958,8 +3958,8 @@ static int swr_slave_reg_enable(struct regulator_dev *rdev)
 	rc = haptics_masked_write(chip, chip->cfg_addr_base,
 			HAP_CFG_SWR_ACCESS_REG, mask, mask);
 	if (rc < 0) {
-		dev_err(chip->dev, "Failed to enable SWR_PAT, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "Failed to enable SWR_PAT, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -3974,7 +3974,7 @@ static int swr_slave_reg_enable(struct regulator_dev *rdev)
 				HAP_CFG_TRIG_PRIORITY_REG,
 				SWR_IGNORE_BIT, SWR_IGNORE_BIT);
 		if (rc < 0) {
-			dev_err(chip->dev, "Failed to enable SWR_IGNORE, rc=%d\n", rc);
+			//dev_err(chip->dev, "Failed to enable SWR_IGNORE, rc=%d\n", rc);
 			return rc;
 		}
 
@@ -3986,7 +3986,7 @@ static int swr_slave_reg_enable(struct regulator_dev *rdev)
 				HAP_CFG_TRIG_PRIORITY_REG,
 				SWR_IGNORE_BIT, 0);
 		if (rc < 0) {
-			dev_err(chip->dev, "Failed to disable SWR_IGNORE, rc=%d\n", rc);
+			//dev_err(chip->dev, "Failed to disable SWR_IGNORE, rc=%d\n", rc);
 			return rc;
 		}
 	}
@@ -4005,7 +4005,7 @@ static int swr_slave_reg_disable(struct regulator_dev *rdev)
 			SWR_PAT_INPUT_EN_BIT | SWR_PAT_RES_N_BIT |
 			SWR_PAT_CFG_EN_BIT, 0);
 	if (rc < 0) {
-		dev_err(chip->dev, "Failed to disable SWR_PAT, rc=%d\n", rc);
+		//dev_err(chip->dev, "Failed to disable SWR_PAT, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -4043,8 +4043,8 @@ static int haptics_init_swr_slave_regulator(struct haptics_chip *chip)
 	rc = haptics_read(chip, chip->cfg_addr_base,
 			HAP_CFG_SWR_ACCESS_REG, &val, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "Failed to read SWR_ACCESS, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "Failed to read SWR_ACCESS, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -4060,9 +4060,9 @@ static int haptics_init_swr_slave_regulator(struct haptics_chip *chip)
 		rc = PTR_ERR(chip->swr_slave_rdev);
 		chip->swr_slave_rdev = NULL;
 
-		if (rc != -EPROBE_DEFER)
-			dev_err(chip->dev, "register swr-slave-reg regulator failed, rc=%d\n",
-					rc);
+//		if (rc != -EPROBE_DEFER)
+			//dev_err(chip->dev, "register swr-slave-reg regulator failed, rc=%d\n",
+//					rc);
 	}
 
 	return rc;
@@ -4073,14 +4073,14 @@ static int haptics_pbs_trigger_isc_config(struct haptics_chip *chip)
 	int rc;
 
 	if (chip->pbs_node == NULL) {
-		dev_err(chip->dev, "PBS device is not defined\n");
+		//dev_err(chip->dev, "PBS device is not defined\n");
 		return -ENODEV;
 	}
 
 	rc = qpnp_pbs_trigger_single_event(chip->pbs_node);
-	if (rc < 0)
-		dev_err(chip->dev, "Trigger PBS to config ISC failed, rc=%d\n",
-				rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "Trigger PBS to config ISC failed, rc=%d\n",
+//				rc);
 
 	return rc;
 }
@@ -4101,7 +4101,7 @@ static u32 get_lra_impedance_capable_max(struct haptics_chip *chip)
 	if (chip->hpwr_vreg)
 		mohms = (chip->hpwr_voltage_mv * 1000) / MIN_ISC_MA;
 
-	dev_info(chip->dev, "LRA impedance capable max: %u mohms\n", mohms);
+//	dev_dbg(chip->dev, "LRA impedance capable max: %u mohms\n", mohms);
 	return mohms;
 }
 
@@ -4119,7 +4119,7 @@ static int haptics_detect_lra_impedance(struct haptics_chip *chip)
 	u32 amplitude, lra_min_mohms, lra_max_mohms, capability_mohms;
 
 	if (chip->cfg_revision == HAP_CFG_V1) {
-		dev_info(chip->dev, "HAP_CFG V1.0 doesn't support impedance detection\n");
+//		dev_dbg(chip->dev, "HAP_CFG V1.0 doesn't support impedance detection\n");
 		return 0;
 	}
 
@@ -4161,8 +4161,8 @@ static int haptics_detect_lra_impedance(struct haptics_chip *chip)
 		if (rc < 0)
 			goto restore;
 
-		dev_info(chip->dev, "sweeping milli_pct %u, amplitude %#x\n",
-				duty_milli_pct, amplitude);
+//		dev_dbg(chip->dev, "sweeping milli_pct %u, amplitude %#x\n",
+//				duty_milli_pct, amplitude);
 		/* Enable play */
 		chip->play.pattern_src = DIRECT_PLAY;
 		rc = haptics_enable_play(chip, true);
@@ -4194,13 +4194,13 @@ static int haptics_detect_lra_impedance(struct haptics_chip *chip)
 	capability_mohms = get_lra_impedance_capable_max(chip);
 	lra_min_mohms = low_milli_pct * capability_mohms / 100000;
 	lra_max_mohms = high_milli_pct * capability_mohms / 100000;
-	if (lra_min_mohms == 0)
-		dev_warn(chip->dev, "Short circuit detected!\n");
-	else if (lra_max_mohms >= capability_mohms)
-		dev_warn(chip->dev, "Open circuit detected!\n");
-	else
-		dev_info(chip->dev, "LRA impedance is between %u - %u mohms\n",
-				lra_min_mohms, lra_max_mohms);
+//	if (lra_min_mohms == 0)
+//		dev_warn(chip->dev, "Short circuit detected!\n");
+//	else if (lra_max_mohms >= capability_mohms)
+//		dev_warn(chip->dev, "Open circuit detected!\n");
+//	else
+//		dev_dbg(chip->dev, "LRA impedance is between %u - %u mohms\n",
+//				lra_min_mohms, lra_max_mohms);
 
 	chip->config.lra_min_mohms = lra_min_mohms;
 	chip->config.lra_max_mohms = lra_max_mohms;
@@ -4238,7 +4238,7 @@ static int haptics_detect_lra_frequency(struct haptics_chip *chip)
 	rc = haptics_read(chip, chip->cfg_addr_base,
 			HAP_CFG_AUTORES_CFG_REG, &autores_cfg, 1);
 	if (rc < 0) {
-		dev_err(chip->dev, "Read AUTORES_CFG failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Read AUTORES_CFG failed, rc=%d\n", rc);
 		return rc;
 	}
 
@@ -4328,7 +4328,7 @@ static int haptics_start_lra_calibrate(struct haptics_chip *chip)
 	 */
 	if ((chip->play.pattern_src == FIFO) &&
 			atomic_read(&chip->play.fifo_status.is_busy)) {
-		dev_err(chip->dev, "In FIFO playing, ignore calibration\n");
+		//dev_err(chip->dev, "In FIFO playing, ignore calibration\n");
 		rc = -EBUSY;
 		goto unlock;
 	}
@@ -4336,14 +4336,14 @@ static int haptics_start_lra_calibrate(struct haptics_chip *chip)
 	/* Stop other mode playing if there is any */
 	rc = haptics_enable_play(chip, false);
 	if (rc < 0) {
-		dev_err(chip->dev, "Stop playing failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Stop playing failed, rc=%d\n", rc);
 		goto unlock;
 	}
 
 	chip->play.in_calibration = true;
 	rc = haptics_detect_lra_frequency(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Detect LRA frequency failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Detect LRA frequency failed, rc=%d\n", rc);
 		goto unlock;
 	}
 
@@ -4351,7 +4351,7 @@ static int haptics_start_lra_calibrate(struct haptics_chip *chip)
 	usleep_range(4000, 5000);
 	rc = haptics_detect_lra_impedance(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Detect LRA impedance failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Detect LRA impedance failed, rc=%d\n", rc);
 		goto unlock;
 	}
 
@@ -4451,33 +4451,33 @@ static int haptics_probe(struct platform_device *pdev)
 	chip->dev = &pdev->dev;
 	chip->regmap = dev_get_regmap(chip->dev->parent, NULL);
 	if (!chip->regmap) {
-		dev_err(chip->dev, "Get regmap failed\n");
+		//dev_err(chip->dev, "Get regmap failed\n");
 		return -ENXIO;
 	}
 
 	rc = haptics_parse_dt(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Parse device-tree failed, rc = %d\n", rc);
+		//dev_err(chip->dev, "Parse device-tree failed, rc = %d\n", rc);
 		return rc;
 	}
 
 	rc = haptics_init_custom_effect(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Init custom effect failed, rc=%d\n", rc);
+		//dev_err(chip->dev, "Init custom effect failed, rc=%d\n", rc);
 		return rc;
 	}
 
 	rc = haptics_hw_init(chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "Initialize HW failed, rc = %d\n", rc);
+		//dev_err(chip->dev, "Initialize HW failed, rc = %d\n", rc);
 		return rc;
 	}
 
 	if (is_swr_supported(chip)) {
 		rc = haptics_init_swr_slave_regulator(chip);
 		if (rc < 0) {
-			dev_err(chip->dev, "Initialize swr slave regulator failed, rc = %d\n",
-					rc);
+			//dev_err(chip->dev, "Initialize swr slave regulator failed, rc = %d\n",
+//					rc);
 			return rc;
 		}
 	}
@@ -4486,8 +4486,8 @@ static int haptics_probe(struct platform_device *pdev)
 			NULL, fifo_empty_irq_handler,
 			IRQF_ONESHOT, "fifo-empty", chip);
 	if (rc < 0) {
-		dev_err(chip->dev, "request fifo-empty IRQ failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "request fifo-empty IRQ failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -4516,8 +4516,8 @@ static int haptics_probe(struct platform_device *pdev)
 
 	rc = input_ff_create(input_dev, count);
 	if (rc < 0) {
-		dev_err(chip->dev, "create input FF device failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "create input FF device failed, rc=%d\n",
+//				rc);
 		return rc;
 	}
 
@@ -4528,8 +4528,8 @@ static int haptics_probe(struct platform_device *pdev)
 	ff_dev->set_gain = haptics_set_gain;
 	rc = input_register_device(input_dev);
 	if (rc < 0) {
-		dev_err(chip->dev, "register input device failed, rc=%d\n",
-				rc);
+		//dev_err(chip->dev, "register input device failed, rc=%d\n",
+//				rc);
 		goto destroy_ff;
 	}
 
@@ -4538,14 +4538,14 @@ static int haptics_probe(struct platform_device *pdev)
 	chip->hap_class.class_groups = hap_class_groups;
 	rc = class_register(&chip->hap_class);
 	if (rc < 0) {
-		dev_err(chip->dev, "register hap_class failed, rc=%d\n");
+		//dev_err(chip->dev, "register hap_class failed, rc=%d\n");
 		goto destroy_ff;
 	}
 
 #ifdef CONFIG_DEBUG_FS
 	rc = haptics_create_debugfs(chip);
-	if (rc < 0)
-		dev_err(chip->dev, "Creating debugfs failed, rc=%d\n", rc);
+//	if (rc < 0)
+		//dev_err(chip->dev, "Creating debugfs failed, rc=%d\n", rc);
 #endif
 	return 0;
 destroy_ff:
@@ -4584,13 +4584,13 @@ static int haptics_suspend(struct device *dev)
 	if ((play->pattern_src == FIFO) &&
 			atomic_read(&play->fifo_status.is_busy)) {
 		if (atomic_read(&play->fifo_status.written_done) == 0) {
-			dev_info(chip->dev, "cancelling FIFO playing\n");
+//			dev_dbg(chip->dev, "cancelling FIFO playing\n");
 			atomic_set(&play->fifo_status.cancelled, 1);
 		}
 
 		rc = haptics_stop_fifo_play(chip);
 		if (rc < 0) {
-			dev_err(chip->dev, "stop FIFO playing failed, rc=%d\n");
+			//dev_err(chip->dev, "stop FIFO playing failed, rc=%d\n");
 			mutex_unlock(&play->lock);
 			return rc;
 		}
