@@ -13,6 +13,7 @@
 		#size-cells = <1>;
 		ranges;
 		dma-ranges;
+		qcom,iommu-best-fit-algo;
 
 		interrupts-extended = <&pdc 19 IRQ_TYPE_EDGE_RISING>,
 				<&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
