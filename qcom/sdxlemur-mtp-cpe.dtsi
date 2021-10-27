@@ -1,9 +1,9 @@
 #include "sdxlemur-mtp.dtsi"
 
 &soc {
-	ntn3_vreg: ntn3_vreg {
+	qps615_vreg: qps615_vreg {
 		compatible = "regulator-fixed";
-		regulator-name = "ntn3_vreg";
+		regulator-name = "qps615_vreg";
 		gpio = <&tlmm 107 GPIO_ACTIVE_HIGH>;
 		regulator-min-microvolt = <1000000>;
 		regulator-max-microvolt = <1000000>;
@@ -15,7 +15,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "qca_vreg";
 		gpio = <&tlmm 106 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&ntn3_vreg>;
+		vin-supply = <&qps615_vreg>;
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		enable-active-high;
@@ -26,7 +26,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "aqr_vreg";
 		gpio = <&tlmm 105 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&qca_vreg>;
+		vin-supply = <&qps615_vreg>;
 		regulator-min-microvolt = <1000000>;
 		regulator-max-microvolt = <1000000>;
 		enable-active-high;
@@ -132,7 +132,7 @@
 &pcie0 {
 	pcie-i2c-phandle = <&i2c_5>;
 
-	vreg-3p3-supply = <&aqr_vreg>;
+	vreg-3p3-supply = <&qps615_vreg>;
 
 	iommu-map = <0x0 &apps_smmu 0x0200 0x1>,
 		<0x100 &apps_smmu 0x0201 0x1>,
