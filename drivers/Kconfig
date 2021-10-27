@@ -223,6 +223,10 @@ source "drivers/sensors/Kconfig"
 
 source "drivers/esoc/Kconfig"
 
+source "drivers/rmnet/perf/Kconfig"
+
+source "drivers/rmnet/shs/Kconfig"
+
 config TARGET_PROJECT_J6
 	bool "Target Projet J6"
 	default y
