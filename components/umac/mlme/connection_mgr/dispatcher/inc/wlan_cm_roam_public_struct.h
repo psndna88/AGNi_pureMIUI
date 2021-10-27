@@ -891,6 +891,32 @@ struct wlan_rso_sae_offload_params {
 };
 #endif
 
+/**
+ * struct roam_event_rt_info - Roam event related information
+ * @vdev_id: Vdev id
+ * @roam_scan_state: roam scan state notif value
+ * @roam_invoke_fail_reason: roam invoke fail reason
+ */
+struct roam_event_rt_info {
+	uint8_t vdev_id;
+	uint32_t roam_scan_state;
+	uint32_t roam_invoke_fail_reason;
+};
+
+/**
+ * enum roam_rt_stats_type: different types of params to get roam event stats
+ * for the vdev
+ * @ROAM_RT_STATS_TYPE_SCAN_STATE: Roam Scan Start/End
+ * @ROAM_RT_STATS_TYPE_INVOKE_FAIL_REASON: One of WMI_ROAM_FAIL_REASON_ID for
+ * roam failure in case of forced roam
+ * @ROAM_RT_STATS_TYPE_ROAM_SCAN_INFO: Roam Trigger/Fail/Scan/AP Stats
+ */
+enum roam_rt_stats_type {
+	ROAM_RT_STATS_TYPE_SCAN_STATE,
+	ROAM_RT_STATS_TYPE_INVOKE_FAIL_REASON,
+	ROAM_RT_STATS_TYPE_ROAM_SCAN_INFO,
+};
+
 #define ROAM_SCAN_DWELL_TIME_ACTIVE_DEFAULT   (100)
 #define ROAM_SCAN_DWELL_TIME_PASSIVE_DEFAULT  (110)
 #define ROAM_SCAN_MIN_REST_TIME_DEFAULT       (50)
