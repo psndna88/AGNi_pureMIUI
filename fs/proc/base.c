@@ -749,8 +749,6 @@ struct delay_struct {
 	u64 freepages_delay;  /* wait for memory reclaim */
 	u64 cpu_runtime;
 	u64 cpu_run_delay;
-	u64 binder_delay;     /* wait for binder transaction */
-	u64 mem_spr;
 };
 
 static ssize_t delay_read(struct file *file, char __user *buf,
@@ -759,7 +757,7 @@ static ssize_t delay_read(struct file *file, char __user *buf,
 	struct task_struct *task = get_proc_task(file_inode(file));
 	struct delay_struct d = {};
 	unsigned long flags;
-	u64 blkio_delay, swapin_delay, freepages_delay, binder_delay, slowpath_running;
+	u64 blkio_delay, swapin_delay, freepages_delay;
 	loff_t dummy_pos = 0;
 	if (!task)
 		return -ESRCH;
@@ -768,20 +766,16 @@ static ssize_t delay_read(struct file *file, char __user *buf,
 	blkio_delay = task->delays->blkio_delay;
 	swapin_delay = task->delays->swapin_delay;
 	freepages_delay = task->delays->freepages_delay;
-	binder_delay = task->delays->binder_delay;
-	slowpath_running = task->delays->mem_sp_running;
 	raw_spin_unlock_irqrestore(&task->delays->lock, flags);
 
-	d.version = 2;
-	d.blkio_delay = blkio_delay;
-	d.swapin_delay = swapin_delay;
-	d.freepages_delay = freepages_delay;
-	d.binder_delay = binder_delay;
-	d.mem_spr = slowpath_running;
+	d.version = 1;
+	d.blkio_delay = blkio_delay >> 20;
+	d.swapin_delay = swapin_delay >> 20;
+	d.freepages_delay = freepages_delay >> 20;
 
 	if (likely(sched_info_on())) {
-		d.cpu_runtime = task->se.sum_exec_runtime;
-		d.cpu_run_delay = task->sched_info.run_delay;
+		d.cpu_runtime = task->se.sum_exec_runtime >> 20;
+		d.cpu_run_delay = task->sched_info.run_delay >> 20;
 	}
 
 	put_task_struct(task);
