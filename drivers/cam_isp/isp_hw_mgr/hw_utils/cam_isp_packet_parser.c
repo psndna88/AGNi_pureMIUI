@@ -124,6 +124,12 @@ static int cam_isp_update_dual_config(
 	cpu_addr += (cmd_desc->offset / 4);
 	dual_config = (struct cam_isp_dual_config *)cpu_addr;
 
+	if (dual_config->num_ports > size_isp_out) {
+		CAM_ERR(CAM_ISP, "num_ports %d more than max_vfe_out_res %d",
+			dual_config->num_ports, size_isp_out);
+		return -EINVAL;
+	}
+
 	if ((dual_config->num_ports *
 		sizeof(struct cam_isp_dual_stripe_config)) >
 		(remain_len - offsetof(struct cam_isp_dual_config, stripes))) {
@@ -131,14 +137,6 @@ static int cam_isp_update_dual_config(
 		return -EINVAL;
 	}
 	for (i = 0; i < dual_config->num_ports; i++) {
-
-		if (i >= CAM_ISP_IFE_OUT_RES_BASE + size_isp_out) {
-			CAM_ERR(CAM_ISP,
-				"failed update for i:%d > size_isp_out:%d",
-				i, size_isp_out);
-			rc = -EINVAL;
-			goto end;
-		}
 
 		hw_mgr_res = &res_list_isp_out[i];
 		if (!hw_mgr_res) {
