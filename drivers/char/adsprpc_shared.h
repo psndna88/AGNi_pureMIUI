@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,7 +32,8 @@
 #define FASTRPC_IOCTL_INVOKE_CRC _IOWR('R', 11, struct fastrpc_ioctl_invoke_crc)
 #define FASTRPC_IOCTL_CONTROL   _IOWR('R', 12, struct fastrpc_ioctl_control)
 #define FASTRPC_IOCTL_MUNMAP_FD _IOWR('R', 13, struct fastrpc_ioctl_munmap_fd)
-
+#define FASTRPC_IOCTL_GET_DSP_INFO \
+			_IOWR('R', 16, struct fastrpc_ioctl_dsp_capabilities)
 #define FASTRPC_GLINK_GUID "fastrpcglink-apps-dsp"
 #define FASTRPC_SMD_GUID "fastrpcsmd-apps-dsp"
 #define DEVICE_NAME      "adsprpc-smd"
@@ -261,6 +262,13 @@ struct fastrpc_ctrl_wakelock {
 	uint32_t enable;	/* wakelock control enable */
 };
 
+
+#define FASTRPC_MAX_DSP_ATTRIBUTES	(7)
+struct fastrpc_ioctl_dsp_capabilities {
+	uint32_t domain;	//! DSP domain to query capabilities
+	uint32_t dsp_attributes[FASTRPC_MAX_DSP_ATTRIBUTES];
+};
+
 struct fastrpc_ioctl_control {
 	uint32_t req;
 	union {
@@ -317,5 +325,20 @@ static inline struct smq_phy_page *smq_phy_page_start(uint32_t sc,
 
 	return (struct smq_phy_page *)(&buf[nTotal]);
 }
+
+enum fastrpc_proc_attr {
+	/* Macro for Debug attr */
+	FASTRPC_MODE_DEBUG				= 1 << 0,
+	/* Macro for Ptrace */
+	FASTRPC_MODE_PTRACE				= 1 << 1,
+	/* Macro for CRC Check */
+	FASTRPC_MODE_CRC				= 1 << 2,
+	/* Macro for Unsigned PD */
+	FASTRPC_MODE_UNSIGNED_MODULE	= 1 << 3,
+	/* Macro for Adaptive QoS */
+	FASTRPC_MODE_ADAPTIVE_QOS		= 1 << 4,
+	/* Macro for System Process */
+	FASTRPC_MODE_SYSTEM_PROCESS		= 1 << 5,
+};
 
 #endif

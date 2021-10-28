@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -109,6 +109,73 @@ static int32_t cam_pmic_ir_led_on(
 
 	return 0;
 }
+
+static int32_t cam_pmic_ir_cut_off(struct cam_ir_led_ctrl *ictrl)
+{
+	int32_t rc = 0;
+
+	rc = gpio_direction_input(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[0].gpio);
+	if (rc)
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+
+	CAM_INFO(CAM_IR_LED, "CAM_IR_CUT_PACKET_OPCODE_OFF_Output_GPIO_1:%d",
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[0].gpio);
+	rc = gpio_direction_output(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[0].gpio,
+		0);
+	if (rc) {
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+		return rc;
+	}
+	CAM_INFO(CAM_IR_LED, "CAM_IR_CUT_PACKET_OPCODE_OFF_Output_GPIO_2:%d",
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[1].gpio);
+	rc = gpio_direction_output(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[1].gpio,
+		1);
+	if (rc) {
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+		return rc;
+	}
+	msleep(120);
+	rc = gpio_direction_output(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[1].gpio,
+		0);
+	if (rc) {
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+		return rc;
+	}
+	return rc;
+}
+
+static int32_t cam_pmic_ir_cut_on(
+	struct cam_ir_led_ctrl *ictrl,
+	struct cam_ir_led_set_on_off *ir_led_data)
+{
+	int rc;
+
+	if (ictrl->ir_led_state == CAM_IR_LED_STATE_ON) {
+		if (ictrl->pwm_dev)
+			pwm_disable(ictrl->pwm_dev);
+	}
+	rc = gpio_direction_output(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[0].gpio,
+			1);
+	if (rc) {
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+		return rc;
+	}
+	msleep(120);
+	rc = gpio_direction_output(
+		ictrl->soc_info.gpio_data->cam_gpio_common_tbl[0].gpio,
+		0);
+	if (rc) {
+		CAM_ERR(CAM_IR_LED, "gpio operation failed(%d)", rc);
+		return rc;
+	}
+	return 0;
+}
+
 
 static int32_t cam_ir_led_handle_init(
 	struct cam_ir_led_ctrl *ictrl)
@@ -229,6 +296,28 @@ static int32_t cam_ir_led_config(struct cam_ir_led_ctrl *ictrl,
 				return rc;
 			}
 			ictrl->ir_led_state = CAM_IR_LED_STATE_OFF;
+		}
+		break;
+	case CAM_IR_CUT_PACKET_OPCODE_ON:
+		if (ictrl->func_tbl->camera_ir_cut_on != NULL) {
+			rc = ictrl->func_tbl->camera_ir_cut_on(
+					ictrl, cam_ir_led_info);
+			if (rc < 0) {
+				CAM_ERR(CAM_IR_LED,
+					"Fail to turn ircut ON rc=%d", rc);
+				return rc;
+			}
+			ictrl->ir_led_state = CAM_IR_LED_STATE_OFF;
+		}
+		break;
+	case CAM_IR_CUT_PACKET_OPCODE_OFF:
+		if (ictrl->func_tbl->camera_ir_cut_off != NULL) {
+			rc = ictrl->func_tbl->camera_ir_cut_off(ictrl);
+			if (rc < 0) {
+				CAM_ERR(CAM_IR_LED,
+					"Fail to turn ircut OFF rc=%d", rc);
+				return rc;
+			}
 		}
 		break;
 	case CAM_PKT_NOP_OPCODE:
@@ -571,6 +660,8 @@ static struct cam_ir_led_table cam_pmic_ir_led_table = {
 		.camera_ir_led_release = &cam_pmic_ir_led_release,
 		.camera_ir_led_off = &cam_pmic_ir_led_off,
 		.camera_ir_led_on = &cam_pmic_ir_led_on,
+		.camera_ir_cut_off = &cam_pmic_ir_cut_off,
+		.camera_ir_cut_on = &cam_pmic_ir_cut_on,
 	},
 };
 
@@ -581,6 +672,8 @@ static struct cam_ir_led_table cam_gpio_ir_led_table = {
 		.camera_ir_led_release = NULL,
 		.camera_ir_led_off = NULL,
 		.camera_ir_led_on = NULL,
+		.camera_ir_cut_off = NULL,
+		.camera_ir_cut_on = NULL,
 	},
 };
 

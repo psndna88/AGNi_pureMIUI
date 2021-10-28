@@ -1231,21 +1231,14 @@ static int ib_prctl_set(struct task_struct *task, unsigned long ctrl)
 			return 0;
 
 		/*
-		 * With strict mode for both IBPB and STIBP, the instruction
-		 * code paths avoid checking this task flag and instead,
-		 * unconditionally run the instruction. However, STIBP and IBPB
-		 * are independent and either can be set to conditionally
-		 * enabled regardless of the mode of the other.
-		 *
-		 * If either is set to conditional, allow the task flag to be
-		 * updated, unless it was force-disabled by a previous prctl
-		 * call. Currently, this is possible on an AMD CPU which has the
-		 * feature X86_FEATURE_AMD_STIBP_ALWAYS_ON. In this case, if the
-		 * kernel is booted with 'spectre_v2_user=seccomp', then
-		 * spectre_v2_user_ibpb == SPECTRE_V2_USER_SECCOMP and
-		 * spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT_PREFERRED.
+		 * Indirect branch speculation is always disabled in strict
+		 * mode. It can neither be enabled if it was force-disabled
+		 * by a  previous prctl call.
+
 		 */
-		if (!is_spec_ib_user_controlled() ||
+		if (spectre_v2_user_ibpb == SPECTRE_V2_USER_STRICT ||
+		    spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT ||
+		    spectre_v2_user_stibp == SPECTRE_V2_USER_STRICT_PREFERRED ||
 		    task_spec_ib_force_disable(task))
 			return -EPERM;
 
