@@ -470,6 +470,7 @@ struct sde_connector_dyn_hdr_metadata {
  * @esd_status_interval: variable to change ESD check interval in millisec
  * @panel_dead: Flag to indicate if panel has gone bad
  * @esd_status_check: Flag to indicate if ESD thread is scheduled or not
+ * @twm_en: Flag to indicate if TWM mode is enabled or not
  * @bl_scale_dirty: Flag to indicate PP BL scale value(s) is changed
  * @bl_scale: BL scale value for ABA feature
  * @bl_scale_sv: BL scale value for sunlight visibility feature
@@ -533,6 +534,7 @@ struct sde_connector {
 	u32 esd_status_interval;
 	bool panel_dead;
 	bool esd_status_check;
+	bool twm_en;
 
 	bool bl_scale_dirty;
 	u32 bl_scale;
