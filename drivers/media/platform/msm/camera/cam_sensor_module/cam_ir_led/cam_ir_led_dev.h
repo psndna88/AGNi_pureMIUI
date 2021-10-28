@@ -1,4 +1,4 @@
-/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,6 +39,8 @@
 #define CAM_IR_LED_PIPELINE_DELAY 1
 #define CAM_IR_LED_PACKET_OPCODE_OFF 0
 #define CAM_IR_LED_PACKET_OPCODE_ON  1
+#define CAM_IR_CUT_PACKET_OPCODE_ON  3
+#define CAM_IR_CUT_PACKET_OPCODE_OFF 4
 
 enum cam_ir_led_switch_trigger_ops {
 	LED_SWITCH_OFF = 0,
@@ -153,6 +155,9 @@ struct cam_ir_led_func {
 	int32_t (*camera_ir_led_release)(struct cam_ir_led_ctrl *);
 	int32_t (*camera_ir_led_off)(struct cam_ir_led_ctrl *);
 	int32_t (*camera_ir_led_on)(struct cam_ir_led_ctrl *,
+		struct cam_ir_led_set_on_off *);
+	int32_t (*camera_ir_cut_off)(struct cam_ir_led_ctrl *);
+	int32_t (*camera_ir_cut_on)(struct cam_ir_led_ctrl *,
 		struct cam_ir_led_set_on_off *);
 };
 

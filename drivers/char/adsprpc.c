@@ -17,7 +17,6 @@
 #include <linux/completion.h>
 #include <linux/pagemap.h>
 #include <linux/mm.h>
-#include <linux/fs.h>
 #include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/cdev.h>
@@ -31,7 +30,6 @@
 #include <soc/qcom/service-notifier.h>
 #include <soc/qcom/service-locator.h>
 #include <linux/scatterlist.h>
-#include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/device.h>
 #include <linux/of.h>
@@ -50,6 +48,7 @@
 #include <linux/debugfs.h>
 #include <linux/pm_qos.h>
 #include <linux/cpumask.h>
+#include <linux/stat.h>
 
 #define TZ_PIL_PROTECT_MEM_SUBSYS_ID 0x0C
 #define TZ_PIL_CLEAR_PROTECT_MEM_SUBSYS_ID 0x0D
@@ -100,7 +99,8 @@
 
 #define PERF_KEYS \
 	"count:flush:map:copy:rpmsg:getargs:putargs:invalidate:invoke:tid:ptr"
-#define FASTRPC_STATIC_HANDLE_KERNEL (1)
+#define FASTRPC_STATIC_HANDLE_PROCESS_GROUP (1)
+#define FASTRPC_STATIC_HANDLE_DSP_UTILITIES (2)
 #define FASTRPC_STATIC_HANDLE_LISTENER (3)
 #define FASTRPC_STATIC_HANDLE_MAX (20)
 #define FASTRPC_LATENCY_CTRL_ENB  (1)
@@ -274,6 +274,11 @@ struct fastrpc_static_pd {
 	int cid;
 };
 
+struct fastrpc_dsp_capabilities {
+	uint32_t is_cached;      //! Flag if dsp attributes are cached
+	uint32_t dsp_attributes[FASTRPC_MAX_DSP_ATTRIBUTES];
+};
+
 struct fastrpc_channel_ctx {
 	char *name;
 	char *subsys;
@@ -297,6 +302,9 @@ struct fastrpc_channel_ctx {
 	void *remoteheap_ramdump_dev;
 	/* Indicates, if channel is restricted to secure node only */
 	int secure;
+	struct fastrpc_dsp_capabilities dsp_cap_kernel;
+	/* Indicates whether the channel supports unsigned PD */
+	bool unsigned_support;
 };
 
 struct fastrpc_apps {
@@ -1950,9 +1958,12 @@ static void fastrpc_init(struct fastrpc_apps *me)
 		me->channel[i].secure = SECURE_CHANNEL;
 		mutex_init(&me->channel[i].smd_mutex);
 		mutex_init(&me->channel[i].rpmsg_mutex);
+		me->channel[i].unsigned_support = false;
 	}
 	/* Set CDSP channel to non secure */
 	me->channel[CDSP_DOMAIN_ID].secure = NON_SECURE_CHANNEL;
+	/* Set CDSP channel unsigned_support to true*/
+	me->channel[CDSP_DOMAIN_ID].unsigned_support = true;
 }
 
 static inline void fastrpc_pm_awake(int fl_wake_enable, bool *pm_awake_voted)
@@ -2004,10 +2015,13 @@ static int fastrpc_internal_invoke(struct fastrpc_file *fl, uint32_t mode,
 		getnstimeofday(&invoket);
 
 	if (!kernel) {
-		VERIFY(err, invoke->handle != FASTRPC_STATIC_HANDLE_KERNEL);
+		VERIFY(err, invoke->handle !=
+			FASTRPC_STATIC_HANDLE_PROCESS_GROUP);
+		VERIFY(err, invoke->handle !=
+			FASTRPC_STATIC_HANDLE_DSP_UTILITIES);
 		if (err) {
-			pr_err("adsprpc: ERROR: %s: user application %s trying to send a kernel RPC message to channel %d",
-				__func__, current->comm, cid);
+			pr_err("adsprpc: ERROR: %s: user application %s trying to send a kernel RPC message to channel %d, handle 0x%x",
+				__func__, current->comm, cid, invoke->handle);
 			goto bail;
 		}
 	}
@@ -2136,6 +2150,20 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 	struct fastrpc_buf *imem = NULL;
 	unsigned long imem_dma_attr = 0;
 	char *proc_name = NULL;
+	int unsigned_request = (uproc->attrs & FASTRPC_MODE_UNSIGNED_MODULE);
+	int cid = fl->cid;
+	struct fastrpc_channel_ctx *chan = &me->channel[cid];
+
+	if (chan->unsigned_support &&
+		fl->dev_minor == MINOR_NUM_DEV) {
+		/* Make sure third party applications */
+		/* can spawn only unsigned PD when */
+		/* channel configured as secure. */
+		if (chan->secure && !unsigned_request) {
+			err = -ECONNREFUSED;
+			goto bail;
+		}
+	}
 
 	VERIFY(err, 0 == (err = fastrpc_channel_open(fl)));
 	if (err)
@@ -2147,7 +2175,7 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 
 		ra[0].buf.pv = (void *)&tgid;
 		ra[0].buf.len = sizeof(tgid);
-		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(0, 1, 0);
 		ioctl.inv.pra = ra;
 		ioctl.fds = NULL;
@@ -2248,7 +2276,7 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 		ra[5].buf.len = sizeof(inbuf.siglen);
 		fds[5] = -1;
 
-		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(6, 4, 0);
 		if (uproc->attrs)
 			ioctl.inv.sc = REMOTE_SCALARS_MAKE(7, 6, 0);
@@ -2337,7 +2365,7 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 		ra[2].buf.pv = (void *)pages;
 		ra[2].buf.len = sizeof(*pages);
 		fds[2] = -1;
-		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(8, 3, 0);
 		ioctl.inv.pra = ra;
@@ -2382,6 +2410,120 @@ bail:
 	return err;
 }
 
+static int fastrpc_get_info_from_dsp(struct fastrpc_file *fl,
+				uint32_t *dsp_attr_buf,
+				uint32_t dsp_attr_buf_len,
+				uint32_t domain)
+{
+	int err = 0, dsp_support = 0;
+	struct fastrpc_ioctl_invoke_crc ioctl;
+	remote_arg_t ra[2];
+	struct fastrpc_apps *me = &gfa;
+
+	// Querying device about DSP support
+	switch (domain) {
+	case ADSP_DOMAIN_ID:
+	case SDSP_DOMAIN_ID:
+	case CDSP_DOMAIN_ID:
+		if (me->channel[domain].issubsystemup)
+			dsp_support = 1;
+		break;
+	case MDSP_DOMAIN_ID:
+		//Modem not supported for fastRPC
+		break;
+	default:
+		dsp_support = 0;
+		break;
+	}
+	dsp_attr_buf[0] = dsp_support;
+
+	// If domain not supported, skip querying capabilities
+	if (dsp_support == 0) {
+		err = -ENOTCONN;
+		goto bail;
+	}
+
+	err = fastrpc_channel_open(fl);
+	if (err)
+		goto bail;
+
+	ra[0].buf.pv = (void *)&dsp_attr_buf_len;
+	ra[0].buf.len = sizeof(dsp_attr_buf_len);
+	ra[1].buf.pv = (void *)(&dsp_attr_buf[1]);
+	ra[1].buf.len = dsp_attr_buf_len * sizeof(uint32_t);
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_DSP_UTILITIES;
+	ioctl.inv.sc = REMOTE_SCALARS_MAKE(0, 1, 1);
+	ioctl.inv.pra = ra;
+	ioctl.fds = NULL;
+	ioctl.attrs = NULL;
+	ioctl.crc = NULL;
+	fl->pd = 1;
+
+	// Querying DSP about capabilities support
+	err = fastrpc_internal_invoke(fl, FASTRPC_MODE_PARALLEL, 1, &ioctl);
+bail:
+	if (err)
+		pr_err("adsprpc: %s: %s: could not obtain dsp information, err val 0x%x",
+				current->comm, __func__, err);
+	return err;
+}
+
+static int fastrpc_get_info_from_kernel(
+		struct fastrpc_ioctl_dsp_capabilities *dsp_cap,
+		struct fastrpc_file *fl)
+{
+	int err = 0;
+	uint32_t domain_support;
+	uint32_t domain = dsp_cap->domain;
+
+	if (!gcinfo[domain].dsp_cap_kernel.is_cached) {
+		/*
+		 * Information not on kernel, query device for information
+		 * and cache on kernel
+		 */
+		err = fastrpc_get_info_from_dsp(fl, dsp_cap->dsp_attributes,
+				FASTRPC_MAX_DSP_ATTRIBUTES - 1,
+				domain);
+		if (err)
+			goto bail;
+
+		domain_support = dsp_cap->dsp_attributes[0];
+		switch (domain_support) {
+		case 0:
+			memset(dsp_cap->dsp_attributes, 0,
+				sizeof(dsp_cap->dsp_attributes));
+			memset(&gcinfo[domain].dsp_cap_kernel.dsp_attributes,
+				0, sizeof(dsp_cap->dsp_attributes));
+			break;
+		case 1:
+			memcpy(&gcinfo[domain].dsp_cap_kernel.dsp_attributes,
+				dsp_cap->dsp_attributes,
+				sizeof(dsp_cap->dsp_attributes));
+			break;
+		default:
+			err = -1;
+			/*
+			 * Reset is_cached flag to 0 so subsequent calls
+			 * can try to query dsp again
+			 */
+			gcinfo[domain].dsp_cap_kernel.is_cached = 0;
+			pr_warn("adsprpc: %s: %s: returned bad domain support value %d",
+					current->comm,
+					__func__,
+					domain_support);
+			goto bail;
+		}
+		gcinfo[domain].dsp_cap_kernel.is_cached = 1;
+	} else {
+		// Information on Kernel, pass it to user
+		memcpy(dsp_cap->dsp_attributes,
+			&gcinfo[domain].dsp_cap_kernel.dsp_attributes,
+			sizeof(dsp_cap->dsp_attributes));
+	}
+bail:
+	return err;
+}
+
 static int fastrpc_release_current_dsp_process(struct fastrpc_file *fl)
 {
 	int err = 0;
@@ -2404,7 +2546,7 @@ static int fastrpc_release_current_dsp_process(struct fastrpc_file *fl)
 	tgid = fl->tgid;
 	ra[0].buf.pv = (void *)&tgid;
 	ra[0].buf.len = sizeof(tgid);
-	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 	ioctl.inv.sc = REMOTE_SCALARS_MAKE(1, 1, 0);
 	ioctl.inv.pra = ra;
 	ioctl.fds = NULL;
@@ -2453,7 +2595,7 @@ static int fastrpc_mmap_on_dsp(struct fastrpc_file *fl, uint32_t flags,
 	ra[2].buf.pv = (void *)&routargs;
 	ra[2].buf.len = sizeof(routargs);
 
-	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 	if (fl->apps->compat)
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(4, 2, 1);
 	else
@@ -2516,7 +2658,7 @@ static int fastrpc_munmap_on_dsp_rh(struct fastrpc_file *fl, uint64_t phys,
 		ra[1].buf.pv = (void *)&routargs;
 		ra[1].buf.len = sizeof(routargs);
 
-		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(9, 1, 1);
 		ioctl.inv.pra = ra;
 		ioctl.fds = NULL;
@@ -2568,7 +2710,7 @@ static int fastrpc_munmap_on_dsp(struct fastrpc_file *fl, uintptr_t raddr,
 	ra[0].buf.pv = (void *)&inargs;
 	ra[0].buf.len = sizeof(inargs);
 
-	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_KERNEL;
+	ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
 	if (fl->apps->compat)
 		ioctl.inv.sc = REMOTE_SCALARS_MAKE(5, 1, 0);
 	else
@@ -3468,26 +3610,32 @@ static int fastrpc_get_info(struct fastrpc_file *fl, uint32_t *info)
 {
 	int err = 0;
 	uint32_t cid;
+	struct fastrpc_apps *me = &gfa;
 
 	VERIFY(err, fl != NULL);
 	if (err)
 		goto bail;
+	cid = *info;
 	if (fl->cid == -1) {
-		cid = *info;
+		struct fastrpc_channel_ctx *chan = &me->channel[cid];
+
 		VERIFY(err, cid < NUM_CHANNELS);
 		if (err)
 			goto bail;
 		/* Check to see if the device node is non-secure */
 		if (fl->dev_minor == MINOR_NUM_DEV) {
 			/*
-			 * For non secure device node check and make sure that
-			 * the channel allows non-secure access
-			 * If not, bail. Session will not start.
-			 * cid will remain -1 and client will not be able to
-			 * invoke any other methods without failure
+			 * If an app is trying to offload to a secure remote
+			 * channel by opening the non-secure device node, allow
+			 * the access if the subsystem supports unsigned
+			 * offload. Untrusted apps will be restricted.
 			 */
-			if (fl->apps->channel[cid].secure == SECURE_CHANNEL) {
+			if (chan->secure == SECURE_CHANNEL &&
+					!chan->unsigned_support) {
 				err = -EACCES;
+				pr_err("adsprpc: GetInfo failed dev %d, cid %d, secure %d\n",
+				  fl->dev_minor, cid,
+				  fl->apps->channel[cid].secure);
 				goto bail;
 			}
 		}
@@ -3561,6 +3709,26 @@ bail:
 	return err;
 }
 
+static int fastrpc_get_dsp_info(struct fastrpc_ioctl_dsp_capabilities *dsp_cap,
+		void *param, struct fastrpc_file *fl)
+{
+	int err = 0;
+
+	K_COPY_FROM_USER(err, 0, dsp_cap, param,
+			sizeof(struct fastrpc_ioctl_dsp_capabilities));
+	VERIFY(err, dsp_cap->domain < NUM_CHANNELS);
+	if (err)
+		goto bail;
+
+	err = fastrpc_get_info_from_kernel(dsp_cap, fl);
+	if (err)
+		goto bail;
+	K_COPY_TO_USER(err, 0, param, dsp_cap,
+			sizeof(struct fastrpc_ioctl_dsp_capabilities));
+bail:
+	return err;
+}
+
 static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 				 unsigned long ioctl_param)
 {
@@ -3574,6 +3742,7 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 		struct fastrpc_ioctl_init_attrs init;
 		struct fastrpc_ioctl_perf perf;
 		struct fastrpc_ioctl_control cp;
+		struct fastrpc_ioctl_dsp_capabilities dsp_cap;
 	} p;
 	union {
 		struct fastrpc_ioctl_mmap mmap;
@@ -3793,7 +3962,9 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 		if (err)
 			goto bail;
 		break;
-
+	case FASTRPC_IOCTL_GET_DSP_INFO:
+		err = fastrpc_get_dsp_info(&p.dsp_cap, param, fl);
+		break;
 	default:
 		err = -ENOTTY;
 		pr_info("bad ioctl: %d\n", ioctl_num);

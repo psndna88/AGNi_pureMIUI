@@ -58,10 +58,11 @@
 
 struct hdmi_cec_ctrl {
 	struct cec_adapter  *adap;
-	struct device       *dev;
+	struct device       *parent;
 	struct dss_io_data  *io;
 	bool                enabled;
 	bool                addressed;
+	bool                cec_wakeup_en;
 	struct workqueue_struct *workqueue;
 	struct work_struct  cec_read_work;
 	struct work_struct  cec_write_work;
@@ -234,7 +235,7 @@ bool hdmi_cec_is_wakeup_en(void *input)
 		return false;
 	}
 
-	return true;
+	return cec_ctrl->cec_wakeup_en;
 }
 
 
@@ -326,55 +327,124 @@ static const struct cec_adap_ops mdss_hdmi_cec_adap_ops = {
 	.adap_transmit = hdmi_cec_adap_transmit,
 };
 
+static ssize_t hdmi_cec_rda_wakeup_enable(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	struct cec_adapter  *adap = dev_get_drvdata(dev);
+	struct hdmi_cec_ctrl *ctl = adap->priv;
+
+	if (!ctl) {
+		pr_err("invalid cec ctl\n");
+		return -EINVAL;
+	}
+
+	if (ctl->cec_wakeup_en) {
+		pr_debug("cec_wakeup is enabled\n");
+		ret = snprintf(buf, PAGE_SIZE, "%d\n", 1);
+	} else {
+		pr_debug("cec_wakeup is disabled\n");
+		ret = snprintf(buf, PAGE_SIZE, "%d\n", 0);
+	}
+
+	return ret;
+}
+
+static ssize_t hdmi_cec_wta_wakeup_enable(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+	size_t ret;
+	struct cec_adapter  *adap = dev_get_drvdata(dev);
+	struct hdmi_cec_ctrl *ctl = adap->priv;
+
+	if (!ctl) {
+		pr_err("invalid cec ctl\n");
+		return -EINVAL;
+	}
+
+	ret = kstrtoint(buf, 10, &val);
+	if (ret) {
+		pr_err("kstrtoint failed.\n");
+		return -EINVAL;
+	}
+
+	if (val > 0) {
+		ctl->cec_wakeup_en = true;
+	} else if (val == 0) {
+		ctl->cec_wakeup_en = false;
+	} else {
+		pr_err("invalid parameter\n");
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(wakeup_enable, 0644, hdmi_cec_rda_wakeup_enable,
+	hdmi_cec_wta_wakeup_enable);
+
 void *hdmi_cec_init(struct hdmi_cec_init_data *init_data)
 {
 	struct hdmi_cec_ctrl *cec_ctrl;
 	int ret = 0;
 
-	do {
-		if (!init_data->io) {
-			DEV_ERR("%s: invalid cec ctrl\n", __func__);
-			ret = -EINVAL;
-			break;
-		}
+	if (!init_data->io) {
+		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		ret = -EINVAL;
+		goto err_alloc;
+	}
 
-		cec_ctrl = kzalloc(sizeof(struct hdmi_cec_ctrl), GFP_KERNEL);
-		if (!cec_ctrl) {
-			DEV_ERR("%s: FAILED: out of memory\n", __func__);
-			ret = -EINVAL;
-			break;
-		}
+	cec_ctrl = kzalloc(sizeof(struct hdmi_cec_ctrl), GFP_KERNEL);
+	if (!cec_ctrl) {
+		DEV_ERR("%s: FAILED: out of memory\n", __func__);
+		ret = -EINVAL;
+		goto err_alloc;
+	}
 
-		cec_ctrl->io = init_data->io;
-		cec_ctrl->workqueue = init_data->workq;
+	cec_ctrl->io = init_data->io;
+	cec_ctrl->workqueue = init_data->workq;
 
-		cec_ctrl->adap =
-			cec_allocate_adapter(&mdss_hdmi_cec_adap_ops, cec_ctrl,
-					     DRV_NAME, CEC_CAP_DEFAULTS |
-					     CEC_CAP_PHYS_ADDR,
-					     CEC_MAX_LOG_ADDRS);
-		ret = PTR_ERR_OR_ZERO(cec_ctrl->adap);
-		if (ret < 0) {
-			DEV_ERR("%s: Failed to allocate CEC adapter\n",
-				__func__);
-			break;
-		}
+	cec_ctrl->adap = cec_allocate_adapter(&mdss_hdmi_cec_adap_ops, cec_ctrl,
+					      DRV_NAME, CEC_CAP_DEFAULTS |
+					      CEC_CAP_PHYS_ADDR,
+					      CEC_MAX_LOG_ADDRS);
+	ret = PTR_ERR_OR_ZERO(cec_ctrl->adap);
+	if (ret < 0) {
+		DEV_ERR("%s: Failed to allocate CEC adapter\n",
+			__func__);
+		goto err_allocate_adapter;
+	}
 
-		cec_ctrl->dev = init_data->dev;
+	cec_ctrl->parent = init_data->dev;
 
-		INIT_WORK(&cec_ctrl->cec_read_work, hdmi_cec_receive_msg_work);
-		INIT_WORK(&cec_ctrl->cec_write_work, hdmi_cec_send_msg_work);
+	INIT_WORK(&cec_ctrl->cec_read_work, hdmi_cec_receive_msg_work);
+	INIT_WORK(&cec_ctrl->cec_write_work, hdmi_cec_send_msg_work);
 
-		ret = cec_register_adapter(cec_ctrl->adap, cec_ctrl->dev);
-		if (ret < 0) {
-			DEV_ERR("%s: Failed to register CEC adapter\n",
-				__func__);
-			break;
-		}
+	ret = cec_register_adapter(cec_ctrl->adap, cec_ctrl->parent);
+	if (ret < 0) {
+		DEV_ERR("%s: Failed to register CEC adapter\n",
+			__func__);
+		goto err_register_adapter;
+	}
 
-		return cec_ctrl;
-	} while (0);
+	ret = sysfs_add_file_to_group(&cec_ctrl->adap->devnode.dev.kobj,
+				      &dev_attr_wakeup_enable.attr, NULL);
+	if (ret < 0) {
+		DEV_ERR("%s: Fail to add sysfs for CEC adapter\n", __func__);
+		goto err_sysfs_file;
+	}
 
+	return cec_ctrl;
+
+err_sysfs_file:
+	cec_unregister_adapter(cec_ctrl->adap);
+	goto err_allocate_adapter;	// skip cec_delete_adapter
+err_register_adapter:
+	cec_delete_adapter(cec_ctrl->adap);
+err_allocate_adapter:
+	kfree(cec_ctrl);
+err_alloc:
 	return ERR_PTR(ret);
 }
 
@@ -382,5 +452,8 @@ void hdmi_cec_deinit(void *data)
 {
 	struct hdmi_cec_ctrl *cec_ctrl = data;
 
+	sysfs_remove_file_from_group(&cec_ctrl->adap->devnode.dev.kobj,
+				     &dev_attr_wakeup_enable.attr, NULL);
 	cec_unregister_adapter(cec_ctrl->adap);
+	kfree(cec_ctrl);
 }
