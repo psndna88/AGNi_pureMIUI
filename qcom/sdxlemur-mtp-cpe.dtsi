@@ -182,6 +182,8 @@
 					<&ioss_aqr_rx>,
 					<&ioss_aqr_tx>;
 
+				qcom,ioss-wol-phy;
+
 				interrupts-extended = <&tlmm 103 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";
 
