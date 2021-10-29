@@ -219,6 +219,9 @@
 					<&ioss_napa_rx>,
 					<&ioss_napa_tx>;
 
+				qcom,ioss-wol-phy;
+				qcom,ioss-wol-magic;
+
 				interrupts-extended = <&tlmm 81 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";
 
