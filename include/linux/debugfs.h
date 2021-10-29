@@ -59,8 +59,6 @@ static const struct file_operations __fops = {				\
 
 typedef struct vfsmount *(*debugfs_automount_t)(struct dentry *, void *);
 
-#if defined(CONFIG_DEBUG_FS)
-
 struct dentry *debugfs_lookup(const char *name, struct dentry *parent);
 
 struct dentry *debugfs_create_file(const char *name, umode_t mode,
@@ -154,7 +152,7 @@ ssize_t debugfs_read_file_bool(struct file *file, char __user *user_buf,
 ssize_t debugfs_write_file_bool(struct file *file, const char __user *user_buf,
 				size_t count, loff_t *ppos);
 
-#else
+#if 0
 
 #include <linux/err.h>
 
