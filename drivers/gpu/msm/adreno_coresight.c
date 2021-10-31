@@ -391,9 +391,9 @@ void adreno_coresight_init(struct adreno_device *adreno_dev)
 	int i = 0;
 	struct device_node *node, *child;
 
-	node = of_find_compatible_node(device->pdev->dev.of_node,
+//	node = of_find_compatible_node(device->pdev->dev.of_node,
 					NULL, "qcom,gpu-coresight");
-	if (!node)
+//	if (!node)
 		return;
 
 	for_each_child_of_node(node, child) {
