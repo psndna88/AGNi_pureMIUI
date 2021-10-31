@@ -2865,18 +2865,21 @@ static ssize_t twm_enable_store(struct device *device,
 {
 	struct drm_connector *conn;
 	struct sde_connector *sde_conn;
+	struct dsi_display *dsi_display;
 	int rc;
 	int data;
 
 	conn = dev_get_drvdata(device);
 	sde_conn = to_sde_connector(conn);
-
+	dsi_display = (struct dsi_display *) sde_conn->display;
 	rc = kstrtoint(buf, 10, &data);
 	if (rc) {
-		SDE_ERROR("kstrtoint failed, rc =%d\n", rc);
+		SDE_ERROR("kstrtoint failed, rc = %d\n", rc);
 		return -EINVAL;
 	}
 	sde_conn->twm_en = data ? true : false;
+	dsi_display->panel->is_twm_en = sde_conn->twm_en;
+	sde_conn->allow_bl_update = data ? false : true;
 	SDE_DEBUG("TWM: %s\n", sde_conn->twm_en ? "ENABLED" : "DISABLED");
 	return count;
 }
