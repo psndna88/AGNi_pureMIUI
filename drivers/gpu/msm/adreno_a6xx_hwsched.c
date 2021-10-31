@@ -418,9 +418,9 @@ static int a6xx_hwsched_gpu_boot(struct adreno_device *adreno_dev)
 	a6xx_start(adreno_dev);
 
 	/* Re-initialize the coresight registers if applicable */
-	adreno_coresight_start(adreno_dev);
+//	adreno_coresight_start(adreno_dev);
 
-	adreno_perfcounter_start(adreno_dev);
+//	adreno_perfcounter_start(adreno_dev);
 
 	/* Clear FSR here in case it is set from a previous pagefault */
 	kgsl_mmu_clear_fsr(&device->mmu);
@@ -623,10 +623,10 @@ static int a6xx_hwsched_power_off(struct adreno_device *adreno_dev)
 	kgsl_pwrscale_update_stats(device);
 
 	/* Save active coresight registers if applicable */
-	adreno_coresight_stop(adreno_dev);
+//	adreno_coresight_stop(adreno_dev);
 
 	/* Save physical performance counter values before GPU power down*/
-	adreno_perfcounter_save(adreno_dev);
+//	adreno_perfcounter_save(adreno_dev);
 
 	adreno_irqctrl(adreno_dev, 0);
 
