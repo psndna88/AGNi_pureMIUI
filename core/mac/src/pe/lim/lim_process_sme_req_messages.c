@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1227,6 +1228,7 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 	struct bss_description *bss_desc;
 	QDF_STATUS status;
 	int8_t reg_max = 0;
+	struct mlme_legacy_priv *mlme_priv;
 
 	if (!mac_ctx || !msg_buf) {
 		QDF_TRACE(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_ERROR,
@@ -1555,6 +1557,49 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 
 		session->limCurrentBssCaps =
 			session->lim_join_req->bssDescription.capabilityInfo;
+
+		mlme_priv = wlan_vdev_mlme_get_ext_hdl(session->vdev);
+		if (!mlme_priv) {
+			pe_err("Invalid mlme priv object");
+			ret_code = eSIR_SME_INVALID_PARAMETERS;
+			goto end;
+		}
+
+		qdf_mem_zero(mlme_priv->connect_info.ext_cap_ie,
+			     DOT11F_IE_EXTCAP_MAX_LEN + 2);
+
+		if (session->lim_join_req->addIEAssoc.length) {
+			uint8_t *add_ie = NULL;
+			uint16_t add_ie_len;
+
+			add_ie_len = session->lim_join_req->addIEAssoc.length;
+			add_ie = qdf_mem_malloc(add_ie_len);
+			if (!add_ie) {
+				ret_code = eSIR_SME_INVALID_PARAMETERS;
+				goto end;
+			}
+			qdf_mem_copy(add_ie,
+				     session->lim_join_req->
+				     addIEAssoc.addIEdata,
+				     add_ie_len);
+
+			status = lim_strip_ie(mac_ctx, add_ie, &add_ie_len,
+					      DOT11F_EID_EXTCAP, ONE_BYTE,
+					      NULL, 0,
+					      mlme_priv->connect_info.
+					      ext_cap_ie,
+					      DOT11F_IE_EXTCAP_MAX_LEN);
+			qdf_mem_free(add_ie);
+
+			if (QDF_IS_STATUS_ERROR(status)) {
+				pe_err("Parsing of ext cap failed with status : %d",
+				       status);
+				qdf_mem_zero(mlme_priv->connect_info.ext_cap_ie,
+					     DOT11F_IE_EXTCAP_MAX_LEN + 2);
+				ret_code = eSIR_SME_INVALID_PARAMETERS;
+				goto end;
+			}
+		}
 
 		mlme_obj = wlan_vdev_mlme_get_cmpt_obj(session->vdev);
 		if (!mlme_obj)
@@ -6259,9 +6304,10 @@ static void lim_process_set_ie_req(struct mac_context *mac_ctx, uint32_t *msg_bu
 	struct send_extcap_ie *msg;
 	QDF_STATUS status;
 	tDot11fIEExtCap extra_ext_cap = {0};
-	struct pe_session *pe_session;
-	uint8_t *add_ie = NULL;
-	uint16_t add_ie_len, vdev_id;
+	uint16_t vdev_id;
+	struct wlan_objmgr_vdev *vdev = NULL;
+	struct mlme_legacy_priv *mlme_priv;
+	struct s_ext_cap *p_ext_cap;
 
 	if (!msg_buf) {
 		pe_err("Buffer is Pointing to NULL");
@@ -6271,41 +6317,35 @@ static void lim_process_set_ie_req(struct mac_context *mac_ctx, uint32_t *msg_bu
 	msg = (struct send_extcap_ie *)msg_buf;
 	vdev_id = msg->session_id;
 
-	pe_session = pe_find_session_by_vdev_id(mac_ctx, vdev_id);
-	if (pe_session) {
-		if (!pe_session->lim_join_req ||
-		    !pe_session->lim_join_req->addIEAssoc.length)
-			goto send_ie;
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (!vdev)
+		return;
 
-		add_ie_len = pe_session->lim_join_req->addIEAssoc.length;
-		add_ie = qdf_mem_malloc(add_ie_len);
-		if (!add_ie)
-			goto send_ie;
-
-		qdf_mem_copy(add_ie,
-			     pe_session->lim_join_req->addIEAssoc.addIEdata,
-			     add_ie_len);
-
-		status = lim_strip_extcap_update_struct(mac_ctx, add_ie,
-							&add_ie_len,
-							&extra_ext_cap);
-		if (QDF_IS_STATUS_SUCCESS(status)) {
-			struct s_ext_cap *p_ext_cap =
-				(struct s_ext_cap *)extra_ext_cap.bytes;
-			if (p_ext_cap->interworking_service)
-				p_ext_cap->qos_map = 1;
-
-			extra_ext_cap.num_bytes =
-				lim_compute_ext_cap_ie_length(&extra_ext_cap);
-		}
-		qdf_mem_free(add_ie);
+	mlme_priv = wlan_vdev_mlme_get_ext_hdl(vdev);
+	if (!mlme_priv) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+		return;
 	}
+
+	if (!mlme_priv->connect_info.ext_cap_ie[0])
+		goto send_ie;
+
+	lim_update_extcap_struct(mac_ctx, mlme_priv->connect_info.ext_cap_ie,
+				 &extra_ext_cap);
+
+	p_ext_cap = (struct s_ext_cap *)extra_ext_cap.bytes;
+	if (p_ext_cap->interworking_service)
+		p_ext_cap->qos_map = 1;
+
+	extra_ext_cap.num_bytes = lim_compute_ext_cap_ie_length(&extra_ext_cap);
 
 send_ie:
 	status = lim_send_ext_cap_ie(mac_ctx, msg->session_id, &extra_ext_cap,
 				     true);
 	if (QDF_IS_STATUS_ERROR(status))
 		pe_err("Unable to send ExtCap to FW");
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
 }
 
 #ifdef WLAN_FEATURE_11AX_BSS_COLOR
