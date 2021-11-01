@@ -2088,6 +2088,7 @@ static int haptics_load_predefined_effect(struct haptics_chip *chip,
 	}
 
 	/* Clamp VMAX for different vibration strength */
+	play->vmax_mv = 8500;
 	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
 	if (rc < 0)
 		return rc;
@@ -2151,13 +2152,7 @@ static int haptics_init_custom_effect(struct haptics_chip *chip)
 	chip->custom_effect->pattern = NULL;
 	chip->custom_effect->brake = NULL;
 	chip->custom_effect->id = UINT_MAX;
-#ifdef QCOM_HAPTIC_BOB
-	chip->custom_effect->vmax_mv = chip->config.vmax_mv;//MIUI modif
-#elif defined(CONFIG_TARGET_PRODUCT_HAYDN)
 	chip->custom_effect->vmax_mv = 8500;
-#else
-	chip->custom_effect->vmax_mv = 9000;
-#endif
 	chip->custom_effect->t_lra_us = chip->config.t_lra_us;
 	chip->custom_effect->src = FIFO;
 	chip->custom_effect->auto_res_disable = true;
