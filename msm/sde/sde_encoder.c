@@ -918,9 +918,10 @@ static int _sde_encoder_atomic_check_reserve(struct drm_encoder *drm_enc,
 		}
 
 		/* Skip RM allocation for Primary during CWB usecase */
-		if (!crtc_state->mode_changed && !crtc_state->active_changed &&
+		if ((!crtc_state->mode_changed && !crtc_state->active_changed &&
 			crtc_state->connectors_changed && (conn_state->crtc ==
-			conn_state->connector->state->crtc))
+			conn_state->connector->state->crtc)) ||
+			(crtc_state->active_changed && !crtc_state->active))
 			goto skip_reserve;
 
 		/* Reserve dynamic resources, indicating atomic_check phase */
