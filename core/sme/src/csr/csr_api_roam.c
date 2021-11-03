@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -6806,13 +6807,17 @@ static inline void csr_roam_process_he_info(struct join_rsp *sme_join_rsp,
 }
 #endif
 
-static void csr_update_rsn_intersect_to_fw(struct wlan_objmgr_psoc *psoc,
-					   uint8_t vdev_id)
+static void csr_update_rsn_intersect_to_fw(struct mac_context *mac_ctx,
+					   uint8_t vdev_id,
+					   struct bss_description *bss_desc)
 {
 	int32_t rsn_val;
 	struct wlan_objmgr_vdev *vdev;
+	const uint8_t *ie = NULL;
+	uint16_t ie_len;
+	tDot11fIERSN rsn_ie = {0};
 
-	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc, vdev_id,
 						    WLAN_LEGACY_SME_ID);
 
 	if (!vdev) {
@@ -6827,6 +6832,22 @@ static void csr_update_rsn_intersect_to_fw(struct wlan_objmgr_psoc *psoc,
 	if (rsn_val < 0) {
 		sme_err("Invalid mgmt cipher");
 		return;
+	}
+
+	if (bss_desc) {
+		ie_len = csr_get_ielen_from_bss_description(bss_desc);
+
+		ie = wlan_get_ie_ptr_from_eid(WLAN_EID_RSN,
+					      (uint8_t *)bss_desc->ieFields,
+					      ie_len);
+
+		if (ie && ie[0] == WLAN_EID_RSN &&
+		    !dot11f_unpack_ie_rsn(mac_ctx, (uint8_t *)ie + 2, ie[1],
+					  &rsn_ie, false)) {
+			if (!(*(uint16_t *)&rsn_ie.RSN_Cap &
+			    WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED))
+				rsn_val &= ~WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED;
+		}
 	}
 
 	if (wma_cli_set2_command(vdev_id, WMI_VDEV_PARAM_RSN_CAPABILITY,
@@ -7233,7 +7254,7 @@ static void csr_roam_process_join_res(struct mac_context *mac_ctx,
 		csr_roam_link_up(mac_ctx, conn_profile->bssid);
 	}
 
-	csr_update_rsn_intersect_to_fw(mac_ctx->psoc, session_id);
+	csr_update_rsn_intersect_to_fw(mac_ctx, session_id, bss_desc);
 	sme_free_join_rsp_fils_params(roam_info);
 	qdf_mem_free(roam_info);
 }
