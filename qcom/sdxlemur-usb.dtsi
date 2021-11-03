@@ -117,7 +117,7 @@
 		reg-names = "hsusb_phy_base",
 			"eud_enable_reg";
 		vdd-supply = <&pmx65_l4>;
-		qcom,vdd-voltage-level = <0 912000 912000>;
+		qcom,vdd-voltage-level = <0 880000 912000>;
 		vdda18-supply = <&pmx65_l5>;
 		vdda33-supply = <&pmx65_l10>;
 
@@ -138,7 +138,7 @@
 			"pcs_clamp_enable_reg";
 
 		vdd-supply = <&pmx65_l4>;
-		qcom,vdd-voltage-level = <0 912000 912000>;
+		qcom,vdd-voltage-level = <0 880000 912000>;
 		qcom,vdd-max-load-uA = <47900>;
 		core-supply = <&pmx65_l1>;
 		qcom,core-max-load-uA = <15000>;
