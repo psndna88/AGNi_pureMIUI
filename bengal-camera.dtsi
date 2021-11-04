@@ -38,7 +38,6 @@
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
 			<384000000 0 268800000 0>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -69,7 +68,6 @@
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
 			<384000000 0 268800000 0>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -100,7 +98,6 @@
 			<240000000 0 200000000 0>,
 			<341330000 0 200000000 0>,
 			<384000000 0 268800000 0>;
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -277,13 +274,13 @@
 		reg = <0x5c11000 0x1000>,
 			<0x5c13000 0x4000>;
 		reg-cam-base = <0x11000 0x13000>;
+		cam_hw_fuse = <CAM_CPAS_SECURE_CAMERA_ENABLE 0x01B401E4 100 CAM_CPAS_FEATURE_TYPE_ENABLE 0xFF>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 159 IRQ_TYPE_EDGE_RISING>;
-		camnoc-axi-min-ib-bw = <3000000000>;  /*Need to be verified*/
+		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&gcc_camss_top_gdsc>;
 		clock-names =
-			"gcc_camss_ahb_clk",
 			"gcc_camss_top_ahb_clk",
 			"gcc_camss_top_ahb_clk_src",
 			"gcc_camss_axi_clk",
@@ -291,7 +288,6 @@
 			"gcc_camss_nrt_axi_clk",
 			"gcc_camss_rt_axi_clk";
 		clocks =
-			<&gcc GCC_CAMERA_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK_SRC>,
 			<&gcc GCC_CAMSS_AXI_CLK>,
@@ -300,47 +296,37 @@
 			<&gcc GCC_CAMSS_RT_AXI_CLK>;
 		src-clock-name = "gcc_camss_axi_clk_src";
 		clock-rates =
-			<0 0        0 0         0 0 0>,
-			<0 0 80000000 0  19200000 0 0>,
-			<0 0 80000000 0 150000000 0 0>,
-			<0 0 80000000 0 200000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>;
-		clock-cntl-level = "suspend", "minsvs", "lowsvs", "svs",
-			"svs_l1", "nominal", "turbo";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
+			<0        0 0         0 0 0>,
+			<0 19200000 0  19200000 0 0>,
+			<0 80000000 0 150000000 0 0>,
+			<0 80000000 0 200000000 0 0>,
+			<0 80000000 0 300000000 0 0>,
+			<0 80000000 0 300000000 0 0>,
+			<0 80000000 0 300000000 0 0>;
+		clock-cntl-level = "suspend", "lowsvs", "svs",
+			"svs_l1", "nominal", "nominal_l1", "turbo";
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;
 		camnoc-axi-clk-bw-margin-perc = <20>;
-		qcom,msm-bus,name = "cam_ahb";
-		qcom,msm-bus,num-cases = <7>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 0>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 133333>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 133333>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>;
-		vdd-corners = <RPMH_REGULATOR_LEVEL_RETENTION
-			RPMH_REGULATOR_LEVEL_MIN_SVS
-			RPMH_REGULATOR_LEVEL_LOW_SVS
-			RPMH_REGULATOR_LEVEL_SVS
-			RPMH_REGULATOR_LEVEL_SVS_L1
-			RPMH_REGULATOR_LEVEL_NOM
-			RPMH_REGULATOR_LEVEL_NOM_L1
-			RPMH_REGULATOR_LEVEL_NOM_L2
-			RPMH_REGULATOR_LEVEL_TURBO
-			RPMH_REGULATOR_LEVEL_TURBO_L1>;
+		interconnect-names = "cam_ahb";
+		interconnects =<&bimc MASTER_AMPSS_M0
+			&config_noc SLAVE_CAMERA_CFG>;
+		cam-ahb-num-cases = <7>;
+		cam-ahb-bw-KBps =
+			<0 0>, <0 133333>, <0 150000>, <0 150000>,
+			<0 300000>, <0 300000>, <0 300000>;
+		vdd-corners = <RPM_SMD_REGULATOR_LEVEL_NONE
+			RPM_SMD_REGULATOR_LEVEL_RETENTION
+			RPM_SMD_REGULATOR_LEVEL_RETENTION_PLUS
+			RPM_SMD_REGULATOR_LEVEL_MIN_SVS
+			RPM_SMD_REGULATOR_LEVEL_LOW_SVS
+			RPM_SMD_REGULATOR_LEVEL_SVS
+			RPM_SMD_REGULATOR_LEVEL_SVS_PLUS
+			RPM_SMD_REGULATOR_LEVEL_NOM
+			RPM_SMD_REGULATOR_LEVEL_NOM_PLUS
+			RPM_SMD_REGULATOR_LEVEL_TURBO
+			RPM_SMD_REGULATOR_LEVEL_TURBO_NO_CPR
+			RPM_SMD_REGULATOR_LEVEL_BINNING>;
 		vdd-corner-ahb-mapping = "suspend", "minsvs",
 			"lowsvs", "svs", "svs_l1",
 			"nominal", "nominal", "nominal",
@@ -360,19 +346,12 @@
 					node-name = "level2-rt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_hf_0";
 					ib-bw-voting-needed;
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_hf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_hf_0";
+						interconnects =
+						<&mmrt_virt MASTER_CAMNOC_HF
+						&bimc SLAVE_EBI_CH0>;
 					};
 				};
 
@@ -381,18 +360,11 @@
 					node-name = "level2-nrt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_sf_0";
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_sf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_sf_0";
+						interconnects =
+						<&mmnrt_virt MASTER_CAMNOC_SF
+						&bimc SLAVE_EBI_CH0>;
 					};
 				};
 			};
@@ -594,8 +566,8 @@
 		compatible = "qcom,csid530";
 		reg-names = "csid", "top", "camnoc";
 		reg = <0x5c6e000 0x5000>,
-				<0x5c11000 0x1000>,
-				<0x5c13000 0x4000>;
+			<0x5c11000 0x1000>,
+			<0x5c13000 0x4000>;
 		reg-cam-base = <0x6e000 0x11000 0x13000>;
 		interrupt-names = "csid0";
 		interrupts = <GIC_SPI 210 IRQ_TYPE_EDGE_RISING>;
@@ -622,7 +594,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -649,7 +620,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		cam_hw_pid = <4>;
 		status = "ok";
 	};
@@ -659,8 +629,8 @@
 		compatible = "qcom,csid530";
 		reg-names = "csid", "top", "camnoc";
 		reg = <0x5c75000 0x5000>,
-				<0x5c11000 0x1000>,
-				<0x5c13000 0x4000>;
+			<0x5c11000 0x1000>,
+			<0x5c13000 0x4000>;
 		reg-cam-base = <0x75000 0x11000 0x13000>;
 		interrupt-names = "csid1";
 		interrupts = <GIC_SPI 212 IRQ_TYPE_EDGE_RISING>;
@@ -687,7 +657,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -714,7 +683,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		cam_hw_pid = <5>;
 		status = "ok";
 	};
@@ -724,8 +692,8 @@
 		compatible = "qcom,csid530";
 		reg-names = "csid", "top", "camnoc";
 		reg = <0x5c7c000 0x5000>,
-				<0x5c11000 0x1000>,
-				<0x5c13000 0x4000>;
+			<0x5c11000 0x1000>,
+			<0x5c13000 0x4000>;
 		reg-cam-base = <0x7c000 0x11000 0x13000>;
 		interrupt-names = "csid2";
 		interrupts = <GIC_SPI 77 IRQ_TYPE_EDGE_RISING>;
@@ -752,7 +720,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_csid_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 
@@ -779,7 +746,6 @@
 		clock-cntl-level = "svs", "svs_l1", "turbo";
 		src-clock-name = "tfe_clk_src";
 		clock-control-debugfs = "true";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		cam_hw_pid = <6>;
 		status = "ok";
 	};
@@ -814,7 +780,7 @@
 	cam_tfe_tpg1: qcom,tpg1@5c68000 {
 		cell-index = <1>;
 		compatible = "qcom,tpg101";
-		reg-names = "tpg0", "top";
+		reg-names = "tpg1", "top";
 		reg = <0x5c68000 0x400>,
 				<0x5c11000 0x1000>;
 		reg-cam-base = <0x68000 0x11000>;
@@ -868,21 +834,22 @@
 		regulator-names = "camss";
 		camss-supply = <&gcc_camss_top_gdsc>;
 		clock-names =
+			"ope_ahb_clk_src",
 			"ope_ahb_clk",
 			"ope_clk_src",
 			"ope_clk";
 		clocks =
+			<&gcc GCC_CAMSS_OPE_AHB_CLK_SRC>,
 			<&gcc GCC_CAMSS_OPE_AHB_CLK>,
 			<&gcc GCC_CAMSS_OPE_CLK_SRC>,
 			<&gcc GCC_CAMSS_OPE_CLK>;
 		clock-rates =
-			<171428571 200000000 0>,
-			<171428571 266600000 0>,
-			<240000000 465000000 0>,
-			<240000000 580000000 0>;
+			<19200000 0 19200000 0>,
+			<171428571 0 200000000 0>,
+			<240000000 0 465000000 0>,
+			<240000000 0 580000000 0>;
 		clock-cntl-level = "svs", "svs_l1", "nominal", "turbo";
 		src-clock-name = "ope_clk_src";
-		qcom,cam-cx-ipeak = <&cx_ipeak_lm 8>;
 		status = "ok";
 	};
 };

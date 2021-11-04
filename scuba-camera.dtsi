@@ -6,6 +6,11 @@
 		status = "ok";
 	};
 
+	qcom,cam-sync {
+		compatible = "qcom,cam-sync";
+		status = "ok";
+	};
+
 	cam_csiphy0: qcom,csiphy0 {
 		cell-index = <0>;
 		compatible = "qcom,csiphy-v2.0", "qcom,csiphy";
@@ -68,7 +73,7 @@
 
 	cam_cci0: qcom,cci0 {
 		cell-index = <0>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x05C1B000 0x1000>;
@@ -162,7 +167,7 @@
 	};
 
 	qcom,cam_smmu {
-		compatible = "qcom,msm-cam-smmu";
+		compatible = "qcom,msm-cam-smmu", "simple-bus";
 		status = "ok";
 
 		msm_cam_smmu_tfe {
@@ -190,7 +195,7 @@
 			qcom,iommu-faults = "non-fatal";
 			multiple-client-devices;
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
-			cam-smmu-label = "ope", "ope-cdm0";
+			cam-smmu-label = "ope", "ope-cdm";
 			ope_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -206,7 +211,7 @@
 		msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x800 0x000>;
-			cam-smmu-label = "cpas-cdm0";
+			cam-smmu-label = "cpas-cdm";
 			qcom,iommu-faults = "non-fatal";
 			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cpas_cdm_iova_mem_map: iova-mem-map {
@@ -226,12 +231,11 @@
 			cam-smmu-label = "cam-secure";
 			qcom,secure-cb;
 		};
-
 	};
 
 	qcom,cam-cpas@5c11000 {
 		cell-index = <0>;
-		compatible = "qcom,cam-cpas";
+		compatible = "qcom,cam-cpas", "simple-bus";
 		label = "cpas";
 		arch-compat = "cpas_top";
 		status = "ok";
@@ -239,13 +243,13 @@
 		reg = <0x5c11000 0x1000>,
 			<0x5c13000 0x4000>;
 		reg-cam-base = <0x11000 0x13000>;
+		cam_hw_fuse = <CAM_CPAS_SECURE_CAMERA_ENABLE 0x01B401E4 100 CAM_CPAS_FEATURE_TYPE_ENABLE 0xFF>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 159 IRQ_TYPE_EDGE_RISING>;
 		camnoc-axi-min-ib-bw = <3000000000>;
 		regulator-names = "camss-vdd";
 		camss-vdd-supply = <&gcc_camss_top_gdsc>;
 		clock-names =
-			"gcc_camss_ahb_clk",
 			"gcc_camss_top_ahb_clk",
 			"gcc_camss_top_ahb_clk_src",
 			"gcc_camss_axi_clk",
@@ -253,7 +257,6 @@
 			"gcc_camss_nrt_axi_clk",
 			"gcc_camss_rt_axi_clk";
 		clocks =
-			<&gcc GCC_CAMERA_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK>,
 			<&gcc GCC_CAMSS_TOP_AHB_CLK_SRC>,
 			<&gcc GCC_CAMSS_AXI_CLK>,
@@ -262,51 +265,37 @@
 			<&gcc GCC_CAMSS_RT_AXI_CLK>;
 		src-clock-name = "gcc_camss_axi_clk_src";
 		clock-rates =
-			<0 0        0 0         0 0 0>,
-			<0 0 80000000 0  19200000 0 0>,
-			<0 0 80000000 0 150000000 0 0>,
-			<0 0 80000000 0 200000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>,
-			<0 0 80000000 0 300000000 0 0>;
-		clock-cntl-level = "suspend", "minsvs", "lowsvs", "svs",
-			"svs_l1", "nominal", "turbo";
-		qcom,cx-ipeak-gpu-limit = <921600000>;
+			<0        0 0         0 0 0>,
+			<0 19200000 0  19200000 0 0>,
+			<0 80000000 0 150000000 0 0>,
+			<0 80000000 0 200000000 0 0>,
+			<0 80000000 0 300000000 0 0>,
+			<0 80000000 0 300000000 0 0>,
+			<0 80000000 0 300000000 0 0>;
+		clock-cntl-level = "suspend", "lowsvs", "svs",
+			"svs_l1", "nominal", "nominal_l1", "turbo";
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;
 		camnoc-axi-clk-bw-margin-perc = <20>;
-		qcom,msm-bus,name = "cam_ahb";
-		qcom,msm-bus,num-cases = <7>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 0>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 133333>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>;
-		vdd-corners = <RPMH_REGULATOR_LEVEL_RETENTION
-			RPMH_REGULATOR_LEVEL_MIN_SVS
-			RPMH_REGULATOR_LEVEL_LOW_SVS
-			RPMH_REGULATOR_LEVEL_LOW_SVS_L1
-			RPMH_REGULATOR_LEVEL_LOW_SVS_L2
-			RPMH_REGULATOR_LEVEL_SVS
-			RPMH_REGULATOR_LEVEL_SVS_L0
-			RPMH_REGULATOR_LEVEL_SVS_L1
-			RPMH_REGULATOR_LEVEL_SVS_L2
-			RPMH_REGULATOR_LEVEL_NOM
-			RPMH_REGULATOR_LEVEL_NOM_L1
-			RPMH_REGULATOR_LEVEL_NOM_L2
-			RPMH_REGULATOR_LEVEL_TURBO
-			RPMH_REGULATOR_LEVEL_TURBO_L1>;
+		interconnect-names = "cam_ahb";
+		interconnects =<&bimc MASTER_AMPSS_M0
+			&config_noc SLAVE_CAMERA_CFG>;
+		cam-ahb-num-cases = <7>;
+		cam-ahb-bw-KBps =
+			<0 0>, <0 133333>, <0 150000>, <0 150000>,
+			<0 300000>, <0 300000>, <0 300000>;
+		vdd-corners = <RPM_SMD_REGULATOR_LEVEL_NONE
+			RPM_SMD_REGULATOR_LEVEL_RETENTION
+			RPM_SMD_REGULATOR_LEVEL_RETENTION_PLUS
+			RPM_SMD_REGULATOR_LEVEL_MIN_SVS
+			RPM_SMD_REGULATOR_LEVEL_LOW_SVS
+			RPM_SMD_REGULATOR_LEVEL_SVS
+			RPM_SMD_REGULATOR_LEVEL_SVS_PLUS
+			RPM_SMD_REGULATOR_LEVEL_NOM
+			RPM_SMD_REGULATOR_LEVEL_NOM_PLUS
+			RPM_SMD_REGULATOR_LEVEL_TURBO
+			RPM_SMD_REGULATOR_LEVEL_TURBO_NO_CPR
+			RPM_SMD_REGULATOR_LEVEL_BINNING>;
 		vdd-corner-ahb-mapping = "suspend", "lowsvs", "lowsvs",
 			"lowsvs", "lowsvs", "svs", "svs_l1", "svs_l1",
 			"svs_l1", "nominal", "nominal", "nominal",
@@ -326,19 +315,12 @@
 					node-name = "level2-rt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_hf_0";
 					ib-bw-voting-needed;
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_hf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_hf_0";
+						interconnects =
+						<&mmrt_virt MASTER_CAMNOC_HF
+						&bimc SLAVE_EBI_CH0>;
 					};
 				};
 
@@ -347,18 +329,11 @@
 					node-name = "level2-nrt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_sf_0";
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_sf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_sf_0";
+						interconnects =
+						<&mmnrt_virt MASTER_CAMNOC_SF
+						&bimc SLAVE_EBI_CH0>;
 					};
 				};
 			};
@@ -503,7 +478,7 @@
 
 	cam_ope_cdm: qcom,ope-cdm0@5c42000 {
 		cell-index = <0>;
-		compatible = "qcom,cam-ope-cdm2_0";
+		compatible = "qcom,cam-ope-cdm2_1";
 		label = "ope-cdm";
 		reg = <0x5c42000 0x400>;
 		reg-names = "ope-cdm0";
@@ -665,7 +640,7 @@
 
 	cam_tfe_tpg0: qcom,tpg0@5c66000 {
 		cell-index = <0>;
-		compatible = "qcom,tpgv1";
+		compatible = "qcom,tpg101";
 		reg-names = "tpg0", "top";
 		reg = <0x5c66000 0x400>,
 			<0x5c11000 0x1000>;
@@ -690,10 +665,10 @@
 		status = "ok";
 	};
 
-	cam_tfe_tpg1: qcom,tpg0@5c68000 {
+	cam_tfe_tpg1: qcom,tpg1@5c68000 {
 		cell-index = <1>;
-		compatible = "qcom,tpgv1";
-		reg-names = "tpg0", "top";
+		compatible = "qcom,tpg101";
+		reg-names = "tpg1", "top";
 		reg = <0x5c68000 0x400>,
 			<0x5c11000 0x1000>;
 		reg-cam-base = <0x68000 0x11000>;
