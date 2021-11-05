@@ -2703,7 +2703,7 @@ static int sde_crtc_config_exposure_dim_layer(struct drm_crtc_state *crtc_state,
 		return -EINVAL;
 	}
 
-	if (!alpha || panel->spec_pdata->aod_mode || panel->spec_pdata->hbm_mode) {
+	if (!alpha || panel->doze_enabled) {
 		cstate->exposure_dim_layer = NULL;
 		return 0;
 	}
@@ -4867,6 +4867,13 @@ static int sde_crtc_exposure_atomic_check(struct sde_crtc_state *cstate,
 		struct plane_state *pstates, int cnt)
 {
 	int i, zpos = 0;
+	struct dsi_display *dsi_display = get_main_display();
+	struct dsi_panel *panel = dsi_display->panel;
+
+	if (!panel->dimlayer_exposure || panel->doze_enabled) {
+		cstate->exposure_dim_layer = NULL;
+		return 0;
+	}
 
 	for (i = 0; i < cnt; i++) {
 		if (pstates[i].stage > zpos)
