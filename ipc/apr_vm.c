@@ -585,7 +585,7 @@ static int apr_vm_cb_thread(void *data)
 	unsigned long delay = jiffies + (HZ / 2);
 	int status = 0;
 	int ret = 0;
-	struct sched_param param = {.sched_priority = 1};
+	struct sched_param param = {.sched_priority = 3};
 
 	sched_setscheduler(current, SCHED_FIFO, &param);
 
