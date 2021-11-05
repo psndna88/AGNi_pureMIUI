@@ -4066,7 +4066,7 @@ void sde_crtc_reset_sw_state(struct drm_crtc *crtc)
 	/* mark other properties which need to be dirty for next update */
 	set_bit(SDE_CRTC_DIRTY_DIM_LAYERS, &sde_crtc->revalidate_mask);
 #ifdef CONFIG_DRM_SDE_EXPO
-	set_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, sde_crtc_state->dirty);
+	set_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, cstate->dirty);
 #endif
 	if (cstate->num_ds_enabled)
 		set_bit(SDE_CRTC_DIRTY_DEST_SCALER, cstate->dirty);
@@ -4886,6 +4886,13 @@ static int sde_crtc_exposure_atomic_check(struct sde_crtc_state *cstate,
 		struct plane_state *pstates, int cnt)
 {
 	int i, zpos = 0;
+        struct dsi_display *dsi_display = get_main_display();
+        struct dsi_panel *panel = dsi_display->panel;
+
+	if (!panel->dimlayer_exposure) {
+		cstate->exposure_dim_layer = NULL;
+		return 0;
+	}
 
 	for (i = 0; i < cnt; i++) {
 		if (pstates[i].stage > zpos)

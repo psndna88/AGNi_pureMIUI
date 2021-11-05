@@ -285,6 +285,10 @@ struct dsi_panel {
 	bool fod_hbm_requested;
 	bool fod_ui;
 	int local_hbm_on_1000nit_51_index;
+	
+#ifdef CONFIG_DRM_SDE_EXPO
+	bool dimlayer_exposure;
+#endif
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
