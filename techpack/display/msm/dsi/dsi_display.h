@@ -799,4 +799,6 @@ int dsi_display_dump_clks_state(struct dsi_display *display);
  */
 void dsi_display_dfps_update_parent(struct dsi_display *display);
 
+struct dsi_display *get_main_display(void);
+
 #endif /* _DSI_DISPLAY_H_ */
