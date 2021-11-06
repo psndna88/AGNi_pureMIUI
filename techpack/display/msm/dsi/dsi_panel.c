@@ -682,6 +682,31 @@ int dsi_panel_set_doze_mode(struct dsi_panel *panel, enum dsi_doze_mode_type mod
 	return dsi_panel_update_doze(panel);
 }
 
+int dsi_panel_set_hbm_mode(struct dsi_panel *panel, bool status)
+{
+	enum dsi_cmd_set_type type;
+	int rc;
+
+	if (panel->doze_enabled) {
+		return 0;
+	}
+
+	if (panel->hbm_enabled)
+		type = DSI_CMD_SET_MI_HBM_ON;
+	else
+		type = DSI_CMD_SET_MI_HBM_OFF;
+
+	mutex_lock(&panel->panel_lock);
+	rc = dsi_panel_tx_cmd_set(panel, type);
+	if (rc)
+		DSI_ERR("[%s] failed to send nolp cmd, rc=%d\n",
+						panel->name, rc);
+	dsi_panel_set_backlight(panel, panel->hbm_enabled ? panel->bl_config.bl_max_level : panel->bl_config.bl_level);
+	mutex_unlock(&panel->panel_lock);
+
+	return rc;
+}
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -1827,6 +1852,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"mi,mdss-dsi-doze-lbm-command",
 	"mi,mdss-dsi-doze-hbm-nolp-command",
 	"mi,mdss-dsi-doze-lbm-nolp-command",
+	"mi,mdss-dsi-hbm-on-command",
+	"mi,mdss-dsi-hbm-off-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1857,6 +1884,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"mi,mdss-dsi-doze-lbm-command-state",
 	"mi,mdss-dsi-doze-hbm-nolp-command-state",
 	"mi,mdss-dsi-doze-lbm-nolp-command-state",
+	"mi,mdss-dsi-hbm-on-command-state",
+	"mi,mdss-dsi-hbm-off-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -4344,6 +4373,9 @@ int dsi_panel_set_lp1(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	if(panel->hbm_enabled)
+		dsi_panel_set_hbm_mode(panel, false);
+
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
 		goto exit;
@@ -4381,6 +4413,9 @@ int dsi_panel_set_lp2(struct dsi_panel *panel)
 		DSI_ERR("invalid params\n");
 		return -EINVAL;
 	}
+
+	if(panel->hbm_enabled)
+                dsi_panel_set_hbm_mode(panel, false);
 
 	mutex_lock(&panel->panel_lock);
 	if (!panel->panel_initialized)
@@ -4432,6 +4467,9 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 
 exit:
 	mutex_unlock(&panel->panel_lock);
+	if (panel->hbm_enabled) {
+		dsi_panel_set_hbm_mode(panel, panel->hbm_enabled);
+	}
 	return rc;
 }
 
@@ -4766,6 +4804,10 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	else
 		panel->panel_initialized = true;
 	mutex_unlock(&panel->panel_lock);
+
+	if(panel->hbm_enabled)
+		dsi_panel_set_hbm_mode(panel, panel->hbm_enabled);
+
 	return rc;
 }
 
