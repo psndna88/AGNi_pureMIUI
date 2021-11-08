@@ -2943,11 +2943,10 @@ static inline void hdd_netif_queue_enable(struct hdd_adapter *adapter)
 					     adapter->vdev_id);
 		qdf_queue_work(0, hdd_ctx->adapter_ops_wq,
 			       &adapter->netdev_features_update_work);
-	} else {
-		wlan_hdd_netif_queue_control(adapter,
-					     WLAN_WAKE_ALL_NETIF_QUEUE,
-					     WLAN_CONTROL_PATH);
 	}
+	wlan_hdd_netif_queue_control(adapter,
+				     WLAN_WAKE_ALL_NETIF_QUEUE,
+				     WLAN_CONTROL_PATH);
 }
 
 static void hdd_save_connect_status(struct hdd_adapter *adapter,
