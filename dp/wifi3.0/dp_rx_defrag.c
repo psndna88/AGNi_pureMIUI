@@ -1760,9 +1760,6 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 		goto discard_frag;
 	}
 
-	pdev = peer->vdev->pdev;
-	rx_tid = &peer->rx_tid[tid];
-
 	mpdu_sequence_control_valid =
 		hal_rx_get_mpdu_sequence_control_valid(soc->hal_soc,
 						       rx_desc->rx_buf_start);
@@ -1797,10 +1794,15 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	 */
 	fragno = dp_rx_frag_get_mpdu_frag_number(rx_desc->rx_buf_start);
 
+	pdev = peer->vdev->pdev;
+	rx_tid = &peer->rx_tid[tid];
+
+	qdf_spin_lock_bh(&rx_tid->tid_lock);
 	rx_reorder_array_elem = peer->rx_tid[tid].array;
 	if (!rx_reorder_array_elem) {
 		dp_err_rl("Rcvd Fragmented pkt before tid setup for peer %pK",
 			  peer);
+		qdf_spin_unlock_bh(&rx_tid->tid_lock);
 		goto discard_frag;
 	}
 
@@ -1818,6 +1820,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			"Rcvd unfragmented pkt on REO Err srng, dropping");
 
+		qdf_spin_unlock_bh(&rx_tid->tid_lock);
 		qdf_assert(0);
 		goto discard_frag;
 	}
@@ -1845,6 +1848,13 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 			rx_tid->curr_seq_num = rxseq;
 		}
 	} else {
+		/* Check if we are processing first fragment if it is
+		 * not first fragment discard fragment.
+		 */
+		if (fragno) {
+			qdf_spin_unlock_bh(&rx_tid->tid_lock);
+			goto discard_frag;
+		}
 		dp_debug("cur rxseq %d\n", rxseq);
 		/* Start of a new sequence */
 		dp_rx_defrag_cleanup(peer, tid);
@@ -1856,11 +1866,9 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	 * If the earlier sequence was dropped, this will be the fresh start.
 	 * Else, continue with next fragment in a given sequence
 	 */
-	qdf_spin_lock_bh(&rx_tid->tid_lock);
 	status = dp_rx_defrag_fraglist_insert(peer, tid, &rx_reorder_array_elem->head,
 			&rx_reorder_array_elem->tail, frag,
 			&all_frag_present);
-	qdf_spin_unlock_bh(&rx_tid->tid_lock);
 
 	/*
 	 * Currently, we can have only 6 MSDUs per-MPDU, if the current
@@ -1878,6 +1886,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 		if (status != QDF_STATUS_SUCCESS) {
 			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 				"%s: Unable to store ring desc !", __func__);
+			qdf_spin_unlock_bh(&rx_tid->tid_lock);
 			goto discard_frag;
 		}
 	} else {
@@ -1906,6 +1915,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 
 		dp_rx_defrag_waitlist_add(peer, tid);
 		dp_peer_unref_delete(peer, DP_MOD_ID_RX_ERR);
+		qdf_spin_unlock_bh(&rx_tid->tid_lock);
 
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1914,7 +1924,6 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 		  "All fragments received for sequence: %d", rxseq);
 
 	/* Process the fragments */
-	qdf_spin_lock_bh(&rx_tid->tid_lock);
 	status = dp_rx_defrag(peer, tid, rx_reorder_array_elem->head,
 		rx_reorder_array_elem->tail);
 	if (QDF_IS_STATUS_ERROR(status)) {
