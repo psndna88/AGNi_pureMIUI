@@ -1,0 +1,11 @@
+assocreq	wlan.fc.type_subtype == 0
+assoreq	wlan.fc.type_subtype == 0
+assocresp	wlan.fc.type_subtype == 1
+assoresp	wlan.fc.type_subtype == 1
+assocreassocreq	(wlan.fc.type_subtype == 0 or wlan.fc.type_subtype == 2)
+assocreassocresp	(wlan.fc.type_subtype == 1 or wlan.fc.type_subtype == 3)
+probereq	wlan.fc.type_subtype == 4
+proberesp	wlan.fc.type_subtype == 5
+beacon	wlan.fc.type_subtype == 8
+QoSNULL	wlan.fc.type_subtype == 0x2c
+qosdata	wlan.fc.type_subtype == 0x28

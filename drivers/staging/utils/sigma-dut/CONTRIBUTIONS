@@ -1,0 +1,107 @@
+Contributions to sigma_dut
+--------------------------
+
+This software is distributed under a permissive open source license to
+allow it to be used in any projects, whether open source or proprietary.
+Contributions to the project are welcome and it is important to maintain
+clear record of contributions and terms under which they are licensed.
+To help with this, following procedure is used to allow acceptance and
+recording of the terms.
+
+All contributions are expected to be licensed under the Clear BSD
+license (see below) and will not be accepted if any contrary licensing
+which could affect the license of this project are submitted.
+Acknowledgment of the terms is tracked through inclusion of
+Signed-off-by tag in the contributions at the end of the commit log
+message. This tag indicates that the contributor agrees with the
+Developer Certificate of Origin (DCO) version 1.1 terms (see below; also
+available from http://developercertificate.org/).
+
+To indicate your acceptance of Developer's Certificate of Origin 1.1
+terms and licensing of the contribution under the Clear BSD license
+terms, please add the following line to the end of the commit message
+for each contribution you make to the project:
+
+Signed-off-by: Your Name <your@email.example.org>
+
+using your real name. Pseudonyms or anonymous contributions cannot
+unfortunately be accepted.
+
+
+===[ start quote from http://developercertificate.org/ ]=======================
+
+Developer Certificate of Origin
+Version 1.1
+
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+660 York Street, Suite 102,
+San Francisco, CA 94110 USA
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+
+Developer's Certificate of Origin 1.1
+
+By making a contribution to this project, I certify that:
+
+(a) The contribution was created in whole or in part by me and I
+    have the right to submit it under the open source license
+    indicated in the file; or
+
+(b) The contribution is based upon previous work that, to the best
+    of my knowledge, is covered under an appropriate open source
+    license and I have the right under that license to submit that
+    work with modifications, whether created in whole or in part
+    by me, under the same open source license (unless I am
+    permitted to submit under a different license), as indicated
+    in the file; or
+
+(c) The contribution was provided directly to me by some other
+    person who certified (a), (b) or (c) and I have not modified
+    it.
+
+(d) I understand and agree that this project and the contribution
+    are public and that a record of the contribution (including all
+    personal information I submit with it, including my sign-off) is
+    maintained indefinitely and may be redistributed consistent with
+    this project or the open source license(s) involved.
+
+===[ end quote from http://developercertificate.org/ ]=========================
+
+
+The license terms used for sigma_dut files
+------------------------------------------
+
+Copyright (c) 2010-2011, Atheros Communications, Inc.
+Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
+All Rights Reserved.
+Licensed under the Clear BSD license.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice,
+  this list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+* Neither the name of Qualcomm Atheros, Inc. nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
