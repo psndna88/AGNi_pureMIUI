@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/delay.h>
@@ -74,6 +75,7 @@ static const struct of_device_id msm_cam_hw_cdm_dt_match[] = {
 		.compatible = CAM_HW_CDM_OPE_NAME_2_1,
 		.data = &cam_cdm_2_1_reg_offset,
 	},
+	{}
 };
 
 static enum cam_cdm_id cam_hw_cdm_get_id_by_name(char *name)
@@ -354,7 +356,24 @@ void cam_hw_cdm_dump_core_debug_registers(struct cam_hw_info *cdm_hw,
 			cam_cdm_read_hw_reg(cdm_hw,
 				inv_cmd_log->data_regs->icl_inv_data,
 				&dump_reg);
-			CAM_INFO(CAM_CDM, "Last Inv cmd: 0x%x", dump_reg);
+			CAM_INFO(CAM_CDM, "First word of Last Inv cmd: 0x%x",
+				dump_reg);
+
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_0,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "First word of Last Good cmd: 0x%x",
+				dump_reg);
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_1,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "Second word of Last Good cmd: 0x%x",
+				dump_reg);
+			cam_cdm_read_hw_reg(cdm_hw,
+				inv_cmd_log->data_regs->icl_last_data_2,
+				&dump_reg);
+			CAM_INFO(CAM_CDM, "Third word of Last Good cmd: 0x%x",
+				dump_reg);
 		}
 	}
 

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2018,2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #ifndef _CAM_SENSOR_CORE_H_
@@ -14,6 +15,15 @@
  * This API powers up the camera sensor module
  */
 int cam_sensor_power_up(struct cam_sensor_ctrl_t *s_ctrl);
+
+#if IS_ENABLED(CONFIG_ISPV2_AL6021)
+/**
+ * @s_ctrl: Sensor ctrl structure
+ *
+ * This API powers up extra the camera sensor module
+ */
+int cam_sensor_power_up_extra(struct cam_sensor_ctrl_t *s_ctrl);
+#endif
 
 /**
  * @s_ctrl: Sensor ctrl structure

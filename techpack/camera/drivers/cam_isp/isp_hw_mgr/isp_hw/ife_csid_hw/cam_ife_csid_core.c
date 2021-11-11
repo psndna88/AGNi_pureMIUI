@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/iopoll.h>
@@ -1306,7 +1307,7 @@ int cam_ife_csid_path_reserve(struct cam_ife_csid_hw *csid_hw,
 	} else {
 		path_data->dt = reserve->in_port->dt[0];
 		path_data->vc = reserve->in_port->vc[0];
-		if (reserve->in_port->num_valid_vc_dt) {
+		if (reserve->in_port->num_valid_vc_dt > 1) {
 			path_data->dt1 = reserve->in_port->dt[1];
 			path_data->vc1 = reserve->in_port->vc[1];
 			path_data->is_valid_vc1_dt1 = 1;
@@ -2574,6 +2575,11 @@ static int cam_ife_csid_init_config_rdi_path(
 			csid_reg->rdi_reg[id]->csid_rdi_multi_vcdt_cfg0_addr);
 		val |= ((path_data->vc1 << 2) |
 			(path_data->dt1 << 7) | 1);
+
+		cam_io_w_mb(val, soc_info->reg_map[0].mem_base +
+			csid_reg->rdi_reg[id]->csid_rdi_multi_vcdt_cfg0_addr);
+		CAM_DBG(CAM_ISP, "multi vcdt enabled: vc1 %d, dt1 %d, val %d",
+		path_data->vc1, path_data->dt1, val);
 	}
 
 	/* select the post irq sub sample strobe for time stamp capture */

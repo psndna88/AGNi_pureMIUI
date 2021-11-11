@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/module.h>
@@ -1296,6 +1297,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 	uint32_t frm_offset = 0;
 	size_t len_of_buffer;
 	size_t remain_len;
+	bool is_trigger_eof = true; // xiaomi add
 	struct cam_control *ioctl_ctrl = NULL;
 	struct cam_packet *csl_packet = NULL;
 	struct cam_cmd_buf_desc *cmd_desc = NULL;
@@ -1524,6 +1526,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 
 			flash_operation_info =
 				(struct cam_flash_set_on_off *) cmd_buf;
+			is_trigger_eof = (bool)flash_operation_info->is_trigger_eof; // xiaomi add
 			if (!flash_operation_info) {
 				CAM_ERR(CAM_FLASH,
 					"flash_operation_info Null");
@@ -1746,7 +1749,7 @@ int cam_flash_pmic_pkt_parser(struct cam_flash_ctrl *fctrl, void *arg)
 		if ((csl_packet->header.op_code & 0xFFFFF) ==
 			CAM_FLASH_PACKET_OPCODE_SET_OPS) {
 			add_req.skip_before_applying |= SKIP_NEXT_FRAME;
-			add_req.trigger_eof = true;
+			add_req.trigger_eof = is_trigger_eof; // xiaomi modify
 
 			if (flash_data && (flash_data->opcode !=
 				CAMERA_SENSOR_FLASH_OP_FIREDURATION))

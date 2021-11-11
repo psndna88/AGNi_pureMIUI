@@ -1468,6 +1468,8 @@ static int cam_vfe_camif_ver3_handle_irq_bottom_half(void *handler_priv,
 		camif_priv->eof_ts.tv_usec =
 			payload->ts.mono_time.tv_usec;
 
+		cam_cpas_notify_event("IFE EOF", evt_info.hw_idx);
+
 		if (camif_priv->event_cb)
 			camif_priv->event_cb(camif_priv->priv,
 				CAM_ISP_HW_EVENT_EOF, (void *)&evt_info);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/debugfs.h>
@@ -20,6 +21,7 @@
 #include "cam_isp_context.h"
 #include "cam_common_util.h"
 #include "cam_req_mgr_debug.h"
+#include "cam_cpas_api.h"
 
 static const char isp_dev_name[] = "cam-isp";
 
@@ -729,6 +731,12 @@ static void __cam_isp_ctx_send_sof_timestamp(
 	if ((ctx_isp->use_frame_header_ts) || (request_id == 0))
 		goto end;
 
+	if (ctx_isp->offline_context) {
+		CAM_DBG(CAM_ISP,
+			"Don't sent sof timestamp for offline context");
+		return;
+	}
+
 	req_msg.session_hdl = ctx_isp->base->session_hdl;
 	req_msg.u.frame_msg.frame_id = ctx_isp->frame_id;
 	req_msg.u.frame_msg.request_id = request_id;
@@ -838,7 +846,7 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 				"Move active request %lld to free list(cnt = %d) [flushed], ctx %u",
 				buf_done_req_id, ctx_isp->active_req_cnt,
 				ctx->ctx_id);
-			ctx_isp->last_bufdone_error_apply_req_id = 0;
+			ctx_isp->last_bufdone_err_apply_req_id = 0;
 		} else {
 			list_add(&req->list, &ctx->pending_req_list);
 			CAM_DBG(CAM_REQ,
@@ -864,8 +872,10 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 			"Move active request %lld to free list(cnt = %d) [all fences done], ctx %u",
 			buf_done_req_id, ctx_isp->active_req_cnt, ctx->ctx_id);
 		ctx_isp->req_info.last_bufdone_req_id = req->request_id;
-		ctx_isp->last_bufdone_error_apply_req_id = 0;
+		ctx_isp->last_bufdone_err_apply_req_id = 0;
 	}
+
+	cam_cpas_notify_event("IFE BufDone", buf_done_req_id);
 
 	__cam_isp_ctx_update_state_monitor_array(ctx_isp,
 		CAM_ISP_STATE_CHANGE_TRIGGER_DONE, buf_done_req_id);
@@ -1394,12 +1404,13 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 
 			req_in_wait_list = true;
 			if (ctx_isp->last_applied_req_id !=
-				ctx_isp->last_bufdone_error_apply_req_id) {
+				ctx_isp->last_bufdone_err_apply_req_id) {
 				CAM_WARN(CAM_ISP,
-					"Buf done with no active request but with req in wait list, req %llu last apply id:%lld",
+					"Buf done with no active request but with req in wait list, req %llu last apply id:%lld last err id:%lld",
 					req->request_id,
-					ctx_isp->last_applied_req_id);
-				ctx_isp->last_bufdone_error_apply_req_id =
+					ctx_isp->last_applied_req_id,
+					ctx_isp->last_bufdone_err_apply_req_id);
+				ctx_isp->last_bufdone_err_apply_req_id =
 					ctx_isp->last_applied_req_id;
 			}
 
@@ -1418,11 +1429,11 @@ static int __cam_isp_ctx_handle_buf_done_verify_addr(
 		}
 
 		if (!req_in_wait_list  && (ctx_isp->last_applied_req_id !=
-			ctx_isp->last_bufdone_error_apply_req_id)) {
+			ctx_isp->last_bufdone_err_apply_req_id)) {
 			CAM_WARN(CAM_ISP,
 				"Buf done with no active request bubble_state=%d last_applied_req_id:%lld ",
 				bubble_state, ctx_isp->last_applied_req_id);
-			ctx_isp->last_bufdone_error_apply_req_id =
+			ctx_isp->last_bufdone_err_apply_req_id =
 					ctx_isp->last_applied_req_id;
 		}
 		return 0;
