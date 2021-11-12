@@ -1763,7 +1763,7 @@ int dfs_get_random_bin5_dur(struct wlan_dfs *dfs,
  * @dfs: Pointer to wlan_dfs structure.
  * @dl: Pointer to dfs_delayline structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD)
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(DFS_DEBUG)
 void dfs_print_delayline(struct wlan_dfs *dfs,
 		struct dfs_delayline *dl);
 #else
@@ -1777,15 +1777,24 @@ void dfs_print_delayline(struct wlan_dfs *dfs, struct dfs_delayline *dl)
  * dfs_print_nol() - Print NOL elements.
  * @dfs: Pointer to wlan_dfs structure.
  */
+#ifdef DFS_DEBUG
 void dfs_print_nol(struct wlan_dfs *dfs);
+#else
+static inline void dfs_print_nol(struct wlan_dfs *dfs) {}
+#endif
 
 /**
  * dfs_print_filter() - Prints the filter.
  * @dfs: Pointer to wlan_dfs structure.
  * @rf: Pointer to dfs_filter structure.
  */
+#ifdef DFS_DEBUG
 void dfs_print_filter(struct wlan_dfs *dfs,
 		struct dfs_filter *rf);
+#else
+static inline void dfs_print_filter(struct wlan_dfs *dfs,
+		struct dfs_filter *rf) {}
+#endif
 
 /**
  * dfs_getchanstate() - Get chan state.
@@ -2281,7 +2290,11 @@ int dfs_init_radar_filters(struct wlan_dfs *dfs,
  * dfs_print_filters() - Print the filters.
  * @dfs: Pointer to wlan_dfs structure.
  */
+#ifdef DFS_DEBUG
 void dfs_print_filters(struct wlan_dfs *dfs);
+#else
+static inline void dfs_print_filters(struct wlan_dfs *dfs) {}
+#endif
 
 /**
  * dfs_clear_stats() - Clear stats.
