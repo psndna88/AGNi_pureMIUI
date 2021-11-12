@@ -666,7 +666,6 @@ else
 DFS_OBJS +=	$(WLAN_COMMON_ROOT)/target_if/dfs/src/target_if_dfs_partial_offload.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_fcc_bin5.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_bindetects.o \
-		$(DFS_CORE_SRC_DIR)/filtering/dfs_debug.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_init.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_misc.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_phyerr_tlv.o \
@@ -676,6 +675,9 @@ DFS_OBJS +=	$(WLAN_COMMON_ROOT)/target_if/dfs/src/target_if_dfs_partial_offload.
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_radar.o \
 		$(DFS_CORE_SRC_DIR)/filtering/dfs_partial_offload_radar.o \
 		$(DFS_CORE_SRC_DIR)/misc/dfs_filter_init.o
+ifdef DFS_DEBUG
+DFS_OBJS +=	$(DFS_CORE_SRC_DIR)/filtering/dfs_debug.o
+endif
 endif
 endif
 
