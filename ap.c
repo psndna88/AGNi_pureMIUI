@@ -1140,8 +1140,12 @@ static enum sigma_cmd_result cmd_ap_set_wireless(struct sigma_dut *dut,
 	/* TODO: SGI20 */
 
 	val = get_param(cmd, "STBC_TX");
-	if (val)
-		dut->ap_tx_stbc = atoi(val);
+	if (val) {
+		if (atoi(val))
+			dut->ap_tx_stbc = VALUE_ENABLED;
+		else
+			dut->ap_tx_stbc = VALUE_DISABLED;
+	}
 
 	val = get_param(cmd, "WIDTH");
 	if (val) {
@@ -4269,7 +4273,7 @@ static int owrt_ap_config_vap(struct sigma_dut *dut)
 		}
 	}
 
-	if (dut->ap_tx_stbc) {
+	if (dut->ap_tx_stbc == VALUE_ENABLED) {
 		/* STBC and beamforming are mutually exclusive features */
 		owrt_ap_set_vap(dut, vap_id, "implicitbf", "0");
 	}
@@ -5867,7 +5871,7 @@ static void cmd_ath_ap_radio_config(struct sigma_dut *dut)
 			break;
 		}
 
-		if (dut->ap_tx_stbc) {
+		if (dut->ap_tx_stbc == VALUE_ENABLED) {
 			run_system(dut, "cfg -a TX_STBC_2=1");
 		}
 
@@ -7802,6 +7806,25 @@ static void fwtest_set_he_params(struct sigma_dut *dut, const char *ifname)
 }
 
 
+#define IEEE80211_VHT_CAP_TXSTBC                               ((u32) (1 << 7))
+
+static enum value_not_set_enabled_disabled
+get_driver_ap_tx_stbc_capab(struct sigma_dut *dut)
+{
+	sigma_dut_print(dut, DUT_MSG_DEBUG,
+			"[hw_modes] valid=%d vht_capab=0x%x",
+			dut->hw_modes.valid, dut->hw_modes.vht_capab);
+#ifdef NL80211_SUPPORT
+	if (dut->hw_modes.valid)
+		return (dut->hw_modes.vht_capab & IEEE80211_VHT_CAP_TXSTBC) ?
+			VALUE_ENABLED : VALUE_DISABLED;
+#endif /* NL80211_SUPPORT */
+
+	/* Assume supported by default */
+	return VALUE_ENABLED;
+}
+
+
 #define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_3895                    0x0
 #define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_7991                    0x1
 #define IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454                   0x2
@@ -8084,6 +8107,9 @@ write_conf:
 	if (drv == DRIVER_MAC80211 || drv == DRIVER_LINUX_WCN)
 		fprintf(f, "driver=nl80211\n");
 
+	if (dut->ap_tx_stbc == VALUE_NOT_SET && drv == DRIVER_LINUX_WCN)
+		dut->ap_tx_stbc = get_driver_ap_tx_stbc_capab(dut);
+
 	if ((drv == DRIVER_MAC80211 || drv == DRIVER_QNXNTO ||
 	     drv == DRIVER_LINUX_WCN) &&
 	    (dut->ap_mode == AP_11ng || dut->ap_mode == AP_11na ||
@@ -8115,7 +8141,7 @@ write_conf:
 				ht40minus = 1;
 		}
 
-		if (dut->ap_tx_stbc)
+		if (dut->ap_tx_stbc == VALUE_ENABLED)
 			tx_stbc = 1;
 
 		/* Overwrite the ht_capab with offset value if configured */
@@ -8847,7 +8873,7 @@ skip_key_mgmt:
 
 		if (dut->ap_sgi80 || dut->ap_txBF ||
 		    dut->ap_ldpc != VALUE_NOT_SET ||
-		    dut->ap_tx_stbc || dut->ap_mu_txBF ||
+		    dut->ap_tx_stbc == VALUE_ENABLED || dut->ap_mu_txBF ||
 		    dut->ap_ampdu_exp || dut->ap_max_mpdu_len ||
 		    dut->ap_chwidth == AP_160 || dut->ap_chwidth == AP_80_80) {
 			fprintf(f, "vht_capab=%s%s%s%s%s%s",
@@ -8856,7 +8882,8 @@ skip_key_mgmt:
 				"[SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2]" : "",
 				(dut->ap_ldpc == VALUE_ENABLED) ?
 				"[RXLDPC]" : "",
-				dut->ap_tx_stbc ? "[TX-STBC-2BY1]" : "",
+				(dut->ap_tx_stbc == VALUE_ENABLED) ?
+				"[TX-STBC-2BY1]" : "",
 				dut->ap_mu_txBF ? "[MU-BEAMFORMER]" : "",
 				dut->ap_chwidth == AP_160 ? "[VHT160]" :
 				(dut->ap_chwidth == AP_80_80 ?
@@ -9856,7 +9883,16 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 		dut->ap_tx_streams = 3;
 		dut->ap_vhtmcs_map = 0;
 		dut->ap_chwidth = AP_80;
-		dut->ap_tx_stbc = 1;
+		/*
+		 * TX STBC is optional, so don't enable it here for the
+		 * LINUX-WCN driver. When processing ap_config_commit, if this
+		 * is still not set, query it from the wiphy to see if it is
+		 * supported by the driver.
+		 */
+		if (drv == DRIVER_LINUX_WCN)
+			dut->ap_tx_stbc = VALUE_NOT_SET;
+		else
+			dut->ap_tx_stbc = VALUE_ENABLED;
 		dut->ap_dyn_bw_sig = VALUE_ENABLED;
 		if (get_openwrt_driver_type() == OPENWRT_DRIVER_ATHEROS)
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
@@ -10012,9 +10048,14 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 
 	memset(&dut->hw_modes, 0, sizeof(struct dut_hw_modes));
 #ifdef NL80211_SUPPORT
-	if (get_driver_type(dut) == DRIVER_MAC80211 && mac80211_get_wiphy(dut))
-		sigma_dut_print(dut, DUT_MSG_DEBUG,
-				"Failed to get wiphy data from the driver");
+	if (get_driver_type(dut) == DRIVER_MAC80211 ||
+	    get_driver_type(dut) == DRIVER_LINUX_WCN) {
+		if (mac80211_get_wiphy(dut))
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Failed to get wiphy data from the driver");
+		else
+			dut->hw_modes.valid = true;
+	}
 #endif /* NL80211_SUPPORT */
 
 	dut->ap_oper_chn = 0;

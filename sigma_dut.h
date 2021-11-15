@@ -123,6 +123,7 @@ struct dut_hw_modes {
 	u8 ampdu_params;
 	u32 vht_capab;
 	u8 vht_mcs_set[8];
+	bool valid;
 };
 
 #define WPA_GET_BE32(a) ((((u32) (a)[0]) << 24) | (((u32) (a)[1]) << 16) | \
@@ -545,7 +546,7 @@ struct sigma_dut {
 	} ap_chwidth;
 	enum ap_chwidth default_11na_ap_chwidth;
 	enum ap_chwidth default_11ng_ap_chwidth;
-	int ap_tx_stbc;
+	enum value_not_set_enabled_disabled ap_tx_stbc;
 	enum value_not_set_enabled_disabled ap_dyn_bw_sig;
 	int ap_sgi80;
 	int ap_p2p_mgmt;
