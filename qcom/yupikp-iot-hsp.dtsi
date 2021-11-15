@@ -1,4 +1,5 @@
 #include "yupikp-iot-idp.dtsi"
+#include "qcx6490-cnss.dtsi"
 
 &pcie0 {
 	status = "ok";

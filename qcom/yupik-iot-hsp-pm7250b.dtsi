@@ -1,4 +1,6 @@
+#include <dt-bindings/interconnect/qcom,yupik.h>
 #include "yupik-iot-idp-pm7250b.dtsi"
+#include "qcx6490-cnss.dtsi"
 
 &pcie0 {
 	status = "ok";
