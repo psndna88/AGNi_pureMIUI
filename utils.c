@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2014-2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2021, The Linux Foundation
  * Copyright (c) 2005-2011, Jouni Malinen <j@w1.fi>
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.

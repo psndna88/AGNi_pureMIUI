@@ -1,6 +1,7 @@
 /*
  * Sigma Control API DUT (FTM LOC functionality)
  * Copyright (c) 2016, Qualcomm Atheros, Inc.
+ * Copyright (c) 2019, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
