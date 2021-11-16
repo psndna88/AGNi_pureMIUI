@@ -5392,7 +5392,6 @@ static struct snd_soc_dai_link msm_rx_tx_cdc_dma_be_dai_links[] = {
 		.ignore_suspend = 1,
 		.ops = &msm_cdc_dma_be_ops,
 		SND_SOC_DAILINK_REG(rx_dma_rx0),
-		.init = &msm_int_audrx_init,
 	},
 	{
 		.name = LPASS_BE_RX_CDC_DMA_RX_1,
