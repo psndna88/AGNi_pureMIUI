@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018-2019, The Linux Foundation
+ * Copyright (c) 2018-2021, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -363,6 +363,23 @@ const char * get_param_indexed(struct sigma_cmd *cmd, const char *name,
 	}
 
 	return NULL;
+}
+
+
+const char * get_param_fmt(struct sigma_cmd *cmd, const char *name, ...)
+{
+	va_list ap;
+	char buf[100];
+	int ret;
+
+	va_start(ap, name);
+	ret = vsnprintf(buf, sizeof(buf), name, ap);
+	va_end(ap);
+
+	if (ret < 0 || ret >= sizeof(buf))
+		return NULL;
+
+	return get_param(cmd, buf);
 }
 
 
@@ -837,7 +854,9 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->priv_cmd = "iwpriv";
 	dut->sigma_tmpdir = SIGMA_TMPDIR;
 	dut->ap_ocvc = -1;
+	dut->user_config_ap_ocvc = -1;
 	dut->ap_sae_commit_status = -1;
+	dut->sta_async_twt_supp = -1;
 }
 
 
@@ -883,6 +902,8 @@ static void deinit_sigma_dut(struct sigma_dut *dut)
 	dut->station_ifname_2g = NULL;
 	free(dut->station_ifname_5g);
 	dut->station_ifname_5g = NULL;
+	stop_dscp_policy_mon_thread(dut);
+	free_dscp_policy_table(dut);
 }
 
 
@@ -930,7 +951,7 @@ static const char * const license1 =
 "\n"
 "Copyright (c) 2010-2011, Atheros Communications, Inc.\n"
 "Copyright (c) 2011-2017, Qualcomm Atheros, Inc.\n"
-"Copyright (c) 2018-2019, The Linux Foundation\n"
+"Copyright (c) 2018-2021, The Linux Foundation\n"
 "All Rights Reserved.\n"
 "Licensed under the Clear BSD license.\n"
 "\n";
@@ -1005,7 +1026,8 @@ static void usage(void)
 	       "       Ex: </data/vendor/wifi/sockets>] \\\n"
 	       "       [-Z <Override default tmp dir path>] \\\n"
 	       "       [-5 <WFD timeout override>] \\\n"
-	       "       [-r <HT40 or 2.4_HT40>]\n");
+	       "       [-r <HT40 or 2.4_HT40>] \\\n"
+	       "       [-6 <ocv or bp or ocv_bp>]\n");
 	printf("local command: sigma_dut [-p<port>] <-l<cmd>>\n");
 }
 
@@ -1028,7 +1050,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:");
+			   "aAb:Bc:C:dDE:e:fF:gGhH:j:J:i:Ik:K:l:L:m:M:nN:o:O:p:P:qQr:R:s:S:tT:uv:VWw:x:y:z:Z:2345:6:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1250,6 +1272,19 @@ int main(int argc, char *argv[])
 			sigma_dut.user_config_timeout = timeout;
 			break;
 		}
+		case '6':
+			if (strcmp(optarg, "ocv") == 0) {
+				sigma_dut.user_config_ap_ocvc = 1;
+			} else if (strcmp(optarg, "bp") == 0) {
+				sigma_dut.user_config_ap_beacon_prot = 1;
+			} else if (strcmp(optarg, "ocv_bp") == 0) {
+				sigma_dut.user_config_ap_beacon_prot = 1;
+				sigma_dut.user_config_ap_ocvc = 1;
+			} else {
+				printf("Unsupported -6 value\n");
+				exit(1);
+			}
+			break;
 		case 'h':
 		default:
 			usage();

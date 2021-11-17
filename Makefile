@@ -59,8 +59,8 @@ ifndef NO_TRAFFIC_AGENT
 CFLAGS += -DCONFIG_TRAFFIC_AGENT -DCONFIG_WFA_WMM_AC
 OBJS += traffic_agent.o
 OBJS += uapsd_stream.o
-LIBS += -lpthread
 endif
+LIBS += -lpthread
 
 ifndef NO_WLANTEST
 CFLAGS += -DCONFIG_WLANTEST
