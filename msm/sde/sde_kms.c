@@ -4795,6 +4795,7 @@ struct msm_kms *sde_kms_init(struct drm_device *dev)
 
 	msm_kms_init(&sde_kms->base, &kms_funcs);
 	sde_kms->dev = dev;
+	sde_kms->irq_num = -1;
 
 	return &sde_kms->base;
 }
