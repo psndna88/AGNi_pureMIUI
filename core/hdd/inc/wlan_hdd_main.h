@@ -1875,6 +1875,7 @@ struct hdd_adapter_ops_history {
  * @is_dual_mac_cfg_updated: indicate whether dual mac cfg has been updated
  * @twt_en_dis_work: work to send twt enable/disable cmd on MCC/SCC concurrency
  * @dump_in_progress: Stores value of dump in progress
+ * @rx_skip_qdisc_chk_conc: flag to skip ingress qdisc check in concurrency
  */
 struct hdd_context {
 	struct wlan_objmgr_psoc *psoc;
@@ -2232,6 +2233,7 @@ struct hdd_context {
 	bool is_therm_stats_in_progress;
 #endif
 	uint64_t bw_vote_time;
+	qdf_atomic_t rx_skip_qdisc_chk_conc;
 };
 
 /**
