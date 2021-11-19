@@ -1106,10 +1106,17 @@ QDF_STATUS __scm_handle_bcn_probe(struct scan_bcn_probe_event *bcn)
 		if (scan_obj->cb.update_beacon)
 			scan_obj->cb.update_beacon(pdev, scan_entry);
 
-		if (!scm_is_bss_allowed_for_country(psoc, scan_entry)) {
-			scm_info("Drop frame from "QDF_MAC_ADDR_FMT
-				 ": AP in VLP mode not supported for US",
-				 QDF_MAC_ADDR_REF(scan_entry->bssid.bytes));
+		/**
+		 * Do not drop the frame if Wi-Fi safe mode or RF test mode is
+		 * enabled. wlan_cm_get_check_6ghz_security API returns true if
+		 * neither Safe mode nor RF test mode are enabled.
+		 */
+		if (!scm_is_bss_allowed_for_country(psoc, scan_entry) &&
+		    wlan_cm_get_check_6ghz_security(psoc)) {
+			scm_info_rl(
+				"Drop frame from "QDF_MAC_ADDR_FMT
+				": AP in VLP mode not supported for US",
+				QDF_MAC_ADDR_REF(scan_entry->bssid.bytes));
 			util_scan_free_cache_entry(scan_entry);
 			qdf_mem_free(scan_node);
 			continue;
