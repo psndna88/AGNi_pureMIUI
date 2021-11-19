@@ -1,0 +1,27 @@
+#include "scuba-sde-display-common.dtsi"
+#include <dt-bindings/clock/qcom,dispcc-scuba.h>
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTE0_MUX_CLK>,
+		<&mdss_dsi_phy0 PIX0_MUX_CLK>,
+		<&mdss_dsi_phy0 BYTE0_SRC_CLK>,
+		<&mdss_dsi_phy0 PIX0_SRC_CLK>,
+		<&mdss_dsi_phy0 SHADOW_BYTE0_SRC_CLK>,
+		<&mdss_dsi_phy0 SHADOW_PIX0_SRC_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		"src_byte_clk0", "src_pixel_clk0",
+		"shadow_byte_clk0", "shadow_pixel_clk0";
+
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 40 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&L15A>;
+};
+
+&mdss_mdp {
+	connectors = <&smmu_sde_unsec &sde_dsi>;
+};
