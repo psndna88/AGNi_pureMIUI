@@ -10121,19 +10121,21 @@ static inline void hdd_low_tput_gro_flush_skip_handler(
 
 /**
  * hdd_pld_request_bus_bandwidth() - Function to control bus bandwidth
- * @hdd_ctx - handle to hdd context
- * @tx_packets - transmit packet count
- * @rx_packets - receive packet count
+ * @hdd_ctx: handle to hdd context
+ * @tx_packets: transmit packet count received in BW interval
+ * @rx_packets: receive packet count received in BW interval
+ * @diff_us: delta time since last invocation.
  *
  * The function controls the bus bandwidth and dynamic control of
- * tcp delayed ack configuration
+ * tcp delayed ack configuration.
  *
  * Returns: None
  */
 
 static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 					  const uint64_t tx_packets,
-					  const uint64_t rx_packets)
+					  const uint64_t rx_packets,
+					  const uint64_t diff_us)
 {
 	uint16_t index = 0;
 	bool vote_level_change = false;
@@ -10152,11 +10154,17 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 	enum wlan_tp_level next_tx_level = WLAN_SVC_TP_NONE;
 	uint32_t delack_timer_cnt = hdd_ctx->config->tcp_delack_timer_count;
 	cpumask_t pm_qos_cpu_mask;
+	cpumask_t pm_qos_cpu_mask_tx;
+	cpumask_t pm_qos_cpu_mask_rx;
 	bool is_rx_pm_qos_high = false;
 	bool is_tx_pm_qos_high = false;
 	bool legacy_client = false;
+	uint32_t bw_interval_us;
 
 	cpumask_clear(&pm_qos_cpu_mask);
+	cpumask_clear(&pm_qos_cpu_mask_tx);
+	cpumask_clear(&pm_qos_cpu_mask_rx);
+	bw_interval_us = hdd_ctx->config->bus_bw_compute_interval * 1000;
 
 	if (hdd_ctx->high_bus_bw_request)
 		next_vote_level = PLD_BUS_WIDTH_VERY_HIGH;
@@ -10181,9 +10189,6 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 					    legacy_client);
 
 	if (hdd_ctx->cur_vote_level != next_vote_level) {
-		hdd_debug("BW Vote level %d, tx_packets: %lld, rx_packets: %lld",
-			  next_vote_level, tx_packets, rx_packets);
-
 		hdd_ctx->cur_vote_level = next_vote_level;
 		vote_level_change = true;
 
@@ -10257,13 +10262,17 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 
 	qdf_dp_trace_apply_tput_policy(dptrace_high_tput_req);
 
-	/*
-	 * Includes tcp+udp, if perf core is required for tcp, then
-	 * perf core is also required for udp.
-	 */
 	no_rx_offload_pkts = hdd_ctx->no_rx_offload_pkt_cnt;
 	hdd_ctx->no_rx_offload_pkt_cnt = 0;
-	rx_offload_pkts = rx_packets - no_rx_offload_pkts;
+
+	/* adjust for any sched delays */
+	no_rx_offload_pkts = no_rx_offload_pkts * bw_interval_us;
+	no_rx_offload_pkts = qdf_do_div(no_rx_offload_pkts, (uint32_t)diff_us);
+
+	if (rx_packets >= no_rx_offload_pkts)
+		rx_offload_pkts = rx_packets - no_rx_offload_pkts;
+	else
+		rx_offload_pkts = 0;
 
 	avg_no_rx_offload_pkts = (no_rx_offload_pkts +
 				  hdd_ctx->prev_no_rx_offload_pkts) / 2;
@@ -10288,7 +10297,7 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 		is_rx_pm_qos_high = false;
 	}
 
-	hdd_pm_qos_update_cpu_mask(&pm_qos_cpu_mask, is_rx_pm_qos_high);
+	hdd_pm_qos_update_cpu_mask(&pm_qos_cpu_mask_rx, is_rx_pm_qos_high);
 
 	if (cds_sched_handle_throughput_req(rxthread_high_tput_req))
 		hdd_warn("Rx thread high_tput(%d) affinity request failed",
@@ -10328,7 +10337,14 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 
 	no_tx_offload_pkts = hdd_ctx->no_tx_offload_pkt_cnt;
 	hdd_ctx->no_tx_offload_pkt_cnt = 0;
-	tx_offload_pkts = tx_packets - no_tx_offload_pkts;
+	/* adjust for any sched delays */
+	no_tx_offload_pkts = no_tx_offload_pkts * bw_interval_us;
+	no_tx_offload_pkts = qdf_do_div(no_tx_offload_pkts, (uint32_t)diff_us);
+
+	if (tx_packets >= no_tx_offload_pkts)
+		tx_offload_pkts = tx_packets - no_tx_offload_pkts;
+	else
+		tx_offload_pkts = 0;
 
 	avg_no_tx_offload_pkts = (no_tx_offload_pkts +
 				  hdd_ctx->prev_no_tx_offload_pkts) / 2;
@@ -10348,7 +10364,7 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 	else
 		is_tx_pm_qos_high = false;
 
-	hdd_pm_qos_update_cpu_mask(&pm_qos_cpu_mask, is_tx_pm_qos_high);
+	hdd_pm_qos_update_cpu_mask(&pm_qos_cpu_mask_tx, is_tx_pm_qos_high);
 
 	if (avg_tx > hdd_ctx->config->tcp_tx_high_tput_thres)
 		next_tx_level = WLAN_SVC_TP_HIGH;
@@ -10368,11 +10384,39 @@ static void hdd_pld_request_bus_bandwidth(struct hdd_context *hdd_ctx,
 	index = hdd_ctx->hdd_txrx_hist_idx;
 	if (vote_level_change || tx_level_change || rx_level_change) {
 		/* Clear all the mask if no silver/gold vote is required */
+
 		if (next_vote_level < PLD_BUS_WIDTH_HIGH) {
 			is_rx_pm_qos_high = false;
 			is_tx_pm_qos_high = false;
 			cpumask_clear(&pm_qos_cpu_mask);
+		} else {
+			cpumask_or(&pm_qos_cpu_mask,
+				   &pm_qos_cpu_mask_tx,
+				   &pm_qos_cpu_mask_rx);
+
+			if (qdf_cpumask_empty(&pm_qos_cpu_mask))
+				hdd_pm_qos_update_cpu_mask(&pm_qos_cpu_mask,
+							   false);
 		}
+
+		if (!hdd_ctx->pm_qos_request)
+			hdd_pm_qos_update_request(hdd_ctx,
+						  &pm_qos_cpu_mask);
+	}
+
+	if (vote_level_change || tx_level_change || rx_level_change) {
+		hdd_debug("tx:%llu[%llu(off)+%llu(no-off)] rx:%llu[%llu(off)+%llu(no-off)] next_level(vote %u rx %u tx %u) pm_qos(rx:%u,%*pb tx:%u,%*pb)",
+			  tx_packets,
+			  hdd_ctx->prev_tx_offload_pkts,
+			  hdd_ctx->prev_no_tx_offload_pkts,
+			  rx_packets,
+			  hdd_ctx->prev_rx_offload_pkts,
+			  hdd_ctx->prev_no_rx_offload_pkts,
+			  next_vote_level, next_rx_level, next_tx_level,
+			  is_rx_pm_qos_high,
+			  cpumask_pr_args(&pm_qos_cpu_mask_rx),
+			  is_tx_pm_qos_high,
+			  cpumask_pr_args(&pm_qos_cpu_mask_tx));
 
 		hdd_ctx->hdd_txrx_hist[index].next_tx_level = next_tx_level;
 		hdd_ctx->hdd_txrx_hist[index].next_rx_level = next_rx_level;
@@ -10658,7 +10702,7 @@ static void __hdd_bus_bw_work_handler(struct hdd_context *hdd_ctx)
 	rx_packets = rx_packets * bw_interval_us;
 	rx_packets = qdf_do_div(rx_packets, (uint32_t)diff_us);
 
-	hdd_pld_request_bus_bandwidth(hdd_ctx, tx_packets, rx_packets);
+	hdd_pld_request_bus_bandwidth(hdd_ctx, tx_packets, rx_packets, diff_us);
 
 	return;
 
@@ -11004,6 +11048,8 @@ void wlan_hdd_display_tx_rx_histogram(struct hdd_context *hdd_ctx)
 				"HIGH" : "LOW",
 				hdd_ctx->hdd_txrx_hist[i].is_tx_pm_qos_high ?
 				"HIGH" : "LOW");
+		if (hdd_ctx->hdd_txrx_hist[i].qtime <= 0)
+			continue;
 	}
 }
 
