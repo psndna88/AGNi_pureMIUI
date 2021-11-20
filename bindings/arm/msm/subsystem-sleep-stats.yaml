@@ -26,6 +26,9 @@ properties:
   reg:
     maxItems: 1
 
+required:
+  - compatible
+
 example:
   - |
     subsystem-sleep-stats {
