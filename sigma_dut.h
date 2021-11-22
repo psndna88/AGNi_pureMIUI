@@ -393,6 +393,7 @@ struct dscp_policy_data {
 	int end_port;
 	enum ip_protocol protocol;
 	int dscp;
+	int granularity_score;
 	struct dscp_policy_data *next;
 };
 
@@ -1039,6 +1040,7 @@ struct sigma_dut {
 	unsigned int num_dscp_status;
 	unsigned int prev_disable_scs_support;
 	unsigned int prev_disable_mscs_support;
+	int dscp_use_iptables;
 };
 
 

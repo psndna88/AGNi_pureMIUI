@@ -3594,6 +3594,21 @@ void free_dscp_policy_table(struct sigma_dut *dut)
 }
 
 
+static char * protocol_to_str(int proto)
+{
+	switch (proto) {
+	case 6:
+		return "tcp";
+	case 17:
+		return "udp";
+	case 50:
+		return "esp";
+	default:
+		return "unknown";
+	}
+}
+
+
 static int delete_nft_table(struct sigma_dut *dut, const char *table,
 			   const char *ip_type)
 {
@@ -3640,6 +3655,136 @@ static int remove_nft_rule(struct sigma_dut *dut, int policy_id,
 }
 
 
+static int remove_iptable_rule(struct sigma_dut *dut,
+			       struct dscp_policy_data *dscp_policy)
+{
+	char ip_cmd[1000];
+	char *pos;
+	int ret, len;
+	enum ip_version ip_ver = dscp_policy->ip_version;
+
+	pos = ip_cmd;
+	len = sizeof(ip_cmd);
+
+	ret = snprintf(pos, len,
+		       "/system/bin/%s -t mangle -D OUTPUT -o %s",
+		       ip_ver == IPV6 ? "ip6tables" : "iptables",
+		       dut->station_ifname);
+	if (snprintf_error(len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to create delete iptables command %s",
+				ip_cmd);
+		return -1;
+	}
+
+	pos += ret;
+	len -= ret;
+
+	if (strlen(dscp_policy->src_ip)) {
+		ret = snprintf(pos, len, " -s %s", dscp_policy->src_ip);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding src_ip %s in delete command",
+					dscp_policy->src_ip);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (strlen(dscp_policy->dst_ip)) {
+		ret = snprintf(pos, len, " -d %s",
+			       dscp_policy->dst_ip);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding dst_ip %s in delete cmd",
+					dscp_policy->dst_ip);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->src_port || dscp_policy->dst_port ||
+	    (dscp_policy->start_port && dscp_policy->end_port)) {
+		ret = snprintf(pos, len, " -p %s",
+			       protocol_to_str(dscp_policy->protocol));
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding protocol %d in delete command",
+					dscp_policy->protocol);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->src_port) {
+		ret = snprintf(pos, len, " --sport %d",
+			       dscp_policy->src_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding src_port %d in delete command",
+					 dscp_policy->src_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->dst_port) {
+		ret = snprintf(pos, len, " --dport %d",
+			       dscp_policy->dst_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding dst_port %d in delete command",
+					 dscp_policy->dst_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->start_port && dscp_policy->end_port) {
+		ret = snprintf(pos, len, " --match multiport --dports %d:%d",
+			       dscp_policy->start_port,
+			       dscp_policy->end_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding start:end port %d:%d in delete command",
+					 dscp_policy->start_port,
+					 dscp_policy->end_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	ret = snprintf(pos, len, " -j DSCP --set-dscp 0x%0x",
+		       dscp_policy->dscp);
+	if (snprintf_error(len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Error in adding dscp %0x in delete command",
+				dscp_policy->dscp);
+		return -1;
+	}
+	ret = system(ip_cmd);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "iptables rule: %s err: %d",
+			ip_cmd, ret);
+
+	return ret;
+}
+
+
+static int remove_dscp_policy_rule(struct sigma_dut *dut,
+				   struct dscp_policy_data *dscp_policy)
+{
+	return dut->dscp_use_iptables ? remove_iptable_rule(dut, dscp_policy) :
+		remove_nft_rule(dut, dscp_policy->policy_id,
+				dscp_policy->ip_version);
+}
+
+
 static int create_nft_table(struct sigma_dut *dut, int policy_id,
 			    const char *table_name, enum ip_version ip_ver)
 {
@@ -3679,21 +3824,6 @@ static int create_nft_table(struct sigma_dut *dut, int policy_id,
 }
 
 
-static char * protocol_to_str(int proto)
-{
-	switch (proto) {
-	case 6:
-		return "tcp";
-	case 17:
-		return "udp";
-	case 50:
-		return "esp";
-	default:
-		return "unknown";
-	}
-}
-
-
 static int remove_dscp_policy(struct sigma_dut *dut, u8 policy_id)
 {
 	struct dscp_policy_data *dscp_policy = dut->dscp_policy_table;
@@ -3715,7 +3845,7 @@ static int remove_dscp_policy(struct sigma_dut *dut, u8 policy_id)
 		return 0;
 
 	if (strlen(dscp_policy->domain_name) == 0 &&
-	    remove_nft_rule(dut, policy_id, dscp_policy->ip_version))
+	    remove_dscp_policy_rule(dut, dscp_policy))
 		return -1;
 
 	if (prev)
@@ -3835,13 +3965,173 @@ static int add_nft_rule(struct sigma_dut *dut,
 }
 
 
+static int add_iptable_rule(struct sigma_dut *dut,
+			    struct dscp_policy_data *dscp_policy)
+{
+	char ip_cmd[1000];
+	char *pos;
+	int ret, len;
+	enum ip_version ip_ver = dscp_policy->ip_version;
+	struct dscp_policy_data *active_policy = dut->dscp_policy_table;
+	int ipv4_rule_num = 1, ipv6_rule_num = 1;
+
+	pos = ip_cmd;
+	len = sizeof(ip_cmd);
+
+	/*
+	 * DSCP target in the mangle table doesn't stop processing of rules
+	 * so to make sure the most granular rule is applied last, add the new
+	 * rules in granularity increasing order.
+	 */
+	while (active_policy) {
+		/*
+		 * Domain name rules are managed in sigma_dut thus don't count
+		 * them while counting the number of active rules.
+		 */
+		if (strlen(active_policy->domain_name)) {
+			active_policy = active_policy->next;
+			continue;
+		}
+
+		if (active_policy->granularity_score >
+		    dscp_policy->granularity_score)
+			break;
+
+		if (active_policy->ip_version == IPV6)
+			ipv6_rule_num++;
+		else
+			ipv4_rule_num++;
+
+		active_policy = active_policy->next;
+	}
+
+	ret = snprintf(pos, len,
+		       "/system/bin/%s -t mangle -I OUTPUT %d -o %s",
+		       ip_ver == IPV6 ? "ip6tables" : "iptables",
+		       ip_ver == IPV6 ? ipv6_rule_num : ipv4_rule_num,
+		       dut->station_ifname);
+	if (snprintf_error(len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Failed to create iptables command %s", ip_cmd);
+		return -1;
+	}
+
+	pos += ret;
+	len -= ret;
+
+	if (strlen(dscp_policy->src_ip)) {
+		ret = snprintf(pos, len, " -s %s", dscp_policy->src_ip);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding src_ip %s",
+					dscp_policy->src_ip);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (strlen(dscp_policy->dst_ip)) {
+		ret = snprintf(pos, len, " -d %s", dscp_policy->dst_ip);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding dst_ip %s",
+					dscp_policy->dst_ip);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->src_port || dscp_policy->dst_port ||
+	    (dscp_policy->start_port && dscp_policy->end_port)) {
+		ret = snprintf(pos, len, " -p %s",
+			       protocol_to_str(dscp_policy->protocol));
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding protocol %d in add command",
+					 dscp_policy->protocol);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->src_port) {
+		ret = snprintf(pos, len, " --sport %d", dscp_policy->src_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding src_port %d",
+					 dscp_policy->src_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->dst_port) {
+		ret = snprintf(pos, len, " --dport %d", dscp_policy->dst_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding dst_port %d",
+					dscp_policy->dst_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	if (dscp_policy->start_port && dscp_policy->end_port) {
+		ret = snprintf(pos, len, " --match multiport --dports %d:%d",
+			       dscp_policy->start_port, dscp_policy->end_port);
+		if (snprintf_error(len, ret)) {
+			sigma_dut_print(dut, DUT_MSG_INFO,
+					"Error in adding start:end port %d:%d",
+					dscp_policy->start_port,
+					dscp_policy->end_port);
+			return -1;
+		}
+		pos += ret;
+		len -= ret;
+	}
+
+	ret = snprintf(pos, len, " -j DSCP --set-dscp 0x%0x",
+		       dscp_policy->dscp);
+	if (snprintf_error(len, ret)) {
+		sigma_dut_print(dut, DUT_MSG_INFO,
+				"Error in adding dscp %0x", dscp_policy->dscp);
+		return -1;
+	}
+	ret = system(ip_cmd);
+	sigma_dut_print(dut, DUT_MSG_DEBUG, "iptables rule: %s err: %d",
+			ip_cmd, ret);
+
+	return ret;
+}
+
+
+static int add_dscp_policy_rule(struct sigma_dut *dut,
+				struct dscp_policy_data *dscp_policy)
+{
+	return dut->dscp_use_iptables ? add_iptable_rule(dut, dscp_policy) :
+		add_nft_rule(dut, dscp_policy);
+}
+
+
 static void clear_all_dscp_policies(struct sigma_dut *dut)
 {
 	free_dscp_policy_table(dut);
 
-	if (system("nft flush ruleset") != 0)
-		sigma_dut_print(dut, DUT_MSG_ERROR,
-				"Failed to flush DSCP policy");
+	if (dut->dscp_use_iptables) {
+		if (system("/system/bin/iptables -t mangle -F && /system/bin/iptables -t mangle -X") != 0 ||
+		    system("/system/bin/ip6tables -t mangle -F && /system/bin/iptables -t mangle -X") != 0)
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iptables: Failed to flush DSCP policy");
+	} else {
+		if (system("nft flush ruleset") != 0)
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"nftables: Failed to flush DSCP policy");
+	}
 }
 
 
@@ -3911,7 +4201,7 @@ static void * mon_dscp_policies(void *ptr)
 	int ret, policy_id;
 	struct wpa_ctrl *ctrl;
 	char buf[4096], *pos, *end;
-	struct dscp_policy_data *policy = NULL, *policy_table;
+	struct dscp_policy_data *policy = NULL, *current_policy, *prev_policy;
 	struct dscp_policy_status status_list[10];
 	int num_status = 0;
 	const char *events[] = {
@@ -4038,6 +4328,8 @@ static void * mon_dscp_policies(void *ptr)
 			goto reject;
 		}
 		policy->ip_version = atoi(pos + 11);
+		if (policy->ip_version)
+			policy->granularity_score++;
 
 		pos = strstr(buf, "domain_name=");
 		if (pos) {
@@ -4051,6 +4343,7 @@ static void * mon_dscp_policies(void *ptr)
 
 			memcpy(policy->domain_name, pos, end - pos);
 			policy->domain_name[end - pos] = '\0';
+			policy->granularity_score++;
 		}
 
 		pos = strstr(buf, "start_port=");
@@ -4065,6 +4358,9 @@ static void * mon_dscp_policies(void *ptr)
 			policy->end_port = atoi(pos);
 		}
 
+		if (policy->start_port && policy->end_port)
+			policy->granularity_score++;
+
 		pos = strstr(buf, "src_ip=");
 		if (pos) {
 			pos += 7;
@@ -4077,6 +4373,7 @@ static void * mon_dscp_policies(void *ptr)
 
 			memcpy(policy->src_ip, pos, end - pos);
 			policy->src_ip[end - pos] = '\0';
+			policy->granularity_score++;
 		}
 
 		pos = strstr(buf, "dst_ip=");
@@ -4091,41 +4388,60 @@ static void * mon_dscp_policies(void *ptr)
 
 			memcpy(policy->dst_ip, pos, end - pos);
 			policy->dst_ip[end - pos] = '\0';
+			policy->granularity_score++;
 		}
 
 		pos = strstr(buf, "src_port=");
 		if (pos) {
 			pos += 9;
 			policy->src_port = atoi(pos);
+			policy->granularity_score++;
 		}
 
 		pos = strstr(buf, "dst_port=");
 		if (pos) {
 			pos += 9;
 			policy->dst_port = atoi(pos);
+			policy->granularity_score++;
 		}
 
 		pos = strstr(buf, "protocol=");
 		if (pos) {
 			pos += 9;
 			policy->protocol = atoi(pos);
+			policy->granularity_score++;
 		}
 
 		/*
 		 * Skip adding nft rules for doman name policies.
 		 * Domain name rules are applied in sigma_dut itself.
 		 */
-		if (!strlen(policy->domain_name) && add_nft_rule(dut, policy))
+		if (!strlen(policy->domain_name) &&
+		    add_dscp_policy_rule(dut, policy))
 			goto reject;
 
-		if (dut->dscp_policy_table) {
-			policy_table = dut->dscp_policy_table;
-			while (policy_table->next != NULL)
-				policy_table = policy_table->next;
+		/*
+		 * Add the new policy in policy table in granularity increasing
+		 * order.
+		 */
+		current_policy = dut->dscp_policy_table;
+		prev_policy = NULL;
 
-			policy_table->next = policy;
-		} else
+		while (current_policy) {
+			if (current_policy->granularity_score >
+			    policy->granularity_score)
+				break;
+
+			prev_policy = current_policy;
+			current_policy = current_policy->next;
+		}
+
+		if (prev_policy)
+			prev_policy->next = policy;
+		else
 			dut->dscp_policy_table = policy;
+
+		policy->next = current_policy;
 
 success:
 		status_list[num_status].status = DSCP_POLICY_SUCCESS;
