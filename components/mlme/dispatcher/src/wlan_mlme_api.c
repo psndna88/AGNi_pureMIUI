@@ -4956,6 +4956,23 @@ bool mlme_get_user_ps(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id)
 	return usr_ps_enable;
 }
 
+uint8_t
+wlan_mlme_get_mgmt_hw_tx_retry_count(struct wlan_objmgr_psoc *psoc,
+				     enum mlme_cfg_frame_type frm_type)
+{
+	struct wlan_mlme_psoc_ext_obj *mlme_obj;
+
+	mlme_obj = mlme_get_psoc_ext_obj(psoc);
+
+	if (!mlme_obj)
+		return 0;
+
+	if (frm_type >= CFG_FRAME_TYPE_MAX)
+		return 0;
+
+	return mlme_obj->cfg.gen.mgmt_hw_tx_retry_count[frm_type];
+}
+
 QDF_STATUS
 wlan_mlme_get_tx_retry_multiplier(struct wlan_objmgr_psoc *psoc,
 				  uint32_t *tx_retry_multiplier)
