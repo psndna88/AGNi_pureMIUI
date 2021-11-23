@@ -1550,7 +1550,8 @@ static int dsi_message_tx(struct dsi_ctrl *dsi_ctrl,
 	if (dsi_ctrl->dma_wait_queued)
 		dsi_ctrl_flush_cmd_dma_queue(dsi_ctrl);
 
-	if (!(*flags & DSI_CTRL_CMD_BROADCAST_MASTER))
+	if ((*flags & DSI_CTRL_CMD_BROADCAST) &&
+			(!(*flags & DSI_CTRL_CMD_BROADCAST_MASTER)))
 		dsi_ctrl_clear_slave_dma_status(dsi_ctrl, *flags);
 
 	if (*flags & DSI_CTRL_CMD_NON_EMBEDDED_MODE) {
