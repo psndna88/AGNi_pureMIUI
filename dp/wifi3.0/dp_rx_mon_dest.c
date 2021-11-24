@@ -1411,27 +1411,6 @@ qdf_nbuf_t dp_rx_mon_restitch_mpdu(struct dp_soc *soc, uint32_t mac_id,
 }
 #endif
 
-#ifdef DP_MON_RSSI_IN_DBM
-/*
- * dp_rx_mon_rssi_convert(): convert rssi_comb from unit dBm to dB
- *		to match with radiotap further conversion requirement
- * @rx_status: monitor mode rx status pointer
- *
- * Return: none
- */
-static inline
-void dp_rx_mon_rssi_convert(struct mon_rx_status *rx_status)
-{
-	rx_status->rssi_comb = rx_status->rssi_comb -
-				rx_status->chan_noise_floor;
-}
-#else
-static inline
-void dp_rx_mon_rssi_convert(struct mon_rx_status *rx_status)
-{
-}
-#endif
-
 /*
  * dp_rx_mon_deliver(): function to deliver packets to stack
  * @soc: DP soc
@@ -1469,8 +1448,6 @@ QDF_STATUS dp_rx_mon_deliver(struct dp_soc *soc, uint32_t mac_id,
 		pdev->ppdu_info.rx_status.device_id = soc->device_id;
 		pdev->ppdu_info.rx_status.chan_noise_floor =
 			pdev->chan_noise_floor;
-		/* convert rssi_comb from dBm to positive dB value */
-		dp_rx_mon_rssi_convert(&pdev->ppdu_info.rx_status);
 
 		dp_handle_tx_capture(soc, pdev, mon_mpdu);
 
