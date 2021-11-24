@@ -352,6 +352,8 @@ static u32 sde_rsc_timer_calculate(struct sde_rsc_priv *rsc,
 			line_time_ns, prefill_time_ns);
 	pr_debug("static wakeup time:%lld cxo:%u\n", total, cxo_period_ns);
 
+	SDE_EVT32(rsc->cmd_config.fps, rsc->cmd_config.vtotal, total);
+
 	pdc_backoff_time_ns = rsc_backoff_time_ns;
 	rsc_backoff_time_ns = div_u64(rsc_backoff_time_ns, cxo_period_ns);
 	rsc->timer_config.rsc_backoff_time_ns = (u32) rsc_backoff_time_ns;
