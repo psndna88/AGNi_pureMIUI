@@ -2133,11 +2133,14 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 		qdf_mem_free(parsed_frm_ptr);
 		return QDF_STATUS_E_FAILURE;
 	}
-	pe_debug("LFR3:Beacon/Prb Rsp: %d bssid "QDF_MAC_ADDR_FMT" beacon "QDF_MAC_ADDR_FMT,
+	pe_debug("LFR3:Beacon/Prb Rsp: %d len %d bssid "QDF_MAC_ADDR_FMT" beacon "QDF_MAC_ADDR_FMT,
 		 roam_synch_ind_ptr->isBeacon,
+		 roam_synch_ind_ptr->beaconProbeRespLength,
 		 QDF_MAC_ADDR_REF(roam_synch_ind_ptr->bssid.bytes),
 		 QDF_MAC_ADDR_REF(mac_hdr->bssId));
-
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
+			   bcn_proberesp_ptr,
+			   roam_synch_ind_ptr->beaconProbeRespLength);
 	status = lim_roam_gen_beacon_descr(mac,
 					   roam_synch_ind_ptr,
 					   parsed_frm_ptr,
@@ -2215,15 +2218,21 @@ lim_roam_fill_bss_descr(struct mac_context *mac,
 				(uint8_t *)parsed_frm_ptr->mdie,
 				SIR_MDIE_SIZE);
 	}
-	pe_debug("chan: %d rssi: %d ie_len %d",
+	pe_debug("chan: %d rssi: %d desc len %d",
 		 bss_desc_ptr->chan_freq,
-		 bss_desc_ptr->rssi, ie_len);
+		 bss_desc_ptr->rssi,
+		 bss_desc_ptr->length);
+
+	qdf_mem_free(parsed_frm_ptr);
 	if (ie_len) {
 		qdf_mem_copy(&bss_desc_ptr->ieFields,
 			     ie, ie_len);
 		qdf_mem_free(ie);
+	} else {
+		pe_err("Beacon/Probe rsp doesn't have any IEs");
+		return QDF_STATUS_E_FAILURE;
 	}
-	qdf_mem_free(parsed_frm_ptr);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -2518,64 +2527,6 @@ lim_check_ft_initial_im_association(struct roam_offload_synch_ind *roam_synch,
 	}
 }
 
-/**
- * lim_get_assoc_resp_from_roam_sync() - get assoc response from
- * roam sync event
- * @mac_ctx: mac context
- * @session: pe session
- * @roam_sync_ind_ptr: roam sync indication
- *
- * This function is to get parsed assoc response data
- *
- * Return: assoc response data struct
- */
-static tpSirAssocRsp
-lim_get_assoc_resp_from_roam_sync(
-		struct mac_context *mac_ctx,
-		struct pe_session *session,
-		struct roam_offload_synch_ind *roam_sync_ind_ptr)
-{
-	uint8_t *reassoc_resp;
-	tpSirAssocRsp assoc_rsp;
-	uint32_t frame_len;
-	uint8_t *frm_body;
-
-	if (roam_sync_ind_ptr->reassocRespLength <= SIR_MAC_HDR_LEN_3A) {
-		pe_warn("invalid roam sync assoc rsp");
-		return NULL;
-	}
-	reassoc_resp = (uint8_t *)roam_sync_ind_ptr +
-			roam_sync_ind_ptr->reassocRespOffset +
-			SIR_MAC_HDR_LEN_3A;
-	frame_len = roam_sync_ind_ptr->reassocRespLength - SIR_MAC_HDR_LEN_3A;
-
-	assoc_rsp = qdf_mem_malloc(sizeof(*assoc_rsp));
-	if (!assoc_rsp) {
-		pe_warn("err to malloc assoc rsp");
-		return NULL;
-	}
-
-	frm_body = qdf_mem_malloc(frame_len);
-	if (!frm_body) {
-		pe_warn("err to malloc assoc rsp body");
-		qdf_mem_free(assoc_rsp);
-		return NULL;
-	}
-	qdf_mem_copy(frm_body, reassoc_resp, frame_len);
-	/* parse Re/Association Response frame. */
-	if (sir_convert_assoc_resp_frame2_struct(
-		mac_ctx, session, frm_body,
-		frame_len, assoc_rsp) == QDF_STATUS_E_FAILURE) {
-		pe_err("Parse error Assoc resp length: %d", frame_len);
-		qdf_mem_free(frm_body);
-		qdf_mem_free(assoc_rsp);
-		return NULL;
-	}
-	qdf_mem_free(frm_body);
-
-	return assoc_rsp;
-}
-
 QDF_STATUS
 pe_roam_synch_callback(struct mac_context *mac_ctx,
 		       struct roam_offload_synch_ind *roam_sync_ind_ptr,
@@ -2591,7 +2542,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	struct bss_params *add_bss_params;
 	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	uint16_t join_rsp_len;
-	tpSirAssocRsp assoc_rsp;
 
 	if (!roam_sync_ind_ptr) {
 		pe_err("LFR3:roam_sync_ind_ptr is NULL");
@@ -2681,15 +2631,11 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->csaOffloadEnable = session_ptr->csaOffloadEnable;
 
 	/* Next routine will update nss and vdev_nss with AP's capabilities */
-	assoc_rsp = lim_get_assoc_resp_from_roam_sync(
-			mac_ctx, ft_session_ptr, roam_sync_ind_ptr);
 	lim_fill_ft_session(mac_ctx, bss_desc, ft_session_ptr,
-			    session_ptr, roam_sync_ind_ptr->phy_mode,
-			    assoc_rsp);
+			    session_ptr, roam_sync_ind_ptr->phy_mode);
 	pe_set_rmf_caps(mac_ctx, ft_session_ptr, roam_sync_ind_ptr);
 	/* Next routine may update nss based on dot11Mode */
-	lim_ft_prepare_add_bss_req(mac_ctx, ft_session_ptr, bss_desc,
-				   assoc_rsp);
+	lim_ft_prepare_add_bss_req(mac_ctx, ft_session_ptr, bss_desc);
 	if (session_ptr->is11Rconnection)
 		lim_fill_fils_ft(session_ptr, ft_session_ptr);
 
@@ -2702,7 +2648,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	if (!curr_sta_ds) {
 		pe_err("LFR3:failed to lookup hash entry");
 		ft_session_ptr->bRoamSynchInProgress = false;
-		qdf_mem_free(assoc_rsp);
 		return status;
 	}
 	session_ptr->limSmeState = eLIM_SME_IDLE_STATE;
@@ -2719,7 +2664,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 		pe_err("LFR3:failed to add hash entry for "QDF_MAC_ADDR_FMT,
 		       QDF_MAC_ADDR_REF(add_bss_params->staContext.staMac));
 		ft_session_ptr->bRoamSynchInProgress = false;
-		qdf_mem_free(assoc_rsp);
 		return status;
 	}
 
@@ -2759,7 +2703,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	roam_sync_ind_ptr->join_rsp = qdf_mem_malloc(join_rsp_len);
 	if (!roam_sync_ind_ptr->join_rsp) {
 		ft_session_ptr->bRoamSynchInProgress = false;
-		qdf_mem_free(assoc_rsp);
 		return QDF_STATUS_E_NOMEM;
 	}
 
@@ -2801,7 +2744,6 @@ pe_roam_synch_callback(struct mac_context *mac_ctx,
 	ft_session_ptr->limSmeState = eLIM_SME_LINK_EST_STATE;
 	ft_session_ptr->limPrevSmeState = ft_session_ptr->limSmeState;
 	ft_session_ptr->bRoamSynchInProgress = false;
-	qdf_mem_free(assoc_rsp);
 
 	return QDF_STATUS_SUCCESS;
 }

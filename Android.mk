@@ -7,6 +7,10 @@ ENABLE_QCACLD := true
 endif
 endif
 
+ifeq ($(BOARD_COMMON_DIR),)
+    BOARD_COMMON_DIR := device/qcom/common
+endif
+
 ifeq  ($(ENABLE_QCACLD), true)
 # Android makefile for the WLAN Module
 LOCAL_PATH := $(call my-dir)
@@ -105,7 +109,7 @@ endif
 
 # DLKM_DIR was moved for JELLY_BEAN (PLATFORM_SDK 16)
 ifeq ($(call is-platform-sdk-version-at-least,16),true)
-	DLKM_DIR := $(TOP)/device/qcom/common/dlkm
+	DLKM_DIR := $(TOP)/$(BOARD_COMMON_DIR)/dlkm
 else
 	DLKM_DIR := build/dlkm
 endif # platform-sdk-version
