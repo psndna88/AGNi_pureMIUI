@@ -13,7 +13,9 @@ fi
 
 echo "`rm -rf $COUT/*`" > /dev/null
 if [ -f $COUT/.config ]; then
-	echo "`rm -rf $COUT/.*`" > /dev/null
+	rm -rf $COUT/.*
+	rm -rf $COUT/.config
+	rm -rf $COUT/.thinlto-cache
 fi
 
 echo "   Compile folder EMPTY !"
@@ -22,4 +24,5 @@ echo "   Compile folder EMPTY !"
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="0"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
