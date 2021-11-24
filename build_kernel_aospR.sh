@@ -7,7 +7,7 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="MIATOLL"
 CONFIG1="agni_atoll_aospR_defconfig"
-export AGNI_BUILD_TYPE="AOSP-R"
+export AGNI_BUILD_TYPE="AOSP-RS"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
