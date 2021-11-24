@@ -986,6 +986,7 @@
 			qcom,mhi-soc-reset-offset = <0xb01b8>;
 			qcom,aoss-rst-clr;
 			qcom,aux-clk = <0x11>;
+			qcom,avoid-reboot-in-d3hot;
 
 			qcom,phy-init = <0x1240 0x01 0x0
 				0x100c 0x02 0x0
@@ -1445,6 +1446,7 @@
 		qcom,status-in-gpio = <&tlmm 65 0x00>;
 		qcom,status-out-gpio = <&tlmm 44 0x00>;
 		qcom,status-out2-gpio = <&tlmm 45 0x00>;
+		status = "disabled";
 	};
 };
 

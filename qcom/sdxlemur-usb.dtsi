@@ -8,11 +8,12 @@
 
 		iommus = <&apps_smmu 0x1a0 0x0>;
 		qcom,iommu-dma = "atomic";
-		qcom,iommu-dma-addr-pool = <0x40000000 0x5ffe0000>;
+		qcom,iommu-dma-addr-pool = <0x90000000 0x0ffe0000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
 		dma-ranges;
+		qcom,iommu-best-fit-algo;
 
 		interrupts-extended = <&pdc 19 IRQ_TYPE_EDGE_RISING>,
 				<&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
@@ -72,7 +73,7 @@
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
-			snps,xhci-imod-value = <4000>;
+			imod-interval-ns = <1000000>;
 		};
 
 		qcom,usbbam@a704000 {
