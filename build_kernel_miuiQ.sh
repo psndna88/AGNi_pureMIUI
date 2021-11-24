@@ -1,6 +1,7 @@
 #!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
+export BUILDJOBS=4
 
 KERNELDIR=`readlink -f .`
 
@@ -10,18 +11,20 @@ export AGNI_BUILD_TYPE="MIUI-Q"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
-FILENAME="AGNi_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
+FILENAME="AGNi_kernel-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
 
-# AGNi CCACHE SHIFTING TO SDM660
+# AGNi CCACHE SHIFTING TO MIATOLL
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="1"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
 
 exit_reset() {
 	export CCACHE_SDM660="0"
 	export CCACHE_MIATOLL_Q="0"
 	export CCACHE_MIATOLL_R="0"
+	export CCACHE_HAYDN="0"
 	. ~/WORKING_DIRECTORY/ccache_shifter.sh
 	sync
 	exit
@@ -64,13 +67,13 @@ echo ""
 
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
 
-make defconfig O=$COMPILEDIR_ATOLL $CONFIG1
-make -j4 O=$COMPILEDIR_ATOLL
+make O=$COMPILEDIR_ATOLL $CONFIG1
+make -j$BUILDJOBS O=$COMPILEDIR_ATOLL
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_ATOLL/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
 fi
-rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old
+rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old 2>/dev/null
 
 if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz $KERNELDIR/$DIR/Image.gz
@@ -106,5 +109,6 @@ fi
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="0"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
 
