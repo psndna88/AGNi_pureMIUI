@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, 2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/regmap.h>
@@ -1831,6 +1831,8 @@ int wcd934x_regmap_register_patch(struct regmap *regmap, int revision)
 		rc = regmap_multi_reg_write(regmap, wcd934x_1_1_defaults,
 					    ARRAY_SIZE(wcd934x_1_1_defaults));
 		regcache_cache_only(regmap, false);
+		break;
+	default:
 		break;
 	}
 
