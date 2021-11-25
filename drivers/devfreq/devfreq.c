@@ -319,7 +319,7 @@ static int devfreq_set_target(struct devfreq *devfreq, unsigned long new_freq,
 
 	devfreq->previous_freq = new_freq;
 
-	if (devfreq->suspend_freq >= 0)
+	if (devfreq->suspend_freq >= devfreq->scaling_min_freq)
 		devfreq->resume_freq = new_freq;
 
 	return err;
@@ -914,7 +914,7 @@ int devfreq_suspend_device(struct devfreq *devfreq)
 			return ret;
 	}
 
-	if (devfreq->suspend_freq >= 0) {
+	if (devfreq->suspend_freq >= devfreq->scaling_min_freq) {
 		mutex_lock(&devfreq->lock);
 		ret = devfreq_set_target(devfreq, devfreq->suspend_freq, 0);
 		mutex_unlock(&devfreq->lock);
