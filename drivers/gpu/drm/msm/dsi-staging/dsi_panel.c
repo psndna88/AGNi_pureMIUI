@@ -1827,13 +1827,6 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-off-commands",
 	"qcom,mdss-dsi-dispparam-crc-dcip3-on-command",
 	"qcom,mdss-dsi-dispparam-crc-off-command",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-l1-on-command",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-l2-on-command",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-off-command",
-	"qcom,mdss-dsi-dispparam-cabcuion-command",
-	"qcom,mdss-dsi-dispparam-cabcstillon-command",
-	"qcom,mdss-dsi-dispparam-cabcmovieon-command",
-	"qcom,mdss-dsi-dispparam-cabcoff-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1911,13 +1904,6 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
  	"qcom,mdss-dsi-qsync-off-commands-state",
 	"qcom,mdss-dsi-dispparam-crc-dcip3-on-command-state",
 	"qcom,mdss-dsi-dispparam-crc-off-command-state",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-l1-on-command-state",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-l2-on-command-state",
-	"qcom,mdss-dsi-dispparam-lcd-hbm-off-command-state",
-	"qcom,mdss-dsi-dispparam-cabcuion-command-state",
-	"qcom,mdss-dsi-dispparam-cabcstillon-command-state",
-	"qcom,mdss-dsi-dispparam-cabcmovieon-command-state",
-	"qcom,mdss-dsi-dispparam-cabcoff-command-state",
 };
 
 int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
@@ -5283,9 +5269,9 @@ ssize_t dsi_panel_mipi_reg_read(struct dsi_panel *panel, char *buf)
 int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 {
 	static const enum dsi_cmd_set_type type_map[] = {
-		DSI_CMD_SET_DISP_LCD_HBM_OFF,
-		DSI_CMD_SET_DISP_LCD_HBM_L1_ON,
-		DSI_CMD_SET_DISP_LCD_HBM_L2_ON
+		DSI_CMD_SET_DISP_HBM_OFF,
+		DSI_CMD_SET_HBM1_ON,
+		DSI_CMD_SET_HBM2_ON
 	};
 
 	enum dsi_cmd_set_type type;
@@ -5307,10 +5293,10 @@ int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 int dsi_panel_apply_cabc_mode(struct dsi_panel *panel)
 {
 	static const enum dsi_cmd_set_type type_map[] = {
-		DSI_CMD_SET_DISP_CABC_OFF,
-		DSI_CMD_SET_DISP_CABC_UI_ON,
-		DSI_CMD_SET_DISP_CABC_STILL_ON,
-		DSI_CMD_SET_DISP_CABC_MOVIE_ON
+		DSI_CMD_SET_DISP_CABCOFF,
+		DSI_CMD_SET_DISP_CABCUION,
+		DSI_CMD_SET_DISP_CABCSTILLON,
+		DSI_CMD_SET_DISP_CABCMOVIEON
 	};
 
 	enum dsi_cmd_set_type type;
