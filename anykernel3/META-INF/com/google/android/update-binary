@@ -512,7 +512,11 @@ else
 fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
-if ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
+
+if ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
+	ANDROID_VER="S";
+	ui_print " " "AGNi detected Android S" " ";
+elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
 	ANDROID_VER="R";
 	ui_print " " "AGNi detected Android R" " ";
 elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
