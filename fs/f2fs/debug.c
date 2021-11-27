@@ -11,7 +11,6 @@
 #include <linux/fs.h>
 #include <linux/backing-dev.h>
 #include <linux/f2fs_fs.h>
-#include <linux/proc_fs.h>
 #include <linux/blkdev.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -26,7 +25,6 @@ static DEFINE_MUTEX(f2fs_stat_mutex);
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *f2fs_debugfs_root;
 #endif
-extern struct proc_dir_entry *f2fs_proc_root;
 
 /*
  * This function calculates BDF of every segments
@@ -61,6 +59,7 @@ void f2fs_update_sit_info(struct f2fs_sb_info *sbi)
 		si->avg_vblocks = 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void update_general_status(struct f2fs_sb_info *sbi)
 {
 	struct f2fs_stat_info *si = F2FS_STAT(sbi);
@@ -146,8 +145,8 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 		si->node_pages = NODE_MAPPING(sbi)->nrpages;
 	if (sbi->meta_inode)
 		si->meta_pages = META_MAPPING(sbi)->nrpages;
-	si->nats = NM_I(sbi)->nat_cnt[TOTAL_NAT];
-	si->dirty_nats = NM_I(sbi)->nat_cnt[DIRTY_NAT];
+	si->nats = NM_I(sbi)->nat_cnt;
+	si->dirty_nats = NM_I(sbi)->dirty_nat_cnt;
 	si->sits = MAIN_SEGS(sbi);
 	si->dirty_sits = SIT_I(sbi)->dirty_sentries;
 	si->free_nids = NM_I(sbi)->nid_cnt[FREE_NID];
@@ -259,10 +258,9 @@ get_cache:
 	si->cache_mem += (NM_I(sbi)->nid_cnt[FREE_NID] +
 				NM_I(sbi)->nid_cnt[PREALLOC_NID]) *
 				sizeof(struct free_nid);
-	si->cache_mem += NM_I(sbi)->nat_cnt[TOTAL_NAT] *
-				sizeof(struct nat_entry);
-	si->cache_mem += NM_I(sbi)->nat_cnt[DIRTY_NAT] *
-				sizeof(struct nat_entry_set);
+	si->cache_mem += NM_I(sbi)->nat_cnt * sizeof(struct nat_entry);
+	si->cache_mem += NM_I(sbi)->dirty_nat_cnt *
+					sizeof(struct nat_entry_set);
 	si->cache_mem += si->inmem_pages * sizeof(struct inmem_pages);
 	for (i = 0; i < MAX_INO_ENTRY; i++)
 		si->cache_mem += sbi->im[i].ino_num * sizeof(struct ino_entry);
@@ -483,6 +481,7 @@ static const struct file_operations stat_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+#endif
 
 int f2fs_build_stats(struct f2fs_sb_info *sbi)
 {
@@ -538,7 +537,7 @@ void f2fs_destroy_stats(struct f2fs_sb_info *sbi)
 	list_del(&si->stat_list);
 	mutex_unlock(&f2fs_stat_mutex);
 
-	kfree(si);
+	kvfree(si);
 }
 
 void __init f2fs_create_root_stats(void)
@@ -549,16 +548,10 @@ void __init f2fs_create_root_stats(void)
 	debugfs_create_file("status", S_IRUGO, f2fs_debugfs_root, NULL,
 			    &stat_fops);
 #endif
-	if (f2fs_proc_root)
-		proc_create_data("status", S_IRUGO, f2fs_proc_root,
-				&stat_fops, NULL);
 }
 
 void f2fs_destroy_root_stats(void)
 {
-	if (f2fs_proc_root)
-		remove_proc_entry("status", f2fs_proc_root);
-
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(f2fs_debugfs_root);
 	f2fs_debugfs_root = NULL;
