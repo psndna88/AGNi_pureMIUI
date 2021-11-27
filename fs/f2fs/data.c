@@ -219,14 +219,12 @@ struct block_device *f2fs_target_device(struct f2fs_sb_info *sbi,
 	struct block_device *bdev = sbi->sb->s_bdev;
 	int i;
 
-	if (f2fs_is_multi_device(sbi)) {
-		for (i = 0; i < sbi->s_ndevs; i++) {
-			if (FDEV(i).start_blk <= blk_addr &&
-			    FDEV(i).end_blk >= blk_addr) {
-				blk_addr -= FDEV(i).start_blk;
-				bdev = FDEV(i).bdev;
-				break;
-			}
+	for (i = 0; i < sbi->s_ndevs; i++) {
+		if (FDEV(i).start_blk <= blk_addr &&
+					FDEV(i).end_blk >= blk_addr) {
+			blk_addr -= FDEV(i).start_blk;
+			bdev = FDEV(i).bdev;
+			break;
 		}
 	}
 	if (bio) {
@@ -239,9 +237,6 @@ struct block_device *f2fs_target_device(struct f2fs_sb_info *sbi,
 int f2fs_target_device_index(struct f2fs_sb_info *sbi, block_t blkaddr)
 {
 	int i;
-
-	if (!f2fs_is_multi_device(sbi))
-		return 0;
 
 	for (i = 0; i < sbi->s_ndevs; i++)
 		if (FDEV(i).start_blk <= blkaddr && FDEV(i).end_blk >= blkaddr)
@@ -359,12 +354,6 @@ submit_io:
 	else
 		trace_f2fs_submit_write_bio(sbi->sb, type, bio);
 	submit_bio(bio);
-}
-
-static void __f2fs_submit_read_bio(struct f2fs_sb_info *sbi,
-				struct bio *bio, enum page_type type)
-{
-	__submit_bio(sbi, bio, type);
 }
 
 static void __submit_merged_bio(struct f2fs_bio_info *io)
@@ -492,7 +481,7 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 
 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,
 			__is_meta_io(fio) ? META_GENERIC : DATA_GENERIC))
-		return -EFSCORRUPTED;
+		return -EFAULT;
 
 	trace_f2fs_submit_page_bio(page, fio);
 	f2fs_trace_ios(fio, 0);
@@ -518,7 +507,7 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 	inc_page_count(fio->sbi, is_read_io(fio->op) ?
 			__read_io_type(page): WB_DATA_TYPE(fio->page));
 
-	__f2fs_submit_read_bio(fio->sbi, bio, fio->type);
+	__submit_bio(fio->sbi, bio, fio->type);
 	return 0;
 }
 
@@ -667,7 +656,7 @@ static int f2fs_submit_page_read(struct inode *inode, struct page *page,
 	}
 	ClearPageError(page);
 	inc_page_count(F2FS_I_SB(inode), F2FS_RD_DATA);
-	__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
+	__submit_bio(F2FS_I_SB(inode), bio, DATA);
 	return 0;
 }
 
@@ -1151,7 +1140,7 @@ next_block:
 
 	if (__is_valid_data_blkaddr(blkaddr) &&
 		!f2fs_is_valid_blkaddr(sbi, blkaddr, DATA_GENERIC)) {
-		err = -EFSCORRUPTED;
+		err = -EFAULT;
 		goto sync_out;
 	}
 
@@ -1667,7 +1656,7 @@ zero_out:
 		if (bio && (last_block_in_bio != block_nr - 1 ||
 			!__same_bdev(F2FS_I_SB(inode), block_nr, bio))) {
 submit_and_realloc:
-			__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
+			__submit_bio(F2FS_I_SB(inode), bio, DATA);
 			bio = NULL;
 		}
 
@@ -1706,7 +1695,7 @@ set_error_page:
 		goto next_page;
 confused:
 		if (bio) {
-			__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
+			__submit_bio(F2FS_I_SB(inode), bio, DATA);
 			bio = NULL;
 		}
 		unlock_page(page);
@@ -1716,7 +1705,7 @@ next_page:
 	}
 	BUG_ON(pages && !list_empty(pages));
 	if (bio)
-		__f2fs_submit_read_bio(F2FS_I_SB(inode), bio, DATA);
+		__submit_bio(F2FS_I_SB(inode), bio, DATA);
 	return 0;
 }
 
@@ -1773,7 +1762,7 @@ retry_encrypt:
 		/* flush pending IOs and wait for a while in the ENOMEM case */
 		if (PTR_ERR(fio->encrypted_page) == -ENOMEM) {
 			f2fs_flush_merged_writes(fio->sbi);
-			congestion_wait(BLK_RW_ASYNC, HZ/50);
+			congestion_wait(BLK_RW_ASYNC, DEFAULT_IO_TIMEOUT);
 			gfp_flags |= __GFP_NOFAIL;
 			goto retry_encrypt;
 		}
@@ -1891,7 +1880,7 @@ int f2fs_do_write_data_page(struct f2fs_io_info *fio)
 
 		if (!f2fs_is_valid_blkaddr(fio->sbi, fio->old_blkaddr,
 							DATA_GENERIC))
-			return -EFSCORRUPTED;
+			return -EFAULT;
 
 		ipu_force = true;
 		fio->need_lock = LOCK_DONE;
@@ -1918,7 +1907,7 @@ got_it:
 	if (__is_valid_data_blkaddr(fio->old_blkaddr) &&
 		!f2fs_is_valid_blkaddr(fio->sbi, fio->old_blkaddr,
 							DATA_GENERIC)) {
-		err = -EFSCORRUPTED;
+		err = -EFAULT;
 		goto out_writepage;
 	}
 	/*
@@ -1993,7 +1982,7 @@ static int __write_data_page(struct page *page, bool *submitted,
 	loff_t i_size = i_size_read(inode);
 	const pgoff_t end_index = ((unsigned long long) i_size)
 							>> PAGE_SHIFT;
-	loff_t psize = (loff_t)(page->index + 1) << PAGE_SHIFT;
+	loff_t psize = (page->index + 1) << PAGE_SHIFT;
 	unsigned offset = 0;
 	bool need_balance_fs = false;
 	int err = 0;
@@ -2253,11 +2242,8 @@ continue_unlock:
 					ret = 0;
 					if (wbc->sync_mode == WB_SYNC_ALL) {
 						cond_resched();
-#if (CONFIG_HZ > 100)
-						congestion_wait(BLK_RW_ASYNC, 2);
-#else
-						congestion_wait(BLK_RW_ASYNC, 1);
-#endif
+						congestion_wait(BLK_RW_ASYNC,
+									DEFAULT_IO_TIMEOUT);
 						goto retry_write;
 					}
 					continue;
@@ -2502,8 +2488,6 @@ static int f2fs_write_begin(struct file *file, struct address_space *mapping,
 	block_t blkaddr = NULL_ADDR;
 	int err = 0;
 
-	trace_f2fs_write_begin(inode, pos, len, flags);
-
 	err = f2fs_is_checkpoint_ready(sbi);
 	if (err)
 		goto fail;
@@ -2601,8 +2585,6 @@ static int f2fs_write_end(struct file *file,
 			struct page *page, void *fsdata)
 {
 	struct inode *inode = page->mapping->host;
-
-	trace_f2fs_write_end(inode, pos, len, copied);
 
 	/*
 	 * This should be come from len == PAGE_SIZE, and we expect copied
@@ -2715,8 +2697,6 @@ static ssize_t f2fs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 
 	do_opu = allow_outplace_dio(inode, iocb, iter);
 
-	trace_f2fs_direct_IO_enter(inode, offset, count, rw);
-
 	if (rw == WRITE && whint_mode == WHINT_MODE_OFF)
 		iocb->ki_hint = WRITE_LIFE_NOT_SET;
 
@@ -2761,8 +2741,6 @@ static ssize_t f2fs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 		}
 	}
 out:
-	trace_f2fs_direct_IO_exit(inode, offset, count, rw, err);
-
 	return err;
 }
 

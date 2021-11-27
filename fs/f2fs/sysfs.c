@@ -15,10 +15,11 @@
 #include "segment.h"
 #include "gc.h"
 
-struct proc_dir_entry *f2fs_proc_root;
+static struct proc_dir_entry *f2fs_proc_root;
 
 /* Sysfs support for f2fs */
 enum {
+	GC_THREAD,	/* struct f2fs_gc_thread */
 	SM_INFO,	/* struct f2fs_sm_info */
 	DCC_INFO,	/* struct discard_cmd_control */
 	NM_INFO,	/* struct f2fs_nm_info */
@@ -42,7 +43,9 @@ struct f2fs_attr {
 
 static unsigned char *__struct_ptr(struct f2fs_sb_info *sbi, int struct_type)
 {
-	if (struct_type == SM_INFO)
+	if (struct_type == GC_THREAD)
+		return (unsigned char *)sbi->gc_thread;
+	else if (struct_type == SM_INFO)
 		return (unsigned char *)SM_I(sbi);
 	else if (struct_type == DCC_INFO)
 		return (unsigned char *)SM_I(sbi)->dcc_info;
@@ -253,6 +256,20 @@ out:
 	if (!strcmp(a->attr.name, "trim_sections"))
 		return -EINVAL;
 
+	if (!strcmp(a->attr.name, "gc_urgent")) {
+		if (t >= 1) {
+			sbi->gc_mode = GC_URGENT;
+			if (sbi->gc_thread) {
+				sbi->gc_thread->gc_wake = 1;
+				wake_up_interruptible_all(
+					&sbi->gc_thread->gc_wait_queue_head);
+				wake_up_discard_thread(sbi, true);
+			}
+		} else {
+			sbi->gc_mode = GC_NORMAL;
+		}
+		return count;
+	}
 	if (!strcmp(a->attr.name, "gc_idle")) {
 		if (t == GC_IDLE_CB)
 			sbi->gc_mode = GC_IDLE_CB;
@@ -280,7 +297,19 @@ static ssize_t f2fs_sbi_store(struct f2fs_attr *a,
 			struct f2fs_sb_info *sbi,
 			const char *buf, size_t count)
 {
-	return __sbi_store(a, sbi, buf, count);
+	ssize_t ret;
+	bool gc_entry = (!strcmp(a->attr.name, "gc_urgent") ||
+					a->struct_type == GC_THREAD);
+
+	if (gc_entry) {
+		if (!down_read_trylock(&sbi->sb->s_umount))
+			return -EAGAIN;
+	}
+	ret = __sbi_store(a, sbi, buf, count);
+	if (gc_entry)
+		up_read(&sbi->sb->s_umount);
+
+	return ret;
 }
 
 static ssize_t f2fs_attr_show(struct kobject *kobj,
@@ -368,6 +397,13 @@ static struct f2fs_attr f2fs_attr_##_name = {			\
 	.id	= _id,						\
 }
 
+F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_urgent_sleep_time,
+							urgent_sleep_time);
+F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_min_sleep_time, min_sleep_time);
+F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_max_sleep_time, max_sleep_time);
+F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_no_gc_sleep_time, no_gc_sleep_time);
+F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_idle, gc_mode);
+F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_urgent, gc_mode);
 F2FS_RW_ATTR(SM_INFO, f2fs_sm_info, reclaim_segments, rec_prefree_segments);
 F2FS_RW_ATTR(DCC_INFO, discard_cmd_control, max_small_discards, max_discards);
 F2FS_RW_ATTR(DCC_INFO, discard_cmd_control, discard_granularity, discard_granularity);
@@ -389,6 +425,7 @@ F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, cp_interval, interval_time[CP_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, idle_interval, interval_time[REQ_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, discard_idle_interval,
 					interval_time[DISCARD_TIME]);
+F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_idle_interval, interval_time[GC_TIME]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info,
 		umount_discard_timeout, interval_time[UMOUNT_DISCARD_TIMEOUT]);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, iostat_enable, iostat_enable);
@@ -422,6 +459,12 @@ F2FS_FEATURE_RO_ATTR(sb_checksum, FEAT_SB_CHECKSUM);
 
 #define ATTR_LIST(name) (&f2fs_attr_##name.attr)
 static struct attribute *f2fs_attrs[] = {
+	ATTR_LIST(gc_urgent_sleep_time),
+	ATTR_LIST(gc_min_sleep_time),
+	ATTR_LIST(gc_max_sleep_time),
+	ATTR_LIST(gc_no_gc_sleep_time),
+	ATTR_LIST(gc_idle),
+	ATTR_LIST(gc_urgent),
 	ATTR_LIST(reclaim_segments),
 	ATTR_LIST(max_small_discards),
 	ATTR_LIST(discard_granularity),
@@ -441,6 +484,7 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(cp_interval),
 	ATTR_LIST(idle_interval),
 	ATTR_LIST(discard_idle_interval),
+	ATTR_LIST(gc_idle_interval),
 	ATTR_LIST(umount_discard_timeout),
 	ATTR_LIST(iostat_enable),
 	ATTR_LIST(readdir_ra),
@@ -645,7 +689,7 @@ int __init f2fs_init_sysfs(void)
 {
 	int ret;
 
-	kobject_set_name(&f2fs_kset.kobj, "f2fs_dev");
+	kobject_set_name(&f2fs_kset.kobj, "f2fs");
 	f2fs_kset.kobj.parent = fs_kobj;
 	ret = kset_register(&f2fs_kset);
 	if (ret)
@@ -653,11 +697,10 @@ int __init f2fs_init_sysfs(void)
 
 	ret = kobject_init_and_add(&f2fs_feat, &f2fs_feat_ktype,
 				   NULL, "features");
-	if (ret) {
-		kobject_put(&f2fs_feat);
+	if (ret)
 		kset_unregister(&f2fs_kset);
-	} else
-		f2fs_proc_root = proc_mkdir("fs/f2fs_dev", NULL);
+	else
+		f2fs_proc_root = proc_mkdir("fs/f2fs", NULL);
 	return ret;
 }
 
@@ -665,7 +708,7 @@ void f2fs_exit_sysfs(void)
 {
 	kobject_put(&f2fs_feat);
 	kset_unregister(&f2fs_kset);
-	remove_proc_entry("fs/f2fs_dev", NULL);
+	remove_proc_entry("fs/f2fs", NULL);
 	f2fs_proc_root = NULL;
 }
 
@@ -678,11 +721,8 @@ int f2fs_register_sysfs(struct f2fs_sb_info *sbi)
 	init_completion(&sbi->s_kobj_unregister);
 	err = kobject_init_and_add(&sbi->s_kobj, &f2fs_sb_ktype, NULL,
 				"%s", sb->s_id);
-	if (err) {
-		kobject_put(&sbi->s_kobj);
-		wait_for_completion(&sbi->s_kobj_unregister);
+	if (err)
 		return err;
-	}
 
 	if (f2fs_proc_root)
 		sbi->s_proc = proc_mkdir(sb->s_id, f2fs_proc_root);
@@ -710,6 +750,4 @@ void f2fs_unregister_sysfs(struct f2fs_sb_info *sbi)
 		remove_proc_entry(sbi->sb->s_id, f2fs_proc_root);
 	}
 	kobject_del(&sbi->s_kobj);
-	kobject_put(&sbi->s_kobj);
-	wait_for_completion(&sbi->s_kobj_unregister);
 }
