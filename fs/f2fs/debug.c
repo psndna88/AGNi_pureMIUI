@@ -11,7 +11,6 @@
 #include <linux/fs.h>
 #include <linux/backing-dev.h>
 #include <linux/f2fs_fs.h>
-#include <linux/proc_fs.h>
 #include <linux/blkdev.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -24,7 +23,6 @@
 static LIST_HEAD(f2fs_stat_list);
 static struct dentry *f2fs_debugfs_root;
 static DEFINE_MUTEX(f2fs_stat_mutex);
-extern struct proc_dir_entry *f2fs_proc_root;
 
 static void update_general_status(struct f2fs_sb_info *sbi)
 {
@@ -530,16 +528,10 @@ void __init f2fs_create_root_stats(void)
 
 	debugfs_create_file("status", S_IRUGO, f2fs_debugfs_root, NULL,
 			    &stat_fops);
-	if (f2fs_proc_root)
-		proc_create_data("status", S_IRUGO, f2fs_proc_root,
-				&stat_fops, NULL);
 }
 
 void f2fs_destroy_root_stats(void)
 {
-	if (f2fs_proc_root)
-		remove_proc_entry("status", f2fs_proc_root);
-
 	debugfs_remove_recursive(f2fs_debugfs_root);
 	f2fs_debugfs_root = NULL;
 }

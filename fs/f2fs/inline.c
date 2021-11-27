@@ -144,7 +144,7 @@ int f2fs_convert_inline_page(struct dnode_of_data *dn, struct page *page)
 			"%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, "
 			"run fsck to fix.",
 			__func__, dn->inode->i_ino, dn->data_blkaddr);
-		return -EFSCORRUPTED;
+		return -EINVAL;
 	}
 
 	f2fs_bug_on(F2FS_P_SB(page), PageWriteback(page));
@@ -213,8 +213,7 @@ out:
 
 	f2fs_put_page(page, 1);
 
-	if (!err)
-		f2fs_balance_fs(sbi, dn.node_changed);
+	f2fs_balance_fs(sbi, dn.node_changed);
 
 	return err;
 }
@@ -388,7 +387,7 @@ static int f2fs_move_inline_dirents(struct inode *dir, struct page *ipage,
 			"%s: corrupted inline inode ino=%lx, i_addr[0]:0x%x, "
 			"run fsck to fix.",
 			__func__, dir->i_ino, dn.data_blkaddr);
-		err = -EFSCORRUPTED;
+		err = -EINVAL;
 		goto out;
 	}
 
