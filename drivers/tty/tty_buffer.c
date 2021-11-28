@@ -521,6 +521,9 @@ static void flush_to_ldisc(struct kthread_work *work)
 		if (!count)
 			break;
 		head->read += count;
+
+		if (need_resched())
+			cond_resched();
 	}
 
 	mutex_unlock(&buf->lock);
