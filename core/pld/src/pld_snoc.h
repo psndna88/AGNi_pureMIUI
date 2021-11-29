@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -149,6 +150,12 @@ static inline int pld_snoc_is_fw_down(struct device *dev)
 {
 	return 0;
 }
+
+static inline int pld_snoc_is_low_power_mode(struct device *dev)
+{
+	return 0;
+}
+
 static inline int pld_snoc_set_fw_log_mode(struct device *dev, u8 fw_log_mode)
 {
 	return 0;
@@ -328,6 +335,18 @@ static inline int pld_snoc_is_fw_down(struct device *dev)
 {
 	return icnss_is_fw_down();
 }
+
+#ifdef CONFIG_ENABLE_LOW_POWER_MODE
+static inline int pld_snoc_is_low_power_mode(struct device *dev)
+{
+	return icnss_is_low_power();
+}
+#else
+static inline int pld_snoc_is_low_power_mode(struct device *dev)
+{
+	return 0;
+}
+#endif
 
 static inline int pld_snoc_is_qmi_disable(struct device *dev)
 {
