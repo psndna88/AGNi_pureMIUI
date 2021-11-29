@@ -491,7 +491,10 @@ else
 fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
-if ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
+if ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
+	ANDROID_VER="S";
+	ui_print " " "AGNi detected Android S" " ";
+elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
 	ANDROID_VER="R";
 	ui_print " " "AGNi detected Android R" " ";
 elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
@@ -768,7 +771,7 @@ if [ ! -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak ]; then
 	$BB mv -f /vendor/etc/wifi/WCNSS_qcom_cfg.ini /vendor/etc/wifi/WCNSS_qcom_cfg.ini.bak;
 fi;
 if [ "`$BB grep selected.0=1 /tmp/aroma-data/wifi.prop`" ]; then # Automatic
-	if [ "$ANDROID_VER" == "R" ]; then
+	if ([ "$ANDROID_VER" == "R" ] || [ "$ANDROID_VER" == "S" ]); then
 #		ui_print " " "AGNi now modifying firmware for Android 11 Wifi driver support.." " ";
 #		$BB rm /firmware/image/AGNIWIFI-Pie 2>/dev/null;
 #		$BB cp -f $AKHOME/tools/wlan/Q/* /firmware/image;

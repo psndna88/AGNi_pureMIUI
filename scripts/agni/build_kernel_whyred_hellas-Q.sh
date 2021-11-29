@@ -1,6 +1,7 @@
 #!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
+export BUILDJOBS=4
 
 KERNELDIR=`readlink -f .`
 
@@ -25,12 +26,14 @@ FILENAME="AGNi_kernel_Hellas-Q_$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION.zip"
 export CCACHE_SDM660="1"
 export CCACHE_MIATOLL_Q="0"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
 
 exit_reset() {
 	export CCACHE_SDM660="0"
 	export CCACHE_MIATOLL_Q="0"
 	export CCACHE_MIATOLL_R="0"
+	export CCACHE_HAYDN="0"
 	. ~/WORKING_DIRECTORY/ccache_shifter.sh
 	sync
 	exit
@@ -83,7 +86,7 @@ rm $RTL8723AU/*.ko 2>/dev/null
 rm $RTL8192EU/*.ko 2>/dev/null
 
 make defconfig O=$COMPILEDIR $CONFIG1
-make -j4 O=$COMPILEDIR
+make -j$BUILDJOBS O=$COMPILEDIR
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR/.config $KERNELDIR/arch/arm64/configs/$CONFIG1
@@ -141,4 +144,5 @@ fi
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="0"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
