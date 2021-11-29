@@ -123,6 +123,7 @@ struct dut_hw_modes {
 	u8 ampdu_params;
 	u32 vht_capab;
 	u8 vht_mcs_set[8];
+	u8 ap_he_phy_capab[11];
 	bool valid;
 };
 

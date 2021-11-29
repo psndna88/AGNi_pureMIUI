@@ -2213,6 +2213,7 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 	const char *val;
 	unsigned int wlan_tag = 1;
 	const char *security;
+	bool pmf_set = false;
 
 	val = get_param(cmd, "WLAN_TAG");
 	if (val) {
@@ -2598,6 +2599,7 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 				  "errorCode,Unsupported PMF");
 			return 0;
 		}
+		pmf_set = true;
 	}
 
 	dut->ap_add_sha256 = 0;
@@ -2690,6 +2692,8 @@ static enum sigma_cmd_result cmd_ap_set_security(struct sigma_dut *dut,
 				return STATUS_SENT;
 			}
 			dut->ap_transition_disable = 1 << atoi(val);
+			if (dut->ap_pmf == AP_PMF_DISABLED && !pmf_set)
+				dut->ap_pmf = AP_PMF_OPTIONAL;
 		} else {
 			dut->ap_transition_disable = 0;
 		}
@@ -9561,9 +9565,41 @@ static void phy_info_vht_capa(struct dut_hw_modes *mode,
 }
 
 
+static void phy_info_he_capa(struct dut_hw_modes *mode,
+			     struct nlattr *nl_iftype)
+{
+	struct nlattr *tb[NL80211_BAND_IFTYPE_ATTR_MAX + 1];
+	struct nlattr *tb_flags[NL80211_IFTYPE_MAX + 1];
+
+	nla_parse(tb, NL80211_BAND_IFTYPE_ATTR_MAX,
+		  nla_data(nl_iftype), nla_len(nl_iftype), NULL);
+
+	if (!tb[NL80211_BAND_IFTYPE_ATTR_IFTYPES])
+		return;
+
+	if (nla_parse_nested(tb_flags, NL80211_IFTYPE_MAX,
+			     tb[NL80211_BAND_IFTYPE_ATTR_IFTYPES], NULL))
+		return;
+
+	if (!nla_get_flag(tb_flags[NL80211_IFTYPE_AP]))
+		return;
+
+	if (tb[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]) {
+		size_t len = nla_len(tb[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]);
+
+		if (len > sizeof(mode->ap_he_phy_capab))
+			len = sizeof(mode->ap_he_phy_capab);
+
+		memcpy(mode->ap_he_phy_capab,
+		       nla_data(tb[NL80211_BAND_IFTYPE_ATTR_HE_CAP_PHY]), len);
+	}
+}
+
 static int phy_info_band(struct dut_hw_modes *mode, struct nlattr *nl_band)
 {
 	struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
+	struct nlattr *nl_iftype;
+	int rem_band;
 
 	nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
 		  nla_len(nl_band), NULL);
@@ -9575,6 +9611,13 @@ static int phy_info_band(struct dut_hw_modes *mode, struct nlattr *nl_band)
 
 	phy_info_vht_capa(mode, tb_band[NL80211_BAND_ATTR_VHT_CAPA],
 			  tb_band[NL80211_BAND_ATTR_VHT_MCS_SET]);
+
+	if (tb_band[NL80211_BAND_ATTR_IFTYPE_DATA]) {
+		nla_for_each_nested(nl_iftype,
+				    tb_band[NL80211_BAND_ATTR_IFTYPE_DATA],
+				    rem_band)
+			phy_info_he_capa(mode, nl_iftype);
+	}
 
 	/* Other nl80211 band attributes can be parsed here, if required */
 
@@ -9623,6 +9666,49 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			return res;
 	}
 
+	/* Check for MU Beamformer capability (B33) and disable this capability
+	 * if the driver does not support it. This clears the default value
+	 * set in cmd_ap_reset_default(). */
+	if (dut->program == PROGRAM_HE &&
+	    !(dut->hw_modes.ap_he_phy_capab[33 / 8] & (1 << (33 % 8))))
+		dut->ap_mu_txBF = 0;
+
+	return 0;
+}
+
+
+static int protocol_feature_handler(struct nl_msg *msg, void *arg)
+{
+	u32 *feat = arg;
+	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+
+	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb_msg[NL80211_ATTR_PROTOCOL_FEATURES])
+		*feat = nla_get_u32(tb_msg[NL80211_ATTR_PROTOCOL_FEATURES]);
+
+	return NL_SKIP;
+}
+
+
+static u32 get_nl80211_protocol_features(struct sigma_dut *dut, int ifindex)
+{
+	u32 feat = 0;
+	struct nl_msg *msg;
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+				    NL80211_CMD_GET_PROTOCOL_FEATURES))) {
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"%s: could not get protocol feature", __func__);
+		return 0;
+	}
+
+	if (send_and_recv_msgs(dut, dut->nl_ctx, msg, protocol_feature_handler,
+			       &feat) == 0)
+		return feat;
+
 	return 0;
 }
 
@@ -9630,6 +9716,8 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 static int mac80211_get_wiphy(struct sigma_dut *dut)
 {
 	struct nl_msg *msg;
+	u32 feat;
+	int flags = 0;
 	int ret = 0;
 	int ifindex;
 
@@ -9641,9 +9729,14 @@ static int mac80211_get_wiphy(struct sigma_dut *dut)
 		return -1;
 	}
 
-	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, 0,
+	feat = get_nl80211_protocol_features(dut, ifindex);
+	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
+		flags = NLM_F_DUMP;
+
+	if (!(msg = nl80211_drv_msg(dut, dut->nl_ctx, ifindex, flags,
 				    NL80211_CMD_GET_WIPHY)) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex)) {
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
+	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP)) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
 				"%s: could not build get wiphy cmd", __func__);
 		nlmsg_free(msg);
