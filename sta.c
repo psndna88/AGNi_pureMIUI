@@ -14283,6 +14283,9 @@ wcn_sta_set_rfeature_he(const char *intf, struct sigma_dut *dut,
 	val = get_param(cmd, "TWT_Setup");
 	if (val) {
 		if (strcasecmp(val, "Request") == 0) {
+			if (set_power_save_wcn(dut, intf, 1) < 0)
+				sigma_dut_print(dut, DUT_MSG_ERROR,
+						"Failed to enable power save");
 			if (sta_twt_request(dut, conn, cmd)) {
 				send_resp(dut, conn, SIGMA_ERROR,
 					  "ErrorCode,TWT setup failed");
