@@ -689,10 +689,73 @@
 			qcom,sc-deb-cycles = <8>;
 			qcom,en-brake;
 			qcom,brake-pattern = [03 03 00 00];
+			qcom,wave-samples = [3e 3e 3e 00 00 00 00 00];
+			qcom,wave-samples-two = [3e 3e 3e 3e 00 00 00 00];
+			qcom,wave-samples-three = [3e 3e 3e 3e 3e 00 00 00];
+			qcom,wave-rep-cnt = <1>;
+			qcom,wave-samp-rep-cnt = <1>;
 			qcom,lra-high-z = "opt0";
 			qcom,lra-auto-res-mode = "qwd";
 			qcom,lra-calibrate-at-eop = <0>;
 			qcom,correct-lra-drive-freq;
+			qcom,lra-hw-auto-resonance;
+			qcom,play-rate-us = <6667>;
+			qcom,lra-resonance-sig-shape = "square";
+			qcom,lra-auto-resonance-mode = "qwd";
+			qcom,lra-allow-variable-play-rate;
+
+			wf_0 {
+				/* CLICK */
+				qcom,effect-id = <0>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [3e 3e 3e];
+				qcom,wf-play-rate-us = <6667>;
+				qcom,wf-brake-pattern = [01 00 00 00];
+				qcom,lra-auto-resonance-disable;
+			};
+			wf_1 {
+				/* DOUBLE CLICK */
+				qcom,effect-id = <1>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [7e 7e 02 02 02 02 02 02];
+				qcom,wf-play-rate-us = <7143>;
+				qcom,wf-repeat-count = <2>;
+				qcom,wf-s-repeat-count = <1>;
+				qcom,lra-auto-resonance-disable;
+			};
+			wf_2 {
+				/* TICK */
+				qcom,effect-id = <2>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [7e 7e];
+				qcom,wf-play-rate-us = <4000>;
+				qcom,lra-auto-resonance-disable;
+			};
+			wf_3 {
+				/* THUD */
+				qcom,effect-id = <3>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [7e 7e 7e];
+				qcom,wf-play-rate-us = <6667>;
+				qcom,lra-auto-resonance-disable;
+			};
+			wf_4 {
+				/* POP */
+				qcom,effect-id = <4>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [7e 7e];
+				qcom,wf-play-rate-us = <5000>;
+				qcom,lra-auto-resonance-disable;
+			};
+			wf_5 {
+				/* HEAVY CLICK */
+				qcom,effect-id = <5>;
+				qcom,wf-vmax-mv = <3000>;
+				qcom,wf-pattern = [7e 7e 7e];
+				qcom,wf-play-rate-us = <6667>;
+				qcom,wf-brake-pattern = [03 00 00 00];
+				qcom,lra-auto-resonance-disable;
+			};
 		};
 	};
 };
