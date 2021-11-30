@@ -8,6 +8,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/hwid.h>
 #include "cam_soc_util.h"
 #include "cam_debug_util.h"
 #include "cam_cx_ipeak.h"
@@ -1445,6 +1446,11 @@ int cam_soc_util_regulator_disable(struct regulator *rgltr,
 	else if (rgltr_delay_ms)
 		usleep_range(rgltr_delay_ms * 1000,
 			(rgltr_delay_ms * 1000) + 1000);
+	else if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
+		CAM_DBG(CAM_UTIL, "need wait 1ms for AF regulator hardware disabling");
+		if (!strcmp(rgltr_name,"cam_vaf")) //just for L11C OCP(K11)
+			usleep_range(1000,2000);
+	}
 
 	if (regulator_count_voltages(rgltr) > 0) {
 		regulator_set_load(rgltr, 0);
