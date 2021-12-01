@@ -1752,7 +1752,14 @@ static inline uint64_t gsi_read_event_ring_rp_ddr(struct gsi_evt_ring_props* pro
 static inline uint64_t gsi_read_event_ring_rp_reg(struct gsi_evt_ring_props* props,
 	uint8_t id, int ee)
 {
-	return gsi_readl(gsi_ctx->base + GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(id, ee));
+	uint64_t rp;
+
+	rp = gsi_readl(gsi_ctx->base +
+		GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(id, ee));
+	rp |= ((uint64_t)gsi_readl(gsi_ctx->base +
+		GSI_EE_n_EV_CH_k_CNTXT_5_OFFS(id, ee))) << 32;
+
+	return rp;
 }
 
 int gsi_alloc_evt_ring(struct gsi_evt_ring_props *props, unsigned long dev_hdl,
