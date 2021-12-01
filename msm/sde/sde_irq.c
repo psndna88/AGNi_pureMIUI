@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -22,6 +22,8 @@ void sde_irq_update(struct msm_kms *msm_kms, bool enable)
 		SDE_ERROR("invalid kms arguments\n");
 		return;
 	}
+	if (sde_kms->irq_num < 0)
+		return;
 
 	sde_kms->irq_enabled = enable;
 
