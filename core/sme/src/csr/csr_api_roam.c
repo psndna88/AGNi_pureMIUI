@@ -15799,10 +15799,11 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				sme_debug("Channel is 6G but country IE not present");
 			wlan_reg_read_current_country(mac->psoc,
 						      programmed_country);
-			status = wlan_reg_get_6g_power_type_for_ctry(
+			status = wlan_reg_get_6g_power_type_for_ctry(mac->psoc,
 					pIes->Country.country,
 					programmed_country, &power_type_6g,
-					&ctry_code_match);
+					&ctry_code_match,
+					pSession->ap_power_type);
 			if (QDF_IS_STATUS_ERROR(status))
 				break;
 			csr_join_req->ap_power_type_6g = power_type_6g;
