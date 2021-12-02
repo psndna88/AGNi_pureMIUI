@@ -309,6 +309,7 @@
 						00 00 0a 0a
 						00 00 8a 8a];
 		qcom,platform-regulator-settings = [1d 1d 1d 1d 1d];
+		qcom,phy-clamp-enable;
 		qcom,panel-allow-phy-poweroff;
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
