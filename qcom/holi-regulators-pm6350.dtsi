@@ -50,14 +50,6 @@
 					<RPM_SMD_REGULATOR_LEVEL_BINNING>;
 			qcom,use-voltage-level;
 		};
-
-		gfx_cdev: gfx-cdev {
-			compatible = "qcom,regulator-cooling-device";
-			regulator-cdev-supply = <&S3A_LEVEL_AO>;
-			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_RETENTION
-					RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>;
-			#cooling-cells = <2>;
-		};
 	};
 
 	/* PM6350 L1 - VDD_MX supply */
