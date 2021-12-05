@@ -2124,7 +2124,7 @@ static int spcom_unregister_rpmsg_drv(struct spcom_channel *ch)
 	return 0;
 }
 
-static int spcom_probe(struct platform_device *pdev)
+static int __refdata spcom_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct spcom_device *dev = NULL;

@@ -414,12 +414,6 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 		hsusb_phy_write_seq(phy->base, phy->param_override_seq,
 				phy->param_override_seq_cnt, 0);
 
-	/* xiaomi: override param_override_x0 to x3 */
-	writel_relaxed(phy->param_ovrd0, phy->base + 0x6c);
-	writel_relaxed(phy->param_ovrd1, phy->base + 0x70);
-	writel_relaxed(phy->param_ovrd2, phy->base + 0x74);
-	writel_relaxed(phy->param_ovrd3, phy->base + 0x78);
-
 	if (phy->pre_emphasis) {
 		u8 val = TXPREEMPAMPTUNE0(phy->pre_emphasis) &
 				TXPREEMPAMPTUNE0_MASK;
@@ -919,8 +913,6 @@ static int msm_hsphy_remove(struct platform_device *pdev)
 
 	msm_hsphy_enable_clocks(phy, false);
 	msm_hsphy_enable_power(phy, false);
-	kfree(phy);
-
 	return 0;
 }
 

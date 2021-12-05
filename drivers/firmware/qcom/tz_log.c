@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,26 +25,13 @@
 #include <linux/of.h>
 #include <linux/dma-buf.h>
 #include <linux/ion_kernel.h>
-#include <linux/pm.h>
-#include <linux/proc_fs.h>
-#include <linux/wait.h>
-#include <linux/freezer.h>
 
 #include <soc/qcom/scm.h>
 #include <soc/qcom/qseecomi.h>
 
-/* QSEE_LOG_BUF_SIZE = 64K */
-#define QSEE_LOG_BUF_SIZE 0x10000
+/* QSEE_LOG_BUF_SIZE = 32K */
+#define QSEE_LOG_BUF_SIZE 0x8000
 
-/*
- * Adding dummy entries for few API's
- * since QCPE does not rely on these definitions.
- */
-static inline int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf,
-		size_t cmd_len, void *resp_buf, size_t resp_len)
-{
-	return 0;
-}
 
 /* TZ Diagnostic Area legacy version number */
 #define TZBSP_DIAG_MAJOR_VERSION_LEGACY	2
@@ -340,20 +327,6 @@ static struct tzdbg tzdbg = {
 static struct tzdbg_log_t *g_qsee_log;
 static dma_addr_t coh_pmem;
 static uint32_t debug_rw_buf_size;
-static bool restore_from_hibernation;
-static struct proc_dir_entry *g_proc_dir;
-static struct proc_dir_entry *p_qsee_log_dump_handler;
-static struct proc_dir_entry *p_tz_log_dump_handler;
-static DECLARE_WAIT_QUEUE_HEAD(qseelog_waitqueue);
-static atomic_t qseelog_wait = ATOMIC_INIT(0);
-
-void read_qseelog_wakeup(void)
-{
-	if (atomic_read(&qseelog_wait)) {
-		atomic_set(&qseelog_wait, 0);
-		wake_up_all(&qseelog_waitqueue);
-	}
-}
 
 /*
  * Debugfs data structure and functions
@@ -630,32 +603,22 @@ static int _disp_log_stats(struct tzdbg_log_t *log,
 		log_start->offset = (log->log_pos.offset + 1) % log_len;
 	}
 
-	if (buf_idx == TZDBG_QSEE_LOG) {
-		while (log_start->offset == log->log_pos.offset) {
-			atomic_set(&qseelog_wait, 1);
+	while (log_start->offset == log->log_pos.offset) {
+		/*
+		 * No data in ring buffer,
+		 * so we'll hang around until something happens
+		 */
+		unsigned long t = msleep_interruptible(50);
 
-			if (wait_event_freezable(qseelog_waitqueue, atomic_read(&qseelog_wait) == 0)) {
-				/* Some event woke us up, so let's quit */
-				return 0;
-			}
+		if (t != 0) {
+			/* Some event woke us up, so let's quit */
+			return 0;
 		}
-	} else {
-		while (log_start->offset == log->log_pos.offset) {
-			/*
-			 * No data in ring buffer,
-			 * so we'll hang around until something happens
-			 */
-			unsigned long t = msleep_interruptible(50);
 
-			if (t != 0) {
-				/* Some event woke us up, so let's quit */
-				return 0;
-			}
+		if (buf_idx == TZDBG_LOG)
+			memcpy_fromio((void *)tzdbg.diag_buf, tzdbg.virt_iobase,
+						debug_rw_buf_size);
 
-			if (buf_idx == TZDBG_LOG)
-				memcpy_fromio((void *)tzdbg.diag_buf, tzdbg.virt_iobase,
-							debug_rw_buf_size);
-		}
 	}
 
 	max_len = (count > debug_rw_buf_size) ? debug_rw_buf_size : count;
@@ -666,9 +629,8 @@ static int _disp_log_stats(struct tzdbg_log_t *log,
 	while ((log_start->offset != log->log_pos.offset) && (len < max_len)) {
 		tzdbg.disp_buf[i++] = log->log_buf[log_start->offset];
 		log_start->offset = (log_start->offset + 1) % log_len;
-		if (log_start->offset == 0) {
+		if (log_start->offset == 0)
 			++log_start->wrap;
-		}
 		++len;
 	}
 
@@ -739,9 +701,8 @@ static int __disp_hyp_log_stats(uint8_t *log,
 	while ((log_start->offset != hyp->log_pos.offset) && (len < max_len)) {
 		tzdbg.disp_buf[i++] = log[log_start->offset];
 		log_start->offset = (log_start->offset + 1) % log_len;
-		if (log_start->offset == 0) {
+		if (log_start->offset == 0)
 			++log_start->wrap;
-		}
 		++len;
 	}
 
@@ -756,15 +717,6 @@ static int _disp_tz_log_stats(size_t count)
 {
 	static struct tzdbg_log_pos_t log_start = {0};
 	struct tzdbg_log_t *log_ptr;
-	/* wrap and offset are initialized to zero since tz is coldboot
-	 * during restoration from hibernation.the reason to initialise
-	 * the wrap and offset to zero since it contains previous boot
-	 * values and which are invalid now.
-	 */
-	if (restore_from_hibernation) {
-		log_start.wrap = log_start.offset = 0;
-		return 0;
-	}
 
 	log_ptr = (struct tzdbg_log_t *)((unsigned char *)tzdbg.diag_buf +
 				tzdbg.diag_buf->ring_off -
@@ -789,16 +741,6 @@ static int _disp_hyp_log_stats(size_t count)
 static int _disp_qsee_log_stats(size_t count)
 {
 	static struct tzdbg_log_pos_t log_start = {0};
-
-	/* wrap and offset are initialized to zero since tz is coldboot
-	 * during restoration from hibernation. The reason to initialise
-	 * the wrap and offset to zero since it contains previous values
-	 * and which are invalid now.
-	 */
-	if (restore_from_hibernation) {
-		log_start.wrap = log_start.offset = 0;
-		return 0;
-	}
 
 	return _disp_log_stats(g_qsee_log, &log_start,
 			QSEE_LOG_BUF_SIZE - sizeof(struct tzdbg_log_pos_t),
@@ -897,9 +839,8 @@ static ssize_t tzdbgfs_read(struct file *file, char __user *buf,
 		break;
 	}
 
-	if (len > count) {
+	if (len > count)
 		len = count;
-	}
 
 	return simple_read_from_buffer(buf, len, offp,
 				tzdbg.stat[(*tz_id)].data, len);
@@ -918,79 +859,11 @@ const struct file_operations tzdbg_fops = {
 };
 
 
-static ssize_t qsee_log_dump_procfs_read(struct file *file, char __user *buf,
-					 size_t count, loff_t *offp)
-{
-	int len = 0;
-	len = _disp_qsee_log_stats(count);
-	*offp = 0;
-
-	if (len > count) {
-		len = count;
-	}
-
-	return simple_read_from_buffer(buf, len, offp,
-				       tzdbg.stat[TZDBG_QSEE_LOG].data, len);
-}
-
-
-static int qsee_log_dump_procfs_open(struct inode *inode, struct file *pfile)
-{
-	pfile->private_data = inode->i_private;
-	return 0;
-}
-
-const struct file_operations qsee_log_dump_proc_fops = {
-	.owner = THIS_MODULE,
-	.read = qsee_log_dump_procfs_read,
-	.open = qsee_log_dump_procfs_open,
-};
-
-
-static ssize_t tz_log_dump_procfs_read(struct file *file, char __user *buf,
-				       size_t count, loff_t *offp)
-{
-	int len = 0;
-
-	if (TZBSP_DIAG_MAJOR_VERSION_LEGACY <
-		(tzdbg.diag_buf->version >> 16)) {
-		len = _disp_tz_log_stats(count);
-		*offp = 0;
-	} else {
-		len = _disp_tz_log_stats_legacy();
-	}
-
-	if (len > count) {
-		len = count;
-	}
-
-	return simple_read_from_buffer(buf, len, offp,
-				       tzdbg.stat[TZDBG_LOG].data, len);
-}
-
-
-static int tz_log_dump_procfs_open(struct inode *inode, struct file *pfile)
-{
-	pfile->private_data = inode->i_private;
-	return 0;
-}
-
-const struct file_operations tz_log_dump_proc_fops = {
-	.owner = THIS_MODULE,
-	.read = tz_log_dump_procfs_read,
-	.open = tz_log_dump_procfs_open,
-};
-
 /*
  * Allocates log buffer from ION, registers the buffer at TZ
  */
 static void tzdbg_register_qsee_log_buf(struct platform_device *pdev)
 {
-	/* register log buffer scm request */
-	struct qseecom_reg_log_buf_ireq req = {};
-
-	/* scm response */
-	struct qseecom_command_scm_resp resp = {};
 	size_t len;
 	int ret = 0;
 	struct scm_desc desc = {0};
@@ -1005,30 +878,21 @@ static void tzdbg_register_qsee_log_buf(struct platform_device *pdev)
 
 	g_qsee_log = (struct tzdbg_log_t *)buf;
 
-	if (!is_scm_armv8()) {
-		req.qsee_cmd_id = QSEOS_REGISTER_LOG_BUF_COMMAND;
-		req.phy_addr = (uint32_t)coh_pmem;
-		req.len = len;
-		/*  SCM_CALL  to register the log buffer */
-		ret = scm_call(SCM_SVC_TZSCHEDULER, 1,  &req, sizeof(req),
-			&resp, sizeof(resp));
-	} else {
-		desc.args[0] = coh_pmem;
-		desc.args[1] = len;
-		desc.arginfo = 0x22;
-		ret = scm_call2(SCM_QSEEOS_FNID(1, 6), &desc);
-		resp.result = desc.ret[0];
-	}
+	desc.args[0] = coh_pmem;
+	desc.args[1] = len;
+	desc.arginfo = 0x22;
+	ret = scm_call2(SCM_QSEEOS_FNID(1, 6), &desc);
+
 	if (ret) {
 		pr_err("%s: scm_call to register log buffer failed\n",
 			__func__);
 		goto err;
 	}
 
-	if (resp.result != QSEOS_RESULT_SUCCESS) {
+	if (desc.ret[0] != QSEOS_RESULT_SUCCESS) {
 		pr_err(
 		"%s: scm_call to register log buf failed, resp result =%llu\n",
-		__func__, resp.result);
+		__func__, desc.ret[0]);
 		goto err;
 	}
 
@@ -1064,35 +928,10 @@ static int  tzdbgfs_init(struct platform_device *pdev)
 			goto err;
 		}
 	}
-
-	g_proc_dir = proc_mkdir("tzdbg", 0);
-
-	if (g_proc_dir == 0) {
-		printk("Unable to mkdir /proc/aMsg\n");
-		pr_err("%s: qsee log dump dirs in proc  create dir failed ! \n", __func__);
-		rc = -ENOMEM;
-		goto err;
-	}
-
-	p_qsee_log_dump_handler = proc_create("qsee_log_dump", 0, g_proc_dir,
-					      &qsee_log_dump_proc_fops);
-
-	if (p_qsee_log_dump_handler == NULL) {
-		pr_err("%s: qsee log dump dirs in proc  create qsee file failed ! \n", __func__);
-	}
-
-	p_tz_log_dump_handler = proc_create("tz_log_dump", 0, g_proc_dir,
-					    &tz_log_dump_proc_fops);
-
-	if (p_tz_log_dump_handler == NULL) {
-		pr_err("%s: qsee log dump dirs in proc  create tz file failed ! \n", __func__);
-	}
-
 	tzdbg.disp_buf = kzalloc(max(debug_rw_buf_size,
 			tzdbg.hyp_debug_rw_buf_size), GFP_KERNEL);
-	if (tzdbg.disp_buf == NULL) {
+	if (tzdbg.disp_buf == NULL)
 		goto err;
-	}
 	platform_set_drvdata(pdev, dent_dir);
 	return 0;
 err:
@@ -1111,9 +950,6 @@ static void tzdbgfs_exit(struct platform_device *pdev)
 	if (g_qsee_log)
 		dma_free_coherent(&pdev->dev, QSEE_LOG_BUF_SIZE,
 					 (void *)g_qsee_log, coh_pmem);
-	if (p_qsee_log_dump_handler != NULL) {
-		proc_remove(p_qsee_log_dump_handler);
-	}
 }
 
 static int __update_hypdbg_base(struct platform_device *pdev,
@@ -1150,9 +986,8 @@ static int __update_hypdbg_base(struct platform_device *pdev,
 	}
 
 	ptr = kzalloc(tzdbg.hyp_debug_rw_buf_size, GFP_KERNEL);
-	if (!ptr) {
+	if (!ptr)
 		return -ENOMEM;
-	}
 
 	tzdbg.hyp_diag_buf = (struct hypdbg_t *)ptr;
 	hyp = tzdbg.hyp_diag_buf;
@@ -1164,26 +999,19 @@ static void tzdbg_get_tz_version(void)
 {
 	uint32_t smc_id = 0;
 	uint32_t feature = 10;
-	struct qseecom_command_scm_resp resp = {0};
 	struct scm_desc desc = {0};
 	int ret = 0;
 
-	if (!is_scm_armv8()) {
-		ret = scm_call(SCM_SVC_INFO, SCM_SVC_UTIL,  &feature,
-					sizeof(feature), &resp, sizeof(resp));
-	} else {
-		smc_id = TZ_INFO_GET_FEATURE_VERSION_ID;
-		desc.arginfo = TZ_INFO_GET_FEATURE_VERSION_ID_PARAM_ID;
-		desc.args[0] = feature;
-		ret = scm_call2(smc_id, &desc);
-		resp.result = desc.ret[0];
-	}
+	smc_id = TZ_INFO_GET_FEATURE_VERSION_ID;
+	desc.arginfo = TZ_INFO_GET_FEATURE_VERSION_ID_PARAM_ID;
+	desc.args[0] = feature;
+	ret = scm_call2(smc_id, &desc);
 
 	if (ret)
 		pr_err("%s: scm_call to get tz version failed\n",
 				__func__);
 	else
-		tzdbg.tz_version = resp.result;
+		tzdbg.tz_version = desc.ret[0];
 
 }
 
@@ -1263,15 +1091,13 @@ static int tz_log_probe(struct platform_device *pdev)
 	}
 
 	ptr = kzalloc(debug_rw_buf_size, GFP_KERNEL);
-	if (ptr == NULL) {
+	if (ptr == NULL)
 		return -ENXIO;
-	}
 
 	tzdbg.diag_buf = (struct tzdbg_t *)ptr;
 
-	if (tzdbgfs_init(pdev)) {
+	if (tzdbgfs_init(pdev))
 		goto err;
-	}
 
 	tzdbg_register_qsee_log_buf(pdev);
 
@@ -1287,59 +1113,12 @@ err:
 static int tz_log_remove(struct platform_device *pdev)
 {
 	kzfree(tzdbg.diag_buf);
-	if (tzdbg.hyp_diag_buf) {
+	if (tzdbg.hyp_diag_buf)
 		kzfree(tzdbg.hyp_diag_buf);
-	}
 	tzdbgfs_exit(pdev);
 
 	return 0;
 }
-
-#ifdef CONFIG_PM
-static int tz_log_freeze(struct device *dev)
-{
-	/* This Boolean variable is maintained to initialise the ring buffer
-	 * log pointer to zero during restoration from hibernation
-	 */
-	restore_from_hibernation = 1;
-	if (g_qsee_log)
-		dma_free_coherent(dev, QSEE_LOG_BUF_SIZE, (void *)g_qsee_log,
-					coh_pmem);
-	return 0;
-}
-
-static int tz_log_restore(struct device *dev)
-{
-	/* ring buffer log pointer needs to be re initialized
-	 * during restoration from hibernation.
-	 */
-	if (restore_from_hibernation) {
-		_disp_tz_log_stats(0);
-		_disp_qsee_log_stats(0);
-	}
-	/* Register the log bugger at TZ during hibernation resume.
-	 * After hibernation the log buffer is with HLOS as TZ encountered
-	 * a coldboot sequence.
-	 */
-	tzdbg_register_qsee_log_buf(to_platform_device(dev));
-	/* This is set back to zero after successful restoration
-	 * from hibernation.
-	 */
-	restore_from_hibernation = 0;
-	return 0;
-}
-
-static const struct dev_pm_ops tz_log_pmops = {
-	.freeze = tz_log_freeze,
-	.restore = tz_log_restore,
-	.thaw = tz_log_restore,
-};
-
-#define TZ_LOG_PMOPS (&tz_log_pmops)
-
-#else
-#define TZ_LOG_PMOPS NULL
-#endif
 
 static const struct of_device_id tzlog_match[] = {
 	{	.compatible = "qcom,tz-log",
@@ -1355,7 +1134,6 @@ static struct platform_driver tz_log_driver = {
 		.owner = THIS_MODULE,
 		.of_match_table = tzlog_match,
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
-		.pm = TZ_LOG_PMOPS,
 	},
 };
 
