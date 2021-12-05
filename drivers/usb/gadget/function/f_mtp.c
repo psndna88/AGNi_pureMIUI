@@ -616,7 +616,6 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 		goto done;
 	}
 
-	cdev = dev->cdev;
 	len = ALIGN(count, dev->ep_out->maxpacket);
 	if (len > mtp_rx_req_len)
 		return -EINVAL;
