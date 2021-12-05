@@ -155,7 +155,6 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#if 0
 static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
@@ -165,7 +164,6 @@ static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 		!nqx_dev->irq_enabled, msecs_to_jiffies(MAX_IRQ_WAIT_TIME));
 	return ret;
 }
-#endif
 
 static ssize_t nfc_read(struct file *filp, char __user *buf,
 					size_t count, loff_t *offset)
@@ -352,7 +350,9 @@ static int sn100_ese_pwr(struct nqx_dev *nqx_dev, unsigned long int arg)
 		 * VEN state will remain HIGH if NFC is enabled otherwise
 		 * it will be set as LOW
 		 */
-		if (!gpio_get_value(nqx_dev->en_gpio)) {
+		nqx_dev->nfc_ven_enabled =
+			gpio_get_value(nqx_dev->en_gpio);
+		if (!nqx_dev->nfc_ven_enabled) {
 			dev_dbg(&nqx_dev->client->dev, "eSE HAL service setting en_gpio HIGH\n");
 			gpio_set_value(nqx_dev->en_gpio, 1);
 			/* hardware dependent delay */
@@ -753,9 +753,19 @@ static long nfc_ioctl(struct file *pfile, unsigned int cmd,
 		r = nfc_ioctl_power_states(pfile, arg);
 		break;
 	case ESE_SET_PWR:
-		r = sn100_ese_pwr(nqx_dev, arg);
+		if ((nqx_dev->nqx_info.info.chip_type == NFCC_SN100_A) ||
+			(nqx_dev->nqx_info.info.chip_type == NFCC_SN100_B))
+			r = sn100_ese_pwr(nqx_dev, arg);
+		else
+			r = nqx_ese_pwr(nqx_dev, arg);
+		break;
 	case ESE_GET_PWR:
-		r = sn100_ese_pwr(nqx_dev, 3);
+		if ((nqx_dev->nqx_info.info.chip_type == NFCC_SN100_A) ||
+			(nqx_dev->nqx_info.info.chip_type == NFCC_SN100_B))
+			r = sn100_ese_pwr(nqx_dev, 3);
+		else
+			r = nqx_ese_pwr(nqx_dev, 3);
+		break;
 	case SET_RX_BLOCK:
 		break;
 	case SET_EMULATOR_TEST_POINT:
@@ -914,9 +924,7 @@ err_nfcc_hw_info:
 
 	return ret;
 }
-#endif
 
-#if 0
 /* Check for availability of NQ_ NFC controller hardware */
 static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 {
@@ -1428,19 +1436,20 @@ static int nqx_probe(struct i2c_client *client,
 	/* NFC_INT IRQ */
 	nqx_dev->irq_enabled = true;
 	r = request_irq(client->irq, nqx_dev_irq_handler,
-			  IRQF_TRIGGER_RISING, client->name, nqx_dev);
+			  IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND, client->name, nqx_dev);
 	if (r) {
 		dev_err(&client->dev, "%s: request_irq failed\n", __func__);
 		goto err_request_irq_failed;
 	}
 	nqx_disable_irq(nqx_dev);
 
+	/* Do not perform nfcc_hw_check, make sure that nfcc is present */
+#if 0
 	/*
 	 * To be efficient we need to test whether nfcc hardware is physically
 	 * present before attempting further hardware initialisation.
 	 *
 	 */
-#if 0
 	r = nfcc_hw_check(client, nqx_dev);
 	if (r) {
 		/* make sure NFCC is not enabled */
@@ -1464,13 +1473,11 @@ static int nqx_probe(struct i2c_client *client,
 	}
 
 #ifdef NFC_KERNEL_BU
-	if (nqx_dev->pdata->clk_pin_voting) {
-		r = nqx_clock_select(nqx_dev);
-		if (r < 0) {
-			dev_err(&client->dev,
-				"%s: nqx_clock_select failed\n", __func__);
-			goto err_clock_en_failed;
-		}
+	r = nqx_clock_select(nqx_dev);
+	if (r < 0) {
+		dev_err(&client->dev,
+			"%s: nqx_clock_select failed\n", __func__);
+		goto err_clock_en_failed;
 	}
 	gpio_set_value(platform_data->en_gpio, 1);
 #endif
