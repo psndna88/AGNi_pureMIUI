@@ -704,6 +704,10 @@ static int va_macro_tx_va_mclk_enable(struct va_macro_priv *va_priv,
 							   TX_CORE_CLK,
 							   false);
 			if (ret < 0) {
+				if (va_priv->swr_clk_users == 0) {
+					msm_cdc_pinctrl_select_sleep_state(
+							va_priv->va_swr_gpio_p);
+				}
 				dev_err_ratelimited(va_priv->dev,
 					"%s: swr request clk failed\n",
 					__func__);
