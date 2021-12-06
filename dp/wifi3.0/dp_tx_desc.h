@@ -251,16 +251,19 @@ dp_tx_adjust_flow_pool_state(struct dp_soc *soc,
 		soc->pause_cb(pool->flow_pool_id,
 			      WLAN_NETIF_PRIORITY_QUEUE_OFF,
 			      WLAN_DATA_FLOW_CTRL_PRI);
+		/* fallthrough */
 
 	case FLOW_POOL_VO_PAUSED:
 		soc->pause_cb(pool->flow_pool_id,
 			      WLAN_NETIF_VO_QUEUE_OFF,
 			      WLAN_DATA_FLOW_CTRL_VO);
+		/* fallthrough */
 
 	case FLOW_POOL_VI_PAUSED:
 		soc->pause_cb(pool->flow_pool_id,
 			      WLAN_NETIF_VI_QUEUE_OFF,
 			      WLAN_DATA_FLOW_CTRL_VI);
+		/* fallthrough */
 
 	case FLOW_POOL_BE_BK_PAUSED:
 		soc->pause_cb(pool->flow_pool_id,
