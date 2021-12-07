@@ -578,6 +578,9 @@ struct cdp_cmn_ops {
 					  ol_osif_peer_handle osif_peer);
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
 	void (*txrx_drain)(ol_txrx_soc_handle soc);
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+	void (*set_pkt_capture_mode)(struct cdp_soc_t *soc, bool val);
+#endif
 };
 
 struct cdp_ctrl_ops {

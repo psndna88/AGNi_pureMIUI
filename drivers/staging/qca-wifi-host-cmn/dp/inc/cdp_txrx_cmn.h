@@ -2730,4 +2730,33 @@ cdp_drain_txrx(ol_txrx_soc_handle soc)
 
 	return soc->ops->cmn_drv_ops->txrx_drain(soc);
 }
+
+#ifdef WLAN_FEATURE_PKT_CAPTURE_V2
+/**
+ * cdp_set_pkt_capture_mode() - set pkt capture mode in dp ctx
+ * @soc: opaque soc handle
+ * @val: value to be set
+ */
+static inline void
+cdp_set_pkt_capture_mode(ol_txrx_soc_handle soc, bool val)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance", __func__);
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->set_pkt_capture_mode)
+		return;
+
+	soc->ops->cmn_drv_ops->set_pkt_capture_mode(soc, val);
+}
+#else
+static inline void
+cdp_set_pkt_capture_mode(ol_txrx_soc_handle soc, bool val)
+{
+}
+#endif
 #endif /* _CDP_TXRX_CMN_H_ */
