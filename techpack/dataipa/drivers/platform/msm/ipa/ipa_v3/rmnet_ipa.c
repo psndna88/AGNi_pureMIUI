@@ -2965,6 +2965,9 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 	}
 
 	switch (code) {
+#if IS_ENABLED(CONFIG_DEEPSLEEP)
+	case SUBSYS_BEFORE_DS_ENTRY:
+#endif
 	case SUBSYS_BEFORE_SHUTDOWN:
 		IPAWANINFO("IPA received MPSS BEFORE_SHUTDOWN\n");
 		/*Stop netdev first to stop queueing pkts to Q6 */
@@ -2986,6 +2989,9 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		ipa3_odl_pipe_cleanup(true);
 		IPAWANINFO("IPA BEFORE_SHUTDOWN handling is complete\n");
 		break;
+#if IS_ENABLED(CONFIG_DEEPSLEEP)
+	case SUBSYS_AFTER_DS_ENTRY:
+#endif
 	case SUBSYS_AFTER_SHUTDOWN:
 		IPAWANINFO("IPA Received MPSS AFTER_SHUTDOWN\n");
 		if (atomic_read(&rmnet_ipa3_ctx->is_ssr) &&
@@ -2997,6 +3003,9 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 
 		IPAWANINFO("IPA AFTER_SHUTDOWN handling is complete\n");
 		break;
+#if IS_ENABLED(CONFIG_DEEPSLEEP)
+	case SUBSYS_BEFORE_DS_EXIT:
+#endif
 	case SUBSYS_BEFORE_POWERUP:
 		IPAWANINFO("IPA received MPSS BEFORE_POWERUP\n");
 		if (atomic_read(&rmnet_ipa3_ctx->is_ssr)) {
@@ -3009,6 +3018,9 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		ipa3_reset_freeze_vote();
 		IPAWANINFO("IPA BEFORE_POWERUP handling is complete\n");
 		break;
+#if IS_ENABLED(CONFIG_DEEPSLEEP)
+	case SUBSYS_AFTER_DS_EXIT:
+#endif
 	case SUBSYS_AFTER_POWERUP:
 		IPAWANINFO("IPA received MPSS AFTER_POWERUP\n");
 		if (!atomic_read(&rmnet_ipa3_ctx->is_initialized) &&
