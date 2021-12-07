@@ -657,34 +657,34 @@ static int dsi_ctrl_clocks_deinit(struct dsi_ctrl *ctrl)
 	struct dsi_link_hs_clk_info *hs_link = &ctrl->clk_info.hs_link_clks;
 	struct dsi_clk_link_set *rcg = &ctrl->clk_info.rcg_clks;
 
-	if (core->mdp_core_clk)
+	if (!IS_ERR_OR_NULL(core->mdp_core_clk))
 		devm_clk_put(&ctrl->pdev->dev, core->mdp_core_clk);
-	if (core->iface_clk)
+	if (!IS_ERR_OR_NULL(core->iface_clk))
 		devm_clk_put(&ctrl->pdev->dev, core->iface_clk);
-	if (core->core_mmss_clk)
+	if (!IS_ERR_OR_NULL(core->core_mmss_clk))
 		devm_clk_put(&ctrl->pdev->dev, core->core_mmss_clk);
-	if (core->bus_clk)
+	if (!IS_ERR_OR_NULL(core->bus_clk))
 		devm_clk_put(&ctrl->pdev->dev, core->bus_clk);
-	if (core->mnoc_clk)
+	if (!IS_ERR_OR_NULL(core->mnoc_clk))
 		devm_clk_put(&ctrl->pdev->dev, core->mnoc_clk);
 
 	memset(core, 0x0, sizeof(*core));
 
-	if (hs_link->byte_clk)
+	if (!IS_ERR_OR_NULL(hs_link->byte_clk))
 		devm_clk_put(&ctrl->pdev->dev, hs_link->byte_clk);
-	if (hs_link->pixel_clk)
+	if (!IS_ERR_OR_NULL(hs_link->pixel_clk))
 		devm_clk_put(&ctrl->pdev->dev, hs_link->pixel_clk);
-	if (lp_link->esc_clk)
+	if (!IS_ERR_OR_NULL(lp_link->esc_clk))
 		devm_clk_put(&ctrl->pdev->dev, lp_link->esc_clk);
-	if (hs_link->byte_intf_clk)
+	if (!IS_ERR_OR_NULL(hs_link->byte_intf_clk))
 		devm_clk_put(&ctrl->pdev->dev, hs_link->byte_intf_clk);
 
 	memset(hs_link, 0x0, sizeof(*hs_link));
 	memset(lp_link, 0x0, sizeof(*lp_link));
 
-	if (rcg->byte_clk)
+	if (!IS_ERR_OR_NULL(rcg->byte_clk))
 		devm_clk_put(&ctrl->pdev->dev, rcg->byte_clk);
-	if (rcg->pixel_clk)
+	if (!IS_ERR_OR_NULL(rcg->pixel_clk))
 		devm_clk_put(&ctrl->pdev->dev, rcg->pixel_clk);
 
 	memset(rcg, 0x0, sizeof(*rcg));

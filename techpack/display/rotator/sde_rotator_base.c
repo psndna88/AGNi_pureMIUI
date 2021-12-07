@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012, 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012, 2015-2021, The Linux Foundation. All rights reserved.
  */
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
@@ -79,7 +79,7 @@ u32 sde_apply_comp_ratio_factor(u32 quota,
 	return quota;
 }
 
-#define RES_1080p		(1088*1920)
+#define RES_1080p	(1088*1920)
 #define RES_UHD		(3840*2160)
 #define RES_WQXGA	(2560*1600)
 #define XIN_HALT_TIMEOUT_US	0x4000
@@ -507,10 +507,10 @@ int sde_update_reg_bus_vote(struct reg_bus_client *bus_client, u32 usecase_ndx)
 	}
 
 	if (ret) {
-		pr_err("rotator: reg_bus_hdl set failed ab=%llu, ib=%llu\n",
+		SDEROT_ERR("rotator: reg_bus_hdl set failed ab=%llu, ib=%llu\n",
 		       reg_bus_value->ab, reg_bus_value->ib);
 		if (sde_res->reg_bus_usecase_ndx == VOTE_INDEX_DISABLE)
-			pr_err("rotator: reg_bus_hdl was disabled\n");
+			SDEROT_ERR("rotator: reg_bus_hdl was disabled\n");
 	} else {
 		sde_res->reg_bus_usecase_ndx = max_usecase_ndx;
 	}
@@ -841,7 +841,7 @@ static int sde_mdp_bus_scale_register(struct sde_rot_data_type *mdata)
 	mdata->reg_bus_hdl = of_icc_get(&mdata->pdev->dev, "qcom,sde-reg-bus");
 
 	if (mdata->reg_bus_hdl == NULL) {
-		pr_err("rotator: reg bus dt node missing\n");
+		SDEROT_ERR("rotator: reg bus dt node missing\n");
 		return 0;
 	} else if (IS_ERR(mdata->reg_bus_hdl)) {
 		SDEROT_ERR("reg bus handle parsing failed\n");

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
@@ -249,11 +249,13 @@ void sde_rotator_resync_timeline(struct sde_rot_timeline *tl)
 
 	spin_lock_irqsave(&tl->lock, flags);
 	val = tl->next_value - tl->curr_value;
-	if (val > 0) {
-		SDEROT_WARN("flush %s:%d\n", tl->name, val);
+	if (val > 0)
 		sde_rotator_inc_timeline_locked(tl, val);
-	}
 	spin_unlock_irqrestore(&tl->lock, flags);
+
+	if (val > 0)
+		SDEROT_WARN("flush %s:%d\n", tl->name, val);
+
 }
 
 /*
