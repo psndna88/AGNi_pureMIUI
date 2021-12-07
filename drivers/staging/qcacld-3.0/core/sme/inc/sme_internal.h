@@ -514,6 +514,10 @@ struct sme_context {
 #if defined(CLD_PM_QOS) && defined(WLAN_FEATURE_LL_MODE)
 	void (*beacon_latency_event_cb)(uint32_t latency_level);
 #endif
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	void (*roam_rt_stats_cb)(hdd_handle_t hdd_handle,
+				 struct mlme_roam_debug_info *roam_stats);
+#endif
 };
 
 #endif /* #if !defined( __SMEINTERNAL_H ) */

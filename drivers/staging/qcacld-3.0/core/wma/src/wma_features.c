@@ -1498,6 +1498,8 @@ static const uint8_t *wma_wow_wake_reason_str(A_INT32 wake_reason)
 		return "GENERIC_WAKE";
 	case WOW_REASON_TWT:
 		return "TWT Event";
+	case WOW_REASON_ROAM_STATS:
+		return "ROAM_STATS";
 	default:
 		return "unknown";
 	}
@@ -2493,6 +2495,7 @@ static int wma_wake_event_no_payload(
 		return wma_wake_reason_nlod(wma, wake_info->vdev_id);
 
 	case WOW_REASON_GENERIC_WAKE:
+	case WOW_REASON_ROAM_STATS:
 		wma_info("Wake reason %s",
 			 wma_wow_wake_reason_str(wake_info->wake_reason));
 		return 0;

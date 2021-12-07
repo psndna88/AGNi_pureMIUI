@@ -155,11 +155,61 @@ ucfg_cm_update_roam_scan_scheme_bitmap(struct wlan_objmgr_psoc *psoc,
 	return wlan_cm_update_roam_scan_scheme_bitmap(psoc, vdev_id,
 						      roam_scan_scheme_bitmap);
 }
+
+static inline QDF_STATUS
+ucfg_cm_update_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			     uint8_t value, enum roam_rt_stats_params stats)
+{
+	return wlan_cm_update_roam_rt_stats(psoc, value, stats);
+}
+
+static inline uint8_t
+ucfg_cm_get_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			  enum roam_rt_stats_params stats)
+{
+	return wlan_cm_get_roam_rt_stats(psoc, stats);
+}
+
+/**
+ * ucfg_cm_roam_send_rt_stats_config() - Enable/Disable Roam event stats from FW
+ * @pdev: Pointer to pdev
+ * @vdev_id: vdev id
+ * @param_value: Value set based on the userspace attributes.
+ * param_value - 0: if configure attribute is 0
+ *               1: if configure is 1 and suspend_state is not set
+ *               3: if configure is 1 and suspend_state is set
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
+				  uint8_t vdev_id, uint8_t param_value);
 #else
 static inline QDF_STATUS
 ucfg_cm_update_roam_scan_scheme_bitmap(struct wlan_objmgr_psoc *psoc,
 				       uint8_t vdev_id,
 				       uint32_t roam_scan_scheme_bitmap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+ucfg_cm_update_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			     uint8_t value, enum roam_rt_stats_params stats)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint8_t
+ucfg_cm_get_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
+			  enum roam_rt_stats_params stats)
+{
+	return 0;
+}
+
+static inline QDF_STATUS
+ucfg_cm_roam_send_rt_stats_config(struct wlan_objmgr_pdev *pdev,
+				  uint8_t vdev_id, uint8_t param_value)
 {
 	return QDF_STATUS_SUCCESS;
 }
