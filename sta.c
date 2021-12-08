@@ -3667,8 +3667,12 @@ static int remove_iptable_rule(struct sigma_dut *dut,
 	len = sizeof(ip_cmd);
 
 	ret = snprintf(pos, len,
-		       "/system/bin/%s -t mangle -D OUTPUT -o %s",
+		       "%s -t mangle -D OUTPUT -o %s",
+#ifdef ANDROID
+		       ip_ver == IPV6 ? "/system/bin/ip6tables" : "/system/bin/iptables",
+#else /* ANDROID */
 		       ip_ver == IPV6 ? "ip6tables" : "iptables",
+#endif /* ANDROID */
 		       dut->station_ifname);
 	if (snprintf_error(len, ret)) {
 		sigma_dut_print(dut, DUT_MSG_INFO,
@@ -4006,8 +4010,12 @@ static int add_iptable_rule(struct sigma_dut *dut,
 	}
 
 	ret = snprintf(pos, len,
-		       "/system/bin/%s -t mangle -I OUTPUT %d -o %s",
+		       "%s -t mangle -I OUTPUT %d -o %s",
+#ifdef ANDROID
+		       ip_ver == IPV6 ? "/system/bin/ip6tables" : "/system/bin/iptables",
+#else /* ANDROID */
 		       ip_ver == IPV6 ? "ip6tables" : "iptables",
+#endif /* ANDROID */
 		       ip_ver == IPV6 ? ipv6_rule_num : ipv4_rule_num,
 		       dut->station_ifname);
 	if (snprintf_error(len, ret)) {
@@ -4123,10 +4131,17 @@ static void clear_all_dscp_policies(struct sigma_dut *dut)
 	free_dscp_policy_table(dut);
 
 	if (dut->dscp_use_iptables) {
+#ifdef ANDROID
 		if (system("/system/bin/iptables -t mangle -F && /system/bin/iptables -t mangle -X") != 0 ||
-		    system("/system/bin/ip6tables -t mangle -F && /system/bin/iptables -t mangle -X") != 0)
+		    system("/system/bin/ip6tables -t mangle -F && /system/bin/ip6tables -t mangle -X") != 0)
 			sigma_dut_print(dut, DUT_MSG_ERROR,
 					"iptables: Failed to flush DSCP policy");
+#else /* ANDROID */
+		if (system("iptables -t mangle -F && iptables -t mangle -X") != 0 ||
+		    system("ip6tables -t mangle -F && ip6tables -t mangle -X") != 0)
+			sigma_dut_print(dut, DUT_MSG_ERROR,
+					"iptables: Failed to flush DSCP policy");
+#endif /* ANDROID */
 	} else {
 		if (system("nft flush ruleset") != 0)
 			sigma_dut_print(dut, DUT_MSG_ERROR,
