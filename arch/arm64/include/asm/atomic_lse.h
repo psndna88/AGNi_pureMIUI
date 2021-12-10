@@ -17,8 +17,8 @@ static inline void __lse_atomic_##op(int i, atomic_t *v)		\
 	__LSE_PREAMBLE							\
 "       prfm    pstl1strm, %[v]\n"                                      \
 	"	" #asm_op "	%w[i], %[v]\n"				\
-	: [i] "+r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v));							\
+	: [v] "+Q" (v->counter)						\
+	: [i] "r" (i));							\
 }
 
 ATOMIC_OP(andnot, stclr)
@@ -36,15 +36,18 @@ static inline void __lse_atomic_sub(int i, atomic_t *v)
 #define ATOMIC_FETCH_OP(name, mb, op, asm_op, cl...)			\
 static inline int __lse_atomic_fetch_##op##name(int i, atomic_t *v)	\
 {									\
+	int old;							\
+									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"       prfm    pstl1strm, %[v]\n"                                      \
-	"	" #asm_op #mb "	%w[i], %w[i], %[v]"			\
-	: [i] "+r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v)							\
+	"	prfm	pstl1strm, %[v]\n"				\
+	"	" #asm_op #mb "	%w[i], %w[old], %[v]"			\
+	: [v] "+Q" (v->counter),					\
+	  [old] "=r" (old)						\
+	: [i] "r" (i)							\
 	: cl);								\
 									\
-	return i;							\
+	return old;							\
 }
 
 #define ATOMIC_FETCH_OPS(op, asm_op)					\
@@ -128,8 +131,8 @@ static inline void __lse_atomic64_##op(s64 i, atomic64_t *v)		\
 	__LSE_PREAMBLE							\
 "       prfm    pstl1strm, %[v]\n"                                      \
 	"	" #asm_op "	%[i], %[v]\n"				\
-	: [i] "+r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v));							\
+	: [v] "+Q" (v->counter)						\
+	: [i] "r" (i));							\
 }
 
 ATOMIC64_OP(andnot, stclr)
@@ -147,15 +150,18 @@ static inline void __lse_atomic64_sub(s64 i, atomic64_t *v)
 #define ATOMIC64_FETCH_OP(name, mb, op, asm_op, cl...)			\
 static inline long __lse_atomic64_fetch_##op##name(s64 i, atomic64_t *v)\
 {									\
+	s64 old;							\
+									\
 	asm volatile(							\
 	__LSE_PREAMBLE							\
-"       prfm    pstl1strm, %[v]\n"                                      \
-	"	" #asm_op #mb "	%[i], %[i], %[v]"			\
-	: [i] "+r" (i), [v] "+Q" (v->counter)				\
-	: "r" (v)							\
+	"	prfm	pstl1strm, %[v]\n"				\
+	"	" #asm_op #mb "	%[i], %[old], %[v]"			\
+	: [v] "+Q" (v->counter),					\
+	  [old] "=r" (old)						\
+	: [i] "r" (i) 							\
 	: cl);								\
 									\
-	return i;							\
+	return old;							\
 }
 
 #define ATOMIC64_FETCH_OPS(op, asm_op)					\
