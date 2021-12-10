@@ -16,7 +16,7 @@
 #define ISRHEL7
 #elif RHEL_MAJOR == 8
 #define ISRHEL8
-#if RHEL_MINOR >= 4
+#if RHEL_MINOR >= 6
 #define ISCENTOS8S
 #endif
 #endif
@@ -515,6 +515,28 @@ static inline void __compat_kvfree(const void *addr)
 #define kvfree __compat_kvfree
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+#include <linux/vmalloc.h>
+#include <linux/mm.h>
+static inline void *__compat_kvmalloc_array(size_t n, size_t size, gfp_t flags)
+{
+	if (n != 0 && SIZE_MAX / n < size)
+		return NULL;
+	return kvmalloc(n * size, flags);
+}
+#define kvmalloc_array __compat_kvmalloc_array
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 18, 0)
+#include <linux/vmalloc.h>
+#include <linux/mm.h>
+static inline void *__compat_kvcalloc(size_t n, size_t size, gfp_t flags)
+{
+        return kvmalloc_array(n, size, flags | __GFP_ZERO);
+}
+#define kvcalloc __compat_kvcalloc
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 9)
 #include <linux/netdevice.h>
 #define priv_destructor destructor
@@ -757,7 +779,7 @@ static inline void crypto_xor_cpy(u8 *dst, const u8 *src1, const u8 *src2,
 #define hlist_add_behind(a, b) hlist_add_after(b, a)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) && !defined(ISCENTOS8S)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0) && !defined(ISRHEL8)
 #define totalram_pages() totalram_pages
 #endif
 
@@ -831,10 +853,16 @@ static inline void skb_mark_not_on_list(struct sk_buff *skb)
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 20, 0) && !defined(ISRHEL8)
+#include <net/netlink.h>
+#ifndef NLA_POLICY_EXACT_LEN
 #define NLA_POLICY_EXACT_LEN(_len) { .type = NLA_UNSPEC, .len = _len }
 #endif
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0) && !defined(ISRHEL8)
+#include <net/netlink.h>
+#ifndef NLA_POLICY_MIN_LEN
 #define NLA_POLICY_MIN_LEN(_len) { .type = NLA_UNSPEC, .len = _len }
+#endif
 #define COMPAT_CANNOT_INDIVIDUAL_NETLINK_OPS_POLICY
 #endif
 
@@ -849,7 +877,7 @@ static inline void skb_mark_not_on_list(struct sk_buff *skb)
 #endif
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 5, 0) && !defined(ISRHEL8)
 #define genl_dumpit_info(cb) ({ \
 	struct { struct nlattr **attrs; } *a = (void *)((u8 *)cb->args + offsetofend(struct dump_ctx, next_allowedip)); \
 	BUILD_BUG_ON(sizeof(cb->args) < offsetofend(struct dump_ctx, next_allowedip) + sizeof(*a)); \
@@ -1096,6 +1124,37 @@ static const struct header_ops ip_tunnel_header_ops = { .parse_protocol = ip_tun
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
+#include <net/dst_cache.h>
+struct dst_cache_pcpu {
+	unsigned long refresh_ts;
+	struct dst_entry *dst;
+	u32 cookie;
+	union {
+		struct in_addr in_saddr;
+		struct in6_addr in6_saddr;
+	};
+};
+#define COMPAT_HAS_DEFINED_DST_CACHE_PCPU
+static inline void dst_cache_reset_now(struct dst_cache *dst_cache)
+{
+	int i;
+
+	if (!dst_cache->cache)
+		return;
+
+	dst_cache->reset_ts = jiffies;
+	for_each_possible_cpu(i) {
+		struct dst_cache_pcpu *idst = per_cpu_ptr(dst_cache->cache, i);
+		struct dst_entry *dst = idst->dst;
+
+		idst->cookie = 0;
+		idst->dst = NULL;
+		dst_release(dst);
+	}
+}
+#endif
+
 #if defined(ISUBUNTU1604) || defined(ISRHEL7)
 #include <linux/siphash.h>
 #ifndef _WG_LINUX_SIPHASH_H
@@ -1127,7 +1186,7 @@ static const struct header_ops ip_tunnel_header_ops = { .parse_protocol = ip_tun
 #undef __read_mostly
 #define __read_mostly
 #endif
-#if (defined(RAP_PLUGIN) || defined(CONFIG_CFI_CLANG)) && LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
+#if (defined(CONFIG_PAX) || defined(CONFIG_CFI_CLANG)) && LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 #include <linux/timer.h>
 #define wg_expired_retransmit_handshake(a) wg_expired_retransmit_handshake(unsigned long timer)
 #define wg_expired_send_keepalive(a) wg_expired_send_keepalive(unsigned long timer)
