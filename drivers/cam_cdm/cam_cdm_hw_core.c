@@ -1809,11 +1809,9 @@ int cam_hw_cdm_handle_error_info(
 
 	if (node != NULL) {
 		if (node->request_type == CAM_HW_CDM_BL_CB_CLIENT) {
-			mutex_lock(&cdm_hw->hw_mutex);
 			cam_cdm_notify_clients(cdm_hw,
 					CAM_CDM_CB_STATUS_HW_ERROR,
 					(void *)node);
-			mutex_unlock(&cdm_hw->hw_mutex);
 		} else if (node->request_type == CAM_HW_CDM_BL_CB_INTERNAL) {
 			CAM_ERR(CAM_CDM, "Invalid node=%pK %d", node,
 					node->request_type);
