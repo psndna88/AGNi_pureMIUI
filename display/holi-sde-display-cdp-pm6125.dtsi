@@ -75,6 +75,7 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <255>;
+	qcom,bl-update-flag = "delay_until_first_frame";
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 };
 
@@ -83,6 +84,7 @@
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <255>;
+	qcom,bl-update-flag = "delay_until_first_frame";
 	qcom,platform-te-gpio = <&tlmm 23 0>;
 	qcom,platform-reset-gpio = <&pmr735a_gpios 2 0>;
 };
