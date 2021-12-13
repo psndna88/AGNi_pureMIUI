@@ -1,6 +1,7 @@
 /*
  * wpa_supplicant/hostapd control interface library
  * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2018, The Linux Foundation
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.

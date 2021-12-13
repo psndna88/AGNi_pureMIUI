@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010-2011, Atheros Communications, Inc.
  * Copyright (c) 2011-2014, 2016, Qualcomm Atheros, Inc.
- * Copyright (c) 2018, The Linux Foundation
+ * Copyright (c) 2018-2021, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -235,8 +235,9 @@ struct wpa_ctrl * open_hapd_mon(const char *ifname)
 }
 
 
-int get_wpa_cli_events(struct sigma_dut *dut, struct wpa_ctrl *mon,
-		       const char **events, char *buf, size_t buf_size)
+int get_wpa_cli_events_timeout(struct sigma_dut *dut, struct wpa_ctrl *mon,
+			       const char **events, char *buf, size_t buf_size,
+			       unsigned int timeout)
 {
 	int fd, ret;
 	fd_set rfd;
@@ -253,21 +254,24 @@ int get_wpa_cli_events(struct sigma_dut *dut, struct wpa_ctrl *mon,
 	if (fd < 0)
 		return -1;
 
-	time(&start);
+	if (timeout)
+		time(&start);
 	while (1) {
 		size_t len;
 
 		FD_ZERO(&rfd);
 		FD_SET(fd, &rfd);
 
-		time(&now);
-		if ((unsigned int) (now - start) >= dut->default_timeout)
-			tv.tv_sec = 1;
-		else
-			tv.tv_sec = dut->default_timeout -
-				(unsigned int) (now - start) + 1;
-		tv.tv_usec = 0;
-		ret = select(fd + 1, &rfd, NULL, NULL, &tv);
+		if (timeout) {
+			time(&now);
+			if ((unsigned int) (now - start) >= timeout)
+				tv.tv_sec = 1;
+			else
+				tv.tv_sec = timeout -
+					(unsigned int) (now - start) + 1;
+			tv.tv_usec = 0;
+		}
+		ret = select(fd + 1, &rfd, NULL, NULL, timeout ? &tv : NULL);
 		if (ret == 0) {
 			sigma_dut_print(dut, DUT_MSG_INFO, "Timeout on "
 					"waiting for events");
@@ -297,13 +301,24 @@ int get_wpa_cli_events(struct sigma_dut *dut, struct wpa_ctrl *mon,
 			}
 		}
 
+		if (!timeout)
+			continue;
+
 		time(&now);
-		if ((unsigned int) (now - start) > dut->default_timeout) {
+		if ((unsigned int) (now - start) > timeout) {
 			sigma_dut_print(dut, DUT_MSG_INFO, "Timeout on "
 					"waiting for event");
 			return -1;
 		}
 	}
+}
+
+
+int get_wpa_cli_events(struct sigma_dut *dut, struct wpa_ctrl *mon,
+		       const char **events, char *buf, size_t buf_size)
+{
+	return get_wpa_cli_events_timeout(dut, mon, events, buf, buf_size,
+					  dut->default_timeout);
 }
 
 

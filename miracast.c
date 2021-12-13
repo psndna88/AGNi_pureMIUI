@@ -1,7 +1,7 @@
 /*
  * Sigma Control API DUT - Miracast interface
  * Copyright (c) 2017, Qualcomm Atheros, Inc.
- * Copyright (c) 2018-2019, The Linux Foundation
+ * Copyright (c) 2018-2021, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  *
