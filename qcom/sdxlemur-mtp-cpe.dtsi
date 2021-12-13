@@ -321,6 +321,7 @@
 				/* ipa shares this group */
 				qcom,iommu-group = <&ipa_eth_group1>;
 				phy-supply = <&aqr_vreg>;
+				qcom,phy-rst-delay-us = <221000>;
 
 				#address-cells = <1>;
 				#size-cells = <1>;
@@ -357,6 +358,7 @@
 				/* ipa shares this group */
 				qcom,iommu-group = <&ipa_eth_group2>;
 				phy-supply = <&qca_vreg>;
+				qcom,phy-rst-delay-us = <0>;
 
 				#address-cells = <1>;
 				#size-cells = <1>;
