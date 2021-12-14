@@ -3290,6 +3290,8 @@ int adm_open_v2(int port_id, int path, int rate, int channel_mode, int topology,
 		    (topology == DS2_ADM_COPP_TOPOLOGY_ID) ||
 		    (topology == SRS_TRUMEDIA_TOPOLOGY_ID))
 			topology = DEFAULT_COPP_TOPOLOGY;
+	} else if (perf_mode == LOW_LATENCY_PCM_NOPROC_MODE) {
+		flags = ADM_LOW_LATENCY_NPROC_DEVICE_SESSION;
 	} else {
 		if ((path == ADM_PATH_COMPRESSED_RX) ||
 		    (path == ADM_PATH_COMPRESSED_TX))
