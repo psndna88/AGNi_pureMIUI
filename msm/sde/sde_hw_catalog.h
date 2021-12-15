@@ -938,6 +938,7 @@ struct sde_uidle_cfg {
 	u32 debugfs_perf;
 	bool debugfs_ctrl;
 	bool perf_cntr_en;
+	bool dirty;
 };
 
 /* struct sde_mdp_cfg : MDP TOP-BLK instance info
