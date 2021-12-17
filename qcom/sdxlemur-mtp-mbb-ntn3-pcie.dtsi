@@ -108,6 +108,7 @@
 				/* ipa shares this group */
 				qcom,iommu-group = <&ipa_eth_group1>;
 				phy-supply = <&aqr_vreg>;
+				qcom,phy-rst-delay-us = <221000>;
 
 				interrupts-extended = <&tlmm 103 IRQ_TYPE_EDGE_FALLING>;
 				interrupt-names = "wol_irq";
