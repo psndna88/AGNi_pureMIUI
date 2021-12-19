@@ -19,26 +19,16 @@
 #define ELF_BDF_FILE_NAME_GF		"bdwlang.elf"
 #define ELF_BDF_FILE_NAME_PREFIX	"bdwlan.e"
 #define ELF_BDF_FILE_NAME_GF_PREFIX	"bdwlang.e"
-
-#define ELF_BDF_FILE_NAME_K1		 "bd_k1.elf"
-#define ELF_BDF_FILE_NAME_K1_GLOBAL     "bd_k1gl.elf"
-#define ELF_BDF_FILE_NAME_K2		 "bd_k2.elf"
-#define ELF_BDF_FILE_NAME_J18		 "bd_j18.elf"
-#define ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL		 "bd_j18te.elf"
-#define ELF_BDF_FILE_NAME_K9             "bd_k9.elf"
-#define ELF_BDF_FILE_NAME_K9_GLOBAL      "bd_k9gl.elf"
 #define ELF_BDF_FILE_NAME_K11            "bd_k11.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL     "bd_k11gl.elf"
 #define ELF_BDF_FILE_NAME_K11_NO_CRYSTAL            "bd_k11_2.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL     "bd_k11gl_2.elf"
-#define ELF_BDF_FILE_NAME_K8             "bd_k8.elf"
-
+#define ELF_BDF_FILE_NAME_K11_INDIA                 "bd_k11in_2.elf"
 #define BIN_BDF_FILE_NAME		"bdwlan.bin"
 #define BIN_BDF_FILE_NAME_GF		"bdwlang.bin"
 #define BIN_BDF_FILE_NAME_PREFIX	"bdwlan.b"
 #define BIN_BDF_FILE_NAME_GF_PREFIX	"bdwlang.b"
 #define REGDB_FILE_NAME			"regdb.bin"
-#define REGDB_FILE_NAME_XIAOMI		"regdb_xiaomi.bin"
 #define HDS_FILE_NAME			"hds.bin"
 #define CHIP_ID_GF_MASK			0x10
 
@@ -547,50 +537,35 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 	case CNSS_BDF_ELF:
 		/* Board ID will be equal or less than 0xFF in GF mask case */
 		if (plat_priv->board_info.board_id == 0xFF) {
-			if (hw_platform_ver == HARDWARE_PROJECT_J18) {
-				if ((hw_version_major == 9) || ((hw_version_major == 2) && ((hw_version_minor == 1) ||
-					(hw_version_minor == 6))))
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL);
-				else
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18);
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K2) {
-				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K2);
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K1) {
+			if (hw_platform_ver == HARDWARE_PROJECT_K11) {
+                /* P0, P1, P2.0 CN and P2.0 IN have crystal. For others, crystal was removed*/
 				if((uint32_t)CountryGlobal == hw_country_ver){
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1_GLOBAL);
-				}else{
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1);
-				}
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K1A) {
-				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1);
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K9) {
-				if((uint32_t)CountryGlobal == hw_country_ver){
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9_GLOBAL);
-				} else {
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9);
-				}
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K11) {
-                                /* P0, P1, P2.0 CN and P2.0 IN have crystal. For others, crystal was removed*/
-				if((uint32_t)CountryGlobal == hw_country_ver){
-					if ((hw_version_build < 2) || ((hw_version_major == 22) && (hw_version_minor == 0)))
+					if ((hw_version_build < 2) || ((hw_version_major == 22) && (hw_version_minor == 0))) {
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
-					else
+						pr_info("cnss2: ELF_BDF_FILE_NAME_K11_GLOBAL loaded");
+					} else {
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL);
-				} else{
-					if ((hw_version_build < 2) || ((hw_version_major == 2) && (hw_version_minor == 0)))
+						pr_info("cnss2: ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL loaded");
+					}
+				} else if ((uint32_t)CountryIndia == hw_country_ver) {
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA);
+						pr_info("cnss2: ELF_BDF_FILE_NAME_K11_INDIA loaded");
+				} else {
+					if ((hw_version_build < 2) || ((hw_version_major == 2) && (hw_version_minor == 0))) {
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11);
-					else
+						pr_info("cnss2: ELF_BDF_FILE_NAME_K11 loaded");
+					} else {
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_NO_CRYSTAL);
+						pr_info("cnss2: ELF_BDF_FILE_NAME_K11_NO_CRYSTAL loaded");
+					}
 				}
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K8) {
-				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K8);
 			} else if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK) {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME_GF);
 			} else {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME);
-                        }
+            }
 		} else if (plat_priv->board_info.board_id < 0xFF) {
 			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
 				snprintf(filename_tmp, filename_len,
@@ -632,7 +607,7 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 		}
 		break;
 	case CNSS_BDF_REGDB:
-		snprintf(filename_tmp, filename_len, REGDB_FILE_NAME_XIAOMI);
+		snprintf(filename_tmp, filename_len, REGDB_FILE_NAME);
 		break;
 	case CNSS_BDF_HDS:
 		snprintf(filename_tmp, filename_len, HDS_FILE_NAME);
