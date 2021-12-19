@@ -556,14 +556,14 @@ int ipa_fmwk_register_ipa(const struct ipa_core_data *in)
 }
 EXPORT_SYMBOL(ipa_fmwk_register_ipa);
 
-bool ipa_is_ready(void)
+bool msm_ipa_is_ready(void)
 {
 	if (!ipa_fmwk_ctx)
 		return false;
 
 	return ipa_fmwk_ctx->ipa_ready;
 }
-EXPORT_SYMBOL(ipa_is_ready);
+EXPORT_SYMBOL(msm_ipa_is_ready);
 
 int ipa_register_ipa_ready_cb(void(*ipa_ready_cb)(void *user_data),
 	void *user_data)

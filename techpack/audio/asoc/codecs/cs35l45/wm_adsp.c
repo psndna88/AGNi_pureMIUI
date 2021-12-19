@@ -3425,7 +3425,7 @@ static int wm_halo_configure_mpu(struct wm_adsp *dsp, unsigned int lock_regions)
 	return regmap_multi_reg_write(dsp->regmap, config, ARRAY_SIZE(config));
 }
 
-int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq)
+/* int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq)
 {
 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
 	struct wm_adsp *dsps = snd_soc_component_get_drvdata(component);
@@ -3440,7 +3440,7 @@ int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(wm_adsp2_set_dspclk);
+EXPORT_SYMBOL_GPL(wm_adsp2_set_dspclk); */
 
 int wm_adsp2_preloader_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)

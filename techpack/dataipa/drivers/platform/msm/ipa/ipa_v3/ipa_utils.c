@@ -7921,7 +7921,7 @@ EXPORT_SYMBOL(ipa3_set_tag_process_before_gating);
  * @iface - type of vlan capable device
  * @res - query result: true for vlan mode, false for non vlan mode
  *
- * API must be called after ipa_is_ready() returns true, otherwise it will fail
+ * API must be called after msm_ipa_is_ready() returns true, otherwise it will fail
  *
  * Returns: 0 on success, negative on failure
  */

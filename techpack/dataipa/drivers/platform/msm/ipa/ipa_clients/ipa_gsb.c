@@ -224,7 +224,7 @@ static int ipa_gsb_driver_init(struct odu_bridge_params *params)
 {
 	int i;
 
-	if (!ipa_is_ready()) {
+	if (!msm_ipa_is_ready()) {
 		IPA_GSB_ERR("IPA is not ready\n");
 		return -EFAULT;
 	}

@@ -203,7 +203,7 @@ irqreturn_t wm_halo_wdt_expire(int irq, void *data);
 int wm_adsp_event(struct snd_soc_dapm_widget *w,
 		  struct snd_kcontrol *kcontrol, int event);
 
-int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq);
+//int wm_adsp2_set_dspclk(struct snd_soc_dapm_widget *w, unsigned int freq);
 
 int wm_adsp2_preloader_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol);

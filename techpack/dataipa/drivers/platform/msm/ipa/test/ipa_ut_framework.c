@@ -1042,7 +1042,7 @@ int ipa_ut_module_init(void)
 	}
 	mutex_init(&ipa_ut_ctx->lock);
 
-	if (!ipa_is_ready()) {
+	if (!msm_ipa_is_ready()) {
 		init_framewok = false;
 
 		IPA_UT_DBG("IPA driver not ready, registering callback\n");
