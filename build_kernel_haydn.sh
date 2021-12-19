@@ -7,22 +7,24 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="haydn"
 CONFIG1="agni_haydn_defconfig"
-export AGNI_BUILD_TYPE="unified"
+export AGNI_BUILD_TYPE="MIUI_R"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_kernel-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
 
-# AGNi CCACHE SHIFTING TO SDM660
+# AGNi CCACHE SHIFTING TO HAYDN
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="0"
-export CCACHE_MIATOLL_R="1"
+export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="1"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
 
 exit_reset() {
 	export CCACHE_SDM660="0"
 	export CCACHE_MIATOLL_Q="0"
 	export CCACHE_MIATOLL_R="0"
+	export CCACHE_HAYDN="0"
 	. ~/WORKING_DIRECTORY/ccache_shifter.sh
 	sync
 	exit
@@ -108,5 +110,6 @@ fi
 export CCACHE_SDM660="0"
 export CCACHE_MIATOLL_Q="0"
 export CCACHE_MIATOLL_R="0"
+export CCACHE_HAYDN="0"
 . ~/WORKING_DIRECTORY/ccache_shifter.sh
 

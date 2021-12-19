@@ -83,8 +83,8 @@ if mountpoint -q /data; then
 fi
 
 ## Trim partitions
-ui_print "Running fstrim optimisation on f2fs /data.."
-$bin/busybox fstrim -v /data;
+#ui_print "Running fstrim optimisation on f2fs /data.."
+#$bin/busybox fstrim -v /data;
 
 ui_print "Preparing for boot install.."
 ## AnyKernel boot install
