@@ -747,7 +747,7 @@ int LZ4_saveDictHC(
 	if (dictSize > prefixSize)
 		dictSize = prefixSize;
 
-	memmove(safeBuffer, streamPtr->end - dictSize, dictSize);
+	LZ4_memmove(safeBuffer, streamPtr->end - dictSize, dictSize);
 
 	{
 		U32 const endIndex = (U32)(streamPtr->end - streamPtr->base);

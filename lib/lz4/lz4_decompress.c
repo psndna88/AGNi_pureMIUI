@@ -343,7 +343,7 @@ _copy_match:
 				 * match fits entirely within external
 				 * dictionary : just copy
 				 */
-				memmove(op, dictEnd - (lowPrefix - match),
+				LZ4_memmove(op, dictEnd - (lowPrefix - match),
 					length);
 				op += length;
 			} else {
