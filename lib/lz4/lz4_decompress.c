@@ -263,7 +263,11 @@ static FORCE_INLINE int LZ4_decompress_generic(
 				}
 			}
 
-			memcpy(op, ip, length);
+			/*
+			 * supports overlapping memory regions; only matters
+			 * for in-place decompression scenarios
+			 */
+			LZ4_memmove(op, ip, length);
 			ip += length;
 			op += length;
 
@@ -339,7 +343,7 @@ _copy_match:
 				 * match fits entirely within external
 				 * dictionary : just copy
 				 */
-				memmove(op, dictEnd - (lowPrefix - match),
+				LZ4_memmove(op, dictEnd - (lowPrefix - match),
 					length);
 				op += length;
 			} else {
