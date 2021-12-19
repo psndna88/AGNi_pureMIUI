@@ -18,65 +18,29 @@ extern void *cnss_ipc_log_long_context;
 #else
 #define CNSS_IPC_LOG_PAGES              50
 #endif
-#define cnss_debug_log_print(_x...) \
-		 cnss_debug_ipc_log_print(cnss_ipc_log_context, _x)
-
-#define cnss_debug_log_long_print(_x...) \
-		 cnss_debug_ipc_log_print(cnss_ipc_log_long_context, _x)
-#else
-#define cnss_debug_log_print(_x...) \
-		 cnss_debug_ipc_log_print((void *)NULL, _x)
-#define cnss_debug_log_long_print(_x...) \
-		 cnss_debug_ipc_log_print((void *)NULL, _x)
 #endif
+
+#define cnss_debug_log_print(_x...)
+#define cnss_debug_log_long_print(_x...)
 
 #define proc_name (in_irq() ? "irq" : \
 		   (in_softirq() ? "soft_irq" : current->comm))
 
-#define cnss_pr_err(_fmt, ...) \
-	cnss_debug_log_print(proc_name, __func__, \
-			     KERN_ERR, _fmt, ##__VA_ARGS__)
+#define cnss_pr_err(_fmt, ...)
 
-#define cnss_pr_warn(_fmt, ...) \
-	cnss_debug_log_print(proc_name, __func__, \
-			     KERN_WARNING, _fmt, ##__VA_ARGS__)
+#define cnss_pr_warn(_fmt, ...)
 
-#define cnss_pr_info(_fmt, ...) \
-	cnss_debug_log_print(proc_name, __func__, \
-			     KERN_INFO, _fmt, ##__VA_ARGS__)
+#define cnss_pr_info(_fmt, ...)
 
-#define cnss_pr_dbg(_fmt, ...) \
-	cnss_debug_log_print(proc_name, __func__, \
-			     KERN_DEBUG, _fmt, ##__VA_ARGS__)
+#define cnss_pr_dbg(_fmt, ...)
 
-#define cnss_pr_vdbg(_fmt, ...) \
-	cnss_debug_log_long_print(proc_name, __func__, \
-				  KERN_DEBUG, _fmt, ##__VA_ARGS__)
+#define cnss_pr_vdbg(_fmt, ...)
 
-#define cnss_pr_buf(_fmt, ...) \
-	cnss_debug_log_long_print(proc_name, __func__, \
-				  NULL, _fmt, ##__VA_ARGS__)
+#define cnss_pr_buf(_fmt, ...)
 
-#ifdef CONFIG_CNSS2_DEBUG
-#define CNSS_ASSERT(_condition) do {					\
-		if (!(_condition)) {					\
-			cnss_pr_err("ASSERT at line %d\n",		\
-				    __LINE__);				\
-			BUG();						\
-		}							\
-	} while (0)
-#else
-#define CNSS_ASSERT(_condition) do {					\
-		if (!(_condition)) {					\
-			cnss_pr_err("ASSERT at line %d\n",		\
-				    __LINE__);				\
-			WARN_ON(1);					\
-		}							\
-	} while (0)
-#endif
+#define CNSS_ASSERT(_condition)
 
-#define cnss_fatal_err(_fmt, ...)					\
-	cnss_pr_err("fatal: " _fmt, ##__VA_ARGS__)
+#define cnss_fatal_err(_fmt, ...)
 
 int cnss_debug_init(void);
 void cnss_debug_deinit(void);
