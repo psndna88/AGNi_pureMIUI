@@ -399,43 +399,26 @@ HOST_LFS_CFLAGS := $(shell getconf LFS_CFLAGS 2>/dev/null)
 HOST_LFS_LDFLAGS := $(shell getconf LFS_LDFLAGS 2>/dev/null)
 HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
-ifneq ($(LLVM),)
 HOSTCC	= $(CCACHE) clang
 HOSTCXX	= $(CCACHE) clang++
-else
-HOSTCC	= $(CCACHE) gcc
-HOSTCXX	= $(CCACHE) g++
-endif
 KBUILD_HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
-KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS)
+KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS) -flto=$(BUILDJOBS)
 KBUILD_HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS) $(HOSTLDFLAGS)
 KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 
 # Make variables (CC, etc...)
 CPP		= $(CC) -E
-ifneq ($(LLVM),)
-REAL_CC	= $(CCACHE) clang
-LD		= ld.lld
-AR		= llvm-ar
-NM		= llvm-nm
-OBJCOPY		= llvm-objcopy
-OBJDUMP		= llvm-objdump
-READELF		= llvm-readelf
-OBJSIZE		= llvm-size
-STRIP		= llvm-strip
-else
-REAL_CC		= $(CCACHE) $(CROSS_COMPILE)gcc
-LD		= $(CROSS_COMPILE)ld
-AR		= $(CROSS_COMPILE)ar
-NM		= $(CROSS_COMPILE)nm
-OBJCOPY		= $(CROSS_COMPILE)objcopy
-OBJDUMP		= $(CROSS_COMPILE)objdump
-READELF		= $(CROSS_COMPILE)readelf
-OBJSIZE		= $(CROSS_COMPILE)size
-STRIP		= $(CROSS_COMPILE)strip
-endif
+REAL_CC	= $(CCACHE) $(CROSS_COMPILE)clang
+LD		= $(CROSS_COMPILE)ld.lld
+AR		= $(CROSS_COMPILE)llvm-ar
+NM		= $(CROSS_COMPILE)llvm-nm
+OBJCOPY		= $(CROSS_COMPILE)llvm-objcopy
+OBJDUMP		= $(CROSS_COMPILE)llvm-objdump
+READELF		= $(CROSS_COMPILE)llvm-readelf
+OBJSIZE		= $(CROSS_COMPILE)llvm-size
+STRIP		= $(CROSS_COMPILE)llvm-strip
 PAHOLE		= pahole
 LEX		= flex
 YACC		= bison
@@ -695,8 +678,8 @@ export RETPOLINE_VDSO_CFLAGS
 ifdef CONFIG_LTO_CLANG
 # LTO produces LLVM IR instead of object files. Use llvm-ar and llvm-nm, so we
 # can process these.
-AR		:= llvm-ar
-LLVM_NM		:= llvm-nm
+AR		:= $(CROSS_COMPILE)llvm-ar
+LLVM_NM		:= $(CROSS_COMPILE)llvm-nm
 export LLVM_NM
 endif
 
@@ -751,6 +734,7 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, unknown-warning-option)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-format)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-maybe-uninitialized)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-psabi)

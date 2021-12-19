@@ -1,6 +1,7 @@
 #!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
+export BUILDJOBS=4
 
 KERNELDIR=`readlink -f .`
 
@@ -65,7 +66,7 @@ echo ""
 rm $COMPILEDIR_HAYDN/.config 2>/dev/null
 
 make O=$COMPILEDIR_HAYDN $CONFIG1
-make -j4 O=$COMPILEDIR_HAYDN
+make -j$BUILDJOBS O=$COMPILEDIR_HAYDN
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_HAYDN/.config $KERNELDIR/arch/arm64/configs/$CONFIG1

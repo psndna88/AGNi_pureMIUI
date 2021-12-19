@@ -11,7 +11,7 @@ config DEFCONFIG_LIST
 
 config CC_VERSION_TEXT
 	string
-	default "$(CC_VERSION_TEXT)"
+	default "clang version 12.1.1"
 	help
 	  This is used in unclear ways:
 
@@ -38,7 +38,8 @@ config CC_IS_CLANG
 	def_bool $(success,$(CC) --version | grep -q clang)
 
 config LD_IS_LLD
-	def_bool $(success,$(LD) -v | head -n 1 | grep -q LLD)
+	bool
+	default y
 
 config CLANG_VERSION
 	int
