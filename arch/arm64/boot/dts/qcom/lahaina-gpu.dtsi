@@ -9,6 +9,13 @@
 		memory-region = <&pil_gpu_mem>;
 	};
 
+	kgsl_ddr_qos: qcom,kgsl-ddr-qos {
+		compatible = "qcom,devfreq-qoslat";
+		governor = "powersave";
+		operating-points-v2 = <&qoslat_opp_table>;
+		mboxes = <&qmp_aop 0>;
+	};
+
 	msm_gpu: qcom,kgsl-3d0@3d00000 {
 		compatible = "qcom,kgsl-3d0";
 		status = "ok";
@@ -57,8 +64,9 @@
 
 		qcom,tzone-names = "gpuss-0-usr", "gpuss-1-usr";
 
-		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>;
-		interconnect-names = "gpu_icc_path";
+		interconnect-names = "gpu_icc_path", "l3_path";
+		interconnects = <&gem_noc MASTER_GFX3D &mc_virt SLAVE_EBI1>,
+			<&epss_l3_cpu MASTER_EPSS_L3_APPS &epss_l3_cpu SLAVE_EPSS_L3_SHARED>;
 
 		qcom,bus-table-ddr7 =
 			<MHZ_TO_KBPS(0, 4)>,    /* index=0  */
@@ -93,6 +101,28 @@
 			<0>,   /* Off */
 			<100>; /* On */
 
+		qcom,l3-pwrlevels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			compatible = "qcom,l3-pwrlevels";
+
+			qcom,l3-pwrlevel@0 {
+				reg = <0>;
+				qcom,l3-freq = <0>;
+			};
+
+			qcom,l3-pwrlevel@1 {
+				reg = <1>;
+				qcom,l3-freq = <614400000>;
+			};
+
+			qcom,l3-pwrlevel@2 {
+				reg = <2>;
+				qcom,l3-freq = <1516800000>;
+			};
+		};
+
 		qcom,gpu-mempools {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -103,14 +133,12 @@
 				reg = <0>;
 				qcom,mempool-page-size = <4096>;
 				qcom,mempool-reserved = <2048>;
-				qcom,mempool-allocate;
 			};
 			/* 8K Page Pool configuration */
 			qcom,gpu-mempool@1 {
 				reg = <1>;
 				qcom,mempool-page-size = <8192>;
 				qcom,mempool-reserved = <1024>;
-				qcom,mempool-allocate;
 			};
 			/* 64K Page Pool configuration */
 			qcom,gpu-mempool@2 {
@@ -118,9 +146,21 @@
 				qcom,mempool-page-size = <65536>;
 				qcom,mempool-reserved = <256>;
 			};
-			/* 1M Page Pool configuration */
+			/* 128K Page Pool configuration */
 			qcom,gpu-mempool@3 {
 				reg = <3>;
+				qcom,mempool-page-size = <131072>;
+				qcom,mempool-reserved = <128>;
+			};
+			/* 256K Page Pool configuration */
+			qcom,gpu-mempool@4 {
+				reg = <4>;
+				qcom,mempool-page-size = <262144>;
+				qcom,mempool-reserved = <80>;
+			};
+			/* 1M Page Pool configuration */
+			qcom,gpu-mempool@5 {
+				reg = <5>;
 				qcom,mempool-page-size = <1048576>;
 				qcom,mempool-reserved = <32>;
 			};
@@ -270,10 +310,11 @@
 			<&clock_gcc GCC_DDRSS_GPU_AXI_CLK>,
 			<&clock_gcc GCC_GPU_MEMNOC_GFX_CLK>,
 			<&clock_gpucc GPU_CC_AHB_CLK>,
-			<&clock_gpucc GPU_CC_HUB_CX_INT_CLK>;
+			<&clock_gpucc GPU_CC_HUB_CX_INT_CLK>,
+			<&clock_aop QDSS_CLK>;
 
 		clock-names = "gmu_clk", "cxo_clk", "axi_clk",
-			"memnoc_clk", "ahb_clk", "hub_clk";
+			"memnoc_clk", "ahb_clk", "hub_clk", "apb_pclk";
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "aop";

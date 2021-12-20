@@ -22,9 +22,10 @@ First Level Node - CAM IFE CSID device
   Value type: <string>
   Definition: Should be "qcom,csid170", "qcom,csid170_200", "qcom,csid175",
 	"qcom,csid175_200", "qcom,csid480", "qcom,csid580", "qcom,csid680",
-	"qcom,csid-lite170", "qcom,csid-lite175", "qcom,csid-lite480",
-	"qcom,csid-custom480", "qcom,csid-lite580", "qcom,csid-custom580",
-	"qcom,csid-lite680" or "qcom,csid-custom680".
+	"qcom,csid165_204", "qcom,csid-lite170", "qcom,csid-lite175",
+	"qcom,csid-lite480", "qcom,csid-custom480", "qcom,csid-lite580",
+	"qcom,csid-custom580", "qcom,csid-lite680" or "qcom,csid-custom680",
+	"qcom,csid-lite165".
 
 - reg-names
   Usage: required

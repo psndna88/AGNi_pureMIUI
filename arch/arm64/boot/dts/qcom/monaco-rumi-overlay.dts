@@ -5,7 +5,5 @@
 
 / {
 	model = "Qualcomm Technologies, Inc. Monaco RUMI";
-	compatible = "qcom,monaco-rumi", "qcom,monaco", "qcom,rumi";
-	qcom,msm-id = <459 0x10000>;
 	qcom,board-id = <15 0>;
 };

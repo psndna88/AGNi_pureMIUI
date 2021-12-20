@@ -1,18 +1,5 @@
 #include "holi-sde-display-common.dtsi"
 
-&pm6150l_gpios {
-	disp_pins {
-		disp_pins_default: disp_pins_default {
-			pins = "gpio9";
-			function = "func1";
-			qcom,drive-strength = <2>;
-			power-source = <1>;
-			bias-disable;
-			output-low;
-		};
-	};
-};
-
 &sde_dsi {
 	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
 		 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
@@ -105,3 +92,23 @@
 	qcom,mdss-dsi-panel-status-value = <0x1c>;
 	qcom,mdss-dsi-panel-status-read-length = <1>;
 };
+
+&dsi_r66451_amoled_60hz_cmd {
+	qcom,ulps-enabled;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+};
+
+&dsi_r66451_amoled_60hz_video {
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+};
+

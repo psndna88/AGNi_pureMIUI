@@ -1,5 +1,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/iio/qcom,spmi-vadc.h>
+#include "scuba-ion.dtsi"
+#include "scuba-audio-overlay.dtsi"
 
 &soc {
 	scuba_batterydata: qcom,battery-data {

@@ -808,6 +808,7 @@
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
 		qcom,cmb-msr-skip;
+		status = "disabled";
 		out-ports {
 			port {
 				tpdm_sdcc0_out_tpda_qdss29: endpoint {
@@ -829,6 +830,7 @@
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
 		qcom,cmb-msr-skip;
+		status = "disabled";
 		out-ports {
 			port {
 				tpdm_sdcc1_out_tpda_qdss30: endpoint {

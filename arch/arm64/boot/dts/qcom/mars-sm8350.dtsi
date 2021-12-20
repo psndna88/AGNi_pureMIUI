@@ -440,7 +440,7 @@ And public attribution of xiaomi platforms(like venus and so and)
 	 0x0e 0x70	/* override_x1 */
 	 0x04 0x74>;	/* override x2 */
 	qcom,param-override-seq =
-	<0x47 0x6c	/* override_x0 */
+	<0x27 0x6c	/* override_x0 */
 	 0x0b 0x70	/* override_x1 */
 	 0x08 0x74>;	/* override x2 */
 };

@@ -148,6 +148,13 @@
 		arm,buffer-size = <0x400000>;
 		arm,scatter-gather;
 
+		qcom,qdss-ipa-support;
+		ipa-conn-data-base-pa = <0x1468B000>;
+		ipa-conn-data-size = <0x3000>;
+		ipa-conn-desc-base-pa = <0x1468E000>;
+		ipa-conn-desc-size = <0x1000>;
+		ipa-peer-evt-reg-pa = <0x6077818>;
+
 		coresight-name = "coresight-tmc-etr";
 		coresight-ctis = <&cti0 &cti3_swao>;
 		cti-reset-trig-num = <0>;
@@ -614,11 +621,11 @@
 				};
 			};
 
-			port@2 {
-				reg = <2>;
-				funnel_modem_in_funnel_modem_q6: endpoint {
+			port@3 {
+				reg = <3>;
+				funnel_modem_in_funnel_mq6_dup: endpoint {
 					remote-endpoint =
-						<&funnel_modem_q6_out_funnel_modem>;
+						<&funnel_mq6_dup_out_funnel_modem>;
 				};
 			};
 		};
@@ -654,9 +661,9 @@
 
 		out-ports {
 			port {
-				funnel_modem_q6_out_funnel_modem: endpoint {
+				funnel_modem_q6_out_funnel_mq6_dup: endpoint {
 					remote-endpoint =
-					<&funnel_modem_in_funnel_modem_q6>;
+					<&funnel_mq6_dup_in_funnel_modem_q6>;
 				};
 			};
 		};
@@ -669,6 +676,68 @@
 				funnel_modem_q6_in_modem_etm0: endpoint {
 					remote-endpoint =
 					<&modem_etm0_out_funnel_modem_q6>;
+				};
+			};
+		};
+	};
+
+	funnel_mq6_dup: funnel@680d000 {
+		compatible = "arm,primecell";
+		arm,primecell-periphid = <0x000bb908>;
+
+		reg = <0x680d000 0x1000>,
+			<0x680c000 0x1000>;
+
+		reg-names = "funnel-base-dummy", "funnel-base-real";
+
+		coresight-name = "coresight-funnel-modem-q6_dup";
+
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "apb_pclk";
+		qcom,duplicate-funnel;
+
+		out-ports {
+			port {
+				funnel_mq6_dup_out_funnel_modem: endpoint {
+					remote-endpoint =
+					<&funnel_modem_in_funnel_mq6_dup>;
+				};
+			};
+		};
+
+		in-ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@1 {
+				reg = <1>;
+				funnel_mq6_dup_in_funnel_modem_q6: endpoint {
+					remote-endpoint =
+					<&funnel_modem_q6_out_funnel_mq6_dup>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				funnel_mq6_dup_in_modem_diag: endpoint {
+					remote-endpoint =
+					<&modem_diag_out_funnel_mq6_dup>;
+				};
+			};
+		};
+	};
+
+	modem_diag: dummy_source {
+		compatible = "qcom,coresight-dummy";
+
+		coresight-name = "coresight-modem-diag";
+		qcom,dummy-source;
+
+
+		out-ports {
+			port {
+				modem_diag_out_funnel_mq6_dup: endpoint {
+					remote-endpoint =
+						<&funnel_mq6_dup_in_modem_diag>;
 				};
 			};
 		};
@@ -1043,6 +1112,7 @@
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
+		status = "disabled";
 		qcom,cmb-msr-skip;
 		out-ports {
 			port {
@@ -1161,7 +1231,7 @@
 		cpu = <&CPU0>;
 
 		qcom,tupwr-disable;
-		coresight-name = "coresight-coresight-etm0";
+		coresight-name = "coresight-etm0";
 
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
@@ -1526,6 +1596,7 @@
 
 		coresight-name = "coresight-cti-mss_q6_cti";
 
+		status = "disabled";
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 	};
@@ -1538,6 +1609,7 @@
 
 		coresight-name = "coresight-cti-mss_vq6_cti";
 
+		status = "disabled";
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 	};

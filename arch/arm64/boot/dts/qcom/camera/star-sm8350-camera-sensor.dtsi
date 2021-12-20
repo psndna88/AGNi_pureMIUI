@@ -216,17 +216,16 @@
 		compatible = "qcom,eeprom";
 		cam_vio-supply = <&L5I>;
 		cam_vaf-supply = <&L7I>;
-		cam_v_custom1-supply = <&L6I>;
 		cam_vdig-supply = <&camera_wide_dvdd_ldo>;
 		cam_vana-supply = <&camera_wide_vana_ldo>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_bob-supply = <&pm8350c_bob>;
-		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf","cam_v_custom1",
+		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf",
 			"cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 1100000 2200000 3104000 3104000 0 3200000>;
-		rgltr-max-voltage = <1800000 1100000 2200000 3104000 3104000 0 3960000>;
-		rgltr-load-current = <10000 140000 220000 280000 10000 0 2000000>;
+		rgltr-min-voltage = <1800000 1100000 2200000 3104000 0 3200000>;
+		rgltr-max-voltage = <1800000 1100000 2200000 3104000 0 3960000>;
+		rgltr-load-current = <10000 140000 220000 280000 0 2000000>;
 		use-shared-clk;
 		gpio-no-mux = <0>;
 		gpios = <&tlmm 101 0>,
@@ -264,17 +263,16 @@
 		compatible = "qcom,ois";
 		cam_vio-supply = <&L5I>;
 		cam_vaf-supply = <&L7I>;
-		cam_v_custom1-supply = <&L6I>;
 		cam_vdig-supply = <&camera_wide_dvdd_ldo>;
 		cam_vana-supply = <&camera_wide_vana_ldo>;
 		cam_bob-supply = <&pm8350c_bob>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
-		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf","cam_v_custom1",
+		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf",
 			"cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 1100000 2200000 3104000 3104000 0 3200000>;
-		rgltr-max-voltage = <1800000 1100000 2200000 3104000 3104000 0 3960000>;
-		rgltr-load-current = <10000 140000 220000 280000 10000 0 2000000>;
+		rgltr-min-voltage = <1800000 1100000 2200000 3104000 0 3200000>;
+		rgltr-max-voltage = <1800000 1100000 2200000 3104000 0 3960000>;
+		rgltr-load-current = <10000 140000 220000 280000 0 2000000>;
 		use-shared-clk;
 		gpio-no-mux = <0>;
 		gpios = <&tlmm 101 0>,
@@ -307,17 +305,16 @@
 		ois-src = <&ois_wide>;
 		cam_vio-supply = <&L5I>;
 		cam_vaf-supply = <&L7I>;
-		cam_v_custom1-supply = <&L6I>;
 		cam_vdig-supply = <&camera_wide_dvdd_ldo>;
 		cam_vana-supply = <&camera_wide_vana_ldo>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_bob-supply = <&pm8350c_bob>;
-		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf","cam_v_custom1",
+		regulator-names = "cam_vio", "cam_vdig", "cam_vana", "cam_vaf",
 			"cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 1100000 2200000 3104000 3104000 0 3200000>;
-		rgltr-max-voltage = <1800000 1100000 2200000 3104000 3104000 0 3960000>;
-		rgltr-load-current = <10000 140000 220000 280000 10000 0 2000000>;
+		rgltr-min-voltage = <1800000 1100000 2200000 3104000 0 3200000>;
+		rgltr-max-voltage = <1800000 1100000 2200000 3104000 0 3960000>;
+		rgltr-load-current = <10000 140000 220000 280000 0 2000000>;
 		use-shared-clk;
 		gpio-no-mux = <0>;
 		gpios = <&tlmm 101 0>,
@@ -434,15 +431,14 @@
 		cam_vdig-supply = <&L2I>;
 		cam_vana-supply = <&L4I>;
 		cam_v_custom1-supply = <&camera_ultra_vana1_ldo>;
-		cam_v_custom2-supply = <&L6I>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_bob-supply = <&pm8350c_bob>;
-		regulator-names = "cam_vio", "cam_vdig", "cam_vana","cam_v_custom1","cam_v_custom2"
+		regulator-names = "cam_vio", "cam_vdig", "cam_vana","cam_v_custom1"
 			,"cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 1104000 1800000 2900000 3104000 0 3200000>;
-		rgltr-max-voltage = <1800000 1104000 1800000 2900000 3104000 0 3960000>;
-		rgltr-load-current = <10000 140000 180000 290000 100000 0 2000000>;
+		rgltr-min-voltage = <1800000 1104000 1800000 2900000 0 3200000>;
+		rgltr-max-voltage = <1800000 1104000 1800000 2900000 0 3960000>;
+		rgltr-load-current = <10000 140000 180000 290000 0 2000000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_active_ultra
@@ -479,15 +475,14 @@
 		cam_vdig-supply = <&L2I>;
 		cam_vana-supply = <&L4I>;
 		cam_v_custom1-supply = <&camera_ultra_vana1_ldo>;
-		cam_v_custom2-supply = <&L6I>;
 		cam_clk-supply = <&cam_cc_titan_top_gdsc>;
 		cam_bob-supply = <&pm8350c_bob>;
-		regulator-names = "cam_vio", "cam_vdig", "cam_vana","cam_v_custom1","cam_v_custom2"
+		regulator-names = "cam_vio", "cam_vdig", "cam_vana","cam_v_custom1"
 			,"cam_clk", "cam_bob";
 		rgltr-cntrl-support;
-		rgltr-min-voltage = <1800000 1104000 1800000 2900000 3104000 0 3200000>;
-		rgltr-max-voltage = <1800000 1104000 1800000 2900000 3104000 0 3960000>;
-		rgltr-load-current = <10000 140000 180000 290000 100000 0 2000000>;
+		rgltr-min-voltage = <1800000 1104000 1800000 2900000 0 3200000>;
+		rgltr-max-voltage = <1800000 1104000 1800000 2900000 0 3960000>;
+		rgltr-load-current = <10000 140000 180000 290000 0 2000000>;
 		gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_active_ultra

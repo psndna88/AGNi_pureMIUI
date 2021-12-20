@@ -1,8 +1,8 @@
-&soc {
+&i2c_3 {
 	tavil_codec {
 		wcd: wcd_pinctrl@5 {
 			compatible = "qcom,wcd-pinctrl";
-			qcom,num-gpios = <5>;
+			qcom,gpios-count = <5>;
 			gpio-controller;
 			#gpio-cells = <2>;
 

@@ -24,6 +24,7 @@
 			interrupt-names = "kpdpwr";
 			qcom,system-reset;
 			qcom,store-hard-reset-reason;
+			qcom,use-legacy-hard-reset-offset;
 
 			qcom,pon_1 {
 				qcom,pon-type = <PON_POWER_ON_TYPE_KPDPWR>;
@@ -68,11 +69,19 @@
 				label = "ref_1p25";
 				qcom,pre-scaling = <1 1>;
 			};
+
+			xo_therm {
+				reg = <ADC5_XO_THERM_100K_PU>;
+				label = "xo_therm";
+				qcom,ratiometric;
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+			};
 		};
 
 		qcom,pmd9650_rtc {
 			compatible = "qcom,pm8941-rtc";
-			interrupts = <0x0 0x61 0x1 IRQ_TYPE_NONE>;
+			interrupts = <0x0 0x61 0x1 IRQ_TYPE_EDGE_RISING>;
 		};
 	};
 

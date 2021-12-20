@@ -301,7 +301,6 @@
 	mi,max-brightness-clone = <8191>;
 	mi,esd-err-irq-gpio = <&tlmm 67 0x2001>;
 	mi,aod-exit-delay-time = <150>;
-	mi,panel-on-dimming-delay = <120>;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0{
@@ -327,11 +326,6 @@
 				15 00 00 00 00 00 02 FE 00
 				05 01 00 00 00 00 02 38 00];
 			mi,mdss-dsi-nolp-dc-hbm-command-state = "dsi_lp_mode";
-
-			mi,mdss-dsi-dimmingon-command = [15 01 00 00 00 00 02 53 28];
-			mi,mdss-dsi-dimmingon-command-state = "dsi_lp_mode";
-			mi,mdss-dsi-dimmingoff-command = [15 01 00 00 00 00 02 53 20];
-			mi,mdss-dsi-dimmingoff-command-state = "dsi_lp_mode";
 		};
 	};
 };

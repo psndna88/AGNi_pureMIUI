@@ -117,7 +117,7 @@
 		S5B_LEVEL_AO: pmx65_s5_level_ao: regulator-pmx65-s5-level_ao {
 			regulator-name = "pmx65_s5_level_ao";
 			qcom,set = <RPMH_REGULATOR_SET_ACTIVE>;
-			vin-supply = <&VDD_MXA_LEVEL>;
+			vin-supply = <&VDD_MXA_LEVEL_AO>;
 			regulator-min-microvolt =
 				<RPMH_REGULATOR_LEVEL_RETENTION>;
 			regulator-max-microvolt =

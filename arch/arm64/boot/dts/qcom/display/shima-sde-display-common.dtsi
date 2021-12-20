@@ -2,11 +2,6 @@
 #include "dsi-panel-r66451-dsc-fhd-plus-60hz-video.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
-#include "dsi-panel-k9-36-02-0a-dsc-cmd.dtsi"
-#include "dsi-panel-k9-36-02-0a-p1-dsc-cmd.dtsi"
-#include "dsi-panel-k9-36-02-0a-p2-dsc-cmd.dtsi"
-#include "dsi-panel-k9-36-02-0a-mp-dsc-cmd.dtsi"
-#include "dsi-panel-k9-42-02-0b-mp-dsc-cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
 #include "dsi-panel-sharp-dsc-qhd-plus-video.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-video-cphy.dtsi"
@@ -60,52 +55,6 @@
 		};
 	};
 
-    dsi_panel_pwr_supply_k9: dsi_panel_pwr_supply_k9 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1920000>;
-			qcom,supply-max-voltage = <1920000>;
-			qcom,supply-enable-load = <60700>;
-			qcom,supply-disable-load = <80>;
-			qcom,supply-post-on-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@1 {
-			reg = <1>;
-			qcom,supply-name = "dvdd";
-			qcom,supply-min-voltage = <1220000>;
-			qcom,supply-max-voltage = <1220000>;
-			qcom,supply-enable-load = <60700>;
-			qcom,supply-disable-load = <80>;
-			qcom,supply-post-on-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@2 {
-			reg = <2>;
-			qcom,supply-name = "vdd";
-			qcom,supply-min-voltage = <3000000>;
-			qcom,supply-max-voltage = <3000000>;
-			qcom,supply-enable-load = <10000>;
-			qcom,supply-disable-load = <0>;
-			qcom,supply-post-on-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@3 {
-			reg = <3>;
-			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <1400000>;
-			qcom,supply-max-voltage = <6600000>;
-			qcom,supply-enable-load = <0>;
-			qcom,supply-disable-load = <0>;
-			qcom,supply-post-on-sleep = <10>;
-
-		};
-	};
-
 	sde_dsi: qcom,dsi-display-primary {
 		compatible = "qcom,dsi-display";
 		label = "primary";
@@ -152,8 +101,7 @@
 		ibb-supply = <&ibb_vreg>;
 
 		qcom,mdp = <&mdss_mdp>;
-		//qcom,dsi-default-panel = <&dsi_r66451_amoled_video>;
-		qcom,dsi-default-panel = <&dsi_k9_36_02_0a_dsc_cmd>;
+		qcom,dsi-default-panel = <&dsi_r66451_amoled_video>;
 	};
 
 	sde_dsi1: qcom,dsi-display-secondary {
@@ -334,116 +282,6 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
 				07 08 02 04 00 19 0c];
 			qcom,display-topology = <2 2 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
-&dsi_k9_36_02_0a_dsc_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-	qcom,mdss-dsi-clk-strength = <0xFF>;
-	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
-		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 18 06 06 21 20 06
-				06 04 02 04 00 15 16];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 90 Hz */
-		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 18 06 06 21 20 06
-				06 04 02 04 00 15 16];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
-&dsi_k9_36_02_0a_p1_dsc_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-	qcom,mdss-dsi-clk-strength = <0xFF>;
-	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
-		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 90 Hz */
-		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
-&dsi_k9_36_02_0a_p2_dsc_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-	qcom,mdss-dsi-clk-strength = <0xFF>;
-	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
-		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 90 Hz */
-		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
-&dsi_k9_36_02_0a_mp_dsc_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-	qcom,mdss-dsi-clk-strength = <0xFF>;
-	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
-		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 90 Hz */
-		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-	};
-};
-
-&dsi_k9_42_02_0b_mp_dsc_cmd {
-	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-	qcom,mdss-dsi-clk-strength = <0xFF>;
-	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
-		timing@0{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 90 Hz */
-		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 17 06 05 21 20 06
-				06 04 03 04 00 14 15];
-			qcom,display-topology = <1 1 1>;
 			qcom,default-topology-index = <0>;
 		};
 	};

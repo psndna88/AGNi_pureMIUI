@@ -274,7 +274,7 @@ And public attribution of xiaomi platforms(like venus and so and)
 		fts,touch-cornerzone-filter-ver = <0 0 0 0 0 0 0 0
 										0 1 0 0 0 0 0 0
 										0 2 0 2079 250 2479 0 0
-										0 3 1609 2079 1859 2479 0 0>;
+										0 3 1459 2079 1859 2479 0 0>;
 		fts,touch-cornerzone-filter-hor1 = <0 0 0 0 280 280 0 0
 										0 1 0 0 0 0 0 0
 										0 2 0 2199 280 2479 0 0
@@ -869,5 +869,5 @@ And public attribution of xiaomi platforms(like venus and so and)
 };
 
 &qseecom_mem {
-	size = <0x0 0x2400000>;
+	size = <0x0 0x2000000>;
 };
