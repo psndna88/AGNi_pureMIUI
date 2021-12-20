@@ -9753,6 +9753,20 @@ static int mac80211_get_wiphy(struct sigma_dut *dut)
 	return ret;
 }
 
+
+void get_wiphy_capabilities(struct sigma_dut *dut)
+{
+	memset(&dut->hw_modes, 0, sizeof(struct dut_hw_modes));
+	if (get_driver_type(dut) == DRIVER_MAC80211 ||
+	    get_driver_type(dut) == DRIVER_LINUX_WCN) {
+		if (mac80211_get_wiphy(dut))
+			sigma_dut_print(dut, DUT_MSG_DEBUG,
+					"Failed to get wiphy data from the driver");
+		else
+			dut->hw_modes.valid = true;
+	}
+}
+
 #endif /* NL80211_SUPPORT */
 
 
@@ -10139,17 +10153,6 @@ static enum sigma_cmd_result cmd_ap_reset_default(struct sigma_dut *dut,
 			dut->ap_dfs_mode = AP_DFS_MODE_ENABLED;
 	}
 
-	memset(&dut->hw_modes, 0, sizeof(struct dut_hw_modes));
-#ifdef NL80211_SUPPORT
-	if (get_driver_type(dut) == DRIVER_MAC80211 ||
-	    get_driver_type(dut) == DRIVER_LINUX_WCN) {
-		if (mac80211_get_wiphy(dut))
-			sigma_dut_print(dut, DUT_MSG_DEBUG,
-					"Failed to get wiphy data from the driver");
-		else
-			dut->hw_modes.valid = true;
-	}
-#endif /* NL80211_SUPPORT */
 
 	dut->ap_oper_chn = 0;
 
