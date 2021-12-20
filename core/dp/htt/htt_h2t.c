@@ -1061,7 +1061,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_tx_rsc.tx_comp_ring->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_TX_COMP_RING_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1075,7 +1075,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 		(unsigned int)pdev->ipa_uc_tx_rsc.tx_comp_idx_paddr);
 	msg_word++;
 	*msg_word = 0;
-	addr = (uint32_t)(pdev->ipa_uc_tx_rsc.tx_comp_idx_paddr >> 32);
+	addr = (uint64_t)pdev->ipa_uc_tx_rsc.tx_comp_idx_paddr >> 32;
 	HTT_WDI_IPA_CFG_TX_COMP_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1086,7 +1086,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_tx_rsc.tx_ce_idx->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_TX_CE_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1097,7 +1097,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_rx_rsc.rx_ind_ring->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_RX_IND_RING_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1113,7 +1113,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_rx_rsc.rx_ipa_prc_done_idx->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_RX_IND_RD_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1122,7 +1122,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 		(unsigned int)pdev->ipa_uc_rx_rsc.rx_rdy_idx_paddr);
 	msg_word++;
 	*msg_word = 0;
-	addr = (uint32_t)(pdev->ipa_uc_rx_rsc.rx_rdy_idx_paddr >> 32);
+	addr = (uint64_t)pdev->ipa_uc_rx_rsc.rx_rdy_idx_paddr >> 32;
 	HTT_WDI_IPA_CFG_RX_IND_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1133,7 +1133,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ind_ring->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_RX_RING2_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1149,7 +1149,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_RX_RING2_RD_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
@@ -1160,7 +1160,7 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	msg_word++;
 	*msg_word = 0;
 	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info;
-	addr = (uint32_t)(qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32);
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
 	HTT_WDI_IPA_CFG_RX_RING2_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	SET_HTC_PACKET_INFO_TX(&pkt->htc_pkt,
