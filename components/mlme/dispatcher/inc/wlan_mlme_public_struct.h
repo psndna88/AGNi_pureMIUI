@@ -2378,6 +2378,34 @@ struct wlan_mlme_reg {
 	bool enable_nan_on_indoor_channels;
 };
 
+#define IOT_AGGR_INFO_MAX_NUM 32
+
+/**
+ * struct wlan_iot_aggr - IOT related AGGR rule
+ *
+ * @oui: OUI for the rule
+ * @oui_len: length of the OUI
+ * @ampdu_sz: max aggregation size in no. of MPDUs
+ * @amsdu_sz: max aggregation size in no. of MSDUs
+ */
+struct wlan_iot_aggr {
+	uint8_t oui[OUI_LENGTH];
+	uint32_t oui_len;
+	uint32_t ampdu_sz;
+	uint32_t amsdu_sz;
+};
+
+/**
+ * struct wlan_mlme_iot - IOT related CFG Items
+ *
+ * @aggr: aggr rules
+ * @aggr_num: number of the configured aggr rules
+ */
+struct wlan_mlme_iot {
+	struct wlan_iot_aggr aggr[IOT_AGGR_INFO_MAX_NUM];
+	uint32_t aggr_num;
+};
+
 /**
  * struct wlan_mlme_cfg - MLME config items
  * @chainmask_cfg: VHT chainmask related cfg items
@@ -2421,6 +2449,7 @@ struct wlan_mlme_reg {
  * @trig_score_delta: Roam score delta value for various roam triggers
  * @trig_min_rssi: Expected minimum RSSI value of candidate AP for
  * various roam triggers
+ * @iot: IOT related CFG items
  */
 struct wlan_mlme_cfg {
 	struct wlan_mlme_chainmask chainmask_cfg;
@@ -2465,6 +2494,7 @@ struct wlan_mlme_cfg {
 	struct roam_trigger_score_delta trig_score_delta[NUM_OF_ROAM_TRIGGERS];
 	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_MIN_RSSI];
 	struct wlan_mlme_ratemask ratemask_cfg;
+	struct wlan_mlme_iot iot;
 };
 
 enum pkt_origin {

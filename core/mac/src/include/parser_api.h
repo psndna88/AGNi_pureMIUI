@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -493,6 +494,8 @@ typedef struct sSirAssocRsp {
 	uint16_t hlp_data_len;
 	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
 #endif
+	uint32_t iot_amsdu_sz;
+	uint32_t iot_ampdu_sz;
 } tSirAssocRsp, *tpSirAssocRsp;
 
 #ifdef FEATURE_WLAN_ESE
