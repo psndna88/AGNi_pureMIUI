@@ -9721,6 +9721,9 @@ static int mac80211_get_wiphy(struct sigma_dut *dut)
 	int ret = 0;
 	int ifindex;
 
+	if (!dut->main_ifname)
+		return -1;
+
 	ifindex = if_nametoindex(dut->main_ifname);
 	if (ifindex == 0) {
 		sigma_dut_print(dut, DUT_MSG_DEBUG,
