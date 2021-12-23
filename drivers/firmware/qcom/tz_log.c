@@ -27,8 +27,8 @@
 #include <soc/qcom/scm.h>
 #include <soc/qcom/qseecomi.h>
 
-/* QSEE_LOG_BUF_SIZE = 32K */
-#define QSEE_LOG_BUF_SIZE 0x8000
+/* QSEE_LOG_BUF_SIZE = 64K */
+#define QSEE_LOG_BUF_SIZE 0x10000
 
 
 /* TZ Diagnostic Area legacy version number */
@@ -1152,17 +1152,16 @@ static int tz_log_probe(struct platform_device *pdev)
 
 	tzdbg.diag_buf = (struct tzdbg_t *)ptr;
 
-	if (tzdbgfs_init(pdev))
-		goto err;
+	if (tzdbgfs_init(pdev)) {
+		kfree(tzdbg.diag_buf);
+		tzdbg.diag_buf = NULL;
+	}
 
 	tzdbg_register_qsee_log_buf();
 
 	tzdbg_get_tz_version();
 
 	return 0;
-err:
-	kfree(tzdbg.diag_buf);
-	return -ENXIO;
 }
 
 
