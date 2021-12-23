@@ -12,3 +12,10 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0x11010008 0x311>;
 };
+
+&sdx_ext_ipc {
+	qcom,status-in-gpio = <&tlmm 12 0x00>;
+	qcom,status-out-gpio = <&tlmm 13 0x00>;
+	qcom,status-out2-gpio = <&tlmm 15 0x00>;
+	status = "ok";
+};
