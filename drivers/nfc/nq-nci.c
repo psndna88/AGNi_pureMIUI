@@ -1241,6 +1241,7 @@ static int nqx_probe(struct i2c_client *client,
 	} else
 		platform_data = client->dev.platform_data;
 
+	client->flags = I2C_CLIENT_WAKE | I2C_CLIENT_ASYNC_SUSPEND;
 	dev_dbg(&client->dev,
 		"%s, inside nfc-nci flags = %x\n",
 		__func__, client->flags);
