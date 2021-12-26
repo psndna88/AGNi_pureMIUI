@@ -5807,7 +5807,18 @@ static struct platform_driver battery_chg_driver = {
 	.probe = battery_chg_probe,
 	.remove = battery_chg_remove,
 };
-module_platform_driver(battery_chg_driver);
+
+static int __init battery_chg_init(void)
+{
+	return platform_driver_register(&battery_chg_driver);
+}
+late_initcall(battery_chg_init);
+
+static void __exit battery_chg_exit(void)
+{
+	platform_driver_unregister(&battery_chg_driver);
+}
+module_exit(battery_chg_exit);
 
 
 MODULE_DESCRIPTION("QTI Glink battery charger driver");
