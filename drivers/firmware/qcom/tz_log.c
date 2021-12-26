@@ -1671,7 +1671,7 @@ exit_free_qsee_log_buf:
 exit_free_diag_buf:
 	if (!tzdbg.is_encrypted_log_enabled)
 		kfree(tzdbg.diag_buf);
-	return -ENXIO;
+	return 0;
 }
 
 static int tz_log_remove(struct platform_device *pdev)
