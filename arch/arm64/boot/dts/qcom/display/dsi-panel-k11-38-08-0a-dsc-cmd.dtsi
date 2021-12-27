@@ -498,7 +498,7 @@
 };
 
 &dsi_k11_38_08_0a_dsc_cmd {
-	mi,panel-id = <0x4B3131 0x00380800>;
+	mi,panel-id = <0x00004B31 0x00380800>;
 
 	mi,hbm-51-ctl-flag;
 	mi,hbm-off-51-index = <1>;
@@ -514,9 +514,11 @@
 
 	mi,mdss-dsi-panel-dc-threshold = <440>;
 	mi,mdss-dsi-panel-hbm-brightness = <1>;
+	mi,thermal-dimming-flag;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0{
+			mi,mdss-dsc-panel-id = <0x00004B31 0x00380800>;
 			mi,mdss-dsi-dimmingon-command = [39 01 00 00 00 00 02 53 28];
 			mi,mdss-dsi-dimmingon-command-state = "dsi_hs_mode";
 			mi,mdss-dsi-dimmingoff-command = [39 01 00 00 00 00 02 53 20];
@@ -590,6 +592,7 @@
 			mi,mdss-dsi-crc-off-command-state = "dsi_hs_mode";
 		};
 		timing@1{
+			mi,mdss-dsc-panel-id = <0x00004B31 0x00380800>;
 			mi,mdss-dsi-dimmingon-command = [39 01 00 00 00 00 02 53 28];
 			mi,mdss-dsi-dimmingon-command-state = "dsi_hs_mode";
 			mi,mdss-dsi-dimmingoff-command = [39 01 00 00 00 00 02 53 20];
@@ -663,6 +666,7 @@
 			mi,mdss-dsi-crc-off-command-state = "dsi_hs_mode";
 		};
 		timing@2{
+			mi,mdss-dsc-panel-id = <0x00004B31 0x00380800>;
 			mi,mdss-dsi-dimmingon-command = [39 01 00 00 00 00 02 53 28];
 			mi,mdss-dsi-dimmingon-command-state = "dsi_hs_mode";
 			mi,mdss-dsi-dimmingoff-command = [39 01 00 00 00 00 02 53 20];
