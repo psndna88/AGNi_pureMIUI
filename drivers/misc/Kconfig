@@ -558,4 +558,5 @@ source "drivers/misc/ocxl/Kconfig"
 source "drivers/misc/cardreader/Kconfig"
 source "drivers/misc/habanalabs/Kconfig"
 source "drivers/misc/al6021/Kconfig"
+source "drivers/misc/mi-memory/Kconfig"
 endmenu
