@@ -22,6 +22,8 @@
 #include <linux/spmi.h>
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
+#include <linux/alarmtimer.h>
+#include <linux/android_version.h>
 
 /* RTC/ALARM Register offsets */
 #define REG_OFFSET_ALARM_RW	0x40
@@ -607,6 +609,10 @@ static int qpnp_rtc_probe(struct platform_device *pdev)
 		goto fail_rtc_enable;
 	}
 
+	if (get_android_version() <= 9) {
+		/* Init power_on_alarm after adding rtc device */
+		power_on_alarm_init();
+	}
 	/* Request the alarm IRQ */
 	rc = request_any_context_irq(rtc_dd->rtc_alarm_irq,
 				 qpnp_alarm_trigger, IRQF_TRIGGER_RISING,
