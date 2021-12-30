@@ -10,3 +10,8 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0xB010008 0x20B>;
 };
+
+&sdx_ext_ipc {
+	ipq807x_attach = <1>;
+	status = "ok";
+};
