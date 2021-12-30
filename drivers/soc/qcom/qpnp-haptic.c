@@ -175,6 +175,7 @@
 
 u32 adjusted_lra_play_rate_code[ADJUSTED_LRA_PLAY_RATE_CODE_ARRSIZE];
 
+extern bool hapticsqti;
 /* haptic debug register set */
 static u8 qpnp_hap_dbg_regs[] = {
 	0x0a, 0x0b, 0x0c, 0x46, 0x48, 0x4c, 0x4d, 0x4e, 0x4f, 0x51, 0x52, 0x53,
@@ -3214,13 +3215,19 @@ static struct platform_driver qpnp_haptic_driver = {
 
 static int __init qpnp_haptic_init(void)
 {
-	return platform_driver_register(&qpnp_haptic_driver);
+	if (hapticsqti)
+		return 0;
+	else
+		return platform_driver_register(&qpnp_haptic_driver);
 }
 module_init(qpnp_haptic_init);
 
 static void __exit qpnp_haptic_exit(void)
 {
-	return platform_driver_unregister(&qpnp_haptic_driver);
+	if (hapticsqti)
+		return;
+	else
+		platform_driver_unregister(&qpnp_haptic_driver);
 }
 module_exit(qpnp_haptic_exit);
 
