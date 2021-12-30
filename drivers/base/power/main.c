@@ -31,6 +31,7 @@
 #include <linux/suspend.h>
 #include <trace/events/power.h>
 #include <linux/cpufreq.h>
+#include <linux/cpuidle.h>
 #include <linux/timer.h>
 #include <linux/wakeup_reason.h>
 
@@ -123,17 +124,13 @@ void device_pm_unlock(void)
  */
 void device_pm_add(struct device *dev)
 {
-	/* Skip PM setup/initialization. */
-	if (device_pm_not_required(dev))
-		return;
-
 	pr_debug("PM: Adding info for %s:%s\n",
 		 dev->bus ? dev->bus->name : "No Bus", dev_name(dev));
 	device_pm_check_callbacks(dev);
 	mutex_lock(&dpm_list_mtx);
-//	if (dev->parent && dev->parent->power.is_prepared)
-//		dev_warn(dev, "parent %s should not be sleeping\n",
-//			dev_name(dev->parent));
+	if (dev->parent && dev->parent->power.is_prepared)
+		dev_warn(dev, "parent %s should not be sleeping\n",
+			dev_name(dev->parent));
 	list_add_tail(&dev->power.entry, &dpm_list);
 	mutex_unlock(&dpm_list_mtx);
 }
@@ -144,9 +141,6 @@ void device_pm_add(struct device *dev)
  */
 void device_pm_remove(struct device *dev)
 {
-	if (device_pm_not_required(dev))
-		return;
-
 	pr_debug("PM: Removing info for %s:%s\n",
 		 dev->bus ? dev->bus->name : "No Bus", dev_name(dev));
 	complete_all(&dev->power.completion);
@@ -598,6 +592,7 @@ void dpm_resume_noirq(pm_message_t state)
 	dpm_show_time(starttime, state, "noirq");
 	resume_device_irqs();
 	device_wakeup_disarm_wake_irqs();
+	cpuidle_resume();
 //	trace_suspend_resume(TPS("dpm_resume_noirq"), state.event, false);
 }
 
@@ -1117,6 +1112,7 @@ int dpm_suspend_noirq(pm_message_t state)
 	int error = 0;
 
 //	trace_suspend_resume(TPS("dpm_suspend_noirq"), state.event, true);
+	cpuidle_pause();
 	device_wakeup_arm_wake_irqs();
 	suspend_device_irqs();
 	mutex_lock(&dpm_list_mtx);
@@ -1359,6 +1355,7 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	pm_callback_t callback = NULL;
 	char *info = NULL;
 	int error = 0;
+	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 	DECLARE_DPM_WATCHDOG_ON_STACK(wd);
 
 	TRACE_DEVICE(dev);
@@ -1372,19 +1369,18 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	}
 
 	/*
-	 * Wait for possible runtime PM transitions of the device in progress
-	 * to complete and if there's a runtime resume request pending for it,
-	 * resume it before proceeding with invoking the system-wide suspend
-	 * callbacks for it.
-	 *
-	 * If the system-wide suspend callbacks below change the configuration
-	 * of the device, they must disable runtime PM for it or otherwise
-	 * ensure that its runtime-resume callbacks will not be confused by that
-	 * change in case they are invoked going forward.
+	 * If a device configured to wake up the system from sleep states
+	 * has been suspended at run time and there's a resume request pending
+	 * for it, this is equivalent to the device signaling wakeup, so the
+	 * system suspend operation should be aborted.
 	 */
-	pm_runtime_barrier(dev);
+	if (pm_runtime_barrier(dev) && device_may_wakeup(dev))
+		pm_wakeup_event(dev, 0);
 
 	if (pm_wakeup_pending()) {
+		pm_get_active_wakeup_sources(suspend_abort,
+			MAX_SUSPEND_ABORT_LEN);
+		log_suspend_abort_reason(suspend_abort);
 		dev->power.direct_complete = false;
 		async_error = -EBUSY;
 		goto Complete;
