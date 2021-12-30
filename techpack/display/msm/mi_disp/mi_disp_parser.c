@@ -128,7 +128,7 @@ int mi_dsi_panel_parse_config(struct dsi_panel *panel)
 		DISP_INFO("mi,panel-id not specified\n");
 	} else {
 		DISP_INFO("mi,panel-id is 0x%llx\n", mi_cfg->panel_id);
-		if (mi_cfg->panel_id == 0x4B3800420200) {
+		if (mi_cfg->panel_id == 0x4B3100380800) {
 			demura_ptr = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_SW_DISPLAY_DEMURA_TABLE, &item_size);
 			if (!IS_ERR(demura_ptr) && item_size > 0) {
 				DSI_INFO("demura data size %d\n", item_size);

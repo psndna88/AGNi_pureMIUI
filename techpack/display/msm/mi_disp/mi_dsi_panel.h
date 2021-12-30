@@ -27,10 +27,10 @@ enum bkl_dimming_state {
 	STATE_ALL
 };
 
-/* 90Hz gamma and 144Hz gamma info */
+/* 90Hz gamma and 120Hz gamma info */
 struct gamma_cfg {
 	bool read_done;
-	/* 144Hz gamma info */
+	/* 120Hz gamma info */
 	u8 otp_read_b8[44];
 	u8 otp_read_b9[237];
 	u8 otp_read_ba[63];
@@ -49,7 +49,7 @@ struct gamma_cfg {
 	int update_ba_index;
 
 	bool update_done_90hz;
-	bool update_done_144hz;
+	bool update_done_120hz;
 };
 
 struct flatmode_cfg {

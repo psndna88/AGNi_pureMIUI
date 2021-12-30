@@ -4324,7 +4324,7 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			goto parse_fail;
 		}
 
-		if (panel->mi_cfg.panel_id == 0x4B3800420200) {
+		if (panel->mi_cfg.panel_id == 0x4B3100380800) {
 			if (mode->timing.refresh_rate == 60)
 				j = 0;
 			else if (mode->timing.refresh_rate == 90)
@@ -4919,7 +4919,7 @@ int dsi_panel_switch(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
-	if (panel->mi_cfg.dfps_bl_ctrl || panel->mi_cfg.panel_id == 0x4B3800420200
+	if (panel->mi_cfg.dfps_bl_ctrl || panel->mi_cfg.panel_id == 0x4B3100380800
 		|| panel->mi_cfg.gir_enabled)
 		rc = mi_dsi_fps_switch(panel);
 	else
@@ -4930,11 +4930,11 @@ int dsi_panel_switch(struct dsi_panel *panel)
 		       panel->name, rc);
 
 	if (panel->mi_cfg.gamma_update_flag) {
-		if (panel->mi_cfg.gamma_cfg.update_done_144hz &&
-			(144 == panel->cur_mode->timing.refresh_rate)) {
+		if (panel->mi_cfg.gamma_cfg.update_done_120hz &&
+			(90 == panel->cur_mode->timing.refresh_rate)) {
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_WRITE_GAMMA);
 			if (rc)
-				DSI_ERR("[%s] failed to send 144HZ GAMMA, rc=%d\n",
+				DSI_ERR("[%s] failed to send 120HZ GAMMA, rc=%d\n",
 						panel->name, rc);
 		}
 		if (panel->mi_cfg.gamma_cfg.update_done_90hz &&
@@ -4990,11 +4990,11 @@ int dsi_panel_enable(struct dsi_panel *panel)
 		panel->panel_initialized = true;
 
 	if (panel->mi_cfg.gamma_update_flag) {
-		if (panel->mi_cfg.gamma_cfg.update_done_144hz &&
-			(144 == panel->cur_mode->timing.refresh_rate)) {
+		if (panel->mi_cfg.gamma_cfg.update_done_120hz &&
+			(90 == panel->cur_mode->timing.refresh_rate)) {
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_WRITE_GAMMA);
 			if (rc)
-				DSI_ERR("[%s] failed to send 144HZ GAMMA, rc=%d\n",
+				DSI_ERR("[%s] failed to send 120HZ GAMMA, rc=%d\n",
 						panel->name, rc);
 		}
 		if (panel->mi_cfg.gamma_cfg.update_done_90hz &&
@@ -5130,7 +5130,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 				"ibb", REGULATOR_MODE_STANDBY);
 
-		if (panel->mi_cfg.panel_id == 0x4B3800420200 &&
+		if (panel->mi_cfg.panel_id == 0x4B3100380800 &&
 			(panel->power_mode == SDE_MODE_DPMS_LP1 ||
 			panel->power_mode == SDE_MODE_DPMS_LP2)) {
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_PRE_DOZE_TO_OFF);

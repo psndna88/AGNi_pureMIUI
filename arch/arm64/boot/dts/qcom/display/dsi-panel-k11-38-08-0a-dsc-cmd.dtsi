@@ -514,7 +514,6 @@
 
 	mi,mdss-dsi-panel-dc-threshold = <440>;
 	mi,mdss-dsi-panel-hbm-brightness = <1>;
-	mi,thermal-dimming-flag;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0{

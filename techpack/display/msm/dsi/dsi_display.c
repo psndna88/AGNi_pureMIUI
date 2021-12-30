@@ -8300,7 +8300,7 @@ int dsi_display_enable(struct dsi_display *display)
 			}
 		}
 
-		if (mi_get_disp_id(display) == MI_DISP_PRIMARY && display->panel->mi_cfg.panel_id == 0x4B3800420200) {
+		if (mi_get_disp_id(display) == MI_DISP_PRIMARY && display->panel->mi_cfg.panel_id == 0x4B3100380800) {
 			mi_dsi_panel_lhbm_set(display->panel);
 		}
 

@@ -646,7 +646,7 @@ static int mi_dsi_panel_read_gamma_otp_and_flash(struct dsi_panel *panel,
 	mode = panel->cur_mode;
 	gamma_cfg = &panel->mi_cfg.gamma_cfg;
 
-	/* OTP Read 144hz gamma parameter */
+	/* OTP Read 120hz gamma parameter */
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_GAMMA_OTP_READ_PRE);
 	if (rc) {
 		DISP_ERROR("Failed to send DSI_CMD_SET_MI_GAMMA_OTP_READ_PRE command\n");
@@ -654,7 +654,7 @@ static int mi_dsi_panel_read_gamma_otp_and_flash(struct dsi_panel *panel,
 		goto error;
 	}
 
-	DISP_INFO("[%s] Gamma 0xB8 OPT Read 44 Parameter (144Hz)\n", panel->type);
+	DISP_INFO("[%s] Gamma 0xB8 OPT Read 44 Parameter (120Hz)\n", panel->type);
 	flags = 0;
 	memset(read_param_buf, 0, sizeof(read_param_buf));
 	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_MI_GAMMA_OTP_READ_B8].cmds;
@@ -676,7 +676,7 @@ static int mi_dsi_panel_read_gamma_otp_and_flash(struct dsi_panel *panel,
 	}
 	memcpy(gamma_cfg->otp_read_b8, cmds->msg.rx_buf, sizeof(gamma_cfg->otp_read_b8));
 
-	DISP_INFO("[%s] Gamma 0xB9 OPT Read 237 Parameter (144Hz)\n", panel->type);
+	DISP_INFO("[%s] Gamma 0xB9 OPT Read 237 Parameter (120Hz)\n", panel->type);
 	flags = 0;
 	memset(read_param_buf, 0, sizeof(read_param_buf));
 	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_MI_GAMMA_OTP_READ_B9].cmds;
@@ -698,7 +698,7 @@ static int mi_dsi_panel_read_gamma_otp_and_flash(struct dsi_panel *panel,
 	}
 	memcpy(gamma_cfg->otp_read_b9, cmds->msg.rx_buf, sizeof(gamma_cfg->otp_read_b9));
 
-	DISP_INFO("[%s] Gamma 0xBA OTP Read 63 Parameter (144Hz)\n", panel->type);
+	DISP_INFO("[%s] Gamma 0xBA OTP Read 63 Parameter (120Hz)\n", panel->type);
 	flags = 0;
 	memset(read_param_buf, 0, sizeof(read_param_buf));
 	cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_MI_GAMMA_OTP_READ_BA].cmds;
@@ -726,7 +726,7 @@ static int mi_dsi_panel_read_gamma_otp_and_flash(struct dsi_panel *panel,
 		retval = -EAGAIN;
 		goto error;
 	}
-	DISP_INFO("[%s] OTP Read 144hz gamma done\n", panel->type);
+	DISP_INFO("[%s] OTP Read 120hz gamma done\n", panel->type);
 
 	/* Flash Read 90hz gamma parameter */
 	do {
@@ -993,8 +993,8 @@ int mi_dsi_panel_update_gamma_param(struct dsi_panel *panel)
 	for (i = 0; i < total_modes; i++) {
 		mode = &display->modes[i];
 		if (mode && mode->priv_info) {
-			if (144 == mode->timing.refresh_rate && !gamma_cfg->update_done_144hz) {
-				DISP_INFO("[%s] Update GAMMA Parameter (144Hz)\n", panel->type);
+			if (120 == mode->timing.refresh_rate && !gamma_cfg->update_done_120hz) {
+				DISP_INFO("[%s] Update GAMMA Parameter (120Hz)\n", panel->type);
 				cmds = mode->priv_info->cmd_sets[DSI_CMD_SET_MI_WRITE_GAMMA].cmds;
 				count = mode->priv_info->cmd_sets[DSI_CMD_SET_MI_WRITE_GAMMA].count;
 				if (cmds && count >= gamma_cfg->update_b8_index &&
@@ -1024,7 +1024,7 @@ int mi_dsi_panel_update_gamma_param(struct dsi_panel *panel)
 					else
 						DISP_ERROR("failed to update gamma 0xBA parameter\n");
 
-					gamma_cfg->update_done_144hz = true;
+					gamma_cfg->update_done_120hz = true;
 				} else {
 					DISP_ERROR("please check gamma update parameter index configuration\n");
 				}
@@ -1100,7 +1100,7 @@ ssize_t mi_dsi_panel_print_gamma_param(struct dsi_panel *panel,
 	mutex_lock(&panel->panel_lock);
 
 	count += snprintf(buf + count, size - count,
-				"Gamma 0xB8 OPT Read %d Parameter (144Hz)\n",
+				"Gamma 0xB8 OPT Read %d Parameter (120Hz)\n",
 				sizeof(gamma_cfg->otp_read_b8));
 	buffer = gamma_cfg->otp_read_b8;
 	for (i = 1; i <= sizeof(gamma_cfg->otp_read_b8); i++) {
@@ -1114,7 +1114,7 @@ ssize_t mi_dsi_panel_print_gamma_param(struct dsi_panel *panel,
 	}
 
 	count += snprintf(buf + count, size - count,
-				"Gamma 0xB9 OPT Read %d Parameter (144Hz)\n",
+				"Gamma 0xB9 OPT Read %d Parameter (120Hz)\n",
 				sizeof(gamma_cfg->otp_read_b9));
 	buffer = gamma_cfg->otp_read_b9;
 	for (i = 1; i <= sizeof(gamma_cfg->otp_read_b9); i++) {
@@ -1128,7 +1128,7 @@ ssize_t mi_dsi_panel_print_gamma_param(struct dsi_panel *panel,
 	}
 
 	count += snprintf(buf + count, size - count,
-				"Gamma 0xBA OPT Read %d Parameter (144Hz)\n",
+				"Gamma 0xBA OPT Read %d Parameter (120Hz)\n",
 				sizeof(gamma_cfg->otp_read_ba));
 	buffer = gamma_cfg->otp_read_ba;
 	for (i = 1; i <= sizeof(gamma_cfg->otp_read_ba); i++) {
@@ -1760,11 +1760,11 @@ int mi_dsi_panel_demura_set(struct dsi_panel *panel)
 
 	mi_cfg = &panel->mi_cfg;
 
-	if (mi_cfg->panel_id == 0x4B3800420200 && mi_cfg->feature_val[DISP_FEATURE_DC] == FEATURE_ON) {
+	if (mi_cfg->panel_id == 0x4B3100380800 && mi_cfg->feature_val[DISP_FEATURE_DC] == FEATURE_ON) {
 		DISP_INFO("DC is on, current refresh_rate is %d, DSI_CMD_SET_MI_DEMURA_WHEN_DC_ON\n",
 			panel->cur_mode->timing.refresh_rate);
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DEMURA_WHEN_DC_ON);
-	} else if (mi_cfg->panel_id == 0x4B3800420200 && mi_cfg->feature_val[DISP_FEATURE_DC] == FEATURE_OFF) {
+	} else if (mi_cfg->panel_id == 0x4B3100380800 && mi_cfg->feature_val[DISP_FEATURE_DC] == FEATURE_OFF) {
 		DISP_INFO("DC is off, current refresh_rate is %d, DSI_CMD_SET_MI_DEMURA_WHEN_DC_OFF\n",
 			panel->cur_mode->timing.refresh_rate);
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_DEMURA_WHEN_DC_OFF);
@@ -1898,7 +1898,7 @@ static int mi_dsi_update_hbm_cmd_87reg(struct dsi_panel *panel,
 		tx_buf = (u8 *)cmds[index].msg.tx_buf;
 		if (tx_buf && tx_buf[0] == 0x87) {
 			tx_buf[1] = (aa_alpha_set[bl_lvl] >> 8) & 0x0f;
-			if (mi_cfg->panel_id == 0x4B3800420200) {
+			if (mi_cfg->panel_id == 0x4B3100380800) {
 				if (bl_lvl <= 800 && bl_lvl > 524) {
 					if (((aa_alpha_set[bl_lvl] & 0xff) + 0x01) <= 0xff)
 						tx_buf[2] = (aa_alpha_set[bl_lvl] & 0xff) + 0x01;
@@ -1970,7 +1970,7 @@ static int mi_dsi_update_hbm_cmd_87reg(struct dsi_panel *panel,
 		tx_buf = (u8 *)cmds[index + 2].msg.tx_buf;
 		if (tx_buf && tx_buf[0] == 0x87) {
 			tx_buf[1] = (cup_alpha_set[bl_lvl] >> 8) & 0x0f;
-			if (mi_cfg->panel_id == 0x4B3800420200) {
+			if (mi_cfg->panel_id == 0x4B3100380800) {
 				if (bl_lvl <= 800 && bl_lvl > 577) {
 					if ((cup_alpha_set[bl_lvl] & 0xff) >= 0x02)
 						tx_buf[2] = (cup_alpha_set[bl_lvl] & 0xff) - 0x02;
@@ -2427,7 +2427,7 @@ int mi_dsi_panel_set_disp_param(struct dsi_panel *panel, struct disp_feature_ctl
 			break;
 		case LOCAL_HBM_OFF_TO_NORMAL_BACKLIGHT_RESTORE:
 			DISP_INFO("LOCAL_HBM_OFF_TO_NORMAL_BACKLIGHT_RESTORE\n");
-			if (mi_cfg->panel_id == 0x4B3800420200) {
+			if (mi_cfg->panel_id == 0x4B3100380800) {
 				mi_dsi_update_hbm_cmd_51reg(panel, DSI_CMD_SET_MI_LOCAL_HBM_OFF_TO_NORMAL, 0);
 			} else {
 				mi_dsi_update_backlight_in_aod(panel, true);
