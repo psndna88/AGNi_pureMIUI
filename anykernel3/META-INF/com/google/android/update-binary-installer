@@ -572,6 +572,12 @@ if [ "`$BB grep selected.0=2 /tmp/aroma-data/sel.prop`" ]; then
 else
 	$BB echo "0" > $AKHOME/SEL_MODE_FAKE;
 fi;
+# QTI haptics mode
+if [ "`$BB grep selected.0=2 /tmp/aroma-data/aosphaptics.prop`" ]; then
+	$BB echo "1" > $AKHOME/QTI_HAPTICS;
+else
+	$BB echo "0" > $AKHOME/QTI_HAPTICS;
+fi;
 
 ### AGNi: Camera Libs type detection
 DEVICE_NATIVE_MIUIQ="NO";
