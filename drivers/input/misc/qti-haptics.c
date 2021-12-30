@@ -225,7 +225,7 @@ struct qti_hap_chip {
 	bool				vdd_enabled;
 };
 
-extern bool miuirom;
+extern bool hapticsqti;
 static int wf_repeat[8] = {1, 2, 4, 8, 16, 32, 64, 128};
 static int wf_s_repeat[4] = {1, 2, 4, 8};
 const static char * const wf_src_str[] = {"vmax", "buffer", "audio", "pwm"};
@@ -1935,7 +1935,7 @@ static int qti_haptics_probe(struct platform_device *pdev)
 	struct ff_device *ff;
 	int rc = 0, effect_count_max;
 
-	if (miuirom)
+	if (!hapticsqti)
 		return -1;
 
 	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
