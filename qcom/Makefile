@@ -453,7 +453,8 @@ dtb-$(CONFIG_ARCH_SDXLEMUR) += sdxlemur-rumi.dtb \
 	sdxlemur-v2-mtp-mbb-m2-ep-usb.dtb \
 	sdxlemur-v2-mtp-mbb-m2-ep.dtb \
 	sdxlemur-v2-rcm-rc-pine1x.dtb \
-	sdxlemur-v2-rcm-rc-pine2x.dtb
+	sdxlemur-v2-rcm-rc-pine2x.dtb \
+	sdxlemur-v2-m2-ep-fwa.dtb
 
 
 
