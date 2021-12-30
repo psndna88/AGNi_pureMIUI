@@ -611,19 +611,13 @@ patch_fstab() {
 
 # patch_cmdline <cmdline entry name> <replacement string>
 patch_cmdline() {
-  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled sdfat_xattr_los selselection;
+  local cmdfile cmdtmp match osver miui srgblock cpuoc soundmod wiredbtnmode userled sdfat_xattr_los selselection haptics_selection;
   if [ -f "$split_img/cmdline.txt" ]; then
     cmdfile=$split_img/cmdline.txt;
   else
     cmdfile=$home/cmdtmp;
     grep "^cmdline=" $split_img/header | cut -d= -f2- > $cmdfile;
   fi;
-  sed -i 's/androidboot.version/android.ver/' $cmdfile;
-  sed -i 's/androidboot.miui/miui/' $cmdfile;
-  sed -i 's/androidboot.srgblock/srgblock/' $cmdfile;
-  sed -i 's/androidboot.cpuoc/cpuoc/' $cmdfile;
-  sed -i 's/androidboot.agnisoundmod/agnisoundmod/' $cmdfile;
-  sed -i 's/androidboot.wiredbtnaltmode/wiredbtnaltmode/' $cmdfile;
   if ! grep -q "$1" $cmdfile; then
     cmdtmp=$(cat $cmdfile);
     echo "$cmdtmp $2" > $cmdfile;
@@ -686,6 +680,11 @@ patch_cmdline() {
   selselection="`cat $home/SEL_MODE_FAKE`";
   if [ "$selselection" == "1" ]; then
 	sed -i 's/selfake=0/selfake=1/' $cmdfile;
+  fi;
+  # QTI haptics mode
+  haptics_selection="`cat $home/QTI_HAPTICS`";
+  if [ "$haptics_selection" == "1" ]; then
+	sed -i 's/qtihaptics=0/qtihaptics=1/' $cmdfile;
   fi;
 
   if [ -f "$home/cmdtmp" ]; then
