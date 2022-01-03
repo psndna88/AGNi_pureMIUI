@@ -7350,10 +7350,12 @@ static void typec_src_removal(struct smb_charger *chg)
 
 	if (chg->pd_verifed) {
 		chg->pd_verifed = false;
+#if 0
 		if (chg->support_ffc) {
 			if (smblib_get_fastcharge_mode(chg) == true)
 			smblib_set_fastcharge_mode(chg, false);
 		}
+#endif
 	}
 
 	chg->apsd_ext_timeout = false;
