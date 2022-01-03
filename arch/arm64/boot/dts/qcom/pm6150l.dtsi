@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -145,7 +145,7 @@
 		#size-cells = <1>;
 
 		pm6150l_pwm_1: qcom,pwms@bc00 {
-			status = "disabled";
+			status = "ok";
 			compatible = "qcom,pwm-lpg";
 			reg = <0xbc00 0x100>;
 			reg-names = "lpg-base";
@@ -331,11 +331,7 @@
 			interrupt-names = "ovp-irq", "pre-flash-irq",
 					  "flash-irq";
 			qcom,pmic-revid = <&pm6150l_revid>;
-			qcom,fs-current-limit = <25000>;
 			qcom,auto-calibration;
-			qcom,en-cabc;
-			qcom,cabc-sel = <1>;
-			qcom,ovp = <22000>;
 			status = "disabled";
 
 			wled_flash: qcom,wled-flash {
