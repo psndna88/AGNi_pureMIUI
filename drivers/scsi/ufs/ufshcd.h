@@ -1386,4 +1386,7 @@ static inline int ufshcd_vops_crypto_engine_get_status(struct ufs_hba *hba,
 	return 0;
 }
 
+extern int ufshcd_read_desc_param(struct ufs_hba *hba, enum desc_idn desc_id,
+				  int desc_index, u32 param_offset,
+				  u8 *param_read_buf, u32 param_size);
 #endif /* End of Header */
