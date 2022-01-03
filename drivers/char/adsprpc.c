@@ -47,7 +47,6 @@
 #include <soc/qcom/ramdump.h>
 #include <linux/debugfs.h>
 #include <linux/pm_qos.h>
-#include <linux/cpumask.h>
 #include <linux/stat.h>
 
 #define TZ_PIL_PROTECT_MEM_SUBSYS_ID 0x0C
@@ -182,11 +181,6 @@ struct secure_vm {
 	int *vmid;
 	int *vmperm;
 	int vmcount;
-};
-
-struct qos_cores {
-	int *coreno;
-	int corecount;
 };
 
 struct fastrpc_file;
@@ -325,7 +319,6 @@ struct fastrpc_apps {
 	struct smq_invoke_ctx *ctxtable[FASTRPC_CTX_MAX];
 	bool legacy_remote_heap;
 	struct wakeup_source *wake_source;
-	struct qos_cores silvercores;
 };
 
 struct fastrpc_mmap {
@@ -3663,9 +3656,6 @@ static int fastrpc_internal_control(struct fastrpc_file *fl,
 {
 	int err = 0;
 	int latency;
-	cpumask_t mask;
-	struct fastrpc_apps *me = &gfa;
-	u32 len = me->silvercores.corecount, i = 0;
 
 	VERIFY(err, !IS_ERR_OR_NULL(fl) && !IS_ERR_OR_NULL(fl->apps));
 	if (err)
@@ -3681,11 +3671,6 @@ static int fastrpc_internal_control(struct fastrpc_file *fl,
 		VERIFY(err, latency != 0);
 		if (err)
 			goto bail;
-		cpumask_clear(&mask);
-		for (i = 0; i < len; i++)
-			cpumask_set_cpu(me->silvercores.coreno[i], &mask);
-		fl->pm_qos_req.type = PM_QOS_REQ_AFFINE_CORES;
-		cpumask_copy(&fl->pm_qos_req.cpus_affine, &mask);
 		mutex_lock(&fl->pm_qos_mutex);
 		if (!fl->qos_request) {
 			pm_qos_add_request(&fl->pm_qos_req,
@@ -4294,39 +4279,6 @@ bail:
 	}
 }
 
-static void init_qos_cores_list(struct device *dev, char *prop_name,
-						struct qos_cores *silvercores)
-{
-	int err = 0;
-	u32 len = 0, i = 0;
-	u32 *coreslist = NULL;
-
-	if (!of_find_property(dev->of_node, prop_name, &len))
-		goto bail;
-	if (len == 0)
-		goto bail;
-	len /= sizeof(u32);
-	VERIFY(err, NULL != (coreslist = kcalloc(len, sizeof(u32),
-						 GFP_KERNEL)));
-	if (err)
-		goto bail;
-	for (i = 0; i < len; i++) {
-		err = of_property_read_u32_index(dev->of_node, prop_name, i,
-								&coreslist[i]);
-		if (err) {
-			pr_err("adsprpc: %s: failed to read QOS cores list\n",
-								 __func__);
-			goto bail;
-		}
-	}
-	silvercores->coreno = coreslist;
-	silvercores->corecount = len;
-bail:
-	if (err) {
-		kfree(coreslist);
-	}
-}
-
 static void configure_secure_channels(uint32_t secure_domains)
 {
 	struct fastrpc_apps *me = &gfa;
@@ -4363,8 +4315,6 @@ static int fastrpc_probe(struct platform_device *pdev)
 					"qcom,msm-fastrpc-compute")) {
 		init_secure_vmid_list(dev, "qcom,adsp-remoteheap-vmid",
 							&gcinfo[0].rhvm);
-		init_qos_cores_list(dev, "qcom,qos-cores",
-							&me->silvercores);
 
 		of_property_read_u32(dev->of_node, "qcom,rpc-latency-us",
 			&me->latency);
