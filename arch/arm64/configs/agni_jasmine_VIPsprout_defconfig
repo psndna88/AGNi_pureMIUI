@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.4.297 Kernel Configuration
+# Linux/arm64 4.4.298 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -1484,6 +1484,7 @@ CONFIG_AINUR_DTS_HW=y
 # CONFIG_CXL_BASE is not set
 # CONFIG_CXL_KERNEL_API is not set
 # CONFIG_CXL_EEH is not set
+CONFIG_MI_MEMORY_SYSFS=y
 
 #
 # SCSI device support
