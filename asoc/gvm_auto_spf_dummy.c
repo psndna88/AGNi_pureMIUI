@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,6 +32,7 @@
 #include "msm_dailink.h"
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/subsystem_notif.h>
+#include <soc/qcom/boot_stats.h>
 
 
 #define DRV_NAME "spf-asoc-snd"
@@ -908,6 +910,8 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	}
 	dev_info(&pdev->dev, "Sound card %s registered\n", card->name);
 	pr_err("Sound card %s registered\n", card->name);
+	place_marker("M - sound card init complete");
+
 	spdev = pdev;
 
 	subsys_notif_register_notifier("adsp", &auto_spf_dummy_ssr_notifier);
