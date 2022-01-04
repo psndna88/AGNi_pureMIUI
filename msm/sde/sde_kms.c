@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -111,6 +112,8 @@ static int _sde_kms_mmu_destroy(struct sde_kms *sde_kms);
 static int _sde_kms_mmu_init(struct sde_kms *sde_kms);
 static int _sde_kms_register_events(struct msm_kms *kms,
 		struct drm_mode_object *obj, u32 event, bool en);
+static void sde_kms_handle_power_event(u32 event_type, void *usr);
+
 bool sde_is_custom_client(void)
 {
 	return sdecustom;
@@ -2178,14 +2181,38 @@ static int sde_kms_postinit(struct msm_kms *kms)
 	struct drm_crtc *crtc;
 	struct drm_connector *conn;
 	struct drm_connector_list_iter conn_iter;
-	int rc;
+	struct msm_drm_private *priv;
+	int i, rc;
 
-	if (!sde_kms || !sde_kms->dev || !sde_kms->dev->dev) {
+	if (!sde_kms || !sde_kms->dev || !sde_kms->dev->dev ||
+			!sde_kms->dev->dev_private) {
 		SDE_ERROR("invalid sde_kms\n");
 		return -EINVAL;
 	}
 
 	dev = sde_kms->dev;
+	priv = sde_kms->dev->dev_private;
+
+	/*
+	 * Handle (re)initializations during power enable, the sde power
+	 * event call has to be after drm_irq_install to handle irq update.
+	 */
+	sde_kms_handle_power_event(SDE_POWER_EVENT_POST_ENABLE, sde_kms);
+	sde_kms->power_event = sde_power_handle_register_event(&priv->phandle,
+			SDE_POWER_EVENT_POST_ENABLE |
+			SDE_POWER_EVENT_PRE_DISABLE,
+			sde_kms_handle_power_event, sde_kms, "kms");
+
+	if (sde_kms->splash_data.num_splash_displays) {
+		SDE_DEBUG("Skipping MDP Resources disable\n");
+	} else {
+		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
+			sde_power_data_bus_set_quota(&priv->phandle, i,
+				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
+				SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
+
+		pm_runtime_put_sync(sde_kms->dev->dev);
+	}
 
 	rc = _sde_debugfs_init(sde_kms);
 	if (rc)
@@ -4686,7 +4713,7 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	struct drm_device *dev;
 	struct msm_drm_private *priv;
 	struct platform_device *platformdev;
-	int i, irq_num, rc = -EINVAL;
+	int irq_num, rc = -EINVAL;
 
 	if (!kms) {
 		SDE_ERROR("invalid kms\n");
@@ -4734,26 +4761,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	 * Support format modifiers for compression etc.
 	 */
 	dev->mode_config.allow_fb_modifiers = true;
-
-	/*
-	 * Handle (re)initializations during power enable
-	 */
-	sde_kms_handle_power_event(SDE_POWER_EVENT_POST_ENABLE, sde_kms);
-	sde_kms->power_event = sde_power_handle_register_event(&priv->phandle,
-			SDE_POWER_EVENT_POST_ENABLE |
-			SDE_POWER_EVENT_PRE_DISABLE,
-			sde_kms_handle_power_event, sde_kms, "kms");
-
-	if (sde_kms->splash_data.num_splash_displays) {
-		SDE_DEBUG("Skipping MDP Resources disable\n");
-	} else {
-		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
-			sde_power_data_bus_set_quota(&priv->phandle, i,
-				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
-				SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
-
-		pm_runtime_put_sync(sde_kms->dev->dev);
-	}
 
 	sde_kms->affinity_notify.notify = sde_kms_irq_affinity_notify;
 	sde_kms->affinity_notify.release = sde_kms_irq_affinity_release;
