@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,6 +30,8 @@
 #define GET_PDATA_OF_ATTR(attr) \
 	(container_of(attr, struct msm_rpmstats_kobj_attr, ka)->pd)
 
+//2019.12.17 add longcheer xiaoxiongfeng "Increase the hibernation info of the rpmh subsystem"
+static void __iomem *reg_base;
 struct msm_rpmstats_record {
 	char name[32];
 	u32 id;
@@ -324,6 +327,9 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 
 	msm_rpmstats_create_sysfs(pdev, pdata);
 	gpdata = pdata;
+//2019.12.17 add longcheer xiaoxiongfeng "Increase the hibernation info of the rpmh subsystem"
+	reg_base = ioremap_nocache(pdata->phys_addr_base,
+					pdata->phys_size);
 
 	return 0;
 }
