@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1152,6 +1152,7 @@ struct hdd_chan_change_params {
  * @user: user context to prevent/allow runtime pm
  * @is_user_wakelock_acquired: boolean to check if user wakelock status
  * @monitor_mode: monitor mode context to prevent/allow runtime pm
+ * @stats: stats context to prevent/allow runtime pm
  *
  * Runtime PM control for underlying activities
  */
@@ -1161,6 +1162,7 @@ struct hdd_runtime_pm_context {
 	qdf_runtime_lock_t user;
 	bool is_user_wakelock_acquired;
 	qdf_runtime_lock_t monitor_mode;
+	qdf_runtime_lock_t stats;
 };
 
 /*
