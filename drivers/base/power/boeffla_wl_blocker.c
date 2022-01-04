@@ -48,6 +48,7 @@ char list_wl_default[LENGTH_LIST_WL_DEFAULT] = {0};
 extern char list_wl_search[LENGTH_LIST_WL_SEARCH];
 extern bool wl_blocker_active;
 extern bool wl_blocker_debug;
+module_param(wl_blocker_active, bool, 0644);
 
 
 /*****************************************/
