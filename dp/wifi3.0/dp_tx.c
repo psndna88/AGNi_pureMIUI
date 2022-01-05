@@ -4117,15 +4117,18 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 	DP_STATS_INCC(peer, tx.stbc, 1, ts->stbc);
 	DP_STATS_INCC(peer, tx.ldpc, 1, ts->ldpc);
 	DP_STATS_INCC(peer, tx.retries, 1, ts->transmit_cnt > 1);
+
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, pdev->soc,
 			     &peer->stats, ts->peer_id,
 			     UPDATE_PEER_STATS, pdev->pdev_id);
 #endif
-	if (ts->first_msdu)
+	if (ts->first_msdu) {
 		DP_STATS_INCC(peer, tx.mpdu_success_with_retries,
 			      qdf_do_div(ts->transmit_cnt, DP_RETRY_COUNT),
 			      ts->transmit_cnt > DP_RETRY_COUNT);
+		DP_STATS_INCC(peer, tx.retries_mpdu, 1, ts->transmit_cnt > 1);
+	}
 }
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
