@@ -2593,23 +2593,6 @@ out:
 	__sdhci_msm_set_clock(host, clock);
 }
 
-static void sdhci_msm_set_timeout(struct sdhci_host *host, struct mmc_command *cmd)
-{
-	u32 count, start = 15;
-
-	__sdhci_set_timeout(host, cmd);
-	count = sdhci_readb(host, SDHCI_TIMEOUT_CONTROL);
-	/*
-	 * Update software timeout value if its value is less than hardware data
-	 * timeout value. Qcom SoC hardware data timeout value was calculated
-	 * using 4 * MCLK * 2^(count + 13). where MCLK = 1 / host->clock.
-	 */
-	if (cmd && cmd->data && host->clock > 400000 &&
-	    host->clock <= 50000000 &&
-	    ((1 << (count + start)) > (10 * host->clock)))
-		host->data_timeout = 22LL * NSEC_PER_SEC;
-}
-
 static void sdhci_msm_registers_save(struct sdhci_host *host)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -2763,6 +2746,23 @@ static void sdhci_msm_registers_restore(struct sdhci_host *host)
 		mmc_hostname(host->mmc), __func__,
 		readl_relaxed(host->ioaddr +
 			msm_offset->core_pwrctl_mask));
+}
+
+static void sdhci_msm_set_timeout(struct sdhci_host *host, struct mmc_command *cmd)
+{
+	u32 count, start = 15;
+
+	__sdhci_set_timeout(host, cmd);
+	count = sdhci_readb(host, SDHCI_TIMEOUT_CONTROL);
+	/*
+	 * Update software timeout value if its value is less than hardware data
+	 * timeout value. Qcom SoC hardware data timeout value was calculated
+	 * using 4 * MCLK * 2^(count + 13). where MCLK = 1 / host->clock.
+	 */
+	if (cmd && cmd->data && host->clock > 400000 &&
+	    host->clock <= 50000000 &&
+	    ((1 << (count + start)) > (10 * host->clock)))
+		host->data_timeout = 22LL * NSEC_PER_SEC;
 }
 
 /*
@@ -3568,13 +3568,13 @@ static const struct sdhci_ops sdhci_msm_ops = {
 
 	.write_w = sdhci_msm_writew,
 	.write_b = sdhci_msm_writeb,
-	.set_timeout = sdhci_msm_set_timeout,
 	.irq	= sdhci_msm_cqe_irq,
 #if defined(CONFIG_SDC_QTI)
 	.get_current_limit = sdhci_msm_get_current_limit,
 	.notify_load = sdhci_msm_notify_load,
 #endif
 	.hw_reset = sdhci_msm_hw_reset,
+	.set_timeout = sdhci_msm_set_timeout,
 };
 
 static const struct sdhci_pltfm_data sdhci_msm_pdata = {
