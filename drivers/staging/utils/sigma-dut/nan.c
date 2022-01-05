@@ -1270,11 +1270,19 @@ static int sigma_nan_data_response(struct sigma_dut *dut,
 static int sigma_nan_data_end(struct sigma_dut *dut, struct sigma_cmd *cmd)
 {
 	const char *nmf_security_config = get_param(cmd, "Security");
-	NanDataPathEndRequest req;
+	NanDataPathEndRequest *req;
 	NanDebugParams cfg_debug;
 	int size;
 
-	memset(&req, 0, sizeof(NanDataPathEndRequest));
+	req = (NanDataPathEndRequest *)
+		malloc(sizeof(NanDataPathEndRequest) + sizeof(NanDataPathId));
+	if (!req) {
+		sigma_dut_print(dut, DUT_MSG_ERROR,
+				"%s: Failure in allocation of NanDataPathEndRequest",
+				__func__);
+		return -1;
+	}
+	memset(req, 0, sizeof(NanDataPathEndRequest) + sizeof(NanDataPathId));
 	memset(&cfg_debug, 0, sizeof(NanDebugParams));
 	if (nmf_security_config) {
 		int nmf_security_config_val = 0;
@@ -1295,10 +1303,11 @@ static int sigma_nan_data_end(struct sigma_dut *dut, struct sigma_cmd *cmd)
 					 cfg_debug, size);
 	}
 
-	req.num_ndp_instances = 1;
-	req.ndp_instance_id[0] = global_ndp_instance_id;
+	req->num_ndp_instances = 1;
+	req->ndp_instance_id[0] = global_ndp_instance_id;
 
-	nan_data_end(0, dut->wifi_hal_iface_handle, &req);
+	nan_data_end(0, dut->wifi_hal_iface_handle, req);
+	free(req);
 	return 0;
 }
 

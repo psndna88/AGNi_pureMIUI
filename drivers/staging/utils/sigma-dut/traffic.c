@@ -2,7 +2,7 @@
  * Sigma Control API DUT (station/AP)
  * Copyright (c) 2010, Atheros Communications, Inc.
  * Copyright (c) 2011-2013, 2016-2017 Qualcomm Atheros, Inc.
- * Copyright (c) 2018-2019, The Linux Foundation
+ * Copyright (c) 2018-2021, The Linux Foundation
  * All Rights Reserved.
  * Licensed under the Clear BSD license. See README for more details.
  */
@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <ifaddrs.h>
+#include <netdb.h>
 
 #include "wpa_helpers.h"
 
@@ -39,6 +40,7 @@ static enum sigma_cmd_result cmd_traffic_send_ping(struct sigma_dut *dut,
 	int type = 1;
 	int dscp = 0, use_dscp = 0;
 	char extra[100], int_arg[100], intf_arg[100], ip_dst[100], ping[100];
+	struct in6_addr ip6_addr;
 
 	val = get_param(cmd, "Type");
 	if (!val)
@@ -58,6 +60,18 @@ static enum sigma_cmd_result cmd_traffic_send_ping(struct sigma_dut *dut,
 	if (dut->ndp_enable && type == 2) {
 		snprintf(ip_dst, sizeof(ip_dst), "%s%%nan0", dst);
 		dst = ip_dst;
+	} else if (type == 2) {
+		if (inet_pton(AF_INET6, dst, &ip6_addr) <= 0) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "ErrorCode,Unsupported address type");
+			return STATUS_SENT;
+		}
+
+		if (IN6_IS_ADDR_LINKLOCAL(&ip6_addr)) {
+			snprintf(ip_dst, sizeof(ip_dst), "%s%%%s", dst,
+				 get_station_ifname(dut));
+			dst = ip_dst;
+		}
 	}
 
 	val = get_param(cmd, "frameSize");
@@ -248,6 +262,7 @@ static enum sigma_cmd_result cmd_traffic_stop_ping(struct sigma_dut *dut,
 static int get_ip_addr(const char *ifname, int ipv6, char *buf, size_t len)
 {
 	struct ifaddrs *ifa, *ifa_tmp;
+	bool non_ll_addr_found = false;
 
 	if (getifaddrs(&ifa) == -1)
 		return -1;
@@ -270,13 +285,114 @@ static int get_ip_addr(const char *ifname, int ipv6, char *buf, size_t len)
 			struct sockaddr_in6 *in6;
 
 			in6 = (struct sockaddr_in6 *) ifa_tmp->ifa_addr;
-			if (!inet_ntop(AF_INET6, &in6->sin6_addr, buf, len))
-				return -1;
-			return 0;
+
+			/* get link local address if available */
+			if (IN6_IS_ADDR_LINKLOCAL(&in6->sin6_addr)) {
+				if (!inet_ntop(AF_INET6, &in6->sin6_addr, buf,
+					       len))
+					return -1;
+				return 0;
+			}
+
+			if (!non_ll_addr_found &&
+			    inet_ntop(AF_INET6, &in6->sin6_addr, buf, len))
+				non_ll_addr_found = true;
 		}
 	}
 
-	return -1;
+	return non_ll_addr_found ? 0 : -1;
+}
+
+
+static int get_dscp_from_policy_table(struct sigma_dut *dut, int ip_version,
+				      const char *domain_name,
+				      const char *src_ip, int dst_port,
+				      int src_port)
+{
+	struct dscp_policy_data *policy;
+	char *suffix;
+	int dscp = -1, max_score = 0, max_suffix_length = 0;
+	int score, suffix_length;
+
+	for (policy = dut->dscp_policy_table; policy; policy = policy->next) {
+		if (strlen(policy->domain_name) == 0)
+			continue;
+
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Found policy with domain name %s, ipver %d start_port %d, end_port %d, dst_port %d src_port %d, src_ip %s, dscp %d",
+				policy->domain_name, policy->ip_version,
+				policy->start_port, policy->end_port,
+				policy->dst_port, policy->src_port,
+				policy->src_ip, policy->dscp);
+		/*
+		 * Discard if suffix is not found or suffix is not in the end of
+		 * the complete domain name.
+		 */
+		suffix = strstr(domain_name, policy->domain_name);
+		if (!suffix)
+			continue;
+
+		suffix_length = strlen(suffix);
+		if (suffix_length != strlen(policy->domain_name))
+			continue;
+
+		/* Calculate granularity score */
+		score = 0;
+		if (policy->ip_version) {
+			if (ip_version == policy->ip_version)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->start_port && policy->end_port) {
+			if (dst_port >= policy->start_port &&
+			    dst_port <= policy->end_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->dst_port) {
+			if (dst_port == policy->dst_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (policy->src_port) {
+			if (src_port == policy->src_port)
+				score++;
+			else
+				continue;
+		}
+
+		if (strlen(policy->src_ip)) {
+			if (!strcmp(src_ip, policy->src_ip))
+				score++;
+			else
+				continue;
+		}
+
+		if (score > max_score) {
+			max_score = score;
+			max_suffix_length = suffix_length;
+			dscp = policy->dscp;
+		} else if (score == max_score &&
+			   suffix_length > max_suffix_length) {
+			max_suffix_length = suffix_length;
+			dscp = policy->dscp;
+		}
+	}
+
+	if (dscp == -1)
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"Policy not found for %s", domain_name);
+	else
+		sigma_dut_print(dut, DUT_MSG_DEBUG,
+				"DSCP for %s is %d", domain_name, dscp);
+
+	return dscp;
 }
 
 
@@ -284,18 +400,20 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 						     struct sigma_conn *conn,
 						     struct sigma_cmd *cmd)
 {
-	const char *val, *dst;
+	const char *val, *dst, *domain_name = NULL;
 	const char *iptype;
-	int port, duration;
+	int duration, dst_port = 0, src_port = 0;
 	const char *proto;
 	char buf[256];
 	const char *ifname;
-	char port_str[20], iperf[100];
+	char port_str[20], iperf[100], src_ip[100];
 	FILE *f;
 	int server, ipv6 = 0;
 	char *pos;
 	int dscp, reverse = 0;
-	char tos[20], client_port_str[100];
+	char tos[20], client_port_str[100], bitrate[20];
+	struct hostent *host_addr;
+	char ip_addr[INET6_ADDRSTRLEN];
 
 	val = get_param(cmd, "mode");
 	if (!val) {
@@ -321,14 +439,22 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 	port_str[0] = '\0';
 	val = get_param(cmd, "port");
 	if (val) {
-		port = atoi(val);
-		snprintf(port_str, sizeof(port_str), "-p %d", port);
+		dst_port = atoi(val);
+		snprintf(port_str, sizeof(port_str), "-p %d", dst_port);
 	}
 
 	proto = "";
 	val = get_param(cmd, "transproto");
 	if (val && strcasecmp(val, "udp") == 0)
 		proto = "-u";
+
+	bitrate[0] = '\0';
+	val = get_param(cmd, "bitrate");
+	if (val) {
+		int ret = snprintf(bitrate, sizeof(bitrate), " -b %s", val);
+		if (ret < 0 || ret >= sizeof(bitrate))
+			return ERROR_SEND_STATUS;
+	}
 
 	dst = get_param(cmd, "destination");
 	pos = dst ? strchr(dst, '%') : NULL;
@@ -341,7 +467,29 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		ifname = get_station_ifname(dut);
 	}
 
-	if (!server && (!dst || (!is_ip_addr(dst) && !is_ipv6_addr(dst)))) {
+	if (dst && !ipv6 && !is_ip_addr(dst)) {
+		domain_name = dst;
+		host_addr = gethostbyname2(dst, AF_INET);
+		if (!host_addr) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid IPv4 address/domain name");
+			return STATUS_SENT;
+		}
+		dst = inet_ntop(AF_INET, host_addr->h_addr_list[0], ip_addr,
+				sizeof(ip_addr));
+	} else if (dst && ipv6 && !is_ipv6_addr(dst)) {
+		domain_name = dst;
+		host_addr = gethostbyname2(dst, AF_INET6);
+		if (!host_addr) {
+			send_resp(dut, conn, SIGMA_ERROR,
+				  "errorCode,Invalid IPv6 address/domain name");
+			return STATUS_SENT;
+		}
+		dst = inet_ntop(AF_INET6, host_addr->h_addr_list[0], ip_addr,
+				sizeof(ip_addr));
+	}
+
+	if (!server && !dst) {
 		send_resp(dut, conn, SIGMA_ERROR,
 			  "errorCode,Invalid destination address");
 		return STATUS_SENT;
@@ -354,25 +502,25 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		duration = 0;
 
 	client_port_str[0] = '\0';
+	src_ip[0] = '\0';
 	val = get_param(cmd, "clientport");
 	if (val) {
-		char ipaddr[100];
 		int res;
 
-		port = atoi(val);
-		if (get_ip_addr(ifname, ipv6, ipaddr, sizeof(ipaddr))) {
+		src_port = atoi(val);
+		if (get_ip_addr(ifname, ipv6, src_ip, sizeof(src_ip))) {
 			send_resp(dut, conn, SIGMA_ERROR,
 				"errorCode,Cannot get own IP address");
 			return STATUS_SENT;
 		}
 
 		if (ipv6)
-			snprintf(buf, sizeof(buf), "%s%%%s", ipaddr, ifname);
+			snprintf(buf, sizeof(buf), "%s%%%s", src_ip, ifname);
 		else
-			snprintf(buf, sizeof(buf), "%s", ipaddr);
+			snprintf(buf, sizeof(buf), "%s", src_ip);
 
 		res = snprintf(client_port_str, sizeof(client_port_str),
-			       " -B %s --cport %d", buf, port);
+			       " -B %s --cport %d", buf, src_port);
 		if (res < 0 || res >= sizeof(client_port_str))
 			return ERROR_SEND_STATUS;
 	}
@@ -391,6 +539,13 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 			return STATUS_SENT_ERROR;
 		}
 		snprintf(tos, sizeof(tos), " -S 0x%02x", dscp << 2);
+	}
+	if (domain_name) {
+		dscp = get_dscp_from_policy_table(dut, ipv6 ? IPV6 : IPV4,
+						  domain_name, src_ip, dst_port,
+						  src_port);
+		if (dscp != -1)
+			snprintf(tos, sizeof(tos), " -S 0x%02x", dscp << 2);
 	}
 
 	unlink(concat_sigma_tmpdir(dut, "/sigma_dut-iperf", iperf,
@@ -422,10 +577,10 @@ static enum sigma_cmd_result cmd_traffic_start_iperf(struct sigma_dut *dut,
 		else
 			snprintf(buf, sizeof(buf), "%s", dst);
 		fprintf(f, "#!" SHELL "\n"
-			"iperf3 -c %s -t %d %s %s %s%s%s%s > %s"
+			"iperf3 -c %s -t %d %s %s%s %s%s%s%s > %s"
 			"/sigma_dut-iperf &\n"
 			"echo $! > %s/sigma_dut-iperf-pid\n",
-			buf, duration, iptype, proto, port_str,
+			buf, duration, iptype, proto, bitrate, port_str,
 			client_port_str, tos, reverse ? " -R" : "",
 			dut->sigma_tmpdir, dut->sigma_tmpdir);
 	}
