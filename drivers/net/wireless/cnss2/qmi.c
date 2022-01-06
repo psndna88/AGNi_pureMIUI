@@ -36,6 +36,10 @@
 #define ELF_BDF_FILE_NAME_K11_NO_CRYSTAL            "bd_k11_2.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL     "bd_k11gl_2.elf"
 #define ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL      "bd_k11in_2.elf"
+#define ELF_BDF_FILE_NAME_K8             "bd_k8.elf"
+#define ELF_BDF_FILE_NAME_K3S             "bd_k3s.elf"
+#define ELF_BDF_FILE_NAME_K3S_IN             "bd_k3sin.elf"
+#define ELF_BDF_FILE_NAME_J18S             "bd_j18s.elf"
 
 #define BIN_BDF_FILE_NAME		"bdwlan.bin"
 #define BIN_BDF_FILE_NAME_GF		"bdwlang.bin"
@@ -594,13 +598,23 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 					else
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_NO_CRYSTAL);
 				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K8) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K8);
 			} else if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK) {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME_GF);
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K3S) {
+				if((uint32_t)CountryIndia == hw_country_ver){
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K3S_IN);
+				}else{
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K3S);
+				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_J18S) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18S);
 			} else {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME);
-                        }
+			}
 		} else if (plat_priv->board_info.board_id < 0xFF) {
 			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
 				snprintf(filename_tmp, filename_len,
