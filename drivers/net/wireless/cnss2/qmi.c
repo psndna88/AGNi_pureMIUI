@@ -6,6 +6,7 @@
 #include <linux/firmware.h>
 #include <linux/module.h>
 #include <linux/soc/qcom/qmi.h>
+#include <linux/hwid.h>
 
 #include "bus.h"
 #include "debug.h"
@@ -20,11 +21,31 @@
 #define ELF_BDF_FILE_NAME_GF		"bdwlang.elf"
 #define ELF_BDF_FILE_NAME_PREFIX	"bdwlan.e"
 #define ELF_BDF_FILE_NAME_GF_PREFIX	"bdwlang.e"
+
+#define ELF_BDF_FILE_NAME_K1		 "bd_k1.elf"
+#define ELF_BDF_FILE_NAME_K1_GLOBAL     "bd_k1gl.elf"
+#define ELF_BDF_FILE_NAME_K2		 "bd_k2.elf"
+#define ELF_BDF_FILE_NAME_J18		 "bd_j18.elf"
+#define ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL		 "bd_j18te.elf"
+#define ELF_BDF_FILE_NAME_K9             "bd_k9.elf"
+#define ELF_BDF_FILE_NAME_K9_GLOBAL      "bd_k9gl.elf"
+#define ELF_BDF_FILE_NAME_K9_JAPAN       "bd_k9jp.elf"
+#define ELF_BDF_FILE_NAME_K11            "bd_k11.elf"
+#define ELF_BDF_FILE_NAME_K11_GLOBAL     "bd_k11gl.elf"
+#define ELF_BDF_FILE_NAME_K11_NO_CRYSTAL            "bd_k11_2.elf"
+#define ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL     "bd_k11gl_2.elf"
+#define ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL      "bd_k11in_2.elf"
+#define ELF_BDF_FILE_NAME_K8             "bd_k8.elf"
+#define ELF_BDF_FILE_NAME_K3S             "bd_k3s.elf"
+#define ELF_BDF_FILE_NAME_K3S_IN             "bd_k3sin.elf"
+#define ELF_BDF_FILE_NAME_J18S             "bd_j18s.elf"
+
 #define BIN_BDF_FILE_NAME		"bdwlan.bin"
 #define BIN_BDF_FILE_NAME_GF		"bdwlang.bin"
 #define BIN_BDF_FILE_NAME_PREFIX	"bdwlan.b"
 #define BIN_BDF_FILE_NAME_GF_PREFIX	"bdwlang.b"
 #define REGDB_FILE_NAME			"regdb.bin"
+#define REGDB_FILE_NAME_XIAOMI		"regdb_xiaomi.bin"
 #define HDS_FILE_NAME			"hds.bin"
 #define CHIP_ID_GF_MASK			0x10
 
@@ -518,17 +539,80 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 {
 	char filename_tmp[MAX_FIRMWARE_NAME_LEN];
 	int ret = 0;
+	int hw_platform_ver = -1;
+	uint32_t hw_country_ver = 0;
+	uint32_t hw_version_build = 0;
+	uint32_t hw_version_major = 0;
+	uint32_t hw_version_minor = 0;
+	hw_country_ver = get_hw_country_version();
+	hw_platform_ver = get_hw_version_platform();
+	hw_version_build = get_hw_version_build();
+	hw_version_major = get_hw_version_major();
+	hw_version_minor = get_hw_version_minor();
 
 	switch (bdf_type) {
 	case CNSS_BDF_ELF:
 		/* Board ID will be equal or less than 0xFF in GF mask case */
 		if (plat_priv->board_info.board_id == 0xFF) {
-			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
+			if (hw_platform_ver == HARDWARE_PROJECT_J18) {
+				if ((hw_version_major == 9) || ((hw_version_major == 2) && ((hw_version_minor == 1) ||
+					(hw_version_minor == 6))))
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL);
+				else
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18);
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K2) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K2);
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K1) {
+				if((uint32_t)CountryGlobal == hw_country_ver){
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1_GLOBAL);
+				}else{
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1);
+				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K1A) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K1);
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K9) {
+				if((uint32_t)CountryGlobal == hw_country_ver){
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9_GLOBAL);
+				} else if ((uint32_t)CountryJapan == hw_country_ver) {
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9_JAPAN);
+				} else {
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9);
+				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K11) {
+                                /* P0, P1, P2.0 CN and P2.0 IN have crystal. For others, crystal was removed*/
+				if((uint32_t)CountryGlobal == hw_country_ver){
+					if (hw_version_build < 2)
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
+					else
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL);
+				} else if ((uint32_t)CountryIndia == hw_country_ver){
+					if ((hw_version_build < 2) || ((hw_version_major == 0x22) && (hw_version_minor == 0)))
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
+					else
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL);
+				} else{
+					if ((hw_version_build < 2) || ((hw_version_major == 2) && (hw_version_minor == 0)))
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11);
+					else
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_NO_CRYSTAL);
+				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K8) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K8);
+			} else if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK) {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME_GF);
-			else
+			} else if (hw_platform_ver == HARDWARE_PROJECT_K3S) {
+				if((uint32_t)CountryIndia == hw_country_ver){
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K3S_IN);
+				}else{
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K3S);
+				}
+			} else if (hw_platform_ver == HARDWARE_PROJECT_J18S) {
+				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18S);
+			} else {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME);
+			}
 		} else if (plat_priv->board_info.board_id < 0xFF) {
 			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
 				snprintf(filename_tmp, filename_len,
@@ -570,7 +654,7 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 		}
 		break;
 	case CNSS_BDF_REGDB:
-		snprintf(filename_tmp, filename_len, REGDB_FILE_NAME);
+		snprintf(filename_tmp, filename_len, REGDB_FILE_NAME_XIAOMI);
 		break;
 	case CNSS_BDF_HDS:
 		snprintf(filename_tmp, filename_len, HDS_FILE_NAME);
@@ -3002,11 +3086,12 @@ int cnss_qmi_get_dms_mac(struct cnss_plat_data *plat_priv)
 		if (resp.resp.error == DMS_MAC_NOT_PROVISIONED) {
 			cnss_pr_err("NV MAC address is not provisioned");
 			plat_priv->dms.nv_mac_not_prov = 1;
+			ret = -resp.resp.result;
 		} else {
 			cnss_pr_err("QMI_DMS_GET_MAC_ADDRESS_REQ_V01 failed, result: %d, err: %d\n",
 				    resp.resp.result, resp.resp.error);
+			ret = -EAGAIN;
 		}
-		ret = -resp.resp.result;
 		goto out;
 	}
 	if (!resp.mac_address_valid ||
