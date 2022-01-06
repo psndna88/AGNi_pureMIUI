@@ -45,7 +45,7 @@
 #include <linux/fb.h>
 #include <linux/pinctrl/qcom-pinctrl.h>
 #include <drm/drm_bridge.h>
-#include <drm/drm_notifier_mi.h>
+#include <drm/mi_disp_notifier.h>
 
 #define FPC_GPIO_NO_DEFAULT -1
 #define FPC_GPIO_NO_DEFINED -2
@@ -117,7 +117,7 @@ struct fpc1020_data {
 
 	atomic_t wakeup_enabled;	/* Used both in ISR and non-ISR */
 	int irqf;
-	struct notifier_block fb_notifier;
+	struct notifier_block notifier;
 	bool fb_black;
 	bool wait_finger_down;
 	struct work_struct work;
@@ -896,25 +896,25 @@ static int fpc_fb_notif_callback(struct notifier_block *nb,
 				 unsigned long val, void *data)
 {
 	struct fpc1020_data *fpc1020 = container_of(nb, struct fpc1020_data,
-						    fb_notifier);
-	struct fb_event *evdata = data;
+						    notifier);
+	struct mi_disp_notifier *evdata = data;
 	unsigned int blank;
 
 	if (!fpc1020)
 		return 0;
 
-	if (val != MI_DRM_EVENT_BLANK || fpc1020->prepared == false)
+	if (val != MI_DISP_DPMS_EVENT || fpc1020->prepared == false)
 		return 0;
 
 	pr_debug("[info] %s value = %d\n", __func__, (int)val);
 
-	if (evdata && evdata->data && val == MI_DRM_EVENT_BLANK) {
+	if (evdata && evdata->data && val == MI_DISP_DPMS_EVENT) {
 		blank = *(int *)(evdata->data);
 		switch (blank) {
-		case MI_DRM_BLANK_POWERDOWN:
+		case MI_DISP_DPMS_POWERDOWN:
 			fpc1020->fb_black = true;
 			break;
-		case MI_DRM_BLANK_UNBLANK:
+		case MI_DISP_DPMS_ON:
 			fpc1020->fb_black = false;
 			break;
 		default:
@@ -1024,8 +1024,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 #ifndef FPC_DRM_INTERFACE_WA
 	INIT_WORK(&fpc1020->work, notification_work);
 #endif
-	fpc1020->fb_notifier = fpc_notif_block;
-	mi_drm_register_client(&fpc1020->fb_notifier);
+	fpc1020->notifier = fpc_notif_block;
+	mi_disp_register_client(&fpc1020->notifier);
 
 	//rc = hw_reset(fpc1020);
 
@@ -1046,7 +1046,7 @@ static int fpc1020_remove(struct platform_device *pdev)
 {
 	struct fpc1020_data *fpc1020 = platform_get_drvdata(pdev);
 
-	mi_drm_unregister_client(&fpc1020->fb_notifier);
+	mi_disp_unregister_client(&fpc1020->notifier);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
 	wakeup_source_unregister(fpc1020->ttw_wl);
