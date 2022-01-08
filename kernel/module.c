@@ -1312,7 +1312,9 @@ static int check_version(const struct load_info *info,
 	struct modversion_info *versions;
 
 #ifdef CONFIG_MODULE_FORCE_LOAD
-	if (!strncmp("sla", mod->name, 3))
+	if ((!strncmp("sla", mod->name, 3)) || (!strncmp("qti_battery_charger", mod->name, 19)) ||
+		(!strncmp("leds_qti_flash", mod->name, 14)) || (!strncmp("led_class_flash", mod->name, 15)) ||
+		(!strncmp("camera", mod->name, 6)))
 		return 1;
 #endif
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
