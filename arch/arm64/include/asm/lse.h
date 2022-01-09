@@ -21,20 +21,13 @@ extern struct static_key_false arm64_const_caps_ready;
 
 static inline bool system_uses_lse_atomics(void)
 {
-	return (static_branch_likely(&arm64_const_caps_ready)) &&
-		static_branch_likely(&cpu_hwcap_keys[ARM64_HAS_LSE_ATOMICS]);
+	return true;
 }
 
-#define __lse_ll_sc_body(op, ...)					\
-({									\
-	system_uses_lse_atomics() ?					\
-		__lse_##op(__VA_ARGS__) :				\
-		__ll_sc_##op(__VA_ARGS__);				\
-})
+#define __lse_ll_sc_body(op, ...)		__lse_##op(__VA_ARGS__);
 
 /* In-line patching at runtime */
-#define ARM64_LSE_ATOMIC_INSN(llsc, lse)				\
-	ALTERNATIVE(llsc, __LSE_PREAMBLE lse, ARM64_HAS_LSE_ATOMICS)
+#define ARM64_LSE_ATOMIC_INSN(llsc, lse) 			__LSE_PREAMBLE lse
 
 #else	/* CONFIG_AS_LSE && CONFIG_ARM64_LSE_ATOMICS */
 
