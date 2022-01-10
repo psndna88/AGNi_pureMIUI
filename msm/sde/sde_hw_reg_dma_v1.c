@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/iopoll.h>
@@ -1191,6 +1192,10 @@ static int last_cmd_v1(struct sde_hw_ctl *ctl, enum sde_reg_dma_queue q,
 	//Lack of block support will be caught by kick_off
 	memset(&hw, 0, sizeof(hw));
 	SET_UP_REG_DMA_REG(hw, reg_dma, kick_off.dma_type);
+	if (hw.hwversion == 0) {
+		DRM_ERROR("DMA type %d is unsupported\n", kick_off.dma_type);
+		return -EOPNOTSUPP;
+	}
 
 	SDE_EVT32(SDE_EVTLOG_FUNC_ENTRY, mode, ctl->idx, kick_off.queue_select,
 			kick_off.dma_type, kick_off.op);
