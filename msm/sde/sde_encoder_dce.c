@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
  */
 
@@ -911,6 +912,26 @@ void sde_encoder_dce_set_bpp(struct msm_mode_info mode_info,
 
 	SDE_DEBUG("sde_crtc src_bpp = %d, target_bpp = %d\n",
 			sde_crtc->src_bpp, sde_crtc->target_bpp);
+}
+
+bool sde_encoder_has_dsc_hw_rev_2(struct sde_encoder_virt *sde_enc)
+{
+	enum msm_display_compression_type comp_type;
+	int i;
+
+	if (!sde_enc)
+		return false;
+
+	comp_type = sde_enc->mode_info.comp_info.comp_type;
+
+	if (comp_type != MSM_DISPLAY_COMPRESSION_DSC)
+		return false;
+
+	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++)
+		if (sde_enc->hw_dsc[i])
+			return test_bit(SDE_DSC_HW_REV_1_2, &sde_enc->hw_dsc[i]->caps->features);
+
+	return false;
 }
 
 void sde_encoder_dce_disable(struct sde_encoder_virt *sde_enc)
