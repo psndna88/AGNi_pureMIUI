@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2022, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -474,7 +474,7 @@ static const struct soc_enum tdm_config_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tdm_header_type), tdm_header_type),
 };
 
-static u16 afe_port_logging_port_id;
+static u16 afe_port_logging_port_id = 0x9000;
 
 static bool afe_port_logging_item[IDX_TDM_MAX];
 
