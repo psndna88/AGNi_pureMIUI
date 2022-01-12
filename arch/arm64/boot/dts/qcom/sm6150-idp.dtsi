@@ -327,9 +327,9 @@
 	qcom,fcc-stepping-enable;
 	qcom,suspend-input-on-debug-batt;
 	qcom,sec-charger-config = <3>;
-	qcom,thermal-mitigation = <4900000 4900000 4900000 4600000 4500000 4400000 4200000
+	qcom,thermal-mitigation = <5900000 5500000 4900000 4600000 4500000 4400000 4200000
 				   3800000 3800000 3600000 3400000 3200000 3000000 2200000
-				   800000 300000>;
+				   800000 700000>;
 	dpdm-supply = <&qusb_phy0>;
 	qcom,charger-temp-max = <800>;
 	qcom,smb-temp-max = <800>;
