@@ -316,7 +316,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 		return rc;
 	} */
 	if (board_get_33w_supported())
-		max_fcc_ma = 4900;
+		max_fcc_ma = 5900;
 	else
 		max_fcc_ma = 3000;
 
