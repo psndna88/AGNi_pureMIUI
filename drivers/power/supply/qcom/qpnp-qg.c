@@ -3470,7 +3470,7 @@ static int qg_load_battery_profile(struct qpnp_qg *chip)
 		chip->bp.fastchg_curr_ma = -EINVAL;
 	} */
 	if (board_get_33w_supported())
-		chip->bp.fastchg_curr_ma = 4900;
+		chip->bp.fastchg_curr_ma = 5900;
 	else
 		chip->bp.fastchg_curr_ma = 3000;
 

@@ -2871,11 +2871,11 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
     if (board_get_33w_supported()) {
         LCT_THERM_CALL_LEVEL = 14;
         LCT_THERM_LCDOFF_LEVEL = 13;
-        agni_force_therm_level_min = 4;
+        agni_force_therm_level_min = 0;
     } else {
         LCT_THERM_CALL_LEVEL = 7;
         LCT_THERM_LCDOFF_LEVEL = 4;
-        agni_force_therm_level_min = 2;
+        agni_force_therm_level_min = 0;
     }
 
 	if (val->intval < 0)
