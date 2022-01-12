@@ -538,7 +538,7 @@ static int smb5_parse_dt(struct smb5 *chip)
 		chip->dt.batt_profile_fcc_ua = -EINVAL;
 	printk("==test qcom,fcc-max-ua:%d\n", chip->dt.batt_profile_fcc_ua); */
 	if (board_get_33w_supported())
-		chip->dt.batt_profile_fcc_ua = 4900000;
+		chip->dt.batt_profile_fcc_ua = 5900000;
 	else
 		chip->dt.batt_profile_fcc_ua = 3000000;
 
