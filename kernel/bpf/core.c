@@ -295,7 +295,6 @@ int bpf_jit_enable   __read_mostly = IS_BUILTIN(CONFIG_BPF_JIT_ALWAYS_ON);
 int bpf_jit_harden   __read_mostly;
 int bpf_jit_kallsyms __read_mostly;
 long bpf_jit_limit   __read_mostly;
-long bpf_jit_limit_max __read_mostly;
 
 static __always_inline void
 bpf_get_prog_addr_region(const struct bpf_prog *prog,
@@ -509,8 +508,7 @@ u64 __weak bpf_jit_alloc_exec_limit(void)
 static int __init bpf_jit_charge_init(void)
 {
 	/* Only used as heuristic here to derive limit. */
-	bpf_jit_limit_max = bpf_jit_alloc_exec_limit();
-	bpf_jit_limit = min_t(u64, round_up(bpf_jit_limit_max >> 2,
+	bpf_jit_limit = min_t(u64, round_up(bpf_jit_alloc_exec_limit() >> 2,
 					    PAGE_SIZE), LONG_MAX);
 	return 0;
 }
@@ -533,6 +531,14 @@ static void bpf_jit_uncharge_modmem(u32 pages)
 {
 	atomic_long_sub(pages, &bpf_jit_current);
 }
+
+#if IS_ENABLED(CONFIG_BPF_JIT) && IS_ENABLED(CONFIG_CFI_CLANG)
+bool __weak arch_bpf_jit_check_func(const struct bpf_prog *prog)
+{
+	return true;
+}
+EXPORT_SYMBOL(arch_bpf_jit_check_func);
+#endif
 
 struct bpf_binary_header *
 bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
@@ -560,6 +566,7 @@ bpf_jit_binary_alloc(unsigned int proglen, u8 **image_ptr,
 	/* Fill space with illegal/arch-dep instructions. */
 	bpf_fill_ill_insns(hdr, size);
 
+	bpf_jit_set_header_magic(hdr);
 	hdr->pages = pages;
 	hole = min_t(unsigned int, size - (proglen + sizeof(*hdr)),
 		     PAGE_SIZE - sizeof(*hdr));
@@ -1474,6 +1481,118 @@ struct bpf_prog *bpf_prog_select_runtime(struct bpf_prog *fp, int *err)
 }
 EXPORT_SYMBOL_GPL(bpf_prog_select_runtime);
 
+static unsigned int __bpf_prog_ret1(const void *ctx,
+				    const struct bpf_insn *insn)
+{
+	return 1;
+}
+
+static struct bpf_prog_dummy {
+	struct bpf_prog prog;
+} dummy_bpf_prog = {
+	.prog = {
+		.bpf_func = __bpf_prog_ret1,
+	},
+};
+
+/* to avoid allocating empty bpf_prog_array for cgroups that
+ * don't have bpf program attached use one global 'empty_prog_array'
+ * It will not be modified the caller of bpf_prog_array_alloc()
+ * (since caller requested prog_cnt == 0)
+ * that pointer should be 'freed' by bpf_prog_array_free()
+ */
+static struct {
+	struct bpf_prog_array hdr;
+	struct bpf_prog *null_prog;
+} empty_prog_array = {
+	.null_prog = NULL,
+};
+
+struct bpf_prog_array __rcu *bpf_prog_array_alloc(u32 prog_cnt, gfp_t flags)
+{
+	if (prog_cnt)
+		return kzalloc(sizeof(struct bpf_prog_array) +
+			       sizeof(struct bpf_prog *) * (prog_cnt + 1),
+			       flags);
+
+	return &empty_prog_array.hdr;
+}
+
+void bpf_prog_array_free(struct bpf_prog_array __rcu *progs)
+{
+	if (!progs ||
+	    progs == (struct bpf_prog_array __rcu *)&empty_prog_array.hdr)
+		return;
+	kfree_rcu(progs, rcu);
+}
+
+void bpf_prog_array_delete_safe(struct bpf_prog_array __rcu *progs,
+				struct bpf_prog *old_prog)
+{
+	struct bpf_prog **prog = progs->progs;
+
+	for (; *prog; prog++)
+		if (*prog == old_prog) {
+			WRITE_ONCE(*prog, &dummy_bpf_prog.prog);
+			break;
+		}
+}
+
+int bpf_prog_array_copy(struct bpf_prog_array __rcu *old_array,
+			struct bpf_prog *exclude_prog,
+			struct bpf_prog *include_prog,
+			struct bpf_prog_array **new_array)
+{
+	int new_prog_cnt, carry_prog_cnt = 0;
+	struct bpf_prog **existing_prog;
+	struct bpf_prog_array *array;
+	int new_prog_idx = 0;
+
+	/* Figure out how many existing progs we need to carry over to
+	 * the new array.
+	 */
+	if (old_array) {
+		existing_prog = old_array->progs;
+		for (; *existing_prog; existing_prog++) {
+			if (*existing_prog != exclude_prog &&
+			    *existing_prog != &dummy_bpf_prog.prog)
+				carry_prog_cnt++;
+			if (*existing_prog == include_prog)
+				return -EEXIST;
+		}
+	}
+
+	/* How many progs (not NULL) will be in the new array? */
+	new_prog_cnt = carry_prog_cnt;
+	if (include_prog)
+		new_prog_cnt += 1;
+
+	/* Do we have any prog (not NULL) in the new array? */
+	if (!new_prog_cnt) {
+		*new_array = NULL;
+		return 0;
+	}
+
+	/* +1 as the end of prog_array is marked with NULL */
+	array = bpf_prog_array_alloc(new_prog_cnt + 1, GFP_KERNEL);
+	if (!array)
+		return -ENOMEM;
+
+	/* Fill in the new prog array */
+	if (carry_prog_cnt) {
+		existing_prog = old_array->progs;
+		for (; *existing_prog; existing_prog++)
+			if (*existing_prog != exclude_prog &&
+			    *existing_prog != &dummy_bpf_prog.prog)
+				array->progs[new_prog_idx++] = *existing_prog;
+	}
+	if (include_prog)
+		array->progs[new_prog_idx++] = include_prog;
+	array->progs[new_prog_idx] = NULL;
+	*new_array = array;
+	return 0;
+}
+
 static void bpf_prog_free_deferred(struct work_struct *work)
 {
 	struct bpf_prog_aux *aux;
@@ -1527,7 +1646,6 @@ const struct bpf_func_proto bpf_get_prandom_u32_proto __weak;
 const struct bpf_func_proto bpf_get_smp_processor_id_proto __weak;
 const struct bpf_func_proto bpf_get_numa_node_id_proto __weak;
 const struct bpf_func_proto bpf_ktime_get_ns_proto __weak;
-const struct bpf_func_proto bpf_ktime_get_boot_ns_proto __weak;
 
 const struct bpf_func_proto bpf_get_current_pid_tgid_proto __weak;
 const struct bpf_func_proto bpf_get_current_uid_gid_proto __weak;
