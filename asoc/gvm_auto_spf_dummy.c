@@ -218,90 +218,274 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets[] = {
 /* Digital audio interface glue - connects codec <---> CPU */
 static struct snd_soc_dai_link msm_common_dai_links[] = {
 	/* BackEnd DAI Links */
-  {
-    .name = "TERT_TDM_RX_0_DUMMY",
-    .stream_name = "TDM-LPAIF-RX-TERTIARY",
-    .dpcm_playback = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
+	{
+		.name = "TERT_TDM_RX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-RX-TERTIARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(tert_tdm_rx_0_dummy),
+	},
+	{
+		.name = "TERT_TDM_TX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-TX-TERTIARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(tert_tdm_tx_0_dummy),
+	},
+	{
+		.name = "LPASS_BE_AUXPCM_RX_DUMMY",
+		.stream_name = "AUXPCM-LPAIF-RX-PRIMARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(lpass_be_auxpcm_rx_dummy),
+	},
+	{
+		.name = "LPASS_BE_AUXPCM_TX_DUMMY",
+		.stream_name = "AUXPCM-LPAIF-TX-PRIMARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(lpass_be_auxpcm_tx_dummy),
+	},
+	{
+		.name = "QUAT_TDM_RX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-RX-QUATERNARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(quat_tdm_rx_0_dummy),
+	},
+	{
+		.name = "QUAT_TDM_TX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-TX-QUATERNARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(quat_tdm_tx_0_dummy),
+	},
+};
+
+static struct snd_soc_dai_link msm_gvm8295_dai_links[] = {
+	/* BackEnd DAI Links */
+	{
+	.name = "PRI_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-PRIMARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(primary_tdm_rx_0_dummy),
+	},
+	{
+	.name = "PRI_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-PRIMARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(primary_tdm_tx_0_dummy),
+	},
+	{
+	.name = "SEC_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-SECONDARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(secondary_tdm_rx_0_dummy),
+	},
+	{
+	.name = "SEC_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-SECONDARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(secondary_tdm_tx_0_dummy),
+	},
+	{
+	.name = "TERT_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-TERTIARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
 	.ignore_pmdown_time = 1,
 	SND_SOC_DAILINK_REG(tert_tdm_rx_0_dummy),
-  },
-  {
-    .name = "TERT_TDM_TX_0_DUMMY",
-    .stream_name = "TDM-LPAIF-TX-TERTIARY",
-    .dpcm_capture = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
+	},
+	{
+	.name = "TERT_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-TERTIARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
 	.ignore_pmdown_time = 1,
 	SND_SOC_DAILINK_REG(tert_tdm_tx_0_dummy),
-  },
-  {
-    .name = "LPASS_BE_AUXPCM_RX_DUMMY",
-    .stream_name = "AUXPCM-LPAIF-RX-PRIMARY",
-    .dpcm_playback = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
+	},
+	{
+	.name = "QUAT_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-QUATERNARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
 	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(lpass_be_auxpcm_rx_dummy),
-  },
-  {
-    .name = "LPASS_BE_AUXPCM_TX_DUMMY",
-    .stream_name = "AUXPCM-LPAIF-TX-PRIMARY",
-    .dpcm_capture = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
+	SND_SOC_DAILINK_REG(quat_tdm_rx_0_dummy),
+	},
+	{
+	.name = "QUAT_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-QUATERNARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
 	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(lpass_be_auxpcm_tx_dummy),
-  },
+	SND_SOC_DAILINK_REG(quat_tdm_tx_0_dummy),
+	},
+	{
+	.name = "QUIN_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-QUINARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(quin_tdm_rx_0_dummy),
+	},
+	{
+	.name = "QUIN_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-QUINARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(quin_tdm_tx_0_dummy),
+	},
+	{
+	.name = "SEN_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-SENARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(sen_tdm_rx_0_dummy),
+	},
+	{
+	.name = "SEN_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-SENARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(sen_tdm_tx_0_dummy),
+	},
+	{
+	.name = "SEP_TDM_RX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-RX-SEPTENARY",
+	.dpcm_playback = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(sep_tdm_rx_0_dummy),
+	},
+	{
+	.name = "SEP_TDM_TX_0_DUMMY",
+	.stream_name = "TDM-LPAIF-TX-SEPTENARY",
+	.dpcm_capture = 1,
+	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+	SND_SOC_DAILINK_REG(sep_tdm_tx_0_dummy),
+	},
 };
 
 static struct snd_soc_dai_link msm_talos_dai_links[] = {
 	/* BackEnd DAI Links */
-  {
-    .name = "PRIMARY_TDM_RX_0_DUMMY",
-    .stream_name = "TDM-LPAIF_WSA-RX-PRIMARY",
-    .dpcm_playback = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
-	.ignore_suspend = 1,
-	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(primary_tdm_rx_0_dummy),
-  },
-  {
-    .name = "PRIMARY_TDM_TX_0_DUMMY",
-    .stream_name = "TDM-LPAIF_WSA-TX-PRIMARY",
-    .dpcm_capture = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
-	.ignore_suspend = 1,
-	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(primary_tdm_tx_0_dummy),
-  },
-  {
-    .name = "LPASS_BE_AUXPCM_RX_DUMMY",
-    .stream_name = "AUXPCM-LPAIF-RX-PRIMARY",
-    .dpcm_playback = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
-	.ignore_suspend = 1,
-	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(lpass_be_auxpcm_rx_dummy),
-  },
-  {
-    .name = "LPASS_BE_AUXPCM_TX_DUMMY",
-    .stream_name = "AUXPCM-LPAIF-TX-PRIMARY",
-    .dpcm_capture = 1,
-    .trigger = {SND_SOC_DPCM_TRIGGER_POST,
-                SND_SOC_DPCM_TRIGGER_POST},
-	.ignore_suspend = 1,
-	.ignore_pmdown_time = 1,
-	SND_SOC_DAILINK_REG(lpass_be_auxpcm_tx_dummy),
-  },
+	{
+		.name = "PRIMARY_TDM_RX_0_DUMMY",
+		.stream_name = "TDM-LPAIF_WSA-RX-PRIMARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(primary_tdm_rx_0_dummy),
+	},
+	{
+		.name = "PRIMARY_TDM_TX_0_DUMMY",
+		.stream_name = "TDM-LPAIF_WSA-TX-PRIMARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(primary_tdm_tx_0_dummy),
+	},
+	{
+		.name = "LPASS_BE_AUXPCM_RX_DUMMY",
+		.stream_name = "AUXPCM-LPAIF-RX-PRIMARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(lpass_be_auxpcm_rx_dummy),
+	},
+		{
+		.name = "LPASS_BE_AUXPCM_TX_DUMMY",
+		.stream_name = "AUXPCM-LPAIF-TX-PRIMARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(lpass_be_auxpcm_tx_dummy),
+	},
+	{
+		.name = "QUAT_TDM_RX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-RX-QUATERNARY",
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(quat_tdm_rx_0_dummy),
+	},
+	{
+		.name = "QUAT_TDM_TX_0_DUMMY",
+		.stream_name = "TDM-LPAIF-TX-QUATERNARY",
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+					SND_SOC_DPCM_TRIGGER_POST},
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		SND_SOC_DAILINK_REG(quat_tdm_tx_0_dummy),
+	},
 };
 
 struct snd_soc_card snd_soc_card_auto_hana_dummy_msm = {
@@ -310,6 +494,10 @@ struct snd_soc_card snd_soc_card_auto_hana_dummy_msm = {
 
 struct snd_soc_card snd_soc_card_auto_talos_dummy_msm = {
 	.name = "gvmauto-6155-snd-card",
+};
+
+struct snd_soc_card snd_soc_card_auto_makena_dummy_msm = {
+	.name = "gvmauto-8295-snd-card",
 };
 
 static int msm_populate_dai_link_component_of_node(
@@ -330,9 +518,9 @@ static int msm_populate_dai_link_component_of_node(
 			continue;
 
 		/* populate platform_of_node for snd card dai links Skip this part for dummy snd card*/
-        if(0) {
-		if (dai_link[i].platforms->name &&
-		    !dai_link[i].platforms->of_node) {
+		if(0) {
+			if (dai_link[i].platforms->name &&
+				!dai_link[i].platforms->of_node) {
 			index = of_property_match_string(cdev->of_node,
 						"asoc-platform-names",
 						dai_link[i].platforms->name);
@@ -353,7 +541,7 @@ static int msm_populate_dai_link_component_of_node(
 			}
 			dai_link[i].platforms->of_node = np;
 			dai_link[i].platforms->name = NULL;
-		}
+			}
 		}
 
 		/* populate cpu_of_node for snd card dai links */
@@ -361,7 +549,7 @@ static int msm_populate_dai_link_component_of_node(
 			index = of_property_match_string(cdev->of_node,
 						 "asoc-cpu-names",
 						 dai_link[i].cpus->dai_name);
-        pr_err("%s: retrieving cpu_of_node for %s\n",
+			pr_err("%s: retrieving cpu_of_node for %s\n",
 						__func__,
 						dai_link[i].cpus->dai_name);
 			if (index >= 0) {
@@ -412,16 +600,21 @@ err:
 
 static const struct of_device_id gvm_asoc_machine_of_match[]  = {
 	{ .compatible = "qcom,8155-spf-asoc-snd-adp-star",
-      .data = "adp_star_codec"},
+		.data = "adp_star_codec"},
 	{ .compatible = "qcom,6155-spf-asoc-snd-adp-star",
-      .data = "adp_star_codec"},
-    {},
+		.data = "adp_star_codec"},
+	{ .compatible = "qcom,gvm-auto-spf-asoc-snd-adp-star",
+		.data = "adp_star_codec"},
+	{},
 };
 static struct snd_soc_dai_link msm_auto_dai_links[
 			 ARRAY_SIZE(msm_common_dai_links)];
 
 static struct snd_soc_dai_link msm_auto_talos_dai_links[
 			 ARRAY_SIZE(msm_talos_dai_links)];
+
+static struct snd_soc_dai_link msm_auto_gvm8295_dai_links[
+			 ARRAY_SIZE(msm_gvm8295_dai_links)];
 
 static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 {
@@ -451,8 +644,14 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		memcpy(msm_auto_talos_dai_links,
 			msm_talos_dai_links,
 			sizeof(msm_talos_dai_links));
-
 		dailink = msm_auto_talos_dai_links;
+	} else if (!strcmp(match->compatible, "qcom,gvm-auto-spf-asoc-snd-adp-star")) {
+		card = &snd_soc_card_auto_makena_dummy_msm;
+		total_links = ARRAY_SIZE(msm_gvm8295_dai_links);
+		memcpy(msm_auto_gvm8295_dai_links,
+			msm_gvm8295_dai_links,
+			sizeof(msm_gvm8295_dai_links));
+		dailink = msm_auto_gvm8295_dai_links;
 	}
 
 	if (card) {
