@@ -73,7 +73,10 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) external/libnl/include
 
 LOCAL_SHARED_LIBRARIES := libc libcutils libnl
+
+ifneq ($(BUILD_QEMU_IMAGES),true)
 LOCAL_STATIC_LIBRARIES := libpcap.vendor
+endif
 LOCAL_SHARED_LIBRARIES += libnetutils
 LOCAL_C_INCLUDES += $(LOCAL_PATH) system/core/include/netutils
 LOCAL_SHARED_LIBRARIES += libhardware_legacy
