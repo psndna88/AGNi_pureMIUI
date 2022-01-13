@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -488,6 +488,16 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 	cdp_rx_ppdu->num_bytes = ppdu_info->rx_status.ppdu_len;
 	cdp_rx_ppdu->lsig_a = ppdu_info->rx_status.rate;
 	cdp_rx_ppdu->u.ltf_size = ppdu_info->rx_status.ltf_size;
+
+	if (ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11AC) {
+		cdp_rx_ppdu->u.stbc = ppdu_info->rx_status.is_stbc;
+	} else if (ppdu_info->rx_status.preamble_type ==
+			HAL_RX_PKT_TYPE_11AX) {
+		cdp_rx_ppdu->u.stbc = (ppdu_info->rx_status.he_data3 >>
+				       QDF_MON_STATUS_STBC_SHIFT) & 0x1;
+		cdp_rx_ppdu->u.dcm = (ppdu_info->rx_status.he_data3 >>
+				      QDF_MON_STATUS_DCM_SHIFT) & 0x1;
+	}
 
 	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu);
 	dp_rx_populate_su_evm_details(ppdu_info, cdp_rx_ppdu);
@@ -1187,17 +1197,66 @@ dp_rx_mon_populate_cfr_ppdu_info(struct dp_pdev *pdev,
 				 struct hal_rx_ppdu_info *ppdu_info,
 				 struct cdp_rx_indication_ppdu *cdp_rx_ppdu)
 {
+	struct dp_peer *peer;
+	struct dp_ast_entry *ast_entry;
+	struct dp_soc *soc = pdev->soc;
+	uint32_t ast_index;
 	int chain;
 
 	cdp_rx_ppdu->ppdu_id = ppdu_info->com_info.ppdu_id;
 	cdp_rx_ppdu->timestamp = ppdu_info->rx_status.tsft;
 	cdp_rx_ppdu->u.ppdu_type = ppdu_info->rx_status.reception_type;
-	cdp_rx_ppdu->num_users = ppdu_info->com_info.num_users;
 
 	for (chain = 0; chain < MAX_CHAIN; chain++)
 		cdp_rx_ppdu->per_chain_rssi[chain] =
 			ppdu_info->rx_status.rssi[chain];
+
+	cdp_rx_ppdu->u.ltf_size = ppdu_info->rx_status.ltf_size;
+	cdp_rx_ppdu->beamformed = ppdu_info->rx_status.beamformed;
+	cdp_rx_ppdu->u.ldpc = ppdu_info->rx_status.ldpc;
+
+	if ((ppdu_info->rx_status.sgi == VHT_SGI_NYSM) &&
+	    (ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11AC))
+		cdp_rx_ppdu->u.gi = CDP_SGI_0_4_US;
+	else
+		cdp_rx_ppdu->u.gi = ppdu_info->rx_status.sgi;
+
+	if (ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11AC) {
+		cdp_rx_ppdu->u.stbc = ppdu_info->rx_status.is_stbc;
+	} else if (ppdu_info->rx_status.preamble_type ==
+			HAL_RX_PKT_TYPE_11AX) {
+		cdp_rx_ppdu->u.stbc = (ppdu_info->rx_status.he_data3 >>
+				       QDF_MON_STATUS_STBC_SHIFT) & 0x1;
+		cdp_rx_ppdu->u.dcm = (ppdu_info->rx_status.he_data3 >>
+				      QDF_MON_STATUS_DCM_SHIFT) & 0x1;
+	}
+
 	dp_rx_mon_handle_cfr_mu_info(pdev, ppdu_info, cdp_rx_ppdu);
+	ast_index = ppdu_info->rx_status.ast_index;
+	if (ast_index >= wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx)) {
+		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
+		cdp_rx_ppdu->num_users = 0;
+		return;
+	}
+
+	ast_entry = soc->ast_table[ast_index];
+	if (!ast_entry || ast_entry->peer_id == HTT_INVALID_PEER) {
+		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
+		cdp_rx_ppdu->num_users = 0;
+		return;
+	}
+
+	peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+				     DP_MOD_ID_RX_PPDU_STATS);
+	if (!peer) {
+		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
+		cdp_rx_ppdu->num_users = 0;
+		return;
+	}
+
+	cdp_rx_ppdu->peer_id = peer->peer_id;
+	cdp_rx_ppdu->vdev_id = peer->vdev->vdev_id;
+	cdp_rx_ppdu->num_users = ppdu_info->com_info.num_users;
 }
 
 /**
@@ -1247,6 +1306,22 @@ dp_rx_mon_populate_cfr_info(struct dp_pdev *pdev,
 		= ppdu_info->cfr_info.rtt_che_buffer_pointer_high8;
 	cfr_info->rtt_che_buffer_pointer_low32
 		= ppdu_info->cfr_info.rtt_che_buffer_pointer_low32;
+	cfr_info->rtt_cfo_measurement
+		= (int16_t)ppdu_info->cfr_info.rtt_cfo_measurement;
+	cfr_info->agc_gain_info0
+		= ppdu_info->cfr_info.agc_gain_info0;
+	cfr_info->agc_gain_info1
+		= ppdu_info->cfr_info.agc_gain_info1;
+	cfr_info->agc_gain_info2
+		= ppdu_info->cfr_info.agc_gain_info2;
+	cfr_info->agc_gain_info3
+		= ppdu_info->cfr_info.agc_gain_info3;
+	cfr_info->rx_start_ts
+		= ppdu_info->cfr_info.rx_start_ts;
+	cfr_info->mcs_rate
+		= ppdu_info->cfr_info.mcs_rate;
+	cfr_info->gi_type
+		= ppdu_info->cfr_info.gi_type;
 }
 
 /**
