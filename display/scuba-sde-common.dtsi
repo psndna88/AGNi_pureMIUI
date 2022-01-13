@@ -1,24 +1,6 @@
-#include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include <dt-bindings/clock/mdss-14nm-pll-clk.h>
 
 &soc {
-
-	smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
-		compatible = "qcom,smmu_sde_unsec";
-		iommus = <&apps_smmu 0x420 0x2>;
-		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
-		qcom,iommu-faults = "non-fatal";
-		qcom,iommu-earlymap; /* for cont-splash */
-	};
-
-	smmu_sde_sec: qcom,smmu_sde_sec_cb {
-		compatible = "qcom,smmu_sde_sec";
-		iommus = <&apps_smmu 0x421 0x0>;
-		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
-		qcom,iommu-faults = "non-fatal";
-		qcom,iommu-vmid = <0xa>;
-	};
-
-
 	mdss_mdp: qcom,mdss_mdp {
 		compatible = "qcom,sde-kms";
 		reg = <0x5e00000 0x8f030>,
@@ -30,16 +12,6 @@
 			   "sid_phys",
 			   "sde_imem_phys";
 
-		clocks =
-			<&gcc GCC_DISP_HF_AXI_CLK>,
-			<&gcc GCC_DISP_THROTTLE_CORE_CLK>,
-			<&dispcc DISP_CC_MDSS_AHB_CLK>,
-			<&dispcc DISP_CC_MDSS_MDP_CLK>,
-			<&dispcc DISP_CC_MDSS_VSYNC_CLK>,
-			<&dispcc DISP_CC_MDSS_MDP_LUT_CLK>;
-		clock-names = "gcc_bus", "throttle_clk",
-				"iface_clk", "core_clk", "vsync_clk",
-				"lut_clk";
 		clock-rate = <0 0 0 300000000 19200000 192000000>;
 		clock-max-rate = <0 0 0 400000000 19200000 400000000>;
 
@@ -47,13 +19,6 @@
 
 		/* Enable thermal cooling device */
 		#cooling-cells = <2>;
-
-		/* data and reg bus scale settings */
-		interconnects = <&mmrt_virt MASTER_MDP_PORT0 &bimc SLAVE_EBI_CH0>,
-				<&bimc MASTER_AMPSS_M0
-					&config_noc SLAVE_DISPLAY_CFG>;
-		interconnect-names = "qcom,sde-data-bus0",
-					"qcom,sde-reg-bus";
 
 		/* interrupt config */
 		interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>;
@@ -79,15 +44,9 @@
 		qcom,sde-dspp-off = <0x55000>;
 		qcom,sde-dspp-size = <0xfe4>;
 
-		qcom,sde-dspp-rc-version = <0x00010000>;
-		qcom,sde-dspp-rc-off = <0x15800>;
-		qcom,sde-dspp-rc-size = <0x100>;
-		qcom,sde-dspp-rc-mem-size = <2720>;
-
 		qcom,sde-intf-off = <0x0 0x6b800>;
 		qcom,sde-intf-size = <0x2b8>;
 		qcom,sde-intf-type = "none", "dsi";
-		qcom,sde-intf-tear-irq-off = <0 0x6e800>;
 
 		qcom,sde-pp-off = <0x71000>;
 		qcom,sde-pp-size = <0xd4>;
@@ -118,8 +77,7 @@
 		qcom,sde-max-per-pipe-bw-high-kbps = <2700000 2700000>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
-		qcom,sde-sspp-clk-ctrl =
-				<0x2ac 0>, <0x2ac 8>;
+		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2ac 8>;
 		qcom,sde-mixer-linewidth = <2048>;
 		qcom,sde-mixer-blendstages = <0x4>;
 		qcom,sde-panic-per-pipe;
@@ -146,19 +104,17 @@
 
 		/*Pending macrotile & macrotile-qseed has the same configs */
 
-		qcom,sde-danger-lut = <0x000000ff 0x00000000 0x00000000
+		qcom,sde-danger-lut = <0x000000ff 0x00000000
 			0x00000000 0x00000000 0x00000000>;
 
-		qcom,sde-safe-lut = <0xfff0 0x0000 0x0000 0x0000
-			0x0000 0x0000>;
+		qcom,sde-safe-lut-linear = <0 0xfff0>;
 
-		qcom,sde-qos-lut-linear = <0x00112222 0x22335777>;
+		qcom,sde-qos-lut-linear = <0 0x00112222 0x22335777>;
 
 		qcom,sde-cdp-setting = <1 0>;
 
 		qcom,sde-qos-cpu-mask = <0x3>;
 		qcom,sde-qos-cpu-dma-latency = <300>;
-		qcom,sde-qos-cpu-irq-latency = <300>;
 
 		qcom,sde-secure-sid-mask = <0x0000421>;
 		qcom,sde-num-mnoc-ports = <1>;
@@ -235,25 +191,16 @@
 		};
 	};
 
-	mdss_dsi0: qcom,mdss_dsi0_ctrl {
+	mdss_dsi0: qcom,mdss_dsi_ctrl0@5e94000 {
 		compatible = "qcom,dsi-ctrl-hw-v2.4";
 		label = "dsi-ctrl-0";
 		cell-index = <0>;
-		reg =   <0x5e94000 0x400>,
+		frame-threshold-time-us = <800>;
+		reg = <0x5e94000 0x400>,
 			<0x5f08000 0x4>;
 		reg-names = "dsi_ctrl", "disp_cc_base";
 		interrupt-parent = <&mdss_mdp>;
 		interrupts = <4 0>;
-		vdda-1p2-supply = <&L9A>;
-		clocks = <&dispcc DISP_CC_MDSS_BYTE0_CLK>,
-			<&dispcc DISP_CC_MDSS_BYTE0_CLK_SRC>,
-			<&dispcc DISP_CC_MDSS_BYTE0_INTF_CLK>,
-			<&dispcc DISP_CC_MDSS_PCLK0_CLK>,
-			<&dispcc DISP_CC_MDSS_PCLK0_CLK_SRC>,
-			<&dispcc DISP_CC_MDSS_ESC0_CLK>;
-		clock-names = "byte_clk", "byte_clk_rcg", "byte_intf_clk",
-					"pixel_clk", "pixel_clk_rcg",
-					"esc_clk";
 
 		qcom,ctrl-supply-entries {
 			#address-cells = <1>;
@@ -266,7 +213,6 @@
 				qcom,supply-max-voltage = <1312000>;
 				qcom,supply-enable-load = <21800>;
 				qcom,supply-disable-load = <0>;
-				qcom,supply-ulp-load = <0>;
 			};
 		};
 
@@ -286,44 +232,44 @@
 	};
 
 	mdss_dsi_phy0: qcom,mdss_dsi_phy0 {
-		compatible = "qcom,dsi-phy-v4.2";
+		compatible = "qcom,dsi-phy-v2.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
 		#clock-cells = <1>;
-		reg = <0x5e94400 0x800>,
-			<0x5e94900 0x27c>,
+		reg = <0x5e94400 0x588>,
+			<0x5e01400 0x100>,
 			<0x5e94200 0x100>,
+			<0x5e94400 0x588>,
 			<0x5f03000 0x8>;
-		reg-names = "dsi_phy", "pll_base", "dyn_refresh_base", "gdsc_base";
-		pll-label = "dsi_pll_5nm";
-		memory-region = <&dfps_data_memory>;
-		vdda-0p9-supply = <&L12A>;
+		reg-names = "dsi_phy", "phy_clamp_base",
+			"dyn_refresh_base", "pll_base", "gdsc_base";
+		pll-label = "dsi_pll_14nm";
+
 		qcom,platform-strength-ctrl = [ff 06
 						ff 06
 						ff 06
 						ff 06
 						ff 00];
-		qcom,platform-lane-config = [00 00 0a 0a
-						00 00 0a 0a
-						00 00 0a 0a
-						00 00 0a 0a
-						00 00 8a 8a];
+		qcom,platform-lane-config = [00 00 10 0f
+						00 00 10 0f
+						00 00 10 0f
+						00 00 10 0f
+						00 00 10 8f];
 		qcom,platform-regulator-settings = [1d 1d 1d 1d 1d];
-		qcom,phy-clamp-enable;
-		qcom,panel-allow-phy-poweroff;
-		qcom,dsi-pll-ssc-en;
-		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,phy-supply-entries {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			qcom,phy-supply-entry@0 {
 				reg = <0>;
 				qcom,supply-name = "vdda-0p9";
-				qcom,supply-min-voltage = <904000>;
-				qcom,supply-max-voltage = <904000>;
-				qcom,supply-enable-load = <37550>;
+				qcom,supply-min-voltage =
+					<RPM_SMD_REGULATOR_LEVEL_NOM>;
+				qcom,supply-max-voltage =
+					<RPM_SMD_REGULATOR_LEVEL_TURBO_NO_CPR>;
+				qcom,supply-off-min-voltage =
+					<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
-				qcom,supply-ulp-load = <0>;
 			};
 		};
 	};
