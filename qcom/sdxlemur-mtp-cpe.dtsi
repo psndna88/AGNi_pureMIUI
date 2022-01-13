@@ -358,7 +358,7 @@
 				/* ipa shares this group */
 				qcom,iommu-group = <&ipa_eth_group2>;
 				phy-supply = <&qca_vreg>;
-				qcom,phy-rst-delay-us = <0>;
+				qcom,phy-rst-delay-us = <20000>;
 
 				#address-cells = <1>;
 				#size-cells = <1>;
