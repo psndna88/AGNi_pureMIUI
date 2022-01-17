@@ -2896,6 +2896,30 @@ void hdd_clear_fils_connection_info(struct hdd_adapter *adapter)
 #endif
 
 /**
+ * hdd_netif_features_update_required() - Check if feature update
+ * is required
+ * @adapter: pointer to the adapter structure
+ * Returns: true if the connection is legacy and TSO and Checksum offload
+ * enabled or if the connection is not latency and TSO and Checksum
+ * offload are not enabled, false otherwise
+ */
+static bool hdd_netif_features_update_required(struct hdd_adapter *adapter)
+{
+	bool is_legacy_connection = hdd_is_legacy_connection(adapter);
+
+	hdd_debug("Legacy Connection: %d, TSO_CSUM Feature Enabled:%d",
+		  is_legacy_connection, adapter->tso_csum_feature_enabled);
+
+	if (adapter->tso_csum_feature_enabled  && is_legacy_connection)
+		return true;
+
+	if (!adapter->tso_csum_feature_enabled  && !is_legacy_connection)
+		return true;
+
+	return false;
+}
+
+/**
  * hdd_netif_queue_enable() - Enable the network queue for a
  *			      particular adapter.
  * @adapter: pointer to the adapter structure
@@ -2912,7 +2936,8 @@ static inline void hdd_netif_queue_enable(struct hdd_adapter *adapter)
 	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
-	if (cdp_cfg_get(soc, cfg_dp_disable_legacy_mode_csum_offload)) {
+	if (cdp_cfg_get(soc, cfg_dp_disable_legacy_mode_csum_offload) &&
+	    hdd_netif_features_update_required(adapter)) {
 		hdd_adapter_ops_record_event(hdd_ctx,
 					     WLAN_HDD_ADAPTER_OPS_WORK_POST,
 					     adapter->vdev_id);

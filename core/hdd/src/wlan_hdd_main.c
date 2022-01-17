@@ -5084,13 +5084,15 @@ static netdev_features_t __hdd_fix_features(struct net_device *net_dev,
 	}
 
 	feature_tso_csum = hdd_get_tso_csum_feature_flags();
-	if (hdd_is_legacy_connection(adapter))
+	if (hdd_is_legacy_connection(adapter)) {
 		/* Disable checksum and TSO */
 		feature_change_req &= ~feature_tso_csum;
-	else
+		adapter->tso_csum_feature_enabled = 0;
+	} else {
 		/* Enable checksum and TSO */
 		feature_change_req |= feature_tso_csum;
-
+		adapter->tso_csum_feature_enabled = 1;
+	}
 	hdd_debug("vdev mode %d current features 0x%llx, requesting feature change 0x%llx",
 		  adapter->device_mode, net_dev->features,
 		  feature_change_req);
@@ -7731,9 +7733,11 @@ void hdd_set_netdev_flags(struct hdd_adapter *adapter)
 		adapter->dev->features |=
 			(NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM);
 
-	if (cdp_cfg_get(soc, cfg_dp_tso_enable) && enable_csum)
+	if (cdp_cfg_get(soc, cfg_dp_tso_enable) && enable_csum) {
 		adapter->dev->features |=
 			 (NETIF_F_TSO | NETIF_F_TSO6 | NETIF_F_SG);
+		adapter->tso_csum_feature_enabled = 1;
+	}
 
 	adapter->dev->features |= NETIF_F_RXCSUM;
 	temp = (uint64_t)adapter->dev->features;
