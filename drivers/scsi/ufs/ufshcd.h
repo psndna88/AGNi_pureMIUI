@@ -1545,4 +1545,6 @@ static inline void ufshcd_vops_remove_debugfs(struct ufs_hba *hba)
 extern int ufshcd_read_desc_param(struct ufs_hba *hba, enum desc_idn desc_id,
 				  int desc_index, u8 param_offset,
 				  u8 *param_read_buf, u8 param_size);
+extern int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index,
+				   u8 *buf, u32 size, bool ascii);
 #endif /* End of Header */
