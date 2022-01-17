@@ -101,3 +101,5 @@ obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
 obj-$(CONFIG_ANT_CHECK)		+= ant_check.o
 obj-$(CONFIG_ANT_CHECK_DIV)		+= ant_check_div.o
 obj-y 							+= mi-memory/
+obj-$(CONFIG_PERF_HELPER)	+= perf_helper.o
+obj-$(CONFIG_GPIO_TESTING_MODE)     += gpio-testing-mode.o
