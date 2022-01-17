@@ -341,7 +341,7 @@ static int cpufreq_thermal_notifier(struct notifier_block *nb,
 /*add for thermal begin*/
 void cpu_limits_set_level(unsigned int cpu, unsigned int max_freq)
 {
-	struct cpufreq_cooling_device *cpufreq_cdev;
+/*	struct cpufreq_cooling_device *cpufreq_cdev;
 	struct thermal_cooling_device *cdev;
 	unsigned int cdev_cpu;
 	unsigned int level;
@@ -362,7 +362,7 @@ void cpu_limits_set_level(unsigned int cpu, unsigned int max_freq)
 
 			break;
 		}
-	}
+	} */
 }
 /*add for thermal end*/
 
