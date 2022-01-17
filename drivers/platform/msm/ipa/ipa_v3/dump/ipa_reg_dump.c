@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include "ipa_reg_dump.h"
 #include "ipa_access_control.h"
@@ -306,6 +307,8 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	 *       because the following registers are not scaler, rather
 	 *       they are register arrays...
 	 */
+	/* Below are accessable only by VMID0 domain. */
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 	IPA_REG_SAVE_CFG_ENTRY_GEN_EE(IPA_IRQ_STTS_EE_n,
 				      ipa_irq_stts_ee_n),
 	IPA_REG_SAVE_CFG_ENTRY_GEN_EE(IPA_IRQ_EN_EE_n,
@@ -322,6 +325,7 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 				      ipa_suspend_irq_info_ee_n),
 	IPA_REG_SAVE_CFG_ENTRY_GEN_EE(IPA_SUSPEND_IRQ_EN_EE_n,
 				      ipa_suspend_irq_en_ee_n),
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 
 	/* Pipe Endp Registers */
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP(IPA_ENDP_INIT_CTRL_n,
@@ -370,38 +374,45 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 					    ipa_src_rsrc_grp_01_rsrc_type_n),
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_GRP(IPA_SRC_RSRC_GRP_23_RSRC_TYPE_n,
 					    ipa_src_rsrc_grp_23_rsrc_type_n),
+#ifdef CONFIG_IPA3_4_5_RGSTR
 #if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_GRP(IPA_SRC_RSRC_GRP_45_RSRC_TYPE_n,
 					    ipa_src_rsrc_grp_45_rsrc_type_n),
-#endif
-
+#endif /* CONFIG_IPA3_REGDUMP_IPA_4_5 */
+#endif /* CONFIG_IPA3_4_5_RGSTR */
 	/* Destination Resource Group Config Registers */
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_01_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_01_rsrc_type_n),
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_23_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_23_rsrc_type_n),
+#ifdef CONFIG_IPA3_4_5_RGSTR
 #if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_GRP(IPA_DST_RSRC_GRP_45_RSRC_TYPE_n,
 					    ipa_dst_rsrc_grp_45_rsrc_type_n),
-#endif
+#endif /* CONFIG_IPA3_REGDUMP_IPA_4_5 */
+#endif /* CONFIG_IPA3_4_5_RGSTR */
 	/* Source Resource Group Count Registers */
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_CNT_GRP(
 		IPA_SRC_RSRC_GRP_0123_RSRC_TYPE_CNT_n,
 		ipa_src_rsrc_grp_0123_rsrc_type_cnt_n),
+#ifdef CONFIG_IPA3_4_5_RGSTR
 #if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_SRC_RSRC_CNT_GRP(
 		IPA_SRC_RSRC_GRP_4567_RSRC_TYPE_CNT_n,
 		ipa_src_rsrc_grp_4567_rsrc_type_cnt_n),
-#endif
+#endif /* CONFIG_IPA3_REGDUMP_IPA_4_5 */
+#endif /* CONFIG_IPA3_4_5_RGSTR */
 	/* Destination Resource Group Count Registers */
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_CNT_GRP(
 		IPA_DST_RSRC_GRP_0123_RSRC_TYPE_CNT_n,
 		ipa_dst_rsrc_grp_0123_rsrc_type_cnt_n),
+#ifdef CONFIG_IPA3_4_5_RGSTR
 #if defined(CONFIG_IPA3_REGDUMP_IPA_4_5)
 	IPA_REG_SAVE_CFG_ENTRY_DST_RSRC_CNT_GRP(
 		IPA_DST_RSRC_GRP_4567_RSRC_TYPE_CNT_n,
 		ipa_dst_rsrc_grp_4567_rsrc_type_cnt_n),
-#endif
+#endif /* CONFIG_IPA3_REGDUMP_IPA_4_5 */
+#endif /* CONFIG_IPA3_4_5_RGSTR */
 	/*
 	 * =====================================================================
 	 * GSI register definitions begin here...
@@ -409,6 +420,9 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	 */
 
 	/* GSI General Registers */
+	/* Can access only through VMID_0 domain. */
+
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 	GEN_SRC_DST_ADDR_MAP(GSI_CFG,
 			     gsi.gen,
 			     gsi_cfg),
@@ -419,7 +433,9 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 			     IPA_GSI_TOP_GSI_INST_RAM_n,
 			     ipa_gsi_top_gsi_inst_ram_n),
 
+
 	/* GSI Debug Registers */
+	/* can access only through VMID_0 domain. */
 	GEN_SRC_DST_ADDR_MAP(IPA_GSI_TOP_GSI_DEBUG_BUSY_REG,
 			     gsi.debug,
 			     ipa_gsi_top_gsi_debug_busy_reg),
@@ -449,6 +465,8 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 		GSI_DEBUG_QSB_LOG_LAST_MISC_IDn, qsb_log_last_misc),
 
 	/* GSI IRAM pointers Registers */
+	/* can access only through VMID_0 domain */
+
 	GEN_SRC_DST_ADDR_MAP(IPA_GSI_TOP_GSI_IRAM_PTR_CH_CMD,
 			     gsi.debug.gsi_iram_ptrs,
 			     ipa_gsi_top_gsi_iram_ptr_ch_cmd),
@@ -488,8 +506,10 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	GEN_SRC_DST_ADDR_MAP(IPA_GSI_TOP_GSI_IRAM_PTR_INT_MOD_STOPPED,
 			     gsi.debug.gsi_iram_ptrs,
 			     ipa_gsi_top_gsi_iram_ptr_int_mod_stopped),
-
 	/* GSI SHRAM pointers Registers */
+	/* can access only through VMID_0 domain */
+
+
 	GEN_SRC_DST_ADDR_MAP(IPA_GSI_TOP_GSI_SHRAM_PTR_CH_CNTXT_BASE_ADDR,
 			     gsi.debug.gsi_shram_ptrs,
 			     ipa_gsi_top_gsi_shram_ptr_ch_cntxt_base_addr),
@@ -508,7 +528,6 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	GEN_SRC_DST_ADDR_MAP(IPA_GSI_TOP_GSI_SHRAM_PTR_FUNC_STACK_BASE_ADDR,
 			     gsi.debug.gsi_shram_ptrs,
 			     ipa_gsi_top_gsi_shram_ptr_func_stack_base_addr),
-
 	/*
 	 * NOTE: That GEN_SRC_DST_ADDR_MAP() not used below.  This is
 	 *       because the following registers are not scaler, rather
@@ -516,8 +535,12 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 	 */
 
 	/* GSI General EE Registers */
+	/* can access only through VMID_0 domain */
+
+
 	IPA_REG_SAVE_CFG_ENTRY_GSI_GENERAL_EE(GSI_MANAGER_EE_QOS_n,
 					      gsi_manager_ee_qos_n),
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 	IPA_REG_SAVE_CFG_ENTRY_GSI_GENERAL_EE(EE_n_GSI_STATUS,
 					      ee_n_gsi_status),
 	IPA_REG_SAVE_CFG_ENTRY_GSI_GENERAL_EE(EE_n_CNTXT_TYPE_IRQ,
@@ -659,12 +682,17 @@ static struct map_src_dst_addr_s ipa_regs_to_save_array[] = {
 					       ipa_endp_init_rsrc_grp_n),
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP_EXTRA(IPA_ENDP_INIT_SEQ_n,
 					       ipa_endp_init_seq_n),
+
+	/* can access only through VMID_0 domain */
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP_EXTRA(IPA_ENDP_GSI_CFG_TLV_n,
 					       ipa_endp_gsi_cfg_tlv_n),
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP_EXTRA(IPA_ENDP_GSI_CFG_AOS_n,
 					       ipa_endp_gsi_cfg_aos_n),
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP_EXTRA(IPA_ENDP_GSI_CFG1_n,
 					       ipa_endp_gsi_cfg1_n),
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
+
 	IPA_REG_SAVE_CFG_ENTRY_PIPE_ENDP_EXTRA
 		(IPA_ENDP_FILTER_ROUTER_HSH_CFG_n,
 		 ipa_endp_filter_router_hsh_cfg_n),
@@ -1490,7 +1518,7 @@ int ipa_reg_save_init(u32 value)
 	if (ipa3_ctx->do_testbus_collection_on_crash) {
 		memset(ipa_testbus_mem, value, sizeof(ipa_testbus_mem));
 		ipa_reg_save.ipa.testbus =
-		    (struct ipa_reg_save_ipa_testbus_s *) ipa_testbus_mem;
+		(struct ipa_reg_save_ipa_testbus_s *) ipa_testbus_mem;
 	}
 
 	/* setup access for register collection/dump on crash */

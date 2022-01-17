@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #if !defined(_IPA_REG_DUMP_H_)
 #define _IPA_REG_DUMP_H_
@@ -242,17 +243,32 @@ struct map_src_dst_addr_s {
 #define IPA_REG_SAVE_GSI_VER(reg_name, var_name)	\
 	{ GEN_1xVECTOR_REG_OFST(reg_name, 0), \
 		(u32 *)&ipa_reg_save.gsi.gen.var_name }
+
+
+
 /*
  * Macro to define a particular register cfg entry for all 3 EE
  * indexed register
  */
+
+
+#ifdef CONFIG_IPA3_APPS_REGDUMP
+
 #define IPA_REG_SAVE_CFG_ENTRY_GEN_EE(reg_name, var_name) \
-	{ GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE), \
-		(u32 *)&ipa_reg_save.ipa.gen_ee[IPA_HW_Q6_EE].var_name }, \
+	{ GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE), \
+		(u32 *)&ipa_reg_save.ipa.gen_ee[IPA_HW_A7_EE].var_name }
+
+#else
+
+#define IPA_REG_SAVE_CFG_ENTRY_GEN_EE(reg_name, var_name) \
 	{ GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE), \
 		(u32 *)&ipa_reg_save.ipa.gen_ee[IPA_HW_A7_EE].var_name }, \
+	{ GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE), \
+		(u32 *)&ipa_reg_save.ipa.gen_ee[IPA_HW_Q6_EE].var_name }, \
 	{ GEN_1xVECTOR_REG_OFST(reg_name, IPA_HW_HWP_EE), \
 		(u32 *)&ipa_reg_save.ipa.gen_ee[IPA_HW_HWP_EE].var_name }
+
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 
 #define IPA_REG_SAVE_CFG_ENTRY_GSI_FIFO(reg_name, var_name, index) \
 	{ GEN_SCALER_REG_OFST(reg_name), \
@@ -1115,6 +1131,9 @@ struct ipa_reg_save_gsi_ch_cntxt_s {
 		a7[IPA_HW_REG_SAVE_GSI_NUM_CH_CNTXT_A7];
 	struct ipa_reg_save_gsi_ch_cntxt_per_ep_s
 		uc[IPA_HW_REG_SAVE_GSI_NUM_CH_CNTXT_UC];
+	struct ipa_reg_save_gsi_ch_cntxt_per_ep_s
+		q6[IPA_HW_REG_SAVE_GSI_NUM_CH_CNTXT_Q6];
+
 };
 
 /* GSI Event Context register save top level data struct */
@@ -1123,6 +1142,9 @@ struct ipa_reg_save_gsi_evt_cntxt_s {
 		a7[IPA_HW_REG_SAVE_GSI_NUM_EVT_CNTXT_A7];
 	struct ipa_reg_save_gsi_evt_cntxt_per_ep_s
 		uc[IPA_HW_REG_SAVE_GSI_NUM_EVT_CNTXT_UC];
+	struct ipa_reg_save_gsi_evt_cntxt_per_ep_s
+		q6[IPA_HW_REG_SAVE_GSI_NUM_EVT_CNTXT_Q6];
+
 };
 
 /* Top level IPA register save data struct */
