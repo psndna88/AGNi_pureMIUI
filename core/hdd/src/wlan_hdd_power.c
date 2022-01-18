@@ -2938,7 +2938,8 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	case QDF_STA_MODE:
 	case QDF_P2P_CLIENT_MODE:
 		sta_ctx = WLAN_HDD_GET_STATION_CTX_PTR(adapter);
-		if (sta_ctx->hdd_reassoc_scenario) {
+		if (sta_ctx->hdd_reassoc_scenario ||
+		    hdd_is_roaming_in_progress(hdd_ctx)) {
 			hdd_debug("Roaming is in progress, rej this req");
 			return -EINVAL;
 		}

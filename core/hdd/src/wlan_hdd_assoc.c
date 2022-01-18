@@ -3085,15 +3085,6 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				  sta_ctx->ap_supports_immediate_power_save);
 		}
 
-		/* Indicate 'connect' status to user space */
-		hdd_send_association_event(dev, roam_info);
-
-		if (policy_mgr_is_mcc_in_24G(hdd_ctx->psoc)) {
-			if (hdd_ctx->miracast_value)
-				wlan_hdd_set_mas(adapter,
-					hdd_ctx->miracast_value);
-		}
-
 		/* Initialize the Linkup event completion variable */
 		INIT_COMPLETION(adapter->linkup_event_var);
 
@@ -3289,6 +3280,33 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 				assoc_req_len = 0;
 			}
 
+			if (!hddDisconInProgress) {
+				/*
+				 * Perform any WMM-related association
+				 * processing.
+				 */
+				hdd_wmm_assoc(adapter, roam_info,
+					      eCSR_BSS_TYPE_INFRASTRUCTURE);
+
+				/*
+				 * Register the Station with DP after associated
+				 */
+				qdf_status = hdd_roam_register_sta(adapter,
+						roam_info,
+						roam_info->bss_desc);
+				hdd_debug("Enabling queues");
+				hdd_netif_queue_enable(adapter);
+			}
+
+			/* Indicate 'connect' status to user space */
+			hdd_send_association_event(dev, roam_info);
+
+			if (policy_mgr_is_mcc_in_24G(hdd_ctx->psoc)) {
+				if (hdd_ctx->miracast_value)
+					wlan_hdd_set_mas(adapter,
+						hdd_ctx->miracast_value);
+			}
+
 			if ((roam_info->u.pConnectedProfile->AuthType ==
 			     eCSR_AUTH_TYPE_FT_RSN) ||
 			    (roam_info->u.pConnectedProfile->AuthType ==
@@ -3430,38 +3448,10 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 							       conn_info_freq);
 				}
 			}
-			if (!hddDisconInProgress) {
-				/*
-				 * Perform any WMM-related association
-				 * processing.
-				 */
-				hdd_wmm_assoc(adapter, roam_info,
-					      eCSR_BSS_TYPE_INFRASTRUCTURE);
-
-				/*
-				 * Register the Station with DP after associated
-				 */
-				qdf_status = hdd_roam_register_sta(adapter,
-						roam_info,
-						roam_info->bss_desc);
-				hdd_debug("Enabling queues");
-				hdd_netif_queue_enable(adapter);
-			}
 		} else {
-			/*
-			 * wpa supplicant expecting WPA/RSN IE in connect result
-			 * in case of reassociation also need to indicate it to
-			 * supplicant.
-			 */
-			sme_roam_get_wpa_rsn_req_ie(
-						mac_handle,
-						adapter->vdev_id,
-						&reqRsnLength, reqRsnIe);
-
 			cdp_hl_fc_set_td_limit(soc, adapter->vdev_id,
 					       conn_info_freq);
-			hdd_send_re_assoc_event(dev, adapter, roam_info,
-						reqRsnIe, reqRsnLength);
+
 			/* Reassoc successfully */
 			if (roam_info->fAuthRequired) {
 				qdf_status =
@@ -3499,7 +3489,30 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 			/* Start the tx queues */
 			hdd_debug("Enabling queues");
 			hdd_netif_queue_enable(adapter);
+
+			/* Indicate 'connect' status to user space */
+			hdd_send_association_event(dev, roam_info);
+
+			if (policy_mgr_is_mcc_in_24G(hdd_ctx->psoc)) {
+				if (hdd_ctx->miracast_value)
+					wlan_hdd_set_mas(adapter,
+						hdd_ctx->miracast_value);
+			}
+
+			/*
+			 * wpa supplicant expecting WPA/RSN IE in connect result
+			 * in case of reassociation also need to indicate it to
+			 * supplicant.
+			 */
+			sme_roam_get_wpa_rsn_req_ie(
+						mac_handle,
+						adapter->vdev_id,
+						&reqRsnLength, reqRsnIe);
+
+			hdd_send_re_assoc_event(dev, adapter, roam_info,
+						reqRsnIe, reqRsnLength);
 		}
+
 		qdf_mem_free(reqRsnIe);
 
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
