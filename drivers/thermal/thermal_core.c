@@ -565,24 +565,26 @@ static void thermal_zone_device_check(struct work_struct *work)
 #define to_thermal_msg_device(_dev)	\
 	container_of(_dev, struct thermal_message_device, device)
 
+static int user_sconfig = -1;
 static ssize_t
 sconfig_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf){
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	return sprintf(buf,"%d\n",thermal_msg->sconfig);
+//	return sprintf(buf,"%d\n",thermal_msg->sconfig);
+	return sprintf(buf,"%d\n",user_sconfig);
 }
 
 static ssize_t
 sconfig_store(struct device *dev, struct device_attribute *devattr,
 		const char *buf, size_t count){
-	int sconfig;
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	int sconfig;
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	if (kstrtoint(buf,10,&sconfig))
+	if (kstrtoint(buf,10,&user_sconfig))
 		return -EINVAL;
 
-	thermal_msg->sconfig = sconfig;
+//	thermal_msg->sconfig = sconfig;
 
 	return count;
 }
@@ -590,24 +592,26 @@ sconfig_store(struct device *dev, struct device_attribute *devattr,
 static DEVICE_ATTR(sconfig,0644,sconfig_show,sconfig_store);
 
 //Add 3C state node
+static int user_temp_state = -1;
 static ssize_t
 temp_state_show(struct device *dev, struct device_attribute *devattr,
 		       char *buf){
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	return sprintf(buf,"%d\n",thermal_msg->temp_state);
+//	return sprintf(buf,"%d\n",thermal_msg->temp_state);
+	return sprintf(buf,"%d\n",user_temp_state);
 }
 
 static ssize_t
 temp_state_store(struct device *dev, struct device_attribute *devattr,
 		const char *buf, size_t count){
-	int temp_state;
-	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
+//	int temp_state;
+//	struct thermal_message_device *thermal_msg = to_thermal_msg_device(dev);
 
-	if (kstrtoint(buf,10,&temp_state))
+	if (kstrtoint(buf,10,&user_temp_state))
 		return -EINVAL;
 
-	thermal_msg->temp_state = temp_state;
+//	thermal_msg->temp_state = temp_state;
 
 	return count;
 }
