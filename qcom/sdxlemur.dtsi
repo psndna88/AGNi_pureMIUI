@@ -977,7 +977,7 @@
 
 			qcom,pcie-vendor-id = /bits/ 16 <0x17cb>;
 			qcom,pcie-device-id = /bits/ 16 <0x0308>;
-			qcom,pcie-link-speed = <4>;
+			qcom,pcie-link-speed = <3>;
 			qcom,pcie-phy-ver = <7>;
 			qcom,pcie-active-config;
 			qcom,pcie-aggregated-irq;
