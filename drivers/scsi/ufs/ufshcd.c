@@ -2947,7 +2947,7 @@ static void ufshcd_hibern8_on_idle_switch_work(struct work_struct *work)
 	}
 
 	hba->hibern8_on_idle.is_enabled = value;
-out:
+
 	return;
 }
 
@@ -9472,8 +9472,10 @@ static int ufshcd_extcon_unregister(struct ufs_hba *hba)
 static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 {
 	struct ufs_hba *hba = (struct ufs_hba *)data;
+	int ret, retry = 3;
 	struct device *dev = hba->dev;
 	struct device_node *np = dev->of_node;
+
 	/*
 	 * Don't allow clock gating and hibern8 enter for faster device
 	 * detection.
