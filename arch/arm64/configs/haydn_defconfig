@@ -2,11 +2,11 @@
 # Automatically generated file; DO NOT EDIT.
 # Linux/arm64 5.4.170 Kernel Configuration
 #
-CONFIG_CC_VERSION_TEXT="Proton clang version 13.0.0 (https://github.com/llvm/llvm-project b4fd512c36ca344a3ff69350219e8b0a67e9472a)"
+CONFIG_CC_VERSION_TEXT="Prelude clang version 14.0.0 (https://github.com/llvm/llvm-project.git ade71641dcf6fc2c457e318634f0bcff8f8feee1)"
 CONFIG_GCC_VERSION=0
 CONFIG_CC_IS_CLANG=y
 CONFIG_LD_IS_LLD=y
-CONFIG_CLANG_VERSION=130000
+CONFIG_CLANG_VERSION=140000
 CONFIG_CC_CAN_LINK=y
 CONFIG_CC_HAS_ASM_GOTO=y
 CONFIG_CC_HAS_ASM_INLINE=y
