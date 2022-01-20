@@ -66,7 +66,7 @@ struct screen_monitor {
 struct screen_monitor sm;
 #endif
 
-static atomic_t switch_mode = ATOMIC_INIT(10);
+static atomic_t switch_mode = ATOMIC_INIT(-1);
 static atomic_t temp_state = ATOMIC_INIT(0);
 static char boost_buf[128];
 const char *board_sensor;
@@ -1666,11 +1666,13 @@ static DEVICE_ATTR(screen_state, 0664,
 		thermal_screen_state_show, NULL);
 #endif
 
+static int user_sconfig = -1;
 static ssize_t
 thermal_sconfig_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&switch_mode));
+//	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&switch_mode));
+	return snprintf(buf, PAGE_SIZE, "%d\n", user_sconfig);
 }
 
 
@@ -1678,11 +1680,13 @@ static ssize_t
 thermal_sconfig_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
-	int ret, val = -1;
+//	int ret, val = -1;
+	int ret;
 
-	ret = kstrtoint(buf, 10, &val);
+//	ret = kstrtoint(buf, 10, &val);
+	ret = kstrtoint(buf, 10, &user_sconfig);
 
-	atomic_set(&switch_mode, val);
+//	atomic_set(&switch_mode, val);
 
 	if (ret)
 		return ret;
@@ -1711,22 +1715,26 @@ thermal_boost_store(struct device *dev,
 static DEVICE_ATTR(boost, 0644,
 		   thermal_boost_show, thermal_boost_store);
 
+static int user_temp_state = -1;
 static ssize_t
 thermal_temp_state_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&temp_state));
+//	return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&temp_state));
+	return snprintf(buf, PAGE_SIZE, "%d\n", user_temp_state);
 }
 
 static ssize_t
 thermal_temp_state_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
-	int ret, val = -1;
+//	int ret, val = -1;
+	int ret;
 
-	ret = kstrtoint(buf, 10, &val);
+//	ret = kstrtoint(buf, 10, &val);
+	ret = kstrtoint(buf, 10, &user_temp_state);
 
-	atomic_set(&temp_state, val);
+//	atomic_set(&temp_state, val);
 
 	if (ret)
 		return ret;
@@ -1755,7 +1763,7 @@ cpu_limits_store(struct device *dev,
 		return -EINVAL;
 	}
 
-	cpu_limits_set_level(cpu, max);
+	cpu_limits_set_level(cpu, max); // non-effective function by previous commit
 
 	return len;
 }
