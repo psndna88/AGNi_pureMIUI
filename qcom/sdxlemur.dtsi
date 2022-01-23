@@ -1141,7 +1141,7 @@
 			qcom,mhi-ep-msi = <0>;
 			qcom,mhi-version = <0x1000000>;
 			qcom,use-ipa-software-channel;
-			interrupts = <0 145 0>;
+			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "mhi-device-inta";
 			qcom,mhi-ifc-id = <0x030817cb>;
 			qcom,mhi-interrupt;
