@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <net/pkt_sched.h>
@@ -139,11 +140,13 @@ static void dfc_qmap_send_cmd(struct sk_buff *skb)
 {
 	trace_dfc_qmap(skb->data, skb->len, false);
 
-	if (unlikely(!rmnet_ctl || !rmnet_ctl->send) ||
-	    rmnet_ctl->send(rmnet_ctl_handle, skb)) {
-		pr_err("Failed to send to rmnet ctl\n");
+	if (unlikely(!rmnet_ctl || !rmnet_ctl->send)) {
 		kfree_skb(skb);
+		return;
 	}
+
+	if (rmnet_ctl->send(rmnet_ctl_handle, skb))
+		pr_err("Failed to send to rmnet ctl\n");
 }
 
 static void dfc_qmap_send_inband_ack(struct dfc_qmi_data *dfc,
