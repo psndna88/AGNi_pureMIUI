@@ -418,6 +418,8 @@ void hex_dump(struct sigma_dut *dut, u8 *data, size_t len)
 void * nl80211_cmd(struct sigma_dut *dut, struct nl80211_ctx *ctx,
 		   struct nl_msg *msg, int flags, uint8_t cmd)
 {
+	if (!ctx)
+		return NULL;
 	return genlmsg_put(msg, 0, 0, ctx->netlink_familyid,
 			   0, flags, cmd, 0);
 }

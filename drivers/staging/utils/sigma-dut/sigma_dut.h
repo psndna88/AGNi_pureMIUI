@@ -123,6 +123,7 @@ struct dut_hw_modes {
 	u8 ampdu_params;
 	u32 vht_capab;
 	u8 vht_mcs_set[8];
+	u8 ap_he_phy_capab[11];
 	bool valid;
 };
 
@@ -392,6 +393,7 @@ struct dscp_policy_data {
 	int end_port;
 	enum ip_protocol protocol;
 	int dscp;
+	int granularity_score;
 	struct dscp_policy_data *next;
 };
 
@@ -1038,6 +1040,7 @@ struct sigma_dut {
 	unsigned int num_dscp_status;
 	unsigned int prev_disable_scs_support;
 	unsigned int prev_disable_mscs_support;
+	int dscp_use_iptables;
 };
 
 
@@ -1152,6 +1155,7 @@ enum sigma_cmd_result cmd_ap_config_commit(struct sigma_dut *dut,
 int ap_wps_registration(struct sigma_dut *dut, struct sigma_conn *conn,
 			struct sigma_cmd *cmd);
 const char * get_hostapd_ifname(struct sigma_dut *dut);
+void get_wiphy_capabilities(struct sigma_dut *dut);
 
 /* sta.c */
 void sta_register_cmds(void);

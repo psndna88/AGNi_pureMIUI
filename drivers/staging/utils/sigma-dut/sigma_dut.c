@@ -857,6 +857,9 @@ static void set_defaults(struct sigma_dut *dut)
 	dut->user_config_ap_ocvc = -1;
 	dut->ap_sae_commit_status = -1;
 	dut->sta_async_twt_supp = -1;
+#ifdef ANDROID
+	dut->dscp_use_iptables = 1;
+#endif /* ANDROID */
 }
 
 
@@ -1319,6 +1322,7 @@ int main(int argc, char *argv[])
 
 #ifdef NL80211_SUPPORT
 	sigma_dut.nl_ctx = nl80211_init(&sigma_dut);
+	get_wiphy_capabilities(&sigma_dut);
 #endif /* NL80211_SUPPORT */
 	sigma_dut_register_cmds();
 
