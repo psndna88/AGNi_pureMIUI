@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011, 2014-2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -120,7 +121,7 @@ struct htt_ipa_uc_tx_resource_t {
 	qdf_shared_mem_t *tx_ce_idx;
 	qdf_shared_mem_t *tx_comp_ring;
 
-	uint32_t tx_comp_idx_paddr;
+	qdf_dma_addr_t tx_comp_idx_paddr;
 	qdf_shared_mem_t **tx_buf_pool_strg;
 	uint32_t alloc_tx_buf_cnt;
 	bool ipa_smmu_mapped;

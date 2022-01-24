@@ -2288,6 +2288,10 @@ static QDF_STATUS sap_goto_starting(struct sap_context *sap_ctx,
 			     eSAP_CHANNEL_CHANGE_EVENT,
 			     (void *)eSAP_STATUS_SUCCESS);
 	sap_dfs_set_current_channel(sap_ctx);
+	/* Reset radar found flag before start sap, the flag will
+	 * be set when radar found in CAC wait.
+	 */
+	mac_ctx->sap.SapDfsInfo.sap_radar_found_status = false;
 
 	sap_debug("session: %d", sap_ctx->sessionId);
 
@@ -2429,7 +2433,7 @@ static QDF_STATUS sap_fsm_handle_radar_during_cac(struct sap_context *sap_ctx,
 }
 
 /**
- * sap_fsm_handle_start_failure() - handle start failure or stop during cac wait
+ * sap_fsm_handle_start_failure() - handle sap start failure
  * @sap_ctx: SAP context
  * @msg: event msg
  * @mac_handle: Opaque handle to the global MAC context
@@ -2442,13 +2446,11 @@ static QDF_STATUS sap_fsm_handle_start_failure(struct sap_context *sap_ctx,
 {
 	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
 
-	if (msg == eSAP_HDD_STOP_INFRA_BSS &&
-	    (QDF_IS_STATUS_SUCCESS(wlan_vdev_is_dfs_cac_wait(sap_ctx->vdev)) ||
-	     QDF_IS_STATUS_SUCCESS(
-	     wlan_vdev_is_restart_progress(sap_ctx->vdev)))) {
+	if (msg == eSAP_HDD_STOP_INFRA_BSS) {
 		/* Transition from SAP_STARTING to SAP_STOPPING */
-		sap_debug("In cac wait state from state %s => %s",
+		sap_debug("SAP start is in progress, state from state %s => %s",
 			  "SAP_STARTING", "SAP_STOPPING");
+
 		/*
 		 * Stop the CAC timer only in following conditions
 		 * single AP: if there is a single AP then stop timer
@@ -2652,6 +2654,7 @@ static QDF_STATUS sap_fsm_state_starting(struct sap_context *sap_ctx,
 							       mac_handle);
 			} else {
 				sap_debug("skip cac timer");
+				mac_ctx->sap.SapDfsInfo.sap_radar_found_status = false;
 				/*
 				 * If hostapd starts AP on dfs channel,
 				 * hostapd will wait for CAC START/CAC END
@@ -3108,6 +3111,8 @@ sapconvert_to_csr_profile(struct sap_config *config, eCsrRoamBssType bssType,
 		profile->extended_rates.numRates =
 			config->extended_rates.numRates;
 	}
+
+	profile->require_h2e = config->require_h2e;
 
 	qdf_status = ucfg_mlme_get_sap_chan_switch_rate_enabled(
 					mac_ctx->psoc,
