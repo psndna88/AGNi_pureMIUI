@@ -262,6 +262,7 @@ enum roam_invoke_source_entity {
 struct mlme_roam_after_data_stall {
 	bool roam_invoke_in_progress;
 	enum roam_invoke_source_entity source;
+	struct qdf_mac_addr mac_addr;
 };
 
 /**
