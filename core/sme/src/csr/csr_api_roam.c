@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18674,6 +18674,26 @@ csr_cm_roam_scan_offload_fill_lfr3_config(
 }
 #endif
 
+#ifdef CONFIG_BAND_6GHZ
+static void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{
+	wlan_scan_cfg_get_active_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_active_6ghz);
+
+	wlan_scan_cfg_get_passive_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_passive_6ghz);
+}
+#else
+static inline void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{}
+#endif
+
 static void
 csr_cm_roam_scan_offload_fill_scan_params(
 		struct mac_context *mac,
@@ -18794,6 +18814,8 @@ csr_cm_roam_scan_offload_fill_scan_params(
 
 	scan_params->rso_adaptive_dwell_mode =
 		mac->mlme_cfg->lfr.adaptive_roamscan_dwell_mode;
+
+	csr_cm_fill_6ghz_dwell_times(mac->psoc, scan_params);
 }
 
 /**

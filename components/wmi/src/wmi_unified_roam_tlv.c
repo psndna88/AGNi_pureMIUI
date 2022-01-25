@@ -2339,6 +2339,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 	scan_tlv->idle_time = src_scan_params->idle_time;
 	scan_tlv->n_probes = src_scan_params->n_probes;
 	scan_tlv->scan_ctrl_flags |= src_scan_params->scan_ctrl_flags;
+	scan_tlv->dwell_time_active_6ghz =
+		src_scan_params->dwell_time_active_6ghz;
+	scan_tlv->dwell_time_passive_6ghz =
+		src_scan_params->dwell_time_passive_6ghz;
 
 	WMI_SCAN_SET_DWELL_MODE(scan_tlv->scan_ctrl_flags,
 				src_scan_params->rso_adaptive_dwell_mode);
@@ -2351,8 +2355,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 		scan_tlv->scan_ctrl_flags_ext |=
 			WMI_SCAN_DBS_POLICY_DEFAULT;
 
-	wmi_debug("RSO_CFG: dwell time: active %d passive %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
+	wmi_debug("RSO_CFG: dwell time: active %d passive %d, active 6g %d passive 6g %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
 		  scan_tlv->dwell_time_active, scan_tlv->dwell_time_passive,
+		  scan_tlv->dwell_time_active_6ghz,
+		  scan_tlv->dwell_time_passive_6ghz,
 		  scan_tlv->min_rest_time, scan_tlv->max_rest_time,
 		  scan_tlv->repeat_probe_time, scan_tlv->probe_spacing_time);
 	wmi_debug("RSO_CFG: ctrl_flags:0x%x probe_delay:%d max_scan_time:%d idle_time:%d n_probes:%d",
