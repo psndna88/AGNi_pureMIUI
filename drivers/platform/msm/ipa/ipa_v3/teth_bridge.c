@@ -215,6 +215,11 @@ int ipa3_teth_bridge_driver_init(void)
 {
 	int res;
 
+	if(ipa3_teth_ctx) {
+		TETH_DBG("Tethering bridge already initlized\n");
+		return 0;
+	}
+
 	TETH_DBG("Tethering bridge driver init\n");
 	ipa3_teth_ctx = kzalloc(sizeof(*ipa3_teth_ctx), GFP_KERNEL);
 	if (!ipa3_teth_ctx)
