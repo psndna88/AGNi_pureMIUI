@@ -1571,25 +1571,25 @@ err:
 
 static int nqx_suspend(struct device *device)
 {
-	struct i2c_client *client = to_i2c_client(device);
+/*	struct i2c_client *client = to_i2c_client(device);
 	struct nqx_dev *nqx_dev = i2c_get_clientdata(client);
 
 	if (device_may_wakeup(&client->dev) && nqx_dev->irq_enabled) {
 		if (!enable_irq_wake(client->irq))
 			nqx_dev->irq_wake_up = true;
-	}
+	} */
 	return 0;
 }
 
 static int nqx_resume(struct device *device)
 {
-	struct i2c_client *client = to_i2c_client(device);
+/*	struct i2c_client *client = to_i2c_client(device);
 	struct nqx_dev *nqx_dev = i2c_get_clientdata(client);
 
 	if (device_may_wakeup(&client->dev) && nqx_dev->irq_wake_up) {
 		if (!disable_irq_wake(client->irq))
 			nqx_dev->irq_wake_up = false;
-	}
+	} */
 	return 0;
 }
 
