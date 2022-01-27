@@ -2695,7 +2695,7 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 	if ((mode == PM_P2P_GO_MODE || mode == PM_P2P_CLIENT_MODE) ||
 	    (mode == PM_STA_MODE &&
 	     policy_mgr_mode_specific_connection_count(psoc, PM_STA_MODE,
-						       NULL) > 0)) {
+						       NULL))) {
 		/*
 		 * Store the STA mode's parameter and temporarily delete it
 		 * from the concurrency table. This way the allow concurrency
@@ -2714,10 +2714,22 @@ QDF_STATUS policy_mgr_get_valid_chan_weights(struct wlan_objmgr_psoc *psoc,
 		for (i = 0; i < weight->saved_num_chan; i++) {
 			if (policy_mgr_is_concurrency_allowed
 				(psoc, mode, weight->saved_chan_list[i],
-				HW_MODE_20_MHZ)) {
+				HW_MODE_20_MHZ) &&
+			     (policy_mgr_mode_specific_connection_count
+			      (psoc, PM_P2P_GO_MODE, NULL) ||
+			      policy_mgr_mode_specific_connection_count
+			      (psoc, PM_P2P_CLIENT_MODE, NULL)) &&
+			      policy_mgr_go_scc_enforced(psoc))
+		/*
+		 * For two port/three port connection where if one p2p
+		 * connection is already present and force scc is enabled
+		 * then enforce Go negotiation channels to be strictly
+		 * based on PCL list.
+		 */
+				weight->weighed_valid_list[i] = 0;
+			else
 				weight->weighed_valid_list[i] =
-					WEIGHT_OF_NON_PCL_CHANNELS;
-			}
+						WEIGHT_OF_NON_PCL_CHANNELS;
 		}
 		/* Restore the connection info */
 		if (mode == PM_STA_MODE)
