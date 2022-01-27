@@ -888,6 +888,12 @@ struct ufs_hba {
 	#define UFSHCD_QUIRK_BROKEN_UFS_HCI_VERSION		UFS_BIT(5)
 
 	/*
+	 * This quirk needs to be enabled if we apply performance heuristic
+	 * to UFS host.
+	 */
+	#define UFSHCD_QUIRK_UFS_HCI_PERF_HEURISTIC		UFS_BIT(6)
+
+	/*
 	 * This quirk needs to be enabled if the host contoller regards
 	 * resolution of the values of PRDTO and PRDTL in UTRD as byte.
 	 */
@@ -934,6 +940,32 @@ struct ufs_hba {
 	 * inline encryption support but it doesn't work correctly.
 	 */
 	#define UFSHCD_QUIRK_BROKEN_CRYPTO                      UFS_BIT(16)
+
+	/*
+	 * MTK PATCH
+	 * This quirk needs to be enabled if device requires hw reset
+	 * if linkup is failed after retries.
+	 */
+	#define UFSHCD_QUIRK_UFS_HCI_DEV_RST_FOR_LINKUP_FAIL	UFS_BIT(8)
+
+	/*
+	 * MTK PATCH
+	 * This quirk needs to be enabled if host needs vendor-specific reset
+	 * flow.
+	 */
+	#define UFSHCD_QUIRK_UFS_HCI_VENDOR_HOST_RST		UFS_BIT(9)
+
+	/*
+	 * MTK PATCH
+	 * This quirk needs to be enabled if host needs manually disable ah8
+	 * before ringing any doorbell slots.
+	 */
+	#define UFSHCD_QUIRK_UFS_HCI_DISABLE_AH8_BEFORE_RDB	UFS_BIT(10)
+
+	/*
+	 * This quirk needs to be enabled if VCC drop slow
+	 */
+	#define UFSHCD_QUIRK_UFS_VCC_ALWAYS_ON			UFS_BIT(12)
 
 	unsigned int quirks;	/* Deviations from standard UFSHCI spec. */
 
