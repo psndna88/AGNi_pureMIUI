@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/init.h>
 #include <linux/err.h>
@@ -3092,14 +3093,6 @@ static int msm_lsm_close(struct snd_pcm_substream *substream)
 						__func__, ret);
 				prtd->lsm_client->lab_started = false;
 			}
-			if (prtd->lsm_client->lab_buffer) {
-				ret = msm_lsm_lab_buffer_alloc(prtd,
-						LAB_BUFFER_DEALLOC);
-				if (ret)
-					dev_err(rtd->dev,
-						"%s: lab buffer dealloc failed ret %d\n",
-						__func__, ret);
-			}
 		}
 
 		if (!atomic_read(&prtd->read_abort)) {
@@ -3118,6 +3111,15 @@ static int msm_lsm_close(struct snd_pcm_substream *substream)
 				 __func__, ret);
 
 		prtd->lsm_client->started = false;
+	}
+
+	if (prtd->lsm_client->lab_enable && prtd->lsm_client->lab_buffer) {
+		ret = msm_lsm_lab_buffer_alloc(prtd,
+				LAB_BUFFER_DEALLOC);
+		if (ret)
+			dev_err(rtd->dev,
+				"%s: lab buffer dealloc failed ret %d\n",
+				__func__, ret);
 	}
 
 	/*
