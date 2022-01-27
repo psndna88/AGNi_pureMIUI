@@ -50,6 +50,7 @@ static inline void set_max_mapnr(unsigned long limit) { }
 extern unsigned long totalram_pages;
 extern void * high_memory;
 extern int page_cluster;
+extern int user_page_cluster;
 
 #ifdef CONFIG_SYSCTL
 extern int sysctl_legacy_va_layout;
