@@ -41,6 +41,7 @@
 
 /* How many pages do we try to swap or page in/out together? */
 int page_cluster = 0;
+int user_page_cluster = 3;
 
 static DEFINE_PER_CPU(struct pagevec, lru_add_pvec);
 static DEFINE_PER_CPU(struct pagevec, lru_rotate_pvecs);
@@ -1165,4 +1166,7 @@ void __init swap_setup(void)
 	 * Right now other parts of the system means that we
 	 * _really_ don't want to cluster much more
 	 */
+#if defined(CONFIG_ZRAM) || defined(CONFIG_ZSWAP)
+	page_cluster = 1;
+#endif
 }
