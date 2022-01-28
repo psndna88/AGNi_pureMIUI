@@ -15,20 +15,6 @@ config ZRAM
 
 	  See Documentation/blockdev/zram.txt for more information.
 
-config ZRAM_DEDUP
-	bool "Deduplication support for ZRAM data"
-	depends on ZRAM && LIBCRC32C
-	default n
-	help
-	  Deduplicate ZRAM data to reduce amount of memory consumption.
-	  Advantage largely depends on the workload. In some cases, this
-          option reduces memory usage to the half. However, if there is no
-	  duplicated data, the amount of memory consumption would be
-	  increased due to additional metadata usage. And, there is
-	  computation time trade-off. Please check the benefit before
-	  enabling this option. Experiment shows the positive effect when
-	  the zram is used as blockdev and is used to store build output.
-
 config ZRAM_WRITEBACK
        bool "Write back incompressible or idle page to backing device"
        depends on ZRAM
@@ -60,7 +46,22 @@ config ZRAM_DEFAULT_COMP_ALGORITHM
 	default "lz4" 
 
 config ZRAM_SIZE_OVERRIDE
+	bool "override zram size"
+	depends on ZRAM
+	default n
+	
+config ZRAM_SIZE_OVERRIDE_GB
 	int "zram size to set from kernel"
 	range 1 8
-    depends on ZRAM
-	default 2
+    depends on ZRAM_SIZE_OVERRIDE
+	default 3
+
+config MIUI_ZRAM_MEMORY_TRACKING
+	bool "Track zRam stats"
+	depends on ZRAM
+	help
+	  With this feature, admin can track the state of zram
+	  of zRAM. Admin could see the information via
+	  /sys/block/zramX/.
+
+	  See Documentation/blockdev/zram.txt for more information.
