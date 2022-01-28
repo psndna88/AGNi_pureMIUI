@@ -3,6 +3,7 @@
  *  linux/mm/vmscan.c
  *
  *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
+ *  Copyright (C) 2021 XiaoMi, Inc.
  *
  *  Swap reorganised 29.12.95, Stephen Tweedie.
  *  kswapd added: 7.1.96  sct
@@ -56,6 +57,7 @@
 
 #include <linux/swapops.h>
 #include <linux/balloon_compaction.h>
+#include <linux/rtmm.h>
 
 #include "internal.h"
 
@@ -2328,6 +2330,10 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 		goto out;
 	}
 
+	if (unlikely(rtmm_reclaim(current->comm))) {
+		swappiness = rtmm_reclaim_swappiness();
+	}
+
 	/*
 	 * Global reclaim will swap to prevent OOM even with no
 	 * swappiness, but memcg users want to use this knob to
@@ -2403,7 +2409,7 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 	 */
 	if (!IS_ENABLED(CONFIG_BALANCE_ANON_FILE_RECLAIM) &&
 	    !inactive_list_is_low(lruvec, true, sc, false) &&
-	    lruvec_lru_size(lruvec, LRU_INACTIVE_FILE, sc->reclaim_idx) >> sc->priority) {
+	    lruvec_lru_size(lruvec, LRU_INACTIVE_FILE, sc->reclaim_idx) >> sc->priority && (swappiness != 200)) {
 		scan_balance = SCAN_FILE;
 		goto out;
 	}
@@ -3828,9 +3834,10 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 {
 	struct reclaim_state reclaim_state;
 	struct scan_control sc = {
-		.nr_to_reclaim = nr_to_reclaim,
+		.nr_to_reclaim = max(nr_to_reclaim, SWAP_CLUSTER_MAX),
 		.gfp_mask = GFP_HIGHUSER_MOVABLE,
 		.reclaim_idx = MAX_NR_ZONES - 1,
+		.order = 0,
 		.priority = DEF_PRIORITY,
 		.may_writepage = 1,
 		.may_unmap = 1,
