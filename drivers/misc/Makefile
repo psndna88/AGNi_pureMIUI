@@ -70,3 +70,5 @@ obj-y                           += perf_helper.o
 obj-$(CONFIG_GPIO_TESTING_MODE)	+= gpio-testing-mode.o
 obj-$(CONFIG_MI_HARDWARE_ID)    += hwid.o
 obj-y 							+= mi-memory/
+obj-y               			+= mi-power/
+obj-y               			+= mi-ioturbo/

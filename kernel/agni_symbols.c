@@ -26,9 +26,3 @@ u64 trace_clock_local(void) {
 }
 EXPORT_SYMBOL_GPL(trace_clock_local);
 #endif
-
-int power_debug_print_enabled;
-EXPORT_SYMBOL(power_debug_print_enabled);
-
-int mi_power_save_battery_cave;
-EXPORT_SYMBOL(mi_power_save_battery_cave);

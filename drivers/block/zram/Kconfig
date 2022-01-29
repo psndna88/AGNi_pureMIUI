@@ -38,6 +38,17 @@ config ZRAM_MEMORY_TRACKING
 
 	  See Documentation/admin-guide/blockdev/zram.rst for more information.
 
+config MIUI_ZRAM_MEMORY_TRACKING
+	bool "Track zRam stats"
+	depends on ZRAM
+	default y
+	help
+	  With this feature, admin can track the state of zram
+	  of zRAM. Admin could see the information via
+	  /sys/block/zramX/.
+
+	  See Documentation/blockdev/zram.txt for more information.
+
 config ZRAM_DEFAULT_COMP_ALGORITHM
 	string "Default ZRAM algorithm"
 	default "lz4"
