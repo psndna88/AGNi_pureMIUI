@@ -80,6 +80,7 @@ static inline void totalram_pages_set(long val)
 
 extern void * high_memory;
 extern int page_cluster;
+extern int user_page_cluster;
 
 #ifdef CONFIG_SYSCTL
 extern int sysctl_legacy_va_layout;
