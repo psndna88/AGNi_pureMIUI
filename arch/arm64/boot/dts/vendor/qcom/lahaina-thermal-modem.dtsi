@@ -157,7 +157,7 @@
 };
 
 &thermal_zones {
-	modem-lte-sub6-pa1 {
+	pa_therm0 {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
@@ -172,7 +172,7 @@
 		};
 	};
 
-	modem-lte-sub6-pa2 {
+	pa_therm1 {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-governor = "user_space";
