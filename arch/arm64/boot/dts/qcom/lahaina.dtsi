@@ -34,7 +34,7 @@
 	#size-cells = <2>;
 
 	chosen {
-		bootargs = "quiet rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off noirqdebug";
+		bootargs = "quiet rcu_nocbs=0-7 kpti=off noirqdebug";
 	};
 
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
