@@ -183,6 +183,30 @@
 			};
 		};
 	};
+	onewire_gpio_active: onewire_gpio_active {
+		mux {
+			pins = "gpio21";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio21";
+			drive-strength = <2>;
+			bias-pull-up; /* No PULL */
+		};
+	};
+	onewire_gpio_sleep: onewire_gpio_sleep {
+		mux {
+			pins = "gpio21";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio21";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
 };
 
 &qupv3_se11_spi_active {
