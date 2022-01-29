@@ -1322,6 +1322,9 @@ static int check_version(const struct load_info *info,
 		return 1;
 
 	/* No versions at all?  modprobe --force does this. */
+#ifdef CONFIG_MODULE_FORCE_LOAD
+	versindex = 0;
+#endif
 	if (versindex == 0)
 		return try_to_force_load(mod, symname) == 0;
 
@@ -2325,7 +2328,11 @@ static int verify_exported_symbols(struct module *mod)
 				       " (owned by %s)\n",
 				       mod->name, kernel_symbol_name(s),
 				       module_name(owner));
+#ifdef CONFIG_MODULE_FORCE_LOAD
+				return 0;
+#else
 				return -ENOEXEC;
+#endif
 			}
 		}
 	}
