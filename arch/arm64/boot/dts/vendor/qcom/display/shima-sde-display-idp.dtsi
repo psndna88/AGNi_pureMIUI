@@ -51,7 +51,7 @@
 &dsi_k9_36_02_0a_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k9>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-min-level = <8>;
 	qcom,mdss-dsi-bl-max-level = <2047>;
 	qcom,mdss-brightness-max-level = <2047>;
 	qcom,mdss-dsi-bl-inverted-dbv;
@@ -62,7 +62,7 @@
 &dsi_k9_36_02_0a_p1_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k9>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-min-level = <8>;
 	qcom,mdss-dsi-bl-max-level = <2047>;
 	qcom,mdss-brightness-max-level = <2047>;
 	qcom,mdss-dsi-bl-inverted-dbv;
@@ -73,7 +73,7 @@
 &dsi_k9_36_02_0a_p2_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k9>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-min-level = <8>;
 	qcom,mdss-dsi-bl-max-level = <2047>;
 	qcom,mdss-brightness-max-level = <2047>;
 	qcom,mdss-dsi-bl-inverted-dbv;
@@ -84,7 +84,7 @@
 &dsi_k9_36_02_0a_mp_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k9>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-min-level = <8>;
 	qcom,mdss-dsi-bl-max-level = <2047>;
 	qcom,mdss-brightness-max-level = <2047>;
 	qcom,mdss-dsi-bl-inverted-dbv;
@@ -95,7 +95,7 @@
 &dsi_k9_42_02_0b_mp_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k9>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-min-level = <8>;
 	qcom,mdss-dsi-bl-max-level = <2047>;
 	qcom,mdss-brightness-max-level = <2047>;
 	qcom,mdss-dsi-bl-inverted-dbv;
