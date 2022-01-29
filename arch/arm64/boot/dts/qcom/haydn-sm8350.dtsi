@@ -55,26 +55,6 @@ And public attribution of xiaomi platforms(like venus and so and)
 		pinctrl-names = "default";
 		pinctrl-0 = <&ant1_ctrl_irq &ant3_ctrl_irq &ant8_ctrl_irq>;
 	};
-
-	onewire_gpio: onewire_gpio {
-		compatible = "xiaomi,onewire_gpio";
-		label = "xm_onewire";
-		xiaomi,version = <1>;
-		xiaomi,ow_gpio = <&tlmm 21 0x00>;
-		mi,onewire-gpio-cfg-addr = <0x03515000 0x4>;
-		xiaomi,gpio_number = <21>;
-		pinctrl-names = "onewire_active", "onewire_sleep";
-		pinctrl-0 = <&onewire_gpio_active>;
-		pinctrl-1 = <&onewire_gpio_sleep>;
-		status = "ok";
-	};
-
-	maxim_ds28e16: maxim_ds28e16 {
-		compatible = "maxim,ds28e16";
-		label = "max_ds28e16";
-		maxim,version = <1>;
-		status = "ok";
-	};
 };
 
 &ufshc_mem {
