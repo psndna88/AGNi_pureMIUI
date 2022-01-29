@@ -121,6 +121,8 @@
 				reg = <0x01 0xf0170220>;
 				swr-slave-supply = <&hap_swr_slave_reg>;
 				qcom,rx_swr_ch_map = <0 0x01 0x01 0 PCM_OUT1>;
+				qcom,hpwr-supply = <&BOB>;
+				qcom,hpwr-voltage-mv = <3600>;
 			};
 
 			wcd938x_rx_slave: wcd938x-rx-slave {
@@ -230,7 +232,7 @@
 		qcom,cdc-vdd-buck-current = <650000>;
 
 		cdc-vdd-mic-bias-supply = <&BOB>;
-		qcom,cdc-vdd-mic-bias-voltage = <3296000 3296000>;
+		qcom,cdc-vdd-mic-bias-voltage = <3296000 3960000>;
 		qcom,cdc-vdd-mic-bias-current = <30000>;
 
 		qcom,cdc-micbias1-mv = <1800>;
