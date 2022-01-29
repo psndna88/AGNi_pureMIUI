@@ -5358,6 +5358,7 @@
 		qcom,tcs_offset_int_pow_amp_vreg = <0x4D0>;
 		use-pm-domain;
 		cnss-enable-self-recovery;
+		use-nv-mac;
 		qcom,same-dt-multi-dev;
 
 		vdd-wlan-aon-supply = <&S2E>;
