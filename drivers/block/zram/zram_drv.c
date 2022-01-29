@@ -31,6 +31,7 @@
 #include <linux/vmalloc.h>
 #include <linux/err.h>
 #include <linux/idr.h>
+#include <linux/proc_fs.h>
 #include <linux/sysfs.h>
 #include <linux/debugfs.h>
 #include <linux/cpuhotplug.h>
@@ -43,6 +44,7 @@ static DEFINE_IDR(zram_index_idr);
 static DEFINE_MUTEX(zram_index_mutex);
 
 static int zram_major;
+static struct zram *zram_devices;
 static const char *default_compressor = CONFIG_ZRAM_DEFAULT_COMP_ALGORITHM;
 
 /* Module params (documentation at end) */
@@ -81,7 +83,7 @@ static void zram_slot_unlock(struct zram *zram, u32 index)
 
 static inline bool init_done(struct zram *zram)
 {
-	return zram->disksize;
+	return zram ? zram->disksize : 0;
 }
 
 static inline struct zram *dev_to_zram(struct device *dev)
@@ -386,7 +388,7 @@ static ssize_t new_store(struct device *dev,
 	return len;
 }
 
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 static ssize_t writeback_limit_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -473,8 +475,8 @@ static void reset_bdev(struct zram *zram)
 	zram->backing_dev = NULL;
 	zram->old_block_size = 0;
 	zram->bdev = NULL;
-	zram->disk->queue->backing_dev_info->capabilities |=
-				BDI_CAP_SYNCHRONOUS_IO;
+	zram->disk->queue->backing_dev_info->capabilities |= BDI_CAP_SYNCHRONOUS_IO;
+
 	kvfree(zram->bitmap);
 	zram->bitmap = NULL;
 }
@@ -593,8 +595,7 @@ static ssize_t backing_dev_store(struct device *dev,
 	 * freely but in fact, IO is going on so finally could cause
 	 * use-after-free when the IO is really done.
 	 */
-	zram->disk->queue->backing_dev_info->capabilities &=
-			~BDI_CAP_SYNCHRONOUS_IO;
+	zram->disk->queue->backing_dev_info->capabilities &= ~BDI_CAP_SYNCHRONOUS_IO;
 	up_write(&zram->init_lock);
 
 	pr_info("setup backing device %s\n", file_name);
@@ -1420,7 +1421,7 @@ static ssize_t new_stat_show(struct device *dev,
 	return get_idle_or_new_pages(dev_to_zram(dev), buf, false);
 }
 
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 #define FOUR_K(x) ((x) * (1 << (PAGE_SHIFT - 12)))
 static ssize_t bd_stat_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1663,7 +1664,7 @@ static DEVICE_ATTR_RO(io_stat);
 static DEVICE_ATTR_RO(mm_stat);
 static DEVICE_ATTR_RO(idle_stat);
 static DEVICE_ATTR_RO(new_stat);
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 static DEVICE_ATTR_RO(bd_stat);
 #ifdef CONFIG_MIUI_ZRAM_MEMORY_TRACKING
 static DEVICE_ATTR_RO(wb_pages_max);
@@ -1921,16 +1922,13 @@ compress_again:
 				__GFP_KSWAPD_RECLAIM |
 				__GFP_NOWARN |
 				__GFP_HIGHMEM |
-				__GFP_MOVABLE |
-				__GFP_CMA |
-				__GFP_OFFLINABLE);
+				__GFP_MOVABLE);
 	if (!handle) {
 		zcomp_stream_put(zram->comp);
 		atomic64_inc(&zram->stats.writestall);
 		handle = zs_malloc(zram->mem_pool, comp_len,
 				GFP_NOIO | __GFP_HIGHMEM |
-				__GFP_MOVABLE | __GFP_CMA |
-				__GFP_OFFLINABLE);
+				__GFP_MOVABLE);
 		if (handle)
 			goto compress_again;
 		return -ENOMEM;
@@ -2284,9 +2282,14 @@ static ssize_t disksize_store(struct device *dev,
 	struct zram *zram = dev_to_zram(dev);
 	int err;
 
+#ifndef CONFIG_ZRAM_SIZE_OVERRIDE
 	disksize = memparse(buf, NULL);
 	if (!disksize)
 		return -EINVAL;
+#else
+	disksize = (u64)SZ_1G * CONFIG_ZRAM_SIZE_OVERRIDE_GB;
+	pr_info("Overriding zram size to %li", disksize);
+#endif
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
@@ -2312,6 +2315,7 @@ static ssize_t disksize_store(struct device *dev,
 	zram->first_time = zram->last_time = 0;
 #endif
 	zram->comp = comp;
+	barrier();
 	zram->disksize = disksize;
 	set_capacity(zram->disk, zram->disksize >> SECTOR_SHIFT);
 
@@ -2404,7 +2408,7 @@ static DEVICE_ATTR_WO(idle);
 static DEVICE_ATTR_WO(new);
 static DEVICE_ATTR_RW(max_comp_streams);
 static DEVICE_ATTR_RW(comp_algorithm);
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 static DEVICE_ATTR_RW(backing_dev);
 static DEVICE_ATTR_WO(writeback);
 static DEVICE_ATTR_RW(writeback_limit);
@@ -2422,7 +2426,7 @@ static struct attribute *zram_disk_attrs[] = {
 	&dev_attr_new.attr,
 	&dev_attr_max_comp_streams.attr,
 	&dev_attr_comp_algorithm.attr,
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 	&dev_attr_backing_dev.attr,
 	&dev_attr_writeback.attr,
 	&dev_attr_writeback_limit.attr,
@@ -2432,7 +2436,7 @@ static struct attribute *zram_disk_attrs[] = {
 	&dev_attr_mm_stat.attr,
 	&dev_attr_idle_stat.attr,
 	&dev_attr_new_stat.attr,
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 	&dev_attr_bd_stat.attr,
 #ifdef CONFIG_MIUI_ZRAM_MEMORY_TRACKING
 	&dev_attr_wb_pages_max.attr,
@@ -2477,7 +2481,7 @@ static int zram_add(void)
 	device_id = ret;
 
 	init_rwsem(&zram->init_lock);
-#if defined(CONFIG_ZRAM_WRITEBACK) || defined(CONFIG_RTMM)
+#ifdef CONFIG_ZRAM_WRITEBACK
 	spin_lock_init(&zram->wb_limit_lock);
 #endif
 	queue = blk_alloc_queue(GFP_KERNEL);
@@ -2544,6 +2548,9 @@ static int zram_add(void)
 	strlcpy(zram->compressor, default_compressor, sizeof(zram->compressor));
 
 	zram_debugfs_register(zram);
+	if (!zram_devices)
+		zram_devices = zram;
+
 	pr_info("Added device: %s\n", zram->disk->disk_name);
 	return device_id;
 
@@ -2586,6 +2593,8 @@ static int zram_remove(struct zram *zram)
 	del_gendisk(zram->disk);
 	blk_cleanup_queue(zram->disk->queue);
 	put_disk(zram->disk);
+	if (zram_devices == zram)
+		zram_devices = NULL;
 	kfree(zram);
 	return 0;
 }
@@ -2675,6 +2684,80 @@ static void destroy_devices(void)
 	cpuhp_remove_multi_state(CPUHP_ZCOMP_PREPARE);
 }
 
+unsigned long zram_mlog(void)
+{
+#define P2K(x) (((unsigned long)x) << (PAGE_SHIFT - 10))
+	if (num_devices == 0 && init_done(zram_devices))
+		return P2K(zs_get_total_pages(zram_devices->mem_pool));
+#undef P2K
+
+	return 0;
+}
+
+#ifdef CONFIG_PROC_FS
+static int zraminfo_proc_show(struct seq_file *m, void *v)
+{
+	struct zs_pool_stats pool_stats;
+
+	if (num_devices == 0 && init_done(zram_devices)) {
+
+		memset(&pool_stats, 0x00, sizeof(struct zs_pool_stats));
+
+		down_read(&zram_devices->init_lock);
+		zs_pool_stats(zram_devices->mem_pool, &pool_stats);
+		up_read(&zram_devices->init_lock);
+
+#define P2K(x) (((unsigned long)x) << (PAGE_SHIFT - 10))
+#define B2K(x) (((unsigned long)x) >> (10))
+		seq_printf(m,
+		"DiskSize:       %8lu kB\n"
+		"OrigSize:       %8lu kB\n"
+		"ComprSize:      %8lu kB\n"
+		"MemUsed:        %8lu kB\n"
+		"ZeroPage:       %8lu kB\n"
+		"NotifyFree:     %8lu kB\n"
+		"FailReads:      %8lu kB\n"
+		"FailWrites:     %8lu kB\n"
+		"NumReads:       %8lu kB\n"
+		"NumWrites:      %8lu kB\n"
+		"InvalidIO:      %8lu kB\n"
+		"MaxUsedPages:   %8lu kB\n"
+		"PageMigrated:	 %8lu kB\n"
+		,
+		B2K(zram_devices->disksize),
+		P2K(atomic64_read(&zram_devices->stats.pages_stored)),
+		B2K(atomic64_read(&zram_devices->stats.compr_data_size)),
+		P2K(zs_get_total_pages(zram_devices->mem_pool)),
+		P2K(atomic64_read(&zram_devices->stats.same_pages)),
+		P2K(atomic64_read(&zram_devices->stats.notify_free)),
+		P2K(atomic64_read(&zram_devices->stats.failed_reads)),
+		P2K(atomic64_read(&zram_devices->stats.failed_writes)),
+		P2K(atomic64_read(&zram_devices->stats.num_reads)),
+		P2K(atomic64_read(&zram_devices->stats.num_writes)),
+		P2K(atomic64_read(&zram_devices->stats.invalid_io)),
+		P2K(atomic_long_read(&zram_devices->stats.max_used_pages)),
+		P2K(atomic_long_read(&pool_stats.pages_compacted)));
+#undef P2K
+#undef B2K
+		seq_printf(m, "Algorithm: [%s]\n", zram_devices->compressor);
+	}
+
+	return 0;
+}
+
+static int zraminfo_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, zraminfo_proc_show, NULL);
+}
+
+static const struct file_operations zraminfo_proc_fops = {
+	.open		= zraminfo_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
 static int __init zram_init(void)
 {
 	int ret;
@@ -2710,6 +2793,10 @@ static int __init zram_init(void)
 			goto out_error;
 		num_devices--;
 	}
+
+#ifdef CONFIG_PROC_FS
+	proc_create("zraminfo", 0644, NULL, &zraminfo_proc_fops);
+#endif
 
 	return 0;
 
