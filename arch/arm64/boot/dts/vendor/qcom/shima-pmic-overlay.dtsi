@@ -391,7 +391,7 @@
 			#size-cells = <0>;
 
 			pm8008_en-supply = <&PM8008I_EN>;
-			vdd_l1_l2-supply = <&S9B>;
+			vdd_l1_l2-supply = <&S12B>;
 			vdd_l3_l4-supply = <&BOB>;
 			vdd_l5-supply = <&S11B>;
 			vdd_l6-supply = <&BOB>;
@@ -411,7 +411,7 @@
 				regulator-name = "pm8008i_l2";
 				regulator-min-microvolt = <264000>;
 				regulator-max-microvolt = <1150000>;
-				qcom,min-dropout-voltage = <184000>;
+				qcom,min-dropout-voltage = <150000>;
 				qcom,hpm-min-load = <0>;
 			};
 
