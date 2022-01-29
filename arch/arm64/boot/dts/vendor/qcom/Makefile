@@ -208,6 +208,7 @@ endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_SHIMA) +=    \
+	renoir-sm7350-overlay.dtbo	\
 	shima-rumi-overlay.dtbo \
 	shima-idp-overlay.dtbo  \
 	shima-idp-120fps-overlay.dtbo \
@@ -216,6 +217,7 @@ dtbo-$(CONFIG_ARCH_SHIMA) +=    \
 	shima-idps-digital-mics-overlay.dtbo \
 	shima-idps-digital-mics-120fps-overlay.dtbo
 
+renoir-sm7350-overlay.dtbo-base := shima.dtb
 shima-rumi-overlay.dtbo-base := shima.dtb
 shima-idp-overlay.dtbo-base := shima.dtb
 shima-idp-120fps-overlay.dtbo-base := shima.dtb
