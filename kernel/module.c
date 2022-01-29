@@ -1311,10 +1311,6 @@ static int check_version(const struct load_info *info,
 	unsigned int i, num_versions;
 	struct modversion_info *versions;
 
-#ifdef CONFIG_MODULE_FORCE_LOAD
-	if (!strncmp("sla", mod->name, 3))
-		return 1;
-#endif
 	/* Exporting module didn't supply crcs?  OK, we're already tainted. */
 	if (!crc)
 		return 1;
@@ -3162,9 +3158,7 @@ static int check_modinfo(struct module *mod, struct load_info *info, int flags)
 	} else if (!same_magic(modmagic, vermagic, info->index.vers)) {
 		pr_err("%s: version magic '%s' should be '%s'\n",
 		       info->name, modmagic, vermagic);
-#ifndef CONFIG_MODULE_FORCE_LOAD
 		return -ENOEXEC;
-#endif
 	}
 
 #ifndef CONFIG_MODULE_TURNOFF_FORCED_LOAD_TAINT
