@@ -15907,6 +15907,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_thermal_stats_temp_range_supported] =
 			WMI_SERVICE_THERMAL_THROT_STATS_TEMP_RANGE_SUPPORT;
 #endif
+	wmi_service[wmi_service_pno_scan_conf_per_ch_support] =
+			WMI_SERVICE_PNO_SCAN_CONFIG_PER_CHANNEL;
 }
 
 /**
