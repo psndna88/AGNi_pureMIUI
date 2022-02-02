@@ -735,7 +735,9 @@ static struct map_src_dst_addr_s ipa_uc_regs_to_save_array[] = {
 };
 
 static void ipa_hal_save_regs_save_ipa_testbus(void);
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 static void ipa_reg_save_gsi_fifo_status(void);
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 static void ipa_reg_save_rsrc_cnts(void);
 static void ipa_hal_save_regs_ipa_cmdq(void);
 static void ipa_hal_save_regs_rsrc_db(void);
@@ -865,9 +867,10 @@ void ipa_save_registers(void)
 	num_regs += (CONFIG_IPA3_REGDUMP_NUM_EXTRA_ENDP_REGS *
 		     IPA_REG_SAVE_NUM_EXTRA_ENDP_REGS);
 
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 	/* Saving GSI FIFO Status registers */
 	ipa_reg_save_gsi_fifo_status();
-
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 	/*
 	 * On targets that support SSR, we generally want to disable
 	 * the following reg save functionality as it may cause stalls
@@ -896,6 +899,7 @@ void ipa_save_registers(void)
 	}
 
 	/* GSI test bus */
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 	for (i = 0;
 	     i < ARRAY_SIZE(ipa_reg_save_gsi_ch_test_bus_selector_array);
 	     i++) {
@@ -911,6 +915,7 @@ void ipa_save_registers(void)
 		    i].gsi_testbus_reg =
 		    (u32) IPA_READ_SCALER_REG(GSI_TEST_BUS_REG);
 	}
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 
 	ipa_reg_save_rsrc_cnts();
 
@@ -1067,6 +1072,7 @@ void ipa_save_registers(void)
  *
  * @return
  */
+#ifndef CONFIG_IPA3_APPS_REGDUMP
 static void ipa_reg_save_gsi_fifo_status(void)
 {
 	union ipa_hwio_def_ipa_gsi_fifo_status_ctrl_u gsi_fifo_status_ctrl;
@@ -1089,7 +1095,7 @@ static void ipa_reg_save_gsi_fifo_status(void)
 			IPA_READ_SCALER_REG(IPA_GSI_AOS_FIFO_STATUS);
 	}
 }
-
+#endif /* CONFIG_IPA3_APPS_REGDUMP */
 /*
  * FUNCTION:  ipa_reg_save_rsrc_cnts
  *
