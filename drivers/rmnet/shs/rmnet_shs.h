@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -106,6 +106,7 @@ struct rmnet_shs_cfg_s {
 	u8 dl_ind_state;
 	u8 map_mask;
 	u8 map_len;
+	u8 ff_flag;
 
 };
 
@@ -156,6 +157,8 @@ enum rmnet_shs_switch_reason_e {
 	RMNET_SHS_SWITCH_WQ_RATE,
 	RMNET_SHS_OOO_PACKET_SWITCH,
 	RMNET_SHS_OOO_PACKET_TOTAL,
+	RMNET_SHS_SWITCH_PACKET_BURST,
+	RMNET_SHS_SWITCH_CORE_BACKLOG,
 	RMNET_SHS_SWITCH_MAX_REASON
 };
 
@@ -176,6 +179,8 @@ enum rmnet_shs_flush_reason_e {
 	RMNET_SHS_FLUSH_WQ_FB_FLUSH,
 	RMNET_SHS_FLUSH_WQ_CORE_FLUSH,
 	RMNET_SHS_FLUSH_PSH_PKT_FLUSH,
+	RMNET_SHS_FLUSH_WQ_FB_FF_FLUSH,
+	RMNET_SHS_FLUSH_Z_QUEUE_FLUSH,
 	RMNET_SHS_FLUSH_MAX_REASON
 };
 
@@ -195,6 +200,7 @@ struct rmnet_shs_cpu_node_s {
 	u32 qtail;
 	u32 qdiff;
 	u32 parkedlen;
+	u32 seg;
 	u8 prio;
 	u8 wqprio;
 };
@@ -294,12 +300,12 @@ extern struct hlist_head RMNET_SHS_HT[1 << (RMNET_SHS_HT_SIZE)];
 /* rmnet based functions that we rely on*/
 extern void rmnet_deliver_skb(struct sk_buff *skb,
 			      struct rmnet_port *port);
-extern int (*rmnet_shs_skb_entry)(struct sk_buff *skb,
-				  struct rmnet_port *port);
+extern void (*rmnet_shs_skb_entry)(struct sk_buff *skb,
+				   struct rmnet_port *port);
 int rmnet_shs_is_lpwr_cpu(u16 cpu);
 void rmnet_shs_cancel_table(void);
 void rmnet_shs_rx_wq_init(void);
-void rmnet_shs_rx_wq_exit(void);
+unsigned int rmnet_shs_rx_wq_exit(void);
 int rmnet_shs_get_mask_len(u8 mask);
 
 int rmnet_shs_chk_and_flush_node(struct rmnet_shs_skbn_s *node,
@@ -314,7 +320,7 @@ void rmnet_shs_assign(struct sk_buff *skb, struct rmnet_port *port);
 void rmnet_shs_flush_table(u8 is_force_flush, u8 ctxt);
 void rmnet_shs_cpu_node_remove(struct rmnet_shs_skbn_s *node);
 void rmnet_shs_init(struct net_device *dev, struct net_device *vnd);
-void rmnet_shs_exit(void);
+void rmnet_shs_exit(unsigned int cpu_switch);
 void rmnet_shs_ps_on_hdlr(void *port);
 void rmnet_shs_ps_off_hdlr(void *port);
 void rmnet_shs_update_cpu_proc_q_all_cpus(void);
