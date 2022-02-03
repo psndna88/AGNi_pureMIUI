@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2099,38 +2100,55 @@ static void csr_update_bss_with_fils_data(struct mac_context *mac_ctx,
 					  struct bss_description *bss_descr)
 {
 	int ret;
-	tDot11fIEfils_indication fils_indication = {0};
-	struct sir_fils_indication fils_ind;
+	tDot11fIEfils_indication *fils_indication;
+	struct sir_fils_indication *fils_ind;
 
 	if (!scan_entry->ie_list.fils_indication)
 		return;
+
+	fils_indication = qdf_mem_malloc(sizeof(*fils_indication));
+	if (!fils_indication) {
+		sme_err("malloc failed for fils_indication");
+		return;
+	}
 
 	ret = dot11f_unpack_ie_fils_indication(mac_ctx,
 				scan_entry->ie_list.fils_indication +
 				SIR_FILS_IND_ELEM_OFFSET,
 				*(scan_entry->ie_list.fils_indication + 1),
-				&fils_indication, false);
+				fils_indication, false);
 	if (DOT11F_FAILED(ret)) {
 		sme_err("unpack failed ret: 0x%x", ret);
+		qdf_mem_free(fils_indication);
 		return;
 	}
 
-	update_fils_data(&fils_ind, &fils_indication);
-	if (fils_ind.realm_identifier.realm_cnt > SIR_MAX_REALM_COUNT)
-		fils_ind.realm_identifier.realm_cnt = SIR_MAX_REALM_COUNT;
+	fils_ind = qdf_mem_malloc(sizeof(*fils_ind));
+	if (!fils_ind) {
+		sme_err("malloc failed for fils_ind");
+		qdf_mem_free(fils_indication);
+		return;
+	}
+
+	update_fils_data(fils_ind, fils_indication);
+	if (fils_ind->realm_identifier.realm_cnt > SIR_MAX_REALM_COUNT)
+		fils_ind->realm_identifier.realm_cnt = SIR_MAX_REALM_COUNT;
 
 	bss_descr->fils_info_element.realm_cnt =
-		fils_ind.realm_identifier.realm_cnt;
+		fils_ind->realm_identifier.realm_cnt;
 	qdf_mem_copy(bss_descr->fils_info_element.realm,
-			fils_ind.realm_identifier.realm,
+			fils_ind->realm_identifier.realm,
 			bss_descr->fils_info_element.realm_cnt * SIR_REALM_LEN);
-	if (fils_ind.cache_identifier.is_present) {
+	if (fils_ind->cache_identifier.is_present) {
 		bss_descr->fils_info_element.is_cache_id_present = true;
 		qdf_mem_copy(bss_descr->fils_info_element.cache_id,
-			fils_ind.cache_identifier.identifier, CACHE_ID_LEN);
+			fils_ind->cache_identifier.identifier, CACHE_ID_LEN);
 	}
-	if (fils_ind.is_fils_sk_auth_supported)
+	if (fils_ind->is_fils_sk_auth_supported)
 		bss_descr->fils_info_element.is_fils_sk_supported = true;
+
+	 qdf_mem_free(fils_ind);
+	 qdf_mem_free(fils_indication);
 }
 #else
 static void csr_update_bss_with_fils_data(struct mac_context *mac_ctx,
