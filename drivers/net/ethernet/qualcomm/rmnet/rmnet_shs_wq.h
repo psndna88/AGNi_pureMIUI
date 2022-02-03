@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,14 +31,18 @@
 #define RMNET_SHS_NSEC_TO_SEC(x) ((x)/1000000000)
 #define RMNET_SHS_BYTE_TO_BIT(x) ((x)*8)
 #define RMNET_SHS_MIN_HSTAT_NODES_REQD 16
-#define RMNET_SHS_WQ_DELAY_TICKS  10
+#define RMNET_SHS_WQ_INTERVAL_MS  100
 
 extern unsigned long long rmnet_shs_cpu_rx_max_pps_thresh[MAX_CPUS]__read_mostly;
 extern unsigned long long rmnet_shs_cpu_rx_min_pps_thresh[MAX_CPUS]__read_mostly;
 
+extern struct list_head rmnet_shs_wq_ep_tbl;
+
 /* stores wq and end point details */
 
 struct rmnet_shs_wq_ep_s {
+	u64 tcp_rx_bps;
+	u64 udp_rx_bps;
 	struct list_head ep_list_id;
 	struct net_device *ep;
 	int  new_lo_core[MAX_CPUS];
@@ -96,7 +100,7 @@ struct rmnet_shs_wq_hstat_s {
 	u8 in_use;
 	u8 is_perm;
 	u8 is_new_flow;
-	u8 segment_enable; /* segment coalesces packets */
+	u8 segs_per_skb; /* segments per skb */
 };
 
 struct rmnet_shs_wq_cpu_rx_pkt_q_s {
@@ -161,6 +165,7 @@ struct rmnet_shs_wq_cpu_cap_s {
 	struct list_head cpu_cap_list;
 	u64 pps_capacity;
 	u64 avg_pps_capacity;
+	u64 bps;
 	u16 cpu_num;
 };
 
@@ -283,7 +288,7 @@ void rmnet_shs_wq_refresh_new_flow_list(void);
 int rmnet_shs_wq_try_to_move_flow(u16 cur_cpu, u16 dest_cpu, u32 hash_to_move,
 				  u32 sugg_type);
 
-int rmnet_shs_wq_set_flow_segmentation(u32 hash_to_set, u8 seg_enable);
+int rmnet_shs_wq_set_flow_segmentation(u32 hash_to_set, u8 segs_per_skb);
 
 void rmnet_shs_wq_ep_lock_bh(void);
 
