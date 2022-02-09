@@ -22,23 +22,20 @@ device.name9=excalibur
 device.name10=joyeuse_eea
 device.name11=Joyeuse_EEA
 device.name12=durandal
-supported.versions=10,11
+supported.versions=
 supported.patchlevels=
 '; } # end properties
 
 # shell variables
-block=/dev/block/bootdevice/by-name/boot;
+block=auto;
 is_slot_device=0;
 ramdisk_compression=auto;
+patch_vbmeta_flag=1;
+no_block_display=1;
 
 ## AnyKernel methods (DO NOT CHANGE)
 # import patching functions/variables - see for reference
 . tools/ak3-core.sh;
-
-## AnyKernel file attributes
-# set permissions/ownership for included ramdisk files
-set_perm_recursive 0 0 755 644 $ramdisk/*;
-set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
 # Optimize F2FS extension list (@arter97)
 if mountpoint -q /data; then
@@ -83,9 +80,9 @@ if mountpoint -q /data; then
   done
 fi
 
-## AnyKernel install
-dump_boot;
+## AnyKernel boot install
+split_boot;
 
-write_boot;
-## end install
-
+flash_boot;
+flash_dtbo;
+## end boot install

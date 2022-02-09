@@ -19,10 +19,3 @@ if [ -f $COUT/.config ];
 else
 	echo "   Compile folder has no configs."
 fi
-
-# AGNi CCACHE RESET
-export CCACHE_SDM660="0"
-export CCACHE_MIATOLL_Q="0"
-export CCACHE_MIATOLL_R="0"
-export CCACHE_HAYDN="0"
-. ~/WORKING_DIRECTORY/ccache_shifter.sh
