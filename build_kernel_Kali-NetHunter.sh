@@ -1,7 +1,7 @@
 #!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
-export BUILDJOBS=4
+export BUILDJOBS=8
 
 KERNELDIR=`readlink -f .`
 
@@ -12,23 +12,6 @@ SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
 FILENAME="AGNi_kernel-$DEVICE-$AGNI_VERSION_PREFIX-$AGNI_VERSION-$AGNI_BUILD_TYPE.zip"
-
-# AGNi CCACHE SHIFTING TO MIATOLL
-export CCACHE_SDM660="0"
-export CCACHE_MIATOLL_Q="0"
-export CCACHE_MIATOLL_R="1"
-export CCACHE_HAYDN="0"
-. ~/WORKING_DIRECTORY/ccache_shifter.sh
-
-exit_reset() {
-	export CCACHE_SDM660="0"
-	export CCACHE_MIATOLL_Q="0"
-	export CCACHE_MIATOLL_R="0"
-	export CCACHE_HAYDN="0"
-	. ~/WORKING_DIRECTORY/ccache_shifter.sh
-	sync
-	exit
-}
 
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
@@ -75,20 +58,19 @@ if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 fi
 rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old 2>/dev/null
 
-if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image.gz-dtb $KERNELDIR/$DIR/Image.gz-dtb
-#	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
+if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image $KERNELDIR/$DIR/Image
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
-	exit_reset;
 fi
 
 echo ""
 
 ###### ZIP Packing
-if [ -f $KERNELDIR/$DIR/Image.gz-dtb ]; then
+if [ -f $KERNELDIR/$DIR/Image ]; then
 	cp -r $KERNELDIR/anykernel3/* $KERNELDIR/$DIR/
 	cd $KERNELDIR/$DIR/
 	zip -rq $READY_ZIP/$FILENAME *
@@ -104,11 +86,4 @@ if [ -f $KERNELDIR/$DIR/Image.gz-dtb ]; then
 else
 	echo " >>>>> AGNi $DEVICE BUILD ERROR <<<<<"
 fi
-
-# AGNi CCACHE RESET
-export CCACHE_SDM660="0"
-export CCACHE_MIATOLL_Q="0"
-export CCACHE_MIATOLL_R="0"
-export CCACHE_HAYDN="0"
-. ~/WORKING_DIRECTORY/ccache_shifter.sh
 
