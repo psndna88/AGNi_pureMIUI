@@ -19,10 +19,3 @@ if [ -f $COUT/.config ]; then
 fi
 
 echo "   Compile folder EMPTY !"
-
-# AGNi CCACHE RESET
-export CCACHE_SDM660="0"
-export CCACHE_MIATOLL_Q="0"
-export CCACHE_MIATOLL_R="0"
-export CCACHE_HAYDN="0"
-. ~/WORKING_DIRECTORY/ccache_shifter.sh
