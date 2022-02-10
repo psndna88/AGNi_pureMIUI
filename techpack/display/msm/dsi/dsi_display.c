@@ -5702,8 +5702,14 @@ static ssize_t sysfs_dimlayer_exposure_write(struct device *dev,
 
 	panel = display->panel;
 
-	panel->dimlayer_exposure = status;
-	dsi_display_set_backlight(connector, display, panel->bl_config.bl_level);
+	if (status) {
+		panel->dimlayer_exposure = status;
+		dsi_display_set_backlight(connector, display, panel->bl_config.bl_level);
+	}
+	else {
+		dsi_display_set_backlight(connector, display, panel->bl_config.bl_level);
+		panel->dimlayer_exposure = status;
+	}
 
 	return count;
 }
