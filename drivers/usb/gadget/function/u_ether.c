@@ -54,6 +54,11 @@
 #define GETHER_MAX_MTU_SIZE 15412
 #define GETHER_MAX_ETH_FRAME_LEN (GETHER_MAX_MTU_SIZE + ETH_HLEN)
 
+static unsigned int skb_timestamp_enable;
+module_param(skb_timestamp_enable, uint, 0644);
+MODULE_PARM_DESC(skb_timestamp_enable,
+	"to enable timestamping for TX and RX packets");
+
 struct eth_dev {
 	/* lock is held while accessing port_usb
 	 */
@@ -308,6 +313,8 @@ static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 			/* no buffer copies needed, unless hardware can't
 			 * use skb buffers.
 			 */
+			if (skb_timestamp_enable)
+				skb->tstamp = ktime_get();
 			status = netif_rx(skb2);
 next_frame:
 			skb2 = skb_dequeue(&dev->rx_frames);
@@ -486,9 +493,11 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	int			length = 0;
 	int			retval;
 	struct usb_request	*req = NULL;
+	struct sk_buff		*clone = NULL;
 	unsigned long		flags;
 	struct usb_ep		*in;
 	u16			cdc_filter;
+	struct skb_shared_hwtstamps hwtstamps;
 
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->port_usb) {
@@ -591,6 +600,16 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		length++;
 
 	req->length = length;
+
+	if (skb_timestamp_enable) {
+		skb->tstamp = ktime_get();
+		clone = skb_clone_sk(skb);
+		if (clone) {
+			memset(&hwtstamps, 0,
+					sizeof(struct skb_shared_hwtstamps));
+			skb_complete_tx_timestamp(clone, &hwtstamps);
+		}
+	}
 
 	retval = usb_ep_queue(in, req, GFP_ATOMIC);
 	switch (retval) {

@@ -272,7 +272,7 @@ Image sensor node contains properties of camera image sensor
 - compatible
   Usage: required
   Value type: <string>
-  Definition: Should be "qcom,cam-sensor".
+  Definition: Should be "qcom,cam-sensor" or "i2c_camera".
 
 - cell-index: cci hardware core index
   Usage: required

@@ -24,8 +24,9 @@
 #include "sm6150-sde.dtsi"
 #include "sm6150-sde-pll.dtsi"
 #include "sm6150-sde-display.dtsi"
-#include "qcs610-camera-sensor-idp.dtsi"
-#include "sm6150-audio-overlay.dtsi"
+#include "qcs610-camera-sensor-opk.dtsi"
+#include "sm6150-ext-codec-audio-opk-overlay.dtsi"
+#include "sm6150-external-codec.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. QCS610 Openkit";
@@ -40,6 +41,10 @@
 
 &fsa4480 {
 	status = "disabled";
+};
+
+&sm6150_snd {
+	pa-vddio-supply = <&pm6150_l15>;
 };
 
 &pm6150l_gpios {
@@ -61,6 +66,17 @@
 			power-source = <0>;
 			bias-disable;
 			output-low;
+		};
+	};
+
+	sdm_dp_en {
+		sdm_dp_en_default: sdm_dp_en_default {
+			pins = "gpio4";
+			function = "normal";
+			qcom,drive-strength = <2>;
+			output-high;
+			bias-pull-up;
+			power-source = <0>;
 		};
 	};
 };
@@ -196,7 +212,58 @@
 			qcom,smmu-geometry;
 		};
 	};
+};
 
+&lpi_wcd934x_reset_active {
+	mux {
+		pins = "gpio24";
+		function = "func2";
+	};
+	config {
+		pins = "gpio24";
+		drive-strength = <16>;
+		output-high;
+	};
+};
+
+&lpi_wcd934x_reset_sleep {
+	mux {
+		pins = "gpio24";
+		function = "func2";
+	};
+
+	config {
+		pins = "gpio24";
+		drive-strength = <16>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&wcd_intr_default {
+	mux {
+		pins = "gpio50";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio50";
+		drive-strength = <2>; /* 2 mA */
+		bias-pull-down; /* pull down */
+		input-enable;
+	};
+};
+
+&qupv3_se4_spi {
+	status = "disabled";
+};
+
+&qupv3_se6_spi {
+	status = "okay";
+};
+
+&L15A {
+	regulator-always-on;
 };
 
 &emac_phy_intr {
@@ -371,18 +438,6 @@
 	regulator-max-microvolt = <2912000>;
 };
 
-&sde_dp {
-	status="disabled";
-};
-
-&mdss_dp_pll {
-	status="disabled";
-};
-
-&mdss_mdp {
-	connectors = <&sde_rscc &sde_wb &sde_dsi>;
-};
-
 &cont_splash_memory {
 	status = "disabled";
 };
@@ -391,110 +446,160 @@
 	status = "disabled";
 };
 
-&qupv3_se1_i2c {
-	status = "ok";
-	lt9611: lt,lt9611@3b {
-		compatible = "lt,lt9611";
-		reg = <0x3b>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <26 0>;
-		interrupt-names = "lt_irq";
-		lt,irq-gpio = <&tlmm 26 0x0>;
-		lt,reset-gpio = <&tlmm 20 0x0>;
-		lt,hdmi-en-gpio = <&tlmm 79 0x0>;
-		instance_id = <0>;
-		lt,non-pluggable;
-		lt,preferred-mode = "1920x1080";
-
-		pinctrl-names = "default";
-		pinctrl-0 = <&lt9611_pins>;
-
-		vdd-supply = <&pm6150_l13>;
-		vcc-supply = <&pm6150_l16>;
-
-		lt,supply-entries {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			lt,supply-entry@0 {
-				reg = <0>;
-				lt,supply-name = "vcc";
-				lt,supply-min-voltage = <3304000>;
-				lt,supply-max-voltage = <3304000>;
-				lt,supply-enable-load = <200000>;
-				lt,supply-post-on-sleep = <50>;
-			};
-
-			lt,supply-entry@1 {
-				reg = <1>;
-				lt,supply-name = "vdd";
-				lt,supply-min-voltage = <1800000>;
-				lt,supply-max-voltage = <1800000>;
-				lt,supply-enable-load = <200000>;
-				lt,supply-post-on-sleep = <50>;
-			};
-		};
-
-		lt,customize-modes {
-			lt,customize-mode-id@0 {
-				lt,mode-h-active = <1920>;
-				lt,mode-h-front-porch = <88>;
-				lt,mode-h-pulse-width = <44>;
-				lt,mode-h-back-porch = <148>;
-				lt,mode-h-active-high;
-				lt,mode-v-active = <1080>;
-				lt,mode-v-front-porch = <4>;
-				lt,mode-v-pulse-width = <5>;
-				lt,mode-v-back-porch = <36>;
-				lt,mode-v-active-high;
-				lt,mode-refresh-rate = <60>;
-				lt,mode-clock-in-khz = <148500>;
-			};
-		};
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				lt9611_in: endpoint {
-					remote-endpoint = <&ext_dsi_out>;
-				};
-			};
-		};
-	};
-};
-
-&dsi_ext_bridge_hdmi_1080p {
-	qcom,mdss-dsi-ext-bridge = <0>;
-};
-
-&soc {
-	ext_dsi_bridge_display: qcom,dsi-display@50 {
-		label = "ext_dsi_bridge_display hdmi 1080p";
-		qcom,dsi-display-active;
-		qcom,display-type = "primary";
-
-		qcom,dsi-ctrl-num = <0>;
-		qcom,dsi-phy-num = <0>;
-		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-		qcom,dsi-panel = <&dsi_ext_bridge_hdmi_1080p>;
-	};
+&dsi_panel_ili988c_720p_vid_display {
+	qcom,dsi-display-active;
+	qcom,display-type = "primary";
 };
 
 &sde_dsi {
-	qcom,dsi-display-list = <&ext_dsi_bridge_display>;
+	vdd3p-supply = <&pm6150l_l7>;
+};
 
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
+&sde_dp {
+	status="ok";
+	/delete-property/ qcom,dp-aux-switch;
+	/delete-property/ pinctrl-2;
+	qcom,dp-aux-switch = <>;
+	qcom,dp-hpd-gpio = <&tlmm 89 0>;
+	pinctrl-2 = <&sdm_dp_en_default &sde_dp_switch_suspend
+					&sde_dp_hotplug_tlmm>;
+};
 
-		port@0 {
-			reg = <0>;
-			ext_dsi_out: endpoint {
-				remote-endpoint = <&lt9611_in>;
-			};
+&mdss_dp_pll {
+	status="ok";
+};
+
+&mdss_mdp {
+	connectors = <&sde_rscc &sde_wb &sde_dsi &sde_dp>;
+};
+
+&sde_dp_hotplug_tlmm {
+	mux {
+		pins = "gpio89";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio89";
+		bias-disable;
+		input-enable;
+		drive-strength = <2>;
+	};
+};
+/*for camera*/
+&tlmm {
+	cam_sensor_rear1_active: cam_sensor_rear1_active {
+		/* RESET */
+		mux {
+			pins = "gpio45";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio45";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+	cam_sensor_rear1_suspend: cam_sensor_rear1_suspend {
+		/* RESET */
+		mux {
+			pins = "gpio45";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio45";
+			bias-pull-down; /* PULL DOWN */
+			drive-strength = <2>; /* 2 MA */
+			output-low;
+		};
+	};
+
+	cam_sensor_rear2_active: cam_sensor_rear2_active {
+		/* RESET */
+		mux {
+			pins = "gpio47";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio47";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+	cam_sensor_rear2_suspend: cam_sensor_rear2_suspend {
+		/* RESET */
+		mux {
+			pins = "gpio47";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio47";
+			bias-pull-down; /* PULL DOWN */
+			drive-strength = <2>; /* 2 MA */
+			output-low;
+		};
+	};
+
+	cam_sensor_rear3_active: cam_sensor_rear3_active {
+		/* RESET */
+		mux {
+			pins = "gpio47";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio47";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+	cam_sensor_rear3_suspend: cam_sensor_rear3_suspend {
+		/* RESET */
+		mux {
+			pins = "gpio47";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio47";
+			bias-pull-down; /* PULL DOWN */
+			drive-strength = <2>; /* 2 MA */
+			output-low;
+		};
+	};
+
+	cam_sensor_mclk2_active: cam_sensor_mclk2_active {
+		/* MCLK2 */
+		mux {
+			pins = "gpio28";
+			function = "cam_mclk";
+		};
+
+		config {
+			pins = "gpio28";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+	cam_sensor_mclk2_suspend: cam_sensor_mclk2_suspend {
+		/* MCLK2 */
+		mux {
+			pins = "gpio28";
+			function = "cam_mclk";
+		};
+
+		config {
+			pins = "gpio28";
+			bias-pull-down; /* PULL DOWN */
+			drive-strength = <2>; /* 2 MA */
 		};
 	};
 };
