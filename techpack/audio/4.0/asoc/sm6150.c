@@ -41,6 +41,7 @@
 #include "codecs/bolero/wsa-macro.h"
 #include "codecs/wcd937x/wcd937x.h"
 #include "codecs/wcd938x/wcd938x.h"
+#include <linux/regulator/consumer.h>
 
 #include "sm6150-port-config.h"
 
@@ -221,6 +222,11 @@ struct msm_asoc_mach_data {
 	struct device_node *hph_en0_gpio_p; /* used by pinctrl API */
 	bool is_afe_config_done;
 	struct device_node *fsa_handle;
+	int gpio_linein_det;
+	int gpio_lineout_det;
+	int linein_det_swh;
+	int lineout_det_swh;
+	struct regulator *pa_vddio;
 };
 
 struct msm_asoc_wcd93xx_codec {
@@ -9191,6 +9197,17 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 					"qcom,quat-mi2s-gpios", 0);
 	pdata->mi2s_gpio_p[QUIN_MI2S] = of_parse_phandle(pdev->dev.of_node,
 					"qcom,quin-mi2s-gpios", 0);
+
+	pdata->pa_vddio = devm_regulator_get(&pdev->dev, "pa-vddio");
+	if (IS_ERR(pdata->pa_vddio)) {
+		dev_err(&pdev->dev, "failed to get PA_VDDIO regulator\n");
+	} else {
+		ret = regulator_enable(pdata->pa_vddio);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "failed to enable pa_vddio regulator: %d\n",
+				ret);
+		}
+	}
 
 	/*
 	 * Parse US-Euro gpio info from DT. Report no error if us-euro
