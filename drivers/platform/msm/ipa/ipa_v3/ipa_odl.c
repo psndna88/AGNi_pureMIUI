@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include "ipa_i.h"
@@ -284,7 +285,7 @@ int ipa_setup_odl_pipe(void)
 	ipa_odl_ep_cfg = &ipa3_odl_ctx->odl_sys_param;
 
 	IPADBG("Setting up the odl endpoint\n");
-	ipa_odl_ep_cfg->ipa_ep_cfg.cfg.cs_offload_en = IPA_ENABLE_CS_OFFLOAD_DL;
+	ipa_odl_ep_cfg->ipa_ep_cfg.cfg.cs_offload_en = IPA_DISABLE_CS_OFFLOAD;
 
 	ipa_odl_ep_cfg->ipa_ep_cfg.aggr.aggr_en = IPA_ENABLE_AGGR;
 	ipa_odl_ep_cfg->ipa_ep_cfg.aggr.aggr_hard_byte_limit_en = 1;
@@ -363,6 +364,11 @@ int ipa3_odl_pipe_open(void)
 
 	if (!ipa3_odl_ctx->odl_state.adpl_open) {
 		IPAERR("adpl pipe not configured\n");
+		return 0;
+	}
+
+	if (atomic_read(&ipa3_ctx->is_ssr)) {
+		IPAERR("SSR in progress ODL pipe configuration not allowed\n");
 		return 0;
 	}
 
