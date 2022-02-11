@@ -24,6 +24,11 @@
 };
 
 &soc {
+	/* If QCN9000 is connected, LPM modes are disabled */
+	qcom,lpm-levels {
+		status = "disabled";
+	};
+
 	wifi0: qcom,cnss-qcn9000@a0000000 {
 		status = "disabled";
 		compatible = "qcom,cnss-qcn9000";
