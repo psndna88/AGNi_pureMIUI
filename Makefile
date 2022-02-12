@@ -365,7 +365,7 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
 HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wno-strict-prototypes -O2 \
-		-fomit-frame-pointer -std=gnu89 -pipe $(HOST_LFS_CFLAGS)
+		-fomit-frame-pointer -std=gnu89 -pipe -Wno-deprecated-declarations $(HOST_LFS_CFLAGS)
 HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS)
 HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS)
 HOST_LOADLIBES := $(HOST_LFS_LIBS)
@@ -426,7 +426,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wno-strict-prototypes -Wno-trigraphs -pipe \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Wno-implicit-function-declaration \
 		   -Wno-format-security -Wno-unused-variable -Wno-unused-function \
-		   -std=gnu89 -fno-PIE -Wno-misleading-indentation
+		   -std=gnu89 -fno-PIE -Wno-misleading-indentation -Wno-deprecated-declarations
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
 endif
@@ -691,8 +691,10 @@ ARCH_AFLAGS :=
 ARCH_CFLAGS :=
 include arch/$(SRCARCH)/Makefile
 
-KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
-KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
+KBUILD_CFLAGS	+= $(call cc-option, -fno-delete-null-pointer-checks)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, frame-address)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, unused-but-set-variable)
+KBUILD_CFLAGS	+= $(call cc-option, -Wno-unused-but-set-variable)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
@@ -701,6 +703,8 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-format)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-maybe-uninitialized)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-psabi)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
+KBUILD_CPPFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS   += -Os
@@ -781,6 +785,7 @@ KBUILD_CFLAGS += $(call cc-option, -Wno-tautological-constant-out-of-range-compa
 KBUILD_CFLAGS += $(call cc-option, -mllvm -disable-struct-const-merge)
 KBUILD_CFLAGS += $(call cc-option, -Wno-sometimes-uninitialized)
 KBUILD_CFLAGS += $(call cc-disable-warning, void-pointer-to-enum-cast)
+KBUILD_CFLAGS += $(call cc-disable-warning, align-mismatch)
 
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
 
@@ -794,7 +799,7 @@ KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
 endif
 else
 
-KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
+KBUILD_CFLAGS += $(call cc-option, -fno-delete-null-pointer-checks)
 # These warnings generated too much noise in a regular build.
 # Use make W=1 to enable them (see scripts/Makefile.extrawarn)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
