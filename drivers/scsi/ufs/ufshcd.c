@@ -2637,8 +2637,8 @@ static void ufshcd_init_clk_gating(struct ufs_hba *hba)
 
 	snprintf(wq_name, ARRAY_SIZE(wq_name), "ufs_clk_gating_%d",
 			hba->host->host_no);
-	hba->clk_gating.clk_gating_workq =
-		create_singlethread_workqueue(wq_name);
+	hba->clk_gating.clk_gating_workq = alloc_ordered_workqueue(wq_name,
+					WQ_MEM_RECLAIM | WQ_HIGHPRI);
 
 	gating->is_enabled = true;
 
@@ -8572,8 +8572,10 @@ static int ufs_get_device_desc(struct ufs_hba *hba,
 				QUERY_DESC_MAX_SIZE + 1);
 
 	desc_buf = kmalloc(buff_len, GFP_KERNEL);
-	if (!desc_buf)
-		return -ENOMEM;
+	if (!desc_buf) {
+		err = -ENOMEM;
+		goto out;
+	}
 
 	err = ufshcd_read_device_desc(hba, desc_buf, hba->desc_size.dev_desc);
 	if (err) {
@@ -8590,6 +8592,9 @@ static int ufs_get_device_desc(struct ufs_hba *hba,
 				     desc_buf[DEVICE_DESC_PARAM_MANF_ID + 1];
 
 	model_index = desc_buf[DEVICE_DESC_PARAM_PRDCT_NAME];
+
+	/* Zero-pad entire buffer for string termination. */
+	memset(desc_buf, 0, buff_len);
 
 	err = ufshcd_read_string_desc(hba, model_index, str_desc_buf,
 				QUERY_DESC_MAX_SIZE, ASCII_STD);
@@ -9056,6 +9061,9 @@ static int ufs_read_device_desc_data(struct ufs_hba *hba)
 	hba->dev_info.b_device_sub_class =
 		desc_buf[DEVICE_DESC_PARAM_DEVICE_SUB_CLASS];
 	hba->dev_info.i_product_name = desc_buf[DEVICE_DESC_PARAM_PRDCT_NAME];
+	hba->dev_info.w_spec_version =
+		desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 |
+		desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
 
 out:
 	kfree(desc_buf);
