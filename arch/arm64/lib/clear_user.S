@@ -19,7 +19,6 @@
  *
  * Alignment fixed up by hardware.
  */
-	.p2align 4
 SYM_FUNC_START(__arch_clear_user)
 	mov	x2, x1			// save the size for fixup return
 	subs	x1, x1, #8
