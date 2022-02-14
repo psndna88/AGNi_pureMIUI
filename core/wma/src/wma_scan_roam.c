@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5006,44 +5007,44 @@ int wma_roam_pmkid_request_event_handler(void *handle, uint8_t *event,
 
 	if (!event) {
 		wma_err("received null event from target");
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	param_buf = (WMI_ROAM_PMKID_REQUEST_EVENTID_param_tlvs *)event;
 	if (!param_buf) {
 		wma_err("received null buf from target");
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	roam_pmkid_req_ev = param_buf->fixed_param;
 	if (!roam_pmkid_req_ev) {
 		wma_err("received null event data from target");
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	if (roam_pmkid_req_ev->vdev_id >= wma->max_bssid) {
 		wma_err("received invalid vdev_id %d", roam_pmkid_req_ev->vdev_id);
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	num_entries = param_buf->num_pmkid_request;
 	if (num_entries > MAX_RSSI_AVOID_BSSID_LIST) {
 		wma_err("num bssid entries:%d exceeds maximum value",
 			num_entries);
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	src_list = param_buf->pmkid_request;
 	if (len < (sizeof(*roam_pmkid_req_ev) +
 		(num_entries * sizeof(*src_list)))) {
 		wma_err("Invalid length: %d", len);
-		return -EINVAL;
+		return QDF_STATUS_E_INVAL;
 	}
 
 	dst_list = qdf_mem_malloc(sizeof(struct roam_pmkid_req_event) +
 				 (sizeof(struct qdf_mac_addr) * num_entries));
 	if (!dst_list)
-		return -ENOMEM;
+		return QDF_STATUS_E_NOMEM;
 
 	for (i = 0; i < num_entries; i++) {
 		roam_bsslist = &dst_list->ap_bssid[i];
@@ -5054,7 +5055,7 @@ int wma_roam_pmkid_request_event_handler(void *handle, uint8_t *event,
 		    qdf_is_macaddr_group(roam_bsslist)) {
 			wma_err("Invalid bssid");
 			qdf_mem_free(dst_list);
-			return -EINVAL;
+			return QDF_STATUS_E_INVAL;
 		}
 		wma_debug("Received pmkid fallback for bssid: "QDF_MAC_ADDR_FMT" vdev_id:%d",
 			  QDF_MAC_ADDR_REF(roam_bsslist->bytes),
@@ -5065,13 +5066,11 @@ int wma_roam_pmkid_request_event_handler(void *handle, uint8_t *event,
 
 	status = wma->csr_roam_pmkid_req_cb(roam_pmkid_req_ev->vdev_id,
 					    dst_list);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (QDF_IS_STATUS_ERROR(status))
 		wma_err("Pmkid request failed");
-		qdf_mem_free(dst_list);
-		return -EINVAL;
-	}
 
-	qdf_mem_free(dst_list);
+	if (dst_list)
+		qdf_mem_free(dst_list);
 	return 0;
 }
 #endif
