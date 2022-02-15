@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef _MSM_PCM_ROUTING_H
 #define _MSM_PCM_ROUTING_H
@@ -688,6 +689,8 @@ enum {
 #define STREAM_TYPE_ASM 0
 #define STREAM_TYPE_LSM 1
 
+#define PP_PERF_MODE_FLAG_MASK                0x10000
+#define PP_PERF_MODE_VALUE_MASK               0xF
 enum {
 	ADM_TOPOLOGY_CAL_TYPE_IDX = 0,
 	ADM_LSM_TOPOLOGY_CAL_TYPE_IDX,
@@ -743,6 +746,7 @@ struct msm_pcm_stream_app_type_cfg {
 	int sample_rate;
 	uint32_t copp_token;
 	int bit_width;
+	int copp_perf_mode;
 };
 
 /* dai_id: front-end ID,
