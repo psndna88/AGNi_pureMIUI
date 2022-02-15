@@ -53,6 +53,8 @@
 };
 
 &wifi0 {
+	/* QCN9000 6G */
+	board_id = <0xa4>;
 	status = "ok";
 };
 

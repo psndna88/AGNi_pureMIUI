@@ -64,11 +64,13 @@
 };
 
 &wifi0 {
+	/* QCN9000 5G with SBS filter */
 	status = "ok";
-	board_id = <0xa0>;
+	board_id = <0xa3>;
 };
 
 &wifi1 {
+	/* QCN9000 2G */
 	status = "ok";
 	board_id = <0xa1>;
 };
