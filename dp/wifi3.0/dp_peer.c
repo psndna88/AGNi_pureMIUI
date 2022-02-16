@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3529,9 +3530,7 @@ int dp_addba_requestprocess_wifi3(struct cdp_soc_t *cdp_soc,
 
 		buffersize = rx_tid->rx_ba_win_size_override;
 	} else {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-			  "%s restore BA win %d based on addba req",
-			    __func__, buffersize);
+		dp_info("restore BA win %d based on addba req", buffersize);
 	}
 
 	dp_check_ba_buffersize(peer, tid, buffersize);
