@@ -33,8 +33,7 @@
 #define src1end	x7
 #define src2end	x8
 
-SYM_FUNC_START_WEAK_PI(memcmp)
-
+SYM_FUNC_START(__pi_memcmp)
 	cmp	limit, 16
 	b.lo	L(less16)
 	ldp	data1, data3, [src1]
@@ -187,6 +186,6 @@ L(loop64):
 	cmp	data1, data2
 	cneg	result, result, lo
 	ret
-
-SYM_FUNC_END_PI(memcmp)
+SYM_FUNC_END(__pi_memcmp)
+SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)
 EXPORT_SYMBOL_NOKASAN(memcmp)
