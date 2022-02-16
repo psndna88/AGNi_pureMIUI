@@ -6972,6 +6972,20 @@ int dsi_display_get_modes(struct dsi_display *display,
 			goto error;
 		}
 
+		/*
+		 * Update the host_config.dst_format for compressed RGB101010
+		 * pixel format.
+		 */
+		if (display->panel->host_config.dst_format ==
+			DSI_PIXEL_FORMAT_RGB101010 &&
+			display_mode.timing.dsc_enabled) {
+			display->panel->host_config.dst_format =
+				DSI_PIXEL_FORMAT_RGB888;
+			DSI_DEBUG("updated dst_format from %d to %d\n",
+				DSI_PIXEL_FORMAT_RGB101010,
+				display->panel->host_config.dst_format);
+		}
+
 		is_cmd_mode = (display_mode.panel_mode == DSI_OP_CMD_MODE);
 
 		/* Setup widebus support */
