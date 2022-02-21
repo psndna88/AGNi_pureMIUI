@@ -16854,6 +16854,11 @@ static void csr_roam_link_down(struct mac_context *mac, uint32_t sessionId)
 				       eCSR_ROAM_LOSTLINK,
 				       eCSR_ROAM_RESULT_LOSTLINK);
 	}
+
+	/* In case of STA mode disconnect, stop the roam_invoke timer */
+	if (csr_roam_is_sta_mode(mac, sessionId))
+		csr_roam_invoke_timer_stop(mac, sessionId);
+
 	/* Indicate the neighbor roal algorithm about the disconnect
 	 * indication
 	 */
@@ -21207,7 +21212,6 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 					   REASON_ROAM_ABORT);
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
-		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				eCSR_ROAM_ABORT, eCSR_ROAM_RESULT_SUCCESS);
 		goto end;
