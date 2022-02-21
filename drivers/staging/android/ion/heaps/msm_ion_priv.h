@@ -96,8 +96,6 @@ struct ion_platform_heap {
  *			memory.
  * @remove_memory:	called to remove memory from an ION heap. Subsequent
  *			allocations will fail if the heap no longer has memory.
- * @debug_show:		called when the heap debug file is read to add any heap
- *			specific debug info to output
  */
 struct msm_ion_heap_ops {
 	int (*heap_prefetch)(struct ion_heap *heap,
@@ -108,8 +106,6 @@ struct msm_ion_heap_ops {
 			  int nr_regions);
 	int (*add_memory)(struct ion_heap *heap, struct sg_table *sgt);
 	int (*remove_memory)(struct ion_heap *heap, struct sg_table *sgt);
-	int (*debug_show)(struct ion_heap *heap, struct seq_file *s,
-			  void *unused);
 };
 
 /**
