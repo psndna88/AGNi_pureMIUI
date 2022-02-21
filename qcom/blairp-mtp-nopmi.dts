@@ -1,0 +1,13 @@
+/dts-v1/;
+
+#include "blairp.dtsi"
+#include "blairp-mtp-nopmi.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blairp MTP NOPMI";
+	compatible = "qcom,blairp-mtp", "qcom,blairp", "qcom,mtp";
+	qcom,board-id = <8 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x0 0x0>;
+};
+

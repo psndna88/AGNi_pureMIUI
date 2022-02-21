@@ -150,7 +150,14 @@ dtbo-$(CONFIG_ARCH_BLAIR) += blair-rumi-overlay.dtbo \
 	blair-qrd-overlay.dtbo \
 	blair-mtp-usbc-overlay.dtbo \
 	blair-mtp-nopmi-overlay.dtbo \
-	blair-qrd-nopmi-overlay.dtbo
+	blair-qrd-nopmi-overlay.dtbo \
+	blairp-mtp-overlay.dtbo \
+	blairp-cdp-overlay.dtbo \
+	blairp-atp-overlay.dtbo \
+	blairp-qrd-overlay.dtbo \
+	blairp-mtp-usbc-overlay.dtbo \
+	blairp-mtp-nopmi-overlay.dtbo \
+	blairp-qrd-nopmi-overlay.dtbo
 
 blair-rumi-overlay.dtbo-base := blair.dtb
 blair-mtp-overlay.dtbo-base := blair.dtb
@@ -160,6 +167,13 @@ blair-qrd-overlay.dtbo-base := blair.dtb
 blair-mtp-usbc-overlay.dtbo-base := blair.dtb
 blair-mtp-nopmi-overlay.dtbo-base := blair.dtb
 blair-qrd-nopmi-overlay.dtbo-base := blair.dtb
+blairp-mtp-overlay.dtbo-base := blairp.dtb
+blairp-cdp-overlay.dtbo-base := blairp.dtb
+blairp-atp-overlay.dtbo-base := blairp.dtb
+blairp-qrd-overlay.dtbo-base := blairp.dtb
+blairp-mtp-usbc-overlay.dtbo-base := blairp.dtb
+blairp-mtp-nopmi-overlay.dtbo-base := blairp.dtb
+blairp-qrd-nopmi-overlay.dtbo-base := blairp.dtb
 else
 dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb \
 	blair-mtp.dtb \
@@ -168,7 +182,14 @@ dtb-$(CONFIG_ARCH_BLAIR) += blair-rumi.dtb \
 	blair-qrd.dtb \
 	blair-mtp-usbc.dtb \
 	blair-mtp-nopmi.dtb \
-	blair-qrd-nopmi.dtb
+	blair-qrd-nopmi.dtb \
+	blairp-mtp.dtb \
+	blairp-cdp.dtb \
+	blairp-atp.dtb \
+	blairp-qrd.dtb \
+	blairp-mtp-usbc.dtb \
+	blairp-mtp-nopmi.dtb \
+	blairp-qrd-nopmi.dtb
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
