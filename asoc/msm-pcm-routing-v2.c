@@ -182,6 +182,81 @@ static int msm_routing_send_device_pp_params(int port_id,  int copp_idx,
 static void msm_routing_load_topology(size_t data_size, void *data);
 static void msm_routing_unload_topology(uint32_t topology_id);
 
+static int pcm_soft_volume_ctl_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = SOFT_VOLUME_CURVE_ENUM_MAX;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = INT_MAX;
+	return 0;
+}
+
+static void pcm_soft_volume_ctl_private_free(struct snd_kcontrol *kcontrol)
+{
+	struct snd_pcm_volume *info = snd_kcontrol_chip(kcontrol);
+
+	kfree(info);
+}
+
+int snd_pcm_add_soft_volume_ctls(struct snd_pcm *pcm, int stream,
+			   const struct snd_pcm_soft_vol_usr_elem *soft_vol_params,
+			   unsigned long private_value,
+			   struct snd_pcm_soft_volume **info_ret)
+{
+	int err = 0;
+	int size = 0;
+	struct snd_pcm_soft_volume *info;
+	struct snd_kcontrol_new knew = {
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |
+			SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = pcm_soft_volume_ctl_info,
+	};
+
+	info = kzalloc(sizeof(*info), GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+	info->pcm = pcm;
+	info->stream = stream;
+	info->usr_val = soft_vol_params;
+	size = sizeof("Playback ") + sizeof("Soft Vol Params") +
+		STRING_LENGTH_OF_INT*sizeof(char) + 1;
+	knew.name = kzalloc(size, GFP_KERNEL);
+	if (!knew.name) {
+		kfree(info);
+		return -ENOMEM;
+	}
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Playback ", pcm->device, "Soft Vol Params");
+	else
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Capture", pcm->device, "Soft Vol Params");
+	knew.device = pcm->device;
+	knew.count = pcm->streams[stream].substream_count;
+	knew.private_value = private_value;
+	info->kctl = snd_ctl_new1(&knew, info);
+	if (!info->kctl) {
+		kfree(info);
+		kfree(knew.name);
+		return -ENOMEM;
+	}
+	info->kctl->private_free = pcm_soft_volume_ctl_private_free;
+	err = snd_ctl_add(pcm->card, info->kctl);
+	if (err < 0) {
+		kfree(info);
+		kfree(knew.name);
+		return -ENOMEM;
+	}
+	if (info_ret)
+		*info_ret = info;
+	kfree(knew.name);
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_pcm_add_soft_volume_ctls);
+
 #ifndef SND_PCM_ADD_VOLUME_CTL
 static int pcm_volume_ctl_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
