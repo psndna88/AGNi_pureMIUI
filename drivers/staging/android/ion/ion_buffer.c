@@ -66,21 +66,6 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		goto err1;
 	}
 
-	spin_lock(&heap->stat_lock);
-	heap->num_of_buffers++;
-	heap->num_of_alloc_bytes += len;
-	if (heap->num_of_alloc_bytes > heap->alloc_bytes_wm)
-		heap->alloc_bytes_wm = heap->num_of_alloc_bytes;
-	if (heap->num_of_buffers == 1) {
-		/* This module reference lasts as long as at least one
-		 * buffer is allocated from the heap. We are protected
-		 * against ion_device_remove_heap() with dev->lock, so we can
-		 * safely assume the module reference is going to* succeed.
-		 */
-		__module_get(heap->owner);
-	}
-	spin_unlock(&heap->stat_lock);
-
 	INIT_LIST_HEAD(&buffer->attachments);
 	mutex_init(&buffer->lock);
 	track_buffer_created(buffer);
@@ -220,13 +205,6 @@ void ion_buffer_release(struct ion_buffer *buffer)
 		ion_heap_unmap_kernel(buffer->heap, buffer);
 	}
 	buffer->heap->ops->free(buffer);
-	spin_lock(&buffer->heap->stat_lock);
-	buffer->heap->num_of_buffers--;
-	buffer->heap->num_of_alloc_bytes -= buffer->size;
-	if (buffer->heap->num_of_buffers == 0)
-		module_put(buffer->heap->owner);
-	spin_unlock(&buffer->heap->stat_lock);
-	/* drop reference to the heap module */
 
 	kfree(buffer);
 }

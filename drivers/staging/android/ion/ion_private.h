@@ -30,7 +30,6 @@ struct ion_device {
 	struct rw_semaphore lock;
 	DECLARE_BITMAP(heap_ids, ION_NUM_MAX_HEAPS);
 	struct plist_head heaps;
-	struct dentry *debug_root;
 	int heap_cnt;
 };
 

@@ -624,109 +624,6 @@ static struct ion_heap_ops system_heap_ops = {
 	.get_pool_size = ion_msm_system_heap_get_pool_size,
 };
 
-static int ion_msm_system_heap_debug_show(struct ion_heap *heap,
-					  struct seq_file *s, void *unused)
-{
-	struct ion_msm_system_heap *sys_heap;
-	bool use_seq = s;
-	unsigned long uncached_total = 0;
-	unsigned long cached_total = 0;
-	unsigned long secure_total = 0;
-	struct ion_msm_page_pool *pool;
-	int i, j;
-
-	sys_heap = to_msm_system_heap(heap);
-	for (i = 0; i < NUM_ORDERS; i++) {
-		pool = sys_heap->uncached_pools[i];
-		if (use_seq) {
-			seq_printf(s,
-				   "%d order %u highmem pages in uncached pool = %lu total\n",
-				   pool->high_count, pool->order,
-				   (1 << pool->order) * PAGE_SIZE *
-					pool->high_count);
-			seq_printf(s,
-				   "%d order %u lowmem pages in uncached pool = %lu total\n",
-				   pool->low_count, pool->order,
-				   (1 << pool->order) * PAGE_SIZE *
-					pool->low_count);
-		}
-
-		uncached_total += (1 << pool->order) * PAGE_SIZE *
-			pool->high_count;
-		uncached_total += (1 << pool->order) * PAGE_SIZE *
-			pool->low_count;
-	}
-
-	for (i = 0; i < NUM_ORDERS; i++) {
-		pool = sys_heap->cached_pools[i];
-		if (use_seq) {
-			seq_printf(s,
-				   "%d order %u highmem pages in cached pool = %lu total\n",
-				   pool->high_count, pool->order,
-				   (1 << pool->order) * PAGE_SIZE *
-					pool->high_count);
-			seq_printf(s,
-				   "%d order %u lowmem pages in cached pool = %lu total\n",
-				   pool->low_count, pool->order,
-				   (1 << pool->order) * PAGE_SIZE *
-					pool->low_count);
-		}
-
-		cached_total += (1 << pool->order) * PAGE_SIZE *
-			pool->high_count;
-		cached_total += (1 << pool->order) * PAGE_SIZE *
-			pool->low_count;
-	}
-
-	for (i = 0; i < NUM_ORDERS; i++) {
-		for (j = 0; j < VMID_LAST; j++) {
-			if (!is_secure_vmid_valid(j))
-				continue;
-			pool = sys_heap->secure_pools[j][i];
-
-			if (use_seq) {
-				seq_printf(s,
-					   "VMID %d: %d order %u highmem pages in secure pool = %lu total\n",
-					   j, pool->high_count, pool->order,
-					   (1 << pool->order) * PAGE_SIZE *
-						pool->high_count);
-				seq_printf(s,
-					   "VMID  %d: %d order %u lowmem pages in secure pool = %lu total\n",
-					   j, pool->low_count, pool->order,
-					   (1 << pool->order) * PAGE_SIZE *
-						pool->low_count);
-			}
-
-			secure_total += (1 << pool->order) * PAGE_SIZE *
-					 pool->high_count;
-			secure_total += (1 << pool->order) * PAGE_SIZE *
-					 pool->low_count;
-		}
-	}
-
-	if (use_seq) {
-		seq_puts(s, "--------------------------------------------\n");
-		seq_printf(s, "uncached pool = %lu cached pool = %lu secure pool = %lu\n",
-			   uncached_total, cached_total, secure_total);
-		seq_printf(s, "pool total (uncached + cached + secure) = %lu\n",
-			   uncached_total + cached_total + secure_total);
-		seq_puts(s, "--------------------------------------------\n");
-	} else {
-		pr_info("-------------------------------------------------\n");
-		pr_info("uncached pool = %lu cached pool = %lu secure pool = %lu\n",
-			uncached_total, cached_total, secure_total);
-		pr_info("pool total (uncached + cached + secure) = %lu\n",
-			uncached_total + cached_total + secure_total);
-		pr_info("-------------------------------------------------\n");
-	}
-
-	return 0;
-}
-
-static struct msm_ion_heap_ops msm_system_heap_ops = {
-	.debug_show = ion_msm_system_heap_debug_show,
-};
-
 static void ion_msm_system_heap_destroy_pools(struct ion_msm_page_pool **pools)
 {
 	int i;
@@ -835,7 +732,6 @@ struct ion_heap *ion_msm_system_heap_create(struct ion_platform_heap *data)
 	if (!heap)
 		return ERR_PTR(-ENOMEM);
 	heap->heap.dev = data->priv;
-	heap->heap.msm_heap_ops = &msm_system_heap_ops;
 	heap->heap.ion_heap.ops = &system_heap_ops;
 	heap->heap.ion_heap.buf_ops = msm_ion_dma_buf_ops;
 	heap->heap.ion_heap.type = (enum ion_heap_type)ION_HEAP_TYPE_MSM_SYSTEM;
