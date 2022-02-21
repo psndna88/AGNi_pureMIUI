@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -299,9 +299,10 @@ pkt_capture_update_tx_status(
 	pktcapture_hdr->nss = vdev_priv->tx_nss;
 
 	/* Remove the ppdu stats from front of list and fill it in tx_status */
-	qdf_spin_lock(&vdev_priv->lock_q);
+	qdf_spin_lock_bh(&vdev_priv->lock_q);
 	if (QDF_STATUS_SUCCESS ==
 	    qdf_list_remove_front(&vdev_priv->ppdu_stats_q, &node)) {
+		qdf_spin_unlock_bh(&vdev_priv->lock_q);
 		q_node = qdf_container_of(
 			node, struct pkt_capture_ppdu_stats_q_node, node);
 		smu = (htt_ppdu_stats_for_smu_tlv *)(q_node->buf);
@@ -317,8 +318,9 @@ pkt_capture_update_tx_status(
 				     2 * sizeof(uint32_t));
 
 		qdf_mem_free(q_node);
+	} else {
+		qdf_spin_unlock_bh(&vdev_priv->lock_q);
 	}
-	qdf_spin_unlock(&vdev_priv->lock_q);
 
 skip_ppdu_stats:
 	pkt_capture_tx_get_phy_info(pktcapture_hdr, tx_status);
