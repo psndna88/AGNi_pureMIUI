@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -703,6 +704,7 @@ struct wlan_roam_fils_params {
  * @vdev_id: vdev id
  * @dwell_time_passive: dwell time in msec on passive channels
  * @dwell_time_active: dwell time in msec on active channels
+ * @min_dwell_time_6ghz: minimum dwell time in msec for 6 GHz channel
  * @burst_duration: Burst duration time in msec
  * @min_rest_time: min time in msec on the BSS channel,only valid if atleast
  * one VDEV is active
@@ -733,6 +735,7 @@ struct wlan_roam_scan_params {
 	uint32_t vdev_id;
 	uint32_t dwell_time_passive;
 	uint32_t dwell_time_active;
+	uint32_t min_dwell_time_6ghz;
 	uint32_t burst_duration;
 	uint32_t min_rest_time;
 	uint32_t max_rest_time;

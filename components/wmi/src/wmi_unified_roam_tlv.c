@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2329,6 +2330,7 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 
 	scan_tlv->dwell_time_active = src_scan_params->dwell_time_active;
 	scan_tlv->dwell_time_passive = src_scan_params->dwell_time_passive;
+	scan_tlv->min_dwell_time_6ghz = src_scan_params->min_dwell_time_6ghz;
 	scan_tlv->burst_duration = src_scan_params->burst_duration;
 	scan_tlv->min_rest_time = src_scan_params->min_rest_time;
 	scan_tlv->max_rest_time = src_scan_params->max_rest_time;

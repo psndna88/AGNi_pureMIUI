@@ -18725,6 +18725,8 @@ csr_cm_roam_scan_offload_fill_scan_params(
 	/* Parameters updated after association is complete */
 	wlan_scan_cfg_get_passive_dwelltime(mac->psoc,
 					    &scan_params->dwell_time_passive);
+	wlan_scan_cfg_get_min_dwelltime_6g(mac->psoc,
+					   &scan_params->min_dwell_time_6ghz);
 	/*
 	 * Here is the formula,
 	 * T(HomeAway) = N * T(dwell) + (N+1) * T(cs)
