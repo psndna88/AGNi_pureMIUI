@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -2720,9 +2721,8 @@ static int adm_arrange_mch_map_v8(
 		goto non_mch_path;
 	};
 
-	if ((ep_payload->dev_num_channel > 2) &&
-		(port_channel_map[port_idx].set_channel_map ||
-		 multi_ch_maps[idx].set_channel_map)) {
+	if (port_channel_map[port_idx].set_channel_map ||
+		 multi_ch_maps[idx].set_channel_map) {
 		if (port_channel_map[port_idx].set_channel_map)
 			memcpy(ep_payload->dev_channel_mapping,
 				port_channel_map[port_idx].channel_mapping,
