@@ -3411,6 +3411,8 @@ ath10k_mac_tx_h_get_txmode(struct ath10k *ar,
 	const struct ieee80211_hdr *hdr = (void *)skb->data;
 	__le16 fc = hdr->frame_control;
 
+	skb_orphan(skb);
+
 	if (!vif || vif->type == NL80211_IFTYPE_MONITOR)
 		return ATH10K_HW_TXRX_RAW;
 
