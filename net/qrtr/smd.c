@@ -64,8 +64,7 @@ static int qcom_smd_qrtr_probe(struct rpmsg_device *rpdev)
 	struct qrtr_smd_dev *qdev;
 	u32 net_id;
 	bool rt;
-	int rc;
-	size_t size;
+	int rc, size;
 	struct qrtr_array svc_arr = {NULL, 0};
 	pr_info("%s:Entered\n", __func__);
 
