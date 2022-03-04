@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -57,6 +58,8 @@ struct audio_ext_clk_priv {
 	uint32_t lpass_core_hwvote_client_handle;
 	uint32_t lpass_audio_hwvote_client_handle;
 };
+
+static struct audio_ext_clk audio_clk_array[];
 
 static inline struct audio_ext_clk_priv *to_audio_clk(struct clk_hw *hw)
 {
@@ -137,8 +140,8 @@ static u8 audio_ext_clk_get_parent(struct clk_hw *hw)
 {
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int num_parents = clk_hw_get_num_parents(hw);
-	const char * const *parent_names = hw->init->parent_names;
-	u8 i = 0, ret = hw->init->num_parents + 1;
+	const char * const *parent_names = audio_clk_array[clk_priv->clk_src].fact.hw.init->parent_names;
+	u8 i = 0, ret = num_parents + 1;
 
 	if ((clk_priv->clk_src == AUDIO_EXT_CLK_PMI) && clk_priv->clk_name) {
 		for (i = 0; i < num_parents; i++) {
