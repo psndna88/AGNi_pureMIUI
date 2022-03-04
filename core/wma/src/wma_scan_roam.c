@@ -2202,7 +2202,7 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 	struct mlme_roam_debug_info *roam_event = NULL;
 
 	if (!wlan_cm_get_roam_rt_stats(psoc, ROAM_RT_STATS_ENABLE)) {
-		wma_err_rl("Roam events stats is disabled");
+		wma_debug("Roam events stats is disabled");
 		return;
 	}
 

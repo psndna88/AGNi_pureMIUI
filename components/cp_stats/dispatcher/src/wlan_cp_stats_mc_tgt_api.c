@@ -940,7 +940,7 @@ tgt_mc_cp_stats_prepare_n_send_raw_station_stats(struct wlan_objmgr_psoc *psoc,
 	peer = wlan_objmgr_get_peer(psoc, last_req->pdev_id,
 				    last_req->peer_mac_addr, WLAN_CP_STATS_ID);
 	if (!peer) {
-		cp_stats_err("peer object is null");
+		cp_stats_debug("peer object is null");
 		goto end;
 	}
 
