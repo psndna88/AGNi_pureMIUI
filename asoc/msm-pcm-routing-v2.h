@@ -800,6 +800,26 @@ int msm_pcm_routing_set_channel_mixer_runtime(
 int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
 	int fedai_id, struct msm_pcm_channel_mixer *cfg_data);
 
+
+/* array element of usr elem */
+struct snd_pcm_soft_vol_usr_elem {
+	int val[3];
+};
+
+/* mixer control information; retrieved via snd_kcontrol_chip() */
+struct snd_pcm_soft_volume {
+	struct snd_pcm *pcm;    /* assigned PCM instance */
+	int stream;             /* PLAYBACK or CAPTURE */
+	struct snd_kcontrol *kctl;   /* contorl handle*/
+	const struct snd_pcm_soft_vol_usr_elem *usr_val;
+	int max_length;
+	void *private_data;
+};
+
+int snd_pcm_add_soft_volume_ctls(struct snd_pcm *pcm, int stream,
+		const struct snd_pcm_soft_vol_usr_elem *soft_vol_params,
+		unsigned long private_value,
+		struct snd_pcm_soft_volume **info_ret);
 #ifndef SND_PCM_ADD_VOLUME_CTL
 /* PCM Volume control API
  */

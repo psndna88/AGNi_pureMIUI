@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #ifndef __Q6_ASM_V2_H__
 #define __Q6_ASM_V2_H__
@@ -150,6 +151,7 @@ enum {
 	SOFT_VOLUME_CURVE_LINEAR = 0,
 	SOFT_VOLUME_CURVE_EXP,
 	SOFT_VOLUME_CURVE_LOG,
+	SOFT_VOLUME_CURVE_ENUM_MAX,
 };
 
 #define SOFT_VOLUME_INSTANCE_1	1
