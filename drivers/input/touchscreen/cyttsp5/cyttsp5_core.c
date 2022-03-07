@@ -3555,7 +3555,7 @@ static void cyttsp5_watchdog_work(struct work_struct *work)
 	*if found the current sleep_state is SS_SLEEPING
 	*then no need to request_exclusive, directly return
 	*/
-	if (cd->sleep_state == SS_SLEEPING)
+	if (cd->sleep_state == SS_SLEEPING || cd->pm_suspend)
 		return;
 
 	rc = request_exclusive(cd, cd->dev, CY_REQUEST_EXCLUSIVE_TIMEOUT);
@@ -4026,15 +4026,20 @@ static irqreturn_t cyttsp5_irq(int irq, void *handle)
 
 	if (!cyttsp5_check_irq_asserted(cd))
 		return IRQ_HANDLED;
+
+	pm_stay_awake(cd->dev);
+
 	if (cd->pm_suspend) {
+		dev_info(cd->dev, "touch in pm suspend, wait pm resume");
+		pm_wakeup_event(cd->dev, 0);
 		rc = wait_for_completion_timeout(&cd->pm_completion,
-					msecs_to_jiffies(700));
+					msecs_to_jiffies(1000));
 		if (!rc) {
 			dev_err(cd->dev, "Bus don't resume for pm(deep), timeout,skip irq");
+			pm_relax(cd->dev);
 			return IRQ_HANDLED;
 		}
 	}
-	pm_stay_awake(cd->dev);
 
 	rc = cyttsp5_read_input(cd);
 	if (!rc)
@@ -4727,7 +4732,7 @@ int cyttsp5_core_rt_suspend(struct device *dev)
 	rc = cyttsp5_core_sleep(cd);
 	if (rc < 0) {
 		dev_err(dev, "%s: Error on sleep\n", __func__);
-		return -EAGAIN;
+		return 0;
 	}
 	dev_info(dev, "%s successful!", __func__);
 	return 0;
@@ -4742,7 +4747,7 @@ int cyttsp5_core_rt_resume(struct device *dev)
 	rc = cyttsp5_core_wake(cd);
 	if (rc < 0) {
 		dev_err(dev, "%s: Error on wake\n", __func__);
-		return -EAGAIN;
+		return 0;
 	}
 
 	dev_info(dev, "%s successful!", __func__);
@@ -5907,6 +5912,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 	}
 
 	blank = *(int *)(evdata->data);
+	dev_info(cd->dev, "%s: blank:%d\n", __func__, blank);
+	mutex_lock(&cd->drm_callback_lock);
 	if (event == MI_DISP_DPMS_EVENT && blank == MI_DISP_DPMS_ON) {
 		dev_info(cd->dev, "%s: UNBLANK!\n", __func__);
 		if (cd->fb_state != FB_ON) {
@@ -5923,6 +5930,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 			cd->fb_state = FB_OFF;
 		}
 	}
+	mutex_unlock(&cd->drm_callback_lock);
 
 exit:
 	return 0;
@@ -5988,15 +5996,14 @@ static int cyttsp5_set_cur_value(int mode, int value)
 	parade_debug(dev, DEBUG_LEVEL_1, "%s: mode:%d,value:%d\n", __func__, mode, value);
 
 	if (mode == Touch_Doubletap_Mode && value >= 0) {
+		mutex_lock(&cyttsp5_data->drm_callback_lock);
 		pm_runtime_get_sync(dev);
-		mutex_lock(&cyttsp5_data->system_lock);
 		if (cyttsp5_data->sysinfo.ready && IS_PIP_VER_GE(&cyttsp5_data->sysinfo, 1, 2))
 			cyttsp5_data->easy_wakeup_gesture = (u8)value;
 		else
 			ret = -ENODEV;
-		mutex_unlock(&cyttsp5_data->system_lock);
-
 		pm_runtime_put(dev);
+		mutex_unlock(&cyttsp5_data->drm_callback_lock);
 
 		parade_debug(dev, DEBUG_LEVEL_1, "%s: update gesture state:%d, ret = %d\n",
 					__func__, cyttsp5_data->easy_wakeup_gesture, ret);
@@ -6065,6 +6072,7 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	mutex_init(&cd->system_lock);
 	mutex_init(&cd->adap_lock);
 	mutex_init(&cd->hid_report_lock);
+	mutex_init(&cd->drm_callback_lock);
 	spin_lock_init(&cd->spinlock);
 
 	/* Initialize module list */

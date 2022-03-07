@@ -974,6 +974,7 @@ struct cyttsp5_core_data {
 	struct mutex system_lock;
 	struct mutex adap_lock;
 	struct mutex hid_report_lock;
+	struct mutex drm_callback_lock;
 	enum cyttsp5_mode mode;
 	spinlock_t spinlock;
 	struct cyttsp5_mt_data md;
