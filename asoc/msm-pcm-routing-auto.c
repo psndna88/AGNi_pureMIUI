@@ -1456,6 +1456,8 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 	struct msm_pcm_channel_mixer *params)
 {
 	int i, j = 0;
+	int num_ch_input_map = 0;
+	int num_ch_out_map = 0;
 
 	channel_mixer_v2[fe_id][type].enable = params->enable;
 	channel_mixer_v2[fe_id][type].rule = params->rule;
@@ -1465,12 +1467,18 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 		params->output_channel;
 	channel_mixer_v2[fe_id][type].port_idx = params->port_idx;
 
-	for (i = 0; i < ADM_MAX_CHANNELS; i++)
+	for (i = 0; i < ADM_MAX_CHANNELS; i++) {
 		channel_mixer_v2[fe_id][type].in_ch_map[i] =
 			params->in_ch_map[i];
-	for (i = 0; i < ADM_MAX_CHANNELS; i++)
+		if (channel_mixer_v2[fe_id][type].in_ch_map[i] > 0)
+			num_ch_input_map++;
+	}
+	for (i = 0; i < ADM_MAX_CHANNELS; i++) {
 		channel_mixer_v2[fe_id][type].out_ch_map[i] =
 			params->out_ch_map[i];
+		if (channel_mixer_v2[fe_id][type].out_ch_map[i] > 0)
+			num_ch_out_map++;
+	}
 
 	for (i = 0; i < ADM_MAX_CHANNELS; i++)
 		for (j = 0; j < ADM_MAX_CHANNELS; j++)
@@ -1481,7 +1489,14 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 			params->override_in_ch_map;
 	channel_mixer_v2[fe_id][type].override_out_ch_map =
 			params->override_out_ch_map;
-
+	if (channel_mixer_v2[fe_id][type].input_channel != num_ch_input_map && channel_mixer_v2[fe_id][type].override_in_ch_map) {
+			channel_mixer_v2[fe_id][type].override_in_ch_map =false;
+			pr_info("%s: mismatched with num_ch_input_map %d override_in_ch_map set to false \n", __func__,num_ch_input_map);
+	}
+	if (channel_mixer_v2[fe_id][type].output_channel != num_ch_out_map && channel_mixer_v2[fe_id][type].override_out_ch_map) {
+			channel_mixer_v2[fe_id][type].override_out_ch_map =false;
+			pr_info("%s: mismatched with num_ch_out_map %d override_out_ch_map set to false \n", __func__,num_ch_out_map);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(msm_pcm_routing_set_channel_mixer_cfg);
