@@ -32549,6 +32549,15 @@ static int spkr_prot_get_vi_rch_port(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const cdc_dma_rx_0_vi_fb_tx_mux_text[] = {
+	"ZERO", "TX_CDC_DMA_TX_3", "TX_CDC_DMA_TX_4","TX_CDC_DMA_TX_5"
+
+};
+
+static const char * const cdc_dma_rx_1_vi_fb_tx_mux_text[] = {
+	"ZERO", "TX_CDC_DMA_TX_3", "TX_CDC_DMA_TX_4","TX_CDC_DMA_TX_5"
+};
+
 static const char * const slim0_rx_vi_fb_tx_lch_mux_text[] = {
 	"ZERO", "SLIM4_TX"
 };
@@ -32575,6 +32584,14 @@ static const char * const int4_mi2s_rx_vi_fb_tx_mono_mux_text[] = {
 
 static const char * const int4_mi2s_rx_vi_fb_tx_stereo_mux_text[] = {
 	"ZERO", "INT5_MI2S_TX"
+};
+
+static const int cdc_dma_rx_0_vi_fb_tx_value[] = {
+	MSM_BACKEND_DAI_MAX, MSM_BACKEND_DAI_TX_CDC_DMA_TX_3, MSM_BACKEND_DAI_TX_CDC_DMA_TX_4
+};
+
+static const int cdc_dma_rx_1_vi_fb_tx_value[] = {
+	MSM_BACKEND_DAI_MAX, MSM_BACKEND_DAI_TX_CDC_DMA_TX_3, MSM_BACKEND_DAI_TX_CDC_DMA_TX_4
 };
 
 static const int slim0_rx_vi_fb_tx_lch_value[] = {
@@ -32605,6 +32622,16 @@ static const int int4_mi2s_rx_vi_fb_tx_mono_ch_value[] = {
 static const int int4_mi2s_rx_vi_fb_tx_stereo_ch_value[] = {
 	MSM_BACKEND_DAI_MAX, MSM_BACKEND_DAI_INT5_MI2S_TX
 };
+
+static const struct soc_enum cdc_dma_rx_0_vi_fb_mux_enum =
+	SOC_VALUE_ENUM_DOUBLE(0, MSM_BACKEND_DAI_RX_CDC_DMA_RX_0, 0, 0,
+	ARRAY_SIZE(cdc_dma_rx_0_vi_fb_tx_mux_text),
+	cdc_dma_rx_0_vi_fb_tx_mux_text, cdc_dma_rx_0_vi_fb_tx_value);
+
+static const struct soc_enum cdc_dma_rx_1_vi_fb_mux_enum =
+	SOC_VALUE_ENUM_DOUBLE(0, MSM_BACKEND_DAI_RX_CDC_DMA_RX_1, 0, 0,
+	ARRAY_SIZE(cdc_dma_rx_1_vi_fb_tx_mux_text),
+	cdc_dma_rx_1_vi_fb_tx_mux_text, cdc_dma_rx_1_vi_fb_tx_value);
 
 static const struct soc_enum slim0_rx_vi_fb_lch_mux_enum =
 	SOC_VALUE_ENUM_DOUBLE(0, MSM_BACKEND_DAI_SLIMBUS_0_RX, 0, 0,
@@ -32642,6 +32669,16 @@ static const struct soc_enum int4_mi2s_rx_vi_fb_stereo_ch_mux_enum =
 	ARRAY_SIZE(int4_mi2s_rx_vi_fb_tx_stereo_mux_text),
 	int4_mi2s_rx_vi_fb_tx_stereo_mux_text,
 	int4_mi2s_rx_vi_fb_tx_stereo_ch_value);
+
+static const struct snd_kcontrol_new cdc_dma_rx_0_vi_fb_mux =
+	SOC_DAPM_ENUM_EXT("CDC_DMA_RX_0_VI_FB_MUX",
+	cdc_dma_rx_0_vi_fb_mux_enum, spkr_prot_get_vi_lch_port,
+	spkr_prot_put_vi_lch_port);
+
+static const struct snd_kcontrol_new cdc_dma_rx_1_vi_fb_mux =
+	SOC_DAPM_ENUM_EXT("CDC_DMA_RX_1_VI_FB_MUX",
+	cdc_dma_rx_1_vi_fb_mux_enum, spkr_prot_get_vi_lch_port,
+	spkr_prot_put_vi_lch_port);
 
 static const struct snd_kcontrol_new slim0_rx_vi_fb_lch_mux =
 	SOC_DAPM_ENUM_EXT("SLIM0_RX_VI_FB_LCH_MUX",
@@ -33257,6 +33294,12 @@ static const struct snd_soc_dapm_widget msm_qdsp6_widgets[] = {
 	/* Virtual Pins to force backends ON atm */
 	SND_SOC_DAPM_OUTPUT("BE_OUT"),
 	SND_SOC_DAPM_INPUT("BE_IN"),
+
+	SND_SOC_DAPM_MUX("CDC_DMA_RX_0_VI_FB_MUX", SND_SOC_NOPM, 0, 0,
+				&cdc_dma_rx_0_vi_fb_mux),
+
+	SND_SOC_DAPM_MUX("CDC_DMA_RX_1_VI_FB_MUX", SND_SOC_NOPM, 0, 0,
+				&cdc_dma_rx_1_vi_fb_mux),
 
 	SND_SOC_DAPM_MUX("SLIM0_RX_VI_FB_LCH_MUX", SND_SOC_NOPM, 0, 0,
 				&slim0_rx_vi_fb_lch_mux),
@@ -36395,10 +36438,16 @@ static const struct snd_soc_dapm_route intercon[] = {
 #endif
 	{"INCALL_RECORD_TX", NULL, "BE_IN"},
 	{"INCALL_RECORD_RX", NULL, "BE_IN"},
+	{"CDC_DMA_RX_0_VI_FB_MUX", "TX_CDC_DMA_TX_3", "TX_CDC_DMA_TX_3"},
+	{"CDC_DMA_RX_0_VI_FB_MUX", "TX_CDC_DMA_TX_4", "TX_CDC_DMA_TX_4"},
+	{"CDC_DMA_RX_1_VI_FB_MUX", "TX_CDC_DMA_TX_3", "TX_CDC_DMA_TX_3"},
+	{"CDC_DMA_RX_1_VI_FB_MUX", "TX_CDC_DMA_TX_4", "TX_CDC_DMA_TX_4"},
 	{"SLIM0_RX_VI_FB_LCH_MUX", "SLIM4_TX", "SLIMBUS_4_TX"},
 	{"SLIM0_RX_VI_FB_RCH_MUX", "SLIM4_TX", "SLIMBUS_4_TX"},
 	{"WSA_RX_0_VI_FB_LCH_MUX", "WSA_CDC_DMA_TX_0", "WSA_CDC_DMA_TX_0"},
 	{"WSA_RX_0_VI_FB_RCH_MUX", "WSA_CDC_DMA_TX_0", "WSA_CDC_DMA_TX_0"},
+	{"RX_CDC_DMA_RX_0", NULL, "CDC_DMA_RX_0_VI_FB_MUX"},
+	{"RX_CDC_DMA_RX_1", NULL, "CDC_DMA_RX_1_VI_FB_MUX"},
 	{"SLIMBUS_0_RX", NULL, "SLIM0_RX_VI_FB_LCH_MUX"},
 	{"SLIMBUS_0_RX", NULL, "SLIM0_RX_VI_FB_RCH_MUX"},
 	{"WSA_CDC_DMA_RX_0", NULL, "WSA_RX_0_VI_FB_LCH_MUX"},
