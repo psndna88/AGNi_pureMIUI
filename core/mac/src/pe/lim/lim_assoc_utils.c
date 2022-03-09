@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2551,9 +2552,11 @@ lim_add_sta(struct mac_context *mac_ctx,
 			assoc_req =
 			(tpSirAssocReq) session_entry->parsedAssocReq[aid];
 
-			add_sta_params->wpa_rsn = assoc_req->rsnPresent;
-			add_sta_params->wpa_rsn |=
-				(assoc_req->wpaPresent << 1);
+			if (assoc_req) {
+				add_sta_params->wpa_rsn = assoc_req->rsnPresent;
+				add_sta_params->wpa_rsn |=
+					(assoc_req->wpaPresent << 1);
+			}
 		}
 	}
 
