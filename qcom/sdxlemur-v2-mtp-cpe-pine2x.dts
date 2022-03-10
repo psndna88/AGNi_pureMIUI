@@ -3,7 +3,7 @@
 #include "sdxlemur-v2.dtsi"
 #include "sdxlemur-mtp-cpe.dtsi"
 #include "sdxlemur-mtp-cpe-pine2x.dtsi"
-#include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-1024mb-cpe.dtsi"
 #include "sdxlemur-bluetooth.dtsi"
 
 / {
