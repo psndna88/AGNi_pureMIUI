@@ -42,7 +42,7 @@
 
 &pmk8350 {
 	pon_pbs@800 {
-		status = "disabled";
+		status = "ok";
 	};
 };
 
