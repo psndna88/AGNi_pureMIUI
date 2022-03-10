@@ -2819,6 +2819,7 @@
 		qcom,wlan-msa-fixed-region = <&wlan_fw_mem>;
 		qcom,cmd_db_name = "smpb7";
 		cnss-daemon-support;
+		use-nv-mac;
 		dma-coherent;
 		qcom,fw-prefix;
 		vdd-cx-mx-supply = <&S7B>;
