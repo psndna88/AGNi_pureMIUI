@@ -2232,6 +2232,20 @@
 					output-high;
 				};
 			};
+
+			pri_tdm_clk_low_active: pri_tdm_clk_low_active {
+				mux {
+					pins = "gpio97";
+					function = "mi2s0_sck";
+				};
+
+				config {
+					pins = "gpio97";
+					drive-strength = <4>;   /* modify for k9d 4 mA */
+					bias-disable;           /* NO PULL */
+					output-high;
+				};
+			};
 		};
 
 		pri_tdm_sync {
@@ -3029,6 +3043,7 @@
 				config {
 					pins = "gpio140";
 					bias-disable;
+					bias-pull-down;         /* PULL DOWN */
 					drive-strength = <2>;
 				};
 			};
