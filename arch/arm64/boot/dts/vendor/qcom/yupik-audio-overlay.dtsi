@@ -476,18 +476,23 @@
 	};
 };
 
+
 &q6core {
 	cdc_sec_mi2s_gpios: msm_cdc_pinctrl_sec {
+		status = "disabled";
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
+		/*
 		pinctrl-0 = <&sec_mi2s_sck_active &sec_mi2s_ws_active
 				&sec_mi2s_sd0_active>;
 		pinctrl-1 = <&sec_mi2s_sck_sleep &sec_mi2s_ws_sleep
 				&sec_mi2s_sd0_sleep>;
+		*/
 		#gpio-cells = <0>;
 	};
 };
 
+/*
 &dai_mi2s1_rx {
 	qcom,msm-mi2s-lines = <0>;
 };
@@ -495,6 +500,7 @@
 &dai_mi2s1_tx {
 	qcom,msm-mi2s-lines = <1>;
 };
+*/
 
 &adsp_loader {
 	nvmem-cells = <&adsp_variant>;
