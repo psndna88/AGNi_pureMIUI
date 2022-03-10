@@ -1603,7 +1603,7 @@ static void _sde_encoder_rc_restart_delayed(struct sde_encoder_virt *sde_enc,
 	else
 		lp = SDE_MODE_DPMS_ON;
 
-	if (lp == SDE_MODE_DPMS_LP2)
+	if ((lp == SDE_MODE_DPMS_LP1) || (lp == SDE_MODE_DPMS_LP2))
 		idle_pc_duration = IDLE_SHORT_TIMEOUT;
 	else
 		idle_pc_duration = IDLE_POWERCOLLAPSE_DURATION;
