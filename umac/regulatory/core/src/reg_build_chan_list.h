@@ -88,7 +88,29 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS
 reg_process_master_chan_list_ext(struct cur_regulatory_info *reg_info);
-#endif
+
+/**
+ * reg_get_6g_ap_master_chan_list() - Get  an ap  master channel list depending
+ * on * ap power type
+ * @ap_pwr_type: Power type (LPI/VLP/SP)
+ * @chan_list: Pointer to the channel list. The output channel list
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
+					  enum reg_6g_ap_type ap_pwr_type,
+					  struct regulatory_channel *chan_list);
+
+#else /* CONFIG_BAND_6GHZ */
+static inline QDF_STATUS
+reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
+			       enum reg_6g_ap_type ap_pwr_type,
+			       struct regulatory_channel *chan_list)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* CONFIG_BAND_6GHZ */
+
 /**
  * reg_process_master_chan_list() - Compute master channel list based on the
  * regulatory rules.
