@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -5100,6 +5101,9 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	}
 
 	if (++mi2s_intf_conf[index].ref_cnt == 1) {
+		/* Check if msm needs to provide the clock to the interface */
+		if (!mi2s_intf_conf[index].msm_is_mi2s_master)
+			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
@@ -5122,11 +5126,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			atomic_inc(&(pdata->mi2s_gpio_ref_count[index]));
 		}
 	}
-	/* Check if msm needs to provide the clock to the interface */
-	if (!mi2s_intf_conf[index].msm_is_mi2s_master) {
-		mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
+	if (!mi2s_intf_conf[index].msm_is_mi2s_master)
 		fmt = SND_SOC_DAIFMT_CBM_CFM;
-	}
 	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
 	if (ret < 0) {
 		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
@@ -6840,6 +6841,17 @@ static struct snd_soc_dai_link msm_wsa_cdc_dma_be_dai_links[] = {
 		.ignore_suspend = 1,
 		.ops = &msm_cdc_dma_be_ops,
 		SND_SOC_DAILINK_REG(wsa_dma_tx1),
+	},
+	{
+		.name = LPASS_BE_WSA_CDC_DMA_TX_0_VI,
+		.stream_name = "WSA CDC DMA0 Capture",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.id = MSM_BACKEND_DAI_WSA_CDC_DMA_TX_0,
+		.be_hw_params_fixup = msm_be_hw_params_fixup,
+		.ignore_suspend = 1,
+		.ops = &msm_cdc_dma_be_ops,
+		SND_SOC_DAILINK_REG(wsa_dma_tx0_vi),
 	},
 };
 

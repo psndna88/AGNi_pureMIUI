@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/slab.h>
 #include <linux/debugfs.h>
@@ -9792,7 +9793,6 @@ static int afe_set_lpass_clk_cfg_ext_mclk(int index, struct afe_clk_set *cfg,
 	dyn_mclk_cfg.clk_id = cfg->clk_id;
 	dyn_mclk_cfg.clk_attri = cfg->clk_attri;
 	dyn_mclk_cfg.enable = cfg->enable;
-
 	pr_debug("%s: Minor version =0x%x clk id = %d\n", __func__,
 		dyn_mclk_cfg.clk_set_minor_version, dyn_mclk_cfg.clk_id);
 	pr_debug("%s: clk freq (Hz) = %d, clk attri = 0x%x\n", __func__,
@@ -9830,6 +9830,83 @@ stop_mclk:
 
 	return ret;
 }
+
+int afe_set_lpass_clk_cfg_ext_mclk_v2(int index, struct afe_param_id_clock_set_v2_t *dyn_mclk_cfg,
+							uint32_t mclk_freq)
+{
+	struct param_hdr_v3 param_hdr;
+	int ret = 0;
+
+	if (!dyn_mclk_cfg) {
+		pr_err("%s: clock cfg is NULL\n", __func__);
+		ret = -EINVAL;
+		return ret;
+	}
+
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: index[%d] invalid!\n", __func__, index);
+		return -EINVAL;
+	}
+
+	memset(&param_hdr, 0, sizeof(param_hdr));
+	param_hdr.module_id = AFE_MODULE_CLOCK_SET;
+	param_hdr.instance_id = INSTANCE_ID_0;
+	param_hdr.param_id = AFE_PARAM_ID_CLOCK_SET_V2;
+	param_hdr.param_size = sizeof(struct afe_param_id_clock_set_v2_t);
+
+	if (afe_ext_mclk.ext_mclk_cb) {
+		ret =  afe_ext_mclk.ext_mclk_cb(afe_ext_mclk.private_data,
+			dyn_mclk_cfg->enable, mclk_freq, dyn_mclk_cfg);
+		if (ret) {
+			pr_err_ratelimited("%s: get mclk cfg failed %d\n",
+					__func__, ret);
+			return ret;
+		}
+	} else {
+		pr_err_ratelimited("%s: mclk callback not registered\n", __func__);
+		return -EINVAL;
+	}
+
+	dyn_mclk_cfg->clk_set_minor_version = 1;
+
+	pr_debug("%s: Minor version =0x%x clk id = %d\n", __func__,
+		dyn_mclk_cfg->clk_set_minor_version, dyn_mclk_cfg->clk_id);
+	pr_debug("%s: clk freq (Hz) = %d, clk attri = 0x%x\n", __func__,
+		dyn_mclk_cfg->clk_freq_in_hz, dyn_mclk_cfg->clk_attri);
+	pr_debug("%s: clk root = 0x%x clk enable = 0x%x\n", __func__,
+		dyn_mclk_cfg->clk_root, dyn_mclk_cfg->enable);
+	pr_debug("%s: divider_2x =%d m = %d n = %d, d =%d\n", __func__,
+		dyn_mclk_cfg->divider_2x, dyn_mclk_cfg->m, dyn_mclk_cfg->n,
+		dyn_mclk_cfg->d);
+
+	ret = afe_q6_interface_prepare();
+	if (ret != 0) {
+		pr_err_ratelimited("%s: Q6 interface prepare failed %d\n",
+				__func__, ret);
+		goto stop_mclk;
+	}
+
+	mutex_lock(&this_afe.afe_cmd_lock);
+	ret = q6afe_svc_pack_and_set_param_in_band(index, param_hdr,
+						   (u8 *) dyn_mclk_cfg);
+	if (ret < 0)
+		pr_err_ratelimited("%s: ext MCLK clk cfg failed with ret %d\n",
+				__func__, ret);
+
+	mutex_unlock(&this_afe.afe_cmd_lock);
+
+	if (ret >= 0)
+		return ret;
+
+stop_mclk:
+	if (afe_ext_mclk.ext_mclk_cb && dyn_mclk_cfg->enable) {
+		afe_ext_mclk.ext_mclk_cb(afe_ext_mclk.private_data,
+				dyn_mclk_cfg->enable, mclk_freq, dyn_mclk_cfg);
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(afe_set_lpass_clk_cfg_ext_mclk_v2);
 
 /**
  * afe_set_lpass_clk_cfg - Set AFE clk config

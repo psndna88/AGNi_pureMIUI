@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -7065,6 +7066,9 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	if (++mi2s_intf_conf[index].ref_cnt == 1) {
 		if (data_format == AFE_DSD_DATA)
 			fmt = SND_SOC_DAIFMT_CBM_CFS;
+		/* Check if msm needs to provide the clock to the interface */
+		if (!mi2s_intf_conf[index].msm_is_mi2s_master)
+			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
@@ -7101,11 +7105,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 			}
 		}
 	}
-	/* Check if msm needs to provide the clock to the interface */
-	if (!mi2s_intf_conf[index].msm_is_mi2s_master) {
-		mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
+	if (!mi2s_intf_conf[index].msm_is_mi2s_master)
 		fmt = SND_SOC_DAIFMT_CBM_CFM;
-	}
 	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
 	if (ret < 0) {
 		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",

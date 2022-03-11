@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -180,6 +181,81 @@ static int msm_routing_send_device_pp_params(int port_id,  int copp_idx,
 
 static void msm_routing_load_topology(size_t data_size, void *data);
 static void msm_routing_unload_topology(uint32_t topology_id);
+
+static int pcm_soft_volume_ctl_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = SOFT_VOLUME_CURVE_ENUM_MAX;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = INT_MAX;
+	return 0;
+}
+
+static void pcm_soft_volume_ctl_private_free(struct snd_kcontrol *kcontrol)
+{
+	struct snd_pcm_volume *info = snd_kcontrol_chip(kcontrol);
+
+	kfree(info);
+}
+
+int snd_pcm_add_soft_volume_ctls(struct snd_pcm *pcm, int stream,
+			   const struct snd_pcm_soft_vol_usr_elem *soft_vol_params,
+			   unsigned long private_value,
+			   struct snd_pcm_soft_volume **info_ret)
+{
+	int err = 0;
+	int size = 0;
+	struct snd_pcm_soft_volume *info;
+	struct snd_kcontrol_new knew = {
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |
+			SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = pcm_soft_volume_ctl_info,
+	};
+
+	info = kzalloc(sizeof(*info), GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+	info->pcm = pcm;
+	info->stream = stream;
+	info->usr_val = soft_vol_params;
+	size = sizeof("Playback ") + sizeof("Soft Vol Params") +
+		STRING_LENGTH_OF_INT*sizeof(char) + 1;
+	knew.name = kzalloc(size, GFP_KERNEL);
+	if (!knew.name) {
+		kfree(info);
+		return -ENOMEM;
+	}
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Playback ", pcm->device, "Soft Vol Params");
+	else
+		snprintf((char *)knew.name, size, "%s %d %s",
+			"Capture", pcm->device, "Soft Vol Params");
+	knew.device = pcm->device;
+	knew.count = pcm->streams[stream].substream_count;
+	knew.private_value = private_value;
+	info->kctl = snd_ctl_new1(&knew, info);
+	if (!info->kctl) {
+		kfree(info);
+		kfree(knew.name);
+		return -ENOMEM;
+	}
+	info->kctl->private_free = pcm_soft_volume_ctl_private_free;
+	err = snd_ctl_add(pcm->card, info->kctl);
+	if (err < 0) {
+		kfree(info);
+		kfree(knew.name);
+		return -ENOMEM;
+	}
+	if (info_ret)
+		*info_ret = info;
+	kfree(knew.name);
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_pcm_add_soft_volume_ctls);
 
 #ifndef SND_PCM_ADD_VOLUME_CTL
 static int pcm_volume_ctl_info(struct snd_kcontrol *kcontrol,
@@ -1283,6 +1359,30 @@ static bool is_mm_lsm_fe_id(int fe_id)
 	return rc;
 }
 
+static int get_copp_perf_mode(int fe_id, int sess_type, int port)
+{
+	int fdai_mode, copp_perf_mode, flag, value;
+	int rc = 0;
+
+	if ((fe_id < 0) || (fe_id >= MSM_FRONTEND_DAI_MAX) ||
+		(port < 0) || (port >= MSM_BACKEND_DAI_MAX) ||
+		(sess_type != SESSION_TYPE_RX && sess_type != SESSION_TYPE_TX)) {
+			pr_err("%s: Input out of bounds\n", __func__);
+			return rc;
+		}
+	fdai_mode = fe_dai_map[fe_id][sess_type].perf_mode;
+	copp_perf_mode = fe_dai_app_type_cfg[fe_id][sess_type][port].copp_perf_mode;
+	flag = (copp_perf_mode & PP_PERF_MODE_FLAG_MASK);
+	value = (copp_perf_mode & PP_PERF_MODE_VALUE_MASK);
+	rc = fdai_mode;
+	if ((flag != 0) && (value >= LEGACY_PCM_MODE) &&
+		(value <= ULL_POST_PROCESSING_PCM_MODE)) {
+			rc = value;
+	}
+	pr_debug("%s: Get copp_perf_mode = %d", __func__, rc);
+	return rc;
+}
+
 /*
  * msm_pcm_routing_send_chmix_cfg:
  *	send the channel mixer command to mix the input channels
@@ -1476,11 +1576,11 @@ int msm_pcm_routing_reg_stream_app_type_cfg(
 	}
 
 	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d,"
-		"sample_rate %d, copp_token %d, bit_width %d\n",
+		"sample_rate %d, copp_token %d, bit_width %d, copp_perf_mode %d\n",
 		__func__, fedai_id, session_type, be_id,
 		cfg_data->app_type, cfg_data->acdb_dev_id,
 		cfg_data->sample_rate, cfg_data->copp_token,
-		cfg_data->bit_width);
+		cfg_data->bit_width, cfg_data->copp_perf_mode);
 
 	if (!is_mm_lsm_fe_id(fedai_id)) {
 		pr_err("%s: Invalid machine driver ID %d\n",
@@ -1564,11 +1664,11 @@ int msm_pcm_routing_get_stream_app_type_cfg(
 	*bedai_id = be_id;
 	*cfg_data = fe_dai_app_type_cfg[fedai_id][session_type][be_id];
 	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d,"
-		"sample_rate %d, copp_token %d, bit_width %d\n",
+		"sample_rate %d, copp_token %d, bit_width %d, copp_perf_mode %d\n",
 		__func__, fedai_id, session_type, *bedai_id,
 		cfg_data->app_type, cfg_data->acdb_dev_id,
 		cfg_data->sample_rate, cfg_data->copp_token,
-		cfg_data->bit_width);
+		cfg_data->bit_width, cfg_data->copp_perf_mode);
 done:
 	return ret;
 }
@@ -1906,6 +2006,7 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 	u16 bit_width = 16, be_bit_width;
 	bool is_lsm;
 	uint32_t copp_token = 0;
+	int copp_perf_mode = 0;
 
 	pr_debug("%s:fe_id[%d] perf_mode[%d] id[%d] stream_type[%d] passt[%d]",
 		 __func__, fe_id, perf_mode, dspst_id,
@@ -1999,6 +2100,7 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 			}
 			acdb_dev_id =
 			fe_dai_app_type_cfg[fe_id][session_type][i].acdb_dev_id;
+			copp_perf_mode = get_copp_perf_mode(fe_id, session_type, i);
 			topology = msm_routing_get_adm_topology(fe_id,
 								session_type,
 								i);
@@ -2020,7 +2122,7 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 						SNDRV_PCM_FORMAT_S32_LE);
 			copp_idx =
 				adm_open(port_id, path_type, sample_rate,
-					 channels, topology, perf_mode,
+					 channels, topology, copp_perf_mode,
 					 bit_width, app_type, acdb_dev_id,
 					 session_type, passthr_mode, copp_token);
 			if ((copp_idx < 0) ||
@@ -2308,6 +2410,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 	uint32_t passthr_mode = LEGACY_PCM;
 	int ret = 0;
 	uint32_t copp_token = 0;
+	int copp_perf_mode = 0;
 
 	if (fedai_id >= MSM_FRONTEND_DAI_MM_MAX_ID) {
 		/* bad ID assigned in machine driver */
@@ -2380,7 +2483,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 								i);
 			be_bit_width = msm_routing_get_bit_width(
                                                 msm_bedais[i].format);
-
+			copp_perf_mode = get_copp_perf_mode(fedai_id, session_type, i);
 			if (hifi_filter_enabled && (msm_bedais[i].sample_rate ==
                                 384000 ||msm_bedais[i].sample_rate == 352800)
 				&& be_bit_width == 32)
@@ -2403,7 +2506,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 
 				copp_idx = adm_open_v2(port_id, path_type,
 						sample_rate, channels, topology,
-						perf_mode, bits_per_sample,
+						copp_perf_mode, bits_per_sample,
 						app_type, acdb_dev_id,
 						session_type, passthr_mode,
 						copp_token,
@@ -2414,7 +2517,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 			} else
 				copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
-					    perf_mode, bits_per_sample,
+					    copp_perf_mode, bits_per_sample,
 					    app_type, acdb_dev_id,
 					    session_type, passthr_mode, copp_token);
 			if ((copp_idx < 0) ||
@@ -2495,6 +2598,7 @@ void msm_pcm_routing_dereg_phy_stream(int fedai_id, int stream_type)
 {
 	int i, port_type, session_type, path_type, topology, port_id;
 	struct msm_pcm_routing_fdai_data *fdai;
+	int copp_perf_mode;
 
 	if (!is_mm_lsm_fe_id(fedai_id)) {
 		/* bad ID assigned in machine driver */
@@ -2536,7 +2640,8 @@ void msm_pcm_routing_dereg_phy_stream(int fedai_id, int stream_type)
 			topology = adm_get_topology_for_port_copp_idx(
 					port_id, idx);
 			msm_routing_unload_topology(topology);
-			adm_close(port_id, fdai->perf_mode, idx);
+			copp_perf_mode = get_copp_perf_mode(fedai_id, session_type, i);
+			adm_close(port_id, copp_perf_mode, idx);
 			pr_debug("%s:copp:%ld,idx bit fe:%d,type:%d,be:%d\n",
 				 __func__, copp, fedai_id, session_type, i);
 			clear_bit(idx,
@@ -2580,6 +2685,7 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 	uint32_t passthr_mode;
 	bool is_lsm;
 	uint32_t copp_token = 0;
+	int copp_perf_mode = 0;
 
 	pr_debug("%s: reg %x val %x set %x\n", __func__, reg, val, set);
 
@@ -2694,6 +2800,7 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 
 			be_bit_width = msm_routing_get_bit_width(
                                                 msm_bedais[reg].format);
+			copp_perf_mode = get_copp_perf_mode(val, session_type, reg);
 			if (hifi_filter_enabled && (msm_bedais[reg].sample_rate
 				== 384000 ||msm_bedais[reg].sample_rate ==
 				352800) && be_bit_width == 32)
@@ -2701,7 +2808,7 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 							SNDRV_PCM_FORMAT_S32_LE);
 			copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
-					    fdai->perf_mode, bits_per_sample,
+					    copp_perf_mode, bits_per_sample,
 					    app_type, acdb_dev_id,
 					    session_type, passthr_mode, copp_token);
 			if ((copp_idx < 0) ||
@@ -2762,7 +2869,8 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 			topology = adm_get_topology_for_port_copp_idx(port_id,
 								      idx);
 			msm_routing_unload_topology(topology);
-			adm_close(port_id, fdai->perf_mode, idx);
+			copp_perf_mode = get_copp_perf_mode(val, session_type, reg);
+			adm_close(port_id, copp_perf_mode, idx);
 			pr_debug("%s: copp: %ld, reset idx bit fe:%d, type: %d, be:%d topology=0x%x\n",
 				 __func__, copp, val, session_type, reg,
 				 topology);
@@ -26487,6 +26595,10 @@ static const struct snd_kcontrol_new mmul17_mixer_controls[] = {
 	MSM_BACKEND_DAI_USB_TX,
 	MSM_FRONTEND_DAI_MULTIMEDIA17, 1, 0, msm_routing_get_audio_mixer,
 	msm_routing_put_audio_mixer),
+	SOC_DOUBLE_EXT("TERT_TDM_TX_0", SND_SOC_NOPM,
+	MSM_BACKEND_DAI_TERT_TDM_TX_0,
+	MSM_FRONTEND_DAI_MULTIMEDIA17, 1, 0, msm_routing_get_audio_mixer,
+	msm_routing_put_audio_mixer),
 };
 
 static const struct snd_kcontrol_new mmul18_mixer_controls[] = {
@@ -38392,6 +38504,8 @@ static const struct snd_soc_dapm_route intercon_tdm[] = {
 	{"MultiMedia10 Mixer", "QUAT_TDM_TX_2", "QUAT_TDM_TX_2"},
 	{"MultiMedia10 Mixer", "QUAT_TDM_TX_3", "QUAT_TDM_TX_3"},
 
+	{"MultiMedia17 Mixer", "TERT_TDM_TX_0", "TERT_TDM_TX_0"},
+
 	{"MultiMedia20 Mixer", "PRI_TDM_TX_0", "PRI_TDM_TX_0"},
 	{"MultiMedia20 Mixer", "PRI_TDM_TX_1", "PRI_TDM_TX_1"},
 	{"MultiMedia20 Mixer", "PRI_TDM_TX_2", "PRI_TDM_TX_2"},
@@ -41323,6 +41437,7 @@ static int msm_pcm_routing_close(struct snd_pcm_substream *substream)
 	int i, session_type, path_type, topology;
 	struct msm_pcm_routing_bdai_data *bedai;
 	struct msm_pcm_routing_fdai_data *fdai;
+	int copp_perf_mode;
 
 	pr_debug("%s: substream->pcm->id:%s\n",
 		 __func__, substream->pcm->id);
@@ -41364,7 +41479,8 @@ static int msm_pcm_routing_close(struct snd_pcm_substream *substream)
 			topology = adm_get_topology_for_port_copp_idx(port_id,
 								     idx);
 			msm_routing_unload_topology(topology);
-			adm_close(port_id, fdai->perf_mode, idx);
+			copp_perf_mode = get_copp_perf_mode(i, session_type, be_id);
+			adm_close(port_id, copp_perf_mode, idx);
 			pr_debug("%s: copp:%ld,idx bit fe:%d, type:%d,be:%d topology=0x%x\n",
 				 __func__, copp, i, session_type, be_id,
 				 topology);
@@ -41399,6 +41515,7 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 	struct media_format_info voc_be_media_format;
 	bool is_lsm;
 	uint32_t copp_token = 0;
+	int copp_perf_mode = 0;
 
 	pr_debug("%s: substream->pcm->id:%s\n",
 		 __func__, substream->pcm->id);
@@ -41509,7 +41626,7 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 
 			be_bit_width = msm_routing_get_bit_width(
                                                 bedai->format);
-
+			copp_perf_mode = get_copp_perf_mode(i, session_type, be_id);
 			if (hifi_filter_enabled && (bedai->sample_rate == 384000
 				|| bedai->sample_rate == 352800) &&
 				be_bit_width == 32)
@@ -41517,7 +41634,7 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 							SNDRV_PCM_FORMAT_S32_LE);
 			copp_idx = adm_open(port_id, path_type,
 					    sample_rate, channels, topology,
-					    fdai->perf_mode, bits_per_sample,
+					    copp_perf_mode, bits_per_sample,
 					    app_type, acdb_dev_id,
 					    session_type, fdai->passthr_mode, copp_token);
 			if ((copp_idx < 0) ||

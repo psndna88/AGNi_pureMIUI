@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
  * Copyright 2011, The Android Open Source Project
@@ -7427,6 +7428,9 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	intf_conf = &pdata->mi2s_intf_conf[index];
 	mutex_lock(&intf_conf->lock);
 	if (++intf_conf->ref_cnt == 1) {
+		/* Check if msm needs to provide the clock to the interface */
+		if (!intf_conf->msm_is_mi2s_master)
+			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
@@ -7444,11 +7448,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 					__func__, ret_pinctrl);
 		}
 	}
-	/* Check if msm needs to provide the clock to the interface */
-	if (!intf_conf->msm_is_mi2s_master) {
-		mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
+	if (!intf_conf->msm_is_mi2s_master)
 		fmt = SND_SOC_DAIFMT_CBM_CFM;
-	}
 	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
 	if (ret < 0) {
 		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
