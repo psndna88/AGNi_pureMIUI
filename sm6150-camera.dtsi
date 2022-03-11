@@ -7,6 +7,11 @@
 		status = "ok";
 	};
 
+	qcom,cam-sync {
+		compatible = "qcom,cam-sync";
+		status = "ok";
+	};
+
 	cam_csiphy0: qcom,csiphy@ac65000 {
 		cell-index = <0>;
 		compatible = "qcom,csiphy-v2.0", "qcom,csiphy";
@@ -118,7 +123,7 @@
 
 	cam_cci: qcom,cci@ac4a000 {
 		cell-index = <0>;
-		compatible = "qcom,cci";
+		compatible = "qcom,cci", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0xac4a000 0x4000>;
@@ -129,21 +134,19 @@
 		status = "ok";
 		gdscr-supply = <&titan_top_gdsc>;
 		regulator-names = "gdscr";
-		clocks = <&camcc CAM_CC_CAMNOC_AXI_CLK>,
-			<&camcc CAM_CC_SOC_AHB_CLK>,
+		clocks =<&camcc CAM_CC_SOC_AHB_CLK>,
 			<&camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&camcc CAM_CC_CPAS_AHB_CLK>,
 			<&camcc CAM_CC_CCI_CLK>,
 			<&camcc CAM_CC_CCI_CLK_SRC>;
-		clock-names = "camnoc_axi_clk",
-			"soc_ahb_clk",
+		clock-names ="soc_ahb_clk",
 			"slow_ahb_src_clk",
 			"cpas_ahb_clk",
 			"cci_clk",
 			"cci_clk_src";
 		src-clock-name = "cci_clk_src";
 		clock-cntl-level = "lowsvs";
-		clock-rates = <0 0 0 0 0 37500000>;
+		clock-rates = <0 0 0 0 37500000>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cci0_active &cci1_active>;
 		pinctrl-1 = <&cci0_suspend &cci1_suspend>;
@@ -220,7 +223,7 @@
 	};
 
 	qcom,cam_smmu {
-		compatible = "qcom,msm-cam-smmu";
+		compatible = "qcom,msm-cam-smmu", "simple-bus" ;
 		status = "ok";
 
 		msm_cam_smmu_ife {
@@ -228,7 +231,7 @@
 			iommus = <&apps_smmu 0x820 0x0>,
 				<&apps_smmu 0x840 0x0>,
 				<&apps_smmu 0x860 0x0>;
-			label = "ife";
+			cam-smmu-label = "ife";
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -245,7 +248,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x0cc0 0x0>,
 				<&apps_smmu 0x0d40 0x0>;
-			label = "lrme";
+			cam-smmu-label = "lrme";
 			lrme_iova_mem_map: iova-mem-map {
 				iova-mem-region-shared {
 					/* Shared region is 100MB long */
@@ -270,7 +273,7 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0xd80 0x20>,
 				<&apps_smmu  0xda0 0x20>;
-			label = "jpeg";
+			cam-smmu-label = "jpeg";
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 3.4 GB */
 				iova-mem-region-io {
@@ -285,7 +288,7 @@
 
 		msm_cam_icp_fw {
 			compatible = "qcom,msm-cam-smmu-fw-dev";
-			label="icp";
+			cam-smmu-label="icp";
 			memory-region = <&pil_camera_mem>;
 		};
 
@@ -296,7 +299,8 @@
 				<&apps_smmu 0x0ca0 0x0>,
 				<&apps_smmu 0x0d00 0x0>,
 				<&apps_smmu 0x0d20 0x0>;
-			label = "icp";
+			cam-smmu-label = "icp";
+			qcom,iommu-dma-addr-pool = <0x10C00000 0xCF300000>;
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
 					/* Firmware region is 5MB */
@@ -349,9 +353,8 @@
 
 		msm_cam_smmu_cpas_cdm {
 			compatible = "qcom,msm-cam-smmu-cb";
-			iommus = <&apps_smmu 0x0c00 0x0>,
-				<&apps_smmu 0x0c01 0x0>;
-			label = "cpas-cdm0";
+			iommus = <&apps_smmu 0x0c00 0x0>;
+			cam-smmu-label = "cpas-cdm";
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 3.4 GB */
@@ -366,14 +369,14 @@
 
 		msm_cam_smmu_secure {
 			compatible = "qcom,msm-cam-smmu-cb";
-			label = "cam-secure";
+			cam-smmu-label = "cam-secure";
 			qcom,secure-cb;
 		};
 	};
 
-	qcom,cam-cpas@ac40000 {
+	cam_cpas:qcom,cam-cpas@ac40000 {
 		cell-index = <0>;
-		compatible = "qcom,cam-cpas";
+		compatible = "qcom,cam-cpas", "simple-bus";
 		label = "cpas";
 		arch-compat = "cpas_top";
 		status = "ok";
@@ -410,13 +413,18 @@
 		clock-cntl-level = "suspend", "minsvs", "lowsvs", "svs",
 			"svs_l1", "nominal", "turbo";
 		qcom,cam-cx-ipeak = <&cx_ipeak_lm 2>;
+
+		control-camnoc-axi-clk;
+		camnoc-bus-width = <32>;
+		camnoc-axi-clk-bw-margin-perc = <20>;
 		interconnect-names = "cam_ahb";
-		cam-ahb-num-cases = <7>;
 		interconnects =<&gem_noc MASTER_APPSS_PROC
 			&config_noc SLAVE_CAMERA_CFG>;
+		rpmh-bcm-info = <12 0x4 0x800 0 4>;
+		cam-ahb-num-cases = <8>;
 		cam-ahb-bw-KBps =
 			<0 0>, <0 76500>, <0 76500>, <0 150000>, <0 150000>,
-			<0 300000>, <0 300000>;
+			<0 300000>, <0 300000>, <0 300000>;
 		vdd-corners = <RPMH_REGULATOR_LEVEL_RETENTION
 			RPMH_REGULATOR_LEVEL_MIN_SVS
 			RPMH_REGULATOR_LEVEL_LOW_SVS
@@ -438,33 +446,39 @@
 			"ife0", "ife1", "ife2", "ipe0",
 			"ipe1", "cam-cdm-intf0", "cpas-cdm0", "bps0",
 			"icp0", "jpeg-dma0", "jpeg-enc0", "lrmecpas0";
-			client-axi-port-names =
-			"cam_hf_1", "cam_hf_2", "cam_hf_2", "cam_sf_1",
-			"cam_hf_1", "cam_hf_2", "cam_hf_2",
-			"cam_hf_1", "cam_hf_2", "cam_hf_2", "cam_sf_1",
-			"cam_sf_1", "cam_sf_1", "cam_sf_1", "cam_sf_1",
-			"cam_sf_1", "cam_sf_1", "cam_sf_1", "cam_sf_1";
-		client-bus-camnoc-based;
 		camera-bus-nodes {
-			level3-nodes {
-				level-index = <3>;
-				level3_rt0_rd_wr_sum: level3-rt0-rd-wr-sum {
+			level2-nodes {
+				level-index = <2>;
+				level2_rt0_rd_wr_sum: level2-rt0-rd-wr-sum {
 					cell-index = <0>;
-					node-name = "level3-rt0-rd-wr-sum";
+					node-name = "level2-rt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
 					ib-bw-voting-needed;
 					qcom,axi-port-mnoc {
-						interconnect-names = "cam_hf_0";
+						interconnect-names = "cam_hf_0_mnoc";
 						interconnects =
 						<&mmss_noc MASTER_CAMNOC_HF0
 						&mc_virt SLAVE_EBI1>;
 					};
 				};
-
-				level3_nrt0_rd_wr_sum: level3-nrt0-rd-wr-sum {
+				level2_rt1_rd_wr_sum: level2-rt1-rd-wr-sum {
 					cell-index = <1>;
-					node-name = "level3-nrt0-rd-wr-sum";
+					node-name = "level2-rt1-rd-wr-sum";
+					traffic-merge-type =
+					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
+					ib-bw-voting-needed;
+					qcom,axi-port-mnoc {
+						interconnect-names = "cam_hf_1_mnoc";
+						interconnects =
+						<&mmss_noc MASTER_CAMNOC_HF1
+						&mc_virt SLAVE_EBI1>;
+					};
+				};
+
+				level2_nrt0_rd_wr_sum: level2-nrt0-rd-wr-sum {
+					cell-index = <2>;
+					node-name = "level2-nrt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
 					qcom,axi-port-mnoc {
@@ -474,140 +488,40 @@
 						&mc_virt SLAVE_EBI1>;
 					};
 				};
-
-			};
-
-			level2-nodes {
-				level-index = <2>;
-				camnoc-max-needed;
-				level2_rt0_wr: level2-rt0-wr {
-					cell-index = <2>;
-					node-name = "level2-rt0-wr";
-					parent-node = <&level3_rt0_rd_wr_sum>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
-				};
-
-				level2_rt0_rd: level2-rt0-rd {
-					cell-index = <3>;
-					node-name = "level2-rt0-rd";
-					parent-node = <&level3_rt0_rd_wr_sum>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
-				};
-
-				level2_nrt0_wr: level2-nrt0-wr {
-					cell-index = <4>;
-					node-name = "level2-nrt0-wr";
-					parent-node = <&level3_nrt0_rd_wr_sum>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
-				};
-
-				level2_nrt0_rd: level2-nrt0-rd {
-					cell-index = <5>;
-					node-name = "level2-nrt0-rd";
-					parent-node = <&level3_nrt0_rd_wr_sum>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
-				};
 			};
 
 			level1-nodes {
 				level-index = <1>;
 				camnoc-max-needed;
-				level1_rt0_wr0: level1-rt0-wr0 {
-					cell-index = <6>;
-					node-name = "level1-rt0-wr0";
-					parent-node = <&level2_rt0_wr>;
+				level1_rt0_rd_wr0: level1-rt0-rd-wr0 {
+					cell-index = <3>;
+					node-name = "level1-rt0-rd-wr0";
+					parent-node = <&level2_rt0_rd_wr_sum>;
 					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
+					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
 				};
 
-				level1_rt0_wr1: level1-rt0-wr1 {
-					cell-index = <7>;
-					node-name = "level1-rt0-wr1";
-					parent-node = <&level2_rt0_wr>;
+				level1_rt1_rd_wr0: level1-rt1-rd-wr0 {
+					cell-index = <4>;
+					node-name = "level1-rt1-rd-wr1";
+					parent-node = <&level2_rt1_rd_wr_sum>;
 					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
+					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
 				};
 
-				level1_rt0_rd0: level1-rt0-rd0 {
-					cell-index = <8>;
-					node-name = "level1-rt0-rd0";
-					parent-node = <&level2_rt0_rd>;
+				level1_nrt0_rd_wr0: level1-nrt0-rd-wr0 {
+					cell-index = <5>;
+					node-name = "level1-nrt0-rd-wr0";
+					parent-node = <&level2_nrt0_rd_wr_sum>;
 					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_rt0_wr2: level1-rt0-wr2 {
-					cell-index = <9>;
-					node-name = "level1-rt0-wr2";
-					parent-node = <&level2_rt0_wr>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_rt0_wr3: level1-rt0-wr3 {
-					cell-index = <10>;
-					node-name = "level1-rt0-wr3";
-					parent-node = <&level2_rt0_wr>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_nrt0_wr0: level1-nrt0-wr0 {
-					cell-index = <11>;
-					node-name = "level1-nrt0-wr0";
-					parent-node = <&level2_nrt0_wr>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_nrt0_rd0: level1-nrt0-rd0 {
-					cell-index = <12>;
-					node-name = "level1-nrt0-rd0";
-					parent-node = <&level2_nrt0_rd>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_nrt0_wr1: level1-nrt0-wr1 {
-					cell-index = <13>;
-					node-name = "level1-nrt0-wr1";
-					parent-node = <&level2_nrt0_wr>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-				};
-
-				level1_nrt0_rd1: level1-nrt0-rd1 {
-					cell-index = <14>;
-					node-name = "level1-nrt0-rd2";
-					parent-node = <&level2_nrt0_rd>;
-					traffic-merge-type =
-					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
+					<CAM_CPAS_TRAFFIC_MERGE_SUM_INTERLEAVE>;
 				};
 			};
 
 			level0-nodes {
 				level-index = <0>;
-				ife2_ubwc_stats_wr: ife2-ubwc-stats-wr {
-					cell-index = <15>;
-					node-name = "ife2-ubwc-stats-wr";
-					client-name = "ife2";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_IFE_UBWC_STATS>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_WRITE>;
-					constituent-paths =
-					<CAM_CPAS_PATH_DATA_IFE_VID
-					CAM_CPAS_PATH_DATA_IFE_DISP
-					CAM_CPAS_PATH_DATA_IFE_STATS>;
-					parent-node = <&level2_rt0_wr>;
-				};
-
 				ife0_ubwc_stats_wr: ife0-ubwc-stats-wr {
-					cell-index = <16>;
+					cell-index = <6>;
 					node-name = "ife0-ubwc-stats-wr";
 					client-name = "ife0";
 					traffic-data =
@@ -618,11 +532,11 @@
 					<CAM_CPAS_PATH_DATA_IFE_VID
 					CAM_CPAS_PATH_DATA_IFE_DISP
 					CAM_CPAS_PATH_DATA_IFE_STATS>;
-					parent-node = <&level1_rt0_wr0>;
+					parent-node = <&level1_rt0_rd_wr0>;
 				};
 
 				ife1_ubwc_stats_wr: ife1-ubwc-stats-wr {
-					cell-index = <17>;
+					cell-index = <7>;
 					node-name = "ife1-ubwc-stats-wr";
 					client-name = "ife1";
 					traffic-data =
@@ -633,11 +547,11 @@
 					<CAM_CPAS_PATH_DATA_IFE_VID
 					CAM_CPAS_PATH_DATA_IFE_DISP
 					CAM_CPAS_PATH_DATA_IFE_STATS>;
-					parent-node = <&level1_rt0_wr0>;
+					parent-node = <&level1_rt1_rd_wr0>;
 				};
 
 				ife0_linear_pdaf_wr: ife0-linear-pdaf-wr {
-					cell-index = <18>;
+					cell-index = <8>;
 					node-name = "ife0-linear-pdaf-wr";
 					client-name = "ife0";
 					traffic-data =
@@ -647,11 +561,11 @@
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_LINEAR
 					CAM_CPAS_PATH_DATA_IFE_PDAF>;
-					parent-node = <&level1_rt0_wr1>;
+					parent-node = <&level1_rt0_rd_wr0>;
 				};
 
 				ife1_linear_pdaf_wr: ife1-linear-pdaf-wr {
-					cell-index = <19>;
+					cell-index = <9>;
 					node-name = "ife1-linear-pdaf-wr";
 					client-name = "ife1";
 					traffic-data =
@@ -661,25 +575,28 @@
 					constituent-paths =
 					<CAM_CPAS_PATH_DATA_IFE_LINEAR
 					CAM_CPAS_PATH_DATA_IFE_PDAF>;
-					parent-node = <&level1_rt0_wr1>;
+					parent-node = <&level1_rt1_rd_wr0>;
 				};
 
-				ife2_linear_pdaf_wr: ife2-linear-pdaf-wr {
-					cell-index = <20>;
-					node-name = "ife2-linear-pdaf-wr";
+				ife2_rdi_all_wr: ife2-rdi-all-wr {
+					cell-index = <10>;
+					node-name = "ife2-rdi-all-wr";
 					client-name = "ife2";
 					traffic-data =
-					<CAM_CPAS_PATH_DATA_IFE_LINEAR_PDAF>;
+					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_WRITE>;
 					constituent-paths =
-					<CAM_CPAS_PATH_DATA_IFE_LINEAR
-					CAM_CPAS_PATH_DATA_IFE_PDAF>;
-					parent-node = <&level1_rt0_wr1>;
+					<CAM_CPAS_PATH_DATA_IFE_RDI0
+					CAM_CPAS_PATH_DATA_IFE_RDI1
+					CAM_CPAS_PATH_DATA_IFE_RDI2
+					CAM_CPAS_PATH_DATA_IFE_RDI3>;
+					parent-node = <&level2_rt1_rd_wr_sum>;
+
 				};
 
 				ife0_rdi_all_rd: ife0-rdi-all-rd {
-					cell-index = <21>;
+					cell-index = <11>;
 					node-name = "ife0-rdi-all-rd";
 					client-name = "ife0";
 					traffic-data =
@@ -691,11 +608,11 @@
 					CAM_CPAS_PATH_DATA_IFE_RDI1
 					CAM_CPAS_PATH_DATA_IFE_RDI2
 					CAM_CPAS_PATH_DATA_IFE_RDI3>;
-					parent-node = <&level1_rt0_rd0>;
+					parent-node = <&level1_rt0_rd_wr0>;
 				};
 
 				ife1_rdi_all_rd: ife1-rdi-all-rd {
-					cell-index = <22>;
+					cell-index = <12>;
 					node-name = "ife1-rdi-all-rd";
 					client-name = "ife1";
 					traffic-data =
@@ -707,91 +624,11 @@
 					CAM_CPAS_PATH_DATA_IFE_RDI1
 					CAM_CPAS_PATH_DATA_IFE_RDI2
 					CAM_CPAS_PATH_DATA_IFE_RDI3>;
-					parent-node = <&level1_rt0_rd0>;
-				};
-
-				ife2_rdi_all_rd: ife2-rdi-all-rd {
-					cell-index = <23>;
-					node-name = "ife2-rdi-all-rd";
-					client-name = "ife2";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_READ>;
-					constituent-paths =
-					<CAM_CPAS_PATH_DATA_IFE_RDI0
-					CAM_CPAS_PATH_DATA_IFE_RDI1
-					CAM_CPAS_PATH_DATA_IFE_RDI2
-					CAM_CPAS_PATH_DATA_IFE_RDI3>;
-					parent-node = <&level1_rt0_rd0>;
-				};
-
-				custom0_rd: custom0-rd {
-					cell-index = <24>;
-					node-name = "custom0-rd";
-					client-name = "custom0";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_rt0_rd0>;
-				};
-
-				custom1_rd: custom1-rd {
-					cell-index = <25>;
-					node-name = "custom1-rd";
-					client-name = "custom1";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_rt0_rd0>;
-				};
-
-				ife2_rdi_pixel_raw_wr: ife2-rdi-pixel-raw-wr {
-					cell-index = <26>;
-					node-name = "ife2-rdi-pixel-raw-wr";
-					client-name = "ife2";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_WRITE>;
-					constituent-paths =
-					<CAM_CPAS_PATH_DATA_IFE_RDI0
-					CAM_CPAS_PATH_DATA_IFE_RDI1
-					CAM_CPAS_PATH_DATA_IFE_RDI2
-					CAM_CPAS_PATH_DATA_IFE_PIXEL_RAW>;
-					parent-node = <&level1_rt0_wr2>;
-				};
-
-				ife4_rdi_all_wr: ife4-rdi-all-wr {
-					cell-index = <27>;
-					node-name = "ife4-rdi-all-wr";
-					client-name = "ife4";
-					traffic-data =
-					<CAM_CPAS_PATH_DATA_IFE_RDI_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_WRITE>;
-					constituent-paths =
-					<CAM_CPAS_PATH_DATA_IFE_RDI0
-					CAM_CPAS_PATH_DATA_IFE_RDI1
-					CAM_CPAS_PATH_DATA_IFE_RDI2
-					CAM_CPAS_PATH_DATA_IFE_RDI3>;
-					parent-node = <&level1_rt0_wr2>;
-				};
-
-				custom1_wr: custom1-wr {
-					cell-index = <28>;
-					node-name = "custom1-wr";
-					client-name = "custom1";
-					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_WRITE>;
-					parent-node = <&level1_rt0_wr2>;
+					parent-node = <&level1_rt1_rd_wr0>;
 				};
 
 				ife0_rdi_pixel_raw_wr: ife0-rdi-pixel-raw-wr {
-					cell-index = <29>;
+					cell-index = <13>;
 					node-name = "ife0-rdi-pixel-raw-wr";
 					client-name = "ife0";
 					traffic-data =
@@ -803,11 +640,11 @@
 					CAM_CPAS_PATH_DATA_IFE_RDI1
 					CAM_CPAS_PATH_DATA_IFE_RDI2
 					CAM_CPAS_PATH_DATA_IFE_PIXEL_RAW>;
-					parent-node = <&level1_rt0_wr3>;
+					parent-node = <&level1_rt0_rd_wr0>;
 				};
 
 				ife1_rdi_pixel_raw_wr: ife1-rdi-pixel-raw-wr {
-					cell-index = <30>;
+					cell-index = <14>;
 					node-name = "ife1-rdi-pixel-raw-wr";
 					client-name = "ife1";
 					traffic-data =
@@ -819,21 +656,11 @@
 					CAM_CPAS_PATH_DATA_IFE_RDI1
 					CAM_CPAS_PATH_DATA_IFE_RDI2
 					CAM_CPAS_PATH_DATA_IFE_PIXEL_RAW>;
-					parent-node = <&level1_rt0_wr3>;
-				};
-
-				custom0_wr: custom0-wr {
-					cell-index = <31>;
-					node-name = "custom0-wr";
-					client-name = "custom0";
-					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
-					traffic-transaction-type =
-					<CAM_CPAS_TRANSACTION_WRITE>;
-					parent-node = <&level1_rt0_wr3>;
+					parent-node = <&level1_rt1_rd_wr0>;
 				};
 
 				ipe0_all_wr: ipe0-all-wr {
-					cell-index = <32>;
+					cell-index = <15>;
 					node-name = "ipe0-all-wr";
 					client-name = "ipe0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
@@ -843,99 +670,145 @@
 					<CAM_CPAS_PATH_DATA_IPE_WR_VID
 					CAM_CPAS_PATH_DATA_IPE_WR_DISP
 					CAM_CPAS_PATH_DATA_IPE_WR_REF>;
-					parent-node = <&level1_nrt0_wr0>;
+					parent-node = <&level1_nrt0_rd_wr0>;
+				};
+				ipe1_all_wr: ipe1-all-wr {
+					cell-index = <16>;
+					node-name = "ipe1-all-wr";
+					client-name = "ipe1";
+					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
+					traffic-transaction-type =
+					<CAM_CPAS_TRANSACTION_WRITE>;
+					constituent-paths =
+					<CAM_CPAS_PATH_DATA_IPE_WR_VID
+					CAM_CPAS_PATH_DATA_IPE_WR_DISP
+					CAM_CPAS_PATH_DATA_IPE_WR_REF>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
+
 				bps0_all_wr: bps0-all-wr {
-					cell-index = <33>;
+					cell-index = <17>;
 					node-name = "bps0-all-wr";
 					client-name = "bps0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_WRITE>;
-					parent-node = <&level1_nrt0_wr0>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				ipe0_ref_rd: ipe0-ref-rd {
-					cell-index = <34>;
+					cell-index = <18>;
 					node-name = "ipe0-ref-rd";
 					client-name = "ipe0";
 					traffic-data =
 					<CAM_CPAS_PATH_DATA_IPE_RD_REF>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_nrt0_rd0>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
+				ipe1_ref_rd: ipe1-ref-rd {
+					cell-index = <19>;
+					node-name = "ipe1-ref-rd";
+					client-name = "ipe1";
+					traffic-data =
+					<CAM_CPAS_PATH_DATA_IPE_RD_REF>;
+					traffic-transaction-type =
+					<CAM_CPAS_TRANSACTION_READ>;
+					parent-node = <&level1_nrt0_rd_wr0>;
+				};
+
+
 				bps0_all_rd: bps0-all-rd {
-					cell-index = <35>;
+					cell-index = <20>;
 					node-name = "bps0-all-rd";
 					client-name = "bps0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_nrt0_rd0>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				ipe0_in_rd: ipe0-in-rd {
-					cell-index = <36>;
+					cell-index = <21>;
 					node-name = "ipe0-in-rd";
 					client-name = "ipe0";
 					traffic-data =
 					<CAM_CPAS_PATH_DATA_IPE_RD_IN>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level2_nrt0_rd>;
+					parent-node = <&level2_nrt0_rd_wr_sum>;
+				};
+				ipe1_in_rd: ipe1-in-rd {
+					cell-index = <22>;
+					node-name = "ipe1-in-rd";
+					client-name = "ipe1";
+					traffic-data =
+					<CAM_CPAS_PATH_DATA_IPE_RD_IN>;
+					traffic-transaction-type =
+					<CAM_CPAS_TRANSACTION_READ>;
+					parent-node = <&level2_nrt0_rd_wr_sum>;
 				};
 
+
 				jpeg_enc0_all_wr: jpeg-enc0-all-wr {
-					cell-index = <37>;
+					cell-index = <22>;
 					node-name = "jpeg-enc0-all-wr";
 					client-name = "jpeg-enc0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_WRITE>;
-					parent-node = <&level1_nrt0_wr1>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				jpeg_dma0_all_wr: jpeg-dma0-all-wr {
-					cell-index = <38>;
+					cell-index = <23>;
 					node-name = "jpeg-dma0-all-wr";
 					client-name = "jpeg-dma0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_WRITE>;
-					parent-node = <&level1_nrt0_wr1>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				jpeg_enc0_all_rd: jpeg-enc0-all-rd {
-					cell-index = <39>;
+					cell-index = <24>;
 					node-name = "jpeg-enc0-all-rd";
 					client-name = "jpeg-enc0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_nrt0_rd1>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				jpeg_dma0_all_rd: jpeg-dma0-all-rd {
-					cell-index = <40>;
+					cell-index = <25>;
 					node-name = "jpeg-dma0-all-rd";
 					client-name = "jpeg-dma0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level1_nrt0_rd1>;
+					parent-node = <&level1_nrt0_rd_wr0>;
 				};
 
 				cpas_cdm0_all_rd: cpas-cdm0-all-rd {
-					cell-index = <41>;
+					cell-index = <26>;
 					node-name = "cpas-cdm0-all-rd";
 					client-name = "cpas-cdm0";
 					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
 					traffic-transaction-type =
 					<CAM_CPAS_TRANSACTION_READ>;
-					parent-node = <&level2_nrt0_rd>;
+					parent-node = <&level2_nrt0_rd_wr_sum>;
+				};
+				icp0_all_rd: icp0-all-rd {
+					cell-index = <27>;
+					node-name = "icp0-all-rd";
+					client-name = "icp0";
+					traffic-data = <CAM_CPAS_PATH_DATA_ALL>;
+					traffic-transaction-type =
+					<CAM_CPAS_TRANSACTION_READ>;
+					parent-node = <&level2_nrt0_rd_wr_sum>;
 				};
 			};
 		};
@@ -976,11 +849,11 @@
 			<&camcc CAM_CC_CAMNOC_AXI_CLK>;
 		clock-rates = <0 0 0 0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife";
+		cdm-client-names = "ife","ife3";
 		status = "ok";
 	};
 
-	qcom,cam-isp {
+	cam_isp_mgr: qcom,cam-isp {
 		compatible = "qcom,cam-isp";
 		arch-compat = "ife";
 		status = "ok";
@@ -1356,7 +1229,7 @@
 		status = "ok";
 	};
 
-	qcom,cam-jpeg {
+	cam_jpeg_mgr: qcom,cam-jpeg {
 		compatible = "qcom,cam-jpeg";
 		compat-hw-name = "qcom,jpegenc",
 			"qcom,jpegdma";
@@ -1368,9 +1241,10 @@
 	cam_jpeg_enc: qcom,jpegenc@ac4e000 {
 		cell-index = <0>;
 		compatible = "qcom,cam_jpeg_enc";
-		reg-names = "jpege_hw";
-		reg = <0xac4e000 0x4000>;
-		reg-cam-base = <0x4e000>;
+		reg-names = "jpege_hw", "cam_camnoc";
+		reg = <0xac4e000 0x4000>,
+			<0xac42000 0x5000>;
+		reg-cam-base = <0x4e000 0x42000>;
 		interrupt-names = "jpeg";
 		interrupts = <GIC_SPI 474 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1399,9 +1273,10 @@
 	cam_jpeg_dma: qcom,jpegdma@ac52000{
 		cell-index = <0>;
 		compatible = "qcom,cam_jpeg_dma";
-		reg-names = "jpegdma_hw";
-		reg = <0xac52000 0x4000>;
-		reg-cam-base = <0x52000>;
+		reg-names = "jpegdma_hw", "cam_camnoc";
+		reg = <0xac52000 0x4000>,
+		      <0xac42000 0x5000>;
+		reg-cam-base = <0x52000 0x42000>;
 		interrupt-names = "jpegdma";
 		interrupts = <GIC_SPI 475 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1427,7 +1302,7 @@
 		status = "ok";
 	};
 
-	qcom,cam-lrme {
+	cam_lrme_mgr: qcom,cam-lrme {
 		compatible = "qcom,cam-lrme";
 		arch-compat = "lrme";
 		status = "ok";
