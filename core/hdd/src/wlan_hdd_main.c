@@ -5084,13 +5084,15 @@ static netdev_features_t __hdd_fix_features(struct net_device *net_dev,
 	}
 
 	feature_tso_csum = hdd_get_tso_csum_feature_flags();
-	if (hdd_is_legacy_connection(adapter))
+	if (hdd_is_legacy_connection(adapter)) {
 		/* Disable checksum and TSO */
 		feature_change_req &= ~feature_tso_csum;
-	else
+		adapter->tso_csum_feature_enabled = 0;
+	} else {
 		/* Enable checksum and TSO */
 		feature_change_req |= feature_tso_csum;
-
+		adapter->tso_csum_feature_enabled = 1;
+	}
 	hdd_debug("vdev mode %d current features 0x%llx, requesting feature change 0x%llx",
 		  adapter->device_mode, net_dev->features,
 		  feature_change_req);
@@ -5125,7 +5127,7 @@ static netdev_features_t hdd_fix_features(struct net_device *net_dev,
 	return changed_features;
 }
 /**
- * __hdd_set_features - Update device config for resultant change in feature
+ * __hdd_set_features - Notify device about change in features
  * @net_dev: Handle to net_device
  * @features: Existing + requested feature after resolving the dependency
  *
@@ -5135,7 +5137,6 @@ static int __hdd_set_features(struct net_device *net_dev,
 			      netdev_features_t features)
 {
 	struct hdd_adapter *adapter = netdev_priv(net_dev);
-	cdp_config_param_type vdev_param;
 	ol_txrx_soc_handle soc = cds_get_context(QDF_MODULE_ID_SOC);
 
 	if (!adapter->handle_feature_update) {
@@ -5151,15 +5152,6 @@ static int __hdd_set_features(struct net_device *net_dev,
 	hdd_debug("vdev mode %d vdev_id %d current features 0x%llx, changed features 0x%llx",
 		  adapter->device_mode, adapter->vdev_id, net_dev->features,
 		  features);
-
-	if (features & (NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM))
-		vdev_param.cdp_enable_tx_checksum = true;
-	else
-		vdev_param.cdp_enable_tx_checksum = false;
-
-	if (cdp_txrx_set_vdev_param(soc, adapter->vdev_id, CDP_ENABLE_CSUM,
-				    vdev_param))
-		hdd_debug("Failed to set DP vdev params");
 
 	return 0;
 }
@@ -7731,9 +7723,11 @@ void hdd_set_netdev_flags(struct hdd_adapter *adapter)
 		adapter->dev->features |=
 			(NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM);
 
-	if (cdp_cfg_get(soc, cfg_dp_tso_enable) && enable_csum)
+	if (cdp_cfg_get(soc, cfg_dp_tso_enable) && enable_csum) {
 		adapter->dev->features |=
 			 (NETIF_F_TSO | NETIF_F_TSO6 | NETIF_F_SG);
+		adapter->tso_csum_feature_enabled = 1;
+	}
 
 	adapter->dev->features |= NETIF_F_RXCSUM;
 	temp = (uint64_t)adapter->dev->features;
@@ -10721,24 +10715,16 @@ __hdd_adapter_param_update_work(struct hdd_adapter *adapter)
 {
 	/**
 	 * This check is needed in case the work got scheduled after the
-	 * interface got disconnected. During disconnection, the network queues
-	 * are paused and hence should not be, mistakenly, restarted here.
-	 * There are two approaches to handle this case
-	 * 1) Flush the work during disconnection
-	 * 2) Check for connected state in work
-	 *
-	 * Since the flushing of work during disconnection will need to be
-	 * done at multiple places or entry points, instead its preferred to
-	 * check the connection state and skip the operation here.
+	 * interface got disconnected.
+	 * Netdev features update is to be done only after the connection,
+	 * since the connection mode plays an important role in identifying
+	 * the features that are to be updated.
+	 * So in case of interface disconnect skip feature update.
 	 */
 	if (!hdd_adapter_is_connected_sta(adapter))
 		return;
 
 	hdd_netdev_update_features(adapter);
-
-	hdd_debug("Enabling queues");
-	wlan_hdd_netif_queue_control(adapter, WLAN_WAKE_ALL_NETIF_QUEUE,
-				     WLAN_CONTROL_PATH);
 }
 
 /**
@@ -12262,20 +12248,21 @@ int hdd_psoc_idle_shutdown(struct device *dev)
 		return -EINVAL;
 	}
 
-	/*
-	 * This is to handle scenario in which platform driver triggers
-	 * idle_shutdown if Deep Sleep/Hibernate entry notification is
-	 * received from modem subsystem in wearable devices
-	 */
-	if (hdd_is_any_interface_open(hdd_ctx)) {
-		hdd_err_rl("all interfaces are not down, ignore idle shutdown");
-		return -EINVAL;
-	}
-
 	if (is_mode_change_psoc_idle_shutdown)
 		ret = __hdd_mode_change_psoc_idle_shutdown(hdd_ctx);
-	else
+	else {
+		/*
+		 * This is to handle scenario in which platform driver triggers
+		 * idle_shutdown if Deep Sleep/Hibernate entry notification is
+		 * received from modem subsystem in wearable devices
+		 */
+		if (hdd_is_any_interface_open(hdd_ctx)) {
+			hdd_err_rl("all interfaces are not down, ignore idle shutdown");
+			return -EINVAL;
+		}
+
 		ret =  __hdd_psoc_idle_shutdown(hdd_ctx);
+	}
 
 	return ret;
 }

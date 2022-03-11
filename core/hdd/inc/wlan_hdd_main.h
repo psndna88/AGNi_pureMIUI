@@ -1437,6 +1437,7 @@ struct hdd_adapter {
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
 	bool is_link_layer_stats_set;
+	uint8_t ll_stats_failure_count;
 #endif
 	uint8_t link_status;
 	uint8_t upgrade_udp_qos_threshold;
@@ -1530,6 +1531,8 @@ struct hdd_adapter {
 	uint8_t gro_disallowed[DP_MAX_RX_THREADS];
 	uint8_t gro_flushed[DP_MAX_RX_THREADS];
 	bool handle_feature_update;
+	/* Indicate if TSO and checksum offload features are enabled or not */
+	bool tso_csum_feature_enabled;
 	bool runtime_disable_rx_thread;
 	ol_txrx_rx_fp rx_stack;
 

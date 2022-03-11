@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18674,6 +18674,26 @@ csr_cm_roam_scan_offload_fill_lfr3_config(
 }
 #endif
 
+#ifdef CONFIG_BAND_6GHZ
+static void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{
+	wlan_scan_cfg_get_active_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_active_6ghz);
+
+	wlan_scan_cfg_get_passive_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_passive_6ghz);
+}
+#else
+static inline void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{}
+#endif
+
 static void
 csr_cm_roam_scan_offload_fill_scan_params(
 		struct mac_context *mac,
@@ -18794,6 +18814,8 @@ csr_cm_roam_scan_offload_fill_scan_params(
 
 	scan_params->rso_adaptive_dwell_mode =
 		mac->mlme_cfg->lfr.adaptive_roamscan_dwell_mode;
+
+	csr_cm_fill_6ghz_dwell_times(mac->psoc, scan_params);
 }
 
 /**
@@ -20838,6 +20860,12 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 	fastreassoc->bssid[4] = bssid[4];
 	fastreassoc->bssid[5] = bssid[5];
 
+	qdf_mem_copy(&vdev_roam_params->mac_addr, &bssid, ETH_ALEN);
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)&bssid))
+		goto send_evt;
+	if (qdf_is_macaddr_broadcast((struct qdf_mac_addr *)&bssid))
+		goto send_evt;
+
 	status = sme_get_beacon_frm(mac_handle, profile, bssid,
 				    &fastreassoc->frame_buf,
 				    &fastreassoc->frame_len,
@@ -20871,6 +20899,7 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 		}
 	}
 
+send_evt:
 	msg.type = eWNI_SME_ROAM_INVOKE;
 	msg.reserved = 0;
 	msg.bodyptr = fastreassoc;
@@ -20884,8 +20913,11 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 		fastreassoc->frame_len = 0;
 		qdf_mem_free(fastreassoc);
 	} else {
+		if (qdf_is_macaddr_zero((struct qdf_mac_addr *)&bssid))
+			vdev_roam_params->source = CONNECTION_MGR_INITIATED;
+		else
+			vdev_roam_params->source = USERSPACE_INITIATED;
 		vdev_roam_params->roam_invoke_in_progress = true;
-		vdev_roam_params->source = USERSPACE_INITIATED;
 		session->roam_invoke_timer_info.mac = mac_ctx;
 		session->roam_invoke_timer_info.vdev_id = vdev_id;
 		qdf_mc_timer_start(&session->roam_invoke_timer,
@@ -21192,6 +21224,16 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 			goto end;
 		}
 
+		/*
+		 * If reassoc MAC from user space is broadcast MAC as:
+		 * wpa_cli DRIVER REASSOC ff:ff:ff:ff:ff:ff 0,
+		 * user space invoked roaming candidate selection will base on
+		 * firmware score algorithm, current connection will be kept if
+		 * current AP has highest score. It is requirement from
+		 * customer which can avoid ping-pong roaming.
+		 */
+		if (qdf_is_macaddr_broadcast(&vdev_roam_params->mac_addr))
+			mlme_debug("Keep current connection");
 		/* Userspace roam req fail, disconnect with AP */
 		if (vdev_roam_params->source == USERSPACE_INITIATED ||
 		    mac_ctx->nud_fail_behaviour == DISCONNECT_AFTER_ROAM_FAIL)

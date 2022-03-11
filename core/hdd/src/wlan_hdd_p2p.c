@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -527,7 +528,7 @@ int hdd_set_p2p_noa(struct net_device *dev, uint8_t *command)
 		noa.single_noa_duration = duration;
 		noa.ps_selection = P2P_POWER_SAVE_TYPE_SINGLE_NOA;
 	} else {
-		if (duration >= interval) {
+		if (count && (duration >= interval)) {
 			hdd_err("Duration should be less than interval");
 			return -EINVAL;
 		}
