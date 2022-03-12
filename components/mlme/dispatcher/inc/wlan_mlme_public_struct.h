@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1720,6 +1720,7 @@ struct fw_scan_channels {
  * @saved_freq_list: Valid channel list
  * @sae_single_pmk_feature_enabled: Contains value of ini
  * sae_single_pmk_feature_enabled
+ * @enable_ft_over_ds: Flag to enable/disable FT-over-DS
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -1837,6 +1838,7 @@ struct wlan_mlme_lfr_cfg {
 #if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
 	bool sae_single_pmk_feature_enabled;
 #endif
+	bool enable_ft_over_ds;
 };
 
 /**

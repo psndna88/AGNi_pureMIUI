@@ -98,6 +98,8 @@
 #define DEFAULT_ROAM_SCAN_SCHEME_BITMAP 0
 #define ROAM_MAX_CFG_VALUE 0xffffffff
 
+#define ENABLE_FT_OVER_DS      1   /* enable ft_over_ds */
+
 /*
  * Currently roam score delta value is sent for 2 triggers and min rssi
  * values are sent for 3 triggers
@@ -859,6 +861,7 @@ struct wlan_rso_11i_params {
  * @rokh_id_length: r0kh id length
  * @rokh_id: r0kh id
  * @mdid: mobility domain info
+ * @enable_ft_over_ds: Flag to enable/disable FT-over-DS
  */
 struct wlan_rso_11r_params {
 	bool is_11r_assoc;
@@ -869,6 +872,7 @@ struct wlan_rso_11r_params {
 	uint32_t r0kh_id_length;
 	uint8_t r0kh_id[WMI_ROAM_R0KH_ID_MAX_LEN];
 	struct mobility_domain_info mdid;
+	bool enable_ft_over_ds;
 };
 
 /**

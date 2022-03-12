@@ -18658,6 +18658,9 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 
 	csr_cm_update_rso_adaptive_11r(&rso_config->rso_11r_info,
 				       session);
+	rso_config->rso_11r_info.enable_ft_over_ds =
+		mac->mlme_cfg->lfr.enable_ft_over_ds;
+
 	csr_cm_update_rso_ese_info(mac, rso_config, roam_info, session);
 
 	akm = mac->roam.roamSession[vdev_id].connectedProfile.AuthType;
