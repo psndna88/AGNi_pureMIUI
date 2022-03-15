@@ -5030,6 +5030,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 
 	mdwc->ss_redriver_node = of_parse_phandle(node, "ssusb_redriver", 0);
 
+	/* set the initial value */
+	mdwc->usb_data_enabled = true;
+
 	if (of_property_read_bool(node, "usb-role-switch")) {
 		role_desc.fwnode = dev_fwnode(&pdev->dev);
 		mdwc->role_switch = usb_role_switch_register(mdwc->dev,
@@ -5112,8 +5115,6 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		dwc3_ext_event_notify(mdwc);
 	}
 
-	/* set the initial value */
-	mdwc->usb_data_enabled = true;
 	device_create_file(&pdev->dev, &dev_attr_orientation);
 	device_create_file(&pdev->dev, &dev_attr_mode);
 	device_create_file(&pdev->dev, &dev_attr_speed);
