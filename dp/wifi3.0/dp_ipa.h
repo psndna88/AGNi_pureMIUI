@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -255,7 +256,7 @@ QDF_STATUS dp_ipa_handle_rx_buf_smmu_mapping(struct dp_soc *soc,
 					     uint32_t size,
 					     bool create);
 
-bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap1,
+bool dp_reo_remap_config(struct dp_soc *soc,uint32_t *remap0, uint32_t *remap1,
 			 uint32_t *remap2);
 bool dp_ipa_is_mdm_platform(void);
 

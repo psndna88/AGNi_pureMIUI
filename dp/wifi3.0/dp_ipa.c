@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -701,7 +702,7 @@ int dp_ipa_ring_resource_setup(struct dp_soc *soc,
 	 * Set DEST_RING_MAPPING_4 to SW2 as default value for
 	 * DESTINATION_RING_CTRL_IX_0.
 	 */
-	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_TCL, 0) |
+	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_SW1, 0) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW1, 1) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW2, 2) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW3, 3) |
@@ -988,7 +989,7 @@ QDF_STATUS dp_ipa_enable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		return QDF_STATUS_E_AGAIN;
 
 	/* Call HAL API to remap REO rings to REO2IPA ring */
-	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_TCL, 0) |
+	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_SW1, 0) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW4, 1) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW1, 2) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW4, 3) |
@@ -1025,6 +1026,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	struct dp_pdev *pdev =
 		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
 	uint32_t ix0;
+	uint32_t ix1;
 	uint32_t ix2;
 	uint32_t ix3;
 
@@ -1040,7 +1042,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		return QDF_STATUS_E_AGAIN;
 
 	/* Call HAL API to remap REO rings to REO2IPA ring */
-	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_TCL, 0) |
+	ix0 = HAL_REO_REMAP_IX0(REO_REMAP_SW1, 0) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW1, 1) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW2, 2) |
 	      HAL_REO_REMAP_IX0(REO_REMAP_SW3, 3) |
@@ -1050,7 +1052,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	      HAL_REO_REMAP_IX0(REO_REMAP_FW, 7);
 
 	if (wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx)) {
-		dp_reo_remap_config(soc, &ix2, &ix3);
+		dp_reo_remap_config(soc, &ix1, &ix2, &ix3);
 
 		hal_reo_read_write_ctrl_ix(soc->hal_soc, false, &ix0, NULL,
 					   &ix2, &ix3);

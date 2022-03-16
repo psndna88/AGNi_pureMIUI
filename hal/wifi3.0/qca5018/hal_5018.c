@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1768,6 +1769,7 @@ struct hal_hw_txrx_ops qca5018_hal_hw_txrx_ops = {
 	hal_rx_mpdu_end_offset_get_generic,
 	hal_rx_flow_setup_fse_5018,
 	hal_compute_reo_remap_ix2_ix3_5018,
+	NULL,
 	NULL,
 	NULL,
 	NULL,
