@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020, 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -506,15 +506,16 @@ pkt_capture_is_beacon_forward_enable(struct wlan_objmgr_vdev *vdev,
 				 &connected_bssid))
 		my_beacon = true;
 
-	if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
-	    PKT_CAPTURE_MGMT_CONNECT_BEACON && !my_beacon)
-		return false;
+	if (((vdev_priv->frame_filter.mgmt_rx_frame_filter &
+	    PKT_CAPTURE_MGMT_CONNECT_BEACON) ||
+	    vdev_priv->frame_filter.connected_beacon_interval) && my_beacon)
+		return true;
 
 	if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
-	    PKT_CAPTURE_MGMT_CONNECT_SCAN_BEACON && my_beacon)
-		return false;
+	    PKT_CAPTURE_MGMT_CONNECT_SCAN_BEACON && !my_beacon)
+		return true;
 
-	return true;
+	return false;
 }
 
 #ifdef DP_MON_RSSI_IN_DBM
