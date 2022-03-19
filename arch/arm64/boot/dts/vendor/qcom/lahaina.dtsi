@@ -42,7 +42,7 @@
 
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
-		sdhc1 = &sdhc_2; /* SDC2 SD card slot */
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
 		serial0 = &qupv3_se3_2uart;
 		hsuart0 = &qupv3_se18_4uart;
 		pci-domain0 = &pcie0; /* PCIe0 domain */
@@ -2183,7 +2183,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_TZ
-				      IRQ_TYPE_LEVEL_HIGH>;
+				      IRQ_TYPE_EDGE_RISING>;
 			label = "spss";
 		};
 	};
@@ -2435,6 +2435,7 @@
 
 	qcom,cpufreq-hw-debug@18591000 {
 		compatible = "qcom,cpufreq-hw-epss-debug";
+		status = "disabled";
 		reg = <0x18591000 0x800>;
 		reg-names = "domain-top";
 		qcom,freq-hw-domain = <&cpufreq_hw 0>, <&cpufreq_hw 1>,
@@ -3127,6 +3128,9 @@
 		iommus = <&apps_smmu 0xE0 0x0>;
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
+
+		rpm-level = <3>;
+		spm-level = <5>;
 
 		status = "disabled";
 		qos0 {
@@ -4343,7 +4347,7 @@
 
 				msm_cdsp_rm: qcom,msm_cdsp_rm {
 					compatible = "qcom,msm-cdsp-rm";
-					qcom,qos-latency-us = <70>;
+					qcom,qos-latency-us = <60>;
 					qcom,qos-maxhold-ms = <20>;
 				};
 			};
@@ -4358,7 +4362,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_GLINK_QMP
-				      IRQ_TYPE_LEVEL_HIGH>;
+				      IRQ_TYPE_EDGE_RISING>;
 
 			reg = <0x1885008 0x8>,
 			      <0x1885010 0x4>;
@@ -5023,15 +5027,15 @@
 		qcom,same-dt-multi-dev;
 
 		vdd-wlan-aon-supply = <&S2E>;
-		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 1>;
+		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
 		vdd-wlan-dig-supply = <&S11B>;
-		qcom,vdd-wlan-dig-config = <1012000 1012000 0 0 1>;
+		qcom,vdd-wlan-dig-config = <950000 952000 0 0 1>;
 		vdd-wlan-io-supply = <&S10B>;
 		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 1>;
 		vdd-wlan-rfa1-supply = <&S1C>;
-		qcom,vdd-wlan-rfa1-config = <1900000 1952000 0 0 1>;
+		qcom,vdd-wlan-rfa1-config = <1880000 1880000 0 0 1>;
 		vdd-wlan-rfa2-supply = <&S12B>;
-		qcom,vdd-wlan-rfa2-config = <1350000 1360000 0 0 1>;
+		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
 		wlan-ant-switch-supply = <&L7E>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
 
@@ -5282,10 +5286,10 @@
 		qcom,bt-vdd-rfa2-supply = <&S12B>;
 		qcom,bt-vdd-asd-supply = <&L7E>;
 
-		qcom,bt-vdd-aon-config = <1012000 1012000 0 1>;
-		qcom,bt-vdd-dig-config = <1012000 1012000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1900000 1952000 0 1>;
-		qcom,bt-vdd-rfa2-config = <1350000 1360000 0 1>;
+		qcom,bt-vdd-aon-config = <950000 950000 0 1>;
+		qcom,bt-vdd-dig-config = <950000 950000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
+		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
 	};
 
