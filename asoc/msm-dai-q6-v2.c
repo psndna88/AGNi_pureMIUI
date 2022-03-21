@@ -11263,7 +11263,7 @@ static int msm_dai_q6_tdm_set_channel_map(struct snd_soc_dai *dai,
 }
 
 static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
-					    int slots_per_frame)
+					    int slots_per_frame, int num_channels)
 {
 	unsigned int i = 0;
 	unsigned int slot_index = 0;
@@ -11277,6 +11277,11 @@ static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
 
 	if (slot_width_bytes == 0) {
 		pr_err("%s: slot width is zero\n", __func__);
+		return slot_mask;
+	}
+
+	if (num_channels != slots_per_frame) {
+		pr_debug("%s: multi lane is enabled, use the slot mask of tdm group\n", __func__);
 		return slot_mask;
 	}
 
@@ -11407,11 +11412,13 @@ static int msm_dai_q6_tdm_hw_params(struct snd_pcm_substream *substream,
 		tdm->slot_mask = tdm_param_set_slot_mask(
 					slot_mapping_v2->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 	else
 		tdm->slot_mask = tdm_param_set_slot_mask(slot_mapping->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 
 	pr_debug("%s: TDM:\n"
 		"num_channels=%d sample_rate=%d bit_width=%d\n"
