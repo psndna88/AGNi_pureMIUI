@@ -100,7 +100,7 @@ static int devfreq_gpubw_get_target(struct devfreq *df,
 	int act_level;
 	int norm_max_cycles;
 	int norm_cycles;
-	int wait_active_percent;
+	int wait_active_percent = 0;
 	int gpu_percent;
 	/*
 	 * Normalized AB should at max usage be the gpu_bimc frequency in MHz.
@@ -131,8 +131,9 @@ static int devfreq_gpubw_get_target(struct devfreq *df,
 			(unsigned int) priv->bus.total_time;
 	norm_cycles = (unsigned int)(priv->bus.ram_time + priv->bus.ram_wait) /
 			(unsigned int) priv->bus.total_time;
-	wait_active_percent = (100 * (unsigned int)priv->bus.ram_wait) /
-			(unsigned int) priv->bus.ram_time;
+	if (priv->bus.ram_time)
+		wait_active_percent = (100 * (unsigned int)priv->bus.ram_wait) /
+				(unsigned int) priv->bus.ram_time;
 	gpu_percent = (100 * (unsigned int)priv->bus.gpu_time) /
 			(unsigned int) priv->bus.total_time;
 
