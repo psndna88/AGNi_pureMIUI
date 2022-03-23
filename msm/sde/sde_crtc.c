@@ -5415,7 +5415,7 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 		return;
 	}
 
-	info = kzalloc(sizeof(struct sde_kms_info), GFP_KERNEL);
+	info = vzalloc(sizeof(struct sde_kms_info));
 	if (!info) {
 		SDE_ERROR("failed to allocate info memory\n");
 		return;
@@ -5499,7 +5499,7 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 			info->data, SDE_KMS_INFO_DATALEN(info),
 			CRTC_PROP_INFO);
 
-	kfree(info);
+	vfree(info);
 }
 
 static int _sde_crtc_get_output_fence(struct drm_crtc *crtc,

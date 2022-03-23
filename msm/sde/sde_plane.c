@@ -3665,7 +3665,7 @@ static void _sde_plane_setup_capabilities_blob(struct sde_plane *psde,
 	sde_kms_info_add_keyint(info, "pipe_idx", pipe_id);
 
 	index = (master_plane_id == 0) ? 0 : 1;
-	if (catalog->has_demura &&
+	if (catalog->has_demura && psde->pipe < SSPP_MAX &&
 	    catalog->demura_supported[psde->pipe][index] != ~0x0)
 		sde_kms_info_add_keyint(info, "demura_block", index);
 
@@ -3755,7 +3755,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 	psde->catalog = catalog;
 	is_master = !psde->is_virtual;
 
-	info = kzalloc(sizeof(struct sde_kms_info), GFP_KERNEL);
+	info = vzalloc(sizeof(struct sde_kms_info));
 	if (!info) {
 		SDE_ERROR("failed to allocate info memory\n");
 		return;
@@ -3834,7 +3834,7 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			ARRAY_SIZE(e_fb_translation_mode), 0,
 			PLANE_PROP_FB_TRANSLATION_MODE);
 
-	kfree(info);
+	vfree(info);
 }
 
 static inline void _sde_plane_set_csc_v1(struct sde_plane *psde,
