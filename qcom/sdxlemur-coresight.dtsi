@@ -147,6 +147,7 @@
 
 		arm,buffer-size = <0x400000>;
 		arm,scatter-gather;
+		qcom,sw-usb;
 
 		qcom,qdss-ipa-support;
 		ipa-conn-data-base-pa = <0x1468B000>;
