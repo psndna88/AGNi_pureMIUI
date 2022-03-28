@@ -14,9 +14,9 @@ M ?= $(shell pwd)
 # WLAN_ROOT must contain an absolute path (i.e. not a relative path)
 KBUILD_OPTIONS := WLAN_ROOT=$(shell cd $(KERNEL_SRC); readlink -e $(M))
 
-# MODNAME should be qca_cld3_wlan for helium based platform
-ifeq (qca_cld3, $(WLAN_CHIPSET))
-KBUILD_OPTIONS += MODNAME?=$(WLAN_CHIPSET)_wlan
+# MODNAME should be qca_cld3_wlan for helium based wear target
+ifeq (qca_cld3, $(WLAN_WEAR_CHIPSET))
+KBUILD_OPTIONS += MODNAME?=$(WLAN_WEAR_CHIPSET)_wlan
 else
 KBUILD_OPTIONS += MODNAME?=wlan
 endif
