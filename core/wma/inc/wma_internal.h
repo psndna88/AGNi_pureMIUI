@@ -300,6 +300,7 @@ int wma_roam_vdev_disconnect_event_handler(void *handle, uint8_t *event,
  * @events:    Event/Notif type from roam event/roam stats event
  * @roam_info: Roam stats from the roam stats event
  * @value:     Notif param value from the roam event
+ * @reason:    Notif param value from the roam event that carries trigger reason
  *
  * Gathers the roam stats from the roam event and the roam stats event and
  * sends them to hdd for filling the vendor attributes.
@@ -310,7 +311,7 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id,
 				     enum roam_rt_stats_type events,
 				     struct mlme_roam_debug_info *roam_info,
-				     uint32_t value);
+				     uint32_t value, uint32_t reason);
 #else
 static inline int wma_mlme_roam_synch_event_handler_cb(void *handle,
 						       uint8_t *event,
@@ -346,7 +347,7 @@ wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 				uint8_t vdev_id,
 				enum roam_rt_stats_type events,
 				struct mlme_roam_debug_info *roam_info,
-				uint32_t value)
+				uint32_t value, uint32_t reason)
 {}
 #endif
 

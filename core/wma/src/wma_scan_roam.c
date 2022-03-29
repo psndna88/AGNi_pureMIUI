@@ -2200,7 +2200,7 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id,
 				     enum roam_rt_stats_type events,
 				     struct mlme_roam_debug_info *roam_info,
-				     uint32_t value)
+				     uint32_t value, uint32_t reason)
 {
 	struct mac_context *mac = cds_get_context(QDF_MODULE_ID_PE);
 	struct mlme_roam_debug_info *roam_event = NULL;
@@ -2216,12 +2216,17 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 		if (!roam_event)
 			return;
 
-		if (value == WMI_ROAM_NOTIF_SCAN_START)
+		if (value == WMI_ROAM_NOTIF_SCAN_START) {
 			roam_event->roam_event_param.roam_scan_state =
 					QCA_WLAN_VENDOR_ROAM_SCAN_STATE_START;
-		else if (value == WMI_ROAM_NOTIF_SCAN_END)
+			if (reason) {
+				roam_event->trigger.present = true;
+				roam_event->trigger.trigger_reason = reason;
+			}
+		} else if (value == WMI_ROAM_NOTIF_SCAN_END) {
 			roam_event->roam_event_param.roam_scan_state =
 					QCA_WLAN_VENDOR_ROAM_SCAN_STATE_END;
+		}
 
 		if (mac && mac->sme.roam_rt_stats_cb) {
 			wma_debug("Invoke HDD roam events callback for "
@@ -2507,7 +2512,7 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 		wma_report_real_time_roam_stats(
 					wma->psoc, vdev_id,
 					ROAM_RT_STATS_TYPE_ROAM_SCAN_INFO,
-					roam_info, 0);
+					roam_info, 0, 0);
 
 		qdf_mem_free(roam_info);
 	}
@@ -4665,7 +4670,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 						wma_handle->psoc,
 						wmi_event->vdev_id,
 						ROAM_RT_STATS_TYPE_SCAN_STATE,
-						NULL, wmi_event->notif);
+						NULL, wmi_event->notif,
+						wmi_event->notif_params);
 		break;
 	case WMI_ROAM_REASON_RSO_STATUS:
 		wma_rso_cmd_status_event_handler(wmi_event);
@@ -4688,7 +4694,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		wma_report_real_time_roam_stats(
 					wma_handle->psoc, wmi_event->vdev_id,
 					ROAM_RT_STATS_TYPE_INVOKE_FAIL_REASON,
-					NULL, wmi_event->notif_params);
+					NULL, wmi_event->notif_params, 0);
 		qdf_mem_free(roam_synch_data);
 		break;
 	case WMI_ROAM_REASON_DEAUTH:
