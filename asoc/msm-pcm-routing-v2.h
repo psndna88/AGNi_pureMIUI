@@ -688,6 +688,7 @@ enum {
 
 #define STREAM_TYPE_ASM 0
 #define STREAM_TYPE_LSM 1
+#define MT_MX_MAX_PORTS 64
 
 #define PP_PERF_MODE_FLAG_MASK                0x10000
 #define PP_PERF_MODE_VALUE_MASK               0xF
@@ -749,6 +750,13 @@ struct msm_pcm_stream_app_type_cfg {
 	int copp_perf_mode;
 };
 
+struct msm_pcm_channel_mixer_v2 {
+	struct msm_pcm_channel_mixer mixer_cfg;
+	int fedai_id;
+	int session_type;
+	int be_id;
+	bool is_used;
+};
 /* dai_id: front-end ID,
  * dspst_id:  DSP audio stream ID
  * stream_type: playback or capture
