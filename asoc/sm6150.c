@@ -31,6 +31,7 @@
 #include <asoc/msm-cdc-pinctrl.h>
 #include "codecs/wcd934x/wcd934x.h"
 #include "codecs/wcd9335.h"
+#include "asoc/wcd-mbhc-v2.h"
 #include "codecs/wcd934x/wcd934x-mbhc.h"
 #include "codecs/wcd937x/wcd937x-mbhc.h"
 #include "codecs/wsa881x.h"
@@ -40,6 +41,7 @@
 #include "codecs/wcd937x/wcd937x.h"
 #include "msm_talos_dailink.h"
 #include "talos-port-config.h"
+#include <soc/soundwire.h>
 
 #define DRV_NAME "sm6150-asoc-snd"
 
@@ -629,7 +631,9 @@ static int dmic_2_3_gpio_cnt;
 static void *def_wcd_mbhc_cal(void);
 static int msm_snd_enable_codec_ext_clk(struct snd_soc_component *component,
 					int enable, bool dapm);
+static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime*);
 static int msm_wsa881x_init(struct snd_soc_pcm_runtime *rtd);
+static int msm_wcd937x_wsa881x_init(struct snd_soc_pcm_runtime *rtd);
 
 /*
  * Need to report LINEIN
@@ -5137,15 +5141,23 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_sync(dapm);
 
+	snd_soc_dapm_ignore_suspend(dapm, "EAR");
+	snd_soc_dapm_ignore_suspend(dapm, "AUX");
+	snd_soc_dapm_ignore_suspend(dapm, "HPHL");
+	snd_soc_dapm_ignore_suspend(dapm, "HPHR");
+	snd_soc_dapm_ignore_suspend(dapm, "AMIC1");
+	snd_soc_dapm_ignore_suspend(dapm, "AMIC2");
+	snd_soc_dapm_ignore_suspend(dapm, "AMIC3");
+	snd_soc_dapm_ignore_suspend(dapm, "AMIC4");
+	snd_soc_dapm_sync(dapm);
+
 	/*
 	 * Send speaker configuration only for WSA8810.
 	 * Default configuration is for WSA8815.
 	 */
 
 	wsa_macro_set_spkr_mode(component,
-			WSA_MACRO_SPKR_MODE_1);
-	wsa_macro_set_spkr_gain_offset(component,
-			WSA_MACRO_GAIN_OFFSET_M1P5_DB);
+			WSA_MACRO_SPKR_MODE_DEFAULT);
 
 	card = rtd->card->snd_card;
 	if (!pdata->codec_root) {
@@ -5170,7 +5182,7 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	bolero_register_wake_irq(component, false);
 
 	bolero_set_port_map(bolero_component,
-				ARRAY_SIZE(sm_port_map), sm_port_map);
+				ARRAY_SIZE(sm_port_map_wcd937x), sm_port_map_wcd937x);
 
 	codec_reg_done = true;
 	return 0;
@@ -7492,7 +7504,7 @@ static struct snd_soc_dai_link msm_wsa_cdc_dma_be_dai_links[] = {
 		.stream_name = "WSA CDC DMA0 Playback",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.init = &msm_wsa881x_init,
+		.init = &msm_wcd937x_wsa881x_init,
 		.id = MSM_BACKEND_DAI_WSA_CDC_DMA_RX_0,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_pmdown_time = 1,
@@ -7717,6 +7729,46 @@ err_hs_detect:
 	kfree(mbhc_calibration);
 err_mbhc_cal:
 err_pcm_runtime:
+	return ret;
+}
+
+static int msm_snd_card_late_probe(struct snd_soc_card *card)
+{
+	struct snd_soc_component *component = NULL;
+	const char *be_dl_name = LPASS_BE_RX_CDC_DMA_RX_0;
+	struct snd_soc_pcm_runtime *rtd;
+	int ret = 0;
+	void *mbhc_calibration;
+
+	rtd = snd_soc_get_pcm_runtime(card, be_dl_name);
+	if (!rtd) {
+		dev_err(card->dev,
+			"%s: snd_soc_get_pcm_runtime for %s failed!\n",
+			__func__, be_dl_name);
+		ret = -EINVAL;
+	}
+
+	component = snd_soc_rtdcom_lookup(rtd, WCD937X_DRV_NAME);
+	if (!component) {
+		pr_err("%s: component is NULL\n", __func__);
+		ret = -EINVAL;
+	}
+
+	mbhc_calibration = def_wcd_mbhc_cal();
+	if (!mbhc_calibration) {
+		ret = -ENOMEM;
+	}
+	wcd_mbhc_cfg.calibration = mbhc_calibration;
+	ret = wcd937x_mbhc_hs_detect(component, &wcd_mbhc_cfg);
+	if (ret) {
+		dev_err(card->dev, "%s: mbhc hs detect failed, err:%d\n",
+			__func__, ret);
+		goto err_hs_detect;
+	}
+	return 0;
+
+err_hs_detect:
+	kfree(mbhc_calibration);
 	return ret;
 }
 
@@ -8045,6 +8097,8 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 			total_links +=
 				ARRAY_SIZE(msm_tasha_fe_dai_links);
 		} else {
+			card->late_probe =
+				msm_snd_card_late_probe;
 			memcpy(msm_sm6150_dai_links + total_links,
 				msm_bolero_fe_dai_links,
 				sizeof(msm_bolero_fe_dai_links));
@@ -8186,7 +8240,8 @@ static int msm_wsa881x_init(struct snd_soc_pcm_runtime *rtd)
 						SPKR_L_BOOST, SPKR_L_VI};
 	u8 spkright_port_types[WSA881X_MAX_SWR_PORTS] = {SPKR_R, SPKR_R_COMP,
 						SPKR_R_BOOST, SPKR_R_VI};
-	unsigned int ch_rate[WSA881X_MAX_SWR_PORTS] = {2400, 600, 300, 1200};
+	unsigned int ch_rate[WSA881X_MAX_SWR_PORTS] = {SWR_CLK_RATE_2P4MHZ, SWR_CLK_RATE_0P6MHZ,
+							SWR_CLK_RATE_0P3MHZ, SWR_CLK_RATE_1P2MHZ};
 	unsigned int ch_mask[WSA881X_MAX_SWR_PORTS] = {0x1, 0xF, 0x3, 0x3};
 	struct snd_soc_component *component = NULL;
 	struct msm_asoc_mach_data *pdata =
@@ -8237,6 +8292,69 @@ static int msm_wsa881x_init(struct snd_soc_pcm_runtime *rtd)
 
 	return 0;
 }
+
+static int msm_wcd937x_wsa881x_init(struct snd_soc_pcm_runtime *rtd)
+{
+	u8 spkleft_ports[WSA881X_MAX_SWR_PORTS] = {0, 1, 2, 3};
+	u8 spkright_ports[WSA881X_MAX_SWR_PORTS] = {0, 1, 2, 3};
+	u8 spkleft_port_types[WSA881X_MAX_SWR_PORTS] = {SPKR_L, SPKR_L_COMP,
+						SPKR_L_BOOST, SPKR_L_VI};
+	u8 spkright_port_types[WSA881X_MAX_SWR_PORTS] = {SPKR_R, SPKR_R_COMP,
+						SPKR_R_BOOST, SPKR_R_VI};
+	unsigned int ch_rate[WSA881X_MAX_SWR_PORTS] = {SWR_CLK_RATE_2P4MHZ, SWR_CLK_RATE_0P6MHZ,
+							SWR_CLK_RATE_0P3MHZ, SWR_CLK_RATE_1P2MHZ};
+	unsigned int ch_mask[WSA881X_MAX_SWR_PORTS] = {0x1, 0xF, 0x3, 0x3};
+	struct snd_soc_component *component = NULL;
+	struct msm_asoc_mach_data *pdata =
+					snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_dapm_context *dapm = NULL;
+
+
+	if (pdata->wsa_max_devs > 0) {
+			component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.3");
+		if (!component) {
+			pr_err("%s: wsa-codec.3 component is NULL\n", __func__);
+			return -EINVAL;
+		}
+
+		dapm = snd_soc_component_get_dapm(component);
+
+		wsa881x_set_channel_map(component, &spkleft_ports[0],
+				WSA881X_MAX_SWR_PORTS, &ch_mask[0],
+				&ch_rate[0], &spkleft_port_types[0]);
+		if (dapm->component) {
+			snd_soc_dapm_ignore_suspend(dapm, "SpkrLeft IN");
+			snd_soc_dapm_ignore_suspend(dapm, "SpkrLeft SPKR");
+		}
+		wsa881x_codec_info_create_codec_entry(pdata->codec_root,
+						      component);
+	}
+
+	/* If current platform has more than one WSA */
+	if (pdata->wsa_max_devs > 1) {
+			component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.4");
+		if (!component) {
+			pr_err("%s: wsa-codec.4 component is NULL\n", __func__);
+			return -EINVAL;
+		}
+
+		dapm = snd_soc_component_get_dapm(component);
+
+		wsa881x_set_channel_map(component, &spkright_ports[0],
+				WSA881X_MAX_SWR_PORTS, &ch_mask[0],
+				&ch_rate[0], &spkright_port_types[0]);
+		if (dapm->component) {
+			snd_soc_dapm_ignore_suspend(dapm, "SpkrRight IN");
+			snd_soc_dapm_ignore_suspend(dapm, "SpkrRight SPKR");
+		}
+		wsa881x_codec_info_create_codec_entry(pdata->codec_root,
+						      component);
+	}
+
+	return 0;
+}
+
+
 static void msm_i2s_auxpcm_init(struct platform_device *pdev)
 {
 	int count;
@@ -8477,8 +8595,8 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	}
 
 	/* Get maximum WSA device count for this platform */
-		ret = of_property_read_u32(pdev->dev.of_node,
-				"qcom,wsa-max-devs", &pdata->wsa_max_devs);
+	ret = of_property_read_u32(pdev->dev.of_node,
+			"qcom,wsa-max-devs", &pdata->wsa_max_devs);
 	if (ret) {
 		dev_info(&pdev->dev,
 			"%s: wsa-max-devs property missing in DT %s, ret = %d\n",
