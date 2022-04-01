@@ -275,6 +275,19 @@ ifeq ($(KERNEL_BUILD), 1)
 	obj-y	+= wsa883x/
 	obj-y	+= rouleur/
 endif
+
+ifneq (,$(filter $(TARGET_PRODUCT), venus star haydn odin))
+	obj-y	+= cs35l41/
+endif
+
+ifneq (,$(filter $(TARGET_PRODUCT), cetus))
+	obj-y	+= cs35l45/
+endif
+
+ifneq (,$(filter $(TARGET_PRODUCT), renoir lisa))
+	obj-y	+= tfa98xx/
+endif
+
 # Module information used by KBuild framework
 obj-$(CONFIG_WCD9XXX_CODEC_CORE) += wcd_core_dlkm.o
 obj-$(CONFIG_WCD9XXX_CODEC_CORE_V2) += wcd_core_dlkm.o

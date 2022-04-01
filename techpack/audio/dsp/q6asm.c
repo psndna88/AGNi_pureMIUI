@@ -7399,6 +7399,20 @@ static int __q6asm_media_format_block_multi_ch_pcm_v5(struct audio_client *ac,
 			 PCM_FORMAT_MAX_NUM_CHANNEL_V8);
 	}
 
+	if (fmt.param.num_channels==2) {
+		if (channel_mapping[0] == 0 || channel_mapping[1] ==0) {
+			pr_err("%s: chnl map wrong %d, %d\n", __func__,
+				channel_mapping[0], channel_mapping[1]);
+			channel_mapping[0] = 1;
+			channel_mapping[1] = 2;
+		}
+	} else if (fmt.param.num_channels==1) {
+		if (channel_mapping[0] !=3){
+			pr_err("%s: chnl map wrong %d", __func__, channel_mapping[0]);
+			channel_mapping[0] = 3;
+		}
+	}
+
 	rc = apr_send_pkt(ac->apr, (uint32_t *) &fmt);
 	if (rc < 0) {
 		pr_err("%s: Comamnd open failed %d\n", __func__, rc);
@@ -11375,6 +11389,12 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struc
 		cal_block->cal_info)->topology;
 	cal_info->app_type = ((struct audio_cal_info_asm_top *)
 		cal_block->cal_info)->app_type;
+
+	if (0 == cal_info->topology_id) {
+		cal_info->topology_id = 0x10c68;;
+		pr_err("%s: Correct using topology %d app_type %d\n", __func__,
+			cal_info->topology_id, cal_info->app_type);
+	}
 
 	cal_utils_mark_cal_used(cal_block);
 

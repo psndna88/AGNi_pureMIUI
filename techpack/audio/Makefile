@@ -46,6 +46,13 @@ LINUXINCLUDE    += \
                 -I$(srctree)/techpack/audio/include/asoc \
                 -I$(srctree)/techpack/audio/include
 
+#for mius start
+ifeq ($(CONFIG_MIUS_PROXIMITY), y)
+LINUXINCLUDE    += \
+                -I$(srctree)/techpack/audio/include/mius
+endif
+#for mius end
+
 ifeq ($(CONFIG_QTI_QUIN_GVM), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/gvmautoconf.h
