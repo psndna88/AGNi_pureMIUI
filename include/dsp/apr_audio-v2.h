@@ -223,6 +223,8 @@ struct adm_cmd_matrix_map_routings_v5 {
 /* Definition for a low latency stream session. */
 #define ADM_LOW_LATENCY_DEVICE_SESSION			0x2000
 
+#define ADM_LOW_LATENCY_NPROC_DEVICE_SESSION		0x6000
+
 /* Definition for a ultra low latency stream session. */
 #define ADM_ULTRA_LOW_LATENCY_DEVICE_SESSION		0x4000
 
@@ -8100,6 +8102,8 @@ struct asm_session_cmdrsp_get_path_delay_v2 {
 
 #define ASM_ULTRA_LOW_LATENCY_STREAM_SESSION			0x20000000
 
+#define ASM_ULTRA_LOW_LATENCY_NPROC_STREAM_SESSION		0x30000000
+
 #define ASM_ULL_POST_PROCESSING_STREAM_SESSION			0x40000000
 
 #define ASM_LEGACY_STREAM_SESSION                                      0
@@ -13635,4 +13639,16 @@ struct afe_param_id_port_data_log_disable_t
 	 */
 } __packed;
 
+#define AFE_MODULE_LIMITER  0x000102A8
+#define AFE_PARAM_ID_ENABLE 0x00010203
+struct afe_param_id_port_afe_limiter_disable_t
+{
+	uint16_t           disable_afe_limiter;
+	/** Flag for enabling or disabling data logging.
+	 * @values
+	 * - AFE_PORT_DATA_LOGGING_ENABLE  - enable data logging.
+	 * - AFE_PORT_DATA_LOGGING_DISABLE - disable data logging.
+	 */
+	 uint16_t	reserved;
+} __packed;
 #endif /*_APR_AUDIO_V2_H_ */
