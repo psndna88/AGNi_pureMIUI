@@ -44,12 +44,12 @@ EXPORT_SYMBOL(g_touchscreen_usb_plugin);
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
 #endif
-int batt_hot_decidegree_max = 430;
-int batt_cp_warm_threshold = 400;
-int batt_warm_threshold = 400;
-int cp_warm_threshold = 400;
+int batt_hot_decidegree_max = 450;
+int batt_cp_warm_threshold = 430;
+int batt_warm_threshold = 430;
+int cp_warm_threshold = 430;
 int soft_jeita_hysteresis = 0;
-static int agni_force_therm_level_min = 0;
+int agni_force_therm_level_min = 0;
 static int userspace_thermal_level = 0;
 
 #define smblib_err(chg, fmt, ...)
@@ -66,19 +66,21 @@ static int smblib_get_prop_typec_mode(struct smb_charger *chg);
 
 void charging_temps_thresholds(void)
 {
-/*	if (board_get_33w_supported()) {
-		batt_hot_decidegree_max = 430;
-		batt_cp_warm_threshold = 400;
-		batt_warm_threshold = 400;
-		cp_warm_threshold = 400;
-		soft_jeita_hysteresis = 0;
+	if (board_get_33w_supported()) {
+//		batt_hot_decidegree_max = 430;
+//		batt_cp_warm_threshold = 400;
+//		batt_warm_threshold = 400;
+//		cp_warm_threshold = 400;
+//		soft_jeita_hysteresis = 0;
+		agni_force_therm_level_min = 6;
 	} else {
-		batt_hot_decidegree_max = 470; //500
-		batt_cp_warm_threshold = 450;
-		batt_warm_threshold = 450;
-		cp_warm_threshold = 450;
-		soft_jeita_hysteresis = 5;
-	} */
+//		batt_hot_decidegree_max = 470; //500
+//		batt_cp_warm_threshold = 450;
+//		batt_warm_threshold = 450;
+//		cp_warm_threshold = 450;
+//		soft_jeita_hysteresis = 5;
+		agni_force_therm_level_min = 3;
+	}
 }
 
 int lct_check_hwversion(void)
@@ -104,6 +106,7 @@ int lct_check_hwversion(void)
 	if ((project_number == 5) && (major_number%10 == 0))
 		india_or_global = JAPAN_HWVERSION;
 
+	charging_temps_thresholds();
 	return india_or_global;
 }
 
