@@ -17,6 +17,7 @@
 };
 
 &pcie_i2c_ctrl {
+	ep_reset_postlinkup;
 	reg_update = <0x82c030 0x1
 			0x828000 0x3
 			0x82bd00 0x8
