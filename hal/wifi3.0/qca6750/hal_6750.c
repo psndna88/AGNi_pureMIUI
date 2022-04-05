@@ -2242,7 +2242,11 @@ struct hal_hw_srng_config hw_srng_table_6750[] = {
 	},
 	{ /* WBM2SW_RELEASE */
 		.start_ring_id = HAL_SRNG_WBM2SW0_RELEASE,
+#ifdef CONFIG_PLD_IPCIE_FW_SIM
+		.max_rings = 5,
+#else
 		.max_rings = 4,
+#endif
 		.entry_size = sizeof(struct wbm_release_ring) >> 2,
 		.lmac_ring = FALSE,
 		.ring_dir = HAL_SRNG_DST_RING,
