@@ -3702,6 +3702,12 @@ static int msm_routing_adm_get_backend_idx(struct snd_kcontrol *kcontrol)
 		backend_id = MSM_BACKEND_DAI_SLIMBUS_7_TX;
 	} else if (strnstr(kcontrol->id.name, "TERT_TDM_TX_0", sizeof("TERT_TDM_TX_0"))) {
 		backend_id = MSM_BACKEND_DAI_TERT_TDM_TX_0;
+	} else if (strnstr(kcontrol->id.name, "TERT_TDM_RX_0", sizeof("TERT_TDM_RX_0"))) {
+		backend_id = MSM_BACKEND_DAI_TERT_TDM_RX_0;
+	} else if (strnstr(kcontrol->id.name, "SEC_TDM_TX_0", sizeof("SEC_TDM_TX_0"))) {
+		backend_id = MSM_BACKEND_DAI_SEC_TDM_TX_0;
+	} else if (strnstr(kcontrol->id.name, "SEC_TDM_RX_0", sizeof("SEC_TDM_RX_0"))) {
+		backend_id = MSM_BACKEND_DAI_SEC_TDM_RX_0;
 	} else {
 		pr_err("%s: unsupported backend id: %s",
 			__func__, kcontrol->id.name);
@@ -3750,6 +3756,15 @@ static int msm_routing_adm_channel_config_put(
 
 static const struct snd_kcontrol_new adm_channel_config_controls[] = {
 	SOC_ENUM_EXT("TERT_TDM_TX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("TERT_TDM_RX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("SEC_TDM_TX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("SEC_TDM_RX_0 ADM Channels", adm_override_chs,
 			msm_routing_adm_channel_config_get,
 			msm_routing_adm_channel_config_put),
 };
