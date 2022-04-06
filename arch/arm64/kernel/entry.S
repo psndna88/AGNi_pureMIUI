@@ -637,7 +637,7 @@ el1_da:
 	 */
 	mrs	x3, far_el1
 	inherit_daif	pstate=x23, tmp=x2
-	untagged_addr	x0, x3
+	clear_address_tag x0, x3
 	mov	x2, sp				// struct pt_regs
 	bl	do_mem_abort
 
@@ -841,7 +841,7 @@ el0_da:
 	mrs	x26, far_el1
 	ct_user_exit_irqoff
 	enable_daif
-	untagged_addr	x0, x26
+	clear_address_tag x0, x26
 	mov	x1, x25
 	mov	x2, sp
 	bl	do_mem_abort
