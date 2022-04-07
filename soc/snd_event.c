@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/platform_device.h>
@@ -233,6 +234,9 @@ int snd_event_client_deregister(struct device *dev)
 		return -EINVAL;
 	}
 
+	dev_dbg(dev, "%s: removing client to SND event FW \n",
+		__func__);
+
 	mutex_lock(&snd_event_mutex);
 	if (list_empty(&snd_event_client_list)) {
 		dev_dbg(dev, "%s: No SND client registered\n", __func__);
@@ -249,7 +253,7 @@ int snd_event_client_deregister(struct device *dev)
 
 	c->state = false;
 
-	if (master && master->clients_found) {
+	if (master) {
 		struct snd_event_client *d;
 		bool dev_found = false;
 
@@ -260,9 +264,12 @@ int snd_event_client_deregister(struct device *dev)
 				break;
 			}
 		}
-		if (dev_found) {
-			ret = check_and_update_fwk_state();
-			master->clients_found = false;
+		if (dev_found ) {
+			if(master->clients_found) {
+				ret = check_and_update_fwk_state();
+				master->clients_found = false;
+			}
+			master->clients->cl_arr[i].dev = NULL;
 		}
 	}
 
@@ -464,6 +471,9 @@ int snd_event_notify(struct device *dev, unsigned int state)
 		pr_err("%s: dev is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	dev_dbg(dev, "%s: snd_event_notify (state %u)\n",
+		__func__, state);
 
 	mutex_lock(&snd_event_mutex);
 	if (list_empty(&snd_event_client_list) && !master) {
