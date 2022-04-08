@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -142,6 +143,7 @@ enum mgmt_action_category {
 	ACTION_CATEGORY_RVS = 19,
 	ACTION_CATEGORY_UNPROT_DMG = 20,
 	ACTION_CATEGORY_VHT = 21,
+	ACTION_CATEGORY_USIG = 22,
 	ACTION_CATEGORY_VENDOR_SPECIFIC_PROTECTED = 126,
 	ACTION_CATEGORY_VENDOR_SPECIFIC = 127,
 };
@@ -472,6 +474,17 @@ enum vht_actioncode {
 };
 
 /**
+ * enum twt_actioncode - twt action frames
+ * @TWT_SETUP: twt set up action frame
+ * @TWT_INFORMATION: twt information action frame
+ */
+enum twt_actioncode {
+	TWT_SETUP = 6,
+	TWT_TEARDOWN = 7,
+	TWT_INFORMATION = 11,
+};
+
+/**
  * struct action_frm_hdr - action frame header
  * @action_category: action category
  * @action_code: action code
@@ -601,6 +614,9 @@ struct action_frm_hdr {
  * @MGMT_ACTION_MCSC_RSP: MCSC response frame
  * @MGMT_FRAME_TYPE_ALL:         mgmt frame type for all type of frames
  * @MGMT_CTRL_FRAME: Control Frames
+ * @MGMT_ACTION_TWT_SETUP: TWT setup frame
+ * @MGMT_ACTION_TWT_TEARDOWN: TWT teardown frame
+ * @MGMT_ACTION_TWT_INFORMATION: TWT information frame
  * @MGMT_MAX_FRAME_TYPE:         max. mgmt frame types
  */
 enum mgmt_frame_type {
@@ -726,6 +742,9 @@ enum mgmt_frame_type {
 	MGMT_ACTION_MCSC_RSP,
 	MGMT_FRAME_TYPE_ALL,
 	MGMT_CTRL_FRAME,
+	MGMT_ACTION_TWT_SETUP,
+	MGMT_ACTION_TWT_TEARDOWN,
+	MGMT_ACTION_TWT_INFORMATION,
 	MGMT_MAX_FRAME_TYPE,
 };
 
