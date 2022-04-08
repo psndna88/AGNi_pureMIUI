@@ -67,14 +67,14 @@
 		thermal-sensors = <&tsens0 3>;
 		trips {
 			mdmss0_config0: mdmss0-config0 {
-				temperature = <111000>;
+				temperature = <101000>;
 				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss0_config1: mdmss0-config1 {
-				temperature = <115000>;
-				hysteresis = <2000>;
+				temperature = <105000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 		};
@@ -87,14 +87,14 @@
 		thermal-sensors = <&tsens0 4>;
 		trips {
 			mdmss1_config0: mdmss1-config0 {
-				temperature = <111000>;
+				temperature = <101000>;
 				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss1_config1: mdmss1-config1 {
-				temperature = <115000>;
-				hysteresis = <2000>;
+				temperature = <105000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 		};
@@ -134,14 +134,14 @@
 		thermal-sensors = <&tsens0 5>;
 		trips {
 			mdmss2_config0: mdmss2-config0 {
-				temperature = <111000>;
+				temperature = <101000>;
 				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss2_config1: mdmss2-config1 {
-				temperature = <115000>;
-				hysteresis = <2000>;
+				temperature = <105000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 		};
@@ -154,14 +154,14 @@
 		thermal-sensors = <&tsens0 6>;
 		trips {
 			mdmss3_config0: mdmss3-config0 {
-				temperature = <111000>;
+				temperature = <101000>;
 				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			mdmss3_config1: mdmss3-config1 {
-				temperature = <115000>;
-				hysteresis = <2000>;
+				temperature = <105000>;
+				hysteresis = <3000>;
 				type = "passive";
 			};
 		};
