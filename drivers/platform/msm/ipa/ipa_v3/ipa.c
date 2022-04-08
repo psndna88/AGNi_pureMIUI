@@ -9660,6 +9660,7 @@ static void ipa3_deepsleep_suspend(void)
 	/*Disabling IPA interrupt*/
 	ipa3_remove_interrupt_handler(IPA_TX_SUSPEND_IRQ);
 	ipa3_interrupts_destroy(ipa3_res.ipa_irq, &ipa3_ctx->master_pdev->dev);
+	ipa3_uc_interface_destroy();
 	/*Destroy the NAT device*/
 	ipa3_nat_ipv6ct_destroy_devices();
 	/*Freeing memory allocated for coalesing and dma task*/
