@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
@@ -783,10 +784,6 @@ static int _sde_connector_update_dirty_properties(
 					connector->state, CONNECTOR_PROP_LP);
 			_sde_connector_update_power_locked(c_conn);
 			mutex_unlock(&c_conn->lock);
-			break;
-		case CONNECTOR_PROP_BL_SCALE:
-		case CONNECTOR_PROP_SV_BL_SCALE:
-			_sde_connector_update_bl_scale(c_conn);
 			break;
 		case CONNECTOR_PROP_HDR_METADATA:
 			_sde_connector_update_hdr_metadata(c_conn, c_state);
@@ -2637,7 +2634,7 @@ int sde_connector_set_blob_data(struct drm_connector *conn,
 		return -EINVAL;
 	}
 
-	info = kzalloc(sizeof(*info), GFP_KERNEL);
+	info = vzalloc(sizeof(*info));
 	if (!info)
 		return -ENOMEM;
 
@@ -2695,7 +2692,7 @@ int sde_connector_set_blob_data(struct drm_connector *conn,
 			SDE_KMS_INFO_DATALEN(info),
 			prop_id);
 exit:
-	kfree(info);
+	vfree(info);
 
 	return rc;
 }
