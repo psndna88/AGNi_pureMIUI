@@ -481,6 +481,8 @@ static bool afe_port_logging_item[IDX_TDM_MAX];
 
 static int afe_port_loggging_control_added;
 
+static int afe_port_limiter_control_added;
+
 static int afe_dyn_mclk_control_added;
 
 static DEFINE_MUTEX(tdm_mutex);
@@ -10572,6 +10574,78 @@ int jitter_cleaner_afe_enable_mclk_and_get_info_cb_func(void *private_data,
 	return 0;
 }
 
+static int msm_pcm_afe_limiter_param_ctl_info(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info* ucontrol)
+{
+	ucontrol->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	/* two int values: port_id and enable/disable */
+	ucontrol->count = 2;
+	/* Valid range is all positive values to support above controls */
+	ucontrol->value.integer.min = 0;
+	ucontrol->value.integer.max = INT_MAX;
+	return 0;
+}
+
+static int msm_pcm_afe_limiter_param_ctl_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int msm_pcm_afe_limiter_param_ctl_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	u16 port_id;
+	struct afe_param_id_port_afe_limiter_disable_t afe_limiter_disable;
+	struct param_hdr_v3 param_hdr;
+	int ret = -EINVAL;
+
+	pr_debug("%s: enter\n", __func__);
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	port_id = ucontrol->value.integer.value[0];
+	afe_limiter_disable.disable_afe_limiter = ucontrol->value.integer.value[1];
+
+	ret = afe_port_send_afe_limiter_param(port_id, &afe_limiter_disable);
+	if (ret)
+		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, port_id, ret);
+
+	return ret;
+}
+
+static int msm_pcm_add_afe_port_limiter_control(struct snd_soc_dai *dai)
+{
+	const char* afe_port_limiter_ctl_name = "AFE_port_limiter_disable";
+	int rc = 0;
+	struct snd_kcontrol_new *knew = NULL;
+	struct snd_kcontrol* kctl = NULL;
+
+	/* Add AFE port logging controls */
+	knew = kzalloc(sizeof(struct snd_kcontrol_new), GFP_KERNEL);
+	if (!knew) {
+		return -ENOMEM;
+	}
+	knew->iface = SNDRV_CTL_ELEM_IFACE_MIXER;
+	knew->info = msm_pcm_afe_limiter_param_ctl_info;
+	knew->get = msm_pcm_afe_limiter_param_ctl_get;
+	knew->put = msm_pcm_afe_limiter_param_ctl_put;
+	knew->name = afe_port_limiter_ctl_name;
+	knew->private_value = dai->id;
+	kctl = snd_ctl_new1(knew, knew);
+	if (!kctl) {
+		kfree(knew);
+		return -ENOMEM;
+	}
+
+	rc = snd_ctl_add(dai->component->card->snd_card, kctl);
+	if (rc < 0)
+		pr_err("%s: err add AFE port limiter disable control, DAI = %s\n",
+			__func__, dai->name);
+
+	return rc;
+}
+
 static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 {
 	int rc = 0;
@@ -10678,6 +10752,17 @@ static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 				__func__, dai->name);
 			goto rtn;
 		}
+	}
+
+	if (!afe_port_limiter_control_added) {
+		rc = msm_pcm_add_afe_port_limiter_control(dai);
+		if (rc < 0) {
+			dev_err(dai->dev, "%s: add AFE port logging control failed DAI: %s\n",
+				__func__, dai->name);
+			goto rtn;
+		}
+
+		afe_port_limiter_control_added = 1;
 	}
 
 	if (tdm_dai_data->is_island_dai)
@@ -11263,7 +11348,7 @@ static int msm_dai_q6_tdm_set_channel_map(struct snd_soc_dai *dai,
 }
 
 static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
-					    int slots_per_frame)
+					    int slots_per_frame, int num_channels)
 {
 	unsigned int i = 0;
 	unsigned int slot_index = 0;
@@ -11277,6 +11362,11 @@ static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
 
 	if (slot_width_bytes == 0) {
 		pr_err("%s: slot width is zero\n", __func__);
+		return slot_mask;
+	}
+
+	if (num_channels != slots_per_frame) {
+		pr_debug("%s: multi lane is enabled, use the slot mask of tdm group\n", __func__);
 		return slot_mask;
 	}
 
@@ -11407,11 +11497,13 @@ static int msm_dai_q6_tdm_hw_params(struct snd_pcm_substream *substream,
 		tdm->slot_mask = tdm_param_set_slot_mask(
 					slot_mapping_v2->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 	else
 		tdm->slot_mask = tdm_param_set_slot_mask(slot_mapping->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 
 	pr_debug("%s: TDM:\n"
 		"num_channels=%d sample_rate=%d bit_width=%d\n"

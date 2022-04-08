@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/init.h>
@@ -21,6 +22,7 @@
 #include <linux/spi/spi.h>
 #include <linux/regulator/consumer.h>
 #include <audio/linux/mfd/wcd9xxx/wcd9xxx_registers.h>
+#include <soc/swr-common.h>
 #include <soc/swr-wcd.h>
 #include <soc/snd_event.h>
 #include <sound/pcm.h>
@@ -500,6 +502,7 @@ struct wcd_swr_ctrl_platform_data {
 	int (*write)(void *handle, int reg, int val);
 	int (*bulk_write)(void *handle, u32 *reg, u32 *val, size_t len);
 	int (*clk)(void *handle, bool enable);
+	int (*core_vote)(void *handle, bool enable);
 	int (*handle_irq)(void *handle,
 			  irqreturn_t (*swrm_irq_handler)(int irq, void *data),
 			  void *swrm_handle, int action);
@@ -747,6 +750,34 @@ void *tavil_get_afe_config(struct snd_soc_component *component,
 	}
 }
 EXPORT_SYMBOL(tavil_get_afe_config);
+
+int tavil_set_port_map(struct snd_soc_component *component,
+			u32 size, void *data)
+{
+
+	struct swr_mstr_port_map *map = NULL;
+	struct swrm_port_config port_cfg;
+	struct tavil_priv *priv = NULL;
+
+	if (!component || (size == 0) || !data)
+		return -EINVAL;
+
+	priv = snd_soc_component_get_drvdata(component);
+
+	map = (struct swr_mstr_port_map *)data;
+
+	port_cfg.uc = map->uc;
+	port_cfg.size = SWR_MSTR_PORT_LEN;
+	port_cfg.params = map->swr_port_params;
+
+
+	swrm_wcd_notify(
+		priv->swr.ctrl_data[0].swr_pdev,
+		SWR_SET_PORT_MAP, &port_cfg);
+
+	return 0;
+}
+EXPORT_SYMBOL(tavil_set_port_map);
 
 static bool is_tavil_playback_dai(int dai_id)
 {
@@ -11345,6 +11376,7 @@ static int tavil_probe(struct platform_device *pdev)
 	tavil->swr.plat_data.bulk_write = tavil_swrm_bulk_write;
 	tavil->swr.plat_data.clk = tavil_swrm_clock;
 	tavil->swr.plat_data.handle_irq = tavil_swrm_handle_irq;
+	tavil->swr.plat_data.core_vote = NULL;
 	tavil->swr.spkr_gain_offset = WCD934X_RX_GAIN_OFFSET_0_DB;
 
 	/* Register for Clock */
