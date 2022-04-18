@@ -68,7 +68,6 @@ static int dsi_pwr_parse_supply_node(struct dsi_parser_utils *utils,
 		rc = utils->read_u32(node, "qcom,supply-ulp-load", &tmp);
 		if (rc) {
 			DSI_DEBUG("ulp-load not specified\n");
-			rc = 0;
 		}
 		regs->vregs[i].ulp_load = (!rc ? tmp :
 			regs->vregs[i].enable_load);
