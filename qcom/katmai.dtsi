@@ -1,0 +1,7 @@
+#include "yupik-iot.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KATMAI SoC";
+	compatible = "qcom,yupik-iot";
+	qcom,msm-id = <576 0x10000>;
+};
