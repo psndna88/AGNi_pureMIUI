@@ -825,6 +825,7 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 				WMI_ROAM_SYNCH_EVENTID_param_tlvs *param_buf)
 {
 	wmi_roam_synch_event_fixed_param *synch_event;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	wmi_channel *chan;
 	wmi_key_material *key;
 	wmi_key_material_ext *key_ft;
@@ -856,6 +857,9 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		return status;
 	}
 
+	cdp_update_roaming_peer_in_vdev(soc, synch_event->vdev_id,
+					roam_synch_ind_ptr->bssid.bytes,
+					synch_event->auth_status);
 	/*
 	 * If lengths of bcn_probe_rsp, reassoc_req and reassoc_rsp are zero in
 	 * synch_event driver would have received bcn_probe_rsp, reassoc_req
