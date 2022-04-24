@@ -1194,17 +1194,7 @@ static int wsa881x_probe(struct snd_soc_component *component)
 			"client failed\n", __func__);
 		return ret;
 	}
-	mutex_init(&wsa_pdata[wsa881x_index].bg_lock);
-	mutex_init(&wsa_pdata[wsa881x_index].res_lock);
-	snprintf(wsa_pdata[wsa881x_index].tz_pdata.name, 100, "%s",
-		wsa_tz_names[wsa881x_index]);
-	wsa_pdata[wsa881x_index].component = component;
-	wsa_pdata[wsa881x_index].spk_pa_gain = SPK_GAIN_12DB;
-	wsa_pdata[wsa881x_index].component = component;
-	wsa_pdata[wsa881x_index].tz_pdata.component = component;
-	wsa_pdata[wsa881x_index].tz_pdata.wsa_temp_reg_read =
-						wsa881x_temp_reg_read;
-	snd_soc_component_set_drvdata(component, &wsa_pdata[wsa881x_index]);
+
 	while (retry) {
 		if (wsa_pdata[wsa881x_index].regmap_flag)
 			break;
@@ -1216,6 +1206,18 @@ static int wsa881x_probe(struct snd_soc_component *component)
 				"analog slave not initilized\n", __func__);
 		return -EPROBE_DEFER;
 	}
+
+	mutex_init(&wsa_pdata[wsa881x_index].bg_lock);
+	mutex_init(&wsa_pdata[wsa881x_index].res_lock);
+	snprintf(wsa_pdata[wsa881x_index].tz_pdata.name, 100, "%s",
+		wsa_tz_names[wsa881x_index]);
+	wsa_pdata[wsa881x_index].component = component;
+	wsa_pdata[wsa881x_index].spk_pa_gain = SPK_GAIN_12DB;
+	wsa_pdata[wsa881x_index].component = component;
+	wsa_pdata[wsa881x_index].tz_pdata.component = component;
+	wsa_pdata[wsa881x_index].tz_pdata.wsa_temp_reg_read =
+						wsa881x_temp_reg_read;
+	snd_soc_component_set_drvdata(component, &wsa_pdata[wsa881x_index]);
 	wsa881x_init_thermal(&wsa_pdata[wsa881x_index].tz_pdata);
 	INIT_DELAYED_WORK(&wsa_pdata[wsa881x_index].ocp_ctl_work,
 				wsa881x_ocp_ctl_work);
