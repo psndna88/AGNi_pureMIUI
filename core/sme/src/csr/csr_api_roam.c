@@ -21309,7 +21309,6 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		}
 
 		policy_mgr_check_n_start_opportunistic_timer(mac_ctx->psoc);
-		policy_mgr_check_concurrent_intf_and_restart_sap(mac_ctx->psoc);
 		vdev_roam_params->roam_invoke_in_progress = false;
 
 		if (roam_synch_data->authStatus ==
@@ -21328,6 +21327,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 						   WLAN_ROAM_INIT,
 						   REASON_CONNECT);
 		}
+		policy_mgr_check_concurrent_intf_and_restart_sap(mac_ctx->psoc);
 		goto end;
 	case SIR_ROAMING_DEAUTH:
 		csr_roam_roaming_offload_timer_action(
