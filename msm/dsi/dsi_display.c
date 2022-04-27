@@ -2455,6 +2455,63 @@ void dsi_display_enable_event(struct drm_connector *connector,
 	}
 }
 
+int dsi_display_ctrl_vreg_on(struct dsi_display *display)
+{
+	int rc = 0;
+	int i;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_ctrl *dsi_ctrl;
+
+	display_for_each_ctrl(i, display) {
+		ctrl = &display->ctrl[i];
+		if (!ctrl->ctrl)
+			continue;
+
+		dsi_ctrl = ctrl->ctrl;
+		if (dsi_ctrl->current_state.host_initialized) {
+			rc = dsi_pwr_enable_regulator(
+					&dsi_ctrl->pwr_info.host_pwr, true);
+			if (rc) {
+				DSI_ERR("[%s] Failed to enable vreg, rc=%d\n",
+				       dsi_ctrl->name, rc);
+				goto error;
+			}
+			DSI_DEBUG("[%s] Enable ctrl vreg\n", dsi_ctrl->name);
+		}
+	}
+error:
+	return rc;
+}
+
+int dsi_display_ctrl_vreg_off(struct dsi_display *display)
+{
+	int rc = 0;
+	int i;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_ctrl *dsi_ctrl;
+
+	display_for_each_ctrl(i, display) {
+		ctrl = &display->ctrl[i];
+		if (!ctrl->ctrl)
+			continue;
+
+		dsi_ctrl = ctrl->ctrl;
+		if (dsi_ctrl->current_state.host_initialized) {
+			rc = dsi_pwr_enable_regulator(
+				&dsi_ctrl->pwr_info.host_pwr, false);
+			if (rc) {
+				DSI_ERR("[%s] Failed to disable vreg, rc=%d\n",
+				       dsi_ctrl->name, rc);
+				goto error;
+			}
+			DSI_DEBUG("[%s] Disable ctrl vreg\n", dsi_ctrl->name);
+		}
+	}
+error:
+	return rc;
+}
+
+
 static int dsi_display_ctrl_power_on(struct dsi_display *display)
 {
 	int rc = 0;
@@ -4203,6 +4260,9 @@ static int dsi_display_parse_dt(struct dsi_display *display)
 
 	display->needs_clk_src_reset = of_property_read_bool(of_node,
 				"qcom,needs-clk-src-reset");
+
+	display->needs_ctrl_vreg_disable = of_property_read_bool(of_node,
+				"qcom,needs-ctrl-vreg-disable");
 
 	/* Parse all external bridges from port 0 */
 	display_for_each_ctrl(i, display) {
