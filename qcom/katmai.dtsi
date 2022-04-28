@@ -1,4 +1,5 @@
 #include "yupik-iot.dtsi"
+#include "katmai-cpu.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. KATMAI SoC";
