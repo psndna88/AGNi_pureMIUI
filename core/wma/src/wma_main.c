@@ -3413,6 +3413,11 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					wma_roam_vdev_disconnect_event_handler,
 					WMA_RX_SERIALIZER_CTX);
 
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   wmi_roam_frame_event_id,
+					   wma_roam_candidate_frame_event_handler,
+					   WMA_RX_SERIALIZER_CTX);
+
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
 				wmi_rssi_breach_event_id,

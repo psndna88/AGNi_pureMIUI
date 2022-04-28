@@ -1185,6 +1185,8 @@ QDF_STATUS sme_hdd_ready_ind(mac_handle_t mac_handle)
 		msg->csr_roam_auth_event_handle_cb =
 				csr_roam_auth_offload_callback;
 		msg->csr_roam_pmkid_req_cb = csr_roam_pmkid_req_callback;
+		msg->csr_roam_candidate_event_cb =
+				csr_roam_candidate_event_handle_callback;
 
 		status = u_mac_post_ctrl_msg(mac_handle, (tSirMbMsg *)msg);
 		if (QDF_IS_STATUS_ERROR(status)) {

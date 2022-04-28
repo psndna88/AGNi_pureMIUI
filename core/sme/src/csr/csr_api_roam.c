@@ -21938,6 +21938,128 @@ csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
 	return status;
 
 }
+
+static
+void csr_inform_bcn_probe(struct mac_context *mac_ctx,
+			  uint8_t *frame, uint32_t len,
+			  qdf_freq_t freq)
+{
+	qdf_nbuf_t buf;
+	uint8_t *data, i;
+	struct mgmt_rx_event_params rx_param = {0};
+	struct wlan_frame_hdr *hdr;
+	enum mgmt_frame_type frm_type = MGMT_BEACON;
+
+	hdr = (struct wlan_frame_hdr *)frame;
+
+	if ((hdr->i_fc[0] & QDF_IEEE80211_FC0_SUBTYPE_MASK) ==
+	    MGMT_SUBTYPE_PROBE_RESP)
+		frm_type = MGMT_PROBE_RESP;
+
+	rx_param.pdev_id = 0;
+	rx_param.chan_freq = freq;
+	/* Real RSSI will be filled after roam sync */
+	rx_param.rssi = 0;
+
+	/* Set all per chain rssi as invalid */
+	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
+		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
+
+	buf = qdf_nbuf_alloc(NULL, qdf_roundup(len, 4), 0, 4, false);
+	if (!buf)
+		return;
+
+	qdf_nbuf_put_tail(buf, len);
+	qdf_nbuf_set_protocol(buf, ETH_P_CONTROL);
+
+	data = qdf_nbuf_data(buf);
+	qdf_mem_copy(data, frame, len);
+	/* buf will be freed by scan module in error or success case */
+	wlan_scan_process_bcn_probe_rx_sync(wlan_pdev_get_psoc(mac_ctx->pdev),
+					    buf, &rx_param, frm_type);
+}
+
+QDF_STATUS
+csr_roam_candidate_event_handle_callback(struct mac_context *mac_ctx,
+					 uint8_t *frame, uint32_t len)
+{
+	uint32_t ie_offset, ie_len;
+	uint8_t *ie_ptr = NULL;
+	uint8_t *extracted_ie = NULL;
+	uint8_t primary_channel, band;
+	qdf_freq_t op_freq;
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_MLME, QDF_TRACE_LEVEL_DEBUG,
+			   frame, len);
+
+	/* Fixed parameters offset */
+	ie_offset = sizeof(struct wlan_frame_hdr) + SIR_MAC_B_PR_SSID_OFFSET;
+
+	if (len <= ie_offset) {
+		mlme_err("Invalid frame length");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ie_ptr = frame + ie_offset;
+	ie_len = len - ie_offset;
+
+	/* For 2.4GHz,5GHz get channel from DS IE */
+	extracted_ie = (uint8_t *)wlan_get_ie_ptr_from_eid(WLAN_ELEMID_DSPARMS,
+							   ie_ptr, ie_len);
+
+	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_DSPARMS &&
+	    extracted_ie[1] == WLAN_DS_PARAM_IE_MAX_LEN) {
+		band = BIT(REG_BAND_2G) | BIT(REG_BAND_5G);
+		primary_channel = *(extracted_ie + 2);
+		sme_debug("Extracted primary channel from DS : %d",
+			  primary_channel);
+		goto update_beacon;
+	}
+
+	/* For HT, VHT and non-6GHz HE, get channel from HTINFO IE */
+	extracted_ie = (uint8_t *)
+		wlan_get_ie_ptr_from_eid(WLAN_ELEMID_HTINFO_ANA,
+					 ie_ptr, ie_len);
+	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_HTINFO_ANA &&
+	    extracted_ie[1] == sizeof(struct wlan_ie_htinfo_cmn)) {
+		band = BIT(REG_BAND_2G) | BIT(REG_BAND_5G);
+		primary_channel =
+			((struct wlan_ie_htinfo *)extracted_ie)->
+						hi_ie.hi_ctrlchannel;
+		sme_debug("Extracted primary channel from HT INFO : %d",
+			  primary_channel);
+		goto update_beacon;
+	}
+
+	/* For 6GHz, get channel from HE OP IE */
+	extracted_ie = (uint8_t *)
+		wlan_get_ext_ie_ptr_from_ext_id(WLAN_HEOP_OUI_TYPE,
+						(uint8_t)
+						WLAN_HEOP_OUI_SIZE,
+						ie_ptr, ie_len);
+
+	if (extracted_ie &&
+	    !qdf_mem_cmp(&extracted_ie[2], WLAN_HEOP_OUI_TYPE,
+			 WLAN_HEOP_OUI_SIZE) &&
+	     extracted_ie[1] <= WLAN_MAX_HEOP_IE_LEN) {
+		band = BIT(REG_BAND_6G);
+		primary_channel = util_scan_get_6g_oper_channel(extracted_ie);
+		sme_debug("Extracted primary channel from HE OP : %d",
+			  primary_channel);
+		if (primary_channel)
+			goto update_beacon;
+	}
+
+	mlme_err("Primary channel was not found in the candidate scan entry");
+	return QDF_STATUS_E_FAILURE;
+
+update_beacon:
+	op_freq = wlan_reg_chan_band_to_freq(mac_ctx->pdev,
+					     primary_channel, band);
+	sme_debug("Roaming candidate frequency : %d", op_freq);
+	csr_inform_bcn_probe(mac_ctx, frame, len, op_freq);
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 QDF_STATUS csr_update_owe_info(struct mac_context *mac,

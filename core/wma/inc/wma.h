@@ -1012,6 +1012,9 @@ typedef struct {
 					uint16_t reason_code);
 	QDF_STATUS (*csr_roam_pmkid_req_cb)(uint8_t vdev_id,
 		struct roam_pmkid_req_event *bss_list);
+	QDF_STATUS (*csr_roam_candidate_event_cb)(struct mac_context *mac,
+						  uint8_t *frame,
+						  uint32_t len);
 	qdf_wake_lock_t wmi_cmd_rsp_wake_lock;
 	qdf_runtime_lock_t wmi_cmd_rsp_runtime_lock;
 	qdf_runtime_lock_t sap_prevent_runtime_pm_lock;
