@@ -4697,6 +4697,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_PKT_CAPTURE_V2
 	wmi_vdev_smart_monitor_event_id,
 #endif
+	 wmi_roam_frame_event_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
