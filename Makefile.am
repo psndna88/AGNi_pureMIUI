@@ -15,6 +15,9 @@ endif
 ifeq ($(TARGET_SUPPORT), qrbx210)
 KBUILD_OPTIONS += CONFIG_ARCH_BENGAL=y
 endif
+ifeq ($(TARGET_SUPPORT), qrb5165)
+KBUILD_OPTIONS += CONFIG_ARCH_KONA=y
+endif
 
 subdir-ccflags-y += -I$(AUDIO_ROOT)/include/uapi/
 
@@ -37,6 +40,12 @@ ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qrbx210))
 obj-m += asoc/codecs/rouleur/
 obj-m += asoc/codecs/bolero/
 obj-m += asoc/codecs/wcd937x/
+KBUILD_CFLAGS += -Wno-error
+endif
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qrb5165))
+obj-m += asoc/codecs/bolero/
+obj-m += asoc/codecs/wcd938x/
+bj-m += asoc/codecs/wsa883x/
 KBUILD_CFLAGS += -Wno-error
 endif
 ifeq ($(TARGET_SUPPORT), sdmsteppe)
