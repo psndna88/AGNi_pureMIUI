@@ -56,7 +56,7 @@
 #include <linux/notifier.h>
 #include <linux/backlight.h>
 #include <drm/dsi_display_fod.h>
-#include <drm/drm_panel.h>
+#include <drm/mi_disp_notifier.h>
 
 #include <linux/fb.h>
 #include <linux/proc_fs.h>
@@ -131,9 +131,6 @@ static u8 key_mask;
 
 extern spinlock_t fts_int;
 struct fts_ts_info *fts_info;
-#if defined(CONFIG_DRM_PANEL)
-static struct drm_panel *active_panel;
-#endif
 static int fts_init_sensing(struct fts_ts_info *info);
 static int fts_mode_handler(struct fts_ts_info *info, int force);
 static int fts_chip_initialization(struct fts_ts_info *info, int init_type);
@@ -1246,15 +1243,12 @@ static ssize_t stm_fts_cmd_show(struct device *dev,
 			res = (res | ERROR_DISABLE_INTER);
 			goto END;
 		}
-#if defined(CONFIG_DRM)
-	if (active_panel)
-		res = drm_panel_notifier_unregister(active_panel, &info->notifier);
+		res = mi_disp_unregister_client(&info->notifier);
 		if (res < 0) {
 			logError(1, "%s ERROR: unregister notifier failed!\n",
 				 tag);
 			goto END;
 		}
-#endif
 		switch (typeOfComand[0]) {
 			/*ITO TEST */
 		case 0x01:
@@ -1472,10 +1466,9 @@ static ssize_t stm_fts_cmd_show(struct device *dev,
 		res = ERROR_OP_NOT_ALLOW;
 
 	}
-#if defined(CONFIG_DRM)
-	if (active_panel)
-		drm_panel_notifier_register(active_panel, &info->notifier);
-#endif
+	if (mi_disp_register_client(&info->notifier) < 0) {
+		logError(1, "%s ERROR: register notifier failed!\n", tag);
+	}
 END:
 	all_strbuff = (u8 *) kzalloc(size, GFP_KERNEL);
 
@@ -5523,10 +5516,7 @@ int fts_chip_powercycle(struct fts_ts_info *info)
 static int fts_init_sensing(struct fts_ts_info *info)
 {
 	int error = 0;
-#if defined(CONFIG_DRM_PANEL)
-	if (active_panel)
-		error |= drm_panel_notifier_register(active_panel, &info->notifier);
-#endif
+	error |= mi_disp_register_client(&info->notifier);
 	error |= fts_interrupt_install(info);
 	error |= fts_mode_handler(info, 0);
 #ifdef FTS_FOD_AREA_REPORT
@@ -6857,13 +6847,14 @@ static int fts_drm_state_chg_callback(struct notifier_block *nb,
 {
 	struct fts_ts_info *info =
 	    container_of(nb, struct fts_ts_info, notifier);
-	struct drm_panel_notifier *evdata = data;
+	struct mi_disp_notifier *evdata = data;
 	unsigned int blank;
 
-	if (!(val == DRM_PANEL_EARLY_EVENT_BLANK ||
-		val == DRM_PANEL_EVENT_BLANK)) {
-		logError(1, "event(%lu) do not need process\n", val);
-		return 0;
+	logError(0, "%s %s: fts notifier begin!\n", tag, __func__);
+
+	if (evdata->disp_id != MI_DISPLAY_PRIMARY) {
+		logError(1, "%s %s: not primary display\n", tag, __func__);
+		return NOTIFY_OK;
 	}
 
 	if (evdata && evdata->data && info) {
@@ -6871,15 +6862,17 @@ static int fts_drm_state_chg_callback(struct notifier_block *nb,
 		blank = *(int *)(evdata->data);
 		logError(1, "%s %s: val:%lu,blank:%u\n", tag, __func__, val, blank);
 
-		if (val == DRM_PANEL_EVENT_BLANK && (blank == DRM_PANEL_BLANK_POWERDOWN)) {
+		if (val == MI_DISP_DPMS_EARLY_EVENT && (blank == MI_DISP_DPMS_POWERDOWN ||
+			blank == MI_DISP_DPMS_LP1 || blank == MI_DISP_DPMS_LP2)) {
 			if (info->sensor_sleep)
 				return NOTIFY_OK;
 
-			logError(1, "%s %s: FB_BLANK_POWERDOWN\n", tag, __func__);
+			logError(1, "%s %s: FB_BLANK %s\n", tag,
+				 __func__, blank == MI_DISP_DPMS_POWERDOWN ? "POWER DOWN" : "LP");
 
 			flush_workqueue(info->event_wq);
 			queue_work(info->event_wq, &info->suspend_work);
-		} else if (val == DRM_PANEL_EVENT_BLANK && blank == DRM_PANEL_BLANK_UNBLANK) {
+		} else if (val == MI_DISP_DPMS_EVENT && blank == MI_DISP_DPMS_ON) {
 			if (!info->sensor_sleep)
 				return NOTIFY_OK;
 
@@ -7587,35 +7580,6 @@ static int parse_gamemode_dt(struct device *dev, struct fts_hw_platform_data *bd
 }
 #endif
 
-/**
- * pointer active_panel initlized function, used to checkout panel(config)from devices
- * tree ,later will be passed to drm_notifyXXX function.
- * @param device node contains the panel
- * @return pointer to that panel if panel truely  exists, otherwise negative number
- */
-static int fts_ts_check_panel(struct device_node *np)
-{
-	int i;
-	int count;
-	struct device_node *node;
-	struct drm_panel *panel;
-
-	count = of_count_phandle_with_args(np, "panel", NULL);
-	if (count <= 0)
-		return -ENODEV;
-
-	for (i = 0; i < count; i++) {
-		node = of_parse_phandle(np, "panel", i);
-		panel = of_drm_find_panel(node);
-		of_node_put(node);
-		if (!IS_ERR(panel)) {
-			active_panel = panel;
-			return 0;
-		}
-	}
-
-	return PTR_ERR(panel);
-}
 /**
  * Retrieve and parse the hw information from the device tree node defined in the system.
  * the most important information to obtain are: IRQ and RESET gpio numbers, power regulator names
@@ -8365,11 +8329,6 @@ static int fts_probe(struct spi_device *client)
 	int res = 0;
 	u8 gesture_cmd[6] = {0xA2, 0x03, 0x00, 0x00, 0x00, 0x03};
 #endif
-#if defined(CONFIG_DRM_PANEL) && defined(CONFIG_OF)
-	error = fts_ts_check_panel(dp);
-	if (error < 0)
-		logError(1, "enter here,no panel in current device node");
-#endif
 	logError(1, "%s %s: driver spi ver: %s\n", tag, __func__,
 		 FTS_TS_DRV_VERSION);
 #ifdef I2C_INTERFACE
@@ -8894,10 +8853,7 @@ ProbeErrorExit_7:
 		kfree(info->dma_buf->wrBuf);
 #endif
 ProbeErrorExit_6:
-#if defined(CONFIG_DRM)
-	if (active_panel)
-		drm_panel_notifier_unregister(active_panel, &info->notifier);
-#endif
+	mi_disp_unregister_client(&info->notifier);
 	input_unregister_device(info->input_dev);
 #ifdef CONFIG_FTS_POWERSUPPLY_CB
 	power_supply_unreg_notifier(&info->power_supply_notifier);
@@ -8968,10 +8924,7 @@ static int fts_remove(struct spi_device *client)
 #ifdef CONFIG_FTS_BL_CB
 	backlight_unregister_notifier(&info->bl_notifier);
 #endif
-#if defined(CONFIG_DRM)
-	if (active_panel)
-		drm_panel_notifier_unregister(active_panel, &info->notifier);
-#endif
+	mi_disp_unregister_client(&info->notifier);
 	/* unregister the device */
 	input_unregister_device(info->input_dev);
 
