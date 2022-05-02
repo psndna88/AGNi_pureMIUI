@@ -220,7 +220,7 @@ struct sde_dbg_evtlog *sde_evtlog_init(void)
 {
 	struct sde_dbg_evtlog *evtlog;
 
-	evtlog = vzalloc(sizeof(*evtlog));
+	evtlog = kzalloc(sizeof(*evtlog), GFP_KERNEL);
 	if (!evtlog)
 		return ERR_PTR(-ENOMEM);
 
@@ -240,7 +240,7 @@ struct sde_dbg_reglog *sde_reglog_init(void)
 {
 	struct sde_dbg_reglog *reglog;
 
-	reglog = vzalloc(sizeof(*reglog));
+	reglog = kzalloc(sizeof(*reglog), GFP_KERNEL);
 	if (!reglog)
 		return ERR_PTR(-ENOMEM);
 
@@ -351,7 +351,7 @@ void sde_evtlog_destroy(struct sde_dbg_evtlog *evtlog)
 		list_del(&filter_node->list);
 		kfree(filter_node);
 	}
-	vfree(evtlog);
+	kfree(evtlog);
 }
 
 void sde_reglog_destroy(struct sde_dbg_reglog *reglog)
@@ -359,5 +359,5 @@ void sde_reglog_destroy(struct sde_dbg_reglog *reglog)
 	if (!reglog)
 		return;
 
-	vfree(reglog);
+	kfree(reglog);
 }
