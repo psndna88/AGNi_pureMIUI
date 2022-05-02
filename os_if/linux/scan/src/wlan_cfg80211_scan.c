@@ -1535,8 +1535,7 @@ int wlan_cfg80211_scan(struct wlan_objmgr_vdev *vdev,
 		if (req->scan_req.scan_policy_high_accuracy)
 			req->scan_req.adaptive_dwell_time_mode =
 						SCAN_DWELL_MODE_STATIC;
-		if (req->scan_req.scan_policy_low_power ||
-		    req->scan_req.scan_policy_low_span)
+		if (req->scan_req.scan_policy_low_power)
 			req->scan_req.adaptive_dwell_time_mode =
 						SCAN_DWELL_MODE_AGGRESSIVE;
 	}

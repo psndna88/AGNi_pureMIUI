@@ -61,6 +61,15 @@ typedef uint32_t wlan_scan_id;
 
 #define TBTT_INFO_COUNT 16
 
+/* Active dwell time in low span scan mode(NL80211_SCAN_FLAG_LOW_SPAN)
+ * in msec
+ */
+#define LOW_SPAN_ACTIVE_DWELL_TIME 40
+/* passive dwell time in low span scan mode (NL80211_SCAN_FLAG_LOW_SPAN)
+ * in msec
+ */
+#define LOW_SPAN_PASSIVE_DWELL_TIME 110
+
 /* forward declaration */
 struct wlan_objmgr_vdev;
 struct wlan_objmgr_pdev;
