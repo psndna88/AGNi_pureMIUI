@@ -430,3 +430,14 @@ req_free:
 
 	return status;
 }
+
+bool wlan_scan_cfg_skip_6g_and_indoor_freq(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_scan_obj *scan_obj;
+
+	scan_obj = wlan_psoc_get_scan_obj(psoc);
+	if (!scan_obj)
+		return false;
+
+	return scan_obj->scan_def.skip_6g_and_indoor_freq;
+}
