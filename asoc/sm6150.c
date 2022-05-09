@@ -7208,7 +7208,7 @@ static struct snd_soc_dai_link msm_tasha_be_dai_links[] = {
 
 static struct snd_soc_dai_link msm_wcn_be_dai_links[] = {
 	{
-		.name = LPASS_BE_SLIMBUS_TX_VI,
+		.name = LPASS_BE_SLIMBUS_7_RX,
 		.stream_name = "Slimbus7 Playback",
 		/* BT codec driver determines capabilities based on
 		 * dai name, bt codecdai name should always contains

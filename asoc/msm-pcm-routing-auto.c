@@ -1456,6 +1456,8 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 	struct msm_pcm_channel_mixer *params)
 {
 	int i, j = 0;
+	int num_ch_input_map = 0;
+	int num_ch_out_map = 0;
 
 	channel_mixer_v2[fe_id][type].enable = params->enable;
 	channel_mixer_v2[fe_id][type].rule = params->rule;
@@ -1465,12 +1467,18 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 		params->output_channel;
 	channel_mixer_v2[fe_id][type].port_idx = params->port_idx;
 
-	for (i = 0; i < ADM_MAX_CHANNELS; i++)
+	for (i = 0; i < ADM_MAX_CHANNELS; i++) {
 		channel_mixer_v2[fe_id][type].in_ch_map[i] =
 			params->in_ch_map[i];
-	for (i = 0; i < ADM_MAX_CHANNELS; i++)
+		if (channel_mixer_v2[fe_id][type].in_ch_map[i] > 0)
+			num_ch_input_map++;
+	}
+	for (i = 0; i < ADM_MAX_CHANNELS; i++) {
 		channel_mixer_v2[fe_id][type].out_ch_map[i] =
 			params->out_ch_map[i];
+		if (channel_mixer_v2[fe_id][type].out_ch_map[i] > 0)
+			num_ch_out_map++;
+	}
 
 	for (i = 0; i < ADM_MAX_CHANNELS; i++)
 		for (j = 0; j < ADM_MAX_CHANNELS; j++)
@@ -1481,7 +1489,14 @@ int msm_pcm_routing_set_channel_mixer_cfg(
 			params->override_in_ch_map;
 	channel_mixer_v2[fe_id][type].override_out_ch_map =
 			params->override_out_ch_map;
-
+	if (channel_mixer_v2[fe_id][type].input_channel != num_ch_input_map && channel_mixer_v2[fe_id][type].override_in_ch_map) {
+			channel_mixer_v2[fe_id][type].override_in_ch_map =false;
+			pr_info("%s: mismatched with num_ch_input_map %d override_in_ch_map set to false \n", __func__,num_ch_input_map);
+	}
+	if (channel_mixer_v2[fe_id][type].output_channel != num_ch_out_map && channel_mixer_v2[fe_id][type].override_out_ch_map) {
+			channel_mixer_v2[fe_id][type].override_out_ch_map =false;
+			pr_info("%s: mismatched with num_ch_out_map %d override_out_ch_map set to false \n", __func__,num_ch_out_map);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(msm_pcm_routing_set_channel_mixer_cfg);
@@ -2209,7 +2224,7 @@ static int msm_pcm_routing_channel_mixer_v2(int fe_id, bool perf_mode,
 	int j = 0, be_id = 0;
 	int ret = 0;
 
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: invalid FE %d\n", __func__, fe_id);
 		return 0;
 	}
@@ -2276,7 +2291,7 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
 		return ret;
 	}
 
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: invalid FE %d\n", __func__, fe_id);
 		return 0;
 	}
@@ -3702,6 +3717,12 @@ static int msm_routing_adm_get_backend_idx(struct snd_kcontrol *kcontrol)
 		backend_id = MSM_BACKEND_DAI_SLIMBUS_7_TX;
 	} else if (strnstr(kcontrol->id.name, "TERT_TDM_TX_0", sizeof("TERT_TDM_TX_0"))) {
 		backend_id = MSM_BACKEND_DAI_TERT_TDM_TX_0;
+	} else if (strnstr(kcontrol->id.name, "TERT_TDM_RX_0", sizeof("TERT_TDM_RX_0"))) {
+		backend_id = MSM_BACKEND_DAI_TERT_TDM_RX_0;
+	} else if (strnstr(kcontrol->id.name, "SEC_TDM_TX_0", sizeof("SEC_TDM_TX_0"))) {
+		backend_id = MSM_BACKEND_DAI_SEC_TDM_TX_0;
+	} else if (strnstr(kcontrol->id.name, "SEC_TDM_RX_0", sizeof("SEC_TDM_RX_0"))) {
+		backend_id = MSM_BACKEND_DAI_SEC_TDM_RX_0;
 	} else {
 		pr_err("%s: unsupported backend id: %s",
 			__func__, kcontrol->id.name);
@@ -3750,6 +3771,15 @@ static int msm_routing_adm_channel_config_put(
 
 static const struct snd_kcontrol_new adm_channel_config_controls[] = {
 	SOC_ENUM_EXT("TERT_TDM_TX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("TERT_TDM_RX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("SEC_TDM_TX_0 ADM Channels", adm_override_chs,
+			msm_routing_adm_channel_config_get,
+			msm_routing_adm_channel_config_put),
+	SOC_ENUM_EXT("SEC_TDM_RX_0 ADM Channels", adm_override_chs,
 			msm_routing_adm_channel_config_get,
 			msm_routing_adm_channel_config_put),
 };
@@ -32041,6 +32071,10 @@ static int msm_routing_put_device_pp_params_mixer(struct snd_kcontrol *kcontrol,
 
 	for_each_set_bit(i, &msm_bedais[be_idx].fe_sessions[0],
 				MSM_FRONTEND_DAI_MM_SIZE) {
+                if (i >= MSM_FRONTEND_DAI_MAX) {
+                        pr_debug("%s: Invalid FE id %d\n", __func__, i);
+                        return  -EINVAL;
+                }
 		if ((fe_dai_map[i][session_type].passthr_mode == LEGACY_PCM) ||
 			(fe_dai_map[i][session_type].passthr_mode == LISTEN))
 			compr_passthr_mode = false;
@@ -32747,6 +32781,10 @@ static void get_drift_and_put_asrc(struct work_struct *work)
 	else
 		pr_debug("%s: Succeed to get drift\n", __func__);
 
+        if (NULL == &p_asrc_cfg->modules) {
+                pr_err("%s: Failed to get asrc config modules\n", __func__);
+                goto exit;
+        }
 	list_for_each_safe(ptr, next, &p_asrc_cfg->modules) {
 		config_node = list_entry(ptr, struct asrc_module_config_node,
 					list);
