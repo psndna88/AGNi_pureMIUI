@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2333,6 +2333,7 @@ struct cdp_monitor_filter {
  * @cfg_dp_tso_enable: get TSO enable config
  * @cfg_dp_lro_enable: get LRO enable config
  * @cfg_dp_gro_enable: get GRP enable config
+ * @cfg_dp_force_gro_enable: get Force GRP enable config
  * @cfg_dp_tx_flow_start_queue_offset: get DP TX flow start queue offset
  * @cfg_dp_tx_flow_stop_queue_threshold: get DP TX flow stop queue threshold
  * @cfg_dp_ipa_uc_tx_buf_size: get IPA TX buf size config
@@ -2355,6 +2356,7 @@ enum cdp_dp_cfg {
 	cfg_dp_tso_enable,
 	cfg_dp_lro_enable,
 	cfg_dp_gro_enable,
+	cfg_dp_force_gro_enable,
 	cfg_dp_tx_flow_start_queue_offset,
 	cfg_dp_tx_flow_stop_queue_threshold,
 	cfg_dp_ipa_uc_tx_buf_size,

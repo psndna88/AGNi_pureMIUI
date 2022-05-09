@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1859,6 +1860,7 @@ struct hal_hw_txrx_ops qcn9000_hal_hw_txrx_ops = {
 	hal_rx_mpdu_end_offset_get_generic,
 	hal_rx_flow_setup_fse_9000,
 	hal_compute_reo_remap_ix2_ix3_9000,
+	NULL,
 	NULL,
 	NULL,
 	NULL,
