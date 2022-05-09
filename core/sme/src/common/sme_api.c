@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16026,6 +16027,7 @@ QDF_STATUS sme_handle_sae_msg(mac_handle_t mac_handle,
 		sae_msg->length = sizeof(*sae_msg);
 		sae_msg->vdev_id = session_id;
 		sae_msg->sae_status = sae_status;
+		sae_msg->result_code = eSIR_SME_AUTH_REFUSED;
 		qdf_mem_copy(sae_msg->peer_mac_addr,
 			     peer_mac_addr.bytes,
 			     QDF_MAC_ADDR_SIZE);

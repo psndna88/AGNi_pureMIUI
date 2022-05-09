@@ -5685,7 +5685,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 		return 0;
 	}
 
-	if (sta_ctx->hdd_reassoc_scenario) {
+	if (sta_ctx->hdd_reassoc_scenario ||
+	    hdd_is_roaming_in_progress(hdd_ctx)) {
 		hdd_debug("Roaming is in progress, cannot continue with this request");
 		/*
 		 * supplicant reports very low rssi to upper layer
