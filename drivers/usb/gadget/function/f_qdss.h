@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2017,2021 The Linux Foundation. All rights reserved.
  *
@@ -99,4 +100,5 @@ struct usb_qdss_opts {
 
 int uninit_data(struct usb_ep *ep);
 int set_qdss_data_connection(struct f_qdss *qdss, int enable);
+int alloc_sps_req(struct usb_ep *data_ep);
 #endif

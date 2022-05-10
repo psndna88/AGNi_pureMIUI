@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,6 +39,7 @@ static void _update_wptr(struct adreno_device *adreno_dev, bool reset_timer)
 	bool write = false;
 	unsigned int val;
 	int ret = 0;
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
 	spin_lock_irqsave(&rb->preempt_lock, flags);
 
@@ -541,6 +543,21 @@ unsigned int a6xx_preemption_pre_ibsubmit(
 		cmds += cp_gpuaddr(adreno_dev, cmds, dest);
 		*cmds++ = lower_32_bits(gpuaddr);
 		*cmds++ = upper_32_bits(gpuaddr);
+
+		/*
+		 * Add a KMD post amble to clear the perf counters during
+		 * preemption
+		 */
+		if (!adreno_dev->perfcounter) {
+			u64 kmd_postamble_addr =
+			SCRATCH_PREEMPTION_CTXT_RESTORE_GPU_ADDR(device, KMD_POSTAMBLE_IDX);
+
+			*cmds++ = cp_type7_packet(CP_SET_AMBLE, 3);
+			*cmds++ = lower_32_bits(kmd_postamble_addr);
+			*cmds++ = upper_32_bits(kmd_postamble_addr);
+			*cmds++ = ((CP_KMD_AMBLE_TYPE << 20) | GENMASK(22, 20))
+			| (adreno_dev->preempt.postamble_len | GENMASK(19, 0));
+		}
 	}
 
 	return (unsigned int) (cmds - cmds_orig);
@@ -763,6 +780,33 @@ int a6xx_preemption_init(struct adreno_device *adreno_dev)
 			goto err;
 
 		addr += A6XX_CP_CTXRECORD_PREEMPTION_COUNTER_SIZE;
+	}
+
+	/*
+	 * First 8 dwords of the preemption scratch buffer is used to store the
+	 * address for CP to save/restore VPC data. Reserve 11 dwords in the
+	 * preemption scratch buffer from index KMD_POSTAMBLE_IDX for KMD
+	 * postamble pm4 packets
+	 */
+	if (!adreno_dev->perfcounter) {
+		u32 *postamble = preempt->counters.hostptr +
+					(KMD_POSTAMBLE_IDX * sizeof(u64));
+		u32 count = 0;
+
+		postamble[count++] = cp_type7_packet(CP_REG_RMW, 3);
+		postamble[count++] = A6XX_RBBM_PERFCTR_SRAM_INIT_CMD;
+		postamble[count++] = 0x0;
+		postamble[count++] = 0x1;
+
+		postamble[count++] = cp_type7_packet(CP_WAIT_REG_MEM, 6);
+		postamble[count++] = 0x3;
+		postamble[count++] = A6XX_RBBM_PERFCTR_SRAM_INIT_STATUS;
+		postamble[count++] = 0x0;
+		postamble[count++] = 0x1;
+		postamble[count++] = 0x1;
+		postamble[count++] = 0x0;
+
+		preempt->postamble_len = count;
 	}
 
 	ret = a6xx_preemption_iommu_init(adreno_dev);
