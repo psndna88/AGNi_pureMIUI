@@ -1276,6 +1276,7 @@ QDF_STATUS dp_rx_dump_fisa_stats(struct dp_soc *soc)
 		&((struct dp_fisa_rx_sw_ft *)rx_fst->base)[0];
 	int ft_size = rx_fst->max_entries;
 	int i;
+	uint64_t avg_aggregated;
 
 	dp_info("Num of flows programmed %d", rx_fst->add_flow_count);
 	dp_info("Num of flows evicted %d", rx_fst->del_flow_count);
@@ -1285,10 +1286,9 @@ QDF_STATUS dp_rx_dump_fisa_stats(struct dp_soc *soc)
 		if (!sw_ft_entry->is_populated)
 			continue;
 
-		dp_info("FLOw ID %d is %s on napi/ring %d",
-			sw_ft_entry->flow_id,
-			sw_ft_entry->is_flow_udp ? "udp" : "tcp",
-			sw_ft_entry->napi_id);
+		avg_aggregated = sw_ft_entry->bytes_aggregated;
+		qdf_do_div(avg_aggregated, sw_ft_entry->flush_count);
+		dp_info("avg aggregation %llu", avg_aggregated);
 		dp_info("num msdu aggr %d", sw_ft_entry->aggr_count);
 		dp_info("flush count %d", sw_ft_entry->flush_count);
 		dp_info("bytes_aggregated %llu", sw_ft_entry->bytes_aggregated);
