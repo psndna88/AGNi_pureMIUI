@@ -684,13 +684,7 @@ static void av_dev_drift_afe_cb_handler(uint32_t opcode, uint32_t *payload,
 		return;
 	}
 
-	if (!this_afe.av_dev_drift_resp.status) {
-		atomic_set(&this_afe.state, 0);
-	} else {
-		pr_debug("%s: av_dev_drift_resp status: %d\n", __func__,
-			 this_afe.av_dev_drift_resp.status);
-		atomic_set(&this_afe.state, -1);
-	}
+	atomic_set(&this_afe.state, 0);
 }
 
 static void doa_tracking_mon_afe_cb_handler(uint32_t opcode, uint32_t *payload,
