@@ -47,13 +47,13 @@ obj-y += asoc/
 obj-y += asoc/codecs/
 obj-y += soc/
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa8195))
-KBUILD_OPTIONS += CONFIG_SND_SOC_SA8155=m
+KBUILD_OPTIONS += CONFIG_SND_SOC_SA8155=y
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa6155))
-KBUILD_OPTIONS += CONFIG_SND_SOC_SA6155=m
+KBUILD_OPTIONS += CONFIG_SND_SOC_SA6155=y
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm))
-KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=m
+KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=y
 endif
 endif
 
