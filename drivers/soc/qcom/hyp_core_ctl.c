@@ -22,6 +22,11 @@
 #include <linux/pm_qos.h>
 #include <linux/cpufreq.h>
 #include <linux/sched/sysctl.h>
+#ifndef CONFIG_TRACEPOINTS
+#include <linux/cpu.h>
+#include <linux/interrupt.h>
+#include <linux/irqreturn.h>
+#endif
 
 #include <linux/haven/hcall.h>
 #include <linux/haven/hh_errno.h>

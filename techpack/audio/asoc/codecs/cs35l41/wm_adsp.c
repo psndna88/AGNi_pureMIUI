@@ -3930,7 +3930,7 @@ err:
 	mutex_unlock(&vpu->pwr_lock);
 }
 
-static void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
+void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
 {
 	int ret;
 
