@@ -5735,6 +5735,18 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (pdata->wcd_disabled) {
 		codec_reg_done = true;
+	        if (pdata->lito_v2_enabled) {
+		        /*
+		        * Enable tx data line3 for saipan version v2 and
+		        * write corresponding lpi register.
+		        */
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map_v2),
+
+				    sm_port_map_v2);
+	        } else {
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map),
+				    sm_port_map);
+	        }
 		return 0;
 	}
 
@@ -5784,10 +5796,10 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 		        * Enable tx data line3 for saipan version v2 and
 		        * write corresponding lpi register.
 		        */
-		        bolero_set_port_map(component, ARRAY_SIZE(sm_port_map_v2),
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map_v2),
 				    sm_port_map_v2);
 	        } else {
-		        bolero_set_port_map(component, ARRAY_SIZE(sm_port_map),
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map),
 				    sm_port_map);
 	        }
 	}
@@ -7187,10 +7199,12 @@ static struct snd_soc_dai_link msm_kona_dai_links[
 static int msm_populate_dai_link_component_of_node(
 					struct snd_soc_card *card)
 {
-	int i, index, ret = 0;
+	int i, j, index, ret = 0;
 	struct device *cdev = card->dev;
 	struct snd_soc_dai_link *dai_link = card->dai_link;
 	struct device_node *np;
+	int codecs_enabled = 0;
+	struct snd_soc_dai_link_component *codecs_comp = NULL;
 
 	if (!cdev) {
 		dev_err(cdev, "%s: Sound card device memory NULL\n", __func__);
@@ -7247,22 +7261,77 @@ static int msm_populate_dai_link_component_of_node(
 		}
 
 		/* populate codec_of_node for snd card dai links */
-		if (dai_link[i].codecs->name && !dai_link[i].codecs->of_node) {
-			index = of_property_match_string(cdev->of_node,
-						 "asoc-codec-names",
-						 dai_link[i].codecs->name);
-			if (index < 0)
-				continue;
-			np = of_parse_phandle(cdev->of_node, "asoc-codec",
-					      index);
-			if (!np) {
-				dev_err(cdev, "%s: retrieving phandle for codec %s failed\n",
-					__func__, dai_link[i].codecs->name);
-				ret = -ENODEV;
-				goto err;
+		if (dai_link[i].num_codecs > 0) {
+			for (j = 0; j < dai_link[i].num_codecs; j++) {
+				if (dai_link[i].codecs[j].of_node ||
+						!dai_link[i].codecs[j].name)
+					continue;
+
+				index = of_property_match_string(cdev->of_node,
+						"asoc-codec-names",
+						dai_link[i].codecs[j].name);
+				if (index < 0)
+					continue;
+				np = of_parse_phandle(cdev->of_node,
+						      "asoc-codec",
+						      index);
+				if (!np) {
+					dev_err(cdev, "%s: retrieving phandle for codec %s failed\n",
+						__func__,
+						dai_link[i].codecs[j].name);
+					ret = -ENODEV;
+					goto err;
+				}
+				dai_link[i].codecs[j].of_node = np;
+				dai_link[i].codecs[j].name = NULL;
 			}
-			dai_link[i].codecs->of_node = np;
-			dai_link[i].codecs->name = NULL;
+		}
+	}
+
+	/* In multi-codec scenario, check if codecs are enabled for this platform */
+	for (i = 0; i < card->num_links; i++) {
+		codecs_enabled = 0;
+		if (dai_link[i].num_codecs > 1) {
+			for (j = 0; j < dai_link[i].num_codecs; j++) {
+				if (!dai_link[i].codecs[j].of_node)
+					continue;
+
+				np = dai_link[i].codecs[j].of_node;
+                                if (!of_device_is_available(np)) {
+                                        dev_dbg(cdev, "%s: codec is disabled: %s\n",
+						__func__,
+						np->full_name);
+					dai_link[i].codecs[j].of_node = NULL;
+					continue;
+                                }
+
+				codecs_enabled++;
+			}
+			if (codecs_enabled > 0 &&
+				    codecs_enabled < dai_link[i].num_codecs) {
+				codecs_comp = devm_kzalloc(cdev,
+				    sizeof(struct snd_soc_dai_link_component)
+				    * codecs_enabled, GFP_KERNEL);
+				if (!codecs_comp) {
+					dev_err(cdev, "%s: %s dailink codec component alloc failed\n",
+						__func__, dai_link[i].name);
+					ret = -ENOMEM;
+					goto err;
+				}
+				index = 0;
+				for (j = 0; j < dai_link[i].num_codecs; j++) {
+					if(dai_link[i].codecs[j].of_node) {
+						codecs_comp[index].of_node =
+						  dai_link[i].codecs[j].of_node;
+						codecs_comp[index].dai_name =
+						  dai_link[i].codecs[j].dai_name;
+						codecs_comp[index].name = NULL;
+						index++;
+					}
+				}
+				dai_link[i].codecs = codecs_comp;
+				dai_link[i].num_codecs = codecs_enabled;
+			}
 		}
 	}
 
