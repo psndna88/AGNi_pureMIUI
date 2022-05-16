@@ -882,10 +882,13 @@ error:
  */
 
 #define IOVA_MAG_SIZE 128
+#define IOVA_MAG_SIZE_LOW (IOVA_MAG_SIZE/2)
+#define CACHE_INDEX_LIMIT 3
 
 struct iova_magazine {
 	unsigned long size;
-	unsigned long pfns[IOVA_MAG_SIZE];
+	unsigned long max_size;
+	unsigned long *pfns;
 };
 
 struct iova_cpu_rcache {
@@ -894,13 +897,23 @@ struct iova_cpu_rcache {
 	struct iova_magazine *prev;
 };
 
-static struct iova_magazine *iova_magazine_alloc(gfp_t flags)
+static struct iova_magazine *iova_magazine_alloc(unsigned long index, gfp_t flags)
 {
-	return kzalloc(sizeof(struct iova_magazine), flags);
+	struct iova_magazine *mag;
+
+	mag = kzalloc(sizeof(struct iova_magazine), flags);
+	if (index < CACHE_INDEX_LIMIT)
+		mag->max_size = IOVA_MAG_SIZE_LOW;
+	else
+		mag->max_size = IOVA_MAG_SIZE;
+
+	mag->pfns = kcalloc(mag->max_size, sizeof(unsigned long), flags);
+	return mag;
 }
 
 static void iova_magazine_free(struct iova_magazine *mag)
 {
+	kfree(mag->pfns);
 	kfree(mag);
 }
 
@@ -931,7 +944,7 @@ iova_magazine_free_pfns(struct iova_magazine *mag, struct iova_domain *iovad)
 
 static bool iova_magazine_full(struct iova_magazine *mag)
 {
-	return (mag && mag->size == IOVA_MAG_SIZE);
+	return (mag && mag->size == mag->max_size);
 }
 
 static bool iova_magazine_empty(struct iova_magazine *mag)
@@ -983,8 +996,8 @@ static void init_iova_rcaches(struct iova_domain *iovad)
 		for_each_possible_cpu(cpu) {
 			cpu_rcache = per_cpu_ptr(rcache->cpu_rcaches, cpu);
 			spin_lock_init(&cpu_rcache->lock);
-			cpu_rcache->loaded = iova_magazine_alloc(GFP_KERNEL);
-			cpu_rcache->prev = iova_magazine_alloc(GFP_KERNEL);
+			cpu_rcache->loaded = iova_magazine_alloc(i, GFP_KERNEL);
+			cpu_rcache->prev = iova_magazine_alloc(i, GFP_KERNEL);
 		}
 	}
 }
@@ -997,7 +1010,7 @@ static void init_iova_rcaches(struct iova_domain *iovad)
  */
 static bool __iova_rcache_insert(struct iova_domain *iovad,
 				 struct iova_rcache *rcache,
-				 unsigned long iova_pfn)
+				 unsigned long iova_pfn, unsigned long log_size)
 {
 	struct iova_magazine *mag_to_free = NULL;
 	struct iova_cpu_rcache *cpu_rcache;
@@ -1013,7 +1026,7 @@ static bool __iova_rcache_insert(struct iova_domain *iovad,
 		swap(cpu_rcache->prev, cpu_rcache->loaded);
 		can_insert = true;
 	} else {
-		struct iova_magazine *new_mag = iova_magazine_alloc(GFP_ATOMIC);
+		struct iova_magazine *new_mag = iova_magazine_alloc(log_size, GFP_ATOMIC);
 
 		if (new_mag) {
 			spin_lock(&rcache->lock);
@@ -1051,7 +1064,7 @@ static bool iova_rcache_insert(struct iova_domain *iovad, unsigned long pfn,
 	if (log_size >= IOVA_RANGE_CACHE_MAX_SIZE)
 		return false;
 
-	return __iova_rcache_insert(iovad, &iovad->rcaches[log_size], pfn);
+	return __iova_rcache_insert(iovad, &iovad->rcaches[log_size], pfn, log_size);
 }
 
 /*
