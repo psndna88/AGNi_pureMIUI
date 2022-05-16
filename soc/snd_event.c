@@ -304,6 +304,8 @@ void snd_event_mstr_add_client(struct snd_event_clients **snd_clients,
 					 GFP_KERNEL);
 		if (!client->cl_arr) {
 			*snd_clients = ERR_PTR(-ENOMEM);
+			kfree(client);
+			client = NULL;
 			return;
 		}
 		*snd_clients = client;
