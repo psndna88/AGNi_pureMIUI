@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -465,8 +465,46 @@ struct cdp_tidq_stats {
  * @rtt_che_buffer_pointer_low32 : The low 32 bits of the 40 bits pointer to
  * external RTT channel information buffer
  *
+ * @rtt_cfo_measurement : raw cfo data extracted from hardware, which is 14 bit
+ * signed number. The first bit used for sign representation and 13 bits for
+ * fractional part.
+ *
+ * @agc_gain_info0: Chain 0 & chain 1 agc gain information reported by PHY
+ *
+ * @agc_gain_info1: Chain 2 & chain 3 agc gain information reported by PHY
+ *
+ * @agc_gain_info2: Chain 4 & chain 5 agc gain information reported by PHY
+ *
+ * @agc_gain_info3: Chain 6 & chain 7 agc gain information reported by PHY
+ *
+ * @rx_start_ts: Rx packet timestamp, the time the first L-STF ADC sample
+ * arrived at Rx antenna.
+ *
+ * @mcs_rate: Indicates the mcs/rate in which packet is received.
+ * If HT,
+ *    0-7: MCS0-MCS7
+ * If VHT,
+ *    0-9: MCS0 to MCS9
+ * If HE,
+ *    0-11: MCS0 to MCS11,
+ *    12-13: 4096QAM,
+ *    14-15: reserved
+ * If Legacy,
+ *    0: 48 Mbps
+ *    1: 24 Mbps
+ *    2: 12 Mbps
+ *    3: 6 Mbps
+ *    4: 54 Mbps
+ *    5: 36 Mbps
+ *    6: 18 Mbps
+ *    7: 9 Mbps
+ *
+ * @gi_type: Indicates the gaurd interval.
+ *    0: 0.8 us
+ *    1: 0.4 us
+ *    2: 1.6 us
+ *    3: 3.2 us
  */
-
 struct cdp_rx_ppdu_cfr_info {
 	bool bb_captured_channel;
 	bool bb_captured_timeout;
@@ -475,6 +513,14 @@ struct cdp_rx_ppdu_cfr_info {
 	uint8_t chan_capture_status;
 	uint8_t rtt_che_buffer_pointer_high8;
 	uint32_t rtt_che_buffer_pointer_low32;
+	int16_t rtt_cfo_measurement;
+	uint32_t agc_gain_info0;
+	uint32_t agc_gain_info1;
+	uint32_t agc_gain_info2;
+	uint32_t agc_gain_info3;
+	uint32_t rx_start_ts;
+	uint32_t mcs_rate;
+	uint32_t gi_type;
 };
 #endif
 /*
@@ -868,6 +914,7 @@ struct protocol_trace_count {
  * @stbc: Packets in STBC
  * @ldpc: Packets in LDPC
  * @retries: Packet retries
+ * @retries_mpdu: mpdu number of successfully transmitted after retries
  * @non_amsdu_cnt: Number of MSDUs with no MSDU level aggregation
  * @amsdu_cnt: Number of MSDUs part of AMSDU
  * @tx_rate: Tx Rate
@@ -949,6 +996,7 @@ struct cdp_tx_stats {
 	uint32_t stbc;
 	uint32_t ldpc;
 	uint32_t retries;
+	uint32_t retries_mpdu;
 	uint32_t non_amsdu_cnt;
 	uint32_t amsdu_cnt;
 	uint32_t tx_rate;
@@ -1024,6 +1072,8 @@ struct cdp_tx_stats {
 	uint32_t num_ppdu_cookie_valid;
 	uint32_t no_ack_count[QDF_PROTO_SUBTYPE_MAX];
 	struct cdp_pkt_info tx_success_twt;
+	/* mpdu retry count in case of successful transmission */
+	uint32_t mpdu_success_with_retries;
 };
 
 /* struct cdp_rx_stats - rx Level Stats

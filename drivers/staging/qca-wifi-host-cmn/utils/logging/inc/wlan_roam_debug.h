@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -64,6 +65,7 @@ typedef enum {
  * @DEBUG_CONN_DISCONNECT: trace station disconnect
  * @DEBUG_CONN_DISCONNECT_HANDLER: trace disconnect handler
  * @DEBUG_CONN_DISCONNECT_IND: trace disconnect indication
+ * @DEBUG_CONN_RSO: trace RSO state changing
  */
 enum peer_debug_op {
 	DEBUG_PEER_CREATE_SEND = 0,
@@ -91,6 +93,7 @@ enum peer_debug_op {
 	DEBUG_CONN_DISCONNECT,
 	DEBUG_CONN_DISCONNECT_HANDLER,
 	DEBUG_CONN_DISCONNECT_IND,
+	DEBUG_CONN_RSO,
 };
 
 /**

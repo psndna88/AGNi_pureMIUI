@@ -5956,6 +5956,8 @@ void dp_txrx_path_stats(struct dp_soc *soc)
 			       pdev->stats.tx.dropped.fw_rem_notx);
 		DP_PRINT_STATS("Invalid peer on tx path: %u",
 			       pdev->soc->stats.tx.tx_invalid_peer.num);
+		DP_PRINT_STATS("Tx desc freed in non-completion path: %u",
+			       pdev->soc->stats.tx.tx_comp_exception);
 
 		DP_PRINT_STATS("Tx packets sent per interrupt:");
 		DP_PRINT_STATS("Single Packet: %u",
@@ -6650,6 +6652,10 @@ dp_print_soc_rx_stats(struct dp_soc *soc)
 		       soc->stats.rx.err.reo_cmd_send_fail);
 
 	DP_PRINT_STATS("Rx BAR frames:%d", soc->stats.rx.bar_frame);
+	DP_PRINT_STATS("Rxdma2rel route drop:%d",
+		       soc->stats.rx.rxdma2rel_route_drop);
+	DP_PRINT_STATS("Reo2rel route drop:%d",
+		       soc->stats.rx.reo2rel_route_drop);
 }
 
 #ifdef FEATURE_TSO_STATS

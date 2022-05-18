@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -337,7 +337,7 @@ static void dump_mu_rx_info(void *mu_rx_user_info,
 static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 {
 	uint8_t user_id, chain_id;
-	struct cfr_metadata_version_3 *meta = &header->u.meta_v3;
+	struct enh_cfr_metadata *meta = &header->u.meta_enh;
 	uint8_t *usermac = NULL;
 
 	cfr_debug("<METADATA><%u>\n"
@@ -345,6 +345,7 @@ static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 		  "vendorid = 0x%x\n"
 		  "cfr_metadata_version = %d\n"
 		  "cfr_data_version = %d\n"
+		  "cfr_metadata_len = %d\n"
 		  "chip_type = %d\n"
 		  "platform_type = %d\n"
 		  "status = %d\n"
@@ -363,12 +364,13 @@ static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 		  "is_mu_ppdu = %d\n"
 		  "num_users = %d\n",
 		cookie,
-		header->start_magic_num,
-		header->vendorid,
-		header->cfr_metadata_version,
-		header->cfr_data_version,
-		header->chip_type,
-		header->pltform_type,
+		header->cmn.start_magic_num,
+		header->cmn.vendorid,
+		header->cmn.cfr_metadata_version,
+		header->cmn.cfr_data_version,
+		header->cmn.cfr_metadata_len,
+		header->cmn.chip_type,
+		header->cmn.pltform_type,
 		meta->status,
 		meta->capture_bw,
 		meta->channel_bw,
@@ -406,6 +408,21 @@ static void dump_metadata(struct csi_cfr_header *header, uint32_t cookie)
 		cfr_debug("chain_phase[%d] = %d\n",
 			  chain_id,
 			  meta->chain_phase[chain_id]);
+	}
+
+	if (header->cmn.cfr_metadata_version >= CFR_META_VERSION_5) {
+		cfr_debug("rtt_cfo_measurement = %d\n",
+			  meta->rtt_cfo_measurement);
+		cfr_debug("rx_start_ts = %u\n", meta->rx_start_ts);
+
+		for (chain_id = 0; chain_id < HOST_MAX_CHAINS; chain_id++) {
+			cfr_debug("agc_gain[%d] = %d\n",
+				  chain_id,
+				  meta->agc_gain[chain_id]);
+		}
+
+		cfr_debug("mcs_rate = %u\n", meta->mcs_rate);
+		cfr_debug("gi_type = %u\n", meta->gi_type);
 	}
 }
 
@@ -704,9 +721,10 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	int i, status = 0;
 	QDF_STATUS retval = 0;
 	struct wlan_lmac_if_cfr_rx_ops *cfr_rx_ops = NULL;
-	struct cfr_metadata_version_3 *meta = NULL;
+	struct enh_cfr_metadata *meta = NULL;
 	uint8_t srng_id = 0;
 	struct wlan_lmac_if_rx_ops *rx_ops;
+	uint32_t target_type;
 
 	if (qdf_unlikely(!pdev)) {
 		cfr_err("pdev is null\n");
@@ -745,6 +763,7 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 		cfr_err("rx_ops is NULL");
 		goto relref;
 	}
+	target_type = target_if_cfr_get_target_type(psoc);
 	cfr_rx_ops = &rx_ops->cfr_rx_ops;
 	buf_addr_extn = cfr_info->rtt_che_buffer_pointer_high8 & 0xF;
 	buf_addr = (cfr_info->rtt_che_buffer_pointer_low32 |
@@ -805,15 +824,9 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	lut->tx_address2 = cfr_info->rtt_che_buffer_pointer_high8;
 	lut->txrx_tstamp = qdf_ktime_to_ms(qdf_ktime_get());
 	header = &lut->header;
-	meta = &header->u.meta_v3;
+	meta = &header->u.meta_enh;
 
-	header->start_magic_num        = 0xDEADBEAF;
-	header->vendorid               = 0x8cfdf0;
-	header->cfr_metadata_version   = CFR_META_VERSION_3;
-	header->cfr_data_version       = CFR_DATA_VERSION_1;
-	header->chip_type              = pcfr->chip_type;
-	header->pltform_type           = CFR_PLATFORM_TYPE_ARM;
-	header->Reserved               = 0;
+	target_if_cfr_fill_header(header, false, target_type, true);
 
 	meta->status       = 1;
 	meta->phy_mode = ch_phymode;
@@ -825,6 +838,27 @@ void target_if_cfr_rx_tlv_process(struct wlan_objmgr_pdev *pdev, void *nbuf)
 	meta->timestamp = cdp_rx_ppdu->timestamp;
 	meta->is_mu_ppdu = (cdp_rx_ppdu->u.ppdu_type == CDP_RX_TYPE_SU) ? 0 : 1;
 	meta->num_mu_users = (meta->is_mu_ppdu) ? (cdp_rx_ppdu->num_users) : 0;
+
+	meta->rtt_cfo_measurement = cfr_info->rtt_cfo_measurement;
+	meta->rx_start_ts = cfr_info->rx_start_ts;
+
+	meta->agc_gain[0] = get_gain_db(get_u16_lsb(cfr_info->agc_gain_info0));
+	meta->agc_gain[1] = get_gain_db(get_u16_msb(cfr_info->agc_gain_info0));
+	meta->agc_gain[2] = get_gain_db(get_u16_lsb(cfr_info->agc_gain_info1));
+	meta->agc_gain[3] = get_gain_db(get_u16_msb(cfr_info->agc_gain_info1));
+	meta->agc_gain[4] = get_gain_db(get_u16_lsb(cfr_info->agc_gain_info2));
+	meta->agc_gain[5] = get_gain_db(get_u16_msb(cfr_info->agc_gain_info2));
+	meta->agc_gain[6] = get_gain_db(get_u16_lsb(cfr_info->agc_gain_info3));
+	meta->agc_gain[7] = get_gain_db(get_u16_msb(cfr_info->agc_gain_info3));
+
+	meta->mcs_rate = cfr_info->mcs_rate;
+	meta->gi_type = cfr_info->gi_type;
+	meta->sig_info.ltf_size = cdp_rx_ppdu->u.ltf_size;
+	meta->sig_info.stbc = cdp_rx_ppdu->u.stbc;
+	meta->sig_info.sgi = (cdp_rx_ppdu->u.gi == CDP_SGI_0_4_US) ? 1 : 0;
+	meta->sig_info.dcm = cdp_rx_ppdu->u.dcm;
+	meta->sig_info.coding = cdp_rx_ppdu->u.ldpc;
+	meta->sig_info.beamformed = cdp_rx_ppdu->beamformed;
 
 	if (meta->num_mu_users > pcfr->max_mu_users)
 		meta->num_mu_users = pcfr->max_mu_users;
@@ -923,7 +957,7 @@ static bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 	uint8_t capture_type = CFR_TYPE_METHOD_AUTO;
 	uint8_t *peer_macaddr = NULL;
 	struct wlan_lmac_if_cfr_rx_ops *cfr_rx_ops = NULL;
-	struct cfr_metadata_version_3 *meta = NULL;
+	struct enh_cfr_metadata *meta = NULL;
 	struct wlan_lmac_if_rx_ops *rx_ops;
 
 	if ((!pdev) || (!payload)) {
@@ -1003,8 +1037,8 @@ static bool enh_cfr_dbr_event_handler(struct wlan_objmgr_pdev *pdev,
 		     sizeof(struct whal_cfir_dma_hdr));
 
 	header = &lut->header;
-	header->chip_type = pcfr->chip_type;
-	meta = &header->u.meta_v3;
+	header->cmn.chip_type = pcfr->chip_type;
+	meta = &header->u.meta_enh;
 	meta->channel_bw = dma_hdr.upload_pkt_bw;
 	meta->num_rx_chain = NUM_CHAINS_FW_TO_HOST(dma_hdr.num_chains);
 	meta->length = length;
@@ -1164,24 +1198,13 @@ static void enh_prepare_cfr_header_txstatus(wmi_cfr_peer_tx_event_param
 					    struct csi_cfr_header *header,
 					    uint32_t target_type)
 {
-	header->start_magic_num        = 0xDEADBEAF;
-	header->vendorid               = 0x8cfdf0;
-	header->cfr_metadata_version   = CFR_META_VERSION_3;
-	header->cfr_data_version       = CFR_DATA_VERSION_1;
+	target_if_cfr_fill_header(header, false, target_type, false);
+	header->u.meta_enh.status       = 0; /* failure */
+	header->u.meta_enh.length       = 0;
+	header->u.meta_enh.rtt_cfo_measurement = tx_evt_param->cfo_measurement;
+	header->u.meta_enh.rx_start_ts = tx_evt_param->rx_start_ts;
 
-	if (target_type == TARGET_TYPE_QCN9000)
-		header->chip_type      = CFR_CAPTURE_RADIO_PINE;
-	else if (target_type == TARGET_TYPE_QCA5018)
-		header->chip_type      = CFR_CAPTURE_RADIO_MAPLE;
-	else
-		header->chip_type      = CFR_CAPTURE_RADIO_CYP;
-
-	header->pltform_type           = CFR_PLATFORM_TYPE_ARM;
-	header->Reserved               = 0;
-	header->u.meta_v3.status       = 0; /* failure */
-	header->u.meta_v3.length       = 0;
-
-	qdf_mem_copy(&header->u.meta_v3.peer_addr.su_peer_addr[0],
+	qdf_mem_copy(&header->u.meta_enh.peer_addr.su_peer_addr[0],
 		     &tx_evt_param->peer_mac_addr.bytes[0], QDF_MAC_ADDR_SIZE);
 }
 
@@ -1206,7 +1229,7 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 	struct pdev_cfr *pcfr;
 	struct look_up_table *lut = NULL;
 	struct csi_cfr_header *header = NULL;
-	struct csi_cfr_header header_error = {0};
+	struct csi_cfr_header header_error = {{0} };
 	wmi_cfr_peer_tx_event_param tx_evt_param = {0};
 	qdf_dma_addr_t buf_addr = 0, buf_addr_temp = 0;
 	int status;
@@ -1362,50 +1385,44 @@ target_if_peer_capture_event(ol_scn_t sc, uint8_t *data, uint32_t datalen)
 	lut->txrx_tstamp = qdf_ktime_to_ms(qdf_ktime_get());
 
 	header = &lut->header;
-	header->start_magic_num        = 0xDEADBEAF;
-	header->vendorid               = 0x8cfdf0;
-	header->cfr_metadata_version   = CFR_META_VERSION_3;
-	header->cfr_data_version       = CFR_DATA_VERSION_1;
-
-	if (target_type == TARGET_TYPE_QCN9000)
-		header->chip_type      = CFR_CAPTURE_RADIO_PINE;
-	else if (target_type == TARGET_TYPE_QCA5018)
-		header->chip_type      = CFR_CAPTURE_RADIO_MAPLE;
-	else
-		header->chip_type      = CFR_CAPTURE_RADIO_CYP;
-
-	header->pltform_type           = CFR_PLATFORM_TYPE_ARM;
-	header->Reserved               = 0;
-	header->u.meta_v3.status       = (tx_evt_param.status &
-					  PEER_CFR_CAPTURE_EVT_STATUS_MASK) ?
-					  1 : 0;
-	header->u.meta_v3.capture_bw   = tx_evt_param.bandwidth;
+	target_if_cfr_fill_header(header, false, target_type, false);
+	header->u.meta_enh.status       = (tx_evt_param.status &
+					   PEER_CFR_CAPTURE_EVT_STATUS_MASK) ?
+					   1 : 0;
+	header->u.meta_enh.capture_bw   = tx_evt_param.bandwidth;
 
 	bss_chan = wlan_vdev_mlme_get_bss_chan(vdev);
-	header->u.meta_v3.phy_mode     = bss_chan->ch_phymode;
+	header->u.meta_enh.phy_mode     = bss_chan->ch_phymode;
 
-	header->u.meta_v3.prim20_chan  = tx_evt_param.primary_20mhz_chan;
-	header->u.meta_v3.center_freq1 = tx_evt_param.band_center_freq1;
-	header->u.meta_v3.center_freq2 = tx_evt_param.band_center_freq2;
+	header->u.meta_enh.prim20_chan  = tx_evt_param.primary_20mhz_chan;
+	header->u.meta_enh.center_freq1 = tx_evt_param.band_center_freq1;
+	header->u.meta_enh.center_freq2 = tx_evt_param.band_center_freq2;
 
 	/* Currently CFR data is captured on ACK of a Qos NULL frame.
 	 * For 20 MHz, ACK is Legacy and for 40/80/160, ACK is DUP Legacy.
 	 */
-	header->u.meta_v3.capture_mode = tx_evt_param.bandwidth ?
+	header->u.meta_enh.capture_mode = tx_evt_param.bandwidth ?
 		CFR_DUP_LEGACY_ACK : CFR_LEGACY_ACK;
-	header->u.meta_v3.capture_type = tx_evt_param.capture_method;
-	header->u.meta_v3.num_rx_chain = wlan_vdev_mlme_get_rxchainmask(vdev);
-	header->u.meta_v3.sts_count    = tx_evt_param.spatial_streams;
-	header->u.meta_v3.timestamp    = tx_evt_param.timestamp_us;
+	header->u.meta_enh.capture_type = tx_evt_param.capture_method;
+	header->u.meta_enh.num_rx_chain = wlan_vdev_mlme_get_rxchainmask(vdev);
+	header->u.meta_enh.sts_count    = tx_evt_param.spatial_streams;
+	header->u.meta_enh.timestamp    = tx_evt_param.timestamp_us;
 
-	qdf_mem_copy(&header->u.meta_v3.peer_addr.su_peer_addr[0],
+	qdf_mem_copy(&header->u.meta_enh.peer_addr.su_peer_addr[0],
 		     &tx_evt_param.peer_mac_addr.bytes[0], QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(&header->u.meta_v3.chain_rssi[0],
+	qdf_mem_copy(&header->u.meta_enh.chain_rssi[0],
 		     &tx_evt_param.chain_rssi[0],
 		     HOST_MAX_CHAINS * sizeof(tx_evt_param.chain_rssi[0]));
-	qdf_mem_copy(&header->u.meta_v3.chain_phase[0],
+	qdf_mem_copy(&header->u.meta_enh.chain_phase[0],
 		     &tx_evt_param.chain_phase[0],
 		     HOST_MAX_CHAINS * sizeof(tx_evt_param.chain_phase[0]));
+	qdf_mem_copy(&header->u.meta_enh.agc_gain[0],
+		     &tx_evt_param.agc_gain[0],
+		     HOST_MAX_CHAINS * sizeof(tx_evt_param.agc_gain[0]));
+	header->u.meta_enh.rtt_cfo_measurement = tx_evt_param.cfo_measurement;
+	header->u.meta_enh.rx_start_ts = tx_evt_param.rx_start_ts;
+	header->u.meta_enh.mcs_rate    = tx_evt_param.mcs_rate;
+	header->u.meta_enh.gi_type     = tx_evt_param.gi_type;
 
 	status = correlate_and_relay_enh(pdev, cookie, lut,
 					 CORRELATE_TX_EV_MODULE_ID);

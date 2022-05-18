@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -606,7 +607,7 @@ more_msdu_link_desc:
 		rx_tlv_hdr_last = qdf_nbuf_data(tail_nbuf);
 
 		if (qdf_unlikely(head_nbuf != tail_nbuf)) {
-			nbuf = dp_rx_sg_create(head_nbuf);
+			nbuf = dp_rx_sg_create(soc, head_nbuf);
 			qdf_nbuf_set_is_frag(nbuf, 1);
 			DP_STATS_INC(soc, rx.err.reo_err_oor_sg_count, 1);
 		}
@@ -1140,6 +1141,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	qdf_ether_header_t *eh;
 	struct hal_rx_msdu_metadata msdu_metadata;
 	uint16_t sa_idx = 0;
+	bool is_eapol;
 
 	qdf_nbuf_set_rx_chfrag_start(nbuf,
 				hal_rx_msdu_end_first_msdu_get(soc->hal_soc,
@@ -1294,6 +1296,22 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			/* IEEE80211_SEQ_MAX indicates invalid start_seq */
 	}
 
+	eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
+
+	if (!peer->authorize) {
+		is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf) ||
+			   qdf_nbuf_is_ipv4_wapi_pkt(nbuf);
+
+		if (is_eapol) {
+			if (qdf_mem_cmp(eh->ether_dhost,
+					&vdev->mac_addr.raw[0],
+					QDF_MAC_ADDR_SIZE))
+				goto drop_nbuf;
+		} else {
+			goto drop_nbuf;
+		}
+	}
+
 	/*
 	 * Drop packets in this path if cce_match is found. Packets will come
 	 * in following path depending on whether tidQ is setup.
@@ -1307,8 +1325,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	 *    to stack.
 	 */
 	if (qdf_unlikely(dp_rx_err_cce_drop(soc, vdev, nbuf, rx_tlv_hdr))) {
-		qdf_nbuf_free(nbuf);
-		return QDF_STATUS_E_FAILURE;
+		goto drop_nbuf;
 	}
 
 	if (qdf_unlikely(vdev->rx_decap_type == htt_cmn_pkt_type_raw)) {
@@ -1335,7 +1352,6 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 				 soc->hal_soc, rx_tlv_hdr) &&
 				 (vdev->rx_decap_type ==
 				  htt_cmn_pkt_type_ethernet))) {
-			eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 			DP_STATS_INC_PKT(peer, rx.multicast, 1,
 					 qdf_nbuf_len(nbuf));
 
@@ -1607,6 +1623,124 @@ void dp_rx_process_mic_error(struct dp_soc *soc, qdf_nbuf_t nbuf,
 fail:
 	qdf_nbuf_free(nbuf);
 	return;
+}
+
+/**
+ * dp_rx_err_route_hdl() - Function to send EAPOL frames to stack
+ *                            Free any other packet which comes in
+ *                            this path.
+ *
+ * @soc: core DP main context
+ * @nbuf: buffer pointer
+ * @peer: peer handle
+ * @rx_tlv_hdr: start of rx tlv header
+ * @err_src: rxdma/reo
+ *
+ * This function indicates EAPOL frame received in wbm error ring to stack.
+ * Any other frame should be dropped.
+ *
+ * Return: SUCCESS if delivered to stack
+ */
+static void
+dp_rx_err_route_hdl(struct dp_soc *soc, qdf_nbuf_t nbuf,
+		    struct dp_peer *peer, uint8_t *rx_tlv_hdr,
+		    enum hal_rx_wbm_error_source err_src)
+{
+	uint32_t pkt_len;
+	uint16_t msdu_len;
+	struct dp_vdev *vdev;
+	struct hal_rx_msdu_metadata msdu_metadata;
+	bool is_eapol;
+
+	hal_rx_msdu_metadata_get(soc->hal_soc, rx_tlv_hdr, &msdu_metadata);
+	msdu_len = hal_rx_msdu_start_msdu_len_get(rx_tlv_hdr);
+	pkt_len = msdu_len + msdu_metadata.l3_hdr_pad + RX_PKT_TLVS_LEN;
+
+	if (qdf_likely(!qdf_nbuf_is_frag(nbuf))) {
+		if (dp_rx_check_pkt_len(soc, pkt_len))
+			goto drop_nbuf;
+
+		/* Set length in nbuf */
+		qdf_nbuf_set_pktlen(
+			nbuf, qdf_min(pkt_len, (uint32_t)RX_DATA_BUFFER_SIZE));
+		qdf_assert_always(nbuf->data == rx_tlv_hdr);
+	}
+
+	/*
+	 * Check if DMA completed -- msdu_done is the last bit
+	 * to be written
+	 */
+	if (!hal_rx_attn_msdu_done_get(rx_tlv_hdr)) {
+		dp_err_rl("MSDU DONE failure");
+		hal_rx_dump_pkt_tlvs(soc->hal_soc, rx_tlv_hdr,
+				     QDF_TRACE_LEVEL_INFO);
+		qdf_assert(0);
+	}
+
+	if (!peer)
+		goto drop_nbuf;
+
+	vdev = peer->vdev;
+	if (!vdev) {
+		dp_err_rl("Null vdev!");
+		DP_STATS_INC(soc, rx.err.invalid_vdev, 1);
+		goto drop_nbuf;
+	}
+
+	/*
+	 * Advance the packet start pointer by total size of
+	 * pre-header TLV's
+	 */
+	if (qdf_nbuf_is_frag(nbuf))
+		qdf_nbuf_pull_head(nbuf, RX_PKT_TLVS_LEN);
+	else
+		qdf_nbuf_pull_head(nbuf, (msdu_metadata.l3_hdr_pad +
+					  RX_PKT_TLVS_LEN));
+
+	dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, NULL, 0, 1);
+
+	/*
+	 * Indicate EAPOL frame to stack only when vap mac address
+	 * matches the destination address.
+	 */
+	is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf);
+	if (is_eapol || qdf_nbuf_is_ipv4_wapi_pkt(nbuf)) {
+		qdf_ether_header_t *eh =
+			(qdf_ether_header_t *)qdf_nbuf_data(nbuf);
+		if (qdf_mem_cmp(eh->ether_dhost, &vdev->mac_addr.raw[0],
+				QDF_MAC_ADDR_SIZE) == 0) {
+			DP_STATS_INC_PKT(vdev, rx.to_stack, 1,
+					 qdf_nbuf_len(nbuf));
+
+			/*
+			 * Update the protocol tag in SKB based on
+			 * CCE metadata.
+			 */
+			dp_rx_update_protocol_tag(soc, vdev, nbuf, rx_tlv_hdr,
+						  EXCEPTION_DEST_RING_ID,
+						  true, true);
+			/* Update the flow tag in SKB based on FSE metadata */
+			dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr,
+					      true);
+			DP_STATS_INC_PKT(peer, rx.to_stack, 1,
+					 qdf_nbuf_len(nbuf));
+			qdf_nbuf_set_exc_frame(nbuf, 1);
+			qdf_nbuf_set_next(nbuf, NULL);
+
+			dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
+
+			return;
+		}
+	}
+
+drop_nbuf:
+
+	DP_STATS_INCC(soc, rx.reo2rel_route_drop, 1,
+		      err_src == HAL_RX_WBM_ERR_SRC_REO);
+	DP_STATS_INCC(soc, rx.rxdma2rel_route_drop, 1,
+		      err_src == HAL_RX_WBM_ERR_SRC_RXDMA);
+
+	qdf_nbuf_free(nbuf);
 }
 
 #ifdef DP_RX_DESC_COOKIE_INVALIDATE
@@ -2360,7 +2494,7 @@ done:
 		 * QCN9000 has this support
 		 */
 		if (qdf_nbuf_is_rx_chfrag_cont(nbuf)) {
-			nbuf = dp_rx_sg_create(nbuf);
+			nbuf = dp_rx_sg_create(soc, nbuf);
 			next = nbuf->next;
 			/*
 			 * SG error handling is not done correctly,
@@ -2451,6 +2585,17 @@ done:
 						   wbm_err_info.reo_err_code);
 					qdf_nbuf_free(nbuf);
 				}
+			} else if (wbm_err_info.reo_psh_rsn
+					== HAL_RX_WBM_REO_PSH_RSN_ROUTE) {
+				dp_rx_err_route_hdl(soc, nbuf, peer,
+						    rx_tlv_hdr,
+						    HAL_RX_WBM_ERR_SRC_REO);
+			} else {
+				/* should not enter here */
+				dp_alert("invalid reo push reason %u",
+					 wbm_err_info.reo_psh_rsn);
+				qdf_nbuf_free(nbuf);
+				qdf_assert_always(0);
 			}
 		} else if (wbm_err_info.wbm_err_src ==
 					HAL_RX_WBM_ERR_SRC_RXDMA) {
@@ -2515,6 +2660,17 @@ done:
 					dp_err_rl("RXDMA error %d",
 						  wbm_err_info.rxdma_err_code);
 				}
+			} else if (wbm_err_info.rxdma_psh_rsn
+					== HAL_RX_WBM_RXDMA_PSH_RSN_ROUTE) {
+				dp_rx_err_route_hdl(soc, nbuf, peer,
+						    rx_tlv_hdr,
+						    HAL_RX_WBM_ERR_SRC_RXDMA);
+			} else {
+				/* should not enter here */
+				dp_alert("invalid rxdma push reason %u",
+					 wbm_err_info.rxdma_psh_rsn);
+				qdf_nbuf_free(nbuf);
+				qdf_assert_always(0);
 			}
 		} else {
 			/* Should not come here */

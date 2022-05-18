@@ -399,6 +399,19 @@ wmi_unified_vdev_set_param_send(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+QDF_STATUS
+wmi_unified_roam_set_param_send(wmi_unified_t wmi_handle,
+				struct vdev_set_params *roam_param)
+{
+	if (wmi_handle->ops->send_roam_set_param_cmd)
+		return wmi_handle->ops->send_roam_set_param_cmd(wmi_handle,
+								roam_param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_sifs_trigger_send(wmi_unified_t wmi_handle,
 					 struct sifs_trigger_param *param)
 {
@@ -2225,12 +2238,16 @@ wmi_extract_chan_stats(wmi_unified_t wmi_handle, void *evt_buf,
 }
 
 QDF_STATUS wmi_extract_thermal_stats(wmi_unified_t wmi_handle, void *evt_buf,
-				     uint32_t *temp, uint32_t *level,
+				     uint32_t *temp,
+				     enum thermal_throttle_level *level,
+				     uint32_t *therm_throt_levels,
+				     struct thermal_throt_level_stats *tt_stats,
 				     uint32_t *pdev_id)
 {
 	if (wmi_handle->ops->extract_thermal_stats)
 		return wmi_handle->ops->extract_thermal_stats(wmi_handle,
-			evt_buf, temp, level, pdev_id);
+			evt_buf, temp, level, therm_throt_levels,
+			tt_stats, pdev_id);
 
 	return QDF_STATUS_E_FAILURE;
 }

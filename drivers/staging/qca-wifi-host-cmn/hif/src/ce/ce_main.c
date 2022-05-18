@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1412,6 +1413,7 @@ QDF_STATUS alloc_mem_ce_debug_hist_data(struct hif_softc *scn, uint32_t ce_id)
 			(uint8_t *)qdf_mem_malloc(CE_DEBUG_MAX_DATA_BUF_SIZE);
 		if (!event->data) {
 			hif_err_rl("ce debug data alloc failed");
+			scn->hif_ce_desc_hist.data_enable[ce_id] = false;
 			return QDF_STATUS_E_NOMEM;
 		}
 	}
@@ -1451,7 +1453,72 @@ void free_mem_ce_debug_hist_data(struct hif_softc *scn, uint32_t ce_id)
 
 #ifndef HIF_CE_DEBUG_DATA_DYNAMIC_BUF
 #if defined(HIF_CONFIG_SLUB_DEBUG_ON) || defined(HIF_CE_DEBUG_DATA_BUF)
-struct hif_ce_desc_event hif_ce_desc_history[CE_COUNT_MAX][HIF_CE_HISTORY_MAX];
+struct hif_ce_desc_event *hif_ce_desc_history[CE_COUNT_MAX];
+
+/* define this variable for crashscope parse */
+uint32_t hif_ce_history_max = HIF_CE_HISTORY_MAX;
+
+/**
+ * hif_ce_debug_only_enable_ce2_ce3() - if only enable ce2/ce3 debug
+ * This is different config for perf/debug buid version.
+ * for debug build, it will enable ce history for all ce, but for
+ * perf build(if CONFIG_SLUB_DEBUG_ON is N), it only enable for
+ * ce2(wmi event) & ce3(wmi cmd) history.
+ *
+ * Return: true if only enable ce2/ce3 debug, otherwise false.
+ */
+#if defined(CONFIG_SLUB_DEBUG_ON)
+static inline bool hif_ce_debug_only_enable_ce2_ce3(void)
+{
+	return false;
+}
+#else
+static inline bool hif_ce_debug_only_enable_ce2_ce3(void)
+{
+	return true;
+}
+#endif
+
+QDF_STATUS hif_ce_debug_history_prealloc_deinit(void)
+{
+	int ce_id;
+
+	for (ce_id = 0; ce_id < CE_COUNT_MAX; ce_id++) {
+		if (hif_ce_desc_history[ce_id]) {
+			qdf_mem_free(hif_ce_desc_history[ce_id]);
+			hif_ce_desc_history[ce_id] = NULL;
+		}
+	}
+	hif_debug("ce debug memory freed");
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS hif_ce_debug_history_prealloc_init(void)
+{
+	int ce_id;
+
+	hif_debug("alloc ce debug memory, only_ce2/ce3 %d",
+		  hif_ce_debug_only_enable_ce2_ce3());
+	for (ce_id = 0; ce_id < CE_COUNT_MAX; ce_id++) {
+		if (hif_ce_debug_only_enable_ce2_ce3() &&
+		    ce_id != CE_ID_2 &&
+		    ce_id != CE_ID_3) {
+			hif_ce_desc_history[ce_id] = NULL;
+			continue;
+		}
+
+		hif_ce_desc_history[ce_id] =
+			qdf_mem_malloc(HIF_CE_HISTORY_MAX *
+				       sizeof(struct hif_ce_desc_event));
+		if (!hif_ce_desc_history[ce_id]) {
+			hif_ce_debug_history_prealloc_deinit();
+			return QDF_STATUS_E_NOMEM;
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 
 /**
  * alloc_mem_ce_debug_history() - Allocate CE descriptor history
@@ -1465,14 +1532,33 @@ alloc_mem_ce_debug_history(struct hif_softc *scn, unsigned int ce_id,
 			   uint32_t src_nentries)
 {
 	struct ce_desc_hist *ce_hist = &scn->hif_ce_desc_hist;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
-	ce_hist->hist_ev[ce_id] = hif_ce_desc_history[ce_id];
-	ce_hist->enable[ce_id] = 1;
-
-	if (src_nentries)
-		alloc_mem_ce_debug_hist_data(scn, ce_id);
-	else
+	if (hif_ce_debug_only_enable_ce2_ce3() &&
+	    ce_id != CE_ID_2 &&
+	    ce_id != CE_ID_3) {
+		ce_hist->enable[ce_id] = false;
 		ce_hist->data_enable[ce_id] = false;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (!hif_ce_desc_history[ce_id]) {
+		hif_err("prealloc memory failed");
+		return QDF_STATUS_E_NOMEM;
+	}
+	ce_hist->hist_ev[ce_id] = hif_ce_desc_history[ce_id];
+	ce_hist->enable[ce_id] = true;
+
+	if (src_nentries) {
+		status = alloc_mem_ce_debug_hist_data(scn, ce_id);
+		if (status != QDF_STATUS_SUCCESS) {
+			ce_hist->enable[ce_id] = false;
+			ce_hist->hist_ev[ce_id] = NULL;
+			return status;
+		}
+	} else {
+		ce_hist->data_enable[ce_id] = false;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1488,7 +1574,10 @@ static void free_mem_ce_debug_history(struct hif_softc *scn, unsigned int ce_id)
 {
 	struct ce_desc_hist *ce_hist = &scn->hif_ce_desc_hist;
 
-	ce_hist->enable[ce_id] = 0;
+	if (!ce_hist->enable[ce_id])
+		return;
+
+	ce_hist->enable[ce_id] = false;
 	if (ce_hist->data_enable[ce_id]) {
 		ce_hist->data_enable[ce_id] = false;
 		free_mem_ce_debug_hist_data(scn, ce_id);
@@ -1538,7 +1627,7 @@ static void free_mem_ce_debug_history(struct hif_softc *scn, unsigned int CE_id)
 		free_mem_ce_debug_hist_data(scn, CE_id);
 	}
 
-	ce_hist->enable[CE_id] = 0;
+	ce_hist->enable[CE_id] = false;
 	qdf_mem_free(ce_hist->hist_ev[CE_id]);
 	ce_hist->hist_ev[CE_id] = NULL;
 }

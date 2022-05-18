@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -47,6 +47,10 @@
  * Cypress - Tx completion event for one-shot capture (or) RXTLV event for RCC
  */
 #define CORRELATE_TX_EV_MODULE_ID 1
+
+#define get_u16_lsb(value) (uint16_t)(value)
+#define get_u16_msb(value) (uint16_t)(((uint32_t)value) >> 16)
+#define get_gain_db(value) ((value) & 0xFF)
 
 /**
  * target_if_cfr_init_pdev() - Inits cfr pdev and registers necessary handlers.
@@ -168,6 +172,17 @@ void target_if_cfr_info_send(struct wlan_objmgr_pdev *pdev, void *head,
 			     size_t hlen, void *data, size_t dlen, void *tail,
 			     size_t tlen);
 
+/**
+ * target_if_cfr_fill_header() - Function to fill cfr header cmn section
+ * @hdr: pointer to the csi_cfr_header
+ * @is_wifi_2_0: flag to indicate legacy and non legacy radio
+ * @target_type: target type of the radio
+ * @is_rcc: flag to denote fill header request from periodic cfr/rcc
+ */
+void target_if_cfr_fill_header(struct csi_cfr_header *hdr,
+			       bool is_wifi_2_0,
+			       uint32_t target_type,
+			       bool is_rcc);
 #ifdef WIFI_TARGET_TYPE_2_0
 /**
  * cfr_wifi2_0_init_pdev() - Function to init legacy pdev

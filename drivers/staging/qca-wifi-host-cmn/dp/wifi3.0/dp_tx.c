@@ -58,6 +58,8 @@
 /* invalid peer id for reinject*/
 #define DP_INVALID_PEER 0XFFFE
 
+#define DP_RETRY_COUNT 7
+
 /*mapping between hal encrypt type and cdp_sec_type*/
 #define MAX_CDP_SEC_TYPE 12
 static const uint8_t sec_type_map[MAX_CDP_SEC_TYPE] = {
@@ -1694,9 +1696,8 @@ dp_tx_hw_enqueue(struct dp_soc *soc, struct dp_vdev *vdev,
 		hal_tx_desc_set_to_fw(hal_tx_desc_cached, 1);
 
 	/* verify checksum offload configuration*/
-	if (vdev->csum_enabled &&
-	    ((qdf_nbuf_get_tx_cksum(tx_desc->nbuf) == QDF_NBUF_TX_CKSUM_TCP_UDP)
-		|| qdf_nbuf_is_tso(tx_desc->nbuf)))  {
+	if ((qdf_nbuf_get_tx_cksum(tx_desc->nbuf) == QDF_NBUF_TX_CKSUM_TCP_UDP)
+		|| qdf_nbuf_is_tso(tx_desc->nbuf))  {
 		hal_tx_desc_set_l3_checksum_en(hal_tx_desc_cached, 1);
 		hal_tx_desc_set_l4_checksum_en(hal_tx_desc_cached, 1);
 	}
@@ -2546,7 +2547,6 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				    tid_tx_stats[tx_q->ring_id][msdu_info->tid];
 			tid_stats->swdrop_cnt[TX_HW_ENQUEUE]++;
 
-			dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 			if (msdu_info->frm_type == dp_tx_frm_me) {
 				hw_enq_fail++;
 				if (hw_enq_fail == msdu_info->num_seg) {
@@ -2572,6 +2572,7 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 						msdu_info->u.sg_info
 						.curr_seg->next;
 				i++;
+				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				continue;
 			}
 
@@ -2588,9 +2589,11 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				 */
 				dp_tx_comp_free_buf(soc, tx_desc);
 				i++;
+				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				continue;
 			}
 
+			dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 			goto done;
 		}
 
@@ -4119,6 +4122,12 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 			     &peer->stats, ts->peer_id,
 			     UPDATE_PEER_STATS, pdev->pdev_id);
 #endif
+	if (ts->first_msdu) {
+		DP_STATS_INCC(peer, tx.mpdu_success_with_retries,
+			      qdf_do_div(ts->transmit_cnt, DP_RETRY_COUNT),
+			      ts->transmit_cnt > DP_RETRY_COUNT);
+		DP_STATS_INCC(peer, tx.retries_mpdu, 1, ts->transmit_cnt > 1);
+	}
 }
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
@@ -4900,6 +4909,7 @@ more_data:
 				 !tx_desc->flags)) {
 				dp_info_rl("Descriptor freed in vdev_detach %d",
 					   tx_desc_id);
+				DP_STATS_INC(soc, tx.tx_comp_exception, 1);
 				continue;
 			}
 
@@ -5007,30 +5017,6 @@ qdf_nbuf_t dp_tx_non_std(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 }
 #endif
 
-static void dp_tx_vdev_update_feature_flags(struct dp_vdev *vdev)
-{
-	struct wlan_cfg_dp_soc_ctxt *cfg;
-
-	struct dp_soc *soc;
-
-	soc = vdev->pdev->soc;
-	if (!soc)
-		return;
-
-	cfg = soc->wlan_cfg_ctx;
-	if (!cfg)
-		return;
-
-	if (vdev->opmode == wlan_op_mode_ndi)
-		vdev->csum_enabled = wlan_cfg_get_nan_checksum_offload(cfg);
-	else if ((vdev->subtype == wlan_op_subtype_p2p_device) ||
-		 (vdev->subtype == wlan_op_subtype_p2p_cli) ||
-		 (vdev->subtype == wlan_op_subtype_p2p_go))
-		vdev->csum_enabled = wlan_cfg_get_p2p_checksum_offload(cfg);
-	else
-		vdev->csum_enabled = wlan_cfg_get_checksum_offload(cfg);
-}
-
 /**
  * dp_tx_vdev_attach() - attach vdev to dp tx
  * @vdev: virtual device instance
@@ -5061,8 +5047,6 @@ QDF_STATUS dp_tx_vdev_attach(struct dp_vdev *vdev)
 	HTT_TX_TCL_METADATA_VALID_HTT_SET(vdev->htt_tcl_metadata, 0);
 
 	dp_tx_vdev_update_search_flags(vdev);
-
-	dp_tx_vdev_update_feature_flags(vdev);
 
 	return QDF_STATUS_SUCCESS;
 }
