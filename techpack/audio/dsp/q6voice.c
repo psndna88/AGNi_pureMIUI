@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/slab.h>
 #include <linux/kthread.h>
@@ -25,7 +26,7 @@
 #include <dsp/voice_mhi.h>
 #include <soc/qcom/secure_buffer.h>
 
-#define TIMEOUT_MS 300
+#define TIMEOUT_MS 1000
 
 
 #define CMD_STATUS_SUCCESS 0
@@ -118,7 +119,7 @@ static int voice_send_cvp_ecns_enable_cmd(struct voice_data *v,
 
 static int is_cal_memory_allocated(void);
 static bool is_cvd_version_queried(void);
-static int is_voip_memory_allocated(void);
+static bool is_voip_memory_allocated(void);
 static int voice_get_cvd_int_version(char *cvd_ver_string);
 static int voice_alloc_cal_mem_map_table(void);
 static int voice_alloc_rtac_mem_map_table(void);
@@ -134,7 +135,7 @@ static int remap_cal_data(struct cal_block_data *cal_block,
 static int voice_unmap_cal_memory(int32_t cal_type,
 				  struct cal_block_data *cal_block);
 
-static int is_source_tracking_shared_memomry_allocated(void);
+static bool is_source_tracking_shared_memomry_allocated(void);
 static int voice_alloc_source_tracking_shared_memory(void);
 static int voice_alloc_and_map_source_tracking_shared_memory(
 						struct voice_data *v);
@@ -2222,7 +2223,7 @@ done:
 }
 
 
-static int is_voip_memory_allocated(void)
+static bool is_voip_memory_allocated(void)
 {
 	bool ret;
 	struct voice_data *v = voice_get_session(
@@ -9693,7 +9694,7 @@ int voc_get_sound_focus(struct sound_focus_param *soundFocusData)
 }
 EXPORT_SYMBOL(voc_get_sound_focus);
 
-static int is_source_tracking_shared_memomry_allocated(void)
+static bool is_source_tracking_shared_memomry_allocated(void)
 {
 	bool ret;
 
@@ -10351,7 +10352,11 @@ int __init voice_init(void)
 
 void voice_exit(void)
 {
+	int i;
 	q6core_destroy_uevent_data(common.uevent_data);
 	voice_delete_cal_data();
 	free_cal_map_table();
+	mutex_destroy(&common.common_lock);
+	for (i = 0; i < MAX_VOC_SESSIONS; i++)
+		mutex_destroy(&common.voice[i].lock);
 }

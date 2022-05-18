@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -683,7 +684,7 @@ static int msm_pcm_playback_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	u64 fe_id = kcontrol->private_value;
 	int session_type = SESSION_TYPE_RX;
 	int be_id = ucontrol->value.integer.value[3];
-	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0};
+	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0, 0};
 	int ret = 0;
 
 	cfg_data.app_type = ucontrol->value.integer.value[0];
@@ -694,10 +695,12 @@ static int msm_pcm_playback_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		cfg_data.copp_token = ucontrol->value.integer.value[4];
 	if (ucontrol->value.integer.value[5] != 0)
 		cfg_data.bit_width = ucontrol->value.integer.value[5];
+	if (ucontrol->value.integer.value[6] != 0)
+		cfg_data.copp_perf_mode = ucontrol->value.integer.value[6];
 	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
-		"sample_rate- %d copp_token- %d bit_width- %d\n",
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id, cfg_data.app_type, cfg_data.acdb_dev_id,
-		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width);
+		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 	ret = msm_pcm_routing_reg_stream_app_type_cfg(fe_id, session_type,
 						      be_id, &cfg_data);
 	if (ret < 0)
@@ -730,11 +733,12 @@ static int msm_pcm_playback_app_type_cfg_ctl_get(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[3] = be_id;
 	ucontrol->value.integer.value[4] = cfg_data.copp_token;
 	ucontrol->value.integer.value[5] = cfg_data.bit_width;
+	ucontrol->value.integer.value[6] = cfg_data.copp_perf_mode;
 	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
-		"sample_rate- %d copp_token- %d bit_width- %d\n",
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id,
 		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token, cfg_data.bit_width);
+		cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 
 done:
 	return ret;
@@ -746,7 +750,7 @@ static int msm_pcm_capture_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	u64 fe_id = kcontrol->private_value;
 	int session_type = SESSION_TYPE_TX;
 	int be_id = ucontrol->value.integer.value[3];
-	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0};
+	struct msm_pcm_stream_app_type_cfg cfg_data = {0, 0, 48000, 0, 0, 0};
 	int ret = 0;
 
 	cfg_data.app_type = ucontrol->value.integer.value[0];
@@ -757,10 +761,12 @@ static int msm_pcm_capture_app_type_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		cfg_data.copp_token = ucontrol->value.integer.value[4];
 	if (ucontrol->value.integer.value[5] != 0)
 		cfg_data.bit_width = ucontrol->value.integer.value[5];
+	if (ucontrol->value.integer.value[6] != 0)
+		cfg_data.copp_perf_mode = ucontrol->value.integer.value[6];
 	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
-		"sample_rate- %d copp_token- %d bit_width- %d\n",
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id, cfg_data.app_type, cfg_data.acdb_dev_id,
-		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width);
+		cfg_data.sample_rate, cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 	ret = msm_pcm_routing_reg_stream_app_type_cfg(fe_id, session_type,
 						      be_id, &cfg_data);
 	if (ret < 0)
@@ -793,11 +799,12 @@ static int msm_pcm_capture_app_type_cfg_ctl_get(struct snd_kcontrol *kcontrol,
 	ucontrol->value.integer.value[3] = be_id;
 	ucontrol->value.integer.value[4] = cfg_data.copp_token;
 	ucontrol->value.integer.value[5] = cfg_data.bit_width;
+	ucontrol->value.integer.value[6] = cfg_data.copp_perf_mode;
 	pr_debug("%s: fe_id- %llu session_type- %d be_id- %d app_type- %d acdb_dev_id- %d"
-		"sample_rate- %d copp_token- %d bit_width- %d\n",
+		"sample_rate- %d copp_token- %d bit_width- %d copp_perf_mode- %d\n",
 		__func__, fe_id, session_type, be_id,
 		cfg_data.app_type, cfg_data.acdb_dev_id, cfg_data.sample_rate,
-		cfg_data.copp_token, cfg_data.bit_width);
+		cfg_data.copp_token, cfg_data.bit_width, cfg_data.copp_perf_mode);
 done:
 	return ret;
 }

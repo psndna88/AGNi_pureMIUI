@@ -148,7 +148,7 @@ int audio_cal_register(int num_cal_types,
 			GFP_KERNEL);
 		if (callback_node == NULL) {
 			ret = -ENOMEM;
-			goto err;
+			goto err_callback_node;
 		}
 
 		memcpy(callback_node, &reg_data[i].callbacks,
@@ -160,10 +160,13 @@ int audio_cal_register(int num_cal_types,
 			&audio_cal.client_info[reg_data[i].cal_type]);
 		mutex_unlock(&audio_cal.cal_mutex[reg_data[i].cal_type]);
 	}
-done:
-	return ret;
+	goto done;
+
+err_callback_node:
+	kfree(client_info_node);
 err:
 	audio_cal_deregister(num_cal_types, reg_data);
+done:
 	return ret;
 }
 
@@ -619,7 +622,9 @@ void audio_cal_exit(void)
 			kfree(client_info_node);
 			client_info_node = NULL;
 		}
+		mutex_destroy(&audio_cal.cal_mutex[i]);
 	}
+	mutex_destroy(&audio_cal.common_lock);
 	misc_deregister(&audio_cal_misc);
 }
 

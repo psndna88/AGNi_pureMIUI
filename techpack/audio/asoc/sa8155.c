@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
  * Copyright 2011, The Android Open Source Project
@@ -148,6 +149,10 @@ static const char *const tdm_gpio_phandle[] = {"qcom,pri-tdm-gpios",
 						"qcom,hsif2-tdm-gpios",
 						};
 
+static const char *const mclk_gpio_phandle[] = { "qcom,internal-mclk1-gpios" };
+
+static bool mclk_enable_status = false;
+
 enum {
 	TDM_0 = 0,
 	TDM_1,
@@ -174,6 +179,11 @@ enum {
 	TDM_HSIF1,
 	TDM_HSIF2,
 	TDM_INTERFACE_MAX,
+};
+
+enum {
+	MCLK1 = 0,
+	MCLK_MAX,
 };
 
 struct tdm_port {
@@ -937,6 +947,17 @@ static SOC_ENUM_SINGLE_EXT_DECL(mi2s_tx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_rx_format, bit_format_text);
 static SOC_ENUM_SINGLE_EXT_DECL(aux_pcm_tx_format, bit_format_text);
 
+static struct afe_clk_set internal_mclk[MCLK_MAX] = {
+	{
+		AFE_API_VERSION_CLOCK_SET_V2,
+		Q6AFE_LPASS_CLK_ID_MCLK_1,
+		Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
+		Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+		Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+		1,
+	}
+};
+
 static struct afe_clk_set mi2s_clk[MI2S_MAX] = {
 	{
 		AFE_API_VERSION_I2S_CONFIG,
@@ -983,6 +1004,7 @@ static struct afe_clk_set mi2s_clk[MI2S_MAX] = {
 
 struct msm_asoc_mach_data {
 	struct msm_pinctrl_info pinctrl_info[TDM_INTERFACE_MAX];
+	struct msm_pinctrl_info mclk_pinctrl_info[MCLK_MAX];
 	struct mi2s_conf mi2s_intf_conf[MI2S_MAX];
 	struct tdm_conf tdm_intf_conf[TDM_INTERFACE_MAX];
 };
@@ -5008,7 +5030,8 @@ static int msm_mi2s_set_sclk(struct snd_pcm_substream *substream, bool enable)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int port_id = 0;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 
 	port_id = msm_get_port_id(rtd->dai_link->id);
 	if (port_id < 0) {
@@ -5161,13 +5184,13 @@ static int msm_get_pinctrl(struct platform_device *pdev)
 
 		/* get all the states handles from Device Tree */
 		pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
-							"sleep");
+							"default");
 		if (IS_ERR(pinctrl_info->sleep)) {
 			pr_err("%s: could not get sleep pin state\n", __func__);
 			goto err;
 		}
 		pinctrl_info->active = pinctrl_lookup_state(pinctrl,
-							"default");
+							"active");
 		if (IS_ERR(pinctrl_info->active)) {
 			pr_err("%s: could not get active pin state\n",
 				__func__);
@@ -5190,6 +5213,92 @@ static int msm_get_pinctrl(struct platform_device *pdev)
 err:
 	for (j = i; j >= 0; j--) {
 		pinctrl_info = &pdata->pinctrl_info[j];
+		if (pinctrl_info == NULL)
+			continue;
+		if (pinctrl_info->pinctrl) {
+			devm_pinctrl_put(pinctrl_info->pinctrl);
+			pinctrl_info->pinctrl = NULL;
+		}
+	}
+	return -EINVAL;
+}
+
+static int msm_pinctrl_mclk_enable(struct platform_device *pdev)
+{
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_pinctrl_info *pinctrl_info = NULL;
+	struct pinctrl *pinctrl = NULL;
+	int pinctrl_num;
+	int i, j;
+	struct device_node *np = NULL;
+	struct platform_device *pdev_np = NULL;
+	int ret = 0;
+
+	pinctrl_num = MCLK_MAX;
+	for (i = 0; i < pinctrl_num; i++) {
+
+		np = of_parse_phandle(pdev->dev.of_node, mclk_gpio_phandle[i], 0);
+		if (!np) {
+			pr_err("%s: device node %s is null\n", __func__, mclk_gpio_phandle[i]);
+			continue;
+		}
+		pdev_np = of_find_device_by_node(np);
+		if (!pdev_np) {
+			pr_err("%s: platform device not found\n", __func__);
+			continue;
+		}
+
+		pinctrl_info = &pdata->mclk_pinctrl_info[i];
+		if (pinctrl_info == NULL) {
+			pr_err("%s: pinctrl info is null\n", __func__);
+			continue;
+		}
+
+		pinctrl = devm_pinctrl_get(&pdev_np->dev);
+		if (IS_ERR_OR_NULL(pinctrl)) {
+			pr_err("%s: fail to get pinctrl handle\n", __func__);
+			goto err;
+		}
+		pinctrl_info->pinctrl = pinctrl;
+		/* get all the states handles from Device Tree */
+		pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
+			"sleep");
+		if (IS_ERR(pinctrl_info->sleep)) {
+			pr_err("%s: could not get sleep pin state\n", __func__);
+			goto err;
+		}
+		pinctrl_info->active = pinctrl_lookup_state(pinctrl,
+			"default");
+		if (IS_ERR(pinctrl_info->active)) {
+			pr_err("%s: could not get active pin state\n", __func__);
+			goto err;
+		}
+
+		/* Reset the mclk pins to a active state */
+		ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+			&internal_mclk[i]);
+		if (ret < 0) {
+			pr_err("%s: afe lpass clock failed to enable clock, err:%d\n",
+				__func__, ret);
+			ret = -EIO;
+			goto err;
+		}
+		mclk_enable_status = true;
+		ret = pinctrl_select_state(pinctrl_info->pinctrl, pinctrl_info->active);
+		if (ret != 0) {
+			pr_err("%s: set pin state to active failed with %d\n",
+				__func__, ret);
+			ret = -EIO;
+			goto err;
+		}
+		pinctrl_info->curr_state = STATE_ACTIVE;
+	}
+	return 0;
+
+err:
+	for (j = i; j >= 0; j--) {
+		pinctrl_info = &pdata->mclk_pinctrl_info[i];
 		if (pinctrl_info == NULL)
 			continue;
 		if (pinctrl_info->pinctrl) {
@@ -7290,7 +7399,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 	unsigned int fmt = SND_SOC_DAIFMT_CBS_CFS;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
@@ -7319,23 +7429,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	mutex_lock(&intf_conf->lock);
 	if (++intf_conf->ref_cnt == 1) {
 		/* Check if msm needs to provide the clock to the interface */
-		if (!intf_conf->msm_is_mi2s_master) {
+		if (!intf_conf->msm_is_mi2s_master)
 			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
-			fmt = SND_SOC_DAIFMT_CBM_CFM;
-		}
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
 				"%s: afe lpass clock failed to enable MI2S clock, err:%d\n",
 				__func__, ret);
 			goto clean_up;
-		}
-
-		ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
-		if (ret < 0) {
-			pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
-				__func__, index, ret);
-			goto clk_off;
 		}
 
 		pinctrl_info = &pdata->pinctrl_info[index];
@@ -7346,6 +7447,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 				pr_err("%s: MI2S TLMM pinctrl set failed with %d\n",
 					__func__, ret_pinctrl);
 		}
+	}
+	if (!intf_conf->msm_is_mi2s_master)
+		fmt = SND_SOC_DAIFMT_CBM_CFM;
+	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
+	if (ret < 0) {
+		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
+			__func__, index, ret);
+		goto clk_off;
 	}
 clk_off:
 	if (ret < 0)
@@ -7362,7 +7471,8 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	int ret;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	int index = rtd->cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (rtd->cpu_dai->id) / 2;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	struct msm_pinctrl_info *pinctrl_info = NULL;
@@ -7448,7 +7558,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE1,
-		SND_SOC_DAILINK_REG(voicemmode1),
+		SND_SOC_DAILINK_REG(voicemmode1_hostless),
 	},
 	{
 		.name = "MSM VoIP",
@@ -7462,7 +7572,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		/* this dainlink has playback support */
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOIP,
-		SND_SOC_DAILINK_REG(msmvoip),
+		SND_SOC_DAILINK_REG(msmvoip_hostless),
 	},
 	{
 		.name = MSM_DAILINK_NAME(ULL),
@@ -7630,7 +7740,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE2,
-		SND_SOC_DAILINK_REG(voicemmode2),
+		SND_SOC_DAILINK_REG(voicemmode2_hostless),
 	},
 	/* LSM FE */
 	{
@@ -10566,11 +10676,25 @@ static int sa8155_ssr_enable(struct device *dev, void *data)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	int ret = 0;
+	int i;
 
 	if (!card) {
 		dev_err(dev, "%s: card is NULL\n", __func__);
 		ret = -EINVAL;
 		goto err;
+	}
+
+	if (mclk_enable_status == true) {
+		for (i = 0; i < MCLK_MAX; i++) {
+			ret = afe_set_lpass_clock_v2(AFE_PORT_ID_TDM_PORT_RANGE_START,
+			&internal_mclk[i]);
+			if (ret < 0) {
+				pr_err("%s: afe lpass clock failed to enable clock, err:%d\n",
+					__func__, ret);
+				ret = -EIO;
+				goto err;
+			}
+		}
 	}
 
 	dev_info(dev, "%s: setting snd_card to ONLINE\n", __func__);
@@ -10642,6 +10766,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	int ret;
 	enum apr_subsys_state q6_state;
 	static int first_probe = 1;
+	const struct of_device_id *match;
 
 	if (first_probe) {
 		place_marker("M - DRIVER Audio Init");
@@ -10721,6 +10846,24 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 			"%s: pinctrl parsing failed with %d\n",
 			__func__, ret);
 		ret = 0;
+	}
+
+	match = of_match_node(sa8155_asoc_machine_of_match, pdev->dev.of_node);
+	if (!match) {
+		dev_err(&pdev->dev, "%s: No DT match found for sound card\n", __func__);
+		return -EINVAL;
+	}
+	if (strstr(match->compatible, "sa8295")) {
+		/* enable mclk pinctrl info from devicetree */
+		ret = msm_pinctrl_mclk_enable(pdev);
+		if (!ret) {
+			pr_debug("%s: pinctrl mclk parsing successful\n", __func__);
+		} else {
+			dev_err(&pdev->dev,
+				"%s: pinctrl mclk parsing failed with %d\n",
+				__func__, ret);
+			ret = 0;
+		}
 	}
 
 	msm_i2s_auxpcm_init(pdev);

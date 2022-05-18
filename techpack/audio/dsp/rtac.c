@@ -2068,6 +2068,13 @@ void rtac_exit(void)
 	kzfree(rtac_asm_buffer);
 	kzfree(rtac_afe_buffer);
 	kzfree(rtac_voice_buffer);
+	mutex_destroy(&rtac_voice_apr_mutex);
+	mutex_destroy(&rtac_voice_mutex);
+	mutex_destroy(&rtac_afe_apr_mutex);
+	mutex_destroy(&rtac_asm_apr_mutex);
+	mutex_destroy(&rtac_adm_apr_mutex);
+	mutex_destroy(&rtac_adm_mutex);
+	mutex_destroy(&rtac_common.rtac_fops_mutex);
 }
 
 MODULE_DESCRIPTION("SoC QDSP6v2 Real-Time Audio Calibration driver");
