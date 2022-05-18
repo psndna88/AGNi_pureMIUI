@@ -3541,6 +3541,19 @@ hw_dump:
 	return rc;
 }
 
+static int __cam_isp_ctx_flush_req_in_flushed_state(
+	struct cam_context               *ctx,
+	struct cam_req_mgr_flush_request *flush_req)
+{
+	if (flush_req->type == CAM_REQ_MGR_FLUSH_TYPE_ALL) {
+		CAM_INFO(CAM_ISP, "Flush in flushed state req id %lld ctx_id:%d",
+			flush_req->req_id, ctx->ctx_id);
+		ctx->last_flush_req = flush_req->req_id;
+	}
+
+	return 0;
+}
+
 static int __cam_isp_ctx_flush_req(struct cam_context *ctx,
 	struct list_head *req_list, struct cam_req_mgr_flush_request *flush_req)
 {
@@ -4106,6 +4119,16 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_state(
 				CAM_DBG(CAM_ISP,
 					"CDM callback detected for req: %lld, possible buf_done delay, waiting for buf_done",
 					req->request_id);
+				if (req_isp->num_fence_map_out ==
+					req_isp->num_deferred_acks) {
+					__cam_isp_handle_deferred_buf_done(ctx_isp, req,
+						true,
+						CAM_SYNC_STATE_SIGNALED_ERROR,
+						CAM_SYNC_ISP_EVENT_BUBBLE);
+
+					__cam_isp_ctx_handle_buf_done_for_req_list(
+						ctx_isp, req);
+				}
 				goto end;
 			} else {
 				CAM_WARN(CAM_ISP,
@@ -4292,7 +4315,7 @@ static struct cam_isp_ctx_irq_ops
 			__cam_isp_ctx_rdi_only_sof_in_top_state,
 			__cam_isp_ctx_reg_upd_in_sof,
 			NULL,
-			NULL,
+			__cam_isp_ctx_notify_eof_in_activated_state,
 			NULL,
 		},
 	},
@@ -4303,7 +4326,7 @@ static struct cam_isp_ctx_irq_ops
 			__cam_isp_ctx_rdi_only_sof_in_applied_state,
 			NULL,
 			NULL,
-			NULL,
+			__cam_isp_ctx_notify_eof_in_activated_state,
 			__cam_isp_ctx_buf_done_in_applied,
 		},
 	},
@@ -4314,7 +4337,7 @@ static struct cam_isp_ctx_irq_ops
 			__cam_isp_ctx_rdi_only_sof_in_top_state,
 			NULL,
 			NULL,
-			NULL,
+			__cam_isp_ctx_notify_eof_in_activated_state,
 			__cam_isp_ctx_buf_done_in_epoch,
 		},
 	},
@@ -4325,7 +4348,7 @@ static struct cam_isp_ctx_irq_ops
 			__cam_isp_ctx_rdi_only_sof_in_bubble_state,
 			__cam_isp_ctx_rdi_only_reg_upd_in_bubble_state,
 			NULL,
-			NULL,
+			__cam_isp_ctx_notify_eof_in_activated_state,
 			__cam_isp_ctx_buf_done_in_bubble,
 		},
 	},
@@ -4336,7 +4359,7 @@ static struct cam_isp_ctx_irq_ops
 			__cam_isp_ctx_rdi_only_sof_in_bubble_applied,
 			__cam_isp_ctx_rdi_only_reg_upd_in_bubble_applied_state,
 			NULL,
-			NULL,
+			__cam_isp_ctx_notify_eof_in_activated_state,
 			__cam_isp_ctx_buf_done_in_bubble_applied,
 		},
 	},
@@ -4635,6 +4658,14 @@ static int __cam_isp_ctx_config_dev_in_top_state(
 		CAM_INFO(CAM_ISP,
 			"request %lld has been flushed, reject packet",
 			packet->header.request_id);
+		rc = -EBADR;
+		goto free_req;
+	} else if ((packet_opcode == CAM_ISP_PACKET_INIT_DEV)
+		&& (packet->header.request_id <= ctx->last_flush_req)
+		&& ctx->last_flush_req && packet->header.request_id) {
+		CAM_WARN(CAM_ISP,
+			"last flushed req is %lld, config dev(init) for req %lld",
+			ctx->last_flush_req, packet->header.request_id);
 		rc = -EBADR;
 		goto free_req;
 	}
@@ -5927,6 +5958,7 @@ static struct cam_ctx_ops
 		.crm_ops = {
 			.unlink = __cam_isp_ctx_unlink_in_ready,
 			.process_evt = __cam_isp_ctx_process_evt,
+			.flush_req = __cam_isp_ctx_flush_req_in_flushed_state,
 		},
 		.irq_ops = NULL,
 		.pagefault_ops = cam_isp_context_dump_requests,

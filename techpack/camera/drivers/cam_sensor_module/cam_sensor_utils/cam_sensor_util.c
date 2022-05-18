@@ -74,11 +74,11 @@ int32_t cam_sensor_util_regulator_powerup(struct cam_hw_soc_info *soc_info)
 		if (IS_ERR_OR_NULL(soc_info->rgltr[i])) {
 			rc = PTR_ERR(soc_info->rgltr[i]);
 			rc = rc ? rc : -EINVAL;
-			CAM_ERR(CAM_ACTUATOR, "get failed for regulator %s %d",
+			CAM_ERR(CAM_SENSOR, "get failed for regulator %s %d",
 				 soc_info->rgltr_name[i], rc);
 			return rc;
 		}
-		CAM_DBG(CAM_ACTUATOR, "get for regulator %s",
+		CAM_DBG(CAM_SENSOR, "get for regulator %s",
 			soc_info->rgltr_name[i]);
 	}
 

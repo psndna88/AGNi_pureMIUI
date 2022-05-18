@@ -7990,6 +7990,14 @@ static int cam_ife_hw_mgr_handle_hw_eof(
 	case CAM_ISP_HW_VFE_IN_RDI1:
 	case CAM_ISP_HW_VFE_IN_RDI2:
 	case CAM_ISP_HW_VFE_IN_RDI3:
+		if (!ife_hw_mgr_ctx->is_rdi_only_context)
+			break;
+		if (atomic_read(&ife_hw_mgr_ctx->overflow_pending))
+			break;
+		ife_hw_irq_eof_cb(ife_hw_mgr_ctx->common.cb_priv,
+			CAM_ISP_HW_EVENT_EOF, (void *)&eof_done_event_data);
+		break;
+
 	case CAM_ISP_HW_VFE_IN_PDLIB:
 	case CAM_ISP_HW_VFE_IN_LCR:
 		break;

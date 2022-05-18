@@ -38,6 +38,10 @@ ifeq ($(CONFIG_ARCH_YUPIK), y)
 include $(srctree)/techpack/camera/config/yupikcamera.conf
 endif
 
+ifeq ($(CONFIG_ARCH_SM6150), y)
+include $(srctree)/techpack/camera/config/sm6150camera.conf
+endif
+
 ifeq ($(CONFIG_ARCH_KONA), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/konacameraconf.h
@@ -81,6 +85,11 @@ endif
 ifeq ($(CONFIG_ARCH_YUPIK), y)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/yupikcameraconf.h
+endif
+
+ifeq ($(CONFIG_ARCH_SM6150), y)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/sm6150cameraconf.h
 endif
 
 endif
