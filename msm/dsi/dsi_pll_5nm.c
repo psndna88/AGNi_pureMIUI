@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
@@ -288,6 +290,13 @@ static inline bool dsi_pll_5nm_is_hw_revision(
 		struct dsi_pll_resource *rsc)
 {
 	return (rsc->pll_revision == DSI_PLL_5NM) ?
+		true : false;
+}
+
+static inline bool dsi_pll_7nm_v4_1_is_hw_revision(
+		struct dsi_pll_resource *rsc)
+{
+	return (rsc->pll_revision == DSI_PLL_7NM_V4_1) ?
 		true : false;
 }
 
@@ -2591,7 +2600,8 @@ int dsi_pll_clock_register_5nm(struct platform_device *pdev,
 		dsi0pll_vco_clk.priv = pll_res;
 		dsi0pll_shadow_vco_clk.priv = pll_res;
 
-		if (dsi_pll_5nm_is_hw_revision(pll_res)) {
+		if (dsi_pll_5nm_is_hw_revision(pll_res) ||
+				dsi_pll_7nm_v4_1_is_hw_revision(pll_res)) {
 			dsi0pll_vco_clk.min_rate = 600000000;
 			dsi0pll_vco_clk.max_rate = 5000000000;
 			dsi0pll_shadow_vco_clk.min_rate = 600000000;
@@ -2660,7 +2670,8 @@ int dsi_pll_clock_register_5nm(struct platform_device *pdev,
 		dsi1pll_vco_clk.priv = pll_res;
 		dsi1pll_shadow_vco_clk.priv = pll_res;
 
-		if (dsi_pll_5nm_is_hw_revision(pll_res)) {
+		if (dsi_pll_5nm_is_hw_revision(pll_res) ||
+				dsi_pll_7nm_v4_1_is_hw_revision(pll_res)) {
 			dsi1pll_vco_clk.min_rate = 600000000;
 			dsi1pll_vco_clk.max_rate = 5000000000;
 			dsi1pll_shadow_vco_clk.min_rate = 600000000;

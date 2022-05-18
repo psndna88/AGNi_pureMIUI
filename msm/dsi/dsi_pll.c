@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
  */
 
@@ -21,6 +23,7 @@ static int dsi_pll_clock_register(struct platform_device *pdev,
 
 	switch (pll_res->pll_revision) {
 	case DSI_PLL_5NM:
+	case DSI_PLL_7NM_V4_1:
 		rc = dsi_pll_clock_register_5nm(pdev, pll_res);
 		break;
 	case DSI_PLL_10NM:
@@ -150,6 +153,8 @@ int dsi_pll_init(struct platform_device *pdev, struct dsi_pll_resource **pll)
 
 	if (!strcmp(label, "dsi_pll_5nm"))
 		pll_res->pll_revision = DSI_PLL_5NM;
+	else if (!strcmp(label, "dsi_pll_7nm_v4_1"))
+		pll_res->pll_revision = DSI_PLL_7NM_V4_1;
 	else if (!strcmp(label, "dsi_pll_10nm"))
 		pll_res->pll_revision = DSI_PLL_10NM;
 	else
