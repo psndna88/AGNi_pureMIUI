@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -68,6 +69,7 @@ static netdev_tx_t rmnet_vnd_start_xmit(struct sk_buff *skb,
 	int ip_type;
 	u32 mark;
 	unsigned int len;
+	bool need_to_drop = false;
 
 	priv = netdev_priv(dev);
 	if (priv->real_dev) {
@@ -76,6 +78,14 @@ static netdev_tx_t rmnet_vnd_start_xmit(struct sk_buff *skb,
 		mark = skb->mark;
 		len = skb->len;
 		trace_rmnet_xmit_skb(skb);
+
+		qmi_rmnet_get_flow_state(dev, skb, &need_to_drop);
+		if (unlikely(need_to_drop)) {
+			this_cpu_inc(priv->pcpu_stats->stats.tx_drops);
+			kfree_skb(skb);
+			return NETDEV_TX_OK;
+		}
+
 		rmnet_egress_handler(skb);
 		qmi_rmnet_burst_fc_check(dev, ip_type, mark, len);
 		qmi_rmnet_work_maybe_restart(rmnet_get_rmnet_port(dev));

@@ -2,13 +2,15 @@ ifneq ($(TARGET_PRODUCT),qssi)
 RMNET_CORE_DLKM_PLATFORMS_LIST := lahaina
 RMNET_CORE_DLKM_PLATFORMS_LIST += holi
 RMNET_CORE_DLKM_PLATFORMS_LIST += monaco
-RMNET_CORE_DLKM_PLATFORMS_LIST += monaco_go
-RMNET_CORE_DLKM_PLATFORMS_LIST += monaco_go_aon
 
 ifeq ($(call is-board-platform-in-list, $(RMNET_CORE_DLKM_PLATFORMS_LIST)),true)
 #Make file to create RMNET_CORE DLKM
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
+
+ifeq ($(BOARD_COMMON_DIR),)
+    BOARD_COMMON_DIR := device/qcom/common
+endif
 
 LOCAL_CFLAGS := -Wno-macro-redefined -Wno-unused-function -Wall -Werror
 LOCAL_CLANG :=true
@@ -30,7 +32,7 @@ LOCAL_SRC_FILES := \
 	wda_qmi.c
 
 RMNET_BLD_DIR := ../../vendor/qcom/opensource/datarmnet/core
-DLKM_DIR := $(TOP)/device/qcom/common/dlkm
+DLKM_DIR := $(TOP)/$(BOARD_COMMON_DIR)/dlkm
 
 KBUILD_OPTIONS := $(RMNET_BLD_DIR)
 
@@ -51,7 +53,7 @@ LOCAL_SRC_FILES := \
 	rmnet_ctl_ipa.c
 
 RMNET_BLD_DIR := ../../vendor/qcom/opensource/datarmnet/core
-DLKM_DIR := $(TOP)/device/qcom/common/dlkm
+DLKM_DIR := $(TOP)/$(BOARD_COMMON_DIR)/dlkm
 
 KBUILD_OPTIONS := $(RMNET_BLD_DIR)
 
