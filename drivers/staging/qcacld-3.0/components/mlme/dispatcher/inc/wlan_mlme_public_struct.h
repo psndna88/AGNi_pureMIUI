@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -261,6 +262,7 @@ enum roam_invoke_source_entity {
 struct mlme_roam_after_data_stall {
 	bool roam_invoke_in_progress;
 	enum roam_invoke_source_entity source;
+	struct qdf_mac_addr mac_addr;
 };
 
 /**
@@ -1185,6 +1187,21 @@ struct wlan_mlme_ratemask {
 	uint32_t higher32_2;
 };
 
+/**
+ * enum mlme_cfg_frame_type  - frame type to configure mgmt hw tx retry count
+ * @CFG_GO_NEGOTIATION_REQ_FRAME_TYPE: p2p go negotiation request fame
+ * @CFG_P2P_INVITATION_REQ_FRAME_TYPE: p2p invitation request frame
+ * @CFG_PROVISION_DISCOVERY_REQ_FRAME_TYPE: p2p provision discovery request
+ */
+enum mlme_cfg_frame_type {
+	CFG_GO_NEGOTIATION_REQ_FRAME_TYPE = 0,
+	CFG_P2P_INVITATION_REQ_FRAME_TYPE = 1,
+	CFG_PROVISION_DISCOVERY_REQ_FRAME_TYPE = 2,
+	CFG_FRAME_TYPE_MAX,
+};
+
+#define MAX_MGMT_HW_TX_RETRY_COUNT 127
+
 /* struct wlan_mlme_generic - Generic CFG config items
  *
  * @band_capability: HW Band Capability - Both or 2.4G only or 5G only
@@ -1232,6 +1249,8 @@ struct wlan_mlme_ratemask {
  * @enabled_rf_test_mode: Enable/disable the RF test mode config
  * @monitor_mode_concurrency: Monitor mode concurrency supported
  * @ocv_support: FW supports OCV or not
+ * @tx_retry_multiplier: TX xretry extension parameter
+ * @mgmt_hw_tx_retry_count: MGMT HW tx retry count for frames
  */
 struct wlan_mlme_generic {
 	uint32_t band_capability;
@@ -1276,6 +1295,8 @@ struct wlan_mlme_generic {
 	bool enabled_rf_test_mode;
 	enum monitor_mode_concurrency monitor_mode_concurrency;
 	bool ocv_support;
+	uint32_t tx_retry_multiplier;
+	uint8_t mgmt_hw_tx_retry_count[CFG_FRAME_TYPE_MAX];
 };
 
 /*
@@ -1586,6 +1607,7 @@ struct fw_scan_channels {
  * @mawc_roam_enabled:              Enable/Disable MAWC during roaming
  * @enable_fast_roam_in_concurrency:Enable LFR roaming on STA during concurrency
  * @vendor_btm_param:               Vendor WTC roam trigger parameters
+ * @roam_rt_stats:                  Roam event stats vendor command parameters
  * @lfr3_roaming_offload:           Enable/disable roam offload feature
  * @lfr3_dual_sta_roaming_enabled:  Enable/Disable dual sta roaming offload
  * feature
@@ -1704,6 +1726,7 @@ struct wlan_mlme_lfr_cfg {
 	bool enable_fast_roam_in_concurrency;
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	struct wlan_cm_roam_vendor_btm_params vendor_btm_param;
+	struct wlan_cm_roam_rt_stats roam_rt_stats;
 	bool lfr3_roaming_offload;
 	bool lfr3_dual_sta_roaming_enabled;
 	bool enable_self_bss_roam;
@@ -2131,6 +2154,7 @@ struct wlan_mlme_power {
  * @ap_link_monitor_timeout: AP link monitor timeout value
  * @ps_data_inactivity_timeout: PS data inactivity timeout
  * @wmi_wq_watchdog_timeout: timeout period for wmi watchdog bite
+ * @sae_auth_failure_timeout: SAE authentication failure timeout
  */
 struct wlan_mlme_timeout {
 	uint32_t join_failure_timeout;
@@ -2146,6 +2170,7 @@ struct wlan_mlme_timeout {
 	uint32_t ap_link_monitor_timeout;
 	uint32_t ps_data_inactivity_timeout;
 	uint32_t wmi_wq_watchdog_timeout;
+	uint32_t sae_auth_failure_timeout;
 };
 
 /**
@@ -2354,6 +2379,34 @@ struct wlan_mlme_reg {
 	bool enable_nan_on_indoor_channels;
 };
 
+#define IOT_AGGR_INFO_MAX_NUM 32
+
+/**
+ * struct wlan_iot_aggr - IOT related AGGR rule
+ *
+ * @oui: OUI for the rule
+ * @oui_len: length of the OUI
+ * @ampdu_sz: max aggregation size in no. of MPDUs
+ * @amsdu_sz: max aggregation size in no. of MSDUs
+ */
+struct wlan_iot_aggr {
+	uint8_t oui[OUI_LENGTH];
+	uint32_t oui_len;
+	uint32_t ampdu_sz;
+	uint32_t amsdu_sz;
+};
+
+/**
+ * struct wlan_mlme_iot - IOT related CFG Items
+ *
+ * @aggr: aggr rules
+ * @aggr_num: number of the configured aggr rules
+ */
+struct wlan_mlme_iot {
+	struct wlan_iot_aggr aggr[IOT_AGGR_INFO_MAX_NUM];
+	uint32_t aggr_num;
+};
+
 /**
  * struct wlan_mlme_cfg - MLME config items
  * @chainmask_cfg: VHT chainmask related cfg items
@@ -2397,6 +2450,7 @@ struct wlan_mlme_reg {
  * @trig_score_delta: Roam score delta value for various roam triggers
  * @trig_min_rssi: Expected minimum RSSI value of candidate AP for
  * various roam triggers
+ * @iot: IOT related CFG items
  */
 struct wlan_mlme_cfg {
 	struct wlan_mlme_chainmask chainmask_cfg;
@@ -2441,6 +2495,7 @@ struct wlan_mlme_cfg {
 	struct roam_trigger_score_delta trig_score_delta[NUM_OF_ROAM_TRIGGERS];
 	struct roam_trigger_min_rssi trig_min_rssi[NUM_OF_ROAM_MIN_RSSI];
 	struct wlan_mlme_ratemask ratemask_cfg;
+	struct wlan_mlme_iot iot;
 };
 
 enum pkt_origin {
@@ -2482,6 +2537,7 @@ struct wlan_mlme_sae_single_pmk {
  * @btm_rsp:            BTM response information
  * @roam_init_info:     Roam initial info
  * @roam_msg_info:      roam related message information
+ * @roam_event_param:   Roam event notif params
  */
 struct mlme_roam_debug_info {
 	struct wmi_roam_trigger_info trigger;
@@ -2491,6 +2547,7 @@ struct mlme_roam_debug_info {
 	struct roam_btm_response_data btm_rsp;
 	struct roam_initial_data roam_init_info;
 	struct roam_msg_info roam_msg_info;
+	struct roam_event_rt_info roam_event_param;
 };
 
 /**

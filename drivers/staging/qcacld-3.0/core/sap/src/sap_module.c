@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1234,6 +1235,7 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 	enum phy_ch_width ch_width, concurrent_bw = 0;
 	struct mac_context *mac;
 	struct ch_params ch_params = {0};
+	uint32_t channel_bonding_mode = 0;
 
 	mac = sap_get_mac_context();
 	if (!mac) {
@@ -1249,7 +1251,14 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 		 */
 		ch_width = CH_WIDTH_20MHZ;
 	} else {
-		ch_width = wlansap_get_max_bw_by_phymode(sap_context);
+		wlan_mlme_get_channel_bonding_5ghz(mac->psoc,
+						   &channel_bonding_mode);
+		if (WLAN_REG_IS_5GHZ_CH_FREQ(chan_freq) &&
+		    (!channel_bonding_mode))
+			ch_width = CH_WIDTH_20MHZ;
+		else
+			ch_width = wlansap_get_max_bw_by_phymode(sap_context);
+
 		concurrent_bw = wlan_sap_get_concurrent_bw(
 				mac->pdev, mac->psoc, chan_freq,
 				ch_width);
@@ -1263,11 +1272,12 @@ wlansap_get_csa_chanwidth_from_phymode(struct sap_context *sap_context,
 	ch_width = ch_params.ch_width;
 	if (tgt_ch_params)
 		*tgt_ch_params = ch_params;
-	sap_nofl_debug("freq %d bw %d (phymode %d, con bw %d, tgt bw %d)",
+	sap_nofl_debug("freq %d bw %d (phymode %d, con bw %d, tgt bw %d) channel bonding 5g %d",
 		       chan_freq, ch_width,
 		       sap_context->csr_roamProfile.phyMode,
 		       concurrent_bw,
-		       tgt_ch_params ? tgt_ch_params->ch_width : CH_WIDTH_MAX);
+		       tgt_ch_params ? tgt_ch_params->ch_width : CH_WIDTH_MAX,
+		       channel_bonding_mode);
 
 	return ch_width;
 }
@@ -3227,6 +3237,11 @@ qdf_freq_t wlansap_get_chan_band_restrict(struct sap_context *sap_ctx,
 		return wlansap_get_safe_channel_from_pcl_and_acs_range(sap_ctx);
 	} else if (wlan_reg_is_passive_for_freq(mac->pdev,
 						sap_ctx->chan_freq)) {
+		sap_ctx->chan_freq_before_switch_band = sap_ctx->chan_freq;
+		sap_ctx->chan_width_before_switch_band =
+			sap_ctx->ch_params.ch_width;
+		sap_debug("Save chan info before switch: %d, width: %d",
+			  sap_ctx->chan_freq, sap_ctx->ch_params.ch_width);
 		sap_debug("channel is passive");
 		*csa_reason = CSA_REASON_CHAN_PASSIVE;
 		return wlansap_get_safe_channel_from_pcl_for_sap(sap_ctx);

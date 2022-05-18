@@ -756,6 +756,15 @@ int pld_qmi_send(struct device *dev, int type, void *cmd,
 		 int (*cb)(void *ctx, void *event, int event_len));
 bool pld_is_fw_dump_skipped(struct device *dev);
 
+#ifdef CONFIG_ENABLE_LOW_POWER_MODE
+int pld_is_low_power_mode(struct device *dev);
+#else
+static inline int pld_is_low_power_mode(struct device *dev)
+{
+	return 0;
+}
+#endif
+
 /**
  * pld_is_pdr() - Check WLAN PD is Restarted
  *

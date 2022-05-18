@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +25,7 @@
 /* Header files */
 
 #include "wma.h"
+#include "enet.h"
 #include "wma_api.h"
 #include "cds_api.h"
 #include "wmi_unified_api.h"
@@ -65,7 +67,6 @@
 #include <cdp_txrx_cfg.h>
 #include "cdp_txrx_stats.h"
 #include <cdp_txrx_misc.h>
-#include "enet.h"
 #include "wlan_mgmt_txrx_utils_api.h"
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_objmgr_pdev_obj.h"
@@ -1721,6 +1722,7 @@ static QDF_STATUS wma_update_thermal_mitigation_to_fw(tp_wma_handle wma,
 	therm_data.levelconf[0].dcoffpercent =
 		wma->thermal_mgmt_info.throttle_duty_cycle_tbl[thermal_level];
 	therm_data.levelconf[0].priority = 0;
+	therm_data.num_thermal_conf = 1;
 
 	return wmi_unified_thermal_mitigation_param_cmd_send(wma->wmi_handle,
 							     &therm_data);

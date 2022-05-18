@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -373,6 +374,49 @@ mlme_init_lpass_support_cfg(struct wlan_objmgr_psoc *psoc,
 }
 #endif
 
+/**
+ * mlme_init_mgmt_hw_tx_retry_count_cfg() - initialize mgmt hw tx retry count
+ * @psoc: Pointer to PSOC
+ * @gen: pointer to generic CFG items
+ *
+ * Return: None
+ */
+static void mlme_init_mgmt_hw_tx_retry_count_cfg(
+			struct wlan_objmgr_psoc *psoc,
+			struct wlan_mlme_generic *gen)
+{
+	uint32_t i;
+	qdf_size_t out_size = 0;
+	uint8_t count_array[MGMT_FRM_HW_TX_RETRY_COUNT_STR_LEN];
+
+	qdf_uint8_array_parse(cfg_get(psoc, CFG_MGMT_FRAME_HW_TX_RETRY_COUNT),
+			      count_array,
+			      MGMT_FRM_HW_TX_RETRY_COUNT_STR_LEN,
+			      &out_size);
+
+	for (i = 0; i + 1 < out_size; i += 2) {
+		if (count_array[i] >= CFG_FRAME_TYPE_MAX) {
+			mlme_legacy_debug("invalid frm type %d",
+					  count_array[i]);
+			continue;
+		}
+		if (count_array[i + 1] >= MAX_MGMT_HW_TX_RETRY_COUNT) {
+			mlme_legacy_debug("mgmt hw tx retry count %d for frm %d, limit to %d",
+					  count_array[i + 1],
+					  count_array[i],
+					  MAX_MGMT_HW_TX_RETRY_COUNT);
+			gen->mgmt_hw_tx_retry_count[count_array[i]] =
+						MAX_MGMT_HW_TX_RETRY_COUNT;
+		} else {
+			mlme_legacy_debug("mgmt hw tx retry count %d for frm %d",
+					  count_array[i + 1],
+					  count_array[i]);
+			gen->mgmt_hw_tx_retry_count[count_array[i]] =
+							count_array[i + 1];
+		}
+	}
+}
+
 static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 				  struct wlan_mlme_generic *gen)
 {
@@ -436,6 +480,8 @@ static void mlme_init_generic_cfg(struct wlan_objmgr_psoc *psoc,
 		cfg_get(psoc, CFG_SAE_CONNECION_RETRIES);
 	gen->monitor_mode_concurrency =
 		cfg_get(psoc, CFG_MONITOR_MODE_CONCURRENCY);
+	gen->tx_retry_multiplier = cfg_get(psoc, CFG_TX_RETRY_MULTIPLIER);
+	mlme_init_mgmt_hw_tx_retry_count_cfg(psoc, gen);
 }
 
 static void mlme_init_edca_ani_cfg(struct wlan_objmgr_psoc *psoc,
@@ -680,6 +726,8 @@ static void mlme_init_timeout_cfg(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_PS_DATA_INACTIVITY_TIMEOUT);
 	timeouts->wmi_wq_watchdog_timeout =
 			cfg_get(psoc, CFG_WMI_WQ_WATCHDOG);
+	timeouts->sae_auth_failure_timeout =
+			cfg_get(psoc, CFG_SAE_AUTH_FAILURE_TIMEOUT);
 }
 
 static void mlme_init_ht_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
@@ -1180,13 +1228,13 @@ static void mlme_init_he_cap_in_cfg(struct wlan_objmgr_psoc *psoc,
 	he_caps->dot11_he_cap.rx_full_bw_su_he_mu_non_cmpr_sigb =
 			cfg_default(CFG_HE_RX_FULL_BW_MU_NON_CMPR_SIGB);
 	he_caps->dot11_he_cap.rx_he_mcs_map_lt_80 =
-			cfg_default(CFG_HE_RX_MCS_MAP_LT_80);
+			cfg_get(psoc, CFG_HE_RX_MCS_MAP_LT_80);
 	he_caps->dot11_he_cap.tx_he_mcs_map_lt_80 =
-			cfg_default(CFG_HE_TX_MCS_MAP_LT_80);
-	value = cfg_default(CFG_HE_RX_MCS_MAP_160);
+			cfg_get(psoc, CFG_HE_TX_MCS_MAP_LT_80);
+	value = cfg_get(psoc, CFG_HE_RX_MCS_MAP_160);
 	qdf_mem_copy(he_caps->dot11_he_cap.rx_he_mcs_map_160, &value,
 		     sizeof(uint16_t));
-	value = cfg_default(CFG_HE_TX_MCS_MAP_160);
+	value = cfg_get(psoc, CFG_HE_TX_MCS_MAP_160);
 	qdf_mem_copy(he_caps->dot11_he_cap.tx_he_mcs_map_160, &value,
 		     sizeof(uint16_t));
 	value = cfg_default(CFG_HE_RX_MCS_MAP_80_80);
@@ -1604,6 +1652,7 @@ static void mlme_init_roam_offload_cfg(struct wlan_objmgr_psoc *psoc,
 	lfr->idle_roam_band = cfg_get(psoc, CFG_LFR_IDLE_ROAM_BAND);
 	lfr->sta_roam_disable = cfg_get(psoc, CFG_STA_DISABLE_ROAM);
 	mlme_init_sae_single_pmk_cfg(psoc, lfr);
+	qdf_mem_zero(&lfr->roam_rt_stats, sizeof(lfr->roam_rt_stats));
 }
 
 #else
@@ -2344,6 +2393,127 @@ mlme_init_dot11_mode_cfg(struct wlan_objmgr_psoc *psoc,
 	dot11_mode->vdev_type_dot11_mode = cfg_get(psoc, CFG_VDEV_DOT11_MODE);
 }
 
+/**
+ * mlme_iot_parse_aggr_info - parse aggr related items in ini
+ *
+ * @psoc: PSOC pointer
+ * @iot: IOT related CFG items
+ *
+ * Return: None
+ */
+static void
+mlme_iot_parse_aggr_info(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_mlme_iot *iot)
+{
+	char *aggr_info, *oui, *msdu, *mpdu, *aggr_info_temp;
+	uint32_t ampdu_sz, amsdu_sz, index = 0, oui_len, cfg_str_len;
+	struct wlan_iot_aggr *aggr_info_list;
+	const char *cfg_str;
+	int ret;
+
+	cfg_str = cfg_get(psoc, CFG_TX_IOT_AGGR);
+	if (!cfg_str)
+		return;
+
+	cfg_str_len = qdf_str_len(cfg_str);
+	if (!cfg_str_len)
+		return;
+
+	aggr_info = qdf_mem_malloc(cfg_str_len + 1);
+	if (!aggr_info)
+		return;
+
+	aggr_info_list = iot->aggr;
+	qdf_mem_copy(aggr_info, cfg_str, cfg_str_len);
+	mlme_legacy_debug("aggr_info=[%s]", aggr_info);
+
+	aggr_info_temp = aggr_info;
+	while (aggr_info_temp) {
+		/* skip possible spaces before oui string */
+		while (*aggr_info_temp == ' ')
+			aggr_info_temp++;
+
+		oui = strsep(&aggr_info_temp, ",");
+		if (!oui) {
+			mlme_legacy_err("oui error");
+			goto end;
+		}
+
+		oui_len = qdf_str_len(oui) / 2;
+		if (oui_len > sizeof(aggr_info_list[index].oui)) {
+			mlme_legacy_err("size error");
+			goto end;
+		}
+
+		amsdu_sz = 0;
+		msdu = strsep(&aggr_info_temp, ",");
+		if (!msdu) {
+			mlme_legacy_err("msdu error");
+			goto end;
+		}
+
+		ret = kstrtou32(msdu, 10, &amsdu_sz);
+		if (ret || amsdu_sz > IOT_AGGR_MSDU_MAX_NUM) {
+			mlme_legacy_err("invalid msdu no. %s [%u]",
+					msdu, amsdu_sz);
+			goto end;
+		}
+
+		ampdu_sz = 0;
+		mpdu = strsep(&aggr_info_temp, ",");
+		if (!mpdu) {
+			mlme_legacy_err("mpdu error");
+			goto end;
+		}
+
+		ret = kstrtou32(mpdu, 10, &ampdu_sz);
+		if (ret || ampdu_sz > IOT_AGGR_MPDU_MAX_NUM) {
+			mlme_legacy_err("invalid mpdu no. %s [%u]",
+					mpdu, ampdu_sz);
+			goto end;
+		}
+
+		mlme_legacy_debug("id %u oui[%s] len %u msdu %u mpdu %u",
+				  index, oui, oui_len, amsdu_sz, ampdu_sz);
+
+		ret = qdf_hex_str_to_binary(aggr_info_list[index].oui,
+					    oui, oui_len);
+		if (ret) {
+			mlme_legacy_err("oui error: %d", ret);
+			goto end;
+		}
+
+		aggr_info_list[index].amsdu_sz = amsdu_sz;
+		aggr_info_list[index].ampdu_sz = ampdu_sz;
+		aggr_info_list[index].oui_len = oui_len;
+		index++;
+		if (index >= IOT_AGGR_INFO_MAX_NUM) {
+			mlme_legacy_err("exceed max num, index = %d", index);
+			break;
+		}
+	}
+	iot->aggr_num = index;
+
+end:
+	mlme_legacy_debug("configured aggr num %d", iot->aggr_num);
+	qdf_mem_free(aggr_info);
+}
+
+/**
+ * mlme_iot_parse_aggr_info - parse IOT related items in ini
+ *
+ * @psoc: PSOC pointer
+ * @iot: IOT related CFG items
+ *
+ * Return: None
+ */
+static void
+mlme_init_iot_cfg(struct wlan_objmgr_psoc *psoc,
+		  struct wlan_mlme_iot *iot)
+{
+	mlme_iot_parse_aggr_info(psoc, iot);
+}
+
 QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_mlme_psoc_ext_obj *mlme_obj;
@@ -2396,6 +2566,7 @@ QDF_STATUS mlme_cfg_on_psoc_enable(struct wlan_objmgr_psoc *psoc)
 	mlme_init_btm_cfg(psoc, &mlme_cfg->btm);
 	mlme_init_roam_score_config(psoc, mlme_cfg);
 	mlme_init_ratemask_cfg(psoc, &mlme_cfg->ratemask_cfg);
+	mlme_init_iot_cfg(psoc, &mlme_cfg->iot);
 
 	return status;
 }

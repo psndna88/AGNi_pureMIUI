@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -141,6 +141,26 @@ int os_if_fwol_send_dscp_up_map_to_fw(struct wlan_objmgr_vdev *vdev,
 	status = ucfg_fwol_send_dscp_up_map_to_fw(vdev, dscp_to_up_map);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		osif_err("Failed to send dscp_up_map to FW, %d", status);
+
+	return qdf_status_to_os_return(status);
+}
+#endif
+
+#ifdef THERMAL_STATS_SUPPORT
+int os_if_fwol_get_thermal_stats_req(struct wlan_objmgr_psoc *psoc,
+				     enum thermal_stats_request_type req,
+				     void (*callback)(void *context,
+				     struct thermal_throttle_info *response),
+				     void *context)
+{
+	QDF_STATUS status;
+
+
+	status = ucfg_fwol_send_get_thermal_stats_cmd(psoc, req, callback,
+						      context);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		osif_err("Failed to send get thermal stats cmd to FW, %d",
+			 status);
 
 	return qdf_status_to_os_return(status);
 }

@@ -166,9 +166,67 @@ static void tgt_fwol_register_elna_rx_ops(struct wlan_fwol_rx_ops *rx_ops)
 }
 #endif /* WLAN_FEATURE_ELNA */
 
+#ifdef THERMAL_STATS_SUPPORT
+static QDF_STATUS
+tgt_fwol_get_thermal_stats_resp(struct wlan_objmgr_psoc *psoc,
+				struct thermal_throttle_info *resp)
+{
+	QDF_STATUS status;
+	struct scheduler_msg msg = {0};
+	struct wlan_fwol_rx_event *event;
+
+	event = qdf_mem_malloc(sizeof(*event));
+	if (!event)
+		return QDF_STATUS_E_NOMEM;
+
+	status = wlan_objmgr_psoc_try_get_ref(psoc, WLAN_FWOL_SB_ID);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		fwol_err("Failed to get psoc ref");
+		fwol_release_rx_event(event);
+		return status;
+	}
+
+	event->psoc = psoc;
+	event->event_id = WLAN_FWOL_EVT_GET_THERMAL_STATS_RESPONSE;
+	event->get_thermal_stats_response = *resp;
+	msg.type = WLAN_FWOL_EVT_GET_THERMAL_STATS_RESPONSE;
+	msg.bodyptr = event;
+	msg.callback = fwol_process_event;
+	msg.flush_callback = fwol_flush_callback;
+	status = scheduler_post_message(QDF_MODULE_ID_FWOL,
+					QDF_MODULE_ID_FWOL,
+					QDF_MODULE_ID_TARGET_IF, &msg);
+
+	if (QDF_IS_STATUS_SUCCESS(status))
+		return QDF_STATUS_SUCCESS;
+
+	fwol_err("failed to send WLAN_FWOL_EVT_GET_THERMAL_STATS_RESPONSE msg");
+	fwol_flush_callback(&msg);
+
+	return status;
+}
+
+static void
+tgt_fwol_register_thermal_stats_resp(struct wlan_fwol_rx_ops *rx_ops)
+{
+	rx_ops->get_thermal_stats_resp = tgt_fwol_get_thermal_stats_resp;
+}
+#else
+static void
+tgt_fwol_register_thermal_stats_resp(struct wlan_fwol_rx_ops *rx_ops)
+{
+}
+#endif
+
+static void tgt_fwol_register_thermal_rx_ops(struct wlan_fwol_rx_ops *rx_ops)
+{
+	tgt_fwol_register_thermal_stats_resp(rx_ops);
+}
+
 QDF_STATUS tgt_fwol_register_rx_ops(struct wlan_fwol_rx_ops *rx_ops)
 {
 	tgt_fwol_register_elna_rx_ops(rx_ops);
+	tgt_fwol_register_thermal_rx_ops(rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

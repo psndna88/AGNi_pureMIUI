@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -853,6 +854,65 @@ enum monitor_mode_concurrency {
 	CFG_VALUE_OR_DEFAULT, \
 	"Monitor mode concurrency supported")
 
+/*
+ * <ini>
+ * tx_retry_multiplier - TX retry multiplier
+ * @Min: 0
+ * @Max: 500
+ * @Default: 0
+ *
+ * This ini is used to indicate percentage to max retry limit to fw
+ * which can further be used by fw to multiply counter by
+ * tx_retry_multiplier percent.
+ *
+ * Supported Feature: STA/SAP
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_TX_RETRY_MULTIPLIER CFG_INI_UINT( \
+	"tx_retry_multiplier", \
+	0, \
+	500, \
+	0, \
+	CFG_VALUE_OR_DEFAULT, \
+	"percentage of max retry limit")
+
+/*
+ * <ini>
+ * mgmt_frame_hw_tx_retry_count - Set hw tx retry count for mgmt action
+ * frame
+ * @Min: N/A
+ * @Max: N/A
+ * @Default: N/A
+ *
+ * Set mgmt action frame hw tx retry count, string format looks like below:
+ * frame_hw_tx_retry_count="<frame type>,<retry count>,..."
+ * frame type is enum value of mlme_cfg_frame_type.
+ * Retry count max value is 127.
+ * For example:
+ * frame_hw_tx_retry_count="0,64,2,32"
+ * The above input string means:
+ * For p2p go negotiation request fame, hw retry count 64
+ * For p2p provision discovery request, hw retry count 32
+ *
+ * Related: None.
+ *
+ * Supported Feature: STA/P2P
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define MGMT_FRM_HW_TX_RETRY_COUNT_STR_LEN  (64)
+#define CFG_MGMT_FRAME_HW_TX_RETRY_COUNT CFG_INI_STRING( \
+		"mgmt_frame_hw_tx_retry_count", \
+		0, \
+		MGMT_FRM_HW_TX_RETRY_COUNT_STR_LEN, \
+		"", \
+		"Set mgmt action frame hw tx retry count")
+
 #define CFG_GENERIC_ALL \
 	CFG(CFG_ENABLE_DEBUG_PACKET_LOG) \
 	CFG(CFG_PMF_SA_QUERY_MAX_RETRIES) \
@@ -887,5 +947,7 @@ enum monitor_mode_concurrency {
 	CFG(CFG_DFS_CHAN_AGEOUT_TIME) \
 	CFG(CFG_SAE_CONNECION_RETRIES) \
 	CFG(CFG_WLS_6GHZ_CAPABLE) \
-	CFG(CFG_MONITOR_MODE_CONCURRENCY)
+	CFG(CFG_MONITOR_MODE_CONCURRENCY)\
+	CFG(CFG_TX_RETRY_MULTIPLIER) \
+	CFG(CFG_MGMT_FRAME_HW_TX_RETRY_COUNT)
 #endif /* __CFG_MLME_GENERIC_H */

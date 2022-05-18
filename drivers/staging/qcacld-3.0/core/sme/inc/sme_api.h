@@ -669,6 +669,30 @@ QDF_STATUS sme_roam_set_psk_pmk(mac_handle_t mac_handle,
  */
 QDF_STATUS sme_set_pmk_cache_ft(mac_handle_t mac_handle, uint8_t session_id,
 				tPmkidCacheInfo *pmk_cache);
+
+/**
+ * sme_roam_events_register_callback() - Register roam events callback
+ * @mac_handle: Opaque handle to the MAC context
+ * @roam_rt_stats_cb: Function to be invoked for roam events stats
+ *
+ * This function will register a callback for roams events stats.
+ *
+ * Return: void
+ */
+void sme_roam_events_register_callback(mac_handle_t mac_handle,
+				       void (*roam_rt_stats_cb)(
+				hdd_handle_t hdd_handle,
+				struct mlme_roam_debug_info *roam_stats));
+
+/**
+ * sme_roam_events_deregister_callback() - DeRegister roam events callback
+ * @mac_handle: Opaque handle to the MAC context
+ *
+ * This function will deregister the callback of roams events stats.
+ *
+ * Return: void
+ */
+void sme_roam_events_deregister_callback(mac_handle_t mac_handle);
 #else
 static inline
 void sme_get_pmk_info(mac_handle_t mac_handle, uint8_t session_id,
@@ -703,6 +727,17 @@ QDF_STATUS sme_set_pmk_cache_ft(mac_handle_t mac_handle, uint8_t session_id,
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static inline void
+sme_roam_events_register_callback(mac_handle_t mac_handle,
+				  void (*roam_rt_stats_cb)(
+				hdd_handle_t hdd_handle,
+				struct mlme_roam_debug_info *roam_stats))
+{}
+
+static inline
+void sme_roam_events_deregister_callback(mac_handle_t mac_handle)
+{}
 #endif
 
 /**
@@ -2470,6 +2505,27 @@ sme_set_del_peers_ind_callback(mac_handle_t mac_handle,
  */
 void sme_set_chan_info_callback(mac_handle_t mac_handle,
 			void (*callback)(struct scan_chan_info *chan_info));
+
+#ifdef WLAN_FEATURE_CAL_FAILURE_TRIGGER
+/**
+ * sme_set_cal_failure_event_cb() - Register calibration failure event callback
+ * @mac_handle - MAC global handle
+ * @callback   - calibration failure event callback from HDD
+ *
+ * This API is invoked by HDD to register its callback to mac
+ *
+ * Return: None
+ */
+void sme_set_cal_failure_event_cb(
+			mac_handle_t mac_handle,
+			void (*callback)(uint8_t cal_type, uint8_t reason));
+#else
+static inline void
+sme_set_cal_failure_event_cb(mac_handle_t mac_handle,
+			     void (*callback)(uint8_t cal_type, uint8_t reason))
+{
+}
+#endif
 
 /**
  * sme_get_rssi_snr_by_bssid() - gets the rssi and snr by bssid from scan cache

@@ -561,6 +561,15 @@ bool csr_is_profile_wapi(struct csr_roam_profile *pProfile);
 void csr_get_vdev_type_nss(enum QDF_OPMODE dev_mode, uint8_t *nss_2g,
 			   uint8_t *nss_5g);
 
+/**
+ * csr_send_set_ie  - Send Set IE request to lim
+ * @type: Vdev type
+ * @sub_type: Vdev sub type
+ * @vdev_id: Vdev id
+ *
+ * Return: None
+ */
+void csr_send_set_ie(uint8_t type, uint8_t sub_type, uint8_t vdev_id);
 #ifdef FEATURE_WLAN_DIAG_SUPPORT_CSR
 
 /* Security */
@@ -973,6 +982,17 @@ csr_get_bssdescr_from_scan_handle(tScanResultHandle result_handle,
 
 bool is_disconnect_pending(struct mac_context *mac_ctx,
 				   uint8_t sessionid);
+
+/**
+ * is_disconnect_pending_on_other_vdev() - To check whether a disconnect req
+ * is pending on any other vdev or not
+ * @mac_tx: mac context
+ * @sessionid: session id
+ *
+ * Return true if disconnect is pending on any other vdev
+ */
+bool is_disconnect_pending_on_other_vdev(struct mac_context *mac_ctx,
+					 uint8_t sessionid);
 
 QDF_STATUS
 csr_roam_prepare_bss_config_from_profile(struct mac_context *mac_ctx,

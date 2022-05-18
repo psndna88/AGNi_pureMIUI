@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -817,6 +818,10 @@ struct mac_context {
 	csr_roam_complete_cb session_roam_complete_cb;
 #ifdef FEATURE_ANI_LEVEL_REQUEST
 	struct ani_level_params ani_params;
+#endif
+
+#ifdef WLAN_FEATURE_CAL_FAILURE_TRIGGER
+	void (*cal_failure_event_cb)(uint8_t cal_type, uint8_t reason);
 #endif
 };
 

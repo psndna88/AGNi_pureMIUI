@@ -154,6 +154,37 @@ end:
 
 	return status;
 }
+
+QDF_STATUS wlan_cm_tgt_send_roam_rt_stats_config(struct wlan_objmgr_psoc *psoc,
+						 struct roam_disable_cfg *req)
+{
+	QDF_STATUS status;
+	struct wlan_cm_roam_tx_ops *roam_tx_ops;
+	struct wlan_objmgr_vdev *vdev;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, req->vdev_id,
+						    WLAN_MLME_NB_ID);
+	if (!vdev)
+		return QDF_STATUS_E_INVAL;
+
+	roam_tx_ops = wlan_cm_roam_get_tx_ops_from_vdev(vdev);
+	if (!roam_tx_ops || !roam_tx_ops->send_roam_rt_stats_config) {
+		mlme_err("vdev %d send_roam_rt_stats_config is NULL",
+			 req->vdev_id);
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = roam_tx_ops->send_roam_rt_stats_config(vdev,
+							req->vdev_id, req->cfg);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("vdev %d fail to send roam rt stats config",
+			   req->vdev_id);
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_NB_ID);
+
+	return status;
+}
 #endif
 
 #if defined(WLAN_FEATURE_HOST_ROAM) || defined(WLAN_FEATURE_ROAM_OFFLOAD)

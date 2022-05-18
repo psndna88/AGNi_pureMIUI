@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -43,6 +44,7 @@
 #include "lim_process_fils.h"
 #include "wlan_blm_api.h"
 #include "wlan_mlme_twt_api.h"
+#include "wlan_mlme_ucfg_api.h"
 
 /**
  * lim_update_stads_htcap() - Updates station Descriptor HT capability
@@ -604,6 +606,88 @@ static void clean_up_ft_sha384(tpSirAssocRsp assoc_rsp, bool sha384_akm)
 }
 
 /**
+ * lim_get_iot_aggr_sz() - check and get IOT aggr size for configured OUI
+ *
+ * @mac_ctx: Pointer to Global MAC structure
+ * @ie_ptr: Pointer to starting IE in Beacon/Probe Response
+ * @ie_len: Length of all IEs combined
+ * @amsdu_sz: pointer to buffer to store AMSDU size
+ * @ampdu_sz: pointer to buffer to store AMPDU size
+ *
+ * This function is called to find configured vendor specific OUIs
+ * from the IEs in Beacon/Probe Response frames, if one of the OUI is
+ * present, get the configured aggr size for the OUI.
+ *
+ * Return: true if found, false otherwise.
+ */
+static bool
+lim_get_iot_aggr_sz(struct mac_context *mac, uint8_t *ie_ptr, uint32_t ie_len,
+		    uint32_t *amsdu_sz, uint32_t *ampdu_sz)
+{
+	const uint8_t *oui, *vendor_ie;
+	struct wlan_mlme_iot *iot;
+	uint32_t oui_len, aggr_num;
+	int i;
+
+	iot = &mac->mlme_cfg->iot;
+	aggr_num = iot->aggr_num;
+	if (!aggr_num)
+		return false;
+
+	for (i = 0; i < aggr_num; i++) {
+		oui = iot->aggr[i].oui;
+		oui_len = iot->aggr[i].oui_len;
+		vendor_ie = wlan_get_vendor_ie_ptr_from_oui(oui, oui_len,
+							    ie_ptr, ie_len);
+		if (!vendor_ie)
+			continue;
+
+		*amsdu_sz = iot->aggr[i].amsdu_sz;
+		*ampdu_sz = iot->aggr[i].ampdu_sz;
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * lim_update_iot_aggr_sz() - check and update IOT aggr size
+ *
+ * @mac_ctx: Pointer to Global MAC structure
+ * @ie_ptr: Pointer to starting IE in Beacon/Probe Response
+ * @ie_len: Length of all IEs combined
+ * @session_entry: A pointer to session entry
+ *
+ * This function is called to find configured vendor specific OUIs
+ * from the IEs in Beacon/Probe Response frames, and set the aggr
+ * size accordingly.
+ *
+ * Return: None
+ */
+static void
+lim_update_iot_aggr_sz(struct mac_context *mac_ctx, uint8_t *ie_ptr,
+		       uint32_t ie_len, struct pe_session *session_entry)
+{
+	int ret;
+	uint32_t amsdu_sz, ampdu_sz;
+	bool iot_hit;
+
+	if (!ie_ptr || !ie_len)
+		return;
+
+	iot_hit = lim_get_iot_aggr_sz(mac_ctx, ie_ptr, ie_len,
+				      &amsdu_sz, &ampdu_sz);
+	if (!iot_hit)
+		return;
+
+	pe_debug("Try to set iot amsdu size: %u", amsdu_sz);
+	ret = wma_cli_set_command(session_entry->smeSessionId,
+				  GEN_VDEV_PARAM_AMSDU, amsdu_sz, GEN_CMD);
+	if (ret)
+		pe_err("Failed to set iot amsdu size: %d", ret);
+}
+
+/**
  * lim_process_assoc_rsp_frame() - Processes assoc response
  * @mac_ctx: Pointer to Global MAC structure
  * @rx_packet_info    - A pointer to Rx packet info structure
@@ -622,7 +706,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 			    uint32_t reassoc_frame_len,
 			    uint8_t subtype, struct pe_session *session_entry)
 {
-	uint8_t *body;
+	uint8_t *body, *ie;
 	uint16_t caps, ie_len;
 	uint32_t frame_len;
 	tSirMacAddr current_bssid;
@@ -1043,6 +1127,7 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	}
 	pe_debug("Successfully Associated with BSS " QDF_MAC_ADDR_FMT,
 		 QDF_MAC_ADDR_REF(hdr->sa));
+
 #ifdef FEATURE_WLAN_ESE
 	if (session_entry->eseContext.tsm.tsmInfo.state)
 		session_entry->eseContext.tsm.tsmMetrics.RoamingCount = 0;
@@ -1083,9 +1168,10 @@ lim_process_assoc_rsp_frame(struct mac_context *mac_ctx, uint8_t *rx_pkt_info,
 	 */
 	ie_len = lim_get_ielen_from_bss_description(
 		&session_entry->lim_join_req->bssDescription);
-	lim_extract_ap_capabilities(mac_ctx,
-		(uint8_t *)session_entry->lim_join_req->bssDescription.ieFields,
-		ie_len, beacon);
+	ie = (uint8_t *)session_entry->lim_join_req->bssDescription.ieFields;
+	lim_update_iot_aggr_sz(mac_ctx, ie, ie_len, session_entry);
+
+	lim_extract_ap_capabilities(mac_ctx, ie, ie_len, beacon);
 	lim_update_assoc_sta_datas(mac_ctx, sta_ds, assoc_rsp,
 				   session_entry, beacon);
 

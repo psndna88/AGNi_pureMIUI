@@ -393,6 +393,25 @@ void
 wlan_hdd_cfg80211_stats_ext2_callback(hdd_handle_t hdd_handle,
 				      struct sir_sme_rx_aggr_hole_ind *pmsg);
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+/**
+ * wlan_hdd_cfg80211_roam_events_callback() - roam_events_callback
+ * @hdd_handle: opaque handle to the hdd context
+ * @roam_stats: roam events stats
+ *
+ * Return: void
+ */
+void
+wlan_hdd_cfg80211_roam_events_callback(hdd_handle_t hdd_handle,
+				       struct mlme_roam_debug_info *roam_stats);
+#else
+static inline void
+wlan_hdd_cfg80211_roam_events_callback(hdd_handle_t hdd_handle,
+				       struct mlme_roam_debug_info *roam_stats)
+{
+}
+#endif /* End of WLAN_FEATURE_ROAM_OFFLOAD */
+
 /**
  * wlan_hdd_get_rcpi() - Wrapper to get current RCPI
  * @adapter: adapter upon which the measurement is requested
@@ -472,6 +491,9 @@ int wlan_hdd_get_link_speed(struct hdd_adapter *adapter, uint32_t *link_speed);
  * Return: status of operation
  */
 int wlan_hdd_get_station_stats(struct hdd_adapter *adapter);
+
+int wlan_hdd_qmi_get_sync_resume(void);
+int wlan_hdd_qmi_put_suspend(void);
 
 #ifdef WLAN_FEATURE_BIG_DATA_STATS
 /**

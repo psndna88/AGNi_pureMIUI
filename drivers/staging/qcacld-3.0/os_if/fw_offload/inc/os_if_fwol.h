@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,6 +26,7 @@
 #define __OS_IF_FWOL_H__
 
 #include "wlan_objmgr_vdev_obj.h"
+#include "wlan_fwol_public_structs.h"
 
 #ifdef WLAN_FEATURE_ELNA
 /**
@@ -81,5 +82,13 @@ static inline int os_if_fwol_send_dscp_up_map_to_fw(
 	return -EOPNOTSUPP;
 }
 #endif /* WLAN_SEND_DSCP_UP_MAP_TO_FW */
+
+#ifdef THERMAL_STATS_SUPPORT
+int os_if_fwol_get_thermal_stats_req(struct wlan_objmgr_psoc *psoc,
+				     enum thermal_stats_request_type req,
+				     void (*callback)(void *context,
+				     struct thermal_throttle_info *response),
+				     void *context);
+#endif /* THERMAL_STATS_SUPPORT */
 
 #endif /* __OS_IF_FWOL_H__ */

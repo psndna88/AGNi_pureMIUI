@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1017,6 +1018,8 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 	struct htt_htc_pkt *pkt;
 	qdf_nbuf_t msg;
 	uint32_t *msg_word;
+	uint32_t addr;
+	qdf_mem_info_t *mem_info_t;
 
 	pkt = htt_htc_pkt_alloc(pdev);
 	if (!pkt)
@@ -1052,13 +1055,14 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 
 	msg_word++;
 	*msg_word = 0;
-	/* TX COMP RING BASE LO */
 	HTT_WDI_IPA_CFG_TX_COMP_RING_BASE_ADDR_LO_SET(*msg_word,
 		(unsigned int)qdf_mem_get_dma_addr(pdev->osdev,
 			&pdev->ipa_uc_tx_rsc.tx_comp_ring->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	/* TX COMP RING BASE HI, NONE */
+	mem_info_t = &pdev->ipa_uc_tx_rsc.tx_comp_ring->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_TX_COMP_RING_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1071,6 +1075,8 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 		(unsigned int)pdev->ipa_uc_tx_rsc.tx_comp_idx_paddr);
 	msg_word++;
 	*msg_word = 0;
+	addr = (uint64_t)pdev->ipa_uc_tx_rsc.tx_comp_idx_paddr >> 32;
+	HTT_WDI_IPA_CFG_TX_COMP_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1079,6 +1085,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_tx_rsc.tx_ce_idx->mem_info));
 	msg_word++;
 	*msg_word = 0;
+	mem_info_t = &pdev->ipa_uc_tx_rsc.tx_ce_idx->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_TX_CE_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1087,8 +1096,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_rx_rsc.rx_ind_ring->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_IND_RING_BASE_ADDR_HI_SET(*msg_word,
-		0);
+	mem_info_t = &pdev->ipa_uc_rx_rsc.rx_ind_ring->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_RX_IND_RING_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1102,8 +1112,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_rx_rsc.rx_ipa_prc_done_idx->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_IND_RD_IDX_ADDR_HI_SET(*msg_word,
-		0);
+	mem_info_t = &pdev->ipa_uc_rx_rsc.rx_ipa_prc_done_idx->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_RX_IND_RD_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1111,8 +1122,8 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 		(unsigned int)pdev->ipa_uc_rx_rsc.rx_rdy_idx_paddr);
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_IND_WR_IDX_ADDR_HI_SET(*msg_word,
-		0);
+	addr = (uint64_t)pdev->ipa_uc_rx_rsc.rx_rdy_idx_paddr >> 32;
+	HTT_WDI_IPA_CFG_RX_IND_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1121,8 +1132,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_rx_rsc.rx2_ind_ring->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_RING2_BASE_ADDR_HI_SET(*msg_word,
-		0);
+	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ind_ring->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_RX_RING2_BASE_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1136,8 +1148,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_RING2_RD_IDX_ADDR_HI_SET(*msg_word,
-		0);
+	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_RX_RING2_RD_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	msg_word++;
 	*msg_word = 0;
@@ -1146,8 +1159,9 @@ int htt_h2t_ipa_uc_rsc_cfg_msg(struct htt_pdev_t *pdev)
 			&pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info));
 	msg_word++;
 	*msg_word = 0;
-	HTT_WDI_IPA_CFG_RX_RING2_WR_IDX_ADDR_HI_SET(*msg_word,
-		0);
+	mem_info_t = &pdev->ipa_uc_rx_rsc.rx2_ipa_prc_done_idx->mem_info;
+	addr = (uint64_t)qdf_mem_get_dma_addr(pdev->osdev, mem_info_t) >> 32;
+	HTT_WDI_IPA_CFG_RX_RING2_WR_IDX_ADDR_HI_SET(*msg_word, addr);
 
 	SET_HTC_PACKET_INFO_TX(&pkt->htc_pkt,
 			       htt_h2t_send_complete_free_netbuf,

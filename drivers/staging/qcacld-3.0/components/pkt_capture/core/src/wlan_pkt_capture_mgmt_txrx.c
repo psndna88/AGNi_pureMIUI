@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -329,14 +330,41 @@ void pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
 			 uint16_t chan_freq,
 			 uint8_t preamble_type)
 {
+	struct mgmt_offload_event_params params = {0};
+	tpSirMacFrameCtl pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
+	struct pkt_capture_vdev_priv *vdev_priv;
+	struct wlan_objmgr_vdev *vdev;
 	qdf_nbuf_t wbuf;
 	int nbuf_len;
-	struct mgmt_offload_event_params params = {0};
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	if (!pdev) {
 		pkt_capture_err("pdev is NULL");
 		return;
 	}
+
+	vdev = pkt_capture_get_vdev();
+	status = pkt_capture_vdev_get_ref(vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pkt_capture_err("failed to get vdev ref");
+		return;
+	}
+
+	vdev_priv = pkt_capture_vdev_get_priv(vdev);
+	if (!vdev_priv) {
+		pkt_capture_err("packet capture vdev priv is NULL");
+		pkt_capture_vdev_put_ref(vdev);
+		return;
+	}
+
+	if (pfc->type == IEEE80211_FC0_TYPE_MGT &&
+	    !(vdev_priv->frame_filter.mgmt_tx_frame_filter &
+	    PKT_CAPTURE_MGMT_FRAME_TYPE_ALL))
+		goto exit;
+
+	if (pfc->type == IEEE80211_FC0_TYPE_CTL &&
+	    !vdev_priv->frame_filter.ctrl_tx_frame_filter)
+		goto exit;
 
 	nbuf_len = qdf_nbuf_len(nbuf);
 	wbuf = qdf_nbuf_alloc(NULL, roundup(nbuf_len + RESERVE_BYTES, 4),
@@ -344,7 +372,7 @@ void pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
 	if (!wbuf) {
 		pkt_capture_err("Failed to allocate wbuf for mgmt len(%u)",
 				nbuf_len);
-		return;
+		goto exit;
 	}
 
 	qdf_nbuf_put_tail(wbuf, nbuf_len);
@@ -372,6 +400,8 @@ void pkt_capture_mgmt_tx(struct wlan_objmgr_pdev *pdev,
 	if (QDF_STATUS_SUCCESS !=
 		pkt_capture_process_mgmt_tx_data(pdev, &params, wbuf, 0xFF))
 		qdf_nbuf_free(wbuf);
+exit:
+	pkt_capture_vdev_put_ref(vdev);
 }
 
 void
@@ -380,17 +410,45 @@ pkt_capture_mgmt_tx_completion(struct wlan_objmgr_pdev *pdev,
 			       uint32_t status,
 			       struct mgmt_offload_event_params *params)
 {
+	struct pkt_capture_vdev_priv *vdev_priv;
+	struct wlan_objmgr_vdev *vdev;
+	tpSirMacFrameCtl pfc;
 	qdf_nbuf_t wbuf, nbuf;
 	int nbuf_len;
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
 
 	if (!pdev) {
 		pkt_capture_err("pdev is NULL");
 		return;
 	}
 
+	vdev = pkt_capture_get_vdev();
+	ret = pkt_capture_vdev_get_ref(vdev);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		pkt_capture_err("failed to get vdev ref");
+		return;
+	}
+
+	vdev_priv = pkt_capture_vdev_get_priv(vdev);
+	if (!vdev_priv) {
+		pkt_capture_err("packet capture vdev priv is NULL");
+		pkt_capture_vdev_put_ref(vdev);
+		return;
+	}
+
 	nbuf = mgmt_txrx_get_nbuf(pdev, desc_id);
 	if (!nbuf)
-		return;
+		goto exit;
+
+	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
+	if (pfc->type == IEEE80211_FC0_TYPE_MGT &&
+	    !(vdev_priv->frame_filter.mgmt_tx_frame_filter &
+	    PKT_CAPTURE_MGMT_FRAME_TYPE_ALL))
+		goto exit;
+
+	if (pfc->type == IEEE80211_FC0_TYPE_CTL &&
+	    !vdev_priv->frame_filter.ctrl_tx_frame_filter)
+		goto exit;
 
 	nbuf_len = qdf_nbuf_len(nbuf);
 	wbuf = qdf_nbuf_alloc(NULL, roundup(nbuf_len + RESERVE_BYTES, 4),
@@ -398,7 +456,7 @@ pkt_capture_mgmt_tx_completion(struct wlan_objmgr_pdev *pdev,
 	if (!wbuf) {
 		pkt_capture_err("Failed to allocate wbuf for mgmt len(%u)",
 				nbuf_len);
-		return;
+		goto exit;
 	}
 
 	qdf_nbuf_put_tail(wbuf, nbuf_len);
@@ -409,7 +467,63 @@ pkt_capture_mgmt_tx_completion(struct wlan_objmgr_pdev *pdev,
 					pdev, params, wbuf,
 					pkt_capture_mgmt_status_map(status)))
 		qdf_nbuf_free(wbuf);
+
+exit:
+	pkt_capture_vdev_put_ref(vdev);
 }
+
+/**
+ * pkt_capture_is_beacon_forward_enable() - API to check whether particular
+ * beacon needs to be forwarded on mon interface based on vendor command
+ * @vdev: vdev object
+ * @wbuf: netbuf
+ *
+ * Return: bool
+ */
+static bool
+pkt_capture_is_beacon_forward_enable(struct wlan_objmgr_vdev *vdev,
+				     qdf_nbuf_t wbuf)
+{
+	struct pkt_capture_vdev_priv *vdev_priv;
+	struct qdf_mac_addr connected_bssid = {0};
+	tpSirMacMgmtHdr mac_hdr;
+	bool my_beacon = false;
+
+	vdev_priv = pkt_capture_vdev_get_priv(vdev);
+	if (!vdev_priv) {
+		pkt_capture_err("packet capture vdev priv is NULL");
+		return false;
+	}
+
+	if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+	    PKT_CAPTURE_MGMT_CONNECT_NO_BEACON)
+		return false;
+
+	mac_hdr = (tpSirMacMgmtHdr)(qdf_nbuf_data(wbuf));
+	wlan_vdev_get_bss_peer_mac(vdev, &connected_bssid);
+
+	if (qdf_is_macaddr_equal((struct qdf_mac_addr *)mac_hdr->bssId,
+				 &connected_bssid))
+		my_beacon = true;
+
+	if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+	    PKT_CAPTURE_MGMT_CONNECT_BEACON && !my_beacon)
+		return false;
+
+	if (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+	    PKT_CAPTURE_MGMT_CONNECT_SCAN_BEACON && my_beacon)
+		return false;
+
+	return true;
+}
+
+#ifdef DP_MON_RSSI_IN_DBM
+#define PKT_CAPTURE_FILL_RSSI(rx_params) \
+((rx_params)->snr + NORMALIZED_TO_NOISE_FLOOR)
+#else
+#define PKT_CAPTURE_FILL_RSSI(rx_status) \
+((rx_params)->snr)
+#endif
 
 /**
  * process_pktcapture_mgmt_rx_data_cb() -  process management rx packets
@@ -426,15 +540,52 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 			    enum mgmt_frame_type frm_type)
 {
 	struct mon_rx_status txrx_status = {0};
+	struct pkt_capture_vdev_priv *vdev_priv;
 	struct ieee80211_frame *wh;
 	tpSirMacFrameCtl pfc;
 	qdf_nbuf_t nbuf;
 	int buf_len;
 	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_pdev *pdev;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
-	if (!(pkt_capture_get_pktcap_mode(psoc) & PKT_CAPTURE_MODE_MGMT_ONLY)) {
+	vdev = pkt_capture_get_vdev();
+	status = pkt_capture_vdev_get_ref(vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		pkt_capture_err("failed to get vdev ref");
 		qdf_nbuf_free(wbuf);
 		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_priv = pkt_capture_vdev_get_priv(vdev);
+	if (!vdev_priv) {
+		pkt_capture_err("packet capture vdev priv is NULL");
+		pkt_capture_vdev_put_ref(vdev);
+		qdf_nbuf_free(wbuf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(wbuf));
+
+	if (pfc->type == SIR_MAC_CTRL_FRAME  &&
+	    !vdev_priv->frame_filter.ctrl_rx_frame_filter)
+		goto exit;
+
+	if (pfc->type == SIR_MAC_MGMT_FRAME  &&
+	    !vdev_priv->frame_filter.mgmt_rx_frame_filter)
+		goto exit;
+
+	if (pfc->type == SIR_MAC_MGMT_FRAME) {
+		if (pfc->subType == SIR_MAC_MGMT_BEACON) {
+			if (!pkt_capture_is_beacon_forward_enable(vdev, wbuf))
+				goto exit;
+		} else {
+			if (!((vdev_priv->frame_filter.mgmt_rx_frame_filter &
+			    PKT_CAPTURE_MGMT_FRAME_TYPE_ALL) ||
+			    (vdev_priv->frame_filter.mgmt_rx_frame_filter &
+			    PKT_CAPTURE_MGMT_CONNECT_NO_BEACON)))
+				goto exit;
+		}
 	}
 
 	buf_len = qdf_nbuf_len(wbuf);
@@ -454,14 +605,13 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 	pfc = (tpSirMacFrameCtl)(qdf_nbuf_data(nbuf));
 	wh = (struct ieee80211_frame *)qdf_nbuf_data(nbuf);
 
+	pdev = wlan_vdev_get_pdev(vdev);
+	pkt_capture_vdev_put_ref(vdev);
+
 	if ((pfc->type == IEEE80211_FC0_TYPE_MGT) &&
 	    (pfc->subType == SIR_MAC_MGMT_DISASSOC ||
 	     pfc->subType == SIR_MAC_MGMT_DEAUTH ||
 	     pfc->subType == SIR_MAC_MGMT_ACTION)) {
-		struct wlan_objmgr_pdev *pdev;
-
-		vdev = pkt_capture_get_vdev();
-		pdev = wlan_vdev_get_pdev(vdev);
 		if (pkt_capture_is_rmf_enabled(pdev, psoc, wh->i_addr1)) {
 			QDF_STATUS status;
 
@@ -478,13 +628,13 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 	/* rx_params->rate is in Kbps, convert into Mbps */
 	txrx_status.rate = (rx_params->rate / 1000);
 	txrx_status.ant_signal_db = rx_params->snr;
-	txrx_status.rssi_comb = rx_params->snr;
 	txrx_status.chan_noise_floor = NORMALIZED_TO_NOISE_FLOOR;
+	txrx_status.rssi_comb = PKT_CAPTURE_FILL_RSSI(rx_params);
 	txrx_status.nr_ant = 1;
 	txrx_status.rtap_flags |=
 		((txrx_status.rate == 6 /* Mbps */) ? BIT(1) : 0);
 
-	if (rx_params->phy_mode != WLAN_PHYMODE_11B)
+	if (rx_params->phy_mode != PKTCAPTURE_RATECODE_CCK)
 		txrx_status.ofdm_flag = 1;
 	else
 		txrx_status.cck_flag = 1;
@@ -500,6 +650,10 @@ pkt_capture_mgmt_rx_data_cb(struct wlan_objmgr_psoc *psoc,
 		pkt_capture_mgmtpkt_process(psoc, &txrx_status, nbuf, 0))
 		qdf_nbuf_free(nbuf);
 
+	return QDF_STATUS_SUCCESS;
+exit:
+	pkt_capture_vdev_put_ref(vdev);
+	qdf_nbuf_free(wbuf);
 	return QDF_STATUS_SUCCESS;
 }
 

@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1389,9 +1390,11 @@ QDF_STATUS csr_parse_bss_description_ies(struct mac_context *mac_ctx,
 	int ieLen;
 
 	ieFields_offset = GET_FIELD_OFFSET(struct bss_description, ieFields);
-	if (!bss_desc->length ||
-	    (bss_desc->length - sizeof(bss_desc->length) <= ieFields_offset))
+	if (bss_desc->length <= (ieFields_offset - sizeof(bss_desc->length))) {
+		sme_err_rl("Invalid bss_desc IES: len:%d ie_fields_offset:%d",
+			   bss_desc->length, ieFields_offset);
 		return status;
+	}
 
 	ieLen =	(int)(bss_desc->length + sizeof(bss_desc->length) -
 		ieFields_offset);
@@ -1400,7 +1403,7 @@ QDF_STATUS csr_parse_bss_description_ies(struct mac_context *mac_ctx,
 		if (!DOT11F_FAILED(dot11f_unpack_beacon_i_es
 				    (mac_ctx, (uint8_t *)bss_desc->ieFields,
 				    ieLen, pIEStruct, false)))
-		status = QDF_STATUS_SUCCESS;
+			status = QDF_STATUS_SUCCESS;
 	}
 
 	return status;
@@ -2489,8 +2492,7 @@ uint8_t csr_construct_rsn_ie(struct mac_context *mac, uint32_t sessionId,
 		self_rsn_cap |= WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
 		if (pProfile->MFPRequired)
 			self_rsn_cap |= WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
-		if (!(rsn_cap & WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED))
-			self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED;
+
 	} else {
 		self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
 		self_rsn_cap &= ~WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3194,4 +3195,42 @@ QDF_STATUS mlme_set_user_ps(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
  * Return: True if user_ps flag is set
  */
 bool mlme_get_user_ps(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
+
+/**
+ * wlan_mlme_get_mgmt_hw_tx_retry_count() - Get mgmt frame hw tx retry count
+ *
+ * @psoc: pointer to psoc object
+ * @frm_type: frame type of the query
+ *
+ * Return: hw tx retry count
+ */
+uint8_t
+wlan_mlme_get_mgmt_hw_tx_retry_count(struct wlan_objmgr_psoc *psoc,
+				     enum mlme_cfg_frame_type frm_type);
+
+/**
+ * wlan_mlme_get_tx_retry_multiplier() - Get the tx retry multiplier percentage
+ *
+ * @psoc: pointer to psoc object
+ * @tx_retry_multiplier: pointer to hold user config value of
+ * tx_retry_multiplier
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_tx_retry_multiplier(struct wlan_objmgr_psoc *psoc,
+				  uint32_t *tx_retry_multiplier);
+
+/**
+ * wlan_mlme_get_channel_bonding_5ghz  - Get the channel bonding
+ * val for 5ghz freq
+ * @psoc: pointer to psoc object
+ * @value: pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_channel_bonding_5ghz(struct wlan_objmgr_psoc *psoc,
+				   uint32_t *value);
+
 #endif /* _WLAN_MLME_API_H_ */

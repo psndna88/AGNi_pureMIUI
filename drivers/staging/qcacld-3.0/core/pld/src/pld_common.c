@@ -2727,6 +2727,38 @@ int pld_is_fw_down(struct device *dev)
 	return ret;
 }
 
+#ifdef CONFIG_ENABLE_LOW_POWER_MODE
+/**
+ * pld_is_low_power_mode() - Check WLAN fw is in low power
+ * @dev: device
+ *
+ * This API will be called to check if WLAN FW is in low power or not.
+ * Low power means either Deep Sleep or Hibernate state.
+ *
+ *  Return: 0 FW is not in low power mode
+ *          Otherwise FW is low power mode
+ *          Always return 0 for unsupported bus type
+ */
+int pld_is_low_power_mode(struct device *dev)
+{
+	int ret = 0;
+	enum pld_bus_type type = pld_get_bus_type(dev);
+
+	switch (type) {
+	case PLD_BUS_TYPE_SNOC:
+		ret = pld_snoc_is_low_power_mode(dev);
+		break;
+	case PLD_BUS_TYPE_PCIE_FW_SIM:
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+	case PLD_BUS_TYPE_SNOC_FW_SIM:
+	case PLD_BUS_TYPE_IPCI:
+	default:
+		break;
+	}
+	return ret;
+}
+#endif
+
 /**
  * pld_force_assert_target() - Send a force assert request to FW.
  * @dev: device pointer

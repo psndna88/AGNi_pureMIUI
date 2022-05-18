@@ -43,6 +43,7 @@
 #include <cdp_txrx_stats_struct.h>
 #include <cdp_txrx_peer_ops.h>
 #include <cdp_txrx_host_stats.h>
+#include "wlan_hdd_stats.h"
 
 /*
  * define short names for the global vendor params
@@ -2417,8 +2418,17 @@ int32_t hdd_cfg80211_get_sta_info_cmd(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
+	errno = wlan_hdd_qmi_get_sync_resume();
+	if (errno) {
+		hdd_err("qmi sync resume failed: %d", errno);
+		goto end;
+	}
+
 	errno = __hdd_cfg80211_get_sta_info_cmd(wiphy, wdev, data, data_len);
 
+	wlan_hdd_qmi_put_suspend();
+
+end:
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -122,7 +123,7 @@ hdd_world_regrules_67_68_6A_6C = {
 	}
 };
 
-#define OSIF_PSOC_SYNC_OP_WAIT_TIME 500
+#define COUNTRY_CHANGE_WORK_RESCHED_WAIT_TIME 30
 /**
  * hdd_get_world_regrules() - get the appropriate world regrules
  * @reg: regulatory data
@@ -1532,8 +1533,8 @@ static void hdd_restart_sap_with_new_phymode(struct hdd_context *hdd_ctx,
 		hdd_err("SAP Start Bss fail");
 		return;
 	}
-	status = qdf_wait_for_event_completion(&hostapd_state->qdf_event,
-					       SME_CMD_START_BSS_TIMEOUT);
+	status = qdf_wait_single_event(&hostapd_state->qdf_event,
+				       SME_CMD_START_BSS_TIMEOUT);
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		mutex_unlock(&hdd_ctx->sap_lock);
 		hdd_err("SAP Start timeout");
@@ -1647,7 +1648,7 @@ static void hdd_country_change_work_handle(void *arg)
 	errno = osif_psoc_sync_op_start(wiphy_dev(hdd_ctx->wiphy), &psoc_sync);
 
 	if (errno == -EAGAIN) {
-		qdf_sleep(OSIF_PSOC_SYNC_OP_WAIT_TIME);
+		qdf_sleep(COUNTRY_CHANGE_WORK_RESCHED_WAIT_TIME);
 		hdd_debug("rescheduling country change work");
 		qdf_sched_work(0, &hdd_ctx->country_change_work);
 		return;
