@@ -43,7 +43,10 @@ static int br_device_event(struct notifier_block *unused, unsigned long event, v
 
 		if (event == NETDEV_REGISTER) {
 			/* register of bridge completed, add sysfs entries */
-			br_sysfs_addbr(dev);
+			err = br_sysfs_addbr(dev);
+			if (err)
+				return notifier_from_errno(err);
+
 			return NOTIFY_DONE;
 		}
 	}
@@ -390,6 +393,12 @@ static void __exit br_deinit(void)
 #endif
 	br_fdb_fini();
 }
+
+#ifdef CONFIG_HYFI_BRIDGE_HOOKS
+/* Hook for bridge event notifications */
+br_notify_hook_t __rcu *br_notify_hook __read_mostly;
+EXPORT_SYMBOL(br_notify_hook);
+#endif
 
 module_init(br_init)
 module_exit(br_deinit)

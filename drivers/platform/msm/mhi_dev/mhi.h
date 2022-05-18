@@ -452,6 +452,7 @@ struct event_req {
 	struct list_head	list;
 	u32			flush_num;
 	bool		is_cmd_cpl;
+	bool		is_stale;
 };
 
 struct mhi_cmd_cmpl_ctx {
@@ -672,15 +673,22 @@ enum mhi_msg_level {
 extern uint32_t bhi_imgtxdb;
 extern enum mhi_msg_level mhi_msg_lvl;
 extern enum mhi_msg_level mhi_ipc_msg_lvl;
+extern enum mhi_msg_level mhi_ipc_err_msg_lvl;
 extern void *mhi_ipc_log;
+extern void *mhi_ipc_err_log;
 
 #define mhi_log(_msg_lvl, _msg, ...) do { \
 	if (_msg_lvl >= mhi_msg_lvl) { \
-		pr_err("[%s] "_msg, __func__, ##__VA_ARGS__); \
+		pr_err("[0x%x %s] "_msg, bhi_imgtxdb, \
+				__func__, ##__VA_ARGS__); \
 	} \
 	if (mhi_ipc_log && (_msg_lvl >= mhi_ipc_msg_lvl)) { \
 		ipc_log_string(mhi_ipc_log,                     \
-		"[0x%x %s] " _msg, bhi_imgtxdb, __func__, ##__VA_ARGS__);     \
+		"[0x%x %s] " _msg, bhi_imgtxdb, __func__, ##__VA_ARGS__); \
+	} \
+	if (mhi_ipc_err_log && (_msg_lvl >= mhi_ipc_err_msg_lvl)) { \
+		ipc_log_string(mhi_ipc_err_log,                     \
+		"[0x%x %s] " _msg, bhi_imgtxdb, __func__, ##__VA_ARGS__); \
 	} \
 } while (0)
 

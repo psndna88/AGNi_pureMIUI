@@ -204,13 +204,15 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	for (i = 0; i < ntokens; i += 2) {
 		if (sscanf(cp, "%u:%u", &cpu, &val) != 2)
 			return -EINVAL;
-		if (cpu > (num_present_cpus() - 1))
-			return -EINVAL;
+		if (cpu >= nr_cpu_ids)
+			break;
 
-		i_cpu_stats = &per_cpu(msm_perf_cpu_stats, cpu);
+		if (cpu_possible(cpu)) {
+			i_cpu_stats = &per_cpu(msm_perf_cpu_stats, cpu);
 
-		i_cpu_stats->min = val;
-		cpumask_set_cpu(cpu, limit_mask_min);
+			i_cpu_stats->min = val;
+			cpumask_set_cpu(cpu, limit_mask_min);
+		}
 
 		cp = strnchr(cp, strlen(cp), ' ');
 		cp++;
@@ -295,13 +297,15 @@ static int set_cpu_max_freq(const char *buf, const struct kernel_param *kp)
 	for (i = 0; i < ntokens; i += 2) {
 		if (sscanf(cp, "%u:%u", &cpu, &val) != 2)
 			return -EINVAL;
-		if (cpu > (num_present_cpus() - 1))
-			return -EINVAL;
+		if (cpu >= nr_cpu_ids)
+			break;
 
-		i_cpu_stats = &per_cpu(msm_perf_cpu_stats, cpu);
+		if (cpu_possible(cpu)) {
+			i_cpu_stats = &per_cpu(msm_perf_cpu_stats, cpu);
 
-		i_cpu_stats->max = val;
-		cpumask_set_cpu(cpu, limit_mask_max);
+			i_cpu_stats->max = val;
+			cpumask_set_cpu(cpu, limit_mask_max);
+		}
 
 		cp = strnchr(cp, strlen(cp), ' ');
 		cp++;
@@ -560,10 +564,12 @@ static inline void msm_perf_read_event(struct event_data *event)
 	}
 
 	if (!per_cpu(cpu_is_idle, event->pevent->cpu) &&
-				!per_cpu(cpu_is_hp, event->pevent->cpu))
+				!per_cpu(cpu_is_hp, event->pevent->cpu)) {
 		total = perf_event_read_value(event->pevent, &enabled, &running);
-	else
+		event->cached_total_count = total;
+	} else {
 		total = event->cached_total_count;
+	}
 
 	ev_count = total - event->prev_count;
 	event->prev_count = total;

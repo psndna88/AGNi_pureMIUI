@@ -777,8 +777,10 @@ static struct dentry *open_or_create_index_dir(struct dentry *backing_dir)
 	err = vfs_mkdir(backing_inode, index_dentry, 0777);
 	inode_unlock(backing_inode);
 
-	if (err)
+	if (err) {
+		dput(index_dentry);
 		return ERR_PTR(err);
+	}
 
 	if (!d_really_is_positive(index_dentry)) {
 		dput(index_dentry);
@@ -2286,6 +2288,7 @@ void incfs_kill_sb(struct super_block *sb)
 	pr_debug("incfs: unmount\n");
 	incfs_free_mount_info(mi);
 	generic_shutdown_super(sb);
+	sb->s_fs_info = NULL;
 }
 
 static int show_options(struct seq_file *m, struct dentry *root)

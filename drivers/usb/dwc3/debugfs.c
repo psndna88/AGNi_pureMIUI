@@ -1020,33 +1020,19 @@ static void dwc3_debugfs_create_endpoint_files(struct dwc3_ep *dep,
 	}
 }
 
-static void dwc3_debugfs_create_endpoint_dir(struct dwc3_ep *dep,
-		struct dentry *parent)
+void dwc3_debugfs_create_endpoint_dir(struct dwc3_ep *dep)
 {
 	struct dentry		*dir;
+	struct dentry		*root;
 
-	dir = debugfs_create_dir(dep->name, parent);
+	root = debugfs_lookup(dev_name(dep->dwc->dev), usb_debug_root);
+	dir = debugfs_create_dir(dep->name, root);
 	if (!dir) {
 		pr_err("%s: failed to create dir %s\n", __func__, dep->name);
 		return;
 	}
 
 	dwc3_debugfs_create_endpoint_files(dep, dir);
-}
-
-static void dwc3_debugfs_create_endpoint_dirs(struct dwc3 *dwc,
-		struct dentry *parent)
-{
-	int			i;
-
-	for (i = 0; i < dwc->num_eps; i++) {
-		struct dwc3_ep	*dep = dwc->eps[i];
-
-		if (!dep)
-			continue;
-
-		dwc3_debugfs_create_endpoint_dir(dep, parent);
-	}
 }
 
 static ssize_t dwc3_gadget_int_events_store(struct file *file,
@@ -1294,8 +1280,6 @@ void dwc3_debugfs_init(struct dwc3 *dwc)
 		return;
 	}
 
-	dwc->root = root;
-
 	debugfs_create_file("regdump", 0444, root, dwc, &dwc3_regdump_fops);
 
 	debugfs_create_file("lsp_dump", S_IRUGO | S_IWUSR, root, dwc,
@@ -1316,7 +1300,6 @@ void dwc3_debugfs_init(struct dwc3 *dwc)
 				    &dwc3_link_state_fops);
 		debugfs_create_file("cp_toggle", 0200, root, dwc,
 				    &dwc3_cp_toggle_fops);
-		dwc3_debugfs_create_endpoint_dirs(dwc, root);
 
 		file = debugfs_create_file("int_events", 0644, root, dwc,
 				&dwc3_gadget_int_events_fops);
@@ -1327,6 +1310,6 @@ void dwc3_debugfs_init(struct dwc3 *dwc)
 
 void dwc3_debugfs_exit(struct dwc3 *dwc)
 {
-	debugfs_remove_recursive(dwc->root);
+	debugfs_remove(debugfs_lookup(dev_name(dwc->dev), usb_debug_root));
 	kfree(dwc->regset);
 }

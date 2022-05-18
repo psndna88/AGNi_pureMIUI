@@ -44,6 +44,7 @@
 #include <soc/qcom/ramdump.h>
 #include <linux/soc/qcom/smem.h>
 #include <linux/soc/qcom/smem_state.h>
+#include <trace/events/trace_msm_ssr_event.h>
 #include "main.h"
 #include "qmi.h"
 #include "debug.h"
@@ -72,7 +73,14 @@
 #define ICNSS_BDF_TYPE_DEFAULT         ICNSS_BDF_ELF
 
 #define PROBE_TIMEOUT                 15000
-#define WLFW_TIMEOUT			msecs_to_jiffies(3000)
+
+#ifdef CONFIG_ICNSS2_DEBUG
+static unsigned long qmi_timeout = 3000;
+module_param(qmi_timeout, ulong, 0600);
+#define WLFW_TIMEOUT                    msecs_to_jiffies(qmi_timeout)
+#else
+#define WLFW_TIMEOUT                    msecs_to_jiffies(3000)
+#endif
 
 static struct icnss_priv *penv;
 static struct work_struct wpss_loader;
@@ -187,6 +195,8 @@ char *icnss_driver_event_to_str(enum icnss_driver_event_type type)
 		return "M3_DUMP_UPLOAD";
 	case ICNSS_DRIVER_EVENT_QDSS_TRACE_REQ_DATA:
 		return "QDSS_TRACE_REQ_DATA";
+	case ICNSS_DRIVER_EVENT_SUBSYS_RESTART_LEVEL:
+		return "SUBSYS_RESTART_LEVEL";
 	case ICNSS_DRIVER_EVENT_MAX:
 		return "EVENT_MAX";
 	}
@@ -389,6 +399,17 @@ bool icnss_is_fw_down(void)
 		test_bit(ICNSS_REJUVENATE, &priv->state);
 }
 EXPORT_SYMBOL(icnss_is_fw_down);
+
+unsigned long icnss_get_device_config(void)
+{
+	struct icnss_priv *priv = icnss_get_plat_priv();
+
+	if (!priv)
+		return 0;
+
+	return priv->device_config;
+}
+EXPORT_SYMBOL(icnss_get_device_config);
 
 bool icnss_is_rejuvenate(void)
 {
@@ -1085,6 +1106,25 @@ static int icnss_qdss_trace_req_data_hdlr(struct icnss_priv *priv,
 	return ret;
 }
 
+static int icnss_subsys_restart_level_type(struct icnss_priv *priv,
+					   void *data)
+{
+	int ret = 0;
+	struct icnss_subsys_restart_level_data *event_data = data;
+
+	if (!priv)
+		return -ENODEV;
+
+	if (!data)
+		return -EINVAL;
+
+	ret = wlfw_subsys_restart_level_msg(priv, event_data->restart_level);
+
+	kfree(data);
+
+	return ret;
+}
+
 static int icnss_event_soc_wake_request(struct icnss_priv *priv, void *data)
 {
 	int ret = 0;
@@ -1278,7 +1318,8 @@ static int icnss_driver_event_pd_service_down(struct icnss_priv *priv,
 	if (priv->force_err_fatal)
 		ICNSS_ASSERT(0);
 
-	if (priv->device_id == WCN6750_DEVICE_ID) {
+	if (priv->device_id == WCN6750_DEVICE_ID &&
+	    !IS_ERR(priv->smp2p_info.smem_state)) {
 		priv->smp2p_info.seq = 0;
 		if (qcom_smem_state_update_bits(
 				priv->smp2p_info.smem_state,
@@ -1516,6 +1557,9 @@ static void icnss_driver_event_work(struct work_struct *work)
 		case ICNSS_DRIVER_EVENT_QDSS_TRACE_REQ_DATA:
 			ret = icnss_qdss_trace_req_data_hdlr(priv,
 							     event->data);
+			break;
+		case ICNSS_DRIVER_EVENT_SUBSYS_RESTART_LEVEL:
+			ret = icnss_subsys_restart_level_type(priv, event->data);
 			break;
 		default:
 			icnss_pr_err("Invalid Event type: %d", event->type);
@@ -3872,6 +3916,14 @@ static void icnss_init_control_params(struct icnss_priv *priv)
 	}
 }
 
+static void icnss_read_device_configs(struct icnss_priv *priv)
+{
+	if (of_property_read_bool(priv->pdev->dev.of_node,
+				  "wlan-ipa-disabled")) {
+		set_bit(ICNSS_IPA_DISABLED, &priv->device_config);
+	}
+}
+
 static inline void  icnss_get_smp2p_info(struct icnss_priv *priv)
 {
 
@@ -3880,7 +3932,7 @@ static inline void  icnss_get_smp2p_info(struct icnss_priv *priv)
 					    "wlan-smp2p-out",
 					    &priv->smp2p_info.smem_bit);
 	if (IS_ERR(priv->smp2p_info.smem_state)) {
-		icnss_pr_smp2p("Failed to get smem state %d",
+		icnss_pr_err("Failed to get smem state %d",
 			     PTR_ERR(priv->smp2p_info.smem_state));
 	}
 
@@ -3906,6 +3958,33 @@ static inline bool icnss_use_nv_mac(struct icnss_priv *priv)
 	return of_property_read_bool(priv->pdev->dev.of_node,
 				     "use-nv-mac");
 }
+
+#ifdef CONFIG_ICNSS2_RESTART_LEVEL_NOTIF
+static void pil_restart_level_notifier(void *ignore,
+				       int restart_level,
+				       const char *fw)
+{
+	struct icnss_subsys_restart_level_data *restart_level_data;
+
+	icnss_pr_err("PIL Notifier, restart_level: %d, FW:%s",
+		     restart_level, fw);
+
+	restart_level_data = kzalloc(sizeof(*restart_level_data), GFP_ATOMIC);
+
+	if (!restart_level_data)
+		return;
+
+	if (!strcmp(fw, "wpss")) {
+		if (restart_level == RESET_SUBSYS_COUPLED)
+			restart_level_data->restart_level = ICNSS_ENABLE_M3_SSR;
+		else
+			restart_level_data->restart_level = ICNSS_DISABLE_M3_SSR;
+
+		icnss_driver_event_post(penv, ICNSS_DRIVER_EVENT_SUBSYS_RESTART_LEVEL,
+					0, restart_level_data);
+	}
+}
+#endif
 
 static int icnss_probe(struct platform_device *pdev)
 {
@@ -3946,6 +4025,8 @@ static int icnss_probe(struct platform_device *pdev)
 	icnss_allow_recursive_recovery(dev);
 
 	icnss_init_control_params(priv);
+
+	icnss_read_device_configs(priv);
 
 	ret = icnss_resource_parse(priv);
 	if (ret)
@@ -4023,6 +4104,9 @@ static int icnss_probe(struct platform_device *pdev)
 		icnss_pr_dbg("NV MAC feature is %s\n",
 			     priv->use_nv_mac ? "Mandatory":"Not Mandatory");
 		INIT_WORK(&wpss_loader, icnss_wpss_load);
+#ifdef CONFIG_ICNSS2_RESTART_LEVEL_NOTIF
+		register_trace_pil_restart_level(pil_restart_level_notifier, NULL);
+#endif
 	}
 
 	INIT_LIST_HEAD(&priv->icnss_tcdev_list);
@@ -4054,6 +4138,9 @@ static int icnss_remove(struct platform_device *pdev)
 		icnss_dms_deinit(priv);
 		icnss_genl_exit();
 		icnss_runtime_pm_deinit(priv);
+#ifdef CONFIG_ICNSS2_RESTART_LEVEL_NOTIF
+		unregister_trace_pil_restart_level(pil_restart_level_notifier, NULL);
+#endif
 	}
 
 	device_init_wakeup(&priv->pdev->dev, false);
