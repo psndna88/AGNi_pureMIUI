@@ -918,14 +918,22 @@ static const struct drm_mode_config_funcs qpic_mode_config_funcs = {
 static void qpic_display_fb_mark_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 {
 	u32 size;
-	struct drm_gem_cma_object *cma_obj = drm_fb_cma_get_gem_obj(fb, 0);
-	struct dma_buf_attachment *import_attach = cma_obj->base.import_attach;
+	struct drm_gem_cma_object *cma_obj = NULL;
+	struct dma_buf_attachment *import_attach = NULL;
 	struct qpic_display_data *qpic_display = fb->dev->dev_private;
 
 	if (!qpic_display->is_qpic_on || !qpic_display->is_panel_on) {
 		pr_info("%s: qpic or panel is not enabled\n", __func__);
 		return;
 	}
+
+	cma_obj = drm_fb_cma_get_gem_obj(fb, 0);
+	if (!cma_obj) {
+		pr_err("failed to get gem obj\n");
+		return;
+	}
+	import_attach = cma_obj->base.import_attach;
+
 	/* currently QPIC display SW can't support partial updates */
 	rect->x1 = 0;
 	rect->x2 = fb->width;
@@ -1194,7 +1202,7 @@ int qpic_display_get_resource(struct qpic_display_data *qpic_display)
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "qpic_base");
 	if (!res) {
 		pr_err("unable to get QPIC reg base address\n");
-		rc = -ENOMEM;
+		return -ENOMEM;
 	}
 
 	qpic_display->qpic_reg_size = resource_size(res);
@@ -1202,7 +1210,7 @@ int qpic_display_get_resource(struct qpic_display_data *qpic_display)
 					qpic_display->qpic_reg_size);
 	if (unlikely(!qpic_display->qpic_base)) {
 		pr_err("unable to map MDSS QPIC base\n");
-		rc = -ENOMEM;
+		return -ENOMEM;
 	}
 	qpic_display->qpic_phys = res->start;
 	pr_info("MDSS QPIC HW Base phy_Address=0x%x virt=0x%x\n",
@@ -1212,7 +1220,7 @@ int qpic_display_get_resource(struct qpic_display_data *qpic_display)
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		pr_err("unable to get QPIC irq\n");
-		rc = -ENODEV;
+		return -ENODEV;
 	}
 
 	qpic_display->qpic_clk = devm_clk_get(&pdev->dev, "core_clk");

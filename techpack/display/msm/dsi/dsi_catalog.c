@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/errno.h>
@@ -293,6 +294,7 @@ static void dsi_catalog_phy_4_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v4_0_cache_phy_timings;
 	phy->ops.set_continuous_clk = dsi_phy_hw_v4_0_set_continuous_clk;
 	phy->ops.commit_phy_timing = dsi_phy_hw_v4_0_commit_phy_timing;
+	phy->ops.phy_idle_off = dsi_phy_hw_v4_0_phy_idle_off;
 }
 
 /**

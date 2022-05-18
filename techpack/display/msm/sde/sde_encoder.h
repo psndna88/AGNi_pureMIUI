@@ -276,6 +276,12 @@ void sde_encoder_get_hw_resources(struct drm_encoder *encoder,
 		struct drm_connector_state *conn_state);
 
 /**
+ * sde_encoder_trigger_rsc_state_change - rsc state change.
+ * @encoder:	encoder pointer
+ */
+void sde_encoder_trigger_rsc_state_change(struct drm_encoder *drm_enc);
+
+/**
  * sde_encoder_early_wakeup - early wake up display
  * @encoder:	encoder pointer
  */
@@ -517,12 +523,12 @@ bool sde_encoder_is_cwb_disabling(struct drm_encoder *drm_enc,
 	struct drm_crtc *drm_crtc);
 
 /**
- * sde_encoder_is_primary_display - checks if underlying display is primary
- *     display or not.
+ * sde_encoder_get_display_type - returns the display_type of underlying
+ *     display
  * @drm_enc:    Pointer to drm encoder structure
- * @Return:     true if it is primary display. false if secondary display
+ * @Return:     display_type
  */
-bool sde_encoder_is_primary_display(struct drm_encoder *enc);
+u32 sde_encoder_get_display_type(struct drm_encoder *enc);
 
 /**
  * sde_encoder_is_dsi_display - checks if underlying display is DSI

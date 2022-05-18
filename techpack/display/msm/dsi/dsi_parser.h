@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _DSI_PARSER_H_
@@ -204,7 +204,7 @@ static inline struct dsi_parser_utils *dsi_parser_get_of_utils(void)
 		.get_child_count = of_get_child_count,
 		.get_available_child_count = of_get_available_child_count,
 		.find_property = of_find_property,
-		.get_next_child = of_get_next_child,
+		.get_next_child = of_get_next_available_child,
 		.count_u32_elems = of_property_count_u32_elems,
 		.get_named_gpio = of_get_named_gpio,
 	};

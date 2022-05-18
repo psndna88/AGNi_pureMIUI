@@ -425,6 +425,7 @@ enum {
 	MIXER_BLOCKS,
 	MIXER_DISP,
 	MIXER_CWB,
+	MIXER_CWB_MASK,
 	MIXER_PROP_MAX,
 };
 
@@ -710,6 +711,7 @@ static struct sde_prop_type mixer_prop[] = {
 		PROP_TYPE_STRING_ARRAY},
 	{MIXER_CWB, "qcom,sde-mixer-cwb-pref", false,
 		PROP_TYPE_STRING_ARRAY},
+	{MIXER_CWB_MASK, "qcom,sde-mixer-cwb-mask", false, PROP_TYPE_U32_ARRAY},
 };
 
 static struct sde_prop_type mixer_blocks_prop[] = {
@@ -1976,10 +1978,10 @@ void sde_hw_ctl_set_preference(struct sde_mdss_cfg *sde_cfg,
 	}
 }
 
-void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
+u32 sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
 		uint32_t disp_type)
 {
-	u32 i, cnt = 0, sec_cnt = 0;
+	u32 i, cnt = 0, sec_cnt = 0, lm_mask = 0;
 
 	if (disp_type == SDE_CONNECTOR_PRIMARY) {
 		for (i = 0; i < sde_cfg->mixer_count; i++) {
@@ -1998,6 +2000,7 @@ void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
 			if (cnt < num_lm) {
 				set_bit(SDE_DISP_PRIMARY_PREF,
 						&sde_cfg->mixer[i].features);
+				lm_mask |=  BIT(sde_cfg->mixer[i].id - 1);
 				cnt++;
 			}
 
@@ -2036,10 +2039,13 @@ void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
 					BIT(SDE_DISP_PRIMARY_PREF))) {
 				set_bit(SDE_DISP_SECONDARY_PREF,
 						&sde_cfg->mixer[i].features);
+				lm_mask |= BIT(sde_cfg->mixer[i].id - 1);
 				cnt++;
 			}
 		}
 	}
+
+	return lm_mask;
 }
 
 static int sde_mixer_parse_dt(struct device_node *np,
@@ -2150,6 +2156,9 @@ static int sde_mixer_parse_dt(struct device_node *np,
 
 		if (BIT(mixer->id - LM_0) & sde_cfg->cwb_virtual_mixers_mask)
 			set_bit(SDE_MIXER_IS_VIRTUAL, &mixer->features);
+
+		mixer->cwb_mask = !props->exists[MIXER_CWB_MASK] ? 0x0 :
+				PROP_VALUE_ACCESS(props->values, MIXER_CWB_MASK, i);
 
 		mixer->pingpong = pp_count > 0 ? pp_idx + PINGPONG_0
 							: PINGPONG_MAX;

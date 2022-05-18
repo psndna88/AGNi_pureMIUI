@@ -938,6 +938,7 @@ struct sde_uidle_cfg {
 	u32 debugfs_perf;
 	bool debugfs_ctrl;
 	bool perf_cntr_en;
+	bool dirty;
 };
 
 /* struct sde_mdp_cfg : MDP TOP-BLK instance info
@@ -977,6 +978,7 @@ struct sde_sspp_cfg {
  * @pingpong:          ID of connected PingPong, PINGPONG_MAX if unsupported
  * @ds:                ID of connected DS, DS_MAX if unsupported
  * @lm_pair_mask:      Bitmask of LMs that can be controlled by same CTL
+ * @cwb_mask:	Bitmask of LMs connected to cwb mux from this LM id
  */
 struct sde_lm_cfg {
 	SDE_HW_BLK_INFO;
@@ -985,6 +987,7 @@ struct sde_lm_cfg {
 	u32 pingpong;
 	u32 ds;
 	unsigned long lm_pair_mask;
+	u32 cwb_mask;
 };
 
 /**
@@ -1641,8 +1644,10 @@ struct sde_mdss_hw_cfg_handler {
  * @sde_cfg:              pointer to sspp cfg
  * @num_lm:               num lms to set preference
  * @disp_type:            is the given display primary/secondary
+ *
+ * Return: layer mixer mask allocated for the disp_type
  */
-void sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
+u32 sde_hw_mixer_set_preference(struct sde_mdss_cfg *sde_cfg, u32 num_lm,
 		uint32_t disp_type);
 
 /**

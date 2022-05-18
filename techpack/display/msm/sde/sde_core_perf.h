@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _SDE_CORE_PERF_H_
@@ -137,6 +137,13 @@ void sde_core_perf_crtc_release_bw(struct drm_crtc *crtc);
  * @enable: enable/disable uidle
  */
 void sde_core_perf_crtc_update_uidle(struct drm_crtc *crtc, bool enable);
+
+/**
+ * sde_core_uidle_setup_ctl - enable uidle DB control
+ * @crtc: Pointer to crtc
+ * @enable: enable/disable uidle DB
+ */
+void sde_core_uidle_setup_ctl(struct drm_crtc *crtc, bool enable);
 
 /**
  * sde_core_perf_destroy - destroy the given core performance context
