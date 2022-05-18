@@ -145,6 +145,7 @@ typedef enum {
     GROUP_USAGE         = 0x01,
     TX_USAGE            = 0x02,     /* default Tx Key - Static WEP only */
     PMK_USAGE           = 0x04,     /* PMK cache */
+    LTF_USAGE           = 0x08,     /* LTF key seed */
 } KEY_USAGE;
 /*
  * List of Events (target to host)
