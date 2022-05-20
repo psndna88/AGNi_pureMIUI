@@ -83,8 +83,8 @@
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_mlme_twt_api.h"
 #include "wlan_cmn_ieee80211.h"
+#include "wlan_crypto_def_i.h"
 
-#define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
 #define MAX_PWR_FCC_CHAN_13 2
 
@@ -21091,6 +21091,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 {
 	uint8_t session_id = roam_synch_data->roamed_vdev_id;
 	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, session_id);
+	struct wlan_frame_hdr *hdr;
 	tDot11fBeaconIEs *ies_local = NULL;
 	struct ps_global_info *ps_global_info = &mac_ctx->sme.ps_global_info;
 	struct csr_roam_info *roam_info;
@@ -21610,15 +21611,28 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 				eCSR_NEIGHBOR_ROAM_STATE_INIT, session_id);
 	}
 
-	if (roam_synch_data->is_ft_im_roam) {
+	hdr = (struct wlan_frame_hdr *)((uint8_t *)roam_synch_data +
+					roam_synch_data->reassoc_req_offset);
+	if (WLAN_FC0_GET_TYPE(hdr->i_fc[0]) == WLAN_FC0_TYPE_MGMT &&
+	    WLAN_FC0_GET_STYPE(hdr->i_fc[0]) == WLAN_FC0_STYPE_ASSOC_REQ) {
 		ssid_offset = SIR_MAC_ASSOC_REQ_SSID_OFFSET;
 	} else {
 		ssid_offset = SIR_MAC_REASSOC_REQ_SSID_OFFSET;
 	}
 
 	roam_info->nBeaconLength = 0;
-	roam_info->nAssocReqLength = roam_synch_data->reassoc_req_length -
-		SIR_MAC_HDR_LEN_3A - ssid_offset;
+	roam_info->nAssocReqLength = 0;
+	roam_info->nAssocRspLength = 0;
+	if (roam_synch_data->reassoc_req_length >
+	    (SIR_MAC_HDR_LEN_3A + ssid_offset)) {
+		roam_info->nAssocReqLength =
+			roam_synch_data->reassoc_req_length -
+			SIR_MAC_HDR_LEN_3A - ssid_offset;
+	} else {
+		sme_err("Invalid reassoc length:%d",
+			roam_synch_data->reassoc_req_length);
+	}
+
 	roam_info->nAssocRspLength = roam_synch_data->reassocRespLength -
 		SIR_MAC_HDR_LEN_3A;
 	roam_info->pbFrames = qdf_mem_malloc(roam_info->nBeaconLength +
