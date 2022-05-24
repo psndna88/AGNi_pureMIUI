@@ -1113,6 +1113,17 @@ remap_fail:
 	return result;
 }
 
+void ipa3_uc_interface_destroy(void)
+{
+	if(ipa3_ctx->uc_ctx.uc_inited) {
+		ipa3_remove_interrupt_handler(IPA_UC_IRQ_2);
+		ipa3_remove_interrupt_handler(IPA_UC_IRQ_1);
+		ipa3_remove_interrupt_handler(IPA_UC_IRQ_0);
+		iounmap(ipa3_ctx->uc_ctx.uc_sram_mmio);
+		ipa3_ctx->uc_ctx.uc_inited = false;
+	}
+}
+
 /**
  * ipa3_uc_send_cmd() - Send a command to the uC
  *
@@ -1439,7 +1450,7 @@ int ipa3_uc_debug_stats_alloc(
 	result = ipa3_uc_send_cmd((u32)(cmd.phys_base),
 		command,
 		IPA_HW_2_CPU_OFFLOAD_CMD_STATUS_SUCCESS,
-		false, 10 * HZ);
+		false, 20 * HZ);
 	if (result) {
 		IPAERR("fail to alloc offload stats\n");
 		goto cleanup;

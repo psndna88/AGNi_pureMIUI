@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include "ipa_i.h"
@@ -250,6 +251,7 @@ int ipa3_send_adpl_msg(unsigned long skb_data)
 	list_add_tail(&msg->link, &ipa3_odl_ctx->adpl_msg_list);
 	atomic_inc(&ipa3_odl_ctx->stats.numer_in_queue);
 	mutex_unlock(&ipa3_odl_ctx->adpl_msg_lock);
+	wake_up(&ipa3_odl_ctx->adpl_msg_waitq);
 	IPA_STATS_INC_CNT(ipa3_odl_ctx->stats.odl_rx_pkt);
 
 	return 0;
@@ -283,7 +285,7 @@ int ipa_setup_odl_pipe(void)
 	ipa_odl_ep_cfg = &ipa3_odl_ctx->odl_sys_param;
 
 	IPADBG("Setting up the odl endpoint\n");
-	ipa_odl_ep_cfg->ipa_ep_cfg.cfg.cs_offload_en = IPA_ENABLE_CS_OFFLOAD_DL;
+	ipa_odl_ep_cfg->ipa_ep_cfg.cfg.cs_offload_en = IPA_DISABLE_CS_OFFLOAD;
 
 	ipa_odl_ep_cfg->ipa_ep_cfg.aggr.aggr_en = IPA_ENABLE_AGGR;
 	ipa_odl_ep_cfg->ipa_ep_cfg.aggr.aggr_hard_byte_limit_en = 1;
@@ -362,6 +364,11 @@ int ipa3_odl_pipe_open(void)
 
 	if (!ipa3_odl_ctx->odl_state.adpl_open) {
 		IPAERR("adpl pipe not configured\n");
+		return 0;
+	}
+
+	if (atomic_read(&ipa3_ctx->is_ssr)) {
+		IPAERR("SSR in progress ODL pipe configuration not allowed\n");
 		return 0;
 	}
 
@@ -527,7 +534,9 @@ static ssize_t ipa_adpl_read(struct file *filp, char __user *buf, size_t count,
 	int ret =  0;
 	char __user *start = buf;
 	struct ipa3_push_msg_odl *msg;
+	DEFINE_WAIT_FUNC(wait, woken_wake_function);
 
+	add_wait_queue(&ipa3_odl_ctx->adpl_msg_waitq, &wait);
 	while (1) {
 		IPADBG_LOW("Writing message to adpl pipe\n");
 		if (!ipa3_odl_ctx->odl_state.odl_open)
@@ -572,9 +581,6 @@ static ssize_t ipa_adpl_read(struct file *filp, char __user *buf, size_t count,
 			IPA_STATS_INC_CNT(ipa3_odl_ctx->stats.odl_tx_diag_pkt);
 			kfree(msg);
 			msg = NULL;
-		} else {
-			ret = -EAGAIN;
-			break;
 		}
 
 		ret = -EAGAIN;
@@ -587,9 +593,9 @@ static ssize_t ipa_adpl_read(struct file *filp, char __user *buf, size_t count,
 
 		if (start != buf)
 			break;
-
+		wait_woken(&wait, TASK_INTERRUPTIBLE, MAX_SCHEDULE_TIMEOUT);
 	}
-
+	remove_wait_queue(&ipa3_odl_ctx->adpl_msg_waitq, &wait);
 	if (start != buf && ret != -EFAULT)
 		ret = buf - start;
 
@@ -665,6 +671,7 @@ int ipa_odl_init(void)
 
 	odl_cdev = ipa3_odl_ctx->odl_cdev;
 	INIT_LIST_HEAD(&ipa3_odl_ctx->adpl_msg_list);
+	init_waitqueue_head(&ipa3_odl_ctx->adpl_msg_waitq);
 	mutex_init(&ipa3_odl_ctx->adpl_msg_lock);
 	mutex_init(&ipa3_odl_ctx->pipe_lock);
 

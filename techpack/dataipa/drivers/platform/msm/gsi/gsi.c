@@ -1482,8 +1482,7 @@ int gsi_deregister_device(unsigned long dev_hdl, bool force)
 
 	devm_free_irq(gsi_ctx->dev, gsi_ctx->per.irq, gsi_ctx);
 	gsi_unmap_base();
-	memset(gsi_ctx, 0, sizeof(*gsi_ctx));
-
+	gsi_ctx->per_registered = false;
 	return GSI_STATUS_SUCCESS;
 }
 EXPORT_SYMBOL(gsi_deregister_device);
@@ -1752,7 +1751,14 @@ static inline uint64_t gsi_read_event_ring_rp_ddr(struct gsi_evt_ring_props* pro
 static inline uint64_t gsi_read_event_ring_rp_reg(struct gsi_evt_ring_props* props,
 	uint8_t id, int ee)
 {
-	return gsi_readl(gsi_ctx->base + GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(id, ee));
+	uint64_t rp;
+
+	rp = gsi_readl(gsi_ctx->base +
+		GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(id, ee));
+	rp |= ((uint64_t)gsi_readl(gsi_ctx->base +
+		GSI_EE_n_EV_CH_k_CNTXT_5_OFFS(id, ee))) << 32;
+
+	return rp;
 }
 
 int gsi_alloc_evt_ring(struct gsi_evt_ring_props *props, unsigned long dev_hdl,
@@ -4051,7 +4057,7 @@ int gsi_poll_n_channel(unsigned long chan_hdl,
 		/* update rp to see of we have anything new to process */
 		rp = ctx->evtr->props.gsi_read_event_ring_rp(
 			&ctx->evtr->props, ctx->evtr->id, ee);
-		rp |= ctx->ring.rp & 0xFFFFFFFF00000000ULL;
+		rp |= ctx->evtr->ring.rp & 0xFFFFFFFF00000000ULL;
 
 		ctx->evtr->ring.rp = rp;
 		/* read gsi event ring rp again if last read is empty */
@@ -4063,7 +4069,7 @@ int gsi_poll_n_channel(unsigned long chan_hdl,
 			__iowmb();
 			rp = ctx->evtr->props.gsi_read_event_ring_rp(
 				&ctx->evtr->props, ctx->evtr->id, ee);
-			rp |= ctx->ring.rp & 0xFFFFFFFF00000000ULL;
+			rp |= ctx->evtr->ring.rp & 0xFFFFFFFF00000000ULL;
 			ctx->evtr->ring.rp = rp;
 			if (rp == ctx->evtr->ring.rp_local) {
 				spin_unlock_irqrestore(

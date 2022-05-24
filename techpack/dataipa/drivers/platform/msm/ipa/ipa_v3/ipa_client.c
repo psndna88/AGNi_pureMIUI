@@ -67,6 +67,7 @@ int ipa3_enable_data_path(u32 clnt_hdl)
 			holb_cfg.en = IPA_HOLB_TMR_EN;
 		} else if (ipa3_ctx->ipa_hw_type == IPA_HW_v4_11 &&
 				(ep->client == IPA_CLIENT_WLAN1_CONS ||
+				ep->client == IPA_CLIENT_WLAN2_CONS ||
 				 ep->client == IPA_CLIENT_USB_CONS)) {
 			holb_cfg.en = IPA_HOLB_TMR_EN;
 			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL_4_5;
@@ -1497,8 +1498,10 @@ int ipa3_set_reset_client_cons_pipe_sus_holb(bool set_reset, u32 tmr_val,
 			IPA_ENDP_INIT_HOL_BLOCK_EN_n,
 			pipe_idx, &ep_holb);
 
-		/* IPA4.5 issue requires HOLB_EN to be written twice */
-		if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5)
+		/* For targets > IPA_4.0 issue requires HOLB_EN to be
+		 * written twice.
+		 */
+		if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_0)
 			ipahal_write_reg_n_fields(
 				IPA_ENDP_INIT_HOL_BLOCK_EN_n,
 				pipe_idx, &ep_holb);

@@ -41,6 +41,7 @@
 #include <linux/jiffies.h>
 #include <linux/delay.h>
 #include <linux/wait.h>
+#include <linux/suspend.h>
 
 #ifdef CONFIG_ARM64
 
@@ -51,7 +52,7 @@
 #endif
 
 #define DRV_NAME "ipa"
-
+#define DELAY_BEFORE_FW_LOAD 500
 #define IPA_SUBSYSTEM_NAME "ipa_fws"
 #define IPA_UC_SUBSYSTEM_NAME "ipa_uc"
 
@@ -124,8 +125,14 @@ static void ipa_gsi_notify_cb(struct gsi_per_notify *notify);
 static int ipa3_attach_to_smmu(void);
 static int ipa3_alloc_pkt_init(void);
 
+#ifdef CONFIG_DEEPSLEEP
+static void ipa3_deepsleep_resume(void);
+static void ipa3_deepsleep_suspend(void);
+#endif
+
 static void ipa3_load_ipa_fw(struct work_struct *work);
 static DECLARE_WORK(ipa3_fw_loading_work, ipa3_load_ipa_fw);
+static DECLARE_DELAYED_WORK(ipa3_fw_load_failure_handle, ipa3_load_ipa_fw);
 
 static void ipa_dec_clients_disable_clks_on_wq(struct work_struct *work);
 static DECLARE_DELAYED_WORK(ipa_dec_clients_disable_clks_on_wq_work,
@@ -436,6 +443,38 @@ int ipa_smmu_free_sgt(struct sg_table **out_sgt_ptr)
 	return 0;
 }
 EXPORT_SYMBOL(ipa_smmu_free_sgt);
+
+/**
+ * ipa_pm_notify() - PM notify to listen suspend events
+ *
+ * This callback will be invoked by the pm framework to suspend
+ * operation is invoked.
+ *
+ * Returns NOTIFY_DONE to pm framework completed operation.
+ */
+
+static int ipa_pm_notify(struct notifier_block *b, unsigned long event, void *p)
+{
+	IPAERR("Entry\n");
+	switch (event) {
+		case PM_POST_SUSPEND:
+#ifdef CONFIG_DEEPSLEEP
+			if (mem_sleep_current == PM_SUSPEND_MEM && ipa3_ctx->deepsleep) {
+				IPADBG("Enter deepsleep resume\n");
+				ipa3_deepsleep_resume();
+				IPADBG("Exit deepsleep resume\n");
+			}
+#endif
+			break;
+	}
+	IPAERR("Exit\n");
+	return NOTIFY_DONE;
+}
+
+
+static struct notifier_block ipa_pm_notifier = {
+	.notifier_call = ipa_pm_notify,
+};
 
 static const struct dev_pm_ops ipa_pm_ops = {
 	.suspend_late = ipa3_ap_suspend,
@@ -3566,16 +3605,18 @@ static void ipa3_q6_avoid_holb(void)
 			 * setting HOLB on Q6 pipes, and from APPS perspective
 			 * they are not valid, therefore, the above function
 			 * will fail.
+			 * Also don't reset the HOLB timer to 0 for Q6 pipes.
 			 */
-			ipahal_write_reg_n_fields(
-				IPA_ENDP_INIT_HOL_BLOCK_TIMER_n,
-				ep_idx, &ep_holb);
+
+
 			ipahal_write_reg_n_fields(
 				IPA_ENDP_INIT_HOL_BLOCK_EN_n,
 				ep_idx, &ep_holb);
 
-			/* IPA4.5 issue requires HOLB_EN to be written twice */
-			if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_5)
+			/* For targets > IPA_4.0 issue requires HOLB_EN to 
+			 * be written twice.
+			 */
+			if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_0)
 				ipahal_write_reg_n_fields(
 					IPA_ENDP_INIT_HOL_BLOCK_EN_n,
 					ep_idx, &ep_holb);
@@ -5060,6 +5101,7 @@ static void ipa3_teardown_apps_pipes(void)
 	__ipa3_del_rt_rule(ipa3_ctx->dflt_v4_rt_rule_hdl);
 	__ipa3_del_hdr(ipa3_ctx->excp_hdr_hdl, false);
 	ipa3_teardown_sys_pipe(ipa3_ctx->clnt_hdl_cmd);
+	ipa3_dealloc_common_event_ring();
 }
 
 #ifdef CONFIG_COMPAT
@@ -6314,6 +6356,12 @@ static inline void ipa3_enable_napi_lan_rx(void)
 		napi_enable(&ipa3_ctx->napi_lan_rx);
 }
 
+static inline void ipa3_disable_napi_lan_rx(void)
+{
+	if (ipa3_ctx->lan_rx_napi_enable)
+		napi_disable(&ipa3_ctx->napi_lan_rx);
+}
+
 static inline void ipa3_register_to_fmwk(void)
 {
 	struct ipa_core_data data;
@@ -6688,6 +6736,11 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 		IPADBG("register to fmwk\n");
 		ipa3_register_to_fmwk();
 	}
+
+#ifdef CONFIG_DEEPSLEEP
+	if (!ipa3_is_ready())
+		ipa_fmwk_deepsleep_exit_ipa();
+#endif
 	complete_all(&ipa3_ctx->init_completion_obj);
 
 	ipa_ut_module_init();
@@ -6790,13 +6843,12 @@ static int ipa3_manual_load_ipa_fws(void)
 
 static int ipa3_pil_load_ipa_fws(const char *sub_sys)
 {
-	void *subsystem_get_retval = NULL;
 
 	IPADBG("PIL FW loading process initiated sub_sys=%s\n",
 		sub_sys);
 
-	subsystem_get_retval = subsystem_get(sub_sys);
-	if (IS_ERR_OR_NULL(subsystem_get_retval)) {
+	ipa3_ctx->subsystem_get_retval = subsystem_get(sub_sys);
+	if (IS_ERR_OR_NULL(ipa3_ctx->subsystem_get_retval)) {
 		IPAERR("Unable to PIL load FW for sub_sys=%s\n", sub_sys);
 		return -EINVAL;
 	}
@@ -6805,6 +6857,20 @@ static int ipa3_pil_load_ipa_fws(const char *sub_sys)
 	return 0;
 }
 
+#ifdef CONFIG_DEEPSLEEP
+static int ipa3_pil_unload_ipa_fws(void)
+{
+
+	IPADBG("PIL FW unloading process initiated sub_sys\n");
+
+	if (ipa3_ctx->subsystem_get_retval)
+		subsystem_put(ipa3_ctx->subsystem_get_retval);
+
+	IPADBG("PIL FW unloading process is complete sub_sys\n");
+	return 0;
+}
+#endif
+
 static void ipa3_load_ipa_fw(struct work_struct *work)
 {
 	int result;
@@ -6812,11 +6878,14 @@ static void ipa3_load_ipa_fw(struct work_struct *work)
 	IPADBG("Entry\n");
 
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
-
+	
 	result = ipa3_attach_to_smmu();
 	if (result) {
 		IPAERR("IPA attach to smmu failed %d\n", result);
 		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
+		queue_delayed_work(ipa3_ctx->transport_power_mgmt_wq,
+			&ipa3_fw_load_failure_handle,
+			msecs_to_jiffies(DELAY_BEFORE_FW_LOAD));
 		return;
 	}
 
@@ -6836,13 +6905,18 @@ static void ipa3_load_ipa_fw(struct work_struct *work)
 		result = ipa3_manual_load_ipa_fws();
 	}
 
-	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 
 	if (result) {
-		IPAERR("IPA FW loading process has failed result=%d\n",
-			result);
+
+		ipa3_ctx->ipa_pil_load++;
+		IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
+		IPADBG("IPA firmware loading deffered to a work queue\n");
+		queue_delayed_work(ipa3_ctx->transport_power_mgmt_wq,
+			&ipa3_fw_load_failure_handle,
+			msecs_to_jiffies(DELAY_BEFORE_FW_LOAD));
 		return;
 	}
+	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
 	mutex_lock(&ipa3_ctx->fw_load_data.lock);
 	ipa3_ctx->fw_load_data.state = IPA_FW_LOAD_STATE_LOADED;
 	mutex_unlock(&ipa3_ctx->fw_load_data.lock);
@@ -6902,7 +6976,7 @@ static void ipa_fw_load_sm_handle_event(enum ipa_fw_load_event ev)
 		if (ipa3_ctx->fw_load_data.state == IPA_FW_LOAD_STATE_INIT) {
 			ipa3_ctx->fw_load_data.state =
 				IPA_FW_LOAD_STATE_SMMU_DONE;
-			goto out;
+			goto sched_fw_load;
 		}
 		if (ipa3_ctx->fw_load_data.state ==
 			IPA_FW_LOAD_STATE_FWFILE_READY) {
@@ -7873,8 +7947,10 @@ fail_mem_ctrl:
 	kfree(ipa3_ctx->ipa_tz_unlock_reg);
 	ipa3_ctx->ipa_tz_unlock_reg = NULL;
 fail_tz_unlock_reg:
-	if (ipa3_ctx->logbuf)
+	if (ipa3_ctx->logbuf) {
 		ipc_log_context_destroy(ipa3_ctx->logbuf);
+		ipa3_ctx->logbuf = NULL;
+	}
 fail_uc_file_alloc:
 	kfree(ipa3_ctx->gsi_fw_file_name);
 	ipa3_ctx->gsi_fw_file_name = NULL;
@@ -8807,6 +8883,7 @@ static int ipa_smmu_wlan_cb_probe(struct device *dev)
 		}
 	}
 
+	cb->done = true;
 	return 0;
 }
 
@@ -8886,10 +8963,35 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 	ipa3_ctx->s1_bypass_arr[IPA_SMMU_CB_UC] = (bypass != 0);
 
 	ipa3_ctx->uc_pdev = dev;
-
+	cb->done = true;
 	return 0;
 }
 
+static void ipa3_ap_iommu_unmap(struct ipa_smmu_cb_ctx *cb, const u32 *add_map, u32 add_map_size) {
+
+	int i, res;
+
+	/* iterate of each entry of the additional mapping array */
+	for (i = 0; i < add_map_size / sizeof(u32); i += 3) {
+		u32 iova = be32_to_cpu(add_map[i]);
+		u32 pa = be32_to_cpu(add_map[i + 1]);
+		u32 size = be32_to_cpu(add_map[i + 2]);
+		unsigned long iova_p;
+		phys_addr_t pa_p;
+		u32 size_p;
+
+		IPA_SMMU_ROUND_TO_PAGE(iova, pa, size,
+			iova_p, pa_p, size_p);
+		IPADBG_LOW("unmapping 0x%lx to 0x%pa size %d\n",
+				iova_p, &pa_p, size_p);
+
+		res = iommu_unmap(cb->iommu_domain,iova_p, size_p);
+		if(res != size_p) {
+			pr_err("iommu unmap failed for AP cb\n");
+			ipa_assert();
+		}
+	}
+}
 static int ipa_smmu_ap_cb_probe(struct device *dev)
 {
 	struct ipa_smmu_cb_ctx *cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_AP);
@@ -9024,6 +9126,8 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		if (ret < 0 && ret != -EEXIST) {
 			IPAERR("unable to allocate smem MODEM entry\n");
 			cb->valid = false;
+			if(add_map)
+				ipa3_ap_iommu_unmap(cb, add_map, add_map_size);
 			return -EFAULT;
 		}
 		smem_addr = qcom_smem_get(SMEM_MODEM,
@@ -9032,6 +9136,8 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		if (IS_ERR(smem_addr)) {
 			IPAERR("unable to acquire smem MODEM entry\n");
 			cb->valid = false;
+			if(add_map)
+				ipa3_ap_iommu_unmap(cb, add_map, add_map_size);
 			return -EFAULT;
 		}
 		if (smem_size != ipa_smem_size)
@@ -9052,6 +9158,7 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 
 	smmu_info.present[IPA_SMMU_CB_AP] = true;
 
+	cb->done = true;
 	ipa3_ctx->pdev = dev;
 	cb->next_addr = cb->va_end;
 
@@ -9104,18 +9211,26 @@ static int ipa_smmu_11ad_cb_probe(struct device *dev)
 		IPADBG("11AD using shared CB\n");
 		cb->shared = true;
 	}
-
+	cb->done = true;
 	return 0;
 }
 
 static int ipa_smmu_cb_probe(struct device *dev, enum ipa_smmu_cb_type cb_type)
 {
+	struct ipa_smmu_cb_ctx *cb = ipa3_get_smmu_ctx(cb_type);
+
+	if((cb != NULL) && (cb->done == true)) {
+		IPADBG("SMMU CB type %d already initialized\n", cb_type);
+		return 0;
+	}
 	switch (cb_type) {
 	case IPA_SMMU_CB_AP:
+		ipa3_ctx->pdev = &ipa3_ctx->master_pdev->dev;
 		return ipa_smmu_ap_cb_probe(dev);
 	case IPA_SMMU_CB_WLAN:
 		return ipa_smmu_wlan_cb_probe(dev);
 	case IPA_SMMU_CB_UC:
+		ipa3_ctx->uc_pdev = &ipa3_ctx->master_pdev->dev;
 		return ipa_smmu_uc_cb_probe(dev);
 	case IPA_SMMU_CB_11AD:
 		return ipa_smmu_11ad_cb_probe(dev);
@@ -9130,18 +9245,19 @@ static int ipa3_attach_to_smmu(void)
 	struct ipa_smmu_cb_ctx *cb;
 	int i, result;
 
-	ipa3_ctx->pdev = &ipa3_ctx->master_pdev->dev;
-	ipa3_ctx->uc_pdev = &ipa3_ctx->master_pdev->dev;
-
 	if (smmu_info.arm_smmu) {
 		IPADBG("smmu is enabled\n");
 		for (i = 0; i < IPA_SMMU_CB_MAX; i++) {
 			cb = ipa3_get_smmu_ctx(i);
 			result = ipa_smmu_cb_probe(cb->dev, i);
-			if (result)
+			if (result) {
 				IPAERR("probe failed for cb %d\n", i);
+				return result;
+			}
 		}
 	} else {
+		ipa3_ctx->pdev = &ipa3_ctx->master_pdev->dev;
+		ipa3_ctx->uc_pdev = &ipa3_ctx->master_pdev->dev;
 		IPADBG("smmu is disabled\n");
 	}
 	return 0;
@@ -9424,7 +9540,17 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 				return -EOPNOTSUPP;
 			}
 		}
+		/* Below update of pre init for non smmu device, As
+		 * existing flow initialzies only for smmu
+		 * enabled node.*/
+
+		result = ipa3_pre_init(&ipa3_res, pdev_p);
+		if (result) {
+			IPAERR("ipa3_init failed\n");
+			return result;
+		}
 		ipa_fw_load_sm_handle_event(IPA_FW_LOAD_EVNT_SMMU_DONE);
+		goto skip_repeat_pre_init;
 	}
 
 	/* Proceed to real initialization */
@@ -9434,6 +9560,7 @@ int ipa3_plat_drv_probe(struct platform_device *pdev_p)
 		return result;
 	}
 
+skip_repeat_pre_init:
 	result = of_platform_populate(pdev_p->dev.of_node,
 		ipa_plat_drv_match, NULL, &pdev_p->dev);
 	if (result) {
@@ -9462,7 +9589,8 @@ int ipa3_ap_suspend(struct device *dev)
 	int i;
 
 	IPADBG("Enter...\n");
-
+	if (!of_device_is_compatible(dev->of_node,"qcom,ipa"))
+		return 0;
 	/* In case there is a tx/rx handler in polling mode fail to suspend */
 	for (i = 0; i < ipa3_ctx->ipa_num_pipes; i++) {
 		if (ipa3_ctx->ep[i].sys &&
@@ -9473,6 +9601,13 @@ int ipa3_ap_suspend(struct device *dev)
 		}
 	}
 
+#ifdef CONFIG_DEEPSLEEP
+	if (mem_sleep_current == PM_SUSPEND_MEM) {
+		IPADBG("Enter deepsleep suspend\n");
+		ipa3_deepsleep_suspend();
+		IPADBG("Exit deepsleep suspend\n");
+	}
+#endif
 	ipa_pm_deactivate_all_deferred();
 
 	IPADBG("Exit\n");
@@ -9504,6 +9639,59 @@ bool ipa3_get_lan_rx_napi(void)
 {
 	return ipa3_ctx->lan_rx_napi_enable;
 }
+
+
+#ifdef CONFIG_DEEPSLEEP
+static void ipa3_deepsleep_suspend(void)
+{
+	IPADBG("Entry\n");
+	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
+
+	/* To allow default routing table delection using this flag */
+	ipa3_ctx->deepsleep = true;
+	/*Disabling the LAN NAPI*/
+	ipa3_disable_napi_lan_rx();
+	/*NOt allow uC related operations until uC load again*/
+	ipa3_ctx->uc_ctx.uc_loaded = false;
+	/*Disconnecting LAN PROD/LAN CONS/CMD PROD apps pipes*/
+	ipa3_teardown_apps_pipes();
+	/*Deregistering the GSI driver*/
+	gsi_deregister_device(ipa3_ctx->gsi_dev_hdl, false);
+	/*Destroying filter table ids*/
+	ipa3_destroy_flt_tbl_idrs();
+	/*Disabling IPA interrupt*/
+	ipa3_remove_interrupt_handler(IPA_TX_SUSPEND_IRQ);
+	ipa3_interrupts_destroy(ipa3_res.ipa_irq, &ipa3_ctx->master_pdev->dev);
+	ipa3_uc_interface_destroy();
+	/*Destroy the NAT device*/
+	ipa3_nat_ipv6ct_destroy_devices();
+	/*Freeing memory allocated for coalesing and dma task*/
+	ipa3_free_coal_close_frame();
+	ipa3_free_dma_task_for_gsi();
+	/*Destroying ipa hal module*/
+	ipahal_destroy();
+	ipa3_ctx->ipa_initialization_complete = false;
+	ipa3_debugfs_remove();
+	/*Unloading IPA FW to allow FW load in resume*/
+	ipa3_pil_unload_ipa_fws();
+	/*Calling framework API to reset IPA ready flag to false*/
+	ipa_fmwk_deepsleep_entry_ipa();
+	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
+	IPADBG("Exit\n");
+}
+
+static void ipa3_deepsleep_resume(void)
+{
+
+	IPADBG("Entry\n");
+	/*After deeplseep exit we shouldn't allow delete the default routing table*/
+	ipa3_ctx->deepsleep = false;
+	/*Scheduling WQ to load IPA FW*/
+	queue_work(ipa3_ctx->transport_power_mgmt_wq,
+		&ipa3_fw_loading_work);
+	IPADBG("Exit\n");
+}
+#endif
 
 static void ipa_gsi_notify_cb(struct gsi_per_notify *notify)
 {
@@ -9934,6 +10122,8 @@ static int __init ipa_module_init(void)
 		/* Register as a PCI device driver */
 		return pci_register_driver(&ipa_pci_driver);
 	}
+
+	register_pm_notifier(&ipa_pm_notifier);
 	/* Register as a platform device driver */
 	return platform_driver_register(&ipa_plat_drv);
 }
@@ -9944,6 +10134,7 @@ static void __exit ipa_module_exit(void)
 	if (running_emulation)
 		pci_unregister_driver(&ipa_pci_driver);
 	platform_driver_unregister(&ipa_plat_drv);
+	unregister_pm_notifier(&ipa_pm_notifier);
 	kfree(ipa3_ctx);
 	ipa3_ctx = NULL;
 }

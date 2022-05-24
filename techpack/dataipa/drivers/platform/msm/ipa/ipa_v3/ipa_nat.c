@@ -179,7 +179,7 @@ static int ipa3_nat_ipv6ct_mmap(
 	/*
 	 * Check if no smmu or non dma coherent
 	 */
-	if (!cb->valid || !dev_is_dma_coherent(cb->dev)) {
+	if (cb && cb->dev && (!cb->valid || !dev_is_dma_coherent(cb->dev))) {
 
 		IPADBG("Either smmu valid=%u and/or DMA coherent=%u false\n",
 			   cb->valid, !dev_is_dma_coherent(cb->dev));
@@ -1366,8 +1366,9 @@ int ipa3_nat_init_cmd(
 		goto bail;
 	}
 
-	if (init->table_entries == 0) {
-		IPAERR_RL("Table entries is zero\n");
+	if (init->table_entries == 0 ||
+		init->table_entries == U16_MAX) {
+		IPAERR_RL("Table entries is %d\n", init->table_entries);
 		result = -EPERM;
 		goto bail;
 	}
