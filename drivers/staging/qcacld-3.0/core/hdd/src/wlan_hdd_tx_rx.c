@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2244,8 +2245,9 @@ QDF_STATUS hdd_rx_deliver_to_stack(struct hdd_adapter *adapter,
 	bool skb_receive_offload_ok = false;
 	uint8_t rx_ctx_id = QDF_NBUF_CB_RX_CTX_ID(skb);
 
-	/* rx_ctx_id is already verified for out-of-range */
-	hdd_rx_check_qdisc_for_adapter(adapter, rx_ctx_id);
+	if (!hdd_ctx->dp_agg_param.force_gro_enable)
+		/* rx_ctx_id is already verified for out-of-range */
+		hdd_rx_check_qdisc_for_adapter(adapter, rx_ctx_id);
 
 	if (QDF_NBUF_CB_RX_TCP_PROTO(skb) &&
 	    !QDF_NBUF_CB_RX_PEER_CACHED_FRM(skb))
