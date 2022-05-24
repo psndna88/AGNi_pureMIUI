@@ -27,6 +27,7 @@
 #include <linux/of_irq.h>
 #include <linux/dma-buf.h>
 #include <linux/memblock.h>
+#include <linux/suspend.h>
 #include <drm/drm_atomic_uapi.h>
 #include <drm/drm_probe_helper.h>
 
@@ -3713,6 +3714,44 @@ void sde_kms_display_early_wakeup(struct drm_device *dev,
 	drm_connector_list_iter_end(&conn_iter);
 }
 
+#ifdef CONFIG_DEEPSLEEP
+static int _sde_kms_pm_set_clk_src(struct sde_kms *sde_kms, bool enable)
+{
+	int i, rc = 0;
+	void *display;
+	struct dsi_display *dsi_display;
+
+	if (mem_sleep_current == PM_SUSPEND_MEM) {
+		SDE_INFO("Deepsleep\n");
+
+		for (i = 0; i < sde_kms->dsi_display_count; i++) {
+			display = sde_kms->dsi_displays[i];
+			dsi_display = (struct dsi_display *)display;
+
+			if (!dsi_display->needs_clk_src_reset)
+				continue;
+
+			if (enable)
+				rc = dsi_display_set_clk_src(dsi_display);
+			else
+				rc = dsi_display_unset_clk_src(dsi_display);
+
+			if (rc) {
+				SDE_ERROR("failed to set clks rc:%d\n", rc);
+				return rc;
+			}
+		}
+	}
+
+	return rc;
+}
+#else
+static inline int _sde_kms_pm_set_clk_src(struct sde_kms *sde_kms, bool enable)
+{
+	return 0;
+}
+#endif
+
 static void _sde_kms_pm_suspend_idle_helper(struct sde_kms *sde_kms,
 	struct device *dev)
 {
@@ -3904,6 +3943,9 @@ unlock:
 	pm_runtime_put_sync(dev);
 	pm_runtime_get_noresume(dev);
 
+	/* reset clock source based on PM suspend state */
+	_sde_kms_pm_set_clk_src(sde_kms, false);
+
 	/* dump clock state before entering suspend */
 	if (sde_kms->pm_suspend_clk_dump)
 		_sde_kms_dump_clks_state(sde_kms);
@@ -3940,6 +3982,9 @@ retry:
 	} else if (WARN_ON(ret)) {
 		goto end;
 	}
+
+	/* reset clock source based on PM suspend state */
+	_sde_kms_pm_set_clk_src(sde_kms, true);
 
 	sde_kms->suspend_block = false;
 

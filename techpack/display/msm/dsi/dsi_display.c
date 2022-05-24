@@ -885,16 +885,17 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 		panel->esd_config.esd_enabled = false;
 	}
 
-	if (rc <= 0 && te_check_override)
+	/*
+	 * TE check may fail even if status read is passing. In case of
+	 * te_check_override, check the status both from reg read and TE.
+	 */
+	if (rc > 0 && te_check_override)
 		rc = dsi_display_status_check_te(dsi_display, te_rechecks);
 	/* Unmask error interrupts if check passed*/
 	if (rc > 0) {
 		dsi_display_set_ctrl_esd_check_flag(dsi_display, false);
 		dsi_display_mask_ctrl_error_interrupts(dsi_display, mask,
 							false);
-		if (te_check_override && panel->esd_config.esd_enabled == false)
-			rc = dsi_display_status_check_te(dsi_display,
-					te_rechecks);
 	}
 
 	dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
@@ -2659,7 +2660,7 @@ error:
 }
 
 #ifdef CONFIG_DEEPSLEEP
-static int dsi_display_unset_clk_src(struct dsi_display *display)
+int dsi_display_unset_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
 	int i;
@@ -2684,13 +2685,13 @@ static int dsi_display_unset_clk_src(struct dsi_display *display)
 	return 0;
 }
 #else
-static inline int dsi_display_unset_clk_src(struct dsi_display *display)
+inline int dsi_display_unset_clk_src(struct dsi_display *display)
 {
 	return 0;
 }
 #endif
 
-static int dsi_display_set_clk_src(struct dsi_display *display)
+int dsi_display_set_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
 	int i;
@@ -3340,7 +3341,7 @@ static ssize_t dsi_host_transfer(struct mipi_dsi_host *host,
 
 		rc = dsi_ctrl_cmd_transfer(display->ctrl[ctrl_idx].ctrl, msg,
 				&cmd_flags);
-		if (rc) {
+		if (rc < 0) {
 			DSI_ERR("[%s] cmd transfer failed, rc=%d\n",
 			       display->name, rc);
 			goto error_disable_cmd_engine;
@@ -4199,6 +4200,9 @@ static int dsi_display_parse_dt(struct dsi_display *display)
 
 	/* Parse TE data */
 	dsi_display_parse_te_data(display);
+
+	display->needs_clk_src_reset = of_property_read_bool(of_node,
+				"qcom,needs-clk-src-reset");
 
 	/* Parse all external bridges from port 0 */
 	display_for_each_ctrl(i, display) {
