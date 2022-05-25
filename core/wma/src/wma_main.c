@@ -9301,6 +9301,7 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 {
 	uint32_t i;
 	QDF_STATUS status;
+	bool is_channel_allowed;
 
 	if (!wma_handle) {
 		wma_err("WMA handle is NULL. Cannot issue command");
@@ -9343,6 +9344,14 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 		    msg->chan_weights.saved_chan_list[i]))
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
+
+		is_channel_allowed =
+			policy_mgr_is_sta_chan_valid_for_connect_and_roam(
+					wma_handle->pdev,
+					msg->chan_weights.saved_chan_list[i]);
+		if (!is_channel_allowed)
+			msg->chan_weights.weighed_valid_list[i] =
+						WEIGHT_OF_DISALLOWED_CHANNELS;
 	}
 
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
