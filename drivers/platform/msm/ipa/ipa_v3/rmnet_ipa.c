@@ -3410,8 +3410,7 @@ int rmnet_ipa3_set_tether_client_pipe(
 		return -EFAULT;
 	}
 	/* error checking if dl_dst_pipe_len valid or not*/
-	if (data->dl_dst_pipe_len > QMI_IPA_MAX_PIPES_V01 ||
-		data->dl_dst_pipe_len < 0) {
+	if (data->dl_dst_pipe_len > QMI_IPA_MAX_PIPES_V01) {
 		IPAWANERR("DL dst pipes %d exceeding max %d\n",
 			data->dl_dst_pipe_len,
 			QMI_IPA_MAX_PIPES_V01);

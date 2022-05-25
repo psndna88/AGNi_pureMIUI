@@ -897,11 +897,7 @@ int ipa3_qmi_add_offload_request_send(
 		return -EINVAL;
 	}
 
-	/* check if the filter rules from IPACM is valid */
-	if (req->filter_spec_ex2_list_len < 0) {
-		IPAWANERR("IPACM pass invalid num of rules\n");
-		return -EINVAL;
-	} else if (req->filter_spec_ex2_list_len == 0) {
+	if (req->filter_spec_ex2_list_len == 0) {
 		IPAWANDBG("IPACM pass zero rules to Q6\n");
 	} else {
 		IPAWANDBG("IPACM pass %u rules to Q6\n",
