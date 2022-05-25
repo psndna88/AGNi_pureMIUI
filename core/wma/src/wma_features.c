@@ -5193,6 +5193,7 @@ static void wma_send_set_key_rsp(uint8_t vdev_id, bool pairwise,
 			     QDF_MAC_ADDR_SIZE);
 		wma_send_msg_high_priority(wma, WMA_SET_STAKEY_RSP,
 					   key_info_uc, 0);
+		wlan_release_peer_key_wakelock(wma->pdev, crypto_key->macaddr);
 	} else {
 		key_info_mc = qdf_mem_malloc(sizeof(*key_info_mc));
 		if (!key_info_mc)
@@ -5281,14 +5282,6 @@ void wma_update_set_key(uint8_t session_id, bool pairwise,
 
 	if (iface)
 		iface->is_waiting_for_key = false;
-
-	if (!pairwise && iface) {
-		/* Its GTK release the wake lock */
-		wma_debug("Release set key wake lock");
-		qdf_runtime_pm_allow_suspend(
-				&iface->vdev_set_key_runtime_wakelock);
-		wma_release_wakelock(&iface->vdev_set_key_wakelock);
-	}
 
 	wma_send_set_key_rsp(session_id, pairwise, key_index);
 }

@@ -6982,6 +6982,8 @@ int wlan_hdd_send_roam_auth_event(struct hdd_adapter *adapter, uint8_t *bssid,
 			*((uint64_t *)roam_info_ptr->replay_ctr));
 
 	} else {
+		wlan_acquire_peer_key_wakelock(hdd_ctx->pdev,
+					       roam_info_ptr->bssid.bytes);
 		hdd_debug("No Auth Params TLV's");
 		if (nla_put_u8(skb, QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AUTHORIZED,
 					false)) {
