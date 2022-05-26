@@ -10,43 +10,11 @@
 
 #define IPA_PM_DRV_NAME "ipa_pm"
 
-#define IPA_PM_DBG(fmt, args...) \
-	do { \
-		pr_debug(IPA_PM_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf_low(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
-#define IPA_PM_DBG_LOW(fmt, args...) \
-	do { \
-		pr_debug(IPA_PM_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf_low(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
-#define IPA_PM_ERR(fmt, args...) \
-	do { \
-		pr_err(IPA_PM_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf_low(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
-#define IPA_PM_ERR_RL(fmt, args...) \
-	do { \
-		pr_err_ratelimited_ipa(IPA_PM_DRV_NAME " %s:%d " fmt, \
-			__func__, __LINE__, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-		IPA_IPC_LOGGING(ipa3_get_ipc_logbuf_low(), \
-			IPA_PM_DRV_NAME " %s:%d " fmt, ## args); \
-	} while (0)
-#define IPA_PM_DBG_STATE(hdl, name, state) \
-	IPA_PM_DBG_LOW("Client[%d] %s: %s\n", hdl, name, \
-		client_state_to_str[state])
+#define IPA_PM_DBG(fmt, args...)
+#define IPA_PM_DBG_LOW(fmt, args...)
+#define IPA_PM_ERR(fmt, args...)
+#define IPA_PM_ERR_RL(fmt, args...)
+#define IPA_PM_DBG_STATE(hdl, name, state)
 
 
 #if IPA_PM_MAX_CLIENTS > 32
@@ -419,8 +387,8 @@ static void activate_work_func(struct work_struct *work)
 		client->state = IPA_PM_DEACTIVATED;
 		dec_clk = true;
 	} else {
-		IPA_PM_ERR("unexpected state %d\n", client->state);
-		WARN_ON(1);
+//		IPA_PM_ERR("unexpected state %d\n", client->state);
+//		WARN_ON(1);
 	}
 	spin_unlock_irqrestore(&client->state_lock, flags);
 
@@ -444,7 +412,7 @@ static void activate_work_func(struct work_struct *work)
 		client->callback(client->callback_params,
 			IPA_PM_CLIENT_ACTIVATED);
 	} else {
-		IPA_PM_ERR_RL("client has no callback");
+//		IPA_PM_ERR_RL("client has no callback");
 	}
 	mutex_unlock(&ipa_pm_ctx->client_mutex);
 
@@ -466,7 +434,7 @@ static void delayed_deferred_deactivate_work_func(struct work_struct *work)
 	client = container_of(dwork, struct ipa_pm_client, deactivate_work);
 
 	if (unlikely(client == NULL)) {
-		IPA_PM_ERR("Client already deregistered\n");
+//		IPA_PM_ERR("Client already deregistered\n");
 		return;
 	}
 
@@ -500,8 +468,8 @@ static void delayed_deferred_deactivate_work_func(struct work_struct *work)
 		do_clk_scaling();
 		return;
 	default:
-		IPA_PM_ERR("unexpected state %d\n", client->state);
-		WARN_ON(1);
+//		IPA_PM_ERR("unexpected state %d\n", client->state);
+//		WARN_ON(1);
 		goto bail;
 	}
 
@@ -554,7 +522,7 @@ static int add_client_to_exception_list(u32 hdl)
 			exception->pending);
 
 			if (exception->pending < 0) {
-				WARN_ON(1);
+//				WARN_ON(1);
 				exception->pending = 0;
 				mutex_unlock(&ipa_pm_ctx->client_mutex);
 				return -EPERM;
@@ -1246,8 +1214,8 @@ int ipa_pm_handle_suspend(u32 pipe_bitmask)
 						, IPA_PM_REQUEST_WAKEUP);
 					client_notified[client->hdl] = true;
 				} else {
-					IPA_PM_ERR("client has no callback");
-					WARN_ON(1);
+//					IPA_PM_ERR("client has no callback");
+//					WARN_ON(1);
 				}
 			}
 		}
