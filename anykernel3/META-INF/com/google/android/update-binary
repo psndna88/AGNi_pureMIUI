@@ -499,7 +499,8 @@ elif [ -f /system_root/build.prop ]; then
 	buildprop=/system_root/build.prop;
 	buildproploc=/system_root;
 else
-	ui_print " " "Unable to read from build.prop" " ";
+	ui_print " ";
+#	ui_print " " "Unable to read from build.prop" " ";
 #	ui_print "   DON'T YOU HAVE ANY ROM INSTALLED ?????";
 #	ui_print " " " Terminating Installation !" " ";
 #	cleanup;
@@ -516,10 +517,10 @@ elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
 	ANDROID_VER="Q";
 	ui_print "AGNi detected Android Q";
 else
-	ANDROID_VER="R";
+	ANDROID_VER="S";
 #	ANDROID_VER="UNSUPPORTED";
-	ui_print " " ">> Unsupported Android Version OR couldn't read from system." " ";
-	ui_print " " "  So, Assuming Android 11 and continuing..." " ";
+#	ui_print " " ">> Unsupported Android Version OR couldn't read from system." " ";
+#	ui_print " " "  So, Assuming Android 12 and continuing..." " ";
 #	ui_print " " " Terminating Installation !" " ";
 #	cleanup;
 #	exit;

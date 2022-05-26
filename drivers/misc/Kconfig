@@ -531,6 +531,7 @@ config MI_HARDWARE_ID
 	  This adds support for mi hwid.
 
 config PERF_HELPER
+	bool "PERF_HELPER"
 	default y
 	help
 	  this module support record perf lock history and other perf messages.
