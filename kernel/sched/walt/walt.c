@@ -2152,7 +2152,7 @@ static inline void run_walt_irq_work(u64 old_window_start, struct rq *rq)
 				   rq->wrq.window_start);
 	if (result == old_window_start) {
 		walt_irq_work_queue(&walt_cpufreq_irq_work);
-		trace_walt_window_rollover(rq->wrq.window_start);
+//		trace_walt_window_rollover(rq->wrq.window_start);
 	}
 }
 
@@ -2181,10 +2181,10 @@ void walt_update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 	if (event == PUT_PREV_TASK && p->state)
 		p->wts.iowaited = p->in_iowait;
 
-	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime,
-				&rq->wrq.grp_time);
-	trace_sched_update_task_ravg_mini(p, rq, event, wallclock, irqtime,
-				&rq->wrq.grp_time);
+//	trace_sched_update_task_ravg(p, rq, event, wallclock, irqtime,
+//				&rq->wrq.grp_time);
+//	trace_sched_update_task_ravg_mini(p, rq, event, wallclock, irqtime,
+//				&rq->wrq.grp_time);
 
 done:
 	p->wts.mark_start = wallclock;
