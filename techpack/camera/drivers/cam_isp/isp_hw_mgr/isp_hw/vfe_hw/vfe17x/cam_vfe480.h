@@ -340,6 +340,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x0000AC58,
 	.off_lossy_var    = 0x0000AC5C,
 	.bw_limit         = 0x0000AC1C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -353,6 +354,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x0000AD58,
 	.off_lossy_var    = 0x0000AD5C,
 	.bw_limit         = 0x0000AD1C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -366,6 +368,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x0000B058,
 	.off_lossy_var    = 0x0000B05C,
 	.bw_limit         = 0x0000B01C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
@@ -379,6 +382,7 @@ static struct cam_vfe_bus_ver3_reg_offset_ubwc_client
 	.lossy_thresh1    = 0x0000B158,
 	.off_lossy_var    = 0x0000B15C,
 	.bw_limit         = 0x0000B11C,
+	.ubwc_comp_en_bit = BIT(1),
 };
 
 static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
@@ -481,9 +485,6 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 			.image_cfg_1              = 0x0000AE10,
 			.image_cfg_2              = 0x0000AE14,
 			.packer_cfg               = 0x0000AE18,
-			.frame_header_addr        = 0x0000AE20,
-			.frame_header_incr        = 0x0000AE24,
-			.frame_header_cfg         = 0x0000AE28,
 			.line_done_cfg            = 0,
 			.irq_subsample_period     = 0x0000AE30,
 			.irq_subsample_pattern    = 0x0000AE34,
@@ -510,9 +511,6 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 			.image_cfg_1              = 0x0000AF10,
 			.image_cfg_2              = 0x0000AF14,
 			.packer_cfg               = 0x0000AF18,
-			.frame_header_addr        = 0x0000AF20,
-			.frame_header_incr        = 0x0000AF24,
-			.frame_header_cfg         = 0x0000AF28,
 			.line_done_cfg            = 0,
 			.irq_subsample_period     = 0x0000AF30,
 			.irq_subsample_pattern    = 0x0000AF34,
@@ -597,9 +595,6 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 			.image_cfg_1              = 0x0000B210,
 			.image_cfg_2              = 0x0000B214,
 			.packer_cfg               = 0x0000B218,
-			.frame_header_addr        = 0x0000B220,
-			.frame_header_incr        = 0x0000B224,
-			.frame_header_cfg         = 0x0000B228,
 			.line_done_cfg            = 0,
 			.irq_subsample_period     = 0x0000B230,
 			.irq_subsample_pattern    = 0x0000B234,
@@ -626,9 +621,6 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 			.image_cfg_1              = 0x0000B310,
 			.image_cfg_2              = 0x0000B314,
 			.packer_cfg               = 0x0000B318,
-			.frame_header_addr        = 0x0000B320,
-			.frame_header_incr        = 0x0000B324,
-			.frame_header_cfg         = 0x0000B328,
 			.line_done_cfg            = 0,
 			.irq_subsample_period     = 0x0000B330,
 			.irq_subsample_pattern    = 0x0000B334,
@@ -684,9 +676,6 @@ static struct cam_vfe_bus_ver3_hw_info vfe480_bus_hw_info = {
 			.image_cfg_1              = 0x0000B510,
 			.image_cfg_2              = 0x0000B514,
 			.packer_cfg               = 0x0000B518,
-			.frame_header_addr        = 0x0000B520,
-			.frame_header_incr        = 0x0000B524,
-			.frame_header_cfg         = 0x0000B528,
 			.line_done_cfg            = 0,
 			.irq_subsample_period     = 0x0000B530,
 			.irq_subsample_pattern    = 0x0000B534,

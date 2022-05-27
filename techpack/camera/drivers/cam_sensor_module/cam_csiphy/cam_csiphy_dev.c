@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_csiphy_dev.h"
@@ -8,7 +8,10 @@
 #include "cam_csiphy_soc.h"
 #include "cam_csiphy_core.h"
 #include <media/cam_sensor.h>
+#include <dt-bindings/msm/msm-camera.h>
 #include "camera_main.h"
+
+static struct dentry *root_dentry;
 
 static void cam_csiphy_subdev_handle_message(
 		struct v4l2_subdev *sd,
@@ -29,29 +32,52 @@ static void cam_csiphy_subdev_handle_message(
 	}
 }
 
-static long cam_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
-	unsigned int cmd, void *arg)
+static int cam_csiphy_debug_register(struct csiphy_device *csiphy_dev)
 {
-	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
 	int rc = 0;
+	struct dentry *dbgfileptr = NULL;
+	char debugfs_name[25];
 
-	switch (cmd) {
-	case VIDIOC_CAM_CONTROL:
-		rc = cam_csiphy_core_cfg(csiphy_dev, arg);
-		if (rc)
-			CAM_ERR(CAM_CSIPHY,
-				"Failed in configuring the device: %d", rc);
-		break;
-	default:
-		CAM_ERR(CAM_CSIPHY, "Wrong ioctl : %d", cmd);
-		rc = -ENOIOCTLCMD;
-		break;
+	if (!csiphy_dev) {
+		CAM_ERR(CAM_CSIPHY, "null CSIPHY dev ptr");
+		return -EINVAL;
 	}
 
+	if (!root_dentry) {
+		dbgfileptr = debugfs_create_dir("camera_csiphy", NULL);
+		if (!dbgfileptr) {
+			CAM_ERR(CAM_CSIPHY,
+				"Debugfs could not create directory!");
+			rc = -ENOENT;
+			goto end;
+		}
+		/* Store parent inode for cleanup in caller */
+		root_dentry = dbgfileptr;
+	}
+
+	snprintf(debugfs_name, 25, "%s%d%s", "csiphy",
+		csiphy_dev->soc_info.index,
+		"_en_irq_dump");
+	dbgfileptr = debugfs_create_bool(debugfs_name, 0644,
+		root_dentry, &csiphy_dev->enable_irq_dump);
+
+	if (IS_ERR(dbgfileptr)) {
+		if (PTR_ERR(dbgfileptr) == -ENODEV)
+			CAM_WARN(CAM_CSIPHY, "DebugFS not enabled in kernel!");
+		else
+			rc = PTR_ERR(dbgfileptr);
+	}
+end:
 	return rc;
 }
 
-static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
+static void cam_csiphy_debug_unregister(void)
+{
+	debugfs_remove_recursive(root_dentry);
+	root_dentry = NULL;
+}
+
+static int cam_csiphy_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct csiphy_device *csiphy_dev =
@@ -67,6 +93,49 @@ static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
 	mutex_unlock(&csiphy_dev->mutex);
 
 	return 0;
+}
+
+static int cam_csiphy_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_CSIPHY);
+
+	if (crm_active) {
+		CAM_DBG(CAM_CSIPHY, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_csiphy_subdev_close_internal(sd, fh);
+}
+
+static long cam_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
+	int rc = 0;
+
+	switch (cmd) {
+	case VIDIOC_CAM_CONTROL:
+		rc = cam_csiphy_core_cfg(csiphy_dev, arg);
+		if (rc)
+			CAM_ERR(CAM_CSIPHY,
+				"Failed in configuring the device: %d", rc);
+		break;
+	case CAM_SD_SHUTDOWN:
+		if (!cam_req_mgr_is_shutdown()) {
+			CAM_ERR(CAM_CORE, "SD shouldn't come from user space");
+			return 0;
+		}
+
+		rc = cam_csiphy_subdev_close_internal(sd, NULL);
+		break;
+	default:
+		CAM_ERR(CAM_CSIPHY, "Wrong ioctl : %d", cmd);
+		rc = -ENOIOCTLCMD;
+		break;
+	}
+
+	return rc;
 }
 
 #ifdef CONFIG_COMPAT
@@ -162,6 +231,15 @@ static int cam_csiphy_component_bind(struct device *dev,
 		CAM_ERR(CAM_CSIPHY, "DT parsing failed: %d", rc);
 		goto csiphy_no_resource;
 	}
+	/* validate PHY FUSE only for CSIPHY4 */
+	if ((new_csiphy_dev->soc_info.index == 4) &&
+		!cam_cpas_is_feature_supported(
+			CAM_CPAS_CSIPHY_FUSE,
+			(1 << new_csiphy_dev->soc_info.index), NULL)) {
+		CAM_ERR(CAM_CSIPHY, "PHY%d is not supported: %d",
+			new_csiphy_dev->soc_info.index);
+		goto csiphy_no_resource;
+	}
 
 	new_csiphy_dev->v4l2_dev_str.internal_ops =
 		&csiphy_subdev_intern_ops;
@@ -179,6 +257,8 @@ static int cam_csiphy_component_bind(struct device *dev,
 		cam_csiphy_subdev_handle_message;
 	new_csiphy_dev->v4l2_dev_str.token =
 		new_csiphy_dev;
+	new_csiphy_dev->v4l2_dev_str.close_seq_prior =
+		CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	rc = cam_register_subdev(&(new_csiphy_dev->v4l2_dev_str));
 	if (rc < 0) {
@@ -212,6 +292,7 @@ static int cam_csiphy_component_bind(struct device *dev,
 	cpas_parms.userdata = new_csiphy_dev;
 
 	strlcpy(cpas_parms.identifier, "csiphy", CAM_HW_IDENTIFIER_LENGTH);
+
 	rc = cam_cpas_register_client(&cpas_parms);
 	if (rc) {
 		CAM_ERR(CAM_CSIPHY, "CPAS registration failed rc: %d", rc);
@@ -221,8 +302,14 @@ static int cam_csiphy_component_bind(struct device *dev,
 	CAM_DBG(CAM_CSIPHY, "CPAS registration successful handle=%d",
 		cpas_parms.client_handle);
 	new_csiphy_dev->cpas_handle = cpas_parms.client_handle;
+
+	cam_csiphy_register_baseaddress(new_csiphy_dev);
+
 	CAM_DBG(CAM_CSIPHY, "%s component bound successfully",
 		pdev->name);
+
+	cam_csiphy_debug_register(new_csiphy_dev);
+
 	return rc;
 
 csiphy_unregister_subdev:
@@ -242,6 +329,7 @@ static void cam_csiphy_component_unbind(struct device *dev,
 	struct v4l2_subdev *subdev = platform_get_drvdata(pdev);
 	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(subdev);
 
+	cam_csiphy_debug_unregister();
 	CAM_INFO(CAM_CSIPHY, "Unbind CSIPHY component");
 	cam_cpas_unregister_client(csiphy_dev->cpas_handle);
 	cam_csiphy_soc_release(csiphy_dev);

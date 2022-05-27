@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt) "CAM-REQ-MGR_UTIL %s:%d " fmt, __func__, __LINE__
@@ -14,6 +14,8 @@
 #include <media/cam_req_mgr.h>
 #include "cam_req_mgr_util.h"
 #include "cam_debug_util.h"
+#include "cam_context.h"
+#include "cam_subdev.h"
 
 static struct cam_req_mgr_util_hdl_tbl *hdl_tbl;
 static DEFINE_SPINLOCK(hdl_tbl_lock);
@@ -114,27 +116,13 @@ static int32_t cam_get_free_handle_index(void)
 	idx = find_first_zero_bit(hdl_tbl->bitmap, hdl_tbl->bits);
 
 	if (idx >= CAM_REQ_MGR_MAX_HANDLES_V2 || idx < 0) {
-		CAM_DBG(CAM_CRM, "idx: %d", idx);
+		CAM_ERR(CAM_CRM, "No free index found idx: %d", idx);
 		return -ENOSR;
 	}
 
 	set_bit(idx, hdl_tbl->bitmap);
 
 	return idx;
-}
-
-void cam_dump_tbl_info(void)
-{
-	int i;
-
-	for (i = 0; i < CAM_REQ_MGR_MAX_HANDLES_V2; i++)
-		CAM_INFO(CAM_CRM,
-			"i: %d session_hdl=0x%x hdl_value=0x%x type=%d state=%d dev_id=0x%llx",
-			i, hdl_tbl->hdl[i].session_hdl,
-			hdl_tbl->hdl[i].hdl_value,
-			hdl_tbl->hdl[i].type,
-			hdl_tbl->hdl[i].state,
-			hdl_tbl->hdl[i].dev_id);
 }
 
 int32_t cam_create_session_hdl(void *priv)
@@ -153,7 +141,6 @@ int32_t cam_create_session_hdl(void *priv)
 	idx = cam_get_free_handle_index();
 	if (idx < 0) {
 		CAM_ERR(CAM_CRM, "Unable to create session handle");
-		cam_dump_tbl_info();
 		spin_unlock_bh(&hdl_tbl_lock);
 		return idx;
 	}
@@ -177,6 +164,14 @@ int32_t cam_create_device_hdl(struct cam_create_dev_hdl *hdl_data)
 	int idx;
 	int rand = 0;
 	int32_t handle;
+	bool crm_active;
+
+	crm_active = cam_req_mgr_is_open(CAM_CRM);
+	if (!crm_active) {
+		CAM_ERR(CAM_CRM, "CRM is not ACTIVE");
+		spin_unlock_bh(&hdl_tbl_lock);
+		return -EINVAL;
+	}
 
 	spin_lock_bh(&hdl_tbl_lock);
 	if (!hdl_tbl) {
@@ -189,7 +184,6 @@ int32_t cam_create_device_hdl(struct cam_create_dev_hdl *hdl_data)
 	if (idx < 0) {
 		CAM_ERR(CAM_CRM,
 			"Unable to create device handle(idx= %d)", idx);
-		cam_dump_tbl_info();
 		spin_unlock_bh(&hdl_tbl_lock);
 		return idx;
 	}
@@ -207,6 +201,36 @@ int32_t cam_create_device_hdl(struct cam_create_dev_hdl *hdl_data)
 
 	pr_debug("%s: handle = 0x%x idx = %d\n", __func__, handle, idx);
 	return handle;
+}
+
+int32_t cam_get_dev_handle_info(uint64_t handle,
+	struct cam_context **ctx, int32_t dev_index)
+{
+	int32_t idx;
+	struct v4l2_subdev *sd = (struct v4l2_subdev *)handle;
+
+	for (idx = dev_index + 1; idx < CAM_REQ_MGR_MAX_HANDLES_V2; idx++) {
+		if (hdl_tbl->hdl[idx].state == HDL_ACTIVE) {
+			*ctx = (struct cam_context *)cam_get_device_priv(
+					hdl_tbl->hdl[idx].hdl_value);
+			if ((*ctx) && !strcmp(sd->name, (*ctx)->dev_name))
+				return idx;
+		}
+	}
+	*ctx = NULL;
+	return CAM_REQ_MGR_MAX_HANDLES_V2;
+}
+
+uint64_t cam_get_dev_handle_status(void)
+{
+	int32_t idx;
+	uint64_t active_dev_hdls = 0;
+
+	for (idx = 0; idx < CAM_REQ_MGR_MAX_HANDLES_V2; idx++)
+		if (hdl_tbl->hdl[idx].state == HDL_ACTIVE)
+			active_dev_hdls |= hdl_tbl->hdl[idx].dev_id;
+
+	return active_dev_hdls;
 }
 
 void *cam_get_device_priv(int32_t dev_hdl)

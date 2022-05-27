@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -787,6 +787,11 @@ static uint32_t *ope_create_stripe_cmd(struct cam_ope_hw_mgr *hw_mgr,
 	uint32_t *print_ptr;
 	int num_dmi = 0;
 	struct cam_cdm_utils_ops *cdm_ops;
+	uint32_t reg_val_pair[2];
+	struct cam_hw_info *ope_dev;
+	struct cam_ope_device_core_info *core_info;
+	struct ope_hw *ope_hw;
+	struct cam_ope_top_reg *top_reg;
 
 	if (s_idx >= OPE_MAX_CMD_BUFS ||
 		batch_idx >= OPE_MAX_BATCH_SIZE) {
@@ -868,10 +873,21 @@ static uint32_t *ope_create_stripe_cmd(struct cam_ope_hw_mgr *hw_mgr,
 			}
 			CAM_DBG(CAM_OPE, "Stripe:%d Indirect:X", stripe_idx);
 		}
+
 		if (hw_mgr->frame_dump_enable)
 			dump_stripe_cmd(frm_proc, stripe_idx, i, k,
 				iova_addr, kmd_buf, buf_len);
 	}
+
+	ope_dev = hw_mgr->ope_dev_intf[0]->hw_priv;
+	core_info = (struct cam_ope_device_core_info *)ope_dev->core_info;
+	ope_hw = core_info->ope_hw_info->ope_hw;
+	top_reg = ope_hw->top_reg;
+
+	reg_val_pair[0] = top_reg->offset + top_reg->scratch_reg;
+	reg_val_pair[1] = stripe_idx;
+	kmd_buf = cdm_ops->cdm_write_regrandom(kmd_buf, 1, reg_val_pair);
+
 	return kmd_buf;
 }
 
@@ -1614,12 +1630,15 @@ int cam_ope_process_cmd(void *device_priv, uint32_t cmd_type,
 	void *cmd_args, uint32_t arg_size)
 {
 	int rc = 0;
-	struct cam_hw_info *ope_dev = device_priv;
-	struct cam_hw_soc_info *soc_info = NULL;
-	struct cam_ope_device_core_info *core_info = NULL;
-	struct ope_hw *ope_hw;
-	bool hfi_en;
+	struct    cam_hw_info *ope_dev = device_priv;
+	struct    cam_hw_soc_info *soc_info = NULL;
+	struct    cam_ope_device_core_info *core_info = NULL;
+	struct    cam_ope_match_pid_args  *match_pid_mid = NULL;
+	struct    ope_hw *ope_hw;
+	bool      hfi_en;
 	unsigned long flags;
+	int i;
+	uint32_t device_idx;
 
 	if (!device_priv) {
 		CAM_ERR(CAM_OPE, "Invalid args %x for cmd %u",
@@ -1718,6 +1737,33 @@ int cam_ope_process_cmd(void *device_priv, uint32_t cmd_type,
 	case OPE_HW_DUMP_DEBUG:
 		rc = cam_ope_process_dump_debug_reg(ope_hw, hfi_en);
 		break;
+	case OPE_HW_MATCH_PID_MID:
+		if (!cmd_args) {
+			CAM_ERR(CAM_OPE, "cmd args NULL");
+			return -EINVAL;
+		}
+
+		match_pid_mid = (struct cam_ope_match_pid_args *)cmd_args;
+		match_pid_mid->mid_match_found = false;
+
+		device_idx = match_pid_mid->device_idx;
+
+		for (i = 0; i < MAX_RW_CLIENTS; i++) {
+			if ((match_pid_mid->fault_mid ==
+				ope_hw->common->ope_mid_info[device_idx][i].mid) &&
+				(match_pid_mid->fault_pid ==
+				ope_hw->common->ope_mid_info[device_idx][i].pid)) {
+				match_pid_mid->match_res =
+				ope_hw->common->ope_mid_info[device_idx][i].cam_ope_res_type;
+				match_pid_mid->mid_match_found = true;
+				break;
+			}
+		}
+		if (!match_pid_mid->mid_match_found) {
+			rc = -1;
+			CAM_INFO(CAM_OPE, "mid match not found");
+		}
+		break;
 	default:
 		break;
 	}
@@ -1756,3 +1802,4 @@ irqreturn_t cam_ope_irq(int irq_num, void *data)
 
 	return IRQ_HANDLED;
 }
+

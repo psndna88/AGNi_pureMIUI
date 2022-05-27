@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CPAS_HW_H_
@@ -70,6 +70,8 @@ enum cam_cpas_access_type {
  * @power_off: Function pointer for hw core specific power off settings
  * @setup_qos_settings: Function pointer for hw to select a specific qos header
  * @print_poweron_settings: Function pointer for hw to print poweron settings
+ * @qchannel_handshake: Function pointer for hw core specific qchannel
+ *                      handshake settings
  *
  */
 struct cam_cpas_internal_ops {
@@ -85,12 +87,14 @@ struct cam_cpas_internal_ops {
 	int (*setup_qos_settings)(struct cam_hw_info *cpas_hw,
 		uint32_t selection_mask);
 	int (*print_poweron_settings)(struct cam_hw_info *cpas_hw);
+	int (*qchannel_handshake)(struct cam_hw_info *cpas_hw, bool power_on);
 };
 
 /**
  * struct cam_cpas_reg : CPAS register info
  *
  * @enable: Whether this reg info need to be enabled
+ * @is_fuse_based : Whether this reg info need to be enabled based on fuse
  * @access_type: Register access type
  * @masked_value: Whether this register write/read is based on mask, shift
  * @mask: Mask for this register value
@@ -100,6 +104,7 @@ struct cam_cpas_internal_ops {
  */
 struct cam_cpas_reg {
 	bool enable;
+	bool is_fuse_based;
 	enum cam_cpas_access_type access_type;
 	bool masked_value;
 	uint32_t offset;

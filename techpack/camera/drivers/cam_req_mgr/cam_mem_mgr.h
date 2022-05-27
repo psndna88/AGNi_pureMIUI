@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_MEM_MGR_H_
@@ -70,6 +70,7 @@ struct cam_mem_buf_queue {
  * @dentry: Debugfs entry
  * @alloc_profile_enable: Whether to enable alloc profiling
  * @dbg_buf_idx: debug buffer index to get usecases info
+ * @force_cache_allocs: Force all internal buffer allocations with cache
  */
 struct cam_mem_table {
 	struct mutex m_lock;
@@ -79,6 +80,7 @@ struct cam_mem_table {
 	struct dentry *dentry;
 	bool alloc_profile_enable;
 	size_t dbg_buf_idx;
+	bool force_cache_allocs;
 };
 
 /**

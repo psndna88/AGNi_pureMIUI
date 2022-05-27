@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_LRME_CONTEXT_H_
@@ -29,5 +29,17 @@ int cam_lrme_context_init(struct cam_lrme_context *lrme_ctx,
 	struct cam_context *base_ctx, struct cam_hw_mgr_intf *hw_intf,
 	uint32_t index);
 int cam_lrme_context_deinit(struct cam_lrme_context *lrme_ctx);
+
+/**
+ * cam_lrme_dev_close_internal()
+ *
+ * @brief: Close function for the jpeg dev
+ *
+ * @sd: Pointer to struct v4l2_subdev
+ * @fh: Pointer to struct v4l2_subdev_fh
+ *
+ */
+int cam_lrme_dev_close_internal(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh);
 
 #endif /* _CAM_LRME_CONTEXT_H_ */

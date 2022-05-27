@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_INTERFACE_H
@@ -22,8 +22,6 @@ struct cam_req_mgr_apply_request;
 struct cam_req_mgr_flush_request;
 struct cam_req_mgr_link_evt_data;
 struct cam_req_mgr_dump_info;
-
-#define SKIP_NEXT_FRAME 0x100
 
 /* Request Manager -- camera device driver interface */
 /**
@@ -119,9 +117,11 @@ enum cam_pipeline_delay {
 /**
  * @CAM_TRIGGER_POINT_SOF   : Trigger point for Start Of Frame
  * @CAM_TRIGGER_POINT_EOF   : Trigger point for End Of Frame
+ * @CAM_TRIGGER_MAX_POINTS  : Maximum number of trigger point
  */
 #define CAM_TRIGGER_POINT_SOF     (1 << 0)
 #define CAM_TRIGGER_POINT_EOF     (1 << 1)
+#define CAM_TRIGGER_MAX_POINTS    2
 
 /**
  * enum cam_req_status
@@ -266,7 +266,9 @@ struct cam_req_mgr_error_notify {
  * @link_hdl             : link identifier
  * @dev_hdl              : device handle which has sent this req id
  * @req_id               : req id which device is ready to process
- * @skip_before_applying : before applying req mgr introduce bubble
+ * @skip_at_sof          : before applying req mgr introduce bubble
+ *                         by not sending request to devices. ex: IFE and Flash
+ * @skip_at_eof          : before applying req mgr introduce bubble
  *                         by not sending request to devices. ex: IFE and Flash
  * @trigger_eof          : to identify that one of the device at this slot needs
  *                         to be apply at EOF
@@ -275,7 +277,8 @@ struct cam_req_mgr_add_request {
 	int32_t  link_hdl;
 	int32_t  dev_hdl;
 	uint64_t req_id;
-	uint32_t skip_before_applying;
+	uint32_t skip_at_sof;
+	uint32_t skip_at_eof;
 	bool     trigger_eof;
 };
 
@@ -316,7 +319,6 @@ struct cam_req_mgr_device_info {
  * @dev_hdl         : device handle for reference
  * @max_delay       : max pipeline delay on this link
  * @crm_cb          : callback funcs to communicate with req mgr
- * @subscribe_event : the mask of trigger points this link subscribes
  * @trigger_id      : Unique ID provided to the triggering device
  */
 struct cam_req_mgr_core_dev_link_setup {
@@ -325,7 +327,6 @@ struct cam_req_mgr_core_dev_link_setup {
 	int32_t                    dev_hdl;
 	enum cam_pipeline_delay    max_delay;
 	struct cam_req_mgr_crm_cb *crm_cb;
-	uint32_t                   subscribe_event;
 	int32_t                    trigger_id;
 };
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -40,6 +40,10 @@ static int cam_ois_get_dt_data(struct cam_ois_ctrl_t *o_ctrl)
 			rc);
 		return rc;
 	}
+
+	rc = cam_sensor_util_regulator_powerup(soc_info);
+	if (rc < 0)
+		return rc;
 
 	if (!soc_info->gpio_data) {
 		CAM_INFO(CAM_OIS, "No GPIO found");

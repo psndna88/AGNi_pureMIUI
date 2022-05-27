@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_csiphy_soc.h"
@@ -14,6 +14,7 @@
 #include "include/cam_csiphy_1_2_5_hwreg.h"
 #include "include/cam_csiphy_2_0_hwreg.h"
 #include "include/cam_csiphy_2_1_0_hwreg.h"
+#include "cam_subdev.h"
 
 /* Clock divide factor for CPHY spec v1.0 */
 #define CSIPHY_DIVISOR_16           16
@@ -87,11 +88,11 @@ int32_t cam_csiphy_mem_dmp(struct cam_hw_soc_info *soc_info)
 int32_t cam_csiphy_status_dmp(struct csiphy_device *csiphy_dev)
 {
 	struct csiphy_reg_parms_t *csiphy_reg = NULL;
-	int32_t                   rc = 0;
-	resource_size_t           size = 0;
+	int32_t                    rc = 0;
+	resource_size_t            size = 0;
 	void __iomem              *phy_base = NULL;
-	int                       reg_id = 0;
-	uint32_t                  irq, status_reg, clear_reg;
+	int                        reg_id = 0;
+	uint32_t                   irq, status_reg, clear_reg;
 
 	if (!csiphy_dev) {
 		rc = -EINVAL;
@@ -110,13 +111,8 @@ int32_t cam_csiphy_status_dmp(struct csiphy_device *csiphy_dev)
 
 	if (phy_base != NULL) {
 		for (reg_id = 0; reg_id < size; reg_id++) {
-			uint32_t offset;
-
-			offset = status_reg + (0x4 * reg_id);
-			irq = cam_io_r(phy_base +  offset);
-			offset = clear_reg + (0x4 * reg_id);
-			cam_io_w_mb(irq, phy_base + offset);
-			cam_io_w_mb(0, phy_base + offset);
+			irq = cam_io_r(phy_base + status_reg + (0x4 * reg_id));
+			cam_io_w_mb(irq, phy_base + clear_reg + (0x4 * reg_id));
 
 			CAM_INFO(CAM_CSIPHY,
 				"CSIPHY%d_IRQ_STATUS_ADDR%d = 0x%x",
@@ -129,8 +125,6 @@ int32_t cam_csiphy_status_dmp(struct csiphy_device *csiphy_dev)
 	}
 	return rc;
 }
-
-
 
 enum cam_vote_level get_clk_vote_default(struct csiphy_device *csiphy_dev,
 	int32_t index)
@@ -189,6 +183,7 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 	int32_t rc = 0;
 	struct cam_hw_soc_info   *soc_info;
 	enum cam_vote_level vote_level = CAM_SVS_VOTE;
+	unsigned long clk_rate = 0;
 
 	soc_info = &csiphy_dev->soc_info;
 
@@ -200,7 +195,7 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 
 	vote_level = csiphy_dev->ctrl_reg->getclockvoting(csiphy_dev, index);
 	rc = cam_soc_util_enable_platform_resource(soc_info, true,
-		vote_level, ENABLE_IRQ);
+		vote_level, true);
 	if (rc < 0) {
 		CAM_ERR(CAM_CSIPHY, "failed to enable platform resources %d",
 			rc);
@@ -209,6 +204,11 @@ int32_t cam_csiphy_enable_hw(struct csiphy_device *csiphy_dev, int32_t index)
 
 	rc = cam_soc_util_set_src_clk_rate(soc_info,
 		soc_info->clk_rate[0][soc_info->src_clk_idx]);
+	clk_rate = cam_soc_util_get_clk_rate_applied(soc_info,
+		csiphy_dev->rx_clk_src_idx, true, vote_level);
+	cam_subdev_notify_message(CAM_TFE_DEVICE_TYPE,
+		CAM_SUBDEV_MESSAGE_CLOCK_UPDATE,
+		clk_rate);
 
 	if (rc < 0) {
 		CAM_ERR(CAM_CSIPHY, "csiphy_clk_set_rate failed rc: %d", rc);
@@ -446,7 +446,8 @@ int32_t cam_csiphy_parse_dt_info(struct platform_device *pdev,
 		csiphy_dev->is_divisor_32_comp = false;
 		csiphy_dev->hw_version = CSIPHY_VERSION_V125;
 		csiphy_dev->clk_lane = 0;
-		csiphy_dev->ctrl_reg->data_rates_settings_table = NULL;
+		csiphy_dev->ctrl_reg->data_rates_settings_table =
+			&data_rate_delta_table_1_2_5;
 	} else if (of_device_is_compatible(soc_info->dev->of_node,
 		"qcom,csiphy-v2.0")) {
 		csiphy_dev->ctrl_reg->csiphy_2ph_reg = csiphy_2ph_v2_0_reg;
@@ -480,7 +481,7 @@ int32_t cam_csiphy_parse_dt_info(struct platform_device *pdev,
 		csiphy_dev->is_csiphy_3phase_hw = CSI_3PHASE_HW;
 		csiphy_dev->is_divisor_32_comp = false;
 		csiphy_dev->clk_lane = 0;
-		csiphy_dev->ctrl_reg->data_rates_settings_table = NULL;
+		csiphy_dev->ctrl_reg->data_rates_settings_table = &data_rate_delta_table_2_0;
 	} else if (of_device_is_compatible(soc_info->dev->of_node,
 		"qcom,csiphy-v2.1.0")) {
 		csiphy_dev->ctrl_reg->csiphy_2ph_reg = csiphy_2ph_v2_1_0_reg;

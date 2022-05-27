@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_ISP_HW_H_
@@ -133,9 +133,12 @@ enum cam_isp_hw_cmd_type {
 	CAM_ISP_HW_CMD_CSID_CLOCK_DUMP,
 	CAM_ISP_HW_CMD_TPG_CORE_CFG_CMD,
 	CAM_ISP_HW_CMD_CSID_CHANGE_HALT_MODE,
-	CAM_ISP_HW_CMD_DISABLE_UBWC_COMP,
 	CAM_ISP_HW_CMD_SET_SFE_DEBUG_CFG,
 	CAM_ISP_HW_CMD_QUERY_BUS_CAP,
+	CAM_ISP_HW_CMD_GET_CLOCK_RATE,
+	CAM_ISP_HW_CMD_DYNAMIC_CLOCK_UPDATE,
+	CAM_ISP_HW_DUMP_HW_SRC_CLK_RATE,
+	CAM_ISP_HW_CMD_TPG_SET_PATTERN,
 	CAM_ISP_HW_CMD_MAX,
 };
 
@@ -214,7 +217,7 @@ struct cam_isp_blanking_config {
  * @hw_idx:         IFE hw index
  * @err_type:       Error type if any
  * @reg_val:        Any critical register value captured during irq handling
- *
+ * @evt_param       Specific info about frame
  */
 struct cam_isp_hw_event_info {
 	enum cam_isp_resource_type     res_type;
@@ -222,6 +225,7 @@ struct cam_isp_hw_event_info {
 	uint32_t                       hw_idx;
 	uint32_t                       err_type;
 	uint32_t                       reg_val;
+	uint32_t                       evt_param;
 };
 
 /*
@@ -249,6 +253,7 @@ struct cam_isp_hw_cmd_buf_update {
  * @ image_buf_offset: image buffer address offset array
  * @ num_buf:          Number of buffers in the image_buf array
  * @ frame_header:     frame header iova
+ * @ fh_enabled:       flag to indicate if this WM enables frame header
  * @ local_id:         local id for the wm
  * @ width:            width of scratch buffer
  * @ height:           height of scratch buffer
@@ -262,6 +267,7 @@ struct cam_isp_hw_get_wm_update {
 	uint32_t                        image_buf_offset[CAM_PACKET_MAX_PLANES];
 	uint32_t                        num_buf;
 	uint64_t                        frame_header;
+	bool                            fh_enabled;
 	uint32_t                        local_id;
 	uint32_t                        width;
 	uint32_t                        height;

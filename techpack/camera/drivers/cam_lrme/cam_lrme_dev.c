@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/device.h>
@@ -59,9 +59,12 @@ static int cam_lrme_dev_open(struct v4l2_subdev *sd,
 {
 	struct cam_lrme_dev *lrme_dev = g_lrme_dev;
 
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_LOCK);
+
 	if (!lrme_dev) {
 		CAM_ERR(CAM_LRME,
 			"LRME Dev not initialized, dev=%pK", lrme_dev);
+		cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
 		return -ENODEV;
 	}
 
@@ -69,10 +72,12 @@ static int cam_lrme_dev_open(struct v4l2_subdev *sd,
 	lrme_dev->open_cnt++;
 	mutex_unlock(&lrme_dev->lock);
 
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
+
 	return 0;
 }
 
-static int cam_lrme_dev_close(struct v4l2_subdev *sd,
+int cam_lrme_dev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
@@ -106,6 +111,18 @@ end:
 	return rc;
 }
 
+static int cam_lrme_dev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_LRME);
+
+	if (crm_active) {
+		CAM_DBG(CAM_LRME, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+	return cam_lrme_dev_close_internal(sd, fh);
+}
+
 static const struct v4l2_subdev_internal_ops cam_lrme_subdev_internal_ops = {
 	.open = cam_lrme_dev_open,
 	.close = cam_lrme_dev_close,
@@ -126,6 +143,7 @@ static int cam_lrme_component_bind(struct device *dev,
 		return -ENOMEM;
 	}
 	g_lrme_dev->sd.internal_ops = &cam_lrme_subdev_internal_ops;
+	g_lrme_dev->sd.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 
 	mutex_init(&g_lrme_dev->lock);
 

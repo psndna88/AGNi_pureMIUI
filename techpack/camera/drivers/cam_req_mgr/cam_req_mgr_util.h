@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_REQ_MGR_UTIL_API_H_
@@ -165,5 +165,12 @@ int32_t cam_req_mgr_util_deinit(void);
  * cleaned
  */
 int32_t cam_req_mgr_util_free_hdls(void);
+
+/**
+ * cam_get_dev_handle_status() - get dev handles status
+ *
+ * Returns dev handle status
+ */
+uint64_t cam_get_dev_handle_status(void);
 
 #endif /* _CAM_REQ_MGR_UTIL_API_H_ */

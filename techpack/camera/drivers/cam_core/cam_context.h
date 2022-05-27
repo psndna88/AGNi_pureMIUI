@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _CAM_CONTEXT_H_
@@ -9,6 +9,7 @@
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/kref.h>
+#include <media/v4l2-subdev.h>
 #include "cam_req_mgr_interface.h"
 #include "cam_hw_mgr_intf.h"
 #include "cam_smmu_api.h"
@@ -95,6 +96,7 @@ struct cam_ctx_request {
  * @acquire_hw:            Function pointer for acquire hw
  * @release_hw:            Function pointer for release hw
  * @dump_dev:              Function pointer for dump dev
+ * @shutdown_dev:          Function pointer for shutdown dev
  *
  */
 struct cam_ctx_ioctl_ops {
@@ -114,6 +116,8 @@ struct cam_ctx_ioctl_ops {
 	int (*release_hw)(struct cam_context *ctx, void *args);
 	int (*dump_dev)(struct cam_context *ctx,
 			struct cam_dump_req_cmd *cmd);
+	int (*shutdown_dev)(struct v4l2_subdev *sd,
+			struct v4l2_subdev_fh *fh);
 };
 
 /**
@@ -158,14 +162,17 @@ struct cam_ctx_crm_ops {
  * @pagefault_ops:         Function to be called on page fault
  * @dumpinfo_ops:          Function to be invoked for dumping any
  *                         context info
+ * @msg_cb_ops:            Function to be called on any message from
+ *                         other subdev notifications
  *
  */
 struct cam_ctx_ops {
-	struct cam_ctx_ioctl_ops     ioctl_ops;
-	struct cam_ctx_crm_ops       crm_ops;
-	cam_hw_event_cb_func         irq_ops;
-	cam_hw_pagefault_cb_func     pagefault_ops;
-	cam_ctx_info_dump_cb_func    dumpinfo_ops;
+	struct cam_ctx_ioctl_ops      ioctl_ops;
+	struct cam_ctx_crm_ops        crm_ops;
+	cam_hw_event_cb_func          irq_ops;
+	cam_hw_pagefault_cb_func      pagefault_ops;
+	cam_ctx_info_dump_cb_func     dumpinfo_ops;
+	cam_ctx_message_cb_func       msg_cb_ops;
 };
 
 /**
@@ -368,6 +375,19 @@ int cam_context_dump_pf_info(struct cam_context *ctx,
 	struct cam_smmu_pf_info *pf_info);
 
 /**
+ * cam_context_handle_message()
+ *
+ * @brief:        Handle message callback command
+ *
+ * @ctx:          Object pointer for cam_context
+ * @msg_type:     message type sent from other subdev
+ * @data:         data from other subdev
+ *
+ */
+int cam_context_handle_message(struct cam_context *ctx,
+	uint32_t msg_type, uint32_t *data);
+
+/**
  * cam_context_handle_acquire_dev()
  *
  * @brief:        Handle acquire device command
@@ -462,6 +482,19 @@ int cam_context_handle_start_dev(struct cam_context *ctx,
  */
 int cam_context_handle_stop_dev(struct cam_context *ctx,
 		struct cam_start_stop_dev_cmd *cmd);
+
+/**
+ * cam_context_handle_shutdown_dev()
+ *
+ * @brief:        Handle shutdown device command
+ *
+ * @ctx:          Object pointer for cam_context
+ * @cmd:          Shutdown device command payload
+ * @fh:           Pointer to struct v4l2_subdev_fh
+ *
+ */
+int cam_context_handle_shutdown_dev(struct cam_context *ctx,
+	struct cam_control *cmd, struct v4l2_subdev_fh *fh);
 
 /**
  * cam_context_handle_dump_dev()

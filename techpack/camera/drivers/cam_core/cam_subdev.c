@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "cam_subdev.h"
@@ -45,6 +45,8 @@ static long cam_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd,
 	long rc;
 	struct cam_node *node =
 		(struct cam_node *) v4l2_get_subdevdata(sd);
+	struct v4l2_subdev_fh *fh = (struct v4l2_subdev_fh *)arg;
+	struct cam_control cntrl_cmd;
 
 	if (!node || node->state == CAM_NODE_STATE_UNINIT) {
 		rc = -EINVAL;
@@ -53,8 +55,23 @@ static long cam_subdev_ioctl(struct v4l2_subdev *sd, unsigned int cmd,
 
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
+		cam_req_mgr_rwsem_read_op(CAM_SUBDEV_LOCK);
 		rc = cam_node_handle_ioctl(node,
 			(struct cam_control *) arg);
+		cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
+		break;
+	case CAM_SD_SHUTDOWN:
+		if (!cam_req_mgr_is_shutdown()) {
+			CAM_WARN(CAM_CORE, "SD shouldn't come from user space");
+			return 0;
+		}
+
+		cntrl_cmd.op_code = CAM_SD_SHUTDOWN;
+		cntrl_cmd.handle = (uint64_t)sd;
+		rc = cam_node_handle_shutdown_dev(node, &cntrl_cmd, fh);
+		if (rc)
+			CAM_ERR(CAM_CORE, "shutdown device failed(rc = %d)",
+				rc);
 		break;
 	default:
 		CAM_ERR(CAM_CORE, "Invalid command %d for %s", cmd,

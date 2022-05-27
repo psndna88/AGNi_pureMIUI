@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -18,6 +18,7 @@
 #include "cam_cpas_hw_intf.h"
 #include "cam_cpas_soc.h"
 #include "camera_main.h"
+#include "cam_cpas_api.h"
 
 #define CAM_CPAS_DEV_NAME    "cam-cpas"
 #define CAM_CPAS_INTF_INITIALIZED() (g_cpas_intf && g_cpas_intf->probe_done)
@@ -161,19 +162,14 @@ bool cam_cpas_is_feature_supported(uint32_t flag, uint32_t hw_map,
 		if (soc_private->feature_info[i].feature == flag)
 			break;
 
-	if (i == soc_private->num_feature_info) {
-		CAM_INFO(CAM_CPAS, "Feature not found, no of featues: %d",
-			soc_private->num_feature_info);
+	if (i == soc_private->num_feature_info)
 		goto end;
-	}
 
 	if (soc_private->feature_info[i].type == CAM_CPAS_FEATURE_TYPE_DISABLE
 		|| (soc_private->feature_info[i].type ==
 		CAM_CPAS_FEATURE_TYPE_ENABLE)) {
 		if ((soc_private->feature_info[i].hw_map & hw_map) == hw_map)
 			supported = soc_private->feature_info[i].enable;
-		else
-			supported = !soc_private->feature_info[i].enable;
 	} else {
 		if (!fuse_val) {
 			CAM_ERR(CAM_CPAS,
@@ -212,6 +208,25 @@ int cam_cpas_get_cpas_hw_version(uint32_t *hw_version)
 	}
 
 	return 0;
+}
+
+int cam_cpas_get_camnoc_fifo_fill_level_info(
+	uint32_t cpas_version,
+	uint32_t client_handle)
+{
+	int rc = 0;
+
+	if (!CAM_CPAS_INTF_INITIALIZED()) {
+		CAM_ERR(CAM_CPAS, "cpas intf not initialized");
+		return -ENODEV;
+	}
+
+	rc = cam_cpas_hw_get_camnoc_fill_level_info(cpas_version,
+		client_handle);
+	if (rc)
+		CAM_ERR(CAM_CPAS, "Failed to dump fifo reg rc %d", rc);
+
+	return rc;
 }
 
 int cam_cpas_get_hw_info(uint32_t *camera_family,
@@ -676,7 +691,7 @@ static int cam_cpas_subdev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int cam_cpas_subdev_close(struct v4l2_subdev *sd,
+static int __cam_cpas_subdev_close(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct cam_cpas_intf *cpas_intf = v4l2_get_subdevdata(sd);
@@ -687,11 +702,29 @@ static int cam_cpas_subdev_close(struct v4l2_subdev *sd,
 	}
 
 	mutex_lock(&cpas_intf->intf_lock);
+	if (cpas_intf->open_cnt <= 0) {
+		CAM_WARN(CAM_CPAS, "device already closed, open_cnt: %d", cpas_intf->open_cnt);
+		mutex_unlock(&cpas_intf->intf_lock);
+		return 0;
+	}
 	cpas_intf->open_cnt--;
 	CAM_DBG(CAM_CPAS, "CPAS Subdev close count %d", cpas_intf->open_cnt);
 	mutex_unlock(&cpas_intf->intf_lock);
 
 	return 0;
+}
+
+static int cam_cpas_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_CPAS);
+
+	if (crm_active) {
+		CAM_DBG(CAM_CPAS, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return __cam_cpas_subdev_close(sd, fh);
 }
 
 static long cam_cpas_subdev_ioctl(struct v4l2_subdev *sd,
@@ -708,6 +741,9 @@ static long cam_cpas_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_CAM_CONTROL:
 		rc = cam_cpas_subdev_cmd(cpas_intf, (struct cam_control *) arg);
+		break;
+	case CAM_SD_SHUTDOWN:
+		rc = __cam_cpas_subdev_close(sd, NULL);
 		break;
 	default:
 		CAM_ERR(CAM_CPAS, "Invalid command %d for CPAS!", cmd);
@@ -796,6 +832,7 @@ static int cam_cpas_subdev_register(struct platform_device *pdev)
 	subdev->sd_flags =
 		V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 	subdev->ent_function = CAM_CPAS_DEVICE_TYPE;
+	subdev->close_seq_prior = CAM_SD_CLOSE_LOW_PRIORITY;
 
 	rc = cam_register_subdev(subdev);
 	if (rc) {

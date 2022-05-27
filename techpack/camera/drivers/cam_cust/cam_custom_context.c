@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -1266,10 +1266,10 @@ static int __cam_custom_ctx_config_dev(struct cam_context *ctx,
 		if ((ctx->state != CAM_CTX_FLUSHED) &&
 			(ctx->state >= CAM_CTX_READY) &&
 			(ctx->ctx_crm_intf->add_req)) {
+			memset(&add_req, 0, sizeof(add_req));
 			add_req.link_hdl = ctx->link_hdl;
 			add_req.dev_hdl  = ctx->dev_hdl;
 			add_req.req_id   = req->request_id;
-			add_req.skip_before_applying = 0;
 			rc = ctx->ctx_crm_intf->add_req(&add_req);
 			if (rc) {
 				CAM_ERR(CAM_CUSTOM,
@@ -1375,7 +1375,6 @@ static int __cam_custom_ctx_link_in_acquired(struct cam_context *ctx,
 
 	ctx->link_hdl = link->link_hdl;
 	ctx->ctx_crm_intf = link->crm_cb;
-	ctx_custom->subscribe_event = link->subscribe_event;
 
 	/* change state only if we had the init config */
 	if (ctx_custom->init_received)
@@ -1605,6 +1604,19 @@ static int __cam_custom_ctx_apply_default_req(
 	return rc;
 }
 
+static int __cam_custom_ctx_shutdown_dev(
+	struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	int rc = -EINVAL;
+
+	if (!sd || !fh) {
+		CAM_ERR(CAM_CUSTOM, "Invalid input pointer");
+		return rc;
+	}
+
+	return cam_custom_subdev_close_internal(sd, fh);
+}
+
 /* top state machine */
 static struct cam_ctx_ops
 	cam_custom_dev_ctx_top_state_machine[CAM_CTX_STATE_MAX] = {
@@ -1619,6 +1631,7 @@ static struct cam_ctx_ops
 		.ioctl_ops = {
 			.acquire_dev =
 				__cam_custom_ctx_acquire_dev_in_available,
+			.shutdown_dev = __cam_custom_ctx_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
@@ -1630,6 +1643,7 @@ static struct cam_ctx_ops
 			.release_dev = __cam_custom_release_dev_in_acquired,
 			.config_dev = __cam_custom_ctx_config_dev_in_acquired,
 			.release_hw = __cam_custom_ctx_release_hw_in_top_state,
+			.shutdown_dev = __cam_custom_ctx_shutdown_dev,
 		},
 		.crm_ops = {
 			.link = __cam_custom_ctx_link_in_acquired,
@@ -1648,6 +1662,7 @@ static struct cam_ctx_ops
 			.release_dev = __cam_custom_release_dev_in_acquired,
 			.config_dev = __cam_custom_ctx_config_dev,
 			.release_hw = __cam_custom_ctx_release_hw_in_top_state,
+			.shutdown_dev = __cam_custom_ctx_shutdown_dev,
 		},
 		.crm_ops = {
 			.unlink = __cam_custom_ctx_unlink_in_ready,
@@ -1665,6 +1680,7 @@ static struct cam_ctx_ops
 			.config_dev = __cam_custom_ctx_config_dev_in_flushed,
 			.release_hw =
 				__cam_custom_ctx_release_hw_in_activated_state,
+			.shutdown_dev = __cam_custom_ctx_shutdown_dev,
 		},
 		.crm_ops = {
 			.unlink = __cam_custom_ctx_unlink_in_ready,
@@ -1681,6 +1697,7 @@ static struct cam_ctx_ops
 			.config_dev = __cam_custom_ctx_config_dev,
 			.release_hw =
 				__cam_custom_ctx_release_hw_in_activated_state,
+			.shutdown_dev = __cam_custom_ctx_shutdown_dev,
 		},
 		.crm_ops = {
 			.unlink = __cam_custom_ctx_unlink_in_activated,

@@ -199,10 +199,22 @@ static int32_t cam_a5_download_fw(void *device_priv)
 	pdev = soc_info->pdev;
 	cam_a5_soc_info = soc_info->soc_private;
 
-	rc = request_firmware(&core_info->fw_elf, "CAMERA_ICP.elf", &pdev->dev);
-	if (rc) {
-		CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
-		return rc;
+	if (cam_a5_soc_info->fw_name) {
+		CAM_INFO(CAM_ICP, "Downloading firmware %s",
+			cam_a5_soc_info->fw_name);
+		rc = request_firmware(&core_info->fw_elf,
+				cam_a5_soc_info->fw_name, &pdev->dev);
+		if (rc) {
+			CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
+			return rc;
+		}
+	} else {
+		rc = request_firmware(&core_info->fw_elf,
+				"CAMERA_ICP.elf", &pdev->dev);
+		if (rc) {
+			CAM_ERR(CAM_ICP, "Failed to locate fw: %d", rc);
+			return rc;
+		}
 	}
 
 	if (!core_info->fw_elf) {
@@ -409,6 +421,8 @@ static int cam_a5_power_resume(struct cam_hw_info *a5_info, bool debug_enabled)
 {
 	uint32_t val = A5_CSR_FULL_CPU_EN;
 	void __iomem *base;
+	struct cam_hw_soc_info *soc_info = NULL;
+	struct a5_soc_info *a5_soc_info;
 
 	if (!a5_info) {
 		CAM_ERR(CAM_ICP, "invalid A5 device info");
@@ -416,6 +430,8 @@ static int cam_a5_power_resume(struct cam_hw_info *a5_info, bool debug_enabled)
 	}
 
 	base = a5_info->soc_info.reg_map[A5_SIERRA_BASE].mem_base;
+	soc_info = &a5_info->soc_info;
+	a5_soc_info = soc_info->soc_private;
 
 	cam_io_w_mb(A5_CSR_A5_CPU_EN, base + ICP_SIERRA_A5_CSR_A5_CONTROL);
 	cam_io_w_mb(A5_CSR_FUNC_RESET, base + ICP_SIERRA_A5_CSR_NSEC_RESET);
@@ -424,6 +440,11 @@ static int cam_a5_power_resume(struct cam_hw_info *a5_info, bool debug_enabled)
 		val |= A5_CSR_FULL_DBG_EN;
 
 	cam_io_w_mb(val, base + ICP_SIERRA_A5_CSR_A5_CONTROL);
+	cam_io_w_mb(a5_soc_info->a5_qos_val,
+		base + ICP_SIERRA_A5_CSR_ACCESS);
+
+	CAM_DBG(CAM_ICP, "a5 qos-val : 0x%x",
+		cam_io_r_mb(base + ICP_SIERRA_A5_CSR_ACCESS));
 
 	return 0;
 }
@@ -697,6 +718,9 @@ int cam_a5_process_cmd(void *device_priv, uint32_t cmd_type,
 			if (*disable_ubwc_comp) {
 				ubwc_ipe_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
 				ubwc_bps_cfg[1] &= ~CAM_ICP_UBWC_COMP_EN;
+				CAM_DBG(CAM_ICP,
+					"Force disable UBWC compression, ubwc_ipe_cfg: 0x%x, ubwc_bps_cfg: 0x%x",
+					ubwc_ipe_cfg[1], ubwc_bps_cfg[1]);
 			}
 			rc = hfi_cmd_ubwc_config_ext(&ubwc_ipe_cfg[0],
 					&ubwc_bps_cfg[0]);

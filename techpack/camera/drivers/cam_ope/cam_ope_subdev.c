@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/delay.h>
@@ -69,6 +69,8 @@ static int cam_ope_subdev_open(struct v4l2_subdev *sd,
 	struct cam_node *node = v4l2_get_subdevdata(sd);
 	int rc = 0;
 
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_LOCK);
+
 	mutex_lock(&g_ope_dev.ope_lock);
 	if (g_ope_dev.open_cnt >= 1) {
 		CAM_ERR(CAM_OPE, "OPE subdev is already opened");
@@ -92,10 +94,11 @@ static int cam_ope_subdev_open(struct v4l2_subdev *sd,
 	CAM_DBG(CAM_OPE, "OPE HW open success: %d", rc);
 end:
 	mutex_unlock(&g_ope_dev.ope_lock);
+	cam_req_mgr_rwsem_read_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 }
 
-static int cam_ope_subdev_close(struct v4l2_subdev *sd,
+int cam_ope_subdev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	int rc = 0;
@@ -134,6 +137,19 @@ end:
 	return rc;
 }
 
+static int cam_ope_subdev_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh)
+{
+	bool crm_active = cam_req_mgr_is_open(CAM_OPE);
+
+	if (crm_active) {
+		CAM_DBG(CAM_OPE, "CRM is ACTIVE, close should be from CRM");
+		return 0;
+	}
+
+	return cam_ope_subdev_close_internal(sd, fh);
+}
+
 const struct v4l2_subdev_internal_ops cam_ope_subdev_internal_ops = {
 	.open = cam_ope_subdev_open,
 	.close = cam_ope_subdev_close,
@@ -156,6 +172,7 @@ static int cam_ope_subdev_component_bind(struct device *dev,
 
 	g_ope_dev.sd.pdev = pdev;
 	g_ope_dev.sd.internal_ops = &cam_ope_subdev_internal_ops;
+	g_ope_dev.sd.close_seq_prior = CAM_SD_CLOSE_MEDIUM_PRIORITY;
 	rc = cam_subdev_probe(&g_ope_dev.sd, pdev, OPE_DEV_NAME,
 		CAM_OPE_DEVICE_TYPE);
 	if (rc) {

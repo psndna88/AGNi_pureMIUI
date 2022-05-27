@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _CAM_CDM_H_
@@ -68,6 +69,8 @@
 #define CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT 0x40
 #define CAM_CDM_BL_FIFO_LENGTH_CFG_SHIFT 0x10
 #define CAM_CDM_BL_FIFO_FLUSH_SHIFT 0x3
+#define CAM_CDM_BL_FIFO_BOUNDARY_CHECK \
+	(CAM_CDM_BL_FIFO_LENGTH_MAX_DEFAULT / 2)
 
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX 0x00
 #define CAM_CDM_BL_FIFO_REQ_SIZE_MAX_DIV2 0x01
@@ -83,6 +86,7 @@
 #define CAM_CDM_RESET_HW_STATUS 0x4
 #define CAM_CDM_ERROR_HW_STATUS 0x5
 #define CAM_CDM_FLUSH_HW_STATUS 0x6
+#define CAM_CDM_RESET_ERR_STATUS 0x7
 
 /* Curent BL command masks and shifts */
 #define CAM_CDM_CURRENT_BL_LEN   0xFFFFF
@@ -107,6 +111,14 @@
 	(CAM_CDM_IRQ_STATUS_ERROR_INV_CMD_MASK | \
 	 CAM_CDM_IRQ_STATUS_ERROR_OVER_FLOW_MASK | \
 	 CAM_CDM_IRQ_STATUS_ERROR_AHB_BUS_MASK)
+
+
+struct cam_cdm_pid_mid_data {
+	int cdm_pid;
+	int cdm_mid;
+	int ope_cdm_pid;
+	int ope_cdm_mid;
+};
 
 /* Structure to store hw version info */
 struct cam_version_reg {
@@ -351,6 +363,7 @@ struct cam_cdm_common_regs {
 	const struct cam_cdm_icl_regs *icl_reg;
 	uint32_t spare;
 	uint32_t priority_group_bit_offset;
+	struct cam_cdm_pid_mid_data *cdm_pid_mid_info;
 };
 
 /**

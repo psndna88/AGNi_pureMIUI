@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -52,7 +52,7 @@ static int cam_icp_context_dump_active_request(void *data,
 		pf_dbg_entry = &(req->pf_data);
 		CAM_INFO(CAM_ICP, "req_id : %lld", req->request_id);
 
-		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry->packet,
+		rc = cam_context_dump_pf_info_to_hw(ctx, pf_dbg_entry,
 			&b_mem_found, &b_ctx_found, &resource_type, pf_info);
 		if (rc)
 			CAM_ERR(CAM_ICP, "Failed to dump pf info");
@@ -221,6 +221,12 @@ static int __cam_icp_handle_buf_done_in_ready(void *ctx,
 	return cam_context_buf_done_from_hw(ctx, done, evt_id);
 }
 
+static int __cam_icp_shutdown_dev(
+	struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	return cam_icp_subdev_close_internal(sd, fh);
+}
+
 static struct cam_ctx_ops
 	cam_icp_ctx_state_machine[CAM_CTX_STATE_MAX] = {
 	/* Uninit */
@@ -233,6 +239,7 @@ static struct cam_ctx_ops
 	{
 		.ioctl_ops = {
 			.acquire_dev = __cam_icp_acquire_dev_in_available,
+			.shutdown_dev = __cam_icp_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = NULL,
@@ -245,6 +252,7 @@ static struct cam_ctx_ops
 			.config_dev = __cam_icp_config_dev_in_ready,
 			.flush_dev = __cam_icp_flush_dev_in_ready,
 			.dump_dev = __cam_icp_dump_dev_in_ready,
+			.shutdown_dev = __cam_icp_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_icp_handle_buf_done_in_ready,
@@ -258,16 +266,23 @@ static struct cam_ctx_ops
 			.config_dev = __cam_icp_config_dev_in_ready,
 			.flush_dev = __cam_icp_flush_dev_in_ready,
 			.dump_dev = __cam_icp_dump_dev_in_ready,
+			.shutdown_dev = __cam_icp_shutdown_dev,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_icp_handle_buf_done_in_ready,
 		.pagefault_ops = cam_icp_context_dump_active_request,
 	},
 	/* Flushed */
-	{},
+	{
+		.ioctl_ops = {
+			.shutdown_dev = __cam_icp_shutdown_dev,
+		},
+	},
 	/* Activated */
 	{
-		.ioctl_ops = {},
+		.ioctl_ops = {
+			.shutdown_dev = __cam_icp_shutdown_dev,
+		},
 		.crm_ops = {},
 		.irq_ops = NULL,
 		.pagefault_ops = cam_icp_context_dump_active_request,

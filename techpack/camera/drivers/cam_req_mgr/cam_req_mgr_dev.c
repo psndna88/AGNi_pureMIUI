@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 
@@ -9,6 +9,7 @@
 #include <linux/platform_device.h>
 #include <linux/highmem.h>
 #include <linux/types.h>
+#include <linux/rwsem.h>
 
 #include <mm/slab.h>
 
@@ -18,6 +19,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/cam_req_mgr.h>
 #include <media/cam_defs.h>
+#include <linux/list_sort.h>
 
 #include "cam_req_mgr_dev.h"
 #include "cam_req_mgr_util.h"
@@ -33,6 +35,9 @@
 
 static struct cam_req_mgr_device g_dev;
 struct kmem_cache *g_cam_req_mgr_timer_cachep;
+static struct list_head cam_req_mgr_ordered_sd_list;
+
+DECLARE_RWSEM(rwsem_lock);
 
 static struct device_attribute camera_debug_sysfs_attr =
 	__ATTR(debug_node, 0600, NULL, cam_debug_sysfs_node_store);
@@ -102,9 +107,28 @@ static void cam_v4l2_device_cleanup(void)
 	g_dev.v4l2_dev = NULL;
 }
 
+
+void cam_req_mgr_rwsem_read_op(enum cam_subdev_rwsem lock)
+{
+	if (lock == CAM_SUBDEV_LOCK)
+		down_read(&rwsem_lock);
+	else if (lock == CAM_SUBDEV_UNLOCK)
+		up_read(&rwsem_lock);
+}
+
+static void cam_req_mgr_rwsem_write_op(enum cam_subdev_rwsem lock)
+{
+	if (lock == CAM_SUBDEV_LOCK)
+		down_write(&rwsem_lock);
+	else if (lock == CAM_SUBDEV_UNLOCK)
+		up_write(&rwsem_lock);
+}
+
 static int cam_req_mgr_open(struct file *filep)
 {
 	int rc;
+
+	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_LOCK);
 
 	mutex_lock(&g_dev.cam_lock);
 	if (g_dev.open_cnt >= 1) {
@@ -123,6 +147,7 @@ static int cam_req_mgr_open(struct file *filep)
 	spin_unlock_bh(&g_dev.cam_eventq_lock);
 
 	g_dev.open_cnt++;
+	g_dev.read_active_dev_id_hdls = 0;
 	rc = cam_mem_mgr_init();
 	if (rc) {
 		g_dev.open_cnt--;
@@ -131,12 +156,14 @@ static int cam_req_mgr_open(struct file *filep)
 	}
 
 	mutex_unlock(&g_dev.cam_lock);
+	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 
 mem_mgr_init_fail:
 	v4l2_fh_release(filep);
 end:
 	mutex_unlock(&g_dev.cam_lock);
+	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 	return rc;
 }
 
@@ -159,32 +186,42 @@ static unsigned int cam_req_mgr_poll(struct file *f,
 static int cam_req_mgr_close(struct file *filep)
 {
 	struct v4l2_subdev *sd;
+	struct cam_subdev *csd;
 	struct v4l2_fh *vfh = filep->private_data;
 	struct v4l2_subdev_fh *subdev_fh = to_v4l2_subdev_fh(vfh);
 
 	CAM_WARN(CAM_CRM,
 		"release invoked associated userspace process has died, open_cnt: %d",
 		g_dev.open_cnt);
+
+	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_LOCK);
+
 	mutex_lock(&g_dev.cam_lock);
 
 	if (g_dev.open_cnt <= 0) {
 		mutex_unlock(&g_dev.cam_lock);
+		cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 		return -EINVAL;
 	}
 
 	cam_req_mgr_handle_core_shutdown();
+	g_dev.shutdown_state = true;
 
-	list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
+	list_for_each_entry(csd, &cam_req_mgr_ordered_sd_list, list) {
+		sd = &csd->sd;
 		if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
 			continue;
-		if (sd->internal_ops && sd->internal_ops->close) {
+		if (sd->internal_ops) {
 			CAM_DBG(CAM_CRM, "Invoke subdev close for device %s",
 				sd->name);
-			sd->internal_ops->close(sd, subdev_fh);
+			v4l2_subdev_call(sd, core, ioctl,
+				CAM_SD_SHUTDOWN, subdev_fh);
 		}
 	}
 
 	g_dev.open_cnt--;
+	g_dev.shutdown_state = false;
+	g_dev.read_active_dev_id_hdls = 0;
 	v4l2_fh_release(filep);
 
 	spin_lock_bh(&g_dev.cam_eventq_lock);
@@ -194,6 +231,8 @@ static int cam_req_mgr_close(struct file *filep)
 	cam_req_mgr_util_free_hdls();
 	cam_mem_mgr_deinit();
 	mutex_unlock(&g_dev.cam_lock);
+
+	cam_req_mgr_rwsem_write_op(CAM_SUBDEV_UNLOCK);
 
 	return 0;
 }
@@ -660,6 +699,51 @@ void cam_subdev_notify_message(u32 subdev_type,
 }
 EXPORT_SYMBOL(cam_subdev_notify_message);
 
+
+static int cam_req_mgr_ordered_list_cmp(void *priv,
+	struct list_head *head_1, struct list_head *head_2)
+{
+	struct cam_subdev *entry_1 =
+		list_entry(head_1, struct cam_subdev, list);
+	struct cam_subdev *entry_2 =
+		list_entry(head_2, struct cam_subdev, list);
+	int ret = -1;
+
+	if (entry_1->close_seq_prior > entry_2->close_seq_prior)
+		return 1;
+	else if (entry_1->close_seq_prior < entry_2->close_seq_prior)
+		return ret;
+	else
+		return 0;
+}
+
+bool cam_req_mgr_is_open(uint64_t dev_id)
+{
+	bool crm_status;
+	bool dev_id_status;
+
+	mutex_lock(&g_dev.cam_lock);
+	crm_status = g_dev.open_cnt ? true : false;
+
+	if (!g_dev.read_active_dev_id_hdls) {
+		g_dev.active_dev_id_hdls = cam_get_dev_handle_status();
+		g_dev.read_active_dev_id_hdls++;
+	}
+
+	dev_id_status = (g_dev.active_dev_id_hdls & dev_id) ? true : false;
+	crm_status &=  dev_id_status;
+	mutex_unlock(&g_dev.cam_lock);
+
+	return crm_status;
+}
+EXPORT_SYMBOL(cam_req_mgr_is_open);
+
+bool cam_req_mgr_is_shutdown(void)
+{
+	return g_dev.shutdown_state;
+}
+EXPORT_SYMBOL(cam_req_mgr_is_shutdown);
+
 int cam_register_subdev(struct cam_subdev *csd)
 {
 	struct v4l2_subdev *sd;
@@ -687,6 +771,10 @@ int cam_register_subdev(struct cam_subdev *csd)
 	sd->entity.num_pads = 0;
 	sd->entity.pads = NULL;
 	sd->entity.function = csd->ent_function;
+
+	list_add(&csd->list, &cam_req_mgr_ordered_sd_list);
+	list_sort(NULL, &cam_req_mgr_ordered_sd_list,
+		cam_req_mgr_ordered_list_cmp);
 
 	rc = v4l2_device_register_subdev(g_dev.v4l2_dev, sd);
 	if (rc) {
@@ -748,6 +836,7 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 		goto video_setup_fail;
 
 	g_dev.open_cnt = 0;
+	g_dev.shutdown_state = false;
 	mutex_init(&g_dev.cam_lock);
 	spin_lock_init(&g_dev.cam_eventq_lock);
 	mutex_init(&g_dev.dev_lock);
@@ -765,6 +854,7 @@ static int cam_req_mgr_component_master_bind(struct device *dev)
 	}
 
 	g_dev.state = true;
+	INIT_LIST_HEAD(&cam_req_mgr_ordered_sd_list);
 
 	if (g_cam_req_mgr_timer_cachep == NULL) {
 		g_cam_req_mgr_timer_cachep = kmem_cache_create("crm_timer",
