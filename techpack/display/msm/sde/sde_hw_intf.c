@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  */
 #include <linux/iopoll.h>
@@ -257,10 +258,11 @@ static void sde_hw_intf_setup_timing_engine(struct sde_hw_intf *ctx,
 	data_width = p->width;
 
 	if (p->compression_en) {
-		data_width = DIV_ROUND_UP(p->dce_bytes_per_line, 3);
-
 		if (p->wide_bus_en)
-			data_width >>= 1;
+			data_width = DIV_ROUND_UP(p->dce_bytes_per_line, 6);
+		else
+			data_width = DIV_ROUND_UP(p->dce_bytes_per_line, 3);
+
 	} else if (!dp_intf && p->wide_bus_en) {
 		data_width = p->width >> 1;
 	} else {
@@ -543,20 +545,30 @@ static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 		struct sde_hw_tear_check *te)
 {
 	struct sde_hw_blk_reg_map *c;
-	int cfg;
+	u32 cfg = 0;
+	spinlock_t tearcheck_spinlock;
 
 	if (!intf)
 		return -EINVAL;
 
+	spin_lock_init(&tearcheck_spinlock);
 	c = &intf->hw;
 
-	cfg = BIT(19); /* VSYNC_COUNTER_EN */
 	if (te->hw_vsync_mode)
 		cfg |= BIT(20);
 
 	cfg |= te->vsync_count;
 
+	/*
+	 * Local spinlock is acquired here to avoid pre-emption
+	 * as below register programming should be completed in
+	 * less than 2^16 vsync clk cycles.
+	 */
+	spin_lock(&tearcheck_spinlock);
+	SDE_REG_WRITE(c, INTF_TEAR_SYNC_WRCOUNT,
+			(te->start_pos + te->sync_threshold_start + 1));
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_VSYNC, cfg);
+	wmb(); /* disable vsync counter before updating single buffer registers */
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_HEIGHT, te->sync_cfg_height);
 	SDE_REG_WRITE(c, INTF_TEAR_VSYNC_INIT_VAL, te->vsync_init_val);
 	SDE_REG_WRITE(c, INTF_TEAR_RD_PTR_IRQ, te->rd_ptr_irq);
@@ -565,8 +577,9 @@ static int sde_hw_intf_setup_te_config(struct sde_hw_intf *intf,
 	SDE_REG_WRITE(c, INTF_TEAR_SYNC_THRESH,
 			((te->sync_threshold_continue << 16) |
 			 te->sync_threshold_start));
-	SDE_REG_WRITE(c, INTF_TEAR_SYNC_WRCOUNT,
-			(te->start_pos + te->sync_threshold_start + 1));
+	cfg |= BIT(19); /* VSYNC_COUNTER_EN */
+	SDE_REG_WRITE(c, INTF_TEAR_SYNC_CONFIG_VSYNC, cfg);
+	spin_unlock(&tearcheck_spinlock);
 
 	return 0;
 }

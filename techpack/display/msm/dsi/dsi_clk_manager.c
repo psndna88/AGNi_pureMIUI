@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
 
@@ -171,6 +172,16 @@ int dsi_clk_update_parent(struct dsi_clk_link_set *parent,
 			  struct dsi_clk_link_set *child)
 {
 	int rc = 0;
+
+	if (!parent->byte_clk || !parent->pixel_clk) {
+		DSI_ERR("Invalid parent\n");
+		return -EINVAL;
+	}
+
+	if (!child->byte_clk || !child->pixel_clk) {
+		DSI_ERR("Invalid child\n");
+		return -EINVAL;
+	}
 
 	rc = clk_set_parent(child->byte_clk, parent->byte_clk);
 	if (rc) {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2015-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
@@ -103,7 +104,7 @@ void sde_irq_preinstall(struct msm_kms *kms)
 	}
 
 	/* disable irq until power event enables it */
-	if (!sde_kms->splash_data.num_splash_displays && !sde_kms->irq_enabled)
+	if (!sde_kms->irq_enabled)
 		irq_set_status_flags(sde_kms->irq_num, IRQ_NOAUTOEN);
 }
 

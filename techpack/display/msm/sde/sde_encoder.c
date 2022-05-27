@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -1313,20 +1314,9 @@ static int _sde_encoder_update_rsc_client(
 	    (rsc_config->prefill_lines != mode_info->prefill_lines) ||
 	    (rsc_config->jitter_numer != mode_info->jitter_numer) ||
 	    (rsc_config->jitter_denom != mode_info->jitter_denom)) {
-
 		rsc_config->fps = mode_info->frame_rate;
 		rsc_config->vtotal = mode_info->vtotal;
-		/*
-		 * for video mode, prefill lines should not go beyond vertical
-		 * front porch for RSCC configuration. This will ensure bw
-		 * downvotes are not sent within the active region. Additional
-		 * -1 is to give one line time for rscc mode min_threshold.
-		 */
-		if (is_vid_mode && (mode_info->prefill_lines >= v_front_porch))
-			rsc_config->prefill_lines = v_front_porch - 1;
-		else
-			rsc_config->prefill_lines = mode_info->prefill_lines;
-
+		rsc_config->prefill_lines = mode_info->prefill_lines;
 		rsc_config->jitter_numer = mode_info->jitter_numer;
 		rsc_config->jitter_denom = mode_info->jitter_denom;
 		sde_enc->rsc_state_init = false;
@@ -1772,9 +1762,6 @@ static int _sde_encoder_rc_pre_modeset(struct drm_encoder *drm_enc,
 {
 	int ret = 0;
 
-	/* cancel delayed off work, if any */
-	_sde_encoder_rc_cancel_delayed(sde_enc, sw_event);
-
 	mutex_lock(&sde_enc->rc_lock);
 
 	if (sde_enc->rc_state == SDE_ENC_RC_STATE_OFF) {
@@ -1804,19 +1791,18 @@ static int _sde_encoder_rc_pre_modeset(struct drm_encoder *drm_enc,
 		sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
 	}
 
+	if (sde_encoder_has_dsc_hw_rev_2(sde_enc))
+		goto skip_wait;
+
 	ret = sde_encoder_wait_for_event(drm_enc, MSM_ENC_TX_COMPLETE);
 	if (ret && ret != -EWOULDBLOCK) {
-		SDE_ERROR_ENC(sde_enc,
-				"wait for commit done returned %d\n",
-				ret);
-		SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
-				ret, SDE_EVTLOG_ERROR);
+		SDE_ERROR_ENC(sde_enc, "wait for commit done returned %d\n", ret);
+		SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state, ret, SDE_EVTLOG_ERROR);
 		ret = -EINVAL;
 		goto end;
 	}
 
-	sde_encoder_irq_control(drm_enc, false);
-
+skip_wait:
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 		SDE_ENC_RC_STATE_MODESET, SDE_EVTLOG_FUNC_CASE5);
 
@@ -1849,8 +1835,6 @@ static int _sde_encoder_rc_post_modeset(struct drm_encoder *drm_enc,
 		ret = -EINVAL;
 		goto end;
 	}
-
-	sde_encoder_irq_control(drm_enc, true);
 
 	_sde_encoder_update_rsc_client(drm_enc, true);
 
@@ -2301,6 +2285,9 @@ static void sde_encoder_virt_mode_set(struct drm_encoder *drm_enc,
 	sde_connector_state_get_mode_info(conn->state, &sde_enc->mode_info);
 	sde_encoder_dce_set_bpp(sde_enc->mode_info, sde_enc->crtc);
 
+	/* cancel delayed off work, if any */
+	kthread_cancel_delayed_work_sync(&sde_enc->delayed_off_work);
+
 	/* release resources before seamless mode change */
 	ret = sde_encoder_virt_modeset_rc(drm_enc, adj_mode, true);
 	if (ret)
@@ -2538,7 +2525,6 @@ static void _sde_encoder_virt_enable_helper(struct drm_encoder *drm_enc)
 				&sde_enc->cur_master->intf_cfg_v1);
 
 	_sde_encoder_update_vsync_source(sde_enc, &sde_enc->disp_info, false);
-	sde_encoder_control_te(drm_enc, true);
 
 	memset(&sde_enc->prv_conn_roi, 0, sizeof(sde_enc->prv_conn_roi));
 	memset(&sde_enc->cur_conn_roi, 0, sizeof(sde_enc->cur_conn_roi));
@@ -2641,6 +2627,7 @@ void sde_encoder_virt_restore(struct drm_encoder *drm_enc)
 		sde_enc->cur_master->ops.restore(sde_enc->cur_master);
 
 	_sde_encoder_virt_enable_helper(drm_enc);
+	sde_encoder_control_te(drm_enc, true);
 }
 
 static void sde_encoder_off_work(struct kthread_work *work)
@@ -2663,6 +2650,7 @@ static void sde_encoder_off_work(struct kthread_work *work)
 static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 {
 	struct sde_encoder_virt *sde_enc = NULL;
+	bool has_master_enc = false;
 	int i, ret = 0;
 	struct msm_compression_info *comp_info = NULL;
 	struct drm_display_mode *cur_mode = NULL;
@@ -2689,18 +2677,19 @@ static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 	SDE_DEBUG_ENC(sde_enc, "\n");
 	SDE_EVT32(DRMID(drm_enc), cur_mode->hdisplay, cur_mode->vdisplay);
 
-	sde_enc->cur_master = NULL;
 	for (i = 0; i < sde_enc->num_phys_encs; i++) {
 		struct sde_encoder_phys *phys = sde_enc->phys_encs[i];
 
 		if (phys && phys->ops.is_master && phys->ops.is_master(phys)) {
 			SDE_DEBUG_ENC(sde_enc, "master is now idx %d\n", i);
 			sde_enc->cur_master = phys;
+			has_master_enc = true;
 			break;
 		}
 	}
 
-	if (!sde_enc->cur_master) {
+	if (!has_master_enc) {
+		sde_enc->cur_master = NULL;
 		SDE_ERROR("virt encoder has no master! num_phys %d\n", i);
 		return;
 	}
@@ -2721,6 +2710,9 @@ static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 				ret);
 		return;
 	}
+
+	/* turn off vsync_in to update tear check configuration */
+	sde_encoder_control_te(drm_enc, false);
 
 	memset(&sde_enc->cur_master->intf_cfg_v1, 0,
 			sizeof(sde_enc->cur_master->intf_cfg_v1));
@@ -2777,6 +2769,7 @@ static void sde_encoder_virt_enable(struct drm_encoder *drm_enc)
 		sde_enc->cur_master->ops.enable(sde_enc->cur_master);
 
 	_sde_encoder_virt_enable_helper(drm_enc);
+	sde_encoder_control_te(drm_enc, true);
 }
 
 void sde_encoder_virt_reset(struct drm_encoder *drm_enc)
