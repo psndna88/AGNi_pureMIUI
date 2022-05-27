@@ -152,7 +152,7 @@ config QCOM_RTB_SEPARATE_CPUS
 # hiding of the automatic options.
 
 config TRACING
-	bool
+	bool "Tracing"
 	select RING_BUFFER
 	select STACKTRACE if STACKTRACE_SUPPORT
 	select TRACEPOINTS
@@ -162,7 +162,7 @@ config TRACING
 	select TRACE_CLOCK
 
 config GENERIC_TRACER
-	bool
+	bool "generic tracer"
 	select TRACING
 
 #
@@ -170,7 +170,7 @@ config GENERIC_TRACER
 # be able to offer generic tracing facilities:
 #
 config TRACING_SUPPORT
-	bool
+	bool "tracing support"
 	depends on TRACE_IRQFLAGS_SUPPORT
 	depends on STACKTRACE_SUPPORT
 	default y
