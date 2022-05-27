@@ -2991,6 +2991,13 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		break;
 #if IS_ENABLED(CONFIG_DEEPSLEEP)
 	case SUBSYS_AFTER_DS_ENTRY:
+		IPAWANINFO("IPA Received AFTER DEEPSLEEP ENTRY\n");
+		if (atomic_read(&rmnet_ipa3_ctx->is_ssr) &&
+				ipa3_ctx_get_type(IPA_HW_TYPE) < IPA_HW_v4_0)
+			ipa3_q6_post_shutdown_cleanup();
+
+		IPAWANINFO("AFTER DEEPSLEEP ENTRY handling is complete\n");
+		break;
 #endif
 	case SUBSYS_AFTER_SHUTDOWN:
 		IPAWANINFO("IPA Received MPSS AFTER_SHUTDOWN\n");
@@ -3005,6 +3012,17 @@ static int ipa3_lcl_mdm_ssr_notifier_cb(struct notifier_block *this,
 		break;
 #if IS_ENABLED(CONFIG_DEEPSLEEP)
 	case SUBSYS_BEFORE_DS_EXIT:
+		IPAWANINFO("IPA received BEFORE DEEPSLEEP EXIT\n");
+		if (atomic_read(&rmnet_ipa3_ctx->is_ssr)) {
+			/* clean up cached QMI msg/handlers */
+			ipa3_qmi_service_exit();
+			ipa3_q6_pre_powerup_cleanup();
+		}
+		/* hold a proxy vote for the modem. */
+		ipa3_proxy_clk_vote(atomic_read(&rmnet_ipa3_ctx->is_ssr));
+		ipa3_reset_freeze_vote();
+		IPAWANINFO("BEFORE DEEPSLEEP EXIT handling is complete\n");
+		break;
 #endif
 	case SUBSYS_BEFORE_POWERUP:
 		IPAWANINFO("IPA received MPSS BEFORE_POWERUP\n");

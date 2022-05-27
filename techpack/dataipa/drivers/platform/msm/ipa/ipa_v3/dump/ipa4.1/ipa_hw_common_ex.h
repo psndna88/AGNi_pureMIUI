@@ -1,5 +1,7 @@
 /* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -412,6 +414,20 @@ enum ipa_hw_irq_srcs_e {
  */
 #define IPA_HW_REG_SAVE_NUM_ACTIVE_PIPES             23
 
+
+/*
+ * Total number of channel contexts that need to be saved for q6
+ */
+
+#define IPA_HW_REG_SAVE_GSI_NUM_CH_CNTXT_Q6         11
+
+/*
+ * Total number of event ring contexts that need to be saved for Q6
+ */
+
+#define IPA_HW_REG_SAVE_GSI_NUM_EVT_CNTXT_Q6         11
+
+
 /*
  * Macro to set the active flag for all active pipe indexed register
  */
@@ -511,7 +527,29 @@ enum ipa_hw_irq_srcs_e {
 	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 3), \
 		(u32 *)&ipa_reg_save.gsi.ch_cntxt.uc[3].var_name }, \
 	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 4), \
-		(u32 *)&ipa_reg_save.gsi.ch_cntxt.uc[4].var_name }
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.uc[4].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 0), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[0].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 1), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[1].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 2), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[2].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 3), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[3].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 4), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[4].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 5), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[5].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 6), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[6].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 7), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[7].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 8), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[8].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 9), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[9].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 10), \
+		(u32 *)&ipa_reg_save.gsi.ch_cntxt.q6[10].var_name }
 
 #define IPA_REG_SAVE_CFG_ENTRY_GSI_EVT_CNTXT(reg_name, var_name) \
 	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_A7_EE, 0), \
@@ -545,7 +583,29 @@ enum ipa_hw_irq_srcs_e {
 	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 2), \
 		(u32 *)&ipa_reg_save.gsi.evt_cntxt.uc[2].var_name }, \
 	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_REG_SAVE_HWP_GSI_EE, 3), \
-		(u32 *)&ipa_reg_save.gsi.evt_cntxt.uc[3].var_name }
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.uc[3].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 0), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[0].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 1), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[1].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 2), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[2].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 3), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[3].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 4), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[4].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 5), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[5].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 6), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[6].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 7), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[7].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 8), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[8].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 9), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[9].var_name }, \
+	{ GEN_2xVECTOR_REG_OFST(reg_name, IPA_HW_Q6_EE, 10), \
+		(u32 *)&ipa_reg_save.gsi.evt_cntxt.q6[10].var_name }
 
 /*
  * Macro to define a particular register cfg entry for all pipe
