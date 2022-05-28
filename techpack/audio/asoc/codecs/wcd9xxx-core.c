@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/kernel.h>
@@ -638,9 +638,9 @@ err:
 	wcd9xxx_bringdown(wcd9xxx->dev);
 	wcd9xxx_core_res_deinit(&wcd9xxx->core_res);
 err_bring_up:
-	mutex_destroy(&wcd9xxx->io_lock);
-	mutex_destroy(&wcd9xxx->xfer_lock);
 	mutex_destroy(&wcd9xxx->reset_lock);
+	mutex_destroy(&wcd9xxx->xfer_lock);
+	mutex_destroy(&wcd9xxx->io_lock);
 	return ret;
 }
 
@@ -1200,9 +1200,12 @@ static int wcd9xxx_i2c_probe(struct i2c_client *client,
 		wcd9xxx_set_intf_type(WCD9XXX_INTERFACE_TYPE_I2C);
 
 		return ret;
+	} else {
+		ret = -EINVAL;
+		pr_err("%s: I2C probe in wrong state, ret %d\n", __func__, ret);
+		goto fail;
 	}
 
-	pr_err("%s: I2C probe in wrong state\n", __func__);
 
 
 err_device_init:

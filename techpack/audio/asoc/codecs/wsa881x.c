@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -30,8 +31,20 @@
 #include "wsa881x-temp-sensor.h"
 #include "asoc/bolero-slave-internal.h"
 
-#define DRV_NAME "wsa-codec"
 #define WSA881X_NUM_RETRY	5
+
+#define MAX_NAME_LEN 30
+#define WSA881X_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
+			SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
+			SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000 |\
+			SNDRV_PCM_RATE_384000)
+/* Fractional Rates */
+#define WSA881X_FRAC_RATES (SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200 |\
+				SNDRV_PCM_RATE_176400 | SNDRV_PCM_RATE_352800)
+
+#define WSA881X_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
+			SNDRV_PCM_FMTBIT_S24_LE |\
+			SNDRV_PCM_FMTBIT_S24_3LE | SNDRV_PCM_FMTBIT_S32_LE)
 
 enum {
 	G_18DB = 0,
@@ -110,6 +123,14 @@ struct wsa881x_priv {
 	int (*register_notifier)(void *handle,
 				 struct notifier_block *nblock,
 				 bool enable);
+	struct dentry *debugfs_dent;
+	struct dentry *debugfs_peek;
+	struct dentry *debugfs_poke;
+	struct dentry *debugfs_reg_dump;
+	unsigned int read_data;
+	char *wsa881x_name_prefix;
+	struct snd_soc_dai_driver *dai_driver;
+	struct snd_soc_component_driver *driver;
 };
 
 struct wsa_ctrl_platform_data {
@@ -136,14 +157,6 @@ struct wsa_ctrl_platform_data {
 static int wsa881x_ocp_poll_timer_sec = WSA881X_OCP_CTL_POLL_TIMER_SEC;
 module_param(wsa881x_ocp_poll_timer_sec, int, 0664);
 MODULE_PARM_DESC(wsa881x_ocp_poll_timer_sec, "timer for ocp ctl polling");
-
-static struct wsa881x_priv *dbgwsa881x;
-static struct dentry *debugfs_wsa881x_dent;
-static struct dentry *debugfs_peek;
-static struct dentry *debugfs_poke;
-static struct dentry *debugfs_reg_dump;
-static unsigned int read_data;
-static unsigned int devnum;
 
 static int32_t wsa881x_resource_acquire(struct snd_soc_component *component,
 						bool enable);
@@ -399,30 +412,28 @@ static bool is_swr_slv_reg_readable(int reg)
 	return ret;
 }
 
-static ssize_t wsa881x_swrslave_reg_show(char __user *ubuf, size_t count,
-					  loff_t *ppos)
+static ssize_t wsa881x_swrslave_reg_show(struct swr_device *pdev, char __user *ubuf,
+		size_t count, loff_t *ppos)
 {
 	int i, reg_val, len;
 	ssize_t total = 0;
 	char tmp_buf[SWR_SLV_MAX_BUF_LEN];
 
-	if (!ubuf || !ppos || (devnum == 0))
+	if (!ubuf || !ppos)
 		return 0;
 
 	for (i = (((int) *ppos / BYTES_PER_LINE) + SWR_SLV_START_REG_ADDR);
-		i <= SWR_SLV_MAX_REG_ADDR; i++) {
+			i <= SWR_SLV_MAX_REG_ADDR; i++) {
 		if (!is_swr_slv_reg_readable(i))
 			continue;
-		swr_read(dbgwsa881x->swr_slave, devnum,
-			i, &reg_val, 1);
-		len = snprintf(tmp_buf, 25, "0x%.3x: 0x%.2x\n", i,
-			       (reg_val & 0xFF));
+		swr_read(pdev, pdev->dev_num, i, &reg_val, 1);
+		len = snprintf(tmp_buf, sizeof(tmp_buf), "0x%.3x: 0x%.2x\n", i,
+				(reg_val & 0xFF));
 		if (len < 0) {
 			pr_err("%s: fail to fill the buffer\n", __func__);
 			total = -EFAULT;
 			goto copy_err;
 		}
-
 		if ((total + len) >= count - 1)
 			break;
 		if (copy_to_user((ubuf + total), tmp_buf, len)) {
@@ -430,53 +441,84 @@ static ssize_t wsa881x_swrslave_reg_show(char __user *ubuf, size_t count,
 			total = -EFAULT;
 			goto copy_err;
 		}
-		*ppos += len;
 		total += len;
+		*ppos += len;
 	}
 
 copy_err:
+	*ppos = SWR_SLV_MAX_REG_ADDR * BYTES_PER_LINE;
 	return total;
 }
 
-static ssize_t codec_debug_read(struct file *file, char __user *ubuf,
-				size_t count, loff_t *ppos)
+static ssize_t codec_debug_dump(struct file *file, char __user *ubuf,
+		size_t count, loff_t *ppos)
 {
-	char lbuf[SWR_SLV_RD_BUF_LEN];
-	char *access_str;
-	ssize_t ret_cnt;
+	struct swr_device *pdev;
 
 	if (!count || !file || !ppos || !ubuf)
 		return -EINVAL;
 
-	access_str = file->private_data;
+	pdev = file->private_data;
+	if (!pdev)
+		return -EINVAL;
+
 	if (*ppos < 0)
 		return -EINVAL;
 
-	if (!strcmp(access_str, "swrslave_peek")) {
-		snprintf(lbuf, sizeof(lbuf), "0x%x\n", (read_data & 0xFF));
-		ret_cnt = simple_read_from_buffer(ubuf, count, ppos, lbuf,
-					       strnlen(lbuf, 7));
-	} else if (!strcmp(access_str, "swrslave_reg_dump")) {
-		ret_cnt = wsa881x_swrslave_reg_show(ubuf, count, ppos);
-	} else {
-		pr_err("%s: %s not permitted to read\n", __func__, access_str);
-		ret_cnt = -EPERM;
-	}
-	return ret_cnt;
+	return wsa881x_swrslave_reg_show(pdev, ubuf, count, ppos);
 }
 
-static ssize_t codec_debug_write(struct file *filp,
-	const char __user *ubuf, size_t cnt, loff_t *ppos)
+static ssize_t codec_debug_read(struct file *file, char __user *ubuf,
+		size_t count, loff_t *ppos)
 {
-	char lbuf[SWR_SLV_WR_BUF_LEN];
-	int rc;
-	u32 param[5];
-	char *access_str;
+	char lbuf[SWR_SLV_RD_BUF_LEN];
+	struct swr_device *pdev = NULL;
+	struct wsa881x_priv *wsa881x = NULL;
 
-	if (!filp || !ppos || !ubuf)
+	if (!count || !file || !ppos || !ubuf)
 		return -EINVAL;
 
-	access_str = filp->private_data;
+	pdev = file->private_data;
+	if (!pdev)
+		return -EINVAL;
+
+	wsa881x = swr_get_dev_data(pdev);
+	if (!wsa881x)
+		return -EINVAL;
+
+	if (*ppos < 0)
+		return -EINVAL;
+
+	snprintf(lbuf, sizeof(lbuf), "0x%x\n",
+			(wsa881x->read_data & 0xFF));
+
+	return simple_read_from_buffer(ubuf, count, ppos, lbuf,
+			strnlen(lbuf, 7));
+}
+
+static ssize_t codec_debug_peek_write(struct file *file,
+		const char __user *ubuf, size_t cnt, loff_t *ppos)
+{
+	char lbuf[SWR_SLV_WR_BUF_LEN];
+	int rc = 0;
+	u32 param[5];
+	struct swr_device *pdev = NULL;
+	struct wsa881x_priv *wsa881x = NULL;
+
+	if (!cnt || !file || !ppos || !ubuf)
+		return -EINVAL;
+
+	pdev = file->private_data;
+	if (!pdev)
+		return -EINVAL;
+
+	wsa881x = swr_get_dev_data(pdev);
+	if (!wsa881x)
+		return -EINVAL;
+
+	if (*ppos < 0)
+		return -EINVAL;
+
 	if (cnt > sizeof(lbuf) - 1)
 		return -EINVAL;
 
@@ -485,32 +527,10 @@ static ssize_t codec_debug_write(struct file *filp,
 		return -EFAULT;
 
 	lbuf[cnt] = '\0';
-	if (!strcmp(access_str, "swrslave_poke")) {
-		/* write */
-		rc = get_parameters(lbuf, param, 3);
-		if ((param[0] <= SWR_SLV_MAX_REG_ADDR) && (param[1] <= 0xFF) &&
-			(rc == 0))
-			swr_write(dbgwsa881x->swr_slave, param[2],
-				param[0], &param[1]);
-		else
-			rc = -EINVAL;
-	} else if (!strcmp(access_str, "swrslave_peek")) {
-		/* read */
-		rc = get_parameters(lbuf, param, 2);
-		if ((param[0] <= SWR_SLV_MAX_REG_ADDR) && (rc == 0))
-			swr_read(dbgwsa881x->swr_slave, param[1],
-				param[0], &read_data, 1);
-		else
-			rc = -EINVAL;
-	} else if (!strcmp(access_str, "swrslave_reg_dump")) {
-		/* reg dump */
-		rc = get_parameters(lbuf, param, 1);
-		if ((rc == 0) && (param[0] > 0) &&
-		    (param[0] <= SWR_SLV_MAX_DEVICES))
-			devnum = param[0];
-		else
-			rc = -EINVAL;
-	}
+	rc = get_parameters(lbuf, param, 1);
+	if (!((param[0] <= SWR_SLV_MAX_REG_ADDR) && (rc == 0)))
+		return -EINVAL;
+	swr_read(pdev, pdev->dev_num, param[0], &wsa881x->read_data, 1);
 	if (rc == 0)
 		rc = cnt;
 	else
@@ -519,12 +539,57 @@ static ssize_t codec_debug_write(struct file *filp,
 	return rc;
 }
 
-static const struct file_operations codec_debug_ops = {
+static ssize_t codec_debug_write(struct file *file,
+		const char __user *ubuf, size_t cnt, loff_t *ppos)
+{
+	char lbuf[SWR_SLV_WR_BUF_LEN];
+	int rc = 0;
+	u32 param[5];
+	struct swr_device *pdev;
+
+	if (!file || !ppos || !ubuf)
+		return -EINVAL;
+
+	pdev = file->private_data;
+	if (!pdev)
+		return -EINVAL;
+
+	if (cnt > sizeof(lbuf) - 1)
+		return -EINVAL;
+
+	rc = copy_from_user(lbuf, ubuf, cnt);
+	if (rc)
+		return -EFAULT;
+
+	lbuf[cnt] = '\0';
+	rc = get_parameters(lbuf, param, 2);
+	if (!((param[0] <= SWR_SLV_MAX_REG_ADDR) &&
+				(param[1] <= 0xFF) && (rc == 0)))
+		return -EINVAL;
+	swr_write(pdev, pdev->dev_num, param[0], &param[1]);
+	if (rc == 0)
+		rc = cnt;
+	else
+		pr_err("%s: rc = %d\n", __func__, rc);
+
+	return rc;
+}
+
+static const struct file_operations codec_debug_write_ops = {
 	.open = codec_debug_open,
 	.write = codec_debug_write,
-	.read = codec_debug_read,
 };
 
+static const struct file_operations codec_debug_read_ops = {
+	.open = codec_debug_open,
+	.read = codec_debug_read,
+	.write = codec_debug_peek_write,
+};
+
+static const struct file_operations codec_debug_dump_ops = {
+	.open = codec_debug_open,
+	.read = codec_debug_dump,
+};
 static void wsa881x_regcache_sync(struct wsa881x_priv *wsa881x)
 {
 	mutex_lock(&wsa881x->res_lock);
@@ -1307,7 +1372,7 @@ static void wsa881x_remove(struct snd_soc_component *component)
 }
 
 static const struct snd_soc_component_driver soc_codec_dev_wsa881x = {
-	.name = DRV_NAME,
+	.name = "wsa-codec",
 	.probe = wsa881x_probe,
 	.remove = wsa881x_remove,
 	.controls = wsa881x_snd_controls,
@@ -1316,6 +1381,21 @@ static const struct snd_soc_component_driver soc_codec_dev_wsa881x = {
 	.num_dapm_widgets = ARRAY_SIZE(wsa881x_dapm_widgets),
 	.dapm_routes = wsa881x_audio_map,
 	.num_dapm_routes = ARRAY_SIZE(wsa881x_audio_map),
+};
+
+static struct snd_soc_dai_driver wsa_dai[] = {
+	{
+		.name = "wsa_rx",
+		.playback = {
+			.stream_name = "WSA881X_AIF Playback",
+			.rates = WSA881X_RATES | WSA881X_FRAC_RATES,
+			.formats = WSA881X_FORMATS,
+			.rate_max = 192000,
+			.rate_min = 8000,
+			.channels_min = 1,
+			.channels_max = 2,
+		},
+	},
 };
 
 static int wsa881x_gpio_ctrl(struct wsa881x_priv *wsa881x, bool enable)
@@ -1412,9 +1492,13 @@ static int wsa881x_event_notify(struct notifier_block *nb,
 static int wsa881x_swr_probe(struct swr_device *pdev)
 {
 	int ret = 0;
-	struct wsa881x_priv *wsa881x;
+	struct wsa881x_priv *wsa881x = NULL;
+	struct snd_soc_component *component;
 	u8 devnum = 0;
+	int dev_index = 0;
 	bool pin_state_current = false;
+	char buffer[MAX_NAME_LEN];
+	const char *wsa881x_name_prefix_of = NULL;
 	struct wsa_ctrl_platform_data *plat_data = NULL;
 
 	wsa881x = devm_kzalloc(&pdev->dev, sizeof(struct wsa881x_priv),
@@ -1452,27 +1536,31 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 	wsa881x_gpio_ctrl(wsa881x, true);
 	wsa881x->state = WSA881X_DEV_UP;
 
-	if (!debugfs_wsa881x_dent) {
-		dbgwsa881x = wsa881x;
-		debugfs_wsa881x_dent = debugfs_create_dir(
-						"wsa881x_swr_slave", 0);
-		if (!IS_ERR(debugfs_wsa881x_dent)) {
-			debugfs_peek = debugfs_create_file("swrslave_peek",
-					S_IFREG | 0444, debugfs_wsa881x_dent,
-					(void *) "swrslave_peek",
-					&codec_debug_ops);
+	if (!wsa881x->debugfs_dent) {
+		wsa881x->debugfs_dent = debugfs_create_dir(
+				dev_name(&pdev->dev), 0);
+		if (!IS_ERR(wsa881x->debugfs_dent)) {
+			wsa881x->debugfs_peek =
+				debugfs_create_file("swrslave_peek",
+						S_IFREG | 0444,
+						wsa881x->debugfs_dent,
+						(void *) pdev,
+						&codec_debug_read_ops);
 
-			debugfs_poke = debugfs_create_file("swrslave_poke",
-					S_IFREG | 0444, debugfs_wsa881x_dent,
-					(void *) "swrslave_poke",
-					&codec_debug_ops);
+			wsa881x->debugfs_poke =
+				debugfs_create_file("swrslave_poke",
+						S_IFREG | 0444,
+						wsa881x->debugfs_dent,
+						(void *) pdev,
+						&codec_debug_write_ops);
 
-			debugfs_reg_dump = debugfs_create_file(
+			wsa881x->debugfs_reg_dump =
+				debugfs_create_file(
 						"swrslave_reg_dump",
 						S_IFREG | 0444,
-						debugfs_wsa881x_dent,
-						(void *) "swrslave_reg_dump",
-						&codec_debug_ops);
+						wsa881x->debugfs_dent,
+						(void *) pdev,
+						&codec_debug_dump_ops);
 		}
 	}
 
@@ -1500,13 +1588,73 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 		goto dev_err;
 	}
 
-	ret = snd_soc_register_component(&pdev->dev, &soc_codec_dev_wsa881x,
-				     NULL, 0);
+	ret = of_property_read_string(pdev->dev.of_node,
+			"qcom,wsa-prefix", &wsa881x_name_prefix_of);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"%s: Looking up %s property in node %s failed\n",
+			__func__, "qcom,wsa-prefix",
+			pdev->dev.of_node->full_name);
+		goto dev_err;
+	}
+
+	wsa881x->driver = devm_kzalloc(&pdev->dev,
+				sizeof(struct snd_soc_component_driver),
+				GFP_KERNEL);
+	if (!wsa881x->driver) {
+		ret = -ENOMEM;
+		goto err_mem;
+	}
+
+	memcpy(wsa881x->driver, &soc_codec_dev_wsa881x,
+			sizeof(struct snd_soc_component_driver));
+
+	wsa881x->dai_driver = devm_kzalloc(&pdev->dev,
+				sizeof(struct snd_soc_dai_driver),
+				GFP_KERNEL);
+	if (!wsa881x->dai_driver) {
+		ret = -ENOMEM;
+		goto err_mem;
+	}
+
+	memcpy(wsa881x->dai_driver, wsa_dai,
+		sizeof(struct snd_soc_dai_driver));
+
+	dev_index = (int)((char)(pdev->addr & 0xF));
+
+	snprintf(buffer, sizeof(buffer), "wsa-codec.%d", dev_index);
+	wsa881x->driver->name = kstrndup(buffer,
+				       strlen(buffer), GFP_KERNEL);
+
+	snprintf(buffer, sizeof(buffer), "wsa_rx%d", dev_index);
+	wsa881x->dai_driver->name =
+			kstrndup(buffer, strlen(buffer), GFP_KERNEL);
+
+	snprintf(buffer, sizeof(buffer),
+		 "WSA881X_AIF%d Playback", dev_index);
+	wsa881x->dai_driver->playback.stream_name =
+			kstrndup(buffer, strlen(buffer), GFP_KERNEL);
+
+	/* Number of DAI's used is 1 */
+	ret = snd_soc_register_component(&pdev->dev,
+				wsa881x->driver, wsa881x->dai_driver, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: Codec registration failed\n",
 			__func__);
-		goto dev_err;
+		goto err_mem;
 	}
+
+	wsa881x->wsa881x_name_prefix = kstrndup(wsa881x_name_prefix_of,
+		strlen(wsa881x_name_prefix_of), GFP_KERNEL);
+
+	component = snd_soc_lookup_component(&pdev->dev, wsa881x->driver->name);
+	if (!component) {
+		dev_err(&pdev->dev, "%s: component is NULL \n", __func__);
+		ret = -EINVAL;
+		goto err_mem;
+	}
+
+	component->name_prefix = wsa881x->wsa881x_name_prefix;
 
 	wsa881x->bolero_np = of_parse_phandle(pdev->dev.of_node,
 					      "qcom,bolero-handle", 0);
@@ -1543,6 +1691,17 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 
 	return 0;
 
+err_mem:
+	kfree(wsa881x->wsa881x_name_prefix);
+	if (wsa881x->dai_driver) {
+		devm_kfree(&pdev->dev, wsa881x->dai_driver->name);
+		devm_kfree(&pdev->dev, wsa881x->dai_driver->playback.stream_name);
+		devm_kfree(&pdev->dev, wsa881x->dai_driver);
+	}
+	if (wsa881x->driver) {
+		devm_kfree(&pdev->dev, wsa881x->driver->name);
+		devm_kfree(&pdev->dev, wsa881x->driver);
+	}
 dev_err:
 	if (pin_state_current == false)
 		wsa881x_gpio_ctrl(wsa881x, false);
@@ -1564,14 +1723,24 @@ static int wsa881x_swr_remove(struct swr_device *pdev)
 	if (wsa881x->register_notifier)
 		wsa881x->register_notifier(wsa881x->handle,
 					   &wsa881x->bolero_nblock, false);
-	debugfs_remove_recursive(debugfs_wsa881x_dent);
-	debugfs_wsa881x_dent = NULL;
+	debugfs_remove_recursive(wsa881x->debugfs_dent);
+	wsa881x->debugfs_dent = NULL;
 	mutex_destroy(&wsa881x->res_lock);
 	mutex_destroy(&wsa881x->temp_lock);
 	snd_soc_unregister_component(&pdev->dev);
 	if (wsa881x->pd_gpio)
 		gpio_free(wsa881x->pd_gpio);
 	swr_set_dev_data(pdev, NULL);
+	kfree(wsa881x->wsa881x_name_prefix);
+	if (wsa881x->dai_driver) {
+		devm_kfree(&pdev->dev, wsa881x->dai_driver->name);
+		devm_kfree(&pdev->dev, wsa881x->dai_driver->playback.stream_name);
+		devm_kfree(&pdev->dev, wsa881x->dai_driver);
+	}
+	if (wsa881x->driver) {
+		devm_kfree(&pdev->dev, wsa881x->driver->name);
+		devm_kfree(&pdev->dev, wsa881x->driver);
+	}
 	return 0;
 }
 

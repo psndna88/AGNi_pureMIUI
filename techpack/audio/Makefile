@@ -2,7 +2,6 @@
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_QTI_QUIN_GVM), y)
 include $(srctree)/techpack/audio/config/gvmauto.conf
-export
 endif
 ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 include $(srctree)/techpack/audio/config/sdxpoorwillsauto.conf
@@ -27,7 +26,12 @@ include $(srctree)/techpack/audio/config/holiauto.conf
 endif
 ifeq ($(CONFIG_ARCH_SA8155), y)
 include $(srctree)/techpack/audio/config/sa8155auto.conf
-export
+endif
+ifeq ($(CONFIG_ARCH_SA6155), y)
+include $(srctree)/techpack/audio/config/sa6155auto.conf
+endif
+ifeq ($(CONFIG_ARCH_SM6150), y)
+include $(srctree)/techpack/audio/config/sm6150auto.conf
 endif
 ifeq ($(CONFIG_ARCH_SA6155), y)
 include $(srctree)/techpack/audio/config/sa6155auto.conf
@@ -89,7 +93,10 @@ ifeq ($(CONFIG_ARCH_SA6155), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/sa6155autoconf.h
 endif
-
+ifeq ($(CONFIG_ARCH_SM6150), y)
+LINUXINCLUDE    += \
+                -include $(srctree)/techpack/audio/config/sm6150autoconf.h
+endif
 obj-y += soc/
 obj-y += dsp/
 obj-y += ipc/

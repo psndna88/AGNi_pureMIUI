@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -158,16 +157,14 @@ static int wcd_measure_adc_once(struct wcd_mbhc *mbhc, int mux_ctl)
 	while (retry--) {
 		/* wait for 600usec to get adc results */
 		usleep_range(600, 610);
-		pr_debug("%s: retry: %d\n",  __func__, retry);
+
 		/* check for ADC Timeout */
 		WCD_MBHC_REG_READ(WCD_MBHC_ADC_TIMEOUT, adc_timeout);
-		pr_debug("%s: timeout: %d\n",  __func__, adc_timeout);
 		if (adc_timeout)
 			continue;
 
 		/* Read ADC complete bit */
 		WCD_MBHC_REG_READ(WCD_MBHC_ADC_COMPLETE, adc_complete);
-		pr_debug("%s: complete: %d\n",  __func__, adc_complete);
 		if (!adc_complete)
 			continue;
 
@@ -481,7 +478,8 @@ static bool wcd_mbhc_adc_check_for_spl_headset(struct wcd_mbhc *mbhc,
 	adc_hph_threshold = wcd_mbhc_adc_get_hph_thres(mbhc);
 
 	if (output_mv > adc_threshold || output_mv < adc_hph_threshold) {
-		spl_hs = false;
+		if (mbhc->force_linein == true)
+			spl_hs = false;
 	} else {
 		spl_hs = true;
 		if (spl_hs_cnt)
@@ -543,9 +541,12 @@ static bool wcd_is_special_headset(struct wcd_mbhc *mbhc)
 		msleep(50);
 		output_mv = wcd_measure_adc_once(mbhc, MUX_CTL_IN2P);
 		if (output_mv <= adc_threshold) {
-			pr_debug("%s: Special headset detected in %d msecs\n",
-					__func__, delay);
-			is_spl_hs = true;
+			if (mbhc->force_linein != true) {
+				pr_debug(
+				"%s: Special headset detected in %d msecs\n",
+					 __func__, delay);
+				is_spl_hs = true;
+			}
 		}
 
 		if (delay == SPECIAL_HS_DETECT_TIME_MS) {
@@ -865,7 +866,7 @@ correct_plug_type:
 			}
 		}
 
-		if (output_mv > hs_threshold) {
+		if (output_mv > hs_threshold || mbhc->force_linein == true) {
 			pr_debug("%s: cable is extension cable\n", __func__);
 			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 			wrk_complete = true;
@@ -906,11 +907,6 @@ correct_plug_type:
 			wrk_complete = false;
 		}
 	}
-	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
-	    plug_type == MBHC_PLUG_TYPE_HEADPHONE))
-		if (mbhc->mbhc_cb->bcs_enable)
-			mbhc->mbhc_cb->bcs_enable(mbhc, true);
-
 	if (!wrk_complete) {
 		/*
 		 * If plug_tye is headset, we might have already reported either
@@ -966,8 +962,10 @@ enable_supply:
 	else
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_DETECTION_DONE, 0);
 
-	if (plug_type == MBHC_PLUG_TYPE_HEADSET)
-		mbhc->micbias_enable = true;
+	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
+	    plug_type == MBHC_PLUG_TYPE_HEADPHONE))
+		if (mbhc->mbhc_cb->bcs_enable)
+			mbhc->mbhc_cb->bcs_enable(mbhc, true);
 
 	if (mbhc->mbhc_cb->mbhc_micbias_control)
 		wcd_mbhc_adc_update_fsm_source(mbhc, plug_type);

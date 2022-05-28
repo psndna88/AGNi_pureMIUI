@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  */
 
 #define CONFIG_PINCTRL_LPI 1
@@ -47,3 +47,4 @@
 //#define CONFIG_SND_SOC_TFA9874 1
 #define CONFIG_AUXPCM_DISABLE 1
 #define  CONFIG_MIUS_IIO 1
+#define CONFIG_SWRM_VER_1P6 1

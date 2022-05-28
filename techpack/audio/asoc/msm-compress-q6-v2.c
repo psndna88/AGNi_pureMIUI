@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 
@@ -66,7 +66,7 @@
 #define COMPR_PLAYBACK_MAX_NUM_FRAGMENTS (16 * 4)
 
 #define COMPRESSED_LR_VOL_MAX_STEPS	0x2000
-const DECLARE_TLV_DB_LINEAR(msm_compr_vol_gain, 0,
+static const DECLARE_TLV_DB_LINEAR(msm_compr_vol_gain, 0,
 				COMPRESSED_LR_VOL_MAX_STEPS);
 
 /* Stream id switches between 1 and 2 */
@@ -190,7 +190,7 @@ struct msm_compr_audio {
 	spinlock_t lock;
 };
 
-const u32 compr_codecs[] = {
+static const u32 compr_codecs[] = {
 	SND_AUDIOCODEC_AC3, SND_AUDIOCODEC_EAC3, SND_AUDIOCODEC_DTS,
 	SND_AUDIOCODEC_TRUEHD, SND_AUDIOCODEC_IEC61937};
 
@@ -891,8 +891,7 @@ static void compr_event_handler(uint32_t opcode,
 		}
 		atomic_set(&prtd->eos, 0);
 		stream_index = STREAM_ARRAY_INDEX(stream_id);
-		if (stream_index >= MAX_NUMBER_OF_STREAMS ||
-		    stream_index < 0) {
+		if (stream_index >= MAX_NUMBER_OF_STREAMS) {
 			pr_err("%s: Invalid stream index %d", __func__,
 				stream_index);
 			spin_unlock_irqrestore(&prtd->lock, flags);
@@ -1582,7 +1581,7 @@ static int msm_compr_configure_dsp_for_playback
 
 	pr_debug("%s: stream_id %d\n", __func__, ac->stream_id);
 	stream_index = STREAM_ARRAY_INDEX(ac->stream_id);
-	if (stream_index >= MAX_NUMBER_OF_STREAMS || stream_index < 0) {
+	if (stream_index >= MAX_NUMBER_OF_STREAMS) {
 		pr_err("%s: Invalid stream index:%d", __func__, stream_index);
 		return -EINVAL;
 	}
@@ -1609,6 +1608,9 @@ static int msm_compr_configure_dsp_for_playback
 		bits_per_sample = 24;
 	else if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
 		bits_per_sample = 32;
+
+	ac->fedai_id = soc_prtd->dai_link->id;
+	ac->stream_type = SNDRV_PCM_STREAM_PLAYBACK;
 
 	if (prtd->compr_passthr != LEGACY_PCM) {
 		ret = q6asm_open_write_compressed(ac, prtd->codec,
@@ -1765,6 +1767,9 @@ static int msm_compr_configure_dsp_for_capture(struct snd_compr_stream *cstream)
 		break;
 	}
 
+	prtd->audio_client->stream_type = SNDRV_PCM_STREAM_CAPTURE;
+	prtd->audio_client->fedai_id = soc_prtd->dai_link->id;
+
 	pr_debug("%s: stream_id %d bits_per_sample %d compr_passthr %d\n",
 			__func__, ac->stream_id, bits_per_sample,
 			prtd->compr_passthr);
@@ -1828,7 +1833,7 @@ static int msm_compr_configure_dsp_for_capture(struct snd_compr_stream *cstream)
 	}
 
 	stream_index = STREAM_ARRAY_INDEX(ac->stream_id);
-	if (stream_index >= MAX_NUMBER_OF_STREAMS || stream_index < 0) {
+	if (stream_index >= MAX_NUMBER_OF_STREAMS) {
 		pr_err("%s: Invalid stream index:%d", __func__, stream_index);
 		return -EINVAL;
 	}
@@ -1881,6 +1886,7 @@ static int msm_compr_configure_dsp_for_capture(struct snd_compr_stream *cstream)
 			ret = q6asm_enc_cfg_blk_pcm_format_support_v5(
 					prtd->audio_client,
 					prtd->sample_rate, prtd->num_channels,
+					true, NULL,
 					bits_per_sample, sample_word_size,
 					ASM_LITTLE_ENDIAN, DEFAULT_QF);
 		else
@@ -2169,7 +2175,7 @@ static int msm_compr_playback_free(struct snd_compr_stream *cstream)
 	stream_id = ac->stream_id;
 	stream_index = STREAM_ARRAY_INDEX(NEXT_STREAM_ID(stream_id));
 
-	if ((stream_index < MAX_NUMBER_OF_STREAMS && stream_index >= 0) &&
+	if ((stream_index < MAX_NUMBER_OF_STREAMS) &&
 	    (prtd->gapless_state.stream_opened[stream_index])) {
 		prtd->gapless_state.stream_opened[stream_index] = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
@@ -2179,7 +2185,7 @@ static int msm_compr_playback_free(struct snd_compr_stream *cstream)
 	}
 
 	stream_index = STREAM_ARRAY_INDEX(stream_id);
-	if ((stream_index < MAX_NUMBER_OF_STREAMS && stream_index >= 0) &&
+	if ((stream_index < MAX_NUMBER_OF_STREAMS) &&
 	    (prtd->gapless_state.stream_opened[stream_index])) {
 		prtd->gapless_state.stream_opened[stream_index] = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
@@ -2263,7 +2269,7 @@ static int msm_compr_capture_free(struct snd_compr_stream *cstream)
 	stream_id = ac->stream_id;
 
 	stream_index = STREAM_ARRAY_INDEX(stream_id);
-	if ((stream_index < MAX_NUMBER_OF_STREAMS && stream_index >= 0)) {
+	if (stream_index < MAX_NUMBER_OF_STREAMS) {
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		pr_debug("close stream %d", stream_id);
 		q6asm_stream_cmd(ac, CMD_CLOSE, stream_id);
@@ -2335,8 +2341,7 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 	pr_debug("%s: sample_rate %d\n", __func__, prtd->sample_rate);
 
 	/* prtd->codec_param.codec.reserved[0] is for compr_passthr */
-	if ((prtd->codec_param.codec.reserved[0] >= LEGACY_PCM &&
-	    prtd->codec_param.
+	if ((prtd->codec_param.
 	    codec.reserved[0] <= COMPRESSED_PASSTHROUGH_DSD) ||
 	    (prtd->codec_param.
 	    codec.reserved[0] == COMPRESSED_PASSTHROUGH_IEC61937))
@@ -2982,8 +2987,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		 * called immediately.
 		 */
 		stream_index = STREAM_ARRAY_INDEX(stream_id);
-		if (stream_index >= MAX_NUMBER_OF_STREAMS ||
-		    stream_index < 0) {
+		if (stream_index >= MAX_NUMBER_OF_STREAMS) {
 			pr_err("%s: Invalid stream index: %d", __func__,
 				stream_index);
 			spin_unlock_irqrestore(&prtd->lock, flags);
@@ -3032,6 +3036,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
 				__func__, stream_id, bits_per_sample);
 
+		prtd->audio_client->fedai_id = (int)fe_id;
 		if (q6core_get_avcs_api_version_per_service(
 					APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
 					ADSP_ASM_API_VERSION_V2)
@@ -4232,8 +4237,7 @@ static int msm_compr_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
 	}
 
 	event_data = (struct msm_adsp_event_data *)ucontrol->value.bytes.data;
-	if ((event_data->event_type < ADSP_STREAM_PP_EVENT) ||
-	    (event_data->event_type >= ADSP_STREAM_EVENT_MAX)) {
+	if (event_data->event_type >= ADSP_STREAM_EVENT_MAX) {
 		pr_err("%s: invalid event_type=%d",
 			__func__, event_data->event_type);
 		ret = -EINVAL;
