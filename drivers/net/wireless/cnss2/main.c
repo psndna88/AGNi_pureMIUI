@@ -1422,7 +1422,6 @@ void cnss_schedule_recovery(struct device *dev,
 {
 	struct cnss_plat_data *plat_priv = cnss_bus_dev_to_plat_priv(dev);
 	struct cnss_recovery_data *data;
-	int gfp = GFP_KERNEL;
 
 	if (!test_bit(CNSS_DEV_ERR_NOTIFY, &plat_priv->driver_state))
 		cnss_bus_update_status(plat_priv, CNSS_FW_DOWN);
@@ -1433,10 +1432,11 @@ void cnss_schedule_recovery(struct device *dev,
 		return;
 	}
 
-	if (in_interrupt() || irqs_disabled())
-		gfp = GFP_ATOMIC;
-
-	data = kzalloc(sizeof(*data), gfp);
+	/* Allocating memory always with GFP_ATOMIC flag inside
+	 * cnss_schedule_recovery(). Because there is a chance for
+	 * this api to be invoked in atomic context on some platforms.
+	 */
+	data = kzalloc(sizeof(*data), GFP_ATOMIC);
 	if (!data)
 		return;
 

@@ -2288,6 +2288,7 @@ void incfs_kill_sb(struct super_block *sb)
 	pr_debug("incfs: unmount\n");
 	incfs_free_mount_info(mi);
 	generic_shutdown_super(sb);
+	sb->s_fs_info = NULL;
 }
 
 static int show_options(struct seq_file *m, struct dentry *root)

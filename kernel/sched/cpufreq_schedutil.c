@@ -1161,7 +1161,6 @@ static void sugov_tunables_save(struct cpufreq_policy *policy,
 	cached->down_rate_limit_us = tunables->down_rate_limit_us;
 }
 
-
 static void sugov_clear_global_tunables(void)
 {
 	if (!have_governor_per_policy())
