@@ -7829,7 +7829,7 @@ u32 msm_comm_calc_framerate(struct msm_vidc_inst *inst,
 	capability = &inst->capability;
 
 	if (timestamp_us <= prev_ts) {
-		s_vpr_e(inst->sid, "%s: invalid ts %lld, prev ts %lld\n",
+		s_vpr_e(inst->sid, "%s: invalid ts %llu, prev ts %llu\n",
 			__func__, timestamp_us, prev_ts);
 		return framerate;
 	}
@@ -7860,7 +7860,7 @@ u32 msm_comm_get_max_framerate(struct msm_vidc_inst *inst)
 	}
 	avg_framerate = count ? (div_u64(avg_framerate, count)) : (1 << 16);
 
-	s_vpr_l(inst->sid, "%s: fps %u, list size %d\n", __func__, avg_framerate, count);
+	s_vpr_l(inst->sid, "%s: fps %u, list size %u\n", __func__, avg_framerate, count);
 	mutex_unlock(&inst->timestamps.lock);
 	return (u32)avg_framerate;
 }
