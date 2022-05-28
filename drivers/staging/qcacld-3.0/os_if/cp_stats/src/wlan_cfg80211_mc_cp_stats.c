@@ -403,6 +403,11 @@ static void get_peer_rssi_cb(struct stats_event *ev, void *cookie)
 		return;
 	}
 
+	if (!ev->peer_stats) {
+		osif_err("no peer stats");
+		goto get_peer_rssi_cb_fail;
+	}
+
 	priv = osif_request_priv(request);
 	rssi_size = sizeof(*ev->peer_stats) * ev->num_peer_stats;
 	if (rssi_size == 0) {

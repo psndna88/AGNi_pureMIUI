@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7031,7 +7032,9 @@ int wma_rx_service_ready_ext_event(void *handle, uint8_t *event,
 	 * indicate 3 vdevs and firmware shall add 1 vdev for NAN. So decrement
 	 * the num_vdevs by 1.
 	 */
-	if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc)) {
+
+	if (ucfg_nan_is_vdev_creation_allowed(wma_handle->psoc) ||
+	    QDF_GLOBAL_FTM_MODE == cds_get_conparam()) {
 		wlan_res_cfg->nan_separate_iface_support = true;
 	} else {
 		wlan_res_cfg->num_vdevs--;

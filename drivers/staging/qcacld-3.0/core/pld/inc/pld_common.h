@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -152,6 +153,16 @@ enum pld_uevent {
 	PLD_FW_HANG_EVENT,
 	PLD_SMMU_FAULT,
 };
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * enum pld_device_config - Get PLD device config
+ * @PLD_IPA_DISABLD: IPA is disabled
+ */
+enum pld_device_config {
+	PLD_IPA_DISABLED,
+};
+#endif
 
 /**
  * struct pld_uevent_data - uevent status received from platform driver
@@ -756,6 +767,15 @@ int pld_qmi_send(struct device *dev, int type, void *cmd,
 		 int (*cb)(void *ctx, void *event, int event_len));
 bool pld_is_fw_dump_skipped(struct device *dev);
 
+#ifdef CONFIG_ENABLE_LOW_POWER_MODE
+int pld_is_low_power_mode(struct device *dev);
+#else
+static inline int pld_is_low_power_mode(struct device *dev)
+{
+	return 0;
+}
+#endif
+
 /**
  * pld_is_pdr() - Check WLAN PD is Restarted
  *
@@ -932,6 +952,21 @@ void pld_thermal_unregister(struct device *dev, int mon_id);
  */
 int pld_get_thermal_state(struct device *dev, unsigned long *thermal_state,
 			  int mon_id);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * pld_is_ipa_offload_disabled() - Check if IPA offload is enabled or not
+ * @dev: The device structure
+ *
+ * Return: Non-zero code for IPA offload disable; zero for IPA offload enable
+ */
+int pld_is_ipa_offload_disabled(struct device *dev);
+#else
+int pld_is_ipa_offload_disabled(struct device *dev);
+{
+	return 0;
+}
+#endif
 
 #if IS_ENABLED(CONFIG_WCNSS_MEM_PRE_ALLOC) && defined(FEATURE_SKB_PRE_ALLOC)
 

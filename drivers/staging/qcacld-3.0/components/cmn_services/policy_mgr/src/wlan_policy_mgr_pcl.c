@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -201,15 +202,15 @@ void policy_mgr_decr_session_set_pcl(struct wlan_objmgr_psoc *psoc,
 
 			/* Send RSO stop before sending set pcl command */
 			pm_ctx->sme_cbacks.sme_rso_stop_cb(
-						mac_handle, session_id,
+						mac_handle, vdev_id,
 						REASON_DRIVER_DISABLED,
 						RSO_SET_PCL);
 
 			policy_mgr_set_pcl_for_existing_combo(psoc, PM_STA_MODE,
-							      session_id);
+							      vdev_id);
 
 			pm_ctx->sme_cbacks.sme_rso_start_cb(
-					mac_handle, session_id,
+					mac_handle, vdev_id,
 					REASON_DRIVER_ENABLED,
 					RSO_SET_PCL);
 		}
@@ -2505,7 +2506,9 @@ policy_mgr_get_sap_mandatory_channel(struct wlan_objmgr_psoc *psoc,
 	}
 
 	sap_new_freq = pcl.pcl_list[0];
-	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_ch_freq)) {
+	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(sap_ch_freq) ||
+	    (WLAN_REG_IS_5GHZ_CH_FREQ(sap_ch_freq) &&
+	     WLAN_REG_IS_5GHZ_CH_FREQ(*intf_ch_freq))) {
 		for (i = 0; i < pcl.pcl_len; i++) {
 			if (pcl.pcl_list[i] == *intf_ch_freq) {
 				sap_new_freq = pcl.pcl_list[i];

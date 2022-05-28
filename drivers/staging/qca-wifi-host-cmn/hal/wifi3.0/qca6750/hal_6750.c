@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1824,6 +1825,19 @@ void hal_compute_reo_remap_ix2_ix3_6750(uint32_t *ring, uint32_t num_rings,
 	}
 }
 
+static
+void hal_compute_reo_remap_ix0_6750(uint32_t *remap0)
+{
+	*remap0 = HAL_REO_REMAP_IX0(REO_REMAP_SW1, 0) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW1, 1) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW2, 2) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW3, 3) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW2, 4) |
+			HAL_REO_REMAP_IX0(REO_REMAP_RELEASE, 5) |
+			HAL_REO_REMAP_IX0(REO_REMAP_FW, 6) |
+			HAL_REO_REMAP_IX0(REO_REMAP_FW, 7);
+}
+
 struct hal_hw_txrx_ops qca6750_hal_hw_txrx_ops = {
 	/* init and setup */
 	hal_srng_dst_hw_init_generic,
@@ -1942,6 +1956,7 @@ struct hal_hw_txrx_ops qca6750_hal_hw_txrx_ops = {
 	hal_rx_mpdu_end_offset_get_generic,
 	hal_rx_flow_setup_fse_6750,
 	hal_compute_reo_remap_ix2_ix3_6750,
+	hal_compute_reo_remap_ix0_6750,
 
 	/* CMEM FSE */
 	hal_rx_flow_setup_cmem_fse_6750,
@@ -2227,7 +2242,11 @@ struct hal_hw_srng_config hw_srng_table_6750[] = {
 	},
 	{ /* WBM2SW_RELEASE */
 		.start_ring_id = HAL_SRNG_WBM2SW0_RELEASE,
+#ifdef CONFIG_PLD_IPCIE_FW_SIM
+		.max_rings = 5,
+#else
 		.max_rings = 4,
+#endif
 		.entry_size = sizeof(struct wbm_release_ring) >> 2,
 		.lmac_ring = FALSE,
 		.ring_dir = HAL_SRNG_DST_RING,

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3398,12 +3399,14 @@ static void dp_soc_reset_intr_mask(struct dp_soc *soc)
  * @remap2: output parameter indicates reo remap 2 register value
  * Return: bool type, true if remap is configured else false.
  */
-bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap1, uint32_t *remap2)
+bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap0,
+			 uint32_t *remap1, uint32_t *remap2)
 {
 	uint32_t ring[4] = {REO_REMAP_SW1, REO_REMAP_SW2,
 						REO_REMAP_SW3};
 	hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
 				      3, remap1, remap2);
+	hal_compute_reo_remap_ix0(soc->hal_soc, remap0);
 	dp_debug("remap1 %x remap2 %x", *remap1, *remap2);
 
 	return true;
@@ -3529,7 +3532,7 @@ static uint8_t dp_reo_ring_selection(uint32_t value, uint32_t *ring)
 	return num;
 }
 
-static bool dp_reo_remap_config(struct dp_soc *soc,
+static bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap0,
 				uint32_t *remap1,
 				uint32_t *remap2)
 {
@@ -3547,6 +3550,7 @@ static bool dp_reo_remap_config(struct dp_soc *soc,
 		num = dp_reo_ring_selection(value, ring);
 		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
 					      num, remap1, remap2);
+		hal_compute_reo_remap_ix0(soc->hal_soc, remap0);
 
 		break;
 	case dp_nss_cfg_first_radio:
@@ -9324,11 +9328,6 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 				      val.cdp_vdev_param_mesh_mode);
 		break;
 #endif
-	case CDP_ENABLE_CSUM:
-		dp_info("vdev_id %d enable Checksum %d", vdev_id,
-			val.cdp_enable_tx_checksum);
-		vdev->csum_enabled = val.cdp_enable_tx_checksum;
-		break;
 	case CDP_ENABLE_HLOS_TID_OVERRIDE:
 		dp_info("vdev_id %d enable hlod tid override %d", vdev_id,
 			val.cdp_vdev_param_hlos_tid_override);
@@ -11094,6 +11093,9 @@ static uint32_t dp_get_cfg(struct cdp_soc_t *soc, enum cdp_dp_cfg cfg)
 	case cfg_dp_gro_enable:
 		value = dpsoc->wlan_cfg_ctx->gro_enabled;
 		break;
+	case cfg_dp_force_gro_enable:
+		value = dpsoc->wlan_cfg_ctx->force_gro_enabled;
+		break;
 	case cfg_dp_tx_flow_start_queue_offset:
 		value = dpsoc->wlan_cfg_ctx->tx_flow_start_queue_offset;
 		break;
@@ -12542,6 +12544,7 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 		 * are offloaded to NSS
 		 */
 		if (dp_reo_remap_config(soc,
+					&reo_params.remap0,
 					&reo_params.remap1,
 					&reo_params.remap2))
 			reo_params.rx_hash_enabled = true;

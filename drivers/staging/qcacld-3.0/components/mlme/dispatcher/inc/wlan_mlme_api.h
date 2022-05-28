@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2708,6 +2708,15 @@ wlan_mlme_get_roaming_offload(struct wlan_objmgr_psoc *psoc,
 #endif
 
 /**
+ * wlan_mlme_set_ft_over_ds() - Update ft_over_ds
+ * @psoc: pointer to psoc object
+ * @ft_over_ds_enable: value of ft_over_ds
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_mlme_set_ft_over_ds(struct wlan_objmgr_psoc *psoc,
+				    uint8_t ft_over_ds_enable);
+/**
  * wlan_mlme_get_dfs_chan_ageout_time() - Get the DFS Channel ageout time
  * @psoc: pointer to psoc object
  * @dfs_chan_ageout_time: output pointer to hold configured value of DFS
@@ -3220,5 +3229,17 @@ wlan_mlme_get_mgmt_hw_tx_retry_count(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 wlan_mlme_get_tx_retry_multiplier(struct wlan_objmgr_psoc *psoc,
 				  uint32_t *tx_retry_multiplier);
+
+/**
+ * wlan_mlme_get_channel_bonding_5ghz  - Get the channel bonding
+ * val for 5ghz freq
+ * @psoc: pointer to psoc object
+ * @value: pointer to the value which will be filled for the caller
+ *
+ * Return: QDF Status
+ */
+QDF_STATUS
+wlan_mlme_get_channel_bonding_5ghz(struct wlan_objmgr_psoc *psoc,
+				   uint32_t *value);
 
 #endif /* _WLAN_MLME_API_H_ */

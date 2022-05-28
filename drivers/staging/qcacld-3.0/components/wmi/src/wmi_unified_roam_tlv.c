@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1019,6 +1020,14 @@ static QDF_STATUS send_roam_invoke_cmd_tlv(wmi_unified_t wmi_handle,
 		cmd->flags |=
 			(1 << WMI_ROAM_INVOKE_FLAG_FULL_SCAN_IF_NO_CANDIDATE);
 		cmd->reason = ROAM_INVOKE_REASON_NUD_FAILURE;
+	} else if (qdf_is_macaddr_broadcast((struct qdf_mac_addr *)&roaminvoke->bssid)) {
+		cmd->num_chan = 0;
+		cmd->num_bssid = 0;
+		cmd->roam_scan_mode = WMI_ROAM_INVOKE_SCAN_MODE_CACHE_MAP;
+		cmd->flags |=
+			(1 << WMI_ROAM_INVOKE_FLAG_FULL_SCAN_IF_NO_CANDIDATE) |
+			(1 << WMI_ROAM_INVOKE_FLAG_SELECT_CANDIDATE_CONSIDER_SCORE);
+		cmd->reason = ROAM_INVOKE_REASON_USER_SPACE;
 	} else {
 		cmd->reason = ROAM_INVOKE_REASON_USER_SPACE;
 	}
@@ -2137,6 +2146,8 @@ wmi_fill_rso_tlvs(wmi_unified_t wmi_handle, uint8_t *buf,
 				src_11r_info->is_adaptive_11r;
 			roam_offload_11r->ft_im_for_deauth =
 				src_11r_info->enable_ft_im_roaming;
+			roam_offload_11r->ft_over_ds_enable =
+				src_11r_info->enable_ft_over_ds;
 
 			if (akm == WMI_AUTH_OPEN) {
 				/*
@@ -2321,6 +2332,7 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 
 	scan_tlv->dwell_time_active = src_scan_params->dwell_time_active;
 	scan_tlv->dwell_time_passive = src_scan_params->dwell_time_passive;
+	scan_tlv->min_dwell_time_6ghz = src_scan_params->min_dwell_time_6ghz;
 	scan_tlv->burst_duration = src_scan_params->burst_duration;
 	scan_tlv->min_rest_time = src_scan_params->min_rest_time;
 	scan_tlv->max_rest_time = src_scan_params->max_rest_time;
@@ -2331,6 +2343,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 	scan_tlv->idle_time = src_scan_params->idle_time;
 	scan_tlv->n_probes = src_scan_params->n_probes;
 	scan_tlv->scan_ctrl_flags |= src_scan_params->scan_ctrl_flags;
+	scan_tlv->dwell_time_active_6ghz =
+		src_scan_params->dwell_time_active_6ghz;
+	scan_tlv->dwell_time_passive_6ghz =
+		src_scan_params->dwell_time_passive_6ghz;
 
 	WMI_SCAN_SET_DWELL_MODE(scan_tlv->scan_ctrl_flags,
 				src_scan_params->rso_adaptive_dwell_mode);
@@ -2343,8 +2359,10 @@ wmi_fill_rso_start_scan_tlv(struct wlan_roam_scan_offload_params *rso_req,
 		scan_tlv->scan_ctrl_flags_ext |=
 			WMI_SCAN_DBS_POLICY_DEFAULT;
 
-	wmi_debug("RSO_CFG: dwell time: active %d passive %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
+	wmi_debug("RSO_CFG: dwell time: active %d passive %d, active 6g %d passive 6g %d, minrest %d max rest %d repeat probe time %d probe_spacing:%d",
 		  scan_tlv->dwell_time_active, scan_tlv->dwell_time_passive,
+		  scan_tlv->dwell_time_active_6ghz,
+		  scan_tlv->dwell_time_passive_6ghz,
 		  scan_tlv->min_rest_time, scan_tlv->max_rest_time,
 		  scan_tlv->repeat_probe_time, scan_tlv->probe_spacing_time);
 	wmi_debug("RSO_CFG: ctrl_flags:0x%x probe_delay:%d max_scan_time:%d idle_time:%d n_probes:%d",

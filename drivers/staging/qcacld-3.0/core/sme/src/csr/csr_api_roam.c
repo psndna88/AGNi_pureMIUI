@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7665,6 +7665,7 @@ QDF_STATUS csr_roam_copy_profile(struct mac_context *mac,
 	pDstProfile->chan_switch_hostapd_rate_enabled  =
 		pSrcProfile->chan_switch_hostapd_rate_enabled;
 	pDstProfile->force_rsne_override = pSrcProfile->force_rsne_override;
+	pDstProfile->is_hs_20_ap = pSrcProfile->is_hs_20_ap;
 end:
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		csr_release_profile(mac, pDstProfile);
@@ -16854,6 +16855,11 @@ static void csr_roam_link_down(struct mac_context *mac, uint32_t sessionId)
 				       eCSR_ROAM_LOSTLINK,
 				       eCSR_ROAM_RESULT_LOSTLINK);
 	}
+
+	/* In case of STA mode disconnect, stop the roam_invoke timer */
+	if (csr_roam_is_sta_mode(mac, sessionId))
+		csr_roam_invoke_timer_stop(mac, sessionId);
+
 	/* Indicate the neighbor roal algorithm about the disconnect
 	 * indication
 	 */
@@ -17040,7 +17046,9 @@ static void csr_update_btm_offload_config(struct mac_context *mac_ctx,
 		return;
 
 	/* For RSO Stop Disable BTM offload to firmware */
-	if (command == ROAM_SCAN_OFFLOAD_STOP) {
+	if (command == ROAM_SCAN_OFFLOAD_STOP ||
+	    session->pCurRoamProfile->is_hs_20_ap) {
+		sme_debug("RSO cmd: %d", command);
 		*btm_offload_config = 0;
 		return;
 	}
@@ -18650,6 +18658,9 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 
 	csr_cm_update_rso_adaptive_11r(&rso_config->rso_11r_info,
 				       session);
+	rso_config->rso_11r_info.enable_ft_over_ds =
+		mac->mlme_cfg->lfr.enable_ft_over_ds;
+
 	csr_cm_update_rso_ese_info(mac, rso_config, roam_info, session);
 
 	akm = mac->roam.roamSession[vdev_id].connectedProfile.AuthType;
@@ -18672,6 +18683,26 @@ csr_cm_roam_scan_offload_fill_lfr3_config(
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif
+
+#ifdef CONFIG_BAND_6GHZ
+static void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{
+	wlan_scan_cfg_get_active_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_active_6ghz);
+
+	wlan_scan_cfg_get_passive_6g_dwelltime(
+					psoc,
+					&scan_params->dwell_time_passive_6ghz);
+}
+#else
+static inline void
+csr_cm_fill_6ghz_dwell_times(struct wlan_objmgr_psoc *psoc,
+			     struct wlan_roam_scan_params *scan_params)
+{}
 #endif
 
 static void
@@ -18697,6 +18728,8 @@ csr_cm_roam_scan_offload_fill_scan_params(
 	/* Parameters updated after association is complete */
 	wlan_scan_cfg_get_passive_dwelltime(mac->psoc,
 					    &scan_params->dwell_time_passive);
+	wlan_scan_cfg_get_min_dwelltime_6g(mac->psoc,
+					   &scan_params->min_dwell_time_6ghz);
 	/*
 	 * Here is the formula,
 	 * T(HomeAway) = N * T(dwell) + (N+1) * T(cs)
@@ -18794,6 +18827,8 @@ csr_cm_roam_scan_offload_fill_scan_params(
 
 	scan_params->rso_adaptive_dwell_mode =
 		mac->mlme_cfg->lfr.adaptive_roamscan_dwell_mode;
+
+	csr_cm_fill_6ghz_dwell_times(mac->psoc, scan_params);
 }
 
 /**
@@ -20838,6 +20873,12 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 	fastreassoc->bssid[4] = bssid[4];
 	fastreassoc->bssid[5] = bssid[5];
 
+	qdf_mem_copy(&vdev_roam_params->mac_addr, &bssid, ETH_ALEN);
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)&bssid))
+		goto send_evt;
+	if (qdf_is_macaddr_broadcast((struct qdf_mac_addr *)&bssid))
+		goto send_evt;
+
 	status = sme_get_beacon_frm(mac_handle, profile, bssid,
 				    &fastreassoc->frame_buf,
 				    &fastreassoc->frame_len,
@@ -20871,6 +20912,7 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 		}
 	}
 
+send_evt:
 	msg.type = eWNI_SME_ROAM_INVOKE;
 	msg.reserved = 0;
 	msg.bodyptr = fastreassoc;
@@ -20884,8 +20926,11 @@ QDF_STATUS csr_fast_reassoc(mac_handle_t mac_handle,
 		fastreassoc->frame_len = 0;
 		qdf_mem_free(fastreassoc);
 	} else {
+		if (qdf_is_macaddr_zero((struct qdf_mac_addr *)&bssid))
+			vdev_roam_params->source = CONNECTION_MGR_INITIATED;
+		else
+			vdev_roam_params->source = USERSPACE_INITIATED;
 		vdev_roam_params->roam_invoke_in_progress = true;
-		vdev_roam_params->source = USERSPACE_INITIATED;
 		session->roam_invoke_timer_info.mac = mac_ctx;
 		session->roam_invoke_timer_info.vdev_id = vdev_id;
 		qdf_mc_timer_start(&session->roam_invoke_timer,
@@ -21175,7 +21220,6 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 					   REASON_ROAM_ABORT);
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
-		csr_roam_invoke_timer_stop(mac_ctx, session_id);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,
 				eCSR_ROAM_ABORT, eCSR_ROAM_RESULT_SUCCESS);
 		goto end;
@@ -21192,6 +21236,16 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 			goto end;
 		}
 
+		/*
+		 * If reassoc MAC from user space is broadcast MAC as:
+		 * wpa_cli DRIVER REASSOC ff:ff:ff:ff:ff:ff 0,
+		 * user space invoked roaming candidate selection will base on
+		 * firmware score algorithm, current connection will be kept if
+		 * current AP has highest score. It is requirement from
+		 * customer which can avoid ping-pong roaming.
+		 */
+		if (qdf_is_macaddr_broadcast(&vdev_roam_params->mac_addr))
+			mlme_debug("Keep current connection");
 		/* Userspace roam req fail, disconnect with AP */
 		if (vdev_roam_params->source == USERSPACE_INITIATED ||
 		    mac_ctx->nud_fail_behaviour == DISCONNECT_AFTER_ROAM_FAIL)

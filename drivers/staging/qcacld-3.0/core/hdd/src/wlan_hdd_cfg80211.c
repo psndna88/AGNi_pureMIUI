@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7163,6 +7163,7 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_NUM_RX_CHAINS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
 
 };
 
@@ -7597,6 +7598,35 @@ static int hdd_set_roam_reason_vsie_status(struct hdd_adapter *adapter,
 	return -ENOTSUPP;
 }
 #endif
+
+static int hdd_set_ft_over_ds(struct hdd_adapter *adapter,
+			      const struct nlattr *attr)
+{
+	uint8_t ft_over_ds_enable;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct hdd_context *hdd_ctx = NULL;
+
+	hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	if (!hdd_ctx) {
+		hdd_err("hdd_ctx failure");
+		return -EINVAL;
+	}
+
+	ft_over_ds_enable = nla_get_u8(attr);
+
+	if (ft_over_ds_enable != 0 && ft_over_ds_enable != 1) {
+		hdd_err_rl("Invalid ft_over_ds_enable: %d", ft_over_ds_enable);
+		return -EINVAL;
+	}
+
+	status = ucfg_mlme_set_ft_over_ds(hdd_ctx->psoc, ft_over_ds_enable);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		hdd_err("set ft_over_ds failed");
+		return -EINVAL;
+	}
+
+	return status;
+}
 
 static int hdd_config_ldpc(struct hdd_adapter *adapter,
 			   const struct nlattr *attr)
@@ -9046,6 +9076,8 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_power},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_UDP_QOS_UPGRADE,
 	 hdd_config_udp_qos_upgrade_threshold},
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS,
+	 hdd_set_ft_over_ds},
 #ifdef FEATURE_WLAN_DYNAMIC_NSS
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_NSS_SWITCH,
 	 hdd_config_enable_dynamic_nss},
@@ -20872,6 +20904,7 @@ static int wlan_hdd_cfg80211_set_ie(struct hdd_adapter *adapter,
 					assoc_add_ie->addIEdata;
 				roam_profile->nAddIEAssocLength =
 					assoc_add_ie->length;
+				roam_profile->is_hs_20_ap = true;
 			}
 			/* Appending OSEN Information  Element in Assiciation Request */
 			else if ((0 == memcmp(&genie[0], OSEN_OUI_TYPE,

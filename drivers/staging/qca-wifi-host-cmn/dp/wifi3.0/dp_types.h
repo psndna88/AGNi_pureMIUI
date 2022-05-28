@@ -972,6 +972,10 @@ struct dp_soc_stats {
 		uint32_t msdu_scatter_wait_break;
 		/* Number of bar frames received */
 		uint32_t bar_frame;
+		/* Number of frames routed from rxdma */
+		uint32_t rxdma2rel_route_drop;
+		/* Number of frames routed from reo*/
+		uint32_t reo2rel_route_drop;
 
 		struct {
 			/* Invalid RBM error count */
@@ -2578,9 +2582,6 @@ struct dp_vdev {
 
 	/* IGMP multicast enhancement enabled */
 	uint8_t igmp_mcast_enhanc_en;
-
-	/* HW TX Checksum Enabled Flag */
-	uint8_t csum_enabled;
 
 	/* vdev_id - ID used to specify a particular vdev to the target */
 	uint8_t vdev_id;

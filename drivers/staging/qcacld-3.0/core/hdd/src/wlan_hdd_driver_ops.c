@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1199,11 +1200,16 @@ static int __wlan_hdd_bus_suspend(struct wow_enable_params wow_params)
 	hdd_info("starting bus suspend");
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx)
+		return -ENODEV;
 
 	err = wlan_hdd_validate_context(hdd_ctx);
-	if (err)
-		return err;
-
+	if (0 != err) {
+		if (pld_is_low_power_mode(hdd_ctx->parent_dev))
+			hdd_debug("low power mode (Deep Sleep/Hibernate)");
+		else
+			return err;
+	}
 
 	/* If Wifi is off, return success for system suspend */
 	if (hdd_ctx->driver_status != DRIVER_MODULES_ENABLED) {
@@ -1908,10 +1914,17 @@ static int wlan_hdd_pld_suspend(struct device *dev,
 	struct hdd_context *hdd_ctx;
 
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	if (!hdd_ctx)
+		return -ENODEV;
 
 	errno = wlan_hdd_validate_context(hdd_ctx);
-	if (errno)
-		return errno;
+	if (0 != errno) {
+		if (pld_is_low_power_mode(hdd_ctx->parent_dev))
+			hdd_debug("low power mode (Deep Sleep/Hibernate)");
+		else
+			return errno;
+	}
+
 	/*
 	 * Flush the idle shutdown before ops start.This is done here to avoid
 	 * the deadlock as idle shutdown waits for the dsc ops

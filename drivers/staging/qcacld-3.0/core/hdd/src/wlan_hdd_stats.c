@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -90,6 +90,7 @@
 #endif /* kernel version less than 4.0.0 && no_backport */
 
 #define HDD_LINK_STATS_MAX		5
+#define HDD_MAX_ALLOWED_LL_STATS_FAILURE	5
 
 /* 11B, 11G Rate table include Basic rate and Extended rate
  * The IDX field is the rate index
@@ -2028,14 +2029,17 @@ static int wlan_hdd_send_ll_stats_req(struct hdd_adapter *adapter,
 	}
 	ret = osif_request_wait_for_response(request);
 	if (ret) {
-		hdd_err("Target response timed out request id %d request bitmap 0x%x",
-			priv->request_id, priv->request_bitmap);
+		adapter->ll_stats_failure_count++;
+		hdd_err("Target response timed out request id %d request bitmap 0x%x ll_stats failure count %d",
+			priv->request_id, priv->request_bitmap,
+			adapter->ll_stats_failure_count);
 		qdf_spin_lock(&priv->ll_stats_lock);
 		priv->request_bitmap = 0;
 		qdf_spin_unlock(&priv->ll_stats_lock);
 		ret = -ETIMEDOUT;
 	} else {
 		hdd_update_station_stats_cached_timestamp(adapter);
+		adapter->ll_stats_failure_count = 0;
 	}
 	qdf_spin_lock(&priv->ll_stats_lock);
 	status = qdf_list_remove_front(&priv->ll_stats_q, &ll_node);
@@ -2055,6 +2059,12 @@ exit:
 	wlan_hdd_reset_station_stats_request_pending(hdd_ctx->psoc, adapter);
 	hdd_exit();
 	osif_request_put(request);
+
+	if (adapter->ll_stats_failure_count >=
+					HDD_MAX_ALLOWED_LL_STATS_FAILURE) {
+		cds_trigger_recovery(QDF_STATS_REQ_TIMEDOUT);
+		adapter->ll_stats_failure_count = 0;
+	}
 
 	return ret;
 }
@@ -2137,6 +2147,11 @@ __wlan_hdd_cfg80211_ll_stats_get(struct wiphy *wiphy,
 	if (!adapter->is_link_layer_stats_set) {
 		hdd_nofl_debug("is_link_layer_stats_set: %d",
 			       adapter->is_link_layer_stats_set);
+		return -EINVAL;
+	}
+
+	if (adapter->device_mode == QDF_SAP_MODE) {
+		hdd_nofl_debug("LL_STATS get is not supported for SAP mode");
 		return -EINVAL;
 	}
 
@@ -4189,7 +4204,7 @@ static void wlan_hdd_fill_summary_stats(tCsrSummaryStatsInfo *stats,
 	if (cds_dp_get_vdev_stats(vdev_id, &dp_stats)) {
 		orig_cnt = info->tx_retries;
 		orig_fail_cnt = info->tx_failed;
-		info->tx_retries = dp_stats.tx_retries;
+		info->tx_retries = dp_stats.tx_retries_mpdu;
 		info->tx_failed += dp_stats.tx_mpdu_success_with_retries;
 		hdd_debug("vdev %d tx retries adjust from %d to %d",
 			  vdev_id, orig_cnt, info->tx_retries);
@@ -5670,7 +5685,8 @@ static int wlan_hdd_get_sta_stats(struct wiphy *wiphy,
 		return 0;
 	}
 
-	if (sta_ctx->hdd_reassoc_scenario) {
+	if (sta_ctx->hdd_reassoc_scenario ||
+	    hdd_is_roaming_in_progress(hdd_ctx)) {
 		hdd_debug("Roaming is in progress, cannot continue with this request");
 		/*
 		 * supplicant reports very low rssi to upper layer

@@ -1232,3 +1232,6 @@ ifeq ($(CONFIG_FW_THERMAL_THROTTLE), y)
 CONFIG_WLAN_THERMAL_MULTI_CLIENT_SUPPORT := y
 endif
 endif
+
+#Enable Low Power Modes: Deep Sleep/Hibernate
+CONFIG_ENABLE_LOW_POWER_MODE := y

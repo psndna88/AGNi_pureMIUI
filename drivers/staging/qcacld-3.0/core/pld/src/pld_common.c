@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1318,11 +1319,13 @@ int pld_exit_power_save(struct device *dev)
 	switch (type) {
 	case PLD_BUS_TYPE_PCIE:
 	case PLD_BUS_TYPE_PCIE_FW_SIM:
-	case PLD_BUS_TYPE_IPCI_FW_SIM:
 	case PLD_BUS_TYPE_SNOC_FW_SIM:
 	case PLD_BUS_TYPE_SNOC:
 	case PLD_BUS_TYPE_SDIO:
 	case PLD_BUS_TYPE_USB:
+		break;
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+		ret = pld_pcie_fw_sim_exit_power_save(dev);
 		break;
 	case PLD_BUS_TYPE_IPCI:
 		ret = pld_ipci_exit_power_save(dev);
@@ -2727,6 +2730,38 @@ int pld_is_fw_down(struct device *dev)
 	return ret;
 }
 
+#ifdef CONFIG_ENABLE_LOW_POWER_MODE
+/**
+ * pld_is_low_power_mode() - Check WLAN fw is in low power
+ * @dev: device
+ *
+ * This API will be called to check if WLAN FW is in low power or not.
+ * Low power means either Deep Sleep or Hibernate state.
+ *
+ *  Return: 0 FW is not in low power mode
+ *          Otherwise FW is low power mode
+ *          Always return 0 for unsupported bus type
+ */
+int pld_is_low_power_mode(struct device *dev)
+{
+	int ret = 0;
+	enum pld_bus_type type = pld_get_bus_type(dev);
+
+	switch (type) {
+	case PLD_BUS_TYPE_SNOC:
+		ret = pld_snoc_is_low_power_mode(dev);
+		break;
+	case PLD_BUS_TYPE_PCIE_FW_SIM:
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+	case PLD_BUS_TYPE_SNOC_FW_SIM:
+	case PLD_BUS_TYPE_IPCI:
+	default:
+		break;
+	}
+	return ret;
+}
+#endif
+
 /**
  * pld_force_assert_target() - Send a force assert request to FW.
  * @dev: device pointer
@@ -3149,6 +3184,45 @@ int pld_get_thermal_state(struct device *dev, unsigned long *thermal_state,
 
 	return errno;
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/**
+ * pld_is_ipa_offload_disabled() - Check if IPA offload is disabled or not
+ *
+ * @dev: device
+ *
+ * This API will be called to check if IPA offload is disabled or not.
+ *
+ *  Return: Non-zero for IPA offload is disabled
+ *          Otherwise IPA offload is enabled
+ */
+int pld_is_ipa_offload_disabled(struct device *dev)
+{
+	unsigned long dev_cfg = 0;
+
+	enum pld_bus_type type = pld_get_bus_type(dev);
+
+	switch (type) {
+	case PLD_BUS_TYPE_SNOC:
+		dev_cfg = pld_snoc_get_device_config();
+		break;
+	case PLD_BUS_TYPE_IPCI:
+	case PLD_BUS_TYPE_PCIE:
+	case PLD_BUS_TYPE_SDIO:
+	case PLD_BUS_TYPE_USB:
+	case PLD_BUS_TYPE_SNOC_FW_SIM:
+	case PLD_BUS_TYPE_PCIE_FW_SIM:
+	case PLD_BUS_TYPE_IPCI_FW_SIM:
+		pr_err("Not supported on type %d\n", type);
+		break;
+	default:
+		pr_err("Invalid device type %d\n", type);
+		break;
+	}
+
+	return test_bit(PLD_IPA_DISABLED, &dev_cfg);
+}
+#endif
 
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 /**

@@ -227,7 +227,8 @@ void target_if_cfr_fill_header(struct csi_cfr_header *hdr,
 		hdr->cmn.chip_type = CFR_CAPTURE_RADIO_HKV2;
 	} else {
 		if (target_type == TARGET_TYPE_QCN9000 ||
-		    target_type == TARGET_TYPE_QCA6490)
+		    target_type == TARGET_TYPE_QCA6490 ||
+		    target_type == TARGET_TYPE_QCA6750)
 			hdr->cmn.cfr_metadata_version = CFR_META_VERSION_7;
 		else if ((target_type == TARGET_TYPE_QCA6018) ||
 			 ((target_type == TARGET_TYPE_QCA5018) && (!is_rcc)))
