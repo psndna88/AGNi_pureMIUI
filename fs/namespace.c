@@ -3195,8 +3195,8 @@ long do_mount(const char *dev_name, const char __user *dir_name,
 		retval = do_new_mount(&path, type_page, sb_flags, mnt_flags,
 				      dev_name, data_page);
 
-	pr_info("%s: dev: %s, mount point: %s , retval=%d", __FUNCTION__,  dev_name, 
-		d_path(&path, buf_path, buf_path_len), retval);
+//	pr_info("%s: dev: %s, mount point: %s , retval=%d", __FUNCTION__,  dev_name, 
+//		d_path(&path, buf_path, buf_path_len), retval);
 dput_out:
 	path_put(&path);
 	return retval;
