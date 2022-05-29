@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.180 Kernel Configuration
+# Linux/arm64 5.4.185 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 12.1.1"
 CONFIG_GCC_VERSION=0
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
 # CONFIG_UAPI_HEADER_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_AOSP-S_v1.0-beta12"
+CONFIG_LOCALVERSION="-AGNi_haydn_AOSP-S_v1.0-beta13"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
