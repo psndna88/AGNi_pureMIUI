@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2019, 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  */
 #ifndef __Q6_ASM_V2_H__
 #define __Q6_ASM_V2_H__
@@ -151,7 +150,6 @@ enum {
 	SOFT_VOLUME_CURVE_LINEAR = 0,
 	SOFT_VOLUME_CURVE_EXP,
 	SOFT_VOLUME_CURVE_LOG,
-	SOFT_VOLUME_CURVE_ENUM_MAX,
 };
 
 #define SOFT_VOLUME_INSTANCE_1	1
@@ -250,8 +248,6 @@ struct audio_client {
 	/* shared io */
 	struct audio_buffer shared_pos_buf;
 	struct shared_io_config config;
-	int stream_type;
-	int fedai_id;
 };
 
 struct q6asm_cal_info {
@@ -306,9 +302,6 @@ int q6asm_open_read_v5(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample, bool ts_mode,
 			uint32_t enc_cfg_id);
 
-int q6asm_open_read_with_retry(struct audio_client *ac, uint32_t format,
-			uint16_t bits_per_sample, bool ts_mode);
-
 int q6asm_open_write(struct audio_client *ac, uint32_t format
 		/*, uint16_t bits_per_sample*/);
 
@@ -326,9 +319,6 @@ int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample);
 
 int q6asm_open_write_v5(struct audio_client *ac, uint32_t format,
-			uint16_t bits_per_sample);
-
-int q6asm_open_write_with_retry(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample);
 
 int q6asm_stream_open_write_v2(struct audio_client *ac, uint32_t format,
@@ -363,9 +353,6 @@ int q6asm_open_read_write_v2(struct audio_client *ac, uint32_t rd_format,
 			     int topology);
 
 int q6asm_open_loopback_v2(struct audio_client *ac,
-			   uint16_t bits_per_sample);
-
-int q6asm_open_loopback_with_retry(struct audio_client *ac,
 			   uint16_t bits_per_sample);
 
 int q6asm_open_transcode_loopback(struct audio_client *ac,
@@ -433,8 +420,6 @@ void *q6asm_is_cpu_buf_avail(int dir, struct audio_client *ac,
 
 int q6asm_cpu_buf_release(int dir, struct audio_client *ac);
 
-int q6asm_cpu_buf_release_nolock(int dir, struct audio_client *ac);
-
 void *q6asm_is_cpu_buf_avail_nolock(int dir, struct audio_client *ac,
 					uint32_t *size, uint32_t *idx);
 
@@ -491,13 +476,11 @@ int q6asm_enc_cfg_blk_pcm_format_support_v4(struct audio_client *ac,
 					    uint16_t mode);
 
 int q6asm_enc_cfg_blk_pcm_format_support_v5(struct audio_client *ac,
-					    uint32_t rate, uint32_t channels,
-					    bool use_default_chmap,
-					    char *channel_map,
-					    uint16_t bits_per_sample,
-					    uint16_t sample_word_size,
-					    uint16_t endianness,
-					    uint16_t mode);
+					uint32_t rate, uint32_t channels,
+					uint16_t bits_per_sample,
+					uint16_t sample_word_size,
+					uint16_t endianness,
+					uint16_t mode);
 
 int q6asm_enc_cfg_blk_custom(struct audio_client *ac,
 			uint32_t sample_rate, uint32_t channels,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -29,8 +29,6 @@
 
 #define MSM_AUDIO_SMMU_VM_CMD_MAP 0x00000001
 #define MSM_AUDIO_SMMU_VM_CMD_UNMAP 0x00000002
-#define MSM_AUDIO_SMMU_VM_CMD_MAP_V2 0x00000003
-#define MSM_AUDIO_SMMU_VM_CMD_UNMAP_V2 0x00000004
 #define MSM_AUDIO_SMMU_VM_HAB_MINOR_ID 1
 
 struct msm_audio_ion_private {
@@ -52,34 +50,28 @@ struct msm_audio_alloc_data {
 	u32 export_id;
 };
 
-struct msm_audio_smmu_vm_map_cmd_v2 {
+struct msm_audio_smmu_vm_map_cmd {
 	int cmd_id;
 	u32 export_id;
 	u32 buf_size;
-	u32 token;
 };
 
-struct msm_audio_smmu_vm_map_cmd_rsp_v2 {
+struct msm_audio_smmu_vm_map_cmd_rsp {
 	int status;
 	u64 addr;
-	u32 token;
 };
 
-struct msm_audio_smmu_vm_unmap_cmd_v2 {
+struct msm_audio_smmu_vm_unmap_cmd {
 	int cmd_id;
 	u32 export_id;
-	u32 token;
 };
 
-struct msm_audio_smmu_vm_unmap_cmd_rsp_v2 {
+struct msm_audio_smmu_vm_unmap_cmd_rsp {
 	int status;
-	u32 token;
-	u64 padding;
 };
 
 static struct msm_audio_ion_private msm_audio_ion_data = {0,};
 static u32 msm_audio_ion_hab_handle;
-static u32 token_id;
 
 static void msm_audio_ion_add_allocation(
 	struct msm_audio_ion_private *msm_audio_ion_data,
@@ -237,8 +229,8 @@ static int msm_audio_ion_smmu_map(struct dma_buf *dma_buf,
 	u32 cmd_rsp_size;
 	bool found = false;
 	bool exported = false;
-	struct msm_audio_smmu_vm_map_cmd_v2 smmu_map_cmd;
-	struct msm_audio_smmu_vm_map_cmd_rsp_v2 cmd_rsp;
+	struct msm_audio_smmu_vm_map_cmd smmu_map_cmd;
+	struct msm_audio_smmu_vm_map_cmd_rsp cmd_rsp;
 	struct msm_audio_alloc_data *alloc_data = NULL;
 	unsigned long delay = jiffies + (HZ / 2);
 
@@ -260,13 +252,9 @@ static int msm_audio_ion_smmu_map(struct dma_buf *dma_buf,
 			}
 
 			exported = true;
-			smmu_map_cmd.cmd_id = MSM_AUDIO_SMMU_VM_CMD_MAP_V2;
+			smmu_map_cmd.cmd_id = MSM_AUDIO_SMMU_VM_CMD_MAP;
 			smmu_map_cmd.export_id = export_id;
 			smmu_map_cmd.buf_size = *len;
-			smmu_map_cmd.token = token_id;
-			pr_debug("%s: export_id %u, smmu_map_cmd.token %u\n",
-				__func__, smmu_map_cmd.export_id, smmu_map_cmd.token);
-			token_id++;
 
 			rc = habmm_socket_send(msm_audio_ion_hab_handle,
 				(void *)&smmu_map_cmd, sizeof(smmu_map_cmd), 0);
@@ -289,28 +277,6 @@ static int msm_audio_ion_smmu_map(struct dma_buf *dma_buf,
 				pr_err("%s: habmm_socket_recv failed %d\n",
 					__func__, rc);
 				goto err;
-			}
-
-			while (cmd_rsp.token != smmu_map_cmd.token) {
-				pr_err("%s: invalid token %u, expected %u\n",
-					__func__, cmd_rsp.token, smmu_map_cmd.token);
-
-				cmd_rsp_size = sizeof(cmd_rsp);
-				rc = habmm_socket_recv(msm_audio_ion_hab_handle,
-					(void *)&cmd_rsp,
-					&cmd_rsp_size,
-					0xFFFFFFFF,
-					0);
-
-				if (time_before(jiffies, delay) && (rc == -EINTR) &&
-				   (cmd_rsp_size == 0)) {
-					continue;
-				}
-				if (rc) {
-					pr_err("%s: habmm_socket_recv failed %d\n",
-						__func__, rc);
-					goto err;
-				}
 			}
 
 			if (cmd_rsp_size != sizeof(cmd_rsp)) {
@@ -336,10 +302,10 @@ static int msm_audio_ion_smmu_map(struct dma_buf *dma_buf,
 
 	if (!found) {
 		pr_err("%s: cannot find allocation, dma_buf %pK", __func__, dma_buf);
-		rc = -EINVAL;
+		return -EINVAL;
 	}
 
-	return rc;
+	return 0;
 
 err:
 	if (exported)
@@ -354,8 +320,8 @@ static int msm_audio_ion_smmu_unmap(struct dma_buf *dma_buf)
 	int rc;
 	bool found = false;
 	u32 cmd_rsp_size;
-	struct msm_audio_smmu_vm_unmap_cmd_v2 smmu_unmap_cmd;
-	struct msm_audio_smmu_vm_unmap_cmd_rsp_v2 cmd_rsp;
+	struct msm_audio_smmu_vm_unmap_cmd smmu_unmap_cmd;
+	struct msm_audio_smmu_vm_unmap_cmd_rsp cmd_rsp;
 	struct msm_audio_alloc_data *alloc_data, *next;
 	unsigned long delay = jiffies + (HZ / 2);
 
@@ -370,12 +336,9 @@ static int msm_audio_ion_smmu_unmap(struct dma_buf *dma_buf)
 
 		if (alloc_data->dma_buf == dma_buf) {
 			found = true;
-			smmu_unmap_cmd.cmd_id = MSM_AUDIO_SMMU_VM_CMD_UNMAP_V2;
+			smmu_unmap_cmd.cmd_id = MSM_AUDIO_SMMU_VM_CMD_UNMAP;
 			smmu_unmap_cmd.export_id = alloc_data->export_id;
-			smmu_unmap_cmd.token = token_id;
-			pr_debug("%s: export_id %u, smmu_unmap_cmd.token %u\n",
-				__func__, smmu_unmap_cmd.export_id, smmu_unmap_cmd.token);
-			token_id++;
+
 			rc = habmm_socket_send(msm_audio_ion_hab_handle,
 				(void *)&smmu_unmap_cmd,
 				sizeof(smmu_unmap_cmd), 0);
@@ -398,28 +361,6 @@ static int msm_audio_ion_smmu_unmap(struct dma_buf *dma_buf)
 				pr_err("%s: habmm_socket_recv failed %d\n",
 					__func__, rc);
 				goto err;
-			}
-
-			while (cmd_rsp.token != smmu_unmap_cmd.token) {
-				pr_err("%s: invalid token %u, expected %u\n",
-					__func__, cmd_rsp.token, smmu_unmap_cmd.token);
-
-				cmd_rsp_size = sizeof(cmd_rsp);
-				rc = habmm_socket_recv(msm_audio_ion_hab_handle,
-					(void *)&cmd_rsp,
-					&cmd_rsp_size,
-					0xFFFFFFFF,
-					0);
-
-				if (time_before(jiffies, delay) && (rc == -EINTR) &&
-				   (cmd_rsp_size == 0)) {
-					continue;
-				}
-				if (rc) {
-					pr_err("%s: habmm_socket_recv failed %d\n",
-						__func__, rc);
-					goto err;
-				}
 			}
 
 			if (cmd_rsp_size != sizeof(cmd_rsp)) {
@@ -459,6 +400,8 @@ err:
 	if (found) {
 		(void)habmm_unexport(msm_audio_ion_hab_handle,
 			alloc_data->export_id, 0xFFFFFFFF);
+		list_del(&(alloc_data->list));
+		kfree(alloc_data);
 	}
 
 	mutex_unlock(&(msm_audio_ion_data.list_mutex));
@@ -592,7 +535,6 @@ static int msm_audio_ion_map_buf(struct dma_buf *dma_buf, dma_addr_t *paddr,
 		if (rc) {
 			pr_err("%s: failed to do smmu map, err = %d\n",
 				__func__, rc);
-			msm_audio_ion_unmap_kernel(dma_buf);
 			msm_audio_dma_buf_unmap(dma_buf, false);
 			goto err;
 		}
@@ -1005,11 +947,6 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 	if (!smmu_enabled) {
 		dev_dbg(dev, "%s: SMMU is Disabled\n", __func__);
 		goto exit;
-	}
-	else {
-		rc = dma_set_mask(dev, DMA_BIT_MASK(64));
-		dev_dbg(dev, "%s: dma_set_mask returned 0x%x\n",
-			__func__, rc);
 	}
 
 	rc = habmm_socket_open(&msm_audio_ion_hab_handle,

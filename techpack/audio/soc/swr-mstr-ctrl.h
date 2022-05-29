@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _SWR_WCD_CTRL_H
@@ -198,7 +198,6 @@ struct swr_mstr_ctrl {
 	u64 phy_dev[SWRM_NUM_AUTO_ENUM_SLAVES + 1];
 	bool use_custom_phy_addr;
 	u32 is_always_on;
-	bool clk_stop_wakeup;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs_swrm_dent;
 	struct dentry *debugfs_peek;

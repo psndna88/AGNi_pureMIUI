@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2012-2017, 2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, 2019 The Linux Foundation. All rights reserved.
  */
 
 #ifndef _MSM_PCM_H
@@ -49,11 +49,11 @@ struct msm_audio_in_frame_info {
 #define PLAYBACK_MIN_NUM_PERIODS    2
 #define PLAYBACK_MAX_NUM_PERIODS    8
 #define PLAYBACK_MAX_PERIOD_SIZE    122880
-#define PLAYBACK_MIN_PERIOD_SIZE    120
+#define PLAYBACK_MIN_PERIOD_SIZE    128
 #define CAPTURE_MIN_NUM_PERIODS     2
 #define CAPTURE_MAX_NUM_PERIODS     8
 #define CAPTURE_MAX_PERIOD_SIZE     122880
-#define CAPTURE_MIN_PERIOD_SIZE     120
+#define CAPTURE_MIN_PERIOD_SIZE     320
 
 struct msm_audio {
 	struct snd_pcm_substream *substream;
@@ -117,7 +117,6 @@ struct msm_plat_data {
 	struct msm_pcm_ch_map *ch_map[MSM_FRONTEND_DAI_MAX];
 	struct snd_pcm *pcm_device[MSM_FRONTEND_DAI_MM_SIZE];
 	struct msm_pcm_channel_mixer *chmixer_pspd[MSM_FRONTEND_DAI_MM_SIZE][2];
-	struct msm_pcm_channel_mixer *chmixer_ec_ref[MSM_FRONTEND_DAI_MM_SIZE];
 	struct mutex lock;
 };
 

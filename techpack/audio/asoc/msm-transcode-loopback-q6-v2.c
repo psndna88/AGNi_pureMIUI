@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -43,6 +43,8 @@
 #define APP_TYPE_CONFIG_IDX_ACDB_ID 1
 #define APP_TYPE_CONFIG_IDX_SAMPLE_RATE 2
 #define APP_TYPE_CONFIG_IDX_BE_ID 3
+
+static DEFINE_MUTEX(transcode_loopback_session_lock);
 
 struct msm_transcode_audio_effects {
 	struct bass_boost_params bass_boost;
@@ -540,7 +542,6 @@ static int msm_transcode_loopback_set_params(struct snd_compr_stream *cstream,
 						loopback_event_handler);
 		trans->session_id = trans->audio_client->session;
 		trans->audio_client->perf_mode = trans->sink.perf_mode;
-		trans->audio_client->fedai_id = rtd->dai_link->id;
 		ret = q6asm_open_transcode_loopback(trans->audio_client,
 					bit_width,
 					trans->source.codec_format,

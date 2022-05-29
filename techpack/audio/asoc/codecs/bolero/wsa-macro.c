@@ -235,7 +235,6 @@ struct wsa_macro_priv {
 			[WSA_MACRO_CHILD_DEVICES_MAX];
 	int child_count;
 	int ear_spkr_gain;
-	int wsa_spkrrecv;
 	int spkr_gain_offset;
 	int spkr_mode;
 	int is_softclip_on[WSA_MACRO_SOFTCLIP_MAX];
@@ -294,11 +293,6 @@ static const struct snd_kcontrol_new wsa_int1_vbat_mix_switch[] = {
 	SOC_DAPM_SINGLE("WSA RX1 VBAT Enable", SND_SOC_NOPM, 0, 1, 0)
 };
 
-static const char *const wsa_macro_ear_spkrrecv_text[] = {
-	"OFF", "ON"
-};
-static SOC_ENUM_SINGLE_EXT_DECL(wsa_macro_ear_spkrrecv_enum,
-				wsa_macro_ear_spkrrecv_text);
 static SOC_ENUM_SINGLE_EXT_DECL(wsa_macro_ear_spkr_pa_gain_enum,
 				wsa_macro_ear_spkr_pa_gain_text);
 static SOC_ENUM_SINGLE_EXT_DECL(wsa_macro_spkr_boost_stage_enum,
@@ -1711,14 +1705,6 @@ static int wsa_macro_config_ear_spkr_gain(struct snd_soc_component *component,
 			dev_dbg(wsa_priv->dev, "%s: RX0 Volume %d dB\n",
 				__func__, val);
 		}
-		if(wsa_priv->wsa_spkrrecv) {
-			snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_COMPANDER0_CTL7, 0x01, 0x00);
-			snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_COMPANDER0_CTL3, 0x80, 0x80);
-			snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_RX0_RX_PATH_CFG1, 0x08, 0x00);
-		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		/*
@@ -1733,12 +1719,6 @@ static int wsa_macro_config_ear_spkr_gain(struct snd_soc_component *component,
 			dev_dbg(wsa_priv->dev, "%s: Reset RX0 Volume to 0 dB\n",
 				__func__);
 		}
-		snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_RX0_RX_PATH_CFG1, 0x08, 0x08);
-		snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_COMPANDER0_CTL7, 0x01, 0x01);
-		snd_soc_component_update_bits(component,
-				BOLERO_CDC_WSA_COMPANDER0_CTL3, 0x80, 0x00);
 		break;
 	}
 
@@ -2115,43 +2095,6 @@ static int wsa_macro_set_compander(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int wsa_macro_ear_spkrrecv_get(struct snd_kcontrol *kcontrol,
-				 struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_component *component =
-				snd_soc_kcontrol_component(kcontrol);
-	struct device *wsa_dev = NULL;
-	struct wsa_macro_priv *wsa_priv = NULL;
-
-	if (!wsa_macro_get_data(component, &wsa_dev, &wsa_priv, __func__))
-		return -EINVAL;
-
-	ucontrol->value.integer.value[0] = wsa_priv->wsa_spkrrecv;
-
-	dev_dbg(component->dev, "%s: ucontrol->value.integer.value[0] = %ld\n",
-		 __func__, ucontrol->value.integer.value[0]);
-
-	return 0;
-}
-
-static int wsa_macro_ear_spkrrecv_put(struct snd_kcontrol *kcontrol,
-                                        struct snd_ctl_elem_value *ucontrol)
-{
-        struct snd_soc_component *component =
-                                snd_soc_kcontrol_component(kcontrol);
-        struct device *wsa_dev = NULL;
-        struct wsa_macro_priv *wsa_priv = NULL;
-
-        if (!wsa_macro_get_data(component, &wsa_dev, &wsa_priv, __func__))
-                return -EINVAL;
-        wsa_priv->wsa_spkrrecv = ucontrol->value.integer.value[0];
-
-        dev_dbg(component->dev, "%s:spkrrecv status = %d\n",
-                 __func__, wsa_priv->wsa_spkrrecv);
-
-        return 0;
-}
-
 static int wsa_macro_ear_spkr_pa_gain_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
@@ -2417,9 +2360,6 @@ static int wsa_macro_soft_clip_enable_put(struct snd_kcontrol *kcontrol,
 }
 
 static const struct snd_kcontrol_new wsa_macro_snd_controls[] = {
-	SOC_ENUM_EXT("WSA SPKRRECV", wsa_macro_ear_spkrrecv_enum,
-			wsa_macro_ear_spkrrecv_get,
-			wsa_macro_ear_spkrrecv_put),
 	SOC_ENUM_EXT("EAR SPKR PA Gain", wsa_macro_ear_spkr_pa_gain_enum,
 		     wsa_macro_ear_spkr_pa_gain_get,
 		     wsa_macro_ear_spkr_pa_gain_put),
@@ -2812,10 +2752,10 @@ static const struct snd_soc_dapm_route wsa_audio_map[] = {
 static const struct wsa_macro_reg_mask_val wsa_macro_reg_init[] = {
 	{BOLERO_CDC_WSA_BOOST0_BOOST_CFG1, 0x3F, 0x12},
 	{BOLERO_CDC_WSA_BOOST0_BOOST_CFG2, 0x1C, 0x08},
-	{BOLERO_CDC_WSA_COMPANDER0_CTL7, 0x1E, 0x18},
+	{BOLERO_CDC_WSA_COMPANDER0_CTL7, 0x1E, 0x0C},
 	{BOLERO_CDC_WSA_BOOST1_BOOST_CFG1, 0x3F, 0x12},
 	{BOLERO_CDC_WSA_BOOST1_BOOST_CFG2, 0x1C, 0x08},
-	{BOLERO_CDC_WSA_COMPANDER1_CTL7, 0x1E, 0x18},
+	{BOLERO_CDC_WSA_COMPANDER1_CTL7, 0x1E, 0x0C},
 	{BOLERO_CDC_WSA_BOOST0_BOOST_CTL, 0x70, 0x58},
 	{BOLERO_CDC_WSA_BOOST1_BOOST_CTL, 0x70, 0x58},
 	{BOLERO_CDC_WSA_RX0_RX_PATH_CFG1, 0x08, 0x08},
@@ -3146,23 +3086,6 @@ static void wsa_macro_add_child_devices(struct work_struct *work)
 					__func__, ctrl_num);
 				goto fail_pdev_add;
 			}
-
-			temp = krealloc(swr_ctrl_data,
-					(ctrl_num + 1) * sizeof(
-					struct wsa_macro_swr_ctrl_data),
-					GFP_KERNEL);
-			if (!temp) {
-				dev_err(&pdev->dev, "out of memory\n");
-				ret = -ENOMEM;
-				goto fail_pdev_add;
-			}
-			swr_ctrl_data = temp;
-			swr_ctrl_data[ctrl_num].wsa_swr_pdev = pdev;
-			ctrl_num++;
-			dev_dbg(&pdev->dev,
-				"%s: Adding soundwire ctrl device(s)\n",
-				__func__);
-			wsa_priv->swr_ctrl_data = swr_ctrl_data;
 		}
 
 		ret = platform_device_add(pdev);
@@ -3173,6 +3096,24 @@ static void wsa_macro_add_child_devices(struct work_struct *work)
 			goto fail_pdev_add;
 		}
 
+		if (!strcmp(node->name, "wsa_swr_master")) {
+			temp = krealloc(swr_ctrl_data,
+					(ctrl_num + 1) * sizeof(
+					struct wsa_macro_swr_ctrl_data),
+					GFP_KERNEL);
+			if (!temp) {
+				dev_err(&pdev->dev, "out of memory\n");
+				ret = -ENOMEM;
+				goto err;
+			}
+			swr_ctrl_data = temp;
+			swr_ctrl_data[ctrl_num].wsa_swr_pdev = pdev;
+			ctrl_num++;
+			dev_dbg(&pdev->dev,
+				"%s: Added soundwire ctrl device(s)\n",
+				__func__);
+			wsa_priv->swr_ctrl_data = swr_ctrl_data;
+		}
 		if (wsa_priv->child_count < WSA_MACRO_CHILD_DEVICES_MAX)
 			wsa_priv->pdev_child_devices[
 					wsa_priv->child_count++] = pdev;
@@ -3309,12 +3250,12 @@ static int wsa_macro_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: register macro failed\n", __func__);
 		goto reg_macro_fail;
 	}
+	schedule_work(&wsa_priv->wsa_macro_add_child_devices_work);
 	pm_runtime_set_autosuspend_delay(&pdev->dev, AUTO_SUSPEND_DELAY);
 	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
-	schedule_work(&wsa_priv->wsa_macro_add_child_devices_work);
 
 	return ret;
 reg_macro_fail:

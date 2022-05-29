@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 
@@ -43,8 +42,6 @@
 
 #define SWRM_DSD_PARAMS_PORT 4
 
-#define SWRM_SPK_DAC_PORT_RECEIVER 0
-
 #define SWR_BROADCAST_CMD_ID            0x0F
 #define SWR_DEV_ID_MASK			0xFFFFFFFFFFFF
 #define SWR_REG_VAL_PACK(data, dev, id, reg)	\
@@ -56,6 +53,7 @@
 
 #define ERR_AUTO_SUSPEND_TIMER_VAL 0x1
 
+#define SWRM_INTERRUPT_STATUS_MASK 0x1FDFD
 #define SWRM_LINK_STATUS_RETRY_CNT 100
 
 #define SWRM_ROW_48    48
@@ -774,12 +772,6 @@ static int swrm_get_port_config(struct swr_mstr_ctrl *swrm)
 	else if (swrm->bus_clk == SWR_CLK_RATE_0P6MHZ)
 		usecase = 2;
 
-	if ((swrm->master_id == MASTER_ID_WSA) &&
-	    swrm->mport_cfg[SWRM_SPK_DAC_PORT_RECEIVER].port_en &&
-	    swrm->mport_cfg[SWRM_SPK_DAC_PORT_RECEIVER].ch_rate ==
-			SWR_CLK_RATE_4P8MHZ)
-		usecase = 1;
-
 	params = swrm->port_param[usecase];
 	copy_port_tables(swrm, params);
 
@@ -1314,8 +1306,9 @@ static void swrm_disable_ports(struct swr_master *master,
 		dev_dbg(swrm->dev, "%s: value :%d\n", __func__, value);
 		value |= ((mport->offset1)
 				<< SWRM_DP_PORT_CTRL_OFFSET1_SHFT);
+		dev_dbg(swrm->dev, "%s: value :%d\n", __func__, value);
 		value |= (mport->sinterval & 0xFF);
-
+		dev_dbg(swrm->dev, "%s: value :%d\n", __func__, value);
 		swr_master_write(swrm,
 				SWRM_DP_PORT_CTRL_BANK((i + 1), bank),
 				value);
@@ -1468,14 +1461,12 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 					SWRS_DP_SAMPLE_CONTROL_1_BANK(slv_id,
 								bank));
 
-			if ((port_req->sinterval >> 8)& 0xFF) {
-				reg[len] = SWRM_CMD_FIFO_WR_CMD;
-				val[len++] = SWR_REG_VAL_PACK(
+			reg[len] = SWRM_CMD_FIFO_WR_CMD;
+			val[len++] = SWR_REG_VAL_PACK(
 					(port_req->sinterval >> 8)& 0xFF,
 					port_req->dev_num, 0x00,
 					SWRS_DP_SAMPLE_CONTROL_2_BANK(slv_id,
 								bank));
-			}
 
 			reg[len] = SWRM_CMD_FIFO_WR_CMD;
 			val[len++] = SWR_REG_VAL_PACK(port_req->offset1,
@@ -1508,7 +1499,8 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 						port_req->dev_num, 0x00,
 						SWRS_DP_BLOCK_CONTROL_1(slv_id));
 			}
-			if (port_req->blk_pack_mode != SWR_INVALID_PARAM) {
+			if (port_req->blk_pack_mode != SWR_INVALID_PARAM
+					&& swrm->master_id != MASTER_ID_WSA) {
 				reg[len] = SWRM_CMD_FIFO_WR_CMD;
 				val[len++] =
 					SWR_REG_VAL_PACK(
@@ -1839,15 +1831,6 @@ static int swrm_connect_port(struct swr_master *master,
 				swrm->dynamic_port_map_supported) {
 			mport->ch_rate += portinfo->ch_rate[i];
 			swrm_update_bus_clk(swrm);
-		} else {
-			/*
-			 * Fallback to assign slave port ch_rate
-			 * as master port uses same ch_rate as slave
-			 * unlike soundwire TX master ports where
-			 * unified ports and multiple slave port
-			 * channels can attach to same master port
-			 */
-			mport->ch_rate = portinfo->ch_rate[i];
 		}
 	}
 	master->num_port += portinfo->num_port;
@@ -1965,12 +1948,10 @@ static void swrm_enable_slave_irq(struct swr_mstr_ctrl *swrm)
 	dev_dbg(swrm->dev, "%s: slave status: 0x%x\n", __func__, status);
 	for (i = 0; i < (swrm->master.num_dev + 1); i++) {
 		if (status & SWRM_MCP_SLV_STATUS_MASK) {
-			if (!swrm->clk_stop_wakeup) {
-				swrm_cmd_fifo_rd_cmd(swrm, &temp, i, 0x0,
+			swrm_cmd_fifo_rd_cmd(swrm, &temp, i, 0x0,
 					SWRS_SCP_INT_STATUS_CLEAR_1, 1);
-				swrm_cmd_fifo_wr_cmd(swrm, 0xFF, i, 0x0,
+			swrm_cmd_fifo_wr_cmd(swrm, 0xFF, i, 0x0,
 					SWRS_SCP_INT_STATUS_CLEAR_1);
-			}
 			swrm_cmd_fifo_wr_cmd(swrm, 0x4, i, 0x0,
 					SWRS_SCP_INT_STATUS_MASK_1);
 		}
@@ -2216,9 +2197,7 @@ handle_irq:
 				 * re-enable Host IRQ and process slave pending
 				 * interrupts, if any.
 				 */
-				swrm->clk_stop_wakeup = true;
 				swrm_enable_slave_irq(swrm);
-				swrm->clk_stop_wakeup = false;
 			}
 			break;
 		default:
@@ -2852,8 +2831,6 @@ static int swrm_probe(struct platform_device *pdev)
 	swrm->dev_up = true;
 	swrm->state = SWR_MSTR_UP;
 	swrm->ipc_wakeup = false;
-	swrm->enable_slave_irq = false;
-	swrm->clk_stop_wakeup = false;
 	swrm->ipc_wakeup_triggered = false;
 	swrm->disable_div2_clk_switch = FALSE;
 	init_completion(&swrm->reset);

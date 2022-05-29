@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -394,21 +394,6 @@ static int swr_dmic_codec_probe(struct snd_soc_component *component)
 	strlcat(w_name, " SWR_DMIC_OUTPUT", sizeof(w_name));
 	snd_soc_dapm_ignore_suspend(dapm, w_name);
 
-	memset(w_name, 0, sizeof(w_name));
-	strlcpy(w_name, component->name_prefix, sizeof(w_name));
-	strlcat(w_name, " VA_SWR_DMIC", sizeof(w_name));
-	snd_soc_dapm_ignore_suspend(dapm, w_name);
-
-	memset(w_name, 0, sizeof(w_name));
-	strlcpy(w_name, component->name_prefix, sizeof(w_name));
-	strlcat(w_name, " SMIC_VA_PORT_EN", sizeof(w_name));
-	snd_soc_dapm_ignore_suspend(dapm, w_name);
-
-	memset(w_name, 0, sizeof(w_name));
-	strlcpy(w_name, component->name_prefix, sizeof(w_name));
-	strlcat(w_name, " SWR_DMIC_VA_OUTPUT", sizeof(w_name));
-	snd_soc_dapm_ignore_suspend(dapm, w_name);
-
 	snd_soc_dapm_sync(dapm);
 
 	swr_dmic->nblock.notifier_call = swr_dmic_event_notify;
@@ -594,11 +579,11 @@ static int swr_dmic_probe(struct swr_device *pdev)
 	}
 
 	/*
-	 * Add 10msec delay to provide sufficient time for
+	 * Add 5msec delay to provide sufficient time for
 	 * soundwire auto enumeration of slave devices as
 	 * as per HW requirement.
 	 */
-	usleep_range(10000, 10010);
+	usleep_range(5000, 5010);
 	do {
 		/* Add delay for soundwire enumeration */
 		usleep_range(100, 110);

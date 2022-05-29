@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
-* Copyright (c) 2010-2014, 2016-2021 The Linux Foundation. All rights reserved.
-*/
+ * Copyright (c) 2010-2014, 2016-2020 The Linux Foundation. All rights reserved.
+ */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -122,6 +122,7 @@ struct apr_svc_table {
  *    apr handle and store in svc tbl.
  */
 
+static struct mutex m_lock_tbl_qdsp6;
 
 static struct apr_svc_table svc_tbl_qdsp6[] = {
 	{
@@ -213,6 +214,7 @@ static struct apr_svc_table svc_tbl_qdsp6[] = {
 	},
 };
 
+static struct mutex m_lock_tbl_voice;
 
 static struct apr_svc_table svc_tbl_voice[] = {
 	{
@@ -585,7 +587,7 @@ static int apr_vm_cb_thread(void *data)
 	unsigned long delay = jiffies + (HZ / 2);
 	int status = 0;
 	int ret = 0;
-	struct sched_param param = {.sched_priority = 3};
+	struct sched_param param = {.sched_priority = 1};
 
 	sched_setscheduler(current, SCHED_FIFO, &param);
 
@@ -633,10 +635,10 @@ static int apr_vm_get_svc(const char *svc_name, int domain_id, int *client_id,
 	int i;
 	int size;
 	struct apr_svc_table *tbl;
+	struct mutex *lock;
 	struct aprv2_vm_cmd_register_rsp_t apr_rsp;
 	uint32_t apr_len;
 	int ret = 0;
-	unsigned long flags;
 	struct {
 		uint32_t cmd_id;
 		struct aprv2_vm_cmd_register_t reg_cmd;
@@ -645,11 +647,14 @@ static int apr_vm_get_svc(const char *svc_name, int domain_id, int *client_id,
 	if (domain_id == APR_DOMAIN_ADSP) {
 		tbl = svc_tbl_qdsp6;
 		size = ARRAY_SIZE(svc_tbl_qdsp6);
+		lock = &m_lock_tbl_qdsp6;
 	} else {
 		tbl = svc_tbl_voice;
 		size = ARRAY_SIZE(svc_tbl_voice);
+		lock = &m_lock_tbl_voice;
 	}
-	spin_lock_irqsave(&hab_tx_lock, flags);
+
+	mutex_lock(lock);
 	for (i = 0; i < size; i++) {
 		if (!strcmp(svc_name, tbl[i].name)) {
 			*client_id = tbl[i].client_id;
@@ -673,7 +678,7 @@ static int apr_vm_get_svc(const char *svc_name, int domain_id, int *client_id,
 				if (ret) {
 					pr_err("%s: habmm_socket_send failed %d\n",
 						__func__, ret);
-					spin_unlock_irqrestore(&hab_tx_lock, flags);
+					mutex_unlock(lock);
 					return ret;
 				}
 				/* wait for response */
@@ -685,14 +690,14 @@ static int apr_vm_get_svc(const char *svc_name, int domain_id, int *client_id,
 				if (ret) {
 					pr_err("%s: apr_vm_nb_receive failed %d\n",
 						__func__, ret);
-					spin_unlock_irqrestore(&hab_tx_lock, flags);
+					mutex_unlock(lock);
 					return ret;
 				}
 				if (apr_rsp.status) {
 					pr_err("%s: apr_vm_nb_receive status %d\n",
 						__func__, apr_rsp.status);
 					ret = apr_rsp.status;
-					spin_unlock_irqrestore(&hab_tx_lock, flags);
+					mutex_unlock(lock);
 					return ret;
 				}
 				/* update svc table */
@@ -706,7 +711,7 @@ static int apr_vm_get_svc(const char *svc_name, int domain_id, int *client_id,
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&hab_tx_lock, flags);
+	mutex_unlock(lock);
 
 	pr_debug("%s: svc_name = %s client_id = %d domain_id = %d\n",
 		 __func__, svc_name, *client_id, domain_id);
@@ -726,10 +731,10 @@ static int apr_vm_rel_svc(int domain_id, int svc_id, int handle)
 	int i;
 	int size;
 	struct apr_svc_table *tbl;
+	struct mutex *lock;
 	struct aprv2_vm_cmd_deregister_rsp_t apr_rsp;
 	uint32_t apr_len;
 	int ret = 0;
-	unsigned long flags;
 	struct {
 		uint32_t cmd_id;
 		struct aprv2_vm_cmd_deregister_t dereg_cmd;
@@ -738,12 +743,14 @@ static int apr_vm_rel_svc(int domain_id, int svc_id, int handle)
 	if (domain_id == APR_DOMAIN_ADSP) {
 		tbl = svc_tbl_qdsp6;
 		size = ARRAY_SIZE(svc_tbl_qdsp6);
+		lock = &m_lock_tbl_qdsp6;
 	} else {
 		tbl = svc_tbl_voice;
 		size = ARRAY_SIZE(svc_tbl_voice);
+		lock = &m_lock_tbl_voice;
 	}
 
-	spin_lock_irqsave(&hab_tx_lock, flags);
+	mutex_lock(lock);
 	for (i = 0; i < size; i++) {
 		if (tbl[i].id == svc_id && tbl[i].handle == handle) {
 			/* need to deregister a service */
@@ -783,7 +790,8 @@ static int apr_vm_rel_svc(int domain_id, int svc_id, int handle)
 			break;
 		}
 	}
-	spin_unlock_irqrestore(&hab_tx_lock, flags);
+	mutex_unlock(lock);
+
 	if (i == size) {
 		pr_err("%s: APR: Wrong svc id %d handle %d\n",
 				__func__, svc_id, handle);
@@ -805,8 +813,8 @@ static void apr_vm_set_subsys_state(void)
 	spin_lock(&apr_priv->apr_lock);
 	if (apr_priv->is_initial_boot)
 		schedule_work(&apr_priv->add_chld_dev_work);
-	apr_priv->is_initial_boot = false;
 	spin_unlock(&apr_priv->apr_lock);
+	snd_event_notify(apr_priv->dev, SND_EVENT_UP);
 }
 
 /**
@@ -853,7 +861,7 @@ int apr_send_pkt(void *handle, uint32_t *buf)
 		return -ENETRESET;
 	}
 
-	spin_lock_irqsave(&hab_tx_lock, flags);
+	spin_lock_irqsave(&svc->w_lock, flags);
 	if (!svc->id || !svc->vm_handle) {
 		pr_err("APR: Still service is not yet opened\n");
 		ret = -EINVAL;
@@ -922,7 +930,7 @@ int apr_send_pkt(void *handle, uint32_t *buf)
 	ret = hdr->pkt_size;
 
 done:
-	spin_unlock_irqrestore(&hab_tx_lock, flags);
+	spin_unlock_irqrestore(&svc->w_lock, flags);
 	return ret;
 }
 EXPORT_SYMBOL(apr_send_pkt);
@@ -1405,6 +1413,7 @@ static int apr_probe(struct platform_device *pdev)
 			mutex_init(&client[i][j].m_lock);
 			for (k = 0; k < APR_SVC_MAX; k++) {
 				mutex_init(&client[i][j].svc[k].m_lock);
+				spin_lock_init(&client[i][j].svc[k].w_lock);
 			}
 		}
 	spin_lock(&apr_priv->apr_lock);
@@ -1421,12 +1430,10 @@ static int apr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-#ifdef CONFIG_IPC_LOGGING
 	apr_pkt_ctx = ipc_log_context_create(APR_PKT_IPC_LOG_PAGE_CNT,
 						"apr", 0);
 	if (!apr_pkt_ctx)
 		pr_err("%s: Unable to create ipc log context\n", __func__);
-#endif  /* CONFIG_IPC_LOGGING */
 
 	ret = of_property_read_string(pdev->dev.of_node,
 				      "qcom,subsys-name",
@@ -1454,8 +1461,6 @@ static int apr_probe(struct platform_device *pdev)
 		pr_err("%s: Registration with SND event fwk failed ret = %d\n",
 			__func__, ret);
 		ret = 0;
-	} else {
-		snd_event_notify(apr_priv->dev, SND_EVENT_UP);
 	}
 
 	return apr_debug_init();

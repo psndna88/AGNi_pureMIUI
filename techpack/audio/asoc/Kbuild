@@ -29,16 +29,6 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
-	ifdef CONFIG_SND_SOC_AR
-		include $(AUDIO_ROOT)/config/arauto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/arautoconf.h
-	endif
-	ifdef CONFIG_SND_SOC_GVM_SA8295
-		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
-		export
-		INCS    +=  -include $(AUDIO_ROOT)/config/sa8295gvmautoconf.h
-	endif
 else
 	ifeq ($(KERNEL_BUILD), 0)
 		ifeq ($(CONFIG_ARCH_SM8150), y)
@@ -141,6 +131,7 @@ endif
 # for SM6150 sound card driver
 ifdef CONFIG_SND_SOC_SM6150
 	MACHINE_OBJS += sm6150.o
+	MACHINE_OBJS += machine_615x_init.o
 endif
 
 # For sa6155 sound card driver
@@ -186,16 +177,6 @@ ifdef CONFIG_SND_SOC_SA8155
 	MACHINE_OBJS += sa8155.o
 endif
 
-# for gvmgh sound card driver
-ifdef CONFIG_SND_SOC_GVM_AUTO_SPF
-    SPF_MACHINE_OBJS += gvm_auto_spf_dummy.o
-endif
-
-# for sa8295 sound card driver
-ifdef CONFIG_SND_SOC_SA8295
-	MACHINE_OBJS += sa8155.o
-endif
-
 ifdef CONFIG_SND_SOC_CPE
 	CPE_LSM_OBJS += msm-cpe-lsm.o
 endif
@@ -215,19 +196,11 @@ ifdef CONFIG_SND_SOC_QDSP6V2
 	PLATFORM_OBJS += msm-pcm-loopback-v2.o
 	PLATFORM_OBJS += msm-pcm-q6-noirq.o
 	PLATFORM_OBJS += msm-pcm-q6-v2.o
-	ifeq (y,$(findstring y,$(CONFIG_QTI_QUIN_GVM) $(CONFIG_PLATFORM_AUTO)))
-		PLATFORM_OBJS += msm-pcm-routing-auto.o
-	else
-		PLATFORM_OBJS += msm-pcm-routing-v2.o
-		PLATFORM_OBJS += msm-pcm-voice-v2.o
-		PLATFORM_OBJS += msm-pcm-voip-v2.o
-	endif
+	PLATFORM_OBJS += msm-pcm-routing-v2.o
+	PLATFORM_OBJS += msm-pcm-voice-v2.o
+	PLATFORM_OBJS += msm-pcm-voip-v2.o
 	PLATFORM_OBJS += msm-transcode-loopback-q6-v2.o
-	ifeq (y,$(findstring y,$(CONFIG_QTI_QUIN_GVM) $(CONFIG_PLATFORM_AUTO)))
-		PLATFORM_OBJS += platform_init_auto.o
-	else
-		PLATFORM_OBJS += platform_init.o
-	endif
+	PLATFORM_OBJS += platform_init.o
 endif
 ifdef CONFIG_WCD9XXX_CODEC_CORE
 	PLATFORM_OBJS += msm-dai-slim.o
@@ -328,11 +301,5 @@ machine_dlkm-y := $(MACHINE_OBJS)
 obj-$(CONFIG_SND_SOC_SA8155) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
-obj-$(CONFIG_SND_SOC_SA8295) += machine_dlkm.o
-machine_dlkm-y := $(MACHINE_OBJS)
-
 obj-$(CONFIG_SND_SOC_CPE) += cpe_lsm_dlkm.o
 cpe_lsm_dlkm-y := $(CPE_LSM_OBJS)
-
-obj-$(CONFIG_SND_SOC_GVM_AUTO_SPF) += spf_machine_dlkm.o
-spf_machine_dlkm-y := $(SPF_MACHINE_OBJS)
