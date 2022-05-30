@@ -157,4 +157,4 @@ static int __init wlan_copy_ini_buf(void)
 	return 0;
 }
 
-module_init(wlan_copy_ini_buf);
+late_initcall(wlan_copy_ini_buf);
