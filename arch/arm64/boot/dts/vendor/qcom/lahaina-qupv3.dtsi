@@ -82,7 +82,7 @@
 		pinctrl-1 = <&qupv3_se3_2uart_sleep>;
 		interrupts = <GIC_SPI 604 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,wrapper-core = <&qupv3_0>;
-		status = "ok";
+		status = "disabled";
 	};
 
 	/* Debug UART Instance for RUMI */
