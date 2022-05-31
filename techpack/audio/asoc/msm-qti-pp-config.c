@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/err.h>
@@ -578,6 +578,7 @@ static int msm_qti_pp_put_rms_value_control(struct snd_kcontrol *kcontrol,
 }
 
 /* VOLUME */
+static int msm_route_dp_vol_control;
 static int msm_route_fm_vol_control;
 static int msm_afe_lb_vol_ctrl;
 static int msm_afe_sec_mi2s_lb_vol_ctrl;
@@ -588,6 +589,24 @@ static int msm_afe_slimbus_8_lb_vol_ctrl;
 static int msm_asm_bit_width;
 static const DECLARE_TLV_DB_LINEAR(fm_rx_vol_gain, 0, INT_RX_VOL_MAX_STEPS);
 static const DECLARE_TLV_DB_LINEAR(afe_lb_vol_gain, 0, INT_RX_VOL_MAX_STEPS);
+
+
+static int msm_qti_pp_get_dp_vol_mixer(struct snd_kcontrol *kcontrol,
+				       struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm_route_dp_vol_control;
+	return 0;
+}
+
+static int msm_qti_pp_set_dp_vol_mixer(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	afe_loopback_gain(AFE_PORT_ID_TX_CODEC_DMA_TX_3, ucontrol->value.integer.value[0]);
+
+	msm_route_dp_vol_control = ucontrol->value.integer.value[0];
+
+	return 0;
+}
 
 static int msm_qti_pp_get_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_value *ucontrol)
@@ -1439,6 +1458,12 @@ static const struct snd_kcontrol_new ec_ffecns_controls[] = {
 		msm_ffecns_get, msm_ffecns_put),
 };
 
+static const struct snd_kcontrol_new int_dp_vol_mixer_controls[] = {
+	SOC_SINGLE_EXT_TLV("DISPLAY_PORT Loopback Volume", SND_SOC_NOPM, 0,
+	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_dp_vol_mixer,
+	msm_qti_pp_set_dp_vol_mixer, afe_lb_vol_gain),
+};
+
 static const struct snd_kcontrol_new int_fm_vol_mixer_controls[] = {
 	SOC_SINGLE_EXT_TLV("Internal FM RX Volume", SND_SOC_NOPM, 0,
 	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_fm_vol_mixer,
@@ -1691,6 +1716,9 @@ static const struct snd_kcontrol_new dtmf_detect_enable_mixer_controls[] = {
 #ifdef CONFIG_QTI_PP
 void msm_qti_pp_add_controls(struct snd_soc_component *component)
 {
+	snd_soc_add_component_controls(component, int_dp_vol_mixer_controls,
+			ARRAY_SIZE(int_dp_vol_mixer_controls));
+
 	snd_soc_add_component_controls(component, int_fm_vol_mixer_controls,
 			ARRAY_SIZE(int_fm_vol_mixer_controls));
 

@@ -29,6 +29,11 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
+	ifdef CONFIG_SND_SOC_GVM_SA8295
+		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sa8295gvmautoconf.h
+	endif
 else
 	ifeq ($(KERNEL_BUILD), 0)
 		ifeq ($(CONFIG_ARCH_SM6150), y)
@@ -138,7 +143,6 @@ ifdef CONFIG_SND_SOC_MSM_QDSP6V2_INTF
 	Q6_OBJS += adsp_err.o
 	Q6_OBJS += msm_audio_ion.o
 	Q6_OBJS += q6_init.o
-	Q6_OBJS += model_loader.o
 endif
 
 # for ELUS start
@@ -154,7 +158,7 @@ endif
 # for ELUS end
 
 # for MIUS start
-ifdef CONFIG_MIUS_PROXIMITY
+ifdef CONFIG_MIUS_IIO
 	Q6_OBJS += apr_mius.o
 	Q6_OBJS += mius/mius.o
 	Q6_OBJS += mius/mius_sysfs.o
@@ -303,6 +307,3 @@ q6_pdr_dlkm-y := $(QDSP6_PDR_OBJS)
 
 obj-$(CONFIG_MSM_QDSP6_NOTIFIER) += q6_notifier_dlkm.o
 q6_notifier_dlkm-y := $(QDSP6_NOTIFIER_OBJS)
-
-# inject some build related information
-DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"

@@ -30,6 +30,11 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
+	ifdef CONFIG_SND_SOC_GVM_SA8295
+		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sa8295gvmautoconf.h
+	endif
 else
 	ifeq ($(KERNEL_BUILD), 0)
 			ifeq ($(CONFIG_ARCH_SM6150), y)
@@ -203,6 +208,3 @@ apr_dlkm-y := $(APRV_GLINK)
 
 obj-$(CONFIG_WCD_DSP_GLINK) += wglink_dlkm.o
 wglink_dlkm-y := $(WDSP_GLINK)
-
-# inject some build related information
-CDEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"

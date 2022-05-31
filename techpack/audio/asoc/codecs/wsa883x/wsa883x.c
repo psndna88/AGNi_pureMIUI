@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -132,6 +132,8 @@ static int wsa883x_get_temperature(struct snd_soc_component *component,
 enum {
 	WSA8830 = 0,
 	WSA8835,
+	WSA8832,
+	WSA8835_V2 = 5,
 };
 
 enum {
@@ -544,6 +546,12 @@ static const char * const wsa_dev_mode_text[] = {
 	"speaker", "receiver", "ultrasound"
 };
 
+enum {
+	SPEAKER,
+	RECEIVER,
+	ULTRASOUND,
+};
+
 static const struct soc_enum wsa_dev_mode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(wsa_dev_mode_text), wsa_dev_mode_text);
 
@@ -715,7 +723,11 @@ static ssize_t wsa883x_variant_read(struct snd_info_entry *entry,
 	case WSA8830:
 		len = snprintf(buffer, sizeof(buffer), "WSA8830\n");
 		break;
+	case WSA8832:
+		len = snprintf(buffer, sizeof(buffer), "WSA8832\n");
+		break;
 	case WSA8835:
+	case WSA8835_V2:
 		len = snprintf(buffer, sizeof(buffer), "WSA8835\n");
 		break;
 	default:
@@ -994,6 +1006,8 @@ static int wsa883x_enable_swr_dac_port(struct snd_soc_dapm_widget *w,
 				&port_id[num_port], &num_ch[num_port],
 				&ch_mask[num_port], &ch_rate[num_port],
 				&port_type[num_port]);
+		if (wsa883x->dev_mode == RECEIVER)
+			ch_rate[num_port] = SWR_CLK_RATE_4P8MHZ;
 		++num_port;
 
 		if (wsa883x->comp_enable) {
@@ -1062,17 +1076,52 @@ static int wsa883x_spkr_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_component *component =
 			snd_soc_dapm_to_component(w->dapm);
 	struct wsa883x_priv *wsa883x = snd_soc_component_get_drvdata(component);
+	struct irq_data *irq_data = NULL;
 
 	dev_dbg(component->dev, "%s: %s %d\n", __func__, w->name, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		if (wsa883x->dev_mode == RECEIVER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_CDC_PATH_MODE,
+						0x02, 0x02);
+			snd_soc_component_update_bits(component,
+						WSA883X_SPKR_PWM_CLK_CTL,
+						0x08, 0x08);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x04);
+		} else if (wsa883x->dev_mode == SPEAKER) {
+			snd_soc_component_update_bits(component,
+						WSA883X_CDC_PATH_MODE,
+						0x02, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_SPKR_PWM_CLK_CTL,
+						0x08, 0x00);
+			snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0xF0, 0x90);
+			if (wsa883x->variant == WSA8830 ||
+				wsa883x->variant == WSA8832)
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x03);
+			else
+				snd_soc_component_update_bits(component,
+						WSA883X_DRE_CTL_0,
+						0x07, 0x02);
+		}
 		swr_slvdev_datapath_control(wsa883x->swr_slave,
 					    wsa883x->swr_slave->dev_num,
 					    true);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
-		snd_soc_component_update_bits(component, WSA883X_DRE_CTL_1,
-						0x01, 0x01);
+		snd_soc_component_update_bits(component,
+					WSA883X_DRE_CTL_1,
+					0x01, 0x01);
 		/* Added delay as per HW sequence */
 		usleep_range(250, 300);
 		wcd_enable_irq(&wsa883x->irq_info, WSA883X_IRQ_INT_PA_ON_ERR);
@@ -1091,9 +1140,12 @@ static int wsa883x_spkr_event(struct snd_soc_dapm_widget *w,
 				WSA883X_PA_FSM_CTL, 0x01, 0x01);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
-		if (!test_bit(SPKR_ADIE_LB, &wsa883x->status_mask))
-			wcd_disable_irq(&wsa883x->irq_info,
-					WSA883X_IRQ_INT_PDM_WD);
+		if (!test_bit(SPKR_ADIE_LB, &wsa883x->status_mask)) {
+			irq_data = irq_get_irq_data(WSA883X_IRQ_INT_PDM_WD);
+			if (irq_data && !irqd_irq_disabled(irq_data))
+				wcd_disable_irq(&wsa883x->irq_info,
+						WSA883X_IRQ_INT_PDM_WD);
+		}
 		snd_soc_component_update_bits(component,
 				WSA883X_VBAT_ADC_FLT_CTL,
 				0x01, 0x00);
@@ -1173,7 +1225,7 @@ static void wsa883x_codec_init(struct snd_soc_component *component)
 		snd_soc_component_update_bits(component, reg_init[i].reg,
 					reg_init[i].mask, reg_init[i].val);
 
-	if (wsa883x->variant == WSA8830)
+	if (wsa883x->variant == WSA8830 || wsa883x->variant == WSA8832)
 		snd_soc_component_update_bits(component, WSA883X_DRE_CTL_0,
 					0x07, 0x03);
 }
@@ -1465,6 +1517,7 @@ static int wsa883x_event_notify(struct notifier_block *nb,
 	u16 event = (val & 0xffff);
 	struct wsa883x_priv *wsa883x = container_of(nb, struct wsa883x_priv,
 						    parent_nblock);
+	struct irq_data *irq_data = NULL;
 
 	if (!wsa883x)
 		return -EINVAL;
@@ -1493,8 +1546,10 @@ static int wsa883x_event_notify(struct notifier_block *nb,
 			snd_soc_component_update_bits(wsa883x->component,
 						WSA883X_PA_FSM_CTL,
 						0x01, 0x01);
-			wcd_enable_irq(&wsa883x->irq_info,
-					WSA883X_IRQ_INT_PDM_WD);
+			irq_data = irq_get_irq_data(WSA883X_IRQ_INT_PDM_WD);
+			if (irq_data && irqd_irq_disabled(irq_data))
+				wcd_enable_irq(&wsa883x->irq_info,
+						WSA883X_IRQ_INT_PDM_WD);
 			/* Added delay as per HW sequence */
 			usleep_range(3000, 3100);
 			snd_soc_component_update_bits(wsa883x->component,

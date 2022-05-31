@@ -29,6 +29,11 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
+	ifdef CONFIG_SND_SOC_GVM_SA8295
+		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sa8295gvmautoconf.h
+	endif
 else
 	ifeq ($(KERNEL_BUILD), 0)
 		ifeq ($(CONFIG_ARCH_SM8150), y)
@@ -177,6 +182,11 @@ ifdef CONFIG_SND_SOC_SA8155
 	MACHINE_OBJS += sa8155.o
 endif
 
+# for sa8295 sound card driver
+ifdef CONFIG_SND_SOC_SA8295
+	MACHINE_OBJS += sa8295.o
+endif
+
 ifdef CONFIG_SND_SOC_CPE
 	CPE_LSM_OBJS += msm-cpe-lsm.o
 endif
@@ -299,6 +309,9 @@ obj-$(CONFIG_SND_SOC_BENGAL) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_SA8155) += machine_dlkm.o
+machine_dlkm-y := $(MACHINE_OBJS)
+
+obj-$(CONFIG_SND_SOC_SA8295) += machine_dlkm.o
 machine_dlkm-y := $(MACHINE_OBJS)
 
 obj-$(CONFIG_SND_SOC_CPE) += cpe_lsm_dlkm.o

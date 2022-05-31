@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2018, 2020-2021 The Linux Foundation. All rights reserved.
  */
 
 #include <linux/fs.h>
@@ -188,6 +188,7 @@ struct q6audio_aio {
 	int rflush;             /* Read  flush */
 	int wflush;             /* Write flush */
 	bool reset_event;
+	bool wake_event_initialized;
 	long (*codec_ioctl)(struct file *, unsigned int, unsigned long);
 	long (*codec_compat_ioctl)(struct file *, unsigned int, unsigned long);
 };

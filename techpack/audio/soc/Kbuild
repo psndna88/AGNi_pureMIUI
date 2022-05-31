@@ -29,6 +29,11 @@ ifeq ($(CONFIG_SND_SOC_AUTO), y)
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
 	endif
+	ifdef CONFIG_SND_SOC_GVM_SA8295
+		include $(AUDIO_ROOT)/config/sa8295gvmauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sa8295gvmautoconf.h
+	endif
 else
 	ifeq ($(KERNEL_BUILD), 0)
 		ifeq ($(CONFIG_ARCH_SM8150), y)
@@ -216,6 +221,3 @@ swr_ctrl_dlkm-y := $(SWR_CTRL_OBJS)
 
 obj-$(CONFIG_WCD_SPI_AC) += wcd_spi_acc_ctl_dlkm.o
 wcd_spi_acc_ctl_dlkm-y := $(WCD_SPI_ACC_CTL_OBJS)
-
-# inject some build related information
-DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"

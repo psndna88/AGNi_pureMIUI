@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef __Q6AFE_V2_H__
@@ -54,6 +54,8 @@
 #define AFE_API_VERSION_V9		9
 /* for external mclk dynamic switch */
 #define AFE_API_VERSION_V8		8
+#define AFE_API_VERSION_V10		10
+#define AFE_SAMPLING_RATE_8KHZ 8000
 
 
 /* the different modes for data*/
@@ -305,6 +307,74 @@ enum {
 	/* IDX 212 */
 	IDX_HDMI_RX_MS,
 	IDX_AFE_PORT_ID_PSEUDOPORT_01,
+	/* IDX 213-> 228 */
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_0,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_0,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_1,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_1,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_2,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_2,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_3,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_3,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_4,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_4,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_5,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_5,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_6,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_6,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_RX_7,
+	IDX_AFE_PORT_ID_SEPTENARY_TDM_TX_7,
+	/* IDX 229-> 244 */
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_0,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_0,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_1,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_1,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_2,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_2,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_3,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_3,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_4,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_4,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_5,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_5,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_6,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_6,
+	IDX_AFE_PORT_ID_HSIF0_TDM_RX_7,
+	IDX_AFE_PORT_ID_HSIF0_TDM_TX_7,
+	/* IDX 244-> 259 */
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_0,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_0,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_1,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_1,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_2,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_2,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_3,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_3,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_4,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_4,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_5,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_5,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_6,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_6,
+	IDX_AFE_PORT_ID_HSIF1_TDM_RX_7,
+	IDX_AFE_PORT_ID_HSIF1_TDM_TX_7,
+	/* IDX 260-> 275 */
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_0,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_0,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_1,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_1,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_2,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_2,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_3,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_3,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_4,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_4,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_5,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_5,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_6,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_6,
+	IDX_AFE_PORT_ID_HSIF2_TDM_RX_7,
+	IDX_AFE_PORT_ID_HSIF2_TDM_TX_7,
 	AFE_MAX_PORTS
 };
 
@@ -520,6 +590,8 @@ int afe_send_custom_tdm_header_cfg(
 int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 		       u32 rate, u16 num_groups);
 void afe_set_routing_callback(routing_cb cb);
+int afe_port_send_logging_cfg(u16 port_id,
+	struct afe_param_id_port_data_log_disable_t *log_disable);
 int afe_get_av_dev_drift(struct afe_param_id_dev_timing_stats *timing_stats,
 		u16 port);
 int afe_get_sp_rx_tmax_xmax_logging_data(
@@ -552,6 +624,8 @@ enum {
 	AFE_LPASS_CORE_HW_DCODEC_BLOCK,
 	AFE_LPASS_CORE_HW_VOTE_MAX
 };
+int afe_set_source_clk(u16 port_id, const char *clk_src);
+void afe_set_clk_src_array(const char *clk_src[CLK_SRC_MAX]);
 int afe_set_mclk_src_cfg(u16 port_id, uint32_t mclk_src_id, uint32_t mclk_freq);
 
 typedef int (*afe_enable_mclk_and_get_info_cb_func) (void *private_data,

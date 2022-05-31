@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -158,16 +157,14 @@ static int wcd_measure_adc_once(struct wcd_mbhc *mbhc, int mux_ctl)
 	while (retry--) {
 		/* wait for 600usec to get adc results */
 		usleep_range(600, 610);
-		pr_debug("%s: retry: %d\n",  __func__, retry);
+
 		/* check for ADC Timeout */
 		WCD_MBHC_REG_READ(WCD_MBHC_ADC_TIMEOUT, adc_timeout);
-		pr_debug("%s: timeout: %d\n",  __func__, adc_timeout);
 		if (adc_timeout)
 			continue;
 
 		/* Read ADC complete bit */
 		WCD_MBHC_REG_READ(WCD_MBHC_ADC_COMPLETE, adc_complete);
-		pr_debug("%s: complete: %d\n",  __func__, adc_complete);
 		if (!adc_complete)
 			continue;
 
