@@ -32,11 +32,6 @@
 #include "gadget.h"
 #include "io.h"
 
-#undef dev_dbg
-#undef pr_debug
-#define pr_debug pr_err
-#define dev_dbg dev_err
-
 #define DWC3_ALIGN_FRAME(d, n)	(((d)->frame_number + ((d)->interval * (n))) \
 					& ~((d)->interval - 1))
 
