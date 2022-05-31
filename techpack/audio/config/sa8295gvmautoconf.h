@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2021, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,11 +10,12 @@
  * GNU General Public License for more details.
  */
 
-#define CONFIG_MSM_QDSP6_APRV2_RPMSG 1
-#define CONFIG_MSM_QDSP6_SSR 1
+#define CONFIG_MSM_QDSP6_APRV2_VM 1
 #define CONFIG_MSM_ADSP_LOADER 1
+#define CONFIG_MSM_QDSP6_SSR 1
 #define CONFIG_MSM_QDSP6_NOTIFIER 1
-#define CONFIG_SND_SOC_MSM_QDSP6V2_INTF 1
+#define CONFIG_SND_SOC_MSM_QDSP6V2_VM 1
+#define CONFIG_SND_SOC_QDSP6V2 1
 #define CONFIG_QTI_PP 1
 #define CONFIG_SND_HWDEP_ROUTING 1
 #define CONFIG_DTS_EAGLE 1
@@ -23,9 +24,5 @@
 #define CONFIG_SND_SOC_MSM_STUB 1
 #define CONFIG_SND_SOC_MSM_HDMI_CODEC_RX 1
 #define CONFIG_MSM_QDSP6V2_CODECS 1
-#define CONFIG_SND_SOC_QDSP6V2 1
-#define CONFIG_SND_SOC_SA6155 1
-#define CONFIG_SOUNDWIRE 1
-#define CONFIG_SOUNDWIRE_MSTR_CTRL 1
 #define CONFIG_SND_EVENT 1
-#define CONFIG_MSM_INTERNAL_MCLK 1
+#define CONFIG_SND_SOC_SA8295 1

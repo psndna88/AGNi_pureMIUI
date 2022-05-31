@@ -23,6 +23,7 @@
 #include <linux/ipc_logging.h>
 #include <linux/of_platform.h>
 #include <linux/ratelimit.h>
+#include <soc/qcom/boot_stats.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <linux/qcom_scm.h>
 #include <soc/snd_event.h>
@@ -314,6 +315,7 @@ static void apr_add_child_devices(struct work_struct *work)
 static void apr_adsp_up(void)
 {
 	pr_info("%s: Q6 is Up\n", __func__);
+	place_marker("M - ADSP Ready");
 	apr_set_q6_state(APR_SUBSYS_LOADED);
 
 	spin_lock(&apr_priv->apr_lock);

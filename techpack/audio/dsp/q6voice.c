@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
-#define DEBUG
 #include <linux/slab.h>
 #include <linux/kthread.h>
 #include <linux/kernel.h>
@@ -3947,27 +3946,19 @@ static int voice_unmap_cal_memory(int32_t cal_type,
 					__func__, v->session_id, result2);
 
 				result = result2;
-			} else {
-				if (cal_type == CVP_VOCPROC_DYNAMIC_CAL_TYPE)
-					voice_send_cvp_deregister_vol_cal_cmd(v);
-				else if (cal_type == CVP_VOCPROC_STATIC_CAL_TYPE)
-					voice_send_cvp_deregister_cal_cmd(v);
-				else if (cal_type == CVP_VOCDEV_CFG_CAL_TYPE)
-					voice_send_cvp_deregister_dev_cfg_cmd(v);
-				else if (cal_type == CVS_VOCSTRM_STATIC_CAL_TYPE)
-					voice_send_cvs_deregister_cal_cmd(v);
-				else
-					pr_err("%s: Invalid cal type %d!\n",
-						__func__, cal_type);
 			}
 
-			result2 = voice_send_start_voice_cmd(v);
-			if (result2) {
-				pr_err("%s: Voice_send_start_voice_cmd failed for session 0x%x, err %d!\n",
-					__func__, v->session_id, result2);
-
-				result = result2;
-			}
+			if (cal_type == CVP_VOCPROC_DYNAMIC_CAL_TYPE)
+				voice_send_cvp_deregister_vol_cal_cmd(v);
+			else if (cal_type == CVP_VOCPROC_STATIC_CAL_TYPE)
+				voice_send_cvp_deregister_cal_cmd(v);
+			else if (cal_type == CVP_VOCDEV_CFG_CAL_TYPE)
+				voice_send_cvp_deregister_dev_cfg_cmd(v);
+			else if (cal_type == CVS_VOCSTRM_STATIC_CAL_TYPE)
+				voice_send_cvs_deregister_cal_cmd(v);
+			else
+				pr_err("%s: Invalid cal type %d!\n",
+					__func__, cal_type);
 		}
 
 		if ((cal_block->map_data.q6map_handle != 0) &&
@@ -4254,14 +4245,7 @@ static int voice_send_cvp_channel_info_v2(struct voice_data *v,
 	case EC_REF_PATH:
 		channel_info_param_data->param_id =
 			VSS_PARAM_VOCPROC_EC_REF_CHANNEL_INFO;
-#if defined(CONFIG_TARGET_PRODUCT_CETUS)
-		if (v->dev_rx.port_id == 0x9020)
-			channel_info->num_channels = 4;
-		else
-			channel_info->num_channels = v->dev_rx.no_of_channels;
-#else
 		channel_info->num_channels = v->dev_rx.no_of_channels;
-#endif
 		channel_info->bits_per_sample = v->dev_rx.bits_per_sample;
 		memcpy(&channel_info->channel_mapping,
 		       v->dev_rx.channel_mapping,

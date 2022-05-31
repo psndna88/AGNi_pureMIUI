@@ -4180,6 +4180,7 @@ static void holi_tdm_snd_shutdown(struct snd_pcm_substream *substream)
 	}
 }
 
+#ifndef CONFIG_AUXPCM_DISABLE
 static int holi_aux_snd_startup(struct snd_pcm_substream *substream)
 {
 	int ret = 0;
@@ -4241,6 +4242,7 @@ static void holi_aux_snd_shutdown(struct snd_pcm_substream *substream)
 		}
 	}
 }
+#endif
 
 static int msm_snd_cdc_dma_startup(struct snd_pcm_substream *substream)
 {
@@ -4574,10 +4576,12 @@ err:
 	return ret;
 }
 
+#ifndef CONFIG_AUXPCM_DISABLE
 static struct snd_soc_ops holi_aux_be_ops = {
 	.startup = holi_aux_snd_startup,
 	.shutdown = holi_aux_snd_shutdown
 };
+#endif
 
 static struct snd_soc_ops holi_tdm_be_ops = {
 	.hw_params = holi_tdm_snd_hw_params,
@@ -5665,6 +5669,7 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	},
 };
 
+#ifndef CONFIG_AUXPCM_DISABLE
 static struct snd_soc_dai_link msm_auxpcm_be_dai_links[] = {
 	/* Primary AUX PCM Backend DAI Links */
 	{
@@ -5761,6 +5766,7 @@ static struct snd_soc_dai_link msm_auxpcm_be_dai_links[] = {
 		SND_SOC_DAILINK_REG(quat_auxpcm_tx),
 	},
 };
+#endif
 
 static struct snd_soc_dai_link msm_rx_tx_cdc_dma_be_dai_links[] = {
 	/* RX CDC DMA Backend DAI Links */
@@ -5906,7 +5912,9 @@ static struct snd_soc_dai_link msm_holi_dai_links[
 			ARRAY_SIZE(msm_common_misc_fe_dai_links) +
 			ARRAY_SIZE(msm_common_be_dai_links) +
 			ARRAY_SIZE(msm_mi2s_be_dai_links) +
+#ifndef CONFIG_AUXPCM_DISABLE
 			ARRAY_SIZE(msm_auxpcm_be_dai_links) +
+#endif
 			ARRAY_SIZE(msm_rx_tx_cdc_dma_be_dai_links) +
 			ARRAY_SIZE(msm_va_cdc_dma_be_dai_links) +
 			ARRAY_SIZE(msm_afe_rxtx_lb_be_dai_link) +
@@ -6162,7 +6170,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	int total_links = 0;
 	int rc = 0;
 	u32 mi2s_audio_intf = 0;
-	u32 auxpcm_audio_intf = 0;
 	u32 val = 0;
 	u32 wcn_btfm_intf = 0;
 	const struct of_device_id *match;
@@ -6218,15 +6225,15 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 					ARRAY_SIZE(msm_mi2s_be_dai_links);
 			}
 		}
-
+#ifndef CONFIG_AUXPCM_DISABLE
 		rc = of_property_read_u32(dev->of_node,
 					  "qcom,auxpcm-audio-intf",
-					  &auxpcm_audio_intf);
+					  &val);
 		if (rc) {
 			dev_dbg(dev, "%s: No DT match Aux PCM interface\n",
 				__func__);
 		} else {
-			if (auxpcm_audio_intf) {
+			if (val) {
 				memcpy(msm_holi_dai_links + total_links,
 					msm_auxpcm_be_dai_links,
 					sizeof(msm_auxpcm_be_dai_links));
@@ -6234,6 +6241,7 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 					ARRAY_SIZE(msm_auxpcm_be_dai_links);
 			}
 		}
+#endif
 
 		rc = of_property_read_u32(dev->of_node, "qcom,afe-rxtx-lb",
 				&val);

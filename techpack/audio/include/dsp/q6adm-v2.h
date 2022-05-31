@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef __Q6_ADM_V2_H__
@@ -55,6 +55,14 @@ enum {
 #define ADM_MAX_CHANNELS 32
 
 #define ADSP_ADM_API_VERSION_V3 3
+
+struct msm_ec_ref_port_cfg {
+	int rx;
+	int port_id;
+	int ch;
+	int bit_width;
+	int sampling_rate;
+};
 
 /* multiple copp per stream. */
 struct route_payload {
@@ -123,13 +131,20 @@ int adm_open(int port, int path, int rate, int mode, int topology,
 			   int app_type, int acdbdev_id, int session_type,
 			   uint32_t pass_thr, uint32_t copp_token);
 
+int adm_open_v2(int port, int path, int rate, int mode, int topology,
+			   int perf_mode, uint16_t bits_per_sample,
+			   int app_type, int acdbdev_id, int session_type,
+			   uint32_t pass_thr, uint32_t copp_token,
+			   struct msm_ec_ref_port_cfg *ec_ref_port_cfg,
+			   struct msm_pcm_channel_mixer *ec_ref_chmix_cfg);
+
 int adm_map_rtac_block(struct rtac_cal_block_data *cal_block);
 
 int adm_unmap_rtac_block(uint32_t *mem_map_handle);
 
 int adm_close(int port, int topology, int perf_mode);
 
-int adm_matrix_map(int path, struct route_payload payload_map,
+int adm_matrix_map(int fedai_id, int path, struct route_payload payload_map,
 		   int perf_mode, uint32_t passthr_mode);
 
 int adm_connect_afe_port(int mode, int session_id, int port_id);
@@ -236,5 +251,6 @@ int crus_adm_get_params(int port_id, int copp_idx, uint32_t module_id,
 			uint32_t param_id, char *params, uint32_t params_length,
 			uint32_t client_id);
 int adm_set_ffecns_freeze_event(bool ffecns_freeze_event);
-int adm_set_device_model(int device_model);
+int adm_apr_send_pkt(void *data, wait_queue_head_t *wait,
+			int port_idx, int copp_idx, int opcode);
 #endif /* __Q6_ADM_V2_H__ */

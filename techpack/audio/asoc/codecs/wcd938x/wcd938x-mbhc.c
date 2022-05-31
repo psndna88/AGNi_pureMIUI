@@ -3,7 +3,6 @@
  * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -1106,6 +1105,10 @@ int wcd938x_mbhc_init(struct wcd938x_mbhc **mbhc,
 	}
 
 	(*mbhc) = wcd938x_mbhc;
+	snd_soc_add_component_controls(component, impedance_detect_controls,
+				   ARRAY_SIZE(impedance_detect_controls));
+	snd_soc_add_component_controls(component, hph_type_detect_controls,
+				   ARRAY_SIZE(hph_type_detect_controls));
 
 	return 0;
 err:

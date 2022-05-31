@@ -2,7 +2,6 @@
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_QTI_QUIN_GVM), y)
 include $(srctree)/techpack/audio/config/gvmauto.conf
-export
 endif
 ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 include $(srctree)/techpack/audio/config/sdxpoorwillsauto.conf
@@ -27,11 +26,9 @@ include $(srctree)/techpack/audio/config/holiauto.conf
 endif
 ifeq ($(CONFIG_ARCH_SA8155), y)
 include $(srctree)/techpack/audio/config/sa8155auto.conf
-export
 endif
 ifeq ($(CONFIG_ARCH_SA6155), y)
 include $(srctree)/techpack/audio/config/sa6155auto.conf
-export
 endif
 endif
 # Use USERINCLUDE when you must reference the UAPI directories only.
@@ -47,10 +44,8 @@ LINUXINCLUDE    += \
                 -I$(srctree)/techpack/audio/include
 
 #for mius start
-ifeq ($(CONFIG_MIUS_PROXIMITY), y)
 LINUXINCLUDE    += \
                 -I$(srctree)/techpack/audio/include/mius
-endif
 #for mius end
 
 ifeq ($(CONFIG_QTI_QUIN_GVM), y)

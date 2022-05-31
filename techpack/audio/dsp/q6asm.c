@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  * Author: Brian Swetland <swetland@google.com>
  *
@@ -102,6 +102,7 @@ struct audio_session {
 	struct audio_client *ac;
 	spinlock_t session_lock;
 	struct mutex mutex_lock_per_session;
+	bool ignore;
 };
 /* session id: 0 reserved */
 static struct audio_session session[ASM_ACTIVE_STREAMS_ALLOWED + 1];
@@ -129,7 +130,7 @@ static void q6asm_reset_buf_state(struct audio_client *ac);
 void *q6asm_mmap_apr_reg(void);
 
 static int q6asm_is_valid_session(struct apr_client_data *data, void *priv);
-static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info);
+static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struct audio_client *ac);
 
 /* for ASM custom topology */
 static struct cal_type_data *cal_data[ASM_MAX_CAL_TYPES];
@@ -586,6 +587,87 @@ static int q6asm_session_alloc(struct audio_client *ac)
 	return -ENOMEM;
 }
 
+static void q6asm_session_set_ignore(int id)
+{
+	session[id].ignore = true;
+}
+
+static void q6asm_session_clean_ignore(void)
+{
+	int i;
+
+	for (i = 1; i <= ASM_ACTIVE_STREAMS_ALLOWED; i++)
+		session[i].ignore = false;
+}
+
+static void q6asm_session_deregister(struct audio_client *ac)
+{
+	rtac_set_asm_handle(ac->session, NULL);
+	apr_deregister(ac->apr2);
+	apr_deregister(ac->apr);
+	q6asm_mmap_apr_dereg();
+	ac->apr2 = NULL;
+	ac->apr = NULL;
+	ac->mmap_apr = NULL;
+}
+
+static int q6asm_session_register(struct audio_client *ac)
+{
+	ac->apr = apr_register("ADSP", "ASM",
+			(apr_fn)q6asm_callback,
+			((ac->session) << 8 | 0x0001),
+			ac);
+	if (ac->apr == NULL) {
+		pr_err("%s: Registration with APR failed\n", __func__);
+		goto fail_apr1;
+	}
+
+	ac->apr2 = apr_register("ADSP", "ASM",
+			(apr_fn)q6asm_callback,
+			((ac->session) << 8 | 0x0002),
+			ac);
+	if (ac->apr2 == NULL) {
+		pr_err("%s: Registration with APR-2 failed\n", __func__);
+		goto fail_apr2;
+	}
+
+	rtac_set_asm_handle(ac->session, ac->apr);
+
+	pr_debug("%s: Registering the common port with APR\n", __func__);
+	ac->mmap_apr = q6asm_mmap_apr_reg();
+	if (ac->mmap_apr == NULL)
+		goto fail_mmap;
+
+	return 0;
+
+fail_mmap:
+	apr_deregister(ac->apr2);
+fail_apr2:
+	apr_deregister(ac->apr);
+fail_apr1:
+	return -EINVAL;
+}
+
+static int q6asm_session_try_next(struct audio_client *ac)
+{
+	int n;
+	int s = ac->session;
+
+	for (n = 1; n <= ASM_ACTIVE_STREAMS_ALLOWED; n++) {
+		if (++s > ASM_ACTIVE_STREAMS_ALLOWED)
+			s -= ASM_ACTIVE_STREAMS_ALLOWED;
+		if (!session[s].ignore && !session[s].ac) {
+			q6asm_session_deregister(ac);
+			session[ac->session].ac = NULL;
+			session[s].ac = ac;
+			ac->session = s;
+			return q6asm_session_register(ac);
+		}
+	}
+	pr_debug("%s: session not available\n", __func__);
+	return -EINVAL;
+}
+
 static int q6asm_get_session_id_from_audio_client(struct audio_client *ac)
 {
 	int n;
@@ -771,6 +853,93 @@ static int q6asm_unmap_cal_memory(int32_t cal_type,
 	cal_block->map_data.q6map_handle = 0;
 done:
 	return result;
+}
+
+static struct cal_block_data *q6asm_find_cal_by_app_type(int cal_index,
+							  int app_type)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_audstrm *audstrm_info = NULL;
+
+	pr_debug("%s\n", __func__);
+
+	list_for_each_safe(ptr, next,
+			&cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_index == ASM_AUDSTRM_CAL) {
+			audstrm_info = cal_block->cal_info;
+			if (audstrm_info->app_type == app_type)
+				return cal_block;
+		}
+	}
+	pr_err("%s: Can't find ASM Cal for cal_index %d app_type %d\n",
+			__func__, cal_index, app_type);
+	return NULL;
+}
+
+static bool is_q6asm_topology_cal_send_by_v6(int path, int usecase)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	int buffer_idx_asm;
+
+	buffer_idx_asm = path + MAX_PATH_TYPE * usecase + ASM_CAL_SEND_VERSION_OFFSET;
+	pr_debug("%s: path(%d), usecase(%d), buffer_idx_asm(%d)\n",
+			__func__, path, usecase, buffer_idx_asm);
+
+	list_for_each_safe(ptr, next,
+			&cal_data[ASM_TOPOLOGY_CAL]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_block != NULL) {
+			if (cal_block->buffer_number == buffer_idx_asm)
+				return true;
+		}
+	}
+	return false;
+}
+
+static struct cal_block_data *q6asm_find_cal_by_buf_number(int cal_index,
+							  int app_type, int path, int usecase)
+{
+	struct list_head *ptr, *next;
+	struct cal_block_data *cal_block = NULL;
+	struct audio_cal_info_audstrm *audstrm_info = NULL;
+	int buffer_idx_w_path = usecase;
+
+	pr_debug("%s\n", __func__);
+
+	if (cal_index == ASM_AUDSTRM_CAL)
+		buffer_idx_w_path = path + MAX_PATH_TYPE * usecase;
+
+	list_for_each_safe(ptr, next,
+			&cal_data[cal_index]->cal_blocks) {
+
+		cal_block = list_entry(ptr,
+				struct cal_block_data, list);
+
+		if (cal_index == ASM_AUDSTRM_CAL) {
+			audstrm_info = cal_block->cal_info;
+			if ((audstrm_info->app_type == app_type) &&
+				(cal_block->buffer_number == buffer_idx_w_path)) {
+					return cal_block;
+			}
+		} else {
+			if (cal_block->buffer_number == buffer_idx_w_path) {
+					return cal_block;
+			}
+		}
+	}
+	pr_err("%s: Can't find ASM Cal for cal_index %d app_type %d buffer_number %d\n",
+			__func__, cal_index, app_type, buffer_idx_w_path);
+
+	return NULL;
 }
 
 int q6asm_unmap_cal_data(int cal_type, struct cal_block_data *cal_block)
@@ -1139,13 +1308,7 @@ void q6asm_audio_client_free(struct audio_client *ac)
 		}
 	}
 
-	rtac_set_asm_handle(ac->session, NULL);
-	apr_deregister(ac->apr2);
-	apr_deregister(ac->apr);
-	q6asm_mmap_apr_dereg();
-	ac->apr2 = NULL;
-	ac->apr = NULL;
-	ac->mmap_apr = NULL;
+	q6asm_session_deregister(ac);
 	q6asm_session_free(ac);
 
 	pr_debug("%s: APR De-Register\n", __func__);
@@ -1350,34 +1513,11 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	ac->fptr_cache_ops = NULL;
 	/* DSP expects stream id from 1 */
 	ac->stream_id = 1;
-	ac->apr = apr_register("ADSP", "ASM",
-			(apr_fn)q6asm_callback,
-			((ac->session) << 8 | 0x0001),
-			ac);
 
-	if (ac->apr == NULL) {
-		pr_err("%s: Registration with APR failed\n", __func__);
+	rc = q6asm_session_register(ac);
+	if (rc < 0) {
 		mutex_unlock(&session_lock);
-		goto fail_apr1;
-	}
-	ac->apr2 = apr_register("ADSP", "ASM",
-			(apr_fn)q6asm_callback,
-			((ac->session) << 8 | 0x0002),
-			ac);
-
-	if (ac->apr2 == NULL) {
-		pr_err("%s: Registration with APR-2 failed\n", __func__);
-		mutex_unlock(&session_lock);
-		goto fail_apr2;
-	}
-
-	rtac_set_asm_handle(n, ac->apr);
-
-	pr_debug("%s: Registering the common port with APR\n", __func__);
-	ac->mmap_apr = q6asm_mmap_apr_reg();
-	if (ac->mmap_apr == NULL) {
-		mutex_unlock(&session_lock);
-		goto fail_mmap;
+		goto fail_register;
 	}
 
 	init_waitqueue_head(&ac->cmd_wait);
@@ -1400,7 +1540,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	rc = send_asm_custom_topology(ac);
 	if (rc < 0) {
 		mutex_unlock(&session_lock);
-		goto fail_mmap;
+		goto fail_send;
 	}
 
 	pr_debug("%s: session[%d]\n", __func__, ac->session);
@@ -1408,11 +1548,9 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	mutex_unlock(&session_lock);
 
 	return ac;
-fail_mmap:
-	apr_deregister(ac->apr2);
-fail_apr2:
-	apr_deregister(ac->apr);
-fail_apr1:
+fail_send:
+	q6asm_session_deregister(ac);
+fail_register:
 	q6asm_session_free(ac);
 fail_session:
 	return NULL;
@@ -1702,11 +1840,8 @@ static int32_t q6asm_srvc_callback(struct apr_client_data *data, void *priv)
 				buf_node = list_entry(ptr,
 						struct asm_buffer_node,
 						list);
-				if (buf_node->buf_phys_addr ==
-				common_client.port[i].buf->phys) {
-					list_del(&buf_node->list);
-					kfree(buf_node);
-				}
+				list_del(&buf_node->list);
+				kfree(buf_node);
 			}
 			pr_debug("%s: Clearing custom topology\n", __func__);
 		}
@@ -2004,9 +2139,12 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 		switch (payload[0]) {
 		case ASM_STREAM_CMD_SET_PP_PARAMS_V2:
 		case ASM_STREAM_CMD_SET_PP_PARAMS_V3:
-			if (rtac_make_asm_callback(ac->session, payload,
+			//cmd_state_pp : wait=-1 , non wait=0
+			if (atomic_read(&ac->cmd_state_pp) != -1) {
+				if (rtac_make_asm_callback(ac->session, payload,
 					data->payload_size))
-				break;
+					break;
+			}
 		case ASM_SESSION_CMD_PAUSE:
 		case ASM_SESSION_CMD_SUSPEND:
 		case ASM_DATA_CMD_EOS:
@@ -2214,7 +2352,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			}
 			if ( data->payload_size >= 2 * sizeof(uint32_t) &&
 				(lower_32_bits(port->buf[buf_index].phys) !=
-				payload[0] ||
+				payload[0] || 
 				msm_audio_populate_upper_32_bits(
 					port->buf[buf_index].phys) != payload[1])) {
 				pr_debug("%s: Expected addr %pK\n",
@@ -2624,6 +2762,48 @@ exit:
 	return ret;
 }
 EXPORT_SYMBOL(q6asm_cpu_buf_release);
+
+/**
+ * q6asm_cpu_buf_release_nolock -
+ *       releases cpu buffer for ASM
+ *
+ * @dir: RX or TX direction
+ * @ac: Audio client handle
+ *
+ * Returns 0 on success or error on failure
+ **/
+
+int q6asm_cpu_buf_release_nolock(int dir, struct audio_client *ac)
+{
+	struct audio_port_data *port;
+	int ret = 0;
+	int idx;
+
+	if (!ac || ((dir != IN) && (dir != OUT))) {
+		pr_err("%s: ac %pK dir %d\n", __func__, ac, dir);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	if (ac->io_mode & SYNC_IO_MODE) {
+		port = &ac->port[dir];
+		idx = port->cpu_buf;
+		if (port->cpu_buf == 0) {
+			port->cpu_buf = port->max_buf_cnt - 1;
+		} else if (port->cpu_buf < port->max_buf_cnt) {
+			port->cpu_buf = port->cpu_buf - 1;
+		} else {
+			pr_err("%s: buffer index(%d) out of range\n",
+				__func__, port->cpu_buf);
+			ret = -EINVAL;
+			goto exit;
+		}
+		port->buf[port->cpu_buf].used = dir ^ 1;
+	}
+exit:
+	return ret;
+}
+EXPORT_SYMBOL(q6asm_cpu_buf_release_nolock);
 
 /**
  * q6asm_is_cpu_buf_avail_nolock -
@@ -3168,7 +3348,7 @@ static int __q6asm_open_read(struct audio_client *ac,
 	/* Stream prio : High, provide meta info with encoded frames */
 	open.src_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.preprocopo_id = cal_info.topology_id;
 
 
@@ -3342,6 +3522,53 @@ int q6asm_open_read_v5(struct audio_client *ac, uint32_t format,
 }
 EXPORT_SYMBOL(q6asm_open_read_v5);
 
+static int q6asm_open_read_version_adaptor(struct audio_client *ac,
+			uint32_t format, uint16_t bits_per_sample, bool ts_mode)
+{
+	if (q6core_get_avcs_api_version_per_service(
+			APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
+			ADSP_ASM_API_VERSION_V2)
+		return q6asm_open_read_v5(ac, FORMAT_LINEAR_PCM,
+						bits_per_sample, false, ENC_CFG_ID_NONE);
+	else
+		return q6asm_open_read_v4(ac, FORMAT_LINEAR_PCM,
+						bits_per_sample, false, ENC_CFG_ID_NONE);
+}
+
+/*
+ * q6asm_open_read_with_retry - Opens audio capture session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @format: encoder format
+ * @bits_per_sample: bit width of capture session
+ * @ts_mode: timestamp mode
+ */
+int q6asm_open_read_with_retry(struct audio_client *ac, uint32_t format,
+			uint16_t bits_per_sample, bool ts_mode)
+{
+	int i = 0, rc = 0;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_read_version_adaptor(ac, format,
+				bits_per_sample, ts_mode);
+		if (rc != -EALREADY)
+			break;
+
+		pr_debug("%s: session %d is occupied, try next\n",
+				__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_read_with_retry);
 
 /**
  * q6asm_open_write_compressed -
@@ -3515,7 +3742,7 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	open.sink_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 	open.bits_per_sample = bits_per_sample;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
 	if (ac->perf_mode != LEGACY_PCM_MODE)
@@ -3673,6 +3900,51 @@ int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 }
 EXPORT_SYMBOL(q6asm_open_write_v4);
 
+static int q6asm_open_write_version_adaptor(struct audio_client *ac,
+			uint32_t format, uint16_t bits_per_sample)
+{
+	if (q6core_get_avcs_api_version_per_service(
+			APRV2_IDS_SERVICE_ID_ADSP_ASM_V) >=
+			ADSP_ASM_API_VERSION_V2)
+		return q6asm_open_write_v5(ac, format, bits_per_sample);
+	else
+		return q6asm_open_write_v4(ac, format, bits_per_sample);
+}
+
+/*
+ * q6asm_open_write_with_retry - Opens audio playback session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @format: decoder format
+ * @bits_per_sample: bit width of playback session
+ */
+int q6asm_open_write_with_retry(struct audio_client *ac, uint32_t format,
+			uint16_t bits_per_sample)
+{
+	int i = 0, rc = 0;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_write_version_adaptor(ac, format,
+						bits_per_sample);
+		if (rc != -EALREADY)
+			break;
+
+		pr_debug("%s: session %d is occupied, try next\n",
+				__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_write_with_retry);
+
 int q6asm_stream_open_write_v2(struct audio_client *ac, uint32_t format,
 			       uint16_t bits_per_sample, int32_t stream_id,
 			       bool is_gapless_mode)
@@ -3786,7 +4058,7 @@ static int __q6asm_open_read_write(struct audio_client *ac, uint32_t rd_format,
 	open.mode_flags = is_meta_data_mode ? BUFFER_META_ENABLE : 0;
 	open.bits_per_sample = bits_per_sample;
 	/* source endpoint : matrix */
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.postprocopo_id = cal_info.topology_id;
 
 	open.postprocopo_id = overwrite_topology ?
@@ -4011,7 +4283,7 @@ int q6asm_open_loopback_v2(struct audio_client *ac, uint16_t bits_per_sample)
 		open.src_format_id = ASM_MEDIA_FMT_MULTI_CHANNEL_PCM_V2;
 		open.sink_format_id = ASM_MEDIA_FMT_MULTI_CHANNEL_PCM_V2;
 		/* source endpoint : matrix */
-		rc = q6asm_get_asm_topology_apptype(&cal_info);
+		rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 		open.audproc_topo_id = cal_info.topology_id;
 
 		ac->app_type = cal_info.app_type;
@@ -4043,7 +4315,7 @@ int q6asm_open_loopback_v2(struct audio_client *ac, uint16_t bits_per_sample)
 		open.src_endpointype = 0;
 		open.sink_endpointype = 0;
 		/* source endpoint : matrix */
-		rc = q6asm_get_asm_topology_apptype(&cal_info);
+		rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 		open.postprocopo_id = cal_info.topology_id;
 
 		ac->app_type = cal_info.app_type;
@@ -4084,6 +4356,37 @@ fail_cmd:
 	return rc;
 }
 EXPORT_SYMBOL(q6asm_open_loopback_v2);
+
+/*
+ * q6asm_open_loopback_with_retry - Opens audio loopback session, with retrying
+ * in case of session ID conflict
+ *
+ * @ac: Client session handle
+ * @bits_per_sample: bit width of sample
+ */
+int q6asm_open_loopback_with_retry(struct audio_client *ac,
+				uint16_t bits_per_sample)
+{
+	int i = 0, rc = 0;
+
+	mutex_lock(&session_lock);
+	for (i = 0; i < ASM_ACTIVE_STREAMS_ALLOWED; i++) {
+		rc = q6asm_open_loopback_v2(ac, bits_per_sample);
+		if (rc != -EALREADY)
+			break;
+		pr_debug("%s: session %d is occupied, try next\n",
+					__func__, ac->session);
+		q6asm_session_set_ignore(ac->session);
+		rc = q6asm_session_try_next(ac);
+		if (rc < 0)
+			break;
+	}
+	q6asm_session_clean_ignore();
+	mutex_unlock(&session_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(q6asm_open_loopback_with_retry);
 
 /**
  * q6asm_open_transcode_loopback -
@@ -4150,7 +4453,7 @@ int q6asm_open_transcode_loopback(struct audio_client *ac,
 	}
 
 	/* source endpoint : matrix */
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open.audproc_topo_id = cal_info.topology_id;
 
 
@@ -4406,7 +4709,7 @@ int q6asm_open_shared_io(struct audio_client *ac,
 	open->endpoint_type = ASM_END_POINT_DEVICE_MATRIX;
 	open->topo_bits_per_sample = config->bits_per_sample;
 
-	rc = q6asm_get_asm_topology_apptype(&cal_info);
+	rc = q6asm_get_asm_topology_apptype(&cal_info, ac);
 	open->topo_id = cal_info.topology_id;
 
 	if (config->format == FORMAT_LINEAR_PCM)
@@ -5443,13 +5746,17 @@ EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_v2);
 
 static int __q6asm_enc_cfg_blk_pcm_v5(struct audio_client *ac,
 				      uint32_t rate, uint32_t channels,
+				      bool use_default_chmap,
+				      char *channel_map,
 				      uint16_t bits_per_sample,
 				      uint16_t sample_word_size,
 				      uint16_t endianness,
 				      uint16_t mode)
 {
 	return q6asm_enc_cfg_blk_pcm_v5(ac, rate, channels,
-					bits_per_sample, true, false, NULL,
+					bits_per_sample,
+					use_default_chmap, false,
+					channel_map,
 					sample_word_size, endianness, mode);
 }
 
@@ -5558,20 +5865,28 @@ EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_format_support_v4);
  * @rate: sample rate
  * @channels: number of channels
  * @bits_per_sample: bit width of encoder session
+ * @use_default_chmap: true if default channel map to be used
+ * @channel_map: input channel map
  * @sample_word_size: Size in bits of the word that holds a sample of a channel
  * @endianness: endianness of the pcm data
  * @mode: Mode to provide additional info about the pcm input data
  */
 int q6asm_enc_cfg_blk_pcm_format_support_v5(struct audio_client *ac,
 					    uint32_t rate, uint32_t channels,
+					    bool use_default_chmap,
+					    char *channel_map,
 					    uint16_t bits_per_sample,
 					    uint16_t sample_word_size,
 					    uint16_t endianness,
 					    uint16_t mode)
 {
 	 return __q6asm_enc_cfg_blk_pcm_v5(ac, rate, channels,
-					   bits_per_sample, sample_word_size,
-					   endianness, mode);
+					   use_default_chmap,
+					   channel_map,
+					   bits_per_sample,
+					   sample_word_size,
+					   endianness,
+					   mode);
 }
 
 EXPORT_SYMBOL(q6asm_enc_cfg_blk_pcm_format_support_v5);
@@ -10999,8 +11314,10 @@ done:
  * Hence it cannot be reused or resent unless the flag
  * is reset.
  */
-static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
+static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struct audio_client *ac)
 {
+	int path = 0;
+	int cal_buf_index = 0;
 	struct cal_block_data *cal_block = NULL;
 
 	cal_info->topology_id = DEFAULT_POPP_TOPOLOGY;
@@ -11008,11 +11325,38 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
 
 	if (cal_data[ASM_TOPOLOGY_CAL] == NULL)
 		goto done;
+	if (!ac) {
+		pr_err("%s: Audio client is NULL\n", __func__);
+		goto done;
+	}
+	if (ac->stream_type == SNDRV_PCM_STREAM_PLAYBACK)
+		path = RX_DEVICE;
+	else
+		path = TX_DEVICE;
 
 	mutex_lock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
-	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_TOPOLOGY_CAL]);
-	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
-		goto unlock;
+	if (is_q6asm_topology_cal_send_by_v6(path, ac->fedai_id)) {
+		pr_debug("%s: ASM topology cal block is send by acdb_loader_send_audio_cal_v6!\n",
+				 __func__);
+		cal_buf_index = path + MAX_PATH_TYPE * ac->fedai_id + ASM_CAL_SEND_VERSION_OFFSET;
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL,
+						   ac->app_type,
+						   path,
+						   cal_buf_index);
+		if (cal_block == NULL) {
+			pr_err("%s: Couldn't find cal_block with buf_number!\n", __func__);
+			goto unlock;
+		}
+	} else {
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, ac->fedai_id);
+		if (cal_block == NULL) {
+			pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
+				"search using CAL type only\n", __func__);
+			cal_block = cal_utils_get_only_cal_block(cal_data[ASM_TOPOLOGY_CAL]);
+		}
+		if (cal_block == NULL || cal_utils_is_cal_stale(cal_block))
+			goto unlock;
+	}
 	cal_info->topology_id = ((struct audio_cal_info_asm_top *)
 		cal_block->cal_info)->topology;
 	cal_info->app_type = ((struct audio_cal_info_asm_top *)
@@ -11029,7 +11373,7 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info)
 unlock:
 	mutex_unlock(&cal_data[ASM_TOPOLOGY_CAL]->lock);
 done:
-	pr_err("%s: Using topology %d app_type %d\n", __func__,
+	pr_debug("%s: Using topology %d app_type %d\n", __func__,
 			cal_info->topology_id, cal_info->app_type);
 
 	return 0;
@@ -11048,6 +11392,7 @@ int q6asm_send_cal(struct audio_client *ac)
 	struct cal_block_data *cal_block = NULL;
 	struct mem_mapping_hdr mem_hdr;
 	u32 payload_size = 0;
+	int path = 0;
 	int rc = -EINVAL;
 	pr_debug("%s:\n", __func__);
 
@@ -11068,15 +11413,24 @@ int q6asm_send_cal(struct audio_client *ac)
 		goto done;
 	}
 
+	if (ac->stream_type == SNDRV_PCM_STREAM_PLAYBACK)
+		path = RX_DEVICE;
+	else
+		path = TX_DEVICE;
+
 	memset(&mem_hdr, 0, sizeof(mem_hdr));
 	mutex_lock(&cal_data[ASM_AUDSTRM_CAL]->lock);
-	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_AUDSTRM_CAL]);
+	cal_block = q6asm_find_cal_by_buf_number(ASM_AUDSTRM_CAL, ac->app_type, path, ac->fedai_id);
 	if (cal_block == NULL) {
-		pr_err("%s: cal_block is NULL\n",
-			__func__);
-		goto unlock;
+		pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
+			"search using app_type only\n", __func__);
+		cal_block = q6asm_find_cal_by_app_type(ASM_AUDSTRM_CAL, ac->app_type);
+		if (cal_block == NULL) {
+			pr_err("%s: cal_block is NULL\n",
+				__func__);
+			goto unlock;
+		}
 	}
-
 	if (cal_utils_is_cal_stale(cal_block)) {
 		rc = 0; /* not error case */
 		pr_debug("%s: cal_block is stale\n",

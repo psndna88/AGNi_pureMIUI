@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2021, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1340,6 +1340,7 @@ int audio_aio_open(struct q6audio_aio *audio, struct file *file)
 	audio->pcm_cfg.sample_rate = 48000;
 	audio->pcm_cfg.channel_count = 2;
 
+	audio->wake_event_initialized = false;
 	/* Only AIO interface */
 	if (file->f_flags & O_NONBLOCK) {
 		pr_debug("%s[%pK]:set to aio interface\n", __func__, audio);
@@ -1373,6 +1374,7 @@ int audio_aio_open(struct q6audio_aio *audio, struct file *file)
 	audio->drv_ops.out_flush(audio);
 	audio->opened = 1;
 	audio->reset_event = false;
+	audio->wake_event_initialized = true;
 	file->private_data = audio;
 	audio->codec_ioctl = audio_aio_ioctl;
 	audio->codec_compat_ioctl = audio_aio_compat_ioctl;

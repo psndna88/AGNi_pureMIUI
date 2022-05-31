@@ -4,7 +4,6 @@
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 
-#define DEBUG
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
@@ -1885,9 +1884,7 @@ static int wcd938x_enable_req(struct snd_soc_dapm_widget *w,
 		default:
 			break;
 		}
-
 		if (wcd938x->adc_count == 0) {
-
 			snd_soc_component_update_bits(component,
 					WCD938X_DIGITAL_CDC_ANA_CLK_CTL, 0x10, 0x00);
 			snd_soc_component_update_bits(component,
@@ -2627,7 +2624,6 @@ static int wcd938x_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#if 0
 static int wcd938x_ear_pa_gain_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -2669,7 +2665,6 @@ static int wcd938x_ear_pa_gain_put(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-#endif
 
 static int wcd938x_get_compander(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
@@ -2977,10 +2972,8 @@ static const struct soc_enum rx_hph_mode_mux_enum =
 			    rx_hph_mode_mux_text);
 
 static const struct snd_kcontrol_new wcd9380_snd_controls[] = {
-#if 0
 	SOC_ENUM_EXT("EAR PA GAIN", wcd938x_ear_pa_gain_enum,
 		wcd938x_ear_pa_gain_get, wcd938x_ear_pa_gain_put),
-#endif
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum_wcd9380,
 		wcd938x_rx_hph_mode_get, wcd938x_rx_hph_mode_put),
@@ -3757,7 +3750,7 @@ static int wcd938x_soc_codec_probe(struct snd_soc_component *component)
 	int variant;
 	int ret = -EINVAL;
 
-	dev_err(component->dev, "%s()\n", __func__);
+	dev_info(component->dev, "%s()\n", __func__);
 	wcd938x = snd_soc_component_get_drvdata(component);
 
 	if (!wcd938x)

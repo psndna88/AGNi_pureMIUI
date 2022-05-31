@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 
@@ -572,13 +572,7 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 	{
 		.playback = {
 			.stream_name = "ULTRAOUND_HOSTLESS Playback",
-#if defined (CONFIG_TARGET_PRODUCT_CETUS)
-			.aif_name = "RX1_CDC_DMA_DL_US",
-#elif defined (CONFIG_TARGET_PRODUCT_RENOIR)
-			.aif_name = "TERT_MI2S_DL_HL",
-#else
 			.aif_name = "TERT_TDM_RX_1_DL_US",
-#endif
 			.rates = SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_11025 |
 				SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_22050 |
 				SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 |
@@ -751,6 +745,22 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_dai_ops,
 		.name = "HDMI_HOSTLESS",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "DISPLAY_PORT_HOSTLESS Playback",
+			.aif_name = "DP_DL_HL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+				    SNDRV_PCM_FMTBIT_S24_LE),
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min = 8000,
+			.rate_max = 48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "DISPLAY_PORT_HOSTLESS",
 		.probe = fe_dai_probe,
 	},
 	{
