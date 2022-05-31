@@ -5468,7 +5468,9 @@ static int battery_chg_parse_dt(struct battery_chg_dev *bcdev)
 }
 
 #define FB_BLANK 1
-#define FB_UNBLANK 0
+//#define FB_UNBLANK 0
+//Assume Display is Off always to avoid current throttling
+#define FB_UNBLANK 1
 static int fb_notifier_callback(struct notifier_block *nb,
 				unsigned long val, void *data)
 {
