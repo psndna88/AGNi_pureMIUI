@@ -2191,6 +2191,19 @@ void policy_mgr_set_weight_of_dfs_passive_channels_to_zero(
 	return;
 }
 
+static bool is_freq_present_in_pcl(uint32_t idx, uint32_t *pcl_freqs,
+				   uint32_t chanlist_freq)
+{
+	uint32_t i;
+
+	for (i = 0; i < idx; i++) {
+		if (pcl_freqs[i] == chanlist_freq)
+			return true;
+	}
+
+	return false;
+}
+
 /**
  * policy_mgr_add_5g_to_pcl() - add the 5G/6G channels into PCL
  * @psoc: psoc object
@@ -2218,6 +2231,7 @@ policy_mgr_add_5g_to_pcl(struct wlan_objmgr_psoc *psoc, uint32_t *pcl_freqs,
 	uint32_t weight1, weight2;
 	const uint32_t *chlist1;
 	uint8_t chlist1_len;
+	uint8_t list_len = 0;
 	const uint32_t *chlist2;
 	uint8_t chlist2_len;
 	uint32_t i;
@@ -2257,22 +2271,32 @@ policy_mgr_add_5g_to_pcl(struct wlan_objmgr_psoc *psoc, uint32_t *pcl_freqs,
 			       pcl_sz, chlist1_len, idx);
 		return;
 	}
-	qdf_mem_copy(&pcl_freqs[idx], chlist1, chlist1_len * sizeof(*chlist1));
-	for (i = 0; i < chlist1_len; i++)
-		pcl_weights[idx++] = weight1;
+	for (i = 0; i < chlist1_len; i++) {
+		if (is_freq_present_in_pcl(idx, pcl_freqs, chlist1[i]))
+			continue;
+		pcl_freqs[idx] = chlist1[i];
+		pcl_weights[idx] = weight1;
+		idx++;
+		list_len++;
+	}
 
-	len += chlist1_len;
+	len += list_len;
 
 	if ((chlist2_len + idx) > pcl_sz) {
 		policy_mgr_err("no enough weight len chlist2_len %d %d %d",
 			       pcl_sz, chlist2_len, idx);
 		return;
 	}
-	qdf_mem_copy(&pcl_freqs[idx], chlist2,
-		     chlist2_len * sizeof(*chlist2));
-	for (i = 0; i < chlist2_len; i++)
-		pcl_weights[idx++] = weight2;
-	len += chlist2_len;
+	list_len = 0;
+	for (i = 0; i < chlist2_len; i++) {
+		if (is_freq_present_in_pcl(idx, pcl_freqs, chlist2[i]))
+			continue;
+		pcl_freqs[idx] = chlist2[i];
+		pcl_weights[idx] = weight2;
+		idx++;
+		list_len++;
+	}
+	len += list_len;
 
 	*index = idx;
 	policy_mgr_debug("Add 5g chlist len %d 6g chlist len %d len %d index %d order %d",
