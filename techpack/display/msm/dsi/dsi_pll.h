@@ -16,14 +16,10 @@
 #include "clk-regmap-mux.h"
 #include "dsi_defs.h"
 
-#define DSI_PLL_DBG(p, fmt, ...)	DRM_DEV_DEBUG(NULL, "[msm-dsi-debug]: DSI_PLL_%d: "\
-		fmt, p ? p->index : -1,	##__VA_ARGS__)
-#define DSI_PLL_ERR(p, fmt, ...)	DRM_DEV_ERROR(NULL, "[msm-dsi-error]: DSI_PLL_%d: "\
-		fmt, p ? p->index : -1,	##__VA_ARGS__)
-#define DSI_PLL_INFO(p, fmt, ...)	DRM_DEV_INFO(NULL, "[msm-dsi-info]: DSI_PLL_%d: "\
-		fmt, p ? p->index : -1,	##__VA_ARGS__)
-#define DSI_PLL_WARN(p, fmt, ...)	DRM_WARN("[msm-dsi-warn]: DSI_PLL_%d: "\
-		fmt, p ? p->index : -1, ##__VA_ARGS__)
+#define DSI_PLL_DBG(p, fmt, ...)
+#define DSI_PLL_ERR(p, fmt, ...)
+#define DSI_PLL_INFO(p, fmt, ...)
+#define DSI_PLL_WARN(p, fmt, ...)
 
 #define DSI_PLL_REG_W(base, offset, data)	\
 				writel_relaxed((data), (base) + (offset))
