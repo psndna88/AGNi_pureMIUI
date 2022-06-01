@@ -221,12 +221,6 @@
 
 	pm8350c_tz {
 		cooling-maps {
-			pm8350c_mdm {
-				trip = <&pm8350c_trip0>;
-				cooling-device = <&modem_tj THERMAL_MAX_LIMIT
-							THERMAL_MAX_LIMIT>;
-			};
-
 			pm8350c_nsp {
 				trip = <&pm8350c_trip0>;
 				cooling-device = <&cdsp_sw THERMAL_MAX_LIMIT
