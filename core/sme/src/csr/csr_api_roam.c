@@ -5028,10 +5028,16 @@ QDF_STATUS csr_roam_stop_network(struct mac_context *mac, uint32_t sessionId,
 				ssid_match = csr_is_ssid_equal(
 						mac, pSession->pConnectBssDesc,
 						bss_desc, pIes);
-			if (bss_desc && !ssid_match)
-				status = csr_roam_issue_disassociate(mac,
-						sessionId, substate, false);
-			else if (bss_desc)
+			if (bss_desc && !ssid_match) {
+				csr_roam_issue_disassociate(mac,
+							    sessionId, substate,
+							    false);
+				status = QDF_STATUS_E_FAILURE;
+				qdf_mem_free(pBssConfig);
+
+				return status;
+
+			} else if (bss_desc) {
 				/*
 				 * In an infra & going to an infra network with
 				 * the same SSID.  This calls for a reassoc seq.
@@ -5042,6 +5048,7 @@ QDF_STATUS csr_roam_stop_network(struct mac_context *mac, uint32_t sessionId,
 						mac, sessionId, roam_profile,
 						bss_desc, pBssConfig, pIes,
 						false);
+			}
 		} else if (bss_desc || CSR_IS_INFRA_AP(roam_profile)) {
 			/*
 			 * Not in Infra. We can go ahead and set
