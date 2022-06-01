@@ -1,5 +1,4 @@
 #include <dt-bindings/thermal/thermal_qti.h>
-#include "lahaina-thermal-modem.dtsi"
 
 &qmi_tmd {
 	cdsp {
@@ -1404,11 +1403,6 @@
 				trip = <&mx_pe_config2>;
 				cooling-device = <&msm_gpu 1 1>;
 			};
-
-			mx_pe_cdev_3 {
-				trip = <&mx_pe_config3>;
-				cooling-device = <&modem_tj 1 1>;
-			};
 		};
 	};
 
@@ -1463,11 +1457,6 @@
 			cx_pe_cdev_3 {
 				trip = <&cx_pe_config3>;
 				cooling-device = <&cdsp_sw 3 3>;
-			};
-
-			cx_pe_cdev_4 {
-				trip = <&cx_pe_config4>;
-				cooling-device = <&modem_tj 1 1>;
 			};
 
 			cx_pe_cdev_5 {
