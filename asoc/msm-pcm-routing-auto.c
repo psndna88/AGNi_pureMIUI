@@ -32759,7 +32759,7 @@ static const struct snd_kcontrol_new
 		},
 };
 
-#define ASRC_PARAM_MAX				10
+#define ASRC_PARAM_MAX				7
 #define ASRC_SCHED_DELAY_MS 			50
 
 #define MODULE_ID_AUTO_ASRC			0x123A7000
@@ -32817,6 +32817,8 @@ struct asrc_config {
 };
 
 static struct asrc_config asrc_cfg[ASRC_PARAM_MAX];
+
+static int asrc_params[ASRC_PARAM_MAX], asrc_enable;
 
 static int sched_delay_ms = ASRC_SCHED_DELAY_MS;
 
@@ -33084,7 +33086,7 @@ static int asrc_enable_module(struct asrc_module_config_params *params)
 {
 	int ret = 0;
 	int module_id = MODULE_ID_AUTO_ASRC;
-	int instance_id = 0;
+	int instance_id = ((params->m_io == MODULE_PORT_IN) ? 0x8000 : 0);
 	int param_id = PARAM_ID_AUTO_ASRC_ENABLE;
 	int param_size = sizeof(params->enable);
 	void *param_module = (void *)&params->enable;
@@ -33119,7 +33121,7 @@ static int asrc_put_drift_to_module(
 {
 	int ret = 0;
 	int module_id = MODULE_ID_AUTO_ASRC;
-	int instance_id = 0;
+	int instance_id = ((params->m_io == MODULE_PORT_IN) ? 0x8000 : 0);
 	int param_id = ((params->m_io == MODULE_PORT_IN)
 			? PARAM_ID_AUTO_ASRC_INPUT_TIMING_STATS
 			: PARAM_ID_AUTO_ASRC_OUTPUT_TIMING_STATS);
@@ -33270,31 +33272,38 @@ static void asrc_drift_deinit(void)
 static int msm_dai_q6_asrc_config_get(
 	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-	int i = DRIFT_SRC_AFE_PRI;
+	int i;
 
-	for (; i < DRIFT_SRC_MAX; ++i) {
-		mutex_lock(&asrc_cfg[i].lock);
+	for (i = 0; i < ASRC_PARAM_MAX; i++) {
+
 		ucontrol->value.integer.value[i] =
-			asrc_cfg[i].drift_src;
-		mutex_unlock(&asrc_cfg[i].lock);
+			asrc_params[i];
 	}
 	return 0;
 }
 
-static int msm_dai_q6_asrc_config_put(
+static int msm_dai_q6_asrc_start_get(
 	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = asrc_enable;
+	return 0;
+}
+
+static int asrc_start(void)
 {
 	int ret = 0, idx = 0, i = 0, be_id = -1, module_enabled = 0;
 	struct afe_param_id_dev_timing_stats timing_stats = {0};
 	struct asrc_module_config_params params = {0};
 
-	int enable = ucontrol->value.integer.value[0];
-	int fe_id  = ucontrol->value.integer.value[1];
-	int dir    = ucontrol->value.integer.value[2];
-	int be_afe = ucontrol->value.integer.value[3];
-	int m_io   = ucontrol->value.integer.value[4];
-	int param  = ucontrol->value.integer.value[5];
-	int delay  = ucontrol->value.integer.value[6];
+	int enable = asrc_params[0];
+	int fe_id  = asrc_params[1];
+	int dir    = asrc_params[2];
+	int be_afe = asrc_params[3];
+	int m_io   = asrc_params[4];
+	int param  = asrc_params[5];
+	int delay  = asrc_params[6];
+
+	memset(asrc_params,0,sizeof(asrc_params));
 
 	/* group device */
 	be_id = msm_pcm_get_be_id_from_port_id(be_afe & ~0x0100);
@@ -33408,11 +33417,43 @@ done:
 	return ret;
 }
 
+static int msm_dai_q6_asrc_config_put(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	int iter;
+
+	for(iter=0; iter<ASRC_PARAM_MAX; iter++){
+		asrc_params[iter] = ucontrol->value.integer.value[iter];
+	}
+	return 0;
+}
+
+static int msm_dai_q6_asrc_start_put(
+	struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = -1;
+	asrc_enable = ucontrol->value.integer.value[0];
+
+	if(asrc_enable)
+		ret = asrc_start();
+	else
+		pr_err(" %s : ASRC config is not set.\n",__func__);
+
+	return ret;
+}
+
 static const struct snd_kcontrol_new asrc_config_controls[] = {
 	SOC_SINGLE_MULTI_EXT("ASRC Config", SND_SOC_NOPM, 0,
 				 0xFFFF, 0, ASRC_PARAM_MAX,
 				 msm_dai_q6_asrc_config_get,
 				 msm_dai_q6_asrc_config_put),
+};
+
+static const struct snd_kcontrol_new asrc_start_controls[] = {
+	SOC_SINGLE_MULTI_EXT("ASRC Start", SND_SOC_NOPM, 0,
+				0xFFFF, 0, 1,
+				msm_dai_q6_asrc_start_get,
+				msm_dai_q6_asrc_start_put),
 };
 
 enum {
@@ -33635,6 +33676,8 @@ static int msm_routing_probe(struct snd_soc_component *component)
 				      ARRAY_SIZE(mclk_src_controls));
 	snd_soc_add_component_controls(component, asrc_config_controls,
 				      ARRAY_SIZE(asrc_config_controls));
+	snd_soc_add_component_controls(component, asrc_start_controls,
+					ARRAY_SIZE(asrc_start_controls));
 #ifdef CONFIG_MSM_INTERNAL_MCLK
 	snd_soc_add_component_controls(component, internal_mclk_control,
 				      ARRAY_SIZE(internal_mclk_control));
