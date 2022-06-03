@@ -12,3 +12,8 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0xA010008 0x30A>;
 };
+
+&ipa_hw {
+	qcom,use-dual-pine-config;
+};
+
