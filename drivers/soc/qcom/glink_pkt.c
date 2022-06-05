@@ -23,15 +23,9 @@
 #define GLINK_PKT_IPC_LOG_PAGE_CNT 2
 static void *glink_pkt_ilctxt;
 
-#define GLINK_PKT_INFO(x, ...)						     \
-	ipc_log_string(glink_pkt_ilctxt, "[%s]: "x, __func__, ##__VA_ARGS__)
+#define GLINK_PKT_INFO(x, ...)
 
-#define GLINK_PKT_ERR(x, ...)						     \
-do {									     \
-	printk_ratelimited("%s[%s]: " x, KERN_ERR, __func__, ##__VA_ARGS__); \
-	ipc_log_string(glink_pkt_ilctxt, "%s[%s]: " x, "", __func__,         \
-			##__VA_ARGS__);\
-} while (0)
+#define GLINK_PKT_ERR(x, ...)
 
 #define GLINK_PKT_IOCTL_MAGIC (0xC3)
 

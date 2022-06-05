@@ -4474,7 +4474,7 @@ static ssize_t request_vdm_cmd_store(struct class *c,
 
 	ret = sscanf(buf, "%d,%s\n", &cmd, buffer);
 
-	pr_info("%s:buf:%s cmd:%d, buffer:%s\n", __func__, buf, cmd, buffer);
+//	pr_info("%s:buf:%s cmd:%d, buffer:%s\n", __func__, buf, cmd, buffer);
 
 	StringToHex(buffer, data, &ccount);
 	usbpd_request_vdm_cmd(bcdev, cmd, (unsigned int *)data);
@@ -4529,8 +4529,8 @@ static ssize_t request_vdm_cmd_show(struct class *c,
 		rc = read_ss_auth_property_id(bcdev, pst, prop_id);
 		if (rc < 0)
 			return rc;
-		pr_info("auth:0x%x 0x%x 0x%x 0x%x\n",
-			bcdev->ss_auth_data[0],bcdev->ss_auth_data[1],bcdev->ss_auth_data[2],bcdev->ss_auth_data[3]);
+//		pr_info("auth:0x%x 0x%x 0x%x 0x%x\n",
+//			bcdev->ss_auth_data[0],bcdev->ss_auth_data[1],bcdev->ss_auth_data[2],bcdev->ss_auth_data[3]);
 		for (i = 0; i < USBPD_UVDM_SS_LEN; i++) {
 			memset(data, 0, sizeof(data));
 			snprintf(data, sizeof(data), "%08lx", bcdev->ss_auth_data[i]);
@@ -4539,7 +4539,7 @@ static ssize_t request_vdm_cmd_show(struct class *c,
 		return snprintf(buf, PAGE_SIZE, "%d,%s", cmd, str_buf);
 	  	break;
 	  default:
-		pr_info("feedbak cmd:%d is not support\n", cmd);
+//		pr_info("feedbak cmd:%d is not support\n", cmd);
 		break;
 	}
 
