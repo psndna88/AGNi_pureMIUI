@@ -174,8 +174,8 @@ static bool voice_itr_get_next_session(struct voice_session_itr *itr,
 
 	if (itr == NULL)
 		return false;
-	pr_debug("%s : cur idx = %d session idx = %d\n",
-			 __func__, itr->cur_idx, itr->session_idx);
+//	pr_debug("%s : cur idx = %d session idx = %d\n",
+//			 __func__, itr->cur_idx, itr->session_idx);
 
 	if (itr->cur_idx <= itr->session_idx) {
 		ret = true;

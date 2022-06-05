@@ -14,12 +14,9 @@
 
 #include "dsi_defs.h"
 
-#define DSI_CTRL_HW_DBG(c, fmt, ...)	DRM_DEV_DEBUG(NULL, "[msm-dsi-debug]: DSI_%d: "\
-		fmt, c ? c->index : -1,	##__VA_ARGS__)
-#define DSI_CTRL_HW_ERR(c, fmt, ...)	DRM_DEV_ERROR(NULL, "[msm-dsi-error]: DSI_%d: "\
-		fmt, c ? c->index : -1,	##__VA_ARGS__)
-#define DSI_CTRL_HW_INFO(c, fmt, ...)	DRM_DEV_INFO(NULL, "[msm-dsi-info]: DSI_%d: "\
-		fmt, c ? c->index : -1,	##__VA_ARGS__)
+#define DSI_CTRL_HW_DBG(c, fmt, ...)
+#define DSI_CTRL_HW_ERR(c, fmt, ...)
+#define DSI_CTRL_HW_INFO(c, fmt, ...)
 
 /**
  * Modifier flag for command transmission. If this flag is set, command

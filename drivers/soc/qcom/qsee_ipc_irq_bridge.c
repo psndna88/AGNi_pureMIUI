@@ -19,18 +19,9 @@
 #define DEVICE_NAME MODULE_NAME
 #define NUM_LOG_PAGES 4
 
-#define QIIB_DBG(x...) do { \
-	if (qiib_info->log_ctx) \
-		ipc_log_string(qiib_info->log_ctx, x); \
-	else \
-		pr_debug(x); \
-	} while (0)
+#define QIIB_DBG(x...)
 
-#define QIIB_ERR(x...) do { \
-	pr_err(x); \
-	if (qiib_info->log_ctx) \
-		ipc_log_string(qiib_info->log_ctx, x); \
-	} while (0)
+#define QIIB_ERR(x...)
 
 static void qiib_cleanup(void);
 

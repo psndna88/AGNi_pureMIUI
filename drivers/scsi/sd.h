@@ -127,17 +127,9 @@ static inline struct scsi_disk *scsi_disk(struct gendisk *disk)
 	return container_of(disk->private_data, struct scsi_disk, driver);
 }
 
-#define sd_printk(prefix, sdsk, fmt, a...)				\
-        (sdsk)->disk ?							\
-	      sdev_prefix_printk(prefix, (sdsk)->device,		\
-				 (sdsk)->disk->disk_name, fmt, ##a) :	\
-	      sdev_printk(prefix, (sdsk)->device, fmt, ##a)
+#define sd_printk(prefix, sdsk, fmt, a...)
 
-#define sd_first_printk(prefix, sdsk, fmt, a...)			\
-	do {								\
-		if ((sdsk)->first_scan)					\
-			sd_printk(prefix, sdsk, fmt, ##a);		\
-	} while (0)
+#define sd_first_printk(prefix, sdsk, fmt, a...)
 
 static inline int scsi_medium_access_command(struct scsi_cmnd *scmd)
 {

@@ -8737,9 +8737,9 @@ static int msm_dai_q6_tdm_header_get(struct snd_kcontrol *kcontrol,
 	for (i = 0; i < AFE_CUSTOM_TDM_HEADER_MAX_CNT; i++) {
 		ucontrol->value.integer.value[i] =
 			dai_data->port_cfg.custom_tdm_header.header[i];
-		pr_debug("%s: header #%d = 0x%x\n",
-			__func__, i,
-			dai_data->port_cfg.custom_tdm_header.header[i]);
+//		pr_debug("%s: header #%d = 0x%x\n",
+//			__func__, i,
+//			dai_data->port_cfg.custom_tdm_header.header[i]);
 	}
 	return 0;
 }

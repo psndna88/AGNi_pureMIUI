@@ -18,13 +18,9 @@
 static void *ssr_ilc;
 static DEFINE_MUTEX(ssr_lock);
 
-#define MSM_SSR_INFO(x, ...) ipc_log_string(ssr_ilc, x, ##__VA_ARGS__)
+#define MSM_SSR_INFO(x, ...)
 
-#define MSM_SSR_ERR(dev, x, ...)				       \
-do {								       \
-	dev_err(dev, "[%s]: "x, __func__, ##__VA_ARGS__);	       \
-	ipc_log_string(ssr_ilc, "[%s]: "x, __func__, ##__VA_ARGS__);   \
-} while (0)
+#define MSM_SSR_ERR(dev, x, ...)
 
 #define GLINK_SSR_DO_CLEANUP	0
 #define GLINK_SSR_CLEANUP_DONE	1
