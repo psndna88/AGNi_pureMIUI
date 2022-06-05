@@ -1265,8 +1265,8 @@ static void handle_notification(struct battery_chg_dev *bcdev, void *data,
 		 * unplugged).
 		 */
 		power_supply_changed(pst->psy);
-		if (!bcdev->reverse_chg_flag)
-			pm_wakeup_dev_event(bcdev->dev, 50, true);
+//		if (!bcdev->reverse_chg_flag)
+//			pm_wakeup_dev_event(bcdev->dev, 50, true);
 	}
 }
 
