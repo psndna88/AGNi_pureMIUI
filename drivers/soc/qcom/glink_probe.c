@@ -17,13 +17,9 @@
 #define GLINK_PROBE_LOG_PAGE_CNT 4
 static void *glink_ilc;
 
-#define GLINK_INFO(x, ...) ipc_log_string(glink_ilc, x, ##__VA_ARGS__)
+#define GLINK_INFO(x, ...)
 
-#define GLINK_ERR(dev, x, ...)					       \
-do {								       \
-	dev_err(dev, "[%s]: "x, __func__, ##__VA_ARGS__);	       \
-	ipc_log_string(glink_ilc, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
+#define GLINK_ERR(dev, x, ...)
 
 extern const struct dev_pm_ops glink_native_pm_ops;
 

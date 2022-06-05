@@ -371,27 +371,9 @@ struct se_geni_rsc {
 #define GSI_RX_PACK_EN          (BIT(1))
 #define GSI_PRESERVE_PACK       (BIT(2))
 
-#define GENI_SE_ERR(log_ctx, print, dev, x...) do { \
-if (log_ctx) \
-	ipc_log_string(log_ctx, x); \
-if (print) { \
-	if (dev) \
-		dev_err((dev), x); \
-	else \
-		pr_err(x); \
-} \
-} while (0)
+#define GENI_SE_ERR(log_ctx, print, dev, x...)
 
-#define GENI_SE_DBG(log_ctx, print, dev, x...) do { \
-if (log_ctx) \
-	ipc_log_string(log_ctx, x); \
-if (print) { \
-	if (dev) \
-		dev_dbg((dev), x); \
-	else \
-		pr_debug(x); \
-} \
-} while (0)
+#define GENI_SE_DBG(log_ctx, print, dev, x...)
 
 /* In KHz */
 #define DEFAULT_SE_CLK  19200
