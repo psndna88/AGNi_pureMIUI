@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2010-2017, 2019, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2017, 2019-2021, The Linux Foundation. All rights reserved.
  */
 #ifndef __APR_H_
 #define __APR_H_
@@ -195,4 +195,5 @@ uint16_t apr_get_reset_domain(uint16_t proc);
 int apr_start_rx_rt(void *handle);
 int apr_end_rx_rt(void *handle);
 void apr_register_adsp_state_cb(void *adsp_cb, void *client_handle);
+int apr_pkt_config(void *handle, struct apr_pkt_cfg *cfg);
 #endif

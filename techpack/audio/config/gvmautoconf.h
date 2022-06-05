@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 
+#define CONFIG_SND_SOC_GVM_AUTO_SPF 1
 #define CONFIG_MSM_QDSP6_APRV2_VM 1
 #define CONFIG_MSM_ADSP_LOADER 1
 #define CONFIG_MSM_QDSP6_SSR 1
@@ -26,3 +27,4 @@
 #define CONFIG_MSM_QDSP6V2_CODECS 1
 #define CONFIG_SND_EVENT 1
 #define CONFIG_SND_SOC_SA8155 1
+
