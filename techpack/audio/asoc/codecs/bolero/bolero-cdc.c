@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of_platform.h>
@@ -509,7 +509,7 @@ static u8 bolero_dmic_clk_div_get(struct snd_soc_component *component,
 
 	if (priv->macro_params[macro].clk_div_get) {
 		ret = priv->macro_params[macro].clk_div_get(component);
-		if (ret > 0)
+		if (ret >= 0)
 			return ret;
 	}
 
@@ -702,6 +702,7 @@ int bolero_register_macro(struct device *dev, u16 macro_id,
 			priv->macro_params[macro_id].reg_wake_irq =
 						ops->reg_wake_irq;
 	}
+	mutex_lock(&priv->macro_lock);
 	priv->num_dais += ops->num_dais;
 	priv->num_macros_registered++;
 	priv->macros_supported[macro_id] = true;
@@ -712,6 +713,7 @@ int bolero_register_macro(struct device *dev, u16 macro_id,
 		ret = bolero_copy_dais_from_macro(priv);
 		if (ret < 0) {
 			dev_err(dev, "%s: copy_dais failed\n", __func__);
+			mutex_unlock(&priv->macro_lock);
 			return ret;
 		}
 		if (priv->macros_supported[TX_MACRO] == false) {
@@ -724,9 +726,11 @@ int bolero_register_macro(struct device *dev, u16 macro_id,
 				priv->bolero_dais, priv->num_dais);
 		if (ret < 0) {
 			dev_err(dev, "%s: register codec failed\n", __func__);
+			mutex_unlock(&priv->macro_lock);
 			return ret;
 		}
 	}
+	mutex_unlock(&priv->macro_lock);
 	return 0;
 }
 EXPORT_SYMBOL(bolero_register_macro);
@@ -1395,6 +1399,7 @@ static int bolero_probe(struct platform_device *pdev)
 	priv->core_audio_vote_count = 0;
 
 	dev_set_drvdata(&pdev->dev, priv);
+	mutex_init(&priv->macro_lock);
 	mutex_init(&priv->io_lock);
 	mutex_init(&priv->clk_lock);
 	mutex_init(&priv->vote_lock);
@@ -1435,6 +1440,7 @@ static int bolero_remove(struct platform_device *pdev)
 		return -EINVAL;
 
 	of_platform_depopulate(&pdev->dev);
+	mutex_destroy(&priv->macro_lock);
 	mutex_destroy(&priv->io_lock);
 	mutex_destroy(&priv->clk_lock);
 	mutex_destroy(&priv->vote_lock);

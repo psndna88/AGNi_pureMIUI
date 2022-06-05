@@ -1337,3 +1337,33 @@ SND_SOC_DAILINK_DEFS(ext_display_port,
 	DAILINK_COMP_ARRAY(COMP_CODEC("msm-ext-disp-audio-codec-rx",
 			"msm_dp_audio_codec_rx_dai")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
+
+SND_SOC_DAILINK_DEFS(tert_tdm_rx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-rx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(tert_tdm_tx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(lpass_be_auxpcm_rx_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-rx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(lpass_be_auxpcm_tx_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(primary_tdm_rx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-rx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));
+
+SND_SOC_DAILINK_DEFS(primary_tdm_tx_0_dummy,
+    DAILINK_COMP_ARRAY(COMP_CPU("snd-soc-dummy-dai")),
+    DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
+    DAILINK_COMP_ARRAY(COMP_PLATFORM("snd-soc-dummy")));

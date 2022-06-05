@@ -1425,13 +1425,6 @@ int msm_pcm_routing_set_stream_ec_ref_chmix_cfg(
 		ret = -EINVAL;
 		goto done;
 	}
-	if (cfg_data->input_channel != msm_ec_ref_ch) {
-		pr_err("%s: mismatched input ch %d with port config ch %d\n",
-				__func__, cfg_data->input_channel,
-				 msm_ec_ref_ch);
-		ret = -EINVAL;
-		goto done;
-	}
 
 	pr_debug("%s: fedai_id %d, input_channel %d output_channel %d\n",
 		__func__, fedai_id,
@@ -1495,10 +1488,12 @@ int msm_pcm_routing_reg_stream_app_type_cfg(
 		goto done;
 	}
 
-	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d, sample_rate %d copp_token %d\n",
+	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d,"
+		"sample_rate %d, copp_token %d, bit_width %d\n",
 		__func__, fedai_id, session_type, be_id,
 		cfg_data->app_type, cfg_data->acdb_dev_id,
-		cfg_data->sample_rate, cfg_data->copp_token);
+		cfg_data->sample_rate, cfg_data->copp_token,
+		cfg_data->bit_width);
 
 	if (!is_mm_lsm_fe_id(fedai_id)) {
 		pr_err("%s: Invalid machine driver ID %d\n",
@@ -1581,10 +1576,12 @@ int msm_pcm_routing_get_stream_app_type_cfg(
 
 	*bedai_id = be_id;
 	*cfg_data = fe_dai_app_type_cfg[fedai_id][session_type][be_id];
-	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d, sample_rate %d copp_token %d\n",
+	pr_debug("%s: fedai_id %d, session_type %d, be_id %d, app_type %d, acdb_dev_id %d,"
+		"sample_rate %d, copp_token %d, bit_width %d\n",
 		__func__, fedai_id, session_type, *bedai_id,
 		cfg_data->app_type, cfg_data->acdb_dev_id,
-		cfg_data->sample_rate, cfg_data->copp_token);
+		cfg_data->sample_rate, cfg_data->copp_token,
+		cfg_data->bit_width);
 done:
 	return ret;
 }
@@ -2005,6 +2002,8 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 				sample_rate =
 			fe_dai_app_type_cfg[fe_id][session_type][i].sample_rate;
 				bit_width =
+					(fe_dai_app_type_cfg[fe_id][session_type][i].bit_width) ?
+					fe_dai_app_type_cfg[fe_id][session_type][i].bit_width :
 					app_type_cfg[app_type_idx].bit_width;
 				copp_token =
 			fe_dai_app_type_cfg[fe_id][session_type][i].copp_token;
@@ -2377,6 +2376,8 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 				fe_dai_app_type_cfg[fedai_id][session_type][i]
 					.sample_rate;
 				bits_per_sample =
+					(fe_dai_app_type_cfg[fedai_id][session_type][i].bit_width) ?
+					fe_dai_app_type_cfg[fedai_id][session_type][i].bit_width :
 					app_type_cfg[app_type_idx].bit_width;
 				copp_token =
 				fe_dai_app_type_cfg[fedai_id][session_type][i]
@@ -2690,6 +2691,8 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 				fe_dai_app_type_cfg[val][session_type][reg]
 					.sample_rate;
 				bits_per_sample =
+					(fe_dai_app_type_cfg[val][session_type][reg].bit_width) ?
+					fe_dai_app_type_cfg[val][session_type][reg].bit_width :
 					app_type_cfg[app_type_idx].bit_width;
 				copp_token =
 				fe_dai_app_type_cfg[val][session_type][reg]
@@ -2891,6 +2894,11 @@ static void msm_pcm_routing_process_voice(u16 reg, u16 val, int set)
 	pr_debug("%s: reg %x val %x set %x\n", __func__, reg, val, set);
 
 	session_id = msm_pcm_routing_get_voc_sessionid(val);
+
+	if (!session_id) {
+		pr_err("%s: Invalid session_id %x\n", __func__, session_id);
+		return;
+	}
 
 	pr_debug("%s: FE DAI 0x%x session_id 0x%x\n",
 		__func__, val, session_id);
@@ -6135,6 +6143,18 @@ static int get_ec_ref_port_id(int value, int *index)
 		*index = 45;
 		port_id = RT_PROXY_PORT_001_TX;
 		break;
+	case 46:
+		*index = 46;
+		port_id = AFE_PORT_ID_PRIMARY_TDM_RX_2;
+		break;
+	case 47:
+		*index = 47;
+		port_id = AFE_PORT_ID_TERTIARY_TDM_RX;
+		break;
+	case 48:
+		*index = 48;
+		port_id = AFE_PORT_ID_SECONDARY_TDM_TX_1;
+		break;
 	default:
 		*index = 0; /* NONE */
 		pr_err("%s: Invalid value %d\n", __func__, value);
@@ -6194,6 +6214,7 @@ static const char *const ec_ref_rx[] = { "None", "SLIM_RX", "I2S_RX",
 	"RX_CDC_DMA_RX_3", "TX_CDC_DMA_TX_0", "TERT_TDM_RX_2", "SEC_TDM_TX_0",
 	"DISPLAY_PORT1", "SEN_MI2S_RX", "TERT_TDM_RX_0","QUIN_TDM_TX_0", "SENARY_MI2S_TX",
 	"PRI_TDM_RX_0", "PRI_TDM_TX_0", "QUIN_MI2S_RX", "AFE_PCM_TX",
+	"PRI_TDM_RX_2", "TERT_TDM_RX_0", "SEC_TDM_TX_1",
 };
 
 static const struct soc_enum msm_route_ec_ref_rx_enum[] = {
@@ -41544,6 +41565,8 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 					fe_dai_app_type_cfg[i][session_type]
 							   [be_id].sample_rate;
 				bits_per_sample =
+					(fe_dai_app_type_cfg[i][session_type][be_id].bit_width) ?
+					fe_dai_app_type_cfg[i][session_type][be_id].bit_width :
 					app_type_cfg[app_type_idx].bit_width;
 				copp_token =
 					fe_dai_app_type_cfg[i][session_type]
@@ -42871,7 +42894,7 @@ static struct afe_clk_set internal_mclk = {
 	Q6AFE_LPASS_IBIT_CLK_12_P288_MHZ,
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
-	1,
+	0,
 };
 
 static int msm_internal_mclk_ctl_get(struct snd_kcontrol *kcontrol,

@@ -683,7 +683,7 @@ enum {
 #define ADM_PP_PARAM_MUTE_BIT			1
 #define ADM_PP_PARAM_LATENCY_ID			1
 #define ADM_PP_PARAM_LATENCY_BIT		2
-#define BE_DAI_PORT_SESSIONS_IDX_MAX		4
+#define BE_DAI_PORT_SESSIONS_IDX_MAX		5
 #define BE_DAI_FE_SESSIONS_IDX_MAX		2
 
 #define STREAM_TYPE_ASM 0
@@ -743,6 +743,7 @@ struct msm_pcm_stream_app_type_cfg {
 	int acdb_dev_id;
 	int sample_rate;
 	uint32_t copp_token;
+	int bit_width;
 };
 
 /* dai_id: front-end ID,
