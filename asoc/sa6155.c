@@ -4930,8 +4930,11 @@ static int sa6155_tdm_snd_startup(struct snd_pcm_substream *substream)
 	 */
 	intf_conf = &pdata->tdm_intf_conf[index];
 	mutex_lock(&intf_conf->lock);
+
+	pr_debug("%s: intf_conf->ref_cnt = %d, index = %d\n", __func__, intf_conf->ref_cnt, index);
+
 	if (++intf_conf->ref_cnt == 1) {
-		if (index == TDM_TERT || index == TDM_QUAT ||
+		if (index == TDM_TERT || index == TDM_QUAT || index == TDM_SEC ||
 			index == TDM_QUIN) {
 			pinctrl_info = &pdata->pinctrl_info[index];
 			if (pinctrl_info->pinctrl) {
@@ -4940,6 +4943,8 @@ static int sa6155_tdm_snd_startup(struct snd_pcm_substream *substream)
 				if (ret_pinctrl)
 					pr_err("%s: TDM TLMM pinctrl set failed with %d\n",
 						__func__, ret_pinctrl);
+			} else {
+				pr_err("%s: No set_pinctrl entity for [%d]...\n", __func__, index);
 			}
 		}
 	}
