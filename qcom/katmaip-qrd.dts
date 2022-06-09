@@ -1,11 +1,10 @@
 /dts-v1/;
-/plugin/;
 
+#include "katmaip.dtsi"
 #include "yupikp-iot-qrd.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. YUPIKP-IOT QRD";
+	model = "Qualcomm Technologies, Inc. KATMAIP QRD";
 	compatible = "qcom,yupikp-iot-qrd", "qcom,yupikp-iot", "qcom,qrd";
-	qcom,msm-id = <498 0x10000>, <575 0x10000>, <576 0x10000>;
 	qcom,board-id = <0x1000B 0>;
 };
