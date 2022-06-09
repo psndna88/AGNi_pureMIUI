@@ -376,17 +376,16 @@
 				<&apps_smmu 0x840 0x400>,
 				<&apps_smmu 0xC00 0x400>,
 				<&apps_smmu 0xC40 0x400>;
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
-			cam-smmu-label = "ife", "ife-cdm";
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
+			cam-smmu-label = "ife";
+			dma-coherent-hint-cached;
 			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
 				iova-mem-region-io {
 					iova-region-name = "io";
-					/* 1 MB pad for start */
-					iova-region-start = <0x100000>;
-					/* 1 MB pad for end */
-					iova-region-len = <0xffe00000>;
+					iova-region-start = <0x7400000>;
+					iova-region-len = <0xd8c00000>;
 					iova-region-id = <0x3>;
 					status = "ok";
 				};
@@ -398,15 +397,14 @@
 			iommus = <&apps_smmu 0x2040 0x400>,
 				<&apps_smmu 0x2440 0x400>;
 			cam-smmu-label = "jpeg";
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
+			dma-coherent-hint-cached;
 			jpeg_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4.0 GB */
 				iova-mem-region-io {
 					iova-region-name = "io";
-					/* 1 MB pad for start */
-					iova-region-start = <0x100000>;
-					/* 1 MB pad for end */
-					iova-region-len = <0xffe00000>;
+					iova-region-start = <0x7400000>;
+					iova-region-len = <0xd8c00000>;
 					iova-region-id = <0x3>;
 					status = "ok";
 				};
@@ -415,7 +413,7 @@
 
 		msm_cam_icp_fw {
 			compatible = "qcom,msm-cam-smmu-fw-dev";
-			label="icp";
+			cam-smmu-label="icp";
 			memory-region = <&pil_camera_mem>;
 		};
 
@@ -424,20 +422,15 @@
 			iommus = <&apps_smmu 0x20E2 0x400>,
 				<&apps_smmu 0x24E2 0x400>,
 				<&apps_smmu 0x2000 0x400>,
-				<&apps_smmu 0x2001 0x400>,
 				<&apps_smmu 0x2400 0x400>,
-				<&apps_smmu 0x2401 0x400>,
 				<&apps_smmu 0x2060 0x400>,
-				<&apps_smmu 0x2061 0x400>,
 				<&apps_smmu 0x2460 0x400>,
-				<&apps_smmu 0x2461 0x400>,
 				<&apps_smmu 0x2020 0x400>,
-				<&apps_smmu 0x2021 0x400>,
-				<&apps_smmu 0x2420 0x400>,
-				<&apps_smmu 0x2421 0x400>;
+				<&apps_smmu 0x2420 0x400>;
 			cam-smmu-label = "icp";
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
 			iova-region-discard = <0xdff00000 0x300000>;
+			dma-coherent-hint-cached;
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
 					/* Firmware region is 5MB */
@@ -493,15 +486,14 @@
 			iommus = <&apps_smmu 0x20C0 0x400>,
 				<&apps_smmu 0x24C0 0x400>;
 			cam-smmu-label = "cpas-cdm";
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
+			dma-coherent-hint-cached;
 			cpas_cdm_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 4.0 GB */
 					iova-region-name = "io";
-					/* 1 MB pad for start */
-					iova-region-start = <0x100000>;
-					/* 1 MB pad for end */
-					iova-region-len = <0xffe00000>;
+					iova-region-start = <0x7400000>;
+					iova-region-len = <0xd8c00000>;
 					iova-region-id = <0x3>;
 					status = "ok";
 				};
@@ -518,16 +510,15 @@
 			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 0x2080 0x400>,
 				<&apps_smmu 0x2480 0x400>;
-			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
+			qcom,iommu-dma-addr-pool = <0x7400000 0xd8c00000>;
 			cam-smmu-label = "fd";
+			dma-coherent-hint-cached;
 			fd_iova_mem_map: iova-mem-map {
 				iova-mem-region-io {
 					/* IO region is approximately 4.0 GB */
 					iova-region-name = "io";
-					/* 1 MB pad for start */
-					iova-region-start = <0x100000>;
-					/* 1 MB pad for end */
-					iova-region-len = <0xffe00000>;
+					iova-region-start = <0x7400000>;
+					iova-region-len = <0xd8c00000>;
 					iova-region-id = <0x3>;
 					status = "ok";
 				};
@@ -583,26 +574,13 @@
 		control-camnoc-axi-clk;
 		camnoc-bus-width = <32>;
 		camnoc-axi-clk-bw-margin-perc = <20>;
-		qcom,msm-bus,name = "cam_ahb";
-		qcom,msm-bus,num-cases = <8>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 0>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 76800>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 76800>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 150000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>,
-			<MSM_BUS_MASTER_AMPSS_M0
-			MSM_BUS_SLAVE_CAMERA_CFG 0 300000>;
+		interconnect-names = "cam_ahb";
+		interconnects =<&gem_noc MASTER_APPSS_PROC
+			&config_noc SLAVE_CAMERA_CFG>;
+		cam-ahb-num-cases = <8>;
+		cam-ahb-bw-KBps =
+			<0 0>, <0 76800>, <0 76800>, <0 150000>,
+			<0 150000>, <0 300000>, <0 300000>, <0 300000>;
 		vdd-corners = <RPMH_REGULATOR_LEVEL_RETENTION
 			RPMH_REGULATOR_LEVEL_MIN_SVS
 			RPMH_REGULATOR_LEVEL_LOW_SVS
@@ -622,11 +600,10 @@
 			"csiphy0", "csiphy1", "csiphy2", "csiphy3",
 			"csiphy4", "csiphy5", "cci0", "cci1",
 			"csid0", "csid1", "csid2", "csid3",
-			"csid4", "csid5", "csid6", "ife0",
-			"ife1", "ife2", "ife3", "custom0",
-			"ipe0", "cam-cdm-intf0", "cpas-cdm0",
-			"ife-cdm0", "ife-cdm1", "bps0", "icp0",
-			"jpeg-dma0", "jpeg-enc0", "fd0";
+			"csid4", "csid5", "csid6", "ife0", "ife1",
+			"ife2", "ife3", "ife4", "ife5", "ife6",
+			"custom0", "ipe0", "cam-cdm-intf0", "cpas-cdm0",
+			"bps0", "icp0", "jpeg-dma0", "jpeg-enc0", "fd0";
 
 		camera-bus-nodes {
 			level3-nodes {
@@ -636,19 +613,12 @@
 					node-name = "level3-rt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_hf_0";
 					ib-bw-voting-needed;
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_hf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_HF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_hf_0";
+						interconnects =
+						<&mmss_noc MASTER_CAMNOC_HF
+						&mc_virt SLAVE_EBI1>;
 					};
 				};
 
@@ -657,18 +627,11 @@
 					node-name = "level3-nrt0-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_sf_0";
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_sf_0_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_SF
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_sf_0";
+						interconnects =
+						<&mmss_noc MASTER_CAMNOC_SF
+						&mc_virt SLAVE_EBI1>;
 					};
 				};
 
@@ -677,18 +640,11 @@
 					node-name = "level3-nrt1-rd-wr-sum";
 					traffic-merge-type =
 					<CAM_CPAS_TRAFFIC_MERGE_SUM>;
-					qcom,axi-port-name = "cam_sf_icp";
 					qcom,axi-port-mnoc {
-						qcom,msm-bus,name =
-						"cam_sf_icp_mnoc";
-						qcom,msm-bus-vector-dyn-vote;
-						qcom,msm-bus,num-cases = <2>;
-						qcom,msm-bus,num-paths = <1>;
-						qcom,msm-bus,vectors-KBps =
-						<MSM_BUS_MASTER_CAMNOC_ICP
-						MSM_BUS_SLAVE_EBI_CH0 0 0>,
-						<MSM_BUS_MASTER_CAMNOC_ICP
-						MSM_BUS_SLAVE_EBI_CH0 0 0>;
+						interconnect-names = "cam_sf_icp";
+						interconnects =
+						<&mmss_noc MASTER_CAMNOC_ICP
+						&mc_virt SLAVE_EBI1>;
 					};
 				};
 			};
@@ -1136,7 +1092,7 @@
 
 	cam_cpas_cdm: qcom,cpas-cdm@ac4d000 {
 		cell-index = <0>;
-		compatible = "qcom,cam-cpas-cdm1_2";
+		compatible = "qcom,cam170-cpas-cdm0";
 		label = "cpas-cdm";
 		reg = <0xac4d000 0x1000>;
 		reg-names = "cpas-cdm";
@@ -1151,74 +1107,51 @@
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
 		clock-rates = <0 0>;
 		clock-cntl-level = "svs";
-		cdm-client-names = "ife2", "ife3", "ife4", "ife5", "ife6", "dualife";
+		cdm-client-names = "ife", "ife2", "ife3", "ife4", "ife5", "ife6", "dualife";
 		status = "ok";
 	};
 
-	qcom,ife-cdm0@acb4200 {
-		cell-index = <0>;
-		compatible = "qcom,cam-ife-cdm1_2";
-		label = "ife-cdm";
+	qcom,cpas-cdm1@acb4200 {
+		cell-index = <1>;
+		compatible = "qcom,cam480-cpas-cdm1";
+		label = "cpas-cdm";
 		reg = <0xacb4200 0x1000>;
-		reg-names = "ife-cdm0";
+		reg-names = "cpas-cdm";
 		reg-cam-base = <0xb4200>;
 		interrupts = <GIC_SPI 456 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "ife-cdm0";
-		regulator-names = "camss","ife0";
+		interrupt-names = "cpas-cdm";
+		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
-		ife0-supply = <&ife_0_gdsc>;
-		clock-names = "ife_0_ahb",
-			"ife_0_areg",
-			"ife_clk",
-			"ife_axi_clk",
+		clock-names = "cam_cc_cpas_slow_ahb_clk",
 			"cam_cc_cpas_ahb_clk";
-		clocks =
-			<&clock_camcc CAM_CC_IFE_0_AHB_CLK>,
-			<&clock_camcc CAM_CC_IFE_0_AREG_CLK>,
-			<&clock_camcc CAM_CC_IFE_0_CLK>,
-			<&clock_camcc CAM_CC_IFE_0_AXI_CLK>,
+		clocks = <&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
-		clock-rates =
-			<0 0 0 0 0>,
-			<0 0 0 0 0>,
-			<0 0 0 0 0>,
-			<0 0 0 0 0>;
-		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		clock-rates = <0 0>;
+		clock-cntl-level = "svs";
 		cdm-client-names = "ife0";
-		status = "ok";
+		status = "disabled";
 	};
 
-	qcom,ife-cdm1@acc3200 {
-		cell-index = <1>;
-		compatible = "qcom,cam-ife-cdm1_2";
-		label = "ife-cdm";
+	qcom,cpas-cdm2@acc3200 {
+		cell-index = <2>;
+		compatible = "qcom,cam480-cpas-cdm2";
+		label = "cpas-cdm";
 		reg = <0xacc3200 0x1000>;
-		reg-names = "ife-cdm1";
+		reg-names = "cpas-cdm";
 		reg-cam-base = <0xc3200>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "ife-cdm1";
-		regulator-names = "camss","ife1";
+		interrupt-names = "cpas-cdm";
+		regulator-names = "camss";
 		camss-supply = <&titan_top_gdsc>;
 		ife1-supply = <&ife_1_gdsc>;
-		clock-names = "ife_1_ahb",
-			"ife_1_areg",
-			"ife_clk",
-			"ife_axi_clk",
+		clock-names = "cam_cc_cpas_slow_ahb_clk",
 			"cam_cc_cpas_ahb_clk";
-		clocks =
-			<&clock_camcc CAM_CC_IFE_1_AHB_CLK>,
-			<&clock_camcc CAM_CC_IFE_1_AREG_CLK>,
-			<&clock_camcc CAM_CC_IFE_1_CLK>,
-			<&clock_camcc CAM_CC_IFE_1_AXI_CLK>,
+		clocks = <&clock_camcc CAM_CC_SLOW_AHB_CLK_SRC>,
 			<&clock_camcc CAM_CC_CPAS_AHB_CLK>;
-		clock-rates =
-			<0 0 0 0 0>,
-			<0 0 0 0 0>,
-			<0 0 0 0 0>,
-			<0 0 0 0 0>;
-		clock-cntl-level = "lowsvs", "svs", "svs_l1", "turbo";
+		clock-rates = <0 0>;
+		clock-cntl-level = "svs";
 		cdm-client-names = "ife1";
-		status = "ok";
+		status = "disabled";
 	};
 
 	qcom,cam-isp {
