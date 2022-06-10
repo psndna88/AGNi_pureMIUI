@@ -46,7 +46,6 @@
 #include <linux/cleancache.h>
 
 #include "ext4.h"
-#include <trace/events/android_fs.h>
 
 #define NUM_PREALLOC_POST_READ_CTXS	128
 
@@ -160,17 +159,6 @@ static bool bio_post_read_required(struct bio *bio)
 	return bio->bi_private && !bio->bi_status;
 }
 
-static void
-ext4_trace_read_completion(struct bio *bio)
-{
-	struct page *first_page = bio->bi_io_vec[0].bv_page;
-
-	if (first_page != NULL)
-		trace_android_fs_dataread_end(first_page->mapping->host,
-					      page_offset(first_page),
-					      bio->bi_iter.bi_size);
-}
-
 /*
  * I/O completion handler for multipage BIOs.
  *
@@ -185,9 +173,6 @@ ext4_trace_read_completion(struct bio *bio)
  */
 static void mpage_end_io(struct bio *bio)
 {
-	if (trace_android_fs_dataread_start_enabled())
-		ext4_trace_read_completion(bio);
-
 	if (bio_post_read_required(bio)) {
 		struct bio_post_read_ctx *ctx = bio->bi_private;
 
@@ -240,24 +225,6 @@ static inline loff_t ext4_readpage_limit(struct inode *inode)
 static void
 ext4_submit_bio_read(struct bio *bio)
 {
-	if (trace_android_fs_dataread_start_enabled()) {
-		struct page *first_page = bio->bi_io_vec[0].bv_page;
-
-		if (first_page != NULL) {
-			char *path, pathbuf[MAX_TRACE_PATHBUF_LEN];
-
-			path = android_fstrace_get_pathname(pathbuf,
-						    MAX_TRACE_PATHBUF_LEN,
-						    first_page->mapping->host);
-			trace_android_fs_dataread_start(
-				first_page->mapping->host,
-				page_offset(first_page),
-				bio->bi_iter.bi_size,
-				current->pid,
-				path,
-				current->comm);
-		}
-	}
 	submit_bio(bio);
 }
 
