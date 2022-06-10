@@ -61,6 +61,15 @@ typedef uint32_t wlan_scan_id;
 
 #define TBTT_INFO_COUNT 16
 
+/* Active dwell time in low span scan mode(NL80211_SCAN_FLAG_LOW_SPAN)
+ * in msec
+ */
+#define LOW_SPAN_ACTIVE_DWELL_TIME 40
+/* passive dwell time in low span scan mode (NL80211_SCAN_FLAG_LOW_SPAN)
+ * in msec
+ */
+#define LOW_SPAN_PASSIVE_DWELL_TIME 110
+
 /* forward declaration */
 struct wlan_objmgr_vdev;
 struct wlan_objmgr_pdev;
@@ -1449,11 +1458,13 @@ enum ext_cap_bit_field {
  * @timestamp: time stamp of beacon/probe
  * @short_ssid: Short SSID
  * @bssid: BSSID
+ * @bss_params: bss params present in RNR IE
  */
 struct scan_rnr_info {
 	qdf_time_t timestamp;
 	uint32_t short_ssid;
 	struct qdf_mac_addr bssid;
+	uint8_t bss_params;
 };
 
 /**

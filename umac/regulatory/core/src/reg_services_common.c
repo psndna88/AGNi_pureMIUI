@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1687,7 +1688,7 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 
 	if (freq == 0) {
-		reg_err_rl("Invalid freq %d", freq);
+		reg_debug_rl("Invalid freq %d", freq);
 		return 0;
 	}
 
