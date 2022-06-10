@@ -62,7 +62,7 @@ static int cam_fd_dev_open(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int cam_fd_dev_close_internal(struct v4l2_subdev *sd,
+int cam_fd_dev_close_internal(struct v4l2_subdev *sd,
 	struct v4l2_subdev_fh *fh)
 {
 	struct cam_fd_dev *fd_dev = &g_fd_dev;
