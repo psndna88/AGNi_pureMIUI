@@ -932,6 +932,33 @@ hdd_link_layer_process_iface_stats(struct hdd_adapter *adapter,
 }
 
 /**
+ * put_channel_stats_chload - put chload of channel stats
+ * @vendor_event: vendor event
+ * @channel_stats: Pointer to channel stats
+ *
+ * Return: bool
+ */
+static bool put_channel_stats_chload(struct sk_buff *vendor_event,
+				     struct wifi_channel_stats *channel_stats)
+{
+	uint64_t txrx_time;
+	uint32_t chload;
+
+	if (!channel_stats->on_time)
+		return true;
+
+	txrx_time = (channel_stats->tx_time + channel_stats->rx_time) * 100;
+	chload = qdf_do_div(txrx_time, channel_stats->on_time);
+
+	if (nla_put_u8(vendor_event,
+		       QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_LOAD_PERCENTAGE,
+		       chload))
+		return false;
+
+	return true;
+}
+
+/**
  * hdd_llstats_radio_fill_channels() - radio stats fill channels
  * @adapter: Pointer to device adapter
  * @radiostat: Pointer to stats data
@@ -1002,6 +1029,13 @@ static int hdd_llstats_radio_fill_channels(struct hdd_adapter *adapter,
 				QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_RX_TIME,
 				channel_stats->rx_time)) {
 				hdd_err("nla_put failed for tx time (%u, %d)",
+					radiostat->num_channels, i);
+				return -EINVAL;
+			}
+
+			if (!put_channel_stats_chload(vendor_event,
+						      channel_stats)) {
+				hdd_err("nla_put failed for chload (%u, %d)",
 					radiostat->num_channels, i);
 				return -EINVAL;
 			}
@@ -4598,11 +4632,11 @@ static void hdd_fill_sinfo_rate_info(struct station_info *sinfo,
 		}
 	}
 
-	hdd_info("flag %x mcs %d legacy %d nss %d",
-		 rate_info->flags,
-		 rate_info->mcs,
-		 rate_info->legacy,
-		 rate_info->nss);
+	hdd_debug("flag %x mcs %d legacy %d nss %d",
+		  rate_info->flags,
+		  rate_info->mcs,
+		  rate_info->legacy,
+		  rate_info->nss);
 
 	if (is_tx)
 		sinfo->filled |= HDD_INFO_TX_BITRATE;
@@ -4697,7 +4731,7 @@ static void hdd_fill_rate_info(struct wlan_objmgr_psoc *psoc,
 				       &link_speed_rssi_low,
 				       &link_speed_rssi_report);
 
-	hdd_info("reportMaxLinkSpeed %d", link_speed_rssi_report);
+	hdd_debug("reportMaxLinkSpeed %d", link_speed_rssi_report);
 
 	/* convert to 100kbps expected in rate table */
 	tx_rate = stats->tx_rate.rate / 100;
@@ -4888,20 +4922,20 @@ static void wlan_hdd_fill_station_info(struct wlan_objmgr_psoc *psoc,
 	sinfo->assoc_req_ies_len = stainfo->assoc_req_ies.len;
 
 	/* dump sta info*/
-	hdd_info("dump stainfo");
-	hdd_info("con_time %d inact_time %d tx_pkts %d rx_pkts %d",
-		 sinfo->connected_time, sinfo->inactive_time,
-		 sinfo->tx_packets, sinfo->rx_packets);
-	hdd_info("failed %d retries %d tx_bytes %lld rx_bytes %lld",
-		 sinfo->tx_failed, sinfo->tx_retries,
-		 sinfo->tx_bytes, sinfo->rx_bytes);
-	hdd_info("rssi %d tx mcs %d legacy %d nss %d flags %x",
-		 sinfo->signal, sinfo->txrate.mcs,
-		 sinfo->txrate.legacy, sinfo->txrate.nss,
-		 sinfo->txrate.flags);
-	hdd_info("rx mcs %d legacy %d nss %d flags %x",
-		 sinfo->rxrate.mcs, sinfo->rxrate.legacy,
-		 sinfo->rxrate.nss, sinfo->rxrate.flags);
+	hdd_debug("dump stainfo");
+	hdd_debug("con_time %d inact_time %d tx_pkts %d rx_pkts %d",
+		  sinfo->connected_time, sinfo->inactive_time,
+		  sinfo->tx_packets, sinfo->rx_packets);
+	hdd_debug("failed %d retries %d tx_bytes %lld rx_bytes %lld",
+		  sinfo->tx_failed, sinfo->tx_retries,
+		  sinfo->tx_bytes, sinfo->rx_bytes);
+	hdd_debug("rssi %d tx mcs %d legacy %d nss %d flags %x",
+		  sinfo->signal, sinfo->txrate.mcs,
+		  sinfo->txrate.legacy, sinfo->txrate.nss,
+		  sinfo->txrate.flags);
+	hdd_debug("rx mcs %d legacy %d nss %d flags %x",
+		  sinfo->rxrate.mcs, sinfo->rxrate.legacy,
+		  sinfo->rxrate.nss, sinfo->rxrate.flags);
 }
 
 /**
@@ -5011,7 +5045,7 @@ static uint8_t hdd_get_rate_flags(uint32_t rate,
 	else if (mode == SIR_SME_PHY_MODE_VHT)
 		flags = hdd_get_rate_flags_vht(rate, nss, mcs);
 	else
-		hdd_err("invalid mode param %d", mode);
+		hdd_debug("invalid mode param %d", mode);
 
 	return flags;
 }
@@ -5607,7 +5641,8 @@ void hdd_wlan_fill_per_chain_rssi_stats(struct station_info *sinfo,
 }
 #endif
 
-#if defined(CFG80211_RX_FCS_ERROR_REPORTING_SUPPORT)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 20, 0)) || \
+	defined(CFG80211_RX_FCS_ERROR_REPORTING_SUPPORT)
 static void hdd_fill_fcs_and_mpdu_count(struct hdd_adapter *adapter,
 					struct station_info *sinfo)
 {

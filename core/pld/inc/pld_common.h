@@ -78,6 +78,7 @@ enum pld_bus_type {
  * @PLD_BUS_WIDTH_MEDIUM: vote for medium bus bandwidth
  * @PLD_BUS_WIDTH_HIGH: vote for high bus bandwidth
  * @PLD_BUS_WIDTH_VERY_HIGH: vote for very high bus bandwidth
+ * @PLD_BUS_WIDTH_ULTRA_HIGH: vote for ultra high bus bandwidth
  * @PLD_BUS_WIDTH_LOW_LATENCY: vote for low latency bus bandwidth
  */
 enum pld_bus_width_type {
@@ -87,8 +88,11 @@ enum pld_bus_width_type {
 	PLD_BUS_WIDTH_MEDIUM,
 	PLD_BUS_WIDTH_HIGH,
 	PLD_BUS_WIDTH_VERY_HIGH,
+	PLD_BUS_WIDTH_ULTRA_HIGH,
+	PLD_BUS_WIDTH_MAX,
 	PLD_BUS_WIDTH_LOW_LATENCY,
 };
+
 
 #define PLD_MAX_FILE_NAME NAME_MAX
 
@@ -941,6 +945,15 @@ int pld_thermal_register(struct device *dev, unsigned long state, int mon_id);
  * Return: None
  */
 void pld_thermal_unregister(struct device *dev, int mon_id);
+
+/**
+ * pld_bus_width_type_to_str() - Helper function to convert PLD bandwidth level
+ *				 to string
+ * @level: PLD bus width level
+ *
+ * Return: String corresponding to input "level"
+ */
+const char *pld_bus_width_type_to_str(enum pld_bus_width_type level);
 
 /**
  * pld_get_thermal_state() - Get the current thermal state from the PLD

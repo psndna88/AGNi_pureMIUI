@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -620,6 +621,8 @@ struct csr_roam_session {
 	qdf_mc_timer_t roam_invoke_timer;
 	struct csr_timer_info roam_invoke_timer_info;
 #endif
+	/* AP power type */
+	uint8_t ap_power_type;
 };
 
 struct csr_roamstruct {
