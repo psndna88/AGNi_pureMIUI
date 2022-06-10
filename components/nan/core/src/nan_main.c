@@ -563,11 +563,13 @@ static QDF_STATUS nan_handle_confirm(struct nan_datapath_confirm_event *confirm)
 	peer = wlan_objmgr_get_peer_by_mac(psoc,
 					   confirm->peer_ndi_mac_addr.bytes,
 					   WLAN_NAN_ID);
-	if (!peer) {
+	if (!peer && confirm->rsp_code == NAN_DATAPATH_RESPONSE_ACCEPT) {
 		nan_debug("Drop NDP confirm as peer isn't available");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
-	wlan_objmgr_peer_release_ref(peer, WLAN_NAN_ID);
+
+	if (peer)
+		wlan_objmgr_peer_release_ref(peer, WLAN_NAN_ID);
 
 	psoc_nan_obj = nan_get_psoc_priv_obj(psoc);
 	if (!psoc_nan_obj) {
