@@ -527,6 +527,9 @@ static int parse_options(struct super_block *sb, char *options, bool is_remount)
 		args[0].to = args[0].from = NULL;
 		token = match_token(p, f2fs_tokens, args);
 
+		// F2FS force DISCARD & GC_MERGE
+		set_opt(sbi, GC_MERGE);
+		set_opt(sbi, DISCARD);
 		switch (token) {
 		case Opt_gc_background:
 			name = match_strdup(&args[0]);
