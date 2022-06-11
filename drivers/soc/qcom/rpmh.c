@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2016-2021, The Linux Foundation. All rights reserved. */
+/* Copyright (C) 2021 XiaoMi, Inc. */
 
 #include <linux/atomic.h>
 #include <linux/bug.h>
@@ -492,12 +493,13 @@ int rpmh_write_batch(const struct device *dev, enum rpmh_state state,
 			time_left = wait_for_completion_timeout(&compls[i], time_left);
 			if (!time_left) {
 				/*
-				* Better hope they never finish because they'll signal
-				* the completion that we're going to free once
-				* we've returned from this function.
-				*/
+				 * Better hope they never finish because they'll signal
+				 * the completion that we're going to free once
+				 * we've returned from this function.
+				 */
 				rpmh_rsc_debug(ctrlr_to_drv(ctrlr), &compls[i]);
-				BUG_ON(1);
+				ret = -ETIMEDOUT;
+				goto exit;
 			}
 		}
 		else {
