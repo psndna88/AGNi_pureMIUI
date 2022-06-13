@@ -469,8 +469,8 @@ static int ipa3_qmi_send_req_wait(struct qmi_handle *client_handle,
 
 	mutex_lock(&ipa3_qmi_lock);
 
-	if (!client_handle) {
-
+	if (client_handle != ipa_q6_clnt) {
+		IPADBG("Q6 QMI clinet pointer already freed\n");
 		mutex_unlock(&ipa3_qmi_lock);
 		return -EINVAL;
 	}
@@ -1857,6 +1857,7 @@ void ipa3_qmi_service_exit(void)
 
 	workqueues_stopped = true;
 
+	IPADBG("Entry\n");
 	/* qmi-service */
 	if (ipa3_svc_handle != NULL) {
 		qmi_handle_release(ipa3_svc_handle);
@@ -1889,6 +1890,7 @@ void ipa3_qmi_service_exit(void)
 	ipa3_qmi_indication_fin = false;
 	ipa3_modem_init_cmplt = false;
 	send_qmi_init_q6 = true;
+	IPADBG("Exit\n");
 }
 
 void ipa3_qmi_stop_workqueues(void)
