@@ -1,8 +1,31 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python2
 # SPDX-License-Identifier: GPL-2.0-only
 # Copyright (c) 2011-2017, 2018 The Linux Foundation. All rights reserved.
 
 # -*- coding: utf-8 -*-
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of The Linux Foundation nor
+#       the names of its contributors may be used to endorse or promote
+#       products derived from this software without specific prior written
+#       permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NON-INFRINGEMENT ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Invoke gcc, looking for warnings, and causing a failure if there are
 # non-whitelisted warnings.
@@ -17,13 +40,6 @@ import subprocess
 # force LANG to be set to en_US.UTF-8 to get consistent warnings.
 
 allowed_warnings = set([
-    "umid.c:138",
-    "umid.c:213",
-    "umid.c:388",
-    "coresight-catu.h:116",
-    "mprotect.c:42",
-    "signal.c:95",
-    "signal.c:51",
  ])
 
 # Capture the name of the object file, can find it.
@@ -32,10 +48,10 @@ ofile = None
 warning_re = re.compile(r'''(.*/|)([^/]+\.[a-z]+:\d+):(\d+:)? warning:''')
 def interpret_warning(line):
     """Decode the message from gcc.  The messages we care about have a filename, and a warning"""
-    line = line.rstrip().decode()
+    line = line.rstrip('\n')
     m = warning_re.match(line)
     if m and m.group(2) not in allowed_warnings:
-        print("error, forbidden warning:", m.group(2))
+        print >> sys.stderr, "error, forbidden warning:", m.group(2)
 
         # If there is a warning, remove any object if it exists.
         if ofile:
@@ -60,17 +76,17 @@ def run_gcc():
     try:
         proc = subprocess.Popen(args, stderr=subprocess.PIPE)
         for line in proc.stderr:
-            print(line, end=' ')
+            print >> sys.stderr, line,
             interpret_warning(line)
 
         result = proc.wait()
     except OSError as e:
         result = e.errno
         if result == errno.ENOENT:
-            print(args[0] + ':',e.strerror)
-            print('Is your PATH set correctly?')
+            print >> sys.stderr, args[0] + ':',e.strerror
+            print >> sys.stderr, 'Is your PATH set correctly?'
         else:
-            print(' '.join(args), str(e))
+            print >> sys.stderr, ' '.join(args), str(e)
 
     return result
 
