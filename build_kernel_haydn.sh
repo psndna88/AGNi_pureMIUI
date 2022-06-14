@@ -65,8 +65,7 @@ rm $COMPILEDIR_HAYDN/.config $COMPILEDIR_HAYDN/.config.old 2>/dev/null
 
 if ([ -f $COMPILEDIR_HAYDN/arch/arm64/boot/Image ]); then
 	mv $COMPILEDIR_HAYDN/arch/arm64/boot/Image $KERNELDIR/$DIR/Image
-#	./scripts/dtc/libfdt/mkdtboimg.py create $COMPILEDIR_HAYDN/arch/arm64/boot/dtbo.img $COMPILEDIR_HAYDN/arch/arm64/boot/dts/qcom/*.dtb
-#	mv $COMPILEDIR_HAYDN/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
+	mv $COMPILEDIR_HAYDN/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
 	mv $COMPILEDIR_HAYDN/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
