@@ -16,7 +16,10 @@
 
 OBJCOPYFLAGS_Image :=-O binary -R .note -R .note.gnu.build-id -R .comment -S
 
-targets := Image Image.bz2 Image.gz Image.lz4 Image.lzma Image.lzo
+targets := Image Image.bz2 Image.gz Image.lz4 Image.lzma Image.lzo dtbo.img dtb.img
+
+DTB_OBJS := $(shell find -L $(obj)/dts/ -name \*.dtb)
+DTBO_OBJS := $(shell find -L $(obj)/dts/ -name \*.dtbo)
 
 ifeq ($(CONFIG_QCOM_RTIC),y)
 # Add RTIC DTB to the DTB list if RTIC MPGen is enabled
@@ -51,6 +54,12 @@ $(obj)/Image.lzma: $(obj)/Image FORCE
 $(obj)/Image.lzo: $(obj)/Image FORCE
 	$(call if_changed,lzo)
 
+$(obj)/dtbo.img: $(DTBO_OBJS) FORCE
+	$(call if_changed,mkdtimg,4096) # align dtbo.img to 4kB
+
+$(obj)/dtb.img: $(DTB_OBJS) FORCE
+	$(call if_changed,cat)
+	
 install:
 	$(CONFIG_SHELL) $(srctree)/$(src)/install.sh $(KERNELRELEASE) \
 	$(obj)/Image System.map "$(INSTALL_PATH)"
