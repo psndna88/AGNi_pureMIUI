@@ -1,5 +1,18 @@
 #include "holi-sde-display.dtsi"
 
+&pm6150l_gpios {
+	disp_pins {
+		disp_pins_default: disp_pins_default {
+			pins = "gpio9";
+			function = "func1";
+			qcom,drive-strength = <2>;
+			power-source = <1>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
 &dsi_rm69299_visionox_amoled_video {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";

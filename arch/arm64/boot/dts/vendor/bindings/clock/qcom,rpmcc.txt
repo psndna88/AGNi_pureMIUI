@@ -19,6 +19,9 @@ Required properties :
 			"qcom,rpmcc-msm8998", "qcom,rpmcc"
 			"qcom,rpmcc-qcs404", "qcom,rpmcc"
 			"qcom,rpmcc-holi", "qcom,rpmcc"
+			"qcom,rpmcc-sdxnightjar", "qcom,rpmcc"
+			"qcom,rpmcc-monaco", "qcom,rpmcc"
+			"qcom,rpmcc-scuba", "qcom,rpmcc"
 
 - #clock-cells : shall contain 1
 

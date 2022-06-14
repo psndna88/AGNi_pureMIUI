@@ -1,5 +1,12 @@
 #include "lahaina-sde-display.dtsi"
 
+&dsi_panel_pwr_supply {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-min-voltage = <1880000>;
+		qcom,supply-max-voltage = <1880000>;
+	};
+};
+
 &dsi_r66451_amoled_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";

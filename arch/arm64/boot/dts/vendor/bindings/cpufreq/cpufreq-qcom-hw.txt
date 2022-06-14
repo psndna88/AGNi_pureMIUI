@@ -50,6 +50,12 @@ Properties:
 			should have the "pdmem-domainX" to indicate the
 			corresponding bases.
 
+- qcom,sdpm-cx-mx-<id>
+	Usage:		Optional
+	Value type:	<prop-encoded-array>
+	Definition:	Addresses and sizes for the SDPM memory of the HW bases
+			in each frequency domain, indicated by an "id"(0/1/2).
+
 * Property qcom,freq-domain
 Devices supporting freq-domain must set their "qcom,freq-domain" property with
 phandle to a cpufreq_hw followed by the Domain ID(0/1) in the CPU DT node.
@@ -181,6 +187,8 @@ DCVS state together.
 
 		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
 		clock-names = "xo", "alternate";
+		qcom,sdpm-cx-mx-1 = <0x00636f08 0x4>;
+		qcom,sdpm-cx-mx-2 = <0x00636f0c 0x4>;
 
 		#freq-domain-cells = <1>;
 	};

@@ -9,11 +9,12 @@ Required properties :
 - interrupt-names : Interrupt resource entries are :
 	"pwr_event_irq" : Interrupt to controller for asynchronous events in LPM.
 	Used for SS-USB power events.
- - clocks: a list of phandles to the controller clocks. Use as per
-   Documentation/devicetree/bindings/clock/clock-bindings.txt
- - clock-names: Names of the clocks in 1-1 correspondence with the "clocks"
-   property. Required clocks are "xo", "iface_clk", "core_clk", "sleep_clk"
-   and "utmi_clk".
+- clocks: a list of phandles to the controller clocks. Use as per
+  Documentation/devicetree/bindings/clock/clock-bindings.txt
+- clock-names: Names of the clocks in 1-1 correspondence with the "clocks"
+  property. Required clocks are "iface_clk", "core_clk", "sleep_clk" and
+  "utmi_clk". Optional clocks are "xo", "bus_aggr_clk", "noc_aggr_clk",
+  "cfg_ahb_clk", "noc_aggr_north_clk", "noc_aggr_south_clk" and "noc_sys_clk".
 - resets: reset specifier pair consists of phandle for the reset provider
   and reset lines used by this controller.
 - reset-names: reset signal name strings sorted in the same order as the resets
@@ -39,11 +40,6 @@ Optional properties :
     going through PDC. (use qcom,use-pdc-interrupts property)
     "dm_hs_phy_irq" : Interrupt from HS PHY for asynchronous events in LPM
     going through PDC. (use qcom,use-pdc-interrupts property)
-
- - clocks: a list of phandles to the controller clocks. Use as per
-   Documentation/devicetree/bindings/clock/clock-bindings.txt
- - clock-names: Names of the clocks in 1-1 correspondence with the "clocks"
-   property. Optional clocks are "bus_aggr_clk", "noc_aggr_clk" and "cfg_ahb_clk".
 - qcom,charging-disabled: If present then battery charging using USB
   is disabled.
 - vbus_dwc3-supply: phandle to the 5V VBUS supply regulator used for host mode.
@@ -86,9 +82,12 @@ Optional properties :
 	are supported. If omitted, assume HW supports "1.5".
 - qcom,reset-ep-after-lpm-resume: If present, dbm requires ep reset after
 	going to lpm
-- qcom,host-poweroff-in-pm-suspend: If present, allow PM suspend to happen
-	irrespective of runtimePM state of host and power collapse the core.
-	This also leads to reset-resume of connected devices on PM resume.
+- qcom,ignore-wakeup-src-in-hostmode: If present, PM suspend/freeze allowed
+	irrespective of host runtimePM state. In PM suspend/resume case, core
+	will stay powered and connected devices will just be suspended/resumed.
+	In hibernation, core will power collapse and connected devices will
+	reset-resume on PM restore. Also, USB remote wakeup from system suspend
+	will not be supported.
 - qcom,default-mode-none: If present, do not start any mode on probe for an OTG
 	capable DWC3 which does not have extcon handle.
 - qcom,default-mode-host: If present, start host mode on probe for an OTG

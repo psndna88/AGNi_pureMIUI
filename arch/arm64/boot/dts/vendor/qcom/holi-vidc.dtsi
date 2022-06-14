@@ -36,7 +36,7 @@
 					&bimc SLAVE_EBI>;
 		/* Bus BW range (low, high) for each bus */
 		qcom,bus-range-kbps = <1000 1000
-					1000 2128000>;
+					1000 6500000>;
 
 		/* MMUs */
 		non_secure_cb {

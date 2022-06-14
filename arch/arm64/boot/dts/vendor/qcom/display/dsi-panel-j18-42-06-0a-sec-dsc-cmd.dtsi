@@ -171,28 +171,15 @@
 					15 00 00 00 00 00 02 C3 00
 					/* enter AOD*/
 					15 00 00 00 00 00 02 FE 00
-					15 00 00 00 00 00 02 39 00
-					/* fix AOD flicker issue*/
-					15 00 00 00 00 00 02 FE 72
-					15 00 00 00 00 00 02 49 40
-					15 00 00 00 00 00 02 FE 60
-					15 00 00 00 00 00 02 CE 10
-					15 00 00 00 00 00 02 E2 10
-					15 01 00 00 00 00 02 FE 00];
+					15 01 00 00 00 00 02 39 00];
 				qcom,mdss-dsi-lp1-command-state = "dsi_lp_mode";
 
 				qcom,mdss-dsi-nolp-command = [
 					/* exit AOD*/
 					15 00 00 00 00 00 02 FE 00
 					15 00 00 00 00 00 02 38 00
-					/* fix AOD flicker issue*/
-					15 00 00 00 00 00 02 FE 72
-					15 00 00 00 00 00 02 49 00
-					15 00 00 00 00 00 02 FE 60
-					15 00 00 00 00 00 02 CE 1D
-					15 00 00 00 00 00 02 E2 1D
 					/* extend pulse off */
-					/*15 00 00 00 00 00 02 FE 60*/
+					15 00 00 00 00 00 02 FE 60
 					15 00 00 00 00 00 02 C3 00
 					/* OSC learning*/
 					15 00 00 00 00 00 02 FE D0
@@ -333,26 +320,13 @@
 					15 00 00 00 00 00 02 19 0C
 					/* enter AOD*/
 					15 00 00 00 00 00 02 FE 00
-					15 00 00 00 00 00 02 39 00
-					/* fix AOD flicker issue*/
-					15 00 00 00 00 00 02 FE 72
-					15 00 00 00 00 00 02 49 40
-					15 00 00 00 00 00 02 FE 60
-					15 00 00 00 00 00 02 CE 10
-					15 00 00 00 00 00 02 E2 10
-					15 01 00 00 00 00 02 FE 00];
+					15 01 00 00 00 00 02 39 00];
 				qcom,mdss-dsi-lp1-command-state = "dsi_lp_mode";
 
 				qcom,mdss-dsi-nolp-command = [
 					/* exit AOD*/
 					15 00 00 00 00 00 02 FE 00
 					15 00 00 00 00 00 02 38 00
-					/* fix AOD flicker issue*/
-					15 00 00 00 00 00 02 FE 72
-					15 00 00 00 00 00 02 49 00
-					15 00 00 00 00 00 02 FE 60
-					15 00 00 00 00 00 02 CE 1D
-					15 00 00 00 00 00 02 E2 1D
 					/* switch to 90fps */
 					15 00 00 00 00 00 02 FE D0
 					/*90fps setting*/
@@ -413,7 +387,6 @@
 	mi,mdss-dsi-panel-dc-type = <0>;
 	mi,mdss-dsi-panel-dc-threshold = <0x11D>;
 	mi,max-brightness-clone = <8191>;
-	mi,panel-on-dimming-delay = <120>;
 	qcom,mdss-dsi-display-timings {
 		timing@0{
 			mi,mdss-dsi-timing-switch-command = [
@@ -717,14 +690,8 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				/* extend pulse off */
-				/*15 00 00 00 00 00 02 FE 60*/
+				15 00 00 00 00 00 02 FE 60
 				15 00 00 00 00 00 02 C3 08
 				/* OSC learning*/
 				15 00 00 00 00 00 02 FE D0
@@ -743,12 +710,6 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				15 00 00 00 00 00 02 FE 40
 				15 00 00 00 00 00 02 46 39
 				/* OSC learning*/
@@ -768,12 +729,6 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				15 00 00 00 00 00 02 FE 40
 				15 00 00 00 00 00 02 46 3E
 				/* OSC learning*/
@@ -860,11 +815,6 @@
 				15 00 00 00 00 00 02 C3 00
 				15 01 00 00 00 00 02 FE 00];
 			mi,mdss-dsi-panel-demura-l6-command-state = "dsi_lp_mode";
-
-			mi,mdss-dsi-dimmingon-command = [15 01 00 00 00 00 02 53 28];
-			mi,mdss-dsi-dimmingon-command-state = "dsi_lp_mode";
-			mi,mdss-dsi-dimmingoff-command = [15 01 00 00 00 00 02 53 20];
-			mi,mdss-dsi-dimmingoff-command-state = "dsi_lp_mode";
 		};
 		timing@1{
 			mi,mdss-dsi-timing-switch-command = [
@@ -1145,12 +1095,6 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				/* switch to 90fps */
 				15 00 00 00 00 00 02 FE D0
 				/*90fps setting*/
@@ -1189,12 +1133,6 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				/* switch to 90fps */
 				15 00 00 00 00 00 02 FE D0
 				/*90fps setting*/
@@ -1232,12 +1170,6 @@
 				/* exit AOD*/
 				15 00 00 00 00 00 02 FE 00
 				05 00 00 00 00 00 02 38 00
-				/* fix AOD flicker issue*/
-				15 00 00 00 00 00 02 FE 72
-				15 00 00 00 00 00 02 49 00
-				15 00 00 00 00 00 02 FE 60
-				15 00 00 00 00 00 02 CE 1D
-				15 00 00 00 00 00 02 E2 1D
 				/* switch to 90fps */
 				15 00 00 00 00 00 02 FE D0
 				/*90fps setting*/
@@ -1342,11 +1274,6 @@
 				15 00 00 00 00 00 02 C3 00
 				15 01 00 00 00 00 02 FE 00];
 			mi,mdss-dsi-panel-demura-l6-command-state = "dsi_lp_mode";
-
-			mi,mdss-dsi-dimmingon-command = [15 01 00 00 00 00 02 53 28];
-			mi,mdss-dsi-dimmingon-command-state = "dsi_lp_mode";
-			mi,mdss-dsi-dimmingoff-command = [15 01 00 00 00 00 02 53 20];
-			mi,mdss-dsi-dimmingoff-command-state = "dsi_lp_mode";
 		};
 	};
 };

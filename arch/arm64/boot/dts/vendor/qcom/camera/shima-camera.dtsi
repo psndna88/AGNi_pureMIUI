@@ -463,8 +463,8 @@
 				<&apps_smmu 0x2820 0x400>,
 				<&apps_smmu 0x2C20 0x400>;
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
-			iova-region-discard = <0xdff00000 0x300000>;
 			dma-coherent-hint-cached;
+			iova-region-discard = <0xdff00000 0x300000>;
 			cam-smmu-label = "icp";
 			icp_iova_mem_map: iova-mem-map {
 				iova-mem-region-firmware {
@@ -933,7 +933,7 @@
 		scl-clk-names = "ife_2_areg";
 		clock-control-debugfs = "true";
 		ubwc-static-cfg = <0x1016 0x1026>;
-		cam_hw_pid = < 23 6 18 10>;
+		cam_hw_pid = < 30 6 18 10>;
 		status = "ok";
 	};
 
@@ -1185,6 +1185,7 @@
 		ubwc-ipe-write-cfg = <0x161cf 0x161ef>;
 		ubwc-bps-fetch-cfg = <0x7073 0x707b>;
 		ubwc-bps-write-cfg = <0x161cf 0x161ef>;
+		qos-val = <0x00000A0A>;
 		status = "ok";
 	};
 
@@ -1285,6 +1286,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegenc_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <25 26>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 
@@ -1308,6 +1312,9 @@
 		clock-rates = <600000000 0>;
 		src-clock-name = "jpegdma_clk_src";
 		clock-cntl-level = "nominal";
+		cam_hw_pid = <24 27>;
+		cam_hw_rd_mid = <0>;
+		cam_hw_wr_mid = <1>;
 		status = "ok";
 	};
 

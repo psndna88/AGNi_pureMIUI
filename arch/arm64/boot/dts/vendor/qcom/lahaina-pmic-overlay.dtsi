@@ -286,6 +286,10 @@
 	nvmem-names = "hap_cfg_sdam";
 	nvmem = <&pmk8350_sdam_46>;
 	qcom,pbs-client = <&pm8350b_pbs2>;
+	qcom,lra-f0-min = <160>;
+	qcom,lra-f0-max = <180>;
+	qcom,lra-f0-default = <170>;
+	qcom,lra-f0-cal-count = <592>;
 };
 
 &pmr735a_tz {

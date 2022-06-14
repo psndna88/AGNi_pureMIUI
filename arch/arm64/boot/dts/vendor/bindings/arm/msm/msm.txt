@@ -59,6 +59,15 @@ SoCs:
 - YUPIK
   compatible = "qcom,yupik"
 
+- YUPIKP
+  compatible = "qcom,yupikp"
+
+- YUPIK-IOT
+  compatible = "qcom,yupik-iot"
+
+- YUPIKP-IOT
+  compatible = "qcom,yupikp-iot"
+
 - LITO
   compatible = "qcom,lito"
 
@@ -92,11 +101,20 @@ SoCs:
 - HOLI
   compatible = "qcom,holi"
 
+- BLAIR
+  compatible = "qcom,blair"
+
 - MONACO
   compatible = "qcom,monaco"
 
+- MONACOP
+  compatible = "qcom,monacop"
+
 - SDXNIGHTJAR
   compatible = "qcom,sdxnightjar"
+
+- DIREWOLF
+  compatible = "qcom,direwolf"
 
 Generic board variants:
 
@@ -222,6 +240,16 @@ compatible = "qcom,shima-idp"
 compatible = "qcom,shima-atp"
 compatible = "qcom,shima-qrd"
 compatible = "qcom,yupik-rumi"
+compatible = "qcom,yupik-idp"
+compatible = "qcom,yupik-atp"
+compatible = "qcom,yupik-qrd"
+compatible = "qcom,yupik-iot-idp"
+compatible = "qcom,yupik-iot-qrd"
+compatible = "qcom,yupikp-idp"
+compatible = "qcom,yupikp-atp"
+compatible = "qcom,yupikp-qrd"
+compatible = "qcom,yupikp-iot-idp"
+compatible = "qcom,yupikp-iot-qrd"
 compatible = "qcom,lito-rumi"
 compatible = "qcom,lito-mtp"
 compatible = "qcom,lito-cdp"
@@ -236,6 +264,12 @@ compatible = "qcom,sm6150-mtp"
 compatible = "qcom,sm6150-cdp"
 compatible = "qcom,sm6150-qrd"
 compatible = "qcom,sm6150-idp"
+compatible = "qcom,sm6150p"
+compatible = "qcom,sa6155-adp-star"
+compatible = "qcom,sa6155p-adp-star"
+compatible = "qcom,sa6155p"
+compatible = "qcom,sa6155-adp-air"
+compatible = "qcom,sa6155p-adp-air"
 compatible = "qcom,qcs405-rumi"
 compatible = "qcom,qcs405-iot"
 compatible = "qcom,qcs403-iot"
@@ -245,6 +279,7 @@ compatible = "qcom,sdxprairie-rumi"
 compatible = "qcom,sdxprairie-mtp"
 compatible = "qcom,sdxprairie-cdp"
 compatible = "qcom,sdxlemur-rumi"
+compatible = "qcom,sdxlemur-atp"
 compatible = "qcom,sdxlemur-mtp"
 compatible = "qcom,sdxlemur-cdp"
 compatible = "qcom,sdxlemur-rcm"
@@ -256,8 +291,20 @@ compatible = "qcom,holi-mtp"
 compatible = "qcom,holi-cdp"
 compatible = "qcom,holi-qrd"
 compatible = "qcom,holi-atp"
+compatible = "qcom,blair-rumi"
+compatible = "qcom,blair-mtp"
+compatible = "qcom,blair-cdp"
+compatible = "qcom,blair-atp"
 compatible = "qcom,scuba-idp"
 compatible = "qcom,monaco-rumi"
+compatible = "qcom,monaco"
+compatible = "qcom,monacop"
 compatible = "qcom,sdxnightjar-mtp"
 compatible = "qcom,sdxnightjar-cdp"
 compatible = "qcom,sdxnightjar-qrd"
+compatible = "qcom,direwolf-ivi"
+compatible = "qcom,direwolf-ivi-rumi"
+compatible = "qcom,direwolf-ivi-adp-star"
+compatible = "qcom,direwolf-adas"
+compatible = "qcom,direwolf-adas-rumi"
+compatible = "qcom,direwolf-adas-adp-star"

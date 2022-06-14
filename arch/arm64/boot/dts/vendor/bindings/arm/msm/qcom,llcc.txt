@@ -13,7 +13,9 @@ Properties:
 	Value type: <string>
 	Definition: must be "qcom,sdm845-llcc" or "qcom,lahaina-llcc"
 	            or "qcom,shima-llcc" or "qcom,sdxlemur-llcc"
-	            or "qcom,yupik-llcc"
+	            or "qcom,yupik-llcc" or "qcom,sm8150-llcc"
+		    or "qcom,sdmshrike-llcc" or "qcom,sm6150-llcc"
+		    or "qcom,direwolf-llcc"
 		    "qcom,llcc-v2" must be appended for V2 hardware.
 
 - reg:
@@ -46,6 +48,12 @@ Properties:
 	Definition: List of clock input name strings sorted in the same
 		    order as the clocks property. Definition must have
 		    "qdss_clk"
+
+- memory-region:
+	Usage: optional
+	Value type: <prop-encoded-array>
+	Definition: List of memory regions which define the range of addresses used
+		    for tightly coupled memory in the llcc.
 Example:
 
 	cache-controller@1100000 {

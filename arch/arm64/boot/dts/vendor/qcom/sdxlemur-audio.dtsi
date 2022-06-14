@@ -4,10 +4,7 @@
 	snd_934x: sound-tavil {
 		compatible = "qcom,sdx-asoc-snd-tavil";
 		qcom,model = "sdx-tavil-i2s-snd-card";
-		qcom,prim_mi2s_aux_master = <&prim_master>;
-		qcom,prim_mi2s_aux_slave = <&prim_slave>;
-		qcom,sec_mi2s_aux_master = <&sec_master>;
-		qcom,sec_mi2s_aux_slave = <&sec_slave>;
+		qcom,prim_mi2s_master = <&prim_master>;
 
 		asoc-platform = <&pcm0>, <&pcm1>, <&voip>, <&voice>,
 				<&loopback>, <&hostless>, <&afe>, <&routing>,

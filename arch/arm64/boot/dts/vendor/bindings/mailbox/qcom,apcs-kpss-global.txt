@@ -20,6 +20,7 @@ platforms.
 		    "qcom,scuba-apcs-hmss-global"
 		    "qcom,monaco-apcs-hmss-global"
 		    "qcom,sm8150-spcs-global"
+		    "qcom,sdxnightjar-apcs-gcc"
 
 - reg:
 	Usage: required

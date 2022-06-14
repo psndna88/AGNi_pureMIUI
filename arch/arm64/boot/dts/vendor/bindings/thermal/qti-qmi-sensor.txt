@@ -71,6 +71,27 @@ Subsystem properties:
 		38. qfe_wtr_pa2_fr1
 		39. qfe_wtr_pa3_fr1
 		40. qfe_wtr0_fr1
+		41. qtm_therm
+		42. modem_bcl_warn
+		43. sdr0_pa0
+		44. sdr0_pa1
+		45. sdr0_pa2
+		46. sdr0_pa3
+		47. sdr0_pa4
+		48. sdr0_pa5
+		49. sdr0
+		50. sdr1_pa0
+		51. sdr1_pa1
+		52. sdr1_pa2
+		53. sdr1_pa3
+		54. sdr1_pa4
+		55. sdr1_pa5
+		56. sdr1
+		57. mmw0
+		58. mmw1
+		59. mmw2
+		60. mmw3
+		61. mmw_ific0
 
 Example:
 

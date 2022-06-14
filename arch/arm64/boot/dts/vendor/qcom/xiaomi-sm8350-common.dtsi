@@ -92,16 +92,15 @@
 		status = "ok";
 		touch,name = "xiaomi-touch";
 	};
-};
 
-&qupv3_se1_spi {
-        status = "ok";
-        ir-spi@0 {
-                compatible = "ir-spi";
-                reg = <0>;
-                spi-max-frequency = <19200000>;
-                status = "ok";
-        };
+	touch_avddsource_vreg: touch_avddsource_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "touch_avddsource_vreg";
+		/*startup-delay-us = <4000>;*/
+		enable-active-high;
+		/*regulator-boot-on*/
+		gpio = <&tlmm 132 0>;
+	};
 };
 
 &sdhc_2 {
@@ -167,6 +166,7 @@
 			&dsi_sw43404_amoled_video
 			&dsi_sw43404_amoled_fhd_plus_cmd
 			&dsi_r66451_amoled_cmd
+			&dsi_r66451_amoled_60hz_cmd
 			&dsi_r66451_amoled_video>;
 };
 
@@ -222,6 +222,26 @@
 	status = "ok";
 };
 
+&dsi_k2_38_08_0a_dsc_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k2>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <4>;
+	qcom,mdss-dsi-bl-max-level = <2047>;
+	qcom,mdss-brightness-max-level = <2047>;
+	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
+};
+
+&dsi_k2_38_08_0a_mp_dsc_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k2>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <4>;
+	qcom,mdss-dsi-bl-max-level = <2047>;
+	qcom,mdss-brightness-max-level = <2047>;
+	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
+};
+
 &dsi_k11_38_08_0a_dsc_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k2>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
@@ -231,6 +251,59 @@
 	qcom,platform-te-gpio = <&tlmm 82 0>;
 	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
+
+&dsi_j18_42_06_0a_prim_dsc_cmd {
+
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_prim>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <2>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
+};
+
+&dsi_j18_42_06_0a_sec_dsc_cmd {
+	qcom,panel-sec-supply-entries = <&dsi_panel_pwr_supply_sec>;
+	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <2>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,platform-te-gpio = <&tlmm 83 0>;
+	qcom,platform-sec-reset-gpio = <&tlmm 74 0>;
+};
+
+&dsi_k1_43_06_00_sec_cmd {
+	qcom,panel-sec-supply-entries = <&dsi_panel_pwr_supply_sec_k1>;
+	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <0>;
+	qcom,mdss-dsi-bl-max-level = <255>;
+	qcom,mdss-brightness-max-level = <255>;
+	qcom,platform-te-gpio = <&tlmm 83 0>;
+	qcom,platform-sec-reset-gpio = <&tlmm 30 0>;
+};
+
+&dsi_k1_43_06_00_sec_video {
+	qcom,panel-sec-supply-entries = <&dsi_panel_pwr_supply_sec_k1>;
+	qcom,mdss-dsi-sec-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <0>;
+	qcom,mdss-dsi-bl-max-level = <255>;
+	qcom,mdss-brightness-max-level = <255>;
+	qcom,platform-te-gpio = <&tlmm 83 0>;
+	qcom,platform-sec-reset-gpio = <&tlmm 30 0>;
+};
+
+&dsi_k8_42_02_0a_dsc_cmd {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_k8>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <2>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+        qcom,mdss-brightness-init-level = <100>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
+};
+
 
 &sde_dsi {
 	qcom,dsi-default-panel = <&dsi_sim_vid>;

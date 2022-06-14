@@ -45,12 +45,11 @@
 		#iommu-cells = <2>;
 		qcom,skip-init;
 		qcom,use-3-lvl-tables;
-		#global-interrupts = <2>;
+		#global-interrupts = <1>;
 		#size-cells = <1>;
 		#address-cells = <1>;
 		ranges;
 		interrupts =	<GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>,

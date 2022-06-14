@@ -55,6 +55,11 @@ properties:
       Value type: <phandle>
       Definition: A phandle to the wakeup interrupt controller for the SoC.
 
+  no-wake-gpios:
+      Usage: optional
+      Value type: <prop-encoded-array>
+      Definition: List of gpios to not use for wakeup.
+
   Please refer to ../gpio/gpio.txt and ../interrupt-controller/interrupts.txt for
   a general description of GPIO and interrupt bindings.
 
@@ -196,4 +201,5 @@ examples:
       interrupt-controller;
       #interrupt-cells = <2>;
       wakeup-parent = <&pdc>;
+      no-wake-gpios = <2 7 11>;
     };
