@@ -333,6 +333,8 @@ patternProperties:
     description: Firefly
   "^focaltech,.*":
     description: FocalTech Systems Co.,Ltd
+  "^novatek,.*":
+    description: NOVATEK Microelectronics Corporation
   "^friendlyarm,.*":
     description: Guangzhou FriendlyARM Computer Tech Co., Ltd
   "^fsl,.*":
@@ -759,6 +761,8 @@ patternProperties:
     description: QiaoDian XianShi Corporation
   "^qnap,.*":
     description: QNAP Systems, Inc.
+  "^qvm,.*":
+    description: BlackBerry Ltd
   "^radxa,.*":
     description: Radxa
   "^raidsonic,.*":

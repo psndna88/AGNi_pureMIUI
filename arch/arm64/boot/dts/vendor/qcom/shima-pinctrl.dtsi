@@ -1552,19 +1552,19 @@
 			clk {
 				pins = "sdc1_clk";
 				bias-disable;
-				drive-strength = <16>;
+				drive-strength = <12>;
 			};
 
 			cmd {
 				pins = "sdc1_cmd";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <12>;
 			};
 
 			data {
 				pins = "sdc1_data";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <12>;
 			};
 
 			rclk {
@@ -3092,7 +3092,7 @@
 				config {
 					pins = "gpio81";
 					drive-strength = <2>;
-					bias-pull-up;
+					bias-disable;
 					input-enable;
 				};
 			};
@@ -3109,6 +3109,19 @@
 				drive-strength = <2>;
 				output-low;
 				bias-pull-down;
+			};
+		};
+
+		trigout_a: trigout_a {
+			mux {
+					pins = "gpio14";
+					function = "qdss_cti";
+			};
+
+			config {
+				pins = "gpio14";
+				drive-strength = <2>;
+				bias-disable;
 			};
 		};
 	};

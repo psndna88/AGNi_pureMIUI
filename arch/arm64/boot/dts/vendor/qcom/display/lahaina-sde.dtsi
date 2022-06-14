@@ -80,6 +80,7 @@
 		qcom,mst-enable;
 		qcom,dsc-feature-enable;
 		qcom,fec-feature-enable;
+		qcom,dsc-continuous-pps;
 
 		vdda-1p2-supply = <&L6B>;
 		vdda-0p9-supply = <&L1B>;
@@ -262,7 +263,6 @@
 	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 	memory-region = <&dfps_data_memory>;
-	qcom,panel-allow-phy-poweroff;
 
 };
 

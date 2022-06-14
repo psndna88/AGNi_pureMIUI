@@ -265,12 +265,6 @@
 				type = "passive";
 			};
 
-			quiet_modem_skin_trip2: quiet-modem-skin-trip2 {
-				temperature = <50000>;
-				hysteresis = <4000>;
-				type = "passive";
-			};
-
 			quiet_cx_trip: quiet-cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
@@ -331,7 +325,7 @@
 			};
 
 			modem-skin-cdev2 {
-				trip = <&quiet_modem_skin_trip2>;
+				trip = <&quiet_cx_trip>;
 				cooling-device = <&modem_skin 3 3>;
 			};
 
@@ -487,19 +481,21 @@
 };
 
 &usb_qmp_dp_phy {
-	pinctrl-names = "portselect";
+	pinctrl-names = "unused";
 };
 
 &qupv3_se5_i2c {
 	status = "ok";
 
+	#address-cells = <1>;
+	#size-cells = <0>;
 	redriver: redriver@1c {
 		compatible = "onnn,redriver";
 		reg = <0x1c>;
 
-		pinctrl-names = "enable_gpio";
+		pinctrl-names = "default";
 		pinctrl-0 = <&usb3phy_portselect_gpio>;
-		orientation_gpio = <&tlmm 81 0>;
+		gpios = <&tlmm 81 0>;
 
 		eq = /bits/ 8 <
 				/* Parameters for USB */

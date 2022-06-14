@@ -1,4 +1,6 @@
 #include "lahaina-sde-display-common.dtsi"
+#include <dt-bindings/clock/qcom,dispcc-lahaina.h>
+
 /*
 &tlmm {
 	display_panel_avdd_default: display_panel_avdd_default {
@@ -48,6 +50,8 @@
 			 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
 			 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
 			 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>,
 			 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
 			 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>,
 			 <&mdss_dsi_phy1 CPHY_BYTECLK_SRC_1_CLK>,
@@ -55,15 +59,35 @@
 			 <&mdss_dsi_phy1 BYTECLK_SRC_1_CLK>,
 			 <&mdss_dsi_phy1 PCLK_SRC_1_CLK>,
 			 <&mdss_dsi_phy1 SHADOW_BYTECLK_SRC_1_CLK>,
-			 <&mdss_dsi_phy1 SHADOW_PCLK_SRC_1_CLK>;
+			 <&mdss_dsi_phy1 SHADOW_PCLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_CPHY_BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_CPHY_PCLK_SRC_1_CLK>,
+			 /*
+			  * Currently the dsi clock handles are under the dsi
+			  * controller DT node. As soon as the controller probe
+			  * finishes, the dispcc sync state can get called before
+			  * the dsi_display probe potentially disturbing the clock
+			  * votes for cont_splash use case. Hence we are no longer
+			  * protected by the component model in this case against the
+			  * disp cc sync state getting triggered after the dsi_ctrl
+			  * probe. To protect against this incorrect sync state trigger
+			  * add this dummy MDP clk vote handle to the dsi_display
+			  * DT node. Since the dsi_display driver does not parse
+			  * MDP clock nodes, no actual vote shall be added and this
+			  * change is done just to satisfy sync state requirements.
+			  */
+			 <&clock_dispcc DISP_CC_MDSS_MDP_CLK>;
 	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 			"cphy_byte_clk0", "cphy_pixel_clk0",
 			"src_byte_clk0", "src_pixel_clk0",
 			"shadow_byte_clk0", "shadow_pixel_clk0",
+			"shadow_cphybyte_clk0", "shadow_cphypixel_clk0",
 			"mux_byte_clk1", "mux_pixel_clk1",
 			"cphy_byte_clk1", "cphy_pixel_clk1",
 			"src_byte_clk1", "src_pixel_clk1",
-			"shadow_byte_clk1", "shadow_pixel_clk1";
+			"shadow_byte_clk1", "shadow_pixel_clk1",
+			"shadow_cphybyte_clk1", "shadow_cphypixel_clk1",
+			"mdp_core_clk";
 
 	pinctrl-names = "panel_active", "panel_suspend";
 	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
@@ -87,11 +111,27 @@
 		 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
 		 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>,
 		 <&mdss_dsi_phy1 CPHY_BYTECLK_SRC_1_CLK>,
-		 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>;
+		 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>,
+		 /*
+		  * Currently the dsi clock handles are under the dsi
+		  * controller DT node. As soon as the controller probe
+		  * finishes, the dispcc sync state can get called before
+		  * the dsi_display probe potentially disturbing the clock
+		  * votes for cont_splash use case. Hence we are no longer
+		  * protected by the component model in this case against the
+		  * disp cc sync state getting triggered after the dsi_ctrl
+		  * probe. To protect against this incorrect sync state trigger
+		  * add this dummy MDP clk vote handle to the dsi_display
+		  * DT node. Since the dsi_display driver does not parse
+		  * MDP clock nodes, no actual vote shall be added and this
+		  * change is done just to satisfy sync state requirements.
+		  */
+		 <&clock_dispcc DISP_CC_MDSS_MDP_CLK>;
 	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 			"cphy_byte_clk0", "cphy_pixel_clk0",
 			"mux_byte_clk1", "mux_pixel_clk1",
-			"cphy_byte_clk1", "cphy_pixel_clk1";
+			"cphy_byte_clk1", "cphy_pixel_clk1",
+			"mdp_core_clk";
 
 	pinctrl-names = "panel_active", "panel_suspend";
 	pinctrl-0 = <&sde_dsi1_active &sde_te1_active>;
@@ -301,22 +341,15 @@
 
 	qcom,mdss-dsi-clk-strength = <0x65>;
 	qcom,mdss-dsi-display-timings {
-		/* 60 Hz */
+		/* 120 Hz */
 		timing@0{
 			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
 				0A 09 02 04 00 1E 0F];
 			qcom,display-topology = <1 1 1>;
 			qcom,default-topology-index = <0>;
 		};
-		/* 90 Hz */
+		/* 60 Hz */
 		timing@1{
-			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
-				0A 09 02 04 00 1E 0F];
-			qcom,display-topology = <1 1 1>;
-			qcom,default-topology-index = <0>;
-		};
-		/* 120 Hz */
-		timing@2{
 			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
 				0A 09 02 04 00 1E 0F];
 			qcom,display-topology = <1 1 1>;
@@ -379,8 +412,8 @@
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
-			qcom,mdss-dsi-panel-phy-timings = [01 09 01 01 0E 1B 01
-				01 02 02 04 00 08 06];
+			qcom,mdss-dsi-panel-phy-timings = [00 57 17 17 2E 33 16
+			    17 14 02 04 43 1B 00];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
@@ -428,5 +461,35 @@
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 		};
+	};
+};
+
+&dsi_k8_42_02_0a_dsc_cmd {
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	qcom,mdss-dsi-clk-strength = <0x65>;
+
+	qcom,mdss-dsi-display-timings {
+		/* 60 Hz */
+		timing@0{
+			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
+				0A 09 02 04 00 1E 0F];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+		/* 90 Hz */
+		timing@1{
+			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
+				0A 09 02 04 00 1E 0F];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+		/* 120 Hz */
+		timing@2{
+			qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 1A 19 09
+				0A 09 02 04 00 1E 0F];
+			qcom,display-topology = <1 1 1>;
+			qcom,default-topology-index = <0>;
+		};
+
 	};
 };

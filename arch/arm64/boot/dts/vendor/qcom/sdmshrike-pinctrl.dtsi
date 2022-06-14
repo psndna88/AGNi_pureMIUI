@@ -3,11 +3,20 @@
 		compatible = "qcom,sdmshrike-pinctrl";
 		reg = <0x03000000 0xddc000>, <0x17c000f0 0x60>;
 		reg-names = "pinctrl", "spi_cfg";
-		interrupts =<GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 212 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 213 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 215 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 216 IRQ_TYPE_LEVEL_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
+		wakeup-parent = <&pdc>;
 
 		ufs_dev_reset_assert: ufs_dev_reset_assert {
 			config {
@@ -2636,77 +2645,55 @@
 			};
 		};
 
-		sdc2_clk_on: sdc2_clk_on {
-			config {
+		sdc2_on: sdc2_on {
+			clk {
 				pins = "sdc2_clk";
 				bias-disable;		/* NO pull */
 				drive-strength = <16>;	/* 16 MA */
 			};
+
+			cmd {
+				pins = "sdc2_cmd";
+				bias-pull-up;		/* pull up */
+				drive-strength = <10>;	/* 10 MA */
+			};
+
+			data {
+				pins = "sdc2_data";
+				bias-pull-up;		/* pull up */
+				drive-strength = <10>;	/* 10 MA */
+			};
+
+			sd-cd {
+				pins = "gpio96";
+				bias-pull-up;           /* pull up */
+				drive-strength = <2>;   /* 2 MA */
+			};
 		};
 
-		sdc2_clk_off: sdc2_clk_off {
-			config {
+		sdc2_off: sdc2_off {
+			clk {
 				pins = "sdc2_clk";
 				bias-disable;		/* NO pull */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_cmd_on: sdc2_cmd_on {
-			config {
-				pins = "sdc2_cmd";
-				bias-pull-up;		/* pull up */
-				drive-strength = <10>;	/* 10 MA */
-			};
-		};
-
-		sdc2_cmd_off: sdc2_cmd_off {
-			config {
+			cmd {
 				pins = "sdc2_cmd";
 				bias-pull-up;		/* pull up */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_data_on: sdc2_data_on {
-			config {
-				pins = "sdc2_data";
-				bias-pull-up;		/* pull up */
-				drive-strength = <10>;	/* 10 MA */
-			};
-		};
-
-		sdc2_data_off: sdc2_data_off {
-			config {
+			data {
 				pins = "sdc2_data";
 				bias-pull-up;		/* pull up */
 				drive-strength = <2>;	/* 2 MA */
 			};
-		};
 
-		sdc2_cd_on: cd_on {
-			mux {
-				pins = "gpio96"; /* sdcard_det */
-				function = "gpio";
-			};
-
-			config {
+			sd-cd {
 				pins = "gpio96";
-				drive-strength = <2>;
-				bias-pull-up;
-			};
-		};
-
-		sdc2_cd_off: cd_off {
-			mux {
-				pins = "gpio96";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio96";
-				drive-strength = <2>;
-				bias-disable;
+				bias-disable;           /* pull up */
+				drive-strength = <2>;   /* 2 MA */
 			};
 		};
 
@@ -3009,7 +2996,7 @@
 			hs1_i2s_data0_sleep: hs1_i2s_data0_sleep {
 				mux {
 					pins = "gpio158";
-					function = "sleep";
+					function = "gpio";
 				};
 
 				config {
@@ -3586,7 +3573,7 @@
 			};
 		};
 
-		cnss_pins {
+		cnss_pins: cnss_pins {
 			cnss_wlan_en_active: cnss_wlan_en_active {
 				mux {
 					pins = "gpio169";
@@ -5023,6 +5010,73 @@
 				pins = "gpio141";
 				drive-strength = <2>;
 				bias-disable;
+			};
+		};
+
+		qupv3_se4_4uart_pins: qupv3_se4_4uart_pins {
+			qupv3_se4_default_ctsrtsrx: qupv3_se4_default_ctsrtsrx {
+				mux {
+					pins = "gpio51", "gpio52", "gpio54";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio51", "gpio52", "gpio54";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+
+			qupv3_se4_default_tx: qupv3_se4_default_tx {
+				mux {
+					pins = "gpio53";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio53";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+
+			qupv3_se4_ctsrx: qupv3_se4_ctsrx {
+				mux {
+					pins = "gpio51", "gpio54";
+					function = "qup4";
+				};
+
+				config {
+					pins = "gpio51", "gpio54";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			qupv3_se4_rts: qupv3_se4_rts {
+				mux {
+					pins = "gpio52";
+					function = "qup4";
+				};
+
+				config {
+					pins = "gpio52";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+
+			qupv3_se4_tx: qupv3_se4_tx {
+				mux {
+					pins = "gpio53";
+					function = "qup4";
+				};
+
+				config {
+					pins = "gpio53";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
 			};
 		};
 

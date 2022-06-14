@@ -23,6 +23,12 @@
 		};
 	};
 
+	xiaomi_touch {
+		compatible = "xiaomi-touch";
+		status = "ok";
+		touch,name = "xiaomi-touch";
+	};
+
 	thermal_message: thermal-message {
 	board-sensor = "VIRTUAL-SENSOR";
 	};
@@ -270,7 +276,7 @@
 			qcom,use-bark = <1>;
 			qcom,support-reset = <1>;
 			linux,code = <KEY_POWER>;
-			qcom,s1-timer = <4480>;
+			qcom,s1-timer = <6720>;
 			qcom,s2-timer = <2000>;
 			qcom,s2-type = <PON_POWER_OFF_TYPE_HARD_RESET>;
 		};

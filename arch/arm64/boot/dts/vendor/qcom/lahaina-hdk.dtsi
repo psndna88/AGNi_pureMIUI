@@ -1,4 +1,5 @@
 #include "lahaina-qrd-common.dtsi"
+#include "camera/lahaina-camera-sensor-hdk.dtsi"
 
 &wsa883x_0222 {
 	status = "disabled";
@@ -84,7 +85,9 @@
 
 &qupv3_se15_i2c {
 	status = "ok";
-
+	qcom,clk-freq-out = <100000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
 	lt9611: lt,lt9611@2b {
 		compatible = "lt,lt9611uxc";
 		reg = <0x2b>;
@@ -189,4 +192,11 @@
 	qcom,link-check-max-count = <50>;
 	qcom,ep-gpio = <&tlmm 6 0>;
 	qcom,boot-option = <0x0>;
+};
+
+&dsi_panel_pwr_supply {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-min-voltage = <1860000>;
+		qcom,supply-max-voltage = <1860000>;
+	};
 };

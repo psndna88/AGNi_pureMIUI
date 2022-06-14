@@ -50,13 +50,41 @@
 			cmd {
 				pins = "sdc1_cmd";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <16>;
 			};
 
 			data {
 				pins = "sdc1_data";
 				bias-pull-up;
-				drive-strength = <10>;
+				drive-strength = <16>;
+			};
+
+			data_4 {
+				pins = "gpio98";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_5 {
+				pins = "gpio99";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_6 {
+				pins = "gpio100";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
+			};
+
+			data_7 {
+				pins = "gpio101";
+				function = "gpio";
+				drive-strength = <12>;
+				bias-pull-up;
 			};
 		};
 
@@ -77,6 +105,34 @@
 				pins = "sdc1_data";
 				bias-pull-up;
 				drive-strength = <2>;
+			};
+
+			data_4 {
+				pins = "gpio98";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_5 {
+				pins = "gpio99";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_6 {
+				pins = "gpio100";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
+			};
+
+			data_7 {
+				pins = "gpio101";
+				function = "gpio";
+				drive-strength = <2>;
+				bias-disable;
 			};
 		};
 
@@ -216,6 +272,42 @@
 			};
 		};
 
+		pcie_ep {
+			pcie_ep_clkreq_default: pcie_ep_clkreq_default {
+				mux {
+					pins = "gpio56";
+					function = "pcie_clkreq";
+				};
+
+				config {
+					pins = "gpio56";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+
+			pcie_ep_perst_default: pcie_ep_perst_default {
+				mux {
+					pins = "gpio57";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+
+			pcie_ep_wake_default: pcie_ep_wake_default {
+				mux {
+					pins = "gpio53";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio53";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+
 		i2c_1 {
 			i2c_1_active: i2c_1_active {
 				mux {
@@ -282,20 +374,20 @@
 				config {
 					pins = "gpio10", "gpio11";
 					drive-strength = <2>;
-					bias-pull-up;
+					bias-disable;
 				};
 			};
 
 			i2c_3_sleep: i2c_3_sleep {
 				mux {
 					pins = "gpio10", "gpio11";
-					function = "gpio";
+					function = "blsp_i2c3";
 				};
 
 				config {
 					pins = "gpio10", "gpio11";
 					drive-strength = <2>;
-					bias-disable;
+					bias-pull-up;
 				};
 			};
 		};
@@ -1121,12 +1213,12 @@
 		wcd9xxx_intr {
 			wcd_intr_default: wcd_intr_default {
 				mux {
-					pins = "gpio96";
+					pins = "gpio48";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio96";
+					pins = "gpio48";
 					drive-strength = <2>; /* 2 mA */
 					bias-pull-down; /* pull down */
 					input-enable;
@@ -1137,12 +1229,12 @@
 		cdc_reset_ctrl {
 			cdc_reset_sleep: cdc_reset_sleep {
 				mux {
-					pins = "gpio92";
+					pins = "gpio49";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio92";
+					pins = "gpio49";
 					drive-strength = <2>;
 					bias-disable;
 					output-low;
@@ -1151,12 +1243,12 @@
 
 			cdc_reset_active:cdc_reset_active {
 				mux {
-					pins = "gpio92";
+					pins = "gpio49";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio92";
+					pins = "gpio49";
 					drive-strength = <8>;
 					bias-pull-down;
 					output-high;
@@ -1239,7 +1331,7 @@
 			pri_ws_active_master: pri_ws_active_master {
 				mux {
 					pins = "gpio12";
-					function = "pri_mi2s";
+					function = "pri_mi2s_ws";
 				};
 
 				config {
@@ -1267,7 +1359,7 @@
 			pri_ws_active_slave: pri_ws_active_slave {
 				mux {
 					pins = "gpio12";
-					function = "pri_mi2s";
+					function = "pri_mi2s_ws";
 				};
 
 				config {

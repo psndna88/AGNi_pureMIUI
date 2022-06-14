@@ -39,6 +39,13 @@ Profile data node required properties:
 			of coefficients used in hardware state machines and thus
 			influencing the final output of the state of charge read
 			by software.
+- qcom,capacity : Maximum capacity of the battery (in mAH).
+- qcom,checksum : Checksum used to determine if loaded battery profile is valid.
+- qcom,recharge-soc-delta : Percentage of SOC delta dropped after end of charge
+			to enable recharge.
+- qcom,recharge-vflt-delta : Delta in Vfloat dropped from regular vfloat in
+			recharge.
+- qcom,recharge-iterm-ma : Termination current (in mA) in recharge.
 
 Profile data node optional properties:
 - qcom,chg-rslow-comp-c1 : A constant for rslow compensation in the fuel gauge.
@@ -153,6 +160,21 @@ Profile data node optional properties:
 			This should be in decidegree and if not specified
 			default select value is 10 DeciDegC.
 			<RISE_HYS_DECIDEG_C, FALL_HYS_DECIDEG_C>
+- qcom,jeita-fcc-scaling: A bool property to indicate if temperature based
+			jeita fcc scaling is enabled. If defined, enables
+			scaling of FCC based on battery-temperature. Scales
+			the FCC depending upon the granularity of increase in
+			battery temperature.
+- qcom,jeita-fcc-scaling-temp-threshold: A tuple entry to allow configuring the
+			min and max battery temperature threshold (in DeciDegC)
+			for jeita fcc scaling algorithm to kick in.
+			<MIN_BATT_TEMP_DECIDEG_C, MAX_BATT_TEMP_DECIDEG_C>
+- qcom,jeita-scaling-min-fcc-ua : This value corresponds to the minimum FCC (in uA) of
+			the battery to be applied when battery temperature hits the max
+			temperature indicated it "qcom,jeita-fcc-scaling-temp-threshold".
+			This value is selected based on profiling after making sure that
+			the battery-temperature does not rise at this FCC.
+
 Profile data node required subnodes:
 - qcom,fcc-temp-lut : An 1-dimensional lookup table node that encodes
 			temperature to fcc lookup. The units for this lookup
@@ -183,6 +205,16 @@ Lookup table required properties:
 			the size of qcom,lut-row-legend if it's a 2-dimensional
 			table. The data should be in a flattened row-major
 			representation.
+- qcom,bp-c-table0 : LUT table of the battery used for PON SOC estimation
+			during battery charge.
+- qcom,bp-d-table0 : LUT table of the battery used for PON SOC estimation
+			during battery discharge.
+- qcom,bp-c-table-X : LUT tables of the battery at different temperatures
+			used for SOC estimation during battery charge. Value
+			of X starts from 1.
+- qcom,bp-d-table-X : LUT tables of the battery at different temperatures
+			used for SOC estimation during battery charge. Value
+			of X starts from 1.
 
 Lookup table optional properties:
 - qcom,lut-row-legend : An array that encodes the legend of the lookup table's rows.
