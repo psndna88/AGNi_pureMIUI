@@ -263,6 +263,7 @@
 	qcom,dsi-pll-ssc-en;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 	memory-region = <&dfps_data_memory>;
+	qcom,panel-allow-phy-poweroff;
 
 };
 
