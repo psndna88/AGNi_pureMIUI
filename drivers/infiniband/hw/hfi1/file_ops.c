@@ -422,6 +422,9 @@ static ssize_t hfi1_write_iter(struct kiocb *kiocb, struct iov_iter *from)
 	int done = 0, reqs = 0;
 	unsigned long dim = from->nr_segs;
 
+	if (!HFI1_CAP_IS_KSET(SDMA))
+		return -EINVAL;
+
 	if (!cq || !pq)
 		return -EIO;
 
