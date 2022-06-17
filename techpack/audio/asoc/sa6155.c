@@ -3945,14 +3945,22 @@ static int msm_pinctrl_init(struct platform_device *pdev, enum pinctrl_mode mode
 		pinctrl_info->pinctrl = pinctrl;
 
 		/* get all the states handles from Device Tree */
-		pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
-			"sleep");
+		if (mode == TDM_PINCTRL)
+			pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
+				"default");
+		else
+			pinctrl_info->sleep = pinctrl_lookup_state(pinctrl,
+                                "sleep");
 		if (IS_ERR(pinctrl_info->sleep)) {
 			pr_err("%s: could not get sleep pin state\n", __func__);
 			goto err;
 		}
-		pinctrl_info->active = pinctrl_lookup_state(pinctrl,
-			"default");
+		if (mode == TDM_PINCTRL)
+			pinctrl_info->active = pinctrl_lookup_state(pinctrl,
+				"active");
+		else
+			pinctrl_info->active = pinctrl_lookup_state(pinctrl,
+                                "default");
 		if (IS_ERR(pinctrl_info->active)) {
 			pr_err("%s: could not get active pin state\n",
 				__func__);

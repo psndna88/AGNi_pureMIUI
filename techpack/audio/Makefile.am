@@ -43,7 +43,7 @@ obj-y += asoc/codecs/bolero/
 obj-y += asoc/codecs/wcd937x/
 endif
 
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa6155 sa8195 qtiquingvm qtiquingvm8295 sa8295))
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa6155 sa8195 qtiquingvm qtiquingvm8295 sa8295 qtigvmi3))
 KBUILD_OPTIONS += CONFIG_SND_SOC_AUTO=y
 obj-y := ipc/
 obj-y += dsp/
@@ -56,7 +56,7 @@ endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa6155))
 KBUILD_OPTIONS += CONFIG_SND_SOC_SA6155=y
 endif
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm))
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm qtigvmi3))
 KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=y
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm8295))

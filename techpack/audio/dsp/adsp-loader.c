@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2014, 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2017-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/init.h>
@@ -24,6 +24,7 @@
 #define SSR_RESET_CMD 1
 #define IMAGE_UNLOAD_CMD 0
 #define MAX_FW_IMAGES 4
+#define BOOT_FOR_EARLY_CHIME_CMD 2
 
 static ssize_t adsp_boot_store(struct kobject *kobj,
 	struct kobj_attribute *attr,
@@ -260,7 +261,11 @@ static ssize_t adsp_boot_store(struct kobject *kobj,
 	} else if (boot == IMAGE_UNLOAD_CMD) {
 		pr_debug("%s: going to call adsp_unloader\n", __func__);
 		adsp_loader_unload(adsp_private);
+	} else if (boot == BOOT_FOR_EARLY_CHIME_CMD) {
+		pr_debug("%s: going to call adsp_load_fw\n", __func__);
+		adsp_load_fw(NULL);
 	}
+
 	return count;
 }
 
