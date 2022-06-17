@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 #ifndef __Q6AFE_V2_H__
@@ -592,8 +593,12 @@ int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 void afe_set_routing_callback(routing_cb cb);
 int afe_port_send_logging_cfg(u16 port_id,
 	struct afe_param_id_port_data_log_disable_t *log_disable);
+int afe_port_send_afe_limiter_param(u16 port_id,
+	struct afe_param_id_port_afe_limiter_disable_t *disable_limiter);
 int afe_get_av_dev_drift(struct afe_param_id_dev_timing_stats *timing_stats,
 		u16 port);
+int afe_set_lpass_clk_cfg_ext_mclk_v2(int index,
+	struct afe_param_id_clock_set_v2_t *dyn_mclk_cfg, uint32_t mclk_freq);
 int afe_get_sp_rx_tmax_xmax_logging_data(
 		struct afe_sp_rx_tmax_xmax_logging_param *xt_logging,
 		u16 port_id);

@@ -5165,7 +5165,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE1,
-		SND_SOC_DAILINK_REG(voicemmode1),
+		SND_SOC_DAILINK_REG(voicemmode1_hostless),
 	},
 	{
 		.name = "MSM VoIP",
@@ -5179,7 +5179,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		/* this dainlink has playback support */
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOIP,
-		SND_SOC_DAILINK_REG(msmvoip),
+		SND_SOC_DAILINK_REG(msmvoip_hostless),
 	},
 	{
 		.name = MSM_DAILINK_NAME(ULL),
@@ -5347,7 +5347,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		.id = MSM_FRONTEND_DAI_VOICEMMODE2,
-		SND_SOC_DAILINK_REG(voicemmode2),
+		SND_SOC_DAILINK_REG(voicemmode2_hostless),
 	},
 	/* LSM FE */
 	{

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/init.h>
 #include <linux/module.h>
@@ -475,11 +476,15 @@ static const struct soc_enum tdm_config_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tdm_header_type), tdm_header_type),
 };
 
-static u16 afe_port_logging_port_id;
+static u16 afe_port_logging_port_id = 0x9000;
 
 static bool afe_port_logging_item[IDX_TDM_MAX];
 
 static int afe_port_loggging_control_added;
+
+static int afe_port_limiter_control_added;
+
+static int afe_dyn_mclk_control_added;
 
 static DEFINE_MUTEX(tdm_mutex);
 
@@ -520,6 +525,51 @@ static struct afe_clk_set tdm_clk_set = {
 	Q6AFE_LPASS_CLK_ATTRIBUTE_INVERT_COUPLE_NO,
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
 	0,
+};
+
+static int clk_id_index;
+static int clk_root_index;
+static int clk_attri_index;
+static int global_dyn_mclk_cfg_portid;
+struct afe_param_id_clock_set_v2_t global_dyn_mclk_cfg = {
+	.clk_set_minor_version = Q6AFE_LPASS_CLK_CONFIG_API_VERSION,
+	.clk_id = Q6AFE_LPASS_CLK_ID_TER_PCM_IBIT,
+	.clk_freq_in_hz = 12288000,
+	.clk_attri = Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+	.clk_root = Q6AFE_LPASS_MCLK_IN0,
+	.divider_2x = AFE_CLOCK_DEFAULT_INTEGER_DIVIDER,
+	.m = AFE_CLOCK_DEFAULT_M_VALUE,
+	.n = AFE_CLOCK_DEFAULT_N_VALUE,
+	.d = AFE_CLOCK_DEFAULT_D_VALUE,
+	.enable = 0,
+};
+
+static int afe_dyn_clk_root_enum[] = {
+	Q6AFE_LPASS_MCLK_IN0,
+	Q6AFE_LPASS_MCLK_IN1,
+};
+
+static int afe_dyn_clk_attri_enum[] = {
+	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_DIVIDEND,
+	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_DIVISOR,
+};
+
+static int afe_dyn_clk_id_enum[] = {
+	Q6AFE_LPASS_CLK_ID_PRI_MI2S_IBIT, Q6AFE_LPASS_CLK_ID_PRI_MI2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_SEC_MI2S_IBIT, Q6AFE_LPASS_CLK_ID_SEC_MI2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_TER_MI2S_IBIT, Q6AFE_LPASS_CLK_ID_TER_MI2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT, Q6AFE_LPASS_CLK_ID_QUAD_MI2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_SPEAKER_I2S_IBIT, Q6AFE_LPASS_CLK_ID_SPEAKER_I2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_SPEAKER_I2S_OSR,
+	Q6AFE_LPASS_CLK_ID_PRI_PCM_IBIT, Q6AFE_LPASS_CLK_ID_PRI_PCM_EBIT,
+	Q6AFE_LPASS_CLK_ID_SEC_PCM_IBIT, Q6AFE_LPASS_CLK_ID_SEC_PCM_EBIT,
+	Q6AFE_LPASS_CLK_ID_TER_PCM_IBIT, Q6AFE_LPASS_CLK_ID_TER_PCM_EBIT,
+	Q6AFE_LPASS_CLK_ID_QUAD_PCM_IBIT, Q6AFE_LPASS_CLK_ID_QUAD_PCM_EBIT,
+	Q6AFE_LPASS_CLK_ID_MCLK_1, Q6AFE_LPASS_CLK_ID_MCLK_2,
+	Q6AFE_LPASS_CLK_ID_MCLK_3, Q6AFE_LPASS_CLK_ID_MCLK_4,
+	Q6AFE_LPASS_CLK_ID_MCLK_5, Q6AFE_LPASS_CLK_ID_AHB_HDMI_INPUT,
+	Q6AFE_LPASS_CLK_ID_SPDIF_CORE
 };
 
 static int msm_dai_q6_get_tdm_clk_ref(u16 id)
@@ -10359,14 +10409,240 @@ static int msm_pcm_add_afe_port_logging_control(struct snd_soc_dai *dai)
 	return rc;
 }
 
+static int get_global_clk_root(int value)
+{
+	if ((value < 0) || (value > ARRAY_SIZE(afe_dyn_clk_root_enum) - 1)) {
+		pr_err("%s, %d set clk_root range failed\n", __func__, __LINE__);
+		return global_dyn_mclk_cfg.clk_root;
+	}
+	clk_root_index = value;
+	return  afe_dyn_clk_root_enum[clk_root_index];
+}
+
+static int get_global_clk_attri(int value)
+{
+	if ((value < 0) || (value > ARRAY_SIZE(afe_dyn_clk_attri_enum) - 1)) {
+		pr_err("%s, %d set clk_attri range failed\n", __func__, __LINE__);
+		return global_dyn_mclk_cfg.clk_attri;
+	}
+	clk_attri_index = value;
+	return  afe_dyn_clk_attri_enum[clk_attri_index];
+}
+
+static int get_global_clk_id(int value)
+{
+	if ((value < 0) || (value > ARRAY_SIZE(afe_dyn_clk_id_enum) - 1)) {
+		pr_err("%s, %d set clk_id range failed\n", __func__, __LINE__);
+		return global_dyn_mclk_cfg.clk_id;
+	}
+	clk_id_index = value;
+	return afe_dyn_clk_id_enum[clk_id_index];
+}
+
+static int msm_pcm_afe_dyn_mclk_ctl_info(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info *ucontrol)
+{
+	ucontrol->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	/* 11 int values:clk_set_minor_version, clk_id, clk_freq_in_hz, clk_attri,
+	 * clk_root, enable, divider_2x, m, n, d
+	 */
+	ucontrol->count = 11;
+	ucontrol->value.integer.min = 0;
+	ucontrol->value.integer.max = INT_MAX;
+	/* Valid range is all positive values to support above controls */
+	pr_debug("%s,%d\n", __func__, __LINE__);
+
+	return 0;
+}
+
+static int msm_pcm_afe_dyn_mclk_ctl_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = global_dyn_mclk_cfg_portid;
+	ucontrol->value.integer.value[1] = clk_id_index;
+	ucontrol->value.integer.value[2] = global_dyn_mclk_cfg.clk_freq_in_hz;
+	ucontrol->value.integer.value[3] = clk_attri_index;
+	ucontrol->value.integer.value[4] = clk_root_index;
+	ucontrol->value.integer.value[5] = global_dyn_mclk_cfg.enable;
+	ucontrol->value.integer.value[6] = global_dyn_mclk_cfg.divider_2x;
+	ucontrol->value.integer.value[7] = global_dyn_mclk_cfg.m;
+	ucontrol->value.integer.value[8] = global_dyn_mclk_cfg.n;
+	ucontrol->value.integer.value[9] = global_dyn_mclk_cfg.d;
+	ucontrol->value.integer.value[10] = global_dyn_mclk_cfg.clk_set_minor_version;
+
+	pr_debug("%s:%d.... portid:%d, clk_id:%d, clk_freq_in_hz:%d, clk_attri:%d, clk_root:%d, enable:%d, divider_2x:%d, m:%d, n:%d, d:%d, version:%d\n",
+		__func__, __LINE__, global_dyn_mclk_cfg_portid, global_dyn_mclk_cfg.clk_id,
+		global_dyn_mclk_cfg.clk_freq_in_hz, global_dyn_mclk_cfg.clk_attri,
+		global_dyn_mclk_cfg.clk_root, global_dyn_mclk_cfg.enable,
+		global_dyn_mclk_cfg.divider_2x, global_dyn_mclk_cfg.m, global_dyn_mclk_cfg.n,
+		global_dyn_mclk_cfg.d, global_dyn_mclk_cfg.clk_set_minor_version);
+
+	return 0;
+}
+
+static int msm_pcm_afe_dyn_mclk_ctl_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = -EINVAL;
+
+	pr_debug("%s: enter\n", __func__);
+
+	global_dyn_mclk_cfg_portid = ucontrol->value.integer.value[0];
+
+	global_dyn_mclk_cfg.clk_id = get_global_clk_id(ucontrol->value.integer.value[1]);
+
+	if (ucontrol->value.integer.value[2] >= 0)
+		global_dyn_mclk_cfg.clk_freq_in_hz = ucontrol->value.integer.value[2];
+
+	global_dyn_mclk_cfg.clk_attri = get_global_clk_attri(ucontrol->value.integer.value[3]);
+
+	global_dyn_mclk_cfg.clk_root = get_global_clk_root(ucontrol->value.integer.value[4]);
+
+	if ((ucontrol->value.integer.value[5] <= 1) && (ucontrol->value.integer.value[5] >= 0))
+		global_dyn_mclk_cfg.enable = ucontrol->value.integer.value[5];
+
+	global_dyn_mclk_cfg.divider_2x = ucontrol->value.integer.value[6];
+	global_dyn_mclk_cfg.m = ucontrol->value.integer.value[7];
+	global_dyn_mclk_cfg.n = ucontrol->value.integer.value[8];
+	global_dyn_mclk_cfg.d = ucontrol->value.integer.value[9];
+
+	pr_debug("%s:%d.... portid:%d, clk_id_index:%d, clk_freq_in_hz:%d, clk_attri_index:%d, clk_root_index:%d, enable:%d, divider_2x:%d, m:%d, n:%d, d:%d, version:%d\n",
+		__func__, __LINE__, ucontrol->value.integer.value[0],
+		 ucontrol->value.integer.value[1],
+		ucontrol->value.integer.value[2], ucontrol->value.integer.value[3],
+		ucontrol->value.integer.value[4], ucontrol->value.integer.value[5],
+		ucontrol->value.integer.value[6], ucontrol->value.integer.value[7],
+		ucontrol->value.integer.value[8], ucontrol->value.integer.value[9]);
+
+	ret = afe_set_lpass_clk_cfg_ext_mclk_v2(global_dyn_mclk_cfg_portid,
+		&global_dyn_mclk_cfg, 0);
+	if (ret)
+		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, global_dyn_mclk_cfg_portid, ret);
+
+	return ret;
+}
+
+static int msm_pcm_add_afe_dyn_mclk_control(struct snd_soc_dai *dai)
+{
+	int rc = 0;
+	struct snd_kcontrol_new *knew = NULL;
+	struct snd_kcontrol *kctl = NULL;
+	const char *afe_dyn_mclk_ctl_name = "AFE_dyn_switch_mclk_source";
+
+	/* Add AFE port logging controls */
+	knew = kzalloc(sizeof(struct snd_kcontrol_new), GFP_KERNEL);
+	if (!knew)
+		return -ENOMEM;
+
+	knew->iface = SNDRV_CTL_ELEM_IFACE_MIXER;
+	knew->info = msm_pcm_afe_dyn_mclk_ctl_info;
+	knew->get = msm_pcm_afe_dyn_mclk_ctl_get;
+	knew->put = msm_pcm_afe_dyn_mclk_ctl_put;
+	knew->name = afe_dyn_mclk_ctl_name;
+	knew->private_value = dai->id;
+	kctl = snd_ctl_new1(knew, knew);
+	if (!kctl) {
+		kfree(knew);
+		return -ENOMEM;
+	}
+
+	rc = snd_ctl_add(dai->component->card->snd_card, kctl);
+	if (rc < 0)
+		pr_err("%s: err add AFE dyn mclk control, DAI = %s\n",
+			__func__, dai->name);
+
+	return rc;
+}
+
+int jitter_cleaner_afe_enable_mclk_and_get_info_cb_func(void *private_data,
+			uint32_t enable, uint32_t mclk_freq,
+			struct afe_param_id_clock_set_v2_t *dyn_mclk_cfg)
+{
+	pr_debug("%s,%d\n", __func__, __LINE__);
+	return 0;
+}
+
+static int msm_pcm_afe_limiter_param_ctl_info(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_info* ucontrol)
+{
+	ucontrol->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	/* two int values: port_id and enable/disable */
+	ucontrol->count = 2;
+	/* Valid range is all positive values to support above controls */
+	ucontrol->value.integer.min = 0;
+	ucontrol->value.integer.max = INT_MAX;
+	return 0;
+}
+
+static int msm_pcm_afe_limiter_param_ctl_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int msm_pcm_afe_limiter_param_ctl_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	u16 port_id;
+	struct afe_param_id_port_afe_limiter_disable_t afe_limiter_disable;
+	struct param_hdr_v3 param_hdr;
+	int ret = -EINVAL;
+
+	pr_debug("%s: enter\n", __func__);
+	memset(&param_hdr, 0, sizeof(param_hdr));
+
+	port_id = ucontrol->value.integer.value[0];
+	afe_limiter_disable.disable_afe_limiter = ucontrol->value.integer.value[1];
+
+	ret = afe_port_send_afe_limiter_param(port_id, &afe_limiter_disable);
+	if (ret)
+		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, port_id, ret);
+
+	return ret;
+}
+
+static int msm_pcm_add_afe_port_limiter_control(struct snd_soc_dai *dai)
+{
+	const char* afe_port_limiter_ctl_name = "AFE_port_limiter_disable";
+	int rc = 0;
+	struct snd_kcontrol_new *knew = NULL;
+	struct snd_kcontrol* kctl = NULL;
+
+	/* Add AFE port logging controls */
+	knew = kzalloc(sizeof(struct snd_kcontrol_new), GFP_KERNEL);
+	if (!knew) {
+		return -ENOMEM;
+	}
+	knew->iface = SNDRV_CTL_ELEM_IFACE_MIXER;
+	knew->info = msm_pcm_afe_limiter_param_ctl_info;
+	knew->get = msm_pcm_afe_limiter_param_ctl_get;
+	knew->put = msm_pcm_afe_limiter_param_ctl_put;
+	knew->name = afe_port_limiter_ctl_name;
+	knew->private_value = dai->id;
+	kctl = snd_ctl_new1(knew, knew);
+	if (!kctl) {
+		kfree(knew);
+		return -ENOMEM;
+	}
+
+	rc = snd_ctl_add(dai->component->card->snd_card, kctl);
+	if (rc < 0)
+		pr_err("%s: err add AFE port limiter disable control, DAI = %s\n",
+			__func__, dai->name);
+
+	return rc;
+}
+
 static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 {
 	int rc = 0;
+	int port_idx = 0;
 	struct msm_dai_q6_tdm_dai_data *tdm_dai_data = NULL;
 	struct snd_kcontrol *data_format_kcontrol = NULL;
 	struct snd_kcontrol *header_type_kcontrol = NULL;
 	struct snd_kcontrol *header_kcontrol = NULL;
-	int port_idx = 0;
 	const struct snd_kcontrol_new *data_format_ctrl = NULL;
 	const struct snd_kcontrol_new *header_type_ctrl = NULL;
 	const struct snd_kcontrol_new *header_ctrl = NULL;
@@ -10445,6 +10721,37 @@ static int msm_dai_q6_dai_tdm_probe(struct snd_soc_dai *dai)
 		}
 
 		afe_port_loggging_control_added = 1;
+	}
+
+	/* add AFE dyn mclk controls */
+	if (!afe_dyn_mclk_control_added) {
+		rc = msm_pcm_add_afe_dyn_mclk_control(dai);
+		if (rc < 0) {
+			dev_err(dai->dev, "%s: add AFE dyn mclk control failed DAI: %s\n",
+				__func__, dai->name);
+			goto rtn;
+		}
+
+		afe_dyn_mclk_control_added = 1;
+
+		rc = afe_register_ext_mclk_cb(jitter_cleaner_afe_enable_mclk_and_get_info_cb_func,
+			(void *)&global_dyn_mclk_cfg);
+		if (rc < 0) {
+			dev_err(dai->dev, "%s: add AFE afe_register_ext_mclk_cb failed : %s\n",
+				__func__, dai->name);
+			goto rtn;
+		}
+	}
+
+	if (!afe_port_limiter_control_added) {
+		rc = msm_pcm_add_afe_port_limiter_control(dai);
+		if (rc < 0) {
+			dev_err(dai->dev, "%s: add AFE port logging control failed DAI: %s\n",
+				__func__, dai->name);
+			goto rtn;
+		}
+
+		afe_port_limiter_control_added = 1;
 	}
 
 	if (tdm_dai_data->is_island_dai)
@@ -11030,7 +11337,7 @@ static int msm_dai_q6_tdm_set_channel_map(struct snd_soc_dai *dai,
 }
 
 static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
-					    int slots_per_frame)
+					    int slots_per_frame, int num_channels)
 {
 	unsigned int i = 0;
 	unsigned int slot_index = 0;
@@ -11044,6 +11351,11 @@ static unsigned int tdm_param_set_slot_mask(u16 *slot_offset, int slot_width,
 
 	if (slot_width_bytes == 0) {
 		pr_err("%s: slot width is zero\n", __func__);
+		return slot_mask;
+	}
+
+	if (num_channels != slots_per_frame) {
+		pr_debug("%s: multi lane is enabled, use the slot mask of tdm group\n", __func__);
 		return slot_mask;
 	}
 
@@ -11174,11 +11486,13 @@ static int msm_dai_q6_tdm_hw_params(struct snd_pcm_substream *substream,
 		tdm->slot_mask = tdm_param_set_slot_mask(
 					slot_mapping_v2->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 	else
 		tdm->slot_mask = tdm_param_set_slot_mask(slot_mapping->offset,
 					tdm_group->slot_width,
-					tdm_group->nslots_per_frame);
+					tdm_group->nslots_per_frame,
+					tdm_group->num_channels);
 
 	pr_debug("%s: TDM:\n"
 		"num_channels=%d sample_rate=%d bit_width=%d\n"

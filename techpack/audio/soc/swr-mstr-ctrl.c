@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 
@@ -1465,12 +1466,14 @@ static void swrm_copy_data_port_config(struct swr_master *master, u8 bank)
 					SWRS_DP_SAMPLE_CONTROL_1_BANK(slv_id,
 								bank));
 
-			reg[len] = SWRM_CMD_FIFO_WR_CMD;
-			val[len++] = SWR_REG_VAL_PACK(
+			if ((port_req->sinterval >> 8)& 0xFF) {
+				reg[len] = SWRM_CMD_FIFO_WR_CMD;
+				val[len++] = SWR_REG_VAL_PACK(
 					(port_req->sinterval >> 8)& 0xFF,
 					port_req->dev_num, 0x00,
 					SWRS_DP_SAMPLE_CONTROL_2_BANK(slv_id,
 								bank));
+			}
 
 			reg[len] = SWRM_CMD_FIFO_WR_CMD;
 			val[len++] = SWR_REG_VAL_PACK(port_req->offset1,
