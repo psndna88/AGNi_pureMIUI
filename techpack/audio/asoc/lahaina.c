@@ -5150,7 +5150,7 @@ static int msm_snd_cdc_dma_startup(struct snd_pcm_substream *substream)
 static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 				u32 num_ch, u32 ch_mask)
 {
-	int i = 0;
+	int i = 0, j = 0;
 	int val = 0;
 	u8 dev_num = 0;
 	int ch_configured = 0;
@@ -5159,6 +5159,7 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_dai_link *dai_link = rtd->dai_link;
         struct msm_asoc_mach_data *pdata =
 			snd_soc_card_get_drvdata(rtd->card);
+	struct lpass_swr_spkr_dep_cfg_t *spkr_dep_cfg_ptr;
 
 	if (!pdata) {
 		pr_err("%s: pdata is NULL\n", __func__);
@@ -5217,9 +5218,11 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 			return;
 		}
 
+		spkr_dep_cfg_ptr = &(pdata->cps_config.spkr_dep_cfg[i]);
+
 		/* Clear stale dev num info */
-		pdata->cps_config.spkr_dep_cfg[i].vbatt_pkd_reg_addr &= 0xFFFF;
-		pdata->cps_config.spkr_dep_cfg[i].temp_pkd_reg_addr &= 0xFFFF;
+		spkr_dep_cfg_ptr->vbatt_pkd_reg_addr &= 0xFFFF;
+		spkr_dep_cfg_ptr->temp_pkd_reg_addr &= 0xFFFF;
 
 		val = 0;
 
@@ -5233,11 +5236,22 @@ static void set_cps_config(struct snd_soc_pcm_runtime *rtd,
 		val |= (i*2) << 16;
 
 		/* Update dev num in packed reg addr */
-		pdata->cps_config.spkr_dep_cfg[i].vbatt_pkd_reg_addr |= val;
+		spkr_dep_cfg_ptr->vbatt_pkd_reg_addr |= val;
 
 		val &= 0xFF0FFFF;
 		val |= ((i*2)+1) << 16;
-		pdata->cps_config.spkr_dep_cfg[i].temp_pkd_reg_addr |= val;
+		spkr_dep_cfg_ptr->temp_pkd_reg_addr |= val;
+
+		/* Retain dev_num from val */
+		val &= 0x00F00000;
+		for (j = 0; j < MAX_CPS_LEVELS; j++)
+		{
+			val &= 0xFFF0FFFF;
+			val |= ((i * 3) + j) << 16;
+			spkr_dep_cfg_ptr->value_normal_thrsd[j] |= val;
+			spkr_dep_cfg_ptr->value_low1_thrsd[j] |= val;
+			spkr_dep_cfg_ptr->value_low2_thrsd[j] |= val;
+		}
 		i++;
 		ch_configured++;
 	}
