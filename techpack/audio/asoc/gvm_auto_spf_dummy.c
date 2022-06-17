@@ -518,7 +518,6 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "parse card name failed, err:%d\n",
 			ret);
-    pr_err("parse card name failed, err:%d\n", __func__, ret);
 		goto err;
 	}
 
