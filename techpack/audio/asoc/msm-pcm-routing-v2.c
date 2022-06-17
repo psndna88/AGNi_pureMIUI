@@ -42469,8 +42469,7 @@ static int asrc_get_module_location(struct asrc_module_config_params *params,
 	unsigned long copp = -1;
 	bool copp_is_found = false;
 	struct msm_pcm_routing_bdai_data *bedai = NULL;
-	int port_type = (dir == SESSION_TYPE_RX) ? MSM_AFE_PORT_TYPE_RX :
-			       MSM_AFE_PORT_TYPE_TX;
+	int port_type = -1;
 
 	mutex_lock(&routing_lock);
 
@@ -42484,6 +42483,10 @@ static int asrc_get_module_location(struct asrc_module_config_params *params,
 	dir = params->dir;
 	be_id = params->be_id;
 	bedai = &msm_bedais[be_id];
+
+	port_type = (dir == SESSION_TYPE_RX) ? MSM_AFE_PORT_TYPE_RX :
+			  MSM_AFE_PORT_TYPE_TX;
+
 	if (afe_get_port_type(bedai->port_id) != port_type) {
 		pr_err("%s: port_type not match: be_dai %d type %d\n",
 			__func__, be_id, port_type);

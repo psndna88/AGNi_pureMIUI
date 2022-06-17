@@ -557,6 +557,7 @@ static void *def_wcd_mbhc_cal(void);
 static void *def_rouleur_mbhc_cal(void);
 
 static int msm_int_audrx_init(struct snd_soc_pcm_runtime*);
+static int msm_aux_codec_init(struct snd_soc_pcm_runtime*);
 
 /*
  * Need to report LINEIN
@@ -4257,25 +4258,19 @@ static void msm_add_auxpcm_snd_controls(struct snd_soc_component *component)
 
 static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 {
-	int ret = -EINVAL;
-	struct snd_soc_component *component;
-	struct snd_soc_component *bolero_component = NULL;
-	struct snd_soc_dapm_context *dapm;
-	struct snd_card *card;
-	struct snd_info_entry *entry;
-	struct platform_device *pdev = NULL;
-	int i = 0;
-	char *data = NULL;
+	struct snd_soc_component *component = NULL;
+	struct snd_soc_dapm_context *dapm = NULL;
+	struct snd_card *card = NULL;
+	struct snd_info_entry *entry = NULL;
 	struct msm_asoc_mach_data *pdata =
 				snd_soc_card_get_drvdata(rtd->card);
+	int ret = -EINVAL;
 
 	component = snd_soc_rtdcom_lookup(rtd, "bolero_codec");
 	if (!component) {
 		pr_err("%s: could not find component for bolero_codec\n",
 			__func__);
 		return ret;
-	} else {
-		bolero_component = component;
 	}
 
 	dapm = snd_soc_component_get_dapm(component);
@@ -4330,6 +4325,29 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	bolero_info_create_codec_entry(pdata->codec_root, component);
 	bolero_register_wake_irq(component, false);
 
+err:
+	return ret;
+}
+
+static int msm_aux_codec_init(struct snd_soc_pcm_runtime *rtd)
+{
+	int ret = -EINVAL;
+	struct snd_soc_component *component = NULL;
+	struct snd_soc_component *bolero_component = NULL;
+	struct snd_soc_dapm_context *dapm = NULL;
+	struct snd_card *card = NULL;
+	struct snd_info_entry *entry;
+	char *data = NULL;
+	struct msm_asoc_mach_data *pdata =
+				snd_soc_card_get_drvdata(rtd->card);
+
+	bolero_component = snd_soc_rtdcom_lookup(rtd, "bolero_codec");
+	if (!bolero_component) {
+		pr_err("%s: could not find component for bolero_codec\n",
+			__func__);
+		return -EINVAL;
+	}
+
 	component = snd_soc_rtdcom_lookup(rtd, ROULEUR_DRV_NAME);
 	if (!component)
 		component = snd_soc_rtdcom_lookup(rtd, WCD937X_DRV_NAME);
@@ -4352,6 +4370,18 @@ static int msm_int_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "AMIC3");
 	snd_soc_dapm_ignore_suspend(dapm, "AMIC4");
 	snd_soc_dapm_sync(dapm);
+
+	if (!pdata->codec_root) {
+		entry = msm_snd_info_create_subdir(card->module, "codecs",
+						 card->proc_root);
+		if (!entry) {
+			dev_dbg(component->dev, "%s: Cannot create codecs module entry\n",
+				 __func__);
+			ret = 0;
+			goto err;
+		}
+		pdata->codec_root = entry;
+	}
 
 	if (wcd_datalane_mismatch) {
 		bolero_set_port_map(component,
@@ -5389,6 +5419,7 @@ static struct snd_soc_dai_link msm_rx_tx_cdc_dma_be_dai_links[] = {
 		.ignore_suspend = 1,
 		.ops = &msm_cdc_dma_be_ops,
 		SND_SOC_DAILINK_REG(rx_dma_rx0),
+		.init = &msm_aux_codec_init,
 	},
 	{
 		.name = LPASS_BE_RX_CDC_DMA_RX_1,
@@ -5466,12 +5497,12 @@ static struct snd_soc_dai_link msm_va_cdc_dma_be_dai_links[] = {
 		.stream_name = "VA CDC DMA0 Capture",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.init = &msm_int_audrx_init,
 		.id = MSM_BACKEND_DAI_VA_CDC_DMA_TX_0,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 		.ops = &msm_cdc_dma_be_ops,
 		SND_SOC_DAILINK_REG(va_dma_tx0),
+		.init = &msm_int_audrx_init,
 	},
 	{
 		.name = LPASS_BE_VA_CDC_DMA_TX_1,
