@@ -638,9 +638,9 @@ err:
 	wcd9xxx_bringdown(wcd9xxx->dev);
 	wcd9xxx_core_res_deinit(&wcd9xxx->core_res);
 err_bring_up:
-	mutex_destroy(&wcd9xxx->io_lock);
-	mutex_destroy(&wcd9xxx->xfer_lock);
 	mutex_destroy(&wcd9xxx->reset_lock);
+	mutex_destroy(&wcd9xxx->xfer_lock);
+	mutex_destroy(&wcd9xxx->io_lock);
 	return ret;
 }
 

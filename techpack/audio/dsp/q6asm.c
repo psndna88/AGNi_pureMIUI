@@ -11698,5 +11698,13 @@ int __init q6asm_init(void)
 
 void q6asm_exit(void)
 {
+	int lcnt;
 	q6asm_delete_cal_data();
+	for (lcnt = 0; lcnt <= OUT; lcnt++)
+		mutex_destroy(&common_client.port[lcnt].lock);
+
+	mutex_destroy(&common_client.cmd_lock);
+
+	for (lcnt = 0; lcnt <= ASM_ACTIVE_STREAMS_ALLOWED; lcnt++)
+		mutex_destroy(&(session[lcnt].mutex_lock_per_session));
 }
