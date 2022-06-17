@@ -136,7 +136,6 @@ endif
 # for SM6150 sound card driver
 ifdef CONFIG_SND_SOC_SM6150
 	MACHINE_OBJS += sm6150.o
-	MACHINE_OBJS += machine_615x_init.o
 endif
 
 # For sa6155 sound card driver
@@ -211,11 +210,19 @@ ifdef CONFIG_SND_SOC_QDSP6V2
 	PLATFORM_OBJS += msm-pcm-loopback-v2.o
 	PLATFORM_OBJS += msm-pcm-q6-noirq.o
 	PLATFORM_OBJS += msm-pcm-q6-v2.o
-	PLATFORM_OBJS += msm-pcm-routing-v2.o
-	PLATFORM_OBJS += msm-pcm-voice-v2.o
-	PLATFORM_OBJS += msm-pcm-voip-v2.o
+	ifeq (y,$(findstring y,$(CONFIG_QTI_QUIN_GVM) $(CONFIG_PLATFORM_AUTO)))
+		PLATFORM_OBJS += msm-pcm-routing-auto.o
+	else
+		PLATFORM_OBJS += msm-pcm-routing-v2.o
+		PLATFORM_OBJS += msm-pcm-voice-v2.o
+		PLATFORM_OBJS += msm-pcm-voip-v2.o
+	endif
 	PLATFORM_OBJS += msm-transcode-loopback-q6-v2.o
-	PLATFORM_OBJS += platform_init.o
+	ifeq (y,$(findstring y,$(CONFIG_QTI_QUIN_GVM) $(CONFIG_PLATFORM_AUTO)))
+		PLATFORM_OBJS += platform_init_auto.o
+	else
+		PLATFORM_OBJS += platform_init.o
+	endif
 endif
 ifdef CONFIG_WCD9XXX_CODEC_CORE
 	PLATFORM_OBJS += msm-dai-slim.o

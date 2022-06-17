@@ -26,6 +26,7 @@ obj-y += asoc/
 obj-y += asoc/codecs/
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sdmsteppe))
 obj-y += asoc/codecs/wcd934x/
+KBUILD_CFLAGS += -Wno-error
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qcs40x))
 obj-y += asoc/codecs/bolero/
