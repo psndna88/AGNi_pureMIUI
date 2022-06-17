@@ -801,7 +801,7 @@ void hif_latency_detect_timer_start(struct hif_opaque_softc *hif_ctx)
 	if (QDF_GLOBAL_MISSION_MODE != hif_get_conparam(scn))
 		return;
 
-	hif_info_rl("start timer");
+	hif_debug_rl("start timer");
 	if (scn->latency_detect.is_timer_started) {
 		hif_info("timer has been started");
 		return;
@@ -819,7 +819,7 @@ void hif_latency_detect_timer_stop(struct hif_opaque_softc *hif_ctx)
 	if (QDF_GLOBAL_MISSION_MODE != hif_get_conparam(scn))
 		return;
 
-	hif_info_rl("stop timer");
+	hif_debug_rl("stop timer");
 
 	qdf_timer_sync_cancel(&scn->latency_detect.detect_latency_timer);
 	scn->latency_detect.is_timer_started = false;

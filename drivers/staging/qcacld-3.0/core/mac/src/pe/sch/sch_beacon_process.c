@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -760,10 +761,10 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 		}
 		wlan_reg_read_current_country(mac_ctx->psoc,
 					      programmed_country);
-		status = wlan_reg_get_6g_power_type_for_ctry(
+		status = wlan_reg_get_6g_power_type_for_ctry(mac_ctx->psoc,
 					bcn->countryInfoParam.countryString,
 					programmed_country, &pwr_type_6g,
-					&ctry_code_match);
+					&ctry_code_match, REG_MAX_AP_TYPE);
 		if (QDF_IS_STATUS_ERROR(status))
 			return;
 	}
