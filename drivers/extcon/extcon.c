@@ -1337,6 +1337,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 
 err_dev:
 	if (edev->max_supported)
+		kfree(edev->nh);
 		kfree(edev->extcon_dev_type.groups);
 err_alloc_groups:
 	if (edev->max_supported && edev->mutually_exclusive) {
@@ -1396,6 +1397,7 @@ void extcon_dev_unregister(struct extcon_dev *edev)
 	if (edev->max_supported) {
 		kfree(edev->extcon_dev_type.groups);
 		kfree(edev->cables);
+		kfree(edev->nh);
 	}
 
 	put_device(&edev->dev);
