@@ -382,7 +382,7 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 {
 	int rc = 0;
 
-	if (panel->is_twm_en) {
+	if (panel->is_twm_en || panel->skip_panel_off) {
 		DSI_DEBUG("TWM Enabled, skip panel power off\n");
 		return rc;
 	}
@@ -2204,6 +2204,9 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 
 	panel->reset_gpio_always_on = utils->read_bool(utils->data,
 			"qcom,platform-reset-gpio-always-on");
+
+	panel->skip_panel_off = utils->read_bool(utils->data,
+			"qcom,skip-panel-power-off");
 
 	panel->spr_info.enable = false;
 	panel->spr_info.pack_type = MSM_DISPLAY_SPR_TYPE_MAX;
