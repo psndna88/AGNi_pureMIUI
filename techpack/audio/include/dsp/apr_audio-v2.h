@@ -8333,6 +8333,9 @@ struct asm_stream_cmd_open_shared_io {
 /* Bit value for Low Latency Tx stream subfield */
 #define ASM_LOW_LATENCY_TX_STREAM_SESSION			1
 
+/* Bit value for Low Latency No Post Processing Tx stream subfield */
+#define ASM_LOW_LATENCY_NPROC_TX_STREAM_SESSION			3
+
 /* Bit shift for the stream_perf_mode subfield. */
 #define ASM_SHIFT_STREAM_PERF_MODE_FLAG_IN_OPEN_READ              29
 

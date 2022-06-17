@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,6 +30,9 @@
 #include <sound/info.h>
 #include <dsp/audio_notifier.h>
 #include "msm_dailink.h"
+#include <soc/qcom/subsystem_restart.h>
+#include <soc/qcom/subsystem_notif.h>
+#include <soc/qcom/boot_stats.h>
 
 
 #define DRV_NAME "spf-asoc-snd"
@@ -823,6 +827,31 @@ void msm_common_set_pdata(struct snd_soc_card *card,
 	pdata->common_pdata = common_pdata;
 }
 
+static int auto_spf_dummy_ssr_cb(struct notifier_block *this,
+				unsigned long code,
+				void *data)
+{
+	struct snd_soc_card *card = platform_get_drvdata(spdev);
+
+	switch (code) {
+	case SUBSYS_BEFORE_SHUTDOWN:
+		snd_soc_card_change_online_state(card, 0); // change sndcard status to OFFLINE
+		dev_info(&spdev->dev, "ssr restart, mark sndcard offline\n");
+	break;
+	case SUBSYS_AFTER_POWERUP:
+		snd_soc_card_change_online_state(card, 1); // change sndcard status to ONLINE
+		dev_info(&spdev->dev, "ssr complete, mark sndcard online\n");
+	break;
+	default:
+	break;
+	}
+	return 0;
+}
+
+static struct notifier_block auto_spf_dummy_ssr_notifier = {
+	.notifier_call = auto_spf_dummy_ssr_cb,
+};
+
 static int msm_asoc_machine_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card;
@@ -881,7 +910,12 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	}
 	dev_info(&pdev->dev, "Sound card %s registered\n", card->name);
 	pr_err("Sound card %s registered\n", card->name);
+	place_marker("M - sound card init complete");
+
 	spdev = pdev;
+
+	subsys_notif_register_notifier("adsp", &auto_spf_dummy_ssr_notifier);
+	dev_info(&pdev->dev, "Audio driver register for SSR complete\n");
 
 	return 0;
 err:

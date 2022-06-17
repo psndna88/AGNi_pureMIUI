@@ -751,9 +751,11 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 		else if (params_format(params) == SNDRV_PCM_FORMAT_S32_LE)
 			bits_per_sample = 32;
 
-		/* ULL mode is not supported in capture path */
+		/* ULL mode is not supported in capture path so using LLNP insted of ULL */
 		if (pdata->perf_mode == LEGACY_PCM_MODE)
 			prtd->audio_client->perf_mode = LEGACY_PCM_MODE;
+		else if (pdata->perf_mode == ULTRA_LOW_LATENCY_PCM_MODE)
+			prtd->audio_client->perf_mode = LOW_LATENCY_PCM_NOPROC_MODE;
 		else
 			prtd->audio_client->perf_mode = LOW_LATENCY_PCM_MODE;
 
@@ -3775,6 +3777,9 @@ static int msm_pcm_probe(struct platform_device *pdev)
 			else if (!strcmp(latency_level, "ull-pp"))
 				pdata->perf_mode =
 					ULL_POST_PROCESSING_PCM_MODE;
+			else if (!strcmp(latency_level, "llnp"))
+				pdata->perf_mode =
+					LOW_LATENCY_PCM_NOPROC_MODE;
 		}
 	} else {
 		pdata->perf_mode = LEGACY_PCM_MODE;

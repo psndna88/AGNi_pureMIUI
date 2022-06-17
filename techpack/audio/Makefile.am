@@ -15,6 +15,9 @@ endif
 ifeq ($(TARGET_SUPPORT), qrbx210)
 KBUILD_OPTIONS += CONFIG_ARCH_BENGAL=y
 endif
+ifeq ($(TARGET_SUPPORT), qrb5165)
+KBUILD_OPTIONS += CONFIG_ARCH_KONA=y
+endif
 
 subdir-ccflags-y += -I$(AUDIO_ROOT)/include/uapi/
 
@@ -39,12 +42,18 @@ obj-y += asoc/codecs/bolero/
 obj-y += asoc/codecs/wcd937x/
 KBUILD_CFLAGS += -Wno-error
 endif
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qrb5165))
+obj-y += asoc/codecs/bolero/
+obj-y += asoc/codecs/wcd938x/
+obj-y += asoc/codecs/wsa883x/
+KBUILD_CFLAGS += -Wno-error
+endif
 ifeq ($(TARGET_SUPPORT), sdmsteppe)
 obj-y += asoc/codecs/bolero/
 obj-y += asoc/codecs/wcd937x/
 endif
 
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa6155 sa8195 qtiquingvm qtiquingvm8295 sa8295 qtigvmi3))
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa8155 sa8155ivi sa6155 sa8195 qtiquingvm qtiquingvm8295 sa8295))
 KBUILD_OPTIONS += CONFIG_SND_SOC_AUTO=y
 obj-y := ipc/
 obj-y += dsp/
@@ -63,6 +72,15 @@ endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm8295))
 KBUILD_OPTIONS += CONFIG_SND_SOC_GVM_SA8295=m
 endif
+endif
+ifeq ($(AR_SUPPORT), $(filter $(AR_SUPPORT), yes))
+obj-y := ipc/
+obj-y += dsp/
+obj-y += asoc/
+obj-y += asoc/codecs/
+obj-y += soc/
+KBUILD_OPTIONS += CONFIG_SND_SOC_AUTO=y
+KBUILD_OPTIONS += CONFIG_SND_SOC_AR=y
 endif
 
 all:
