@@ -274,7 +274,8 @@ static int wsa881x_i2c_read_device(struct wsa881x_pdata *wsa881x,
 		}
 		pr_debug("read success reg = %x val = %x\n",
 						reg, val);
-	} else {
+	} else if (wsa881x->client[wsa881x_index]) {
+
 		reg_addr = (u8)reg;
 		msg = &wsa881x->xfer_msg[0];
 		msg->addr = wsa881x->client[wsa881x_index]->addr;
@@ -302,6 +303,9 @@ static int wsa881x_i2c_read_device(struct wsa881x_pdata *wsa881x,
 			}
 		}
 		val = dest[0];
+	} else {
+		pr_err("failed for i2c client is not initilized\n");
+		return -EINVAL;
 	}
 	return val;
 }
@@ -1190,6 +1194,19 @@ static int wsa881x_probe(struct snd_soc_component *component)
 			"client failed\n", __func__);
 		return ret;
 	}
+
+	while (retry) {
+		if (wsa_pdata[wsa881x_index].regmap_flag)
+			break;
+		msleep(100);
+		retry--;
+	}
+	if (!retry) {
+		dev_err(&client->dev, "%s: max retry expired and regmap of\n"
+				"analog slave not initilized\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
 	mutex_init(&wsa_pdata[wsa881x_index].bg_lock);
 	mutex_init(&wsa_pdata[wsa881x_index].res_lock);
 	snprintf(wsa_pdata[wsa881x_index].tz_pdata.name, 100, "%s",
@@ -1201,16 +1218,6 @@ static int wsa881x_probe(struct snd_soc_component *component)
 	wsa_pdata[wsa881x_index].tz_pdata.wsa_temp_reg_read =
 						wsa881x_temp_reg_read;
 	snd_soc_component_set_drvdata(component, &wsa_pdata[wsa881x_index]);
-	while (retry) {
-		if (wsa_pdata[wsa881x_index].regmap[WSA881X_ANALOG_SLAVE]
-							!= NULL)
-			break;
-		msleep(100);
-		retry--;
-	}
-	if (!retry)
-		dev_err(&client->dev, "%s: max retry expired and regmap of\n"
-				"analog slave not initilized\n", __func__);
 	wsa881x_init_thermal(&wsa_pdata[wsa881x_index].tz_pdata);
 	INIT_DELAYED_WORK(&wsa_pdata[wsa881x_index].ocp_ctl_work,
 				wsa881x_ocp_ctl_work);

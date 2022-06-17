@@ -495,6 +495,9 @@ static struct afe_param_id_tdm_lane_cfg tdm_lane_cfg = {
 	0x0,
 };
 
+#define LIMITER_PARM_MAX 3
+static u16 limiter_param[LIMITER_PARM_MAX];
+
 /* cache of group cfg per parent node */
 static struct afe_param_id_group_device_tdm_cfg tdm_group_cfg = {
 	AFE_API_VERSION_GROUP_DEVICE_TDM_CONFIG,
@@ -10568,7 +10571,7 @@ static int msm_pcm_afe_limiter_param_ctl_info(struct snd_kcontrol *kcontrol,
 {
 	ucontrol->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	/* two int values: port_id and enable/disable */
-	ucontrol->count = 2;
+	ucontrol->count = LIMITER_PARM_MAX;
 	/* Valid range is all positive values to support above controls */
 	ucontrol->value.integer.min = 0;
 	ucontrol->value.integer.max = INT_MAX;
@@ -10578,6 +10581,9 @@ static int msm_pcm_afe_limiter_param_ctl_info(struct snd_kcontrol *kcontrol,
 static int msm_pcm_afe_limiter_param_ctl_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	ucontrol->value.integer.value[0] = limiter_param[0];
+	ucontrol->value.integer.value[1] = limiter_param[1];
+	ucontrol->value.integer.value[2] = limiter_param[2];
 	return 0;
 }
 
@@ -10589,16 +10595,29 @@ static int msm_pcm_afe_limiter_param_ctl_put(struct snd_kcontrol *kcontrol,
 	struct param_hdr_v3 param_hdr;
 	int ret = -EINVAL;
 
+	limiter_param[0] = ucontrol->value.integer.value[0];
+	limiter_param[1] = ucontrol->value.integer.value[1];
+	limiter_param[2] = ucontrol->value.integer.value[2];
+
+
+	if(limiter_param[2] != LIMITER_PARM_MAX - 1)
+	{
+		return 0;
+	}
+
 	pr_debug("%s: enter\n", __func__);
 	memset(&param_hdr, 0, sizeof(param_hdr));
 
-	port_id = ucontrol->value.integer.value[0];
-	afe_limiter_disable.disable_afe_limiter = ucontrol->value.integer.value[1];
+	port_id = limiter_param[0];
+	afe_limiter_disable.disable_afe_limiter = limiter_param[1];
 
 	ret = afe_port_send_afe_limiter_param(port_id, &afe_limiter_disable);
 	if (ret)
 		pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
 			__func__, port_id, ret);
+
+	//resetting number of parameters to zero
+	limiter_param[2] = 0;
 
 	return ret;
 }

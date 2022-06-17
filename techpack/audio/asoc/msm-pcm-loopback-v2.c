@@ -2062,8 +2062,7 @@ static int msm_loopback_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
 	audio_client = q6asm_get_audio_client(fe_dai.strm_id);
 
 	event_data = (struct msm_adsp_event_data *)ucontrol->value.bytes.data;
-	if ((event_data->event_type < ADSP_STREAM_PP_EVENT) ||
-	    (event_data->event_type >= ADSP_STREAM_EVENT_MAX)) {
+	if (event_data->event_type >= ADSP_STREAM_EVENT_MAX) {
 		pr_err("%s: invalid event_type=%d\n",
 			__func__, event_data->event_type);
 		ret = -EINVAL;

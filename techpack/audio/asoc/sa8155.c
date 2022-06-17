@@ -7579,6 +7579,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.async_ops = ASYNC_DPCM_SND_SOC_PREPARE,
 #endif /* CONFIG_AUDIO_QGKI */
 		.dpcm_playback = 1,
+		.dpcm_capture = 1,
 		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 			SND_SOC_DPCM_TRIGGER_POST},
 		.ignore_suspend = 1,
