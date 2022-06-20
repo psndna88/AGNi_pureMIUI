@@ -105,6 +105,12 @@ typedef enum {
 #define MAX_WAIT_FOR_BCN_TX_COMPLETE 4000
 #define MAX_WAKELOCK_FOR_CSA         5000
 
+#ifdef WLAN_FEATURE_11BE
+#define MAX_NUM_PWR_LEVELS 16
+#else
+#define MAX_NUM_PWR_LEVELS 8
+#endif
+
 #ifdef WLAN_FEATURE_11W
 typedef union uPmfSaQueryTimerId {
 	struct {
