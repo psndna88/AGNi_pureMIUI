@@ -11,3 +11,15 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0x12010008 0x312>;
 };
+
+&wifi0 {
+	/* QCN9000 6G with SBS filter */
+	status = "ok";
+	board_id = <0xa4>;
+};
+
+&wifi1 {
+	/* QCN9000 5G */
+	status = "ok";
+	board_id = <0xa3>;
+};
