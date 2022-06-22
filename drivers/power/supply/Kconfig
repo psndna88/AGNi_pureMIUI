@@ -442,6 +442,12 @@ config MI_WIRELESS
 	help
 	  Say Y here to enable mi wireless
 
+config BQ_FG_1S
+	tristate "BQ 1S battery cell config"
+	depends on QTI_PMIC_GLINK
+	help
+	  Say Y here to enable Bq fuel gauge
+
 config CHARGER_88PM860X
 	tristate "Marvell 88PM860x Charger driver"
 	depends on MFD_88PM860X && BATTERY_88PM860X
