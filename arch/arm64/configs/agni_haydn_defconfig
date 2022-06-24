@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.199 Kernel Configuration
+# Linux/arm64 5.4.200 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 12.1.1"
 CONFIG_GCC_VERSION=0
@@ -22,7 +22,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
 # CONFIG_UAPI_HEADER_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_AOSP-ST_v1.0-beta27"
+CONFIG_LOCALVERSION="-AGNi_haydn_AOSP-ST_v1.0-stable"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
@@ -2583,9 +2583,8 @@ CONFIG_ADSPRPC_QGKI=y
 # CONFIG_VIRTIO_EAVB is not set
 # CONFIG_VIRTIO_FASTRPC is not set
 # CONFIG_MSM_RDBG is not set
-# end of Character devices
-
 # CONFIG_RANDOM_TRUST_BOOTLOADER is not set
+# end of Character devices
 
 #
 # I2C support
@@ -2889,6 +2888,7 @@ CONFIG_QTI_BATTERY_CHARGER=y
 # CONFIG_BQ_FUEL_GAUGE is not set
 CONFIG_BQ2597X=y
 # CONFIG_MI_WIRELESS is not set
+CONFIG_BQ_FG_1S=y
 # CONFIG_CHARGER_ISP1704 is not set
 # CONFIG_CHARGER_MAX8903 is not set
 # CONFIG_CHARGER_LP8727 is not set
