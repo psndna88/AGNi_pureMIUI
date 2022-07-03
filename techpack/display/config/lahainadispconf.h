@@ -18,3 +18,4 @@
 #define CONFIG_DRM_SDE_RSC 1
 #define CONFIG_DRM_SDE_VM 1
 #define CONFIG_DRM_SDE_EXPO 1
+#define CONFIG_HBM 1
