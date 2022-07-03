@@ -4785,16 +4785,6 @@ enum qca_wlan_vendor_attr_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS = 80,
 
-	/* 8-bit unsigned value to trigger dynamic nss feature.
-	 * 1-Enable, 0-Disable
-	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_NSS_SWITCH = 81,
-
-	/* 8-bit unsigned value to set bt in active or not.
-	 * 1-active, 0-inactive
-	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_BT_ACTIVE = 82,
-
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_CONFIG_MAX =
