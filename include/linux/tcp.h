@@ -218,6 +218,7 @@ struct tcp_sock {
 	u8	compressed_ack;
 	u8	tlp_retrans:1,	/* TLP is a retransmission */
 		unused_1:7;
+	u8	fast_ack_mode:2; /* which fast ack mode ? */
 	u32	chrono_start;	/* Start time in jiffies of a TCP chrono */
 	u32	chrono_stat[3];	/* Time in jiffies for chrono_stat stats */
 	u8	chrono_type:2,	/* current chronograph type */
@@ -289,8 +290,8 @@ struct tcp_sock {
 	u32	delivered_ce;	/* Like the above but only ECE marked packets */
 	u32	lost;		/* Total data packets lost incl. rexmits */
 	u32	app_limited;	/* limited until "delivered" reaches this val */
-	u64	first_tx_mstamp;  /* start of window send phase */
-	u64	delivered_mstamp; /* time we reached "delivered" */
+	u32	first_tx_mstamp;  /* start of window send phase */
+	u32	delivered_mstamp; /* time we reached "delivered" */
 	u32	rate_delivered;    /* saved rate sample: packets delivered */
 	u32	rate_interval_us;  /* saved rate sample: time elapsed */
 
