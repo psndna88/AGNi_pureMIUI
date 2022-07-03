@@ -86,9 +86,6 @@
 #include "wlan_pkt_capture_ucfg_api.h"
 #include "wlan_hdd_thermal.h"
 #include "wlan_hdd_object_manager.h"
-#ifdef FEATURE_WLAN_DYNAMIC_NSS
-#include "wlan_hdd_dynamic_nss.h"
-#endif
 #include <linux/igmp.h>
 #include "qdf_types.h"
 /* Preprocessor definitions and constants */
@@ -416,10 +413,6 @@ static void __wlan_hdd_ipv6_changed(struct net_device *net_dev,
 		sme_dhcp_done_ind(hdd_ctx->mac_handle, adapter->vdev_id);
 		schedule_work(&adapter->ipv6_notifier_work);
 	}
-
-#ifdef FEATURE_WLAN_DYNAMIC_NSS
-	wlan_hdd_start_dynamic_nss(adapter);
-#endif
 
 exit:
 	hdd_exit();
@@ -1164,10 +1157,6 @@ static void __wlan_hdd_ipv4_changed(struct net_device *net_dev)
 		if (ifa && ifa->ifa_local)
 			schedule_work(&adapter->ipv4_notifier_work);
 	}
-
-#ifdef FEATURE_WLAN_DYNAMIC_NSS
-	wlan_hdd_start_dynamic_nss(adapter);
-#endif
 
 exit:
 	hdd_exit();
