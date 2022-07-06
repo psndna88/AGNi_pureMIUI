@@ -77,7 +77,7 @@ module_param_named(lpm_ipi_prediction, lpm_ipi_prediction, bool, 0664);
 static bool agni_present = true;
 module_param(agni_present, bool, 0444);
 
-static bool cluster_use_deepest_state = true;
+static bool cluster_use_deepest_state = false;
 module_param(cluster_use_deepest_state, bool, 0664);
 
 struct lpm_history {
@@ -497,7 +497,7 @@ static uint64_t lpm_cpuidle_predict(struct cpuidle_device *dev,
 		history->hinvalid = 0;
 		history->htmr_wkup = 1;
 		history->stime = 0;
-		return 1;
+		return 0;
 	}
 
 	/*
@@ -689,10 +689,9 @@ static int cpu_power_select(struct cpuidle_device *dev,
 			 * call prediction.
 			 */
 			if (next_wakeup_us > max_residency) {
-				predicted = (lpm_cpuidle_predict(dev, cpu,
+				predicted = lpm_cpuidle_predict(dev, cpu,
 					&idx_restrict, &idx_restrict_time,
-					&ipi_predicted
-					) == 1) ? 0 : (max_residency >> 1);
+					&ipi_predicted);
 				if (predicted && (predicted < min_residency))
 					predicted = min_residency;
 			} else
