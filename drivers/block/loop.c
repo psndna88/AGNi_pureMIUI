@@ -227,20 +227,24 @@ static void __loop_update_dio(struct loop_device *lo, bool dio)
 		blk_mq_unfreeze_queue(lo->lo_queue);
 }
 
-static void
+static int
 figure_loop_size(struct loop_device *lo, loff_t offset, loff_t sizelimit)
 {
 	loff_t size = get_size(offset, sizelimit, lo->lo_backing_file);
+	sector_t x = (sector_t)size;
 	struct block_device *bdev = lo->lo_device;
 
+	if (unlikely((loff_t)x != size))
+		return -EFBIG;
 	if (lo->lo_offset != offset)
 		lo->lo_offset = offset;
 	if (lo->lo_sizelimit != sizelimit)
 		lo->lo_sizelimit = sizelimit;
-	set_capacity(lo->lo_disk, size);
+	set_capacity(lo->lo_disk, x);
 	bd_set_size(bdev, (loff_t)get_capacity(bdev->bd_disk) << 9);
 	/* let user-space know about the new size */
 	kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
+	return 0;
 }
 
 static inline int
@@ -916,8 +920,10 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 	    !file->f_op->write_iter)
 		lo_flags |= LO_FLAGS_READ_ONLY;
 
+	error = -EFBIG;
 	size = get_loop_size(lo, file);
-
+	if ((loff_t)(sector_t)size != size)
+		goto out_putf;
 	error = loop_prepare_queue(lo);
 	if (error)
 		goto out_putf;
@@ -1148,7 +1154,10 @@ loop_set_status(struct loop_device *lo, const struct loop_info64 *info)
 				lo->lo_device->bd_inode->i_mapping->nrpages);
 			goto exit;
 		}
-		figure_loop_size(lo, info->lo_offset, info->lo_sizelimit);
+		if (figure_loop_size(lo, info->lo_offset, info->lo_sizelimit)) {
+			err = -EFBIG;
+			goto exit;
+		}
 	}
 
 	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
@@ -1347,9 +1356,7 @@ static int loop_set_capacity(struct loop_device *lo)
 	if (unlikely(lo->lo_state != Lo_bound))
 		return -ENXIO;
 
-	figure_loop_size(lo, lo->lo_offset, lo->lo_sizelimit);
-
-	return 0;
+	return figure_loop_size(lo, lo->lo_offset, lo->lo_sizelimit);
 }
 
 static int loop_set_dio(struct loop_device *lo, unsigned long arg)
