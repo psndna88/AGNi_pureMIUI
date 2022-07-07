@@ -10261,6 +10261,7 @@
       <elf-symbol name='skb_copy_datagram_from_iter' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='skb_copy_datagram_iter' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='skb_copy_expand' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='skb_copy_header' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='skb_copy_ubufs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='skb_cow_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='skb_csum_hwoffload_help' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
