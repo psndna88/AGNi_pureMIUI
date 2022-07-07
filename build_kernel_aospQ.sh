@@ -60,8 +60,8 @@ rm $COMPILEDIR_ATOLL/.config $COMPILEDIR_ATOLL/.config.old 2>/dev/null
 
 if ([ -f $COMPILEDIR_ATOLL/arch/arm64/boot/Image ] && [ -f $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img ]); then
 	mv $COMPILEDIR_ATOLL/arch/arm64/boot/Image $KERNELDIR/$DIR/Image
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb
-	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtb.img $KERNELDIR/$DIR/dtb.img
+	mv $COMPILEDIR_ATOLL/arch/arm64/boot/dtbo.img $KERNELDIR/$DIR/dtbo.img
 else
 	echo "         ERROR: Cross-compiling AGNi kernel $DEVICE."
 	rm -rf $KERNELDIR/$DIR
