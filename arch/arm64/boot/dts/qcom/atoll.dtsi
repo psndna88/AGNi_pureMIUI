@@ -465,7 +465,7 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
 			};
 			fstab {
 				compatible = "android,fstab";
@@ -645,7 +645,7 @@
 	};
 
 	chosen {
-		bootargs = "rcu_nocbs=0-7 quiet noirqdebug kpti=off";
+		bootargs = "rcu_nocbs=0-7 quiet noirqdebug kpti=off nosoftlockup mce=ignore_ce cgroup_disable=pressure";
 	};
 
 	soc: soc { };
@@ -4237,7 +4237,7 @@
 
 &L4P {
 	regulator-min-microvolt = <2800000>;
-	regulator-max-microvolt = <2800000>;
+	regulator-max-microvolt = <3400000>;
 	qcom,min-dropout-voltage = <200000>;
 };
 
