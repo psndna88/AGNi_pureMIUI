@@ -62,6 +62,11 @@ set_perm_recursive() {
 }
 ###
 
+# mkdir_ak <dir> [<dir2> ...]
+mkdir_ak() {
+  mkdir -p "$@";
+}
+
 ### dump_boot functions:
 # split_boot (dump and split image only)
 split_boot() {
@@ -160,7 +165,7 @@ unpack_ramdisk() {
   if [ "$comp" ]; then
     mv -f ramdisk.cpio ramdisk.cpio.$comp;
     $bin/magiskboot decompress ramdisk.cpio.$comp ramdisk.cpio;
-    if [ $? != 0 ]; then
+    if [ $? != 0 ] && $comp --help 2>/dev/null; then
       echo "Attempting ramdisk unpack with busybox $comp..." >&2;
       $comp -dc ramdisk.cpio.$comp > ramdisk.cpio;
     fi;
@@ -216,7 +221,7 @@ repack_ramdisk() {
   [ $((magisk_patched & 3)) -eq 1 ] && $bin/magiskboot cpio ramdisk-new.cpio "extract .backup/.magisk $split_img/.magisk";
   if [ "$comp" ]; then
     $bin/magiskboot compress=$comp ramdisk-new.cpio;
-    if [ $? != 0 ]; then
+    if [ $? != 0 ] && $comp --help 2>/dev/null; then
       echo "Attempting ramdisk repack with busybox $comp..." >&2;
       $comp -9c ramdisk-new.cpio > ramdisk-new.cpio.$comp;
       [ $? != 0 ] && packfail=1;
@@ -320,9 +325,9 @@ flash_boot() {
         fi;
         if [ $((magisk_patched & 3)) -eq 1 ]; then
           ui_print " " "Magisk detected! Patching kernel so reflashing Magisk is not necessary...";
-          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -v 'raw' | sed -n 's;.*\[\(.*\)\];\1;p');
+          comp=$($bin/magiskboot decompress kernel 2>&1 | grep -vE 'raw|zimage' | sed -n 's;.*\[\(.*\)\];\1;p');
           ($bin/magiskboot split $kernel || $bin/magiskboot decompress $kernel kernel) 2>/dev/null;
-          if [ $? != 0 -a "$comp" ]; then
+          if [ $? != 0 -a "$comp" ] && $comp --help 2>/dev/null; then
             echo "Attempting kernel unpack with busybox $comp..." >&2;
             $comp -dc $kernel > kernel;
           fi;
@@ -332,7 +337,7 @@ flash_boot() {
           fi;
           if [ "$comp" ]; then
             $bin/magiskboot compress=$comp kernel kernel.$comp;
-            if [ $? != 0 ]; then
+            if [ $? != 0 ] && $comp --help 2>/dev/null; then
               echo "Attempting kernel repack with busybox $comp..." >&2;
               $comp -9c kernel > kernel.$comp;
             fi;
@@ -416,7 +421,7 @@ flash_boot() {
 
 # flash_generic <name>
 flash_generic() {
-  local file img imgblock isro path;
+  local avb avbblock file flags img imgblock isro path;
 
   cd $home;
   for file in $1 $1.img; do
@@ -438,8 +443,35 @@ flash_generic() {
     if [ ! "$imgblock" ]; then
       abort "$1 partition could not be found. Aborting...";
     fi;
-    # TODO: add dynamic partition resizing using lptools_static instead of aborting
-    if [ "$(wc -c < $img)" -gt "$(wc -c < $imgblock)" ]; then
+    if [ "$path" == "/dev/block/mapper" ]; then
+      avb=$($bin/httools_static avb $1);
+      [ $? == 0 ] || abort "Failed to parse fstab entry for $1. Aborting...";
+      if [ "$avb" ]; then
+        flags=$($bin/httools_static disable-flags);
+        [ $? == 0 ] || abort "Failed to parse top-level vbmeta. Aborting...";
+        if [ "$flags" == "enabled" ]; then
+          [ "$1" == "vendor_dlkm" -a "$avb" == "vbmeta" ] || abort "Unable to patch $1 on $avb. Aborting ...";
+          ui_print " " "dm-verity detected! Patching vbmeta...";
+          for path in /dev/block/bootdevice/by-name /dev/block/mapper; do
+            for file in $avb $avb$slot; do
+              if [ -e $path/$file ]; then
+                avbblock=$path/$file;
+                break 2;
+              fi;
+            done;
+          done;
+          cd $bin;
+          $bin/httools_static patch $home/$img $avbblock || abort "Failed to patch $1 on $avb. Aborting...";
+          cd $home;
+        fi
+      fi
+      $bin/lptools_static remove $1_ak3;
+      $bin/lptools_static create $1_ak3 $(wc -c < $img) || abort "Creating $1_ak3 failed. Aborting...";
+      $bin/lptools_static unmap $1_ak3 || abort "Unmapping $1_ak3 failed. Aborting...";
+      $bin/lptools_static map $1_ak3 || abort "Mapping $1_ak3 failed. Aborting...";
+      $bin/lptools_static replace $1_ak3 $1$slot || abort "Replacing $1$slot failed. Aborting...";
+      imgblock=/dev/block/mapper/$1_ak3;
+    elif [ "$(wc -c < $img)" -gt "$(wc -c < $imgblock)" ]; then
       abort "New $1 image larger than $1 partition. Aborting...";
     fi;
     isro=$(blockdev --getro $imgblock 2>/dev/null);
@@ -447,7 +479,6 @@ flash_generic() {
     if [ ! "$no_block_display" ]; then
       ui_print " " "$imgblock";
     fi;
-    blockdev --setrw $imgblock 2>/dev/null;
     if [ -f "$bin/flash_erase" -a -f "$bin/nandwrite" ]; then
       $bin/flash_erase $imgblock 0 0;
       $bin/nandwrite -p $imgblock $img;
@@ -473,10 +504,10 @@ flash_dtbo() { flash_generic dtbo; }
 
 ### write_boot (repack ramdisk then build, sign and write image, vendor_dlkm and dtbo)
 write_boot() {
-  flash_generic vendor_dlkm; # TODO: move below boot once resizing is supported
   repack_ramdisk;
   flash_boot;
   flash_generic vendor_boot; # temporary until hdr v4 can be unpacked/repacked fully by magiskboot
+  flash_generic vendor_dlkm;
   flash_generic dtbo;
 }
 ###
@@ -618,7 +649,7 @@ replace_file() {
 # patch_fstab <fstab file> <mount match name> <fs match type> block|mount|fstype|options|flags <original string> <replacement string>
 patch_fstab() {
   local entry part newpart newentry;
-  entry=$(grep "$2" $1 | grep "$3");
+  entry=$(grep "$2[[:space:]]" $1 | grep "$3");
   if [ ! "$(echo "$entry" | grep "$6")" -o "$6" == " " -o ! "$6" ]; then
     case $4 in
       block) part=$(echo "$entry" | awk '{ print $1 }');;
@@ -743,8 +774,12 @@ setup_ak() {
     ;;
   esac;
 
-  # automate simple multi-partition setup for boot_img_hdr_v3 + vendor_boot
+  # clean up any template placeholder files
   cd $home;
+  rm -f modules/system/lib/modules/placeholder patch/placeholder ramdisk/placeholder;
+  rmdir -p modules patch ramdisk 2>/dev/null;
+
+  # automate simple multi-partition setup for boot_img_hdr_v3 + vendor_boot
   if [ -e "/dev/block/bootdevice/by-name/vendor_boot$slot" -a ! -f vendor_setup ] && [ -f dtb -o -d vendor_ramdisk -o -d vendor_patch ]; then
     echo "Setting up for simple automatic vendor_boot flashing..." >&2;
     (mkdir boot-files;
@@ -774,7 +809,7 @@ setup_ak() {
   case $block in
     boot|recovery|vendor_boot)
       case $block in
-        boot) parttype="ramdisk boot BOOT LNX android_boot bootimg KERN-A kernel KERNEL";;
+        boot) parttype="ramdisk init_boot boot BOOT LNX android_boot bootimg KERN-A kernel KERNEL";;
         recovery) parttype="ramdisk_recovery recovery RECOVERY SOS android_recovery";;
         vendor_boot) parttype="vendor_boot";;
       esac;
