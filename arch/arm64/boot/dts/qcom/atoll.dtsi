@@ -467,7 +467,7 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
 			};
 			fstab {
 				compatible = "android,fstab";
@@ -647,7 +647,7 @@
 	};
 
 	chosen {
-		bootargs = "rcu_nocbs=0-7 quiet noirqdebug kpti=off";
+		bootargs = "rcu_nocbs=0-7 quiet noirqdebug kpti=off nosoftlockup mce=ignore_ce cgroup_disable=pressure";
 	};
 
 	soc: soc { };
