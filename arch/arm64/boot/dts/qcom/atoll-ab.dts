@@ -22,6 +22,6 @@
 	qcom,board-id = <0 0>;
 };
 &ufshc_mem {
-	spm-level = <3>;
-	rpm-level = <3>;
+	spm-level = <5>;
+	rpm-level = <5>;
 };
