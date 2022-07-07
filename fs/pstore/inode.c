@@ -291,7 +291,7 @@ static const struct super_operations pstore_ops = {
 	.show_options	= pstore_show_options,
 };
 
-struct super_block *pstore_sb;
+static struct super_block *pstore_sb;
 
 bool pstore_is_mounted(void)
 {

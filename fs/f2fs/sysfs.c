@@ -103,13 +103,6 @@ static ssize_t ovp_segments_show(struct f2fs_attr *a,
 			(unsigned long long)(overprovision_segments(sbi)));
 }
 
-static ssize_t reserved_segments_show(struct f2fs_attr *a,
-		struct f2fs_sb_info *sbi, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%llu\n",
-		(unsigned long long)(reserved_segments(sbi)));
-}
-
 static ssize_t lifetime_write_kbytes_show(struct f2fs_attr *a,
 		struct f2fs_sb_info *sbi, char *buf)
 {
@@ -473,12 +466,6 @@ out:
 		}
 		return count;
 	}
-
-	if (!strcmp(a->attr.name, "gc_urgent_sleep_time")) {
-		*ui = t ? (unsigned int)t : DEF_GC_THREAD_URGENT_SLEEP_TIME;
-		return count;
-	}
-
 	if (!strcmp(a->attr.name, "gc_idle")) {
 		if (t == GC_IDLE_CB) {
 			sbi->gc_mode = GC_IDLE_CB;
@@ -491,11 +478,6 @@ out:
 		} else {
 			sbi->gc_mode = GC_NORMAL;
 		}
-		return count;
-	}
-
-	if (!strcmp(a->attr.name, "gc_booster")) {
-		sbi->gc_booster = !!t;
 		return count;
 	}
 
@@ -692,7 +674,6 @@ F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_max_sleep_time, max_sleep_time);
 F2FS_RW_ATTR(GC_THREAD, f2fs_gc_kthread, gc_no_gc_sleep_time, no_gc_sleep_time);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_idle, gc_mode);
 F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_urgent, gc_mode);
-F2FS_RW_ATTR(F2FS_SBI, f2fs_sb_info, gc_booster, gc_booster);
 F2FS_RW_ATTR(SM_INFO, f2fs_sm_info, reclaim_segments, rec_prefree_segments);
 F2FS_RW_ATTR(DCC_INFO, discard_cmd_control, max_small_discards, max_discards);
 F2FS_RW_ATTR(DCC_INFO, discard_cmd_control, discard_granularity, discard_granularity);
@@ -735,7 +716,6 @@ F2FS_RW_ATTR(CPRC_INFO, ckpt_req_control, ckpt_thread_ioprio, ckpt_thread_ioprio
 F2FS_GENERAL_RO_ATTR(dirty_segments);
 F2FS_GENERAL_RO_ATTR(free_segments);
 F2FS_GENERAL_RO_ATTR(ovp_segments);
-F2FS_GENERAL_RO_ATTR(reserved_segments);
 F2FS_GENERAL_RO_ATTR(lifetime_write_kbytes);
 F2FS_GENERAL_RO_ATTR(features);
 F2FS_GENERAL_RO_ATTR(current_reserved_blocks);
@@ -804,7 +784,6 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(gc_no_gc_sleep_time),
 	ATTR_LIST(gc_idle),
 	ATTR_LIST(gc_urgent),
-	ATTR_LIST(gc_booster),
 	ATTR_LIST(reclaim_segments),
 	ATTR_LIST(main_blkaddr),
 	ATTR_LIST(max_small_discards),
@@ -845,7 +824,6 @@ static struct attribute *f2fs_attrs[] = {
 	ATTR_LIST(dirty_segments),
 	ATTR_LIST(free_segments),
 	ATTR_LIST(ovp_segments),
-	ATTR_LIST(reserved_segments),
 	ATTR_LIST(unusable),
 	ATTR_LIST(lifetime_write_kbytes),
 	ATTR_LIST(features),
