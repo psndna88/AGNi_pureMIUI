@@ -346,6 +346,7 @@ do_levelcheck() {
 }
 dump_moduleinfo() {
 $BB cat <<EOF > $1;
+id=ak3-helper
 name=AK3 Helper Module
 version=$($BB awk '{ print $3 }' $AKHOME/vertmp) $($BB grep -oE '#.[0-9]' $AKHOME/vertmp)
 versionCode=1
@@ -570,13 +571,13 @@ $BB mount /data;
 # AGNi Support magisk module installation
 ui_print ">> Installing AGNi Support Module..";
 ASUP=/data/adb/modules/AGNiSupport;
-#$BB mv -f $ASUP/disable /data/adb/modules;
+$BB mv -f $ASUP/disable /data/adb/modules;
 $BB rm -rf $ASUP;
 mkdir -p $ASUP;
 $BB cp -rf $AKHOME/common/AGNiSupport/* $ASUP;
 $BB chmod 0644 $ASUP/*.prop;
 $BB chmod 0777 $ASUP/*.sh;
-#$BB mv -f /data/adb/modules/disable $ASUP;
+$BB mv -f /data/adb/modules/disable $ASUP;
 # AGNi Sound magisk module installation
 ui_print ">> Installing AGNi Sound Module..";
 ASND=/data/adb/modules/AGNiSound;
@@ -625,6 +626,7 @@ $BB rm -rf /data/adb/modules/AGNiEAS;
 # end magisk module installation
 $BB sync;
 #umount_all;
+ui_print " ";
 setup_env;
 
 do_devicecheck;
