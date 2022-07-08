@@ -76,7 +76,11 @@ extern struct dentry_stat_t dentry_stat;
  * large memory footprint increase).
  */
 #ifdef CONFIG_64BIT
+#ifdef CONFIG_ARM64
+# define DNAME_INLINE_LEN 32 + 192 /* 384 bytes */
+#else
 # define DNAME_INLINE_LEN 96 /* 256 bytes */
+#endif
 #else
 # ifdef CONFIG_SMP
 #  define DNAME_INLINE_LEN 36 /* 128 bytes */
