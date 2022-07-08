@@ -469,7 +469,7 @@ static struct snd_soc_dai_link msm_gvm8295_dai_links[] = {
 	{
 	.name = "HS_IF0_TDM_RX_0_DUMMY",
 	.stream_name = "TDM-LPAIF_SDR-RX-PRIMARY",
-	.dpcm_capture = 1,
+	.dpcm_playback = 1,
 	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
@@ -489,7 +489,7 @@ static struct snd_soc_dai_link msm_gvm8295_dai_links[] = {
 	{
 	.name = "HS_IF1_TDM_RX_0_DUMMY",
 	.stream_name = "TDM-LPAIF_SDR-RX-SECONDARY",
-	.dpcm_capture = 1,
+	.dpcm_playback = 1,
 	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
@@ -509,7 +509,7 @@ static struct snd_soc_dai_link msm_gvm8295_dai_links[] = {
 	{
 	.name = "HS_IF2_TDM_RX_0_DUMMY",
 	.stream_name = "TDM-LPAIF_SDR-RX-TERTIARY",
-	.dpcm_capture = 1,
+	.dpcm_playback = 1,
 	.trigger = {SND_SOC_DPCM_TRIGGER_POST,
 				SND_SOC_DPCM_TRIGGER_POST},
 	.ignore_suspend = 1,
