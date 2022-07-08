@@ -227,7 +227,7 @@ int snd_pcm_add_soft_volume_ctls(struct snd_pcm *pcm, int stream,
 	}
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		snprintf((char *)knew.name, size, "%s %d %s",
-			"Playback ", pcm->device, "Soft Vol Params");
+			"Playback", pcm->device, "Soft Vol Params");
 	else
 		snprintf((char *)knew.name, size, "%s %d %s",
 			"Capture", pcm->device, "Soft Vol Params");

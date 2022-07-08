@@ -276,19 +276,19 @@ static int msm_pcm_soft_volume_ctl_put(struct snd_kcontrol *kcontrol,
 
 		if ( prtd) {
 			if ((ucontrol->value.integer.value[0] < 0) || (ucontrol->value.integer.value[0] > 15000)) {
-				pr_err("%s : Ramp period range (0 to 15000), input value is out of range: %d",__func__,soft_params.period);
+				pr_err("%s : Ramp period range (0 to 15000), input value is out of range: %d",__func__,ucontrol->value.integer.value[0]);
 				goto exit;
 			} else {
 				soft_params.period = ucontrol->value.integer.value[0];
 			}
 			if ((ucontrol->value.integer.value[1] < 0) || (ucontrol->value.integer.value[1] > 15000000)) {
-				pr_err("%s : Ramp step range (0 to 15000000), input value is out of range: %d",__func__,soft_params.step);
+				pr_err("%s : Ramp step range (0 to 15000000), input value is out of range: %d",__func__,ucontrol->value.integer.value[1]);
 				goto exit;
 			} else {
 				soft_params.step = ucontrol->value.integer.value[1];
 			}
 			if ((ucontrol->value.integer.value[2] < 0) || (ucontrol->value.integer.value[2] >= SOFT_VOLUME_CURVE_ENUM_MAX)) {
-				pr_err("%s : Ramping curve range (0 to 2), input value is out of range: %d",__func__,soft_params.rampingcurve);
+				pr_err("%s : Ramping curve range (0 to 2), input value is out of range: %d",__func__,ucontrol->value.integer.value[2]);
 				goto exit;
 			} else {
 				soft_params.rampingcurve = ucontrol->value.integer.value[2];
