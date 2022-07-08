@@ -159,7 +159,7 @@ static int target_leasetype(struct file_lock *fl)
 }
 
 int leases_enable = 1;
-int lease_break_time = 10;
+int lease_break_time = 45;
 
 /*
  * The global file_lock_list is only used for displaying /proc/locks, so we
