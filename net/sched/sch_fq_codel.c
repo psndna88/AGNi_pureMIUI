@@ -469,7 +469,7 @@ static int fq_codel_init(struct Qdisc *sch, struct nlattr *opt,
 	int i;
 	int err;
 
-	sch->limit = 10*1024;
+	sch->limit = 2560; /* 2.5*1024 */
 	q->flows_cnt = 1024;
 	q->memory_limit = 32 << 20; /* 32 MBytes */
 	q->drop_batch_size = 64;
