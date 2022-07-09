@@ -1505,21 +1505,21 @@ static int fb_notifier_callback(struct notifier_block *self,
 								  fb_notif);
 
 	if (!evdata) {
-		FTS_ERROR("evdata is null");
+//		FTS_ERROR("evdata is null");
 		return 0;
 	}
 
 	if (!(event == FB_EARLY_EVENT_BLANK || event == FB_EVENT_BLANK)) {
-		FTS_INFO("event(%lu) do not need process\n", event);
+//		FTS_INFO("event(%lu) do not need process\n", event);
 		return 0;
 	}
 
 	blank = evdata->data;
-	FTS_INFO("FB event:%lu,blank:%d", event, *blank);
+//	FTS_INFO("FB event:%lu,blank:%d", event, *blank);
 	switch (*blank) {
 	case FB_BLANK_UNBLANK:
 		if (FB_EARLY_EVENT_BLANK == event) {
-			FTS_INFO("resume: event = %lu, not care\n", event);
+//			FTS_INFO("resume: event = %lu, not care\n", event);
 		} else if (FB_EVENT_BLANK == event) {
 			queue_work(fts_data->ts_workqueue, &fts_data->resume_work);
 		}
@@ -1529,11 +1529,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 			cancel_work_sync(&fts_data->resume_work);
 			fts_ts_suspend(ts_data->dev);
 		} else if (FB_EVENT_BLANK == event) {
-			FTS_INFO("suspend: event = %lu, not care\n", event);
+//			FTS_INFO("suspend: event = %lu, not care\n", event);
 		}
 		break;
 	default:
-		FTS_INFO("FB BLANK(%d) do not need process\n", *blank);
+//		FTS_INFO("FB BLANK(%d) do not need process\n", *blank);
 		break;
 	}
 
@@ -1549,28 +1549,28 @@ static int drm_notifier_callback(struct notifier_block *self,
 	int blank;
 
 	if (!ts_data || !evdata || !evdata->data) {
-		FTS_ERROR("evdata is null");
+//		FTS_ERROR("evdata is null");
 		goto exit;
 	}
 
 	if (evdata->disp_id != MI_DISPLAY_PRIMARY) {
-		FTS_INFO("not primary display\n");
+//		FTS_INFO("not primary display\n");
 		return NOTIFY_OK;
 	}
 
 	blank = *(int *)(evdata->data);
-	FTS_INFO("DRM event:%lu, blank:%d", event, blank);
+//	FTS_INFO("DRM event:%lu, blank:%d", event, blank);
 
 	if (event == MI_DISP_DPMS_EVENT && blank == MI_DISP_DPMS_ON) {
-		FTS_INFO("FB_BLANK_UNBLANK!\n");
+//		FTS_INFO("FB_BLANK_UNBLANK!\n");
 		queue_work(fts_data->ts_workqueue, &fts_data->resume_work);
 
 	} else if (event == MI_DISP_DPMS_EARLY_EVENT &&
 			(blank == MI_DISP_DPMS_POWERDOWN ||
 			 blank == MI_DISP_DPMS_LP1 ||
 			 blank == MI_DISP_DPMS_LP2)) {
-		FTS_INFO("FB_BLANK %s\n",
-				blank == MI_DISP_DPMS_POWERDOWN ? "POWER DOWN" : "LP");
+//		FTS_INFO("FB_BLANK %s\n",
+//				blank == MI_DISP_DPMS_POWERDOWN ? "POWER DOWN" : "LP");
 
 		cancel_work_sync(&fts_data->resume_work);
 		fts_ts_suspend(ts_data->dev);
