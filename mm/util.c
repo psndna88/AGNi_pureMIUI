@@ -534,7 +534,7 @@ int __page_mapcount(struct page *page)
 EXPORT_SYMBOL_GPL(__page_mapcount);
 
 int sysctl_overcommit_memory __read_mostly = OVERCOMMIT_ALWAYS;
-int sysctl_overcommit_ratio __read_mostly = 100;
+int sysctl_overcommit_ratio __read_mostly = 50;
 unsigned long sysctl_overcommit_kbytes __read_mostly;
 int sysctl_max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
 unsigned long sysctl_user_reserve_kbytes __read_mostly = 1UL << 17; /* 128MB */
