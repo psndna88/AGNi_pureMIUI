@@ -2626,7 +2626,7 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc,
 		}
 		break;
 	default:
-		dev_dbg(mdwc->dev, "unknown dwc3 event\n");
+//		dev_dbg(mdwc->dev, "unknown dwc3 event\n");
 		break;
 	}
 }
@@ -5967,8 +5967,8 @@ static int dwc3_msm_pm_suspend(struct device *dev)
 	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
-	dev_dbg(dev, "dwc3-msm PM suspend\n");
-	dbg_event(0xFF, "PM Sus", 0);
+//	dev_dbg(dev, "dwc3-msm PM suspend\n");
+//	dbg_event(0xFF, "PM Sus", 0);
 
 	/*
 	 * Check if pm_suspend can proceed irrespective of runtimePM state of
@@ -5998,8 +5998,8 @@ static int dwc3_msm_pm_resume(struct device *dev)
 	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
-	dev_dbg(dev, "dwc3-msm PM resume\n");
-	dbg_event(0xFF, "PM Res", 0);
+//	dev_dbg(dev, "dwc3-msm PM resume\n");
+//	dbg_event(0xFF, "PM Res", 0);
 
 	atomic_set(&mdwc->pm_suspended, 0);
 
