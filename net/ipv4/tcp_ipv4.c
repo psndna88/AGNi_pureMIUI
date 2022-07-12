@@ -2499,7 +2499,11 @@ static int __net_init tcp_sk_init(struct net *net)
 		*per_cpu_ptr(net->ipv4.tcp_sk, cpu) = sk;
 	}
 
-	net->ipv4.sysctl_tcp_ecn = 1;
+	/* 0 Disable ECN. Neither initiate nor accept ECN.
+	 * 1 Enable ECN when requested by incoming connections and also request ECN on outgoing connection attempts.
+	 * 2 Enable ECN when requested by incoming connections but do not request ECN on outgoing connections.
+	 * Default: 2 */
+	net->ipv4.sysctl_tcp_ecn = 2;
 	net->ipv4.sysctl_tcp_ecn_fallback = 1;
 
 	net->ipv4.sysctl_tcp_base_mss = TCP_BASE_MSS;
@@ -2530,6 +2534,7 @@ static int __net_init tcp_sk_init(struct net *net)
 	net->ipv4.sysctl_tcp_sack = 1;
 	net->ipv4.sysctl_tcp_window_scaling = 1;
 	net->ipv4.sysctl_tcp_timestamps = 1;
+	net->ipv4.sysctl_tcp_mtu_probing = 1;
 
 	return 0;
 fail:
