@@ -268,7 +268,7 @@ pkt_capture_process_tx_data(void *soc, void *log_data, u_int16_t vdev_id,
 {
 	struct dp_soc *psoc = soc;
 	uint8_t tid = 0;
-	uint8_t bssid[QDF_MAC_ADDR_SIZE];
+	uint8_t bssid[QDF_MAC_ADDR_SIZE] = {0};
 	struct pkt_capture_tx_hdr_elem_t *ptr_pktcapture_hdr;
 	struct pkt_capture_tx_hdr_elem_t pktcapture_hdr = {0};
 	struct hal_tx_completion_status tx_comp_status = {0};
@@ -482,7 +482,7 @@ pkt_capture_is_frame_filter_set(qdf_nbuf_t buf,
 void pkt_capture_callback(void *soc, enum WDI_EVENT event, void *log_data,
 			  u_int16_t peer_id, uint32_t status)
 {
-	uint8_t bssid[QDF_MAC_ADDR_SIZE];
+	uint8_t bssid[QDF_MAC_ADDR_SIZE] = {0};
 	struct wlan_objmgr_vdev *vdev;
 	struct pkt_capture_vdev_priv *vdev_priv;
 	struct pkt_capture_frame_filter *frame_filter;
