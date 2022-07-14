@@ -15706,6 +15706,17 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 					       bss_freq,
 					       mac->mlme_cfg->ht_caps.
 					       ht_cap_info.adv_coding_cap);
+
+		if (pProfile->csrPersona == QDF_STA_MODE) {
+			if (pSession->ht_config.ht_sgi20)
+				pSession->ht_config.ht_sgi20 =
+					pIes->HTCaps.shortGI20MHz;
+
+			if (pSession->ht_config.ht_sgi40)
+				pSession->ht_config.ht_sgi40 =
+					pIes->HTCaps.shortGI40MHz;
+		}
+
 		csr_join_req->ht_config = pSession->ht_config;
 		csr_join_req->vht_config = pSession->vht_config;
 		sme_debug("ht capability 0x%x VHT capability 0x%x",
