@@ -2542,6 +2542,15 @@ struct dp_pdev {
 
 struct dp_peer;
 
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+#define WLAN_ROAM_PEER_AUTH_STATUS_NONE 0x0
+/**
+ * This macro is equivalent to macro ROAM_AUTH_STATUS_AUTHENTICATED used
+ * in connection mgr
+ */
+#define WLAN_ROAM_PEER_AUTH_STATUS_AUTHENTICATED 0x2
+#endif
+
 /* VDEV structure for data path state */
 struct dp_vdev {
 	/* OS device abstraction */
@@ -2787,7 +2796,6 @@ struct dp_vdev {
 	qdf_atomic_t ref_cnt;
 	qdf_atomic_t mod_refs[DP_MOD_ID_MAX];
 	uint8_t num_latency_critical_conn;
-
 #ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 	/* Indicate if uplink delay report is enabled or not */
 	qdf_atomic_t ul_delay_report;
@@ -2798,6 +2806,11 @@ struct dp_vdev {
 	/* accumulative number of packets delay has accumulated */
 	qdf_atomic_t ul_pkts_accum;
 #endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
+
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+	uint32_t roaming_peer_status;
+	union dp_align_mac_addr roaming_peer_mac;
+#endif
 };
 
 enum {
