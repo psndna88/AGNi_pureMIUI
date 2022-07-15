@@ -754,9 +754,15 @@ void ipa_fw_rejuvenate_send_msg(struct wlan_objmgr_pdev *pdev)
 
 void ipa_component_config_update(struct wlan_objmgr_psoc *psoc)
 {
-	struct device *dev = wlan_psoc_get_qdf_dev(psoc)->dev;
+	struct device *dev;
 	QDF_STATUS status;
 
+	if (!wlan_psoc_get_qdf_dev(psoc)) {
+		ipa_err("wlan_psoc_get_qdf_dev returned NULL");
+		return;
+	}
+
+	dev = wlan_psoc_get_qdf_dev(psoc)->dev;
 	status = ipa_config_mem_alloc();
 	if (QDF_IS_STATUS_ERROR(status)) {
 		ipa_err("Failed to alloc g_ipa_config");
