@@ -1,0 +1,17 @@
+#include "katmai.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KATMAIP SoC";
+	compatible = "qcom,yupikp-iot";
+	qcom,msm-id = <575 0x10000>;
+};
+
+&soc {
+	qcom,rmnet-ipa {
+		status = "disabled";
+	};
+};
+
+&ipa_hw {
+	status = "disabled";
+};
