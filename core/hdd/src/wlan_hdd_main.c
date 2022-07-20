@@ -16213,8 +16213,10 @@ exit:
 		uint64_t interval_us =
 			hdd_ctx->config->bus_bw_compute_interval * 1000;
 		qdf_atomic_set(&hdd_ctx->num_latency_critical_clients, 0);
-		hdd_ctx->cur_vote_level = PLD_BUS_WIDTH_NONE;
 		hdd_pld_request_bus_bandwidth(hdd_ctx, 0, 0, interval_us);
+		hdd_ctx->cur_vote_level = PLD_BUS_WIDTH_NONE;
+		pld_request_bus_bandwidth(hdd_ctx->parent_dev,
+					  PLD_BUS_WIDTH_NONE);
 	}
 }
 
