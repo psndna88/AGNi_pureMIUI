@@ -2858,7 +2858,7 @@ static int msm_dai_q6_cdc_hw_params(struct snd_pcm_hw_params *params,
 	return 0;
 }
 
-static u16 num_of_bits_set(u16 sd_line_mask)
+u16 num_of_bits_set(u16 sd_line_mask)
 {
 	u8 num_bits_set = 0;
 
@@ -2868,6 +2868,7 @@ static u16 num_of_bits_set(u16 sd_line_mask)
 	}
 	return num_bits_set;
 }
+EXPORT_SYMBOL(num_of_bits_set);
 
 static int msm_dai_q6_i2s_hw_params(struct snd_pcm_hw_params *params,
 				    struct snd_soc_dai *dai, int stream)
@@ -11663,6 +11664,7 @@ static int msm_dai_q6_tdm_prepare(struct snd_pcm_substream *substream,
 	u16 group_id = dai_data->group_cfg.tdm_cfg.group_id;
 	int group_idx = 0;
 	atomic_t *group_ref = NULL;
+	int intf_idx =  PORT_ID_TO_INTF_IDX(dai->id);
 
 	dev_dbg(dai->dev, "%s: dev_name: %s dev_id: 0x%x group_id: 0x%x\n",
 		 __func__, dev_name(dai->dev), dai->dev->id, group_id);
@@ -11683,7 +11685,6 @@ static int msm_dai_q6_tdm_prepare(struct snd_pcm_substream *substream,
 	group_ref = &tdm_group_ref[group_idx];
 
 	if (!test_bit(STATUS_PORT_STARTED, dai_data->status_mask)) {
-
 		if (msm_dai_q6_get_tdm_clk_ref(group_idx) == 0) {
 			/* TX and RX share the same clk. So enable the clk
 			 * per TDM interface. */
@@ -11695,7 +11696,18 @@ static int msm_dai_q6_tdm_prepare(struct snd_pcm_substream *substream,
 				goto rtn;
 			}
 		}
-
+		/* Paired Rx Port Start */
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			rc = afe_paired_rx_tdm_port_ops(intf_idx, true, tdm_group_ref);
+			if (rc < 0) {
+				pr_debug("%s:Paired Rx Port failed to start\n",__func__);
+				if (msm_dai_q6_get_tdm_clk_ref(group_idx) == 0) {
+					msm_dai_q6_tdm_set_clk(dai_data,
+						dai->id, false);
+				}
+				goto rtn;
+			}
+		}
 		/* PORT START should be set if prepare called
 		 * in active state.
 		 */
@@ -11720,6 +11732,9 @@ static int msm_dai_q6_tdm_prepare(struct snd_pcm_substream *substream,
 		rc = afe_tdm_port_start(dai->id, &dai_data->port_cfg,
 			dai_data->rate, dai_data->num_group_ports);
 		if (rc < 0) {
+			rc = afe_paired_rx_tdm_port_ops(intf_idx, false, tdm_group_ref);
+			if (rc < 0)
+				pr_err("%s:Unable to close Paired Rx due to tx usecase start failure", __func__);
 			if (atomic_read(group_ref) == 0) {
 				afe_port_group_enable(group_id,
 					NULL, false, NULL);
@@ -11734,6 +11749,7 @@ static int msm_dai_q6_tdm_prepare(struct snd_pcm_substream *substream,
 			set_bit(STATUS_PORT_STARTED,
 				dai_data->status_mask);
 			atomic_inc(group_ref);
+			pr_debug("%s: Group ref count: group_ref : %d", __func__, group_ref->counter);
 		}
 
 		/* TODO: need to monitor PCM/MI2S/TDM HW status */
@@ -11755,6 +11771,7 @@ static void msm_dai_q6_tdm_shutdown(struct snd_pcm_substream *substream,
 	u16 group_id = dai_data->group_cfg.tdm_cfg.group_id;
 	int group_idx = 0;
 	atomic_t *group_ref = NULL;
+	int intf_idx =  PORT_ID_TO_INTF_IDX(dai->id);
 
 	group_idx = msm_dai_q6_get_group_idx(dai->id);
 	if (group_idx < 0) {
@@ -11774,6 +11791,7 @@ static void msm_dai_q6_tdm_shutdown(struct snd_pcm_substream *substream,
 				__func__, dai->id);
 		}
 		atomic_dec(group_ref);
+		pr_debug("%s: group_ref : %d \n",__func__, group_ref->counter);
 		clear_bit(STATUS_PORT_STARTED,
 			dai_data->status_mask);
 
@@ -11785,7 +11803,17 @@ static void msm_dai_q6_tdm_shutdown(struct snd_pcm_substream *substream,
 					__func__, group_id);
 			}
 		}
-
+		/* Paired Rx Stop */
+		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			rc = afe_paired_rx_tdm_port_ops(intf_idx, false, tdm_group_ref);
+			if (rc < 0){
+				if (msm_dai_q6_get_tdm_clk_ref(group_idx) == 0) {
+					msm_dai_q6_tdm_set_clk(dai_data,
+						dai->id, false);
+				}
+				pr_err("%s:AFE Paired Rx Port Not disabled");
+			}
+		}
 		if (msm_dai_q6_get_tdm_clk_ref(group_idx) == 0) {
 			rc = msm_dai_q6_tdm_set_clk(dai_data,
 				dai->id, false);
