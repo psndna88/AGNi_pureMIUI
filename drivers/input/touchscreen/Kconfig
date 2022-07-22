@@ -1319,4 +1319,6 @@ config TOUCHSCREEN_COMMON_DT2W
 
 	  If unsure, say N.
 
+source "drivers/input/touchscreen/focaltech_touch/Kconfig"
+
 endif
