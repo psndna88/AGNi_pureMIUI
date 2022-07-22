@@ -31,6 +31,16 @@
 #define SP_V4_NUM_MAX_SPKRS SP_V2_NUM_MAX_SPKRS
 #define MAX_LSM_SESSIONS 8
 
+/* Paired Rx Structure Info */
+static struct afe_tdm_intf_paired_rx_cfg afe_tdm_paired_rx_cfg[AFE_TDM_INTERFACE_MAX] = {
+	{0}, /*Primary*/
+	{0}, /*secondary*/
+	{0}, /*Tertiary*/
+	{0}, /*Quaternary*/
+	{0}, /*QUINARY*/
+};
+static atomic_t afe_tdm_port_ref[AFE_MAX_PORTS] = {0};
+
 struct afe_avcs_payload_port_mapping {
 	u16 port_id;
 	struct avcs_load_unload_modules_payload *payload;
@@ -4560,6 +4570,7 @@ int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 	uint16_t port_index = 0;
 	enum afe_mad_type mad_type = MAD_HW_NONE;
 	int ret = 0;
+	atomic_t *port_ref = NULL;
 
 	if (!tdm_port) {
 		pr_err("%s: Error, no configuration data\n", __func__);
@@ -4575,6 +4586,7 @@ int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 				__func__, index);
 		return -EINVAL;
 	}
+	port_ref = &afe_tdm_port_ref[index];
 	ret = q6audio_validate_port(port_id);
 	if (ret < 0) {
 		pr_err("%s: port id: 0x%x ret %d\n", __func__, port_id, ret);
@@ -4673,6 +4685,8 @@ int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
 	}
 
 	ret = afe_send_cmd_port_start(port_id);
+	if(!ret)
+		atomic_inc(port_ref);
 
 fail_cmd:
 	return ret;
@@ -9322,6 +9336,7 @@ int afe_close(int port_id)
 	u16 i;
 	int index = 0;
 	uint16_t port_index;
+	atomic_t *port_ref = NULL;
 
 	memset(&stop, 0, sizeof(stop));
 
@@ -9382,6 +9397,7 @@ int afe_close(int port_id)
 				__func__, index);
 		return -EINVAL;
 	}
+	port_ref = &afe_tdm_port_ref[index];
 	ret = q6audio_validate_port(port_id);
 	if (ret < 0) {
 		pr_warn("%s: Not a valid port id 0x%x ret %d\n",
@@ -9446,8 +9462,11 @@ int afe_close(int port_id)
 	stop.reserved = 0;
 
 	ret = afe_apr_send_pkt(&stop, &this_afe.wait[index]);
-	if (ret)
+	if (ret) {
 		pr_err("%s: AFE close failed %d\n", __func__, ret);
+	} else {
+		atomic_dec(port_ref);
+	}
 
 fail_cmd:
 	if ((q6core_get_avcs_api_version_per_service(
@@ -12154,3 +12173,102 @@ void afe_set_lsm_afe_port_id(int idx, int lsm_port)
 	this_afe.lsm_afe_ports[idx] = lsm_port;
 }
 EXPORT_SYMBOL(afe_set_lsm_afe_port_id);
+
+//Paired Rx Functions
+void afe_tdm_paired_rx_cfg_val(int intf_idx, int afe_port_id,
+			union afe_port_group_config tdm_group,
+			struct afe_tdm_port_config tdm_port,
+			struct afe_param_id_tdm_lane_cfg tdm_lane)
+{
+	afe_tdm_paired_rx_cfg[intf_idx].afe_port_id = afe_port_id;
+	afe_tdm_paired_rx_cfg[intf_idx].tdm_port = tdm_port;
+	afe_tdm_paired_rx_cfg[intf_idx].tdm_group = tdm_group;
+	afe_tdm_paired_rx_cfg[intf_idx].tdm_lane = tdm_lane;
+}
+EXPORT_SYMBOL(afe_tdm_paired_rx_cfg_val);
+
+int afe_paired_rx_tdm_port_ops(int intf_idx, bool enable, atomic_t *dai_group_ref)
+{
+	int rc = 0;
+	int group_id = afe_tdm_paired_rx_cfg[intf_idx].tdm_group.group_cfg.group_id;
+	int port_id = afe_tdm_paired_rx_cfg[intf_idx].afe_port_id;
+	int group_idx = AFE_TDM_RX_GET_GROUP_IDX(group_id);
+	atomic_t *group_ref = &dai_group_ref[group_idx];
+	atomic_t *port_ref = NULL;
+	int index = 0;
+
+	if (port_id == 0) {
+		pr_debug("%s:No Paired Rx alloted for TDM interface %d", __func__, intf_idx);
+		return 0;
+	}
+
+	index = q6audio_get_port_index(port_id);
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: AFE port index[%d] invalid!\n",
+				__func__, index);
+		return -EINVAL;
+	}
+	port_ref = &afe_tdm_port_ref[index];
+	if (enable) {
+		pr_debug("%s:Paired Rx Afe Port Id 0x%x Start, Group Id is 0x%x", __func__, port_id, group_id);
+		if (atomic_read(group_ref) == 0) {
+			rc = afe_port_group_enable(group_id,
+					&afe_tdm_paired_rx_cfg[intf_idx].tdm_group,
+					true,
+					&afe_tdm_paired_rx_cfg[intf_idx].tdm_lane);
+			if (rc < 0) {
+				pr_err("%s:Failed to enable paired rx afe group 0x%x\n"
+				 , __func__, group_id);
+				return -EINVAL;
+			}
+		}
+		if (atomic_read(port_ref) == 0){
+			rc = afe_tdm_port_start(port_id,
+				    &afe_tdm_paired_rx_cfg[intf_idx].tdm_port,
+				    afe_tdm_paired_rx_cfg[intf_idx].tdm_port.tdm.sample_rate,
+				    afe_tdm_paired_rx_cfg[intf_idx].tdm_port.tdm.num_channels);
+			if (rc < 0) {
+				if (atomic_read(group_ref) == 0) {
+					afe_port_group_enable(group_id,
+						NULL, false, NULL);
+				}
+				pr_err("%s: fail to open paired rx AFE port 0x%x\n", __func__, port_id);
+				return -EINVAL;
+			} else {
+				pr_debug("%s:Paired Rx Port Started Sucessfully", __func__);
+				atomic_inc(group_ref);
+			}
+		} else {
+			pr_debug("%s:Paired Rx Usecase already started", __func__);
+			atomic_inc(port_ref);
+			atomic_inc(group_ref);
+		}
+	} else {
+		pr_debug("%s:Paired Rx Afe Port Id 0x%x Stop, Group Id is 0x%x", __func__, port_id, group_id);
+		if (atomic_read(port_ref) == 1) {
+			rc = afe_close(port_id);
+			if (rc < 0) {
+				pr_err("%s:Failed to close paired rx port 0x%x", __func__, port_id);
+				return -EINVAL;
+			} else {
+				pr_debug("%s:Paired Rx Usecase closed successfully", __func__);
+			}
+			atomic_dec(group_ref);
+			if (atomic_read(group_ref) == 0) {
+				rc = afe_port_group_enable(group_id, NULL, false, NULL);
+				if (rc < 0) {
+					pr_err("%s: fail to disable paired AFE group 0x%x\n", __func__, group_id);
+					return -EINVAL;
+				}
+			}
+		} else if (atomic_read(port_ref) > 1) {
+			atomic_dec(port_ref);
+			atomic_dec(group_ref);
+		} else {
+			pr_err("%s:No need to close port",__func__);
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+EXPORT_SYMBOL(afe_paired_rx_tdm_port_ops);
