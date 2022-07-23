@@ -7,7 +7,7 @@ properties() { '
 kernel.string=AGNi Kernel for MIATOLL
 do.devicecheck=1
 do.modules=0
-do.systemless=1
+do.systemless=0
 do.cleanup=1
 do.cleanuponabort=1
 device.name1=curtana
@@ -27,10 +27,10 @@ supported.patchlevels=
 '; } # end properties
 
 # shell variables
-block=auto;
+block=/dev/block/bootdevice/by-name/boot;
 is_slot_device=0;
 ramdisk_compression=auto;
-patch_vbmeta_flag=auto;
+patch_vbmeta_flag=0;
 no_block_display=1;
 
 ## AnyKernel methods (DO NOT CHANGE)
@@ -83,11 +83,5 @@ fi
 ## AnyKernel boot install
 dump_boot;
 
-# begin ramdisk changes
-mkdir_ak $ramdisk/dev;
-set_perm 0 0 777 $ramdisk/dev;
-# end ramdisk changes
-
 write_boot;
-flash_dtbo;
 ## end boot install
