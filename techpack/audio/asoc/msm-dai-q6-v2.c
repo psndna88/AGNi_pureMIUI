@@ -1656,7 +1656,6 @@ static int msm_dai_q6_power_mode_put(struct snd_kcontrol *kcontrol,
 	u16 port_id = (u16)kcontrol->private_value;
 
 	pr_debug("%s: power mode = %d\n", __func__, value);
-	trace_printk("%s: power mode = %d\n", __func__, value);
 
 	afe_set_power_mode_cfg(port_id, value);
 	return 0;
@@ -1733,7 +1732,6 @@ static int msm_dai_q6_island_mode_put(struct snd_kcontrol *kcontrol,
 	u16 port_id = (u16)kcontrol->private_value;
 
 	pr_debug("%s: island mode = %d\n", __func__, value);
-	trace_printk("%s: island mode = %d\n", __func__, value);
 
 	afe_set_island_mode_cfg(port_id, value);
 	return 0;
