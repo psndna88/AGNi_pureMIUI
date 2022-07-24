@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3440,6 +3440,11 @@ QDF_STATUS csr_set_modify_profile_fields(struct mac_context *mac,
 					 pModifyProfileFields)
 {
 	struct csr_roam_session *pSession = CSR_GET_SESSION(mac, sessionId);
+
+	if (!pSession) {
+		sme_err("Session_id invalid %d", sessionId);
+		return QDF_STATUS_E_INVAL;
+	}
 
 	qdf_mem_copy(&pSession->connectedProfile.modifyProfileFields,
 		     pModifyProfileFields, sizeof(tCsrRoamModifyProfileFields));
