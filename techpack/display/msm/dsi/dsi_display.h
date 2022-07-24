@@ -215,6 +215,7 @@ struct dsi_display {
 	bool is_te_irq_enabled;
 	struct completion esd_te_gate;
 	bool needs_clk_src_reset;
+	bool needs_ctrl_vreg_disable;
 
 	u32 ctrl_count;
 	struct dsi_display_ctrl ctrl[MAX_DSI_CTRLS_PER_DISPLAY];
@@ -819,4 +820,21 @@ int dsi_display_unset_clk_src(struct dsi_display *display);
  * Return: Zero on Success
  */
 int dsi_display_set_clk_src(struct dsi_display *display);
+
+/**
+ * dsi_display_ctrl_vreg_on() - enable dsi ctrl regulator
+ * @display:         Handle to display
+ *
+ * Return: Zero on Success
+ */
+int dsi_display_ctrl_vreg_on(struct dsi_display *display);
+
+/**
+ * dsi_display_ctrl_vreg_off() - disable dsi ctrl regulator
+ * @display:         Handle to display
+ *
+ * Return: Zero on Success
+ */
+int dsi_display_ctrl_vreg_off(struct dsi_display *display);
+
 #endif /* _DSI_DISPLAY_H_ */
