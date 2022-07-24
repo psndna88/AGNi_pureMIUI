@@ -27,10 +27,10 @@ supported.patchlevels=
 '; } # end properties
 
 # shell variables
-block=auto;
+block=/dev/block/bootdevice/by-name/boot;
 is_slot_device=0;
 ramdisk_compression=auto;
-patch_vbmeta_flag=1;
+patch_vbmeta_flag=0;
 no_block_display=1;
 
 ## AnyKernel methods (DO NOT CHANGE)
@@ -81,8 +81,7 @@ if mountpoint -q /data; then
 fi
 
 ## AnyKernel boot install
-split_boot;
+dump_boot;
 
-flash_boot;
-flash_dtbo;
+write_boot;
 ## end boot install
