@@ -858,7 +858,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	struct msm_asoc_mach_data *pdata;
 	int ret;
 
-
+	place_marker("M - DRIVER Audio Init");
 
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev, "No platform supplied from device tree\n");
@@ -910,7 +910,8 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	}
 	dev_info(&pdev->dev, "Sound card %s registered\n", card->name);
 	pr_err("Sound card %s registered\n", card->name);
-	place_marker("M - sound card init complete");
+
+	place_marker("M - DRIVER Audio Ready");
 
 	spdev = pdev;
 
