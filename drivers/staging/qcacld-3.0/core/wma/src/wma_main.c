@@ -2653,8 +2653,6 @@ static int wma_unified_phyerr_rx_event_handler(void *handle,
 
 void wma_vdev_init(struct wma_txrx_node *vdev)
 {
-	qdf_wake_lock_create(&vdev->vdev_set_key_wakelock, "vdev_set_key");
-	qdf_runtime_lock_init(&vdev->vdev_set_key_runtime_wakelock);
 	vdev->is_waiting_for_key = false;
 }
 
@@ -2726,8 +2724,6 @@ void wma_vdev_deinit(struct wma_txrx_node *vdev)
 		vdev->plink_status_req = NULL;
 	}
 
-	qdf_runtime_lock_deinit(&vdev->vdev_set_key_runtime_wakelock);
-	qdf_wake_lock_destroy(&vdev->vdev_set_key_wakelock);
 	vdev->is_waiting_for_key = false;
 }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1252,6 +1253,11 @@ __wlan_hdd_cfg80211_oem_data_handler(struct wiphy *wiphy,
 		.timeout_ms = WLAN_WAIT_TIME_GET_OEM_DATA,
 		.dealloc = wlan_hdd_free_oem_data,
 	};
+
+	if (QDF_GLOBAL_FTM_MODE == hdd_get_conparam()) {
+		hdd_err("Command not allowed in FTM mode");
+		return -EPERM;
+	}
 
 	ret = wlan_hdd_validate_context(hdd_ctx);
 	if (ret)

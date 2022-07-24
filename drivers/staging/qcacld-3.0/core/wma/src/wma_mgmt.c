@@ -1446,14 +1446,11 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 	    || params->encryptType == eSIR_ED_WPI
 #endif /* FEATURE_WLAN_WAPI */
 	    ) {
-		if (!params->no_ptk_4_way)
+		if (!params->no_ptk_4_way) {
 			cmd->need_ptk_4_way = 1;
-		wma_nofl_debug("Acquire set key wake lock for %d ms",
-			       WMA_VDEV_SET_KEY_WAKELOCK_TIMEOUT);
-		wma_acquire_wakelock(&intr->vdev_set_key_wakelock,
-			WMA_VDEV_SET_KEY_WAKELOCK_TIMEOUT);
-		qdf_runtime_pm_prevent_suspend(
-			&intr->vdev_set_key_runtime_wakelock);
+			wlan_acquire_peer_key_wakelock(wma->pdev,
+						       cmd->peer_mac);
+		}
 	}
 	if (params->wpa_rsn >> 1)
 		cmd->need_gtk_2_way = 1;
