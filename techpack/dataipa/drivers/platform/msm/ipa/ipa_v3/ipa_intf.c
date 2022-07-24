@@ -82,19 +82,19 @@ int ipa3_register_intf_ext(const char *name, const struct ipa_tx_intf *tx,
 		return -EINVAL;
 	}
 
-	if (tx && tx->num_props > IPA_NUM_PROPS_MAX) {
+	if (tx && ((tx->num_props > IPA_NUM_PROPS_MAX) || (tx->num_props == 0))) {
 		IPAERR_RL("invalid tx num_props=%d max=%d\n", tx->num_props,
 				IPA_NUM_PROPS_MAX);
 		return -EINVAL;
 	}
 
-	if (rx && rx->num_props > IPA_NUM_PROPS_MAX) {
+	if (rx && ((rx->num_props > IPA_NUM_PROPS_MAX) || (rx->num_props == 0))) {
 		IPAERR_RL("invalid rx num_props=%d max=%d\n", rx->num_props,
 				IPA_NUM_PROPS_MAX);
 		return -EINVAL;
 	}
 
-	if (ext && ext->num_props > IPA_NUM_PROPS_MAX) {
+	if (ext && ((ext->num_props > IPA_NUM_PROPS_MAX) || (ext->num_props == 0))) {
 		IPAERR_RL("invalid ext num_props=%d max=%d\n", ext->num_props,
 				IPA_NUM_PROPS_MAX);
 		return -EINVAL;
