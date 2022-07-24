@@ -3,4 +3,4 @@ name=AGNi Kernel MIATOLL Support Module (AOSP)
 version=2.3
 versionCode=20082021
 author=psndna88
-description=This module disables Qualcomm SVI feature causing random reboots.
+description=This module disables Qualcomm SVI feature causing random reboots for rare cases

@@ -1,5 +1,3 @@
 # Disable QCOM SVI
 ro.vendor.display.svi=0
 
-# disable logging
-persist.vendor.sys.cnss.diag_txt=false
