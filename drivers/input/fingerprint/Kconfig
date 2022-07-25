@@ -1,12 +1,6 @@
 #
 # Fingerprint driver configuration
 #
-config FINGERPRINT_FP_VREG_CONTROL
-    bool "fingerprint fp_vdd_reg regulator control"
-    default n
-	---help---
-	  Say Y here to enable fp_vdd_vreg regulator by device driver
-
 menuconfig INPUT_FINGERPRINT
 	bool "Fingerprints"
 	help
