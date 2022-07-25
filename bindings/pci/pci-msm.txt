@@ -407,11 +407,17 @@ interconnects:
 	Usage: optional
 	Value type: <u32 array of bdfs>
 	Definition: Skip enumeration for the list of 32-bit BDFs.
+
 - qcom,config-recovery:
 	Usage: optional
 	Value type : <bool>
 	Definition: Enable to notify the client driver for recovery when
 		config space is not accessible
+
+- qcom, pcie-halt-feature-dis:
+	Usage: optional
+        Value type : <bool>
+        Definition: Disable PCIe Write and Read halt feature
 
 ==============
 Root port node
