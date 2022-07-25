@@ -472,12 +472,6 @@ Required properties:
  - qcom,rx_swr_ch_map: Specify the mapping of soundwire rx slave port configuration.
 		format: <port_id, ch_mask, ch_rate, num_ch, port_type>.
 
-Optional properties:
- - qcom,hpwr-supply: Specify the phandle of the non-HBOOST reglator device which
-		supplies the power for haptics module.
- - qcom,hpwr-voltage-mv: Specify the voltage level in mv unit requested from
-		the non-HBoost regulator.
-
 Example:
 swr_haptics: swr_haptics@f0170220 {
 	compatible = "qcom,pm8350b-swr-haptics";

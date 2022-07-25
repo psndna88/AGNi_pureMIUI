@@ -74,6 +74,7 @@
 
 		qtee_shmbridge {
 			compatible = "qcom,tee-shared-memory-bridge";
+			qcom,custom-bridge-size = <256>;
 		};
 	};
 
@@ -193,13 +194,15 @@
 		qcom,reset-clk;
 		qcom,sequential-fw-load;
 
-		interrupts-extended = <&modem_smp2p_in 0 0>,
+		interrupts-extended = <&intc GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>,
+				<&modem_smp2p_in 0 0>,
 				<&modem_smp2p_in 2 0>,
 				<&modem_smp2p_in 1 0>,
 				<&modem_smp2p_in 3 0>,
 				<&modem_smp2p_in 7 0>;
 
-		interrupt-names = "qcom,err-fatal",
+		interrupt-names = "qcom,wdog",
+				"qcom,err-fatal",
 				"qcom,proxy-unvote",
 				"qcom,err-ready",
 				"qcom,stop-ack",

@@ -478,26 +478,20 @@
 
 &q6core {
 	cdc_sec_mi2s_gpios: msm_cdc_pinctrl_sec {
-		status = "disabled";
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
-                /* sec_mi2s_sck_active use the gpio106,but the gpio106 is used by camera,so need
-                delete this */
-                /*
 		pinctrl-0 = <&sec_mi2s_sck_active &sec_mi2s_ws_active
 				&sec_mi2s_sd0_active>;
 		pinctrl-1 = <&sec_mi2s_sck_sleep &sec_mi2s_ws_sleep
 				&sec_mi2s_sd0_sleep>;
-                */
 		#gpio-cells = <0>;
 	};
 };
-/*
+
 &dai_mi2s1 {
 	qcom,msm-mi2s-rx-lines = <0>;
 	qcom,msm-mi2s-tx-lines = <1>;
 };
-*/
 
 &adsp_loader {
 	nvmem-cells = <&adsp_variant>;

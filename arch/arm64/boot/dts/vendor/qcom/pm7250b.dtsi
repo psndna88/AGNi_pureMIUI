@@ -9,7 +9,7 @@
 	interrupt-controller;
 	#interrupt-cells = <4>;
 
-	qcom,pm7250b@2 {
+	pm7250b_2: qcom,pm7250b@2 {
 		compatible = "qcom,spmi-pmic";
 		reg = <2 SPMI_USID>;
 		#address-cells = <1>;
@@ -22,6 +22,7 @@
 
 		pm7250b_charger: qcom,qpnp-smb5 {
 			compatible = "qcom,pm7250b-smb5";
+			depends-on-supply = <&pm7250b_vadc>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			#cooling-cells = <2>;
@@ -181,6 +182,7 @@
 
 		pm7250b_qg: qpnp,qg {
 			compatible = "qcom,pm7250b-qg";
+			depends-on-supply = <&pm7250b_vadc>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 
@@ -408,7 +410,7 @@
 		};
 	};
 
-	qcom,pm7250b@3 {
+	pm7250b_3: qcom,pm7250b@3 {
 		compatible = "qcom,spmi-pmic";
 		reg = <3 SPMI_USID>;
 		#address-cells = <1>;
@@ -424,7 +426,7 @@
 };
 
 &thermal_zones {
-	pm7250b_tz {
+	pm7250b_temp_alarm: pm7250b_tz {
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
@@ -440,13 +442,13 @@
 			pm7250b_trip1: trip1 {
 				temperature = <115000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 
-			trip2 {
+			pm7250b_trip2: trip2 {
 				temperature = <145000>;
 				hysteresis = <0>;
-				type = "passive";
+				type = "critical";
 			};
 		};
 	};
@@ -535,7 +537,7 @@
 		trips {
 			socd_trip:socd-trip {
 				temperature = <90>;
-				hysteresis = <1>;
+				hysteresis = <0>;
 				type = "passive";
 			};
 		};

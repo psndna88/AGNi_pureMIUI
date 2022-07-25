@@ -393,6 +393,7 @@
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent-hint-cached;
 			cam-smmu-label = "ife";
+			stall-disable;
 			multiple-client-devices;
 			ife_iova_mem_map: iova-mem-map {
 				/* IO region is approximately 4 GB */
@@ -412,6 +413,7 @@
 				<&apps_smmu 0x20E0 0x20>;
 			cam-smmu-label = "jpeg";
 			qcom,iommu-faults = "non-fatal";
+			stall-disable;
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent-hint-cached;
 			jpeg_iova_mem_map: iova-mem-map {
@@ -442,6 +444,7 @@
 				<&apps_smmu 0x2140 0x0>;
 			cam-smmu-label = "icp";
 			qcom,iommu-faults = "non-fatal";
+			stall-disable;
 			qcom,iommu-dma-addr-pool = <0x10c00000 0xee300000>;
 			dma-coherent-hint-cached;
 			iova-region-discard = <0xdff00000 0x300000>;
@@ -500,6 +503,7 @@
 			iommus = <&apps_smmu 0x2040 0x0>;
 			cam-smmu-label = "cpas-cdm";
 			qcom,iommu-faults = "non-fatal";
+			stall-disable;
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent-hint-cached;
 			cpas_cdm_iova_mem_map: iova-mem-map {
@@ -526,6 +530,7 @@
 				<&apps_smmu 0x2120 0x20>;
 			cam-smmu-label = "lrme";
 			qcom,iommu-faults = "non-fatal";
+			stall-disable;
 			qcom,iommu-dma-addr-pool = <0x100000 0xffe00000>;
 			dma-coherent-hint-cached;
 			lrme_iova_mem_map: iova-mem-map {
@@ -1052,10 +1057,11 @@
 
 	cam_jpeg_enc: qcom,jpegenc {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_enc";
-		reg-names = "jpege_hw";
-		reg = <0xac4e000 0x4000>;
-		reg-cam-base = <0x4e000>;
+		compatible = "qcom,cam_jpeg_enc_165";
+		reg-names = "jpege_hw", "cam_camnoc";
+		reg = <0xac4e000 0x4000>,
+			<0x0ac9f000 0x10000>;
+		reg-cam-base = <0x4e000 0x9f000>;
 		interrupt-names = "jpeg";
 		interrupts = <GIC_SPI 474 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1078,10 +1084,11 @@
 
 	cam_jpeg_dma: qcom,jpegdma {
 		cell-index = <0>;
-		compatible = "qcom,cam_jpeg_dma";
-		reg-names = "jpegdma_hw";
-		reg = <0xac52000 0x4000>;
-		reg-cam-base = <0x52000>;
+		compatible = "qcom,cam_jpeg_dma_165";
+		reg-names = "jpegdma_hw", "cam_camnoc";
+		reg = <0xac52000 0x4000>,
+			<0x0ac9f000 0x10000>;
+		reg-cam-base = <0x52000 0x9f000>;
 		interrupt-names = "jpegdma";
 		interrupts = <GIC_SPI 475 IRQ_TYPE_EDGE_RISING>;
 		regulator-names = "camss-vdd";
@@ -1147,7 +1154,8 @@
 			      <CAM_CPAS_ISP_LITE_FUSE 0x7801FC 0x20 CAM_CPAS_FEATURE_TYPE_DISABLE 0x10>,
 			      <CAM_CPAS_SHDR_FUSE 0x7801FC 0x40 CAM_CPAS_FEATURE_TYPE_DISABLE 0xFF>,
 			      <CAM_CPAS_QCFA_BINNING_ENABLE 0x7801FC 0x80 CAM_CPAS_FEATURE_TYPE_DISABLE 0xFF>,
-			      <CAM_CPAS_CSIPHY_FUSE 0x7801FC 0x100 CAM_CPAS_FEATURE_TYPE_DISABLE 0x10>;
+			      <CAM_CPAS_CSIPHY_FUSE 0x7801FC 0x100 CAM_CPAS_FEATURE_TYPE_DISABLE 0x10>,
+			      <CAM_CPAS_RT_OT_FUSE 0x7801A4 0x10000000 CAM_CPAS_FEATURE_TYPE_DISABLE 0xFF>;
 		interrupt-names = "cpas_camnoc";
 		interrupts = <GIC_SPI 459 IRQ_TYPE_EDGE_RISING>;
 		camnoc-axi-min-ib-bw = <3000000000>;

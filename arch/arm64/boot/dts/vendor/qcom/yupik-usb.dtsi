@@ -335,7 +335,8 @@
 		resets = <&gcc GCC_USB30_SEC_BCR>;
 		reset-names = "core_reset";
 
-		qcom,core-clk-rate = <60000000>;
+		qcom,core-clk-rate = <120000000>;
+		qcom,core-clk-rate-hs = <60000000>;
 		qcom,num-gsi-evt-buffs = <0x3>;
 		qcom,pm-qos-latency = <61>;
 		qcom,gsi-reg-offset =

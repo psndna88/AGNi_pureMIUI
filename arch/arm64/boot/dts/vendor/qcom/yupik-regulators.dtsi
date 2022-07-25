@@ -217,7 +217,7 @@
 		pm7325_l9: regulator-pm7325-l9 {
 			regulator-name = "pm7325_l9";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1080000>;
+			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1304000>;
 			qcom,init-voltage = <1200000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
@@ -656,7 +656,7 @@
 		qcom,supported-modes =
 			<RPMH_REGULATOR_MODE_LPM
 			RPMH_REGULATOR_MODE_HPM>;
-		qcom,mode-threshold-currents = <0 30000>;
+		qcom,mode-threshold-currents = <0 10000>;
 		L6C:
 		pm8350c_l6: regulator-pm8350c-l6 {
 			regulator-name = "pm8350c_l6";

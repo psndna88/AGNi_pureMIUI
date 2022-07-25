@@ -106,9 +106,11 @@
 &dsi_sim_vid {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,platform-reset-gpio = <&tlmm 16 0>;
+	qcom,platform-reset-gpio = <&tlmm 24 0>;
 };
 
 &sde_dsi {
-	qcom,dsi-default-panel = <&dsi_sim_vid>;
+	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
+	pinctrl-2 = <&lcd_backlight_ctrl_default>;
+	qcom,dsi-default-panel = <&dsi_r66451_amoled_60hz_cmd>;
 };

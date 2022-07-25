@@ -37,7 +37,7 @@
 
 			qcom,actlr =
 				/* ALL CBs of GFX: +15 deep PF */
-				<0x0 0x3ff 0x30B>;
+				<0x0 0x3ff 0x32B>;
 
 		gfx_0_tbu: gfx_0_tbu@0x59dd000 {
 				compatible = "qcom,qsmmuv500-tbu";

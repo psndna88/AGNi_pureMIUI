@@ -84,6 +84,11 @@
 	status = "disabled";
 };
 
+&pil_modem_mem {
+	status = "disabled";
+};
+
+
 &soc {
 	qcom,lpass@17300000 {
 		status = "ok";
@@ -106,7 +111,7 @@
 		status = "ok";
 	};
 
-	qcom,spss@1880000 {
+	qcom,spss@188101c {
 		status = "ok";
 	};
 

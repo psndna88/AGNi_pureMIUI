@@ -49,6 +49,8 @@
 
 		qcom,initial-pwrlevel = <5>;
 
+		qcom,no-nap;
+
 		qcom,highest-bank-bit = <16>;
 
 		qcom,min-access-length = <32>;

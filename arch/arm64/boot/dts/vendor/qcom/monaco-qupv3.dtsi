@@ -432,30 +432,6 @@
 		status = "disabled";
 	};
 
-	qupv3_se7_spi_b: spi@4a9c000 {
-		compatible = "qcom,spi-geni";
-		reg = <0x4a9c000 0x4000>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg-names = "se_phys";
-		interrupts = <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>;
-		clock-names = "se-clk", "m-ahb", "s-ahb";
-		clocks = <&gcc GCC_QUPV3_WRAP0_S7_CLK>,
-			<&gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
-			<&gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&qupv3_se7_spi_active_L0_b
-			&qupv3_se7_spi_active_L1_b &qupv3_se7_spi_active_L2_b
-					&qupv3_se7_spi_active_L3_b>;
-		pinctrl-1 = <&qupv3_se7_spi_sleep_b>;
-		dmas = <&gpi_dma0 0 7 1 64 0>,
-			<&gpi_dma0 1 7 1 64 0>;
-		dma-names = "tx", "rx";
-		spi-max-frequency = <75000000>;
-		qcom,wrapper-core = <&qupv3_0>;
-		status = "disabled";
-	};
-
 	/* HS UART Instance */
 	qupv3_se5_4uart: qcom,qup_uart@4a94000 {
 		compatible = "qcom,msm-geni-serial-hs";

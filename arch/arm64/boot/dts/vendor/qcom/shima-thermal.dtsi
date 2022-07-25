@@ -1569,19 +1569,19 @@
 				(QMI_MODEM_INST_ID+QMI_PA)>;
 		trips {
 			modem_trip0: modem-trip0 {
-				temperature = <56000>;
+				temperature = <46000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_trip1: modem-trip1 {
-				temperature = <57000>;
+				temperature = <47000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_trip2: modem-trip2 {
-				temperature = <64000>;
+				temperature = <54000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
@@ -1613,19 +1613,19 @@
 				(QMI_MODEM_INST_ID+QMI_PA_1)>;
 		trips {
 			modem_pa_fr1_trip0: modem-pa-fr1-trip0 {
-				temperature = <56000>;
+				temperature = <46000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_pa_fr1_trip1: modem-pa-fr1-trip1 {
-				temperature = <57000>;
+				temperature = <47000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			modem_pa_fr1_trip2: modem-pa-fr1-trip2 {
-				temperature = <65000>;
+				temperature = <55000>;
 				hysteresis = <5000>;
 				type = "passive";
 			};

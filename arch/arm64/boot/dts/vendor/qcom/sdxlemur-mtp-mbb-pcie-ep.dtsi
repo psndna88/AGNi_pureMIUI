@@ -1,5 +1,4 @@
 #include "sdxlemur-mtp.dtsi"
-#include "sdxlemur-mtp-audio-overlay.dtsi"
 
 &soc {
 
@@ -26,6 +25,10 @@
 };
 
 &ipa_eth_group1 {
+	qcom,iommu-dma = "bypass";
+};
+
+&ipa_eth_group2 {
 	qcom,iommu-dma = "bypass";
 };
 

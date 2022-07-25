@@ -20,10 +20,10 @@
 			pins = "gpio8";
 			function = "func1";
 			input-disable;
-			output-enable;
+			output-low;
 			bias-disable;
-			power-source = <1>;       /* 1.8V */
-			qcom,drive-strength = <2>;
+			power-source = <0>;
+			qcom,drive-strength = <3>;
 		};
 	};
 };

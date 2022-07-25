@@ -55,6 +55,7 @@
 				<&mem_noc MASTER_APPSS_PROC &system_noc SLAVE_USB3>;
 
 		qcom,default-bus-vote = <2>; /* use svs bus voting */
+		qcom,pm-qos-latency = <44>;
 		dwc3@a600000 {
 			compatible = "snps,dwc3";
 			reg = <0x0a600000 0xcd00>;

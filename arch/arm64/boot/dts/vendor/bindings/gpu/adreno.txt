@@ -7,6 +7,7 @@ Required properties:
 			May also includes "qcom,adreno-gpu-*" for few targets.
 			Must include "qcom,adreno-gpu-a619-holi" for Holi target.
 			Must include "qcom,adreno-gpu-a642" for Shima target.
+			Must include "qcom,adreno-gpu-a642l" for Yupik target.
 - reg:			Specifies the list of register regions for the device.
 - reg-names:		Resource names used for the register regions specified
 			in reg.
@@ -272,6 +273,8 @@ Properties:
 		Defines a GPU model name for specific GPU model ID.
 
 Properties:
+- compatible:
+		May also include "qcom,adreno-gpu-*" for few targets.
 -  qcom,gpu-model-id:
 		Identifier for the specific GPU hardware configuration  - must match the value read
 		from the hardware.
@@ -435,8 +438,15 @@ Example of A330 GPU in MSM8916:
 			compatible="qcom,gpu-models";
 
 			qcom,gpu-model@0 {
+				compatible="qcom,adreno-gpu-a642l";
 				qcom,gpu-model-id = <0>;
 				qcom,gpu-model = "Adreno642Lv1";
+				qcom,vk-device-id= <0x06030500>;
+			};
+			qcom,gpu-model@1 {
+				compatible="qcom,adreno-gpu-a645";
+				qcom,gpu-model-id = <190>;
+				qcom,gpu-model = "Adreno645";
 				qcom,vk-device-id= <0x06030500>;
 			};
 		}

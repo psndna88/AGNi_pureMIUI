@@ -69,14 +69,6 @@
 			size = <0x400000>;
 		};
 
-
-		audio_mem: audio_region@0 {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x00000000 0xffffffff>;
-			reusable;
-			size = <0x400000>;
-		};
-
 		llcc_tcm_mem: llcc_tcm_region {
 			no-map;
 			reg = <0x15800000 0x800000>;
@@ -244,7 +236,7 @@
 		interconnects = <&system_noc MASTER_CRYPTO &mc_virt SLAVE_EBI1>;
 	};
 
-	qcom,msm-cpufreq {
+	cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
 		clocks = <&apsscc APCS_MUX_CLK>;
 		clock-names = "cpu0_clk";
@@ -298,6 +290,11 @@
 		etf_reg {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0x102>;
+		};
+
+		tzpu_ctx0 {
+			qcom,dump-size = <0x800>;
+			qcom,dump-id = <0x00>;
 		};
 
 		misc_data {
@@ -420,6 +417,7 @@
 		interrupt-names = "eud_irq";
 		interrupt-parent = <&pdc>;
 		interrupts = <15 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-mask = <0x30>;
 		reg = <0xff0000 0x2000>,
 			<0xff2000 0x1000>;
 		reg-names = "eud_base", "eud_mode_mgr2";
@@ -582,6 +580,7 @@
 		clock-names = "core", "iface";
 
 		bus-width = <4>;
+		qcom,restore-after-cx-collapse;
 
 		/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
 		qcom,dll-hsr-list = <0x0007642c 0x0 0x10 0x2C010800 0x80040868>;
@@ -803,6 +802,11 @@
 				};
 			};
 		};
+	};
+
+	qcom,mhi_dev_qrtr {
+		compatible = "qcom,qrtr-mhi-dev";
+		qcom,net-id = <3>;
 	};
 
 	qcom,glinkpkt {
@@ -1139,6 +1143,7 @@
 			interrupt-names = "mhi-device-inta";
 			qcom,mhi-ifc-id = <0x030817cb>;
 			qcom,mhi-interrupt;
+			qcom,no-m0-timeout;
 		status = "disabled";
 	};
 
@@ -1160,9 +1165,15 @@
 	};
 
 	ipa_eth_group1: ipa_eth_group1 {
-		qcom,iommu-dma-addr-pool = <0x80000000 0x0fe20000>;
+		qcom,iommu-dma-addr-pool = <0x80000000 0x07f00000>;
 		qcom,iommu-dma = "atomic";
 	};
+
+	ipa_eth_group2: ipa_eth_group2 {
+		qcom,iommu-dma-addr-pool = <0x87f10000 0x07f00000>;
+		qcom,iommu-dma = "atomic";
+	};
+
 
 	ipa_hw: qcom,ipa@03e00000 {
 		compatible = "qcom,ipa";
@@ -1180,6 +1191,7 @@
 		qcom,ipa-hw-mode = <0>;
 		qcom,platform-type = <0>; /* MDM platform */
 		qcom,ee = <0>;
+		qcom,entire-ipa-block-size = <0x200000>;
 		qcom,use-ipa-tethering-bridge;
 		qcom,use-tput-estmation-pipe;
 		qcom,mhi-event-ring-id-limits = <9 15>; /* start and end */
@@ -1188,15 +1200,15 @@
 		qcom,arm-smmu;
 		qcom,smmu-fast-map;
 		qcom,ipa-wdi3-over-gsi;
-		qcom,ipa-wdi3-holb-2g = <8>;
-		qcom,ipa-wdi3-holb-5g = <15>;
+		qcom,ipa-wdi3-holb-2g = <15>;
+		qcom,ipa-wdi3-holb-5g = <31>;
 		qcom,ipa-endp-delay-wa-v2;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
-		qcom,ipa-uc-holb-monitor;
-		qcom,ipa-holb-monitor-poll-period = <5>;
-		qcom,ipa-holb-monitor-max-cnt-wlan = <10>;
-		qcom,ipa-holb-monitor-max-cnt-usb = <10>;
+		qcom,register-collection-on-crash;
+		qcom,testbus-collection-on-crash;
+		qcom,non-tn-collection-on-crash;
+		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -1229,7 +1241,7 @@
 
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 		"TURBO";
-		qcom,throughput-threshold = <2000 4000 8000>;
+		qcom,throughput-threshold = <3000 5000 10000>;
 		qcom,scaling-exceptions = <>;
 
 		ipa_smmu_ap: ipa_smmu_ap {
@@ -1267,7 +1279,8 @@
 		ipa_smmu_eth1: ipa_smmu_eth1 {
 			compatible = "qcom,ipa-smmu-eth1-cb";
 			iommus = <&apps_smmu 0x5E4 0x0>;
-			qcom,iommu-dma = "atomic";
+			qcom,shared-cb;
+			qcom,iommu-group = <&ipa_eth_group2>;
 		};
 
 		ipa_smmu_wlan1: ipa_smmu_wlan1 {
@@ -1426,6 +1439,13 @@
 	qtee_shmbridge {
 		compatible = "qcom,tee-shared-memory-bridge";
 	};
+
+	sdx_ext_ipc: qcom,sdx_ext_ipc {
+		compatible = "qcom,sdx-ext-ipc";
+		qcom,status-in-gpio = <&tlmm 65 0x00>;
+		qcom,status-out-gpio = <&tlmm 44 0x00>;
+		qcom,status-out2-gpio = <&tlmm 45 0x00>;
+	};
 };
 
 #include "sdxlemur-pinctrl.dtsi"
@@ -1437,5 +1457,4 @@
 #include "sdxlemur-pm.dtsi"
 #include "sdxlemur-pcie.dtsi"
 #include "sdxlemur-blsp.dtsi"
-#include "sdxlemur-audio.dtsi"
 #include "sdxlemur-thermal.dtsi"

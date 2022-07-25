@@ -1968,6 +1968,7 @@ Optional properties:
 - qcom,ext-disp-audio-rx: Property to specify if Audio over Display port is supported for the target
 - qcom,wcn-btfm : Property to specify if WCN BT/FM chip is used for the target
 - qcom,mi2s-audio-intf: Property to specify if MI2S interface is used for the target
+- qcom,cc-va-intf-enable : Property to specify if VA interface is used for the target
 - qcom,auxpcm-audio-intf: Property to specify if Aux PCM interface is used for the target
 - qcom,cdc-dmic-gpios : phandle for Digital mic clk and data gpios.
 - qcom,msm_audio_ssr_devs: List the snd event framework clients
@@ -1976,12 +1977,14 @@ Optional properties:
 - qcom,va-bolero-codec: Property to specify VA macro supported.
 - qcom,rxtx-bolero-codec: Property to specify RX-TX macros supported.
 - qcom,wsa-bolero-codec: Property to specify WSA macro supported.
+- qcom,visense-enable: Property to specify VISense need to enable or not.
 
 Example:
 	monaco_snd: sound {
 		status = "okay";
 		compatible = "qcom,monaco-asoc-snd";
 		qcom,mi2s-audio-intf = <0>;
+		qcom,cc-va-intf-enable = <0>;
 		qcom,auxpcm-audio-intf = <0>;
 		qcom,tdm-audio-intf = <0>;
 		qcom,wcn-btfm = <0>;

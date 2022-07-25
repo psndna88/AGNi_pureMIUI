@@ -421,7 +421,7 @@
 	pdc: interrupt-controller@b220000 {
 		compatible = "qcom,sm6150-pdc";
 		reg = <0xb220000 0x30000>;
-		qcom,pdc-ranges = <6 486 1>, <8 488 4>;
+		qcom,pdc-ranges = <6 486 1>, <8 488 4>, <94 609 1>;
 		#interrupt-cells = <2>;
 		interrupt-parent = <&intc>;
 		interrupt-controller;
@@ -475,8 +475,7 @@
 		pinctrl-0 = <&sdc2_on>;
 		pinctrl-1 = <&sdc2_off>;
 
-		broken-cd;
-
+		cd-gpios = <&tlmm 99 GPIO_ACTIVE_LOW>;
 		status = "disabled";
 
 		qos0 {
@@ -595,7 +594,7 @@
 #include "sa6155p-vm-cnss.dtsi"
 
 &tlmm {
-	/delete-property/ wakeup-parent;
+	qcom,gpio-irq-map = <99 94>;
 };
 
 &qupv3_0 {

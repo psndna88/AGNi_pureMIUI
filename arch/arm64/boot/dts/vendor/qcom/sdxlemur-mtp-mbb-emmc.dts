@@ -3,6 +3,8 @@
 #include "sdxlemur.dtsi"
 #include "sdxlemur-mtp-mbb-emmc.dtsi"
 #include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-audio.dtsi"
+#include "sdxlemur-mtp-audio-overlay.dtsi"
 #include "sdxlemur-bluetooth.dtsi"
 
 / {

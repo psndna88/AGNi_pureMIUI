@@ -149,3 +149,19 @@
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
+
+&cpufreq {
+	qcom,cpufreq-table =
+		<  345600 >,
+		<  576000 >,
+		<  1094400 >,
+		<  1708800 >;
+};
+
+&cpu0_cpu_ddr_tbl {
+	qcom,core-dev-table =
+		<   345600  MHZ_TO_MBPS( 300, 4) >,
+		<   576000  MHZ_TO_MBPS( 768, 4) >,
+		<  1440000  MHZ_TO_MBPS(1555, 4) >,
+		<  1708800  MHZ_TO_MBPS(2092, 4) >;
+};

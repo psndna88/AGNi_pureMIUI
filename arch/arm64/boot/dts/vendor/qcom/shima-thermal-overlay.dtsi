@@ -10,7 +10,6 @@
 
 &thermal_zones {
 	socd {
-		disable-thermal-zone;
 		cooling-maps {
 			socd_cpu4 {
 				trip = <&socd_trip>;
@@ -34,7 +33,7 @@
 		};
 	};
 
-/*	pm8350b-bcl-lvl0 {
+	pm8350b-bcl-lvl0 {
 		cooling-maps {
 			vbat_cpu4 {
 				trip = <&b_bcl_lvl0>;
@@ -71,7 +70,6 @@
 			};
 		};
 	};
-*/
 
 	pm8350b-bcl-lvl2 {
 		cooling-maps {

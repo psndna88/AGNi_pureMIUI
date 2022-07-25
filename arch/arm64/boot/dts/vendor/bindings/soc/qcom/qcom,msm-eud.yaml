@@ -40,6 +40,11 @@ properties:
     Value type: <string>
     Definition: Must be "eud_irq"
 
+  interrupt-mask:
+    Usage: optional
+    Value type: <prop-encoded-array>
+    Definition: offset of the interrupt mask for apps if not INT1
+
   reg-names:
     Usage: optional
     Value type: <string>
