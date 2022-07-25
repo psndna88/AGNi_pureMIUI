@@ -23,6 +23,15 @@
 		regulator-max-microvolt = <RPM_SMD_REGULATOR_LEVEL_BINNING>;
 	};
 
+	cx_cdev: cx-cdev-lvl {
+		compatible = "qcom,regulator-cooling-device";
+		regulator-cdev-supply = <&VDD_CX_LEVEL_AO>;
+		regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
+				RPM_SMD_REGULATOR_LEVEL_NOM>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+
 	S3A:
 	pm5100_s3: regulator-pm5100-s3 {
 		compatible = "qcom,stub-regulator";
@@ -81,6 +90,15 @@
 		regulator-min-microvolt =
 			<RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 		regulator-max-microvolt = <RPM_SMD_REGULATOR_LEVEL_BINNING>;
+	};
+
+	mx_cdev: mx-cdev-lvl {
+		compatible = "qcom,regulator-cooling-device";
+		regulator-cdev-supply = <&VDD_MXA_LEVEL>;
+		regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
+				RPM_SMD_REGULATOR_LEVEL_NOM>;
+		#cooling-cells = <2>;
+		status = "disabled";
 	};
 
 	VDD_LPI_CX_LEVEL:
@@ -332,5 +350,77 @@
 		qcom,hpm-min-load = <10000>;
 		regulator-min-microvolt = <2650000>;
 		regulator-max-microvolt = <3544000>;
+	};
+
+	L1C:
+	pm8010_l1: regulator-pm8010-l1 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l1";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+	};
+
+	L2C:
+	pm8010_l2: regulator-pm8010-l2 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l2";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+	};
+
+	L3C:
+	pm8010_l3: regulator-pm8010-l3 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l3";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	L4C:
+	pm8010_l4: regulator-pm8010-l4 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l4";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	L5C:
+	pm8010_l5: regulator-pm8010-l5 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l5";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+	};
+
+	L6C:
+	pm8010_l6: regulator-pm8010-l6 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l6";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+	};
+
+	L7C:
+	pm8010_l7: regulator-pm8010-l7 {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm8010_l7";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+	};
+
+	SPKR_BOOST:
+	pm5100_boost: regulator-pm5100-boost {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "pm5100_boost";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
 	};
 };

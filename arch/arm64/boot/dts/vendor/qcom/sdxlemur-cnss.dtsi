@@ -32,11 +32,11 @@
 		cnss-enable-self-recovery;
 
 		vdd-wlan-aon-supply = <&S7B>;
-		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 1>;
+		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 0>;
 		vdd-wlan-rfa1-supply = <&S4B>;
-		qcom,vdd-wlan-rfa1-config = <1900000 1900000 0 0 1>;
+		qcom,vdd-wlan-rfa1-config = <1900000 1900000 0 0 0>;
 		vdd-wlan-rfa2-supply = <&S2B>;
-		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
+		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 0>;
 
 		interconnects =
 		<&system_noc MASTER_PCIE_0 &system_noc SLAVE_SNOC_MEM_NOC_GC>,

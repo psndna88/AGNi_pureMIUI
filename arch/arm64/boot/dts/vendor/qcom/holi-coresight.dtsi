@@ -2431,6 +2431,7 @@
 
 		coresight-name = "coresight-cti-mss_q6_cti";
 
+		status = "disabled";
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
 	};
@@ -2443,6 +2444,7 @@
 
 		coresight-name = "coresight-cti-mss_vq6_cti";
 
+		status = "disabled";
 		clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "apb_pclk";
 	};

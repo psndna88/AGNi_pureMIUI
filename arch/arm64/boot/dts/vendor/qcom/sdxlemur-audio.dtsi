@@ -38,3 +38,8 @@
 				"msm-dai-q6-auxpcm.2";
 	};
 };
+
+&audio_co_heap {
+	status = "okay";
+	memory-region = <&audio_heap_mem>;
+};

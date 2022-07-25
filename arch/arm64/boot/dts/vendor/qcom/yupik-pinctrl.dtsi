@@ -3030,7 +3030,6 @@
 				config {
 					pins = "gpio140";
 					bias-disable;
-					bias-pull-down;         /* PULL DOWN */
 					drive-strength = <2>;
 				};
 			};

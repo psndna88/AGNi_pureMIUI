@@ -50,14 +50,14 @@
 		vdd-wlan-ctrl1-supply = <&vreg_conn_pa>;
 		vdd-wlan-ctrl2-supply = <&vreg_conn_1p8>;
 		vdd-wlan-supply = <&vreg_wlan>;
-		vdd-wlan-aon-supply = <&pm8195_1_s5>;
-		vdd-wlan-rfa1-supply = <&pm8195_1_s2>;
-		vdd-wlan-rfa2-supply = <&pm8195_2_s5>;
-		vdd-wlan-rfa3-supply = <&pm8195_2_l7>;
+		vdd-wlan-vl-supply = <&pm8195_1_s5>;
+		vdd-wlan-vm-supply = <&pm8195_1_s2>;
+		vdd-wlan-s5c-supply = <&pm8195_2_s5>;
+		vdd-wlan-vh-supply = <&pm8195_2_l7>;
 
 		wlan_vregs = "vdd-wlan-ctrl1", "vdd-wlan-ctrl2";
-		qcom,vdd-wlan-ctrl1-config = <0 0 0 0>;
-		qcom,vdd-wlan-ctrl2-config = <0 0 0 0>;
+		qcom,vdd-wlan-ctrl1-config = <0 0 0 0 0>;
+		qcom,vdd-wlan-ctrl2-config = <0 0 0 0 0>;
 		wlan-en-gpio = <&tlmm 169 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;
@@ -70,7 +70,7 @@
 
 			supported-ids = <0x003e>;
 			wlan_vregs = "vdd-wlan";
-			qcom,vdd-wlan-info = <0 0 0 10>;
+			qcom,vdd-wlan-config = <0 0 0 10 1>;
 
 			qcom,wlan-ramdump-dynamic = <0x200000>;
 		};
@@ -80,12 +80,12 @@
 			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1101>;
-			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
-				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-config = <1000000 1000000 0 0 1>;
-			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1900000 1900000 450000 0 1>;
+			wlan_vregs = "vdd-wlan-vl", "vdd-wlan-vm",
+				   "vdd-wlan-s5c", "vdd-wlan-vh";
+			qcom,vdd-wlan-vl-config = <1000000 1000000 0 0 0>;
+			qcom,vdd-wlan-vm-config = <1370000 1370000 0 0 0>;
+			qcom,vdd-wlan-s5c-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-vh-config = <1900000 1900000 450000 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
@@ -191,12 +191,12 @@
 			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1102>;
-			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
-				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-config = <1055000 1055000 0 0 1>;
-			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1900000 1900000 0 0 1>;
+			wlan_vregs = "vdd-wlan-vl", "vdd-wlan-vm",
+				   "vdd-wlan-s5c", "vdd-wlan-vh";
+			qcom,vdd-wlan-vl-config = <1000000 1000000 0 0 0>;
+			qcom,vdd-wlan-vm-config = <1370000 1370000 0 0 0>;
+			qcom,vdd-wlan-s5c-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-vh-config = <1900000 1900000 450000 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x300000>;
 			mhi,max-channels = <30>;
@@ -315,14 +315,14 @@
 		vdd-wlan-ctrl1-supply = <&vreg_conn_pa>;
 		vdd-wlan-ctrl2-supply = <&vreg_conn_1p8>;
 		vdd-wlan-supply = <&vreg_wlan>;
-		vdd-wlan-aon-supply = <&pm8195_1_s5>;
-		vdd-wlan-rfa1-supply = <&pm8195_1_s2>;
-		vdd-wlan-rfa2-supply = <&pm8195_2_s5>;
-		vdd-wlan-rfa3-supply = <&pm8195_2_l7>;
+		vdd-wlan-vl-supply = <&pm8195_1_s5>;
+		vdd-wlan-vm-supply = <&pm8195_1_s2>;
+		vdd-wlan-s5c-supply = <&pm8195_2_s5>;
+		vdd-wlan-vh-supply = <&pm8195_2_l7>;
 
 		wlan_vregs = "vdd-wlan-ctrl1", "vdd-wlan-ctrl2";
-		qcom,vdd-wlan-ctrl1-config = <0 0 0 0>;
-		qcom,vdd-wlan-ctrl2-config = <0 0 0 0>;
+		qcom,vdd-wlan-ctrl1-config = <0 0 0 0 0>;
+		qcom,vdd-wlan-ctrl2-config = <0 0 0 0 0>;
 		wlan-en-gpio = <&tlmm 170 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active2>;
@@ -334,7 +334,7 @@
 
 			supported-ids = <0x003e>;
 			wlan_vregs = "vdd-wlan";
-			qcom,vdd-wlan-info = <0 0 0 10>;
+			qcom,vdd-wlan-info = <0 0 0 10 1>;
 
 			qcom,wlan-ramdump-dynamic = <0x200000>;
 		};
@@ -344,12 +344,12 @@
 			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1101>;
-			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
-				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-config = <1000000 1000000 0 0 1>;
-			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1900000 1900000 450000 0 1>;
+			wlan_vregs = "vdd-wlan-vl", "vdd-wlan-vm",
+				   "vdd-wlan-s5c", "vdd-wlan-vh";
+			qcom,vdd-wlan-vl-config = <1000000 1000000 0 0 0>;
+			qcom,vdd-wlan-vm-config = <1370000 1370000 0 0 0>;
+			qcom,vdd-wlan-s5c-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-vh-config = <1900000 1900000 450000 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x400000>;
 			mhi,max-channels = <30>;
@@ -433,12 +433,12 @@
 			reg-names = "smmu_iova_ipa";
 
 			supported-ids = <0x1102>;
-			wlan_vregs = "vdd-wlan-aon", "vdd-wlan-rfa1",
-				   "vdd-wlan-rfa2", "vdd-wlan-rfa3";
-			qcom,vdd-wlan-aon-config = <1055000 1055000 0 0 1>;
-			qcom,vdd-wlan-rfa1-config = <1370000 1370000 0 0 1>;
-			qcom,vdd-wlan-rfa2-config = <2040000 2040000 0 0 1>;
-			qcom,vdd-wlan-rfa3-config = <1900000 1900000 0 0 1>;
+			wlan_vregs = "vdd-wlan-vl", "vdd-wlan-vm",
+				   "vdd-wlan-s5c", "vdd-wlan-vh";
+			qcom,vdd-wlan-vl-config = <1055000 1055000 0 0 0>;
+			qcom,vdd-wlan-vm-config = <1370000 1370000 0 0 0>;
+			qcom,vdd-wlan-s5c-config = <2040000 2040000 0 0 0>;
+			qcom,vdd-wlan-vh-config = <1900000 1900000 450000 0 0>;
 
 			qcom,wlan-ramdump-dynamic = <0x300000>;
 			mhi,max-channels = <30>;

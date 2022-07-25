@@ -62,6 +62,16 @@
 			};
 		};
 	};
+
+	cxip_cdev: cxip-cdev@3ed000 {
+		compatible = "qcom,cxip-lm-cooling-device";
+		reg = <0x3ed000 0xe008>;
+		qcom,thermal-client-offset = <0x8000>;
+		/* 4th and 5th offsets to bypass VICTIM1 */
+		qcom,bypass-client-list = <0x2004 0x4004 0x6004 0xc004 0xc008 0xe004>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
 };
 
 &rpm_bus {
@@ -1083,6 +1093,12 @@
 				type = "passive";
 			};
 
+			q6_hvx_cxip: q6-hvx-cxip-trip {
+				temperature = <95000>;
+				hysteresis = <20000>;
+				type = "passive";
+			};
+
 			q6_hvx_cx_mon: q6-hvx-cx-mon {
 				temperature = <100000>;
 				hysteresis = <5000>;
@@ -1095,6 +1111,11 @@
 				trip = <&q6_hvx_trip0>;
 				cooling-device = <&cdsp_sw THERMAL_NO_LIMIT
 							THERMAL_NO_LIMIT>;
+			};
+
+			q6-hvx-cxip-cdev {
+				trip = <&q6_hvx_cxip>;
+				cooling-device = <&cxip_cdev 1 1>;
 			};
 
 			q6-hvx-cx-cdev0 {

@@ -1458,7 +1458,7 @@
 			config {
 				pins = "gpio0", "gpio1";
 				drive-strength = <2>;
-        			input-enable;
+				input-enable;
 				bias-pull-up;
 			};
 		};
@@ -1472,7 +1472,7 @@
 			config {
 				pins = "gpio0", "gpio1";
 				drive-strength = <2>;
-        			input-enable;
+				input-enable;
 				bias-disable;
 			};
 		};

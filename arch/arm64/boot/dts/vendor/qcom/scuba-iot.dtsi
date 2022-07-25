@@ -1125,7 +1125,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <528000>;
 				regulator-max-microvolt = <1256000>;
 				qcom,min-dropout-voltage = <75000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L2P: qcom,pm8008-l2@4100 {
@@ -1134,7 +1134,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <528000>;
 				regulator-max-microvolt = <1144000>;
 				qcom,min-dropout-voltage = <187500>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L3P: qcom,pm8008-l3@4200 {
@@ -1143,7 +1143,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <2704000>;
 				regulator-max-microvolt = <2896000>;
 				qcom,min-dropout-voltage = <200000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L4P: qcom,pm8008-l4@4300 {
@@ -1152,7 +1152,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <2704000>;
 				regulator-max-microvolt = <2896000>;
 				qcom,min-dropout-voltage = <200000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L5P: qcom,pm8008-l5@4400 {
@@ -1161,7 +1161,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <2704000>;
 				regulator-max-microvolt = <2896000>;
 				qcom,min-dropout-voltage = <300000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L6P: qcom,pm8008-l6@4500 {
@@ -1170,7 +1170,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <2704000>;
 				regulator-max-microvolt = <2896000>;
 				qcom,min-dropout-voltage = <300000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 
 			L7P: qcom,pm8008-l7@4600 {
@@ -1179,7 +1179,7 @@ dcc: dcc_v2@1be2000 {
 				regulator-min-microvolt = <1656000>;
 				regulator-max-microvolt = <1896000>;
 				qcom,min-dropout-voltage = <300000>;
-				qcom,hpm-min-load = <10000>;
+				qcom,hpm-min-load = <0>;
 			};
 		};
 	};

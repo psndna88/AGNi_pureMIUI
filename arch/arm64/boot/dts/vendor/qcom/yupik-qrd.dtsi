@@ -265,6 +265,94 @@
 		};
 	};
 
+	modem-sub6-pa1-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_PA)>;
+		trips {
+			sub6_pa1_trip0: sub6-pa1-trip0 {
+				temperature = <46000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			sub6_pa1_trip1: sub6-pa1-trip1 {
+				temperature = <47000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			sub6_pa1_trip2: sub6-pa1-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			pa_fr1_cdev0 {
+				trip = <&sub6_pa1_trip0>;
+				cooling-device = <&modem_pa_fr1 1 1>;
+			};
+
+			pa_fr1_cdev1 {
+				trip = <&sub6_pa1_trip1>;
+				cooling-device = <&modem_pa_fr1 2 2>;
+			};
+
+			pa_fr1_cdev2 {
+				trip = <&sub6_pa1_trip2>;
+				cooling-device = <&modem_pa_fr1 3 3>;
+			};
+		};
+	};
+
+	modem-lte-pa2-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_PA_1)>;
+		trips {
+			sub6_pa2_trip0: sub6-pa2-trip0 {
+				temperature = <46000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			sub6_pa2_trip1: sub6-pa2-trip1 {
+				temperature = <47000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
+			sub6_pa2_trip2: sub6-pa2-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			pa_cdev0 {
+				trip = <&sub6_pa2_trip0>;
+				cooling-device = <&modem_pa 1 1>;
+			};
+
+			pa_cdev1 {
+				trip = <&sub6_pa2_trip1>;
+				cooling-device = <&modem_pa 2 2>;
+			};
+
+			pa_cdev2 {
+				trip = <&sub6_pa2_trip2>;
+				cooling-device = <&modem_pa 3 3>;
+			};
+		};
+	};
+
 	quiet-therm-step {
 		polling-delay-passive = <2000>;
 		polling-delay = <0>;
@@ -272,27 +360,21 @@
 		thermal-sensors = <&pmk8350_adc_tm PM7325_ADC7_AMUX_THM1_100K_PU>;
 
 		trips {
-			quiet_skin_trip0: quiet-skin-trip0 {
-				temperature = <43000>;
-				hysteresis = <4000>;
-				type = "passive";
-			};
-
 			quiet_batt_trip0: quiet-batt-trip0 {
 				temperature = <44000>;
 				hysteresis = <2000>;
 				type = "passive";
 			};
 
-			quiet_skin_trip1: quiet-skin-trip1 {
-				temperature = <45000>;
-				hysteresis = <4000>;
-				type = "passive";
-			};
-
 			quiet_batt_trip1: quiet-batt-trip1 {
 				temperature = <46000>;
 				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			quiet_skin_trip0: quiet-skin-trip0 {
+				temperature = <47000>;
+				hysteresis = <4000>;
 				type = "passive";
 			};
 
@@ -305,6 +387,12 @@
 			quiet_batt_trip3: quiet-batt-trip3 {
 				temperature = <49000>;
 				hysteresis = <1000>;
+				type = "passive";
+			};
+
+			quiet_skin_trip1: quiet-skin-trip1 {
+				temperature = <49000>;
+				hysteresis = <4000>;
 				type = "passive";
 			};
 
@@ -329,6 +417,12 @@
 			quiet_cx_trip: quiet-cx-trip {
 				temperature = <55000>;
 				hysteresis = <5000>;
+				type = "passive";
+			};
+
+			quiet_skin_trip2: quiet-skin-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
 				type = "passive";
 			};
 		};
@@ -376,7 +470,7 @@
 			};
 
 			skin-cdev2 {
-				trip = <&quiet_cx_trip>;
+				trip = <&quiet_skin_trip2>;
 				cooling-device = <&modem_skin 3 3>;
 			};
 
@@ -398,6 +492,138 @@
 			batt-cdev3 {
 				trip = <&quiet_batt_trip3>;
 				cooling-device = <&battery_charger 16 16>;
+			};
+		};
+	};
+
+	modem-mmw-pa1-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_MMW_PA1)>;
+		trips {
+			mmw_pa1_trip0: mmw-pa1-trip0 {
+				temperature = <48000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa1_trip1: mmw-pa1-trip1 {
+				temperature = <51000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa1_trip2: mmw-pa1-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mmw_skin1_cdev0 {
+				trip = <&mmw_pa1_trip0>;
+				cooling-device = <&modem_mmw_skin1 1 1>;
+			};
+
+			mmw_skin1_cdev1 {
+				trip = <&mmw_pa1_trip1>;
+				cooling-device = <&modem_mmw_skin1 2 2>;
+			};
+
+			mmw_skin1_cdev2 {
+				trip = <&mmw_pa1_trip2>;
+				cooling-device = <&modem_mmw_skin1 3 3>;
+			};
+		};
+	};
+
+	modem-mmw-pa2-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_MMW_PA2)>;
+		trips {
+			mmw_pa2_trip0: mmw-pa2-trip0 {
+				temperature = <46000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa2_trip1: mmw-pa2-trip1 {
+				temperature = <48000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa2_trip2: mmw-pa2-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mmw_skin2_cdev0 {
+				trip = <&mmw_pa2_trip0>;
+				cooling-device = <&modem_mmw_skin2 1 1>;
+			};
+
+			mmw_skin2_cdev1 {
+				trip = <&mmw_pa2_trip1>;
+				cooling-device = <&modem_mmw_skin2 2 2>;
+			};
+
+			mmw_skin2_cdev2 {
+				trip = <&mmw_pa2_trip2>;
+				cooling-device = <&modem_mmw_skin2 3 3>;
+			};
+		};
+	};
+
+	modem-mmw-pa3-step {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-governor = "step_wise";
+		thermal-sensors = <&qmi_sensor
+				(QMI_MODEM_INST_ID+QMI_MMW_PA3)>;
+		trips {
+			mmw_pa3_trip0: mmw-pa3-trip0 {
+				temperature = <46000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa3_trip1: mmw-pa3-trip1 {
+				temperature = <48000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+
+			mmw_pa3_trip2: mmw-pa3-trip2 {
+				temperature = <57000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			mmw_skin0_cdev0 {
+				trip = <&mmw_pa3_trip0>;
+				cooling-device = <&modem_mmw_skin0 1 1>;
+			};
+
+			mmw_skin0_cdev1 {
+				trip = <&mmw_pa3_trip1>;
+				cooling-device = <&modem_mmw_skin0 2 2>;
+			};
+
+			mmw_skin0_cdev2 {
+				trip = <&mmw_pa3_trip2>;
+				cooling-device = <&modem_mmw_skin0 3 3>;
 			};
 		};
 	};

@@ -14,6 +14,7 @@ Required properties:
 	- "qcom,scshrike-vidc" : Invokes driver specific data for SA8195.
 	- "qcom,sm6150-vidc" : Invokes driver specific data for SA6155.
 	- "qcom,scuba-vidc" : Invokes driver specific data for SCUBA.
+	- "qcom,monaco-vidc" : Invokes driver specific data for MONACO.
 
 Optional properties:
 - vidc,firmware-name : Video Firmware ELF image name to be loaded by PIL

@@ -17,7 +17,8 @@ Charger specific properties:
 - compatible
   Usage:      required
   Value type: <string>
-  Definition: "qcom,qpnp-smblite".
+  Definition: "qcom,qpnp-smblite" for SMBLITE on PM2250.
+	      "qcom,qpnp-pm5100-smblite" for SMBLITE on PM5100.
 
 - qcom,pmic-revid
   Usage:      required

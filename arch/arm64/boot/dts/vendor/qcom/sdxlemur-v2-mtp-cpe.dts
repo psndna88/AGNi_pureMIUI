@@ -3,6 +3,8 @@
 #include "sdxlemur-v2.dtsi"
 #include "sdxlemur-mtp-cpe.dtsi"
 #include "sdxlemur-1024mb-cpe.dtsi"
+#include "sdxlemur-audio.dtsi"
+#include "sdxlemur-mtp-audio-overlay.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP CPE V2";

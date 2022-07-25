@@ -299,9 +299,9 @@
 		reg = <0x0 0x80000000 0x0 0x600000>;
 	};
 
-	xbl_aop_mem: xbl_aop_mem@80600000 {
+	xbl_aop_mem: xbl_aop_mem@80700000 {
 		no-map;
-		reg = <0x0 0x80600000 0x0 0x260000>;
+		reg = <0x0 0x80700000 0x0 0x160000>;
 	};
 
 	cmd_db: reserved-memory@80860000 {
@@ -347,12 +347,12 @@
 
 	pil_adsp_mem: adsp@86700000 {
 		no-map;
-		reg = <0x0 0x86700000 0x0 0x3000000>;
+		reg = <0x0 0x86700000 0x0 0x2800000>;
 	};
 
-	pil_cdsp_mem: cdsp@89700000 {
+	pil_cdsp_mem: cdsp@88f00000 {
 		no-map;
-		reg = <0x0 0x89700000 0x0 0x1e00000>;
+		reg = <0x0 0x88f00000 0x0 0x1e00000>;
 	};
 
 	adsp_mem: adsp_region {
@@ -395,22 +395,22 @@
 
 	pil_trustedvm_mem: pil_trustedvm_region@d0800000 {
 		no-map;
-		//reg = <0x0 0xd0800000 0x0 0x76f7000>;
+		reg = <0x0 0xd0800000 0x0 0x76f7000>;
 	};
 
 	qrtr_shbuf: qrtr-shmem {
 		no-map;
-		//reg = <0x0 0xd7ef7000 0x0 0x9000>;
+		reg = <0x0 0xd7ef7000 0x0 0x9000>;
 	};
 
 	chan0_shbuf: neuron_block@0 {
 		no-map;
-		//reg = <0x0 0xd7f00000 0x0 0x80000>;
+		reg = <0x0 0xd7f00000 0x0 0x80000>;
 	};
 
 	chan1_shbuf: neuron_block@1 {
 		no-map;
-		//reg = <0x0 0xd7f80000 0x0 0x80000>;
+		reg = <0x0 0xd7f80000 0x0 0x80000>;
 	};
 
 	user_contig_mem: user_contig_region {
@@ -451,6 +451,13 @@
 		reusable;
 		alignment = <0x0 0x400000>;
 		size = <0x0 0x1400000>;
+	};
+
+	qcom: ramoops {
+		compatible = "ramoops";
+		reg = <0x0 0xa9000000 0x0 0x200000>;
+		pmsg-size = <0x200000>;
+		mem-type = <2>;
 	};
 
 	/* global autoconfigured region for contiguous allocations */
@@ -504,13 +511,13 @@
 		label = "dfps_data_memory";
 	};
 
-	//non_secure_display_memory: non_secure_display_region {
-		//compatible = "shared-dma-pool";
-		//alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-		//reusable;
-		//alignment = <0x0 0x400000>;
-		//size = <0x0 0x6400000>;
-	//};
+	non_secure_display_memory: non_secure_display_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x6400000>;
+	};
 };
 
 &soc {
@@ -1161,7 +1168,7 @@
 		status = "ok";
 		qcom,pas-id = <28>;
 		qcom,firmware-name = "trustedvm";
-		//memory-region = <&pil_trustedvm_mem>;
+		memory-region = <&pil_trustedvm_mem>;
 	};
 
 	qcom,guestvm_loader {
@@ -1191,7 +1198,7 @@
 			class = "message-queue";
 			direction = "receive";
 			max-size = <0 65536>;
-			//shared-buffer = <&chan0_shbuf>;
+			shared-buffer = <&chan0_shbuf>;
 			qcom,primary;
 			haven-label = <1>;
 			peer-name = <2>;
@@ -1203,7 +1210,7 @@
 			class = "message-queue";
 			direction = "send";
 			max-size = <0 65536>;
-			//shared-buffer = <&chan1_shbuf>;
+			shared-buffer = <&chan1_shbuf>;
 			qcom,primary;
 			haven-label = <2>;
 			peer-name = <2>;
@@ -1215,7 +1222,7 @@
 		qcom,master;
 		haven-label = <3>;
 		peer-name = <2>;
-		//shared-buffer = <&qrtr_shbuf>;
+		shared-buffer = <&qrtr_shbuf>;
 	};
 
 	tcsr_mutex_block: syscon@1f40000 {
@@ -3561,7 +3568,6 @@
 		/* RPMH_PDC_WLAN_RF_TCS<6>_CMD<0> offset */
 		qcom,tcs_offset_int_pow_amp_vreg = <0x4B0>;
 		cnss-enable-self-recovery;
-		use-nv-mac;
 
 		vdd-wlan-aon-supply = <&S2C>;
 		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;

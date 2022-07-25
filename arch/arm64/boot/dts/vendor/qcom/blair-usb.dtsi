@@ -15,10 +15,12 @@
 		#size-cells = <1>;
 		ranges;
 
-		interrupts = <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
-			<GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "pwr_event_irq", "ss_phy_irq", "hs_phy_irq";
+		interrupts-extended = <&intc GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>,
+				<&wakegic 12 IRQ_TYPE_LEVEL_HIGH>,
+				<&wakegic 93 IRQ_TYPE_EDGE_RISING>,
+				<&wakegic 94 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "pwr_event_irq", "ss_phy_irq",
+				"dm_hs_phy_irq", "dp_hs_phy_irq";
 
 		clocks = <&gcc GCC_USB30_PRIM_MASTER_CLK>,
 			<&gcc GCC_SYS_NOC_USB3_PRIM_AXI_CLK>,
@@ -33,10 +35,28 @@
 		reset-names = "core_reset";
 
 		USB3_GDSC-supply = <&gcc_usb30_prim_gdsc>;
+		dpdm-supply = <&usb2_phy0>;
+		qcom,usb-charger;
 
 		qcom,core-clk-rate = <133333333>;
 		qcom,core-clk-rate-hs = <66666667>;
+
+		interconnect-names = "usb-ddr", "usb-ipa", "ddr-usb";
+		interconnects = <&system_noc MASTER_USB3_0 &bimc SLAVE_EBI>,
+				<&system_noc MASTER_USB3_0 &config_noc SLAVE_IPA_CFG>,
+				<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_USB3>;
+
+		qcom,interconnect-values-nom = /* NOMINAL Votes */
+						<1000000 1550000>,
+						<0 2400>,
+						<0 40000>;
+		qcom,interconnect-values-svs = /* SVS Votes */
+						<240000 700000>,
+						<0 2400>,
+						<0 40000>;
+
 		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,pm-qos-latency = <61>;
 		qcom,gsi-reg-offset =
 			<0x0fc /* GSI_GENERAL_CFG */
 			 0x110 /* GSI_DBL_ADDR_L */
@@ -52,23 +72,25 @@
 			reg = <0x4e00000 0xcd00>;
 			interrupt-parent = <&intc>;
 			interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
-			usb-phy = <&qusb_phy0>, <&usb_qmp_dp_phy>;
+			usb-phy = <&usb2_phy0>, <&usb_qmp_dp_phy>;
 			tx-fifo-resize;
 			linux,sysdev_is_parent;
 			snps,disable-clk-gating;
+			snps,is-utmi-l1-suspend;
+			snps,usb2-gadget-lpm-disable;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
 			snps,dis_u2_susphy_quirk;
-			snps,dis_enblslpm_quirk;
 			snps,has-lpm-erratum;
 			snps,hird-threshold = /bits/ 8 <0x10>;
 			snps,usb3_lpm_capable;
-			usb-core-id = <0>;
 			maximum-speed = "super-speed";
-			dr_mode = "drd";
+			dr_mode = "otg";
 		};
 	};
 
 	/* Primary USB port related QUSB2 PHY */
-	qusb_phy0: qusb@162b000 {
+	usb2_phy0: hsphy@162b000 {
 		compatible = "qcom,usb-hsphy-snps-femto";
 		reg = <0x162B000 0x114>,
 			<0x0162A000 0x1000>;
@@ -86,9 +108,9 @@
 		resets = <&gcc GCC_QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
 		qcom,param-override-seq =
-			<0xe6 0x6c	/* override_x0 */
-			 0x0b 0x70	/* override_x1 */
-			 0x17 0x74>;	/* override x2 */
+			<0xa6 0x6c	/* override_x0 */
+			 0x85 0x70	/* override_x1 */
+			 0x16 0x74>;	/* override x2 */
 	};
 
 	/* Primary USB port related QMP USB DP Combo PHY */

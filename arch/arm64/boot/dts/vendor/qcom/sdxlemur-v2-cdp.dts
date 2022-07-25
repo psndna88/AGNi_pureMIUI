@@ -3,6 +3,9 @@
 #include "sdxlemur-v2.dtsi"
 #include "sdxlemur-cdp.dtsi"
 #include "sdxlemur-1024mb.dtsi"
+#include "sdxlemur-audio.dtsi"
+#include "sdxlemur-cdp-audio-overlay.dtsi"
+#include "sdxlemur-bluetooth.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR CDP V2";

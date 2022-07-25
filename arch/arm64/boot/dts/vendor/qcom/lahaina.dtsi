@@ -353,67 +353,42 @@
 
 	pil_slpi_mem: pil_slpi_region@89a00000 {
 		no-map;
-		reg = <0x0 0x89a00000 0x0 0x1500000>;
+		reg = <0x0 0x89a00000 0x0 0x2f00000>;
 	};
 
-	pil_cdsp_mem: pil_cdsp_region@8af00000 {
+	pil_cdsp_mem: pil_cdsp_region@8c900000 {
 		no-map;
-		reg = <0x0 0x8af00000 0x0 0x1e00000>;
+		reg = <0x0 0x8c900000 0x0 0x1e00000>;
 	};
 
-	pil_ipa_fw_mem: pil_ipa_fw_region@8cd00000 {
+	pil_ipa_fw_mem: pil_ipa_fw_region@8e700000 {
 		no-map;
-		reg = <0x0 0x8cd00000 0x0 0x10000>;
+		reg = <0x0 0x8e700000 0x0 0x10000>;
 	};
 
-	pil_ipa_gsi_mem: pil_ipa_gsi_region@8cd10000 {
+	pil_ipa_gsi_mem: pil_ipa_gsi_region@8e710000 {
 		no-map;
-		reg = <0x0 0x8cd10000 0x0 0xa000>;
+		reg = <0x0 0x8e710000 0x0 0xa000>;
 	};
 
-	pil_gpu_mem: pil_gpu_region@8cd1a000 {
+	pil_gpu_mem: pil_gpu_region@8e71a000 {
 		no-map;
-		reg = <0x0 0x8cd1a000 0x0 0x2000>;
+		reg = <0x0 0x8e71a000 0x0 0x2000>;
 	};
 
-	pil_spss_mem: pil_spss_region@8ce00000 {
+	pil_spss_mem: pil_spss_region@8e800000 {
 		no-map;
-		reg = <0x0 0x8ce00000 0x0 0x100000>;
+		reg = <0x0 0x8e800000 0x0 0x100000>;
 	};
 
-	pil_modem_mem: modem_region@8d000000 {
+	pil_modem_mem: modem_region@8f000000 {
 		no-map;
-		reg = <0x0 0x8d000000 0x0 0x10000000>;
-	};
-
-	hyp_reserved_mem: qheebsp_dbg_vm_hyp_region@d0000000 {
-		no-map;
-		//reg = <0x0 0xd0000000 0x0 0x800000>;
-	};
-
-	pil_trustedvm_mem: pil_trustedvm_region@d0800000 {
-		no-map;
-		//reg = <0x0 0xd0800000 0x0 0x76f7000>;
-	};
-
-	qrtr_shbuf: qrtr-shmem {
-		no-map;
-		//reg = <0x0 0xd7ef7000 0x0 0x9000>;
-	};
-
-	chan0_shbuf: neuron_block@0 {
-		no-map;
-		//reg = <0x0 0xd7f00000 0x0 0x80000>;
-	};
-
-	chan1_shbuf: neuron_block@1 {
-		no-map;
-		//reg = <0x0 0xd7f80000 0x0 0x80000>;
+		reg = <0x0 0x8f000000 0x0 0x10000000>;
 	};
 
 	removed_mem: removed_region@d8800000 {
 		no-map;
-		reg = <0x0 0xd8800000 0x0 0xA000000>;
+		reg = <0x0 0xd8800000 0x0 0x8200000>;
 	};
 
 	adsp_mem: adsp_region {
@@ -542,15 +517,6 @@
 		alignment = <0x0 0x100000>;
 		size = <0x0 0x800000>;
 	};
-
-    //non_secure_display_memory: non_secure_display_region {
-    //	compatible = "shared-dma-pool";
-    //	alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-    //	reusable;
-    //	alignment = <0x0 0x400000>;
-    //	size = <0x0 0x6400000>;
-    //};
-
 };
 
 &soc {
@@ -2192,7 +2158,6 @@
 			class = "message-queue";
 			direction = "receive";
 			max-size = <0 65536>;
-			//shared-buffer = <&chan0_shbuf>;
 			qcom,primary;
 			haven-label = <1>;
 			peer-name = <2>;
@@ -2204,7 +2169,6 @@
 			class = "message-queue";
 			direction = "send";
 			max-size = <0 65536>;
-			//shared-buffer = <&chan1_shbuf>;
 			qcom,primary;
 			haven-label = <2>;
 			peer-name = <2>;
@@ -2229,7 +2193,6 @@
 		qcom,master;
 		haven-label = <3>;
 		peer-name = <2>;
-		//shared-buffer = <&qrtr_shbuf>;
 	};
 
 	jtag_mm0: jtagmm@7040000 {
@@ -3167,12 +3130,42 @@
 
 		status = "disabled";
 		qos0 {
-			mask = <0xf0>;
+			mask = <0x1>;
 			vote = <44>;
 		};
 
 		qos1 {
-			mask = <0x0f>;
+			mask = <0x2>;
+			vote = <44>;
+		};
+
+		qos2 {
+			mask = <0x4>;
+			vote = <44>;
+		};
+
+		qos3 {
+			mask = <0x8>;
+			vote = <44>;
+		};
+
+		qos4 {
+			mask = <0x10>;
+			vote = <44>;
+		};
+
+		qos5 {
+			mask = <0x20>;
+			vote = <44>;
+		};
+
+		qos6 {
+			mask = <0x40>;
+			vote = <44>;
+		};
+
+		qos7 {
+			mask = <0x80>;
 			vote = <44>;
 		};
 	};
@@ -4642,6 +4635,7 @@
 		qcom,use-64-bit-dma-mask;
 		qcom,ipa-endp-delay-wa;
 		qcom,lan-rx-napi;
+		qcom,lan-rx-ring-size = <224>;
 		qcom,tx-napi;
 		qcom,wan-use-skb-page;
 		qcom,rmnet-ctl-enable;
@@ -4684,7 +4678,7 @@
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 			"TURBO";
 		qcom,throughput-threshold = <600 2500 5000>;
-		qcom,scaling-exceptions = <>;
+		qcom,scaling-exceptions = "wdi", "100", "600", "1200";
 
 		/* smp2p information */
 		qcom,smp2p_map_ipa_1_out {
@@ -4836,7 +4830,6 @@
 		status = "ok";
 		qcom,pas-id = <28>;
 		qcom,firmware-name = "trustedvm";
-		//memory-region = <&pil_trustedvm_mem>;
 	};
 
 	qcom,guestvm_loader {

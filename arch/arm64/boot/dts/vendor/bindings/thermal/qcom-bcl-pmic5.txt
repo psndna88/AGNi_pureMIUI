@@ -35,6 +35,25 @@ Optional Parameters:
 	Value type: <bool>
 	Definition: When this flag is defined, the BCL driver will account for
 			no bit shift in the threshold registers.
+- qcom,ibat-ccm-hw-support:
+	Value type: <bool>
+	Definition: Enable this flag when BCL Peripheral supports continuous
+			current monitoring(CCM) hardware for battery current
+			monitor.
+
+- nvmem-cells:
+	Value type: <phandle>
+	Definition: phandle pointing to a nvmem-cells node representing the
+			sdam registers that has information of ibat scaling range
+			factor.When defined, the bcl driver will use it to
+			scale ibat current greater than default supported range.
+
+- nvmem-cell-names:
+	Value type: <string>
+	Definition: Specifies the given nvmem cell name as defined in
+			sdam node.
+			Documentation/devicetree/bindings/nvmem/nvmem.txt and also
+			example below.
 
 Example:
 		bcl@4200 {
@@ -45,4 +64,7 @@ Example:
 			interrupt-names = "bcl-lvl0",
 						"bcl-lvl1";
 			qcom,pmic7-threshold;
+			qcom,ibat-ccm-hw-support;
+			nvmem-cells = <&adc_scaling>;
+			nvmem-cell-names = "adc_scaling";
 		};

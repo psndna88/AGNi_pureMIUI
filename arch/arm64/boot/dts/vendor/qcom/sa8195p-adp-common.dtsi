@@ -62,7 +62,7 @@ status = "ok";
 		status = "ok";
 	};
 
-	qcom,spss@1880000 {
+	qcom,spss@188101c {
 		status = "ok";
 	};
 
@@ -128,7 +128,7 @@ status = "ok";
 		};
 	};
 
-	ethqos_hw: qcom,ethernet@00020000 {
+	ethqos_hw: qcom,ethernet@20000 {
 		compatible = "qcom,stmmac-ethqos";
 		qcom,arm-smmu;
 		emac-core-version = <0x20010001>;

@@ -32,7 +32,7 @@ msm_gpu: qcom,kgsl-3d0@5900000 {
 
 		vddcx-supply = <&gpu_cx_gdsc>;
 		vdd-supply = <&gpu_gx_gdsc>;
-		vdd-parent-supply = <&VDD_GFX_LEVEL>;
+		vdd-parent-supply = <&S3A_LEVEL>;
 		vdd-parent-min-corner = <RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 		qcom,chipid = <0x06010900>;
 

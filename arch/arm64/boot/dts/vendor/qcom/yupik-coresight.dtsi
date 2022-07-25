@@ -3324,5 +3324,17 @@
 		clocks = <&aopcc QDSS_CLK>;
 		clock-names = "apb_pclk";
 	};
+
+	cti0_apss_dl: cti@7862000 {
+		compatible = "arm,primecell";
+		arm,primecell-periphid = <0x000bb966>;
+		reg = <0x7862000 0x1000>;
+		reg-names = "cti-base";
+
+		coresight-name = "coresight-cti-apss_dl_cti0";
+
+		clocks = <&aopcc QDSS_CLK>;
+		clock-names = "apb_pclk";
+	};
 };
 

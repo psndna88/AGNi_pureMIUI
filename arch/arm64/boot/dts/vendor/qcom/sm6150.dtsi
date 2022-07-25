@@ -352,30 +352,28 @@
 			reg = <0x0 0x95900000 0x0 0x1e00000>;
 		};
 
-		pil_ipa_fw_mem: ips_fw_region@0x97700000 {
+		pil_ipa_fw_mem: ips_fw_region@97700000 {
 			no-map;
 			reg = <0x0 0x97700000 0x0 0x10000>;
 		};
 
-		pil_ipa_gsi_mem: ipa_gsi_region@0x97710000 {
+		pil_ipa_gsi_mem: ipa_gsi_region@97710000 {
 			no-map;
 			reg = <0x0 0x97710000 0x0 0x5000>;
 		};
 
-		pil_gpu_mem: gpu_region@0x97715000 {
+		pil_gpu_mem: gpu_region@97715000 {
 			no-map;
 			reg = <0x0 0x97715000 0x0 0x2000>;
 		};
 
 		qseecom_mem: qseecom_region {
 			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1400000>;
+			no-map;
+			reg = <0x0 0x9e400000 0x0 0x1400000>;
 		};
 
-		cdsp_sec_mem: cdsp_sec_regions@0x9f800000 {
+		cdsp_sec_mem: cdsp_sec_regions@9f800000 {
 			no-map;
 			reg = <0x0 0x9f800000 0x0 0x1e00000>;
 		};
@@ -497,7 +495,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17c20000 {
+	timer@17c20000 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -505,7 +503,7 @@
 		reg = <0x17c20000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17c21000 {
+		frame@17c21000 {
 			frame-number = <0>;
 			interrupts = <0 8 0x4>,
 				     <0 6 0x4>;
@@ -932,7 +930,7 @@
 			&mc_virt SLAVE_EBI1>;
 	};
 
-	qcom,mpm2-sleep-counter@0xc221000 {
+	qcom,mpm2-sleep-counter@c221000 {
 		compatible = "qcom,mpm2-sleep-counter";
 		reg = <0xc221000 0x1000>;
 		clock-frequency = <32768>;

@@ -83,6 +83,7 @@
 	scuba_snd: sound {
 		compatible = "qcom,bengal-asoc-snd";
 		qcom,mi2s-audio-intf = <0>;
+		qcom,cc-va-intf-enable = <0>;
 		qcom,auxpcm-audio-intf = <0>;
 		qcom,tdm-audio-intf = <0>;
 		qcom,wcn-btfm = <0>;

@@ -371,10 +371,8 @@
 
 		qseecom_mem: qseecom_region {
 			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			alignment = <0x0 0x400000>;
-			size = <0x0 0x1400000>;
+			no-map;
+			reg = <0x0 0x9e400000 0x0 0x1400000>;
 		};
 
 		cdsp_sec_mem: cdsp_sec_regions {
@@ -525,7 +523,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17c20000 {
+	timer@17c20000 {
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -533,7 +531,7 @@
 		reg = <0x17c20000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17c21000 {
+		frame@17c21000 {
 			frame-number = <0>;
 			interrupts = <0 8 0x4>,
 				     <0 6 0x4>;
@@ -1105,7 +1103,7 @@
 		status = "disabled";
 	};
 
-	cpucc: syscon@182a0018 {
+	cpucc: syscon@182a0000 {
 		compatible = "syscon";
 		reg = <0x182a0000 0x4>;
 	};
@@ -1240,7 +1238,7 @@
 	thermal_zones: thermal-zones {
 	};
 
-	osm_l3: interconnect@0x18321000 {
+	osm_l3: interconnect@18321000 {
 		reg = <0x18321000 0x1400>;
 		compatible = "qcom,sm8150-osm-l3";
 		clocks = <&rpmhcc RPMH_CXO_CLK>, <&gcc GPLL0>;
@@ -2228,7 +2226,7 @@
 		mbox-names = "slpi-pil";
 	};
 
-	qcom,spss@1880000 {
+	qcom,spss@188101c {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0x188101c 0x4>,
 		      <0x1881024 0x4>,

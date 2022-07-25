@@ -1,18 +1,48 @@
 #include "holi-audio-overlay.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
+#include "holi-pm7250b.dtsi"
 #include "holi-pmic-overlay-pm6125.dtsi"
+#include "holi-thermal-overlay-pm6125.dtsi"
+#include "display/holi-sde-display-mtp-pm6125.dtsi"
 #include <dt-bindings/iio/qti_power_supply_iio.h>
+#include "camera/holi-camera-pm6125-overlay.dtsi"
 
-/* Dummy LDO reference */
 &wcd938x_codec {
-	cdc-vdd-mic-bias-supply = <&L2A>;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddio-supply = <&L9A>;
+	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
+				   "cdc-vddio";
+	/*
+	 * Overriding cdc-vdd-mic-bias-supply to dummy value
+	 * to avoid compilation errors as BOB is not definied
+	 * for pm6125
+	 */
+	cdc-vdd-mic-bias-supply = <>;
 };
 
 &wcd937x_codec {
-	cdc-vdd-mic-bias-supply = <&L2A>;
+	cdc-vdd-rxtx-supply = <&L9A>;
+	cdc-vddpx-supply = <&L9A>;
+	qcom,cdc-static-supplies = "cdc-vdd-rxtx",
+				   "cdc-vddpx";
+	/*
+	 * Overriding cdc-vdd-mic-bias-supply to dummy value
+	 * to avoid compilation errors as BOB is not definied
+	 * for pm6125
+	 */
+	cdc-vdd-mic-bias-supply = <>;
 };
 
+&wsa881x_i2c_e {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
+&wsa881x_i2c_f {
+	cdc-vdd-1p8-supply = <&L9A>;
+};
+
+/* Dummy LDO reference */
 &sdhc_1 {
 	status = "ok";
 
@@ -147,6 +177,20 @@
 	};
 };
 
+&soc {
+	touch_avdd: touch_avdd_stub {
+		/*
+		 * Touch eLDO controlled by gpio#53 is always ON.
+		 * Using dummy regulator.
+		 */
+		compatible = "qcom,stub-regulator";
+		regulator-name = "touch_avdd_stub";
+		qcom,hpm-min-load = <10000>;
+		regulator-min-microvolt = <2700000>;
+		regulator-max-microvolt = <3544000>;
+	};
+};
+
 &qupv3_se8_i2c {
 	status = "okay";
 	qcom,i2c-touch-active="synaptics,tcm-i2c";
@@ -161,8 +205,8 @@
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&pmx_ts_release>;
-		vdd-supply = <&L11A>;
-		avdd-supply = <&L6A>;
+		vdd-supply = <&L9A>;
+		avdd-supply = <&touch_avdd>;
 		synaptics,pwr-reg-name = "avdd";
 		synaptics,bus-reg-name = "vdd";
 		synaptics,irq-gpio = <&tlmm 22 0x2008>;
@@ -175,6 +219,9 @@
 		synaptics,ubl-i2c-addr = <0x20>;
 		synaptics,extend_report;
 		synaptics,firmware-name = "synaptics_firmware.img";
+
+		panel = <&dsi_rm69299_visionox_amoled_video
+			&dsi_rm69299_visionox_amoled_cmd>;
 	};
 };
 
@@ -205,13 +252,13 @@
 		      <&pm7250b_qg PSY_IIO_CYCLE_COUNT>,
 		      <&pm7250b_qg PSY_IIO_CHARGE_FULL_DESIGN>,
 		      <&pm7250b_qg PSY_IIO_TIME_TO_FULL_NOW>,
-		      <&smb1396_div2_cp_master PSY_IIO_PARALLEL_MODE>,
-		      <&smb1396_div2_cp_master PSY_IIO_PARALLEL_OUTPUT_MODE>,
-		      <&smb1396_div2_cp_master PSY_IIO_MIN_ICL>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_SWITCHER_EN>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_ENABLE>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_ILIM>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_DIE_TEMP>;
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_PARALLEL_OUTPUT_MODE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_MIN_ICL>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_SWITCHER_EN>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ENABLE>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ILIM>,
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_DIE_TEMP>;
 	io-channel-names = "usb_in_voltage",
 			   "usb_in_current",
 			   "chg_temp",
@@ -268,7 +315,7 @@
 		      <&pm7250b_charger PSY_IIO_RECHARGE_SOC>,
 		      <&pm7250b_charger PSY_IIO_FORCE_RECHARGE>,
 		      <&pm7250b_charger PSY_IIO_CHARGE_DONE>,
-		      <&smb1396_div2_cp_master PSY_IIO_CP_ENABLE>;
+		      <&smb1394_div2_cp_primary PSY_IIO_CP_ENABLE>;
 	io-channel-names = "batt-therm",
 			   "batt-id",
 			   "input_current_limited",
@@ -283,10 +330,16 @@
 	qcom,cl-feedback-on;
 	qcom,tcss-enable;
 	qcom,fvss-enable;
-	qcom,fvss-vbatt-mv = <3300>;
 	qcom,bass-enable;
 	qcom,use-cp-iin-sns;
+	qcom,vbatt-cutoff-mv = <3400>;
+	qcom,vbatt-empty-mv = <3200>;
+	qcom,vbatt-empty-cold-mv = <3100>;
+	qcom,vbatt-low-mv = <3500>;
+	qcom,fvss-vbatt-mv = <3500>;
 };
+
+#include "camera/holi-camera-sensor-usbc-pm6125-mtp.dtsi"
 
 &pm7250b_charger {
 	dpdm-supply = <&qusb_phy0>;
@@ -321,20 +374,20 @@
 
 &qupv3_se10_i2c {
 	status = "ok";
-	#include "smb1398.dtsi"
+	#include "smb1394.dtsi"
 };
 
-&smb1396 {
+&smb1394 {
 	interrupts = <0x2 0xc5 0x0 IRQ_TYPE_LEVEL_LOW>;
 	interrupt-parent = <&spmi_bus>;
-	interrupt-names = "smb1396";
+	interrupt-names = "smb1394";
 	pinctrl-names = "default";
 	qcom,enable-toggle-stat;
 	pinctrl-0 = <&smb_stat_default>;
 	status = "ok";
 };
 
-&smb1396_div2_cp_master {
+&smb1394_div2_cp_primary {
 	io-channels = <&pm7250b_vadc ADC5_AMUX_THM2>,
 		      <&pm7250b_charger PSY_IIO_USB_REAL_TYPE>,
 		      <&pm7250b_charger PSY_IIO_ADAPTER_CC_MODE>,
@@ -355,7 +408,7 @@
 };
 
 &pm7250b_pdphy {
-	vdd-pdphy-supply = <&L3A>;
+	vdd-pdphy-supply = <&L7E>;
 	vbus-supply = <&smb5_vbus>;
 	vconn-supply = <&smb5_vconn>;
 
