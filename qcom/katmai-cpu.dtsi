@@ -281,13 +281,13 @@
 		};
 	};
 
-
 	qcom,cpu-voltage-cdev {
-		apc1_cluster: qcom,apc1-cluster {
-			/delete-property/ qcom,cpus;
-			qcom,cpus = <&CPU4>;
+		apc1_cluster: thermal-cluster-4-7 {
+			/delete-property/ qcom,cluster0;
+			/delete-property/ qcom,cluster1;
 		};
 	};
+
 };
 
 &funnel_apss {
@@ -298,9 +298,34 @@
 };
 
 &thermal_zones {
+	cpu-1-0-step {
+		cooling-maps {
+			/delete-node/ cpu10_cdev1;
+		};
+	};
+
+	cpu-1-1-step {
+		cooling-maps {
+			/delete-node/ cpu11_cdev1;
+		};
+	};
+
+	cpu-1-2-step {
+		cooling-maps {
+			/delete-node/ cpu12_cdev1;
+		};
+	};
+
+	cpu-1-3-step {
+		cooling-maps {
+			/delete-node/ cpu13_cdev1;
+		};
+	};
+
 	cpu-1-4-step {
 		cooling-maps {
 			/delete-node/ cpu14_cdev;
+			/delete-node/ cpu14_cdev1;
 			/delete-node/ cpu14_cdev2;
 		};
 	};
@@ -308,6 +333,7 @@
 	cpu-1-5-step {
 		cooling-maps {
 			/delete-node/ cpu15_cdev;
+			/delete-node/ cpu15_cdev1;
 			/delete-node/ cpu15_cdev2;
 		};
 	};
