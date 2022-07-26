@@ -472,6 +472,29 @@
 		size = <0x0 0xA400000>;
 	};
 
+/*	qcom: ramoops {
+		compatible = "ramoops";
+		reg = <0x0 0xa9000000 0x0 0x200000>;
+		pmsg-size = <0x200000>;
+		mem-type = <2>;
+	}; */
+
+	/*
+	 * Lahaina have empty memory available at 0xb0000000 to 0xd0000000.
+	 * Carve ramoops out of that area.
+	 */
+	ramoops@b0000000 {
+		compatible   = "ramoops";
+		reg          = <0x00 0xb0000000 0x00 0x100000>;
+		ecc-size     = <16>;
+		record-size  = <0x100000>;
+		console-size = <0>;
+		ftrace-size  = <0>;
+		pmsg-size    = <0>;
+		max-reason   = <4>;
+		status       = "ok";
+	};
+
 	cnss_wlan_mem: cnss_wlan_region {
 		compatible = "shared-dma-pool";
 		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
