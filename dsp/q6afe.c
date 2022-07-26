@@ -9851,6 +9851,9 @@ stop_mclk:
 	return ret;
 }
 
+static int ext_dyn_mclk_port_id;
+static int ext_dyn_clk_root = Q6AFE_LPASS_CLK_ROOT_DEFAULT;
+static struct afe_param_id_clock_set_v2_t ext_dyn_mclk;
 int afe_set_lpass_clk_cfg_ext_mclk_v2(int index, struct afe_param_id_clock_set_v2_t *dyn_mclk_cfg,
 							uint32_t mclk_freq)
 {
@@ -9915,6 +9918,21 @@ int afe_set_lpass_clk_cfg_ext_mclk_v2(int index, struct afe_param_id_clock_set_v
 
 	mutex_unlock(&this_afe.afe_cmd_lock);
 
+	if (ext_dyn_clk_root != dyn_mclk_cfg->clk_root) {
+		ext_dyn_mclk_port_id = index;
+		ext_dyn_mclk.clk_set_minor_version = dyn_mclk_cfg->clk_set_minor_version;
+		ext_dyn_mclk.clk_id = dyn_mclk_cfg->clk_id;
+		ext_dyn_mclk.clk_freq_in_hz = dyn_mclk_cfg->clk_freq_in_hz;
+		ext_dyn_mclk.clk_attri = dyn_mclk_cfg->clk_attri;
+		ext_dyn_mclk.clk_root = dyn_mclk_cfg->clk_root;
+		ext_dyn_mclk.enable = dyn_mclk_cfg->enable;
+		ext_dyn_mclk.divider_2x = dyn_mclk_cfg->divider_2x;
+		ext_dyn_mclk.m = dyn_mclk_cfg->m;
+		ext_dyn_mclk.n = dyn_mclk_cfg->n;
+		ext_dyn_mclk.d = dyn_mclk_cfg->d;
+
+		ext_dyn_clk_root = dyn_mclk_cfg->clk_root;
+	}
 	if (ret >= 0)
 		return ret;
 
@@ -10032,6 +10050,7 @@ int afe_set_lpass_clock_v2(u16 port_id, struct afe_clk_set *cfg)
 		return -EINVAL;
 	}
 
+	ext_dyn_mclk.enable = cfg->enable;
 	if (clkinfo_per_port[idx].mclk_src_id != MCLK_SRC_INT) {
 		pr_debug("%s: ext MCLK src %d\n",
 			__func__, clkinfo_per_port[idx].mclk_src_id);
@@ -10062,6 +10081,12 @@ int afe_set_lpass_clock_v2(u16 port_id, struct afe_clk_set *cfg)
 
 		ret = afe_set_lpass_clk_cfg_ext_mclk(index, cfg,
 					clkinfo_per_port[idx].mclk_freq);
+	} else if (ext_dyn_mclk.clk_root != Q6AFE_LPASS_CLK_ROOT_DEFAULT) {
+		ret = afe_set_lpass_clk_cfg_ext_mclk_v2(ext_dyn_mclk_port_id,
+			&ext_dyn_mclk, 0);
+		if (ret)
+			pr_err("%s: AFE port logging setting for port 0x%x failed %d\n",
+			__func__, ext_dyn_mclk_port_id, ret);
 	} else {
 		ret = afe_set_lpass_clk_cfg(index, cfg);
 	}
