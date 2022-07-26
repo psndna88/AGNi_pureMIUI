@@ -29,7 +29,7 @@ ui_printfile() {
   done < $1;
 }
 show_progress() { echo "progress $1 $2" >> $OUTFD; }
-file_getprop() { $BB grep "^$2=" "$1" | $BB cut -d= -f2-; }
+file_getprop() { $BB grep "^$2=" "$1" | $BB tail -n1 | $BB cut -d= -f2-; }
 find_slot() {
   local slot=$(getprop ro.boot.slot_suffix 2>/dev/null);
   [ "$slot" ] || slot=$($BB grep -o 'androidboot.slot_suffix=.*$' /proc/cmdline | $BB cut -d\  -f1 | $BB cut -d= -f2);
@@ -52,25 +52,26 @@ mount_apex() {
   [ -d /system_root/system/apex ] || return 1;
   local apex dest loop minorx num var;
   setup_mountpoint /apex;
+  $BB mount -t tmpfs tmpfs /apex -o mode=755 && $BB touch /apex/apextmp;
   minorx=1;
   [ -e /dev/block/loop1 ] && minorx=$($BB ls -l /dev/block/loop1 | $BB awk '{ print $6 }');
   num=0;
   for apex in /system_root/system/apex/*; do
-    dest=/apex/$($BB basename $apex .apex);
-    case $dest in
-      *.current|*.release) dest=$(echo $dest | $BB rev | $BB cut -d. -f2- | $BB rev);;
-    esac;
+    dest=/apex/$($BB basename $apex | $BB sed -E -e 's;\.apex$|\.capex$;;' -e 's;\.current$|\.release$;;');
     $BB mkdir -p $dest;
     case $apex in
-      *.apex)
+      *.apex|*.capex)
+        $BB unzip -qo $apex original_apex -d /apex;
+        [ -f /apex/original_apex ] && apex=/apex/original_apex;
         $BB unzip -qo $apex apex_payload.img -d /apex;
+        $BB mv -f /apex/original_apex $dest.apex 2>/dev/null;
         $BB mv -f /apex/apex_payload.img $dest.img;
         $BB mount -t ext4 -o ro,noatime $dest.img $dest 2>/dev/null;
         if [ $? != 0 ]; then
           while [ $num -lt 64 ]; do
             loop=/dev/block/loop$num;
-            ($BB mknod $loop b 7 $((num * minorx));
-            $BB losetup $loop $dest.img) 2>/dev/null;
+            [ -e $loop ] || $BB mknod $loop b 7 $((num * minorx));
+            $BB losetup $loop $dest.img 2>/dev/null;
             num=$((num + 1));
             $BB losetup $loop | $BB grep -q $dest.img && break;
           done;
@@ -89,9 +90,9 @@ mount_apex() {
   $($BB grep -o 'export .* /.*' /system_root/init.environ.rc | $BB sed 's; /;=/;'); unset export;
 }
 umount_apex() {
-  [ -d /apex/com.android.runtime ] || return 1;
+  [ -d /apex ] || return 1;
   local dest loop var;
-  for var in $($BB grep -o 'export .* /.*' /system_root/init.environ.rc | $BB awk '{ print $2 }'); do
+  for var in $($BB grep -o 'export .* /.*' /system_root/init.environ.rc 2>/dev/null | $BB awk '{ print $2 }'); do
     if [ "$(eval echo \$OLD_$var)" ]; then
       eval $var=\$OLD_${var};
     else
@@ -100,12 +101,11 @@ umount_apex() {
     unset OLD_${var};
   done;
   for dest in $($BB find /apex -type d -mindepth 1 -maxdepth 1); do
-    if [ -f $dest.img ]; then
-      loop=$($BB mount | $BB grep $dest | $BB cut -d\  -f1);
-    fi;
-    ($BB umount -l $dest;
-    $BB losetup -d $loop) 2>/dev/null;
+    loop=$($BB mount | $BB grep $dest | $BB grep loop | $BB cut -d\  -f1);
+    $BB umount -l $dest;
+    [ "$loop" ] && $BB losetup -d $loop;
   done;
+  [ -f /apex/apextmp ] && $BB umount /apex;
   $BB rm -rf /apex 2>/dev/null;
 }
 mount_all() {
@@ -272,7 +272,7 @@ do_devicecheck() {
   product=$(getprop ro.build.product 2>/dev/null);
   vendordevice=$(getprop ro.product.vendor.device 2>/dev/null);
   vendorproduct=$(getprop ro.vendor.product.device 2>/dev/null);
-  for testname in $(file_getprop anykernel.sh 'device.name.*'); do
+  for testname in $($BB grep '^device.name.*=' anykernel.sh | $BB cut -d= -f2-); do
     for devicename in $device $product $vendordevice $vendorproduct; do
       if [ "$devicename" == "$testname" ]; then
         ui_print "$testname" " ";
@@ -346,6 +346,7 @@ do_levelcheck() {
 }
 dump_moduleinfo() {
 $BB cat <<EOF > $1;
+id=ak3-helper
 name=AK3 Helper Module
 version=$($BB awk '{ print $3 }' $AKHOME/vertmp) $($BB grep -oE '#.[0-9]' $AKHOME/vertmp)
 versionCode=1
@@ -508,10 +509,11 @@ else
 fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
-if ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
-	ANDROID_VER="R";
-elif ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
+if ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
 	ANDROID_VER="S";
+	ui_print " " "AGNi detected Android S" " ";
+elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
+	ANDROID_VER="R";
 	ui_print " " "AGNi detected Android R" " ";
 elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
 	ANDROID_VER="Q";
@@ -565,6 +567,7 @@ $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 # end magisk module installation
 $BB sync;
 #umount_all;
+ui_print " ";
 setup_env;
 
 do_devicecheck;
