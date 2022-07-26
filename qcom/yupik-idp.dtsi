@@ -144,6 +144,14 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
+	pm7325b_batt_therm {
+		reg = <PM7325B_ADC7_V_I_BAT_THERM>;
+		label = "pm7325b_batt_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+
 	pm7325b_chg_temp {
 		reg = <PM7325B_ADC7_CHG_TEMP>;
 		label = "pm7325b_chg_temp";
