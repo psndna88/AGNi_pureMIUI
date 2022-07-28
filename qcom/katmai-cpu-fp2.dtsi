@@ -1,0 +1,89 @@
+&cpu4_cpu_llcc_latmon {
+	qcom,core-dev-table =
+		<  691200 MHZ_TO_MBPS(  300, 16) >,
+		<  940800 MHZ_TO_MBPS(  466, 16) >,
+		< 1228800 MHZ_TO_MBPS(  600, 16) >,
+		< 1651200 MHZ_TO_MBPS(  806, 16) >;
+};
+
+&cpu4_llcc_ddr_latmon {
+	ddr4-map {
+		qcom,core-dev-table =
+			<  691200 MHZ_TO_MBPS( 451, 4) >,
+			<  940800 MHZ_TO_MBPS( 547, 4) >,
+			< 1228800 MHZ_TO_MBPS(1017, 4) >,
+			< 1651200 MHZ_TO_MBPS(1555, 4) >;
+	};
+
+	ddr5-map {
+		qcom,core-dev-table =
+			<  691200 MHZ_TO_MBPS( 451, 4) >,
+			<  940800 MHZ_TO_MBPS( 547, 4) >,
+			< 1228800 MHZ_TO_MBPS( 768, 4) >,
+			< 1651200 MHZ_TO_MBPS(1555, 4) >,
+			< 1900800 MHZ_TO_MBPS(1708, 4) >;
+	};
+};
+
+&cpu4_computemon {
+	ddr4-map {
+		qcom,core-dev-table =
+			<  691200 MHZ_TO_MBPS( 451, 4) >,
+			< 1228800 MHZ_TO_MBPS( 547, 4) >,
+			< 1516800 MHZ_TO_MBPS( 768, 4) >,
+			< 1651200 MHZ_TO_MBPS(1017, 4) >,
+			< 1900800 MHZ_TO_MBPS(1555, 4) >;
+	};
+
+	ddr5-map {
+		qcom,core-dev-table =
+			<  691200 MHZ_TO_MBPS( 451, 4) >,
+			< 1228800 MHZ_TO_MBPS( 547, 4) >,
+			< 1516800 MHZ_TO_MBPS( 768, 4) >,
+			< 1651200 MHZ_TO_MBPS(1555, 4) >,
+			< 1900800 MHZ_TO_MBPS(1708, 4) >;
+	};
+};
+
+&cpu4_llcc_computemon {
+	qcom,core-dev-table =
+		< 1900800 MHZ_TO_MBPS( 150, 16) >;
+};
+
+&cpu7_computemon {
+	ddr4-map {
+		qcom,core-dev-table =
+			< 2380800 MHZ_TO_MBPS( 451, 4) >;
+	};
+
+	ddr5-map {
+		qcom,core-dev-table =
+			< 2380800 MHZ_TO_MBPS( 451, 4) >;
+	};
+};
+
+&cpu7_l3_computemon {
+	qcom,core-dev-table =
+		< 2035200  300000000 >;
+};
+
+&cpu7_qoslatmon {
+	qcom,core-dev-table =
+		< 2035200 1 >;
+
+};
+
+&cpu4_rimps_l3_latmon {
+	qcom,core-dev-table =
+		<  940800  556800000 >,
+		< 1228800  768000000 >,
+		< 1651200 1190400000 >,
+		< 1900800 1401600000 >;
+};
+
+&cpu7_rimps_l3_latmon {
+	qcom,core-dev-table =
+		< 1056000  556800000 >,
+		< 1324800  768000000 >,
+		< 1766400 1190400000 >;
+};

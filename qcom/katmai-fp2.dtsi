@@ -1,11 +1,11 @@
 #include "yupik-iot.dtsi"
-#include "katmai-cpu.dtsi"
+#include "katmai-cpu-fp2.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. KATMAI SoC";
+	model = "Qualcomm Technologies, Inc. KATMAI-FP2 SoC";
 	compatible = "qcom,yupik-iot";
 	qcom,msm-id = <576 0x10000>;
-	qcom,softsku-id = <1>;
+	qcom,softsku-id = <2>;
 };
 
 &msm_gpu {
@@ -38,12 +38,4 @@
 					qcom,acd-level = <0x882F5FFD>;
 			};
 	};
-};
-
-&cam_csid2 {
-	status = "disabled";
-};
-
-&cam_vfe2 {
-	status = "disabled";
 };
