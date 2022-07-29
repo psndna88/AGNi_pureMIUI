@@ -11484,7 +11484,6 @@
       <elf-symbol name='tty_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_register_ldisc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_release_struct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
-      <elf-symbol name='tty_schedule_flip' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_ldisc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_operations' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_termios' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>

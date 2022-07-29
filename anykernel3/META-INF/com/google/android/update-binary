@@ -527,7 +527,10 @@ fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
 
-if ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
+if ([ "$aver" == "13" ] || [ "$aver" == "13.0" ]); then
+	ANDROID_VER="T";
+	ui_print " " "AGNi detected Android T" " ";
+elif ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
 	ANDROID_VER="S";
 	ui_print " " "AGNi detected Android S" " ";
 elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
@@ -569,7 +572,7 @@ $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 
 $BB mount /data;
 # AGNi Support magisk module installation
-ui_print ">> Installing AGNi Support Module..";
+#ui_print ">> Installing AGNi Support Module..";
 ASUP=/data/adb/modules/AGNiSupport;
 $BB mv -f $ASUP/disable /data/adb/modules;
 $BB rm -rf $ASUP;
@@ -609,7 +612,7 @@ $BB chmod 0755 $ASUP/vendor/etc/device_features;
 $BB chmod 0777 $ASUP/*.sh;
 $BB mv -f /data/adb/modules/disable $ASND;
 # AGNi WIFI tuning module
-ui_print ">> Installing AGNi WIFI tuning Module..";
+#ui_print ">> Installing AGNi WIFI tuning Module..";
 AWLAN=/data/adb/modules/AGNiWIFI;
 $BB mv -f $AWLAN/disable /data/adb/modules;
 $BB rm -rf $AWLAN;
@@ -642,6 +645,23 @@ if [ $? != 0 ]; then
 fi;
 
 do_modules;
+
+miatoll_userdata="/dev/block/by-name/userdata";
+if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
+	ui_print " ";
+	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
+	ui_print "(this can take few minutes)";
+	$BB sync;
+	$BB umount /sdcard;
+	$BB umount /data;
+	ui_print " Scan Running 1/2 ...";
+	fsck.f2fs -afy $miatoll_userdata;
+	ui_print " Scan Running 2/2 ...";
+	fsck.f2fs -afy $miatoll_userdata;
+	ui_print ">> Filesystem checks done! <<";
+	$BB mount $miatoll_userdata /data;
+	$BB mount $miatoll_userdata /sdcard;
+fi;
 
 debugging;
 restore_env;
