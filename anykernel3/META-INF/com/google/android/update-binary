@@ -500,8 +500,7 @@ elif [ -f /system_root/build.prop ]; then
 	buildprop=/system_root/build.prop;
 	buildproploc=/system_root;
 else
-	ui_print " ";
-#	ui_print " " "Unable to read from build.prop" " ";
+	ui_print " " "Unable to read from build.prop" " ";
 #	ui_print "   DON'T YOU HAVE ANY ROM INSTALLED ?????";
 #	ui_print " " " Terminating Installation !" " ";
 #	cleanup;
@@ -509,7 +508,10 @@ else
 fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
-if ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
+if ([ "$aver" == "13" ] || [ "$aver" == "13.0" ]); then
+	ANDROID_VER="T";
+	ui_print " " "AGNi detected Android T" " ";
+elif ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
 	ANDROID_VER="S";
 	ui_print " " "AGNi detected Android S" " ";
 elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
@@ -531,16 +533,16 @@ $BB echo "$ANDROID_VER" > $AKHOME/ANDROIDVER;
 if [ "`$BB grep ro.miui $buildprop`" ]; then
 	MIUI_ROM="true";
 	ui_print " " "AGNi detected MIUI rom." " ";
-#	if [ "`$BB grep ro.miui.ui.version.name=V12 $buildprop`" ]; then
-#		MIUI_VER="12";
-#		ui_print " " "AGNi detected MIUI 12" " ";
-#	elif [ "`$BB grep ro.miui.ui.version.name=V13 $buildprop`" ]; then
-#		MIUI_VER="11";
-#		ui_print " " "AGNi detected MIUI 13" " ";
-#	else
-#		MIUI_VER="UNSUPPORTED";
-#		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
-#	fi;
+	if [ "`$BB grep ro.miui.ui.version.name=V13 $buildprop`" ]; then
+		MIUI_VER="13";
+		ui_print " " "AGNi detected MIUI 13" " ";
+	elif [ "`$BB grep ro.miui.ui.version.name=V12 $buildprop`" ]; then
+		MIUI_VER="12";
+		ui_print " " "AGNi detected MIUI 12" " ";
+	else
+		MIUI_VER="UNSUPPORTED";
+		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
+	fi;
 else
 	MIUI_ROM="false";
 #	MIUI_VER="none";
@@ -564,6 +566,7 @@ $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 #$BB mkdir -p /data/adb/post-fs-data.d;
 #$BB cp -f $AKHOME/tools/atools.sh /data/adb/post-fs-data.d/atools.sh;
 #$BB chmod 0777 /data/adb/post-fs-data.d/atools.sh;
+#$BB rm -rf /data/adb/modules/AGNiEAS;
 # end magisk module installation
 $BB sync;
 #umount_all;
@@ -583,6 +586,23 @@ if [ $? != 0 ]; then
 fi;
 
 do_modules;
+
+haydn_userdata="/dev/block/mapper/userdata";
+if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
+	ui_print " ";
+	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
+	ui_print "(this can take few minutes)";
+	$BB sync;
+	$BB umount /sdcard;
+	$BB umount /data;
+	ui_print " Scan Running 1/2 ...";
+	fsck.f2fs -afy $haydn_userdata;
+	ui_print " Scan Running 2/2 ...";
+	fsck.f2fs -afy $haydn_userdata;
+	ui_print ">> Filesystem checks done! <<";
+	$BB mount $haydn_userdata /data;
+	$BB mount $haydn_userdata /sdcard;
+fi;
 
 debugging;
 restore_env;
