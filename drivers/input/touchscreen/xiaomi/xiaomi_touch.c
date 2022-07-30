@@ -1,6 +1,8 @@
 #include "xiaomi_touch.h"
 
 static struct xiaomi_touch_pdata *touch_pdata;
+static struct xiaomi_touch *xiaomi_touch_device;
+
 #define RAW_SIZE PAGE_SIZE * 4
 
 static int xiaomi_touch_dev_open(struct inode *inode, struct file *file)
@@ -95,6 +97,32 @@ static long xiaomi_touch_dev_ioctl(struct file *file, unsigned int cmd,
 		pr_err("%s don't support mode\n", __func__);
 		ret = -EINVAL;
 		break;
+	}
+
+	if (user_cmd == SET_CUR_VALUE) {
+		touch_data->thp_cmd_buf[0] = user_cmd;
+		touch_data->thp_cmd_buf[1] = buf[0];
+		touch_data->thp_cmd_buf[2] = buf[1];
+		touch_data->thp_cmd_buf[3] = buf[2];
+		touch_data->thp_cmd_size = 4;
+		sysfs_notify(&xiaomi_touch_device->dev->kobj, NULL,
+		     "touch_thp_cmd");
+	} else if (user_cmd == SET_LONG_VALUE) {
+		touch_data->thp_cmd_buf[0] = user_cmd;
+		touch_data->thp_cmd_buf[1] = buf[0];
+		touch_data->thp_cmd_buf[2] = buf[1];
+		touch_data->thp_cmd_buf[3] = buf[2];
+		memcpy(&(touch_data->thp_cmd_buf[4]), &buf[3], sizeof(int) * buf[2]);
+		touch_data->thp_cmd_size = 4 + buf[2];
+		sysfs_notify(&xiaomi_touch_device->dev->kobj, NULL,
+		     "touch_thp_cmd");
+	} else if (user_cmd == RESET_MODE) {
+		touch_data->thp_cmd_buf[0] = user_cmd;
+		touch_data->thp_cmd_buf[1] = buf[0];
+		touch_data->thp_cmd_buf[2] = buf[1];
+		touch_data->thp_cmd_size = 3;
+		sysfs_notify(&xiaomi_touch_device->dev->kobj, NULL,
+		     "touch_thp_cmd");
 	}
 
 	if (ret >= 0)
@@ -606,6 +634,22 @@ struct device_attribute *attr, char *buf)
 	return snprintf(buf, PAGE_SIZE, "%d\n", touch_data->is_enable_touchdelta);
 }
 
+static ssize_t thp_cmd_status_show(struct device *dev,
+struct device_attribute *attr, char *buf)
+{
+	struct xiaomi_touch_interface *touch_data = NULL;
+	mutex_lock(&dev->mutex);
+
+	if (!touch_pdata) {
+		mutex_unlock(&dev->mutex);
+		return -ENOMEM;
+	}
+	touch_data = touch_pdata->touch_data[0];
+	memcpy(buf, touch_data->thp_cmd_buf, touch_data->thp_cmd_size * sizeof(int));
+	mutex_unlock(&dev->mutex);
+	return touch_data->thp_cmd_size * sizeof(int);
+}
+
 static ssize_t thp_downthreshold_show(struct device *dev,
 struct device_attribute *attr, char *buf)
 {
@@ -878,6 +922,8 @@ struct device_attribute *attr, char *buf)
 	return snprintf(buf, PAGE_SIZE, "%d\n", touch_pdata->suspend_state);
 }
 
+static DEVICE_ATTR(touch_thp_cmd, (S_IRUGO), thp_cmd_status_show, NULL);
+
 static DEVICE_ATTR(touch_thp_islandthd, (S_IRUGO | S_IWUSR | S_IWGRP),
 		   thp_islandthreshold_show, thp_islandthreshold_store);
 
@@ -941,6 +987,7 @@ static struct attribute *touch_attr_group[] = {
 	&dev_attr_enable_touch_raw.attr,
 	&dev_attr_enable_touch_delta.attr,
 	&dev_attr_clicktouch_raw.attr,
+	&dev_attr_touch_thp_cmd.attr,
 	&dev_attr_touch_thp_tx_num.attr,
 	&dev_attr_touch_thp_rx_num.attr,
 	&dev_attr_touch_thp_x_resolution.attr,
@@ -1108,6 +1155,7 @@ static int xiaomi_touch_probe(struct platform_device *pdev)
 		goto parse_dt_err;
 	}
 
+	xiaomi_touch_device = &xiaomi_touch_dev;
 	if (!xiaomi_touch_dev.class)
 		xiaomi_touch_dev.class = class_create(THIS_MODULE, "touch");
 
