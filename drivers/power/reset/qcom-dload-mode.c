@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <linux/delay.h>
@@ -38,7 +39,7 @@ struct qcom_dload {
 static bool enable_dump =
 	IS_ENABLED(CONFIG_POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT);
 static enum qcom_download_mode current_download_mode = QCOM_DOWNLOAD_NODUMP;
-static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_FULLDUMP;
+static enum qcom_download_mode dump_mode = QCOM_DOWNLOAD_BOTHDUMP;
 static bool early_pcie_init_enable;
 
 static int set_download_mode(enum qcom_download_mode mode)
