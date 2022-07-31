@@ -1748,6 +1748,7 @@ static int exec_binprm(struct linux_binprm *bprm)
 	return ret;
 }
 
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
 static noinline bool is_lmkd_reinit(struct user_arg_ptr *argv)
 {
 	const char __user *str;
@@ -1768,6 +1769,7 @@ static noinline bool is_lmkd_reinit(struct user_arg_ptr *argv)
 
 	return !strcmp(buf, "--reinit");
 }
+#endif
 
 /*
  * sys_execve() executes a new program.
@@ -1873,6 +1875,7 @@ static int __do_execve_file(int fd, struct filename *filename,
 	if (retval < 0)
 		goto out;
 
+#ifdef CONFIG_ANDROID_SIMPLE_LMK
 	// Super nasty hack to disable lmkd reloading props
 	if (unlikely(strcmp(bprm.filename, "/system/bin/lmkd") == 0)) {
 		if (is_lmkd_reinit(&argv)) {
@@ -1881,6 +1884,7 @@ static int __do_execve_file(int fd, struct filename *filename,
 			goto out;
 		}
 	}
+#endif
 
 	retval = exec_binprm(&bprm);
 	if (retval < 0)
