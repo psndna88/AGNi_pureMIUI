@@ -5911,64 +5911,6 @@ static ssize_t sysfs_dimlayer_exposure_write(struct device *dev,
 }
 #endif
 
-static ssize_t sysfs_hbm_enabled_read(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct dsi_display *display = dev_get_drvdata(dev);
-	if (!display->panel)
-		return 0;
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n", display->panel->hbm_enabled);
-}
-
-static ssize_t sysfs_hbm_enabled_write(struct device *dev,
-	    struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct dsi_display *display = dev_get_drvdata(dev);
-	int rc = 0;
-	bool status;
-
-	if (!display->panel)
-		return -EINVAL;
-
-	rc = kstrtobool(buf, &status);
-	if (rc) {
-		pr_err("%s: kstrtobool failed. rc=%d\n", __func__, rc);
-		return rc;
-	}
-
-	mutex_lock(&display->display_lock);
-
-	display->panel->hbm_enabled = status;
-	if (!dsi_panel_initialized(display->panel))
-		goto error;
-
-	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_CORE_CLK, DSI_CLK_ON);
-	if (rc) {
-		pr_err("[%s] failed to enable DSI core clocks, rc=%d\n",
-		       display->name, rc);
-		goto error;
-	}
-
-	rc = dsi_panel_set_hbm_mode(display->panel, display->panel->hbm_enabled);
-	if (rc) {
-		pr_err("unable to set hbm mode\n");
-		goto error;
-	}
-
-	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
-			DSI_CORE_CLK, DSI_CLK_OFF);
-	if (rc) {
-		pr_err("[%s] failed to disable DSI core clocks, rc=%d\n",
-		       display->name, rc);
-		goto error;
-	}
-error:
-	mutex_unlock(&display->display_lock);
-	return rc == 0 ? count : rc;
-}
-
 static DEVICE_ATTR(doze_status, 0644,
 			sysfs_doze_status_read,
 			sysfs_doze_status_write);
@@ -5983,17 +5925,12 @@ static DEVICE_ATTR(dimlayer_exposure, 0644,
 			sysfs_dimlayer_exposure_write);
 #endif
 
-static DEVICE_ATTR(hbm_enabled, 0644,
-			sysfs_hbm_enabled_read,
-			sysfs_hbm_enabled_write);
-
 static struct attribute *display_fs_attrs[] = {
 	&dev_attr_doze_status.attr,
 	&dev_attr_doze_mode.attr,
 #ifdef CONFIG_DRM_SDE_EXPO
 	&dev_attr_dimlayer_exposure.attr,
 #endif
-	&dev_attr_hbm_enabled.attr,
 	NULL,
 };
 static struct attribute_group display_fs_attrs_group = {

@@ -285,8 +285,6 @@ struct dsi_panel {
 	bool doze_requested;
 	enum dsi_doze_mode_type doze_mode;
 
-	bool hbm_enabled;
-
 #ifdef CONFIG_DRM_SDE_EXPO
 	bool dimlayer_exposure;
 #endif
@@ -441,6 +439,4 @@ void dsi_panel_dealloc_cmd_packets(struct dsi_panel_cmd_set *set);
 
 int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status);
 int dsi_panel_set_doze_mode(struct dsi_panel *panel, enum dsi_doze_mode_type mode);
-
-int dsi_panel_set_hbm_mode(struct dsi_panel *panel, bool status);
 #endif /* _DSI_PANEL_H_ */
