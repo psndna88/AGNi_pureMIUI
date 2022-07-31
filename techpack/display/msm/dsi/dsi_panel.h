@@ -284,10 +284,6 @@ struct dsi_panel {
 	bool doze_enabled;
 	bool doze_requested;
 	enum dsi_doze_mode_type doze_mode;
-
-#ifdef CONFIG_DRM_SDE_EXPO
-	bool dimlayer_exposure;
-#endif
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
