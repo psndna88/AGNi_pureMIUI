@@ -13,6 +13,7 @@
 #define HARDWARE_PROJECT_K1A        5
 #define HARDWARE_PROJECT_K9         6
 #define HARDWARE_PROJECT_K8         7
+#define HARDWARE_PROJECT_K3S        8
 
 #define HW_MAJOR_VERSION_SHIFT      16
 #define HW_MINOR_VERSION_SHIFT      0
