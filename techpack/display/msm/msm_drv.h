@@ -179,10 +179,6 @@ enum msm_mdp_crtc_property {
 	CRTC_PROP_IDLE_PC_STATE,
 	CRTC_PROP_CACHE_STATE,
 	CRTC_PROP_VM_REQ_STATE,
-
-#ifdef CONFIG_DRM_SDE_EXPO
-	CRTC_PROP_DIM_LAYER_EXPO,
-#endif
 	CRCT_PROP_MI_FOD_SYNC_INFO,
 
 	/* total # of properties */
