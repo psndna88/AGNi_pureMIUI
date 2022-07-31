@@ -42,11 +42,6 @@
 #include "sde_core_perf.h"
 #include "sde_trace.h"
 #include "sde_vm.h"
-
-#ifdef CONFIG_DRM_SDE_EXPO
-#include "dsi_display.h"
-#include "dsi_panel.h"
-#endif
 #include "mi_sde_crtc.h"
 
 #define SDE_PSTATES_MAX (SDE_STAGE_MAX * 4)
@@ -1564,15 +1559,6 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 						mixer, &cstate->dim_layer[i]);
 			clear_bit(SDE_CRTC_DIRTY_DIM_LAYERS, cstate->dirty);
 		}
-#ifdef CONFIG_DRM_SDE_EXPO
-		if (test_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, cstate->dirty)) {
-			if (cstate->exposure_dim_layer) {
-				_sde_crtc_setup_dim_layer_cfg(crtc, sde_crtc,
-						mixer, cstate->exposure_dim_layer);
-			}
-			clear_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, cstate->dirty);
-		}
-#endif
 	}
 }
 
@@ -2683,53 +2669,6 @@ static void _sde_crtc_set_dim_layer_v1(struct drm_crtc *crtc,
 clear:
 	set_bit(SDE_CRTC_DIRTY_DIM_LAYERS, cstate->dirty);
 }
-
-#ifdef CONFIG_DRM_SDE_EXPO
-static int sde_crtc_config_exposure_dim_layer(struct drm_crtc_state *crtc_state, int stage)
-{
-	struct sde_kms *kms;
-	struct sde_hw_dim_layer *dim_layer;
-	struct sde_crtc_state *cstate = to_sde_crtc_state(crtc_state);
-	struct drm_display_mode *mode = &crtc_state->adjusted_mode;
-	int alpha = sde_crtc_get_property(cstate, CRTC_PROP_DIM_LAYER_EXPO);
-	struct dsi_display *dsi_display = get_main_display();
-	struct dsi_panel *panel = dsi_display->panel;
-
-	kms = _sde_crtc_get_kms(crtc_state->crtc);
-	if (!kms || !kms->catalog) {
-		return -EINVAL;
-	}
-
-	if (cstate->num_dim_layers == SDE_MAX_DIM_LAYERS - 1) {
-		pr_err("failed to get available dim layer for exposure\n");
-		return -EINVAL;
-	}
-
-	if (!alpha || panel->spec_pdata->aod_mode || panel->spec_pdata->hbm_mode) {
-		cstate->exposure_dim_layer = NULL;
-		return 0;
-	}
-
-	if ((stage + SDE_STAGE_0) >= kms->catalog->mixer[0].sblk->maxblendstages) {
-		return -EINVAL;
-	}
-
-	dim_layer = &cstate->dim_layer[cstate->num_dim_layers];
-	dim_layer->flags = SDE_DRM_DIM_LAYER_INCLUSIVE;
-	dim_layer->stage = stage + SDE_STAGE_0;
-
-	dim_layer->rect.x = 0;
-	dim_layer->rect.y = 0;
-	dim_layer->rect.w = mode->hdisplay;
-	dim_layer->rect.h = mode->vdisplay;
-	dim_layer->color_fill = (struct sde_mdss_color) {0, 0, 0, alpha};
-	cstate->exposure_dim_layer = dim_layer;
-
-	set_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, cstate->dirty);
-
-	return 0;
-}
-#endif
 
 /**
  * _sde_crtc_set_dest_scaler - copy dest scaler settings from userspace
@@ -4053,9 +3992,6 @@ void sde_crtc_reset_sw_state(struct drm_crtc *crtc)
 
 	/* mark other properties which need to be dirty for next update */
 	set_bit(SDE_CRTC_DIRTY_DIM_LAYERS, &sde_crtc->revalidate_mask);
-#ifdef CONFIG_DRM_SDE_EXPO
-	set_bit(SDE_CRTC_DIRTY_DIM_LAYER_EXPO, cstate->dirty);
-#endif
 	if (cstate->num_ds_enabled)
 		set_bit(SDE_CRTC_DIRTY_DEST_SCALER, cstate->dirty);
 }
@@ -4869,27 +4805,6 @@ static int _sde_crtc_check_get_pstates(struct drm_crtc *crtc,
 	return rc;
 }
 
-#ifdef CONFIG_DRM_SDE_EXPO
-static int sde_crtc_exposure_atomic_check(struct sde_crtc_state *cstate,
-		struct plane_state *pstates, int cnt)
-{
-	int i, zpos = 0;
-
-	for (i = 0; i < cnt; i++) {
-		if (pstates[i].stage > zpos)
-			zpos = pstates[i].stage;
-	}
-	zpos++;
-
-	if (sde_crtc_config_exposure_dim_layer(&cstate->base, zpos)) {
-		SDE_ERROR("Failed to config dim layer\n");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-#endif
-
 static int _sde_crtc_check_zpos(struct drm_crtc_state *state,
 		struct sde_crtc *sde_crtc,
 		struct plane_state *pstates,
@@ -4991,12 +4906,6 @@ static int _sde_crtc_atomic_check_pstates(struct drm_crtc *crtc,
 			plane, multirect_plane, &cnt);
 	if (rc)
 		return rc;
-
-#ifdef CONFIG_DRM_SDE_EXPO
-	rc = sde_crtc_exposure_atomic_check(cstate, pstates, cnt);
-	if (rc)
-		return rc;
-#endif
 
 	/* assign mixer stages based on sorted zpos property */
 	rc = _sde_crtc_check_zpos(state, sde_crtc, pstates, cstate, mode, cnt);
@@ -5572,11 +5481,6 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	if (catalog->mdp[0].has_dest_scaler)
 		sde_crtc_install_dest_scale_properties(sde_crtc, catalog,
 				info);
-
-#ifdef CONFIG_DRM_SDE_EXPO
-	msm_property_install_volatile_range(&sde_crtc->property_info,
-			"dim_layer_exposure", 0x0, 0, ~0, 0, CRTC_PROP_DIM_LAYER_EXPO);
-#endif
 
 	if (catalog->dspp_count && catalog->rc_count)
 		sde_kms_info_add_keyint(info, "rc_mem_size",
