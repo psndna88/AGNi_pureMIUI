@@ -10,18 +10,11 @@
 #include "sde_formats.h"
 #include "dsi_display.h"
 #include "sde_trace.h"
+#include "mi_sde_encoder.h"
 
-#define SDE_DEBUG_VIDENC(e, fmt, ...) SDE_DEBUG("enc%d intf%d " fmt, \
-		(e) && (e)->base.parent ? \
-		(e)->base.parent->base.id : -1, \
-		(e) && (e)->base.hw_intf ? \
-		(e)->base.hw_intf->idx - INTF_0 : -1, ##__VA_ARGS__)
+#define SDE_DEBUG_VIDENC(e, fmt, ...)
 
-#define SDE_ERROR_VIDENC(e, fmt, ...) SDE_ERROR("enc%d intf%d " fmt, \
-		(e) && (e)->base.parent ? \
-		(e)->base.parent->base.id : -1, \
-		(e) && (e)->base.hw_intf ? \
-		(e)->base.hw_intf->idx - INTF_0 : -1, ##__VA_ARGS__)
+#define SDE_ERROR_VIDENC(e, fmt, ...)
 
 #define to_sde_encoder_phys_vid(x) \
 	container_of(x, struct sde_encoder_phys_vid, base)
@@ -500,6 +493,8 @@ static void sde_encoder_phys_vid_vblank_irq(void *arg, int irq_idx)
 	hw_ctl = phys_enc->hw_ctl;
 	if (!hw_ctl)
 		return;
+
+	mi_sde_encoder_save_vsync_info(phys_enc);
 
 	SDE_ATRACE_BEGIN("vblank_irq");
 
