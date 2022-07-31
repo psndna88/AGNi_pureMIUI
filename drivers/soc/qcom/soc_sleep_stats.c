@@ -57,6 +57,11 @@ struct appended_entry {
 	__le32 reserved[3];
 };
 
+#ifdef CONFIG_MI_POWER_INFO_MODULE
+/*add  CONFIG_MI_POWER_INFO_MODULE */
+//#include "../../misc/mi-power/mi_power.h"
+extern void soc_sleep_stats_dbg_register(struct stats_prv_data *prv_data);
+#endif // end of CONFIG_MI_POWER_INFO_MODULE
 struct stats_entry {
 	struct entry entry;
 	struct appended_entry appended_entry;
@@ -232,6 +237,10 @@ static int soc_sleep_stats_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, drv);
 
+#ifdef CONFIG_MI_POWER_INFO_MODULE
+	/*add  CONFIG_MI_POWER_INFO_MODULE  register */
+	soc_sleep_stats_dbg_register(prv_data);
+#endif // end of CONFIG_MI_POWER_INFO_MODULE
 
 	return 0;
 }
