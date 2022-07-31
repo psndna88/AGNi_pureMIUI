@@ -277,7 +277,6 @@ struct dsi_panel {
 	struct dsi_panel_ops panel_ops;
 
 	bool doze_enabled;
-	bool doze_requested;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
