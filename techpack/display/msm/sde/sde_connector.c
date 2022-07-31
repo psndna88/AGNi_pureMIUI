@@ -104,7 +104,6 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	int rc = 0;
 	struct sde_kms *sde_kms;
 	struct sde_vm_ops *vm_ops;
-	struct dsi_display *dsi_display = NULL;
 
 	sde_kms = _sde_connector_get_kms(&c_conn->base);
 	if (!sde_kms) {
@@ -139,8 +138,8 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	if (bl_lvl && bl_lvl < display->panel->bl_config.bl_min_level)
 		bl_lvl = display->panel->bl_config.bl_min_level;
 
-	if (!display->panel->bl_config.allow_bl_update) {
-		display->panel->bl_config.unset_bl_level = bl_lvl;
+	if (!c_conn->allow_bl_update) {
+		c_conn->unset_bl_level = bl_lvl;
 		return 0;
 	}
 
@@ -166,7 +165,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		mi_disp_feature_event_notify(&d_event, (u8 *)&brightness);
 		rc = c_conn->ops.set_backlight(&c_conn->base,
 				c_conn->display, bl_lvl);
-		display->panel->bl_config.unset_bl_level = 0;
+		c_conn->unset_bl_level = 0;
 	}
 
 done:
@@ -690,13 +689,13 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 
 	bl_config = &dsi_display->panel->bl_config;
 
-	if (!bl_config->allow_bl_update) {
-		bl_config->unset_bl_level = bl_config->bl_level;
+	if (!c_conn->allow_bl_update) {
+		c_conn->unset_bl_level = bl_config->bl_level;
 		return 0;
 	}
 
-	if (bl_config->unset_bl_level)
-		bl_config->bl_level = bl_config->unset_bl_level;
+	if (c_conn->unset_bl_level)
+		bl_config->bl_level = c_conn->unset_bl_level;
 
 	bl_config->bl_scale = c_conn->bl_scale > MAX_BL_SCALE_LEVEL ?
 			MAX_BL_SCALE_LEVEL : c_conn->bl_scale;
@@ -708,7 +707,7 @@ static int _sde_connector_update_bl_scale(struct sde_connector *c_conn)
 		bl_config->bl_level);
 	rc = c_conn->ops.set_backlight(&c_conn->base,
 			dsi_display, bl_config->bl_level);
-	bl_config->unset_bl_level = 0;
+	c_conn->unset_bl_level = 0;
 
 	return rc;
 }
@@ -797,8 +796,6 @@ static int _sde_connector_update_dirty_properties(
 {
 	struct sde_connector *c_conn;
 	struct sde_connector_state *c_state;
-	struct dsi_display *dsi_display = NULL;
-	struct dsi_backlight_config *bl_config = NULL;
 	int idx;
 
 	if (!connector) {
@@ -808,13 +805,6 @@ static int _sde_connector_update_dirty_properties(
 
 	c_conn = to_sde_connector(connector);
 	c_state = to_sde_connector_state(connector->state);
-
-	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
-		dsi_display = c_conn->display;
-
-		if (dsi_display && dsi_display->panel)
-			bl_config = &dsi_display->panel->bl_config;
-	}
 
 	mutex_lock(&c_conn->property_info.property_lock);
 	while ((idx = msm_property_pop_dirty(&c_conn->property_info,
@@ -847,7 +837,7 @@ static int _sde_connector_update_dirty_properties(
 	 * Special handling for postproc properties and
 	 * for updating backlight if any unset backlight level is present
 	 */
-	if (c_conn->bl_scale_dirty || (bl_config && bl_config->unset_bl_level)) {
+	if (c_conn->bl_scale_dirty || c_conn->unset_bl_level) {
 		_sde_connector_update_bl_scale(c_conn);
 		c_conn->bl_scale_dirty = false;
 	}
@@ -997,8 +987,7 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 		backlight_update_status(c_conn->bl_device);
 	}
 
-	if (display && display->panel)
-		display->panel->bl_config.allow_bl_update = false;
+	c_conn->allow_bl_update = false;
 }
 
 void sde_connector_helper_bridge_enable(struct drm_connector *connector)
