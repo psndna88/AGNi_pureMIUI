@@ -633,7 +633,7 @@ error:
 	return rc;
 }
 
-static int dsi_panel_update_doze(struct dsi_panel *panel) {
+int dsi_panel_update_doze(struct dsi_panel *panel) {
 	int rc = 0;
 
 	if (panel->doze_enabled) {
@@ -651,27 +651,11 @@ static int dsi_panel_update_doze(struct dsi_panel *panel) {
 	return rc;
 }
 
-static int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status) {
+int dsi_panel_set_doze_status(struct dsi_panel *panel, bool status) {
 	if (status == panel->doze_enabled)
 		return 0;
 
-	if (!panel->bl_config.allow_bl_update && status) {
-		panel->doze_requested = status;
-		return 0;
-	}
-
 	panel->doze_enabled = status;
-	panel->doze_requested = status;
-
-	return dsi_panel_update_doze(panel);
-}
-
-static int dsi_panel_apply_doze_status(struct dsi_panel *panel)
-{
-	if (panel->doze_requested == panel->doze_enabled)
-		return 0;
-
-	panel->doze_enabled = panel->doze_requested;
 
 	return dsi_panel_update_doze(panel);
 }
@@ -713,10 +697,6 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		DSI_ERR("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
 	}
-
-	rc = dsi_panel_apply_doze_status(panel);
-	if (rc)
-		DSI_ERR("[%s] unable to apply doze on, rc=%d\n", panel->name, rc);
 
 	bl->real_bl_level = bl_lvl;
 	panel->mi_cfg.bl_need_update = false;
@@ -3849,7 +3829,6 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	panel->drm_panel.dev = &panel->mipi_device.dev;
 	panel->mipi_device.dev.of_node = of_node;
 	panel->doze_enabled = false;
-	panel->doze_requested = false;
 
 	rc = drm_panel_add(&panel->drm_panel);
 	if (rc)
@@ -5170,7 +5149,6 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	panel->panel_initialized = false;
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 	panel->doze_enabled = false;
-	panel->doze_requested = false;
 	mi_dsi_update_micfg_flags(panel, PANEL_OFF);
 
 	mutex_unlock(&panel->panel_lock);
