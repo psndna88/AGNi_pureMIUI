@@ -587,22 +587,22 @@ fi;
 
 do_modules;
 
-haydn_userdata="/dev/block/mapper/userdata";
-if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
-	ui_print " ";
-	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
-	ui_print "(this can take few minutes)";
-	$BB sync;
-	$BB umount /sdcard;
-	$BB umount /data;
-	ui_print " Scan Running 1/2 ...";
-	fsck.f2fs -afy $haydn_userdata;
-	ui_print " Scan Running 2/2 ...";
-	fsck.f2fs -afy $haydn_userdata;
-	ui_print ">> Filesystem checks done! <<";
-	$BB mount $haydn_userdata /data;
-	$BB mount $haydn_userdata /sdcard;
-fi;
+#haydn_userdata="/dev/block/mapper/userdata";
+#if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
+#	ui_print " ";
+#	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
+#	ui_print "(this can take few minutes)";
+#	$BB sync;
+#	$BB umount /sdcard;
+#	$BB umount /data;
+#	ui_print " Scan Running 1/2 ...";
+#	fsck.f2fs -afy $haydn_userdata;
+#	ui_print " Scan Running 2/2 ...";
+#	fsck.f2fs -afy $haydn_userdata;
+#	ui_print ">> Filesystem checks done! <<";
+#	$BB mount $haydn_userdata /data;
+#	$BB mount $haydn_userdata /sdcard;
+#fi;
 
 debugging;
 restore_env;
