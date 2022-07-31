@@ -157,4 +157,7 @@ struct zram {
 	atomic64_t avg_size;
 #endif
 };
+
+/* mlog */
+unsigned long zram_mlog(void);
 #endif
