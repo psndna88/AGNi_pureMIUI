@@ -742,7 +742,8 @@ static int sde_rsc_switch_to_idle(struct sde_rsc_priv *rsc,
 		if (!rc)
 			rc = CMD_MODE_SWITCH_SUCCESS;
 	} else if (clk_client_active) {
-		rc = sde_rsc_switch_to_clk(rsc, wait_vblank_crtc_id);
+		if (rsc->current_state != SDE_RSC_CLK_STATE)
+			rc = sde_rsc_switch_to_clk(rsc, wait_vblank_crtc_id);
 		if (!rc)
 			rc = CLK_MODE_SWITCH_SUCCESS;
 	} else if (rsc->hw_ops.state_update) {
@@ -958,8 +959,13 @@ int sde_rsc_client_state_update(struct sde_rsc_client *caller_client,
 		goto end;
 	}
 
-	if (rsc->current_state == SDE_RSC_IDLE_STATE)
-		sde_rsc_resource_enable(rsc);
+	if (rsc->current_state == SDE_RSC_IDLE_STATE) {
+		rc = sde_rsc_resource_enable(rsc);
+		if (rc) {
+			pr_err("failed to enable sde rsc power resources rc:%d\n", rc);
+			goto end;
+		}
+	}
 
 	switch (state) {
 	case SDE_RSC_IDLE_STATE:

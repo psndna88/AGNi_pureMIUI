@@ -24,6 +24,10 @@
 	(((h)->rsvp && ((h)->rsvp->enc_id != (r)->enc_id)) ||\
 		((h)->rsvp_nxt && ((h)->rsvp_nxt->enc_id != (r)->enc_id)))
 
+#define RESERVED_BY_SAME_ENCODER(c, n) \
+	(((c) && ((c)->enc_id == (n)->enc_id)) &&\
+		((c)->topology == (n)->topology))
+
 #define RM_RQ_LOCK(r) ((r)->top_ctrl & BIT(SDE_RM_TOPCTL_RESERVE_LOCK))
 #define RM_RQ_CLEAR(r) ((r)->top_ctrl & BIT(SDE_RM_TOPCTL_RESERVE_CLEAR))
 #define RM_RQ_DSPP(r) ((r)->top_ctrl & BIT(SDE_RM_TOPCTL_DSPP))
@@ -1380,6 +1384,55 @@ static void sde_rm_get_rsvp_nxt_hw_blks(
 	}
 }
 
+static int _sde_rm_get_reserved_dsc_ids(struct sde_rm *rm,
+		struct sde_rm_rsvp *rsvp_nxt,
+		u8 *rsvp_dsc_ids,
+		u32 rsvp_dsc_size,
+		u32 *dsc_cnt)
+{
+	struct sde_rm_rsvp *dsc_rsvp_cur, *dsc_rsvp_nxt;
+	struct sde_rm_hw_iter iter_i;
+	u32 cnt = 0;
+
+	if (!rm || !rsvp_nxt || !rsvp_dsc_ids || !rsvp_dsc_size || !dsc_cnt) {
+		SDE_ERROR("invalid arguments");
+		return -EINVAL;
+	}
+
+	sde_rm_init_hw_iter(&iter_i, 0, SDE_HW_BLK_DSC);
+	while (_sde_rm_get_hw_locked(rm, &iter_i)) {
+		if (cnt >= rsvp_dsc_size)
+			break;
+
+		if (!iter_i.blk->id)
+			break;
+
+		dsc_rsvp_cur = iter_i.blk->rsvp;
+		if (RESERVED_BY_SAME_ENCODER(dsc_rsvp_cur, rsvp_nxt)) {
+			SDE_DEBUG("selecting cur dsc:%d enc:%d seq:%d top:%d",
+					iter_i.blk->id, dsc_rsvp_cur->enc_id,
+					dsc_rsvp_cur->seq,
+					dsc_rsvp_cur->topology);
+
+			rsvp_dsc_ids[cnt++] = iter_i.blk->id;
+			continue;
+		}
+
+		dsc_rsvp_nxt = iter_i.blk->rsvp_nxt;
+		if (RESERVED_BY_SAME_ENCODER(dsc_rsvp_nxt, rsvp_nxt)) {
+			SDE_DEBUG("selecting nxt dsc:%d enc:%d seq:%d top:%d",
+					iter_i.blk->id, dsc_rsvp_nxt->enc_id,
+					dsc_rsvp_nxt->seq,
+					dsc_rsvp_nxt->topology);
+			rsvp_dsc_ids[cnt++] = iter_i.blk->id;
+			continue;
+		}
+	}
+	*dsc_cnt = cnt;
+
+	return 0;
+}
+
 static int _sde_rm_reserve_dsc(
 		struct sde_rm *rm,
 		struct sde_rm_rsvp *rsvp,
@@ -1394,6 +1447,8 @@ static int _sde_rm_reserve_dsc(
 	int num_dsc_enc;
 	struct msm_display_dsc_info *dsc_info;
 	int i;
+	u8 rsvp_dsc_ids[MAX_BLOCKS];
+	u32 dsc_cnt = 0;
 
 	if (reqs->hw_res.comp_info->comp_type != MSM_DISPLAY_COMPRESSION_DSC) {
 		SDE_DEBUG("compression blk dsc not required\n");
@@ -1404,10 +1459,22 @@ static int _sde_rm_reserve_dsc(
 	dsc_info = &reqs->hw_res.comp_info->dsc_info;
 
 	if ((!num_dsc_enc) || !dsc_info) {
-		SDE_DEBUG("invalid topoplogy params: %d, %d\n",
+		SDE_DEBUG("invalid topology params: %d, %d\n",
 				num_dsc_enc, !(dsc_info == NULL));
 		return 0;
 	}
+
+	if (!_dsc_ids && _sde_rm_get_reserved_dsc_ids(rm, rsvp,
+			rsvp_dsc_ids, ARRAY_SIZE(rsvp_dsc_ids), &dsc_cnt)) {
+		return -EINVAL;
+	}
+
+	/* Specify DSC reuse selection in non cont.splash use case only */
+	if (!_dsc_ids && (dsc_cnt == num_dsc_enc))
+		_dsc_ids = rsvp_dsc_ids;
+
+	SDE_DEBUG("_dsc_ids=%pK, rsvp_dsc_ids=%pK, dsc_cnt=%d, num_dsc_enc=%d",
+			_dsc_ids, rsvp_dsc_ids, dsc_cnt, num_dsc_enc);
 
 	sde_rm_init_hw_iter(&iter_i, 0, SDE_HW_BLK_DSC);
 	sde_rm_get_rsvp_nxt_hw_blks(rm, rsvp, SDE_HW_BLK_PINGPONG, pp);
@@ -1492,6 +1559,8 @@ static int _sde_rm_reserve_dsc(
 
 		dsc[i]->rsvp_nxt = rsvp;
 
+		SDE_DEBUG("reserving dsc:%d, enc:%d, seq:%d", dsc[i]->id,
+			rsvp->enc_id, rsvp->seq);
 		SDE_EVT32(dsc[i]->type, rsvp->enc_id, dsc[i]->id);
 	}
 

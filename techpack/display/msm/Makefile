@@ -144,7 +144,21 @@ msm_drm-$(CONFIG_HDCP_QSEECOM) += ../hdcp/msm_hdcp.o \
 
 msm_drm-$(CONFIG_DRM_MSM) += \
 	mi_disp/mi_disp_notifier.o \
-	mi_disp/mi_dsi_display.o
+	mi_disp/mi_disp_core.o \
+	mi_disp/mi_disp_feature.o \
+	mi_disp/mi_disp_sysfs.o \
+	mi_disp/mi_disp_file.o \
+	mi_disp/mi_disp_parser.o \
+	mi_disp/mi_disp_procfs.o \
+	mi_disp/mi_disp_debugfs.o \
+	mi_disp/mi_disp_print.o \
+	mi_disp/mi_disp_log.o \
+	mi_disp/mi_dsi_display.o \
+	mi_disp/mi_dsi_panel.o \
+	mi_disp/mi_sde_connector.o \
+	mi_disp/mi_sde_crtc.o \
+	mi_disp/mi_sde_encoder.o \
+	mi_disp/mi_cooling_device.o
 
 msm_drm-$(CONFIG_MSM_SDE_ROTATOR) += ../rotator/sde_rotator_dev.o \
 	../rotator/sde_rotator_core.o \

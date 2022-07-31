@@ -22,6 +22,8 @@ struct dsi_bridge {
 
 	struct dsi_display *display;
 	struct dsi_display_mode dsi_mode;
+	struct mutex lock;
+	bool is_dsi_drm_bridge;
 };
 
 /**
