@@ -5120,7 +5120,8 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	 * power resources, by always keeping them on.
 	 *
 	 */
-	if (IS_ENABLED(CONFIG_ARM_SMMU_POWER_ALWAYS_ON))
+	if (IS_ENABLED(CONFIG_ARM_SMMU_POWER_ALWAYS_ON) &&
+	    of_property_read_bool(dev->of_node, "qcom,power-always-on"))
 		arm_smmu_power_on(smmu->pwr);
 
 	/*
@@ -5179,7 +5180,8 @@ static int arm_smmu_device_remove(struct platform_device *pdev)
 	arm_smmu_power_off(smmu, smmu->pwr);
 
 	/* Remove the extra reference that was taken in the probe function */
-	if (IS_ENABLED(CONFIG_ARM_SMMU_POWER_ALWAYS_ON))
+	if (IS_ENABLED(CONFIG_ARM_SMMU_POWER_ALWAYS_ON) &&
+	    of_property_read_bool(pdev->dev.of_node, "qcom,power-always-on"))
 		arm_smmu_power_off(smmu, smmu->pwr);
 
 	arm_smmu_exit_power_resources(smmu->pwr);
