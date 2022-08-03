@@ -11,8 +11,7 @@
 #include <linux/raid/xor.h>
 #include <asm/xor.h>
 
-static void xor_xc_2(unsigned long bytes, unsigned long * __restrict p1,
-		     const unsigned long * __restrict p2)
+static void xor_xc_2(unsigned long bytes, unsigned long *p1, unsigned long *p2)
 {
 	asm volatile(
 		"	larl	1,2f\n"
@@ -33,9 +32,8 @@ static void xor_xc_2(unsigned long bytes, unsigned long * __restrict p1,
 		: "0", "1", "cc", "memory");
 }
 
-static void xor_xc_3(unsigned long bytes, unsigned long * __restrict p1,
-		     const unsigned long * __restrict p2,
-		     const unsigned long * __restrict p3)
+static void xor_xc_3(unsigned long bytes, unsigned long *p1, unsigned long *p2,
+		     unsigned long *p3)
 {
 	asm volatile(
 		"	larl	1,2f\n"
@@ -60,10 +58,8 @@ static void xor_xc_3(unsigned long bytes, unsigned long * __restrict p1,
 		: : "0", "1", "cc", "memory");
 }
 
-static void xor_xc_4(unsigned long bytes, unsigned long * __restrict p1,
-		     const unsigned long * __restrict p2,
-		     const unsigned long * __restrict p3,
-		     const unsigned long * __restrict p4)
+static void xor_xc_4(unsigned long bytes, unsigned long *p1, unsigned long *p2,
+		     unsigned long *p3, unsigned long *p4)
 {
 	asm volatile(
 		"	larl	1,2f\n"
@@ -92,11 +88,8 @@ static void xor_xc_4(unsigned long bytes, unsigned long * __restrict p1,
 		: : "0", "1", "cc", "memory");
 }
 
-static void xor_xc_5(unsigned long bytes, unsigned long * __restrict p1,
-		     const unsigned long * __restrict p2,
-		     const unsigned long * __restrict p3,
-		     const unsigned long * __restrict p4,
-		     const unsigned long * __restrict p5)
+static void xor_xc_5(unsigned long bytes, unsigned long *p1, unsigned long *p2,
+		     unsigned long *p3, unsigned long *p4, unsigned long *p5)
 {
 	/* Get around a gcc oddity */
 	register unsigned long *reg7 asm ("7") = p5;
