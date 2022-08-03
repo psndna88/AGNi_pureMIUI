@@ -7,6 +7,8 @@
 #define __HWKM_H_
 
 #include <linux/types.h>
+#include <stdbool.h>
+#include <stddef.h>
 
 /* Maximum number of bytes in a key used in a KEY_SLOT_RDWR operation */
 #define HWKM_MAX_KEY_SIZE 32

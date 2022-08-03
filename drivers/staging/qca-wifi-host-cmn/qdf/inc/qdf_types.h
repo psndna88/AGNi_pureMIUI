@@ -29,7 +29,7 @@
 
 /* Include Files */
 #include <i_qdf_types.h>
-#include <linux/stdarg.h>
+#include <stdarg.h>
 #ifdef TSOSEG_DEBUG
 #include <qdf_atomic.h>
 #endif
