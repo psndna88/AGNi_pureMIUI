@@ -28,9 +28,9 @@
  */
 
 #include <linux/delay.h>
-#include <linux/stdarg.h>
 
 #include "dm_services.h"
+#include <stdarg.h>
 
 struct dc_reg_value_masks {
 	uint32_t value;

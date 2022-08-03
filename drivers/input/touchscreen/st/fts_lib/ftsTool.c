@@ -41,7 +41,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/string.h>
-#include <linux/stdarg.h>
+#include <stdarg.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/serio.h>

@@ -10,7 +10,7 @@
  */
 
 #include <errno.h>
-#include <linux/stdarg.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>

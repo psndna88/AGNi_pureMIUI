@@ -561,7 +561,9 @@ static char *pnames[] =
 	/*2f */ "Useruserdata"
 };
 
-#include <linux/stdarg.h>
+
+
+#include <stdarg.h>
 
 /*-------------------------------------------------------*/
 static _cdebbuf *bufprint(_cdebbuf *cdb, char *fmt, ...)

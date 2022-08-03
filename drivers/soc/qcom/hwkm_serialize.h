@@ -6,6 +6,9 @@
 #ifndef __HWKM_SERIALIZE_H_
 #define __HWKM_SERIALIZE_H_
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include <linux/hwkm.h>
 
 /* Command lengths (words) */

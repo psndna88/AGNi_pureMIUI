@@ -50,7 +50,7 @@
  *					prumpf	991016	
  */
 
-#include <linux/stdarg.h>
+#include <stdarg.h>
 
 #include <linux/delay.h>
 #include <linux/init.h>

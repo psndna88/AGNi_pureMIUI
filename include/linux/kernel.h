@@ -3,7 +3,7 @@
 #define _LINUX_KERNEL_H
 
 
-#include <linux/stdarg.h>
+#include <stdarg.h>
 #include <linux/limits.h>
 #include <linux/linkage.h>
 #include <linux/stddef.h>
