@@ -147,17 +147,18 @@ static ssize_t fscaps_show(struct kobject *kobj,
 KERNEL_ATTR_RO(fscaps);
 
 #ifndef CONFIG_TINY_RCU
-int rcu_expedited;
+int rcu_expedited=1;
+int rcu_expedited_user=1;
 static ssize_t rcu_expedited_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", READ_ONCE(rcu_expedited));
+	return sprintf(buf, "%d\n", READ_ONCE(rcu_expedited_user));
 }
 static ssize_t rcu_expedited_store(struct kobject *kobj,
 				   struct kobj_attribute *attr,
 				   const char *buf, size_t count)
 {
-	if (kstrtoint(buf, 0, &rcu_expedited))
+	if (kstrtoint(buf, 0, &rcu_expedited_user))
 		return -EINVAL;
 
 	return count;
@@ -165,21 +166,40 @@ static ssize_t rcu_expedited_store(struct kobject *kobj,
 KERNEL_ATTR_RW(rcu_expedited);
 
 int rcu_normal;
+int rcu_normal_user;
 static ssize_t rcu_normal_show(struct kobject *kobj,
 			       struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", READ_ONCE(rcu_normal));
+	return sprintf(buf, "%d\n", READ_ONCE(rcu_normal_user));
 }
 static ssize_t rcu_normal_store(struct kobject *kobj,
 				struct kobj_attribute *attr,
 				const char *buf, size_t count)
 {
-	if (kstrtoint(buf, 0, &rcu_normal))
+	if (kstrtoint(buf, 0, &rcu_normal_user))
 		return -EINVAL;
 
 	return count;
 }
 KERNEL_ATTR_RW(rcu_normal);
+
+int rcu_normal_after_boot=1;
+int rcu_normal_after_boot_user=1;
+static ssize_t rcu_normal_after_boot_show(struct kobject *kobj,
+			       struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", READ_ONCE(rcu_normal_after_boot_user));
+}
+static ssize_t rcu_normal_after_boot_store(struct kobject *kobj,
+				struct kobj_attribute *attr,
+				const char *buf, size_t count)
+{
+	if (kstrtoint(buf, 0, &rcu_normal_after_boot_user))
+		return -EINVAL;
+
+	return count;
+}
+KERNEL_ATTR_RW(rcu_normal_after_boot);
 #endif /* #ifndef CONFIG_TINY_RCU */
 
 /*
