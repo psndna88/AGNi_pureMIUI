@@ -11,44 +11,7 @@
 
 	.arch		armv8-a+crc
 
-	.macro		byteorder, reg, be
-	.if		\be
-CPU_LE( rev		\reg, \reg	)
-	.else
-CPU_BE( rev		\reg, \reg	)
-	.endif
-	.endm
-
-	.macro		byteorder16, reg, be
-	.if		\be
-CPU_LE( rev16		\reg, \reg	)
-	.else
-CPU_BE( rev16		\reg, \reg	)
-	.endif
-	.endm
-
-	.macro		bitorder, reg, be
-	.if		\be
-	rbit		\reg, \reg
-	.endif
-	.endm
-
-	.macro		bitorder16, reg, be
-	.if		\be
-	rbit		\reg, \reg
-	lsr		\reg, \reg, #16
-	.endif
-	.endm
-
-	.macro		bitorder8, reg, be
-	.if		\be
-	rbit		\reg, \reg
-	lsr		\reg, \reg, #24
-	.endif
-	.endm
-
-	.macro		__crc32, c, be=0
-	bitorder	w0, \be
+	.macro		__crc32, c
 	cmp		x2, #16
 	b.lt		8f			// less than 16 bytes
 
@@ -61,14 +24,10 @@ CPU_BE( rev16		\reg, \reg	)
 	add		x8, x8, x1
 	add		x1, x1, x7
 	ldp		x5, x6, [x8]
-	byteorder	x3, \be
-	byteorder	x4, \be
-	byteorder	x5, \be
-	byteorder	x6, \be
-	bitorder	x3, \be
-	bitorder	x4, \be
-	bitorder	x5, \be
-	bitorder	x6, \be
+CPU_BE(	rev		x3, x3		)
+CPU_BE(	rev		x4, x4		)
+CPU_BE(	rev		x5, x5		)
+CPU_BE(	rev		x6, x6		)
 
 	tst		x7, #8
 	crc32\c\()x	w8, w0, x3
@@ -96,43 +55,33 @@ CPU_BE( rev16		\reg, \reg	)
 32:	ldp		x3, x4, [x1], #32
 	sub		x2, x2, #32
 	ldp		x5, x6, [x1, #-16]
-	byteorder	x3, \be
-	byteorder	x4, \be
-	byteorder	x5, \be
-	byteorder	x6, \be
-	bitorder	x3, \be
-	bitorder	x4, \be
-	bitorder	x5, \be
-	bitorder	x6, \be
+CPU_BE(	rev		x3, x3		)
+CPU_BE(	rev		x4, x4		)
+CPU_BE(	rev		x5, x5		)
+CPU_BE(	rev		x6, x6		)
 	crc32\c\()x	w0, w0, x3
 	crc32\c\()x	w0, w0, x4
 	crc32\c\()x	w0, w0, x5
 	crc32\c\()x	w0, w0, x6
 	cbnz		x2, 32b
-0:	bitorder	w0, \be
-	ret
+0:	ret
 
 8:	tbz		x2, #3, 4f
 	ldr		x3, [x1], #8
-	byteorder	x3, \be
-	bitorder	x3, \be
+CPU_BE(	rev		x3, x3		)
 	crc32\c\()x	w0, w0, x3
 4:	tbz		x2, #2, 2f
 	ldr		w3, [x1], #4
-	byteorder	w3, \be
-	bitorder	w3, \be
+CPU_BE(	rev		w3, w3		)
 	crc32\c\()w	w0, w0, w3
 2:	tbz		x2, #1, 1f
 	ldrh		w3, [x1], #2
-	byteorder16	w3, \be
-	bitorder16	w3, \be
+CPU_BE(	rev16		w3, w3		)
 	crc32\c\()h	w0, w0, w3
 1:	tbz		x2, #0, 0f
 	ldrb		w3, [x1]
-	bitorder8	w3, \be
 	crc32\c\()b	w0, w0, w3
-0:	bitorder	w0, \be
-	ret
+0:	ret
 	.endm
 
 	.align		5
@@ -150,11 +99,3 @@ alternative_if_not ARM64_HAS_CRC32
 alternative_else_nop_endif
 	__crc32		c
 SYM_FUNC_END(__crc32c_le)
-
-	.align		5
-SYM_FUNC_START(crc32_be)
-alternative_if_not ARM64_HAS_CRC32
-	b		crc32_be_base
-alternative_else_nop_endif
-	__crc32		be=1
-SYM_FUNC_END(crc32_be)
