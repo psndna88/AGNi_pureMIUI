@@ -34,7 +34,7 @@
 	#size-cells = <2>;
 
 	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x98c000 rcu_nocbs=0-7 kpti=off quiet noirqdebug mce=ignore_ce cgroup_disable=pressure";
+		bootargs = "ramoops_memreserve=4M log_buf_len=256K earlycon=msm_geni_serial,0x98c000 rcu_nocbs=0-7 kpti=off quiet noirqdebug mce=ignore_ce cgroup_disable=pressure";
 	};
 
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
