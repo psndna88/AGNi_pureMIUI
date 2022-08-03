@@ -18,6 +18,7 @@
 #ifndef mISDNIF_H
 #define mISDNIF_H
 
+#include <stdarg.h>
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/socket.h>

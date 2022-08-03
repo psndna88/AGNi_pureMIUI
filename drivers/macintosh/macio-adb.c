@@ -2,6 +2,7 @@
 /*
  * Driver for the ADB controller in the Mac I/O (Hydra) chip.
  */
+#include <stdarg.h>
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>

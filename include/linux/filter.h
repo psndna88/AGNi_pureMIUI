@@ -5,6 +5,8 @@
 #ifndef __LINUX_FILTER_H__
 #define __LINUX_FILTER_H__
 
+#include <stdarg.h>
+
 #include <linux/atomic.h>
 #include <linux/refcount.h>
 #include <linux/compat.h>

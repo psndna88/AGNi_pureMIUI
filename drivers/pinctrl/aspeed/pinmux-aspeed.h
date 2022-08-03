@@ -5,6 +5,7 @@
 #define ASPEED_PINMUX_H
 
 #include <linux/regmap.h>
+#include <stdbool.h>
 
 /*
  * The ASPEED SoCs provide typically more than 200 pins for GPIO and other
