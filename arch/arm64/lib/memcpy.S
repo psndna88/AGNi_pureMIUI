@@ -57,11 +57,11 @@
 	.endm
 
 	.weak memcpy
-SYM_FUNC_START_ALIAS(__memcpy)
-SYM_FUNC_START_PI(memcpy)
+ENTRY(__memcpy)
+ENTRY(memcpy)
 #include "copy_template.S"
 	ret
-SYM_FUNC_END_PI(memcpy)
+ENDPIPROC(memcpy)
 EXPORT_SYMBOL(memcpy)
-SYM_FUNC_END_ALIAS(__memcpy)
+ENDPROC(__memcpy)
 EXPORT_SYMBOL(__memcpy)

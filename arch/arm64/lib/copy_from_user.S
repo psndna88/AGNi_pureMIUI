@@ -53,12 +53,12 @@
 	.endm
 
 end	.req	x5
-SYM_FUNC_START(__arch_copy_from_user)
+ENTRY(__arch_copy_from_user)
 	add	end, x0, x2
 #include "copy_template.S"
 	mov	x0, #0				// Nothing to copy
 	ret
-SYM_FUNC_END(__arch_copy_from_user)
+ENDPROC(__arch_copy_from_user)
 EXPORT_SYMBOL(__arch_copy_from_user)
 
 	.section .fixup,"ax"
