@@ -30,7 +30,9 @@ unsigned long __copy_user_flushcache(void *to, const void __user *from,
 {
 	unsigned long rc;
 
-	rc = raw_copy_from_user(to, from, n);
+	uaccess_enable_not_uao();
+	rc = __arch_copy_from_user(to, from, n);
+	uaccess_disable_not_uao();
 
 	/* See above */
 	__clean_dcache_area_pop(to, n - rc);
