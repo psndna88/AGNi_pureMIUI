@@ -24,36 +24,36 @@
  * Returns:
  *	x0 - dest
  */
-	.macro ldrb1 reg, ptr, val
-	ldrb  \reg, [\ptr], \val
+	.macro ldrb1 ptr, regB, val
+	ldrb  \ptr, [\regB], \val
 	.endm
 
-	.macro strb1 reg, ptr, val
-	strb \reg, [\ptr], \val
+	.macro strb1 ptr, regB, val
+	strb \ptr, [\regB], \val
 	.endm
 
-	.macro ldrh1 reg, ptr, val
-	ldrh  \reg, [\ptr], \val
+	.macro ldrh1 ptr, regB, val
+	ldrh  \ptr, [\regB], \val
 	.endm
 
-	.macro strh1 reg, ptr, val
-	strh \reg, [\ptr], \val
+	.macro strh1 ptr, regB, val
+	strh \ptr, [\regB], \val
 	.endm
 
-	.macro ldr1 reg, ptr, val
-	ldr \reg, [\ptr], \val
+	.macro ldr1 ptr, regB, val
+	ldr \ptr, [\regB], \val
 	.endm
 
-	.macro str1 reg, ptr, val
-	str \reg, [\ptr], \val
+	.macro str1 ptr, regB, val
+	str \ptr, [\regB], \val
 	.endm
 
-	.macro ldp1 reg1, reg2, ptr, val
-	ldp \reg1, \reg2, [\ptr], \val
+	.macro ldp1 ptr, regB, regC, val
+	ldp \ptr, \regB, [\regC], \val
 	.endm
 
-	.macro stp1 reg1, reg2, ptr, val
-	stp \reg1, \reg2, [\ptr], \val
+	.macro stp1 ptr, regB, regC, val
+	stp \ptr, \regB, [\regC], \val
 	.endm
 
 	.weak memcpy
