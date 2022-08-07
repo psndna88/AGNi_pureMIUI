@@ -447,6 +447,14 @@ config MI_THERMAL_INTERFACE
 	help
 	  This is xiaomi thermal control interface.
 
+config MI_THERMAL_CPU_THROTTLE
+	bool "xiaomi thermal control for cpu throttling"
+	depends on MI_THERMAL_INTERFACE
+	default y
+	help
+	  Device using custom thermal implementation
+	  eg: Pixel thermal.
+
 config SPRD_THERMAL
 	tristate "Temperature sensor on Spreadtrum SoCs"
 	depends on ARCH_SPRD || COMPILE_TEST

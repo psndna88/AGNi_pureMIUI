@@ -98,6 +98,9 @@ static LIST_HEAD(cpufreq_cdev_list);
 
 void cpu_limits_set_level(unsigned int cpu, unsigned int max_freq)
 {
+#ifndef CONFIG_MI_THERMAL_CPU_THROTTLE
+	return; //skip throttling cpu on mi thermals as pixel thermals are being used
+#else
 	struct cpufreq_cooling_device *cpufreq_cdev;
 	struct thermal_cooling_device *cdev;
 	unsigned int cdev_cpu;
@@ -120,6 +123,7 @@ void cpu_limits_set_level(unsigned int cpu, unsigned int max_freq)
 			break;
 		}
 	}
+#endif
 }
 
 /* Below code defines functions to be used for cpufreq as cooling device */
