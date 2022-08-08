@@ -280,8 +280,10 @@ static ssize_t sps_set_bam_addr(struct file *file, const char __user *buf,
 	}
 	vir_addr = &bam->base;
 	num_pipes = bam->props.num_pipes;
+#ifdef CONFIG_IPC_LOGGING
 	if (log_level_sel <= SPS_IPC_MAX_LOGLEVEL)
 		bam->ipc_loglevel = log_level_sel;
+#endif
 
 	switch (reg_dump_option) {
 	case 1: /* output all registers of this BAM */
@@ -507,7 +509,9 @@ static void sps_debugfs_init(void)
 	debugfs_buf_size = 0;
 	debugfs_buf_used = 0;
 	wraparound = false;
+#ifdef CONFIG_IPC_LOGGING
 	log_level_sel = SPS_IPC_MAX_LOGLEVEL + 1;
+#endif
 
 	dent = debugfs_create_dir("sps", NULL);
 	if (IS_ERR(dent)) {
@@ -2115,38 +2119,47 @@ int sps_register_bam_device(const struct sps_bam_props *bam_props,
 
 	snprintf(bam_name, sizeof(bam_name), "sps_bam_%pa_0",
 					&bam->props.phys_addr);
+#ifdef CONFIG_IPC_LOGGING
 	bam->ipc_log0 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							bam_name, 0);
 	if (!bam->ipc_log0)
 		SPS_ERR(sps, "unable to create IPC Log 0 for bam %pa\n",
 				&bam->props.phys_addr);
+#endif
 
 	snprintf(bam_name, sizeof(bam_name), "sps_bam_%pa_1",
 					&bam->props.phys_addr);
+#ifdef CONFIG_IPC_LOGGING
 	bam->ipc_log1 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							bam_name, 0);
 	if (!bam->ipc_log1)
 		SPS_ERR(sps, "unable to create IPC Log 1 for bam %pa\n",
 				&bam->props.phys_addr);
+#endif
 
 	snprintf(bam_name, sizeof(bam_name), "sps_bam_%pa_2",
 					&bam->props.phys_addr);
+#ifdef CONFIG_IPC_LOGGING
 	bam->ipc_log2 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							bam_name, 0);
 	if (!bam->ipc_log2)
 		SPS_ERR(sps, "unable to create IPC Log 2 for bam %pa\n",
 				&bam->props.phys_addr);
+#endif
 
 	snprintf(bam_name, sizeof(bam_name), "sps_bam_%pa_3",
 					&bam->props.phys_addr);
+#ifdef CONFIG_IPC_LOGGING
 	bam->ipc_log3 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							bam_name, 0);
 	if (!bam->ipc_log3)
 		SPS_ERR(sps, "unable to create IPC Log 3 for bam %pa\n",
 				&bam->props.phys_addr);
+#endif
 
 	snprintf(bam_name, sizeof(bam_name), "sps_bam_%pa_4",
 					&bam->props.phys_addr);
+#ifdef CONFIG_IPC_LOGGING
 	bam->ipc_log4 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							bam_name, 0);
 	if (!bam->ipc_log4)
@@ -2157,6 +2170,7 @@ int sps_register_bam_device(const struct sps_bam_props *bam_props,
 		bam->ipc_loglevel = bam_props->ipc_loglevel;
 	else
 		bam->ipc_loglevel = SPS_IPC_DEFAULT_LOGLEVEL;
+#endif
 
 	ok = sps_bam_device_init(bam);
 	mutex_unlock(&bam->lock);
@@ -2250,11 +2264,13 @@ int sps_deregister_bam_device(unsigned long dev_handle)
 	mutex_lock(&bam->lock);
 	sps_bam_device_de_init(bam);
 	mutex_unlock(&bam->lock);
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(bam->ipc_log0);
 	ipc_log_context_destroy(bam->ipc_log1);
 	ipc_log_context_destroy(bam->ipc_log2);
 	ipc_log_context_destroy(bam->ipc_log3);
 	ipc_log_context_destroy(bam->ipc_log4);
+#endif
 	if (bam->props.virt_size)
 		(void)iounmap(bam->props.virt_addr);
 
@@ -2927,6 +2943,7 @@ static int __init sps_init(void)
 	if (sps == NULL)
 		return -ENOMEM;
 
+#ifdef CONFIG_IPC_LOGGING
 	sps->ipc_log0 = ipc_log_context_create(SPS_IPC_LOGPAGES,
 							"sps_ipc_log0", 0);
 	if (!sps->ipc_log0)
@@ -2947,6 +2964,7 @@ static int __init sps_init(void)
 				SPS_IPC_REG_DUMP_FACTOR, "sps_ipc_log4", 0);
 	if (!sps->ipc_log4)
 		pr_err("Failed to create IPC log4\n");
+#endif
 
 	ret = platform_driver_register(&msm_sps_driver);
 
