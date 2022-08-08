@@ -1616,7 +1616,7 @@ config NETDEV_NOTIFIER_ERROR_INJECT
 	  If unsure, say N.
 
 config FUNCTION_ERROR_INJECTION
-	def_bool y
+	bool "Function error injection support"
 	depends on HAVE_FUNCTION_ERROR_INJECTION && KPROBES
 
 config FAULT_INJECTION
