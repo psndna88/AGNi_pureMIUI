@@ -5804,6 +5804,7 @@ void ipa3_dec_client_disable_clks_delay_wq(
 		&ipa_dec_clients_disable_clks_on_suspend_irq_wq_work, delay))
 		IPAERR("Scheduling delayed work failed\n");
 }
+#ifndef CONFIG_DISABLE_IPA_WAKELOCKS
 /**
  * ipa3_inc_acquire_wakelock() - Increase active clients counter, and
  * acquire wakelock if necessary
@@ -5844,6 +5845,16 @@ void ipa3_dec_release_wakelock(void)
 		__pm_relax(ipa3_ctx->w_lock);
 	spin_unlock_irqrestore(&ipa3_ctx->wakelock_ref_cnt.spinlock, flags);
 }
+#else
+inline void ipa3_inc_acquire_wakelock(void)
+{
+	pr_debug("%s: Stub ipa wakelock fn\n", __func__);
+}
+inline void ipa3_dec_release_wakelock(void)
+{
+	pr_debug("%s: Stub ipa wakelock fn\n", __func__);
+}
+#endif
 
 int ipa3_set_clock_plan_from_pm(int idx)
 {
