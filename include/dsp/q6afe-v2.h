@@ -63,8 +63,16 @@
 #define BAP_BROADCAST        2
 #define BAP_BA_SIMULCAST     3
 
+#define AFE_TDM_INTERFACE_MAX 10
+#define AFE_ID_MASK 0xFF
+#define AFE_ID_SHIFT 4
+#define PORT_ID_TO_INTF_IDX(b) ((b & AFE_ID_MASK) >> AFE_ID_SHIFT)
+#define AFE_TDM_RX_GET_GROUP_IDX(b) ((PORT_ID_TO_INTF_IDX(b)) * 2)
+#define AFE_TDM_TX_GET_GROUP_IDX(b) ((PORT_ID_TO_INTF_IDX(b)) * 2 + 1)
+#define MAX_PORTS_PER_INTF 8
 
 typedef int (*routing_cb)(int port);
+u16 num_of_bits_set(u16 sd_line_mask);
 
 enum {
 	/* IDX 0->4 */
@@ -678,4 +686,15 @@ int afe_get_spk_v_vali_flag(void);
 void afe_get_spk_v_vali_sts(int *spk_v_vali_sts);
 void afe_set_spk_initial_cal(int initial_cal);
 void afe_set_spk_v_vali_flag(int v_vali_flag);
+struct afe_tdm_intf_paired_rx_cfg {
+	int afe_port_id;
+	union afe_port_group_config tdm_group; /* hold tdm group config */
+	struct afe_tdm_port_config tdm_port; /* hold tdm config */
+	struct afe_param_id_tdm_lane_cfg tdm_lane; /* hold tdm lane config */
+};
+void afe_tdm_paired_rx_cfg_val(int intf_idx, int afe_port_id,
+	union afe_port_group_config tdm_group, struct afe_tdm_port_config tdm_port,
+	struct afe_param_id_tdm_lane_cfg tdm_lane);
+int afe_paired_rx_tdm_port_ops(int intf_idx, bool enable, atomic_t *dai_group_ref);
+
 #endif /* __Q6AFE_V2_H__ */
