@@ -577,7 +577,7 @@ static int cam_mem_util_check_map_flags(struct cam_mem_mgr_map_cmd *cmd)
 static int cam_mem_util_map_hw_va(uint32_t flags,
 	int32_t *mmu_hdls,
 	int32_t num_hdls,
-	int fd,
+	int fd, struct dma_buf *dmabuf,
 	dma_addr_t *hw_vaddr,
 	size_t *len,
 	enum cam_smmu_region_id region,
@@ -606,7 +606,8 @@ static int cam_mem_util_map_hw_va(uint32_t flags,
 				fd,
 				dir,
 				hw_vaddr,
-				len);
+				len,
+				dmabuf);
 
 			if (rc < 0) {
 				CAM_ERR(CAM_MEM,
@@ -624,7 +625,8 @@ static int cam_mem_util_map_hw_va(uint32_t flags,
 				(dma_addr_t *)hw_vaddr,
 				len,
 				region,
-				is_internal);
+				is_internal,
+				dmabuf);
 
 			if (rc < 0) {
 				CAM_ERR(CAM_MEM,
@@ -716,6 +718,7 @@ int cam_mem_mgr_alloc_and_map(struct cam_mem_mgr_alloc_cmd *cmd)
 			cmd->mmu_hdls,
 			cmd->num_hdl,
 			fd,
+			dmabuf,
 			&hw_vaddr,
 			&len,
 			region,
@@ -856,6 +859,7 @@ int cam_mem_mgr_map(struct cam_mem_mgr_map_cmd *cmd)
 			cmd->mmu_hdls,
 			cmd->num_hdl,
 			cmd->fd,
+			dmabuf,
 			&hw_vaddr,
 			&len,
 			CAM_SMMU_REGION_IO,
@@ -1109,8 +1113,6 @@ static int cam_mem_util_unmap(int32_t idx,
 		if (cam_mem_util_unmap_hw_va(idx, region, client))
 			CAM_ERR(CAM_MEM, "Failed, dmabuf=%pK",
 				tbl.bufq[idx].dma_buf);
-		if (client == CAM_SMMU_MAPPING_KERNEL)
-			tbl.bufq[idx].dma_buf = NULL;
 	}
 
 	mutex_lock(&tbl.m_lock);
@@ -1126,8 +1128,7 @@ static int cam_mem_util_unmap(int32_t idx,
 		tbl.bufq[idx].is_imported,
 		tbl.bufq[idx].dma_buf);
 
-	if (tbl.bufq[idx].dma_buf)
-		dma_buf_put(tbl.bufq[idx].dma_buf);
+	dma_buf_put(tbl.bufq[idx].dma_buf);
 
 	tbl.bufq[idx].fd = -1;
 	tbl.bufq[idx].dma_buf = NULL;
