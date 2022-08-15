@@ -929,7 +929,7 @@ CONFIG_WLAN_WEXT_SUPPORT_ENABLE := y
 endif
 
 #Flag to enable/disable MTRACE feature
-CONFIG_ENABLE_MTRACE_LOG := n
+CONFIG_ENABLE_MTRACE_LOG := y
 
 #Flag to enable nud tracking feature
 CONFIG_WLAN_NUD_TRACKING := y
@@ -1232,7 +1232,7 @@ CONFIG_DP_SWLM := y
 endif
 
 #Enable Hang Event
-CONFIG_WLAN_HANG_EVENT := n
+CONFIG_WLAN_HANG_EVENT := y
 
 ifeq ($(CONFIG_CNSS_QCA6750), y)
 ifeq ($(CONFIG_FW_THERMAL_THROTTLE), y)
