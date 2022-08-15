@@ -365,7 +365,7 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
 HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wno-strict-prototypes -O2 \
-		-fomit-frame-pointer -std=gnu89 -pipe $(HOST_LFS_CFLAGS)
+		-fomit-frame-pointer -std=gnu89 -pipe -Wno-deprecated-declarations $(HOST_LFS_CFLAGS)
 HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS)
 HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS)
 HOST_LOADLIBES := $(HOST_LFS_LIBS)
@@ -426,7 +426,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wno-strict-prototypes -Wno-trigraphs -pipe \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Wno-implicit-function-declaration \
 		   -Wno-format-security -Wno-unused-variable -Wno-unused-function \
-		   -std=gnu89 -fno-PIE -Wno-misleading-indentation
+		   -std=gnu89 -fno-PIE -Wno-misleading-indentation -Wno-deprecated-declarations
 ifeq ($(TARGET_BOARD_TYPE),auto)
 KBUILD_CFLAGS    += -DCONFIG_PLATFORM_AUTO
 endif
@@ -701,6 +701,8 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-format)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-maybe-uninitialized)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-psabi)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
+KBUILD_CPPFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS   += -Os
