@@ -402,7 +402,7 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 HOSTCC	= $(CCACHE) clang
 HOSTCXX	= $(CCACHE) clang++
 KBUILD_HOSTCFLAGS   := -Wmissing-prototypes -Wstrict-prototypes -O2 \
-		-fomit-frame-pointer -Wno-visibility -std=gnu89 $(HOST_LFS_CFLAGS) \
+		-fomit-frame-pointer -Wno-visibility -std=gnu89 -Wno-deprecated-declarations $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
 KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS) -flto=$(BUILDJOBS)
 KBUILD_HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS) $(HOSTLDFLAGS)
@@ -477,7 +477,7 @@ KBUILD_CFLAGS   := -Wundef -Wno-strict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE \
 		   -Werror=implicit-function-declaration -Wno-error=implicit-int \
 		   -Werror=return-type -Wno-format-security -Wno-unused-variable -Wno-unused-function \
-		   -std=gnu89 -Wno-misleading-indentation -Wno-pointer-to-int-cast
+		   -std=gnu89 -Wno-misleading-indentation -Wno-pointer-to-int-cast -Wno-deprecated-declarations
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -738,6 +738,8 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning, unknown-warning-option)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-format)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-maybe-uninitialized)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-psabi)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
+KBUILD_CPPFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE
 KBUILD_CFLAGS += -O2
