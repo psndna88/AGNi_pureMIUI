@@ -39,3 +39,11 @@
 			};
 	};
 };
+
+&cam_csid2 {
+	status = "disabled";
+};
+
+&cam_vfe2 {
+	status = "disabled";
+};
