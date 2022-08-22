@@ -10,15 +10,18 @@ include $(srctree)/lib/vdso/Makefile
 
 # Same as cc-*option, but using CC_COMPAT instead of CC
 ifeq ($(CONFIG_CC_IS_CLANG), y)
-CC_COMPAT ?= $(CC)
-CC_COMPAT += --target=arm-linux-gnueabi
-else
-CC_COMPAT ?= $(CROSS_COMPILE_COMPAT)gcc
-endif
+CC_COMPAT_CLANG_FLAGS := --target=$(notdir $(CROSS_COMPILE_COMPAT:%-=%))
 
-ifeq ($(CONFIG_LD_IS_LLD), y)
+CC_COMPAT ?= $(CC)
+CC_COMPAT += $(CC_COMPAT_CLANG_FLAGS)
+
+ifneq ($(LLVM),)
 LD_COMPAT ?= $(LD)
 else
+LD_COMPAT ?= $(CROSS_COMPILE_COMPAT)ld
+endif
+else
+CC_COMPAT ?= $(CROSS_COMPILE_COMPAT)gcc
 LD_COMPAT ?= $(CROSS_COMPILE_COMPAT)ld
 endif
 
@@ -44,6 +47,10 @@ VDSO_CPPFLAGS += $(LINUXINCLUDE)
 # Common C and assembly flags
 # From top-level Makefile
 VDSO_CAFLAGS := $(VDSO_CPPFLAGS)
+ifneq ($(shell $(CC_COMPAT) --version 2>&1 | head -n 1 | grep clang),)
+VDSO_CAFLAGS += --target=$(notdir $(CROSS_COMPILE_COMPAT:%-=%))
+endif
+
 VDSO_CAFLAGS += $(call cc32-option,-fno-PIE)
 ifdef CONFIG_DEBUG_INFO
 VDSO_CAFLAGS += -g
@@ -109,7 +116,6 @@ VDSO_AFLAGS += $(dmbinstr)
 VDSO_LDFLAGS += -Bsymbolic --no-undefined -soname=linux-vdso.so.1
 VDSO_LDFLAGS += -z max-page-size=4096 -z common-page-size=4096
 VDSO_LDFLAGS += -nostdlib -shared --hash-style=sysv --build-id
-
 
 # Borrow vdsomunge.c from the arm vDSO
 # We have to use a relative path because scripts/Makefile.host prefixes
