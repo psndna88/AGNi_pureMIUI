@@ -22,7 +22,6 @@
 #include <linux/swap.h>
 #include <linux/splice.h>
 #include <linux/sched.h>
-#include <linux/freezer.h>
 
 MODULE_ALIAS_MISCDEV(FUSE_MINOR);
 MODULE_ALIAS("devname:fuse");
@@ -402,9 +401,9 @@ static void request_wait_answer(struct fuse_conn *fc, struct fuse_req *req)
 
 	/*
 	 * Either request is already in userspace, or it was forced.
-	 * Wait half of freeze_timeout_msecs to avoid getting stuck.
+	 * Wait it out.
 	 */
-	wait_event_freezable_timeout(req->waitq, test_bit(FR_FINISHED, &req->flags), freeze_timeout_msecs / 2);
+	wait_event(req->waitq, test_bit(FR_FINISHED, &req->flags));
 }
 
 static void __fuse_request_send(struct fuse_conn *fc, struct fuse_req *req)
@@ -2296,22 +2295,6 @@ static long fuse_dev_ioctl(struct file *file, unsigned int cmd,
 			}
 		}
 	}
-	#if defined(CONFIG_PASSTHROUGH_SYSTEM) && defined(CONFIG_REGION_IS_CN)
-	else if (cmd == FUSE_DEV_IOC_PASSTHROUGH_OPEN) {
-		struct fuse_dev *fud;
-		struct fuse_passthrough_out pto;
-
-		err = -EFAULT;
-		if (!copy_from_user(&pto,
-				    (struct fuse_passthrough_out __user *)arg,
-				    sizeof(pto))) {
-			err = -EINVAL;
-			fud = fuse_get_dev(file);
-			if (fud)
-				err = fuse_passthrough_open(fud, &pto);
-		}
-	}
-	#endif
 	return err;
 }
 
