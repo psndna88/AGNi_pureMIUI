@@ -51,4 +51,16 @@ config MIUI_ZRAM_MEMORY_TRACKING
 
 config ZRAM_DEFAULT_COMP_ALGORITHM
 	string "Default ZRAM algorithm"
+    depends on ZRAM
 	default "lz4"
+
+config ZRAM_SIZE_OVERRIDE
+	bool "override zram size"
+	depends on ZRAM
+	default n
+	
+config ZRAM_SIZE_OVERRIDE_GB
+	int "zram size to set from kernel"
+	range 1 8
+    depends on ZRAM_SIZE_OVERRIDE
+	default 4
