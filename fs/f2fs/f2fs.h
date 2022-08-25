@@ -3,7 +3,6 @@
  * fs/f2fs/f2fs.h
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
- * Copyright (C) 2021 XiaoMi, Inc.
  *             http://www.samsung.com/
  */
 #ifndef _LINUX_F2FS_H
@@ -99,9 +98,6 @@ extern const char *f2fs_fault_name[FAULT_MAX];
 #define F2FS_MOUNT_RESERVE_ROOT		0x01000000
 #define F2FS_MOUNT_DISABLE_CHECKPOINT	0x02000000
 #define F2FS_MOUNT_NORECOVERY		0x04000000
-
-#define F2FS_MOUNT_MERGE_CHECKPOINT	0x10000000
-#define F2FS_MOUNT_GC_MERGE		0x20000000
 
 #define F2FS_OPTION(sbi)	((sbi)->mount_opt)
 #define clear_opt(sbi, option)	(F2FS_OPTION(sbi).opt &= ~F2FS_MOUNT_##option)
@@ -612,8 +608,8 @@ enum {
 
 #define DEFAULT_RETRY_IO_COUNT	8	/* maximum retry read IO count */
 
-/* congestion wait timeout value, default: 6ms */
-#define	DEFAULT_IO_TIMEOUT	(msecs_to_jiffies(6))
+/* congestion wait timeout value, default: 20ms */
+#define	DEFAULT_IO_TIMEOUT	(msecs_to_jiffies(20))
 
 /* maximum retry quota flush count */
 #define DEFAULT_RETRY_QUOTA_FLUSH_COUNT		8
@@ -805,9 +801,6 @@ struct f2fs_inode_info {
 	struct task_struct *inmem_task;	/* store inmemory task */
 	struct mutex inmem_lock;	/* lock for inmemory pages */
 	struct extent_tree *extent_tree;	/* cached extent_tree entry */
-#ifdef CONFIG_F2FS_CP_OPT
-	struct list_head xattr_dirty_list;	/* list for xattr changed inodes */
-#endif
 
 	/* avoid racing between foreground op and gc */
 	struct rw_semaphore i_gc_rwsem[2];
@@ -1148,9 +1141,6 @@ enum cp_reason_type {
 	CP_FASTBOOT_MODE,
 	CP_SPEC_LOG_NUM,
 	CP_RECOVER_DIR,
-#ifdef CONFIG_F2FS_CP_OPT
-	CP_PARENT_XATTR_SET,
-#endif
 };
 
 enum iostat_type {
@@ -1464,10 +1454,6 @@ struct f2fs_sb_info {
 	struct list_head fsync_node_list;	/* node list head */
 	unsigned int fsync_seg_id;		/* sequence id */
 	unsigned int fsync_node_num;		/* number of node entries */
-#ifdef CONFIG_F2FS_CP_OPT
-	spinlock_t xattr_set_dir_ilist_lock;	/* lock for dir inode list*/
-	struct list_head xattr_set_dir_ilist;	/* xattr changed dir inode list */
-#endif
 
 	/* for orphan inode, use 0'th array */
 	unsigned int max_orphans;		/* max orphan inodes */
@@ -1539,7 +1525,6 @@ struct f2fs_sb_info {
 	struct f2fs_gc_kthread	*gc_thread;	/* GC thread */
 	unsigned int cur_victim_sec;		/* current victim section num */
 	unsigned int gc_mode;			/* current GC state */
-	bool gc_booster;			/* boost background gc */
 	unsigned int next_victim_seg[2];	/* next segment in victim section */
 	/* for skip statistic */
 	unsigned int atomic_files;              /* # of opened atomic file */
@@ -3558,7 +3543,7 @@ struct f2fs_stat_info {
 	int nats, dirty_nats, sits, dirty_sits;
 	int free_nids, avail_nids, alloc_nids;
 	int total_count, utilization;
-	int gc_booster, bg_gc, nr_wb_cp_data, nr_wb_data;
+	int bg_gc, nr_wb_cp_data, nr_wb_data;
 	int nr_rd_data, nr_rd_node, nr_rd_meta;
 	int nr_dio_read, nr_dio_write;
 	unsigned int io_skip_bggc, other_skip_bggc;
@@ -3811,16 +3796,6 @@ int f2fs_read_inline_dir(struct file *file, struct dir_context *ctx,
 int f2fs_inline_data_fiemap(struct inode *inode,
 			struct fiemap_extent_info *fieinfo,
 			__u64 start, __u64 len);
-
-#ifdef CONFIG_F2FS_CP_OPT
-/*
- * xattr.c
- */
-void f2fs_inode_xattr_set(struct inode *inode);
-void f2fs_remove_xattr_set_inode(struct inode *inode);
-void f2fs_clear_xattr_set_ilist(struct f2fs_sb_info *sbi);
-int f2fs_parent_inode_xattr_set(struct inode *inode);
-#endif
 
 /*
  * shrinker.c
