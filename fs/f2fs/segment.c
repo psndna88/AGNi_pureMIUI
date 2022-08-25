@@ -3,7 +3,6 @@
  * fs/f2fs/segment.c
  *
  * Copyright (c) 2012 Samsung Electronics Co., Ltd.
- * Copyright (C) 2021 XiaoMi, Inc.
  *             http://www.samsung.com/
  */
 #include <linux/fs.h>
@@ -507,19 +506,8 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi, bool need)
 	 * dir/node pages without enough free segments.
 	 */
 	if (has_not_enough_free_secs(sbi, 0, 0)) {
-		if (test_opt(sbi, GC_MERGE) && sbi->gc_thread &&
-					sbi->gc_thread->f2fs_gc_task) {
-			DEFINE_WAIT(wait);
-
-			prepare_to_wait(&sbi->gc_thread->fggc_wq, &wait,
-						TASK_UNINTERRUPTIBLE);
-			wake_up(&sbi->gc_thread->gc_wait_queue_head);
-			io_schedule();
-			finish_wait(&sbi->gc_thread->fggc_wq, &wait);
-		} else {
-			down_write(&sbi->gc_lock);
-			f2fs_gc(sbi, false, false, NULL_SEGNO);
-		}
+		down_write(&sbi->gc_lock);
+		f2fs_gc(sbi, false, false, NULL_SEGNO);
 	}
 }
 
@@ -2838,15 +2826,6 @@ skip:
 
 		if (fatal_signal_pending(current))
 			break;
-
-		/*
-		 * If the trim thread is running and we receive the SCREEN_ON
-		 * event, we will send SIGUSR1 singnal to teriminate the trim
-		 * thread. So if there is a SIGUSR1 signal pending in current
-		 * thread, we need stop issuing discard commands and return.
-		 */
-		if (signal_pending(current) && sigismember(&current->pending.signal, SIGUSR1))
-			break;
 	}
 
 	blk_finish_plug(&plug);
@@ -2899,6 +2878,15 @@ int f2fs_trim_fs(struct f2fs_sb_info *sbi, struct fstrim_range *range)
 	err = f2fs_write_checkpoint(sbi, &cpc);
 	up_write(&sbi->gc_lock);
 	if (err)
+		goto out;
+
+	/*
+	 * We filed discard candidates, but actually we don't need to wait for
+	 * all of them, since they'll be issued in idle time along with runtime
+	 * discard option. User configuration looks like using runtime discard
+	 * or periodic fstrim instead of it.
+	 */
+	if (f2fs_realtime_discard_enable(sbi))
 		goto out;
 
 	start_block = START_BLOCK(sbi, start_segno);
