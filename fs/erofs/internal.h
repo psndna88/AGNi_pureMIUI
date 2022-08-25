@@ -324,6 +324,14 @@ static inline unsigned int erofs_inode_datalayout(unsigned int value)
 			      EROFS_I_DATALAYOUT_BITS);
 }
 
+static inline void *erofs_calloc_nofail(size_t n, size_t size)
+{
+	void *ret = kvcalloc(n, size, GFP_KERNEL | __GFP_RETRY_MAYFAIL);
+	if (!ret)
+		ret = kcalloc(n, size, GFP_KERNEL | __GFP_NOFAIL);
+	return ret;
+}
+
 /*
  * Different from grab_cache_page_nowait(), reclaiming is never triggered
  * when allocating new pages.
