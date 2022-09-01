@@ -295,7 +295,7 @@ cld80211_oem_rsp_alloc_skb(uint32_t portid, void **hdr, struct nlattr **nest,
 		return NULL;
 	}
 
-	*hdr = nl80211hdr_put(msg, portid, 0, *flags, WLAN_NL_MSG_OEM);
+	*hdr = nl80211hdr_put_qca(msg, portid, 0, *flags, WLAN_NL_MSG_OEM);
 	if (*hdr == NULL) {
 		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
 					"nl80211 hdr put failed");
@@ -341,7 +341,7 @@ int nl_srv_unregister(tWlanNlModTypes msg_type, nl_srv_msg_callback msg_handler)
 	return 0;
 }
 
-void *nl80211hdr_put(struct sk_buff *skb, uint32_t portid,
+void *nl80211hdr_put_qca(struct sk_buff *skb, uint32_t portid,
 		     uint32_t seq, int flags, uint8_t cmd)
 {
 	struct genl_family *cld80211_fam = cld80211_get_genl_family();
@@ -370,7 +370,7 @@ static int cld80211_fill_data(struct sk_buff *msg, uint32_t portid,
 	void *hdr;
 	struct nlattr *nest;
 
-	hdr = nl80211hdr_put(msg, portid, seq, flags, cmd);
+	hdr = nl80211hdr_put_qca(msg, portid, seq, flags, cmd);
 	if (!hdr) {
 		QDF_TRACE(QDF_MODULE_ID_HDD, QDF_TRACE_LEVEL_ERROR,
 						"nl80211 hdr put failed");
