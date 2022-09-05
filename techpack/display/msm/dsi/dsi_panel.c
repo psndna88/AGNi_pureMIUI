@@ -5103,6 +5103,10 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	else
 		panel->panel_initialized = true;
 	mutex_unlock(&panel->panel_lock);
+
+	if (!rc)
+		rc = dsi_backlight_update_dpms(&panel->bl_config,
+					       SDE_MODE_DPMS_ON);
 	return rc;
 }
 
@@ -5143,14 +5147,15 @@ int dsi_panel_pre_disable(struct dsi_panel *panel)
 		gpio_set_value(panel->bl_config.en_gpio, 0);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_PRE_OFF);
-	if (rc) {
+	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_PRE_OFF cmds, rc=%d\n",
 		       panel->name, rc);
-		goto error;
-	}
 
-error:
 	mutex_unlock(&panel->panel_lock);
+
+	if (!rc)
+		rc = dsi_backlight_update_dpms(&panel->bl_config,
+					       SDE_MODE_DPMS_OFF);
 	return rc;
 }
 
@@ -5244,5 +5249,35 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel)
 	}
 error:
 	mutex_unlock(&panel->panel_lock);
+	return rc;
+}
+
+int dsi_backlight_update_dpms(struct dsi_backlight_config *bl, int power_mode)
+{
+	struct backlight_device *bd = bl->raw_bd;
+	int rc = 0;
+
+	if (!bd)
+		return 0;
+
+	mutex_lock(&bd->ops_lock);
+	switch (power_mode) {
+	case SDE_MODE_DPMS_ON:
+		bd->props.power = FB_BLANK_UNBLANK;
+		bd->props.state &= ~BL_CORE_FBBLANK;
+		break;
+	case SDE_MODE_DPMS_OFF:
+		bd->props.power = FB_BLANK_POWERDOWN;
+		bd->props.state |= BL_CORE_FBBLANK;
+		break;
+	default:
+		rc = -EINVAL;
+		break;
+	}
+
+	if (!rc)
+		backlight_update_status(bd);
+	mutex_unlock(&bd->ops_lock);
+
 	return rc;
 }

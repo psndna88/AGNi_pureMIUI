@@ -427,4 +427,5 @@ int dsi_panel_apply_requested_fod_hbm(struct dsi_panel *panel);
 void dsi_panel_set_fod_ui(struct dsi_panel *panel, bool status);
 void dsi_panel_request_fod_hbm(struct dsi_panel *panel, bool status);
 
+int dsi_backlight_update_dpms(struct dsi_backlight_config *bl, int power_state);
 #endif /* _DSI_PANEL_H_ */
