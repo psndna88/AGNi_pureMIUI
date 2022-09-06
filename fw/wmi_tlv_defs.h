@@ -1288,6 +1288,11 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_coex_dbam_cmd_fixed_param,
     WMITLV_TAG_STRUC_wmi_coex_dbam_complete_event_fixed_param,
     WMITLV_TAG_STRUC_wmi_is_my_mgmt_frame,
+    WMITLV_TAG_STRUC_wmi_health_mon_init_done_fixed_param,
+    WMITLV_TAG_STRUC_wmi_ipa_link_stats_event_fixed_param,
+    WMITLV_TAG_STRUC_wmi_ipa_link_stats,
+    WMITLV_TAG_STRUC_wmi_ipa_per_mac_stats,
+    WMITLV_TAG_STRUC_wmi_pdev_featureset_cmd_fixed_param,
 } WMITLV_TAG_ID;
 
 /*
@@ -1792,6 +1797,7 @@ typedef enum {
     OP(WMI_WOW_COAP_DEL_KEEPALIVE_PATTERN_CMDID) \
     OP(WMI_WOW_COAP_GET_BUF_INFO_CMDID) \
     OP(WMI_COEX_DBAM_CMDID) \
+    OP(WMI_PDEV_FEATURESET_CMDID) \
     /* add new CMD_LIST elements above this line */
 
 
@@ -2082,6 +2088,8 @@ typedef enum {
     OP(WMI_HALPHY_CTRL_PATH_STATS_EVENTID) \
     OP(WMI_WOW_COAP_BUF_INFO_EVENTID) \
     OP(WMI_COEX_DBAM_COMPLETE_EVENTID) \
+    OP(WMI_HEALTH_MON_INIT_DONE_EVENTID) \
+    OP(WMI_IPA_LINK_STATS_EVENTID) \
     /* add new EVT_LIST elements above this line */
 
 
@@ -4223,8 +4231,14 @@ WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_FIPS_EXTEND_CMDID);
 
 /* FIPS mode set cmd */
 #define WMITLV_TABLE_WMI_PDEV_FIPS_MODE_SET_CMDID(id,op,buf,len) \
-     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_fips_mode_set_cmd_fixed_param, wmi_pdev_fips_mode_set_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_fips_mode_set_cmd_fixed_param, wmi_pdev_fips_mode_set_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX)
  WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_FIPS_MODE_SET_CMDID);
+
+/* Featureset cmd */
+#define WMITLV_TABLE_WMI_PDEV_FEATURESET_CMDID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_pdev_featureset_cmd_fixed_param, wmi_pdev_featureset_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, feature_set_bitmap, WMITLV_SIZE_VAR)
+WMITLV_CREATE_PARAM_STRUC(WMI_PDEV_FEATURESET_CMDID);
 
 /* get CCK ANI level */
 #define WMITLV_TABLE_WMI_PDEV_GET_ANI_CCK_CONFIG_CMDID(id,op,buf,len) \
@@ -5647,7 +5661,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_OEM_DMA_BUF_RELEASE_EVENTID);
 /* oem data event */
 #define WMITLV_TABLE_WMI_OEM_DATA_EVENTID(id,op, buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_oem_data_event_fixed_param, wmi_oem_data_event_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, data, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, data, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_BYTE, A_UINT8, file_name, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_OEM_DATA_EVENTID);
 
 /* HOST SWBA Event */
@@ -5748,6 +5763,14 @@ WMITLV_CREATE_PARAM_STRUC(WMI_PEER_LINK_STATS_EVENTID);
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_channel_stats, channel_stats, WMITLV_SIZE_VAR)
 
 WMITLV_CREATE_PARAM_STRUC(WMI_RADIO_LINK_STATS_EVENTID);
+
+/* Update ipa stats Event */
+#define WMITLV_TABLE_WMI_IPA_LINK_STATS_EVENTID(id,op,buf,len)\
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_ipa_link_stats_event_fixed_param, wmi_ipa_link_stats_event_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_ipa_link_stats, ipa_stats, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_ipa_per_mac_stats, per_mac_stats, WMITLV_SIZE_VAR)
+
+WMITLV_CREATE_PARAM_STRUC(WMI_IPA_LINK_STATS_EVENTID);
 
 /* Update WLM stats event */
 #define WMITLV_TABLE_WMI_WLM_STATS_EVENTID(id,op,buf,len) \
@@ -6933,6 +6956,10 @@ WMITLV_CREATE_PARAM_STRUC(WMI_WOW_COAP_BUF_INFO_EVENTID);
 #define WMITLV_TABLE_WMI_COEX_DBAM_COMPLETE_EVENTID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_coex_dbam_complete_event_fixed_param, wmi_coex_dbam_complete_event_fixed_param, fixed_param, WMITLV_SIZE_FIX)
 WMITLV_CREATE_PARAM_STRUC(WMI_COEX_DBAM_COMPLETE_EVENTID);
+
+#define WMITLV_TABLE_WMI_HEALTH_MON_INIT_DONE_EVENTID(id,op,buf,len) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_health_mon_init_done_fixed_param, wmi_health_mon_init_done_fixed_param, fixed_param, WMITLV_SIZE_FIX)
+WMITLV_CREATE_PARAM_STRUC(WMI_HEALTH_MON_INIT_DONE_EVENTID);
 
 
 
