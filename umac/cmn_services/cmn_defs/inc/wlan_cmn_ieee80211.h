@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -195,6 +196,10 @@
 #define WLAN_VHTOP_CHWIDTH_REVSIG_160    1
 /* 80 + 80 MHz Operating Channel  (revised signalling) */
 #define WLAN_VHTOP_CHWIDTH_REVSIG_80_80  1
+
+#define WLAN_MAX_HEOP_IE_LEN              16
+#define WLAN_HEOP_OUI_TYPE                "\x24"
+#define WLAN_HEOP_OUI_SIZE                1
 
 #define WLAN_HEOP_FIXED_PARAM_LENGTH       7
 #define WLAN_HEOP_VHTOP_LENGTH             3

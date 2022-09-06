@@ -339,6 +339,18 @@ util_scan_get_phymode_6g(struct wlan_objmgr_pdev *pdev,
 
 	return phymode;
 }
+
+uint8_t
+util_scan_get_6g_oper_channel(uint8_t *he_op_ie)
+{
+	struct he_oper_6g_param *he_6g_params;
+
+	he_6g_params = util_scan_get_he_6g_params(he_op_ie);
+	if (!he_6g_params)
+		return 0;
+
+	return he_6g_params->primary_channel;
+}
 #else
 static QDF_STATUS
 util_scan_get_chan_from_he_6g_params(struct wlan_objmgr_pdev *pdev,
