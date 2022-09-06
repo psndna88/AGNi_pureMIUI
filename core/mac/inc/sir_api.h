@@ -482,6 +482,9 @@ struct sme_ready_req {
 					uint16_t deauth_disassoc_frame_len,
 					uint16_t reason_code);
 	csr_roam_pmkid_req_fn_t csr_roam_pmkid_req_cb;
+	QDF_STATUS (*csr_roam_candidate_event_cb)(struct mac_context *mac,
+						  uint8_t *frame,
+						  uint32_t len);
 };
 
 /**
@@ -2927,6 +2930,18 @@ struct roam_offload_synch_ind {
 	uint8_t hlp_data[FILS_MAX_HLP_DATA_LEN];
 	bool is_ft_im_roam;
 	enum wlan_phymode phy_mode; /*phy mode sent by fw */
+};
+
+/*
+ * struct roam_scan_candidate_frame Roam candidate scan entry
+ * vdev_id : vdev id
+ * frame_len : Length of the beacon/probe rsp frame
+ * frame : Pointer to the frame
+ */
+struct roam_scan_candidate_frame {
+	uint8_t vdev_id;
+	uint32_t frame_length;
+	uint8_t *frame;
 };
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD

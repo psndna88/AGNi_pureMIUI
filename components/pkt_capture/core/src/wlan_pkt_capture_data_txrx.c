@@ -1467,10 +1467,6 @@ void pkt_capture_datapkt_process(
 	if (QDF_IS_STATUS_ERROR(ret))
 		goto drop_rx_buf;
 
-	pkt = pkt_capture_alloc_mon_pkt(vdev);
-	if (!pkt)
-		goto drop_rx_buf;
-
 	switch (type) {
 	case TXRX_PROCESS_TYPE_DATA_RX:
 		callback = pkt_capture_rx_data_cb;
@@ -1480,7 +1476,14 @@ void pkt_capture_datapkt_process(
 		callback = pkt_capture_tx_data_cb;
 		break;
 	default:
-		return;
+		pkt_capture_vdev_put_ref(vdev);
+		goto drop_rx_buf;
+	}
+
+	pkt = pkt_capture_alloc_mon_pkt(vdev);
+	if (!pkt) {
+		pkt_capture_vdev_put_ref(vdev);
+		goto drop_rx_buf;
 	}
 
 	pkt->callback = callback;
