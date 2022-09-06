@@ -4,6 +4,7 @@
 	model = "Qualcomm Technologies, Inc. KATMAIP SoC";
 	compatible = "qcom,yupikp-iot";
 	qcom,msm-id = <575 0x10000>;
+	qcom,softsku-id = <1>;
 };
 
 &cam_csid2 {
