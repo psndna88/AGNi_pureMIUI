@@ -2475,14 +2475,20 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 			bits_per_sample = msm_routing_get_bit_width(
 						msm_bedais[i].format);
 
+			topology = msm_routing_get_adm_topology(fedai_id,
+								session_type,
+								i);
 			app_type =
 			fe_dai_app_type_cfg[fedai_id][session_type][i].app_type;
 			if (app_type) {
 				app_type_idx =
 				msm_pcm_routing_get_app_type_idx(app_type);
-				sample_rate =
-				fe_dai_app_type_cfg[fedai_id][session_type][i]
-					.sample_rate;
+				if ((fe_dai_app_type_cfg[fedai_id][session_type][i].sample_rate != msm_bedais[i].sample_rate) &&
+					(topology == AUDIO_COPP_MFC)) {
+					pr_debug("%s: FE and BE SR is not equal", __func__);
+					sample_rate = msm_bedais[i].sample_rate;
+				} else
+					sample_rate = fe_dai_app_type_cfg[fedai_id][session_type][i].sample_rate;
 				bits_per_sample =
 					(fe_dai_app_type_cfg[fedai_id][session_type][i].bit_width) ?
 					fe_dai_app_type_cfg[fedai_id][session_type][i].bit_width :
@@ -2496,9 +2502,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 			acdb_dev_id =
 			fe_dai_app_type_cfg[fedai_id][session_type][i]
 				.acdb_dev_id;
-			topology = msm_routing_get_adm_topology(fedai_id,
-								session_type,
-								i);
+
 			be_bit_width = msm_routing_get_bit_width(
                                                 msm_bedais[i].format);
 			copp_perf_mode = get_copp_perf_mode(fedai_id, session_type, i);
@@ -2563,11 +2567,16 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 				&session_copp_map[fedai_id][session_type][i]);
 
 			if (msm_is_resample_needed(
-				sample_rate,
-				msm_bedais[i].sample_rate))
-				adm_copp_mfc_cfg(port_id, copp_idx,
-					msm_bedais[i].sample_rate);
-
+				fe_dai_app_type_cfg[fedai_id][session_type][i].sample_rate,
+				msm_bedais[i].sample_rate)) {
+				if ((session_type == SESSION_TYPE_TX) && (topology == AUDIO_COPP_MFC)) {
+					adm_copp_mfc_cfg(port_id, copp_idx,
+						fe_dai_app_type_cfg[fedai_id][session_type][i].sample_rate);
+				} else {
+					adm_copp_mfc_cfg(port_id, copp_idx,
+						msm_bedais[i].sample_rate);
+				}
+			}
 			for (j = 0; j < MAX_COPPS_PER_PORT; j++) {
 				unsigned long copp =
 				    session_copp_map[fedai_id][session_type][i];
