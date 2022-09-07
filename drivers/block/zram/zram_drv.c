@@ -2319,7 +2319,6 @@ static ssize_t disksize_store(struct device *dev,
 	zram->first_time = zram->last_time = 0;
 #endif
 	zram->comp = comp;
-	barrier();
 	zram->disksize = disksize;
 	set_capacity(zram->disk, zram->disksize >> SECTOR_SHIFT);
 
@@ -2686,16 +2685,6 @@ static void destroy_devices(void)
 	idr_destroy(&zram_index_idr);
 	unregister_blkdev(zram_major, "zram");
 	cpuhp_remove_multi_state(CPUHP_ZCOMP_PREPARE);
-}
-
-unsigned long zram_mlog(void)
-{
-#define P2K(x) (((unsigned long)x) << (PAGE_SHIFT - 10))
-	if (num_devices == 0 && init_done(zram_devices))
-		return P2K(zs_get_total_pages(zram_devices->mem_pool));
-#undef P2K
-
-	return 0;
 }
 
 #ifdef CONFIG_PROC_FS
