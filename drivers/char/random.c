@@ -1100,6 +1100,33 @@ void add_input_randomness(unsigned int type, unsigned int code, unsigned int val
 }
 EXPORT_SYMBOL_GPL(add_input_randomness);
 
+/*
+ * Add a callback function that will be invoked when the nonblocking
+ * pool is initialised.
+ *
+ * returns: 0 if callback is successfully added
+ *	    -EALREADY if pool is already initialised (callback not called)
+ *	    -ENOENT if module for callback is not alive
+ */
+int add_random_ready_callback(struct random_ready_callback *rdy)
+{
+	struct module *owner;
+	unsigned long flags;
+	int err = -EALREADY;
+
+	if (crng_ready())
+		return err;
+
+	return 0;
+}
+EXPORT_SYMBOL(add_random_ready_callback);
+
+/*
+ * Delete a previously registered readiness callback function.
+ */
+void del_random_ready_callback(struct random_ready_callback *rdy) { }
+EXPORT_SYMBOL(del_random_ready_callback);
+
 #ifdef CONFIG_BLOCK
 void add_disk_randomness(struct gendisk *disk)
 {
