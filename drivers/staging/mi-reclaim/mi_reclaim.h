@@ -64,6 +64,7 @@ typedef struct sys {
 
 typedef struct mi_reclaim {
 	bool                      switch_on;
+	bool                      switch_on_fake;
 	bool                      debug;
 	bool                      need_reclaim;
 	wait_queue_head_t         wait;
