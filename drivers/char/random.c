@@ -744,7 +744,7 @@ static void __cold _credit_init_bits(size_t bits)
  *
  *	void add_device_randomness(const void *buf, size_t len);
  *	void add_hwgenerator_randomness(const void *buf, size_t len, size_t entropy);
- *	void add_bootloader_randomness(const void *buf, size_t len);
+ *	void add_bootloader_randomness_upstream(const void *buf, size_t len);
  *	void add_interrupt_randomness(int irq);
  *	void add_input_randomness(unsigned int type, unsigned int code, unsigned int value);
  *	void add_disk_randomness(struct gendisk *disk);
@@ -761,7 +761,7 @@ static void __cold _credit_init_bits(size_t bits)
  * entropy as specified by the caller. If the entropy pool is full it will
  * block until more entropy is needed.
  *
- * add_bootloader_randomness() is called by bootloader drivers, such as EFI
+ * add_bootloader_randomness_upstream() is called by bootloader drivers, such as EFI
  * and device tree, and credits its input depending on whether or not the
  * configuration option CONFIG_RANDOM_TRUST_BOOTLOADER is set.
  *
@@ -882,12 +882,15 @@ EXPORT_SYMBOL_GPL(add_hwgenerator_randomness);
  * Handle random seed passed by bootloader, and credit it if
  * CONFIG_RANDOM_TRUST_BOOTLOADER is set.
  */
-void __init add_bootloader_randomness(const void *buf, size_t len)
+void __init add_bootloader_randomness_upstream(const void *buf, size_t len)
 {
 	mix_pool_bytes(buf, len);
 	if (trust_bootloader)
 		credit_init_bits(len * 8);
 }
+
+void add_bootloader_randomness(const void *buf, unsigned int size) { }
+EXPORT_SYMBOL_GPL(add_bootloader_randomness);
 
 struct fast_pool {
 	struct work_struct mix;
