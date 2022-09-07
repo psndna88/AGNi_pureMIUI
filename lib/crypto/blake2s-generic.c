@@ -106,6 +106,13 @@ void blake2s_compress_generic(struct blake2s_state *state,const u8 *block,
 
 EXPORT_SYMBOL(blake2s_compress_generic);
 
+void blake2b_compress_generic(struct blake2s_state *state,const u8 *block,
+			      size_t nblocks, const u32 inc)
+{
+	blake2s_compress_generic(state, block, nblocks, inc);
+}
+EXPORT_SYMBOL(blake2b_compress_generic);
+
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("BLAKE2s hash function");
 MODULE_AUTHOR("Jason A. Donenfeld <Jason@zx2c4.com>");
