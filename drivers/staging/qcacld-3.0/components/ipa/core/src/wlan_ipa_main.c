@@ -165,7 +165,7 @@ QDF_STATUS ipa_rm_set_perf_level(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -186,7 +186,7 @@ void ipa_uc_info(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -207,7 +207,7 @@ void ipa_uc_stat(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -228,7 +228,7 @@ void ipa_uc_rt_debug_host_dump(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -249,7 +249,7 @@ void ipa_dump_info(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -270,7 +270,7 @@ void ipa_uc_stat_request(struct wlan_objmgr_pdev *pdev, uint8_t reason)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -292,7 +292,7 @@ void ipa_uc_stat_query(struct wlan_objmgr_pdev *pdev,
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -313,7 +313,7 @@ void ipa_reg_sap_xmit_cb(struct wlan_objmgr_pdev *pdev, wlan_ipa_softap_xmit cb)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -335,7 +335,7 @@ void ipa_reg_send_to_nw_cb(struct wlan_objmgr_pdev *pdev,
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -358,7 +358,7 @@ void ipa_reg_rps_enable_cb(struct wlan_objmgr_pdev *pdev,
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -380,7 +380,7 @@ void ipa_set_mcc_mode(struct wlan_objmgr_pdev *pdev, bool mcc_mode)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -401,7 +401,7 @@ void ipa_set_dfs_cac_tx(struct wlan_objmgr_pdev *pdev, bool tx_block)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -423,7 +423,7 @@ void ipa_set_ap_ibss_fwd(struct wlan_objmgr_pdev *pdev, uint8_t session_id,
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -449,7 +449,7 @@ void ipa_uc_force_pipe_shutdown(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -470,7 +470,7 @@ void ipa_flush(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -491,7 +491,7 @@ QDF_STATUS ipa_suspend(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -512,7 +512,7 @@ QDF_STATUS ipa_resume(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -534,7 +534,7 @@ QDF_STATUS ipa_uc_ol_init(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -555,7 +555,7 @@ bool ipa_is_tx_pending(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -575,7 +575,7 @@ QDF_STATUS ipa_uc_ol_deinit(struct wlan_objmgr_pdev *pdev)
 
 	ipa_init_deinit_lock();
 
-	if (!ipa_is_ready()) {
+	if (!ipa_is_ready_qcacld()) {
 		ipa_debug("ipa is not ready");
 		status = QDF_STATUS_SUCCESS;
 		goto out;
@@ -605,7 +605,7 @@ QDF_STATUS ipa_send_mcc_scc_msg(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -624,7 +624,7 @@ QDF_STATUS ipa_wlan_evt(struct wlan_objmgr_pdev *pdev, qdf_netdev_t net_dev,
 {
 	struct wlan_ipa_priv *ipa_obj;
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -651,7 +651,7 @@ bool ipa_is_fw_wdi_activated(struct wlan_objmgr_pdev *pdev)
 		return false;
 	}
 
-	if (!ipa_is_ready()) {
+	if (!ipa_is_ready_qcacld()) {
 		ipa_debug("ipa is not ready");
 		return false;
 	}
@@ -670,7 +670,7 @@ void ipa_uc_cleanup_sta(struct wlan_objmgr_pdev *pdev,
 {
 	struct wlan_ipa_priv *ipa_obj;
 
-	if (!ipa_is_ready()) {
+	if (!ipa_is_ready_qcacld()) {
 		ipa_debug("ipa is not ready");
 		return;
 	}
@@ -689,7 +689,7 @@ QDF_STATUS ipa_uc_disconnect_ap(struct wlan_objmgr_pdev *pdev,
 {
 	struct wlan_ipa_priv *ipa_obj;
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return QDF_STATUS_SUCCESS;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -706,7 +706,7 @@ void ipa_cleanup_dev_iface(struct wlan_objmgr_pdev *pdev,
 {
 	struct wlan_ipa_priv *ipa_obj;
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -722,7 +722,7 @@ void ipa_uc_ssr_cleanup(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_ipa_priv *ipa_obj;
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
@@ -835,7 +835,7 @@ void ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 	if (!ipa_config_is_enabled())
 		return;
 
-	if (!ipa_is_ready())
+	if (!ipa_is_ready_qcacld())
 		return;
 
 	ipa_obj = ipa_pdev_get_priv_obj(pdev);
