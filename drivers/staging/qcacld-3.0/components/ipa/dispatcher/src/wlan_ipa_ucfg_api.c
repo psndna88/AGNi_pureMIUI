@@ -31,7 +31,7 @@ bool ucfg_ipa_is_present(void)
 
 bool ucfg_ipa_is_ready(void)
 {
-	return ipa_is_ready();
+	return ipa_is_ready_qcacld();
 }
 
 bool ucfg_ipa_is_enabled(void)
