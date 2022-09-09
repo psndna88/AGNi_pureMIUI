@@ -797,20 +797,6 @@ static ssize_t writeback_store(struct device *dev,
 		if (wb_pages_nr >= wb_max)
 			break;
 
-		/*
-		 * If the writeback thread is running and we receive the
-		 * SCREEN_ON event, we will send SIGUSR1 singnal to teriminate
-		 * the writeback thread. So if there is a SIGUSR1 signal in
-		 * current thread, stop writeback.
-		 */
-		if (signal_pending(current) &&
-		    (sigismember(&current->signal->shared_pending.signal, SIGUSR1) ||
-		     sigismember(&current->pending.signal, SIGUSR1))) {
-			pr_info("Stop writeback, because SIGUSR1 is received\n");
-			ret = -EINTR;
-			break;
-		}
-
 		bvec.bv_page = page;
 		bvec.bv_len = PAGE_SIZE;
 		bvec.bv_offset = 0;
