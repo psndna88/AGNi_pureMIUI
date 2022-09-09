@@ -24,8 +24,6 @@
 #include <linux/export.h>
 #include <linux/rtc.h>
 #include <linux/seq_file.h>
-#include <linux/time.h>
-#include <linux/time64.h>
 
 /*CUR,DEFAULT,MIN,MAX*/
 #define VALUE_TYPE_SIZE 6
@@ -33,8 +31,6 @@
 #define MAX_BUF_SIZE 256
 #define BTN_INFO 0x152
 #define MAX_TOUCH_ID 10
-#define RAW_BUF_NUM 4
-#define THP_CMD_BASE	1000
 
 enum suspend_state {
 	XIAOMI_TOUCH_RESUME = 0,
@@ -76,12 +72,9 @@ enum MODE_TYPE {
 	Touch_Debug_Level      		= 18,
 	Touch_Power_Status     		= 19,
 	Touch_Mode_NUM         		= 20,
-	THP_LOCK_SCAN_MODE      	= THP_CMD_BASE + 0,
 };
 
 struct xiaomi_touch_interface {
-	int thp_cmd_buf[MAX_BUF_SIZE];
-	int thp_cmd_size;
 	int touch_mode[Touch_Mode_NUM][VALUE_TYPE_SIZE];
 	int (*setModeValue)(int Mode, int value);
 	int (*setModeLongValue)(int Mode, int value_len, int *value);
@@ -113,7 +106,6 @@ struct xiaomi_touch_interface {
 	int thp_noisefilter;
 	int thp_islandthreshold;
 	int thp_smooth;
-	int thp_dump_raw;
 	bool is_enable_touchdelta;
 };
 
@@ -139,7 +131,7 @@ enum touch_state {
 struct touch_event {
 	u32 slot;
 	enum touch_state state;
-	struct timespec64 touch_time;
+	struct timespec touch_time;
 };
 
 struct last_touch_event {
@@ -152,12 +144,7 @@ struct xiaomi_touch_pdata{
 	struct xiaomi_touch_interface *touch_data[2];
 	int suspend_state;
 	dma_addr_t phy_base;
-	int raw_head;
-	int raw_tail;
-	int raw_len;
-	unsigned int *raw_buf[RAW_BUF_NUM];
 	unsigned int *raw_data;
-	spinlock_t raw_lock;
 	int palm_value;
 	bool palm_changed;
 	int prox_value;
