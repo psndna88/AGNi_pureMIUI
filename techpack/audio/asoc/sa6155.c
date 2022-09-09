@@ -1,4 +1,5 @@
 /* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
  * Copyright 2011, The Android Open Source Project
@@ -4032,7 +4033,8 @@ static int msm_mi2s_set_sclk(struct snd_pcm_substream *substream, bool enable)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int port_id = 0;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 
 	port_id = msm_get_port_id(rtd->dai_link->id);
 	if (port_id < 0) {
@@ -5275,7 +5277,8 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	int index = cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (cpu_dai->id) / 2;
 	unsigned int fmt = SND_SOC_DAIFMT_CBS_CFS;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
@@ -5304,23 +5307,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	mutex_lock(&intf_conf->lock);
 	if (++intf_conf->ref_cnt == 1) {
 		/* Check if msm needs to provide the clock to the interface */
-		if (!intf_conf->msm_is_mi2s_master) {
+		if (!intf_conf->msm_is_mi2s_master)
 			mi2s_clk[index].clk_id = mi2s_ebit_clk[index];
-			fmt = SND_SOC_DAIFMT_CBM_CFM;
-		}
 		ret = msm_mi2s_set_sclk(substream, true);
 		if (ret < 0) {
 			dev_err(rtd->card->dev,
 				"%s: afe lpass clock failed to enable MI2S clock, err:%d\n",
 				__func__, ret);
 			goto clean_up;
-		}
-
-		ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
-		if (ret < 0) {
-			pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
-				__func__, index, ret);
-			goto clk_off;
 		}
 
 		pinctrl_info = &pdata->pinctrl_info[index];
@@ -5331,6 +5325,14 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 				pr_err("%s: MI2S TLMM pinctrl set failed with %d\n",
 					__func__, ret_pinctrl);
 		}
+	}
+	if (!intf_conf->msm_is_mi2s_master)
+		fmt = SND_SOC_DAIFMT_CBM_CFM;
+	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
+	if (ret < 0) {
+		pr_err("%s: set fmt cpu dai failed for MI2S (%d), err:%d\n",
+			__func__, index, ret);
+		goto clk_off;
 	}
 clk_off:
 	if (ret < 0)
@@ -5347,7 +5349,8 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	int ret;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	int index = rtd->cpu_dai->id;
+	/* Rx and Tx DAIs should use same clk index */
+	int index = (rtd->cpu_dai->id) / 2;
 	struct snd_soc_card *card = rtd->card;
 	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	struct msm_pinctrl_info *pinctrl_info = NULL;

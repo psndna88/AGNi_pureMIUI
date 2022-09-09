@@ -967,6 +967,9 @@ enable_supply:
 		if (mbhc->mbhc_cb->bcs_enable)
 			mbhc->mbhc_cb->bcs_enable(mbhc, true);
 
+	if (plug_type == MBHC_PLUG_TYPE_HEADSET)
+		mbhc->micbias_enable = true;
+
 	if (mbhc->mbhc_cb->mbhc_micbias_control)
 		wcd_mbhc_adc_update_fsm_source(mbhc, plug_type);
 exit:

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -6755,32 +6755,6 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 	},
 };
 
-static struct snd_soc_dai_link star_tdm_rx0_cs35l41_dai_link = {
-		.name = LPASS_BE_TERT_TDM_RX_0,
-		.stream_name = "Tertiary TDM0 Playback",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_TERT_TDM_RX_0,
-		.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ops = &lahaina_tdm_be_ops,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(tert_tdm_rx_0_star),
-};
-
-static struct snd_soc_dai_link star_tdm_rx1_cs35l41_dai_link = {
-		.name = LPASS_BE_TERT_TDM_RX_1,
-		.stream_name = "Tertiary TDM1 Playback",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_TERT_TDM_RX_1,
-		.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ops = &lahaina_tdm_be_ops,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		SND_SOC_DAILINK_REG(tert_tdm_rx_1_star),
-};
-
 static struct snd_soc_dai_link haydn_tdm_rx0_cs35l41_dai_link = {
 		.name = LPASS_BE_TERT_TDM_RX_0,
 		.stream_name = "Tertiary TDM0 Playback",
@@ -7735,7 +7709,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	u32 mi2s_audio_intf = 0;
 	u32 val = 0;
 	int i = 0;
-	u32 is_dev_mars = 0;
 	u32 wcn_btfm_intf = 0;
 	const struct of_device_id *match;
 	u32 wsa_max_devs = 0;
@@ -7787,28 +7760,13 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		       sizeof(msm_common_ultrasound_dai_links));
 		total_links += ARRAY_SIZE(msm_common_ultrasound_dai_links);
 
-		of_property_read_u32(dev->of_node, "qcom,msm-is-mars", &is_dev_mars);
-
-		if (is_dev_mars != 0) {
-			for (i = 0; i < ARRAY_SIZE(msm_common_be_dai_links); i++) {
-				if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_0)) {
-					memcpy(msm_common_be_dai_links + i, &star_tdm_rx0_cs35l41_dai_link,
-									sizeof(star_tdm_rx0_cs35l41_dai_link));
-				} else if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_1)) {
-					memcpy(msm_common_be_dai_links + i, &star_tdm_rx1_cs35l41_dai_link,
-									sizeof(star_tdm_rx1_cs35l41_dai_link));
-				}
-			}
-		}
-		if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
-			for (i = 0; i < ARRAY_SIZE(msm_common_be_dai_links); i++) {
-				if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_0)) {
-					memcpy(msm_common_be_dai_links + i, &haydn_tdm_rx0_cs35l41_dai_link,
-									sizeof(haydn_tdm_rx0_cs35l41_dai_link));
-				} else if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_1)) {
-					memcpy(msm_common_be_dai_links + i, &haydn_tdm_rx1_cs35l41_dai_link,
-									sizeof(haydn_tdm_rx1_cs35l41_dai_link));
-				}
+		for (i = 0; i < ARRAY_SIZE(msm_common_be_dai_links); i++) {
+			if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_0)) {
+				memcpy(msm_common_be_dai_links + i, &haydn_tdm_rx0_cs35l41_dai_link,
+								sizeof(haydn_tdm_rx0_cs35l41_dai_link));
+			} else if (!strcmp(msm_common_be_dai_links[i].name, LPASS_BE_TERT_TDM_RX_1)) {
+				memcpy(msm_common_be_dai_links + i, &haydn_tdm_rx1_cs35l41_dai_link,
+								sizeof(haydn_tdm_rx1_cs35l41_dai_link));
 			}
 		}
 

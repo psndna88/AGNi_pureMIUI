@@ -66,7 +66,7 @@ endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), sa6155))
 KBUILD_OPTIONS += CONFIG_SND_SOC_SA6155=y
 endif
-ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm qtigvmi3))
+ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm))
 KBUILD_OPTIONS += CONFIG_SND_SOC_GVM=y
 endif
 ifeq ($(TARGET_SUPPORT), $(filter $(TARGET_SUPPORT), qtiquingvm8295))
