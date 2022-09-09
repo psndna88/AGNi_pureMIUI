@@ -2305,6 +2305,7 @@ static ssize_t disksize_store(struct device *dev,
 	zram->first_time = zram->last_time = 0;
 #endif
 	zram->comp = comp;
+	barrier();
 	zram->disksize = disksize;
 	set_capacity(zram->disk, zram->disksize >> SECTOR_SHIFT);
 
