@@ -873,9 +873,6 @@ int uvc_xu_ctrl_query(struct uvc_video_chain *chain,
 void uvc_ctrl_cleanup_fh(struct uvc_fh *handle);
 
 /* Utility functions */
-void uvc_simplify_fraction(u32 *numerator, u32 *denominator,
-			   unsigned int n_terms, unsigned int threshold);
-u32 uvc_fraction_to_interval(u32 numerator, u32 denominator);
 struct usb_host_endpoint *uvc_find_endpoint(struct usb_host_interface *alts,
 					    u8 epaddr);
 
