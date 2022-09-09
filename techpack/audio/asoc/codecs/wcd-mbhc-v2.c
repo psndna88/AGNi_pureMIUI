@@ -1643,40 +1643,6 @@ static int wcd_mbhc_set_keycode(struct wcd_mbhc *mbhc)
 	return result;
 }
 
-#ifdef CONFIG_AUDIO_UART_DEBUG
-static int wcd_mbhc_init_gpio(struct wcd_mbhc *mbhc,
-			      struct wcd_mbhc_config *mbhc_cfg,
-			      const char *gpio_dt_str,
-			      int *gpio, struct device_node **gpio_dn)
-{
-	int rc = 0;
-	struct snd_soc_component *component;
-	struct snd_soc_card *card;
-
-	if (!mbhc || !mbhc_cfg)
-		return -EINVAL;
-
-	component = mbhc->component;
-	card = component->card;
-
-	dev_dbg(mbhc->component->dev, "%s: gpio %s\n", __func__, gpio_dt_str);
-
-	*gpio_dn = of_parse_phandle(card->dev->of_node, gpio_dt_str, 0);
-
-	if (!(*gpio_dn)) {
-		*gpio = of_get_named_gpio(card->dev->of_node, gpio_dt_str, 0);
-		if (!gpio_is_valid(*gpio)) {
-			dev_err(card->dev, "%s, property %s not in node %s",
-				__func__, gpio_dt_str,
-				card->dev->of_node->full_name);
-			rc = -EINVAL;
-		}
-	}
-
-	return rc;
-}
-#endif
-
 #if IS_ENABLED(CONFIG_QCOM_FSA4480_I2C)
 static int wcd_mbhc_usbc_ana_event_handler(struct notifier_block *nb,
 					   unsigned long mode, void *ptr)
@@ -1738,25 +1704,12 @@ int wcd_mbhc_start(struct wcd_mbhc *mbhc, struct wcd_mbhc_config *mbhc_cfg)
 
 	/* Parse fsa switch handle */
 	if (mbhc_cfg->enable_usbc_analog) {
-#ifdef CONFIG_AUDIO_UART_DEBUG
-		if (of_find_property(card->dev->of_node,
-					"qcom,uart-audio-sw-gpio",
-					NULL)) {
-			rc = wcd_mbhc_init_gpio(mbhc, mbhc_cfg,
-					"qcom,uart-audio-sw-gpio",
-					&mbhc_cfg->uart_audio_switch_gpio,
-					&mbhc_cfg->uart_audio_switch_gpio_p);
-			if (rc)
-				goto err;
-			#ifdef CONFIG_FASTBOOT_CMD_CTRL_UART
-			if (!is_early_cons_enabled) {
-				/*disable uart as it can produce noise when headset was pluged-in*/
-				msm_cdc_pinctrl_select_active_state(mbhc_cfg->uart_audio_switch_gpio_p);
-				dev_dbg(mbhc->component->dev, "disable uart in wcd_mbhc_start() \n");
-			}
-			#endif
-		}
-#endif
+		mbhc_cfg->uart_audio_switch_gpio_p =
+			of_parse_phandle(card->dev->of_node,
+					 "qcom,uart-audio-sw-gpio", 0);
+		if (mbhc_cfg->uart_audio_switch_gpio_p)
+			msm_cdc_pinctrl_select_active_state(
+				mbhc_cfg->uart_audio_switch_gpio_p);
 
 		dev_dbg(mbhc->component->dev, "%s: usbc analog enabled\n",
 				__func__);

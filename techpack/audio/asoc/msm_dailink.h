@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include <sound/soc.h>
@@ -461,22 +460,10 @@ SND_SOC_DAILINK_DEFS(sec_tdm_tx_0,
 	DAILINK_COMP_ARRAY(COMP_CODEC("msm-stub-codec.1", "msm-stub-tx")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
-SND_SOC_DAILINK_DEFS(tert_tdm_rx_0_haydn,
-	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36896")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.0-0040", "cs35l41.0-0040"),
-			   COMP_CODEC("cs35l41.0-0041", "cs35l41.0-0041")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
-
 SND_SOC_DAILINK_DEFS(tert_tdm_rx_0,
 	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36896")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.1-0040", "cs35l41.1-0040"),
 			   COMP_CODEC("cs35l41.1-0042", "cs35l41.1-0042")),
-	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
-
-SND_SOC_DAILINK_DEFS(tert_tdm_rx_1_haydn,
-	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36898")),
-	DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.0-0040", "cs35l41.0-0040"),
-			   COMP_CODEC("cs35l41.0-0041", "cs35l41.0-0041")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
 SND_SOC_DAILINK_DEFS(tert_tdm_rx_1,
@@ -485,17 +472,17 @@ SND_SOC_DAILINK_DEFS(tert_tdm_rx_1,
 			   COMP_CODEC("cs35l41.1-0042", "cs35l41.1-0042")),
 	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
-SND_SOC_DAILINK_DEFS(tert_tdm_rx_0_star,
-       DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36896")),
-       DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.1-0040", "cs35l41.1-0040"),
-                          COMP_CODEC("cs35l41.1-0042", "cs35l41.1-0042")),
-       DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
+SND_SOC_DAILINK_DEFS(tert_tdm_rx_0_haydn,
+	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36896")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.0-0040", "cs35l41.0-0040"),
+			   COMP_CODEC("cs35l41.0-0041", "cs35l41.0-0041")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
-SND_SOC_DAILINK_DEFS(tert_tdm_rx_1_star,
-       DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36898")),
-       DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.1-0040", "cs35l41.1-0040"),
-                          COMP_CODEC("cs35l41.1-0042", "cs35l41.1-0042")),
-       DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
+SND_SOC_DAILINK_DEFS(tert_tdm_rx_1_haydn,
+	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36898")),
+	DAILINK_COMP_ARRAY(COMP_CODEC("cs35l41.0-0040", "cs35l41.0-0040"),
+			   COMP_CODEC("cs35l41.0-0041", "cs35l41.0-0041")),
+	DAILINK_COMP_ARRAY(COMP_PLATFORM("msm-pcm-routing")));
 
 SND_SOC_DAILINK_DEFS(tert_tdm_tx_0,
 	DAILINK_COMP_ARRAY(COMP_CPU("msm-dai-q6-tdm.36897")),

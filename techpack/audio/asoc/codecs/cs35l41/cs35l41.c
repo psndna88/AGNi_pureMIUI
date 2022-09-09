@@ -42,7 +42,6 @@
 #include <linux/spi/spi.h>
 #include <linux/err.h>
 #include <linux/firmware.h>
-#include <linux/hwid.h>
 #include "wm_adsp.h"
 #include "cs35l41.h"
 #include "cs35l41_user.h"
@@ -1340,6 +1339,10 @@ static const struct cs35l41_global_fs_config cs35l41_fs_rates[] = {
 	{ 32000,	0x13 },
 };
 
+#define SPK_DAI_NAME "cs35l41.0-0041"
+#define RCV_DAI_NAME "cs35l41.0-0040"
+#define HANDSET_TUNING "rcv_voice_delta.txt"
+
 static int cs35l41_is_speaker_in_handset(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
 {
@@ -1347,20 +1350,7 @@ static int cs35l41_is_speaker_in_handset(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *rcv_dai = NULL;//rtd->codec_dais[1];
 	struct cs35l41_private *cs35l41 = NULL;
 	const char *fw_name = NULL;
-	const char *SPK_DAI_NAME = NULL;
-	const char *RCV_DAI_NAME = NULL;
-	const char *HANDSET_TUNING = NULL;
 	int i = 0;
-
-	if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
-		SPK_DAI_NAME = "cs35l41.0-0041";
-		RCV_DAI_NAME = "cs35l41.0-0040";
-		HANDSET_TUNING = "rcv_voice_delta.txt";
-	} else {
-		SPK_DAI_NAME = "cs35l41.1-0040";
-		RCV_DAI_NAME = "cs35l41.1-0042";
-		HANDSET_TUNING = "rcv_voice_delta.txt";
-	}
 
 	/* Only care about speaker ops*/
 	if (strcmp(dai->name, SPK_DAI_NAME))
@@ -1981,9 +1971,7 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "DSP1 Preload");
-		if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
-			regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
-		}
+		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
 	} else {
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Playback");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV AMP Capture");
@@ -1996,10 +1984,8 @@ static int cs35l41_component_probe(struct snd_soc_component *component)
 		snd_soc_dapm_ignore_suspend(dapm, "RCV TEMP");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preloader");
 		snd_soc_dapm_ignore_suspend(dapm, "RCV DSP1 Preload");
-		if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
-			regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
-			regmap_write(cs35l41->regmap, CS35L41_DAC_MSM_CFG, 0x00200000);
-		}
+		regmap_write(cs35l41->regmap, CS35L41_VPBR_CFG, 0x2005304);
+		regmap_write(cs35l41->regmap, CS35L41_DAC_MSM_CFG, 0x00200000);
 	}
 /* Add run-time mixer control for fast use case switch */
 	kcontrol = kzalloc(sizeof(*kcontrol), GFP_KERNEL);
