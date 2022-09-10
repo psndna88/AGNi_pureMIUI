@@ -343,4 +343,16 @@ config PINCTRL_BLAIR
 	  Say Y here to compile statically, or M here to compile it as a module.
 	  If unsure, say N.
 
+config PINCTRL_RENOIR
+	tristate "RENOIR GPIO condfig"
+	default n
+
+config PINCTRL_REDWOOD
+	tristate "REDWOOD GPIO config"
+	default n
+
+config PINCTRL_SM7325
+	tristate "SM7325 GPIO condfig"
+	default n
+
 endif
