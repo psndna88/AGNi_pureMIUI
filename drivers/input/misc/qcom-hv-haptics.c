@@ -1008,6 +1008,12 @@ static int haptics_get_closeloop_lra_period_v2(
 	bool auto_res_done;
 	u64 tmp;
 	int rc;
+#ifdef QCOM_HAPTIC_F0_PROTECT
+	//protect low rate of xbl f0 abnormal for k9 only
+	int f0_mix, f0_max, f0_default, f0_cnt;
+	int rc1, rc2, rc3, rc4;
+	struct device_node *node = chip->dev->of_node;
+#endif
 
 	/* read RC_CLK_CAL enabling mode */
 	rc = haptics_read(chip, chip->cfg_addr_base,
@@ -1162,6 +1168,39 @@ static int haptics_get_closeloop_lra_period_v2(
 		tmp = div_u64(tmp, last_good_tlra_cl_sts);
 		tmp = div_u64(tmp, 293);
 		config->rc_clk_cal_count = div_u64(tmp, config->t_lra_us);
+#ifdef QCOM_HAPTIC_F0_PROTECT
+		//protect low rate of xbl f0 abnormal for k9 only
+		if(in_boot){
+			u32  xbl_f0 = USEC_PER_SEC / config->cl_t_lra_us;
+			dev_err(chip->dev, "xbl f0  =%d \n", xbl_f0);
+			rc1 = of_property_read_u32(node, "qcom,lra-f0-min", &f0_mix);
+			if (rc1 < 0) {
+				dev_err(chip->dev, "lra-f0-min failed, rc=%d\n", rc);
+			}
+			rc2 = of_property_read_u32(node, "qcom,lra-f0-max", &f0_max);
+			if (rc2 < 0) {
+				dev_err(chip->dev, "lra-f0-max failed, rc=%d\n", rc);
+			}
+			rc3 = of_property_read_u32(node, "qcom,lra-f0-default", &f0_default);
+			if (rc3 < 0) {
+				dev_err(chip->dev, "lra-f0-default failed, rc=%d\n", rc);
+			}
+			rc4 = of_property_read_u32(node, "qcom,lra-f0-cal-count", &f0_cnt);
+			if (rc4 < 0) {
+				dev_err(chip->dev, "lra-f0-cal-count failed, rc=%d\n", rc);
+			}
+			if (rc1 >= 0 && rc2 >= 0 && rc3 >= 0 && rc4 >= 0) {
+				if (xbl_f0 > f0_max || xbl_f0 < f0_mix) {
+					dev_err(chip->dev, "xbl f0 abnormal: %d ~ 0x%x use default: %d ~ 0x%x f0:%d - %d after boot\n",
+							xbl_f0, config->rc_clk_cal_count, f0_default, f0_cnt, f0_mix, f0_max);
+					config->cl_t_lra_us = USEC_PER_SEC /f0_default;
+					config->rc_clk_cal_count = f0_cnt;
+				}
+			} else {
+				dev_err(chip->dev, "lra-f0: default min max count must set together in dtsi\n");
+			}
+		}
+#endif
 	} else {
 		dev_err(chip->dev, "Can't get close-loop LRA period in rc_clk_cal mode %u\n",
 				rc_clk_cal);
@@ -1476,11 +1515,13 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 	if ((is_boost_vreg_enabled_in_open_loop(chip) ||
 	     chip->hboost_enabled || is_haptics_external_powered(chip)) && en) {
 		/* Force VREG_RDY */
+#if !defined(QCOM_HAPTIC_BOB)
 		rc = haptics_masked_write(chip, chip->cfg_addr_base,
 				HAP_CFG_VSET_CFG_REG, FORCE_VREG_RDY_BIT,
 				FORCE_VREG_RDY_BIT);
 		if (rc < 0)
 			return rc;
+#endif
 
 		/* Toggle RC_CLK_CAL_EN if it's in auto mode */
 		rc = haptics_read(chip, chip->cfg_addr_base,
@@ -1508,9 +1549,11 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 			dev_dbg(chip->dev, "Toggle CAL_EN in open-loop-VREG playing\n");
 		}
 	} else if (!is_haptics_external_powered(chip)) {
+#if !defined(QCOM_HAPTIC_BOB)
 		rc = haptics_masked_write(chip, chip->cfg_addr_base,
 				HAP_CFG_VSET_CFG_REG,
 				FORCE_VREG_RDY_BIT, 0);
+#endif
 	}
 
 	return rc;
@@ -1537,8 +1580,6 @@ static int haptics_enable_play(struct haptics_chip *chip, bool en)
 		return rc;
 
 	val = play->pattern_src;
-	if (play->brake && !play->brake->disabled)
-		val |= BRAKE_EN_BIT;
 
 	if (en)
 		val |= PLAY_EN_BIT;
@@ -2076,7 +2117,7 @@ static int haptics_load_constant_effect(struct haptics_chip *chip, u8 amplitude)
 		goto unlock;
 
 	/* Always enable LRA auto resonance for DIRECT_PLAY */
-	rc = haptics_enable_autores(chip, !chip->config.is_erm);
+	rc = haptics_enable_autores(chip, 0);
 	if (rc < 0)
 		goto unlock;
 
@@ -2167,7 +2208,13 @@ static int haptics_init_custom_effect(struct haptics_chip *chip)
 	chip->custom_effect->pattern = NULL;
 	chip->custom_effect->brake = NULL;
 	chip->custom_effect->id = UINT_MAX;
+#ifdef QCOM_HAPTIC_BOB
 	chip->custom_effect->vmax_mv = chip->config.vmax_mv;
+#elif defined(CONFIG_TARGET_PRODUCT_HAYDN)
+	chip->custom_effect->vmax_mv = 8500;
+#else
+	chip->custom_effect->vmax_mv = 9000;
+#endif
 	chip->custom_effect->t_lra_us = chip->config.t_lra_us;
 	chip->custom_effect->src = FIFO;
 	chip->custom_effect->auto_res_disable = true;
@@ -2283,7 +2330,12 @@ static int haptics_load_custom_effect(struct haptics_chip *chip,
 
 	play->effect = chip->custom_effect;
 	play->brake = NULL;
-	play->vmax_mv = (magnitude * chip->custom_effect->vmax_mv) / 0x7fff;
+	/*
+	 * make vibration intensity could changed larger, 0x4000
+	 * is computed by 0x7fff - 0x3fff
+	 */
+	play->vmax_mv = (magnitude - 0x3fff) * chip->custom_effect->vmax_mv / 0x4000;
+
 	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
 	if (rc < 0)
 		goto cleanup;
@@ -4088,6 +4140,13 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 		rc = -EINVAL;
 		goto free_pbs;
 	}
+
+#ifdef CONFIG_TARGET_PRODUCT_HAYDN
+	config->vmax_mv = 1200;
+#endif
+#ifdef CONFIG_TARGET_PRODUCT_VILI
+	config->vmax_mv = 1300;
+#endif
 
 	config->fifo_empty_thresh = get_fifo_empty_threshold(chip);
 	of_property_read_u32(node, "qcom,fifo-empty-threshold",
