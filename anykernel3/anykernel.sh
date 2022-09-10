@@ -8,8 +8,8 @@ kernel.string=AGNi Kernel for haydn
 do.devicecheck=1
 do.modules=0
 do.systemless=0
-do.cleanup=0
-do.cleanuponabort=0
+do.cleanup=1
+do.cleanuponabort=1
 device.name1=haydn
 device.name2=haydn_in
 device.name3=MI 11x Pro
@@ -21,7 +21,7 @@ device.name8=K40 Pro
 device.name9=K40 Pro+
 device.name10=milahaina
 device.name11=haydnin
-supported.versions=12
+supported.versions=
 supported.patchlevels=
 '; } # end properties
 
@@ -29,15 +29,12 @@ supported.patchlevels=
 block=boot;
 is_slot_device=1;
 ramdisk_compression=auto;
+patch_vbmeta_flag=0;
+no_block_display=1;
 
 ## AnyKernel methods (DO NOT CHANGE)
 # import patching functions/variables - see for reference
 . tools/ak3-core.sh;
-
-## AnyKernel file attributes
-# set permissions/ownership for included ramdisk files
-set_perm_recursive 0 0 755 644 $ramdisk/*;
-set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
 # Optimize F2FS extension list (@arter97)
 if mountpoint -q /data; then
@@ -82,31 +79,8 @@ if mountpoint -q /data; then
   done
 fi
 
-## Trim partitions
-#ui_print "Running fstrim optimisation on f2fs /data.."
-#$bin/busybox fstrim -v /data;
-
-ui_print "Preparing for boot install.."
 ## AnyKernel boot install
 dump_boot;
 
 write_boot;
 ## end boot install
-
-
-# shell variables
-#block=vendor_boot;
-#is_slot_device=1;
-#ramdisk_compression=auto;
-
-# reset for vendor_boot patching
-#reset_ak;
-
-
-#ui_print "Preparing for vendor_boot install.."
-## AnyKernel vendor_boot install
-#split_boot; # skip unpack/repack ramdisk since we don't need vendor_ramdisk access
-
-#flash_boot;
-## end vendor_boot install
-
