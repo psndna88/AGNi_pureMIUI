@@ -1493,11 +1493,13 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 	if ((is_boost_vreg_enabled_in_open_loop(chip) ||
 	     is_haptics_external_powered(chip)) && en) {
 		/* Force VREG_RDY */
+#if !defined(QCOM_HAPTIC_BOB)
 		rc = haptics_masked_write(chip, chip->cfg_addr_base,
 				HAP_CFG_VSET_CFG_REG, FORCE_VREG_RDY_BIT,
 				FORCE_VREG_RDY_BIT);
 		if (rc < 0)
 			return rc;
+#endif
 
 		/* Toggle RC_CLK_CAL_EN if it's in auto mode */
 		rc = haptics_read(chip, chip->cfg_addr_base,
@@ -1525,9 +1527,11 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 			dev_dbg(chip->dev, "Toggle CAL_EN in open-loop-VREG playing\n");
 		}
 	} else if (!is_haptics_external_powered(chip)) {
+#if !defined(QCOM_HAPTIC_BOB)
 		rc = haptics_masked_write(chip, chip->cfg_addr_base,
 				HAP_CFG_VSET_CFG_REG,
 				FORCE_VREG_RDY_BIT, 0);
+#endif
 	}
 
 	return rc;
@@ -2149,7 +2153,13 @@ static int haptics_init_custom_effect(struct haptics_chip *chip)
 	chip->custom_effect->pattern = NULL;
 	chip->custom_effect->brake = NULL;
 	chip->custom_effect->id = UINT_MAX;
+#ifdef QCOM_HAPTIC_BOB
+	chip->custom_effect->vmax_mv = chip->config.vmax_mv;
+#elif defined(CONFIG_TARGET_PRODUCT_HAYDN)
 	chip->custom_effect->vmax_mv = 8500;
+#else
+	chip->custom_effect->vmax_mv = 9000;
+#endif
 	chip->custom_effect->t_lra_us = chip->config.t_lra_us;
 	chip->custom_effect->src = FIFO;
 	chip->custom_effect->auto_res_disable = true;
@@ -2269,14 +2279,14 @@ static int haptics_load_custom_effect(struct haptics_chip *chip,
 	 * make vibration intensity could changed larger, 0x4000
 	 * is computed by 0x7fff - 0x3fff
 	 */
-	play->vmax_mv = ((magnitude - 0x3fff) * chip->custom_effect->vmax_mv) / 0x4000;
+	play->vmax_mv = (magnitude - 0x3fff) * chip->custom_effect->vmax_mv / 0x4000;
 
-	/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
-	rc = haptics_toggle_module_enable(chip);
+	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
 	if (rc < 0)
 		goto cleanup;
 
-	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
+	/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
+	rc = haptics_toggle_module_enable(chip);
 	if (rc < 0)
 		goto cleanup;
 
@@ -4065,7 +4075,13 @@ static int haptics_parse_dt(struct haptics_chip *chip)
 		goto free_pbs;
 	}
 
+#ifdef CONFIG_TARGET_PRODUCT_HAYDN
 	config->vmax_mv = 1200;
+#endif
+#ifdef CONFIG_TARGET_PRODUCT_VILI
+	config->vmax_mv = 1300;
+#endif
+
 	config->fifo_empty_thresh = get_fifo_empty_threshold(chip);
 	of_property_read_u32(node, "qcom,fifo-empty-threshold",
 			&config->fifo_empty_thresh);
