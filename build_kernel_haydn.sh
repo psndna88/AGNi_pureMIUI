@@ -18,11 +18,11 @@ fi
 if [ -f ~/WORKING_DIRECTORY/snapdragon_llvm.sh ]; then
 	. ~/WORKING_DIRECTORY/snapdragon_llvm.sh
 else
-	export CROSS_COMPILE=/PATH_TO/snapdragon_llvm_aarch64_v12.1.1/bin/aarch64-linux-android-
-	export CROSS_COMPILE_ARM32=/PATH_TO/snapdragon_llvm_arm_v12.1.1/bin/arm-linux-androideabi-
+	export CROSS_COMPILE=/PATH_TO/snapdragon_llvm_aarch64_v14.1.4/bin/aarch64-linux-android-
+	export CROSS_COMPILE_ARM32=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
 	export CLANG_TRIPLE=aarch64-linux-gnu
 	#32bit VDSO
-	export CROSS_COMPILE_COMPAT=/PATH_TO/snapdragon_llvm_arm_v12.1.1/bin/arm-linux-androideabi-
+	export CROSS_COMPILE_COMPAT=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
 fi
 
 if [ ! -d $COMPILEDIR_HAYDN ]; then
@@ -54,6 +54,8 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE
 echo ""
 
 rm $COMPILEDIR_HAYDN/.config 2>/dev/null
+mkdir ~/.cache/clang_thinlto-cache 2>/dev/null
+ln -s ~/.cache/clang_thinlto-cache $COMPILEDIR_HAYDN/.thinlto-cache 2>/dev/null
 
 make O=$COMPILEDIR_HAYDN $CONFIG1
 make -j`nproc --ignore=2` O=$COMPILEDIR_HAYDN
