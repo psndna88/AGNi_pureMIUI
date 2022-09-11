@@ -1,7 +1,6 @@
 #!/bin/bash
 export ARCH=arm64
 export SUBARCH=arm64
-export BUILDJOBS=8
 
 KERNELDIR=`readlink -f .`
 
@@ -18,6 +17,12 @@ if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ]; then
 fi
 if [ -f ~/WORKING_DIRECTORY/snapdragon_llvm.sh ]; then
 	. ~/WORKING_DIRECTORY/snapdragon_llvm.sh
+else
+	export CROSS_COMPILE=/PATH_TO/snapdragon_llvm_aarch64_v14.1.4/bin/aarch64-linux-android-
+	export CROSS_COMPILE_ARM32=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
+	export CLANG_TRIPLE=aarch64-linux-gnu
+	#32bit VDSO
+	export CROSS_COMPILE_COMPAT=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
 fi
 
 if [ ! -d $COMPILEDIR_ATOLL ]; then
@@ -49,9 +54,11 @@ echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE
 echo ""
 
 rm $COMPILEDIR_ATOLL/.config 2>/dev/null
+mkdir ~/.cache/clang_thinlto-cache 2>/dev/null
+ln -s ~/.cache/clang_thinlto-cache $COMPILEDIR_ATOLL/.thinlto-cache 2>/dev/null
 
 make O=$COMPILEDIR_ATOLL $CONFIG1
-make -j$BUILDJOBS O=$COMPILEDIR_ATOLL
+make -j`nproc --ignore=2` O=$COMPILEDIR_ATOLL
 
 if [ $SYNC_CONFIG -eq 1 ]; then # SYNC CONFIG
 	cp -f $COMPILEDIR_ATOLL/.config $KERNELDIR/arch/arm64/configs/$CONFIG1

@@ -1,12 +1,26 @@
 #!/bin/bash
 export KERNELDIR=`readlink -f .`
+. $KERNELDIR/AGNi_version.sh
 if [ -f ~/WORKING_DIRECTORY/AGNi_stamp.sh ];
 	then
 	. ~/WORKING_DIRECTORY/AGNi_stamp.sh
 fi
-if [ -f ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh ];
-	then
-	. ~/WORKING_DIRECTORY/gcc-8.x-uber_aarch64.sh
+if [ -f ~/WORKING_DIRECTORY/snapdragon_llvm.sh ]; then
+	. ~/WORKING_DIRECTORY/snapdragon_llvm.sh
+else
+	export CROSS_COMPILE=/PATH_TO/snapdragon_llvm_aarch64_v14.1.4/bin/aarch64-linux-android-
+	export CROSS_COMPILE_ARM32=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
+	export CLANG_TRIPLE=aarch64-linux-gnu
+	#32bit VDSO
+	export CROSS_COMPILE_COMPAT=/PATH_TO/snapdragon_llvm_arm_v14.1.4/bin/arm-linux-androideabi-
+fi
+export LD="$CROSS_COMPILEld.lld"
+export CC="$CROSS_COMPILEclang"
+export NM="$CROSS_COMPILEllvm-nm"
+export OBJCOPY="$CROSS_COMPILEllvm-objcopy"
+
+if [ ! -f $COMPILEDIR_HAYDN/.config ]; then
+	cp $KERNELDIR/arch/arm64/configs/$CONFIG1 $COMPILEDIR_ATOLL/.config
 fi
 
 if [ ! -d $COMPILEDIR_ATOLL ]; then
