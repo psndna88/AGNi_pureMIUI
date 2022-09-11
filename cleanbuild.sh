@@ -11,11 +11,10 @@ else
 	COUT=$COMPILEDIR_ATOLL
 fi
 
-echo "`rm -rf $COUT/*`" > /dev/null
+echo "`rm -rf $COUT/*`" 2>/dev/null
 if [ -f $COUT/.config ]; then
-	rm -rf $COUT/.*
-	rm -rf $COUT/.config
-	rm -rf $COUT/.thinlto-cache
+	rm -rf $COUT/.* 2>/dev/null
+	rm -rf $COUT/.config 2>/dev/null
 fi
 
 echo "   Compile folder EMPTY !"

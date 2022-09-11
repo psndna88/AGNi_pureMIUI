@@ -646,22 +646,22 @@ fi;
 
 do_modules;
 
-miatoll_userdata="/dev/block/by-name/userdata";
-if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
-	ui_print " ";
-	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
-	ui_print "(this can take few minutes)";
-	$BB sync;
-	$BB umount /sdcard;
-	$BB umount /data;
-	ui_print " Scan Running 1/2 ...";
-	fsck.f2fs -afy $miatoll_userdata;
-	ui_print " Scan Running 2/2 ...";
-	fsck.f2fs -afy $miatoll_userdata;
-	ui_print ">> Filesystem checks done! <<";
-	$BB mount $miatoll_userdata /data;
-	$BB mount $miatoll_userdata /sdcard;
-fi;
+#miatoll_userdata="/dev/block/by-name/userdata";
+#if ([ -f /bin/fsck.f2fs ] || [ -f /sbin/fsck.f2fs ] && [ -d /data/media/0 ]); then
+#	ui_print " ";
+#	ui_print "AGNi starting /data filesystem checks/fixes(fsck)";
+#	ui_print "(this can take few minutes)";
+#	$BB sync;
+#	$BB umount /sdcard;
+#	$BB umount /data;
+#	ui_print " Scan Running 1/2 ...";
+#	fsck.f2fs -afy $miatoll_userdata;
+#	ui_print " Scan Running 2/2 ...";
+#	fsck.f2fs -afy $miatoll_userdata;
+#	ui_print ">> Filesystem checks done! <<";
+#	$BB mount $miatoll_userdata /data;
+#	$BB mount $miatoll_userdata /sdcard;
+#fi;
 
 debugging;
 restore_env;
