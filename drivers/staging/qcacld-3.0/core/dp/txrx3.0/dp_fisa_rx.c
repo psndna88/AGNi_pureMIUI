@@ -1286,15 +1286,16 @@ QDF_STATUS dp_rx_dump_fisa_stats(struct dp_soc *soc)
 		if (!sw_ft_entry->is_populated)
 			continue;
 
-		avg_aggregated = sw_ft_entry->bytes_aggregated;
-		qdf_do_div(avg_aggregated, sw_ft_entry->flush_count);
-		dp_info("avg aggregation %llu", avg_aggregated);
+		dp_info("FLOw ID %d is %s on napi/ring %d",
+			sw_ft_entry->flow_id,
+			sw_ft_entry->is_flow_udp ? "udp" : "tcp",
+			sw_ft_entry->napi_id);
 		dp_info("num msdu aggr %d", sw_ft_entry->aggr_count);
 		dp_info("flush count %d", sw_ft_entry->flush_count);
 		dp_info("bytes_aggregated %llu", sw_ft_entry->bytes_aggregated);
-		dp_info("avg aggregation %llu",
-			sw_ft_entry->bytes_aggregated / sw_ft_entry->flush_count
-			);
+		avg_aggregated = sw_ft_entry->bytes_aggregated;
+		qdf_do_div(avg_aggregated, sw_ft_entry->flush_count);
+		dp_info("avg aggregation %llu", avg_aggregated);
 		print_flow_tuple(&sw_ft_entry->rx_flow_tuple_info);
 	}
 	return QDF_STATUS_SUCCESS;
