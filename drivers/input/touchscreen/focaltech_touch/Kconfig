@@ -4,7 +4,6 @@
 
 config TOUCHSCREEN_FTS_TOUCH
 	tristate "Focaltech Touchscreen"
-	default n
 	help
 	  Say Y here if you have Focaltech touch panel.
 	  If unsure, say N.
