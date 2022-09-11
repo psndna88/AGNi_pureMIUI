@@ -380,6 +380,9 @@ static int btrfs_xattr_handler_get(const struct xattr_handler *handler,
 				   const char *name, void *buffer, size_t size,
 				   int flags)
 {
+	if (btrfs_root_readonly(BTRFS_I(inode)->root))
+		return -EROFS;
+
 	name = xattr_full_name(handler, name);
 	return __btrfs_getxattr(inode, name, buffer, size);
 }
