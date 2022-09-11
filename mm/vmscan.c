@@ -164,9 +164,8 @@ struct scan_control {
 #ifdef CONFIG_INCREASE_MAXIMUM_SWAPPINESS
 int vm_swappiness = 190;
 #else
-int vm_swappiness = 60; //100
+int vm_swappiness = 100;
 #endif
-int vm_swappiness_fake = 100;
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
