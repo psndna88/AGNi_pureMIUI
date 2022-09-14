@@ -40,7 +40,7 @@
 
 	ioss_r8125_eth0_tx: r8125_tx@eth0 {
 		qcom,dir-tx;
-		qcom,ring-size = <1024>;
+		qcom,ring-size = <4096>;
 		qcom,buff-size = <2048>;
 
 		qcom,mod-count-min = <32>;
