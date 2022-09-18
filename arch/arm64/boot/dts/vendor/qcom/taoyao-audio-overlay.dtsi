@@ -1,8 +1,11 @@
 #include "yupik-audio-overlay.dtsi"
 
-&dai_mi2s0 {
-	qcom,msm-mi2s-rx-lines = <2>;
-	qcom,msm-mi2s-tx-lines = <1>;
+&dai_mi2s0_rx {
+	qcom,msm-mi2s-lines = <2>;
+};
+
+&dai_mi2s0_tx {
+	qcom,msm-mi2s-lines = <1>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pri_mi2s_sck_active &pri_mi2s_ws_active
 			&pri_mi2s_sd0_active &pri_mi2s_sd1_active>;
