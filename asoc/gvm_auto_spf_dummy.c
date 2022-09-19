@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/miscdevice.h>
 #include <linux/input.h>
 #include <linux/of_device.h>
 #include <linux/pm_qos.h>
@@ -30,8 +31,6 @@
 #include <sound/info.h>
 #include <dsp/audio_notifier.h>
 #include "msm_dailink.h"
-#include <soc/qcom/subsystem_restart.h>
-#include <soc/qcom/subsystem_notif.h>
 #include <soc/qcom/boot_stats.h>
 
 
@@ -827,29 +826,42 @@ void msm_common_set_pdata(struct snd_soc_card *card,
 	pdata->common_pdata = common_pdata;
 }
 
-static int auto_spf_dummy_ssr_cb(struct notifier_block *this,
-				unsigned long code,
-				void *data)
+#define AUTO_VIRT_SNDCARD_ONLINE 0
+#define AUTO_VIRT_SNDCARD_OFFLINE 1
+
+static long virt_sndcard_ioctl(struct file *f,
+			unsigned int cmd, unsigned long arg)
 {
+	int ret = 0;
 	struct snd_soc_card *card = platform_get_drvdata(spdev);
 
-	switch (code) {
-	case SUBSYS_BEFORE_SHUTDOWN:
+	switch (cmd) {
+	case AUTO_VIRT_SNDCARD_OFFLINE:
 		snd_soc_card_change_online_state(card, 0); // change sndcard status to OFFLINE
 		dev_info(&spdev->dev, "ssr restart, mark sndcard offline\n");
 	break;
-	case SUBSYS_AFTER_POWERUP:
+	case AUTO_VIRT_SNDCARD_ONLINE:
 		snd_soc_card_change_online_state(card, 1); // change sndcard status to ONLINE
 		dev_info(&spdev->dev, "ssr complete, mark sndcard online\n");
 	break;
 	default:
+		pr_err("%s: ioctl not found\n", __func__);
+		ret = -EFAULT;
 	break;
 	}
-	return 0;
+
+	return ret;
 }
 
-static struct notifier_block auto_spf_dummy_ssr_notifier = {
-	.notifier_call = auto_spf_dummy_ssr_cb,
+static const struct file_operations virt_sndcard_ctl_fops = {
+		.owner = THIS_MODULE,
+		.unlocked_ioctl = virt_sndcard_ioctl,
+};
+
+static struct miscdevice virt_sndcard_ctl_misc = {
+		.minor	= MISC_DYNAMIC_MINOR,
+		.name	= "virt_sndcard_ctl",
+		.fops	= &virt_sndcard_ctl_fops,
 };
 
 static int msm_asoc_machine_probe(struct platform_device *pdev)
@@ -915,8 +927,11 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 
 	spdev = pdev;
 
-	subsys_notif_register_notifier("adsp", &auto_spf_dummy_ssr_notifier);
-	dev_info(&pdev->dev, "Audio driver register for SSR complete\n");
+	ret = misc_register(&virt_sndcard_ctl_misc);
+	if (ret) {
+		pr_err("Audio virtual sndcard ctrl register fail, ret=%d\n", ret);
+	}
+	dev_info(&pdev->dev, "Audio virtual sndcard ctrl register complete\n");
 
 	return 0;
 err:
@@ -926,7 +941,7 @@ err:
 
 static int msm_asoc_machine_remove(struct platform_device *pdev)
 {
-
+	misc_deregister(&virt_sndcard_ctl_misc);
 	return 0;
 }
 
