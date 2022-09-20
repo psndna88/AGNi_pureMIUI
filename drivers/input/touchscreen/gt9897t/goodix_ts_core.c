@@ -34,6 +34,7 @@
 #define CORE_MODULE_PROB_SUCCESS		1
 #define CORE_MODULE_PROB_FAILED			-1
 #define CORE_MODULE_REMOVED				-2
+#define OLED_JUDGE_ID					(17+307)
 int core_module_prob_sate = CORE_MODULE_UNPROBED;
 struct goodix_module goodix_modules;
 struct goodix_ts_core *goodix_core_data;
@@ -3193,6 +3194,16 @@ static struct platform_driver goodix_ts_driver = {
 static int __init goodix_ts_core_init(void)
 {
 	int ret;
+
+	if (get_hw_version_platform() == HARDWARE_PROJECT_K9) {
+		gpio_direction_input(OLED_JUDGE_ID);
+		if (gpio_get_value(OLED_JUDGE_ID)) {
+			ts_err("TP is goodix");
+		} else {
+			ts_err("TP is focal");
+			return 0;
+		}
+	}
 
 	ts_info("Core layer init:%s", GOODIX_DRIVER_VERSION);
 	ret = goodix_bus_init();
