@@ -19,6 +19,7 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
+#include <linux/hwid.h>
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38)
 #include <linux/input/mt.h>
@@ -1096,8 +1097,21 @@ void goodix_match_fw(struct goodix_ts_core *ts_data)
 	if (is_lockdown_empty(ts_data->lockdown_info))
 		goodix_ts_get_lockdowninfo(ts_data);
 	if (goodix_get_panel_type(ts_data) < 0) {
-		ts->fw_name = TS_DEFAULT_FIRMWARE;
-		ts->cfg_bin_name = TS_DEFAULT_CFG_BIN;
+		switch (get_hw_version_platform()) {
+			case HARDWARE_PROJECT_K9:
+				ts->fw_name = TS_DEFAULT_FIRMWARE_K9;
+				ts->cfg_bin_name = TS_DEFAULT_CFG_BIN_K9;
+				break;
+			case HARDWARE_PROJECT_K9D:
+				ts->fw_name = TS_DEFAULT_FIRMWARE_K9D;
+				ts->cfg_bin_name = TS_DEFAULT_CFG_BIN_K9D;
+				break;
+			default:
+				ts->fw_name = TS_DEFAULT_FIRMWARE;
+				ts->cfg_bin_name = TS_DEFAULT_CFG_BIN;
+				break;
+		}
+
 	} else {
 		ts->fw_name = ts->config_array[ts->panel_index].gdx_fw_name;
 		ts->cfg_bin_name =ts->config_array[ts->panel_index].gdx_cfg_name;
