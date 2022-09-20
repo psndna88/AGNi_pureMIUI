@@ -31,3 +31,6 @@ config TOUCHSCREEN_GOODIX_TS_GESTURE
 
 	  To compile this driver as a module, choose M here.
 
+config TOUCHSCREEN_QGKI_GOODIX
+	default n
+	bool "QGKI config"

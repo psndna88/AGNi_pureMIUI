@@ -9,3 +9,7 @@ config TOUCHSCREEN_GOODIX_BRL_9916
 	  to your system.
 	  If build module, say M.
 	  If unsure, say N.
+
+config TOUCHSCREEN_QGKI_GOODIX
+	default n
+	bool "QGKI config"
