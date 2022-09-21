@@ -204,6 +204,8 @@ struct dsi_display {
 	struct drm_device *drm_dev;
 	struct drm_connector *drm_conn;
 	struct drm_connector *ext_conn;
+	struct class *class;
+	struct device *dev;
 
 	const char *name;
 	const char *display_type;
