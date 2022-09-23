@@ -115,7 +115,6 @@
 		qcom,slv-addr-space-size = <0x40000000>;
 		qcom,ep-latency = <10>;
 		qcom,num-parf-testbus-sel = <0xb9>;
-		qcom,pcie-halt-feature-dis;
 
 		qcom,pcie-phy-ver = <1108>;
 		qcom,phy-status-offset = <0x1214>;
