@@ -11362,7 +11362,7 @@ static int q6asm_get_asm_topology_apptype(struct q6asm_cal_info *cal_info, struc
 			goto unlock;
 		}
 	} else {
-		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, ac->fedai_id);
+		cal_block = q6asm_find_cal_by_buf_number(ASM_TOPOLOGY_CAL, 0, 0, path);
 		if (cal_block == NULL) {
 			pr_debug("%s: Couldn't find cal_block with buf_number, re-routing "
 				"search using CAL type only\n", __func__);
