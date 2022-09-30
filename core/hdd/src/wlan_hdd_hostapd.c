@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1347,6 +1348,10 @@ static int calcuate_max_phy_rate(int mode, int nss, int ch_width,
 	if (mode == SIR_SME_PHY_MODE_HT) {
 		/* check for HT Mode */
 		maxidx = ht_mcs_idx;
+		if (maxidx > 7) {
+			hdd_err("ht_mcs_idx %d is incorrect", ht_mcs_idx);
+			return maxrate;
+		}
 		if (nss == 1) {
 			supported_mcs_rate = supported_mcs_rate_nss1;
 		} else if (nss == 2) {
