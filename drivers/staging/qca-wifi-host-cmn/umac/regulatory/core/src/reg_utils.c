@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -36,6 +37,7 @@
 #include <qdf_platform.h>
 #include "reg_services_common.h"
 #include "reg_build_chan_list.h"
+#include "wlan_cm_bss_score_param.h"
 
 #define DEFAULT_WORLD_REGDMN 0x60
 
@@ -323,9 +325,11 @@ QDF_STATUS reg_get_domain_from_country_code(v_REGDOMAIN_t *reg_domain_ptr,
 
 #ifdef CONFIG_REG_CLIENT
 QDF_STATUS
-reg_get_6g_power_type_for_ctry(uint8_t *ap_ctry, uint8_t *sta_ctry,
+reg_get_6g_power_type_for_ctry(struct wlan_objmgr_psoc *psoc,
+			       uint8_t *ap_ctry, uint8_t *sta_ctry,
 			       enum reg_6g_ap_type *pwr_type_6g,
-			       bool *ctry_code_match)
+			       bool *ctry_code_match,
+			       enum reg_6g_ap_type ap_pwr_type)
 {
 	*pwr_type_6g = REG_INDOOR_AP;
 
@@ -334,15 +338,32 @@ reg_get_6g_power_type_for_ctry(uint8_t *ap_ctry, uint8_t *sta_ctry,
 			  ap_ctry[1], sta_ctry[0], sta_ctry[1]);
 		*ctry_code_match = false;
 
-		if (wlan_reg_is_us(sta_ctry)) {
+		/**
+		 * Do not return if Wi-Fi safe mode or RF test mode is
+		 * enabled, rather STA should operate in LPI mode.
+		 * wlan_cm_get_check_6ghz_security API returns true if
+		 * neither Safe mode nor RF test mode are enabled.
+		 */
+		if (wlan_reg_is_us(sta_ctry) &&
+		    wlan_cm_get_check_6ghz_security(psoc)) {
 			reg_err("US VLP not in place yet, connection not allowed");
 			return QDF_STATUS_E_NOSUPPORT;
 		}
 
-		if (wlan_reg_is_etsi(sta_ctry)) {
-			reg_debug("STA ctry:%c%c, doesn't match with AP ctry, switch to VLP",
-				 sta_ctry[0], sta_ctry[1]);
-			*pwr_type_6g = REG_VERY_LOW_POWER_AP;
+		if (wlan_reg_is_etsi(sta_ctry) &&
+		    ap_pwr_type != REG_MAX_AP_TYPE) {
+			if (!(wlan_reg_is_us(ap_ctry) &&
+			      ap_pwr_type == REG_INDOOR_AP)) {
+				reg_debug("STA ctry:%c%c, doesn't match with AP ctry, switch to VLP",
+					  sta_ctry[0], sta_ctry[1]);
+				*pwr_type_6g = REG_VERY_LOW_POWER_AP;
+			}
+		}
+
+		if (wlan_reg_is_us(ap_ctry) && ap_pwr_type == REG_INDOOR_AP) {
+			reg_debug("AP ctry:%c%c, AP power type:%d, allow STA IN LPI",
+				  ap_ctry[0], ap_ctry[1], ap_pwr_type);
+			*pwr_type_6g = REG_INDOOR_AP;
 		}
 	} else {
 		*ctry_code_match = true;
