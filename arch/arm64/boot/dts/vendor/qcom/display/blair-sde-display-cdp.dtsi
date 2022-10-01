@@ -1,5 +1,6 @@
 /* Should extend holi-sde-display-cdp-pm6125.dtsi */
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
+#include <dt-bindings/clock/qcom,dispcc-blair.h>
 #include "dsi-panel-nt36672e-fhd-plus-144hz-video-cphy.dtsi"
 
 &tlmm {
@@ -56,12 +57,29 @@
 		<&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
 		<&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
 		<&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
-		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>;
+		<&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>,
+		/*
+		 * Currently the dsi clock handles are under the dsi
+		 * controller DT node. As soon as the controller probe
+		 * finishes, the dispcc sync state can get called before
+		 * the dsi_display probe potentially disturbing the clock
+		 * votes for cont_splash use case. Hence we are no longer
+		 * protected by the component model in this case against the
+		 * disp cc sync state getting triggered after the dsi_ctrl
+		 * probe. To protect against this incorrect sync state trigger
+		 * add this dummy MDP clk vote handle to the dsi_display
+		 * DT node. Since the dsi_display driver does not parse
+		 * MDP clock nodes, no actual vote shall be added and this
+		 * change is done just to satisfy sync state requirements.
+		 */
+		<&dispcc DISP_CC_MDSS_MDP_CLK>;
+
 	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 		"cphy_byte_clk0", "cphy_pixel_clk0",
 		"src_byte_clk0", "src_pixel_clk0",
 		"shadow_byte_clk0", "shadow_pixel_clk0",
-		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0";
+		"shadow_cphybyte_clk0", "shadow_cphypixel_clk0",
+		"mdp_core_clk";
 
 	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
 	pinctrl-0 = <&sde_te_active &disp_pins_reset &lcd_bias_en_active>;
@@ -89,6 +107,38 @@
 		timing@0 {
 			qcom,mdss-dsi-panel-phy-timings = [00 20 08 08 18 17 08
 							08 08 02 04 00 1b 0d];
+		};
+	};
+};
+
+&dsi_r66451_amoled_cmd {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 10 04 04 12 1e 04
+				04 03 02 04 00 0e 09];
+		};
+
+		timing@1 {
+			qcom,mdss-dsi-panel-phy-timings = [00 16 06 05 14 1f 06
+				06 06 02 04 00 14 0b];
+		};
+
+		timing@2 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
+		};
+	};
+};
+
+&dsi_r66451_amoled_video {
+	/delete-property/ qcom,mdss-dsi-t-clk-post;
+	/delete-property/ qcom,mdss-dsi-t-clk-pre;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 1c 08 07 17 16 07
+				07 08 02 04 00 19 0c];
 		};
 	};
 };

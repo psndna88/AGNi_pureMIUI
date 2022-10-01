@@ -1,0 +1,11 @@
+&soc {
+	mdss_dsi0_pll: qcom,mdss_dsi_pll@ae94400 {
+		status = "disabled";
+		compatible = "qcom,dsi-phy-v2.0";
+	};
+
+	mdss_dp_pll: qcom,mdss_dp_pll@88e9000 {
+		status = "disabled";
+		compatible = "qcom,dp-display";
+	};
+};

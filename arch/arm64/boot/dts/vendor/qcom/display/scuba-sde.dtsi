@@ -1,0 +1,57 @@
+#include "scuba-sde-common.dtsi"
+#include <dt-bindings/clock/mdss-14nm-pll-clk.h>
+
+&soc {
+	smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
+		compatible = "qcom,smmu_sde_unsec";
+		iommus = <&apps_smmu 0x420 0x2>;
+		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+		qcom,iommu-faults = "non-fatal";
+		qcom,iommu-earlymap; /* for cont-splash */
+	};
+
+	smmu_sde_sec: qcom,smmu_sde_sec_cb {
+		compatible = "qcom,smmu_sde_sec";
+		iommus = <&apps_smmu 0x421 0x0>;
+		qcom,iommu-dma-addr-pool = <0x00020000 0xfffe0000>;
+		qcom,iommu-faults = "non-fatal";
+		qcom,iommu-vmid = <0xa>;
+	};
+};
+
+&mdss_mdp {
+	clocks =
+		<&gcc GCC_DISP_HF_AXI_CLK>,
+		<&gcc GCC_DISP_THROTTLE_CORE_CLK>,
+		<&dispcc DISP_CC_MDSS_AHB_CLK>,
+		<&dispcc DISP_CC_MDSS_MDP_CLK>,
+		<&dispcc DISP_CC_MDSS_VSYNC_CLK>,
+		<&dispcc DISP_CC_MDSS_MDP_LUT_CLK>;
+	clock-names = "gcc_bus", "throttle_clk", "iface_clk",
+		"core_clk", "vsync_clk", "lut_clk";
+
+	/* data and reg bus scale settings */
+	interconnects = <&mmrt_virt MASTER_MDP_PORT0 &bimc SLAVE_EBI_CH0>,
+		<&bimc MASTER_AMPSS_M0 &config_noc SLAVE_DISPLAY_CFG>;
+	interconnect-names = "qcom,sde-data-bus0", "qcom,sde-reg-bus";
+};
+
+&mdss_dsi0 {
+	vdda-1p2-supply = <&L5A>;
+	clocks = <&dispcc DISP_CC_MDSS_BYTE0_CLK>,
+		<&dispcc DISP_CC_MDSS_BYTE0_CLK_SRC>,
+		<&dispcc DISP_CC_MDSS_BYTE0_INTF_CLK>,
+		<&dispcc DISP_CC_MDSS_PCLK0_CLK>,
+		<&dispcc DISP_CC_MDSS_PCLK0_CLK_SRC>,
+		<&dispcc DISP_CC_MDSS_ESC0_CLK>;
+	clock-names = "byte_clk", "byte_clk_rcg", "byte_intf_clk",
+		"pixel_clk", "pixel_clk_rcg", "esc_clk";
+};
+
+&mdss_dsi_phy0 {
+	vdda-0p9-supply = <&VDD_MX_LEVEL>;
+	qcom,panel-allow-phy-poweroff;
+	qcom,dsi-pll-ssc-en;
+	qcom,dsi-pll-ssc-mode = "down-spread";
+	memory-region = <&dfps_data_memory>;
+};

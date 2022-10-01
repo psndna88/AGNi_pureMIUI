@@ -1,5 +1,6 @@
 #include <dt-bindings/clock/mdss-5nm-pll-clk.h>
 #include "dsi-panel-rm69090-amoled-178-cmd.dtsi"
+#include "dsi-panel-rm69090-amoled-178-vid.dtsi"
 #include "dsi-panel-rm6d030-amoled-141-cmd.dtsi"
 
 &soc {
@@ -12,8 +13,9 @@
 			qcom,supply-name = "vddio";
 			qcom,supply-min-voltage = <1800000>;
 			qcom,supply-max-voltage = <2000000>;
-			qcom,supply-enable-load = <62000>;
+			qcom,supply-enable-load = <4000>;
 			qcom,supply-disable-load = <80>;
+			qcom,supply-ulp-load = <100>;
 			qcom,supply-post-on-sleep = <20>;
 		};
 
@@ -46,13 +48,39 @@
 			qcom,supply-name = "vddio";
 			qcom,supply-min-voltage = <1800000>;
 			qcom,supply-max-voltage = <2000000>;
-			qcom,supply-enable-load = <62000>;
+			qcom,supply-enable-load = <4000>;
 			qcom,supply-disable-load = <80>;
+			qcom,supply-ulp-load = <100>;
 			qcom,supply-post-on-sleep = <20>;
 		};
 	};
 
 	dsi_panel_pwr_supply_labibb_amoled: dsi_panel_pwr_supply_labibb_amoled {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <2000000>;
+			qcom,supply-enable-load = <4000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-ulp-load = <100>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vdda-3p3";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <13200>;
+			qcom,supply-disable-load = <80>;
+		};
+	};
+
+	dsi_panel_pwr_supply_nolab_amoled: dsi_panel_pwr_supply_nolab_amoled {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -68,12 +96,20 @@
 
 		qcom,panel-supply-entry@1 {
 			reg = <1>;
-			qcom,supply-name = "vdda-3p3";
-			qcom,supply-min-voltage = <3000000>;
-			qcom,supply-max-voltage = <3000000>;
-			qcom,supply-enable-load = <13200>;
-			qcom,supply-disable-load = <80>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <0>;
+			qcom,supply-disable-load = <0>;
+			qcom,supply-post-on-sleep = <20>;
 		};
+	};
+
+	display_panel_ibb: display_panel_ibb_stub {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "display_panel_ibb";
+		regulator-min-microvolt = <4600000>;
+		regulator-max-microvolt = <6000000>;
 	};
 
 	sde_dsi: qcom,dsi-display-primary {
@@ -105,6 +141,7 @@
 		qcom,platform-te-gpio = <&tlmm 73 0>;
 		qcom,panel-te-source = <0>;
 		vddio-supply = <&L21A>;
+		ibb-supply = <&display_panel_ibb>;
 		qcom,mdp = <&mdss_mdp>;
 
 		qcom,dsi-default-panel =
@@ -117,11 +154,19 @@
 };
 
 &dsi_rm69090_amoled_cmd {
+	qcom,ulps-enabled;
 	qcom,mdss-dsi-t-clk-post = <0x08>;
 	qcom,mdss-dsi-t-clk-pre = <0x0B>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0", /*TODO: check these*/
 				"src_byte_clk0", "src_pixel_clk0",
 				"shadow_byte_clk0", "shadow_pixel_clk0";
+
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,esd-check-enabled;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
@@ -133,7 +178,33 @@
 	};
 };
 
+&dsi_rm69090_amoled_vid {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-t-clk-post = <0x07>;
+	qcom,mdss-dsi-t-clk-pre = <0x09>;
+	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+				"src_byte_clk0", "src_pixel_clk0",
+				"shadow_byte_clk0", "shadow_pixel_clk0";
+
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,esd-check-enabled;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,mdss-dsi-panel-phy-timings = [00 0A 01 02 0E 1B 02
+				02 02 01 02 04 09 07];
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
 &dsi_rm6d030_amoled_cmd {
+	qcom,ulps-enabled;
 	qcom,mdss-dsi-t-clk-post = <0x07>;
 	qcom,mdss-dsi-t-clk-pre = <0x0A>;
 	qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
