@@ -637,6 +637,7 @@ void *hh_rm_call(hh_rm_msgid_t message_id,
 		pr_err("%s: Reply for seq:%d failed with RM err: %d\n",
 			__func__, connection->seq, connection->reply_err_code);
 		ret = ERR_PTR(hh_remap_error(connection->reply_err_code));
+		kfree(connection->recv_buff);
 		goto out;
 	}
 
@@ -644,14 +645,14 @@ void *hh_rm_call(hh_rm_msgid_t message_id,
 			     connection->recv_buff, connection->recv_buff_size,
 			     false);
 
-	mutex_lock(&hh_rm_call_idr_lock);
-	idr_remove(&hh_rm_call_idr, connection->seq);
-	mutex_unlock(&hh_rm_call_idr_lock);
-
 	ret = connection->recv_buff;
 	*resp_buff_size = connection->recv_buff_size;
 
 out:
+	mutex_lock(&hh_rm_call_idr_lock);
+	idr_remove(&hh_rm_call_idr, connection->seq);
+	mutex_unlock(&hh_rm_call_idr_lock);
+
 	kfree(connection);
 	return ret;
 }

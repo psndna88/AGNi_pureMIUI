@@ -1681,6 +1681,7 @@ int ep_pcie_core_enable_endpoint(enum ep_pcie_options opt)
 	u32 val = 0;
 	u32 retries = 0;
 	u32 bme = 0;
+	bool perst = true;
 	bool ltssm_en = false;
 	struct ep_pcie_dev_t *dev = &ep_pcie_dev;
 
@@ -1921,11 +1922,19 @@ int ep_pcie_core_enable_endpoint(enum ep_pcie_options opt)
 		if (retries % 100 == 0)
 			EP_PCIE_DBG(dev, "PCIe V%d: LTSSM_STATE:0x%x\n",
 					dev->rev, (val >> 0xC) & 0x3f);
+		perst = atomic_read(&dev->perst_deast) ? 1 : 0;
 	} while ((!(val & XMLH_LINK_UP) ||
 		!ep_pcie_confirm_linkup(dev, false))
-		&& (retries < LINK_UP_CHECK_MAX_COUNT));
+		&& (retries < LINK_UP_CHECK_MAX_COUNT) && perst);
 
-	if (retries == LINK_UP_CHECK_MAX_COUNT) {
+	if (!perst) {
+		dev->perst_ast_in_enum_counter++;
+		EP_PCIE_ERR(dev,
+				"PCIe V%d: Perst asserted No. %ld while waiting for link to be up\n",
+				dev->rev, dev->perst_ast_in_enum_counter);
+		ret = EP_PCIE_ERROR;
+		goto link_fail;
+	} else if (retries == LINK_UP_CHECK_MAX_COUNT) {
 		EP_PCIE_ERR(dev, "PCIe V%d: link initialization failed\n",
 			dev->rev);
 		ret = EP_PCIE_ERROR;
@@ -2324,7 +2333,7 @@ static int ep_pcie_enumeration(struct ep_pcie_dev_t *dev)
 		EP_PCIE_ERR(&ep_pcie_dev,
 			"PCIe V%d: the input handler is NULL\n",
 			ep_pcie_dev.rev);
-		return EP_PCIE_ERROR;
+		return -ENODEV;
 	}
 
 	EP_PCIE_DBG(dev,
@@ -3503,7 +3512,11 @@ static int ep_pcie_probe(struct platform_device *pdev)
 		ep_pcie_dev.rev, dev_name(&(pdev->dev)));
 
 	ret = ep_pcie_enumeration(&ep_pcie_dev);
-	if (ret && !ep_pcie_debug_keep_resource)
+	if (ret == EP_PCIE_ERROR)
+		EP_PCIE_ERR(&ep_pcie_dev,
+				"PCIe V%d: Enumeration failed in probe, waiting for Perst deassert\n",
+				ep_pcie_dev.rev);
+	if (ret && !ep_pcie_debug_keep_resource & !ep_pcie_dev.perst_enum)
 		goto irq_deinit;
 
 	register_reboot_notifier(&ep_pcie_core_reboot_notifier);
