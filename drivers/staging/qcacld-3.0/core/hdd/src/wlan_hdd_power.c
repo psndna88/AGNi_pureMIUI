@@ -88,6 +88,7 @@
 #include "wlan_hdd_object_manager.h"
 #include <linux/igmp.h>
 #include "qdf_types.h"
+#include <wlan_cp_stats_mc_ucfg_api.h>
 /* Preprocessor definitions and constants */
 #ifdef QCA_WIFI_NAPIER_EMULATION
 #define HDD_SSR_BRING_UP_TIME 3000000
@@ -601,7 +602,7 @@ void hdd_enable_ns_offload(struct hdd_adapter *adapter,
 	/* cache ns request */
 	status = ucfg_pmo_cache_ns_offload_req(ns_req);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Failed to cache ns request; status:%d", status);
+		hdd_debug("Failed to cache ns request; status:%d", status);
 		goto free_req;
 	}
 
@@ -613,7 +614,7 @@ void hdd_enable_ns_offload(struct hdd_adapter *adapter,
 	/* enable ns request */
 	status = ucfg_pmo_enable_ns_offload_in_fwr(vdev, trigger);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		hdd_err("Failed to enable ns offload; status:%d", status);
+		hdd_debug("Failed to enable ns offload; status:%d", status);
 		goto put_vdev;
 	}
 
@@ -2916,6 +2917,7 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	int status;
 	struct hdd_station_ctx *sta_ctx;
 	static bool is_rate_limited;
+	struct wlan_objmgr_vdev *vdev;
 
 	hdd_enter_dev(ndev);
 
@@ -2967,7 +2969,13 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	    is_rate_limited) {
 		hdd_debug("Modules not enabled/rate limited, use cached stats");
 		/* Send cached data to upperlayer*/
-		*dbm = adapter->hdd_stats.class_a_stat.max_pwr;
+		vdev = hdd_objmgr_get_vdev(adapter);
+		if (!vdev) {
+			hdd_err("vdev is NULL");
+			return -EINVAL;
+		}
+		ucfg_mc_cp_stats_get_tx_power(vdev, dbm);
+		hdd_objmgr_put_vdev(vdev);
 		return 0;
 	}
 

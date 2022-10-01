@@ -83,8 +83,8 @@
 #include "wlan_cm_roam_public_struct.h"
 #include "wlan_mlme_twt_api.h"
 #include "wlan_cmn_ieee80211.h"
+#include "wlan_crypto_def_i.h"
 
-#define RSN_AUTH_KEY_MGMT_SAE           WLAN_RSN_SEL(WLAN_AKM_SAE)
 #define MAX_PWR_FCC_CHAN_12 8
 #define MAX_PWR_FCC_CHAN_13 2
 
@@ -5028,10 +5028,16 @@ QDF_STATUS csr_roam_stop_network(struct mac_context *mac, uint32_t sessionId,
 				ssid_match = csr_is_ssid_equal(
 						mac, pSession->pConnectBssDesc,
 						bss_desc, pIes);
-			if (bss_desc && !ssid_match)
-				status = csr_roam_issue_disassociate(mac,
-						sessionId, substate, false);
-			else if (bss_desc)
+			if (bss_desc && !ssid_match) {
+				csr_roam_issue_disassociate(mac,
+							    sessionId, substate,
+							    false);
+				status = QDF_STATUS_E_FAILURE;
+				qdf_mem_free(pBssConfig);
+
+				return status;
+
+			} else if (bss_desc) {
 				/*
 				 * In an infra & going to an infra network with
 				 * the same SSID.  This calls for a reassoc seq.
@@ -5042,6 +5048,7 @@ QDF_STATUS csr_roam_stop_network(struct mac_context *mac, uint32_t sessionId,
 						mac, sessionId, roam_profile,
 						bss_desc, pBssConfig, pIes,
 						false);
+			}
 		} else if (bss_desc || CSR_IS_INFRA_AP(roam_profile)) {
 			/*
 			 * Not in Infra. We can go ahead and set
@@ -8195,6 +8202,12 @@ csr_roam_reassoc(struct mac_context *mac_ctx, uint32_t session_id,
 		sme_err("No profile specified");
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	if (!session) {
+		sme_err("Session_id invalid %d", session_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	sme_debug(
 		"called  BSSType = %s (%d) authtype = %d  encryType = %d",
 		sme_bss_type_to_string(profile->BSSType),
@@ -15700,6 +15713,17 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 					       bss_freq,
 					       mac->mlme_cfg->ht_caps.
 					       ht_cap_info.adv_coding_cap);
+
+		if (pProfile->csrPersona == QDF_STA_MODE) {
+			if (pSession->ht_config.ht_sgi20)
+				pSession->ht_config.ht_sgi20 =
+					pIes->HTCaps.shortGI20MHz;
+
+			if (pSession->ht_config.ht_sgi40)
+				pSession->ht_config.ht_sgi40 =
+					pIes->HTCaps.shortGI40MHz;
+		}
+
 		csr_join_req->ht_config = pSession->ht_config;
 		csr_join_req->vht_config = pSession->vht_config;
 		sme_debug("ht capability 0x%x VHT capability 0x%x",
@@ -15799,10 +15823,11 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 				sme_debug("Channel is 6G but country IE not present");
 			wlan_reg_read_current_country(mac->psoc,
 						      programmed_country);
-			status = wlan_reg_get_6g_power_type_for_ctry(
+			status = wlan_reg_get_6g_power_type_for_ctry(mac->psoc,
 					pIes->Country.country,
 					programmed_country, &power_type_6g,
-					&ctry_code_match);
+					&ctry_code_match,
+					pSession->ap_power_type);
 			if (QDF_IS_STATUS_ERROR(status))
 				break;
 			csr_join_req->ap_power_type_6g = power_type_6g;
@@ -20339,6 +20364,11 @@ static bool csr_is_conn_allow_2g_band(struct mac_context *mac_ctx,
 	sap_session_id = csr_find_session_by_type(mac_ctx, QDF_SAP_MODE);
 	if (WLAN_UMAC_VDEV_ID_MAX != sap_session_id) {
 		sap_session = CSR_GET_SESSION(mac_ctx, sap_session_id);
+		if (!sap_session) {
+			sme_err("Session_id invalid %d", sap_session_id);
+			return false;
+		}
+
 		if (0 != sap_session->bssParams.operation_chan_freq &&
 		    sap_session->bssParams.operation_chan_freq != ch_freq) {
 			QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
@@ -20377,6 +20407,11 @@ static bool csr_is_conn_allow_5g_band(struct mac_context *mac_ctx,
 	p2pgo_session_id = csr_find_session_by_type(mac_ctx, QDF_P2P_GO_MODE);
 	if (WLAN_UMAC_VDEV_ID_MAX != p2pgo_session_id) {
 		p2pgo_session = CSR_GET_SESSION(mac_ctx, p2pgo_session_id);
+		if (!p2pgo_session) {
+			sme_err("Session_id invalid %d", p2pgo_session_id);
+			return false;
+		}
+
 		if (0 != p2pgo_session->bssParams.operation_chan_freq &&
 		    eCSR_ASSOC_STATE_TYPE_NOT_CONNECTED !=
 		    p2pgo_session->connectState &&
@@ -21090,6 +21125,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 {
 	uint8_t session_id = roam_synch_data->roamed_vdev_id;
 	struct csr_roam_session *session = CSR_GET_SESSION(mac_ctx, session_id);
+	struct wlan_frame_hdr *hdr;
 	tDot11fBeaconIEs *ies_local = NULL;
 	struct ps_global_info *ps_global_info = &mac_ctx->sme.ps_global_info;
 	struct csr_roam_info *roam_info;
@@ -21309,7 +21345,6 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		}
 
 		policy_mgr_check_n_start_opportunistic_timer(mac_ctx->psoc);
-		policy_mgr_check_concurrent_intf_and_restart_sap(mac_ctx->psoc);
 		vdev_roam_params->roam_invoke_in_progress = false;
 
 		if (roam_synch_data->authStatus ==
@@ -21328,6 +21363,7 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 						   WLAN_ROAM_INIT,
 						   REASON_CONNECT);
 		}
+		policy_mgr_check_concurrent_intf_and_restart_sap(mac_ctx->psoc);
 		goto end;
 	case SIR_ROAMING_DEAUTH:
 		csr_roam_roaming_offload_timer_action(
@@ -21609,15 +21645,28 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 				eCSR_NEIGHBOR_ROAM_STATE_INIT, session_id);
 	}
 
-	if (roam_synch_data->is_ft_im_roam) {
+	hdr = (struct wlan_frame_hdr *)((uint8_t *)roam_synch_data +
+					roam_synch_data->reassoc_req_offset);
+	if (WLAN_FC0_GET_TYPE(hdr->i_fc[0]) == WLAN_FC0_TYPE_MGMT &&
+	    WLAN_FC0_GET_STYPE(hdr->i_fc[0]) == WLAN_FC0_STYPE_ASSOC_REQ) {
 		ssid_offset = SIR_MAC_ASSOC_REQ_SSID_OFFSET;
 	} else {
 		ssid_offset = SIR_MAC_REASSOC_REQ_SSID_OFFSET;
 	}
 
 	roam_info->nBeaconLength = 0;
-	roam_info->nAssocReqLength = roam_synch_data->reassoc_req_length -
-		SIR_MAC_HDR_LEN_3A - ssid_offset;
+	roam_info->nAssocReqLength = 0;
+	roam_info->nAssocRspLength = 0;
+	if (roam_synch_data->reassoc_req_length >
+	    (SIR_MAC_HDR_LEN_3A + ssid_offset)) {
+		roam_info->nAssocReqLength =
+			roam_synch_data->reassoc_req_length -
+			SIR_MAC_HDR_LEN_3A - ssid_offset;
+	} else {
+		sme_err("Invalid reassoc length:%d",
+			roam_synch_data->reassoc_req_length);
+	}
+
 	roam_info->nAssocRspLength = roam_synch_data->reassocRespLength -
 		SIR_MAC_HDR_LEN_3A;
 	roam_info->pbFrames = qdf_mem_malloc(roam_info->nBeaconLength +
@@ -21906,6 +21955,128 @@ csr_roam_auth_offload_callback(struct mac_context *mac_ctx,
 
 	return status;
 
+}
+
+static
+void csr_inform_bcn_probe(struct mac_context *mac_ctx,
+			  uint8_t *frame, uint32_t len,
+			  qdf_freq_t freq)
+{
+	qdf_nbuf_t buf;
+	uint8_t *data, i;
+	struct mgmt_rx_event_params rx_param = {0};
+	struct wlan_frame_hdr *hdr;
+	enum mgmt_frame_type frm_type = MGMT_BEACON;
+
+	hdr = (struct wlan_frame_hdr *)frame;
+
+	if ((hdr->i_fc[0] & QDF_IEEE80211_FC0_SUBTYPE_MASK) ==
+	    MGMT_SUBTYPE_PROBE_RESP)
+		frm_type = MGMT_PROBE_RESP;
+
+	rx_param.pdev_id = 0;
+	rx_param.chan_freq = freq;
+	/* Real RSSI will be filled after roam sync */
+	rx_param.rssi = 0;
+
+	/* Set all per chain rssi as invalid */
+	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
+		rx_param.rssi_ctl[i] = WLAN_INVALID_PER_CHAIN_RSSI;
+
+	buf = qdf_nbuf_alloc(NULL, qdf_roundup(len, 4), 0, 4, false);
+	if (!buf)
+		return;
+
+	qdf_nbuf_put_tail(buf, len);
+	qdf_nbuf_set_protocol(buf, ETH_P_CONTROL);
+
+	data = qdf_nbuf_data(buf);
+	qdf_mem_copy(data, frame, len);
+	/* buf will be freed by scan module in error or success case */
+	wlan_scan_process_bcn_probe_rx_sync(wlan_pdev_get_psoc(mac_ctx->pdev),
+					    buf, &rx_param, frm_type);
+}
+
+QDF_STATUS
+csr_roam_candidate_event_handle_callback(struct mac_context *mac_ctx,
+					 uint8_t *frame, uint32_t len)
+{
+	uint32_t ie_offset, ie_len;
+	uint8_t *ie_ptr = NULL;
+	uint8_t *extracted_ie = NULL;
+	uint8_t primary_channel, band;
+	qdf_freq_t op_freq;
+
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_MLME, QDF_TRACE_LEVEL_DEBUG,
+			   frame, len);
+
+	/* Fixed parameters offset */
+	ie_offset = sizeof(struct wlan_frame_hdr) + SIR_MAC_B_PR_SSID_OFFSET;
+
+	if (len <= ie_offset) {
+		mlme_err("Invalid frame length");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ie_ptr = frame + ie_offset;
+	ie_len = len - ie_offset;
+
+	/* For 2.4GHz,5GHz get channel from DS IE */
+	extracted_ie = (uint8_t *)wlan_get_ie_ptr_from_eid(WLAN_ELEMID_DSPARMS,
+							   ie_ptr, ie_len);
+
+	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_DSPARMS &&
+	    extracted_ie[1] == WLAN_DS_PARAM_IE_MAX_LEN) {
+		band = BIT(REG_BAND_2G) | BIT(REG_BAND_5G);
+		primary_channel = *(extracted_ie + 2);
+		sme_debug("Extracted primary channel from DS : %d",
+			  primary_channel);
+		goto update_beacon;
+	}
+
+	/* For HT, VHT and non-6GHz HE, get channel from HTINFO IE */
+	extracted_ie = (uint8_t *)
+		wlan_get_ie_ptr_from_eid(WLAN_ELEMID_HTINFO_ANA,
+					 ie_ptr, ie_len);
+	if (extracted_ie && extracted_ie[0] == WLAN_ELEMID_HTINFO_ANA &&
+	    extracted_ie[1] == sizeof(struct wlan_ie_htinfo_cmn)) {
+		band = BIT(REG_BAND_2G) | BIT(REG_BAND_5G);
+		primary_channel =
+			((struct wlan_ie_htinfo *)extracted_ie)->
+						hi_ie.hi_ctrlchannel;
+		sme_debug("Extracted primary channel from HT INFO : %d",
+			  primary_channel);
+		goto update_beacon;
+	}
+
+	/* For 6GHz, get channel from HE OP IE */
+	extracted_ie = (uint8_t *)
+		wlan_get_ext_ie_ptr_from_ext_id(WLAN_HEOP_OUI_TYPE,
+						(uint8_t)
+						WLAN_HEOP_OUI_SIZE,
+						ie_ptr, ie_len);
+
+	if (extracted_ie &&
+	    !qdf_mem_cmp(&extracted_ie[2], WLAN_HEOP_OUI_TYPE,
+			 WLAN_HEOP_OUI_SIZE) &&
+	     extracted_ie[1] <= WLAN_MAX_HEOP_IE_LEN) {
+		band = BIT(REG_BAND_6G);
+		primary_channel = util_scan_get_6g_oper_channel(extracted_ie);
+		sme_debug("Extracted primary channel from HE OP : %d",
+			  primary_channel);
+		if (primary_channel)
+			goto update_beacon;
+	}
+
+	mlme_err("Primary channel was not found in the candidate scan entry");
+	return QDF_STATUS_E_FAILURE;
+
+update_beacon:
+	op_freq = wlan_reg_chan_band_to_freq(mac_ctx->pdev,
+					     primary_channel, band);
+	sme_debug("Roaming candidate frequency : %d", op_freq);
+	csr_inform_bcn_probe(mac_ctx, frame, len, op_freq);
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

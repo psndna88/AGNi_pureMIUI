@@ -1014,7 +1014,13 @@ static void wma_process_cli_set_cmd(tp_wma_handle wma,
 			ret = wma_reset_tsf_gpio(wma, privcmd->param_value);
 			break;
 		default:
-			wma_err("Invalid param id 0x%x", privcmd->param_id);
+			ret = wma_set_tsf_auto_report(wma,
+						      privcmd->param_vdev_id,
+						      privcmd->param_id,
+						      privcmd->param_value);
+			if (ret == QDF_STATUS_E_FAILURE)
+				wma_err("Invalid param id 0x%x",
+					privcmd->param_id);
 			break;
 		}
 		break;
@@ -2647,8 +2653,6 @@ static int wma_unified_phyerr_rx_event_handler(void *handle,
 
 void wma_vdev_init(struct wma_txrx_node *vdev)
 {
-	qdf_wake_lock_create(&vdev->vdev_set_key_wakelock, "vdev_set_key");
-	qdf_runtime_lock_init(&vdev->vdev_set_key_runtime_wakelock);
 	vdev->is_waiting_for_key = false;
 }
 
@@ -2720,8 +2724,6 @@ void wma_vdev_deinit(struct wma_txrx_node *vdev)
 		vdev->plink_status_req = NULL;
 	}
 
-	qdf_runtime_lock_deinit(&vdev->vdev_set_key_runtime_wakelock);
-	qdf_wake_lock_destroy(&vdev->vdev_set_key_wakelock);
 	vdev->is_waiting_for_key = false;
 }
 
@@ -3410,6 +3412,11 @@ QDF_STATUS wma_open(struct wlan_objmgr_psoc *psoc,
 					wmi_vdev_disconnect_event_id,
 					wma_roam_vdev_disconnect_event_handler,
 					WMA_RX_SERIALIZER_CTX);
+
+	wmi_unified_register_event_handler(wma_handle->wmi_handle,
+					   wmi_roam_frame_event_id,
+					   wma_roam_candidate_frame_event_handler,
+					   WMA_RX_SERIALIZER_CTX);
 
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 	wmi_unified_register_event_handler(wma_handle->wmi_handle,
@@ -9294,6 +9301,7 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 {
 	uint32_t i;
 	QDF_STATUS status;
+	bool is_channel_allowed;
 
 	if (!wma_handle) {
 		wma_err("WMA handle is NULL. Cannot issue command");
@@ -9336,6 +9344,14 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 		    msg->chan_weights.saved_chan_list[i]))
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
+
+		is_channel_allowed =
+			policy_mgr_is_sta_chan_valid_for_connect_and_roam(
+					wma_handle->pdev,
+					msg->chan_weights.saved_chan_list[i]);
+		if (!is_channel_allowed)
+			msg->chan_weights.weighed_valid_list[i] =
+						WEIGHT_OF_DISALLOWED_CHANNELS;
 	}
 
 	if (!QDF_IS_STATUS_SUCCESS(status)) {

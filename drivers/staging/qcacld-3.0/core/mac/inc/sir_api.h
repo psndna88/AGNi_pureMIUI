@@ -482,6 +482,9 @@ struct sme_ready_req {
 					uint16_t deauth_disassoc_frame_len,
 					uint16_t reason_code);
 	csr_roam_pmkid_req_fn_t csr_roam_pmkid_req_cb;
+	QDF_STATUS (*csr_roam_candidate_event_cb)(struct mac_context *mac,
+						  uint8_t *frame,
+						  uint32_t len);
 };
 
 /**
@@ -2929,6 +2932,18 @@ struct roam_offload_synch_ind {
 	enum wlan_phymode phy_mode; /*phy mode sent by fw */
 };
 
+/*
+ * struct roam_scan_candidate_frame Roam candidate scan entry
+ * vdev_id : vdev id
+ * frame_len : Length of the beacon/probe rsp frame
+ * frame : Pointer to the frame
+ */
+struct roam_scan_candidate_frame {
+	uint8_t vdev_id;
+	uint32_t frame_length;
+	uint8_t *frame;
+};
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 struct handoff_failure_ind {
 	uint8_t vdev_id;
@@ -4413,6 +4428,8 @@ struct sir_sme_ext_cng_chan_ind {
  * @soc_timer_high: high 32bits of synced SOC timer value
  * @global_tsf_low: low 32bits of tsf64
  * @global_tsf_high: high 32bits of tsf64
+ * @mac_id: MAC identifier
+ * @mac_id_valid: Indicate if mac_id is valid or not
  *
  * driver use this struct to store the tsf info
  */
@@ -4424,6 +4441,10 @@ struct stsf {
 	uint32_t soc_timer_high;
 	uint32_t global_tsf_low;
 	uint32_t global_tsf_high;
+#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+	uint32_t mac_id;
+	uint32_t mac_id_valid;
+#endif
 };
 
 #define SIR_BCN_FLT_MAX_ELEMS_IE_LIST 8

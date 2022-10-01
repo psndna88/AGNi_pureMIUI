@@ -825,6 +825,7 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 				WMI_ROAM_SYNCH_EVENTID_param_tlvs *param_buf)
 {
 	wmi_roam_synch_event_fixed_param *synch_event;
+	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	wmi_channel *chan;
 	wmi_key_material *key;
 	wmi_key_material_ext *key_ft;
@@ -856,6 +857,9 @@ static int wma_fill_roam_synch_buffer(tp_wma_handle wma,
 		return status;
 	}
 
+	cdp_update_roaming_peer_in_vdev(soc, synch_event->vdev_id,
+					roam_synch_ind_ptr->bssid.bytes,
+					synch_event->auth_status);
 	/*
 	 * If lengths of bcn_probe_rsp, reassoc_req and reassoc_rsp are zero in
 	 * synch_event driver would have received bcn_probe_rsp, reassoc_req
@@ -2196,7 +2200,7 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 				     uint8_t vdev_id,
 				     enum roam_rt_stats_type events,
 				     struct mlme_roam_debug_info *roam_info,
-				     uint32_t value)
+				     uint32_t value, uint32_t reason)
 {
 	struct mac_context *mac = cds_get_context(QDF_MODULE_ID_PE);
 	struct mlme_roam_debug_info *roam_event = NULL;
@@ -2212,12 +2216,17 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 		if (!roam_event)
 			return;
 
-		if (value == WMI_ROAM_NOTIF_SCAN_START)
+		if (value == WMI_ROAM_NOTIF_SCAN_START) {
 			roam_event->roam_event_param.roam_scan_state =
 					QCA_WLAN_VENDOR_ROAM_SCAN_STATE_START;
-		else if (value == WMI_ROAM_NOTIF_SCAN_END)
+			if (reason) {
+				roam_event->trigger.present = true;
+				roam_event->trigger.trigger_reason = reason;
+			}
+		} else if (value == WMI_ROAM_NOTIF_SCAN_END) {
 			roam_event->roam_event_param.roam_scan_state =
 					QCA_WLAN_VENDOR_ROAM_SCAN_STATE_END;
+		}
 
 		if (mac && mac->sme.roam_rt_stats_cb) {
 			wma_debug("Invoke HDD roam events callback for "
@@ -2503,7 +2512,7 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 		wma_report_real_time_roam_stats(
 					wma->psoc, vdev_id,
 					ROAM_RT_STATS_TYPE_ROAM_SCAN_INFO,
-					roam_info, 0);
+					roam_info, 0, 0);
 
 		qdf_mem_free(roam_info);
 	}
@@ -2602,6 +2611,72 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 err:
 	return -EINVAL;
 }
+
+int wma_roam_candidate_frame_event_handler(void *handle, uint8_t *event,
+					   uint32_t len)
+{
+	tp_wma_handle wma = (tp_wma_handle) handle;
+	WMI_ROAM_FRAME_EVENTID_param_tlvs *param_buf = NULL;
+	wmi_roam_frame_event_fixed_param *frame_params = NULL;
+	struct roam_scan_candidate_frame *data;
+	struct mac_context *mac_ctx;
+	QDF_STATUS status;
+
+	if (!event || !len) {
+		wma_err("Empty roam candidate frame event");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	param_buf = (WMI_ROAM_FRAME_EVENTID_param_tlvs *)event;
+	if (!param_buf) {
+		wma_err("Received null buf from target");
+		return -EINVAL;
+	}
+
+	frame_params =
+		(wmi_roam_frame_event_fixed_param *)param_buf->fixed_param;
+
+	if (!wma_is_vdev_valid(frame_params->vdev_id)) {
+		wma_err("Invalid vdev id %d", frame_params->vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (frame_params->frame_length > param_buf->num_frame) {
+		wma_err("Invalid frame length %d expected : %d",
+			frame_params->frame_length,
+			param_buf->num_frame);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!param_buf->frame) {
+		wmi_err("Frame pointer is Null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+
+	if (!mac_ctx) {
+		wma_err("NULL mac ptr");
+		QDF_ASSERT(0);
+		return -EINVAL;
+	}
+
+	data = qdf_mem_malloc(sizeof(*data));
+
+	if (!data)
+		return -ENOMEM;
+
+	data->vdev_id = frame_params->vdev_id;
+	data->frame_length = frame_params->frame_length;
+	data->frame = (uint8_t *)param_buf->frame;
+
+	status = wma->csr_roam_candidate_event_cb(mac_ctx, data->frame,
+							 data->frame_length);
+	qdf_mem_free(data);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #endif
 
 /**
@@ -4661,7 +4736,8 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 						wma_handle->psoc,
 						wmi_event->vdev_id,
 						ROAM_RT_STATS_TYPE_SCAN_STATE,
-						NULL, wmi_event->notif);
+						NULL, wmi_event->notif,
+						wmi_event->notif_params);
 		break;
 	case WMI_ROAM_REASON_RSO_STATUS:
 		wma_rso_cmd_status_event_handler(wmi_event);
@@ -4684,7 +4760,7 @@ int wma_roam_event_callback(WMA_HANDLE handle, uint8_t *event_buf,
 		wma_report_real_time_roam_stats(
 					wma_handle->psoc, wmi_event->vdev_id,
 					ROAM_RT_STATS_TYPE_INVOKE_FAIL_REASON,
-					NULL, wmi_event->notif_params);
+					NULL, wmi_event->notif_params, 0);
 		qdf_mem_free(roam_synch_data);
 		break;
 	case WMI_ROAM_REASON_DEAUTH:

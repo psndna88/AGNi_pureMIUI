@@ -121,10 +121,10 @@ lim_process_deauth_frame(struct mac_context *mac, uint8_t *pRxPacketInfo,
 		pe_err("rx frame doesn't have valid a1 address, drop it");
 		return;
 	}
+
 #ifdef WLAN_FEATURE_11W
 	/* PMF: If this session is a PMF session, then ensure that this frame was protected */
-	if (pe_session->limRmfEnabled &&
-	    pe_session->is_key_installed &&
+	if (is_mgmt_protected(pe_session->vdev_id, (const uint8_t *)pHdr->sa) &&
 	    (WMA_GET_RX_DPU_FEEDBACK(pRxPacketInfo) &
 		DPU_FEEDBACK_UNPROTECTED_ERROR)) {
 		pe_debug("received an unprotected deauth from AP");
@@ -345,7 +345,7 @@ static void lim_process_sae_auth_msg(struct mac_context *mac_ctx,
 
 	sae_msg->vdev_id = pe_session->vdev_id;
 	sae_msg->sae_status = IEEE80211_STATUS_UNSPECIFIED;
-	sae_msg->result_code = eSIR_SME_DEAUTH_WHILE_JOIN;
+	sae_msg->result_code = eSIR_SME_AUTH_REFUSED;
 	qdf_mem_copy(sae_msg->peer_mac_addr, addr, QDF_MAC_ADDR_SIZE);
 	lim_process_sae_msg(mac_ctx, sae_msg);
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -902,6 +903,9 @@ static void hdd_copy_ht_operation(struct hdd_station_ctx *hdd_sta_ctx,
 		hdd_ht_ops->operation_mode |=
 			IEEE80211_HT_OP_MODE_NON_HT_STA_PRSNT;
 
+	if (roam_ht_ops->chan_center_freq_seg2)
+		hdd_ht_ops->operation_mode |=
+			(roam_ht_ops->chan_center_freq_seg2 << IEEE80211_HT_OP_MODE_CCFS2_SHIFT);
 	/* stbc_param */
 	temp_ht_ops = roam_ht_ops->basicSTBCMCS &
 			HT_STBC_PARAM_MCS;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2727,22 +2728,25 @@ static int hdd_twt_pause_session(struct hdd_adapter *adapter,
 	qdf_mem_copy(params.peer_macaddr, hdd_sta_ctx->conn_info.bssid.bytes,
 		     QDF_MAC_ADDR_SIZE);
 	params.vdev_id = adapter->vdev_id;
+	params.dialog_id = 0;
 
-	ret = wlan_cfg80211_nla_parse_nested(tb,
+	if (twt_param_attr) {
+		ret = wlan_cfg80211_nla_parse_nested(tb,
 					QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX,
 					twt_param_attr,
 					qca_wlan_vendor_twt_add_dialog_policy);
-	if (ret) {
-		hdd_debug("command parsing failed");
-		return ret;
-	}
+		if (ret) {
+			hdd_debug("command parsing failed");
+			return ret;
+		}
 
-	id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_ID;
-	if (tb[id]) {
-		params.dialog_id = nla_get_u8(tb[id]);
+		id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_FLOW_ID;
+		if (tb[id])
+			params.dialog_id = nla_get_u8(tb[id]);
+		else
+			hdd_debug("TWT: FLOW_ID not specified. set to zero");
 	} else {
-		params.dialog_id = 0;
-		hdd_debug("TWT: FLOW_ID not specified. set to zero");
+		hdd_debug("TWT param not present. flow id set to zero");
 	}
 
 	status = hdd_twt_check_all_twt_support(adapter->hdd_ctx->psoc,
@@ -3876,7 +3880,8 @@ static int hdd_twt_configure(struct hdd_adapter *adapter,
 	twt_param_attr = tb[id];
 
 	if (!twt_param_attr &&
-	    twt_oper != QCA_WLAN_TWT_GET_CAPABILITIES) {
+	    twt_oper != QCA_WLAN_TWT_GET_CAPABILITIES &&
+	    twt_oper != QCA_WLAN_TWT_SUSPEND) {
 		hdd_err("TWT parameters NOT specified");
 		return -EINVAL;
 	}
@@ -4446,6 +4451,8 @@ void __hdd_twt_update_work_handler(struct hdd_context *hdd_ctx)
 	hdd_debug("Total connection %d, sta_count %d, sap_count %d",
 		  num_connections, sta_count, sap_count);
 	switch (num_connections) {
+	case 0:
+		break;
 	case 1:
 		if (sta_count == 1) {
 			hdd_send_twt_requestor_enable_cmd(hdd_ctx);
@@ -4489,7 +4496,7 @@ void __hdd_twt_update_work_handler(struct hdd_context *hdd_ctx)
 					WLAN_HDD_ID_OBJ_MGR);
 		break;
 	default:
-		hdd_err("Unexpected number of connection");
+		hdd_debug("Unexpected number of connection");
 		break;
 	}
 }

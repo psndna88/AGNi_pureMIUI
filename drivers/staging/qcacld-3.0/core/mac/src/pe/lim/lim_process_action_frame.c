@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1519,7 +1520,7 @@ static void lim_process_addba_req(struct mac_context *mac_ctx, uint8_t *rx_pkt_i
 					WMI_MGMT_TX_COMP_TYPE_DISCARD);
 		}
 	} else {
-		pe_err_rl("Failed to process addba request");
+		pe_debug_rl("Failed to process addba request");
 	}
 
 error:
@@ -1551,7 +1552,7 @@ static void lim_process_delba_req(struct mac_context *mac_ctx, uint8_t *rx_pkt_i
 	body_ptr = WMA_GET_RX_MPDU_DATA(rx_pkt_info);
 	frame_len = WMA_GET_RX_PAYLOAD_LEN(rx_pkt_info);
 
-	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_INFO,
+	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_PE, QDF_TRACE_LEVEL_DEBUG,
 			   body_ptr, frame_len);
 
 	delba_req = qdf_mem_malloc(sizeof(*delba_req));
@@ -1575,7 +1576,7 @@ static void lim_process_delba_req(struct mac_context *mac_ctx, uint8_t *rx_pkt_i
 			delba_req->delba_param_set.tid, delba_req->Reason.code);
 
 	if (QDF_STATUS_SUCCESS != qdf_status)
-		pe_err("Failed to process delba request");
+		pe_err_rl("Failed to process delba request");
 
 error:
 	qdf_mem_free(delba_req);

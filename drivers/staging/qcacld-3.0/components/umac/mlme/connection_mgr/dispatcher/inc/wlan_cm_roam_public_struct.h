@@ -1031,8 +1031,8 @@ struct wlan_roam_offload_scan_rssi_params {
 	int max_drop_rssi_5g;
 	uint32_t good_rssi_threshold;
 	bool early_stop_scan_enable;
-	uint32_t roam_earlystop_thres_min;
-	uint32_t roam_earlystop_thres_max;
+	int32_t roam_earlystop_thres_min;
+	int32_t roam_earlystop_thres_max;
 	int dense_rssi_thresh_offset;
 	int dense_min_aps_cnt;
 	int initial_dense_status;

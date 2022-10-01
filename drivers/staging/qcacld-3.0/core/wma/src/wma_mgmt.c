@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1445,14 +1446,11 @@ QDF_STATUS wma_send_peer_assoc(tp_wma_handle wma,
 	    || params->encryptType == eSIR_ED_WPI
 #endif /* FEATURE_WLAN_WAPI */
 	    ) {
-		if (!params->no_ptk_4_way)
+		if (!params->no_ptk_4_way) {
 			cmd->need_ptk_4_way = 1;
-		wma_nofl_debug("Acquire set key wake lock for %d ms",
-			       WMA_VDEV_SET_KEY_WAKELOCK_TIMEOUT);
-		wma_acquire_wakelock(&intr->vdev_set_key_wakelock,
-			WMA_VDEV_SET_KEY_WAKELOCK_TIMEOUT);
-		qdf_runtime_pm_prevent_suspend(
-			&intr->vdev_set_key_runtime_wakelock);
+			wlan_acquire_peer_key_wakelock(wma->pdev,
+						       cmd->peer_mac);
+		}
 	}
 	if (params->wpa_rsn >> 1)
 		cmd->need_gtk_2_way = 1;
@@ -3203,8 +3201,8 @@ wma_get_peer_pmf_status(tp_wma_handle wma, uint8_t *peer_mac)
 				    wlan_objmgr_pdev_get_pdev_id(wma->pdev),
 				    peer_mac, WLAN_LEGACY_WMA_ID);
 	if (!peer) {
-		wma_err("Peer of peer_mac "QDF_MAC_ADDR_FMT" not found",
-			 QDF_MAC_ADDR_REF(peer_mac));
+		wma_debug("Peer of peer_mac " QDF_MAC_ADDR_FMT " not found",
+			  QDF_MAC_ADDR_REF(peer_mac));
 		return false;
 	}
 	is_pmf_enabled = mlme_get_peer_pmf_status(peer);
@@ -3701,6 +3699,8 @@ QDF_STATUS wma_de_register_mgmt_frm_client(void)
  * @pe_roam_synch_cb: PE roam synch callback routine pointer
  * @csr_roam_auth_event_handle_cb: CSR callback routine pointer
  * @csr_roam_pmkid_req_cb: CSR roam pmkid callback routine pointer
+ * @csr_roam_candidate_event_handle_cb: CSR roam candidate callback
+ * routine pointer
  *
  * Register the SME and PE callback routines with WMA for
  * handling roaming
@@ -3718,7 +3718,9 @@ QDF_STATUS wma_register_roaming_callbacks(
 					uint8_t *deauth_disassoc_frame,
 					uint16_t deauth_disassoc_frame_len,
 					uint16_t reason_code),
-	csr_roam_pmkid_req_fn_t csr_roam_pmkid_req_cb)
+	csr_roam_pmkid_req_fn_t csr_roam_pmkid_req_cb,
+	QDF_STATUS (*csr_roam_candidate_event_cb)(struct mac_context *mac,
+						  uint8_t *frame, uint32_t len))
 {
 
 	tp_wma_handle wma = cds_get_context(QDF_MODULE_ID_WMA);
@@ -3731,6 +3733,8 @@ QDF_STATUS wma_register_roaming_callbacks(
 	wma->csr_roam_auth_event_handle_cb = csr_roam_auth_event_handle_cb;
 	wma->pe_roam_synch_cb = pe_roam_synch_cb;
 	wma->pe_disconnect_cb = pe_disconnect_cb;
+	wma->csr_roam_candidate_event_cb =
+			csr_roam_candidate_event_cb;
 	wma_debug("Registered roam synch callbacks with WMA successfully");
 
 	wma->csr_roam_pmkid_req_cb = csr_roam_pmkid_req_cb;

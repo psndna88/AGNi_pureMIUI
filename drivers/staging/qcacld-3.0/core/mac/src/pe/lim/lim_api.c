@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -630,18 +631,7 @@ static void pe_shutdown_notifier_cb(void *ctx)
 }
 
 #ifdef WLAN_FEATURE_11W
-/**
- * is_mgmt_protected - check RMF enabled for the peer
- * @vdev_id: vdev id
- * @peer_mac_addr: peer mac address
- *
- * The function check the mgmt frame protection enabled or not
- * for station mode and AP mode
- *
- * Return: true, if the connection is RMF enabled.
- */
-static bool is_mgmt_protected(uint32_t vdev_id,
-				  const uint8_t *peer_mac_addr)
+bool is_mgmt_protected(uint32_t vdev_id, const uint8_t *peer_mac_addr)
 {
 	uint16_t aid;
 	tpDphHashNode sta_ds;
@@ -1366,7 +1356,8 @@ void pe_register_callbacks_with_wma(struct mac_context *mac,
 			ready_req->csr_roam_auth_event_handle_cb,
 			ready_req->pe_roam_synch_cb,
 			ready_req->pe_disconnect_cb,
-			ready_req->csr_roam_pmkid_req_cb);
+			ready_req->csr_roam_pmkid_req_cb,
+			ready_req->csr_roam_candidate_event_cb);
 	if (status != QDF_STATUS_SUCCESS)
 		pe_err("Registering roaming callbacks with WMA failed");
 }
