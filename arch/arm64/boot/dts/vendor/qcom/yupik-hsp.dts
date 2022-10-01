@@ -4,6 +4,6 @@
 
 / {
 	model = "Qualcomm Technologies, Inc. Yupik IDP HSP + SoC";
-	compatible = "qcom,yupik-idp", "qcom,yupik", "qcom,idp";
+	compatible = "qcom,yupik";
 	qcom,board-id = <0 1>;
 };

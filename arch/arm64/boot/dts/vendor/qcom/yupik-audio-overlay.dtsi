@@ -488,9 +488,12 @@
 	};
 };
 
-&dai_mi2s1 {
-	qcom,msm-mi2s-rx-lines = <0>;
-	qcom,msm-mi2s-tx-lines = <1>;
+&dai_mi2s1_rx {
+	qcom,msm-mi2s-lines = <0>;
+};
+
+&dai_mi2s1_tx {
+	qcom,msm-mi2s-lines = <1>;
 };
 
 &adsp_loader {

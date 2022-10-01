@@ -13,7 +13,7 @@
 	};
 };
 
-&ntn3_vreg {
+&qps615_vreg {
 	vin-supply = <&pine_vreg>;
 };
 
@@ -29,7 +29,7 @@
 		reg = <0 0 0 0 0>;
 		qcom,iommu-group = <&qcn9000_pci_iommu_group_0>;
 		memory-region = <&qcn9000_0_mem>;
-		qrtr_instance_id = <0x0>;
+		qrtr_instance_id = <0x20>;
 
 		#address-cells = <1>;
 		#size-cells = <1>;

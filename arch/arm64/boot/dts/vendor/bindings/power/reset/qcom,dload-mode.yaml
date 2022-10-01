@@ -16,6 +16,18 @@ properties:
   compatible:
     items:
       - const: qcom,dload-mode
+  reg:
+    Value type: <prop-encoded-array>
+    Definition: The base address and size for reading the proper configuration
+                related information.
+
+  reg-names:
+    Value type: string
+    Definition: The reg name for reading the configurations.
+
+  qcom,boot-config-shift:
+    Value type: <prop-encoded-array>
+    Definition: The range of bits from low to high.
 
 required:
   - compatible

@@ -8,11 +8,12 @@
 
 		iommus = <&apps_smmu 0x1a0 0x0>;
 		qcom,iommu-dma = "atomic";
-		qcom,iommu-dma-addr-pool = <0x40000000 0x5ffe0000>;
+		qcom,iommu-dma-addr-pool = <0x90000000 0x0ffe0000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
 		dma-ranges;
+		qcom,iommu-best-fit-algo;
 
 		interrupts-extended = <&pdc 19 IRQ_TYPE_EDGE_RISING>,
 				<&intc GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
@@ -72,7 +73,7 @@
 			tx-fifo-resize;
 			maximum-speed = "super-speed-plus";
 			dr_mode = "otg";
-			snps,xhci-imod-value = <4000>;
+			imod-interval-ns = <1000000>;
 		};
 
 		qcom,usbbam@a704000 {
@@ -116,7 +117,7 @@
 		reg-names = "hsusb_phy_base",
 			"eud_enable_reg";
 		vdd-supply = <&pmx65_l4>;
-		qcom,vdd-voltage-level = <0 912000 912000>;
+		qcom,vdd-voltage-level = <0 880000 912000>;
 		vdda18-supply = <&pmx65_l5>;
 		vdda33-supply = <&pmx65_l10>;
 
@@ -137,7 +138,7 @@
 			"pcs_clamp_enable_reg";
 
 		vdd-supply = <&pmx65_l4>;
-		qcom,vdd-voltage-level = <0 912000 912000>;
+		qcom,vdd-voltage-level = <0 880000 912000>;
 		qcom,vdd-max-load-uA = <47900>;
 		core-supply = <&pmx65_l1>;
 		qcom,core-max-load-uA = <15000>;

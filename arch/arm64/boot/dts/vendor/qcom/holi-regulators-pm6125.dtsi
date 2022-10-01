@@ -74,10 +74,6 @@
 		regulator-s3-level-ao {
 			status = "disabled";
 		};
-
-		gfx-cdev {
-			status = "disabled";
-		};
 	};
 
 	/* Disable mx_cdev for PM6150A */
@@ -434,16 +430,6 @@
 					<RPM_SMD_REGULATOR_LEVEL_BINNING>;
 			qcom,use-voltage-level;
 		};
-
-		gfx_cdev: gfx-cdev {
-			status = "okay";
-			compatible = "qcom,regulator-cooling-device";
-			regulator-cdev-supply = <&S8A_LEVEL_AO>;
-			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NONE
-					RPM_SMD_REGULATOR_LEVEL_SVS_PLUS>;
-			#cooling-cells = <2>;
-		};
-
 	};
 
 	/* VDD_LPI_CX supply */

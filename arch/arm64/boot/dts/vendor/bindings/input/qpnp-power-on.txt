@@ -129,6 +129,8 @@ Optional properties:
 - qcom,use-legacy-hard-reset-offset       Boolean property to support legacy
 				hard-reset offset of the PON_RB_SPARE register for
 				some (PON gen2) platforms.
+- qcom,log-kpd-event:		Boolean property to enable logging of KPDPWR status
+				during driver INIT and runtime when key is pressed.
 
 Optional Sub-nodes:
 - qcom,pon_1 ... qcom,pon_n:	These PON child nodes correspond to features

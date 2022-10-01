@@ -8,6 +8,7 @@ Required properties:
 			Must include "qcom,adreno-gpu-a619-holi" for Holi target.
 			Must include "qcom,adreno-gpu-a642" for Shima target.
 			Must include "qcom,adreno-gpu-a642l" for Yupik target.
+			Must include "qcom,adreno-gpu-a643" for Yupik a643 target.
 - reg:			Specifies the list of register regions for the device.
 - reg-names:		Resource names used for the register regions specified
 			in reg.

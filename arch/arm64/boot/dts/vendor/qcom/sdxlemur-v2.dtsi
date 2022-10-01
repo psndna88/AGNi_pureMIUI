@@ -3,151 +3,155 @@
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR V2";
 	compatible = "qcom,sdxlemur";
-	qcom,msm-id = <458 0x20000>, <483 0x20000>;
+	qcom,msm-id = <458 0x20000>, <483 0x20000>, <509 0x20000>;
+};
+
+/* Overriding the BAM node to enable SMMU S1 support in sdxlemur V2
+ * Adding i2c SID's in BAM node, as descriptors buffers for i2c
+ * usecase are allocated in BAM DMA driver.
+ */
+&dma_blsp1 {
+	iommus = <&apps_smmu 0x148 0x1>,
+		<&apps_smmu 0x14a 0x1>,
+		<&apps_smmu 0x14c 0x1>,
+		<&apps_smmu 0x14e 0x1>;
+	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
+	qcom,iommu-geometry = <0x40000000 0x10000000>;
+	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_1 {
-	iommus = <&apps_smmu 0x148 0x0>,
-		<&apps_smmu 0x149 0x0>;
+	iommus = <&apps_smmu 0x148 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_2 {
-	iommus = <&apps_smmu 0x14a 0x0>,
-		<&apps_smmu 0x14b 0x0>;
+	iommus = <&apps_smmu 0x14a 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_3 {
-	iommus = <&apps_smmu 0x14c 0x0>,
-		<&apps_smmu 0x14d 0x0>;
+	iommus = <&apps_smmu 0x14c 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_4 {
-	iommus = <&apps_smmu 0x14e 0x0>,
-		<&apps_smmu 0x14f 0x0>;
+	iommus = <&apps_smmu 0x14e 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_5 {
-	iommus = <&apps_smmu 0x148 0x0>,
-		<&apps_smmu 0x149 0x0>;
+	iommus = <&apps_smmu 0x148 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_6 {
-	iommus = <&apps_smmu 0x14a 0x0>,
-		<&apps_smmu 0x14b 0x0>;
+	iommus = <&apps_smmu 0x14a 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &i2c_7 {
-	iommus = <&apps_smmu 0x14e 0x0>,
-		<&apps_smmu 0x14f 0x0>;
+	iommus = <&apps_smmu 0x14e 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &spi_1 {
-	iommus = <&apps_smmu 0x148 0x0>,
-		<&apps_smmu 0x149 0x0>;
+	iommus = <&apps_smmu 0x148 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &spi_2 {
-	iommus = <&apps_smmu 0x14a 0x0>,
-		<&apps_smmu 0x14b 0x0>;
+	iommus = <&apps_smmu 0x14a 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &spi_3 {
-	iommus = <&apps_smmu 0x14c 0x0>,
-		<&apps_smmu 0x14d 0x0>;
+	iommus = <&apps_smmu 0x14c 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &spi_4 {
-	iommus = <&apps_smmu 0x14e 0x0>,
-		<&apps_smmu 0x14f 0x0>;
+	iommus = <&apps_smmu 0x14e 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart1a_hs {
-	iommus = <&apps_smmu 0x140 0x0>,
-		<&apps_smmu 0x141 0x0>;
+	iommus = <&apps_smmu 0x140 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart1b_hs {
-	iommus = <&apps_smmu 0x140 0x0>,
-		<&apps_smmu 0x141 0x0>;
+	iommus = <&apps_smmu 0x140 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart2a_hs {
-	iommus = <&apps_smmu 0x142 0x0>,
-		<&apps_smmu 0x143 0x0>;
+	iommus = <&apps_smmu 0x142 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart2b_hs {
-	iommus = <&apps_smmu 0x142 0x0>,
-		<&apps_smmu 0x143 0x0>;
+	iommus = <&apps_smmu 0x142 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart3_hs {
-	iommus = <&apps_smmu 0x144 0x0>,
-		<&apps_smmu 0x145 0x0>;
+	iommus = <&apps_smmu 0x144 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart4a_hs {
-	iommus = <&apps_smmu 0x146 0x0>,
-		<&apps_smmu 0x147 0x0>;
+	iommus = <&apps_smmu 0x146 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
 };
 
 &blsp1_uart4b_hs {
-	iommus = <&apps_smmu 0x146 0x0>,
-		<&apps_smmu 0x147 0x0>;
+	iommus = <&apps_smmu 0x146 0x1>;
 	qcom,iommu-dma-addr-pool = <0x40000000 0x10000000>;
 	qcom,iommu-geometry = <0x40000000 0x10000000>;
 	qcom,iommu-dma = "fastmap";
+};
+
+&apsscc {
+	qcom,speed0-bin-v0 =
+		<   345600000 RPMH_REGULATOR_LEVEL_LOW_SVS>,
+		<   576000000 RPMH_REGULATOR_LEVEL_SVS>,
+		<  1094400000 RPMH_REGULATOR_LEVEL_NOM>,
+		<  1804800000 RPMH_REGULATOR_LEVEL_TURBO>;
 };
 
 &cpufreq {
@@ -155,7 +159,7 @@
 		<  345600 >,
 		<  576000 >,
 		<  1094400 >,
-		<  1708800 >;
+		<  1804800 >;
 };
 
 &cpu0_cpu_ddr_tbl {
@@ -163,5 +167,14 @@
 		<   345600  MHZ_TO_MBPS( 300, 4) >,
 		<   576000  MHZ_TO_MBPS( 768, 4) >,
 		<  1440000  MHZ_TO_MBPS(1555, 4) >,
-		<  1708800  MHZ_TO_MBPS(2092, 4) >;
+		<  1804800  MHZ_TO_MBPS(2092, 4) >;
+};
+
+&pil_modem {
+	qcom,vdd_mss-uV-uA = <RPMH_REGULATOR_LEVEL_NOM_L1 100000>;
+};
+
+
+&dload_mode {
+	qcom,boot-config-shift = <1 4>;
 };

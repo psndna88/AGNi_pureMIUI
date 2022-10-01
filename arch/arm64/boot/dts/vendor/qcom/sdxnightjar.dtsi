@@ -49,7 +49,7 @@
 
 		mss_mem: mss_region@0x88000000 {
 			no-map;
-			reg = <0x88000000 0x6e00000>;
+			reg = <0x88000000 0x6600000>;
 			label = "mss_mem";
 		};
 
@@ -187,7 +187,7 @@
 		qcom,firmware-name = "modem";
 		qcom,pil-self-auth;
 		qcom,sysmon-id = <0>;
-		qcom,ssctl-instance-id = <0x12>;
+		qcom,ssctl-instance-id = <0x22>;
 		qcom,override-acc;
 		qcom,qdsp6v61-1-1;
 		memory-region = <&mss_mem>;

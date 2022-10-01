@@ -261,7 +261,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
-	qcom,i2c-touch-active="synaptics,tcm-i2c";
+	qcom,i2c-touch-active= "synaptics,tcm-i2c";
 
 	synaptics_tcm@20 {
 		compatible = "synaptics,tcm-i2c";
@@ -309,6 +309,9 @@
 		pinctrl-0 = <&ts_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
 		pinctrl-2 = <&pmx_ts_release>;
+
+		panel = <&dsi_r66451_amoled_cmd
+			&dsi_r66451_amoled_video>;
 	};
 
 	novatek@62 {

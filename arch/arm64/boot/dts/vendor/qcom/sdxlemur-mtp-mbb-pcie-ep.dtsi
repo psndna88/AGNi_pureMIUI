@@ -66,4 +66,7 @@
 
 &usb {
 	qcom,iommu-dma = "bypass";
+	dwc3@a600000 {
+		snps,usb2-gadget-lpm-disable;
+	};
 };

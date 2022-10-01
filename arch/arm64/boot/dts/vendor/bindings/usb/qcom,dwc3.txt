@@ -46,6 +46,10 @@ Optional properties:
 - qcom,select-utmi-as-pipe-clk: if present, disable USB3 pipe_clk requirement.
 				Used when dwc3 operates without SSPHY and only
 				HS/FS/LS modes are supported.
+- qcom,iommu-best-fit-algo:	If present, enables best fit algorithm for iova
+				allocation. This helps in reducing fragmentation
+				and utilizing the iova address space more
+				efficiently.
 
 Required child node:
 A child node must exist to represent the core DWC3 IP block. The name of

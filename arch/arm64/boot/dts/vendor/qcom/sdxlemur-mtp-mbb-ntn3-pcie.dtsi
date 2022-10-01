@@ -1,9 +1,9 @@
 #include "sdxlemur-mtp-mbb.dtsi"
 
 &soc {
-	ntn3_vreg: ntn3_vreg {
+	qps615_vreg: qps615_vreg {
 		compatible = "regulator-fixed";
-		regulator-name = "ntn3_vreg";
+		regulator-name = "qps615_vreg";
 		gpio = <&tlmm 107 GPIO_ACTIVE_HIGH>;
 		regulator-min-microvolt = <1000000>;
 		regulator-max-microvolt = <1000000>;
@@ -15,13 +15,36 @@
 		compatible = "regulator-fixed";
 		regulator-name = "aqr_vreg";
 		gpio = <&tlmm 105 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&ntn3_vreg>;
+		vin-supply = <&qps615_vreg>;
 		regulator-min-microvolt = <1000000>;
 		regulator-max-microvolt = <1000000>;
 		enable-active-high;
-		regulator-enable-ramp-delay = <2400>;
+		regulator-enable-ramp-delay = <10000>;
 	};
 
+	ioss_qps615_rx: qps615_rx@eth {
+		qcom,dir-rx;
+		qcom,rx-filter-ip;
+
+		qcom,ring-size = <128>;
+		qcom,buff-size = <2048>;
+
+		qcom,mod-count-min = <64>;
+		qcom,mod-count-max = <64>;
+		qcom,mod-usecs-min = <30>;
+		qcom,mod-usecs-max = <60>;
+	};
+
+	ioss_qps615_tx: qps615_tx@eth {
+		qcom,dir-tx;
+		qcom,ring-size = <512>;
+		qcom,buff-size = <2048>;
+
+		qcom,mod-count-min = <64>;
+		qcom,mod-count-max = <64>;
+		qcom,mod-usecs-min = <30>;
+		qcom,mod-usecs-max = <60>;
+	};
 };
 
 &i2c_3 {
@@ -40,7 +63,7 @@
 
 	qcom,filtered-bdfs = <0x02080000>;
 
-	vreg-3p3-supply = <&aqr_vreg>;
+	vreg-3p3-supply = <&qps615_vreg>;
 
 	iommu-map = <0x0 &apps_smmu 0x0200 0x1>,
 		<0x100 &apps_smmu 0x0201 0x1>,
@@ -72,6 +95,30 @@
 		/* BDF 2.3.0 */
 		pcie0_bus2_dev3_fn0: pcie0_bus2_dev3_fn0 {
 			reg = <0x1800 0x0 0x0 0x0 0x0>;
+			qps615_eth0,qps615_eth0@pcie0_rp {
+				reg = <0x0 0x0 0x0 0x0 0x0>;
+
+				compatible = "qcom,ioss-v2-device";
+				qcom,ioss = <&ioss>;
+				qcom,ioss_instance = <0>;
+				qcom,ioss_channels =
+					<&ioss_qps615_rx>,
+					<&ioss_qps615_tx>;
+
+				/* ipa shares this group */
+				qcom,iommu-group = <&ipa_eth_group1>;
+				phy-supply = <&aqr_vreg>;
+				qcom,phy-rst-delay-us = <221000>;
+
+				interrupts-extended = <&tlmm 103 IRQ_TYPE_EDGE_FALLING>;
+				interrupt-names = "wol_irq";
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&aqr_intn_wol_sig>;
+
+				#address-cells = <1>;
+				#size-cells = <1>;
+			};
 			/* BDF 5.0.0 */
 			pcie0_bus5_dev0_fn0: pcie0_ntn3_eth0 {
 				reg = <0x0 0x0 0x0 0x0 0x0>;
@@ -80,31 +127,6 @@
 					qcom,iommu-dma = "atomic";
 				};
 			};
-		};
-	};
-};
-
-&wlan {
-	mhi_events {
-		mhi_event@0 {
-			mhi,num-elements = <32>;
-			mhi,intmod = <0>;
-			mhi,msi = <1>;
-			mhi,priority = <0>;
-			mhi,brstmode = <2>;
-			mhi,data-type = <1>;
-		};
-
-		mhi_event@1 {
-			mhi,num-elements = <256>;
-			mhi,intmod = <0>;
-			mhi,msi = <2>;
-			mhi,priority = <1>;
-			mhi,brstmode = <2>;
-		};
-
-		mhi_event@2 {
-			status = "disabled";
 		};
 	};
 };

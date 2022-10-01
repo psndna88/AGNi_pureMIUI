@@ -30,6 +30,7 @@
 
 		use-pm-domain;
 		cnss-enable-self-recovery;
+		default_gen_speed = <0>;
 
 		vdd-wlan-aon-supply = <&S7B>;
 		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 0>;
@@ -169,12 +170,7 @@
 			};
 
 			mhi_event@2 {
-				mhi,num-elements = <32>;
-				mhi,intmod = <0>;
-				mhi,msi = <0>;
-				mhi,priority = <2>;
-				mhi,brstmode = <2>;
-				mhi,data-type = <3>;
+				status = "disabled";
 			};
 		};
 

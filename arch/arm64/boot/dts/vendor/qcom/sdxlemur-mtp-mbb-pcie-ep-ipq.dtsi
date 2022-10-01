@@ -14,10 +14,12 @@
 
 &pcie_ep {
 	status = "ok";
+	qcom,pcie-perst-enum;
 };
 
 &mhi_device {
 	status = "ok";
+	qcom,no-m0-timeout;
 };
 
 &mhi_net_device {
@@ -68,6 +70,4 @@
 	qcom,iommu-dma = "bypass";
 };
 
-&sdx_ext_ipc {
-	ipq807x_attach = <1>;
-};
+

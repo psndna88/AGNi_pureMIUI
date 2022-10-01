@@ -6,10 +6,11 @@
 #include "sdxlemur-audio.dtsi"
 #include "sdxlemur-mtp-audio-overlay.dtsi"
 #include "sdxlemur-bluetooth.dtsi"
+#include "display/sdxlemur-qpic-display.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP MBB V2";
 	compatible = "qcom,sdxlemur-mtp",
 		"qcom,sdxlemur", "qcom,mtp";
-	qcom,board-id = <0x2020008 0x302>;
+	qcom,board-id = <0x2010008 0x302>;
 };

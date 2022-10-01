@@ -46,6 +46,11 @@
 	rpmh-regulator-smpb8 {
 		compatible = "qcom,rpmh-vrm-regulator";
 		qcom,resource-name = "smpb8";
+		qcom,regulator-type = "pmic5-hfsmps";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_RET
+			RPMH_REGULATOR_MODE_AUTO>;
+		qcom,mode-threshold-currents = <0 200000>;
 		S8B:
 		pm7325_s8: regulator-pm7325-s8 {
 			regulator-name = "pm7325_s8";
@@ -53,6 +58,7 @@
 			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1500000>;
 			qcom,init-voltage = <1272000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_RET>;
 		};
 	};
 

@@ -130,6 +130,11 @@
 		reg = <0xb221200 0x60>;
 	};
 
+	subsystem-sleep-stats {
+		compatible = "qcom,subsystem-sleep-stats";
+		reg = <0xc3f0000 0x400>;
+	};
+
 	soc-sleep-stats@c3f0000 {
 		compatible = "qcom,rpmh-sleep-stats";
 		reg = <0xc3f0000 0x400>;

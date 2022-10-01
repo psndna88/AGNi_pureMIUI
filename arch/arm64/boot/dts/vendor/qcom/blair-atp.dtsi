@@ -347,10 +347,6 @@
 		regulator-s3-level-ao {
 			status = "okay";
 		};
-
-		gfx-cdev {
-			status = "okay";
-		};
 	};
 
 	/* Enable mx_cdev for PM6350 */

@@ -196,8 +196,11 @@
 		};
 	};
 
-	dload_mode {
+	dload_mode: dload_mode {
 		compatible = "qcom,dload-mode";
+		reg = <0x786070 0x4>;
+		reg-names = "boot-config";
+		qcom,boot-config-shift = <1 3>;
 	};
 
 	dcc: dcc_v2@117f000 {
@@ -943,7 +946,7 @@
 		vreg-mx-supply = <&VDD_MXA_LEVEL>;
 
 		qcom,vreg-1p8-voltage-level = <1200000 1200000 30000>;
-		qcom,vreg-0p9-voltage-level = <912000 912000 132000>;
+		qcom,vreg-0p9-voltage-level = <912000 880000 132000>;
 		qcom,vreg-mx-voltage-level = <RPMH_REGULATOR_LEVEL_MAX RPMH_REGULATOR_LEVEL_NOM 0>;
 
 		clocks = <&gcc GCC_PCIE_PIPE_CLK>,
@@ -977,8 +980,8 @@
 
 			qcom,pcie-vendor-id = /bits/ 16 <0x17cb>;
 			qcom,pcie-device-id = /bits/ 16 <0x0308>;
-			qcom,pcie-link-speed = <4>;
-			qcom,pcie-phy-ver = <6>;
+			qcom,pcie-link-speed = <3>;
+			qcom,pcie-phy-ver = <7>;
 			qcom,pcie-active-config;
 			qcom,pcie-aggregated-irq;
 			qcom,pcie-mhi-a7-irq;
@@ -986,6 +989,7 @@
 			qcom,mhi-soc-reset-offset = <0xb01b8>;
 			qcom,aoss-rst-clr;
 			qcom,aux-clk = <0x11>;
+			qcom,avoid-reboot-in-d3hot;
 
 			qcom,phy-init = <0x1240 0x01 0x0
 				0x100c 0x02 0x0
@@ -1018,7 +1022,7 @@
 				0x1168 0x0a 0x0
 				0x116c 0x04 0x0
 				0x119c 0x88 0x0
-				0x1174 0x20 0x0
+				0x1174 0x60 0x0
 				0x11a0 0x14 0x0
 				0x11a8 0x0f 0x0
 				0x0220 0x16 0x0
@@ -1123,6 +1127,7 @@
 				0x1370 0x2e 0x0
 				0x155c 0x2e 0x0
 				0x1484 0x08 0x0
+				0x1388 0xaa 0x0
 				0x1200 0x00 0x0
 				0x1244 0x03 0x0>;
 
@@ -1139,7 +1144,7 @@
 			qcom,mhi-ep-msi = <0>;
 			qcom,mhi-version = <0x1000000>;
 			qcom,use-ipa-software-channel;
-			interrupts = <0 145 0>;
+			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "mhi-device-inta";
 			qcom,mhi-ifc-id = <0x030817cb>;
 			qcom,mhi-interrupt;
@@ -1208,7 +1213,6 @@
 		qcom,register-collection-on-crash;
 		qcom,testbus-collection-on-crash;
 		qcom,non-tn-collection-on-crash;
-		qcom,lan-rx-napi;
 		clock-names = "core_clk";
 		clocks = <&rpmhcc RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -1241,7 +1245,7 @@
 
 		qcom,bus-vector-names = "MIN", "SVS2", "SVS", "NOMINAL",
 		"TURBO";
-		qcom,throughput-threshold = <3000 5000 10000>;
+		qcom,throughput-threshold = <2000 2500 10000>;
 		qcom,scaling-exceptions = <>;
 
 		ipa_smmu_ap: ipa_smmu_ap {
@@ -1445,6 +1449,7 @@
 		qcom,status-in-gpio = <&tlmm 65 0x00>;
 		qcom,status-out-gpio = <&tlmm 44 0x00>;
 		qcom,status-out2-gpio = <&tlmm 45 0x00>;
+		status = "disabled";
 	};
 };
 
