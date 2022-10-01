@@ -897,6 +897,7 @@ static SOC_ENUM_SINGLE_EXT_DECL(bt_sample_rate_tx, bt_sample_rate_tx_text);
 static SOC_ENUM_SINGLE_EXT_DECL(afe_loopback_tx_chs, afe_loopback_tx_ch_text);
 
 static bool is_initial_boot;
+static bool is_wsa8810;
 static bool codec_reg_done;
 static struct snd_soc_aux_dev *msm_aux_dev;
 static struct snd_soc_codec_conf *msm_codec_conf;
@@ -5548,43 +5549,66 @@ static int msm_int_wsa_init(struct snd_soc_pcm_runtime *rtd)
 	unsigned int ch_mask[WSA881X_MAX_SWR_PORTS] = {0x1, 0xF, 0x3, 0x3};
 	struct snd_soc_component *component = NULL;
 	struct snd_soc_dapm_context *dapm = NULL;
+	struct snd_card *card = NULL;
+	struct snd_info_entry *entry;
 	struct msm_asoc_mach_data *pdata =
 				snd_soc_card_get_drvdata(rtd->card);
 	int wsa_active_devs = 0;
 
+	card = rtd->card->snd_card;
+	if (!pdata->codec_root) {
+		entry = msm_snd_info_create_subdir(card->module, "codecs",
+						 card->proc_root);
+		if (!entry) {
+			pr_debug("%s: Cannot create codecs module entry\n",
+				 __func__);
+			return 0;
+		}
+		pdata->codec_root = entry;
+	}
+
         if (pdata->wsa_max_devs > 0) {
 		component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.1");
+		if (!component)
+			component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.3");
 		if (component) {
 			dapm = snd_soc_component_get_dapm(component);
 
-			wsa881x_set_channel_map(component, &spkleft_ports[0],
-					WSA883X_MAX_SWR_PORTS, &ch_mask[0],
-					&ch_rate[0], &spkleft_port_types[0]);
+			if (strnstr(component->name, "wsa883x", sizeof(component->name))) {
+				wsa883x_set_channel_map(component, &spkleft_ports[0],
+						WSA883X_MAX_SWR_PORTS, &ch_mask[0],
+						&ch_rate[0], &spkleft_port_types[0]);
+				wsa883x_codec_info_create_codec_entry(pdata->codec_root,
+									component);
+			} else if (strnstr(component->name, "wsa881x", sizeof(component->name))) {
+				wsa881x_set_channel_map(component, &spkleft_ports[0],
+						WSA881X_MAX_SWR_PORTS, &ch_mask[0],
+						&ch_rate[0], &spkleft_port_types[0]);
+				wsa881x_codec_info_create_codec_entry(pdata->codec_root,
+									component);
+			}
 
 		        if (dapm->component) {
 			        snd_soc_dapm_ignore_suspend(dapm, "SpkrLeft IN");
 			        snd_soc_dapm_ignore_suspend(dapm, "SpkrLeft SPKR");
 		        }
-	                /*
-	                * Send speaker configuration only for WSA8810.
-	                * Default configuration is for WSA8815.
-	                */
-			wsa_macro_set_spkr_mode(component,WSA_MACRO_SPKR_MODE_1);
-			wsa_macro_set_spkr_gain_offset(component,WSA_MACRO_GAIN_OFFSET_M1P5_DB);
-			wsa881x_codec_info_create_codec_entry(pdata->codec_root,
-								component);
+
+			if (!strcmp(component->name, WSA8810_NAME_1) ||
+				!strcmp(component->name, WSA8810_NAME_2))
+				is_wsa8810 = true;
 
 			wsa_active_devs++;
 		} else {
-			pr_info("%s: wsa-codec.1 component is NULL\n", __func__);
+			pr_err("%s: wsa-codec.1 and wsa-codec.3 component are NULL\n", __func__);
 		}
 	}
 
         /* If current platform has more than one WSA */
         if (pdata->wsa_max_devs > wsa_active_devs) {
 		component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.2");
+		if (!component)
+			component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.4");
 		if (!component) {
-			pr_err("%s: wsa-codec.2 component is NULL\n", __func__);
 			pr_err("%s: %d WSA is found. Expect %d WSA.",
 				__func__, wsa_active_devs, pdata->wsa_max_devs);
 			return -EINVAL;
@@ -5592,16 +5616,24 @@ static int msm_int_wsa_init(struct snd_soc_pcm_runtime *rtd)
 
 		dapm = snd_soc_component_get_dapm(component);
 
-		wsa881x_set_channel_map(component, &spkright_ports[0],
-				WSA883X_MAX_SWR_PORTS, &ch_mask[0],
-				&ch_rate[0], &spkright_port_types[0]);
+		if (strnstr(component->name, "wsa883x", sizeof(component->name))) {
+			wsa883x_set_channel_map(component, &spkright_ports[0],
+					WSA883X_MAX_SWR_PORTS, &ch_mask[0],
+					&ch_rate[0], &spkright_port_types[0]);
+			wsa883x_codec_info_create_codec_entry(pdata->codec_root,
+								component);
+		} else if (strnstr(component->name, "wsa881x", sizeof(component->name))) {
+			wsa881x_set_channel_map(component, &spkright_ports[0],
+					WSA881X_MAX_SWR_PORTS, &ch_mask[0],
+					&ch_rate[0], &spkright_port_types[0]);
+			wsa881x_codec_info_create_codec_entry(pdata->codec_root,
+								component);
+		}
 
 		if (dapm->component) {
 			snd_soc_dapm_ignore_suspend(dapm, "SpkrRight IN");
 			snd_soc_dapm_ignore_suspend(dapm, "SpkrRight SPKR");
 		}
-		wsa881x_codec_info_create_codec_entry(pdata->codec_root,
-							component);
 	}
 
 	return 0;
@@ -5694,22 +5726,27 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	* Send speaker configuration only for WSA8810.
 	* Default configuration is for WSA8815.
 	*/
-	component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.1");
-	if (!component) {
-		component = snd_soc_rtdcom_lookup(rtd, "wsa-codec.3");
-	        if (!component) {
-			pr_debug("%s: wsa-codec.3 component is NULL\n",
-				 __func__);
-		} else {
-                        wsa_macro_set_spkr_mode(bolero_component,WSA_MACRO_SPKR_MODE_DEFAULT);
-                }
-        } else {
-		wsa_macro_set_spkr_mode(bolero_component,WSA_MACRO_SPKR_MODE_1);
-		wsa_macro_set_spkr_gain_offset(bolero_component,WSA_MACRO_GAIN_OFFSET_M1P5_DB);
+	if (is_wsa8810) {
+		wsa_macro_set_spkr_mode(bolero_component,
+				WSA_MACRO_SPKR_MODE_1);
+		wsa_macro_set_spkr_gain_offset(bolero_component,
+					WSA_MACRO_GAIN_OFFSET_M1P5_DB);
 	}
 
 	if (pdata->wcd_disabled) {
 		codec_reg_done = true;
+	        if (pdata->lito_v2_enabled) {
+		        /*
+		        * Enable tx data line3 for saipan version v2 and
+		        * write corresponding lpi register.
+		        */
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map_v2),
+
+				    sm_port_map_v2);
+	        } else {
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map),
+				    sm_port_map);
+	        }
 		return 0;
 	}
 
@@ -5759,10 +5796,10 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 		        * Enable tx data line3 for saipan version v2 and
 		        * write corresponding lpi register.
 		        */
-		        bolero_set_port_map(component, ARRAY_SIZE(sm_port_map_v2),
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map_v2),
 				    sm_port_map_v2);
 	        } else {
-		        bolero_set_port_map(component, ARRAY_SIZE(sm_port_map),
+		        bolero_set_port_map(bolero_component, ARRAY_SIZE(sm_port_map),
 				    sm_port_map);
 	        }
 	}
@@ -7162,10 +7199,12 @@ static struct snd_soc_dai_link msm_kona_dai_links[
 static int msm_populate_dai_link_component_of_node(
 					struct snd_soc_card *card)
 {
-	int i, index, ret = 0;
+	int i, j, index, ret = 0;
 	struct device *cdev = card->dev;
 	struct snd_soc_dai_link *dai_link = card->dai_link;
 	struct device_node *np;
+	int codecs_enabled = 0;
+	struct snd_soc_dai_link_component *codecs_comp = NULL;
 
 	if (!cdev) {
 		dev_err(cdev, "%s: Sound card device memory NULL\n", __func__);
@@ -7222,22 +7261,77 @@ static int msm_populate_dai_link_component_of_node(
 		}
 
 		/* populate codec_of_node for snd card dai links */
-		if (dai_link[i].codecs->name && !dai_link[i].codecs->of_node) {
-			index = of_property_match_string(cdev->of_node,
-						 "asoc-codec-names",
-						 dai_link[i].codecs->name);
-			if (index < 0)
-				continue;
-			np = of_parse_phandle(cdev->of_node, "asoc-codec",
-					      index);
-			if (!np) {
-				dev_err(cdev, "%s: retrieving phandle for codec %s failed\n",
-					__func__, dai_link[i].codecs->name);
-				ret = -ENODEV;
-				goto err;
+		if (dai_link[i].num_codecs > 0) {
+			for (j = 0; j < dai_link[i].num_codecs; j++) {
+				if (dai_link[i].codecs[j].of_node ||
+						!dai_link[i].codecs[j].name)
+					continue;
+
+				index = of_property_match_string(cdev->of_node,
+						"asoc-codec-names",
+						dai_link[i].codecs[j].name);
+				if (index < 0)
+					continue;
+				np = of_parse_phandle(cdev->of_node,
+						      "asoc-codec",
+						      index);
+				if (!np) {
+					dev_err(cdev, "%s: retrieving phandle for codec %s failed\n",
+						__func__,
+						dai_link[i].codecs[j].name);
+					ret = -ENODEV;
+					goto err;
+				}
+				dai_link[i].codecs[j].of_node = np;
+				dai_link[i].codecs[j].name = NULL;
 			}
-			dai_link[i].codecs->of_node = np;
-			dai_link[i].codecs->name = NULL;
+		}
+	}
+
+	/* In multi-codec scenario, check if codecs are enabled for this platform */
+	for (i = 0; i < card->num_links; i++) {
+		codecs_enabled = 0;
+		if (dai_link[i].num_codecs > 1) {
+			for (j = 0; j < dai_link[i].num_codecs; j++) {
+				if (!dai_link[i].codecs[j].of_node)
+					continue;
+
+				np = dai_link[i].codecs[j].of_node;
+                                if (!of_device_is_available(np)) {
+                                        dev_dbg(cdev, "%s: codec is disabled: %s\n",
+						__func__,
+						np->full_name);
+					dai_link[i].codecs[j].of_node = NULL;
+					continue;
+                                }
+
+				codecs_enabled++;
+			}
+			if (codecs_enabled > 0 &&
+				    codecs_enabled < dai_link[i].num_codecs) {
+				codecs_comp = devm_kzalloc(cdev,
+				    sizeof(struct snd_soc_dai_link_component)
+				    * codecs_enabled, GFP_KERNEL);
+				if (!codecs_comp) {
+					dev_err(cdev, "%s: %s dailink codec component alloc failed\n",
+						__func__, dai_link[i].name);
+					ret = -ENOMEM;
+					goto err;
+				}
+				index = 0;
+				for (j = 0; j < dai_link[i].num_codecs; j++) {
+					if(dai_link[i].codecs[j].of_node) {
+						codecs_comp[index].of_node =
+						  dai_link[i].codecs[j].of_node;
+						codecs_comp[index].dai_name =
+						  dai_link[i].codecs[j].dai_name;
+						codecs_comp[index].name = NULL;
+						index++;
+					}
+				}
+				dai_link[i].codecs = codecs_comp;
+				dai_link[i].num_codecs = codecs_enabled;
+			}
 		}
 	}
 

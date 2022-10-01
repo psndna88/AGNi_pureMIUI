@@ -846,6 +846,10 @@ struct audproc_softvolume_params {
  */
 #define AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT            0x00010913
 
+/* ID of the Output Media Format V2 parameters used by AUDPROC_MODULE_ID_MFC.
+ */
+#define AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT_V2         0x00010942
+
 /* Param ID of Channel Mixer used by AUDPROC_MODULE_ID_MFC */
 #define AUDPROC_CHMIXER_PARAM_ID_COEFF                      0x00010342
 
@@ -879,6 +883,33 @@ struct adm_cmd_set_pp_params_v5 {
 	 * in shared memory. This is used for parsing the parameter
 	 * payload.
 	 */
+} __packed;
+
+/* Payload of the AUDPROC_PARAM_ID_MFC_OUTPUT_MEDIA_FORMAT_V2 parameter in the
+ Media Format Converter Module. Following this will be the variable payload for channel_map.
+ */
+struct audproc_mfc_output_media_fmt_v2_t
+{
+	uint32_t sampling_rate;
+	/**< @h2xmle_description  {Sampling rate in samples per second.}
+	@h2xmle_range        {0..384000}  */
+
+	uint16_t bits_per_sample;
+	/**< @h2xmle_description  {Number of bits used to store each sample.}
+	@h2xmle_rangeList   {"16 bits per sample (Q15 format)"= 16;"24 bits per sample (Q27 format)"=24;"32 bits per sample (Q31 format)"=32
+	@h2xmle_default      {16}
+	*/
+
+	uint16_t num_channels;
+	/**< @h2xmle_description  {Number of channels.}
+	@h2xmle_default      {1}
+	@h2xmle_range        {1..32}  */
+
+	uint16_t channel_type[0];
+	/**< @h2xmle_description  {Channel mapping array. Specify a channel mapping for each output channel.If the number of channels is not a multiple of four, zero padding must be added to the channel type array to align the packet to a multiple of 32 bits.}
+	@h2xmle_variableArraySize {num_channels}
+	@h2xmle_range        {1..63}
+	@h2xmle_default      {1}*/
 } __packed;
 
 /* Maximum number of channels supported by MFC media fmt params */
@@ -5716,6 +5747,7 @@ struct afe_param_id_lpass_core_shared_clk_cfg {
 
 #define NULL_POPP_TOPOLOGY				0x00010C68
 #define NULL_COPP_TOPOLOGY				0x00010312
+#define AUDIO_COPP_MFC					0x10000098
 #define DEFAULT_COPP_TOPOLOGY				0x00010314
 #define DEFAULT_POPP_TOPOLOGY				0x00010BE4
 #define COMPRESSED_PASSTHROUGH_DEFAULT_TOPOLOGY         0x0001076B
