@@ -3180,6 +3180,7 @@ static int __io_sqe_files_scm(struct io_ring_ctx *ctx, int nr, int offset)
 
 	fpl->max = fpl->count = nr;
 	UNIXCB(skb).fp = fpl;
+	skb->scm_io_uring = 1;
 	refcount_add(skb->truesize, &sk->sk_wmem_alloc);
 	skb_queue_head(&sk->sk_receive_queue, skb);
 
