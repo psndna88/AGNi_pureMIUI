@@ -3961,6 +3961,7 @@ static void wcd938x_soc_codec_remove(struct snd_soc_component *component)
 		wcd938x->register_notifier(wcd938x->handle,
 						&wcd938x->nblock,
 						false);
+	wcd938x_mbhc_deinit(component);
 }
 
 static int wcd938x_soc_codec_suspend(struct snd_soc_component *component)
