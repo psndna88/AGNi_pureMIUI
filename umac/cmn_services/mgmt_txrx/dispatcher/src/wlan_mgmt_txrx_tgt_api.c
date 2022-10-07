@@ -210,6 +210,12 @@ mgmt_get_public_action_subtype(uint8_t action_code)
 	case PUB_ACTION_GAS_COMEBACK_RESPONSE:
 		frm_type = MGMT_ACTION_GAS_COMEBACK_RESPONSE;
 		break;
+	case PUB_ACTION_FTM_REQUEST:
+		frm_type = MGMT_ACTION_FTM_REQUEST;
+		break;
+	case PUB_ACTION_FTM_RESPONSE:
+		frm_type = MGMT_ACTION_FTM_RESPONSE;
+		break;
 	default:
 		frm_type = MGMT_FRM_UNSPECIFIED;
 		break;
