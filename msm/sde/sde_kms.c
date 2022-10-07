@@ -1240,12 +1240,14 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 {
 	struct msm_drm_private *priv;
 	struct sde_splash_display *splash_display;
+	struct sde_power_handle *phandle;
 	int i;
 
 	if (!sde_kms || !crtc)
 		return;
 
 	priv = sde_kms->dev->dev_private;
+	phandle = &priv->phandle;
 
 	if (!crtc->state->active || !sde_kms->splash_data.num_splash_displays)
 		return;
@@ -1272,9 +1274,9 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 	/* remove the votes if all displays are done with splash */
 	if (!sde_kms->splash_data.num_splash_displays) {
 		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
-			sde_power_data_bus_set_quota(&priv->phandle, i,
+			sde_power_data_bus_set_quota(phandle, i,
 				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
-				SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
+				phandle->ib_quota[i]);
 
 		pm_runtime_put_sync(sde_kms->dev->dev);
 	}
