@@ -32,7 +32,7 @@
 		interconnect-names = "pcie_to_memnoc", "memnoc_to_ddr";
 
 		qcom,icc-path-count = <2>;
-		qcom,bus-bw-cfg-count = <7>;
+		qcom,bus-bw-cfg-count = <9>;
 		qcom,bus-bw-cfg =
 		/** ICC Path 1 **/
 		<0 0>, /* no vote */
@@ -46,6 +46,10 @@
 		<100000 790000>,
 		/* very high: > 1080 Mbps snoc/anoc: 403 Mhz ddr: 451.2 MHz */
 		<175000 1600000>,
+		/* Ultra high */
+		<0 0>,
+		/* Super High */
+		<0 0>,
 		/* low (latency critical): 18-60 Mbps snoc/anoc: 200 Mhz
 		 * ddr: 547.2 MHz
 		 */
@@ -58,6 +62,8 @@
 		<30000 1804800>,
 		<100000 1804800>,
 		<175000 6220800>,
+		<0 0>,
+		<0 0>,
 		<7500 2188800>;
 
 		mhi,max-channels = <30>;
