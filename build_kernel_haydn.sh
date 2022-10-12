@@ -90,6 +90,7 @@ if [ -f $KERNELDIR/$DIR/Image ]; then
 	echo " <<<<< AGNi has been built for $DEVICE !!! >>>>>>"
 	echo "         VERSION: AGNi $AGNI_VERSION_PREFIX $AGNI_VERSION $AGNI_BUILD_TYPE"
 	echo "            FILE: $FILENAME"
+	cd $KERNELDIR && ./abi_generate.sh
 else
 	echo " >>>>> AGNi $DEVICE BUILD ERROR <<<<<"
 fi
