@@ -8187,15 +8187,21 @@ static const struct snd_soc_dapm_widget tavil_dapm_widgets[] = {
 		tavil_codec_force_enable_micbias,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_AIF_OUT_E("AIF1 CAP", "AIF1 Capture", 0, SND_SOC_NOPM,
-			       AIF1_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_OUT_E("AIF2 CAP", "AIF2 Capture", 0, SND_SOC_NOPM,
-			       AIF2_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_OUT_E("AIF3 CAP", "AIF3 Capture", 0, SND_SOC_NOPM,
-			       AIF3_CAP, 0, tavil_codec_enable_tx,
-			       SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_OUT("AIF1 CAP", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("AIF2 CAP", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("AIF3 CAP", "AIF3 Capture", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF1_CAP_MIX", SND_SOC_NOPM, AIF1_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MIXER_E("AIF2_CAP_MIX", SND_SOC_NOPM, AIF2_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MIXER_E("AIF3_CAP_MIX", SND_SOC_NOPM, AIF3_CAP, 0,
+		NULL, 0, tavil_codec_enable_tx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_MIXER("SLIM TX0", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("SLIM TX1", SND_SOC_NOPM, 0, 0, NULL, 0),
