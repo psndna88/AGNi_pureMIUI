@@ -237,6 +237,7 @@ endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_YUPIK) +=    \
+	lisa-sm7325-overlay.dtbo \
 	yupik-rumi-overlay.dtbo \
 	yupik-idp-overlay.dtbo \
 	yupik-atp-overlay.dtbo \
@@ -270,6 +271,7 @@ dtbo-$(CONFIG_ARCH_YUPIK) +=    \
 	katmaip-fp2-hsp-pm7250b-overlay.dtbo \
 	yupikp-iot-idps-amoled-overlay.dtbo
 
+lisa-sm7325-overlay.dtbo-base := yupik.dtb
 yupik-rumi-overlay.dtbo-base := yupik.dtb
 yupik-idp-overlay.dtbo-base := yupik.dtb
 yupik-atp-overlay.dtbo-base := yupik.dtb
