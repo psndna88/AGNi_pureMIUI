@@ -345,6 +345,13 @@
 				label = "chg_mid";
 				qcom,pre-scaling = <1 6>;
 			};
+
+			pm7250b_led_l_therm@53 {
+				reg = <ADC5_GPIO2_100K_PU>;
+				label = "led_l_therm";
+				qcom,hw-settle-time = <200>;
+				qcom,pre-scaling = <1 1>;
+			};
 		};
 
 		pm7250b_adc_tm: adc_tm@3500 {
@@ -355,6 +362,20 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			#thermal-sensor-cells = <1>;
+		};
+
+		pm7250b_adc_tm_iio: adc_tm@3400 {
+			compatible = "qcom,adc-tm5-iio";
+			reg = <0x3400>;
+			#thermal-sensor-cells = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			io-channels = <&pm7250b_vadc ADC5_GPIO2_100K_PU>;
+			pm7250b_led_l_therm {
+					reg = <ADC5_GPIO2_100K_PU>;
+					qcom,ratiometric;
+					qcom,hw-settle-time = <200>;
+			};
 		};
 
 		pm7250b_bcl: bcl@1d00 {
@@ -488,12 +509,12 @@
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
-		thermal-sensors = <&pm7250b_bcl 5>;
+		#thermal-sensors = <&pm7250b_bcl 5>;
 
 		trips {
 			b_bcl_lvl0: b-bcl-lvl0 {
-				temperature = <1>;
-				hysteresis = <1>;
+				temperature = <90000>;
+				hysteresis = <1000>;
 				type = "passive";
 			};
 		};
@@ -503,12 +524,12 @@
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
-		thermal-sensors = <&pm7250b_bcl 6>;
+		#thermal-sensors = <&pm7250b_bcl 6>;
 
 		trips {
 			b_bcl_lvl1: b-bcl-lvl1 {
-				temperature = <1>;
-				hysteresis = <1>;
+				temperature = <90000>;
+				hysteresis = <1000>;
 				type = "passive";
 			};
 		};
@@ -518,12 +539,12 @@
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
-		thermal-sensors = <&pm7250b_bcl 7>;
+		#thermal-sensors = <&pm7250b_bcl 7>;
 
 		trips {
 			b_bcl_lvl2: b-bcl-lvl2 {
-				temperature = <1>;
-				hysteresis = <1>;
+				temperature = <90000>;
+				hysteresis = <1000>;
 				type = "passive";
 			};
 		};
@@ -539,6 +560,21 @@
 			socd_trip:socd-trip {
 				temperature = <90>;
 				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+	};
+
+	led_l_therm {
+		polling-delay-passive = <100>;
+		polling-delay = <0>;
+		thermal-governor = "user_space";
+		thermal-sensors = <&pm7250b_adc_tm_iio ADC5_GPIO2_100K_PU>;
+
+		trips {
+			active-config0 {
+				temperature = <125000>;
+				hysteresis = <1000>;
 				type = "passive";
 			};
 		};
