@@ -372,6 +372,7 @@
 		bcl_soc:bcl-soc {
 			compatible = "qcom,msm-bcl-soc";
 			#thermal-sensor-cells = <0>;
+			status = "disabled";
 		};
 
 		pm7250b_gpios: pinctrl@c000 {
@@ -532,7 +533,7 @@
 		polling-delay-passive = <100>;
 		polling-delay = <0>;
 		thermal-governor = "step_wise";
-		thermal-sensors = <&bcl_soc>;
+		#thermal-sensors = <&bcl_soc>;
 
 		trips {
 			socd_trip:socd-trip {
