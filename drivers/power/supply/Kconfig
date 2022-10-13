@@ -418,6 +418,42 @@ config QTI_BATTERY_CHARGER
 	  To compile the driver as a module, choose M here: the module will be
 	  called qti_battery_charger.
 
+config BQ2597X
+	bool "BQ2597X charger"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable BQ2597X charger
+
+config BQ_FG_1S
+	bool "BQ 1S battery cell config"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable BQ 1S battery cell
+
+config BQ_FUEL_GAUGE
+	bool "BQ fuel gauge config"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable BQ fuel gauge
+
+config DUAL_FUEL_GAUGE
+	bool "Dual fuel gauge"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable dual fuel gauge
+
+config MI_WIRELESS
+	bool "mi wireless config"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable mi wireless
+
+config RENOIR_FOR_BUILD
+	bool "renoir build debug"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable renoir build debug
+
 config CHARGER_88PM860X
 	tristate "Marvell 88PM860x Charger driver"
 	depends on MFD_88PM860X && BATTERY_88PM860X
