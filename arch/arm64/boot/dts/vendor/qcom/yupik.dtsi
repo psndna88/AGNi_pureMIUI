@@ -315,9 +315,9 @@
 		reg = <0x0 0x80000000 0x0 0x600000>;
 	};
 
-	xbl_aop_mem: xbl_aop_mem@80700000 {
+	xbl_aop_mem: xbl_aop_mem@80600000 {
 		no-map;
-		reg = <0x0 0x80700000 0x0 0x160000>;
+		reg = <0x0 0x80600000 0x0 0x260000>;
 	};
 
 	cmd_db: cmd_db@80860000 {
@@ -363,12 +363,12 @@
 
 	pil_adsp_mem: adsp@86700000 {
 		no-map;
-		reg = <0x0 0x86700000 0x0 0x2800000>;
+		reg = <0x0 0x86700000 0x0 0x4000000>;
 	};
 
-	pil_cdsp_mem: cdsp@88f00000 {
+	pil_cdsp_mem: cdsp@9c700000 {
 		no-map;
-		reg = <0x0 0x88f00000 0x0 0x1e00000>;
+		reg = <0x0 0x9c700000 0x0 0x1e00000>;
 	};
 
 	adsp_mem: adsp_region {
