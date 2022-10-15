@@ -18,4 +18,6 @@
 
 #define MI_DISP_LOG_ENABLE 0
 
+#define CONFIG_HWCONF_MANAGER 1
+
 #endif /* _MI_DISP_CONFIG_H_ */

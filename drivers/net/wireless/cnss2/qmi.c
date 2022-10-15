@@ -28,13 +28,12 @@
 #define ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL		 "bd_j18te.elf"
 #define ELF_BDF_FILE_NAME_K9             "bd_k9.elf"
 #define ELF_BDF_FILE_NAME_K9_GLOBAL      "bd_k9gl.elf"
+#define ELF_BDF_FILE_NAME_K9_JAPAN       "bd_k9jp.elf"
 #define ELF_BDF_FILE_NAME_K11            "bd_k11.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL     "bd_k11gl.elf"
 #define ELF_BDF_FILE_NAME_K11_NO_CRYSTAL            "bd_k11_2.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL     "bd_k11gl_2.elf"
-#define ELF_BDF_FILE_NAME_K8             "bd_k8.elf"
-#define ELF_BDF_FILE_NAME_K11_INDIA                 "bd_k11in_2.elf"
-#define ELF_BDF_FILE_NAME_K3S             "bd_k3s.elf"
+#define ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL      "bd_k11in_2.elf"
 
 #define BIN_BDF_FILE_NAME		"bdwlan.bin"
 #define BIN_BDF_FILE_NAME_GF		"bdwlang.bin"
@@ -546,13 +545,12 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 	hw_version_major = get_hw_version_major();
 	hw_version_minor = get_hw_version_minor();
 
+	cnss_pr_dbg("hw_country_ver =  %d\n",hw_country_ver);
 	switch (bdf_type) {
 	case CNSS_BDF_ELF:
 		/* Board ID will be equal or less than 0xFF in GF mask case */
 		if (plat_priv->board_info.board_id == 0xFF) {
-			if (hw_platform_ver == HARDWARE_PROJECT_K3S) {
-				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K3S);
-			} else if (hw_platform_ver == HARDWARE_PROJECT_J18) {
+			if (hw_platform_ver == HARDWARE_PROJECT_J18) {
 				if ((hw_version_major == 9) || ((hw_version_major == 2) && ((hw_version_minor == 1) ||
 					(hw_version_minor == 6))))
 					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_J18_TIME_EXTERNAL);
@@ -571,27 +569,29 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 			} else if (hw_platform_ver == HARDWARE_PROJECT_K9) {
 				if((uint32_t)CountryGlobal == hw_country_ver){
 					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9_GLOBAL);
+				} else if ((uint32_t)CountryJapan == hw_country_ver) {
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9_JAPAN);
 				} else {
 					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K9);
 				}
 			} else if (hw_platform_ver == HARDWARE_PROJECT_K11) {
                                 /* P0, P1, P2.0 CN and P2.0 IN have crystal. For others, crystal was removed*/
-				if ((uint32_t)CountryIndia == hw_country_ver) {
-						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA);
-						pr_info("cnss2: ELF_BDF_FILE_NAME_K11_INDIA loaded");
-				} else if((uint32_t)CountryGlobal == hw_country_ver){
-					if ((hw_version_build < 2) || ((hw_version_major == 22) && (hw_version_minor == 0)))
+				if((uint32_t)CountryGlobal == hw_country_ver){
+					if (hw_version_build < 2)
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
 					else
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL);
+				} else if ((uint32_t)CountryIndia == hw_country_ver){
+					if ((hw_version_build < 2) || ((hw_version_major == 0x22) && (hw_version_minor == 0)))
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
+					else
+						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL);
 				} else{
 					if ((hw_version_build < 2) || ((hw_version_major == 2) && (hw_version_minor == 0)))
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11);
 					else
 						snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_NO_CRYSTAL);
 				}
-			} else if (hw_platform_ver == HARDWARE_PROJECT_K8) {
-				snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K8);
 			} else if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK) {
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME_GF);

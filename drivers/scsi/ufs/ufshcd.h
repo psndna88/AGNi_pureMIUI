@@ -1240,6 +1240,7 @@ extern int ufshcd_dme_get_attr(struct ufs_hba *hba, u32 attr_sel,
 			       u32 *mib_val, u8 peer);
 extern int ufshcd_config_pwr_mode(struct ufs_hba *hba,
 			struct ufs_pa_layer_attr *desired_pwr_mode);
+extern void ufshcd_hba_stoped(struct ufs_hba *hba, bool can_sleep);
 /* UIC command interfaces for DME primitives */
 #define DME_LOCAL	0
 #define DME_PEER	1
@@ -1502,6 +1503,8 @@ static inline void ufshcd_vops_dbg_register_dump(struct ufs_hba *hba)
 static inline void ufshcd_vops_device_reset(struct ufs_hba *hba)
 {
 	if (hba->vops && hba->vops->device_reset) {
+		/* disable hba before device reset */
+		ufshcd_hba_stoped(hba, true);
 		hba->vops->device_reset(hba);
 		ufshcd_set_ufs_dev_active(hba);
 		if (ufshcd_is_wb_allowed(hba)) {

@@ -32,6 +32,7 @@
 #include "mi_disp_sysfs.h"
 #include "mi_disp_procfs.h"
 #include "mi_disp_debugfs.h"
+#include "mi_hwconf_manager.h"
 
 struct disp_feature *g_disp_feature = NULL;
 
@@ -387,6 +388,8 @@ int mi_disp_feature_init(void)
 
 	DISP_INFO("mi disp_feature driver initialized!\n");
 
+	hwconf_init();
+
 	return 0;
 
 err_cdev_register:
@@ -400,6 +403,8 @@ err_core_deinit:
 
 void mi_disp_feature_deinit(void)
 {
+	hwconf_exit();
+
 	if (!g_disp_feature)
 		return;
 	device_destroy(g_disp_feature->class, g_disp_feature->dev_id);

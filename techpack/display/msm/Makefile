@@ -156,7 +156,8 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	mi_disp/mi_sde_connector.o \
 	mi_disp/mi_sde_crtc.o \
 	mi_disp/mi_sde_encoder.o \
-	mi_disp/mi_cooling_device.o
+	mi_disp/mi_cooling_device.o \
+	mi_disp/mi_hwconf_manager.o
 
 msm_drm-$(CONFIG_MSM_SDE_ROTATOR) += ../rotator/sde_rotator_dev.o \
 	../rotator/sde_rotator_core.o \
