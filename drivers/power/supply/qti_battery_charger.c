@@ -87,7 +87,7 @@ static const unsigned int bcdev_usb_extcon_cable[] = {
 };
 
 /* Standard usb_type definitions similar to power_supply_sysfs.c */
-static const char * const power_supply_usb_type_text[] = {
+const char * const power_supply_usb_type_text[] = {
 	"Unknown", "USB", "USB_DCP", "USB_CDP", "USB_ACA", "USB_C",
 	"USB_PD", "PD_DRP", "PD_PPS", "BrickID", "USB_HVDCP",
 	"USB_HVDCP3","USB_HVDCP3P5", "USB_FLOAT"
@@ -124,7 +124,7 @@ static int battery_chg_fw_write(struct battery_chg_dev *bcdev, void *data,
 	return rc;
 }
 
-static int battery_chg_write(struct battery_chg_dev *bcdev, void *data,
+int battery_chg_write(struct battery_chg_dev *bcdev, void *data,
 				int len)
 {
 	int rc;
@@ -160,7 +160,7 @@ static int battery_chg_write(struct battery_chg_dev *bcdev, void *data,
 	return 0;
 }
 
-static int write_property_id(struct battery_chg_dev *bcdev,
+int write_property_id(struct battery_chg_dev *bcdev,
 			struct psy_state *pst, u32 prop_id, u32 val)
 {
 	struct battery_charger_req_msg req_msg = { { 0 } };
@@ -179,7 +179,7 @@ static int write_property_id(struct battery_chg_dev *bcdev,
 	return battery_chg_write(bcdev, &req_msg, sizeof(req_msg));
 }
 
-static int read_property_id(struct battery_chg_dev *bcdev,
+int read_property_id(struct battery_chg_dev *bcdev,
 			struct psy_state *pst, u32 prop_id)
 {
 	struct battery_charger_req_msg req_msg = { { 0 } };
@@ -916,7 +916,7 @@ static int battery_psy_set_fcc(struct battery_chg_dev *bcdev, u32 prop_id, int v
 	return rc;
 }
 
-static int usb_psy_get_prop(struct power_supply *psy,
+int usb_psy_get_prop(struct power_supply *psy,
 		enum power_supply_property prop,
 		union power_supply_propval *pval)
 {
@@ -1878,7 +1878,18 @@ static struct attribute *battery_class_attrs[] = {
 	&class_attr_usb_typec_compliant.attr,
 	NULL,
 };
-ATTRIBUTE_GROUPS(battery_class);
+
+static const struct attribute_group battery_class_group = {
+	.attrs = battery_class_attrs,
+};
+
+extern const struct attribute_group xiaomi_battery_class_group;
+
+static const struct attribute_group *battery_class_groups[] = {
+	&battery_class_group,
+	&xiaomi_battery_class_group,
+	NULL,
+};
 
 #ifdef CONFIG_DEBUG_FS
 static void battery_chg_add_debugfs(struct battery_chg_dev *bcdev)
@@ -2105,6 +2116,9 @@ static int register_extcon_conn_type(struct battery_chg_dev *bcdev)
 	return rc;
 }
 
+extern void generate_xm_charge_uvent(struct work_struct *work);
+extern void xm_charger_debug_info_print_work(struct work_struct *work);
+
 static int battery_chg_probe(struct platform_device *pdev)
 {
 	struct battery_chg_dev *bcdev;
@@ -2246,6 +2260,8 @@ static int battery_chg_probe(struct platform_device *pdev)
 
 	schedule_work(&bcdev->usb_type_work);
 
+	INIT_DELAYED_WORK( &bcdev->xm_prop_change_work, generate_xm_charge_uvent);
+	INIT_DELAYED_WORK( &bcdev->charger_debug_info_print_work, xm_charger_debug_info_print_work);
 	schedule_delayed_work(&bcdev->charger_debug_info_print_work, 5 * HZ);
 
 	bcdev->slave_fg_verify_flag = false;

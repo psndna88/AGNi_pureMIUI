@@ -50,7 +50,23 @@
 #define ADAP_TYPE_DCP		2
 #define ADAP_TYPE_PD		6
 
+#define USBPD_UVDM_SS_LEN		4
+#define USBPD_UVDM_VERIFIED_LEN		1
+
 #define MAX_THERMAL_LEVEL		16
+
+enum uvdm_state {
+	USBPD_UVDM_DISCONNECT,
+	USBPD_UVDM_CHARGER_VERSION,
+	USBPD_UVDM_CHARGER_VOLTAGE,
+	USBPD_UVDM_CHARGER_TEMP,
+	USBPD_UVDM_SESSION_SEED,
+	USBPD_UVDM_AUTHENTICATION,
+	USBPD_UVDM_VERIFIED,
+	USBPD_UVDM_REMOVE_COMPENSATION,
+	USBPD_UVDM_REVERSE_AUTHEN,
+	USBPD_UVDM_CONNECT,
+};
 
 enum usb_connector_type {
 	USB_CONNECTOR_TYPE_TYPEC,
@@ -318,6 +334,15 @@ struct xm_verify_digest_resp_msg {
 	u8			digest[BATTERY_DIGEST_LEN];
 	bool			slave_fg;
 };
+
+struct xm_set_wls_bin_req_msg {
+	struct pmic_glink_hdr hdr;
+	u32 property_id;
+	u16 total_length;
+	u8 serial_number;
+	u8 fw_area;
+	u8 wls_fw_bin[MAX_STR_LEN];
+};  /* Message */
 
 struct wireless_fw_check_req {
 	struct pmic_glink_hdr	hdr;
