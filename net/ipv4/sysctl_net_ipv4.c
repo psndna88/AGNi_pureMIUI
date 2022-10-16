@@ -56,7 +56,7 @@ static int tcp_use_userconfig_min;
 static int tcp_use_userconfig_max = 1;
 
 /* obsolete */
-static int sysctl_tcp_low_latency __read_mostly = 1;
+static int sysctl_tcp_low_latency __read_mostly;
 
 /* Update system visible IP port range */
 static void set_local_port_range(struct net *net, int range[2])
