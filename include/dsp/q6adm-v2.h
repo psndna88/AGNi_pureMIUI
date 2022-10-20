@@ -16,6 +16,7 @@
 #include <dsp/q6audio-v2.h>
 
 #define MAX_MODULES_IN_TOPO 16
+#define MAX_FE_ID           33
 #define ADM_GET_TOPO_MODULE_LIST_LENGTH\
 		((MAX_MODULES_IN_TOPO + 1) * sizeof(uint32_t))
 #define ADM_GET_TOPO_MODULE_INSTANCE_LIST_LENGTH                               \
@@ -246,4 +247,10 @@ void adm_set_native_mode(int mode);
 int adm_set_ffecns_freeze_event(bool ffecns_freeze_event);
 int adm_apr_send_pkt(void *data, wait_queue_head_t *wait,
 			int port_idx, int copp_idx, int opcode);
+void q6adm_register_callback(void *cb);
+void q6adm_clear_callback(void);
+int q6adm_send_event_register_cmd(int port_id, int copp_idx, u8 *data,
+					int param_size, int opcode);
+int q6adm_update_rtd_info(void *rtd, int port_id,
+			int copp_idx, int fe_id, int enable);
 #endif /* __Q6_ADM_V2_H__ */
