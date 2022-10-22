@@ -573,11 +573,11 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 	{
 		.playback = {
 			.stream_name = "ULTRAOUND_HOSTLESS Playback",
-#if defined (CONFIG_TARGET_PRODUCT_CETUS)
+#if defined (CONFIG_TARGET_PRODUCT_CETUS) || defined(CONFIG_TARGET_PRODUCT_ARGO)
 			.aif_name = "RX1_CDC_DMA_DL_US",
 #elif defined (CONFIG_TARGET_PRODUCT_RENOIR)
 			.aif_name = "TERT_MI2S_DL_HL",
-#elif defined(CONFIG_TARGET_PRODUCT_LISA)
+#elif defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 			.aif_name = "PRI_TDM_RX_1_DL_US",
 #else
 			.aif_name = "TERT_TDM_RX_1_DL_US",
