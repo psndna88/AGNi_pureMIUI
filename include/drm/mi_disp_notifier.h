@@ -22,6 +22,8 @@
 #define MI_DISP_DPMS_EVENT             0x01
 /* A hardware display power mode state early change occurred */
 #define MI_DISP_DPMS_EARLY_EVENT       0x02
+/* A hardware display mode state after fps changed */
+#define MI_DISP_FPS_CHANGE_EVENT       0xF628
 
 enum {
 	/* panel: power on */
