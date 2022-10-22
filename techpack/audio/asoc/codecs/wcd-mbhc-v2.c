@@ -1806,6 +1806,7 @@ static int wcd_mbhc_init_gpio(struct wcd_mbhc *mbhc,
 static int wcd_mbhc_usbc_ana_event_handler(struct notifier_block *nb,
 					   unsigned long mode, void *ptr)
 {
+	u8 det_status = 0;
 	struct wcd_mbhc *mbhc = container_of(nb, struct wcd_mbhc, fsa_nb);
 
 	if (!mbhc)
@@ -1821,6 +1822,23 @@ static int wcd_mbhc_usbc_ana_event_handler(struct notifier_block *nb,
 		/* insertion detected, enable L_DET_EN */
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_L_DET_EN, 0);
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_L_DET_EN, 1);
+
+		WCD_MBHC_REG_READ(WCD_MBHC_L_DET_EN,det_status);
+		pr_debug("%s: det_status = %x\n",__func__,det_status);
+	}
+	else if (mode == TYPEC_ACCESSORY_NONE && mbhc->current_plug == MBHC_PLUG_TYPE_NONE) {
+		mbhc->hs_detect_work_stop = true;
+		/* Disable HW FSM */
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN, 0);
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_BTN_ISRC_CTL, 0);
+		mbhc->extn_cable_hph_rem = false;
+
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_L_DET_EN, 0);
+		if (mbhc->mbhc_cb->clk_setup)
+			mbhc->mbhc_cb->clk_setup(mbhc->component, false);
+		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_MECH_DETECTION_TYPE, 1);
+		WCD_MBHC_REG_READ(WCD_MBHC_L_DET_EN,det_status);
+		pr_debug("%s: det_status = %x\n",__func__,det_status);
 	}
 	return 0;
 }

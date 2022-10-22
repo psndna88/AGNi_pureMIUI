@@ -496,7 +496,7 @@ static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 	{ /* PRI TDM */
 		{ {0,   4, 0xFFFF} }, /* RX_0 */
 		{ {8,  12, 0xFFFF} }, /* RX_1 */
-#if defined(CONFIG_TARGET_PRODUCT_LISA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 		{ {0xFFFF} }, /* RX_2 */
 		{ {0xFFFF} }, /* RX_3 */
 #else
@@ -509,7 +509,7 @@ static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
 		{ {0xFFFF} }, /* RX_7 */
 	},
 	{
-#if defined(CONFIG_TARGET_PRODUCT_LISA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 		{ {0,   4, 0xFFFF} }, /* TX_0 */
 		{ {8,  12, 0xFFFF} }, /* TX_1 */
 		{ {0xFFFF} }, /* TX_2 */
@@ -4887,7 +4887,7 @@ static int lahaina_tdm_snd_hw_params(struct snd_pcm_substream *substream,
 			__func__, cpu_dai->id);
 		return -EINVAL;
 	}
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 	if (slots == TDM_MAX_SLOTS) {
 		slots = TDM_MAX_SLOTS / 2;
 		pr_debug("%s: dai id = 0x%x update slots = %d\n", __func__, cpu_dai->id, slots);
@@ -6304,7 +6304,7 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(tx3_cdcdma_hostless),
 	},
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 	{/* hw:x,32 */
 		.name = "PRI_TDM_TX_0_HOSTLESS",
 		.stream_name = "PRI_TDM_TX_0_HOSTLESS Capture",
@@ -6669,7 +6669,7 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		SND_SOC_DAILINK_REG(pri_tdm_rx_0),
 	},
-#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 	{
 		.name = LPASS_BE_PRI_TDM_RX_1,
 		.stream_name = "Primary TDM1 Playback",

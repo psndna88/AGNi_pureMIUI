@@ -47,7 +47,11 @@
 #define TX_MACRO_DMIC_UNMUTE_DELAY_MS	40
 #define TX_MACRO_AMIC_UNMUTE_DELAY_MS	200
 #define TX_MACRO_DMIC_HPF_DELAY_MS	200
+#if defined(CONFIG_TARGET_PRODUCT_VILI) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
+#define TX_MACRO_AMIC_HPF_DELAY_MS	200
+#else
 #define TX_MACRO_AMIC_HPF_DELAY_MS	100
+#endif
 
 struct tx_macro_priv *g_tx_priv;
 
@@ -1048,6 +1052,13 @@ void bolero_tx_macro_mute_hs(void)
 		return;
 
 	component = g_tx_priv->component;
+
+	if (delayed_work_pending(&g_tx_priv->tx_hs_unmute_dwork)) {
+		dev_err(component->dev, "%s: there is already a work, give up unmute\n",
+				__func__);
+		return;
+	}
+
 	g_tx_priv->reg_before_mute = snd_soc_component_read32(component, reg);
 	dev_info(component->dev, "%s: the reg(%#x) value before mute is: %#x \n",
 			__func__, reg, g_tx_priv->reg_before_mute);
@@ -1167,6 +1178,8 @@ static int tx_macro_enable_dec(struct snd_soc_dapm_widget *w,
 		 * 6ms delay is required as per HW spec
 		 */
 		usleep_range(6000, 6010);
+		snd_soc_component_update_bits(component,
+			hpf_gate_reg, 0x02, 0x00);
 		/* apply gain after decimator is enabled */
 		snd_soc_component_write(component, tx_gain_ctl_reg,
 			      snd_soc_component_read32(component,

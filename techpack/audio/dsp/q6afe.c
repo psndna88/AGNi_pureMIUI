@@ -509,13 +509,12 @@ static int q6afe_load_avcs_modules(int num_modules, u16 port_id,
 					AVS_MODULE_ID_DEPACKETIZER_COP_V2;
 					goto load_unload;
 				}
-				if (format_id == ASM_MEDIA_FMT_APTX_ADAPTIVE) {
-					goto load_unload;
-				}
-
 				if (format_id == ENC_CODEC_TYPE_LHDC) {
 					pm[i]->payload->load_unload_info[0].id1 =
 						AVS_MODULE_ID_DEPACKETIZER_COP_V1;
+					goto load_unload;
+				}
+				if (format_id == ASM_MEDIA_FMT_APTX_ADAPTIVE) {
 					goto load_unload;
 				}
 
@@ -1101,7 +1100,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		uint32_t *payload = data->payload;
 		uint32_t param_id;
 		uint32_t param_id_pos = 0;
-#if defined(CONFIG_TARGET_PRODUCT_LISA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 #else
 #ifdef CONFIG_MSM_CSPL
 		if (crus_afe_callback(data->payload, data->payload_size) == 0)
@@ -6707,7 +6706,7 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 		goto fail_cmd;
 	}
 	ret = afe_send_cmd_port_start(port_id);
-#if defined(CONFIG_TARGET_PRODUCT_LISA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 #else
 #if CONFIG_MSM_CSPL
 	if (ret == 0)
@@ -9923,7 +9922,7 @@ int afe_close(int port_id)
 		atomic_dec(port_ref);
 	}
 
-#if defined(CONFIG_TARGET_PRODUCT_LISA)
+#if defined(CONFIG_TARGET_PRODUCT_LISA) || defined(CONFIG_TARGET_PRODUCT_MONA) || defined(CONFIG_TARGET_PRODUCT_ZIJIN)
 #else
 #if CONFIG_MSM_CSPL
 	crus_afe_port_close(port_id);
