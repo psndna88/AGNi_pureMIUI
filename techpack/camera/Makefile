@@ -92,6 +92,11 @@ LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/sm6150cameraconf.h
 endif
 
+ifeq ($(TARGET_PRODUCT), haydn)
+LINUXINCLUDE    += \
+		-include $(srctree)/techpack/camera/config/haydncameraconf.h
+endif
+
 endif
 
 ifneq (,$(filter $(CONFIG_SPECTRA_CAMERA), y m))
