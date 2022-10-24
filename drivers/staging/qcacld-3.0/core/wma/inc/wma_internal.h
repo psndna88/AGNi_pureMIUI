@@ -312,6 +312,17 @@ void wma_report_real_time_roam_stats(struct wlan_objmgr_psoc *psoc,
 				     enum roam_rt_stats_type events,
 				     struct mlme_roam_debug_info *roam_info,
 				     uint32_t value, uint32_t reason);
+
+/**
+ * wma_roam_candidate_frame_event_handler - Handles wma roam frame event id
+ * @handle: wma_handle
+ * @event:  event data
+ * @len:    length of the data
+ *
+ *Return: Success or Failure status
+ */
+int wma_roam_candidate_frame_event_handler(void *handle, uint8_t *event,
+					   uint32_t len);
 #else
 static inline int wma_mlme_roam_synch_event_handler_cb(void *handle,
 						       uint8_t *event,

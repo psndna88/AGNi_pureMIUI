@@ -2611,6 +2611,72 @@ int wma_roam_stats_event_handler(WMA_HANDLE handle, uint8_t *event,
 err:
 	return -EINVAL;
 }
+
+int wma_roam_candidate_frame_event_handler(void *handle, uint8_t *event,
+					   uint32_t len)
+{
+	tp_wma_handle wma = (tp_wma_handle) handle;
+	WMI_ROAM_FRAME_EVENTID_param_tlvs *param_buf = NULL;
+	wmi_roam_frame_event_fixed_param *frame_params = NULL;
+	struct roam_scan_candidate_frame *data;
+	struct mac_context *mac_ctx;
+	QDF_STATUS status;
+
+	if (!event || !len) {
+		wma_err("Empty roam candidate frame event");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	param_buf = (WMI_ROAM_FRAME_EVENTID_param_tlvs *)event;
+	if (!param_buf) {
+		wma_err("Received null buf from target");
+		return -EINVAL;
+	}
+
+	frame_params =
+		(wmi_roam_frame_event_fixed_param *)param_buf->fixed_param;
+
+	if (!wma_is_vdev_valid(frame_params->vdev_id)) {
+		wma_err("Invalid vdev id %d", frame_params->vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (frame_params->frame_length > param_buf->num_frame) {
+		wma_err("Invalid frame length %d expected : %d",
+			frame_params->frame_length,
+			param_buf->num_frame);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!param_buf->frame) {
+		wmi_err("Frame pointer is Null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mac_ctx = cds_get_context(QDF_MODULE_ID_PE);
+
+	if (!mac_ctx) {
+		wma_err("NULL mac ptr");
+		QDF_ASSERT(0);
+		return -EINVAL;
+	}
+
+	data = qdf_mem_malloc(sizeof(*data));
+
+	if (!data)
+		return -ENOMEM;
+
+	data->vdev_id = frame_params->vdev_id;
+	data->frame_length = frame_params->frame_length;
+	data->frame = (uint8_t *)param_buf->frame;
+
+	status = wma->csr_roam_candidate_event_cb(mac_ctx, data->frame,
+							 data->frame_length);
+	qdf_mem_free(data);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #endif
 
 /**

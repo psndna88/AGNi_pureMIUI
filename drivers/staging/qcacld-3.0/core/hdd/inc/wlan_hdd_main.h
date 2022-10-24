@@ -1198,6 +1198,20 @@ struct rcpi_info {
 
 struct hdd_context;
 
+#ifdef WLAN_FEATURE_DYNAMIC_RX_AGGREGATION
+/**
+ * enum qdisc_filter_status - QDISC filter status
+ * @QDISC_FILTER_RTNL_LOCK_FAIL: rtnl lock acquire failed
+ * @QDISC_FILTER_PRIO_MATCH: qdisc filter with priority match
+ * @QDISC_FILTER_PRIO_MISMATCH: no filter match with configured priority
+ */
+enum qdisc_filter_status {
+	QDISC_FILTER_RTNL_LOCK_FAIL,
+	QDISC_FILTER_PRIO_MATCH,
+	QDISC_FILTER_PRIO_MISMATCH,
+};
+#endif
+
 /**
  * struct hdd_adapter - hdd vdev/net_device context
  * @vdev: object manager vdev context
@@ -1532,7 +1546,7 @@ struct hdd_adapter {
 	void *cookie;
 	bool response_expected;
 #endif
-	uint8_t gro_disallowed[DP_MAX_RX_THREADS];
+	qdf_atomic_t gro_disallowed;
 	uint8_t gro_flushed[DP_MAX_RX_THREADS];
 	bool handle_feature_update;
 	/* Indicate if TSO and checksum offload features are enabled or not */
@@ -1865,7 +1879,8 @@ struct hdd_adapter_ops_history {
  * @country_change_work: work for updating vdev when country changes
  * @rx_aggregation: rx aggregation enable or disable state
  * @gro_force_flush: gro force flushed indication flag
- * @force_gro_enable: force GRO enable or disable flag
+ * @tc_based_dyn_gro: TC based dynamic GRO enable/disable flag
+ * @tc_ingress_prio: TC ingress priority
  * @current_pcie_gen_speed: current pcie gen speed
  * @pm_qos_req: pm_qos request for all cpu cores
  * @qos_cpu_mask: voted cpu core mask
@@ -2205,7 +2220,8 @@ struct hdd_context {
 	struct {
 		qdf_atomic_t rx_aggregation;
 		uint8_t gro_force_flush[DP_MAX_RX_THREADS];
-		bool force_gro_enable;
+		bool tc_based_dyn_gro;
+		uint32_t tc_ingress_prio;
 	} dp_agg_param;
 	int current_pcie_gen_speed;
 	qdf_workqueue_t *adapter_ops_wq;

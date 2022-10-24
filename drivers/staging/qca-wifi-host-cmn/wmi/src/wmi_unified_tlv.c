@@ -15548,6 +15548,8 @@ event_ids[wmi_roam_scan_chan_list_id] =
 	event_ids[wmi_vdev_smart_monitor_event_id] =
 			WMI_VDEV_SMART_MONITOR_EVENTID;
 #endif
+	event_ids[wmi_roam_frame_event_id] =
+			WMI_ROAM_FRAME_EVENTID;
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3729,4 +3730,16 @@ bool policy_mgr_is_sta_mon_concurrency(struct wlan_objmgr_psoc *psoc);
  *
  */
 QDF_STATUS policy_mgr_check_mon_concurrency(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * policy_mgr_is_sta_chan_valid_for_connect_and_roam  - Check if given
+ * channel is valid for STA connection/roam pcl channels
+ * @pdev: pdev
+ * @freq: frequency
+ *
+ * Return: true if channel is valid else false
+ */
+bool policy_mgr_is_sta_chan_valid_for_connect_and_roam(
+				struct wlan_objmgr_pdev *pdev,
+				qdf_freq_t freq);
 #endif /* __WLAN_POLICY_MGR_API_H */

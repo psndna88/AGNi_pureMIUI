@@ -2691,7 +2691,8 @@ static void dp_soc_interrupt_detach(struct cdp_soc_t *txrx_soc)
 	}
 
 	qdf_mem_set(&soc->mon_intr_id_lmac_map,
-		    REG_BAND_UNKNOWN * sizeof(int), DP_MON_INVALID_LMAC_ID);
+		    sizeof(soc->mon_intr_id_lmac_map),
+		    DP_MON_INVALID_LMAC_ID);
 }
 
 #define AVG_MAX_MPDUS_PER_TID 128
@@ -9025,6 +9026,14 @@ static QDF_STATUS dp_get_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 		val->cdp_pdev_param_fltr_ucast =
 					dp_pdev_get_filter_ucast_data(pdev);
 		break;
+	case CDP_MONITOR_CHANNEL:
+		val->cdp_pdev_param_monitor_chan =
+			((struct dp_pdev *)pdev)->mon_chan_num;
+		break;
+	case CDP_MONITOR_FREQUENCY:
+		val->cdp_pdev_param_mon_freq =
+			((struct dp_pdev *)pdev)->mon_chan_freq;
+		break;
 	default:
 		return QDF_STATUS_E_FAILURE;
 	}
@@ -11113,8 +11122,11 @@ static uint32_t dp_get_cfg(struct cdp_soc_t *soc, enum cdp_dp_cfg cfg)
 	case cfg_dp_gro_enable:
 		value = dpsoc->wlan_cfg_ctx->gro_enabled;
 		break;
-	case cfg_dp_force_gro_enable:
-		value = dpsoc->wlan_cfg_ctx->force_gro_enabled;
+	case cfg_dp_tc_based_dyn_gro_enable:
+		value = dpsoc->wlan_cfg_ctx->tc_based_dynamic_gro;
+		break;
+	case cfg_dp_tc_ingress_prio:
+		value = dpsoc->wlan_cfg_ctx->tc_ingress_prio;
 		break;
 	case cfg_dp_tx_flow_start_queue_offset:
 		value = dpsoc->wlan_cfg_ctx->tx_flow_start_queue_offset;
