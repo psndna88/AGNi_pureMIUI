@@ -159,9 +159,10 @@ int rtac_allocate_cal_buffer(uint32_t cal_type)
 		&rtac_cal[cal_type].cal_data.paddr,
 		&len,
 		&rtac_cal[cal_type].cal_data.kvaddr);
-	if (result < 0) {
+	if (result) {
 		pr_err("%s: ION create client for RTAC failed\n",
 		       __func__);
+		result = -EINVAL;
 		goto done;
 	}
 

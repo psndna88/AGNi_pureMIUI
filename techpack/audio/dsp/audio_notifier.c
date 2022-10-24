@@ -423,7 +423,7 @@ static int audio_notifier_convert_opcode(unsigned long opcode,
 	int ret = 0;
 
 	switch (opcode) {
-	case SUBSYS_BEFORE_SHUTDOWN:
+	case SUBSYS_AFTER_SHUTDOWN:
 	case SERVREG_NOTIF_SERVICE_STATE_DOWN_V01:
 		*notifier_opcode = AUDIO_NOTIFIER_SERVICE_DOWN;
 		break;

@@ -8527,10 +8527,11 @@ static int voice_alloc_oob_shared_mem(void)
 			bufsz * bufcnt,
 			&phys, &len,
 			&mem_addr);
-	if (rc < 0) {
+	if (rc) {
 		pr_err("%s: audio ION alloc failed, rc = %d\n",
 			__func__, rc);
 
+		rc = -EINVAL;
 		goto done;
 	}
 
@@ -8579,10 +8580,11 @@ static int voice_alloc_oob_mem_table(void)
 				&v->shmem_info.memtbl.phys,
 				&len,
 				&(v->shmem_info.memtbl.data));
-	if (rc < 0) {
+	if (rc) {
 		pr_err("%s: audio ION alloc failed, rc = %d\n",
 			__func__, rc);
 
+		rc = -EINVAL;
 		goto done;
 	}
 
@@ -8965,9 +8967,10 @@ static int voice_alloc_cal_mem_map_table(void)
 				&common.cal_mem_map_table.phys,
 				&len,
 				&(common.cal_mem_map_table.data));
-	if ((ret < 0) && (ret != -EPROBE_DEFER)) {
+	if ((ret) && (ret != -EPROBE_DEFER)) {
 		pr_err("%s: audio ION alloc failed, rc = %d\n",
 			__func__, ret);
+		ret = -EINVAL;
 		goto done;
 	}
 
@@ -8991,9 +8994,10 @@ static int voice_alloc_rtac_mem_map_table(void)
 			&common.rtac_mem_map_table.phys,
 			&len,
 			&(common.rtac_mem_map_table.data));
-	if (ret < 0) {
+	if (ret) {
 		pr_err("%s: audio ION alloc failed, rc = %d\n",
 			__func__, ret);
+		ret = -EINVAL;
 		goto done;
 	}
 
@@ -9723,7 +9727,7 @@ static int voice_alloc_source_tracking_shared_memory(void)
 		&(common.source_tracking_sh_mem.sh_mem_block.phys),
 		(size_t *)&(common.source_tracking_sh_mem.sh_mem_block.size),
 		&(common.source_tracking_sh_mem.sh_mem_block.data));
-	if (ret < 0) {
+	if (ret) {
 		pr_err("%s: audio ION alloc failed for sh_mem block, ret = %d\n",
 			__func__, ret);
 
@@ -9745,7 +9749,7 @@ static int voice_alloc_source_tracking_shared_memory(void)
 		&(common.source_tracking_sh_mem.sh_mem_table.phys),
 		(size_t *)&(common.source_tracking_sh_mem.sh_mem_table.size),
 		&(common.source_tracking_sh_mem.sh_mem_table.data));
-	if (ret < 0) {
+	if (ret) {
 		pr_err("%s: audio ION alloc failed for sh_mem table, ret = %d\n",
 			__func__, ret);
 

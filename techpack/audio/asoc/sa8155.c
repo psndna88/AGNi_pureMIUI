@@ -5503,7 +5503,7 @@ static int msm_pinctrl_mclk_enable(struct platform_device *pdev)
 
 		np = of_parse_phandle(pdev->dev.of_node, mclk_gpio_phandle[i], 0);
 		if (!np) {
-			pr_err("%s: device node %s is null\n", __func__, mclk_gpio_phandle[i]);
+			pr_debug("%s: device node %s is null\n", __func__, mclk_gpio_phandle[i]);
 			continue;
 		}
 		pdev_np = of_find_device_by_node(np);
