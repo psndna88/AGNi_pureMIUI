@@ -2081,6 +2081,12 @@ void lim_calculate_tpc(struct mac_context *mac,
 							session->ch_width);
 	}
 
+	if (num_pwr_levels > MAX_NUM_PWR_LEVELS) {
+		pe_debug("reset num_pwr_levels %d to MAX_NUM_PWR_LEVELS %d",
+			 num_pwr_levels, MAX_NUM_PWR_LEVELS);
+		num_pwr_levels = MAX_NUM_PWR_LEVELS;
+	}
+
 	ch_params.ch_width = CH_WIDTH_20MHZ;
 
 	for (i = 0; i < num_pwr_levels; i++) {
