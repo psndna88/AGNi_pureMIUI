@@ -548,6 +548,7 @@ struct afe_param_id_clock_set_v2_t global_dyn_mclk_cfg = {
 };
 
 static int afe_dyn_clk_root_enum[] = {
+	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
 	Q6AFE_LPASS_MCLK_IN0,
 	Q6AFE_LPASS_MCLK_IN1,
 };
@@ -556,6 +557,7 @@ static int afe_dyn_clk_attri_enum[] = {
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_DIVIDEND,
 	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_DIVISOR,
+	Q6AFE_LPASS_CLK_ATTRIBUTE_INVERT_COUPLE_NO,
 };
 
 static int afe_dyn_clk_id_enum[] = {
