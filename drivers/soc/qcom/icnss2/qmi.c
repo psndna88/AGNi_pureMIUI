@@ -44,7 +44,7 @@
 #define ELF_BDF_FILE_NAME_K11_GLOBAL     "bd_k11gl.elf"
 #define ELF_BDF_FILE_NAME_K11_NO_CRYSTAL            "bd_k11_2.elf"
 #define ELF_BDF_FILE_NAME_K11_GLOBAL_NO_CRYSTAL     "bd_k11gl_2.elf"
-#define ELF_BDF_FILE_NAME_K11_INDIA                 "bd_k11in_2.elf"
+#define ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL      "bd_k11in_2.elf"
 #define BIN_BDF_FILE_NAME		"bdwlan.bin"
 #define BIN_BDF_FILE_NAME_PREFIX	"bdwlan.b"
 #define REGDB_FILE_NAME			"regdb.bin"
@@ -952,7 +952,7 @@ static int icnss_get_bdf_file_name(struct icnss_priv *priv,
 				if ((uint32_t)CountryGlobal == hw_country_ver) {
 					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_GLOBAL);
 				} else if ((uint32_t)CountryIndia == hw_country_ver) {
-					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA);
+					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11_INDIA_NO_CRYSTAL);
 				} else {
 					snprintf(filename_tmp, filename_len, ELF_BDF_FILE_NAME_K11);
 				}

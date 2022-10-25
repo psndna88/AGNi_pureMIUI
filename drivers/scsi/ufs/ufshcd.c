@@ -111,7 +111,7 @@
 #define UFSHCD_REF_CLK_GATING_WAIT_US 0xFF /* microsecs */
 
 /* Polling time to wait for fDeviceInit  */
-#define FDEVICEINIT_COMPL_TIMEOUT 8000 /* millisecs */
+#define FDEVICEINIT_COMPL_TIMEOUT 1500 /* millisecs */
 
 #define ufshcd_toggle_vreg(_dev, _vreg, _on)				\
 	({                                                              \
@@ -3575,10 +3575,14 @@ static inline char ufshcd_remove_non_printable(u8 ch)
 int ufshcd_get_hynix_hr(struct scsi_device *sdev, u8 *buf, u32 size)
 {
 	struct ufs_hba *hba;
+	int ret = 0;
 
 	hba = shost_priv(sdev->host);
 	size = QUERY_DESC_HEALTH_DEF_SIZE;
-	return ufshcd_read_desc(hba, QUERY_DESC_IDN_HEALTH, 0, buf, size);
+	pm_runtime_get_sync(hba->dev);
+	ret = ufshcd_read_desc(hba, QUERY_DESC_IDN_HEALTH, 0, buf, size);
+	pm_runtime_put_sync(hba->dev);
+	return ret;
 }
 
 /**
@@ -4684,6 +4688,11 @@ static inline void ufshcd_hba_stop(struct ufs_hba *hba, bool can_sleep)
 					10, 1, can_sleep);
 	if (err)
 		dev_err(hba->dev, "%s: Controller disable failed\n", __func__);
+}
+
+void ufshcd_hba_stoped(struct ufs_hba *hba, bool can_sleep)
+{
+	ufshcd_hba_stop(hba, can_sleep);
 }
 
 /**
@@ -7842,6 +7851,47 @@ void ufshcd_parse_dev_ref_clk_freq(struct ufs_hba *hba, struct clk *refclk)
 	if (hba->dev_ref_clk_freq == REF_CLK_FREQ_INVAL)
 		dev_err(hba->dev,
 		"invalid ref_clk setting = %ld\n", freq);
+}
+static char serial[QUERY_DESC_MAX_SIZE] = {0};
+
+char *ufs_get_serial(void)
+{
+	return serial;
+}
+
+static int ufs_init_serial(struct ufs_hba *hba)
+{
+	u8 index;
+	int ret, i;
+	int desc_len = QUERY_DESC_MAX_SIZE;
+	u8 *desc_buf;
+	desc_buf = kzalloc(QUERY_DESC_MAX_SIZE, GFP_ATOMIC);
+	if (!desc_buf)
+		return -ENOMEM;
+	ret = ufshcd_query_descriptor_retry(hba,
+		UPIU_QUERY_OPCODE_READ_DESC, QUERY_DESC_IDN_DEVICE,
+		0, 0, desc_buf, &desc_len);
+	if (ret) {
+		ret = -EINVAL;
+		goto out;
+	}
+	index = desc_buf[DEVICE_DESC_PARAM_SN];
+	kfree(desc_buf);
+	desc_buf = NULL;
+	ret = ufshcd_read_string_desc(hba, index, &desc_buf,
+					FALSE);
+	if (ret < 0)
+		goto out;
+
+	for (i = 2; i <  desc_buf[QUERY_DESC_LENGTH_OFFSET]; i += 2) {
+		snprintf(serial+i*2 - 4, QUERY_DESC_MAX_SIZE, "%02x%02x", desc_buf[i], desc_buf[i+1]);
+	}
+	pr_info("SerialNumber:%s\n", serial);
+
+
+out:
+	kfree(desc_buf);
+	return ret;
 }
 
 static int ufshcd_set_dev_ref_clk(struct ufs_hba *hba)

@@ -325,7 +325,7 @@ static ssize_t stat_show(struct kobject *kobj,
 static ssize_t enable_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%u\n", pg_mi_reclaim->switch_on_fake);
+	return scnprintf(buf, PAGE_SIZE, "%u\n", pg_mi_reclaim->switch_on);
 }
 
 static ssize_t event_show(struct kobject *kobj,
@@ -392,10 +392,10 @@ static ssize_t enable_store(struct kobject *kobj,
 		return ret;
 
 	if (enable) {
-		pg_mi_reclaim->switch_on_fake = true;
+		pg_mi_reclaim->switch_on = true;
 
 	} else {
-		pg_mi_reclaim->switch_on_fake = false;
+		pg_mi_reclaim->switch_on = false;
 	}
 
 	return len;
@@ -569,8 +569,7 @@ static int __init mi_reclaim_init(void)
 	if (mi_reclaim_thread_start() < 0)
 		return RET_FAIL;
 
-	pg_mi_reclaim->switch_on = false;
-	pg_mi_reclaim->switch_on_fake = true;
+	pg_mi_reclaim->switch_on = true;
 	pr_info("mi_reclaim init ok\n");
 	return RET_OK;
 
