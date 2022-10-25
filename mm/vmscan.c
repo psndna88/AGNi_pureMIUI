@@ -4136,6 +4136,44 @@ void wakeup_kswapd(struct zone *zone, gfp_t gfp_flags, int order,
 	wake_up_interruptible(&pgdat->kswapd_wait);
 }
 
+#ifdef CONFIG_COMPACTION
+/*
+ * Try to free `nr_to_reclaim' of memory, system-wide, and return the number of
+ * freed pages.
+ *
+ * Rather than trying to age LRUs the aim is to preserve the overall
+ * LRU order by reclaiming preferentially
+ * inactive > active > active referenced > active mapped
+ */
+static unsigned long reclaim_all_pages(unsigned long nr_to_reclaim)
+{
+	unsigned long nr_reclaimed;
+
+	return nr_reclaimed;
+}
+
+/* The written value is actually unused, the number of pages is reclaimed */
+unsigned long sysctl_reclaim_pages;
+
+/*
+ * This is the entry point for compacting all nodes via
+ * /proc/sys/vm/reclaim_pages
+ */
+int sysctl_reclaim_pages_handler(struct ctl_table *table, int write,
+			void __user *buffer, size_t *length, loff_t *ppos)
+{
+	int ret;
+	unsigned long nr_reclaimed;
+
+	ret = proc_doulongvec_minmax(table, write, buffer, length, ppos);
+	if (!ret && write) {
+		nr_reclaimed = reclaim_all_pages(sysctl_reclaim_pages);
+	}
+
+	return ret;
+}
+#endif
+
 #ifdef CONFIG_HIBERNATION
 /*
  * Try to free `nr_to_reclaim' of memory, system-wide, and return the number of
