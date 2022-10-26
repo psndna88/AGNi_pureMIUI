@@ -79,6 +79,9 @@ void flush_dcache_page(struct page *page)
 }
 EXPORT_SYMBOL(flush_dcache_page);
 
+void flush_cache_all(struct page *page) { }
+EXPORT_SYMBOL(flush_cache_all);
+
 /*
  * Additional functions defined in assembly.
  */
