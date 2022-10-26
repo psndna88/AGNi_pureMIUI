@@ -1659,6 +1659,7 @@
       <elf-symbol name='cam_mem_put_cpu_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cam_register_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cam_register_subdev_fops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='cam_req_mgr_is_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cam_req_mgr_notify_message' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cam_res_mgr_gpio_free_arry' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cam_res_mgr_gpio_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
