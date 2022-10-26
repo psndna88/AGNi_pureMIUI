@@ -681,6 +681,7 @@
       <elf-symbol name='_bcd2bin' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='_bin2bcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='_copy_from_iter' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='_copy_from_iter_flushcache' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='_copy_from_iter_full' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='_copy_from_iter_full_nocache' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='_copy_from_iter_nocache' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -945,9 +946,11 @@
       <elf-symbol name='ar9003_paprd_is_done' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='ar9003_paprd_populate_single_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='ar9003_paprd_setup_gain_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='arch_invalidate_pmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='arch_set_freq_scale' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='arch_set_max_freq_scale' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='arch_setup_dma_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='arch_wb_cache_pmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='argv_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='argv_split' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='arm_iommu_attach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -6419,6 +6422,7 @@
       <elf-symbol name='mbox_send_message' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='mc44s803_attach' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='mdio_bus_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='mdio_bus_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='mdio_device_create' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='mdio_device_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='mdio_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -6475,6 +6479,7 @@
       <elf-symbol name='memchr_inv' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='memcmp' type='func-type' binding='weak-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='memcpy' type='func-type' binding='weak-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='memcpy_flushcache' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='memdup_user' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='memdup_user_nul' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='memmove' type='func-type' binding='weak-binding' visibility='default-visibility' alias='__memmove' is-defined='yes'/>
@@ -11487,6 +11492,7 @@
       <elf-symbol name='tty_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_register_ldisc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_release_struct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='tty_schedule_flip' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_ldisc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_operations' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='tty_set_termios' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -12621,6 +12627,7 @@
       <elf-symbol name='xdr_write_pages' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='xfrm4_prepare_output' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='xfrm4_protocol_deregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='xfrm4_protocol_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='xfrm4_protocol_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='xfrm4_rcv' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='xfrm4_rcv_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
