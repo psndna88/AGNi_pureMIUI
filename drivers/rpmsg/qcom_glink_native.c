@@ -36,26 +36,9 @@
 #include "qcom_glink_native.h"
 
 #define GLINK_LOG_PAGE_CNT 2
-#define GLINK_INFO(ctxt, x, ...)					  \
-do {									  \
-	if (ctxt)							  \
-		ipc_log_string(ctxt, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
-
-#define CH_INFO(ch, x, ...)						     \
-do {									     \
-	if (ch->glink && ch->glink->ilc)				     \
-		ipc_log_string(ch->glink->ilc, "%s[%d:%d] %s: "x, ch->name,  \
-			       ch->lcid, ch->rcid, __func__, ##__VA_ARGS__); \
-} while (0)
-
-
-#define GLINK_ERR(ctxt, x, ...)						  \
-do {									  \
-	pr_err_ratelimited("[%s]: "x, __func__, ##__VA_ARGS__);		  \
-	if (ctxt)							  \
-		ipc_log_string(ctxt, "[%s]: "x, __func__, ##__VA_ARGS__); \
-} while (0)
+#define GLINK_INFO(ctxt, x, ...)
+#define CH_INFO(ch, x, ...)
+#define GLINK_ERR(ctxt, x, ...)
 
 #define GLINK_NAME_SIZE		32
 #define GLINK_VERSION_1		1
@@ -1764,7 +1747,7 @@ static void qcom_glink_rx_close(struct qcom_glink *glink, unsigned int rcid)
 	kthread_cancel_work_sync(&channel->intent_work);
 
 	if (channel->rpdev) {
-		strlcpy(chinfo.name, channel->name, sizeof(chinfo.name));
+		strscpy_pad(chinfo.name, channel->name, sizeof(chinfo.name));
 		chinfo.src = RPMSG_ADDR_ANY;
 		chinfo.dst = RPMSG_ADDR_ANY;
 
