@@ -388,6 +388,9 @@ int __tty_insert_flip_char(struct tty_port *port, unsigned char ch, char flag)
 }
 EXPORT_SYMBOL(__tty_insert_flip_char);
 
+void tty_schedule_flip(struct tty_port *port) { }
+EXPORT_SYMBOL(tty_schedule_flip);
+
 /**
  *	tty_prepare_flip_string		-	make room for characters
  *	@port: tty port
