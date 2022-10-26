@@ -297,3 +297,4 @@ void __init xfrm4_protocol_init(void)
 {
 	xfrm_input_register_afinfo(&xfrm4_input_afinfo);
 }
+EXPORT_SYMBOL(xfrm4_protocol_init);
