@@ -10434,6 +10434,8 @@
       <elf-symbol name='snd_event_master_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_event_mstr_add_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_event_notify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='snd_fasync_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='snd_fasync_helper' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_free_pages' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_hwdep_new' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_info_create_card_entry' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -10452,6 +10454,7 @@
       <elf-symbol name='snd_jack_report' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_jack_set_key' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_jack_set_parent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='snd_kill_fasync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_lookup_minor_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_malloc_pages' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='snd_pci_quirk_lookup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>

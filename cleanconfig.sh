@@ -13,8 +13,8 @@ fi
 
 if [ -f $COUT/.config ];
 	then
-	rm $COUT/.config
-	rm $COUT/.config.old
+	rm $COUT/.config 2>/dev/null
+	rm $COUT/.config.old 2>/dev/null
 	echo "   Compile folder configs cleared !"
 else
 	echo "   Compile folder has no configs."
