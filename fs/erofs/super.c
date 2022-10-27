@@ -453,10 +453,8 @@ static match_table_t erofs_tokens = {
 static int erofs_parse_options(struct super_block *sb, char *options)
 {
 	substring_t args[MAX_OPT_ARGS];
-	struct erofs_sb_info *sbi = EROFS_SB(sb);
 	char *p;
 	int err;
-	struct erofs_device_info *dif;
 
 	if (!options)
 		return 0;
@@ -505,25 +503,6 @@ static int erofs_parse_options(struct super_block *sb, char *options)
 			err = erofs_build_cache_strategy(sb, args);
 			if (err)
 				return err;
-			break;
-		case Opt_device:
-			dif = kzalloc(sizeof(*dif), GFP_KERNEL);
-			if (!dif)
-				return -ENOMEM;
-			dif->path = kstrdup(options, GFP_KERNEL);
-			if (!dif->path) {
-				kfree(dif);
-				return -ENOMEM;
-			}
-			down_write(&sbi->devs->rwsem);
-			err = idr_alloc(&sbi->devs->tree, dif, 0, 0, GFP_KERNEL);
-			up_write(&sbi->devs->rwsem);
-			if (err < 0) {
-				kfree(dif->path);
-				kfree(dif);
-				return err;
-			}
-			++sbi->devs->extra_devices;
 			break;
 		default:
 			erofs_err(sb, "Unrecognized mount option \"%s\" or missing value", p);
