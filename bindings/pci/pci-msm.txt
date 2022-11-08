@@ -419,6 +419,12 @@ interconnects:
         Value type : <bool>
         Definition: Disable PCIe Write and Read halt feature
 
+- qcom, qcom,bdf-halt-dis:
+        Usage: optional
+        Value type : <bool>
+        Definition: Disables the BDF halt feature which halt inbound
+		write transactions when BDF change is detected.
+
 ==============
 Root port node
 ==============

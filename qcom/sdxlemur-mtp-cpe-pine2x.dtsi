@@ -38,6 +38,9 @@
 	qcom,no-l1-supported;
 	qcom,no-l1ss-supported;
 	qcom,no-aux-clk-sync;
+	qcom,bdf-halt-dis;
+	qcom,wr-halt-size = <0x1e>;
+
 };
 
 &pcie0_bus2_dev1_fn0 {
