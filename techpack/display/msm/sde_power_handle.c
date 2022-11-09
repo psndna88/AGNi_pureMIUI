@@ -473,21 +473,24 @@ static void sde_power_parse_ib_votes(struct platform_device *pdev,
 	if (rc)
 		pr_err("error reading min core ib vote. rc=%d, np=%x\n", rc, pdev->dev.of_node);
 
-	phandle->min_ib_vote.min_core_ib = (!rc ? tmp*1000 : 0);
+	phandle->ib_quota[SDE_POWER_HANDLE_DBUS_ID_MNOC] = (!rc ? tmp*1000 :
+							SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
 
 	rc = of_property_read_u32(pdev->dev.of_node,
 			"qcom,sde-min-llcc-ib-kbps", &tmp);
 	if (rc)
 		pr_err("error reading min llcc ib vote. rc=%d\n", rc);
 
-	phandle->min_ib_vote.min_llcc_ib = (!rc ? tmp*1000 : 0);
+	phandle->ib_quota[SDE_POWER_HANDLE_DBUS_ID_LLCC] = (!rc ? tmp*1000 :
+							SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
 
 	rc = of_property_read_u32(pdev->dev.of_node,
 			"qcom,sde-min-dram-ib-kbps", &tmp);
 	if (rc)
 		pr_err("error reading min dram ib vote. rc=%d\n", rc);
 
-	phandle->min_ib_vote.min_dram_ib = (!rc ? tmp*1000 : 0);
+	phandle->ib_quota[SDE_POWER_HANDLE_DBUS_ID_EBI] = (!rc ? tmp*1000 :
+							SDE_POWER_HANDLE_ENABLE_BUS_IB_QUOTA);
 }
 
 static int sde_power_bus_parse(struct platform_device *pdev,
@@ -732,7 +735,6 @@ int sde_power_resource_enable(struct sde_power_handle *phandle, bool enable)
 {
 	int rc = 0, i = 0;
 	struct dss_module_power *mp;
-	u32 bus_ib_quota = 0;
 
 	if (!phandle) {
 		pr_err("invalid input argument\n");
@@ -754,32 +756,17 @@ int sde_power_resource_enable(struct sde_power_handle *phandle, bool enable)
 		sde_power_event_trigger_locked(phandle,
 				SDE_POWER_EVENT_PRE_ENABLE);
 
-		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX &&
-			phandle->data_bus_handle[i].data_paths_cnt > 0; i++) {
-
-			bus_ib_quota = 0;
-			switch (i) {
-			case SDE_POWER_HANDLE_DBUS_ID_MNOC:
-				bus_ib_quota =
-					phandle->min_ib_vote.min_core_ib;
-				break;
-			case SDE_POWER_HANDLE_DBUS_ID_LLCC:
-				bus_ib_quota =
-					phandle->min_ib_vote.min_llcc_ib;
-				break;
-			case SDE_POWER_HANDLE_DBUS_ID_EBI:
-				bus_ib_quota =
-					phandle->min_ib_vote.min_dram_ib;
-			}
-
-			rc = _sde_power_data_bus_set_quota(
-				&phandle->data_bus_handle[i],
-				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
-				bus_ib_quota);
-			if (rc) {
-				pr_err("failed to set data bus vote id=%d rc=%d\n",
-						i, rc);
-				goto vreg_err;
+		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++) {
+			if (phandle->data_bus_handle[i].data_paths_cnt > 0) {
+				rc = _sde_power_data_bus_set_quota(
+					&phandle->data_bus_handle[i],
+					SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
+					phandle->ib_quota[i]);
+				if (rc) {
+					pr_err("failed to set data bus vote id=%d rc=%d\n",
+							i, rc);
+					goto vreg_err;
+				}
 			}
 		}
 		rc = msm_dss_enable_vreg(mp->vreg_config, mp->num_vreg,
