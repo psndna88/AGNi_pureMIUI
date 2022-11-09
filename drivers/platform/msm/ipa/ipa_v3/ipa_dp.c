@@ -1383,10 +1383,14 @@ int ipa3_setup_sys_pipe(struct ipa_sys_connect_params *sys_in, u32 *clnt_hdl)
 fail_gen3:
 	ipa3_disable_data_path(ipa_ep_idx);
 fail_repl:
-	ep->sys->repl_hdlr = ipa3_replenish_rx_cache;
-	ep->sys->repl->capacity = 0;
-	kfree(ep->sys->repl);
-	ep->sys->repl = NULL;
+	if (IPA_CLIENT_IS_CONS(ep->client))
+		ipa3_cleanup_rx(ep->sys);
+
+	if(ep->sys->repl) {
+		ep->sys->repl->capacity = 0;
+		kfree(ep->sys->repl);
+		ep->sys->repl = NULL;
+	}
 fail_page_recycle_repl:
 	if (ep->sys->page_recycle_repl) {
 		ep->sys->page_recycle_repl->capacity = 0;
