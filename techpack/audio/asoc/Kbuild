@@ -186,7 +186,7 @@ ifdef CONFIG_SND_SOC_SA8155
 	MACHINE_OBJS += sa8155.o
 endif
 
-# for gvmgh sound card driver
+# for gvm sound card driver
 ifdef CONFIG_SND_SOC_GVM_AUTO_SPF
     SPF_MACHINE_OBJS += gvm_auto_spf_dummy.o
 endif
