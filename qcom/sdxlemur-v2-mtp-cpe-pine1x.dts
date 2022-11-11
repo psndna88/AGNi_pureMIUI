@@ -12,3 +12,7 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0x9010008 0x309>;
 };
+
+&ipa_hw {
+	qcom,scaling-exceptions = "wdi", "1400", "4800", "10000";
+};
