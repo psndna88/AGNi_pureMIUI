@@ -32338,6 +32338,9 @@ static int msm_pcm_routing_prepare(struct snd_pcm_substream *substream)
 				(fdai->passthr_mode == LEGACY_PCM))
 				msm_pcm_routing_cfg_pp(port_id, copp_idx,
 						       topology, channels);
+			if(msm_pcm_routing_channel_mixer(i, fdai->perf_mode,fdai->strm_id, session_type)){
+				pr_err("%s: failed to send channel mixer \n", __func__);
+			}
 		}
 	}
 
