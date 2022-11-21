@@ -1352,6 +1352,7 @@ void collapse_pte_mapped_thp(struct mm_struct *mm, unsigned long addr)
 	 */
 	i_mmap_lock_write(vma->vm_file->f_mapping);
 
+	vm_write_begin(vma);
 	/*
 	 * This spinlock should be unnecessary: Nobody else should be accessing
 	 * the page tables under spinlock protection here, only
@@ -1412,6 +1413,7 @@ void collapse_pte_mapped_thp(struct mm_struct *mm, unsigned long addr)
 				haddr + HPAGE_PMD_SIZE);
 	mmu_notifier_invalidate_range_start(&range);
 	_pmd = pmdp_collapse_flush(vma, haddr, pmd);
+	vm_write_end(vma);
 	mm_dec_nr_ptes(mm);
 	tlb_remove_table_sync_one();
 	mmu_notifier_invalidate_range_end(&range);
@@ -1429,6 +1431,7 @@ drop_hpage:
 abort:
 	pte_unmap_unlock(start_pte, ptl);
 	i_mmap_unlock_write(vma->vm_file->f_mapping);
+	vm_write_end(vma);
 	goto drop_hpage;
 }
 
@@ -1508,8 +1511,10 @@ static void retract_page_tables(struct address_space *mapping, pgoff_t pgoff)
 							NULL, mm, addr,
 							addr + HPAGE_PMD_SIZE);
 				mmu_notifier_invalidate_range_start(&range);
+				vm_write_begin(vma);
 				/* assume page table is clear */
 				_pmd = pmdp_collapse_flush(vma, addr, pmd);
+				vm_write_end(vma);
 				mm_dec_nr_ptes(mm);
 				tlb_remove_table_sync_one();
 				pte_free(mm, pmd_pgtable(_pmd));
