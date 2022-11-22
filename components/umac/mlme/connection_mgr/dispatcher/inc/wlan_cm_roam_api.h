@@ -160,6 +160,29 @@ wlan_cm_roam_neighbor_proceed_with_handoff_req(uint8_t vdev_id);
  */
 bool wlan_cm_is_sta_connected(uint8_t vdev_id);
 
+/**
+ * wlan_cm_set_exclude_rm_partial_scan_freq() - set value to include/exclude
+ * the partial scan channels in roam full scan.
+ * @psoc: PSOC pointer
+ * @exclude_rm_partial_scan_freq: Include/exclude the channels in roam full scan
+ * that are already scanned as part of partial scan.
+ *
+ * Return: none
+ */
+void
+wlan_cm_set_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc,
+					 uint8_t exclude_rm_partial_scan_freq);
+
+/**
+ * wlan_cm_get_exclude_rm_partial_scan_freq() - Get value to include/exclude
+ * the partial scan channels in roam full scan.
+ * @psoc: PSOC pointer
+ *
+ * Return: value to include/exclude the partial scan channels in roam full scan
+ */
+uint8_t
+wlan_cm_get_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc);
+
 #else
 static inline QDF_STATUS
 wlan_cm_enable_roaming_on_connected_sta(struct wlan_objmgr_pdev *pdev,
@@ -761,6 +784,12 @@ wlan_cm_get_roam_rt_stats(struct wlan_objmgr_psoc *psoc,
 
 static inline uint16_t
 wlan_cm_roam_get_ho_delay_config(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
+}
+
+static inline uint8_t
+wlan_cm_get_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc)
 {
 	return 0;
 }
