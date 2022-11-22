@@ -272,6 +272,21 @@ cm_roam_send_rt_stats_config(struct wlan_objmgr_psoc *psoc,
 
 	return status;
 }
+
+QDF_STATUS
+cm_roam_send_ho_delay_config(struct wlan_objmgr_psoc *psoc,
+			     uint8_t vdev_id, uint16_t param_value)
+{
+	QDF_STATUS status;
+
+	wlan_cm_roam_set_ho_delay_config(psoc, param_value);
+	status = wlan_cm_tgt_send_roam_ho_delay_config(psoc,
+						       vdev_id, param_value);
+	if (QDF_IS_STATUS_ERROR(status))
+		mlme_debug("fail to send roam HO delay config");
+
+	return status;
+}
 #else
 static inline void
 cm_roam_reason_vsie(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
@@ -526,6 +541,9 @@ cm_roam_start_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	start_req->wlan_roam_rt_stats_config =
 			wlan_cm_get_roam_rt_stats(psoc, ROAM_RT_STATS_ENABLE);
 
+	start_req->wlan_roam_ho_delay_config =
+			wlan_cm_roam_get_ho_delay_config(psoc);
+
 	status = wlan_cm_tgt_send_roam_start_req(psoc, vdev_id, start_req);
 	if (QDF_IS_STATUS_ERROR(status))
 		mlme_debug("fail to send roam start");
@@ -574,6 +592,9 @@ cm_roam_update_config_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	update_req->wlan_roam_rt_stats_config =
 			wlan_cm_get_roam_rt_stats(psoc, ROAM_RT_STATS_ENABLE);
+
+	update_req->wlan_roam_ho_delay_config =
+			wlan_cm_roam_get_ho_delay_config(psoc);
 
 	status = wlan_cm_tgt_send_roam_update_req(psoc, vdev_id, update_req);
 	if (QDF_IS_STATUS_ERROR(status))
