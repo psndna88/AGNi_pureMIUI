@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -215,6 +215,9 @@ mgmt_get_public_action_subtype(uint8_t action_code)
 		break;
 	case PUB_ACTION_FTM_RESPONSE:
 		frm_type = MGMT_ACTION_FTM_RESPONSE;
+		break;
+	case PUB_ACTION_FILS_DISCOVERY:
+		frm_type = MGMT_ACTION_FILS_DISCOVERY;
 		break;
 	default:
 		frm_type = MGMT_FRM_UNSPECIFIED;
