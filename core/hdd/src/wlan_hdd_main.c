@@ -18090,6 +18090,11 @@ static int con_mode_handler_ftm(const char *kmessage,
 
 	ret = param_set_int(kmessage, kp);
 
+	if (cds_is_driver_loaded() || cds_is_load_or_unload_in_progress()) {
+		pr_err("Driver already loaded or load/unload in progress");
+		return -ENOTSUPP;
+	}
+
 	if (con_mode_ftm != QDF_GLOBAL_FTM_MODE) {
 		pr_err("Only FTM mode supported!");
 		return -ENOTSUPP;
