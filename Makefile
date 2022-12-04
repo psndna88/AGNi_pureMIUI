@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 VERSION = 5
 PATCHLEVEL = 4
-SUBLEVEL = 220
+SUBLEVEL = 222
 EXTRAVERSION =
 NAME = Kleptomaniac Octopus
 
@@ -862,7 +862,9 @@ DEBUG_CFLAGS	+= -gsplit-dwarf-4
 else
 DEBUG_CFLAGS	+= -g
 endif
-ifneq ($(LLVM_IAS),1)
+ifeq ($(LLVM_IAS),1)
+KBUILD_AFLAGS	+= -g
+else
 KBUILD_AFLAGS	+= -Wa,-gdwarf-2
 endif
 endif
