@@ -10819,6 +10819,8 @@
       <elf-symbol name='snd_event_master_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x895bcd25'/>
       <elf-symbol name='snd_event_mstr_add_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3507a903'/>
       <elf-symbol name='snd_event_notify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbb7dcca1'/>
+      <elf-symbol name='snd_fasync_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5af762f1'/>
+      <elf-symbol name='snd_fasync_helper' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8a9a13f5'/>
       <elf-symbol name='snd_hwdep_new' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d9decad'/>
       <elf-symbol name='snd_hwparams_to_dma_slave_config' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x30e7e6f7'/>
       <elf-symbol name='snd_info_create_card_entry' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f2411a0'/>
@@ -10836,6 +10838,7 @@
       <elf-symbol name='snd_jack_report' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd102206a'/>
       <elf-symbol name='snd_jack_set_key' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9c0987e'/>
       <elf-symbol name='snd_jack_set_parent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2a839c16'/>
+      <elf-symbol name='snd_kill_fasync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8f2a4eb'/>
       <elf-symbol name='snd_lookup_minor_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2e5ae4a'/>
       <elf-symbol name='snd_pci_quirk_lookup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9696b3b'/>
       <elf-symbol name='snd_pci_quirk_lookup_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x73076315'/>
