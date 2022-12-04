@@ -7835,9 +7835,11 @@ static const struct snd_kcontrol_new lo2_mixer[] = {
 };
 
 static const struct snd_soc_dapm_widget tavil_dapm_slim_widgets[] = {
-	SND_SOC_DAPM_AIF_IN_E("AIF4 PB", "AIF4 Playback", 0, SND_SOC_NOPM,
-			      AIF4_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_IN("AIF4 PB", "AIF4 Playback", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF4 PB MIX", SND_SOC_NOPM, AIF4_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_AIF_OUT_E("AIF4 VI", "VIfeed", 0, SND_SOC_NOPM,
 			       AIF4_VIFEED, 0,
@@ -7884,15 +7886,19 @@ static const struct snd_soc_dapm_widget tavil_dapm_slim_widgets[] = {
 };
 
 static const struct snd_soc_dapm_widget tavil_dapm_widgets[] = {
-	SND_SOC_DAPM_AIF_IN_E("AIF1 PB", "AIF1 Playback", 0, SND_SOC_NOPM,
-			      AIF1_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_IN_E("AIF2 PB", "AIF2 Playback", 0, SND_SOC_NOPM,
-			      AIF2_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
-	SND_SOC_DAPM_AIF_IN_E("AIF3 PB", "AIF3 Playback", 0, SND_SOC_NOPM,
-			      AIF3_PB, 0, tavil_codec_enable_rx,
-			      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_AIF_IN("AIF1 PB", "AIF1 Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("AIF2 PB", "AIF2 Playback", 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("AIF3 PB", "AIF3 Playback", 0, SND_SOC_NOPM, 0, 0),
+
+	SND_SOC_DAPM_MIXER_E("AIF1 PB MIX", SND_SOC_NOPM, AIF1_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MIXER_E("AIF2 PB MIX", SND_SOC_NOPM, AIF2_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_MIXER_E("AIF3 PB MIX", SND_SOC_NOPM, AIF3_PB, 0,
+		NULL, 0, tavil_codec_enable_rx,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	WCD_DAPM_MUX("CDC_IF RX0 MUX", WCD934X_RX0, cdc_if_rx0),
 	WCD_DAPM_MUX("CDC_IF RX1 MUX", WCD934X_RX1, cdc_if_rx1),
