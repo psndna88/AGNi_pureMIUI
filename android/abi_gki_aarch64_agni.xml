@@ -3911,8 +3911,8 @@
       <elf-symbol name='dwc3_dbg_print' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1262b7b8'/>
       <elf-symbol name='dwc3_gadget_get_link_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbbee9253'/>
       <elf-symbol name='dwc3_gadget_resize_tx_fifos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc118494d'/>
-      <elf-symbol name='dwc3_host_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6e3b36f5'/>
-      <elf-symbol name='dwc3_host_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xba4f0fa'/>
+      <elf-symbol name='dwc3_host_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d467881'/>
+      <elf-symbol name='dwc3_host_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44410fbd'/>
       <elf-symbol name='dwc3_msm_release_ss_lane' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16dd88a1'/>
       <elf-symbol name='dwc3_notify_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa619bd0'/>
       <elf-symbol name='dwc3_send_gadget_ep_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbbdf0762'/>
@@ -13339,9 +13339,9 @@
       <elf-symbol name='xfrm_unregister_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd5adc74'/>
       <elf-symbol name='xfrm_unregister_type_offload' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36890626'/>
       <elf-symbol name='xfrm_user_policy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda9477ba'/>
-      <elf-symbol name='xhci_dbg_trace' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x608b0711'/>
-      <elf-symbol name='xhci_ext_cap_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa18904a0'/>
-      <elf-symbol name='xhci_gen_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x995d580c'/>
+      <elf-symbol name='xhci_dbg_trace' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x17901a70'/>
+      <elf-symbol name='xhci_ext_cap_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3dda8ca4'/>
+      <elf-symbol name='xhci_gen_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b201f9'/>
       <elf-symbol name='xhci_get_sec_event_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66ddc8fb'/>
       <elf-symbol name='xhci_get_xfer_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e3a1ca6'/>
       <elf-symbol name='xhci_init_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2dc4a73'/>
@@ -13350,13 +13350,13 @@
       <elf-symbol name='xhci_pci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64f0bf99'/>
       <elf-symbol name='xhci_pci_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64475a03'/>
       <elf-symbol name='xhci_pci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x76b6413a'/>
-      <elf-symbol name='xhci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb74d7ba4'/>
+      <elf-symbol name='xhci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6cf5b1a8'/>
       <elf-symbol name='xhci_run' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f04d0ad'/>
       <elf-symbol name='xhci_sec_event_ring_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5cb46561'/>
       <elf-symbol name='xhci_sec_event_ring_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x21b31084'/>
       <elf-symbol name='xhci_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa748b4c'/>
       <elf-symbol name='xhci_stop_endpoint' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3214117f'/>
-      <elf-symbol name='xhci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5b01c2f8'/>
+      <elf-symbol name='xhci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7df8981e'/>
       <elf-symbol name='xiaomi_touch_set_suspend_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88aaf668'/>
       <elf-symbol name='xiaomitouch_register_modedata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2af64a2'/>
       <elf-symbol name='xlogchar_kwrite' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1f6bc0f'/>
