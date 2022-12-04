@@ -197,7 +197,9 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		return;
 	}
 
-	atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
+	if (bridge->encoder->crtc->state->active_changed)
+		atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
+
 	mi_cfg = &c_bridge->display->panel->mi_cfg;
 
 	power_mode = sde_connector_get_lp(c_bridge->display->drm_conn);
