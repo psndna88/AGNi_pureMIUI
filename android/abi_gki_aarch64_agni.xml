@@ -3919,10 +3919,10 @@
       <elf-symbol name='dwc3_set_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1896a13'/>
       <elf-symbol name='dwc3_set_prtcap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4d8ffd53'/>
       <elf-symbol name='dwc3_stop_active_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52a66031'/>
-      <elf-symbol name='ebt_do_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2b4ae60'/>
-      <elf-symbol name='ebt_register_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4290631'/>
-      <elf-symbol name='ebt_unregister_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fb79e89'/>
-      <elf-symbol name='ebt_unregister_table_pre_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x362f6647'/>
+      <elf-symbol name='ebt_do_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2284861'/>
+      <elf-symbol name='ebt_register_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x73c0f38a'/>
+      <elf-symbol name='ebt_unregister_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd057859b'/>
+      <elf-symbol name='ebt_unregister_table_pre_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa24e7308'/>
       <elf-symbol name='ecc_gen_privkey' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6315f31'/>
       <elf-symbol name='ecc_is_key_valid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x671f7aa5'/>
       <elf-symbol name='ecc_is_pubkey_valid_partial' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde867c29'/>
