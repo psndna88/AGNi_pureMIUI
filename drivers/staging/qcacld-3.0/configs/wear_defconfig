@@ -817,10 +817,10 @@ CONFIG_ATH_PCIE_ACCESS_DEBUG := n
 
 #Enable IPA offload
 ifeq ($(CONFIG_IPA), y)
-CONFIG_IPA_OFFLOAD := y
+CONFIG_IPA_OFFLOAD := n
 endif
 ifeq ($(CONFIG_IPA3), y)
-CONFIG_IPA_OFFLOAD := y
+CONFIG_IPA_OFFLOAD := n
 endif
 
 #Flag to enable SMMU S1 support
