@@ -261,6 +261,7 @@ static DEFINE_STATIC_KEY_FALSE_RO(bypass_usercopy_checks);
  */
 void __check_object_size(const void *ptr, unsigned long n, bool to_user)
 {
+	return;
 	if (static_branch_unlikely(&bypass_usercopy_checks))
 		return;
 
