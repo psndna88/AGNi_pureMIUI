@@ -885,7 +885,15 @@ fail:
 	psoc_nan_obj->nan_social_ch_2g_freq = 0;
 	psoc_nan_obj->nan_social_ch_5g_freq = 0;
 	nan_set_discovery_state(psoc, NAN_DISC_DISABLED);
-	policy_mgr_check_n_start_opportunistic_timer(psoc);
+	if (ucfg_is_nan_dbs_supported(psoc))
+		policy_mgr_check_n_start_opportunistic_timer(psoc);
+
+	/*
+	 * If FW respond with NAN enable failure, then TDLS should be enable
+	 * again if there is TDLS connection exist earlier.
+	 * decrement the active TDLS session.
+	 */
+	ucfg_tdls_notify_connect_failure(psoc);
 
 done:
 	nan_conc_callback = psoc_nan_obj->cb_obj.nan_concurrency_update;
@@ -1113,7 +1121,6 @@ bool nan_is_enable_allowed(struct wlan_objmgr_psoc *psoc, uint32_t nan_ch_freq)
 	}
 
 	return (NAN_DISC_DISABLED == nan_get_discovery_state(psoc) &&
-		ucfg_is_nan_conc_control_supported(psoc) &&
 		policy_mgr_allow_concurrency(psoc, PM_NAN_DISC_MODE,
 					     nan_ch_freq, HW_MODE_20_MHZ));
 }
