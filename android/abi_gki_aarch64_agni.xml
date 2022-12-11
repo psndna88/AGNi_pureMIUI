@@ -422,7 +422,7 @@
       <elf-symbol name='__mdiobus_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3a5ab44f'/>
       <elf-symbol name='__mdiobus_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xff898e00'/>
       <elf-symbol name='__media_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcbd99a8e'/>
-      <elf-symbol name='__media_device_usb_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfaa34eb2'/>
+      <elf-symbol name='__media_device_usb_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfbdd8f77'/>
       <elf-symbol name='__media_entity_enum_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdc581289'/>
       <elf-symbol name='__media_entity_remove_links' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf13abf70'/>
       <elf-symbol name='__media_entity_setup_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16c6567e'/>
@@ -588,9 +588,9 @@
       <elf-symbol name='__scsi_init_queue' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa1a3d85'/>
       <elf-symbol name='__scsi_iterate_devices' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb782f274'/>
       <elf-symbol name='__scsi_print_sense' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2c3d2fbb'/>
-      <elf-symbol name='__sdhci_add_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x419a894e'/>
-      <elf-symbol name='__sdhci_read_caps' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6bfc1eb7'/>
-      <elf-symbol name='__sdhci_set_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc30f5b13'/>
+      <elf-symbol name='__sdhci_add_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d579dda'/>
+      <elf-symbol name='__sdhci_read_caps' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb78a3aca'/>
+      <elf-symbol name='__sdhci_set_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc8342f53'/>
       <elf-symbol name='__seq_open_private' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x18237f39'/>
       <elf-symbol name='__serio_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb6903abf'/>
       <elf-symbol name='__serio_register_port' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xefa85f3e'/>
@@ -686,7 +686,7 @@
       <elf-symbol name='__udp_gso_segment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbc0a61e'/>
       <elf-symbol name='__uio_register_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcd024867'/>
       <elf-symbol name='__unregister_chrdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6bc3fbc0'/>
-      <elf-symbol name='__usb_create_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb8a2011c'/>
+      <elf-symbol name='__usb_create_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15c72de0'/>
       <elf-symbol name='__usb_get_extra_descriptor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd36760ef'/>
       <elf-symbol name='__usecs_to_jiffies' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1969a8e'/>
       <elf-symbol name='__v4l2_clk_register_fixed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x956716be'/>
@@ -3909,18 +3909,18 @@
       <elf-symbol name='dw_pcie_wait_for_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x272a07ae'/>
       <elf-symbol name='dw_pcie_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe9a83d5'/>
       <elf-symbol name='dw_pcie_write_dbi' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x39158202'/>
-      <elf-symbol name='dwc3_core_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x53cb5730'/>
-      <elf-symbol name='dwc3_dbg_print' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x556a65c6'/>
-      <elf-symbol name='dwc3_gadget_get_link_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8abd23a5'/>
-      <elf-symbol name='dwc3_gadget_resize_tx_fifos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c3de18d'/>
-      <elf-symbol name='dwc3_host_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd30834fd'/>
-      <elf-symbol name='dwc3_host_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72ed5d60'/>
+      <elf-symbol name='dwc3_core_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x32e4f63'/>
+      <elf-symbol name='dwc3_dbg_print' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1262b7b8'/>
+      <elf-symbol name='dwc3_gadget_get_link_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbbee9253'/>
+      <elf-symbol name='dwc3_gadget_resize_tx_fifos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc118494d'/>
+      <elf-symbol name='dwc3_host_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6e3b36f5'/>
+      <elf-symbol name='dwc3_host_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xba4f0fa'/>
       <elf-symbol name='dwc3_msm_release_ss_lane' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16dd88a1'/>
-      <elf-symbol name='dwc3_notify_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd0776d2c'/>
-      <elf-symbol name='dwc3_send_gadget_ep_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x56aa5f0f'/>
-      <elf-symbol name='dwc3_set_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7946fa9'/>
-      <elf-symbol name='dwc3_set_prtcap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59695bb6'/>
-      <elf-symbol name='dwc3_stop_active_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d815f37'/>
+      <elf-symbol name='dwc3_notify_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa619bd0'/>
+      <elf-symbol name='dwc3_send_gadget_ep_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbbdf0762'/>
+      <elf-symbol name='dwc3_set_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1896a13'/>
+      <elf-symbol name='dwc3_set_prtcap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4d8ffd53'/>
+      <elf-symbol name='dwc3_stop_active_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52a66031'/>
       <elf-symbol name='ebt_do_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2284861'/>
       <elf-symbol name='ebt_register_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x73c0f38a'/>
       <elf-symbol name='ebt_unregister_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd057859b'/>
@@ -3983,14 +3983,14 @@
       <elf-symbol name='efivars_kobject' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc9a8b62b'/>
       <elf-symbol name='efivars_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2d2b495'/>
       <elf-symbol name='efivars_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3fe43ab'/>
-      <elf-symbol name='ehci_adjust_port_wakeup_flags' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x13ef7903'/>
-      <elf-symbol name='ehci_handshake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4104d41'/>
-      <elf-symbol name='ehci_hub_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79d65e19'/>
-      <elf-symbol name='ehci_init_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70fdd68a'/>
-      <elf-symbol name='ehci_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xecebe005'/>
-      <elf-symbol name='ehci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7df26f07'/>
-      <elf-symbol name='ehci_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79008aa6'/>
-      <elf-symbol name='ehci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xca48d3fa'/>
+      <elf-symbol name='ehci_adjust_port_wakeup_flags' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2bc6f0c'/>
+      <elf-symbol name='ehci_handshake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4a1304c7'/>
+      <elf-symbol name='ehci_hub_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6aee13b7'/>
+      <elf-symbol name='ehci_init_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbdbbd20e'/>
+      <elf-symbol name='ehci_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f747e36'/>
+      <elf-symbol name='ehci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3028fb3'/>
+      <elf-symbol name='ehci_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2a305d0d'/>
+      <elf-symbol name='ehci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd8cc8c17'/>
       <elf-symbol name='elevator_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe5f0f7ea'/>
       <elf-symbol name='elliptic_add_component_controls' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa2c1caff'/>
       <elf-symbol name='elliptic_set_hall_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd9f37d80'/>
@@ -4169,7 +4169,7 @@
       <elf-symbol name='filemap_range_has_page' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x131c4d6f'/>
       <elf-symbol name='filemap_write_and_wait' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xca7d61d'/>
       <elf-symbol name='filemap_write_and_wait_range' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f5a4b14'/>
-      <elf-symbol name='fill_inquiry_response' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x85a10272'/>
+      <elf-symbol name='fill_inquiry_response' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3abe9ef2'/>
       <elf-symbol name='filp_close' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x35cca3ae'/>
       <elf-symbol name='filp_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2173cbf1'/>
       <elf-symbol name='filter_match_preds' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7d6d2d4'/>
@@ -4191,7 +4191,7 @@
       <elf-symbol name='find_next_bit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0a3d105'/>
       <elf-symbol name='find_next_zero_bit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x479c3c86'/>
       <elf-symbol name='find_pid_ns' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4688f214'/>
-      <elf-symbol name='find_snd_usb_substream' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x977a4483'/>
+      <elf-symbol name='find_snd_usb_substream' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x93ca85fa'/>
       <elf-symbol name='find_subsys' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x37758475'/>
       <elf-symbol name='find_subsys_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4f77813'/>
       <elf-symbol name='find_task_by_vpid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf6c9ae4b'/>
@@ -4910,12 +4910,12 @@
       <elf-symbol name='gsi_write_evt_ring_scratch' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb49d41c6'/>
       <elf-symbol name='gsi_write_wdi3_channel_scratch2_reg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce4e703d'/>
       <elf-symbol name='gsi_write_wdi3_channel_scratch_6_7_reg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6090fc47'/>
-      <elf-symbol name='gspca_coarse_grained_expo_autogain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2d097cd0'/>
-      <elf-symbol name='gspca_dev_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x734f79af'/>
-      <elf-symbol name='gspca_dev_probe2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x155e9269'/>
+      <elf-symbol name='gspca_coarse_grained_expo_autogain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4c83696b'/>
+      <elf-symbol name='gspca_dev_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5da0eff6'/>
+      <elf-symbol name='gspca_dev_probe2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x699436c'/>
       <elf-symbol name='gspca_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa65bf503'/>
-      <elf-symbol name='gspca_expo_autogain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc889fed2'/>
-      <elf-symbol name='gspca_frame_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64dde6cb'/>
+      <elf-symbol name='gspca_expo_autogain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7aa55e68'/>
+      <elf-symbol name='gspca_frame_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xddc0b548'/>
       <elf-symbol name='gspca_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x40e415d5'/>
       <elf-symbol name='gspca_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c9cab61'/>
       <elf-symbol name='guid_gen' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c3f70e0'/>
@@ -6897,7 +6897,7 @@
       <elf-symbol name='media_device_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3948227'/>
       <elf-symbol name='media_device_unregister_entity' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa974a6bc'/>
       <elf-symbol name='media_device_unregister_entity_notify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf451dac3'/>
-      <elf-symbol name='media_device_usb_allocate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51dc46cf'/>
+      <elf-symbol name='media_device_usb_allocate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcacb533'/>
       <elf-symbol name='media_devnode_create' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x24fc0540'/>
       <elf-symbol name='media_devnode_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9b611da8'/>
       <elf-symbol name='media_entity_enum_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe5ceecd6'/>
@@ -9917,10 +9917,10 @@
       <elf-symbol name='rndis_signal_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e551bc8'/>
       <elf-symbol name='rndis_uninit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7317220f'/>
       <elf-symbol name='rng_is_initialized' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3a4f9d28'/>
-      <elf-symbol name='roccat_common2_device_init_struct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbada8849'/>
-      <elf-symbol name='roccat_common2_receive' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd3c4c725'/>
-      <elf-symbol name='roccat_common2_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fcd7372'/>
-      <elf-symbol name='roccat_common2_send_with_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab6d6281'/>
+      <elf-symbol name='roccat_common2_device_init_struct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc4ebab70'/>
+      <elf-symbol name='roccat_common2_receive' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e392127'/>
+      <elf-symbol name='roccat_common2_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x54ce6890'/>
+      <elf-symbol name='roccat_common2_send_with_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bb36d92'/>
       <elf-symbol name='roccat_common2_sysfs_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b23a1c4'/>
       <elf-symbol name='roccat_common2_sysfs_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeb40f08f'/>
       <elf-symbol name='roccat_connect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x597e04a2'/>
@@ -10208,50 +10208,50 @@
       <elf-symbol name='sdev_evt_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd44b53c'/>
       <elf-symbol name='sdev_evt_send_simple' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15b264e3'/>
       <elf-symbol name='sdev_prefix_printk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x21a4f904'/>
-      <elf-symbol name='sdhci_abort_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4a6a065'/>
-      <elf-symbol name='sdhci_add_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81d605e0'/>
-      <elf-symbol name='sdhci_adma_write_desc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x840501fe'/>
-      <elf-symbol name='sdhci_alloc_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc29eabd0'/>
-      <elf-symbol name='sdhci_calc_clk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0c823da'/>
-      <elf-symbol name='sdhci_cleanup_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5f691f6e'/>
+      <elf-symbol name='sdhci_abort_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x684031e5'/>
+      <elf-symbol name='sdhci_add_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5f02a772'/>
+      <elf-symbol name='sdhci_adma_write_desc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb1ac3043'/>
+      <elf-symbol name='sdhci_alloc_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1c6d728e'/>
+      <elf-symbol name='sdhci_calc_clk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbc991a93'/>
+      <elf-symbol name='sdhci_cleanup_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x94592d81'/>
       <elf-symbol name='sdhci_cqe_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x10db4af5'/>
       <elf-symbol name='sdhci_cqe_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed4dc62c'/>
-      <elf-symbol name='sdhci_cqe_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd6e0040'/>
-      <elf-symbol name='sdhci_dumpregs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfcbce3b9'/>
-      <elf-symbol name='sdhci_enable_clk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44726ac0'/>
+      <elf-symbol name='sdhci_cqe_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8cd07ab6'/>
+      <elf-symbol name='sdhci_dumpregs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1086e392'/>
+      <elf-symbol name='sdhci_enable_clk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc77d2550'/>
       <elf-symbol name='sdhci_enable_sdio_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8257e76'/>
-      <elf-symbol name='sdhci_enable_v4_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb6ea2573'/>
-      <elf-symbol name='sdhci_end_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x819c0302'/>
+      <elf-symbol name='sdhci_enable_v4_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c8ce4d9'/>
+      <elf-symbol name='sdhci_end_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbcfde7e7'/>
       <elf-symbol name='sdhci_execute_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf7fbad8'/>
-      <elf-symbol name='sdhci_free_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa381f439'/>
+      <elf-symbol name='sdhci_free_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf4e6c91f'/>
       <elf-symbol name='sdhci_get_property' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9b307a1f'/>
-      <elf-symbol name='sdhci_pltfm_clk_get_max_clock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x78ba1d48'/>
+      <elf-symbol name='sdhci_pltfm_clk_get_max_clock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7198835'/>
       <elf-symbol name='sdhci_pltfm_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70cfe1c2'/>
-      <elf-symbol name='sdhci_pltfm_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2aee6e2'/>
-      <elf-symbol name='sdhci_pltfm_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf436cc38'/>
+      <elf-symbol name='sdhci_pltfm_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7d747be3'/>
+      <elf-symbol name='sdhci_pltfm_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b8c5430'/>
       <elf-symbol name='sdhci_pltfm_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x682dafbe'/>
       <elf-symbol name='sdhci_pltfm_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x39181d23'/>
       <elf-symbol name='sdhci_pltfm_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc68aa665'/>
-      <elf-symbol name='sdhci_remove_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88f88eab'/>
+      <elf-symbol name='sdhci_remove_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x21b961eb'/>
       <elf-symbol name='sdhci_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x552f7017'/>
       <elf-symbol name='sdhci_request_atomic' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9af12f4f'/>
-      <elf-symbol name='sdhci_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42bc2452'/>
-      <elf-symbol name='sdhci_reset_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9ed70c88'/>
-      <elf-symbol name='sdhci_resume_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6114cc2f'/>
-      <elf-symbol name='sdhci_runtime_resume_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb35f6c20'/>
-      <elf-symbol name='sdhci_runtime_suspend_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x433653df'/>
-      <elf-symbol name='sdhci_send_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x356dce17'/>
-      <elf-symbol name='sdhci_set_bus_width' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2caeb23'/>
-      <elf-symbol name='sdhci_set_clock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa00d990c'/>
-      <elf-symbol name='sdhci_set_data_timeout_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe300427b'/>
+      <elf-symbol name='sdhci_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x534ed7d1'/>
+      <elf-symbol name='sdhci_reset_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c0bf91b'/>
+      <elf-symbol name='sdhci_resume_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xef6d29b9'/>
+      <elf-symbol name='sdhci_runtime_resume_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd497ace3'/>
+      <elf-symbol name='sdhci_runtime_suspend_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x71186652'/>
+      <elf-symbol name='sdhci_send_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70791238'/>
+      <elf-symbol name='sdhci_set_bus_width' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe21d86ea'/>
+      <elf-symbol name='sdhci_set_clock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x69e34770'/>
+      <elf-symbol name='sdhci_set_data_timeout_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61b1fb57'/>
       <elf-symbol name='sdhci_set_ios' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x481635f2'/>
-      <elf-symbol name='sdhci_set_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x417f3d12'/>
-      <elf-symbol name='sdhci_set_power_noreg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x99c8fd8b'/>
-      <elf-symbol name='sdhci_set_uhs_signaling' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xef7188fd'/>
-      <elf-symbol name='sdhci_setup_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcc3ef2ff'/>
+      <elf-symbol name='sdhci_set_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcefa2e47'/>
+      <elf-symbol name='sdhci_set_power_noreg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9cdc452c'/>
+      <elf-symbol name='sdhci_set_uhs_signaling' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91365826'/>
+      <elf-symbol name='sdhci_setup_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd55f9104'/>
       <elf-symbol name='sdhci_start_signal_voltage_switch' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaf914bd8'/>
-      <elf-symbol name='sdhci_start_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbf2d1e76'/>
-      <elf-symbol name='sdhci_suspend_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f535e09'/>
+      <elf-symbol name='sdhci_start_tuning' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc082bab6'/>
+      <elf-symbol name='sdhci_suspend_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc5d62bb1'/>
       <elf-symbol name='sdio_align_size' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61dea96f'/>
       <elf-symbol name='sdio_claim_host' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce939c2b'/>
       <elf-symbol name='sdio_claim_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4d2ee36a'/>
@@ -11098,13 +11098,13 @@
       <elf-symbol name='snd_timer_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x318d2521'/>
       <elf-symbol name='snd_timer_stop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x26e9bc51'/>
       <elf-symbol name='snd_unregister_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f1648a6'/>
-      <elf-symbol name='snd_usb_enable_audio_stream' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d1a6f5b'/>
+      <elf-symbol name='snd_usb_enable_audio_stream' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e78741e'/>
       <elf-symbol name='snd_usbmidi_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd9d2bb03'/>
       <elf-symbol name='snd_usbmidi_input_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16756dc0'/>
       <elf-symbol name='snd_usbmidi_input_stop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x63343b1d'/>
       <elf-symbol name='snd_usbmidi_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2af19e1'/>
       <elf-symbol name='snd_usbmidi_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbed43a41'/>
-      <elf-symbol name='snd_vendor_set_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd616d49a'/>
+      <elf-symbol name='snd_vendor_set_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5cfa5ae8'/>
       <elf-symbol name='snmp_fold_field' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9e472f5f'/>
       <elf-symbol name='snmp_get_cpu_field' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc71e64a9'/>
       <elf-symbol name='snprintf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x656e4a6e'/>
@@ -12259,13 +12259,13 @@
       <elf-symbol name='usb_add_function' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf164a0be'/>
       <elf-symbol name='usb_add_gadget_udc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe06cfe53'/>
       <elf-symbol name='usb_add_gadget_udc_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79f9808a'/>
-      <elf-symbol name='usb_add_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4ef3baf9'/>
+      <elf-symbol name='usb_add_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaaa6a295'/>
       <elf-symbol name='usb_add_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c1ecb71'/>
       <elf-symbol name='usb_add_phy_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29aef3db'/>
-      <elf-symbol name='usb_alloc_coherent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa9739a76'/>
-      <elf-symbol name='usb_alloc_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x99ff0d58'/>
+      <elf-symbol name='usb_alloc_coherent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe71e8a1a'/>
+      <elf-symbol name='usb_alloc_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa04c8e36'/>
       <elf-symbol name='usb_alloc_streams' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf350586d'/>
-      <elf-symbol name='usb_alloc_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc114ae29'/>
+      <elf-symbol name='usb_alloc_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa41eca2'/>
       <elf-symbol name='usb_altnum_to_altsetting' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x465dff7'/>
       <elf-symbol name='usb_amd_dev_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9b9df41'/>
       <elf-symbol name='usb_amd_hang_symptom_quirk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33832c7'/>
@@ -12277,7 +12277,7 @@
       <elf-symbol name='usb_anchor_empty' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e8d8619'/>
       <elf-symbol name='usb_anchor_resume_wakeups' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x40267068'/>
       <elf-symbol name='usb_anchor_suspend_wakeups' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79bc842c'/>
-      <elf-symbol name='usb_anchor_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd04b644e'/>
+      <elf-symbol name='usb_anchor_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bce91e8'/>
       <elf-symbol name='usb_asmedia_modifyflowcontrol' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x492690d5'/>
       <elf-symbol name='usb_assign_descriptors' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2707029b'/>
       <elf-symbol name='usb_autopm_get_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9548763e'/>
@@ -12293,25 +12293,25 @@
       <elf-symbol name='usb_bam_get_bam_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xca94d11c'/>
       <elf-symbol name='usb_bam_get_connection_idx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9793ee5'/>
       <elf-symbol name='usb_bam_get_pipe_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x47f91acf'/>
-      <elf-symbol name='usb_block_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x163498b7'/>
-      <elf-symbol name='usb_bulk_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2350991d'/>
-      <elf-symbol name='usb_bus_start_enum' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x30ef5499'/>
+      <elf-symbol name='usb_block_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a2d6846'/>
+      <elf-symbol name='usb_bulk_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd24dbd18'/>
+      <elf-symbol name='usb_bus_start_enum' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6ef412f8'/>
       <elf-symbol name='usb_calc_bus_time' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e64181d'/>
-      <elf-symbol name='usb_choose_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed5ef415'/>
-      <elf-symbol name='usb_clear_halt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x386085de'/>
+      <elf-symbol name='usb_choose_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bdf74fb'/>
+      <elf-symbol name='usb_clear_halt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1e3fc643'/>
       <elf-symbol name='usb_composite_overwrite_options' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4e2dd721'/>
       <elf-symbol name='usb_composite_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaeb44066'/>
       <elf-symbol name='usb_composite_setup_continue' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9f981f1'/>
       <elf-symbol name='usb_composite_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6fb6acfd'/>
-      <elf-symbol name='usb_control_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44d4f84f'/>
+      <elf-symbol name='usb_control_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x34430a2d'/>
       <elf-symbol name='usb_copy_descriptors' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2e09263f'/>
-      <elf-symbol name='usb_create_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x450325cb'/>
-      <elf-symbol name='usb_create_shared_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeaa053b3'/>
+      <elf-symbol name='usb_create_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfb82941c'/>
+      <elf-symbol name='usb_create_shared_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc75a0d63'/>
       <elf-symbol name='usb_decode_ctrl' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4531624f'/>
       <elf-symbol name='usb_del_gadget_udc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe9bc128d'/>
       <elf-symbol name='usb_deregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1c06b329'/>
       <elf-symbol name='usb_deregister_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x214c76ff'/>
-      <elf-symbol name='usb_deregister_device_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa61b0340'/>
+      <elf-symbol name='usb_deregister_device_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc480d21b'/>
       <elf-symbol name='usb_descriptor_fillbuf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2ea2134'/>
       <elf-symbol name='usb_diag_alloc_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f252ebe'/>
       <elf-symbol name='usb_diag_close' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc6632b3c'/>
@@ -12319,19 +12319,19 @@
       <elf-symbol name='usb_diag_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x818e3549'/>
       <elf-symbol name='usb_diag_request_size' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcd089a93'/>
       <elf-symbol name='usb_diag_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe5747f22'/>
-      <elf-symbol name='usb_disable_autosuspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x27f4fc2f'/>
-      <elf-symbol name='usb_disable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc177e57f'/>
-      <elf-symbol name='usb_disable_ltm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7d18ed10'/>
+      <elf-symbol name='usb_disable_autosuspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d5417fa'/>
+      <elf-symbol name='usb_disable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc47388ea'/>
+      <elf-symbol name='usb_disable_ltm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59831b6c'/>
       <elf-symbol name='usb_disable_xhci_ports' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5ab69b50'/>
       <elf-symbol name='usb_disabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x19a304ba'/>
       <elf-symbol name='usb_driver_claim_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfef47d4a'/>
       <elf-symbol name='usb_driver_release_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x599939ac'/>
-      <elf-symbol name='usb_driver_set_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92ce3136'/>
-      <elf-symbol name='usb_enable_autosuspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2d2de54'/>
+      <elf-symbol name='usb_driver_set_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f7b485d'/>
+      <elf-symbol name='usb_enable_autosuspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x67ba2926'/>
       <elf-symbol name='usb_enable_intel_xhci_ports' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x41c8a87a'/>
-      <elf-symbol name='usb_enable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x11a218b7'/>
-      <elf-symbol name='usb_enable_ltm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xadcd10d8'/>
-      <elf-symbol name='usb_ep0_reinit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5b6e54d9'/>
+      <elf-symbol name='usb_enable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42be1011'/>
+      <elf-symbol name='usb_enable_ltm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdf4e8397'/>
+      <elf-symbol name='usb_ep0_reinit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8cdca9e1'/>
       <elf-symbol name='usb_ep_alloc_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa0e62d4b'/>
       <elf-symbol name='usb_ep_autoconfig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf94728b8'/>
       <elf-symbol name='usb_ep_autoconfig_by_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb129ddee'/>
@@ -12354,11 +12354,11 @@
       <elf-symbol name='usb_find_common_endpoints' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8eae8dfd'/>
       <elf-symbol name='usb_find_common_endpoints_reverse' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x987520e2'/>
       <elf-symbol name='usb_find_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5763ea27'/>
-      <elf-symbol name='usb_for_each_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x426631a1'/>
+      <elf-symbol name='usb_for_each_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d22d9d8'/>
       <elf-symbol name='usb_free_all_descriptors' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4e33eeec'/>
-      <elf-symbol name='usb_free_coherent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4a4ea9d4'/>
+      <elf-symbol name='usb_free_coherent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe1fadd1'/>
       <elf-symbol name='usb_free_streams' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57bb9855'/>
-      <elf-symbol name='usb_free_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf741a2b2'/>
+      <elf-symbol name='usb_free_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x874118e8'/>
       <elf-symbol name='usb_function_activate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa53e36ae'/>
       <elf-symbol name='usb_function_deactivate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4b8a228'/>
       <elf-symbol name='usb_function_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd0cc908f'/>
@@ -12386,67 +12386,67 @@
       <elf-symbol name='usb_gadget_vbus_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2904d060'/>
       <elf-symbol name='usb_gadget_vbus_draw' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x98a63370'/>
       <elf-symbol name='usb_gadget_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x971166fc'/>
-      <elf-symbol name='usb_gen_phy_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa96f197'/>
-      <elf-symbol name='usb_gen_phy_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd86713fc'/>
-      <elf-symbol name='usb_get_current_frame_number' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1e9c729'/>
-      <elf-symbol name='usb_get_descriptor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b7325f7'/>
-      <elf-symbol name='usb_get_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc032e8a6'/>
+      <elf-symbol name='usb_gen_phy_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x554cf070'/>
+      <elf-symbol name='usb_gen_phy_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x726305a1'/>
+      <elf-symbol name='usb_get_current_frame_number' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x810a05f4'/>
+      <elf-symbol name='usb_get_descriptor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e368ac5'/>
+      <elf-symbol name='usb_get_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x556927e0'/>
       <elf-symbol name='usb_get_dr_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x418f710d'/>
-      <elf-symbol name='usb_get_from_anchor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14f98f53'/>
+      <elf-symbol name='usb_get_from_anchor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2333f994'/>
       <elf-symbol name='usb_get_function' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91d2d516'/>
       <elf-symbol name='usb_get_function_instance' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc5442975'/>
       <elf-symbol name='usb_get_gadget_udc_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x50b88f41'/>
-      <elf-symbol name='usb_get_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xec4a7493'/>
+      <elf-symbol name='usb_get_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf7bf1fe1'/>
       <elf-symbol name='usb_get_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf97e3f4'/>
       <elf-symbol name='usb_get_maximum_speed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x97008600'/>
       <elf-symbol name='usb_get_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xad5c483c'/>
       <elf-symbol name='usb_get_remote_wakeup_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x672f0c93'/>
-      <elf-symbol name='usb_get_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfe15e3f2'/>
-      <elf-symbol name='usb_get_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x517192e2'/>
+      <elf-symbol name='usb_get_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1cc67028'/>
+      <elf-symbol name='usb_get_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x65809552'/>
       <elf-symbol name='usb_gsi_ep_op' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14760d8f'/>
       <elf-symbol name='usb_gstrings_attach' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x177122f7'/>
-      <elf-symbol name='usb_hc_died' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdbddd35e'/>
+      <elf-symbol name='usb_hc_died' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed858960'/>
       <elf-symbol name='usb_hcd_amd_remote_wakeup_quirk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3cd86233'/>
-      <elf-symbol name='usb_hcd_check_unlink_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4a8e3cee'/>
-      <elf-symbol name='usb_hcd_end_port_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3ba6d0d5'/>
-      <elf-symbol name='usb_hcd_giveback_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc48f97ad'/>
+      <elf-symbol name='usb_hcd_check_unlink_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e107a5'/>
+      <elf-symbol name='usb_hcd_end_port_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2d25c7b8'/>
+      <elf-symbol name='usb_hcd_giveback_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcc8fb4eb'/>
       <elf-symbol name='usb_hcd_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70cf032f'/>
-      <elf-symbol name='usb_hcd_is_primary_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x197b74f2'/>
-      <elf-symbol name='usb_hcd_link_urb_to_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79a4bba1'/>
-      <elf-symbol name='usb_hcd_map_urb_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a3dd0cf'/>
+      <elf-symbol name='usb_hcd_is_primary_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c7d6aef'/>
+      <elf-symbol name='usb_hcd_link_urb_to_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9320c8ed'/>
+      <elf-symbol name='usb_hcd_map_urb_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15b9b5bb'/>
       <elf-symbol name='usb_hcd_pci_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3167cd8'/>
       <elf-symbol name='usb_hcd_pci_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95202662'/>
       <elf-symbol name='usb_hcd_pci_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbdbfce5'/>
       <elf-symbol name='usb_hcd_platform_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0ce6ad2'/>
-      <elf-symbol name='usb_hcd_poll_rh_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8ecd416f'/>
-      <elf-symbol name='usb_hcd_resume_root_hub' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0e4e735'/>
-      <elf-symbol name='usb_hcd_setup_local_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa8bedc8'/>
-      <elf-symbol name='usb_hcd_start_port_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d62eced'/>
-      <elf-symbol name='usb_hcd_unlink_urb_from_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42677d92'/>
-      <elf-symbol name='usb_hcd_unmap_urb_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7d9d943'/>
-      <elf-symbol name='usb_hcd_unmap_urb_setup_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8eb28771'/>
-      <elf-symbol name='usb_hub_claim_port' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xebd326f9'/>
-      <elf-symbol name='usb_hub_clear_tt_buffer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57560a1e'/>
-      <elf-symbol name='usb_hub_find_child' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7debc079'/>
-      <elf-symbol name='usb_hub_release_port' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x80708c29'/>
-      <elf-symbol name='usb_ifnum_to_if' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdeef2762'/>
-      <elf-symbol name='usb_init_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x758a85ad'/>
+      <elf-symbol name='usb_hcd_poll_rh_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6348ea60'/>
+      <elf-symbol name='usb_hcd_resume_root_hub' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd04d9b3'/>
+      <elf-symbol name='usb_hcd_setup_local_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e72ae0b'/>
+      <elf-symbol name='usb_hcd_start_port_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88956590'/>
+      <elf-symbol name='usb_hcd_unlink_urb_from_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe9be3b64'/>
+      <elf-symbol name='usb_hcd_unmap_urb_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x693a36d7'/>
+      <elf-symbol name='usb_hcd_unmap_urb_setup_for_dma' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe05e0c83'/>
+      <elf-symbol name='usb_hub_claim_port' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf800266d'/>
+      <elf-symbol name='usb_hub_clear_tt_buffer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f31ca80'/>
+      <elf-symbol name='usb_hub_find_child' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa1f0e3fe'/>
+      <elf-symbol name='usb_hub_release_port' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3ff34de7'/>
+      <elf-symbol name='usb_ifnum_to_if' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdad311a9'/>
+      <elf-symbol name='usb_init_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x20f7aa1c'/>
       <elf-symbol name='usb_interface_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x664fae66'/>
-      <elf-symbol name='usb_interrupt_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa5d5f82c'/>
+      <elf-symbol name='usb_interrupt_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcce3ebe9'/>
       <elf-symbol name='usb_kill_anchored_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x962c8ae1'/>
-      <elf-symbol name='usb_kill_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2db16b9e'/>
-      <elf-symbol name='usb_lock_device_for_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf19e7692'/>
+      <elf-symbol name='usb_kill_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb013da50'/>
+      <elf-symbol name='usb_lock_device_for_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf86b33fd'/>
       <elf-symbol name='usb_match_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x719171fc'/>
       <elf-symbol name='usb_match_one_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79f59031'/>
       <elf-symbol name='usb_of_get_companion_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8422ddcb'/>
-      <elf-symbol name='usb_of_get_device_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4a2091f'/>
-      <elf-symbol name='usb_of_get_interface_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2faecf28'/>
-      <elf-symbol name='usb_of_has_combined_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9ef7595d'/>
+      <elf-symbol name='usb_of_get_device_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa6f6a570'/>
+      <elf-symbol name='usb_of_get_interface_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5fe3a0ce'/>
+      <elf-symbol name='usb_of_has_combined_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf12c0c4b'/>
       <elf-symbol name='usb_os_desc_prepare_interf_dir' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x762c2ad2'/>
       <elf-symbol name='usb_otg_descriptor_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x99390261'/>
       <elf-symbol name='usb_otg_descriptor_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9e641170'/>
       <elf-symbol name='usb_otg_state_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f0d9053'/>
-      <elf-symbol name='usb_phy_gen_create_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95266334'/>
+      <elf-symbol name='usb_phy_gen_create_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2146932'/>
       <elf-symbol name='usb_phy_generic_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb489d657'/>
       <elf-symbol name='usb_phy_generic_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc59b2033'/>
       <elf-symbol name='usb_phy_get_charger_current' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb961557e'/>
@@ -12463,11 +12463,11 @@
       <elf-symbol name='usb_phy_set_charger_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81e3439a'/>
       <elf-symbol name='usb_phy_set_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xca7745b7'/>
       <elf-symbol name='usb_poison_anchored_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x842f046d'/>
-      <elf-symbol name='usb_poison_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd34ad895'/>
-      <elf-symbol name='usb_put_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a4b0929'/>
+      <elf-symbol name='usb_poison_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0c5ac35'/>
+      <elf-symbol name='usb_put_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeba36056'/>
       <elf-symbol name='usb_put_function' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfbda81c2'/>
       <elf-symbol name='usb_put_function_instance' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8468efb8'/>
-      <elf-symbol name='usb_put_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x283c5488'/>
+      <elf-symbol name='usb_put_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2f5b79f'/>
       <elf-symbol name='usb_put_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2ac070a3'/>
       <elf-symbol name='usb_put_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8dab7e6d'/>
       <elf-symbol name='usb_qdss_alloc_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xec57bf2e'/>
@@ -12477,115 +12477,115 @@
       <elf-symbol name='usb_qdss_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2600d2a7'/>
       <elf-symbol name='usb_queue_reset_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7f3ebcff'/>
       <elf-symbol name='usb_register_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1915c4a1'/>
-      <elf-symbol name='usb_register_device_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe9133a92'/>
+      <elf-symbol name='usb_register_device_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x497ba786'/>
       <elf-symbol name='usb_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x396b4887'/>
       <elf-symbol name='usb_register_notify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x89bbafc6'/>
       <elf-symbol name='usb_remove_function' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46b350d2'/>
-      <elf-symbol name='usb_remove_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc8fa410e'/>
+      <elf-symbol name='usb_remove_hcd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6708d5a2'/>
       <elf-symbol name='usb_remove_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc231a74e'/>
-      <elf-symbol name='usb_reset_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81846b9a'/>
-      <elf-symbol name='usb_reset_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbac6550b'/>
-      <elf-symbol name='usb_reset_endpoint' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a40bef'/>
+      <elf-symbol name='usb_reset_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa6fbaf2'/>
+      <elf-symbol name='usb_reset_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdfb2d634'/>
+      <elf-symbol name='usb_reset_endpoint' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x55a6f99b'/>
       <elf-symbol name='usb_role_switch_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab6365e8'/>
       <elf-symbol name='usb_role_switch_get_role' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xff42c374'/>
       <elf-symbol name='usb_role_switch_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc9fd634a'/>
       <elf-symbol name='usb_role_switch_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd5fbd70e'/>
       <elf-symbol name='usb_role_switch_set_role' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd5474690'/>
       <elf-symbol name='usb_role_switch_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2882d40e'/>
-      <elf-symbol name='usb_root_hub_lost_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70e3ac03'/>
+      <elf-symbol name='usb_root_hub_lost_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa5c7ab49'/>
       <elf-symbol name='usb_scuttle_anchored_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x807766ea'/>
-      <elf-symbol name='usb_set_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x475cf0b6'/>
-      <elf-symbol name='usb_set_device_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc6059b3a'/>
-      <elf-symbol name='usb_set_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1707a513'/>
-      <elf-symbol name='usb_sg_cancel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4eaefbd2'/>
-      <elf-symbol name='usb_sg_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf3a5767e'/>
-      <elf-symbol name='usb_sg_wait' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xff9deeb8'/>
+      <elf-symbol name='usb_set_configuration' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde615734'/>
+      <elf-symbol name='usb_set_device_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8377f6f6'/>
+      <elf-symbol name='usb_set_interface' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31d17014'/>
+      <elf-symbol name='usb_sg_cancel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8bcaed20'/>
+      <elf-symbol name='usb_sg_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9cd6e220'/>
+      <elf-symbol name='usb_sg_wait' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9de80618'/>
       <elf-symbol name='usb_show_dynids' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc17e9946'/>
       <elf-symbol name='usb_speed_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x77ae495d'/>
       <elf-symbol name='usb_state_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4de17ab3'/>
-      <elf-symbol name='usb_stor_Bulk_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x328328ee'/>
-      <elf-symbol name='usb_stor_Bulk_transport' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x40f40d3d'/>
-      <elf-symbol name='usb_stor_CB_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x310f78c5'/>
-      <elf-symbol name='usb_stor_CB_transport' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x82829e18'/>
+      <elf-symbol name='usb_stor_Bulk_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x67f326ea'/>
+      <elf-symbol name='usb_stor_Bulk_transport' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd3abdc9'/>
+      <elf-symbol name='usb_stor_CB_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3ba13173'/>
+      <elf-symbol name='usb_stor_CB_transport' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe08170f4'/>
       <elf-symbol name='usb_stor_access_xfer_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a1862ef'/>
-      <elf-symbol name='usb_stor_adjust_quirks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64df4450'/>
-      <elf-symbol name='usb_stor_bulk_srb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9f2ec785'/>
-      <elf-symbol name='usb_stor_bulk_transfer_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16daa5a0'/>
-      <elf-symbol name='usb_stor_bulk_transfer_sg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x80ea4eb0'/>
-      <elf-symbol name='usb_stor_clear_halt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66e914e0'/>
-      <elf-symbol name='usb_stor_control_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9aece01'/>
-      <elf-symbol name='usb_stor_ctrl_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdcd34830'/>
+      <elf-symbol name='usb_stor_adjust_quirks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x43fcc3d1'/>
+      <elf-symbol name='usb_stor_bulk_srb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0b9447d'/>
+      <elf-symbol name='usb_stor_bulk_transfer_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc70017f3'/>
+      <elf-symbol name='usb_stor_bulk_transfer_sg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xacbb8d52'/>
+      <elf-symbol name='usb_stor_clear_halt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc9317a6e'/>
+      <elf-symbol name='usb_stor_control_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1e09736'/>
+      <elf-symbol name='usb_stor_ctrl_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2d83667'/>
       <elf-symbol name='usb_stor_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8bfd629a'/>
       <elf-symbol name='usb_stor_host_template_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2e66265'/>
       <elf-symbol name='usb_stor_post_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbf86be0c'/>
       <elf-symbol name='usb_stor_pre_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4807ae39'/>
-      <elf-symbol name='usb_stor_probe1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd25f02fe'/>
-      <elf-symbol name='usb_stor_probe2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcd75ec48'/>
+      <elf-symbol name='usb_stor_probe1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29a747b4'/>
+      <elf-symbol name='usb_stor_probe2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7f0ba3b3'/>
       <elf-symbol name='usb_stor_reset_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4cd0594'/>
       <elf-symbol name='usb_stor_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xec512c0f'/>
       <elf-symbol name='usb_stor_set_xfer_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8732ae22'/>
       <elf-symbol name='usb_stor_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1304788b'/>
-      <elf-symbol name='usb_stor_transparent_scsi_command' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4a1d138'/>
+      <elf-symbol name='usb_stor_transparent_scsi_command' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8c39dc7b'/>
       <elf-symbol name='usb_store_new_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf52a2c94'/>
-      <elf-symbol name='usb_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1cbf5133'/>
+      <elf-symbol name='usb_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7a0cbfc2'/>
       <elf-symbol name='usb_string_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda236f2b'/>
       <elf-symbol name='usb_string_ids_n' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5237a5ef'/>
       <elf-symbol name='usb_string_ids_tab' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3d1f57b'/>
-      <elf-symbol name='usb_submit_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa857458'/>
+      <elf-symbol name='usb_submit_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd014d543'/>
       <elf-symbol name='usb_udc_vbus_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2d6d0fd'/>
-      <elf-symbol name='usb_unanchor_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf4c0d194'/>
+      <elf-symbol name='usb_unanchor_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc3fff476'/>
       <elf-symbol name='usb_unlink_anchored_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x933f75e0'/>
-      <elf-symbol name='usb_unlink_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfef33f29'/>
-      <elf-symbol name='usb_unlocked_disable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7e90a23b'/>
-      <elf-symbol name='usb_unlocked_enable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9740798'/>
+      <elf-symbol name='usb_unlink_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4658197c'/>
+      <elf-symbol name='usb_unlocked_disable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2e3b4da7'/>
+      <elf-symbol name='usb_unlocked_enable_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8fbb51d9'/>
       <elf-symbol name='usb_unpoison_anchored_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x86b13d2a'/>
-      <elf-symbol name='usb_unpoison_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x391d4366'/>
+      <elf-symbol name='usb_unpoison_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaf5ca804'/>
       <elf-symbol name='usb_unregister_notify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x811dc334'/>
-      <elf-symbol name='usb_urb_ep_type_check' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4345163a'/>
+      <elf-symbol name='usb_urb_ep_type_check' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd56e1bf7'/>
       <elf-symbol name='usb_wait_anchor_empty_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x407af304'/>
-      <elf-symbol name='usb_wakeup_enabled_descendants' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7f83214b'/>
-      <elf-symbol name='usb_wakeup_notification' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2ac12d6'/>
-      <elf-symbol name='usbnet_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95d6f628'/>
-      <elf-symbol name='usbnet_cdc_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x114309af'/>
-      <elf-symbol name='usbnet_cdc_unbind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdf74749'/>
+      <elf-symbol name='usb_wakeup_enabled_descendants' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xece4065b'/>
+      <elf-symbol name='usb_wakeup_notification' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2011302f'/>
+      <elf-symbol name='usbnet_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72853985'/>
+      <elf-symbol name='usbnet_cdc_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaac692a2'/>
+      <elf-symbol name='usbnet_cdc_unbind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15ad3c30'/>
       <elf-symbol name='usbnet_change_mtu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7996167e'/>
-      <elf-symbol name='usbnet_defer_kevent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7eb7ffb'/>
-      <elf-symbol name='usbnet_device_suggests_idle' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2543561'/>
+      <elf-symbol name='usbnet_defer_kevent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf39ee4df'/>
+      <elf-symbol name='usbnet_device_suggests_idle' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7475e0bf'/>
       <elf-symbol name='usbnet_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3262158d'/>
-      <elf-symbol name='usbnet_ether_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc3a2505'/>
-      <elf-symbol name='usbnet_generic_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfc837bad'/>
+      <elf-symbol name='usbnet_ether_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0285484'/>
+      <elf-symbol name='usbnet_generic_cdc_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x34f6095c'/>
       <elf-symbol name='usbnet_get_drvinfo' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3802b860'/>
-      <elf-symbol name='usbnet_get_endpoints' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7335ed'/>
-      <elf-symbol name='usbnet_get_ethernet_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7492a188'/>
+      <elf-symbol name='usbnet_get_endpoints' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x50a56836'/>
+      <elf-symbol name='usbnet_get_ethernet_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8fe312e4'/>
       <elf-symbol name='usbnet_get_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3f01952'/>
       <elf-symbol name='usbnet_get_link_ksettings' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd9ccb447'/>
       <elf-symbol name='usbnet_get_msglevel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4adc1c3e'/>
       <elf-symbol name='usbnet_get_stats64' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd77b7928'/>
-      <elf-symbol name='usbnet_link_change' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc90df26'/>
-      <elf-symbol name='usbnet_manage_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6da40205'/>
+      <elf-symbol name='usbnet_link_change' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1580d49'/>
+      <elf-symbol name='usbnet_manage_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3c4eb8'/>
       <elf-symbol name='usbnet_nway_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x77ebb58b'/>
       <elf-symbol name='usbnet_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc3a35f93'/>
-      <elf-symbol name='usbnet_pause_rx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x887f23f3'/>
+      <elf-symbol name='usbnet_pause_rx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe333c66'/>
       <elf-symbol name='usbnet_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb8933964'/>
-      <elf-symbol name='usbnet_purge_paused_rxq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a863ce4'/>
-      <elf-symbol name='usbnet_read_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaf0f486f'/>
-      <elf-symbol name='usbnet_read_cmd_nopm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66a0c39'/>
+      <elf-symbol name='usbnet_purge_paused_rxq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x65af9c65'/>
+      <elf-symbol name='usbnet_read_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd069e15f'/>
+      <elf-symbol name='usbnet_read_cmd_nopm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd61c55d4'/>
       <elf-symbol name='usbnet_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x710d4542'/>
-      <elf-symbol name='usbnet_resume_rx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeac3d844'/>
+      <elf-symbol name='usbnet_resume_rx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1a778a6'/>
       <elf-symbol name='usbnet_set_link_ksettings' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31724dce'/>
       <elf-symbol name='usbnet_set_msglevel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa72174bf'/>
-      <elf-symbol name='usbnet_skb_return' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd7ea06e0'/>
+      <elf-symbol name='usbnet_skb_return' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x94ebc379'/>
       <elf-symbol name='usbnet_start_xmit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x172ec320'/>
-      <elf-symbol name='usbnet_status_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16eb0432'/>
-      <elf-symbol name='usbnet_status_stop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xffd52cea'/>
+      <elf-symbol name='usbnet_status_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa5b8186f'/>
+      <elf-symbol name='usbnet_status_stop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x80aa3799'/>
       <elf-symbol name='usbnet_stop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x272c0e74'/>
       <elf-symbol name='usbnet_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd546b1ba'/>
       <elf-symbol name='usbnet_tx_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb43471c2'/>
-      <elf-symbol name='usbnet_unlink_rx_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81fc0884'/>
-      <elf-symbol name='usbnet_update_max_qlen' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c9937ba'/>
-      <elf-symbol name='usbnet_write_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x56582e99'/>
-      <elf-symbol name='usbnet_write_cmd_async' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91da2330'/>
-      <elf-symbol name='usbnet_write_cmd_nopm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0e80fd9'/>
+      <elf-symbol name='usbnet_unlink_rx_urbs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x324cf7c3'/>
+      <elf-symbol name='usbnet_update_max_qlen' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x875edda7'/>
+      <elf-symbol name='usbnet_write_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42650cc1'/>
+      <elf-symbol name='usbnet_write_cmd_async' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1c087549'/>
+      <elf-symbol name='usbnet_write_cmd_nopm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcb873373'/>
       <elf-symbol name='use_mm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31535c5f'/>
       <elf-symbol name='user_describe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7a06ecd4'/>
       <elf-symbol name='user_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fd2afe5'/>
@@ -13341,26 +13341,26 @@
       <elf-symbol name='xfrm_unregister_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd5adc74'/>
       <elf-symbol name='xfrm_unregister_type_offload' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36890626'/>
       <elf-symbol name='xfrm_user_policy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda9477ba'/>
-      <elf-symbol name='xhci_dbg_trace' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6bb49fc'/>
-      <elf-symbol name='xhci_ext_cap_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbaa3c6a9'/>
-      <elf-symbol name='xhci_gen_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92240cc4'/>
-      <elf-symbol name='xhci_get_sec_event_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1922c33c'/>
-      <elf-symbol name='xhci_get_xfer_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1b0395ac'/>
-      <elf-symbol name='xhci_init_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe85a80ac'/>
+      <elf-symbol name='xhci_dbg_trace' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x17901a70'/>
+      <elf-symbol name='xhci_ext_cap_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3dda8ca4'/>
+      <elf-symbol name='xhci_gen_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b201f9'/>
+      <elf-symbol name='xhci_get_sec_event_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66ddc8fb'/>
+      <elf-symbol name='xhci_get_xfer_ring_phys_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e3a1ca6'/>
+      <elf-symbol name='xhci_init_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2dc4a73'/>
       <elf-symbol name='xhci_pci_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51df46a5'/>
       <elf-symbol name='xhci_pci_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb81c6396'/>
-      <elf-symbol name='xhci_pci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdce257fc'/>
-      <elf-symbol name='xhci_pci_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb36fa4e0'/>
-      <elf-symbol name='xhci_pci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4840993'/>
-      <elf-symbol name='xhci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b92b6b6'/>
-      <elf-symbol name='xhci_run' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x407ffa09'/>
-      <elf-symbol name='xhci_sec_event_ring_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8d003fbc'/>
-      <elf-symbol name='xhci_sec_event_ring_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x27f5a377'/>
-      <elf-symbol name='xhci_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f43007b'/>
-      <elf-symbol name='xhci_stop_endpoint' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb6b54acf'/>
-      <elf-symbol name='xhci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2cbeae5'/>
+      <elf-symbol name='xhci_pci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64f0bf99'/>
+      <elf-symbol name='xhci_pci_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64475a03'/>
+      <elf-symbol name='xhci_pci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x76b6413a'/>
+      <elf-symbol name='xhci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6cf5b1a8'/>
+      <elf-symbol name='xhci_run' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f04d0ad'/>
+      <elf-symbol name='xhci_sec_event_ring_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5cb46561'/>
+      <elf-symbol name='xhci_sec_event_ring_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x21b31084'/>
+      <elf-symbol name='xhci_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa748b4c'/>
+      <elf-symbol name='xhci_stop_endpoint' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3214117f'/>
+      <elf-symbol name='xhci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7df8981e'/>
       <elf-symbol name='xiaomi_touch_set_suspend_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88aaf668'/>
-      <elf-symbol name='xiaomitouch_register_modedata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2af64a2'/>
+      <elf-symbol name='xiaomitouch_register_modedata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33c26789'/>
       <elf-symbol name='xlogchar_kwrite' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1f6bc0f'/>
       <elf-symbol name='xsk_clear_rx_need_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x53c79d3a'/>
       <elf-symbol name='xsk_clear_tx_need_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d8ddd13'/>
