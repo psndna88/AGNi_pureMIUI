@@ -3850,7 +3850,6 @@ static int voice_map_cal_memory(struct cal_block_data *cal_block,
 		goto done;
 	}
 
-	mutex_lock(&common.common_lock);
 	v = &common.voice[voc_index];
 
 	result = voice_map_memory_physical_cmd(v,
@@ -3864,12 +3863,10 @@ static int voice_map_cal_memory(struct cal_block_data *cal_block,
 			&cal_block->cal_data.paddr,
 			cal_block->map_data.map_size);
 
-		goto done_unlock;
+		goto done;
 	}
 
 	cal_block->map_data.q6map_handle = common.cal_mem_handle;
-done_unlock:
-	mutex_unlock(&common.common_lock);
 done:
 	return result;
 }
