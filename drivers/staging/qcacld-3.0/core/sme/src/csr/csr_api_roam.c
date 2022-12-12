@@ -21017,17 +21017,21 @@ static bool csr_is_sae_single_pmk_vsie_ap(struct bss_description *bss_des)
  * @mac_ctx: mac context
  * @session: Session
  * @vdev_id: session id
+ * @psk_pmk: pmk of roamed AP
+ * @pmk_len: pmk length
  *
  * Return: True if same pmk IE is present
  */
 static void
 csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 				     struct csr_roam_session *session,
-				     uint8_t vdev_id)
+				     uint8_t vdev_id, uint8_t *psk_pmk,
+				     uint8_t pmk_len)
 {
 	struct wlan_objmgr_vdev *vdev;
 	struct mlme_pmk_info *pmk_info;
 	tPmkidCacheInfo *pmkid_cache;
+	struct wlan_crypto_pmksa *roam_sync_pmksa;
 	int32_t keymgmt;
 	bool val, lookup_success;
 
@@ -21052,9 +21056,28 @@ csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 		if (!val)
 			goto end;
 
-		wlan_crypto_set_sae_single_pmk_bss_cap(vdev,
-		   (struct qdf_mac_addr *)session->pConnectBssDesc->bssId,
-		   true);
+		roam_sync_pmksa = qdf_mem_malloc(sizeof(*roam_sync_pmksa));
+		if (roam_sync_pmksa) {
+			qdf_copy_macaddr(&roam_sync_pmksa->bssid,
+					 (struct qdf_mac_addr *)
+					 &session->pConnectBssDesc->bssId);
+			roam_sync_pmksa->single_pmk_supported = true;
+			roam_sync_pmksa->pmk_len = pmk_len;
+			qdf_mem_copy(roam_sync_pmksa->pmk, psk_pmk,
+				     roam_sync_pmksa->pmk_len);
+			sme_debug("SPMK received for " QDF_MAC_ADDR_FMT
+				  "pmk_len:%d", QDF_MAC_ADDR_REF(
+				  roam_sync_pmksa->bssid.bytes),
+				  roam_sync_pmksa->pmk_len);
+			/* update single pmk info for roamed ap to pmk table */
+			wlan_crypto_set_sae_single_pmk_info(vdev,
+							    roam_sync_pmksa);
+
+			qdf_mem_zero(roam_sync_pmksa, sizeof(*roam_sync_pmksa));
+			qdf_mem_free(roam_sync_pmksa);
+		} else {
+			goto end;
+		}
 
 		pmkid_cache = qdf_mem_malloc(sizeof(*pmkid_cache));
 		if (!pmkid_cache)
@@ -21107,7 +21130,8 @@ end:
 static inline void
 csr_check_and_set_sae_single_pmk_cap(struct mac_context *mac_ctx,
 				     struct csr_roam_session *session,
-				     uint8_t vdev_id)
+				     uint8_t vdev_id, uint8_t *psk_pmk,
+				     uint8_t pmk_len)
 {
 }
 #endif
@@ -21330,8 +21354,12 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 			mac_ctx->psoc);
 		mac_ctx->sme.set_connection_info_cb(false);
 
-		csr_check_and_set_sae_single_pmk_cap(mac_ctx, session,
-						     session_id);
+		if (roam_synch_data->pmk_len)
+			csr_check_and_set_sae_single_pmk_cap(
+						mac_ctx, session,
+						session_id,
+						roam_synch_data->pmk,
+						roam_synch_data->pmk_len);
 
 		if (ucfg_pkt_capture_get_pktcap_mode(mac_ctx->psoc))
 			ucfg_pkt_capture_record_channel(vdev);
