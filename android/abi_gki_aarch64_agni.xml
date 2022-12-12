@@ -1928,8 +1928,10 @@
       <elf-symbol name='cnss_remove_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57998018'/>
       <elf-symbol name='cnss_request_bus_bandwidth' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95adfc06'/>
       <elf-symbol name='cnss_request_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x12e1d860'/>
+      <elf-symbol name='cnss_reset_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xceaa50d5'/>
       <elf-symbol name='cnss_schedule_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16b59a6e'/>
       <elf-symbol name='cnss_self_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8f20336b'/>
+      <elf-symbol name='cnss_send_buffer_to_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a1ac106'/>
       <elf-symbol name='cnss_set_fw_log_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5a02c67a'/>
       <elf-symbol name='cnss_set_pcie_gen_speed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa0b82d26'/>
       <elf-symbol name='cnss_smmu_get_domain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdbc88615'/>
@@ -5956,13 +5958,13 @@
       <elf-symbol name='ip_tunnel_xmit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14bef679'/>
       <elf-symbol name='ip_valid_fib_dump_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51872a10'/>
       <elf-symbol name='ipa3_add_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd487e0cb'/>
-      <elf-symbol name='ipa3_cfg_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22149a27'/>
+      <elf-symbol name='ipa3_cfg_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x87a9e0c3'/>
       <elf-symbol name='ipa3_cfg_ep_holb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5844bbaf'/>
-      <elf-symbol name='ipa3_conn_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52f7a96a'/>
-      <elf-symbol name='ipa3_conn_wigig_client_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1c606712'/>
-      <elf-symbol name='ipa3_conn_wigig_rx_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5f15f6a6'/>
-      <elf-symbol name='ipa3_connect_mhi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc081b71a'/>
-      <elf-symbol name='ipa3_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7a534802'/>
+      <elf-symbol name='ipa3_conn_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xabf0c156'/>
+      <elf-symbol name='ipa3_conn_wigig_client_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6f32f65'/>
+      <elf-symbol name='ipa3_conn_wigig_rx_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda8d802d'/>
+      <elf-symbol name='ipa3_connect_mhi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33646620'/>
+      <elf-symbol name='ipa3_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb31c64a3'/>
       <elf-symbol name='ipa3_create_wdi_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe523d4f1'/>
       <elf-symbol name='ipa3_dec_client_disable_clks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab40656a'/>
       <elf-symbol name='ipa3_del_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3c5262f'/>
@@ -5970,17 +5972,17 @@
       <elf-symbol name='ipa3_deregister_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x50a32f74'/>
       <elf-symbol name='ipa3_disable_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x263d3f4'/>
       <elf-symbol name='ipa3_disable_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf007b95e'/>
-      <elf-symbol name='ipa3_disable_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde79a9e1'/>
+      <elf-symbol name='ipa3_disable_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd75f30d3'/>
       <elf-symbol name='ipa3_disconn_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x926a6ac0'/>
-      <elf-symbol name='ipa3_disconn_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b8f0901'/>
+      <elf-symbol name='ipa3_disconn_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46aa9572'/>
       <elf-symbol name='ipa3_disconnect_mhi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa27ddee'/>
       <elf-symbol name='ipa3_disconnect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x721a5798'/>
       <elf-symbol name='ipa3_enable_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x84543673'/>
       <elf-symbol name='ipa3_enable_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb34ab24f'/>
-      <elf-symbol name='ipa3_enable_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1ed9be04'/>
+      <elf-symbol name='ipa3_enable_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeea0b212'/>
       <elf-symbol name='ipa3_get_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x829f670e'/>
-      <elf-symbol name='ipa3_get_client_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x390a0486'/>
-      <elf-symbol name='ipa3_get_ctx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc41ec368'/>
+      <elf-symbol name='ipa3_get_client_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd2cdde7'/>
+      <elf-symbol name='ipa3_get_ctx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaee0741f'/>
       <elf-symbol name='ipa3_get_dma_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x659ffaf0'/>
       <elf-symbol name='ipa3_get_ipc_logbuf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x953f0af'/>
       <elf-symbol name='ipa3_get_ipc_logbuf_low' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f3d094e'/>
@@ -5988,16 +5990,16 @@
       <elf-symbol name='ipa3_get_smmu_params' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f5f007b'/>
       <elf-symbol name='ipa3_get_transport_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x331d8d9a'/>
       <elf-symbol name='ipa3_get_transport_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7d5693fe'/>
-      <elf-symbol name='ipa3_has_open_aggr_frame' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bab0146'/>
+      <elf-symbol name='ipa3_has_open_aggr_frame' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc91b8e3a'/>
       <elf-symbol name='ipa3_inc_client_enable_clks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf42314fd'/>
       <elf-symbol name='ipa3_inc_client_enable_clks_no_block' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4b4aced0'/>
       <elf-symbol name='ipa3_is_client_handle_valid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc9206433'/>
-      <elf-symbol name='ipa3_mhi_destroy_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb04e76d5'/>
+      <elf-symbol name='ipa3_mhi_destroy_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x151bc714'/>
       <elf-symbol name='ipa3_mhi_init_engine' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x802f6841'/>
-      <elf-symbol name='ipa3_mhi_query_ch_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa461d1'/>
-      <elf-symbol name='ipa3_mhi_reset_channel_internal' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c6bc80b'/>
-      <elf-symbol name='ipa3_mhi_resume_channels_internal' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70aa85f'/>
-      <elf-symbol name='ipa3_mhi_stop_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x169677c7'/>
+      <elf-symbol name='ipa3_mhi_query_ch_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb351ca05'/>
+      <elf-symbol name='ipa3_mhi_reset_channel_internal' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x370c33d3'/>
+      <elf-symbol name='ipa3_mhi_resume_channels_internal' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5329ead7'/>
+      <elf-symbol name='ipa3_mhi_stop_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbcf806b7'/>
       <elf-symbol name='ipa3_notify_clients_registered' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcbdd873b'/>
       <elf-symbol name='ipa3_ntn_uc_dereg_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9637cedf'/>
       <elf-symbol name='ipa3_ntn_uc_reg_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31fd7f74'/>
@@ -6005,10 +6007,10 @@
       <elf-symbol name='ipa3_qmi_disable_force_clear_datapath_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3418a115'/>
       <elf-symbol name='ipa3_qmi_enable_force_clear_datapath_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x19499b6b'/>
       <elf-symbol name='ipa3_register_client_callback' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8079ce3a'/>
-      <elf-symbol name='ipa3_register_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe65ad4f0'/>
+      <elf-symbol name='ipa3_register_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa2c2c984'/>
       <elf-symbol name='ipa3_release_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x561252c5'/>
       <elf-symbol name='ipa3_release_wdi_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x53b67637'/>
-      <elf-symbol name='ipa3_request_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1454bdde'/>
+      <elf-symbol name='ipa3_request_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92e8a5d'/>
       <elf-symbol name='ipa3_reset_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x11708ab6'/>
       <elf-symbol name='ipa3_reset_gsi_event_ring' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x56880c3c'/>
       <elf-symbol name='ipa3_resume_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa009fcaf'/>
@@ -6016,16 +6018,16 @@
       <elf-symbol name='ipa3_set_tag_process_before_gating' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x529f18ea'/>
       <elf-symbol name='ipa3_set_usb_max_packet_size' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe962490e'/>
       <elf-symbol name='ipa3_set_wlan_tx_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x23574aed'/>
-      <elf-symbol name='ipa3_setup_uc_ntn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x788540c2'/>
+      <elf-symbol name='ipa3_setup_uc_ntn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7354464e'/>
       <elf-symbol name='ipa3_smmu_map_peer_buff' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa9093464'/>
       <elf-symbol name='ipa3_smmu_map_peer_reg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2d84a20'/>
       <elf-symbol name='ipa3_start_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15d21684'/>
       <elf-symbol name='ipa3_stop_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x68706d71'/>
       <elf-symbol name='ipa3_suspend_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe04fe07'/>
-      <elf-symbol name='ipa3_tear_down_uc_offload_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f2bcee8'/>
-      <elf-symbol name='ipa3_teth_bridge_connect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x32f83732'/>
-      <elf-symbol name='ipa3_teth_bridge_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15439518'/>
-      <elf-symbol name='ipa3_teth_bridge_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa866e493'/>
+      <elf-symbol name='ipa3_tear_down_uc_offload_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x65750bd2'/>
+      <elf-symbol name='ipa3_teth_bridge_connect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42dba7c3'/>
+      <elf-symbol name='ipa3_teth_bridge_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7b600622'/>
+      <elf-symbol name='ipa3_teth_bridge_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd3eab59f'/>
       <elf-symbol name='ipa3_uc_dereg_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7473712c'/>
       <elf-symbol name='ipa3_uc_holb_enabled_check' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5d422272'/>
       <elf-symbol name='ipa3_uc_loaded_check' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x849793f5'/>
@@ -6043,7 +6045,7 @@
       <elf-symbol name='ipa3_xdci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdcfb1eb1'/>
       <elf-symbol name='ipa_add_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3e28ea62'/>
       <elf-symbol name='ipa_add_interrupt_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9caeb540'/>
-      <elf-symbol name='ipa_add_rt_rule' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x77d5c713'/>
+      <elf-symbol name='ipa_add_rt_rule' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8e2cbdc'/>
       <elf-symbol name='ipa_add_socksv5_conn' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xafa78c3'/>
       <elf-symbol name='ipa_assert' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc973d1d2'/>
       <elf-symbol name='ipa_bridge_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x25357f8b'/>
@@ -6056,7 +6058,7 @@
       <elf-symbol name='ipa_bridge_tx_dp' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5cd20d07'/>
       <elf-symbol name='ipa_broadcast_wdi_quota_reach_ind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbf3a24d9'/>
       <elf-symbol name='ipa_cfg_ep_ctrl' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3aa05516'/>
-      <elf-symbol name='ipa_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1a01351d'/>
+      <elf-symbol name='ipa_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xebe1420b'/>
       <elf-symbol name='ipa_del_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x907da86d'/>
       <elf-symbol name='ipa_del_socksv5_conn' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x158cd3dc'/>
       <elf-symbol name='ipa_dereg_uc_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc65a2054'/>
@@ -6076,22 +6078,22 @@
       <elf-symbol name='ipa_eth_client_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1b8f4e63'/>
       <elf-symbol name='ipa_eth_client_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x30da97ca'/>
       <elf-symbol name='ipa_eth_client_unreg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x813ad6f0'/>
-      <elf-symbol name='ipa_eth_get_ipa_client_type_from_eth_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x381f2bb4'/>
+      <elf-symbol name='ipa_eth_get_ipa_client_type_from_eth_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xee5c8b96'/>
       <elf-symbol name='ipa_eth_register_ready_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb18daef4'/>
       <elf-symbol name='ipa_eth_unregister_ready_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfff87208'/>
       <elf-symbol name='ipa_fmwk_register_gsb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x252a3b8b'/>
-      <elf-symbol name='ipa_fmwk_register_ipa' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x637c67be'/>
-      <elf-symbol name='ipa_fmwk_register_ipa_eth' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa31dc34c'/>
-      <elf-symbol name='ipa_fmwk_register_ipa_mhi' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2736a85'/>
+      <elf-symbol name='ipa_fmwk_register_ipa' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x24629d1a'/>
+      <elf-symbol name='ipa_fmwk_register_ipa_eth' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc379f9f0'/>
+      <elf-symbol name='ipa_fmwk_register_ipa_mhi' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0326a67'/>
       <elf-symbol name='ipa_fmwk_register_ipa_qdss' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb93f9cc4'/>
-      <elf-symbol name='ipa_fmwk_register_ipa_usb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed9b5079'/>
-      <elf-symbol name='ipa_fmwk_register_ipa_wdi3' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcb9c84cf'/>
-      <elf-symbol name='ipa_fmwk_register_ipa_wigig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88d5487c'/>
-      <elf-symbol name='ipa_fmwk_register_uc_offload' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf32198eb'/>
+      <elf-symbol name='ipa_fmwk_register_ipa_usb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2487b52'/>
+      <elf-symbol name='ipa_fmwk_register_ipa_wdi3' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xee1326c9'/>
+      <elf-symbol name='ipa_fmwk_register_ipa_wigig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae096b07'/>
+      <elf-symbol name='ipa_fmwk_register_uc_offload' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x368387e4'/>
       <elf-symbol name='ipa_free_skb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe987a2e5'/>
-      <elf-symbol name='ipa_get_default_aggr_time_limit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4b9e6f80'/>
-      <elf-symbol name='ipa_get_ep_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6077a56d'/>
-      <elf-symbol name='ipa_get_gsi_ep_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaca2fe8'/>
+      <elf-symbol name='ipa_get_default_aggr_time_limit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x32ac7b27'/>
+      <elf-symbol name='ipa_get_ep_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9dac3fb1'/>
+      <elf-symbol name='ipa_get_gsi_ep_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x43b9f443'/>
       <elf-symbol name='ipa_get_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81a660e'/>
       <elf-symbol name='ipa_get_hw_type' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c2ecd04'/>
       <elf-symbol name='ipa_get_lan_rx_napi' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x930dacc2'/>
@@ -6101,7 +6103,7 @@
       <elf-symbol name='ipa_get_wdi_version' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb282ba20'/>
       <elf-symbol name='ipa_is_ready' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4455296a'/>
       <elf-symbol name='ipa_is_vlan_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x481a78c6'/>
-      <elf-symbol name='ipa_mhi_connect_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x548422ea'/>
+      <elf-symbol name='ipa_mhi_connect_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xedd36785'/>
       <elf-symbol name='ipa_mhi_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf75fcf4'/>
       <elf-symbol name='ipa_mhi_disconnect_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7f9c72f'/>
       <elf-symbol name='ipa_mhi_handle_ipa_config_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a8cd956'/>
@@ -6113,7 +6115,7 @@
       <elf-symbol name='ipa_mhi_update_mstate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x503edb62'/>
       <elf-symbol name='ipa_pm_activate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x485e6c8f'/>
       <elf-symbol name='ipa_pm_activate_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f7f501d'/>
-      <elf-symbol name='ipa_pm_associate_ipa_cons_to_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57a00c87'/>
+      <elf-symbol name='ipa_pm_associate_ipa_cons_to_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x959e4ea'/>
       <elf-symbol name='ipa_pm_deactivate_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22d7510a'/>
       <elf-symbol name='ipa_pm_deferred_deactivate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe448ce4c'/>
       <elf-symbol name='ipa_pm_deregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8dee820e'/>
@@ -6123,7 +6125,7 @@
       <elf-symbol name='ipa_qdss_conn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6f160279'/>
       <elf-symbol name='ipa_qdss_disconn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb4607c13'/>
       <elf-symbol name='ipa_reg_uc_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9aa62a9e'/>
-      <elf-symbol name='ipa_register_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3526a70c'/>
+      <elf-symbol name='ipa_register_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1455c2c'/>
       <elf-symbol name='ipa_register_ipa_ready_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x23fed57a'/>
       <elf-symbol name='ipa_register_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x35aec98d'/>
       <elf-symbol name='ipa_register_rmnet_ctl_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9822a4af'/>
@@ -6134,39 +6136,39 @@
       <elf-symbol name='ipa_rmnet_ll_xmit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72b742'/>
       <elf-symbol name='ipa_send_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x804e397e'/>
       <elf-symbol name='ipa_set_aggr_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a1e6c46'/>
-      <elf-symbol name='ipa_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcabfcbbb'/>
+      <elf-symbol name='ipa_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95846bc8'/>
       <elf-symbol name='ipa_set_qcncm_ndp_sig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29c22e18'/>
       <elf-symbol name='ipa_set_single_ndp_per_mbim' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x636aefb1'/>
-      <elf-symbol name='ipa_setup_sys_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9f2c36f2'/>
+      <elf-symbol name='ipa_setup_sys_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed1be0ab'/>
       <elf-symbol name='ipa_smmu_free_sgt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x511f5eb9'/>
       <elf-symbol name='ipa_smmu_store_sgt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0f3d614'/>
       <elf-symbol name='ipa_stop_gsi_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72ad9241'/>
       <elf-symbol name='ipa_suspend_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14d90137'/>
       <elf-symbol name='ipa_teardown_sys_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae7fddf'/>
-      <elf-symbol name='ipa_tx_dp' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x809dabd1'/>
+      <elf-symbol name='ipa_tx_dp' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9f22f94d'/>
       <elf-symbol name='ipa_uc_bw_monitor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4c839de6'/>
       <elf-symbol name='ipa_uc_offload_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb37111b7'/>
-      <elf-symbol name='ipa_uc_offload_conn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33440d80'/>
+      <elf-symbol name='ipa_uc_offload_conn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6827aad6'/>
       <elf-symbol name='ipa_uc_offload_dereg_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29a08f30'/>
       <elf-symbol name='ipa_uc_offload_disconn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6f1df5'/>
-      <elf-symbol name='ipa_uc_offload_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x268e93fb'/>
+      <elf-symbol name='ipa_uc_offload_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda480cdb'/>
       <elf-symbol name='ipa_uc_offload_reg_rdyCB' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9a94b0e'/>
-      <elf-symbol name='ipa_uc_wdi_get_dbpa' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x12906fc6'/>
+      <elf-symbol name='ipa_uc_wdi_get_dbpa' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3ae4b116'/>
       <elf-symbol name='ipa_unregister_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x969d7ff3'/>
       <elf-symbol name='ipa_unregister_rmnet_ctl_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2750226d'/>
       <elf-symbol name='ipa_unregister_rmnet_ll_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x27d9976'/>
       <elf-symbol name='ipa_usb_deinit_teth_prot' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa80740ae'/>
       <elf-symbol name='ipa_usb_init_teth_prot' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46031a5c'/>
       <elf-symbol name='ipa_usb_is_teth_prot_connected' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfb7e71f9'/>
-      <elf-symbol name='ipa_usb_xdci_connect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x939d91d7'/>
+      <elf-symbol name='ipa_usb_xdci_connect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe53dddab'/>
       <elf-symbol name='ipa_usb_xdci_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9ad67b2d'/>
       <elf-symbol name='ipa_usb_xdci_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x17a5836e'/>
       <elf-symbol name='ipa_usb_xdci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1656ddc9'/>
       <elf-symbol name='ipa_wdi_bw_monitor' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x242b4ba9'/>
       <elf-symbol name='ipa_wdi_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9cd51f9b'/>
       <elf-symbol name='ipa_wdi_cleanup_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a46982c'/>
-      <elf-symbol name='ipa_wdi_conn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed39039d'/>
-      <elf-symbol name='ipa_wdi_conn_pipes_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3ef1c80'/>
+      <elf-symbol name='ipa_wdi_conn_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdc2629a3'/>
+      <elf-symbol name='ipa_wdi_conn_pipes_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6147f815'/>
       <elf-symbol name='ipa_wdi_create_smmu_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf72ac45'/>
       <elf-symbol name='ipa_wdi_create_smmu_mapping_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7b9ab77'/>
       <elf-symbol name='ipa_wdi_dereg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5cfec53d'/>
@@ -6182,31 +6184,31 @@
       <elf-symbol name='ipa_wdi_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x75e7bcdf'/>
       <elf-symbol name='ipa_wdi_init_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2dead9c'/>
       <elf-symbol name='ipa_wdi_is_tx1_used' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5692d8b4'/>
-      <elf-symbol name='ipa_wdi_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6f0ad823'/>
-      <elf-symbol name='ipa_wdi_reg_intf_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe20e96a1'/>
+      <elf-symbol name='ipa_wdi_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22290a11'/>
+      <elf-symbol name='ipa_wdi_reg_intf_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x498c7aa'/>
       <elf-symbol name='ipa_wdi_release_smmu_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6bceca2b'/>
       <elf-symbol name='ipa_wdi_release_smmu_mapping_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14c5afd7'/>
-      <elf-symbol name='ipa_wdi_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b62997c'/>
-      <elf-symbol name='ipa_wdi_set_perf_profile_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x97ffa03d'/>
+      <elf-symbol name='ipa_wdi_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc3cd0a21'/>
+      <elf-symbol name='ipa_wdi_set_perf_profile_per_inst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9ea26e65'/>
       <elf-symbol name='ipa_wdi_sw_stats' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8d86b61'/>
       <elf-symbol name='ipa_wigig_cleanup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa46a5758'/>
-      <elf-symbol name='ipa_wigig_conn_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7313809'/>
-      <elf-symbol name='ipa_wigig_conn_client_smmu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xebffee62'/>
-      <elf-symbol name='ipa_wigig_conn_rx_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c704832'/>
-      <elf-symbol name='ipa_wigig_conn_rx_pipe_smmu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51947c8f'/>
+      <elf-symbol name='ipa_wigig_conn_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8ce56f51'/>
+      <elf-symbol name='ipa_wigig_conn_client_smmu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x940c95f8'/>
+      <elf-symbol name='ipa_wigig_conn_rx_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a4a9bfc'/>
+      <elf-symbol name='ipa_wigig_conn_rx_pipe_smmu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8dbd31ed'/>
       <elf-symbol name='ipa_wigig_dereg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x282d8f9c'/>
-      <elf-symbol name='ipa_wigig_disable_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed12c7c5'/>
-      <elf-symbol name='ipa_wigig_disconn_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc28a1fdb'/>
-      <elf-symbol name='ipa_wigig_enable_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbbea7872'/>
+      <elf-symbol name='ipa_wigig_disable_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x11504e78'/>
+      <elf-symbol name='ipa_wigig_disconn_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1eb076'/>
+      <elf-symbol name='ipa_wigig_enable_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8471ed2b'/>
       <elf-symbol name='ipa_wigig_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe1cbead8'/>
       <elf-symbol name='ipa_wigig_is_smmu_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6cf0839'/>
       <elf-symbol name='ipa_wigig_reg_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x94321fe7'/>
       <elf-symbol name='ipa_wigig_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x55a285c2'/>
       <elf-symbol name='ipa_wigig_save_regs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe2b34d94'/>
-      <elf-symbol name='ipa_wigig_send_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8ada100'/>
+      <elf-symbol name='ipa_wigig_send_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc5cdd9f6'/>
       <elf-symbol name='ipa_wigig_send_wlan_msg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf22f760'/>
       <elf-symbol name='ipa_wigig_set_perf_profile' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfae5e88c'/>
-      <elf-symbol name='ipa_wigig_tx_dp' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa57b578'/>
+      <elf-symbol name='ipa_wigig_tx_dp' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd7a922df'/>
       <elf-symbol name='ipcomp_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1586dfa9'/>
       <elf-symbol name='ipcomp_init_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6575995b'/>
       <elf-symbol name='ipcomp_input' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x43d5a6cb'/>
@@ -13884,7 +13886,7 @@
       <elf-symbol name='ip_frag_ecn_table' size='16' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa8f6c843'/>
       <elf-symbol name='ip_tos2prio' size='16' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fbd16da'/>
       <elf-symbol name='ip_tunnel_metadata_cnt' size='16' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66628bf3'/>
-      <elf-symbol name='ipa_clients_strings' size='1008' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4228203b'/>
+      <elf-symbol name='ipa_clients_strings' size='1032' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4228203b'/>
       <elf-symbol name='iptun_encaps' size='64' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed6aff6d'/>
       <elf-symbol name='ipv4_specific' size='104' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde530b6f'/>
       <elf-symbol name='ipv6_bpf_stub' size='8' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2ba8e478'/>
