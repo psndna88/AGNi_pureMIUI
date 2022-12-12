@@ -212,9 +212,13 @@ const struct snd_soc_dapm_route tavil_audio_map[] = {
 	 */
 
 	/* Virtual input widgets */
-	{"AIF1 CAP", NULL, "AIF1_CAP Mixer"},
-	{"AIF2 CAP", NULL, "AIF2_CAP Mixer"},
-	{"AIF3 CAP", NULL, "AIF3_CAP Mixer"},
+	{"AIF1 CAP", NULL, "AIF1_CAP_MIX"},
+	{"AIF2 CAP", NULL, "AIF2_CAP_MIX"},
+	{"AIF3 CAP", NULL, "AIF3_CAP_MIX"},
+
+	{"AIF1_CAP_MIX", NULL, "AIF1_CAP Mixer"},
+	{"AIF2_CAP_MIX", NULL, "AIF2_CAP Mixer"},
+	{"AIF3_CAP_MIX", NULL, "AIF3_CAP Mixer"},
 
 	/* WDMA3 */
 	{"WDMA3 PORT0 MUX", "DEC0", "ADC MUX0"},
