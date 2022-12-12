@@ -37,6 +37,7 @@
 #include "wlan_utility.h"
 #include "wlan_osif_request_manager.h"
 #include "wlan_mlme_ucfg_api.h"
+#include "wlan_tdls_ucfg_api.h"
 
 #define NAN_CMD_MAX_SIZE 2048
 
@@ -2624,15 +2625,15 @@ int os_if_process_nan_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	}
 
 	/*
-	 * If target does not support NAN DBS, send request with type GENERIC.
-	 * These will be treated as passthrough by the driver. This is to make
-	 * sure that HW mode is not set to DBS by NAN Enable request. NAN state
-	 * machine will remain unaffected in this case.
+	 * If target does not support NAN DBS, stop the opportunistic timer.
+	 * Opportunistic timer gets triggered as soon as a DBS use case is
+	 * completed and hw_mode would be set to SMM when the timer(5 seconds)
+	 * expires.
+	 * This is to make sure that HW mode is not set to DBS by NAN Enable
+	 * request. NAN state machine will remain unaffected in this case.
 	 */
-	if (!NAN_CONCURRENCY_SUPPORTED(psoc)) {
+	if (!NAN_CONCURRENCY_SUPPORTED(psoc))
 		policy_mgr_check_and_stop_opportunistic_timer(psoc, vdev_id);
-		return os_if_nan_generic_req(psoc, tb);
-	}
 
 	/*
 	 * Send all requests other than Enable/Disable as type GENERIC.

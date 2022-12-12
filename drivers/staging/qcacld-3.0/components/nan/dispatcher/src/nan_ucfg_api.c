@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,6 +35,7 @@
 #include "cfg_nan.h"
 #include "wlan_mlme_api.h"
 #include "cfg_nan_api.h"
+#include "wlan_tdls_ucfg_api.h"
 
 struct wlan_objmgr_psoc;
 struct wlan_objmgr_vdev;
@@ -876,8 +877,16 @@ post_msg:
 			if (req_type == NAN_ENABLE_REQ) {
 				nan_set_discovery_state(psoc,
 							NAN_DISC_DISABLED);
-				policy_mgr_check_n_start_opportunistic_timer(
-									psoc);
+				if (ucfg_is_nan_dbs_supported(psoc))
+					policy_mgr_check_n_start_opportunistic_timer(psoc);
+
+				/*
+				 * If FW respond with NAN enable failure, then
+				 * TDLS should be enable again if there is TDLS
+				 * connection exist earlier.
+				 * decrement the active TDLS session.
+				 */
+				ucfg_tdls_notify_connect_failure(psoc);
 			} else if (req_type == NAN_DISABLE_REQ) {
 				nan_disable_cleanup(psoc);
 			}
