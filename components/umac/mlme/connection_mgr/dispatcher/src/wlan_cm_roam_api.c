@@ -516,6 +516,9 @@ QDF_STATUS wlan_cm_roam_cfg_get_value(struct wlan_objmgr_psoc *psoc,
 	case HI_RSSI_DELAY_BTW_SCANS:
 		dst_config->uint_value = src_config->hi_rssi_scan_delay;
 		break;
+	case ROAM_RSSI_DIFF_6GHZ:
+		dst_config->uint_value = src_config->roam_rssi_diff_6ghz;
+		break;
 	default:
 		mlme_err("Invalid roam config requested:%d", roam_cfg_type);
 		status = QDF_STATUS_E_FAILURE;
@@ -561,6 +564,9 @@ wlan_cm_roam_cfg_set_value(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 		break;
 	case HI_RSSI_DELAY_BTW_SCANS:
 		dst_config->hi_rssi_scan_delay = src_config->uint_value;
+		break;
+	case ROAM_RSSI_DIFF_6GHZ:
+		dst_config->roam_rssi_diff_6ghz = src_config->uint_value;
 		break;
 	default:
 		mlme_err("Invalid roam config requested:%d", roam_cfg_type);

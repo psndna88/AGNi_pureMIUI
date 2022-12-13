@@ -548,6 +548,7 @@ cm_roam_start_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 {
 	struct wlan_roam_start_config *start_req;
 	QDF_STATUS status;
+	struct cm_roam_values_copy temp;
 
 	start_req = qdf_mem_malloc(sizeof(*start_req));
 	if (!start_req)
@@ -580,6 +581,9 @@ cm_roam_start_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	start_req->wlan_roam_full_scan_6ghz_on_disc =
 				wlan_cm_roam_get_full_scan_6ghz_on_disc(psoc);
 
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id, ROAM_RSSI_DIFF_6GHZ, &temp);
+	start_req->wlan_roam_rssi_diff_6ghz = temp.uint_value;
+
 	status = wlan_cm_tgt_send_roam_start_req(psoc, vdev_id, start_req);
 	if (QDF_IS_STATUS_ERROR(status))
 		mlme_debug("fail to send roam start");
@@ -603,6 +607,7 @@ cm_roam_update_config_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 {
 	struct wlan_roam_update_config *update_req;
 	QDF_STATUS status;
+	struct cm_roam_values_copy temp;
 
 	cm_roam_set_roam_reason_better_ap(psoc, vdev_id, false);
 
@@ -637,6 +642,9 @@ cm_roam_update_config_req(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 
 	update_req->wlan_roam_full_scan_6ghz_on_disc =
 				wlan_cm_roam_get_full_scan_6ghz_on_disc(psoc);
+
+	wlan_cm_roam_cfg_get_value(psoc, vdev_id, ROAM_RSSI_DIFF_6GHZ, &temp);
+	update_req->wlan_roam_rssi_diff_6ghz = temp.uint_value;
 
 	status = wlan_cm_tgt_send_roam_update_req(psoc, vdev_id, update_req);
 	if (QDF_IS_STATUS_ERROR(status))
