@@ -901,7 +901,8 @@ typedef struct {
     /** Num of times su bf sequences are denylisted */
     A_UINT32 num_su_txbf_denylisted;
     /** pdev uptime in microseconds **/
-    A_UINT32 pdev_up_time_us;
+    A_UINT32 pdev_up_time_us_low;
+    A_UINT32 pdev_up_time_us_high;
 } htt_tx_pdev_stats_cmn_tlv;
 
 #define HTT_TX_PDEV_STATS_URRN_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -945,6 +946,18 @@ typedef struct {
     A_UINT32 cw_min[HTT_NUM_AC_WMM][HTT_STATS_MUEDCA_VALUE_MAX];
     A_UINT32 cw_max[HTT_NUM_AC_WMM][HTT_STATS_MUEDCA_VALUE_MAX];
 } htt_tx_pdev_muedca_params_stats_tlv_v;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 ul_mumimo_less_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_mumimo_medium_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_mumimo_highly_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_mumimo_default_relaxed[HTT_NUM_AC_WMM];
+    A_UINT32 ul_muofdma_less_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_muofdma_medium_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_muofdma_highly_aggressive[HTT_NUM_AC_WMM];
+    A_UINT32 ul_muofdma_default_relaxed[HTT_NUM_AC_WMM];
+} htt_tx_pdev_ap_edca_params_stats_tlv_v;
 
 #define HTT_TX_PDEV_SIFS_BURST_HIST_STATS 10
 #define HTT_TX_PDEV_STATS_SIFS_HIST_TLV_SZ(_num_elems) (sizeof(A_UINT32) * (_num_elems))
@@ -1589,7 +1602,11 @@ typedef struct {
         intra_bss      : 1,
         chip_id        : 2,
         ml_peer_id     : 13,
-        reserved       : 1;
+        on_chip        : 1;
+    A_UINT32
+        tx_monitor_override_sta : 1,
+        rx_monitor_override_sta : 1,
+        reserved1               : 30;
 } htt_ast_entry_tlv;
 
 typedef enum {
@@ -1941,7 +1958,7 @@ typedef struct {
     A_UINT32      mu_mimo_mpdus_failed_usr;
     /** 11AC DL MU MIMO number of mpdus re-queued to HW, per user */
     A_UINT32      mu_mimo_mpdus_requeued_usr;
-    /** 11AC DL MU MIMO BA not receieved, per user */
+    /** 11AC DL MU MIMO BA not received, per user */
     A_UINT32      mu_mimo_err_no_ba_usr;
     /** 11AC DL MU MIMO mpdu underrun encountered, per user */
     A_UINT32      mu_mimo_mpdu_underrun_usr;
@@ -2084,7 +2101,7 @@ typedef struct {
     A_UINT32 mpdu_ack_fail_cnt;
     /** This will include sched cmd flush and time based discard */
     A_UINT32 mpdu_filt_cnt;
-    /** Number of MPDUs for which ACK was sucessful but no Tx happened */
+    /** Number of MPDUs for which ACK was successful but no Tx happened */
     A_UINT32 false_mpdu_ack_count;
 
     /** Number of times txq timeout happened */
@@ -2156,7 +2173,7 @@ typedef struct {
  * completing the burst, we identify the txop used in the burst and
  * incr the corresponding bin.
  * Each bin represents 1ms & we have 10 bins in this histogram.
- * they are deined in FW using the following macros
+ * they are defined in FW using the following macros
  * #define WAL_MAX_TXOP_USED_CNT_HISTOGRAM 10
  * #define WAL_TXOP_USED_HISTOGRAM_INTERVAL 1000 ( 1 ms )
  *
@@ -2660,6 +2677,18 @@ typedef struct {
 } htt_txbf_ofdma_ax_steer_stats_tlv;
 
 typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* 11AX HE OFDMA MPDUs tried in rbo steering */
+    A_UINT32 ax_ofdma_rbo_steer_mpdus_tried;
+    /* 11AX HE OFDMA MPDUs failed in rbo steering */
+    A_UINT32 ax_ofdma_rbo_steer_mpdus_failed;
+    /* 11AX HE OFDMA MPDUs tried in sifs steering */
+    A_UINT32 ax_ofdma_sifs_steer_mpdus_tried;
+    /* 11AX HE OFDMA MPDUs failed in sifs steering */
+    A_UINT32 ax_ofdma_sifs_steer_mpdus_failed;
+} htt_txbf_ofdma_ax_steer_mpdu_stats_tlv;
+
+typedef struct {
     /** 11BE EHT OFDMA NDPA frame queued to the HW */
     A_UINT32 be_ofdma_ndpa_queued;
     /** 11BE EHT OFDMA NDPA frame sent over the air */
@@ -2793,16 +2822,30 @@ typedef struct {
     htt_txbf_ofdma_be_steer_stats_elem_t be_steer[1]; /* variable length */
 } htt_txbf_ofdma_be_steer_stats_tlv;
 
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /* 11BE EHT OFDMA MPDUs tried in rbo steering */
+    A_UINT32 be_ofdma_rbo_steer_mpdus_tried;
+    /* 11BE EHT OFDMA MPDUs failed in rbo steering */
+    A_UINT32 be_ofdma_rbo_steer_mpdus_failed;
+    /* 11BE EHT OFDMA MPDUs tried in sifs steering */
+    A_UINT32 be_ofdma_sifs_steer_mpdus_tried;
+    /* 11BE EHT OFDMA MPDUs failed in sifs steering */
+    A_UINT32 be_ofdma_sifs_steer_mpdus_failed;
+} htt_txbf_ofdma_be_steer_mpdu_stats_tlv;
+
 /* STATS_TYPE : HTT_DBG_EXT_STATS_TXBF_OFDMA
  * TLV_TAGS:
  *      - HTT_STATS_TXBF_OFDMA_NDPA_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_NDP_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_BRP_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_STEER_STATS_TAG
+ *      - HTT_STATS_TXBF_OFDMA_AX_STEER_MPDU_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_BE_NDPA_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_BE_NDP_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_BE_BRP_STATS_TAG
  *      - HTT_STATS_TXBF_OFDMA_BE_STEER_STATS_TAG
+ *      - HTT_STATS_TXBF_OFDMA_BE_STEER_MPDU_STATS_TAG
  */
 
 typedef struct {
@@ -3297,7 +3340,7 @@ typedef struct {
     A_UINT32 mu_mimo_mpdus_failed_usr;
     /** 11AC DL MU MIMO number of mpdus re-queued to HW, per user */
     A_UINT32 mu_mimo_mpdus_requeued_usr;
-    /** 11AC DL MU MIMO BA not receieved, per user */
+    /** 11AC DL MU MIMO BA not received, per user */
     A_UINT32 mu_mimo_err_no_ba_usr;
     /** 11AC DL MU MIMO mpdu underrun encountered, per user */
     A_UINT32 mu_mimo_mpdu_underrun_usr;
@@ -3312,7 +3355,7 @@ typedef struct {
     A_UINT32 ax_mu_mimo_mpdus_failed_usr;
     /** 11AX DL MU MIMO number of mpdus re-queued to HW, per user */
     A_UINT32 ax_mu_mimo_mpdus_requeued_usr;
-    /** 11AX DL MU MIMO BA not receieved, per user */
+    /** 11AX DL MU MIMO BA not received, per user */
     A_UINT32 ax_mu_mimo_err_no_ba_usr;
     /** 11AX DL MU MIMO mpdu underrun encountered, per user */
     A_UINT32 ax_mu_mimo_mpdu_underrun_usr;
@@ -3327,7 +3370,7 @@ typedef struct {
     A_UINT32 ax_ofdma_mpdus_failed_usr;
     /** 11AX MU OFDMA number of mpdus re-queued to HW, per user */
     A_UINT32 ax_ofdma_mpdus_requeued_usr;
-    /** 11AX MU OFDMA BA not receieved, per user */
+    /** 11AX MU OFDMA BA not received, per user */
     A_UINT32 ax_ofdma_err_no_ba_usr;
     /** 11AX MU OFDMA mpdu underrun encountered, per user */
     A_UINT32 ax_ofdma_mpdu_underrun_usr;
@@ -3459,7 +3502,7 @@ typedef enum {
     HTT_SCHED_TID_SKIP_UL_TWT_PAUSED,           /* Skip ul tid if twt txq is paused                                                              */
     HTT_SCHED_TID_SKIP_PEER_UL_RX_NOT_ACTIVE,   /* Skip ul tid if peer ul rx is not active                                                       */
     HTT_SCHED_TID_SKIP_NO_FORCE_TRIGGER,        /* Skip ul tid if there is no force triggers                                                     */
-    HTT_SCHED_TID_SKIP_SMART_BASIC_TRIGGER,     /* Skip ul tid if smart basic trigger doesnot have enough data                                   */
+    HTT_SCHED_TID_SKIP_SMART_BASIC_TRIGGER,     /* Skip ul tid if smart basic trigger doesn't have enough data                                   */
 
 
     HTT_SCHED_INELIGIBILITY_MAX,
@@ -3481,7 +3524,7 @@ typedef struct {
 } htt_sched_txq_sched_ineligibility_tlv_v;
 
 typedef enum {
-    HTT_SCHED_SUPERCYCLE_TRIGGER_NONE = 0,                 /* Supercycle not triggerd */
+    HTT_SCHED_SUPERCYCLE_TRIGGER_NONE = 0,                 /* Supercycle not triggered */
     HTT_SCHED_SUPERCYCLE_TRIGGER_FORCED,                   /* forced supercycle trigger */
     HTT_SCHED_SUPERCYCLE_TRIGGER_LESS_NUM_TIDQ_ENTRIES,    /* Num tidq entries is less than max_client threshold */
     HTT_SCHED_SUPERCYCLE_TRIGGER_LESS_NUM_ACTIVE_TIDS,     /* Num active tids is less than max_client threshold */
@@ -4944,8 +4987,12 @@ typedef struct {
     htt_tlv_hdr_t tlv_hdr;
     /** Tx PPDU duration histogram **/
     A_UINT32 tx_ppdu_dur_hist[HTT_PDEV_STATS_PPDU_DUR_HIST_BINS];
-    A_UINT32 tx_success_time_us;
-    A_UINT32 tx_fail_time_us;
+    A_UINT32 tx_success_time_us_low;
+    A_UINT32 tx_success_time_us_high;
+    A_UINT32 tx_fail_time_us_low;
+    A_UINT32 tx_fail_time_us_high;
+    A_UINT32 pdev_up_time_us_low;
+    A_UINT32 pdev_up_time_us_high;
 } htt_tx_pdev_ppdu_dur_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_TX_RATE
@@ -6271,7 +6318,7 @@ typedef enum {
     HTT_EXPLICIT_TXBF_MU_SIFS_STEER_STATS = 3,
     /* Multi user random back off steer stats */
     HTT_EXPLICIT_TXBF_MU_RBO_STEER_STATS  = 4,
-    /* For backward compatability new modes cannot be added */
+    /* For backward compatibility new modes cannot be added */
     HTT_TXBF_MAX_NUM_OF_MODES = 5
 } htt_txbf_sound_steer_modes;
 
@@ -6443,7 +6490,7 @@ typedef struct {
      * opportunities created. Incoming OBSS frame RSSI is compared with per
      * PPDU non-SRG RSSI threshold configured in each PPDU. If incoming OBSS
      * RSSI < non-SRG RSSI threshold configured in each PPDU, then non-SRG
-     * tranmission happens.
+     * transmission happens.
      */
     A_UINT32 num_non_srg_ppdu_tried;
     /**
@@ -6464,7 +6511,7 @@ typedef struct {
      * Incoming OBSS frame RSSI is compared with per PPDU SRG RSSI
      * threshold configured in each PPDU.
      * If incoming OBSS RSSI < SRG RSSI threshold configured in each PPDU,
-     * then SRG tranmission happens.
+     * then SRG transmission happens.
      */
     A_UINT32 num_srg_ppdu_tried;
     /**
@@ -6542,15 +6589,15 @@ typedef struct {
      * histogram showing how many times different degrees of backpressure
      * duration occurred:
      * Index 0 indicates the number of times ring was
-     * continously in backpressure state for 100 - 200ms.
+     * continuously in backpressure state for 100 - 200ms.
      * Index 1 indicates the number of times ring was
-     * continously in backpressure state for 200 - 300ms.
+     * continuously in backpressure state for 200 - 300ms.
      * Index 2 indicates the number of times ring was
-     * continously in backpressure state for 300 - 400ms.
+     * continuously in backpressure state for 300 - 400ms.
      * Index 3 indicates the number of times ring was
-     * continously in backpressure state for 400 - 500ms.
+     * continuously in backpressure state for 400 - 500ms.
      * Index 4 indicates the number of times ring was
-     * continously in backpressure state beyond 500ms.
+     * continuously in backpressure state beyond 500ms.
      */
     A_UINT32 backpressure_hist[5];
 } htt_ring_backpressure_stats_tlv;
@@ -6815,6 +6862,15 @@ typedef struct {
     A_UINT32 reduced_tx_su_ibf_bw[HTT_TX_TXBF_RATE_STATS_NUM_REDUCED_CHAN_TYPES][HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS];
     /** Open loop TX BW stats */
     A_UINT32 reduced_tx_su_ol_bw[HTT_TX_TXBF_RATE_STATS_NUM_REDUCED_CHAN_TYPES][HTT_TX_TXBF_RATE_STATS_NUM_BW_COUNTERS];
+    /** Txbf flag reason stats */
+    A_UINT32 txbf_flag_set_mu_mode;
+    A_UINT32 txbf_flag_set_final_status;
+    A_UINT32 txbf_flag_not_set_verified_txbf_mode;
+    A_UINT32 txbf_flag_not_set_disable_p2p_access;
+    A_UINT32 txbf_flag_not_set_max_nss_reached_in_he160;
+    A_UINT32 txbf_flag_not_set_disable_ul_dl_ofdma;
+    A_UINT32 txbf_flag_not_set_mcs_threshold_value;
+    A_UINT32 txbf_flag_not_set_final_status;
 } htt_tx_pdev_txbf_rate_stats_tlv;
 
 typedef enum {
@@ -7271,27 +7327,27 @@ typedef enum {
 
 typedef enum {
     HTT_STATS_RESET_CAUSE_FIRST_RESET      = 0x00000001, /* First reset by application */
-    HTT_STATS_RESET_CAUSE_ERROR            = 0x00000002, /* Trigered due to error */
+    HTT_STATS_RESET_CAUSE_ERROR            = 0x00000002, /* Triggered due to error */
     HTT_STATS_RESET_CAUSE_DEEP_SLEEP       = 0x00000004, /* Reset after deep sleep */
     HTT_STATS_RESET_CAUSE_FULL_RESET       = 0x00000008, /* Full reset without any optimizations */
     HTT_STATS_RESET_CAUSE_CHANNEL_CHANGE   = 0x00000010, /* For normal channel change */
-    HTT_STATS_RESET_CAUSE_BAND_CHANGE      = 0x00000020, /* Trigered due to band change */
-    HTT_STATS_RESET_CAUSE_DO_CAL           = 0x00000040, /* Trigered due to calibrations */
+    HTT_STATS_RESET_CAUSE_BAND_CHANGE      = 0x00000020, /* Triggered due to band change */
+    HTT_STATS_RESET_CAUSE_DO_CAL           = 0x00000040, /* Triggered due to calibrations */
     HTT_STATS_RESET_CAUSE_MCI_ERROR        = 0x00000080, /* Triggered due to MCI ERROR */
-    HTT_STATS_RESET_CAUSE_CHWIDTH_CHANGE   = 0x00000100, /* Trigered due to channel width change */
-    HTT_STATS_RESET_CAUSE_WARM_RESTORE_CAL = 0x00000200, /* Trigered due to warm reset we want to just restore calibrations */
-    HTT_STATS_RESET_CAUSE_COLD_RESTORE_CAL = 0x00000400, /* Trigered due to cold reset we want to just restore calibrations */
-    HTT_STATS_RESET_CAUSE_PHY_WARM_RESET   = 0x00000800, /* Trigered due to phy warm reset we want to just restore calibrations */
-    HTT_STATS_RESET_CAUSE_M3_SSR           = 0x00001000, /* Trigered due to SSR Restart */
+    HTT_STATS_RESET_CAUSE_CHWIDTH_CHANGE   = 0x00000100, /* Triggered due to channel width change */
+    HTT_STATS_RESET_CAUSE_WARM_RESTORE_CAL = 0x00000200, /* Triggered due to warm reset we want to just restore calibrations */
+    HTT_STATS_RESET_CAUSE_COLD_RESTORE_CAL = 0x00000400, /* Triggered due to cold reset we want to just restore calibrations */
+    HTT_STATS_RESET_CAUSE_PHY_WARM_RESET   = 0x00000800, /* Triggered due to phy warm reset we want to just restore calibrations */
+    HTT_STATS_RESET_CAUSE_M3_SSR           = 0x00001000, /* Triggered due to SSR Restart */
     HTT_STATS_RESET_CAUSE_FORCE_CAL        = 0x00002000, /* Reset to force the calibration */
     /* 0x00004000, 0x00008000 reserved */
     HTT_STATS_NO_RESET_CHANNEL_CHANGE      = 0x00010000, /* No reset, normal channel change */
     HTT_STATS_NO_RESET_BAND_CHANGE         = 0x00020000, /* No reset, channel change across band */
     HTT_STATS_NO_RESET_CHWIDTH_CHANGE      = 0x00040000, /* No reset, channel change across channel width */
     HTT_STATS_NO_RESET_CHAINMASK_CHANGE    = 0x00080000, /* No reset, chainmask change */
-    HTT_STATS_RESET_CAUSE_PHY_WARM_RESET_UCODE_TRIG = 0x00100000, /* Trigered due to phy warm reset we want to just restore calibrations */
+    HTT_STATS_RESET_CAUSE_PHY_WARM_RESET_UCODE_TRIG = 0x00100000, /* Triggered due to phy warm reset we want to just restore calibrations */
     HTT_STATS_RESET_CAUSE_PHY_OFF_TIMEOUT_RESET  = 0x00200000, /* Reset ucode because phy off ack timeout*/
-    HTT_STATS_RESET_CAUSE_LMAC_RESET_UMAC_NOC_ERR = 0x00400000, /* LMAC reset trigered due to NOC Address/Slave error originating at LMAC */
+    HTT_STATS_RESET_CAUSE_LMAC_RESET_UMAC_NOC_ERR = 0x00400000, /* LMAC reset triggered due to NOC Address/Slave error originating at LMAC */
     HTT_STATS_NO_RESET_SCAN_BACK_TO_SAME_HOME_CHANNEL_CHANGE = 0x00800000, /* No reset, scan to home channel change */
 } HTT_STATS_RESET_CAUSE;
 
@@ -7343,7 +7399,7 @@ typedef struct {
     A_UINT32 phytx_abort_cnt;
     /** number of times rx abort initiated by phy */
     A_UINT32 phyrx_abort_cnt;
-    /** number of rx defered count initiated by phy */
+    /** number of rx deferred count initiated by phy */
     A_UINT32 phyrx_defer_abort_cnt;
     /** number of sizing events generated at LSTF */
     A_UINT32 rx_gain_adj_lstf_event_cnt; /* a.k.a sizing1 */
@@ -8285,7 +8341,7 @@ typedef struct _htt_ml_peer_stats {
 } htt_ml_peer_stats_t;
 
 /*
- * ODD Mandatory Stats are grouped together from all the exisitng different
+ * ODD Mandatory Stats are grouped together from all the existing different
  * stats, to form a set of stats that will be used by the ODD application to
  * post the stats to the cloud instead of polling for the individual stats.
  * This is done to avoid non-mandatory stats to be polled as the data will not
