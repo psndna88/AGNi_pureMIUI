@@ -377,7 +377,6 @@ static int fts_get_ic_information(struct fts_ts_data *ts_data)
 	return 0;
 }
 
-/*
 static int fts_read_hardware_info(struct fts_ts_data *ts_data)
 {
 	int ret = 0;
@@ -401,7 +400,6 @@ static int fts_read_hardware_info(struct fts_ts_data *ts_data)
 
 	return ret;
 }
-*/
 
 /*****************************************************************************
 *  Reprot related
@@ -2203,7 +2201,6 @@ static void fts_init_touchmode_data(struct fts_ts_data *ts_data)
 #define HT_AFE_START                           0x50
 #define HT_AFE_STOP                            0x51
 
-/*
 static int fts_enable_touch_raw(bool en)
 {
 #define FTS_HOSTPROCESS_FW "focaltech_ts_ht_fw.bin"
@@ -2232,7 +2229,6 @@ static int fts_enable_touch_raw(bool en)
 	}
 	return 0;
 }
-*/
 
 static int fts_get_rx_num(void)
 {
@@ -2286,7 +2282,7 @@ static void fts_init_xiaomi_touchfeature(struct fts_ts_data *ts_data)
 	xiaomi_touch_interfaces.touch_vendor_read = fts_touch_vendor_read;
 	xiaomi_touch_interfaces.palm_sensor_write = fts_palm_sensor_write;
 	xiaomi_touch_interfaces.enable_clicktouch_raw = fts_enable_click_touch_raw;
-	/*xiaomi_touch_interfaces.enable_touch_raw = fts_enable_touch_raw;*/
+	xiaomi_touch_interfaces.enable_touch_raw = fts_enable_touch_raw;
 	/*xiaomi_touch_interfaces.enable_touch_delta = fts_enable_touch_delta;*/
 	xiaomi_touch_interfaces.get_touch_rx_num = fts_get_rx_num;
 	xiaomi_touch_interfaces.get_touch_tx_num = fts_get_tx_num;
