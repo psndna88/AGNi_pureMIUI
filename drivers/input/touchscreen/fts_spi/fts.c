@@ -5871,6 +5871,11 @@ static int fts_probe(struct spi_device *client)
 	u16 bus_type;
 	logError(1, "%s %s: driver spi ver: %s\n", tag, __func__,
 		 FTS_TS_DRV_VERSION);
+	if (get_hw_version_platform() == HARDWARE_PROJECT_K11) {
+		logError(1, "device is haydn");
+		error = -ENODEV;
+		goto ProbeErrorExit_0;
+	}
 #ifdef I2C_INTERFACE
 	logError(1, "%s I2C interface... \n", tag);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
