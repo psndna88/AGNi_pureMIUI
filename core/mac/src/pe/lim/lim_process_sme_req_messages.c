@@ -2178,8 +2178,9 @@ void lim_calculate_tpc(struct mac_context *mac,
 	mlme_obj->reg_tpc_obj.eirp_power = reg_max;
 	mlme_obj->reg_tpc_obj.power_type_6g = ap_power_type_6g;
 
-	pe_debug("num_pwr_levels: %d, is_psd_power: %d, total eirp_power: %d, ap_pwr_type: %d",
-		 num_pwr_levels, is_psd_power, reg_max, ap_power_type_6g);
+	pe_debug("num_pwr_levels: %d, is_psd_power: %d, total eirp_power: %d, ap_pwr_type: %d tx_pwrlimit: %d",
+		 num_pwr_levels, is_psd_power, reg_max, ap_power_type_6g,
+		 mlme_obj->mgmt.generic.tx_pwrlimit);
 }
 
 /**
