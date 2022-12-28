@@ -100,7 +100,7 @@ struct xiaomi_touch_interface {
 	int (*get_touch_tx_num)(void);
 	int (*get_touch_x_resolution)(void);
 	int (*get_touch_y_resolution)(void);
-	int (*enable_touch_raw)(bool en);
+	int (*enable_touch_raw)(int en);
 	int (*enable_clicktouch_raw)(int count);
 	int (*enable_touch_delta)(bool en);
 	u8 (*panel_vendor_read)(void);
@@ -129,6 +129,8 @@ struct xiaomi_touch {
 	struct mutex  mutex;
 	struct mutex  palm_mutex;
 	struct mutex  prox_mutex;
+	struct mutex gesture_single_tap_mutex;
+	struct mutex fod_press_status_mutex;
 	wait_queue_head_t 	wait_queue;
 };
 
@@ -171,6 +173,7 @@ struct xiaomi_touch_pdata{
 	const char *name;
 	struct proc_dir_entry  *last_touch_events_proc;
 	struct last_touch_event *last_touch_events;
+	int fod_press_status_value;
 };
 
 struct xiaomi_touch *xiaomi_touch_dev_get(int minor);
@@ -195,4 +198,9 @@ extern void last_touch_events_collect(int slot, int state);
 
 int xiaomi_touch_set_suspend_state(int state);
 
+extern int notify_gesture_single_tap(void);
+
+extern int update_fod_press_status(int value);
+
+extern void thp_send_cmd_to_hal(int cmd, int value);
 #endif

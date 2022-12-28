@@ -2203,7 +2203,7 @@ static void fts_init_touchmode_data(struct fts_ts_data *ts_data)
 #define HT_AFE_START                           0x50
 #define HT_AFE_STOP                            0x51
 
-static int fts_enable_touch_raw(bool en)
+static int fts_enable_touch_raw(int en)
 {
 #define FTS_HOSTPROCESS_FW "focaltech_ts_ht_fw.bin"
 	int ret;
