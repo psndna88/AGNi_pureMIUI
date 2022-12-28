@@ -541,7 +541,10 @@ static int fts_input_report_b(struct fts_ts_data *data)
 
 			if ((data->log_level >= 2) ||
 				((1 == data->log_level) && (FTS_TOUCH_DOWN == events[i].flag))) {
-				FTS_DEBUG("[B]P%d DOWN!", events[i].id);
+				FTS_DEBUG("[B]P%d(%d, %d)[p:%d,tm:%d] DOWN!",
+						  events[i].id,
+						  events[i].x, events[i].y,
+						  events[i].p, events[i].area);
 			}
 #ifdef FTS_XIAOMI_TOUCHFEATURE
 			last_touch_events_collect(events[i].id, 1);
@@ -754,16 +757,14 @@ static int fts_read_parse_touchdata(struct fts_ts_data *data)
 		}
 
 		data->touch_point++;
-		events[i].x = ((buf[FTS_TOUCH_X_H_POS + base] & 0x0F) << 11) +
-				((buf[FTS_TOUCH_X_L_POS + base] & 0xFF) << 3) +
-				((buf[FTS_TOUCH_PRE_POS + base] & 0xE0) >> 5);
-		events[i].y = ((buf[FTS_TOUCH_Y_H_POS + base] & 0x0F) << 11) +
-				((buf[FTS_TOUCH_Y_L_POS + base] & 0xFF) << 3) +
-				((buf[FTS_TOUCH_PRE_POS + base] & 0x1C) >> 2);
+		events[i].x = ((buf[FTS_TOUCH_X_H_POS + base] & 0x0F) << 8) +
+				(buf[FTS_TOUCH_X_L_POS + base] & 0xFF);
+		events[i].y = ((buf[FTS_TOUCH_Y_H_POS + base] & 0x0F) << 8) +
+				(buf[FTS_TOUCH_Y_L_POS + base] & 0xFF);
 		events[i].flag = buf[FTS_TOUCH_EVENT_POS + base] >> 6;
 		events[i].id = buf[FTS_TOUCH_ID_POS + base] >> 4;
 		events[i].area = buf[FTS_TOUCH_AREA_POS + base] >> 4;
-		events[i].p =  buf[FTS_TOUCH_PRE_POS + base] & 0x03;
+		events[i].p =  buf[FTS_TOUCH_PRE_POS + base];
 
 		if (EVENT_DOWN(events[i].flag) && (data->point_num == 0)) {
 			FTS_INFO("abnormal touch data from fw");
