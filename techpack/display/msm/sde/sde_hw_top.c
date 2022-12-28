@@ -203,10 +203,9 @@ static bool sde_hw_setup_clk_force_ctrl(struct sde_hw_mdp *mdp,
 		return false;
 
 	ctrl_reg = (struct sde_clk_ctrl_reg *)&mdp->caps->clk_ctrls[clk_ctrl];
-	if (ctrl_reg->val == enable)
+	if (cmpxchg(&ctrl_reg->val, !enable, enable) == enable)
 		return enable;
 
-	ctrl_reg->val = enable;
 	reg_off = ctrl_reg->reg_off;
 	bit_off = ctrl_reg->bit_off;
 
