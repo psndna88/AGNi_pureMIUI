@@ -2743,7 +2743,7 @@ static int fts_ts_probe(struct spi_device *spi)
 	fts_data = ts_data;
 	ts_data->spi = spi;
 	ts_data->dev = &spi->dev;
-	ts_data->log_level = 1;
+	ts_data->log_level = 0;
 	ts_data->poweroff_on_sleep = false;
 
 	ts_data->bus_type = BUS_TYPE_SPI_V2;
