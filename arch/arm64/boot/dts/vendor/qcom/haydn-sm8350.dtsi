@@ -153,7 +153,7 @@ And public attribution of xiaomi platforms(like venus and so and)
 		focaltech,reset-gpio = <&tlmm 22 0x00>;
 		focaltech,irq-gpio = <&tlmm 23 0x2008>;
 		focaltech,max-touch-number = <10>;
-		focaltech,display-coords = <0 0 8640 19200>;
+		focaltech,display-coords = <0 0 1080 2400>;
 		focaltech,open-min = <3000>;
 		focaltech,touch-range-array = <1 5 10 15 20>;
 		focaltech,touch-def-array = <3 3 3 3>;
