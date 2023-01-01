@@ -631,6 +631,7 @@ struct request_queue {
 
 #define QUEUE_FLAG_MQ_DEFAULT	((1 << QUEUE_FLAG_NONROT) |		\
 				 (1 << QUEUE_FLAG_DISCARD) |		\
+				 (1 << QUEUE_FLAG_SAME_FORCE) |		\
 				 (1 << QUEUE_FLAG_SAME_COMP))
 
 void blk_queue_flag_set(unsigned int flag, struct request_queue *q);
