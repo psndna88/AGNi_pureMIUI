@@ -806,7 +806,7 @@ static int rcu_torture_boost(void *arg)
 
 	/* Set real-time priority. */
 	sp.sched_priority = 1;
-	if (sched_setscheduler(current, SCHED_FIFO, &sp) < 0) {
+	if (sched_setscheduler(current, SCHED_RR, &sp) < 0) {
 		VERBOSE_TOROUT_STRING("rcu_torture_boost RT prio failed!");
 		n_rcu_torture_boost_rterror++;
 	}
