@@ -370,7 +370,7 @@ rcu_perf_writer(void *arg)
 	WARN_ON(!wdpp);
 	set_cpus_allowed_ptr(current, cpumask_of(me % nr_cpu_ids));
 	sp.sched_priority = 1;
-	sched_setscheduler_nocheck(current, SCHED_FIFO, &sp);
+	sched_setscheduler_nocheck(current, SCHED_RR, &sp);
 
 	if (holdoff)
 		schedule_timeout_uninterruptible(holdoff * HZ);
