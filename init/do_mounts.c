@@ -225,13 +225,18 @@ dev_t name_to_dev_t(const char *name)
 	char *p;
 	dev_t res = 0;
 	int part;
+	int needtowait = 40<<1;
 
 #ifdef CONFIG_BLOCK
 	if (strncmp(name, "PARTUUID=", 9) == 0) {
 		name += 9;
 		res = devt_from_partuuid(name);
-		if (!res)
-			goto fail;
+		while (!res && needtowait) {
+			/* waiting 0.5 sec */
+			msleep(500);
+			res = devt_from_partuuid(name);
+			needtowait--;
+		}
 		goto done;
 	} else if (strncmp(name, "PARTLABEL=", 10) == 0) {
 		struct device *dev;
@@ -604,7 +609,9 @@ void __init prepare_namespace(void)
 	 * For example, it is not atypical to wait 5 seconds here
 	 * for the touchpad of a laptop to initialize.
 	 */
+	async_synchronize_full();
 	wait_for_device_probe();
+	async_synchronize_full();
 
 	md_run_setup();
 
