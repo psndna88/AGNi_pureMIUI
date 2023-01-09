@@ -14951,7 +14951,7 @@ csr_update_sae_single_pmk_ap_cap(struct mac_context *mac,
 }
 #endif
 
-static void csr_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq)
+void csr_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq)
 {
 	/*
 	 * Some IOT APs don't send supported rates in

@@ -1486,6 +1486,15 @@ QDF_STATUS csr_mlme_vdev_disconnect_all_p2p_client_event(uint8_t vdev_id);
 QDF_STATUS csr_mlme_vdev_stop_bss(uint8_t vdev_id);
 
 /*
+ * csr_get_basic_rates() - Get basic rate for a band
+ * @b_rates: Basic rate
+ * @chan_freq: frequency for which basic rate is required
+ *
+ * Return: void
+ */
+void csr_get_basic_rates(tSirMacRateSet *b_rates, uint32_t chan_freq);
+
+/*
  * csr_mlme_get_concurrent_operation_freq() - Callback for MLME module to
  *	get the concurrent operation frequency
  *
