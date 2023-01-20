@@ -199,7 +199,7 @@ static void tcp_mtu_probing(struct inet_connection_sock *icsk, struct sock *sk)
 		return;
 
 	if (!icsk->icsk_mtup.enabled) {
-		icsk->icsk_mtup.enabled = 1;
+		icsk->icsk_mtup.enabled = -1;
 		icsk->icsk_mtup.probe_timestamp = tcp_jiffies32;
 	} else {
 		mss = tcp_mtu_to_mss(sk, icsk->icsk_mtup.search_low) >> 1;
