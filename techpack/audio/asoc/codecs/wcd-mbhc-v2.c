@@ -410,6 +410,14 @@ out_micb_en:
 		break;
 	/* MICBIAS usage change */
 	case WCD_EVENT_POST_DAPM_MICBIAS_2_OFF:
+#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
+	   if (mbhc->mbhc_cfg->enable_usbc_analog &&
+			(mbhc->is_hs_recording == true)) {
+			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_L_DET_EN, 0);
+			if (mbhc->mbhc_cb->clk_setup)
+				mbhc->mbhc_cb->clk_setup(mbhc->component, false);
+		}
+#endif
 		mbhc->is_hs_recording = false;
 		pr_debug("%s: is_capture: %d\n", __func__,
 			  mbhc->is_hs_recording);
@@ -1113,7 +1121,6 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 
 	if ((mbhc->current_plug == MBHC_PLUG_TYPE_NONE) &&
 	    detection_type) {
-
 		/* If moisture is present, then enable polling, disable
 		 * moisture detection and wait for interrupt
 		 */
@@ -1150,6 +1157,10 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 			mbhc->mbhc_fn->wcd_mbhc_detect_plug_type(mbhc);
 	} else if ((mbhc->current_plug != MBHC_PLUG_TYPE_NONE)
 			&& !detection_type) {
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
+		if (mbhc->mbhc_cb->mbhc_micbias_control)
+                mbhc->mbhc_cb->mbhc_micbias_control(component, MIC_BIAS_2,MICB2_DISABLE);
+#endif
 		/* Disable external voltage source to micbias if present */
 		if (mbhc->mbhc_cb->enable_mb_source)
 			mbhc->mbhc_cb->enable_mb_source(mbhc, false);
@@ -1205,8 +1216,12 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 		mbhc->extn_cable_hph_rem = false;
 		wcd_mbhc_report_plug(mbhc, 0, jack_type);
-
-		if (mbhc->mbhc_cfg->enable_usbc_analog) {
+#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
+		if (mbhc->mbhc_cfg->enable_usbc_analog &&
+			(mbhc->is_hs_recording == false)) {
+#else
+	    if (mbhc->mbhc_cfg->enable_usbc_analog) {
+#endif
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_L_DET_EN, 0);
 			if (mbhc->mbhc_cb->clk_setup)
 				mbhc->mbhc_cb->clk_setup(

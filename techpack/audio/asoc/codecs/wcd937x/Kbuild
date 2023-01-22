@@ -69,6 +69,10 @@ COMMON_INC :=	-I$(AUDIO_ROOT)/$(COMMON_DIR)
 
 ############ WCD937X ############
 
+ifeq ($(TARGET_PRODUCT), taoyao)
+	CDEFINES += -DCONFIG_SND_SOC_FOR_ULTRASOUND_PATH
+endif
+
 # for WCD937X Codec
 ifdef CONFIG_SND_SOC_WCD937X
 	WCD937X_OBJS += wcd937x.o
