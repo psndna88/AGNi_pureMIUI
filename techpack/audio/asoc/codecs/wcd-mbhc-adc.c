@@ -186,8 +186,13 @@ static int wcd_measure_adc_once(struct wcd_mbhc *mbhc, int mux_ctl)
 			__func__, adc_complete, adc_timeout);
 		ret = -EINVAL;
 	} else {
+#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
+		pr_debug("%s: adc complete: %d, adc timeout: %d output_mV: %d mux_ctl: %d\n",
+			__func__, adc_complete, adc_timeout, output_mv, mux_ctl);
+#else
 		pr_debug("%s: adc complete: %d, adc timeout: %d output_mV: %d\n",
 			__func__, adc_complete, adc_timeout, output_mv);
+#endif
 		ret = output_mv;
 	}
 
@@ -857,9 +862,22 @@ correct_plug_type:
 				 * if switch is toggled, check again,
 				 * otherwise report unsupported plug
 				 */
+
+#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
+				if (!mbhc->mbhc_cfg->swap_gnd_mic)
+				{
+					pr_err("%s: mbhc->mbhc_cfg->swap_gnd_mic is NULL\n", __func__);
+				}
+#endif
+
 				if (mbhc->mbhc_cfg->swap_gnd_mic &&
+#ifdef CONFIG_TARGET_PRODUCT_TAOYAO
+					!(mbhc->mbhc_cfg->swap_gnd_mic(component,
+					true))) {
+#else
 					mbhc->mbhc_cfg->swap_gnd_mic(component,
 					true)) {
+#endif
 					pr_debug("%s: US_EU gpio present,flip switch\n"
 						, __func__);
 					continue;
@@ -947,6 +965,13 @@ report:
 
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ADC_MODE, 0);
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ADC_EN, 0);
+
+	if (mbhc->hs_detect_work_stop) {
+		pr_debug("%s: stop requested: %d\n", __func__,
+				mbhc->hs_detect_work_stop);
+		wcd_micbias_disable(mbhc);
+		goto exit;
+	}
 
 	WCD_MBHC_RSC_LOCK(mbhc);
 	wcd_mbhc_find_plug_and_report(mbhc, plug_type);

@@ -81,6 +81,7 @@ void audio_cal_exit(void);
 void voice_exit(void);
 void q6lsm_exit(void);
 void q6asm_exit(void);
+
 /* for elus start */
 #ifdef CONFIG_ELUS_PROXIMITY
 int elliptic_driver_exit(void);

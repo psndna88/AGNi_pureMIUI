@@ -26,6 +26,7 @@
 #include "wcd938x.h"
 #include "internal.h"
 #include "asoc/bolero-slave-internal.h"
+#include "linux/mmhardware_sysfs.h"
 
 #define NUM_SWRS_DT_PARAMS 5
 #define WCD938X_VARIANT_ENTRY_SIZE 32
@@ -4311,6 +4312,10 @@ static int wcd938x_bind(struct device *dev)
 	}
 	wcd938x->dev_up = true;
 
+	/* register codec hardware */
+#ifdef CONFIG_MMHARDWARE_DETECTION
+	register_kobj_under_mmsysfs(MM_HW_CODEC, MM_HARDWARE_SYSFS_CODEC_FOLDER);
+#endif
 	return ret;
 err_irq:
 	wcd_irq_exit(&wcd938x->irq_info, wcd938x->virq);

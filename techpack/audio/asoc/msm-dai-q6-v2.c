@@ -22,7 +22,10 @@
 #include "msm-dai-q6-v2.h"
 #include <asoc/core.h>
 #ifdef TFA_NON_DSP_SOLUTION
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 #include "codecs/tfa9874/inc/tfa_platform_interface_definition.h"
+
+#endif
 #endif
 
 #define MSM_DAI_PRI_AUXPCM_DT_DEV_ID 1
@@ -6160,6 +6163,7 @@ static int msm_dai_q6_mi2s_hw_params(struct snd_pcm_substream *substream,
 	struct msm_dai_q6_dai_data *dai_data = &mi2s_dai_config->mi2s_dai_data;
 	struct afe_param_id_i2s_cfg *i2s = &dai_data->port_config.i2s;
 #ifdef TFA_NON_DSP_SOLUTION
+#if defined(CONFIG_TARGET_PRODUCT_TAOYAO)
 	u16 port_id = 0;
 
 	if (msm_mi2s_get_port_id(dai->id, substream->stream,
@@ -6168,6 +6172,7 @@ static int msm_dai_q6_mi2s_hw_params(struct snd_pcm_substream *substream,
 				__func__, port_id);
 		return -EINVAL;
 	}
+#endif
 #endif
 	dai_data->channels = params_channels(params);
 	switch (dai_data->channels) {
@@ -6350,7 +6355,6 @@ static int msm_dai_q6_mi2s_hw_params(struct snd_pcm_substream *substream,
 	dai_data->port_config.i2s.i2s_cfg_minor_version =
 			AFE_API_VERSION_I2S_CONFIG;
 	dai_data->port_config.i2s.sample_rate = dai_data->rate;
-
 	dev_dbg(dai->dev, "%s: dai id %d dai_data->channels = %d\n"
 		"sample_rate = %u i2s_cfg_minor_version = 0x%x\n"
 		"bit_width = %hu  channel_mode = 0x%x mono_stereo = %#x\n"
