@@ -688,6 +688,7 @@ static int ucsi_remove(struct platform_device *pdev)
 	int rc;
 
 	cancel_work_sync(&udev->notify_work);
+	cancel_work_sync(&udev->swap_role_work);
 	ucsi_unregister(udev->ucsi);
 	ucsi_destroy(udev->ucsi);
 
