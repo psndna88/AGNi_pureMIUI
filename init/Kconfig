@@ -478,6 +478,12 @@ config MIMISC_MC
 	---help---
 	  Acct ion/gpu misc memory to memory cgroup
 
+config MI_ZRAM_WRITEBACK_CONTROL
+	bool "mi zram writeback control"
+	default y
+	---help---
+	  control if disable zram writeback in per memory cgroup
+
 config BSD_PROCESS_ACCT
 	bool "BSD Process Accounting"
 	depends on MULTIUSER

@@ -58,6 +58,9 @@
 
 #include <linux/swapops.h>
 #include <linux/balloon_compaction.h>
+#ifdef CONFIG_RTMM
+#include <linux/rtmm.h>
+#endif
 #include <linux/mi_reclaim.h>
 #include <linux/cam_reclaim.h>
 
@@ -2391,6 +2394,12 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 		goto out;
 	}
 
+#ifdef CONFIG_RTMM
+	if (unlikely(rtmm_reclaim(current->comm))) {
+		swappiness = rtmm_reclaim_swappiness();
+	}
+#endif
+
 #ifdef CONFIG_MI_RECLAIM
 	if (mi_st()) {
 		swappiness = mi_reclaim_swappiness();
@@ -2471,7 +2480,11 @@ static void get_scan_count(struct lruvec *lruvec, struct mem_cgroup *memcg,
 	 */
 	if (!IS_ENABLED(CONFIG_BALANCE_ANON_FILE_RECLAIM) &&
 	    !inactive_list_is_low(lruvec, true, sc, false) &&
+#ifdef CONFIG_RTMM
+	    lruvec_lru_size(lruvec, LRU_INACTIVE_FILE, sc->reclaim_idx) >> sc->priority && (swappiness != 200)) {
+#else
 	    lruvec_lru_size(lruvec, LRU_INACTIVE_FILE, sc->reclaim_idx) >> sc->priority) {
+#endif
 		scan_balance = SCAN_FILE;
 		goto out;
 	}
@@ -4137,6 +4150,27 @@ void wakeup_kswapd(struct zone *zone, gfp_t gfp_flags, int order,
 }
 
 #ifdef CONFIG_COMPACTION
+static long reclaim_setcpuaffinity(struct task_struct *task, struct cpumask *newmask, struct cpumask *prevmask)
+{
+	long rc = -1;
+
+	if (prevmask) {
+		if (sched_getaffinity(task->pid, prevmask))
+			return rc;
+	}
+
+	if (newmask && !cpumask_equal(newmask, &task->cpus_mask)) {
+		cpumask_t cpumask_temp;
+		cpumask_and(&cpumask_temp, newmask, cpu_online_mask);
+		if (0 == cpumask_weight(&cpumask_temp))
+			return rc;
+		rc = sched_setaffinity(task->pid, newmask);
+		if (rc != 0)
+			pr_err("%s sched_setaffinity() failed", __func__);
+	}
+	return rc;
+}
+
 /*
  * Try to free `nr_to_reclaim' of memory, system-wide, and return the number of
  * freed pages.
@@ -4145,9 +4179,39 @@ void wakeup_kswapd(struct zone *zone, gfp_t gfp_flags, int order,
  * LRU order by reclaiming preferentially
  * inactive > active > active referenced > active mapped
  */
-static unsigned long reclaim_all_pages(unsigned long nr_to_reclaim)
+unsigned long reclaim_all_pages(unsigned long nr_to_reclaim)
 {
+	DECLARE_BITMAP(cpu_bitmap, NR_CPUS);
+	struct cpumask prevmask = {0};
+	long rc = 0;
+
+	struct scan_control sc = {
+		.nr_to_reclaim = nr_to_reclaim,
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.reclaim_idx = MAX_NR_ZONES - 1,
+		.priority = DEF_PRIORITY,
+		.may_writepage = 1,
+		.may_unmap = 1,
+		.may_swap = 1,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
 	unsigned long nr_reclaimed;
+	unsigned int noreclaim_flag;
+
+	fs_reclaim_acquire(sc.gfp_mask);
+	noreclaim_flag = memalloc_noreclaim_save();
+	set_task_reclaim_state(current, &sc.reclaim_state);
+
+	cpu_bitmap[0] = 15;  // 0-3
+	rc = reclaim_setcpuaffinity(current, to_cpumask(cpu_bitmap), &prevmask);
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+	if (rc == 0) {
+		reclaim_setcpuaffinity(current, &prevmask, NULL);
+	}
+
+	set_task_reclaim_state(current, NULL);
+	memalloc_noreclaim_restore(noreclaim_flag);
+	fs_reclaim_release(sc.gfp_mask);
 
 	return nr_reclaimed;
 }
@@ -4320,6 +4384,43 @@ static void multi_kswapd_cpu_online(pg_data_t *pgdat,
 
 	for (hid = 1; hid < nr_threads; hid++)
 		set_cpus_allowed_ptr(pgdat->mkswapd[hid], mask);
+}
+#endif
+#ifdef CONFIG_RTMM
+/*
+  * reclaim anon/file pages from global lru
+  *
+  * TODO: merge with shrink_all_memory()??
+  */
+unsigned long reclaim_global(unsigned long nr_to_reclaim)
+{
+	struct reclaim_state reclaim_state;
+	struct scan_control sc = {
+		.nr_to_reclaim = max(nr_to_reclaim, SWAP_CLUSTER_MAX),
+		.gfp_mask = GFP_HIGHUSER_MOVABLE,
+		.reclaim_idx = MAX_NR_ZONES - 1,
+		.order = 0,
+		.priority = DEF_PRIORITY,
+		.may_writepage = 1,
+		.may_unmap = 1,
+		.may_swap = 1,
+	};
+	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+	struct task_struct *p = current;
+	unsigned long nr_reclaimed;
+
+	p->flags |= PF_MEMALLOC;
+	fs_reclaim_acquire(sc.gfp_mask);
+	reclaim_state.reclaimed_slab = 0;
+	p->reclaim_state = &reclaim_state;
+
+	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+
+	p->reclaim_state = NULL;
+	fs_reclaim_release(sc.gfp_mask);
+	p->flags &= ~PF_MEMALLOC;
+
+	return nr_reclaimed;
 }
 #endif
 

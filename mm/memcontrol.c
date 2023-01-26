@@ -4073,6 +4073,31 @@ static int mem_cgroup_move_charge_write(struct cgroup_subsys_state *css,
 }
 #endif
 
+#ifdef CONFIG_MI_ZRAM_WRITEBACK_CONTROL
+static u64 mem_cgroup_zram_writeback_read(struct cgroup_subsys_state *css, struct cftype *cft)
+{
+        return mem_cgroup_from_css(css)->zram_writeback_disable;
+}
+
+static int mem_cgroup_zram_writeback_write(struct cgroup_subsys_state *css,
+					struct cftype *cft, u64 val)
+{
+	struct mem_cgroup *memcg = mem_cgroup_from_css(css);
+
+	if (val & ~MOVE_MASK)
+		return -EINVAL;
+
+	/*
+	 * No kind of locking is needed in here, because ->can_attach() will
+	 * check this value once in the beginning of the process, and then carry
+	 * on with stale data. This means that changes to this value will only
+	 * affect task migrations starting after the change.
+	 */
+	memcg->zram_writeback_disable = val;
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_NUMA
 
 #define LRU_ALL_FILE (BIT(LRU_INACTIVE_FILE) | BIT(LRU_ACTIVE_FILE))
@@ -5187,6 +5212,14 @@ static struct cftype mem_cgroup_legacy_files[] = {
 		.read_u64 = mem_cgroup_move_charge_read,
 		.write_u64 = mem_cgroup_move_charge_write,
 	},
+// XIAOMI
+#ifdef CONFIG_MI_ZRAM_WRITEBACK_CONTROL
+        {
+                .name = "zram_writeback_control",
+                .read_u64 = mem_cgroup_zram_writeback_read,
+                .write_u64 = mem_cgroup_zram_writeback_write,
+        },
+#endif
 	{
 		.name = "oom_control",
 		.seq_show = mem_cgroup_oom_control_read,

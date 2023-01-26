@@ -562,3 +562,9 @@ source "drivers/misc/mi-memory/Kconfig"
 source "drivers/misc/mi-power/Kconfig"
 source "drivers/misc/mi-ioturbo/Kconfig"
 endmenu
+
+config BOOTUP_RECLAIM
+        bool "bootup reclaim"
+        default y
+        help
+          reclaim global memory when bootup

@@ -575,6 +575,9 @@ static void __init mm_init(void)
 	init_espfix_bsp();
 	/* Should be run after espfix64 is set up. */
 	pti_init();
+#ifdef CONFIG_EMERGENCY_MEMORY
+	emergency_mm_init();
+#endif
 }
 
 void __init __weak arch_call_rest_init(void)
@@ -840,7 +843,7 @@ static int __init initcall_blacklist(char *str)
 		}
 	} while (str_entry);
 
-	return 1;
+	return 0;
 }
 
 static bool __init_or_module initcall_blacklisted(initcall_t fn)

@@ -626,6 +626,9 @@ struct walt_task_struct {
 	u64				cpu_cycles;
 	cpumask_t			cpus_requested;
 	bool				iowaited;
+	#ifdef CONFIG_RTMM
+	u64				proc_load;
+	#endif
 };
 
 #else

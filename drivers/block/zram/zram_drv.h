@@ -21,6 +21,9 @@
 #include <linux/crypto.h>
 
 #include "zcomp.h"
+#ifdef CONFIG_MI_ZRAM_WRITEBACK_CONTROL
+#include <linux/memcontrol.h>
+#endif
 
 #define SECTORS_PER_PAGE_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
 #define SECTORS_PER_PAGE	(1 << SECTORS_PER_PAGE_SHIFT)
@@ -51,6 +54,9 @@ enum zram_pageflags {
 	ZRAM_UNDER_WB,	/* page is under writeback */
 	ZRAM_HUGE,	/* Incompressible page */
 	ZRAM_IDLE,	/* not accessed page since last idle marking */
+#ifdef CONFIG_MI_ZRAM_WRITEBACK_CONTROL
+	ZRAM_IMPORTANT,	/* the important page */
+#endif
 
 	__NR_ZRAM_PAGEFLAGS,
 };
@@ -88,6 +94,10 @@ struct zram_stats {
 	atomic64_t notify_free;	/* no. of swap slot free notifications */
 	atomic64_t same_pages;		/* no. of same element filled pages */
 	atomic64_t huge_pages;		/* no. of huge pages */
+#ifdef CONFIG_MI_ZRAM_WRITEBACK_CONTROL
+	atomic64_t important_pages;	/* no. of important pages */
+	atomic64_t important_compr_data_size;     /* important compressed size of pages stored */
+#endif
 	atomic64_t pages_stored;	/* no. of pages currently stored */
 #ifdef CONFIG_MIUI_ZRAM_MEMORY_TRACKING
 	atomic64_t origin_pages_max;	/* no. of maximum origin pages stored */

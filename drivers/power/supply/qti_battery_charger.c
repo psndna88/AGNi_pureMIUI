@@ -1440,7 +1440,11 @@ struct quick_charge adapter_cap[11] = {
 	{0, 0},
 };
 #define ADAPTER_NONE              0x00
-#define ADAPTER_XIAOMI_PD_40W     0x0c
+#define ADAPTER_XIAOMI_QC3_20W    0x09
+#define ADAPTER_XIAOMI_PD_20W     0x0a
+#define ADAPTER_XIAOMI_CAR_20W    0x0b
+#define ADAPTER_XIAOMI_PD_30W     0x0c
+#define ADAPTER_VOICE_BOX_30W     0x0d
 #define ADAPTER_XIAOMI_PD_50W     0x0e
 #define ADAPTER_XIAOMI_PD_60W     0x0f
 #define ADAPTER_XIAOMI_PD_100W    0x10
@@ -1482,7 +1486,7 @@ static u8 get_quick_charge_type(struct battery_chg_dev *bcdev)
 		return QUICK_CHARGE_NORMAL;
 
 	if (real_charger_type == POWER_SUPPLY_USB_TYPE_PD_PPS && verify_digiest == 1) {
-		if (apdo_max >= 120)
+		if (apdo_max >= 50)
 			return QUICK_CHARGE_SUPER;
 		else
 			return QUICK_CHARGE_TURBE;
@@ -1495,8 +1499,12 @@ static u8 get_quick_charge_type(struct battery_chg_dev *bcdev)
 	{
 		case ADAPTER_NONE:
 			break;
-		case ADAPTER_XIAOMI_PD_40W:
+		case ADAPTER_XIAOMI_QC3_20W:
+		case ADAPTER_XIAOMI_PD_20W:
+		case ADAPTER_XIAOMI_CAR_20W:
 			return QUICK_CHARGE_TURBE;
+		case ADAPTER_XIAOMI_PD_30W:
+		case ADAPTER_VOICE_BOX_30W:
 		case ADAPTER_XIAOMI_PD_50W:
 		case ADAPTER_XIAOMI_PD_60W:
 		case ADAPTER_XIAOMI_PD_100W:
@@ -4883,7 +4891,7 @@ static ssize_t typec_mode_show(struct class *c,
 	int rc;
 
 	rc = read_property_id(bcdev, pst, XM_PROP_TYPEC_MODE);
-	if (rc < 0)
+	if (rc < 0 || pst->prop[XM_PROP_TYPEC_MODE] > 9 || pst->prop[XM_PROP_TYPEC_MODE] < 0)
 		return rc;
 
 	return scnprintf(buf, PAGE_SIZE, "%s\n", power_supply_usbc_text[pst->prop[XM_PROP_TYPEC_MODE]]);
@@ -5357,7 +5365,7 @@ static void generate_xm_charge_uvent(struct work_struct *work)
 	return;
 }
 
-#define CHARGING_PERIOD_S		30
+#define CHARGING_PERIOD_S		60
 #define DISCHARGE_PERIOD_S		300
 static void xm_charger_debug_info_print_work(struct work_struct *work)
 {
@@ -5482,13 +5490,14 @@ static int fb_notifier_callback(struct notifier_block *nb,
 						     fb_notifier);
 	struct mi_disp_notifier *evdata = data;
 	unsigned int blank;
+	int rc;
 
 	if(val != MI_DISP_DPMS_EVENT)
 		return NOTIFY_OK;
 
 	if (evdata && evdata->data && bcdev) {
 		blank = *(int *)(evdata->data);
-		pr_err("val:%lu,blank:%u\n", val, blank);
+		pr_debug("val:%lu,blank:%u\n", val, blank);
 
 		if ((blank == MI_DISP_DPMS_POWERDOWN ||
 			blank == MI_DISP_DPMS_LP1 || blank == MI_DISP_DPMS_LP2)) {
@@ -5497,7 +5506,10 @@ static int fb_notifier_callback(struct notifier_block *nb,
 			bcdev->blank_state = FB_UNBLANK;
 		}
 
-		schedule_work(&bcdev->fb_notifier_work);
+		rc = write_property_id(bcdev, &bcdev->psy_list[PSY_TYPE_XM],
+				XM_PROP_FB_BLANK_STATE, bcdev->blank_state);
+		if (rc < 0)
+			return rc;
 	}
 	return NOTIFY_OK;
 }
