@@ -6615,6 +6615,7 @@
       <elf-symbol name='kstrtoul_from_user' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8a6af65c'/>
       <elf-symbol name='kstrtoull' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3c80c06c'/>
       <elf-symbol name='kstrtoull_from_user' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x54245b39'/>
+      <elf-symbol name='ksu_kallsyms_lookup_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb23157a7'/>
       <elf-symbol name='ksys_sync_helper' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x55c76a23'/>
       <elf-symbol name='kthread_associate_blkcg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4b79cce6'/>
       <elf-symbol name='kthread_bind' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xad4e4440'/>
