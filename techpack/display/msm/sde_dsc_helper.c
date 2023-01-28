@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  */
 
 #include "msm_drv.h"
@@ -57,9 +58,49 @@ static char sde_dsc_rc_range_min_qp[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
 	{0, 2, 3, 4, 5, 5, 5, 6, 6, 7, 8, 8, 9, 11, 12},
 };
 
+static char sde_dsc_rc_range_min_qp_nt37703[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
+	/* DSC v1.1 */
+	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 7, 13},
+	{0, 4, 5, 5, 7, 7, 7, 7, 7, 8, 9, 9, 9, 12,16},
+	{0, 4, 5, 6, 7, 7, 7, 7, 7, 7, 9, 9, 9, 11, 15},
+	/* DSC v1.1 SCR and DSC v1.2 RGB 444 */
+	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 9, 12},
+	{0, 4, 5, 5, 7, 7, 7, 7, 7, 8, 9, 9, 9, 12, 16},
+	{0, 4, 5, 6, 7, 7, 7, 7, 7, 7, 9, 9, 9, 11, 15},
+	/* DSC v1.2 YUV422 */
+	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 7, 10},
+	{0, 4, 5, 5, 7, 7, 7, 7, 7, 7, 9, 9, 9, 13, 16},
+	{0, 4, 9, 9, 11, 11, 11, 11, 11, 11, 13, 13, 13, 17, 20},
+	{0, 2, 3, 4, 5, 5, 5, 6, 6, 7, 8, 8, 9, 11, 12},
+	/* DSC v1.2 YUV420 */
+	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 7, 10},
+	{0, 2, 3, 4, 6, 7, 7, 7, 7, 7, 9, 9, 9, 11, 14},
+	{0, 2, 3, 4, 5, 5, 5, 6, 6, 7, 8, 8, 9, 11, 12},
+};
+
 /*
  * Rate control - Max QP values for each ratio type in sde_dsc_ratio_type
  */
+static char sde_dsc_rc_range_max_qp_nt[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
+	/* DSC v1.1 */
+	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12, 13, 13, 15},
+	{8, 8, 9, 10, 11, 11, 11, 12, 13, 14, 15, 16, 17, 17, 19},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	/* DSC v1.1 SCR and DSC v1.2 RGB 444 */
+	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 10, 11, 11, 12, 13},
+	{8, 8, 9, 10, 11, 11, 11, 12, 13, 14, 14, 15, 15, 16, 17},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	/* DSC v1.2 YUV422 */
+	{3, 4, 5, 6, 7, 7, 7, 8, 9, 9, 10, 10, 11, 11, 12},
+	{2, 4, 5, 6, 7, 7, 7, 8, 8, 9, 9, 9, 9, 10, 11},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	{2, 5, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 13},
+	/* DSC v1.2 YUV420 */
+	{2, 4, 5, 6, 7, 7, 7, 8, 8, 9, 9, 9, 9, 10, 12},
+	{2, 5, 7, 8, 9, 10, 11, 12, 12, 13, 13, 13, 13, 14, 15},
+	{2, 5, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 13},
+	};
+
 static char sde_dsc_rc_range_max_qp[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
 	/* DSC v1.1 */
 	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12, 13, 13, 15},
@@ -80,6 +121,26 @@ static char sde_dsc_rc_range_max_qp[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
 	{2, 5, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 13},
 	};
 
+
+static char sde_dsc_rc_range_max_qp_nt37703[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
+	/* DSC v1.1 */
+	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 11, 12, 13, 13, 15},
+	{8, 8, 9, 10, 11, 11, 11, 12, 13, 14, 14, 15, 15, 16, 17},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	/* DSC v1.1 SCR and DSC v1.2 RGB 444 */
+	{4, 4, 5, 6, 7, 7, 7, 8, 9, 10, 10, 11, 11, 12, 13},
+	{8, 8, 9, 10, 11, 11, 11, 12, 13, 14, 14, 15, 15, 16, 17},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	/* DSC v1.2 YUV422 */
+	{3, 4, 5, 6, 7, 7, 7, 8, 9, 9, 10, 10, 11, 11, 12},
+	{2, 4, 5, 6, 7, 7, 7, 8, 8, 9, 9, 9, 9, 10, 11},
+	{7, 8, 9, 10, 11, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16},
+	{2, 5, 5, 6, 6, 7, 7, 8, 9, 9, 10, 11, 11, 12, 13},
+	/* DSC v1.2 YUV420 */
+	{2, 4, 5, 6, 7, 7, 7, 8, 8, 9, 9, 9, 9, 10, 12},
+	{2, 5, 7, 8, 9, 10, 11, 12, 12, 13, 13, 13, 13, 14, 15},
+	{8, 8, 9, 10, 11, 11, 11, 12, 13, 14, 14, 15, 15, 16, 17},
+	};
 /*
  * Rate control - bpg offset values for each ratio type in sde_dsc_ratio_type
  */
@@ -103,6 +164,26 @@ static char sde_dsc_rc_range_bpg[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
 	{10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10, -10, -12, -12, -12},
 };
 
+
+static char sde_dsc_rc_range_bpg_nt37703[DSC_RATIO_TYPE_MAX][DSC_NUM_BUF_RANGES] = {
+	/* DSC v1.1 */
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -12, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	/* DSC v1.1 SCR and DSC V1.2 RGB 444 */
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -12, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	/* DSC v1.2 YUV422 */
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -12, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -10, -12, -12, -12},
+	{10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10, -10, -12, -12, -12},
+	/* DSC v1.2 YUV420 */
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -12, -12, -12, -12},
+	{2, 0, 0, -2, -4, -6, -8, -8, -8, -10, -10, -12, -12, -12, -12},
+	{10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10, -10, -12, -12, -12},
+};
 /**
  * Maps to lookup the sde_dsc_ratio_type index used in rate control tables
  */
@@ -251,12 +332,36 @@ int sde_dsc_populate_dsc_config(struct drm_dsc_config *dsc, int scr_ver) {
 		dsc->rc_buf_thresh[i] = sde_dsc_rc_buf_thresh[i];
 
 	for (i = 0; i < DSC_NUM_BUF_RANGES; i++) {
-		dsc->rc_range_params[i].range_min_qp =
-			sde_dsc_rc_range_min_qp[ratio_idx][i];
-		dsc->rc_range_params[i].range_max_qp =
-			sde_dsc_rc_range_max_qp[ratio_idx][i];
-		dsc->rc_range_params[i].range_bpg_offset =
-			sde_dsc_rc_range_bpg[ratio_idx][i];
+		if (((dsc->dsc_panel_id >> 8) == 0x4D3230003602)) {
+			dsc->rc_range_params[i].range_min_qp =
+				sde_dsc_rc_range_min_qp_nt37703[ratio_idx][i];
+		} else {
+			dsc->rc_range_params[i].range_min_qp =
+				sde_dsc_rc_range_min_qp[ratio_idx][i];
+		}
+		if (((dsc->dsc_panel_id >> 8) == 0x4B39003602) || ((dsc->dsc_panel_id >> 8) == 0x4B38004202)
+			|| ((dsc->dsc_panel_id >> 24) == 0x4B335300)||((dsc->dsc_panel_id >> 8) == 0x4B3944003602)
+			|| ((dsc->dsc_panel_id >> 8) == 0x4B3942004202)||((dsc->dsc_panel_id >> 8) == 0x4C39004202)
+			|| ((dsc->dsc_panel_id >> 8) == 0x4C39003602)||((dsc->dsc_panel_id >> 8) == 0x4B3945003502)
+			|| ((dsc->dsc_panel_id >> 8) == 0x4B3945004202)) {
+			dsc->rc_range_params[i].range_max_qp =
+				sde_dsc_rc_range_max_qp_nt[ratio_idx][i];
+
+		} else if (((dsc->dsc_panel_id >> 8) == 0x4D3230003602)) {
+			dsc->rc_range_params[i].range_max_qp =
+				sde_dsc_rc_range_max_qp_nt37703[ratio_idx][i];
+		} else {
+			dsc->rc_range_params[i].range_max_qp =
+				sde_dsc_rc_range_max_qp[ratio_idx][i];
+		}
+
+		if (((dsc->dsc_panel_id >> 8) == 0x4D3230003602)) {
+			dsc->rc_range_params[i].range_bpg_offset =
+				sde_dsc_rc_range_bpg_nt37703[ratio_idx][i];
+		} else {
+			dsc->rc_range_params[i].range_bpg_offset =
+				sde_dsc_rc_range_bpg[ratio_idx][i];
+		}
 	}
 
 	if (bpp == 8) {
@@ -532,6 +637,9 @@ int sde_dsc_create_pps_buf_cmd(struct msm_display_dsc_info *dsc_info,
 	}
 
 	if (dsc->dsc_version_minor == 0x2) {
+		if (((dsc->dsc_panel_id >> 8) == 0x4D3230003602)) {
+			data = 0;
+		}
 		if (dsc->native_422)
 			data = BIT(0);
 		else if (dsc->native_420)
