@@ -1360,4 +1360,6 @@ source "drivers/input/touchscreen/fts_spi/Kconfig"
 
 source "drivers/input/touchscreen/fts_dual/Kconfig"
 
+source "drivers/input/touchscreen/gt9916/Kconfig"
+
 endif
