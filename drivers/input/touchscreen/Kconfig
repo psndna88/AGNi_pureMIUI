@@ -1359,4 +1359,6 @@ source "drivers/input/touchscreen/gt9916/Kconfig"
 
 source "drivers/input/touchscreen/gt9897t/Kconfig"
 
+source "drivers/input/touchscreen/synaptics_s3908p/Kconfig"
+
 endif
