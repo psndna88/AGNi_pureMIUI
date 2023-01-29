@@ -38,6 +38,7 @@
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 #include <linux/firmware.h>
+#include <linux/hwid.h>
 #include "synaptics_tcm_core.h"
 #include "synaptics_tcm_testing.h"
 
@@ -567,6 +568,7 @@ static int testing_load_testlimits(enum test_code testcode, unsigned int gapdiff
 	unsigned int cols;
 	unsigned int buf_size_bytes = 0;
 	const struct firmware *firmware = NULL;
+        const char *syna_tcm_test_file = NULL;
 	struct syna_tcm_buffer *dest_buffer0 = NULL;
 	struct syna_tcm_buffer *dest_buffer1 = NULL;
 	struct syna_tcm_hcd *tcm_hcd = testing_hcd->tcm_hcd;
@@ -634,7 +636,18 @@ static int testing_load_testlimits(enum test_code testcode, unsigned int gapdiff
 	}
 
 	/* read limit csv file */
-	sprintf(limit_file_name, "%s", SYNA_TCM_TESTING_LIMITS_FILE_NAME);
+	switch (get_hw_version_platform()) {
+		case HARDWARE_PROJECT_K9B:
+			syna_tcm_test_file = SYNA_TCM_TESTING_LIMITS_FILE_NAME_K9B;
+			break;
+		case HARDWARE_PROJECT_K9E:
+			syna_tcm_test_file = SYNA_TCM_TESTING_LIMITS_FILE_NAME_K9E;
+			break;
+		default:
+			// Nothing
+			break;
+	}
+	sprintf(limit_file_name, "%s", syna_tcm_test_file);
 	LOGN(tcm_hcd->pdev->dev.parent,
 			"limit_file_name:%s.\n", limit_file_name);
 

@@ -44,7 +44,8 @@
 
 #define PT1_PT3_LIMITS_BYTES_SIZE  (8)
 #define PT10_LIMITS_BYTES_SIZE     (1)
-#define SYNA_TCM_TESTING_LIMITS_FILE_NAME  "k9b_test_limits_S3908P.csv"
+#define SYNA_TCM_TESTING_LIMITS_FILE_NAME_K9B  "k9b_test_limits_S3908P.csv"
+#define SYNA_TCM_TESTING_LIMITS_FILE_NAME_K9E  "k9e_test_limits_S3908P.csv"
 #define CSV_PT1_TESTING_LIMITS             "PT1_TRx_TRx_short_test"
 #define CSV_PT3_TESTING_LIMITS             "PT3_TRX_GND_short_test"
 #define CSV_PT5_TESTING_LIMITS_MIN         "PT5_Full_raw_cap_test_min"
