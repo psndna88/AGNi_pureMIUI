@@ -89,3 +89,4 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
 obj-$(CONFIG_INPUT_AW8697_HAPTIC)	+= aw8697_haptic/
 obj-$(CONFIG_INPUT_AW8624_HAPTIC)	+= aw8624_haptic/
+obj-$(CONFIG_INPUT_AW862XX_HAPTIC)  += aw8622x_haptic/
