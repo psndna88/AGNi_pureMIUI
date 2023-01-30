@@ -11,6 +11,7 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/component.h>
+#include <linux/mmhardware_sysfs.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
 #include <soc/soundwire.h>
@@ -26,7 +27,6 @@
 #include "wcd938x.h"
 #include "internal.h"
 #include "asoc/bolero-slave-internal.h"
-#include "linux/mmhardware_sysfs.h"
 
 #define NUM_SWRS_DT_PARAMS 5
 #define WCD938X_VARIANT_ENTRY_SIZE 32
