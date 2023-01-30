@@ -231,7 +231,7 @@ struct aw8624_dts_info {
 	unsigned int gain_flag;
 	unsigned int effect_id_boundary;
 	unsigned int effect_max;
-	unsigned int rtp_time[175];
+	unsigned int rtp_time[194];
 	unsigned int trig_config[3][5];
 };
 
@@ -364,6 +364,7 @@ struct aw8624 {
 
 	unsigned char rtp_init;
 	unsigned char ram_init;
+	unsigned char ram_retry_cnt;//Daniel 20211009 modify
 
 	unsigned int f0;
 	unsigned int cont_f0;
