@@ -917,4 +917,5 @@ config INPUT_STPMIC1_ONKEY
 source "drivers/input/misc/aw8697_haptic/Kconfig"
 source "drivers/input/misc/aw8624_haptic/Kconfig"
 source "drivers/input/misc/aw8622x_haptic/Kconfig"
+source "drivers/input/misc/aw86927_haptic/Kconfig"
 endif
