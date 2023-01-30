@@ -7,7 +7,6 @@
 #ifndef _AW8622X_H_
 #define _AW8622X_H_
 
-#define INPUT_DEV
 
 #include <linux/regmap.h>
 #include <linux/timer.h>
@@ -53,14 +52,7 @@ typedef struct led_classdev cdev_t;
 #define AW8622X_VBAT_MAX		(5500)
 #define AW8622X_TRIG_NUM		(3)
 #define AW8622X_I2C_RETRY_DELAY		(2)
-#define HAP_BRAKE_PATTERN_MAX           (4)
-#define AW8624_SEQUENCER_SIZE           (8)
-#define AW8624_SEQUENCER_LOOP_SIZE      (4)
 
-#define HAP_WAVEFORM_BUFFER_MAX     8
-#define HAP_PLAY_RATE_US_DEFAULT    5715
-#define HAP_PLAY_RATE_US_MAX        20475
-#define FF_EFFECT_COUNT_MAX     32
 
 // static int wf_s_repeat[4] = { 1, 2, 4, 8 };
 
@@ -128,18 +120,10 @@ enum aw8622x_haptic_cmd {
 	AW8622X_HAPTIC_CMD_STOP = 255,
 };
 
-
-enum haptics_custom_effect_param {
-	CUSTOM_DATA_EFFECT_IDX,
-	CUSTOM_DATA_TIMEOUT_SEC_IDX,
-	CUSTOM_DATA_TIMEOUT_MSEC_IDX,
-	CUSTOM_DATA_LEN,
-};
-
 enum aw8622x_haptic_cali_lra {
-	WRITE_ZERO = 0,
-	F0_CALI = 1,
-	OSC_CALI = 2,
+	AW8622X_WRITE_ZERO = 0,
+	AW8622X_F0_CALI = 1,
+	AW8622X_OSC_CALI = 2,
 };
 
 enum aw8622x_haptic_rtp_mode {
@@ -185,22 +169,6 @@ enum aw8622x_ef_id {
  trig3*  1     0     0       1       0      2     0   0
 */
 
-struct fileops {
-	unsigned char cmd;
-	unsigned char reg;
-	unsigned char ram_addrh;
-	unsigned char ram_addrl;
-};
-
-struct trig {
-	unsigned char trig_level;
-	unsigned char trig_polar;
-	unsigned char pos_enable;
-	unsigned char pos_sequence;
-	unsigned char neg_enable;
-	unsigned char neg_sequence;
-	unsigned char trig_brk;
-};
 
 struct aw8622x_dts_info {
 	unsigned int mode;
@@ -223,77 +191,25 @@ struct aw8622x_dts_info {
 	unsigned int trig_config[24];
 	unsigned int effect_id_boundary;
 	unsigned int effect_max;
-    unsigned int rtp_time[175];
+	unsigned int rtp_time[194];
 	bool is_enabled_powerup_f0_cali;
 	bool is_enabled_auto_bst;
 };
 
-
-#ifdef INPUT_DEV
-enum actutor_type {
-	ACT_LRA,
-	ACT_ERM,
+struct aw8622x_trig {
+	unsigned char trig_level;
+	unsigned char trig_polar;
+	unsigned char pos_enable;
+	unsigned char pos_sequence;
+	unsigned char neg_enable;
+	unsigned char neg_sequence;
+	unsigned char trig_brk;
 };
 
-enum lra_res_sig_shape {
-	RES_SIG_SINE,
-	RES_SIG_SQUARE,
-};
-
-enum lra_auto_res_mode {
-	AUTO_RES_MODE_ZXD,
-	AUTO_RES_MODE_QWD,
-};
-
-enum wf_src {
-	INT_WF_VMAX,
-	INT_WF_BUFFER,
-	EXT_WF_AUDIO,
-	EXT_WF_PWM,
-};
-
-
-struct qti_hap_effect {
-	int id;
-	u8 *pattern;
-	int pattern_length;
-	u16 play_rate_us;
-	u16 vmax_mv;
-	u8 wf_repeat_n;
-	u8 wf_s_repeat_n;
-	u8 brake[HAP_BRAKE_PATTERN_MAX];
-	int brake_pattern_length;
-	bool brake_en;
-	bool lra_auto_res_disable;
-};
-
-struct qti_hap_play_info {
-	struct qti_hap_effect *effect;
-	u16 vmax_mv;
-	int length_us;
-	int playing_pos;
-	bool playing_pattern;
-};
-
-struct qti_hap_config {
-	enum actutor_type act_type;
-	enum lra_res_sig_shape lra_shape;
-	enum lra_auto_res_mode lra_auto_res_mode;
-	enum wf_src ext_src;
-	u16 vmax_mv;
-	u16 play_rate_us;
-	bool lra_allow_variable_play_rate;
-	bool use_ext_wf_src;
-};
-#endif
 struct aw8622x {
 	struct regmap *regmap;
 	struct i2c_client *i2c;
-#if 1
-	struct pinctrl *aw8622x_pinctrl;
-	struct pinctrl_state *pinctrl_state[3];
-#endif
-	int enable_pin_control;
+
 	/*struct snd_soc_codec *codec; */
 	struct device *dev;
 	struct input_dev *input;
@@ -305,7 +221,7 @@ struct aw8622x {
 	struct work_struct set_gain_work;
 	struct delayed_work ram_work;
 	struct delayed_work stop_work;
-	struct trig trig[AW8622X_TRIG_NUM];
+	struct aw8622x_trig trig[AW8622X_TRIG_NUM];
 	struct aw8622x_dts_info dts_info;
 	struct fileops fileops;
 	struct ram ram;
@@ -376,15 +292,17 @@ struct aw8622x {
 	unsigned int rtp_len;
 	unsigned long int microsecond;
 
-        u16 new_gain;
-        unsigned char level;
+	u16 new_gain;
+	unsigned char level;
 	struct haptic_audio haptic_audio;
 	unsigned int osc_cali_run;
-        unsigned char ram_vbat_comp;
+	unsigned char ram_vbat_comp;
+	atomic_t is_in_rtp_loop;
 	atomic_t exit_in_rtp_loop;
-        wait_queue_head_t stop_wait_q;
-        struct workqueue_struct *work_queue;
-        struct work_struct vibrator_work;
+	wait_queue_head_t wait_q;
+	wait_queue_head_t stop_wait_q;
+	struct workqueue_struct *work_queue;
+	struct work_struct vibrator_work;
 	/* ram monitor */
 #ifdef AW_RAM_STATE_OUTPUT
 	struct delayed_work ram_monitor_work;
@@ -420,6 +338,11 @@ struct aw8622x_container {
 	int len;
 	unsigned char data[];
 };
+/*********************************************************
+ *
+ * extern
+ *
+ ********************************************************/
 extern char aw8622x_check_qualify(struct aw8622x *aw8622x);
 
 extern int aw8622x_parse_dt(struct device *dev, struct aw8622x *aw8622x,
@@ -429,36 +352,15 @@ extern int aw8622x_vibrator_init(struct aw8622x *aw8622x);
 extern int aw8622x_haptic_init(struct aw8622x *aw8622x);
 extern int aw8622x_ram_work_init(struct aw8622x *aw8622x);
 extern irqreturn_t aw8622x_irq(int irq, void *data);
-
 extern struct attribute_group aw8622x_vibrator_attribute_group;
-/*********************************************************
- *
- * ioctl
- *
- ********************************************************/
-struct aw8624_seq_loop {
-	unsigned char loop[AW8624_SEQUENCER_SIZE];
-};
+extern void aw8622x_haptics_set_gain(struct input_dev *dev, u16 gain);
+extern int aw8622x_haptics_erase(struct input_dev *dev, int effect_id);
+extern int aw8622x_haptics_playback(struct input_dev *dev, int effect_id,
+			     int val);
+extern int aw8622x_haptics_upload_effect (struct input_dev *dev,
+				   struct ff_effect *effect,
+				   struct ff_effect *old);
+extern void aw8622x_haptics_set_gain_work_routine(struct work_struct *work);
 
-struct aw8624_que_seq {
-	unsigned char index[AW8624_SEQUENCER_SIZE];
-};
 
-#define AW8624_HAPTIC_IOCTL_MAGIC         'h'
-
-#define AW8624_HAPTIC_SET_QUE_SEQ         _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
-						1,\
-						struct aw8624_que_seq*)
-#define AW8624_HAPTIC_SET_SEQ_LOOP        _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
-						2,\
-						struct aw8624_seq_loop*)
-#define AW8624_HAPTIC_PLAY_QUE_SEQ        _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
-						3,\
-						unsigned int)
-#define AW8624_HAPTIC_SET_GAIN            _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
-						6,\
-						unsigned int)
-#define AW8624_HAPTIC_PLAY_REPEAT_SEQ     _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
-						7,\
-						unsigned int)
 #endif

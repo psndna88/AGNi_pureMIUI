@@ -2,18 +2,15 @@
 #define _AW8624_H_
 
 /*********************************************************
-*
-* kernel version
-*
-********************************************************/
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 4, 1)
-#define TIMED_OUTPUT
-#endif
-
+ *
+ * kernel version
+ *
+ ********************************************************/
+#define TEST_CONT_TO_RAM
 /*********************************************************
-*
-* aw8624.h
-*
+ *
+ * aw8624.h
+ *
  ********************************************************/
 #include <linux/regmap.h>
 #include <linux/timer.h>
@@ -21,61 +18,64 @@
 #include <linux/hrtimer.h>
 #include <linux/mutex.h>
 #include <linux/cdev.h>
-#include <linux/pm_wakeup.h>
-#include <linux/pm_wakeirq.h>
-#include "haptic.h"
-#ifdef TIMED_OUTPUT
-#include <../../../drivers/staging/android/timed_output.h>
-#else
 #include <linux/leds.h>
-#endif
+#include <linux/atomic.h>
+#include <linux/timekeeping.h>
+#include "haptic.h"
 
 /*********************************************************
-*
-* marco
-*
-********************************************************/
+ *
+ * marco
+ *
+ ********************************************************/
+#define MAX_I2C_BUFFER_SIZE                 65536
 
-#define AW8624_I2C_RETRIES		(2)
-#define AW8624_RTP_NAME_MAX		(64)
-#define AW8624_SEQUENCER_SIZE		(8)
-#define AW8624_SEQUENCER_LOOP_SIZE	(4)
-#define AW8624_OSC_CALIBRATION_T_LENGTH	(5100000)
-#define AW8624_PM_QOS_VALUE_VB		(400)
-#define AW8624_VBAT_REFER		(4200)
-#define AW8624_VBAT_MIN			(3000)
-#define AW8624_VBAT_MAX			(4500)
-#define AW8624_HAPTIC_NAME		("aw8624_haptic")
+#define AW8624_SEQUENCER_SIZE               8
+#define AW8624_SEQUENCER_LOOP_SIZE          4
 
+#define AW8624_RTP_I2C_SINGLE_MAX_NUM       512
+
+#define HAPTIC_MAX_TIMEOUT                  10000
+
+#define AW8624_VBAT_REFER                   4400
+#define AW8624_VBAT_MIN                     3500
+#define AW8624_VBAT_MAX                     4500
+
+
+#define AW8624_CONT_PLAYBACK_MODE       AW8624_BIT_CONT_CTRL_CLOSE_PLAYBACK
 
 /*
-* aw8624 dts info
-*
-* aw8624_brake_local[3][8]
-* [0][0-7] is en_brake1,en_brake2,brake0_level,
-* brake1_level,brake2_level,brake0_p_num,brake1_p_num,brake0_level;
+ * trig default high level
+ * ___________         _________________
+ *           |         |
+ *           |         |
+ *           |___________|
+ *        first edge
+ *                   second edge
+ *
+ *
+ * trig default low level
+ *            ___________
+ *        |           |
+ *        |           |
+ * __________|        |_________________
+ *        first edge
+ *                   second edge
+ */
+/* trig config */
+/*dts config
+* default_level -> 1: high level; 0: low level
+* dual_edge     -> 1: dual edge; 0: first edge
+*vib_trig_config = <
+*       1   1              1          1           2
+*  enable   default_level  dual_edge  first_seq   second_seq
+*       1   1              2          1           2
+*  enable   default_level  dual_edge  first_seq   second_seq
+*       1   1              3          1           2
+*  enable   default_level  dual_edge  first_seq   second_seq
 */
-struct aw8624_dts_info {
-	int aw8624_mode;
-	int aw8624_f0_pre;
-	int aw8624_f0_cali_percen;
-	int aw8624_cont_drv_lvl;
-	int aw8624_cont_drv_lvl_ov;
-	int aw8624_cont_td;
-	int aw8624_cont_zc_thr;
-	int aw8624_cont_num_brk;
-	int aw8624_f0_coeff;
-	int aw8624_duration_time[5];
-	int aw8624_cont_brake[3][8];
-	int aw8624_f0_trace_parameter[4];
-	int aw8624_bemf_config[4];
-	int aw8624_sw_brake[2];
-	int aw8624_wavseq[16];
-	int aw8624_wavloop[10];
-	int aw8624_td_brake[3];
-	int aw8624_tset;
-	int aw8624_parameter1;
-};
+#define AW8624_TRIG_NUM                     3
+
 
 enum aw8624_flags {
 	AW8624_FLAG_NONR = 0,
@@ -91,21 +91,6 @@ enum aw8624_haptic_read_write {
 	AW8624_HAPTIC_CMD_WRITE_REG = 1,
 };
 
-enum aw8624_haptic_play {
-	AW8624_HAPTIC_PLAY_NULL = 0,
-	AW8624_HAPTIC_PLAY_ENABLE = 1,
-	AW8624_HAPTIC_PLAY_STOP = 2,
-	AW8624_HAPTIC_PLAY_GAIN = 8,
-};
-
-enum aw8624_haptic_cmd {
-	AW8624_HAPTIC_CMD_NULL = 0,
-	AW8624_HAPTIC_CMD_ENABLE = 1,
-	AW8624_HAPTIC_CMD_HAPTIC = 0x0f,
-	AW8624_HAPTIC_CMD_TP = 0x10,
-	AW8624_HAPTIC_CMD_SYS = 0xf0,
-	AW8624_HAPTIC_CMD_STOP = 255,
-};
 enum aw8624_haptic_work_mode {
 	AW8624_HAPTIC_STANDBY_MODE = 0,
 	AW8624_HAPTIC_RAM_MODE = 1,
@@ -115,19 +100,16 @@ enum aw8624_haptic_work_mode {
 	AW8624_HAPTIC_RAM_LOOP_MODE = 5,
 };
 
-enum aw8624_haptic_bst_mode {
-	AW8624_HAPTIC_BYPASS_MODE = 0,
-	AW8624_HAPTIC_BOOST_MODE = 1,
-};
-
 enum aw8624_haptic_activate_mode {
 	AW8624_HAPTIC_ACTIVATE_RAM_MODE = 0,
 	AW8624_HAPTIC_ACTIVATE_CONT_MODE = 1,
+	AW8624_HAPTIC_ACTIVATE_RTP_MODE = 2,
+	AW8624_HAPTIC_ACTIVATE_RAM_LOOP_MODE = 3,
 };
 
-enum aw8624_haptic_vbat_comp_mode {
-	AW8624_HAPTIC_VBAT_SW_COMP_MODE = 0,
-	AW8624_HAPTIC_VBAT_HW_COMP_MODE = 1,
+enum aw8624_haptic_cont_vbat_comp_mode {
+	AW8624_HAPTIC_CONT_VBAT_SW_COMP_MODE = 0,
+	AW8624_HAPTIC_CONT_VBAT_HW_COMP_MODE = 1,
 };
 
 enum aw8624_haptic_ram_vbat_comp_mode {
@@ -146,74 +128,133 @@ enum aw8624_haptic_pwm_mode {
 	AW8624_PWM_12K = 2,
 };
 
+enum aw8624_haptic_play {
+	AW8624_HAPTIC_PLAY_NULL = 0,
+	AW8624_HAPTIC_PLAY_ENABLE = 1,
+	AW8624_HAPTIC_PLAY_STOP = 2,
+	AW8624_HAPTIC_PLAY_GAIN = 8,
+};
+
+enum aw8624_haptic_cmd {
+	AW8624_HAPTIC_CMD_NULL = 0,
+	AW8624_HAPTIC_CMD_ENABLE = 1,
+	AW8624_HAPTIC_CMD_STOP = 255,
+};
+
+enum aw8624_haptic_strength {
+	AW8624_LIGHT_MAGNITUDE = 0x3fff,
+	AW8624_MEDIUM_MAGNITUDE = 0x5fff,
+	AW8624_STRONG_MAGNITUDE = 0x7fff,
+};
+
 enum aw8624_haptic_cali_lra {
-	AW8624_HAPTIC_ZERO = 0,
-	AW8624_HAPTIC_F0_CALI_LRA = 1,
-	AW8624_HAPTIC_RTP_CALI_LRA = 2,
+	NORMAL_CALI = 0,
+	F0_CALI = 1,
+	OSC_CALI = 2,
 };
 
 /*********************************************************
-*
-* struct
-*
-********************************************************/
-struct fileops {
-	unsigned char cmd;
-	unsigned char reg;
-	unsigned char ram_addrh;
-	unsigned char ram_addrl;
+ *
+ * struct
+ *
+ ********************************************************/
+/*struct ram {
+	unsigned int len;
+	unsigned int check_sum;
+	unsigned int base_addr;
+	unsigned char version;
+	unsigned char ram_shift;
+	unsigned char baseaddr_shift;
 };
 
+struct haptic_ctr {
+	unsigned char cmd;
+	unsigned char play;
+	unsigned char wavseq;
+	unsigned char loop;
+	unsigned char gain;
+};
 
+struct haptic_audio {
+	struct mutex lock;
+	struct hrtimer timer;
+	struct work_struct work;
+	int delay_val;
+	int timer_val;
+	unsigned char cnt;
+	struct haptic_ctr data[256];
+	struct haptic_ctr ctr;
+	unsigned char ori_gain;
+};*/
+struct aw8624_dts_info {
+	unsigned int mode;
+	unsigned int f0_pre;
+	unsigned int f0_cali_percen;
+	unsigned int cont_drv_lvl;
+	unsigned int cont_drv_lvl_ov;
+	unsigned int cont_td;
+	unsigned int cont_zc_thr;
+	unsigned int cont_num_brk;
+	unsigned int f0_coeff;
+	unsigned int f0_trace_parameter[4];
+	unsigned int bemf_config[4];
+	unsigned int sw_brake;
+	unsigned int tset;
+	unsigned int r_spare;
+	unsigned int parameter1;
+	unsigned int gain_flag;
+	unsigned int effect_id_boundary;
+	unsigned int effect_max;
+	unsigned int rtp_time[194];
+	unsigned int trig_config[3][5];
+};
+
+struct aw8624_tirg {
+	unsigned char enable;
+	unsigned char default_level;
+	unsigned char dual_edge;
+	unsigned char frist_seq;
+	unsigned char second_seq;
+
+};
 
 struct aw8624 {
-	struct regmap *regmap;
 	struct i2c_client *i2c;
-	struct device *dev;
-	struct input_dev *input;
-	struct aw8624_container *rtp_container;
-
 	struct mutex lock;
-	struct mutex rtp_lock;
-	struct wake_lock wk_lock;
-	unsigned char wk_lock_flag;
-	struct hrtimer timer;
+
 	struct work_struct vibrator_work;
-	struct work_struct irq_work;
 	struct work_struct rtp_work;
+	struct work_struct set_gain_work;
 	struct delayed_work ram_work;
 	struct delayed_work stop_work;
-#ifdef TIMED_OUTPUT
-	struct timed_output_dev to_dev;
-#else
-	struct led_classdev cdev;
-#endif
+
 	struct fileops fileops;
 	struct ram ram;
-	bool haptic_ready;
-	bool audio_ready;
-	int pre_haptic_number;
-	struct timeval current_time;
-	struct timeval pre_enter_time;
-	struct timeval start, end;
+
+	struct timespec64 start, end;
 	unsigned int timeval_flags;
 	unsigned int osc_cali_flag;
 	unsigned long int microsecond;
-	unsigned int theory_time;
+	unsigned int sys_frequency;
 	unsigned int rtp_len;
+	unsigned int lra_calib_data;
+	unsigned int f0_calib_data;
+
 	int reset_gpio;
 	int irq_gpio;
-	int reset_gpio_ret;
-	int irq_gpio_ret;
 
 	unsigned char hwen_flag;
 	unsigned char flags;
 	unsigned char chipid;
 	unsigned char chipid_flag;
-	unsigned char singlecycle;
+
 	unsigned char play_mode;
+
 	unsigned char activate_mode;
+
 	unsigned char auto_boost;
+	unsigned char wk_lock_flag;
+	unsigned char irq_sts_flag;
 
 	int state;
 	int duration;
@@ -221,44 +262,69 @@ struct aw8624 {
 	int index;
 	int vmax;
 	int gain;
+	u16 new_gain;
 	int f0_value;
+	unsigned char level;
 
 	unsigned char seq[AW8624_SEQUENCER_SIZE];
 	unsigned char loop[AW8624_SEQUENCER_SIZE];
 
-	unsigned int gun_type;
-	unsigned int bullet_nr;
 	unsigned int rtp_cnt;
 	unsigned int rtp_file_num;
 
 	unsigned char rtp_init;
 	unsigned char ram_init;
-	unsigned char rtp_routine_on;
 
 	unsigned int f0;
-	unsigned int f0_pre;
-	unsigned int cont_td;
 	unsigned int cont_f0;
-	unsigned int cont_zc_thr;
-	unsigned char cont_drv_lvl;
-	unsigned char cont_drv_lvl_ov;
-	unsigned char cont_num_brk;
 	unsigned char max_pos_beme;
 	unsigned char max_neg_beme;
 	unsigned char f0_cali_flag;
-	bool IsUsedIRQ;
-	bool ram_update_delay;
-	struct haptic_audio haptic_audio;
+	unsigned int osc_cali_run;
 
 	unsigned char ram_vbat_comp;
 	unsigned int vbat;
 	unsigned int lra;
-	unsigned int interval_us;
-	unsigned int ramupdate_flag;
-	unsigned int rtpupdate_flag;
-	unsigned int osc_cali_run;
-	unsigned int lra_calib_data;
-	unsigned int f0_calib_data;
+
+	struct aw8624_tirg trig[AW8624_TRIG_NUM];
+
+	struct haptic_audio haptic_audio;
+	struct aw8624_dts_info info;
+	atomic_t is_in_rtp_loop;
+	atomic_t exit_in_rtp_loop;
+	wait_queue_head_t wait_q;//wait queue for exit irq mode
+	wait_queue_head_t stop_wait_q;  //wait queue for stop rtp mode
+	struct workqueue_struct *work_queue;
+
+#ifdef INPUT_DEV
+	struct platform_device *pdev;
+	struct device *dev;
+	struct regmap *regmap;
+	struct input_dev *input_dev;
+	struct pwm_device *pwm_dev;
+	struct qti_hap_config config;
+	struct qti_hap_play_info play;
+	struct qti_hap_effect *predefined;
+	struct qti_hap_effect constant;
+	struct regulator *vdd_supply;
+	struct hrtimer stop_timer;
+	struct hrtimer hap_disable_timer;
+	struct hrtimer timer;	/*test used  ,del */
+	struct mutex rtp_lock;
+	spinlock_t bus_lock;
+	ktime_t last_sc_time;
+	int play_irq;
+	int sc_irq;
+	int effects_count;
+	int sc_det_count;
+	u16 reg_base;
+	bool perm_disable;
+	bool play_irq_en;
+	bool vdd_enabled;
+	int effect_type;
+	int effect_id;
+	int test_val;
+#endif
 };
 
 struct aw8624_container {
@@ -267,10 +333,10 @@ struct aw8624_container {
 };
 
 /*********************************************************
-*
-* ioctl
-*
-********************************************************/
+ *
+ * ioctl
+ *
+ ********************************************************/
 struct aw8624_seq_loop {
 	unsigned char loop[AW8624_SEQUENCER_SIZE];
 };
@@ -279,35 +345,45 @@ struct aw8624_que_seq {
 	unsigned char index[AW8624_SEQUENCER_SIZE];
 };
 
-#define AW8624_HAPTIC_IOCTL_MAGIC		'h'
-#define AW8624_HAPTIC_SET_QUE_SEQ	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 1, struct aw8624_que_seq*)
-#define AW8624_HAPTIC_SET_SEQ_LOOP	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 2, struct aw8624_seq_loop*)
-#define AW8624_HAPTIC_PLAY_QUE_SEQ	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 3, unsigned int)
-#define AW8624_HAPTIC_SET_BST_VOL	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 4, unsigned int)
-#define AW8624_HAPTIC_SET_BST_PEAK_CUR	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 5, unsigned int)
-#define AW8624_HAPTIC_SET_GAIN		\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 6, unsigned int)
-#define AW8624_HAPTIC_PLAY_REPEAT_SEQ	\
-		_IOWR(AW8624_HAPTIC_IOCTL_MAGIC, 7, unsigned int)
+#define AW8624_HAPTIC_IOCTL_MAGIC         'h'
 
-extern int aw8624_parse_dt(struct device *dev, struct aw8624 *aw8624,
-		struct device_node *np);
+#define AW8624_HAPTIC_SET_QUE_SEQ         _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
+						1,\
+						struct aw8624_que_seq*)
+#define AW8624_HAPTIC_SET_SEQ_LOOP        _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
+						2,\
+						struct aw8624_seq_loop*)
+#define AW8624_HAPTIC_PLAY_QUE_SEQ        _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
+						3,\
+						unsigned int)
+#define AW8624_HAPTIC_SET_GAIN            _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
+						6,\
+						unsigned int)
+#define AW8624_HAPTIC_PLAY_REPEAT_SEQ     _IOWR(AW8624_HAPTIC_IOCTL_MAGIC,\
+						7,\
+						unsigned int)
+
+/*********************************************************
+ *
+ * extern
+ *
+ ********************************************************/
+extern int aw8624_haptics_upload_effect(struct input_dev *dev,
+					struct ff_effect *effect,
+					struct ff_effect *old);
+extern int aw8624_haptics_playback(struct input_dev *dev, int effect_id,
+				   int val);
+extern int aw8624_haptics_erase(struct input_dev *dev, int effect_id);
+extern void aw8624_haptics_set_gain_work_routine(struct work_struct *work);
 extern void aw8624_interrupt_setup(struct aw8624 *aw8624);
+extern int aw8624_parse_dt(struct device *dev, struct aw8624 *aw8624,
+			   struct device_node *np);
 extern int aw8624_vibrator_init(struct aw8624 *aw8624);
 extern int aw8624_haptic_init(struct aw8624 *aw8624);
-extern int aw8624_haptic_trig1_config(struct aw8624 *aw8624,
-				unsigned char flag);
 extern int aw8624_ram_init(struct aw8624 *aw8624);
-extern struct attribute_group aw8624_vibrator_attribute_group;
-extern struct miscdevice aw8624_haptic_misc;
+extern void aw8624_haptics_set_gain(struct input_dev *dev, u16 gain);
 extern irqreturn_t aw8624_irq(int irq, void *data);
+extern struct attribute_group aw8624_vibrator_attribute_group;
 
 #endif
-
-
 

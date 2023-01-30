@@ -2,7 +2,6 @@
  * aw8622x.c
  *
  * Copyright (c) 2020 AWINIC Technology CO., LTD
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * vun Author: Ray <yulei@awinic.com>
  *
@@ -45,13 +44,181 @@
 static char *aw8622x_ram_name = "aw8622x_haptic.bin";
 static char aw8622x_rtp_name[][AW8622X_RTP_NAME_MAX] = {
 	{"aw8622x_osc_rtp_24K_5s.bin"},
+	{"AcousticGuitar_RTP.bin"},	//21
+	{"Blues_RTP.bin"},
+	{"Candy_RTP.bin"},
+	{"Carousel_RTP.bin"},
+	{"Celesta_RTP.bin"},
+	{"Childhood_RTP.bin"},
+	{"Country_RTP.bin"},
+	{"Cowboy_RTP.bin"},
+	{"Echo_RTP.bin"},
+	{"Fairyland_RTP.bin"},
+	{"Fantasy_RTP.bin"},	//31
+	{"Field_Trip_RTP.bin"},
+	{"Glee_RTP.bin"},
+	{"Glockenspiel_RTP.bin"},
+	{"Ice_Latte_RTP.bin"},
+	{"Kung_Fu_RTP.bin"},
+	{"Leisure_RTP.bin"},
+	{"Lollipop_RTP.bin"},
+	{"MiMix2_RTP.bin"},
+	{"Mi_RTP.bin"},
+	{"MiHouse_RTP.bin"},	//41
+	{"MiJazz_RTP.bin"},
+	{"MiRemix_RTP.bin"},
+	{"Mountain_Spring_RTP.bin"},
+	{"Orange_RTP.bin"},
+	{"WindChime_RTP.bin"},	//46
+	{"Space_Age_RTP.bin"},
+	{"ToyRobot_RTP.bin"},
+	{"Vigor_RTP.bin"},
+	{"Bottle_RTP.bin"},
+	{"Bubble_RTP.bin"},	//51
+	{"Bullfrog_RTP.bin"},
+	{"Burst_RTP.bin"},
+	{"Chirp_RTP.bin"},
+	{"Clank_RTP.bin"},
+	{"Crystal_RTP.bin"},
+	{"FadeIn_RTP.bin"},
+	{"FadeOut_RTP.bin"},
+	{"Flute_RTP.bin"},
+	{"Fresh_RTP.bin"},
+	{"Frog_RTP.bin"},	//61
+	{"Guitar_RTP.bin"},
+	{"Harp_RTP.bin"},
+	{"IncomingMessage_RTP.bin"},
+	{"MessageSent_RTP.bin"},
+	{"Moment_RTP.bin"},
+	{"NotificationXylophone_RTP.bin"},
+	{"Potion_RTP.bin"},
+	{"Radar_RTP.bin"},
+	{"Spring_RTP.bin"},
+	{"Swoosh_RTP.bin"},	//71
+	{"Gesture_UpSlide_RTP.bin"},
+	{"Gesture_UpHold_RTP.bin"},
+	{"Charge_Wire_RTP.bin"},
+	{"Charge_Wireless_RTP.bin"},
+	{"Unlock_Failed_RTP.bin"},
+	{"FOD_Motion1_RTP.bin"},
+	{"FOD_Motion2_RTP.bin"},
+	{"FOD_Motion3_RTP.bin"},
+	{"FOD_Motion4_RTP.bin"},
+	{"FaceID_Wrong1_RTP.bin"},
+	{"FaceID_Wrong2_RTP.bin"},	//82
+	{"uninstall_animation_rtp.bin"},
+	{"uninstall_dialog_rtp.bin"},
+	{"screenshot_rtp.bin"},
+	{"lockscreen_camera_entry_rtp.bin"},
+	{"launcher_edit_rtp.bin"},
+	{"launcher_icon_selection_rtp.bin"},
+	{"taskcard_remove_rtp.bin"},
+	{"task_cleanall_rtp.bin"},
+	{"new_iconfolder_rtp.bin"},
+	{"notification_remove_rtp.bin"},
+	{"notification_cleanall_rtp.bin"},
+	{"notification_setting_rtp.bin"},
+	{"game_turbo_rtp.bin"},
+	{"NFC_card_rtp.bin"},
+	{"wakeup_voice_assistant_rtp.bin"},
+	{"NFC_card_slow_rtp.bin"},
+	{"POCO_RTP.bin"},	//99
+	{"aw8622x_rtp.bin"},	//100
+	{"offline_countdown_RTP.bin"},
+	{"scene_bomb_injury_RTP.bin"},
+	{"scene_bomb_RTP.bin"},	//103
+	{"door_open_RTP.bin"},
 	{"aw8622x_rtp.bin"},
-	{"aw8622x_rtp_lighthouse.bin"},
-	{"aw8622x_rtp_silk.bin"},
+	{"scene_step_RTP.bin"},	//106
+	{"crawl_RTP.bin"},
+	{"scope_on_RTP.bin"},
+	{"scope_off_RTP.bin"},
+	{"magazine_quick_RTP.bin"},
+	{"grenade_RTP.bin"},
+	{"scene_getshot_RTP.bin"},	//112
+	{"grenade_explosion_RTP.bin"},
+	{"punch_RTP.bin"},
+	{"pan_RTP.bin"},
+	{"bandage_RTP.bin"},
+	{"aw8622x_rtp.bin"},
+	{"scene_jump_RTP.bin"},
+	{"vehicle_plane_RTP.bin"},	//119
+	{"scene_openparachute_RTP.bin"},	//120
+	{"scene_closeparachute_RTP.bin"},	//121
+	{"vehicle_collision_RTP.bin"},
+	{"vehicle_buggy_RTP.bin"},	//123
+	{"vehicle_dacia_RTP.bin"},	//124
+	{"vehicle_moto_RTP.bin"},	//125
+	{"firearms_akm_RTP.bin"},	//126
+	{"firearms_m16a4_RTP.bin"},	//127
+	{"aw8622x_rtp.bin"},
+	{"firearms_awm_RTP.bin"},	//129
+	{"firearms_mini14_RTP.bin"},	//130
+	{"firearms_vss_RTP.bin"},	//131
+	{"firearms_qbz_RTP.bin"},	//132
+	{"firearms_ump9_RTP.bin"},	//133
+	{"firearms_dp28_RTP.bin"},	//134
+	{"firearms_s1897_RTP.bin"},	//135
+	{"aw8622x_rtp.bin"},
+	{"firearms_p18c_RTP.bin"},	//137
+	{"aw8622x_rtp.bin"},
+	{"aw8622x_rtp.bin"},
+	{"CFM_KillOne_RTP.bin"},
+	{"CFM_Headshot_RTP.bin"},	//141
+	{"CFM_MultiKill_RTP.bin"},
+	{"CFM_KillOne_Strong_RTP.bin"},
+	{"CFM_Headshot_Strong_RTP.bin"},
+	{"CFM_MultiKill_Strong_RTP.bin"},
+	{"CFM_Weapon_Grenade_Explode_RTP.bin"},
+	{"CFM_Weapon_Grenade_KillOne_RTP.bin"},
+	{"CFM_ImpactFlesh_Normal_RTP.bin"},
+	{"CFM_Weapon_C4_Installed_RTP.bin"},
+	{"CFM_Hero_Appear_RTP.bin"},
+	{"CFM_UI_Reward_OpenBox_RTP.bin"},
+	{"CFM_UI_Reward_Task_RTP.bin"},
+	{"CFM_Weapon_BLT_Shoot_RTP.bin"},	//153
+	{"Atlantis_RTP.bin"},
+	{"DigitalUniverse_RTP.bin"},
+	{"Reveries_RTP.bin"},
+	{"FOD_Motion_Triang_RTP.bin"},
+	{"FOD_Motion_Flare_RTP.bin"},
+	{"FOD_Motion_Ripple_RTP.bin"},
+	{"FOD_Motion_Spiral_RTP.bin"},
+	{"gamebox_launch_rtp.bin"}, // 161
+	{"Gesture_Back_Pull_RTP.bin"},// 162
+	{"Gesture_Back_Release_RTP.bin"},// 163
+	{"alert_rtp.bin"},// 164
+	{"feedback_negative_light_rtp.bin"},// 165
+	{"feedback_neutral_rtp.bin"},// 166
+	{"feedback_positive_rtp.bin"},// 167
+	{"fingerprint_record_rtp.bin"},// 168
+	{"lockdown_rtp.bin"},// 169
+	{"sliding_damping_rtp.bin"},// 170
+	{"todo_alldone_rtp.bin"},// 171
+	{"uninstall_animation_icon_rtp.bin"},// 172
+	{"signal_button_highlight_rtp.bin"},//173
+	{"signal_button_negative_rtp.bin"},
+	{"signal_button_rtp.bin"},
+	{"signal_clock_high_rtp.bin"},//176
+	{"signal_clock_rtp.bin"},
+	{"signal_clock_unit_rtp.bin"},
+	{"signal_inputbox_rtp.bin"},
+	{"signal_key_high_rtp.bin"},
+	{"signal_key_unit_rtp.bin"},//181
+	{"signal_list_highlight_rtp.bin"},
+	{"signal_list_rtp.bin"},
+	{"signal_picker_rtp.bin"},
+	{"signal_popup_rtp.bin"},
+	{"signal_seekbar_rtp.bin"},//186
+	{"signal_switch_rtp.bin"},
+	{"signal_tab_rtp.bin"},
+	{"signal_text_rtp.bin"},
+	{"signal_transition_light_rtp.bin"},
+	{"signal_transition_rtp.bin"},//191
+	{"haptics_video_rtp.bin"},//192
 };
 
 struct pm_qos_request aw8622x_pm_qos_req_vb;
-
 
 static int wf_repeat[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
  /******************************************************
@@ -192,12 +359,12 @@ int aw8622x_parse_dt(struct device *dev, struct aw8622x *aw8622x,
 	unsigned int val = 0;
 	unsigned int prctmode_temp[3];
 	unsigned int sine_array_temp[4];
-	unsigned int rtp_time[175];
+	unsigned int rtp_time[194];
 	struct qti_hap_config *config = &aw8622x->config;
 	struct device_node *child_node;
 	struct qti_hap_effect *effect;
 	int rc = 0, tmp, i = 0, j;
-	
+
 	val = of_property_read_u32(np,
 			"aw8622x_vib_mode",
 			&aw8622x->dts_info.mode);
@@ -332,7 +499,7 @@ int aw8622x_parse_dt(struct device *dev, struct aw8622x *aw8622x,
 				 &aw8622x->dts_info.effect_max);
 	if (val != 0)
 		aw_dev_err(aw8622x->dev,"%s: vib_effect_max not found\n", __func__);
-	
+
 		config->play_rate_us = HAP_PLAY_RATE_US_DEFAULT;
 	rc = of_property_read_u32(np, "qcom,play-rate-us", &tmp);
 	if (!rc)
@@ -456,21 +623,21 @@ static void aw8622x_haptic_upload_lra(struct aw8622x *aw8622x,
 				      unsigned int flag)
 {
 	switch (flag) {
-	case WRITE_ZERO:
+	case AW8622X_WRITE_ZERO:
 		aw_dev_err(aw8622x->dev, "%s write zero to trim_lra!\n",
 			    __func__);
 		aw8622x_i2c_write_bits(aw8622x, AW8622X_REG_TRIMCFG3,
 				       AW8622X_BIT_TRIMCFG3_TRIM_LRA_MASK,
 				       0x00);
 		break;
-	case F0_CALI:
+	case AW8622X_F0_CALI:
 		aw_dev_err(aw8622x->dev, "%s write f0_cali_data to trim_lra = 0x%02X\n",
 			    __func__, aw8622x->f0_cali_data);
 		aw8622x_i2c_write_bits(aw8622x, AW8622X_REG_TRIMCFG3,
 				       AW8622X_BIT_TRIMCFG3_TRIM_LRA_MASK,
 				       (char)aw8622x->f0_cali_data);
 		break;
-	case OSC_CALI:
+	case AW8622X_OSC_CALI:
 		aw_dev_err(aw8622x->dev, "%s write osc_cali_data to trim_lra = 0x%02X\n",
 			    __func__, aw8622x->osc_cali_data);
 		aw8622x_i2c_write_bits(aw8622x, AW8622X_REG_TRIMCFG3,
@@ -627,39 +794,46 @@ static void aw8622x_interrupt_clear(struct aw8622x *aw8622x)
 	aw_dev_dbg(aw8622x->dev, "%s: reg SYSINT=0x%02X\n", __func__, reg_val);
 }
 
+//Daniel 20210716 modify start
 static int aw8622x_haptic_set_gain(struct aw8622x *aw8622x, unsigned char gain)
 {
-	aw8622x_i2c_write(aw8622x, AW8622X_REG_PLAYCFG2, gain);
+	unsigned char comp_gain = 0;
+	if (aw8622x->ram_vbat_compensate == AW8622X_HAPTIC_RAM_VBAT_COMP_ENABLE)
+	{
+		aw8622x_haptic_get_vbat(aw8622x);
+		pr_debug("%s: ref %d vbat %d ", __func__, AW8622X_VBAT_REFER,
+				aw8622x->vbat);
+		comp_gain =
+			    aw8622x->gain * AW8622X_VBAT_REFER / aw8622x->vbat;
+			if (comp_gain >
+			    (128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN)) {
+				comp_gain =
+				    128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN;
+				aw_dev_dbg(aw8622x->dev, "%s gain limit=%d\n",
+					   __func__, comp_gain);
+			}
+		pr_info("%s: enable vbat comp, level = %x comp level = %x", __func__,
+			   gain, comp_gain);
+		aw8622x_i2c_write(aw8622x, AW8622X_REG_PLAYCFG2, comp_gain);
+	} else {
+		pr_debug("%s: disable compsensation, vbat=%d, vbat_min=%d, vbat_ref=%d",
+		__func__, aw8622x->vbat, AW8622X_VBAT_MIN, AW8622X_VBAT_REFER);
+		aw8622x_i2c_write(aw8622x, AW8622X_REG_PLAYCFG2, gain);
+	}
 	return 0;
 }
+
 
 static int aw8622x_haptic_ram_vbat_compensate(struct aw8622x *aw8622x,
 					      bool flag)
 {
-	int temp_gain = 0;
-
-	if (flag) {
-		if (aw8622x->ram_vbat_compensate ==
-		    AW8622X_HAPTIC_RAM_VBAT_COMP_ENABLE) {
-			aw8622x_haptic_get_vbat(aw8622x);
-			temp_gain =
-			    aw8622x->gain * AW8622X_VBAT_REFER / aw8622x->vbat;
-			if (temp_gain >
-			    (128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN)) {
-				temp_gain =
-				    128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN;
-				aw_dev_dbg(aw8622x->dev, "%s gain limit=%d\n",
-					   __func__, temp_gain);
-			}
-			aw8622x_haptic_set_gain(aw8622x, temp_gain);
-		} else {
-			aw8622x_haptic_set_gain(aw8622x, aw8622x->gain);
-		}
-	} else {
-		aw8622x_haptic_set_gain(aw8622x, aw8622x->gain);
-	}
+	if (flag)
+		aw8622x->ram_vbat_compensate = AW8622X_HAPTIC_RAM_VBAT_COMP_ENABLE;
+	else
+		aw8622x->ram_vbat_compensate = AW8622X_HAPTIC_RAM_VBAT_COMP_DISABLE;
 	return 0;
-}
+	
+}//Daniel 20210716 modify end
 
 static int aw8622x_haptic_play_mode(struct aw8622x *aw8622x,
 				    unsigned char play_mode)
@@ -916,7 +1090,8 @@ static int aw8622x_haptic_rtp_init(struct aw8622x *aw8622x)
 	aw8622x->rtp_cnt = 0;
 	mutex_lock(&aw8622x->rtp_lock);
 	while ((!aw8622x_haptic_rtp_get_fifo_afs(aw8622x))
-	       && (aw8622x->play_mode == AW8622X_HAPTIC_RTP_MODE)) {
+	       && (aw8622x->play_mode == AW8622X_HAPTIC_RTP_MODE)
+		   &&  !atomic_read(&aw8622x->exit_in_rtp_loop)) {
 		aw_dev_err(aw8622x->dev, "%s rtp cnt = %d\n", __func__,
 			    aw8622x->rtp_cnt);
 		if (!aw8622x->rtp_container) {
@@ -948,12 +1123,12 @@ static int aw8622x_haptic_rtp_init(struct aw8622x *aw8622x)
 		    || ((glb_state_val & 0x0f) == 0x00)) {
 			if (aw8622x->rtp_cnt == aw8622x->rtp_container->len)
 				aw_dev_err(aw8622x->dev,
-					"%s: rtp load completely! glb_state_val=%02x aw8622x->rtp_cnt=%02x\n",
+					"%s: rtp load completely! glb_state_val=0x%02x aw8622x->rtp_cnt=%d\n",
 					__func__, glb_state_val,
 					aw8622x->rtp_cnt);
 			else
 				aw_dev_err(aw8622x->dev,
-					"%s rtp load failed!! glb_state_val=%02x aw8622x->rtp_cnt=%02x\n",
+					"%s rtp load failed!! glb_state_val=0x%02x aw8622x->rtp_cnt=%d\n",
 					__func__, glb_state_val,
 					aw8622x->rtp_cnt);
 			aw8622x->rtp_cnt = 0;
@@ -964,7 +1139,8 @@ static int aw8622x_haptic_rtp_init(struct aw8622x *aw8622x)
 	}
 	mutex_unlock(&aw8622x->rtp_lock);
 
-	if (aw8622x->play_mode == AW8622X_HAPTIC_RTP_MODE)
+	if (aw8622x->play_mode == AW8622X_HAPTIC_RTP_MODE
+	    && !atomic_read(&aw8622x->exit_in_rtp_loop))
 		aw8622x_haptic_set_rtp_aei(aw8622x, true);
 
 	aw_dev_err(aw8622x->dev, "%s exit\n", __func__);
@@ -983,6 +1159,7 @@ static unsigned char aw8622x_haptic_osc_read_status(struct aw8622x *aw8622x)
 static int aw8622x_haptic_set_repeat_wav_seq(struct aw8622x *aw8622x,
 					     unsigned char seq)
 {
+	aw_dev_info(aw8622x->dev, "%s repeat wav seq %d\n", __func__, seq);
 	aw8622x_haptic_set_wav_seq(aw8622x, 0x00, seq);
 	aw8622x_haptic_set_wav_loop(aw8622x, 0x00,
 				    AW8622X_BIT_WAVLOOP_INIFINITELY);
@@ -1013,6 +1190,40 @@ static int aw8622x_haptic_set_pwm(struct aw8622x *aw8622x, unsigned char mode)
 	return 0;
 }
 
+static int16_t aw8622x_haptic_effect_strength(struct aw8622x *aw8622x)
+{
+	pr_debug("%s: enter\n", __func__);
+	pr_debug("%s: aw8622x->play.vmax_mv =0x%x\n", __func__,
+		 aw8622x->play.vmax_mv);
+#if 0
+	switch (aw8622x->play.vmax_mv) {
+	case AW8622X_LIGHT_MAGNITUDE:
+		aw8622x->level = 0x30;
+		break;
+	case AW8622X_MEDIUM_MAGNITUDE:
+		aw8622x->level = 0x50;
+		break;
+	case AW8622X_STRONG_MAGNITUDE:
+		aw8622x->level = 0x80;
+		break;
+	default:
+		break;
+	}
+#else
+	if (aw8622x->play.vmax_mv >= 0x7FFF)
+		aw8622x->level = 0x80;	/*128 */
+	else if (aw8622x->play.vmax_mv <= 0x3FFF)
+		aw8622x->level = 0x1E;	/*30 */
+	else
+		aw8622x->level = (aw8622x->play.vmax_mv - 16383) / 128;
+	if (aw8622x->level < 0x1E)
+		aw8622x->level = 0x1E;	/*30 */
+#endif
+
+	pr_info("%s: aw8622x->level =0x%x\n", __func__, aw8622x->level);
+	return 0;
+}
+
 static void aw8622x_rtp_work_routine(struct work_struct *work)
 {
 	const struct firmware *rtp_file;
@@ -1023,68 +1234,130 @@ static void aw8622x_rtp_work_routine(struct work_struct *work)
 	struct aw8622x *aw8622x = container_of(work, struct aw8622x, rtp_work);
 
 	aw_dev_err(aw8622x->dev, "%s enter\n", __func__);
-	mutex_lock(&aw8622x->rtp_lock);
-	/* fw loaded */
-	ret = request_firmware(&rtp_file,
-			       aw8622x_rtp_name[aw8622x->rtp_file_num],
-			       aw8622x->dev);
-	if (ret < 0) {
-		aw_dev_err(aw8622x->dev, "%s: failed to read %s\n", __func__,
-			   aw8622x_rtp_name[aw8622x->rtp_file_num]);
-		mutex_unlock(&aw8622x->rtp_lock);
+
+	if ((aw8622x->effect_id < aw8622x->dts_info.effect_id_boundary) &&
+	    (aw8622x->effect_id > aw8622x->dts_info.effect_max))
 		return;
-	}
-	aw8622x->rtp_init = 0;
-	vfree(aw8622x->rtp_container);
-	aw8622x->rtp_container = vmalloc(rtp_file->size + sizeof(int));
-	if (!aw8622x->rtp_container) {
-		release_firmware(rtp_file);
-		aw_dev_err(aw8622x->dev, "%s: error allocating memory\n",
-			   __func__);
-		mutex_unlock(&aw8622x->rtp_lock);
-		return;
-	}
-	aw8622x->rtp_container->len = rtp_file->size;
-	aw_dev_err(aw8622x->dev, "%s: rtp file:[%s] size = %dbytes\n",
-		    __func__, aw8622x_rtp_name[aw8622x->rtp_file_num],
-		    aw8622x->rtp_container->len);
-	memcpy(aw8622x->rtp_container->data, rtp_file->data, rtp_file->size);
-	mutex_unlock(&aw8622x->rtp_lock);
-	release_firmware(rtp_file);
+	pr_info("%s: effect_id =%d state = %d\n", __func__, aw8622x->effect_id,
+		aw8622x->state);
 	mutex_lock(&aw8622x->lock);
-	aw8622x->rtp_init = 1;
-	aw8622x_haptic_upload_lra(aw8622x, OSC_CALI);
-	aw8622x_haptic_set_pwm(aw8622x, AW8622X_PWM_24K);//Daniel 20210601
-	/* gain */
-	aw8622x_haptic_ram_vbat_compensate(aw8622x, false);
-	/* rtp mode config */
-	aw8622x_haptic_play_mode(aw8622x, AW8622X_HAPTIC_RTP_MODE);
-	/* haptic go */
-	aw8622x_haptic_play_go(aw8622x, true);
-	mutex_unlock(&aw8622x->lock);
-	usleep_range(2000, 2500);
-	while (cnt) {
-		aw8622x_i2c_read(aw8622x, AW8622X_REG_GLBRD5, &reg_val);
-		if ((reg_val & 0x0f) == 0x08) {
-			cnt = 0;
-			rtp_work_flag = true;
-			aw_dev_err(aw8622x->dev, "%s RTP_GO! glb_state=0x08\n",
-				    __func__);
-		} else {
-			cnt--;
-			aw_dev_dbg(aw8622x->dev, "%s wait for RTP_GO, glb_state=0x%02X\n",
-				   __func__, reg_val);
+	aw8622x_haptic_upload_lra(aw8622x, AW8622X_OSC_CALI);
+	aw8622x_haptic_set_rtp_aei(aw8622x, false);
+	aw8622x_interrupt_clear(aw8622x);
+	//wait for irq to exit
+	atomic_set(&aw8622x->exit_in_rtp_loop, 1);
+	while (atomic_read(&aw8622x->is_in_rtp_loop)) {
+		pr_info("%s:  goint to waiting irq exit\n", __func__);
+		ret =
+		    wait_event_interruptible(aw8622x->wait_q,
+					     atomic_read(&aw8622x->
+							 is_in_rtp_loop) == 0);
+		pr_info("%s:  wakeup \n", __func__);
+		if (ret == -ERESTARTSYS) {
+			atomic_set(&aw8622x->exit_in_rtp_loop, 0);
+			wake_up_interruptible(&aw8622x->stop_wait_q);
+			mutex_unlock(&aw8622x->lock);
+			pr_err("%s: wake up by signal return erro\n", __func__);
+			return;
 		}
+	}
+	atomic_set(&aw8622x->exit_in_rtp_loop, 0);
+	wake_up_interruptible(&aw8622x->stop_wait_q);
+	aw8622x_haptic_stop(aw8622x);
+
+	if (aw8622x->state) {
+		pm_stay_awake(aw8622x->dev);
+		aw8622x->wk_lock_flag = 1;
+		aw8622x_haptic_effect_strength(aw8622x);
+		aw8622x->rtp_file_num = aw8622x->effect_id - 20;
+		pr_info("%s:   aw8622x->rtp_file_num =%d\n", __func__,
+			aw8622x->rtp_file_num);
+		if (aw8622x->rtp_file_num < 0)
+			aw8622x->rtp_file_num = 0;
+		if (aw8622x->rtp_file_num >
+		    ((sizeof(aw8622x_rtp_name) / AW8622X_RTP_NAME_MAX) - 1))
+			aw8622x->rtp_file_num =
+			    (sizeof(aw8622x_rtp_name) / AW8622X_RTP_NAME_MAX) - 1;
+
+
+		/* fw loaded */
+		ret = request_firmware(&rtp_file,
+				       aw8622x_rtp_name[aw8622x->rtp_file_num],
+				       aw8622x->dev);
+		if (ret < 0) {
+			aw_dev_err(aw8622x->dev, "%s: failed to read %s\n", __func__,
+				   aw8622x_rtp_name[aw8622x->rtp_file_num]);
+			if (aw8622x->wk_lock_flag == 1) {
+					pm_relax(aw8622x->dev);
+					aw8622x->wk_lock_flag = 0;
+				}
+			mutex_unlock(&aw8622x->lock);
+			return;
+		}
+		aw8622x->rtp_init = 0;
+		vfree(aw8622x->rtp_container);
+		aw8622x->rtp_container = vmalloc(rtp_file->size + sizeof(int));
+		if (!aw8622x->rtp_container) {
+			release_firmware(rtp_file);
+			aw_dev_err(aw8622x->dev, "%s: error allocating memory\n",
+				   __func__);
+		    if (aw8622x->wk_lock_flag == 1) {
+					pm_relax(aw8622x->dev);
+					aw8622x->wk_lock_flag = 0;
+				}
+			mutex_unlock(&aw8622x->lock);
+			return;
+		}
+		aw8622x->rtp_container->len = rtp_file->size;
+		aw_dev_err(aw8622x->dev, "%s: rtp file:[%s] size = %dbytes\n",
+			    __func__, aw8622x_rtp_name[aw8622x->rtp_file_num],
+			    aw8622x->rtp_container->len);
+		memcpy(aw8622x->rtp_container->data, rtp_file->data, rtp_file->size);
+		release_firmware(rtp_file);
+		aw8622x->rtp_init = 1;
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_OSC_CALI);
+		aw8622x_haptic_set_pwm(aw8622x, AW8622X_PWM_24K);//Daniel 20210601
+		/* gain */
+		aw8622x_haptic_ram_vbat_compensate(aw8622x, false);
+		aw8622x_haptic_set_gain(aw8622x, aw8622x->level);//Daniel 20210716 modify
+		/* rtp mode config */
+		aw8622x_haptic_play_mode(aw8622x, AW8622X_HAPTIC_RTP_MODE);
+		/* haptic go */
+		aw8622x_haptic_play_go(aw8622x, true);
+		mutex_unlock(&aw8622x->lock);
 		usleep_range(2000, 2500);
-	}
-	if (rtp_work_flag) {
-		aw8622x_haptic_rtp_init(aw8622x);
+		while (cnt) {
+			aw8622x_i2c_read(aw8622x, AW8622X_REG_GLBRD5, &reg_val);
+			if ((reg_val & 0x0f) == 0x08) {
+				cnt = 0;
+				rtp_work_flag = true;
+				aw_dev_err(aw8622x->dev, "%s RTP_GO! glb_state=0x08\n",
+					    __func__);
+			} else {
+				cnt--;
+				aw_dev_dbg(aw8622x->dev, "%s wait for RTP_GO, glb_state=0x%02X\n",
+					   __func__, reg_val);
+			}
+			usleep_range(2000, 2500);
+		}
+		if (rtp_work_flag) {
+			aw8622x_haptic_rtp_init(aw8622x);
+		} else {
+			/* enter standby mode */
+			aw8622x_haptic_stop(aw8622x);
+			aw_dev_err(aw8622x->dev, "%s failed to enter RTP_GO status!\n",
+				   __func__);
+		}
 	} else {
-		/* enter standby mode */
-		aw8622x_haptic_stop(aw8622x);
-		aw_dev_err(aw8622x->dev, "%s failed to enter RTP_GO status!\n",
-			   __func__);
+		if (aw8622x->wk_lock_flag == 1) {
+			pm_relax(aw8622x->dev);
+			aw8622x->wk_lock_flag = 0;
+		}
+		aw8622x->rtp_cnt = 0;
+		aw8622x->rtp_init = 0;
+                mutex_unlock(&aw8622x->lock);
 	}
+
 }
 
 static int aw8622x_rtp_osc_calibration(struct aw8622x *aw8622x)
@@ -1492,6 +1765,7 @@ static void aw8622x_ram_loaded(const struct firmware *cont, void *context)
 		aw_dev_err(aw8622x->dev,
 			"%s: check sum err: check_sum=0x%04x\n", __func__,
 			check_sum);
+		release_firmware(cont);
 		return;
 	} else {
 		aw_dev_err(aw8622x->dev, "%s: check sum pass: 0x%04x\n",
@@ -1560,7 +1834,7 @@ static int aw8622x_rtp_trim_lra_calibration(struct aw8622x *aw8622x)
 						     aw8622x->microsecond);
 	if (lra_trim_code >= 0) {
 		aw8622x->osc_cali_data = lra_trim_code;
-		aw8622x_haptic_upload_lra(aw8622x, OSC_CALI);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_OSC_CALI);
 	}
 	return 0;
 }
@@ -1658,7 +1932,7 @@ static int aw8622x_haptic_f0_calibration(struct aw8622x *aw8622x)
 
 	aw_dev_err(aw8622x->dev, "%s enter\n", __func__);
 	/*
-	 * aw8622x_haptic_upload_lra(aw8622x, WRITE_ZERO);
+	 * aw8622x_haptic_upload_lra(aw8622x, AW8622X_WRITE_ZERO);
 	 */
 	if (aw8622x_haptic_cont_get_f0(aw8622x)) {
 		aw_dev_err(aw8622x->dev, "%s get f0 error, user defafult f0\n",
@@ -1701,7 +1975,7 @@ static int aw8622x_haptic_f0_calibration(struct aw8622x *aw8622x)
 			f0_cali_lra = (char)f0_cali_step + 32;
 		/* update cali step */
 		aw8622x->f0_cali_data = (int)f0_cali_lra;
-		aw8622x_haptic_upload_lra(aw8622x, F0_CALI);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_F0_CALI);
 
 		aw8622x_i2c_read(aw8622x, AW8622X_REG_TRIMCFG3, &reg_val);
 
@@ -1811,7 +2085,7 @@ static void aw8622x_haptic_brightness_set(struct led_classdev *cdev,
 	mutex_lock(&aw8622x->lock);
 	aw8622x_haptic_stop(aw8622x);
 	if (aw8622x->amplitude > 0) {
-		aw8622x_haptic_upload_lra(aw8622x, F0_CALI);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_F0_CALI);
 		aw8622x_haptic_ram_vbat_compensate(aw8622x, false);
 		aw8622x_haptic_play_wav_seq(aw8622x, aw8622x->amplitude);
 	}
@@ -2040,7 +2314,8 @@ static void aw8622x_haptic_audio_work_routine(struct work_struct *work)
 static ssize_t aw8622x_cont_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	aw8622x_haptic_read_cont_f0(aw8622x);
@@ -2053,7 +2328,8 @@ static ssize_t aw8622x_cont_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2070,7 +2346,8 @@ static ssize_t aw8622x_cont_store(struct device *dev,
 static ssize_t aw8622x_f0_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 	unsigned char reg = 0;
 
@@ -2081,7 +2358,7 @@ static ssize_t aw8622x_f0_show(struct device *dev,
 				AW8622X_BIT_SYSCTRL7_D2S_GAIN_MASK,
 				AW8622X_BIT_SYSCTRL7_D2S_GAIN_40);
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_TRIMCFG3, &reg);
-	aw8622x_haptic_upload_lra(aw8622x, WRITE_ZERO);
+	aw8622x_haptic_upload_lra(aw8622x, AW8622X_WRITE_ZERO);
 	aw8622x_haptic_cont_get_f0(aw8622x);
 	aw8622x_i2c_write(aw8622x, AW8622X_REG_TRIMCFG3, reg);
 	/* set d2s_gain to default when cat f0 is finished.*/
@@ -2111,7 +2388,8 @@ static ssize_t aw8622x_f0_store(struct device *dev,
 static ssize_t aw8622x_reg_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 	unsigned char i = 0;
 	unsigned char reg_val = 0;
@@ -2130,7 +2408,8 @@ static ssize_t aw8622x_reg_store(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
 				 size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 
 	if (sscanf(buf, "%x %x", &databuf[0], &databuf[1]) == 2) {
@@ -2144,7 +2423,8 @@ static ssize_t aw8622x_reg_store(struct device *dev,
 static ssize_t aw8622x_duration_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ktime_t time_rem;
 	s64 time_ms = 0;
 
@@ -2159,7 +2439,8 @@ static ssize_t aw8622x_duration_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2176,7 +2457,8 @@ static ssize_t aw8622x_duration_store(struct device *dev,
 static ssize_t aw8622x_activate_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	/* For now nothing to show */
 	return snprintf(buf, PAGE_SIZE, "activate = %d\n", aw8622x->state);
@@ -2186,7 +2468,8 @@ static ssize_t aw8622x_activate_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2212,7 +2495,8 @@ static ssize_t aw8622x_activate_store(struct device *dev,
 static ssize_t aw8622x_seq_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	size_t count = 0;
 	unsigned char i = 0;
 	unsigned char reg_val = 0;
@@ -2230,7 +2514,8 @@ static ssize_t aw8622x_seq_store(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
 				 size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 
 	if (sscanf(buf, "%x %x", &databuf[0], &databuf[1]) == 2) {
@@ -2253,7 +2538,8 @@ static ssize_t aw8622x_seq_store(struct device *dev,
 static ssize_t aw8622x_loop_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	size_t count = 0;
 	unsigned char i = 0;
 	unsigned char reg_val = 0;
@@ -2277,7 +2563,8 @@ static ssize_t aw8622x_loop_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 
 	if (sscanf(buf, "%x %x", &databuf[0], &databuf[1]) == 2) {
@@ -2295,7 +2582,8 @@ static ssize_t aw8622x_loop_store(struct device *dev,
 static ssize_t aw8622x_rtp_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len,
@@ -2308,7 +2596,8 @@ static ssize_t aw8622x_rtp_store(struct device *dev,
 				 struct device_attribute *attr, const char *buf,
 				 size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2344,7 +2633,8 @@ static ssize_t aw8622x_rtp_store(struct device *dev,
 static ssize_t aw8622x_state_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", aw8622x->state);
 }
@@ -2353,6 +2643,7 @@ static ssize_t aw8622x_state_store(struct device *dev,
 				   struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
+
 	return count;
 }
 
@@ -2360,7 +2651,8 @@ static ssize_t aw8622x_activate_mode_show(struct device *dev,
 					  struct device_attribute *attr,
 					  char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	return snprintf(buf, PAGE_SIZE, "%d\n",
 			aw8622x->activate_mode);
@@ -2370,7 +2662,8 @@ static ssize_t aw8622x_activate_mode_store(struct device *dev,
 					   struct device_attribute *attr,
 					   const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2386,7 +2679,8 @@ static ssize_t aw8622x_activate_mode_store(struct device *dev,
 static ssize_t aw8622x_index_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned char reg_val = 0;
 
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_WAVCFG1, &reg_val);
@@ -2398,7 +2692,8 @@ static ssize_t aw8622x_index_store(struct device *dev,
 				   struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2416,7 +2711,8 @@ static ssize_t aw8622x_index_store(struct device *dev,
 static ssize_t aw8622x_sram_size_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned char reg_val = 0;
 
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_RTPCFG1, &reg_val);
@@ -2435,7 +2731,8 @@ static ssize_t aw8622x_sram_size_store(struct device *dev,
 					struct device_attribute *attr,
 					const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2457,7 +2754,8 @@ static ssize_t aw8622x_sram_size_store(struct device *dev,
 static ssize_t aw8622x_osc_cali_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len, "osc_cali_data = 0x%02X\n",
@@ -2470,7 +2768,8 @@ static ssize_t aw8622x_osc_cali_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2478,16 +2777,18 @@ static ssize_t aw8622x_osc_cali_store(struct device *dev,
 	if (rc < 0)
 		return rc;
 	mutex_lock(&aw8622x->lock);
+	aw8622x->osc_cali_run = 1;
 	if (val == 1) {
-		aw8622x_haptic_upload_lra(aw8622x, WRITE_ZERO);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_WRITE_ZERO);
 		aw8622x_rtp_osc_calibration(aw8622x);
 		aw8622x_rtp_trim_lra_calibration(aw8622x);
 	} else if (val == 2) {
-		aw8622x_haptic_upload_lra(aw8622x, OSC_CALI);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_OSC_CALI);
 		aw8622x_rtp_osc_calibration(aw8622x);
 	} else {
 		aw_dev_err(aw8622x->dev, "%s input value out of range\n", __func__);
 	}
+	aw8622x->osc_cali_run = 0;
 	/* osc calibration flag end, other behaviors are permitted */
 	mutex_unlock(&aw8622x->lock);
 
@@ -2498,7 +2799,8 @@ static ssize_t aw8622x_gain_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
 	unsigned char reg = 0;
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_PLAYCFG2, &reg);
 
@@ -2509,7 +2811,8 @@ static ssize_t aw8622x_gain_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2530,7 +2833,8 @@ static ssize_t aw8622x_gain_store(struct device *dev,
 static ssize_t aw8622x_ram_update_show(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 	unsigned int i = 0;
 	unsigned char reg_val = 0;
@@ -2563,7 +2867,8 @@ static ssize_t aw8622x_ram_update_store(struct device *dev,
 					struct device_attribute *attr,
 					const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2578,7 +2883,8 @@ static ssize_t aw8622x_ram_update_store(struct device *dev,
 static ssize_t aw8622x_f0_save_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len, "f0_cali_data = 0x%02X\n",
@@ -2591,7 +2897,8 @@ static ssize_t aw8622x_f0_save_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2605,7 +2912,8 @@ static ssize_t aw8622x_f0_save_store(struct device *dev,
 static ssize_t aw8622x_osc_save_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len, "osc_cali_data = 0x%02X\n",
@@ -2618,7 +2926,8 @@ static ssize_t aw8622x_osc_save_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2634,7 +2943,8 @@ static ssize_t aw8622x_ram_vbat_compensate_show(struct device *dev,
 						struct device_attribute *attr,
 						char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len +=
@@ -2648,7 +2958,8 @@ static ssize_t aw8622x_ram_vbat_compensate_store(struct device *dev,
 						 struct device_attribute *attr,
 						 const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2671,13 +2982,14 @@ static ssize_t aw8622x_ram_vbat_compensate_store(struct device *dev,
 static ssize_t aw8622x_cali_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 	unsigned char reg = 0;
 
 	mutex_lock(&aw8622x->lock);
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_TRIMCFG3, &reg);
-	aw8622x_haptic_upload_lra(aw8622x, F0_CALI);
+	aw8622x_haptic_upload_lra(aw8622x, AW8622X_F0_CALI);
 	aw8622x_haptic_cont_get_f0(aw8622x);
 	aw8622x_i2c_write(aw8622x, AW8622X_REG_TRIMCFG3, reg);
 	mutex_unlock(&aw8622x->lock);
@@ -2689,7 +3001,8 @@ static ssize_t aw8622x_cali_store(struct device *dev,
 				  struct device_attribute *attr,
 				  const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2698,7 +3011,7 @@ static ssize_t aw8622x_cali_store(struct device *dev,
 		return rc;
 	if (val) {
 		mutex_lock(&aw8622x->lock);
-		aw8622x_haptic_upload_lra(aw8622x, WRITE_ZERO);
+		aw8622x_haptic_upload_lra(aw8622x, AW8622X_WRITE_ZERO);
 		aw8622x_haptic_f0_calibration(aw8622x);
 		mutex_unlock(&aw8622x->lock);
 	}
@@ -2709,7 +3022,8 @@ static ssize_t aw8622x_cont_wait_num_show(struct device *dev,
 					  struct device_attribute *attr,
 					  char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len,
@@ -2721,7 +3035,8 @@ static ssize_t aw8622x_cont_wait_num_store(struct device *dev,
 					   struct device_attribute *attr,
 					   const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[1] = { 0 };
 
 	if (sscanf(buf, "%x", &databuf[0]) == 1) {
@@ -2735,7 +3050,8 @@ static ssize_t aw8622x_cont_drv_lvl_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len,
@@ -2751,7 +3067,8 @@ static ssize_t aw8622x_cont_drv_lvl_store(struct device *dev,
 					  struct device_attribute *attr,
 					  const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 
 	if (sscanf(buf, "%x %x", &databuf[0], &databuf[1]) == 2) {
@@ -2770,7 +3087,8 @@ static ssize_t aw8622x_cont_drv_time_show(struct device *dev,
 					  struct device_attribute *attr,
 					  char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len,
@@ -2786,7 +3104,8 @@ static ssize_t aw8622x_cont_drv_time_store(struct device *dev,
 					   struct device_attribute *attr,
 					   const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 
 	if (sscanf(buf, "%x %x", &databuf[0], &databuf[1]) == 2) {
@@ -2804,7 +3123,8 @@ static ssize_t aw8622x_cont_brk_time_show(struct device *dev,
 					  struct device_attribute *attr,
 					  char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf + len, PAGE_SIZE - len, "cont_brk_time = 0x%02X\n",
@@ -2816,7 +3136,8 @@ static ssize_t aw8622x_cont_brk_time_store(struct device *dev,
 					   struct device_attribute *attr,
 					   const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[1] = { 0 };
 
 	if (sscanf(buf, "%x", &databuf[0]) == 1) {
@@ -2831,7 +3152,8 @@ static ssize_t aw8622x_vbat_monitor_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	mutex_lock(&aw8622x->lock);
@@ -2854,11 +3176,12 @@ static ssize_t aw8622x_lra_resistance_show(struct device *dev,
 					   struct device_attribute *attr,
 					   char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	aw8622x_haptic_get_lra_resistance(aw8622x);
-	len += snprintf(buf + len, PAGE_SIZE - len, "lra_resistance = %d\n",
+	len += snprintf(buf + len, PAGE_SIZE - len, "%d\n",
 			aw8622x->lra);
 	return len;
 }
@@ -2873,7 +3196,8 @@ static ssize_t aw8622x_lra_resistance_store(struct device *dev,
 static ssize_t aw8622x_prctmode_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 	unsigned char reg_val = 0;
 
@@ -2888,7 +3212,8 @@ static ssize_t aw8622x_prctmode_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[2] = { 0, 0 };
 	unsigned int addr = 0;
 	unsigned int val = 0;
@@ -2906,7 +3231,8 @@ static ssize_t aw8622x_prctmode_store(struct device *dev,
 static ssize_t aw8622x_gun_type_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	return snprintf(buf, PAGE_SIZE, "0x%02x\n", aw8622x->gun_type);
 
@@ -2916,7 +3242,8 @@ static ssize_t aw8622x_gun_type_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2933,7 +3260,8 @@ static ssize_t aw8622x_gun_type_store(struct device *dev,
 static ssize_t aw8622x_bullet_nr_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 
 	return snprintf(buf, PAGE_SIZE, "0x%02x\n", aw8622x->bullet_nr);
 }
@@ -2942,7 +3270,8 @@ static ssize_t aw8622x_bullet_nr_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int val = 0;
 	int rc = 0;
 
@@ -2959,7 +3288,8 @@ static ssize_t aw8622x_bullet_nr_store(struct device *dev,
 static ssize_t aw8622x_haptic_audio_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	ssize_t len = 0;
 
 	len += snprintf(buf+len, PAGE_SIZE-len,
@@ -2971,7 +3301,8 @@ static ssize_t aw8622x_haptic_audio_store(struct device *dev,
 				      struct device_attribute *attr,
 				      const char *buf, size_t count)
 {
-	struct aw8622x *aw8622x = dev_get_drvdata(dev);
+	struct awinic *awinic = dev_get_drvdata(dev);
+	struct aw8622x *aw8622x = awinic->aw8622x;
 	unsigned int databuf[6] = {0};
 	int rtp_is_going_on = 0;
 	struct haptic_ctr *hap_ctr = NULL;
@@ -3038,7 +3369,6 @@ static ssize_t aw8622x_haptic_audio_store(struct device *dev,
 	}
 	return count;
 }
-
 
 static DEVICE_ATTR(f0, 0644, aw8622x_f0_show, aw8622x_f0_store);
 static DEVICE_ATTR(cont, 0644, aw8622x_cont_show, aw8622x_cont_store);
@@ -3124,39 +3454,7 @@ struct attribute_group aw8622x_vibrator_attribute_group = {
 	.attrs = aw8622x_vibrator_attributes
 };
 
-static int16_t aw8622x_haptic_effect_strength(struct aw8622x *aw8622x)
-{
-	pr_debug("%s: enter\n", __func__);
-	pr_debug("%s: aw8622x->play.vmax_mv =0x%x\n", __func__,
-		 aw8622x->play.vmax_mv);
-#if 0
-	switch (aw8622x->play.vmax_mv) {
-	case AW8622X_LIGHT_MAGNITUDE:
-		aw8622x->level = 0x30;
-		break;
-	case AW8622X_MEDIUM_MAGNITUDE:
-		aw8622x->level = 0x50;
-		break;
-	case AW8622X_STRONG_MAGNITUDE:
-		aw8622x->level = 0x80;
-		break;
-	default:
-		break;
-	}
-#else
-	if (aw8622x->play.vmax_mv >= 0x7FFF)
-		aw8622x->level = 0x80;	/*128 */
-	else if (aw8622x->play.vmax_mv <= 0x3FFF)
-		aw8622x->level = 0x1E;	/*30 */
-	else
-		aw8622x->level = (aw8622x->play.vmax_mv - 16383) / 128;
-	if (aw8622x->level < 0x1E)
-		aw8622x->level = 0x1E;	/*30 */
-#endif
 
-	pr_info("%s: aw8622x->level =0x%x\n", __func__, aw8622x->level);
-	return 0;
-}
 
 static int aw8622x_haptic_play_effect_seq(struct aw8622x *aw8622x,
 					 unsigned char flag)
@@ -3170,10 +3468,16 @@ static int aw8622x_haptic_play_effect_seq(struct aw8622x *aw8622x,
 		 aw8622x->activate_mode);
 	if (flag) {
 		if (aw8622x->activate_mode == AW8622X_HAPTIC_ACTIVATE_RAM_MODE) {
-			//Daniel 20210525 modify start
-			if((aw8622x->effect_id == 5) || (aw8622x->effect_id == 9)){
+			//Daniel 20210719 modify start
+			//this mapping only used for K9B
+			if(aw8622x->effect_id == 5 || aw8622x->effect_id == 6){
+				aw8622x->effect_id = 6;
+			}else if(aw8622x->effect_id == 1){
 				aw8622x->effect_id = 3;
-			}//Daniel 20210525 modify end
+			}else if((aw8622x->effect_id >= 2)&&(aw8622x->effect_id <= 9)){
+				aw8622x->effect_id = 8;
+			}
+			//Daniel 20210719 modify end
 			aw8622x_haptic_set_wav_seq(aw8622x, 0x00,
 						  (char)aw8622x->effect_id + 1);
 			aw8622x_haptic_set_pwm(aw8622x,  AW8622X_PWM_12K);//Daniel 20210601 modify
@@ -3190,6 +3494,11 @@ static int aw8622x_haptic_play_effect_seq(struct aw8622x *aw8622x,
 							 (aw8622x->dts_info.
 							  effect_id_boundary +
 							  1));
+			//Daniel 20210716 modify start
+			aw8622x_i2c_write_bits(aw8622x, AW8622X_REG_SYSCTRL7,
+			AW8622X_BIT_SYSCTRL7_GAIN_BYPASS_MASK,
+			AW8622X_BIT_SYSCTRL7_GAIN_CHANGEABLE);
+			//Daniel 20210716 modify end
 			aw8622x_haptic_set_pwm(aw8622x,  AW8622X_PWM_12K);//Daniel 20210601 modify
 			aw8622x_haptic_set_gain(aw8622x, aw8622x->level);
 			aw8622x_haptic_play_repeat_seq(aw8622x, true);
@@ -3212,11 +3521,12 @@ static void aw8622x_long_vibrate_work_routine(struct work_struct *work)
 	mutex_lock(&aw8622x->lock);
 	/* Enter standby mode */
 	aw8622x_haptic_stop(aw8622x);
-	aw8622x_haptic_upload_lra(aw8622x, F0_CALI);
+	aw8622x_haptic_upload_lra(aw8622x, AW8622X_F0_CALI);
 	if (aw8622x->state) {
 		if (aw8622x->activate_mode ==
 			AW8622X_HAPTIC_ACTIVATE_RAM_MODE) {
-			    //aw8622x_haptic_ram_vbat_compensate(aw8622x, false);
+			    //Daniel 20210716 midify start
+			    aw8622x_haptic_ram_vbat_compensate(aw8622x, false);
 			    //aw8622x_haptic_play_repeat_seq(aw8622x, true);
 				aw8622x_haptic_play_effect_seq(aw8622x, true);
 		} else if (aw8622x->activate_mode ==
@@ -3224,11 +3534,13 @@ static void aw8622x_long_vibrate_work_routine(struct work_struct *work)
 			        aw8622x_haptic_ram_vbat_compensate(aw8622x, true);
 					aw8622x_haptic_play_effect_seq(aw8622x, true);
 			       //aw8622x_haptic_play_repeat_seq(aw8622x, true);
-					/* run ms timer */
+			/* run ms timer */
 		        hrtimer_start(&aw8622x->timer,
 			              ktime_set(aw8622x->duration / 1000,
 					       (aw8622x->duration % 1000) * 1000000),
 			      HRTIMER_MODE_REL);
+				pm_stay_awake(aw8622x->dev);
+			    aw8622x->wk_lock_flag = 1;
 		} else if (aw8622x->activate_mode ==
 			   AW8622X_HAPTIC_ACTIVATE_CONT_MODE) {
 			aw_dev_err(aw8622x->dev, "%s mode:%s\n", __func__,
@@ -3263,7 +3575,7 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 	aw8622x->vib_dev.name = "awinic_vibrator";
 	aw8622x->vib_dev.get_time = aw8622x_vibrator_get_time;
 	aw8622x->vib_dev.enable = aw8622x_vibrator_enable;
-	
+
 	ret = sysfs_create_group(&aw8622x->i2c->dev.kobj, &aw8622x_vibrator_attribute_group);
 	if (ret < 0) {
 		aw_dev_err(aw8622x->dev, "%s error creating bus sysfs attr files\n",
@@ -3276,21 +3588,13 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 			"%s: fail to create timed output dev\n", __func__);
 		return ret;
 	}
-
-	ret = sysfs_create_link(&aw8622x->vib_dev.dev->kobj, 
-					&aw8622x->i2c->dev.kobj, "vibrator");
-	if (ret < 0) {
-		aw_dev_err(aw8622x->dev, "%s error creating class sysfs link attr files\n",
-			   __func__);
-		return ret;
-	}
 #else
 	aw_dev_err(aw8622x->dev, "%s: loaded in leds_cdev framework!\n",
 		    __func__);
 	aw8622x->vib_dev.name = "awinic_vibrator";
 	aw8622x->vib_dev.brightness_get = aw8622x_haptic_brightness_get;
 	aw8622x->vib_dev.brightness_set = aw8622x_haptic_brightness_set;
-	
+
 	ret = sysfs_create_group(&aw8622x->i2c->dev.kobj, &aw8622x_vibrator_attribute_group);
 	if (ret < 0) {
 		aw_dev_err(aw8622x->dev, "%s error creating bus sysfs attr files\n",
@@ -3304,8 +3608,8 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 			   __func__);
 		return ret;
 	}
-	
-	ret = sysfs_create_link(&aw8622x->vib_dev.dev->kobj, 
+
+	ret = sysfs_create_link(&aw8622x->vib_dev.dev->kobj,
 					&aw8622x->i2c->dev.kobj, "vibrator");
 	if (ret < 0) {
 		aw_dev_err(aw8622x->dev, "%s error creating class sysfs link attr files\n",
@@ -3320,6 +3624,10 @@ int aw8622x_vibrator_init(struct aw8622x *aw8622x)
 	INIT_WORK(&aw8622x->rtp_work, aw8622x_rtp_work_routine);
 	mutex_init(&aw8622x->lock);
 	mutex_init(&aw8622x->rtp_lock);
+	atomic_set(&aw8622x->is_in_rtp_loop, 0);
+	atomic_set(&aw8622x->exit_in_rtp_loop, 0);
+	init_waitqueue_head(&aw8622x->wait_q);
+	init_waitqueue_head(&aw8622x->stop_wait_q);
 
 	return 0;
 }
@@ -3573,7 +3881,7 @@ int aw8622x_haptic_init(struct aw8622x *aw8622x)
 				AW8622X_REG_TRIMCFG1,
 				AW8622X_BIT_TRIMCFG1_RL_TRIM_SRC_MASK,
 				AW8622X_BIT_TRIMCFG1_RL_TRIM_SRC_REG);
-	aw8622x_haptic_upload_lra(aw8622x, WRITE_ZERO);
+	aw8622x_haptic_upload_lra(aw8622x, AW8622X_WRITE_ZERO);
 	aw8622x_haptic_f0_calibration(aw8622x);
 	mutex_unlock(&aw8622x->lock);
 	return ret;
@@ -3624,6 +3932,7 @@ irqreturn_t aw8622x_irq(int irq, void *data)
 	unsigned char glb_state_val = 0;
 
 	aw_dev_err(aw8622x->dev, "%s enter\n", __func__);
+	atomic_set(&aw8622x->is_in_rtp_loop, 1);
 	aw8622x_i2c_read(aw8622x, AW8622X_REG_SYSINT, &reg_val);
 	aw_dev_err(aw8622x->dev, "%s: reg SYSINT=0x%02X\n", __func__, reg_val);
 	if (reg_val & AW8622X_BIT_SYSINT_UVLI)
@@ -3642,8 +3951,8 @@ irqreturn_t aw8622x_irq(int irq, void *data)
 			    __func__);
 		if (aw8622x->rtp_init) {
 			while ((!aw8622x_haptic_rtp_get_fifo_afs(aw8622x)) &&
-			       (aw8622x->play_mode ==
-				AW8622X_HAPTIC_RTP_MODE)) {
+			       (aw8622x->play_mode ==AW8622X_HAPTIC_RTP_MODE)
+				  && !atomic_read(&aw8622x->exit_in_rtp_loop)) {
 				mutex_lock(&aw8622x->rtp_lock);
 				aw_dev_err(aw8622x->dev, "%s: aw8622x rtp mode fifo update, cnt=%d\n",
 					    __func__, aw8622x->rtp_cnt);
@@ -3675,12 +3984,12 @@ irqreturn_t aw8622x_irq(int irq, void *data)
 					if (aw8622x->rtp_cnt ==
 						aw8622x->rtp_container->len)
 						aw_dev_err(aw8622x->dev,
-							"%s: rtp load completely! glb_state_val=%02x aw8622x->rtp_cnt=%02x\n",
+							"%s: rtp load completely! glb_state_val=%02x aw8622x->rtp_cnt=%d\n",
 							__func__, glb_state_val,
 							aw8622x->rtp_cnt);
 					else
 						aw_dev_err(aw8622x->dev,
-							"%s rtp load failed!! glb_state_val=%02x aw8622x->rtp_cnt=%02x\n",
+							"%s rtp load failed!! glb_state_val=%02x aw8622x->rtp_cnt=%d\n",
 							__func__, glb_state_val,
 							aw8622x->rtp_cnt);
 
@@ -3703,9 +4012,12 @@ irqreturn_t aw8622x_irq(int irq, void *data)
 		aw_dev_err(aw8622x->dev, "%s: aw8622x rtp mode fifo almost full!\n",
 			    __func__);
 
-	if (aw8622x->play_mode != AW8622X_HAPTIC_RTP_MODE)
-		aw8622x_haptic_set_rtp_aei(aw8622x, false);
+	if (aw8622x->play_mode != AW8622X_HAPTIC_RTP_MODE
+	    || atomic_read(&aw8622x->exit_in_rtp_loop)){
+		aw8622x_haptic_set_rtp_aei(aw8622x, false);}
 
+	atomic_set(&aw8622x->is_in_rtp_loop, 0);
+	wake_up_interruptible(&aw8622x->wait_q);
 	aw_dev_err(aw8622x->dev, "%s exit\n", __func__);
 
 	return IRQ_HANDLED;
@@ -3729,11 +4041,236 @@ char aw8622x_check_qualify(struct aw8622x *aw8622x)
 	return 0;
 }
 
-EXPORT_SYMBOL(aw8622x_check_qualify);
-EXPORT_SYMBOL(aw8622x_irq);
-EXPORT_SYMBOL(aw8622x_interrupt_setup);
-EXPORT_SYMBOL(aw8622x_haptic_init);
-EXPORT_SYMBOL(aw8622x_ram_work_init);
-EXPORT_SYMBOL(aw8622x_vibrator_init);
-EXPORT_SYMBOL(aw8622x_vibrator_attribute_group);
-EXPORT_SYMBOL(aw8622x_parse_dt);
+
+
+int aw8622x_haptics_upload_effect (struct input_dev *dev,
+				   struct ff_effect *effect,
+				   struct ff_effect *old)
+{
+       struct aw8622x *aw8622x = input_get_drvdata(dev);
+       struct qti_hap_play_info *play = &aw8622x->play;
+	s16 data[CUSTOM_DATA_LEN];
+	ktime_t rem;
+	s64 time_us;
+	int ret;
+
+       pr_err("%s: enter\n", __func__);
+
+       if (aw8622x->osc_cali_run != 0)
+		return 0;
+
+	if (hrtimer_active(&aw8622x->timer)) {
+		rem = hrtimer_get_remaining(&aw8622x->timer);
+		time_us = ktime_to_us(rem);
+		printk("waiting for playing clear sequence: %lld us\n",
+		       time_us);
+		usleep_range(time_us, time_us + 100);
+	}
+
+	pr_info("%s: effect->type=0x%x,FF_CONSTANT=0x%x,FF_PERIODIC=0x%x\n",
+		__func__, effect->type, FF_CONSTANT, FF_PERIODIC);
+	aw8622x->effect_type = effect->type;
+	mutex_lock(&aw8622x->lock);
+	while (atomic_read(&aw8622x->exit_in_rtp_loop)) {
+		pr_info("%s:  goint to waiting rtp  exit\n", __func__);
+		mutex_unlock(&aw8622x->lock);
+		ret =
+		    wait_event_interruptible(aw8622x->stop_wait_q,
+					     atomic_read(&aw8622x->
+							 exit_in_rtp_loop) ==
+					     0);
+		pr_info("%s:  wakeup \n", __func__);
+		if (ret == -ERESTARTSYS) {
+			mutex_unlock(&aw8622x->lock);
+			pr_err("%s: wake up by signal return erro\n", __func__);
+			return ret;
+		}
+		mutex_lock(&aw8622x->lock);
+	}
+	if (aw8622x->effect_type == FF_CONSTANT) {
+		pr_debug("%s:  effect_type is  FF_CONSTANT! \n", __func__);
+		/*cont mode set duration */
+		aw8622x->duration = effect->replay.length;
+		aw8622x->activate_mode = AW8622X_HAPTIC_ACTIVATE_RAM_LOOP_MODE;
+		aw8622x->effect_id = aw8622x->dts_info.effect_id_boundary;
+
+	} else if (aw8622x->effect_type == FF_PERIODIC) {
+		if (aw8622x->effects_count == 0) {
+			mutex_unlock(&aw8622x->lock);
+			return -EINVAL;
+		}
+
+		pr_debug("%s:  effect_type is  FF_PERIODIC! \n", __func__);
+		if (copy_from_user(data, effect->u.periodic.custom_data,
+				   sizeof(s16) * CUSTOM_DATA_LEN)) {
+			mutex_unlock(&aw8622x->lock);
+			return -EFAULT;
+		}
+
+		aw8622x->effect_id = data[0];
+		//this mapping for aw8624 effect_id 21
+		if (aw8622x->effect_id == 521) {
+			aw8622x->effect_id = 21;
+		}
+		pr_debug("%s: aw8622x->effect_id =%d \n", __func__,
+			 aw8622x->effect_id);
+		play->vmax_mv = effect->u.periodic.magnitude;	/*vmax level */
+		//if (aw8624->info.gain_flag == 1)
+		//      play->vmax_mv = AW8624_LIGHT_MAGNITUDE;
+		//printk("%s  %d  aw8624->play.vmax_mv = 0x%x\n", __func__, __LINE__, aw8624->play.vmax_mv);
+
+		if (aw8622x->effect_id < 0 ||
+		    aw8622x->effect_id > aw8622x->dts_info.effect_max) {
+			mutex_unlock(&aw8622x->lock);
+			return 0;
+		}
+
+		if (aw8622x->effect_id < aw8622x->dts_info.effect_id_boundary) {
+			aw8622x->activate_mode = AW8622X_HAPTIC_ACTIVATE_RAM_MODE;
+			pr_info
+			    ("%s: aw8622x->effect_id=%d , aw8622x->activate_mode = %d\n",
+			     __func__, aw8622x->effect_id,
+			     aw8622x->activate_mode);
+			data[1] = aw8622x->predefined[aw8622x->effect_id].play_rate_us / 1000000;	/*second data */
+			data[2] = aw8622x->predefined[aw8622x->effect_id].play_rate_us / 1000;	/*millisecond data */
+			pr_debug
+			    ("%s: aw8622x->predefined[aw8622x->effect_id].play_rate_us/1000 = %d\n",
+			     __func__,
+			     aw8622x->predefined[aw8622x->effect_id].
+			     play_rate_us / 1000);
+		}
+		if (aw8622x->effect_id >= aw8622x->dts_info.effect_id_boundary) {
+			aw8622x->activate_mode = AW8622X_HAPTIC_ACTIVATE_RTP_MODE;
+			pr_info
+			    ("%s: aw8622x->effect_id=%d , aw8622x->activate_mode = %d\n",
+			     __func__, aw8622x->effect_id,
+			     aw8622x->activate_mode);
+			data[1] = aw8622x->dts_info.rtp_time[aw8622x->effect_id] / 1000;	/*second data */
+			data[2] = aw8622x->dts_info.rtp_time[aw8622x->effect_id] % 1000;	/*millisecond data */
+			pr_debug("%s: data[1] = %d data[2] = %d, rtp_time %d\n", __func__,
+				 data[1], data[2], aw8622x->dts_info.rtp_time[aw8622x->effect_id]);
+		}
+
+		if (copy_to_user(effect->u.periodic.custom_data, data,
+				 sizeof(s16) * CUSTOM_DATA_LEN)) {
+			mutex_unlock(&aw8622x->lock);
+			return -EFAULT;
+		}
+
+	} else {
+		pr_err("%s: Unsupported effect type: %d\n", __func__,
+		       effect->type);
+	}
+	mutex_unlock(&aw8622x->lock);
+	pr_debug("%s	%d	aw8622x->effect_type= 0x%x\n", __func__,
+		 __LINE__, aw8622x->effect_type);
+	return 0;
+}
+
+int aw8622x_haptics_playback(struct input_dev *dev, int effect_id,
+			     int val)
+{
+	struct aw8622x *aw8622x = input_get_drvdata(dev);
+	int rc = 0;
+	pr_debug("%s:  %d enter\n", __func__, __LINE__);
+
+	pr_info("%s: effect_id=%d , val = %d\n", __func__, effect_id, val);
+	pr_info("%s: aw8622x->effect_id=%d , aw8622x->activate_mode = %d\n",
+		__func__, aw8622x->effect_id, aw8622x->activate_mode);
+
+	/*for osc calibration */
+	if (aw8622x->osc_cali_run != 0)
+		return 0;
+
+	if (val > 0)
+		aw8622x->state = 1;
+	if (val <= 0)
+		aw8622x->state = 0;
+	hrtimer_cancel(&aw8622x->timer);
+
+	if (aw8622x->effect_type == FF_CONSTANT &&
+	    aw8622x->activate_mode == AW8622X_HAPTIC_ACTIVATE_RAM_LOOP_MODE) {
+		pr_info("%s: enter ram_loop_mode \n", __func__);
+		//schedule_work(&aw8624->long_vibrate_work);
+		queue_work(aw8622x->work_queue, &aw8622x->long_vibrate_work);
+	} else if (aw8622x->effect_type == FF_PERIODIC &&
+		   aw8622x->activate_mode == AW8622X_HAPTIC_ACTIVATE_RAM_MODE) {
+		pr_info("%s: enter  ram_mode\n", __func__);
+		//schedule_work(&aw8624->long_vibrate_work)
+		queue_work(aw8622x->work_queue, &aw8622x->long_vibrate_work);;
+	} else if (aw8622x->effect_type == FF_PERIODIC &&
+		   aw8622x->activate_mode == AW8622X_HAPTIC_ACTIVATE_RTP_MODE) {
+		pr_info("%s: enter  rtp_mode\n", __func__);
+		//schedule_work(&aw8624->rtp_work);
+		queue_work(aw8622x->work_queue, &aw8622x->rtp_work);
+		//if we are in the play mode, force to exit
+		if (val == 0) {
+			atomic_set(&aw8622x->exit_in_rtp_loop, 1);
+		}
+	} else {
+		/*other mode */
+	}
+
+	return rc;
+}
+
+int aw8622x_haptics_erase(struct input_dev *dev, int effect_id)
+{
+	struct aw8622x *aw8622x = input_get_drvdata(dev);
+	int rc = 0;
+
+	/*for osc calibration */
+	if (aw8622x->osc_cali_run != 0)
+		return 0;
+
+	pr_debug("%s: enter\n", __func__);
+	aw8622x->effect_type = 0;
+	aw8622x->duration = 0;
+	return rc;
+}
+
+void aw8622x_haptics_set_gain_work_routine(struct work_struct *work)
+{
+	unsigned char comp_level = 0;
+	struct aw8622x *aw8622x =
+	    container_of(work, struct aw8622x, set_gain_work);
+
+	if (aw8622x->new_gain >= 0x7FFF)
+		aw8622x->level = 0x80;	/*128 */
+	else if (aw8622x->new_gain <= 0x3FFF)
+		aw8622x->level = 0x1E;	/*30 */
+	else
+		aw8622x->level = (aw8622x->new_gain - 16383) / 128;
+
+	if (aw8622x->level < 0x1E)
+		aw8622x->level = 0x1E;	/*30 */
+	pr_info("%s: set_gain queue work, new_gain = %x level = %x \n", __func__,
+		aw8622x->new_gain, aw8622x->level);
+
+	if (aw8622x->ram_vbat_compensate == AW8622X_HAPTIC_RAM_VBAT_COMP_ENABLE
+		&& aw8622x->vbat)
+	{
+		pr_debug("%s: ref %d vbat %d ", __func__, AW8622X_VBAT_REFER,
+				aw8622x->vbat);
+		comp_level = aw8622x->level * AW8622X_VBAT_REFER / aw8622x->vbat;
+		if (comp_level > (128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN)) {
+			comp_level = 128 * AW8622X_VBAT_REFER / AW8622X_VBAT_MIN;
+			pr_debug("%s: comp level limit is %d ", __func__, comp_level);
+		}
+		pr_info("%s: enable vbat comp, level = %x comp level = %x", __func__,
+			   aw8622x->level, comp_level);
+		aw8622x_i2c_write(aw8622x, AW8622X_REG_PLAYCFG2, comp_level);//Daniel 20210716
+	} else {
+		pr_debug("%s: disable compsensation, vbat=%d, vbat_min=%d, vbat_ref=%d",
+				__func__, aw8622x->vbat, AW8622X_VBAT_MIN, AW8622X_VBAT_REFER);
+		aw8622x_i2c_write(aw8622x, AW8622X_REG_PLAYCFG2, aw8622x->level);//Daniel 20210716
+	}
+}
+
+void aw8622x_haptics_set_gain(struct input_dev *dev, u16 gain)
+{
+	struct aw8622x *aw8622x = input_get_drvdata(dev);
+	pr_debug("%s: enter\n", __func__);
+	aw8622x->new_gain = gain;
+	queue_work(aw8622x->work_queue, &aw8622x->set_gain_work);
+}
