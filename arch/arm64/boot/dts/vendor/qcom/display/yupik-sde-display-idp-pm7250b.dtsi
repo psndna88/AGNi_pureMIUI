@@ -35,8 +35,6 @@
 	pinctrl-names = "panel_active", "panel_suspend", "pwm_pin";
 	pinctrl-0 = <&sde_dsi_active &sde_te_active &disp_lcd_bias_en_default>;
 	pinctrl-2 = <&lcd_backlight_ctrl_default>;
-
-	qcom,dsi-default-panel = <&dsi_nt36672e_fhd_plus_120_video>;
 };
 
 &dsi_nt36672e_fhd_plus_60_video {
@@ -75,3 +73,12 @@
 	qcom,platform-bklight-en-gpio = <&pm8350c_gpios 7 0>;
 };
 
+&dsi_prim_sim_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_l9>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,platform-reset-gpio = <&tlmm 44 0>;
+};
+
+&sde_dsi {
+	qcom,dsi-default-panel = <&dsi_prim_sim_vid>;
+};
