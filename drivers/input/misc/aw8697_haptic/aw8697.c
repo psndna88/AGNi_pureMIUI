@@ -1322,6 +1322,7 @@ static int aw8697_haptic_rtp_init(struct aw8697 *aw8697)
 	unsigned int period_size = aw8697->ram.base_addr >> 2 ;
 
 	pm_qos_add_request(&pm_qos_req_vb, PM_QOS_CPU_DMA_LATENCY, PM_QOS_VALUE_VB);
+	mutex_lock(&aw8697->rtp_lock);
 	aw8697->rtp_cnt = 0;
 	while ((!aw8697_haptic_rtp_get_fifo_afi(aw8697)) &&
 	       (aw8697->play_mode == AW8697_HAPTIC_RTP_MODE) &&
@@ -1339,6 +1340,7 @@ static int aw8697_haptic_rtp_init(struct aw8697 *aw8697)
 			if (aw8697->rtp_cnt == aw8697_rtp->len) {
 				aw8697->rtp_cnt = 0;
 				aw8697_haptic_set_rtp_aei(aw8697, false);
+				mutex_unlock(&aw8697->rtp_lock);
 				pm_qos_remove_request(&pm_qos_req_vb);
 				return 0;
 			}
@@ -1349,6 +1351,7 @@ static int aw8697_haptic_rtp_init(struct aw8697 *aw8697)
 				pr_info("%s: custom rtp update complete\n", __func__);
 				aw8697->rtp_cnt = 0;
 				aw8697_haptic_set_rtp_aei(aw8697, false);
+				mutex_unlock(&aw8697->rtp_lock);
 				pm_qos_remove_request(&pm_qos_req_vb);
 				return 0;
 			}
@@ -1358,6 +1361,7 @@ static int aw8697_haptic_rtp_init(struct aw8697 *aw8697)
 		aw8697_haptic_set_rtp_aei(aw8697, true);
 	}
 	pr_info("%s: exit\n", __func__);
+	mutex_unlock(&aw8697->rtp_lock);
 	pm_qos_remove_request(&pm_qos_req_vb);
 	return 0;
 }
@@ -2553,6 +2557,8 @@ static void aw8697_vibrator_work_routine(struct work_struct *work)
 				      ktime_set(aw8697->duration / 1000,
 						(aw8697->duration % 1000) *
 						1000000), HRTIMER_MODE_REL);
+			pm_stay_awake(aw8697->dev);
+			aw8697->wk_lock_flag = 1;
 		} else if (aw8697->activate_mode ==
 			   AW8697_HAPTIC_ACTIVATE_CONT_MODE) {
 			aw8697_haptic_cont(aw8697);
@@ -2562,6 +2568,11 @@ static void aw8697_vibrator_work_routine(struct work_struct *work)
 						1000000), HRTIMER_MODE_REL);
 		} else {
 			/*other mode */
+		}
+	} else {
+		if (aw8697->wk_lock_flag == 1) {
+			pm_relax(aw8697->dev);
+			aw8697->wk_lock_flag = 0;
 		}
 	}
 	mutex_unlock(&aw8697->lock);
@@ -2577,6 +2588,7 @@ static int aw8697_vibrator_init(struct aw8697 *aw8697)
 	INIT_WORK(&aw8697->rtp_work, aw8697_rtp_work_routine);
 
 	mutex_init(&aw8697->lock);
+	mutex_init(&aw8697->rtp_lock);
 	atomic_set(&aw8697->is_in_rtp_loop, 0);
 	atomic_set(&aw8697->exit_in_rtp_loop, 0);
 	atomic_set(&aw8697->is_in_write_loop, 0);
@@ -2723,8 +2735,6 @@ static irqreturn_t aw8697_irq(int irq, void *data)
 		aw8697_haptic_set_rtp_aei(aw8697, false);
 	}
 
-	aw8697_i2c_read(aw8697, AW8697_REG_SYSINT, &reg_val);
-	pr_debug("%s: reg SYSINT=0x%x\n", __func__, reg_val);
 	aw8697_i2c_read(aw8697, AW8697_REG_SYSST, &reg_val);
 	pr_debug("%s: reg SYSST=0x%x\n", __func__, reg_val);
 	atomic_set(&aw8697->is_in_rtp_loop, 0);

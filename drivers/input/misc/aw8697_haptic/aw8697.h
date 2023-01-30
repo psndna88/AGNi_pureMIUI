@@ -345,6 +345,7 @@ struct aw8697 {
 	unsigned char activate_mode;
 
 	unsigned char auto_boost;
+	unsigned char wk_lock_flag;
 
 	int state;
 	int duration;
