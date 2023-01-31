@@ -3,8 +3,8 @@
 * \brief Contains the size and the byte array of the production test limit file which contains thresholds used to test data 
 */
 
-#ifndef FTS_LIMITS_H
-#define FTS_LIMITS_H
+//#ifndef FTS_LIMITS_H
+//#define FTS_LIMITS_H
 /*This is an auto generated header file*/
 /*--->Remember to change the name of the two variables!<---*/
 const uint32_t myArray2_size = 16725;
@@ -2106,4 +2106,4 @@ const uint8_t myArray2[] = {
 	0x2C, 0x32, 0x35, 0x35, 0x0A,
 };
 
-#endif
+//#endif

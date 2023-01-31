@@ -2,8 +2,8 @@
 * \file fts_fw.h
 * \brief Contains the size and the byte array of the fw file to burn into the IC
 */
-#ifndef FTS_FW_H
-#define FTS_FW_H
+//#ifndef FTS_FW_H
+//#define FTS_FW_H
 /*This is an auto generated header file*/
 /*--->Remember to change the name of the two variables!<---*/
 const uint32_t myArray_size = 100476;
@@ -12570,4 +12570,4 @@ const uint8_t myArray[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x75, 0x6A, 0xB0,
 };
 
-#endif
+//#endif
