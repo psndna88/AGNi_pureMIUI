@@ -65,7 +65,7 @@
 
 /*#define FW_H_FILE*/
 #define FTS_FW_UPDATE
-#define FW_UPDATE_ON_PROBE
+/*#define FW_UPDATE_ON_PROBE*/
 #ifdef FW_H_FILE
 #define FW_SIZE_NAME myArray_size
 #define FW_ARRAY_NAME myArray
@@ -86,7 +86,7 @@
 /*#define USE_ONE_FILE_NODE*/
 
 #ifndef FW_UPDATE_ON_PROBE
-#define EXP_FN_WORK_DELAY_MS				1000
+#define EXP_FN_WORK_DELAY_MS				5000
 #endif
 
 /**** END ****/
