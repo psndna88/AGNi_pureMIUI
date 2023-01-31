@@ -19750,7 +19750,8 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 				    const u8 *ssid, size_t ssid_len,
 				    const u8 *bssid, const u8 *bssid_hint,
 				    uint32_t oper_freq,
-				    enum nl80211_chan_width ch_width)
+				    enum nl80211_chan_width ch_width,
+				    uint32_t ch_freq_hint)
 {
 	int status = 0;
 	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
@@ -19942,6 +19943,8 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 			roam_profile->ChannelInfo.freq_list = NULL;
 			roam_profile->ChannelInfo.numOfChannels = 0;
 		}
+
+		roam_profile->freq_hint = ch_freq_hint;
 
 		if (wlan_hdd_cfg80211_check_pmf_valid(roam_profile)) {
 			status = -EINVAL;
@@ -21759,6 +21762,7 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 #endif
 	struct hdd_adapter *adapter = WLAN_HDD_GET_PRIV_PTR(ndev);
 	struct hdd_context *hdd_ctx;
+	uint32_t ch_freq_hint = 0;
 
 	hdd_enter();
 
@@ -21874,11 +21878,15 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	else
 		ch_freq = 0;
 
+	if (req->channel_hint)
+		ch_freq_hint = req->channel_hint->center_freq;
+
 	wlan_hdd_check_ht20_ht40_ind(hdd_ctx, adapter, req);
 
 	status = wlan_hdd_cfg80211_connect_start(adapter, req->ssid,
 						 req->ssid_len, req->bssid,
-						 bssid_hint, ch_freq, 0);
+						 bssid_hint, ch_freq, 0,
+						 ch_freq_hint);
 	if (status) {
 		wlan_hdd_cfg80211_clear_privacy(adapter);
 		hdd_err("connect failed");
