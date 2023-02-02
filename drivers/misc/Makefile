@@ -72,3 +72,4 @@ obj-$(CONFIG_MI_HARDWARE_ID)    += hwid.o
 obj-y 							+= mi-memory/
 obj-y               			+= mi-power/
 obj-y               			+= mi-ioturbo/
+obj-$(CONFIG_MMHARDWARE_OTHER_DETECTION) += mmhardware_others.o
