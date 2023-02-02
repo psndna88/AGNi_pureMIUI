@@ -285,7 +285,6 @@ static int gsx_gesture_ist(struct goodix_ts_core *cd,
 			input_report_abs(cd->input_dev, ABS_MT_WIDTH_MAJOR,overlay_area);
 			input_report_abs(cd->input_dev, ABS_MT_WIDTH_MINOR,overlay_area);
 			input_sync(cd->input_dev);
-			mi_disp_set_fod_queue_work(1, true);
 			cd->fod_finger = true;
 			FP_Event_Gesture = 0;
 			goto re_send_ges_cmd;
@@ -308,7 +307,6 @@ static int gsx_gesture_ist(struct goodix_ts_core *cd,
 			input_report_key(cd->input_dev, BTN_TOUCH, 0);
 			input_report_key(cd->input_dev, BTN_TOOL_FINGER, 0);
 			input_sync(cd->input_dev);
-			mi_disp_set_fod_queue_work(0, true);
 		}
 		goto re_send_ges_cmd;
 	}
