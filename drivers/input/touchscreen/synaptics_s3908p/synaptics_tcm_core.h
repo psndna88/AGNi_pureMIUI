@@ -931,8 +931,6 @@ int touch_free_objects(struct syna_tcm_hcd *tcm_hcd);
 
 int touch_flush_slots(struct syna_tcm_hcd *tcm_hcd);
 
-extern int mi_disp_set_fod_queue_work(u32 fod_btn, bool from_touch);
-
 void touch_fod_test(int value);
 
 #endif
