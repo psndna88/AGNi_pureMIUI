@@ -2715,7 +2715,11 @@
       <elf-symbol name='devm_clk_bulk_get_all' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46975313'/>
       <elf-symbol name='devm_clk_bulk_get_optional' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f8ef19d'/>
       <elf-symbol name='devm_clk_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7ab153a2'/>
+      <elf-symbol name='devm_clk_get_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab886f7e'/>
       <elf-symbol name='devm_clk_get_optional' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe29134df'/>
+      <elf-symbol name='devm_clk_get_optional_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3416f0b3'/>
+      <elf-symbol name='devm_clk_get_optional_prepared' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8bed6f4'/>
+      <elf-symbol name='devm_clk_get_prepared' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1df4f666'/>
       <elf-symbol name='devm_clk_hw_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7ae5b539'/>
       <elf-symbol name='devm_clk_hw_register_clkdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa0f2f5df'/>
       <elf-symbol name='devm_clk_hw_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x25b8a926'/>
