@@ -242,6 +242,8 @@
       <elf-symbol name='__dma_inv_area' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='__dma_request_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='__do_once_done' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='__do_once_slow_done' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='__do_once_slow_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='__do_once_start' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='__dquot_alloc_space' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='__dquot_free_space' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -3618,6 +3620,7 @@
       <elf-symbol name='dvb_ca_en50221_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_ca_en50221_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_demux_push_idx_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='dvb_device_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_dmx_get_pattern' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_dmx_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_dmx_notify_idx_events' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -3634,7 +3637,6 @@
       <elf-symbol name='dvb_dmx_video_pattern_search' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_dmxdev_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_dmxdev_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
-      <elf-symbol name='dvb_free_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_frontend_detach' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_frontend_reinitialise' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='dvb_frontend_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -9815,6 +9817,7 @@
       <elf-symbol name='simple_attr_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='simple_attr_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='simple_attr_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='simple_attr_write_signed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='simple_dname' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='simple_empty' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='simple_fill_super' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
@@ -12719,7 +12722,7 @@
       <elf-symbol name='cpu_bit_bitmap' size='520' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cpu_cgrp_subsys_enabled_key' size='16' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cpu_cgrp_subsys_on_dfl_key' size='16' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
-      <elf-symbol name='cpu_hwcap_keys' size='512' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
+      <elf-symbol name='cpu_hwcap_keys' size='528' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cpu_hwcaps' size='8' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cpu_lp_mask' size='8' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
       <elf-symbol name='cpu_number' size='4' type='object-type' binding='global-binding' visibility='default-visibility' is-defined='yes'/>
