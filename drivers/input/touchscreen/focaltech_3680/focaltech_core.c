@@ -638,7 +638,6 @@ static int fts_input_report_b(struct fts_ts_data *ts_data, struct ts_event *even
                 /*be useful when panel has been resumed */
                 input_report_key(input_dev, BTN_INFO, 1);
                 FTS_INFO("Report_0x152 resume DOWN");
-                mi_disp_set_fod_queue_work(1, true);
             }
             input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, ts_data->overlap_area);
             input_report_abs(input_dev, ABS_MT_WIDTH_MINOR, ts_data->overlap_area);
@@ -894,7 +893,6 @@ static int fts_read_and_report_foddata(struct fts_ts_data *data)
                     input_mt_slot(data->input_dev, buf[0]);
                     input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, 1);
                     input_report_key(data->input_dev, BTN_INFO, 1);
-                    mi_disp_set_fod_queue_work(1, true);
                     input_report_key(data->input_dev, BTN_TOUCH, 1);
                     input_report_key(data->input_dev, BTN_TOOL_FINGER, 1);
                     input_report_abs(data->input_dev, ABS_MT_POSITION_X, x);
@@ -909,7 +907,6 @@ static int fts_read_and_report_foddata(struct fts_ts_data *data)
                 mutex_unlock(&data->report_mutex);
             } else {
                 input_report_key(data->input_dev, BTN_INFO, 0);
-                mi_disp_set_fod_queue_work(0, true);
                 input_sync(data->input_dev);
                 data->finger_in_fod = false;
                 data->fod_finger_skip = false;
@@ -2059,7 +2056,6 @@ static ssize_t fts_fod_test_store(struct device *dev,
     sscanf(buf, "%u", &value);
     if (value) {
         input_report_key(info->input_dev, BTN_INFO, 1);
-        mi_disp_set_fod_queue_work(1, true);
         input_sync(info->input_dev);
         input_mt_slot(info->input_dev, 0);
         input_mt_report_slot_state(info->input_dev, MT_TOOL_FINGER, 1);
@@ -2076,7 +2072,6 @@ static ssize_t fts_fod_test_store(struct device *dev,
         input_mt_report_slot_state(info->input_dev, MT_TOOL_FINGER, 0);
         input_report_abs(info->input_dev, ABS_MT_TRACKING_ID, -1);
         input_report_key(info->input_dev, BTN_INFO, 0);
-        mi_disp_set_fod_queue_work(0, true);
         input_sync(info->input_dev);
     }
     return count;

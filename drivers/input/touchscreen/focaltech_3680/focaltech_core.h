@@ -387,7 +387,6 @@ int fts_ex_mode_recovery(struct fts_ts_data *ts_data);
 void fts_irq_disable(void);
 void fts_irq_enable(void);
 
-extern int mi_disp_set_fod_queue_work(u32 fod_btn, bool from_touch);
 /* power supply functions*/
 extern int power_supply_reg_notifier(struct notifier_block *nb);
 extern int power_supply_is_system_supplied(void);
