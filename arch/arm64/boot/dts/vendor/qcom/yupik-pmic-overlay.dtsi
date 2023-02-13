@@ -284,7 +284,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		qcom,pm8008i-regulator {
+		PM8008I: qcom,pm8008i-regulator {
 			compatible = "qcom,pm8008-regulator";
 			#address-cells = <1>;
 			#size-cells = <0>;
