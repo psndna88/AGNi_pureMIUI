@@ -24,6 +24,7 @@
 
 #include <drm/mi_disp_notifier.h>
 #include <linux/backlight.h>
+#include <drm/dsi_display_fod.h>
 #include <linux/power_supply.h>
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38)
@@ -1369,6 +1370,7 @@ static void goodix_ts_report_finger(struct input_dev *dev,
 			goodix_core_data->fod_finger = true;
 			input_report_key(dev, BTN_INFO, 1);
 			input_sync(dev);
+			dsi_display_primary_request_fod_hbm(1);
 			ts_info("fod finger is %d",goodix_core_data->fod_finger);
 			goto finger_pos;
 	} else if ((goodix_core_data->eventsdata & 0x08) != 0x08 && goodix_core_data->fod_finger) {
@@ -1377,6 +1379,7 @@ static void goodix_ts_report_finger(struct input_dev *dev,
 			input_report_abs(dev, ABS_MT_WIDTH_MAJOR, 0);
 			input_report_abs(dev, ABS_MT_WIDTH_MINOR, 0);
 			input_sync(dev);
+	 		dsi_display_primary_request_fod_hbm(0);
 			goodix_core_data->fod_finger = false;
 			ts_info("fod finger is %d",goodix_core_data->fod_finger);
 			goto finger_pos;
@@ -2060,6 +2063,7 @@ static void goodix_ts_release_connects(struct goodix_ts_core *core_data)
 			last_touch_events_collect(i, 0);
 #endif
 	}
+	dsi_display_primary_request_fod_hbm(0);
 	input_report_key(input_dev, BTN_TOUCH, 0);
 	input_mt_sync_frame(input_dev);
 	input_sync(input_dev);
