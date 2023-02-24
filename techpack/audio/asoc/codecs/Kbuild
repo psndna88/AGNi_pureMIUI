@@ -279,7 +279,7 @@ ifeq ($(KERNEL_BUILD), 1)
 	obj-y	+= rouleur/
 endif
 
-ifneq (,$(filter $(TARGET_PRODUCT), venus star haydn odin vili))
+ifneq (,$(filter $(TARGET_PRODUCT), venus star mars haydn odin vili))
 	obj-y	+= cs35l41/
 endif
 
