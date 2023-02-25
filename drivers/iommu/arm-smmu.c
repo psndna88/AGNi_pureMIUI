@@ -3197,7 +3197,7 @@ static unsigned long arm_smmu_mask_iova(struct arm_smmu_domain *smmu_domain,
 }
 
 static int arm_smmu_map(struct iommu_domain *domain, unsigned long iova,
-			phys_addr_t paddr, size_t size, int prot)
+			phys_addr_t paddr, size_t size, int prot, gfp_t gfp)
 {
 	int ret;
 	unsigned long flags;
