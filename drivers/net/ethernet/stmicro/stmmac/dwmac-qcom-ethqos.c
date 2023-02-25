@@ -1650,6 +1650,8 @@ static int qcom_ethqos_probe(struct platform_device *pdev)
 	plat_dat->handle_prv_ioctl = ethqos_handle_prv_ioctl;
 	plat_dat->request_phy_wol = qcom_ethqos_request_phy_wol;
 	plat_dat->init_pps = ethqos_init_pps;
+	if (of_device_is_compatible(np, "qcom,qcs404-ethqos"))
+		plat_dat->rx_clk_runs_in_lpi = 1;
 
 	if (of_property_read_bool(pdev->dev.of_node,
 				  "emac-core-version")) {
