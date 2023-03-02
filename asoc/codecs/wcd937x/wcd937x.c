@@ -1734,8 +1734,9 @@ static int wcd937x_event_notify(struct notifier_block *block,
 	case BOLERO_SLV_EVT_SSR_DOWN:
 		wcd937x->mbhc->wcd_mbhc.deinit_in_progress = true;
 		mbhc = &wcd937x->mbhc->wcd_mbhc;
-		wcd937x->usbc_hs_status = get_usbc_hs_status(component,
-						mbhc->mbhc_cfg);
+		if(mbhc->mbhc_cfg)
+			wcd937x->usbc_hs_status = get_usbc_hs_status(component,
+							mbhc->mbhc_cfg);
 		wcd937x_mbhc_ssr_down(wcd937x->mbhc, component);
 		wcd937x_reset_low(wcd937x->dev);
 		break;
@@ -1755,7 +1756,8 @@ static int wcd937x_event_notify(struct notifier_block *block,
 			dev_err(component->dev, "%s: mbhc initialization failed\n",
 				__func__);
 		} else {
-			wcd937x_mbhc_hs_detect(component, mbhc->mbhc_cfg);
+			if(mbhc->mbhc_cfg)
+				wcd937x_mbhc_hs_detect(component, mbhc->mbhc_cfg);
 			if (wcd937x->usbc_hs_status)
 				mdelay(500);
 		}
