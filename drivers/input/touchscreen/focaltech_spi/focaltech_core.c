@@ -40,7 +40,6 @@
 #include <linux/of_irq.h>
 #include <linux/times.h>
 #include <linux/time.h>
-#include <linux/hwid.h>
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>
@@ -2719,10 +2718,6 @@ static int fts_ts_probe(struct spi_device *spi)
 	struct fts_ts_data *ts_data = NULL;
 
 	FTS_INFO("Touch Screen(SPI BUS) driver prboe...");
-	if (get_hw_version_platform() != HARDWARE_PROJECT_K11) {
-		FTS_ERROR("device is not haydn");
-		return -ENODEV;
-	}
 	spi->mode = SPI_MODE_0;
 	spi->max_speed_hz = 12000000;
 	spi->bits_per_word = 8;
