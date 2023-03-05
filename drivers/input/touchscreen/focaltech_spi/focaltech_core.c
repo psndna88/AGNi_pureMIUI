@@ -2201,7 +2201,7 @@ static void fts_init_touchmode_data(struct fts_ts_data *ts_data)
 #define HT_AFE_START                           0x50
 #define HT_AFE_STOP                            0x51
 
-static int fts_enable_touch_raw(int en)
+static int fts_enable_touch_raw(bool en)
 {
 #define FTS_HOSTPROCESS_FW "focaltech_ts_ht_fw.bin"
 	int ret;
@@ -2737,7 +2737,7 @@ static int fts_ts_probe(struct spi_device *spi)
 	fts_data = ts_data;
 	ts_data->spi = spi;
 	ts_data->dev = &spi->dev;
-	ts_data->log_level = 0;
+	ts_data->log_level = 1;
 	ts_data->poweroff_on_sleep = false;
 
 	ts_data->bus_type = BUS_TYPE_SPI_V2;
