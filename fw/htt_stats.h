@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1481,6 +1481,17 @@ typedef struct _htt_tx_tid_stats_v1_tlv {
     A_UINT32 mlo_flush_partner_info_high;
     A_UINT32 mlo_flush_initator_info_low;
     A_UINT32 mlo_flush_initator_info_high;
+    /*
+     * head_msdu_tqm_timestamp_us:
+     *     MSDU enqueue timestamp (TQM reference timestamp) for the MSDU
+     *     at the head of the MPDU queue
+     * head_msdu_tqm_latency_us:
+     *     The age of the MSDU that is at the head of the MPDU queue,
+     *     i.e. the delta between the current TQM time and the MSDU's
+     *     enqueue timestamp.
+     */
+    A_UINT32 head_msdu_tqm_timestamp_us;
+    A_UINT32 head_msdu_tqm_latency_us;
 } htt_tx_tid_stats_v1_tlv;
 
 #define HTT_RX_TID_STATS_SW_PEER_ID_M 0x0000ffff
@@ -4980,6 +4991,8 @@ typedef struct {
     A_UINT32 ax_su_embedded_trigger_data_ppdu_err;
     /** sta side trigger stats */
     A_UINT32 trigger_type_11be[HTT_TX_PDEV_STATS_NUM_11BE_TRIGGER_TYPES];
+    /** Stats for Extra EHT LTF */
+    A_UINT32 extra_eht_ltf;
 } htt_tx_pdev_rate_stats_tlv;
 
 typedef struct {
@@ -7494,13 +7507,13 @@ typedef struct {
     /** rx_pkt_cnt -
      * Received EOP (end-of-packet) count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax; [5] = GF
-     * [6-7]=RSVD
+     * [6] = EHT; [7]=RSVD; [6] = Applicable only for BE
      */
     A_UINT32 rx_pkt_cnt[HTT_MAX_RX_PKT_CNT];
     /** rx_pkt_crc_pass_cnt -
      * Received EOP (end-of-packet) count per packet type;
      * [0] = 11a; [1] = 11b; [2] = 11n; [3] = 11ac; [4] = 11ax; [5] = GF
-     * [6-7]=RSVD
+     * [6] = EHT; [7]=RSVD; [6] = Applicable only for BE
      */
     A_UINT32 rx_pkt_crc_pass_cnt[HTT_MAX_RX_PKT_CRC_PASS_CNT];
     /** per_blk_err_cnt -
@@ -7522,12 +7535,12 @@ typedef struct {
     A_UINT32 rx_ota_err_cnt[HTT_MAX_RX_OTA_ERR_CNT];
     /** rx_pkt_cnt_ext -
      * Received EOP (end-of-packet) count per packet type for BE;
-     * [0] = EHT; [1] = WUR; [2] = AZ; [3]=RVSD
+     * [0] = WUR; [1] = AZ; [2-3]=RVSD
      */
     A_UINT32 rx_pkt_cnt_ext[HTT_MAX_RX_PKT_CNT_EXT];
     /** rx_pkt_crc_pass_cnt_ext -
      * Received EOP (end-of-packet) count per packet type for BE;
-     * [0] = EHT; [1] = WUR; [2] = AZ; [3]=RVSD
+     * [0] = WUR; [1] = AZ; [2-3]=RVSD
      */
     A_UINT32 rx_pkt_crc_pass_cnt_ext[HTT_MAX_RX_PKT_CRC_PASS_CNT_EXT];
     /** rx_pkt_mu_cnt -
