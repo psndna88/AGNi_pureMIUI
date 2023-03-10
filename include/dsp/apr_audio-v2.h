@@ -333,9 +333,11 @@ struct adm_cmd_device_open_v5 {
  */
 
 	u16                  endpoint_id_2;
-/* Logical and physical endpoint ID 2 for a voice processor
- * Tx block.
- * This is not applicable to audio COPP.
+/* Endpoint 2 is set with 0xFFFF by default.
+ * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
+ * which will be connected to the TX block.
+ * ECREF data is given as input to the TX block.
+ * Endpoint 2 is applicable to audio CoPreP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
@@ -423,9 +425,11 @@ struct adm_cmd_device_open_v6 {
  */
 
 	u16                  endpoint_id_2;
-/* Logical and physical endpoint ID 2 for a voice processor
- * Tx block.
- * This is not applicable to audio COPP.
+/* Endpoint 2 is set with 0xFFFF by default.
+ * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
+ * which will be connected to the TX block.
+ * ECREF data is given as input to the TX block.
+ * Endpoint 2 is applicable to audio CoPreP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
@@ -589,9 +593,11 @@ struct adm_cmd_device_open_v8 {
  */
 
 	u16                  endpoint_id_2;
-/* Logical and physical endpoint ID 2 for a voice processor
- * Tx block.
- * This is not applicable to audio COPP.
+/* Endpoint 2 is set with 0xFFFF by default.
+ * In cases of ECREF, Endpoint 2 can be set with the ecref AFE port id,
+ * which will be connected to the TX block.
+ * ECREF data is given as input to the TX block.
+ * Endpoint 2 is applicable to audio CoPreP.
  * Supported values:
  * - AFE Rx port
  * - 0xFFFF -- Endpoint 2 is unavailable and the voice
