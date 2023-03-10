@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -404,7 +405,24 @@ static inline bool pld_pcie_platform_driver_support(void)
 {
 	return false;
 }
+
+static inline int pld_pcie_set_wfc_mode(struct device *dev,
+					enum pld_wfc_mode wfc_mode)
+{
+	return 0;
+}
 #else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+int pld_pcie_set_wfc_mode(struct device *dev,
+			  enum pld_wfc_mode wfc_mode);
+#else
+static inline int pld_pcie_set_wfc_mode(struct device *dev,
+					enum pld_wfc_mode wfc_mode)
+{
+	return 0;
+}
+#endif
+
 int pld_pcie_get_fw_files_for_target(struct device *dev,
 				     struct pld_fw_files *pfw_files,
 				     u32 target_type, u32 target_version);

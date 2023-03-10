@@ -199,6 +199,7 @@ ifeq ($(CONFIG_ARCH_QCS40X), y)
 	CONFIG_WLAN_CLD_PM_QOS := y
 endif
 CONFIG_WLAN_FEATURE_MBSSID := y
+CONFIG_WLAN_FEATURE_P2P_P2P_STA := y
 
 #Flag to enable Legacy Fast Roaming3(LFR3)
 ifeq (y,$(findstring y,$(CONFIG_HELIUMPLUS) $(CONFIG_LITHIUM)))
@@ -972,8 +973,6 @@ CONFIG_CP_STATS := y
 CONFIG_FEATURE_INTEROP_ISSUES_AP := y
 
 CONFIG_FEATURE_WLAN_WAPI := y
-
-CONFIG_AGEIE_ON_SCAN_RESULTS := y
 
 #Flag to enable FW log parsing support feature
 CONFIG_FEATURE_FW_LOG_PARSING := y
