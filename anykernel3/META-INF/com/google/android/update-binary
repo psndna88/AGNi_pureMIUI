@@ -532,23 +532,12 @@ fi;
 $BB echo "$ANDROID_VER" > $AKHOME/ANDROIDVER;
 if [ "`$BB grep ro.miui $buildprop`" ]; then
 	MIUI_ROM="true";
-	ui_print " " "AGNi detected MIUI rom." " ";
-	if [ "`$BB grep ro.miui.ui.version.name=V13 $buildprop`" ]; then
-		MIUI_VER="13";
-		ui_print " " "AGNi detected MIUI 13" " ";
-	elif [ "`$BB grep ro.miui.ui.version.name=V12 $buildprop`" ]; then
-		MIUI_VER="12";
-		ui_print " " "AGNi detected MIUI 12" " ";
-	else
-		MIUI_VER="UNSUPPORTED";
-		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
-	fi;
+	ui_print " " "AGNi detected MIUI rom. Exiting. Need AOSP variant." " ";
+	exit;
 else
 	MIUI_ROM="false";
-#	MIUI_VER="none";
 	ui_print " " "AGNi detected non-MIUI rom." " ";
 fi;
-#$BB echo "$MIUI_VER" > $AKHOME/MIUIVER;
 $BB echo "$MIUI_ROM" > $AKHOME/MIUI_ROM;
 
 #$BB mount /data;
