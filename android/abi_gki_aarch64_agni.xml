@@ -333,7 +333,7 @@
       <elf-symbol name='__i2c_smbus_xfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe52398f6'/>
       <elf-symbol name='__i2c_transfer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x25b78a52'/>
       <elf-symbol name='__icmp_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd873f02e'/>
-      <elf-symbol name='__icnss_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x498dc4d7'/>
+      <elf-symbol name='__icnss_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfffd102a'/>
       <elf-symbol name='__ieee80211_schedule_txq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdf8e979c'/>
       <elf-symbol name='__iio_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x237447b1'/>
       <elf-symbol name='__iio_trigger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4426de08'/>
@@ -768,6 +768,7 @@
       <elf-symbol name='abort' type='func-type' binding='weak-binding' visibility='default-visibility' is-defined='yes' crc='0xb4f13d2a'/>
       <elf-symbol name='abort_creds' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4345bc55'/>
       <elf-symbol name='acc_ctrlrequest' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61431eef'/>
+      <elf-symbol name='acc_ctrlrequest_composite' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31bcf2fb'/>
       <elf-symbol name='acc_disconnect' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3980acd8'/>
       <elf-symbol name='access_process_vm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x255c1b94'/>
       <elf-symbol name='account_locked_vm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5bc4da44'/>
@@ -953,7 +954,7 @@
       <elf-symbol name='alloc_ep_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6dc11b4d'/>
       <elf-symbol name='alloc_etherdev_mqs' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2162834'/>
       <elf-symbol name='alloc_file_pseudo' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1d74f752'/>
-      <elf-symbol name='alloc_io_pgtable_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3cb866be'/>
+      <elf-symbol name='alloc_io_pgtable_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x34262669'/>
       <elf-symbol name='alloc_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xad8d1e1'/>
       <elf-symbol name='alloc_iova_fast' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1b0118ab'/>
       <elf-symbol name='alloc_iova_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x58604e4d'/>
@@ -1015,7 +1016,7 @@
       <elf-symbol name='arch_bpf_jit_check_func' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2e625b43'/>
       <elf-symbol name='arch_set_freq_scale' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72ccfa10'/>
       <elf-symbol name='arch_set_max_freq_scale' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d43b21e'/>
-      <elf-symbol name='arch_setup_dma_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa47dd078'/>
+      <elf-symbol name='arch_setup_dma_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab41020b'/>
       <elf-symbol name='argv_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0b13336'/>
       <elf-symbol name='argv_split' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7380dffa'/>
       <elf-symbol name='arp_create' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf974125'/>
@@ -1461,7 +1462,7 @@
       <elf-symbol name='bus_register_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xea21104c'/>
       <elf-symbol name='bus_remove_file' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdf582b69'/>
       <elf-symbol name='bus_rescan_devices' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36c5897a'/>
-      <elf-symbol name='bus_set_iommu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9b57bcb'/>
+      <elf-symbol name='bus_set_iommu' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc6afaadf'/>
       <elf-symbol name='bus_sort_breadthfirst' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2144e77b'/>
       <elf-symbol name='bus_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4fd3817d'/>
       <elf-symbol name='bus_unregister_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f6802b'/>
@@ -1487,7 +1488,7 @@
       <elf-symbol name='call_usermodehelper' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7eedcc4'/>
       <elf-symbol name='call_usermodehelper_exec' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2d8920a7'/>
       <elf-symbol name='call_usermodehelper_setup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc45e9b45'/>
-      <elf-symbol name='cam_cci_dump_registers' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92cae316'/>
+      <elf-symbol name='cam_cci_dump_registers' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x77550823'/>
       <elf-symbol name='cam_cdm_acquire' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f1aee61'/>
       <elf-symbol name='cam_cdm_detect_hang_error' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x93b98818'/>
       <elf-symbol name='cam_cdm_flush_hw' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42f7be68'/>
@@ -1514,7 +1515,7 @@
       <elf-symbol name='cam_cpas_unregister_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdc110f9e'/>
       <elf-symbol name='cam_cpas_update_ahb_vote' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x108c6b4'/>
       <elf-symbol name='cam_cpas_update_axi_vote' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8913d1dc'/>
-      <elf-symbol name='cam_ife_csid_hw_deinit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4abe2126'/>
+      <elf-symbol name='cam_ife_csid_hw_deinit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa0175d3c'/>
       <elf-symbol name='cam_ife_csid_hw_probe_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x826aaae0'/>
       <elf-symbol name='cam_mem_get_cpu_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xddefea'/>
       <elf-symbol name='cam_mem_get_io_buf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xef0dd27'/>
@@ -1523,17 +1524,17 @@
       <elf-symbol name='cam_mem_mgr_release_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa675e7bc'/>
       <elf-symbol name='cam_mem_mgr_request_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xea05771'/>
       <elf-symbol name='cam_mem_mgr_reserve_memory_region' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4df33986'/>
-      <elf-symbol name='cam_register_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4e2c53b5'/>
+      <elf-symbol name='cam_register_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd0d7d2f'/>
       <elf-symbol name='cam_req_mgr_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf5433013'/>
       <elf-symbol name='cam_req_mgr_is_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf45df614'/>
       <elf-symbol name='cam_req_mgr_is_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x50216286'/>
       <elf-symbol name='cam_req_mgr_notify_message' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2a2b7dc'/>
-      <elf-symbol name='cam_res_mgr_gpio_free_arry' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fa594d4'/>
-      <elf-symbol name='cam_res_mgr_gpio_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf72dcab9'/>
+      <elf-symbol name='cam_res_mgr_gpio_free_arry' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe221919a'/>
+      <elf-symbol name='cam_res_mgr_gpio_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3e26782'/>
       <elf-symbol name='cam_res_mgr_gpio_set_value' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36ee6373'/>
-      <elf-symbol name='cam_res_mgr_led_trigger_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f2b5a24'/>
-      <elf-symbol name='cam_res_mgr_led_trigger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcfbe6ac1'/>
-      <elf-symbol name='cam_res_mgr_led_trigger_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x54746ae8'/>
+      <elf-symbol name='cam_res_mgr_led_trigger_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0e54c90'/>
+      <elf-symbol name='cam_res_mgr_led_trigger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf3cffdcc'/>
+      <elf-symbol name='cam_res_mgr_led_trigger_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44e35767'/>
       <elf-symbol name='cam_res_mgr_util_check_if_gpio_is_shared' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1026fe51'/>
       <elf-symbol name='cam_res_mgr_util_get_idx_from_shared_gpio' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab1ad390'/>
       <elf-symbol name='cam_res_mgr_util_get_idx_from_shared_pctrl_gpio' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91fe5310'/>
@@ -1547,18 +1548,18 @@
       <elf-symbol name='cam_smmu_get_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5f90d4dd'/>
       <elf-symbol name='cam_smmu_get_region_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x58fe5c10'/>
       <elf-symbol name='cam_smmu_get_stage2_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcfc66588'/>
-      <elf-symbol name='cam_smmu_map_kernel_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b1d81e3'/>
+      <elf-symbol name='cam_smmu_map_kernel_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1d72f97e'/>
       <elf-symbol name='cam_smmu_map_stage2_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb267ad03'/>
       <elf-symbol name='cam_smmu_map_user_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91aaed5c'/>
       <elf-symbol name='cam_smmu_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbad07e56'/>
       <elf-symbol name='cam_smmu_put_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe632639'/>
       <elf-symbol name='cam_smmu_release_sec_heap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x495a5dfa'/>
-      <elf-symbol name='cam_smmu_reserve_sec_heap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x733cf0c8'/>
-      <elf-symbol name='cam_smmu_unmap_kernel_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9011fee4'/>
+      <elf-symbol name='cam_smmu_reserve_sec_heap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x438f67'/>
+      <elf-symbol name='cam_smmu_unmap_kernel_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59942d01'/>
       <elf-symbol name='cam_smmu_unmap_stage2_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x28d57bb5'/>
       <elf-symbol name='cam_smmu_unmap_user_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x30de4dcb'/>
       <elf-symbol name='cam_subdev_notify_message' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x67a3869a'/>
-      <elf-symbol name='cam_unregister_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe693a53c'/>
+      <elf-symbol name='cam_unregister_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3d1c99ca'/>
       <elf-symbol name='can_do_mlock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcc5d22d9'/>
       <elf-symbol name='cancel_delayed_work' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda571594'/>
       <elf-symbol name='cancel_delayed_work_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8beca97'/>
@@ -1894,56 +1895,56 @@
       <elf-symbol name='cmd_db_read_aux_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf0b2419f'/>
       <elf-symbol name='cmd_db_read_slave_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x450d9a35'/>
       <elf-symbol name='cmd_db_ready' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5203d176'/>
-      <elf-symbol name='cnss_athdiag_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2faa123'/>
-      <elf-symbol name='cnss_athdiag_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52014401'/>
-      <elf-symbol name='cnss_auto_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3164e39f'/>
-      <elf-symbol name='cnss_auto_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc82c6099'/>
-      <elf-symbol name='cnss_device_crashed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52d55bdb'/>
-      <elf-symbol name='cnss_force_collect_rddm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8ea58d2'/>
-      <elf-symbol name='cnss_force_fw_assert' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92571299'/>
-      <elf-symbol name='cnss_get_boot_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc439d149'/>
-      <elf-symbol name='cnss_get_fw_files_for_target' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2c26bd3c'/>
+      <elf-symbol name='cnss_athdiag_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d413609'/>
+      <elf-symbol name='cnss_athdiag_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd9d91458'/>
+      <elf-symbol name='cnss_auto_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15113cef'/>
+      <elf-symbol name='cnss_auto_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xccaf7f2a'/>
+      <elf-symbol name='cnss_device_crashed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x85db64d3'/>
+      <elf-symbol name='cnss_force_collect_rddm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2cf30777'/>
+      <elf-symbol name='cnss_force_fw_assert' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x859dcce1'/>
+      <elf-symbol name='cnss_get_boot_timeout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfbd86baa'/>
+      <elf-symbol name='cnss_get_fw_files_for_target' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf359f4c1'/>
       <elf-symbol name='cnss_get_mem_seg_count' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1d2606f1'/>
       <elf-symbol name='cnss_get_mem_segment_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c2b5b1f'/>
-      <elf-symbol name='cnss_get_msi_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3f35b689'/>
-      <elf-symbol name='cnss_get_msi_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f197990'/>
-      <elf-symbol name='cnss_get_platform_cap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29f422fe'/>
-      <elf-symbol name='cnss_get_soc_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1070d99e'/>
-      <elf-symbol name='cnss_get_user_msi_assignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8bfecedf'/>
-      <elf-symbol name='cnss_get_virt_ramdump_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x15f19b61'/>
-      <elf-symbol name='cnss_idle_restart' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x922a5ff4'/>
-      <elf-symbol name='cnss_idle_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc65ff8d4'/>
-      <elf-symbol name='cnss_lock_pm_sem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc6bc7379'/>
-      <elf-symbol name='cnss_pci_allow_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x66910390'/>
-      <elf-symbol name='cnss_pci_force_wake_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1cdd3d5'/>
-      <elf-symbol name='cnss_pci_force_wake_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x35c1b87f'/>
-      <elf-symbol name='cnss_pci_force_wake_request_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x94e5d223'/>
-      <elf-symbol name='cnss_pci_get_reg_dump' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f26b4c9'/>
-      <elf-symbol name='cnss_pci_is_device_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x37ce0799'/>
-      <elf-symbol name='cnss_pci_is_device_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9387d9a3'/>
-      <elf-symbol name='cnss_pci_is_drv_connected' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x84f6a9b8'/>
-      <elf-symbol name='cnss_pci_link_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x34d6e801'/>
-      <elf-symbol name='cnss_pci_lock_reg_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x282553ea'/>
-      <elf-symbol name='cnss_pci_prevent_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa5e90a8'/>
-      <elf-symbol name='cnss_pci_unlock_reg_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4377c745'/>
-      <elf-symbol name='cnss_power_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9e5a05f9'/>
-      <elf-symbol name='cnss_power_up' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbb95bf11'/>
-      <elf-symbol name='cnss_qmi_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x608312ec'/>
-      <elf-symbol name='cnss_qmi_send_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfefa6103'/>
-      <elf-symbol name='cnss_qmi_send_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6b229c7'/>
-      <elf-symbol name='cnss_release_pm_sem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x90358f36'/>
-      <elf-symbol name='cnss_remove_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3dbe6e80'/>
-      <elf-symbol name='cnss_request_bus_bandwidth' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7cfbc8f3'/>
-      <elf-symbol name='cnss_request_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7039caa7'/>
-      <elf-symbol name='cnss_reset_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9116e79c'/>
-      <elf-symbol name='cnss_schedule_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8a719efe'/>
-      <elf-symbol name='cnss_self_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd0ccd42'/>
-      <elf-symbol name='cnss_send_buffer_to_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd17d33b0'/>
-      <elf-symbol name='cnss_set_fw_log_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x868a7cd2'/>
-      <elf-symbol name='cnss_set_pcie_gen_speed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd45aae20'/>
-      <elf-symbol name='cnss_smmu_get_domain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcb624311'/>
-      <elf-symbol name='cnss_smmu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9bdc59c'/>
-      <elf-symbol name='cnss_smmu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3019517'/>
+      <elf-symbol name='cnss_get_msi_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9af4e381'/>
+      <elf-symbol name='cnss_get_msi_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc250671d'/>
+      <elf-symbol name='cnss_get_platform_cap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x206e784e'/>
+      <elf-symbol name='cnss_get_soc_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x67c5f862'/>
+      <elf-symbol name='cnss_get_user_msi_assignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf242ef7b'/>
+      <elf-symbol name='cnss_get_virt_ramdump_mem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5413d612'/>
+      <elf-symbol name='cnss_idle_restart' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c13732d'/>
+      <elf-symbol name='cnss_idle_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb11509e2'/>
+      <elf-symbol name='cnss_lock_pm_sem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a9c2c9b'/>
+      <elf-symbol name='cnss_pci_allow_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfd1325'/>
+      <elf-symbol name='cnss_pci_force_wake_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a1dbf38'/>
+      <elf-symbol name='cnss_pci_force_wake_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb42825e'/>
+      <elf-symbol name='cnss_pci_force_wake_request_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe1435276'/>
+      <elf-symbol name='cnss_pci_get_reg_dump' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf4ff922a'/>
+      <elf-symbol name='cnss_pci_is_device_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x13567044'/>
+      <elf-symbol name='cnss_pci_is_device_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5157251b'/>
+      <elf-symbol name='cnss_pci_is_drv_connected' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e504dbb'/>
+      <elf-symbol name='cnss_pci_link_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2fef3d8'/>
+      <elf-symbol name='cnss_pci_lock_reg_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81dd5b4b'/>
+      <elf-symbol name='cnss_pci_prevent_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44ae9ef7'/>
+      <elf-symbol name='cnss_pci_unlock_reg_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x469313e4'/>
+      <elf-symbol name='cnss_power_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e6130c5'/>
+      <elf-symbol name='cnss_power_up' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3ce12ea'/>
+      <elf-symbol name='cnss_qmi_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8bf9010'/>
+      <elf-symbol name='cnss_qmi_send_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f1d3612'/>
+      <elf-symbol name='cnss_qmi_send_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x84afa805'/>
+      <elf-symbol name='cnss_release_pm_sem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4713d30c'/>
+      <elf-symbol name='cnss_remove_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe9d1eb3'/>
+      <elf-symbol name='cnss_request_bus_bandwidth' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x588081f'/>
+      <elf-symbol name='cnss_request_pm_qos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x11bce3d2'/>
+      <elf-symbol name='cnss_reset_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x635b36cc'/>
+      <elf-symbol name='cnss_schedule_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x350938a9'/>
+      <elf-symbol name='cnss_self_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9be205af'/>
+      <elf-symbol name='cnss_send_buffer_to_afcmem' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x76bdb534'/>
+      <elf-symbol name='cnss_set_fw_log_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf3f0ef33'/>
+      <elf-symbol name='cnss_set_pcie_gen_speed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce4ab9cf'/>
+      <elf-symbol name='cnss_smmu_get_domain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x39972a2b'/>
+      <elf-symbol name='cnss_smmu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8064185f'/>
+      <elf-symbol name='cnss_smmu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3f662a8'/>
       <elf-symbol name='cnss_statistic_wow_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfc3f432'/>
       <elf-symbol name='cnss_utils_get_cc_source' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf459268f'/>
       <elf-symbol name='cnss_utils_get_driver_load_cnt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1345708'/>
@@ -1957,11 +1958,11 @@
       <elf-symbol name='cnss_utils_set_wlan_unsafe_channel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x862177e8'/>
       <elf-symbol name='cnss_utils_wlan_get_dfs_nol' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5a9891b4'/>
       <elf-symbol name='cnss_utils_wlan_set_dfs_nol' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5b670268'/>
-      <elf-symbol name='cnss_wlan_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x983ac1c5'/>
-      <elf-symbol name='cnss_wlan_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5315256a'/>
-      <elf-symbol name='cnss_wlan_pm_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1a1ea4bc'/>
-      <elf-symbol name='cnss_wlan_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bc28a62'/>
-      <elf-symbol name='cnss_wlan_unregister_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xee8dfb56'/>
+      <elf-symbol name='cnss_wlan_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x97695fff'/>
+      <elf-symbol name='cnss_wlan_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c3af79f'/>
+      <elf-symbol name='cnss_wlan_pm_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b952c85'/>
+      <elf-symbol name='cnss_wlan_register_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4d0fefb'/>
+      <elf-symbol name='cnss_wlan_unregister_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe981d0bc'/>
       <elf-symbol name='commit_creds' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b5b9684'/>
       <elf-symbol name='compat_alloc_user_space' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbffde8ec'/>
       <elf-symbol name='compat_get_timespec' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa901b31'/>
@@ -2420,7 +2421,6 @@
       <elf-symbol name='dec_zone_page_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf85f9a5'/>
       <elf-symbol name='decode_rs8' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x65f24eea'/>
       <elf-symbol name='decrypt_blob' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4c9439da'/>
-      <elf-symbol name='default_iommu_map_sg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x67434d11'/>
       <elf-symbol name='default_llseek' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x836cde43'/>
       <elf-symbol name='default_wake_function' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaad8c7d6'/>
       <elf-symbol name='del_gendisk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd9141d3d'/>
@@ -2821,6 +2821,8 @@
       <elf-symbol name='devm_kstrdup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb15bd552'/>
       <elf-symbol name='devm_kstrdup_const' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x79116e3c'/>
       <elf-symbol name='devm_kvasprintf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce34134'/>
+      <elf-symbol name='devm_led_classdev_multicolor_register_ext' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x734d587a'/>
+      <elf-symbol name='devm_led_classdev_multicolor_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7ff8421'/>
       <elf-symbol name='devm_led_classdev_register_ext' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3cd3df1b'/>
       <elf-symbol name='devm_led_classdev_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdfdd48e9'/>
       <elf-symbol name='devm_led_trigger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb07850d9'/>
@@ -2848,8 +2850,8 @@
       <elf-symbol name='devm_of_phy_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x97ea8ed9'/>
       <elf-symbol name='devm_of_phy_get_by_index' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x74315c2e'/>
       <elf-symbol name='devm_of_phy_provider_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x359df844'/>
-      <elf-symbol name='devm_of_platform_depopulate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x49b3aee5'/>
-      <elf-symbol name='devm_of_platform_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3e55db05'/>
+      <elf-symbol name='devm_of_platform_depopulate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd068dc8d'/>
+      <elf-symbol name='devm_of_platform_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6607c220'/>
       <elf-symbol name='devm_of_pwm_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1dce8331'/>
       <elf-symbol name='devm_pci_alloc_host_bridge' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22e36d5e'/>
       <elf-symbol name='devm_pci_epc_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5b3b7e3c'/>
@@ -3228,10 +3230,10 @@
       <elf-symbol name='drm_any_plane_has_format' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7045f189'/>
       <elf-symbol name='drm_atomic_add_affected_connectors' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa561daf3'/>
       <elf-symbol name='drm_atomic_add_affected_planes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x402d5efe'/>
-      <elf-symbol name='drm_atomic_bridge_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb8907dc2'/>
-      <elf-symbol name='drm_atomic_bridge_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2140b525'/>
-      <elf-symbol name='drm_atomic_bridge_post_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44ba3a01'/>
-      <elf-symbol name='drm_atomic_bridge_pre_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x99bd733f'/>
+      <elf-symbol name='drm_atomic_bridge_chain_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa985858c'/>
+      <elf-symbol name='drm_atomic_bridge_chain_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x35b3a7fe'/>
+      <elf-symbol name='drm_atomic_bridge_chain_post_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa99fa0ea'/>
+      <elf-symbol name='drm_atomic_bridge_chain_pre_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52015cba'/>
       <elf-symbol name='drm_atomic_check_only' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x531f9b42'/>
       <elf-symbol name='drm_atomic_commit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb59cd078'/>
       <elf-symbol name='drm_atomic_get_connector_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5d669417'/>
@@ -3314,13 +3316,13 @@
       <elf-symbol name='drm_av_sync_delay' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa5274be'/>
       <elf-symbol name='drm_bridge_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa9abcbfd'/>
       <elf-symbol name='drm_bridge_attach' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb99dd170'/>
-      <elf-symbol name='drm_bridge_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x724e2038'/>
-      <elf-symbol name='drm_bridge_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46cbd30d'/>
-      <elf-symbol name='drm_bridge_mode_fixup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xccc57ef5'/>
-      <elf-symbol name='drm_bridge_mode_set' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa1295ab'/>
-      <elf-symbol name='drm_bridge_mode_valid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8707f52e'/>
-      <elf-symbol name='drm_bridge_post_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d7c9339'/>
-      <elf-symbol name='drm_bridge_pre_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xac2dd2bd'/>
+      <elf-symbol name='drm_bridge_chain_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0f25b0a'/>
+      <elf-symbol name='drm_bridge_chain_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x283e7ac1'/>
+      <elf-symbol name='drm_bridge_chain_mode_fixup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x80aacc05'/>
+      <elf-symbol name='drm_bridge_chain_mode_set' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7d0c2ca7'/>
+      <elf-symbol name='drm_bridge_chain_mode_valid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbfd6a7d6'/>
+      <elf-symbol name='drm_bridge_chain_post_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7590b0ae'/>
+      <elf-symbol name='drm_bridge_chain_pre_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x85debc4b'/>
       <elf-symbol name='drm_bridge_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xefb4df18'/>
       <elf-symbol name='drm_bus_flags_from_videomode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xad885165'/>
       <elf-symbol name='drm_calc_timestamping_constants' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc2040ab5'/>
@@ -3405,6 +3407,7 @@
       <elf-symbol name='drm_dev_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe8a034df'/>
       <elf-symbol name='drm_dev_fini' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc10cd033'/>
       <elf-symbol name='drm_dev_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91c0709a'/>
+      <elf-symbol name='drm_dev_has_vblank' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcfbcf3b7'/>
       <elf-symbol name='drm_dev_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x28c9c1ef'/>
       <elf-symbol name='drm_dev_printk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1a762dbb'/>
       <elf-symbol name='drm_dev_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31e7d5da'/>
@@ -3923,7 +3926,7 @@
       <elf-symbol name='dwc3_gadget_resize_tx_fifos' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb9140437'/>
       <elf-symbol name='dwc3_host_exit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7bebafc0'/>
       <elf-symbol name='dwc3_host_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf30e99fb'/>
-      <elf-symbol name='dwc3_msm_release_ss_lane' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x668a97c9'/>
+      <elf-symbol name='dwc3_msm_release_ss_lane' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd2e82ae'/>
       <elf-symbol name='dwc3_notify_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8e12f71c'/>
       <elf-symbol name='dwc3_send_gadget_ep_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc8b07230'/>
       <elf-symbol name='dwc3_set_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf50257fe'/>
@@ -4092,8 +4095,8 @@
       <elf-symbol name='extcon_unregister_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfe1fcec'/>
       <elf-symbol name='extcon_unregister_notifier_all' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72f7144b'/>
       <elf-symbol name='f_setown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4c58257f'/>
-      <elf-symbol name='fast_smmu_init_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1503784c'/>
-      <elf-symbol name='fast_smmu_put_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x599799b1'/>
+      <elf-symbol name='fast_smmu_init_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14b9e83d'/>
+      <elf-symbol name='fast_smmu_put_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfc7a50e3'/>
       <elf-symbol name='fasync_helper' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb5caf712'/>
       <elf-symbol name='fat_add_entries' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd2c76dc'/>
       <elf-symbol name='fat_alloc_new_dir' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x289067b6'/>
@@ -4395,7 +4398,7 @@
       <elf-symbol name='fsg_store_removable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3163a541'/>
       <elf-symbol name='fsg_store_ro' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x74a180b4'/>
       <elf-symbol name='fsl8250_handle_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x821d9bb3'/>
-      <elf-symbol name='fsl_mc_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x86cb608'/>
+      <elf-symbol name='fsl_mc_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd171e005'/>
       <elf-symbol name='fsnotify' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4ac831ce'/>
       <elf-symbol name='fsnotify_add_mark' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c4ee052'/>
       <elf-symbol name='fsnotify_alloc_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x977a3ca3'/>
@@ -4519,7 +4522,7 @@
       <elf-symbol name='generic_cont_expand_simple' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x486e8005'/>
       <elf-symbol name='generic_copy_file_range' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14c21e01'/>
       <elf-symbol name='generic_delete_inode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb016a362'/>
-      <elf-symbol name='generic_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x138f248a'/>
+      <elf-symbol name='generic_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3fd8ca08'/>
       <elf-symbol name='generic_end_io_acct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x40681adc'/>
       <elf-symbol name='generic_error_remove_page' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x994e7a46'/>
       <elf-symbol name='generic_fadvise' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb5658c86'/>
@@ -4766,7 +4769,7 @@
       <elf-symbol name='gov_attr_set_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb91f7bc'/>
       <elf-symbol name='gov_attr_set_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81f8c789'/>
       <elf-symbol name='gov_update_cpu_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa8addf'/>
-      <elf-symbol name='gpi_dump_for_geni' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9060ddbd'/>
+      <elf-symbol name='gpi_dump_for_geni' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14783b23'/>
       <elf-symbol name='gpio_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfe990052'/>
       <elf-symbol name='gpio_free_array' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0d1656c'/>
       <elf-symbol name='gpio_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x47229b5c'/>
@@ -5228,50 +5231,50 @@
       <elf-symbol name='icmpv6_err_convert' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae316c11'/>
       <elf-symbol name='icmpv6_ndo_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1072d04'/>
       <elf-symbol name='icmpv6_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7b7ccb2'/>
-      <elf-symbol name='icnss_allow_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d02b8f8'/>
-      <elf-symbol name='icnss_athdiag_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b8195b2'/>
-      <elf-symbol name='icnss_athdiag_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbdb12474'/>
+      <elf-symbol name='icnss_allow_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42c9a59b'/>
+      <elf-symbol name='icnss_athdiag_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x84fdebbc'/>
+      <elf-symbol name='icnss_athdiag_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x942dab93'/>
       <elf-symbol name='icnss_block_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7119ef94'/>
-      <elf-symbol name='icnss_ce_free_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70704d9b'/>
-      <elf-symbol name='icnss_ce_request_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x52c2d095'/>
-      <elf-symbol name='icnss_disable_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1fa78ed0'/>
-      <elf-symbol name='icnss_enable_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x196720f'/>
-      <elf-symbol name='icnss_exit_power_save' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d42f86e'/>
-      <elf-symbol name='icnss_force_wake_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c4c15f4'/>
-      <elf-symbol name='icnss_force_wake_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xafb3acc0'/>
-      <elf-symbol name='icnss_get_ce_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcdc6d194'/>
-      <elf-symbol name='icnss_get_curr_therm_cdev_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f079574'/>
+      <elf-symbol name='icnss_ce_free_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x44c2257d'/>
+      <elf-symbol name='icnss_ce_request_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6adff61d'/>
+      <elf-symbol name='icnss_disable_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3581dc8'/>
+      <elf-symbol name='icnss_enable_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdf4dd43e'/>
+      <elf-symbol name='icnss_exit_power_save' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe07567f8'/>
+      <elf-symbol name='icnss_force_wake_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x13fc8709'/>
+      <elf-symbol name='icnss_force_wake_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8d077eb8'/>
+      <elf-symbol name='icnss_get_ce_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x454ea2de'/>
+      <elf-symbol name='icnss_get_curr_therm_cdev_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9eff2937'/>
       <elf-symbol name='icnss_get_device_config' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7616737a'/>
-      <elf-symbol name='icnss_get_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7cc7f50e'/>
-      <elf-symbol name='icnss_get_mhi_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfdd3e83b'/>
-      <elf-symbol name='icnss_get_msi_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe6d9e063'/>
-      <elf-symbol name='icnss_get_msi_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe51bb59b'/>
-      <elf-symbol name='icnss_get_soc_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d28333'/>
-      <elf-symbol name='icnss_get_user_msi_assignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0059dd4'/>
-      <elf-symbol name='icnss_idle_restart' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc7fb7b49'/>
-      <elf-symbol name='icnss_idle_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2704a690'/>
-      <elf-symbol name='icnss_is_device_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x821cbe4b'/>
+      <elf-symbol name='icnss_get_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2607e569'/>
+      <elf-symbol name='icnss_get_mhi_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd565b43f'/>
+      <elf-symbol name='icnss_get_msi_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a401d9b'/>
+      <elf-symbol name='icnss_get_msi_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x247a929'/>
+      <elf-symbol name='icnss_get_soc_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2601470'/>
+      <elf-symbol name='icnss_get_user_msi_assignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x347a3bc7'/>
+      <elf-symbol name='icnss_idle_restart' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe55e690f'/>
+      <elf-symbol name='icnss_idle_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfa080aae'/>
+      <elf-symbol name='icnss_is_device_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa20c225d'/>
       <elf-symbol name='icnss_is_fw_down' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9b5bd3f7'/>
       <elf-symbol name='icnss_is_fw_ready' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae0bb978'/>
-      <elf-symbol name='icnss_is_pci_ep_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x397c99ff'/>
+      <elf-symbol name='icnss_is_pci_ep_awake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9549cb4d'/>
       <elf-symbol name='icnss_is_pdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61c3fdd0'/>
-      <elf-symbol name='icnss_is_qmi_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x16416f10'/>
+      <elf-symbol name='icnss_is_qmi_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33625fc5'/>
       <elf-symbol name='icnss_is_rejuvenate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc31ae623'/>
       <elf-symbol name='icnss_power_off' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7084afdf'/>
       <elf-symbol name='icnss_power_on' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa1129160'/>
-      <elf-symbol name='icnss_prevent_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbedc7dd2'/>
-      <elf-symbol name='icnss_qmi_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xccbb921a'/>
-      <elf-symbol name='icnss_set_fw_log_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36719126'/>
-      <elf-symbol name='icnss_smmu_get_domain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4ec46f00'/>
-      <elf-symbol name='icnss_smmu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x724fffdd'/>
-      <elf-symbol name='icnss_smmu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfbc9d721'/>
-      <elf-symbol name='icnss_socinfo_get_serial_number' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1ba6d3e1'/>
-      <elf-symbol name='icnss_thermal_cdev_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x478aff7d'/>
-      <elf-symbol name='icnss_thermal_cdev_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe50f2dd8'/>
-      <elf-symbol name='icnss_trigger_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x350f9520'/>
-      <elf-symbol name='icnss_unregister_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c56bcdb'/>
-      <elf-symbol name='icnss_wlan_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcfbb723'/>
-      <elf-symbol name='icnss_wlan_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x27a50a19'/>
+      <elf-symbol name='icnss_prevent_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1a0f43a2'/>
+      <elf-symbol name='icnss_qmi_send' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x62cd1211'/>
+      <elf-symbol name='icnss_set_fw_log_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa6be186c'/>
+      <elf-symbol name='icnss_smmu_get_domain' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf3973583'/>
+      <elf-symbol name='icnss_smmu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe26898a0'/>
+      <elf-symbol name='icnss_smmu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bfab12c'/>
+      <elf-symbol name='icnss_socinfo_get_serial_number' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14a7814e'/>
+      <elf-symbol name='icnss_thermal_cdev_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfdd66549'/>
+      <elf-symbol name='icnss_thermal_cdev_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5ff40e68'/>
+      <elf-symbol name='icnss_trigger_recovery' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc59257e7'/>
+      <elf-symbol name='icnss_unregister_driver' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x635f8792'/>
+      <elf-symbol name='icnss_wlan_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde0888c8'/>
+      <elf-symbol name='icnss_wlan_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6bcbd6b5'/>
       <elf-symbol name='ida_alloc_range' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7a02573'/>
       <elf-symbol name='ida_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7d5f92e'/>
       <elf-symbol name='ida_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xffb7c514'/>
@@ -5757,76 +5760,78 @@
       <elf-symbol name='iomap_truncate_page' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7d571a23'/>
       <elf-symbol name='iomap_zero_range' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc84e79f3'/>
       <elf-symbol name='iommu_alloc_resv_region' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaf40724'/>
-      <elf-symbol name='iommu_attach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b498e57'/>
-      <elf-symbol name='iommu_attach_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1e662812'/>
-      <elf-symbol name='iommu_aux_attach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x746eefda'/>
-      <elf-symbol name='iommu_aux_detach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe55ded2c'/>
-      <elf-symbol name='iommu_aux_get_pasid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d4dcf3a'/>
-      <elf-symbol name='iommu_capable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6ac50d01'/>
+      <elf-symbol name='iommu_attach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4fec49c'/>
+      <elf-symbol name='iommu_attach_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7edd63f3'/>
+      <elf-symbol name='iommu_aux_attach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91cce1c4'/>
+      <elf-symbol name='iommu_aux_detach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51df9683'/>
+      <elf-symbol name='iommu_aux_get_pasid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x795d2f0f'/>
+      <elf-symbol name='iommu_capable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x97dde8af'/>
       <elf-symbol name='iommu_default_passthrough' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc3ea5305'/>
-      <elf-symbol name='iommu_detach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1062bb4'/>
-      <elf-symbol name='iommu_detach_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc22e92a7'/>
-      <elf-symbol name='iommu_dev_disable_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1d5f40af'/>
-      <elf-symbol name='iommu_dev_enable_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe7b8a989'/>
-      <elf-symbol name='iommu_dev_feature_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa2d45b75'/>
-      <elf-symbol name='iommu_dev_has_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaaef6cf5'/>
-      <elf-symbol name='iommu_device_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x456b6684'/>
-      <elf-symbol name='iommu_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b7e5e26'/>
-      <elf-symbol name='iommu_device_sysfs_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe93f2df1'/>
-      <elf-symbol name='iommu_device_sysfs_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6feb9053'/>
-      <elf-symbol name='iommu_device_unlink' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x881c70c2'/>
-      <elf-symbol name='iommu_device_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c1e4292'/>
-      <elf-symbol name='iommu_dma_configure_alignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb5a1242f'/>
-      <elf-symbol name='iommu_dma_enable_best_fit_algo' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4e8bf98'/>
-      <elf-symbol name='iommu_dma_get_resv_regions' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22159045'/>
-      <elf-symbol name='iommu_dma_reserve_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x93c33076'/>
-      <elf-symbol name='iommu_domain_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbcf6ec7b'/>
-      <elf-symbol name='iommu_domain_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2a84579'/>
-      <elf-symbol name='iommu_domain_get_attr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95be1c31'/>
-      <elf-symbol name='iommu_domain_set_attr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x37d1e9d4'/>
-      <elf-symbol name='iommu_domain_window_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6fd99830'/>
-      <elf-symbol name='iommu_domain_window_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3128e86d'/>
-      <elf-symbol name='iommu_fwspec_add_ids' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61ab11b6'/>
-      <elf-symbol name='iommu_fwspec_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6ab868ab'/>
-      <elf-symbol name='iommu_fwspec_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8baaff7f'/>
-      <elf-symbol name='iommu_get_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xef62fa0'/>
-      <elf-symbol name='iommu_get_domain_for_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22bc9cac'/>
-      <elf-symbol name='iommu_get_fault_ids' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcbb5bf94'/>
+      <elf-symbol name='iommu_detach_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf15e5a00'/>
+      <elf-symbol name='iommu_detach_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcbc0b187'/>
+      <elf-symbol name='iommu_dev_disable_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa031530'/>
+      <elf-symbol name='iommu_dev_enable_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae7fee3'/>
+      <elf-symbol name='iommu_dev_feature_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbee7cc0e'/>
+      <elf-symbol name='iommu_dev_has_feature' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xded56ea7'/>
+      <elf-symbol name='iommu_device_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9bbbaa7c'/>
+      <elf-symbol name='iommu_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2fad674f'/>
+      <elf-symbol name='iommu_device_sysfs_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x43f8e168'/>
+      <elf-symbol name='iommu_device_sysfs_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb7e76514'/>
+      <elf-symbol name='iommu_device_unlink' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x77e5d9f1'/>
+      <elf-symbol name='iommu_device_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9e697a2d'/>
+      <elf-symbol name='iommu_dma_configure_alignment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3822d49a'/>
+      <elf-symbol name='iommu_dma_enable_best_fit_algo' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2bf325f4'/>
+      <elf-symbol name='iommu_dma_get_resv_regions' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeb9246c1'/>
+      <elf-symbol name='iommu_dma_reserve_iova' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaeff1956'/>
+      <elf-symbol name='iommu_domain_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x98e41976'/>
+      <elf-symbol name='iommu_domain_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcb817eaf'/>
+      <elf-symbol name='iommu_domain_get_attr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5796222a'/>
+      <elf-symbol name='iommu_domain_set_attr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59a56d28'/>
+      <elf-symbol name='iommu_domain_window_disable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5643734f'/>
+      <elf-symbol name='iommu_domain_window_enable' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeb5df57a'/>
+      <elf-symbol name='iommu_fwspec_add_ids' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf15aed97'/>
+      <elf-symbol name='iommu_fwspec_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbf482b3a'/>
+      <elf-symbol name='iommu_fwspec_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x945b0af2'/>
+      <elf-symbol name='iommu_get_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4655d4e8'/>
+      <elf-symbol name='iommu_get_domain_for_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x272e6148'/>
+      <elf-symbol name='iommu_get_fault_ids' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x56a2f46c'/>
       <elf-symbol name='iommu_get_group_resv_regions' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7006586e'/>
-      <elf-symbol name='iommu_get_msi_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe0c84be4'/>
-      <elf-symbol name='iommu_group_add_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8040cdd1'/>
+      <elf-symbol name='iommu_get_msi_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f227b60'/>
+      <elf-symbol name='iommu_group_add_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd7b437fd'/>
       <elf-symbol name='iommu_group_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8d22bb58'/>
-      <elf-symbol name='iommu_group_for_each_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x69d156b'/>
-      <elf-symbol name='iommu_group_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xef1cf8d1'/>
+      <elf-symbol name='iommu_group_for_each_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4bc7df56'/>
+      <elf-symbol name='iommu_group_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4dc19518'/>
       <elf-symbol name='iommu_group_get_by_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x21ac8b77'/>
-      <elf-symbol name='iommu_group_get_for_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x568b8711'/>
+      <elf-symbol name='iommu_group_get_for_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x30f33e73'/>
       <elf-symbol name='iommu_group_get_iommudata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd55ad93b'/>
       <elf-symbol name='iommu_group_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6e7943ec'/>
       <elf-symbol name='iommu_group_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x89485687'/>
       <elf-symbol name='iommu_group_ref_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4d6d0bbc'/>
       <elf-symbol name='iommu_group_register_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x36075bb5'/>
-      <elf-symbol name='iommu_group_remove_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeec2b1bc'/>
+      <elf-symbol name='iommu_group_remove_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x19b26d6b'/>
       <elf-symbol name='iommu_group_set_iommudata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc66b77b1'/>
       <elf-symbol name='iommu_group_set_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbcdd5b99'/>
       <elf-symbol name='iommu_group_unregister_notifier' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a1733eb'/>
-      <elf-symbol name='iommu_iova_to_phys' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb0507014'/>
-      <elf-symbol name='iommu_logger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7c0ec3ee'/>
-      <elf-symbol name='iommu_logger_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x984279ad'/>
-      <elf-symbol name='iommu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5ccad40c'/>
-      <elf-symbol name='iommu_map_sg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa2fdd942'/>
-      <elf-symbol name='iommu_page_response' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b4ff7c3'/>
-      <elf-symbol name='iommu_present' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b2ca4c7'/>
-      <elf-symbol name='iommu_put_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4d308ce'/>
-      <elf-symbol name='iommu_register_device_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x95ef1229'/>
-      <elf-symbol name='iommu_report_device_fault' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x424a0d42'/>
-      <elf-symbol name='iommu_set_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa68e5f17'/>
-      <elf-symbol name='iommu_sva_bind_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf829b122'/>
-      <elf-symbol name='iommu_sva_get_pasid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2ca00f26'/>
-      <elf-symbol name='iommu_sva_set_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1877463d'/>
-      <elf-symbol name='iommu_sva_unbind_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd6ed392'/>
-      <elf-symbol name='iommu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbcd20b17'/>
-      <elf-symbol name='iommu_unmap_fast' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8c7a2a93'/>
-      <elf-symbol name='iommu_unregister_device_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf8900264'/>
+      <elf-symbol name='iommu_iova_to_phys' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd30bc567'/>
+      <elf-symbol name='iommu_logger_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa6b82117'/>
+      <elf-symbol name='iommu_logger_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd20615ed'/>
+      <elf-symbol name='iommu_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d79cdd6'/>
+      <elf-symbol name='iommu_map_atomic' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7ebcb2a'/>
+      <elf-symbol name='iommu_map_sg' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0ec769f'/>
+      <elf-symbol name='iommu_map_sg_atomic' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6c23c7b'/>
+      <elf-symbol name='iommu_page_response' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd244eb1'/>
+      <elf-symbol name='iommu_present' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa438a1f1'/>
+      <elf-symbol name='iommu_put_dma_cookie' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe4d872c1'/>
+      <elf-symbol name='iommu_register_device_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5e7aafa5'/>
+      <elf-symbol name='iommu_report_device_fault' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64a2970'/>
+      <elf-symbol name='iommu_set_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbf9edac9'/>
+      <elf-symbol name='iommu_sva_bind_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa94eb6c3'/>
+      <elf-symbol name='iommu_sva_get_pasid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x91b49528'/>
+      <elf-symbol name='iommu_sva_set_ops' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xafb2e6ca'/>
+      <elf-symbol name='iommu_sva_unbind_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x68ef5520'/>
+      <elf-symbol name='iommu_unmap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd3314371'/>
+      <elf-symbol name='iommu_unmap_fast' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcb4bc286'/>
+      <elf-symbol name='iommu_unregister_device_fault_handler' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x73319e21'/>
       <elf-symbol name='ion_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1d654857'/>
       <elf-symbol name='ion_buffer_prep_noncached' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c8bacfb'/>
       <elf-symbol name='ion_buffer_zero' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xccddd4c8'/>
@@ -5968,11 +5973,11 @@
       <elf-symbol name='ipa3_add_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd487e0cb'/>
       <elf-symbol name='ipa3_cfg_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x87a9e0c3'/>
       <elf-symbol name='ipa3_cfg_ep_holb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5844bbaf'/>
-      <elf-symbol name='ipa3_conn_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf1e8e8de'/>
+      <elf-symbol name='ipa3_conn_wdi3_pipes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xda0b14c5'/>
       <elf-symbol name='ipa3_conn_wigig_client_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6f32f65'/>
-      <elf-symbol name='ipa3_conn_wigig_rx_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa4f3aa4b'/>
-      <elf-symbol name='ipa3_connect_mhi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa35df032'/>
-      <elf-symbol name='ipa3_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbc69c8b5'/>
+      <elf-symbol name='ipa3_conn_wigig_rx_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x25c77cd0'/>
+      <elf-symbol name='ipa3_connect_mhi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaaf8dd47'/>
+      <elf-symbol name='ipa3_connect_wdi_pipe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9a57823b'/>
       <elf-symbol name='ipa3_create_wdi_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe523d4f1'/>
       <elf-symbol name='ipa3_dec_client_disable_clks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xab40656a'/>
       <elf-symbol name='ipa3_del_hdr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3c5262f'/>
@@ -5990,8 +5995,8 @@
       <elf-symbol name='ipa3_enable_wigig_pipe_i' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xeea0b212'/>
       <elf-symbol name='ipa3_get_client' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x829f670e'/>
       <elf-symbol name='ipa3_get_client_mapping' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd2cdde7'/>
-      <elf-symbol name='ipa3_get_ctx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2c2b3325'/>
-      <elf-symbol name='ipa3_get_dma_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6b126c0e'/>
+      <elf-symbol name='ipa3_get_ctx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce4f5a90'/>
+      <elf-symbol name='ipa3_get_dma_dev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x51a5ce81'/>
       <elf-symbol name='ipa3_get_ipc_logbuf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x953f0af'/>
       <elf-symbol name='ipa3_get_ipc_logbuf_low' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f3d094e'/>
       <elf-symbol name='ipa3_get_r_rev_version' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5e48dfa3'/>
@@ -6711,6 +6716,8 @@
       <elf-symbol name='led_blink_set_oneshot' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x94b4459d'/>
       <elf-symbol name='led_classdev_flash_register_ext' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x906d0fee'/>
       <elf-symbol name='led_classdev_flash_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd05fe332'/>
+      <elf-symbol name='led_classdev_multicolor_register_ext' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1c6f7e12'/>
+      <elf-symbol name='led_classdev_multicolor_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5a2ccf34'/>
       <elf-symbol name='led_classdev_register_ext' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xce44bdcf'/>
       <elf-symbol name='led_classdev_resume' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8385eafa'/>
       <elf-symbol name='led_classdev_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9fd31d'/>
@@ -6719,6 +6726,7 @@
       <elf-symbol name='led_get_default_pattern' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xba373ef3'/>
       <elf-symbol name='led_get_flash_fault' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x106fee7d'/>
       <elf-symbol name='led_init_core' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x60f1ff84'/>
+      <elf-symbol name='led_mc_calc_color_components' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x31985f7'/>
       <elf-symbol name='led_set_brightness' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x76b56350'/>
       <elf-symbol name='led_set_brightness_nopm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x464f3308'/>
       <elf-symbol name='led_set_brightness_nosleep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb8a28be6'/>
@@ -7052,12 +7060,14 @@
       <elf-symbol name='mipi_dsi_dcs_enter_sleep_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x428fb215'/>
       <elf-symbol name='mipi_dsi_dcs_exit_sleep_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x65fb2001'/>
       <elf-symbol name='mipi_dsi_dcs_get_display_brightness' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x637696d1'/>
+      <elf-symbol name='mipi_dsi_dcs_get_display_brightness_large' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x92d5350f'/>
       <elf-symbol name='mipi_dsi_dcs_get_pixel_format' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc5300082'/>
       <elf-symbol name='mipi_dsi_dcs_get_power_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x19bdb662'/>
       <elf-symbol name='mipi_dsi_dcs_nop' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x478d4be6'/>
       <elf-symbol name='mipi_dsi_dcs_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaec7fca7'/>
       <elf-symbol name='mipi_dsi_dcs_set_column_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x75ca3435'/>
       <elf-symbol name='mipi_dsi_dcs_set_display_brightness' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb7f7e8fb'/>
+      <elf-symbol name='mipi_dsi_dcs_set_display_brightness_large' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x110c9144'/>
       <elf-symbol name='mipi_dsi_dcs_set_display_off' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa469f565'/>
       <elf-symbol name='mipi_dsi_dcs_set_display_on' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3e8ecc0'/>
       <elf-symbol name='mipi_dsi_dcs_set_page_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2b65cfcb'/>
@@ -7256,7 +7266,7 @@
       <elf-symbol name='msm_crus_pb_set_copp_idx' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x461de9cc'/>
       <elf-symbol name='msm_cvp_close' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7f6c1baa'/>
       <elf-symbol name='msm_cvp_est_cycles' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61962dbf'/>
-      <elf-symbol name='msm_cvp_load_u32_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x410fcd7a'/>
+      <elf-symbol name='msm_cvp_load_u32_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x859daed7'/>
       <elf-symbol name='msm_cvp_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe1116234'/>
       <elf-symbol name='msm_cvp_poll' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf40b3091'/>
       <elf-symbol name='msm_cvp_private' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72da8364'/>
@@ -7285,7 +7295,7 @@
       <elf-symbol name='msm_dump_data_register_nominidump' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd501da'/>
       <elf-symbol name='msm_dump_table_version' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x86793f82'/>
       <elf-symbol name='msm_dwc3_reset_dbm_ep' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x75de4aec'/>
-      <elf-symbol name='msm_dwc3_reset_ep_after_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x255c4962'/>
+      <elf-symbol name='msm_dwc3_reset_ep_after_lpm' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x627116d3'/>
       <elf-symbol name='msm_ep_config' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x72b23b64'/>
       <elf-symbol name='msm_ep_set_endless' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdbd945e8'/>
       <elf-symbol name='msm_ep_unconfig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x20328640'/>
@@ -7297,7 +7307,7 @@
       <elf-symbol name='msm_hdcp_cache_repeater_topology' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x81a42853'/>
       <elf-symbol name='msm_hdcp_notify_topology' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xde0931cf'/>
       <elf-symbol name='msm_hdcp_register_cb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46120e8'/>
-      <elf-symbol name='msm_ioctl_rmfb2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe050a11e'/>
+      <elf-symbol name='msm_ioctl_rmfb2' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x29c68f2'/>
       <elf-symbol name='msm_ion_dma_buf_lock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2da8260d'/>
       <elf-symbol name='msm_ion_dma_buf_unlock' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x392546'/>
       <elf-symbol name='msm_ion_heap_add_memory' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xea136698'/>
@@ -7310,9 +7320,9 @@
       <elf-symbol name='msm_minidump_enabled' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x584e21a2'/>
       <elf-symbol name='msm_minidump_remove_region' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x817876ce'/>
       <elf-symbol name='msm_minidump_update_region' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3cd056fa'/>
-      <elf-symbol name='msm_msi_config' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x469ffaa2'/>
-      <elf-symbol name='msm_msi_config_access' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf093c70'/>
-      <elf-symbol name='msm_msi_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7540afd7'/>
+      <elf-symbol name='msm_msi_config' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f7c7df1'/>
+      <elf-symbol name='msm_msi_config_access' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdd648f75'/>
+      <elf-symbol name='msm_msi_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8d6d3387'/>
       <elf-symbol name='msm_pcie_allow_l1' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9355e5d'/>
       <elf-symbol name='msm_pcie_debug_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf2331788'/>
       <elf-symbol name='msm_pcie_deregister_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4ba4db82'/>
@@ -7338,7 +7348,7 @@
       <elf-symbol name='msm_pinctrl_remove' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8d23a20a'/>
       <elf-symbol name='msm_qti_pp_send_chmix_cfg_cmd' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9aea81dd'/>
       <elf-symbol name='msm_qup_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c8d2c7'/>
-      <elf-symbol name='msm_register_vm_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdfe31ec5'/>
+      <elf-symbol name='msm_register_vm_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf5ee3065'/>
       <elf-symbol name='msm_rpmh_get_apss_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd22b2d06'/>
       <elf-symbol name='msm_rpmh_master_stats_update' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14f43ca7'/>
       <elf-symbol name='msm_secure_get_vmid_perms' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe171fa0e'/>
@@ -7346,7 +7356,7 @@
       <elf-symbol name='msm_set_restart_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x96b4b484'/>
       <elf-symbol name='msm_spare_read' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa3454c9a'/>
       <elf-symbol name='msm_spare_write' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x62bf5f41'/>
-      <elf-symbol name='msm_unregister_vm_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7508ec2c'/>
+      <elf-symbol name='msm_unregister_vm_event' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc41a727a'/>
       <elf-symbol name='msm_vidc_close' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3e616082'/>
       <elf-symbol name='msm_vidc_dqbuf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3ac371f7'/>
       <elf-symbol name='msm_vidc_dqevent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7008c87'/>
@@ -7354,7 +7364,7 @@
       <elf-symbol name='msm_vidc_enum_framesizes' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xada17133'/>
       <elf-symbol name='msm_vidc_g_ctrl' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5375830e'/>
       <elf-symbol name='msm_vidc_g_fmt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x134d7c20'/>
-      <elf-symbol name='msm_vidc_load_u32_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x565e6f75'/>
+      <elf-symbol name='msm_vidc_load_u32_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcebf02d'/>
       <elf-symbol name='msm_vidc_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6e6d04ac'/>
       <elf-symbol name='msm_vidc_poll' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdde48024'/>
       <elf-symbol name='msm_vidc_qbuf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6d0e91c5'/>
@@ -7834,7 +7844,6 @@
       <elf-symbol name='noop_set_page_dirty' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3afbbb39'/>
       <elf-symbol name='notify_before_auth_and_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x38dbbd0a'/>
       <elf-symbol name='notify_change' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xec7985d2'/>
-      <elf-symbol name='notify_gesture_single_tap' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x76221702'/>
       <elf-symbol name='notify_proxy_unvote' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64e68506'/>
       <elf-symbol name='notify_proxy_vote' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f42eefc'/>
       <elf-symbol name='nr_free_buffer_pages' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x27fa66e1'/>
@@ -7925,21 +7934,21 @@
       <elf-symbol name='of_cpu_node_to_id' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x56766416'/>
       <elf-symbol name='of_cpufreq_cooling_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x61e0e4f4'/>
       <elf-symbol name='of_css' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x873b2189'/>
-      <elf-symbol name='of_dev_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7ecbf599'/>
-      <elf-symbol name='of_dev_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd3aab379'/>
+      <elf-symbol name='of_dev_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdc4612d0'/>
+      <elf-symbol name='of_dev_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x89159bb7'/>
       <elf-symbol name='of_devfreq_cooling_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x449aebf8'/>
       <elf-symbol name='of_devfreq_cooling_register_power' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x446a440c'/>
-      <elf-symbol name='of_device_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbba67830'/>
-      <elf-symbol name='of_device_get_match_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9fb91410'/>
+      <elf-symbol name='of_device_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4ca03382'/>
+      <elf-symbol name='of_device_get_match_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5494571c'/>
       <elf-symbol name='of_device_is_available' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf488b004'/>
       <elf-symbol name='of_device_is_big_endian' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa66fe465'/>
       <elf-symbol name='of_device_is_compatible' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd1a43d4'/>
-      <elf-symbol name='of_device_modalias' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x58cebb13'/>
-      <elf-symbol name='of_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9c6a825'/>
-      <elf-symbol name='of_device_request_module' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1f6c2fa7'/>
-      <elf-symbol name='of_device_uevent_modalias' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x86f84cf'/>
-      <elf-symbol name='of_device_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6fe6c1b1'/>
-      <elf-symbol name='of_dma_configure' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc9a1a9cf'/>
+      <elf-symbol name='of_device_modalias' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70a85e71'/>
+      <elf-symbol name='of_device_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1a024d8e'/>
+      <elf-symbol name='of_device_request_module' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd1d64404'/>
+      <elf-symbol name='of_device_uevent_modalias' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6c4d8716'/>
+      <elf-symbol name='of_device_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf60c2935'/>
+      <elf-symbol name='of_dma_configure' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd6165b85'/>
       <elf-symbol name='of_dma_controller_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x48a01cf9'/>
       <elf-symbol name='of_dma_controller_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf9f2455'/>
       <elf-symbol name='of_dma_is_coherent' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2734a7a4'/>
@@ -7955,7 +7964,7 @@
       <elf-symbol name='of_find_backlight' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c14ffc4'/>
       <elf-symbol name='of_find_backlight_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88de9336'/>
       <elf-symbol name='of_find_compatible_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb6494656'/>
-      <elf-symbol name='of_find_device_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x332f5e92'/>
+      <elf-symbol name='of_find_device_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa1e99c83'/>
       <elf-symbol name='of_find_i2c_adapter_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb74dcf17'/>
       <elf-symbol name='of_find_i2c_device_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x867bcf07'/>
       <elf-symbol name='of_find_matching_node_and_match' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22a75730'/>
@@ -7983,7 +7992,7 @@
       <elf-symbol name='of_get_cpu_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6d95d728'/>
       <elf-symbol name='of_get_display_timing' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x55289031'/>
       <elf-symbol name='of_get_display_timings' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe81c428'/>
-      <elf-symbol name='of_get_dma_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbeb072cc'/>
+      <elf-symbol name='of_get_dma_window' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc0bac217'/>
       <elf-symbol name='of_get_drm_display_mode' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaf868281'/>
       <elf-symbol name='of_get_i2c_adapter_by_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd3206cfe'/>
       <elf-symbol name='of_get_mac_address' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2ccf4079'/>
@@ -8027,7 +8036,7 @@
       <elf-symbol name='of_irq_to_resource_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd013fd00'/>
       <elf-symbol name='of_machine_is_compatible' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd31ccb06'/>
       <elf-symbol name='of_map_rid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf4938a71'/>
-      <elf-symbol name='of_match_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x68e14a15'/>
+      <elf-symbol name='of_match_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7557cd45'/>
       <elf-symbol name='of_match_node' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x935823f3'/>
       <elf-symbol name='of_mdio_find_bus' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x242d9f89'/>
       <elf-symbol name='of_mdiobus_register' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbde9a1c'/>
@@ -8067,12 +8076,12 @@
       <elf-symbol name='of_phy_provider_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf72c2773'/>
       <elf-symbol name='of_phy_register_fixed_link' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x707c5032'/>
       <elf-symbol name='of_phy_simple_xlate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb18a0eb7'/>
-      <elf-symbol name='of_platform_bus_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x875228b0'/>
-      <elf-symbol name='of_platform_default_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x200cec14'/>
-      <elf-symbol name='of_platform_depopulate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc84fa304'/>
-      <elf-symbol name='of_platform_device_create' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x466a7ccc'/>
-      <elf-symbol name='of_platform_device_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc05d79e4'/>
-      <elf-symbol name='of_platform_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59c1d0b0'/>
+      <elf-symbol name='of_platform_bus_probe' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe722474e'/>
+      <elf-symbol name='of_platform_default_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x80f91199'/>
+      <elf-symbol name='of_platform_depopulate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1013d8f2'/>
+      <elf-symbol name='of_platform_device_create' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf718b7c2'/>
+      <elf-symbol name='of_platform_device_destroy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9d5a6ca'/>
+      <elf-symbol name='of_platform_populate' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x48bd01a6'/>
       <elf-symbol name='of_pm_clk_add_clk' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf876cbdc'/>
       <elf-symbol name='of_pm_clk_add_clks' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f68a03'/>
       <elf-symbol name='of_prop_next_string' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7fb3c5f0'/>
@@ -8231,7 +8240,7 @@
       <elf-symbol name='pci_dev_present' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3145216f'/>
       <elf-symbol name='pci_dev_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x594128e4'/>
       <elf-symbol name='pci_dev_run_wake' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfcca2ff0'/>
-      <elf-symbol name='pci_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a396dbf'/>
+      <elf-symbol name='pci_device_group' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1b37d56d'/>
       <elf-symbol name='pci_device_is_present' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x42de57fd'/>
       <elf-symbol name='pci_disable_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59bd9ae6'/>
       <elf-symbol name='pci_disable_link_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x159f74e4'/>
@@ -9160,7 +9169,7 @@
       <elf-symbol name='qce_f9_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x144b95b9'/>
       <elf-symbol name='qce_get_driver_stats' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8a41438e'/>
       <elf-symbol name='qce_hw_support' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x46a7cef5'/>
-      <elf-symbol name='qce_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6d64a42'/>
+      <elf-symbol name='qce_open' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a8be85c'/>
       <elf-symbol name='qce_process_sha_req' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9f8000c3'/>
       <elf-symbol name='qcom_adc5_hw_scale' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc7aa93b4'/>
       <elf-symbol name='qcom_cc_map' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe0e9e8c'/>
@@ -9766,7 +9775,7 @@
       <elf-symbol name='remove_resource' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x164bbd19'/>
       <elf-symbol name='remove_wait_queue' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x37110088'/>
       <elf-symbol name='replace_page_cache_page' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4d8092dd'/>
-      <elf-symbol name='report_iommu_fault' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd266b4ff'/>
+      <elf-symbol name='report_iommu_fault' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x20d448a4'/>
       <elf-symbol name='request_any_context_irq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3043ff9'/>
       <elf-symbol name='request_firmware' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8b46b5b2'/>
       <elf-symbol name='request_firmware_direct' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd8896015'/>
@@ -9973,29 +9982,29 @@
       <elf-symbol name='rpmsg_trysend_offchannel' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa07a7dcf'/>
       <elf-symbol name='rpmsg_trysendto' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6df34d0f'/>
       <elf-symbol name='rpmsg_unregister_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x20f08754'/>
-      <elf-symbol name='rproc_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x71236f06'/>
-      <elf-symbol name='rproc_add_carveout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x22a9eb77'/>
-      <elf-symbol name='rproc_add_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb3ac7f6'/>
-      <elf-symbol name='rproc_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8bec37b3'/>
-      <elf-symbol name='rproc_boot' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57006892'/>
-      <elf-symbol name='rproc_coredump_add_custom_segment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7fbf709a'/>
-      <elf-symbol name='rproc_coredump_add_segment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x7a940665'/>
-      <elf-symbol name='rproc_da_to_va' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x35a343f3'/>
-      <elf-symbol name='rproc_del' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa4413bd'/>
+      <elf-symbol name='rproc_add' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc90f79d'/>
+      <elf-symbol name='rproc_add_carveout' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4f3e13c6'/>
+      <elf-symbol name='rproc_add_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xcf463124'/>
+      <elf-symbol name='rproc_alloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2af46980'/>
+      <elf-symbol name='rproc_boot' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xad44de24'/>
+      <elf-symbol name='rproc_coredump_add_custom_segment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x836e889c'/>
+      <elf-symbol name='rproc_coredump_add_segment' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9c5d4410'/>
+      <elf-symbol name='rproc_da_to_va' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x915aeba6'/>
+      <elf-symbol name='rproc_del' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4710f699'/>
       <elf-symbol name='rproc_elf_find_loaded_rsc_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaa5f0ed'/>
       <elf-symbol name='rproc_elf_get_boot_addr' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc77d033b'/>
       <elf-symbol name='rproc_elf_load_rsc_table' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1197c5b7'/>
       <elf-symbol name='rproc_elf_load_segments' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe3a81574'/>
       <elf-symbol name='rproc_elf_sanity_check' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x89d1ceb2'/>
-      <elf-symbol name='rproc_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2aa63d15'/>
-      <elf-symbol name='rproc_get_by_child' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbb163b21'/>
-      <elf-symbol name='rproc_get_by_phandle' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x348653d4'/>
-      <elf-symbol name='rproc_mem_entry_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xae78b1cf'/>
-      <elf-symbol name='rproc_of_resm_mem_entry_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc7063ba'/>
-      <elf-symbol name='rproc_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2184d410'/>
-      <elf-symbol name='rproc_remove_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8dc564dc'/>
-      <elf-symbol name='rproc_report_crash' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x59015e49'/>
-      <elf-symbol name='rproc_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xfc4213d8'/>
+      <elf-symbol name='rproc_free' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x4b50427a'/>
+      <elf-symbol name='rproc_get_by_child' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa9c7d6c5'/>
+      <elf-symbol name='rproc_get_by_phandle' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd02fe928'/>
+      <elf-symbol name='rproc_mem_entry_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x366a8f57'/>
+      <elf-symbol name='rproc_of_resm_mem_entry_init' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd76996f1'/>
+      <elf-symbol name='rproc_put' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa83c3af6'/>
+      <elf-symbol name='rproc_remove_subdev' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbd168b7'/>
+      <elf-symbol name='rproc_report_crash' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x73d8bba4'/>
+      <elf-symbol name='rproc_shutdown' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe118130'/>
       <elf-symbol name='rproc_va_to_pa' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5f6b889c'/>
       <elf-symbol name='rproc_vq_interrupt' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbe4dd86a'/>
       <elf-symbol name='rps_may_expire_flow' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x399c1932'/>
@@ -10612,6 +10621,7 @@
       <elf-symbol name='sk_set_peek_off' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x58a1d86b'/>
       <elf-symbol name='sk_setup_caps' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8aa1c9e5'/>
       <elf-symbol name='sk_stop_timer' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c91fa67'/>
+      <elf-symbol name='sk_stop_timer_sync' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x3b57c375'/>
       <elf-symbol name='sk_stream_error' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x39e713b6'/>
       <elf-symbol name='sk_stream_kill_queues' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x64cadeb0'/>
       <elf-symbol name='sk_stream_wait_close' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x542a1e1e'/>
@@ -11164,6 +11174,7 @@
       <elf-symbol name='sock_i_ino' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf9ce176d'/>
       <elf-symbol name='sock_i_uid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x268ab4ca'/>
       <elf-symbol name='sock_init_data' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57945bc5'/>
+      <elf-symbol name='sock_init_data_uid' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x886c9bf1'/>
       <elf-symbol name='sock_inuse_get' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x716aa993'/>
       <elf-symbol name='sock_kfree_s' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1413f897'/>
       <elf-symbol name='sock_kmalloc' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc686fa2b'/>
@@ -11705,7 +11716,6 @@
       <elf-symbol name='thermal_zone_of_sensor_unregister' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x2f271cf8'/>
       <elf-symbol name='thermal_zone_set_trips' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xed8098cc'/>
       <elf-symbol name='thermal_zone_unbind_cooling_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xdec0d5e'/>
-      <elf-symbol name='thp_send_cmd_to_hal' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1dd6b93'/>
       <elf-symbol name='thread_group_cputime_adjusted' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x1955adb'/>
       <elf-symbol name='tick_broadcast_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c5a1b16'/>
       <elf-symbol name='tick_broadcast_oneshot_control' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xbfe5616d'/>
@@ -12268,7 +12278,6 @@
       <elf-symbol name='update_bw_hwmon' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x683e8d26'/>
       <elf-symbol name='update_clicktouch_raw' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xec6be240'/>
       <elf-symbol name='update_devfreq' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xf50bfaad'/>
-      <elf-symbol name='update_fod_press_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x17c892ac'/>
       <elf-symbol name='update_hw_monitor_info' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xaccb392'/>
       <elf-symbol name='update_palm_sensor_value' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x49118811'/>
       <elf-symbol name='update_prox_sensor_value' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xe6a87d0f'/>
@@ -12357,7 +12366,7 @@
       <elf-symbol name='usb_ep0_reinit' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa7f13a7a'/>
       <elf-symbol name='usb_ep_alloc_request' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa0e62d4b'/>
       <elf-symbol name='usb_ep_autoconfig' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x5c138f6e'/>
-      <elf-symbol name='usb_ep_autoconfig_by_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb852233a'/>
+      <elf-symbol name='usb_ep_autoconfig_by_name' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x70b97ae8'/>
       <elf-symbol name='usb_ep_autoconfig_release' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xd5fdbdc1'/>
       <elf-symbol name='usb_ep_autoconfig_reset' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xac35feb3'/>
       <elf-symbol name='usb_ep_autoconfig_ss' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x9fe1e36e'/>
@@ -12423,7 +12432,7 @@
       <elf-symbol name='usb_get_intf' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8c62e101'/>
       <elf-symbol name='usb_get_maximum_speed' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x218fb014'/>
       <elf-symbol name='usb_get_phy' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb21bc577'/>
-      <elf-symbol name='usb_get_remote_wakeup_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6a140f29'/>
+      <elf-symbol name='usb_get_remote_wakeup_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x8f5cfb2'/>
       <elf-symbol name='usb_get_status' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x6e69e452'/>
       <elf-symbol name='usb_get_urb' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x57906a77'/>
       <elf-symbol name='usb_gsi_ep_op' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x14760d8f'/>
@@ -13386,7 +13395,7 @@
       <elf-symbol name='xhci_suspend' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc661957a'/>
       <elf-symbol name='xhci_update_hub_device' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x458133f8'/>
       <elf-symbol name='xiaomi_touch_set_suspend_state' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x88aaf668'/>
-      <elf-symbol name='xiaomitouch_register_modedata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xb2af64a2'/>
+      <elf-symbol name='xiaomitouch_register_modedata' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0x33c26789'/>
       <elf-symbol name='xlogchar_kwrite' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xc1f6bc0f'/>
       <elf-symbol name='xsk_clear_rx_need_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xee7af4c2'/>
       <elf-symbol name='xsk_clear_tx_need_wakeup' type='func-type' binding='global-binding' visibility='default-visibility' is-defined='yes' crc='0xa467163a'/>

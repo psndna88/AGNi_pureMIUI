@@ -540,8 +540,8 @@ if [ "`$BB grep ro.miui $buildprop`" ]; then
 		MIUI_VER="12";
 		ui_print " " "AGNi detected MIUI 12" " ";
 	else
-		MIUI_VER="UNSUPPORTED";
-		ui_print " " ">> Unsupported MIUI version OR couldnt read from system." " ";
+		MIUI_VER="14";
+		ui_print " " "AGNi assumes MIUI 14 installed or above" " ";
 	fi;
 else
 	MIUI_ROM="false";
