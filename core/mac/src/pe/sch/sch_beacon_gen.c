@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -216,6 +216,30 @@ static void sch_get_csa_ecsa_count_offset(uint8_t *ie, uint32_t ie_len,
 	}
 }
 
+static void
+populate_channel_switch_ann(struct mac_context *mac_ctx,
+			    tDot11fBeacon2 *bcn,
+			    struct pe_session *pe_session)
+{
+	populate_dot11f_chan_switch_ann(mac_ctx, &bcn->ChanSwitchAnn,
+					pe_session);
+	pe_debug("csa: mode:%d chan:%d count:%d",
+		 bcn->ChanSwitchAnn.switchMode,
+		 bcn->ChanSwitchAnn.newChannel,
+		 bcn->ChanSwitchAnn.switchCount);
+
+	if (!pe_session->dfsIncludeChanWrapperIe)
+		return;
+
+	populate_dot11f_chan_switch_wrapper(mac_ctx,
+					    &bcn->ChannelSwitchWrapper,
+					    pe_session);
+	pe_debug("wrapper: width:%d f0:%d f1:%d",
+		 bcn->ChannelSwitchWrapper.WiderBWChanSwitchAnn.newChanWidth,
+		 bcn->ChannelSwitchWrapper.WiderBWChanSwitchAnn.newCenterChanFreq0,
+		 bcn->ChannelSwitchWrapper.WiderBWChanSwitchAnn.newCenterChanFreq1);
+}
+
 /**
  * sch_set_fixed_beacon_fields() - sets the fixed params in beacon frame
  * @mac_ctx:       mac global context
@@ -367,15 +391,12 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 				 ext_csa->new_reg_class,
 				 ext_csa->new_channel,
 				 ext_csa->switch_count);
-		} else {
-			populate_dot11f_chan_switch_ann(mac_ctx,
-							&bcn_2->ChanSwitchAnn,
-							session);
-			pe_debug("csa: mode:%d chan:%d count:%d",
-				 bcn_2->ChanSwitchAnn.switchMode,
-				 bcn_2->ChanSwitchAnn.newChannel,
-				 bcn_2->ChanSwitchAnn.switchCount);
 		}
+
+		if (session->lim_non_ecsa_cap_num &&
+		    WLAN_REG_IS_24GHZ_CH_FREQ(session->curr_op_freq) &&
+		    !is_6ghz_chsw)
+			populate_channel_switch_ann(mac_ctx, bcn_2, session);
 	}
 
 	populate_dot11_supp_operating_classes(mac_ctx,
@@ -390,55 +411,10 @@ sch_set_fixed_beacon_fields(struct mac_context *mac_ctx, struct pe_session *sess
 						  &bcn_2->PowerConstraints);
 		populate_dot11f_tpc_report(mac_ctx, &bcn_2->TPCReport, session);
 		/* Need to insert channel switch announcement here */
-		if ((LIM_IS_AP_ROLE(session)
-		    || LIM_IS_P2P_DEVICE_GO(session))
-			&& session->dfsIncludeChanSwIe == true) {
-			/*
-			 * Channel switch announcement only if radar is detected
-			 * and SAP has instructed to announce channel switch IEs
-			 * in beacon and probe responses
-			 */
-			if (!is_6ghz_chsw) {
-				populate_dot11f_chan_switch_ann
-					(mac_ctx, &bcn_2->ChanSwitchAnn,
-					 session);
-				pe_debug("csa: mode:%d chan:%d count:%d",
-					 bcn_2->ChanSwitchAnn.switchMode,
-					 bcn_2->ChanSwitchAnn.newChannel,
-					 bcn_2->ChanSwitchAnn.switchCount);
-			}
-			/*
-			 * TODO: depending the CB mode, extended channel switch
-			 * announcement need to be called
-			 */
-			/*
-			populate_dot11f_ext_chan_switch_ann(mac_ctx,
-					&bcn_2->ExtChanSwitchAnn, session);
-			*/
-			/*
-			 * TODO: If in 11AC mode, wider bw channel switch
-			 * announcement needs to be called
-			 */
-			/*
-			populate_dot11f_wider_bw_chan_switch_ann(mac_ctx,
-					&bcn_2->WiderBWChanSwitchAnn, session);
-			*/
-			/*
-			 * Populate the Channel Switch Wrapper Element if
-			 * SAP operates in 40/80 Mhz Channel Width.
-			 */
-			if (true == session->dfsIncludeChanWrapperIe) {
-				populate_dot11f_chan_switch_wrapper(mac_ctx,
-					&bcn_2->ChannelSwitchWrapper, session);
-				pe_debug("wrapper: width:%d f0:%d f1:%d",
-				      bcn_2->ChannelSwitchWrapper.
-					WiderBWChanSwitchAnn.newChanWidth,
-				      bcn_2->ChannelSwitchWrapper.
-					WiderBWChanSwitchAnn.newCenterChanFreq0,
-				      bcn_2->ChannelSwitchWrapper.
-					WiderBWChanSwitchAnn.newCenterChanFreq1
-					);
-			}
+		if ((LIM_IS_AP_ROLE(session) ||
+		     LIM_IS_P2P_DEVICE_GO(session)) &&
+		    session->dfsIncludeChanSwIe && !is_6ghz_chsw) {
+			populate_channel_switch_ann(mac_ctx, bcn_2, session);
 		}
 	}
 	if (mac_ctx->rrm.rrmConfig.sap_rrm_enabled)
