@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -3674,7 +3675,6 @@ static void ipa3_halt_q6_gsi_channels(bool prod)
 				gsi_ep_cfg->ipa_gsi_chan_num,
 				gsi_ep_cfg->ee,
 				code);
-				ipa_assert();
 			}
 		}
 	}
