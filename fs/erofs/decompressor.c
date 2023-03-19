@@ -56,18 +56,14 @@ static int z_erofs_lz4_prepare_destpages(struct z_erofs_decompress_req *rq,
 
 		if (page) {
 			__clear_bit(j, bounced);
-			if (!PageHighMem(page)) {
-				if (!i) {
-					kaddr = page_address(page);
-					continue;
-				}
-				if (kaddr &&
-				    kaddr + PAGE_SIZE == page_address(page)) {
+			if (kaddr) {
+				if (kaddr + PAGE_SIZE == page_address(page))
 					kaddr += PAGE_SIZE;
-					continue;
-				}
+				else
+					kaddr = NULL;
+			} else if (!i) {
+				kaddr = page_address(page);
 			}
-			kaddr = NULL;
 			continue;
 		}
 		kaddr = NULL;
