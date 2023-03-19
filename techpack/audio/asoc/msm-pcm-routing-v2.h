@@ -897,4 +897,7 @@ int snd_pcm_add_usr_ctls(struct snd_pcm *pcm, int stream,
     unsigned long private_value,
     struct snd_pcm_usr **info_ret);
 #endif
+
+bool msm_pcm_routing_get_portid_copp_idx(int fe_id,
+	int session_type, int *port_id, int *copp_idx);
 #endif /*_MSM_PCM_H*/

@@ -7919,6 +7919,8 @@ static int msm_rx_tx_codec_init(struct snd_soc_pcm_runtime *rtd)
 	bolero_register_wake_irq(component, false);
 
 	if (pdata->wcd_disabled) {
+		bolero_set_port_map(bolero_component,
+			ARRAY_SIZE(sm_port_map), sm_port_map);
 		codec_reg_done = true;
 		return 0;
 	}

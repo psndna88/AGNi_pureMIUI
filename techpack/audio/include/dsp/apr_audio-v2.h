@@ -30,6 +30,11 @@ struct param_outband {
 /* Instance ID definitions */
 #define INSTANCE_ID_0 0x0000
 
+struct adm_register_event {
+	struct apr_hdr hdr;
+	__u8 payload[0];
+} __packed;
+
 struct mem_mapping_hdr {
 	/*
 	 * LSW of parameter data payload address. Supported values: any.
@@ -135,6 +140,10 @@ struct module_instance_info {
 
 #define ADM_CMD_MATRIX_MAP_ROUTINGS_V5 0x00010325
 #define ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5 0x0001033D
+
+#define ADM_CMD_REGISTER_EVENT  0x00010365
+#define ADM_PP_EVENT            0x00010366
+
 /* Enumeration for an audio Rx matrix ID.*/
 #define ADM_MATRIX_ID_AUDIO_RX              0
 
@@ -666,6 +675,26 @@ struct dsp_stream_callback_list {
 };
 
 struct dsp_stream_callback_prtd {
+	uint16_t event_count;
+	struct list_head event_queue;
+	spinlock_t prtd_spin_lock;
+};
+
+#define DSP_ADM_CALLBACK "ADSP COPP Callback Event"
+#define DSP_ADM_CALLBACK_QUEUE_SIZE 1024
+
+struct dsp_adm_callback_list {
+	struct list_head list;
+	struct msm_adsp_event_data event;
+};
+
+struct adm_usr_info {
+	u32 service_id;
+	u32 reserved;
+	u32 token_coppidx;
+};
+
+struct dsp_adm_callback_prtd {
 	uint16_t event_count;
 	struct list_head event_queue;
 	spinlock_t prtd_spin_lock;
