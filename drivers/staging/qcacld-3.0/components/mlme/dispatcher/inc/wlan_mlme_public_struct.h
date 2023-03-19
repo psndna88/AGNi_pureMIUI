@@ -1673,6 +1673,7 @@ struct fw_scan_channels {
  * @roam_preauth_retry_count:       Configure the max number of preauth retry
  * @roam_preauth_no_ack_timeout:    Configure the no ack timeout period
  * @roam_rssi_diff:                 Enable roam based on rssi
+ * @roam_rssi_diff_6ghz: RSSI diff value to be used for roaming to 6 GHz AP.
  * @roam_scan_offload_enabled:      Enable Roam Scan Offload
  * @neighbor_scan_timer_period:     Neighbor scan timer period
  * @neighbor_scan_min_timer_period: Min neighbor scan timer period
@@ -1722,6 +1723,11 @@ struct fw_scan_channels {
  * @sae_single_pmk_feature_enabled: Contains value of ini
  * sae_single_pmk_feature_enabled
  * @enable_ft_over_ds: Flag to enable/disable FT-over-DS
+ * @roam_ho_delay_config: Roam HO delay value
+ * @exclude_rm_partial_scan_freq: Exclude the channels in roam full scan that
+ * are already scanned as part of partial scan.
+ * @roam_full_scan_6ghz_on_disc: Include the 6 GHz channels in roam full scan
+ * only on prior discovery of any 6 GHz support in the environment.
  */
 struct wlan_mlme_lfr_cfg {
 	bool mawc_roam_enabled;
@@ -1790,6 +1796,7 @@ struct wlan_mlme_lfr_cfg {
 	uint32_t roam_preauth_retry_count;
 	uint32_t roam_preauth_no_ack_timeout;
 	uint8_t roam_rssi_diff;
+	uint8_t roam_rssi_diff_6ghz;
 	uint8_t bg_rssi_threshold;
 	bool roam_scan_offload_enabled;
 	uint32_t neighbor_scan_timer_period;
@@ -1840,6 +1847,9 @@ struct wlan_mlme_lfr_cfg {
 	bool sae_single_pmk_feature_enabled;
 #endif
 	bool enable_ft_over_ds;
+	uint16_t roam_ho_delay_config;
+	uint8_t exclude_rm_partial_scan_freq;
+	uint8_t roam_full_scan_6ghz_on_disc;
 };
 
 /**
