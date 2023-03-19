@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -3322,6 +3322,12 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 
 	_sde_crtc_blend_setup(crtc, old_state, true);
 	_sde_crtc_dest_scaler_setup(crtc);
+
+	 /* cancel the idle notify delayed work */
+	if (sde_encoder_check_curr_mode(sde_crtc->mixers[0].encoder,
+				MSM_DISPLAY_VIDEO_MODE) &&
+		kthread_cancel_delayed_work_sync(&sde_crtc->idle_notify_work))
+		SDE_DEBUG("idle notify work cancelled\n");
 
 	if (crtc->state->mode_changed || sde_kms->perf.catalog->uidle_cfg.dirty)
 		sde_core_perf_crtc_update_uidle(crtc, true);
