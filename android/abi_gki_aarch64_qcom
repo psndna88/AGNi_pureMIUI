@@ -1372,6 +1372,7 @@
   kthread_stop
   kthread_unpark
   kthread_worker_fn
+  ktime_add_safe
   ktime_get
   ktime_get_mono_fast_ns
   ktime_get_real_seconds
@@ -2418,6 +2419,7 @@
   strrchr
   strreplace
   strscpy
+  strscpy_pad
   strsep
   strstr
   __sw_hweight32

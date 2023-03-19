@@ -1179,6 +1179,7 @@ cont:
 	card->clk_scaling_highest = mmc_sd_get_max_clock(card);
 	card->clk_scaling_lowest = host->f_min;
 #endif
+
 	host->card = card;
 	return 0;
 
