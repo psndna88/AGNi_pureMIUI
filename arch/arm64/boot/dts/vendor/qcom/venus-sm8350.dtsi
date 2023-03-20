@@ -25,6 +25,15 @@ And public attribution of xiaomi platforms(like J2 and so and)
 	};
 */
 
+	fingerprint_goodix {
+		compatible = "goodix,fingerprint";
+		l11c_vdd-supply = <&L11C>;
+		goodix,gpio-reset = <&tlmm 39 0x0>;
+		goodix,gpio-irq = <&tlmm 38 0x0>;
+		fp-gpio-pwr = <&tlmm 13 0x0>;
+		status = "ok";
+	};
+
 	md_testing_mode {
 		compatible = "modem,md-testing-mode";
 		status-gpio = <&tlmm 84 0x00>,
@@ -127,6 +136,7 @@ And public attribution of xiaomi platforms(like J2 and so and)
 	regulator-max-microvolt = <3300000>;
 	qcom,init-voltage = <3300000>;
 };
+
 
 &soc {
 	display_panel_vddd: display_panel_vddd {
