@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2018, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -477,7 +478,6 @@ int hif_apps_irqs_disable(struct hif_opaque_softc *hif_ctx)
 		return -EINVAL;
 
 	/* if the wake_irq is shared, don't disable it twice */
-	disable_irq(scn->wake_irq);
 	for (i = 0; i < scn->ce_count; ++i) {
 		int irq = scn->bus_ops.hif_map_ce_to_irq(scn, i);
 
@@ -499,7 +499,6 @@ int hif_apps_irqs_enable(struct hif_opaque_softc *hif_ctx)
 		return -EINVAL;
 
 	/* if the wake_irq is shared, don't enable it twice */
-	enable_irq(scn->wake_irq);
 	for (i = 0; i < scn->ce_count; ++i) {
 		int irq = scn->bus_ops.hif_map_ce_to_irq(scn, i);
 

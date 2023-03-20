@@ -844,6 +844,10 @@ static void csr_neighbor_roam_info_ctx_init(struct mac_context *mac,
 	wlan_cm_update_roam_scan_scheme_bitmap(mac->psoc, session_id,
 					       DEFAULT_ROAM_SCAN_SCHEME_BITMAP);
 
+	src_cfg.uint_value = mac->mlme_cfg->lfr.roam_rssi_diff_6ghz;
+	wlan_cm_roam_cfg_set_value(mac->psoc, session_id,
+				   ROAM_RSSI_DIFF_6GHZ, &src_cfg);
+
 	/*
 	 * Now we can clear the preauthDone that
 	 * was saved as we are connected afresh
