@@ -30,6 +30,11 @@ ifeq ($(KERNEL_BUILD), 0)
 		include $(AUDIO_ROOT)/config/konaauto.conf
 		INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
 	endif
+	ifeq ($(CONFIG_ARCH_LAHAINA), y)
+		include $(AUDIO_ROOT)/config/lahainaauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/lahainaautoconf.h
+	endif
 	ifeq ($(CONFIG_ARCH_LITO), y)
 		include $(AUDIO_ROOT)/config/litoauto.conf
 		export
