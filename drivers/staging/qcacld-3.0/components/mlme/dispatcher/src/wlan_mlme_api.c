@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5020,3 +5020,12 @@ wlan_mlme_get_channel_bonding_5ghz(struct wlan_objmgr_psoc *psoc,
 	*value = mlme_obj->cfg.feature_flags.channel_bonding_mode_5ghz;
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef WLAN_FEATURE_P2P_P2P_STA
+bool
+wlan_mlme_get_p2p_p2p_conc_support(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_psoc_nif_fw_ext_cap_get(psoc,
+					    WLAN_SOC_EXT_P2P_P2P_CONC_SUPPORT);
+}
+#endif

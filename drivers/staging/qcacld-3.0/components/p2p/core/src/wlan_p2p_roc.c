@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -136,11 +137,30 @@ static QDF_STATUS p2p_scan_start(struct p2p_roc_context *roc_ctx)
 		is_dbs = policy_mgr_is_hw_dbs_capable(p2p_soc_obj->soc);
 
 		if (go_num)
-			req->scan_req.dwell_time_passive *=
+		/* Add fixed 300ms extra ROC time instead of multiplying the
+		 * ROC duration by const value as this causes the ROC to be
+		 * upto 1.5 secs if GO is present. Firmware will advertize NOA
+		 * of 1.5 secs and if supplicant cancels ROC after 200 or 300ms
+		 * then firmware cannot cancel NOA. So when supplicant sends
+		 * next ROC it will be delayed as firmware already is running
+		 * previous NOA. This causes p2p find issues if GO is present.
+		 * So add fixed duration of 300ms and also cap max ROC to 600ms
+		 * when GO is present
+		 */
+			req->scan_req.dwell_time_passive +=
 					P2P_ROC_DURATION_MULTI_GO_PRESENT;
 		else
 			req->scan_req.dwell_time_passive *=
 					P2P_ROC_DURATION_MULTI_GO_ABSENT;
+		if (go_num && req->scan_req.dwell_time_passive >
+			   P2P_MAX_ROC_DURATION_GO_PRESENT) {
+			req->scan_req.dwell_time_passive =
+					P2P_MAX_ROC_DURATION_GO_PRESENT;
+		} else if (req->scan_req.dwell_time_passive >
+			   P2P_MAX_ROC_DURATION) {
+			req->scan_req.dwell_time_passive = P2P_MAX_ROC_DURATION;
+		}
+
 		/* this is to protect too huge value if some customers
 		 * give a higher value from supplicant
 		 */
@@ -162,9 +182,6 @@ static QDF_STATUS p2p_scan_start(struct p2p_roc_context *roc_ctx)
 				 P2P_MAX_ROC_DURATION_NON_DBS_NAN_PRESENT)
 				req->scan_req.dwell_time_passive =
 					P2P_MAX_ROC_DURATION_NON_DBS_NAN_PRESENT;
-		} else if (req->scan_req.dwell_time_passive >
-			   P2P_MAX_ROC_DURATION) {
-			req->scan_req.dwell_time_passive = P2P_MAX_ROC_DURATION;
 		}
 	}
 	p2p_debug("FW requested roc duration is:%d",
