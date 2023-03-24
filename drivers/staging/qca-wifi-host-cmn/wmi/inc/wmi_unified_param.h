@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5276,6 +5276,9 @@ typedef enum {
 	wmi_service_thermal_stats_temp_range_supported,
 #endif
 	wmi_service_pno_scan_conf_per_ch_support,
+#ifdef WLAN_FEATURE_P2P_P2P_STA
+	wmi_service_p2p_p2p_cc_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
