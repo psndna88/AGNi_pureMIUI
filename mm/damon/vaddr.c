@@ -624,7 +624,7 @@ static unsigned long damos_madvise(struct damon_target *target,
 	if (!mm)
 		return 0;
 
-	applied = do_madvise(mm, start, len, behavior) ? 0 : len;
+	applied = do_madvise(current, mm, start, len, behavior) ? 0 : len;
 	mmput(mm);
 
 	return applied;
