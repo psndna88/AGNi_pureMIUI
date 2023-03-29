@@ -492,6 +492,7 @@ int ipa3_interrupts_init(u32 ipa_irq, u32 ee, struct device *ipa_dev)
 {
 	int idx;
 	int res = 0;
+	cpumask_t cpu_mask;
 
 	ipa_ee = ee;
 	for (idx = 0; idx < IPA_IRQ_NUM_MAX; idx++) {
@@ -520,6 +521,16 @@ int ipa3_interrupts_init(u32 ipa_irq, u32 ee, struct device *ipa_dev)
 	 *  emulator interrupts are handled...
 	 */
 	if (ipa3_ctx->ipa3_hw_mode != IPA_HW_MODE_EMULATION) {
+		/* Create a CPU mask that includes the first four CPUs */
+		cpumask_clear(&cpu_mask);
+		cpumask_set_cpu(0, &cpu_mask);
+		cpumask_set_cpu(1, &cpu_mask);
+		cpumask_set_cpu(2, &cpu_mask);
+		cpumask_set_cpu(3, &cpu_mask);
+
+		/* Set affinity hint for interrupt */
+		irq_set_affinity_hint(ipa_irq, &cpu_mask);
+
 		res = request_irq(ipa_irq, (irq_handler_t) ipa3_isr,
 					IRQF_TRIGGER_RISING, "ipa", ipa_dev);
 		if (res) {
