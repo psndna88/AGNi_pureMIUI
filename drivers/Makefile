@@ -188,4 +188,3 @@ obj-$(CONFIG_INTERCONNECT)	+= interconnect/
 obj-$(CONFIG_COUNTER)		+= counter/
 obj-$(CONFIG_NXP_SR100)         += uwb-sr100/
 obj-y                           += fragmention/
-obj-$(CONFIG_KSU)		+= KernelSU/
