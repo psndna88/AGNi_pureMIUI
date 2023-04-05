@@ -39,12 +39,13 @@
 #include <elliptic/elliptic_mixer_controls.h>
 #endif
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 #include <dsp/apr_mius.h>
 #include <mius/mius_mixer_controls.h>
 #endif
 /* for mius end */
 
+#include <dsp/model_loader.h>
 #include "msm-pcm-routing-v2.h"
 #include "msm-pcm-routing-devdep.h"
 #include "msm-qti-pp-config.h"
@@ -1882,6 +1883,9 @@ static int msm_routing_get_adm_topology(int fedai_id, int session_type,
 {
 	int topology = NULL_COPP_TOPOLOGY;
 	int app_type = 0, acdb_dev_id = 0;
+	bool is_afe_proxy;
+
+	is_afe_proxy = (be_id == MSM_BACKEND_DAI_RX_CDC_DMA_RX_6);
 
 	pr_debug("%s: fedai_id %d, session_type %d, be_id %d\n",
 	       __func__, fedai_id, session_type, be_id);
@@ -1907,7 +1911,7 @@ static int msm_routing_get_adm_topology(int fedai_id, int session_type,
 						      app_type,
 						      acdb_dev_id,
 						      ADM_TOPOLOGY_CAL_TYPE_IDX,
-						      false /*exact*/);
+						      is_afe_proxy /*exact*/);
 		if (topology < 0)
 			topology = NULL_COPP_TOPOLOGY;
 	}
@@ -2203,6 +2207,7 @@ int msm_pcm_routing_reg_phy_compr_stream(int fe_id, int perf_mode,
 				mutex_unlock(&routing_lock);
 				return -EINVAL;
 			}
+			msm_crus_pb_set_copp_idx(port_id, copp_idx);
 			pr_debug("%s: set idx bit of fe:%d, type: %d, be:%d\n",
 				 __func__, fe_id, session_type, i);
 			set_bit(copp_idx,
@@ -2941,6 +2946,7 @@ static void msm_pcm_routing_process_audio(u16 reg, u16 val, int set)
 				mutex_unlock(&routing_lock);
 				return;
 			}
+			msm_crus_pb_set_copp_idx(port_id, copp_idx);
 			pr_debug("%s: setting idx bit of fe:%d, type: %d, be:%d\n",
 				 __func__, val, session_type, reg);
 			set_bit(copp_idx,
@@ -6984,7 +6990,10 @@ static const char * const ext_ec_ref_rx[] = {"NONE", "PRI_MI2S_TX",
 					"SEC_MI2S_TX", "TERT_MI2S_TX",
 					"QUAT_MI2S_TX", "QUIN_MI2S_TX",
 					"SLIM_1_TX", "PRI_TDM_TX",
-					"SEC_TDM_TX", "TERT_TDM_TX", "SENARY_MI2S_TX"};
+					"SEC_TDM_TX", "TERT_TDM_TX",
+					"SENARY_MI2S_TX", "TERT_MI2S_RX",
+					"TERT_TDM_RX_0", "PRI_TDM_RX_0",
+					"TERT_TDM_TX_0"};
 
 
 static const struct soc_enum msm_route_ext_ec_ref_rx_enum[] = {
@@ -36647,6 +36656,8 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"RX_CDC_DMA_RX_1_Voice Mixer", "VoiceMMode2", "VOICEMMODE2_DL"},
 	{"RX_CDC_DMA_RX_1", NULL, "RX_CDC_DMA_RX_1_Voice Mixer"},
 
+	{"VOC_EXT_EC MUX", "PRI_TDM_RX",    "PRI_TDM_RX_0"},
+	{"VOC_EXT_EC MUX", "TERT_TDM_RX",    "TERT_TDM_RX_0"},
 	{"VOC_EXT_EC MUX", "SLIM_1_TX",    "SLIMBUS_1_TX"},
 	{"VOIP_UL", NULL, "VOC_EXT_EC MUX"},
 	{"VOICEMMODE1_UL", NULL, "VOC_EXT_EC MUX"},
@@ -37094,6 +37105,7 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"PRI_SPDIF_TX", NULL, "BE_IN"},
 	{"SEC_SPDIF_TX", NULL, "BE_IN"},
 	{"PROXY_TX", NULL, "BE_IN"},
+	{"PRI_TDM_RX_1", NULL, "PRI_TDM_RX_1_DL_US"},
 	{"TERT_TDM_RX_1", NULL, "TERT_TDM_RX_1_DL_US"},
 	{"TX4_CDC_DMA_UL_US", NULL, "TX_CDC_DMA_TX_4"},
 };
@@ -41660,6 +41672,7 @@ static const struct snd_soc_dapm_route intercon_mi2s[] = {
 	{"VOC_EXT_EC MUX", "TERT_MI2S_TX", "TERT_MI2S_TX"},
 	{"VOC_EXT_EC MUX", "QUAT_MI2S_TX", "QUAT_MI2S_TX"},
 	{"VOC_EXT_EC MUX", "QUIN_MI2S_TX", "QUIN_MI2S_TX"},
+	{"VOC_EXT_EC MUX", "TERT_MI2S_RX", "TERT_MI2S_RX"},
 	{"VOC_EXT_EC MUX", "SENARY_MI2S_TX", "SENARY_MI2S_TX"},
 
 	{"AUDIO_REF_EC_UL1 MUX", "PRI_MI2S_TX", "PRI_MI2S_TX"},
@@ -42840,6 +42853,41 @@ static const struct snd_kcontrol_new stereo_channel_reverse_control[] = {
 	msm_routing_stereo_channel_reverse_control_put),
 };
 
+static int msm_routing_device_model_control_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = 0;
+
+	return 0;
+}
+
+static int msm_routing_device_model_control_put(
+			struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	int device_model = 0;
+	int ret = 0;
+
+	pr_debug("%s Device Model value:%ld\n", __func__,
+				ucontrol->value.integer.value[0]);
+
+	device_model = ucontrol->value.integer.value[0];
+
+	ret = adm_set_device_model(device_model);
+	if (ret) {
+		pr_err("%s:set device model failed, err=%d\n",
+			__func__, ret);
+		goto done;
+	}
+done:
+	return ret;
+}
+
+static const struct snd_kcontrol_new device_model_control[] = {
+	SOC_SINGLE_EXT("Device model", SND_SOC_NOPM, 0,
+	255, 0, msm_routing_device_model_control_get, msm_routing_device_model_control_put),
+};
+
 static int msm_routing_instance_id_support_info(struct snd_kcontrol *kcontrol,
 						struct snd_ctl_elem_info *uinfo)
 {
@@ -43709,6 +43757,9 @@ static int msm_routing_probe(struct snd_soc_component *component)
 	snd_soc_add_component_controls(component, aanc_noise_level,
 				      ARRAY_SIZE(aanc_noise_level));
 
+	snd_soc_add_component_controls(component, device_model_control,
+				ARRAY_SIZE(device_model_control));
+
 	snd_soc_add_component_controls(component, msm_voc_session_controls,
 				      ARRAY_SIZE(msm_voc_session_controls));
 
@@ -43779,7 +43830,7 @@ static int msm_routing_probe(struct snd_soc_component *component)
 			port_multi_channel_map_mixer_controls,
 			ARRAY_SIZE(port_multi_channel_map_mixer_controls));
 	/* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 	mius_add_component_controls(component);
 #endif
 	/* for mius end */
@@ -43798,6 +43849,7 @@ static int msm_routing_probe(struct snd_soc_component *component)
 				      ARRAY_SIZE(mclk_src_controls));
 	snd_soc_add_component_controls(component, asrc_config_controls,
 				      ARRAY_SIZE(asrc_config_controls));
+	send_data_add_component_controls(component);
 #ifdef CONFIG_MSM_INTERNAL_MCLK
 	snd_soc_add_component_controls(component, internal_mclk_control,
 				      ARRAY_SIZE(internal_mclk_control));

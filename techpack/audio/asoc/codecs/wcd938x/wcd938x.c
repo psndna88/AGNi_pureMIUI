@@ -2162,9 +2162,8 @@ static int wcd938x_event_notify(struct notifier_block *block,
 						     NULL);
 		wcd938x->mbhc->wcd_mbhc.deinit_in_progress = true;
 		mbhc = &wcd938x->mbhc->wcd_mbhc;
-		if(mbhc->mbhc_cfg)
-			wcd938x->usbc_hs_status = get_usbc_hs_status(component,
-							mbhc->mbhc_cfg);
+		wcd938x->usbc_hs_status = get_usbc_hs_status(component,
+						mbhc->mbhc_cfg);
 		wcd938x_mbhc_ssr_down(wcd938x->mbhc, component);
 		wcd938x_reset_low(wcd938x->dev);
 		break;
@@ -2186,8 +2185,7 @@ static int wcd938x_event_notify(struct notifier_block *block,
 			dev_err(component->dev, "%s: mbhc initialization failed\n",
 				__func__);
 		} else {
-			if(mbhc->mbhc_cfg)
-				wcd938x_mbhc_hs_detect(component, mbhc->mbhc_cfg);
+			wcd938x_mbhc_hs_detect(component, mbhc->mbhc_cfg);
 		}
 		wcd938x->mbhc->wcd_mbhc.deinit_in_progress = false;
 		wcd938x->dev_up = true;
@@ -2627,6 +2625,7 @@ static int wcd938x_rx_hph_mode_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#if 0
 static int wcd938x_ear_pa_gain_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -2668,6 +2667,7 @@ static int wcd938x_ear_pa_gain_put(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+#endif
 
 static int wcd938x_get_compander(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
@@ -3064,8 +3064,10 @@ static const struct soc_enum rx_hph_mode_mux_enum =
 			    rx_hph_mode_mux_text);
 
 static const struct snd_kcontrol_new wcd9380_snd_controls[] = {
+#if 0
 	SOC_ENUM_EXT("EAR PA GAIN", wcd938x_ear_pa_gain_enum,
 		wcd938x_ear_pa_gain_get, wcd938x_ear_pa_gain_put),
+#endif
 
 	SOC_ENUM_EXT("RX HPH Mode", rx_hph_mode_mux_enum_wcd9380,
 		wcd938x_rx_hph_mode_get, wcd938x_rx_hph_mode_put),

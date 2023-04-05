@@ -152,6 +152,7 @@ ifdef CONFIG_SND_SOC_MSM_QDSP6V2_INTF
 	Q6_OBJS += adsp_err.o
 	Q6_OBJS += msm_audio_ion.o
 	Q6_OBJS += q6_init.o
+	Q6_OBJS += model_loader.o
 endif
 
 # for ELUS start
@@ -167,7 +168,7 @@ endif
 # for ELUS end
 
 # for MIUS start
-ifdef CONFIG_MIUS_IIO
+ifdef CONFIG_MIUS_PROXIMITY
 	Q6_OBJS += apr_mius.o
 	Q6_OBJS += mius/mius.o
 	Q6_OBJS += mius/mius_sysfs.o
@@ -254,6 +255,10 @@ INCS +=		$(COMMON_INC) \
 		$(UAPI_INC)
 
 EXTRA_CFLAGS += $(INCS)
+
+ifdef CONFIG_MIUS_PROXIMITY
+	CDEFINES += -DCONFIG_QGKI_SYSTEM
+endif
 
 CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DANI_LITTLE_BIT_ENDIAN \
