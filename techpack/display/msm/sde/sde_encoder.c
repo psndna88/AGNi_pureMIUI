@@ -1646,6 +1646,29 @@ void sde_encoder_control_idle_pc(struct drm_encoder *drm_enc, bool enable)
 	SDE_EVT32(sde_enc->idle_pc_enabled);
 }
 
+static void _sde_encoder_set_rc_state(struct sde_encoder_virt *sde_enc,
+	enum sde_enc_rc_states rc_state)
+{
+	struct drm_encoder *drm_enc = &sde_enc->base;
+
+	if (sde_enc->rc_state == rc_state)
+		return;
+
+	sde_enc->rc_state = rc_state;
+
+	switch (rc_state) {
+		case SDE_ENC_RC_STATE_OFF:
+		case SDE_ENC_RC_STATE_IDLE:
+			msm_idle_set_state(drm_enc, false);
+			break;
+		case SDE_ENC_RC_STATE_ON:
+			msm_idle_set_state(drm_enc, true);
+			break;
+		default:
+			break;
+	}
+}
+
 static void _sde_encoder_rc_restart_delayed(struct sde_encoder_virt *sde_enc,
 	u32 sw_event)
 {
@@ -1739,14 +1762,12 @@ static int _sde_encoder_rc_kickoff(struct drm_encoder *drm_enc,
 	}
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			SDE_ENC_RC_STATE_ON, SDE_EVTLOG_FUNC_CASE1);
-	sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_ON);
 
 end:
 	/* avoid delayed off work if called from esd thread */
 	if (!sde_enc->delay_kickoff)
 		_sde_encoder_rc_kickoff_delayed(sde_enc, sw_event);
-
-	msm_idle_set_state(drm_enc, false);
 
 	mutex_unlock(&sde_enc->rc_lock);
 	return ret;
@@ -1757,8 +1778,6 @@ static int _sde_encoder_rc_pre_stop(struct drm_encoder *drm_enc,
 {
 	/* cancel delayed off work, if any */
 	_sde_encoder_rc_cancel_delayed(sde_enc, sw_event);
-
-	msm_idle_set_state(drm_enc, true);
 
 	mutex_lock(&sde_enc->rc_lock);
 
@@ -1786,7 +1805,7 @@ static int _sde_encoder_rc_pre_stop(struct drm_encoder *drm_enc,
 			SDE_ENC_RC_STATE_PRE_OFF,
 			SDE_EVTLOG_FUNC_CASE3);
 
-	sde_enc->rc_state = SDE_ENC_RC_STATE_PRE_OFF;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_PRE_OFF);
 
 end:
 	mutex_unlock(&sde_enc->rc_lock);
@@ -1826,7 +1845,7 @@ static int _sde_encoder_rc_stop(struct drm_encoder *drm_enc,
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			SDE_ENC_RC_STATE_OFF, SDE_EVTLOG_FUNC_CASE4);
 
-	sde_enc->rc_state = SDE_ENC_RC_STATE_OFF;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_OFF);
 
 end:
 	mutex_unlock(&sde_enc->rc_lock);
@@ -1864,7 +1883,7 @@ static int _sde_encoder_rc_pre_modeset(struct drm_encoder *drm_enc,
 
 		SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			SDE_ENC_RC_STATE_ON, SDE_EVTLOG_FUNC_CASE5);
-		sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
+		_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_ON);
 	}
 
 	if (sde_encoder_has_dsc_hw_rev_2(sde_enc))
@@ -1882,7 +1901,7 @@ skip_wait:
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 		SDE_ENC_RC_STATE_MODESET, SDE_EVTLOG_FUNC_CASE5);
 
-	sde_enc->rc_state = SDE_ENC_RC_STATE_MODESET;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_MODESET);
 	_sde_encoder_pm_qos_remove_request(drm_enc);
 
 end:
@@ -1918,7 +1937,7 @@ static int _sde_encoder_rc_post_modeset(struct drm_encoder *drm_enc,
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			SDE_ENC_RC_STATE_ON, SDE_EVTLOG_FUNC_CASE6);
 
-	sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_ON);
 	_sde_encoder_pm_qos_add_request(drm_enc);
 
 end:
@@ -1971,7 +1990,7 @@ static int _sde_encoder_rc_idle(struct drm_encoder *drm_enc,
 
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
 			SDE_ENC_RC_STATE_IDLE, SDE_EVTLOG_FUNC_CASE7);
-	sde_enc->rc_state = SDE_ENC_RC_STATE_IDLE;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_IDLE);
 
 end:
 	mutex_unlock(&sde_enc->rc_lock);
@@ -2045,7 +2064,7 @@ static int _sde_encoder_rc_early_wakeup(struct drm_encoder *drm_enc,
 				msecs_to_jiffies(
 				IDLE_POWERCOLLAPSE_IN_EARLY_WAKEUP));
 
-		sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
+		_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_ON);
 	}
 
 	SDE_EVT32(DRMID(drm_enc), sw_event, sde_enc->rc_state,
@@ -3837,7 +3856,7 @@ void sde_encoder_trigger_rsc_state_change(struct drm_encoder *drm_enc)
 	_sde_encoder_update_rsc_client(drm_enc, true);
 
 	SDE_EVT32(DRMID(drm_enc), sde_enc->rc_state, SDE_ENC_RC_STATE_ON);
-	sde_enc->rc_state = SDE_ENC_RC_STATE_ON;
+	_sde_encoder_set_rc_state(sde_enc, SDE_ENC_RC_STATE_ON);
 
 end:
 	mutex_unlock(&sde_enc->rc_lock);
