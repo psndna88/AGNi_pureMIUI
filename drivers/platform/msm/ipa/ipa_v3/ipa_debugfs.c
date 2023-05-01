@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifdef CONFIG_DEBUG_FS
@@ -1359,6 +1360,7 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		"flow_disable=%u\n"
 		"rx_page_drop_cnt=%u\n"
 		"lower_order=%u\n",
+		"pipe_setup_fail_cnt=%u\n",
 		ipa3_ctx->stats.tx_sw_pkts,
 		ipa3_ctx->stats.tx_hw_pkts,
 		ipa3_ctx->stats.tx_non_linear,
@@ -1376,7 +1378,8 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		ipa3_ctx->stats.flow_enable,
 		ipa3_ctx->stats.flow_disable,
 		ipa3_ctx->stats.rx_page_drop_cnt,
-		ipa3_ctx->stats.lower_order
+		ipa3_ctx->stats.lower_order,
+		ipa3_ctx->stats.pipe_setup_fail_cnt
 		);
 	cnt += nbytes;
 
