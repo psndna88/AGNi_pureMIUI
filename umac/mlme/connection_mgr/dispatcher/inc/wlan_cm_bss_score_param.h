@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -129,6 +130,7 @@ struct per_slot_score {
  * @check_assoc_disallowed: Should assoc be disallowed if MBO OCE IE indicate so
  * @vendor_roam_score_algorithm: Preferred ETP vendor roam score algorithm
  * @check_6ghz_security: check security for 6Ghz candidate
+ * @standard_6ghz_conn_policy: check for 6 GHz standard connection policy
  * @key_mgmt_mask_6ghz: user configurable mask for 6ghz AKM
  */
 struct scoring_cfg {
@@ -143,6 +145,7 @@ struct scoring_cfg {
 	bool check_assoc_disallowed;
 	bool vendor_roam_score_algorithm;
 	uint8_t check_6ghz_security;
+	uint8_t standard_6ghz_conn_policy:1;
 	uint32_t key_mgmt_mask_6ghz;
 };
 
@@ -291,6 +294,18 @@ void wlan_cm_set_6ghz_key_mgmt_mask(struct wlan_objmgr_psoc *psoc,
  */
 uint32_t wlan_cm_get_6ghz_key_mgmt_mask(struct wlan_objmgr_psoc *psoc);
 
+void wlan_cm_set_standard_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					   bool value);
+
+/**
+ * wlan_cm_get_standard_6ghz_conn_policy() - Get 6Ghz standard connection
+ *					     policy
+ * @psoc: pointer to psoc object
+ *
+ * Return: value
+ */
+bool wlan_cm_get_standard_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc);
+
 #else
 static inline bool
 wlan_cm_6ghz_allowed_for_akm(struct wlan_objmgr_psoc *psoc,
@@ -310,6 +325,18 @@ void wlan_cm_reset_check_6ghz_security(struct wlan_objmgr_psoc *psoc) {}
 
 static inline
 bool wlan_cm_get_check_6ghz_security(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline
+void wlan_cm_set_standard_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc,
+					   uint32_t value)
+{
+}
+
+static inline
+bool wlan_cm_get_standard_6ghz_conn_policy(struct wlan_objmgr_psoc *psoc)
 {
 	return false;
 }
