@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.240 Kernel Configuration
+# Linux/arm64 5.4.243 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 14.1.4"
 CONFIG_GCC_VERSION=0
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-ST_v2.9-stable"
+CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-ST_v3.0-stable"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
@@ -5076,6 +5076,7 @@ CONFIG_MSM_GENI_SE=y
 # CONFIG_MSM_11AD is not set
 # CONFIG_IOSS is not set
 # CONFIG_R8125 is not set
+# CONFIG_R8168 is not set
 # end of Qualcomm technologies inc. MSM specific device drivers
 
 CONFIG_CLKDEV_LOOKUP=y
