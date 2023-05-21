@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved
  */
 
 #include <net/ip.h>
@@ -9614,6 +9615,20 @@ u32 ipa3_get_r_rev_version(void)
 	return r_rev;
 }
 EXPORT_SYMBOL(ipa3_get_r_rev_version);
+
+u32 ipa3_get_qmap_id(int pipe_idx)
+{
+	if (pipe_idx >= ipa3_ctx->ipa_num_pipes || pipe_idx < 0) {
+		IPAERR("Bad pipe index!\n");
+		WARN_ON(1);
+		return -EINVAL;
+	}
+
+	return ipa3_ctx->ep[pipe_idx].cfg.meta.qmap_id;
+
+}
+EXPORT_SYMBOL(ipa3_get_qmap_id);
+
 
 /**
  * ipa3_ctx_get_type() - to get platform type, hw type
