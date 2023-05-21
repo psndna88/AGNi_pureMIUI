@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2194,6 +2194,29 @@ wlan_mlme_get_sta_miracast_mcc_rest_time(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 wlan_mlme_get_sap_mcc_chnl_avoid(struct wlan_objmgr_psoc *psoc,
 				 uint8_t *value);
+
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * wlan_mlme_is_standard_6ghz_conn_policy_enabled() - Get the 6 GHz standard
+ *                                                    connection policy flag
+ * @psoc: psoc context
+ * @value: Enable/Disable value ptr.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mlme_is_standard_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
+					       bool *value);
+#else
+static inline QDF_STATUS
+wlan_mlme_is_standard_6ghz_conn_policy_enabled(struct wlan_objmgr_psoc *psoc,
+					       bool *value)
+{
+	*value = false;
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * wlan_mlme_get_mcc_bcast_prob_resp() - Get broadcast probe rsp in MCC
  *
@@ -3242,4 +3265,22 @@ QDF_STATUS
 wlan_mlme_get_channel_bonding_5ghz(struct wlan_objmgr_psoc *psoc,
 				   uint32_t *value);
 
+#ifdef WLAN_FEATURE_P2P_P2P_STA
+/**
+ * wlan_mlme_get_p2p_p2p_conc_support() - Get p2p+p2p conc support
+ *
+ * @psoc: pointer to psoc object
+ * @val : value
+ *
+ * Return: Success/failure
+ */
+bool
+wlan_mlme_get_p2p_p2p_conc_support(struct wlan_objmgr_psoc *psoc);
+#else
+static inline bool
+wlan_mlme_get_p2p_p2p_conc_support(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
 #endif /* _WLAN_MLME_API_H_ */

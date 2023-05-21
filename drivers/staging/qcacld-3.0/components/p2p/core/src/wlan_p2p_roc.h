@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,8 +36,9 @@
 #define P2P_MAX_ROC_DURATION_NON_DBS_NDP_PRESENT  250
 #define P2P_MAX_ROC_DURATION_DBS_NAN_PRESENT      450
 #define P2P_MAX_ROC_DURATION_NON_DBS_NAN_PRESENT  300
+#define P2P_MAX_ROC_DURATION_GO_PRESENT     600
 
-#define P2P_ROC_DURATION_MULTI_GO_PRESENT   6
+#define P2P_ROC_DURATION_MULTI_GO_PRESENT   300
 #define P2P_ROC_DURATION_MULTI_GO_ABSENT    10
 #define P2P_ACTION_FRAME_DEFAULT_WAIT       200
 #define P2P_ROC_DEFAULT_DURATION            200

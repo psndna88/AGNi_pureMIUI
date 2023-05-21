@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -876,6 +876,16 @@ typedef struct {
                      reserved3:     31;
         };
     };
+    /* is_manual_ulofdma_trigger:
+     * Flag to indicate if a given UL OFDMA trigger is manually triggered
+     * from the Host
+     */
+    A_UINT32 is_manual_ulofdma_trigger;
+    /* is_combined_ul_bsrp_trigger:
+     * Flag to indicate if a given UL BSRP trigger is sent combined as
+     * part of existing DL/UL data sequence
+     */
+    A_UINT32 is_combined_ul_bsrp_trigger;
 } htt_ppdu_stats_common_tlv;
 
 #define HTT_PPDU_STATS_USER_COMMON_TLV_TID_NUM_M     0x000000ff
@@ -1796,6 +1806,19 @@ typedef enum HTT_PPDU_STATS_RESP_PPDU_TYPE HTT_PPDU_STATS_RESP_PPDU_TYPE;
         ((_var) |= ((_val) << HTT_PPDU_STATS_USER_RATE_TLV_PUNC_PATTERN_BITMAP_S)); \
     } while (0)
 
+#define HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_M  0x00010000
+#define HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_S          16
+
+#define HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_GET(_var) \
+    (((_var) & HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_M) >> \
+    HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_S)
+
+#define HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_SET (_var , _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF, _val); \
+        ((_var) |= ((_val) << HTT_PPDU_STATS_USER_RATE_TLV_EXTRA_EHT_LTF_S)); \
+    } while (0)
+
 typedef enum HTT_PPDU_STATS_RU_SIZE {
     HTT_PPDU_STATS_RU_26,
     HTT_PPDU_STATS_RU_52,
@@ -1981,9 +2004,12 @@ typedef struct {
     /*
      * BIT [15:0]  :- Punctured BW bitmap pattern to indicate which BWs are
      *                punctured.
+     * BIT 16      :- flag showing whether EHT extra LTF is applied
+     *                for current PPDU
      */
     A_UINT32 punc_pattern_bitmap: 16,
-             reserved4:           16;
+             extra_eht_ltf:       1,
+             reserved4:           15;
 } htt_ppdu_stats_user_rate_tlv;
 
 #define HTT_PPDU_STATS_USR_RATE_VALID_M     0x80000000
@@ -2426,7 +2452,7 @@ typedef struct {
 
     /*
      * Max rates configured per BW:
-     * for BW supported by Smart Antenna - 20MHZ, 40MHZ and 80MHZ and 160MHZ
+     * for BW supported by Smart Antenna - 20MHZ, 40MHZ, 80MHZ and 160MHZ
      * (Note: 160 MHz is currently not supported by Smart Antenna)
      */
     A_UINT32 max_rates[HTT_STATS_NUM_SUPPORTED_BW_SMART_ANTENNA];
@@ -2447,6 +2473,12 @@ typedef struct {
              sw_rts_failure:    1,
              cts_rcvd_diff_bw:  1,
              reserved2:        28;
+
+    /*
+     * Max rates configured per BW:
+     * for BW supported by Smart Antenna - 320 MHZ
+     */
+    A_UINT32 max_rates_ext;
 } htt_ppdu_stats_user_cmpltn_common_tlv;
 
 #define HTT_PPDU_STATS_USER_CMPLTN_BA_BITMAP_TLV_TID_NUM_M     0x000000ff
