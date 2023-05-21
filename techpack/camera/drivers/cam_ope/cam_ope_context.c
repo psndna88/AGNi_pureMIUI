@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -39,7 +40,6 @@ static int cam_ope_context_dump_active_request(void *data,
 		return -EINVAL;
 	}
 
-	mutex_lock(&ctx->ctx_mutex);
 	if (ctx->state < CAM_CTX_ACQUIRED || ctx->state > CAM_CTX_ACTIVATED) {
 		CAM_ERR(CAM_OPE, "Invalid state ope ctx %d state %d",
 			ctx->ctx_id, ctx->state);
@@ -65,7 +65,6 @@ static int cam_ope_context_dump_active_request(void *data,
 	}
 
 end:
-	mutex_unlock(&ctx->ctx_mutex);
 	return rc;
 }
 
