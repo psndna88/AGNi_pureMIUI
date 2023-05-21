@@ -318,8 +318,16 @@ int msm_comm_set_buses(struct msm_vidc_core *core, u32 sid)
 		mutex_unlock(&inst->registeredbufs.lock);
 
 		if (!filled_len || !device_addr) {
+			mutex_lock(&inst->eosbufs.lock);
+			if (list_empty(&inst->eosbufs.list) &&
+				!inst->in_flush && !inst->out_flush) {
+				s_vpr_l(sid, "%s: No pending eos/flush cmds\n",
+					     __func__);
+				mutex_unlock(&inst->eosbufs.lock);
+				continue;
+			}
+			mutex_unlock(&inst->eosbufs.lock);
 			s_vpr_l(sid, "%s: no input\n", __func__);
-			continue;
 		}
 
 		/* skip inactive session bus bandwidth */
@@ -856,8 +864,16 @@ int msm_vidc_set_clocks(struct msm_vidc_core *core, u32 sid)
 		mutex_unlock(&inst->registeredbufs.lock);
 
 		if (!filled_len || !device_addr) {
+			mutex_lock(&inst->eosbufs.lock);
+			if (list_empty(&inst->eosbufs.list) && !inst->in_flush
+				&& !inst->out_flush) {
+				s_vpr_l(sid, "%s: No pending eos/flush cmds\n",
+					       __func__);
+				mutex_unlock(&inst->eosbufs.lock);
+				continue;
+			}
+			mutex_unlock(&inst->eosbufs.lock);
 			s_vpr_l(sid, "%s: no input\n", __func__);
-			continue;
 		}
 
 		/* skip inactive session clock rate */
