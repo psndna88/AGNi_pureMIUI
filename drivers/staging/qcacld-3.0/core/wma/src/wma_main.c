@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -9323,27 +9323,97 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 	}
 
 	msg->chan_weights.saved_num_chan = wma_handle->saved_chan.num_channels;
+
 	status = policy_mgr_get_valid_chan_weights(wma_handle->psoc,
 		(struct policy_mgr_pcl_chan_weights *)&msg->chan_weights,
 		PM_STA_MODE);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wma_err("Error in creating weighed pcl");
+		return status;
+	}
 
 	for (i = 0; i < msg->chan_weights.saved_num_chan; i++) {
 		msg->chan_weights.weighed_valid_list[i] =
 			wma_map_pcl_weights(
 				msg->chan_weights.weighed_valid_list[i]);
-		/* Dont allow roaming on 2G when 5G_ONLY configured */
+
+		if (msg->band_mask ==
+		      (BIT(REG_BAND_2G) | BIT(REG_BAND_5G) | BIT(REG_BAND_6G)))
+			continue;
+
+		/*
+		 * Dont allow roaming on 5G/6G band if only 2G band configured
+		 * as supported roam band mask
+		 */
+		if (((wma_handle->bandcapability == BAND_2G) ||
+		    (msg->band_mask == BIT(REG_BAND_2G))) &&
+		    !WLAN_REG_IS_24GHZ_CH_FREQ(
+		    msg->chan_weights.saved_chan_list[i])) {
+			msg->chan_weights.weighed_valid_list[i] =
+				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
+		}
+
+		/*
+		 * Dont allow roaming on 2G/6G band if only 5G band configured
+		 * as supported roam band mask
+		 */
 		if (((wma_handle->bandcapability == BAND_5G) ||
 		    (msg->band_mask == BIT(REG_BAND_5G))) &&
+		    !WLAN_REG_IS_5GHZ_CH_FREQ(
+		    msg->chan_weights.saved_chan_list[i])) {
+			msg->chan_weights.weighed_valid_list[i] =
+				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
+		}
+
+		/*
+		 * Dont allow roaming on 2G/5G band if only 6G band configured
+		 * as supported roam band mask
+		 */
+		if (msg->band_mask == BIT(REG_BAND_6G) &&
+		    !WLAN_REG_IS_6GHZ_CHAN_FREQ(
+		    msg->chan_weights.saved_chan_list[i])) {
+			msg->chan_weights.weighed_valid_list[i] =
+				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
+		}
+
+		/*
+		 * Dont allow roaming on 6G band if only 2G + 5G band configured
+		 * as supported roam band mask.
+		 */
+		if (msg->band_mask == (BIT(REG_BAND_2G) | BIT(REG_BAND_5G)) &&
+		    (WLAN_REG_IS_6GHZ_CHAN_FREQ(
+		    msg->chan_weights.saved_chan_list[i]))) {
+			msg->chan_weights.weighed_valid_list[i] =
+				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
+		}
+
+		/*
+		 * Dont allow roaming on 2G band if only 5G + 6G band configured
+		 * as supported roam band mask.
+		 */
+		if (msg->band_mask == (BIT(REG_BAND_5G) | BIT(REG_BAND_6G)) &&
 		    (WLAN_REG_IS_24GHZ_CH_FREQ(
 		    msg->chan_weights.saved_chan_list[i]))) {
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
 		}
-		if (msg->band_mask == BIT(REG_BAND_2G) &&
-		    !WLAN_REG_IS_24GHZ_CH_FREQ(
-		    msg->chan_weights.saved_chan_list[i]))
+
+		/*
+		 * Dont allow roaming on 5G band if only 2G + 6G band configured
+		 * as supported roam band mask.
+		 */
+		if (msg->band_mask == (BIT(REG_BAND_2G) | BIT(REG_BAND_6G)) &&
+		    (WLAN_REG_IS_5GHZ_CH_FREQ(
+		    msg->chan_weights.saved_chan_list[i]))) {
 			msg->chan_weights.weighed_valid_list[i] =
 				WEIGHT_OF_DISALLOWED_CHANNELS;
+			continue;
+		}
 
 		is_channel_allowed =
 			policy_mgr_is_sta_chan_valid_for_connect_and_roam(
@@ -9354,10 +9424,6 @@ QDF_STATUS wma_send_set_pcl_cmd(tp_wma_handle wma_handle,
 						WEIGHT_OF_DISALLOWED_CHANNELS;
 	}
 
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		wma_err("Error in creating weighed pcl");
-		return status;
-	}
 	wma_debug("Dump channel list send to wmi");
 	policy_mgr_dump_channel_list(msg->chan_weights.saved_num_chan,
 				     msg->chan_weights.saved_chan_list,

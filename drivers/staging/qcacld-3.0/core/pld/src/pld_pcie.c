@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -940,5 +941,30 @@ void pld_pcie_device_self_recovery(struct device *dev,
 	}
 	cnss_self_recovery(dev, cnss_reason);
 }
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+int pld_pcie_set_wfc_mode(struct device *dev,
+			  enum pld_wfc_mode wfc_mode)
+{
+	struct cnss_wfc_cfg cfg;
+	int ret;
+
+	switch (wfc_mode) {
+	case PLD_WFC_MODE_OFF:
+		cfg.mode = CNSS_WFC_MODE_OFF;
+		break;
+	case PLD_WFC_MODE_ON:
+		cfg.mode = CNSS_WFC_MODE_ON;
+		break;
+	default:
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = cnss_set_wfc_mode(dev, cfg);
+out:
+	return ret;
+}
+#endif
 #endif
 #endif

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4832,6 +4832,16 @@ enum qca_wlan_vendor_attr_config {
 	 * 1-active, 0-inactive
 	 */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_BT_ACTIVE = 82,
+
+	/* 8-bit unsigned value, whenever wifi calling (wfc) begin or end,
+	 * Userspace sends this information to driver/firmware to configure
+	 * wfc state. Driver/Firmware uses this information to
+	 * optimize power savings, rate adaption, roaming, etc.
+	 *
+	 * 1 - wfc is on.
+	 * 0 - wfc is off.
+	 */
+	QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE = 86,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_AFTER_LAST,

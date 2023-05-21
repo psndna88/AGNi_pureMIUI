@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -522,6 +523,21 @@ enum policy_mgr_one_connection_mode {
  *			2x2
  * @PM_P2P_GO_SAP_SBS_5_1x1: P2P GO & SAP connection on 5G SBS
  *			using 1x1
+ * @PM_P2P_GO_P2P_GO_SCC_24_1x1: P2P GO & P2P GO SCC on 2.4G using 1x1
+ * @PM_P2P_GO_P2P_GO_SCC_24_2x2: P2P GO & P2P GO SCC on 2.4G using 2x2
+ * @PM_P2P_GO_P2P_GO_MCC_24_1x1: P2P GO & P2P GO MCC on 2.4G using 1x1
+ * @PM_P2P_GO_P2P_GO_MCC_24_2x2: P2P GO & P2P GO MCC on 2.4G using 2x2
+ * @PM_P2P_GO_P2P_GO_SCC_5_1x1: P2P GO & P2P GO SCC on 5G using 1x1
+ * @PM_P2P_GO_P2P_GO_SCC_5_2x2: P2P GO & P2P GO SCC on 5G using 2x2
+ * @PM_P2P_GO_P2P_GO_MCC_5_1x1: P2P GO & P2P GO MCC on 5G using 1x1
+ * @PM_P2P_GO_P2P_GO_MCC_5_2x2: P2P GO & P2P GO MCC on 5G using 2x2
+ * @PM_P2P_GO_P2P_GO_MCC_24_5_1x1: P2P GO 2.4G & P2P GO 5G dual band MCC
+ *                                 using 1x1
+ * @PM_P2P_GO_P2P_GO_MCC_24_5_2x2: P2P GO 2.4G & P2P GO 5G dual band MCC
+ *                                 using 2x2
+ * @PM_P2P_GO_P2P_GO_DBS_1x1: P2P GO & P2P GO on DBS using 1x1
+ * @PM_P2P_GO_P2P_GO_DBS_2x2: P2P GO & P2P GO on DBS using 2x2
+ * @PM_P2P_GO_P2P_GO_SBS_5_1x1: P2P GO & P2P GO on SBS using 1x1
  * @PM_P2P_CLI_SAP_SCC_24_1x1: CLI & SAP connection on SCC using
  *			1x1@2.4 Ghz
  * @PM_P2P_CLI_SAP_SCC_24_2x2: CLI & SAP connection on SCC using
@@ -547,6 +563,21 @@ enum policy_mgr_one_connection_mode {
  *			2x2
  * @PM_P2P_CLI_SAP_SBS_5_1x1: P2P CLI & SAP connection on 5G SBS
  *			using 1x1
+ * @PM_P2P_CLI_P2P_CLI_SCC_24_1x1: P2P CLI & P2P CLI SCC on 2.4G using 1x1
+ * @PM_P2P_CLI_P2P_CLI_SCC_24_2x2: P2P CLI & P2P CLI SCC on 2.4G using 2x2
+ * @PM_P2P_CLI_P2P_CLI_MCC_24_1x1: P2P CLI & P2P CLI MCC on 2.4G using 1x1
+ * @PM_P2P_CLI_P2P_CLI_MCC_24_2x2: P2P CLI & P2P CLI MCC on 2.4G using 2x2
+ * @PM_P2P_CLI_P2P_CLI_SCC_5_1x1: P2P CLI & P2P CLI SCC on 5G using 1x1
+ * @PM_P2P_CLI_P2P_CLI_SCC_5_2x2: P2P CLI & P2P CLI SCC on 5G using 2x2
+ * @PM_P2P_CLI_P2P_CLI_MCC_5_1x1: P2P CLI & P2P CLI MCC on 5G using 1x1
+ * @PM_P2P_CLI_P2P_CLI_MCC_5_2x2: P2P CLI & P2P CLI MCC on 5G using 2x2
+ * @PM_P2P_CLI_P2P_CLI_MCC_24_5_1x1: P2P CLI 2.4G & P2P CLI 5G dual band MCC
+ *                                 using 1x1
+ * @PM_P2P_CLI_P2P_CLI_MCC_24_5_2x2: P2P CLI 2.4G & P2P CLI 5G dual band MCC
+ *                                 using 2x2
+ * @PM_P2P_CLI_P2P_CLI_DBS_1x1: P2P CLI & P2P CLI on DBS using 1x1
+ * @PM_P2P_CLI_P2P_CLI_DBS_2x2: P2P CLI & P2P CLI on DBS using 2x2
+ * @PM_P2P_CLI_P2P_CLI_SBS_5_1x1: P2P CLI & P2P CLI on SBS using 1x1
  * @PM_SAP_SAP_SCC_24_1x1: SAP & SAP connection on
  *			SCC using 1x1@2.4 Ghz
  * @PM_SAP_SAP_SCC_24_2x2: SAP & SAP connection on
@@ -617,21 +648,6 @@ enum policy_mgr_one_connection_mode {
  * @PM_NAN_DISC_NDI_MCC_24_2x2: NAN & NDI connection on MCC using 2x2 on 2.4 GHz
  * @PM_NAN_DISC_NDI_DBS_1x1: NAN & NDI connection on DBS using 1x1
  * @PM_NAN_DISC_NDI_DBS_2x2: NAN & NDI connection on DBS using 2x2
- * @PM_P2P_GO_P2P_GO_SCC_24_1x1: P2P GO & P2P GO SCC on 2.4G using 1x1
- * @PM_P2P_GO_P2P_GO_SCC_24_2x2: P2P GO & P2P GO SCC on 2.4G using 2x2
- * @PM_P2P_GO_P2P_GO_MCC_24_1x1: P2P GO & P2P GO MCC on 2.4G using 1x1
- * @PM_P2P_GO_P2P_GO_MCC_24_2x2: P2P GO & P2P GO MCC on 2.4G using 2x2
- * @PM_P2P_GO_P2P_GO_SCC_5_1x1: P2P GO & P2P GO SCC on 5G using 1x1
- * @PM_P2P_GO_P2P_GO_SCC_5_2x2: P2P GO & P2P GO SCC on 5G using 2x2
- * @PM_P2P_GO_P2P_GO_MCC_5_1x1: P2P GO & P2P GO MCC on 5G using 1x1
- * @PM_P2P_GO_P2P_GO_MCC_5_2x2: P2P GO & P2P GO MCC on 5G using 2x2
- * @PM_P2P_GO_P2P_GO_MCC_24_5_1x1: P2P GO 2.4G & P2P GO 5G dual band MCC
- *                                 using 1x1
- * @PM_P2P_GO_P2P_GO_MCC_24_5_2x2: P2P GO 2.4G & P2P GO 5G dual band MCC
- *                                 using 2x2
- * @PM_P2P_GO_P2P_GO_DBS_1x1: P2P GO & P2P GO on DBS using 1x1
- * @PM_P2P_GO_P2P_GO_DBS_2x2: P2P GO & P2P GO on DBS using 2x2
- * @PM_P2P_GO_P2P_GO_SBS_5_1x1: P2P GO & P2P GO on SBS using 1x1
  *
  * These are generic IDs that identify the various roles in the
  * software system
@@ -702,6 +718,21 @@ enum policy_mgr_two_connection_mode {
 	PM_P2P_GO_SAP_DBS_1x1,
 	PM_P2P_GO_SAP_DBS_2x2,
 	PM_P2P_GO_SAP_SBS_5_1x1,
+	PM_P2P_GO_SAP_SBS_5_2x2 = PM_P2P_GO_SAP_SBS_5_1x1,
+	PM_P2P_GO_P2P_GO_SCC_24_1x1,
+	PM_P2P_GO_P2P_GO_SCC_24_2x2,
+	PM_P2P_GO_P2P_GO_MCC_24_1x1,
+	PM_P2P_GO_P2P_GO_MCC_24_2x2,
+	PM_P2P_GO_P2P_GO_SCC_5_1x1,
+	PM_P2P_GO_P2P_GO_SCC_5_2x2,
+	PM_P2P_GO_P2P_GO_MCC_5_1x1,
+	PM_P2P_GO_P2P_GO_MCC_5_2x2,
+	PM_P2P_GO_P2P_GO_MCC_24_5_1x1,
+	PM_P2P_GO_P2P_GO_MCC_24_5_2x2,
+	PM_P2P_GO_P2P_GO_DBS_1x1,
+	PM_P2P_GO_P2P_GO_DBS_2x2,
+	PM_P2P_GO_P2P_GO_SBS_5_1x1,
+	PM_P2P_GO_P2P_GO_SBS_5_2x2 = PM_P2P_GO_P2P_GO_SBS_5_1x1,
 	PM_P2P_CLI_SAP_SCC_24_1x1,
 	PM_P2P_CLI_SAP_SCC_24_2x2,
 	PM_P2P_CLI_SAP_MCC_24_1x1,
@@ -715,6 +746,21 @@ enum policy_mgr_two_connection_mode {
 	PM_P2P_CLI_SAP_DBS_1x1,
 	PM_P2P_CLI_SAP_DBS_2x2,
 	PM_P2P_CLI_SAP_SBS_5_1x1,
+	PM_P2P_CLI_SAP_SBS_5_2x2 = PM_P2P_CLI_SAP_SBS_5_1x1,
+	PM_P2P_CLI_P2P_CLI_SCC_24_1x1,
+	PM_P2P_CLI_P2P_CLI_SCC_24_2x2,
+	PM_P2P_CLI_P2P_CLI_MCC_24_1x1,
+	PM_P2P_CLI_P2P_CLI_MCC_24_2x2,
+	PM_P2P_CLI_P2P_CLI_SCC_5_1x1,
+	PM_P2P_CLI_P2P_CLI_SCC_5_2x2,
+	PM_P2P_CLI_P2P_CLI_MCC_5_1x1,
+	PM_P2P_CLI_P2P_CLI_MCC_5_2x2,
+	PM_P2P_CLI_P2P_CLI_MCC_24_5_1x1,
+	PM_P2P_CLI_P2P_CLI_MCC_24_5_2x2,
+	PM_P2P_CLI_P2P_CLI_DBS_1x1,
+	PM_P2P_CLI_P2P_CLI_DBS_2x2,
+	PM_P2P_CLI_P2P_CLI_SBS_5_1x1,
+	PM_P2P_CLI_P2P_CLI_SBS_5_2x2 = PM_P2P_CLI_P2P_CLI_SBS_5_1x1,
 	PM_SAP_SAP_SCC_24_1x1,
 	PM_SAP_SAP_SCC_24_2x2,
 	PM_SAP_SAP_MCC_24_1x1,
@@ -759,19 +805,6 @@ enum policy_mgr_two_connection_mode {
 	PM_NAN_DISC_NDI_MCC_24_2x2,
 	PM_NAN_DISC_NDI_DBS_1x1,
 	PM_NAN_DISC_NDI_DBS_2x2,
-	PM_P2P_GO_P2P_GO_SCC_24_1x1,
-	PM_P2P_GO_P2P_GO_SCC_24_2x2,
-	PM_P2P_GO_P2P_GO_MCC_24_1x1,
-	PM_P2P_GO_P2P_GO_MCC_24_2x2,
-	PM_P2P_GO_P2P_GO_SCC_5_1x1,
-	PM_P2P_GO_P2P_GO_SCC_5_2x2,
-	PM_P2P_GO_P2P_GO_MCC_5_1x1,
-	PM_P2P_GO_P2P_GO_MCC_5_2x2,
-	PM_P2P_GO_P2P_GO_MCC_24_5_1x1,
-	PM_P2P_GO_P2P_GO_MCC_24_5_2x2,
-	PM_P2P_GO_P2P_GO_DBS_1x1,
-	PM_P2P_GO_P2P_GO_DBS_2x2,
-	PM_P2P_GO_P2P_GO_SBS_5_1x1,
 	PM_MAX_TWO_CONNECTION_MODE
 };
 
@@ -1285,11 +1318,29 @@ struct connection_info {
 };
 
 /**
+ * struct go_plus_go_force_scc - structure to hold p2p go
+ * params for forcescc restart
+ *
+ * @vdev_id: vdev id of first p2p go which needs to do csa
+ * @ch_freq: ch freq of curr p2p go
+ * @ch_width: ch width of curr p2p go
+ */
+struct go_plus_go_force_scc {
+	uint8_t vdev_id;
+	uint32_t ch_freq;
+	uint32_t ch_width;
+};
+
+/**
  * struct sta_ap_intf_check_work_ctx - sta_ap_intf_check_work
  * related info
  * @psoc: pointer to PSOC object information
+ * @go_plus_go_force_scc: structure to hold params of
+ *			  curr and first p2p go ctx
  */
 struct sta_ap_intf_check_work_ctx {
 	struct wlan_objmgr_psoc *psoc;
+	struct go_plus_go_force_scc go_plus_go_force_scc;
 };
+
 #endif /* __WLAN_POLICY_MGR_PUBLIC_STRUCT_H */
