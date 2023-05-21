@@ -1371,16 +1371,6 @@ struct adm_cmd_connect_afe_port_v5 {
  */
 } __packed;
 
-/* Allows a client to notify adsp the device model */
-
-#define ADM_CMD_SET_DEVICE_MODEL	0x00011112
-
-/*  Payload of the #ADM_CMD_SET_DEVICE_MODEL command.*/
-struct adm_cmd_set_device_model {
-	struct apr_hdr     hdr;
-	u8                 model;
-/* ID of the device model */
-} __packed;
 
 /* adsp_adm_api.h */
 
@@ -2669,7 +2659,6 @@ struct afe_event_rt_proxy_port_status {
 } __packed;
 
 #define AFE_PORT_DATA_CMD_RT_PROXY_PORT_WRITE_V2 0x000100ED
-#define AFE_PORT_SEND_DATA_CMD   0x00011111
 
 struct afe_port_data_cmd_rt_proxy_port_write_v2 {
 	struct apr_hdr hdr;
@@ -4200,7 +4189,7 @@ struct afe_param_id_cdc_dma_data_align {
 	uint32_t	cdc_dma_data_align;
 } __packed;
 
-#define MAX_ABR_LEVELS 6
+#define MAX_ABR_LEVELS 5
 
 struct afe_bit_rate_level_map_t {
 	/*
@@ -4915,11 +4904,6 @@ struct asm_lhdc_specific_enc_cfg_t {
 	 * @Default: 679 for LHDCBT_MTU_2DH5
 	 */
 	uint16_t                     mtu;
-	uint32_t                     ar_enabled;
-	uint32_t                     meta_enabled;
-	uint32_t                     llac_enabled;
-	uint32_t                     mbr_enabled;
-	uint32_t                     larc_enabled;
 } __packed;
 
 struct asm_lhdc_enc_cfg_t {

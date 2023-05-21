@@ -35,7 +35,7 @@ static int __init audio_q6_init(void)
 	voice_mhi_init();
 	digital_cdc_rsc_mgr_init();
 /* for mius start */
-#ifdef CONFIG_MIUS_PROXIMITY
+#ifdef CONFIG_MIUS_IIO
 	mius_driver_init();
 #endif
 /* for mius end */
@@ -69,7 +69,7 @@ static void __exit audio_q6_exit(void)
 	adsp_err_exit();
 	voice_mhi_exit();
 /* for mius start */
-#ifdef CONFIG_MIUS_PROXIMITY
+#ifdef CONFIG_MIUS_IIO
 	mius_driver_exit();
 #endif
 /* for mius end */

@@ -38,7 +38,7 @@ int elliptic_driver_init(void);
 #endif
 /* for elus end */
 /* for mius start */
-#ifdef CONFIG_MIUS_PROXIMITY
+#ifdef CONFIG_MIUS_IIO
 int mius_driver_init(void);
 #endif
 /* for mius end */
@@ -89,7 +89,7 @@ int elliptic_driver_exit(void);
 #endif
 /* for elus end */
 /* for mius start */
-#ifdef CONFIG_MIUS_PROXIMITY
+#ifdef CONFIG_MIUS_IIO
 int mius_driver_exit(void);
 #endif
 /* for mius end */

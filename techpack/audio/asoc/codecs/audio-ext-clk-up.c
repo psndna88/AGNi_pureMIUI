@@ -18,7 +18,6 @@
 #include <linux/ratelimit.h>
 #include <dsp/q6afe-v2.h>
 #include "audio-ext-clk-up.h"
-#include <soc/qcom/subsystem_restart.h>
 
 enum {
 	AUDIO_EXT_CLK_PMI,
@@ -156,9 +155,7 @@ static int lpass_hw_vote_prepare(struct clk_hw *hw)
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int ret;
 	static DEFINE_RATELIMIT_STATE(rtl, 1 * HZ, 1);
-	struct subsys_device *adsp_dev = NULL;
 
-	adsp_dev = find_subsys_device("adsp");
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_CORE_HW_VOTE)  {
 		pr_debug("%s: vote for %d clock\n",
 			__func__, clk_priv->clk_src);
@@ -168,9 +165,6 @@ static int lpass_hw_vote_prepare(struct clk_hw *hw)
 		if (ret < 0) {
 			pr_err("%s lpass core hw vote failed %d\n",
 				__func__, ret);
-			if (ret == -110 && adsp_dev != NULL) {
-				subsystem_restart_dev(adsp_dev);
-			}
 			return ret;
 		}
 	}
@@ -196,9 +190,7 @@ static void lpass_hw_vote_unprepare(struct clk_hw *hw)
 {
 	struct audio_ext_clk_priv *clk_priv = to_audio_clk(hw);
 	int ret = 0;
-	struct subsys_device *adsp_dev = NULL;
 
-	adsp_dev = find_subsys_device("adsp");
 	if (clk_priv->clk_src == AUDIO_EXT_CLK_LPASS_CORE_HW_VOTE) {
 		pr_debug("%s: unvote for %d clock\n",
 			__func__, clk_priv->clk_src);
@@ -206,9 +198,6 @@ static void lpass_hw_vote_unprepare(struct clk_hw *hw)
 			AFE_LPASS_CORE_HW_MACRO_BLOCK,
 			clk_priv->lpass_core_hwvote_client_handle);
 		if (ret < 0) {
-			if (ret == -110 && adsp_dev != NULL) {
-				subsystem_restart_dev(adsp_dev);
-			}
 			pr_err("%s lpass core hw vote failed %d\n",
 				__func__, ret);
 		}

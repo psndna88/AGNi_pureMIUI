@@ -437,8 +437,7 @@ struct wcd_mbhc_config {
 	bool enable_anc_mic_detect;
 	u32 enable_usbc_analog;
 	bool moisture_duty_cycle_en;
-	int uart_audio_switch_gpio;
-	struct device_node *uart_audio_switch_gpio_p; /* used by pinctrl API */
+	struct device_node *uart_audio_switch_gpio_p;
 	bool flip_switch;
 };
 
@@ -637,8 +636,5 @@ int wcd_cancel_btn_work(struct wcd_mbhc *mbhc);
 int wcd_mbhc_get_button_mask(struct wcd_mbhc *mbhc);
 void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			enum snd_jack_types jack_type);
-#ifdef CONFIG_FASTBOOT_CMD_CTRL_UART
-extern bool is_early_cons_enabled;
-#endif
 
 #endif /* __WCD_MBHC_V2_H__ */
