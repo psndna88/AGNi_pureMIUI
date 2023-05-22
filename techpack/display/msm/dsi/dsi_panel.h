@@ -315,7 +315,7 @@ static inline void dsi_panel_release_panel_lock(struct dsi_panel *panel)
 
 static inline bool dsi_panel_is_type_oled(struct dsi_panel *panel)
 {
-	return (panel->panel_type == DSI_DISPLAY_PANEL_TYPE_OLED);
+	return true;
 }
 
 struct dsi_panel *dsi_panel_get(struct device *parent,
