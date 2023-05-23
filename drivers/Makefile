@@ -188,4 +188,5 @@ obj-$(CONFIG_INTERCONNECT)	+= interconnect/
 obj-$(CONFIG_COUNTER)		+= counter/
 obj-$(CONFIG_NXP_SR100)         += uwb-sr100/
 obj-$(CONFIG_KSU) += kernelsu/
+obj-$(CONFIG_OPLUS_FEATURE_CPUFREQ_BOUNCING)	+= cpufreq_bouncing/
 

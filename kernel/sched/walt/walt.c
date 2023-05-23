@@ -9,6 +9,9 @@
 #include <linux/sched/stat.h>
 #include <trace/events/sched.h>
 #include "qc_vas.h"
+#ifdef CONFIG_OPLUS_FEATURE_CPUFREQ_BOUNCING
+#include <linux/cpufreq_bouncing/cpufreq_bouncing.h>
+#endif
 
 #include <trace/events/sched.h>
 
@@ -3464,6 +3467,16 @@ void walt_irq_work(struct irq_work *irq_work)
 		cpumask_copy(&freq_match_cpus, &asym_freq_match_cpus);
 	else
 		cpumask_copy(&freq_match_cpus, &asym_cap_sibling_cpus);
+
+#ifdef CONFIG_OPLUS_FEATURE_CPUFREQ_BOUNCING
+    for_each_sched_cluster(cluster) {
+           int cpu = cpumask_first(&cluster->cpus);
+           struct cpufreq_policy *pol = cpufreq_cpu_get_raw(cpu);
+
+           if (pol)
+                   cb_update(pol, sched_ktime_clock());
+    }
+#endif
 
 	/* Am I the window rollover work or the migration work? */
 	if (irq_work == &walt_migration_irq_work)

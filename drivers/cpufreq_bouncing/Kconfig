@@ -1,0 +1,5 @@
+config OPLUS_FEATURE_CPUFREQ_BOUNCING
+	tristate "cpufreq_bouncing"
+	default n
+	help
+	  adjust cpu max frequency based on cpu busy duration
