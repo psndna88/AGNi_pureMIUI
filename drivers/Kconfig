@@ -234,4 +234,6 @@ source "drivers/uwb-sr100/Kconfig"
 
 source "drivers/kernelsu/Kconfig"
 
+source "drivers/cpufreq_bouncing/Kconfig"
+
 endmenu
