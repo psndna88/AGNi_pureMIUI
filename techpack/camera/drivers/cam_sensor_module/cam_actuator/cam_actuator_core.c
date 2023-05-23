@@ -307,11 +307,13 @@ int32_t cam_actuator_apply_request(struct cam_req_mgr_apply_request *apply)
 		a_ctrl->i2c_data.per_frame[request_id].request_id) &&
 		(a_ctrl->i2c_data.per_frame[request_id].is_settings_valid)
 		== 1) {
-		if (get_hw_version_platform() == HARDWARE_PROJECT_K9E ||
-				get_hw_version_platform() == HARDWARE_PROJECT_M20) {
-			// For macro camera
+		if (get_hw_version_platform() == HARDWARE_PROJECT_K9E) {
 			if ((a_ctrl->setting_apply_state == ACT_APPLY_SETTINGS_LATER) && (apply->request_id == 13))
 				usleep_range(10000, 10010);
+		}
+		if (get_hw_version_platform() == HARDWARE_PROJECT_M20) {
+			if ((a_ctrl->setting_apply_state == ACT_APPLY_SETTINGS_LATER) && (apply->request_id == 13))
+				usleep_range(3000, 3010);
 		}
 		rc = cam_actuator_apply_settings(a_ctrl,
 			&a_ctrl->i2c_data.per_frame[request_id]);
