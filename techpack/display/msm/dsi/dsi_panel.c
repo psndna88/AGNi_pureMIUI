@@ -391,6 +391,10 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
 
+	if (panel->mi_panel_id == 0x4D323000360200) {
+	  mdelay(5);
+	}
+
 	if (gpio_is_valid(panel->reset_config.reset_gpio) &&
 					!panel->reset_gpio_always_on)
 		gpio_set_value(panel->reset_config.reset_gpio, 0);
@@ -1819,6 +1823,9 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"mi,mdss-dsi-timing-switch-dc-hbm-command",
 	"mi,mdss-dsi-nolp-command",
 	"mi,mdss-dsi-crc-off-command",
+	"mi,mdss-dsi-fps-120-gamma-command",
+	"mi,mdss-dsi-fps-90-gamma-command",
+	"mi,mdss-dsi-fps-60-gamma-command",
 	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command",
 	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command",
 	"mi,mdss-dsi-local-hbm-normal-white-750nit-command",
@@ -1907,6 +1914,9 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"mi,mdss-dsi-timing-switch-dc-hbm-command-state",
 	"mi,mdss-dsi-nolp-command-state",
 	"mi,mdss-dsi-crc-off-command-state",
+	"mi,mdss-dsi-fps-120-gamma-command-state",
+	"mi,mdss-dsi-fps-90-gamma-command-state",
+	"mi,mdss-dsi-fps-60-gamma-command-state",
 	"mi,mdss-dsi-local-hbm-normal-white-1000nit-command-state",
 	"mi,mdss-dsi-local-hbm-hlpm-white-1000nit-command-state",
 	"mi,mdss-dsi-local-hbm-normal-white-750nit-command-state",
@@ -3717,6 +3727,14 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		goto error;
 	}
 
+	rc = utils->read_u64(utils->data, "mi,panel-id", &panel->mi_panel_id);
+	if (rc) {
+		panel->mi_panel_id = 0;
+		DSI_INFO("mi,panel-id not specified\n");
+	} else {
+		DSI_INFO("mi,panel-id 0x%llX\n", panel->mi_panel_id);
+	}
+
 	rc = dsi_panel_parse_panel_mode(panel);
 	if (rc) {
 		DSI_ERR("failed to parse panel mode configuration, rc=%d\n",
@@ -4899,6 +4917,45 @@ int dsi_panel_mode_switch_to_vid(struct dsi_panel *panel)
 	return rc;
 }
 
+int dsi_panel_gamma_switch(struct dsi_panel *panel)
+{
+    int rc = 0;
+
+    if (panel->cached_fps == panel->cur_mode->timing.refresh_rate) {
+        DSI_DEBUG("[%s] skipped gama update\n", panel->name);
+        return rc;
+    }
+
+    mutex_lock(&panel->panel_lock);
+
+    switch (panel->cur_mode->timing.refresh_rate) {
+        case 120:
+            rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_FPS_120_GAMMA);
+            break;
+        case 90:
+            rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_FPS_90_GAMMA);
+            break;
+        case 60:
+            rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_FPS_60_GAMMA);
+            break;
+        default:
+            DSI_ERR("[%s] unsupported refresh rate: %d\n", panel->name,
+                    panel->cur_mode->timing.refresh_rate);
+            rc = -EINVAL; // or another appropriate error code
+            break;
+    }
+
+    if (rc)
+        DSI_ERR("[%s] failed to send DSI_CMD_SET_MI_FPS_GAMMA cmds, rc=%d\n",
+               panel->name, rc);
+
+    mutex_unlock(&panel->panel_lock);
+
+    panel->cached_fps = panel->cur_mode->timing.refresh_rate;
+
+    return rc;
+}
+
 int dsi_panel_switch(struct dsi_panel *panel)
 {
 	int rc = 0;
@@ -5015,6 +5072,11 @@ error:
 				panel->name, rc);
 		}
 	}
+
+	if (panel->mi_panel_id == 0x4D323000360200) {
+		dsi_panel_gamma_switch(panel);
+	}
+
 	return rc;
 }
 
