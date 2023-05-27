@@ -517,7 +517,7 @@ struct sde_mdss_color {
  * Define bit masks for h/w logging.
  */
 #define SDE_DBG_MASK_NONE     (1 << 0)
-#define SDE_DBG_MASK_CDM      (1 << 1)
+/* #define SDE_DBG_MASK_CDM      (1 << 1)
 #define SDE_DBG_MASK_DSPP     (1 << 2)
 #define SDE_DBG_MASK_INTF     (1 << 3)
 #define SDE_DBG_MASK_LM       (1 << 4)
@@ -534,7 +534,25 @@ struct sde_mdss_color {
 #define SDE_DBG_MASK_UIDLE    (1 << 15)
 #define SDE_DBG_MASK_SID      (1 << 15)
 #define SDE_DBG_MASK_QDSS     (1 << 16)
-#define SDE_DBG_MASK_VDC      (1 << 17)
+#define SDE_DBG_MASK_VDC      (1 << 17) */
+#define SDE_DBG_MASK_CDM      (1 << 0)
+#define SDE_DBG_MASK_DSPP     (1 << 0)
+#define SDE_DBG_MASK_INTF     (1 << 0)
+#define SDE_DBG_MASK_LM       (1 << 0)
+#define SDE_DBG_MASK_CTL      (1 << 0)
+#define SDE_DBG_MASK_PINGPONG (1 << 0)
+#define SDE_DBG_MASK_SSPP     (1 << 0)
+#define SDE_DBG_MASK_WB       (1 << 0)
+#define SDE_DBG_MASK_TOP      (1 << 0)
+#define SDE_DBG_MASK_VBIF     (1 << 0)
+#define SDE_DBG_MASK_DSC      (1 << 0)
+#define SDE_DBG_MASK_ROT      (1 << 0)
+#define SDE_DBG_MASK_DS       (1 << 0)
+#define SDE_DBG_MASK_REGDMA   (1 << 0)
+#define SDE_DBG_MASK_UIDLE    (1 << 0)
+#define SDE_DBG_MASK_SID      (1 << 0)
+#define SDE_DBG_MASK_QDSS     (1 << 0)
+#define SDE_DBG_MASK_VDC      (1 << 0)
 
 /**
  * struct sde_hw_cp_cfg: hardware dspp/lm feature payload.
