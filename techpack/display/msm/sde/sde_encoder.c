@@ -44,25 +44,10 @@
 #include "sde_encoder_dce.h"
 #include "sde_vm.h"
 
-#define SDE_DEBUG_ENC(e, fmt, ...) SDE_DEBUG("enc%d " fmt,\
-		(e) ? (e)->base.base.id : -1, ##__VA_ARGS__)
-
-#define SDE_ERROR_ENC(e, fmt, ...) SDE_ERROR("enc%d " fmt,\
-		(e) ? (e)->base.base.id : -1, ##__VA_ARGS__)
-
-#define SDE_DEBUG_PHYS(p, fmt, ...) SDE_DEBUG("enc%d intf%d pp%d " fmt,\
-		(p) ? (p)->parent->base.id : -1, \
-		(p) ? (p)->intf_idx - INTF_0 : -1, \
-		(p) ? ((p)->hw_pp ? (p)->hw_pp->idx - PINGPONG_0 : -1) : -1, \
-		##__VA_ARGS__)
-
-#define SDE_ERROR_PHYS(p, fmt, ...) SDE_ERROR("enc%d intf%d pp%d " fmt,\
-		(p) ? (p)->parent->base.id : -1, \
-		(p) ? (p)->intf_idx - INTF_0 : -1, \
-		(p) ? ((p)->hw_pp ? (p)->hw_pp->idx - PINGPONG_0 : -1) : -1, \
-		##__VA_ARGS__)
-
-
+#define SDE_DEBUG_ENC(e, fmt, ...)
+#define SDE_ERROR_ENC(e, fmt, ...)
+#define SDE_DEBUG_PHYS(p, fmt, ...)
+#define SDE_ERROR_PHYS(p, fmt, ...)
 
 #define MISR_BUFF_SIZE			256
 
