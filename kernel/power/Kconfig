@@ -328,3 +328,8 @@ config	BOEFFLA_WL_BLOCKER
 		bool "Boeffla generic wakelock blocker driver"
 		depends on PM
 		default y
+
+config	BOEFFLA_WL_BLOCKER_APPLY_DEFAULT_BLOCKLIST
+		bool "apply wakelock blocklist by default"
+		depends on BOEFFLA_WL_BLOCKER
+		default n
