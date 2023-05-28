@@ -1516,6 +1516,7 @@ int geni_se_iommu_free_buf(struct device *wrapper_dev, dma_addr_t *iova,
 }
 EXPORT_SYMBOL(geni_se_iommu_free_buf);
 
+#ifdef CONFIG_IPC_LOGGING
 /**
  * geni_se_dump_dbg_regs() - Print relevant registers that capture most
  *			accurately the state of an SE.
@@ -1600,6 +1601,9 @@ void geni_se_dump_dbg_regs(struct se_geni_rsc *rsc, void __iomem *base,
 	"dma_txirq_en:0x%x, dma_rxirq_en:0x%x geni_m_irq_en:0x%x geni_s_irq_en:0x%x\n",
 	geni_dma_tx_irq_en, geni_dma_rx_irq_en, geni_m_irq_en, geni_s_irq_en);
 }
+#else
+void geni_se_dump_dbg_regs(struct se_geni_rsc *rsc, void __iomem *base,	void *ipc) { }
+#endif
 EXPORT_SYMBOL(geni_se_dump_dbg_regs);
 
 static const struct of_device_id geni_se_dt_match[] = {

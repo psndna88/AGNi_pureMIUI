@@ -34,11 +34,7 @@
 #define IDR_KEY(client)		\
 	IDR_KEY_GEN((client)->data.svid, (client)->port_index)
 
-#define altmode_dbg(fmt, ...) \
-	do { \
-		ipc_log_string(altmode_ipc_log, fmt, ##__VA_ARGS__); \
-		pr_debug(fmt, ##__VA_ARGS__); \
-	} while (0)
+#define altmode_dbg(fmt, ...)
 
 struct usbc_notify_ind_msg {
 	struct pmic_glink_hdr	hdr;
@@ -134,7 +130,9 @@ static LIST_HEAD(probe_notify_list);
 static DEFINE_MUTEX(notify_lock);
 
 static void altmode_send_pan_ack(struct work_struct *work);
+#ifdef CONFIG_IPC_LOGGING
 static void *altmode_ipc_log;
+#endif
 
 static struct altmode_dev *to_altmode_device(struct device_node *amdev_node)
 {
@@ -737,9 +735,11 @@ static int altmode_probe(struct platform_device *pdev)
 		goto unreg_pmic_glink;
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	altmode_ipc_log = ipc_log_context_create(NUM_LOG_PAGES, "altmode", 0);
 	if (!altmode_ipc_log)
 		dev_warn(dev, "Error in creating ipc_log_context\n");
+#endif
 
 	altmode_notify_clients(amdev);
 
@@ -779,8 +779,10 @@ static int altmode_remove(struct platform_device *pdev)
 		list_del(&client->c_node);
 	mutex_unlock(&amdev->client_lock);
 
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(altmode_ipc_log);
 	altmode_ipc_log = NULL;
+#endif
 
 	rc = pmic_glink_unregister_client(amdev->pgclient);
 	if (rc < 0)

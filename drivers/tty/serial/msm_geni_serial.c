@@ -118,9 +118,11 @@
 #define WAIT_XFER_MAX_ITER	(2)
 #define WAIT_XFER_MAX_TIMEOUT_US	(150)
 #define WAIT_XFER_MIN_TIMEOUT_US	(100)
+#ifdef CONFIG_IPC_LOGGING
 #define IPC_LOG_PWR_PAGES	(10)
 #define IPC_LOG_MISC_PAGES	(30)
 #define IPC_LOG_TX_RX_PAGES	(30)
+#endif
 #define DATA_BYTES_PER_LINE	(32)
 
 #define M_IRQ_BITS		(M_RX_FIFO_WATERMARK_EN | M_RX_FIFO_LAST_EN |\
@@ -145,7 +147,7 @@
  */
 #define POLL_ITERATIONS		1000
 
-#define IPC_LOG_MSG(ctx, x...) ipc_log_string(ctx, x)
+#define IPC_LOG_MSG(ctx, x...)
 #define DMA_RX_BUF_SIZE		(2048)
 #define UART_CONSOLE_RX_WM	(2)
 
@@ -476,6 +478,7 @@ static ssize_t loopback_store(struct device *dev,
 
 static DEVICE_ATTR_RW(loopback);
 
+#ifdef CONFIG_IPC_LOGGING
 static void dump_ipc(void *ipc_ctx, char *prefix, char *string,
 						u64 addr, int size)
 
@@ -489,6 +492,9 @@ static void dump_ipc(void *ipc_ctx, char *prefix, char *string,
 	ipc_log_string(ipc_ctx, "%s[0x%.10x:%d] : %s", prefix,
 					(unsigned int)addr, size, buf);
 }
+#else
+static void dump_ipc(void *ipc_ctx, char *prefix, char *string, u64 addr, int size) { }
+#endif
 
 static bool device_pending_suspend(struct uart_port *uport)
 {
@@ -561,8 +567,10 @@ static int wait_for_transfers_inflight(struct uart_port *uport)
 				     __func__);
 			return -EBUSY;
 		}
+#ifdef CONFIG_IPC_LOGGING
 		geni_se_dump_dbg_regs(&port->serial_rsc,
 				uport->membase, port->ipc_log_misc);
+#endif
 	}
 	return 0;
 }
@@ -2942,6 +2950,7 @@ static void console_unregister(struct uart_driver *drv)
 }
 #endif /* (CONFIG_SERIAL_MSM_GENI_CONSOLE) || defined(CONFIG_CONSOLE_POLL) */
 
+#ifdef CONFIG_DEBUG_FS
 static void msm_geni_serial_debug_init(struct uart_port *uport, bool console)
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
@@ -3009,6 +3018,9 @@ static void msm_geni_serial_debug_init(struct uart_port *uport, bool console)
 		}
 	}
 }
+#else
+static void msm_geni_serial_debug_init(struct uart_port *uport, bool console) { }
+#endif
 
 static void msm_geni_serial_cons_pm(struct uart_port *uport,
 		unsigned int new_state, unsigned int old_state)
