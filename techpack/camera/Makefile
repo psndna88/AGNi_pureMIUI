@@ -92,10 +92,10 @@ LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/sm6150cameraconf.h
 endif
 
-ifeq ($(TARGET_PRODUCT), haydn)
+#ifeq ($(TARGET_PRODUCT), haydn)
 LINUXINCLUDE    += \
 		-include $(srctree)/techpack/camera/config/haydncameraconf.h
-endif
+#endif
 
 endif
 
