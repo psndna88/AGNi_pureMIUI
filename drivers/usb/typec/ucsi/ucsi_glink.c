@@ -33,11 +33,7 @@
 #define NUM_LOG_PAGES			10
 #define UCSI_WAIT_TIME_MS		5000
 
-#define ucsi_dbg(fmt, ...) \
-	do { \
-		ipc_log_string(ucsi_ipc_log, fmt, ##__VA_ARGS__); \
-		pr_debug(fmt, ##__VA_ARGS__); \
-	} while (0)
+#define ucsi_dbg(fmt, ...)
 
 struct ucsi_read_buf_req_msg {
 	struct pmic_glink_hdr	hdr;
@@ -604,14 +600,18 @@ static int ucsi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, udev);
 	udev->dev = dev;
 
+#ifdef CONFIG_IPC_LOGGING
 	ucsi_ipc_log = ipc_log_context_create(NUM_LOG_PAGES, "ucsi", 0);
 	if (!ucsi_ipc_log)
 		dev_warn(dev, "Error in creating ipc_log_context\n");
+#endif
 
 	rc = ucsi_setup(udev);
 	if (rc) {
+#ifdef CONFIG_IPC_LOGGING
 		ipc_log_context_destroy(ucsi_ipc_log);
 		ucsi_ipc_log = NULL;
+#endif
 		pmic_glink_unregister_client(udev->client);
 	}
 
@@ -633,8 +633,10 @@ static int ucsi_remove(struct platform_device *pdev)
 		dev_err(dev, "pmic_glink_unregister_client failed rc=%d\n",
 			rc);
 
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(ucsi_ipc_log);
 	ucsi_ipc_log = NULL;
+#endif
 
 	return rc;
 }

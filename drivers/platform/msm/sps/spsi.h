@@ -42,10 +42,12 @@
 	((sizeof(int) == sizeof(long)) ? 0 : (SPSRM_CLEAR << 32))
 
 #define MAX_MSG_LEN 80
+#ifdef CONFIG_IPC_LOGGING
 #define SPS_IPC_LOGPAGES 10
 #define SPS_IPC_REG_DUMP_FACTOR 3
 #define SPS_IPC_DEFAULT_LOGLEVEL 3
 #define SPS_IPC_MAX_LOGLEVEL 4
+#endif
 
 /* Connection mapping control struct */
 struct sps_rm {
@@ -88,6 +90,7 @@ struct sps_drv {
 	/* Connection control state */
 	struct sps_rm connection_ctrl;
 
+#ifdef CONFIG_IPC_LOGGING
 	void *ipc_log0;
 	void *ipc_log1;
 	void *ipc_log2;
@@ -95,6 +98,7 @@ struct sps_drv {
 	void *ipc_log4;
 
 	u32 ipc_loglevel;
+#endif
 };
 
 extern struct sps_drv *sps;
@@ -216,13 +220,14 @@ extern u8 print_limit_option;
 		}	\
 	} while (0)
 #else
-#define SPS_DBG3(dev, msg, args...)             pr_debug(msg, ##args)
-#define SPS_DBG2(dev, msg, args...)             pr_debug(msg, ##args)
-#define SPS_DBG1(dev, msg, args...)             pr_debug(msg, ##args)
-#define SPS_DBG(dev, msg, args...)              pr_debug(msg, ##args)
-#define SPS_INFO(dev, msg, args...)             pr_info(msg, ##args)
-#define SPS_ERR(dev, msg, args...)              pr_err(msg, ##args)
-#define SPS_DUMP(msg, args...)                  pr_info(msg, ##args)
+#define SPS_DBG3(dev, msg, args...)
+#define SPS_DBG2(dev, msg, args...)
+#define SPS_DBG1(dev, msg, args...)
+#define SPS_DBG(dev, msg, args...)
+#define SPS_INFO(dev, msg, args...)
+#define SPS_ERR(dev, msg, args...)
+#define SPS_DUMP(msg, args...)
+#define SPS_IPC(idx, dev, msg, ...)
 #endif
 
 /* End point parameters */
