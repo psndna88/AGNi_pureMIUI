@@ -189,7 +189,7 @@ ifeq ($(strip ${QCA_DFS_COMPONENT_ENABLE}),1)
 ccflags-y+= -DDFS_COMPONENT_ENABLE
 endif
 
-obj-m += qca_spectral.o
+obj-y += qca_spectral.o
 
 ccflags-y+= $(INCS) $(COPTS) -DSPECTRAL_USE_NETLINK_SOCKETS=1 -DWLAN_SPECTRAL_ENABLE=1
 ccflags-y+= -DSPECTRAL_USE_NL_BCAST=1

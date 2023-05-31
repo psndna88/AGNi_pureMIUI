@@ -1,4 +1,4 @@
-KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
+KERNEL_SRC ?= ../../../
 
 # The Make variable $(M) must point to the directory that contains the module
 # source code (which includes this Makefile). It can either be an absolute or a
@@ -22,11 +22,13 @@ KBUILD_OPTIONS += MODNAME?=wlan
 endif
 
 #By default build for CLD
-WLAN_SELECT := CONFIG_QCA_CLD_WLAN=m
+WLAN_SELECT := CONFIG_QCA_CLD_WLAN=y
 KBUILD_OPTIONS += CONFIG_QCA_WIFI_ISOC=0
 KBUILD_OPTIONS += CONFIG_QCA_WIFI_2_0=1
 KBUILD_OPTIONS += $(WLAN_SELECT)
 KBUILD_OPTIONS += $(KBUILD_EXTRA) # Extra config if any
+subdir-ccflags-y  += -Os
+subdir-ccflags-y  += -foptimize-sibling-calls
 
 all:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)

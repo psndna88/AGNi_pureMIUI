@@ -114,7 +114,7 @@ endif
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/iot_sim/core
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/iot_sim/dispatcher/inc
 
-obj-m += qca_iot_sim.o
+obj-y += qca_iot_sim.o
 
 ccflags-y+= $(INCS) $(COPTS)
 
