@@ -1,5 +1,5 @@
-obj-m += rmnet_core.o
-obj-m += rmnet_ctl.o
+obj-y += rmnet_core.o
+obj-y += rmnet_ctl.o
 rmnet_core-y := rmnet_config.o rmnet_handlers.o rmnet_descriptor.o \
 	rmnet_genl.o rmnet_map_command.o rmnet_map_data.o rmnet_vnd.o\
 	qmi_rmnet.o wda_qmi.o dfc_qmi.o dfc_qmap.o
