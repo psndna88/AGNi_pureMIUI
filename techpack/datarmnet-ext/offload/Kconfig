@@ -4,7 +4,7 @@
 
 menuconfig RMNET_OFFLOAD
     tristate "Rmnet offload support"
-    default m
+    default y
     depends on RMNET_CORE
     ---help---
         Offload support for the RmNet driver

@@ -3,7 +3,7 @@
 #
 
 menuconfig RMNET_CORE
-	default m 
+	default y
 	select GRO_CELLS
 	---help---
 	  If you select this, you will enable the RMNET module which is used
@@ -12,7 +12,7 @@ menuconfig RMNET_CORE
 	  any IP mode physical device.
 
 menuconfig RMNET_CTL
-	default m
+	default y
 	---help---
 	  Enable the RMNET CTL module which is used for handling QMAP commands
 	  for flow control purposes.
