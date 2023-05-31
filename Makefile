@@ -368,7 +368,7 @@ include scripts/subarch.include
 # Alternatively CROSS_COMPILE can be set in the environment.
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
-ARCH		?= $(SUBARCH)
+ARCH		:= arm64
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -398,6 +398,7 @@ endif
 KCONFIG_CONFIG	?= .config
 export KCONFIG_CONFIG
 
+CCACHE := ccache
 # SHELL used by kbuild
 CONFIG_SHELL := sh
 
@@ -405,43 +406,26 @@ HOST_LFS_CFLAGS := $(shell getconf LFS_CFLAGS 2>/dev/null)
 HOST_LFS_LDFLAGS := $(shell getconf LFS_LDFLAGS 2>/dev/null)
 HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
-ifneq ($(LLVM),)
-HOSTCC	= clang
-HOSTCXX	= clang++
-else
-HOSTCC	= gcc
-HOSTCXX	= g++
-endif
-KBUILD_HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
-		-fomit-frame-pointer -std=gnu89 -Wno-deprecated-declarations $(HOST_LFS_CFLAGS) \
+HOSTCC	= $(CCACHE) clang
+HOSTCXX	= $(CCACHE) clang++
+KBUILD_HOSTCFLAGS   := -Wmissing-prototypes -Wstrict-prototypes -O2 \
+		-fomit-frame-pointer -Wno-visibility -std=gnu89 -Wno-deprecated-declarations $(HOST_LFS_CFLAGS) \
 		$(HOSTCFLAGS)
-KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS)
+KBUILD_HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS) $(HOSTCXXFLAGS) -flto=$(BUILDJOBS)
 KBUILD_HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS) $(HOSTLDFLAGS)
 KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 
 # Make variables (CC, etc...)
 CPP		= $(CC) -E
-ifneq ($(LLVM),)
-CC		= clang
-LD		= ld.lld
-AR		= llvm-ar
-NM		= llvm-nm
-OBJCOPY		= llvm-objcopy
-OBJDUMP		= llvm-objdump
-READELF		= llvm-readelf
-OBJSIZE		= llvm-size
-STRIP		= llvm-strip
-else
-CC		= $(CROSS_COMPILE)gcc
-LD		= $(CROSS_COMPILE)ld
-AR		= $(CROSS_COMPILE)ar
-NM		= $(CROSS_COMPILE)nm
-OBJCOPY		= $(CROSS_COMPILE)objcopy
-OBJDUMP		= $(CROSS_COMPILE)objdump
-READELF		= $(CROSS_COMPILE)readelf
-OBJSIZE		= $(CROSS_COMPILE)size
-STRIP		= $(CROSS_COMPILE)strip
-endif
+REAL_CC	= $(CCACHE) $(CROSS_COMPILE)clang
+LD		= $(CROSS_COMPILE)ld.lld
+AR		= $(CROSS_COMPILE)llvm-ar
+NM		= $(CROSS_COMPILE)llvm-nm
+OBJCOPY		= $(CROSS_COMPILE)llvm-objcopy
+OBJDUMP		= $(CROSS_COMPILE)llvm-objdump
+READELF		= $(CROSS_COMPILE)llvm-readelf
+OBJSIZE		= $(CROSS_COMPILE)llvm-size
+STRIP		= $(CROSS_COMPILE)llvm-strip
 PAHOLE		= pahole
 LEX		= flex
 YACC		= bison
@@ -496,11 +480,11 @@ LINUXINCLUDE    := \
 		$(USERINCLUDE)
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
-KBUILD_CFLAGS   := -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -Wundef -Wno-strict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE \
-		   -Werror=implicit-function-declaration -Werror=implicit-int \
-		   -Werror=return-type -Wno-format-security \
-		   -std=gnu89 -Wno-deprecated-declarations
+		   -Werror=implicit-function-declaration -Wno-error=implicit-int \
+		   -Werror=return-type -Wno-format-security -Wno-unused-variable -Wno-unused-function \
+		   -std=gnu89 -Wno-misleading-indentation -Wno-pointer-to-int-cast -Wno-deprecated-declarations
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -605,6 +589,9 @@ GCC_TOOLCHAIN_DIR := $(dir $(shell which $(CROSS_COMPILE)elfedit))
 CLANG_FLAGS	+= --prefix=$(GCC_TOOLCHAIN_DIR)$(notdir $(CROSS_COMPILE))
 endif
 CLANG_FLAGS	+= -Werror=unknown-warning-option
+CLANG_FLAGS	+= $(call cc-option, -Wno-misleading-indentation)
+CLANG_FLAGS	+= $(call cc-option, -Wno-bool-operation)
+CLANG_FLAGS	+= $(call cc-option, -Wno-unsequenced)
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
@@ -711,8 +698,8 @@ export RETPOLINE_VDSO_CFLAGS
 ifdef CONFIG_LTO_CLANG
 # LTO produces LLVM IR instead of object files. Use llvm-ar and llvm-nm, so we
 # can process these.
-AR		:= llvm-ar
-LLVM_NM		:= llvm-nm
+AR		:= $(CROSS_COMPILE)llvm-ar
+LLVM_NM		:= $(CROSS_COMPILE)llvm-nm
 export LLVM_NM
 endif
 
@@ -760,11 +747,17 @@ include/config/auto.conf:
 endif # may-sync-config
 endif # need-config
 
-KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
-KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
+KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks)
+KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, unknown-warning-option)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-format)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-maybe-uninitialized)
+KBUILD_CFLAGS  += $(call cc-option, -Wno-psabi)
 KBUILD_CFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 KBUILD_CPPFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 
@@ -774,6 +767,16 @@ else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3
 KBUILD_CFLAGS += -O3
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS += -Os
+endif
+
+# Tell compiler to tune the performance of the code for a specified
+# target processor
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS += -mcpu=cortex-a78.cortex-a55 -march=armv8.4-a+crc+crypto
+KBUILD_AFLAGS += -mcpu=cortex-a78.cortex-a55 -march=armv8.4-a+crc+crypto
+else ifeq ($(cc-name),clang)
+KBUILD_CFLAGS += -mcpu=cortex-a55 -march=armv8.4-a+crc+crypto
+KBUILD_AFLAGS += -mcpu=cortex-a55 -march=armv8.4-a+crc+crypto
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
@@ -807,12 +810,28 @@ ifdef CONFIG_CC_IS_CLANG
 KBUILD_CPPFLAGS += -Qunused-arguments
 KBUILD_CFLAGS += -Wno-format-invalid-specifier
 KBUILD_CFLAGS += -Wno-gnu
+KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
+KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
+KBUILD_CFLAGS += $(call cc-disable-warning, address-of-packed-member)
+KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
+KBUILD_CFLAGS += $(call cc-disable-warning, excess-initializers)
+KBUILD_CFLAGS += $(call cc-disable-warning, declaration-after-statement)
+KBUILD_CFLAGS += $(call cc-disable-warning, int-conversion)
+KBUILD_CFLAGS += $(call cc-disable-warning, strlcpy-strlcat-size)
+KBUILD_CFLAGS += $(call cc-option, -Wno-undefined-optimized)
+KBUILD_CFLAGS += $(call cc-option, -Wno-tautological-constant-out-of-range-compare)
+KBUILD_CFLAGS += $(call cc-option, -mllvm -disable-struct-const-merge)
+KBUILD_CFLAGS += $(call cc-option, -Wno-sometimes-uninitialized)
+KBUILD_CFLAGS += $(call cc-disable-warning, void-pointer-to-enum-cast)
+KBUILD_CFLAGS += $(call cc-disable-warning, align-mismatch)
+KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks)
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
 KBUILD_CFLAGS += -Wno-tautological-compare
 # CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
 # source of a reference will be _MergedGlobals and not on of the whitelisted names.
 # See modpost pattern 2
 KBUILD_CFLAGS += -mno-global-merge
+KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
 KBUILD_CFLAGS += $(call cc-disable-warning, undefined-optimized)
 KBUILD_CFLAGS += -fno-builtin
 else
@@ -820,7 +839,7 @@ else
 # Warn about unmarked fall-throughs in switch statement.
 # Disabled for clang while comment to attribute conversion happens and
 # https://github.com/ClangBuiltLinux/linux/issues/636 is discussed.
-KBUILD_CFLAGS += $(call cc-option,-Wimplicit-fallthrough,)
+KBUILD_CFLAGS += $(call cc-option,-Wimplicit-fallthrough)
 endif
 
 # These warnings generated too much noise in a regular build.
@@ -859,14 +878,14 @@ DEBUG_CFLAGS	:= $(call cc-option, -fno-var-tracking-assignments)
 
 ifdef CONFIG_DEBUG_INFO
 ifdef CONFIG_DEBUG_INFO_SPLIT
-DEBUG_CFLAGS	+= -gsplit-dwarf
+DEBUG_CFLAGS	+= -gsplit-dwarf-4
 else
 DEBUG_CFLAGS	+= -g
 endif
 ifeq ($(LLVM_IAS),1)
 KBUILD_AFLAGS	+= -g
 else
-KBUILD_AFLAGS	+= -Wa,-gdwarf-2
+KBUILD_AFLAGS	+= -Wa,-gdwarf-4
 endif
 endif
 
@@ -996,6 +1015,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, stringop-truncation)
 KBUILD_CFLAGS += $(call cc-disable-warning, zero-length-bounds)
 KBUILD_CFLAGS += $(call cc-disable-warning, array-bounds)
 KBUILD_CFLAGS += $(call cc-disable-warning, stringop-overflow)
+KBUILD_CFLAGS += $(call cc-disable-warning, visibility)
 
 # Another good warning that we'll want to enable eventually
 KBUILD_CFLAGS += $(call cc-disable-warning, restrict)
@@ -1593,8 +1613,8 @@ distclean: mrproper
 	$(call cmd,rmfiles)
 	@find $(srctree) $(RCS_FIND_IGNORE) \
 		\( -name '*.orig' -o -name '*.rej' -o -name '*~' \
-		-o -name '*.bak' -o -name '#*#' -o -name '*%' \
-		-o -name 'core' \) \
+		-o -name '*.bak' -o -name '#*#' -o -name '*%' -o -name '.*.orig' \
+		-o -name '.*.rej' -o -name '*%'  -o -name 'core' \) \
 		-type f -print | xargs rm -f
 
 
