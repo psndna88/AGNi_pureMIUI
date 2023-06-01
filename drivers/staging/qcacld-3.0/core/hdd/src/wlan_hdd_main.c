@@ -244,6 +244,30 @@ static struct cdev wlan_hdd_state_cdev;
 static struct class *class;
 static dev_t device;
 static bool hdd_loaded = false;
+static struct gwlan_loader *wlan_loader;
+static ssize_t wlan_boot_cb(struct kobject *kobj,
+			    struct kobj_attribute *attr,
+			    const char *buf, size_t count);
+struct gwlan_loader {
+	bool loaded_state;
+	struct kobject *boot_wlan_obj;
+	struct attribute_group *attr_group;
+};
+
+static struct kobj_attribute wlan_boot_attribute =
+	__ATTR(boot_wlan, 0220, NULL, wlan_boot_cb);
+
+static struct attribute *attrs[] = {
+	&wlan_boot_attribute.attr,
+	NULL,
+};
+#define MODULE_INITIALIZED 1
+
+#ifdef MULTI_IF_NAME
+#define WLAN_LOADER_NAME "boot_" MULTI_IF_NAME
+#else
+#define WLAN_LOADER_NAME "boot_wlan"
+#endif
 
 /* the Android framework expects this param even though we don't use it */
 #define BUF_LEN 20
@@ -16744,8 +16768,6 @@ static void __hdd_inform_wifi_off(void)
 	ucfg_blm_wifi_off(hdd_ctx->pdev);
 }
 
-int hdd_driver_load(void);
-
 static void hdd_inform_wifi_off(void)
 {
 	int ret;
@@ -16772,6 +16794,37 @@ void hdd_init_start_completion(void)
 	INIT_COMPLETION(wlan_start_comp);
 }
 
+#if defined CFG80211_USER_HINT_CELL_BASE_SELF_MANAGED || \
+                    (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0))
+static void hdd_inform_wifi_on(void)
+{
+	int ret;
+	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
+	struct osif_psoc_sync *psoc_sync;
+
+	hdd_nofl_debug("inform regdomain for wifi on");
+	ret = wlan_hdd_validate_context(hdd_ctx);
+	if (ret)
+		return;
+	if (!wlan_hdd_validate_modules_state(hdd_ctx))
+		return;
+	if (!hdd_ctx->wiphy)
+		return;
+	ret = osif_psoc_sync_op_start(wiphy_dev(hdd_ctx->wiphy), &psoc_sync);
+	if (ret)
+		return;
+	if (hdd_ctx->wiphy->registered)
+		hdd_send_wiphy_regd_sync_event(hdd_ctx);
+
+	osif_psoc_sync_op_stop(psoc_sync);
+}
+#else
+static void hdd_inform_wifi_on(void)
+{
+}
+#endif
+
+int hdd_driver_load(void);
 static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 						const char __user *user_buf,
 						size_t count,
@@ -16783,6 +16836,7 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	int ret;
 	unsigned long rc;
 	struct hdd_context *hdd_ctx;
+	bool turning_on = false;
 
 	if (copy_from_user(buf, user_buf, 3)) {
 		pr_err("Failed to read buffer\n");
@@ -16795,8 +16849,10 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		goto exit;
 	}
 
-	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) == 0)
+	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) == 0) {
 		pr_info("Wifi Turning On from UI\n");
+		turning_on = true;
+	}
 
 	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) != 0) {
 		pr_err("Invalid value received from framework");
@@ -16809,6 +16865,9 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 			goto exit;
 		}
 	}
+
+	hdd_info("is_driver_loaded %d is_driver_recovering %d",
+		 cds_is_driver_loaded(), cds_is_driver_recovering());
 
 	if (!cds_is_driver_loaded() || cds_is_driver_recovering()) {
 		rc = wait_for_completion_timeout(&wlan_start_comp,
@@ -16829,6 +16888,9 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 		hdd_psoc_idle_timer_stop(hdd_ctx);
 
 exit:
+	if (turning_on)
+		hdd_inform_wifi_on();
+
 	return count;
 }
 
@@ -17811,6 +17873,116 @@ EXPORT_SYMBOL(hdd_driver_unload);
 #endif
 
 /**
+ * wlan_boot_cb() - Wlan boot callback
+ * @kobj:      object whose directory we're creating the link in.
+ * @attr:      attribute the user is interacting with
+ * @buff:      the buffer containing the user data
+ * @count:     number of bytes in the buffer
+ *
+ * This callback is invoked when the fs is ready to start the
+ * wlan driver initialization.
+ *
+ * Return: 'count' on success or a negative error code in case of failure
+ */
+static ssize_t wlan_boot_cb(struct kobject *kobj,
+			    struct kobj_attribute *attr,
+			    const char *buf,
+			    size_t count)
+{
+
+	wlan_loader->loaded_state = MODULE_INITIALIZED;
+
+	return count;
+}
+
+/**
+ * hdd_sysfs_cleanup() - cleanup sysfs
+ *
+ * Return: None
+ *
+ */
+static void hdd_sysfs_cleanup(void)
+{
+	/* remove from group */
+	if (wlan_loader->boot_wlan_obj && wlan_loader->attr_group)
+		sysfs_remove_group(wlan_loader->boot_wlan_obj,
+				   wlan_loader->attr_group);
+
+	/* unlink the object from parent */
+	kobject_del(wlan_loader->boot_wlan_obj);
+
+	/* free the object */
+	kobject_put(wlan_loader->boot_wlan_obj);
+
+	kfree(wlan_loader->attr_group);
+	kfree(wlan_loader);
+
+	wlan_loader = NULL;
+}
+
+/**
+ * wlan_init_sysfs() - Creates the sysfs to be invoked when the fs is
+ * ready
+ *
+ * This is creates the syfs entry boot_wlan. Which shall be invoked
+ * when the filesystem is ready.
+ *
+ * QDF API cannot be used here since this function is called even before
+ * initializing WLAN driver.
+ *
+ * Return: 0 for success, errno on failure
+ */
+static int wlan_init_sysfs(void)
+{
+	int ret = -ENOMEM;
+
+	wlan_loader = kzalloc(sizeof(*wlan_loader), GFP_KERNEL);
+	if (!wlan_loader)
+		return -ENOMEM;
+
+	wlan_loader->boot_wlan_obj = NULL;
+	wlan_loader->attr_group = kzalloc(sizeof(*(wlan_loader->attr_group)),
+					  GFP_KERNEL);
+	if (!wlan_loader->attr_group)
+		goto error_return;
+
+	wlan_loader->loaded_state = 0;
+	wlan_loader->attr_group->attrs = attrs;
+
+	wlan_loader->boot_wlan_obj = kobject_create_and_add(WLAN_LOADER_NAME,
+							    kernel_kobj);
+	if (!wlan_loader->boot_wlan_obj) {
+		hdd_err("sysfs create and add failed");
+		goto error_return;
+	}
+
+	ret = sysfs_create_group(wlan_loader->boot_wlan_obj,
+				 wlan_loader->attr_group);
+	if (ret) {
+		hdd_err("sysfs create group failed; errno:%d", ret);
+		goto error_return;
+	}
+
+	return 0;
+
+error_return:
+	hdd_sysfs_cleanup();
+
+	return ret;
+}
+
+/**
+ * wlan_deinit_sysfs() - Removes the sysfs created to initialize the wlan
+ *
+ * Return: 0 on success or errno on failure
+ */
+static int wlan_deinit_sysfs(void)
+{
+	hdd_sysfs_cleanup();
+	return 0;
+}
+
+/**
  * hdd_module_init() - Module init helper
  *
  * Module init helper function used by both module and static driver.
@@ -17827,6 +17999,7 @@ static int hdd_module_init(void)
 {
 	int ret;
 
+	ret = wlan_init_sysfs();
 	ret = wlan_hdd_state_ctrl_param_create();
 	if (ret)
 		pr_err("wlan_hdd_state_create:%x\n", ret);
@@ -17850,6 +18023,7 @@ static void __exit hdd_module_exit(void)
 static void __exit hdd_module_exit(void)
 {
 	hdd_driver_unload();
+	wlan_deinit_sysfs();
 }
 #endif
 
