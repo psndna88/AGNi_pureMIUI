@@ -3,5 +3,5 @@
 * Copyright (c) 2020, The Linux Foundation. All rights reserved.
 */
 
-#define CONFIG_IPA_DEBUG 1
-#define CONFIG_IPA_UT 1
+#define CONFIG_IPA_DEBUG 0
+#define CONFIG_IPA_UT 0
