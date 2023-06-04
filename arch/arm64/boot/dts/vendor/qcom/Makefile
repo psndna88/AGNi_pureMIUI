@@ -1,68 +1,8 @@
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-dtbo-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi-overlay.dtbo \
-	lahaina-mtp-overlay.dtbo \
-	cetus-sm8350-overlay.dtbo \
-	star-sm8350-overlay.dtbo \
-	odin-sm8350-overlay.dtbo \
-	venus-sm8350-overlay.dtbo \
-	haydn-sm8350-overlay.dtbo \
-	mars-sm8350-overlay.dtbo \
-	vili-sm8350-overlay.dtbo \
-	lahaina-mtp-hsp-overlay.dtbo \
-	lahaina-cdp-overlay.dtbo \
-	lahaina-qrd-overlay.dtbo \
-	lahaina-atp-overlay.dtbo \
-	lahaina-hdk-overlay.dtbo \
-	lahaina-hhg-overlay.dtbo \
-	lahainap-hhg-hsp-pro-overlay.dtbo \
-	lahaina-qrd-hsp-overlay.dtbo \
-	lahaina-qrd-module-overlay.dtbo \
-	lahainap-mtp-overlay.dtbo \
-	lahainap-cdp-overlay.dtbo \
-	lahainap-atp-overlay.dtbo \
-	lahainap-qrd-overlay.dtbo \
-	lahaina-cdp-v2.2-overlay.dtbo \
-	lahaina-mtp-v2-overlay.dtbo \
-	lahaina-mtp-v2.1-overlay.dtbo \
-	lahaina-mtp-hsp-pro-overlay.dtbo \
-	lahaina-cdp-hsp-pro-overlay.dtbo \
-	lahaina-qrd-hsp-pro-overlay.dtbo
+dtbo-$(CONFIG_ARCH_LAHAINA) += haydn-sm8350-overlay.dtbo
 
-lahaina-rumi-overlay.dtbo-base := lahaina.dtb
-lahaina-mtp-hsp-overlay.dtbo-base := lahaina.dtb
-cetus-sm8350-overlay.dtbo-base := lahaina.dtb
-star-sm8350-overlay.dtbo-base := lahaina.dtb
-odin-sm8350-overlay.dtbo-base := lahaina.dtb
-venus-sm8350-overlay.dtbo-base := lahaina.dtb
 haydn-sm8350-overlay.dtbo-base := lahaina.dtb
-mars-sm8350-overlay.dtbo-base := lahaina.dtb
-vili-sm8350-overlay.dtbo-base := lahaina.dtb
-lahaina-mtp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-cdp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-atp-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-hdk-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-hhg-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahainap-hhg-hsp-pro-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
-lahaina-qrd-hsp-overlay.dtbo-base := lahaina.dtb
-lahaina-qrd-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahaina-qrd-module-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb lahaina-v2.1.dtb
-lahainap-mtp-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
-lahainap-cdp-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
-lahainap-atp-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
-lahainap-qrd-overlay.dtbo-base := lahainap.dtb lahainap-v2.dtb lahainap-v2.1.dtb
-lahaina-cdp-v2.2-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
-lahaina-mtp-v2-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
-lahaina-mtp-v2.1-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
-lahaina-mtp-hsp-pro-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
-lahaina-cdp-hsp-pro-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
-lahaina-qrd-hsp-pro-overlay.dtbo-base := lahaina.dtb lahaina-v2.dtb \
-					lahaina-v2.1.dtb
 else
 dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-mtp-hsp.dtb \
