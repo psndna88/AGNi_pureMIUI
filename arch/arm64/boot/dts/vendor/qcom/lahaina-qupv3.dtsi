@@ -860,7 +860,7 @@
 		interrupts-extended = <&intc GIC_SPI 586 IRQ_TYPE_LEVEL_HIGH>,
 				<&tlmm 71 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,wrapper-core = <&qupv3_2>;
-		qcom,wakeup-byte = <0xFD>;
+/*		qcom,wakeup-byte = <0xFD>; */
 		status = "disabled";
 	};
 
