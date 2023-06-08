@@ -148,6 +148,7 @@ enum htt_dbg_ext_stats_type {
      *           6 bit htt_msdu_flow_stats_tlv
      *           7 bit htt_peer_sched_stats_tlv
      *           8 bit htt_peer_ax_ofdma_stats_tlv
+     *           9 bit htt_peer_be_ofdma_stats_tlv
      *   - config_param2: [Bit31 : Bit0] mac_addr31to0
      *   - config_param3: [Bit15 : Bit0] mac_addr47to32
      *                    [Bit 16] If this bit is set, reset per peer stats
@@ -518,6 +519,24 @@ enum htt_dbg_ext_stats_type {
      *   - htt_pdev_mbssid_ctrl_frame_stats
      */
     HTT_DBG_PDEV_MBSSID_CTRL_FRAME_STATS = 54,
+
+    /** HTT_DBG_SOC_SSR_STATS
+     * Used for non-MLO UMAC recovery stats.
+     * PARAMS:
+     *    - No Params
+     * RESP MSG:
+     *    - htt_umac_ssr_stats_tlv
+     */
+    HTT_DBG_SOC_SSR_STATS = 55,
+
+    /** HTT_DBG_MLO_UMAC_SSR_STATS
+     * Used for MLO UMAC recovery stats.
+     * PARAMS:
+     *    - No Params
+     * RESP MSG:
+     *    - htt_mlo_umac_ssr_stats_tlv
+     */
+    HTT_DBG_MLO_UMAC_SSR_STATS = 56,
 
 
     /* keep this last */
@@ -1858,6 +1877,7 @@ typedef enum {
     HTT_MSDU_FLOW_STATS_TLV     = 6,
     HTT_PEER_SCHED_STATS_TLV    = 7,
     HTT_PEER_AX_OFDMA_STATS_TLV = 8,
+    HTT_PEER_BE_OFDMA_STATS_TLV = 9,
 
     HTT_PEER_STATS_MAX_TLV      = 31,
 } htt_peer_stats_tlv_enum;
@@ -1901,7 +1921,19 @@ typedef struct {
     /* Last updated value of DL and UL queue depths for each peer per AC */
     A_UINT32 last_updated_dl_qdepth[HTT_NUM_AC_WMM];
     A_UINT32 last_updated_ul_qdepth[HTT_NUM_AC_WMM];
+    /* Per peer Manual 11ax UL OFDMA trigger and trigger error counts */
+    A_UINT32 ax_manual_ulofdma_trig_count;
+    A_UINT32 ax_manual_ulofdma_trig_err_count;
 } htt_peer_ax_ofdma_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 peer_id;
+    /* Per peer Manual 11be UL OFDMA trigger and trigger error counts */
+    A_UINT32 be_manual_ulofdma_trig_count;
+    A_UINT32 be_manual_ulofdma_trig_err_count;
+} htt_peer_be_ofdma_stats_tlv;
+
 
 /* config_param0 */
 
@@ -1992,6 +2024,7 @@ typedef struct _htt_peer_stats {
     htt_tx_tid_stats_v1_tlv    tx_tid_stats_v1[1];
     htt_peer_sched_stats_tlv   peer_sched_stats;
     htt_peer_ax_ofdma_stats_tlv ax_ofdma_stats;
+    htt_peer_be_ofdma_stats_tlv be_ofdma_stats;
 } htt_peer_stats_t;
 
 /* =========== ACTIVE PEER LIST ========== */
@@ -2510,6 +2543,14 @@ typedef struct {
     A_UINT32 standalone_ax_bsr_trigger_tried[HTT_NUM_AC_WMM];
     /** 11AX HE MU Standalone Freq. BSRP Trigger completed with error(s) */
     A_UINT32 standalone_ax_bsr_trigger_err[HTT_NUM_AC_WMM];
+    /** 11AX HE Manual Single-User UL OFDMA Trigger frame sent over the air */
+    A_UINT32 manual_ax_su_ulofdma_basic_trigger[HTT_NUM_AC_WMM];
+    /** 11AX HE Manual Single-User UL OFDMA Trigger completed with error(s) */
+    A_UINT32 manual_ax_su_ulofdma_basic_trigger_err[HTT_NUM_AC_WMM];
+    /** 11AX HE Manual Multi-User UL OFDMA Trigger frame sent over the air */
+    A_UINT32 manual_ax_mu_ulofdma_basic_trigger[HTT_NUM_AC_WMM];
+    /** 11AX HE Manual Multi-User UL OFDMA Trigger completed with error(s) */
+    A_UINT32 manual_ax_mu_ulofdma_basic_trigger_err[HTT_NUM_AC_WMM];
 } htt_tx_selfgen_ax_stats_tlv;
 
 typedef struct {
@@ -2557,6 +2598,14 @@ typedef struct {
     A_UINT32 standalone_be_bsr_trigger_tried[HTT_NUM_AC_WMM];
     /** 11BE EHT MU Standalone Freq. BSRP Trigger completed with error(s) */
     A_UINT32 standalone_be_bsr_trigger_err[HTT_NUM_AC_WMM];
+    /** 11BE EHT Manual Single-User UL OFDMA Trigger frame sent over the air */
+    A_UINT32 manual_be_su_ulofdma_basic_trigger[HTT_NUM_AC_WMM];
+    /** 11BE EHT Manual Single-User UL OFDMA Trigger completed with error(s) */
+    A_UINT32 manual_be_su_ulofdma_basic_trigger_err[HTT_NUM_AC_WMM];
+    /** 11BE EHT Manual Multi-User UL OFDMA Trigger frame sent over the air */
+    A_UINT32 manual_be_mu_ulofdma_basic_trigger[HTT_NUM_AC_WMM];
+    /** 11BE EHT Manual Multi-User UL OFDMA Trigger completed with error(s) */
+    A_UINT32 manual_be_mu_ulofdma_basic_trigger_err[HTT_NUM_AC_WMM];
 } htt_tx_selfgen_be_stats_tlv;
 
 typedef struct { /* DEPRECATED */
@@ -6245,8 +6294,11 @@ typedef struct {
      */
 } htt_pdev_cca_stats_hist_v1_tlv;
 
-#define HTT_TWT_SESSION_FLAG_FLOW_ID_M 0x0000ffff
+#define HTT_TWT_SESSION_FLAG_FLOW_ID_M 0x0000000f
 #define HTT_TWT_SESSION_FLAG_FLOW_ID_S 0
+
+#define HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_M 0x0000fff0
+#define HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_S 4
 
 #define HTT_TWT_SESSION_FLAG_BCAST_TWT_M 0x00010000
 #define HTT_TWT_SESSION_FLAG_BCAST_TWT_S 16
@@ -6265,6 +6317,16 @@ typedef struct {
     do { \
         HTT_CHECK_SET_VAL(HTT_TWT_SESSION_FLAG_FLOW_ID, _val); \
         ((_var) |= ((_val) << HTT_TWT_SESSION_FLAG_FLOW_ID_S)); \
+    } while (0)
+
+#define HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_GET(_var) \
+    (((_var) & HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_M) >> \
+     HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_S)
+
+#define HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_SET(_var, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT, _val); \
+        ((_var) |= ((_val) << HTT_TWT_SESSION_FLAG_BTWT_PEER_CNT_S)); \
     } while (0)
 
 #define HTT_TWT_SESSION_FLAG_BCAST_TWT_GET(_var) \
@@ -6972,6 +7034,7 @@ typedef enum {
     HTT_STATS_RC_MODE_DLMUMIMO = 1,
     HTT_STATS_RC_MODE_DLOFDMA  = 2,
     HTT_STATS_RC_MODE_ULMUMIMO = 3,
+    HTT_STATS_RC_MODE_ULOFDMA  = 4,
 } htt_stats_rc_mode;
 
 typedef struct {
@@ -8819,6 +8882,616 @@ typedef struct {
 typedef struct {
     htt_pdev_bw_mgr_stats_tlv bw_mgr_tlv;
 } htt_pdev_bw_mgr_stats_t;
+
+
+/*============= start MLO UMAC SSR stats ============= { */
+
+typedef enum {
+    HTT_MLO_UMAC_SSR_DBG_POINT_INVALID = 0,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_DISABLE_RXDMA_PREFETCH,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_PMACS_HWMLOS,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_GLOBAL_WSI,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_PMACS_DMAC,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_TCL,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_TQM,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_WBM,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_REO,
+    HTT_MLO_UMAC_SSR_DBG_POINT_PRE_RESET_HOST,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESET_PREREQUISITES,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESET_PRE_RING_RESET,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESET_APPLY_SOFT_RESET,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESET_POST_RING_RESET,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESET_FW_TQM_CMDQS,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_HOST,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_UMAC_INTERRUPTS,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_WBM,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_REO,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_TQM,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_PMACS_DMAC,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_TQM_SYNC_CMD,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_GLOBAL_WSI,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_PMACS_HWMLOS,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_ENABLE_RXDMA_PREFETCH,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_TCL,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_HOST_ENQ,
+    HTT_MLO_UMAC_SSR_DBG_POINT_POST_RESET_VERIFY_UMAC_RECOVERED,
+    /* The below debug point values are reserved for future expansion. */
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED28,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED29,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED30,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED31,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED32,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED33,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED34,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED35,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED36,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED37,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED38,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED39,
+    HTT_MLO_UMAC_SSR_DBG_POINT_RESERVED40,
+    /*
+     * Due to backwards compatibility requirements, no futher DBG_POINT values
+     * can be added (but the above reserved values can be repurposed).
+     */
+    HTT_MLO_UMAC_SSR_DBG_POINT_MAX,
+} HTT_MLO_UMAC_SSR_DBG_POINTS;
+
+typedef enum {
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_INVALID = 0,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_DO_PRE_RESET,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_DO_POST_RESET_START,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_DO_POST_RESET_COMPLETE,
+    /* The below recovery handshake values are reserved for future expansion. */
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_RESERVED4,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_RESERVED5,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_RESERVED6,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_RESERVED7,
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_RESERVED8,
+    /*
+     * Due to backwards compatibility requirements, no futher
+     * RECOVERY_HANDSHAKE values can be added (but the above
+     * reserved values can be repurposed).
+     */
+    HTT_MLO_UMAC_RECOVERY_HANDSHAKE_COUNT,
+} HTT_MLO_UMAC_RECOVERY_HANDSHAKES;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 start_ms;
+    A_UINT32 end_ms;
+    A_UINT32 delta_ms;
+    A_UINT32 reserved;
+    A_UINT32 footprint; /* holds a HTT_MLO_UMAC_SSR_DBG_POINTS value */
+    A_UINT32 tqm_hw_tstamp;
+} htt_mlo_umac_ssr_dbg_tlv;
+
+typedef struct {
+    A_UINT32 last_mlo_htt_handshake_delta_ms;
+    A_UINT32 max_mlo_htt_handshake_delta_ms;
+    union {
+        A_UINT32 umac_recovery_done_mask;
+        struct {
+            A_UINT32 pre_reset_disable_rxdma_prefetch : 1,
+                     pre_reset_pmacs_hwmlos : 1,
+                     pre_reset_global_wsi : 1,
+                     pre_reset_pmacs_dmac : 1,
+                     pre_reset_tcl : 1,
+                     pre_reset_tqm : 1,
+                     pre_reset_wbm : 1,
+                     pre_reset_reo : 1,
+                     pre_reset_host : 1,
+                     reset_prerequisites : 1,
+                     reset_pre_ring_reset : 1,
+                     reset_apply_soft_reset : 1,
+                     reset_post_ring_reset : 1,
+                     reset_fw_tqm_cmdqs : 1,
+                     post_reset_host : 1,
+                     post_reset_umac_interrupts : 1,
+                     post_reset_wbm : 1,
+                     post_reset_reo : 1,
+                     post_reset_tqm : 1,
+                     post_reset_pmacs_dmac : 1,
+                     post_reset_tqm_sync_cmd : 1,
+                     post_reset_global_wsi : 1,
+                     post_reset_pmacs_hwmlos : 1,
+                     post_reset_enable_rxdma_prefetch : 1,
+                     post_reset_tcl : 1,
+                     post_reset_host_enq : 1,
+                     post_reset_verify_umac_recovered : 1,
+                     reserved : 5;
+        } done_mask;
+    };
+} htt_mlo_umac_ssr_mlo_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    htt_mlo_umac_ssr_mlo_stats_t mlo;
+} htt_mlo_umac_ssr_mlo_stats_tlv;
+
+/* dword0 - b'0 - PRE_RESET_DISABLE_RXDMA_PREFETCH */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_M 0x1
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_S 0
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_DISABLE_RXDMA_PREFETCH_S));\
+    } while (0)
+
+/* dword0 - b'1 - PRE_RESET_PMACS_HWMLOS */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_M 0x2
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_S 1
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_HWMLOS_S));\
+    } while (0)
+
+/* dword0 - b'2 - PRE_RESET_GLOBAL_WSI */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_M 0x4
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_S 2
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_GLOBAL_WSI_S));\
+    } while (0)
+
+/* dword0 - b'3 - PRE_RESET_PMACS_DMAC */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_M 0x8
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_S 3
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_PMACS_DMAC_S));\
+    } while (0)
+
+/* dword0 - b'4 - PRE_RESET_TCL */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_M 0x10
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_S 4
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_TCL_S));\
+    } while (0)
+
+/* dword0 - b'5 - PRE_RESET_TQM */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_M 0x20
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_S 5
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_TQM_S));\
+    } while (0)
+
+/* dword0 - b'6 - PRE_RESET_WBM */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_M 0x40
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_S 6
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_WBM_S));\
+    } while (0)
+
+/* dword0 - b'7 - PRE_RESET_REO */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_M 0x80
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_S 7
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_REO_S));\
+    } while (0)
+
+/* dword0 - b'8 - PRE_RESET_HOST */
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_M 0x100
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_S 8
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_M) >> \
+     HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_S)
+#define HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_PRE_RESET_HOST_S));\
+    } while (0)
+
+/* dword0 - b'9 - RESET_PREREQUISITES */
+#define HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_M 0x200
+#define HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_S 9
+#define HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_M) >> \
+     HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_S)
+#define HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_RESET_PREREQUISITES_S));\
+    } while (0)
+
+/* dword0 - b'10 - RESET_PRE_RING_RESET */
+#define HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_M 0x400
+#define HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_S 10
+#define HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_M) >> \
+     HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_S)
+#define HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_RESET_PRE_RING_RESET_S));\
+    } while (0)
+
+/* dword0 - b'11 - RESET_APPLY_SOFT_RESET */
+#define HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_M 0x800
+#define HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_S 11
+#define HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_M) >> \
+     HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_S)
+#define HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_RESET_APPLY_SOFT_RESET_S));\
+    } while (0)
+
+/* dword0 - b'12 - RESET_POST_RING_RESET */
+#define HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_M 0x1000
+#define HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_S 12
+#define HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_M) >> \
+     HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_S)
+#define HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_RESET_POST_RING_RESET_S));\
+    } while (0)
+
+/* dword0 - b'13 - RESET_FW_TQM_CMDQS */
+#define HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_M 0x2000
+#define HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_S 13
+#define HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_M) >> \
+     HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_S)
+#define HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_RESET_FW_TQM_CMDQS_S));\
+    } while (0)
+
+/* dword0 - b'14 - POST_RESET_HOST */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_M 0x4000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_S 14
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_S));\
+    } while (0)
+
+/* dword0 - b'15 - POST_RESET_UMAC_INTERRUPTS */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_M 0x8000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_S 15
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_UMAC_INTERRUPTS_S));\
+    } while (0)
+
+/* dword0 - b'16 - POST_RESET_WBM */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_M 0x10000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_S 16
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_WBM_S));\
+    } while (0)
+
+/* dword0 - b'17 - POST_RESET_REO */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_M 0x20000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_S 17
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_REO, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_REO_S));\
+    } while (0)
+
+/* dword0 - b'18 - POST_RESET_TQM */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_M 0x40000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_S 18
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_S));\
+    } while (0)
+
+/* dword0 - b'19 - POST_RESET_PMACS_DMAC */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_M 0x80000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_S 19
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_DMAC_S));\
+    } while (0)
+
+/* dword0 - b'20 - POST_RESET_TQM_SYNC_CMD */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_M 0x100000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_S 20
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_TQM_SYNC_CMD_S));\
+    } while (0)
+
+/* dword0 - b'21 - POST_RESET_GLOBAL_WSI */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_M 0x200000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_S 21
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_GLOBAL_WSI_S));\
+    } while (0)
+
+/* dword0 - b'22 - POST_RESET_PMACS_HWMLOS */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_M 0x400000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_S 22
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_PMACS_HWMLOS_S));\
+    } while (0)
+
+/* dword0 - b'23 - POST_RESET_ENABLE_RXDMA_PREFETCH */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_M 0x800000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_S 23
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_ENABLE_RXDMA_PREFETCH_S));\
+    } while (0)
+
+/* dword0 - b'24 - POST_RESET_TCL */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_M 0x1000000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_S 24
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_TCL_S));\
+    } while (0)
+
+/* dword0 - b'25 - POST_RESET_HOST_ENQ */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_M 0x2000000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_S 25
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_HOST_ENQ_S));\
+    } while (0)
+
+/* dword0 - b'26 - POST_RESET_VERIFY_UMAC_RECOVERED */
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_M 0x4000000
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_S 26
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_GET(word0) \
+    (((word0) & HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_M) >> \
+     HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_S)
+#define HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_SET(word0, _val) \
+    do { \
+        HTT_CHECK_SET_VAL(HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED, _val); \
+        ((word0) |= ((_val) << HTT_UMAC_RECOVERY_DONE_POST_RESET_VERIFY_UMAC_RECOVERED_S));\
+    } while (0)
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 last_trigger_request_ms;
+    A_UINT32 last_start_ms;
+    A_UINT32 last_start_disengage_umac_ms;
+    A_UINT32 last_enter_ssr_platform_thread_ms;
+    A_UINT32 last_exit_ssr_platform_thread_ms;
+    A_UINT32 last_start_engage_umac_ms;
+    A_UINT32 last_done_successful_ms;
+    A_UINT32 post_reset_tqm_sync_cmd_completion_ms;
+    A_UINT32 htt_sync_mlo_initiate_umac_recovery_ms;
+    A_UINT32 htt_sync_do_pre_reset_ms;
+    A_UINT32 htt_sync_do_post_reset_start_ms;
+    A_UINT32 htt_sync_do_post_reset_complete_ms;
+} htt_mlo_umac_ssr_kpi_tstamp_stats_tlv;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    A_UINT32 htt_sync_start_ms;
+    A_UINT32 htt_sync_delta_ms;
+    A_UINT32 post_t2h_start_ms;
+    A_UINT32 post_t2h_delta_ms;
+    A_UINT32 post_t2h_msg_read_shmem_ms;
+    A_UINT32 post_t2h_msg_write_shmem_ms;
+    A_UINT32 post_t2h_msg_send_msg_to_host_ms;
+} htt_mlo_umac_htt_handshake_stats_tlv;
+
+typedef struct {
+    /*
+     * Note that the host cannot use this struct directly, but instead needs
+     * to use the TLV header within each element of each of the arrays in
+     * this struct to determine where the subsequent item resides.
+     */
+    htt_mlo_umac_ssr_dbg_tlv dbg_point[HTT_MLO_UMAC_SSR_DBG_POINT_MAX];
+    htt_mlo_umac_htt_handshake_stats_tlv htt_handshakes[HTT_MLO_UMAC_RECOVERY_HANDSHAKE_COUNT];
+} htt_mlo_umac_ssr_kpi_delta_stats_t;
+
+typedef struct {
+    /*
+     * Since each item within htt_mlo_umac_ssr_kpi_delta_stats_t has its own
+     * TLV header, and since no additional fields are added in this struct
+     * beyond the htt_mlo_umac_ssr_kpi_delta_stats_t info, no additional
+     * TLV header is needed.
+     *
+     * Note that the host cannot use this struct directly, but instead needs
+     * to use the TLV header within each item inside the
+     * htt_mlo_umac_ssr_kpi_delta_stats_t to determine where the subsequent
+     * item resides.
+     */
+    htt_mlo_umac_ssr_kpi_delta_stats_t kpi_delta;
+} htt_mlo_umac_ssr_kpi_delta_stats_tlv;
+
+typedef struct {
+    A_UINT32 last_e2e_delta_ms;
+    A_UINT32 max_e2e_delta_ms;
+    A_UINT32 per_handshake_max_allowed_delta_ms;
+    /* Total done count */
+    A_UINT32 total_success_runs_cnt;
+    A_UINT32 umac_recovery_in_progress;
+    /* Count of Disengaged in Pre reset */
+    A_UINT32 umac_disengaged_count;
+    /* Count of UMAC Soft/Control Reset */
+    A_UINT32 umac_soft_reset_count;
+    /* Count of Engaged in Post reset */
+    A_UINT32 umac_engaged_count;
+} htt_mlo_umac_ssr_common_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    htt_mlo_umac_ssr_common_stats_t cmn;
+} htt_mlo_umac_ssr_common_stats_tlv;
+
+typedef struct {
+    A_UINT32 trigger_requests_count;
+    A_UINT32 trigger_count_for_umac_hang;
+    A_UINT32 trigger_count_for_mlo_target_recovery_mode1;
+    A_UINT32 trigger_count_for_unknown_signature;
+    A_UINT32 total_trig_dropped;
+    A_UINT32 trigger_count_for_unit_test_direct_trigger;
+    A_UINT32 trigger_count_for_tx_de_wdg_dummy_frame_tout;
+    A_UINT32 trigger_count_for_peer_delete_wdg_dummy_frame_tout;
+    A_UINT32 trigger_count_for_reo_hang;
+    A_UINT32 trigger_count_for_tqm_hang;
+    A_UINT32 trigger_count_for_tcl_hang;
+    A_UINT32 trigger_count_for_wbm_hang;
+} htt_mlo_umac_ssr_trigger_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    htt_mlo_umac_ssr_trigger_stats_t trigger;
+} htt_mlo_umac_ssr_trigger_stats_tlv;
+
+typedef struct {
+    /*
+     * Note that the host cannot use this struct directly, but instead needs
+     * to use the TLV header within each element to determine where the
+     * subsequent element resides.
+     */
+    htt_mlo_umac_ssr_kpi_delta_stats_tlv   kpi_delta_tlv;
+    htt_mlo_umac_ssr_kpi_tstamp_stats_tlv  kpi_tstamp_tlv;
+} htt_mlo_umac_ssr_kpi_stats_t;
+
+typedef struct {
+    /*
+     * Since the embedded sub-struct within htt_mlo_umac_ssr_kpi_stats_tlv
+     * has its own TLV header, and since no additional fields are added in
+     * this struct beyond the htt_mlo_umac_ssr_kpi_stats_t info, no additional
+     * TLV header is needed.
+     *
+     * Note that the host cannot use this struct directly, but instead needs
+     * to use the TLV header within the htt_mlo_umac_ssr_kpi_stats_t sub-struct
+     * to determine how much data is present for this struct.
+     */
+    htt_mlo_umac_ssr_kpi_stats_t kpi;
+} htt_mlo_umac_ssr_kpi_stats_tlv;
+
+typedef struct {
+    /*
+     * Note that the host cannot use this struct directly, but instead needs
+     * to use the TLV header within each element to determine where the
+     * subsequent element resides.
+     */
+    htt_mlo_umac_ssr_trigger_stats_tlv trigger_tlv;
+    htt_mlo_umac_ssr_kpi_stats_tlv     kpi_tlv;
+    htt_mlo_umac_ssr_mlo_stats_tlv     mlo_tlv;
+    htt_mlo_umac_ssr_common_stats_tlv  cmn_tlv;
+} htt_mlo_umac_ssr_stats_tlv;
+
+/*============= end MLO UMAC SSR stats ============= } */
+
+typedef struct {
+    A_UINT32 total_done;
+    A_UINT32 trigger_requests_count;
+    A_UINT32 total_trig_dropped;
+    A_UINT32 umac_disengaged_count;
+    A_UINT32 umac_soft_reset_count;
+    A_UINT32 umac_engaged_count;
+    A_UINT32 last_trigger_request_ms;
+    A_UINT32 last_start_ms;
+    A_UINT32 last_start_disengage_umac_ms;
+    A_UINT32 last_enter_ssr_platform_thread_ms;
+    A_UINT32 last_exit_ssr_platform_thread_ms;
+    A_UINT32 last_start_engage_umac_ms;
+    A_UINT32 last_done_successful_ms;
+    A_UINT32 last_e2e_delta_ms;
+    A_UINT32 max_e2e_delta_ms;
+    A_UINT32 trigger_count_for_umac_hang;
+    A_UINT32 trigger_count_for_mlo_quick_ssr;
+    A_UINT32 trigger_count_for_unknown_signature;
+    A_UINT32 post_reset_tqm_sync_cmd_completion_ms;
+    A_UINT32 htt_sync_mlo_initiate_umac_recovery_ms;
+    A_UINT32 htt_sync_do_pre_reset_ms;
+    A_UINT32 htt_sync_do_post_reset_start_ms;
+    A_UINT32 htt_sync_do_post_reset_complete_ms;
+} htt_umac_ssr_stats_t;
+
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    htt_umac_ssr_stats_t stats;
+} htt_umac_ssr_stats_tlv;
 
 
 #endif /* __HTT_STATS_H__ */
