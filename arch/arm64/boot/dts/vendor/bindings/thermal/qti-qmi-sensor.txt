@@ -92,6 +92,17 @@ Subsystem properties:
 		59. mmw2
 		60. mmw3
 		61. mmw_ific0
+		62. rf_cal
+		63. qfe_wtr_pa4
+		64. qfe_wtr_pa5
+		65. qfe_wtr_pa6
+		66. qfe_wtr_pa4_fr1
+		67. qfe_wtr_pa5_fr1
+		68. qfe_wtr_pa6_fr1
+		69. qfe_ret_pa1
+		70. qfe_ret_pa1_fr1
+		71. sdr0_pa
+		72. sdr1_pa
 
 Example:
 

@@ -1,0 +1,10 @@
+#include "yupik-iot-hsp-pm7250b.dtsi"
+
+&pcie1 {
+	status = "disabled";
+};
+
+&pcie1_msi {
+	status = "disabled";
+};
+

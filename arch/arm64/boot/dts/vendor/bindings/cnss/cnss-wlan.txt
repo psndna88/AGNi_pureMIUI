@@ -54,6 +54,8 @@ Optional properties:
                           load in uA and Regulator settle delay in us
   - qcom,smmu-s1-enable: Boolean property to decide whether to enable SMMU
                          S1 stage or not
+  - wlan-ipa-disabled: Boolean property to decide whether IPA is disabled
+		       or not
   - qcom,wlan-smmu-iova-address: I/O virtual address range as <start length>
                                  format to be used for allocations associated
                                  between WLAN/PCIe and SMMU

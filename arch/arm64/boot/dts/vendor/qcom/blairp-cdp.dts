@@ -1,0 +1,10 @@
+/dts-v1/;
+
+#include "blairp.dtsi"
+#include "blairp-cdp.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blairp CDP";
+	compatible = "qcom,blairp-cdp", "qcom,blairp", "qcom,cdp";
+	qcom,board-id = <1 0>;
+};

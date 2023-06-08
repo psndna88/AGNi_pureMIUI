@@ -12,3 +12,9 @@
 		"qcom,sdxlemur", "qcom,mtp";
 	qcom,board-id = <0xA010008 0x30A>;
 };
+
+&ipa_hw {
+	qcom,use-dual-pine-config;
+	qcom,scaling-exceptions = "wdi", "1400", "4800", "10000", "wdi1", "1400", "4800", "10000";
+};
+

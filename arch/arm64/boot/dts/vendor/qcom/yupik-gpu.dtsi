@@ -559,6 +559,94 @@
 					qcom,acd-level = <0x882F5FFD>;
 				};
 			};
+
+			qcom,gpu-pwrlevels-5 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				qcom,speed-bin = <148>;
+				qcom,initial-pwrlevel = <4>;
+
+				qcom,gpu-pwrlevel@0 {
+					reg = <0>;
+					qcom,gpu-freq = <700000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_NOM>;
+
+					qcom,bus-freq-ddr7 = <11>;
+					qcom,bus-min-ddr7 = <10>;
+					qcom,bus-max-ddr7 = <11>;
+
+					qcom,bus-freq-ddr8 = <9>;
+					qcom,bus-min-ddr8 = <8>;
+					qcom,bus-max-ddr8 = <10>;
+
+					qcom,acd-level = <0x802B5FFD>;
+				};
+
+				qcom,gpu-pwrlevel@1 {
+					reg = <1>;
+					qcom,gpu-freq = <608000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L2>;
+
+					qcom,bus-freq-ddr7 = <10>;
+					qcom,bus-min-ddr7 = <9>;
+					qcom,bus-max-ddr7 = <11>;
+
+					qcom,bus-freq-ddr8 = <8>;
+					qcom,bus-min-ddr8 = <7>;
+					qcom,bus-max-ddr8 = <10>;
+
+					qcom,acd-level = <0x802B5FFD>;
+				};
+
+				qcom,gpu-pwrlevel@2 {
+					reg = <2>;
+					qcom,gpu-freq = <550000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
+
+					qcom,bus-freq-ddr7 = <9>;
+					qcom,bus-min-ddr7 = <8>;
+					qcom,bus-max-ddr7 = <11>;
+
+					qcom,bus-freq-ddr8 = <7>;
+					qcom,bus-min-ddr8 = <6>;
+					qcom,bus-max-ddr8 = <9>;
+
+					qcom,acd-level = <0x802B5FFD>;
+				};
+
+				qcom,gpu-pwrlevel@3 {
+					reg = <3>;
+					qcom,gpu-freq = <450000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_SVS>;
+
+					qcom,bus-freq-ddr7 = <6>;
+					qcom,bus-min-ddr7 = <5>;
+					qcom,bus-max-ddr7 = <10>;
+
+					qcom,bus-freq-ddr8 = <6>;
+					qcom,bus-min-ddr8 = <6>;
+					qcom,bus-max-ddr8 = <8>;
+
+					qcom,acd-level = <0x802B5FFD>;
+				};
+
+				qcom,gpu-pwrlevel@4 {
+					reg = <4>;
+					qcom,gpu-freq = <315000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
+
+					qcom,bus-freq-ddr7 = <3>;
+					qcom,bus-min-ddr7 = <2>;
+					qcom,bus-max-ddr7 = <9>;
+
+					qcom,bus-freq-ddr8 = <3>;
+					qcom,bus-min-ddr8 = <2>;
+					qcom,bus-max-ddr8 = <7>;
+
+					qcom,acd-level = <0x882F5FFD>;
+				};
+			};
 		};
 	};
 

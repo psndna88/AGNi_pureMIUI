@@ -104,6 +104,9 @@ SoCs:
 - BLAIR
   compatible = "qcom,blair"
 
+- BLAIRP
+  compatible = "qcom,blairp"
+
 - MONACO
   compatible = "qcom,monaco"
 
@@ -300,6 +303,10 @@ compatible = "qcom,blair-mtp"
 compatible = "qcom,blair-cdp"
 compatible = "qcom,blair-atp"
 compatible = "qcom,blair-qrd"
+compatible = "qcom,blairp-mtp"
+compatible = "qcom,blairp-cdp"
+compatible = "qcom,blairp-atp"
+compatible = "qcom,blairp-qrd"
 compatible = "qcom,scuba-idp"
 compatible = "qcom,monaco-rumi"
 compatible = "qcom,monaco"

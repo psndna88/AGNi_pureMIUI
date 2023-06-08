@@ -1,0 +1,25 @@
+/dts-v1/;
+
+#include "sdxlemur-v2.dtsi"
+#include "sdxlemur-mtp-cpe.dtsi"
+#include "sdxlemur-mtp-cpe-pine2x.dtsi"
+#include "sdxlemur-1024mb-cpe.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDXLEMUR MTP CPE 2x Pine V2 5+6 Configuration";
+	compatible = "qcom,sdxlemur-mtp",
+		"qcom,sdxlemur", "qcom,mtp";
+	qcom,board-id = <0x12010008 0x312>;
+};
+
+&wifi0 {
+	/* QCN9000 6G with SBS filter */
+	status = "ok";
+	board_id = <0xa4>;
+};
+
+&wifi1 {
+	/* QCN9000 5G */
+	status = "ok";
+	board_id = <0xa3>;
+};
