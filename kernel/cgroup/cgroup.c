@@ -3044,8 +3044,8 @@ static int cgroup_update_dfl_csses(struct cgroup *cgrp)
 	DEFINE_CGROUP_MGCTX(mgctx);
 	struct cgroup_subsys_state *d_css;
 	struct cgroup *dsct;
-	struct ext_css_set *ext_src_set;
 	bool has_tasks;
+	struct ext_css_set *ext_src_set;
 	int ret;
 
 	lockdep_assert_held(&cgroup_mutex);
