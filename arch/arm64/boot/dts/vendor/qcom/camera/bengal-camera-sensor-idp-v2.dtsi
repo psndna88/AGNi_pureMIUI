@@ -1,0 +1,11 @@
+&cam_cci0 {
+	/* GMSL-1 */
+	qcom,cam-sensor3 {
+		cci-master = <1>;
+	};
+
+	/* GMSL-2 */
+	qcom,cam-sensor4 {
+		cci-master = <1>;
+	};
+};
