@@ -15,11 +15,13 @@ endif
 
 ifeq ($(CONFIG_SND_SOC_AUTO), y)
 	ifdef CONFIG_SND_SOC_SA8155
+		CDEFINES += -DCONFIG_SEN_TDM_DISABLE
 		include $(AUDIO_ROOT)/config/sa8155auto.conf
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
 	endif
 	ifdef CONFIG_SND_SOC_SA6155
+		CDEFINES += -DCONFIG_SEN_TDM_DISABLE
 		include $(AUDIO_ROOT)/config/sa6155auto.conf
 		export
 		INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
