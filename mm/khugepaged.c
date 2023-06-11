@@ -1405,8 +1405,6 @@ void collapse_pte_mapped_thp(struct mm_struct *mm, unsigned long addr)
 	}
 
 	/* step 4: collapse pmd */
-	ptl = pmd_lock(vma->vm_mm, pmd);
-	_pmd = pmdp_collapse_flush(vma, haddr, pmd);
 	/* we make no change to anon, but protect concurrent anon page lookup */
 	if (vma->anon_vma)
 		anon_vma_lock_write(vma->anon_vma);
@@ -1414,6 +1412,8 @@ void collapse_pte_mapped_thp(struct mm_struct *mm, unsigned long addr)
 	mmu_notifier_range_init(&range, MMU_NOTIFY_CLEAR, 0, NULL, mm, haddr,
 				haddr + HPAGE_PMD_SIZE);
 	mmu_notifier_invalidate_range_start(&range);
+	ptl = pmd_lock(vma->vm_mm, pmd);
+	_pmd = pmdp_collapse_flush(vma, haddr, pmd);
 	spin_unlock(ptl);
 	vm_write_end(vma);
 	mm_dec_nr_ptes(mm);
@@ -1507,9 +1507,6 @@ static void retract_page_tables(struct address_space *mapping, pgoff_t pgoff)
 		if (down_write_trylock(&mm->mmap_sem)) {
 			if (!khugepaged_test_exit(mm)) {
 				vm_write_begin(vma);
-				spinlock_t *ptl = pmd_lock(mm, pmd);
-				/* assume page table is clear */
-				_pmd = pmdp_collapse_flush(vma, addr, pmd);
 				struct mmu_notifier_range range;
 
 				mmu_notifier_range_init(&range,
@@ -1517,6 +1514,9 @@ static void retract_page_tables(struct address_space *mapping, pgoff_t pgoff)
 							NULL, mm, addr,
 							addr + HPAGE_PMD_SIZE);
 				mmu_notifier_invalidate_range_start(&range);
+				spinlock_t *ptl = pmd_lock(mm, pmd);
+				/* assume page table is clear */
+				_pmd = pmdp_collapse_flush(vma, addr, pmd);
 				spin_unlock(ptl);
 				vm_write_end(vma);
 				mm_dec_nr_ptes(mm);
