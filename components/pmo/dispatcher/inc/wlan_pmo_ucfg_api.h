@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -993,11 +994,14 @@ int ucfg_pmo_psoc_clear_target_wake_up(struct wlan_objmgr_psoc *psoc);
 
 /**
  * ucfg_pmo_psoc_target_suspend_acknowledge() - Clear initial wake up status
- * @psoc: objmgr psoc handle
+ * @context: caller-provided context
+ * @wow_nack: Was WoW NACK'ed
+ * @reason_code: WoW status reason code
  *
  * Return: None
  */
-void ucfg_pmo_psoc_target_suspend_acknowledge(void *context, bool wow_nack);
+void ucfg_pmo_psoc_target_suspend_acknowledge(void *context, bool wow_nack,
+					      uint16_t reason_code);
 
 /**
  * ucfg_pmo_psoc_wakeup_host_event_received() - got host wake up evennt from fwr
@@ -1665,7 +1669,8 @@ ucfg_pmo_psoc_clear_target_wake_up(struct wlan_objmgr_psoc *psoc)
 }
 
 static inline void
-ucfg_pmo_psoc_target_suspend_acknowledge(void *context, bool wow_nack)
+ucfg_pmo_psoc_target_suspend_acknowledge(void *context, bool wow_nack,
+					 uint16_t reason_code)
 {
 }
 
