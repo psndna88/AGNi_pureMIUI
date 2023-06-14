@@ -774,7 +774,11 @@ static void binder_transaction_priority(struct binder_thread *thread,
 	t->set_priority_called = true;
 
 	if (!node->inherit_rt && is_rt_policy(desired.sched_policy)) {
-		desired.prio = NICE_TO_PRIO(0);
+		// MIUI MOD:
+		// We boost some app process to FIFO, but binder out thread
+		// from fifo has low priority, so we modify priority higher.
+		// desired.prio = NICE_TO_PRIO(0);
+		desired.prio = NICE_TO_PRIO(-10);
 		desired.sched_policy = SCHED_NORMAL;
 	}
 
@@ -3255,10 +3259,23 @@ static void binder_transaction(struct binder_proc *proc,
 			     (u64)tr->data_size, (u64)tr->offsets_size,
 			     (u64)extra_buffers_size);
 
+	//MIUI MOD:
+	/*
 	if (!reply && !(tr->flags & TF_ONE_WAY))
 		t->from = thread;
 	else
 		t->from = NULL;
+	*/
+	if (!reply && !(tr->flags & TF_ONE_WAY)) {
+		t->from = thread;
+		t->async_from_pid = -1;
+		t->async_from_tid = -1;
+	} else {
+		t->from = NULL;
+		t->async_from_pid = thread->proc->pid;
+		t->async_from_tid = thread->pid;
+	}
+	//END
 	t->sender_euid = task_euid(proc->tsk);
 	t->to_proc = target_proc;
 	t->to_thread = target_thread;
@@ -5052,6 +5069,10 @@ static int binder_thread_release(struct binder_proc *proc,
 			t = t->to_parent;
 		} else if (t->from == thread) {
 			t->from = NULL;
+			//MIUI ADD:
+			t->async_from_pid = -1;
+			t->async_from_tid = -1;
+			//END
 			t = t->from_parent;
 		} else
 			BUG();
