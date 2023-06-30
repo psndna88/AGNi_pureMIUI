@@ -33,7 +33,8 @@ struct mem_cgroup;
 extern void vmpressure(gfp_t gfp, struct mem_cgroup *memcg, bool tree,
 		       unsigned long scanned, unsigned long reclaimed,
 		       int order);
-extern void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio);
+extern void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg, int prio,
+			    int order);
 
 extern void vmpressure_init(struct vmpressure *vmpr);
 extern void vmpressure_cleanup(struct vmpressure *vmpr);
@@ -48,6 +49,6 @@ extern void vmpressure_unregister_event(struct mem_cgroup *memcg,
 static inline void vmpressure(gfp_t gfp, struct mem_cgroup *memcg, bool tree,
 			      unsigned long scanned, unsigned long reclaimed, int order) {}
 static inline void vmpressure_prio(gfp_t gfp, struct mem_cgroup *memcg,
-				   int prio) {}
+				   int prio, int order) {}
 #endif /* CONFIG_MEMCG */
 #endif /* __LINUX_VMPRESSURE_H */
