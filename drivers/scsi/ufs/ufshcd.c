@@ -7369,9 +7369,8 @@ static int ufshcd_abort(struct scsi_cmnd *cmd)
 		goto out;
 	}
 
-	ufs_spin_lock_irqsave(host->host_lock, flags);
 cleanup:
-	spin_lock_irqsave(host->host_lock, flags);
+	ufs_spin_lock_irqsave(host->host_lock, flags);
 	__ufshcd_transfer_req_compl(hba, (1UL << tag));
 	ufs_spin_unlock_irqrestore(host->host_lock, flags);
 
@@ -8327,9 +8326,16 @@ out:
 static int ufshcd_probe_hba(struct ufs_hba *hba, bool async)
 {
 	int ret;
+	unsigned long flags;
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+	bool reinit_needed = true;
+#endif
 	ktime_t start = ktime_get();
 
 	dev_err(hba->dev, "*** This is %s ***\n", __FILE__);
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+reinit:
+#endif
 
 	ret = ufshcd_link_startup(hba);
 	if (ret)
@@ -8365,6 +8371,34 @@ static int ufshcd_probe_hba(struct ufs_hba *hba, bool async)
 			goto out;
 	}
 
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+	/*
+	 * After reading the device descriptor, it is found as UFS 2.x
+	 * device and limit_phy_submode is set as 1 in DT file i.e
+	 * host phy is calibrated with gear4 setting, we need to
+	 * reinitialize UFS phy host with HS-Gear3, Rate B.
+	 */
+	if (hba->dev_info.wspecversion < 0x300 &&
+		hba->limit_phy_submode && reinit_needed) {
+		unsigned long flags;
+		int err;
+
+		ufshcd_vops_device_reset(hba);
+
+		/* Reset the host controller */
+		spin_lock_irqsave(hba->host->host_lock, flags);
+		ufshcd_hba_stop(hba, false);
+		spin_unlock_irqrestore(hba->host->host_lock, flags);
+
+		hba->limit_phy_submode = 0;
+		err = ufshcd_hba_enable(hba);
+		if (err)
+			goto out;
+		reinit_needed = false;
+
+		goto reinit;
+	}
+#endif
 	ufshcd_tune_unipro_params(hba);
 
 	/* UFS device is also active now */
@@ -8400,7 +8434,6 @@ static int ufshcd_probe_hba(struct ufs_hba *hba, bool async)
 	/* set the state as operational after switching to desired gear */
 	hba->ufshcd_state = UFSHCD_STATE_OPERATIONAL;
 
-#if defined(CONFIG_SCSI_UFSHCD_QTI)
 	ufshcd_wb_config(hba);
 
 #if defined(CONFIG_SCSI_SKHPB)
