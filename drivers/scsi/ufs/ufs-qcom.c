@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2013-2020, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  */
 
@@ -19,6 +19,7 @@
 #include <linux/cpu.h>
 #include <linux/blk-mq.h>
 #include <linux/bitfield.h>
+#include <linux/nvmem-consumer.h>
 
 #include "ufshcd.h"
 #include "ufshcd-pltfrm.h"
@@ -79,6 +80,7 @@ static int ufs_qcom_set_dme_vs_core_clk_ctrl_clear_div(struct ufs_hba *hba,
 						       u32 clk_40ns_cycles);
 static void ufs_qcom_parse_limits(struct ufs_qcom_host *host);
 static void ufs_qcom_parse_lpm(struct ufs_qcom_host *host);
+static void ufs_qcom_parse_wb(struct ufs_qcom_host *host);
 static int ufs_qcom_set_dme_vs_core_clk_ctrl_max_freq_mode(struct ufs_hba *hba);
 static int ufs_qcom_init_sysfs(struct ufs_hba *hba);
 static int ufs_qcom_update_qos_constraints(struct qos_cpu_group *qcg,
@@ -1964,7 +1966,8 @@ static void ufs_qcom_set_caps(struct ufs_hba *hba)
 			UFSHCD_CAP_HIBERN8_WITH_CLK_GATING |
 			UFSHCD_CAP_AUTO_BKOPS_SUSPEND |
 			UFSHCD_CAP_RPM_AUTOSUSPEND;
-		hba->caps |= UFSHCD_CAP_WB_EN;
+		if (!host->disable_wb_support)
+			hba->caps |= UFSHCD_CAP_WB_EN;
 	}
 
 	if (host->hw_ver.major >= 0x2) {
@@ -2256,6 +2259,7 @@ static void ufs_qcom_save_host_ptr(struct ufs_hba *hba)
  * It will read the opcode, idn and buf_length parameters, and, put the
  * response in the buffer field while updating the used size in buf_length.
  */
+#if !defined(CONFIG_UFSFEATURE)
 static int
 ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 {
@@ -2495,6 +2499,7 @@ ufs_qcom_ioctl(struct scsi_device *dev, unsigned int cmd, void __user *buffer)
 
 	return err;
 }
+#endif
 
 static int tag_to_cpu(struct ufs_hba *hba, unsigned int tag)
 {
@@ -2716,6 +2721,38 @@ static void ufs_qcom_parse_pm_level(struct ufs_hba *hba)
 	}
 }
 
+void ufs_qcom_read_nvmem_cell(struct ufs_qcom_host *host)
+{
+	size_t len;
+	int *data;
+
+	host->nvmem_cell = nvmem_cell_get(host->hba->dev, "ufs_dev");
+	if (IS_ERR(host->nvmem_cell)) {
+		dev_info(host->hba->dev, "(%s) Failed to get nvmem cell\n", __func__);
+		return;
+	}
+
+	data = nvmem_cell_read(host->nvmem_cell, &len);
+	if (IS_ERR(data)) {
+		dev_info(host->hba->dev, "(%s) Failed to read from nvmem\n", __func__);
+		goto cell_put;
+	}
+
+	host->limit_phy_submode = *data;
+
+	if (!!host->limit_phy_submode)
+		dev_info(host->hba->dev, "(%s) UFS device is 3.x\n",
+						__func__);
+	else
+		dev_info(host->hba->dev, "(%s) UFS device is 2.x\n",
+						__func__);
+
+	kfree(data);
+
+cell_put:
+	nvmem_cell_put(host->nvmem_cell);
+}
+
 /**
  * ufs_qcom_init - bind phy with controller
  * @hba: host controller instance
@@ -2733,6 +2770,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct ufs_qcom_host *host;
 	struct resource *res;
+	struct device_node *np = dev->of_node;
 
 	host = devm_kzalloc(dev, sizeof(*host), GFP_KERNEL);
 	if (!host) {
@@ -2872,6 +2910,15 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 		}
 	}
 
+	host->limit_phy_submode = UFS_QCOM_LIMIT_PHY_SUBMODE;
+	host->ufs_dev_types = 0;
+	of_property_read_u32(np, "ufs-dev-types", &host->ufs_dev_types);
+	if (host->ufs_dev_types >= 2) {
+		/* Find the UFS device type */
+		ufs_qcom_read_nvmem_cell(host);
+	}
+
+
 	err = ufs_qcom_init_lane_clks(host);
 	if (err)
 		goto out_disable_vccq_parent;
@@ -2883,6 +2930,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	if (host->disable_lpm)
 		pm_runtime_forbid(host->hba->dev);
 
+	ufs_qcom_parse_wb(host);
 	ufs_qcom_set_caps(hba);
 	ufs_qcom_advertise_quirks(hba);
 
@@ -2905,6 +2953,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 
 	ufs_qcom_init_sysfs(hba);
 
+#if !defined(CONFIG_UFSFEATURE)
 	/* Provide SCSI host ioctl API */
 	hba->host->hostt->ioctl = (int (*)(struct scsi_device *, unsigned int,
 				   void __user *))ufs_qcom_ioctl;
@@ -2912,6 +2961,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	hba->host->hostt->compat_ioctl = (int (*)(struct scsi_device *,
 					  unsigned int,
 					  void __user *))ufs_qcom_ioctl;
+#endif
 #endif
 
 	ufs_qcom_save_host_ptr(hba);
@@ -3458,16 +3508,18 @@ static void ufs_qcom_parse_limits(struct ufs_qcom_host *host)
 	host->limit_tx_pwm_gear = UFS_QCOM_LIMIT_PWMGEAR_TX;
 	host->limit_rx_pwm_gear = UFS_QCOM_LIMIT_PWMGEAR_RX;
 	host->limit_rate = UFS_QCOM_LIMIT_HS_RATE;
-	host->limit_phy_submode = UFS_QCOM_LIMIT_PHY_SUBMODE;
 
 	of_property_read_u32(np, "limit-tx-hs-gear", &host->limit_tx_hs_gear);
 	of_property_read_u32(np, "limit-rx-hs-gear", &host->limit_rx_hs_gear);
 	of_property_read_u32(np, "limit-tx-pwm-gear", &host->limit_tx_pwm_gear);
 	of_property_read_u32(np, "limit-rx-pwm-gear", &host->limit_rx_pwm_gear);
 	of_property_read_u32(np, "limit-rate", &host->limit_rate);
-	of_property_read_u32(np, "limit-phy-submode", &host->limit_phy_submode);
 #if defined(CONFIG_SCSI_UFSHCD_QTI)
+	if (host->ufs_dev_types == 0)
+		of_property_read_u32(np, "limit-phy-submode", &host->limit_phy_submode);
 	host->hba->limit_phy_submode = host->limit_phy_submode;
+#else
+	of_property_read_u32(np, "limit-phy-submode", &host->limit_phy_submode);
 #endif
 }
 
@@ -3496,6 +3548,19 @@ static void ufs_qcom_parse_lpm(struct ufs_qcom_host *host)
 	if (host->disable_lpm)
 		dev_info(host->hba->dev, "(%s) All LPM is disabled\n",
 			 __func__);
+}
+
+/*
+ *  ufs_qcom_parse_wb - read from DTS whether WB support should be enabled.
+ */
+static void ufs_qcom_parse_wb(struct ufs_qcom_host *host)
+{
+	struct device_node *node = host->hba->dev->of_node;
+
+	host->disable_wb_support = of_property_read_bool(node,
+			"qcom,disable-wb-support");
+	if (host->disable_wb_support)
+		pr_info("%s: WB support disabled\n", __func__);
 }
 
 /**
@@ -3768,6 +3833,16 @@ static int ufs_qcom_probe(struct platform_device *pdev)
 	    strcmp(android_boot_dev, dev_name(dev)))
 		return -ENODEV;
 
+	/*
+	 * Check whether primary UFS boot device is probed using
+	 * primary_boot_device_probed flag, if its not set defer the probe.
+	 */
+	if ((of_property_read_bool(np, "secondary-storage")) && (!ufs_qcom_hosts[0]
+		|| !ufs_qcom_hosts[0]->hba->primary_boot_device_probed)) {
+		err = -EPROBE_DEFER;
+		return err;
+	}
+
 	/* Perform generic probe */
 	err = ufshcd_pltfrm_init(pdev, &ufs_hba_qcom_vops);
 	if (err)
@@ -3817,6 +3892,11 @@ static const struct dev_pm_ops ufs_qcom_pm_ops = {
 	.runtime_suspend = ufshcd_pltfrm_runtime_suspend,
 	.runtime_resume  = ufshcd_pltfrm_runtime_resume,
 	.runtime_idle    = ufshcd_pltfrm_runtime_idle,
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+	.freeze		= ufshcd_pltfrm_freeze,
+	.restore	= ufshcd_pltfrm_restore,
+	.thaw		= ufshcd_pltfrm_thaw,
+#endif
 };
 
 static struct platform_driver ufs_qcom_pltform = {

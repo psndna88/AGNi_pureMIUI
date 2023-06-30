@@ -301,8 +301,19 @@ static int ufshcd_hba_init_crypto_qti_spec(struct ufs_hba *hba,
 
 	num_slots = ufshcd_num_keyslots(hba);
 #if IS_ENABLED(CONFIG_QTI_CRYPTO_FDE)
-	if (num_slots > 0)
-		--num_slots;
+	if (num_slots > crypto_qti_ice_get_num_fde_slots()) {
+		//Reduce the total number of slots available to FBE
+		//(by the number reserved for the FDE)
+		//Check at least one slot for backward compatibility,
+		//otherwise return failure
+		if (num_slots - crypto_qti_ice_get_num_fde_slots() < 1) {
+			pr_err("%s: Too much slots allocated to fde\n", __func__);
+			err = -ENOMEM;
+			goto out;
+		} else {
+			num_slots = num_slots - crypto_qti_ice_get_num_fde_slots();
+		}
+	}
 #endif
 	hba->ksm = keyslot_manager_create(hba->dev, num_slots,
 				ksm_ops, BLK_CRYPTO_FEATURE_WRAPPED_KEYS,

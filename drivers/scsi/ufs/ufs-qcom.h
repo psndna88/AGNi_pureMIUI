@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef UFS_QCOM_H_
@@ -9,6 +9,7 @@
 #include <linux/reset.h>
 #include <linux/phy/phy.h>
 #include <linux/pm_qos.h>
+#include <linux/nvmem-consumer.h>
 #include "ufshcd.h"
 #ifdef CONFIG_SCSI_UFSHCD_QTI
 #include "unipro.h"
@@ -361,6 +362,7 @@ struct ufs_qcom_host {
 	int limit_rx_pwm_gear;
 	int limit_rate;
 	int limit_phy_submode;
+	int ufs_dev_types;
 
 	bool disable_lpm;
 	struct qcom_bus_scale_data *qbsd;
@@ -377,6 +379,8 @@ struct ufs_qcom_host {
 	struct ufs_qcom_qos_req *ufs_qos;
 	bool bypass_g4_cfgready;
 	bool is_dt_pm_level_read;
+	bool disable_wb_support;
+	struct nvmem_cell *nvmem_cell;
 };
 
 static inline u32

@@ -330,4 +330,7 @@ config REBOOT_AUTO_FSYNC
 	help
 	  Force automatic file sync on power off, reboot, panic/freeze
 
+config FS_HPB
+	bool "Support HPB on Filesystem"
+	default y
 endmenu

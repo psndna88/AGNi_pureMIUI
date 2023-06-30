@@ -1,5 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2021, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #ifndef UFSHCD_PLTFRM_H_
@@ -40,6 +50,12 @@ int ufshcd_pltfrm_runtime_suspend(struct device *dev);
 int ufshcd_pltfrm_runtime_resume(struct device *dev);
 int ufshcd_pltfrm_runtime_idle(struct device *dev);
 
+#ifdef CONFIG_SCSI_UFSHCD_QTI
+int ufshcd_pltfrm_freeze(struct device *dev);
+int ufshcd_pltfrm_restore(struct device *dev);
+int ufshcd_pltfrm_thaw(struct device *dev);
+#endif /* CONFIG_SCSI_UFSHCD_QTI */
+
 #else /* !CONFIG_PM */
 
 #define ufshcd_pltfrm_suspend	NULL
@@ -47,6 +63,12 @@ int ufshcd_pltfrm_runtime_idle(struct device *dev);
 #define ufshcd_pltfrm_runtime_suspend	NULL
 #define ufshcd_pltfrm_runtime_resume	NULL
 #define ufshcd_pltfrm_runtime_idle	NULL
+
+#ifdef CONFIG_SCSI_UFSHCD_QTI
+#define ufshcd_pltfrm_restore   NULL
+#define ufshcd_pltfrm_freeze   NULL
+#define ufshcd_pltfrm_thaw   NULL
+#endif /* CONFIG_SCSI_UFSHCD_QTI */
 
 #endif /* CONFIG_PM */
 

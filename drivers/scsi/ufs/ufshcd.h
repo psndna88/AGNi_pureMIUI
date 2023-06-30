@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (C) 2021 XiaoMi, Inc.
- * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -74,6 +74,13 @@
 #include "ufs_quirks.h"
 #include "ufshci.h"
 
+#if defined(CONFIG_UFSFEATURE)
+#include "ufsfeature.h"
+#endif
+#if defined(CONFIG_SCSI_SKHPB)
+#include "ufshpb_skh.h"
+#endif
+
 #define UFSHCD "ufshcd"
 #define UFSHCD_DRIVER_VERSION "0.2"
 
@@ -135,11 +142,17 @@ enum ufs_pm_op {
 	UFS_RUNTIME_PM,
 	UFS_SYSTEM_PM,
 	UFS_SHUTDOWN_PM,
+#ifdef CONFIG_SCSI_UFSHCD_QTI
+	UFS_SYSTEM_RESTORE,
+#endif
 };
 
 #define ufshcd_is_runtime_pm(op) ((op) == UFS_RUNTIME_PM)
 #define ufshcd_is_system_pm(op) ((op) == UFS_SYSTEM_PM)
 #define ufshcd_is_shutdown_pm(op) ((op) == UFS_SHUTDOWN_PM)
+#ifdef CONFIG_SCSI_UFSHCD_QTI
+#define ufshcd_is_restore(op) ((op) == UFS_SYSTEM_RESTORE)
+#endif
 
 /* Host <-> Device UniPro Link state */
 enum uic_link_state {
@@ -1041,6 +1054,25 @@ struct ufs_hba {
 	struct device		bsg_dev;
 	struct request_queue	*bsg_queue;
 
+	bool delay_ssu;
+
+#if defined(CONFIG_SCSI_SKHPB)
+	u32 skhpb_feat;
+	int skhpb_state;
+	int skhpb_max_regions;
+	struct delayed_work skhpb_init_work;
+	bool issue_ioctl;
+	struct skhpb_lu *skhpb_lup[UFS_UPIU_MAX_GENERAL_LUN];
+	struct work_struct skhpb_eh_work;
+	u32 skhpb_quirk;
+	u8 hpb_control_mode;
+#define SKHPB_U8_MAX 0xFF
+	u8 skhpb_quicklist_lu_enable[UFS_UPIU_MAX_GENERAL_LUN];
+#endif
+
+#if defined(CONFIG_SCSI_SKHPB)
+	struct scsi_device *sdev_ufs_lu[UFS_UPIU_MAX_GENERAL_LUN];
+#endif
 #ifdef CONFIG_SCSI_UFS_CRYPTO
 	/* crypto */
 	union ufs_crypto_capabilities crypto_capabilities;
@@ -1053,6 +1085,7 @@ struct ufs_hba {
 	bool wb_buf_flush_enabled;
 	bool wb_enabled;
 	struct delayed_work rpm_dev_flush_recheck_work;
+	bool primary_boot_device_probed;
 	ANDROID_KABI_RESERVE(1);
 	ANDROID_KABI_RESERVE(2);
 	ANDROID_KABI_RESERVE(3);
@@ -1061,6 +1094,10 @@ struct ufs_hba {
 	/* distinguish between resume and restore */
 	bool restore;
 	bool abort_triggered_wlun;
+#endif
+
+#if defined(CONFIG_UFSFEATURE)
+	struct ufsf_feature ufsf;
 #endif
 };
 
@@ -1148,6 +1185,10 @@ static inline bool ufshcd_is_auto_hibern8_enabled(struct ufs_hba *hba)
 
 static inline bool ufshcd_is_wb_allowed(struct ufs_hba *hba)
 {
+#if defined(CONFIG_UFSTW)
+	if (is_samsung_ufs(hba))
+		return false;
+#endif
 	return hba->caps & UFSHCD_CAP_WB_EN;
 }
 
@@ -1188,6 +1229,9 @@ int ufshcd_wait_for_register(struct ufs_hba *hba, u32 reg, u32 mask,
 void ufshcd_parse_dev_ref_clk_freq(struct ufs_hba *hba, struct clk *refclk);
 void ufshcd_update_reg_hist(struct ufs_err_reg_hist *reg_hist,
 			    u32 reg);
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+void ufshcd_hba_stop(struct ufs_hba *hba, bool can_sleep);
+#endif
 
 static inline void check_upiu_size(void)
 {
@@ -1234,6 +1278,11 @@ extern int ufshcd_runtime_idle(struct ufs_hba *hba);
 extern int ufshcd_system_suspend(struct ufs_hba *hba);
 extern int ufshcd_system_resume(struct ufs_hba *hba);
 extern int ufshcd_shutdown(struct ufs_hba *hba);
+#ifdef CONFIG_SCSI_UFSHCD_QTI
+extern int ufshcd_system_thaw(struct ufs_hba *hba);
+extern int ufshcd_system_restore(struct ufs_hba *hba);
+extern int ufshcd_system_freeze(struct ufs_hba *hba);
+#endif
 extern int ufshcd_dme_set_attr(struct ufs_hba *hba, u32 attr_sel,
 			       u8 attr_set, u32 mib_val, u8 peer);
 extern int ufshcd_dme_get_attr(struct ufs_hba *hba, u32 attr_sel,
@@ -1323,6 +1372,13 @@ void ufshcd_fixup_dev_quirks(struct ufs_hba *hba, struct ufs_dev_fix *fixups);
 #define SD_ASCII_STD true
 #define SD_RAW false
 
+#if defined(CONFIG_UFSFEATURE)
+int ufshcd_exec_dev_cmd(struct ufs_hba *hba,
+			enum dev_cmd_type cmd_type, int timeout);
+void ufshcd_scsi_block_requests(struct ufs_hba *hba);
+void ufshcd_scsi_unblock_requests(struct ufs_hba *hba);
+int ufshcd_wait_for_doorbell_clr(struct ufs_hba *hba, u64 wait_timeout_us);
+#endif
 int ufshcd_hold(struct ufs_hba *hba, bool async);
 void ufshcd_release(struct ufs_hba *hba);
 
@@ -1503,8 +1559,14 @@ static inline void ufshcd_vops_dbg_register_dump(struct ufs_hba *hba)
 static inline void ufshcd_vops_device_reset(struct ufs_hba *hba)
 {
 	if (hba->vops && hba->vops->device_reset) {
-		/* disable hba before device reset */
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+		/*
+		 * If Host Tx keeps bursting during and after H/W reset,
+		 * some UFS devices may fail the next following link startup,
+		 * hence disable hba before reset the device.
+		 */
 		ufshcd_hba_stoped(hba, true);
+#endif
 		hba->vops->device_reset(hba);
 		ufshcd_set_ufs_dev_active(hba);
 		if (ufshcd_is_wb_allowed(hba)) {
@@ -1540,6 +1602,10 @@ static inline u8 ufshcd_scsi_to_upiu_lun(unsigned int scsi_lun)
 		return scsi_lun & UFS_UPIU_MAX_UNIT_NUM_ID;
 }
 
+#if defined(CONFIG_SCSI_SKHPB)
+int ufshcd_query_flag_retry(struct ufs_hba *hba,
+	enum query_opcode opcode, enum flag_idn idn, u8 index, bool *flag_res);
+#endif
 
 int ufshcd_dump_regs(struct ufs_hba *hba, size_t offset, size_t len,
 		     const char *prefix);
