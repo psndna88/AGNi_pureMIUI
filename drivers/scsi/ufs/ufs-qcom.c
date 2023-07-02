@@ -18,7 +18,6 @@
 #include <linux/devfreq.h>
 #include <linux/cpu.h>
 #include <linux/blk-mq.h>
-#include <linux/bitfield.h>
 
 #include "ufshcd.h"
 #include "ufshcd-pltfrm.h"
@@ -71,7 +70,6 @@ struct ufs_qcom_dev_params {
 };
 
 static struct ufs_qcom_host *ufs_qcom_hosts[MAX_UFS_QCOM_HOSTS];
-extern int in_panic;
 
 static void ufs_qcom_get_default_testbus_cfg(struct ufs_qcom_host *host);
 static int ufs_qcom_set_dme_vs_core_clk_ctrl_clear_div(struct ufs_hba *hba,
@@ -493,16 +491,6 @@ static int ufs_qcom_phy_power_on(struct ufs_hba *hba)
 	int ret = 0;
 
 	mutex_lock(&host->phy_mutex);
-	if (hba->curr_dev_pwr_mode == UFS_POWERDOWN_PWR_MODE &&
-		hba->clk_gating.state != CLKS_ON) {
-		ret = -1;
-		dev_err(hba->dev, "%s: host shutdown %d\n",
-			__func__, ret);
-
-		mutex_unlock(&host->phy_mutex);
-
-		return ret;
-	}
 	if (!host->is_phy_pwr_on) {
 		ret = phy_power_on(phy);
 		if (ret) {
@@ -1682,8 +1670,6 @@ static int ufs_qcom_pwr_change_notify(struct ufs_hba *hba,
 	struct phy *phy = host->generic_phy;
 	struct ufs_qcom_dev_params ufs_qcom_cap;
 	int ret = 0;
-	struct device_node *np = hba->dev->of_node;
-
 
 	if (!dev_req_params) {
 		pr_err("%s: incoming dev_req_params is NULL\n", __func__);
@@ -1710,18 +1696,6 @@ static int ufs_qcom_pwr_change_notify(struct ufs_hba *hba,
 
 		ufs_qcom_cap.desired_working_mode =
 					UFS_QCOM_LIMIT_DESIRED_MODE;
-
-		if ((hba->dev_quirks & UFS_DEVICE_QUIRK_LIMIT_NUM_LANES_TX) &&
-			of_property_read_bool(np, "ufs_limit_num_lanes_tx_1")) {
-                  	pr_info("Number Of Active Lanes TX Has Been Limited From 2 To 1\n ");
-			ufs_qcom_cap.tx_lanes = 1;
-
-                }
-            	else
-                {
-                	ufs_qcom_cap.tx_lanes = 2;
-                }
-
 
 		if (host->hw_ver.major == 0x1) {
 			/*
@@ -1962,7 +1936,7 @@ static void ufs_qcom_set_caps(struct ufs_hba *hba)
 	if (!host->disable_lpm) {
 		hba->caps |= UFSHCD_CAP_CLK_GATING |
 			UFSHCD_CAP_HIBERN8_WITH_CLK_GATING |
-			UFSHCD_CAP_AUTO_BKOPS_SUSPEND |
+			UFSHCD_CAP_CLK_SCALING | UFSHCD_CAP_AUTO_BKOPS_SUSPEND |
 			UFSHCD_CAP_RPM_AUTOSUSPEND;
 		hba->caps |= UFSHCD_CAP_WB_EN;
 	}
@@ -2256,6 +2230,7 @@ static void ufs_qcom_save_host_ptr(struct ufs_hba *hba)
  * It will read the opcode, idn and buf_length parameters, and, put the
  * response in the buffer field while updating the used size in buf_length.
  */
+#if !defined(CONFIG_UFSFEATURE)
 static int
 ufs_qcom_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 {
@@ -2495,6 +2470,7 @@ ufs_qcom_ioctl(struct scsi_device *dev, unsigned int cmd, void __user *buffer)
 
 	return err;
 }
+#endif
 
 static int tag_to_cpu(struct ufs_hba *hba, unsigned int tag)
 {
@@ -2905,6 +2881,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 
 	ufs_qcom_init_sysfs(hba);
 
+#if !defined(CONFIG_UFSFEATURE)
 	/* Provide SCSI host ioctl API */
 	hba->host->hostt->ioctl = (int (*)(struct scsi_device *, unsigned int,
 				   void __user *))ufs_qcom_ioctl;
@@ -2912,6 +2889,7 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	hba->host->hostt->compat_ioctl = (int (*)(struct scsi_device *,
 					  unsigned int,
 					  void __user *))ufs_qcom_ioctl;
+#endif
 #endif
 
 	ufs_qcom_save_host_ptr(hba);
