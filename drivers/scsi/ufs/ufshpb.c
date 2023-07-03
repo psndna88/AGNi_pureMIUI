@@ -381,15 +381,15 @@ static void ufshpb_pre_req_compl_fn(struct request *req, blk_status_t error)
 	struct scsi_sense_hdr sshdr;
 
 	if (error) {
-		ERR_MSG("block status %d", error);
+//		ERR_MSG("block status %d", error);
 		scsi_normalize_sense(pre_req->sense, SCSI_SENSE_BUFFERSIZE,
 				     &sshdr);
-		ERR_MSG("code %x sense_key %x asc %x ascq %x",
-			sshdr.response_code,
-			sshdr.sense_key, sshdr.asc, sshdr.ascq);
-		ERR_MSG("byte4 %x byte5 %x byte6 %x additional_len %x",
-			sshdr.byte4, sshdr.byte5,
-			sshdr.byte6, sshdr.additional_length);
+//		ERR_MSG("code %x sense_key %x asc %x ascq %x",
+//			sshdr.response_code,
+//			sshdr.sense_key, sshdr.asc, sshdr.ascq);
+//		ERR_MSG("byte4 %x byte5 %x byte6 %x additional_len %x",
+//			sshdr.byte4, sshdr.byte5,
+//			sshdr.byte6, sshdr.additional_length);
 	}
 
 	bio_put(pre_req->bio);
@@ -3661,10 +3661,10 @@ static inline int ufshpb_version_check(struct ufshpb_dev_info *hpb_dev_info)
 
 	INFO_MSG("HPB Driver Version : (%.6X%s)", UFSHPB_DD_VER, UFSHPB_DD_VER_POST);
 
-	if (hpb_dev_info->version != UFSHPB_VER) {
+/*	if (hpb_dev_info->version != UFSHPB_VER) {
 		ERR_MSG("ERROR: HPB Spec Version mismatch. So HPB disabled.");
 		return -ENODEV;
-	}
+	} */
 	return 0;
 }
 
@@ -4042,8 +4042,8 @@ void ufshpb_suspend(struct ufsf_feature *ufsf)
 	seq_scan_lu(lun) {
 		hpb = ufsf->hpb_lup[lun];
 		if (hpb) {
-			INFO_MSG("ufshpb_lu %d goto suspend", lun);
-			INFO_MSG("ufshpb_lu %d changes suspend state", lun);
+//			INFO_MSG("ufshpb_lu %d goto suspend", lun);
+//			INFO_MSG("ufshpb_lu %d changes suspend state", lun);
 			ufshpb_set_state(ufsf, HPB_SUSPEND);
 			ufshpb_cancel_jobs(hpb);
 		}
@@ -4067,8 +4067,8 @@ void ufshpb_resume(struct ufsf_feature *ufsf)
 			do_retry_work =
 				!list_empty_careful(&hpb->lh_map_req_retry);
 
-			INFO_MSG("ufshpb_lu %d resume. do_task_work %d retry %d",
-				 lun, do_task_work, do_retry_work);
+//			INFO_MSG("ufshpb_lu %d resume. do_task_work %d retry %d",
+//				 lun, do_task_work, do_retry_work);
 
 			if (do_task_work)
 				schedule_work(&hpb->task_work);
