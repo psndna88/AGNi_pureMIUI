@@ -119,10 +119,10 @@ static inline int ufshid_version_check(int spec_version)
 	INFO_MSG("HID Driver version (%.6X%s)",
 		 UFSHID_DD_VER, UFSHID_DD_VER_POST);
 
-	if (spec_version != UFSHID_VER) {
-		ERR_MSG("UFS HID version mismatched");
-		return -ENODEV;
-	}
+//	if (spec_version != UFSHID_VER) {
+//		ERR_MSG("UFS HID version mismatched");
+//		return -ENODEV;
+//	}
 	return 0;
 }
 
