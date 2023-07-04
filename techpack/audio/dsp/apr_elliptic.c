@@ -398,6 +398,8 @@ int32_t elliptic_process_apr_payload(uint32_t *payload)
 	    block_proximity("erdog.challegram") ||
 	    block_proximity("egram.mdgram") ||
 	    block_proximity("egram.plus") ||
+	    block_proximity("org.telegram.messenger") ||
+	    block_proximity("org.thunderdog.challegram") ||
 	    block_proximity("mimi.nekogram"))
 		return ret;
 
