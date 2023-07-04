@@ -9223,19 +9223,18 @@ static void ufshcd_vreg_set_lpm(struct ufs_hba *hba)
 		ufshcd_setup_vreg(hba, false);
 		vcc_off = true;
 	} else if (!ufshcd_is_ufs_dev_active(hba)) {
-#if defined(CONFIG_UFSTW)
-		if (hba->dev_info.wmanufacturerid == UFS_VENDOR_SKHYNIX) {
-#endif
-
+//#if defined(CONFIG_UFSTW)
+//		if (hba->dev_info.wmanufacturerid == UFS_VENDOR_SKHYNIX) {
+//#endif
 		ufshcd_toggle_vreg(hba->dev, hba->vreg_info.vcc, false);
 		vcc_off = true;
 		if (ufshcd_is_link_hibern8(hba) || ufshcd_is_link_off(hba)) {
 			ufshcd_config_vreg_lpm(hba, hba->vreg_info.vccq);
 			ufshcd_config_vreg_lpm(hba, hba->vreg_info.vccq2);
 		}
-#if defined(CONFIG_UFSTW)
-		}
-#endif
+//#if defined(CONFIG_UFSTW)
+//		}
+//#endif
 	}
 
 	/*
