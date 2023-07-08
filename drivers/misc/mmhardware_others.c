@@ -127,7 +127,7 @@ err:
 }
 EXPORT_SYMBOL(register_otherkobj_under_mmsysfs);
 
-module_init(mmhardware_others_init);
+late_initcall(mmhardware_others_init);
 module_exit(mmhardware_others_exit);
 MODULE_DESCRIPTION("mm module");
 MODULE_LICENSE("GPL v2");
