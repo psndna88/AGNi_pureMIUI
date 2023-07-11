@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -8248,14 +8248,26 @@ QDF_STATUS lim_util_get_type_subtype(void *pkt, uint8_t *type,
 	return QDF_STATUS_SUCCESS;
 }
 
-enum rateid lim_get_min_session_txrate(struct pe_session *session)
+enum rateid lim_get_min_session_txrate(struct pe_session *session,
+				       qdf_freq_t *pre_auth_freq)
 {
 	enum rateid rid = RATEID_DEFAULT;
 	uint8_t min_rate = SIR_MAC_RATE_54, curr_rate, i;
-	tSirMacRateSet *rateset = &session->rateSet;
+	tSirMacRateSet *rateset;
 
 	if (!session)
 		return rid;
+
+	rateset = &session->rateSet;
+
+	if (pre_auth_freq) {
+		pe_debug("updated rateset to pre auth freq %d",
+			 *pre_auth_freq);
+		if ((*pre_auth_freq))
+			csr_get_basic_rates(rateset, *pre_auth_freq);
+		else
+			return rid;
+	}
 
 	for (i = 0; i < rateset->numRates; i++) {
 		/* Ignore MSB - set to indicate basic rate */
