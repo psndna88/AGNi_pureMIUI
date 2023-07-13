@@ -196,6 +196,7 @@ static struct xiaomi_touch xiaomi_touch_dev = {
 	.palm_mutex = __MUTEX_INITIALIZER(xiaomi_touch_dev.palm_mutex),
 	.prox_mutex = __MUTEX_INITIALIZER(xiaomi_touch_dev.prox_mutex),
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER(xiaomi_touch_dev.wait_queue),
+	.fod_press_status_mutex = __MUTEX_INITIALIZER(xiaomi_touch_dev.fod_press_status_mutex),
 };
 
 struct xiaomi_touch *xiaomi_touch_dev_get(int minor)
@@ -938,6 +939,39 @@ struct device_attribute *attr, char *buf)
 	return snprintf(buf, PAGE_SIZE, "%d\n", touch_pdata->suspend_state);
 }
 
+int update_fod_press_status(int value)
+{
+	struct xiaomi_touch *dev = NULL;
+
+	mutex_lock(&xiaomi_touch_dev.fod_press_status_mutex);
+
+	if (!touch_pdata) {
+		mutex_unlock(&xiaomi_touch_dev.fod_press_status_mutex);
+		return -ENODEV;
+	}
+
+	dev = touch_pdata->device;
+
+	if (value != touch_pdata->fod_press_status_value) {
+		pr_info("%s: value:%d\n", __func__, value);
+		touch_pdata->fod_press_status_value = value;
+		sysfs_notify(&xiaomi_touch_dev.dev->kobj, NULL,
+			     "fod_press_status");
+	}
+
+	mutex_unlock(&xiaomi_touch_dev.fod_press_status_mutex);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(update_fod_press_status);
+
+static ssize_t fod_press_status_show(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	struct xiaomi_touch_pdata *pdata = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", pdata->fod_press_status_value);
+}
+
 static DEVICE_ATTR(touch_thp_cmd, (S_IRUGO | S_IWUSR | S_IWGRP),
 			thp_cmd_status_show, thp_cmd_status_store);
 
@@ -998,6 +1032,8 @@ static DEVICE_ATTR(suspend_state, 0644, xiaomi_touch_suspend_state, NULL);
 static DEVICE_ATTR(update_rawdata, (S_IRUGO | S_IWUSR | S_IWGRP), update_rawdata_show,
 			NULL);
 
+static DEVICE_ATTR(fod_press_status, (0664), fod_press_status_show, NULL);
+
 static struct attribute *touch_attr_group[] = {
 	&dev_attr_enable_touch_raw.attr,
 	&dev_attr_enable_touch_delta.attr,
@@ -1022,6 +1058,7 @@ static struct attribute *touch_attr_group[] = {
 	&dev_attr_touch_vendor.attr,
 	&dev_attr_update_rawdata.attr,
 	&dev_attr_suspend_state.attr,
+	&dev_attr_fod_press_status.attr,
 	NULL,
 };
 
