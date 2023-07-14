@@ -2735,6 +2735,49 @@ static inline u16 ufshcd_upiu_wlun_to_scsi_wlun(u8 upiu_wlun_id)
 	return (upiu_wlun_id & ~UFS_UPIU_WLUN_ID) | SCSI_W_LUN_BASE;
 }
 
+static void ufshcd_pm_qos_get_worker(struct work_struct *work)
+{
+	struct ufs_hba *hba = container_of(work, typeof(*hba), pm_qos.get_work);
+
+	if (!atomic_read(&hba->pm_qos.count))
+		return;
+
+	mutex_lock(&hba->pm_qos.lock);
+	if (atomic_read(&hba->pm_qos.count) && !hba->pm_qos.active) {
+		cpu_latency_qos_update_request(&hba->pm_qos.req, 100);
+		hba->pm_qos.active = true;
+	}
+	mutex_unlock(&hba->pm_qos.lock);
+}
+
+static void ufshcd_pm_qos_put_worker(struct work_struct *work)
+{
+	struct ufs_hba *hba = container_of(work, typeof(*hba), pm_qos.put_work);
+
+	if (atomic_read(&hba->pm_qos.count))
+		return;
+
+	mutex_lock(&hba->pm_qos.lock);
+	if (!atomic_read(&hba->pm_qos.count) && hba->pm_qos.active) {
+		cpu_latency_qos_update_request(&hba->pm_qos.req,
+					       PM_QOS_DEFAULT_VALUE);
+		hba->pm_qos.active = false;
+	}
+	mutex_unlock(&hba->pm_qos.lock);
+}
+
+static void ufshcd_pm_qos_get(struct ufs_hba *hba)
+{
+	if (atomic_inc_return(&hba->pm_qos.count) == 1)
+		queue_work(system_unbound_wq, &hba->pm_qos.get_work);
+}
+
+static void ufshcd_pm_qos_put(struct ufs_hba *hba)
+{
+	if (atomic_dec_return(&hba->pm_qos.count) == 0)
+		queue_work(system_unbound_wq, &hba->pm_qos.put_work);
+}
+
 /**
  * ufshcd_queuecommand - main entry point for SCSI requests
  * @host: SCSI host pointer
@@ -2749,8 +2792,12 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	unsigned long flags;
 	int tag;
 	int err = 0;
+	bool cmd_sent = false;
 
 	hba = shost_priv(host);
+
+    /* Wake the CPU managing the IRQ as soon as possible */
+    ufshcd_pm_qos_get(hba);
 
 	tag = cmd->request->tag;
 	if (!ufshcd_valid_tag(hba, tag)) {
@@ -2870,6 +2917,7 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		goto out_compl_cmd;
 	}
 	ufshcd_send_command(hba, tag);
+	cmd_sent = true;
 	ufs_spin_unlock_irqrestore(hba->host->host_lock, flags);
 	goto out;
 
@@ -2885,6 +2933,9 @@ out:
 	if (!oops_in_progress) {
 		up_read(&hba->clk_scaling_lock);
 	}
+	if (!cmd_sent)
+		ufshcd_pm_qos_put(hba);
+
 	return err;
 }
 
@@ -5468,6 +5519,7 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba,
 #endif
 			ufshcd_add_command_trace(hba, index, "complete");
 			result = ufshcd_transfer_rsp_status(hba, lrbp);
+			ufshcd_pm_qos_put(hba);
 			scsi_dma_unmap(cmd);
 			cmd->result = result;
 			ufshcd_complete_lrbp_crypto(hba, cmd, lrbp);
@@ -10148,6 +10200,13 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	 */
 	ufshcd_readl(hba, REG_INTERRUPT_ENABLE);
 
+	mutex_init(&hba->pm_qos.lock);
+	INIT_WORK(&hba->pm_qos.get_work, ufshcd_pm_qos_get_worker);
+	INIT_WORK(&hba->pm_qos.put_work, ufshcd_pm_qos_put_worker);
+	hba->pm_qos.req.type = PM_QOS_REQ_AFFINE_IRQ;
+	hba->pm_qos.req.irq = irq;
+	cpu_latency_qos_add_request(&hba->pm_qos.req, PM_QOS_DEFAULT_VALUE);
+
 	/* IRQ registration */
 	err = devm_request_irq(dev, irq, ufshcd_intr, IRQF_SHARED, UFSHCD, hba);
 	if (err) {
@@ -10235,6 +10294,7 @@ exit_gating:
 	ufshcd_exit_clk_gating(hba);
 	destroy_workqueue(hba->eh_wq);
 out_disable:
+	cpu_latency_qos_remove_request(&hba->pm_qos.req);
 	hba->is_irq_enabled = false;
 	ufshcd_hba_exit(hba);
 out_error:
