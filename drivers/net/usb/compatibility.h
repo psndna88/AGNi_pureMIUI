@@ -612,10 +612,12 @@
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,12,0) */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,251)
 	static inline void eth_hw_addr_set(struct net_device *dev, const u8 *addr)
 	{
 		memcpy(dev->dev_addr, addr, 6);
 	}
+#endif
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5,19,0) */
 
