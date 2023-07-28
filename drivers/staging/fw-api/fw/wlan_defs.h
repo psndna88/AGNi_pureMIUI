@@ -149,7 +149,7 @@ typedef enum {
     MODE_11AX_HE80_2G = 23,
 #endif
 
-#if defined(SUPPORT_11BE) && SUPPORT_11BE
+#if (defined(SUPPORT_11BE) && SUPPORT_11BE) || defined(SUPPORT_11BE_ROM)
     MODE_11BE_EHT20 = 24,
     MODE_11BE_EHT40 = 25,
     MODE_11BE_EHT80 = 26,
@@ -248,7 +248,7 @@ typedef enum {
         ((mode) == MODE_11AX_HE80_2G))
 #endif /* SUPPORT_11AX */
 
-#if defined(SUPPORT_11BE) && SUPPORT_11BE
+#if (defined(SUPPORT_11BE) && SUPPORT_11BE) || defined(SUPPORT_11BE_ROM)
 #define IS_MODE_EHT(mode) (((mode) == MODE_11BE_EHT20) || \
         ((mode) == MODE_11BE_EHT40)     || \
         ((mode) == MODE_11BE_EHT80)     || \
@@ -1747,7 +1747,14 @@ A_COMPILE_TIME_ASSERT(check_mlo_glb_link_info_8byte_size_quantum,
 
 typedef enum {
     MLO_SHMEM_CRASH_PARTNER_CHIPS = 1,
+    MLO_SHMEM_CRASH_SW_PANIC      = 2,
+    MLO_SHMEM_CRASH_SW_ASSERT     = 3,
 } MLO_SHMEM_CHIP_CRASH_REASON;
+
+typedef enum {
+    MLO_SHMEM_RECOVERY_CRASH_PARTNER_CHIPS = 1,
+    MLO_SHMEM_RECOVER_NON_MLO_MODE = 2,
+} MLO_SHMEM_CHIP_RECOVERY_MODE;
 
 /* glb link info structures used for scratchpad memory (crash and recovery) */
 typedef struct {
@@ -1757,17 +1764,29 @@ typedef struct {
      * crash reason, takes value in enum MLO_SHMEM_CHIP_CRASH_REASON
      */
     A_UINT32 crash_reason;
+    /**
+     * crash reason, takes value in enum MLO_SHMEM_CHIP_RECOVERY_MODE
+     */
+    A_UINT32 recovery_mode;
+    /* reserved: added for padding to A_UINT64 size, available for future use */
+    A_UINT32 reserved;
 } mlo_glb_per_chip_crash_info;
 
 A_COMPILE_TIME_ASSERT(check_mlo_glb_per_chip_crash_info,
         (((sizeof(mlo_glb_per_chip_crash_info) % sizeof(A_UINT64) == 0x0))));
 
 /** Helper macro for params GET/SET of mlo_glb_chip_crash_info */
-#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_NO_OF_CHIPS_GET(chip_info) MLO_SHMEM_GET_BITS(chip_info, 0, 2)
-#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_NO_OF_CHIPS_SET(chip_info, value) MLO_SHMEM_SET_BITS(chip_info, 0, 2, value)
+#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_NO_OF_CHIPS_GET(chip_info) \
+    (MLO_SHMEM_GET_BITS(chip_info, 0, 2) + \
+     (MLO_SHMEM_GET_BITS(chip_info, 12, 4) << 2))
+#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_NO_OF_CHIPS_SET(chip_info, value) \
+    do { \
+       MLO_SHMEM_SET_BITS(chip_info, 0, 2, ((value) & 0x03)); \
+       MLO_SHMEM_SET_BITS(chip_info, 12, 4, ((value) >> 2)); \
+} while (0)
 
-#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_VALID_CHIP_BMAP_GET(chip_info) MLO_SHMEM_GET_BITS(chip_info, 2, 3)
-#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_VALID_CHIP_BMAP_SET(chip_info, value) MLO_SHMEM_SET_BITS(chip_info, 2, 3, value)
+#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_VALID_CHIP_BMAP_GET(chip_info) MLO_SHMEM_GET_BITS(chip_info, 2, 8)
+#define MLO_SHMEM_CHIP_CRASH_INFO_PARAM_VALID_CHIP_BMAP_SET(chip_info, value) MLO_SHMEM_SET_BITS(chip_info, 2, 8, value)
 
 typedef struct {
     /* TLV tag and len; tag equals MLO_SHMEM_TLV_STRUCT_MLO_GLB_CHIP_CRASH_INFO */
@@ -1778,7 +1797,18 @@ typedef struct {
      *
      * [1:0]:  no_of_chips
      * [4:2]:  valid_chip_bmap
-     * [31:6]: reserved
+     * For number of chips beyond 3, extension fields are added.
+     * To maintain backward compatibility, with 3 chip board and
+     * old host driver, valid chip bmap is extended in continuation from
+     * existing bit 4 onwards, while extending no_of_chips information
+     * would overlap with old valid_chip_bmap, hence extended from
+     * bit 12:15. Now no_of_chip will have two parts, lower 2 bits from 0-1 and
+     * upper 4 bits from 12-15. SET-GET macros are modified accordingly.
+     * This helps in no change in respective processing files and don't need
+     * to maintain two copy of information for backward compatibility.
+     * [9:5]:  valid_chip_bmap_ext
+     * [15:12]: no_of_chips_ext
+     * [31:16]: reserved
      */
     A_UINT32 chip_info;
     /*  This TLV is followed by array of mlo_glb_per_chip_crash_info:

@@ -29,6 +29,8 @@
 
 &pcie0 {
 	qcom,boot-option = <0x1>;
+	qcom,bdf-halt-dis;
+	qcom,wr-halt-size = <0x1e>;
 };
 
 &pm7250b_vadc {

@@ -1,0 +1,15 @@
+/dts-v1/;
+
+#include "blairp.dtsi"
+#include "blairp-mtp-usbc.dtsi"
+#include "holi-mtp-pm7250b.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. BLAIRP MTP USBC audio";
+	compatible = "qcom,blairp-mtp", "qcom,blairp", "qcom,mtp";
+	qcom,board-id = <8 1>;
+};
+
+&pm7250b_charger {
+	dpdm-supply = <&usb2_phy0>;
+};

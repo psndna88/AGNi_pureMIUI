@@ -1,0 +1,9 @@
+/dts-v1/;
+
+#include "katmai-fp2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KATMAI-FP2 SoC";
+	compatible = "qcom,yupik-iot";
+	qcom,board-id = <0 0>;
+};

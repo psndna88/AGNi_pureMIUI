@@ -169,7 +169,8 @@
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
-
+#define DRIVER_DISCONNECT_REASON_INDEX \
+	QCA_NL80211_VENDOR_SUBCMD_DRIVER_DISCONNECT_REASON_INDEX
 /**
  * rtt_is_initiator - Macro to check if the bitmap has any RTT roles set
  * @bitmap: The bitmap to be checked
@@ -1699,6 +1700,10 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 	[QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO_INDEX] = {
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_UPDATE_STA_INFO,
+	},
+	[QCA_NL80211_VENDOR_SUBCMD_DRIVER_DISCONNECT_REASON_INDEX] = {
+		.vendor_id = QCA_NL80211_VENDOR_ID,
+		.subcmd = QCA_NL80211_VENDOR_SUBCMD_DRIVER_DISCONNECT_REASON,
 	},
 #ifdef WLAN_SUPPORT_TWT
 	FEATURE_TWT_VENDOR_EVENTS
@@ -22146,6 +22151,9 @@ wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
 				      uint16_t disconnect_ies_len)
 {
 	enum ieee80211_reasoncode ieee80211_reason;
+	struct sk_buff *vendor_event;
+	int flags;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 
 	ieee80211_reason = wlan_hdd_get_cfg80211_disconnect_reason(adapter,
 								   reason);
@@ -22155,6 +22163,26 @@ wlan_hdd_cfg80211_indicate_disconnect(struct hdd_adapter *adapter,
 		      adapter->last_disconnect_reason,
 		      hdd_qca_reason_to_str(adapter->last_disconnect_reason),
 		      locally_generated);
+
+	flags = cds_get_gfp_flags();
+	vendor_event =
+		cfg80211_vendor_event_alloc(
+			hdd_ctx->wiphy, &(adapter->wdev), NLMSG_HDRLEN +
+			sizeof(adapter->last_disconnect_reason) +
+			NLMSG_HDRLEN, DRIVER_DISCONNECT_REASON_INDEX, flags);
+	if (!vendor_event) {
+		hdd_err("cfg80211_vendor_event_alloc failed");
+		return;
+	}
+
+	if (nla_put_u32(vendor_event, DISCONNECT_REASON,
+			adapter->last_disconnect_reason)) {
+		hdd_err("DISCONNECT_REASON put fail");
+		kfree_skb(vendor_event);
+		goto send_disconnect;
+	}
+	cfg80211_vendor_event(vendor_event, flags);
+send_disconnect:
 	cfg80211_disconnected(adapter->dev, ieee80211_reason, disconnect_ies,
 			      disconnect_ies_len, locally_generated,
 			      GFP_KERNEL);

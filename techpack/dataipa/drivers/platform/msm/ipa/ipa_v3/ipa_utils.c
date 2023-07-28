@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved
  */
 
 #include <net/ip.h>
@@ -7280,7 +7281,7 @@ void ipa3_counter_remove_hdl(int hdl)
 	offset = counter->hw_counter.start_id - 1;
 	if (offset >= 0 && (offset + counter->hw_counter.num_counters)
 		< IPA_FLT_RT_HW_COUNTER) {
-		memset(&ipa3_ctx->flt_rt_counters.used_hw + offset,
+		memset(&ipa3_ctx->flt_rt_counters.used_hw[offset],
 			   0, counter->hw_counter.num_counters * sizeof(bool));
 	} else {
 		IPAERR_RL("unexpected hdl %d\n", hdl);
@@ -7289,7 +7290,7 @@ void ipa3_counter_remove_hdl(int hdl)
 	offset = counter->sw_counter.start_id - 1 - IPA_FLT_RT_HW_COUNTER;
 	if (offset >= 0 && (offset + counter->sw_counter.num_counters)
 		< IPA_FLT_RT_SW_COUNTER) {
-		memset(&ipa3_ctx->flt_rt_counters.used_sw + offset,
+		memset(&ipa3_ctx->flt_rt_counters.used_sw[offset],
 		   0, counter->sw_counter.num_counters * sizeof(bool));
 	} else {
 		IPAERR_RL("unexpected hdl %d\n", hdl);
@@ -9614,6 +9615,20 @@ u32 ipa3_get_r_rev_version(void)
 	return r_rev;
 }
 EXPORT_SYMBOL(ipa3_get_r_rev_version);
+
+u32 ipa3_get_qmap_id(int pipe_idx)
+{
+	if (pipe_idx >= ipa3_ctx->ipa_num_pipes || pipe_idx < 0) {
+		IPAERR("Bad pipe index!\n");
+		WARN_ON(1);
+		return -EINVAL;
+	}
+
+	return ipa3_ctx->ep[pipe_idx].cfg.meta.qmap_id;
+
+}
+EXPORT_SYMBOL(ipa3_get_qmap_id);
+
 
 /**
  * ipa3_ctx_get_type() - to get platform type, hw type

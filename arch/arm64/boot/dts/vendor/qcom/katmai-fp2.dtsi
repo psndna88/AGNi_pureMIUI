@@ -1,0 +1,60 @@
+#include "yupik-iot.dtsi"
+#include "katmai-cpu-fp2.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. KATMAI-FP2 SoC";
+	compatible = "qcom,yupik-iot";
+	qcom,msm-id = <576 0x10000>;
+	qcom,softsku-id = <2>;
+};
+
+&msm_gpu {
+	/delete-property/qcom,gpu-speed-bin;
+	/delete-property/qcom,initial-pwrlevel;
+	/delete-node/qcom,gpu-pwrlevels;
+	/delete-node/qcom,gpu-pwrlevel-bins;
+
+	/* GPU power levels */
+	qcom,gpu-pwrlevels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			qcom,initial-pwrlevel = <0>;
+			compatible = "qcom,gpu-pwrlevels";
+
+			qcom,gpu-pwrlevel@0 {
+					reg = <0>;
+					qcom,gpu-freq = <315000000>;
+					qcom,level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
+
+					qcom,bus-freq-ddr7 = <3>;
+					qcom,bus-min-ddr7 = <2>;
+					qcom,bus-max-ddr7 = <9>;
+
+					qcom,bus-freq-ddr8 = <3>;
+					qcom,bus-min-ddr8 = <2>;
+					qcom,bus-max-ddr8 = <7>;
+
+					qcom,acd-level = <0x882F5FFD>;
+			};
+	};
+};
+
+&cam_csid2 {
+	status = "disabled";
+};
+
+&cam_vfe2 {
+	status = "disabled";
+};
+
+&mdss_dsi0 {
+	/delete-property/reg;
+	/delete-property/reg-names;
+
+	reg = <0xae94000 0x400>,
+		<0xaf08000 0x4>,
+		<0x0ae36000 0x300>,
+		<0xc00c6000 0x01000>;
+	reg-names = "dsi_ctrl", "disp_cc_base", "mdp_intf_base", "disp_conf";
+};

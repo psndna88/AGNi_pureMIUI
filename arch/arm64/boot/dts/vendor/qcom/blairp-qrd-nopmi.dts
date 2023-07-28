@@ -1,0 +1,13 @@
+/dts-v1/;
+
+#include "blairp.dtsi"
+#include "blairp-qrd-nopmi.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Blairp QRD NOPMI";
+	compatible = "qcom,blairp-qrd", "qcom,blairp", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+	qcom,pmic-id-size = <4>;
+	qcom,pmic-id = <0x2D 0x0 0x0 0x0>;
+};
+

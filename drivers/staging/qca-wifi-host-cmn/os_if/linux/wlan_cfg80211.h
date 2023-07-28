@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -140,6 +141,8 @@
  *	MBSSID TX VDEV status index
  * @QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT_INDEX: TWT config index
  * @QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG_INDEX: CFR data event index
+ * @QCA_NL80211_VENDOR_SUBCMD_DRIVER_DISCONNECT_REASON_INDEX:
+ *	Driver disconnect reason index
  */
 
 enum qca_nl80211_vendor_subcmds_index {
@@ -232,6 +235,7 @@ enum qca_nl80211_vendor_subcmds_index {
 	QCA_NL80211_VENDOR_SUBCMD_UPDATE_SSID_INDEX,
 	QCA_NL80211_VENDOR_SUBCMD_WIFI_FW_STATS_INDEX,
 	QCA_NL80211_VENDOR_SUBCMD_MBSSID_TX_VDEV_STATUS_INDEX,
+	QCA_NL80211_VENDOR_SUBCMD_DRIVER_DISCONNECT_REASON_INDEX,
 #ifdef WLAN_SUPPORT_TWT
 	QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT_INDEX,
 #endif

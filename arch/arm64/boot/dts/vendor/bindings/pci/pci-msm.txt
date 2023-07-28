@@ -407,11 +407,23 @@ interconnects:
 	Usage: optional
 	Value type: <u32 array of bdfs>
 	Definition: Skip enumeration for the list of 32-bit BDFs.
+
 - qcom,config-recovery:
 	Usage: optional
 	Value type : <bool>
 	Definition: Enable to notify the client driver for recovery when
 		config space is not accessible
+
+- qcom, pcie-halt-feature-dis:
+	Usage: optional
+        Value type : <bool>
+        Definition: Disable PCIe Write and Read halt feature
+
+- qcom, qcom,bdf-halt-dis:
+        Usage: optional
+        Value type : <bool>
+        Definition: Disables the BDF halt feature which halt inbound
+		write transactions when BDF change is detected.
 
 ==============
 Root port node
@@ -629,6 +641,17 @@ i2c child node
 	Value Type: Array of <u32>
 	Definition: List of slave registers to dump by i2c read
 
+- version-reg:
+	Usage: optional
+	Value type: <u32>
+	Definition: Register to find ntn3 switch version
+
+- force-i2c-setting:
+	Usage: optional
+	Value type: <bool>
+	Definition: If force-i2c-setting flag is set
+		    then de_emphasis settings are updated
+		    irrespective of the chip version via i2c_writes
 =======
 Example
 =======
@@ -641,5 +664,7 @@ Example
 		ep-reset-reg = <0x801210>;
 		ep-reset-gpio-mask = <0xf>;
 		dump-regs = <0x801330 0x801350 0x801370>;
+		version-reg = <0x800000>;
+		force-i2c-setting;
 	};
 };
