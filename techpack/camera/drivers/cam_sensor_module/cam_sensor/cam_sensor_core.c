@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/module.h>
@@ -339,6 +340,7 @@ static int32_t cam_sensor_i2c_pkt_parse(struct cam_sensor_ctrl_t *s_ctrl,
 	}
 
 end:
+	cam_mem_put_cpu_buf(config.packet_handle);
 	return rc;
 }
 
@@ -589,9 +591,11 @@ int32_t cam_handle_mem_ptr(uint64_t handle, struct cam_sensor_ctrl_t *s_ctrl)
 				"Failed to parse the command Buffer Header");
 			goto end;
 		}
+		cam_mem_put_cpu_buf(cmd_desc[i].mem_handle);
 	}
 
 end:
+	cam_mem_put_cpu_buf(handle);
 	return rc;
 }
 
