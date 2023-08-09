@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.251 Kernel Configuration
+# Linux/arm64 5.4.252 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 14.1.4"
 CONFIG_GCC_VERSION=0
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-ST_v4.1-stable-qgki"
+CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-ST_v4.2-stable-qgki"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
@@ -6175,7 +6175,6 @@ CONFIG_QUOTACTL=y
 # CONFIG_AUTOFS4_FS is not set
 # CONFIG_AUTOFS_FS is not set
 CONFIG_FUSE_FS=y
-CONFIG_PASSTHROUGH_SYSTEM=y
 # CONFIG_CUSE is not set
 CONFIG_VIRTIO_FS=y
 CONFIG_OVERLAY_FS=y
