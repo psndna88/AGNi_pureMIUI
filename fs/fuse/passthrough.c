@@ -1,39 +1,60 @@
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
 // SPDX-License-Identifier: GPL-2.0
 
 #include "fuse_i.h"
-#include "fuse.h"
+
+#include <linux/fuse.h>
 #include <linux/idr.h>
 #include <linux/uio.h>
+
+#define PASSTHROUGH_IOCB_MASK                                                  \
+	(IOCB_APPEND | IOCB_DSYNC | IOCB_HIPRI | IOCB_NOWAIT | IOCB_SYNC)
 
 struct fuse_aio_req {
 	struct kiocb iocb;
 	struct kiocb *iocb_fuse;
 };
 
+static inline void kiocb_clone(struct kiocb *kiocb, struct kiocb *kiocb_src,
+			       struct file *filp)
+{
+	*kiocb = (struct kiocb){
+		.ki_filp = filp,
+		.ki_flags = kiocb_src->ki_flags,
+		.ki_hint = kiocb_src->ki_hint,
+		.ki_ioprio = kiocb_src->ki_ioprio,
+		.ki_pos = kiocb_src->ki_pos,
+	};
+}
+
+static void fuse_file_accessed(struct file *dst_file, struct file *src_file)
+{
+	struct inode *dst_inode;
+	struct inode *src_inode;
+
+	if (dst_file->f_flags & O_NOATIME)
+		return;
+
+	dst_inode = file_inode(dst_file);
+	src_inode = file_inode(src_file);
+
+	if ((!timespec64_equal(&dst_inode->i_mtime, &src_inode->i_mtime) ||
+	     !timespec64_equal(&dst_inode->i_ctime, &src_inode->i_ctime))) {
+		dst_inode->i_mtime = src_inode->i_mtime;
+		dst_inode->i_ctime = src_inode->i_ctime;
+	}
+
+	touch_atime(&dst_file->f_path);
+}
+
 static void fuse_copyattr(struct file *dst_file, struct file *src_file)
 {
 	struct inode *dst = file_inode(dst_file);
 	struct inode *src = file_inode(src_file);
 
+	dst->i_atime = src->i_atime;
+	dst->i_mtime = src->i_mtime;
+	dst->i_ctime = src->i_ctime;
 	i_size_write(dst, i_size_read(src));
-}
-
-static inline rwf_t iocb_to_rw_flags(int ifl)
-{
-	rwf_t flags = 0;
-
-	if (ifl & IOCB_APPEND)
-		flags |= RWF_APPEND;
-	if (ifl & IOCB_DSYNC)
-		flags |= RWF_DSYNC;
-	if (ifl & IOCB_HIPRI)
-		flags |= RWF_HIPRI;
-	if (ifl & IOCB_NOWAIT)
-		flags |= RWF_NOWAIT;
-	if (ifl & IOCB_SYNC)
-		flags |= RWF_SYNC;
-	return flags;
 }
 
 static void fuse_aio_cleanup_handler(struct fuse_aio_req *aio_req)
@@ -62,18 +83,6 @@ static void fuse_aio_rw_complete(struct kiocb *iocb, long res, long res2)
 	iocb_fuse->ki_complete(iocb_fuse, res, res2);
 }
 
-static inline void kiocb_clone(struct kiocb *kiocb, struct kiocb *kiocb_src,
-			       struct file *filp)
-{
-	*kiocb = (struct kiocb){
-		.ki_filp = filp,
-		.ki_flags = kiocb_src->ki_flags,
-		.ki_hint = kiocb_src->ki_hint,
-		.ki_ioprio = kiocb_src->ki_ioprio,
-		.ki_pos = kiocb_src->ki_pos,
-	};
-}
-
 ssize_t fuse_passthrough_read_iter(struct kiocb *iocb_fuse,
 				   struct iov_iter *iter)
 {
@@ -89,7 +98,8 @@ ssize_t fuse_passthrough_read_iter(struct kiocb *iocb_fuse,
 	old_cred = override_creds(ff->passthrough.cred);
 	if (is_sync_kiocb(iocb_fuse)) {
 		ret = vfs_iter_read(passthrough_filp, iter, &iocb_fuse->ki_pos,
-				    iocb_to_rw_flags(iocb_fuse->ki_flags));
+				    iocb_to_rw_flags(iocb_fuse->ki_flags,
+						     PASSTHROUGH_IOCB_MASK));
 	} else {
 		struct fuse_aio_req *aio_req;
 
@@ -98,6 +108,7 @@ ssize_t fuse_passthrough_read_iter(struct kiocb *iocb_fuse,
 			ret = -ENOMEM;
 			goto out;
 		}
+
 		aio_req->iocb_fuse = iocb_fuse;
 		kiocb_clone(&aio_req->iocb, iocb_fuse, passthrough_filp);
 		aio_req->iocb.ki_complete = fuse_aio_rw_complete;
@@ -107,6 +118,8 @@ ssize_t fuse_passthrough_read_iter(struct kiocb *iocb_fuse,
 	}
 out:
 	revert_creds(old_cred);
+
+	fuse_file_accessed(fuse_filp, passthrough_filp);
 
 	return ret;
 }
@@ -127,11 +140,14 @@ ssize_t fuse_passthrough_write_iter(struct kiocb *iocb_fuse,
 
 	inode_lock(fuse_inode);
 
+	fuse_copyattr(fuse_filp, passthrough_filp);
+
 	old_cred = override_creds(ff->passthrough.cred);
 	if (is_sync_kiocb(iocb_fuse)) {
 		file_start_write(passthrough_filp);
 		ret = vfs_iter_write(passthrough_filp, iter, &iocb_fuse->ki_pos,
-				     iocb_to_rw_flags(iocb_fuse->ki_flags));
+				     iocb_to_rw_flags(iocb_fuse->ki_flags,
+						      PASSTHROUGH_IOCB_MASK));
 		file_end_write(passthrough_filp);
 		if (ret > 0)
 			fuse_copyattr(fuse_filp, passthrough_filp);
@@ -143,6 +159,7 @@ ssize_t fuse_passthrough_write_iter(struct kiocb *iocb_fuse,
 			ret = -ENOMEM;
 			goto out;
 		}
+
 		file_start_write(passthrough_filp);
 		__sb_writers_release(passthrough_inode->i_sb, SB_FREEZE_WRITE);
 
@@ -165,9 +182,7 @@ ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma)
 	int ret;
 	const struct cred *old_cred;
 	struct fuse_file *ff = file->private_data;
-	struct inode *fuse_inode = file_inode(file);
 	struct file *passthrough_filp = ff->passthrough.filp;
-	struct inode *passthrough_inode = file_inode(passthrough_filp);
 
 	if (!passthrough_filp->f_op->mmap)
 		return -ENODEV;
@@ -186,37 +201,24 @@ ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma)
 	else
 		fput(file);
 
-	if (file->f_flags & O_NOATIME)
-		return ret;
-
-	if ((!timespec64_equal(&fuse_inode->i_mtime,
-			       &passthrough_inode->i_mtime) ||
-	     !timespec64_equal(&fuse_inode->i_ctime,
-			       &passthrough_inode->i_ctime))) {
-		fuse_inode->i_mtime = passthrough_inode->i_mtime;
-		fuse_inode->i_ctime = passthrough_inode->i_ctime;
-	}
-	touch_atime(&file->f_path);
+	fuse_file_accessed(file, passthrough_filp);
 
 	return ret;
 }
 
-int fuse_passthrough_open(struct fuse_dev *fud,
-			  struct fuse_passthrough_out *pto)
+int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd)
 {
 	int res;
 	struct file *passthrough_filp;
 	struct fuse_conn *fc = fud->fc;
+	struct inode *passthrough_inode;
+	struct super_block *passthrough_sb;
 	struct fuse_passthrough *passthrough;
 
 	if (!fc->passthrough)
 		return -EPERM;
 
-	/* This field is reserved for future implementation */
-	if (pto->len != 0)
-		return -EINVAL;
-
-	passthrough_filp = fget(pto->fd);
+	passthrough_filp = fget(lower_fd);
 	if (!passthrough_filp) {
 		pr_err("FUSE: invalid file descriptor for passthrough.\n");
 		return -EBADF;
@@ -225,24 +227,41 @@ int fuse_passthrough_open(struct fuse_dev *fud,
 	if (!passthrough_filp->f_op->read_iter ||
 	    !passthrough_filp->f_op->write_iter) {
 		pr_err("FUSE: passthrough file misses file operations.\n");
-		return -EBADF;
+		res = -EBADF;
+		goto err_free_file;
+	}
+
+	passthrough_inode = file_inode(passthrough_filp);
+	passthrough_sb = passthrough_inode->i_sb;
+	if (passthrough_sb->s_stack_depth >= FILESYSTEM_MAX_STACK_DEPTH) {
+		pr_err("FUSE: fs stacking depth exceeded for passthrough\n");
+		res = -EINVAL;
+		goto err_free_file;
 	}
 
 	passthrough = kmalloc(sizeof(struct fuse_passthrough), GFP_KERNEL);
-	if (!passthrough)
-		return -ENOMEM;
+	if (!passthrough) {
+		res = -ENOMEM;
+		goto err_free_file;
+	}
 
 	passthrough->filp = passthrough_filp;
 	passthrough->cred = prepare_creds();
+
 	idr_preload(GFP_KERNEL);
 	spin_lock(&fc->passthrough_req_lock);
 	res = idr_alloc(&fc->passthrough_req, passthrough, 1, 0, GFP_ATOMIC);
 	spin_unlock(&fc->passthrough_req_lock);
 	idr_preload_end();
-	if (res <= 0) {
-		fuse_passthrough_release(passthrough);
-		kfree(passthrough);
-	}
+
+	if (res > 0)
+		return res;
+
+	fuse_passthrough_release(passthrough);
+	kfree(passthrough);
+
+err_free_file:
+	fput(passthrough_filp);
 
 	return res;
 }
@@ -250,8 +269,6 @@ int fuse_passthrough_open(struct fuse_dev *fud,
 int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
 			   struct fuse_open_out *openarg)
 {
-	struct inode *passthrough_inode;
-	struct super_block *passthrough_sb;
 	struct fuse_passthrough *passthrough;
 	int passthrough_fh = openarg->passthrough_fh;
 
@@ -269,17 +286,9 @@ int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
 	if (!passthrough)
 		return -EINVAL;
 
-	passthrough_inode = file_inode(passthrough->filp);
-	passthrough_sb = passthrough_inode->i_sb;
-	if (passthrough_sb->s_stack_depth >= FILESYSTEM_MAX_STACK_DEPTH) {
-		pr_err("FUSE: fs stacking depth exceeded for passthrough\n");
-		fuse_passthrough_release(passthrough);
-		kfree(passthrough);
-		return -EINVAL;
-	}
-
 	ff->passthrough = *passthrough;
 	kfree(passthrough);
+
 	return 0;
 }
 
@@ -294,4 +303,3 @@ void fuse_passthrough_release(struct fuse_passthrough *passthrough)
 		passthrough->cred = NULL;
 	}
 }
-#endif

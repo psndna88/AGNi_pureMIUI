@@ -13,11 +13,7 @@
 # define pr_fmt(fmt) "fuse: " fmt
 #endif
 
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
-#include "fuse.h"
-#else
 #include <linux/fuse.h>
-#endif
 #include <linux/fs.h>
 #include <linux/mount.h>
 #include <linux/wait.h>
@@ -169,10 +165,9 @@ enum {
 struct fuse_conn;
 struct fuse_release_args;
 
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
 /**
  * Reference to lower filesystem file for read/write operations handled in
- * passthrough mode
+ * passthrough mode.
  * This struct also tracks the credentials to be used for handling read/write
  * operations.
  */
@@ -180,7 +175,7 @@ struct fuse_passthrough {
 	struct file *filp;
 	struct cred *cred;
 };
-#endif
+
 /** FUSE specific file data */
 struct fuse_file {
 	/** Fuse connection for this file */
@@ -225,10 +220,9 @@ struct fuse_file {
 		u64 version;
 
 	} readdir;
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
+
 	/** Container for data related to the passthrough functionality */
 	struct fuse_passthrough passthrough;
-#endif
 
 	/** RB node to be linked on fuse_conn->polled_files */
 	struct rb_node polled_node;
@@ -746,10 +740,9 @@ struct fuse_conn {
 	/* Do not show mount options */
 	unsigned int no_mount_options:1;
 
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
 	/** Passthrough mode for read/write IO */
 	unsigned int passthrough:1;
-#endif
+
 	/** The number of requests waiting for completion */
 	atomic_t num_waiting;
 
@@ -786,13 +779,11 @@ struct fuse_conn {
 	/** List of device instances belonging to this connection */
 	struct list_head devices;
 
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
 	/** IDR for passthrough requests */
 	struct idr passthrough_req;
 
 	/** Protects passthrough_req */
 	spinlock_t passthrough_req_lock;
-#endif
 };
 
 static inline struct fuse_conn *get_fuse_conn_super(struct super_block *sb)
@@ -1142,15 +1133,14 @@ unsigned int fuse_len_args(unsigned int numargs, struct fuse_arg *args);
  */
 u64 fuse_get_unique(struct fuse_iqueue *fiq);
 void fuse_free_conn(struct fuse_conn *fc);
-#if defined(CONFIG_PASSTHROUGH_SYSTEM)
-int fuse_passthrough_open(struct fuse_dev *fud,
-			  struct fuse_passthrough_out *pto);
+
+/* passthrough.c */
+int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd);
 int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
-			  struct fuse_open_out *openarg);
+			   struct fuse_open_out *openarg);
 void fuse_passthrough_release(struct fuse_passthrough *passthrough);
 ssize_t fuse_passthrough_read_iter(struct kiocb *iocb, struct iov_iter *to);
 ssize_t fuse_passthrough_write_iter(struct kiocb *iocb, struct iov_iter *from);
 ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma);
-#endif
 
 #endif /* _FS_FUSE_I_H */
