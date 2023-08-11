@@ -19,6 +19,16 @@ And public attribution of xiaomi platforms(like venus and so and)
 			debounce-interval = <15>;
 		};
 	};
+
+        fingerprint_goodix {
+                compatible = "goodix,fingerprint";
+                l11c_vdd-supply = <&L11C>;
+                goodix,gpio-reset = <&tlmm 39 0x0>;
+                goodix,gpio-irq = <&tlmm 38 0x0>;
+                fp-gpio-pwr = <&tlmm 13 0x0>;
+                status = "ok";
+        };
+
 	touch_vdd_vreg: touch_vdd_vreg {
 		compatible = "regulator-fixed";
 		regulator-name = "touch_vdd_vreg";
