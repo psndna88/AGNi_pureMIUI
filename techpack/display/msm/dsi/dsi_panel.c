@@ -10,7 +10,6 @@
 #include <linux/of_gpio.h>
 #include <linux/pwm.h>
 #include <video/mipi_display.h>
-#include <drm/drm_modes.h>
 
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
@@ -3801,8 +3800,8 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	}
 
 	panel->power_mode = SDE_MODE_DPMS_OFF;
-	drm_panel_init(&panel->drm_panel, &panel->mipi_device.dev,
-		 NULL, DRM_MODE_CONNECTOR_DSI);
+	drm_panel_init(&panel->drm_panel);
+	panel->drm_panel.dev = &panel->mipi_device.dev;
 	panel->mipi_device.dev.of_node = of_node;
 
 	rc = drm_panel_add(&panel->drm_panel);
