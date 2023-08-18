@@ -2,7 +2,7 @@
 config ZRAM
 	tristate "Compressed RAM block device support"
 	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
-	select CRYPTO_LZ4
+	select CRYPTO_LZO
 	help
 	  Creates virtual block devices called /dev/zramX (X = 0, 1, ...).
 	  Pages written to these disks are compressed and stored in memory
@@ -52,7 +52,7 @@ config MIUI_ZRAM_MEMORY_TRACKING
 config ZRAM_DEFAULT_COMP_ALGORITHM
 	string "Default ZRAM algorithm"
     depends on ZRAM
-	default "lz4"
+	default "lzo-rle"
 
 config ZRAM_SIZE_OVERRIDE
 	bool "override zram size"
