@@ -1289,6 +1289,7 @@ static ssize_t cool_mode_show(struct class *c, struct class_attribute *attr,
 static CLASS_ATTR_RW(cool_mode);
 #endif
 
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 static ssize_t bt_transfer_start_store(struct class *c,
 				       struct class_attribute *attr,
 				       const char *buf, size_t count)
@@ -1339,6 +1340,7 @@ static ssize_t bt_transfer_start_show(struct class *c,
 			 pst->prop[XM_PROP_BT_TRANSFER_START]);
 }
 static CLASS_ATTR_RW(bt_transfer_start);
+#endif
 
 static ssize_t master_smb1396_online_show(struct class *c,
 					  struct class_attribute *attr,
@@ -1746,6 +1748,7 @@ out:
 }
 static CLASS_ATTR_RW(reverse_chg_mode);
 
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 static ssize_t wls_tx_speed_store(struct class *c, struct class_attribute *attr,
 				  const char *buf, size_t count)
 {
@@ -1777,6 +1780,7 @@ static ssize_t wls_tx_speed_show(struct class *c, struct class_attribute *attr,
 	return scnprintf(buf, PAGE_SIZE, "%u", pst->prop[XM_PROP_WLS_TX_SPEED]);
 }
 static CLASS_ATTR_RW(wls_tx_speed);
+#endif
 
 static ssize_t reverse_chg_state_show(struct class *c,
 				      struct class_attribute *attr, char *buf)
@@ -2053,6 +2057,7 @@ static ssize_t night_charging_show(struct class *c,
 }
 static CLASS_ATTR_RW(night_charging);
 
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 static ssize_t smart_batt_store(struct class *c, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
@@ -2089,6 +2094,7 @@ static ssize_t smart_batt_show(struct class *c, struct class_attribute *attr,
 	return scnprintf(buf, PAGE_SIZE, "%u\n", pst->prop[XM_PROP_SMART_BATT]);
 }
 static CLASS_ATTR_RW(smart_batt);
+#endif
 
 static ssize_t verify_process_store(struct class *c,
 				    struct class_attribute *attr,
@@ -2166,12 +2172,14 @@ static void usbpd_request_vdm_cmd(struct battery_chg_dev *bcdev,
 		val = *data;
 		pr_err("AUTHENTICATION:data = %d\n", val);
 		break;
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 	case USBPD_UVDM_REVERSE_AUTHEN:
 		prop_id = XM_PROP_VDM_CMD_REVERSE_AUTHEN;
 		usbpd_sha256_bitswap32(data, USBPD_UVDM_SS_LEN);
 		val = *data;
 		pr_err("AUTHENTICATION:data = %d\n", val);
 		break;
+#endif
 	case USBPD_UVDM_REMOVE_COMPENSATION:
 		prop_id = XM_PROP_VDM_CMD_REMOVE_COMPENSATION;
 		val = *data;
@@ -2623,6 +2631,7 @@ static ssize_t typec_mode_show(struct class *c, struct class_attribute *attr,
 }
 static CLASS_ATTR_RO(typec_mode);
 
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 static ssize_t fg1_qmax_show(struct class *c, struct class_attribute *attr,
 			     char *buf)
 {
@@ -2835,6 +2844,7 @@ static ssize_t fg1_tfullq_show(struct class *c, struct class_attribute *attr,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", pst->prop[XM_PROP_FG1_TFULLQ]);
 }
 static CLASS_ATTR_RO(fg1_tfullq);
+#endif
 
 static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_wireless_register.attr,
@@ -2887,7 +2897,9 @@ static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_bq2597x_battery_voltage.attr,
 	&class_attr_cool_mode.attr,
 #endif
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 	&class_attr_bt_transfer_start.attr,
+#endif
 	&class_attr_master_smb1396_online.attr,
 	&class_attr_master_smb1396_iin.attr,
 	&class_attr_slave_smb1396_online.attr,
@@ -2914,7 +2926,9 @@ static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_op_mode.attr,
 	&class_attr_wls_die_temp.attr,
 	&class_attr_wls_car_adapter.attr,
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 	&class_attr_wls_tx_speed.attr,
+#endif
 #endif
 	/*****************************/
 	&class_attr_input_suspend.attr,
@@ -2938,6 +2952,7 @@ static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_qbg_temp.attr,
 	&class_attr_typec_mode.attr,
 	&class_attr_night_charging.attr,
+#if !defined(CONFIG_VENUS_FOR_BUILD)
 	&class_attr_smart_batt.attr,
 	&class_attr_fg1_qmax.attr,
 	&class_attr_fg1_rm.attr,
@@ -2952,6 +2967,7 @@ static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_fg1_tambient.attr,
 	&class_attr_fg1_tremq.attr,
 	&class_attr_fg1_tfullq.attr,
+#endif
 	&class_attr_power_max.attr,
 	NULL,
 };

@@ -454,6 +454,12 @@ config RENOIR_FOR_BUILD
 	help
 	  Say Y here to enable renoir build debug
 
+config VENUS_FOR_BUILD
+	bool "venus build debug"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable venus build debug
+
 config CHARGER_88PM860X
 	tristate "Marvell 88PM860x Charger driver"
 	depends on MFD_88PM860X && BATTERY_88PM860X
