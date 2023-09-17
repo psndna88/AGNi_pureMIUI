@@ -21306,10 +21306,19 @@ csr_process_roam_sync_callback(struct mac_context *mac_ctx,
 		 * the candidate was not successful.
 		 * Connection to the previous AP is still valid in this
 		 * case. So move to RSO_ENABLED state.
+		 *
+		 * Switch to RSO enabled state only if the current state is
+		 * WLAN_ROAMING_IN_PROG or WLAN_ROAM_SYNCH_IN_PROG.
+		 * This API can be called in internal roam aborts also when
+		 * RSO state is deinit and cause RSO start to be sent in
+		 * disconnected state.
 		 */
-		csr_post_roam_state_change(mac_ctx, session_id,
-					   WLAN_ROAM_RSO_ENABLED,
-					   REASON_ROAM_ABORT);
+		if (MLME_IS_ROAMING_IN_PROG(mac_ctx->psoc, session_id) ||
+		    MLME_IS_ROAM_SYNCH_IN_PROGRESS(mac_ctx->psoc, session_id))
+			csr_post_roam_state_change(mac_ctx, session_id,
+						   WLAN_ROAM_RSO_ENABLED,
+						   REASON_ROAM_ABORT);
+
 		csr_roam_roaming_offload_timer_action(mac_ctx,
 				0, session_id, ROAMING_OFFLOAD_TIMER_STOP);
 		csr_roam_call_callback(mac_ctx, session_id, NULL, 0,

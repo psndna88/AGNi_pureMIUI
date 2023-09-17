@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -115,6 +115,7 @@ static unsigned char pkt_capture_get_tx_rate(
 		case 0x0:
 			ret = 0x16;
 			*preamble = LONG_PREAMBLE;
+			break;
 		case 0x1:
 			ret = 0xB;
 			*preamble = LONG_PREAMBLE;
@@ -179,12 +180,14 @@ static void pkt_capture_tx_get_phy_info(
 			mcs = 8 + pktcapture_hdr->mcs;
 		else
 			mcs = pktcapture_hdr->mcs;
+
+		tx_status->ht_mcs = mcs;
 		break;
 	case 0x3:
 		tx_status->vht_flags = 1;
 		mcs = pktcapture_hdr->mcs;
 		tx_status->vht_flag_values3[0] =
-			mcs << 0x4 | (pktcapture_hdr->nss + 1);
+			mcs << 0x4 | (pktcapture_hdr->nss);
 		tx_status->vht_flag_values2 = pktcapture_hdr->bw;
 		break;
 	case 0x4:
@@ -205,9 +208,9 @@ static void pkt_capture_tx_get_phy_info(
 		break;
 	}
 
-	if (preamble == 0)
+	if (preamble_type != HAL_TX_PKT_TYPE_11B)
 		tx_status->ofdm_flag = 1;
-	else if (preamble == 1)
+	else
 		tx_status->cck_flag = 1;
 
 	tx_status->mcs = mcs;
@@ -727,9 +730,9 @@ static void pkt_capture_rx_get_phy_info(void *context, void *psoc,
 		break;
 	}
 
-	if (preamble == 0)
+	if (preamble_type != HAL_RX_PKT_TYPE_11B)
 		rx_status->ofdm_flag = 1;
-	else if (preamble == 1)
+	else
 		rx_status->cck_flag = 1;
 
 	rx_status->bw = bw;

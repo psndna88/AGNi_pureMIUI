@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,6 +37,12 @@
 /* max flow cumulative ip length */
 #define FISA_FLOW_MAX_CUMULATIVE_IP_LEN \
 	(FISA_MAX_SINGLE_CUMULATIVE_IP_LEN * FISA_FLOW_MAX_AGGR_COUNT)
+
+/* minimal pure UDP data length required for FISA */
+#define FISA_MIN_UDP_DATA_LEN 16
+/* minimal length without L2/L3 header required for FISA */
+#define FISA_MIN_L4_AND_DATA_LEN \
+	(FISA_UDP_HDR_LEN + FISA_MIN_UDP_DATA_LEN)
 
 #define IPSEC_PORT 500
 #define IPSEC_NAT_PORT 4500
