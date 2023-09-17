@@ -129,6 +129,7 @@ static int cam_isp_update_dual_config(
 	if (dual_config->num_ports > size_isp_out) {
 		CAM_ERR(CAM_ISP, "num_ports %d more than max_vfe_out_res %d",
 			dual_config->num_ports, size_isp_out);
+		cam_mem_put_cpu_buf(cmd_desc->mem_handle);
 		return -EINVAL;
 	}
 
