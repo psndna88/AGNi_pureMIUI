@@ -147,6 +147,8 @@ static int voice_send_get_sound_focus_cmd(struct voice_data *v,
 				struct sound_focus_param *soundFocusData);
 static int voice_send_get_source_tracking_cmd(struct voice_data *v,
 			struct source_tracking_param *sourceTrackingData);
+static int voice_send_get_fnn_source_track_cmd(struct voice_data *v,
+			struct fluence_nn_source_tracking_param *FnnSourceTrackingData);
 static int voice_pack_and_set_cvp_param(struct voice_data *v,
 					struct param_hdr_v3 param_hdr,
 					u8 *param_data);
@@ -1164,6 +1166,10 @@ static int voice_create_mvm_cvs_session(struct voice_data *v)
 						common.mvs_info.media_type;
 			cvs_full_ctl_cmd.cvs_session.network_id =
 					       common.mvs_info.network_type;
+
+			memset(cvs_full_ctl_cmd.cvs_session.name, 0,
+				sizeof(cvs_full_ctl_cmd.cvs_session.name));
+
 			strlcpy(cvs_full_ctl_cmd.cvs_session.name,
 				"default q6 voice",
 				strlen("default q6 voice")+1);
@@ -3078,6 +3084,9 @@ static int voice_send_cvp_create_cmd(struct voice_data *v)
 		cvp_session_cmd.cvp_session.ec_ref_port_id =
 						 VSS_IVOCPROC_PORT_ID_NONE;
 	}
+
+	memset(cvp_session_cmd.cvp_session.name, 0,
+                        sizeof(cvp_session_cmd.cvp_session.name));
 
 	pr_debug("tx_topology: %d tx_port_id=%d, rx_port_id=%d, mode: 0x%x\n",
 		cvp_session_cmd.cvp_session.tx_topology_id,
@@ -8431,6 +8440,19 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 				v->async_err = ptr[1];
 				wake_up(&v->cvp_wait);
 				break;
+			case VSS_IFNN_ST_CMD_GET_ACTIVITY:
+				if (!ptr[1]) {
+					/* Read data from shared memory */
+					common.is_source_tracking_resp_success = true;
+				} else {
+					common.is_source_tracking_resp_success = false;
+					pr_err("%s: Error received for source tracking params\n",
+						__func__);
+				}
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				v->async_err = ptr[1];
+				wake_up(&v->cvp_wait);
+				break;
 			default:
 				pr_debug("%s: not match cmd = 0x%x\n",
 					  __func__, ptr[0]);
@@ -10027,6 +10049,158 @@ int voc_get_source_tracking(struct source_tracking_param *sourceTrackingData)
 	return ret;
 }
 EXPORT_SYMBOL(voc_get_source_tracking);
+
+static int voice_send_get_fnn_source_track_cmd(struct voice_data *v,
+			struct fluence_nn_source_tracking_param *FnnSourceTrackingData)
+{
+	struct apr_hdr cvp_get_fnn_st_param_cmd;
+	int ret = 0;
+	void *apr_cvp;
+	u16 cvp_handle;
+	int i;
+
+	if (!v) {
+		pr_err("%s: v is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	apr_cvp = common.apr_q6_cvp;
+	if (!apr_cvp) {
+		pr_err("%s: apr_cvp is NULL.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!FnnSourceTrackingData) {
+		pr_err("%s: Caught NULL pointer \n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	cvp_handle = voice_get_cvp_handle(v);
+
+	/* send APR command to retrieve Sound Track Params from fluence NN Module */
+	cvp_get_fnn_st_param_cmd.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+					     APR_HDR_LEN(APR_HDR_SIZE),
+					     APR_PKT_VER);
+	cvp_get_fnn_st_param_cmd.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+					   sizeof(cvp_get_fnn_st_param_cmd) - APR_HDR_SIZE);
+	cvp_get_fnn_st_param_cmd.src_port = voice_get_idx_for_session(v->session_id);
+	cvp_get_fnn_st_param_cmd.dest_port = cvp_handle;
+	cvp_get_fnn_st_param_cmd.token = 0;
+	cvp_get_fnn_st_param_cmd.opcode = VSS_IFNN_ST_CMD_GET_ACTIVITY;
+
+	v->cvp_state = CMD_STATUS_FAIL;
+	v->async_err = 0;
+	ret = apr_send_pkt(apr_cvp,
+			   (uint32_t *) &cvp_get_fnn_st_param_cmd);
+	if (ret < 0) {
+		pr_err("%s: Error in sending APR command\n", __func__);
+
+		ret = -EINVAL;
+		goto done;
+	}
+	ret = wait_event_timeout(v->cvp_wait,
+				 (v->cvp_state == CMD_STATUS_SUCCESS),
+				 msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: wait_event timeout\n", __func__);
+
+		ret = -ETIME;
+		goto done;
+	}
+
+	if (v->async_err > 0) {
+		pr_err("%s: DSP returned error[%s]\n",
+				__func__, adsp_err_get_err_str(
+				v->async_err));
+		ret = adsp_err_get_lnx_err_code(
+				v->async_err);
+		goto done;
+	}
+
+	if (!common.is_fnn_source_tracking_resp_success) {
+		pr_err("%s: Error response received from CVD\n", __func__);
+
+		ret = -EINVAL;
+		goto done;
+	}
+
+	FnnSourceTrackingData->speech_probablity_q20 =
+		common.FnnSourceTrackingResponse.speech_probablity_q20;
+	pr_debug("%s: speech_probablity = %d\n",
+		  __func__, FnnSourceTrackingData->speech_probablity_q20);
+
+	for (i = 0; i < MAX_TOP_SPEAKERS; i++) {
+		FnnSourceTrackingData->speakers[i] =
+		 common.FnnSourceTrackingResponse.speakers[i];
+		pr_debug("%s: speakers[%d] = %d\n",
+		 __func__, i, FnnSourceTrackingData->speakers[i]);
+	}
+
+	for (i = 0; i < MAX_POLAR_ACTIVITY_INDICATORS; i++) {
+		FnnSourceTrackingData->polarActivity[i] =
+		 common.FnnSourceTrackingResponse.polarActivity[i];
+		pr_debug("%s: polarActivity[%d] = %d\n",
+		 __func__, i, FnnSourceTrackingData->polarActivity[i]);
+	}
+
+	FnnSourceTrackingData->session_time_lsw =
+			common.FnnSourceTrackingResponse.session_time_lsw;
+	pr_debug("%s: session_time_lsw = %d\n",
+		  __func__, FnnSourceTrackingData->session_time_lsw);
+
+	FnnSourceTrackingData->session_time_msw =
+			common.FnnSourceTrackingResponse.session_time_msw;
+	pr_debug("%s: session_time_msw = %d\n",
+		  __func__, FnnSourceTrackingData->session_time_msw);
+
+	common.is_fnn_source_tracking_resp_success = false;
+
+done:
+	pr_debug("%s: Exit, ret=%d\n", __func__, ret);
+
+	return ret;
+}
+
+/**
+ * voc_get_fnn_source_tracking - retrieves source track data.
+ *
+ * @sourceTrackingData: pointer to be updated with source track data.
+ *
+ * Returns 0 on success or error on failure
+ */
+int voc_get_fnn_source_tracking(struct fluence_nn_source_tracking_param *FnnSourceTrackingData)
+{
+	struct voice_data *v = NULL;
+	int ret = -EINVAL;
+	struct voice_session_itr itr;
+
+	mutex_lock(&common.common_lock);
+
+	voice_itr_init(&itr, ALL_SESSION_VSID);
+	while (voice_itr_get_next_session(&itr, &v)) {
+		if (v == NULL) {
+			pr_err("%s: invalid session\n", __func__);
+
+			break;
+		}
+
+		mutex_lock(&v->lock);
+		if (is_voc_state_active(v->voc_state) &&
+			(v->lch_mode != VOICE_LCH_START) &&
+			!v->disable_topology)
+			ret = voice_send_get_fnn_source_track_cmd(v,
+					FnnSourceTrackingData);
+		mutex_unlock(&v->lock);
+
+	}
+
+	mutex_unlock(&common.common_lock);
+	pr_debug("%s: Exit, ret=%d\n", __func__, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(voc_get_fnn_source_tracking);
 
 static int voice_set_cvp_param(struct voice_data *v,
 			       struct vss_icommon_mem_mapping_hdr *mem_hdr,

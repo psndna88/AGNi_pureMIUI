@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 
@@ -13586,10 +13586,29 @@ struct adm_set_compressed_device_latency {
 #define VOICEPROC_MODULE_ID_FLUENCE_PRO_VC_TX               0x00010F35
 #define VOICEPROC_PARAM_ID_FLUENCE_SOUNDFOCUS               0x00010E37
 #define VOICEPROC_PARAM_ID_FLUENCE_SOURCETRACKING           0x00010E38
+#define AUDPROC_PARAM_ID_FLUENCE_NN_SOURCE_TRACKING         0x00010B83
+#define MODULE_ID_FLUENCE_NN                                0x00010B0F
 #define MAX_SECTORS                                         8
 #define MAX_NOISE_SOURCE_INDICATORS                         3
 #define MAX_POLAR_ACTIVITY_INDICATORS                       360
 #define MAX_DOA_TRACKING_ANGLES                             2
+#define MAX_TOP_SPEAKERS                                    5
+#define MAX_FOCUS_DIRECTION                                 2
+
+struct fluence_nn_sound_focus_param {
+	int16_t mode;
+	int16_t focus_direction[MAX_FOCUS_DIRECTION];
+	int16_t focus_width;
+} __packed;
+
+struct fluence_nn_source_tracking_param {
+	int32_t speech_probablity_q20;
+	int16_t speakers[MAX_TOP_SPEAKERS];
+	int16_t reserved;
+	uint8_t polarActivity[MAX_POLAR_ACTIVITY_INDICATORS];
+	uint32_t session_time_lsw;
+	uint32_t session_time_msw;
+} __packed;
 
 struct sound_focus_param {
 	uint16_t start_angle[MAX_SECTORS];
@@ -13608,6 +13627,21 @@ struct doa_tracking_mon_param {
 	uint16_t target_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint16_t interf_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint8_t polar_activity[MAX_POLAR_ACTIVITY_INDICATORS];
+} __packed;
+
+struct adm_param_fluence_nn_sound_focus_t {
+	int16_t mode;
+	int16_t focus_direction[2];
+	int16_t focus_width;
+} __packed;
+
+struct adm_param_fluence_nn_source_tracking_t {
+	int32_t speech_probablity_q20;
+	int16_t speakers[5];
+	int16_t reserved;
+	uint8_t polarActivity[360];
+	uint32_t session_time_lsw;
+	uint32_t session_time_msw;
 } __packed;
 
 struct adm_param_fluence_soundfocus_t {

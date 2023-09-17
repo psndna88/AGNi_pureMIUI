@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/init.h>
 #include <linux/err.h>
@@ -781,6 +781,13 @@ static int msm_lsm_reg_model(struct snd_pcm_substream *substream,
 		}
 
 		q6lsm_sm_set_param_data(client, p_info, &offset, sm);
+
+		if ((sm->size - offset) < p_info->param_size) {
+			dev_err(rtd->dev, "%s: user buff size is greater than expected\n",
+				__func__);
+			rc = -EINVAL;
+			goto err_copy;
+		}
 
 		/*
 		 * For set_param, advance the sound model data with the
@@ -2318,6 +2325,7 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 	case SNDRV_LSM_GET_MODULE_PARAMS_32: {
 		struct lsm_params_get_info_32 p_info_32, *param_info_rsp = NULL;
 		struct lsm_params_get_info *p_info = NULL;
+		prtd->lsm_client->get_param_payload = NULL;
 
 		memset(&p_info_32, 0 , sizeof(p_info_32));
 		if (!prtd->lsm_client->use_topology) {
@@ -2368,6 +2376,7 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 				__func__, err);
 			kfree(p_info);
 			kfree(prtd->lsm_client->get_param_payload);
+			prtd->lsm_client->get_param_payload = NULL;
 			goto done;
 		}
 
@@ -2378,6 +2387,7 @@ static int msm_lsm_ioctl_compat(struct snd_pcm_substream *substream,
 			err = -ENOMEM;
 			kfree(p_info);
 			kfree(prtd->lsm_client->get_param_payload);
+			prtd->lsm_client->get_param_payload = NULL;
 			goto done;
 		}
 
@@ -2402,6 +2412,7 @@ free:
 		kfree(p_info);
 		kfree(param_info_rsp);
 		kfree(prtd->lsm_client->get_param_payload);
+		prtd->lsm_client->get_param_payload = NULL;
 		break;
 	}
 	case SNDRV_LSM_REG_SND_MODEL_V2:
@@ -2628,6 +2639,7 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 
 	case SNDRV_LSM_GET_MODULE_PARAMS: {
 		struct lsm_params_get_info temp_p_info, *p_info = NULL;
+		prtd->lsm_client->get_param_payload = NULL;
 
 		memset(&temp_p_info, 0, sizeof(temp_p_info));
 		if (!prtd->lsm_client->use_topology) {
@@ -2646,6 +2658,15 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 			err = -EFAULT;
 			goto done;
 		}
+
+		if (temp_p_info.param_size > 0 &&
+			((INT_MAX - sizeof(temp_p_info)) <
+				temp_p_info.param_size)) {
+			pr_err("%s: Integer overflow\n", __func__);
+			err = -EINVAL;
+			goto done;
+		}
+
 		size = sizeof(temp_p_info) +  temp_p_info.param_size;
 		p_info = kzalloc(size, GFP_KERNEL);
 
@@ -2699,6 +2720,7 @@ static int msm_lsm_ioctl(struct snd_pcm_substream *substream,
 free:
 		kfree(p_info);
 		kfree(prtd->lsm_client->get_param_payload);
+		prtd->lsm_client->get_param_payload = NULL;
 		break;
 	}
 	case SNDRV_LSM_EVENT_STATUS:
