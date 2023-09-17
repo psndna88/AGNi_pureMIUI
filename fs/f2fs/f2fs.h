@@ -29,10 +29,6 @@
 #include <linux/fscrypt.h>
 #include <linux/fsverity.h>
 
-#ifdef CONFIG_FS_HPB
-#include <linux/fs_hpb.h>
-#endif
-
 #ifdef CONFIG_F2FS_CHECK_FS
 #define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
 #else
@@ -797,9 +793,6 @@ enum {
 	FI_COMPRESSED_FILE,	/* indicate file's data can be compressed */
 	FI_MMAP_FILE,		/* indicate file was mmapped */
 	FI_COMPRESS_RELEASED,	/* compressed blocks were released */
-#ifdef CONFIG_FS_HPB
-	FI_HPB_INODE,
-#endif
 	FI_MAX,			/* max flag, never be used */
 };
 
