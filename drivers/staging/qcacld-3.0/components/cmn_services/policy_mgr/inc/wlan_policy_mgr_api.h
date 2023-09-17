@@ -1968,6 +1968,14 @@ QDF_STATUS policy_mgr_wait_for_connection_update(
 QDF_STATUS policy_mgr_reset_connection_update(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * policy_mgr_reset_hw_mode_change() - Reset the hw mode change.
+ * @psoc: Pointer to PSOC object
+ *
+ * Return: none
+ */
+void policy_mgr_reset_hw_mode_change(struct wlan_objmgr_psoc *psoc);
+
+/**
  * policy_mgr_set_connection_update() - Set connection update
  * event
  * @psoc: PSOC object information

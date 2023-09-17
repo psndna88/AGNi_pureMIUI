@@ -1398,16 +1398,6 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 
 	wma_roam_update_vdev(wma, roam_synch_ind_ptr);
 
-	if (QDF_IS_STATUS_ERROR(wma->csr_roam_synch_cb(wma->mac_context,
-				roam_synch_ind_ptr,
-				bss_desc_ptr, SIR_ROAM_SYNCH_PROPAGATION))) {
-		wma_err("CSR roam synch propagation failed, abort roam");
-		status = -EINVAL;
-		goto cleanup_label;
-	}
-
-	wma_process_roam_synch_complete(wma, synch_event->vdev_id);
-
 	/* update freq and channel width */
 	wma->interfaces[synch_event->vdev_id].ch_freq =
 		roam_synch_ind_ptr->chan_freq;
@@ -1425,6 +1415,16 @@ int wma_mlme_roam_synch_event_handler_cb(void *handle, uint8_t *event,
 	wma_update_phymode_on_roam(wma, roam_synch_ind_ptr->bssid.bytes,
 				   param_buf->chan,
 				   &wma->interfaces[synch_event->vdev_id]);
+
+	if (QDF_IS_STATUS_ERROR(wma->csr_roam_synch_cb(wma->mac_context,
+				roam_synch_ind_ptr,
+				bss_desc_ptr, SIR_ROAM_SYNCH_PROPAGATION))) {
+		wma_err("CSR roam synch propagation failed, abort roam");
+		status = -EINVAL;
+		goto cleanup_label;
+	}
+
+	wma_process_roam_synch_complete(wma, synch_event->vdev_id);
 
 	wma->csr_roam_synch_cb(wma->mac_context, roam_synch_ind_ptr,
 			       bss_desc_ptr, SIR_ROAM_SYNCH_COMPLETE);

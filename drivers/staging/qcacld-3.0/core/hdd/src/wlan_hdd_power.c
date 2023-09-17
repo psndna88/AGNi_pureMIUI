@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1496,12 +1496,17 @@ hdd_suspend_wlan(void)
 		hdd_adapter_dev_put_debug(adapter, NET_DEV_HOLD_SUSPEND_WLAN);
 	}
 
+	hdd_ctx->hdd_wlan_suspend_in_progress = true;
+
 	status = ucfg_pmo_psoc_user_space_suspend_req(hdd_ctx->psoc,
 						      QDF_SYSTEM_SUSPEND);
-	if (status != QDF_STATUS_SUCCESS)
+	if (status != QDF_STATUS_SUCCESS) {
+		hdd_ctx->hdd_wlan_suspend_in_progress = false;
 		return -EAGAIN;
+	}
 
 	hdd_ctx->hdd_wlan_suspended = true;
+	hdd_ctx->hdd_wlan_suspend_in_progress = false;
 
 	hdd_configure_sar_sleep_index(hdd_ctx);
 

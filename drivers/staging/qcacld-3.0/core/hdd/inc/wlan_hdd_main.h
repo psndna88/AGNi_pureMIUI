@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1223,6 +1223,8 @@ enum qdisc_filter_status {
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
  * @latency_level: 0 - normal, 1 - moderate, 2 - low, 3 - ultralow
+ * @mc_addr_list: multicast address list
+ * @mc_list_lock: spin lock for multicast list
  * @last_disconnect_reason: Last disconnected internal reason code
  *                          as per enum qca_disconnect_reason_codes
  * @connect_req_status: Last disconnected internal status code
@@ -1408,6 +1410,7 @@ struct hdd_adapter {
 #endif
 
 	struct hdd_multicast_addr_list mc_addr_list;
+	qdf_spinlock_t mc_list_lock;
 	uint8_t addr_filter_pattern;
 
 	struct hdd_scan_info scan_info;
@@ -1934,6 +1937,7 @@ struct hdd_context {
 	bool is_ol_rx_thread_suspended;
 #endif
 
+	bool hdd_wlan_suspend_in_progress;
 	bool hdd_wlan_suspended;
 	bool suspended;
 	/* flag to start pktlog after SSR/PDR if previously enabled */
@@ -5029,4 +5033,13 @@ void wlan_hdd_set_pm_qos_request(struct hdd_context *hdd_ctx,
 {
 }
 #endif
+
+/**
+ * hdd_update_multicast_list() - update the multicast list
+ * @vdev: pointer to VDEV object
+ *
+ * Return: none
+ */
+void hdd_update_multicast_list(struct wlan_objmgr_vdev *vdev);
+
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */
