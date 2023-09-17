@@ -490,7 +490,6 @@ static void dd_insert_request(struct blk_mq_hw_ctx *hctx, struct request *rq,
 	struct request_queue *q = hctx->queue;
 	struct deadline_data *dd = q->elevator->elevator_data;
 	const int data_dir = rq_data_dir(rq);
-	LIST_HEAD(free);
 
 	/*
 	 * This may be a requeue of a write request that has locked its
@@ -498,15 +497,16 @@ static void dd_insert_request(struct blk_mq_hw_ctx *hctx, struct request *rq,
 	 */
 	blk_req_zone_write_unlock(rq);
 
-	if (blk_mq_sched_try_insert_merge(q, rq, &free)) {
-		blk_mq_free_requests(&free);
+	if (blk_mq_sched_try_insert_merge(q, rq))
 		return;
-	}
 
 	blk_mq_sched_request_inserted(rq);
 
-	if (at_head) {
-		list_add(&rq->queuelist, &dd->dispatch);
+	if (at_head || blk_rq_is_passthrough(rq)) {
+		if (at_head)
+			list_add(&rq->queuelist, &dd->dispatch);
+		else
+			list_add_tail(&rq->queuelist, &dd->dispatch);
 	} else {
 		deadline_add_rq_rb(dd, rq);
 
