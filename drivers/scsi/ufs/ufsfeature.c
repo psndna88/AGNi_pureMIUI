@@ -282,6 +282,7 @@ out:
 int is_samsung_ufs(struct ufs_hba *hba)
 {
 	return ((hba->dev_info.wmanufacturerid == UFS_VENDOR_SAMSUNG) ||
+		(hba->dev_info.wmanufacturerid == UFS_VENDOR_WDC) ||
 		(hba->dev_info.wmanufacturerid == UFS_VENDOR_MICRON));
 }
 
