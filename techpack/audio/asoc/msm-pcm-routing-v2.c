@@ -32571,8 +32571,13 @@ done:
 static int msm_source_tracking_info(struct snd_kcontrol *kcontrol,
 				    struct snd_ctl_elem_info *uinfo)
 {
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
-	uinfo->count = sizeof(struct source_tracking_param);
+	if (strnstr(kcontrol->id.name, "FNN", sizeof("FNN"))) {
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+		uinfo->count = sizeof(struct fluence_nn_source_tracking_param);
+	} else {
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+		uinfo->count = sizeof(struct source_tracking_param);
+	}
 
 	return 0;
 }
@@ -32582,20 +32587,33 @@ static int msm_voice_source_tracking_get(struct snd_kcontrol *kcontrol,
 {
 	int ret = 0;
 	struct source_tracking_param sourceTrackingData;
+	struct fluence_nn_source_tracking_param FnnSourceTrackingData;
 
-	memset(&sourceTrackingData, 0, sizeof(struct source_tracking_param));
+	if (strnstr(kcontrol->id.name, "FNN", sizeof("FNN"))) {
+		memset(&FnnSourceTrackingData, 0, sizeof(struct fluence_nn_source_tracking_param));
+		ret = voc_get_fnn_source_tracking(&FnnSourceTrackingData);
+		if (ret) {
+			pr_err("%s: Error getting FNN ST Params, err=%d\n",
+				__func__, ret);
 
-	ret = voc_get_source_tracking(&sourceTrackingData);
-	if (ret) {
-		pr_debug("%s: Error getting Source Tracking Params, err=%d\n",
-			  __func__, ret);
+			ret = -EINVAL;
+			goto done;
+		}
+		memcpy(ucontrol->value.bytes.data, (void *)&FnnSourceTrackingData,
+			sizeof(struct fluence_nn_source_tracking_param));
+	} else {
+		memset(&sourceTrackingData, 0, sizeof(struct source_tracking_param));
+		ret = voc_get_source_tracking(&sourceTrackingData);
+		if (ret) {
+			pr_err("%s: Error getting Source Tracking Params, err=%d\n",
+				__func__, ret);
 
-		ret = -EINVAL;
-		goto done;
+			ret = -EINVAL;
+			goto done;
+		}
+		memcpy(ucontrol->value.bytes.data, (void *)&sourceTrackingData,
+			sizeof(struct source_tracking_param));
 	}
-	memcpy(ucontrol->value.bytes.data, (void *)&sourceTrackingData,
-		sizeof(struct source_tracking_param));
-
 done:
 	return ret;
 }
@@ -32795,12 +32813,18 @@ done:
 static int msm_audio_source_tracking_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	int ret = 0;
+	int ret = -EINVAL;
 	struct source_tracking_param sourceTrackingData;
+	struct fluence_nn_source_tracking_param FnnSourceTrackingData;
 	int port_id, copp_idx;
 
-	ret = msm_audio_sound_focus_derive_port_id(kcontrol,
-				"Source Tracking Audio Tx ", &port_id);
+	if (strnstr(kcontrol->id.name, "FNN", sizeof("FNN"))) {
+		ret = msm_audio_sound_focus_derive_port_id(kcontrol,
+				"FNN STM Audio Tx ", &port_id);
+	} else {
+		ret = msm_audio_sound_focus_derive_port_id(kcontrol,
+					"Source Tracking Audio Tx ", &port_id);
+	}
 	if (ret) {
 		pr_err("%s: Error in deriving port id, err=%d\n",
 			  __func__, ret);
@@ -32819,17 +32843,29 @@ static int msm_audio_source_tracking_get(struct snd_kcontrol *kcontrol,
 		goto done;
 	}
 
-	ret = adm_get_source_tracking(port_id, copp_idx, &sourceTrackingData);
-	if (ret) {
-		pr_err("%s: Error getting Source Tracking Params, err=%d\n",
-			  __func__, ret);
+	if (strnstr(kcontrol->id.name, "FNN", sizeof("FNN"))) {
+		ret = adm_get_fnn_source_tracking(port_id, copp_idx, &FnnSourceTrackingData);
+		if (ret) {
+			pr_err("%s: Error getting FNN STM Params, err=%d\n",
+				__func__, ret);
 
-		ret = -EINVAL;
-		goto done;
-	}
+			ret = -EINVAL;
+			goto done;
+		}
+		memcpy(ucontrol->value.bytes.data, (void *)&FnnSourceTrackingData,
+			sizeof(struct fluence_nn_source_tracking_param));
+	} else {
+		ret = adm_get_source_tracking(port_id, copp_idx, &sourceTrackingData);
+		if (ret) {
+			pr_err("%s: Error getting Source Tracking Params, err=%d\n",
+				__func__, ret);
 
-	memcpy(ucontrol->value.bytes.data, (void *)&sourceTrackingData,
+			ret = -EINVAL;
+			goto done;
+		}
+		memcpy(ucontrol->value.bytes.data, (void *)&sourceTrackingData,
 		sizeof(struct source_tracking_param));
+	}
 
 done:
 	return ret;
@@ -32905,6 +32941,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx SLIMBUS_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx SLIMBUS_0",
@@ -32916,6 +32959,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx SLIMBUS_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx SLIMBUS_0",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -32935,6 +32985,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx TERT_MI2S",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx TERT_MI2S",
@@ -32946,6 +33003,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx TERT_MI2S",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx TERT_MI2S",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -32965,6 +33029,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx INT3_MI2S",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx INT3_MI2S",
@@ -32976,6 +33047,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx INT3_MI2S",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx INT3_MI2S",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -32995,6 +33073,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx VA_CDC_DMA_TX_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx VA_CDC_DMA_TX_0",
@@ -33006,6 +33091,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx VA_CDC_DMA_TX_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx VA_CDC_DMA_TX_0",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -33025,6 +33117,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx TX_CDC_DMA_TX_3",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx TX_CDC_DMA_TX_3",
@@ -33036,6 +33135,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx TX_CDC_DMA_TX_3",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx TX_CDC_DMA_TX_3",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -33055,6 +33161,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.get	= msm_voice_source_tracking_get,
 	},
 	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Voice Tx QUIN_TDM_TX_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_voice_source_tracking_get,
+	},
+	{
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Sound Focus Audio Tx QUIN_TDM_TX_0",
@@ -33066,6 +33179,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
 		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name	= "Source Tracking Audio Tx QUIN_TDM_TX_0",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx QUIN_TDM_TX_0",
 		.info	= msm_source_tracking_info,
 		.get	= msm_audio_source_tracking_get,
 	},
@@ -33083,6 +33203,13 @@ static const struct snd_kcontrol_new msm_source_tracking_controls[] = {
 		.name   = "Source Tracking Audio Tx PRIMARY_TDM",
 		.info   = msm_source_tracking_info,
 		.get    = msm_audio_source_tracking_get,
+	},
+	{
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.iface	= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name	= "FNN STM Audio Tx PRIMARY_TDM",
+		.info	= msm_source_tracking_info,
+		.get	= msm_audio_source_tracking_get,
 	},
 };
 
