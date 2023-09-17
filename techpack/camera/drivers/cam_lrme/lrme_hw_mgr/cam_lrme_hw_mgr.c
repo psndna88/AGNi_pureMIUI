@@ -425,21 +425,26 @@ static int cam_lrme_mgr_util_submit_req(void *priv, void *data)
 			CAM_LRME_HW_CMD_SUBMIT,
 			&submit_args, sizeof(struct cam_lrme_hw_submit_args));
 
-		if (rc == -EBUSY) {
-			CAM_DBG(CAM_LRME, "device busy");
-			req_prio == 0 ? spin_lock(&hw_device->high_req_lock) :
-				spin_lock(&hw_device->normal_req_lock);
-			list_add(&frame_req->frame_list,
-				(req_prio == 0 ?
-				 &hw_device->frame_pending_list_high :
-				 &hw_device->frame_pending_list_normal));
-			req_prio == 0 ? spin_unlock(&hw_device->high_req_lock) :
-				spin_unlock(&hw_device->normal_req_lock);
-			rc = 0;
-		} else
-			CAM_ERR(CAM_LRME,
-				"submit request failed for frame req id: %llu rc %d",
-				frame_req->req_id, rc);
+		if (rc) {
+			if (rc == -EBUSY) {
+				CAM_DBG(CAM_LRME, "device busy");
+
+				req_prio == 0 ?
+					spin_lock(&hw_device->high_req_lock) :
+					spin_lock(&hw_device->normal_req_lock);
+				list_add(&frame_req->frame_list,
+					(req_prio == 0 ?
+					&hw_device->frame_pending_list_high :
+					&hw_device->frame_pending_list_normal));
+				req_prio == 0 ?
+					spin_unlock(&hw_device->high_req_lock) :
+					spin_unlock(
+						&hw_device->normal_req_lock);
+				rc = 0;
+			} else
+				CAM_ERR(CAM_LRME,
+					"submit request failed for frame req id: %llu rc %d",
+					frame_req->req_id, rc);
 		}
 	} else {
 		req_prio == 0 ? spin_lock(&hw_device->high_req_lock) :
