@@ -762,11 +762,11 @@ KBUILD_CFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 KBUILD_CPPFLAGS  += $(call cc-option, -Wno-deprecated-declarations)
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE
-KBUILD_CFLAGS += -O2
+KBUILD_CFLAGS += -O2 -ffast-math
 else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3
 KBUILD_CFLAGS += -O3
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS += -Os
+KBUILD_CFLAGS += -Os -ffast-math
 endif
 
 # Tell compiler to tune the performance of the code for a specified
@@ -775,8 +775,8 @@ ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS += -mcpu=cortex-a78.cortex-a55 -march=armv8.4-a+crc+crypto
 KBUILD_AFLAGS += -mcpu=cortex-a78.cortex-a55 -march=armv8.4-a+crc+crypto
 else ifeq ($(cc-name),clang)
-KBUILD_CFLAGS += -mcpu=cortex-a55 -march=armv8.4-a+crc+crypto
-KBUILD_AFLAGS += -mcpu=cortex-a55 -march=armv8.4-a+crc+crypto
+KBUILD_CFLAGS += -mcpu=kryo -march=armv8.4-a+crc+crypto+aes+lse+sha3
+KBUILD_AFLAGS += -mcpu=kryo -march=armv8.4-a+crc+crypto+aes+lse+sha3
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
