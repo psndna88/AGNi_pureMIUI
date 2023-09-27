@@ -2551,6 +2551,7 @@ extern void cfs_bandwidth_usage_dec(void);
 
 #define nohz_flags(cpu)	(&cpu_rq(cpu)->nohz_flags)
 
+extern cpumask_t cpu_wclaimed_mask;
 extern void nohz_balance_exit_idle(struct rq *rq);
 #else
 static inline void nohz_balance_exit_idle(struct rq *rq) { }
