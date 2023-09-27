@@ -19,6 +19,7 @@ extern cpumask_t __read_mostly **cpu_array;
 extern void
 walt_update_task_ravg(struct task_struct *p, struct rq *rq, int event,
 						u64 wallclock, u64 irqtime);
+extern u64 walt_get_prev_group_run_sum(struct rq *rq);
 
 static inline void
 fixup_cumulative_runnable_avg(struct walt_sched_stats *stats,
