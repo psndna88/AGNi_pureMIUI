@@ -34,7 +34,7 @@
 	#size-cells = <2>;
 
 	chosen {
-		bootargs = "log_buf_len=256K earlycon=msm_geni_serial,0x98c000 rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off quiet noirqdebug";
+		bootargs = "log_buf_len=256K rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off quiet noirqdebug mce=ignore_ce";
 	};
 
 	memory { device_type = "memory"; reg = <0 0 0 0>; };
@@ -42,7 +42,7 @@
 
 	aliases {
 		ufshc1 = &ufshc_mem; /* Embedded UFS Slot */
-		sdhc1 = &sdhc_2; /* SDC2 SD card slot */
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
 		serial0 = &qupv3_se3_2uart;
 		hsuart0 = &qupv3_se18_4uart;
 		pci-domain0 = &pcie0; /* PCIe0 domain */
@@ -388,7 +388,7 @@
 
 	removed_mem: removed_region@d8800000 {
 		no-map;
-		reg = <0x0 0xd8800000 0x0 0xA000000>;
+		reg = <0x0 0xd8800000 0x0 0x8200000>;
 	};
 
 	adsp_mem: adsp_region {
@@ -463,13 +463,6 @@
 		alignment = <0x0 0x400000>;
 		size = <0x0 0x2000000>;
 		linux,cma-default;
-	};
-
-	dump_mem: mem_dump_region {
-		compatible = "shared-dma-pool";
-		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-		reusable;
-		size = <0 0x3000000>;
 	};
 
 	sp_mem: sp_region {  /* SPSS-HLOS ION shared mem */
@@ -2190,7 +2183,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_TZ
-				      IRQ_TYPE_LEVEL_HIGH>;
+				      IRQ_TYPE_EDGE_RISING>;
 			label = "spss";
 		};
 	};
@@ -2442,6 +2435,7 @@
 
 	qcom,cpufreq-hw-debug@18591000 {
 		compatible = "qcom,cpufreq-hw-epss-debug";
+		status = "disabled";
 		reg = <0x18591000 0x800>;
 		reg-names = "domain-top";
 		qcom,freq-hw-domain = <&cpufreq_hw 0>, <&cpufreq_hw 1>,
@@ -3135,15 +3129,47 @@
 		qcom,iommu-dma = "fastmap";
 		dma-coherent;
 
+		rpm-level = <3>;
+		spm-level = <5>;
+
 		status = "disabled";
 		qos0 {
-			mask = <0xf0>;
+			mask = <0x1>;
 			vote = <44>;
 		};
 
-
 		qos1 {
-			mask = <0x0f>;
+			mask = <0x2>;
+			vote = <44>;
+		};
+
+		qos2 {
+			mask = <0x4>;
+			vote = <44>;
+		};
+
+		qos3 {
+			mask = <0x8>;
+			vote = <44>;
+		};
+
+		qos4 {
+			mask = <0x10>;
+			vote = <44>;
+		};
+
+		qos5 {
+			mask = <0x20>;
+			vote = <44>;
+		};
+
+		qos6 {
+			mask = <0x40>;
+			vote = <44>;
+		};
+
+		qos7 {
+			mask = <0x80>;
 			vote = <44>;
 		};
 	};
@@ -4321,7 +4347,7 @@
 
 				msm_cdsp_rm: qcom,msm_cdsp_rm {
 					compatible = "qcom,msm-cdsp-rm";
-					qcom,qos-latency-us = <70>;
+					qcom,qos-latency-us = <60>;
 					qcom,qos-maxhold-ms = <20>;
 				};
 			};
@@ -4336,7 +4362,7 @@
 			interrupt-parent = <&ipcc_mproc>;
 			interrupts = <IPCC_CLIENT_SPSS
 				      IPCC_MPROC_SIGNAL_GLINK_QMP
-				      IRQ_TYPE_LEVEL_HIGH>;
+				      IRQ_TYPE_EDGE_RISING>;
 
 			reg = <0x1885008 0x8>,
 			      <0x1885010 0x4>;
@@ -4625,7 +4651,6 @@
 		qcom,ipa-holb-monitor-max-cnt-11ad = <10>;
 		qcom,tx-wrapper-cache-max-size = <400>;
 		qcom,ipa-gpi-event-rp-ddr;
-		qcom,register-collection-on-crash;
 		clock-names = "core_clk";
 		clocks = <&clock_rpmh RPMH_IPA_CLK>;
 		qcom,interconnect,num-cases = <5>;
@@ -4715,366 +4740,6 @@
 		qcom,firmware-name = "evass";
 
 		memory-region = <&pil_cvp_mem>;
-	};
-
-	mem_dump {
-		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
-
-		c0_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x0>;
-		};
-
-		c100_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x1>;
-		};
-
-		c200_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x2>;
-		};
-
-		c300_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x3>;
-		};
-
-		c400_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x4>;
-		};
-
-		c500_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x5>;
-		};
-
-		c600_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x6>;
-		};
-
-		c700_context {
-			qcom,dump-size = <0x800>;
-			qcom,dump-id = <0x7>;
-		};
-
-		c0_scandump {
-			qcom,dump-size = <0x10100>;
-			qcom,dump-id = <0x130>;
-		};
-
-		c100_scandump {
-			qcom,dump-size = <0x10100>;
-			qcom,dump-id = <0x131>;
-		};
-
-		c200_scandump {
-			qcom,dump-size = <0x10100>;
-			qcom,dump-id = <0x132>;
-		};
-
-		c300_scandump {
-			qcom,dump-size = <0x10100>;
-			qcom,dump-id = <0x133>;
-		};
-
-		c400_scandump: c400_scandump {
-			qcom,dump-size = <0x1a4c0>;
-			qcom,dump-id = <0x134>;
-		};
-
-		c500_scandump: c500_scandump {
-			qcom,dump-size = <0x1a4c0>;
-			qcom,dump-id = <0x135>;
-		};
-
-		c600_scandump: c600_scandump {
-			qcom,dump-size = <0x1a4c0>;
-			qcom,dump-id = <0x136>;
-		};
-
-		c700_scandump: c700_scandump {
-			qcom,dump-size = <0x1a4c0>;
-			qcom,dump-id = <0x137>;
-		};
-
-		cpuss_reg {
-			qcom,dump-size = <0x30000>;
-			qcom,dump-id = <0xef>;
-		};
-
-		l1_icache0 {
-			qcom,dump-size = <0x10900>;
-			qcom,dump-id = <0x60>;
-		};
-
-		l1_icache100 {
-			qcom,dump-size = <0x10900>;
-			qcom,dump-id = <0x61>;
-		};
-
-		l1_icache200 {
-			qcom,dump-size = <0x10900>;
-			qcom,dump-id = <0x62>;
-		};
-
-		l1_icache300 {
-			qcom,dump-size = <0x10900>;
-			qcom,dump-id = <0x63>;
-		};
-
-		l1_icache400 {
-			qcom,dump-size = <0x15100>;
-			qcom,dump-id = <0x64>;
-		};
-
-		l1_icache500 {
-			qcom,dump-size = <0x15100>;
-			qcom,dump-id = <0x65>;
-		};
-
-		l1_icache600 {
-			qcom,dump-size = <0x15100>;
-			qcom,dump-id = <0x66>;
-		};
-
-		l1_icache700 {
-			qcom,dump-size = <0x32100>;
-			qcom,dump-id = <0x67>;
-		};
-
-		l1_dcache0 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x80>;
-		};
-
-		l1_dcache100 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x81>;
-		};
-
-		l1_dcache200 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x82>;
-		};
-
-		l1_dcache300 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x83>;
-		};
-
-		l1_dcache400 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x84>;
-		};
-
-		l1_dcache500 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x85>;
-		};
-
-		l1_dcache600 {
-			qcom,dump-size = <0x9100>;
-			qcom,dump-id = <0x86>;
-		};
-
-		l1_dcache700 {
-			qcom,dump-size = <0x12100>;
-			qcom,dump-id = <0x87>;
-		};
-
-		l1_itlb400 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x24>;
-		};
-
-		l1_itlb500 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x25>;
-		};
-
-		l1_itlb600 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x26>;
-		};
-
-		l1_itlb700 {
-			qcom,dump-size = <0x400>;
-			qcom,dump-id = <0x27>;
-		};
-
-		l1_dtlb400 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x44>;
-		};
-
-		l1_dtlb500 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x45>;
-		};
-
-		l1_dtlb600 {
-			qcom,dump-size = <0x300>;
-			qcom,dump-id = <0x46>;
-		};
-
-		l1_dtlb700 {
-			qcom,dump-size = <0x3a0>;
-			qcom,dump-id = <0x47>;
-		};
-
-		l2_cache400 {
-			qcom,dump-size = <0x90100>;
-			qcom,dump-id = <0xc4>;
-		};
-
-		l2_cache500 {
-			qcom,dump-size = <0x90100>;
-			qcom,dump-id = <0xc5>;
-		};
-
-		l2_cache600 {
-			qcom,dump-size = <0x90100>;
-			qcom,dump-id = <0xc6>;
-		};
-
-		l2_cache700 {
-			qcom,dump-size = <0x120100>;
-			qcom,dump-id = <0xc7>;
-		};
-
-		l2_tlb0 {
-			qcom,dump-size = <0x5b00>;
-			qcom,dump-id = <0x120>;
-		};
-
-		l2_tlb100 {
-			qcom,dump-size = <0x5b00>;
-			qcom,dump-id = <0x121>;
-		};
-
-		l2_tlb200 {
-			qcom,dump-size = <0x5b00>;
-			qcom,dump-id = <0x122>;
-		};
-
-		l2_tlb300 {
-			qcom,dump-size = <0x5b00>;
-			qcom,dump-id = <0x123>;
-		};
-
-		l2_tlb400 {
-			qcom,dump-size = <0x6100>;
-			qcom,dump-id = <0x124>;
-		};
-
-		l2_tlb500 {
-			qcom,dump-size = <0x6100>;
-			qcom,dump-id = <0x125>;
-		};
-
-		l2_tlb600 {
-			qcom,dump-size = <0x6100>;
-			qcom,dump-id = <0x126>;
-		};
-
-		l2_tlb700 {
-			qcom,dump-size = <0xc100>;
-			qcom,dump-id = <0x127>;
-		};
-
-		gemnoc {
-			qcom,dump-size = <0x100000>;
-			qcom,dump-id = <0x162>;
-		};
-
-		mhm_scan {
-			qcom,dump-size = <0x20000>;
-			qcom,dump-id = <0x161>;
-		};
-
-		rpmh {
-			qcom,dump-size = <0x2000000>;
-			qcom,dump-id = <0xec>;
-		};
-
-		rpm_sw {
-			qcom,dump-size = <0x28000>;
-			qcom,dump-id = <0xea>;
-		};
-
-		pmic {
-			qcom,dump-size = <0x200000>;
-			qcom,dump-id = <0xe4>;
-		};
-
-		fcm {
-			qcom,dump-size = <0x8400>;
-			qcom,dump-id = <0xee>;
-		};
-
-		etf_swao {
-			qcom,dump-size = <0x10000>;
-			qcom,dump-id = <0xf1>;
-		};
-
-		etr_reg {
-			qcom,dump-size = <0x1000>;
-			qcom,dump-id = <0x100>;
-		};
-
-		etfswao_reg {
-			qcom,dump-size = <0x1000>;
-			qcom,dump-id = <0x102>;
-		};
-
-		misc_data {
-			qcom,dump-size = <0x1000>;
-			qcom,dump-id = <0xe8>;
-		};
-
-		etf_slpi {
-			qcom,dump-size = <0x4000>;
-			qcom,dump-id = <0xf3>;
-		};
-
-		etfslpi_reg {
-			qcom,dump-size = <0x1000>;
-			qcom,dump-id = <0x103>;
-		};
-
-		etf_lpass {
-			qcom,dump-size = <0x4000>;
-			qcom,dump-id = <0xf4>;
-		};
-
-		etflpass_reg {
-			qcom,dump-size = <0x1000>;
-			qcom,dump-id = <0x104>;
-		};
-
-		LLCC_1: llcc_1_dcache {
-			qcom,dump-size = <0x1141c0>;
-			qcom,dump-id = <0x140>;
-		};
-
-		LLCC_2: llcc_2_dcache {
-			qcom,dump-size = <0x1141c0>;
-			qcom,dump-id = <0x141>;
-		};
-
-		LLCC_3: llcc_3_dcache {
-			qcom,dump-size = <0x1141c0>;
-			qcom,dump-id = <0x142>;
-		};
-
-		LLCC_4: llcc_4_dcache {
-			qcom,dump-size = <0x1141c0>;
-			qcom,dump-id = <0x143>;
-		};
 	};
 
 	qcom,ssc@5c00000 {
@@ -5362,15 +5027,15 @@
 		qcom,same-dt-multi-dev;
 
 		vdd-wlan-aon-supply = <&S2E>;
-		qcom,vdd-wlan-aon-config = <1012000 1012000 0 0 1>;
+		qcom,vdd-wlan-aon-config = <950000 952000 0 0 1>;
 		vdd-wlan-dig-supply = <&S11B>;
-		qcom,vdd-wlan-dig-config = <1012000 1012000 0 0 1>;
+		qcom,vdd-wlan-dig-config = <950000 952000 0 0 1>;
 		vdd-wlan-io-supply = <&S10B>;
 		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 1>;
 		vdd-wlan-rfa1-supply = <&S1C>;
-		qcom,vdd-wlan-rfa1-config = <1900000 1952000 0 0 1>;
+		qcom,vdd-wlan-rfa1-config = <1880000 1880000 0 0 1>;
 		vdd-wlan-rfa2-supply = <&S12B>;
-		qcom,vdd-wlan-rfa2-config = <1350000 1360000 0 0 1>;
+		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 1>;
 		wlan-ant-switch-supply = <&L7E>;
 		qcom,wlan-ant-switch-config = <2800000 2800000 0 0 0>;
 
@@ -5621,10 +5286,10 @@
 		qcom,bt-vdd-rfa2-supply = <&S12B>;
 		qcom,bt-vdd-asd-supply = <&L7E>;
 
-		qcom,bt-vdd-aon-config = <1012000 1012000 0 1>;
-		qcom,bt-vdd-dig-config = <1012000 1012000 0 1>;
-		qcom,bt-vdd-rfa1-config = <1900000 1952000 0 1>;
-		qcom,bt-vdd-rfa2-config = <1350000 1360000 0 1>;
+		qcom,bt-vdd-aon-config = <950000 950000 0 1>;
+		qcom,bt-vdd-dig-config = <950000 950000 0 1>;
+		qcom,bt-vdd-rfa1-config = <1880000 1880000 0 1>;
+		qcom,bt-vdd-rfa2-config = <1350000 1350000 0 1>;
 		qcom,bt-vdd-asd-config = <2800000 2800000 0 1>;
 	};
 
