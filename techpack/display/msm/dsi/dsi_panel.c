@@ -3796,6 +3796,29 @@ static ssize_t sysfs_fod_hbm_write(struct device *dev, struct device_attribute *
 	return count;
 }
 
+static ssize_t sysfs_fod_hbm_read(struct device *dev, struct device_attribute *attr,
+				   char *buf)
+{
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	bool status;
+	int rc = 0;
+
+	display = dev_get_drvdata(dev);
+	if (!display) {
+		DSI_ERR("Invalid display\n");
+		return -EINVAL;
+	}
+
+	panel = display->panel;
+
+	mutex_lock(&panel->panel_lock);
+	status = panel->fod_hbm_requested;
+	mutex_unlock(&panel->panel_lock);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", status);
+}
+
 static ssize_t sysfs_fod_ui_read(struct device *dev, struct device_attribute *attr,
 				 char *buf)
 {
@@ -3818,7 +3841,7 @@ static ssize_t sysfs_fod_ui_read(struct device *dev, struct device_attribute *at
 	return snprintf(buf, PAGE_SIZE, "%d\n", status);
 }
 
-static DEVICE_ATTR(fod_hbm, 0200, NULL, sysfs_fod_hbm_write);
+static DEVICE_ATTR(fod_hbm, 0644, sysfs_fod_hbm_read, sysfs_fod_hbm_write);
 static DEVICE_ATTR(fod_ui, 0400, sysfs_fod_ui_read, NULL);
 
 static struct attribute *panel_attrs[] = {
