@@ -81,6 +81,7 @@ static const char wlan_cfg[] __initconst = {
   "acs_with_more_param=1\n"
   "AutoChannelSelectWeight=0x00fafafa\n"
   "bcast_twt=1\n"
+  "enable_twt=0\n"
   "gRuntimePM=2\n"
   "gRuntimePMDelay=500\n"
   "gEnablePacketLog=0\n"
@@ -99,6 +100,7 @@ static const char wlan_cfg[] __initconst = {
   "gGoKeepAlivePeriod = 20\n"
   "gApKeepAlivePeriod = 20\n"
   "gStaKeepAlivePeriod = 30\n"
+  "gOptimizedPowerManagement=1\n"
   "etsi13_srd_chan_in_master_mode=7\n"
   "gSelect5GHzMargin=5\n"
   "candidate_min_rssi_for_beacon_miss=-83\n"
@@ -124,5 +126,6 @@ static const char wlan_cfg[] __initconst = {
   "gEnableNanSupport=1\n"
   "genable_nan_datapath=1\n"
   "nan_separate_iface_support=1\n"
+  "hostArpOffload=1\n"
   "END\n"
 }; 
