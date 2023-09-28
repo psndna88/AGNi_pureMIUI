@@ -353,7 +353,7 @@
 	mi,hbm-off-51-index = <1>;
 	mi,hbm-on-51-index = <1>;
 	mi,hbm-bl-min-level = <1>;
-	mi,hbm-bl-max-level = <2047>;
+	mi,hbm-bl-max-level = <4096>;
 	mi,max-brightness-clone = <8191>;
 	mi,thermal-dimming-flag;
 	mi,fp-display-on-optimize-flag;
