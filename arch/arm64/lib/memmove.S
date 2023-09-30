@@ -4,10 +4,23 @@
  * Copyright (C) 2013 Linaro.
  *
  * This code is based on glibc cortex strings work originally authored by Linaro
+ * and re-licensed under GPLv2 for the Linux kernel. The original code can
  * be found @
  *
  * http://bazaar.launchpad.net/~linaro-toolchain-dev/cortex-strings/trunk/
  * files/head:/src/aarch64/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/linkage.h>
@@ -47,6 +60,7 @@ D_h	.req	x14
 
 SYM_FUNC_START_ALIAS(__memmove)
 SYM_FUNC_START_WEAK_PI(memmove)
+	prfm    pldl1strm, [src, #L1_CACHE_BYTES]
 	cmp	dstin, src
 	b.lo	__memcpy
 	add	tmp1, src, count
@@ -173,6 +187,7 @@ SYM_FUNC_START_WEAK_PI(memmove)
 	ldp	C_l, C_h, [src, #-48]
 	stp	D_l, D_h, [dst, #-64]!
 	ldp	D_l, D_h, [src, #-64]!
+	prfm    pldl1strm, [src, #(4*L1_CACHE_BYTES)]
 	subs	count, count, #64
 	b.ge	1b
 	stp	A_l, A_h, [dst, #-16]
