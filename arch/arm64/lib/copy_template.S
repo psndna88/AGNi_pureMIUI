@@ -4,10 +4,23 @@
  * Copyright (C) 2013 Linaro.
  *
  * This code is based on glibc cortex strings work originally authored by Linaro
+ * and re-licensed under GPLv2 for the Linux kernel. The original code can
  * be found @
  *
  * http://bazaar.launchpad.net/~linaro-toolchain-dev/cortex-strings/trunk/
  * files/head:/src/aarch64/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -39,6 +52,7 @@ C_h	.req	x12
 D_l	.req	x13
 D_h	.req	x14
 
+	prfm    pldl1strm, [src, #(1*L1_CACHE_BYTES)]
 	mov	dst, dstin
 	cmp	count, #16
 	/*When memory length is less than 16, the accessed are not aligned.*/
@@ -169,6 +183,7 @@ D_h	.req	x14
 	ldp1	C_l, C_h, src, #16
 	stp1	D_l, D_h, dst, #16
 	ldp1	D_l, D_h, src, #16
+	prfm    pldl1strm, [src, #(4*L1_CACHE_BYTES)]
 	subs	count, count, #64
 	b.ge	1b
 	stp1	A_l, A_h, dst, #16
