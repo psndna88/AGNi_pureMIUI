@@ -1105,7 +1105,7 @@ void set_window_start(struct rq *rq)
 	rq->curr->wts.mark_start = rq->wrq.window_start;
 }
 
-unsigned int sysctl_sched_conservative_pl;
+unsigned int sysctl_sched_conservative_pl = 1;
 unsigned int sysctl_sched_many_wakeup_threshold = WALT_MANY_WAKEUP_DEFAULT;
 
 #define INC_STEP 8
