@@ -1172,7 +1172,7 @@ static struct ctl_table ipv4_net_table[] = {
 		.procname	= "tcp_limit_output_bytes",
 		.data		= &init_net.ipv4.sysctl_tcp_limit_output_bytes,
 		.maxlen		= sizeof(int),
-		.mode		= 0644,
+		.mode		= 0444,
 		.proc_handler	= proc_dointvec
 	},
 	{
