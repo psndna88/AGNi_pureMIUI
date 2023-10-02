@@ -127,5 +127,7 @@ static const char wlan_cfg[] __initconst = {
   "genable_nan_datapath=1\n"
   "nan_separate_iface_support=1\n"
   "hostArpOffload=1\n"
+  "gEnableTDLSWmmMode=1\n"
+  "gTDLSUapsdMask=0x8\n"
   "END\n"
 }; 
