@@ -303,7 +303,7 @@ void slatecom_slatedown_handler(void)
 }
 EXPORT_SYMBOL(slatecom_slatedown_handler);
 
-static void parse_fifo(uint8_t *data, union slatecom_event_data_type *event_data)
+static void parse_fifo(uint8_t *data, uint16_t data_len, union slatecom_event_data_type *event_data)
 {
 	uint16_t p_len;
 	uint8_t sub_id;
@@ -314,11 +314,16 @@ static void parse_fifo(uint8_t *data, union slatecom_event_data_type *event_data
 	struct event_list *data_list;
 
 	while (*data != '\0') {
-
+		if (data_len < HED_EVENT_ID_LEN)
+			break;
 		event_id = *((uint16_t *) data);
 		data = data + HED_EVENT_ID_LEN;
+		data_len = data_len - HED_EVENT_ID_LEN;
+		if (data_len < HED_EVENT_SIZE_LEN)
+			break;
 		p_len = *((uint16_t *) data);
 		data = data + HED_EVENT_SIZE_LEN;
+		data_len = data_len - HED_EVENT_SIZE_LEN;
 
 		if (event_id == 0xFFFE) {
 
@@ -346,8 +351,14 @@ static void parse_fifo(uint8_t *data, union slatecom_event_data_type *event_data
 				send_event(SLATECOM_EVENT_TO_MASTER_FIFO_USED,
 						event_data);
 			}
+		} else if (event_id == 0xc8) {
+			data = data + 12;
+			data_len = data_len - 12;
+			pr_err("Packet Received = 0x%X, len = %u\n", event_id, p_len);
 		}
+
 		data = data + p_len;
+		data_len = data_len - p_len;
 	}
 	if (!list_empty(&pr_lst_hd))
 		queue_work(wq, &input_work);
@@ -451,7 +462,8 @@ static void send_back_notification(uint32_t slav_status_reg,
 			if (!ret) {
 				augmnt_fifo((uint8_t *)ptr,
 					master_fifo_used*SLATE_SPI_WORD_SIZE);
-				parse_fifo((uint8_t *)ptr, &event_data);
+				parse_fifo((uint8_t *)ptr,
+					master_fifo_used*SLATE_SPI_WORD_SIZE, &event_data);
 			}
 			kfree(ptr);
 		}
