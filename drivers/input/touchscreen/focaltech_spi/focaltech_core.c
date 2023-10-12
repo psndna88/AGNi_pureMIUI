@@ -1752,7 +1752,7 @@ static void fts_restore_mode_value(int mode, int value_type)
 		xiaomi_touch_interfaces.touch_mode[mode][value_type];
 }
 
-static void fts_restore_normal_mode()
+static void fts_restore_normal_mode(void)
 {
 	int i;
 	int temp_value;
@@ -1879,7 +1879,7 @@ static void fts_power_status_handler(struct fts_ts_data *ts_data, int value)
 	}
 }
 
-static void fts_enter_doze_status()
+static void fts_enter_doze_status(void)
 {
 	int ret = 0;
 	int cnt = 3;
