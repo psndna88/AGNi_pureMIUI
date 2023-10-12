@@ -110,10 +110,10 @@
 	compat_uptr_t)
 
 struct crus_sp_ioctl_header {
-	uint32_t size;
-	uint32_t module_id;
-	uint32_t param_id;
-	uint32_t data_length;
+	__u32 size;
+	__u32 module_id;
+	__u32 param_id;
+	__u32 data_length;
 	void *data;
 };
 
