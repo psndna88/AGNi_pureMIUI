@@ -5274,6 +5274,21 @@ int wlan_hdd_cfg80211_start_bss(struct hdd_adapter *adapter,
 		}
 	}
 
+	/*
+	 * For STA+SAP/GO concurrency support from GUI, In case if
+	 * START AP/GO request comes just before the SAE authentication
+	 * completion on STA, SAE AUTH REQ waits for START AP RSP and
+	 * START AP RSP waits to complete SAE AUTH REQ.
+	 * Driver completes START AP RSP only upon SAE AUTH REQ timeout(5 sec)
+	 * as start ap will be in serialization pending queue, and SAE auth
+	 * sequence cannot complete as hostap thread is blocked in start ap
+	 * cfg80211 ops.
+	 * To avoid above deadlock until SAE timeout, abort the SAE connection
+	 * immediately and complete START AP/GO asap so that the upper layer
+	 * can trigger a fresh connection after START AP/GO completion.
+	 */
+	hdd_abort_ongoing_sta_sae_connection(hdd_ctx, adapter);
+
 	mac_handle = hdd_ctx->mac_handle;
 
 	sme_config = qdf_mem_malloc(sizeof(*sme_config));
@@ -6042,6 +6057,21 @@ static int __wlan_hdd_cfg80211_stop_ap(struct wiphy *wiphy,
 		hdd_err("stop ap is given on device modes other than SAP/GO. Hence return");
 		goto exit;
 	}
+
+	/*
+	 * For STA+SAP/GO concurrency support from GUI, In case if
+	 * STOP AP/GO request comes just before the SAE authentication
+	 * completion on STA, SAE AUTH REQ waits for STOP AP RSP and
+	 * STOP AP RSP waits to complete SAE AUTH REQ.
+	 * Driver completes STOP AP RSP only upon SAE AUTH REQ timeout(5 sec)
+	 * as stop ap will be in serialization pending queue, and SAE auth
+	 * sequence cannot complete as hostap thread is blocked in stop ap
+	 * cfg80211 ops.
+	 * To avoid above deadlock until SAE timeout, abort the SAE connection
+	 * immediately and complete STOP AP/GO asap so that the upper layer
+	 * can trigger a fresh connection after STOP AP/GO completion.
+	 */
+	hdd_abort_ongoing_sta_sae_connection(hdd_ctx, adapter);
 
 	/* Clear SOFTAP_INIT_DONE flag to mark stop_ap deinit. So that we do
 	 * not restart SAP after SSR as SAP is already stopped from user space.

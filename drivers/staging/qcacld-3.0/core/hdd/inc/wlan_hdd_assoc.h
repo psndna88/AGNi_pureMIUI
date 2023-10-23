@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -272,6 +273,17 @@ struct hdd_adapter *hdd_get_sta_connection_in_progress(
  * Return: none
  */
 void hdd_abort_ongoing_sta_connection(struct hdd_context *hdd_ctx);
+
+/**
+ * hdd_abort_ongoing_sta_sae_connection() - Disconnect the sta for which the
+ * sae connection is in progress.
+ * @hdd_ctx: hdd context
+ * @adapter: pointer to the adapter
+ *
+ * Return: none
+ */
+void hdd_abort_ongoing_sta_sae_connection(struct hdd_context *hdd_ctx,
+					  struct hdd_adapter *adapter);
 
 /**
  * hdd_is_any_sta_connected() - check if any sta in connected state

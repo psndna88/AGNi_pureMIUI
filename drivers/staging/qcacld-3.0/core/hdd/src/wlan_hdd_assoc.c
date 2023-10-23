@@ -460,6 +460,47 @@ void hdd_abort_ongoing_sta_connection(struct hdd_context *hdd_ctx)
 	}
 }
 
+void hdd_abort_ongoing_sta_sae_connection(struct hdd_context *hdd_ctx,
+					  struct hdd_adapter *adapter)
+{
+	struct hdd_adapter *sta_adapter;
+	struct wlan_objmgr_vdev *vdev;
+	int32_t key_mgmt;
+	QDF_STATUS status;
+
+	sta_adapter = hdd_get_sta_connection_in_progress(hdd_ctx);
+	if (!sta_adapter) {
+		hdd_err("sta_adapter is NULL");
+		return;
+	}
+
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		return;
+	}
+
+	key_mgmt = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+	hdd_objmgr_put_vdev(vdev);
+
+	if (key_mgmt < 0) {
+		hdd_debug_rl("Invalid key_mgmt: %d", key_mgmt);
+		return;
+	}
+
+	if (QDF_HAS_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_SAE) ||
+	    QDF_HAS_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE)) {
+		hdd_debug("Disconnecting STA on vdev: %d",
+			  sta_adapter->vdev_id);
+		status = wlan_hdd_disconnect(sta_adapter,
+					     eCSR_DISCONNECT_REASON_DEAUTH,
+					     REASON_DISASSOC_NETWORK_LEAVING);
+		if (QDF_IS_STATUS_ERROR(status))
+			hdd_err("wlan_hdd_disconnect failed, status: %d",
+				status);
+	}
+}
+
 bool hdd_is_any_sta_connected(struct hdd_context *hdd_ctx)
 {
 	struct hdd_adapter *adapter = NULL, *next_adapter = NULL;

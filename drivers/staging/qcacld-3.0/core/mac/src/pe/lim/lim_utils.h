@@ -328,6 +328,18 @@ void lim_decide_sta_protection_on_assoc(struct mac_context *mac,
 		struct pe_session *pe_session);
 
 /**
+ * lim_get_cb_mode_for_freq() - Get cb mode depending on the freq
+ * @mac: pointer to Global MAC structure
+ * @pe_session: pe session
+ * @chan_freq: Freq to get cb mode for
+ *
+ * Return: cb mode allowed for the freq
+ */
+uint8_t lim_get_cb_mode_for_freq(struct mac_context *mac,
+				 struct pe_session *session,
+				 qdf_freq_t chan_freq);
+
+/**
  * lim_update_sta_run_time_ht_switch_chnl_params() - Process change in HT
  * bandwidth
  * @mac: pointer to Global MAC structure
@@ -2261,4 +2273,49 @@ static inline void lim_process_sae_msg(struct mac_context *mac, void *body);
 {}
 #endif
 
+/**
+ * lim_update_nss() - Function to update NSS
+ * @mac_ctx: pointer to Global Mac structure
+ * @sta_ds: pointer to tpDphHashNode
+ * @rx_nss: Rx NSS in operating mode notification
+ * @session: pointer to pe_session
+ *
+ * function to update NSS
+ *
+ * Return: None
+ */
+void lim_update_nss(struct mac_context *mac_ctx, tpDphHashNode sta_ds,
+		    uint8_t rx_nss, struct pe_session *session);
+
+/**
+ * lim_update_channel_width() - Function to update channel width
+ * @mac_ctx: pointer to Global Mac structure
+ * @sta_ptr: pointer to tpDphHashNode
+ * @session: pointer to pe_session
+ * @ch_width: Channel width in operating mode notification
+ * @new_ch_width: Final channel bandwifdth
+ *
+ * function to update channel width
+ *
+ * Return: Success or Failure
+ */
+bool lim_update_channel_width(struct mac_context *mac_ctx,
+			      tpDphHashNode sta_ptr,
+			      struct pe_session *session,
+			      uint8_t ch_width,
+			      uint8_t *new_ch_width);
+
+/**
+ * lim_get_vht_ch_width() - Function to get the VHT
+ * operating channel width based on frequency params
+ *
+ * @vht_cap: Pointer to VHT Caps IE.
+ * @vht_op: Pointer to VHT Operation IE.
+ * @ht_info: Pointer to HT Info IE.
+ *
+ * Return: VHT channel width
+ */
+uint8_t lim_get_vht_ch_width(tDot11fIEVHTCaps *vht_cap,
+			     tDot11fIEVHTOperation *vht_op,
+			     tDot11fIEHTInfo *ht_info);
 #endif /* __LIM_UTILS_H */
