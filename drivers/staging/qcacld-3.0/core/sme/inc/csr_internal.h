@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -399,8 +399,6 @@ struct csr_scanstruct {
 	tDblLinkList channelPowerInfoList5G;
 	uint32_t nLastAgeTimeOut;
 	uint32_t nAgingCountDown;
-	uint8_t countryCodeDefault[REG_ALPHA2_LEN + 1];
-	uint8_t countryCodeCurrent[REG_ALPHA2_LEN + 1];
 	uint8_t countryCode11d[REG_ALPHA2_LEN + 1];
 	v_REGDOMAIN_t domainIdDefault;  /* default regulatory domain */
 	v_REGDOMAIN_t domainIdCurrent;  /* current regulatory domain */
@@ -895,7 +893,7 @@ QDF_STATUS csr_change_default_config_param(struct mac_context *mac,
 		struct csr_config_params *pParam);
 QDF_STATUS csr_msg_processor(struct mac_context *mac, void *msg_buf);
 QDF_STATUS csr_open(struct mac_context *mac);
-QDF_STATUS csr_init_chan_list(struct mac_context *mac, uint8_t *alpha2);
+QDF_STATUS csr_init_chan_list(struct mac_context *mac);
 QDF_STATUS csr_close(struct mac_context *mac);
 QDF_STATUS csr_start(struct mac_context *mac);
 QDF_STATUS csr_stop(struct mac_context *mac);

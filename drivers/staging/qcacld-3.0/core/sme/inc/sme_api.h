@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -256,8 +257,7 @@ enum {
   Function declarations and documenation
   ------------------------------------------------------------------------*/
 QDF_STATUS sme_open(mac_handle_t mac_handle);
-QDF_STATUS sme_init_chan_list(mac_handle_t mac_handle, uint8_t *alpha2,
-		enum country_src cc_src);
+QDF_STATUS sme_init_chan_list(mac_handle_t mac_handle, enum country_src cc_src);
 QDF_STATUS sme_close(mac_handle_t mac_handle);
 QDF_STATUS sme_start(mac_handle_t mac_handle);
 

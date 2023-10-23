@@ -205,6 +205,10 @@
 #define WLAN_MAX_HEOP_IE_LEN              16
 #define WLAN_HEOP_OUI_TYPE                "\x24"
 #define WLAN_HEOP_OUI_SIZE                1
+#define WLAN_MIN_HECAP_IE_LEN             22
+#define WLAN_MAX_HECAP_IE_LEN             55
+#define WLAN_HE_MCS_MAP_LEN               2
+#define WLAN_INVALID_RX_MCS_MAP           0xFFFF
 
 #define WLAN_HEOP_FIXED_PARAM_LENGTH       7
 #define WLAN_HEOP_VHTOP_LENGTH             3
