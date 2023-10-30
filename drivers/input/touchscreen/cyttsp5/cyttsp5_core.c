@@ -6011,7 +6011,7 @@ static int cyttsp5_set_cur_value(int mode, int value)
 	return ret;
 }
 
-static void cyttsp5_init_xiaomi_touchfeature()
+static void cyttsp5_init_xiaomi_touchfeature(void)
 {
 	memset(&xiaomi_touch_interfaces, 0x00, sizeof(struct xiaomi_touch_interface));
 	xiaomi_touch_interfaces.setModeValue = cyttsp5_set_cur_value;
