@@ -4887,7 +4887,7 @@ static int fts_write_charge_status(int status)
 	return res;
 }
 
-static int fts_get_charging_status()
+static int fts_get_charging_status(void)
 {
 	int is_charging = 0;
 	is_charging = !!power_supply_is_system_supplied();
