@@ -494,12 +494,12 @@ static void pdump(struct us_data *us, void *ibuffer, int length)
 	unsigned char *buffer = (unsigned char *) ibuffer;
 	int i, j;
 	int from, base;
-
+	size_t size = sizeof(line);
 	offset = 0;
 	for (i = 0; i < length; i++) {
 		if ((i & 15) == 0) {
 			if (i > 0) {
-				offset += sprintf (line+offset, " - ");
+				offset += scnprintf(line+offset, size-offset, " - ");
 				for (j = i - 16; j < i; j++) {
 					if (buffer[j] >= 32 && buffer[j] <= 126)
 						line[offset++] = buffer[j];
@@ -510,11 +510,11 @@ static void pdump(struct us_data *us, void *ibuffer, int length)
 				usb_stor_dbg(us, "%s\n", line);
 				offset = 0;
 			}
-			offset += sprintf (line+offset, "%08x:", i);
+			offset += scnprintf(line+offset, size-offset, "%08x:", i);
 		} else if ((i & 7) == 0) {
-			offset += sprintf (line+offset, " -");
+			offset += scnprintf(line+offset, size-offset, " -");
 		}
-		offset += sprintf (line+offset, " %02x", buffer[i] & 0xff);
+		offset += scnprintf(line+offset, size-offset, " %02x", buffer[i] & 0xff);
 	}
 
 	/* Add the last "chunk" of data. */
@@ -522,10 +522,10 @@ static void pdump(struct us_data *us, void *ibuffer, int length)
 	base = ((length - 1) / 16) * 16;
 
 	for (i = from + 1; i < 16; i++)
-		offset += sprintf (line+offset, "   ");
+		offset += scnprintf(line+offset, size-offset, "   ");
 	if (from < 8)
-		offset += sprintf (line+offset, "  ");
-	offset += sprintf (line+offset, " - ");
+		offset += scnprintf(line+offset, size-offset, "  ");
+	offset += scnprintf(line+offset, size-offset, " - ");
 
 	for (i = 0; i <= from; i++) {
 		if (buffer[base+i] >= 32 && buffer[base+i] <= 126)
