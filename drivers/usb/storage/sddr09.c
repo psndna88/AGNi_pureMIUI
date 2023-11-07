@@ -1139,6 +1139,8 @@ sddr09_get_cardinfo(struct us_data *us, unsigned char flags) {
 	unsigned char deviceID[4];
 	char blurbtxt[256];
 	int result;
+	size_t size = sizeof(blurbtxt);
+	int len;
 
 	usb_stor_dbg(us, "Reading capacity...\n");
 
@@ -1150,10 +1152,11 @@ sddr09_get_cardinfo(struct us_data *us, unsigned char flags) {
 		return NULL;
 	}
 
-	sprintf(blurbtxt, "sddr09: Found Flash card, ID = %4ph", deviceID);
+	scnprintf(blurbtxt, size, "sddr09: Found Flash card, ID = %4ph", deviceID);
 
 	/* Byte 0 is the manufacturer */
-	sprintf(blurbtxt + strlen(blurbtxt),
+	len = strlen(blurbtxt);
+	scnprintf(blurbtxt + len, size - len,
 		": Manuf. %s",
 		nand_flash_manufacturer(deviceID[0]));
 
@@ -1165,29 +1168,34 @@ sddr09_get_cardinfo(struct us_data *us, unsigned char flags) {
 		 * 17301504 raw bytes, of which 16384000 are
 		 * usable for user data.
 		 */
-		sprintf(blurbtxt + strlen(blurbtxt),
+		len = strlen(blurbtxt);
+		scnprintf(blurbtxt + len, size - len,
 			", %d MB", 1<<(cardinfo->chipshift - 20));
 	} else {
-		sprintf(blurbtxt + strlen(blurbtxt),
+		len = strlen(blurbtxt);
+		scnprintf(blurbtxt + len, size - len,
 			", type unrecognized");
 	}
 
 	/* Byte 2 is code to signal availability of 128-bit ID */
 	if (deviceID[2] == 0xa5) {
-		sprintf(blurbtxt + strlen(blurbtxt),
+		len = strlen(blurbtxt);
+		scnprintf(blurbtxt + len, size - len,
 			", 128-bit ID");
 	}
 
 	/* Byte 3 announces the availability of another read ID command */
 	if (deviceID[3] == 0xc0) {
-		sprintf(blurbtxt + strlen(blurbtxt),
+		len = strlen(blurbtxt);
+		scnprintf(blurbtxt + len, size - len,
 			", extra cmd");
 	}
 
-	if (flags & SDDR09_WP)
-		sprintf(blurbtxt + strlen(blurbtxt),
+	if (flags & SDDR09_WP) {
+		len = strlen(blurbtxt);
+		scnprintf(blurbtxt + len, size - len,
 			", WP");
-
+	}
 	printk(KERN_WARNING "%s\n", blurbtxt);
 
 	return cardinfo;
@@ -1538,7 +1546,8 @@ static int sddr09_transport(struct scsi_cmnd *srb, struct us_data *us)
 {
 	static unsigned char sensekey = 0, sensecode = 0;
 	static unsigned char havefakesense = 0;
-	int result, i;
+	int result, i, len;
+	size_t size;
 	unsigned char *ptr = us->iobuf;
 	unsigned long capacity;
 	unsigned int page, pages;
@@ -1701,9 +1710,11 @@ static int sddr09_transport(struct scsi_cmnd *srb, struct us_data *us)
 	srb->cmnd[1] = LUNBITS;
 
 	ptr[0] = 0;
-	for (i=0; i<12; i++)
-		sprintf(ptr+strlen(ptr), "%02X ", srb->cmnd[i]);
-
+	size = sizeof(ptr);
+	for (i = 0; i < 12; i++) {
+		len = strlen(ptr);
+		scnprintf(ptr+len, size-len, "%02X ", srb->cmnd[i]);
+	}
 	usb_stor_dbg(us, "Send control for command %s\n", ptr);
 
 	result = sddr09_send_scsi_command(us, srb->cmnd, 12);
@@ -1730,7 +1741,7 @@ static int sddr09_transport(struct scsi_cmnd *srb, struct us_data *us)
 
 		return (result == USB_STOR_XFER_GOOD ?
 			USB_STOR_TRANSPORT_GOOD : USB_STOR_TRANSPORT_ERROR);
-	} 
+	}
 
 	return USB_STOR_TRANSPORT_GOOD;
 }
