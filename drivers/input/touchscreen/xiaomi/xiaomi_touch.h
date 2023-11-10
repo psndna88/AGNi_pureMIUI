@@ -31,6 +31,9 @@
 #define MAX_BUF_SIZE 256
 #define BTN_INFO 0x152
 #define MAX_TOUCH_ID 10
+#define RAW_BUF_NUM 4
+#define THP_CMD_BASE	1000
+
 
 enum suspend_state {
 	XIAOMI_TOUCH_RESUME = 0,
@@ -72,9 +75,18 @@ enum MODE_TYPE {
 	Touch_Debug_Level      		= 18,
 	Touch_Power_Status     		= 19,
 	Touch_Mode_NUM         		= 20,
+	THP_LOCK_SCAN_MODE      	= THP_CMD_BASE + 0,
+	THP_FOD_DOWNUP_CTL      	= THP_CMD_BASE + 1,
+	THP_SELF_CAP_SCAN         	= THP_CMD_BASE + 2,
+	THP_REPORT_POINT_SWITCH 	= THP_CMD_BASE + 3,
+	THP_HAL_INIT_READY     		= THP_CMD_BASE + 4,
 };
 
 struct xiaomi_touch_interface {
+	int thp_cmd_buf[MAX_BUF_SIZE];
+	char thp_cmd_data_buf[MAX_BUF_SIZE];
+	int thp_cmd_size;
+	int thp_cmd_data_size;
 	int touch_mode[Touch_Mode_NUM][VALUE_TYPE_SIZE];
 	int (*setModeValue)(int Mode, int value);
 	int (*setModeLongValue)(int Mode, int value_len, int *value);
@@ -89,7 +101,7 @@ struct xiaomi_touch_interface {
 	int (*get_touch_tx_num)(void);
 	int (*get_touch_x_resolution)(void);
 	int (*get_touch_y_resolution)(void);
-	int (*enable_touch_raw)(bool en);
+	int (*enable_touch_raw)(int en);
 	int (*enable_clicktouch_raw)(int count);
 	int (*enable_touch_delta)(bool en);
 	u8 (*panel_vendor_read)(void);
@@ -106,6 +118,7 @@ struct xiaomi_touch_interface {
 	int thp_noisefilter;
 	int thp_islandthreshold;
 	int thp_smooth;
+	int thp_dump_raw;
 	bool is_enable_touchdelta;
 };
 
@@ -117,6 +130,7 @@ struct xiaomi_touch {
 	struct mutex  mutex;
 	struct mutex  palm_mutex;
 	struct mutex  prox_mutex;
+	struct mutex fod_press_status_mutex;
 	wait_queue_head_t 	wait_queue;
 };
 
@@ -144,12 +158,18 @@ struct xiaomi_touch_pdata{
 	struct xiaomi_touch_interface *touch_data[2];
 	int suspend_state;
 	dma_addr_t phy_base;
+	int raw_head;
+	int raw_tail;
+	int raw_len;
+	unsigned int *raw_buf[RAW_BUF_NUM];
 	unsigned int *raw_data;
+	spinlock_t raw_lock;
 	int palm_value;
 	bool palm_changed;
 	int prox_value;
 	bool prox_changed;
 	const char *name;
+	int fod_press_status_value;
 	struct proc_dir_entry  *last_touch_events_proc;
 	struct last_touch_event *last_touch_events;
 };
@@ -174,6 +194,9 @@ extern int update_clicktouch_raw(void);
 
 extern void last_touch_events_collect(int slot, int state);
 
+extern int update_fod_press_status(int value);
+
 int xiaomi_touch_set_suspend_state(int state);
 
+extern void thp_send_cmd_to_hal(int cmd, int value);
 #endif
