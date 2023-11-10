@@ -483,7 +483,6 @@ struct battery_chg_dev {
 	bool				support_wireless_charge;
 	bool				support_2s_charging;
 	struct delayed_work		xm_prop_change_work;
-	struct delayed_work		charger_debug_info_print_work;
 	/* To track the driver initialization status */
 	bool				initialized;
 };
@@ -1502,15 +1501,15 @@ static u8 get_quick_charge_type(struct battery_chg_dev *bcdev)
 		case ADAPTER_XIAOMI_QC3_20W:
 		case ADAPTER_XIAOMI_PD_20W:
 		case ADAPTER_XIAOMI_CAR_20W:
-			return QUICK_CHARGE_TURBE;
 		case ADAPTER_XIAOMI_PD_30W:
 		case ADAPTER_VOICE_BOX_30W:
+			return QUICK_CHARGE_TURBE;
 		case ADAPTER_XIAOMI_PD_50W:
 		case ADAPTER_XIAOMI_PD_60W:
 		case ADAPTER_XIAOMI_PD_100W:
 			return QUICK_CHARGE_SUPER;
 		default:
-			return QUICK_CHARGE_FAST;
+			return QUICK_CHARGE_NORMAL;
 	}
 #endif
 
@@ -1673,7 +1672,9 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 					int val)
 {
 	int rc;
-//	u32 fcc_ua, prev_fcc_ua;
+	//	u32 fcc_ua, prev_fcc_ua;
+	if(val == bcdev->curr_thermal_level)
+	      return 0;
 	pr_err("set thermal-level: %d num_thermal_levels: %d \n", val, bcdev->num_thermal_levels);
 
 	if (!bcdev->num_thermal_levels)
@@ -1703,8 +1704,6 @@ static int battery_psy_set_charge_current(struct battery_chg_dev *bcdev,
 		bcdev->curr_thermal_level = val;
 	else
 		bcdev->thermal_fcc_ua = prev_fcc_ua;
-		bcdev->thermal_fcc_ua = fcc_ua;
-	}
 #endif
 	return rc;
 }
@@ -5365,51 +5364,6 @@ static void generate_xm_charge_uvent(struct work_struct *work)
 	return;
 }
 
-#define CHARGING_PERIOD_S		60
-#define DISCHARGE_PERIOD_S		300
-static void xm_charger_debug_info_print_work(struct work_struct *work)
-{
-	struct battery_chg_dev *bcdev = container_of(work, struct battery_chg_dev, charger_debug_info_print_work.work);
-	struct power_supply *usb_psy = NULL;
-	int rc, usb_present = 0;
-	int vbus_vol_uv, ibus_ua;
-	int interval = DISCHARGE_PERIOD_S;
-	union power_supply_propval val = {0, };
-
-	usb_psy = bcdev->psy_list[PSY_TYPE_USB].psy;
-	if (usb_psy != NULL) {
-		rc = usb_psy_get_prop(usb_psy, POWER_SUPPLY_PROP_ONLINE, &val);
-		if (!rc)
-			usb_present = val.intval;
-		else
-			usb_present = 0;
-//		pr_err("usb_present: %d\n", usb_present);
-	} else {
-		return;
-	}
-
-	if (usb_present == 1) {
-		rc = usb_psy_get_prop(usb_psy, POWER_SUPPLY_PROP_VOLTAGE_NOW, &val);
-		if (!rc)
-			vbus_vol_uv = val.intval;
-		else
-			vbus_vol_uv = 0;
-
-		rc = usb_psy_get_prop(usb_psy, POWER_SUPPLY_PROP_CURRENT_NOW, &val);
-		if (!rc)
-			ibus_ua = val.intval;
-		else
-			ibus_ua = 0;
-
-//		pr_err("vbus_vol_uv: %d, ibus_ua: %d\n", vbus_vol_uv, ibus_ua);
-		interval = CHARGING_PERIOD_S;
-	} else {
-		interval = DISCHARGE_PERIOD_S;
-	}
-
-	schedule_delayed_work(&bcdev->charger_debug_info_print_work, interval * HZ);
-}
-
 static int battery_chg_parse_dt(struct battery_chg_dev *bcdev)
 {
 	struct device_node *node = bcdev->dev->of_node;
@@ -5690,8 +5644,6 @@ static int battery_chg_probe(struct platform_device *pdev)
 	schedule_work(&bcdev->usb_type_work);
 
 	INIT_DELAYED_WORK( &bcdev->xm_prop_change_work, generate_xm_charge_uvent);
-	INIT_DELAYED_WORK( &bcdev->charger_debug_info_print_work, xm_charger_debug_info_print_work);
-	schedule_delayed_work(&bcdev->charger_debug_info_print_work, 5 * HZ);
 
 	bcdev->slave_fg_verify_flag = false;
 	bcdev->shutdown_delay_en = true;
