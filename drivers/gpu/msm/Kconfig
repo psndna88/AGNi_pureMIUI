@@ -53,7 +53,7 @@ config QCOM_KGSL_IOCOHERENCY_DEFAULT
 	 the user can still selectively enable I/O coherency with a flag.
 
 config QCOM_KGSL_IDLE_TIMEOUT
-	int
+	int "GPU idle timeout value"
 	default 100000 if !QGKI
 	default 80
 	help
