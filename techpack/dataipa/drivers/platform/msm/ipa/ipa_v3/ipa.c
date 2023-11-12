@@ -237,6 +237,18 @@ static void ipa_pci_io_resume(struct pci_dev *pci_dev)
 {
 }
 
+#ifndef CONFIG_PCI
+static inline void pci_release_region(struct pci_dev *pci_dev, int bar)
+{
+}
+
+static inline int pci_request_region(struct pci_dev *pci_dev, int bar,
+				     const char *res_name)
+{
+	return -EINVAL;
+}
+#endif
+
 /* PCI Error Recovery */
 static const struct pci_error_handlers ipa_pci_err_handler = {
 	.error_detected = ipa_pci_io_error_detected,
