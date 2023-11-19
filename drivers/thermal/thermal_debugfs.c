@@ -27,7 +27,7 @@ static int fetch_cdev(struct thermal_zone_device *tz, char *dev_token,
 	bool match_found = false;
 
 	dev_token = strim(dev_token);
-	if (sscanf(dev_token, "%20[^ +\n\t]", cdev_name) != 1)
+	if (sscanf(dev_token, "%19[^ +\n\t]", cdev_name) != 1)
 		return -EINVAL;
 	list_for_each_entry(instance, &tz->thermal_instances, tz_node) {
 		if (!instance->cdev || instance->trip != trip)
@@ -41,14 +41,14 @@ static int fetch_cdev(struct thermal_zone_device *tz, char *dev_token,
 	if (!match_found)
 		return -ENODEV;
 	if (upper_lim_token) {
-		if (sscanf(upper_lim_token, "%20[^ +\n\t]", limit_str) != 1)
+		if (sscanf(upper_lim_token, "%19[^ +\n\t]", limit_str) != 1)
 			return -EINVAL;
 		if (kstrtoul(limit_str, 0, &upper_limit))
 			return -EINVAL;
 		instance->upper = upper_limit;
 	}
 	if (lower_lim_token) {
-		if (sscanf(lower_lim_token, "%20[^ +\n\t]", limit_str) != 1)
+		if (sscanf(lower_lim_token, "%19[^ +\n\t]", limit_str) != 1)
 			return -EINVAL;
 		if (kstrtoul(limit_str, 0, &lower_limit))
 			return -EINVAL;
@@ -341,7 +341,7 @@ static ssize_t thermal_dbgfs_config_write(struct file *file,
 	}
 	sensor_buf = strnstr(buf, "sensor", count);
 	if (sensor_buf) {
-		if (sscanf(sensor_buf, "sensor %20[^\n\t ]",
+		if (sscanf(sensor_buf, "sensor %19[^\n\t ]",
 				sensor_name) != 1) {
 			pr_err("sensor name not found\n");
 			ret = -EINVAL;
