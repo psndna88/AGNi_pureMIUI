@@ -1118,6 +1118,25 @@ mdss_init_fail:
 	return ret;
 }
 
+void msm_atomic_flush_display_threads(struct msm_drm_private *priv)
+{
+	int i;
+
+	if (!priv) {
+		SDE_ERROR("invalid private data\n");
+		return;
+	}
+
+	for (i = 0; i < priv->num_crtcs; i++) {
+		if (priv->disp_thread[i].thread)
+			kthread_flush_worker(&priv->disp_thread[i].worker);
+		if (priv->event_thread[i].thread)
+			kthread_flush_worker(&priv->event_thread[i].worker);
+	}
+
+	kthread_flush_worker(&priv->pp_event_worker);
+}
+
 /*
  * DRM operations:
  */
@@ -1214,10 +1233,8 @@ static void msm_lastclose(struct drm_device *dev)
 				priv->pending_crtcs);
 
 		rc = kms->funcs->trigger_null_flush(kms);
-		if (rc) {
-			DRM_ERROR("null flush commit failure during lastclose\n");
+		if (rc)
 			return;
-		}
 	}
 
 	/*
@@ -1240,6 +1257,8 @@ static void msm_lastclose(struct drm_device *dev)
 	if (!rc)
 		DRM_INFO("wait for crtc mask 0x%x failed, commit anyway...\n",
 				priv->pending_crtcs);
+
+	msm_atomic_flush_display_threads(priv);
 
 	if (priv->fbdev) {
 		rc = drm_fb_helper_restore_fbdev_mode_unlocked(priv->fbdev);

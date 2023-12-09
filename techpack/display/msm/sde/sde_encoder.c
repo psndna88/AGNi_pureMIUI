@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -1693,6 +1693,17 @@ static void _sde_encoder_rc_cancel_delayed(struct sde_encoder_virt *sde_enc,
 	if (kthread_cancel_delayed_work_sync(&sde_enc->delayed_off_work))
 		SDE_DEBUG_ENC(sde_enc, "sw_event:%d, work cancelled\n",
 				sw_event);
+}
+
+void sde_encoder_cancel_delayed_work(struct drm_encoder *encoder)
+{
+	struct sde_encoder_virt *sde_enc;
+
+	if (!encoder)
+		return;
+
+	sde_enc = to_sde_encoder_virt(encoder);
+	_sde_encoder_rc_cancel_delayed(sde_enc, 0);
 }
 
 static void _sde_encoder_rc_kickoff_delayed(struct sde_encoder_virt *sde_enc,

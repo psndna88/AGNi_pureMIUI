@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
@@ -596,6 +597,12 @@ static inline u32 sde_encoder_get_dfps_maxfps(struct drm_encoder *drm_enc)
  * @drm_enc:	Pointer to drm encoder structure
  */
 void sde_encoder_virt_reset(struct drm_encoder *drm_enc);
+
+/**
+ * sde_encoder_cancel_delayed_work - cancel delayed off work for encoder
+ * @drm_enc:    Pointer to drm encoder structure
+ */
+void sde_encoder_cancel_delayed_work(struct drm_encoder *encoder);
 
 /**
  * sde_encoder_get_kms - retrieve the kms from encoder
