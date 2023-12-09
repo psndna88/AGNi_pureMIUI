@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -129,6 +129,7 @@ pmo_core_do_enable_arp_offload(struct wlan_objmgr_vdev *vdev,
 		status = pmo_tgt_enable_arp_offload_req(vdev, vdev_id);
 		break;
 	case pmo_apps_suspend:
+	case pmo_arp_ns_offload_dynamic_update:
 		/* enable arp when active offload is false (apps suspend) */
 		status = pmo_tgt_enable_arp_offload_req(vdev, vdev_id);
 		break;
@@ -162,6 +163,7 @@ static QDF_STATUS pmo_core_do_disable_arp_offload(struct wlan_objmgr_vdev *vdev,
 
 	switch (trigger) {
 	case pmo_apps_resume:
+	case pmo_arp_ns_offload_dynamic_update:
 		/* disable arp on apps resume when active offload is disable */
 		status = pmo_tgt_disable_arp_offload_req(vdev, vdev_id);
 		break;

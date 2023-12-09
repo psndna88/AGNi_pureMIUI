@@ -1766,7 +1766,7 @@ enum RX_OFFLOAD {
 /**
  * struct hdd_cache_channel_info - Structure of the channel info
  * which needs to be cached
- * @channel_num: channel number
+ * @freq: frequency
  * @reg_status: Current regulatory status of the channel
  * Enable
  * Disable
@@ -1775,7 +1775,7 @@ enum RX_OFFLOAD {
  * @wiphy_status: Current wiphy status
  */
 struct hdd_cache_channel_info {
-	uint32_t channel_num;
+	qdf_freq_t freq;
 	enum channel_state reg_status;
 	uint32_t wiphy_status;
 };
