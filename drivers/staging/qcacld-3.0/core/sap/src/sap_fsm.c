@@ -2019,8 +2019,8 @@ static QDF_STATUS sap_cac_start_notify(mac_handle_t mac_handle)
 			/* Don't start CAC for non-dfs channel, its violation */
 			profile = &sap_context->csr_roamProfile;
 			ch_freq = profile->op_freq;
-			if (!wlan_reg_is_dfs_for_freq(mac->pdev,
-						      ch_freq))
+			if (!wlan_reg_is_dfs_for_freq(mac->pdev, ch_freq) &&
+				wlan_reg_get_5g_bonded_channel_state_for_freq(mac->pdev, ch_freq, profile->ch_params.ch_width) != CHANNEL_STATE_DFS)
 				continue;
 			sap_debug("sapdfs: Signaling eSAP_DFS_CAC_START to HDD for sapctx[%pK]",
 				  sap_context);

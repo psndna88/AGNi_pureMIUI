@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -722,7 +722,9 @@ static void reg_modify_chan_list_for_cached_channels(
 {
 	uint32_t i, j;
 	uint32_t num_cache_channels = pdev_priv_obj->num_cache_channels;
-	struct regulatory_channel *chan_list = pdev_priv_obj->cur_chan_list;
+	struct regulatory_channel *cur_chan_list = pdev_priv_obj->cur_chan_list;
+	struct regulatory_channel *sec_chan_list =
+					pdev_priv_obj->secondary_cur_chan_list;
 	struct regulatory_channel *cache_chan_list =
 					pdev_priv_obj->cache_disable_chan_list;
 
@@ -730,15 +732,24 @@ static void reg_modify_chan_list_for_cached_channels(
 		return;
 
 	if (pdev_priv_obj->disable_cached_channels) {
-		for (i = 0; i < num_cache_channels; i++)
-			for (j = 0; j < NUM_CHANNELS; j++)
-				if (cache_chan_list[i].chan_num ==
-							chan_list[j].chan_num) {
-					chan_list[j].state =
+		for (i = 0; i < num_cache_channels; i++) {
+			for (j = 0; j < NUM_CHANNELS; j++) {
+				if (cache_chan_list[i].center_freq ==
+				    cur_chan_list[j].center_freq) {
+					cur_chan_list[j].state =
 							CHANNEL_STATE_DISABLE;
-					chan_list[j].chan_flags |=
+					cur_chan_list[j].chan_flags |=
 						REGULATORY_CHAN_DISABLED;
 				}
+				if (cache_chan_list[i].center_freq ==
+				    sec_chan_list[j].center_freq) {
+					sec_chan_list[j].state =
+							CHANNEL_STATE_DISABLE;
+					sec_chan_list[j].chan_flags |=
+						REGULATORY_CHAN_DISABLED;
+				}
+			}
+		}
 	}
 }
 #else
@@ -1278,8 +1289,6 @@ void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 	reg_modify_chan_list_for_chan_144(pdev_priv_obj->cur_chan_list,
 					  pdev_priv_obj->en_chan_144);
 
-	reg_modify_chan_list_for_cached_channels(pdev_priv_obj);
-
 	reg_modify_chan_list_for_srd_channels(pdev_priv_obj->pdev_ptr,
 					      pdev_priv_obj->cur_chan_list);
 
@@ -1292,6 +1301,8 @@ void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 						  cur_chan_list);
 
 	reg_populate_secondary_cur_chan_list(pdev_priv_obj);
+
+	reg_modify_chan_list_for_cached_channels(pdev_priv_obj);
 }
 
 void reg_reset_reg_rules(struct reg_rule_info *reg_rules)

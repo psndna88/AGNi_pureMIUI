@@ -7242,6 +7242,7 @@ const struct nla_policy wlan_hdd_wifi_config_policy[
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_TX_NSS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_RX_NSS] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS] = {.type = NLA_U8 },
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD] = {.type = NLA_U8 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE] = {
 		.type = NLA_U8 },
 };
@@ -9024,6 +9025,103 @@ static int hdd_set_nss(struct hdd_adapter *adapter,
 	return ret;
 }
 
+#ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
+#define DYNAMIC_ARP_NS_ENABLE    1
+#define DYNAMIC_ARP_NS_DISABLE   0
+
+/**
+ * hdd_set_arp_ns_offload() - enable/disable arp/ns offload feature
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_set_arp_ns_offload(struct hdd_adapter *adapter,
+				  const struct nlattr *attr)
+{
+	uint8_t offload_state;
+	int errno;
+	QDF_STATUS qdf_status = QDF_STATUS_E_FAILURE;
+	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
+	struct wlan_objmgr_vdev *vdev;
+
+	errno = wlan_hdd_validate_context(hdd_ctx);
+	if (errno)
+		return errno;
+
+	if (!ucfg_pmo_is_arp_offload_enabled(hdd_ctx->psoc) ||
+	    !ucfg_pmo_is_ns_offloaded(hdd_ctx->psoc)) {
+		hdd_err_rl("ARP/NS Offload is disabled by ini");
+		return -EINVAL;
+	}
+
+	if (!ucfg_pmo_is_active_mode_offloaded(hdd_ctx->psoc)) {
+		hdd_err_rl("active mode offload is disabled by ini");
+		return -EINVAL;
+	}
+
+	if (adapter->device_mode != QDF_STA_MODE &&
+	    adapter->device_mode != QDF_P2P_CLIENT_MODE) {
+		hdd_err_rl("only support on sta/p2p-cli mode");
+		return -EINVAL;
+	}
+
+	vdev = hdd_objmgr_get_vdev(adapter);
+	if (!vdev) {
+		hdd_err("vdev is NULL");
+		return -EINVAL;
+	}
+
+	offload_state = nla_get_u8(attr);
+
+	if (offload_state == DYNAMIC_ARP_NS_ENABLE)
+		qdf_status = ucfg_pmo_dynamic_arp_ns_offload_enable(vdev);
+	else if (offload_state == DYNAMIC_ARP_NS_DISABLE)
+		qdf_status = ucfg_pmo_dynamic_arp_ns_offload_disable(vdev);
+
+	if (QDF_IS_STATUS_SUCCESS(qdf_status)) {
+		if (offload_state == DYNAMIC_ARP_NS_ENABLE)
+			ucfg_pmo_dynamic_arp_ns_offload_runtime_allow(vdev);
+		else
+			ucfg_pmo_dynamic_arp_ns_offload_runtime_prevent(vdev);
+	}
+
+	hdd_objmgr_put_vdev(vdev);
+
+	if (QDF_IS_STATUS_ERROR(qdf_status)) {
+		if (qdf_status == QDF_STATUS_E_ALREADY) {
+			hdd_info_rl("already set arp/ns offload %d",
+				    offload_state);
+			return 0;
+		}
+		return qdf_status_to_os_return(qdf_status);
+	}
+
+	if (!hdd_is_vdev_in_conn_state(adapter)) {
+		hdd_info("set not in connect state, updated state %d",
+			 offload_state);
+		return 0;
+	}
+
+	if (offload_state == DYNAMIC_ARP_NS_ENABLE) {
+		hdd_enable_arp_offload(adapter,
+				       pmo_arp_ns_offload_dynamic_update);
+		hdd_enable_ns_offload(adapter,
+				      pmo_arp_ns_offload_dynamic_update);
+	} else if (offload_state == DYNAMIC_ARP_NS_DISABLE) {
+		hdd_disable_arp_offload(adapter,
+					pmo_arp_ns_offload_dynamic_update);
+		hdd_disable_ns_offload(adapter,
+				       pmo_arp_ns_offload_dynamic_update);
+	}
+
+	return 0;
+}
+
+#undef DYNAMIC_ARP_NS_ENABLE
+#undef DYNAMIC_ARP_NS_DISABLE
+#endif
+
 /**
  * hdd_set_wfc_state() - Set wfc state
  * @adapter: hdd adapter
@@ -9168,6 +9266,10 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_udp_qos_upgrade_threshold},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS,
 	 hdd_set_ft_over_ds},
+#ifdef FEATURE_WLAN_DYNAMIC_ARP_NS_OFFLOAD
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD,
+	 hdd_set_arp_ns_offload},
+#endif
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_WFC_STATE,
 	 hdd_set_wfc_state},
 };
@@ -18237,6 +18339,9 @@ static int __wlan_hdd_cfg80211_change_iface(struct wiphy *wiphy,
 	policy_mgr_clear_concurrency_mode(hdd_ctx->psoc, adapter->device_mode);
 
 	if (hdd_is_client_mode(adapter->device_mode)) {
+		if (adapter->device_mode == QDF_STA_MODE)
+			hdd_cleanup_conn_info(adapter);
+
 		if (hdd_is_client_mode(new_mode)) {
 			errno = hdd_change_adapter_mode(adapter, new_mode);
 			if (errno) {

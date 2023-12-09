@@ -6593,68 +6593,108 @@ static int hdd_alloc_chan_cache(struct hdd_context *hdd_ctx, int num_chan)
 /**
  * check_disable_channels() - Check for disable channel
  * @hdd_ctx: Pointer to hdd context
- * @operating_channel: Current operating channel of adapter
+ * @operating_freq: Current operating frequency of adapter
  *
  * This function checks original_channels array for a specific channel
  *
  * Return: 0 if channel not found, 1 if channel found
  */
 static bool check_disable_channels(struct hdd_context *hdd_ctx,
-				   uint8_t operating_channel)
+				   qdf_freq_t operating_freq)
 {
 	uint32_t num_channels;
 	uint8_t i;
-
 	if (!hdd_ctx || !hdd_ctx->original_channels ||
 	    !hdd_ctx->original_channels->channel_info)
 		return false;
 
 	num_channels = hdd_ctx->original_channels->num_channels;
-	for (i = 0; i < num_channels; i++)
-		if (hdd_ctx->original_channels->channel_info[i].channel_num ==
-				operating_channel)
+	for (i = 0; i < num_channels; i++) {
+		if (operating_freq ==
+		    hdd_ctx->original_channels->channel_info[i].freq)
 			return true;
+	}
+
 	return false;
 }
 
 /**
- * disconnect_sta_and_stop_sap() - Disconnect STA and stop SAP
+ * disconnect_sta_and_restart_sap() - Disconnect STA and restart SAP
  *
  * @hdd_ctx: Pointer to hdd context
  * @reason: Disconnect reason code as per @enum wlan_reason_code
  *
  * Disable channels provided by user and disconnect STA if it is
- * connected to any AP, stop SAP and send deauthentication request
- * to STAs connected to SAP.
+ * connected to any AP, restart SAP.
  *
  * Return: None
  */
-static void disconnect_sta_and_stop_sap(struct hdd_context *hdd_ctx,
-					enum wlan_reason_code reason)
+static void disconnect_sta_and_restart_sap(struct hdd_context *hdd_ctx,
+					   enum wlan_reason_code reason)
 {
 	struct hdd_adapter *adapter, *next = NULL;
 	QDF_STATUS status;
-	uint8_t ap_ch;
+	uint32_t ch_list[NUM_CHANNELS];
+	uint32_t ch_count = 0;
+	bool is_valid_chan_present = true;
 
 	if (!hdd_ctx)
 		return;
 
 	hdd_check_and_disconnect_sta_on_invalid_channel(hdd_ctx, reason);
 
+	status = policy_mgr_get_valid_chans(hdd_ctx->psoc, ch_list, &ch_count);
+	if (QDF_IS_STATUS_ERROR(status) || !ch_count) {
+		hdd_debug("No valid channels present, stop the SAPs");
+		is_valid_chan_present = false;
+	}
+
 	status = hdd_get_front_adapter(hdd_ctx, &adapter);
 	while (adapter && (status == QDF_STATUS_SUCCESS)) {
 		if (!hdd_validate_adapter(adapter) &&
 		    adapter->device_mode == QDF_SAP_MODE) {
-			ap_ch = wlan_reg_freq_to_chan(
-				hdd_ctx->pdev,
-				adapter->session.ap.operating_chan_freq);
-			if (check_disable_channels(hdd_ctx, ap_ch))
+			if (!is_valid_chan_present)
 				wlan_hdd_stop_sap(adapter);
+			else if (check_disable_channels(
+				hdd_ctx,
+				adapter->session.ap.operating_chan_freq))
+				policy_mgr_check_sap_restart(hdd_ctx->psoc,
+							     adapter->vdev_id);
 		}
 
 		status = hdd_get_next_adapter(hdd_ctx, adapter, &next);
 		adapter = next;
 	}
+}
+
+/**
+ * hdd_check_chan_and_fill_freq() - to validate chan and convert into freq
+ * @pdev: The physical dev to cache the channels for
+ * @in_chan: input as channel number or freq
+ * @freq: frequency for input in_chan (output parameter)
+ *
+ * This function checks input "in_chan" is channel number, if yes then fills
+ * appropriate frequency into "freq" out param. If the "in_param" is greater
+ * than MAX_5GHZ_CHANNEL then gets the valid frequencies for legacy channels
+ * else get the valid channel for 6Ghz frequency.
+ *
+ * Return: true if "in_chan" is valid channel/frequency; false otherwise
+ */
+static bool hdd_check_chan_and_fill_freq(struct wlan_objmgr_pdev *pdev,
+					 uint32_t *in_chan, qdf_freq_t *freq)
+{
+	if (IS_CHANNEL_VALID(*in_chan)) {
+		*freq = wlan_reg_legacy_chan_to_freq(pdev, *in_chan);
+	} else if (WLAN_REG_IS_24GHZ_CH_FREQ(*in_chan) ||
+		   WLAN_REG_IS_5GHZ_CH_FREQ(*in_chan) ||
+		   WLAN_REG_IS_6GHZ_CHAN_FREQ(*in_chan)) {
+		*freq = *in_chan;
+		*in_chan = wlan_reg_freq_to_chan(pdev, *in_chan);
+	} else {
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -6666,11 +6706,13 @@ static void disconnect_sta_and_stop_sap(struct hdd_context *hdd_ctx,
  * This function parses the channel list received in the command.
  * command should be a string having format
  * SET_DISABLE_CHANNEL_LIST <num of channels>
- * <channels separated by spaces>.
- * If the command comes multiple times than this function will compare
- * the channels received in the command with the channles cached in the
- * first command, if the channel list matches with the cached channles,
- * it returns success otherwise returns failure.
+ * <channels separated by spaces>/<frequency separated by spaces>.
+ * If this command has frequency as input, this function first converts into
+ * equivalent channel.
+ * If the command comes multiple times then the channels received in the
+ * command or channels converted from frequency will be compared with the
+ * channels cached in the first command, if the channel list matches with
+ * the cached channels, it returns success otherwise returns failure.
  *
  * Return: 0 on success, Error code on failure
  */
@@ -6680,8 +6722,9 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 	struct hdd_context *hdd_ctx = WLAN_HDD_GET_CTX(adapter);
 	uint8_t *param;
 	int j, i, temp_int, ret = 0, num_channels;
-	uint32_t parsed_channels[NUM_CHANNELS];
+	qdf_freq_t *chan_freq_list = NULL;
 	bool is_command_repeated = false;
+	qdf_freq_t freq = 0;
 
 	if (!hdd_ctx) {
 		hdd_err("HDD Context is NULL");
@@ -6745,6 +6788,11 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 		is_command_repeated = true;
 	}
 	num_channels = temp_int;
+
+	chan_freq_list = qdf_mem_malloc(num_channels * sizeof(qdf_freq_t));
+	if (!chan_freq_list)
+		return -ENOMEM;
+
 	for (j = 0; j < num_channels; j++) {
 		/*
 		 * param pointing to the beginning of first space
@@ -6776,14 +6824,16 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 			goto parse_failed;
 		}
 
-		if (!IS_CHANNEL_VALID(temp_int)) {
+		if (!hdd_check_chan_and_fill_freq(hdd_ctx->pdev, &temp_int,
+						  &freq)) {
 			hdd_err("Invalid channel number received");
 			ret = -EINVAL;
 			goto parse_failed;
 		}
 
-		hdd_debug("channel[%d] = %d", j, temp_int);
-		parsed_channels[j] = temp_int;
+		hdd_debug("channel[%d] = %d Frequency[%d] = %d", j, temp_int,
+			  j, freq);
+		chan_freq_list[j] = freq;
 	}
 
 	/*extra arguments check*/
@@ -6807,19 +6857,19 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 	 */
 	if (!is_command_repeated) {
 		for (j = 0; j < num_channels; j++)
-			hdd_ctx->original_channels->
-					channel_info[j].channel_num =
-							parsed_channels[j];
+			hdd_ctx->original_channels->channel_info[j].freq =
+							chan_freq_list[j];
 
 		/* Cache the channel list in regulatory also */
-		ucfg_reg_cache_channel_state(hdd_ctx->pdev, parsed_channels,
-					     num_channels);
+		ucfg_reg_cache_channel_freq_state(hdd_ctx->pdev,
+						  chan_freq_list,
+						  num_channels);
 	} else {
 		for (i = 0; i < num_channels; i++) {
 			for (j = 0; j < num_channels; j++)
 				if (hdd_ctx->original_channels->
-					channel_info[i].channel_num ==
-							parsed_channels[j])
+					channel_info[i].freq ==
+							chan_freq_list[j])
 					break;
 			if (j == num_channels) {
 				ret = -EINVAL;
@@ -6829,6 +6879,8 @@ static int hdd_parse_disable_chan_cmd(struct hdd_adapter *adapter, uint8_t *ptr)
 		ret = 0;
 	}
 mem_alloc_failed:
+	if (chan_freq_list)
+		qdf_mem_free(chan_freq_list);
 
 	qdf_mutex_release(&hdd_ctx->cache_channel_lock);
 	/* Disable the channels received in command SET_DISABLE_CHANNEL_LIST */
@@ -6836,8 +6888,9 @@ mem_alloc_failed:
 		ret = wlan_hdd_disable_channels(hdd_ctx);
 		if (ret)
 			return ret;
-		disconnect_sta_and_stop_sap(hdd_ctx,
-					    REASON_OPER_CHANNEL_BAND_CHANGE);
+		disconnect_sta_and_restart_sap(
+					hdd_ctx,
+					REASON_OPER_CHANNEL_BAND_CHANGE);
 	}
 
 	hdd_exit();
@@ -6847,7 +6900,8 @@ mem_alloc_failed:
 parse_failed:
 	if (!is_command_repeated)
 		wlan_hdd_free_cache_channels(hdd_ctx);
-
+	if (chan_freq_list)
+		qdf_mem_free(chan_freq_list);
 	qdf_mutex_release(&hdd_ctx->cache_channel_lock);
 	hdd_exit();
 
@@ -6889,7 +6943,10 @@ static int hdd_get_disable_ch_list(struct hdd_context *hdd_ctx, uint8_t *buf,
 		ch_list = hdd_ctx->original_channels->channel_info;
 		for (i = 0; (i < num_ch) && (len < buf_len - 1); i++) {
 			len += scnprintf(buf + len, buf_len - len,
-					 " %d", ch_list[i].channel_num);
+					 " %d",
+					  wlan_reg_freq_to_chan(
+							hdd_ctx->pdev,
+							ch_list[i].freq));
 		}
 	}
 	qdf_mutex_release(&hdd_ctx->cache_channel_lock);
