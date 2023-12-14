@@ -2170,19 +2170,39 @@ static void __migrate_hrtimers(unsigned int scpu, bool remove_pinned)
 	local_irq_restore(flags);
 }
 
-int hrtimers_dead_cpu(unsigned int scpu)
+int hrtimers_cpu_dying(unsigned int dying_cpu)
 {
-	BUG_ON(cpu_online(scpu));
-	tick_cancel_sched_timer(scpu);
+	struct hrtimer_cpu_base *old_base, *new_base;
+	int i, ncpu = cpumask_first(cpu_active_mask);
+
+	tick_cancel_sched_timer(dying_cpu);
+
+	old_base = this_cpu_ptr(&hrtimer_bases);
+	new_base = &per_cpu(hrtimer_bases, ncpu);
 
 	/*
-	 * this BH disable ensures that raise_softirq_irqoff() does
-	 * not wakeup ksoftirqd (and acquire the pi-lock) while
-	 * holding the cpu_base lock
+	 * The caller is globally serialized and nobody else
+	 * takes two locks at once, deadlock is not possible.
 	 */
-	local_bh_disable();
-	__migrate_hrtimers(scpu, true);
-	local_bh_enable();
+	raw_spin_lock(&old_base->lock);
+	raw_spin_lock_nested(&new_base->lock, SINGLE_DEPTH_NESTING);
+
+	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
+		migrate_hrtimer_list(&old_base->clock_base[i],
+				     &new_base->clock_base[i], true);
+	}
+
+	/*
+	 * The migration might have changed the first expiring softirq
+	 * timer on this CPU. Update it.
+	 */
+	__hrtimer_get_next_event(new_base, HRTIMER_ACTIVE_SOFT);
+	/* Tell the other CPU to retrigger the next event */
+	smp_call_function_single(ncpu, retrigger_next_event, NULL, 0);
+
+	raw_spin_unlock(&new_base->lock);
+	raw_spin_unlock(&old_base->lock);
+
 	return 0;
 }
 
