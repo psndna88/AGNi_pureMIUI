@@ -436,6 +436,12 @@ config BQ_FUEL_GAUGE
 	help
 	  Say Y here to enable BQ fuel gauge
 
+config BQ_CLOUD_AUTHENTICATION
+	bool "BQ cloud thentication config"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable Bq cloud thentication
+
 config DUAL_FUEL_GAUGE
 	bool "Dual fuel gauge"
 	depends on QTI_BATTERY_CHARGER
@@ -448,11 +454,23 @@ config MI_WIRELESS
 	help
 	  Say Y here to enable mi wireless
 
+config AI_RSOC_M20
+	bool "get average current and RSOC config"
+	depends on QTI_BATTERY_CHARGER
+	help
+	  Say Y here to enable create node to get average current and RSOC
+
 config RENOIR_FOR_BUILD
 	bool "renoir build debug"
 	depends on QTI_BATTERY_CHARGER
 	help
 	  Say Y here to enable renoir build debug
+
+config REDWOOD_FOR_BUILD
+        bool "redwood build debug"
+        depends on QTI_BATTERY_CHARGER
+        help
+          Say Y here to enable redwood build debug
 
 config VENUS_FOR_BUILD
 	bool "venus build debug"

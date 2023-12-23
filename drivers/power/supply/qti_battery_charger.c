@@ -24,6 +24,8 @@
 
 #if defined(CONFIG_BQ_FUEL_GAUGE)
 #include <linux/hwid.h>
+#include <linux/ktime.h>
+#include <linux/string.h>
 #include <linux/thermal.h>
 #endif
 
