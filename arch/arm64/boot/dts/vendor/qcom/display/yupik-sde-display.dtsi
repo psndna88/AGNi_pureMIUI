@@ -612,7 +612,7 @@
 &dsi_m20_36_02_0a_dsc_vid {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_m20>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <3>;
+	qcom,mdss-dsi-bl-min-level = <10>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <4095>;
 	qcom,mdss-dsi-factory-bl-max-level = <2047>;
