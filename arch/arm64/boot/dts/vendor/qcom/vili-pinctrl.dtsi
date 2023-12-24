@@ -148,6 +148,19 @@
 	};
 
 	ts_mux {
+	        ts_cs_active: ts_cs_active {
+	                mux {
+	                        pins = "gpio51";
+	                        function = "qup11";
+	                };
+	                
+	                config {
+	                        pins = "gpio51";
+	                        drive-strength = <6>;
+	                        bias-pull-up;
+	                };
+	        };
+	        
 		ts_cs_suspend: ts_cs_suspend {
 			mux {
 				pins = "gpio51";
@@ -159,6 +172,19 @@
 				drive-strength = <6>;
 				bias-pull-up;
 			};
+		};
+		
+		qupv3_se11_spi_active: qupv3_se11_spi_active {
+		        mux {
+		                pins = "gpio48", "gpio49", "gpio50";
+		                function = "qup11";
+		        };
+		        
+		        config {
+		                pins = "gpio48", "gpio49", "gpio50";
+		                drive-strength = <6>;
+		                bias-pull-down;
+		        };
 		};
 	};
 
@@ -175,18 +201,5 @@
 				input-enable;
 			};
 		};
-	};
-};
-
-&qupv3_se11_spi_sleep {
-	mux {
-		pins = "gpio48", "gpio49", "gpio50";
-		function = "gpio";
-	};
-
-	config {
-		pins = "gpio48", "gpio49", "gpio50";
-		drive-strength = <6>;
-		bias-pull-down;
 	};
 };

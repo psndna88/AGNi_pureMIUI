@@ -1472,6 +1472,11 @@
 				cooling-device = <&cdsp_sw 3 3>;
 			};
 
+			cx_pe_cdev_4 {
+				trip = <&cx_pe_config4>;
+				cooling-device = <&modem_tj 1 1>;
+			};
+
 			cx_pe_cdev_5 {
 				trip = <&cx_pe_config5>;
 				cooling-device = <&cdsp_sw 4 4>;
