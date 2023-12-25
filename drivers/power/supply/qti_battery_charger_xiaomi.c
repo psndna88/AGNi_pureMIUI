@@ -3162,7 +3162,7 @@ static ssize_t adsp_result_show(struct class *c,
 static CLASS_ATTR_RO(adsp_result);
 #endif
 
-#if defined(CONFIG_REDWOOD_FOR_BUILD)
+#if (defined(CONFIG_REDWOOD_FOR_BUILD) || defined(CONFIG_VILI_FOR_BUILD))
 static ssize_t shipmode_count_reset_store(struct class *c,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
@@ -3234,7 +3234,9 @@ static ssize_t sport_mode_show(struct class *c,
 	return scnprintf(buf, PAGE_SIZE, "%u\n", pst->prop[XM_PROP_SPORT_MODE]);
 }
 static CLASS_ATTR_RW(sport_mode);
+#endif
 
+#if defined(CONFIG_REDWOOD_FOR_BUILD)
 static ssize_t cell1_volt_show(struct class *c,
 					struct class_attribute *attr, char *buf)
 {
@@ -3466,9 +3468,11 @@ static struct attribute *xiaomi_battery_class_attrs[] = {
 	&class_attr_server_result.attr,
 	&class_attr_adsp_result.attr,
 #endif
-#if defined(CONFIG_REDWOOD_FOR_BUILD)
+#if (defined(CONFIG_REDWOOD_FOR_BUILD) || defined(CONFIG_VILI_FOR_BUILD))
 	&class_attr_shipmode_count_reset.attr,
 	&class_attr_sport_mode.attr,
+#endif
+#if defined(CONFIG_REDWOOD_FOR_BUILD)
 	&class_attr_cell1_volt.attr,
 	&class_attr_cell2_volt.attr,
 	&class_attr_fg_vendor.attr,
