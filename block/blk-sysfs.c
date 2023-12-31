@@ -530,7 +530,7 @@ static ssize_t queue_dax_show(struct request_queue *q, char *page)
 }
 
 static struct queue_sysfs_entry queue_requests_entry = {
-	.attr = {.name = "nr_requests", .mode = 0444 },
+	.attr = {.name = "nr_requests", .mode = 0644 },
 	.show = queue_requests_show,
 	.store = queue_requests_store,
 };
@@ -668,7 +668,7 @@ static struct queue_sysfs_entry queue_rq_affinity_entry = {
 };
 
 static struct queue_sysfs_entry queue_iostats_entry = {
-	.attr = {.name = "iostats", .mode = 0444 },
+	.attr = {.name = "iostats", .mode = 0644 },
 	.show = queue_show_iostats,
 	.store = queue_store_iostats,
 };
