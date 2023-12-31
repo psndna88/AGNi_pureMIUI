@@ -1075,7 +1075,7 @@ void __init swap_setup(void)
 	unsigned long megs = totalram_pages() >> (20 - PAGE_SHIFT);
 
 #if defined(CONFIG_ZRAM) || defined(CONFIG_ZSWAP)
-	page_cluster = 0;
+	page_cluster = 1;
 #else
 	/* Use a smaller cluster for small-memory machines */
 	if (megs < 16)
