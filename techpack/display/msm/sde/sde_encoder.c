@@ -4310,6 +4310,9 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool is_error,
 	struct dsi_display *dsi_display = NULL;
 	struct dsi_display_mode adj_mode;
 	unsigned int i;
+	struct dsi_bridge *c_bridge = NULL;
+	struct dsi_display *dsi_display = NULL;
+	struct dsi_display_mode adj_mode;
 
 	if (!drm_enc) {
 		SDE_ERROR("invalid encoder\n");
@@ -4366,7 +4369,7 @@ void sde_encoder_kickoff(struct drm_encoder *drm_enc, bool is_error,
 
 	if (dsi_display && dsi_display->panel
 		&& sde_enc->disp_info.intf_type == DRM_MODE_CONNECTOR_DSI
-		&& dsi_display->panel->mi_panel_id == 0x4D323000360200
+		&& (dsi_display->panel->mi_panel_id == 0x4D323000360200 || dsi_display->panel->mi_panel_id == 0x4D323000420D00)
 		&& adj_mode.dsi_mode_flags & DSI_MODE_FLAG_VRR) {
 		dsi_panel_gamma_switch(dsi_display->panel);
 	}

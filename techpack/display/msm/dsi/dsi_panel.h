@@ -396,6 +396,7 @@ int dsi_panel_mode_switch_to_cmd(struct dsi_panel *panel);
 int dsi_panel_mode_switch_to_vid(struct dsi_panel *panel);
 
 int dsi_panel_switch(struct dsi_panel *panel);
+int dsi_panel_gamma_switch(struct dsi_panel *panel);
 
 int dsi_panel_post_switch(struct dsi_panel *panel);
 int dsi_panel_gamma_switch(struct dsi_panel *panel);
