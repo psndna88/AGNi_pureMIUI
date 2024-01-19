@@ -508,23 +508,26 @@ else
 fi;
 aver=$(file_getprop $buildprop ro.build.version.release);
 $BB echo "Detected android version: $aver";
-if ([ "$aver" == "13" ] || [ "$aver" == "13.0" ]); then
+if ([ "$aver" == "14" ] || [ "$aver" == "14.0" ]); then
+	ANDROID_VER="U";
+	ui_print " " "AGNi detected Android 14" " ";
+elif ([ "$aver" == "13" ] || [ "$aver" == "13.0" ]); then
 	ANDROID_VER="T";
-	ui_print " " "AGNi detected Android T" " ";
+	ui_print " " "AGNi detected Android 13" " ";
 elif ([ "$aver" == "12" ] || [ "$aver" == "12.0" ]); then
 	ANDROID_VER="S";
-	ui_print " " "AGNi detected Android S" " ";
+	ui_print " " "AGNi detected Android 12" " ";
 elif ([ "$aver" == "11" ] || [ "$aver" == "11.0" ]); then
 	ANDROID_VER="R";
-	ui_print " " "AGNi detected Android R" " ";
+	ui_print " " "AGNi detected Android 11" " ";
 elif ([ "$aver" == "10" ] || [ "$aver" == "10.0" ]); then
 	ANDROID_VER="Q";
-	ui_print "AGNi detected Android Q";
+	ui_print "AGNi detected Android 10";
 else
-	ANDROID_VER="S";
+	ANDROID_VER="T";
 #	ANDROID_VER="UNSUPPORTED";
 #	ui_print " " ">> Unsupported Android Version OR couldn't read from system." " ";
-#	ui_print " " "  So, Assuming Android 12 and continuing..." " ";
+#	ui_print " " "  So, Assuming Android 13 and continuing..." " ";
 #	ui_print " " " Terminating Installation !" " ";
 #	cleanup;
 #	exit;
@@ -533,7 +536,10 @@ $BB echo "$ANDROID_VER" > $AKHOME/ANDROIDVER;
 if [ "`$BB grep ro.miui $buildprop`" ]; then
 	MIUI_ROM="true";
 	ui_print " " "AGNi detected MIUI rom." " ";
-	if [ "`$BB grep ro.miui.ui.version.name=V13 $buildprop`" ]; then
+	if [ "`$BB grep ro.miui.ui.version.name=V14 $buildprop`" ]; then
+		MIUI_VER="14";
+		ui_print " " "AGNi detected MIUI 14" " ";
+	elif [ "`$BB grep ro.miui.ui.version.name=V13 $buildprop`" ]; then
 		MIUI_VER="13";
 		ui_print " " "AGNi detected MIUI 13" " ";
 	elif [ "`$BB grep ro.miui.ui.version.name=V12 $buildprop`" ]; then
