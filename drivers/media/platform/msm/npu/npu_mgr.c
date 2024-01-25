@@ -20,11 +20,6 @@
  * Defines
  * -------------------------------------------------------------------------
  */
-#define LOG_MSG_HEADER_SIZE      20
-#define LOG_MSG_START_MSG_INDEX  5
-#define LOG_MSG_TOTAL_SIZE_INDEX 0
-#define LOG_MSG_MSG_ID_INDEX     1
-
 #define NPU_FW_TIMEOUT_POLL_INTERVAL_MS  10
 #define NPU_FW_TIMEOUT_MS                1000
 
@@ -48,9 +43,7 @@ static void free_network(struct npu_host_ctx *ctx, struct npu_client *client,
 static int network_get(struct npu_network *network);
 static int network_put(struct npu_network *network);
 static void app_msg_proc(struct npu_host_ctx *host_ctx, uint32_t *msg);
-static void log_msg_proc(struct npu_device *npu_dev, uint32_t *msg);
 static void host_session_msg_hdlr(struct npu_device *npu_dev);
-static void host_session_log_hdlr(struct npu_device *npu_dev);
 static int host_error_hdlr(struct npu_device *npu_dev, bool force);
 static int npu_send_network_cmd(struct npu_device *npu_dev,
 	struct npu_network *network, void *cmd_ptr);
@@ -391,7 +384,6 @@ static void host_irq_wq(struct work_struct *work)
 	if (host_error_hdlr(npu_dev, false))
 		return;
 
-	host_session_log_hdlr(npu_dev);
 	host_session_msg_hdlr(npu_dev);
 }
 
@@ -768,6 +760,12 @@ static void app_msg_proc(struct npu_host_ctx *host_ctx, uint32_t *msg)
 		}
 
 		pr_debug("network id : %llu\n", network->id);
+		if (exe_rsp_pkt->header.size < sizeof(*exe_rsp_pkt)) {
+			pr_err("invalid packet header size, header.size: %d\n",
+				exe_rsp_pkt->header.size);
+			network_put(network);
+			break;
+		}
 		stats_size = exe_rsp_pkt->header.size - sizeof(*exe_rsp_pkt);
 		pr_debug("stats_size %d:%d\n", exe_rsp_pkt->header.size,
 			stats_size);
@@ -986,52 +984,6 @@ skip_read_msg:
 	kfree(msg);
 }
 
-static void log_msg_proc(struct npu_device *npu_dev, uint32_t *msg)
-{
-	uint32_t msg_id;
-	uint32_t *log_msg;
-	uint32_t size;
-
-	msg_id = msg[LOG_MSG_MSG_ID_INDEX];
-	size = msg[LOG_MSG_TOTAL_SIZE_INDEX] - LOG_MSG_HEADER_SIZE;
-
-	switch (msg_id) {
-	case NPU_IPC_MSG_EVENT_NOTIFY:
-		/* Process the message */
-		log_msg = &(msg[LOG_MSG_START_MSG_INDEX]);
-		npu_process_log_message(npu_dev, log_msg, size);
-		break;
-	default:
-		pr_err("unsupported log response received %d\n", msg_id);
-		break;
-	}
-}
-
-static void host_session_log_hdlr(struct npu_device *npu_dev)
-{
-	uint32_t *msg;
-	struct npu_host_ctx *host_ctx = &npu_dev->host_ctx;
-
-	msg = kzalloc(sizeof(uint32_t) * NPU_IPC_BUF_LENGTH, GFP_KERNEL);
-
-	if (!msg)
-		return;
-
-	mutex_lock(&host_ctx->lock);
-	if (host_ctx->fw_state == FW_DISABLED) {
-		pr_warn("handle npu session msg when FW is disabled\n");
-		goto skip_read_msg;
-	}
-
-	while (npu_host_ipc_read_msg(npu_dev, IPC_QUEUE_LOG, msg) == 0) {
-		pr_debug("received from log queue\n");
-		log_msg_proc(npu_dev, msg);
-	}
-
-skip_read_msg:
-	mutex_unlock(&host_ctx->lock);
-	kfree(msg);
-}
 
 /* -------------------------------------------------------------------------
  * Function Definitions - Functionality
