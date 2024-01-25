@@ -27,8 +27,6 @@
  */
 static int npu_debug_open(struct inode *inode, struct file *file);
 static int npu_debug_release(struct inode *inode, struct file *file);
-static ssize_t npu_debug_log_read(struct file *file,
-		char __user *user_buf, size_t count, loff_t *ppos);
 static ssize_t npu_debug_ctrl_write(struct file *file,
 		const char __user *user_buf, size_t count, loff_t *ppos);
 
@@ -37,13 +35,6 @@ static ssize_t npu_debug_ctrl_write(struct file *file,
  * -------------------------------------------------------------------------
  */
 static struct npu_device *g_npu_dev;
-
-static const struct file_operations npu_log_fops = {
-	.open = npu_debug_open,
-	.release = npu_debug_release,
-	.read = npu_debug_log_read,
-	.write = NULL,
-};
 
 static const struct file_operations npu_ctrl_fops = {
 	.open = npu_debug_open,
@@ -69,47 +60,6 @@ static int npu_debug_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-/* -------------------------------------------------------------------------
- * Function Implementations - DebugFS Log
- * -------------------------------------------------------------------------
- */
-static ssize_t npu_debug_log_read(struct file *file,
-			char __user *user_buf, size_t count, loff_t *ppos)
-{
-	size_t len = 0;
-	struct npu_device *npu_dev = file->private_data;
-	struct npu_debugfs_ctx *debugfs;
-
-	pr_debug("npu_dev %pK %pK\n", npu_dev, g_npu_dev);
-	npu_dev = g_npu_dev;
-	debugfs = &npu_dev->debugfs_ctx;
-
-	/* mutex log lock */
-	mutex_lock(&debugfs->log_lock);
-
-	if (debugfs->log_num_bytes_buffered != 0) {
-		len = min(debugfs->log_num_bytes_buffered,
-			debugfs->log_buf_size - debugfs->log_read_index);
-		len = min(count, len);
-		if (copy_to_user(user_buf, (debugfs->log_buf +
-			debugfs->log_read_index), len)) {
-			pr_err("%s failed to copy to user\n", __func__);
-			mutex_unlock(&debugfs->log_lock);
-			return -EFAULT;
-		}
-		debugfs->log_read_index += len;
-		if (debugfs->log_read_index == debugfs->log_buf_size)
-			debugfs->log_read_index = 0;
-
-		debugfs->log_num_bytes_buffered -= len;
-		*ppos += len;
-	}
-
-	/* mutex log unlock */
-	mutex_unlock(&debugfs->log_lock);
-
-	return len;
-}
 
 /* -------------------------------------------------------------------------
  * Function Implementations - DebugFS Control
@@ -193,12 +143,6 @@ int npu_debugfs_init(struct npu_device *npu_dev)
 		return -ENODEV;
 	}
 
-	if (!debugfs_create_file("log", 0644, debugfs->root,
-		npu_dev, &npu_log_fops)) {
-		pr_err("debugfs_create_file log fail\n");
-		goto err;
-	}
-
 	if (!debugfs_create_file("ctrl", 0644, debugfs->root,
 		npu_dev, &npu_ctrl_fops)) {
 		pr_err("debugfs_create_file ctrl fail\n");
@@ -235,14 +179,6 @@ int npu_debugfs_init(struct npu_device *npu_dev)
 		goto err;
 	}
 
-	debugfs->log_num_bytes_buffered = 0;
-	debugfs->log_read_index = 0;
-	debugfs->log_write_index = 0;
-	debugfs->log_buf_size = NPU_LOG_BUF_SIZE;
-	debugfs->log_buf = kzalloc(debugfs->log_buf_size, GFP_KERNEL);
-	if (!debugfs->log_buf)
-		goto err;
-	mutex_init(&debugfs->log_lock);
 
 	return 0;
 
@@ -254,12 +190,6 @@ err:
 void npu_debugfs_deinit(struct npu_device *npu_dev)
 {
 	struct npu_debugfs_ctx *debugfs = &npu_dev->debugfs_ctx;
-
-	debugfs->log_num_bytes_buffered = 0;
-	debugfs->log_read_index = 0;
-	debugfs->log_write_index = 0;
-	debugfs->log_buf_size = 0;
-	kfree(debugfs->log_buf);
 
 	if (!IS_ERR_OR_NULL(debugfs->root)) {
 		debugfs_remove_recursive(debugfs->root);
