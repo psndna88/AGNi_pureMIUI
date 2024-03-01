@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -314,6 +314,51 @@ QDF_STATUS cm_roam_full_scan_6ghz_on_disc(struct wlan_objmgr_psoc *psoc,
 							      param_value);
 	if (QDF_IS_STATUS_ERROR(status))
 		mlme_debug("fail to send 6 GHz channels inclusion in full scan");
+
+	return status;
+}
+
+QDF_STATUS cm_set_roam_scan_high_rssi_offset(struct wlan_objmgr_psoc *psoc,
+					     uint8_t vdev_id,
+					     uint8_t param_value)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_roam_offload_scan_rssi_params *roam_rssi_params;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLME_CM_ID);
+	if (!vdev) {
+		mlme_err("vdev object is NULL for vdev %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	roam_rssi_params = qdf_mem_malloc(sizeof(*roam_rssi_params));
+	if (!roam_rssi_params)
+		goto rel_vdev_ref;
+
+	wlan_cm_set_roam_scan_high_rssi_offset(psoc, param_value);
+	qdf_mem_zero(roam_rssi_params, sizeof(*roam_rssi_params));
+	status = wlan_cm_roam_scan_offload_rssi_thresh(psoc, vdev_id,
+						       roam_rssi_params);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		mlme_err("fail to set roam scan offload RSSI threshold params");
+		goto mem_free;
+	}
+	mlme_debug("vdev:%d Configured high RSSI delta=%d, 5 GHZ roam flag=%d",
+		   vdev_id, roam_rssi_params->hi_rssi_scan_rssi_delta,
+		   (roam_rssi_params->flags &
+		    ROAM_SCAN_RSSI_THRESHOLD_FLAG_ROAM_HI_RSSI_EN_ON_5G));
+
+	status = wlan_cm_tgt_send_roam_scan_offload_rssi_params(
+							vdev, roam_rssi_params);
+	if (!QDF_IS_STATUS_SUCCESS(status))
+		mlme_err("fail to set roam scan high RSSI offset");
+
+mem_free:
+	qdf_mem_free(roam_rssi_params);
+rel_vdev_ref:
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLME_CM_ID);
 
 	return status;
 }

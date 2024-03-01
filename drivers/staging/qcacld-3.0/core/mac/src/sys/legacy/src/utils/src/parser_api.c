@@ -1195,6 +1195,13 @@ populate_dot11f_vht_caps(struct mac_context *mac,
 			return QDF_STATUS_SUCCESS;
 		}
 
+		if (wlan_reg_is_24ghz_ch_freq(pe_session->curr_op_freq)) {
+			pDot11f->supportedChannelWidthSet = 0;
+		} else {
+			if (pe_session->ch_width <= CH_WIDTH_80MHZ)
+				pDot11f->supportedChannelWidthSet = 0;
+		}
+
 		if (pe_session->ht_config.ht_rx_ldpc)
 			pDot11f->ldpcCodingCap =
 				pe_session->vht_config.ldpc_coding;
@@ -6400,6 +6407,16 @@ QDF_STATUS populate_dot11f_he_caps(struct mac_context *mac_ctx, struct pe_sessio
 		he_cap->ppet.ppe_threshold.num_ppe_th = 0;
 	}
 	populate_dot11f_twt_he_cap(mac_ctx, session, he_cap);
+
+	if (wlan_reg_is_5ghz_ch_freq(session->curr_op_freq) ||
+	    wlan_reg_is_6ghz_chan_freq(session->curr_op_freq)) {
+		if (session->ch_width <= CH_WIDTH_80MHZ) {
+			he_cap->chan_width_2 = 0;
+			he_cap->chan_width_3 = 0;
+		} else if (session->ch_width == CH_WIDTH_160MHZ) {
+			he_cap->chan_width_3 = 0;
+		}
+	}
 
 	return QDF_STATUS_SUCCESS;
 }

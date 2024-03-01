@@ -654,6 +654,7 @@ static void __sch_beacon_process_for_session(struct mac_context *mac_ctx,
 		wlan_reg_read_current_country(mac_ctx->psoc,
 					      programmed_country);
 		status = wlan_reg_get_6g_power_type_for_ctry(mac_ctx->psoc,
+					mac_ctx->pdev,
 					bcn->countryInfoParam.countryString,
 					programmed_country, &pwr_type_6g,
 					&ctry_code_match, REG_MAX_AP_TYPE);

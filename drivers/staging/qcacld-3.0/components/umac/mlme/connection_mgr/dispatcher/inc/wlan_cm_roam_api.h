@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -692,6 +692,44 @@ wlan_cm_roam_set_ho_delay_config(struct wlan_objmgr_psoc *psoc,
  */
 uint16_t
 wlan_cm_roam_get_ho_delay_config(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_cm_set_roam_scan_high_rssi_offset() - Set the delta change in high RSSI
+ * at which roam scan is triggered in 2.4/5 GHz.
+ * @psoc: PSOC pointer
+ * @roam_high_rssi_delta: Set the High RSSI delta for roam scan trigger
+ * * 1-16 - Set an offset value in this range
+ * * 0    - Disable
+ *
+ * Return: none
+ */
+void
+wlan_cm_set_roam_scan_high_rssi_offset(struct wlan_objmgr_psoc *psoc,
+				       uint8_t roam_high_rssi_delta);
+
+/**
+ * wlan_cm_get_roam_scan_high_rssi_offset() - Get the delta change in high RSSI
+ * at which roam scan is triggered in 2.4/5 GHz.
+ * @psoc: PSOC pointer
+ *
+ * Return: High RSSI delta for roam scan trigger
+ */
+uint8_t wlan_cm_get_roam_scan_high_rssi_offset(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wlan_cm_roam_scan_offload_rssi_thresh() - set roam offload scan rssi
+ * parameters
+ * @psoc: PSOC pointer
+ * @vdev_id: VDEV id
+ * @roam_rssi_params: roam offload scan rssi related parameters
+ *
+ * This function is used to set roam offload scan rssi related parameters
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_cm_roam_scan_offload_rssi_thresh(
+		struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+		struct wlan_roam_offload_scan_rssi_params *roam_rssi_params);
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -823,6 +861,12 @@ wlan_cm_get_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc)
 
 static inline uint8_t
 wlan_cm_roam_get_full_scan_6ghz_on_disc(struct wlan_objmgr_psoc *psoc)
+{
+	return 0;
+}
+
+static inline uint8_t
+wlan_cm_get_roam_scan_high_rssi_offset(struct wlan_objmgr_psoc *psoc)
 {
 	return 0;
 }

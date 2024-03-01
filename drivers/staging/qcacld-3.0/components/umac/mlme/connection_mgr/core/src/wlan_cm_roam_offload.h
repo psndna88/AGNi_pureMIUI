@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -156,6 +156,21 @@ cm_exclude_rm_partial_scan_freq(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS cm_roam_full_scan_6ghz_on_disc(struct wlan_objmgr_psoc *psoc,
 					  uint8_t vdev_id, uint8_t param_value);
+
+/**
+ * cm_set_roam_scan_high_rssi_offset() - Set the delta change in high RSSI at
+ * which roam scan is triggered in 2.4/5 GHz.
+ * @psoc: PSOC pointer
+ * @vdev_id: vdev id
+ * @param_value: Set the High RSSI delta for roam scan trigger
+ * * 1-16 - Set an offset value in this range
+ * * 0    - Disable
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_set_roam_scan_high_rssi_offset(struct wlan_objmgr_psoc *psoc,
+				  uint8_t vdev_id, uint8_t param_value);
 #else
 static inline QDF_STATUS
 cm_roam_send_rt_stats_config(struct wlan_objmgr_psoc *psoc,

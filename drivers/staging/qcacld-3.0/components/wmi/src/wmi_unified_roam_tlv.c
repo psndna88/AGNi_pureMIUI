@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -215,6 +215,7 @@ static QDF_STATUS send_roam_scan_offload_rssi_thresh_cmd_tlv(
 	rssi_threshold_fp->hirssi_upper_bound = roam_req->hi_rssi_scan_rssi_ub;
 	rssi_threshold_fp->rssi_thresh_offset_5g =
 		roam_req->rssi_thresh_offset_5g;
+	rssi_threshold_fp->flags = roam_req->flags;
 
 	buf_ptr += sizeof(wmi_roam_scan_rssi_threshold_fixed_param);
 	WMITLV_SET_HDR(buf_ptr,

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -543,6 +543,8 @@ QDF_STATUS wlan_reg_read_current_country(struct wlan_objmgr_psoc *psoc,
 /**
  * wlan_reg_get_6g_power_type_for_ctry() - Return power type for 6G based
  * on country IE
+ * @psoc: pointer to psoc
+ * @pdev: pointer to pdev
  * @ap_ctry: ptr to country string in country IE
  * @sta_ctry: ptr to sta programmed country
  * @pwr_type_6g: ptr to 6G power type
@@ -552,6 +554,7 @@ QDF_STATUS wlan_reg_read_current_country(struct wlan_objmgr_psoc *psoc,
  */
 QDF_STATUS
 wlan_reg_get_6g_power_type_for_ctry(struct wlan_objmgr_psoc *psoc,
+				    struct wlan_objmgr_pdev *pdev,
 				    uint8_t *ap_ctry, uint8_t *sta_ctry,
 				    enum reg_6g_ap_type *pwr_type_6g,
 				    bool *ctry_code_match,
@@ -1061,6 +1064,14 @@ bool wlan_reg_is_etsi(uint8_t *country);
 bool wlan_reg_chan_is_49ghz(struct wlan_objmgr_pdev *pdev,
 		uint8_t chan_num);
 #endif /* CONFIG_CHAN_NUM_API */
+
+/**
+ * wlan_reg_ctry_support_vlp() - Country supports VLP or not
+ * @country: The country information
+ *
+ * Return: true or false
+ */
+bool wlan_reg_ctry_support_vlp(uint8_t *country);
 
 /**
  * wlan_reg_set_country() - Set the current regulatory country
