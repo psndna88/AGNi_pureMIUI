@@ -4950,6 +4950,10 @@ int rmnet_ipa3_get_wan_mtu(
 	int rmnet_index;
 
 	mux_channel = rmnet_ipa3_ctx->mux_channel;
+
+	/* prevent string buffer overflows */
+	data->if_name[IPA_RESOURCE_NAME_MAX-1] = '\0';
+
 	rmnet_index =
 		find_vchannel_name_index(data->if_name);
 

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _IPA3_I_H_
@@ -59,7 +59,11 @@
 #define IPA_QMAP_HEADER_LENGTH (4)
 #define IPA_DL_CHECKSUM_LENGTH (8)
 #define IPA_NUM_DESC_PER_SW_TX (3)
+#define IPA_GENERIC_RX_POOL_SZ_WAN 192
 #define IPA_GENERIC_RX_POOL_SZ 192
+#define IPA_GENERIC_RX_PAGE_POOL_SZ_FACTOR 2
+#define IPA_GENERIC_RX_CMN_PAGE_POOL_SZ_FACTOR 4
+#define IPA_GENERIC_RX_CMN_TEMP_POOL_SZ_FACTOR 2
 #define IPA_UC_FINISH_MAX 6
 #define IPA_UC_WAIT_MIN_SLEEP 1000
 #define IPA_UC_WAII_MAX_SLEEP 1200
@@ -84,6 +88,13 @@
 
 #define IPA_WAN_AGGR_PKT_CNT 1
 
+#define IPA_PAGE_POLL_DEFAULT_THRESHOLD 15
+#define IPA_PAGE_POLL_THRESHOLD_MAX 30
+
+#define IPA_MAX_NAPI_SORT_PAGE_THRSHLD 3
+#define IPA_MAX_PAGE_WQ_RESCHED_TIME 2
+
+
 #define IPADBG(fmt, args...) \
 	do { \
 		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
@@ -100,6 +111,14 @@
 		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
 		if (ipa3_ctx) \
 			IPA_IPC_LOGGING(ipa3_ctx->logbuf_low, \
+				DRV_NAME " %s:%d " fmt, ## args); \
+	} while (0)
+
+#define IPADBG_CLK(fmt, args...) \
+	do { \
+		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
+		if (ipa3_ctx) \
+			IPA_IPC_LOGGING(ipa3_ctx->logbuf_clk, \
 				DRV_NAME " %s:%d " fmt, ## args); \
 	} while (0)
 
@@ -1054,6 +1073,12 @@ struct ipa3_repl_ctx {
 	atomic_t pending;
 };
 
+struct ipa3_page_repl_ctx {
+	struct list_head page_repl_head;
+	u32 capacity;
+	atomic_t pending;
+};
+
 /**
  * struct ipa3_sys_context - IPA GPI pipes context
  * @head_desc_list: header descriptors list
@@ -1092,7 +1117,6 @@ struct ipa3_sys_context {
 	struct work_struct repl_work;
 	void (*repl_hdlr)(struct ipa3_sys_context *sys);
 	struct ipa3_repl_ctx *repl;
-	struct ipa3_repl_ctx *page_recycle_repl;
 	u32 pkt_sent;
 	struct napi_struct *napi_obj;
 	struct list_head pending_pkts[GSI_VEID_MAX];
@@ -1102,6 +1126,10 @@ struct ipa3_sys_context {
 	u32 eob_drop_cnt;
 	struct napi_struct napi_tx;
 	atomic_t in_napi_context;
+	bool common_buff_pool;
+	struct ipa3_sys_context *common_sys;
+	atomic_t page_avilable;
+	u32 napi_sort_page_thrshld_cnt;
 
 	/* ordering is important - mutable fields go above */
 	struct ipa3_ep_context *ep;
@@ -1117,6 +1145,10 @@ struct ipa3_sys_context {
 	u32 pm_hdl;
 	unsigned int napi_sch_cnt;
 	unsigned int napi_comp_cnt;
+	struct ipa3_page_repl_ctx *page_recycle_repl;
+	struct workqueue_struct *freepage_wq;
+	struct delayed_work freepage_work;
+	struct tasklet_struct tasklet_find_freepage;
 	/* ordering is important - other immutable fields go below */
 };
 
@@ -1423,8 +1455,10 @@ enum ipa3_config_this_ep {
 
 struct ipa3_page_recycle_stats {
 	u64 total_replenished;
+	u64 page_recycled;
 	u64 tmp_alloc;
 };
+
 struct ipa3_stats {
 	u32 tx_sw_pkts;
 	u32 tx_hw_pkts;
@@ -1439,6 +1473,7 @@ struct ipa3_stats {
 	u32 aggr_close;
 	u32 wan_aggr_close;
 	u32 wan_rx_empty;
+	u32 wan_rx_empty_coal;
 	u32 wan_repl_rx_empty;
 	u32 lan_rx_empty;
 	u32 lan_repl_rx_empty;
@@ -1451,6 +1486,10 @@ struct ipa3_stats {
 	struct ipa3_page_recycle_stats page_recycle_stats[2];
 	u64 lower_order;
 	u32 pipe_setup_fail_cnt;
+	u64 page_recycle_cnt[2][IPA_PAGE_POLL_THRESHOLD_MAX];
+	u64 num_sort_tasklet_sched[3];
+	u64 num_of_times_wq_reschd;
+	u64 page_recycle_cnt_in_tasklet;
 };
 
 /* offset for each stats */
@@ -1913,6 +1952,7 @@ struct ipa3_app_clock_vote {
  * @modem_cfg_emb_pipe_flt: modem configure embedded pipe filtering rules
  * @logbuf: ipc log buffer for high priority messages
  * @logbuf_low: ipc log buffer for low priority messages
+ * @logbuf_clk: ipc log buffer for ipa clock messages
  * @ipa_wdi2: using wdi-2.0
  * @ipa_fltrt_not_hashable: filter/route rules not hashable
  * @use_64_bit_dma_mask: using 64bits dma mask
@@ -2052,6 +2092,7 @@ struct ipa3_context {
 	void *smem_pipe_mem;
 	void *logbuf;
 	void *logbuf_low;
+	void *logbuf_clk;
 	struct ipa3_controller *ctrl;
 	struct idr ipa_idr;
 	struct platform_device *master_pdev;
@@ -2164,7 +2205,10 @@ struct ipa3_context {
 	bool fnr_stats_not_supported;
 	bool is_device_crashed;
 	int ipa_pil_load;
-
+	u8 page_poll_threshold;
+	bool wan_common_page_pool;
+	u32 ipa_max_napi_sort_page_thrshld;
+	u32 page_wq_reschd_time;
 };
 
 struct ipa3_plat_drv_res {
