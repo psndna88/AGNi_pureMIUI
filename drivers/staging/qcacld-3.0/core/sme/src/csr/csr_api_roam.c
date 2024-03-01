@@ -14999,6 +14999,7 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	uint8_t acm_mask = 0, uapsd_mask;
+	enum reg_6g_ap_type ap_6g_power_type = REG_INDOOR_AP;
 	uint32_t bss_freq;
 	uint16_t msgLen, ieLen;
 	tSirMacRateSet OpRateSet;
@@ -15831,16 +15832,21 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 		else
 			csr_join_req->isQosEnabled = false;
 
+		if (pIes->he_op.oper_info_6g_present) {
+			ap_6g_power_type = pIes->he_op.oper_info_6g.info.reg_info;
+		}
+
 		if (wlan_reg_is_6ghz_chan_freq(pBssDescription->chan_freq)) {
 			if (!pIes->Country.present)
 				sme_debug("Channel is 6G but country IE not present");
 			wlan_reg_read_current_country(mac->psoc,
 						      programmed_country);
 			status = wlan_reg_get_6g_power_type_for_ctry(mac->psoc,
+					mac->pdev,
 					pIes->Country.country,
 					programmed_country, &power_type_6g,
 					&ctry_code_match,
-					pSession->ap_power_type);
+					ap_6g_power_type);
 			if (QDF_IS_STATUS_ERROR(status))
 				break;
 			csr_join_req->ap_power_type_6g = power_type_6g;
@@ -16402,8 +16408,14 @@ QDF_STATUS csr_send_mb_start_bss_req_msg(struct mac_context *mac, uint32_t
 	value = MLME_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED_FW_DEF;
 	pMsg->vht_config.csnof_beamformer_antSup = (uint8_t)value;
 	pMsg->vht_config.mu_beam_formee = 0;
+	/* Disable shortgi160 and 80 for 2.4Ghz BSS*/
+	if (wlan_reg_is_24ghz_ch_freq(pParam->operation_chan_freq)) {
+		pMsg->vht_config.shortgi160and80plus80 = 0;
+		pMsg->vht_config.shortgi80 = 0;
+	}
 
-	sme_debug("ht capability 0x%x VHT capability 0x%x",
+	sme_debug("cur_op_freq %d ht capability 0x%x VHT capability 0x%x",
+		  pParam->operation_chan_freq,
 		  (*(uint32_t *) &pMsg->ht_config),
 		  (*(uint32_t *) &pMsg->vht_config));
 #ifdef WLAN_FEATURE_11W
@@ -17870,6 +17882,29 @@ csr_cm_roam_scan_offload_rssi_thresh(struct mac_context *mac_ctx,
 	else
 		params->hi_rssi_scan_rssi_delta =
 			roam_info->cfgParams.hi_rssi_scan_rssi_delta;
+	/*
+	 * When the STA operating band is 2.4/5 GHz and if the high RSSI delta
+	 * is configured through vendor command then the priority should be
+	 * given to it and the high RSSI delta value will be overridden with it.
+	 */
+	if (!WLAN_REG_IS_6GHZ_CHAN_FREQ(session->connectedProfile.op_freq)) {
+		uint8_t roam_high_rssi_delta;
+
+		roam_high_rssi_delta =
+		wlan_cm_get_roam_scan_high_rssi_offset(mac_ctx->psoc);
+		if (roam_high_rssi_delta)
+			params->hi_rssi_scan_rssi_delta =
+						roam_high_rssi_delta;
+		/*
+		 * Firmware will use this flag to enable 5 to 6 GHz
+		 * high RSSI roam
+		 */
+		if (roam_high_rssi_delta &&
+		    WLAN_REG_IS_5GHZ_CH_FREQ(session->connectedProfile.op_freq))
+			params->flags |=
+			ROAM_SCAN_RSSI_THRESHOLD_FLAG_ROAM_HI_RSSI_EN_ON_5G;
+	}
+
 	params->hi_rssi_scan_rssi_ub =
 		roam_info->cfgParams.hi_rssi_scan_rssi_ub;
 	params->raise_rssi_thresh_5g =
@@ -18462,6 +18497,37 @@ csr_cm_fill_rso_sae_single_pmk_info(struct mac_context *mac_ctx,
 	return false;
 }
 #endif
+
+QDF_STATUS wlan_cm_roam_scan_offload_rssi_thresh(
+		struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+		struct wlan_roam_offload_scan_rssi_params *roam_rssi_params)
+{
+	struct csr_roam_session *session;
+	struct mac_context *mac_ctx;
+
+	mac_ctx = sme_get_mac_context();
+	if (!mac_ctx) {
+		sme_err("mac_ctx is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	session = CSR_GET_SESSION(mac_ctx, vdev_id);
+	if (!session) {
+		sme_err("session is null %d", vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (WLAN_REG_IS_6GHZ_CHAN_FREQ(session->connectedProfile.op_freq)) {
+		sme_err("vdev:%d High RSSI offset can't be set in 6 GHz band",
+			 vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	csr_cm_roam_scan_offload_rssi_thresh(mac_ctx, session,
+					     roam_rssi_params);
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
