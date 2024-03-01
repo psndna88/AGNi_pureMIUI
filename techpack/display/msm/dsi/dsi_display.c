@@ -2737,7 +2737,7 @@ error:
 	return rc;
 }
 
-#ifdef CONFIG_DEEPSLEEP
+#if defined(CONFIG_DEEPSLEEP) || defined(CONFIG_HIBERNATION)
 int dsi_display_unset_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
