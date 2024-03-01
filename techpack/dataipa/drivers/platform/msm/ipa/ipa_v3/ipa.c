@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/clk.h>
@@ -5396,6 +5396,7 @@ void ipa3_enable_clks(void)
 
 	idx = ipa3_get_bus_vote();
 
+	IPADBG_CLK("IPA ICC Voting for BW Started\n");
 	for (i = 0; i < ipa3_ctx->icc_num_paths; i++) {
 		if (ipa3_ctx->ctrl->icc_path[i] &&
 			icc_set_bw(
@@ -5403,8 +5404,13 @@ void ipa3_enable_clks(void)
 			ipa3_ctx->icc_clk[idx][i][IPA_ICC_AB],
 			ipa3_ctx->icc_clk[idx][i][IPA_ICC_IB]))
 			WARN(1, "path %d bus scaling failed", i);
+			IPADBG_CLK("IPA ICC Voting for BW %d Path Completed\n", i);
 	}
+	IPADBG_CLK("IPA ICC Voting for BW Finished\n");
+
+	IPADBG_CLK("Enabling IPA Clocks Started\n");
 	ipa3_ctx->ctrl->ipa3_enable_clks();
+	IPADBG_CLK("Enabling IPA Clocks Finished\n");
 	atomic_set(&ipa3_ctx->ipa_clk_vote, 1);
 }
 
@@ -5456,10 +5462,13 @@ void ipa3_disable_clks(void)
 		ipa_assert();
 	}
 
+	IPADBG_CLK("Disabling IPA Clocks Started\n");
 	ipa3_ctx->ctrl->ipa3_disable_clks();
+	IPADBG_CLK("Disabling IPA Clocks Finished\n");
 
 	ipa_pm_set_clock_index(0);
 
+	IPADBG_CLK("IPA ICC Voting for BW Started\n");
 	for (i = 0; i < ipa3_ctx->icc_num_paths; i++) {
 		if (ipa3_ctx->ctrl->icc_path[i] &&
 			icc_set_bw(
@@ -5467,7 +5476,9 @@ void ipa3_disable_clks(void)
 			ipa3_ctx->icc_clk[IPA_ICC_NONE][i][IPA_ICC_AB],
 			ipa3_ctx->icc_clk[IPA_ICC_NONE][i][IPA_ICC_IB]))
 			WARN(1, "path %d bus off failed", i);
+			IPADBG_CLK("IPA ICC Voting for BW %d Path Completed\n", i);
 	}
+	IPADBG_CLK("IPA ICC Voting for BW Finished\n");
 	atomic_set(&ipa3_ctx->ipa_clk_vote, 0);
 }
 
@@ -7322,6 +7333,10 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	if (ipa3_ctx->logbuf == NULL)
 		IPADBG("failed to create IPC log, continue...\n");
 
+	ipa3_ctx->logbuf_clk = ipc_log_context_create(IPA_IPC_LOG_PAGES, "ipa_clk", 0);
+	if (ipa3_ctx->logbuf_clk == NULL)
+		IPADBG("failed to create IPC ipa_clk log, continue...\n");
+
 	/* ipa3_ctx->pdev and ipa3_ctx->uc_pdev will be set in the smmu probes*/
 	ipa3_ctx->master_pdev = ipa_pdev;
 	for (i = 0; i < IPA_SMMU_CB_MAX; i++)
@@ -7367,6 +7382,13 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	ipa3_ctx->stats.page_recycle_stats[0].tmp_alloc = 0;
 	ipa3_ctx->stats.page_recycle_stats[1].total_replenished = 0;
 	ipa3_ctx->stats.page_recycle_stats[1].tmp_alloc = 0;
+	memset(ipa3_ctx->stats.page_recycle_cnt, 0,
+		sizeof(ipa3_ctx->stats.page_recycle_cnt));
+	ipa3_ctx->stats.num_sort_tasklet_sched[0] = 0;
+	ipa3_ctx->stats.num_sort_tasklet_sched[1] = 0;
+	ipa3_ctx->stats.num_sort_tasklet_sched[2] = 0;
+	ipa3_ctx->stats.num_of_times_wq_reschd = 0;
+	ipa3_ctx->stats.page_recycle_cnt_in_tasklet = 0;
 	ipa3_ctx->skip_uc_pipe_reset = resource_p->skip_uc_pipe_reset;
 	ipa3_ctx->tethered_flow_control = resource_p->tethered_flow_control;
 	ipa3_ctx->ee = resource_p->ee;
@@ -7556,6 +7578,17 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 
 	/* Enable ipa3_ctx->enable_napi_chain */
 	ipa3_ctx->enable_napi_chain = 1;
+
+	/* Initialize Page poll threshold. */
+	ipa3_ctx->page_poll_threshold = IPA_PAGE_POLL_DEFAULT_THRESHOLD;
+
+	/*Initialize number napi without prealloc buff*/
+	ipa3_ctx->ipa_max_napi_sort_page_thrshld = IPA_MAX_NAPI_SORT_PAGE_THRSHLD;
+	ipa3_ctx->page_wq_reschd_time = IPA_MAX_PAGE_WQ_RESCHED_TIME;
+
+	/* Use common page pool for Def/Coal pipe. */
+	if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_9)
+		ipa3_ctx->wan_common_page_pool = true;
 
 	/* assume clock is on in virtual/emulation mode */
 	if (ipa3_ctx->ipa3_hw_mode == IPA_HW_MODE_VIRTUAL ||
@@ -8195,7 +8228,7 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	ipa_drv_res->ipa_mhi_dynamic_config = false;
 	ipa_drv_res->use_64_bit_dma_mask = false;
 	ipa_drv_res->use_bw_vote = false;
-	ipa_drv_res->wan_rx_ring_size = IPA_GENERIC_RX_POOL_SZ;
+	ipa_drv_res->wan_rx_ring_size = IPA_GENERIC_RX_POOL_SZ_WAN;
 	ipa_drv_res->lan_rx_ring_size = IPA_GENERIC_RX_POOL_SZ;
 	ipa_drv_res->apply_rg10_wa = false;
 	ipa_drv_res->gsi_ch20_wa = false;

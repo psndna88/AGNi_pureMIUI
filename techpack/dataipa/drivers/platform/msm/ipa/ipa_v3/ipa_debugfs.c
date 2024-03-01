@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifdef CONFIG_DEBUG_FS
@@ -1353,6 +1353,7 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		"act_clnt=%u\n"
 		"con_clnt_bmap=0x%x\n"
 		"wan_rx_empty=%u\n"
+		"wan_rx_empty_coal=%u\n"
 		"wan_repl_rx_empty=%u\n"
 		"lan_rx_empty=%u\n"
 		"lan_repl_rx_empty=%u\n"
@@ -1372,6 +1373,7 @@ static ssize_t ipa3_read_stats(struct file *file, char __user *ubuf,
 		atomic_read(&ipa3_ctx->ipa3_active_clients.cnt),
 		connect,
 		ipa3_ctx->stats.wan_rx_empty,
+		ipa3_ctx->stats.wan_rx_empty_coal,
 		ipa3_ctx->stats.wan_repl_rx_empty,
 		ipa3_ctx->stats.lan_rx_empty,
 		ipa3_ctx->stats.lan_repl_rx_empty,
@@ -1421,23 +1423,45 @@ static ssize_t ipa3_read_odlstats(struct file *file, char __user *ubuf,
 	return simple_read_from_buffer(ubuf, count, ppos, dbg_buff, cnt);
 }
 
+
 static ssize_t ipa3_read_page_recycle_stats(struct file *file,
 		char __user *ubuf, size_t count, loff_t *ppos)
 {
 	int nbytes;
-	int cnt = 0;
+	int cnt = 0, i = 0, k = 0;
 
 	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
 			"COAL : Total number of packets replenished =%llu\n"
+			"COAL : Number of page recycled packets  =%llu\n"
 			"COAL : Number of tmp alloc packets  =%llu\n"
+			"COAL  : Number of times tasklet scheduled  =%llu\n"
 			"DEF  : Total number of packets replenished =%llu\n"
-			"DEF  : Number of tmp alloc packets  =%llu\n",
+			"DEF  : Number of page recycled packets =%llu\n"
+			"DEF  : Number of tmp alloc packets  =%llu\n"
+			"DEF  : Number of times tasklet scheduled  =%llu\n"
+			"COMMON  : Number of page recycled in tasklet  =%llu\n"
+			"COMMON  : Number of times free pages not found in tasklet =%llu\n",
 			ipa3_ctx->stats.page_recycle_stats[0].total_replenished,
+			ipa3_ctx->stats.page_recycle_stats[0].page_recycled,
 			ipa3_ctx->stats.page_recycle_stats[0].tmp_alloc,
+			ipa3_ctx->stats.num_sort_tasklet_sched[0],
 			ipa3_ctx->stats.page_recycle_stats[1].total_replenished,
-			ipa3_ctx->stats.page_recycle_stats[1].tmp_alloc);
+			ipa3_ctx->stats.page_recycle_stats[1].page_recycled,
+			ipa3_ctx->stats.page_recycle_stats[1].tmp_alloc,
+			ipa3_ctx->stats.num_sort_tasklet_sched[1],
+			ipa3_ctx->stats.page_recycle_cnt_in_tasklet,
+			ipa3_ctx->stats.num_of_times_wq_reschd);
 
 	cnt += nbytes;
+
+	for (k = 0; k < 2; k++) {
+		for (i = 0; i < ipa3_ctx->page_poll_threshold; i++) {
+			nbytes = scnprintf(dbg_buff + cnt, IPA_MAX_MSG_LEN,
+				"COMMON  : Page replenish efficiency[%d][%d]  =%llu\n",
+				k, i, ipa3_ctx->stats.page_recycle_cnt[k][i]);
+			cnt += nbytes;
+		}
+	}
 
 	return simple_read_from_buffer(ubuf, count, ppos, dbg_buff, cnt);
 }
@@ -2772,6 +2796,68 @@ static ssize_t ipa3_enable_ipc_low(struct file *file,
 	return count;
 }
 
+static ssize_t ipa3_read_ipa_max_napi_sort_page_thrshld(struct file *file,
+	char __user *buf, size_t count, loff_t *ppos) {
+
+	int nbytes;
+	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
+				"page max napi without free page = %d\n",
+				ipa3_ctx->ipa_max_napi_sort_page_thrshld);
+	return simple_read_from_buffer(buf, count, ppos, dbg_buff, nbytes);
+
+}
+
+static ssize_t ipa3_write_ipa_max_napi_sort_page_thrshld(struct file *file,
+	const char __user *buf, size_t count, loff_t *ppos) {
+
+	int ret;
+	u8 ipa_max_napi_sort_page_thrshld = 0;
+
+	if (count >= sizeof(dbg_buff))
+		return -EFAULT;
+
+	ret = kstrtou8_from_user(buf, count, 0, &ipa_max_napi_sort_page_thrshld);
+	if(ret)
+		return ret;
+
+	ipa3_ctx->ipa_max_napi_sort_page_thrshld = ipa_max_napi_sort_page_thrshld;
+
+	IPADBG("napi cnt without prealloc pages = %d", ipa3_ctx->ipa_max_napi_sort_page_thrshld);
+
+	return count;
+}
+
+static ssize_t ipa3_read_page_wq_reschd_time(struct file *file,
+	char __user *buf, size_t count, loff_t *ppos) {
+
+	int nbytes;
+	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
+				"Page WQ reschduule time = %d\n",
+				ipa3_ctx->page_wq_reschd_time);
+	return simple_read_from_buffer(buf, count, ppos, dbg_buff, nbytes);
+
+}
+
+static ssize_t ipa3_write_page_wq_reschd_time(struct file *file,
+	const char __user *buf, size_t count, loff_t *ppos) {
+
+	int ret;
+	u8 page_wq_reschd_time = 0;
+
+	if (count >= sizeof(dbg_buff))
+		return -EFAULT;
+
+	ret = kstrtou8_from_user(buf, count, 0, &page_wq_reschd_time);
+	if(ret)
+		return ret;
+
+	ipa3_ctx->page_wq_reschd_time = page_wq_reschd_time;
+
+	IPADBG("Updated page WQ reschedule time = %d", ipa3_ctx->page_wq_reschd_time);
+
+	return count;
+}
+
 static ssize_t ipa3_read_gsi_wdi3_db_polling(struct file *file,
 	char __user *buf, size_t count, loff_t *ppos) {
 
@@ -2801,6 +2887,41 @@ static ssize_t ipa3_write_gsi_wdi3_db_polling(struct file *file,
 		ipa3_ctx->gsi_wdi_db_polling = false;
 	else
 		IPAERR("Invalid value \n");
+	return count;
+}
+
+static ssize_t ipa3_read_page_poll_threshold(struct file *file,
+		char __user *buf, size_t count, loff_t *ppos) {
+
+	int nbytes;
+	nbytes = scnprintf(dbg_buff, IPA_MAX_MSG_LEN,
+				"Page Poll Threshold = %d\n",
+				ipa3_ctx->page_poll_threshold);
+	return simple_read_from_buffer(buf, count, ppos, dbg_buff, nbytes);
+
+}
+
+static ssize_t ipa3_write_page_poll_threshold(struct file *file,
+	const char __user *buf, size_t count, loff_t *ppos) {
+
+	int ret;
+	u8 page_poll_threshold =0;
+
+	if (count >= sizeof(dbg_buff))
+		return -EFAULT;
+
+	ret = kstrtou8_from_user(buf, count, 0, &page_poll_threshold);
+	if(ret)
+		return ret;
+
+	if(page_poll_threshold != 0 &&
+		page_poll_threshold <= IPA_PAGE_POLL_THRESHOLD_MAX)
+		ipa3_ctx->page_poll_threshold = page_poll_threshold;
+	else
+		IPAERR("Invalid value \n");
+
+	IPADBG("Updated page poll threshold = %d", ipa3_ctx->page_poll_threshold);
+
 	return count;
 }
 
@@ -2985,6 +3106,21 @@ static const struct ipa3_debugfs_file debugfs_files[] = {
 		"wdi3_db_polling_enable", IPA_READ_WRITE_MODE, NULL, {
 			.read = ipa3_read_gsi_wdi3_db_polling,
 			.write = ipa3_write_gsi_wdi3_db_polling,
+		}
+	}, {
+		"page_poll_threshold", IPA_READ_WRITE_MODE, NULL, {
+			.read = ipa3_read_page_poll_threshold,
+			.write = ipa3_write_page_poll_threshold,
+		}
+	}, {
+		"page_wq_reschd_time", IPA_READ_WRITE_MODE, NULL, {
+			.read = ipa3_read_page_wq_reschd_time,
+			.write = ipa3_write_page_wq_reschd_time,
+		}
+	}, {
+		"ipa_max_napi_sort_page_thrshld", IPA_READ_WRITE_MODE, NULL, {
+			.read = ipa3_read_ipa_max_napi_sort_page_thrshld,
+			.write = ipa3_write_ipa_max_napi_sort_page_thrshld,
 		}
 	},
 };
