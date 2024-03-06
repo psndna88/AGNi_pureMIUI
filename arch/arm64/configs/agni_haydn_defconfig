@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.269 Kernel Configuration
+# Linux/arm64 5.4.271 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 14.1.4"
 CONFIG_GCC_VERSION=0
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_AOSP-ST_v5.4-stable-qgki"
+CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-ST_v5.5-stable-qgki"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
@@ -1347,7 +1347,6 @@ CONFIG_NET_SCHED=y
 #
 # Queueing/Scheduling
 #
-# CONFIG_NET_SCH_CBQ is not set
 CONFIG_NET_SCH_HTB=y
 # CONFIG_NET_SCH_HFSC is not set
 CONFIG_NET_SCH_PRIO=y
@@ -1361,7 +1360,6 @@ CONFIG_NET_SCH_PRIO=y
 # CONFIG_NET_SCH_ETF is not set
 # CONFIG_NET_SCH_TAPRIO is not set
 # CONFIG_NET_SCH_GRED is not set
-# CONFIG_NET_SCH_DSMARK is not set
 # CONFIG_NET_SCH_NETEM is not set
 # CONFIG_NET_SCH_DRR is not set
 # CONFIG_NET_SCH_MQPRIO is not set
