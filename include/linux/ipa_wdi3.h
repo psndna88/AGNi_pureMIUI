@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2018 - 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 - 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 - 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _IPA_WDI3_H_
@@ -73,7 +73,7 @@ typedef void (*ipa_wdi_mesh_ast_notifier_cb)(void *priv, unsigned long data);
  * @wdi_notify: bw notification cb
  * inst_id: Instance ID
  * @ast_update: AST update needed or not.
- * @is_hsp: need to identify if attach is hsp/pine.
+ * @rx_tlv_format: need to identify rx tlv format hsp(1)/pine(0).
  */
 struct ipa_wdi_init_in_params {
 	enum ipa_wdi_version wdi_version;
@@ -85,6 +85,7 @@ struct ipa_wdi_init_in_params {
 	int inst_id;
 	bool ast_update;
 	bool is_hsp;
+	u8 rx_tlv_format;
 };
 
 /**
