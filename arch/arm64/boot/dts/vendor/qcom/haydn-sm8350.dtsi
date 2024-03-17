@@ -14,6 +14,12 @@ And public attribution of xiaomi platforms(like venus and so and)
 			status = "disable";
 		};
 	};
+	xiaomi_touch {
+		compatible = "xiaomi-touch";
+		status = "ok";
+		touch,name = "xiaomi-touch";
+	};
+
 	fingerprint_goodix {
 		status = "disable";
 	};
