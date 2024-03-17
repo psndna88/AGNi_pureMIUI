@@ -262,6 +262,7 @@ void dp_tx_dump_flow_pool_info(struct cdp_soc_t *soc_hdl)
 
 void dp_tx_dump_flow_pool_info_compact(struct dp_soc *soc)
 {
+#ifdef WLAN_DEBUG
 	struct dp_txrx_pool_stats *pool_stats = &soc->pool_stats;
 	struct dp_tx_desc_pool_s *pool = NULL;
 	char *comb_log_str;
@@ -298,6 +299,7 @@ void dp_tx_dump_flow_pool_info_compact(struct dp_soc *soc)
 		  "FLOW_POOL_STATS %s", comb_log_str);
 
 	qdf_mem_free(comb_log_str);
+#endif
 }
 
 /**
