@@ -1757,7 +1757,7 @@ static const struct seq_operations vmstat_op = {
 #ifdef CONFIG_SMP
 static DEFINE_PER_CPU(struct delayed_work, vmstat_work);
 /*xiaomi modify to 10s */
-int sysctl_stat_interval __read_mostly = 10*HZ;
+int sysctl_stat_interval __read_mostly = 30*HZ;
 
 #ifdef CONFIG_PROC_FS
 static void refresh_vm_stats(struct work_struct *work)
