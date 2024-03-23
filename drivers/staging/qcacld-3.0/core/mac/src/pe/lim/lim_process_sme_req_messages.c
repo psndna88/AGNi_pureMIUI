@@ -1617,6 +1617,8 @@ __lim_process_sme_join_req(struct mac_context *mac_ctx, void *msg_buf)
 		mlme_obj->reg_tpc_obj.is_power_constraint_abs =
 							!is_pwr_constraint;
 
+		session->best_6g_power_type = sme_join_req->best_6g_power_type;
+
 		if (wlan_reg_is_ext_tpc_supported(mac_ctx->psoc)) {
 			mlme_obj->reg_tpc_obj.ap_constraint_power =
 							local_power_constraint;
@@ -2019,9 +2021,7 @@ uint8_t lim_get_max_tx_power(struct mac_context *mac,
 }
 
 void lim_calculate_tpc(struct mac_context *mac,
-		       struct pe_session *session,
-		       uint8_t ap_pwr_type,
-		       bool ctry_code_match)
+		       struct pe_session *session)
 {
 	bool is_psd_power = false;
 	bool is_tpe_present = false, is_6ghz_freq = false;
@@ -2061,18 +2061,8 @@ void lim_calculate_tpc(struct mac_context *mac,
 	} else {
 		is_6ghz_freq = true;
 		is_psd_power = wlan_reg_is_6g_psd_power(mac->pdev);
-		/* Power mode calculation for 6G*/
-		ap_power_type_6g = session->ap_power_type;
-		if (LIM_IS_STA_ROLE(session)) {
-			if (!session->lim_join_req) {
-				if (!ctry_code_match)
-					ap_power_type_6g = ap_pwr_type;
-			} else {
-				if (!session->lim_join_req->same_ctry_code)
-					ap_power_type_6g =
-					session->lim_join_req->ap_power_type_6g;
-			}
-		}
+		if (LIM_IS_STA_ROLE(session))
+			ap_power_type_6g = session->best_6g_power_type;
 	}
 
 	if (mlme_obj->reg_tpc_obj.num_pwr_levels) {
