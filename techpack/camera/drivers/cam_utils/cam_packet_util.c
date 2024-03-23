@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/types.h>
@@ -32,6 +32,7 @@ int cam_packet_util_get_cmd_mem_addr(int handle, uint32_t **buf_addr,
 		if (kmd_buf_addr && *len) {
 			*buf_addr = (uint32_t *)kmd_buf_addr;
 		} else {
+			cam_mem_put_cpu_buf(handle);
 			CAM_ERR(CAM_UTIL, "Invalid addr and length :%zd", *len);
 			rc = -ENOMEM;
 		}
