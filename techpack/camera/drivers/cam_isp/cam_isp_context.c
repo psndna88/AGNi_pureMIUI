@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -363,6 +363,7 @@ static int cam_isp_ctx_dump_req(
 			if (dump_to_buff) {
 				if (!cpu_addr || !offset || !buf_len) {
 					CAM_ERR(CAM_ISP, "Invalid args");
+					cam_mem_put_cpu_buf(req_isp->cfg[i].handle);
 					break;
 				}
 				dump_info.src_start = buf_start;
@@ -373,8 +374,10 @@ static int cam_isp_ctx_dump_req(
 				rc = cam_cdm_util_dump_cmd_bufs_v2(
 					&dump_info);
 				*offset = dump_info.dst_offset;
-				if (rc)
+				if (rc) {
+					cam_mem_put_cpu_buf(req_isp->cfg[i].handle);
 					return rc;
+				}
 			} else
 				cam_cdm_util_dump_cmd_buf(buf_start, buf_end);
 			cam_mem_put_cpu_buf(req_isp->cfg[i].handle);
@@ -847,7 +850,6 @@ static int __cam_isp_ctx_handle_buf_done_for_req_list(
 					req_isp->fence_map_out[i].sync_id,
 					CAM_SYNC_STATE_SIGNALED_ERROR,
 					CAM_SYNC_ISP_EVENT_BUBBLE);
-
 			list_add_tail(&req->list, &ctx->free_req_list);
 			CAM_DBG(CAM_REQ,
 				"Move active request %lld to free list(cnt = %d) [flushed], ctx %u",
