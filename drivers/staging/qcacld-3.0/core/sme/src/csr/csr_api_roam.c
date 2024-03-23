@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -15028,9 +15028,7 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 	struct wlan_objmgr_vdev *vdev;
 	bool follow_ap_edca;
 	bool reconn_after_assoc_timeout = false;
-	uint8_t programmed_country[REG_ALPHA2_LEN + 1];
 	enum reg_6g_ap_type power_type_6g;
-	bool ctry_code_match;
 	uint8_t reg_cc[REG_ALPHA2_LEN + 1];
 
 	if (!pSession) {
@@ -15839,18 +15837,12 @@ QDF_STATUS csr_send_join_req_msg(struct mac_context *mac, uint32_t sessionId,
 		if (wlan_reg_is_6ghz_chan_freq(pBssDescription->chan_freq)) {
 			if (!pIes->Country.present)
 				sme_debug("Channel is 6G but country IE not present");
-			wlan_reg_read_current_country(mac->psoc,
-						      programmed_country);
-			status = wlan_reg_get_6g_power_type_for_ctry(mac->psoc,
-					mac->pdev,
-					pIes->Country.country,
-					programmed_country, &power_type_6g,
-					&ctry_code_match,
-					ap_6g_power_type);
+			status = wlan_reg_get_best_6g_power_type(mac->psoc,
+					mac->pdev, &power_type_6g,
+					ap_6g_power_type, pBssDescription->chan_freq);
 			if (QDF_IS_STATUS_ERROR(status))
 				break;
-			csr_join_req->ap_power_type_6g = power_type_6g;
-			csr_join_req->same_ctry_code = ctry_code_match;
+			csr_join_req->best_6g_power_type = power_type_6g;
 
 			status = csr_iterate_triplets(pIes->Country);
 		}

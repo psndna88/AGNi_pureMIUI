@@ -619,8 +619,6 @@ struct csr_roam_session {
 	qdf_mc_timer_t roam_invoke_timer;
 	struct csr_timer_info roam_invoke_timer_info;
 #endif
-	/* AP power type */
-	uint8_t ap_power_type;
 };
 
 struct csr_roamstruct {

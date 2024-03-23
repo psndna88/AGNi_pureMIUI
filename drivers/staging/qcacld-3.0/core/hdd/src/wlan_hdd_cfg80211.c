@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4603,12 +4603,13 @@ hdd_send_roam_scan_channel_freq_list_to_sme(struct hdd_context *hdd_ctx,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem)
+	nla_for_each_nested(curr_attr, tb2[PARAM_SCAN_FREQ_LIST], rem) {
+		if (num_chan >= SIR_MAX_SUPPORTED_CHANNEL_LIST) {
+			hdd_err("number of channels (%d) supported exceeded max (%d)",
+				num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
+			return QDF_STATUS_E_INVAL;
+		}
 		num_chan++;
-	if (num_chan > SIR_MAX_SUPPORTED_CHANNEL_LIST) {
-		hdd_err("number of channels (%d) supported exceeded max (%d)",
-			num_chan, SIR_MAX_SUPPORTED_CHANNEL_LIST);
-		return QDF_STATUS_E_INVAL;
 	}
 	num_chan = 0;
 
