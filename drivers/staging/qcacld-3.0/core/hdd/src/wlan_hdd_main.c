@@ -16914,13 +16914,13 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	}
 
 	if (strncmp(buf, wlan_off_str, strlen(wlan_off_str)) == 0) {
-		pr_debug("Wifi turning off from UI\n");
+		hdd_info("Wifi turning off from UI\n");
 		hdd_inform_wifi_off();
 		goto exit;
 	}
 
 	if (strncmp(buf, wlan_on_str, strlen(wlan_on_str)) == 0) {
-		pr_info("Wifi Turning On from UI\n");
+		hdd_info("Wifi Turning On from UI\n");
 		turning_on = true;
 	}
 
@@ -16956,7 +16956,6 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 	hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 	if (hdd_ctx)
 		hdd_psoc_idle_timer_stop(hdd_ctx);
-
 exit:
 	if (turning_on)
 		hdd_inform_wifi_on();

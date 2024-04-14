@@ -4841,16 +4841,6 @@ enum qca_wlan_vendor_attr_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_CONFIG_FT_OVER_DS = 80,
 
-	/* 8-bit unsigned value to trigger dynamic nss feature.
-	 * 1-Enable, 0-Disable
-	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_NSS_SWITCH = 81,
-
-	/* 8-bit unsigned value to set bt in active or not.
-	 * 1-active, 0-inactive
-	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_BT_ACTIVE = 82,
-
 	/*
 	 * 8-bit unsigned value. This attribute can be used to configure the
 	 * firmware to enable/disable ARP/NS offload feature. Possible values
@@ -4862,7 +4852,7 @@ enum qca_wlan_vendor_attr_config {
 	 * This attribute can be set in disconncted and connected state, and
 	 * will restore to default behavior if interface is closed.
 	 */
-	QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD = 83,
+	QCA_WLAN_VENDOR_ATTR_CONFIG_ARP_NS_OFFLOAD = 81,
 
 	/* 8-bit unsigned value, whenever wifi calling (wfc) begin or end,
 	 * Userspace sends this information to driver/firmware to configure

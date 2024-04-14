@@ -16,6 +16,7 @@ config QCA_CLD_WLAN_PROFILE
 	help
 	  Specify which configuration profile to be used for building
 	  this module.
+
 	  Profiles are located at drivers/staging/qcacld-3.0/configs.
 
 endif # QCA_CLD_WLAN
