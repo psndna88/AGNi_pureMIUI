@@ -1294,6 +1294,7 @@ static ssize_t comp_algorithm_store(struct device *dev,
 	if (!zcomp_available_algorithm(compressor))
 		return -EINVAL;
 
+	return len; //zram: disallow userspace to change zram compression algorithm
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
 		up_write(&zram->init_lock);
