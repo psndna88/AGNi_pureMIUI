@@ -6,7 +6,7 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="haydn"
 CONFIG1="agni_haydn_defconfig"
-export AGNI_BUILD_TYPE="MIUI-ST"
+export AGNI_BUILD_TYPE="MIUI-STU"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
