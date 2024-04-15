@@ -1298,10 +1298,19 @@ static inline bool tcp_is_cwnd_limited(const struct sock *sk)
  * but is not always installed/used.
  * Return true if TCP stack should pace packets itself.
  */
+#if defined(CONFIG_DEFAULT_BBR) && !defined(CONFIG_DEFAULT_FQ)
+// FORCE ENABLE TCP INTERNAL PACING with default BBR without FQ
+static inline bool tcp_needs_internal_pacing(struct sock *sk)
+{
+	sk->sk_pacing_status = SK_PACING_NEEDED;
+	return true;
+}
+#else
 static inline bool tcp_needs_internal_pacing(const struct sock *sk)
 {
 	return smp_load_acquire(&sk->sk_pacing_status) == SK_PACING_NEEDED;
 }
+#endif
 
 /* Return in jiffies the delay before one skb is sent.
  * If @skb is NULL, we look at EDT for next packet being sent on the socket.
