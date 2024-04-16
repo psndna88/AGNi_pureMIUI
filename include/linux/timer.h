@@ -195,20 +195,11 @@ extern int try_to_del_timer_sync(struct timer_list *timer);
 
 extern struct timer_base timer_base_deferrable;
 
-extern int timer_delete_sync(struct timer_list *timer);
-
-/**
- * del_timer_sync - Delete a pending timer and wait for a running callback
- * @timer:	The timer to be deleted
- *
- * See timer_delete_sync() for detailed explanation.
- *
- * Do not use in new code. Use timer_delete_sync() instead.
- */
-static inline int del_timer_sync(struct timer_list *timer)
-{
-	return timer_delete_sync(timer);
-}
+#if defined(CONFIG_SMP) || defined(CONFIG_PREEMPT_RT)
+  extern int del_timer_sync(struct timer_list *timer);
+#else
+# define del_timer_sync(t)		del_timer(t)
+#endif
 
 #define del_singleshot_timer_sync(t) del_timer_sync(t)
 
