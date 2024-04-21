@@ -1298,7 +1298,7 @@ static inline bool tcp_is_cwnd_limited(const struct sock *sk)
  * but is not always installed/used.
  * Return true if TCP stack should pace packets itself.
  */
-#if defined(CONFIG_DEFAULT_BBR) && !defined(CONFIG_DEFAULT_FQ)
+#if (defined(CONFIG_DEFAULT_BBR) || defined(CONFIG_DEFAULT_BBR2)) && !defined(CONFIG_DEFAULT_FQ)
 // FORCE ENABLE TCP INTERNAL PACING with default BBR without FQ
 static inline bool tcp_needs_internal_pacing(struct sock *sk)
 {
