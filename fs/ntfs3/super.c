@@ -231,7 +231,7 @@ enum Opt {
 	Opt_err,
 };
 
-static const struct fs_parameter_spec ntfs_fs_parameters[] = {
+static const struct fs_parameter_spec ntfs_param_specs[] = {
 	fsparam_u32("uid",			Opt_uid),
 	fsparam_u32("gid",			Opt_gid),
 	fsparam_u32oct("umask",			Opt_umask),
@@ -248,6 +248,11 @@ static const struct fs_parameter_spec ntfs_fs_parameters[] = {
 	fsparam_flag_no("acsrules",		Opt_noacsrules),
 	fsparam_string("iocharset",		Opt_iocharset),
 	{}
+};
+
+static const struct fs_parameter_description ntfs_fs_parameters = {
+	.name		= "ntfs",
+	.specs		= ntfs_param_specs,
 };
 
 /*
@@ -280,7 +285,7 @@ static int ntfs_fs_parse_param(struct fs_context *fc,
 	struct fs_parse_result result;
 	int opt;
 
-	opt = fs_parse(fc, ntfs_fs_parameters, param, &result);
+	opt = fs_parse(fc, &ntfs_fs_parameters, param, &result);
 	if (opt < 0)
 		return opt;
 
@@ -1438,17 +1443,17 @@ static struct file_system_type ntfs_fs_type = {
 	.owner			= THIS_MODULE,
 	.name			= "ntfs",
 	.init_fs_context	= ntfs_init_fs_context,
-	.parameters		= ntfs_fs_parameters,
+	.parameters		= &ntfs_fs_parameters,
 	.kill_sb		= kill_block_super,
-	.fs_flags		= FS_REQUIRES_DEV | FS_ALLOW_IDMAP,
+	.fs_flags		= FS_REQUIRES_DEV,
 };
 static struct file_system_type ntfs_fs_type3 = {
 	.owner			= THIS_MODULE,
 	.name			= "ntfs3",
 	.init_fs_context	= ntfs_init_fs_context,
-	.parameters		= ntfs_fs_parameters,
+	.parameters		= &ntfs_fs_parameters,
 	.kill_sb		= kill_block_super,
-	.fs_flags		= FS_REQUIRES_DEV | FS_ALLOW_IDMAP,
+	.fs_flags		= FS_REQUIRES_DEV,
 };
 // clang-format on
 
