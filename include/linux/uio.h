@@ -25,6 +25,7 @@ enum iter_type {
 	ITER_BVEC = 16,
 	ITER_PIPE = 32,
 	ITER_DISCARD = 64,
+	ITER_XARRAY = 128,
 };
 
 struct iov_iter {
@@ -40,6 +41,7 @@ struct iov_iter {
 		const struct iovec *iov;
 		const struct kvec *kvec;
 		const struct bio_vec *bvec;
+		struct xarray *xarray;
 		struct pipe_inode_info *pipe;
 	};
 	union {
@@ -48,6 +50,7 @@ struct iov_iter {
 			int idx;
 			int start_idx;
 		};
+		loff_t xarray_start;
 	};
 };
 
@@ -79,6 +82,11 @@ static inline bool iov_iter_is_pipe(const struct iov_iter *i)
 static inline bool iov_iter_is_discard(const struct iov_iter *i)
 {
 	return iov_iter_type(i) == ITER_DISCARD;
+}
+
+static inline bool iov_iter_is_xarray(const struct iov_iter *i)
+{
+	return iov_iter_type(i) == ITER_XARRAY;
 }
 
 static inline unsigned char iov_iter_rw(const struct iov_iter *i)

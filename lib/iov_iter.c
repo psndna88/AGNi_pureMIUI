@@ -8,6 +8,7 @@
 #include <linux/splice.h>
 #include <net/checksum.h>
 #include <linux/scatterlist.h>
+#include <linux/huge_mm.h>
 
 #define PIPE_PARANOIA /* for now */
 
@@ -37,6 +38,27 @@
 		n -= __v.iov_len;			\
 	}						\
 	n = wanted - n;					\
+}
+
+#define iterate_iovec_new(i, n, base, len, off, __p, STEP) {	\
+	size_t off = 0;						\
+	size_t skip = i->iov_offset;				\
+	do {							\
+		len = min(n, __p->iov_len - skip);		\
+		if (likely(len)) {				\
+			base = __p->iov_base + skip;		\
+			len -= (STEP);				\
+			off += len;				\
+			skip += len;				\
+			n -= len;				\
+			if (skip < __p->iov_len)		\
+				break;				\
+		}						\
+		__p++;						\
+		skip = 0;					\
+	} while (n);						\
+	i->iov_offset = skip;					\
+	n = off;						\
 }
 
 #define iterate_kvec(i, n, __v, __p, skip, STEP) {	\
@@ -72,6 +94,34 @@
 			continue;			\
 		(void)(STEP);				\
 	}						\
+}
+
+#define iterate_bvec_new(i, n, base, len, off, p, STEP) {		\
+	size_t off = 0;						\
+	unsigned skip = i->iov_offset;				\
+	while (n) {						\
+		unsigned offset = p->bv_offset + skip;		\
+		unsigned left;					\
+		void *kaddr = kmap_local_page(p->bv_page +	\
+					offset / PAGE_SIZE);	\
+		base = kaddr + offset % PAGE_SIZE;		\
+		len = min(min(n, (size_t)(p->bv_len - skip)),	\
+		     (size_t)(PAGE_SIZE - offset % PAGE_SIZE));	\
+		left = (STEP);					\
+		kunmap_local(kaddr);				\
+		len -= left;					\
+		off += len;					\
+		skip += len;					\
+		if (skip == p->bv_len) {			\
+			skip = 0;				\
+			p++;					\
+		}						\
+		n -= len;					\
+		if (left)					\
+			break;					\
+	}							\
+	i->iov_offset = skip;					\
+	n = off;						\
 }
 
 #define iterate_all_kinds(i, n, v, I, B, K) {			\
@@ -134,6 +184,88 @@
 		i->iov_offset = skip;				\
 	}							\
 }
+
+#define iterate_xarray(i, n, base, len, __off, STEP) {		\
+	__label__ __out;					\
+	size_t __off = 0;					\
+	struct page *head = NULL;				\
+	loff_t start = i->xarray_start + i->iov_offset;		\
+	unsigned offset = start % PAGE_SIZE;			\
+	pgoff_t index = start / PAGE_SIZE;			\
+	int j;							\
+								\
+	XA_STATE(xas, i->xarray, index);			\
+								\
+	rcu_read_lock();					\
+	xas_for_each(&xas, head, ULONG_MAX) {			\
+		unsigned left;					\
+		if (xas_retry(&xas, head))			\
+			continue;				\
+		if (WARN_ON(xa_is_value(head)))			\
+			break;					\
+		if (WARN_ON(PageHuge(head)))			\
+			break;					\
+		for (j = (head->index < index) ? index - head->index : 0; \
+		     j < thp_nr_pages(head); j++) {		\
+			void *kaddr = kmap_local_page(head + j);	\
+			base = kaddr + offset;			\
+			len = PAGE_SIZE - offset;		\
+			len = min(n, len);			\
+			left = (STEP);				\
+			kunmap_local(kaddr);			\
+			len -= left;				\
+			__off += len;				\
+			n -= len;				\
+			if (left || n == 0)			\
+				goto __out;			\
+			offset = 0;				\
+		}						\
+	}							\
+__out:								\
+	rcu_read_unlock();					\
+	i->iov_offset += __off;						\
+	n = __off;						\
+}
+
+#define __iterate_and_advance_new(i, n, base, len, off, I, K) {	\
+	if (unlikely(i->count < n))				\
+		n = i->count;					\
+	if (likely(n)) {					\
+		if (likely(iter_is_iovec(i))) {			\
+			const struct iovec *iov = i->iov;	\
+			void __user *base;			\
+			size_t len;				\
+			iterate_iovec_new(i, n, base, len, off,	\
+						iov, (I))	\
+			i->nr_segs -= iov - i->iov;		\
+			i->iov = iov;				\
+		} else if (iov_iter_is_bvec(i)) {		\
+			const struct bio_vec *bvec = i->bvec;	\
+			void *base;				\
+			size_t len;				\
+			iterate_bvec_new(i, n, base, len, off,	\
+						bvec, (K))	\
+			i->nr_segs -= bvec - i->bvec;		\
+			i->bvec = bvec;				\
+		} else if (iov_iter_is_kvec(i)) {		\
+			const struct kvec *kvec = i->kvec;	\
+			void *base;				\
+			size_t len;				\
+			iterate_iovec_new(i, n, base, len, off,	\
+						kvec, (K))	\
+			i->nr_segs -= kvec - i->kvec;		\
+			i->kvec = kvec;				\
+		} else if (iov_iter_is_xarray(i)) {		\
+			void *base;				\
+			size_t len;				\
+			iterate_xarray(i, n, base, len, off,	\
+							(K))	\
+		}						\
+		i->count -= n;					\
+	}							\
+}
+#define iterate_and_advance_new(i, n, base, len, off, I, K) \
+	__iterate_and_advance_new(i, n, base, len, off, I, ((void)(K),0))
 
 static int copyout(void __user *to, const void *from, size_t n)
 {
@@ -433,6 +565,44 @@ int iov_iter_fault_in_readable(struct iov_iter *i, size_t bytes)
 	return 0;
 }
 EXPORT_SYMBOL(iov_iter_fault_in_readable);
+
+/*
+ * fault_in_iov_iter_readable - fault in iov iterator for reading
+ * @i: iterator
+ * @size: maximum length
+ *
+ * Fault in one or more iovecs of the given iov_iter, to a maximum length of
+ * @size.  For each iovec, fault in each page that constitutes the iovec.
+ *
+ * Returns the number of bytes not faulted in (like copy_to_user() and
+ * copy_from_user()).
+ *
+ * Always returns 0 for non-userspace iterators.
+ */
+size_t fault_in_iov_iter_readable(const struct iov_iter *i, size_t size)
+{
+	if (iter_is_iovec(i)) {
+		size_t count = min(size, iov_iter_count(i));
+		const struct iovec *p;
+		size_t skip;
+
+		size -= count;
+		for (p = i->iov, skip = i->iov_offset; count; p++, skip = 0) {
+			size_t len = min(count, p->iov_len - skip);
+			size_t ret;
+
+			if (unlikely(!len))
+				continue;
+			ret = fault_in_readable(p->iov_base + skip, len);
+			count -= len - ret;
+			if (ret)
+				break;
+		}
+		return count + size;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(fault_in_iov_iter_readable);
 
 void iov_iter_init(struct iov_iter *i, unsigned int direction,
 			const struct iovec *iov, unsigned long nr_segs,
@@ -952,6 +1122,28 @@ size_t iov_iter_zero(size_t bytes, struct iov_iter *i)
 	return bytes;
 }
 EXPORT_SYMBOL(iov_iter_zero);
+
+size_t copy_page_from_iter_atomic(struct page *page, unsigned offset, size_t bytes,
+				  struct iov_iter *i)
+{
+	char *kaddr = kmap_atomic(page), *p = kaddr + offset;
+	if (unlikely(!page_copy_sane(page, offset, bytes))) {
+		kunmap_atomic(kaddr);
+		return 0;
+	}
+	if (unlikely(iov_iter_is_pipe(i) || iov_iter_is_discard(i))) {
+		kunmap_atomic(kaddr);
+		WARN_ON(1);
+		return 0;
+	}
+	iterate_and_advance_new(i, bytes, base, len, off,
+		copyin(p + off, base, len),
+		memcpy(p + off, base, len)
+	)
+	kunmap_atomic(kaddr);
+	return bytes;
+}
+EXPORT_SYMBOL(copy_page_from_iter_atomic);
 
 size_t iov_iter_copy_from_user_atomic(struct page *page,
 		struct iov_iter *i, unsigned long offset, size_t bytes)

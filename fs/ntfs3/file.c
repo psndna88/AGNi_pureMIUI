@@ -69,7 +69,7 @@ static long ntfs_compat_ioctl(struct file *filp, u32 cmd, unsigned long arg)
 /*
  * ntfs_getattr - inode_operations::getattr
  */
-int ntfs_getattr(struct user_namespace *mnt_userns, const struct path *path,
+int ntfs_getattr(const struct path *path,
 		 struct kstat *stat, u32 request_mask, u32 flags)
 {
 	struct inode *inode = d_inode(path->dentry);
@@ -83,7 +83,7 @@ int ntfs_getattr(struct user_namespace *mnt_userns, const struct path *path,
 
 	stat->attributes_mask |= STATX_ATTR_COMPRESSED | STATX_ATTR_ENCRYPTED;
 
-	generic_fillattr(mnt_userns, inode, stat);
+	generic_fillattr(inode, stat);
 
 	stat->result_mask |= STATX_BTIME;
 	stat->btime = ni->i_crtime;
@@ -734,7 +734,7 @@ out:
 /*
  * ntfs3_setattr - inode_operations::setattr
  */
-int ntfs3_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
+int ntfs3_setattr(struct dentry *dentry,
 		  struct iattr *attr)
 {
 	struct super_block *sb = dentry->d_sb;
@@ -753,7 +753,7 @@ int ntfs3_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
 		ia_valid = attr->ia_valid;
 	}
 
-	err = setattr_prepare(mnt_userns, dentry, attr);
+	err = setattr_prepare(dentry, attr);
 	if (err)
 		goto out;
 
@@ -778,10 +778,10 @@ int ntfs3_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
 		ni->ni_flags |= NI_FLAG_UPDATE_PARENT;
 	}
 
-	setattr_copy(mnt_userns, inode, attr);
+	setattr_copy(inode, attr);
 
 	if (mode != inode->i_mode) {
-		err = ntfs_acl_chmod(mnt_userns, inode);
+		err = ntfs_acl_chmod(inode);
 		if (err)
 			goto out;
 
@@ -1209,28 +1209,6 @@ static int ntfs_file_release(struct inode *inode, struct file *file)
 	return err;
 }
 
-/*
- * ntfs_fiemap - file_operations::fiemap
- */
-int ntfs_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
-		__u64 start, __u64 len)
-{
-	int err;
-	struct ntfs_inode *ni = ntfs_i(inode);
-
-	err = fiemap_prep(inode, fieinfo, start, &len, ~FIEMAP_FLAG_XATTR);
-	if (err)
-		return err;
-
-	ni_lock(ni);
-
-	err = ni_fiemap(ni, fieinfo, start, len);
-
-	ni_unlock(ni);
-
-	return err;
-}
-
 // clang-format off
 const struct inode_operations ntfs_file_inode_operations = {
 	.getattr	= ntfs_getattr,
@@ -1239,7 +1217,6 @@ const struct inode_operations ntfs_file_inode_operations = {
 	.permission	= ntfs_permission,
 	.get_acl	= ntfs_get_acl,
 	.set_acl	= ntfs_set_acl,
-	.fiemap		= ntfs_fiemap,
 };
 
 const struct file_operations ntfs_file_operations = {

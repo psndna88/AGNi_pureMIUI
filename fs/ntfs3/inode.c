@@ -731,36 +731,6 @@ static int ntfs_readpage(struct file *file, struct page *page)
 	return mpage_readpage(page, ntfs_get_block);
 }
 
-static void ntfs_readahead(struct readahead_control *rac)
-{
-	struct address_space *mapping = rac->mapping;
-	struct inode *inode = mapping->host;
-	struct ntfs_inode *ni = ntfs_i(inode);
-	u64 valid;
-	loff_t pos;
-
-	if (is_resident(ni)) {
-		/* No readahead for resident. */
-		return;
-	}
-
-	if (is_compressed(ni)) {
-		/* No readahead for compressed. */
-		return;
-	}
-
-	valid = ni->i_valid;
-	pos = readahead_pos(rac);
-
-	if (valid < i_size_read(inode) && pos <= valid &&
-	    valid < pos + readahead_length(rac)) {
-		/* Range cross 'valid'. Read it page by page. */
-		return;
-	}
-
-	mpage_readahead(rac, ntfs_get_block);
-}
-
 static int ntfs_get_block_direct_IO_R(struct inode *inode, sector_t iblock,
 				      struct buffer_head *bh_result, int create)
 {
@@ -1194,8 +1164,7 @@ out:
 	return ERR_PTR(err);
 }
 
-struct inode *ntfs_create_inode(struct user_namespace *mnt_userns,
-				struct inode *dir, struct dentry *dentry,
+struct inode *ntfs_create_inode(struct inode *dir, struct dentry *dentry,
 				const struct cpu_str *uni, umode_t mode,
 				dev_t dev, const char *symname, u32 size,
 				struct ntfs_fnd *fnd)
@@ -1311,7 +1280,7 @@ struct inode *ntfs_create_inode(struct user_namespace *mnt_userns,
 		goto out3;
 	}
 	inode = &ni->vfs_inode;
-	inode_init_owner(mnt_userns, inode, dir, mode);
+	inode_init_owner(inode, dir, mode);
 	mode = inode->i_mode;
 
 	inode->i_atime = inode->i_mtime = inode->i_ctime = ni->i_crtime =
@@ -1610,7 +1579,7 @@ struct inode *ntfs_create_inode(struct user_namespace *mnt_userns,
 
 #ifdef CONFIG_NTFS3_FS_POSIX_ACL
 	if (!S_ISLNK(mode) && (sb->s_flags & SB_POSIXACL)) {
-		err = ntfs_init_acl(mnt_userns, inode, dir);
+		err = ntfs_init_acl(inode, dir);
 		if (err)
 			goto out7;
 	} else
@@ -1970,7 +1939,6 @@ const struct inode_operations ntfs_link_inode_operations = {
 
 const struct address_space_operations ntfs_aops = {
 	.readpage	= ntfs_readpage,
-	.readahead	= ntfs_readahead,
 	.writepage	= ntfs_writepage,
 	.writepages	= ntfs_writepages,
 	.write_begin	= ntfs_write_begin,
@@ -1982,6 +1950,5 @@ const struct address_space_operations ntfs_aops = {
 
 const struct address_space_operations ntfs_aops_cmpr = {
 	.readpage	= ntfs_readpage,
-	.readahead	= ntfs_readahead,
 };
 // clang-format on

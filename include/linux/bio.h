@@ -24,6 +24,7 @@
 #endif
 
 #define BIO_MAX_PAGES		256
+#define BIO_MAX_VECS		256U
 
 #define bio_prio(bio)			(bio)->bi_ioprio
 #define bio_set_prio(bio, prio)		((bio)->bi_ioprio = prio)
