@@ -241,6 +241,26 @@
 })
 
 /**
+ * size_add_new() - Calculate size_t addition with saturation at SIZE_MAX
+ *
+ * @addend1: first addend
+ * @addend2: second addend
+ *
+ * Returns: calculate @addend1 + @addend2, both promoted to size_t,
+ * with any overflow causing the return value to be SIZE_MAX. The
+ * lvalue must be size_t to avoid implicit type conversion.
+ */
+static inline size_t __must_check size_add_new(size_t addend1, size_t addend2)
+{
+	size_t bytes;
+
+	if (check_add_overflow(addend1, addend2, &bytes))
+		return SIZE_MAX;
+
+	return bytes;
+}
+
+/**
  * array_size() - Calculate size of 2-dimensional array.
  *
  * @a: dimension one
