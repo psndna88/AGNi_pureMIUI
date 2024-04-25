@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2213,6 +2213,9 @@ void wma_send_vdev_down(tp_wma_handle wma, struct del_bss_resp *resp)
 		qdf_mem_free(resp);
 		return;
 	}
+
+	wma_debug("Reset roaming_in_progress for vdev %d", vdev_id);
+	wma->interfaces[vdev_id].roaming_in_progress = false;
 
 	if (vdev_stop_type != WMA_DELETE_BSS_HO_FAIL_REQ) {
 		if (wma_send_vdev_down_to_fw(wma, vdev_id) !=
