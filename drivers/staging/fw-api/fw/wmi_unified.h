@@ -7876,7 +7876,10 @@ typedef struct {
     A_UINT32 tlv_header;
     /* vdev id indicating to which the vdev, this chainmask configuration will be applied. */
     A_UINT32 vdev_id;
-    /* number of chains to use for transmissions in 2.4 GHz band */
+    /* number of chains to use for transmissions in 2.4 GHz band
+     * If vdev is MLO vdev, below 2g params apply to all 2.4 GHz band links
+     * If vdev is MLO vdev, below 5g params apply to all 5/6 GHz band links
+     */
     A_UINT32 num_tx_chains_2g;
     /* number of chains to use for reception in 2.4 GHz band */
     A_UINT32 num_rx_chains_2g;
@@ -7906,6 +7909,10 @@ typedef struct {
     A_UINT32 disable_tx_mrc_5g;
     /* If non-zero then use only one chain for RX when connection rx_nss is 1 in 5 GHz */
     A_UINT32 disable_rx_mrc_5g;
+    /* Whether fast chain selection is needed when TX chain num is 1 */
+    A_UINT32 fast_chain_selection;
+    /* RSSI delta threshold to determine better chain, units: dB */
+    A_UINT32 better_chain_rssi_threshold;
 } wmi_vdev_chainmask_config_cmd_fixed_param;
 
 /*
@@ -9323,6 +9330,18 @@ typedef enum {
      * b'8-b'15 indicate the MCS (MCS value can be from 0-15)
      * b'16 Enable or disable nss cap
      * b'17 Enable or disable mcs cap
+     * b'18 To determine the direction for caping DL_direction
+     * b'19 To determine the direction for caping UL_direction
+     *
+     * For backwards compatibility, if bits 18+19 are both
+     * cleared, then the rate cap applies to both DL and UL.
+     * To summarize:
+     *     bit 19 | bit 18 | rate cap applied
+     *     -------+--------+------------------
+     *        0   |    0   | cap rates only for DL
+     *        0   |    1   | cap rates only for DL
+     *        1   |    0   | cap rates only for UL
+     *        1   |    1   | cap rates for both UL and DL
      */
     WMI_PDEV_PARAM_RATE_UPPER_CAP,
 
@@ -9624,6 +9643,10 @@ typedef enum {
 #define WMI_PDEV_UPPER_CAP_NSS_VALID_SET(_value, value) WMI_SET_BITS(_value, 16, 1, value)
 #define WMI_PDEV_UPPER_CAP_MCS_VALID_GET(value) WMI_GET_BITS(value, 17, 1)
 #define WMI_PDEV_UPPER_CAP_MCS_VALID_SET(_value, value) WMI_SET_BITS(_value, 17, 1, value)
+#define WMI_PDEV_UPPER_CAP_DL_DIR_GET(value) WMI_GET_BITS(value, 18, 1)
+#define WMI_PDEV_UPPER_CAP_DL_DIR_SET(_value, value) WMI_SET_BITS(_value, 18, 1, value)
+#define WMI_PDEV_UPPER_CAP_UL_DIR_GET(value) WMI_GET_BITS(value, 19, 1)
+#define WMI_PDEV_UPPER_CAP_UL_DIR_SET(_value, value) WMI_SET_BITS(_value, 19, 1, value)
 
 #define WMI_PDEV_RATE_DROP_NUM_MCS_GET(value) WMI_GET_BITS(value, 0, 8)
 #define WMI_PDEV_RATE_DROP_NUM_MCS_SET(_value, value) WMI_SET_BITS(_value, 0, 8, value)
@@ -41194,12 +41217,13 @@ typedef struct {
 } wmi_big_data_dp_stats_tlv_param;
 
 typedef enum {
-    WMI_6GHZ_REG_LPI = 0,
-    WMI_6GHZ_REG_VLP = 1,
-    WMI_6GHZ_REG_SP  = 2,
-    WMI_6GHZ_REG_SP_STA = 3,
-    WMI_6GHZ_REG_MAX = 5, /* Can't expand, b/c used as array length below */
-} WMI_6GHZ_REG_TYPE;
+    WMI_6GHZ_REG_PWRMODE_LPI = 0, /* LPI mode for AP and client products */
+    WMI_6GHZ_REG_PWRMODE_SP = 1, /* SP mode for AP and client products */
+    WMI_6GHZ_REG_PWRMODE_VLP = 2, /* VLP mode for AP and client products */
+    WMI_6GHZ_REG_PWRMODE_SP_STA = 3, /* SP client mode for AP products */
+
+    WMI_6GHZ_REG_PWRMODE_MAX = 5
+} WMI_6GHZ_REG_PWRMODE_TYPE;
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_vdev_set_tpc_power_fixed_param */
@@ -47979,6 +48003,15 @@ typedef struct {
     A_UINT32 switch_type;  /* see definition of WMI_AUDIO_TRANSPORT_SWITCH_TYPE */
 } wmi_audio_transport_switch_resp_status_cmd_fixed_param;
 
+enum wmi_wifi_radar_cmd {
+    wmi_wifi_radar_capture_disable,
+    wmi_wifi_radar_capture_enable,
+    wmi_wifi_radar_rx_cal,
+    wmi_wifi_radar_tx_cal,
+
+    wmi_wifi_radar_cmd_max = 0xff
+};
+
 typedef struct {
     /** TLV tag and len; tag equals
      * WMITLV_TAG_STRUC_wmi_pdev_enable_wifi_radar_cmd_fixed_param
@@ -48007,7 +48040,7 @@ typedef struct {
      *     4 = 320 MHz
      */
     A_UINT32 bw;
-    /* 0 to stop capture, 1 to start periodic capture, 2 to do calibration */
+    /* enum wmi_wifi_radar_cmd */
     A_UINT32 capture_calibrate;
     /* periodicity of capture in milliseconds */
     A_UINT32 capture_interval_ms;
