@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -32,6 +33,7 @@
 
 enum {
         DP_CONTROLLER0 = 0,
+        HDMI_CONTROLLER,
         DP_CONTROLLER_MAX,
 };
 
@@ -96,7 +98,7 @@ static int msm_ext_disp_edid_ctl_info(struct snd_kcontrol *kcontrol,
 		codec_data->ctl[dai_id], codec_data->stream[dai_id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai_id == HDMI_MS_DAI)
+	if (dai_id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -148,7 +150,7 @@ static int msm_ext_disp_edid_get(struct snd_kcontrol *kcontrol,
 		codec_data->ctl[dai_id], codec_data->stream[dai_id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai_id == HDMI_MS_DAI)
+	if (dai_id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -214,7 +216,7 @@ static int msm_ext_disp_audio_type_get(struct snd_kcontrol *kcontrol,
 		codec_data->ctl[dai_id], codec_data->stream[dai_id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai_id == HDMI_MS_DAI)
+	if (dai_id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -306,7 +308,7 @@ static int msm_ext_disp_audio_ack_set(struct snd_kcontrol *kcontrol,
 		codec_data->ctl[dai_id], codec_data->stream[dai_id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai_id == HDMI_MS_DAI)
+	if (dai_id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -366,7 +368,7 @@ static int msm_ext_disp_audio_device_get(struct snd_kcontrol *kcontrol,
 	int dai_id = ((struct soc_multi_mixer_control *)
 				kcontrol->private_value)->shift;
 
-	if (dai_id < 0 || dai_id > DP_DAI2) {
+	if (dai_id < 0 || dai_id >= DP_DAI_MAX) {
 		dev_err(component->dev,
 			"%s: invalid dai id: %d\n", __func__, dai_id);
 		rc = -EINVAL;
@@ -398,7 +400,7 @@ static int msm_ext_disp_audio_device_set(struct snd_kcontrol *kcontrol,
 	int dai_id = ((struct soc_multi_mixer_control *)
 				kcontrol->private_value)->shift;
 
-	if (dai_id < 0 || dai_id > DP_DAI2) {
+	if (dai_id < 0 || dai_id >= DP_DAI_MAX) {
 		dev_err(component->dev,
 			"%s: invalid dai id: %d\n", __func__, dai_id);
 		rc = -EINVAL;
@@ -498,8 +500,8 @@ static const struct snd_kcontrol_new msm_ext_disp_codec_rx_controls[] = {
 			SND_SOC_NOPM, DP_DAI2, DP_STREAM_MAX - 1, 0, 2,
 			msm_ext_disp_audio_device_get,
 			msm_ext_disp_audio_device_set),
-	SOC_SINGLE_MULTI_EXT("External HDMI Device",
-			SND_SOC_NOPM, HDMI_MS_DAI, DP_STREAM_MAX - 1, 0, 2,
+	SOC_SINGLE_MULTI_EXT("External HDMI Audio Device",
+			SND_SOC_NOPM, HDMI_DAI, DP_STREAM_MAX - 1, 0, 2,
 			msm_ext_disp_audio_device_get,
 			msm_ext_disp_audio_device_set),
 
@@ -526,7 +528,7 @@ static int msm_ext_disp_audio_codec_rx_dai_startup(
 		codec_data->ctl[dai->id], codec_data->stream[dai->id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai->id == HDMI_MS_DAI)
+	if (dai->id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -587,7 +589,7 @@ static int msm_ext_disp_audio_codec_rx_dai_hw_params(
 		codec_data->ctl[dai->id], codec_data->stream[dai->id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai->id == HDMI_MS_DAI)
+	if (dai->id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;
@@ -661,6 +663,10 @@ static int msm_ext_disp_audio_codec_rx_dai_hw_params(
 	audio_setup_params.down_mix = down_mix;
 
 	mutex_lock(&codec_data->dp_ops_lock);
+	if (dai->id == HDMI_DAI)
+		type = EXT_DISPLAY_TYPE_HDMI;
+	else
+		type = EXT_DISPLAY_TYPE_DP;
 	SWITCH_DP_CODEC(codec_info, codec_data, dai->id, type);
 	rc = msm_ext_disp_select_audio_codec(codec_data->ext_disp_core_pdev,
 						 &codec_info);
@@ -701,7 +707,7 @@ static void msm_ext_disp_audio_codec_rx_dai_shutdown(
 		codec_data->ctl[dai->id], codec_data->stream[dai->id]);
 
 	mutex_lock(&codec_data->dp_ops_lock);
-	if (dai->id == HDMI_MS_DAI)
+	if (dai->id == HDMI_DAI)
 		type = EXT_DISPLAY_TYPE_HDMI;
 	else
 		type = EXT_DISPLAY_TYPE_DP;

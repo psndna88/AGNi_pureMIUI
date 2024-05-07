@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
 * Add support for 24 and 32bit format for ASM loopback and playback session.
@@ -1329,7 +1329,7 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 		offset = prtd->in_frame_info[idx].offset;
 		pr_debug("Offset value = %d\n", offset);
 
-		if (offset >= size) {
+		if (size && offset >= size) {
 			pr_err("%s: Invalid dsp buf offset\n", __func__);
 			ret = -EFAULT;
 			q6asm_cpu_buf_release(OUT, prtd->audio_client);
@@ -2681,10 +2681,17 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 	if (chmixer_pspd->enable && prtd && prtd->audio_client) {
 		stream_id = prtd->audio_client->session;
 		be_id = chmixer_pspd->port_idx;
+#ifdef CONFIG_PLATFORM_AUTO
+		msm_pcm_routing_set_channel_mixer_runtime(fe_id, be_id,
+				stream_id,
+				session_type,
+				chmixer_pspd);
+#else
 		msm_pcm_routing_set_channel_mixer_runtime(be_id,
 				stream_id,
 				session_type,
 				chmixer_pspd);
+#endif
 	}
 
 	if (reset_override_out_ch_map)
