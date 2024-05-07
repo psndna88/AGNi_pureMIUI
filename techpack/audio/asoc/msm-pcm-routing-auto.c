@@ -2361,6 +2361,7 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
  * msm_pcm_routing_set_channel_mixer_runtime - apply channel mixer
  * setting during runtime.
  *
+ * @fe_id: frontend index
  * @be_id: backend index
  * @session_id: session index
  * @session_type: session type
@@ -2368,12 +2369,13 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
  *
  * Retuen: 0 for success, else error
  */
-int msm_pcm_routing_set_channel_mixer_runtime(int be_id, int session_id,
+int msm_pcm_routing_set_channel_mixer_runtime(int fe_id, int be_id, int session_id,
 			int session_type,
 			struct msm_pcm_channel_mixer *params)
 {
 	int rc = 0;
 	int port_id, copp_idx = 0;
+	bool tmp = false;
 
 	be_id--;
 	if (be_id < 0 || be_id >= MSM_BACKEND_DAI_MAX) {
@@ -2382,8 +2384,13 @@ int msm_pcm_routing_set_channel_mixer_runtime(int be_id, int session_id,
 		return -EINVAL;
 	}
 
-	port_id = msm_bedais[be_id].port_id;
-	copp_idx = adm_get_default_copp_idx(port_id);
+	tmp =  msm_pcm_routing_get_portid_copp_idx(fe_id, session_type, &port_id, &copp_idx);
+		
+	if(!tmp){
+		pr_err("%s: Could not find copp_idx for fe_id: %d, will use default copp_idx\n",
+			__func__, fe_id);
+		copp_idx = adm_get_default_copp_idx(port_id);
+	}
 	pr_debug("%s: port_id - %d, copp_idx %d session id - %d\n",
 		 __func__, port_id, copp_idx, session_id);
 

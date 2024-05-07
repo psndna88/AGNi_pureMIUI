@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2013-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 /*
  * Add support for 24 and 32bit format for ASM loopback and playback session.
@@ -1022,10 +1022,17 @@ static int msm_pcm_channel_mixer_cfg_ctl_put(struct snd_kcontrol *kcontrol,
 		if (prtd->audio_client) {
 			stream_id = prtd->audio_client->session;
 			be_id = chmixer_pspd->port_idx;
+#ifdef CONFIG_PLATFORM_AUTO
+			msm_pcm_routing_set_channel_mixer_runtime(fe_id, be_id,
+					stream_id,
+					session_type,
+					chmixer_pspd);
+#else
 			msm_pcm_routing_set_channel_mixer_runtime(be_id,
 					stream_id,
 					session_type,
 					chmixer_pspd);
+#endif
 		}
 	}
 	mutex_unlock(&loopback_session_lock);
