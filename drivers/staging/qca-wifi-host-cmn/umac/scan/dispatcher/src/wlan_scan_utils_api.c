@@ -1825,7 +1825,8 @@ static uint8_t
 	if (!ies)
 		return NULL;
 
-	while (len >= MIN_IE_LEN && len >= ies[TAG_LEN_POS] + MIN_IE_LEN) {
+	while ((len >= MIN_IE_LEN + 1) && len >= ies[TAG_LEN_POS] + MIN_IE_LEN)
+	{
 		if ((ies[ID_POS] == elem_id) &&
 		    (ies[ELEM_ID_EXTN_POS] ==
 		     WLAN_EXTN_ELEMID_NONINHERITANCE)) {
@@ -2016,9 +2017,11 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 	extn_elem = util_scan_find_noninheritance_ie(WLAN_ELEMID_EXTN_ELEM,
 						     sub_copy, subie_len);
 
-	if (extn_elem && extn_elem[TAG_LEN_POS]) {
-		util_parse_noninheritance_list(extn_elem, &elem_list,
-					       &extn_elem_list, &ninh);
+	if (extn_elem && extn_elem[TAG_LEN_POS] >= VALID_ELEM_LEAST_LEN) {
+		if (((extn_elem + extn_elem[1] + MIN_IE_LEN) - sub_copy)
+		    < subie_len)
+			util_parse_noninheritance_list(extn_elem, &elem_list,
+						       &extn_elem_list, &ninh);
 	}
 
 	/* go through IEs in ie (skip SSID) and subelement,
@@ -2026,6 +2029,11 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 	 */
 	tmp_old = util_scan_find_ie(WLAN_ELEMID_SSID, ie, ielen);
 	tmp_old = (tmp_old) ? tmp_old + tmp_old[1] + MIN_IE_LEN : ie;
+
+	if (((tmp_old + MIN_IE_LEN) - ie) >= ielen) {
+		qdf_mem_free(sub_copy);
+		return 0;
+	}
 
 	while (((tmp_old + tmp_old[1] + MIN_IE_LEN) - ie) <= ielen) {
 		ninh.non_inh_ie_found = 0;
@@ -2048,6 +2056,9 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 		}
 
 		if (ninh.non_inh_ie_found || (tmp_old[0] == 0)) {
+			if (((tmp_old + tmp_old[1] + MIN_IE_LEN) - ie) >=
+			    (ielen - MIN_IE_LEN))
+				break;
 			tmp_old += tmp_old[1] + MIN_IE_LEN;
 			continue;
 		}
@@ -2102,7 +2113,8 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 							MIN_IE_LEN;
 					}
 				}
-			} else if (tmp_old[0] == WLAN_ELEMID_EXTN_ELEM) {
+			} else if (tmp_old[0] == WLAN_ELEMID_EXTN_ELEM &&
+				   tmp_rem_len >= (MIN_IE_LEN + 1)) {
 				if (tmp_old[PAYLOAD_START_POS] ==
 				    tmp[PAYLOAD_START_POS]) {
 					/* same ie, copy from subelement */
@@ -2136,7 +2148,8 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 			}
 		}
 
-		if (((tmp_old + tmp_old[1] + MIN_IE_LEN) - ie) >= ielen)
+		if (((tmp_old + tmp_old[1] + MIN_IE_LEN) - ie) >=
+		    (ielen - MIN_IE_LEN))
 			break;
 
 		tmp_old += tmp_old[1] + MIN_IE_LEN;
