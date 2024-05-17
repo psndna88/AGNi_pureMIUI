@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 5.4.275 Kernel Configuration
+# Linux/arm64 5.4.277 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 14.1.4"
 CONFIG_GCC_VERSION=0
@@ -21,7 +21,7 @@ CONFIG_THREAD_INFO_IN_TASK=y
 #
 CONFIG_INIT_ENV_ARG_LIMIT=32
 # CONFIG_COMPILE_TEST is not set
-CONFIG_LOCALVERSION="-AGNi_haydn_MIUI-STU_v6.0-stable-qgki"
+CONFIG_LOCALVERSION="-AGNi_haydn_HyperOS-STU_v6.1-stable-qgki"
 # CONFIG_LOCALVERSION_AUTO is not set
 CONFIG_BUILD_SALT=""
 CONFIG_DEFAULT_HOSTNAME="haydn"
@@ -3599,7 +3599,8 @@ CONFIG_CEC_PLATFORM_DRIVERS=y
 # CONFIG_CEC_GPIO is not set
 CONFIG_MSM_GLOBAL_SYNX=y
 CONFIG_MSM_CVP=y
-# CONFIG_MSM_NPU is not set
+CONFIG_MSM_NPU=y
+CONFIG_VIRTIO_NPU=y
 
 #
 # Supported MMC/SDIO adapters
