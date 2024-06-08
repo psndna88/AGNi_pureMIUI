@@ -196,7 +196,7 @@ int kswapd_threads_current = DEF_KSWAPD_THREADS_PER_NODE;
 /*
  * From 0 .. 200.  Higher means more swappy.
  */
-int vm_swappiness = 100;
+int vm_swappiness = 60;
 /*
  * The total number of pages which are beyond the high watermark within all
  * zones.
@@ -4100,7 +4100,7 @@ static bool age_lruvec(struct lruvec *lruvec, struct scan_control *sc, unsigned 
 }
 
 /* to protect the working set of the last N jiffies */
-static unsigned long lru_gen_min_ttl __read_mostly = 1250; //5000ms @ CONFIG_HZ=250
+static unsigned long lru_gen_min_ttl __read_mostly = 5000;
 
 static void lru_gen_age_node(struct pglist_data *pgdat, struct scan_control *sc)
 {
