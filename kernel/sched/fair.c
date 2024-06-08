@@ -77,7 +77,7 @@ static unsigned int sched_nr_latency = 8;
  * After fork, child runs first. If set to 0 (default) then
  * parent will (try to) run first.
  */
-unsigned int sysctl_sched_child_runs_first __read_mostly = 0;
+unsigned int sysctl_sched_child_runs_first __read_mostly = 1;
 
 /*
  * SCHED_OTHER wake-up granularity.
@@ -88,10 +88,10 @@ unsigned int sysctl_sched_child_runs_first __read_mostly = 0;
  *
  * (default: 1 msec * (1 + ilog(ncpus)), units: nanoseconds)
  */
-unsigned int sysctl_sched_wakeup_granularity			= 3000000UL;
-static unsigned int normalized_sysctl_sched_wakeup_granularity	= 3000000UL;
+unsigned int sysctl_sched_wakeup_granularity			= 1500000UL;
+static unsigned int normalized_sysctl_sched_wakeup_granularity	= 1500000UL;
 
-const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
+const_debug unsigned int sysctl_sched_migration_cost	= 50000UL;
 DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
 
 /*
