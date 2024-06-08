@@ -363,7 +363,7 @@ static struct ctl_table sysctl_base_table[] = {
 	{ }
 };
 
-static int min_sched_granularity_ns = 100000;		/* 100 usecs */
+static int min_sched_granularity_ns = 1000000;		/* 100 usecs */
 static int max_sched_granularity_ns = NSEC_PER_SEC;	/* 1 second */
 static int min_wakeup_granularity_ns;			/* 0 usecs */
 static int max_wakeup_granularity_ns = NSEC_PER_SEC;	/* 1 second */
