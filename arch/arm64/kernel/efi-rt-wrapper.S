@@ -52,6 +52,13 @@ ENTRY(__efi_rt_asm_wrapper)
 	ldr_l	x18, efi_rt_stack_top
 	ldr	x18, [x18, #-16]
 #endif
-
+	/*
+	 * With CONFIG_SHADOW_CALL_STACK, the kernel uses x18 to store a
+	 * shadow stack pointer, which we need to restore before returning to
+	 * potentially instrumented code. This is safe because the wrapper is
+	 * called with preemption disabled and a separate shadow stack is used
+	 * for interrupts.
+	 */
+	mov	x18, x2
 	b	efi_handle_corrupted_x18	// tail call
 ENDPROC(__efi_rt_asm_wrapper)
