@@ -1267,10 +1267,17 @@ config CC_OPTIMIZE_FOR_PERFORMANCE
 
 config CC_OPTIMIZE_FOR_PERFORMANCE_O3
 	bool "Optimize more for performance (-O3)"
-	depends on ARC
 	help
 	  Choosing this option will pass "-O3" to your compiler to optimize
 	  the kernel yet more for performance.
+
+config CC_OPTIMIZE_FOR_PERFORMANCE_QC_LLVM
+	bool "Optimize more for high performance (-Ofast)"
+	help
+	  Choosing this option will pass "-Ofast" to your compiler to optimize
+	  the kernel yet more for recommended optimization level for best
+	  performance. Enables all high performance features including 
+	  auto vectorization
 
 config CC_OPTIMIZE_FOR_SIZE
 	bool "Optimize for size (-Os)"
