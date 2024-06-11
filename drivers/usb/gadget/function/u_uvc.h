@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * u_uvc.h
  *
@@ -27,6 +27,7 @@ struct f_uvc_opts {
 
 	unsigned int					control_interface;
 	unsigned int					streaming_interface;
+	char						function_name[32];
 
 	/*
 	 * Control descriptors array pointers for full-/high-speed and
