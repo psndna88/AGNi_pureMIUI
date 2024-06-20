@@ -1854,7 +1854,7 @@ struct doubletag_mux_mapping_table_t {
 struct tunnel_protocols_config_table_t {
 	struct untag_pkt_config_t untagged_mapping_table;
 	uint8_t num_of_single_tag_configs;
-	uint8_t pad0; /*for alignment*/
+	uint8_t feature_mode;
 	uint16_t pad1; /*for alignment*/
 	uint32_t pad2; /*for alignment*/
 	/* table for single tag pkt */
