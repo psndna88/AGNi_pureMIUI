@@ -230,3 +230,11 @@ ifeq ($(CONFIG_SPECTRA_CAMERA),m)
 $(info "SPECTRA CAMERA IS BUILT AS DLKM")
 BOARD_VENDOR_KERNEL_MODULES +=  $(KERNEL_MODULES_OUT)/camera.ko
 endif
+
+cameralog-y := \
+    cam_log/cam_log.o
+obj-$(CONFIG_SPECTRA_CAMERA) += cameralog.o
+ifeq ($(CONFIG_SPECTRA_CAMERA),m)
+$(info "SPECTRA CAMERA IS BUILT AS DLKM")
+BOARD_VENDOR_KERNEL_MODULES +=  $(KERNEL_MODULES_OUT)/cameralog.ko
+endif
