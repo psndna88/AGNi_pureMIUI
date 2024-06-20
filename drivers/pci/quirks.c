@@ -2337,6 +2337,22 @@ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x10f1, quirk_disable_aspm_l0s);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x10f4, quirk_disable_aspm_l0s);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_INTEL, 0x1508, quirk_disable_aspm_l0s);
 
+/*
+ * QPS615 PCIe-PCI bridge devices cause AER timeout errors on the upstream
+ * PCIe root port when L0s is enabled in CPE platform with SDX65.
+ * Disable L0s for both QPS615 and SDX65 when QPS615 switch is
+ * present.
+ */
+static void quirk_disable_aspm_qps615_l0s(struct pci_dev *dev)
+{
+	struct pci_dev *p;
+
+	pci_disable_link_state(dev, PCIE_LINK_STATE_L0S);
+	p = pci_get_device(PCI_VENDOR_ID_QCOM, 0x0308, NULL);
+	pci_disable_link_state(p, PCIE_LINK_STATE_L0S);
+}
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_TOSHIBA, 0x0623, quirk_disable_aspm_qps615_l0s);
+
 static void quirk_disable_aspm_l0s_l1(struct pci_dev *dev)
 {
 	pci_info(dev, "Disabling ASPM L0s/L1\n");

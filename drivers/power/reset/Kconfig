@@ -132,6 +132,16 @@ config POWER_RESET_QCOM_DOWNLOAD_MODE_DEFAULT
 
 	  Say Y here to enable "download mode" by default.
 
+config POWER_RESET_QCOM_DOWNLOAD_MODE_NODUMP
+	bool "MSM download mode as nodump"
+	depends on POWER_RESET_QCOM_DOWNLOAD_MODE
+	help
+	  Support MSM boards to be able to set nodump as download mode,
+	  when unexpected warm-restart is called, so that device will
+	  not go into ramdump path.
+
+	  Say N if not sure.
+
 config POWER_RESET_QCOM_PON
 	tristate "Qualcomm power-on driver"
 	depends on ARCH_QCOM

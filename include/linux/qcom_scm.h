@@ -95,6 +95,7 @@ extern int qcom_scm_set_remote_state(u32 state, u32 id);
 extern int qcom_scm_spin_cpu(void);
 extern void qcom_scm_set_download_mode(enum qcom_download_mode mode,
 				       phys_addr_t tcsr_boot_misc);
+extern int qcom_scm_get_download_mode(unsigned int *mode, phys_addr_t tcsr_boot_misc);
 extern int qcom_scm_config_cpu_errata(void);
 extern void qcom_scm_phy_update_scm_level_shifter(u32 val);
 extern bool qcom_scm_pas_supported(u32 peripheral);
@@ -243,6 +244,8 @@ static inline u32 qcom_scm_set_remote_state(u32 state, u32 id)
 		{ return -ENODEV; }
 static inline int qcom_scm_spin_cpu(void) { return -ENODEV; }
 static inline void qcom_scm_set_download_mode(enum qcom_download_mode mode,
+		phys_addr_t tcsr_boot_misc) {}
+static inline int qcom_scm_get_download_mode(unsigned int *mode,
 		phys_addr_t tcsr_boot_misc) {}
 static inline int qcom_scm_config_cpu_errata(void)
 		{ return -ENODEV; }
