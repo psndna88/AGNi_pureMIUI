@@ -302,12 +302,13 @@ int mi_dsi_panel_parse_config(struct dsi_panel *panel)
 			"mi,mdss-dsi-bl-dcs-big-endian-type");
 
 	rc = utils->read_u64(utils->data, "mi,panel-id", &mi_cfg->panel_id);
+	mi_cfg->panel_id = 0x4B313100380800;
 	if (rc) {
 		mi_cfg->panel_id = 0;
 		DISP_INFO("mi,panel-id not specified\n");
 	} else {
 		DISP_INFO("mi,panel-id is 0x%llx\n", mi_cfg->panel_id);
-		if (mi_cfg->panel_id == 0x4B3800420200) {
+		if (mi_cfg->panel_id == 0x4B313100380800) {
 			demura_ptr = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_SW_DISPLAY_DEMURA_TABLE, &item_size);
 			if (!IS_ERR(demura_ptr) && item_size > 0) {
 				DSI_INFO("demura data size %d\n", item_size);

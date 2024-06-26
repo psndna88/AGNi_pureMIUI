@@ -391,7 +391,7 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
 
-	if (panel->mi_panel_id == 0x4D323000360200) {
+	if (panel->mi_panel_id == 0x4B313100380800) {
 	  mdelay(5);
 	}
 
@@ -3728,6 +3728,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	}
 
 	rc = utils->read_u64(utils->data, "mi,panel-id", &panel->mi_panel_id);
+	panel->mi_panel_id = 0x4B313100380800;
 	if (rc) {
 		panel->mi_panel_id = 0;
 		DSI_INFO("mi,panel-id not specified\n");
@@ -4331,7 +4332,7 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 			goto parse_fail;
 		}
 
-		if (panel->mi_cfg.panel_id == 0x4B3800420200) {
+		if (panel->mi_cfg.panel_id == 0x4B313100380800) {
 			if (mode->timing.refresh_rate == 60)
 				j = 0;
 			else if (mode->timing.refresh_rate == 90)
@@ -4967,7 +4968,7 @@ int dsi_panel_switch(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
-	if (panel->mi_cfg.dfps_bl_ctrl || panel->mi_cfg.panel_id == 0x4B3800420200
+	if (panel->mi_cfg.dfps_bl_ctrl || panel->mi_cfg.panel_id == 0x4B313100380800
 		|| panel->mi_cfg.gir_enabled)
 		rc = mi_dsi_fps_switch(panel);
 	else
@@ -5073,7 +5074,7 @@ error:
 		}
 	}
 
-	if (panel->mi_panel_id == 0x4D323000360200) {
+	if (panel->mi_panel_id == 0x4B313100380800) {
 		dsi_panel_gamma_switch(panel);
 	}
 
@@ -5143,12 +5144,12 @@ int dsi_panel_disable(struct dsi_panel *panel)
 			panel->power_mode == SDE_MODE_DPMS_LP2))
 			dsi_pwr_panel_regulator_mode_set(&panel->power_info,
 				"ibb", REGULATOR_MODE_STANDBY);
-		if (panel->mi_cfg.panel_id == 0x4B3800420200 &&
+		if (panel->mi_cfg.panel_id == 0x4B313100380800 &&
 			(panel->power_mode == SDE_MODE_DPMS_LP1 ||
 			panel->power_mode == SDE_MODE_DPMS_LP2)) {
 			rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_MI_PRE_DOZE_TO_OFF);
 			if (rc)
-				DISP_ERROR("[%s] failed to send DSI_CMD_SET_MI_RRE_DOZE_TO_OFF cmds, rc=%d\n",
+				DISP_ERROR("[%s] failed to send DSI_CMD_SET_MI_PRE_DOZE_TO_OFF cmds, rc=%d\n",
 					panel->name, rc);
 			else
 				DISP_INFO("%s panel: DSI_CMD_SET_MI_PRE_DOZE_TO_OFF\n", panel->type);

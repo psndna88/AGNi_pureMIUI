@@ -8545,7 +8545,7 @@ int dsi_display_enable(struct dsi_display *display)
 		DSI_DEBUG("cont splash enabled, display enable not required\n");
 		dsi_display_panel_id_notification(display);
 
-		if (mi_get_disp_id(display) == MI_DISP_PRIMARY && display->panel->mi_cfg.panel_id == 0x4B3800420200) {
+		if (mi_get_disp_id(display) == MI_DISP_PRIMARY && display->panel->mi_cfg.panel_id == 0x4B313100380800) {
 			if (display->panel->mi_cfg.feature_val[DISP_FEATURE_BIC] == BIC_UPDAT_REG_RIGHT_NOW)
 				mi_dsi_set_bic_reg(display->panel);
 			mi_dsi_panel_lhbm_set(display->panel);
@@ -8608,7 +8608,7 @@ int dsi_display_enable(struct dsi_display *display)
 		goto error;
 	}
 
-	if (display->panel->mi_panel_id == 0x4D323000360200) {
+	if (display->panel->mi_panel_id == 0x4B313100380800) {
 		rc = dsi_panel_gamma_switch(display->panel);
 		if (rc) {
 		DSI_ERR("failed to switch gamma, rc=%d\n",rc);
