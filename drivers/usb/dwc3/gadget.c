@@ -100,7 +100,7 @@ int dwc3_gadget_set_link_state(struct dwc3 *dwc, enum dwc3_link_state state)
 	 * Wait until device controller is ready. Only applies to 1.94a and
 	 * later RTL.
 	 */
-	if (dwc->revision >= DWC3_REVISION_194A) {
+	if (dwc3_is_usb3(dwc) && dwc->revision >= DWC3_REVISION_194A) {
 		while (--retries) {
 			reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 			if (reg & DWC3_DSTS_DCNRD)
@@ -124,7 +124,7 @@ int dwc3_gadget_set_link_state(struct dwc3 *dwc, enum dwc3_link_state state)
 	 * The following code is racy when called from dwc3_gadget_wakeup,
 	 * and is not needed, at least on newer versions
 	 */
-	if (dwc->revision >= DWC3_REVISION_194A)
+	if (dwc3_is_usb3(dwc) && dwc->revision >= DWC3_REVISION_194A)
 		return 0;
 
 	/* wait for a change in DSTS */
@@ -2116,13 +2116,10 @@ static int dwc3_gadget_remote_wakeup(struct dwc3 *dwc)
 		goto out;
 	}
 
-	/* Recent versions do this automatically */
-	if (dwc->revision < DWC3_REVISION_194A) {
-		/* write zeroes to Link Change Request */
-		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-		reg &= ~DWC3_DCTL_ULSTCHNGREQ_MASK;
-		dwc3_writel(dwc->regs, DWC3_DCTL, reg);
-	}
+	/* write zeroes to Link Change Request */
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+	reg &= ~DWC3_DCTL_ULSTCHNGREQ_MASK;
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
 	enable_irq(dwc->irq);
