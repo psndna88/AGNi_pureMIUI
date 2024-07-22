@@ -1731,7 +1731,7 @@ struct IpaDscpVlanPcpMap_t {
 	uint8_t  num_vlan;   /* indicate how many vlans valid vlan above */
 	uint8_t  num_s_vlan; /* indicate how many vlans valid in s_vlan below */
 	uint8_t  dscp_opt;   /* indicates if dscp is required or optional */
-	uint8_t  pad1; /* for alignment */
+	uint8_t  tunnel_id;  /* tunnel id */
 	/*
 	 * The same lookup scheme, using vlan[] above, is used for
 	 * generating the first index of mpls below; and in addition,
@@ -1750,8 +1750,8 @@ struct IpaDscpVlanPcpMap_t {
 	 * mpls_val_sorted is in ascending order, by mpls label values in mpls array
 	 * vlan_c and vlan_s are vlan id values that are corresponding to the mpls label
 	 */
-	uint16_t pad2; /* for alignment */
-	uint8_t  pad3; /* for alignment */
+	uint16_t del_add_vlan_id; /* vlan id to add or del */
+	uint8_t  is_vlan_to_del_add; /* whether to add or del vlan? */
 	uint8_t  num_mpls_val_sorted; /* num of elements in mpls_val_sorted */
 	uint32_t mpls_val_sorted[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
 	uint16_t  vlan_c[IPA_EoGRE_MAX_VLAN * IPA_GRE_MAX_S_VLAN];
@@ -1825,7 +1825,7 @@ struct singletag_mux_mapping_table_t {
 	uint8_t mux_id;
 	/* flag if 1=>pkt_with_option_hdr 0=>pkt_without_option_hdr */
 	uint8_t is_v6_options_hdr_present;
-	uint16_t pad0; /*for alignment*/
+	uint16_t tunnel_id;/* tunnel_id */
 	uint32_t *tunnel_template_addr;
 } __packed;
 
@@ -1850,13 +1850,22 @@ struct doubletag_mux_mapping_table_t {
 /* max number of tunnel to support ie: per PDN two tunnel (2*8)*/
 #define MAX_TUNNEL_SUPPORT 16
 
-/* configuration table */
+/* @tunnel_protocols_config_table_t: Config tbl for uC
+ * @untagged_mapping_table : Store the untag tunnel info.
+ * @num_of_single_tag_configs : no of active tunnel in single tag config.
+ * @feature_mode: which tunnel feature is enabled.
+ * @tunnel_id: Which tunnel info receive from ipacm.
+ * @is_tunnel_id_to_del: whether tunnel to delete.
+ * @singletag_mux_mapping_table: Store tunnel info for active tunnels.
+ * @num_of_double_tag_configs: no of active tunnel in double tag config.
+ * @doubletag_mux_mapping_table: Store double tag tunnel info.
+ */
 struct tunnel_protocols_config_table_t {
 	struct untag_pkt_config_t untagged_mapping_table;
 	uint8_t num_of_single_tag_configs;
 	uint8_t feature_mode;
-	uint16_t pad1; /*for alignment*/
-	uint32_t pad2; /*for alignment*/
+	uint16_t tunnel_id;
+	uint32_t is_tunnel_id_to_del;
 	/* table for single tag pkt */
 	struct singletag_mux_mapping_table_t singletag_mux_mapping_table[MAX_TUNNEL_SUPPORT];
 	uint8_t num_of_double_tag_configs;
