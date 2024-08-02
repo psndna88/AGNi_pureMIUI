@@ -3,6 +3,7 @@
  *
  * Changes from Qualcomm Innovation Center are provided under the following license:
  * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -2348,7 +2349,7 @@ static int msm_pcm_routing_channel_mixer_v2(int fe_id, bool perf_mode,
 	int i = 0, j = 0, be_id = 0;
 	int ret = 0;
 
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: invalid FE %d\n", __func__, fe_id);
 		return 0;
 	}
@@ -2416,7 +2417,7 @@ static int msm_pcm_routing_channel_mixer(int fe_id, bool perf_mode,
 		return ret;
 	}
 
-	if (fe_id >= MSM_FRONTEND_DAI_MM_SIZE) {
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
 		pr_err("%s: invalid FE %d\n", __func__, fe_id);
 		return 0;
 	}
