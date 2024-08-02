@@ -10789,23 +10789,6 @@ csr_cm_roam_fill_11w_params(struct mac_context *mac_ctx,
 	}
 }
 
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-static void
-csr_cm_roam_fill_rsn_caps(struct mac_context *mac, uint8_t vdev_id,
-			  uint16_t *rsn_caps)
-{
-	tCsrRoamConnectedProfile *profile;
-
-	/* Copy the self RSN capabilities in roam offload request */
-	profile = &mac->roam.roamSession[vdev_id].connectedProfile;
-	*rsn_caps &= ~WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
-	*rsn_caps &= ~WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
-	if (profile->MFPRequired)
-		*rsn_caps |= WLAN_CRYPTO_RSN_CAP_MFP_REQUIRED;
-	if (profile->MFPCapable)
-		*rsn_caps |= WLAN_CRYPTO_RSN_CAP_MFP_ENABLED;
-}
-#endif
 #else
 static inline
 void csr_update_pmf_cap_from_profile(struct csr_roam_profile *profile,
@@ -10817,13 +10800,6 @@ void csr_cm_roam_fill_11w_params(struct mac_context *mac_ctx,
 				 uint8_t vdev_id,
 				 struct ap_profile_params *req)
 {}
-
-#ifdef WLAN_FEATURE_ROAM_OFFLOAD
-static inline
-void csr_cm_roam_fill_rsn_caps(struct mac_context *mac, uint8_t vdev_id,
-			       uint16_t *rsn_caps)
-{}
-#endif
 #endif
 
 QDF_STATUS csr_fill_filter_from_vdev_crypto(struct mac_context *mac_ctx,
@@ -10846,7 +10822,7 @@ QDF_STATUS csr_fill_filter_from_vdev_crypto(struct mac_context *mac_ctx,
 	filter->ucastcipherset =
 		wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_UCAST_CIPHER);
 	filter->key_mgmt =
-		wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
+		wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_ORIG_KEY_MGMT);
 	filter->mgmtcipherset =
 		wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_MGMT_CIPHER);
 
@@ -17569,6 +17545,8 @@ static void csr_update_score_params(struct mac_context *mac_ctx,
 	req_score_params->bw_weightage = weight_config->chan_width_weightage;
 	req_score_params->band_weightage = weight_config->chan_band_weightage;
 	req_score_params->nss_weightage = weight_config->nss_weightage;
+	req_score_params->security_weightage =
+					weight_config->security_weightage;
 	req_score_params->esp_qbss_weightage =
 		weight_config->channel_congestion_weightage;
 	req_score_params->beamforming_weightage =
@@ -17590,6 +17568,8 @@ static void csr_update_score_params(struct mac_context *mac_ctx,
 	req_score_params->nss_index_score =
 		score_config->nss_weight_per_index;
 
+	req_score_params->security_index_score =
+		score_config->security_weight_per_index;
 	req_score_params->vendor_roam_score_algorithm =
 			score_config->vendor_roam_score_algorithm;
 
@@ -17991,7 +17971,9 @@ csr_cm_roam_fill_crypto_params(struct mac_context *mac_ctx,
 			       struct ap_profile *profile)
 {
 	struct wlan_objmgr_vdev *vdev;
-	int32_t uccipher, authmode, mccipher, akm;
+	int32_t uccipher, authmode, mccipher, akm, key_mgmt;
+	int32_t num_allowed_authmode = 0;
+	enum wlan_crypto_key_mgmt i;
 
 	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac_ctx->psoc,
 						    session->vdev_id,
@@ -18015,6 +17997,25 @@ csr_cm_roam_fill_crypto_params(struct mac_context *mac_ctx,
 
 	/* Group cipher suite */
 	profile->rsn_mcastcipherset = cm_crypto_cipher_wmi_cipher(mccipher);
+
+	/* Get keymgmt from self security info */
+	key_mgmt = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_ORIG_KEY_MGMT);
+
+	for (i = 0; i < WLAN_CRYPTO_KEY_MGMT_MAX; i++) {
+		/*
+		 * Send AKM in allowed list which are not present in connected
+		 * akm
+		 */
+		if (QDF_HAS_PARAM(key_mgmt, i) &&
+		    num_allowed_authmode < WLAN_CRYPTO_AUTH_MAX) {
+			profile->allowed_authmode[num_allowed_authmode++] =
+			cm_crypto_authmode_to_wmi_authmode(authmode,
+							   (key_mgmt & (1 << i)),
+							   uccipher);
+		}
+	}
+
+	profile->num_allowed_authmode = num_allowed_authmode;
 }
 
 /**
@@ -18604,6 +18605,8 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 	uint16_t rsn_caps = 0;
 	tpCsrNeighborRoamControlInfo roam_info =
 		&mac->roam.neighborRoamInfo[vdev_id];
+	struct wlan_objmgr_vdev *vdev;
+	int32_t crypto_rsn = 0;
 
 	rso_config->roam_offload_enabled =
 		mac->mlme_cfg->lfr.lfr3_roaming_offload;
@@ -18668,16 +18671,30 @@ static QDF_STATUS csr_cm_roam_scan_offload_fill_lfr3_config(
 		(uint16_t)((val >> WNI_CFG_BLOCK_ACK_ENABLED_IMMEDIATE) & 1);
 	final_caps_val = (uint16_t *)&self_caps;
 
-	/*
-	 * Self rsn caps aren't sent to firmware, so in case of PMF required,
-	 * the firmware connects to a non PMF AP advertising PMF not required
-	 * in the re-assoc request which violates protocol.
-	 * So send self RSN caps to firmware in roam SCAN offload command to
-	 * let it configure the params in the re-assoc request too.
-	 * Instead of making another infra, send the RSN-CAPS in MSB of
-	 * beacon Caps.
-	 */
-	csr_cm_roam_fill_rsn_caps(mac, vdev_id, &rsn_caps);
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(mac->psoc,
+						    vdev_id,
+						    WLAN_LEGACY_SME_ID);
+	if (vdev) {
+		/*
+		 * Self rsn caps aren't sent to firmware, so in case of PMF
+		 * required, the firmware connects to a non PMF AP advertising
+		 * PMF not required in the re-assoc request which violates
+		 * protocol. So send self RSN caps to firmware in roam SCAN
+		 * offload command to let it configure the params in the
+		 * re-assoc request too. Instead of making another infra, send
+		 * the RSN-CAPS in MSB of beacon Caps.
+		 */
+		crypto_rsn =
+			wlan_crypto_get_param(vdev,
+					      WLAN_CRYPTO_PARAM_ORIG_RSN_CAP);
+		if (crypto_rsn < 0)
+			sme_err("Invalid RSN capabilities");
+		else
+			rsn_caps = (uint16_t)crypto_rsn;
+
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_LEGACY_SME_ID);
+	}
+
 	rso_config->rso_lfr3_caps.capability =
 		(rsn_caps << RSN_CAPS_SHIFT) | ((*final_caps_val) & 0xFFFF);
 

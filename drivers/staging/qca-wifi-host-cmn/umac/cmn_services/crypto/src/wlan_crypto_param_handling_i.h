@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -179,4 +180,103 @@ QDF_STATUS wlan_crypto_set_key_mgmt(struct wlan_crypto_params *crypto_params,
  * Return: bitmap value of all supported unicast ciphers
  */
 int32_t wlan_crypto_get_key_mgmt(struct wlan_crypto_params *crypto_params);
+
+/**
+ * wlan_crypto_set_orig_ucastcipher - called by ucfg to configure connection
+ *                                    request unicast ciphers in vdev
+ * @crypto_params: pointer to crypto params structure
+ * @value: bitmap value of all supported unicast ciphers
+ *
+ * This function gets called from ucfg to configure unicast ciphers in vdev
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS
+wlan_crypto_set_orig_ucastcipher(struct wlan_crypto_params *crypto_params,
+				 uint32_t value);
+
+/**
+ * wlan_crypto_get_orig_ucastcipher - called by ucfg to get connection request
+ *                                    unicast cipher from vdev
+ * @crypto_params: pointer to crypto params structure
+ *
+ * This function gets called from ucfg to get supported unicast ciphers
+ *
+ * Return: bitmap value of all supported unicast ciphers
+ */
+int32_t
+wlan_crypto_get_orig_ucastcipher(struct wlan_crypto_params *crypto_params);
+
+/**
+ * wlan_crypto_set_orig_mcastcipher - called by ucfg to configure connection
+ *                                    request mcastcipher in vdev
+ * @crypto_params: pointer to crypto params structure
+ * @wlan_crypto_cipher_type: mcast cipher value.
+ *
+ * This function gets called from ucfg to configure mcastcipher in vdev
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS
+wlan_crypto_set_orig_mcastcipher(struct wlan_crypto_params *crypto_params,
+				 wlan_crypto_cipher_type cipher);
+/**
+ * wlan_crypto_get_orig_mcastcipher - called by ucfg to get connection request
+ *                                    mcastcipher from vdev
+ * @crypto_params: pointer to crypto params structure
+ *
+ * This function gets called from ucfg to get mcastcipher of particular vdev
+ *
+ * Return: mcast cipher
+ */
+int32_t
+wlan_crypto_get_orig_mcastcipher(struct wlan_crypto_params *crypto_params);
+
+/**
+ * wlan_crypto_set_orig_key_mgmt - called by ucfg to configure connection
+ *                                 request key_mgmt in vdev
+ * @crypto_params: pointer to crypto params structure
+ * @value: bitmap value of all supported AKMs
+ *
+ * This function gets called from ucfg to configure AKMs in vdev
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS
+wlan_crypto_set_orig_key_mgmt(struct wlan_crypto_params *crypto_params,
+			      uint32_t value);
+
+/**
+ * wlan_crypto_get_orig_key_mgmt - called by ucfg to get connection request key
+ *                                 mgmt from vdev
+ * @crypto_params: pointer to crypto params structure
+ *
+ * This function gets called from ucfg to get supported AKMs
+ *
+ * Return: bitmap value of all supported AKMs
+ */
+int32_t wlan_crypto_get_orig_key_mgmt(struct wlan_crypto_params *crypto_params);
+
+/**
+ * wlan_crypto_set_orig_rsn_cap - called by ucfg to configure
+ *                                        RSN cap in vdev
+ * @crypto_params: pointer to crypto params
+ * @value: bitmap value of all supported RSN cap
+ *
+ * This function gets called from ucfg to configure RSN cap in vdev
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS wlan_crypto_set_orig_rsn_cap(struct wlan_crypto_params *crypto_params,
+					uint32_t value);
+
+/**
+ * wlan_crypto_get_orig_rsn_cap - called by ucfg to get RSN cap from vdev
+ * @crypto_params: pointer to crypto params
+ *
+ * This function gets called from ucfg to get supported RSN cap
+ *
+ * Return: bitmap value of all supported RSN cap
+ */
+int32_t wlan_crypto_get_orig_rsn_cap(struct wlan_crypto_params *crypto_params);
 #endif /* __WLAN_CRYPTO_PARAM_HANDLING_I_H_ */

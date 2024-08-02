@@ -994,6 +994,8 @@ typedef enum {
     WMI_P2P_LISTEN_OFFLOAD_START_CMDID,
     /** set listen offload stop related parameters */
     WMI_P2P_LISTEN_OFFLOAD_STOP_CMDID,
+    /** set DFS master AP configuration */
+    WMI_P2P_GO_DFS_AP_CONFIG_CMDID,
 
     /** AP power save specific config */
     /** set AP power save specific param */
@@ -1308,6 +1310,9 @@ typedef enum {
     /** WMI command to Request Opportunistic Power Mgmt (OPM) stats */
     WMI_REQUEST_OPM_STATS_CMDID,
 
+    /** WMI command to Request SAP suspend/resume */
+    WMI_SET_AP_SUSPEND_RESUME_CMDID,
+
 
     /*  Offload 11k related requests */
     WMI_11K_OFFLOAD_REPORT_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_11K_OFFLOAD),
@@ -1573,6 +1578,7 @@ typedef enum {
     WMI_TWT_NUDGE_DIALOG_CMDID,
     WMI_VDEV_SET_TWT_EDCA_PARAMS_CMDID, /* XPAN TWT */
     WMI_VDEV_GET_TWT_SESSION_STATS_INFO_CMDID,
+    WMI_TWT_VDEV_CONFIG_CMDID,
 
     /** WMI commands related to motion detection **/
     WMI_MOTION_DET_CONFIG_PARAM_CMDID = WMI_CMD_GRP_START_ID(WMI_GRP_MOTION_DET),
@@ -2086,6 +2092,9 @@ typedef enum {
     WMI_P2P_NOA_EVENTID,
     /** send p2p listen offload stopped event with different reason */
     WMI_P2P_LISTEN_OFFLOAD_STOPPED_EVENTID,
+
+    /** send event to AP assisted P2P GO to change current DFS channel */
+    WMI_P2P_CLI_DFS_AP_BMISS_DETECTED_EVENTID,
 
     /** Send EGAP Info to host */
     WMI_AP_PS_EGAP_INFO_EVENTID = WMI_EVT_GRP_START_ID(WMI_GRP_AP_PS),
@@ -4618,8 +4627,12 @@ typedef struct {
      *           and 255 indicates an invalid service class
      *      Refer to WMI_RSRC_CFG_FLAGS2_SAWF_255_SVC_CLASS_SUPPORT_GET/SET
      *      macros.
+     *  Bit 20 - enable feature EPM (Enhanced Power Management)
+     *      0 -> disable the feature
+     *      1 -> enable the feature
+     *      Refer to the below WMI_RSRC_CFG_FLAGS2_EPM_GET/SET macros.
      *
-     *  Bits 31:20 - Reserved
+     *  Bits 31:21 - Reserved
      */
     A_UINT32 flags2;
     /** @brief host_service_flags - can be used by Host to indicate
@@ -5114,6 +5127,10 @@ typedef struct {
 #define WMI_RSRC_CFG_FLAGS2_SAWF_255_SVC_CLASS_SUPPORT_SET(flags2, value) \
     WMI_SET_BITS(flags2, 19, 1, value)
 
+#define WMI_RSRC_CFG_FLAGS2_EPM_GET(flags2) \
+    WMI_GET_BITS(flags2, 20, 1)
+#define WMI_RSRC_CFG_FLAGS2_EPM_SET(flags2, value) \
+    WMI_SET_BITS(flags2, 20, 1, value)
 
 #define WMI_RSRC_CFG_HOST_SERVICE_FLAG_NAN_IFACE_SUPPORT_GET(host_service_flags) \
     WMI_GET_BITS(host_service_flags, 0, 1)
@@ -6130,6 +6147,7 @@ typedef enum {
 #define WMI_SCAN_FLAG_EXT_FAST_SCAN           0x00020000
 #define WMI_SCAN_FLAG_EXT_LOW_POWER_SCAN      0x00040000
 #define WMI_SCAN_FLAG_EXT_STOP_IF_BSSID_FOUND 0x00080000
+#define WMI_SCAN_FLAG_EXT_P2P_SCAN            0x00100000
 
 
 /**
@@ -6335,6 +6353,11 @@ enum wmi_scan_completion_reason {
     WMI_SCAN_REASON_MAX,
 };
 
+#define WMI_SCAN_EVT_IS_SCAN_TYPE_P2P_FLAG_SET(flag, value) \
+    WMI_SET_BITS(flag, 0, 1, value)
+#define WMI_SCAN_EVT_IS_SCAN_TYPE_P2P_FLAG_GET(flag) \
+    WMI_GET_BITS(flag, 0, 1)
+
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_scan_event_fixed_param */
     /** scan event (wmi_scan_event_type) */
@@ -6355,6 +6378,11 @@ typedef struct {
      * In case of STA not connected it will be the free running HW timer
      */
     A_UINT32 tsf_timestamp;
+    /** flags:
+     * Bit[0]    - indicate if scan type is for p2p
+     * Bit[1:31] - reserved
+     */
+    A_UINT32 flags;
 } wmi_scan_event_fixed_param;
 
 /* WMI Diag event */
@@ -7312,6 +7340,9 @@ typedef struct {
 #define WMI_TX_SEND_FLAG_SET_IS_SA_QUERY    0x00000004
 #define WMI_TX_SEND_FLAG_SET_IS_SA_QUERY_GET(tx_flags) WMI_GET_BITS(tx_flags, 2, 1)
 #define WMI_TX_SEND_FLAG_SET_IS_SA_QUERY_SET(tx_flags, value) WMI_SET_BITS(tx_flags, 2, 1, value)
+#define WMI_TX_SEND_FLAG_SET_P2P_FRAME_ON_STA_VDEV 0x00000008
+#define WMI_TX_SEND_FLAG_SET_P2P_FRAME_ON_STA_VDEV_GET(tx_flags) WMI_GET_BITS(tx_flags, 3, 1)
+#define WMI_TX_SEND_FLAG_SET_P2P_FRAME_ON_STA_VDEV_SET(tx_flags, value) WMI_SET_BITS(tx_flags, 3, 1, value)
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_tx_send_params */
@@ -9609,6 +9640,23 @@ typedef enum {
      * E.g. a value of 4 will result in a 1.0 dB tx power reduction.
      */
     WMI_PDEV_PARAM_PWR_REDUCTION_IN_QUARTER_DB,
+
+    WMI_PDEV_PARAM_ENABLE_CHIPSET_LOGGING,
+
+    /** SCAN MODE:
+     *  bit   | scan_mode
+     * -----------------
+     *  0     | SISO SCAN - 1x1 scan
+     *        |     If this bit is 0, then use default scan (NxN).
+     *  1-31  | Reserved.
+     */
+    WMI_PDEV_PARAM_SCAN_MODE,
+
+    /** configure datastall consecutive no ack interval (units = ms) */
+    WMI_PDEV_PARAM_DSTALL_CONSECUTIVE_TX_NO_ACK_INTERVAL,
+    /** configure datastall consecutive no ack threshold */
+    WMI_PDEV_PARAM_DSTALL_CONSECUTIVE_TX_NO_ACK_THRESHOLD,
+
 } WMI_PDEV_PARAM;
 
 #define WMI_PDEV_ONLY_BSR_TRIG_IS_ENABLED(trig_type) WMI_GET_BITS(trig_type, 0, 1)
@@ -17521,6 +17569,25 @@ typedef struct {
     A_UINT32 vdev_id;
 } wmi_vdev_delete_cmd_fixed_param;
 
+typedef struct {
+    A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_p2p_go_dfs_ap_config_fixed_param */
+    /** unique id identifying the VDEV, generated by the caller */
+    A_UINT32 vdev_id;
+    /** "set" field:
+     * HOST to specify a non-zero value if DFS master AP config is to be added,
+     * or a zero value if it is to be removed.
+     */
+    A_UINT32 set;
+    /* The TLVs follows this structure:
+     *  wmi_mac_addr bssid; <-- bssid for P2P GO's STA's connected AP,
+     *                          STA's connected AP is DFS master
+     *  optional TLV used for bssid
+     * wmi_mac_addr non_tx_bssid; <-- bssid for P2P GO's STA's connected AP,
+     *                                if connected to non TX VAP
+     *  optional TLV used for bssid
+     */
+} wmi_p2p_go_dfs_ap_config_fixed_param;
+
 enum WMI_VDEV_UP_FLAGS {
     /** EMA_MBSSID_AP
      * Valid only for STA VDEV.
@@ -17721,6 +17788,7 @@ typedef enum {
 
 /** NAN vdev config Feature flags */
 #define WMI_VDEV_NAN_ALLOW_DW_CONFIG_CHANGE_IN_SYNC_ROLE                0x1
+#define WMI_VDEV_NAN_FORCE_CONGIG_WOW_DB_INTERVAL                       0x2
 
 
 /** the definition of different VDEV parameters */
@@ -18785,6 +18853,10 @@ typedef enum {
     /* Set HW CTS2SELF before DL OFDMA Sequence */
     WMI_VDEV_PARAM_HWCTS2SELF_OFDMA,                      /* 0xC5 */
 
+    /* Update TWT_UNAVAIL_MODE */
+    WMI_VDEV_PARAM_TWT_UNAVAIL_MODE,                      /* 0xC6 */
+
+
     /*=== ADD NEW VDEV PARAM TYPES ABOVE THIS LINE ===
      * The below vdev param types are used for prototyping, and are
      * prone to change.
@@ -19620,12 +19692,20 @@ typedef struct {
     A_UINT32 cu_vdev_map_cat2_hi; /* bits 63:32 */
 } wmi_prb_resp_tmpl_ml_info;
 
+/** indicates P2P GO only case not replay probe req */
+#define WMI_PRB_TMPL_IGNORE_NONP2P_PRB_REQ 0x1
+
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_prb_tmpl_cmd_fixed_param */
     /** unique id identifying the VDEV, generated by the caller */
     A_UINT32 vdev_id;
     /** beacon buffer length. data is in TLV data[] */
     A_UINT32 buf_len;
+    /** flags to control probe tmpl:
+     * Bit     0: If set, FW should ignore non-P2P probe req
+     * Bits 31-1: Reserved
+     */
+    A_UINT32 flags;
 /*
  * The TLVs follows:
  *    wmi_bcn_prb_info bcn_prb_info; <-- beacon probe capabilities and IEs
@@ -25667,6 +25747,15 @@ typedef enum
      */
     WMI_VENDOR_OUI_ACTION_SEND_SMPS_FRAME_WITH_OMN = 12,
 
+    /* Restrict SLO if specific vendor OUI received in beacon. */
+    WMI_VENDOR_OUI_ACTION_RESTRICT_SLO = 13,
+
+    /*
+     * Force MLSR mode if specific vendor OUI received in beacon
+     * when connect with MLO.
+     */
+    WMI_VENDOR_OUI_ACTION_FORCE_MLSR = 14,
+
 
     /* Add any action before this line */
     WMI_VENDOR_OUI_ACTION_MAX_ACTION_ID
@@ -27011,7 +27100,9 @@ typedef enum {
     /** Lower threshold for beacon-RSSI. Used to increase RX chainmask. */
     WMI_STA_SMPS_PARAM_LOWER_BRSSI_THRESH = 4,
     /** Enable/Disable DTIM 1chRx feature */
-    WMI_STA_SMPS_PARAM_DTIM_1CHRX_ENABLE = 5
+    WMI_STA_SMPS_PARAM_DTIM_1CHRX_ENABLE = 5,
+    /** Enable/Disable dynamic bw feature */
+    WMI_STA_SMPS_PARAM_DYNAMIC_BW_SWITCH = 6,
 } wmi_sta_smps_param;
 
 typedef struct {
@@ -27287,7 +27378,6 @@ typedef struct
     A_UINT32      scan_req_id;
 }  wmi_lpi_status_event_fixed_param;
 
-
 typedef struct
 {
     A_UINT32      tlv_header;
@@ -27297,6 +27387,7 @@ typedef struct
     A_UINT32      rssi;
     A_UINT32      vdev_id;
 }  wmi_lpi_handoff_event_fixed_param;
+
 typedef struct
 {
     A_UINT32 tlv_header;
@@ -27304,6 +27395,19 @@ typedef struct
     A_UINT32 numScanLists;  /*number of scan in this event*/
     A_UINT32 isLastResult;  /*is this event a last event of the whole batch scan*/
 }  wmi_batch_scan_result_event_fixed_param;
+
+typedef enum {
+    /** beacons not received from P2P GO */
+    WMI_P2P_GO_BMISS = 0,
+    /** beacons not received from P2 GO's STA's connected AP */
+    WMI_DFS_AP_BMISS = 1,
+} wmi_dfs_ap_bmiss_reason;
+
+typedef struct {
+    A_UINT32 tlv_header;  /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_p2p_cli_dfs_ap_bmiss_fixed_param*/
+    A_UINT32 vdev_id;
+    A_UINT32 reason_code; /* contains a wmi_dfs_ap_bmiss_reason value */
+} wmi_p2p_cli_dfs_ap_bmiss_fixed_param;
 
 typedef struct {
     A_UINT32 tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_p2p_noa_event_fixed_param  */
@@ -37586,6 +37690,7 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_TWT_DEL_DIALOG_CMDID);
         WMI_RETURN_STRING(WMI_TWT_PAUSE_DIALOG_CMDID);
         WMI_RETURN_STRING(WMI_TWT_RESUME_DIALOG_CMDID);
+        WMI_RETURN_STRING(WMI_TWT_VDEV_CONFIG_CMDID);
         WMI_RETURN_STRING(WMI_REQUEST_ROAM_SCAN_STATS_CMDID);
         WMI_RETURN_STRING(WMI_PEER_TID_CONFIGURATIONS_CMDID);
         WMI_RETURN_STRING(WMI_VDEV_SET_CUSTOM_SW_RETRY_TH_CMDID);
@@ -37774,6 +37879,8 @@ static INLINE A_UINT8 *wmi_id_to_name(A_UINT32 wmi_command)
         WMI_RETURN_STRING(WMI_PEER_ACTIVE_TRAFFIC_MAP_CMDID);
         WMI_RETURN_STRING(WMI_REQUEST_OPM_STATS_CMDID);
         WMI_RETURN_STRING(WMI_SOC_TX_PACKET_CUSTOM_CLASSIFY_CMDID);
+        WMI_RETURN_STRING(WMI_SET_AP_SUSPEND_RESUME_CMDID);
+        WMI_RETURN_STRING(WMI_P2P_GO_DFS_AP_CONFIG_CMDID);
     }
 
     return (A_UINT8 *) "Invalid WMI cmd";
@@ -39288,6 +39395,22 @@ typedef struct {
     A_UINT32 pdev_id;
     A_UINT32 status; /* refer to WMI_DISABLE_TWT_STATUS_T enum */
 } wmi_twt_disable_complete_event_fixed_param;
+
+typedef struct {
+    A_UINT32 tlv_header;    /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_twt_vdev_config_cmd_fixed_param */
+    /** pdev_id for identifying the MAC.
+     * See macros starting with WMI_PDEV_ID_ for values.
+     */
+    A_UINT32 pdev_id;
+    A_UINT32 vdev_id;
+    /* TWT support flag to be applied to the vdev
+     * 0 = ITWT, BTWT and RTWT are disabled.
+     * 1 = ITWT is enabled
+     * 2 = ITWT and BTWT are enabled
+     * 3 = ITWT, BTWT and RTWT are enabled
+     */
+    A_UINT32 twt_support;
+} wmi_twt_vdev_config_cmd_fixed_param;
 
 /* status code of TWT Disable */
 typedef enum _WMI_DISABLE_TWT_STATUS_T {
@@ -48479,6 +48602,17 @@ typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_request_opm_stats_cmd_fixed_param */
     A_UINT32 pdev_id; /** pdev_id for identifying the MAC */
 } wmi_request_opm_stats_cmd_fixed_param;
+
+/* wmi command to suspend SAP vdev */
+typedef struct {
+    /** TLV tag and len; tag equals
+     * WMITLV_TAG_STRUC_wmi_set_ap_suspend_resume_cmd_fixed_param */
+    A_UINT32 tlv_header;
+    /* VDEV identifier */
+    A_UINT32 vdev_id; /* If 0xFF, find vdevs corresponding to MLD MAC address */
+    wmi_mac_addr mld_mac_address; /* MLD MAC address */
+    A_UINT32 is_ap_suspend; /* 1 = suspend, 0 = resume */
+} wmi_set_ap_suspend_resume_fixed_param;
 
 
 

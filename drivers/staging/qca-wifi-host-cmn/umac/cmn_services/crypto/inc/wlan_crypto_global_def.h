@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -157,7 +158,7 @@ typedef enum wlan_crypto_auth_mode {
 	WLAN_CRYPTO_AUTH_SAE      = 9,
 	WLAN_CRYPTO_AUTH_FILS_SK  = 10,
 	/** Keep WLAN_CRYPTO_AUTH_MAX at the end. */
-	WLAN_CRYPTO_AUTH_MAX      = WLAN_CRYPTO_AUTH_FILS_SK,
+	WLAN_CRYPTO_AUTH_MAX,
 } wlan_crypto_auth_mode;
 
 /* crypto capabilities */
@@ -223,7 +224,7 @@ typedef enum wlan_crypto_key_mgmt {
 	WLAN_CRYPTO_KEY_MGMT_FT_PSK_SHA384         = 25,
 	WLAN_CRYPTO_KEY_MGMT_PSK_SHA384            = 26,
 	/** Keep WLAN_CRYPTO_KEY_MGMT_MAX at the end. */
-	WLAN_CRYPTO_KEY_MGMT_MAX   = WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384,
+	WLAN_CRYPTO_KEY_MGMT_MAX,
 } wlan_crypto_key_mgmt;
 
 enum wlan_crypto_key_type {
@@ -308,6 +309,10 @@ struct wlan_crypto_pmksa {
  * @key_mgmt:           key mgmt
  * @pmksa:              pmksa
  * @rsn_caps:           rsn_capability
+ * @orig_ucastcipher:   connection request unicast ciphers
+ * @orig_mcastcipher:   connection request multicast cipher
+ * @orig_key_mgmt:      connection request key mgmt
+ * @orig_rsn_caps:      connection request rsn_capability
  *
  * This structure holds crypto params for peer or vdev
  */
@@ -320,6 +325,10 @@ struct wlan_crypto_params {
 	uint32_t key_mgmt;
 	struct   wlan_crypto_pmksa *pmksa[WLAN_CRYPTO_MAX_PMKID];
 	uint16_t rsn_caps;
+	uint32_t orig_ucastcipher;
+	uint32_t orig_mcastcipher;
+	uint32_t orig_key_mgmt;
+	uint16_t orig_rsn_caps;
 };
 
 typedef enum wlan_crypto_param_type {
@@ -331,6 +340,10 @@ typedef enum wlan_crypto_param_type {
 	WLAN_CRYPTO_PARAM_RSN_CAP,
 	WLAN_CRYPTO_PARAM_KEY_MGMT,
 	WLAN_CRYPTO_PARAM_PMKSA,
+	WLAN_CRYPTO_PARAM_ORIG_UCAST_CIPHER,
+	WLAN_CRYPTO_PARAM_ORIG_MCAST_CIPHER,
+	WLAN_CRYPTO_PARAM_ORIG_KEY_MGMT,
+	WLAN_CRYPTO_PARAM_ORIG_RSN_CAP,
 } wlan_crypto_param_type;
 
 /**

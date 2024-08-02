@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -172,6 +172,18 @@ static QDF_STATUS wlan_crypto_set_param(struct wlan_crypto_params *crypto_params
 	case WLAN_CRYPTO_PARAM_KEY_MGMT:
 		status = wlan_crypto_set_key_mgmt(crypto_params, value);
 		break;
+	case WLAN_CRYPTO_PARAM_ORIG_UCAST_CIPHER:
+		status = wlan_crypto_set_orig_ucastcipher(crypto_params, value);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_MCAST_CIPHER:
+		status = wlan_crypto_set_orig_mcastcipher(crypto_params, value);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_KEY_MGMT:
+		status = wlan_crypto_set_orig_key_mgmt(crypto_params, value);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_RSN_CAP:
+		status = wlan_crypto_set_orig_rsn_cap(crypto_params, value);
+		break;
 	default:
 		status = QDF_STATUS_E_INVAL;
 	}
@@ -278,6 +290,18 @@ static int32_t wlan_crypto_get_param_value(wlan_crypto_param_type param,
 		break;
 	case WLAN_CRYPTO_PARAM_KEY_MGMT:
 		value = wlan_crypto_get_key_mgmt(crypto_params);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_UCAST_CIPHER:
+		value = wlan_crypto_get_orig_ucastcipher(crypto_params);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_MCAST_CIPHER:
+		value = wlan_crypto_get_orig_mcastcipher(crypto_params);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_KEY_MGMT:
+		value = wlan_crypto_get_orig_key_mgmt(crypto_params);
+		break;
+	case WLAN_CRYPTO_PARAM_ORIG_RSN_CAP:
+		value = wlan_crypto_get_orig_rsn_cap(crypto_params);
 		break;
 	default:
 		value = -1;
@@ -2553,12 +2577,7 @@ static int32_t wlan_crypto_wpa_suite_to_keymgmt(const uint8_t *sel)
 	return status;
 }
 
-/*
- * Convert a RSN cipher selector OUI to an internal
- * cipher algorithm.  Where appropriate we also
- * record any key length.
- */
-static int32_t wlan_crypto_rsn_suite_to_cipher(const uint8_t *sel)
+int32_t wlan_crypto_rsn_suite_to_cipher(const uint8_t *sel)
 {
 	uint32_t w = LE_READ_4(sel);
 	int32_t status = -1;
@@ -2588,11 +2607,8 @@ static int32_t wlan_crypto_rsn_suite_to_cipher(const uint8_t *sel)
 
 	return status;
 }
-/*
- * Convert an RSN key management/authentication algorithm
- * to an internal code.
- */
-static int32_t wlan_crypto_rsn_suite_to_keymgmt(const uint8_t *sel)
+
+int32_t wlan_crypto_rsn_suite_to_keymgmt(const uint8_t *sel)
 {
 	uint32_t w = LE_READ_4(sel);
 	int32_t status = -1;
