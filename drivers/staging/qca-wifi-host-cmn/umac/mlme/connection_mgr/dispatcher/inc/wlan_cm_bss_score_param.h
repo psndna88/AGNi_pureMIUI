@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -41,6 +41,7 @@
  * @oce_ap_tx_pwr_weightage: OCE AP tx power weigtage
  * @oce_subnet_id_weightage: OCE subnet id weigtage
  * @sae_pk_ap_weightage: SAE-PK AP weigtage
+ * @security_weightage: Security weightage
  */
 struct weight_cfg {
 	uint8_t rssi_weightage;
@@ -57,6 +58,7 @@ struct weight_cfg {
 	uint8_t oce_ap_tx_pwr_weightage;
 	uint8_t oce_subnet_id_weightage;
 	uint8_t sae_pk_ap_weightage;
+	uint8_t security_weightage;
 };
 
 /**
@@ -132,6 +134,8 @@ struct per_slot_score {
  * @check_6ghz_security: check security for 6Ghz candidate
  * @standard_6ghz_conn_policy: check for 6 GHz standard connection policy
  * @key_mgmt_mask_6ghz: user configurable mask for 6ghz AKM
+ * @roam_tgt_score_cap: Roam score capability
+ * @security_weight_per_index: security weight per index
  */
 struct scoring_cfg {
 	struct weight_cfg weight_config;
@@ -147,6 +151,8 @@ struct scoring_cfg {
 	uint8_t check_6ghz_security;
 	uint8_t standard_6ghz_conn_policy:1;
 	uint32_t key_mgmt_mask_6ghz;
+	uint32_t roam_tgt_score_cap;
+	uint32_t security_weight_per_index;
 };
 
 /**
@@ -206,6 +212,14 @@ wlan_blacklist_action_on_bssid(struct wlan_objmgr_pdev *pdev,
 	return CM_BLM_NO_ACTION;
 }
 #endif
+
+enum cm_security_idx {
+	CM_SECURITY_WPA_INDEX,
+	CM_SECURITY_WPA2_INDEX,
+	CM_SECURITY_WPA3_INDEX,
+	CM_SECURITY_WPA_OPEN_WEP_INDEX,
+	CM_MAX_SECURITY_INDEX
+};
 
 /**
  * wlan_cm_calculate_bss_score() - calculate bss score for the scan list

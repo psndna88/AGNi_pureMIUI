@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022,2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1226,9 +1226,8 @@ static int __wlan_hdd_vendor_abort_scan(
 	if (0 != ret)
 		return ret;
 
-	wlan_vendor_abort_scan(hdd_ctx->pdev, data, data_len);
+	return wlan_vendor_abort_scan(hdd_ctx->pdev, data, data_len);
 
-	return ret;
 }
 
 /**
@@ -1248,6 +1247,8 @@ int wlan_hdd_vendor_abort_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 {
 	struct osif_vdev_sync *vdev_sync;
 	int errno;
+
+	hdd_enter_dev(wdev->netdev);
 
 	errno = osif_vdev_sync_op_start(wdev->netdev, &vdev_sync);
 	if (errno)
