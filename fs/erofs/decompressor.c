@@ -341,26 +341,26 @@ static int z_erofs_transform_plain(struct z_erofs_decompress_req *rq,
 		return 0;
 	}
 
-	src = kmap_local_page(rq->in[inpages - 1]) + rq->pageofs_in;
+	src = kmap_local_page_erofs(rq->in[inpages - 1]) + rq->pageofs_in;
 	if (rq->out[0]) {
-		dst = kmap_local_page(rq->out[0]);
+		dst = kmap_local_page_erofs(rq->out[0]);
 		memcpy(dst + rq->pageofs_out, src + interlaced_offset,
 		       righthalf);
-		kunmap_local(dst);
+		kunmap_local_erofs(dst);
 	}
 
 	if (outpages > inpages) {
 		DBG_BUGON(!rq->out[outpages - 1]);
 		if (rq->out[outpages - 1] != rq->in[inpages - 1]) {
-			dst = kmap_local_page(rq->out[outpages - 1]);
+			dst = kmap_local_page_erofs(rq->out[outpages - 1]);
 			memcpy(dst, interlaced_offset ? src :
 					(src + righthalf), lefthalf);
-			kunmap_local(dst);
+			kunmap_local_erofs(dst);
 		} else if (!interlaced_offset) {
 			memmove(src, src + righthalf, lefthalf);
 		}
 	}
-	kunmap_local(src);
+	kunmap_local_erofs(src);
 	return 0;
 }
 

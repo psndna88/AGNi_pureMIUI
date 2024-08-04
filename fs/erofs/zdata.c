@@ -203,7 +203,7 @@ struct z_erofs_bvec_iter {
 static struct page *z_erofs_bvec_iter_end(struct z_erofs_bvec_iter *iter)
 {
 	if (iter->bvpage)
-		kunmap_local(iter->bvset);
+		kunmap_local_erofs(iter->bvset);
 	return iter->bvpage;
 }
 
@@ -217,7 +217,7 @@ static struct page *z_erofs_bvset_flip(struct z_erofs_bvec_iter *iter)
 	DBG_BUGON(!nextpage);
 	oldpage = z_erofs_bvec_iter_end(iter);
 	iter->bvpage = nextpage;
-	iter->bvset = kmap_local_page(nextpage);
+	iter->bvset = kmap_local_page_erofs(nextpage);
 	iter->nr = (PAGE_SIZE - base) / sizeof(struct z_erofs_bvec);
 	iter->cur = 0;
 	return oldpage;
@@ -965,9 +965,9 @@ static int z_erofs_read_fragment(struct inode *inode, erofs_off_t pos,
 			return PTR_ERR(src);
 		}
 
-		dst = kmap_local_page(page);
+		dst = kmap_local_page_erofs(page);
 		memcpy(dst + pageofs + i, src + erofs_blkoff(pos), cnt);
-		kunmap_local(dst);
+		kunmap_local_erofs(dst);
 		pos += cnt;
 	}
 	erofs_put_metabuf(&buf);
@@ -1204,7 +1204,7 @@ static void z_erofs_fill_other_copies(struct z_erofs_decompress_backend *be,
 		cur = bvi->bvec.offset < 0 ? -bvi->bvec.offset : 0;
 		end = min_t(unsigned int, be->pcl->length - bvi->bvec.offset,
 			    bvi->bvec.end);
-		dst = kmap_local_page(bvi->bvec.page);
+		dst = kmap_local_page_erofs(bvi->bvec.page);
 		while (cur < end) {
 			unsigned int pgnr, scur, len;
 
@@ -1219,12 +1219,12 @@ static void z_erofs_fill_other_copies(struct z_erofs_decompress_backend *be,
 				cur += len;
 				continue;
 			}
-			src = kmap_local_page(be->decompressed_pages[pgnr]);
+			src = kmap_local_page_erofs(be->decompressed_pages[pgnr]);
 			memcpy(dst + cur, src + scur, len);
-			kunmap_local(src);
+			kunmap_local_erofs(src);
 			cur += len;
 		}
-		kunmap_local(dst);
+		kunmap_local_erofs(dst);
 		if (err)
 			z_erofs_page_mark_eio(bvi->bvec.page);
 		z_erofs_onlinepage_endio(bvi->bvec.page);
