@@ -58,8 +58,7 @@ mkdir ~/.cache/clang_thinlto-cache 2>/dev/null
 ln -s ~/.cache/clang_thinlto-cache $COMPILEDIR_HAYDN/.thinlto-cache 2>/dev/null
 
 # 90Hz dtsi replacement
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display-ORIG.dtsi
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display_90hz.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
+sed -i 's/\/delete-node\/ timing@1/\/delete-node\/ timing@2/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
 
 make O=$COMPILEDIR_HAYDN $CONFIG1
 make -j`nproc --ignore=2` O=$COMPILEDIR_HAYDN
@@ -79,8 +78,7 @@ else
 fi
 
 # 90Hz dtsi UNDO
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display_90hz.dtsi
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display-ORIG.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
+sed -i 's/\/delete-node\/ timing@2/\/delete-node\/ timing@1/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
 
 echo ""
 
