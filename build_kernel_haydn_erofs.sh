@@ -6,7 +6,7 @@ KERNELDIR=`readlink -f .`
 
 DEVICE="haydn"
 CONFIG1="agni_haydn_defconfig"
-export AGNI_BUILD_TYPE="AOSP-90HZ"
+export AGNI_BUILD_TYPE="AOSP-EROFS"
 SYNC_CONFIG=1
 
 . $KERNELDIR/AGNi_version.sh
@@ -57,9 +57,9 @@ rm $COMPILEDIR_HAYDN/.config 2>/dev/null
 mkdir ~/.cache/clang_thinlto-cache 2>/dev/null
 ln -s ~/.cache/clang_thinlto-cache $COMPILEDIR_HAYDN/.thinlto-cache 2>/dev/null
 
-# 90Hz dtsi replacement
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display-ORIG.dtsi
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display_90hz.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
+# EROFS
+sed -i 's/type = "ext4"/type = "erofs"/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/lahaina.dtsi
+sed -i 's/mnt_flags = "ro,barrier=1,discard"/mnt_flags = "ro"/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/lahaina.dtsi
 
 make O=$COMPILEDIR_HAYDN $CONFIG1
 make -j`nproc --ignore=2` O=$COMPILEDIR_HAYDN
@@ -78,9 +78,9 @@ else
 	rm -rf $KERNELDIR/$DIR
 fi
 
-# 90Hz dtsi UNDO
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display_90hz.dtsi
-mv arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display-ORIG.dtsi arch/arm64/boot/dts/vendor/qcom/display/lahaina-sde-display.dtsi
+# EROFS
+sed -i 's/type = "erofs"/type = "ext4"/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/lahaina.dtsi
+sed -i 's/mnt_flags = "ro"/mnt_flags = "ro,barrier=1,discard"/' $KERNELDIR/arch/arm64/boot/dts/vendor/qcom/lahaina.dtsi
 
 echo ""
 
