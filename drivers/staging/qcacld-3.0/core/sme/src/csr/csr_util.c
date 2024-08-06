@@ -2451,6 +2451,7 @@ static void csr_update_key_mgmt_crypto_param(struct wlan_objmgr_vdev *vdev,
 {
 	int32_t key_mgmt = 0;
 	int32_t neg_akm;
+	uint8_t i;
 
 	neg_akm = wlan_crypto_get_param(vdev, WLAN_CRYPTO_PARAM_KEY_MGMT);
 	if (neg_akm < 0) {
@@ -2458,69 +2459,66 @@ static void csr_update_key_mgmt_crypto_param(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
-	SET_PARAM(neg_akm,
-		  wlan_crypto_rsn_suite_to_keymgmt(ap_rsn.akm_suite[0]));
+	for (i = 0; i < ap_rsn.akm_suite_cnt; i++)
+		SET_PARAM(neg_akm,
+			  wlan_crypto_rsn_suite_to_keymgmt(ap_rsn.akm_suite[i]));
 
 	/*
 	 * As there can be multiple AKM present select the most secured AKM
 	 * present
 	 */
-	if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_SAE))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_SAE);
+	if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B);
-	else if (HAS_PARAM(neg_akm,
-			   WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192))
-		SET_PARAM(key_mgmt,
-			  WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B_192);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA384))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FILS_SHA384);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA256))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA256);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_OWE))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_OWE);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_DPP))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_DPP);
-	else if (HAS_PARAM(neg_akm,
-			   WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384))
-		SET_PARAM(key_mgmt,
-			  WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X_SHA384);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_PSK);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_PSK))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_PSK);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_DPP))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_DPP);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_SAE))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_SAE))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_SAE);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK_SHA384))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_PSK_SHA384);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_PSK);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA384))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_PSK_SHA384);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_PSK))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_PSK);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_WPA_NONE))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_WPA_NONE);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_OSEN))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_OSEN);
+	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_OWE))
+		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_OWE);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_WAPI_PSK))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_WAPI_PSK);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_WAPI_CERT))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_WAPI_CERT);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_CCKM))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_CCKM);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_OSEN))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_OSEN);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_WPS))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_WPS);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X);
 	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_NO_WPA))
 		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_NO_WPA);
-	else if (HAS_PARAM(neg_akm, WLAN_CRYPTO_KEY_MGMT_WPA_NONE))
-		SET_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_WPA_NONE);
 	else /* use original if no akm match */
 		key_mgmt = neg_akm;
 
@@ -2533,6 +2531,7 @@ static void csr_update_ucast_cipher_crypto_param(struct wlan_objmgr_vdev *vdev,
 {
 	int32_t ucastcipherset = 0;
 	int32_t neg_ucastcipher;
+	uint8_t i;
 
 	neg_ucastcipher = wlan_crypto_get_param(vdev,
 						WLAN_CRYPTO_PARAM_UCAST_CIPHER);
@@ -2541,8 +2540,9 @@ static void csr_update_ucast_cipher_crypto_param(struct wlan_objmgr_vdev *vdev,
 		return;
 	}
 
-	SET_PARAM(neg_ucastcipher,
-		  wlan_crypto_rsn_suite_to_cipher(ap_rsn.pwise_cipher_suites[0]));
+	for (i = 0; i < ap_rsn.pwise_cipher_suite_count; i++)
+		SET_PARAM(neg_ucastcipher,
+			  wlan_crypto_rsn_suite_to_cipher(ap_rsn.pwise_cipher_suites[i]));
 
 	/*
 	 * As there can be multiple ucastcipher present select the most secured

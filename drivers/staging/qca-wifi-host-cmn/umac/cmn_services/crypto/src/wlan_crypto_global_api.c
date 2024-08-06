@@ -4382,6 +4382,10 @@ wlan_crypto_merge_prarams(struct wlan_crypto_params *dst_params,
 	dst_params->cipher_caps |= src_params->cipher_caps;
 	dst_params->key_mgmt |= src_params->key_mgmt;
 	dst_params->rsn_caps |= src_params->rsn_caps;
+	dst_params->orig_ucastcipher |= src_params->ucastcipherset;
+	dst_params->orig_mcastcipher |= src_params->mcastcipherset;
+	dst_params->orig_key_mgmt |= src_params->key_mgmt;
+	dst_params->orig_rsn_caps |= src_params->rsn_caps;
 }
 
 static void
