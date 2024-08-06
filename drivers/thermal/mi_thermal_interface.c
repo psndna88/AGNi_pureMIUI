@@ -27,6 +27,7 @@ struct mi_thermal_device  {
 	int usb_online;
 };
 
+static bool usb_online = false;
 static struct mi_thermal_device mi_thermal_dev;
 
 struct screen_monitor {
@@ -87,7 +88,10 @@ static int screen_state_for_thermal_callback(struct notifier_block *nb,
 	blank = *(int *)(evdata->data);
 	switch (blank) {
 	case MI_DISP_DPMS_ON:
-		sm.screen_state = 1;
+		if (usb_online)
+			sm.screen_state = 0;
+		else
+			sm.screen_state = 1;
 		break;
 	case MI_DISP_DPMS_LP1:
 	case MI_DISP_DPMS_LP2:
@@ -113,8 +117,10 @@ static int usb_online_callback(struct notifier_block *nb,
 	union power_supply_propval ret = {0,};
 	int err = 0;
 
-	if (strcmp(psy->desc->name, "usb"))
+	if (strcmp(psy->desc->name, "usb")) {
+		usb_online = true;
 		return NOTIFY_OK;
+	}
 
 	if (!usb_psy)
 		usb_psy = power_supply_get_by_name("usb");
@@ -123,12 +129,13 @@ static int usb_online_callback(struct notifier_block *nb,
 				POWER_SUPPLY_PROP_ONLINE, &ret);
 		if (err) {
 			pr_err("usb online read error:%d\n",err);
+			usb_online = false;
 			return err;
 		}
 		mi_thermal_dev.usb_online = ret.intval;
 		sysfs_notify(&mi_thermal_dev.dev->kobj, NULL, "usb_online");
+		usb_online = true;
 	}
-
 	return NOTIFY_OK;
 }
 
