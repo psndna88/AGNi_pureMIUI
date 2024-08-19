@@ -716,7 +716,7 @@ And public attribution of xiaomi platforms(like venus and so and)
 &qupv3_se2_spi {
         status = "ok";
         ir-spi@0 {
-                compatible = "ir-spi";
+                compatible = "ir-spi-led";
                 reg = <0>;
                 spi-max-frequency = <19200000>;
                 status = "ok";
