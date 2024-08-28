@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/err.h>
 #include <linux/module.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
@@ -205,9 +207,94 @@ static int get_device_tree_data(struct platform_device *pdev,
 	return rc;
 }
 
+static void tsens_thermal_zone_trip_update(struct tsens_device *tmdev,
+					struct thermal_zone_device *tz,
+					const struct thermal_trip *trip, int trip_id)
+{
+	int ret = 0;
+	u32 trip_delta = 0;
+	int trip_temp;
+
+	if (trip->type == THERMAL_TRIP_CRITICAL)
+		return;
+
+	if (strnstr(tz->type, "cpu", sizeof(tz->type)))
+		trip_delta = TSENS_ELEVATE_CPU_DELTA;
+	else
+		trip_delta = TSENS_ELEVATE_DELTA;
+
+	trip_temp = trip->temperature + trip_delta;
+	if (tz->ops->set_trip_temp) {
+		ret = tz->ops->set_trip_temp(tz, trip_id, trip_temp);
+		if (ret) {
+			dev_err(tmdev->dev, "%s: failed to set trip%d for %s\n",
+				__func__, trip_id, tz->type);
+			return;
+		}
+	}
+	thermal_zone_device_update(tz, THERMAL_TRIP_CHANGED);
+}
+
+static int tsens_nvmem_trip_update(struct tsens_device *tmdev,
+				struct thermal_zone_device *tz)
+{
+	int i, num_trips = 0;
+	const struct thermal_trip *trips = NULL;
+
+	if (strnstr(tz->type, "mdmss", sizeof(tz->type)) ||
+		!strnstr(tz->governor->name, "step_wise",
+				sizeof(tz->governor->name)))
+		return 0;
+
+	if (!tz->ops->set_trip_temp) {
+		dev_err(tmdev->dev, "%s: No set_trip_temp ops support for %s\n",
+			__func__, tz->type);
+		return -EINVAL;
+	}
+
+	num_trips = of_thermal_get_ntrips(tz);
+	trips = of_thermal_get_trip_points(tz);
+	for (i = 0; i < num_trips; i++)
+		tsens_thermal_zone_trip_update(tmdev, tz, &trips[i], i);
+
+	return 0;
+}
+
+static bool tsens_is_nvmem_trip_update_needed(struct tsens_device *tmdev)
+{
+	int ret;
+	u32 chipinfo, tsens_jtag;
+	u8 tsens_feat_id;
+
+	if (!of_property_read_bool(tmdev->dev->of_node, "nvmem-cells"))
+		return false;
+
+	ret = nvmem_cell_read_u32(tmdev->dev, "tsens_chipinfo", &chipinfo);
+	if (ret) {
+		dev_err(tmdev->dev,
+			"%s: Not able to read tsens_chipinfo nvmem, ret:%d\n",
+			__func__, ret);
+		return false;
+	}
+
+	tsens_jtag = chipinfo & GENMASK(19, 0);
+	tsens_feat_id = (chipinfo >> TSENS_FEAT_OFFSET) & GENMASK(7, 0);
+	dev_dbg(tmdev->dev, "chipinfo:0x%x tsens_jtag: 0x%x tsens_feat_id:0x%x",
+		chipinfo, tsens_jtag, tsens_feat_id);
+	if ((tsens_jtag == TSENS_CHIP_ID0 && tsens_feat_id == TSENS_FEAT_ID3) ||
+	    (tsens_jtag == TSENS_CHIP_ID1 && tsens_feat_id == TSENS_FEAT_ID4) ||
+	    (tsens_jtag == TSENS_CHIP_ID2 && tsens_feat_id == TSENS_FEAT_ID3) ||
+	    (tsens_jtag == TSENS_CHIP_ID3 && tsens_feat_id == TSENS_FEAT_ID2))
+		return true;
+
+	return false;
+}
+
 static int tsens_thermal_zone_register(struct tsens_device *tmdev)
 {
 	int i = 0, sensor_missing = 0;
+
+	tmdev->need_trip_update = tsens_is_nvmem_trip_update_needed(tmdev);
 
 	for (i = 0; i < TSENS_MAX_SENSORS; i++) {
 		tmdev->sensor[i].tmdev = tmdev;
@@ -222,6 +309,9 @@ static int tsens_thermal_zone_register(struct tsens_device *tmdev)
 				sensor_missing++;
 				continue;
 			}
+			if (tmdev->need_trip_update)
+				tsens_nvmem_trip_update(tmdev,
+						tmdev->sensor[i].tzd);
 		} else {
 			pr_debug("Sensor not enabled:%d\n", i);
 		}

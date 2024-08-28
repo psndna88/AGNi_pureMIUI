@@ -1140,6 +1140,48 @@ static inline const char *exception_type_as_str(enum ipa_exception_type t)
 		"???";
 }
 
+/**
+ * Macro ipa_exception_type_pppoe
+ *
+ * This macro is for describing which field is to be looked at for
+ * exception path consideration.
+ *
+ * NOTE 1: The field implies an offset into the packet under
+ *         consideration.  This offset will be calculated on behalf of
+ *         the user of this API.
+ *
+ * NOTE 2: When exceptions are generated/sent in an ipa_exception
+ *         structure, they will considered to be from the upload
+ *         perspective. And when appropriate, a corresponding, and
+ *         perhaps inverted, downlink exception will be automatically
+ *         created on the callers behalf.  As an example: If a
+ *         FIELD_UDP_SRC_PORT is sent, an uplink exception will be
+ *         created for udp source port, and a corresponding
+ *         FIELD_UDP_DST_PORT will be automatically created for the
+ *         downlink.
+ */
+#define FIELD_IP_PROTOCOL_PPPOE (FIELD_ETHER_TYPE + 1)
+#define FIELD_TCP_SRC_PORT_PPPOE (FIELD_IP_PROTOCOL_PPPOE + 1)
+#define FIELD_TCP_DST_PORT_PPPOE (FIELD_TCP_SRC_PORT_PPPOE + 1)
+#define FIELD_UDP_SRC_PORT_PPPOE (FIELD_TCP_DST_PORT_PPPOE + 1)
+#define FIELD_UDP_DST_PORT_PPPOE (FIELD_UDP_SRC_PORT_PPPOE + 1)
+#define FIELD_ETHER_TYPE_PPPOE   (FIELD_UDP_DST_PORT_PPPOE + 1)
+#define FIELD_PPPOE_MAX	(FIELD_ETHER_TYPE_PPPOE + 1)
+
+/* Function to read PPPoE exception in string format */
+static inline const char *pppoe_exception_type_as_str(uint32_t t)
+{
+	return
+		(t == FIELD_IP_PROTOCOL_PPPOE)  ? "pppoe_ip_protocol"  :
+		(t == FIELD_TCP_SRC_PORT_PPPOE) ? "pppoe_tcp_src_port" :
+		(t == FIELD_TCP_DST_PORT_PPPOE) ? "pppoe_tcp_dst_port" :
+		(t == FIELD_UDP_SRC_PORT_PPPOE) ? "pppoe_udp_src_port" :
+		(t == FIELD_UDP_DST_PORT_PPPOE) ? "pppoe_udp_dst_port" :
+		(t == FIELD_ETHER_TYPE_PPPOE)   ? "pppoe_ether_type"   :
+		(t == FIELD_PPPOE_MAX)          ? "pppoe_max"          :
+		"???";
+}
+
 #define IP_TYPE_EXCEPTION(x) \
 	((x) == FIELD_IP_PROTOCOL  || \
 	  (x) == FIELD_TCP_SRC_PORT || \
@@ -1220,6 +1262,7 @@ struct ipa_field_val_equation_gen {
  * @payload_length: Payload length.
  * @ext_attrib_mask: Extended attributes.
  * @l2tp_udp_next_hdr: next header in L2TP tunneling
+ * @p_exception : exception to enable for mpls-pppoe
  * @field_val_equ: for finding a value at a particular offset
  */
 struct ipa_rule_attrib {
@@ -1265,7 +1308,7 @@ struct ipa_rule_attrib {
 	__u16 payload_length;
 	__u32 ext_attrib_mask;
 	__u8 l2tp_udp_next_hdr;
-	__u8 padding1;
+	__u8 p_exception;
 	struct ipa_field_val_equation_gen fld_val_eq;
 };
 
