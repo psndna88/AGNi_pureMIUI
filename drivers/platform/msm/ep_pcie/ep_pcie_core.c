@@ -2352,7 +2352,6 @@ static irqreturn_t ep_pcie_handle_dstate_change_irq(int irq, void *data)
 		EP_PCIE_DBG(dev,
 			"PCIe V%d: No. %ld change to D3 state\n",
 			dev->rev, dev->d3_counter);
-		ep_pcie_write_mask(dev->parf + PCIE20_PARF_PM_CTRL, 0, BIT(1));
 
 		dev->pme_en_d3 = readl_relaxed(dev->dm_core +
 						PCIE20_CON_STATUS) & PCIE20_MASK_PME_EN;
@@ -2370,13 +2369,6 @@ static irqreturn_t ep_pcie_handle_dstate_change_irq(int irq, void *data)
 	} else if (dstate == 0) {
 		dev->l23_ready = false;
 		dev->d0_counter++;
-		/*
-		 * When device is trasistion back to D0 from D3hot
-		 * (without D3cold), REQ_EXIT_L1 bit won't get cleared.
-		 * And L1 would get blocked till next D3cold.
-		 * So clear it explicitly during D0.
-		 */
-		ep_pcie_write_mask(dev->parf + PCIE20_PARF_PM_CTRL, BIT(1), 0);
 
 		atomic_set(&dev->host_wake_pending, 0);
 		EP_PCIE_DBG(dev,
@@ -3244,6 +3236,11 @@ static int ep_pcie_core_wakeup_host_internal(enum ep_pcie_event event)
 {
 	struct ep_pcie_dev_t *dev = &ep_pcie_dev;
 
+	if (atomic_read(&dev->host_wake_pending)) {
+		EP_PCIE_DBG(dev, "PCIe V%d: Host wake is already pending, returning\n", dev->rev);
+		return 0;
+	}
+
 	if (!atomic_read(&dev->perst_deast)) {
 		/*D3 cold handling*/
 		ep_pcie_core_toggle_wake_gpio(true);
@@ -3254,12 +3251,14 @@ static int ep_pcie_core_wakeup_host_internal(enum ep_pcie_event event)
 			 */
 			dev->wake_from_d3cold = true;
 		}
+		atomic_set(&dev->host_wake_pending, 1);
 	} else if (dev->l23_ready) {
 		EP_PCIE_ERR(dev,
 			"PCIe V%d: request to assert WAKE# when in D3hot\n",
 			dev->rev);
 		/*D3 hot handling*/
 		ep_pcie_core_issue_inband_pme();
+		atomic_set(&dev->host_wake_pending, 1);
 	} else {
 		/*D0 handling*/
 		EP_PCIE_ERR(dev,
@@ -3267,7 +3266,6 @@ static int ep_pcie_core_wakeup_host_internal(enum ep_pcie_event event)
 			dev->rev);
 	}
 
-	atomic_set(&dev->host_wake_pending, 1);
 	EP_PCIE_DBG(dev,
 		"PCIe V%d: Set wake pending : %d and return ; perst is %s de-asserted; D3hot is %s set\n",
 		dev->rev, atomic_read(&dev->host_wake_pending),
