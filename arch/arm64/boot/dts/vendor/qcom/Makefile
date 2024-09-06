@@ -1,8 +1,8 @@
 ifneq ($(CONFIG_ARCH_QTI_VM), y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
-dtbo-$(CONFIG_ARCH_LAHAINA) += haydn-sm8350-overlay.dtbo
+dtbo-$(CONFIG_ARCH_LAHAINA) += vili-sm8350-overlay.dtbo
 
-haydn-sm8350-overlay.dtbo-base := lahaina.dtb
+vili-sm8350-overlay.dtbo-base := lahaina.dtb
 else
 dtb-$(CONFIG_ARCH_LAHAINA) += lahaina-rumi.dtb \
 	lahaina-mtp-hsp.dtb \
