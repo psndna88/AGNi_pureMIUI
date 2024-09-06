@@ -4,8 +4,8 @@ export SUBARCH=arm64
 
 KERNELDIR=`readlink -f .`
 
-DEVICE="haydn"
-CONFIG1="agni_haydn_defconfig"
+DEVICE="vili"
+CONFIG1="agni_vili_defconfig"
 export AGNI_BUILD_TYPE="HyperOS"
 SYNC_CONFIG=1
 
