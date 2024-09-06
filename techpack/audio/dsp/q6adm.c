@@ -58,6 +58,9 @@ static bool close_usb;
 typedef int (*adm_cb)(uint32_t opcode, uint32_t token,
 		       uint32_t *pp_event_package, void *pvt);
 
+static bool is_usb_timeout;
+static bool close_usb;
+
 struct adm_copp {
 
 	atomic_t id[AFE_MAX_PORTS][MAX_COPPS_PER_PORT];
@@ -2806,6 +2809,61 @@ fail_cmd:
 	return ret;
 }
 EXPORT_SYMBOL(adm_connect_afe_port);
+
+/**
+ * adm_set_device_model -
+ *        command to send device model to adsp
+ *
+ * @model: value of model
+ *
+ * Returns 0 on success or error on failure
+ */
+int adm_set_device_model(int device_model)
+{
+	struct adm_cmd_set_device_model	cmd;
+	int ret = 0;
+
+	pr_debug("%s: mode:%d\n", __func__, device_model);
+
+	if (this_adm.apr == NULL) {
+		this_adm.apr = apr_register("ADSP", "ADM", adm_callback,
+						0xFFFFFFFF, &this_adm);
+		if (this_adm.apr == NULL) {
+			pr_err("%s: Unable to register ADM\n", __func__);
+			ret = -ENODEV;
+			return ret;
+		}
+		rtac_set_adm_handle(this_adm.apr);
+	}
+
+	cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+			APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	cmd.hdr.pkt_size = sizeof(cmd);
+	cmd.hdr.src_svc = APR_SVC_ADM;
+	cmd.hdr.src_domain = APR_DOMAIN_APPS;
+	cmd.hdr.src_port = 0;
+	cmd.hdr.dest_svc = APR_SVC_ADM;
+	cmd.hdr.dest_domain = APR_DOMAIN_ADSP;
+	cmd.hdr.dest_port = 0; /* Ignored */
+	cmd.hdr.token = 0;
+	cmd.hdr.opcode = ADM_CMD_SET_DEVICE_MODEL;
+
+	cmd.model = device_model;
+
+	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&cmd);
+	if (ret < 0) {
+		pr_err("%s: send device model: 0x%x failed ret %d\n",
+					__func__, device_model, ret);
+		ret = -EINVAL;
+		goto fail_cmd;
+	}
+	return 0;
+
+fail_cmd:
+
+	return ret;
+}
+EXPORT_SYMBOL(adm_set_device_model);
 
 int adm_arrange_mch_map(struct adm_cmd_device_open_v5 *open, int path,
 			 int channel_mode, int port_idx)

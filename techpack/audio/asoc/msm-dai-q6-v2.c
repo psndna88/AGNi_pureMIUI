@@ -4479,6 +4479,14 @@ static const struct soc_enum rt_proxy_1_tx_enum =
 	SOC_ENUM_SINGLE(RT_PROXY_PORT_001_TX, 0, ARRAY_SIZE(afe_cal_mode_text),
 			afe_cal_mode_text);
 
+static const struct soc_enum cdc_dma_tx_4_enum =
+	SOC_ENUM_SINGLE(AFE_PORT_ID_TX_CODEC_DMA_TX_4, 0, ARRAY_SIZE(afe_cal_mode_text),
+			afe_cal_mode_text);
+
+static const struct soc_enum cdc_dma_rx_6_enum =
+	SOC_ENUM_SINGLE(AFE_PORT_ID_RX_CODEC_DMA_RX_6, 0, ARRAY_SIZE(afe_cal_mode_text),
+			afe_cal_mode_text);
+
 static const struct snd_kcontrol_new sb_config_controls[] = {
 	SOC_ENUM_EXT("SLIM_4_TX Format", sb_config_enum[0],
 		     msm_dai_q6_sb_format_get,
@@ -15479,6 +15487,12 @@ static const struct snd_kcontrol_new cdc_dma_config_controls[] = {
 		     xt_logging_disable_enum[0],
 		     msm_dai_q6_cdc_dma_xt_logging_disable_get,
 		     msm_dai_q6_cdc_dma_xt_logging_disable_put),
+	SOC_ENUM_EXT("CDC_DMA_RX_6 SetCalMode", cdc_dma_rx_6_enum,
+		     msm_dai_q6_cal_info_get,
+		     msm_dai_q6_cal_info_put),
+	SOC_ENUM_EXT("CDC_DMA_TX_4 SetCalMode", cdc_dma_tx_4_enum,
+		     msm_dai_q6_cal_info_get,
+		     msm_dai_q6_cal_info_put),
 };
 
 /* SOC probe for codec DMA interface */
@@ -15510,6 +15524,17 @@ static int msm_dai_q6_dai_cdc_dma_probe(struct snd_soc_dai *dai)
 				 snd_ctl_new1(&cdc_dma_config_controls[1],
 				 dai_data));
 		break;
+	case AFE_PORT_ID_RX_CODEC_DMA_RX_6:
+		rc = snd_ctl_add(dai->component->card->snd_card,
+				 snd_ctl_new1(&cdc_dma_config_controls[2],
+				 dai_data));
+		break;
+	case AFE_PORT_ID_TX_CODEC_DMA_TX_4:
+		rc = snd_ctl_add(dai->component->card->snd_card,
+				 snd_ctl_new1(&cdc_dma_config_controls[3],
+				 dai_data));
+		break;
+
 	default:
 		break;
 	}
