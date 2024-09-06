@@ -4,7 +4,6 @@
  * FTS Capacitive touch screen controller (FingerTipS)
  *
  * Copyright (C) 2017, STMicroelectronics
- * Copyright (C) 2020 XiaoMi, Inc.
  * Authors: AMG(Analog Mems Group)
  *
  * 		marco.cali@st.com
@@ -54,7 +53,11 @@
 #define PINCTRL_STATE_SUSPEND		"pmx_ts_suspend"
 #define PINCTRL_STATE_RELEASE		"pmx_ts_release"
 
-/*#define TOUCH_THP_FW*/
+/*** save power mode ***/
+#define FTS_POWER_SAVE_MODE
+
+#define TOUCH_THP_SUPPORT
+#define TOUCH_THP_FW
 
 #define DRIVER_TEST
 
@@ -74,9 +77,11 @@
 #define LIMITS_ARRAY_NAME myArray2
 #endif
 
+#define FTS_XIAOMI_TOUCHFEATURE
 #define FTS_FOD_AREA_REPORT
 #define FTS_DEBUG_FS
 
+#define DEBUG
 
 /*#define USE_ONE_FILE_NODE*/
 
@@ -200,9 +205,8 @@ struct fts_hw_platform_data {
 	unsigned int y_max;
 	const char *vdd_reg_name;
 	const char *avdd_reg_name;
-	const char *avddold_name;
 	const char *default_fw_name;
-	const char *htp_fw_name;
+	const char *thp_fw_name;
 	size_t config_array_size;
 	struct fts_config_info *config_array;
 	int current_index;
@@ -217,6 +221,33 @@ struct fts_hw_platform_data {
 	unsigned int fod_ly;
 	unsigned int fod_x_size;
 	unsigned int fod_y_size;
+#ifdef FTS_XIAOMI_TOUCHFEATURE
+	u32 touch_follow_per_def;
+	u32 touch_tap_sensitivity_def;
+	u32 touch_aim_sensitivity_def;
+	u32 touch_tap_stability_def;
+	u32 cornerfilter_area_step1;
+	u32 cornerfilter_area_step2;
+	u32 cornerfilter_area_step3;
+	u32 non_curved_display;
+	u32 support_super_resolution;
+	u32 deadzone_filter_ver[4 * GRIP_PARAMETER_NUM];
+	u32 deadzone_filter_hor[4 * GRIP_PARAMETER_NUM];
+	u32 edgezone_filter_ver[4 * GRIP_PARAMETER_NUM];
+	u32 edgezone_filter_hor[4 * GRIP_PARAMETER_NUM];
+	u32 cornerzone_filter_ver[4 * GRIP_PARAMETER_NUM];
+	u32 cornerzone_filter_hor1[4 * GRIP_PARAMETER_NUM];
+	u32 cornerzone_filter_hor2[4 * GRIP_PARAMETER_NUM];
+	u32 normal_deadzone_filter_hor[4 * GRIP_PARAMETER_NUM];
+	u32 normal_edgezone_filter_hor[4 * GRIP_PARAMETER_NUM];
+	u32 normal_cornerzone_filter_hor1[4 * GRIP_PARAMETER_NUM];
+	u32 normal_cornerzone_filter_hor2[4 * GRIP_PARAMETER_NUM];
+	u32 touch_follow_performance[3 * 5];
+	u32 touch_tap_sensitivity[5];
+	u32 touch_aim_sensitivity[5];
+	u32 touch_tap_stability[5];
+	u32 touch_expert_array[6 * EXPERT_ARRAY_SIZE];
+#endif
 	bool support_fod;
 };
 
@@ -232,6 +263,25 @@ extern char tag[8];
 typedef void (*event_dispatch_handler_t)
  (struct fts_ts_info *info, unsigned char *data);
 
+#ifdef CONFIG_SECURE_TOUCH
+struct fts_secure_delay {
+	bool palm_pending;
+	int palm_value;
+};
+
+struct fts_secure_info {
+	bool secure_inited;
+	atomic_t st_1st_complete;
+	atomic_t st_enabled;
+	atomic_t st_pending_irqs;
+	struct completion st_irq_processed;
+	struct completion st_powerdown;
+	struct fts_secure_delay scr_delay;
+	struct mutex palm_lock;
+	void *fts_info;
+};
+#endif
+
 #ifdef CONFIG_I2C_BY_DMA
 struct fts_dma_buf {
 	struct mutex dmaBufLock;
@@ -240,7 +290,11 @@ struct fts_dma_buf {
 };
 #endif
 
-
+struct tp_frame {
+	s64 time_ns;
+	u64 frm_cnt;
+	char thp_frame_buf[PAGE_SIZE];
+};
 /**
  * FTS capacitive touch screen device information
  * - dev             Pointer to the structure device \n
@@ -280,9 +334,9 @@ struct fts_ts_info {
 	struct work_struct resume_work;
 	struct work_struct cmd_update_work;
 	struct work_struct sleep_work;
-	struct work_struct mode_handler_work;
 	struct workqueue_struct *event_wq;
 	struct workqueue_struct *irq_wq;
+	struct workqueue_struct *touch_feature_wq;
 
 #ifndef FW_UPDATE_ON_PROBE
 	struct delayed_work fwu_work;
@@ -302,12 +356,12 @@ struct fts_ts_info {
 	struct fts_hw_platform_data *board;
 	struct regulator *vdd_reg;
 	struct regulator *avdd_reg;
-	struct regulator *avddold_reg;
 
 	int resume_bit;
 	int fwupdate_stat;
 
 	struct notifier_block notifier;
+	struct notifier_block bl_notifier;
 	bool sensor_sleep;
 	bool sensor_scan;
 	struct pinctrl *ts_pinctrl;
@@ -328,32 +382,59 @@ struct fts_ts_info {
 	int stylus_enabled;
 	int cover_enabled;
 	unsigned int grip_enabled;
+	unsigned int grip_pixel;
+	unsigned int doze_time;
+	unsigned int grip_pixel_def;
+	unsigned int doze_time_def;
 #ifdef FTS_DEBUG_FS
 	struct dentry *debugfs;
 #endif
 	struct class *fts_tp_class;
 	struct device *fts_touch_dev;
+#ifdef CONFIG_SECURE_TOUCH
+	struct fts_secure_info *secure_info;
+#endif
 #ifdef CONFIG_I2C_BY_DMA
 	struct fts_dma_buf *dma_buf;
 #endif
 	bool lockdown_is_ok;
+	bool irq_status;
+	wait_queue_head_t 	wait_queue;
+	struct completion tp_reset_completion;
+	atomic_t system_is_resetting;
 	int fod_status;
 	unsigned int fod_overlap;
 	unsigned long fod_id;
 	unsigned long fod_x;
 	unsigned long fod_y;
+	struct mutex fod_mutex;
 	struct mutex cmd_update_mutex;
 	bool fod_coordinate_update;
 	bool fod_pressed;
+	bool prox_sensor_changed;
+	bool prox_sensor_switch;
+	bool palm_sensor_changed;
+	bool palm_sensor_switch;
+	bool enable_touch_raw;
+	bool enable_touch_delta;
+	bool enable_thp_fw;
+	int clicktouch_count;
+	int clicktouch_num;
 	char *data_dump_buf;
+	short strength_buf[PAGE_SIZE];
+	struct tp_frame thp_frame;
 	int aod_status;
 	bool tp_pm_suspend;
 	struct completion pm_resume_completion;
+	bool gamemode_enable;
 	int width_major;
 	int width_minor;
 	int orientation;
 	int last_x[TOUCH_ID_MAX];
 	int last_y[TOUCH_ID_MAX];
+	struct work_struct switch_mode_work;
+	struct work_struct grip_mode_work;
+	bool big_area_fod;
 	struct delayed_work power_supply_work;
 	int charging_status;
 	struct notifier_block power_supply_notifier;
@@ -361,6 +442,7 @@ struct fts_ts_info {
 	struct mutex charge_lock;
 	int fod_icon_status;
 	int nonui_status;
+	bool fod_down;
 };
 
 int fts_chip_powercycle(struct fts_ts_info *info);
@@ -376,4 +458,9 @@ bool fts_is_infod(void);
 #endif
 void fts_restore_regvalues(void);
 const char *fts_get_limit(struct fts_ts_info *info);
+#ifdef FTS_XIAOMI_TOUCHFEATURE
+int fts_palm_sensor_cmd(int input);
+int fts_prox_sensor_cmd(int input);
+bool fts_touchmode_edgefilter(unsigned int touch_id, int x, int y);
+#endif
 #endif

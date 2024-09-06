@@ -92,6 +92,10 @@ int fts_system_reset(void)
 	event_to_search = (int)EVT_ID_CONTROLLER_READY;
 
 	logError(1, "%s System resetting...\n", tag);
+	if (fts_info) {
+		reinit_completion(&fts_info->tp_reset_completion);
+		atomic_set(&fts_info->system_is_resetting, 1);
+	}
 	for (i = 0; i < RETRY_SYSTEM_RESET && res < 0; i++) {
 		resetErrorList();
 		fts_disableInterruptNoSync();
@@ -119,6 +123,10 @@ int fts_system_reset(void)
 					 tag, res);
 			}
 		}
+	}
+	if (fts_info) {
+		complete(&fts_info->tp_reset_completion);
+		atomic_set(&fts_info->system_is_resetting, 0);
 	}
 	if (res < OK) {
 		logError(1,

@@ -344,8 +344,8 @@ static ssize_t fts_driver_test_write(struct file *file, const char __user *buf,
 	TotSelfSenseData totComData;
 
 	u64 address;
-	u16 fw_version;
-	u16 config_id;
+	u16 fw_version = 0;
+	u16 config_id = 0;
 
 	Firmware fw;
 	LimitFile lim;
@@ -1348,7 +1348,7 @@ static ssize_t fts_driver_test_write(struct file *file, const char __user *buf,
 				res = ERROR_OP_NOT_ALLOW;
 			}
 			break;
-
+#if 0
 		case CMD_GETFWVER:
 			res = getFirmwareVersion(&fw_version, &config_id);
 			if (res < OK) {
@@ -1362,6 +1362,7 @@ static ssize_t fts_driver_test_write(struct file *file, const char __user *buf,
 				size += (4) * sizeof(u8);
 			}
 			break;
+#endif
 
 		case CMD_FLASHUNLOCK:
 			res = flash_unlock();
