@@ -152,8 +152,11 @@ ifdef CONFIG_SND_SOC_MSM_QDSP6V2_INTF
 	Q6_OBJS += adsp_err.o
 	Q6_OBJS += msm_audio_ion.o
 	Q6_OBJS += q6_init.o
+	Q6_OBJS += model_loader.o
 endif
 
+CDEFINES += -DCONFIG_MIUS_PROXIMITY
+CDEFINES += -DCONFIG_ELUS_PROXIMITY
 # for ELUS start
 ifdef CONFIG_ELUS_PROXIMITY
 	Q6_OBJS += apr_elliptic.o
@@ -167,7 +170,7 @@ endif
 # for ELUS end
 
 # for MIUS start
-ifdef CONFIG_MIUS_IIO
+ifdef CONFIG_MIUS_PROXIMITY
 	Q6_OBJS += apr_mius.o
 	Q6_OBJS += mius/mius.o
 	Q6_OBJS += mius/mius_sysfs.o
@@ -248,12 +251,22 @@ ifdef CONFIG_DIGITAL_CDC_RSC_MGR
 	Q6_OBJS += digital-cdc-rsc-mgr.o
 endif
 
+ifdef CONFIG_MMHARDWARE_DETECTION
+MMHARDWARE_SYSFS += mmhardware_sysfs.o
+endif
+
 LINUX_INC +=	-Iinclude/linux
 
 INCS +=		$(COMMON_INC) \
 		$(UAPI_INC)
 
 EXTRA_CFLAGS += $(INCS)
+
+CDEFINES += -DCONFIG_TARGET_PRODUCT_HAYDN
+
+ifdef CONFIG_MIUS_PROXIMITY
+	CDEFINES += -DCONFIG_QGKI_SYSTEM
+endif
 
 CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DANI_LITTLE_BIT_ENDIAN \
@@ -316,3 +329,6 @@ q6_pdr_dlkm-y := $(QDSP6_PDR_OBJS)
 
 obj-$(CONFIG_MSM_QDSP6_NOTIFIER) += q6_notifier_dlkm.o
 q6_notifier_dlkm-y := $(QDSP6_NOTIFIER_OBJS)
+
+obj-$(CONFIG_MMHARDWARE_DETECTION) += mmhardware_sysfs_dlkm.o
+mmhardware_sysfs_dlkm-y := $(MMHARDWARE_SYSFS)

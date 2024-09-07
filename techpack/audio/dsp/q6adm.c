@@ -53,10 +53,11 @@ enum adm_cal_status {
 	ADM_STATUS_MAX,
 };
 
-static bool is_usb_timeout;
-static bool close_usb;
 typedef int (*adm_cb)(uint32_t opcode, uint32_t token,
 		       uint32_t *pp_event_package, void *pvt);
+
+static bool is_usb_timeout;
+static bool close_usb;
 
 struct adm_copp {
 
@@ -388,7 +389,7 @@ static int adm_get_copp_id(int port_idx, int copp_idx)
 static int adm_get_idx_if_single_copp_exists(int port_idx,
 			int topology,
 			int rate, int bit_width,
-			uint32_t copp_token)
+			uint32_t copp_token, int channel_mode)
 {
 	int idx;
 
@@ -402,14 +403,16 @@ static int adm_get_idx_if_single_copp_exists(int port_idx,
 			(bit_width ==
 			atomic_read(&this_adm.copp.bit_width[port_idx][idx])) &&
 			(copp_token ==
-			atomic_read(&this_adm.copp.token[port_idx][idx])))
+			atomic_read(&this_adm.copp.token[port_idx][idx])) &&
+			(channel_mode ==
+			atomic_read(&this_adm.copp.channels[port_idx][idx])))
 			return idx;
 	return -EINVAL;
 }
 
 static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 				 int rate, int bit_width, int app_type,
-				 int session_type, uint32_t copp_token)
+				 int session_type, uint32_t copp_token, int channel_mode)
 {
 	int idx;
 
@@ -420,7 +423,8 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 		return adm_get_idx_if_single_copp_exists(port_idx,
 				topology,
 				rate, bit_width,
-				copp_token);
+				copp_token,
+				channel_mode);
 
 	for (idx = 0; idx < MAX_COPPS_PER_PORT; idx++)
 		if ((topology ==
@@ -433,7 +437,9 @@ static int adm_get_idx_if_copp_exists(int port_idx, int topology, int mode,
 			atomic_read(
 				&this_adm.copp.session_type[port_idx][idx])) &&
 		    (app_type ==
-			atomic_read(&this_adm.copp.app_type[port_idx][idx])))
+			atomic_read(&this_adm.copp.app_type[port_idx][idx])) &&
+			(channel_mode ==
+			atomic_read(&this_adm.copp.channels[port_idx][idx])))
 			return idx;
 	return -EINVAL;
 }
@@ -1798,11 +1804,16 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
 			pr_debug("%s: APR_BASIC_RSP_RESULT id 0x%x\n",
 				__func__, payload[0]);
-			if (data->payload_size <
-					(2 * sizeof(uint32_t))) {
-				pr_err("%s: Invalid payload size %d\n",
-					__func__, data->payload_size);
-				return 0;
+
+			if (!((client_id != ADM_CLIENT_ID_SOURCE_TRACKING) &&
+			     ((payload[0] == ADM_CMD_SET_PP_PARAMS_V5) ||
+			      (payload[0] == ADM_CMD_SET_PP_PARAMS_V6)))) {
+				if (data->payload_size <
+						(2 * sizeof(uint32_t))) {
+					pr_err("%s: Invalid payload size %d\n",
+						__func__, data->payload_size);
+					return 0;
+				}
 			}
 
 			if (payload[1] != 0) {
@@ -2807,6 +2818,61 @@ fail_cmd:
 }
 EXPORT_SYMBOL(adm_connect_afe_port);
 
+/**
+ * adm_set_device_model -
+ *        command to send device model to adsp
+ *
+ * @model: value of model
+ *
+ * Returns 0 on success or error on failure
+ */
+int adm_set_device_model(int device_model)
+{
+	struct adm_cmd_set_device_model	cmd;
+	int ret = 0;
+
+	pr_debug("%s: mode:%d\n", __func__, device_model);
+
+	if (this_adm.apr == NULL) {
+		this_adm.apr = apr_register("ADSP", "ADM", adm_callback,
+						0xFFFFFFFF, &this_adm);
+		if (this_adm.apr == NULL) {
+			pr_err("%s: Unable to register ADM\n", __func__);
+			ret = -ENODEV;
+			return ret;
+		}
+		rtac_set_adm_handle(this_adm.apr);
+	}
+
+	cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+			APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	cmd.hdr.pkt_size = sizeof(cmd);
+	cmd.hdr.src_svc = APR_SVC_ADM;
+	cmd.hdr.src_domain = APR_DOMAIN_APPS;
+	cmd.hdr.src_port = 0;
+	cmd.hdr.dest_svc = APR_SVC_ADM;
+	cmd.hdr.dest_domain = APR_DOMAIN_ADSP;
+	cmd.hdr.dest_port = 0; /* Ignored */
+	cmd.hdr.token = 0;
+	cmd.hdr.opcode = ADM_CMD_SET_DEVICE_MODEL;
+
+	cmd.model = device_model;
+
+	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&cmd);
+	if (ret < 0) {
+		pr_err("%s: send device model: 0x%x failed ret %d\n",
+					__func__, device_model, ret);
+		ret = -EINVAL;
+		goto fail_cmd;
+	}
+	return 0;
+
+fail_cmd:
+
+	return ret;
+}
+EXPORT_SYMBOL(adm_set_device_model);
+
 int adm_arrange_mch_map(struct adm_cmd_device_open_v5 *open, int path,
 			 int channel_mode, int port_idx)
 {
@@ -3620,7 +3686,8 @@ int adm_open_v2(int port_id, int path, int rate, int channel_mode, int topology,
 						      perf_mode,
 						      rate, bit_width,
 						      app_type, session_type,
-						      copp_token);
+						      copp_token,
+						      channel_mode);
 
 	if (copp_idx < 0) {
 		copp_idx = adm_get_next_available_copp(port_idx);
@@ -6131,6 +6198,101 @@ done:
 	return ret;
 }
 EXPORT_SYMBOL(adm_get_source_tracking);
+
+/**
+ * adm_get_fnn_source_tracking -
+ *        Retrieve sound track info
+ *
+ * @port_id: Port ID number
+ * @copp_idx: copp index assigned
+ * @FnnSourceTrackingData: pointer for source track data to be updated with
+ *
+ * Returns 0 on success or error on failure
+ */
+int adm_get_fnn_source_tracking(int port_id, int copp_idx,
+			struct fluence_nn_source_tracking_param *FnnSourceTrackingData)
+{
+	int ret = 0, i;
+	char *params_value;
+	uint32_t max_param_size = 0;
+	struct adm_param_fluence_nn_source_tracking_t *fnn_sourcetrack_params = NULL;
+	struct param_hdr_v3 param_hdr;
+
+	pr_debug("%s: Enter, port_id %d, copp_idx %d\n",
+		  __func__, port_id, copp_idx);
+
+	max_param_size = sizeof(struct adm_param_fluence_nn_source_tracking_t) +
+			 sizeof(union param_hdrs);
+	params_value = kzalloc(max_param_size, GFP_KERNEL);
+	if (!params_value)
+		return -ENOMEM;
+
+	memset(&param_hdr, 0, sizeof(param_hdr));
+	param_hdr.module_id = MODULE_ID_FLUENCE_NN;
+	param_hdr.instance_id = INSTANCE_ID_0;
+	param_hdr.param_id = AUDPROC_PARAM_ID_FLUENCE_NN_SOURCE_TRACKING;
+	param_hdr.param_size = max_param_size;
+	ret = adm_get_pp_params(port_id, copp_idx,
+				ADM_CLIENT_ID_SOURCE_TRACKING, NULL, &param_hdr,
+				params_value);
+	if (ret) {
+		pr_err("%s: get parameters failed ret:%d\n", __func__, ret);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	if (this_adm.sourceTrackingData.apr_cmd_status != 0) {
+		pr_err("%s - get params returned error [%s]\n",
+			__func__, adsp_err_get_err_str(
+			this_adm.sourceTrackingData.apr_cmd_status));
+		ret = adsp_err_get_lnx_err_code(
+				this_adm.sourceTrackingData.apr_cmd_status);
+		goto done;
+	}
+
+	fnn_sourcetrack_params = (struct adm_param_fluence_nn_source_tracking_t *) params_value;
+	if ((!FnnSourceTrackingData) || (!fnn_sourcetrack_params)) {
+		pr_err("%s: Caught NULL pointer \n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	FnnSourceTrackingData->speech_probablity_q20 =
+		fnn_sourcetrack_params->speech_probablity_q20;
+	pr_debug("%s: speech_probablity_q20 = %d\n",
+			__func__, FnnSourceTrackingData->speech_probablity_q20);
+
+	for (i = 0; i < MAX_TOP_SPEAKERS; i++) {
+		FnnSourceTrackingData->speakers[i] =
+			fnn_sourcetrack_params->speakers[i];
+		pr_debug("%s: speakers[%d] = %d\n",
+			__func__, i, FnnSourceTrackingData->speakers[i]);
+	}
+
+	for (i = 0; i < MAX_POLAR_ACTIVITY_INDICATORS; i++) {
+		FnnSourceTrackingData->polarActivity[i] =
+			fnn_sourcetrack_params->polarActivity[i];
+		pr_debug("%s: polarActivity[%d] = %d\n",
+		 __func__, i, FnnSourceTrackingData->polarActivity[i]);
+	}
+
+	FnnSourceTrackingData->session_time_lsw =
+			fnn_sourcetrack_params->session_time_lsw;
+	pr_debug("%s: session_time_lsw = %x\n",
+		  __func__, FnnSourceTrackingData->session_time_lsw);
+
+	FnnSourceTrackingData->session_time_msw =
+			fnn_sourcetrack_params->session_time_msw;
+	pr_debug("%s: session_time_msw = %x\n",
+		  __func__, FnnSourceTrackingData->session_time_msw);
+
+done:
+	pr_debug("%s: Exit, ret = %d\n", __func__, ret);
+
+	kfree(params_value);
+	return ret;
+}
+EXPORT_SYMBOL(adm_get_fnn_source_tracking);
 
 /**
  * adm_get_doa_tracking_mon -

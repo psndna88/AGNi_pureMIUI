@@ -142,6 +142,7 @@ static int device_open(struct inode *inode, struct file *filp)
 	unsigned int minor;
 	struct elliptic_device *dev;
 	struct elliptic_data *elliptic_data;
+	unsigned long flags;
 
 	major = imajor(inode);
 	minor = iminor(inode);
@@ -168,9 +169,10 @@ static int device_open(struct inode *inode, struct file *filp)
 	}
 
 	elliptic_data = &dev->el_data;
-	spin_lock(&elliptic_data->fifo_isr_spinlock);
+	spin_lock_irqsave(&elliptic_data->fifo_isr_spinlock, flags);
 	elliptic_data_flush_isr_fifo(elliptic_data);
-	spin_unlock(&elliptic_data->fifo_isr_spinlock);
+	spin_unlock_irqrestore(&elliptic_data->fifo_isr_spinlock, flags);
+
 
 	atomic_set(&elliptic_data->abort_io, 0);
 	elliptic_data_reset_debug_counters(elliptic_data);

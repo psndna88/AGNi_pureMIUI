@@ -1376,6 +1376,16 @@ struct adm_cmd_connect_afe_port_v5 {
  */
 } __packed;
 
+/* Allows a client to notify adsp the device model */
+
+#define ADM_CMD_SET_DEVICE_MODEL	0x00011112
+
+/*  Payload of the #ADM_CMD_SET_DEVICE_MODEL command.*/
+struct adm_cmd_set_device_model {
+	struct apr_hdr     hdr;
+	u8                 model;
+/* ID of the device model */
+} __packed;
 
 /* adsp_adm_api.h */
 
@@ -2664,6 +2674,7 @@ struct afe_event_rt_proxy_port_status {
 } __packed;
 
 #define AFE_PORT_DATA_CMD_RT_PROXY_PORT_WRITE_V2 0x000100ED
+#define AFE_PORT_SEND_DATA_CMD   0x00011111
 
 struct afe_port_data_cmd_rt_proxy_port_write_v2 {
 	struct apr_hdr hdr;
@@ -4194,7 +4205,7 @@ struct afe_param_id_cdc_dma_data_align {
 	uint32_t	cdc_dma_data_align;
 } __packed;
 
-#define MAX_ABR_LEVELS 5
+#define MAX_ABR_LEVELS 6
 
 struct afe_bit_rate_level_map_t {
 	/*
@@ -4909,6 +4920,11 @@ struct asm_lhdc_specific_enc_cfg_t {
 	 * @Default: 679 for LHDCBT_MTU_2DH5
 	 */
 	uint16_t                     mtu;
+	uint32_t                     ar_enabled;
+	uint32_t                     meta_enabled;
+	uint32_t                     llac_enabled;
+	uint32_t                     mbr_enabled;
+	uint32_t                     larc_enabled;
 } __packed;
 
 struct asm_lhdc_enc_cfg_t {
@@ -13571,10 +13587,29 @@ struct adm_set_compressed_device_latency {
 #define VOICEPROC_MODULE_ID_FLUENCE_PRO_VC_TX               0x00010F35
 #define VOICEPROC_PARAM_ID_FLUENCE_SOUNDFOCUS               0x00010E37
 #define VOICEPROC_PARAM_ID_FLUENCE_SOURCETRACKING           0x00010E38
+#define AUDPROC_PARAM_ID_FLUENCE_NN_SOURCE_TRACKING         0x00010B83
+#define MODULE_ID_FLUENCE_NN                                0x00010B0F
 #define MAX_SECTORS                                         8
 #define MAX_NOISE_SOURCE_INDICATORS                         3
 #define MAX_POLAR_ACTIVITY_INDICATORS                       360
 #define MAX_DOA_TRACKING_ANGLES                             2
+#define MAX_TOP_SPEAKERS                                    5
+#define MAX_FOCUS_DIRECTION                                 2
+
+struct fluence_nn_sound_focus_param {
+	int16_t mode;
+	int16_t focus_direction[MAX_FOCUS_DIRECTION];
+	int16_t focus_width;
+} __packed;
+
+struct fluence_nn_source_tracking_param {
+	int32_t speech_probablity_q20;
+	int16_t speakers[MAX_TOP_SPEAKERS];
+	int16_t reserved;
+	uint8_t polarActivity[MAX_POLAR_ACTIVITY_INDICATORS];
+	uint32_t session_time_lsw;
+	uint32_t session_time_msw;
+} __packed;
 
 struct sound_focus_param {
 	uint16_t start_angle[MAX_SECTORS];
@@ -13593,6 +13628,21 @@ struct doa_tracking_mon_param {
 	uint16_t target_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint16_t interf_angle_L16[MAX_DOA_TRACKING_ANGLES];
 	uint8_t polar_activity[MAX_POLAR_ACTIVITY_INDICATORS];
+} __packed;
+
+struct adm_param_fluence_nn_sound_focus_t {
+	int16_t mode;
+	int16_t focus_direction[2];
+	int16_t focus_width;
+} __packed;
+
+struct adm_param_fluence_nn_source_tracking_t {
+	int32_t speech_probablity_q20;
+	int16_t speakers[5];
+	int16_t reserved;
+	uint8_t polarActivity[360];
+	uint32_t session_time_lsw;
+	uint32_t session_time_msw;
 } __packed;
 
 struct adm_param_fluence_soundfocus_t {

@@ -27,7 +27,7 @@
 /* for elus end */
 #include <ipc/apr_tal.h>
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 #include <dsp/apr_mius.h>
 #endif
 /* for mius end */
@@ -1221,7 +1221,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 		else
 			return -EINVAL;
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 	} else if (data->opcode == MI_ULTRASOUND_OPCODE) {
 		if (NULL != data->payload) {
 			printk(KERN_DEBUG "[MIUS] mi ultrasound afe afe cb");
@@ -1312,6 +1312,15 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 			case AFE_PORT_DATA_CMD_RT_PROXY_PORT_READ_V2:
 				port_id = data->src_port;
 				break;
+			case AFE_PORT_SEND_DATA_CMD:
+				pr_debug("%s: AFE_PORT_SEND_DATA_CMD cmd 0x%x\n",
+					__func__, payload[1]);
+				atomic_set(&this_afe.state, 0);
+				if (afe_token_is_valid(data->token))
+					wake_up(&this_afe.wait[data->token]);
+				else
+					return -EINVAL;
+				break;
 			case AFE_CMD_ADD_TOPOLOGIES:
 				atomic_set(&this_afe.state, 0);
 				if (afe_token_is_valid(data->token))
@@ -1355,6 +1364,8 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 				wake_up(&this_afe.lpass_core_hw_wait);
 				break;
 			case AFE_SVC_CMD_EVENT_CFG:
+				if (payload[1] == ADSP_EALREADY)
+					payload[1] = 0;
 				atomic_set(&this_afe.state, payload[1]);
 				wake_up(&this_afe.wait_wakeup);
 				break;
@@ -2930,7 +2941,7 @@ EXPORT_SYMBOL(elus_afe);
 /* for elus end */
 
 /* for mius start */
-#ifdef CONFIG_MIUS_IIO
+#ifdef CONFIG_MIUS_PROXIMITY
 afe_mi_ultrasound_state_t mius_afe = {
 	.ptr_apr = &this_afe.apr,
 	.ptr_status = &this_afe.status,
@@ -8447,6 +8458,55 @@ int afe_unregister_get_events(u16 port_id)
 }
 EXPORT_SYMBOL(afe_unregister_get_events);
 
+int afe_send_data(phys_addr_t buf_addr_p,
+		u32 mem_map_handle, int bytes)
+{
+	int ret = 0;
+	int index;
+	struct afe_port_data_cmd_rt_proxy_port_write_v2 afecmd_wr;
+
+	if (this_afe.apr == NULL) {
+		pr_err("%s: register to AFE is not done\n", __func__);
+		ret = -ENODEV;
+		return ret;
+	}
+	pr_debug("%s: buf_addr_p = 0x%pK bytes = %d\n", __func__,
+						&buf_addr_p, bytes);
+
+	afecmd_wr.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	afecmd_wr.hdr.pkt_size = sizeof(afecmd_wr);
+	afecmd_wr.hdr.src_port = 0;
+	afecmd_wr.hdr.dest_port = 0;
+	afecmd_wr.hdr.token = 0;
+	afecmd_wr.hdr.opcode = AFE_PORT_SEND_DATA_CMD;
+	afecmd_wr.port_id = IDX_RSVD_2;
+	afecmd_wr.buffer_address_lsw = lower_32_bits(buf_addr_p);
+	afecmd_wr.buffer_address_msw =
+			msm_audio_populate_upper_32_bits(buf_addr_p);
+	afecmd_wr.mem_map_handle = mem_map_handle;
+	afecmd_wr.available_bytes = bytes;
+	afecmd_wr.reserved = 0;
+
+	/*
+	 * Do not call afe_apr_send_pkt() here as it acquires
+	 * a mutex lock inside and this function gets called in
+	 * interrupt context leading to scheduler crash
+	 */
+	index = afecmd_wr.hdr.token = IDX_RSVD_2;
+
+	atomic_set(&this_afe.status, 0);
+	ret = afe_apr_send_pkt(&afecmd_wr, &this_afe.wait[index]);
+	if (ret < 0) {
+		pr_err("%s: AFE rtproxy write to port 0x%x failed %d\n",
+			__func__, afecmd_wr.port_id, ret);
+		ret = -EINVAL;
+	}
+
+	return ret;
+
+}
+EXPORT_SYMBOL(afe_send_data);
 /**
  * afe_rt_proxy_port_write -
  *         command for AFE RT proxy port write
