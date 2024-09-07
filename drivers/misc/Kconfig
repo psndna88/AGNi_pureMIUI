@@ -530,6 +530,12 @@ config MI_HARDWARE_ID
 	help
 	  This adds support for mi hwid.
 
+config MMHARDWARE_OTHER_DETECTION
+	tristate "Register xiaomi mmhardware detection module"
+	default y
+	help
+	  This adds support for mmhardware detection
+
 config PERF_HELPER
 	bool "PERF_HELPER"
 	default y

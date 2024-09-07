@@ -12,6 +12,7 @@
 #include <linux/usb/ucsi_glink.h>
 #include <linux/soc/qcom/fsa4480-i2c.h>
 #include <linux/iio/consumer.h>
+#include <linux/mmhardware_others.h>
 
 #define FSA4480_I2C_NAME	"fsa4480-driver"
 
@@ -535,6 +536,9 @@ static int fsa4480_probe(struct i2c_client *i2c,
 		pr_debug("%s audio switch use et7480 reg_val is %x", __func__, reg_val);
 	}
 
+#ifdef CONFIG_MMHARDWARE_OTHER_DETECTION
+	register_otherkobj_under_mmsysfs(MM_HW_AS, "audioswitch");
+#endif
 	return 0;
 
 err_supply:
