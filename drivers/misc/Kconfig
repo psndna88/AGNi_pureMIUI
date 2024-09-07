@@ -532,7 +532,7 @@ config MI_HARDWARE_ID
 
 config MMHARDWARE_OTHER_DETECTION
 	tristate "Register xiaomi mmhardware detection module"
-	default m
+	default y
 	help
 	  This adds support for mmhardware detection
 
