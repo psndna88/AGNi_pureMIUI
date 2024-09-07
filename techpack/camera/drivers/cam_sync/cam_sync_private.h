@@ -29,8 +29,7 @@
 #endif
 
 #define CAM_SYNC_OBJ_NAME_LEN           64
-/* xiaomi add change max cam sync obj to 3072 from 2048*/
-#define CAM_SYNC_MAX_OBJS               3072
+#define CAM_SYNC_MAX_OBJS               2048
 #define CAM_SYNC_MAX_V4L2_EVENTS        250
 #define CAM_SYNC_DEBUG_FILENAME         "cam_debug"
 #define CAM_SYNC_DEBUG_BASEDIR          "cam"
